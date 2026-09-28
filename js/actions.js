@@ -38,6 +38,7 @@ function build(b, x, y, quiet) {
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
+  if (b === 'leuchtturm') festival();
   checkStars();
   save();
   return true;
@@ -247,26 +248,3 @@ function tap(sx, sy, isTouch) {
   else build(tool, x, y);
 }
 
-// Sterne
-function reqs(i) {
-  const s = STARS[i];
-  const r = [
-    { icon: '👥', label: 'Einwohner', have: T.pop, need: s.pop },
-    { icon: '🪙', label: 'Taler pro Sekunde', have: T.inc, need: s.inc, rate: true },
-    { icon: '🌸', label: 'Schönheit', have: T.beauty, need: s.beauty },
-  ];
-  if (s.techs) r.push({ icon: '💡', label: 'Erforscht', have: state.techs.size, need: s.techs });
-  if (s.lm) r.push({ icon: '🗺️', label: 'Sehenswürdigkeiten angeschlossen', have: T.lm, need: s.lm });
-  if (s.landmark) r.push({ icon: '🗼', label: ITEMS[s.landmark].name + ' bauen', have: hasBuilt(s.landmark) ? 1 : 0, need: 1, flag: true });
-  return r;
-}
-function checkStars() {
-  if (PROBE) return;
-  let up = 0;
-  while (state.stars < STARS.length && reqs(state.stars).every(r => r.have >= r.need)) {
-    const rw = STARS[state.stars].reward;
-    state.money += rw.money; state.science += rw.sci;
-    state.stars++; up++;
-  }
-  if (up) { save(); celebrate(); }
-}

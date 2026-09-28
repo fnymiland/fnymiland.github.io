@@ -51,6 +51,7 @@ describe('Bauen', () => {
 
 describe('Rohstoffe', () => {
   it('Sägewerk macht aus 2 Holz 1 Brett, nur solange Holz da ist', () => {
+    game('state.restore.baum = 1');
     build('haus', 4, 4);
     expect(build('saege', 4, 3)).toBe(true);
     game('recalc()');
@@ -132,7 +133,7 @@ describe('Viertel und Wege', () => {
     field();
     build('weg', 8, 8);
     game('state.res.metall = 5');
-    game("state.techs.add('garten')");
+    game("state.techs.add('garten'); state.restore.quelle = 2");
     expect(game("smallError('laterne', 8, 8, 0)")).toBe(null);
     expect(game("placeError('brunnen', 8, 8)")).toBe('Hier steht schon etwas');
   });
@@ -159,7 +160,7 @@ describe('Speichern und Laden', () => {
     raw.tiles = raw.tiles.filter(([k]) => !['3,3', '4,3', '5,3', '6,3', '7,3'].includes(k));
     raw.tiles.push(['3,3', { b: 'kraftwerk', lvl: 1 }], ['4,3', { b: 'strasse', lvl: 1 }], ['5,3', { b: 'strasse', lvl: 1, style: 'kopf' }],
                    ['6,3', { b: 'weg', lvl: 1, style: 'steg' }], ['7,3', { b: 'bus', lvl: 1 }]);
-    raw.paved = [['8,3', 'terrakotta'], ['4,3', 'kopf'], '9,3'];
+    raw.paved = [['8,3', 'terrakotta'], ['4,3', 'kopf'], '9,6'];
     raw.walks = ['3,3,s', ['4,4,e', 'kies']];
     raw.techs = ['wind', 'bus2', 'farben'];
     localStorage.setItem('kachelhausen_v3', JSON.stringify(raw));
@@ -173,7 +174,7 @@ describe('Speichern und Laden', () => {
     expect(d.tiles.get('6,3')).toMatchObject({ b: 'weg', style: 'holz' });
     expect(d.tiles.has('7,3')).toBe(false);
     expect(d.tiles.get('8,3')).toMatchObject({ b: 'weg', style: 'terrakotta' });
-    expect(d.tiles.get('9,3')).toMatchObject({ b: 'weg', style: 'platten' });
+    expect(d.tiles.get('9,6')).toMatchObject({ b: 'weg', style: 'platten' });
     expect(d.walks).toBeUndefined();
   });
 });

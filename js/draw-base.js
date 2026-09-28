@@ -16,7 +16,14 @@ function shade(h, t) {
   if (!v) { v = t < 0 ? mix(h, '#000000', -t) : mix(h, '#ffffff', t); shadeCache.set(k, v); }
   return v;
 }
+let RUIN = false;                   // verfallene Sehenswürdigkeiten: grau-braun
+const ruinCache = new Map();
 function C(h) {
+  if (RUIN) {
+    let r = ruinCache.get(h);
+    if (!r) { r = mix(h, '#8f887c', 0.55); ruinCache.set(h, r); }
+    return r;
+  }
   if (!FOG) return h;
   let m = fogCache.get(h);
   if (!m) { m = mix(h, '#e8efe3', 0.55); fogCache.set(h, m); }

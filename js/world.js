@@ -56,7 +56,9 @@ function placeLandmarks() {
   types.forEach((type, i) => {
     const ang = off + i / types.length * Math.PI * 2;
     const r = (type === 'klippe' ? 0.82 : 0.42 + 0.3 * hash(i, 0, 778)) * ISLAND.r;
-    const tx = Math.round(ISLAND.cx + Math.cos(ang) * r), ty = Math.round(ISLAND.cy + Math.sin(ang) * r);
+    // Der Uralte Baum steht direkt am Dorfrand (Grundstück gleich nebenan) – dort beginnt die Einführung
+    const tx = type === 'baum' ? 9 : Math.round(ISLAND.cx + Math.cos(ang) * r);
+    const ty = type === 'baum' ? 3 : Math.round(ISLAND.cy + Math.sin(ang) * r);
     let spot = null;
     for (let rr = 0; rr < 8 && !spot; rr++)
       for (let dy = -rr; dy <= rr && !spot; dy++) for (let dx = -rr; dx <= rr && !spot; dx++) {

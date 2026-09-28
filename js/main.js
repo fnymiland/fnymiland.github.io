@@ -50,6 +50,9 @@ function probeScene() {
   put(7, 6, 'hafen');
   put(7, 8, 'saege', { rot: 1 });
   put(10, 11, 'fabrik');
+  // Sehenswürdigkeiten: der Baum in allen vier Zuständen, daneben die anderen fertig restauriert
+  [0, 1, 2, 3].forEach((stg, i) => put(-5 + i * 3, -4, 'lm', { lm: 'baum', stage: stg }));
+  ['obsthain', 'klippe', 'ruine', 'erzberg', 'quelle', 'kristall'].forEach((lm, i) => put(-5 + i * 3, -1, 'lm', { lm, stage: 3 }));
   // Felder mit Mühle
   put(12, 11, 'feld'); put(13, 11, 'feld'); put(12, 12, 'muehle', { rot: 1 }); put(13, 12, 'feld');
   // Musterreihe: jeder Stil als kleines Wegstück (y = 13 und 15)
@@ -70,6 +73,7 @@ if (PROBE) {
   probeScene();
   normalizeSmall();
   nameHouses();
+  state.tutorial = -1;
   // ein paar kleine Dekos vor den Häusern
   const add = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[slot] = { b, rot }; };
   add(6, 2, 0, 'laterne'); add(9, 2, 0, 'laterne'); add(12, 2, 0, 'laterne');        // Laternen an der Straße
@@ -83,6 +87,7 @@ if (PROBE) {
   normalizeSmall();
   const refunded = fitFootprints();
   nameHouses();
+  migrateLandmarks();
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

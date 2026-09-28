@@ -134,7 +134,7 @@ function beautyOf(t, x, y) {
   const d = ITEMS[t.b];
   const nearHome = nearHouse(x, y);
   let v = 0;
-  if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1);
+  if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1);
   if (d.ugly && nearHome) v -= d.ugly;
   return v;
 }
@@ -154,7 +154,8 @@ function totals() {
     pop += t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (d.pop || 0) * t.lvl;
     const s = { ...(needsReach(t.b) ? reachOf(net, k, x, y) : { eff: 1, how: null }), ...viertelBonus(net, k) };
     st.set(k, s);
-    if (t.b === 'lm' && ownedTile(x, y)) {
+    // Sehenswürdigkeiten wirken erst, wenn sie mindestens eine Stufe restauriert sind
+    if (t.b === 'lm' && ownedTile(x, y) && lmStage(t.lm) >= 1) {
       s.road = s.how === 'viertel';
       (s.how === 'weit' ? lmHalf : lmOn).set(t.lm, [x, y]);
     }
@@ -195,11 +196,11 @@ function totals() {
     }
     if (d.cat === 'bau' && !d.prod && !d.conv) {
       let v = rawIncome(t.b, x, y) * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * gmul;
-      if (t.b === 'muehle' && klippe && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
+      if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
     }
     if (d.science) {
-      const v = d.science * t.lvl * m * (t.b === 'schule' ? schoolFactor : 1);
+      const v = d.science * t.lvl * m * (t.b === 'schule' ? schoolFactor : 1) * (t.b === 'bibliothek' && hasTech('bibliothek') ? 2 : 1);
       s.sci = v; sci += v;
     }
   }
@@ -211,10 +212,10 @@ function totals() {
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
   if (quelle && (lmOn.has('quelle') || lmHalf.has('quelle'))) {
     beauty += 40 * lmFactor('quelle');
-    if (st.get(quelle[0]).road) inc += 12 * gmul;
+    if (st.get(quelle[0]).road && lmStage('quelle') >= 3) inc += 12 * gmul;
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
-  beauty += 15 * lmFactor('obsthain') + 80 * lmFactor('baum');
+  beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net };
@@ -223,8 +224,22 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
 function recalc() { T = totals(); NET = T.net; previewCache = null; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
-const styleOk = st => state.stars >= (st.star || 0) && (!st.tech || hasTech(st.tech));
-const styleLock = st => st.star && state.stars < st.star ? '★'.repeat(st.star) : st.tech && !hasTech(st.tech) ? '💡 ' + TECH_BY_ID[st.tech].name : '';
+const lmStage = type => (state.restore && state.restore[type]) || 0;
+function unlockOk(def, key) {
+  if (state.legacy && state.legacy.has(key)) return true;
+  if (def.lm) { const [type, n] = def.lm.split(':'); if (lmStage(type) < +n) return false; }
+  if (def.lanterns && lanternCount() < def.lanterns) return false;
+  if (def.tech && !hasTech(def.tech)) return false;
+  return true;
+}
+function unlockText(def) {
+  if (def.lm) { const [type, n] = def.lm.split(':'); if (lmStage(type) < +n) return `${LANDMARKS[type].icon} ${LM_STAGES[type][+n - 1].name}`; }
+  if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
+  if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
+  return '';
+}
+const styleOk = st => unlockOk(st, 'weg:' + st.id);
+const styleLock = st => unlockText(st);
 function currentStyle(kind) {
   if (!styleOk(styleDef(kind, chosenStyle[kind]))) chosenStyle[kind] = STYLES[kind][0].id;
   return chosenStyle[kind];
@@ -285,12 +300,11 @@ function normalizeSmall() {
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }
 }
-const available = id => { const d = ITEMS[id]; return state.stars >= (d.star || 0) && (!d.tech || hasTech(d.tech)); };
+const available = id => unlockOk(ITEMS[id], id);
 const lockText = id => {
   const d = ITEMS[id];
-  if (state.stars < (d.star || 0)) return `🔒 ${'★'.repeat(d.star)}`;
-  if (d.tech && !hasTech(d.tech)) return '🔒 💡 ' + TECH_BY_ID[d.tech].name;
-  return '';
+  const txt = unlockText(d);
+  return txt ? '🔒 ' + txt : '';
 };
 const upgradable = t => ITEMS[t.b].up && t.lvl < MAX_LVL;
 const upgradeCost = t => Math.round(ITEMS[t.b].cost * Math.pow(1.8, t.lvl));

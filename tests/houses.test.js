@@ -6,6 +6,7 @@ beforeEach(() => {
   game('closeModal()');
   game("state.owned.add('1,1'); state.money = 99999; state.stars = 5");
   game("for (const t of TECHS) state.techs.add(t.id)");
+  game("for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3");
   game("for (let y = 6; y <= 11; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass')");
   game('buildRot = 0; recalc()');
 });

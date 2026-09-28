@@ -14,7 +14,13 @@ function newState() {
   const c = iso(ISLAND.cx, ISLAND.cy);
   return {
     seed: Math.floor(Math.random() * 1e9),
-    money: 300, science: 0, stars: 0, res: newRes(),
+    money: 300, science: 0, res: newRes(),
+    restore: {},               // Wahrzeichen → restaurierte Stufe (0–3)
+    diary: ['start'],          // freigeschaltete Tagebuchseiten ('start', 'baum:1', …, 'finale')
+    diarySeen: 0,              // so viele Seiten hat man schon gelesen
+    tutorial: 0,               // Schritt der Einführung, -1 = fertig/übersprungen
+    legacy: new Set(),         // früher per Stern/Forschung Freigeschaltetes bleibt frei
+    festival: false,
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(['0,0']),
     tiles: new Map(),
@@ -38,6 +44,7 @@ function serialize() {
     if (t.rot) o.rot = t.rot;
     if (t.style) o.style = t.style;
     if (t.animal) { o.animal = t.animal; o.name = t.name; }
+    if (t.stage != null) o.stage = t.stage;
     tiles.push([k, o]);
   }
   if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') {
@@ -53,7 +60,8 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 3, seed: state.seed, money: state.money, res: state.res, science: state.science, stars: state.stars,
+    game: 'kachelhausen', v: 3, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
@@ -94,12 +102,32 @@ function parseSave(d) {
   });
   d.techs = (d.techs || []).filter(id => { if (id in SCI_REFUND) { d.science = (d.science || 0) + SCI_REFUND[id]; return false; } return true; });
   return {
-    seed: d.seed, money: +d.money || 0, res: { ...newRes(), ...(d.res || {}) }, science: d.science || 0, stars: d.stars || 0,
+    seed: d.seed, money: +d.money || 0, res: { ...newRes(), ...(d.res || {}) }, science: d.science || 0,
+    restore: d.restore || {}, diary: d.diary || ['start'], diarySeen: d.diarySeen || 0, festival: !!d.festival,
+    // Spielstände von vor den Laternen: Einführung überspringen, Sterne-Freischaltungen behalten
+    tutorial: d.tutorial != null ? d.tutorial : -1,
+    legacy: new Set(d.legacy || legacyUnlocks(d)),
+    oldSave: !d.restore,
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs),
     decos: new Map(d.decos || []),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };
+}
+
+// Was man in alten Ständen per Stern oder Forschung schon freigeschaltet hatte
+function legacyUnlocks(d) {
+  if (d.restore) return [];
+  const out = [], stars = d.stars || 0, techs = new Set(d.techs || []);
+  if (stars >= 1) out.push('schule', 'weg:platten', 'weg:asphalt');
+  if (stars >= 2) out.push('baecker');
+  if (techs.has('bibliothek')) out.push('bibliothek');
+  if (techs.has('kunst')) out.push('kunst', 'weg:blueten');
+  if (techs.has('garten')) out.push('brunnen');
+  if (techs.has('pflasterkunst')) out.push('weg:kopf');
+  // Gebäude, die schon stehen, dürfen auch weiter gebaut werden
+  for (const [, t] of d.tiles || []) if (['saege', 'steinmetz', 'schmiede', 'obst', 'mine', 'park', 'windrad'].includes(t.b)) out.push(t.b);
+  return [...new Set(out)];
 }
 
 // Unlesbare Stände nie überschreiben: Kopie aufbewahren und beim Start Bescheid sagen

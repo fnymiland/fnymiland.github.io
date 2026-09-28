@@ -357,3 +357,13 @@ body.has-styles #hint { bottom: calc(196px + env(safe-area-inset-bottom)); }
 .text-in.small { font-size: 15px; padding: 4px 8px; width: 60%; display: inline-block; margin: 0; }
 #panel { max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); overflow-y: auto; }
 @media (max-width: 600px) { #panel { max-height: calc(100dvh - 330px); } }
+
+/* ---------- v8: Laternen & Tagebuch ---------- */
+.lantern { font-size: 13px; font-weight: 800; color: var(--brown2); }
+.pill.diary { cursor: pointer; position: relative; }
+.off { opacity: .3; }
+.diary-pic canvas { width: 100%; max-width: 320px; border-radius: 14px; display: block; margin: 6px auto 0; box-shadow: 0 3px 0 var(--shadow); }
+.diary-text { font-style: italic; font-size: 16px !important; line-height: 1.5; }
+#goal .req small { font-weight: 700; color: var(--brown2); }
+#goal .link { text-decoration: underline; color: var(--brown2); font-size: 11px; }
+.btn.ghost:disabled { opacity: .4; cursor: default; }

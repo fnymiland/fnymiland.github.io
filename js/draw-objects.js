@@ -166,6 +166,7 @@ const PATH_LOOK = {
   pastell: { edge: '#d9bcc6', fill: '#f5e4ea', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffe08a'] },
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
+  kristall: { edge: '#b9a0e8', fill: '#e6dbfb', pat: ['dots', null], cols: ['#c7a6f7', '#ffffff', '#9d6fe0'], glow: true },
   // Flächen
   platten:    { fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
   kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
@@ -227,6 +228,7 @@ function drawPath(cx, cy, z, x, y, t) {
   if (lk.pat) {
     g.save(); clipTo(roadShapes(arms, t, ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
+  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z);
   const cl = roadCenterline(arms, t);
   if (lk.dash && cl) {
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
@@ -762,6 +764,14 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
+    case 'kristall': {
+      ellipse(cx, cy + 1 * z, 6 * z, 2.6 * z, 'rgba(40,40,60,0.18)');
+      poly([[cx - 5 * z, cy], [cx - 1 * z, cy + 1 * z], [cx - 3 * z, cy - 10 * z]], C('#b98cf2'));
+      poly([[cx - 1 * z, cy + 1 * z], [cx + 3 * z, cy], [cx + 1 * z, cy - 15 * z]], C('#9d6fe0'));
+      poly([[cx + 3 * z, cy], [cx + 6 * z, cy - 1 * z], [cx + 5 * z, cy - 8 * z]], C('#c7a6f7'));
+      glowQuad([[cx - 2 * z, cy - 12 * z], [cx + 2 * z, cy - 12 * z], [cx + 2 * z, cy - 4 * z], [cx - 2 * z, cy - 4 * z]], 18 * z);
+      break;
+    }
     case 'busch': {
       ellipse(cx, cy + 1 * z, 9 * z, 3.5 * z, 'rgba(40,60,20,0.18)');
       circle(cx - 4 * z, cy - 5 * z, 6 * z, C('#4f9e4a'));
@@ -832,11 +842,85 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       circle(sx - 2 * z, sy - 3 * z, 1.8 * z, 'rgba(255,255,255,0.7)');
       break;
     }
-    case 'lm': drawLandmark(t ? t.lm : 'baum', cx, cy, z, now, x, y); break;
+    case 'lm': drawLandmark(t ? t.lm : 'baum', cx, cy, z, now, x, y, t && t.stage != null ? t.stage : lmStage(t ? t.lm : 'baum')); break;
   }
 }
 
-function drawLandmark(type, cx, cy, z, now, x, y) {
+// Sehenswürdigkeit in ihrer Stufe: 0 = verfallen (grau, überwuchert), 1–3 mit immer mehr Details
+function drawLandmark(type, cx, cy, z, now, x, y, stage = 1) {
+  if (stage <= 0) {
+    RUIN = true;
+    drawLandmarkBase(type, cx, cy, z, 0, x, y);
+    RUIN = false;
+    // Gestrüpp und Schutt
+    for (let i = 0; i < 7; i++) {
+      const a = hash(x, y, 700 + i) * Math.PI * 2, r = 0.25 + hash(x, y, 710 + i) * 0.25;
+      const bx = cx + Math.cos(a) * r * TW * z, by = cy + Math.sin(a) * r * TH * z;
+      if (i % 3) circle(bx, by - 2 * z, (3 + hash(x, y, 720 + i) * 3) * z, C(i % 2 ? '#6f8f4a' : '#7d9a55'));
+      else ellipse(bx, by, 3 * z, 1.8 * z, C('#9a948a'));
+    }
+    return;
+  }
+  drawLandmarkBase(type, cx, cy, z, now, x, y);
+  const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
+  const mini = (b, u, v, s, rot = 0) => { const [px, py] = F(u, v); g.save(); g.translate(px, py); g.scale(s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot }); g.restore(); };
+  switch (type) {
+    case 'baum':
+      if (stage >= 2) { mini('bank', 0.38, 0.1, 0.45, 1); mini('bank', -0.1, 0.38, 0.45, 0); }
+      if (stage >= 3) for (let i = 0; i < 9; i++) {
+        const a = i / 9 * Math.PI * 2, lx = cx + Math.cos(a) * 16 * z, ly = cy - 38 * z + Math.sin(a) * 9 * z;
+        const lit = night > 0.15 && isLive();
+        circle(lx, ly, 1.6 * z, lit ? '#ffe58a' : C(['#ffd23f', '#ff8fb1', '#8fc1f0'][i % 3]));
+        glowQuad([[lx - 1, ly - 1], [lx + 1, ly - 1], [lx + 1, ly + 1], [lx - 1, ly + 1]], 10 * z);
+      }
+      break;
+    case 'obsthain':
+      if (stage >= 2) { tree(...F(0.35, -0.25), z * 0.8, 0.3, '#ff6b5e'); for (const [u, v] of [[0.3, 0.3], [0.1, 0.4]]) box(...F(u, v), 3 * z, 1.5 * z, 3 * z, '#c98d5c', null, 0); }
+      if (stage >= 3) mini('pavillon', -0.3, 0.35, 0.5);
+      break;
+    case 'klippe':
+      if (stage >= 2) mini('muehle', -0.4, 0.2, 0.55, 1);
+      if (stage >= 3) for (let i = 0; i < 3; i++) {
+        const kx = cx + (i - 1) * 16 * z + Math.sin(now / 900 + i) * 3 * z, ky = cy - 60 * z - i * 6 * z;
+        poly([[kx, ky - 5 * z], [kx + 4 * z, ky], [kx, ky + 6 * z], [kx - 4 * z, ky]], C(['#e8705f', '#5f8fe8', '#f2b53a'][i]));
+        g.strokeStyle = C('#6b6f78'); g.lineWidth = 0.6 * z;
+        g.beginPath(); g.moveTo(kx, ky + 6 * z); g.quadraticCurveTo(kx + 6 * z, ky + 24 * z, cx + 4 * z, cy - 20 * z); g.stroke();
+      }
+      break;
+    case 'ruine':
+      if (stage >= 2) { const [mx, my] = F(0.3, -0.3); boxR(mx, my, z, 0.18, 0.14, 12 * z, '#efe6d8', '#7d6bb0', 6 * z); }
+      if (stage >= 3) for (let i = 0; i < 3; i++) {
+        const [ax, ay] = F(0.1, 0.35);
+        g.strokeStyle = C('#d6ccb8'); g.lineWidth = 2 * z;
+        g.beginPath(); g.ellipse(ax, ay, (8 + i * 4) * z, (3 + i * 2) * z, 0, Math.PI, 0); g.stroke();
+      }
+      break;
+    case 'erzberg':
+      poly([[cx - 4 * z, cy + 2 * z], [cx + 4 * z, cy + 2 * z], [cx + 4 * z, cy - 7 * z], [cx - 4 * z, cy - 7 * z]], C('#3b3440'));
+      if (stage >= 2) { const [sx, sy] = F(0.4, 0.25); box(sx, sy, 4 * z, 2 * z, 7 * z, '#a86f5c', '#4a4a58', 4 * z); smoke(sx, sy - 13 * z, z, now, true); }
+      if (stage >= 3) { const [tx, ty] = F(-0.4, 0.3); box(tx, ty, 2.5 * z, 1.3 * z, 20 * z, '#cfc8bb', '#6b7a8f', 6 * z); circle(tx, ty - 17 * z, 2 * z, C('#e9a23b')); }
+      break;
+    case 'quelle':
+      for (let i = 0; i < 12 && stage >= 2; i++) {
+        const a = i / 12 * Math.PI * 2;
+        ellipse(cx + Math.cos(a) * hwq(z) , cy + Math.sin(a) * hwq(z) * 0.5, 2.6 * z, 1.6 * z, C('#aeb2bd'));
+      }
+      if (stage >= 3) { const [bx2, by2] = F(-0.35, -0.35); boxR(bx2, by2, z, 0.22, 0.2, 12 * z, '#fff1d6', '#c65a45', 8 * z); }
+      break;
+    case 'kristall':
+      if (stage >= 2) for (const [u, v] of [[0.35, 0.1], [0.1, 0.35], [0.4, 0.35]]) {
+        const [lx, ly] = F(u, v);
+        g.strokeStyle = C('#4a4a58'); g.lineWidth = 1.2 * z;
+        g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx, ly - 12 * z); g.stroke();
+        circle(lx, ly - 13 * z, 2 * z, '#e9d8ff');
+        glowQuad([[lx - 2, ly - 15 * z], [lx + 2, ly - 15 * z], [lx + 2, ly - 11 * z], [lx - 2, ly - 11 * z]], 16 * z);
+      }
+      if (stage >= 3) { poly([[cx + 12 * z, cy + 2 * z], [cx + 18 * z, cy + 1 * z], [cx + 15 * z, cy - 16 * z]], C('#d9c7f7')); glowQuad([[cx - 8 * z, cy - 10 * z], [cx + 8 * z, cy - 10 * z], [cx + 8 * z, cy], [cx - 8 * z, cy]], 40 * z); }
+      break;
+  }
+}
+const hwq = z => TW / 2 * z * 0.78;
+function drawLandmarkBase(type, cx, cy, z, now, x, y) {
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'quelle': {

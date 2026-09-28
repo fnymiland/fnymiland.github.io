@@ -168,7 +168,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 3. ✓ Wege statt Straßen/Gehwege (alle Stile, Dekos auf Wegen, neues Viertel)
 4. ✓ Gebäude über mehrere Felder + Verschieben
 5. ✓ Zufriedenheit + wachsende Häuser + Namen
-6. Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
+6. ✓ Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
 7. Regionen mit Zugängen + Ruinen-Start
 8. Baupläne beim Erschließen + erste Ladung neuer Dinge
 9. Große Forschung mit Stufen

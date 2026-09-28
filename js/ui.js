@@ -124,7 +124,6 @@ function renderStyleBar(t) {
   bar.hidden = false;
 }
 
-function starsHtml(n) { return '★'.repeat(n) + `<span class="off">${'★'.repeat(STARS.length - n)}</span>`; }
 const canResearch = () => TECHS.some(t => !hasTech(t.id) && (t.req || []).every(hasTech) && state.science >= t.cost);
 
 let goalSmall = false;
@@ -142,7 +141,8 @@ function updateHud() {
   rp.hidden = !shown.length;
   rp.innerHTML = shown.map(r => `<span title="${RES[r].name}">${RES[r].icon} <b>${fmt(state.res[r])}</b></span>`).join('');
   $('town-name').textContent = state.town.name;
-  $('hud-stars').innerHTML = starsHtml(state.stars);
+  $('hud-lantern').textContent = `${townTitle()} · 🏮 ${lanternCount()}`;
+  $('diary-dot').hidden = state.diarySeen >= state.diary.length;
   const fl = $('hud-flag');
   fl.style.background = state.town.color;
   fl.textContent = state.town.symbol;
@@ -157,16 +157,13 @@ function updateHud() {
   goal.style.top = top + 'px';
   if (window.innerWidth > 600) $('panel').style.top = top + 'px';
   goal.classList.toggle('small', goalSmall);
-  if (state.stars >= STARS.length) { goal.innerHTML = `<h4><span class="st">★★★★★</span> Inselperle! Gestalte weiter.</h4>`; return; }
-  const s = STARS[state.stars];
-  goal.innerHTML = `<h4>Nächster Stern: ${s.name} <span class="st">${'★'.repeat(state.stars + 1)}</span></h4>` +
-    reqs(state.stars).map(r => {
-      const done = r.have >= r.need, pct = Math.min(100, r.have / r.need * 100);
-      const val = r.flag ? (done ? '✓' : '–') : `${r.rate ? fmtRate(r.have) : fmt(r.have)} / ${fmt(r.need)}`;
-      return `<div class="req${done ? ' done' : ''}">${r.icon} ${r.label}: ${val}<div class="bar"><i style="width:${pct}%"></i></div></div>`;
-    }).join('');
+  goal.innerHTML = goalHtml();
 }
-$('goal').onclick = () => { goalSmall = !goalSmall; updateHud(); };
+$('goal').onclick = e => {
+  if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
+  goalSmall = !goalSmall; updateHud();
+};
+$('diary-btn').onclick = () => openDiary();
 
 // Infofenster
 function closePanel() { $('panel').hidden = true; }
@@ -293,18 +290,32 @@ function openDecoInfo(x, y, slot) {
 }
 
 function openLandmark(x, y) {
-  const t = state.tiles.get(x + ',' + y), L = LANDMARKS[t.lm];
-  const owned = ownedTile(x, y), on = T.lmOn.has(t.lm), half = T.lmHalf.has(t.lm), s = statusOf(x, y) || {};
-  let status = on ? '<div class="ok">✓ Wirkt voll</div>'
-    : half ? '<div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb. Ein Weg zum Dorf bringt die volle Wirkung.</div>'
-    : '<div class="bad">🔒 Liegt auf einem Grundstück, das dir noch nicht gehört.</div>';
-  if (owned) status += `<div>✨ Alles im Umkreis von ${LM_RADIUS} Feldern: +${Math.round(LM_BOOST * 100 * (on ? 1 : 0.5))} % Produktion</div>`;
-  if (t.lm === 'quelle' && owned && !s.road) status += '<div class="bad">🛤️ Touristen kommen nur über einen Weg zum Dorf.</div>';
+  const t = state.tiles.get(x + ',' + y), type = t.lm, L = LANDMARKS[type];
+  const info = restoreInfo(type), owned = ownedTile(x, y), half = T.lmHalf.has(type);
+  const dots = '🏮'.repeat(info.stage) + '<span class="off">🏮</span>'.repeat(3 - info.stage);
+  const stageName = info.stage ? LM_STAGES[type][info.stage - 1].name : 'verfallen';
+  let body = '';
+  if (info.next) {
+    const { money = 0, ...mat } = info.next.cost;
+    const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
+      ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${n}`)].filter(Boolean);
+    const unl = info.next.unlock.map(unlockName);
+    body = `
+      <div class="label">Nächste Stufe: ${info.next.name}</div>
+      <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+      ${unl.length ? `<p class="muted">Schaltet frei: ${unl.join(', ')}</p>` : ''}
+      ${info.err ? `<div class="status"><div class="bad">${info.err}</div></div>` : ''}
+      <div class="row"><button class="btn" id="p-restore" ${info.err ? 'disabled' : ''}>🏮 Restaurieren</button></div>`;
+  } else body = '<p class="ok">Vollständig restauriert – alle drei Laternen brennen.</p>';
   showPanel(`
     <h3>${L.icon} ${L.name}</h3>
-    <p class="big" style="font-size:16px">${L.effect}</p>
-    <div class="status">${status}</div>
+    <p class="hearts">${dots}</p>
+    <p class="muted">Zustand: ${stageName}${info.stage ? ` · Wirkung: ${L.effect}` : ''}</p>
+    ${info.stage && half ? '<div class="status"><div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb.</div></div>' : ''}
+    ${info.stage && owned ? `<p class="muted">✨ Alles in ${LM_RADIUS} Feldern Umkreis: +${Math.round(LM_BOOST * 100 * (half ? 0.5 : 1))} % Produktion</p>` : ''}
+    ${body}
     <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`);
+  if ($('p-restore')) $('p-restore').onclick = () => { if (restoreLandmark(type)) closePanel(); };
   $('p-close').onclick = closePanel;
 }
 
@@ -375,10 +386,16 @@ function wireTownEditor(root, town, onChange) {
   };
 }
 function openTownHall() {
+  const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
   const el = showPanel(`
     <h3>Rathaus von ${escHtml(state.town.name)}</h3>
-    <p class="stars" style="font-size:22px">${starsHtml(state.stars)}</p>
-    <ul class="starlist">${STARS.map((s, i) => `<li class="${i < state.stars ? 'done' : ''}">${i < state.stars ? '✓' : '○'} ${'★'.repeat(i + 1)} ${s.name}</li>`).join('')}</ul>
+    <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
+    ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
+    <ul class="starlist">${Object.keys(LM_STAGES).map(type => {
+      const st = lmStage(type);
+      return `<li class="${st >= 3 ? 'done' : ''}">${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</li>`;
+    }).join('')}
+      <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>
     ${townEditor(state.town)}
     <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Fertig</button></div>`);
   wireTownEditor(el, state.town, () => { updateHud(); save(); });
@@ -400,7 +417,7 @@ function showIntro(first) {
       <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer ein <b>Weg</b> verbindet sie mit dem Dorf.</li>
       <li>🏘️ Was aneinandergrenzt oder über <b>Wege</b> verbunden ist, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
       <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Verkehr und Deko.</li>
-      <li>🗺️ <b>Sehenswürdigkeiten</b> haben eigene Vorteile und geben allem in 10 Feldern Umkreis +15 %.</li>
+      <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten – jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
     <p class="muted" style="font-size:13px">Ziehen = verschieben · Mausrad / zwei Finger = zoomen · Wege: gedrückt halten und ziehen</p>

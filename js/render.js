@@ -268,8 +268,11 @@ function render(now) {
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
   for (const [x, y, type] of labels) {
-    const p = toScreen(x, y), L = LANDMARKS[type], on = T.lmOn.has(type) || T.lmHalf.has(type);
-    pill(`${L.icon} ${L.name}${on ? ' ✓' : ''}`, p.x, p.y - 62 * z, on ? '#eaffea' : '#fff3b0', on ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
+    const p = toScreen(x, y), L = LANDMARKS[type], st = lmStage(type), on = st >= 1;
+    const ready = ownedTile(x, y) && st < 3 && !restoreInfo(type).err;
+    const lanterns = '🏮'.repeat(st) + '·'.repeat(3 - st);
+    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - 62 * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
+      st >= 3 ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
   }
   const price = plotPrice();
   for (const ck of forSale) {
@@ -359,21 +362,10 @@ function spawnIncomeFloats(now) {
   }
 }
 
-function celebrate() {
-  sfx('star');
+function confettiBurst() {
   const cols = ['#f2b53a', '#e8705f', '#5f8fe8', '#58b36a', '#b07ad6', '#f28cb1'];
-  for (let i = 0; i < 180; i++) {
+  for (let i = 0; i < 160; i++) {
     confetti.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.4, vx: (Math.random() - 0.5) * 200,
       vy: Math.random() * 120, r: Math.random() * 6, vr: (Math.random() - 0.5) * 12, col: cols[i % cols.length], life: 5 });
   }
-  const s = state.stars, rw = STARS[s - 1].reward;
-  const unlocked = Object.keys(ITEMS).filter(id => ITEMS[id].star === s && !ITEMS[id].tech).map(id => ITEMS[id].name);
-  openModal(`
-    <h2>${'★'.repeat(s)} ${escHtml(state.town.name)} ist jetzt ${s >= STARS.length ? 'eine' : 'ein'} ${STARS[s - 1].name}!</h2>
-    <p>Belohnung: <b>🪙 ${fmt(rw.money)}</b> und <b>💡 ${fmt(rw.sci)}</b></p>
-    ${unlocked.length ? `<p>Neu: <b>${unlocked.join(', ')}</b></p>` : ''}
-    <p class="muted">${s >= STARS.length ? 'Die Insel ist fertig – aber noch lange nicht zu Ende gestaltet.' : `Nächstes Ziel: ${STARS[s].name}`}</p>
-    <div class="row"><button class="btn" id="m-ok">Weiter geht's!</button></div>`);
-  $('m-ok').onclick = closeModal;
-  buildToolbar();
 }
