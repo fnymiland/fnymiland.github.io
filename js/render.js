@@ -72,7 +72,7 @@ const cachedPath = t => t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id]
 
 // Schlagschatten: Die Sonne steht links, jedes Gebäude wirft einen weichen Schatten nach rechts
 // (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
-const SUN = { dx: 1.5, dy: 0.32 };
+const SUN = { dx: 0.9, dy: 0.2 };
 const SHADOW_COL = 'rgba(30,42,62,0.3)';
 const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34];
 const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feldrand
