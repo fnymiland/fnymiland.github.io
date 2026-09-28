@@ -94,6 +94,13 @@ npm run serve     # Server für WLAN/iPad auf Port 4173
 unendliches Land ohne Ziel · Inselhüpfen (eine Insel bleibt) · Straßenpflicht zum Rathaus · Strom/Kraftwerke ·
 Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse. Züge/Straßenbahn: später neu besprechen.
 
+## Online (GitHub Pages)
+
+Das Spiel liegt unter **https://fnymiland.github.io** (Repository `fnymiland/fnymiland.github.io`, Remote `origin`,
+Branch `main`). **Jeder Push auf `main` ist nach ~1 Minute live** – nur nach Rücksprache pushen. Vorher `npm test`
+und `npm run bump`. Der Zugang (Token) ist im macOS-Schlüsselbund nur für dieses Repository gespeichert
+(`credential.useHttpPath`). Spielstände liegen pro Adresse im Browser – beim Adresswechsel per Datei übertragen.
+
 ## Spielen im WLAN
 
 `python3 -m http.server 4173 --directory ~/Projekte/Spiel` (bzw. Vorschau-Server „spiel“) → auf dem iPad
