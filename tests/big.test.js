@@ -1,0 +1,131 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+beforeAll(() => loadGame());
+beforeEach(() => {
+  game('startNew()');
+  game('closeModal()');
+  // freie Wiese abseits vom Rathaus, viel Geld, alles freigeschaltet
+  game("state.owned.add('1,1'); state.money = 99999; state.stars = 5");
+  game("for (const t of TECHS) state.techs.add(t.id)");
+  game("for (let y = 6; y <= 11; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass')");
+  game('buildRot = 0');
+  game('recalc()');
+});
+const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`);
+
+describe('Gebäude über mehrere Felder', () => {
+  it('ein Markt belegt 2×2 Felder, dort kann nichts anderes hin', () => {
+    build('haus', 6, 6); build('haus', 6, 7);
+    expect(build('markt', 8, 8)).toBe(true);
+    game('recalc()');
+    for (const k of ['8,8', '9,8', '8,9', '9,9']) expect(game(`anchorAt(${k})`)).toBe('8,8');
+    expect(game("placeError('feld', 9, 9)")).toBe('Hier steht schon etwas');
+    expect(game("placeError('markt', 7, 7)")).toBe('Hier ist nicht genug Platz');
+  });
+
+  it('gedreht liegt ein 2×1-Gebäude quer', () => {
+    build('haus', 6, 6); build('haus', 6, 7);
+    game('buildRot = 1');
+    expect(build('saege', 8, 8)).toBe(true);
+    game('recalc()');
+    expect(game("anchorAt(8, 9)")).toBe('8,8');
+    expect(game("anchorAt(9, 8)")).toBe(null);
+  });
+
+  it('Nachbarn zählen rund um die ganze Grundfläche – jedes Gebäude nur einmal', () => {
+    build('haus', 6, 6); build('haus', 6, 7); build('haus', 6, 8);
+    expect(build('baecker', 8, 8)).toBe(true);          // belegt 8,8 und 9,8
+    build('muehle', 10, 8);                               // rechts neben dem zweiten Feld
+    build('muehle', 8, 9);                                // vor dem ersten Feld
+    game('recalc()');
+    expect(game("countNear(8, 8, 1, b => b === 'muehle')")).toBe(2);
+    expect(game("countNear(10, 8, 1, b => b === 'baecker')")).toBe(1);
+  });
+
+  it('Abreißen über irgendein Feld entfernt das ganze Gebäude', () => {
+    build('haus', 6, 6); build('haus', 6, 7);
+    build('markt', 8, 8);
+    game('recalc()');
+    game('demolish(9, 9)');
+    expect(game("state.tiles.has('8,8')")).toBe(false);
+    expect(game("anchorAt(9, 9)")).toBe(null);
+  });
+
+  it('kleine Dekos gehen nicht auf große Gebäude', () => {
+    build('haus', 6, 6); build('haus', 6, 7);
+    build('markt', 8, 8);
+    game('recalc()');
+    expect(game("smallError('blumentopf', 9, 9, 0)")).toBe('Hier ist kein Platz für Deko');
+  });
+});
+
+describe('Verschieben', () => {
+  it('aufnehmen und woanders ablegen – kostenlos, Stufe bleibt', () => {
+    build('haus', 8, 8);
+    game("state.tiles.get('8,8').lvl = 3");
+    const money = game('state.money');
+    game("tool = 'verschieben'");
+    game('pickUp(8, 8, 0)');
+    expect(game("state.tiles.has('8,8')")).toBe(false);
+    game('dropAt(10, 10, 0)');
+    expect(game("state.tiles.get('10,10').lvl")).toBe(3);
+    expect(game('state.money')).toBe(money);
+  });
+
+  it('abbrechen legt es zurück; beim Speichern mitten im Tragen geht nichts verloren', () => {
+    build('haus', 6, 6); build('haus', 6, 7);
+    build('markt', 8, 8);
+    game('pickUp(9, 9, 0)');
+    const saved = game('serialize()');
+    expect(saved.tiles.some(([k, t]) => k === '8,8' && t.b === 'markt')).toBe(true);
+    game('cancelMove()');
+    expect(game("state.tiles.get('8,8').b")).toBe('markt');
+  });
+
+  it('ablegen nur, wo Platz ist', () => {
+    build('haus', 8, 8); build('haus', 9, 8);
+    game('pickUp(8, 8, 0)');
+    game('dropAt(9, 8, 0)');
+    expect(game('moving')).not.toBe(null);
+    game('cancelMove()');
+  });
+
+  it('kleine Dekos wandern von Ecke zu Ecke', () => {
+    game('state.res.bretter = 5');
+    game("buildSmall('bank', 8, 8, 0)");
+    game('pickUp(8, 8, 0)');
+    game('dropAt(9, 9, 3)');
+    expect(game("state.decos.has('8,8')")).toBe(false);
+    expect(game("state.decos.get('9,9')[3].b")).toBe('bank');
+  });
+});
+
+describe('Umgestalten kostet nichts', () => {
+  it('Deko gibt beim Entfernen Geld und Material voll zurück', () => {
+    game('state.res.bretter = 2');
+    const money = game('state.money');
+    game("buildSmall('bank', 8, 8, 0)");
+    game('removeSmall(8, 8, 0)');
+    expect(game('state.money')).toBe(money);
+    expect(game('state.res.bretter')).toBe(2);
+  });
+});
+
+describe('Alte Spielstände', () => {
+  it('ein zu klein gespeicherter Markt bekommt seine Grundfläche oder wird erstattet', () => {
+    game("state.tiles.set('8,8', { b: 'markt', lvl: 1 })");
+    game("for (const k of ['9,8', '8,9', '9,9', '7,8', '8,7', '7,7', '7,9', '9,7']) state.tiles.set(k, { b: 'feld', lvl: 1 })");
+    const money = game('state.money');
+    const removed = game('fitFootprints()');
+    expect(removed).toEqual(['Markt']);
+    expect(game('state.money')).toBe(money + 800);
+    expect(game("state.tiles.has('8,8')")).toBe(false);
+  });
+
+  it('passt er daneben, rückt er einfach', () => {
+    game("state.tiles.set('8,8', { b: 'markt', lvl: 1 })");
+    game("state.tiles.set('9,8', { b: 'feld', lvl: 1 })");
+    expect(game('fitFootprints()')).toEqual([]);
+    expect(game("state.tiles.get('7,8').b")).toBe('markt');
+  });
+});

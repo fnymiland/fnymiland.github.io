@@ -9,14 +9,14 @@ beforeEach(() => {
 describe('Spielstand sichern und laden', () => {
   it('Export und Import ergeben dieselbe Insel', () => {
     game("state.money = 1234; state.res.bretter = 9; state.town.name = 'Möwenhausen'");
-    game("build('haus', 3, 3, true)");
+    game("build('haus', 4, 4, true)");
     const data = JSON.stringify(game('serialize()'));
     game('startNew()');
     game(`adoptState(parseSave(JSON.parse(${JSON.stringify(data)})))`);
     expect(game('state.money')).toBe(1234 - 40);
     expect(game('state.res.bretter')).toBe(9);
     expect(game('state.town.name')).toBe('Möwenhausen');
-    expect(game("state.tiles.get('3,3').b")).toBe('haus');
+    expect(game("state.tiles.get('4,4').b")).toBe('haus');
   });
 
   it('fremde oder kaputte Dateien werden abgelehnt', () => {

@@ -24,8 +24,8 @@ function thumb(type) {
   const c = document.createElement('canvas');
   c.width = 112; c.height = 88;
   const prev = g; g = c.getContext('2d'); FOG = false;
-  const tall = ['leuchtturm', 'windrad'].includes(type);
-  const z = tall ? 0.95 : 1.3, cx = 56, cy = tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
+  const tall = ['leuchtturm', 'windrad'].includes(type), big = isBig(type);
+  const z = big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
     poly([[cx, cy + hh * s], [cx + hw * s, cy], [cx + hw * s, cy + d], [cx, cy + hh * s + d]], '#b0895a');
@@ -80,7 +80,7 @@ function buildToolbar() {
     if (d.cat !== cat) continue;
     const locked = !available(id);
     const sub = locked ? lockText(id) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
-    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : thumb(id));
+    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : id === 'verschieben' ? emoji('✋') : thumb(id));
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
     if (locked) b.classList.add('locked');
@@ -89,6 +89,7 @@ function buildToolbar() {
 }
 
 function setTool(t) {
+  if (t !== 'verschieben' && moving) cancelMove();
   tool = t;
   previewCache = null;
   if (t !== 'look') closePanel();
@@ -192,15 +193,15 @@ function openInfo(x, y) {
   const beete = beetBonus(x, y);
   if (d.pop) why.push(`👥 ${d.pop * t.lvl} Einwohner`);
   if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben`);
-  if (t.b === 'muehle') why.push(`${countAround(x, y, 1, (a, c) => bAt(a, c) === 'feld')} Felder daneben`);
-  if (t.b === 'baecker') why.push(`${countAround(x, y, 1, (a, c) => bAt(a, c) === 'muehle')} Mühlen daneben`);
-  if (t.b === 'markt') why.push(`${countAround(x, y, 2, isProducer)} Gebäude in der Nähe`);
-  if (t.b === 'fabrik') why.push(`${countAround(x, y, 3, (a, c) => bAt(a, c) === 'mine')} Bergwerke in der Nähe`);
+  if (t.b === 'muehle') why.push(`${countNear(x, y, 1, b => b === 'feld')} Felder daneben`);
+  if (t.b === 'baecker') why.push(`${countNear(x, y, 1, b => b === 'muehle')} Mühlen daneben`);
+  if (t.b === 'markt') why.push(`${countNear(x, y, 2, isProducerB)} Gebäude in der Nähe`);
+  if (t.b === 'fabrik') why.push(`${countNear(x, y, 3, b => b === 'mine')} Bergwerke in der Nähe`);
   if (d.cat === 'bau' && beete) why.push(`${beete} Blumenbeet${beete > 1 ? 'e' : ''}: +${beete * 15} %`);
   if (d.up && t.lvl > 1) why.push(`Stufe ${t.lvl}: ×${t.lvl}`);
   const b = beautyOf(t, x, y);
   if (b) why.push(`🌸 ${b > 0 ? '+' : ''}${nf1.format(b)}`);
-  if (d.cat === 'deko' && d.beauty && countAround(x, y, 2, isHouse)) why.push('neben Häusern ×1,5');
+  if (d.cat === 'deko' && d.beauty && nearHouse(x, y)) why.push('neben Häusern ×1,5');
   const outs = [];
   if (s.prod) for (const [r, v] of Object.entries(s.prod)) outs.push(`+${fmtRate(v * 60)} ${RES[r].icon}/min`);
   else if (d.conv) outs.push(`${CONV_RATIO} ${RES[d.conv.from].icon} → 1 ${RES[d.conv.to].icon} · bis ${fmtRate((s.conv || 0) * 60)}/min`);
@@ -234,7 +235,15 @@ function openInfo(x, y) {
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
   if (up) $('p-up').onclick = () => upgrade(x, y);
-  if ($('p-rot')) $('p-rot').onclick = () => { t.rot = ((t.rot || 0) + 1) % 4; t.born = performance.now(); sfx('deco'); save(); };
+  if ($('p-rot')) $('p-rot').onclick = () => {
+    // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
+    const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4;
+    state.tiles.delete(k); rebuildCover();
+    const err = isBig(t.b) ? placeError(t.b, x, y, nr, { move: true }) : null;
+    state.tiles.set(k, t);
+    if (err) { recalc(); fail('Zum Drehen ist hier nicht genug Platz'); return; }
+    t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
+  };
   $('p-close').onclick = closePanel;
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
@@ -245,7 +254,7 @@ function openDecoInfo(x, y, slot) {
   const d = decosAt(x + ',' + y)[slot], it = ITEMS[d.b];
   showPanel(`
     <h3>${it.name}</h3>
-    <div class="stats"><span>🌸 +${it.beauty}${countAround(x, y, 2, isHouse) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
+    <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       <button class="btn danger" id="p-del">Entfernen · +🪙 ${fmt(Math.floor(it.cost / 2))}</button>

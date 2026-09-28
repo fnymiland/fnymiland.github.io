@@ -166,7 +166,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 1. ✓ Rohstoffe + Lager + Sägewerk/Steinmetz/Schmiede
 2. ✓ Technik aufräumen (Teile + Tests) + Spielstand exportieren/importieren
 3. ✓ Wege statt Straßen/Gehwege (alle Stile, Dekos auf Wegen, neues Viertel)
-4. Gebäude über mehrere Felder + Verschieben
+4. ✓ Gebäude über mehrere Felder + Verschieben
 5. Zufriedenheit + wachsende Häuser + Namen
 6. Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
 7. Regionen mit Zugängen + Ruinen-Start

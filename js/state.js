@@ -39,7 +39,18 @@ function serialize() {
     if (t.style) o.style = t.style;
     tiles.push([k, o]);
   }
-  const decos = [...state.decos].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
+  if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') {
+    const t = moving.t, o = { b: t.b, lvl: t.lvl };
+    for (const f of ['wall', 'roof', 'lm', 'rot', 'style']) if (t[f] != null) o[f] = t[f];
+    tiles.push([moving.from, o]);
+  }
+  const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
+  if (typeof moving !== 'undefined' && moving && moving.kind === 'deco') {
+    const [k, slot] = moving.from;
+    if (!decoMap.has(k)) decoMap.set(k, [null, null, null, null]);
+    decoMap.get(k)[slot] = moving.d;
+  }
+  const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
     game: 'kachelhausen', v: 3, seed: state.seed, money: state.money, res: state.res, science: state.science, stars: state.stars,
     town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
@@ -111,6 +122,7 @@ function adoptState(s) {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
+  fitFootprints();
   recalc();
   buildToolbar();
   save();

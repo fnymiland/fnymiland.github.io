@@ -8,7 +8,7 @@ const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [];
 const walkable = (x, y) => {
   if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
-  const t = state.tiles.get(x + ',' + y);
+  const t = objAt(x, y);
   return !t || t.b === 'weg';
 };
 const drivable = () => false;

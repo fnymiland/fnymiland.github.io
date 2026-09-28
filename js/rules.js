@@ -3,16 +3,54 @@
 // Netz: Viertel, Arbeitswege, Ideen, Einnahmen, Rohstoffe, Schönheit
 // ---------------------------------------------------------------------------
 const hasTech = id => state.techs.has(id);
-function bAt(x, y) { const t = state.tiles.get(x + ',' + y); return t ? t.b : null; }
-function countAround(x, y, r, fn) {
-  let n = 0;
-  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-    if ((dx || dy) && fn(x + dx, y + dy)) n++;
+// Grundflächen: Gebäude können mehrere Felder belegen. Gespeichert wird nur das Ankerfeld (hinterste Ecke);
+// COVER sagt für jedes belegte Feld, zu welchem Anker es gehört.
+const sizeOf = (b, rot) => { const s = ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+function footprint(b, ax, ay, rot) {
+  const [w, h] = sizeOf(b, rot || 0), out = [];
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
+  return out;
+}
+let COVER = new Map();
+function rebuildCover() {
+  COVER = new Map();
+  for (const [k, t] of state.tiles) {
+    const [x, y] = keyXY(k);
+    for (const [fx, fy] of footprint(t.b, x, y, t.rot)) COVER.set(fx + ',' + fy, k);
   }
+}
+const anchorAt = (x, y) => COVER.get(x + ',' + y) || null;
+const objAt = (x, y) => { const a = anchorAt(x, y); return a ? state.tiles.get(a) : null; };
+function bAt(x, y) { const t = objAt(x, y); return t ? t.b : null; }
+const isBig = b => { const s = ITEMS[b].size; return !!s && (s[0] > 1 || s[1] > 1); };
+
+// Felder rund um ein Objekt – bei großen Gebäuden rund um die ganze Grundfläche
+function aroundTiles(x, y, r) {
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
+  const [ax, ay] = t ? keyXY(a) : [x, y];
+  const [w, h] = t ? sizeOf(t.b, t.rot) : [1, 1];
+  const out = [];
+  for (let yy = ay - r; yy <= ay + h - 1 + r; yy++) for (let xx = ax - r; xx <= ax + w - 1 + r; xx++) {
+    if (xx >= ax && xx < ax + w && yy >= ay && yy < ay + h) continue;
+    out.push([xx, yy]);
+  }
+  return out;
+}
+function countAround(x, y, r, fn) {           // Felder zählen (z. B. Wasser)
+  let n = 0;
+  for (const [a, b] of aroundTiles(x, y, r)) if (fn(a, b)) n++;
   return n;
 }
+function countNear(x, y, r, pred) {           // Gebäude zählen – jedes nur einmal, auch wenn es groß ist
+  const seen = new Set();
+  for (const [a, b] of aroundTiles(x, y, r)) {
+    const k = anchorAt(a, b);
+    if (k && !seen.has(k) && pred(state.tiles.get(k).b)) seen.add(k);
+  }
+  return seen.size;
+}
 const isWater = (x, y) => terrainAt(x, y) === 'water';
-const isProducer = (x, y) => { const b = bAt(x, y); return !!b && ITEMS[b].cat === 'bau' && b !== 'markt'; };
+const isProducerB = b => ITEMS[b].cat === 'bau' && b !== 'markt';
 const isHouse = (x, y) => bAt(x, y) === 'haus';
 // Regeln (gemeinsam festgelegt): Viertel über Nachbarschaft und Wege, Fußweg 4 Felder, sonst halbe Kraft
 const WALK_REACH = 4, FAR_EFF = 0.5;
@@ -38,7 +76,7 @@ function unionFind() {
 // Wege verbinden so auch weit entfernte Orte mit dem Dorf.
 function computeNet() {
   const uf = unionFind();
-  const occupied = new Set([...state.tiles.keys(), ...state.decos.keys()]);
+  const occupied = new Set([...COVER.keys(), ...state.decos.keys()]);
   for (const k of occupied) {
     uf.add(k);
     const [x, y] = keyXY(k);
@@ -49,11 +87,12 @@ function computeNet() {
   }
   const vOf = k => uf.parent.has(k) ? uf.find(k) : null;
   const vSize = new Map(), vHome = new Set();
-  for (const k of occupied) {
-    const t = state.tiles.get(k), v = vOf(k);
-    if (!t || countsForViertel(t.b)) vSize.set(v, (vSize.get(v) || 0) + 1);
-    if (t && t.b === 'haus') vHome.add(v);
+  for (const [k, t] of state.tiles) {
+    const v = vOf(k);
+    if (countsForViertel(t.b)) vSize.set(v, (vSize.get(v) || 0) + 1);
+    if (t.b === 'haus') vHome.add(v);
   }
+  for (const k of state.decos.keys()) if (!COVER.has(k)) { const v = vOf(k); vSize.set(v, (vSize.get(v) || 0) + 1); }
   // Häuser in Laufweite
   const houses = [];
   for (const [k, t] of state.tiles) if (t.b === 'haus') houses.push(keyXY(k));
@@ -81,18 +120,19 @@ function rawIncome(b, x, y) {
     case 'haus': return 0.5;
     case 'feld': return hasTech('duenger') ? 1.5 : 1;
     case 'fischer': return 1 + 1.5 * countAround(x, y, 1, isWater);
-    case 'muehle': return 0.5 + 2 * countAround(x, y, 1, (a, c) => bAt(a, c) === 'feld');
-    case 'baecker': return 2 + 6 * countAround(x, y, 1, (a, c) => bAt(a, c) === 'muehle');
-    case 'markt': return 1.5 * countAround(x, y, 2, isProducer);
-    case 'fabrik': return 25 + 5 * countAround(x, y, 3, (a, c) => bAt(a, c) === 'mine');
+    case 'muehle': return 0.5 + 2 * countNear(x, y, 1, b => b === 'feld');
+    case 'baecker': return 2 + 6 * countNear(x, y, 1, b => b === 'muehle');
+    case 'markt': return 1.5 * countNear(x, y, 2, isProducerB);
+    case 'fabrik': return 25 + 5 * countNear(x, y, 3, b => b === 'mine');
     case 'leuchtturm': return 10;
     default: return 0;
   }
 }
-const beetBonus = (x, y) => countAround(x, y, 1, (a, c) => bAt(a, c) === 'blumen');
+const beetBonus = (x, y) => countNear(x, y, 1, b => b === 'blumen');
+const nearHouse = (x, y) => countNear(x, y, 2, b => b === 'haus') > 0;
 function beautyOf(t, x, y) {
   const d = ITEMS[t.b];
-  const nearHome = countAround(x, y, 2, isHouse) > 0;
+  const nearHome = nearHouse(x, y);
   let v = 0;
   if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1);
   if (d.ugly && nearHome) v -= d.ugly;
@@ -101,6 +141,7 @@ function beautyOf(t, x, y) {
 
 let NET = null;
 function totals() {
+  rebuildCover();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -163,7 +204,7 @@ function totals() {
     }
   }
   for (const [k, ds] of state.decos) {
-    const [x, y] = keyXY(k), nearHome = countAround(x, y, 2, isHouse) > 0 || isHouse(x, y);
+    const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     for (const d of ds) if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1);
   }
   // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Weg: halb; Touristen nur per Weg)
@@ -197,15 +238,16 @@ function slotAt(sx, sy) {
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
 const BIG_ON_TILE = new Set(['brunnen', 'pavillon', 'statue', 'baum', 'blumen', 'windrad', 'lm']);
-function smallError(b, x, y, slot) {
+function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
-  if (!available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
-  const t = state.tiles.get(k);
-  if (t && BIG_ON_TILE.has(t.b)) return 'Hier ist kein Platz für Deko';
+  const t = objAt(x, y);
+  if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (!t && terrainAt(x, y) !== 'grass') return 'Erst roden bzw. sprengen';
   if (decosAt(k) && decosAt(k)[slot]) return 'Diese Ecke ist schon belegt';
+  if (opts.move) return null;
   if (state.money < d.cost) return 'Zu wenig Taler';
   return matError(d.mat);
 }
@@ -224,7 +266,9 @@ function buildSmall(b, x, y, slot) {
 function removeSmall(x, y, slot) {
   const k = x + ',' + y, ds = decosAt(k);
   if (!ds || !ds[slot]) return;
-  state.money += Math.floor(ITEMS[ds[slot].b].cost / 2);
+  const it = ITEMS[ds[slot].b];
+  state.money += it.cost;
+  for (const [r, n] of Object.entries(it.mat || {})) state.res[r] += n;
   ds[slot] = null;
   if (ds.every(v => !v)) state.decos.delete(k);
   sfx('dig'); recalc(); save();
@@ -250,40 +294,90 @@ const upgradable = t => ITEMS[t.b].up && t.lvl < MAX_LVL;
 const upgradeCost = t => Math.round(ITEMS[t.b].cost * Math.pow(1.8, t.lvl));
 const hasBuilt = b => [...state.tiles.values()].some(t => t.b === b);
 
-function placeError(b, x, y) {
+// Passt das Objekt mit Anker (x, y) hierhin? opts.move: beim Verschieben zählen Kosten und Einwohner nicht
+function placeError(b, x, y, rot = buildRot, opts = {}) {
   const d = ITEMS[b];
-  if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
-  if (!available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
-  const obj = state.tiles.get(x + ',' + y);
-  const ter = terrainAt(x, y);
-  if (b === 'graben') {
-    if (obj) return 'Hier steht etwas';
-    if (ter === 'water') return 'Hier ist schon Wasser';
-    if (ter !== 'grass') return 'Erst roden bzw. sprengen';
-  } else if (b === 'schuett') {
-    if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
+  const r = ROTATABLE.has(b) ? rot : 0;
+  if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'graben' || b === 'schuett') {
+    if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
+    const ter = terrainAt(x, y);
+    if (b === 'graben') {
+      if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
+      if (ter === 'water') return 'Hier ist schon Wasser';
+      if (ter !== 'grass') return 'Erst roden bzw. sprengen';
+    } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
   } else {
-    if (obj) return 'Hier steht schon etwas';
-    if (ter === 'water') return 'Nicht auf dem Wasser';
-    if (BIG_ON_TILE.has(b) && decosAt(x + ',' + y)) return 'Hier stehen schon kleine Dekos';
-    const need = d.needs;
-    if (need === 'forest' && ter !== 'forest') return 'Nur im Wald';
-    if (need === 'rock' && ter !== 'rock') return 'Nur auf Fels';
-    if (need === 'erz' && ter !== 'erz') return 'Nur auf Erzadern (am Erzberg)';
-    if (need === 'obst' && ter !== 'obst') return 'Nur im Wilden Obsthain';
-    if ((need === 'grass' || need === 'shore') && ter !== 'grass') {
-      return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
+    const tiles = footprint(b, x, y, r);
+    for (const [fx, fy] of tiles) {
+      const k = fx + ',' + fy, ter = terrainAt(fx, fy);
+      if (!ownedTile(fx, fy)) return 'Das ist nicht dein Grundstück';
+      if (COVER.has(k)) return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
+      if (ter === 'water') return 'Nicht auf dem Wasser';
+      if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
+      const need = d.needs;
+      if (need === 'forest' && ter !== 'forest') return 'Nur im Wald';
+      if (need === 'rock' && ter !== 'rock') return 'Nur auf Fels';
+      if (need === 'erz' && ter !== 'erz') return 'Nur auf Erzadern (am Erzberg)';
+      if (need === 'obst' && ter !== 'obst') return 'Nur im Wilden Obsthain';
+      if ((need === 'grass' || need === 'shore') && ter !== 'grass') {
+        return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
+      }
     }
-    if (need === 'shore' && !countAround(x, y, 1, isWater)) return 'Muss direkt am Wasser stehen';
-    if (d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
+    if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
+    if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
+  if (opts.move) return null;
   if (state.money < (d.cost || 0)) return 'Zu wenig Taler';
   return matError(d.mat);
 }
 
+// Alte Spielstände: Gebäude, die jetzt mehrere Felder belegen, bekommen ihre Grundfläche.
+// Passt es nirgends, werden Kosten und Material erstattet. Das Rathaus bleibt immer: was im Weg liegt, weicht.
+function fitFootprints() {
+  const removed = [];
+  const refundObj = (k, t) => {
+    const d = ITEMS[t.b];
+    state.money += d.cost || 0;
+    for (const [r, n] of Object.entries(d.mat || {})) state.res[r] += n;
+    state.tiles.delete(k);
+  };
+  rebuildCover();
+  for (const [k, t] of [...state.tiles]) {
+    if (!isBig(t.b)) continue;
+    const [w, h] = sizeOf(t.b, t.rot);
+    const [x, y] = keyXY(k);
+    // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?
+    state.tiles.delete(k); rebuildCover();
+    const ok = (ax, ay) => placeError(t.b, ax, ay, t.rot || 0, { move: true }) === null;
+    let spot = [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]].find(([ax, ay]) => ok(ax, ay));
+    if (!spot && t.b === 'rathaus') {
+      for (const [fx, fy] of footprint(t.b, x, y, t.rot)) {
+        const kk = fx + ',' + fy, a = anchorAt(fx, fy);
+        if (a && state.tiles.get(a).b !== 'lm') { const o = state.tiles.get(a); if (o.b !== 'weg') removed.push(ITEMS[o.b].name); refundObj(a, o); }
+        const ds = state.decos.get(kk);
+        if (ds) { for (const d of ds) if (d) state.money += ITEMS[d.b].cost; state.decos.delete(kk); }
+        rebuildCover();
+      }
+      spot = [x, y];
+    }
+    if (spot) {
+      state.tiles.set(spot[0] + ',' + spot[1], t);
+      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot)) state.decos.delete(fx + ',' + fy);
+    } else {
+      removed.push(ITEMS[t.b].name);
+      state.money += ITEMS[t.b].cost || 0;
+      for (const [r, n] of Object.entries(ITEMS[t.b].mat || {})) state.res[r] += n;
+    }
+    rebuildCover();
+    void w; void h;
+  }
+  return removed;
+}
+
 function demolishInfo(x, y) {
   if (!ownedTile(x, y)) return { err: 'Das ist nicht dein Grundstück' };
-  const t = state.tiles.get(x + ',' + y);
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t) {
     const d = ITEMS[t.b];
     if (t.b === 'lm') return { err: 'Sehenswürdigkeiten bleiben stehen' };
@@ -292,7 +386,9 @@ function demolishInfo(x, y) {
       const lost = d.pop * t.lvl;
       if (T.pop - lost < T.jobs) return { err: 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.' };
     }
-    return { refund: Math.floor(d.cost / 2), label: `${d.name} abreißen` };
+    // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte
+    const full = d.cat === 'deko' || t.b === 'weg';
+    return { anchor: a, refund: full ? d.cost : Math.floor(d.cost / 2), mat: full ? d.mat : null, label: `${d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
@@ -303,12 +399,13 @@ function demolishInfo(x, y) {
 let previewCache = null;
 function previewDelta(b, x, y) {
   const k = x + ',' + y;
-  if (previewCache && previewCache.k === k && previewCache.b === b) return previewCache;
-  state.tiles.set(k, { b, lvl: 1 });
+  if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === buildRot) return previewCache;
+  state.tiles.set(k, { b, lvl: 1, rot: ROTATABLE.has(b) ? buildRot : 0 });
   const t = totals();
   state.tiles.delete(k);
+  rebuildCover();
   const st = t.st.get(k) || {};
-  previewCache = { k, b, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
+  previewCache = { k, b, rot: buildRot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0 };
   return previewCache;
 }

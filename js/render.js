@@ -100,31 +100,59 @@ function render(now) {
     g.strokeStyle = '#f2b53a'; g.lineWidth = 3 * z; g.stroke();
   }
 
-  // 3) Vorschau-Rahmen
+  // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   let preview = null;
+  const outline = (ax, ay, w, h, ok) => {
+    const c = [toScreen(ax - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay + h - 0.5), toScreen(ax - 0.5, ay + h - 0.5)];
+    g.strokeStyle = ok ? '#3fbf6f' : '#e5484d';
+    g.lineWidth = 3 * z;
+    g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath(); g.stroke();
+    return toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2);
+  };
+  const objBox = (x, y) => {           // Grundfläche des Objekts unter dem Zeiger
+    const a = anchorAt(x, y);
+    if (!a) return [x, y, 1, 1];
+    const t = state.tiles.get(a), [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
+    return [ax, ay, w, h];
+  };
+  const ghostType = tool === 'verschieben' ? movingType() : tool;
+  const smallMode = tool === 'verschieben' ? !!moving && moving.kind === 'deco' : !!(ITEMS[tool] && ITEMS[tool].small);
   if (hover && tool !== 'look' && ownedTile(hover.x, hover.y)) {
-    const p = toScreen(hover.x, hover.y);
-    const hds = decosAt(hover.x + ',' + hover.y);
-    if (tool === 'abriss' && hds && hds[hoverSlot]) {
-      preview = { p, ok: true, text: `${ITEMS[hds[hoverSlot].b].name} entfernen: +${fmt(Math.floor(ITEMS[hds[hoverSlot].b].cost / 2))}` };
-    } else if (ITEMS[tool] && ITEMS[tool].small) {
-      const err = smallError(tool, hover.x, hover.y, hoverSlot);
-      preview = { p, ok: !err, small: !err || err === 'Zu wenig Taler', text: err || `🌸 +${ITEMS[tool].beauty}` };
-    } else if (tool === 'weg' && bAt(hover.x, hover.y) === 'weg') {
-      const cur = styleDef('weg', state.tiles.get(hover.x + ',' + hover.y).style), nx = styleDef('weg', currentStyle('weg'));
-      preview = { p, ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
+    const hx = hover.x, hy = hover.y;
+    const hds = decosAt(hx + ',' + hy);
+    const rotOf = b => ROTATABLE.has(b) ? buildRot : 0;
+    let box = [hx, hy, 1, 1];
+    if (tool === 'verschieben' && !moving) {
+      const has = (hds && hds[hoverSlot]) || anchorAt(hx, hy);
+      if (!(hds && hds[hoverSlot])) box = objBox(hx, hy);
+      preview = { ok: !!has, text: has ? 'Aufnehmen' : 'Hier ist nichts' };
+    } else if (smallMode) {
+      const err = tool === 'verschieben' ? moveError(hx, hy, hoverSlot) : smallError(tool, hx, hy, hoverSlot);
+      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}`) };
+    } else if (tool === 'verschieben') {
+      const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType));
+      box = [hx, hy, w, h];
+      preview = { ok: !err, ghost: !err || true, text: err || 'Hierhin' };
+    } else if (tool === 'abriss' && hds && hds[hoverSlot]) {
+      const it = ITEMS[hds[hoverSlot].b];
+      preview = { ok: true, text: `${it.name} entfernen: +${fmt(it.cost)}` };
+    } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
+      const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
+      preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
     } else if (tool === 'abriss') {
-      const info = demolishInfo(hover.x, hover.y);
-      preview = { p, ok: !info.err, text: info.err || (info.refund != null ? `${info.label}: +${fmt(info.refund)}` : `${info.label}: −${fmt(info.cost)}`) };
+      const info = demolishInfo(hx, hy);
+      box = objBox(hx, hy);
+      preview = { ok: !info.err, text: info.err || (info.refund != null ? `${info.label}: +${fmt(info.refund)}` : `${info.label}: −${fmt(info.cost)}`) };
     } else {
-      const err = placeError(tool, hover.x, hover.y);
-      const d = ITEMS[tool];
+      const err = placeError(tool, hx, hy);
+      const d = ITEMS[tool], [w, h] = sizeOf(tool, rotOf(tool));
+      box = [hx, hy, w, h];
       let text = err;
       if (!err) {
         if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(d.cost)}`;
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else {
-          const pv = previewDelta(tool, hover.x, hover.y), parts = [];
+          const pv = previewDelta(tool, hx, hy), parts = [];
           if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
           if (Math.abs(pv.inc) >= 0.05) parts.push(`${pv.inc > 0 ? '+' : ''}${fmtRate(pv.inc)}/s`);
           if (Math.abs(pv.sci) >= 0.05) parts.push(`💡 +${fmtRate(pv.sci)}`);
@@ -136,16 +164,16 @@ function render(now) {
           text = parts.join('  ') || d.name;
         }
       }
-      preview = { p, ok: !err, ghost: d.cat !== 'land' && !d.ground && !state.tiles.has(hover.x + ',' + hover.y) && terrainAt(hover.x, hover.y) !== 'water', text };
+      const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && terrainAt(fx, fy) !== 'water');
+      preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
     }
-    g.strokeStyle = preview.ok ? '#3fbf6f' : '#e5484d';
-    g.lineWidth = 3 * z;
-    g.beginPath();
-    g.moveTo(p.x, p.y - TH / 2 * z); g.lineTo(p.x + TW / 2 * z, p.y); g.lineTo(p.x, p.y + TH / 2 * z); g.lineTo(p.x - TW / 2 * z, p.y);
-    g.closePath(); g.stroke();
+    preview.p = outline(box[0], box[1], box[2], box[3], preview.ok);
+    preview.box = box;
   }
+  const ghostFront = preview && preview.ghost ? [preview.box[0] + preview.box[2] - 1, preview.box[1] + preview.box[3] - 1] : null;
+  const inGhost = (x, y) => preview && preview.ghost && x >= preview.box[0] && x < preview.box[0] + preview.box[2] && y >= preview.box[1] && y < preview.box[1] + preview.box[3];
 
-  // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn)
+  // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map();
   for (const m of walkers.concat(cars)) {
     const k = Math.round(m.px) + ',' + Math.round(m.py);
@@ -159,48 +187,50 @@ function render(now) {
     const owned = ownedTile(x, y);
     FOG = !owned;
     const k = x + ',' + y;
-    const t = state.tiles.get(k);
-    const isGhost = preview && preview.ghost && hover.x === x && hover.y === y;
-    if (t) {
-      if (t.b === 'lm') { FOG = false; labels.push([x, y, t.lm]); }
-      let sc = 1;
-      if (t.born) {
-        const a = (now - t.born) / 380;
-        if (a < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(a - 1, 3) + c1 * Math.pow(a - 1, 2)); }
-      }
-      const ds = sc * decoScale(t.b);
-      drawSmall(k, px, py, z, now, x, y, [0]);
-      g.save(); g.translate(px, py); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-      drawObject(t.b, 0, 0, z, now, x, y, t.lvl, t);
-      g.restore();
-      drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
-      if (t.lvl > 1) drawBadge(px, py, z, t.lvl);
-      const s = T.st.get(k);
-      if (s && t.b !== 'lm' && !PROBE) {
-        const d = ITEMS[t.b];
-        const icon = needsReach(t.b) && s.how === 'weit' ? '🐌' : null;
-        if (icon) icons.push([px, py, icon]);
+    const a = COVER.get(k);
+    if (a) {
+      const t = state.tiles.get(a), [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
+      if (x === ax + w - 1 && y === ay + h - 1) {
+        const c = w === 1 && h === 1 ? { x: px, y: py } : toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2);
+        if (t.b === 'lm') { FOG = false; labels.push([ax, ay, t.lm]); }
+        let sc = 1;
+        if (t.born) {
+          const an = (now - t.born) / 380;
+          if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
+        }
+        const ds = sc * decoScale(t.b);
+        if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [0]);
+        g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+        drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
+        g.restore();
+        if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
+        if (t.lvl > 1) drawBadge(c.x, c.y - (w > 1 || h > 1 ? 14 * z : 0), z, t.lvl);
+        const s = T.st.get(a);
+        if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
       }
     } else {
-      const ter = terrainAt(x, y);
-      if (ter === 'forest' && !(isGhost && tool === 'holz')) drawForest(px, py, z, x, y, 3);
-      else if (ter === 'obst' && !(isGhost && tool === 'obst')) drawForest(px, py, z, x, y, 3, true);
-      else if (ter === 'rock' && !(isGhost && tool === 'stein')) drawRocks(px, py, z, x, y);
-      else if (ter === 'erz' && !(isGhost && tool === 'mine')) drawRocks(px, py, z, x, y, true);
+      const ter = terrainAt(x, y), hide = inGhost(x, y);
+      if (ter === 'forest' && !(hide && ghostType === 'holz')) drawForest(px, py, z, x, y, 3);
+      else if (ter === 'obst' && !(hide && ghostType === 'obst')) drawForest(px, py, z, x, y, 3, true);
+      else if (ter === 'rock' && !(hide && ghostType === 'stein')) drawRocks(px, py, z, x, y);
+      else if (ter === 'erz' && !(hide && ghostType === 'mine')) drawRocks(px, py, z, x, y, true);
       drawSmall(k, px, py, z, now, x, y, [0, 1, 2, 3]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
       const [u, v] = slotUV(hoverSlot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
-      drawSmallOne(tool, buildRot, q[0], q[1], z, now, x, y, 1);
+      drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1);
       g.globalAlpha = 1;
     }
-    if (isGhost) {
+    if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
+      const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
+      const rot = ROTATABLE.has(ghostType) ? buildRot : 0;
       g.globalAlpha = 0.65;
-      g.save(); g.translate(px, py);
-      const gs = decoScale(tool);
-      g.scale((buildRot & 1) && MIRROR.has(tool) && ROTATABLE.has(tool) ? -gs : gs, gs);
-      drawObject(tool, 0, 0, z, now, x, y, 1, { rot: ROTATABLE.has(tool) ? buildRot : 0 });
+      g.save(); g.translate(c.x, c.y);
+      const gs = decoScale(ghostType);
+      g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
+      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined };
+      drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;
     }

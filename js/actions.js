@@ -47,8 +47,9 @@ function demolish(x, y) {
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
   if (info.refund != null) {
-    state.tiles.delete(k);
+    state.tiles.delete(info.anchor);
     state.money += info.refund;
+    for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
     if (info.refund) addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
   } else {
     if (state.money < info.cost) { fail('Zu wenig Taler'); return; }
@@ -59,6 +60,64 @@ function demolish(x, y) {
   sfx('dig');
   recalc();
   save();
+}
+
+// Verschieben: aufnehmen, Ziel antippen, ablegen – kostenlos. Während des Tragens bleibt das Objekt
+// im Spielstand an seinem alten Platz (serialize), damit beim Schließen der App nichts verloren geht.
+let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] }
+const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving.d.b);
+function pickUp(x, y, slot) {
+  const k = x + ',' + y, ds = decosAt(k);
+  if (ds && ds[slot]) {
+    moving = { kind: 'deco', d: ds[slot], from: [k, slot] };
+    ds[slot] = null;
+    if (ds.every(v => !v)) state.decos.delete(k);
+    buildRot = moving.d.rot || 0;
+  } else {
+    const a = anchorAt(x, y), t = a && state.tiles.get(a);
+    if (!t) { toast('Hier ist nichts zum Verschieben'); return; }
+    if (t.b === 'lm') { fail('Sehenswürdigkeiten bleiben, wo sie sind'); return; }
+    moving = { kind: 'tile', t, from: a };
+    state.tiles.delete(a);
+    buildRot = t.rot || 0;
+  }
+  recalc();
+  sfx('deco');
+  $('rot-btn').hidden = !ROTATABLE.has(movingType());
+  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳' : ''));
+}
+function moveError(x, y, slot) {
+  if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
+  return placeError(moving.t.b, x, y, buildRot, { move: true });
+}
+function dropAt(x, y, slot) {
+  const err = moveError(x, y, slot);
+  if (err) { fail(err); return; }
+  const rot = ROTATABLE.has(movingType()) ? buildRot : 0;
+  if (moving.kind === 'deco') {
+    const k = x + ',' + y;
+    if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+    state.decos.get(k)[slot] = { ...moving.d, rot, born: performance.now() };
+  } else {
+    state.tiles.set(x + ',' + y, { ...moving.t, rot, born: performance.now() });
+  }
+  moving = null;
+  $('rot-btn').hidden = true;
+  sfx('build');
+  recalc();
+  save();
+}
+function cancelMove() {
+  if (!moving) return;
+  if (moving.kind === 'deco') {
+    const [k, slot] = moving.from;
+    if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+    state.decos.get(k)[slot] = moving.d;
+  } else {
+    state.tiles.set(moving.from, moving.t);
+  }
+  moving = null;
+  recalc();
 }
 
 function buyPlot(ck) {
@@ -118,8 +177,9 @@ function landmarksIn(ck) {
 function tap(sx, sy, isTouch) {
   const { x, y, slot } = slotAt(sx, sy);
   const ck = chunkOf(x, y);
-  const t = state.tiles.get(x + ',' + y);
-  if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(x, y); return; }
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
+  const [ax, ay] = a ? keyXY(a) : [x, y];
+  if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
   if (!state.owned.has(ck)) {
     if (purchasable(ck)) openBuy(ck);
     else if (onIsland(ck)) toast('Kauf erst die Grundstücke dazwischen');
@@ -129,18 +189,22 @@ function tap(sx, sy, isTouch) {
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
-    else if (t) openInfo(x, y);
+    else if (t) openInfo(ax, ay);
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }
     return;
   }
+  // Verschieben: erstes Tippen nimmt auf (sofort), danach wie Bauen mit Vorschau
+  if (tool === 'verschieben' && !moving) { pickUp(x, y, slot); return; }
+  const smallTool = tool === 'verschieben' ? moving.kind === 'deco' : ITEMS[tool].small;
   // Auf dem Touchscreen: erstes Tippen zeigt die Vorschau, zweites baut.
-  if (isTouch && (!hover || hover.x !== x || hover.y !== y || (ITEMS[tool].small && hoverSlot !== slot))) {
+  if (isTouch && (!hover || hover.x !== x || hover.y !== y || (smallTool && hoverSlot !== slot))) {
     hover = { x, y };
     hoverSlot = slot;
     previewCache = null;
     return;
   }
-  if (tool === 'abriss') { if (ds && ds[slot]) removeSmall(x, y, slot); else demolish(x, y); }
+  if (tool === 'verschieben') dropAt(x, y, slot);
+  else if (tool === 'abriss') { if (ds && ds[slot]) removeSmall(x, y, slot); else demolish(x, y); }
   else if (ITEMS[tool].small) buildSmall(tool, x, y, slot);
   else build(tool, x, y);
 }

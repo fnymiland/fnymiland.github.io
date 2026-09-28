@@ -90,7 +90,7 @@ function drawGround(x, y, p, z, now) {
             : ter === 'erz' ? (alt ? '#b9ab8f' : '#b0a287')
             : (alt ? '#b3c29c' : '#aabb94');
   diamond(p.x, p.y, hw, hh, C(top));
-  if (ter === 'grass' && !beach && !state.tiles.has(x + ',' + y) && hash(x, y, 5) < 0.08) {
+  if (ter === 'grass' && !beach && !COVER.has(x + ',' + y) && hash(x, y, 5) < 0.08) {
     for (let i = 0; i < 3; i++) {
       const u = (hash(x, y, 20 + i) - 0.5) * 0.7, v = (hash(x, y, 30 + i) - 0.5) * 0.7;
       circle(p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, 1.8 * z,

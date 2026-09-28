@@ -25,13 +25,13 @@ describe('Neues Spiel', () => {
 
 describe('Bauen', () => {
   it('ein Haus bringt 4 Einwohner und kostet 40 Taler', () => {
-    expect(build('haus', 3, 3)).toBe(true);
+    expect(build('haus', 4, 4)).toBe(true);
     expect(T().pop).toBe(4);
     expect(game('state.money')).toBe(260);
   });
 
   it('Holzfäller nur im Wald', () => {
-    build('haus', 3, 3);
+    build('haus', 4, 4);
     expect(game("placeError('holz', 4, 3)")).toBe('Nur im Wald');
     game("state.terra.set('4,3', 'forest')");
     expect(build('holz', 4, 3)).toBe(true);
@@ -51,7 +51,7 @@ describe('Bauen', () => {
 
 describe('Rohstoffe', () => {
   it('Sägewerk macht aus 2 Holz 1 Brett, nur solange Holz da ist', () => {
-    build('haus', 3, 3);
+    build('haus', 4, 4);
     expect(build('saege', 4, 3)).toBe(true);
     game('recalc()');
     game('state.res.holz = 2');
@@ -62,9 +62,9 @@ describe('Rohstoffe', () => {
 
   it('Material wird geprüft und abgezogen', () => {
     game("state.money = 1000");
-    expect(game("smallError('bank', 3, 3, 3)")).toBe('Zu wenig Bretter (2 🪚 nötig)');
+    expect(game("smallError('bank', 4, 4, 3)")).toBe('Zu wenig Bretter (2 🪚 nötig)');
     game('state.res.bretter = 5');
-    expect(game("buildSmall('bank', 3, 3, 3)")).toBe(true);
+    expect(game("buildSmall('bank', 4, 4, 3)")).toBe(true);
     expect(game('state.res.bretter')).toBe(3);
   });
 });
@@ -72,8 +72,8 @@ describe('Rohstoffe', () => {
 describe('Kleine Dekos', () => {
   it('bis zu 4 pro Feld, eine Ecke nur einmal', () => {
     game('state.money = 1000');
-    for (let i = 0; i < 4; i++) expect(game(`buildSmall('blumentopf', 3, 3, ${i})`)).toBe(true);
-    expect(game("smallError('blumentopf', 3, 3, 2)")).toBe('Diese Ecke ist schon belegt');
+    for (let i = 0; i < 4; i++) expect(game(`buildSmall('blumentopf', 4, 4, ${i})`)).toBe(true);
+    expect(game("smallError('blumentopf', 4, 4, 2)")).toBe('Diese Ecke ist schon belegt');
   });
 });
 
@@ -141,15 +141,15 @@ describe('Viertel und Wege', () => {
 describe('Speichern und Laden', () => {
   it('ein gespeicherter Stand kommt unverändert zurück', () => {
     game('state.money = 1000; state.res.holz = 7');
-    build('haus', 3, 3);
-    game("state.tiles.set('4,4', { b: 'weg', lvl: 1, style: 'kies' })");
-    game("buildSmall('blumentopf', 3, 3, 1)");
+    build('haus', 4, 4);
+    game("state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'kies' })");
+    game("buildSmall('blumentopf', 4, 4, 1)");
     game('save()');
     const loaded = game('load()');
     expect(loaded.res.holz).toBe(7);
-    expect(loaded.tiles.get('3,3').b).toBe('haus');
-    expect(loaded.tiles.get('4,4').style).toBe('kies');
-    expect(loaded.decos.get('3,3')[1].b).toBe('blumentopf');
+    expect(loaded.tiles.get('4,4').b).toBe('haus');
+    expect(loaded.tiles.get('5,4').style).toBe('kies');
+    expect(loaded.decos.get('4,4')[1].b).toBe('blumentopf');
   });
 
   it('alte Stände: Straßen, Gartenwege und Pflaster werden Wege, Entferntes wird erstattet', () => {
