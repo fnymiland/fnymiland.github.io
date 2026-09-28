@@ -57,7 +57,7 @@ describe('Laternen und Restaurieren', () => {
     expect(game("available('saege')")).toBe(false);
     game('state.restore.baum = 1');
     expect(game("available('saege')")).toBe(true);
-    expect(game("lockText('baecker')")).toBe('🔒 🍎 Obstwiese');
+    expect(game("lockText('baecker')")).toBe('🔒 🍎 Wilder Obsthain → Obstwiese');
   });
 
   it('Sehenswürdigkeiten wirken erst restauriert', () => {

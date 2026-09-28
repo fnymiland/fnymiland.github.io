@@ -78,7 +78,7 @@ function pickUp(x, y, slot) {
   } else {
     const a = anchorAt(x, y), t = a && state.tiles.get(a);
     if (!t) { toast('Hier ist nichts zum Verschieben'); return; }
-    if (t.b === 'lm') { fail('Sehenswürdigkeiten bleiben, wo sie sind'); return; }
+    if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
     moving = { kind: 'tile', t, from: a };
     state.tiles.delete(a);
     buildRot = t.rot || 0;
@@ -220,7 +220,7 @@ function tap(sx, sy, isTouch) {
   const [ax, ay] = a ? keyXY(a) : [x, y];
   if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
   if (!state.owned.has(ck)) {
-    if (purchasable(ck)) openBuy(ck);
+    if (purchasable(ck)) openBuy(ck, sx, sy);
     else if (onIsland(ck)) toast('Kauf erst die Grundstücke dazwischen');
     else toast('Da ist nur Meer.');
     return;

@@ -108,7 +108,7 @@ html, body {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(146px + env(safe-area-inset-bottom));
+  bottom: calc(var(--bar, 160px) + 10px);
   background: rgba(255, 250, 240, .95);
   padding: 7px 16px;
   border-radius: 14px;
@@ -133,8 +133,10 @@ html, body {
   box-shadow: 0 5px 0 var(--shadow), 0 14px 30px rgba(60, 40, 20, .2);
 }
 @media (max-width: 600px) {
-  #panel { top: auto; left: 12px; right: 12px; width: auto; bottom: calc(118px + env(safe-area-inset-bottom)); }
+  #panel { top: auto; left: 12px; right: 12px; width: auto; bottom: calc(var(--bar, 160px) + 10px); }
 }
+/* Kauffenster direkt neben dem angetippten Grundstück (Position setzt ui.js) */
+#panel.float { right: auto; bottom: auto; width: 280px; }
 #panel h3 { margin: 0 0 6px; font-size: 19px; font-weight: 900; display: flex; align-items: baseline; gap: 8px; }
 #panel h3 .lvl { font-size: 13px; background: var(--yellow); padding: 1px 9px; border-radius: 99px; }
 #panel p { margin: 6px 0; font-size: 14px; font-weight: 700; }
@@ -270,8 +272,6 @@ html, body {
   #hud .pill { padding: 5px 10px; font-size: 13px; }
   .money b { font-size: 15px; }
   #goal { top: calc(max(10px, env(safe-area-inset-top)) + 84px); width: 200px; }
-  #hint { bottom: calc(150px + env(safe-area-inset-bottom)); }
-  #panel { bottom: calc(150px + env(safe-area-inset-bottom)); }
 }
 
 /* ---------- v3: Netz, Forschung ---------- */
@@ -299,7 +299,7 @@ html, body {
 #rot-btn {
   position: fixed;
   right: 14px;
-  bottom: calc(146px + env(safe-area-inset-bottom));
+  bottom: calc(var(--bar, 160px) + 10px);
   width: 52px; height: 52px;
   border: 0; border-radius: 50%;
   font: inherit; font-size: 26px; font-weight: 900;
@@ -316,7 +316,7 @@ html, body {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(146px + env(safe-area-inset-bottom));
+  bottom: calc(var(--bar, 160px) + 10px);
   display: flex;
   gap: 6px;
   max-width: calc(100% - 90px);
@@ -339,11 +339,7 @@ html, body {
 .style-chip.on { background: var(--yellow); box-shadow: 0 3px 0 #e0c060; }
 .style-chip:disabled { opacity: .55; cursor: default; }
 .style-chip small { font-size: 10px; font-weight: 800; }
-body.has-styles #hint { bottom: calc(196px + env(safe-area-inset-bottom)); }
-@media (max-width: 600px) {
-  #style-bar { bottom: calc(150px + env(safe-area-inset-bottom)); }
-  body.has-styles #hint { bottom: calc(200px + env(safe-area-inset-bottom)); }
-}
+body.has-styles #hint { bottom: calc(var(--bar, 160px) + 60px); }
 
 /* ---------- v6: Lager ---------- */
 .pill.res { gap: 10px; }

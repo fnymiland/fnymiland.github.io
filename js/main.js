@@ -35,7 +35,7 @@ function probeScene() {
   for (let x = 5; x <= 11; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + ((x - 5) % 5) });
   put(5, 3, 'haus', { rot: 2 });
   put(6, 3, 'markt');
-  put(8, 3, 'baecker', { rot: 0 });
+  put(9, 3, 'baecker', { rot: 1 });
   put(10, 3, 'schule');
   put(12, 3, 'uni');
   // Sandweg nach Süden: Häuser im Westen, Park und Bibliothek im Osten

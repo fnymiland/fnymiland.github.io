@@ -161,6 +161,18 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 - **Technik aufräumen**: Code in Teile zerlegen, automatische Tests.
 - **Spielstand exportieren/importieren** als Datei.
 
+## Feinschliff – entschieden (28.09.2026, nach dem ersten Anspielen)
+
+- **Namen:** Aufgaben und Sperrhinweise nennen immer Ort + Stufe („🌬️ Windige Klippe → Aussichtspunkt“), Antippen springt hin.
+- **Markt 3×3.**
+- **Tag/Nacht:** eigene Spieluhr, ein Tag ≈ 20 Minuten, davon ≈ 3 Minuten Nacht (Laternen leuchten). Nicht mehr die echte Uhr.
+- **Jahreszeiten/Wetter:** erst mal nicht.
+- **Drehen:** alle Gebäude in 4 Richtungen, beim Setzen automatisch mit der Tür zum Weg; drehen mit ⟳ und **Mausrad**. Zeigt die Tür nach hinten, verrät ein Detail (Treppe/Vordach/Schild) die Richtung. **Kamera drehen: nein**, die Ansicht bleibt.
+- **Häuser neu zeichnen:** jede Stufe klar schöner, Stufe 5 = Villa statt „Kirche“. **Aussehen frei wählbar** aus den erreichten Stufen (Einwohner bleiben).
+- **Alle Gebäude bekommen 3 Stufen** mit neuem Aussehen, Ausbau per Knopf (✨). Bedingungen: Mitarbeiter (Einwohner im Viertel) + etwas Passendes in der Nähe (Hafen ← Fischerhütten, Sägewerk ← Holzfäller, Bäckerei ← Mühle + Obst, Markt ← Häuser, Schule ← Einwohner). In Paketen: erst Betriebe, dann Bildung.
+- **Verschieben:** alles, auch Rathaus; Sehenswürdigkeiten erst restauriert und nur auf eigenes Land. Ganze Bereiche verschieben: nicht nötig.
+- **Infozeile** sitzt immer über der Leiste unten; **Grundstück kaufen** direkt dort, wo man getippt hat.
+
 ## Bau-Reihenfolge (jeweils einzeln, mit dir abgestimmt)
 
 1. ✓ Rohstoffe + Lager + Sägewerk/Steinmetz/Schmiede
@@ -169,6 +181,10 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 4. ✓ Gebäude über mehrere Felder + Verschieben
 5. ✓ Zufriedenheit + wachsende Häuser + Namen
 6. ✓ Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
+6a. ✓ Feinschliff 1: Namen, Markt 3×3, Spieluhr, alles verschieben, Infozeile, Kaufen am Grundstück
+6b. Drehen in 4 Richtungen (+ automatisch zum Weg, Mausrad)
+6c. Häuser neu zeichnen + Aussehen wählbar
+6d. Gebäudestufen (Paket Betriebe, dann Bildung) – ersetzt „erste Ladung neuer Dinge“ aus 8
 7. Regionen mit Zugängen + Ruinen-Start
 8. Baupläne beim Erschließen + erste Ladung neuer Dinge
 9. Große Forschung mit Stufen

@@ -79,11 +79,11 @@ function buildToolbar() {
     const d = ITEMS[id];
     if (d.cat !== cat) continue;
     const locked = !available(id);
-    const sub = locked ? lockText(id) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
+    const sub = locked ? lockText(id, true) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
     const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : id === 'verschieben' ? emoji('✋') : thumb(id));
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
-    if (locked) b.classList.add('locked');
+    if (locked) { b.classList.add('locked'); b.title = 'Freischalten: ' + unlockText(d); }
   }
   setTool(tool);
 }
@@ -155,19 +155,41 @@ function updateHud() {
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const goal = $('goal');
   goal.style.top = top + 'px';
-  if (window.innerWidth > 600) $('panel').style.top = top + 'px';
+  if (window.innerWidth > 600 && !$('panel').classList.contains('float')) $('panel').style.top = top + 'px';
   goal.classList.toggle('small', goalSmall);
   goal.innerHTML = goalHtml();
 }
 $('goal').onclick = e => {
   if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
+  const req = e.target.closest('[data-lm]'), pos = req && lmTile(req.dataset.lm);
+  if (pos) { const c = iso(pos[0], pos[1]); cam.x = c.x; cam.y = c.y; clampCam(); sparkle(pos[0], pos[1]); return; }
   goalSmall = !goalSmall; updateHud();
 };
 $('diary-btn').onclick = () => openDiary();
 
 // Infofenster
 function closePanel() { $('panel').hidden = true; }
-function showPanel(html) { const el = $('panel'); el.innerHTML = html; el.hidden = false; return el; }
+function showPanel(html) {
+  const el = $('panel');
+  el.classList.remove('float'); el.style.left = '';
+  el.innerHTML = html; el.hidden = false;
+  return el;
+}
+// Fenster neben eine Stelle auf dem Bildschirm setzen (nicht auf schmalen Bildschirmen)
+function panelAt(sx, sy) {
+  const el = $('panel');
+  if (sx == null || window.innerWidth <= 600) return;
+  el.classList.add('float');
+  const w = el.offsetWidth, h = el.offsetHeight, gap = 24;
+  const top0 = $('hud').getBoundingClientRect().bottom + 8, bottom0 = $('toolbar').getBoundingClientRect().top - 8;
+  let left = sx + gap;
+  if (left + w > window.innerWidth - 12) left = sx - gap - w;
+  left = Math.max(12, Math.min(window.innerWidth - 12 - w, left));
+  const top = Math.max(top0, Math.min(bottom0 - h, sy - h / 2));
+  el.style.left = left + 'px'; el.style.top = top + 'px';
+}
+// Höhe der Leiste unten merken, damit Infozeile und Fenster immer darüber sitzen
+if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--bar', $('toolbar').offsetHeight + 'px')).observe($('toolbar'));
 
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
@@ -319,7 +341,7 @@ function openLandmark(x, y) {
   $('p-close').onclick = closePanel;
 }
 
-function openBuy(ck) {
+function openBuy(ck, sx, sy) {
   const [cx, cy] = ck.split(',').map(Number);
   const cnt = { grass: 0, forest: 0, water: 0, rock: 0, erz: 0, obst: 0 };
   for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK; y++)
@@ -341,6 +363,7 @@ function openBuy(ck) {
     </div>`);
   $('p-buy').onclick = () => buyPlot(ck);
   $('p-close').onclick = closePanel;
+  panelAt(sx, sy);
   updateHud();
 }
 

@@ -15,11 +15,11 @@ beforeEach(() => {
 const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`);
 
 describe('Gebäude über mehrere Felder', () => {
-  it('ein Markt belegt 2×2 Felder, dort kann nichts anderes hin', () => {
+  it('ein Markt belegt 3×3 Felder, dort kann nichts anderes hin', () => {
     build('haus', 6, 6); build('haus', 6, 7);
     expect(build('markt', 8, 8)).toBe(true);
     game('recalc()');
-    for (const k of ['8,8', '9,8', '8,9', '9,9']) expect(game(`anchorAt(${k})`)).toBe('8,8');
+    for (const k of ['8,8', '9,8', '8,9', '9,9', '10,10']) expect(game(`anchorAt(${k})`)).toBe('8,8');
     expect(game("placeError('feld', 9, 9)")).toBe('Hier steht schon etwas');
     expect(game("placeError('markt', 7, 7)")).toBe('Hier ist nicht genug Platz');
   });
@@ -127,6 +127,7 @@ describe('Alte Spielstände', () => {
     game("state.tiles.set('8,8', { b: 'markt', lvl: 1 })");
     game("state.tiles.set('9,8', { b: 'feld', lvl: 1 })");
     expect(game('fitFootprints()')).toEqual([]);
-    expect(game("state.tiles.get('7,8').b")).toBe('markt');
+    expect(game("state.tiles.get('9,8').b")).toBe('feld');
+    expect(game("[...state.tiles.values()].filter(t => t.b === 'markt').length")).toBe(1);
   });
 });

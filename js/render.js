@@ -2,6 +2,17 @@
 // ---------------------------------------------------------------------------
 // Zeichnen – Szene
 // ---------------------------------------------------------------------------
+// Eigene Spieluhr: ein Tag dauert 20 Minuten, beginnt beim Öffnen morgens.
+// 15 Min Tag, 1 Min Dämmerung, 3 Min Nacht (die Laternen leuchten), 1 Min Morgengrauen.
+const DAY_MS = 20 * 60e3, NIGHT_MAX = 0.45;
+function nightAt(ms) {
+  const m = (((ms % DAY_MS) + DAY_MS) % DAY_MS) / 60e3;
+  if (m < 15) return 0;
+  if (m < 16) return (m - 15) * NIGHT_MAX;
+  if (m < 19) return NIGHT_MAX;
+  return (20 - m) * NIGHT_MAX;
+}
+// ?stunde=N erzwingt eine Uhrzeit (Probeansicht)
 function nightLevel(d) {
   const h = d.getHours() + d.getMinutes() / 60;
   if (h >= 7 && h < 18) return 0;
@@ -49,7 +60,7 @@ function render(now) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
-  night = nightLevel(clockNow());
+  night = forcedHour != null ? nightLevel(clockNow()) : nightAt(performance.now());
   glows.length = 0;
 
   const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];

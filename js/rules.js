@@ -232,8 +232,13 @@ function unlockOk(def, key) {
   if (def.tech && !hasTech(def.tech)) return false;
   return true;
 }
-function unlockText(def) {
-  if (def.lm) { const [type, n] = def.lm.split(':'); if (lmStage(type) < +n) return `${LANDMARKS[type].icon} ${LM_STAGES[type][+n - 1].name}`; }
+// Ort und Stufe zusammen („🌬️ Windige Klippe → Aussichtspunkt“), kurz nur der Ort (Leiste unten)
+const lmStepName = (type, n) => `${LANDMARKS[type].icon} ${LANDMARKS[type].name} → ${LM_STAGES[type][n - 1].name}`;
+function unlockText(def, short) {
+  if (def.lm) {
+    const [type, n] = def.lm.split(':');
+    if (lmStage(type) < +n) return short ? `${LANDMARKS[type].icon} ${LANDMARKS[type].name}` : lmStepName(type, +n);
+  }
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   return '';
@@ -301,9 +306,9 @@ function normalizeSmall() {
   }
 }
 const available = id => unlockOk(ITEMS[id], id);
-const lockText = id => {
+const lockText = (id, short) => {
   const d = ITEMS[id];
-  const txt = unlockText(d);
+  const txt = unlockText(d, short);
   return txt ? '🔒 ' + txt : '';
 };
 const upgradable = t => ITEMS[t.b].up && t.lvl < MAX_LVL;
@@ -366,7 +371,11 @@ function fitFootprints() {
     // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?
     state.tiles.delete(k); rebuildCover();
     const ok = (ax, ay) => placeError(t.b, ax, ay, t.rot || 0, { move: true }) === null;
-    let spot = [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]].find(([ax, ay]) => ok(ax, ay));
+    // gewachsene Grundfläche: nach hinten ausweichen, am liebsten so wenig wie möglich
+    const tries = [];
+    for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) tries.push([x - dx, y - dy]);
+    tries.sort((a, b) => (x - a[0]) + (y - a[1]) - (x - b[0]) - (y - b[1]));
+    let spot = tries.find(([ax, ay]) => ok(ax, ay));
     if (!spot && t.b === 'rathaus') {
       for (const [fx, fy] of footprint(t.b, x, y, t.rot)) {
         const kk = fx + ',' + fy, a = anchorAt(fx, fy);
@@ -386,7 +395,6 @@ function fitFootprints() {
       for (const [r, n] of Object.entries(ITEMS[t.b].mat || {})) state.res[r] += n;
     }
     rebuildCover();
-    void w; void h;
   }
   return removed;
 }

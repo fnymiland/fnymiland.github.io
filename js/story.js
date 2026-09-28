@@ -47,7 +47,7 @@ function restoreLandmark(type) {
   sfx('star');
   const after = townTitle(), unl = info.next.unlock.map(unlockName);
   openModal(`
-    <h2>🏮 ${LANDMARKS[type].icon} ${info.next.name}</h2>
+    <h2>🏮 ${lmStepName(type, info.stage + 1)}</h2>
     <p>Die <b>${lanternCount()}. Laterne</b> brennt!</p>
     ${unl.length ? `<p>Neu: <b>${unl.join(', ')}</b></p>` : ''}
     ${after !== before ? `<p>🎉 ${escHtml(state.town.name)} ist jetzt ${TITLE_ARTICLE[after]} <b>${after}</b>!</p>` : ''}
@@ -196,7 +196,6 @@ function goalHtml() {
   const score = o => o.info.err === 'Kauf zuerst das Grundstück' ? 2 : o.info.err === 'Verbinde es per Weg mit dem Dorf' ? 1 : 0;
   opts.sort((a, b) => score(a) - score(b) || a.info.stage - b.info.stage);
   return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + opts.slice(0, 3).map(({ type, info }) => {
-    const L = LANDMARKS[type];
     let detail;
     if (score({ info }) === 2) detail = '🔒 Grundstück kaufen';
     else if (score({ info }) === 1) detail = '🛤️ Weg zum Dorf fehlt';
@@ -205,6 +204,6 @@ function goalHtml() {
       if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
       detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
     }
-    return `<div class="req${info.err ? '' : ' done'}">${L.icon} ${info.next.name}<br><small>${detail}</small></div>`;
+    return `<div class="req${info.err ? '' : ' done'}" data-lm="${type}">${lmStepName(type, info.stage + 1)}<br><small>${detail}</small></div>`;
   }).join('');
 }

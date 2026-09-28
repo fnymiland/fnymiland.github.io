@@ -41,7 +41,7 @@ const ITEMS = {
              conv: { from: 'erz', to: 'metall', rate: 0.1 }, desc: 'Macht aus 2 Erz ⛏️ ein Stück Metall 🔩.' },
   baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [2, 1], cost: 400, needs: 'grass', workers: 2, up: true,
              desc: '+6 Taler/s für jede Mühle direkt daneben.' },
-  markt:   { cat: 'bau', name: 'Markt', size: [2, 2], cost: 800, needs: 'grass', workers: 2, tech: 'handel', up: true,
+  markt:   { cat: 'bau', name: 'Markt', size: [3, 3], cost: 800, needs: 'grass', workers: 2, tech: 'handel', up: true,
              desc: '+1,5 Taler/s für jedes Gebäude im Umkreis von 2.' },
   fabrik:  { cat: 'bau', name: 'Werkstatt', size: [2, 1], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12, up: true,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3.' },

@@ -303,18 +303,42 @@ const BIG_ART = {
     g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0], cyc - 3 * z); g.moveTo(m[0], cyc); g.lineTo(m[0] + 2.2 * z, cyc); g.stroke();
   },
   markt(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.95, hv * 0.95, '#eadcbf', ['stones', '#dccdae']);
+    groundRect(cx, cy, z, hu * 0.96, hv * 0.96, '#eadcbf', ['stones', '#dccdae']);
     const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const cols = ['#e85d5d', '#4fb0e0', '#f2b53a', '#58b36a'];
-    [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]].forEach(([u, v], i) => {
-      const [sx, sy] = F(u * hu, v * hv);
-      const bx = boxR(sx, sy, z, 0.26, 0.2, 8 * z, '#f5e1b8', cols[i], 6 * z);
+    const fruit = ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a', '#c77dff'];
+    const stall = (u, v, col, i) => {
+      const [sx, sy] = F(u, v);
+      const bx = boxR(sx, sy, z, 0.3, 0.22, 7 * z, '#f5e1b8', col, 7 * z);
       const f = lerp(bx.L, bx.B, 0.5);
-      for (let j = 0; j < 4; j++) circle(f[0] - 5 * z + j * 3.4 * z, f[1] - 2.5 * z, 1.8 * z, C(['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a'][(j + i) % 4]));
-    });
+      for (let j = 0; j < 4; j++) circle(f[0] - 5 * z + j * 3.4 * z, f[1] - 2.3 * z, 1.8 * z, C(fruit[(j + i) % 5]));
+    };
+    const umbrella = (u, v, col) => {
+      const [sx, sy] = F(u, v);
+      box(sx, sy + 2 * z, 5 * z, 2.5 * z, 3 * z, '#c9955f', null, 0);
+      g.strokeStyle = C('#8a6a4a'); g.lineWidth = 1.2 * z;
+      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx, sy - 15 * z); g.stroke();
+      poly([[sx - 11 * z, sy - 12 * z], [sx, sy - 19 * z], [sx + 11 * z, sy - 12 * z], [sx, sy - 7 * z]], C(col));
+      poly([[sx, sy - 19 * z], [sx + 11 * z, sy - 12 * z], [sx, sy - 7 * z]], C(shade(col, -0.15)));
+      poly([[sx - 4 * z, sy - 16.5 * z], [sx, sy - 19 * z], [sx + 4 * z, sy - 16.5 * z], [sx, sy - 14.5 * z]], C('#ffffff'));
+    };
+    const crate = (u, v, c) => { const [sx, sy] = F(u, v); box(sx, sy, 3.5 * z, 1.8 * z, 4 * z, c, null, 0); };
+    // hinten nach vorn zeichnen
+    stall(-1.05, -1.05, '#e85d5d', 0);
+    stall(0, -1.1, '#4fb0e0', 1);
+    stall(-1.1, 0, '#f2b53a', 2);
+    stall(1.05, -1.05, '#58b36a', 3);
+    stall(-1.05, 1.05, '#c77dff', 4);
+    crate(0.55, -0.6, '#c9955f'); crate(-0.6, 0.55, '#b98a55');
     const [fx, fy] = F(0, 0);
-    ellipse(fx, fy, 9 * z, 4.5 * z, C('#aeb2bd'));
-    ellipse(fx, fy - 2 * z, 7 * z, 3.5 * z, C('#74d0e6'));
+    ellipse(fx, fy + 1 * z, 14 * z, 7 * z, C('#aeb2bd'));
+    ellipse(fx, fy - 1 * z, 11.5 * z, 5.6 * z, C('#74d0e6'));
+    const jet = Math.sin(now / 300) * 1.2 * z;
+    g.strokeStyle = C('#bfeefa'); g.lineWidth = 1.6 * z;
+    g.beginPath(); g.moveTo(fx, fy - 1 * z); g.lineTo(fx, fy - 9 * z - jet); g.stroke();
+    umbrella(1.1, 0, '#e8705f');
+    umbrella(0, 1.1, '#58b36a');
+    crate(0.95, 0.75, '#f2b53a'); crate(0.7, 1.0, '#c9955f');
+    umbrella(1.05, 1.1, '#4fb0e0');
   },
   hafen(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#c9955f', ['planks', '#a57645']);
