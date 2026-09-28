@@ -151,7 +151,7 @@ function totals() {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
     jobs += d.workers || 0;
-    pop += (d.pop || 0) * t.lvl;
+    pop += t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (d.pop || 0) * t.lvl;
     const s = { ...(needsReach(t.b) ? reachOf(net, k, x, y) : { eff: 1, how: null }), ...viertelBonus(net, k) };
     st.set(k, s);
     if (t.b === 'lm' && ownedTile(x, y)) {
@@ -215,6 +215,8 @@ function totals() {
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
   beauty += 15 * lmFactor('obsthain') + 80 * lmFactor('baum');
+  // Wünsche der Häuser (für Sprechblasen und Infofenster)
+  for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map() };
@@ -373,6 +375,55 @@ function fitFootprints() {
     void w; void h;
   }
   return removed;
+}
+
+// ---------------------------------------------------------------------------
+// Wünsche der Häuser
+// ---------------------------------------------------------------------------
+// Steht ein Gebäude der Sorte (Prädikat) mit irgendeinem seiner Felder im Umkreis r?
+function objWithin(x, y, r, pred) {
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const t = objAt(x + dx, y + dy);
+    if (t && pred(t.b)) return true;
+  }
+  return false;
+}
+function beautyAround(x, y, r) {
+  let sum = 0;
+  const seen = new Set();
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const k = (x + dx) + ',' + (y + dy), a = COVER.get(k);
+    if (a && !seen.has(a)) { seen.add(a); const b = state.tiles.get(a).b; if (b !== 'haus') sum += ITEMS[b].beauty || 0; }
+    const ds = state.decos.get(k);
+    if (ds) for (const d of ds) if (d) sum += ITEMS[d.b].beauty || 0;
+  }
+  return sum;
+}
+function wishMet(w, x, y) {
+  switch (w) {
+    case 'weg': return DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'weg');
+    case 'deko': {
+      if (state.decos.has(x + ',' + y)) return true;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;
+      return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg');
+    }
+    case 'baecker': return objWithin(x, y, 6, b => b === 'baecker');
+    case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));
+    case 'markt': return objWithin(x, y, 8, b => b === 'markt');
+    case 'park': return objWithin(x, y, 4, b => b === 'park' || b === 'brunnen');
+    case 'schule': return objWithin(x, y, 10, b => b === 'schule');
+    case 'schoen': return beautyAround(x, y, 3) >= 30;
+    default: return false;
+  }
+}
+// Wünsche für die nächste Stufe (alle bisherigen zählen weiter mit)
+function houseWishes(t, x, y) {
+  const next = HOUSE_STAGES[t.lvl];
+  if (!next) return { next: null, list: [], met: 0, total: 0, ready: false };
+  const ids = HOUSE_STAGES.slice(1, t.lvl + 1).flatMap(st => st.wishes);
+  const list = ids.map(id => ({ id, text: WISHES[id].text, ok: wishMet(id, x, y) }));
+  const met = list.filter(w => w.ok).length;
+  return { next, list, met, total: list.length, ready: met === list.length };
 }
 
 function demolishInfo(x, y) {

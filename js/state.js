@@ -37,11 +37,12 @@ function serialize() {
     if (t.lm) o.lm = t.lm;
     if (t.rot) o.rot = t.rot;
     if (t.style) o.style = t.style;
+    if (t.animal) { o.animal = t.animal; o.name = t.name; }
     tiles.push([k, o]);
   }
   if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') {
     const t = moving.t, o = { b: t.b, lvl: t.lvl };
-    for (const f of ['wall', 'roof', 'lm', 'rot', 'style']) if (t[f] != null) o[f] = t[f];
+    for (const f of ['wall', 'roof', 'lm', 'rot', 'style', 'animal', 'name']) if (t[f] != null) o[f] = t[f];
     tiles.push([moving.from, o]);
   }
   const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
@@ -123,6 +124,7 @@ function adoptState(s) {
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
   fitFootprints();
+  nameHouses();
   recalc();
   buildToolbar();
   save();

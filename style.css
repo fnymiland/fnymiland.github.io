@@ -349,3 +349,11 @@ body.has-styles #hint { bottom: calc(196px + env(safe-area-inset-bottom)); }
 .pill.res { gap: 10px; }
 .pill.res span { white-space: nowrap; }
 #res-pill[hidden] { display: none; }
+
+/* ---------- v7: Bewohner & Wünsche ---------- */
+#panel .resident { font-size: 16px; margin: 2px 0; }
+#panel .hearts { font-size: 20px; color: #e8607a; letter-spacing: 2px; margin: 0 0 4px; }
+.link { border: 0; background: none; font: inherit; color: var(--brown2); cursor: pointer; padding: 0 4px; }
+.text-in.small { font-size: 15px; padding: 4px 8px; width: 60%; display: inline-block; margin: 0; }
+#panel { max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); overflow-y: auto; }
+@media (max-width: 600px) { #panel { max-height: calc(100dvh - 330px); } }

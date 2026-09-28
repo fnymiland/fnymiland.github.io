@@ -32,7 +32,7 @@ function probeScene() {
   for (let y = 1; y <= 4; y++) for (let x = 1; x <= 4; x++) if (!(x >= 2 && x <= 3 && y >= 2 && y <= 3)) weg(x, y, 'platten');
   // Dorfstraße (Asphalt) nach Osten: Häuser im Norden, Markt, Bäckerei und Schule im Süden
   for (let x = 5; x <= 13; x++) weg(x, 2, 'asphalt');
-  for (let x = 5; x <= 11; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + (x & 1) });
+  for (let x = 5; x <= 11; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + ((x - 5) % 5) });
   put(5, 3, 'haus', { rot: 2 });
   put(6, 3, 'markt');
   put(8, 3, 'baecker', { rot: 0 });
@@ -69,6 +69,7 @@ resize();
 if (PROBE) {
   probeScene();
   normalizeSmall();
+  nameHouses();
   // ein paar kleine Dekos vor den Häusern
   const add = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[slot] = { b, rot }; };
   add(6, 2, 0, 'laterne'); add(9, 2, 0, 'laterne'); add(12, 2, 0, 'laterne');        // Laternen an der Straße
@@ -81,6 +82,7 @@ if (PROBE) {
   state = saved;
   normalizeSmall();
   const refunded = fitFootprints();
+  nameHouses();
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

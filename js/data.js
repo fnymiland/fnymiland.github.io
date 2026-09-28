@@ -18,8 +18,8 @@ const PROBE = new URLSearchParams(location.search).has('probe');
 // cat: bau | netz | bildung | deko | land;  needs: Untergrund;  workers/science: Netzwerte
 const ITEMS = {
   // --- Wohnen & Arbeit ---
-  haus:    { cat: 'bau', name: 'Haus', cost: 40, needs: 'grass', pop: 4, up: true,
-             desc: '4 Einwohner pro Stufe. Antippen = Farben ändern.' },
+  haus:    { cat: 'bau', name: 'Haus', cost: 40, needs: 'grass', pop: 4,
+             desc: 'Hier wohnt jemand. Erfüllst du die Wünsche, kannst du das Haus ausbauen. Antippen = Wünsche und Farben.' },
   feld:    { cat: 'bau', name: 'Feld', cost: 20, needs: 'grass', workers: 1, up: true, desc: '1 Taler/s.' },
   muehle:  { cat: 'bau', name: 'Mühle', cost: 150, needs: 'grass', workers: 1, up: true,
              desc: '+2 Taler/s für jedes Feld direkt daneben.' },
@@ -99,6 +99,32 @@ function matError(mat) {
   for (const [r, n] of Object.entries(mat || {})) if (state.res[r] < n) return `Zu wenig ${RES[r].name} (${n} ${RES[r].icon} nötig)`;
   return null;
 }
+
+// Häuser wachsen: jede Stufe bringt neue Wünsche; sind alle erfüllt, kann man ausbauen (Material aus dem Lager)
+const HOUSE_STAGES = [
+  { name: 'Häuschen', pop: 4 },
+  { name: 'Fachwerkhaus', pop: 6, wishes: ['weg', 'deko'], mat: { bretter: 2 } },
+  { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], mat: { bretter: 4 } },
+  { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], mat: { quader: 4 } },
+  { name: 'Turmhaus', pop: 16, wishes: ['schule', 'schoen'], mat: { quader: 4, metall: 2 } },
+];
+const WISHES = {
+  weg:     { text: 'Weg vor der Tür' },
+  deko:    { text: 'Deko in der Nähe (2 Felder)' },
+  baecker: { text: 'Bäckerei in Laufweite (6 Felder)' },
+  ruhe:    { text: 'Ruhe – kein lauter Betrieb direkt daneben' },
+  markt:   { text: 'Markt in Laufweite (8 Felder)' },
+  park:    { text: 'Park oder Brunnen in der Nähe (4 Felder)' },
+  schule:  { text: 'Schule in der Nähe (10 Felder)' },
+  schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
+};
+const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine']);
+// Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname
+const ANIMALS = [
+  { id: 'katze', icon: '🐱', family: 'Katz', names: ['Ottilie', 'Minka', 'Leo', 'Frida', 'Tom', 'Lotte', 'Pepe', 'Nala'] },
+  { id: 'baer', icon: '🐻', family: 'Bär', names: ['Bruno', 'Hanna', 'Paul', 'Greta', 'Emil', 'Mila', 'Otto', 'Ida'] },
+  { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
+];
 
 const CATS = [
   { id: 'bau', label: '🏠 Bauen' },

@@ -191,7 +191,8 @@ function openInfo(x, y) {
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   const why = [];
   const beete = beetBonus(x, y);
-  if (d.pop) why.push(`👥 ${d.pop * t.lvl} Einwohner`);
+  if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
+  else if (d.pop) why.push(`👥 ${d.pop * t.lvl} Einwohner`);
   if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben`);
   if (t.b === 'muehle') why.push(`${countNear(x, y, 1, b => b === 'feld')} Felder daneben`);
   if (t.b === 'baecker') why.push(`${countNear(x, y, 1, b => b === 'muehle')} Mühlen daneben`);
@@ -221,8 +222,24 @@ function openInfo(x, y) {
       <div class="swatches">${ROOFS.slice(0, n).map((c, i) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
       ${n < 14 ? '<p class="muted">Mehr Farben: Forschung „Farbenlehre“</p>' : ''}`;
   }
+  // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
+  let house = '';
+  if (t.b === 'haus') {
+    const w = houseWishes(t, x, y), a = animalOf(t);
+    const hearts = w.next ? '♥'.repeat(w.met) + '♡'.repeat(w.total - w.met) : '♥♥♥♥♥';
+    house = `
+      <p class="resident">${a.icon} <b id="p-name">${escHtml(t.name)} ${a.family}</b> <button class="link" id="p-rename" aria-label="Namen ändern">✎</button></p>
+      <p class="hearts">${hearts}</p>
+      ${w.next ? `<div class="label">Wünsche für: ${w.next.name}</div>
+        <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}</div>`).join('')}</div>`
+        : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
+    house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
+      ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} Wunsch${w.total - w.met > 1 ? 'e' : ''}`}</button></div>` : '';
+  }
+  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : d.name;
   const el = showPanel(`
-    <h3>${d.name} ${d.up ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
+    <h3>${title} ${d.up ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
+    ${house}
     ${outs.length ? `<p class="big">${outs.join(' · ')}</p>` : ''}
     ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
@@ -235,6 +252,16 @@ function openInfo(x, y) {
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
   if (up) $('p-up').onclick = () => upgrade(x, y);
+  if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
+  if ($('p-rename')) $('p-rename').onclick = () => {
+    const nm = $('p-name');
+    nm.outerHTML = `<input class="text-in small" id="p-name-in" maxlength="16" value="${escHtml(t.name)}">`;
+    const inp = $('p-name-in');
+    inp.focus(); inp.select();
+    const done = () => { const v = inp.value.trim(); if (v) { t.name = v; save(); } openInfo(x, y); };
+    inp.onkeydown = e => { if (e.key === 'Enter') done(); };
+    inp.onblur = done;
+  };
   if ($('p-rot')) $('p-rot').onclick = () => {
     // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
     const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4;

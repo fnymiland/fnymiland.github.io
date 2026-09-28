@@ -204,9 +204,13 @@ function render(now) {
         drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
         g.restore();
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
-        if (t.lvl > 1) drawBadge(c.x, c.y - (w > 1 || h > 1 ? 14 * z : 0), z, t.lvl);
+        if (t.lvl > 1 && t.b !== 'haus') drawBadge(c.x, c.y - (w > 1 || h > 1 ? 14 * z : 0), z, t.lvl);
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
+        if (s && s.wish && s.wish.next) {
+          if (s.wish.ready) icons.push([c.x, c.y, '✨']);
+          else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);
+        }
       }
     } else {
       const ter = terrainAt(x, y), hide = inGhost(x, y);
@@ -279,6 +283,8 @@ function render(now) {
       state.money >= price ? '#3f8f43' : '#8a6a4f', sz);
   }
 
+  drawSparkles(now, z);
+
   // 7) Schwebende Zahlen
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i], a = (now - f.t0) / 1500;
@@ -306,6 +312,28 @@ function render(now) {
     g.save(); g.translate(c.x, c.y); g.rotate(c.r);
     g.fillStyle = c.col; g.fillRect(-4, -2.5, 8, 5);
     g.restore();
+  }
+}
+
+// Glitzern, wenn ein Haus wächst
+const sparkles = [];
+function sparkle(x, y) {
+  const t0 = performance.now();
+  for (let i = 0; i < 16; i++) sparkles.push({ x, y, t0, a: i / 16 * Math.PI * 2, r: 0.4 + Math.random() * 0.5, col: ['#ffd23f', '#ffffff', '#f2a7c0', '#a7d8c9'][i % 4] });
+}
+function drawSparkles(now, z) {
+  for (let i = sparkles.length - 1; i >= 0; i--) {
+    const s = sparkles[i], a = (now - s.t0) / 1400;
+    if (a >= 1) { sparkles.splice(i, 1); continue; }
+    const p = toScreen(s.x + Math.cos(s.a) * s.r * a, s.y + Math.sin(s.a) * s.r * a);
+    const y = p.y - 20 * z - a * 30 * z, r = (1 - a) * 4 * z;
+    g.globalAlpha = 1 - a;
+    g.fillStyle = s.col;
+    g.beginPath();
+    g.moveTo(p.x, y - r * 1.6); g.lineTo(p.x + r * 0.4, y - r * 0.4); g.lineTo(p.x + r * 1.6, y); g.lineTo(p.x + r * 0.4, y + r * 0.4);
+    g.lineTo(p.x, y + r * 1.6); g.lineTo(p.x - r * 0.4, y + r * 0.4); g.lineTo(p.x - r * 1.6, y); g.lineTo(p.x - r * 0.4, y - r * 0.4);
+    g.closePath(); g.fill();
+    g.globalAlpha = 1;
   }
 }
 

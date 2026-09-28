@@ -31,6 +31,7 @@ function build(b, x, y, quiet) {
   else if (b === 'schuett') { state.terra.set(k, 'grass'); sfx('dig'); }
   else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: ROTATABLE.has(b) ? buildRot : 0, ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
+    if (b === 'haus') assignResident(state.tiles.get(k), Math.random, Math.random);
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }
   recalc();
@@ -145,6 +146,43 @@ function upgrade(x, y) {
   recalc();
   addFloat(x, y, 'Stufe ' + t.lvl + '!', '#b8860b');
   sfx('buy');
+  checkStars();
+  save();
+  openInfo(x, y);
+}
+
+// Bewohner: Tierart und Vorname (zufällig beim Bau, bei alten Häusern fest aus der Lage)
+function assignResident(t, r1, r2) {
+  if (t.animal && t.name) return;
+  const a = ANIMALS[Math.floor(r1() * ANIMALS.length)];
+  t.animal = a.id;
+  t.name = a.names[Math.floor(r2() * a.names.length)];
+}
+function nameHouses() {
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'haus') continue;
+    const [x, y] = keyXY(k);
+    assignResident(t, () => hash(x, y, 501), () => hash(x, y, 502));
+  }
+}
+const animalOf = t => ANIMALS.find(a => a.id === t.animal) || ANIMALS[0];
+
+// Haus ausbauen: nur wenn alle Wünsche erfüllt sind; kostet Material
+function houseUpgrade(x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!t || t.b !== 'haus') return;
+  const w = houseWishes(t, x, y);
+  if (!w.next) return;
+  if (!w.ready) { fail('Erst alle Wünsche erfüllen'); return; }
+  const err = matError(w.next.mat);
+  if (err) { fail(err); return; }
+  payMat(w.next.mat);
+  t.lvl++;
+  t.born = performance.now();
+  recalc();
+  sparkle(x, y);
+  sfx('star');
+  toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`);
   checkStars();
   save();
   openInfo(x, y);

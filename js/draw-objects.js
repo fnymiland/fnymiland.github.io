@@ -454,6 +454,120 @@ const BIG_ART = {
   },
 };
 
+// ---------------------------------------------------------------------------
+// Häuser in fünf Stufen: Häuschen, Fachwerk, Reetdach, Stadthaus, Turmhaus
+// ---------------------------------------------------------------------------
+function flowerBox(P, Q, t0, t1, h, z) {
+  faceQuad(P, Q, t0 - 0.03, t1 + 0.03, h - 1.6 * z, h, C('#8a5a3c'));
+  const a = lerp(P, Q, t0), b = lerp(P, Q, t1);
+  for (let i = 0; i < 4; i++) {
+    const m = lerp(a, b, (i + 0.5) / 4);
+    circle(m[0], m[1] - h - 1.2 * z, 1.4 * z, C(['#ff8fb1', '#fff27a', '#ffffff', '#c49bff'][i]));
+  }
+}
+function drawHouse(cx, cy, z, now, x, y, lvl, t) {
+  const hw = TW / 2 * z, hh = TH / 2 * z;
+  const wall = WALLS[t && t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7)];
+  const roof = ROOFS[t && t.roof != null ? t.roof : Math.floor(hash(x, y, 4) * 7)];
+  const rot = (t && t.rot) || 0;
+  const stage = Math.min(lvl || 1, 5);
+  const faces = bx => {
+    const left = [bx.L, bx.B], right = [bx.B, bx.R], r = rot & 3;
+    return { door: r === 0 ? right : r === 1 ? left : null, win: r === 0 ? [left] : r === 1 ? [right] : [left, right] };
+  };
+  if (stage === 1) {                               // Häuschen
+    const s = 0.5, h = 13 * z;
+    shadow(cx, cy, hw * s * 1.1, hh * s * 1.1);
+    const bx = box(cx, cy, hw * s, hh * s, h, wall, roof, 12 * z);
+    doorWin(bx, h, z, rot);
+    return;
+  }
+  if (stage === 2) {                               // Fachwerkhaus mit Blumenkasten
+    const s = 0.54, h = 17 * z;
+    shadow(cx, cy, hw * s * 1.1, hh * s * 1.1);
+    const bx = box(cx, cy, hw * s, hh * s, h, wall, roof, 13 * z);
+    const f = faces(bx);
+    g.strokeStyle = C('#7a5236'); g.lineWidth = 1.1 * z;
+    for (const [P, Q] of [[bx.L, bx.B], [bx.B, bx.R]]) {
+      g.beginPath();
+      for (const tt of [0.02, 0.5, 0.98]) { const a = lerp(P, Q, tt); g.moveTo(a[0], a[1]); g.lineTo(a[0], a[1] - h); }
+      const a = P, b = Q;
+      g.moveTo(a[0], a[1] - h * 0.5); g.lineTo(b[0], b[1] - h * 0.5);
+      const m = lerp(P, Q, 0.25), n = lerp(P, Q, 0.75);
+      g.moveTo(a[0], a[1] - h * 0.5); g.lineTo(m[0], m[1] - h); g.moveTo(b[0], b[1] - h * 0.5); g.lineTo(n[0], n[1] - h);
+      g.stroke();
+    }
+    if (f.door) door(f.door[0], f.door[1], h * 0.9);
+    for (const w of f.win) { windowOn(w[0], w[1], 0.28, 0.46, h * 0.2, h * 0.42, z); windowOn(w[0], w[1], 0.58, 0.76, h * 0.62, h * 0.86, z); flowerBox(w[0], w[1], 0.58, 0.76, h * 0.62, z); }
+    return;
+  }
+  if (stage === 3) {                               // Reetdachhaus mit Garten
+    const s = 0.52, h = 13 * z;
+    ellipse(cx, cy + 2 * z, hw * 0.8, hh * 0.8, C('#86c35b'));
+    for (let i = 0; i < 7; i++) {
+      const a = Math.PI * (0.15 + i * 0.12), gx = cx + Math.cos(a) * hw * 0.78, gy = cy + Math.sin(a) * hh * 0.78;
+      circle(gx, gy - 2 * z, 2.6 * z, C('#5aa84f'));
+      if (i % 2) circle(gx, gy - 3.5 * z, 1.3 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
+    }
+    shadow(cx, cy, hw * s * 1.1, hh * s * 1.1);
+    const bx = box(cx, cy, hw * s, hh * s, h, wall, '#c9a25a', 19 * z);
+    doorWin(bx, h, z, rot);
+    circle(cx - 1 * z, cy - h - 17 * z, 1.3 * z, C('#a8833f'));
+    const chx = cx + hw * 0.18, chy = cy - h - 6 * z;
+    box(chx, chy, 2 * z, 1 * z, 8 * z, '#b35a45', null, 0);
+    smoke(chx, chy - 9 * z, z, now);
+    return;
+  }
+  if (stage === 4) {                               // Stadthaus mit Balkon
+    const s = 0.52, h = 27 * z;
+    shadow(cx, cy, hw * s * 1.15, hh * s * 1.15);
+    const bx = box(cx, cy, hw * s, hh * s, h, wall, roof, 8 * z);
+    const f = faces(bx);
+    if (f.door) door(f.door[0], f.door[1], h * 0.45);
+    for (const w of [[bx.L, bx.B], [bx.B, bx.R]]) {
+      for (const [t0, t1] of [[0.15, 0.4], [0.6, 0.85]]) {
+        if (f.door && w === f.door && t0 > 0.5) continue;
+        windowOn(w[0], w[1], t0, t1, h * 0.12, h * 0.36, z);
+      }
+      windowOn(w[0], w[1], 0.15, 0.4, h * 0.58, h * 0.82, z);
+      windowOn(w[0], w[1], 0.6, 0.85, h * 0.58, h * 0.82, z);
+    }
+    const bf = f.door || f.win[0];
+    faceQuad(bf[0], bf[1], 0.3, 0.7, h * 0.52, h * 0.56, C('#8a5a3c'));
+    g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.9 * z;
+    g.beginPath();
+    for (let i = 0; i <= 6; i++) { const m = lerp(bf[0], bf[1], 0.3 + i * 0.4 / 6); g.moveTo(m[0], m[1] - h * 0.56); g.lineTo(m[0], m[1] - h * 0.66); }
+    const a = lerp(bf[0], bf[1], 0.3), b = lerp(bf[0], bf[1], 0.7);
+    g.moveTo(a[0], a[1] - h * 0.66); g.lineTo(b[0], b[1] - h * 0.66);
+    g.stroke();
+    circle(lerp(bf[0], bf[1], 0.36)[0], lerp(bf[0], bf[1], 0.36)[1] - h * 0.6, 1.8 * z, C('#58b36a'));
+    return;
+  }
+  // Stufe 5: Turmhaus mit Katze am Fenster
+  const s = 0.5, h = 20 * z;
+  shadow(cx, cy, hw * s * 1.2, hh * s * 1.2);
+  const bx = box(cx - 2 * z, cy, hw * s, hh * s, h, wall, roof, 12 * z);
+  doorWin(bx, h, z, rot);
+  const tx = cx + hw * 0.42, ty = cy + hh * 0.1, tr = 6 * z, th = 34 * z;
+  ellipse(tx, ty, tr, tr * 0.5, C(shade(wall, -0.13)));
+  g.fillStyle = C(wall); g.fillRect(tx - tr, ty - th, tr * 2, th);
+  g.fillStyle = C(shade(wall, -0.13)); g.fillRect(tx, ty - th, tr, th);
+  ellipse(tx, ty - th, tr, tr * 0.5, C(shade(wall, 0.05)));
+  poly([[tx - tr * 1.2, ty - th], [tx + tr * 1.2, ty - th], [tx, ty - th - 16 * z]], C(roof));
+  poly([[tx, ty - th], [tx + tr * 1.2, ty - th], [tx, ty - th - 16 * z]], C(shade(roof, -0.18)));
+  const wy = ty - th * 0.62;
+  g.fillStyle = night > 0.15 && isLive() ? '#ffd873' : C('#a8dcff');
+  g.beginPath(); g.ellipse(tx - 1.5 * z, wy, 2.4 * z, 3.4 * z, 0, 0, Math.PI * 2); g.fill();
+  glowQuad([[tx - 4 * z, wy - 3 * z], [tx + 1 * z, wy - 3 * z], [tx + 1 * z, wy + 3 * z], [tx - 4 * z, wy + 3 * z]], 16 * z);
+  // Katze auf dem Fensterbrett
+  const cxw = tx - 1.5 * z, cyw = wy + 3.6 * z, tail = Math.sin(now / 400) * 1.5 * z;
+  ellipse(cxw, cyw, 2.4 * z, 1.4 * z, C('#f4c28f'));
+  circle(cxw - 1.6 * z, cyw - 1.8 * z, 1.4 * z, C('#f4c28f'));
+  poly([[cxw - 2.8 * z, cyw - 2.2 * z], [cxw - 2.4 * z, cyw - 3.8 * z], [cxw - 1.6 * z, cyw - 2.8 * z]], C('#f4c28f'));
+  g.strokeStyle = C('#f4c28f'); g.lineWidth = 0.9 * z;
+  g.beginPath(); g.moveTo(cxw + 2 * z, cyw); g.quadraticCurveTo(cxw + 3.5 * z, cyw + 2 * z, cxw + 3 * z + tail, cyw + 3.5 * z); g.stroke();
+}
+
 // Tür und Fenster je nach Drehung: 0 = Tür rechts vorn, 1 = Tür links vorn, 2/3 = Tür hinten (unsichtbar)
 function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
   const left = [bx.L, bx.B], right = [bx.B, bx.R], r = (rot || 0) & 3;
@@ -480,15 +594,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
-    case 'haus': {
-      const wall = WALLS[t && t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7)];
-      const roof = ROOFS[t && t.roof != null ? t.roof : Math.floor(hash(x, y, 4) * 7)];
-      const s = 0.46 + 0.03 * lvl, h = (12 + 2.5 * lvl) * z;
-      shadow(cx, cy, hw * s * 1.1, hh * s * 1.1);
-      const bx = box(cx, cy, hw * s, hh * s, h, wall, roof, (12 + lvl) * z);
-      doorWin(bx, h, z, t && t.rot);
-      break;
-    }
+    case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;
     case 'feld': {
       diamond(cx, cy, hw * 0.76, hh * 0.76, C('#b8885a'));
       g.strokeStyle = C('#e9b93f'); g.lineWidth = 1.7 * z; g.lineCap = 'round';

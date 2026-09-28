@@ -23,8 +23,9 @@ function syncMovers() {
       const free = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => walkable(a, b));
       if (free.length) {
         const [sx, sy] = free[Math.floor(Math.random() * free.length)];
+        const ht = state.tiles.get(houses[Math.floor(Math.random() * houses.length)][0]);
         walkers.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5,
-          kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)],
+          kind: Math.max(0, ANIMALS.findIndex(a => a.id === (ht && ht.animal))), fur: FUR[Math.floor(Math.random() * FUR.length)],
           shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.7 + Math.random() * 0.4 });
       }
     }
