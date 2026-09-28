@@ -150,7 +150,7 @@ function totals() {
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
-    jobs += d.workers || 0;
+    jobs += jobsOf(t);
     pop += t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (d.pop || 0) * t.lvl;
     const s = { ...(needsReach(t.b) ? reachOf(net, k, x, y) : { eff: 1, how: null }), ...viertelBonus(net, k) };
     st.set(k, s);
@@ -218,6 +218,8 @@ function totals() {
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
+  // Gebäude-Stufen (für ✨ und Infofenster)
+  for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map() };
@@ -311,8 +313,29 @@ const lockText = (id, short) => {
   const txt = unlockText(d, short);
   return txt ? '🔒 ' + txt : '';
 };
-const upgradable = t => ITEMS[t.b].up && t.lvl < MAX_LVL;
-const upgradeCost = t => Math.round(ITEMS[t.b].cost * Math.pow(1.8, t.lvl));
+// Gebäude-Stufen (BUILD_STAGES): was fehlt noch bis zur nächsten Stufe?
+const stageName = t => BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].names[Math.min(t.lvl, MAX_LVL) - 1] : ITEMS[t.b].name;
+const jobsOf = t => (ITEMS[t.b].workers || 0) * (BUILD_STAGES[t.b] ? Math.min(t.lvl, MAX_LVL) : 1);
+function nearText(types, n, r, self) {
+  const where = r === 1 ? 'direkt daneben' : `in der Nähe (${r} Felder)`;
+  if (n === 1) return `${types.map(b => ITEMS[b].name).join(' oder ')} ${where}`;
+  return `${n} ${types.includes(self) ? 'weitere ' : ''}${types.map(b => PLURAL[b] || ITEMS[b].name).join(' oder ')} ${where}`;
+}
+function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
+  const S = BUILD_STAGES[t.b], d = ITEMS[t.b], up = S && S.up[t.lvl - 1];
+  if (!up) return { next: null, conds: [], ready: false };
+  const conds = [];
+  if (d.workers) conds.push({ text: `👷 ${d.workers} freie Einwohner als Mitarbeiter`, ok: pop - jobs >= d.workers });
+  if (up.pop) conds.push({ text: `👥 ${up.pop} Einwohner auf der Insel`, ok: pop >= up.pop });
+  if (up.water) conds.push({ text: `💧 ${up.water} Wasserfelder direkt daneben`, ok: countAround(x, y, 1, isWater) >= up.water });
+  if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
+  if (up.near) {
+    const [types0, n, r] = up.near, types = [].concat(types0);
+    conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, b => types.includes(b)) >= n });
+  }
+  return { next: { name: S.names[t.lvl], cost: up.cost }, conds, ready: conds.every(c => c.ok) };
+}
+const canPay = cost => { const { money = 0, ...mat } = cost; return state.money >= money && hasMat(mat); };
 const hasBuilt = b => [...state.tiles.values()].some(t => t.b === b);
 
 // Drehen: Beim Setzen schaut ein Gebäude von selbst mit der Tür zum Weg. Wer selbst dreht (⟳, Mausrad, R),

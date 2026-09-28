@@ -26,7 +26,10 @@ function kit(cx, cy, z, rot) {
 
   K.poly = (pts, fill, up = 0) => poly(pts.map(([a, b]) => P(a, b, up)), fill);
   K.rect = (a0, b0, a1, b1, fill, up = 0) => K.poly([[a0, b0], [a1, b0], [a1, b1], [a0, b1]], fill, up);
-  K.oval = (a, b, ra, fill, up = 0, squash = 1) => { const [x, y] = P(a, b, up); ellipse(x, y, ra * TW / 2 * z, ra * TH / 2 * z * squash, fill); };
+  // Kreis mit Radius ra (in Feldern) auf dem Boden bzw. in Höhe up
+  K.oval = (a, b, ra, fill, up = 0) => { const [x, y] = P(a, b, up); ellipse(x, y, ra * Math.SQRT2 * TW / 2 * z, ra * Math.SQRT2 * TH / 2 * z, fill); };
+  // Welt-Richtung (u, v) im eigenen Rahmen
+  K.local = (u, v) => r === 0 ? [u, v] : r === 1 ? [v, -u] : r === 2 ? [-u, -v] : [-v, u];
   // Teile von hinten nach vorn zeichnen: [[a, b, fn], …]
   K.scene = parts => parts.map(p => [depth(p[0], p[1]), p[2]]).sort((x, y) => x[0] - y[0]).forEach(p => p[1]());
 

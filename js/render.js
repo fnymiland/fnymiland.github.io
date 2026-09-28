@@ -215,9 +215,9 @@ function render(now) {
         drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
         g.restore();
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
-        if (t.lvl > 1 && t.b !== 'haus') drawBadge(c.x, c.y - (w > 1 || h > 1 ? 14 * z : 0), z, t.lvl);
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
+        if (s && s.grow && s.grow.ready) icons.push([c.x, c.y, '✨']);
         if (s && s.wish && s.wish.next) {
           if (s.wish.ready) icons.push([c.x, c.y, '✨']);
           else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);

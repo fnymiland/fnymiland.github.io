@@ -34,10 +34,10 @@ function probeScene() {
   for (let x = 5; x <= 13; x++) weg(x, 2, 'asphalt');
   for (let x = 5; x <= 11; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + ((x - 5) % 5) });
   put(5, 3, 'haus', { rot: 2 });
-  put(6, 3, 'markt');
-  put(9, 3, 'baecker', { rot: 1 });
-  put(10, 3, 'schule');
-  put(12, 3, 'uni');
+  put(6, 3, 'markt', { lvl: 2, rot: 3 });
+  put(9, 3, 'baecker', { rot: 3, lvl: 3 });
+  put(11, 3, 'schule', { rot: 3, lvl: 2 });
+  put(13, 3, 'uni', { rot: 3 });
   // Sandweg nach Süden: Häuser im Westen, Park und Bibliothek im Osten
   for (let y = 5; y <= 10; y++) weg(2, y, 'sand');
   for (let x = 3; x <= 8; x++) weg(x, 10, 'sand');
@@ -47,14 +47,14 @@ function probeScene() {
   put(5, 8, 'kunst', { rot: 1 });
   // Teich mit Hafen, Sägewerk und Werkstatt am Rand
   for (let y = 6; y <= 9; y++) for (let x = 9; x <= 12; x++) state.terra.set(x + ',' + y, 'water');
-  put(7, 6, 'hafen');
-  put(7, 8, 'saege', { rot: 1 });
-  put(10, 11, 'fabrik');
+  put(7, 6, 'hafen', { lvl: 2 });
+  put(7, 8, 'saege', { rot: 1, lvl: 2 });
+  put(10, 11, 'fabrik', { rot: 1 });
   // Sehenswürdigkeiten: der Baum in allen vier Zuständen, daneben die anderen fertig restauriert
   [0, 1, 2, 3].forEach((stg, i) => put(-5 + i * 3, -4, 'lm', { lm: 'baum', stage: stg }));
   ['obsthain', 'klippe', 'ruine', 'erzberg', 'quelle', 'kristall'].forEach((lm, i) => put(-5 + i * 3, -1, 'lm', { lm, stage: 3 }));
   // Felder mit Mühle
-  put(12, 11, 'feld'); put(13, 11, 'feld'); put(12, 12, 'muehle', { rot: 1 }); put(13, 12, 'feld');
+  put(12, 11, 'feld', { lvl: 2 }); put(13, 11, 'feld', { lvl: 3 }); put(12, 12, 'muehle', { rot: 1, lvl: 3 }); put(13, 12, 'feld');
   // Musterreihe: jeder Stil als kleines Wegstück (y = 13 und 15)
   STYLES.weg.forEach((st, i) => {
     const x = -5 + (i % 8) * 2, y = i < 8 ? 13 : 15;

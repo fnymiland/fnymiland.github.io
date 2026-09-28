@@ -138,17 +138,26 @@ function buyPlot(ck) {
   toast(lms.length ? `Grundstück gekauft! Verbinde ${LANDMARKS[lms[0]].name} per Weg mit dem Dorf.` : 'Neues Grundstück gekauft!');
 }
 
-function upgrade(x, y) {
+// Gebäude ausbauen: nur wenn alle Bedingungen erfüllt sind; kostet Taler und Material
+function stageUpgrade(x, y) {
   const t = state.tiles.get(x + ',' + y);
-  if (!t || !upgradable(t)) return;
-  const c = upgradeCost(t);
-  if (state.money < c) { fail('Zu wenig Taler'); return; }
-  state.money -= c;
+  if (!t || !BUILD_STAGES[t.b]) return;
+  const info = stageInfo(t, x, y);
+  if (!info.next) return;
+  if (!info.ready) { fail('Erst alle Bedingungen erfüllen'); return; }
+  const { money = 0, ...mat } = info.next.cost;
+  if (state.money < money) { fail('Zu wenig Taler'); return; }
+  const err = matError(mat);
+  if (err) { fail(err); return; }
+  state.money -= money;
+  payMat(mat);
   t.lvl++;
   t.born = performance.now();
   recalc();
-  addFloat(x, y, 'Stufe ' + t.lvl + '!', '#b8860b');
-  sfx('buy');
+  const [w, h] = sizeOf(t.b, t.rot);
+  sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
+  sfx('star');
+  toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`);
   checkStars();
   save();
   openInfo(x, y);

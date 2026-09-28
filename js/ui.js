@@ -219,7 +219,8 @@ function openInfo(x, y) {
   if (t.b === 'markt') why.push(`${countNear(x, y, 2, isProducerB)} Gebäude in der Nähe`);
   if (t.b === 'fabrik') why.push(`${countNear(x, y, 3, b => b === 'mine')} Bergwerke in der Nähe`);
   if (d.cat === 'bau' && beete) why.push(`${beete} Blumenbeet${beete > 1 ? 'e' : ''}: +${beete * 15} %`);
-  if (d.up && t.lvl > 1) why.push(`Stufe ${t.lvl}: ×${t.lvl}`);
+  const S = BUILD_STAGES[t.b];
+  if (S && t.lvl > 1) why.push(`Stufe ${t.lvl}: ×${t.lvl}`);
   const b = beautyOf(t, x, y);
   if (b) why.push(`🌸 ${b > 0 ? '+' : ''}${nf1.format(b)}`);
   if (d.cat === 'deko' && d.beauty && nearHouse(x, y)) why.push('neben Häusern ×1,5');
@@ -228,8 +229,22 @@ function openInfo(x, y) {
   else if (d.conv) outs.push(`${CONV_RATIO} ${RES[d.conv.from].icon} → 1 ${RES[d.conv.to].icon} · bis ${fmtRate((s.conv || 0) * 60)}/min`);
   else if (s.inc > 0 || d.cat === 'bau') outs.push(`+${fmtRate(s.inc || 0)} Taler/s`);
   if (d.science) outs.push(`+${fmtRate(s.sci || 0)} 💡/s`);
-  const up = upgradable(t);
-  const cost = up ? upgradeCost(t) : 0;
+  // Gebäude-Stufen: Bedingungen, Kosten, Ausbauen
+  let grow = '';
+  if (S) {
+    const info = stageInfo(t, x, y);
+    if (info.next) {
+      const { money = 0, ...mat } = info.next.cost, missing = info.conds.filter(c => !c.ok).length;
+      const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
+        ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${n}`)].filter(Boolean);
+      grow = `
+        <div class="label">Nächste Stufe: ${info.next.name} · ×${t.lvl + 1}</div>
+        <div class="status">${info.conds.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}</div>`).join('')}</div>
+        <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+        <div class="row"><button class="btn" id="p-stage" ${info.ready && canPay(info.next.cost) ? '' : 'disabled'}>
+          ${info.ready ? (canPay(info.next.cost) ? '✨ Ausbauen' : 'Material fehlt noch') : `Noch ${missing} ${missing > 1 ? 'Bedingungen' : 'Bedingung'}`}</button></div>`;
+    } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
+  }
   let colors = '';
   if (t.b === 'haus') {
     const n = hasTech('farben') ? 14 : 7, look = houseLook(t);
@@ -259,22 +274,21 @@ function openInfo(x, y) {
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
       ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
-  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : d.name;
+  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : stageName(t);
   const el = showPanel(`
-    <h3>${title} ${d.up ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
+    <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
     ${house}
     ${outs.length ? `<p class="big">${outs.join(' · ')}</p>` : ''}
     ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
     <p class="muted">${d.desc}</p>
+    ${grow}
     ${colors}
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
-      ${up ? `<button class="btn" id="p-up" data-cost="${cost}">Ausbauen · 🪙 ${fmt(cost)}</button>`
-           : d.up ? '<button class="btn" disabled>Höchste Stufe</button>' : ''}
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
-  if (up) $('p-up').onclick = () => upgrade(x, y);
+  if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
     const nm = $('p-name');

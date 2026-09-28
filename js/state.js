@@ -94,6 +94,12 @@ function parseSave(d) {
   if ((d.v || 3) < 4) {
     for (const [, t] of d.tiles) if (LONG_FRONT.has(t.b)) t.rot = (t.rot || 0) ^ 1;
   }
+  // 29.09.2026: Gebäude haben höchstens 3 Stufen – was darüber per Taler ausgebaut war, gibt es zurück
+  for (const [, t] of d.tiles) {
+    if (!BUILD_STAGES[t.b] || !(t.lvl > MAX_LVL)) continue;
+    for (let l = MAX_LVL; l < t.lvl; l++) d.money = (+d.money || 0) + Math.round(ITEMS[t.b].cost * Math.pow(1.8, l));
+    t.lvl = MAX_LVL;
+  }
   const taken = new Set(d.tiles.map(([k]) => k));
   for (const w of d.paved || []) {
     const [k, st] = typeof w === 'string' ? [w, 'alt'] : w;

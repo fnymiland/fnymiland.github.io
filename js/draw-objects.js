@@ -285,109 +285,25 @@ function groundRect(cx, cy, z, hu, hv, fill, pat, x, y) {
 }
 const BIG_ART = {
   rathaus(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#e6dfd0', ['tiles', '#d6ccb9']);
-    const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const fp = F(hu * 0.75, -hv * 0.8);
-    drawFlag(fp[0], fp[1], z * 1.3, now, state.town);
-    const H = 24 * z, bx = boxR(cx, cy + 2 * z, z, hu * 0.6, hv * 0.6, H, '#fff1d6', '#6f8fd8', 18 * z);
-    const front = (t.rot || 0) & 1 ? [bx.L, bx.B] : [bx.B, bx.R], side = (t.rot || 0) & 1 ? [bx.B, bx.R] : [bx.L, bx.B];
-    faceQuad(front[0], front[1], 0.42, 0.58, 0, H * 0.5, C('#8a5a3c'));
-    windowOn(front[0], front[1], 0.12, 0.3, H * 0.35, H * 0.72, z);
-    windowOn(front[0], front[1], 0.7, 0.88, H * 0.35, H * 0.72, z);
-    windowsOn(side, 3, H, z);
-    const tw = boxR(cx, cy - H - 4 * z, z, 0.17, 0.17, 20 * z, '#fff1d6', '#e8705f', 12 * z);
-    const m = lerp(tw.L, tw.B, 0.5), cyc = m[1] - 20 * z * 0.6;
-    circle(m[0], cyc, 4.2 * z, C('#ffffff'));
-    g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;
-    g.beginPath(); g.arc(m[0], cyc, 4.2 * z, 0, Math.PI * 2); g.stroke();
-    g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0], cyc - 3 * z); g.moveTo(m[0], cyc); g.lineTo(m[0] + 2.2 * z, cyc); g.stroke();
-  },
-  markt(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.96, hv * 0.96, '#eadcbf', ['stones', '#dccdae']);
-    const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const fruit = ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a', '#c77dff'];
-    const stall = (u, v, col, i) => {
-      const [sx, sy] = F(u, v);
-      const bx = boxR(sx, sy, z, 0.3, 0.22, 7 * z, '#f5e1b8', col, 7 * z);
-      const f = lerp(bx.L, bx.B, 0.5);
-      for (let j = 0; j < 4; j++) circle(f[0] - 5 * z + j * 3.4 * z, f[1] - 2.3 * z, 1.8 * z, C(fruit[(j + i) % 5]));
+    const K = kit(cx, cy, z, t.rot);
+    K.rect(-0.98, -0.98, 0.98, 0.98, C('#e6dfd0'));
+    g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
+    pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
+    g.restore();
+    const hall = () => {
+      const B = K.block({ ha: 0.6, hb: 0.6, h: 24, wall: '#fff1d6', roof: '#6f8fd8', roofH: 18, entry: true, trim: '#ffffff' });
+      K.door(B, 'front', 0.42, 0.58, 0.5);
+      K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2], true);
+      K.sideWins(B, 3, 0.35, 0.72);
+      const T2 = K.block({ ha: 0.17, hb: 0.17, h: 20, lift: 28, wall: '#fff1d6', roof: '#e8705f', roofH: 12 });
+      const F = T2.faces.front || T2.faces.right || T2.faces.left, m = lerp(F.P, F.Q, 0.5), cyc = m[1] - 20 * z * 0.6;
+      circle(m[0], cyc, 4.2 * z, C('#ffffff'));
+      g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;
+      g.beginPath(); g.arc(m[0], cyc, 4.2 * z, 0, Math.PI * 2); g.stroke();
+      g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0], cyc - 3 * z); g.moveTo(m[0], cyc); g.lineTo(m[0] + 2.2 * z, cyc); g.stroke();
     };
-    const umbrella = (u, v, col) => {
-      const [sx, sy] = F(u, v);
-      box(sx, sy + 2 * z, 5 * z, 2.5 * z, 3 * z, '#c9955f', null, 0);
-      g.strokeStyle = C('#8a6a4a'); g.lineWidth = 1.2 * z;
-      g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx, sy - 15 * z); g.stroke();
-      poly([[sx - 11 * z, sy - 12 * z], [sx, sy - 19 * z], [sx + 11 * z, sy - 12 * z], [sx, sy - 7 * z]], C(col));
-      poly([[sx, sy - 19 * z], [sx + 11 * z, sy - 12 * z], [sx, sy - 7 * z]], C(shade(col, -0.15)));
-      poly([[sx - 4 * z, sy - 16.5 * z], [sx, sy - 19 * z], [sx + 4 * z, sy - 16.5 * z], [sx, sy - 14.5 * z]], C('#ffffff'));
-    };
-    const crate = (u, v, c) => { const [sx, sy] = F(u, v); box(sx, sy, 3.5 * z, 1.8 * z, 4 * z, c, null, 0); };
-    // hinten nach vorn zeichnen
-    stall(-1.05, -1.05, '#e85d5d', 0);
-    stall(0, -1.1, '#4fb0e0', 1);
-    stall(-1.1, 0, '#f2b53a', 2);
-    stall(1.05, -1.05, '#58b36a', 3);
-    stall(-1.05, 1.05, '#c77dff', 4);
-    crate(0.55, -0.6, '#c9955f'); crate(-0.6, 0.55, '#b98a55');
-    const [fx, fy] = F(0, 0);
-    ellipse(fx, fy + 1 * z, 14 * z, 7 * z, C('#aeb2bd'));
-    ellipse(fx, fy - 1 * z, 11.5 * z, 5.6 * z, C('#74d0e6'));
-    const jet = Math.sin(now / 300) * 1.2 * z;
-    g.strokeStyle = C('#bfeefa'); g.lineWidth = 1.6 * z;
-    g.beginPath(); g.moveTo(fx, fy - 1 * z); g.lineTo(fx, fy - 9 * z - jet); g.stroke();
-    umbrella(1.1, 0, '#e8705f');
-    umbrella(0, 1.1, '#58b36a');
-    crate(0.95, 0.75, '#f2b53a'); crate(0.7, 1.0, '#c9955f');
-    umbrella(1.05, 1.1, '#4fb0e0');
-  },
-  hafen(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#c9955f', ['planks', '#a57645']);
-    const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const [wx, wy] = F(-hu * 0.45, -hv * 0.45);
-    const bx = boxR(wx, wy, z, 0.42, 0.42, 16 * z, '#d98a6a', '#8b5a3c', 10 * z);
-    faceQuad(bx.B, bx.R, 0.3, 0.7, 0, 16 * z * 0.6, C('#8a5a3c'));
-    windowOn(bx.L, bx.B, 0.3, 0.7, 16 * z * 0.45, 16 * z * 0.75, z);
-    const [kx, ky] = F(hu * 0.55, -hv * 0.4);
-    g.strokeStyle = C('#e9a23b'); g.lineWidth = 2.2 * z; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(kx, ky); g.lineTo(kx, ky - 36 * z); g.lineTo(kx + 18 * z, ky - 30 * z); g.stroke();
-    g.lineWidth = 1 * z; g.beginPath(); g.moveTo(kx + 18 * z, ky - 30 * z); g.lineTo(kx + 18 * z, ky - 16 * z); g.stroke();
-    box(kx + 18 * z, ky - 12 * z, 3 * z, 1.5 * z, 4 * z, '#5f8fe8', null, 0);
-    for (const [u, v, c] of [[-0.2, 0.5, '#5f8fe8'], [0, 0.6, '#e8705f'], [-0.35, 0.35, '#f2b53a']]) { const [bx2, by2] = F(u * hu, v * hv); box(bx2, by2, 3.5 * z, 1.8 * z, 5 * z, c, null, 0); }
-    const [sx, sy] = F(hu * 1.15, hv * 0.6), bob = Math.sin(now / 700) * 1.2 * z;
-    ellipse(sx, sy + 3 * z + bob, 13 * z, 4.5 * z, C('#e8604f'));
-    box(sx - 2 * z, sy - 1 * z + bob, 4 * z, 2 * z, 6 * z, '#ffffff', '#3e8ed0', 3 * z);
-  },
-  schule(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.97, hv * 0.97, '#e2d9c6');
-    const F = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const odd = (t.rot || 0) & 1, [ox, oy] = odd ? F(-hu * 0.35, 0) : F(0, -hv * 0.35);
-    const bu = odd ? hu * 0.45 : hu * 0.85, bv = odd ? hv * 0.85 : hv * 0.45, H = 18 * z;
-    const bx = boxR(ox, oy, z, bu, bv, H, '#f6d7a7', '#d96c4f', 12 * z);
-    const lf = longFace(bx, bu, bv);
-    windowsOn(lf, 5, H, z);
-    faceQuad(lf[0], lf[1], 0.45, 0.55, 0, H * 0.55, C('#8a5a3c'));
-    windowsOn(shortFace(bx, bu, bv), 2, H, z);
-    boxR(ox, oy - H - 10 * z, z, 0.1, 0.1, 8 * z, '#fff4dc', '#d96c4f', 7 * z);
-    circle(ox, oy - H - 14 * z, 1.6 * z, C('#e9a23b'));
-    const [tx, ty] = odd ? F(hu * 0.55, hv * 0.5) : F(hu * 0.5, hv * 0.55);
-    tree(tx, ty, z * 0.9, 0.9);
-    const [px2, py2] = odd ? F(hu * 0.55, -hv * 0.4) : F(-hu * 0.4, hv * 0.55);
-    g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.4 * z;
-    g.beginPath(); g.moveTo(px2 - 6 * z, py2); g.lineTo(px2 - 6 * z, py2 - 12 * z); g.lineTo(px2 + 6 * z, py2 - 12 * z); g.lineTo(px2 + 6 * z, py2); g.stroke();
-    const sw = Math.sin(now / 500) * 3 * z;
-    g.beginPath(); g.moveTo(px2, py2 - 12 * z); g.lineTo(px2 + sw, py2 - 4 * z); g.stroke();
-    box(px2 + sw, py2 - 3 * z, 2.2 * z, 1 * z, 1 * z, '#e8705f', null, 0);
-  },
-  uni(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    groundRect(cx, cy, z, hu * 0.97, hv * 0.97, '#9ad26f');
-    const H = 22 * z, bx = boxR(cx, cy, z, hu * 0.75, hv * 0.6, H, '#f3ead9', null, 0);
-    const odd = (t.rot || 0) & 1, colFace = odd ? [bx.L, bx.B] : [bx.B, bx.R], winFace = odd ? [bx.B, bx.R] : [bx.L, bx.B];
-    for (let i = 0; i < 6; i++) faceQuad(colFace[0], colFace[1], 0.08 + i * 0.155, 0.13 + i * 0.155, 0, H, C('#ffffff'));
-    windowsOn(winFace, 4, H, z);
-    g.beginPath(); g.ellipse(cx, cy - H, 16 * z, 16 * z, 0, Math.PI, 0); g.fillStyle = C('#5f8fe8'); g.fill();
-    ellipse(cx - 4 * z, cy - H - 9 * z, 4 * z, 2.5 * z, C('#8fb4f2'));
-    g.strokeStyle = C('#e9a23b'); g.lineWidth = 1.6 * z;
-    g.beginPath(); g.moveTo(cx, cy - H - 16 * z); g.lineTo(cx, cy - H - 22 * z); g.stroke();
+    const flag = () => { const [fx, fy] = K.P(0.78, -0.78); drawFlag(fx, fy, z * 1.3, now, state.town); };
+    K.scene([[0, 0, hall], [0.78, -0.78, flag], [0.8, 0.75, () => kitBush(K, 0.8, 0.75, 0.9)]]);
   },
   park(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     const L = groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#8fd16a');
@@ -408,75 +324,6 @@ const BIG_ART = {
       const [fx, fy] = F(u, v);
       circle(fx, fy, 1.8 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
     }
-  },
-  baecker(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const bu = hu * 0.85, bv = hv * 0.8, H = (15 + lvl) * z;
-    shadow(cx, cy, (bu + bv) * TW / 2 * z * 0.9, (bu + bv) * TH / 2 * z * 0.9);
-    const bx = boxR(cx, cy, z, bu, bv, H, '#ffe8b0', '#9c5a32', 12 * z);
-    const lf = longFace(bx, bu, bv);
-    windowsOn(lf, 3, H, z, 0.35, 0.95);
-    faceQuad(lf[0], lf[1], 0.12, 0.26, 0, H * 0.6, C('#8a5a3c'));
-    for (let i = 0; i < 6; i++) faceQuad(lf[0], lf[1], 0.08 + i * 0.14, 0.15 + i * 0.14, H * 0.74, H * 0.86, C(i & 1 ? '#ffffff' : '#e8705f'));
-    const P = bx.P, [chx, chy] = P(bu * 0.3, -bv * 0.4, H + 6 * z);
-    box(chx, chy, 2.6 * z, 1.3 * z, 9 * z, '#c0694a', null, 0);
-    smoke(chx, chy - 11 * z, z, now);
-    const sf = shortFace(bx, bu, bv), sb = lerp(sf[0], sf[1], 0.5);
-    ellipse(sb[0], sb[1] - H * 0.55, 4 * z, 2.4 * z, C('#d99a4e'));
-  },
-  saege(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const bu = hu * 0.8, bv = hv * 0.75, H = 13 * z;
-    shadow(cx, cy, (bu + bv) * TW / 2 * z * 0.9, (bu + bv) * TH / 2 * z * 0.9);
-    const bx = boxR(cx, cy, z, bu, bv, H, '#c98d5c', '#7a4f2a', 10 * z);
-    const lf = longFace(bx, bu, bv);
-    faceQuad(lf[0], lf[1], 0.35, 0.65, 0, H * 0.75, C('#6b4a2e'));
-    windowsOn(shortFace(bx, bu, bv), 1, H, z);
-    const P = bx.P, odd = hu < hv;
-    const [lx, ly] = odd ? P(bu * 0.3, bv * 1.1) : P(bu * 1.05, bv * 0.2);
-    for (const [ox, oy] of [[0, 0], [5, -2], [2.5, -4.5]]) {
-      ellipse(lx + ox * z, ly + oy * z, 3.4 * z, 2.6 * z, C('#b57b4a'));
-      ellipse(lx + ox * z - 2.6 * z, ly + oy * z, 1.4 * z, 2.4 * z, C('#ecd1a4'));
-    }
-    const m = lerp(lf[0], lf[1], 0.5), sx = m[0], sy = m[1] - H - 4 * z, a = now / 200;
-    circle(sx, sy, 5 * z, C('#c7cad2'));
-    g.strokeStyle = C('#8a8f99'); g.lineWidth = 1 * z;
-    g.beginPath(); for (let i = 0; i < 4; i++) { const b = a + i * Math.PI / 2; g.moveTo(sx, sy); g.lineTo(sx + Math.cos(b) * 5 * z, sy + Math.sin(b) * 5 * z); } g.stroke();
-  },
-  fabrik(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const bu = hu * 0.85, bv = hv * 0.8, H = 15 * z;
-    shadow(cx, cy, (bu + bv) * TW / 2 * z * 0.9, (bu + bv) * TH / 2 * z * 0.9);
-    const bx = boxR(cx, cy, z, bu, bv, H, '#d98a6a', null, 0);
-    const P = bx.P, odd = hu < hv;
-    for (let i = 0; i < 4; i++) {
-      const f = -0.75 + i * 0.5;
-      const a = odd ? P(-bu, f * bv, H) : P(f * bu, -bv, H), b2 = odd ? P(bu, f * bv, H) : P(f * bu, bv, H);
-      const c2 = odd ? P(bu, (f + 0.3) * bv, H + 7 * z) : P((f + 0.3) * bu, bv, H + 7 * z), d2 = odd ? P(-bu, (f + 0.3) * bv, H + 7 * z) : P((f + 0.3) * bu, -bv, H + 7 * z);
-      poly([a, b2, c2, d2], C('#8fa3b8'));
-    }
-    const lf = longFace(bx, bu, bv);
-    windowsOn(lf, 4, H, z);
-    const [chx, chy] = P(-bu * 0.6, -bv * 0.5, H);
-    box(chx, chy, 2.8 * z, 1.4 * z, 20 * z, '#b35a45', null, 0);
-    smoke(chx, chy - 22 * z, z, now, true);
-  },
-  bibliothek(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const bu = hu * 0.82, bv = hv * 0.78, H = 16 * z;
-    shadow(cx, cy, (bu + bv) * TW / 2 * z * 0.9, (bu + bv) * TH / 2 * z * 0.9);
-    const bx = boxR(cx, cy, z, bu, bv, H, '#efe6d8', '#7d6bb0', 10 * z);
-    const lf = longFace(bx, bu, bv);
-    for (let i = 0; i < 6; i++) faceQuad(lf[0], lf[1], 0.06 + i * 0.16, 0.12 + i * 0.16, 0, H, C('#ffffff'));
-    faceQuad(lf[0], lf[1], 0.44, 0.56, 0, H * 0.55, C('#8a5a3c'));
-    windowsOn(shortFace(bx, bu, bv), 2, H, z);
-  },
-  kunst(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const bu = hu * 0.82, bv = hv * 0.78, H = 17 * z;
-    shadow(cx, cy, (bu + bv) * TW / 2 * z * 0.9, (bu + bv) * TH / 2 * z * 0.9);
-    const bx = boxR(cx, cy, z, bu, bv, H, '#ffe3ef', '#f28cb1', 12 * z);
-    const lf = longFace(bx, bu, bv);
-    windowsOn(lf, 2, H, z, 0.1, 0.9, 0.25, 0.85);
-    windowsOn(shortFace(bx, bu, bv), 1, H, z);
-    const P = bx.P, odd = hu < hv, [px2, py2] = odd ? P(bu * 1.1, bv * 0.5) : P(bu * 0.5, bv * 1.15);
-    ellipse(px2, py2 - 4 * z, 8 * z, 5.5 * z, C('#f7ecd4'));
-    ['#e8705f', '#5f8fe8', '#58b36a', '#ffd23f'].forEach((c, i) => circle(px2 - 4 * z + i * 2.8 * z, py2 - 5 * z + (i & 1) * 2.4 * z, 1.5 * z, C(c)));
   },
 };
 
@@ -640,9 +487,9 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
   if (doorFace) door(doorFace[0], doorFace[1], h * doorH);
   for (const f of winFaces) for (const [a, b] of wins) windowOn(f[0], f[1], a, b, h * 0.35, h * 0.72, z);
 }
-// Unregelmäßige Objekte werden bei ungerader Drehung gespiegelt
-const MIRROR = new Set(['holz', 'fischer', 'bank', 'obst', 'stein', 'mine']);
-const ROTATABLE = new Set([...MIRROR, 'haus', 'muehle', 'steinmetz', 'schmiede',
+// Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
+const MIRROR = new Set(['bank']);
+const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
@@ -659,27 +506,11 @@ function rotateBuild(dir = 1) {
 }
 
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
+  if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;
-    case 'feld': {
-      diamond(cx, cy, hw * 0.76, hh * 0.76, C('#b8885a'));
-      g.strokeStyle = C('#e9b93f'); g.lineWidth = 1.7 * z; g.lineCap = 'round';
-      g.beginPath();
-      const th = (5 + lvl * 0.8) * z;
-      for (let s = -4; s <= 4; s++) for (let i = -2; i <= 2; i++) {
-        const j = s - i;
-        if (j < -2 || j > 2) continue;
-        const u = i * 0.13, v = j * 0.13;
-        const bx = cx + (u - v) * TW / 2 * z, by = cy + (u + v) * TH / 2 * z;
-        const sw = Math.sin(now / 700 + i * 0.7 + j) * 1.2 * z;
-        g.moveTo(bx - 1.5 * z, by); g.lineTo(bx - 1.5 * z + sw, by - th);
-        g.moveTo(bx + 1.5 * z, by); g.lineTo(bx + 1.5 * z + sw, by - th * 0.85);
-      }
-      g.stroke();
-      break;
-    }
     case 'blumen': {
       diamond(cx, cy, hw * 0.72, hh * 0.72, C('#a8764c'));
       const pts = [];
@@ -694,78 +525,14 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
-    case 'holz': {
-      drawForest(cx, cy, z, x, y, 2);
-      const bx = box(cx + 5 * z, cy + 4 * z, hw * 0.3, hh * 0.3, 9 * z, '#c98d5c', '#7a4f2a', 8 * z);
-      door(bx.B, bx.R, 9 * z);
-      for (const [lx, ly] of [[-11, 7], [-7, 9], [-9, 5]]) {
-        ellipse(cx + lx * z, cy + ly * z, 3.2 * z, 2.6 * z, C('#b57b4a'));
-        ellipse(cx + lx * z - 2.4 * z, cy + ly * z, 1.6 * z, 2.4 * z, C('#ecd1a4'));
-      }
-      break;
-    }
-    case 'obst': {
-      diamond(cx, cy, hw * 0.76, hh * 0.76, C('#86c35b'));
-      for (const [u, v] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) {
-        const px = cx + (u - v) * TW / 2 * z, py = cy + (u + v) * TH / 2 * z;
-        tree(px, py, z * 0.7, 0.3, '#ff6b5e');
-      }
-      box(cx + 11 * z, cy + 5 * z, 3 * z, 1.5 * z, 3 * z, '#c98d5c', null, 0);
-      break;
-    }
-    case 'fischer': {
-      shadow(cx, cy, hw * 0.45, hh * 0.45);
-      const h = 11 * z;
-      const bx = box(cx - 2 * z, cy, hw * 0.38, hh * 0.38, h, '#eef8ff', '#3e8ed0', 9 * z);
-      door(bx.B, bx.R, h);
-      windowOn(bx.L, bx.B, 0.35, 0.62, h * 0.4, h * 0.75, z);
-      g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.3 * z;
-      g.beginPath();
-      g.moveTo(cx + 9 * z, cy + 2 * z); g.lineTo(cx + 20 * z, cy - 12 * z);
-      g.quadraticCurveTo(cx + 25 * z, cy - 4 * z, cx + 24 * z, cy + 6 * z);
-      g.stroke();
-      circle(cx + 24 * z, cy + 6 * z + Math.sin(now / 400) * 0.8 * z, 1.8 * z, C('#ff5a4f'));
-      break;
-    }
-    case 'stein': {
-      diamond(cx, cy, hw * 0.76, hh * 0.76, C('#9ea3ab'));
-      boulder(cx - 8 * z, cy - 2 * z, (6 + lvl * 0.5) * z);
-      boulder(cx + 7 * z, cy - 3 * z, (5 + lvl * 0.5) * z);
-      const bx = box(cx + 2 * z, cy + 6 * z, hw * 0.16, hh * 0.16, 4 * z, '#8a5a3c', null, 0);
-      circle(bx.L[0] + 3 * z, bx.L[1] - 5 * z, 2 * z, C('#c7cad2'));
-      break;
-    }
-    case 'mine': {
-      diamond(cx, cy, hw * 0.76, hh * 0.76, C('#a89a80'));
-      ellipse(cx - 2 * z, cy - 4 * z, 14 * z, 10 * z, C('#9a9ea8'));
-      ellipse(cx - 5 * z, cy - 8 * z, 7 * z, 4 * z, C('#c3c6ce'));
-      poly([[cx - 4 * z, cy + 2 * z], [cx + 4 * z, cy + 2 * z], [cx + 4 * z, cy - 7 * z], [cx - 4 * z, cy - 7 * z]], C('#3b3440'));
-      g.strokeStyle = C('#8a5a3c'); g.lineWidth = 2 * z;
-      g.beginPath(); g.moveTo(cx - 5 * z, cy + 2 * z); g.lineTo(cx - 5 * z, cy - 8 * z); g.lineTo(cx + 5 * z, cy - 8 * z); g.lineTo(cx + 5 * z, cy + 2 * z); g.stroke();
-      box(cx + 10 * z, cy + 5 * z, 3.5 * z, 2 * z, 4 * z, '#6b7a8f', null, 0);
-      circle(cx + 10 * z, cy + 0.5 * z, 2 * z, C('#f2c14e'));
-      break;
-    }
-    case 'muehle': {
-      shadow(cx, cy, hw * 0.45, hh * 0.45);
-      const h = (24 + 2 * lvl) * z;
-      const bx = box(cx, cy, hw * 0.34, hh * 0.34, h, '#fff6e4', '#c65a45', 12 * z);
-      doorWin(bx, h, z, t && t.rot, [], 0.5);
-      const odd = t && (t.rot & 1);
-      const m = odd ? lerp(bx.B, bx.R, 0.5) : lerp(bx.L, bx.B, 0.5);
-      blades(m[0] - 1 * z, m[1] - h * 0.8, z, now, 4, 15 * z, '#f3e3c3');
-      break;
-    }
     case 'leuchtturm': {
-      shadow(cx, cy, hw * 0.45, hh * 0.45);
-      diamond(cx, cy, hw * 0.5, hh * 0.5, C('#c9ccd6'));
+      const K = kit(cx, cy, z, t && t.rot);
+      kShadow(K, 0.24);
+      K.rect(-0.25, -0.25, 0.25, 0.25, C('#c9ccd6'));
       const h = 46 * z, a = hw * 0.26, b = hh * 0.26;
-      const bx = box(cx, cy, a, b, h, '#ffffff', null, 0);
-      for (const [h0, h1] of [[0.18, 0.34], [0.52, 0.68]]) {
-        faceQuad(bx.L, bx.B, 0, 1, h * h0, h * h1, C('#e8604f'));
-        faceQuad(bx.B, bx.R, 0, 1, h * h0, h * h1, C('#c94f40'));
-      }
-      door(bx.B, bx.R, h * 0.3);
+      const B = K.block({ ha: 0.13, hb: 0.13, h: 46, wall: '#ffffff', type: 'flat', entry: true });
+      for (const F of Object.values(B.faces)) if (F) for (const [h0, h1] of [[0.18, 0.34], [0.52, 0.68]]) faceQuad(F.P, F.Q, 0, 1, h * h0, h * h1, K.wallCol('#e8604f', F.n));
+      K.door(B, 'front', 0.3, 0.7, 0.28);
       const top = cy - h;
       const lamp = box(cx, top, a * 0.8, b * 0.8, 8 * z, '#fff3b0', '#e8604f', 7 * z);
       glowQuad([[lamp.L[0], lamp.L[1]], [lamp.B[0], lamp.B[1]], [lamp.B[0], lamp.B[1] - 8 * z], [lamp.L[0], lamp.L[1] - 8 * z]], 60 * z);
@@ -793,29 +560,6 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Bildung ---
-    case 'steinmetz': {
-      shadow(cx, cy, hw * 0.6, hh * 0.6);
-      const h = 12 * z;
-      const bx = box(cx - 3 * z, cy - 1 * z, hw * 0.44, hh * 0.44, h, '#dcd6ca', '#8a8f99', 9 * z);
-      doorWin(bx, h, z, t && t.rot);
-      box(cx + 11 * z, cy + 5 * z, 3 * z, 1.5 * z, 3 * z, '#cfc8bb', null, 0);
-      box(cx + 7 * z, cy + 7 * z, 3 * z, 1.5 * z, 3 * z, '#bdb7ab', null, 0);
-      box(cx + 9 * z, cy + 6 * z - 3 * z, 3 * z, 1.5 * z, 3 * z, '#e0dbd1', null, 0);
-      break;
-    }
-    case 'schmiede': {
-      shadow(cx, cy, hw * 0.6, hh * 0.6);
-      const h = 13 * z;
-      const bx = box(cx, cy, hw * 0.48, hh * 0.48, h, '#a86f5c', '#4a4a58', 9 * z);
-      doorWin(bx, h, z, t && t.rot, []);
-      const glow = 0.6 + 0.4 * Math.sin(now / 180);
-      faceQuad(bx.L, bx.B, 0.3, 0.7, h * 0.2, h * 0.6, `rgba(255,${Math.round(120 + 60 * glow)},60,1)`);
-      const chx = cx + hw * 0.25, chy = cy - h - 2 * z;
-      box(chx, chy, 2.6 * z, 1.3 * z, 10 * z, '#6b4f3a', null, 0);
-      smoke(chx, chy - 12 * z, z, now, true);
-      box(cx + 13 * z, cy + 5 * z, 3 * z, 1.5 * z, 3 * z, '#4a4a58', null, 0);
-      break;
-    }
     // --- Deko ---
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
     case 'baum': tree(cx, cy + 2 * z, z * 1.05, 0.9); break;
@@ -1074,16 +818,6 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   }
 }
 
-function drawBadge(cx, cy, z, lvl) {
-  const r = 5.5 * z, bx = cx + 12 * z, by = cy - 30 * z;
-  circle(bx, by, r, '#ffd75e');
-  g.strokeStyle = '#b8860b'; g.lineWidth = 1.2 * z;
-  g.beginPath(); g.arc(bx, by, r, 0, Math.PI * 2); g.stroke();
-  g.fillStyle = '#6b4f3a';
-  g.font = `900 ${7.5 * z}px Nunito, system-ui, sans-serif`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(lvl, bx, by + 0.4 * z);
-}
 function drawStatusIcon(cx, cy, z, icon, now) {
   const bob = Math.sin(now / 300) * 1.5 * z, x = cx - 10 * z, y = cy - 34 * z + bob, r = 6.5 * z;
   circle(x, y + 1.5, r, 'rgba(107,79,58,0.3)');

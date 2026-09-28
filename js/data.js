@@ -7,7 +7,7 @@
 // ---------------------------------------------------------------------------
 const TW = 64, TH = 32, DEPTH = 9, CHUNK = 6;
 const SAVE_KEY = 'kachelhausen_v3';
-const MAX_LVL = 5;
+const MAX_LVL = 3;              // Gebäude-Stufen (Häuser: HOUSE_STAGES)
 const OFFLINE_MAX_S = 8 * 3600;
 const ZOOM_MIN = 0.45, ZOOM_MAX = 2.6;
 const ISLAND = { cMin: -4, cMax: 4, cx: 2.5, cy: 2.5, r: 26 };
@@ -23,30 +23,30 @@ const ITEMS = {
   // --- Wohnen & Arbeit ---
   haus:    { cat: 'bau', name: 'Haus', cost: 40, needs: 'grass', pop: 4,
              desc: 'Hier wohnt jemand. Erfüllst du die Wünsche, kannst du das Haus ausbauen. Antippen = Wünsche und Farben.' },
-  feld:    { cat: 'bau', name: 'Feld', cost: 20, needs: 'grass', workers: 1, up: true, desc: '1 Taler/s.' },
-  muehle:  { cat: 'bau', name: 'Mühle', cost: 150, needs: 'grass', workers: 1, up: true,
+  feld:    { cat: 'bau', name: 'Feld', cost: 20, needs: 'grass', workers: 1, desc: '1 Taler/s.' },
+  muehle:  { cat: 'bau', name: 'Mühle', cost: 150, needs: 'grass', workers: 1,
              desc: '+2 Taler/s für jedes Feld direkt daneben.' },
-  holz:    { cat: 'bau', name: 'Holzfäller', cost: 60, needs: 'forest', workers: 1, ugly: 4, up: true, prod: { holz: 0.3 },
+  holz:    { cat: 'bau', name: 'Holzfäller', cost: 60, needs: 'forest', workers: 1, ugly: 4, prod: { holz: 0.3 },
              desc: 'Nur im Wald. Liefert Holz 🪵. Laut für Nachbarn.' },
-  fischer: { cat: 'bau', name: 'Fischerhütte', cost: 80, needs: 'shore', workers: 1, up: true,
+  fischer: { cat: 'bau', name: 'Fischerhütte', cost: 80, needs: 'shore', workers: 1,
              desc: 'Am Wasser. +1,5 Taler/s pro Wasserfeld daneben.' },
-  obst:    { cat: 'bau', name: 'Obstplantage', lm: 'obsthain:1', cost: 120, needs: 'obst', workers: 1, up: true, prod: { obst: 0.3 },
+  obst:    { cat: 'bau', name: 'Obstplantage', lm: 'obsthain:1', cost: 120, needs: 'obst', workers: 1, prod: { obst: 0.3 },
              desc: 'Nur im Wilden Obsthain. Liefert Obst 🍎.' },
-  stein:   { cat: 'bau', name: 'Steinbruch', cost: 150, needs: 'rock', workers: 2, ugly: 10, up: true, prod: { stein: 0.25 },
+  stein:   { cat: 'bau', name: 'Steinbruch', cost: 150, needs: 'rock', workers: 2, ugly: 10, prod: { stein: 0.25 },
              desc: 'Nur auf Fels. Liefert Stein 🪨, staubig.' },
-  mine:    { cat: 'bau', name: 'Bergwerk', lm: 'erzberg:1', cost: 300, needs: 'erz', workers: 3, ugly: 8, up: true, prod: { erz: 0.2 },
+  mine:    { cat: 'bau', name: 'Bergwerk', lm: 'erzberg:1', cost: 300, needs: 'erz', workers: 3, ugly: 8, prod: { erz: 0.2 },
              desc: 'Nur am Erzberg. Liefert Erz ⛏️.' },
-  saege:   { cat: 'bau', name: 'Sägewerk', lm: 'baum:1', size: [1, 2], cost: 200, needs: 'grass', workers: 2, ugly: 3, up: true, rot: true,
+  saege:   { cat: 'bau', name: 'Sägewerk', lm: 'baum:1', size: [1, 2], cost: 200, needs: 'grass', workers: 2, ugly: 3, rot: true,
              conv: { from: 'holz', to: 'bretter', rate: 0.15 }, desc: 'Macht aus 2 Holz 🪵 ein Brett 🪚.' },
-  steinmetz: { cat: 'bau', name: 'Steinmetz', lm: 'klippe:1', cost: 250, needs: 'grass', workers: 2, ugly: 4, up: true, rot: true,
+  steinmetz: { cat: 'bau', name: 'Steinmetz', lm: 'klippe:1', cost: 250, needs: 'grass', workers: 2, ugly: 4, rot: true,
              conv: { from: 'stein', to: 'quader', rate: 0.12 }, desc: 'Macht aus 2 Stein 🪨 einen Pflasterstein 🧱.' },
-  schmiede: { cat: 'bau', name: 'Schmiede', lm: 'erzberg:2', cost: 350, needs: 'grass', workers: 2, ugly: 6, up: true, rot: true,
+  schmiede: { cat: 'bau', name: 'Schmiede', lm: 'erzberg:2', cost: 350, needs: 'grass', workers: 2, ugly: 6, rot: true,
              conv: { from: 'erz', to: 'metall', rate: 0.1 }, desc: 'Macht aus 2 Erz ⛏️ ein Stück Metall 🔩.' },
-  baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [1, 2], cost: 400, needs: 'grass', workers: 2, up: true,
+  baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [1, 2], cost: 400, needs: 'grass', workers: 2,
              desc: '+6 Taler/s für jede Mühle direkt daneben.' },
-  markt:   { cat: 'bau', name: 'Markt', size: [3, 3], cost: 800, needs: 'grass', workers: 2, tech: 'handel', up: true,
+  markt:   { cat: 'bau', name: 'Markt', size: [3, 3], cost: 800, needs: 'grass', workers: 2, tech: 'handel',
              desc: '+1,5 Taler/s für jedes Gebäude im Umkreis von 2.' },
-  fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12, up: true,
+  fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [2, 2], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
              desc: 'Handel mit der Welt: +8 % auf alle Einnahmen.' },
@@ -56,13 +56,13 @@ const ITEMS = {
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
              desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Mosaikplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
   // --- Bildung ---
-  schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6, up: true,
+  schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
-  bibliothek: { cat: 'bildung', name: 'Bibliothek', lm: 'ruine:2', size: [1, 2], cost: 500, needs: 'grass', workers: 1, science: 1, beauty: 5, up: true,
+  bibliothek: { cat: 'bildung', name: 'Bibliothek', lm: 'ruine:2', size: [1, 2], cost: 500, needs: 'grass', workers: 1, science: 1, beauty: 5,
              desc: '+1 💡/s.' },
-  uni:     { cat: 'bildung', name: 'Universität', size: [2, 2], cost: 2000, needs: 'grass', workers: 4, science: 3, beauty: 10, tech: 'uni', up: true,
+  uni:     { cat: 'bildung', name: 'Universität', size: [2, 2], cost: 2000, needs: 'grass', workers: 4, science: 3, beauty: 10, tech: 'uni',
              desc: '+3 💡/s.' },
-  kunst:   { cat: 'bildung', name: 'Kunstakademie', lm: 'ruine:3', size: [1, 2], cost: 700, needs: 'grass', workers: 2, science: 0.4, beauty: 25, up: true,
+  kunst:   { cat: 'bildung', name: 'Kunstakademie', lm: 'ruine:3', size: [1, 2], cost: 700, needs: 'grass', workers: 2, science: 0.4, beauty: 25,
              desc: 'Schönheit +25 und ein paar kreative Ideen 💡.' },
   // --- Deko ---
   blumen:  { cat: 'deko', name: 'Blumenbeet', cost: 30, needs: 'grass', beauty: 4, desc: '+15 % für Gebäude direkt daneben.' },
@@ -122,6 +122,49 @@ const WISHES = {
   schule:  { text: 'Schule in der Nähe (10 Felder)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
 };
+// Gebäude wachsen in drei Stufen (wie Häuser): Bedingungen erfüllen (✨), dann selbst ausbauen – mit neuem Aussehen.
+// Jede Stufe braucht workers weitere Mitarbeiter (freie Einwohner). Bedingungen: near = [Sorte(n), Anzahl, Umkreis],
+// water = Wasserfelder direkt daneben, pop = Einwohner auf der Insel, beauty = [🌸, Umkreis].
+const BUILD_STAGES = {
+  feld:      { names: ['Acker', 'Kornfeld', 'Gutshof-Feld'],
+               up: [{ near: ['muehle', 1, 3], cost: { money: 40, bretter: 2 } }, { near: ['baecker', 1, 6], cost: { money: 120, bretter: 4, quader: 2 } }] },
+  muehle:    { names: ['Mühle', 'Kornmühle', 'Große Windmühle'],
+               up: [{ near: ['feld', 3, 1], cost: { money: 200, bretter: 6 } }, { near: ['baecker', 1, 4], cost: { money: 500, bretter: 8, quader: 6 } }] },
+  holz:      { names: ['Holzfällerhütte', 'Holzfällerhof', 'Försterei'],
+               up: [{ near: ['saege', 1, 6], cost: { money: 80, bretter: 4 } }, { near: ['holz', 2, 4], cost: { money: 250, bretter: 8, quader: 4 } }] },
+  fischer:   { names: ['Fischerhütte', 'Fischerkate', 'Fischerei'],
+               up: [{ water: 4, cost: { money: 100, bretter: 4 } }, { near: ['markt', 1, 8], cost: { money: 300, bretter: 8, quader: 4 } }] },
+  obst:      { names: ['Obstplantage', 'Obstgarten', 'Obsthof'],
+               up: [{ near: ['baecker', 1, 6], cost: { money: 150, bretter: 6 } }, { near: ['obst', 2, 2], cost: { money: 400, bretter: 8, quader: 4 } }] },
+  stein:     { names: ['Steinbruch', 'Steinbruch mit Kran', 'Großer Steinbruch'],
+               up: [{ near: ['steinmetz', 1, 6], cost: { money: 180, bretter: 6 } }, { near: ['stein', 2, 3], cost: { money: 450, bretter: 10, metall: 2 } }] },
+  mine:      { names: ['Bergwerk', 'Stollen mit Lore', 'Großes Bergwerk'],
+               up: [{ near: ['schmiede', 1, 8], cost: { money: 350, bretter: 8, quader: 4 } }, { near: ['fabrik', 1, 8], cost: { money: 800, quader: 10, metall: 4 } }] },
+  saege:     { names: ['Sägewerk', 'Großes Sägewerk', 'Holzhof'],
+               up: [{ near: ['holz', 2, 6], cost: { money: 250, bretter: 6, quader: 2 } }, { near: ['holz', 4, 6], cost: { money: 600, bretter: 10, quader: 6, metall: 2 } }] },
+  steinmetz: { names: ['Steinmetz', 'Steinmetzhof', 'Bildhauerei'],
+               up: [{ near: ['stein', 1, 6], cost: { money: 300, bretter: 6, quader: 4 } }, { near: ['stein', 2, 6], cost: { money: 700, quader: 10, metall: 3 } }] },
+  schmiede:  { names: ['Schmiede', 'Kunstschmiede', 'Hammerwerk'],
+               up: [{ near: ['mine', 1, 8], cost: { money: 400, bretter: 6, quader: 6 } }, { near: ['mine', 2, 8], cost: { money: 900, quader: 10, metall: 6 } }] },
+  baecker:   { names: ['Bäckerei', 'Backstube', 'Konditorei'],
+               up: [{ near: ['muehle', 1, 3], cost: { money: 450, bretter: 8, quader: 4 } }, { near: ['obst', 1, 6], cost: { money: 1000, quader: 8, metall: 3 } }] },
+  markt:     { names: ['Markt', 'Wochenmarkt', 'Großer Markt'],
+               up: [{ near: ['haus', 5, 8], cost: { money: 900, bretter: 10, quader: 6 } }, { near: ['haus', 10, 8], cost: { money: 2000, quader: 12, metall: 6 } }] },
+  fabrik:    { names: ['Werkstatt', 'Manufaktur', 'Große Werkstatt'],
+               up: [{ near: ['mine', 1, 4], cost: { money: 1300, quader: 8, metall: 4 } }, { near: ['schmiede', 1, 6], cost: { money: 3000, quader: 14, metall: 8 } }] },
+  hafen:     { names: ['Hafen', 'Handelshafen', 'Großer Hafen'],
+               up: [{ near: ['fischer', 2, 8], cost: { money: 1600, bretter: 16, quader: 6 } }, { near: ['fischer', 4, 8], cost: { money: 3500, bretter: 20, quader: 12, metall: 6 } }] },
+  schule:    { names: ['Dorfschule', 'Schulhaus', 'Große Schule'],
+               up: [{ pop: 25, cost: { money: 350, bretter: 8, quader: 4 } }, { pop: 60, near: ['bibliothek', 1, 10], cost: { money: 900, quader: 10, metall: 3 } }] },
+  bibliothek:{ names: ['Bücherei', 'Bibliothek', 'Große Bibliothek'],
+               up: [{ pop: 35, near: ['schule', 1, 10], cost: { money: 550, bretter: 8, quader: 6 } }, { pop: 70, near: [['park', 'brunnen'], 1, 4], cost: { money: 1200, quader: 12, metall: 4 } }] },
+  uni:       { names: ['Universität', 'Große Universität', 'Sternwarte'],
+               up: [{ pop: 80, near: ['bibliothek', 1, 10], cost: { money: 2200, quader: 16, metall: 6 } }, { pop: 120, near: ['kunst', 1, 10], cost: { money: 5000, quader: 24, metall: 12 } }] },
+  kunst:     { names: ['Kunstakademie', 'Atelierhaus', 'Kunstpalast'],
+               up: [{ pop: 40, beauty: [40, 3], cost: { money: 800, bretter: 8, quader: 6 } }, { pop: 80, near: [['pavillon', 'statue'], 1, 4], cost: { money: 1800, quader: 12, metall: 5 } }] },
+};
+const PLURAL = { feld: 'Felder', muehle: 'Mühlen', holz: 'Holzfäller', fischer: 'Fischerhütten', obst: 'Obstplantagen', stein: 'Steinbrüche',
+  mine: 'Bergwerke', haus: 'Häuser', schmiede: 'Schmieden', saege: 'Sägewerke', steinmetz: 'Steinmetze' };
 const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine']);
 // Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname
 const ANIMALS = [
