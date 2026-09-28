@@ -81,17 +81,10 @@ function kit(cx, cy, z, rot) {
   };
 
   // Tür (mit Knauf und Trittstufe) auf einer sichtbaren Seite
-  K.door = (B, side = 'front', t0 = 0.38, t1 = 0.62, hf = 0.62, col = DOOR_COL) => {
+  K.door = (B, side = 'front', t0 = 0.4, t1 = 0.62, hf = 0.55, col = DOOR_COL) => {
     const F = B.faces[side];
     if (!F) return false;
     faceQuad(F.P, F.Q, t0, t1, 0, F.H * hf, C(col));
-    faceQuad(F.P, F.Q, t0 + 0.03, t1 - 0.03, F.H * hf * 0.62, F.H * hf * 0.9, C(shade(col, 0.25)));
-    const kb = lerp(F.P, F.Q, t1 - (t1 - t0) * 0.2);
-    circle(kb[0], kb[1] - F.H * hf * 0.42, 0.7 * z, C('#f2c14e'));
-    if (!B.lift && side === 'front') {
-      const m = (t0 + t1) - 1, w = (t1 - t0) * B.hb;      // Trittstufe vor der Tür
-      K.rect(B.a + B.ha, B.b + m * B.hb - w, B.a + B.ha + 0.09, B.b + m * B.hb + w, C('#d8cfbf'));
-    }
     return true;
   };
   // n Fenster in einer Reihe; skip: Liste von Positionen (0 … n-1), die frei bleiben (z. B. für die Tür)
@@ -101,7 +94,7 @@ function kit(cx, cy, z, rot) {
     const step = (to - from) / n;
     for (let i = 0; i < n; i++) {
       if (skip.includes(i)) continue;
-      const t0 = from + step * (i + 0.18), t1 = from + step * (i + 0.82);
+      const t0 = from + step * (i + 0.12), t1 = from + step * (i + 0.88);
       windowOn(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, z);
       if (box) flowerBox(F.P, F.Q, t0, t1, F.H * h0, z);
     }
@@ -111,12 +104,11 @@ function kit(cx, cy, z, rot) {
   return K;
 }
 
-// Tür zeigt nach hinten: Laterne und Trittstein an der sichtbareren Ecke
+// Tür zeigt nach hinten: Trittstein und ein runder Busch an der sichtbareren Ecke verraten den Eingang
 function backEntry(K, a, b, ha, hb) {
   const s = K.depth(a + ha, b + hb) >= K.depth(a + ha, b - hb) ? 1 : -1;
-  K.rect(a + ha, b - 0.14, a + ha + 0.16, b + 0.14, C('#d8cfbf'));
-  const [lx, ly] = K.P(a + ha + 0.12, b + s * (hb + 0.04));
-  lampPost(lx, ly, K.z);
+  K.oval(a + ha + 0.08, b, 0.09, C('#e3d8c4'));
+  kitBush(K, a + ha + 0.07, b + s * (hb + 0.02), 0.75);
 }
 function lampPost(lx, ly, z, hgt = 17) {
   ellipse(lx, ly + 0.5 * z, 2.6 * z, 1.2 * z, 'rgba(40,60,20,0.18)');
