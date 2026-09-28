@@ -1,0 +1,15 @@
+{
+  "name": "kachelhausen",
+  "private": true,
+  "description": "Gemütliches Aufbauspiel auf einer Insel – kein Build-Schritt, läuft direkt aus den Dateien.",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "serve": "python3 -m http.server 4173 --bind 0.0.0.0",
+    "bump": "node scripts/bump.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.0.0",
+    "vitest": "^3.0.0"
+  }
+}

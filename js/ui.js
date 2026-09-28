@@ -1,0 +1,473 @@
+'use strict';
+// ---------------------------------------------------------------------------
+// Oberfläche
+// ---------------------------------------------------------------------------
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 0 });
+const nfc = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractionDigits: 1 });
+const nf1 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
+function fmt(n) { return Math.abs(n) < 100000 ? nf.format(Math.floor(n)) : nfc.format(n); }
+function fmtRate(n) { return Math.abs(n) < 100 ? nf1.format(n) : fmt(n); }
+function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
+
+let toastTimer = 0;
+function toast(msg) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
+}
+
+function thumb(type) {
+  const c = document.createElement('canvas');
+  c.width = 112; c.height = 88;
+  const prev = g; g = c.getContext('2d'); FOG = false;
+  const tall = ['leuchtturm', 'windrad'].includes(type);
+  const z = tall ? 0.95 : 1.3, cx = 56, cy = tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
+  const block = (s, top) => {
+    poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
+    poly([[cx, cy + hh * s], [cx + hw * s, cy], [cx + hw * s, cy + d], [cx, cy + hh * s + d]], '#b0895a');
+    diamond(cx, cy, hw * s, hh * s, top);
+  };
+  if (type === 'graben') {
+    block(1, '#96d56f');
+    diamond(cx, cy + 3, hw * 0.6, hh * 0.6, '#74d0e6');
+  } else if (type === 'schuett') {
+    diamond(cx, cy + 5, hw, hh, '#74d0e6');
+    block(0.6, '#96d56f');
+  } else if (type === 'pflaster') {
+    block(1, '#96d56f');
+    drawPaving(cx, cy, z, 1e6, 1e6);
+  } else if (type === 'gehweg') {
+    block(1, '#96d56f');
+    const L = (u, v) => [cx + (u - v) * hw, cy + (u + v) * hh];
+    for (const [u0, u1, v0, v1] of [[0.32, 0.5, -0.5, 0.5], [-0.5, 0.5, 0.32, 0.5]]) {
+      poly([L(u0, v0), L(u1, v0), L(u1, v1), L(u0, v1)], '#e6dfd0');
+    }
+  } else {
+    const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287' }[type] || '#96d56f';
+    block(1, ground);
+    drawObject(type, cx, cy, z, 0, 3, 7, 1, null);
+  }
+  g = prev;
+  return c;
+}
+
+function buildToolbar() {
+  const cats = $('cats');
+  cats.innerHTML = '';
+  for (const c of CATS) {
+    const b = document.createElement('button');
+    b.className = 'cat' + (c.id === cat ? ' active' : '');
+    b.textContent = c.label;
+    b.onclick = () => { cat = c.id; if (tool !== 'look' && ITEMS[tool].cat !== cat) tool = 'look'; buildToolbar(); };
+    cats.append(b);
+  }
+  const box = $('tools');
+  box.innerHTML = '';
+  const mk = (id, label, sub, visual) => {
+    const b = document.createElement('button');
+    b.className = 'tool';
+    b.dataset.tool = id;
+    b.append(visual);
+    const n = document.createElement('span'); n.className = 'name'; n.textContent = label;
+    const s = document.createElement('span'); s.className = 'cost'; s.textContent = sub;
+    b.append(n, s);
+    b.onclick = () => { audio(); setTool(tool === id && id !== 'look' ? 'look' : id); };
+    box.append(b);
+    return b;
+  };
+  const emoji = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
+  mk('look', 'Ansehen', 'kaufen & mehr', emoji('👆'));
+  for (const id of Object.keys(ITEMS)) {
+    const d = ITEMS[id];
+    if (d.cat !== cat) continue;
+    const locked = !available(id);
+    const sub = locked ? lockText(id) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
+    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : thumb(id));
+    if (d.cost) b.dataset.cost = d.cost;
+    if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
+    if (locked) b.classList.add('locked');
+  }
+  setTool(tool);
+}
+
+function setTool(t) {
+  tool = t;
+  previewCache = null;
+  if (t !== 'look') closePanel();
+  for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
+  const hint = $('hint');
+  $('rot-btn').hidden = !ROTATABLE.has(t);
+  renderStyleBar(t);
+  if (t !== 'gehweg') hoverEdge = null;
+  if (t === 'look') { hint.hidden = true; return; }
+  const d = ITEMS[t], extra = [];
+  if (d.mat) extra.push('Material: ' + matText(d.mat));
+  if (d.workers) extra.push(`👷 ${d.workers}`);
+  if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);
+  if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
+  hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
+    + (d.paint ? ' · verschieben mit zwei Fingern / rechter Maustaste' : '')
+    + (ROTATABLE.has(t) ? ' · drehen: ⟳ oder Taste R' : '');
+  hint.hidden = false;
+}
+
+// Stil-Leiste für Wege: gewählter Stil wird gemalt, gesperrte zeigen, wie man sie freischaltet
+function renderStyleBar(t) {
+  const bar = $('style-bar');
+  document.body.classList.toggle('has-styles', !!STYLES[t]);
+  if (!STYLES[t]) { bar.hidden = true; return; }
+  const cur = currentStyle(t);
+  bar.innerHTML = STYLES[t].map(st => {
+    const ok = styleOk(st);
+    return `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" ${ok ? '' : 'disabled'} title="${ok ? st.name : 'Freischalten: ' + styleLock(st)}">
+      <i style="background:${st.col}"></i>${st.name}${ok ? '' : ` <small>🔒 ${styleLock(st)}</small>`}</button>`;
+  }).join('');
+  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
+  bar.hidden = false;
+}
+
+function starsHtml(n) { return '★'.repeat(n) + `<span class="off">${'★'.repeat(STARS.length - n)}</span>`; }
+const canResearch = () => TECHS.some(t => !hasTech(t.id) && (t.req || []).every(hasTech) && state.science >= t.cost);
+
+let goalSmall = false;
+function updateHud() {
+  $('money').textContent = fmt(state.money);
+  $('rate').textContent = '+' + fmtRate(T.inc) + '/s';
+  $('pop').textContent = T.jobs + '/' + T.pop;
+  $('sci').textContent = fmt(state.science);
+  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtRate(T.sci) + '/s' : '';
+  $('sci-dot').hidden = !canResearch();
+  $('beauty').textContent = T.beauty;
+  // Lager: nur Waren zeigen, die man hat oder gerade herstellt
+  const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
+  const rp = $('res-pill');
+  rp.hidden = !shown.length;
+  rp.innerHTML = shown.map(r => `<span title="${RES[r].name}">${RES[r].icon} <b>${fmt(state.res[r])}</b></span>`).join('');
+  $('town-name').textContent = state.town.name;
+  $('hud-stars').innerHTML = starsHtml(state.stars);
+  const fl = $('hud-flag');
+  fl.style.background = state.town.color;
+  fl.textContent = state.town.symbol;
+  for (const b of document.querySelectorAll('[data-cost]')) {
+    const poor = state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat)));
+    if (b.classList.contains('tool')) b.classList.toggle('poor', poor);
+    else b.disabled = poor;
+  }
+  for (const b of document.querySelectorAll('[data-sci]')) b.disabled = state.science < +b.dataset.sci;
+  const top = $('hud').getBoundingClientRect().bottom + 8;
+  const goal = $('goal');
+  goal.style.top = top + 'px';
+  if (window.innerWidth > 600) $('panel').style.top = top + 'px';
+  goal.classList.toggle('small', goalSmall);
+  if (state.stars >= STARS.length) { goal.innerHTML = `<h4><span class="st">★★★★★</span> Inselperle! Gestalte weiter.</h4>`; return; }
+  const s = STARS[state.stars];
+  goal.innerHTML = `<h4>Nächster Stern: ${s.name} <span class="st">${'★'.repeat(state.stars + 1)}</span></h4>` +
+    reqs(state.stars).map(r => {
+      const done = r.have >= r.need, pct = Math.min(100, r.have / r.need * 100);
+      const val = r.flag ? (done ? '✓' : '–') : `${r.rate ? fmtRate(r.have) : fmt(r.have)} / ${fmt(r.need)}`;
+      return `<div class="req${done ? ' done' : ''}">${r.icon} ${r.label}: ${val}<div class="bar"><i style="width:${pct}%"></i></div></div>`;
+    }).join('');
+}
+$('goal').onclick = () => { goalSmall = !goalSmall; updateHud(); };
+
+// Infofenster
+function closePanel() { $('panel').hidden = true; }
+function showPanel(html) { const el = $('panel'); el.innerHTML = html; el.hidden = false; return el; }
+
+function openInfo(x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!t) { closePanel(); return; }
+  if (t.b === 'rathaus') { openTownHall(); return; }
+  if (t.b === 'lm') { openLandmark(x, y); return; }
+  const d = ITEMS[t.b], s = statusOf(x, y) || {};
+  const status = [];
+  if (needsReach(t.b)) {
+    status.push({
+      viertel: '<div class="ok">✓ Liegt im Wohnviertel</div>',
+      nah: `<div class="ok">✓ Häuser in Laufweite (bis ${WALK_REACH} Felder)</div>`,
+      strasse: '<div class="ok">✓ Per Straße mit dem Dorf verbunden</div>',
+      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Eine Straße zum Dorf bringt 100 %.</div>',
+    }[s.how]);
+  }
+  if (s.bonus) status.push(`<div class="ok">🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
+  else if (s.n) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
+  if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
+  const why = [];
+  const beete = beetBonus(x, y);
+  if (d.pop) why.push(`👥 ${d.pop * t.lvl} Einwohner`);
+  if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben`);
+  if (t.b === 'muehle') why.push(`${countAround(x, y, 1, (a, c) => bAt(a, c) === 'feld')} Felder daneben`);
+  if (t.b === 'baecker') why.push(`${countAround(x, y, 1, (a, c) => bAt(a, c) === 'muehle')} Mühlen daneben`);
+  if (t.b === 'markt') why.push(`${countAround(x, y, 2, isProducer)} Gebäude in der Nähe`);
+  if (t.b === 'fabrik') why.push(`${countAround(x, y, 3, (a, c) => bAt(a, c) === 'mine')} Bergwerke in der Nähe`);
+  if (d.cat === 'bau' && beete) why.push(`${beete} Blumenbeet${beete > 1 ? 'e' : ''}: +${beete * 15} %`);
+  if (d.up && t.lvl > 1) why.push(`Stufe ${t.lvl}: ×${t.lvl}`);
+  const b = beautyOf(t, x, y);
+  if (b) why.push(`🌸 ${b > 0 ? '+' : ''}${nf1.format(b)}`);
+  if (d.cat === 'deko' && d.beauty && countAround(x, y, 2, isHouse)) why.push('neben Häusern ×1,5');
+  const outs = [];
+  if (s.prod) for (const [r, v] of Object.entries(s.prod)) outs.push(`+${fmtRate(v * 60)} ${RES[r].icon}/min`);
+  else if (d.conv) outs.push(`${CONV_RATIO} ${RES[d.conv.from].icon} → 1 ${RES[d.conv.to].icon} · bis ${fmtRate((s.conv || 0) * 60)}/min`);
+  else if (s.inc > 0 || d.cat === 'bau') outs.push(`+${fmtRate(s.inc || 0)} Taler/s`);
+  if (d.science) outs.push(`+${fmtRate(s.sci || 0)} 💡/s`);
+  const up = upgradable(t);
+  const cost = up ? upgradeCost(t) : 0;
+  let colors = '';
+  if (t.b === 'haus') {
+    const n = hasTech('farben') ? 14 : 7;
+    const wall = t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7);
+    const roof = t.roof != null ? t.roof : Math.floor(hash(x, y, 4) * 7);
+    colors = `
+      <div class="label">Wand</div>
+      <div class="swatches">${WALLS.slice(0, n).map((c, i) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
+      <div class="label">Dach</div>
+      <div class="swatches">${ROOFS.slice(0, n).map((c, i) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+      ${n < 14 ? '<p class="muted">Mehr Farben: Forschung „Farbenlehre“</p>' : ''}`;
+  }
+  const el = showPanel(`
+    <h3>${d.name} ${d.up ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
+    ${outs.length ? `<p class="big">${outs.join(' · ')}</p>` : ''}
+    ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
+    ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
+    <p class="muted">${d.desc}</p>
+    ${colors}
+    <div class="row">
+      ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${up ? `<button class="btn" id="p-up" data-cost="${cost}">Ausbauen · 🪙 ${fmt(cost)}</button>`
+           : d.up ? '<button class="btn" disabled>Höchste Stufe</button>' : ''}
+      <button class="btn ghost" id="p-close">Schließen</button>
+    </div>`);
+  if (up) $('p-up').onclick = () => upgrade(x, y);
+  if ($('p-rot')) $('p-rot').onclick = () => { t.rot = ((t.rot || 0) + 1) % 4; t.born = performance.now(); sfx('deco'); save(); };
+  $('p-close').onclick = closePanel;
+  for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
+  for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
+  updateHud();
+}
+
+function openDecoInfo(x, y, slot) {
+  const d = decosAt(x + ',' + y)[slot], it = ITEMS[d.b];
+  showPanel(`
+    <h3>${it.name}</h3>
+    <div class="stats"><span>🌸 +${it.beauty}${countAround(x, y, 2, isHouse) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
+    <div class="row">
+      ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      <button class="btn danger" id="p-del">Entfernen · +🪙 ${fmt(Math.floor(it.cost / 2))}</button>
+      <button class="btn ghost" id="p-close">Schließen</button>
+    </div>`);
+  if ($('p-rot')) $('p-rot').onclick = () => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); };
+  $('p-del').onclick = () => { removeSmall(x, y, slot); closePanel(); };
+  $('p-close').onclick = closePanel;
+}
+
+function openLandmark(x, y) {
+  const t = state.tiles.get(x + ',' + y), L = LANDMARKS[t.lm];
+  const owned = ownedTile(x, y), on = T.lmOn.has(t.lm), half = T.lmHalf.has(t.lm), s = statusOf(x, y) || {};
+  let status = on ? '<div class="ok">✓ Wirkt voll</div>'
+    : half ? '<div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb. Eine Straße zum Dorf bringt die volle Wirkung.</div>'
+    : '<div class="bad">🔒 Liegt auf einem Grundstück, das dir noch nicht gehört.</div>';
+  if (owned) status += `<div>✨ Alles im Umkreis von ${LM_RADIUS} Feldern: +${Math.round(LM_BOOST * 100 * (on ? 1 : 0.5))} % Produktion</div>`;
+  if (t.lm === 'quelle' && owned && !s.road) status += '<div class="bad">🚗 Touristen kommen nur über eine Straße zum Dorf.</div>';
+  showPanel(`
+    <h3>${L.icon} ${L.name}</h3>
+    <p class="big" style="font-size:16px">${L.effect}</p>
+    <div class="status">${status}</div>
+    <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`);
+  $('p-close').onclick = closePanel;
+}
+
+function openBuy(ck) {
+  const [cx, cy] = ck.split(',').map(Number);
+  const cnt = { grass: 0, forest: 0, water: 0, rock: 0, erz: 0, obst: 0 };
+  for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK; y++)
+    for (let x = cx * CHUNK; x < cx * CHUNK + CHUNK; x++) cnt[terrainAt(x, y)]++;
+  const lms = landmarksIn(ck);
+  const price = plotPrice();
+  showPanel(`
+    <h3>Grundstück kaufen</h3>
+    ${lms.map(l => `<p class="big" style="font-size:16px">${LANDMARKS[l].icon} ${LANDMARKS[l].name}<br><span class="muted">${LANDMARKS[l].effect}</span></p>`).join('')}
+    <div class="stats">
+      <span>🌿 ${cnt.grass} Wiese</span><span>🌲 ${cnt.forest} Wald</span>
+      <span>💧 ${cnt.water} Wasser</span><span>🪨 ${cnt.rock} Fels</span>
+      ${cnt.erz ? `<span>⛏️ ${cnt.erz} Erz</span>` : ''}${cnt.obst ? `<span>🍎 ${cnt.obst} Obsthain</span>` : ''}
+    </div>
+    <p class="muted">Jedes weitere Grundstück wird etwas teurer.</p>
+    <div class="row">
+      <button class="btn" id="p-buy" data-cost="${price}">Kaufen · 🪙 ${fmt(price)}</button>
+      <button class="btn ghost" id="p-close">Schließen</button>
+    </div>`);
+  $('p-buy').onclick = () => buyPlot(ck);
+  $('p-close').onclick = closePanel;
+  updateHud();
+}
+
+// Forschung
+function openResearch() {
+  const cats = [...new Set(TECHS.map(t => t.cat))];
+  openModal(`
+    <h2>🔬 Forschung</h2>
+    <p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – baue eine Schule!'}.</p>
+    <div class="tech-cats">${cats.map(c => `
+      <div class="tech-cat"><h4>${c}</h4>${TECHS.filter(t => t.cat === c).map(t => {
+        const done = hasTech(t.id), open = (t.req || []).every(hasTech);
+        const need = !open ? `<span class="muted">braucht ${t.req.map(r => TECH_BY_ID[r].name).join(', ')}</span>` : '';
+        return `<div class="tech${done ? ' done' : ''}${!open && !done ? ' locked' : ''}">
+          <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
+          ${!done && open ? `<button class="btn" data-tech="${t.id}" data-sci="${t.cost}" ${state.science < t.cost ? 'disabled' : ''}>Erforschen · 💡 ${t.cost}</button>` : ''}
+        </div>`;
+      }).join('')}</div>`).join('')}
+    </div>
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+  $('modal-card').classList.add('research');
+  for (const b of document.querySelectorAll('[data-tech]')) b.onclick = () => research(b.dataset.tech);
+  $('m-close').onclick = closeModal;
+}
+$('sci-btn').onclick = () => { setTool('look'); openResearch(); };
+
+// Stadtname & Flagge
+function townEditor(town) {
+  return `
+    <div class="label">Name deines Ortes</div>
+    <input class="text-in" id="t-name" maxlength="20" value="${escHtml(town.name)}">
+    <div class="label">Flagge</div>
+    <div class="swatches">${FLAG_COLORS.map(c => `<button class="sw${c === town.color ? ' on' : ''}" data-fc="${c}" style="background:${c}" aria-label="Flaggenfarbe"></button>`).join('')}</div>
+    <div class="swatches">${FLAG_SYMBOLS.map(s => `<button class="sw${s === town.symbol ? ' on' : ''}" data-fs="${s}" aria-label="Symbol ${s}">${s}</button>`).join('')}</div>`;
+}
+function wireTownEditor(root, town, onChange) {
+  root.querySelector('#t-name').oninput = e => { town.name = e.target.value.trim() || 'Namenlos'; onChange(); };
+  for (const b of root.querySelectorAll('[data-fc]')) b.onclick = () => {
+    town.color = b.dataset.fc; root.querySelectorAll('[data-fc]').forEach(o => o.classList.toggle('on', o === b)); sfx('deco'); onChange();
+  };
+  for (const b of root.querySelectorAll('[data-fs]')) b.onclick = () => {
+    town.symbol = b.dataset.fs; root.querySelectorAll('[data-fs]').forEach(o => o.classList.toggle('on', o === b)); sfx('deco'); onChange();
+  };
+}
+function openTownHall() {
+  const el = showPanel(`
+    <h3>Rathaus von ${escHtml(state.town.name)}</h3>
+    <p class="stars" style="font-size:22px">${starsHtml(state.stars)}</p>
+    <ul class="starlist">${STARS.map((s, i) => `<li class="${i < state.stars ? 'done' : ''}">${i < state.stars ? '✓' : '○'} ${'★'.repeat(i + 1)} ${s.name}</li>`).join('')}</ul>
+    ${townEditor(state.town)}
+    <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Fertig</button></div>`);
+  wireTownEditor(el, state.town, () => { updateHud(); save(); });
+  $('p-close').onclick = closePanel;
+}
+$('town-btn').onclick = () => { setTool('look'); openTownHall(); };
+$('rot-btn').onclick = () => rotateBuild();
+
+// Dialoge
+function openModal(html) { const c = $('modal-card'); c.className = 'card'; c.innerHTML = html; $('modal').hidden = false; }
+function closeModal() { $('modal').hidden = true; }
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+
+function showIntro(first) {
+  openModal(`
+    <h2>Willkommen auf deiner Insel!</h2>
+    <p>Eine kleine Welt zum Verwalten und Gestalten:</p>
+    <ul>
+      <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer eine <b>Straße</b> führt hin.</li>
+      <li>🏘️ Was über <b>Gehwege oder Pflaster</b> zusammenhängt, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
+      <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Verkehr und Deko.</li>
+      <li>🗺️ <b>Sehenswürdigkeiten</b> haben eigene Vorteile und geben allem in 10 Feldern Umkreis +15 %.</li>
+    </ul>
+    ${first ? townEditor(state.town) : ''}
+    <p class="muted" style="font-size:13px">Ziehen = verschieben · Mausrad / zwei Finger = zoomen · Straßen: gedrückt halten und ziehen</p>
+    <div class="row"><button class="btn" id="m-ok">Los geht's!</button></div>`);
+  if (first) wireTownEditor($('modal-card'), state.town, updateHud);
+  $('m-ok').onclick = () => { closeModal(); save(); };
+}
+function showMenu() {
+  openModal(`
+    <h2>Menü</h2>
+    <div class="row"><button class="btn" id="m-help">Anleitung</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
+    <div class="row">
+      <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
+      <button class="btn ghost" style="flex:1" id="m-import">📂 Spielstand laden</button>
+    </div>
+    <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
+  $('m-help').onclick = () => showIntro(false);
+  $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
+  $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
+  $('m-close').onclick = closeModal;
+  $('m-export').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
+  $('m-import').onclick = () => $('import-file').click();
+  $('m-reset').onclick = () => {
+    const b = $('m-reset');
+    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Wirklich? Alles geht verloren!'; return; }
+    startNew();
+    closeModal(); closePanel(); showIntro(true);
+  };
+}
+$('menu-btn').onclick = showMenu;
+
+// Datei als Text lesen (FileReader klappt auch in älteren Safari-Versionen)
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+    r.readAsText(file);
+  });
+}
+
+// Spielstand aus Datei laden – erst prüfen, dann nachfragen, dann ersetzen
+$('import-file').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  let s;
+  try { s = parseSave(JSON.parse(await readFileText(file))); }
+  catch (err) { fail('Diese Datei ist kein lesbarer Kachelhausen-Spielstand.'); return; }
+  openModal(`
+    <h2>Spielstand laden?</h2>
+    <p>Insel <b>${escHtml(s.town.name)}</b> mit 🪙 ${fmt(s.money)} und ${s.tiles.size} Gebäuden.</p>
+    <p class="muted">Deine jetzige Insel wird dabei ersetzt. Sichere sie vorher, falls du sie behalten willst.</p>
+    <div class="row">
+      <button class="btn" id="m-yes">Laden</button>
+      <button class="btn ghost" id="m-no">Abbrechen</button>
+    </div>`);
+  $('m-yes').onclick = () => { adoptState(s); closeModal(); closePanel(); toast(`Willkommen zurück in ${s.town.name}!`); };
+  $('m-no').onclick = closeModal;
+});
+
+// Rohstoffe fließen ins Lager; Verarbeitung nimmt, was da ist
+function produce(dt) {
+  const before = { ...state.res };
+  for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * dt;
+  for (const c of T.conv) {
+    const want = c.rate * dt, can = Math.min(want, state.res[c.from] / CONV_RATIO);
+    if (can <= 0) continue;
+    state.res[c.from] -= can * CONV_RATIO;
+    state.res[c.to] += can;
+  }
+  return before;
+}
+function creditAway(ms, announce) {
+  const s = Math.min(Math.max(0, ms / 1000), OFFLINE_MAX_S);
+  const earned = T.inc * s, ideas = T.sci * s;
+  state.money += earned;
+  state.science += ideas;
+  const start = { ...state.res };
+  for (let left = s; left > 0; left -= 30) produce(Math.min(30, left));
+  const gained = Object.keys(RES).map(r => [r, state.res[r] - start[r]]).filter(([, n]) => n >= 1);
+  if (announce && s > 60 && earned >= 1) {
+    const mins = Math.round(s / 60);
+    const dur = mins < 90 ? `${mins} Minuten` : `${nf1.format(mins / 60)} Stunden`;
+    openModal(`
+      <h2>Schön, dass du da bist!</h2>
+      <p>In den letzten ${dur} haben die Leute in ${escHtml(state.town.name)} fleißig gearbeitet:</p>
+      <p style="font-size:30px;font-weight:900;color:#3f8f43;margin:6px 0">+ 🪙 ${fmt(earned)}</p>
+      ${ideas >= 1 ? `<p style="font-size:20px;font-weight:900;color:#7d6bb0;margin:0">+ 💡 ${fmt(ideas)}</p>` : ''}
+      ${gained.length ? `<p style="font-size:18px;font-weight:900;margin:6px 0">${gained.map(([r, n]) => `+ ${RES[r].icon} ${fmt(n)}`).join(' · ')}</p>` : ''}
+      ${s >= OFFLINE_MAX_S ? '<p class="muted">(Höchstens 8 Stunden werden angerechnet.)</p>' : ''}
+      <div class="row"><button class="btn" id="m-ok">Danke!</button></div>`);
+    $('m-ok').onclick = () => { closeModal(); sfx('coin'); };
+  }
+}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#6cc6e0">
+<title>Kachelhausen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
+<link rel="stylesheet" href="style.css?v=22">
+</head>
+<body>
+<canvas id="world"></canvas>
+
+<div id="hud">
+  <button class="pill town" id="town-btn" aria-label="Rathaus"><span class="flag" id="hud-flag"></span><b id="town-name"></b><span class="stars" id="hud-stars"></span></button>
+  <div class="pill money" title="Taler">🪙 <b id="money">0</b><small id="rate">+0/s</small></div>
+  <div class="pill" title="Arbeitsplätze / Einwohner">👥 <b id="pop">0/0</b></div>
+  <button class="pill sci" id="sci-btn" title="Forschung">💡 <b id="sci">0</b><small id="sci-rate"></small><span class="dot" id="sci-dot" hidden></span></button>
+  <div class="pill" title="Schönheit">🌸 <b id="beauty">0</b></div>
+  <div class="pill res" id="res-pill" hidden></div>
+  <button class="pill" id="menu-btn" aria-label="Menü">☰</button>
+</div>
+
+<button id="goal" aria-label="Nächstes Ziel"></button>
+<div id="hint" hidden></div>
+<div id="style-bar" hidden></div>
+<button id="rot-btn" hidden aria-label="Drehen">⟳</button>
+<div id="panel" hidden></div>
+<div id="toast" hidden></div>
+<div id="toolbar">
+  <div class="cats" id="cats"></div>
+  <div class="tools" id="tools"></div>
+</div>
+<div id="modal" hidden><div class="card" id="modal-card"></div></div>
+<input type="file" id="import-file" accept="application/json,.json" hidden>
+
+<script src="js/data.js?v=22"></script>
+<script src="js/state.js?v=22"></script>
+<script src="js/world.js?v=22"></script>
+<script src="js/rules.js?v=22"></script>
+<script src="js/audio.js?v=22"></script>
+<script src="js/actions.js?v=22"></script>
+<script src="js/input.js?v=22"></script>
+<script src="js/draw-base.js?v=22"></script>
+<script src="js/draw-objects.js?v=22"></script>
+<script src="js/movers.js?v=22"></script>
+<script src="js/render.js?v=22"></script>
+<script src="js/ui.js?v=22"></script>
+<script src="js/main.js?v=22"></script>
+</body>
+</html>
