@@ -247,22 +247,22 @@ function boxR(cx, cy, z, hu, hv, h, wall, roof, roofH) {
   const P = (u, v, up = 0) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up];
   const L = P(-hu, hv), B = P(hu, hv), R = P(hu, -hv), Tp = P(-hu, -hv);
   poly([L, B, [B[0], B[1] - h], [L[0], L[1] - h]], C(wall));
-  poly([B, R, [R[0], R[1] - h], [B[0], B[1] - h]], C(shade(wall, -0.13)));
+  poly([B, R, [R[0], R[1] - h], [B[0], B[1] - h]], C(shade(wall, LIGHT.side)));
   if (roof) {
     const o = 1.12, eu = hu * o, ev = hv * o;
     const lt = P(-eu, ev, h), bt = P(eu, ev, h), rt = P(eu, -ev, h), tt = P(-eu, -ev, h);
     if (hu >= hv) {
       const r1 = P(-(eu - ev), 0, h + roofH), r2 = P(eu - ev, 0, h + roofH);
-      poly([tt, rt, r2, r1], C(shade(roof, 0.1)));
-      poly([lt, tt, r1], C(shade(roof, 0.1)));
+      poly([tt, rt, r2, r1], C(shade(roof, LIGHT.roofBack)));
+      poly([lt, tt, r1], C(shade(roof, LIGHT.roofSun)));
       poly([lt, bt, r2, r1], C(roof));
-      poly([bt, rt, r2], C(shade(roof, -0.18)));
+      poly([bt, rt, r2], C(shade(roof, LIGHT.roofShade)));
     } else {
       const r1 = P(0, -(ev - eu), h + roofH), r2 = P(0, ev - eu, h + roofH);
-      poly([rt, tt, r1], C(shade(roof, 0.1)));
-      poly([tt, lt, r2, r1], C(shade(roof, 0.1)));
+      poly([rt, tt, r1], C(shade(roof, LIGHT.roofBack)));
+      poly([tt, lt, r2, r1], C(shade(roof, LIGHT.roofSun)));
       poly([lt, bt, r2], C(roof));
-      poly([bt, rt, r1, r2], C(shade(roof, -0.18)));
+      poly([bt, rt, r1, r2], C(shade(roof, LIGHT.roofShade)));
     }
   } else {
     poly([P(-hu, hv, h), P(hu, hv, h), P(hu, -hv, h), P(-hu, -hv, h)], C(shade(wall, 0.08)));
@@ -286,10 +286,12 @@ function groundRect(cx, cy, z, hu, hv, fill, pat, x, y) {
 const BIG_ART = {
   rathaus(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     const K = kit(cx, cy, z, t.rot);
-    K.rect(-0.98, -0.98, 0.98, 0.98, C('#e6dfd0'));
-    g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
-    pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
-    g.restore();
+    if (groundPart(() => {
+      K.rect(-0.98, -0.98, 0.98, 0.98, C('#e6dfd0'));
+      g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
+      pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
+      g.restore();
+    })) return;
     const hall = () => {
       const B = K.block({ ha: 0.6, hb: 0.6, h: 24, wall: '#fff1d6', roof: '#6f8fd8', roofH: 18, over: 1.15, entry: true });
       K.door(B, 'front', 0.42, 0.58, 0.5);
@@ -306,24 +308,29 @@ const BIG_ART = {
     K.scene([[0, 0, hall], [0.78, -0.78, flag], [0.8, 0.75, () => kitBush(K, 0.8, 0.75, 0.9)]]);
   },
   park(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const L = groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#8fd16a');
-    poly([[-hu * 0.98, -0.1], [hu * 0.98, -0.1], [hu * 0.98, 0.1], [-hu * 0.98, 0.1]].map(L), C('#eadbb2'));
-    poly([[-0.1, -hv * 0.98], [0.1, -hv * 0.98], [0.1, hv * 0.98], [-0.1, hv * 0.98]].map(L), C('#eadbb2'));
+    const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
     const F = (u, v) => L([u, v]);
     const [px2, py2] = F(-hu * 0.5, hv * 0.5);
-    ellipse(px2, py2, 16 * z, 7 * z, C('#74d0e6'));
-    ellipse(px2 - 4 * z, py2 - 1.5 * z, 5 * z, 2 * z, C('#b8ecf6'));
+    if (groundPart(() => {
+      groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#8fd16a');
+      poly([[-hu * 0.98, -0.1], [hu * 0.98, -0.1], [hu * 0.98, 0.1], [-hu * 0.98, 0.1]].map(L), C('#eadbb2'));
+      poly([[-0.1, -hv * 0.98], [0.1, -hv * 0.98], [0.1, hv * 0.98], [-0.1, hv * 0.98]].map(L), C('#eadbb2'));
+      ellipse(px2, py2, 16 * z, 7 * z, C('#74d0e6'));
+      ellipse(px2 - 4 * z, py2 - 1.5 * z, 5 * z, 2 * z, C('#b8ecf6'));
+      for (let i = 0; i < 10; i++) {
+        const u = (hash(x, y, 300 + i) - 0.5) * 1.6 * hu, v = (hash(x, y, 320 + i) - 0.5) * 1.6 * hv;
+        if (Math.abs(u) < 0.15 || Math.abs(v) < 0.15) continue;
+        const [fx, fy] = F(u, v);
+        circle(fx, fy, 1.8 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
+      }
+    })) return;
     const dx = Math.sin(now / 1800) * 4 * z;
     ellipse(px2 + dx, py2 + 1 * z, 2.2 * z, 1.4 * z, C('#fffaf0')); circle(px2 + dx + 1.8 * z, py2 - 0.8 * z, 1.2 * z, C('#fffaf0'));
     for (const [u, v] of [[-0.55, -0.55], [0.55, -0.55], [0.55, 0.2]]) { const [tx, ty] = F(u * hu, v * hv); tree(tx, ty + 2 * z, z * 0.95, hash(x, y, u * 7 + v) + 0.3); }
     const [bx2, by2] = F(hu * 0.4, hv * 0.55);
+    const pass = PASS; PASS = null;
     g.save(); g.translate(bx2, by2); g.scale(0.6, 0.6); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: 1 }); g.restore();
-    for (let i = 0; i < 10; i++) {
-      const u = (hash(x, y, 300 + i) - 0.5) * 1.6 * hu, v = (hash(x, y, 320 + i) - 0.5) * 1.6 * hv;
-      if (Math.abs(u) < 0.15 || Math.abs(v) < 0.15) continue;
-      const [fx, fy] = F(u, v);
-      circle(fx, fy, 1.8 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
-    }
+    PASS = pass;
   },
 };
 
@@ -392,7 +399,7 @@ const HOUSE_ART = [
   // 3 Reetdachhaus mit Garten
   (K, wall, roof, now) => {
     const z = K.z, [cx, cy] = K.P(0, 0), hw = TW / 2 * z, hh = TH / 2 * z;
-    ellipse(cx, cy + 2 * z, hw * 0.8, hh * 0.8, C('#86c35b'));
+    if (groundPart(() => ellipse(cx, cy + 2 * z, hw * 0.8, hh * 0.8, C('#86c35b')))) return;
     for (let i = 0; i < 7; i++) {
       const an = Math.PI * (0.15 + i * 0.12), gx = cx + Math.cos(an) * hw * 0.78, gy = cy + Math.sin(an) * hh * 0.78;
       circle(gx, gy - 2 * z, 2.6 * z, C('#5aa84f'));
@@ -429,7 +436,7 @@ const HOUSE_ART = [
   // 5 Villa: breiter, mit Vorbau, Vordach und rundem Garten
   (K, wall, roof, now, x, y) => {
     const z = K.z;
-    K.oval(0, 0, 0.5, C('#8ccb67'));
+    if (groundPart(() => K.oval(0, 0, 0.5, C('#8ccb67')))) return;
     const main = () => {
       kShadow(K, 0.4);
       const B = K.block({ ha: 0.24, hb: 0.34, h: 22, wall, roof, roofH: 12, over: 1.15 });
@@ -489,7 +496,10 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
+const GROUND_TYPES = new Set(['rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'markt', 'hafen', 'schule', 'uni', 'lm']);
+const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5].includes(houseLook(t)));
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
+  if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
@@ -568,8 +578,8 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     }
     case 'busch': {
       ellipse(cx, cy + 1 * z, 9 * z, 3.5 * z, 'rgba(40,60,20,0.18)');
-      circle(cx - 4 * z, cy - 5 * z, 6 * z, C('#4f9e4a'));
-      circle(cx + 4 * z, cy - 5 * z, 6 * z, C('#58ad52'));
+      circle(cx - 4 * z, cy - 5 * z, 6 * z, C('#5aae54'));
+      circle(cx + 4 * z, cy - 5 * z, 6 * z, C('#4a944a'));
       circle(cx, cy - 9 * z, 6.5 * z, C('#62b85a'));
       circle(cx - 2 * z, cy - 11 * z, 2.6 * z, C('#86d37c'));
       break;
@@ -644,10 +654,12 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
 const LM_GROUND = { baum: '#8fd16a', obsthain: '#94d36c', klippe: '#b7bcb2', ruine: '#dcd3c2', erzberg: '#b9ad94', quelle: '#cfc9bb', kristall: '#b4aac6' };
 function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
   const K = kit(cx, cy, z, 0);
-  if (stage <= 0) RUIN = true;
-  K.oval(0, 0, 0.92, C(shade(LM_GROUND[type] || '#8fd16a', -0.06)));
-  K.oval(0, 0, 0.84, C(LM_GROUND[type] || '#8fd16a'));
-  RUIN = false;
+  if (groundPart(() => {
+    if (stage <= 0) RUIN = true;
+    K.oval(0, 0, 0.92, C(shade(LM_GROUND[type] || '#8fd16a', -0.06)));
+    K.oval(0, 0, 0.84, C(LM_GROUND[type] || '#8fd16a'));
+    RUIN = false;
+  })) return;
   drawLandmark(type, cx, cy + 3 * z, z * 1.4, now, x, y, stage);
 }
 // Sehenswürdigkeit in ihrer Stufe: 0 = verfallen (grau, überwuchert), 1–3 mit immer mehr Details

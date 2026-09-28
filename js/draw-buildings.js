@@ -125,7 +125,7 @@ function waterSide(K, x, y, t, b) {
 // --- Betriebe ---
 const BUILDING_ART = {
   feld(K, s, now, x, y) {
-    K.rect(-0.39, -0.39, 0.39, 0.39, C(s === 1 ? '#a8764c' : '#b8885a'));
+    if (groundPart(() => K.rect(-0.39, -0.39, 0.39, 0.39, C(s === 1 ? '#a8764c' : '#b8885a')))) return;
     const parts = [];
     if (s >= 2) parts.push([-0.3, -0.3, () => {         // Vogelscheuche
       const [px, py] = kPost(K, -0.3, -0.3, 15), z = K.z;
@@ -242,7 +242,7 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   obst(K, s, now, x, y) {
-    K.rect(-0.42, -0.42, 0.42, 0.42, C('#86c35b'));
+    if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#86c35b')))) return;
     const spots = s === 1 ? [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]
       : [[-0.26, -0.26], [0.02, -0.28], [-0.28, 0.02], [-0.02, 0.02], [0.26, -0.24], [-0.24, 0.28]];
     const fruits = ['#ff6b5e', '#ffb13b', '#ff6b5e', '#b07ad6', '#ff6b5e', '#ffb13b'];
@@ -262,13 +262,15 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   stein(K, s, now, x, y) {
-    K.rect(-0.42, -0.42, 0.42, 0.42, C('#9ea3ab'));
+    if (groundPart(() => {
+      K.rect(-0.42, -0.42, 0.42, 0.42, C('#9ea3ab'));
+      if (s === 3) {                                       // Abbaugrube in Stufen
+        K.rect(-0.36, -0.32, 0.12, 0.2, C('#7f848c'));
+        K.rect(-0.3, -0.26, 0.06, 0.14, C('#6f747c'));
+        K.rect(-0.24, -0.2, 0.0, 0.08, C('#60656d'));
+      }
+    })) return;
     const parts = [];
-    if (s === 3) parts.push([-0.1, -0.05, () => {        // Abbaugrube in Stufen
-      K.rect(-0.36, -0.32, 0.12, 0.2, C('#7f848c'));
-      K.rect(-0.3, -0.26, 0.06, 0.14, C('#6f747c'));
-      K.rect(-0.24, -0.2, 0.0, 0.08, C('#60656d'));
-    }]);
     parts.push([-0.28, -0.24, () => { const [bx, by] = K.P(-0.28, -0.24); boulder(bx, by, (s === 3 ? 5 : 7) * K.z); }]);
     parts.push([-0.22, 0.26, () => { const [bx, by] = K.P(-0.22, 0.26); boulder(bx, by, 5.5 * K.z); }]);
     parts.push([0.14, 0.2, () => {
@@ -293,7 +295,7 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   mine(K, s, now) {
-    K.rect(-0.42, -0.42, 0.42, 0.42, C('#a89a80'));
+    if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#a89a80')))) return;
     const parts = [];
     const mound = () => {
       const [mx, my] = K.P(-0.12, 0), z = K.z;
@@ -422,10 +424,12 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   markt(K, s, now, x, y) {
-    K.rect(-1.44, -1.44, 1.44, 1.44, C('#eadcbf'));
-    g.save(); clipTo([[[-1.44, -1.44], [1.44, -1.44], [1.44, 1.44], [-1.44, 1.44]]], p => K.P(p[0], p[1]));
-    pattern(p => K.P(p[0] * 2.6, p[1] * 2.6), 'stones', x, y, K.z, C('#dccdae'));
-    g.restore();
+    if (groundPart(() => {
+      K.rect(-1.44, -1.44, 1.44, 1.44, C('#eadcbf'));
+      g.save(); clipTo([[[-1.44, -1.44], [1.44, -1.44], [1.44, 1.44], [-1.44, 1.44]]], p => K.P(p[0], p[1]));
+      pattern(p => K.P(p[0] * 2.6, p[1] * 2.6), 'stones', x, y, K.z, C('#dccdae'));
+      g.restore();
+    })) return;
     const parts = [];
     const stalls = s === 1 ? [[-1, -0.9, SOFT.red], [-0.9, 0.5, SOFT.blue], [0.2, -1.05, SOFT.yellow]]
       : [[-1.05, -1.05, SOFT.red], [0, -1.1, SOFT.blue], [-1.1, 0, SOFT.yellow], [1.05, -1.05, SOFT.green], [-1.05, 1.05, SOFT.purple]];
@@ -479,10 +483,12 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   hafen(K, s, now, x, y, t) {
-    K.rect(-0.98, -0.98, 0.98, 0.98, C('#c9955f'));
-    g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
-    for (let i = -7; i <= 7; i++) kLine(K, K.P(-0.98, i * 0.13), K.P(0.98, i * 0.13), '#a57645', 0.8);
-    g.restore();
+    if (groundPart(() => {
+      K.rect(-0.98, -0.98, 0.98, 0.98, C('#c9955f'));
+      g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
+      for (let i = -7; i <= 7; i++) kLine(K, K.P(-0.98, i * 0.13), K.P(0.98, i * 0.13), '#a57645', 0.8);
+      g.restore();
+    })) return;
     const [wa, wb] = waterSide(K, x, y, t, 'hafen');         // dort liegen die Schiffe
     const parts = [];
     const ware = s === 3 ? { a: -0.4, b: -0.3, ha: 0.42, hb: 0.5, h: 20, wall: '#d98a6a', roof: '#c65a45', roofH: 12 }
@@ -513,9 +519,11 @@ const BUILDING_ART = {
   // --- Bildung ---
   schule(K, s, now, x, y) {
     const parts = [];
-    K.rect(-0.96, -0.96, 0.96, 0.96, C('#e2d9c6'));
-    if (s >= 2) K.rect(-0.9, 0.35, -0.2, 0.9, C('#f1dfae'));       // Sandplatz
-    if (s === 3) { K.rect(0.2, 0.3, 0.9, 0.9, C('#8fd16a')); kLine(K, K.P(0.55, 0.3), K.P(0.55, 0.9), '#ffffff', 0.8); }
+    if (groundPart(() => {
+      K.rect(-0.96, -0.96, 0.96, 0.96, C('#e2d9c6'));
+      if (s >= 2) K.rect(-0.9, 0.35, -0.2, 0.9, C('#f1dfae'));       // Sandplatz
+      if (s === 3) { K.rect(0.2, 0.3, 0.9, 0.9, C('#8fd16a')); kLine(K, K.P(0.55, 0.3), K.P(0.55, 0.9), '#ffffff', 0.8); }
+    })) return;
     const H = s === 3 ? 26 : 16 + s * 2, hb2 = s === 1 ? 0.55 : 0.72;
     parts.push([-0.25, -0.3, () => {
       kShadow(K, 0.6);
@@ -571,7 +579,7 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   uni(K, s, now) {
-    K.rect(-0.96, -0.96, 0.96, 0.96, C('#9ad26f'));
+    if (groundPart(() => K.rect(-0.96, -0.96, 0.96, 0.96, C('#9ad26f')))) return;
     const H = 22;
     const main = () => {
       kShadow(K, 0.6);

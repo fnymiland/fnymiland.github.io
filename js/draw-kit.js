@@ -13,6 +13,10 @@ const FACES = {
   left:  { p: [-1, -1], q: [1, -1], n: [0, -1] },
 };
 const DOOR_COL = '#8a5a3c';
+// Zeichen-Durchgang: 'ground' = nur Flaches (Plätze, Rasen, Beete – darauf fallen die Schatten),
+// 'object' = alles Aufrechte, null = alles (Vorschaubilder, Tagebuch, Geister beim Bauen)
+let PASS = null;
+function groundPart(fn) { if (PASS !== 'object') fn(); return PASS === 'ground'; }
 
 function kit(cx, cy, z, rot) {
   const r = (rot || 0) & 3;
@@ -20,8 +24,12 @@ function kit(cx, cy, z, rot) {
   const P = (a, b, up = 0) => { const [u, v] = turn(a, b); return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   const depth = (a, b) => { const [u, v] = turn(a, b); return u + v; };
   const facing = (na, nb) => { const [u, v] = turn(na, nb); return u + v; };
-  const wallCol = (col, n) => { const [u] = turn(n[0], n[1]); return C(u > 0.5 ? shade(col, -0.13) : col); };
-  const roofCol = (col, n) => { const [u, v] = turn(n[0], n[1]); return C(u + v < 0 ? shade(col, 0.1) : u > 0.5 ? shade(col, -0.18) : col); };
+  const wallHex = (col, n) => { const [u] = turn(n[0], n[1]); return u > 0.5 ? shade(col, LIGHT.side) : col; };
+  const wallCol = (col, n) => C(wallHex(col, n));
+  const roofCol = (col, n) => {
+    const [u, v] = turn(n[0], n[1]);
+    return C(u < -0.5 ? shade(col, LIGHT.roofSun) : v < -0.5 ? shade(col, LIGHT.roofBack) : u > 0.5 ? shade(col, LIGHT.roofShade) : col);
+  };
   const K = { r, z, P, depth, facing, turn, wallCol, roofCol };
 
   K.poly = (pts, fill, up = 0) => poly(pts.map(([a, b]) => P(a, b, up)), fill);
@@ -41,8 +49,13 @@ function kit(cx, cy, z, rot) {
       faces[name] = facing(f.n[0], f.n[1]) > 0.01 ? { P: W(...f.p), Q: W(...f.q), H: h * z, n: f.n } : null;
     }
     if (entry && !faces.front) backEntry(K, a, b, ha, hb);
+    const deep = h >= 6 && roof && type !== 'flat' && type !== 'none';
     for (const f of Object.values(faces)) {
-      if (f) poly([f.P, f.Q, [f.Q[0], f.Q[1] - f.H], [f.P[0], f.P[1] - f.H]], wallCol(wall, f.n));
+      if (!f) continue;
+      const hex = wallHex(wall, f.n);
+      poly([f.P, f.Q, [f.Q[0], f.Q[1] - f.H], [f.P[0], f.P[1] - f.H]], C(hex));
+      if (h >= 6 && !lift) faceQuad(f.P, f.Q, 0, 1, 0, Math.min(1.6 * z, f.H * 0.15), C(shade(hex, -0.07)));   // Wandfuß
+      if (deep) faceQuad(f.P, f.Q, 0, 1, f.H - Math.min(2.6 * z, f.H * 0.22), f.H, C(shade(hex, -0.12)));  // unter dem Dach
     }
     if (trim) for (const f of Object.values(faces)) if (f) faceQuad(f.P, f.Q, 0, 1, f.H - 1.4 * z, f.H, C(trim));
     const top = lift + h;
@@ -122,8 +135,8 @@ function lampPost(lx, ly, z, hgt = 17) {
 function kitTree(K, a, b, s = 0.8, fruit) { const [x, y] = K.P(a, b); tree(x, y, K.z * s, 0.4, fruit); }
 function kitBush(K, a, b, s = 1, col = '#58ad52') {
   const [x, y] = K.P(a, b), z = K.z * s;
-  circle(x - 2.5 * z, y - 3 * z, 3.6 * z, C(shade(col, -0.08)));
-  circle(x + 2.5 * z, y - 3 * z, 3.6 * z, C(col));
+  circle(x - 2.5 * z, y - 3 * z, 3.6 * z, C(col));
+  circle(x + 2.5 * z, y - 3 * z, 3.6 * z, C(shade(col, -0.14)));
   circle(x, y - 5.5 * z, 3.8 * z, C(shade(col, 0.1)));
 }
 // Zaun entlang einer Linie im Rahmen (Latten)

@@ -45,18 +45,21 @@ function faceQuad(P, Q, t0, t1, h0, h1, fill) {
   const a = lerp(P, Q, t0), b = lerp(P, Q, t1);
   poly([[a[0], a[1] - h0], [b[0], b[1] - h0], [b[0], b[1] - h1], [a[0], a[1] - h1]], fill);
 }
+// Licht: Die Sonne steht links. Wände nach +y (links vorn) hell, nach +x (rechts vorn) im Schatten.
+// Dächer: Fläche nach −x (links hinten) in der Sonne, nach −y leicht, nach +x deutlich im Schatten.
+const LIGHT = { side: -0.22, roofSun: 0.12, roofBack: -0.08, roofShade: -0.3 };
 function box(cx, cy, a, b, h, wall, roof, roofH) {
   const L = [cx - a, cy], B = [cx, cy + b], R = [cx + a, cy];
   poly([L, B, [B[0], B[1] - h], [L[0], L[1] - h]], C(wall));
-  poly([B, R, [R[0], R[1] - h], [B[0], B[1] - h]], C(shade(wall, -0.13)));
+  poly([B, R, [R[0], R[1] - h], [B[0], B[1] - h]], C(shade(wall, LIGHT.side)));
   const top = cy - h;
   if (roof) {
     const ra = a * 1.18, rb = b * 1.18, ap = [cx, top - roofH];
     const rL = [cx - ra, top], rB = [cx, top + rb], rR = [cx + ra, top], rT = [cx, top - rb];
-    poly([rL, rT, ap], C(shade(roof, 0.1)));
-    poly([rT, rR, ap], C(shade(roof, 0.1)));
+    poly([rL, rT, ap], C(shade(roof, LIGHT.roofSun)));
+    poly([rT, rR, ap], C(shade(roof, LIGHT.roofBack)));
     poly([rL, rB, ap], C(roof));
-    poly([rB, rR, ap], C(shade(roof, -0.18)));
+    poly([rB, rR, ap], C(shade(roof, LIGHT.roofShade)));
   } else {
     diamond(cx, top, a, b, C(shade(wall, 0.08)));
   }
@@ -114,7 +117,10 @@ function tree(x, y, z, v, fruit) {
   ellipse(x, y + 1 * z, 8 * z, 3.5 * z, 'rgba(40,60,20,0.15)');
   g.fillStyle = C('#9b6a44');
   g.fillRect(x - 1.8 * z, y - 9 * z, 3.6 * z, 9 * z);
-  circle(x, y - 15 * z, 8.5 * z, C(v < 0.5 ? '#4aa857' : '#55b562'));
+  const leaf = v < 0.5 ? '#4aa857' : '#55b562';
+  circle(x, y - 15 * z, 8.5 * z, C(leaf));
+  circle(x + 2.6 * z, y - 12.6 * z, 6 * z, C(shade(leaf, -0.14)));     // Schattenseite
+  circle(x - 1.2 * z, y - 16.5 * z, 6 * z, C(leaf));
   circle(x - 3.5 * z, y - 18 * z, 4.5 * z, C('#74cc7a'));
   if (fruit || v > 0.75) {
     const f = fruit || '#ff6b5e';

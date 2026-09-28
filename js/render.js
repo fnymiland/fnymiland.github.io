@@ -69,6 +69,63 @@ function chunkBounds(cx, cy) {
   return { left, top, w: right - left, h: bottom - top };
 }
 const cachedPath = t => t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id].glow;
+
+// Schlagschatten: Die Sonne steht links, jedes Gebäude wirft einen weichen Schatten nach rechts
+// (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
+const SUN = { dx: 1.5, dy: 0.32 };
+const SHADOW_COL = 'rgba(30,42,62,0.3)';
+const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34];
+const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feldrand
+  muehle: [[28, 34, 40], 0.3], saege: [22, 0.18], steinmetz: [17, 0.26], schmiede: [19, 0.26], baecker: [[22, 32, 32], 0.2],
+  fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [26, 0.2], uni: [30, 0.14], kunst: [[26, 26, 30], 0.2],
+  rathaus: [40, 0.4], leuchtturm: [50, 0.37], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
+};
+const LM_SHADOW = { baum: [44, 0.55], klippe: [34, 0.5], ruine: [20, 0.45], kristall: [26, 0.55], obsthain: [26, 0.55] };
+function shadowOf(t, ax, ay) {
+  let hgt, inset;
+  if (t.b === 'haus') { const look = houseLook(t); hgt = HOUSE_SHADOW[look]; inset = look === 5 ? 0.16 : 0.24; }
+  else if (t.b === 'lm') { const s = LM_SHADOW[t.lm]; if (!s) return null; [hgt, inset] = s; }
+  else { const s = SHADOW[t.b]; if (!s) return null; hgt = Array.isArray(s[0]) ? s[0][Math.min(t.lvl, 3) - 1] : s[0]; inset = s[1]; }
+  const [w, h] = sizeOf(t.b, t.rot), dx = SUN.dx * hgt, dy = SUN.dy * hgt;
+  const base = [[ax - 0.5 + inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay + h - 0.5 - inset], [ax - 0.5 + inset, ay + h - 0.5 - inset]]
+    .map(([x, y]) => { const p = iso(x, y); return [p.x, p.y]; });
+  return hull(base.concat(base.map(([x, y]) => [x + dx, y + dy])));
+}
+function hull(pts) {                      // konvexe Hülle (Monotone Chain)
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo = [], up = [];
+  for (const p of pts) { while (lo.length >= 2 && cross(lo[lo.length - 2], lo[lo.length - 1], p) <= 0) lo.pop(); lo.push(p); }
+  for (let i = pts.length - 1; i >= 0; i--) { const p = pts[i]; while (up.length >= 2 && cross(up[up.length - 2], up[up.length - 1], p) <= 0) up.pop(); up.push(p); }
+  return lo.slice(0, -1).concat(up.slice(0, -1));
+}
+// Flache Teile der Gebäude (Plätze, Rasen, Beete) – vor Wegen und Schatten
+function drawGroundParts(want, at, z) {
+  PASS = 'ground';
+  for (const [k, t] of state.tiles) {
+    if (!hasGroundPart(t)) continue;
+    const [ax, ay] = keyXY(k);
+    if (!want([ax, ay])) continue;
+    const [w, h] = sizeOf(t.b, t.rot), c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
+    FOG = t.b !== 'lm' && !ownedTile(ax, ay);
+    drawObject(t.b, c.x, c.y, z, 0, ax, ay, t.lvl, t);
+  }
+  FOG = false;
+  PASS = null;
+}
+// alle Schatten als eine Fläche (Überlappungen werden nicht dunkler); want(anker) filtert
+function drawShadows(want) {
+  g.beginPath();
+  for (const [k, t] of state.tiles) {
+    const a = keyXY(k);
+    if (!want(a)) continue;
+    const sh = shadowOf(t, a[0], a[1]);
+    if (sh) sh.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    if (sh) g.closePath();
+  }
+  g.fillStyle = SHADOW_COL;
+  g.fill('nonzero');
+}
 let groundCached = false;           // in diesem Bild kommt der Boden (mit Wegen) aus dem Zwischenspeicher
 // Reines Meer sieht auf jedem Grundstück gleich aus (Wellen kommen extra): ein gemeinsames Bild
 const seaInfo = new Map();           // ck → { v, sea, waves }
@@ -105,13 +162,23 @@ function renderGroundChunk(cx, cy, scale) {
     if (terrainAt(x, y) === 'water' && hasWave(x, y)) waves.push([x, y]);
   }
   FOG = false;
-  // Wege liegen flach auf dem Boden: gleich mit hinein (außer leuchtenden)
+  // Flache Gebäudeteile, Wege und Schlagschatten – auch von Nachbar-Grundstücken, aber nur auf dieses gezeichnet,
+  // damit sich nichts doppelt
+  const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
+  const near = ([ax, ay]) => Math.abs(Math.floor(ax / CHUNK) - cx) <= 1 && Math.abs(Math.floor(ay / CHUNK) - cy) <= 1;
+  g.save();
+  g.beginPath();
+  [iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y));
+  g.closePath(); g.clip();
+  drawGroundParts(near, iso, 1);
   for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
     const j = s - i;
     if (j < 0 || j >= CHUNK) continue;
     const x = cx * CHUNK + i, y = cy * CHUNK + j, t = state.tiles.get(x + ',' + y);
     if (t && cachedPath(t)) { const p = iso(x, y); drawPath(p.x, p.y, 1, x, y, t); }
   }
+  drawShadows(near);
+  g.restore();
   g = prev;
   return { c, b, scale, v: groundVersion, waves, used: frameNo };
 }
@@ -217,7 +284,7 @@ function render(now) {
     }
   }
 
-  // 1) Boden (weiter weg aus dem Zwischenspeicher)
+  // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
   else for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1];
@@ -225,6 +292,22 @@ function render(now) {
     drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
   }
   FOG = false;
+  const visRange = ([ax, ay]) => ax >= minX - 3 && ax <= maxX + 1 && ay >= minY - 3 && ay <= maxY + 1;
+  if (!groundCached) drawGroundParts(visRange, toScreen, z);
+  // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
+  for (let i = 0; i < visible.length; i += 4) {
+    const x = visible[i], y = visible[i + 1], t = state.tiles.get(x + ',' + y);
+    if (!t || t.b !== 'weg' || (groundCached && cachedPath(t))) continue;
+    FOG = !ownedTile(x, y);
+    drawPath(visible[i + 2], visible[i + 3], z, x, y, t);
+  }
+  FOG = false;
+  if (!groundCached) {
+    g.save();
+    g.setTransform(DPR * z, 0, 0, DPR * z, (W / 2 - cam.x * z) * DPR, (H / 2 - cam.y * z) * DPR);
+    drawShadows(visRange);
+    g.restore();
+  }
 
   // 2) Grundstücksgrenzen
   const forSale = [];
@@ -354,9 +437,11 @@ function render(now) {
         }
         const ds = sc * decoScale(t.b);
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [0]);
-        if (!(groundCached && cachedPath(t))) {
+        if (t.b !== 'weg') {
           g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+          PASS = 'object';
           drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
+          PASS = null;
           g.restore();
         }
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);

@@ -319,6 +319,7 @@ function openInfo(x, y) {
   for (const b of el.querySelectorAll('[data-look]')) b.onclick = () => {
     const n = +b.dataset.look;
     if (n === t.lvl) delete t.look; else t.look = n;
+    groundVersion++;                   // anderer Schatten
     t.born = performance.now(); sfx('deco'); save(); openInfo(x, y);
   };
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
