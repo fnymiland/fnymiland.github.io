@@ -19,6 +19,7 @@ function build(b, x, y, quiet) {
     if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
     state.money -= ITEMS[b].cost;
     old.style = style;
+    groundVersion++;
     sfx('road'); save();
     return true;
   }

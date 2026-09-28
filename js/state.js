@@ -59,7 +59,7 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 4, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 5, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
@@ -118,6 +118,7 @@ function parseSave(d) {
     tutorial: d.tutorial != null ? d.tutorial : -1,
     legacy: new Set(d.legacy || legacyUnlocks(d)),
     oldSave: !d.restore,
+    fitLm: (d.v || 3) < 5,          // Sehenswürdigkeiten sind seit v5 2×2 groß: einmal passend rücken
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs),
     decos: new Map(d.decos || []),
@@ -164,6 +165,7 @@ function adoptState(s) {
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
   fitFootprints();
+  delete state.fitLm;
   nameHouses();
   recalc();
   buildToolbar();

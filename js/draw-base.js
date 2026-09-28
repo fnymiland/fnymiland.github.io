@@ -68,22 +68,25 @@ function box(cx, cy, a, b, h, wall, roof, roofH) {
 // ---------------------------------------------------------------------------
 const FLOWER_COLS = ['#ff8fb1', '#fff27a', '#ffffff', '#c49bff', '#ff9f5a'];
 
-function drawGround(x, y, p, z, now) {
+const hasWave = (x, y) => hash(x, y, 9) < 0.25;
+function drawWave(x, y, p, z, now) {
+  const off = DEPTH * z * 0.7, ph = now / 900 + hash(x, y, 10) * 20;
+  g.strokeStyle = C('#c4f0f8');
+  g.lineWidth = 1.6 * z;
+  g.lineCap = 'round';
+  g.beginPath();
+  const wx = p.x + Math.sin(ph) * 5 * z, wy = p.y + off + (hash(x, y, 11) - 0.5) * 10 * z;
+  g.moveTo(wx - 5 * z, wy); g.quadraticCurveTo(wx, wy - 2.5 * z, wx + 5 * z, wy);
+  g.stroke();
+}
+// noWaves: für den Boden-Zwischenspeicher (Wellen bewegen sich und werden jedes Bild extra gezeichnet)
+function drawGround(x, y, p, z, now, noWaves) {
   const hw = TW / 2 * z + 0.5, hh = TH / 2 * z + 0.3, d = DEPTH * z;
   const ter = terrainAt(x, y);
   if (ter === 'water') {
     const off = d * 0.7;
     diamond(p.x, p.y + off, hw, hh, C(((x + y) & 1) ? '#74d0e6' : '#6fcbe2'));
-    if (hash(x, y, 9) < 0.25) {
-      const ph = now / 900 + hash(x, y, 10) * 20;
-      g.strokeStyle = C('#c4f0f8');
-      g.lineWidth = 1.6 * z;
-      g.lineCap = 'round';
-      g.beginPath();
-      const wx = p.x + Math.sin(ph) * 5 * z, wy = p.y + off + (hash(x, y, 11) - 0.5) * 10 * z;
-      g.moveTo(wx - 5 * z, wy); g.quadraticCurveTo(wx, wy - 2.5 * z, wx + 5 * z, wy);
-      g.stroke();
-    }
+    if (!noWaves && hasWave(x, y)) drawWave(x, y, p, z, now);
     return;
   }
   const beach = ter === 'grass' && isBeach(x, y);

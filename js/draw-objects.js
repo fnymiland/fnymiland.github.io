@@ -652,10 +652,20 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       circle(sx - 2 * z, sy - 3 * z, 1.8 * z, 'rgba(255,255,255,0.7)');
       break;
     }
-    case 'lm': drawLandmark(t ? t.lm : 'baum', cx, cy, z, now, x, y, t && t.stage != null ? t.stage : lmStage(t ? t.lm : 'baum')); break;
+    case 'lm': drawLandmarkBig(t ? t.lm : 'baum', cx, cy, z, now, x, y, t && t.stage != null ? t.stage : lmStage(t ? t.lm : 'baum')); break;
   }
 }
 
+// Auf der Karte belegt eine Sehenswürdigkeit 2×2 Felder: weicher Untergrund, darauf das Wahrzeichen in groß
+const LM_GROUND = { baum: '#8fd16a', obsthain: '#94d36c', klippe: '#b7bcb2', ruine: '#dcd3c2', erzberg: '#b9ad94', quelle: '#cfc9bb', kristall: '#b4aac6' };
+function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
+  const K = kit(cx, cy, z, 0);
+  if (stage <= 0) RUIN = true;
+  K.oval(0, 0, 0.92, C(shade(LM_GROUND[type] || '#8fd16a', -0.06)));
+  K.oval(0, 0, 0.84, C(LM_GROUND[type] || '#8fd16a'));
+  RUIN = false;
+  drawLandmark(type, cx, cy + 3 * z, z * 1.4, now, x, y, stage);
+}
 // Sehenswürdigkeit in ihrer Stufe: 0 = verfallen (grau, überwuchert), 1–3 mit immer mehr Details
 function drawLandmark(type, cx, cy, z, now, x, y, stage = 1) {
   if (stage <= 0) {

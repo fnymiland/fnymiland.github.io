@@ -86,7 +86,7 @@ const ITEMS = {
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
   rathaus: { cat: null, name: 'Rathaus', size: [2, 2], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
-  lm:      { cat: null, name: 'Sehenswürdigkeit', fixed: true, desc: '' },
+  lm:      { cat: null, name: 'Sehenswürdigkeit', size: [2, 2], fixed: true, desc: '' },
 };
 // Rohstoffe und Waren im gemeinsamen Lager
 const RES = {

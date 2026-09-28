@@ -131,3 +131,37 @@ describe('Alte Spielstände', () => {
     expect(game('lmStage("baum")')).toBe(1);
   });
 });
+
+describe('Sehenswürdigkeiten sind 2×2 groß', () => {
+  it('auf einer neuen Insel: ganz in einem Grundstück, nichts überlappt, der Baum steht bei 9,3', () => {
+    const lms = game("[...state.tiles].filter(([, t]) => t.b === 'lm').map(([k]) => keyXY(k))");
+    expect(lms.length).toBe(7);
+    for (const [x, y] of lms) {
+      const cks = game(`footprint('lm', ${x}, ${y}, 0).map(([a, b]) => chunkOf(a, b))`);
+      expect(new Set(cks).size).toBe(1);
+      expect(game(`footprint('lm', ${x}, ${y}, 0).every(([a, b]) => anchorAt(a, b) === '${x},${y}' && terrainAt(a, b) !== 'water')`)).toBe(true);
+    }
+    expect(game("lmTile('baum')")).toEqual([9, 3]);
+  });
+
+  it('alte Stände: am Grundstücksrand rückt sie ins Grundstück, Hindernisse werden erstattet', () => {
+    const d = game('serialize()');
+    d.v = 4;
+    d.tiles = d.tiles.filter(([, t]) => t.lm !== 'ruine');
+    d.tiles.push(['11,8', { b: 'lm', lm: 'ruine', lvl: 1 }], ['10,9', { b: 'feld', lvl: 1 }]);
+    d.owned.push('1,1');
+    const money = d.money;
+    game(`state = parseSave(${JSON.stringify(d)}); fitFootprints(); delete state.fitLm; recalc()`);
+    const [x, y] = game("lmTile('ruine')");
+    expect(new Set(game(`footprint('lm', ${x}, ${y}, 0).map(([a, b]) => chunkOf(a, b))`))).toEqual(new Set(['1,1']));
+    expect(game('state.money')).toBeGreaterThanOrEqual(money);
+  });
+
+  it('neue Stände: wer sie selbst über die Grenze geschoben hat, findet sie dort wieder', () => {
+    game("state.owned.add('1,1'); state.restore.ruine = 1");
+    game("for (const [k, t] of [...state.tiles]) if (t.lm === 'ruine') state.tiles.delete(k)");
+    game("state.tiles.set('11,8', { b: 'lm', lm: 'ruine', lvl: 1 }); recalc()");
+    game('state = parseSave(serialize()); fitFootprints(); delete state.fitLm; recalc()');
+    expect(game("lmTile('ruine')")).toEqual([11, 8]);
+  });
+});

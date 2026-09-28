@@ -51,6 +51,137 @@ function chunkCorners(ck) {
 const confetti = [];
 let lastRender = 0;
 
+// ---------------------------------------------------------------------------
+// Zwischenspeicher, damit auch große Inseln auf dem iPad flüssig laufen:
+// Der Boden jedes Grundstücks (6×6 Felder) wird einmal in ein eigenes Bild gezeichnet und danach nur noch kopiert.
+// Neu gezeichnet wird, wenn sich Gelände, Besitz oder Bebauung ändern (groundVersion, erhöht von recalc)
+// oder der Zoom deutlich anders ist. Ganz nah dran wird direkt gezeichnet (da sind es nur wenige Felder).
+// Waldbäume und Felsen sind fertige kleine Bilder (einige Varianten je Zoomstufe).
+// ---------------------------------------------------------------------------
+let groundVersion = 0;
+const groundCache = new Map();       // ck → { c, b, scale, v, waves, used }
+const GROUND_MAX_SCALE = 2.6;         // darüber (nah dran) direkt zeichnen
+let frameNo = 0, lastZoom = 0, lastZoomChange = 0;
+function chunkBounds(cx, cy) {
+  const x0 = cx * CHUNK, y0 = cy * CHUNK, x1 = x0 + CHUNK - 1, y1 = y0 + CHUNK - 1;
+  const left = (x0 - y1) * TW / 2 - TW / 2 - 2, right = (x1 - y0) * TW / 2 + TW / 2 + 2;
+  const top = (x0 + y0) * TH / 2 - TH / 2 - 2, bottom = (x1 + y1) * TH / 2 + TH / 2 + DEPTH + 4;
+  return { left, top, w: right - left, h: bottom - top };
+}
+const cachedPath = t => t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id].glow;
+let groundCached = false;           // in diesem Bild kommt der Boden (mit Wegen) aus dem Zwischenspeicher
+// Reines Meer sieht auf jedem Grundstück gleich aus (Wellen kommen extra): ein gemeinsames Bild
+const seaInfo = new Map();           // ck → { v, sea, waves }
+let seaImage = null;
+function chunkSea(cx, cy) {
+  const ck = cx + ',' + cy;
+  let e = seaInfo.get(ck);
+  if (!e || e.v !== groundVersion) {
+    let sea = !state.owned.has(ck);
+    const waves = [];
+    for (let j = 0; j < CHUNK; j++) for (let i = 0; i < CHUNK; i++) {
+      const x = cx * CHUNK + i, y = cy * CHUNK + j;
+      if (terrainAt(x, y) !== 'water') sea = false;
+      else if (hasWave(x, y)) waves.push([x, y]);
+    }
+    e = { v: groundVersion, sea, waves };
+    seaInfo.set(ck, e);
+  }
+  return e;
+}
+function renderGroundChunk(cx, cy, scale) {
+  const b = chunkBounds(cx, cy), c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(b.w * scale)); c.height = Math.max(1, Math.ceil(b.h * scale));
+  const prev = g;
+  g = c.getContext('2d');
+  g.setTransform(scale, 0, 0, scale, -b.left * scale, -b.top * scale);
+  const waves = [];
+  for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
+    const j = s - i;
+    if (j < 0 || j >= CHUNK) continue;
+    const x = cx * CHUNK + i, y = cy * CHUNK + j;
+    FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
+    drawGround(x, y, iso(x, y), 1, 0, true);
+    if (terrainAt(x, y) === 'water' && hasWave(x, y)) waves.push([x, y]);
+  }
+  FOG = false;
+  // Wege liegen flach auf dem Boden: gleich mit hinein (außer leuchtenden)
+  for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
+    const j = s - i;
+    if (j < 0 || j >= CHUNK) continue;
+    const x = cx * CHUNK + i, y = cy * CHUNK + j, t = state.tiles.get(x + ',' + y);
+    if (t && cachedPath(t)) { const p = iso(x, y); drawPath(p.x, p.y, 1, x, y, t); }
+  }
+  g = prev;
+  return { c, b, scale, v: groundVersion, waves, used: frameNo };
+}
+function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
+  const want = z * DPR, zooming = now - lastZoomChange < 250;
+  const order = [];
+  for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
+  order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
+  const stale = e => { const ratio = want / e.scale; return (!zooming && Math.abs(ratio - 1) > 0.02) || ratio < 0.6 || ratio > 1.6; };
+  for (const [cx, cy] of order) {
+    const b = chunkBounds(cx, cy);
+    const sx = (b.left - cam.x) * z + W / 2, sy = (b.top - cam.y) * z + H / 2;
+    if (sx > W || sy > H || sx + b.w * z < 0 || sy + b.h * z < 0) continue;
+    const info = chunkSea(cx, cy);
+    let img;
+    if (info.sea) {
+      if (!seaImage || stale(seaImage)) { seaImage = renderGroundChunk(ISLAND.cMax + 50, 0, want); }
+      img = seaImage.c;
+    } else {
+      const ck = cx + ',' + cy;
+      let e = groundCache.get(ck);
+      if (!e || e.v !== groundVersion || stale(e)) { e = renderGroundChunk(cx, cy, want); groundCache.set(ck, e); }
+      e.used = frameNo;
+      img = e.c;
+    }
+    g.drawImage(img, sx, sy, b.w * z, b.h * z);
+    for (const [x, y] of info.waves) drawWave(x, y, toScreen(x, y), z, now);
+  }
+  if (frameNo % 60 === 0) {
+    for (const [ck, e] of groundCache) if (frameNo - e.used > 120) groundCache.delete(ck);
+    if (seaInfo.size > 400) seaInfo.clear();
+  }
+}
+// Wald- und Felsfelder als fertige Bilder
+const spriteCache = new Map();
+const SPRITE_BOX = { left: -TW / 2 - 12, top: -46, w: TW + 24, h: 66 };
+function tileSprite(kind, x, y, px, py, z) {
+  const variants = kind === 'rock' || kind === 'erz' ? 4 : 6;
+  const v = Math.floor(hash(x, y, 61) * variants), key = kind + v + (FOG ? 'n' : '');
+  const want = z * DPR;
+  let e = spriteCache.get(key);
+  if (!e || want / e.scale > 1.25 || want / e.scale < 0.8) {
+    const c = document.createElement('canvas'), B = SPRITE_BOX;
+    c.width = Math.ceil(B.w * want); c.height = Math.ceil(B.h * want);
+    const prev = g;
+    g = c.getContext('2d');
+    g.setTransform(want, 0, 0, want, -B.left * want, -B.top * want);
+    const vx = 5000 + v * 7, vy = 5000 + v * 13;
+    if (kind === 'forest') drawForest(0, 0, 1, vx, vy, 3);
+    else if (kind === 'obst') drawForest(0, 0, 1, vx, vy, 3, true);
+    else drawRocks(0, 0, 1, vx, vy, kind === 'erz');
+    g = prev;
+    e = { c, scale: want };
+    spriteCache.set(key, e);
+  }
+  const B = SPRITE_BOX;
+  g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
+}
+// Nachtlicht: ein vorgezeichneter weicher Lichtfleck statt eines Farbverlaufs pro Fenster
+let glowSprite = null;
+function glowImage() {
+  if (glowSprite) return glowSprite;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const x = c.getContext('2d'), grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, 'rgba(255,205,100,1)'); grd.addColorStop(1, 'rgba(255,205,100,0)');
+  x.fillStyle = grd; x.fillRect(0, 0, 64, 64);
+  return (glowSprite = c);
+}
+
 function render(now) {
   g = ctx;
   cam = state.cam;
@@ -62,10 +193,20 @@ function render(now) {
   ctx.fillRect(0, 0, W, H);
   night = forcedHour != null ? nightLevel(clockNow()) : nightAt(performance.now());
   glows.length = 0;
+  frameNo++;
+  if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
 
   const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];
-  const minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
-  const minY = Math.min(...cs.map(c => c.y)) - 2, maxY = Math.max(...cs.map(c => c.y)) + 6;
+  groundCached = z * DPR <= GROUND_MAX_SCALE && isLive();
+  let minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
+  let minY = Math.min(...cs.map(c => c.y)) - 2, maxY = Math.max(...cs.map(c => c.y)) + 6;
+  // Außerhalb der Insel steht nichts: dort nur den Boden aus dem Zwischenspeicher, keine Felder durchgehen
+  const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
+  const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
+  if (groundCached) {
+    minX = Math.max(minX, ISLAND.cMin * CHUNK - 1); maxX = Math.min(maxX, (ISLAND.cMax + 1) * CHUNK);
+    minY = Math.max(minY, ISLAND.cMin * CHUNK - 1); maxY = Math.min(maxY, (ISLAND.cMax + 1) * CHUNK);
+  }
   const mX = TW * z, mTop = 110 * z, mBot = TH * z;
   const visible = [];
   for (let s = minX + minY; s <= maxX + maxY; s++) {
@@ -76,8 +217,9 @@ function render(now) {
     }
   }
 
-  // 1) Boden
-  for (let i = 0; i < visible.length; i += 4) {
+  // 1) Boden (weiter weg aus dem Zwischenspeicher)
+  if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
+  else for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1];
     FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
     drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
@@ -85,8 +227,6 @@ function render(now) {
   FOG = false;
 
   // 2) Grundstücksgrenzen
-  const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
-  const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
   const forSale = [];
   g.lineCap = 'round';
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) {
@@ -214,9 +354,11 @@ function render(now) {
         }
         const ds = sc * decoScale(t.b);
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [0]);
-        g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-        drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
-        g.restore();
+        if (!(groundCached && cachedPath(t))) {
+          g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+          drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
+          g.restore();
+        }
         if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
@@ -228,10 +370,10 @@ function render(now) {
       }
     } else {
       const ter = terrainAt(x, y), hide = inGhost(x, y);
-      if (ter === 'forest' && !(hide && ghostType === 'holz')) drawForest(px, py, z, x, y, 3);
-      else if (ter === 'obst' && !(hide && ghostType === 'obst')) drawForest(px, py, z, x, y, 3, true);
-      else if (ter === 'rock' && !(hide && ghostType === 'stein')) drawRocks(px, py, z, x, y);
-      else if (ter === 'erz' && !(hide && ghostType === 'mine')) drawRocks(px, py, z, x, y, true);
+      if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
+      else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
+      else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
+      else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);
       drawSmall(k, px, py, z, now, x, y, [0, 1, 2, 3]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
@@ -267,13 +409,11 @@ function render(now) {
     g.fillStyle = `rgba(25,35,85,${night})`;
     g.fillRect(0, 0, W, H);
     const strength = night / 0.45;
+    const gi = glowImage();
     for (const { q, r } of glows) {
       const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
-      const grd = g.createRadialGradient(gx, gy, 0, gx, gy, r);
-      grd.addColorStop(0, `rgba(255,205,100,${0.45 * strength})`);
-      grd.addColorStop(1, 'rgba(255,205,100,0)');
-      g.fillStyle = grd;
-      g.fillRect(gx - r, gy - r, r * 2, r * 2);
+      g.globalAlpha = 0.45 * strength;
+      g.drawImage(gi, gx - r, gy - r, r * 2, r * 2);
       g.globalAlpha = Math.min(1, strength);
       poly(q, '#ffd873');
       g.globalAlpha = 1;
@@ -285,10 +425,10 @@ function render(now) {
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
   for (const [x, y, type] of labels) {
-    const p = toScreen(x, y), L = LANDMARKS[type], st = lmStage(type), on = st >= 1;
+    const p = toScreen(x + 0.5, y + 0.5), L = LANDMARKS[type], st = lmStage(type), on = st >= 1;
     const ready = ownedTile(x, y) && st < 3 && !restoreInfo(type).err;
     const lanterns = '🏮'.repeat(st) + '·'.repeat(3 - st);
-    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - 62 * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
+    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - 96 * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
       st >= 3 ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
   }
   const price = plotPrice();
@@ -360,23 +500,6 @@ function drawSparkles(now, z) {
 function addFloat(x, y, text, color) {
   if (floats.length > 60) floats.shift();
   floats.push({ x, y, text, color, t0: performance.now() });
-}
-
-function spawnIncomeFloats(now) {
-  for (const [k, t] of state.tiles) {
-    const s = T.st.get(k);
-    if (!s || !(s.inc > 0 || s.sci > 0 || s.prod || s.conv)) continue;
-    if (!t.nf) { t.nf = now + 1000 + Math.random() * 4000; continue; }
-    if (now < t.nf) continue;
-    t.nf = now + 4000 + Math.random() * 2500;
-    const [x, y] = keyXY(k);
-    const p = toScreen(x, y);
-    if (p.x < 0 || p.x > W || p.y < 0 || p.y > H) continue;
-    if (s.prod) addFloat(x, y, Object.keys(s.prod).map(r => '+' + RES[r].icon).join(' '), '#8a5a3c');
-    else if (s.conv) { const c = ITEMS[t.b].conv; if (state.res[c.from] >= CONV_RATIO) addFloat(x, y, '+' + RES[c.to].icon, '#8a5a3c'); }
-    else if (s.inc > 0) addFloat(x, y, '+' + fmtRate(s.inc * 4), '#b8860b');
-    else addFloat(x, y, '💡 +' + fmtRate(s.sci * 4), '#7d6bb0');
-  }
 }
 
 function confettiBurst() {

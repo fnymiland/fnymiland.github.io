@@ -223,7 +223,7 @@ function totals() {
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map() };
-function recalc() { T = totals(); NET = T.net; previewCache = null; }
+function recalc() { T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
 const lmStage = type => (state.restore && state.restore[type]) || 0;
@@ -402,6 +402,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   return matError(d.mat);
 }
 
+// Sehenswürdigkeiten (seit 29.09. 2×2): im selben Grundstück bleiben, am liebsten dort, wo nichts im Weg ist
+function lmSpot(x, y, tries) {
+  const ck = chunkOf(x, y);
+  const inChunk = ([ax, ay]) => footprint('lm', ax, ay, 0).every(([fx, fy]) => chunkOf(fx, fy) === ck);
+  const free = ([ax, ay]) => footprint('lm', ax, ay, 0).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && terrainAt(fx, fy) !== 'water');
+  const all = tries.concat([[x + 1, y], [x, y + 1], [x + 1, y + 1], [x - 1, y + 1], [x + 1, y - 1]]);
+  return all.find(p => inChunk(p) && free(p)) || (free([x, y]) ? [x, y] : null) || all.find(inChunk) || null;
+}
+
 // Alte Spielstände: Gebäude, die jetzt mehrere Felder belegen, bekommen ihre Grundfläche.
 // Passt es nirgends, werden Kosten und Material erstattet. Das Rathaus bleibt immer: was im Weg liegt, weicht.
 function fitFootprints() {
@@ -416,7 +425,7 @@ function fitFootprints() {
   for (const [k, t] of [...state.tiles]) {
     if (!isBig(t.b)) continue;
     const [w, h] = sizeOf(t.b, t.rot);
-    const [x, y] = keyXY(k);
+    let [x, y] = keyXY(k);
     // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?
     state.tiles.delete(k); rebuildCover();
     const ok = (ax, ay) => placeError(t.b, ax, ay, t.rot || 0, { move: true }) === null;
@@ -425,15 +434,18 @@ function fitFootprints() {
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) tries.push([x - dx, y - dy]);
     tries.sort((a, b) => (x - a[0]) + (y - a[1]) - (x - b[0]) - (y - b[1]));
     let spot = tries.find(([ax, ay]) => ok(ax, ay));
-    if (!spot && t.b === 'rathaus') {
+    if (t.b === 'lm') spot = state.fitLm ? lmSpot(x, y, tries) : [x, y];     // nur beim Umstellen alter Stände rücken
+    if ((!spot && t.b === 'rathaus') || t.b === 'lm') {
+      if (!spot) spot = [x, y];
+      [x, y] = spot;
       for (const [fx, fy] of footprint(t.b, x, y, t.rot)) {
         const kk = fx + ',' + fy, a = anchorAt(fx, fy);
         if (a && state.tiles.get(a).b !== 'lm') { const o = state.tiles.get(a); if (o.b !== 'weg') removed.push(ITEMS[o.b].name); refundObj(a, o); }
         const ds = state.decos.get(kk);
         if (ds) { for (const d of ds) if (d) state.money += ITEMS[d.b].cost; state.decos.delete(kk); }
+        if (t.b === 'lm' && terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
         rebuildCover();
       }
-      spot = [x, y];
     }
     if (spot) {
       state.tiles.set(spot[0] + ',' + spot[1], t);
