@@ -238,15 +238,16 @@ function tileSprite(kind, x, y, px, py, z) {
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
 }
 // Nachtlicht: ein vorgezeichneter weicher Lichtfleck statt eines Farbverlaufs pro Fenster
-let glowSprite = null;
-function glowImage() {
-  if (glowSprite) return glowSprite;
-  const c = document.createElement('canvas');
+const glowSprites = {};
+function glowImage(blue) {
+  const key = blue ? 'blue' : 'warm';
+  if (glowSprites[key]) return glowSprites[key];
+  const c = document.createElement('canvas'), rgb = blue ? '140,215,255' : '255,205,100';
   c.width = c.height = 64;
   const x = c.getContext('2d'), grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grd.addColorStop(0, 'rgba(255,205,100,1)'); grd.addColorStop(1, 'rgba(255,205,100,0)');
+  grd.addColorStop(0, `rgba(${rgb},1)`); grd.addColorStop(1, `rgba(${rgb},0)`);
   x.fillStyle = grd; x.fillRect(0, 0, 64, 64);
-  return (glowSprite = c);
+  return (glowSprites[key] = c);
 }
 
 function render(now) {
@@ -494,13 +495,11 @@ function render(now) {
     g.fillStyle = `rgba(25,35,85,${night})`;
     g.fillRect(0, 0, W, H);
     const strength = night / 0.45;
-    const gi = glowImage();
-    for (const { q, r } of glows) {
-      const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+    for (const { q, r, tint } of glows) {
+      const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, blue = tint === 'blue';
       g.globalAlpha = 0.45 * strength;
-      g.drawImage(gi, gx - r, gy - r, r * 2, r * 2);
-      g.globalAlpha = Math.min(1, strength);
-      poly(q, '#ffd873');
+      g.drawImage(glowImage(blue), gx - r, gy - r, r * 2, r * 2);
+      if (!blue) { g.globalAlpha = Math.min(1, strength); poly(q, '#ffd873'); }
       g.globalAlpha = 1;
     }
   }

@@ -6,10 +6,10 @@ let night = 0;
 const glows = [];
 const isLive = () => g === ctx;
 
-function glowQuad(pts, r) {
+function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
   if (!(night > 0.15 && isLive())) return;
   const m = g.getTransform(), k = 1 / DPR;
-  glows.push({ q: pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]), r });
+  glows.push({ q: pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]), r, tint });
 }
 function windowOn(P, Q, t0, t1, h0, h1, z) {
   const lit = night > 0.15 && isLive();
@@ -166,7 +166,7 @@ const PATH_LOOK = {
   pastell: { edge: '#d9bcc6', fill: '#f5e4ea', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffe08a'] },
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
-  kristall: { edge: '#b9a0e8', fill: '#e6dbfb', pat: ['dots', null], cols: ['#c7a6f7', '#ffffff', '#9d6fe0'], glow: true },
+  kristall: { edge: '#9fcfe8', fill: '#e1f4fb', pat: ['dots', null], cols: ['#9fdcf7', '#ffffff', '#62b1dc'], glow: true },
   // Flächen
   platten:    { fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
   kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
@@ -228,7 +228,7 @@ function drawPath(cx, cy, z, x, y, t) {
   if (lk.pat) {
     g.save(); clipTo(roadShapes(arms, t, ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
-  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z);
+  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
   if (lk.dash && cl) {
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
@@ -569,11 +569,10 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     case 'kristall': {
-      ellipse(cx, cy + 1 * z, 6 * z, 2.6 * z, 'rgba(40,40,60,0.18)');
-      poly([[cx - 5 * z, cy], [cx - 1 * z, cy + 1 * z], [cx - 3 * z, cy - 10 * z]], C('#b98cf2'));
-      poly([[cx - 1 * z, cy + 1 * z], [cx + 3 * z, cy], [cx + 1 * z, cy - 15 * z]], C('#9d6fe0'));
-      poly([[cx + 3 * z, cy], [cx + 6 * z, cy - 1 * z], [cx + 5 * z, cy - 8 * z]], C('#c7a6f7'));
-      glowQuad([[cx - 2 * z, cy - 12 * z], [cx + 2 * z, cy - 12 * z], [cx + 2 * z, cy - 4 * z], [cx - 2 * z, cy - 4 * z]], 18 * z);
+      ellipse(cx, cy + 1 * z, 7 * z, 2.8 * z, 'rgba(40,50,70,0.18)');
+      crystal(cx - 4 * z, cy, z, 7 * z, 2.2 * z, -0.3);
+      crystal(cx + 4.5 * z, cy + 0.5 * z, z, 6 * z, 2 * z, 0.3);
+      crystal(cx, cy + 2 * z, z, 11 * z, 2.8 * z, 0.05);
       break;
     }
     case 'busch': {
@@ -654,6 +653,12 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
 const LM_GROUND = { baum: '#8fd16a', obsthain: '#94d36c', klippe: '#b7bcb2', ruine: '#dcd3c2', erzberg: '#b9ad94', quelle: '#cfc9bb', kristall: '#b4aac6' };
 function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
   const K = kit(cx, cy, z, 0);
+  if (LANDMARK_ART[type]) {
+    if (stage <= 0) RUIN = true;
+    LANDMARK_ART[type](K, stage, now, x, y);
+    RUIN = false;
+    return;
+  }
   if (groundPart(() => {
     if (stage <= 0) RUIN = true;
     K.oval(0, 0, 0.92, C(shade(LM_GROUND[type] || '#8fd16a', -0.06)));
@@ -664,6 +669,12 @@ function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
 }
 // Sehenswürdigkeit in ihrer Stufe: 0 = verfallen (grau, überwuchert), 1–3 mit immer mehr Details
 function drawLandmark(type, cx, cy, z, now, x, y, stage = 1) {
+  if (LANDMARK_ART[type]) {                 // für 2×2 gezeichnet: im Tagebuch etwas kleiner
+    if (stage <= 0) RUIN = true;
+    LANDMARK_ART[type](kit(cx, cy + 6 * z, z * 0.62, 0), stage, now, x, y);
+    RUIN = false;
+    return;
+  }
   if (stage <= 0) {
     RUIN = true;
     drawLandmarkBase(type, cx, cy, z, 0, x, y);

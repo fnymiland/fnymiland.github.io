@@ -289,7 +289,7 @@ const STYLES = {
     { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', tech: 'kunst' },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
     { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', shape: 'fill', tech: 'skulptur' },
-    { id: 'kristall', name: 'Kristallweg', col: '#d9c7f7', shape: 'band', lm: 'kristall:3' },
+    { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
   ],
 };
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
