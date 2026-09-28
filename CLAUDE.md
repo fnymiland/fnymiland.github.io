@@ -58,3 +58,21 @@ npm test          # alle Tests (Vitest + jsdom)
 npm run bump      # Versionsnummern in index.html erhöhen
 npm run serve     # Server für WLAN/iPad auf Port 4173
 ```
+
+## Zusammenarbeit (wichtig)
+
+- **Erst besprechen, dann bauen.** Vor jedem größeren Schritt: kurz erklären, wie es technisch geht, Optionen
+  mit Vor-/Nachteilen zeigen, auf die Antwort warten. Kleine Fehler direkt beheben.
+- In **kleinen Schritten** bauen, jeden Schritt zeigen (Probeansicht, Screenshot), dann `npm test`, `npm run bump`,
+  Commit (lokal, Nutzer hat git gewünscht). Stand der Schritte: Bau-Reihenfolge in KONZEPT.md (✓ = fertig).
+- Der Nutzer mag: **cozy und süß**, klares Ziel, Belohnungen selbst auslösen (Ausbauen per Knopf statt automatisch),
+  viel Gestaltungsfreiheit, keine unnötige Verwaltung. Größenverhältnisse müssen stimmen (Deko nicht so groß wie Häuser).
+
+**Schon ausprobiert und verworfen – nicht wieder einbauen:**
+unendliches Land ohne Ziel · Inselhüpfen (eine Insel bleibt) · Straßenpflicht zum Rathaus · Strom/Kraftwerke ·
+Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse. Züge/Straßenbahn: später neu besprechen.
+
+## Spielen im WLAN
+
+`python3 -m http.server 4173 --directory ~/Projekte/Spiel` (bzw. Vorschau-Server „spiel“) → auf dem iPad
+`http://192.168.178.82:4173` (IP kann sich ändern). Jedes Gerät hat seinen eigenen Spielstand (Export/Import im Menü).
