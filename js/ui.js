@@ -232,10 +232,13 @@ function openInfo(x, y) {
   const cost = up ? upgradeCost(t) : 0;
   let colors = '';
   if (t.b === 'haus') {
-    const n = hasTech('farben') ? 14 : 7;
+    const n = hasTech('farben') ? 14 : 7, look = houseLook(t);
+    if (t.lvl > 1) colors += `
+      <div class="label">Aussehen</div>
+      <div class="looks">${HOUSE_STAGES.slice(0, t.lvl).map((st, i) => `<button class="look${i + 1 === look ? ' on' : ''}" data-look="${i + 1}">${st.name}</button>`).join('')}</div>`;
     const wall = t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7);
     const roof = t.roof != null ? t.roof : Math.floor(hash(x, y, 4) * 7);
-    colors = `
+    colors += `
       <div class="label">Wand</div>
       <div class="swatches">${WALLS.slice(0, n).map((c, i) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
       <div class="label">Dach</div>
@@ -254,7 +257,7 @@ function openInfo(x, y) {
         <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}</div>`).join('')}</div>`
         : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
-      ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} Wunsch${w.total - w.met > 1 ? 'e' : ''}`}</button></div>` : '';
+      ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : d.name;
   const el = showPanel(`
@@ -292,6 +295,11 @@ function openInfo(x, y) {
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
   };
   $('p-close').onclick = closePanel;
+  for (const b of el.querySelectorAll('[data-look]')) b.onclick = () => {
+    const n = +b.dataset.look;
+    if (n === t.lvl) delete t.look; else t.look = n;
+    t.born = performance.now(); sfx('deco'); save(); openInfo(x, y);
+  };
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   updateHud();

@@ -94,7 +94,7 @@ Freischaltungen kommen aus vier Quellen – nie nur „genug Taler“:
 4. **Händlerschiff** – seltene Deko und Samen, die es sonst nicht gibt.
 
 **Mehr Dinge insgesamt** (Ziel: rund 80 statt heute ~30), z. B.:
-- 5 Hausformen (Häuschen, Fachwerk, Reetdach, Stadthaus, Turmhaus) × Farben
+- 5 Hausformen (Häuschen, Fachwerk, Reetdach, Stadthaus, Villa) × Farben
 - Zäune (Holz, weißer Lattenzaun, Stein, Hecke), Tore, Rankbögen
 - Blumen (Tulpen, Rosen, Sonnenblumen, Lavendel), Kübel, Kästen am Fenster
 - Spielplatz, Teich mit Enten, Vogelhaus, Gartenzwerge, Wäscheleine, Marktschirme …
@@ -125,7 +125,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 - Wahrzeichen in **freier Reihenfolge** (nur der Uralte Baum kommt zuerst).
 - **Tagebuch:** kurze Sätze + ein kleines gezeichnetes Bild pro Seite (im Stil des Spiels).
 - **Bewohner bekommen Namen.**
-- **Hausformen:** alle fünf (Häuschen, Fachwerk, Reetdach, Stadthaus, Turmhaus), nach und nach freigeschaltet.
+- **Hausformen:** alle fünf (Häuschen, Fachwerk, Reetdach, Stadthaus, Villa), nach und nach freigeschaltet.
 
 ## Kachelhausen 2.0 – entschieden (28.09.2026)
 
@@ -183,7 +183,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 6. ✓ Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
 6a. ✓ Feinschliff 1: Namen, Markt 3×3, Spieluhr, alles verschieben, Infozeile, Kaufen am Grundstück
 6b. ✓ Drehen in 4 Richtungen (+ automatisch zum Weg, Mausrad)
-6c. Häuser neu zeichnen + Aussehen wählbar
+6c. ✓ Häuser neu zeichnen + Aussehen wählbar
 6d. Gebäudestufen (Paket Betriebe, dann Bildung) – ersetzt „erste Ladung neuer Dinge“ aus 8
 7. Regionen mit Zugängen + Ruinen-Start
 8. Baupläne beim Erschließen + erste Ladung neuer Dinge

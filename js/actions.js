@@ -181,6 +181,7 @@ function houseUpgrade(x, y) {
   if (err) { fail(err); return; }
   payMat(w.next.mat);
   t.lvl++;
+  delete t.look;                 // nach dem Ausbau zeigt das Haus seine neue Stufe
   t.born = performance.now();
   recalc();
   sparkle(x, y);

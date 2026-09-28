@@ -110,7 +110,7 @@ const HOUSE_STAGES = [
   { name: 'Fachwerkhaus', pop: 6, wishes: ['weg', 'deko'], mat: { bretter: 2 } },
   { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], mat: { bretter: 4 } },
   { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], mat: { quader: 4 } },
-  { name: 'Turmhaus', pop: 16, wishes: ['schule', 'schoen'], mat: { quader: 4, metall: 2 } },
+  { name: 'Villa', pop: 16, wishes: ['schule', 'schoen'], mat: { quader: 4, metall: 2 } },
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },

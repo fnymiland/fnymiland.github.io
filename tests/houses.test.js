@@ -95,3 +95,28 @@ describe('Wünsche und Ausbauen', () => {
     expect(w.met).toBe(w.total - 1);
   });
 });
+
+describe('Aussehen wählen', () => {
+  it('ein Haus kann aussehen wie jede Stufe, die es schon erreicht hat', () => {
+    game("state.tiles.set('8,8', { b: 'haus', lvl: 4, look: 3 })");
+    expect(game("houseLook(state.tiles.get('8,8'))")).toBe(3);
+    game("state.tiles.get('8,8').look = 5");               // noch nicht erreicht → eigene Stufe
+    expect(game("houseLook(state.tiles.get('8,8'))")).toBe(4);
+    expect(game("HOUSE_STAGES[houseLook({ lvl: 4, look: 3 }) - 1].pop")).toBe(9);
+  });
+
+  it('Einwohner richten sich nach der Stufe, nicht nach dem Aussehen', () => {
+    game("state.tiles.set('8,8', { b: 'haus', lvl: 4, look: 1 }); recalc()");
+    expect(game('T.pop')).toBe(12);
+  });
+
+  it('das Aussehen wird gespeichert, nach dem Ausbau zeigt das Haus die neue Stufe', () => {
+    game("state.tiles.set('8,8', { b: 'haus', lvl: 2, look: 1 })");
+    expect(game("parseSave(serialize()).tiles.get('8,8').look")).toBe(1);
+    game("state.tiles.set('9,8', { b: 'weg', lvl: 1 }); state.decos.set('8,9', [{ b: 'bank' }, null, null, null])");
+    game("state.tiles.set('11,11', { b: 'baecker', lvl: 1 }); state.res.bretter = 10; recalc()");
+    game('houseUpgrade(8, 8)');
+    expect(game("state.tiles.get('8,8').lvl")).toBe(3);
+    expect(game("state.tiles.get('8,8').look")).toBe(undefined);
+  });
+});

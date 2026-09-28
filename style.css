@@ -255,6 +255,12 @@ html, body {
   display: flex; align-items: center; justify-content: center; background: var(--cream2);
 }
 .sw.on { border-color: var(--brown); }
+.looks { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+.look {
+  border: 0; font: inherit; font-weight: 800; font-size: 12px; color: var(--brown);
+  background: var(--cream2); border-radius: 99px; padding: 4px 10px; box-shadow: 0 2px 0 var(--shadow); cursor: pointer;
+}
+.look.on { background: var(--yellow); box-shadow: 0 2px 0 #e0c060; }
 .label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--brown2); margin-top: 10px; }
 .text-in {
   width: 100%; font: inherit; font-weight: 800; font-size: 17px; color: var(--brown);
@@ -351,8 +357,9 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + 60px); }
 #panel .hearts { font-size: 20px; color: #e8607a; letter-spacing: 2px; margin: 0 0 4px; }
 .link { border: 0; background: none; font: inherit; color: var(--brown2); cursor: pointer; padding: 0 4px; }
 .text-in.small { font-size: 15px; padding: 4px 8px; width: 60%; display: inline-block; margin: 0; }
-#panel { max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); overflow-y: auto; }
-@media (max-width: 600px) { #panel { max-height: calc(100dvh - 330px); } }
+/* nie unter die Leiste unten ragen (--bar = gemessene Höhe der Leiste) */
+#panel { max-height: calc(100vh - var(--bar, 160px) - 76px); max-height: calc(100dvh - var(--bar, 160px) - 76px); overflow-y: auto; }
+@media (max-width: 600px) { #panel { max-height: calc(100dvh - var(--bar, 160px) - 110px); } }
 
 /* ---------- v8: Laternen & Tagebuch ---------- */
 .lantern { font-size: 13px; font-weight: 800; color: var(--brown2); }
