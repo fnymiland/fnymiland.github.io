@@ -1,6 +1,6 @@
 'use strict';
 /* Kachelhausen – eine kleine Inselwelt zum Verwalten und Gestalten.
-   Straßen verbinden alles mit dem Rathaus, Strom treibt Betriebe an,
+   Wege verbinden Viertel, Betriebe liefern Rohstoffe,
    Schulen erzeugen Ideen (💡) für die Forschung, Sehenswürdigkeiten locken zum Ausbau. */
 // ---------------------------------------------------------------------------
 // Grundwerte
@@ -49,17 +49,9 @@ const ITEMS = {
              desc: 'Handel mit der Welt: +8 % auf alle Einnahmen.' },
   leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 3000, mat: { quader: 20, metall: 10, bretter: 10 }, needs: 'shore', workers: 1, star: 3, beauty: 40,
              desc: 'Das Wahrzeichen deiner Insel. Nötig für den 5. Stern.' },
-  // --- Wege & Verkehr ---
-  gehweg:  { cat: 'netz', name: 'Gehweg', cost: 0, paint: true, ground: true,
-             desc: 'Nahe an eine Feldkante tippen: Gehweg an/aus. Ziehen = mehrere. Kostenlos.' },
-  pflaster:{ cat: 'netz', name: 'Pflaster', cost: 15, paint: true, ground: true,
-             desc: 'Pflastert ein ganzes Feld – auch unter Gebäuden und Deko. Zählt als Gehweg.' },
-  strasse: { cat: 'netz', name: 'Straße', cost: 10, needs: 'grass', paint: true,
-             desc: 'Verbindet weit entfernte Orte mit dem Dorf – dort läuft dann alles mit voller Kraft. Ziehen = mehrere legen.' },
-  bus:     { cat: 'netz', name: 'Bushaltestelle', cost: 120, needs: 'grass', tech: 'bus',
-             desc: 'Neben eine Straße. Verbindet alle Straßen, an denen eine Haltestelle steht.' },
-  bahnhof: { cat: 'netz', name: 'Bahnhof', cost: 900, needs: 'grass', tech: 'zug',
-             desc: 'Neben eine Straße. Verbindet alle Straßen, an denen ein Bahnhof steht.' },
+  // --- Wege ---
+  weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
+             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Mosaikplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', cost: 300, needs: 'grass', workers: 2, science: 0.6, star: 1, up: true,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
@@ -70,8 +62,6 @@ const ITEMS = {
   kunst:   { cat: 'bildung', name: 'Kunstakademie', cost: 700, needs: 'grass', workers: 2, science: 0.4, beauty: 25, tech: 'kunst', up: true,
              desc: 'Schönheit +25 und ein paar kreative Ideen 💡.' },
   // --- Deko ---
-  weg:     { cat: 'deko', name: 'Gartenweg', cost: 5, needs: 'grass', beauty: 1, paint: true,
-             desc: 'Kiesweg für Gärten und Parks. Verbindet sich mit anderen Gartenwegen und zählt fürs Viertel.' },
   blumen:  { cat: 'deko', name: 'Blumenbeet', cost: 30, needs: 'grass', beauty: 4, desc: '+15 % für Gebäude direkt daneben.' },
   baum:    { cat: 'deko', name: 'Baum', cost: 15, needs: 'grass', beauty: 2, desc: 'Ein Obstbaum.' },
   blumentopf: { cat: 'deko', name: 'Blumentopf', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
@@ -88,7 +78,7 @@ const ITEMS = {
   schuett: { cat: 'land', name: 'Aufschütten', cost: 60, desc: 'Macht aus Wasser neues Land.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
-  rathaus: { cat: null, name: 'Rathaus', beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Straßen führen hierher.' },
+  rathaus: { cat: null, name: 'Rathaus', beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
   lm:      { cat: null, name: 'Sehenswürdigkeit', fixed: true, desc: '' },
 };
 // Rohstoffe und Waren im gemeinsamen Lager
@@ -109,7 +99,7 @@ function matError(mat) {
 
 const CATS = [
   { id: 'bau', label: '🏠 Bauen' },
-  { id: 'netz', label: '🛣️ Wege & Verkehr' },
+  { id: 'netz', label: '🛤️ Wege' },
   { id: 'bildung', label: '🎓 Bildung' },
   { id: 'deko', label: '🌸 Deko' },
   { id: 'land', label: '⛰️ Gelände' },
@@ -130,58 +120,46 @@ const TECHS = [
   { id: 'handel', cat: '🌾 Wirtschaft', name: 'Handel', cost: 40, desc: 'Schaltet den Markt frei.' },
   { id: 'industrie', cat: '🌾 Wirtschaft', name: 'Industrie', cost: 100, req: ['handel'], desc: 'Schaltet die Werkstatt frei.' },
   { id: 'seehandel', cat: '🌾 Wirtschaft', name: 'Seehandel', cost: 150, req: ['handel'], desc: 'Schaltet den Hafen frei.' },
-  { id: 'bus', cat: '🚌 Verkehr', name: 'Buslinien', cost: 25, desc: 'Schaltet Bushaltestellen frei.' },
-  { id: 'bus2', cat: '🚌 Verkehr', name: 'Schnellbusse', cost: 70, req: ['bus'], desc: 'Busse sind dreimal so schnell.' },
-  { id: 'zug', cat: '🚌 Verkehr', name: 'Eisenbahn', cost: 160, req: ['bus2'], desc: 'Schaltet Bahnhöfe frei.' },
   { id: 'bibliothek', cat: '🎓 Bildung', name: 'Bibliotheken', cost: 30, desc: 'Schaltet die Bibliothek frei.' },
   { id: 'uni', cat: '🎓 Bildung', name: 'Universität', cost: 150, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
   { id: 'farben', cat: '🎨 Kunst', name: 'Farbenlehre', cost: 10, desc: 'Sieben neue Wand- und Dachfarben.' },
-  { id: 'garten', cat: '🎨 Kunst', name: 'Gartenkunst', cost: 25, desc: 'Laternen, Brunnen, Holzbohlen und Trittsteine.' },
-  { id: 'pflasterkunst', cat: '🎨 Kunst', name: 'Pflasterkunst', cost: 20, desc: 'Kopfstein, Klinker, Terrakotta und Holzsteg für deine Wege.' },
+  { id: 'garten', cat: '🎨 Kunst', name: 'Gartenkunst', cost: 25, desc: 'Laternen, Brunnen, Holzbohlen- und Trittstein-Wege.' },
+  { id: 'pflasterkunst', cat: '🎨 Kunst', name: 'Pflasterkunst', cost: 20, desc: 'Kopfstein, Klinker und Terrakotta für deine Wege.' },
   { id: 'kunst', cat: '🎨 Kunst', name: 'Kunstakademie', cost: 60, req: ['garten'], desc: 'Schaltet die Kunstakademie frei.' },
   { id: 'skulptur', cat: '🎨 Kunst', name: 'Bildhauerei', cost: 120, req: ['kunst'], desc: 'Pavillon und Sternstatue.' },
 ];
 const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));
 
 // Stile für Wege: erst schlicht, schönere per Stern oder Forschung
+// shape: 'band' = Weg, der sich mit Nachbar-Wegen verbindet; 'fill' = ganze Fläche (Platz)
 const STYLES = {
-  strasse: [
-    { id: 'sand', name: 'Sandweg', col: '#d8c197' },
-    { id: 'asphalt', name: 'Asphalt', col: '#9e988e', star: 1 },
-    { id: 'kopf', name: 'Kopfstein', col: '#aaa398', tech: 'pflasterkunst' },
-    { id: 'klinker', name: 'Klinker', col: '#c46f55', star: 2 },
-  ],
-  gehweg: [
-    { id: 'kies', name: 'Kies', col: '#d8cfc0' },
-    { id: 'platten', name: 'Platten', col: '#e6dfd0', star: 1 },
-    { id: 'klinker', name: 'Klinker', col: '#c97a5e', tech: 'pflasterkunst' },
-    { id: 'holz', name: 'Holzbohlen', col: '#c89a6a', tech: 'garten' },
-    { id: 'mosaik', name: 'Pastell-Mosaik', col: '#f3dfe6', tech: 'farben' },
-  ],
-  pflaster: [
-    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb' },
-    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', tech: 'pflasterkunst' },
-    { id: 'schach', name: 'Schachbrett', col: '#f5dce6', tech: 'farben' },
-    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', tech: 'kunst' },
-    { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', tech: 'skulptur' },
-  ],
   weg: [
-    { id: 'mulch', name: 'Rindenmulch', col: '#8b5e3c' },
-    { id: 'kies', name: 'Kies', col: '#eadbb2', star: 1 },
-    { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', tech: 'garten' },
-    { id: 'steg', name: 'Holzsteg', col: '#c89a6a', tech: 'pflasterkunst' },
-    { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', tech: 'kunst' },
+    { id: 'sand', name: 'Sandweg', col: '#d8c197', shape: 'band' },
+    { id: 'kies', name: 'Kies', col: '#eadbb2', shape: 'band' },
+    { id: 'mulch', name: 'Rindenmulch', col: '#8b5e3c', shape: 'band' },
+    { id: 'platten', name: 'Platten', col: '#e6dfd0', shape: 'fill', star: 1 },
+    { id: 'asphalt', name: 'Asphalt', col: '#9e988e', shape: 'band', star: 1 },
+    { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', shape: 'band', tech: 'garten' },
+    { id: 'holz', name: 'Holzbohlen', col: '#c89a6a', shape: 'band', tech: 'garten' },
+    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', shape: 'fill', tech: 'pflasterkunst' },
+    { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', tech: 'pflasterkunst' },
+    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', tech: 'pflasterkunst' },
+    { id: 'schach', name: 'Schachbrett', col: '#f5dce6', shape: 'fill', tech: 'farben' },
+    { id: 'pastell', name: 'Pastell-Mosaik', col: '#f3dfe6', shape: 'band', tech: 'farben' },
+    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', tech: 'kunst' },
+    { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', tech: 'kunst' },
+    { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', shape: 'fill', tech: 'skulptur' },
   ],
 };
-const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id);
-const chosenStyle = { strasse: 'sand', gehweg: 'kies', pflaster: 'kopf', weg: 'mulch' };
+const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
+const chosenStyle = { weg: 'sand' };
 
 const STARS = [
   { name: 'Kleines Dorf', pop: 12, inc: 8, beauty: 15, reward: { money: 200, sci: 10 } },
   { name: 'Dorf', pop: 30, inc: 40, beauty: 60, techs: 2, reward: { money: 600, sci: 25 } },
-  { name: 'Städtchen', pop: 70, inc: 150, beauty: 180, lm: 1, techs: 5, reward: { money: 2000, sci: 60 } },
-  { name: 'Kleinstadt', pop: 150, inc: 400, beauty: 400, lm: 3, techs: 8, reward: { money: 6000, sci: 120 } },
-  { name: 'Inselperle', pop: 300, inc: 1000, beauty: 900, lm: 5, techs: 11, landmark: 'leuchtturm', reward: { money: 20000, sci: 300 } },
+  { name: 'Städtchen', pop: 70, inc: 150, beauty: 180, lm: 1, techs: 4, reward: { money: 2000, sci: 60 } },
+  { name: 'Kleinstadt', pop: 150, inc: 400, beauty: 400, lm: 3, techs: 7, reward: { money: 6000, sci: 120 } },
+  { name: 'Inselperle', pop: 300, inc: 1000, beauty: 900, lm: 5, techs: 9, landmark: 'leuchtturm', reward: { money: 20000, sci: 300 } },
 ];
 
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',

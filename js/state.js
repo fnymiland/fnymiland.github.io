@@ -20,9 +20,7 @@ function newState() {
     tiles: new Map(),
     terra: new Map(),
     techs: new Set(),
-    paved: new Map(),          // gepflasterte Felder → Stil (Bodenbelag, Objekte dürfen darauf stehen)
     decos: new Map(),          // kleine Dekos: Feld → [4 Ecken] mit { b, rot } oder null
-    walks: new Map(),          // Gehwege auf Feldgrenzen → Stil: 'x,y,e' (zu x+1) und 'x,y,s' (zu y+1)
     cam: { x: c.x, y: c.y, z: 1.4 },
     last: Date.now(),
     muted: false,
@@ -45,7 +43,7 @@ function serialize() {
   return {
     game: 'kachelhausen', v: 3, seed: state.seed, money: state.money, res: state.res, science: state.science, stars: state.stars,
     town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
-    walks: [...state.walks], paved: [...state.paved], decos, cam: state.cam, last: state.last, muted: state.muted,
+    decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -62,8 +60,22 @@ function parseSave(d) {
   if (!d || typeof d !== 'object' || typeof d.seed !== 'number' || !Array.isArray(d.tiles) || !Array.isArray(d.owned)) {
     throw new Error('Das ist kein Kachelhausen-Spielstand.');
   }
-  // Strom wurde entfernt: Kraftwerke/Solarfelder und Energie-Forschung erstatten
-  const REFUND = { kraftwerk: 500, solar: 350 }, SCI_REFUND = { wind: 30, solar: 120 };
+  // 28.09.2026: Straßen, Gartenwege und Pflaster werden zu Wegen; Gehwege an Kanten entfallen
+  const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
+  const WEG_TO = { mulch: 'mulch', kies: 'kies', tritt: 'tritt', steg: 'holz', blueten: 'blueten' };
+  const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'schach', fisch: 'fisch', mosaik: 'mosaik', alt: 'platten' };
+  for (const [, t] of d.tiles) {
+    if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
+    else if (t.b === 'weg' && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'kies';
+  }
+  const taken = new Set(d.tiles.map(([k]) => k));
+  for (const w of d.paved || []) {
+    const [k, st] = typeof w === 'string' ? [w, 'alt'] : w;
+    if (!taken.has(k)) { d.tiles.push([k, { b: 'weg', lvl: 1, style: PAVE_TO[st] || 'platten' }]); taken.add(k); }
+  }
+  // Strom (27.09.) und Busse/Bahnhöfe (28.09.) wurden entfernt: Kosten erstatten
+  const REFUND = { kraftwerk: 500, solar: 350, bus: 120, bahnhof: 900 };
+  const SCI_REFUND = { wind: 30, solar: 120, bus: 25, bus2: 70, zug: 160 };
   d.tiles = d.tiles.filter(([, t]) => {
     if (t.b in REFUND) { d.money += REFUND[t.b]; return false; }
     return t.b in ITEMS;
@@ -74,8 +86,6 @@ function parseSave(d) {
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs),
     decos: new Map(d.decos || []),
-    walks: new Map((d.walks || []).map(w => typeof w === 'string' ? [w, 'platten'] : w)),
-    paved: new Map((d.paved || []).map(w => typeof w === 'string' ? [w, 'alt'] : w)),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };
 }

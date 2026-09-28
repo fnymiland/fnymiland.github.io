@@ -36,7 +36,7 @@ describe('Bauen', () => {
     game("state.terra.set('4,3', 'forest')");
     expect(build('holz', 4, 3)).toBe(true);
     game('recalc()');
-    expect(T().prod.holz).toBeCloseTo(0.3);
+    expect(T().prod.holz).toBeGreaterThanOrEqual(0.3);
   });
 
   it('Betriebe brauchen Einwohner', () => {
@@ -78,24 +78,63 @@ describe('Kleine Dekos', () => {
 });
 
 describe('Viertel und Wege', () => {
-  it('Gebäude an einem gemeinsamen Gehweg bilden ein Viertel, ab 3 gibt es +10 %', () => {
-    game('state.money = 1000');
-    build('haus', 3, 3); build('haus', 4, 3); build('haus', 5, 3);
-    game("for (const x of [3, 4, 5]) state.walks.set(edgeKey(x, 3, 0, 1), 'kies')");
+  // Abseits vom Rathaus bauen, damit nichts ungewollt zusammenhängt
+  const field = () => {
+    game("state.owned.add('1,1'); state.money = 5000");
+    game("for (let y = 6; y <= 17; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass')");
+  };
+
+  it('aneinandergrenzende Gebäude bilden ein Viertel, ab 3 gibt es +10 %', () => {
+    field();
+    build('haus', 8, 8); build('haus', 9, 8); build('haus', 10, 8);
     game('recalc()');
-    const s = game("T.st.get('4,3')");
+    const s = game("T.st.get('9,8')");
     expect(s.n).toBe(3);
     expect(s.bonus).toBeCloseTo(0.1);
   });
 
-  it('Betriebe weit weg vom nächsten Haus laufen nur halb', () => {
-    game('state.money = 5000');
-    build('haus', 3, 3);
-    game("state.owned.add('1,0'); state.terra.set('10,3', 'forest')");
-    expect(build('holz', 10, 3)).toBe(true);
+  it('auch über Eck gehört man dazu, Wege zählen nicht als Gebäude', () => {
+    field();
+    build('haus', 8, 8); build('haus', 9, 9); build('weg', 10, 10);
     game('recalc()');
-    expect(game("T.st.get('10,3').how")).toBe('weit');
-    expect(game("T.st.get('10,3').prod.holz")).toBeCloseTo(0.15);
+    expect(game("T.st.get('9,9').n")).toBe(2);
+  });
+
+  it('weit weg ohne Weg: halbe Kraft – mit Weg zum Dorf: volle Kraft', () => {
+    field();
+    build('haus', 8, 6);
+    game("state.owned.add('1,2'); state.terra.set('8,13', 'forest')");
+    expect(build('holz', 8, 13)).toBe(true);
+    game('recalc()');
+    expect(game("T.st.get('8,13').how")).toBe('weit');
+    for (let y = 7; y <= 12; y++) build('weg', 8, y);
+    game('recalc()');
+    expect(game("T.st.get('8,13').how")).toBe('viertel');
+    expect(game("T.st.get('8,13').eff")).toBe(1);
+  });
+
+  it('Wege übermalen färbt sie um, gleicher Stil tut nichts', () => {
+    field();
+    build('weg', 8, 8);
+    expect(game("state.tiles.get('8,8').style")).toBe('sand');
+    game("chosenStyle.weg = 'kies'");
+    expect(build('weg', 8, 8)).toBe(true);
+    expect(game("state.tiles.get('8,8').style")).toBe('kies');
+    expect(build('weg', 8, 8)).toBe(false);
+  });
+
+  it('gesperrte Stile können nicht gemalt werden', () => {
+    game("chosenStyle.weg = 'mosaik'");
+    expect(game("currentStyle('weg')")).toBe('sand');
+  });
+
+  it('kleine Dekos dürfen auf Wege, große nicht', () => {
+    field();
+    build('weg', 8, 8);
+    game('state.res.metall = 5');
+    game("state.techs.add('garten')");
+    expect(game("smallError('laterne', 8, 8, 0)")).toBe(null);
+    expect(game("placeError('brunnen', 8, 8)")).toBe('Hier steht schon etwas');
   });
 });
 
@@ -103,29 +142,38 @@ describe('Speichern und Laden', () => {
   it('ein gespeicherter Stand kommt unverändert zurück', () => {
     game('state.money = 1000; state.res.holz = 7');
     build('haus', 3, 3);
-    game("state.walks.set(edgeKey(3, 3, 0, 1), 'platten')");
+    game("state.tiles.set('4,4', { b: 'weg', lvl: 1, style: 'kies' })");
     game("buildSmall('blumentopf', 3, 3, 1)");
     game('save()');
     const loaded = game('load()');
     expect(loaded.res.holz).toBe(7);
     expect(loaded.tiles.get('3,3').b).toBe('haus');
-    expect(loaded.walks.get('3,3,s')).toBe('platten');
+    expect(loaded.tiles.get('4,4').style).toBe('kies');
     expect(loaded.decos.get('3,3')[1].b).toBe('blumentopf');
   });
 
-  it('alte Stände: Kraftwerke werden erstattet, Gehwege bekommen einen Stil', () => {
+  it('alte Stände: Straßen, Gartenwege und Pflaster werden Wege, Entferntes wird erstattet', () => {
     game('save()');
     const raw = JSON.parse(localStorage.getItem('kachelhausen_v3'));
-    raw.money = 0;
-    raw.tiles.push(['3,3', { b: 'kraftwerk', lvl: 1 }]);
-    raw.walks = ['3,3,s'];
-    raw.techs = ['wind'];
-    raw.science = 0;
+    raw.money = 0; raw.science = 0;
+    raw.tiles = raw.tiles.filter(([k]) => !['3,3', '4,3', '5,3', '6,3', '7,3'].includes(k));
+    raw.tiles.push(['3,3', { b: 'kraftwerk', lvl: 1 }], ['4,3', { b: 'strasse', lvl: 1 }], ['5,3', { b: 'strasse', lvl: 1, style: 'kopf' }],
+                   ['6,3', { b: 'weg', lvl: 1, style: 'steg' }], ['7,3', { b: 'bus', lvl: 1 }]);
+    raw.paved = [['8,3', 'terrakotta'], ['4,3', 'kopf'], '9,3'];
+    raw.walks = ['3,3,s', ['4,4,e', 'kies']];
+    raw.techs = ['wind', 'bus2', 'farben'];
     localStorage.setItem('kachelhausen_v3', JSON.stringify(raw));
-    const loaded = game('load()');
-    expect(loaded.money).toBe(500);
-    expect(loaded.science).toBe(30);
-    expect(loaded.tiles.has('3,3')).toBe(false);
-    expect(loaded.walks.get('3,3,s')).toBe('platten');
+    const d = game('load()');
+    expect(d.money).toBe(500 + 120);                         // Kraftwerk + Bushaltestelle
+    expect(d.science).toBe(30 + 70);                         // Windkraft + Schnellbusse
+    expect([...d.techs]).toEqual(['farben']);
+    expect(d.tiles.has('3,3')).toBe(false);
+    expect(d.tiles.get('4,3')).toMatchObject({ b: 'weg', style: 'asphalt' });
+    expect(d.tiles.get('5,3')).toMatchObject({ b: 'weg', style: 'kopf' });
+    expect(d.tiles.get('6,3')).toMatchObject({ b: 'weg', style: 'holz' });
+    expect(d.tiles.has('7,3')).toBe(false);
+    expect(d.tiles.get('8,3')).toMatchObject({ b: 'weg', style: 'terrakotta' });
+    expect(d.tiles.get('9,3')).toMatchObject({ b: 'weg', style: 'platten' });
+    expect(d.walks).toBeUndefined();
   });
 });

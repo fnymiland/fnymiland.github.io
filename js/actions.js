@@ -11,19 +11,16 @@ const floats = [];
 function fail(msg) { toast(msg); sfx('error'); }
 
 function build(b, x, y, quiet) {
-  // Umfärben: Straße/Gartenweg/Pflaster im anderen Stil übermalen
+  // Umfärben: bestehenden Weg im anderen Stil übermalen
   const k0 = x + ',' + y, old = state.tiles.get(k0);
-  if (STYLES[b] && ownedTile(x, y)) {
+  if (STYLES[b] && ownedTile(x, y) && old && old.b === b) {
     const style = currentStyle(b);
-    const cur = b === 'pflaster' ? state.paved.get(k0) : old && old.b === b ? old.style || (b === 'strasse' ? 'asphalt' : 'kies') : null;
-    if (cur != null) {
-      if (cur === style) return false;
-      if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
-      state.money -= ITEMS[b].cost;
-      if (b === 'pflaster') state.paved.set(k0, style); else old.style = style;
-      sfx('road'); save();
-      return true;
-    }
+    if ((old.style || 'kies') === style) return false;
+    if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
+    state.money -= ITEMS[b].cost;
+    old.style = style;
+    sfx('road'); save();
+    return true;
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
@@ -32,7 +29,6 @@ function build(b, x, y, quiet) {
   payMat(d.mat);
   if (b === 'graben') { state.terra.set(k, 'water'); sfx('dig'); }
   else if (b === 'schuett') { state.terra.set(k, 'grass'); sfx('dig'); }
-  else if (b === 'pflaster') { state.paved.set(k, currentStyle('pflaster')); sfx('road'); }
   else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: ROTATABLE.has(b) ? buildRot : 0, ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
@@ -40,7 +36,7 @@ function build(b, x, y, quiet) {
   recalc();
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost), '#d9534a');
   const s = statusOf(x, y);
-  if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Eine Straße zum Dorf hilft.');
+  if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
   checkStars();
   save();
   return true;
@@ -50,10 +46,7 @@ function demolish(x, y) {
   const info = demolishInfo(x, y);
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
-  if (info.unpave) {
-    state.paved.delete(k);
-    state.money += info.refund;
-  } else if (info.refund != null) {
+  if (info.refund != null) {
     state.tiles.delete(k);
     state.money += info.refund;
     if (info.refund) addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
@@ -79,7 +72,7 @@ function buyPlot(ck) {
   closePanel();
   sfx('buy');
   const lms = landmarksIn(ck);
-  toast(lms.length ? `Grundstück gekauft! Verbinde ${LANDMARKS[lms[0]].name} per Straße mit dem Rathaus.` : 'Neues Grundstück gekauft!');
+  toast(lms.length ? `Grundstück gekauft! Verbinde ${LANDMARKS[lms[0]].name} per Weg mit dem Dorf.` : 'Neues Grundstück gekauft!');
 }
 
 function upgrade(x, y) {

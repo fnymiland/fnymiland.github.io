@@ -1,6 +1,6 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Netz: Straßen, Arbeitswege, Strom, Ideen, Einnahmen, Schönheit
+// Netz: Viertel, Arbeitswege, Ideen, Einnahmen, Rohstoffe, Schönheit
 // ---------------------------------------------------------------------------
 const hasTech = id => state.techs.has(id);
 function bAt(x, y) { const t = state.tiles.get(x + ',' + y); return t ? t.b : null; }
@@ -14,12 +14,12 @@ function countAround(x, y, r, fn) {
 const isWater = (x, y) => terrainAt(x, y) === 'water';
 const isProducer = (x, y) => { const b = bAt(x, y); return !!b && ITEMS[b].cat === 'bau' && b !== 'markt'; };
 const isHouse = (x, y) => bAt(x, y) === 'haus';
-// Regeln (gemeinsam festgelegt): Viertel über Gehwege/Pflaster, Fußweg 4 Felder, sonst Straße, sonst halbe Kraft
+// Regeln (gemeinsam festgelegt): Viertel über Nachbarschaft und Wege, Fußweg 4 Felder, sonst halbe Kraft
 const WALK_REACH = 4, FAR_EFF = 0.5;
 const VIERTEL_STEPS = [[15, 0.3], [8, 0.2], [3, 0.1]];
 const LM_RADIUS = 10, LM_BOOST = 0.15;
 const needsReach = b => b === 'lm' || !!ITEMS[b].workers;
-const countsForViertel = b => b !== 'strasse' && b !== 'weg';
+const countsForViertel = b => b !== 'weg';
 
 function unionFind() {
   const parent = new Map();
@@ -34,79 +34,32 @@ function unionFind() {
   return { parent, find, union, add };
 }
 
+// Viertel: alles Bebaute (Gebäude, Wege, Dekos), das direkt oder über Eck aneinandergrenzt.
+// Wege verbinden so auch weit entfernte Orte mit dem Dorf.
 function computeNet() {
-  // 1) Viertel: Gehweg-Kanten (Pflasterfelder zählen mit allen vier Kanten) hängen über gemeinsame Ecken zusammen;
-  //    jedes Feld an einer solchen Kante gehört zum Viertel
   const uf = unionFind();
-  const edges = new Set(state.walks.keys());
-  for (const k of state.paved.keys()) { const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) edges.add(edgeKey(x, y, dx, dy)); }
-  for (const [k, t] of state.tiles) if (t.b === 'weg') { const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) edges.add(edgeKey(x, y, dx, dy)); }
-  for (const e of edges) {
-    const [xs, ys, side] = e.split(','), x = +xs, y = +ys;
-    const t2 = side === 'e' ? (x + 1) + ',' + y : x + ',' + (y + 1);
-    const va = side === 'e' ? (x + 0.5) + ',' + (y - 0.5) : (x - 0.5) + ',' + (y + 0.5);
-    const vb = (x + 0.5) + ',' + (y + 0.5);
-    uf.union('E' + e, 'T' + x + ',' + y); uf.union('E' + e, 'T' + t2);
-    uf.union('E' + e, 'V' + va); uf.union('E' + e, 'V' + vb);
-  }
-  const vOf = k => uf.parent.has('T' + k) ? uf.find('T' + k) : null;
-  const vSize = new Map(), vHome = new Set();
-  for (const [k, t] of state.tiles) {
-    const v = vOf(k);
-    if (!v) continue;
-    if (countsForViertel(t.b)) vSize.set(v, (vSize.get(v) || 0) + 1);
-    if (t.b === 'haus') vHome.add(v);
-  }
-  for (const k of state.decos.keys()) {
-    const v = vOf(k);
-    if (v && !state.tiles.has(k)) vSize.set(v, (vSize.get(v) || 0) + 1);
-  }
-  // 2) Straßennetze; Bushaltestellen und Bahnhöfe verbinden die Netze, an denen sie stehen
-  const ru = unionFind();
-  const roads = [];
-  for (const [k, t] of state.tiles) if (t.b === 'strasse') { roads.push(k); ru.add(k); }
-  for (const k of roads) {
+  const occupied = new Set([...state.tiles.keys(), ...state.decos.keys()]);
+  for (const k of occupied) {
+    uf.add(k);
     const [x, y] = keyXY(k);
-    for (const [dx, dy] of [[1, 0], [0, 1]]) { const n = (x + dx) + ',' + (y + dy); if (bAt(x + dx, y + dy) === 'strasse') ru.union(k, n); }
-  }
-  let stops = 0;
-  for (const kind of ['bus', 'bahnhof']) {
-    let first = null;
-    for (const [k, t] of state.tiles) {
-      if (t.b !== kind) continue;
-      if (kind === 'bus') stops++;
-      const [x, y] = keyXY(k);
-      for (const [dx, dy] of DIRS) {
-        const n = (x + dx) + ',' + (y + dy);
-        if (bAt(x + dx, y + dy) !== 'strasse') continue;
-        if (first) ru.union(first, n); else first = n;
-      }
+    for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+      const n = (x + dx) + ',' + (y + dy);
+      if (occupied.has(n)) uf.union(k, n);
     }
   }
-  const vRoads = new Map();          // Viertel → Straßennetze, an die es grenzt
-  for (const k of roads) {
-    const v = vOf(k);
-    if (!v) continue;
-    if (!vRoads.has(v)) vRoads.set(v, new Set());
-    vRoads.get(v).add(ru.find(k));
+  const vOf = k => uf.parent.has(k) ? uf.find(k) : null;
+  const vSize = new Map(), vHome = new Set();
+  for (const k of occupied) {
+    const t = state.tiles.get(k), v = vOf(k);
+    if (!t || countsForViertel(t.b)) vSize.set(v, (vSize.get(v) || 0) + 1);
+    if (t && t.b === 'haus') vHome.add(v);
   }
-  const reachRoads = (x, y) => {
-    const out = new Set();
-    for (const [dx, dy] of DIRS) if (bAt(x + dx, y + dy) === 'strasse') out.add(ru.find((x + dx) + ',' + (y + dy)));
-    const v = vOf(x + ',' + y);
-    if (v && vRoads.has(v)) for (const c of vRoads.get(v)) out.add(c);
-    return out;
-  };
-  // 3) Häuser: Fußweg-Nähe und Straßen, die zu Wohnvierteln führen
-  const houses = [], homeRoads = new Set();
-  for (const [k, t] of state.tiles) {
-    if (t.b !== 'haus') continue;
-    const [x, y] = keyXY(k);
-    houses.push([x, y]);
-    for (const c of reachRoads(x, y)) homeRoads.add(c);
-  }
+  // Häuser in Laufweite
+  const houses = [];
+  for (const [k, t] of state.tiles) if (t.b === 'haus') houses.push(keyXY(k));
   const nearHome = (x, y) => houses.some(([hx, hy]) => Math.max(Math.abs(hx - x), Math.abs(hy - y)) <= WALK_REACH);
-  return { vOf, vSize, vHome, reachRoads, homeRoads, nearHome, stops, roads };
+  const paths = [...state.tiles].filter(([, t]) => t.b === 'weg').map(([k]) => k);
+  return { vOf, vSize, vHome, nearHome, paths };
 }
 
 // Wie gut erreichen die Bewohner diesen Ort?
@@ -114,7 +67,6 @@ function reachOf(net, k, x, y) {
   const v = net.vOf(k);
   if (v && net.vHome.has(v)) return { eff: 1, how: 'viertel' };
   if (net.nearHome(x, y)) return { eff: 1, how: 'nah' };
-  for (const c of net.reachRoads(x, y)) if (net.homeRoads.has(c)) return { eff: 1, how: 'strasse' };
   return { eff: FAR_EFF, how: 'weit' };
 }
 function viertelBonus(net, k) {
@@ -162,7 +114,7 @@ function totals() {
     const s = { ...(needsReach(t.b) ? reachOf(net, k, x, y) : { eff: 1, how: null }), ...viertelBonus(net, k) };
     st.set(k, s);
     if (t.b === 'lm' && ownedTile(x, y)) {
-      s.road = [...net.reachRoads(x, y)].some(c => net.homeRoads.has(c));
+      s.road = s.how === 'viertel';
       (s.how === 'weit' ? lmHalf : lmOn).set(t.lm, [x, y]);
     }
   }
@@ -214,7 +166,7 @@ function totals() {
     const [x, y] = keyXY(k), nearHome = countAround(x, y, 2, isHouse) > 0 || isHouse(x, y);
     for (const d of ds) if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1);
   }
-  // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Straße: halb; Touristen nur per Straße)
+  // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Weg: halb; Touristen nur per Weg)
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
   if (quelle && (lmOn.has('quelle') || lmHalf.has('quelle'))) {
     beauty += 40 * lmFactor('quelle');
@@ -244,7 +196,7 @@ function slotAt(sx, sy) {
   const x = Math.round(a), y = Math.round(b);
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
-const BIG_ON_TILE = new Set(['strasse', 'weg', 'brunnen', 'pavillon', 'statue', 'baum', 'blumen', 'windrad', 'lm']);
+const BIG_ON_TILE = new Set(['brunnen', 'pavillon', 'statue', 'baum', 'blumen', 'windrad', 'lm']);
 function smallError(b, x, y, slot) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
@@ -252,7 +204,7 @@ function smallError(b, x, y, slot) {
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   const t = state.tiles.get(k);
   if (t && BIG_ON_TILE.has(t.b)) return 'Hier ist kein Platz für Deko';
-  if (!t && terrainAt(x, y) !== 'grass' && !state.paved.has(k)) return 'Erst roden bzw. sprengen';
+  if (!t && terrainAt(x, y) !== 'grass') return 'Erst roden bzw. sprengen';
   if (decosAt(k) && decosAt(k)[slot]) return 'Diese Ecke ist schon belegt';
   if (state.money < d.cost) return 'Zu wenig Taler';
   return matError(d.mat);
@@ -310,11 +262,6 @@ function placeError(b, x, y) {
     if (ter !== 'grass') return 'Erst roden bzw. sprengen';
   } else if (b === 'schuett') {
     if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
-  } else if (b === 'pflaster') {
-    if (ter === 'water') return 'Nicht auf dem Wasser';
-    if (state.paved.has(x + ',' + y)) return 'Hier ist schon Pflaster';
-    if (obj && (obj.b === 'strasse' || obj.b === 'weg')) return 'Nicht auf Straßen und Wegen';
-    if (!obj && ter !== 'grass') return 'Erst roden bzw. sprengen';
   } else {
     if (obj) return 'Hier steht schon etwas';
     if (ter === 'water') return 'Nicht auf dem Wasser';
@@ -328,7 +275,7 @@ function placeError(b, x, y) {
       return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
     }
     if (need === 'shore' && !countAround(x, y, 1, isWater)) return 'Muss direkt am Wasser stehen';
-    if (d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser an Straßen';
+    if (d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
   if (state.money < (d.cost || 0)) return 'Zu wenig Taler';
   return matError(d.mat);
@@ -347,7 +294,6 @@ function demolishInfo(x, y) {
     }
     return { refund: Math.floor(d.cost / 2), label: `${d.name} abreißen` };
   }
-  if (state.paved.has(x + ',' + y)) return { unpave: true, refund: 7, label: 'Pflaster entfernen' };
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
   if (ter === 'rock' || ter === 'erz') return { cost: 50, label: 'Sprengen' };

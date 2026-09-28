@@ -37,42 +37,10 @@ function zoomAt(px, py, nz) {
 }
 
 const pointers = new Map();
-let drag = null, pinch = null, moved = false, painting = false, lastPaint = null, paintMode = null, paintAxis = null;
+let drag = null, pinch = null, moved = false, painting = false, lastPaint = null;
 
-// Kante unter dem Finger: die nächstgelegene Grenze des Feldes
-function edgeAt(sx, sy, axis) {
-  const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
-  const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
-  const x = Math.round(a), y = Math.round(b), u = a - x, v = b - y;
-  // axis 'u': nur Grenzen zu x±1, 'v': nur zu y±1 (beim Ziehen bleibt der Pinsel in einer Richtung)
-  const useU = axis ? axis === 'u' : Math.abs(u) > Math.abs(v);
-  const [dx, dy] = useU ? [Math.sign(u) || 1, 0] : [0, Math.sign(v) || 1];
-  return { x, y, dx, dy, key: edgeKey(x, y, dx, dy) };
-}
-let hoverEdge = null, hoverSlot = 0;
-function toggleEdge(e, quiet) {
-  const ox = e.x + e.dx, oy = e.y + e.dy;
-  if (!ownedTile(e.x, e.y) && !ownedTile(ox, oy)) { if (!quiet) fail('Das ist nicht dein Grundstück'); return; }
-  if (isWater(e.x, e.y) && isWater(ox, oy)) return;
-  const style = currentStyle('gehweg');
-  // Erste Kante entscheidet: gleicher Stil → entfernen, sonst legen bzw. umfärben
-  if (paintMode == null) paintMode = state.walks.get(e.key) !== style;
-  if (paintMode) { if (state.walks.get(e.key) === style) return; state.walks.set(e.key, style); }
-  else { if (!state.walks.has(e.key)) return; state.walks.delete(e.key); }
-  sfx('road');
-  recalc();
-  save();
-}
+let hoverSlot = 0;
 function paintAt(sx, sy) {
-  if (tool === 'gehweg') {
-    const e = edgeAt(sx, sy, paintAxis);
-    if (!paintAxis) paintAxis = e.dx ? 'u' : 'v';
-    hoverEdge = e;
-    if (e.key === lastPaint) return;
-    lastPaint = e.key;
-    toggleEdge(e, true);
-    return;
-  }
   const t = toTile(sx, sy);
   const k = t.x + ',' + t.y;
   if (k === lastPaint) return;
@@ -91,7 +59,7 @@ canvas.addEventListener('pointerdown', e => {
     painting = false;
     lastPaint = null;
     drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button };
-    if (tool !== 'look' && ITEMS[tool].paint && e.button === 0) { painting = true; paintMode = null; paintAxis = null; paintAt(e.clientX, e.clientY); }
+    if (tool !== 'look' && ITEMS[tool].paint && e.button === 0) { painting = true; paintAt(e.clientX, e.clientY); }
   } else if (pointers.size === 2) {
     painting = false;
     const [a, b] = [...pointers.values()];
@@ -149,7 +117,6 @@ canvas.addEventListener('wheel', e => {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 function setHover(sx, sy) {
-  if (tool === 'gehweg') hoverEdge = edgeAt(sx, sy);
   hoverSlot = slotAt(sx, sy).slot;
   const t = toTile(sx, sy);
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }

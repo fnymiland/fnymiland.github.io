@@ -9,9 +9,9 @@ const walkers = [], cars = [];
 const walkable = (x, y) => {
   if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
   const t = state.tiles.get(x + ',' + y);
-  return !t || t.b === 'weg' || t.b === 'strasse';
+  return !t || t.b === 'weg';
 };
-const drivable = (x, y) => bAt(x, y) === 'strasse';
+const drivable = () => false;
 
 function syncMovers() {
   const wantW = Math.min(24, Math.floor(T.pop / 4));
@@ -29,16 +29,7 @@ function syncMovers() {
       }
     }
   }
-  const roads = NET ? NET.roads : [];
-  const buses = NET && NET.stops >= 2 ? Math.min(3, NET.stops) : 0;
-  const wantC = Math.min(18, Math.floor(T.jobs / 4) + buses, roads.length);
-  while (cars.length > wantC) cars.pop();
-  if (cars.length < wantC && roads.length) {
-    const [x, y] = keyXY(roads[Math.floor(Math.random() * roads.length)]);
-    const isBus = cars.filter(c => c.bus).length < buses;
-    cars.push({ fx: x, fy: y, tx: x, ty: y, px: x, py: y, t: 1, wait: 0, bus: isBus,
-      col: CARS[Math.floor(Math.random() * CARS.length)], speed: isBus ? (hasTech('bus2') ? 2.6 : 1.4) : 2 + Math.random() });
-  }
+  cars.length = 0;             // keine Straßen mehr – Fahrzeuge kommen später mit der Bahn zurück
 }
 function stepMover(w, dt, ok, preferWay) {
   if (!ok(w.tx, w.ty)) { w.tx = w.fx; w.ty = w.fy; w.t = 1; }

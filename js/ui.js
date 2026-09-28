@@ -37,15 +37,9 @@ function thumb(type) {
   } else if (type === 'schuett') {
     diamond(cx, cy + 5, hw, hh, '#74d0e6');
     block(0.6, '#96d56f');
-  } else if (type === 'pflaster') {
+  } else if (type === 'weg') {
     block(1, '#96d56f');
-    drawPaving(cx, cy, z, 1e6, 1e6);
-  } else if (type === 'gehweg') {
-    block(1, '#96d56f');
-    const L = (u, v) => [cx + (u - v) * hw, cy + (u + v) * hh];
-    for (const [u0, u1, v0, v1] of [[0.32, 0.5, -0.5, 0.5], [-0.5, 0.5, 0.32, 0.5]]) {
-      poly([L(u0, v0), L(u1, v0), L(u1, v1), L(u0, v1)], '#e6dfd0');
-    }
+    drawPath(cx, cy, z, 1e6, 1e6, { style: currentStyle('weg') });
   } else {
     const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287' }[type] || '#96d56f';
     block(1, ground);
@@ -102,7 +96,6 @@ function setTool(t) {
   const hint = $('hint');
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
-  if (t !== 'gehweg') hoverEdge = null;
   if (t === 'look') { hint.hidden = true; return; }
   const d = ITEMS[t], extra = [];
   if (d.mat) extra.push('Material: ' + matText(d.mat));
@@ -189,8 +182,7 @@ function openInfo(x, y) {
     status.push({
       viertel: '<div class="ok">✓ Liegt im Wohnviertel</div>',
       nah: `<div class="ok">✓ Häuser in Laufweite (bis ${WALK_REACH} Felder)</div>`,
-      strasse: '<div class="ok">✓ Per Straße mit dem Dorf verbunden</div>',
-      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Eine Straße zum Dorf bringt 100 %.</div>',
+      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf bringt 100 %.</div>',
     }[s.how]);
   }
   if (s.bonus) status.push(`<div class="ok">🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
@@ -268,10 +260,10 @@ function openLandmark(x, y) {
   const t = state.tiles.get(x + ',' + y), L = LANDMARKS[t.lm];
   const owned = ownedTile(x, y), on = T.lmOn.has(t.lm), half = T.lmHalf.has(t.lm), s = statusOf(x, y) || {};
   let status = on ? '<div class="ok">✓ Wirkt voll</div>'
-    : half ? '<div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb. Eine Straße zum Dorf bringt die volle Wirkung.</div>'
+    : half ? '<div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb. Ein Weg zum Dorf bringt die volle Wirkung.</div>'
     : '<div class="bad">🔒 Liegt auf einem Grundstück, das dir noch nicht gehört.</div>';
   if (owned) status += `<div>✨ Alles im Umkreis von ${LM_RADIUS} Feldern: +${Math.round(LM_BOOST * 100 * (on ? 1 : 0.5))} % Produktion</div>`;
-  if (t.lm === 'quelle' && owned && !s.road) status += '<div class="bad">🚗 Touristen kommen nur über eine Straße zum Dorf.</div>';
+  if (t.lm === 'quelle' && owned && !s.road) status += '<div class="bad">🛤️ Touristen kommen nur über einen Weg zum Dorf.</div>';
   showPanel(`
     <h3>${L.icon} ${L.name}</h3>
     <p class="big" style="font-size:16px">${L.effect}</p>
@@ -369,13 +361,13 @@ function showIntro(first) {
     <h2>Willkommen auf deiner Insel!</h2>
     <p>Eine kleine Welt zum Verwalten und Gestalten:</p>
     <ul>
-      <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer eine <b>Straße</b> führt hin.</li>
-      <li>🏘️ Was über <b>Gehwege oder Pflaster</b> zusammenhängt, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
+      <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer ein <b>Weg</b> verbindet sie mit dem Dorf.</li>
+      <li>🏘️ Was aneinandergrenzt oder über <b>Wege</b> verbunden ist, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
       <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Verkehr und Deko.</li>
       <li>🗺️ <b>Sehenswürdigkeiten</b> haben eigene Vorteile und geben allem in 10 Feldern Umkreis +15 %.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
-    <p class="muted" style="font-size:13px">Ziehen = verschieben · Mausrad / zwei Finger = zoomen · Straßen: gedrückt halten und ziehen</p>
+    <p class="muted" style="font-size:13px">Ziehen = verschieben · Mausrad / zwei Finger = zoomen · Wege: gedrückt halten und ziehen</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's!</button></div>`);
   if (first) wireTownEditor($('modal-card'), state.town, updateHud);
   $('m-ok').onclick = () => { closeModal(); save(); };

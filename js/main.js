@@ -8,64 +8,53 @@ function startNew() {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   walkers.length = 0; cars.length = 0;
   state.tiles.set('2,2', { b: 'rathaus', lvl: 1 });
-  for (let x = 3; x <= 5; x++) state.tiles.set(x + ',2', { b: 'strasse', lvl: 1 });
-  state.tiles.set('2,3', { b: 'strasse', lvl: 1 });
-  state.tiles.set('2,4', { b: 'strasse', lvl: 1 });
+  // ein kleiner Sandweg vom Rathaus aus
+  for (let x = 3; x <= 5; x++) state.tiles.set(x + ',2', { b: 'weg', lvl: 1, style: 'sand' });
+  state.tiles.set('2,3', { b: 'weg', lvl: 1, style: 'sand' });
+  state.tiles.set('2,4', { b: 'weg', lvl: 1, style: 'sand' });
   placeLandmarks();
   recalc();
   buildToolbar();
   save();
 }
 
-// Probeansicht: Gehwege an Kanten, gedrehte Häuser, schmale Straßen
+// Probeansicht: ein Dorf mit Wegen in allen Stilen, Plätzen, Dekos auf Wegen
 function probeScene() {
   state = newState();
   state.seed = 4242;
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();
-  for (let cy = -1; cy <= 1; cy++) for (let cx = -1; cx <= 1; cx++) state.owned.add(cx + ',' + cy);
-  for (let y = -6; y <= 12; y++) for (let x = -6; x <= 12; x++) if (!isSea(x, y)) state.terra.set(x + ',' + y, 'grass');
-  const put = (x, y, b, o = {}) => {
-    const { walk = 0, ...rest } = o;
-    state.tiles.set(x + ',' + y, { b, lvl: 1, ...rest });
-    for (const [dx, dy, bit] of [[1, 0, 1], [-1, 0, 2], [0, 1, 4], [0, -1, 8]]) if (walk & bit) state.walks.set(edgeKey(x, y, dx, dy), 'platten');
-  };
-  // Marktplatz ums Rathaus: alles rundum mit Gehweg
-  put(2, 2, 'rathaus', { walk: 15 });
-  put(3, 2, 'brunnen', { walk: 15 }); put(3, 1, 'blumen', { walk: 15 }); put(3, 3, 'bank', { walk: 15, rot: 1 });
-  put(1, 2, 'baum', { walk: 15 }); put(2, 1, 'laterne', { walk: 15 }); put(2, 3, 'blumen', { walk: 15 });
-  put(1, 1, 'blumen', { walk: 15 }); put(1, 3, 'laterne', { walk: 15 });
-  for (const [px, py] of [[2, 2], [2, 1], [1, 2], [3, 2], [2, 3], [3, 3], [1, 3], [3, 1], [1, 1]]) state.paved.set(px + ',' + py, 'terrakotta');
-  // Einzelne Straßen ohne Häuser: oben mit Gehwegen auf beiden Seiten, darunter ohne
-  for (let x = 8; x <= 11; x++) { put(x, -4, 'strasse', { walk: 4 | 8 }); put(x, -2, 'strasse'); }
-  // Hauptstraße mit Gehweg auf einer Seite, Querstraße, Kurve, Sackgasse
-  for (let x = -4; x <= 7; x++) put(x, 5, 'strasse', { walk: x >= -2 && x <= 4 ? 4 : 0 });
-  for (let y = -2; y <= 11; y++) if (y !== 5) put(6, y, 'strasse');
-  put(10, 6, 'strasse', { walk: 1 | 2 }); put(10, 7, 'strasse', { walk: 4 | 2 }); put(11, 7, 'strasse', { walk: 4 | 8 });
-  put(12, 7, 'strasse', { walk: 4 | 8 });
-  put(8, 5, 'strasse', { walk: 4 | 8 }); put(9, 5, 'strasse', { walk: 4 | 8 }); put(10, 5, 'strasse', { walk: 1 | 8 });
-  // Häuserzeile: Gehweg zur Straße hin, Tür vorne links (Drehung 1), gemischte Stufen
-  for (let x = -2; x <= 4; x++) put(x, 4, 'haus', { walk: 4, rot: 1, lvl: 1 + (x & 1) });
-  // gegenüber: Gehweg auf der Straßenseite, Tür zur Straße (hinten, Drehung 2)
-  for (let x = -2; x <= 3; x++) put(x, 6, 'haus', { walk: 8, rot: 2 });
-  put(4, 6, 'baecker', { walk: 8, rot: 1 });
-  // Innenhof: vier Häuser um Beet und Brunnen
-  put(-2, 0, 'haus', { walk: 4 | 1, rot: 1 }); put(-1, 0, 'haus', { walk: 4 | 2, rot: 0 });
-  put(-2, 2, 'haus', { walk: 8 | 1, rot: 2 }); put(-1, 2, 'haus', { walk: 8 | 2, rot: 3 });
-  put(-2, 1, 'blumen', { walk: 1 }); put(-1, 1, 'brunnen', { walk: 2 });
-  // Vergleich: ohne Gehweg, einzelne Kanten, verschiedene Drehungen
-  put(8, 1, 'haus', { rot: 0 }); put(9, 1, 'haus', { rot: 1, walk: 4 }); put(8, 2, 'haus', { rot: 3, walk: 1 | 4 });
-  // Land: Felder und Mühle ohne Gehweg, Schule am Ortsrand
-  put(8, 8, 'feld'); put(9, 8, 'feld'); put(8, 9, 'feld'); put(9, 9, 'muehle', { rot: 1 }); put(10, 9, 'feld'); put(9, 10, 'feld');
-  put(7, 8, 'schule', { walk: 2 | 8, rot: 1 });
-  // Musterfläche mit allen Stilen: Straßen (y=8) mit Gehwegen darunter, Gartenwege (y=10), Pflaster (y=11)
-  STYLES.strasse.forEach((st, i) => { for (let j = 0; j < 2; j++) put(-6 + i * 3 + j, 8, 'strasse', { style: st.id }); });
-  STYLES.gehweg.forEach((st, i) => { for (let j = 0; j < 2; j++) state.walks.set(edgeKey(-6 + i * 2 + j, 8, 0, 1), st.id); });
-  STYLES.weg.forEach((st, i) => { for (let j = 0; j < 2; j++) put(-6 + i * 2 + j, 10, 'weg', { style: st.id }); });
-  STYLES.pflaster.forEach((st, i) => state.paved.set((-6 + i * 2) + ',12', st.id));
-  for (let y = 7; y <= 13; y++) for (let x = -7; x <= 5; x++) if (!isSea(x, y)) state.terra.set(x + ',' + y, 'grass');
-  state.owned.add('-2,2'); state.owned.add('-1,2'); state.owned.add('0,2');
-  const c = iso(3, 4);
+  for (let cy = -1; cy <= 2; cy++) for (let cx = -1; cx <= 1; cx++) state.owned.add(cx + ',' + cy);
+  for (let y = -6; y <= 17; y++) for (let x = -6; x <= 12; x++) if (!isSea(x, y)) state.terra.set(x + ',' + y, 'grass');
+  const put = (x, y, b, o = {}) => state.tiles.set(x + ',' + y, { b, lvl: 1, ...o });
+  const weg = (x, y, style) => put(x, y, 'weg', { style });
+  // Marktplatz ums Rathaus (Platten), Brunnen und Beete auf dem Platz
+  put(2, 2, 'rathaus');
+  for (const [x, y] of [[1, 1], [2, 1], [3, 1], [1, 2], [1, 3], [2, 3], [3, 3]]) weg(x, y, 'platten');
+  put(3, 2, 'brunnen');
+  // Dorfstraße (Asphalt) nach Osten, Sandweg nach Süden
+  for (let x = 4; x <= 10; x++) weg(x, 2, 'asphalt');
+  for (let y = 4; y <= 9; y++) weg(2, y, 'sand');
+  for (let x = 3; x <= 6; x++) weg(x, 9, 'sand');
+  weg(6, 10, 'sand'); weg(6, 11, 'sand');
+  // Häuser an den Wegen, mit Dekos auf den Wegfeldern davor
+  for (let x = 4; x <= 9; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + (x & 1) });
+  for (let x = 4; x <= 8; x += 2) put(x, 3, 'haus', { rot: 2 });
+  for (let y = 5; y <= 8; y++) put(1, y, 'haus', { rot: 0 });
+  put(3, 5, 'haus', { rot: 1 }); put(3, 6, 'baecker', { rot: 1 });
+  // Gartenweg aus Trittsteinen zum Park, Blütenpfad, Holzbohlen am Teich
+  for (let x = 3; x <= 5; x++) weg(x, 7, 'tritt');
+  put(6, 7, 'baum'); put(6, 6, 'blumen'); put(5, 6, 'pavillon');
+  weg(8, 3, 'blueten'); weg(9, 3, 'blueten'); weg(10, 3, 'blueten');
+  // Felder am Ortsrand (ohne Weg) mit Mühle
+  put(8, 8, 'feld'); put(9, 8, 'feld'); put(8, 9, 'feld'); put(9, 9, 'muehle', { rot: 1 }); put(10, 9, 'feld');
+  // Musterreihe: jeder Stil als kleines Wegstück (y = 13 und 15)
+  STYLES.weg.forEach((st, i) => {
+    const x = -5 + (i % 8) * 2, y = i < 8 ? 13 : 15;
+    weg(x, y, st.id);
+    if (st.shape === 'band') weg(x, y + 1, st.id); else weg(x + 1, y, st.id);
+  });
+  const c = iso(4, 5);
   cam.x = c.x; cam.y = c.y; cam.z = 1.25;
   recalc();
   buildToolbar();
@@ -78,9 +67,10 @@ if (PROBE) {
   normalizeSmall();
   // ein paar kleine Dekos vor den Häusern
   const add = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[slot] = { b, rot }; };
-  add(0, 4, 3, 'blumentopf'); add(1, 4, 3, 'bank', 1); add(2, 4, 2, 'busch'); add(2, 4, 3, 'blumentopf');
-  add(3, 4, 3, 'laterne'); add(-1, 4, 2, 'hecke'); add(-2, 4, 3, 'blumentopf'); add(9, 1, 3, 'bank', 1); add(9, 1, 2, 'blumentopf');
-  add(5, 3, 0, 'busch'); add(5, 3, 1, 'busch'); add(5, 3, 2, 'blumentopf'); add(5, 3, 3, 'bank');
+  add(5, 2, 0, 'laterne'); add(7, 2, 0, 'laterne'); add(9, 2, 0, 'laterne');         // Laternen am Weg
+  add(1, 1, 0, 'blumentopf'); add(1, 3, 3, 'bank', 1); add(3, 3, 3, 'blumentopf');  // auf dem Marktplatz
+  add(4, 1, 3, 'blumentopf'); add(5, 1, 3, 'bank', 1); add(6, 1, 3, 'busch');       // vor den Häusern
+  add(2, 6, 1, 'blumentopf'); add(2, 8, 2, 'laterne'); add(4, 7, 3, 'busch'); add(5, 7, 0, 'bank');
   recalc();
   toast('Probeansicht – hier wird nichts gespeichert');
 } else if (saved) {

@@ -52,9 +52,8 @@ function drawFlag(px, py, z, now, town) {
   g.fillText(town.symbol, px + fw / 2, top + fh / 2 + 0.5 * z);
 }
 
-// Fahrbahn in der Feldmitte; Arme zu Nachbar-Straßen (und zum Rathaus-Platz), Kurven als Bogen
-const ROAD_W = 0.3;                       // halbe Fahrbahnbreite in Feldern
-const connectsRoad = (x, y) => { const b = bAt(x, y); return b === 'strasse' || b === 'rathaus'; };
+// Wege: schmale Bänder, die sich mit Nachbar-Wegen verbinden, oder ganze Flächen (Plätze)
+const ROAD_W = 0.32;                      // halbe Breite eines Weg-Bands in Feldern
 const ang = (u, v) => Math.atan2(v, u);
 function arcPts(cu, cv, r, a0, a1, n = 12) {
   const out = [];
@@ -62,9 +61,8 @@ function arcPts(cu, cv, r, a0, a1, n = 12) {
   return out;
 }
 const sweep = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return a0 + d; };
-function roadArms(x, y, t) {
-  const arms = DIRS.filter(([dx, dy]) => connectsRoad(x + dx, y + dy));
-  return { arms, none: !arms.length };
+function pathArms(x, y) {
+  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus'; });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
 function roadCurve(arms) {
@@ -99,7 +97,7 @@ function roadShapes(arms, t, w) {
   out.push(rect(-w, w, -w, w));
   for (const a of arms) out.push(arm(a));
   // Innenecken zwischen zwei Armen abrunden (Mittelpunkt fest, damit die Bordsteinbreite gleich bleibt)
-  const c0 = ROAD_W + 0.045 + 0.12, r = c0 - w;
+  const c0 = ROAD_W + 0.04 + 0.1, r = c0 - w;
   const has = (dx, dy) => arms.some(a => a[0] === dx && a[1] === dy);
   for (const su of [1, -1]) for (const sv of [1, -1]) {
     if (!has(su, 0) || !has(0, sv)) continue;
@@ -158,27 +156,79 @@ function roadCenterline(arms, t) {
   if (arms.length === 1) return [[arms[0][0] * 0.5, arms[0][1] * 0.5], [0, 0]];
   return null;
 }
-const ROAD_LOOK = {
-  sand:    { edge: '#c9b083', fill: '#d8c197' },
+const PATH_LOOK = {
+  // Bänder
+  sand:    { edge: '#c9b083', fill: '#dcc69d', pat: ['dots', null], cols: ['#cbb286', '#e6d3ad'] },
+  kies:    { edge: '#d9c393', fill: '#eadbb2', pat: ['dots', null], cols: ['#c9b183', '#d8c79d'] },
+  mulch:   { edge: '#6f4a2e', fill: '#8b5e3c', pat: ['dots', null], cols: ['#6f4a2e', '#a0714d'] },
   asphalt: { edge: '#cfc8bb', fill: '#9e988e', dash: true },
-  kopf:    { edge: '#cfc8bb', fill: '#aaa398', pat: ['stones', '#bdb7ab'] },
-  klinker: { edge: '#e0c3a8', fill: '#c46f55', pat: ['bricks', '#a95a43'] },
+  holz:    { edge: '#9c7449', fill: '#c89a6a', pat: ['planks', '#a97d52'] },
+  pastell: { edge: '#d9bcc6', fill: '#f5e4ea', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffe08a'] },
+  blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
+  tritt:   { stones: true },
+  // Flächen
+  platten:    { fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
+  kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
+  klinker:    { fill: '#c97a5e', pat: ['bricks', '#a95a43'] },
+  terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
+  schach:     { fill: '#f5dce6', checker: '#dcefe6' },
+  fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
+  mosaik:     { fill: '#efe6d8', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffd36e', '#8fc1f0'] },
 };
-function drawRoad(cx, cy, z, x, y, t) {
+const isFillPath = (x, y) => { const t = state.tiles.get(x + ',' + y); return !!t && t.b === 'weg' && styleDef('weg', t.style).shape === 'fill'; };
+
+function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-  const { arms } = roadArms(x, y, t);
-  const look = ROAD_LOOK[(t && t.style) || 'asphalt'] || ROAD_LOOK.asphalt;
-  for (const [w, col] of [[ROAD_W + 0.045, look.edge], [ROAD_W, look.fill]]) {
+  const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
+  if (st.shape === 'fill') {
+    const sq = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]];
+    poly(sq.map(L), C(lk.fill));
+    if (lk.checker) {
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
+        if ((i + j) & 1) continue;
+        const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
+        poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
+      }
+    } else if (lk.pat) {
+      g.save(); clipTo([sq], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    }
+    // Randkante, wo die Fläche endet
+    g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineWidth = 1.4 * z; g.lineCap = 'round';
+    g.beginPath();
+    for (const [dx, dy, a, b] of [[1, 0, [0.5, -0.5], [0.5, 0.5]], [-1, 0, [-0.5, -0.5], [-0.5, 0.5]],
+                                  [0, 1, [-0.5, 0.5], [0.5, 0.5]], [0, -1, [-0.5, -0.5], [0.5, -0.5]]]) {
+      if (isFillPath(x + dx, y + dy)) continue;
+      const p0 = L(a), p1 = L(b);
+      g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+    }
+    g.stroke();
+    return;
+  }
+  const arms = pathArms(x, y);
+  if (lk.stones) {
+    // Trittsteine entlang der Mittellinie
+    const cl = roadCenterline(arms, t) || [[0, 0]];
+    const pts = [];
+    for (let i = 0; i < cl.length - 1; i++) {
+      const [a, b] = [cl[i], cl[i + 1]], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      for (let d = 0; d < len; d += 0.26) pts.push([a[0] + (b[0] - a[0]) * d / len, a[1] + (b[1] - a[1]) * d / len]);
+    }
+    if (arms.length > 2 || cl.length < 2) pts.push([0, 0]);
+    for (const [u, v] of pts) {
+      const q = L([u, v]);
+      ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498'));
+      ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d6d1c6'));
+    }
+    return;
+  }
+  for (const [w, col] of [[ROAD_W + 0.04, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of roadShapes(arms, t, w)) poly(sh.map(L), C(col));
   }
-  if (look.pat) {
-    g.save(); clipTo(roadShapes(arms, t, ROAD_W), L); pattern(L, look.pat[0], x, y, z, C(look.pat[1])); g.restore();
-  }
-  if (t && t.style === 'sand') {                 // Feldweg: Grasstreifen in der Mitte
-    for (const sh of roadShapes(arms, t, 0.05)) poly(sh.map(L), C('#9ccf72'));
+  if (lk.pat) {
+    g.save(); clipTo(roadShapes(arms, t, ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
   const cl = roadCenterline(arms, t);
-  if (look.dash && cl) {
+  if (lk.dash && cl) {
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
     g.setLineDash([2.5 * z, 3 * z]);
     g.beginPath();
@@ -186,159 +236,6 @@ function drawRoad(cx, cy, z, x, y, t) {
     g.stroke();
     g.setLineDash([]);
   }
-}
-
-// Gehwege gehören zur Grenze zwischen zwei Feldern und liegen mittig darauf (nie doppelt)
-function edgeKey(x, y, dx, dy) {
-  if (dx === 1) return x + ',' + y + ',e';
-  if (dx === -1) return (x - 1) + ',' + y + ',e';
-  if (dy === 1) return x + ',' + y + ',s';
-  return x + ',' + (y - 1) + ',s';
-}
-const hasWalk = (x, y, dx, dy) => state.walks.has(edgeKey(x, y, dx, dy));
-const WALK_W = 0.11;                      // halbe Gehwegbreite in Feldern
-// Alle sichtbaren Gehwege als zusammenhängendes Netz zeichnen:
-// Streifen auf den Grenzen, runde Ecken an den Knoten, Bögen an Straßenkurven, Pflaster schluckt sie.
-function drawWalkNetwork(visible, z) {
-  const S = ([u, v]) => { const p = toScreen(u, v); return [p.x, p.y]; };
-  const paved = (x, y) => state.paved.has(x + ',' + y);
-  const edges = [], arcs = [], skip = new Set();
-  const nodes = new Map();                        // Knoten "u,v" → { style, dirs }
-  const addNode = (u, v, du, dv, style) => { const k = u + ',' + v; if (!nodes.has(k)) nodes.set(k, { style, dirs: [] }); nodes.get(k).dirs.push([du, dv]); };
-  // Straßenkurven: Gehweg an beiden Außenkanten → als Bogen um die Kurve
-  for (let i = 0; i < visible.length; i += 4) {
-    const x = visible[i], y = visible[i + 1];
-    if (bAt(x, y) !== 'strasse') continue;
-    const curve = roadCurve(roadArms(x, y).arms);
-    if (!curve) continue;
-    const arms = roadArms(x, y).arms;
-    const ka = edgeKey(x, y, -arms[0][0], -arms[0][1]), kb = edgeKey(x, y, -arms[1][0], -arms[1][1]);
-    if (!state.walks.has(ka) || !state.walks.has(kb)) continue;
-    skip.add(ka); skip.add(kb);
-    const style = state.walks.get(ka);
-    arcs.push({ cu: x + curve.cu, cv: y + curve.cv, a0: curve.a0, a1: curve.a1, style });
-    // Enden des Bogens liegen auf Feldecken und laufen dort in Richtung der ersetzten Kanten weiter
-    const [[ax, ay], [bx, by]] = arms;
-    addNode(x + 0.5 * ax - 0.5 * bx, y + 0.5 * ay - 0.5 * by, -ax, -ay, style);
-    addNode(x + 0.5 * bx - 0.5 * ax, y + 0.5 * by - 0.5 * ay, -bx, -by, style);
-  }
-  const seen = new Set();
-  for (let i = 0; i < visible.length; i += 4) {
-    const x = visible[i], y = visible[i + 1];
-    for (const side of ['e', 's']) {
-      const k = x + ',' + y + ',' + side;
-      if (!state.walks.has(k) || skip.has(k) || seen.has(k)) continue;
-      seen.add(k);
-      const nx = side === 'e' ? x + 1 : x, ny = side === 'e' ? y : y + 1;
-      if (paved(x, y) || paved(nx, ny)) continue;   // Pflaster ist selbst Gehweg
-      const a = side === 'e' ? [x + 0.5, y - 0.5] : [x - 0.5, y + 0.5];
-      const b = side === 'e' ? [x + 0.5, y + 0.5] : [x + 0.5, y + 0.5];
-      const style = state.walks.get(k);
-      edges.push({ a, b, style });
-      const du = b[0] - a[0], dv = b[1] - a[1];
-      addNode(a[0], a[1], du, dv, style); addNode(b[0], b[1], -du, -dv, style);
-    }
-  }
-  const W = WALK_W;
-  const quad = pts => poly(pts.map(S), g.fillStyle);
-  const drawAll = (w, colOf) => {
-    for (const e of edges) {
-      g.fillStyle = colOf(e.style);
-      const du = e.b[0] - e.a[0], dv = e.b[1] - e.a[1], nu = -dv * w, nv = du * w;
-      quad([[e.a[0] + nu, e.a[1] + nv], [e.b[0] + nu, e.b[1] + nv], [e.b[0] - nu, e.b[1] - nv], [e.a[0] - nu, e.a[1] - nv]]);
-    }
-    for (const c of arcs) { g.fillStyle = colOf(c.style); quad(arcPts(c.cu, c.cv, 1 + w, c.a0, c.a1).concat(arcPts(c.cu, c.cv, 1 - w, c.a1, c.a0))); }
-    for (const [k, nd] of nodes) {
-      const [u, v] = k.split(',').map(Number);
-      g.fillStyle = colOf(nd.style);
-      // Knoten: Kreis (runde Außenecke) + halbe Quadrate in Richtung der Wege
-      quad(arcPts(u, v, w, 0, Math.PI * 2, 16));
-      for (const [du, dv] of nd.dirs) {
-        const pu = -dv * w, pv = du * w;
-        quad([[u + pu, v + pv], [u + du * w + pu, v + dv * w + pv], [u + du * w - pu, v + dv * w - pv], [u - pu, v - pv]]);
-      }
-    }
-  };
-  const look = st => WALK_LOOK[st] || WALK_LOOK.platten;
-  drawAll(W + 0.018, st => look(st).edge);          // Kante
-  drawAll(W, st => look(st).fill);                  // Fläche
-  // Muster je Stil: Fugen, Bohlen, Kies, Mosaik
-  for (const e of edges) {
-    const lk = look(e.style), du = e.b[0] - e.a[0], dv = e.b[1] - e.a[1];
-    if (lk.dots) {
-      for (let k = 0; k < 14; k++) {
-        const h = hash(Math.round(e.a[0] * 4) + k, Math.round(e.a[1] * 4) + (e.a[0] === e.b[0] ? 7 : 0), 444 + k);
-        const f = (k + 0.5) / 14, o = (hash(Math.round(e.a[0] * 4) + k, Math.round(e.a[1] * 4), 555 + k) - 0.5) * W * 1.6;
-        const q = S([e.a[0] + du * f - dv * o, e.a[1] + dv * f + du * o]);
-        g.fillStyle = lk.dots[Math.floor(h * 97) % lk.dots.length];
-        g.beginPath(); g.arc(q[0], q[1], (lk.big ? 1.3 : 0.9) * z, 0, Math.PI * 2); g.fill();
-      }
-    } else {
-      g.strokeStyle = lk.joint; g.lineWidth = 0.8 * z;
-      g.beginPath();
-      for (let f = lk.step; f < 1 - 1e-6; f += lk.step) {
-        const m = [e.a[0] + du * f, e.a[1] + dv * f];
-        const p0 = S([m[0] - dv * W, m[1] + du * W]), p1 = S([m[0] + dv * W, m[1] - du * W]);
-        g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
-      }
-      g.stroke();
-    }
-  }
-}
-const WALK_LOOK = {
-  kies:    { edge: '#c9bfae', fill: '#ddd4c4', dots: ['#c2b7a4', '#cfc5b3', '#b3a792'] },
-  platten: { edge: '#cbbfa8', fill: '#e6dfd0', joint: '#d6ccb9', step: 0.2 },
-  klinker: { edge: '#a8604a', fill: '#c97a5e', joint: '#b0654d', step: 0.1 },
-  holz:    { edge: '#9c7449', fill: '#c89a6a', joint: '#a97d52', step: 0.07 },
-  mosaik:  { edge: '#d9bcc6', fill: '#f5e4ea', dots: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffe08a'], big: true },
-};
-
-// Pflaster: ganzes Feld mit versetzten Steinen
-const PAVE_LOOK = {
-  kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
-  terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
-  schach:     { fill: '#f5dce6', checker: '#dcefe6' },
-  fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
-  mosaik:     { fill: '#efe6d8', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffd36e', '#8fc1f0'] },
-};
-function drawPaving(px, py, z, x, y) {
-  const L = (u, v) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
-  const Lp = ([u, v]) => L(u, v);
-  const lk = PAVE_LOOK[state.paved.get(x + ',' + y)];
-  const sq = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]];
-  if (lk) {
-    poly(sq.map(Lp), C(lk.fill));
-    if (lk.checker) {
-      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-        if ((i + j) & 1) continue;
-        const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
-        poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(Lp), C(lk.checker));
-      }
-    } else if (lk.pat) {
-      g.save(); clipTo([sq], Lp); pattern(Lp, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
-    }
-  } else {
-    // alter Stil (Sandstein) für bestehende Spielstände
-    poly(sq.map(Lp), C('#e2d8c4'));
-    g.strokeStyle = C('#cfc3aa'); g.lineWidth = 0.8 * z;
-    g.beginPath();
-    for (let k = 1; k < 5; k++) { const v = -0.5 + k * 0.2, a = L(-0.5, v), b = L(0.5, v); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
-    for (let r = 0; r < 5; r++) for (let k = 0; k < 4; k++) {
-      const u = -0.5 + (k + (r & 1 ? 0.5 : 0.25)) * 0.25, a = L(u, -0.5 + r * 0.2), b = L(u, -0.3 + r * 0.2);
-      g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
-    }
-    g.stroke();
-  }
-  // Randkante, wo die Pflasterfläche endet
-  g.strokeStyle = C('#c4b79d'); g.lineWidth = 1.4 * z; g.lineCap = 'round';
-  g.beginPath();
-  for (const [dx, dy, a, b] of [[1, 0, [0.5, -0.5], [0.5, 0.5]], [-1, 0, [-0.5, -0.5], [-0.5, 0.5]],
-                                [0, 1, [-0.5, 0.5], [0.5, 0.5]], [0, -1, [-0.5, -0.5], [0.5, -0.5]]]) {
-    if (state.paved.has((x + dx) + ',' + (y + dy))) continue;
-    const p0 = L(a[0], a[1]), p1 = L(b[0], b[1]);
-    g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
-  }
-  g.stroke();
 }
 
 // Tür und Fenster je nach Drehung: 0 = Tür rechts vorn, 1 = Tür links vorn, 2/3 = Tür hinten (unsichtbar)
@@ -350,7 +247,7 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
   for (const f of winFaces) for (const [a, b] of wins) windowOn(f[0], f[1], a, b, h * 0.35, h * 0.72, z);
 }
 // Unregelmäßige Objekte werden bei ungerader Drehung gespiegelt
-const MIRROR = new Set(['holz', 'fischer', 'bank', 'hafen', 'bus', 'fabrik', 'kunst', 'obst', 'stein', 'mine', 'markt', 'bahnhof']);
+const MIRROR = new Set(['holz', 'fischer', 'bank', 'hafen', 'fabrik', 'kunst', 'obst', 'stein', 'mine', 'markt']);
 const ROTATABLE = new Set([...MIRROR, 'haus', 'muehle', 'baecker', 'schule', 'saege', 'steinmetz', 'schmiede']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
@@ -389,7 +286,6 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       g.beginPath(); g.moveTo(m[0], cy2); g.lineTo(m[0], cy2 - 3 * z); g.moveTo(m[0], cy2); g.lineTo(m[0] + 2 * z, cy2); g.stroke();
       break;
     }
-    case 'strasse': drawRoad(cx, cy, z, x, y, t); break;
     case 'feld': {
       diamond(cx, cy, hw * 0.76, hh * 0.76, C('#b8885a'));
       g.strokeStyle = C('#e9b93f'); g.lineWidth = 1.7 * z; g.lineCap = 'round';
@@ -565,31 +461,6 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Verkehr & Strom ---
-    case 'bus': {
-      diamond(cx, cy, hw * 0.7, hh * 0.7, C('#d9d3c7'));
-      const bx = box(cx - 3 * z, cy - 1 * z, hw * 0.34, hh * 0.18, 10 * z, '#e4f1ff', '#3e8ed0', 3 * z);
-      void bx;
-      g.strokeStyle = C('#6b7a8f'); g.lineWidth = 1.4 * z;
-      g.beginPath(); g.moveTo(cx + 10 * z, cy + 3 * z); g.lineTo(cx + 10 * z, cy - 17 * z); g.stroke();
-      circle(cx + 10 * z, cy - 18 * z, 3.6 * z, C('#ffd23f'));
-      g.fillStyle = C('#3c7a3c'); g.font = `900 ${5 * z}px Nunito, system-ui, sans-serif`;
-      g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', cx + 10 * z, cy - 17.6 * z);
-      break;
-    }
-    case 'bahnhof': {
-      shadow(cx, cy, hw * 0.8, hh * 0.8);
-      diamond(cx, cy, hw * 0.9, hh * 0.9, C('#cfc8bb'));
-      const h = 15 * z;
-      const bx = box(cx - 3 * z, cy - 2 * z, hw * 0.55, hh * 0.4, h, '#f7e3c6', '#b5473a', 10 * z);
-      door(bx.B, bx.R, h);
-      windowOn(bx.L, bx.B, 0.2, 0.45, h * 0.35, h * 0.7, z);
-      windowOn(bx.L, bx.B, 0.6, 0.85, h * 0.35, h * 0.7, z);
-      const m = lerp(bx.B, bx.R, 0.25);
-      circle(m[0], m[1] - h * 0.75, 3 * z, C('#ffffff'));
-      g.strokeStyle = C('#6b6f78'); g.lineWidth = 1.2 * z;
-      for (const o of [12, 16]) { g.beginPath(); g.moveTo(cx - hw * 0.4 + o * z, cy + hh * 0.9 - o * 0.2 * z); g.lineTo(cx + hw * 0.9, cy - hh * 0.1 + o * 0.3 * z); g.stroke(); }
-      break;
-    }
     case 'windrad': {
       ellipse(cx, cy + 1 * z, 5 * z, 2.5 * z, 'rgba(40,60,20,0.15)');
       g.strokeStyle = C('#f4f4f4'); g.lineWidth = 3 * z; g.lineCap = 'round';
@@ -681,40 +552,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Deko ---
-    case 'weg': {
-      const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-      const arms = DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'weg');
-      const st = (t && t.style) || 'kies';
-      if (st === 'tritt') {
-        // Trittsteine entlang der Mittellinie
-        const cl = roadCenterline(arms, t) || [[0, 0]];
-        const pts = [];
-        for (let i = 0; i < cl.length - 1; i++) {
-          const [a, b] = [cl[i], cl[i + 1]], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-          for (let d = 0; d < len; d += 0.26) pts.push([a[0] + (b[0] - a[0]) * d / len, a[1] + (b[1] - a[1]) * d / len]);
-        }
-        if (arms.length > 2) pts.push([0, 0]);
-        for (const [u, v] of pts) {
-          const q = L([u, v]);
-          ellipse(q[0], q[1] + 0.8 * z, 5 * z, 2.6 * z, C('#aaa498'));
-          ellipse(q[0], q[1], 5 * z, 2.6 * z, C('#d6d1c6'));
-        }
-        break;
-      }
-      const WEG_LOOK = {
-        mulch:   ['#7a5236', '#8b5e3c', ['dots', null], ['#6f4a2e', '#a0714d']],
-        kies:    ['#d9c393', '#eadbb2', ['dots', null], ['#c9b183', '#d8c79d']],
-        steg:    ['#9c7449', '#c89a6a', ['planks', '#a97d52']],
-        blueten: ['#e9c6d2', '#f7e3ea', ['dots', null], ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb']],
-      }[st] || ['#d9c393', '#eadbb2'];
-      for (const [w, col] of [[0.2, WEG_LOOK[0]], [0.16, WEG_LOOK[1]]]) for (const sh of roadShapes(arms, t, w)) poly(sh.map(L), C(col));
-      if (WEG_LOOK[2]) {
-        g.save(); clipTo(roadShapes(arms, t, 0.16), L);
-        pattern(L, WEG_LOOK[2][0], x, y, z, WEG_LOOK[2][1] && C(WEG_LOOK[2][1]), WEG_LOOK[3]);
-        g.restore();
-      }
-      break;
-    }
+    case 'weg': drawPath(cx, cy, z, x, y, t); break;
     case 'baum': tree(cx, cy + 2 * z, z * 1.05, 0.9); break;
     case 'blumentopf': {
       ellipse(cx, cy + 1 * z, 7 * z, 3 * z, 'rgba(40,60,20,0.15)');

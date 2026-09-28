@@ -70,7 +70,6 @@ function render(now) {
     const x = visible[i], y = visible[i + 1];
     FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
     drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
-    if (state.paved.has(x + ',' + y)) drawPaving(visible[i + 2], visible[i + 3], z, x, y);
   }
   FOG = false;
 
@@ -101,24 +100,9 @@ function render(now) {
     g.strokeStyle = '#f2b53a'; g.lineWidth = 3 * z; g.stroke();
   }
 
-  // 2b) Gehwege
-  if (state.walks.size) drawWalkNetwork(visible, z);
-
   // 3) Vorschau-Rahmen
   let preview = null;
-  if (tool === 'gehweg') {
-    if (hoverEdge) {
-    const e = hoverEdge, on = state.walks.get(e.key) === currentStyle('gehweg');
-    const a = e.dx ? [e.x + 0.5 * e.dx, e.y - 0.5] : [e.x - 0.5, e.y + 0.5 * e.dy];
-    const b = e.dx ? [e.x + 0.5 * e.dx, e.y + 0.5] : [e.x + 0.5, e.y + 0.5 * e.dy];
-    const pa = toScreen(a[0], a[1]), pb = toScreen(b[0], b[1]);
-    g.strokeStyle = on ? '#e5484d' : '#3fbf6f'; g.lineWidth = 6 * z; g.lineCap = 'round';
-    g.globalAlpha = 0.8;
-    g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke();
-    g.globalAlpha = 1;
-    preview = { p: toScreen((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), ok: !on, text: on ? 'Gehweg entfernen' : 'Gehweg' };
-    }
-  } else if (hover && tool !== 'look' && ownedTile(hover.x, hover.y)) {
+  if (hover && tool !== 'look' && ownedTile(hover.x, hover.y)) {
     const p = toScreen(hover.x, hover.y);
     const hds = decosAt(hover.x + ',' + hover.y);
     if (tool === 'abriss' && hds && hds[hoverSlot]) {
@@ -126,6 +110,9 @@ function render(now) {
     } else if (ITEMS[tool] && ITEMS[tool].small) {
       const err = smallError(tool, hover.x, hover.y, hoverSlot);
       preview = { p, ok: !err, small: !err || err === 'Zu wenig Taler', text: err || `🌸 +${ITEMS[tool].beauty}` };
+    } else if (tool === 'weg' && bAt(hover.x, hover.y) === 'weg') {
+      const cur = styleDef('weg', state.tiles.get(hover.x + ',' + hover.y).style), nx = styleDef('weg', currentStyle('weg'));
+      preview = { p, ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
     } else if (tool === 'abriss') {
       const info = demolishInfo(hover.x, hover.y);
       preview = { p, ok: !info.err, text: info.err || (info.refund != null ? `${info.label}: +${fmt(info.refund)}` : `${info.label}: −${fmt(info.cost)}`) };
@@ -135,7 +122,7 @@ function render(now) {
       let text = err;
       if (!err) {
         if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(d.cost)}`;
-        else if (tool === 'strasse') text = 'Straße';
+        else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else {
           const pv = previewDelta(tool, hover.x, hover.y), parts = [];
           if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
