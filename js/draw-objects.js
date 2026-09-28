@@ -605,13 +605,17 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 // Unregelmäßige Objekte werden bei ungerader Drehung gespiegelt
 const MIRROR = new Set(['holz', 'fischer', 'bank', 'obst', 'stein', 'mine']);
 const ROTATABLE = new Set([...MIRROR, 'haus', 'muehle', 'steinmetz', 'schmiede',
-  'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst']);
+  'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { bank: 0.45, laterne: 0.62, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.8, blumen: 0.85, windrad: 0.9 };
 const decoScale = b => DECO_SCALE[b] || 1;
-function rotateBuild() {
-  buildRot = (buildRot + 1) % 4;
+// Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
+function rotateBuild(dir = 1) {
+  const type = tool === 'verschieben' ? movingType() : tool;
+  const cur = hover && type && ITEMS[type] && ROTATABLE.has(type) ? placeRot(type, hover.x, hover.y) : buildRot;
+  buildRot = (cur + dir + 4) % 4;
+  rotManual = true;
   previewCache = null;
   sfx('deco');
 }

@@ -110,8 +110,19 @@ function endPointer(e) {
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) { hover = null; hoverChunk = null; } });
+// Mausrad: beim Bauen/Verschieben drehbarer Dinge dreht es, sonst zoomt es (Zwei-Finger-Zoom = ctrlKey zoomt immer)
+let wheelAcc = 0, wheelLast = 0;
+const wheelRotates = () => tool === 'verschieben' ? !!moving && ROTATABLE.has(movingType()) : tool !== 'look' && ROTATABLE.has(tool);
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
+  if (!e.ctrlKey && wheelRotates()) {
+    const now = performance.now();
+    if (now - wheelLast > 400) wheelAcc = 0;
+    wheelLast = now;
+    wheelAcc += e.deltaMode ? e.deltaY * 40 : e.deltaY;
+    if (Math.abs(wheelAcc) >= 50) { rotateBuild(wheelAcc > 0 ? 1 : -1); wheelAcc = 0; }
+    return;
+  }
   zoomAt(e.clientX, e.clientY, cam.z * Math.exp(-e.deltaY * 0.0015));
 }, { passive: false });
 canvas.addEventListener('contextmenu', e => e.preventDefault());
@@ -128,7 +139,7 @@ window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   if (e.key === 'Escape') { setTool('look'); closePanel(); closeModal(); return; }
   if (!document.getElementById('modal').hidden) return;
-  if ((e.key === 'r' || e.key === 'R') && ROTATABLE.has(tool)) { rotateBuild(); return; }
+  if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
   const list = Object.keys(ITEMS).filter(id => ITEMS[id].cat === cat);
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= list.length) setTool(list[n - 1]);

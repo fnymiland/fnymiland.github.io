@@ -24,18 +24,22 @@ describe('Gebäude über mehrere Felder', () => {
     expect(game("placeError('markt', 7, 7)")).toBe('Hier ist nicht genug Platz');
   });
 
-  it('gedreht liegt ein 2×1-Gebäude quer', () => {
+  it('lange Gebäude: Tür an der Längsseite, gedreht liegen sie quer', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    game('buildRot = 1');
-    expect(build('saege', 8, 8)).toBe(true);
+    expect(build('saege', 8, 8)).toBe(true);             // Richtung 0: Tür nach +x, also 1 tief und 2 breit
     game('recalc()');
     expect(game("anchorAt(8, 9)")).toBe('8,8');
     expect(game("anchorAt(9, 8)")).toBe(null);
+    game('buildRot = 1');
+    expect(build('saege', 10, 8)).toBe(true);
+    game('recalc()');
+    expect(game("anchorAt(11, 8)")).toBe('10,8');
   });
 
   it('Nachbarn zählen rund um die ganze Grundfläche – jedes Gebäude nur einmal', () => {
     build('haus', 6, 6); build('haus', 6, 7); build('haus', 6, 8);
-    expect(build('baecker', 8, 8)).toBe(true);          // belegt 8,8 und 9,8
+    game('buildRot = 1');
+    expect(build('baecker', 8, 8)).toBe(true);          // quer: belegt 8,8 und 9,8
     build('muehle', 10, 8);                               // rechts neben dem zweiten Feld
     build('muehle', 8, 9);                                // vor dem ersten Feld
     game('recalc()');

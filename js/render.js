@@ -131,7 +131,7 @@ function render(now) {
   if (hover && tool !== 'look' && ownedTile(hover.x, hover.y)) {
     const hx = hover.x, hy = hover.y;
     const hds = decosAt(hx + ',' + hy);
-    const rotOf = b => ROTATABLE.has(b) ? buildRot : 0;
+    const rotOf = b => placeRot(b, hx, hy);
     let box = [hx, hy, 1, 1];
     if (tool === 'verschieben' && !moving) {
       const has = (hds && hds[hoverSlot]) || anchorAt(hx, hy);
@@ -239,7 +239,7 @@ function render(now) {
     }
     if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
       const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
-      const rot = ROTATABLE.has(ghostType) ? buildRot : 0;
+      const rot = placeRot(ghostType, gx, gy);
       g.globalAlpha = 0.65;
       g.save(); g.translate(c.x, c.y);
       const gs = decoScale(ghostType);

@@ -30,7 +30,7 @@ function build(b, x, y, quiet) {
   if (b === 'graben') { state.terra.set(k, 'water'); sfx('dig'); }
   else if (b === 'schuett') { state.terra.set(k, 'grass'); sfx('dig'); }
   else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: ROTATABLE.has(b) ? buildRot : 0, ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
     if (b === 'haus') assignResident(state.tiles.get(k), Math.random, Math.random);
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }
@@ -75,6 +75,7 @@ function pickUp(x, y, slot) {
     ds[slot] = null;
     if (ds.every(v => !v)) state.decos.delete(k);
     buildRot = moving.d.rot || 0;
+    rotManual = false;
   } else {
     const a = anchorAt(x, y), t = a && state.tiles.get(a);
     if (!t) { toast('Hier ist nichts zum Verschieben'); return; }
@@ -82,20 +83,21 @@ function pickUp(x, y, slot) {
     moving = { kind: 'tile', t, from: a };
     state.tiles.delete(a);
     buildRot = t.rot || 0;
+    rotManual = false;
   }
   recalc();
   sfx('deco');
   $('rot-btn').hidden = !ROTATABLE.has(movingType());
-  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳' : ''));
+  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : ''));
 }
 function moveError(x, y, slot) {
   if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
-  return placeError(moving.t.b, x, y, buildRot, { move: true });
+  return placeError(moving.t.b, x, y, placeRot(moving.t.b, x, y), { move: true });
 }
 function dropAt(x, y, slot) {
   const err = moveError(x, y, slot);
   if (err) { fail(err); return; }
-  const rot = ROTATABLE.has(movingType()) ? buildRot : 0;
+  const rot = moving.kind === 'deco' ? (ROTATABLE.has(movingType()) ? buildRot : 0) : placeRot(movingType(), x, y);
   if (moving.kind === 'deco') {
     const k = x + ',' + y;
     if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);

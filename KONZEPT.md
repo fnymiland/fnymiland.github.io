@@ -182,7 +182,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 5. ✓ Zufriedenheit + wachsende Häuser + Namen
 6. ✓ Wahrzeichen-Stufen + Laternen (ersetzt Sterne) + Tagebuch mit Einführung
 6a. ✓ Feinschliff 1: Namen, Markt 3×3, Spieluhr, alles verschieben, Infozeile, Kaufen am Grundstück
-6b. Drehen in 4 Richtungen (+ automatisch zum Weg, Mausrad)
+6b. ✓ Drehen in 4 Richtungen (+ automatisch zum Weg, Mausrad)
 6c. Häuser neu zeichnen + Aussehen wählbar
 6d. Gebäudestufen (Paket Betriebe, dann Bildung) – ersetzt „erste Ladung neuer Dinge“ aus 8
 7. Regionen mit Zugängen + Ruinen-Start

@@ -12,6 +12,9 @@ const OFFLINE_MAX_S = 8 * 3600;
 const ZOOM_MIN = 0.45, ZOOM_MAX = 2.6;
 const ISLAND = { cMin: -4, cMax: 4, cx: 2.5, cy: 2.5, r: 26 };
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+// Drehung rot 0–3: in diese Richtung zeigt die Tür (0 = +x rechts vorn, 1 = +y links vorn, 2 = −x, 3 = −y hinten).
+// size = [Tiefe, Breite] bei rot 0; bei ungerader Drehung liegt das Gebäude quer.
+const FRONT_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 // ?probe: Beispieldorf zum Anschauen, wird nie gespeichert
 const PROBE = new URLSearchParams(location.search).has('probe');
 
@@ -33,17 +36,17 @@ const ITEMS = {
              desc: 'Nur auf Fels. Liefert Stein 🪨, staubig.' },
   mine:    { cat: 'bau', name: 'Bergwerk', lm: 'erzberg:1', cost: 300, needs: 'erz', workers: 3, ugly: 8, up: true, prod: { erz: 0.2 },
              desc: 'Nur am Erzberg. Liefert Erz ⛏️.' },
-  saege:   { cat: 'bau', name: 'Sägewerk', lm: 'baum:1', size: [2, 1], cost: 200, needs: 'grass', workers: 2, ugly: 3, up: true, rot: true,
+  saege:   { cat: 'bau', name: 'Sägewerk', lm: 'baum:1', size: [1, 2], cost: 200, needs: 'grass', workers: 2, ugly: 3, up: true, rot: true,
              conv: { from: 'holz', to: 'bretter', rate: 0.15 }, desc: 'Macht aus 2 Holz 🪵 ein Brett 🪚.' },
   steinmetz: { cat: 'bau', name: 'Steinmetz', lm: 'klippe:1', cost: 250, needs: 'grass', workers: 2, ugly: 4, up: true, rot: true,
              conv: { from: 'stein', to: 'quader', rate: 0.12 }, desc: 'Macht aus 2 Stein 🪨 einen Pflasterstein 🧱.' },
   schmiede: { cat: 'bau', name: 'Schmiede', lm: 'erzberg:2', cost: 350, needs: 'grass', workers: 2, ugly: 6, up: true, rot: true,
              conv: { from: 'erz', to: 'metall', rate: 0.1 }, desc: 'Macht aus 2 Erz ⛏️ ein Stück Metall 🔩.' },
-  baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [2, 1], cost: 400, needs: 'grass', workers: 2, up: true,
+  baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [1, 2], cost: 400, needs: 'grass', workers: 2, up: true,
              desc: '+6 Taler/s für jede Mühle direkt daneben.' },
   markt:   { cat: 'bau', name: 'Markt', size: [3, 3], cost: 800, needs: 'grass', workers: 2, tech: 'handel', up: true,
              desc: '+1,5 Taler/s für jedes Gebäude im Umkreis von 2.' },
-  fabrik:  { cat: 'bau', name: 'Werkstatt', size: [2, 1], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12, up: true,
+  fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12, up: true,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [2, 2], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
              desc: 'Handel mit der Welt: +8 % auf alle Einnahmen.' },
@@ -55,11 +58,11 @@ const ITEMS = {
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6, up: true,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
-  bibliothek: { cat: 'bildung', name: 'Bibliothek', lm: 'ruine:2', size: [2, 1], cost: 500, needs: 'grass', workers: 1, science: 1, beauty: 5, up: true,
+  bibliothek: { cat: 'bildung', name: 'Bibliothek', lm: 'ruine:2', size: [1, 2], cost: 500, needs: 'grass', workers: 1, science: 1, beauty: 5, up: true,
              desc: '+1 💡/s.' },
   uni:     { cat: 'bildung', name: 'Universität', size: [2, 2], cost: 2000, needs: 'grass', workers: 4, science: 3, beauty: 10, tech: 'uni', up: true,
              desc: '+3 💡/s.' },
-  kunst:   { cat: 'bildung', name: 'Kunstakademie', lm: 'ruine:3', size: [2, 1], cost: 700, needs: 'grass', workers: 2, science: 0.4, beauty: 25, up: true,
+  kunst:   { cat: 'bildung', name: 'Kunstakademie', lm: 'ruine:3', size: [1, 2], cost: 700, needs: 'grass', workers: 2, science: 0.4, beauty: 25, up: true,
              desc: 'Schönheit +25 und ein paar kreative Ideen 💡.' },
   // --- Deko ---
   blumen:  { cat: 'deko', name: 'Blumenbeet', cost: 30, needs: 'grass', beauty: 4, desc: '+15 % für Gebäude direkt daneben.' },

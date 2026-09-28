@@ -60,7 +60,7 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 3, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 4, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
@@ -88,6 +88,11 @@ function parseSave(d) {
     if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
     else if (t.b === 'weg' && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'kies';
   }
+  // v4 (28.09.2026): Drehung in 4 Richtungen. Lange Gebäude sind jetzt „1 tief, 2 breit“ (Tür an der Längsseite):
+  // die alte Drehung um eins versetzen, damit Grundfläche und Tür bleiben, wo sie waren.
+  if ((d.v || 3) < 4) {
+    for (const [, t] of d.tiles) if (LONG_FRONT.has(t.b)) t.rot = (t.rot || 0) ^ 1;
+  }
   const taken = new Set(d.tiles.map(([k]) => k));
   for (const w of d.paved || []) {
     const [k, st] = typeof w === 'string' ? [w, 'alt'] : w;
@@ -114,6 +119,8 @@ function parseSave(d) {
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };
 }
+
+const LONG_FRONT = new Set(['saege', 'baecker', 'fabrik', 'bibliothek', 'kunst']);
 
 // Was man in alten Ständen per Stern oder Forschung schon freigeschaltet hatte
 function legacyUnlocks(d) {

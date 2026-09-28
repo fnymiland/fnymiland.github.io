@@ -315,8 +315,34 @@ const upgradable = t => ITEMS[t.b].up && t.lvl < MAX_LVL;
 const upgradeCost = t => Math.round(ITEMS[t.b].cost * Math.pow(1.8, t.lvl));
 const hasBuilt = b => [...state.tiles.values()].some(t => t.b === b);
 
+// Drehen: Beim Setzen schaut ein Gebäude von selbst mit der Tür zum Weg. Wer selbst dreht (⟳, Mausrad, R),
+// behält seine Richtung, bis er das Werkzeug wechselt.
+let rotManual = false;
+// Felder direkt vor der Tür (vor der ganzen Vorderseite)
+function frontTiles(b, x, y, rot) {
+  const [w, h] = sizeOf(b, rot), [dx, dy] = FRONT_DIR[rot & 3], out = [];
+  if (dx) for (let j = 0; j < h; j++) out.push([dx > 0 ? x + w : x - 1, y + j]);
+  else for (let i = 0; i < w; i++) out.push([x + i, dy > 0 ? y + h : y - 1]);
+  return out;
+}
+function autoRot(b, x, y, fallback) {
+  const fits = r => footprint(b, x, y, r).every(([fx, fy]) => !COVER.has(fx + ',' + fy));
+  let best = fallback, bestScore = fits(fallback) ? 0 : -1;
+  for (const r of [fallback, 0, 1, 2, 3]) {
+    if (!fits(r)) continue;
+    const score = frontTiles(b, x, y, r).filter(([fx, fy]) => bAt(fx, fy) === 'weg').length;
+    if (score > bestScore) { best = r; bestScore = score; }
+  }
+  return best;
+}
+function placeRot(b, x, y) {
+  if (!ROTATABLE.has(b)) return 0;
+  if (rotManual || ITEMS[b].small) return buildRot;
+  return autoRot(b, x, y, buildRot);
+}
+
 // Passt das Objekt mit Anker (x, y) hierhin? opts.move: beim Verschieben zählen Kosten und Einwohner nicht
-function placeError(b, x, y, rot = buildRot, opts = {}) {
+function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
   const r = ROTATABLE.has(b) ? rot : 0;
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
@@ -472,13 +498,14 @@ function demolishInfo(x, y) {
 let previewCache = null;
 function previewDelta(b, x, y) {
   const k = x + ',' + y;
-  if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === buildRot) return previewCache;
-  state.tiles.set(k, { b, lvl: 1, rot: ROTATABLE.has(b) ? buildRot : 0 });
+  const rot = placeRot(b, x, y);
+  if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === rot) return previewCache;
+  state.tiles.set(k, { b, lvl: 1, rot });
   const t = totals();
   state.tiles.delete(k);
   rebuildCover();
   const st = t.st.get(k) || {};
-  previewCache = { k, b, rot: buildRot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
+  previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0 };
   return previewCache;
 }

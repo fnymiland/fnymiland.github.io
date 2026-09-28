@@ -91,6 +91,7 @@ function buildToolbar() {
 function setTool(t) {
   if (t !== 'verschieben' && moving) cancelMove();
   tool = t;
+  rotManual = false;
   previewCache = null;
   if (t !== 'look') closePanel();
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
@@ -105,7 +106,7 @@ function setTool(t) {
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
   hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
     + (d.paint ? ' · verschieben mit zwei Fingern / rechter Maustaste' : '')
-    + (ROTATABLE.has(t) ? ' · drehen: ⟳ oder Taste R' : '');
+    + (ROTATABLE.has(t) && !d.small ? ' · schaut von selbst zum Weg, drehen: ⟳, Mausrad oder R' : ROTATABLE.has(t) ? ' · drehen: ⟳ oder R' : '');
   hint.hidden = false;
 }
 
