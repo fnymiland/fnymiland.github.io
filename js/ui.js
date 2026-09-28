@@ -106,7 +106,7 @@ function setTool(t) {
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
   hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
     + (d.paint ? ' · verschieben mit zwei Fingern / rechter Maustaste' : '')
-    + (ROTATABLE.has(t) && !d.small ? ' · schaut von selbst zum Weg, drehen: ⟳, Mausrad oder R' : ROTATABLE.has(t) ? ' · drehen: ⟳ oder R' : '');
+    + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
   hint.hidden = false;
 }
 
@@ -189,6 +189,12 @@ function panelAt(sx, sy) {
   const top = Math.max(top0, Math.min(bottom0 - h, sy - h / 2));
   el.style.left = left + 'px'; el.style.top = top + 'px';
 }
+// Mausrad über der Werkzeugleiste blättert seitwärts
+$('tools').addEventListener('wheel', e => {
+  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+  e.currentTarget.scrollLeft += e.deltaY;
+  e.preventDefault();
+}, { passive: false });
 // Höhe der Leiste unten merken, damit Infozeile und Fenster immer darüber sitzen
 if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--bar', $('toolbar').offsetHeight + 'px')).observe($('toolbar'));
 
@@ -207,7 +213,8 @@ function openInfo(x, y) {
     }[s.how]);
   }
   if (s.bonus) status.push(`<div class="ok">🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
-  else if (s.n) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
+  else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
+  else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   const why = [];
   const beete = beetBonus(x, y);
@@ -462,11 +469,12 @@ function showIntro(first) {
     <ul>
       <li>🏠 <b>Häuser</b> bringen Einwohner. Betriebe bis 4 Felder vom nächsten Haus laufen voll, weiter weg nur halb – außer ein <b>Weg</b> verbindet sie mit dem Dorf.</li>
       <li>🏘️ Was aneinandergrenzt oder über <b>Wege</b> verbunden ist, ist ein <b>Viertel</b>: ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.</li>
-      <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Verkehr und Deko.</li>
+      <li>✨ <b>Alles wächst:</b> Häuser und Betriebe haben Stufen. Sind die Bedingungen erfüllt, funkelt es – antippen und selbst ausbauen.</li>
+      <li>🎓 <b>Schulen</b> erzeugen Ideen 💡 – damit erforschst du neue Gebäude, Wege-Stile und Deko.</li>
       <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten – jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
-    <p class="muted" style="font-size:13px">Ziehen = verschieben · Mausrad / zwei Finger = zoomen · Wege: gedrückt halten und ziehen</p>
+    <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen (beim Bauen dreht das Mausrad) · Wege: gedrückt halten und ziehen</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's!</button></div>`);
   if (first) wireTownEditor($('modal-card'), state.town, updateHud);
   $('m-ok').onclick = () => { closeModal(); save(); };

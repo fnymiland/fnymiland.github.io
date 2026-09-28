@@ -25,3 +25,7 @@ HTMLCanvasElement.prototype.getContext = () => fakeCtx;
 globalThis.requestAnimationFrame = () => 0;
 
 localStorage.clear();
+
+// Zufall mit festem Startwert: neue Inseln (Lage der Sehenswürdigkeiten) sind in jedem Testlauf gleich
+let seed = 12345;
+Math.random = () => (seed = (seed * 16807) % 2147483647) / 2147483647;

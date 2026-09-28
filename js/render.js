@@ -193,14 +193,17 @@ function render(now) {
   }
   const icons = [];
   const labels = [];
+  let staleCover = false;
   for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
     const owned = ownedTile(x, y);
     FOG = !owned;
     const k = x + ',' + y;
-    const a = COVER.get(k);
+    // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
+    const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
+    if (a0 && !t) staleCover = true;
     if (a) {
-      const t = state.tiles.get(a), [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
+      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
       if (x === ax + w - 1 && y === ay + h - 1) {
         const c = w === 1 && h === 1 ? { x: px, y: py } : toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2);
         if (t.b === 'lm') { FOG = false; labels.push([ax, ay, t.lm]); }
@@ -257,7 +260,7 @@ function render(now) {
     }
   }
   FOG = false;
-  for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
+  if (staleCover) recalc();
 
   // 5) Nacht
   if (night > 0) {
@@ -276,6 +279,9 @@ function render(now) {
       g.globalAlpha = 1;
     }
   }
+
+  // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
+  for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
   for (const [x, y, type] of labels) {

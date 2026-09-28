@@ -96,3 +96,10 @@ describe('Alte Spielstände', () => {
     expect(game('parseSave(serialize()).money')).toBe(game('state.money'));
   });
 });
+
+describe('Abreißen', () => {
+  it('gibt die Hälfte von Baupreis und Ausbau-Talern zurück', () => {
+    put('saege', 8, 8, 3);
+    expect(game('demolishInfo(8, 8).refund')).toBe(Math.floor((200 + 250 + 600) / 2));
+  });
+});

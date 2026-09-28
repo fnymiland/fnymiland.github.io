@@ -71,11 +71,11 @@ html, body {
   right: 0;
   bottom: 0;
   padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
-  overflow-x: auto;
-  scrollbar-width: none;
 }
-#toolbar::-webkit-scrollbar { display: none; }
-.tools { display: flex; gap: 8px; width: max-content; margin: 0 auto; padding-top: 6px; }
+/* nur die Werkzeuge scrollen, die Kategorien bleiben stehen */
+.tools { display: flex; gap: 8px; width: max-content; max-width: 100%; margin: 0 auto; padding-top: 6px; overflow-x: auto; scrollbar-width: none; }
+.tools::-webkit-scrollbar { display: none; }
+.tool { flex: none; }
 .tool {
   flex: none;
   width: 78px;
@@ -116,7 +116,7 @@ html, body {
   font-size: 13px;
   box-shadow: 0 3px 0 var(--shadow);
   width: max-content;
-  max-width: calc(100% - 32px);
+  max-width: calc(100% - 160px);     /* rechts sitzt der Drehknopf */
   text-align: center;
   pointer-events: none;
 }
@@ -240,7 +240,9 @@ html, body {
 #goal.small .req { display: none; }
 #goal.small h4 { margin: 0; }
 
-.cats { display: flex; gap: 6px; width: max-content; margin: 0 auto 4px; }
+.cats { display: flex; gap: 6px; width: max-content; max-width: 100%; margin: 0 auto 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 3px; }
+.cats::-webkit-scrollbar { display: none; }
+.cat { flex: none; }
 .cat {
   border: 0; font: inherit; font-weight: 900; font-size: 13px; color: var(--brown);
   background: rgba(255, 250, 240, .85); border-radius: 99px; padding: 5px 14px;

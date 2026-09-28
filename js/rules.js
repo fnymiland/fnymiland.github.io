@@ -325,7 +325,7 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   const S = BUILD_STAGES[t.b], d = ITEMS[t.b], up = S && S.up[t.lvl - 1];
   if (!up) return { next: null, conds: [], ready: false };
   const conds = [];
-  if (d.workers) conds.push({ text: `👷 ${d.workers} freie Einwohner als Mitarbeiter`, ok: pop - jobs >= d.workers });
+  if (d.workers) conds.push({ text: `👷 ${d.workers} ${d.workers === 1 ? 'freier Einwohner' : 'freie Einwohner'} als Mitarbeiter`, ok: pop - jobs >= d.workers });
   if (up.pop) conds.push({ text: `👥 ${up.pop} Einwohner auf der Insel`, ok: pop >= up.pop });
   if (up.water) conds.push({ text: `💧 ${up.water} Wasserfelder direkt daneben`, ok: countAround(x, y, 1, isWater) >= up.water });
   if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
@@ -508,9 +508,10 @@ function demolishInfo(x, y) {
       const lost = d.pop * t.lvl;
       if (T.pop - lost < T.jobs) return { err: 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.' };
     }
-    // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte
+    // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || t.b === 'weg';
-    return { anchor: a, refund: full ? d.cost : Math.floor(d.cost / 2), mat: full ? d.mat : null, label: `${d.name} ${full ? 'entfernen' : 'abreißen'}` };
+    const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0) : 0;
+    return { anchor: a, refund: full ? d.cost : Math.floor((d.cost + staged) / 2), mat: full ? d.mat : null, label: `${d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };

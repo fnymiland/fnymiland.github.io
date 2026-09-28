@@ -22,7 +22,7 @@ const PROBE = new URLSearchParams(location.search).has('probe');
 const ITEMS = {
   // --- Wohnen & Arbeit ---
   haus:    { cat: 'bau', name: 'Haus', cost: 40, needs: 'grass', pop: 4,
-             desc: 'Hier wohnt jemand. Erfüllst du die Wünsche, kannst du das Haus ausbauen. Antippen = Wünsche und Farben.' },
+             desc: 'Hier wohnt jemand. Wünsche erfüllen, dann ausbauen.' },
   feld:    { cat: 'bau', name: 'Feld', cost: 20, needs: 'grass', workers: 1, desc: '1 Taler/s.' },
   muehle:  { cat: 'bau', name: 'Mühle', cost: 150, needs: 'grass', workers: 1,
              desc: '+2 Taler/s für jedes Feld direkt daneben.' },
@@ -82,7 +82,7 @@ const ITEMS = {
   // --- Gelände ---
   graben:  { cat: 'land', name: 'Teich graben', cost: 30, desc: 'Macht aus Wiese Wasser (gut für Fischer).' },
   schuett: { cat: 'land', name: 'Aufschütten', cost: 60, desc: 'Macht aus Wasser neues Land.' },
-  verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Gebäude oder Deko antippen, dann das Ziel antippen. Kostenlos. Drehen mit ⟳ oder R.' },
+  verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
   rathaus: { cat: null, name: 'Rathaus', size: [2, 2], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },

@@ -34,25 +34,23 @@ function newState() {
 }
 
 // Spielstand als einfaches Objekt (für localStorage und Export)
+function tileOut(t) {
+  const o = { b: t.b, lvl: t.lvl };
+  if (t.wall != null) o.wall = t.wall;
+  if (t.roof != null) o.roof = t.roof;
+  if (t.lm) o.lm = t.lm;
+  if (t.rot) o.rot = t.rot;
+  if (t.style) o.style = t.style;
+  if (t.animal) { o.animal = t.animal; o.name = t.name; }
+  if (t.stage != null) o.stage = t.stage;
+  if (t.look) o.look = t.look;
+  return o;
+}
 function serialize() {
   const tiles = [];
-  for (const [k, t] of state.tiles) {
-    const o = { b: t.b, lvl: t.lvl };
-    if (t.wall != null) o.wall = t.wall;
-    if (t.roof != null) o.roof = t.roof;
-    if (t.lm) o.lm = t.lm;
-    if (t.rot) o.rot = t.rot;
-    if (t.style) o.style = t.style;
-    if (t.animal) { o.animal = t.animal; o.name = t.name; }
-    if (t.stage != null) o.stage = t.stage;
-    if (t.look) o.look = t.look;
-    tiles.push([k, o]);
-  }
-  if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') {
-    const t = moving.t, o = { b: t.b, lvl: t.lvl };
-    for (const f of ['wall', 'roof', 'lm', 'rot', 'style', 'animal', 'name', 'look']) if (t[f] != null) o[f] = t[f];
-    tiles.push([moving.from, o]);
-  }
+  for (const [k, t] of state.tiles) tiles.push([k, tileOut(t)]);
+  // was man gerade trägt, wird an seinem alten Platz gespeichert
+  if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') tiles.push([moving.from, tileOut(moving.t)]);
   const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
   if (typeof moving !== 'undefined' && moving && moving.kind === 'deco') {
     const [k, slot] = moving.from;
