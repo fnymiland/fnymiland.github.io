@@ -186,7 +186,9 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
   Erzinsel (Erzberg), Quelleninsel (Heiße Quelle), Kristallinsel (Kristallhöhle).
 - **Gläserne Decke:** Inseln sind gesperrt und werden nacheinander **erschlossen** – mit Talern, Ideen (Weisheit) und Ansehen
   (Ortstitel, Einwohner). Das Spiel zeigt immer, welche Insel als Nächstes dran ist und was fehlt.
-- Erschlossene Inseln sind sofort bebaubar. Später verbindet ein **Zug** die Dörfer: mehr Einwohner, Bonus für beide Orte.
+- Erschlossene Inseln sind sofort bebaubar. Ein **Zug** verbindet die Dörfer (gebaut 30.09.): Schienen an Land oder als
+  Brücke, Meer aufschütten bis zur Megainsel, elektrisch mit 2 Windrädern je Zug, +8 Pendler je Bahnhof und +10 % für
+  beide Inseln; Zugmodell (Regionalbahn, Straßenbahn, Triebwagen) und Farbe wählt der Spieler.
 - Alte Spielstände: Sehenswürdigkeiten ziehen samt Laternen auf ihre Insel um; Inseln mit schon restaurierten
   Sehenswürdigkeiten sind gleich erschlossen; gekaufte Grundstücke werden erstattet.
 

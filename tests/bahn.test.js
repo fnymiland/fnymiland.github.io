@@ -178,3 +178,57 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
     expect([t.train, t.trainCol]).toEqual(['tram', 3]);
   });
 });
+
+describe('Der Zug fährt', () => {
+  // kleine Linie auf der Heimatinsel, mit einem „fremden“ Bahnhof: regionAt wird dafür umgebogen
+  const setup = (wind = 2) => {
+    unlock();
+    game("state.tiles.set('7,4', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('7,10', { b: 'station', lvl: 1, rot: 0 })");
+    for (let y = 4; y <= 11; y++) game(`state.tiles.set('8,${y}', { b: 'schiene', lvl: 1 })`);
+    game("state.tiles.set('9,11', { b: 'schiene', lvl: 1 }); state.tiles.set('10,11', { b: 'schiene', lvl: 1 })");   // Kurve am Ende
+    for (let i = 0; i < wind; i++) game(`state.tiles.set('12,${4 + i * 2}', { b: 'windrad', lvl: 1 })`);
+    game("globalThis.__ra = regionAt; regionAt = (x, y) => y >= 9 ? 'wald' : 'home'; recalc(); syncMovers()");
+  };
+  afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc(); syncMovers()'));
+
+  it('Weg über die Schienen von Bahnhof zu Bahnhof, Kurven als Bogen', () => {
+    setup();
+    const path = game("railPath('8,4', '8,10')");
+    expect(path[0]).toBe('8,4');
+    expect(path[path.length - 1]).toBe('8,10');
+    expect(path.length).toBe(7);
+    const pl = game("railPolyline(['8,10', '8,11', '9,11'])");
+    expect(pl.len).toBeGreaterThan(1.5);
+    expect(pl.len).toBeLessThan(2.1);                                   // Bogen (0,79) statt Ecke (1,0)
+  });
+
+  it('mit Strom fährt er los und hält an den Bahnhöfen', () => {
+    setup();
+    expect(game('trains.length')).toBe(1);
+    const s0 = game('trains[0].c');
+    for (let i = 0; i < 40; i++) game('stepMovers(0.1)');
+    expect(game('trains[0].c')).not.toBe(s0);
+    expect(game('trainCars().length')).toBe(2);                         // Regionalbahn: 2 Wagen
+  });
+
+  it('ohne Strom steht er still (und zeigt ⚡)', () => {
+    setup(1);
+    expect(game('trains.length')).toBe(1);
+    expect(game('trains[0].powered')).toBe(false);
+    const s0 = game('trains[0].c');
+    for (let i = 0; i < 40; i++) game('stepMovers(0.1)');
+    expect(game('trains[0].c')).toBe(s0);
+  });
+
+  it('alle drei Modelle lassen sich zeichnen, tags und nachts', () => {
+    setup();
+    for (const [model, n] of [['regio', 2], ['tram', 1], ['modern', 3]]) {
+      game(`state.tiles.get('7,4').train = '${model}'; syncMovers()`);
+      expect(game('trainCars().length')).toBe(n);
+      for (const night of [0, 0.8]) {
+        expect(() => game(`night = ${night}; for (const c of trainCars()) drawTrainCar(c, 1.5, 1000)`)).not.toThrow();
+      }
+    }
+    game('night = 0');
+  });
+});

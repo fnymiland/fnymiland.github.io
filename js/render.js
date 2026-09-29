@@ -384,12 +384,14 @@ function render(now) {
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map();
-  for (const m of walkers.concat(cars)) {
+  const cars4 = trainCars();
+  for (const m of walkers.concat(cars, cars4)) {
     const k = Math.round(m.px) + ',' + Math.round(m.py);
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }
   const icons = [];
+  for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py); icons.push([p.x + 10 * z, p.y + 4 * z, '⚡']); } }   // Zug ohne Strom
   const labels = [];
   let staleCover = false;
   for (let i = 0; i < visible.length; i += 4) {
@@ -479,7 +481,7 @@ function render(now) {
     if (ms) {
       FOG = false;
       ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
-      for (const m of ms) { if (m.fur) drawWalker(m, z, now); else drawCar(m, z); }
+      for (const m of ms) { if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else drawCar(m, z); }
     }
   }
   FOG = false;

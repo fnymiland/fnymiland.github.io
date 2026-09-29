@@ -449,7 +449,7 @@ function trainChooser(line) {
 function wireTrainChooser(el, line, reopen) {
   const set = (model, col) => {
     for (const k of line.stations) { const t = state.tiles.get(k); if (t) { t.train = model; t.trainCol = col; } }
-    sfx('deco'); save(); reopen();
+    sfx('deco'); save(); syncTrains(); reopen();
   };
   const cur = lineTrain(line);
   for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => set(b.dataset.train, cur.col);
