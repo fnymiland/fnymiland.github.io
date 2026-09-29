@@ -110,8 +110,24 @@ if (PROBE) {
   }
 }
 
+// Bildrate: Beim Bedienen flüssig (höchstens 60/s – 120-Hz-Bildschirme würden sonst doppelt so viel rechnen),
+// beim Zuschauen 30/s, im Hintergrund oder nach 2 Minuten ohne Eingabe 15/s. Spart Strom, Rechner und iPad bleiben
+// kühl. Geld und Produktion rechnen mit der echten Zeit (dt) und laufen genauso schnell weiter.
+let lastInput = performance.now(), lastFrame = -1e9;
+for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart']) {
+  addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
+}
+function frameInterval(now) {
+  const idle = now - lastInput;
+  if (idle < 1500) return 1000 / 60;
+  if (idle > 120000 || !document.hasFocus()) return 1000 / 15;
+  return 1000 / 30;
+}
 let lastTick = Date.now(), lastHud = 0, lastSlow = 0;
 function frame(now) {
+  requestAnimationFrame(frame);
+  if (now - lastFrame < frameInterval(now) - 2) return;   // dieses Bild auslassen
+  lastFrame = now;
   const t = Date.now();
   const dt = Math.min(2, (t - lastTick) / 1000);
   lastTick = t;
@@ -122,7 +138,6 @@ function frame(now) {
   if (now - lastSlow > 700) { syncMovers(); checkStars(); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
