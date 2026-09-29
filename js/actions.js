@@ -251,9 +251,9 @@ function tap(sx, sy, isTouch) {
     previewCache = null;
     return;
   }
-  if (tool === 'verschieben') dropAt(x, y, slot);
+  if (tool === 'verschieben') dropAt(x, y, moving.kind === 'deco' ? freeSlot(x, y, slot) : slot);
   else if (tool === 'abriss') { if (ds && ds[slot]) removeSmall(x, y, slot); else demolish(x, y); }
-  else if (ITEMS[tool].small) buildSmall(tool, x, y, slot);
+  else if (ITEMS[tool].small) buildSmall(tool, x, y, freeSlot(x, y, slot));
   else build(tool, x, y);
 }
 

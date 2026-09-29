@@ -289,7 +289,7 @@ function slotAt(sx, sy) {
   const x = Math.round(a), y = Math.round(b);
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
-const BIG_ON_TILE = new Set(['brunnen', 'pavillon', 'statue', 'baum', 'blumen', 'windrad', 'lm']);
+const BIG_ON_TILE = new Set(['brunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'lm']);
 function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
@@ -298,10 +298,17 @@ function smallError(b, x, y, slot, opts = {}) {
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (!t && terrainAt(x, y) !== 'grass') return 'Erst roden bzw. sprengen';
-  if (decosAt(k) && decosAt(k)[slot]) return 'Diese Ecke ist schon belegt';
+  if (decosAt(k) && decosAt(k)[slot]) return decosAt(k).every(Boolean) ? 'Alle 4 Ecken sind belegt' : 'Diese Ecke ist schon belegt';
   if (opts.move) return null;
   if (state.money < d.cost) return 'Zu wenig Taler';
   return matError(d.mat);
+}
+// Ist die angetippte Ecke belegt, die nächste freie nehmen: erst die beiden Nachbarecken, dann die gegenüber
+function freeSlot(x, y, slot) {
+  const ds = decosAt(x + ',' + y);
+  if (!ds) return slot;
+  const i = [slot, slot ^ 1, slot ^ 2, slot ^ 3].find(n => !ds[n]);
+  return i == null ? slot : i;
 }
 function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
@@ -325,13 +332,14 @@ function removeSmall(x, y, slot) {
   if (ds.every(v => !v)) state.decos.delete(k);
   sfx('dig'); recalc(); save();
 }
-// Alte ganze-Feld-Dekos (Bank, Laterne, Hecke) in eine Ecke verschieben
+// Alte ganze-Feld-Dekos (Bank, Laterne, Hecke, seit 30.09. auch Bäume) in eine Ecke verschieben –
+// Bäume nach hinten, damit vorn Platz für Bank oder Blumentopf bleibt
 function normalizeSmall() {
   for (const [k, t] of [...state.tiles]) {
     if (!ITEMS[t.b] || !ITEMS[t.b].small) continue;
     state.tiles.delete(k);
     if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
-    const ds = state.decos.get(k), free = [3, 0, 1, 2].find(i => !ds[i]);
+    const ds = state.decos.get(k), free = (t.b === 'baum' ? [0, 3, 1, 2] : [3, 0, 1, 2]).find(i => !ds[i]);
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }
 }

@@ -75,7 +75,7 @@ describe('Kleine Dekos', () => {
   it('bis zu 4 pro Feld, eine Ecke nur einmal', () => {
     game('state.money = 1000');
     for (let i = 0; i < 4; i++) expect(game(`buildSmall('blumentopf', 4, 4, ${i})`)).toBe(true);
-    expect(game("smallError('blumentopf', 4, 4, 2)")).toBe('Diese Ecke ist schon belegt');
+    expect(game("smallError('blumentopf', 4, 4, 2)")).toBe('Alle 4 Ecken sind belegt');
   });
 });
 

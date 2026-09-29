@@ -597,7 +597,7 @@ const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine'
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { bank: 0.45, laterne: 0.62, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.8, blumen: 0.85, windrad: 0.9 };
+const DECO_SCALE = { bank: 0.45, laterne: 0.62, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
 const decoScale = b => DECO_SCALE[b] || 1;
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
@@ -669,7 +669,11 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     // --- Bildung ---
     // --- Deko ---
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
-    case 'baum': tree(cx, cy + 2 * z, z * 1.05, 0.9); break;
+    case 'baum': {                        // Obstbaum; je Ecke eine andere Frucht, damit vier Bäume nicht gleich aussehen
+      const h = hash(x, y, 40 + (t && t.slot || 0));
+      tree(cx, cy + 2 * z, z * 1.05, 0.9, h < 0.4 ? '#ff6b5e' : h < 0.7 ? '#ffb13b' : h < 0.85 ? '#b07ad6' : '#ff8fb1');
+      break;
+    }
     case 'blumentopf': {
       ellipse(cx, cy + 1 * z, 7 * z, 3 * z, 'rgba(40,60,20,0.15)');
       poly([[cx - 7 * z, cy - 9 * z], [cx + 7 * z, cy - 9 * z], [cx + 5 * z, cy], [cx - 5 * z, cy]], C('#d9825b'));
@@ -677,7 +681,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       for (let i = 0; i < 6; i++) {
         const a = i / 6 * Math.PI * 2, fx = cx + Math.cos(a) * 4 * z, fy = cy - 12 * z + Math.sin(a) * 2 * z;
         circle(fx, fy + 2 * z, 2.6 * z, C('#5aa84f'));
-        circle(fx, fy - 1 * z, 2.4 * z, C(FLOWER_COLS[(i + Math.floor(hash(x, y, 7) * 5)) % FLOWER_COLS.length]));
+        circle(fx, fy - 1 * z, 2.4 * z, C(FLOWER_COLS[(i + Math.floor(hash(x, y, 7 + (t && t.slot || 0)) * 5)) % FLOWER_COLS.length]));
       }
       break;
     }
@@ -930,10 +934,10 @@ function drawLandmarkBase(type, cx, cy, z, now, x, y) {
   }
 }
 
-function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc) {
+function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0) {
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
-  drawObject(b, 0, 0, z, now, x, y, 1, { rot });
+  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot });
   g.restore();
 }
 function drawSmall(k, px, py, z, now, x, y, which) {
@@ -945,7 +949,7 @@ function drawSmall(k, px, py, z, now, x, y, which) {
     const [u, v] = slotUV(i);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
-    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc);
+    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i);
   }
 }
 

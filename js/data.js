@@ -65,7 +65,7 @@ const ITEMS = {
              desc: 'Schönheit +25 und ein paar kreative Ideen 💡.' },
   // --- Deko ---
   blumen:  { cat: 'deko', name: 'Blumenbeet', cost: 30, needs: 'grass', beauty: 4, desc: '+15 % für Gebäude direkt daneben.' },
-  baum:    { cat: 'deko', name: 'Baum', cost: 15, needs: 'grass', beauty: 2, desc: 'Ein Obstbaum.' },
+  baum:    { cat: 'deko', name: 'Baum', cost: 15, beauty: 2, small: true, desc: 'Ein Obstbaum. Klein – bis zu 4 pro Feld, auch neben Bank und Blumentopf.' },
   blumentopf: { cat: 'deko', name: 'Blumentopf', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   busch:   { cat: 'deko', name: 'Kleiner Busch', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   hecke:   { cat: 'deko', name: 'Hecke', cost: 10, beauty: 1, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },

@@ -333,8 +333,9 @@ function render(now) {
       if (!(hds && hds[hoverSlot])) box = objBox(hx, hy);
       preview = { ok: !!has, text: has ? 'Aufnehmen' : 'Hier ist nichts' };
     } else if (smallMode) {
-      const err = tool === 'verschieben' ? moveError(hx, hy, hoverSlot) : smallError(tool, hx, hy, hoverSlot);
-      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}`) };
+      const slot = freeSlot(hx, hy, hoverSlot);
+      const err = tool === 'verschieben' ? moveError(hx, hy, slot) : smallError(tool, hx, hy, slot);
+      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', slot, text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}`) };
     } else if (tool === 'verschieben') {
       const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType));
       box = [hx, hy, w, h];
@@ -451,9 +452,9 @@ function render(now) {
       drawSmall(k, px, py, z, now, x, y, [0, 1, 2, 3]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
-      const [u, v] = slotUV(hoverSlot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+      const [u, v] = slotUV(preview.slot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
-      drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1);
+      drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1, preview.slot);
       g.globalAlpha = 1;
     }
     if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
