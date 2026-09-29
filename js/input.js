@@ -32,7 +32,7 @@ function toTile(sx, sy) {
   return { x: Math.round(a), y: Math.round(b) };
 }
 function clampCam() {
-  const c = iso(ISLAND.cx, ISLAND.cy), R = ISLE_DIST + ISLE_R, rx = R * TW * 0.75, ry = R * TH * 0.75;
+  const c = iso(ISLAND.cx, ISLAND.cy), R = WORLD.R, rx = R * TW * 0.75, ry = R * TH * 0.75;   // wächst mit der Welt
   cam.x = Math.max(c.x - rx, Math.min(c.x + rx, cam.x));
   cam.y = Math.max(c.y - ry, Math.min(c.y + ry, cam.y));
 }

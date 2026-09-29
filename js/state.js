@@ -266,6 +266,7 @@ function adoptState(s) {
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
   const moved = migrateIslands();
   ownIslandsFully();
+  growWorld();
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();

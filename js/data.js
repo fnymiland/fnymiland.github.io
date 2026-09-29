@@ -512,8 +512,11 @@ for (const i of ISLES) {
   i.cx = ISLAND.cx + Math.cos(i.deg * Math.PI / 180) * ISLE_DIST;
   i.cy = ISLAND.cy + Math.sin(i.deg * Math.PI / 180) * ISLE_DIST;
 }
-// Ganze Welt (für Kamera und Zeichnen): Heimatinsel und alle Themen-Inseln
-const WORLD = { cMin: Math.floor((ISLAND.cx - ISLE_DIST - ISLE_R - 4) / CHUNK), cMax: Math.ceil((ISLAND.cx + ISLE_DIST + ISLE_R + 4) / CHUNK) };
+// Welt (für Kamera, Zeichnen, Seewege): anfangs Heimatinsel und Themen-Inseln; sie wächst mit (growWorld, Block 27)
+const WORLD_BASE = { cMin: Math.floor((ISLAND.cx - ISLE_DIST - ISLE_R - 4) / CHUNK), cMax: Math.ceil((ISLAND.cx + ISLE_DIST + ISLE_R + 4) / CHUNK) };
+const WORLD = { ...WORLD_BASE, R: ISLE_DIST + ISLE_R };
+// Ferne Inseln (Block 27c): nach dem Laternenfest zufällig erzeugt, im Spielstand gespeichert (state.far)
+const FAR = [];
 const DIARY_START = 'Liebe Nachfolgerin, lieber Nachfolger: Die Insel schläft nur. Weck sie auf – Laterne für Laterne. Fang am besten beim alten Baum an.';
 const DIARY_FINALE = 'Der Leuchtturm brennt wieder. Heute Nacht feiern wir das Laternenfest – so wie früher. Danke. Die Insel gehört jetzt dir.';
 

@@ -156,8 +156,46 @@ const ownedTile = (x, y) => state.owned.has(chunkOf(x, y)) || state.claimed.has(
 // Land und innerhalb der Welt – so wächst das Land Schritt für Schritt, auf Wunsch bis zur Megainsel
 function claimable(x, y) {
   if (ownedTile(x, y) || !isSea(x, y)) return false;
-  if (!inWorld(x, y)) return false;
   return DIRS.some(([dx, dy]) => ownedTile(x + dx, y + dy));
+}
+// Die Welt wächst mit (Block 27): eigenes Land im Meer und ferne Inseln, drumherum WORLD_MARGIN Grundstücke Meer.
+// Die Kamera darf bis WORLD.R Felder von der Heimatinsel weg.
+const WORLD_MARGIN = 3;
+function worldInclude(x, y, r = 0) {
+  const lo = Math.floor((Math.min(x, y) - r) / CHUNK) - WORLD_MARGIN, hi = Math.floor((Math.max(x, y) + r) / CHUNK) + WORLD_MARGIN;
+  if (lo < WORLD.cMin) WORLD.cMin = lo;
+  if (hi > WORLD.cMax) WORLD.cMax = hi;
+  WORLD.R = Math.max(WORLD.R, Math.hypot(x - ISLAND.cx, y - ISLAND.cy) + r + 8);
+}
+function growWorld() {
+  WORLD.cMin = WORLD_BASE.cMin; WORLD.cMax = WORLD_BASE.cMax; WORLD.R = ISLE_DIST + ISLE_R;
+  for (const k of state.claimed) worldInclude(...keyXY(k));
+  for (const i of FAR) worldInclude(i.cx, i.cy, i.r * 1.5);
+}
+// Wie tief ist das Meer hier? Abstand zur nächsten natürlichen Küste (grob: die Kreise der Inseln). Bis DEEP_FROM
+// Felder ist es flach; danach kostet Aufschütten immer mehr, und das Wasser wird dunkler.
+const DEEP_FROM = 6, DEEP_STEP = 6;
+function seaDepth(x, y) {
+  let d = Math.hypot(x - ISLAND.cx, y - ISLAND.cy) - ISLAND.r * 0.95;
+  for (const i of ISLES) d = Math.min(d, Math.hypot(x - i.cx, y - i.cy) - ISLE_R * 0.95);
+  for (const i of FAR) d = Math.min(d, Math.hypot(x - i.cx, y - i.cy) - i.r * 0.95);
+  return Math.max(0, d);
+}
+// Preis fürs Aufschütten: 60 Taler im Flachen, danach (1 + (Tiefe über 6 / 6)³)-mal so viel
+function fillCost(x, y) {
+  const base = ITEMS.schuett.cost;
+  if (!isSea(x, y)) return base;
+  const over = Math.max(0, seaDepth(x, y) - DEEP_FROM) / DEEP_STEP;
+  return over > 0 ? niceRound(base * (1 + over * over * over)) : base;
+}
+// Wie dunkel das Wasser hier ist (0 = normal): nur offenes Meer, das nicht aufgeschüttet ist
+function depthAlpha(x, y) {
+  const d = seaDepth(x, y);
+  if (d <= DEEP_FROM) return 0;
+  const t = state.terra.get(x + ',' + y);
+  if (t && t !== 'water') return 0;
+  const f = Math.min(1, (d - DEEP_FROM) / 40);
+  return 0.42 * f * (2 - f);
 }
 const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
 // Wasserfeld am eigenen Ufer – auch schräg (Ecke an Ecke): an gezackten Küsten sieht das genauso nach „Ufer“ aus
@@ -179,7 +217,7 @@ function regionAt(x, y) {
   return r;
 }
 const regionName = r => r === 'home' ? 'Heimatinsel' : ISLE_BY_ID[r].name;
-function claimTile(x, y) { if (!state.owned.has(chunkOf(x, y))) state.claimed.add(x + ',' + y); }
+function claimTile(x, y) { if (!state.owned.has(chunkOf(x, y))) { state.claimed.add(x + ',' + y); worldInclude(x, y); } }
 // Felder von a nach b in Schritten zu direkten Nachbarn (fürs Ziehen: nichts überspringen)
 function tilesBetween(a, b) {
   const out = [];

@@ -182,6 +182,35 @@ function renderGroundChunk(cx, cy, scale) {
   g = prev;
   return { c, b, scale, v: groundVersion, waves, used: frameNo };
 }
+// Tiefes Meer (Block 27b): weit draußen dunkler. Ein kleines Bild mit einem Punkt je Feld (depthAlpha), gedreht und
+// gestaucht wie die Felder über den Boden gelegt (ohne Glätten: jeder Punkt ist genau ein Feld). Neu gerechnet, wenn
+// der sichtbare Bereich es verlässt oder sich Wasser ändert.
+let depthImg = null;
+function drawDepth(minX, maxX, minY, maxY, z) {
+  const d = depthImg;
+  if (!d || d.v !== waterVersion || minX < d.x0 || maxX > d.x1 || minY < d.y0 || maxY > d.y1) {
+    const pad = Math.min(60, Math.max(20, (maxX - minX) >> 1)), x0 = minX - pad, y0 = minY - pad, w = maxX - minX + 2 * pad + 1, h = maxY - minY + 2 * pad + 1;
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    const cx = c.getContext('2d'), img = cx.createImageData(w, h), px = img.data;
+    let any = false;
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const a = depthAlpha(x0 + i, y0 + j);
+      if (a <= 0) continue;
+      const o = (j * w + i) * 4;
+      px[o] = 22; px[o + 1] = 62; px[o + 2] = 118; px[o + 3] = Math.round(a * 255); any = true;
+    }
+    if (any) cx.putImageData(img, 0, 0);
+    depthImg = { c, x0, y0, x1: x0 + w - 1, y1: y0 + h - 1, v: waterVersion, any };
+  }
+  if (!depthImg.any) return;
+  const o = toScreen(depthImg.x0 - 0.5, depthImg.y0 - 0.5), a = DPR * z * TW / 2, b = DPR * z * TH / 2;
+  g.save();
+  g.imageSmoothingEnabled = false;
+  g.setTransform(a, b, -a, b, o.x * DPR, o.y * DPR);
+  g.drawImage(depthImg.c, 0, 0);
+  g.restore();
+}
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   const want = z * DPR, zooming = now - lastZoomChange < 250;
   const order = [];
@@ -351,6 +380,7 @@ function render(now) {
   let minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
   let minY = Math.min(...cs.map(c => c.y)) - 2, maxY = Math.max(...cs.map(c => c.y)) + 6;
   // Außerhalb der Insel steht nichts: dort nur den Boden aus dem Zwischenspeicher, keine Felder durchgehen
+  const seen = [minX, maxX, minY, maxY];                // ganz, auch jenseits der Welt (tiefes Meer)
   const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
   const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
   if (groundCached) {
@@ -375,6 +405,7 @@ function render(now) {
     drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
   }
   FOG = false;
+  drawDepth(...seen, z);
   const visRange = ([ax, ay]) => ax >= minX - 3 && ax <= maxX + 1 && ay >= minY - 3 && ay <= maxY + 1;
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
@@ -446,7 +477,7 @@ function render(now) {
       box = [hx, hy, w, h];
       let text = err;
       if (!err) {
-        if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(d.cost)}`;
+        if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }

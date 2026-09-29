@@ -517,7 +517,8 @@ function placeRot(b, x, y) {
 
 // Schienen über Wasser sind Brücken und kosten mehr
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
-const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
+const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
+  : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 const railArms = (x, y) => DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
 // Bahnübergang: ein Schienenfeld mit cross (und dem Stil des Wegs), gehört zu Schienen- und Wegenetz.
 // Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
@@ -715,7 +716,8 @@ const isLanding = t => !!t && (t.b === 'bootssteg' || t.b === 'hafen');
 // einer Landecke vorbei), dann geglättet (gerade Stücke, solange die Sichtlinie übers Wasser geht). Gemerkt, bis sich
 // Wasser ändert (waterChanged: Teich graben, Aufschütten, neuer Stand).
 const seaCache = new Map();
-function waterChanged() { seaCache.clear(); }
+let waterVersion = 0;                                    // für das Bild vom tiefen Meer (render.js)
+function waterChanged() { seaCache.clear(); waterVersion++; }
 function nearestWater(x, y) {
   const rx = Math.round(x), ry = Math.round(y);
   for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
@@ -723,18 +725,24 @@ function nearestWater(x, y) {
   }
   return null;
 }
+// Suchkasten um Punkte, mit Rand (Umwege um Inseln herum)
+const seaBox = (pts, pad) => [Math.floor(Math.min(...pts.map(p => p[0]))) - pad, Math.floor(Math.min(...pts.map(p => p[1]))) - pad,
+  Math.ceil(Math.max(...pts.map(p => p[0]))) + pad, Math.ceil(Math.max(...pts.map(p => p[1]))) + pad];
 // Breitensuche übers Wasser vom Feld s, bis goal(x, y) passt → Felder vom Start bis zum Ziel (oder null)
-function seaSearch(s, goal) {
-  const X0 = WORLD.cMin * CHUNK - 2, X1 = (WORLD.cMax + 1) * CHUNK + 1, N = X1 - X0 + 1, idx = (x, y) => (y - X0) * N + (x - X0);
-  const inside = (x, y) => x >= X0 && x <= X1 && y >= X0 && y <= X1;
-  const prev = new Int32Array(N * N).fill(-2), q = new Int32Array(N * N);
+// box = [x0, y0, x1, y1]: nur darin suchen (die Welt kann riesig sein); ohne: die ganze Welt
+function seaSearch(s, goal, box) {
+  const [X0, Y0, X1, Y1] = box || [WORLD.cMin * CHUNK - 2, WORLD.cMin * CHUNK - 2, (WORLD.cMax + 1) * CHUNK + 1, (WORLD.cMax + 1) * CHUNK + 1];
+  const N = X1 - X0 + 1, M = Y1 - Y0 + 1, idx = (x, y) => (y - Y0) * N + (x - X0);
+  const inside = (x, y) => x >= X0 && x <= X1 && y >= Y0 && y <= Y1;
+  if (!inside(s[0], s[1])) return null;
+  const prev = new Int32Array(N * M).fill(-2), q = new Int32Array(N * M);
   let head = 0, tail = 0;
   prev[idx(s[0], s[1])] = -1; q[tail++] = idx(s[0], s[1]);
   while (head < tail) {
-    const c = q[head++], x = c % N + X0, y = Math.floor(c / N) + X0;
+    const c = q[head++], x = c % N + X0, y = Math.floor(c / N) + Y0;
     if (goal(x, y)) {
       const out = [];
-      for (let k = c; k !== -1; k = prev[k]) out.push([k % N + X0, Math.floor(k / N) + X0]);
+      for (let k = c; k !== -1; k = prev[k]) out.push([k % N + X0, Math.floor(k / N) + Y0]);
       return out.reverse();
     }
     for (const [dx, dy] of NEAR8) {
@@ -773,7 +781,7 @@ function seaPath(a, b) {
   const key = a.map(v => v.toFixed(1)).join() + '>' + b.map(v => v.toFixed(1)).join();
   if (seaCache.has(key)) return seaCache.get(key);
   const s = nearestWater(...a), t = nearestWater(...b);
-  const tiles = s && t && seaSearch(s, (x, y) => x === t[0] && y === t[1]);
+  const tiles = s && t && seaSearch(s, (x, y) => x === t[0] && y === t[1], seaBox([s, t], 40));
   const r = tiles ? seaRoute(tiles, a, b) : null;
   seaCache.set(key, r);
   return r;
@@ -784,7 +792,7 @@ function expeditionRoute(from, isle) {
   const key = 'exp:' + from + ':' + isle.id;
   if (seaCache.has(key)) return seaCache.get(key);
   const [x, y] = keyXY(from), s = nearestWater(x, y);
-  const tiles = s && seaSearch(s, (a, b) => Math.hypot(a - isle.cx, b - isle.cy) <= ISLE_R + 3);
+  const R = (isle.r || ISLE_R) + 3, tiles = s && seaSearch(s, (a, b) => Math.hypot(a - isle.cx, b - isle.cy) <= R, seaBox([s, [isle.cx, isle.cy]], 40));
   const r = tiles ? seaRoute(tiles, [x, y]) : null;
   seaCache.set(key, r);
   return r;
@@ -793,7 +801,7 @@ function openSeaRoute(k) {
   const key = 'out:' + k;
   if (seaCache.has(key)) return seaCache.get(key);
   const a = dockPoint(k), s = nearestWater(...a);
-  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 14);
+  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 14, seaBox([a], 30));
   const r = tiles ? seaRoute(tiles, a) : null;
   seaCache.set(key, r);
   return r;
@@ -802,7 +810,7 @@ function fishingGround(k) {
   const key = 'fish:' + k;
   if (seaCache.has(key)) return seaCache.get(key);
   const a = dockPoint(k), s = nearestWater(...a), open = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (!isWater(x + dx, y + dy)) return false; return true; };
-  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 2 && open(x, y));
+  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 2 && open(x, y), seaBox([a], 20));
   const r = tiles ? tiles[tiles.length - 1] : null;
   seaCache.set(key, r);
   return r;
@@ -956,7 +964,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
     const tiles = footprint(b, x, y, r), [dx, dy] = FRONT_DIR[r];
     for (const [tx, ty] of tiles) {
-      if (!ownedTile(tx, ty) && !(isSea(tx, ty) && inWorld(tx, ty))) return 'Das ist nicht dein Grundstück';   // ins offene Meer darf sie
+      if (!ownedTile(tx, ty) && !isSea(tx, ty)) return 'Das ist nicht dein Grundstück';   // ins offene Meer darf sie
       if (COVER.has(tx + ',' + ty)) return 'Hier ist nicht genug Platz';
       if (decosAt(tx + ',' + ty)) return 'Hier stehen schon kleine Dekos';
     }
@@ -970,7 +978,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
       const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot';
-      const seaOk = sea && isSea(fx, fy) && inWorld(fx, fy) && nearOwnLand(fx, fy);   // auch schräg am Ufer (Ecke an Ecke)
+      const seaOk = sea && isSea(fx, fy) && nearOwnLand(fx, fy);   // auch schräg am Ufer (Ecke an Ecke)
       if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';
