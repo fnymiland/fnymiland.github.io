@@ -462,10 +462,8 @@ function openInfo(x, y) {
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (s.rail > 1 && t.b !== 'station') status.push(`<div class="ok">🚆 Bahnanschluss der Insel: +${Math.round(RAIL_BONUS * 100)} %</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
-  if (t.b === 'windrad' && (hasTech('bahn') || T.rail.lines.length)) {
-    status.push(`<div>⚡ Strom für Züge: ${T.rail.wind} ${T.rail.wind === 1 ? 'Windrad' : 'Windräder'} – je Zug ${TRAIN_POWER}` +
-      (T.rail.lines.length ? ` · ${T.rail.trains} von ${T.rail.lines.length} ${T.rail.lines.length > 1 ? 'Zügen fahren' : 'Zug fährt'}` : '') + '</div>');
-  }
+  if (t.b === 'windrad') status.push(...powerStatus());
+  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. Eine Werkstatt braucht ${WORKSHOP_POWER} ⚡ – mehr Windräder bauen.</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -616,37 +614,68 @@ function openInfo(x, y) {
   if (!liveNow) updateHud();
 }
 
+// Strom-Bilanz: wer wie viel braucht (Windrad, Rathaus, Lager)
+function powerStatus() {
+  const P = T.rail.power, parts = [];
+  if (P.use.lamps) parts.push(`Laternen ${P.use.lamps}`);
+  if (P.use.work) parts.push(`Werkstätten ${P.use.work}`);
+  if (P.use.trains) parts.push(`Züge ${P.use.trains}`);
+  const out = [`<div class="${P.demand > P.supply ? 'bad' : 'ok'}">⚡ Strom: ${P.supply} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
+  if (P.dark.size) out.push(`<div class="bad">🌙 ${P.dark.size} ${P.dark.size === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
+  if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Werkstatt läuft' : 'Werkstätten laufen'} nur halb</div>`);
+  out.push(`<div class="muted">Je Windrad 1 ⚡ · je 10 Laternen 1 ⚡ · Werkstatt ${WORKSHOP_POWER} ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
+  return out;
+}
 // Bahnhof: wohin fährt der Zug, hat er Strom?
+const kmText = l => `${nf1.format(l.km)} km`;
 function stationStatus(k) {
   const line = lineOf(k), names = l => l.regions.map(regionName);
   if (T.rail.stationNet.get(k) == null) return ['<div class="bad">✗ Keine Schiene direkt am Bahnhof</div>'];
   if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen bis zu einem Bahnhof auf einer anderen Insel legen</div>'];
-  const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')}</div>`];
-  if (line.powered) out.push(`<div class="ok">✓ Der Zug fährt: 👥 +${COMMUTERS} Pendler, +${Math.round(RAIL_BONUS * 100)} % für ${names(line).join(' und ')}</div>`);
-  else out.push(`<div class="bad">⚡ Zu wenig Strom: ${T.rail.wind} von ${T.rail.needed} Windrädern (je Zug ${TRAIN_POWER})</div>`);
+  const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
+  const per = COMMUTERS * (1 + 0.5 * (line.running - 1));
+  if (line.powered) out.push(`<div class="ok">✓ ${line.running > 1 ? `${line.running} Züge fahren` : 'Der Zug fährt'}: 👥 +${per} Pendler je Bahnhof, +${Math.round(RAIL_BONUS * 100)} % für ${names(line).join(' und ')}</div>`);
+  if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${line.need} ⚡ (1 + 1 je km) – ${T.rail.power.supply} ⚡ erzeugt, ${T.rail.power.demand} ⚡ gebraucht</div>`);
+  if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehr Züge drauf.</div>');
   return out;
 }
-// Zug der Linie: Modell und Farbe wählt der Spieler; gespeichert an allen Bahnhöfen der Linie
+// Züge der Linie: Modell und Farbe wählt der Spieler für jeden Zug; gespeichert an allen Bahnhöfen der Linie
 const TRAIN_MODELS = [['regio', 'Regionalbahn'], ['tram', 'Straßenbahn'], ['modern', 'Triebwagen']];
 const TRAIN_COLS = ['#d9534a', '#3e7fd0', '#58b36a', '#f2b53a', '#b07ad6', '#f28cb1', '#4a4a58'];
-function lineTrain(line) {
-  const t = line.stations.map(k => state.tiles.get(k)).find(t => t && t.train);
-  return t ? { model: t.train, col: t.trainCol || 0 } : { model: 'regio', col: 0 };
-}
+const lineTrain = line => line.looks[0];
 function trainChooser(line) {
-  const cur = lineTrain(line);
-  return `<div class="label">Zug dieser Linie</div>
-    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === cur.model ? ' on' : ''}" data-train="${id}">${name}</button>`).join('')}</div>
-    <div class="swatches">${TRAIN_COLS.map((c, i) => `<button class="sw${i === cur.col ? ' on' : ''}" data-tcol="${i}" style="background:${c}" aria-label="Zugfarbe ${i + 1}"></button>`).join('')}</div>`;
+  const n = line.count, { money, ...mat } = EXTRA_TRAIN;
+  const one = (lk, i) => `<div class="label">${n > 1 ? `Zug ${i + 1}` : 'Zug dieser Linie'}${i > 0 ? ` <button class="btn ghost small" data-tdel="${i}">Entfernen · +🪙 ${fmt(money)}</button>` : ''}</div>
+    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === lk.model ? ' on' : ''}" data-train="${i}:${id}">${name}</button>`).join('')}</div>
+    <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>`;
+  const more = line.loop && n < line.max
+    ? `<div class="row"><button class="btn" data-tadd data-cost="${money}" data-mat='${JSON.stringify(mat)}'>🚆 + Zug · 🪙 ${fmt(money)} ${matText(mat)}</button></div>
+       <p class="muted">Braucht noch einmal ${line.need} ⚡ und bringt je Bahnhof 👥 +${COMMUTERS / 2} Pendler.</p>`
+    : line.loop ? `<p class="muted">Mehr Züge ab ${(n + 1) * KM_PER_TRAIN} km Rundkurs (1 Zug je ${KM_PER_TRAIN} km).</p>` : '';
+  return line.looks.slice(0, n).map(one).join('') + more;
 }
 function wireTrainChooser(el, line, reopen) {
-  const set = (model, col) => {
-    for (const k of line.stations) { const t = state.tiles.get(k); if (t) { t.train = model; t.trainCol = col; } }
-    sfx('deco'); save(); syncTrains(); reopen();
+  const store = looks => {
+    for (const k of line.stations) {
+      const t = state.tiles.get(k);
+      if (!t) continue;
+      t.train = looks[0].model; t.trainCol = looks[0].col;
+      if (looks.length > 1) t.extra = looks.slice(1).map(l => ({ ...l })); else delete t.extra;
+    }
+    sfx('deco'); save(); recalc(); syncTrains(); reopen();
   };
-  const cur = lineTrain(line);
-  for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => set(b.dataset.train, cur.col);
-  for (const b of el.querySelectorAll('[data-tcol]')) b.onclick = () => set(cur.model, +b.dataset.tcol);
+  const looks = line.looks.map(l => ({ ...l }));
+  for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => { const [i, m] = b.dataset.train.split(':'); looks[+i].model = m; store(looks); };
+  for (const b of el.querySelectorAll('[data-tcol]')) b.onclick = () => { const [i, c] = b.dataset.tcol.split(':'); looks[+i].col = +c; store(looks); };
+  for (const b of el.querySelectorAll('[data-tdel]')) b.onclick = () => { state.money += EXTRA_TRAIN.money; addCost({ ...EXTRA_TRAIN, money: 0 }, 1); looks.splice(+b.dataset.tdel, 1); store(looks); };
+  const add = el.querySelector('[data-tadd]');
+  if (add) add.onclick = () => {
+    if (!canPay(EXTRA_TRAIN)) { fail(state.money < EXTRA_TRAIN.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
+    addCost(EXTRA_TRAIN, -1);
+    looks.splice(line.count, 0, { model: looks[0].model, col: (looks[line.count - 1].col + 1) % TRAIN_COLS.length });
+    toast('🚆 Ein neuer Zug fährt los!');
+    store(looks);
+  };
 }
 
 function openDecoInfo(x, y, slot) {
@@ -866,7 +895,8 @@ function openTownHall(tab = hallTab) {
       <div class="stats">
         <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
         <span>🪙 +${fmtRate(T.inc)}/s</span><span>💡 +${fmtRate(T.sci)}/s</span><span>🌸 ${T.beauty}</span>
-        ${T.rail.lines.length ? `<span>🚆 ${T.rail.trains}/${T.rail.lines.length} ${T.rail.lines.length > 1 ? 'Züge' : 'Zug'} · ⚡ ${T.rail.wind}/${T.rail.needed}</span>` : ''}
+        ${T.rail.lines.length ? `<span>🚆 ${T.rail.trains} ${T.rail.trains === 1 ? 'Zug fährt' : 'Züge fahren'}</span>` : ''}
+        ${T.rail.power.city || T.rail.power.supply ? `<span>⚡ ${T.rail.power.supply}/${T.rail.power.demand}</span>` : ''}
       </div>
       ${rates.length ? `<div class="label">Lager</div><div class="stats">${rates.join('')}</div>` : ''}
       <div class="label">Laternen</div>

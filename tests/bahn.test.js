@@ -130,14 +130,20 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
     expect(game('T.rail.lines.length')).toBe(1);
     expect(game('T.rail.lines[0].regions')).toEqual(['home', 'wald']);
     expect(game('T.rail.lines[0].powered')).toBe(false);
-    expect(game('T.rail.needed')).toBe(2);
+    const tiles = game('T.rail.lines[0].tiles');
+    expect(tiles).toBeGreaterThan(10);
+    expect(game('T.rail.lines[0].need')).toBe(1 + Math.ceil(tiles / 10));      // 1 ⚡ + 1 ⚡ je km
+    expect(game('T.rail.lines[0].loop')).toBe(null);                           // keine Kreisbahn
   });
 
-  it('mit 2 Windrädern fährt der Zug: +8 Pendler je Bahnhof, +10 % auf beiden Inseln', () => {
+  it('mit genug Windrädern fährt der Zug: +8 Pendler je Bahnhof, +10 % auf beiden Inseln', () => {
     line();
     game("state.tiles.set('6,4', { b: 'feld', lvl: 1 }); recalc()");
-    const pop = game('T.pop'), inc = game("T.st.get('6,4').inc");
-    game("state.tiles.set('12,3', { b: 'windrad', lvl: 1 }); state.tiles.set('12,5', { b: 'windrad', lvl: 1 }); recalc()");
+    const pop = game('T.pop'), inc = game("T.st.get('6,4').inc"), need = game('T.rail.lines[0].need');
+    for (let i = 0; i < need - 1; i++) game(`state.tiles.set('${6 + i},12', { b: 'windrad', lvl: 1 })`);
+    game('recalc()');
+    expect(game('T.rail.lines[0].powered')).toBe(false);                       // ein Windrad zu wenig
+    game(`state.tiles.set('${6 + need - 1},12', { b: 'windrad', lvl: 1 }); recalc()`);
     expect(game('T.rail.lines[0].powered')).toBe(true);
     expect(game('T.pop')).toBe(pop + 16);
     expect(game("T.st.get('6,4').inc")).toBeCloseTo(inc * 1.1);
@@ -150,8 +156,8 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
     const txt = document.getElementById('panel').textContent;
     expect(txt).toContain('Linie Heimatinsel ↔ Waldinsel');
     expect(txt).toContain('Zu wenig Strom');
-    document.querySelector('[data-train="tram"]').onclick();
-    document.querySelector('[data-tcol="2"]').onclick();
+    document.querySelector('[data-train="0:tram"]').onclick();
+    document.querySelector('[data-tcol="0:2"]').onclick();
     expect(game(`[state.tiles.get('8,8').train, state.tiles.get('${wx},${wy}').train, state.tiles.get('${wx},${wy}').trainCol]`)).toEqual(['tram', 'tram', 2]);
   });
 

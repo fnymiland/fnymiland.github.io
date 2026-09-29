@@ -105,8 +105,8 @@ function drawCar(c, z) {
 }
 
 // ---------------------------------------------------------------------------
-// Züge: je Linie einer. Er pendelt zwischen den Bahnhöfen und hält an jedem kurz. Ohne Strom (zu wenige
-// Windräder) steht er am ersten Bahnhof. Modell und Farbe wählt der Spieler am Bahnhof (lineTrain).
+// Züge: Auf einer Strecke pendelt einer zwischen den Bahnhöfen und hält an jedem kurz; auf einem Rundkurs fahren
+// alle im Kreis, gleichmäßig verteilt. Ohne Strom steht der Zug. Modell und Farbe wählt der Spieler am Bahnhof.
 // ---------------------------------------------------------------------------
 const trains = [];
 const TRAIN_SPEED = 1.6, TRAIN_WAIT = 2.5;
@@ -141,27 +141,30 @@ function railPath(from, to) {
   for (let k = to; k; k = prev.get(k)) out.push(k);
   return out.reverse();
 }
-// Punkte in Feld-Koordinaten entlang einer Feldfolge; in Kurven ein Bogen um die gemeinsame Ecke
-function railPolyline(keys) {
-  const P = keys.map(keyXY), pts = [];
-  for (let i = 0; i < P.length; i++) {
+// Punkte in Feld-Koordinaten entlang einer Feldfolge; in Kurven ein Bogen um die gemeinsame Ecke.
+// closed: Ring – das letzte Feld hängt wieder am ersten
+function railPolyline(keys, closed = false) {
+  const P = keys.map(keyXY), pts = [], n = P.length;
+  for (let i = 0; i < n; i++) {
     const [x, y] = P[i];
-    const din = i > 0 ? [x - P[i - 1][0], y - P[i - 1][1]] : P.length > 1 ? [P[1][0] - x, P[1][1] - y] : [1, 0];
-    const dout = i < P.length - 1 ? [P[i + 1][0] - x, P[i + 1][1] - y] : din;
-    if (i === 0 || i === P.length - 1 || (din[0] === dout[0] && din[1] === dout[1])) { pts.push([x, y]); continue; }
+    const pv = closed ? P[(i - 1 + n) % n] : P[i - 1], nx = closed ? P[(i + 1) % n] : P[i + 1];
+    const din = pv ? [x - pv[0], y - pv[1]] : nx ? [nx[0] - x, nx[1] - y] : [1, 0];
+    const dout = nx ? [nx[0] - x, nx[1] - y] : din;
+    if ((!closed && (i === 0 || i === n - 1)) || (din[0] === dout[0] && din[1] === dout[1])) { pts.push([x, y]); continue; }
     const ein = [-din[0] * 0.5, -din[1] * 0.5], eout = [dout[0] * 0.5, dout[1] * 0.5], c = [ein[0] + eout[0], ein[1] + eout[1]];
     const a0 = Math.atan2(ein[1] - c[1], ein[0] - c[0]), a1 = sweep(a0, Math.atan2(eout[1] - c[1], eout[0] - c[0]));
     for (const [u, v] of arcPts(c[0], c[1], 0.5, a0, a1, 6)) pts.push([x + u, y + v]);
   }
+  if (closed) pts.push([...pts[0]]);
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  return { pts, cum, len: cum[cum.length - 1] };
+  return { pts, cum, len: cum[cum.length - 1], loop: closed };
 }
 // Ort und Fahrtrichtung bei Strecke d
 function railPoint(route, d) {
   const { pts, cum } = route;
   if (pts.length === 1) return [pts[0][0], pts[0][1], 1, 0];
-  d = Math.max(0, Math.min(route.len, d));
+  d = route.loop ? ((d % route.len) + route.len) % route.len : Math.max(0, Math.min(route.len, d));
   let i = 1;
   while (i < cum.length - 1 && cum[i] < d) i++;
   const a = pts[i - 1], b = pts[i], seg = cum[i] - cum[i - 1] || 1, f = (d - cum[i - 1]) / seg;
@@ -169,6 +172,7 @@ function railPoint(route, d) {
 }
 // Route einer Linie: Bahnhöfe nach Entfernung vom ersten ordnen, Wege aneinanderhängen, Halte merken
 function lineRoute(line) {
+  if (line.loop) return loopRoute(line);
   const stops = line.stations.map(railStop).filter(Boolean);
   if (stops.length < 2) return null;
   const first = stops[0], dist = k => (railPath(first, k) || []).length;
@@ -202,9 +206,51 @@ function lineRoute(line) {
   });
   return route;
 }
+// Halt eines Bahnhofs auf einer Route: Mitte aller Felder direkt am Bahnhof, die auf der Strecke liegen
+function stopOn(route, st) {
+  const t = state.tiles.get(st), [sx, sy] = keyXY(st), ds = [];
+  let best = null, bd = 0.8;                                  // sonst: nächster Punkt (Bahnhof nur an einer Kurve)
+  for (const [fx, fy] of footprint(t.b, sx, sy, t.rot)) for (const [dx, dy] of DIRS) {
+    const x = fx + dx, y = fy + dy;
+    route.pts.forEach((p, i) => {
+      const d = Math.hypot(p[0] - x, p[1] - y);
+      if (d < 0.01) ds.push(route.cum[i]);
+      if (d < bd && i < route.pts.length - 1) { bd = d; best = route.cum[i]; }
+    });
+  }
+  return ds.length ? ds.reduce((a, b) => a + b, 0) / ds.length : best;
+}
+// Rundkurs: Ring ab einem Feld, an dem kein Bahnhof liegt (sonst läge ein Halt über dem Nahtpunkt)
+function loopRoute(line) {
+  const near = new Set();
+  for (const st of line.stations) {
+    const t = state.tiles.get(st), [sx, sy] = keyXY(st);
+    for (const [fx, fy] of footprint(t.b, sx, sy, t.rot)) for (const [dx, dy] of [[0, 0], ...DIRS]) near.add((fx + dx) + ',' + (fy + dy));
+  }
+  const i0 = Math.max(0, line.loop.findIndex(k => !near.has(k)));
+  const route = railPolyline(line.loop.slice(i0).concat(line.loop.slice(0, i0)), true);
+  route.stops = line.stations.map(st => stopOn(route, st)).filter(d => d != null).sort((a, b) => a - b);
+  if (!route.stops.length) return null;
+  route.lap = route.len / TRAIN_SPEED + route.stops.length * TRAIN_WAIT;
+  return route;
+}
+// Rundkurs: Ort nach Fahrzeit tau (hält an jedem Bahnhof TRAIN_WAIT) – mehrere Züge sind zeitversetzte Kopien
+function loopPos(route, tau) {
+  let t = ((tau % route.lap) + route.lap) % route.lap;
+  const S = route.stops;
+  for (let i = 0; i < S.length; i++) {
+    if (t < TRAIN_WAIT) return S[i];
+    t -= TRAIN_WAIT;
+    const dist = (i + 1 < S.length ? S[i + 1] : S[0] + route.len) - S[i], tt = dist / TRAIN_SPEED;
+    if (t < tt) return S[i] + t * TRAIN_SPEED;
+    t -= tt;
+  }
+  return S[0];
+}
 function syncTrains() {
   if (!T.rail) return;
-  const sig = groundVersion + '|' + T.rail.lines.map(l => { const lk = lineTrain(l); return lk.model + lk.col; }).join();   // Umbau oder neues Modell
+  const looksOf = new Map(T.rail.lines.map(l => [l, lineLooks(l.stations)]));
+  const sig = groundVersion + '|' + T.rail.lines.map(l => looksOf.get(l).map(lk => lk.model + lk.col).join('/') + ':' + l.running).join();   // Umbau, Modell, Strom
   if (syncTrains.sig === sig) return;
   syncTrains.sig = sig;
   const old = new Map(trains.map(tr => [tr.id, tr]));
@@ -212,18 +258,35 @@ function syncTrains() {
   for (const line of T.rail.lines) {
     const route = lineRoute(line);
     if (!route) continue;
-    const look = lineTrain(line), kind = TRAIN_KIND[look.model] || TRAIN_KIND.regio;
+    const kindOf = look => TRAIN_KIND[look.model] || TRAIN_KIND.regio;
+    if (route.loop) {
+      // alle fahrenden Züge gleichmäßig über den Ring verteilt; ohne Strom steht einer am ersten Bahnhof
+      const n = Math.max(1, line.running), prev = old.get(line.stations[0] + '#0'), ls = prev && prev.ls ? prev.ls : { tau: 0 };
+      for (let i = 0; i < n; i++) {
+        const look = looksOf.get(line)[i] || looksOf.get(line)[0];
+        const tr = { id: line.stations[0] + '#' + i, route, loop: true, ls, idx: i, n, powered: line.running > i, model: look.model, col: look.col, kind: kindOf(look), dir: 1 };
+        tr.c = loopPos(route, ls.tau + i * route.lap / n);
+        trains.push(tr);
+      }
+      continue;
+    }
+    const look = looksOf.get(line)[0], kind = kindOf(look);
     const half = (kind.n * (kind.len + kind.gap)) / 2, lo = Math.min(half, route.len / 2), hi = Math.max(route.len - half, route.len / 2);
     const clampStop = d => Math.max(lo, Math.min(hi, d));
     const prev = old.get(line.stations[0]);
     const tr = { id: line.stations[0], route, stops: route.stops.map(clampStop), powered: line.powered, model: look.model, col: look.col, kind,
-      c: prev ? Math.max(lo, Math.min(hi, prev.c)) : clampStop(route.stops[0]), dir: prev ? prev.dir : 1, wait: prev ? prev.wait : TRAIN_WAIT, next: prev ? prev.next : 1 };
+      c: prev && !prev.loop ? Math.max(lo, Math.min(hi, prev.c)) : clampStop(route.stops[0]), dir: prev && !prev.loop ? prev.dir : 1,
+      wait: prev && !prev.loop ? prev.wait : TRAIN_WAIT, next: prev && !prev.loop ? prev.next : 1 };
     if (tr.next >= tr.stops.length || tr.next < 0) { tr.next = tr.stops.length - 1; tr.dir = 1; }
     trains.push(tr);
   }
 }
 function stepTrains(dt) {
   for (const tr of trains) {
+    if (tr.loop) {
+      if (tr.powered && tr.idx === 0) tr.ls.tau += dt;          // die Zeit des Rings läuft einmal pro Linie
+      continue;
+    }
     if (!tr.powered) continue;
     if (tr.wait > 0) { tr.wait -= dt; continue; }
     const target = tr.stops[tr.next], step = TRAIN_SPEED * dt;
@@ -233,12 +296,13 @@ function stepTrains(dt) {
       tr.next += tr.dir;
     } else tr.c += Math.sign(target - tr.c) * step;
   }
+  for (const tr of trains) if (tr.loop && tr.powered) tr.c = loopPos(tr.route, tr.ls.tau + tr.idx * tr.route.lap / tr.n);
 }
 // Wagen zum Zeichnen (einsortiert wie Bewohner, nach ihrem Feld)
 function trainCars() {
   const out = [];
   for (const tr of trains) {
-    const { n, len, gap } = tr.kind, moving = Math.sign(tr.stops[tr.next] - tr.c) || tr.dir;
+    const { n, len, gap } = tr.kind, moving = tr.loop ? 1 : Math.sign(tr.stops[tr.next] - tr.c) || tr.dir;
     for (let i = 0; i < n; i++) {
       const d = tr.c + ((n - 1) / 2 - i) * (len + gap) * moving;
       const [u, v, du, dv] = railPoint(tr.route, d);

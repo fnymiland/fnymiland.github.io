@@ -130,6 +130,16 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `phase` (0 = Baustelle … phases.length = fertig, `wonderDone`). Wirkung (`effect`) und Schönheit erst fertig.
     Abschnitt bauen: `wonderStep`. Baustelle zeichnet `drawWonder` (Gerüst, fertiges Bild von unten abgeschnitten).
     Seebrücke: `needs: 'pier'` (hinterstes Feld an Land, Rest Wasser). Schloss: `festival: true`, Titel.
+32. **Wegübergänge** (`crossFade`): Zwei Wegstile nebeneinander blenden ineinander – jedes Feld legt den Belag des
+    Nachbarn in Schichten bis 50 % über seine Kante. Muster (`pattern`) liegen dafür in einem festen Raster und lassen
+    sich mit `ext` über das Feld hinaus fortsetzen (`box` begrenzt die Punkte). Keine Schwellen/Fugenlinien mehr.
+    Fußgängerbrücke: `footPaid` ist das Design (`FOOT_STYLES`; alte Stände `true` = Holz, `footPaidOf`).
+33. **Strom und Züge** (`computeRail`/`computePower`): Windrad = 1 ⚡. Verbraucher der Reihe nach: Laternen (je 10
+    eine ⚡, sonst `power.dark` → nachts aus, halbe Schönheit), Werkstätten (2 ⚡, sonst `power.idle` → 50 %, ⚡-Symbol),
+    Züge (`trainNeed`: 1 + 1 je km, 10 Schienen = 1 km). Die Stadt braucht erst Strom, wenn es Windräder gibt.
+    Rundkurs: `railLoop` (Äste abschneiden, genau ein Ring, alle Bahnhöfe daran) → `line.loop`; Züge darauf sind
+    zeitversetzte Kopien (`loopPos(route, tau)`, gemeinsames `ls.tau`) und stoßen so nie zusammen. Weitere Züge
+    (`t.extra` an allen Bahnhöfen, `EXTRA_TRAIN`) nur auf Rundkursen, 1 je 2 km (`line.max`).
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

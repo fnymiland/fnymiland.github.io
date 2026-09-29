@@ -105,9 +105,9 @@ zweiter Zug selbst kaufen (nur Rundkurs, je 2 km einer); Wunderwerke als Langzei
 - [x] Fußgängerbrücke **breiter** und im Design wählbar: Stein, Kristall, farbig (wie die Wege).
 
 **9b Bahn und Strom**
-- [ ] Rundkurs: Zug fährt **im Kreis** statt hin und her.
-- [ ] Zweiter Zug auf großen Kreisen (Knopf „+ Zug“, eigenes Aussehen, eigener Strom).
-- [ ] Strom: Zug braucht mehr, je länger die Strecke; auch die Stadt braucht Strom (Fabrik, Laternen …).
+- [x] Rundkurs: Zug fährt **im Kreis** statt hin und her.
+- [x] Zweiter Zug auf großen Kreisen (Knopf „+ Zug“, eigenes Aussehen, eigener Strom).
+- [x] Strom: Zug braucht mehr, je länger die Strecke; auch die Stadt braucht Strom (Fabrik, Laternen …).
 
 **9c Wunderwerke imposant**
 - [ ] Größen: Riesenrad 5×5, Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 (Seebrücke bleibt).

@@ -1063,9 +1063,10 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       ellipse(cx, cy + 1 * z, 4 * z, 2 * z, 'rgba(40,60,20,0.15)');
       g.strokeStyle = C('#4a4a58'); g.lineWidth = 1.8 * z;
       g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 22 * z); g.stroke();
-      const lit = night > 0.15 && isLive();
-      const lb = box(cx, cy - 22 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : '#fff7d6', '#4a4a58', 3 * z);
-      glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
+      const dark = t && T.rail.power.dark.has(x + ',' + y + ',' + (t.slot || 0));     // ohne Strom bleibt sie aus
+      const lit = night > 0.15 && isLive() && !dark;
+      const lb = box(cx, cy - 22 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : dark && night > 0.15 ? '#9a978c' : '#fff7d6', '#4a4a58', 3 * z);
+      if (!dark) glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
       break;
     }
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel

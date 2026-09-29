@@ -293,7 +293,9 @@ const GUIDE = [
   { id: 'meer', icon: '🌊', title: 'Land gewinnen', when: () => state.islands.size >= 2,
     text: 'Mit „Aufschütten“ (⛰️ Gelände) machst du Wasser zu Land – auch im Meer direkt neben deinem Land. So kannst du Inseln vergrößern oder verbinden.' },
   { id: 'bahn', icon: '🚆', title: 'Eisenbahn', when: () => hasTech('bahn'),
-    text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke), stell an beide Enden einen Bahnhof und baue 2 Windräder. Dann fährt der Zug: +8 Pendler je Bahnhof und +10 % für beide Inseln.' },
+    text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke) und stell an beide Enden einen Bahnhof. Der Zug fährt mit Strom von Windrädern: 1 ⚡ + 1 ⚡ je km Strecke. Dann gibt es +8 Pendler je Bahnhof und +10 % für beide Inseln. Als geschlossener Kreis fährt er im Kreis – und auf großen Kreisen passen mehr Züge.' },
+  { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
+    text: 'Werkstätten, Laternen und Züge brauchen Strom. Jedes Windrad liefert 1 ⚡, egal wo es steht. Ohne Strom laufen Werkstätten nur halb (⚡ über dem Gebäude), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im Windrad und im Rathaus.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
     text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
 ];

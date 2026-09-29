@@ -160,7 +160,7 @@ function totals() {
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
   let pop = 0, jobs = 0;
   const rail = computeRail();
-  pop += COMMUTERS * rail.commuters.size;                  // Pendler, die mit dem Zug kommen
+  for (const n of rail.commuters.values()) pop += n;       // Pendler, die mit dem Zug kommen
   const railMul = (x, y) => rail.regions.size && rail.regions.has(regionAt(x, y)) ? 1 + RAIL_BONUS : 1;
   // Erreichbarkeit, Viertel, Sehenswürdigkeiten
   for (const [k, t] of state.tiles) {
@@ -214,6 +214,7 @@ function totals() {
     }
     if (d.cat === 'bau' && !d.prod && !d.conv) {
       let v = rawIncome(t.b, x, y) * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * gmul;
+      if (rail.power.idle.has(k)) { v *= NO_POWER; s.noPower = true; }        // Werkstatt ohne Strom
       if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
     }
@@ -224,7 +225,7 @@ function totals() {
   }
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
-    for (const d of ds) if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1);
+    ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
   }
   // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Weg: halb; Touristen nur per Weg)
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
@@ -255,7 +256,8 @@ function totals() {
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net, rail };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
-  rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, needed: 0, regions: new Set(), commuters: new Set(), comp: new Map() } };
+  rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, regions: new Set(), commuters: new Map(), comp: new Map(),
+    power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } } };
 function recalc() { T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -516,9 +518,32 @@ function setCrossing(x, y, foot, style) {
   return true;
 }
 // Bahn: zusammenhängende Schienen sind ein Netz, Bahnhöfe gehören zum Netz direkt neben ihrer Grundfläche.
-// Ein Netz mit Bahnhöfen auf mindestens zwei Inseln ist eine Linie mit einem Zug. Jeder Zug braucht 2 Windräder
-// (egal wo). Fährt er, bringt jeder Bahnhof der Linie Pendler, und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
-const TRAIN_POWER = 2, COMMUTERS = 8, RAIL_BONUS = 0.1;
+// Ein Netz mit Bahnhöfen auf mindestens zwei Inseln ist eine Linie. Ist das Netz ein Kreis (Rundkurs), fährt der Zug
+// im Kreis, und ab 4 km darf man weitere Züge kaufen (1 je 2 km). Fährt ein Zug, bringt jeder Bahnhof der Linie
+// Pendler (jeder weitere Zug noch einmal halb so viele), und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
+const COMMUTERS = 8, RAIL_BONUS = 0.1, KM = 10, KM_PER_TRAIN = 2;
+const EXTRA_TRAIN = { money: 1500, metall: 10 };
+// Strom ⚡: Jedes Windrad liefert 1 ⚡, egal wo. Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡),
+// Werkstätten (je 2 ⚡), dann die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben nachts
+// dunkel (halbe Schönheit), Werkstätten schaffen die Hälfte, Züge stehen. Die Stadt braucht erst Strom, wenn es
+// Windräder gibt – vorher läuft alles ohne.
+const WIND_POWER = 1, LAMPS_PER_POWER = 10, WORKSHOP_POWER = 2, NO_POWER = 0.5;
+const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
+// Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs
+function railLoop(tiles, rails) {
+  const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k); return DIRS.map(([dx, dy]) => (x + dx) + ',' + (y + dy)).filter(n => core.has(n)); };
+  let changed = true;
+  while (changed) { changed = false; for (const k of [...core]) if (nb(k).length < 2) { core.delete(k); changed = true; } }
+  if (core.size < 4 || [...core].some(k => nb(k).length !== 2)) return null;
+  const start = [...core].sort()[0], ring = [start];
+  for (let prev = null, k = start; ;) {
+    const next = nb(k).find(n => n !== prev);
+    if (next === start) break;
+    if (ring.includes(next)) return null;
+    ring.push(next); prev = k; k = next;
+  }
+  return ring.length === core.size ? ring : null;               // zwei getrennte Ringe: kein Rundkurs
+}
 function computeRail() {
   const rails = new Set(), stations = [];
   let wind = 0;
@@ -527,16 +552,17 @@ function computeRail() {
     else if (t.b === 'station') stations.push(k);
     else if (t.b === 'windrad') wind++;
   }
-  const comp = new Map();
+  const comp = new Map(), netTiles = [];
   let nid = 0;
   for (const k of rails) {
     if (comp.has(k)) continue;
-    const q = [k];
+    const q = [k], list = [k];
     comp.set(k, nid);
     while (q.length) {
       const [x, y] = keyXY(q.pop());
-      for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n)) { comp.set(n, nid); q.push(n); } }
+      for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n)) { comp.set(n, nid); q.push(n); list.push(n); } }
     }
+    netTiles.push(list);
     nid++;
   }
   const byNet = new Map(), stationNet = new Map();
@@ -554,14 +580,47 @@ function computeRail() {
   for (const [net, list] of byNet) {
     const order = r => r === 'home' ? -1 : ISLES.findIndex(i => i.id === r);   // Heimatinsel zuerst
     const regions = [...new Set(list.map(s => regionAt(...keyXY(s))))].sort((p, q) => order(p) - order(q));
-    if (regions.length >= 2) lines.push({ net, stations: list, regions });
+    if (regions.length < 2) continue;
+    const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails);
+    // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
+    const onRing = ring && list.every(s => { const t = state.tiles.get(s), [x, y] = keyXY(s), R = new Set(ring);
+      return footprint(t.b, x, y, t.rot).some(([fx, fy]) => DIRS.some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
+    const loop = onRing ? ring : null, max = loop ? Math.max(1, Math.floor(tiles / KM / KM_PER_TRAIN)) : 1;
+    const looks = lineLooks(list);
+    lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count: Math.min(max, looks.length), need: trainNeed(tiles) });
   }
   lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
-  const trains = Math.floor(wind / TRAIN_POWER);
-  lines.forEach((l, i) => { l.powered = i < trains; });
-  const regions = new Set(), commuters = new Set();
-  for (const l of lines) if (l.powered) { l.regions.forEach(r => regions.add(r)); l.stations.forEach(s => commuters.add(s)); }
-  return { lines, stationNet, wind, trains: Math.min(trains, lines.length), needed: lines.length * TRAIN_POWER, regions, commuters, comp };
+  const power = computePower(lines, wind);
+  const regions = new Set(), commuters = new Map();
+  for (const l of lines) if (l.powered) {
+    l.regions.forEach(r => regions.add(r));
+    const per = COMMUTERS * (1 + 0.5 * (l.running - 1));
+    l.stations.forEach(s => commuters.set(s, Math.max(commuters.get(s) || 0, per)));
+  }
+  return { lines, stationNet, wind, trains: power.trains, regions, commuters, comp, power };
+}
+// Aussehen der Züge einer Linie (am Bahnhof gespeichert): erster Zug train/trainCol, weitere in extra
+function lineLooks(stations) {
+  const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
+  return [{ model: t.train || 'regio', col: t.trainCol || 0 }].concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0 })));
+}
+function computePower(lines, wind) {
+  const supply = wind * WIND_POWER, city = wind > 0 || available('windrad');
+  let left = supply, demand = 0, trains = 0;
+  const dark = new Set(), idle = new Set(), use = { lamps: 0, work: 0, trains: 0 };
+  const take = (n, what) => { demand += n; use[what] += n; if (left >= n) { left -= n; return true; } return false; };
+  if (city) {
+    const lamps = [];
+    for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); });
+    for (let i = 0; i < lamps.length; i += LAMPS_PER_POWER) if (!take(1, 'lamps')) lamps.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
+    for (const k of [...state.tiles.keys()].sort()) if (state.tiles.get(k).b === 'fabrik' && !take(WORKSHOP_POWER, 'work')) idle.add(k);
+  }
+  for (const l of lines) {
+    l.running = 0;
+    for (let i = 0; i < l.count; i++) if (take(l.need, 'trains')) { l.running++; trains++; }
+    l.powered = l.running > 0;
+  }
+  return { supply, demand, left, dark, idle, trains, city, use };
 }
 const lineOf = k => T.rail && T.rail.lines.find(l => l.stations.includes(k));
 // Forschung, mit der ein Rohstoff-Betrieb auch außerhalb seines Geländes gebaut werden darf
