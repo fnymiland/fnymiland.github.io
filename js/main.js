@@ -11,7 +11,9 @@ function startNew() {
   // ein kleiner Sandweg vom Rathaus aus
   for (let x = 4; x <= 5; x++) state.tiles.set(x + ',2', { b: 'weg', lvl: 1, style: 'sand' });
   for (let y = 4; y <= 5; y++) state.tiles.set('2,' + y, { b: 'weg', lvl: 1, style: 'sand' });
-  placeLandmarks();
+  state.owned = new Set();
+  ownIsland('home');
+  placeIslandLandmarks();
   recalc();
   buildToolbar();
   save();
@@ -85,10 +87,12 @@ if (PROBE) {
 } else if (saved) {
   state = saved;
   normalizeSmall();
+  migrateLandmarks();                  // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
+  const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
   const refunded = fitFootprints();
   delete state.fitLm;
+  if (moved) setTimeout(() => announceIslands(moved), 900);
   nameHouses();
-  migrateLandmarks();
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

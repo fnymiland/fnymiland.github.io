@@ -178,6 +178,25 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 - **Kein Einsammeln im Hintergrund:** Wer die App schließt, bekommt nichts nachgezahlt – sonst schaltet man noch schneller frei.
 - **Nur auf Zuruf veröffentlichen:** lokal bauen und zeigen, hochladen (fnymiland.github.io) erst, wenn der Nutzer es sagt.
 
+## Themen-Inseln – entschieden (29.09.2026)
+
+- **Heimatinsel** gehört einem von Anfang an ganz (kein Grundstückskauf mehr). Auf ihr steht keine Sehenswürdigkeit.
+- **Sieben Themen-Inseln** im Meer ringsum, jede mit ihrer Sehenswürdigkeit (3×3) in der Mitte und passendem Gelände:
+  Waldinsel (Uralter Baum), Obstinsel (Wilder Obsthain), Windinsel (Windige Klippe), Ruineninsel (Alte Ruine),
+  Erzinsel (Erzberg), Quelleninsel (Heiße Quelle), Kristallinsel (Kristallhöhle).
+- **Gläserne Decke:** Inseln sind gesperrt und werden nacheinander **erschlossen** – mit Talern, Ideen (Weisheit) und Ansehen
+  (Ortstitel, Einwohner). Das Spiel zeigt immer, welche Insel als Nächstes dran ist und was fehlt.
+- Erschlossene Inseln sind sofort bebaubar. Später verbindet ein **Zug** die Dörfer: mehr Einwohner, Bonus für beide Orte.
+- Alte Spielstände: Sehenswürdigkeiten ziehen samt Laternen auf ihre Insel um; Inseln mit schon restaurierten
+  Sehenswürdigkeiten sind gleich erschlossen; gekaufte Grundstücke werden erstattet.
+
+## Forschung – entschieden (29.09.2026)
+
+- Mehrere **Seiten/Unterstufen**, u. a. eine **Kunstakademie-Seite** für Design (Farben, Muster, Wege-Stile …).
+- **Kleinschrittig und selbst gewählt:** Jeder Wege-Stil, jede Farbe einzeln freischalten – wer den Rindenmulch nie will,
+  steckt die Ideen lieber in Kies. Farben starten mit wenigen Tönen.
+- Dazu (später): Baupläne beim Erschließen, Aufträge der Bewohner im Rathaus, Händlerschiff. Insgesamt langsamer.
+
 ## Bau-Reihenfolge (jeweils einzeln, mit dir abgestimmt)
 
 1. ✓ Rohstoffe + Lager + Sägewerk/Steinmetz/Schmiede

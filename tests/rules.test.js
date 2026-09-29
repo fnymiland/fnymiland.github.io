@@ -45,7 +45,8 @@ describe('Bauen', () => {
   });
 
   it('nicht auf fremdem Grundstück', () => {
-    expect(game("placeError('haus', 20, 20)")).toBe('Das ist nicht dein Grundstück');
+    const [x, y] = game('isleAnchor(ISLE_BY_ID.wald)');
+    expect(game(`placeError('haus', ${x + 4}, ${y})`)).toBe('Das ist nicht dein Grundstück');
   });
 });
 

@@ -41,12 +41,6 @@ function pill(text, x, y, bg, fg, size) {
   g.fillText(text, x, y + 1);
 }
 
-function chunkCorners(ck) {
-  const [cx, cy] = ck.split(',').map(Number);
-  const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
-  return { n: [toScreen(x0, y0), toScreen(x1, y0)], e: [toScreen(x1, y0), toScreen(x1, y1)],
-           s: [toScreen(x1, y1), toScreen(x0, y1)], w: [toScreen(x0, y1), toScreen(x0, y0)] };
-}
 
 const confetti = [];
 let lastRender = 0;
@@ -197,7 +191,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     const info = chunkSea(cx, cy);
     let img;
     if (info.sea) {
-      if (!seaImage || stale(seaImage)) { seaImage = renderGroundChunk(ISLAND.cMax + 50, 0, want); }
+      if (!seaImage || stale(seaImage)) { seaImage = renderGroundChunk(WORLD.cMax + 50, 0, want); }
       img = seaImage.c;
     } else {
       const ck = cx + ',' + cy;
@@ -274,8 +268,8 @@ function render(now) {
   const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
   const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
   if (groundCached) {
-    minX = Math.max(minX, ISLAND.cMin * CHUNK - 1); maxX = Math.min(maxX, (ISLAND.cMax + 1) * CHUNK);
-    minY = Math.max(minY, ISLAND.cMin * CHUNK - 1); maxY = Math.min(maxY, (ISLAND.cMax + 1) * CHUNK);
+    minX = Math.max(minX, WORLD.cMin * CHUNK - 1); maxX = Math.min(maxX, (WORLD.cMax + 1) * CHUNK);
+    minY = Math.max(minY, WORLD.cMin * CHUNK - 1); maxY = Math.min(maxY, (WORLD.cMax + 1) * CHUNK);
   }
   const mX = TW * z, mTop = 110 * z, mBot = TH * z;
   const visible = [];
@@ -310,31 +304,6 @@ function render(now) {
     g.setTransform(DPR * z, 0, 0, DPR * z, (W / 2 - cam.x * z) * DPR, (H / 2 - cam.y * z) * DPR);
     drawShadows(visRange);
     g.restore();
-  }
-
-  // 2) Grundstücksgrenzen
-  const forSale = [];
-  g.lineCap = 'round';
-  for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) {
-    const ck = cx + ',' + cy;
-    if (!state.owned.has(ck)) { if (purchasable(ck)) forSale.push(ck); continue; }
-    const c = chunkCorners(ck);
-    g.strokeStyle = 'rgba(255,248,215,0.9)';
-    g.lineWidth = 2.5 * z;
-    g.setLineDash([6 * z, 6 * z]);
-    for (const [side, nk] of [['n', cx + ',' + (cy - 1)], ['s', cx + ',' + (cy + 1)], ['w', (cx - 1) + ',' + cy], ['e', (cx + 1) + ',' + cy]]) {
-      if (state.owned.has(nk)) continue;
-      g.beginPath(); g.moveTo(c[side][0].x, c[side][0].y); g.lineTo(c[side][1].x, c[side][1].y); g.stroke();
-    }
-    g.setLineDash([]);
-  }
-  if (hoverChunk && tool === 'look' && purchasable(hoverChunk)) {
-    const c = chunkCorners(hoverChunk);
-    g.beginPath();
-    g.moveTo(c.n[0].x, c.n[0].y); g.lineTo(c.e[0].x, c.e[0].y); g.lineTo(c.s[0].x, c.s[0].y); g.lineTo(c.w[0].x, c.w[0].y);
-    g.closePath();
-    g.fillStyle = 'rgba(255,215,94,0.22)'; g.fill();
-    g.strokeStyle = '#f2b53a'; g.lineWidth = 3 * z; g.stroke();
   }
 
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
@@ -459,7 +428,7 @@ function render(now) {
         g.restore();
       }
       if (corner) {
-        if (t.b === 'lm') { FOG = false; labels.push([ax, ay, t.lm]); }
+        if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
         if (!big) {
           drawSmall(k, px, py, z, now, x, y, [0]);
           if (t.b !== 'weg') drawIt();
@@ -534,16 +503,16 @@ function render(now) {
     pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - (LM_LABEL_H[type] || 80) * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
       st >= 3 ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
   }
-  const price = plotPrice();
-  for (const ck of forSale) {
-    const [cx, cy] = ck.split(',').map(Number);
-    const p = toScreen(cx * CHUNK + 2.5, cy * CHUNK + 2.5);
-    if (p.x < -100 || p.x > W + 100 || p.y < -100 || p.y > H + 100) continue;
-    const sz = Math.max(10, 11 * z);
+  // Schilder der Themen-Inseln, die noch gesperrt sind (die nächste hervorgehoben)
+  const nxt = nextIsle();
+  for (const i of ISLES) {
+    if (isleOpen(i.id)) continue;
+    const p = toScreen(i.cx, i.cy - ISLE_R * 0.2);
+    if (p.x < -150 || p.x > W + 150 || p.y < -100 || p.y > H + 150) continue;
+    const isNext = i === nxt, sz = Math.max(11, 12 * z);
     g.fillStyle = '#8a5a3c';
-    g.fillRect(p.x - 1.5 * z, p.y - 22 * z, 3 * z, 22 * z);
-    pill('🪙 ' + fmt(price), p.x, p.y - 26 * z, ck === hoverChunk ? '#fff3b0' : '#fffaf0',
-      state.money >= price ? '#3f8f43' : '#8a6a4f', sz);
+    g.fillRect(p.x - 1.5 * z, p.y - 26 * z, 3 * z, 26 * z);
+    pill(`${i.icon} ${i.name} ${isNext ? '· erschließen' : '🔒'}`, p.x, p.y - 30 * z, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
   }
 
   drawSparkles(now, z);

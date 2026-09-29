@@ -23,7 +23,7 @@ function toTile(sx, sy) {
   return { x: Math.round(a), y: Math.round(b) };
 }
 function clampCam() {
-  const c = iso(ISLAND.cx, ISLAND.cy), rx = ISLAND.r * TW * 0.8, ry = ISLAND.r * TH * 0.8;
+  const c = iso(ISLAND.cx, ISLAND.cy), R = ISLE_DIST + ISLE_R, rx = R * TW * 0.75, ry = R * TH * 0.75;
   cam.x = Math.max(c.x - rx, Math.min(c.x + rx, cam.x));
   cam.y = Math.max(c.y - ry, Math.min(c.y + ry, cam.y));
 }
@@ -131,8 +131,7 @@ function setHover(sx, sy) {
   hoverSlot = slotAt(sx, sy).slot;
   const t = toTile(sx, sy);
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }
-  const ck = chunkOf(t.x, t.y);
-  hoverChunk = purchasable(ck) ? ck : null;
+  hoverChunk = null;
 }
 
 window.addEventListener('keydown', e => {

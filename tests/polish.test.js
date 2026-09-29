@@ -16,6 +16,8 @@ describe('Namen: Ort und Stufe zusammen', () => {
   });
   it('die Aufgabenliste auch', () => {
     game('state.tutorial = -1');
+    expect(game('goalHtml()')).toContain('Nächste Insel: 🌲 Waldinsel');
+    game("state.islands.add('wald'); ownIsland('wald')");
     expect(game('goalHtml()')).toContain('Uralter Baum → Freischneiden');
   });
 });

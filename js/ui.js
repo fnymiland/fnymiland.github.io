@@ -177,7 +177,9 @@ function updateHud() {
 $('goal').onclick = e => {
   if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
   const req = e.target.closest('[data-lm]'), pos = req && lmTile(req.dataset.lm);
-  if (pos) { const c = iso(pos[0], pos[1]); cam.x = c.x; cam.y = c.y; clampCam(); sparkle(pos[0], pos[1]); return; }
+  if (pos) { jumpTo(pos[0], pos[1], 3, 3); sparkle(pos[0] + 1, pos[1] + 1); return; }
+  const isl = e.target.closest('[data-isle]');
+  if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
   goalSmall = !goalSmall; updateHud();
 };
 $('diary-btn').onclick = () => openDiary();
@@ -403,30 +405,35 @@ function openLandmark(x, y) {
   $('p-close').onclick = closePanel;
 }
 
-function openBuy(ck, sx, sy) {
-  const [cx, cy] = ck.split(',').map(Number);
-  const cnt = { grass: 0, forest: 0, water: 0, rock: 0, erz: 0, obst: 0 };
-  for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK; y++)
-    for (let x = cx * CHUNK; x < cx * CHUNK + CHUNK; x++) cnt[terrainAt(x, y)]++;
-  const lms = landmarksIn(ck);
-  const price = plotPrice();
+// Themen-Insel: was sie bietet, was zum Erschließen fehlt
+function openIsle(id, sx, sy) {
+  const i = ISLE_BY_ID[id], nxt = nextIsle(), L = LANDMARKS[i.lm];
+  const need = isleNeeds(i), ok = need.every(c => c.ok), isNext = nxt === i;
   showPanel(`
-    <h3>Grundstück kaufen</h3>
-    ${lms.map(l => `<p class="big" style="font-size:16px">${LANDMARKS[l].icon} ${LANDMARKS[l].name}<br><span class="muted">${LANDMARKS[l].effect}</span></p>`).join('')}
-    <div class="stats">
-      <span>🌿 ${cnt.grass} Wiese</span><span>🌲 ${cnt.forest} Wald</span>
-      <span>💧 ${cnt.water} Wasser</span><span>🪨 ${cnt.rock} Fels</span>
-      ${cnt.erz ? `<span>⛏️ ${cnt.erz} Erz</span>` : ''}${cnt.obst ? `<span>🍎 ${cnt.obst} Obsthain</span>` : ''}
-    </div>
-    <p class="muted">Jedes weitere Grundstück wird etwas teurer.</p>
-    <div class="row">
-      <button class="btn" id="p-buy" data-cost="${price}">Kaufen · 🪙 ${fmt(price)}</button>
-      <button class="btn ghost" id="p-close">Schließen</button>
-    </div>`);
-  $('p-buy').onclick = () => buyPlot(ck);
+    <h3>${i.icon} ${i.name}</h3>
+    <p class="muted">${i.text}</p>
+    <p>${L.icon} <b>${L.name}</b><br><span class="muted">${L.effect}</span></p>
+    ${isNext ? `
+      <div class="label">Zum Erschließen</div>
+      <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}</div>
+      ${i.need.money || i.need.science ? '<p class="muted">Taler und Ideen werden dabei ausgegeben.</p>' : ''}
+      <div class="row"><button class="btn" id="p-isle" ${ok ? '' : 'disabled'}>🏝️ Erschließen</button><button class="btn ghost" id="p-close">Schließen</button></div>`
+    : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} erschließen</div></div>
+      <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`}`);
+  if ($('p-isle')) $('p-isle').onclick = () => { closePanel(); unlockIsland(id); };
   $('p-close').onclick = closePanel;
   panelAt(sx, sy);
-  updateHud();
+}
+// Alte Spielstände: einmal erklären, was sich geändert hat
+function announceIslands(m) {
+  openModal(`
+    <h2>🏝️ Neu: Themen-Inseln!</h2>
+    <p>Die Sehenswürdigkeiten sind auf eigene Inseln im Meer umgezogen – mit allen Laternen, die schon brennen.</p>
+    ${m.isles.length ? `<p>Schon erschlossen: <b>${m.isles.map(id => ISLE_BY_ID[id].icon + ' ' + ISLE_BY_ID[id].name).join(', ')}</b></p>` : ''}
+    <p>Deine Heimatinsel gehört dir jetzt ganz.${m.refund ? ` Für gekaufte Grundstücke bekommst du <b>🪙 ${fmt(m.refund)}</b> zurück.` : ''}</p>
+    <p class="muted">Weitere Inseln erschließt du nacheinander – oben links steht immer, welche als Nächstes dran ist.</p>
+    <div class="row"><button class="btn" id="m-ok">Schön!</button></div>`);
+  $('m-ok').onclick = closeModal;
 }
 
 // Forschung
@@ -525,7 +532,9 @@ function openTownHall(tab = hallTab) {
         const st = lmStage(type);
         return `<li class="${st >= 3 ? 'done' : ''}">${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</li>`;
       }).join('')}
-        <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>`;
+        <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>
+      <div class="label">Inseln</div>
+      <ul class="starlist">${ISLES.map(i => `<li class="${isleOpen(i.id) ? 'done' : ''}">${i.icon} ${i.name} ${isleOpen(i.id) ? '✓' : i === nextIsle() ? '– als Nächstes' : '🔒'}</li>`).join('')}</ul>`;
   } else if (tab === 'ready') {
     const row = (e, i, icon) => `<div class="hall-row"><span>${icon} ${e.text}</span><button class="btn ghost small" data-jump="${i}">Hin</button></div>`;
     body = `

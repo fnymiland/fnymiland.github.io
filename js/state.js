@@ -22,7 +22,8 @@ function newState() {
     legacy: new Set(),         // früher per Stern/Forschung Freigeschaltetes bleibt frei
     festival: false,
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
-    owned: new Set(['0,0']),
+    owned: new Set(['0,0']),   // Grundstücke (6×6) der erschlossenen Inseln
+    islands: new Set(['home']),
     tiles: new Map(),
     terra: new Map(),
     techs: new Set(),
@@ -59,9 +60,9 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 6, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 7, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
-    town: state.town, owned: [...state.owned], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -118,7 +119,10 @@ function parseSave(d) {
     tutorial: d.tutorial != null ? d.tutorial : -1,
     legacy: new Set(d.legacy || legacyUnlocks(d)),
     oldSave: !d.restore,
-    fitLm: (d.v || 3) < 6,          // Sehenswürdigkeiten sind seit v6 3×3 groß (v5: 2×2): einmal passend rücken
+    fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
+    moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
+    boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
+    islands: new Set(d.islands || ['home']),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs),
     decos: new Map(d.decos || []),
@@ -127,6 +131,24 @@ function parseSave(d) {
 }
 
 const LONG_FRONT = new Set(['saege', 'baecker', 'fabrik', 'bibliothek', 'kunst']);
+
+// Spielstände von vor den Themen-Inseln (v < 7): Sehenswürdigkeiten ziehen samt Laternen auf ihre Insel um,
+// Inseln mit schon restaurierten Sehenswürdigkeiten sind erschlossen, die ganze Heimatinsel gehört einem,
+// gekaufte Grundstücke gibt es zurück.
+function migrateIslands() {
+  if (!state.moveLm) return null;
+  const bought = state.boughtPlots || 0;
+  delete state.moveLm; delete state.boughtPlots;
+  let refund = 0;
+  for (let n = 1; n <= bought; n++) refund += Math.round(100 * Math.pow(1.28, n - 1) / 10) * 10;
+  for (const [k, t] of [...state.tiles]) if (t.b === 'lm') state.tiles.delete(k);
+  placeIslandLandmarks();
+  state.islands = new Set(['home', ...ISLES.filter(i => lmStage(i.lm) >= 1).map(i => i.id)]);
+  state.owned = new Set();
+  for (const id of state.islands) ownIsland(id);
+  state.money += refund;
+  return { refund, isles: [...state.islands].filter(id => id !== 'home') };
+}
 
 // Was man in alten Ständen per Stern oder Forschung schon freigeschaltet hatte
 function legacyUnlocks(d) {
@@ -164,10 +186,13 @@ function adoptState(s) {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
+  migrateLandmarks();
+  const moved = migrateIslands();
   fitFootprints();
   delete state.fitLm;
   nameHouses();
   recalc();
+  if (moved) setTimeout(() => announceIslands(moved), 300);
   buildToolbar();
   save();
 }

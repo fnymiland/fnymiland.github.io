@@ -20,15 +20,41 @@ function fbm(x, y, s) {
   return a / n;
 }
 const islandDist = (x, y) => Math.hypot(x - ISLAND.cx, y - ISLAND.cy) / ISLAND.r;
-function isSea(x, y) {
-  return islandDist(x, y) + (fbm(x * 0.08, y * 0.08, 1) - 0.5) * 0.5 > 0.95;
+const homeLand = (x, y) => islandDist(x, y) + (fbm(x * 0.08, y * 0.08, 1) - 0.5) * 0.5 <= 0.95;   // wie früher
+function isleLand(i, x, y) {
+  const d = Math.hypot(x - i.cx, y - i.cy);
+  if (d > ISLE_R * 1.5) return false;
+  return d / ISLE_R + (fbm(x * 0.15, y * 0.15, 17 + i.deg) - 0.5) * 0.6 <= 0.95;
+}
+// Zu welcher Insel gehört das Feld? 'home', die id einer Themen-Insel, oder null (Meer)
+function islandAt(x, y) {
+  if (homeLand(x, y)) return 'home';
+  for (const i of ISLES) if (isleLand(i, x, y)) return i.id;
+  return null;
+}
+function isSea(x, y) { return islandAt(x, y) === null; }
+// Gelände der Themen-Inseln: Lichtung um die Sehenswürdigkeit, ringsum die Mischung der Insel
+function isleTerrain(i, x, y) {
+  if (Math.hypot(x - i.cx, y - i.cy) < 3.4) return 'grass';
+  const n1 = fbm(x * 0.18, y * 0.18, 40 + i.deg), n2 = fbm(x * 0.25, y * 0.25, 90 + i.deg);
+  switch (i.ter) {
+    case 'wald': return n1 > 0.4 ? 'forest' : n2 < 0.3 ? 'water' : 'grass';
+    case 'obst': return n1 > 0.44 ? 'obst' : n2 > 0.7 ? 'forest' : 'grass';
+    case 'fels': return n1 > 0.52 ? 'rock' : n2 > 0.72 ? 'forest' : 'grass';
+    case 'ruine': return n1 > 0.64 ? 'rock' : n2 > 0.68 ? 'forest' : 'grass';
+    case 'erz': return n1 > 0.58 ? 'erz' : n1 > 0.44 ? 'rock' : 'grass';
+    case 'quelle': return n2 < 0.32 ? 'water' : n1 > 0.7 ? 'forest' : 'grass';
+    case 'kristall': return n1 > 0.5 ? 'rock' : n2 > 0.74 ? 'erz' : 'grass';
+    default: return 'grass';
+  }
 }
 function baseTerrain(x, y) {
   const k = x + ',' + y;
   let t = terrainCache.get(k);
   if (t) return t;
-  const d = islandDist(x, y);
-  if (isSea(x, y)) t = 'water';
+  const d = islandDist(x, y), isle = islandAt(x, y);
+  if (!isle) t = 'water';
+  else if (isle !== 'home') t = isleTerrain(ISLE_BY_ID[isle], x, y);
   else if (d < 0.12) t = 'grass';                                     // Startplatz frei halten
   else if (fbm(x * 0.12, y * 0.12, 300) < 0.3) t = 'water';           // Seen
   else if (fbm(x * 0.1, y * 0.1, 500) > 0.65) t = 'rock';
@@ -88,27 +114,32 @@ function placeLandmarks() {
   });
 }
 
+// Die Sehenswürdigkeiten stehen (3×3) in der Mitte ihrer Themen-Insel
+const isleAnchor = i => [Math.round(i.cx) - 1, Math.round(i.cy) - 1];
+function placeIslandLandmarks() {
+  for (const i of ISLES) {
+    const [x, y] = isleAnchor(i);
+    for (const [fx, fy] of footprint('lm', x, y, 0)) state.terra.delete(fx + ',' + fy);
+    state.tiles.set(x + ',' + y, { b: 'lm', lm: i.lm, lvl: 1 });
+  }
+}
+// Alle Grundstücke (6×6), auf denen Land der Insel liegt
+function isleChunks(id) {
+  const out = [];
+  const box = id === 'home' ? [ISLAND.cMin, ISLAND.cMax, ISLAND.cMin, ISLAND.cMax] : (() => {
+    const i = ISLE_BY_ID[id], r = ISLE_R * 1.5;
+    return [Math.floor((i.cx - r) / CHUNK), Math.floor((i.cx + r) / CHUNK), Math.floor((i.cy - r) / CHUNK), Math.floor((i.cy + r) / CHUNK)];
+  })();
+  for (let cy = box[2]; cy <= box[3]; cy++) for (let cx = box[0]; cx <= box[1]; cx++) {
+    let has = false;
+    for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK && !has; y++)
+      for (let x = cx * CHUNK; x < cx * CHUNK + CHUNK && !has; x++) if (islandAt(x, y) === id) has = true;
+    if (has) out.push(cx + ',' + cy);
+  }
+  return out;
+}
+function ownIsland(id) { for (const ck of isleChunks(id)) state.owned.add(ck); }
+const isleOf = (x, y) => { const id = islandAt(x, y); return id && id !== 'home' ? ISLE_BY_ID[id] : null; };
+
 const chunkOf = (x, y) => Math.floor(x / CHUNK) + ',' + Math.floor(y / CHUNK);
 const ownedTile = (x, y) => state.owned.has(chunkOf(x, y));
-function chunkLand(ck) {
-  let n = landCache.get(ck);
-  if (n == null) {
-    const [cx, cy] = ck.split(',').map(Number);
-    n = 0;
-    for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK; y++)
-      for (let x = cx * CHUNK; x < cx * CHUNK + CHUNK; x++) if (!isSea(x, y)) n++;
-    landCache.set(ck, n);
-  }
-  return n;
-}
-function onIsland(ck) {
-  const [cx, cy] = ck.split(',').map(Number);
-  return cx >= ISLAND.cMin && cx <= ISLAND.cMax && cy >= ISLAND.cMin && cy <= ISLAND.cMax && chunkLand(ck) >= 3;
-}
-function purchasable(ck) {
-  if (state.owned.has(ck) || !onIsland(ck)) return false;
-  const [cx, cy] = ck.split(',').map(Number);
-  return state.owned.has((cx + 1) + ',' + cy) || state.owned.has((cx - 1) + ',' + cy) ||
-         state.owned.has(cx + ',' + (cy + 1)) || state.owned.has(cx + ',' + (cy - 1));
-}
-const plotPrice = () => Math.round(100 * Math.pow(1.28, state.owned.size - 1) / 10) * 10;

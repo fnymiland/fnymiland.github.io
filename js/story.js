@@ -15,6 +15,47 @@ function townTitle(n = lanternCount()) {
 const TITLE_ARTICLE = { Weiler: 'ein', Dorf: 'ein', Städtchen: 'ein', Kleinstadt: 'eine', Inselperle: 'eine' };
 const unlockName = u => u.startsWith('weg:') ? `Weg-Stil „${styleDef('weg', u.slice(4)).name}“` : ITEMS[u].name;
 
+// ---------------------------------------------------------------------------
+// Themen-Inseln erschließen (die „gläserne Decke“): Bedingungen, nächste Insel, Erschließen
+// ---------------------------------------------------------------------------
+const isleOpen = id => state.islands.has(id);
+function isleNeeds(i) {
+  const n = i.need, out = [];
+  if (n.lanterns) out.push({ text: `🏮 ${n.lanterns} Laternen (${townTitle(n.lanterns)})`, ok: lanternCount() >= n.lanterns });
+  if (n.pop) out.push({ text: `👥 ${n.pop} Einwohner`, ok: T.pop >= n.pop, have: T.pop, want: n.pop });
+  if (n.science) out.push({ text: `💡 ${fmt(n.science)} Ideen`, ok: state.science >= n.science, have: state.science, want: n.science, pay: true });
+  if (n.money) out.push({ text: `🪙 ${fmt(n.money)} Taler`, ok: state.money >= n.money, have: state.money, want: n.money, pay: true });
+  return out;
+}
+const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || null;
+function unlockIsland(id) {
+  const i = ISLE_BY_ID[id];
+  if (!i || isleOpen(id)) return false;
+  if (nextIsle() !== i) { fail(`Erst die ${nextIsle().name} erschließen`); return false; }
+  const miss = isleNeeds(i).filter(c => !c.ok);
+  if (miss.length) { fail('Es fehlt noch: ' + miss.map(c => c.text).join(', ')); return false; }
+  state.money -= i.need.money || 0;
+  state.science -= i.need.science || 0;
+  state.islands.add(id);
+  ownIsland(id);
+  recalc();
+  const [x, y] = isleAnchor(i);
+  jumpTo(x, y, 3, 3);
+  sparkle(x + 1, y + 1);
+  confettiBurst();
+  sfx('star');
+  openModal(`
+    <h2>${i.icon} ${i.name} erschlossen!</h2>
+    <p>${i.text}</p>
+    <p>In der Mitte wartet ${LANDMARKS[i.lm].icon} <b>${LANDMARKS[i.lm].name}</b> darauf, restauriert zu werden.</p>
+    <p class="muted">Bau dir hier ein kleines Dorf – Betriebe weit weg von Häusern arbeiten nur halb so schnell.</p>
+    <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
+  $('m-ok').onclick = closeModal;
+  checkStars();
+  save();
+  return true;
+}
+
 function lmTile(type) {
   for (const [k, t] of state.tiles) if (t.b === 'lm' && t.lm === type) return keyXY(k);
   return null;
@@ -26,8 +67,8 @@ function restoreInfo(type) {
   if (!next) return { stage, next: null, pos };
   const { money = 0, ...mat } = next.cost;
   let err = null;
-  if (!pos || !ownedTile(pos[0], pos[1])) err = 'Kauf zuerst das Grundstück';
-  else if ((statusOf(pos[0], pos[1]) || {}).how !== 'viertel') err = 'Verbinde es per Weg mit dem Dorf';
+  const isle = ISLE_OF_LM[type];
+  if (!pos || !ownedTile(pos[0], pos[1])) err = `Erschließe zuerst die ${isle ? isle.name : 'Insel'}`;
   else if (state.money < money) err = 'Zu wenig Taler';
   else err = matError(mat);
   return { stage, next, pos, err, money, mat };
@@ -150,11 +191,9 @@ const TUTORIAL = [
   { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Wege → Weg (ziehen)',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
   { text: 'Stell einen Holzfäller in den Wald.', hint: '🏠 Bauen → Holzfäller', done: () => hasBuilt('holz') },
-  { text: 'Kauf das Grundstück mit dem Uralten Baum.', hint: 'Schild „zu verkaufen“ antippen',
-    done: () => { const p = lmTile('baum'); return !!p && ownedTile(p[0], p[1]); } },
-  { text: 'Verbinde den Baum per Weg mit dem Dorf.', hint: 'Weg bis direkt an den Baum',
-    done: () => { const p = lmTile('baum'); return !!p && (statusOf(p[0], p[1]) || {}).how === 'viertel'; } },
-  { text: 'Schneide den Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
+  { text: 'Erschließe die Waldinsel.', hint: 'Braucht 8 Einwohner (2 Häuser) und 🪙 150 – Insel im Meer antippen',
+    done: () => isleOpen('wald') },
+  { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
   { text: 'Bau ein Sägewerk.', hint: '🏠 Bauen → Sägewerk', done: () => hasBuilt('saege') },
   { text: 'Bau dein erstes Haus aus.', hint: 'Wünsche erfüllen, dann Haus antippen → Ausbauen',
     done: () => [...state.tiles.values()].some(t => t.b === 'haus' && t.lvl >= 2) },
@@ -168,7 +207,7 @@ function storyTick() {
   }
   if (state.tutorial >= TUTORIAL.length) {
     state.tutorial = -1;
-    toast('Einführung geschafft! Jetzt gehört die Insel dir – entzünde alle Laternen. 🏮');
+    toast('Einführung geschafft! Erschließe Insel um Insel und entzünde alle Laternen. 🏮');
     sfx('buy');
   } else if (advanced) {
     sfx('coin');
@@ -191,19 +230,21 @@ function goalHtml() {
   if (n >= ITEMS.leuchtturm.lanterns) {
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4><div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
   }
-  // die drei aussichtsreichsten nächsten Stufen
-  const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) })).filter(o => o.info.next);
-  const score = o => o.info.err === 'Kauf zuerst das Grundstück' ? 2 : o.info.err === 'Verbinde es per Weg mit dem Dorf' ? 1 : 0;
-  opts.sort((a, b) => score(a) - score(b) || a.info.stage - b.info.stage);
-  return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + opts.slice(0, 3).map(({ type, info }) => {
-    let detail;
-    if (score({ info }) === 2) detail = '🔒 Grundstück kaufen';
-    else if (score({ info }) === 1) detail = '🛤️ Weg zum Dorf fehlt';
-    else {
-      const parts = Object.entries(info.mat).map(([r, need]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], need))}/${need}`);
-      if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
-      detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
-    }
+  // Laternen auf den schon erschlossenen Inseln, dazu immer die nächste Insel
+  const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) }))
+    .filter(o => o.info.next && o.info.pos && ownedTile(o.info.pos[0], o.info.pos[1]));
+  opts.sort((a, b) => (a.info.err ? 1 : 0) - (b.info.err ? 1 : 0) || a.info.stage - b.info.stage);
+  let html = `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + opts.slice(0, 2).map(({ type, info }) => {
+    const parts = Object.entries(info.mat).map(([r, need]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], need))}/${need}`);
+    if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
+    const detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
     return `<div class="req${info.err ? '' : ' done'}" data-lm="${type}">${lmStepName(type, info.stage + 1)}<br><small>${detail}</small></div>`;
   }).join('');
+  const i = nextIsle();
+  if (i) {
+    const need = isleNeeds(i), ok = need.every(c => c.ok);
+    html += `<div class="req${ok ? ' done' : ''}" data-isle="${i.id}">🏝️ Nächste Insel: ${i.icon} ${i.name}<br><small>${ok ? '✨ bereit – antippen!'
+      : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ')}</small></div>`;
+  }
+  return html;
 }

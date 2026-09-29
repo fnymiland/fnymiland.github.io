@@ -250,6 +250,35 @@ const LM_STAGES = {
 };
 const LANTERN_TOTAL = 22;          // 7 Wahrzeichen × 3 Stufen + Leuchtturm
 const TITLES = [[0, 'Weiler'], [3, 'Dorf'], [8, 'Städtchen'], [14, 'Kleinstadt'], [22, 'Inselperle']];
+
+// Themen-Inseln im Meer rings um die Heimatinsel (ISLAND). Jede hat ihre Sehenswürdigkeit in der Mitte und wird –
+// in dieser Reihenfolge – erschlossen, sobald die Bedingungen erfüllt sind (need: Taler, Ideen, Einwohner, Laternen).
+// ter: Gelände-Mischung der Insel. deg: Richtung von der Heimatinsel aus (Grad, 0 = +x).
+const ISLE_DIST = 48, ISLE_R = 11;
+const ISLES = [
+  { id: 'wald', name: 'Waldinsel', lm: 'baum', icon: '🌲', deg: 20, ter: 'wald',
+    text: 'Dichter Wald um den Uralten Baum – hier gibt es Holz für Bretter.', need: { pop: 8, money: 150 } },
+  { id: 'obst', name: 'Obstinsel', lm: 'obsthain', icon: '🍎', deg: 72, ter: 'obst',
+    text: 'Wilde Apfel- und Kirschbäume – Obst für Plantagen und Bäckereien.', need: { lanterns: 1, pop: 25, money: 1200 } },
+  { id: 'wind', name: 'Windinsel', lm: 'klippe', icon: '🌬️', deg: 124, ter: 'fels',
+    text: 'Felsen und windige Wiesen – Stein für Pflastersteine, Wind für Mühlen.', need: { lanterns: 3, pop: 40, money: 2500 } },
+  { id: 'ruine', name: 'Ruineninsel', lm: 'ruine', icon: '🏛️', deg: 176, ter: 'ruine',
+    text: 'Alte Mauern im Gras – hier beginnt die Bildung: Schule, Bibliothek, Kunst.', need: { lanterns: 5, pop: 60, money: 4000 } },
+  { id: 'erz', name: 'Erzinsel', lm: 'erzberg', icon: '⛏️', deg: 228, ter: 'erz',
+    text: 'Ein Berg voller Erz – Metall für Laternen, Werkzeug und Maschinen.', need: { lanterns: 8, pop: 90, money: 7000, science: 50 } },
+  { id: 'quelle', name: 'Quelleninsel', lm: 'quelle', icon: '♨️', deg: 280, ter: 'quelle',
+    text: 'Warme Quellen und Teiche – schön zum Wohnen, Gäste kommen gern.', need: { lanterns: 11, pop: 130, money: 12000, science: 150 } },
+  { id: 'kristall', name: 'Kristallinsel', lm: 'kristall', icon: '💎', deg: 332, ter: 'kristall',
+    text: 'Leuchtende Kristalle im Fels – nur wer viel weiß, findet den Weg.', need: { lanterns: 14, pop: 160, money: 20000, science: 600 } },
+];
+const ISLE_BY_ID = Object.fromEntries(ISLES.map(i => [i.id, i]));
+const ISLE_OF_LM = Object.fromEntries(ISLES.map(i => [i.lm, i]));
+for (const i of ISLES) {
+  i.cx = ISLAND.cx + Math.cos(i.deg * Math.PI / 180) * ISLE_DIST;
+  i.cy = ISLAND.cy + Math.sin(i.deg * Math.PI / 180) * ISLE_DIST;
+}
+// Ganze Welt (für Kamera und Zeichnen): Heimatinsel und alle Themen-Inseln
+const WORLD = { cMin: Math.floor((ISLAND.cx - ISLE_DIST - ISLE_R - 4) / CHUNK), cMax: Math.ceil((ISLAND.cx + ISLE_DIST + ISLE_R + 4) / CHUNK) };
 const DIARY_START = 'Liebe Nachfolgerin, lieber Nachfolger: Die Insel schläft nur. Weck sie auf – Laterne für Laterne. Fang am besten beim alten Baum an.';
 const DIARY_FINALE = 'Der Leuchtturm brennt wieder. Heute Nacht feiern wir das Laternenfest – so wie früher. Danke. Die Insel gehört jetzt dir.';
 

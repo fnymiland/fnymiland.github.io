@@ -35,7 +35,14 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 - [x] Alle Sehenswürdigkeiten **3×3**, damit ein Weg mittig darauf zulaufen kann (alte Stände rücken einmalig).
 - [x] **Park 3×3** (statt 2×2).
 
-## Block 5 – erst besprechen
+## Block 5 – besprochen, wird gebaut (Details in KONZEPT.md)
+
+- [x] **5a Themen-Inseln:** Heimatinsel ganz, 7 Inseln mit Sehenswürdigkeit in der Mitte, nacheinander erschließen
+      (Taler, Ideen, Ansehen), Führung „welche Insel als Nächstes“, alte Stände ziehen um.
+- [ ] **5b Forschung mit Seiten**, Kunstakademie-Seite, Farben und Wege-Stile einzeln freischalten, langsamer.
+- [ ] **5c Zug** zwischen den Dörfern (mehr Einwohner, Bonus) – eigener Schritt.
+
+## Ursprüngliche Notizen zu Block 5
 
 - [ ] **Themen-Inseln:** Jede Sehenswürdigkeit ist Mittelpunkt einer eigenen Insel (Obsthain-Insel voller Obst,
       Erzberg-Insel voller Stein/Erz …). Man baut dort thematisch eigene Dörfer; ein **Zug** verbindet die Dörfer.

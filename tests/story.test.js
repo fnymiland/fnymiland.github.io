@@ -7,43 +7,16 @@ beforeEach(() => {
   game('state.money = 99999');
 });
 const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`);
-// Weg vom Dorf bis direkt an eine Sehenswürdigkeit legen (Grundstücke dazukaufen)
-function connect(type) {
-  game(`(() => {
-    const [lx, ly] = lmTile('${type}');
-    let x = 2, y = 5;
-    const steps = [];
-    while (x !== lx) { x += Math.sign(lx - x); steps.push([x, y]); }
-    while (y !== ly) { y += Math.sign(ly - y); steps.push([x, y]); }
-    steps.pop();
-    for (const [a, b] of steps) {
-      state.owned.add(chunkOf(a, b));
-      const k = a + ',' + b;
-      if (!COVER.has(k)) { state.terra.set(k, 'grass'); state.tiles.set(k, { b: 'weg', lvl: 1, style: 'sand' }); }
-      rebuildCover();
-    }
-    state.owned.add(chunkOf(lx, ly));
-    recalc();
-  })()`);
-}
-
 describe('Laternen und Restaurieren', () => {
   it('neues Spiel: alles verfallen, 0 Laternen, Weiler', () => {
     expect(game('lanternCount()')).toBe(0);
     expect(game('townTitle()')).toBe('Weiler');
   });
 
-  it('der Uralte Baum steht gleich nebenan', () => {
-    const [x, y] = game("lmTile('baum')");
-    expect(Math.hypot(x - 2.5, y - 2.5)).toBeLessThan(10);
-  });
-
-  it('restaurieren braucht Grundstück, Weg zum Dorf und Material', () => {
+  it('restaurieren braucht die erschlossene Insel und Material', () => {
     build('haus', 4, 4);
-    expect(game("restoreInfo('baum').err")).toBe('Kauf zuerst das Grundstück');
-    game("state.owned.add(chunkOf(...lmTile('baum'))); recalc()");
-    expect(game("restoreInfo('baum').err")).toBe('Verbinde es per Weg mit dem Dorf');
-    connect('baum');
+    expect(game("restoreInfo('baum').err")).toBe('Erschließe zuerst die Waldinsel');
+    game("state.islands.add('wald'); ownIsland('wald'); recalc()");
     game('state.res.holz = 0; recalc()');
     expect(game("restoreInfo('baum').err")).toMatch(/Zu wenig Holz/);
     game('state.res.holz = 10');
@@ -62,7 +35,7 @@ describe('Laternen und Restaurieren', () => {
 
   it('Sehenswürdigkeiten wirken erst restauriert', () => {
     build('haus', 4, 4);
-    connect('ruine');
+    game("state.islands.add('ruine'); ownIsland('ruine'); recalc()");
     expect(game('T.sci')).toBe(0);
     game('state.restore.ruine = 1; recalc()');
     expect(game('T.sci')).toBeGreaterThan(0);
@@ -132,36 +105,60 @@ describe('Alte Spielstände', () => {
   });
 });
 
-describe('Sehenswürdigkeiten sind 2×2 groß', () => {
-  it('auf einer neuen Insel: ganz in einem Grundstück, nichts überlappt, der Baum steht bei 9,3', () => {
-    const lms = game("[...state.tiles].filter(([, t]) => t.b === 'lm').map(([k]) => keyXY(k))");
-    expect(lms.length).toBe(7);
-    for (const [x, y] of lms) {
-      const cks = game(`footprint('lm', ${x}, ${y}, 0).map(([a, b]) => chunkOf(a, b))`);
-      expect(new Set(cks).size).toBe(1);
-      expect(game(`footprint('lm', ${x}, ${y}, 0).every(([a, b]) => anchorAt(a, b) === '${x},${y}' && terrainAt(a, b) !== 'water')`)).toBe(true);
+describe('Themen-Inseln', () => {
+  it('neues Spiel: die Heimatinsel gehört einem ganz, jede Sehenswürdigkeit (3×3) steht mitten auf ihrer Insel', () => {
+    expect(game("state.islands.has('home') && state.islands.size")).toBe(1);
+    expect(game("isleChunks('home').every(ck => state.owned.has(ck))")).toBe(true);
+    for (const i of game('ISLES')) {
+      const [x, y] = game(`lmTile('${i.lm}')`);
+      expect(game(`islandAt(${x + 1}, ${y + 1})`)).toBe(i.id);
+      expect(game(`footprint('lm', ${x}, ${y}, 0).every(([a, b]) => anchorAt(a, b) === '${x},${y}' && terrainAt(a, b) === 'grass')`)).toBe(true);
+      expect(game(`ownedTile(${x}, ${y})`)).toBe(false);
     }
-    expect(game("lmTile('baum')")).toEqual([9, 3]);
+    expect(game('ISLES.every((a, i) => ISLES.every((b, j) => i === j || Math.hypot(a.cx - b.cx, a.cy - b.cy) > 2 * ISLE_R * 1.5))')).toBe(true);
   });
 
-  it('alte Stände: am Grundstücksrand rückt sie ins Grundstück, Hindernisse werden erstattet', () => {
+  it('Inseln werden der Reihe nach erschlossen – mit Einwohnern und Talern', () => {
+    expect(game('nextIsle().id')).toBe('wald');
+    expect(game("unlockIsland('obst')")).toBe(false);                 // erst die Waldinsel
+    game('state.money = 1000; recalc()');
+    expect(game("unlockIsland('wald')")).toBe(false);                 // noch zu wenig Einwohner
+    build('haus', 4, 4); build('haus', 6, 4);
+    expect(game('T.pop')).toBeGreaterThanOrEqual(8);
+    expect(game("unlockIsland('wald')")).toBe(true);
+    expect(game('state.money')).toBe(1000 - 80 - 150);
+    expect(game("ownedTile(...lmTile('baum'))")).toBe(true);
+    expect(game('nextIsle().id')).toBe('obst');
+  });
+
+  it('die Kristallinsel braucht viel Weisheit (Ideen)', () => {
+    expect(game("isleNeeds(ISLE_BY_ID.kristall).some(c => c.text.startsWith('💡') && !c.ok)")).toBe(true);
+  });
+
+  it('auf gesperrten Inseln kann man nichts bauen', () => {
+    const [x, y] = game("isleAnchor(ISLE_BY_ID.obst)");
+    expect(game(`placeError('haus', ${x + 4}, ${y})`)).toBe('Das ist nicht dein Grundstück');
+  });
+
+  it('alte Stände: Sehenswürdigkeiten ziehen samt Laternen um, gekaufte Grundstücke gibt es zurück', () => {
     const d = game('serialize()');
-    d.v = 4;
-    d.tiles = d.tiles.filter(([, t]) => t.lm !== 'ruine');
-    d.tiles.push(['11,8', { b: 'lm', lm: 'ruine', lvl: 1 }], ['10,9', { b: 'feld', lvl: 1 }]);
-    d.owned.push('1,1');
+    d.v = 6;
+    delete d.islands;
+    d.tiles = d.tiles.filter(([, t]) => t.b !== 'lm');
+    d.tiles.push(['12,8', { b: 'lm', lm: 'ruine', lvl: 1 }], ['-6,6', { b: 'lm', lm: 'baum', lvl: 1 }]);
+    d.restore = { ruine: 2 };
+    d.owned = ['0,0', '1,0', '1,1', '2,1'];                               // 3 Grundstücke dazugekauft
     const money = d.money;
-    game(`state = parseSave(${JSON.stringify(d)}); fitFootprints(); delete state.fitLm; recalc()`);
-    const [x, y] = game("lmTile('ruine')");
-    expect(new Set(game(`footprint('lm', ${x}, ${y}, 0).map(([a, b]) => chunkOf(a, b))`))).toEqual(new Set(['1,1']));
-    expect(game('state.money')).toBeGreaterThanOrEqual(money);
-  });
-
-  it('neue Stände: wer sie selbst über die Grenze geschoben hat, findet sie dort wieder', () => {
-    game("state.owned.add('1,1'); state.restore.ruine = 1");
-    game("for (const [k, t] of [...state.tiles]) if (t.lm === 'ruine') state.tiles.delete(k)");
-    game("state.tiles.set('11,8', { b: 'lm', lm: 'ruine', lvl: 1 }); recalc()");
-    game('state = parseSave(serialize()); fitFootprints(); delete state.fitLm; recalc()');
-    expect(game("lmTile('ruine')")).toEqual([11, 8]);
+    game(`state = parseSave(${JSON.stringify(d)}); globalThis.__m = migrateIslands(); recalc()`);
+    expect(game("[...state.tiles.values()].filter(t => t.b === 'lm').length")).toBe(7);
+    expect(game("islandAt(...lmTile('ruine'))")).toBe('ruine');
+    expect(game("state.islands.has('ruine')")).toBe(true);           // restauriert → schon erschlossen
+    expect(game("state.islands.has('wald')")).toBe(false);
+    expect(game('state.restore.ruine')).toBe(2);
+    expect(game('state.money')).toBe(money + 100 + 130 + 160);
+    expect(game("isleChunks('home').every(ck => state.owned.has(ck))")).toBe(true);
+    // noch einmal laden: nichts passiert mehr
+    game('state = parseSave(serialize()); migrateIslands()');
+    expect(game('state.money')).toBe(money + 390);
   });
 });

@@ -125,19 +125,6 @@ function cancelMove() {
   recalc();
 }
 
-function buyPlot(ck) {
-  if (!purchasable(ck)) return;
-  const price = plotPrice();
-  if (state.money < price) { fail('Zu wenig Taler'); return; }
-  state.money -= price;
-  state.owned.add(ck);
-  recalc();
-  save();
-  closePanel();
-  sfx('buy');
-  const lms = landmarksIn(ck);
-  toast(lms.length ? `Grundstück gekauft! Verbinde ${LANDMARKS[lms[0]].name} per Weg mit dem Dorf.` : 'Neues Grundstück gekauft!');
-}
 
 // Gebäude ausbauen: nur wenn alle Bedingungen erfüllt sind; kostet Taler und Material
 function stageUpgrade(x, y) {
@@ -216,28 +203,16 @@ function research(id) {
   openResearch();
 }
 
-function landmarksIn(ck) {
-  const [cx, cy] = ck.split(',').map(Number), out = [];
-  for (let y = cy * CHUNK; y < cy * CHUNK + CHUNK; y++)
-    for (let x = cx * CHUNK; x < cx * CHUNK + CHUNK; x++) {
-      const t = state.tiles.get(x + ',' + y);
-      if (t && t.b === 'lm') out.push(t.lm);
-    }
-  return out;
-}
 
 function tap(sx, sy, isTouch) {
   const { x, y, slot } = slotAt(sx, sy);
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   const [ax, ay] = a ? keyXY(a) : [x, y];
+  const isle = isleOf(x, y);
+  if (isle && !isleOpen(isle.id)) { openIsle(isle.id, sx, sy); return; }
   if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
-  if (!state.owned.has(ck)) {
-    if (purchasable(ck)) openBuy(ck, sx, sy);
-    else if (onIsland(ck)) toast('Kauf erst die Grundstücke dazwischen');
-    else toast('Da ist nur Meer.');
-    return;
-  }
+  if (!state.owned.has(ck)) { toast('Da ist nur Meer.'); return; }
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
