@@ -20,6 +20,7 @@ function newState() {
     diarySeen: 0,              // so viele Seiten hat man schon gelesen
     tutorial: 0,               // Schritt der Einführung, -1 = fertig/übersprungen
     legacy: new Set(),         // früher per Stern/Forschung Freigeschaltetes bleibt frei
+    design: new Set(),         // in der Kunstakademie gekauft: 'wall:4', 'roof:7', 'weg:kies', 'laterne' …
     festival: false,
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(['0,0']),   // Grundstücke (6×6) der erschlossenen Inseln
@@ -60,8 +61,9 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 7, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 8, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
+    design: [...state.design],
     town: state.town, owned: [...state.owned], islands: [...state.islands], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
@@ -112,19 +114,32 @@ function parseSave(d) {
     return t.b in ITEMS;
   });
   d.techs = (d.techs || []).filter(id => { if (id in SCI_REFUND) { d.science = (d.science || 0) + SCI_REFUND[id]; return false; } return true; });
+  // v8 (29.09.2026): Aussehen gibt es einzeln in der Kunstakademie. Was man vorher schon hatte, bleibt freigeschaltet.
+  if ((d.v || 3) < 8) {
+    const had = new Set(d.techs), grant = new Set(d.design || []);
+    const lanterns = Object.values(d.restore || {}).reduce((s, n) => s + n, 0);
+    for (let i = FREE_COLORS; i < (had.has('farben') ? 14 : 7); i++) { grant.add('wall:' + i); grant.add('roof:' + i); }
+    grant.add('weg:kies'); grant.add('weg:mulch');
+    if (lanterns >= 3 || (d.legacy || []).includes('weg:asphalt')) grant.add('weg:asphalt');
+    const byTech = { garten: ['weg:tritt', 'weg:holz', 'laterne'], pflasterkunst: ['weg:klinker', 'weg:terrakotta'],
+      farben: ['weg:schach', 'weg:pastell'], kunst: ['weg:fisch'], skulptur: ['weg:mosaik', 'pavillon', 'statue'] };
+    for (const [tech, ids] of Object.entries(byTech)) if (had.has(tech)) ids.forEach(id => grant.add(id));
+    d.design = [...grant];
+  }
   return {
     seed: d.seed, money: +d.money || 0, res: { ...newRes(), ...(d.res || {}) }, science: d.science || 0,
     restore: d.restore || {}, diary: d.diary || ['start'], diarySeen: d.diarySeen || 0, festival: !!d.festival,
     // Spielstände von vor den Laternen: Einführung überspringen, Sterne-Freischaltungen behalten
     tutorial: d.tutorial != null ? d.tutorial : -1,
     legacy: new Set(d.legacy || legacyUnlocks(d)),
+    design: new Set(d.design || []),
     oldSave: !d.restore,
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
-    owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs),
+    owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     decos: new Map(d.decos || []),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };

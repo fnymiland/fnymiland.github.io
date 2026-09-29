@@ -131,14 +131,17 @@ function renderStyleBar(t) {
   const cur = currentStyle(t);
   bar.innerHTML = STYLES[t].map(st => {
     const ok = styleOk(st);
-    return `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" ${ok ? '' : 'disabled'} title="${ok ? st.name : 'Freischalten: ' + styleLock(st)}">
+    return `<button class="style-chip${st.id === cur ? ' on' : ''}${ok ? '' : ' locked'}" data-style="${st.id}" ${ok || st.design ? '' : 'disabled'} title="${ok ? st.name : 'Freischalten: ' + styleLock(st)}">
       <i style="background:${st.col}"></i>${st.name}${ok ? '' : ` <small>🔒 ${styleLock(st)}</small>`}</button>`;
   }).join('');
-  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => {
+    if (b.classList.contains('locked')) { openResearch('design'); return; }        // in der Kunstakademie kaufen
+    chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t);
+  };
   bar.hidden = false;
 }
 
-const canResearch = () => TECHS.some(t => !hasTech(t.id) && (t.req || []).every(hasTech) && state.science >= t.cost);
+const canResearch = () => TECHS.some(t => techReady(t) && state.science >= t.cost);
 
 let goalSmall = false;
 function updateHud() {
@@ -279,7 +282,7 @@ function openInfo(x, y) {
   }
   let colors = '';
   if (t.b === 'haus' || PAINTABLE.has(t.b)) {
-    const n = hasTech('farben') ? 14 : 7, house = t.b === 'haus';
+    const house = t.b === 'haus';
     if (house && t.lvl > 1) colors += `
       <div class="label">Aussehen</div>
       <div class="looks">${HOUSE_STAGES.slice(0, t.lvl).map((st, i) => `<button class="look${i + 1 === houseLook(t) ? ' on' : ''}" data-look="${i + 1}">${st.name}</button>`).join('')}</div>`;
@@ -289,10 +292,10 @@ function openInfo(x, y) {
     colors += `
       ${!house && (t.wall != null || t.roof != null) ? '<div class="looks"><button class="look" data-orig="1">↺ Originalfarben</button></div>' : ''}
       <div class="label">Wand</div>
-      <div class="swatches">${WALLS.slice(0, n).map((c, i) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
+      <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
       <div class="label">Dach</div>
-      <div class="swatches">${ROOFS.slice(0, n).map((c, i) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
-      ${n < 14 ? '<p class="muted">Mehr Farben: Forschung „Farbenlehre“</p>' : ''}`;
+      <div class="swatches">${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+      ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = '';
@@ -345,6 +348,7 @@ function openInfo(x, y) {
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
   };
   $('p-close').onclick = closePanel;
+  if (el.querySelector('[data-openart]')) el.querySelector('[data-openart]').onclick = () => { closePanel(); openResearch('design'); };
   for (const b of el.querySelectorAll('[data-look]')) b.onclick = () => {
     const n = +b.dataset.look;
     if (n === t.lvl) delete t.look; else t.look = n;
@@ -437,24 +441,52 @@ function announceIslands(m) {
 }
 
 // Forschung
-function openResearch() {
-  const cats = [...new Set(TECHS.map(t => t.cat))];
+// Forschung mit zwei Seiten: Wissen (Ideen, drei Stufen nach Schule/Bibliothek/Uni) und Kunstakademie (Aussehen, Taler)
+let researchTab = 'wissen';
+function openResearch(tab = researchTab) {
+  researchTab = tab;
+  let body;
+  if (tab === 'wissen') {
+    body = `
+      <p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – Ideen kommen aus Schulen (Ruineninsel)'}.</p>
+      <div class="tech-cats">${[1, 2, 3].map(tier => {
+        const open = tierOpen(tier);
+        return `<div class="tech-cat${open ? '' : ' closed'}"><h4>Stufe ${tier} · ${TECH_TIERS[tier].name}${open ? '' : ' 🔒'}</h4>
+          ${open ? '' : `<p class="muted">Baue eine ${TECH_TIERS[tier].name}, um hier zu forschen.</p>`}
+          ${TECHS.filter(t => t.tier === tier).map(t => {
+            const done = hasTech(t.id), ready = techReady(t), reqOk = (t.req || []).every(hasTech);
+            const need = !reqOk && !done ? `<span class="muted">braucht ${t.req.map(r => TECH_BY_ID[r].name).join(', ')}</span>` : '';
+            return `<div class="tech${done ? ' done' : ''}${!ready && !done ? ' locked' : ''}">
+              <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
+              ${ready ? `<button class="btn" data-tech="${t.id}" data-sci="${t.cost}" ${state.science < t.cost ? 'disabled' : ''}>Erforschen · 💡 ${t.cost}</button>` : ''}
+            </div>`;
+          }).join('')}</div>`;
+      }).join('')}</div>`;
+  } else {
+    const groups = [...new Set(DESIGN.map(d => d.group))], master = hasBuilt('kunst');
+    body = `
+      <p>Such dir aus, was dir gefällt – jedes Stück einzeln. Du hast <b>🪙 ${fmt(state.money)}</b>.
+        ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
+      ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
+        const have = !d.price || state.design.has(d.id), err = have ? null : designError(d);
+        const look = d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
+        return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
+          ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name}</span>
+          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(d.price)}`}</small></button>`;
+      }).join('')}</div>`).join('')}`;
+  }
   openModal(`
     <h2>🔬 Forschung</h2>
-    <p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ' – baue eine Schule!'}.</p>
-    <div class="tech-cats">${cats.map(c => `
-      <div class="tech-cat"><h4>${c}</h4>${TECHS.filter(t => t.cat === c).map(t => {
-        const done = hasTech(t.id), open = (t.req || []).every(hasTech);
-        const need = !open ? `<span class="muted">braucht ${t.req.map(r => TECH_BY_ID[r].name).join(', ')}</span>` : '';
-        return `<div class="tech${done ? ' done' : ''}${!open && !done ? ' locked' : ''}">
-          <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
-          ${!done && open ? `<button class="btn" data-tech="${t.id}" data-sci="${t.cost}" ${state.science < t.cost ? 'disabled' : ''}>Erforschen · 💡 ${t.cost}</button>` : ''}
-        </div>`;
-      }).join('')}</div>`).join('')}
+    <div class="looks hall-tabs">
+      <button class="look${tab === 'wissen' ? ' on' : ''}" data-rtab="wissen">📚 Wissen</button>
+      <button class="look${tab === 'design' ? ' on' : ''}" data-rtab="design">🎨 Kunstakademie</button>
     </div>
+    ${body}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   $('modal-card').classList.add('research');
+  for (const b of document.querySelectorAll('[data-rtab]')) b.onclick = () => { sfx('deco'); openResearch(b.dataset.rtab); };
   for (const b of document.querySelectorAll('[data-tech]')) b.onclick = () => research(b.dataset.tech);
+  for (const b of document.querySelectorAll('[data-design]')) b.onclick = () => { if (buyDesign(b.dataset.design)) openResearch('design'); };
   $('m-close').onclick = closeModal;
 }
 $('sci-btn').onclick = () => { setTool('look'); openResearch(); };
@@ -554,14 +586,14 @@ function openTownHall(tab = hallTab) {
       ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
         : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
   } else {
-    const hall = townHallAt(), t = hall && state.tiles.get(hall.join(',')), cols = hasTech('farben') ? 14 : 7;
+    const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
     body = `
       ${townEditor(state.town)}
       ${t ? `
         <div class="label">Rathaus: Wand</div>
-        <div class="swatches">${WALLS.slice(0, cols).map((c, i) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
+        <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
         <div class="label">Rathaus: Dach</div>
-        <div class="swatches">${ROOFS.slice(0, cols).map((c, i) => `<button class="sw${i === t.roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+        <div class="swatches">${colorsOf('roof').map(([c, i]) => `<button class="sw${i === t.roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
         <div class="row"><button class="btn ghost" id="h-move">✋ Rathaus verschieben</button></div>` : ''}`;
   }
   openModal(`

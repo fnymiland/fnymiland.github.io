@@ -32,7 +32,12 @@ function build(b, x, y, quiet) {
   else if (b === 'schuett') { state.terra.set(k, 'grass'); sfx('dig'); }
   else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
-    if (b === 'haus') assignResident(state.tiles.get(k), Math.random, Math.random);
+    if (b === 'haus') {
+      const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
+      assignResident(t, Math.random, Math.random);
+      t.wall = walls[Math.floor(Math.random() * walls.length)][1];
+      t.roof = roofs[Math.floor(Math.random() * roofs.length)][1];
+    }
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }
   recalc();
@@ -163,6 +168,9 @@ function nameHouses() {
     if (t.b !== 'haus') continue;
     const [x, y] = keyXY(k);
     assignResident(t, () => hash(x, y, 501), () => hash(x, y, 502));
+    // Farbe fest eintragen (früher aus der Lage berechnet) – so bleibt das Haus, wie es war
+    if (t.wall == null) t.wall = Math.floor(hash(x, y, 3) * 7);
+    if (t.roof == null) t.roof = Math.floor(hash(x, y, 4) * 7);
   }
 }
 const animalOf = t => ANIMALS.find(a => a.id === t.animal) || ANIMALS[0];
@@ -191,7 +199,7 @@ function houseUpgrade(x, y) {
 
 function research(id) {
   const tch = TECH_BY_ID[id];
-  if (!tch || hasTech(id) || !(tch.req || []).every(hasTech) || state.science < tch.cost) return;
+  if (!tch || !techReady(tch) || state.science < tch.cost) return;
   state.science -= tch.cost;
   state.techs.add(id);
   sfx('research');
@@ -201,6 +209,19 @@ function research(id) {
   save();
   toast(`Erforscht: ${tch.name}!`);
   openResearch();
+}
+
+// Kunstakademie: ein Stück Aussehen (Farbe, Wege-Stil, Deko) mit Talern freischalten
+function buyDesign(id) {
+  const d = DESIGN_BY_ID[id], err = designError(d);
+  if (err) { fail(err); return false; }
+  state.money -= d.price;
+  state.design.add(id);
+  sfx('research');
+  buildToolbar();
+  save();
+  toast(`Freigeschaltet: ${d.name}`);
+  return true;
 }
 
 

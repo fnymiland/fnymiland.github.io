@@ -119,7 +119,7 @@ describe('Viertel und Wege', () => {
     field();
     build('weg', 8, 8);
     expect(game("state.tiles.get('8,8').style")).toBe('sand');
-    game("chosenStyle.weg = 'kies'");
+    game("state.design.add('weg:kies'); chosenStyle.weg = 'kies'");
     expect(build('weg', 8, 8)).toBe(true);
     expect(game("state.tiles.get('8,8').style")).toBe('kies');
     expect(build('weg', 8, 8)).toBe(false);
@@ -134,7 +134,7 @@ describe('Viertel und Wege', () => {
     field();
     build('weg', 8, 8);
     game('state.res.metall = 5');
-    game("state.techs.add('garten'); state.restore.quelle = 2");
+    game("state.design.add('laterne'); state.restore.quelle = 2");
     expect(game("smallError('laterne', 8, 8, 0)")).toBe(null);
     expect(game("placeError('brunnen', 8, 8)")).toBe('Hier steht schon etwas');
   });
@@ -163,12 +163,13 @@ describe('Speichern und Laden', () => {
                    ['6,3', { b: 'weg', lvl: 1, style: 'steg' }], ['7,3', { b: 'bus', lvl: 1 }]);
     raw.paved = [['8,3', 'terrakotta'], ['4,3', 'kopf'], '9,6'];
     raw.walks = ['3,3,s', ['4,4,e', 'kies']];
-    raw.techs = ['wind', 'bus2', 'farben'];
+    raw.techs = ['wind', 'bus2', 'farben']; raw.v = 3; delete raw.design;
     localStorage.setItem('kachelhausen_v3', JSON.stringify(raw));
     const d = game('load()');
     expect(d.money).toBe(500 + 120);                         // Kraftwerk + Bushaltestelle
     expect(d.science).toBe(30 + 70);                         // Windkraft + Schnellbusse
-    expect([...d.techs]).toEqual(['farben']);
+    expect([...d.techs]).toEqual([]);                         // Farbenlehre ist jetzt Kunstakademie …
+    expect(d.design.has('wall:12') && d.design.has('weg:schach')).toBe(true);   // … und bleibt freigeschaltet
     expect(d.tiles.has('3,3')).toBe(false);
     expect(d.tiles.get('4,3')).toMatchObject({ b: 'weg', style: 'asphalt' });
     expect(d.tiles.get('5,3')).toMatchObject({ b: 'weg', style: 'kopf' });

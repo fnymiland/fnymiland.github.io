@@ -39,7 +39,7 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 
 - [x] **5a Themen-Inseln:** Heimatinsel ganz, 7 Inseln mit Sehenswürdigkeit in der Mitte, nacheinander erschließen
       (Taler, Ideen, Ansehen), Führung „welche Insel als Nächstes“, alte Stände ziehen um.
-- [ ] **5b Forschung mit Seiten**, Kunstakademie-Seite, Farben und Wege-Stile einzeln freischalten, langsamer.
+- [x] **5b Forschung mit Seiten**, Kunstakademie-Seite, Farben und Wege-Stile einzeln freischalten, langsamer.
 - [ ] **5c Zug** zwischen den Dörfern (mehr Einwohner, Bonus) – eigener Schritt.
 
 ## Ursprüngliche Notizen zu Block 5

@@ -70,14 +70,14 @@ const ITEMS = {
   busch:   { cat: 'deko', name: 'Kleiner Busch', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   hecke:   { cat: 'deko', name: 'Hecke', cost: 10, beauty: 1, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
-  laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, tech: 'garten', desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
+  laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
   park:    { cat: 'deko', name: 'Park', lm: 'baum:2', size: [3, 3], cost: 300, needs: 'grass', beauty: 30, mat: { bretter: 2 },
              desc: 'Eine grüne Oase mit Teich, Bäumen und Bänken. Belegt 3×3 Felder.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:2', cost: 20, mat: { metall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
   windrad: { cat: 'deko', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind.' },
-  pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, tech: 'skulptur', desc: 'Für Konzerte im Park.' },
-  statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, tech: 'skulptur', desc: 'Glänzt golden.' },
+  pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, design: 600, master: true, desc: 'Für Konzerte im Park.' },
+  statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, design: 900, master: true, desc: 'Glänzt golden.' },
   // --- Gelände ---
   graben:  { cat: 'land', name: 'Teich graben', cost: 30, desc: 'Macht aus Wiese Wasser (gut für Fischer).' },
   schuett: { cat: 'land', name: 'Aufschütten', cost: 60, desc: 'Macht aus Wasser neues Land.' },
@@ -283,40 +283,47 @@ const DIARY_START = 'Liebe Nachfolgerin, lieber Nachfolger: Die Insel schläft n
 const DIARY_FINALE = 'Der Leuchtturm brennt wieder. Heute Nacht feiern wir das Laternenfest – so wie früher. Danke. Die Insel gehört jetzt dir.';
 
 
+// Forschung (Seite „Wissen“, bezahlt mit Ideen 💡) in drei Stufen: 1 braucht eine Schule, 2 eine Bibliothek,
+// 3 eine Universität. Das Aussehen (Farben, Wege-Stile, Deko) gibt es auf der Seite „Kunstakademie“ (DESIGN).
+const TECH_TIERS = [null, { b: 'schule', name: 'Schule' }, { b: 'bibliothek', name: 'Bibliothek' }, { b: 'uni', name: 'Universität' }];
 const TECHS = [
-  { id: 'duenger', cat: '🌾 Wirtschaft', name: 'Dünger', cost: 15, desc: 'Felder bringen 50 % mehr.' },
-  { id: 'handel', cat: '🌾 Wirtschaft', name: 'Handel', cost: 40, desc: 'Schaltet den Markt frei.' },
-  { id: 'industrie', cat: '🌾 Wirtschaft', name: 'Industrie', cost: 100, req: ['handel'], desc: 'Schaltet die Werkstatt frei.' },
-  { id: 'seehandel', cat: '🌾 Wirtschaft', name: 'Seehandel', cost: 150, req: ['handel'], desc: 'Schaltet den Hafen frei.' },
-  { id: 'bibliothek', cat: '🎓 Bildung', name: 'Bibliotheken', cost: 30, desc: 'Bibliotheken bringen doppelt so viele Ideen.' },
-  { id: 'uni', cat: '🎓 Bildung', name: 'Universität', cost: 150, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
-  { id: 'farben', cat: '🎨 Kunst', name: 'Farbenlehre', cost: 10, desc: 'Sieben neue Wand- und Dachfarben.' },
-  { id: 'garten', cat: '🎨 Kunst', name: 'Gartenkunst', cost: 25, desc: 'Laternen, Holzbohlen- und Trittstein-Wege.' },
-  { id: 'pflasterkunst', cat: '🎨 Kunst', name: 'Pflasterkunst', cost: 20, desc: 'Klinker, Terrakotta und Holzsteg für deine Wege.' },
-  { id: 'kunst', cat: '🎨 Kunst', name: 'Kunstschule', cost: 60, req: ['garten'], desc: 'Kunstakademien machen die Umgebung 50 % schöner.' },
-  { id: 'skulptur', cat: '🎨 Kunst', name: 'Bildhauerei', cost: 120, req: ['kunst'], desc: 'Pavillon und Sternstatue.' },
+  { id: 'duenger', tier: 1, name: 'Dünger', cost: 20, desc: 'Felder bringen 50 % mehr.' },
+  { id: 'axt', tier: 1, name: 'Scharfe Äxte', cost: 30, desc: 'Holzfäller liefern 30 % mehr Holz.' },
+  { id: 'netze', tier: 1, name: 'Fischernetze', cost: 30, desc: 'Fischerhütten bringen 30 % mehr.' },
+  { id: 'handel', tier: 1, name: 'Handel', cost: 50, desc: 'Schaltet den Markt frei.' },
+  { id: 'bibliothek', tier: 1, name: 'Bibliotheken', cost: 40, desc: 'Bibliotheken bringen doppelt so viele Ideen.' },
+  { id: 'muehlrad', tier: 2, name: 'Mühlräder', cost: 90, desc: 'Mühlen bringen 30 % mehr.' },
+  { id: 'ofen', tier: 2, name: 'Steinofen', cost: 110, desc: 'Bäckereien bringen 30 % mehr.' },
+  { id: 'industrie', tier: 2, name: 'Industrie', cost: 120, req: ['handel'], desc: 'Schaltet die Werkstatt frei.' },
+  { id: 'seehandel', tier: 2, name: 'Seehandel', cost: 180, req: ['handel'], desc: 'Schaltet den Hafen frei.' },
+  { id: 'kunst', tier: 2, name: 'Kunstschule', cost: 80, desc: 'Kunstakademien machen die Umgebung 50 % schöner.' },
+  { id: 'uni', tier: 2, name: 'Universität', cost: 200, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
+  { id: 'dampf', tier: 3, name: 'Dampfkraft', cost: 350, req: ['industrie'], desc: 'Werkstätten bringen 50 % mehr.' },
+  { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf alle Einnahmen.' },
+  { id: 'sterne', tier: 3, name: 'Sternkunde', cost: 400, desc: 'Alle Ideen 20 % mehr.' },
 ];
 const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));
 
-// Stile für Wege: erst schlicht, schönere per Stern oder Forschung
+// Stile für Wege: Sandweg von Anfang an, die anderen einzeln in der Kunstakademie (design = Preis in Talern)
+// oder als Geschenk einer Sehenswürdigkeit (lm)
 // shape: 'band' = Weg, der sich mit Nachbar-Wegen verbindet; 'fill' = ganze Fläche (Platz)
 const STYLES = {
   weg: [
     { id: 'sand', name: 'Sandweg', col: '#d8c197', shape: 'band' },
-    { id: 'kies', name: 'Kies', col: '#eadbb2', shape: 'band' },
-    { id: 'mulch', name: 'Rindenmulch', col: '#8b5e3c', shape: 'band' },
+    { id: 'kies', name: 'Kies', col: '#eadbb2', shape: 'band', design: 40 },
+    { id: 'mulch', name: 'Rindenmulch', col: '#8b5e3c', shape: 'band', design: 40 },
     { id: 'platten', name: 'Platten', col: '#e6dfd0', shape: 'fill', lm: 'baum:2' },
-    { id: 'asphalt', name: 'Asphalt', col: '#9e988e', shape: 'band', lanterns: 3 },
-    { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', shape: 'band', tech: 'garten' },
-    { id: 'holz', name: 'Holzbohlen', col: '#c89a6a', shape: 'band', tech: 'garten' },
+    { id: 'asphalt', name: 'Asphalt', col: '#9e988e', shape: 'band', design: 200 },
+    { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', shape: 'band', design: 120 },
+    { id: 'holz', name: 'Holzbohlen', col: '#c89a6a', shape: 'band', design: 120 },
     { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', shape: 'fill', lm: 'quelle:2' },
-    { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', tech: 'pflasterkunst' },
-    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', tech: 'pflasterkunst' },
-    { id: 'schach', name: 'Schachbrett', col: '#f5dce6', shape: 'fill', tech: 'farben' },
-    { id: 'pastell', name: 'Pastell-Mosaik', col: '#f3dfe6', shape: 'band', tech: 'farben' },
-    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', tech: 'kunst' },
+    { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', design: 180 },
+    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', design: 180 },
+    { id: 'schach', name: 'Schachbrett', col: '#f5dce6', shape: 'fill', design: 250 },
+    { id: 'pastell', name: 'Pastell-Mosaik', col: '#f3dfe6', shape: 'band', design: 250 },
+    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', design: 350, master: true },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
-    { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', shape: 'fill', tech: 'skulptur' },
+    { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', shape: 'fill', design: 500, master: true },
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
   ],
 };
@@ -328,6 +335,16 @@ const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8',
                '#ffd1b3', '#c9f0e4', '#ffe066', '#d8c3a5', '#b8d8ff', '#ffc2d9', '#f5f5f5'];
 const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1', '#6b7a8f',
                '#2f9e9e', '#8b5a3c', '#3c4a6b', '#d94f8a', '#7cb342', '#ff8a3d', '#4a4a58'];
+// Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern). Die ersten drei Wand- und Dachfarben
+// und der Sandweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
+const FREE_COLORS = 3;
+const DESIGN = [
+  ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
+  ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
+  ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
+  ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master })),
+];
+const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
 const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain' };

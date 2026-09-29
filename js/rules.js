@@ -130,11 +130,11 @@ function rawIncome(b, x, y) {
   switch (b) {
     case 'haus': return 0.5;
     case 'feld': return hasTech('duenger') ? 1.5 : 1;
-    case 'fischer': return 1 + 1.5 * countAround(x, y, 1, isWater);
-    case 'muehle': return 0.5 + 2 * countNear(x, y, 1, b => b === 'feld');
-    case 'baecker': return 2 + 6 * countNear(x, y, 1, b => b === 'muehle');
+    case 'fischer': return (1 + 1.5 * countAround(x, y, 1, isWater)) * (hasTech('netze') ? 1.3 : 1);
+    case 'muehle': return (0.5 + 2 * countNear(x, y, 1, b => b === 'feld')) * (hasTech('muehlrad') ? 1.3 : 1);
+    case 'baecker': return (2 + 6 * countNear(x, y, 1, b => b === 'muehle')) * (hasTech('ofen') ? 1.3 : 1);
     case 'markt': return 1.5 * countNear(x, y, 2, isProducerB);
-    case 'fabrik': return 25 + 5 * countNear(x, y, 3, b => b === 'mine');
+    case 'fabrik': return (25 + 5 * countNear(x, y, 3, b => b === 'mine')) * (hasTech('dampf') ? 1.5 : 1);
     case 'leuchtturm': return 10;
     default: return 0;
   }
@@ -181,7 +181,7 @@ function totals() {
   };
   const klippe = lmOn.get('klippe') || lmHalf.get('klippe');
   const harbors = [...state.tiles.values()].filter(t => t.b === 'hafen').length;
-  const gmul = 1 + 0.08 * harbors;
+  const gmul = 1 + (hasTech('schiffbau') ? 0.12 : 0.08) * harbors;
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
@@ -198,6 +198,7 @@ function totals() {
       for (const [r, base] of Object.entries(d.prod)) {
         let v = base * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m;
         if (t.b === 'mine' && lmOn.has('erzberg')) v *= 1.25;
+        if (t.b === 'holz' && hasTech('axt')) v *= 1.3;
         s.prod[r] = v; prod[r] = (prod[r] || 0) + v;
       }
     }
@@ -226,6 +227,7 @@ function totals() {
     if (st.get(quelle[0]).road && lmStage('quelle') >= 3) inc += 12 * gmul;
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
+  if (hasTech('sterne')) sci *= 1.2;
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
@@ -240,6 +242,7 @@ const statusOf = (x, y) => T.st.get(x + ',' + y);
 const lmStage = type => (state.restore && state.restore[type]) || 0;
 function unlockOk(def, key) {
   if (state.legacy && state.legacy.has(key)) return true;
+  if (def.design && !state.design.has(key)) return false;        // in der Kunstakademie zu kaufen
   if (def.lm) { const [type, n] = def.lm.split(':'); if (lmStage(type) < +n) return false; }
   if (def.lanterns && lanternCount() < def.lanterns) return false;
   if (def.tech && !hasTech(def.tech)) return false;
@@ -252,11 +255,25 @@ function unlockText(def, short) {
     const [type, n] = def.lm.split(':');
     if (lmStage(type) < +n) return short ? `${LANDMARKS[type].icon} ${LANDMARKS[type].name}` : lmStepName(type, +n);
   }
+  if (def.design) return `🎨 Kunstakademie · 🪙 ${fmt(def.design)}`;
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   return '';
 }
 const styleOk = st => unlockOk(st, 'weg:' + st.id);
+// Farben: die ersten FREE_COLORS gibt es von Anfang an, weitere in der Kunstakademie
+const colorOk = (kind, i) => i < FREE_COLORS || state.design.has(kind + ':' + i);
+const colorsOf = kind => (kind === 'wall' ? WALLS : ROOFS).map((c, i) => [c, i]).filter(([, i]) => colorOk(kind, i));
+// Forschung: Stufe n braucht das passende Gebäude (Schule, Bibliothek, Universität)
+const tierOpen = tier => hasBuilt(TECH_TIERS[tier].b);
+const techReady = t => !hasTech(t.id) && tierOpen(t.tier) && (t.req || []).every(hasTech);
+// Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
+function designError(d) {
+  if (!d || state.design.has(d.id) || !d.price) return 'Schon da';
+  if (d.master && !hasBuilt('kunst')) return 'Braucht eine Kunstakademie';
+  if (state.money < d.price) return 'Zu wenig Taler';
+  return null;
+}
 const styleLock = st => unlockText(st);
 function currentStyle(kind) {
   if (!styleOk(styleDef(kind, chosenStyle[kind]))) chosenStyle[kind] = STYLES[kind][0].id;
