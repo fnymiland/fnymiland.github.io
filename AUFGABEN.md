@@ -114,8 +114,8 @@ zweiter Zug selbst kaufen (nur Rundkurs, je 2 km einer); Wunderwerke als Langzei
 - [x] Viel teurer (Langzeitziel, viele Rohstoffe); Wege darin in normaler Kachelgröße.
 
 **9d Aussehen**
-- [ ] Alte Ruine: voll ausgebaut wieder ein **Amphitheater**.
-- [ ] Dächer unterscheidbar: Bäckerei, Schule, Kunstakademie … sehen von oben anders aus als Wohnhäuser.
+- [x] Alte Ruine: voll ausgebaut wieder ein **Amphitheater**.
+- [x] Dächer unterscheidbar: Bäckerei, Schule, Kunstakademie … sehen von oben anders aus als Wohnhäuser.
 
 **9e Oben aufräumen**
 - [ ] Leiste oben schlank: Rathaus, Geld (glatt, ohne Komma), Einwohner, Ideen, 📦 Lager, Menü.

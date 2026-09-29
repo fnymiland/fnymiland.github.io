@@ -27,3 +27,24 @@ describe('Zeichnen', () => {
     expect(() => game('render(2000)')).not.toThrow();
   });
 });
+
+describe('Dächer und Amphitheater', () => {
+  it('neue Dachformen (Mansard, Tonne) in allen Richtungen', () => {
+    for (let r = 0; r < 4; r++) for (const type of ['mansard', 'barrel']) for (const [ha, hb] of [[0.3, 0.5], [0.5, 0.3]]) {
+      expect(() => game(`kit(100, 100, 1, ${r}).block({ ha: ${ha}, hb: ${hb}, h: 12, wall: '#ffeecc', roof: '#cc6644', roofH: 12, type: '${type}' })`), `${type} ${r}`).not.toThrow();
+    }
+  });
+
+  it('Bäckerei, Schule, Bibliothek und Kunstakademie zeichnen in jeder Stufe', () => {
+    for (const b of ['baecker', 'schule', 'bibliothek', 'kunst']) for (let lvl = 1; lvl <= 3; lvl++) for (let rot = 0; rot < 4; rot++) {
+      expect(() => game(`drawObject('${b}', 300, 300, 1, 1000, 5, 5, ${lvl}, { b: '${b}', lvl: ${lvl}, rot: ${rot} })`), `${b} ${lvl} ${rot}`).not.toThrow();
+    }
+  });
+
+  it('die Alte Ruine ist voll ausgebaut ein Amphitheater (Tag und Nacht)', () => {
+    for (const night of [0, 0.8]) for (let stage = 0; stage <= 3; stage++) {
+      expect(() => game(`night = ${night}; LANDMARK_ART.ruine(kit(300, 300, 1, 0), ${stage}, 1000, 5, 5)`)).not.toThrow();
+    }
+    game('night = 0');
+  });
+});

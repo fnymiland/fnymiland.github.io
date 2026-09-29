@@ -290,8 +290,9 @@ const LANDMARK_ART = {
   },
 
   // Alte Ruine: antiker Tempel auf einem Steinsockel – gebrochene Säulen, umgestürzte Säule, Efeu.
-  // Stufe 1 Ausgrabung (Grube, Zelt, Schubkarre), 2 Museum (kleiner Tempel), 3 Amphitheater
+  // Stufe 1 Ausgrabung (Grube, Zelt, Schubkarre), 2 Museum (kleiner Tempel), 3 wieder aufgebautes Amphitheater
   ruine(K, stage, now, x, y) {
+    if (stage >= 3) { amphitheater(K, now, x, y); return; }
     const z = K.z, dim = stage <= 0;
     if (groundPart(() => {
       K.oval(0, 0, 0.95, C('#a9cf86'));
@@ -301,12 +302,6 @@ const LANDMARK_ART = {
       for (let i = 1; i < 5; i++) { const a0 = K.P(-0.5 + i * 0.18, -0.7), a1 = K.P(-0.5 + i * 0.18, 0.55); g.moveTo(...a0); g.lineTo(...a1); }
       g.stroke();
       if (stage >= 1) { K.rect(0.5, -0.45, 0.85, 0.05, C('#8a7456')); K.rect(0.55, -0.4, 0.8, 0, C('#6f5c44')); }   // Ausgrabungsgrube
-      if (stage >= 3) for (let i = 0; i < 3; i++) {                              // Amphitheater: Stufen im Halbkreis
-        const r = 0.35 + i * 0.13, pts = [];
-        for (let k = 0; k <= 12; k++) { const an = Math.PI * 0.5 + k / 12 * Math.PI; pts.push([-0.05 + Math.cos(an) * r * 0.3 + 0.62, 0.62 + Math.sin(an) * r]); }
-        g.strokeStyle = C(i % 2 ? '#d6ccb8' : '#e8dfcc'); g.lineWidth = 3.4 * z; g.lineCap = 'round';
-        g.beginPath(); pts.forEach((p, j) => j ? g.lineTo(...K.P(...p)) : g.moveTo(...K.P(...p))); g.stroke();
-      }
     })) return;
     // Säule: Schaft (links hell, rechts im Schatten), Kapitell, Efeu; h = Höhe (gebrochen = niedrig)
     const column = (a, b, h, ivy) => {
@@ -353,10 +348,78 @@ const LANDMARK_ART = {
       kColumns(B, 'front', 4, z);
       K.door(B, 'front', 0.42, 0.58, 0.6);
     }]);
-    if (stage >= 3) for (const [a, c] of [[0.95, '#e8705f'], [0.35, '#5f8fe8']]) parts.push([a, 0.95, () => {
-      const [px, py] = kPost(K, a, 0.95, 18), wv = Math.sin(now / 300 + a * 5) * 1.5 * z;
-      poly([[px, py], [px + 8 * z, py + 2 * z + wv], [px, py + 5 * z]], C(c));
-    }]);
     K.scene(parts);
   },
 };
+
+// Das wieder aufgebaute Amphitheater (Alte Ruine, Stufe 3): steinerne Sitzreihen im Halbkreis, die nach hinten
+// ansteigen, runde Bühne (Orchestra) mit Mosaik, vorn eine Säulenhalle; Zuschauer, Fahnen, nachts Fackeln
+const AMPHI = { cu: 0.15, r0: 0.55, rN: 1.42, n: 5, step: 5 };
+function amphitheater(K, now, x, y) {
+  const z = K.z, { cu, r0, rN, n, step } = AMPHI, lit = night > 0.15 && isLive();
+  const R = k => r0 + (rN - r0) * k / n;                       // Radius der k-ten Stufenkante
+  const arc = (r, up, a0 = Math.PI / 2, a1 = Math.PI * 1.5, m = 18) => {
+    const out = [];
+    for (let i = 0; i <= m; i++) { const an = a0 + (a1 - a0) * i / m; out.push(K.P(cu + Math.cos(an) * r, Math.sin(an) * r, up)); }
+    return out;
+  };
+  if (groundPart(() => {
+    K.oval(0, 0, 1.5, C('#a9cf86'));
+    kPave(K, () => kRectPath(K, -1.45, -1.45, 1.45, 1.45), PATH_LOOK.platten, x, y, 2);
+    K.oval(cu, 0, r0, C('#e9dcc4'));                                          // Orchestra mit Mosaik-Ringen
+    K.oval(cu, 0, r0 * 0.72, C('#d99a73'));
+    K.oval(cu, 0, r0 * 0.5, C('#f3e6cf'));
+    K.oval(cu, 0, r0 * 0.2, C('#d99a73'));
+  })) return;
+  // Sitzreihen von hinten (hoch) nach vorn: Oberseite, dann die Stufe darunter
+  for (let k = n - 1; k >= 0; k--) {
+    const top = (k + 1) * step;
+    poly(arc(R(k + 1), top).concat(arc(R(k), top).reverse()), C(k % 2 ? '#efe6d6' : '#e7ddca'));
+    poly(arc(R(k), top).concat(arc(R(k), k * step).reverse()), C('#cfc4ae'));
+  }
+  // Stirnseiten der Sitzreihen (Treppenprofil) an den beiden Enden, wenn sie zum Betrachter zeigen
+  for (const sb of [1, -1]) {
+    if (K.facing(0, sb) <= 0.01) continue;
+    const pts = [K.P(cu, sb * rN, 0), K.P(cu, sb * r0, 0)];
+    for (let k = 0; k < n; k++) pts.push(K.P(cu, sb * R(k), (k + 1) * step), K.P(cu, sb * R(k + 1), (k + 1) * step));
+    poly(pts, K.wallCol('#e2d8c4', [0, sb]));
+  }
+  // Zuschauer auf den Stufen (fest verteilt, wippen leicht)
+  for (let i = 0; i < 14; i++) {
+    const k = Math.floor(hash(x + i, y, 71) * n), an = Math.PI / 2 + (0.12 + hash(x, y + i, 72) * 0.76) * Math.PI;
+    const r = (R(k) + R(k + 1)) / 2, [px, py] = K.P(cu + Math.cos(an) * r, Math.sin(an) * r, (k + 1) * step);
+    const bob = Math.abs(Math.sin(now / 260 + i)) * 0.8 * z;
+    ellipse(px, py - 3 * z - bob, 2.3 * z, 2.8 * z, C(SHIRTS[i % SHIRTS.length]));
+    circle(px, py - 7 * z - bob, 1.8 * z, C(FUR[i % FUR.length]));
+  }
+  const parts = [];
+  // Säulenhalle vorn: Bühne mit Holzboden, Säulen und Gebälk (niedrig und luftig, damit man die Ränge sieht)
+  parts.push([1.15, 0, () => {
+    K.block({ a: 1.12, b: 0, ha: 0.2, hb: 1.05, h: 5, wall: '#d8cebb', type: 'flat', roof: '#c9a26f' });
+    for (let i = 0; i < 7; i++) {
+      const b = -0.95 + i * (1.9 / 6), [px, py] = K.P(1.22, b, 5), w = 2.6 * z, H = 26 * z;
+      g.fillStyle = C('#f5eee0'); g.fillRect(px - w, py - H, w, H);
+      g.fillStyle = C('#dcd2bf'); g.fillRect(px, py - H, w, H);
+    }
+    K.block({ a: 1.22, b: 0, ha: 0.09, hb: 1.05, h: 5, lift: 31, wall: '#f5eee0', type: 'flat', roof: '#fbf6ec' });
+    K.poly([[1.22 - 0.09, -1.05], [1.22 + 0.09, -1.05], [1.22 + 0.09, 1.05], [1.22 - 0.09, 1.05]], C('#b9a5d6'), 36);
+  }]);
+  // Fahnen und Fackeln an den Enden der Ränge
+  for (const sb of [1, -1]) parts.push([cu, sb * (rN + 0.02), () => {
+    const [px, py] = kPost(K, cu, sb * (rN + 0.02), 32), wv = Math.sin(now / 300 + sb) * 1.5 * z;
+    poly([[px, py], [px + 9 * z, py + 2 * z + wv], [px, py + 6 * z]], C(sb > 0 ? '#e8705f' : '#5f8fe8'));
+  }]);
+  for (const [a, b] of [[0.9, 1.25], [0.9, -1.25]]) parts.push([a, b, () => {
+    const [px, py] = kPost(K, a, b, 14, '#6b4f3a', 1.4), fl = 1 + Math.sin(now / 120 + a * 7 + b) * 0.15;
+    ellipse(px, py - 3 * z * fl, 2.2 * z, 3.4 * z * fl, lit ? '#ffb347' : C('#8a6440'));
+    if (lit) { ellipse(px, py - 3.6 * z * fl, 1.2 * z, 2 * z * fl, '#fff3b0'); glowQuad([[px - 2, py - 6 * z], [px + 2, py - 6 * z], [px + 2, py], [px - 2, py]], 30 * z); }
+  }]);
+  // eine kleine Vorstellung auf der Orchestra
+  parts.push([cu, 0, () => {
+    const [px, py] = K.P(cu, 0), hop = Math.abs(Math.sin(now / 350)) * 2.5 * z;
+    ellipse(px, py - 4 * z - hop, 3 * z, 3.6 * z, C('#f2c14e'));
+    circle(px, py - 9.5 * z - hop, 2.3 * z, C('#fffaf2'));
+    if (lit) glowQuad([[px - 6, py - 12 * z], [px + 6, py - 12 * z], [px + 6, py], [px - 6, py]], 26 * z);
+  }]);
+  K.scene(parts);
+}

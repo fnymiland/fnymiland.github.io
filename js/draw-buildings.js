@@ -553,7 +553,7 @@ const BUILDING_ART = {
     const [wall, roof] = paint(t, pink ? '#fbe6ee' : '#ffe8b0', pink ? '#e3a1b8' : '#9c5a32'), H = s === 1 ? 15 : 24;
     const main = () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.04, ha: 0.3, hb: 0.56, h: H, wall, roof, roofH: 12, entry: true });
+      const B = K.block({ a: -0.04, ha: 0.3, hb: 0.56, h: H, wall, roof, roofH: 14, type: 'barrel', ridge: 'b', over: 1.08, entry: true });   // Tonnendach: rund wie ein Brotlaib
       K.door(B, 'front', 0.14, 0.28, s === 1 ? 0.62 : 0.38);
       const F = B.faces.front;
       if (F) {                                              // großes Schaufenster
@@ -562,10 +562,10 @@ const BUILDING_ART = {
       }
       if (s >= 2) { K.wins(B, 'front', 3, 0.6, 0.84, 0.1, 0.9); K.sideWins(B, 1, 0.6, 0.84); }
       K.sideWins(B, 1, s === 1 ? 0.35 : 0.12, s === 1 ? 0.72 : 0.36);
-      kitChimney(K, -0.12, 0.3, H + 7, now, '#c0694a');
+      kitChimney(K, -0.12, 0.34, H + 10, now, '#c0694a');
       // Schild: Brezel bzw. Torte
-      const [px, py] = K.P(-0.04, -0.2, H + 12);
-      if (pink) { K.block({ a: -0.04, b: -0.2, ha: 0.07, hb: 0.07, h: 4, lift: H + 6, wall: '#fff6e4', type: 'flat', roof: '#ff8fb1' }); circle(px, py - 2 * K.z, 1.5 * K.z, C('#e8404f')); }
+      const [px, py] = K.P(-0.04, -0.2, H + 20);
+      if (pink) { K.block({ a: -0.04, b: -0.2, ha: 0.07, hb: 0.07, h: 4, lift: H + 14, wall: '#fff6e4', type: 'flat', roof: '#ff8fb1' }); circle(px, py - 2 * K.z, 1.5 * K.z, C('#e8404f')); }
       else { g.strokeStyle = C('#d99a4e'); g.lineWidth = 2 * K.z; g.beginPath(); g.arc(px - 2 * K.z, py, 2.6 * K.z, 0, Math.PI * 2); g.arc(px + 2 * K.z, py, 2.6 * K.z, 0, Math.PI * 2); g.stroke(); }
     };
     const parts = [[0, 0, main]];
@@ -681,15 +681,15 @@ const BUILDING_ART = {
     const H = s === 3 ? 26 : 16 + s * 2, hb2 = s === 1 ? 0.55 : 0.72;
     parts.push([-0.25, -0.3, () => {
       kShadow(K, 0.6);
-      const B = K.block({ a: -0.25, b: -0.3, ha: 0.38, hb: hb2, h: H, wall: SW, roof: SR, roofH: 14, entry: true });
+      const B = K.block({ a: -0.25, b: -0.3, ha: 0.38, hb: hb2, h: H, wall: SW, roof: SR, roofH: 16, type: 'mansard', entry: true });   // Mansarddach
       K.door(B, 'front', 0.44, 0.56, s === 3 ? 0.36 : 0.56);
       K.wins(B, 'front', 4, s === 3 ? 0.1 : 0.32, s === 3 ? 0.34 : 0.7, 0.04, 0.96, [1, 2]);
       if (s === 3) K.wins(B, 'front', 4, 0.58, 0.84, 0.04, 0.96);
       K.sideWins(B, 2, 0.35, 0.72);
       // Glockentürmchen bzw. Uhrturm
       const tH = s === 3 ? 16 : 8, tw = s === 3 ? 0.13 : 0.09;
-      K.block({ a: -0.25, b: -0.3, ha: tw, hb: tw, h: tH, lift: H + (s === 3 ? 4 : 8), wall: shade(SW, 0.3), roof: SR, roofH: 8 });
-      const [bx, by] = K.P(-0.25 + tw, -0.3, H + (s === 3 ? 4 : 8) + tH * 0.55);
+      K.block({ a: -0.25, b: -0.3, ha: tw, hb: tw, h: tH, lift: H + (s === 3 ? 8 : 10), wall: shade(SW, 0.3), roof: SR, roofH: 8 });
+      const [bx, by] = K.P(-0.25 + tw, -0.3, H + (s === 3 ? 8 : 10) + tH * 0.55);
       if (s === 3 && K.facing(1, 0) > 0) { circle(bx, by, 3 * K.z, C('#ffffff')); kLine(K, [bx, by], [bx, by - 2.4 * K.z], '#6b4f3a', 0.7); kLine(K, [bx, by], [bx + 1.8 * K.z, by], '#6b4f3a', 0.7); }
       else circle(bx, by, 1.6 * K.z, C('#e9a23b'));
     }]);
@@ -715,11 +715,13 @@ const BUILDING_ART = {
     const H = 16 + (s - 1) * 2;
     const main = () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: H, wall: SW, roof: SR, roofH: 10, entry: s === 1 });
+      const B = K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.08), entry: s === 1 });   // Flachdach mit Brüstung
       if (s === 1) { K.door(B, 'front', 0.44, 0.56, 0.6); K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2]); }
       else K.wins(B, 'front', 4, 0.35, 0.75, 0.04, 0.96, [1, 2]);
       K.sideWins(B, 2, 0.35, 0.75);
-      if (s === 3) { const top = kDome(K, -0.06, 0, H + 8, 9, '#8fb4f2'); kLine(K, top, [top[0], top[1] - 5 * K.z], '#e9a23b', 1.2); }
+      K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: 3, lift: H, wall: shade(SW, 0.25), type: 'none' });
+      const top = kDome(K, -0.06, 0, H + (s === 3 ? 6 : 2), s === 3 ? 11 : 7, s === 3 ? '#8fb4f2' : SR);
+      kLine(K, top, [top[0], top[1] - 5 * K.z], '#e9a23b', 1.2);
     };
     const portico = () => {                               // Säulenvorbau mit Giebel
       const B = K.block({ a: 0.26, ha: 0.08, hb: 0.26, h: H, wall: shade(SW, 0.3), roof: SR, roofH: 8, entry: true });
@@ -764,10 +766,13 @@ const BUILDING_ART = {
     const main = () => {
       kShadow(K, 0.5);
       const [wall, roof] = paint(t, '#ffe3ef', s === 3 ? '#c3a8e6' : '#eaa6c0');
-      const B = K.block({ a: -0.04, ha: 0.28, hb: 0.54, h: H, wall, roof, roofH: s === 3 ? 0 : 12, type: s === 3 ? 'flat' : 'hip', entry: true });
+      const B = K.block({ a: -0.04, ha: 0.28, hb: 0.54, h: H, wall, roof: shade(roof, 0.25), type: 'flat', entry: true });   // Dachterrasse
       K.door(B, 'front', 0.44, 0.56, 0.6);
       K.wins(B, 'front', 4, 0.2, 0.85, 0.05, 0.95, [1, 2]);
       K.sideWins(B, 1, 0.2, 0.85);
+      if (s < 3) {                                        // gläsernes Atelier-Oberlicht (Tonne)
+        K.block({ a: -0.04, ha: 0.14, hb: 0.4, h: 2, lift: H, wall: roof, roof: night > 0.15 && isLive() ? '#ffe7a8' : '#cdeefa', roofH: 8, type: 'barrel', ridge: 'b', over: 1 });
+      }
       if (s === 3) {                                      // bunte Kuppeln
         [[SOFT.green, -0.34], [SOFT.yellow, 0], [SOFT.blue, 0.34]].forEach(([c, b]) => { const top = kDome(K, -0.04, b, H, b ? 6 : 9, c); circle(top[0], top[1] - 1.5 * K.z, 1.2 * K.z, C('#f2c14e')); });
       }

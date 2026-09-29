@@ -41,7 +41,8 @@ function kit(cx, cy, z, rot) {
   // Teile von hinten nach vorn zeichnen: [[a, b, fn], …]
   K.scene = parts => parts.map(p => [depth(p[0], p[1]), p[2]]).sort((x, y) => x[0] - y[0]).forEach(p => p[1]());
 
-  // Quader mit Dach. type: 'hip' (Walm), 'gable' (Sattel, ridge 'a' oder 'b'), 'flat', 'none'
+  // Quader mit Dach. type: 'hip' (Walm), 'gable' (Sattel, ridge 'a' oder 'b'), 'mansard' (Mansard: steil, dann flach),
+  // 'barrel' (Tonnendach: halbrund über der langen Seite), 'flat', 'none'
   K.block = ({ a = 0, b = 0, ha, hb, h, lift = 0, wall, roof = null, roofH = 0, type = 'hip', ridge = null, over = 1.12, entry = false, trim = null }) => {
     const W = (sa, sb, up = 0) => P(a + sa * ha, b + sb * hb, lift + up);
     const faces = {};
@@ -59,6 +60,49 @@ function kit(cx, cy, z, rot) {
     }
     if (trim) for (const f of Object.values(faces)) if (f) faceQuad(f.P, f.Q, 0, 1, f.H - 1.4 * z, f.H, C(trim));
     const top = lift + h;
+    if (roof && type === 'mansard') {
+      const ea = ha * over, eb = hb * over, k = 0.66, m = top + roofH * 0.62, ka = ea * k, kb = eb * k;
+      const E1 = (sa, sb) => P(a + sa * ea, b + sb * eb, top), E2 = (sa, sb) => P(a + sa * ka, b + sb * kb, m);
+      const SIDES4 = [[[1, -1], [1, 1], [1, 0]], [[1, 1], [-1, 1], [0, 1]], [[-1, 1], [-1, -1], [-1, 0]], [[-1, -1], [1, -1], [0, -1]]];
+      const lower = SIDES4.map(([p, q, n]) => [[E1(...p), E1(...q), E2(...q), E2(...p)], n]);
+      const rh = roofH * 0.38, alongA = ka >= kb, upper = [];
+      if (alongA) {
+        const R1 = P(a - (ka - kb), b, m + rh), R2 = P(a + (ka - kb), b, m + rh);
+        upper.push([[E2(1, 1), E2(-1, 1), R1, R2], [0, 1]], [[E2(-1, -1), E2(1, -1), R2, R1], [0, -1]], [[E2(1, -1), E2(1, 1), R2], [1, 0]], [[E2(-1, 1), E2(-1, -1), R1], [-1, 0]]);
+      } else {
+        const R1 = P(a, b - (kb - ka), m + rh), R2 = P(a, b + (kb - ka), m + rh);
+        upper.push([[E2(1, -1), E2(1, 1), R2, R1], [1, 0]], [[E2(-1, 1), E2(-1, -1), R1, R2], [-1, 0]], [[E2(1, 1), E2(-1, 1), R2], [0, 1]], [[E2(-1, -1), E2(1, -1), R1], [0, -1]]);
+      }
+      const upCol = shade(roof, 0.1);
+      for (const [pts, n] of lower) if (facing(...n) < 0) poly(pts, roofCol(roof, n));
+      for (const [pts, n] of upper) if (facing(...n) < 0) poly(pts, roofCol(upCol, n));
+      for (const [pts, n] of upper) if (facing(...n) >= 0) poly(pts, roofCol(upCol, n));
+      for (const [pts, n] of lower) if (facing(...n) >= 0) poly(pts, roofCol(roof, n));
+      return { faces, a, b, ha, hb, h, lift, top: P(a, b, top), peak: P(a, b, m + rh), W };
+    }
+    if (roof && type === 'barrel') {
+      // Halbrund quer zur langen Seite; Streifen von hinten nach vorn, Schattierung nach der Richtung der Fläche
+      const alongA = ridge ? ridge === 'a' : ha >= hb, L = (alongA ? ha : hb) * over, R = (alongA ? hb : ha) * over, N = 10;
+      const pt = (s, th, r = R) => { const q = Math.cos(th) * r, up = top + Math.sin(th) * roofH * r / R; return alongA ? P(a + s, b + q, up) : P(a + q, b + s, up); };
+      const strips = [];
+      for (let i = 0; i < N; i++) {
+        const t0 = Math.PI * i / N, t1 = Math.PI * (i + 1) / N, c = Math.cos((t0 + t1) / 2);
+        const n = alongA ? [0, c] : [c, 0], [u, v] = turn(...n);
+        const amt = (u < 0 ? -u * LIGHT.roofSun : u * LIGHT.roofShade) + (v < 0 ? -v * LIGHT.roofBack : 0);
+        strips.push([facing(...n), [pt(-L, t0), pt(L, t0), pt(L, t1), pt(-L, t1)], shade(roof, amt)]);
+      }
+      strips.sort((p, q) => p[0] - q[0]).forEach(([, pts, col]) => poly(pts, C(col)));
+      for (const sgn of [1, -1]) {                        // runde Giebel an den Enden (in der Wandflucht)
+        const n = alongA ? [sgn, 0] : [0, sgn];
+        if (facing(...n) <= 0.01) continue;
+        const pts = [];
+        for (let i = 0; i <= N; i++) pts.push(pt(sgn * L / over, Math.PI * i / N, R * 0.94));
+        poly(pts, wallCol(wall, n));
+        g.strokeStyle = C(shade(roof, -0.1)); g.lineWidth = 1.2 * z; g.beginPath();
+        pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
+      }
+      return { faces, a, b, ha, hb, h, lift, top: P(a, b, top), peak: P(a, b, top + roofH), W };
+    }
     if (type === 'flat' || !roof) {
       if (type !== 'none') poly([W(-1, -1, h), W(1, -1, h), W(1, 1, h), W(-1, 1, h)], C(roof || shade(wall, 0.08)));
     } else {
