@@ -102,3 +102,45 @@ describe('Kristall- und Glas-Dekos', () => {
     game('night = 0');
   });
 });
+
+describe('Glasvilla', () => {
+  const villa = () => game("for (let y = 3; y <= 9; y++) for (let x = 6; x <= 11; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } state.tiles.set('8,6', { b: 'haus', lvl: 5, name: 'Mo' }); recalc()");
+
+  it('ist die Stufe nach der Villa, mit mehr Einwohnern', () => {
+    expect(game('HOUSE_STAGES[5].name')).toBe('Glasvilla');
+    expect(game('HOUSE_STAGES[5].pop')).toBeGreaterThan(game('HOUSE_STAGES[4].pop'));
+    expect(game('HOUSE_STAGES[5].mat.kristall')).toBeGreaterThan(0);
+  });
+
+  it('erst mit der ersten Laterne der Kristallhöhle – vorher bleibt die Villa das Ende', () => {
+    villa();
+    game('state.restore.kristall = 0');
+    const w = game("houseWishes(state.tiles.get('8,6'), 8, 6)");
+    expect(w.next).toBe(null);
+    expect(w.later.name).toBe('Glasvilla');
+    game('state.restore.kristall = 1');
+    expect(game("houseWishes(state.tiles.get('8,6'), 8, 6).next.name")).toBe('Glasvilla');
+  });
+
+  it('wünscht sich Blick aufs Wasser – ein Teich reicht', () => {
+    villa();
+    game('state.restore.kristall = 1');
+    expect(game("houseWishes(state.tiles.get('8,6'), 8, 6).list.map(w => w.id)")).toContain('wasser');
+    expect(game("wishMet('wasser', 8, 6)")).toBe(false);
+    game("state.terra.set('10,7', 'water'); recalc()");
+    expect(game("wishMet('wasser', 8, 6)")).toBe(true);
+  });
+
+  it('Ausbau kostet Kristall, danach zeigt das Haus die Glasvilla', () => {
+    villa();
+    game('state.restore.kristall = 1; globalThis.__wm = wishMet; wishMet = () => true');
+    const k = game('state.res.kristall');
+    game('houseUpgrade(8, 6)');
+    game('wishMet = globalThis.__wm');
+    expect(game("state.tiles.get('8,6').lvl")).toBe(6);
+    expect(game('state.res.kristall')).toBe(k - game('HOUSE_STAGES[5].mat.kristall'));
+    expect(game("houseLook(state.tiles.get('8,6'))")).toBe(6);
+    for (const n of [0, 0.8]) expect(() => game(`night = ${n}; drawObject('haus', 100, 100, 1, 1000, 8, 6, 6, state.tiles.get('8,6'))`)).not.toThrow();
+    game('night = 0');
+  });
+});

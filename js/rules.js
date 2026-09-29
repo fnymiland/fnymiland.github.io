@@ -539,6 +539,7 @@ function wishMet(w, x, y) {
     case 'park': return objWithin(x, y, 4, b => b === 'park' || b === 'brunnen');
     case 'schule': return objWithin(x, y, 10, b => b === 'schule');
     case 'schoen': return beautyAround(x, y, 3) >= 30;
+    case 'wasser': return countAround(x, y, 3, isWater) > 0;
     default: return false;
   }
 }
@@ -546,6 +547,8 @@ function wishMet(w, x, y) {
 function houseWishes(t, x, y) {
   const next = HOUSE_STAGES[t.lvl];
   if (!next) return { next: null, list: [], met: 0, total: 0, ready: false };
+  // Stufen mit Freischaltung (Glasvilla: Kristallhöhle) bleiben bis dahin nur ein Ausblick
+  if (next.lm && !unlockOk(next, 'haus:' + next.name)) return { next: null, later: next, list: [], met: 0, total: 0, ready: false };
   const ids = HOUSE_STAGES.slice(1, t.lvl + 1).flatMap(st => st.wishes);
   const list = ids.map(id => ({ id, text: WISHES[id].text, ok: wishMet(id, x, y) }));
   const met = list.filter(w => w.ok).length;

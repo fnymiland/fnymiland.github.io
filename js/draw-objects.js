@@ -460,7 +460,7 @@ function flowerBox(P, Q, t0, t1, h, z) {
     circle(m[0], m[1] - h - 1.2 * z, 1.4 * z, C(['#ff8fb1', '#fff27a', '#ffffff', '#c49bff'][i]));
   }
 }
-const houseLook = t => { const lvl = Math.min((t && t.lvl) || 1, 5); return t && t.look >= 1 && t.look <= lvl ? t.look : lvl; };
+const houseLook = t => { const lvl = Math.min((t && t.lvl) || 1, HOUSE_STAGES.length); return t && t.look >= 1 && t.look <= lvl ? t.look : lvl; };
 function kShadow(K, r) { const [x, y] = K.P(0, 0); ellipse(x, y + 1 * K.z, r * TW * K.z, r * TH * K.z, 'rgba(40,60,20,0.15)'); }
 // Fachwerk: Balken auf allen sichtbaren Wänden
 function timber(B, z, col = '#7a5236') {
@@ -575,6 +575,54 @@ const HOUSE_ART = [
       [0.4, -0.3, () => kitBush(K, 0.4, -0.3, 0.8)], [0.4, 0.3, () => kitBush(K, 0.4, 0.3, 0.8)],
     ]);
   },
+  // 6 Glasvilla: zwei Kuben mit großen Glasfronten und Flachdach, davor Holzdeck mit kleinem Pool
+  (K, wall, roof, now) => {
+    const z = K.z;
+    if (groundPart(() => {
+      K.oval(0, 0, 0.5, C('#8ccb67'));
+      K.rect(0.18, -0.44, 0.46, 0.4, C('#d9b98f'));                       // Holzdeck
+      K.rect(0.24, -0.36, 0.42, 0.08, C('#f3efe6'));                      // Poolrand
+      K.rect(0.265, -0.335, 0.395, 0.055, C('#7fd3ea'));                  // Wasser
+      const w = Math.sin(now / 900) * 0.03;
+      K.rect(0.3 + w, -0.28, 0.33 + w, -0.05, 'rgba(255,255,255,0.45)');
+    })) return;
+    { const [px, py] = K.P(0.33, -0.14); glowQuad([[px - 3 * z, py - 1 * z], [px + 3 * z, py - 1 * z], [px + 3 * z, py + 1 * z], [px - 3 * z, py + 1 * z]], 16 * z, 'blue'); }
+    const lit = night > 0.15 && isLive();
+    // Glasfront über fast die ganze Wand, feine helle Sprossen, tags schräge Spiegelungen
+    const glass = (B, n, h0, h1) => {
+      for (const F of Object.values(B.faces)) {
+        if (!F) continue;
+        faceQuad(F.P, F.Q, 0.06, 0.94, F.H * h0, F.H * h1, lit ? '#ffd873' : C('#a8dcff'));
+        if (lit) {                        // Licht aus der Mitte der Scheiben, damit die Sprossen sichtbar bleiben
+          const m0 = lerp(F.P, F.Q, 0.2), m1 = lerp(F.P, F.Q, 0.8), hm0 = F.H * (h0 + (h1 - h0) * 0.25), hm1 = F.H * (h1 - (h1 - h0) * 0.25);
+          glowQuad([[m0[0], m0[1] - hm0], [m1[0], m1[1] - hm0], [m1[0], m1[1] - hm1], [m0[0], m0[1] - hm1]], 13 * z);
+        } else {
+          g.fillStyle = 'rgba(255,255,255,0.35)';
+          for (const t0 of [0.16, 0.58]) {
+            const a0 = lerp(F.P, F.Q, t0), a1 = lerp(F.P, F.Q, t0 + 0.07), b0 = lerp(F.P, F.Q, t0 + 0.13), b1 = lerp(F.P, F.Q, t0 + 0.2);
+            g.beginPath(); g.moveTo(a0[0], a0[1] - F.H * h0); g.lineTo(a1[0], a1[1] - F.H * h0);
+            g.lineTo(b1[0], b1[1] - F.H * h1); g.lineTo(b0[0], b0[1] - F.H * h1); g.closePath(); g.fill();
+          }
+        }
+        g.strokeStyle = C('#f7f5f0'); g.lineWidth = 1 * z; g.lineCap = 'butt';
+        g.beginPath();
+        for (let i = 1; i < n; i++) { const m = lerp(F.P, F.Q, 0.06 + 0.88 * i / n); g.moveTo(m[0], m[1] - F.H * h0); g.lineTo(m[0], m[1] - F.H * h1); }
+        g.stroke();
+      }
+    };
+    const house = () => {
+      kShadow(K, 0.42);
+      const low = K.block({ a: -0.08, ha: 0.25, hb: 0.37, h: 12, wall: '#f7f5f0', type: 'flat', roof: '#e8e4dc', trim: roof });
+      glass(low, 4, 0.1, 0.86);
+      const up = K.block({ a: -0.15, b: 0.1, ha: 0.2, hb: 0.26, h: 10, lift: 12, wall, type: 'flat', roof: '#e8e4dc', trim: roof });
+      glass(up, 3, 0.18, 0.8);
+    };
+    K.scene([
+      [-0.36, -0.34, () => kitTree(K, -0.36, -0.34, 0.75)],
+      [0, 0, house],
+      [0.2, 0.36, () => kitBush(K, 0.22, 0.38, 0.8)], [-0.3, 0.42, () => kitBush(K, -0.3, 0.42, 0.9)],
+    ]);
+  },
 ];
 function drawHouse(cx, cy, z, now, x, y, lvl, t) {
   const wall = WALLS[t && t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7)];
@@ -610,7 +658,7 @@ function rotateBuild(dir = 1) {
 }
 
 const GROUND_TYPES = new Set(['rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm']);
-const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5].includes(houseLook(t)));
+const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }

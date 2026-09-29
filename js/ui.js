@@ -355,6 +355,7 @@ function openInfo(x, y) {
       <p class="hearts">${hearts}</p>
       ${w.next ? `<div class="label">Wünsche für: ${w.next.name}</div>
         <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}</div>`).join('')}</div>`
+        : w.later ? `<p class="muted">✨ Mit Kristall 💎 von der Kristallinsel kann daraus eine ${w.later.name} werden.</p>`
         : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
       ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';

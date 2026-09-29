@@ -120,6 +120,8 @@ const HOUSE_STAGES = [
   { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], mat: { bretter: 4 } },
   { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], mat: { quader: 4 } },
   { name: 'Villa', pop: 16, wishes: ['schule', 'schoen'], mat: { quader: 4, metall: 2 } },
+  // erst mit Kristall von der Kristallinsel: moderne Villa mit viel Glas
+  { name: 'Glasvilla', pop: 22, wishes: ['wasser'], mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
@@ -130,6 +132,7 @@ const WISHES = {
   park:    { text: 'Park oder Brunnen in der Nähe (4 Felder)' },
   schule:  { text: 'Schule in der Nähe (10 Felder)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
+  wasser:  { text: 'Blick aufs Wasser (Teich, See oder Meer in 3 Feldern)' },
 };
 // Gebäude wachsen in drei Stufen (wie Häuser): Bedingungen erfüllen (✨), dann selbst ausbauen – mit neuem Aussehen.
 // Jede Stufe braucht workers weitere Mitarbeiter (freie Einwohner). Bedingungen: near = [Sorte(n), Anzahl, Umkreis],
