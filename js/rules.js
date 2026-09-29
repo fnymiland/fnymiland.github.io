@@ -146,6 +146,7 @@ function beautyOf(t, x, y) {
   const d = ITEMS[t.b];
   const nearHome = nearHouse(x, y);
   let v = 0;
+  if (d.wonder && !wonderDone(t)) return 0;                              // Baustelle
   if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1);
   if (d.ugly && nearHome) v -= d.ugly;
   return v;
@@ -233,6 +234,19 @@ function totals() {
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
   if (hasTech('sterne')) sci *= 1.2;
+  // Wunderwerke (nur fertige): Touristen, Kurgäste, Ideen, Obst – das Schloss gibt +20 % auf alles
+  let allMul = 0;
+  for (const t of state.tiles.values()) {
+    const W = WONDERS[t.b];
+    if (!W || !wonderDone(t)) continue;
+    const e = W.effect;
+    if (e.inc) inc += e.inc * gmul;
+    if (e.pop) pop += e.pop;
+    if (e.sciMul) sci *= 1 + e.sciMul;
+    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v;
+    if (e.allMul) allMul += e.allMul;
+  }
+  if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
@@ -253,6 +267,7 @@ function unlockOk(def, key) {
   if (def.lanterns && lanternCount() < def.lanterns) return false;
   if (def.tech && !hasTech(def.tech)) return false;
   if (def.rank && starCount() < def.rank) return false;                // Pokale: genug Erfolgs-Sterne
+  if (def.festival && !state.festival) return false;                    // Schloss: nach dem Laternenfest
   if (def.album && !albumDone(def.album)) return false;                // Album-Belohnung: volle Seite
   return true;
 }
@@ -267,6 +282,7 @@ function unlockText(def, short) {
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
+  if (def.festival && !state.festival) return '🎆 nach dem Laternenfest';
   if (def.album && !albumDone(def.album)) return `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
   return '';
 }
@@ -435,6 +451,12 @@ function autoRot(b, x, y, fallback) {
 function placeRot(b, x, y) {
   if (!ROTATABLE.has(b)) return 0;
   if (rotManual || ITEMS[b].small) return buildRot;
+  if (ITEMS[b].needs === 'pier') {                  // Seebrücke zeigt von selbst ins Wasser
+    const ok = [buildRot, 0, 1, 2, 3].find(r => { const f = footprint(b, x, y, r), [dx, dy] = FRONT_DIR[r];
+      const back = f.reduce((p, q) => q[0] * dx + q[1] * dy < p[0] * dx + p[1] * dy ? q : p);
+      return f.every(p => p === back ? terrainAt(...p) !== 'water' : terrainAt(...p) === 'water'); });
+    return ok == null ? buildRot : ok;
+  }
   return autoRot(b, x, y, buildRot);
 }
 
@@ -542,6 +564,16 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (ter === 'water') return 'Hier ist schon Wasser';
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
     } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
+  } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
+    const tiles = footprint(b, x, y, r), [dx, dy] = FRONT_DIR[r];
+    for (const [tx, ty] of tiles) {
+      if (!ownedTile(tx, ty)) return 'Das ist nicht dein Grundstück';
+      if (COVER.has(tx + ',' + ty)) return 'Hier ist nicht genug Platz';
+    }
+    const back = tiles.reduce((p, q) => q[0] * dx + q[1] * dy < p[0] * dx + p[1] * dy ? q : p);
+    const land = tiles.filter(([tx, ty]) => terrainAt(tx, ty) !== 'water');
+    if (land.length !== 1 || land[0] !== back) return 'Vom Ufer aus ins Wasser bauen';
+    if (terrainAt(...back) !== 'grass' && !willClear(b, terrainAt(...back))) return 'Vom Ufer aus ins Wasser bauen';
   } else {
     const tiles = footprint(b, x, y, r);
     for (const [fx, fy] of tiles) {
@@ -570,6 +602,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
+  if (d.wonder && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${WONDERS[b].the} gibt es schon`;
   if (opts.move) return null;
   const c = costOf(b, x, y);
   if (state.money < c.cost + clearCost(b, x, y, r)) return 'Zu wenig Taler';
@@ -705,7 +738,8 @@ function demolishInfo(x, y) {
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }
-    const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0) : 0;
+    const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
+      : WONDERS[t.b] ? WONDERS[t.b].phases.slice(0, t.phase || 0).reduce((s, p) => s + (p.money || 0), 0) : 0;
     return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);

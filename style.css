@@ -480,3 +480,5 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .al-e.miss small { opacity: .55; }
 .al-sw { display: block; width: 30px; height: 30px; border-radius: 50%; margin: 7px 0; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
 .al-reward { margin: 4px 0 0; font-size: 13px; }
+.wbar { height: 9px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 4px 0 6px; }
+.wbar i { display: block; height: 100%; background: var(--yellow); border-radius: 99px; }

@@ -534,11 +534,27 @@ function openInfo(x, y) {
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
       ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
+  // Wunderwerk: Fortschritt, Kosten des nächsten Abschnitts, Knopf
+  let wonder = '';
+  if (WONDERS[t.b]) {
+    const W = WONDERS[t.b], p = t.phase || 0, N = W.phases.length;
+    if (p < N) {
+      const { money = 0, ...mat } = W.phases[p];
+      const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
+        ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
+      wonder = `<div class="label">Abschnitt ${p + 1} von ${N}: ${W.names[p]}</div>
+        <div class="wbar"><i style="width:${p / N * 100}%"></i></div>
+        <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+        <p class="muted">Wenn fertig: ${W.text}.</p>
+        <div class="row"><button class="btn" id="p-wonder" ${canPay(W.phases[p]) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
+    } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
+  }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
   const train = line ? trainChooser(line) : isCrossing(t) ? `<div class="label">Bahnübergang</div>
     <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button>
       <button class="look${t.foot ? ' on' : ''}" data-cross="1">🌉 Bogenbrücke${t.footPaid ? '' : ` · 🪙 ${FOOTBRIDGE.money} 🪚${FOOTBRIDGE.bretter} 🔩${FOOTBRIDGE.metall}`}</button></div>` : '';
-  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang' : stageName(t);
+  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
+    : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
     ${house}
@@ -547,6 +563,7 @@ function openInfo(x, y) {
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
     <p class="muted">${d.desc}</p>
     ${grow}
+    ${wonder}
     ${train}
     ${colors}
     <div class="row">
@@ -587,6 +604,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
+  if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
   if (!liveNow) updateHud();
 }
@@ -804,6 +822,8 @@ function readyList() {
       const miss = s.grow.conds.filter(c => !c.ok);
       if (s.grow.ready) ready.push({ ...where, kind: 'stage', cost: s.grow.next.cost, text: `${stageName(t)} → ${s.grow.next.name}` });
       else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)} – fehlt: ${miss[0].text}` });
+    } else if (WONDERS[t.b] && !wonderDone(t) && canPay(WONDERS[t.b].phases[t.phase || 0])) {          // Wunderwerk: nächster Abschnitt bezahlbar
+      ready.push({ ...where, kind: 'wonder', cost: WONDERS[t.b].phases[t.phase || 0], text: `🏗️ ${ITEMS[t.b].name}: ${WONDERS[t.b].names[t.phase || 0]}` });
     }
   }
   for (const type of Object.keys(LM_STAGES)) {
@@ -852,7 +872,7 @@ function openTownHall(tab = hallTab) {
   } else if (tab === 'ready') {
     // Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
     const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
-    const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
+    const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
     const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
     body = `
       <div class="label">Bereit zum Ausbauen</div>
@@ -926,6 +946,7 @@ function openTownHall(tab = hallTab) {
   for (const b of card.querySelectorAll('[data-up]')) b.onclick = () => {
     const e = all[+b.dataset.up];
     if (e.kind === 'lm') { restoreLandmark(e.type); return; }            // öffnet das Laternen-Fenster
+    if (e.kind === 'wonder') { const t = state.tiles.get(e.x + ',' + e.y); if (wonderStep(e.x, e.y, true) && !wonderDone(t)) openTownHall('ready'); return; }
     if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('ready');
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {

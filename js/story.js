@@ -8,6 +8,7 @@ function lanternCount() {
   return n + (state.festival ? 1 : 0);
 }
 function townTitle(n = lanternCount()) {
+  if (state && [...state.tiles.values()].some(t => t.b === 'schloss' && wonderDone(t))) return 'Königliche Inselperle';
   let title = TITLES[0][1];
   for (const [min, name] of TITLES) if (n >= min) title = name;
   return title;
@@ -229,7 +230,12 @@ function goalHtml() {
       <div class="req">${s.text}</div><div class="req muted">${s.hint}</div>
       <div class="req"><span class="link" data-skip="1">Einführung überspringen</span></div>`;
   }
-  if (state.festival) return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Inselperle</h4><div class="req">Alle Laternen brennen. Gestalte weiter!</div>`;
+  if (state.festival) {                            // danach: das Schloss, Erfolge und Album
+    const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
+    const line = !s ? '🏰 Bau das Schloss: 🏗️ Bauen → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
+    const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4><div class="req">${line}</div><div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
+  }
   if (n >= ITEMS.leuchtturm.lanterns) {
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4><div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
   }
@@ -317,6 +323,7 @@ const ACHIEVEMENTS = [
   { id: 'land', icon: '🌊', name: 'Land aus dem Meer', unit: 'Felder', tiers: [20, 100, 500],
     value: () => [...state.claimed].filter(k => terrainAt(...keyXY(k)) !== 'water').length },
   { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.length], value: () => state.design.size },
+  { id: 'wunder', icon: '🏛️', name: 'Wunderwerke', tiers: [1, 3, 5], value: () => tileCount(t => wonderDone(t)) },
 ];
 const RANKS = [
   { stars: 0, name: 'Noch ohne Ehrennadel' },
@@ -360,7 +367,7 @@ const ALBUM = [
   { id: 'wege', icon: '🛤️', name: 'Wegstile', reward: 'weg:goldpflaster' },
   { id: 'bewohner', icon: '🐾', name: 'Bewohner', reward: 'karussell' },
 ];
-const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank);
+const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
   switch (p.id) {
     case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
@@ -385,4 +392,56 @@ function collectAlbum() {
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
   }
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + d.b);
+}
+
+// ---------------------------------------------------------------------------
+// Wunderwerke: Baustelle (phase 0), dann Abschnitt für Abschnitt; Wirkung (effect) erst, wenn alle fertig sind
+// ---------------------------------------------------------------------------
+const WONDERS = {
+  riesenrad: { the: 'Das Riesenrad', h: 96, text: 'Touristen kommen: +80 Taler/s', effect: { inc: 80 },
+    names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
+    phases: [{ money: 8000, quader: 40 }, { money: 12000, metall: 40 }, { money: 16000, metall: 60, bretter: 60 }, { money: 20000, bretter: 40, metall: 30 }] },
+  sternwarte: { the: 'Die Sternwarte', h: 56, text: '+25 % Ideen für die ganze Insel', effect: { sciMul: 0.25 },
+    names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
+    phases: [{ money: 10000, quader: 60 }, { money: 15000, metall: 50, bretter: 40 }, { money: 20000, metall: 40, quader: 40 }] },
+  seebruecke: { the: 'Die Seebrücke', h: 40, text: 'Kurgäste: +40 Einwohner und +40 Taler/s', effect: { pop: 40, inc: 40 },
+    names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
+    phases: [{ money: 8000, bretter: 80 }, { money: 12000, bretter: 60, metall: 20 }, { money: 16000, quader: 40, metall: 30 }] },
+  botgarten: { the: 'Der Botanische Garten', h: 60, text: 'Sehr viel Schönheit und +0,5 Obst/s', effect: { prod: { obst: 0.5 } },
+    names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
+    phases: [{ money: 12000, quader: 60 }, { money: 18000, metall: 50, kristall: 20 }, { money: 24000, kristall: 40, bretter: 50 }, { money: 30000, obst: 200, kristall: 30 }] },
+  schloss: { the: 'Das Schloss', h: 90, text: '+20 % auf alles – deine Insel ist jetzt eine Königliche Inselperle', effect: { allMul: 0.2 },
+    names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
+    phases: [{ money: 40000, quader: 150 }, { money: 60000, quader: 150, bretter: 100 }, { money: 80000, metall: 120 },
+             { money: 100000, quader: 100, metall: 100 }, { money: 120000, kristall: 60, bretter: 100 }, { money: 150000, metall: 80, kristall: 80, obst: 300 }] },
+};
+const wonderDone = t => !!t && !!WONDERS[t.b] && (t.phase || 0) >= WONDERS[t.b].phases.length;
+// Nächsten Abschnitt bauen (stay: aus dem Rathaus – kein Infofenster danach)
+function wonderStep(x, y, stay = false) {
+  const t = state.tiles.get(x + ',' + y), W = t && WONDERS[t.b];
+  if (!W || wonderDone(t)) return false;
+  const cost = W.phases[t.phase || 0];
+  if (!canPay(cost)) { fail(state.money < (cost.money || 0) ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  const { money = 0, ...mat } = cost;
+  state.money -= money; payMat(mat);
+  t.phase = (t.phase || 0) + 1;
+  t.born = performance.now();
+  recalc();
+  const [w, h] = sizeOf(t.b, t.rot);
+  sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
+  if (wonderDone(t)) {
+    confettiBurst(); confettiBurst();
+    sfx('star');
+    openModal(`
+      <h2>🎉 ${W.the} ist fertig!</h2>
+      <p>${W.text}.</p>
+      <div class="row"><button class="btn" id="m-ok" style="flex:1">Hurra!</button></div>`);
+    $('m-ok').onclick = closeModal;
+  } else {
+    sfx('build');
+    toast(`${W.the}: ${W.names[t.phase - 1]} fertig!`);
+  }
+  save();
+  if (!stay && !wonderDone(t)) openInfo(x, y);
+  return true;
 }

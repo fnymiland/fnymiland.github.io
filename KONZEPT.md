@@ -217,3 +217,10 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 10. Händlerschiff, Ton & Musik
 11. Laternenfest (Finale)
 12. Zahlen gemeinsam einstellen
+
+## Motivation und Endspiel (entschieden 30.09.)
+
+- „Neu freigeschaltet“-Fenster bei jeder Freischaltung, Tipps beim ersten Mal, Tipp-Buch.
+- Erfolge mit Stufen (⭐) → Ehrennadeln → Pokale; Sammelalbum (6 Seiten) → Belohnungen, die es nur so gibt.
+- Große Bauprojekte in Abschnitten: Riesenrad, Sternwarte, Seebrücke, Botanischer Garten; nach dem Laternenfest das
+  Schloss (+20 % auf alles, „Königliche Inselperle“). Nicht gewählt: Aufträge der Bewohner, Feste/Jahreszeiten.

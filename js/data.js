@@ -94,6 +94,17 @@ const ITEMS = {
   pokal_bronze: { cat: 'deko', name: 'Bronze-Pokal', cost: 0, beauty: 6, small: true, rank: 5, desc: 'Für die Ehrennadel in Bronze (5 ⭐ Erfolge).' },
   pokal_silber: { cat: 'deko', name: 'Silber-Pokal', cost: 0, beauty: 10, small: true, rank: 15, desc: 'Für die Ehrennadel in Silber (15 ⭐ Erfolge).' },
   pokal_gold: { cat: 'deko', name: 'Gold-Pokal', cost: 0, beauty: 16, small: true, rank: 30, desc: 'Für die Ehrennadel in Gold (30 ⭐ Erfolge). Funkelt.' },
+  // --- Wunderwerke: erst eine Baustelle, dann Abschnitt für Abschnitt (WONDERS in story.js); Wirkung erst fertig ---
+  riesenrad:  { cat: 'wunder', name: 'Riesenrad', size: [3, 3], cost: 2000, needs: 'grass', lanterns: 10, beauty: 120, wonder: true,
+                desc: 'Touristen kommen: +80 Taler/s und viel Schönheit. Dreht sich, nachts bunt.' },
+  sternwarte: { cat: 'wunder', name: 'Sternwarte', size: [2, 2], cost: 2000, needs: 'grass', tech: 'uni', beauty: 50, wonder: true,
+                desc: '+25 % Ideen für die ganze Insel. Nachts öffnet sich die Kuppel.' },
+  seebruecke: { cat: 'wunder', name: 'Seebrücke', size: [4, 1], cost: 1500, needs: 'pier', lm: 'quelle:1', beauty: 80, wonder: true,
+                desc: 'Vom Ufer ins Meer, mit Pavillon: Kurgäste bringen +40 Einwohner und +40 Taler/s.' },
+  botgarten:  { cat: 'wunder', name: 'Botanischer Garten', size: [3, 3], cost: 3000, needs: 'grass', lm: 'kristall:1', beauty: 180, wonder: true,
+                desc: 'Palmenhaus aus Glas mit Gärten: sehr viel Schönheit und Obst.' },
+  schloss:    { cat: 'wunder', name: 'Schloss', size: [4, 4], cost: 10000, needs: 'grass', festival: true, beauty: 300, wonder: true,
+                desc: 'Das Finale nach dem Laternenfest: +20 % auf alles, „Königliche Inselperle“.' },
   // Belohnungen fürs Sammelalbum (album = Seite, die voll sein muss)
   denkmal:    { cat: 'deko', name: 'Baumeister-Denkmal', cost: 0, needs: 'grass', beauty: 40, album: 'gebaeude', desc: 'Für die volle Album-Seite „Gebäude“.' },
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
@@ -210,6 +221,7 @@ const MENU = [
     { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede'] },
     { id: 'boost', label: '⚡ Verstärker', items: ['markt', 'hafen', 'blumen'] },
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
+    { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
@@ -238,6 +250,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler', windrad: '⚡ Strom für Züge',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', leuchtturm: '🏮 Laternenfest',
+  riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +180 · 🍎', schloss: '+20 % auf alles',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
 const ITEM_TIPS = {
@@ -283,6 +296,11 @@ const ITEM_TIPS = {
   pavillon: 'Große Deko mit viel Schönheit – schön im Park.',
   statue: 'Große Deko mit sehr viel Schönheit.',
   graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Ziehen = mehrere.',
+  riesenrad: 'Ein großes Bauprojekt: Stell die Baustelle hin und bau im Infofenster Abschnitt für Abschnitt.',
+  sternwarte: 'Ein großes Bauprojekt: Baustelle hinstellen, dann Abschnitt für Abschnitt bauen. Gern auf einen Hügel!',
+  seebruecke: 'Vom Ufer aus ins Wasser stellen (das hinterste Feld an Land). Dann Abschnitt für Abschnitt bauen.',
+  botgarten: 'Ein großes Bauprojekt mit Kristall: Baustelle hinstellen, dann Abschnitt für Abschnitt bauen.',
+  schloss: 'Das große Finale: Baustelle hinstellen und in sechs Abschnitten dein Schloss bauen.',
   pokal_bronze: 'Deine erste Ehrennadel! Stell den Pokal vors Rathaus – kostet nichts.',
   denkmal: 'Alle Gebäude einmal gebaut! Ein Denkmal für dich – kostet nichts.',
   rosenbogen: 'Alle Deko einmal aufgestellt! Der Rosenbogen passt über jeden Weg – kostet nichts.',
