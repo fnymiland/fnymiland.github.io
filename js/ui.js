@@ -293,8 +293,12 @@ function storeHtml() {
   const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small></div>`; });
   const P = T.rail.power, power = P.city || P.supply
     ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
+  // Verkehr: alle fahrenden Linien zusammen
+  const run = T.rail.lines.filter(l => l.traffic), want = run.reduce((s, l) => s + l.traffic.demand, 0), got = run.reduce((s, l) => s + l.traffic.carried, 0);
+  const full = want > got + 0.5, money = (T.traffic.fare + T.traffic.spend);
+  const traffic = run.length ? `<div class="store-row${full ? ' bad' : ''}"><span>🚆 Fahrgäste</span><b>${fmt(got)}/min</b><small${full ? ' class="minus"' : ''}>${full ? `${fmt(want)} wollen mit` : money >= 0.05 ? '+' + fmtRate(money) + '/s' : ''}</small></div>` : '';
   return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
-    <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}`;
+    <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}${traffic}`;
 }
 function toggleStore(open = $('store').hidden) {
   const el = $('store');
@@ -591,14 +595,15 @@ function openInfo(x, y) {
     status.push({
       viertel: '<div class="ok">✓ Liegt im Wohnviertel</div>',
       nah: `<div class="ok">✓ Häuser in Laufweite (bis ${WALK_REACH} Felder)</div>`,
-      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf bringt 100 %.</div>',
+      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf oder ein Bahnhof in der Nähe bringt 100 %.</div>',
+      bahn: s.served >= 1 ? '<div class="ok">🚆 Mit dem Zug ans Dorf angebunden</div>'
+        : `<div class="bad">🚆 Mit dem Zug angebunden, aber die Linie ist überfüllt: ${Math.round(s.eff * 100)} %</div>`,
     }[s.how]);
   }
   if (s.bonus) status.push(`<div class="ok">🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
   else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
-  if (s.rail > 1 && t.b !== 'station') status.push(`<div class="ok">🚆 Bahnanschluss der Insel: +${Math.round(RAIL_BONUS * 100)} %</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
@@ -775,24 +780,48 @@ function stationStatus(k) {
   if (T.rail.stationNet.get(k) == null) return ['<div class="bad">✗ Keine Schiene direkt am Bahnhof</div>'];
   if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen bis zu einem Bahnhof auf einer anderen Insel legen</div>'];
   const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
-  const per = COMMUTERS * (1 + 0.5 * (line.running - 1));
-  if (line.powered) out.push(`<div class="ok">✓ ${line.running > 1 ? `${line.running} Züge fahren` : 'Der Zug fährt'}: 👥 +${per} Pendler je Bahnhof, +${Math.round(RAIL_BONUS * 100)} % für ${names(line).join(' und ')}</div>`);
-  if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${line.need} ⚡ (1 + 1 je km) – ${T.rail.power.supply} ⚡ erzeugt, ${T.rail.power.demand} ⚡ gebraucht</div>`);
-  if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehr Züge drauf.</div>');
+  const tr = line.traffic;
+  if (tr) out.push(...trafficStatus(line, tr));
+  if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${fmtPow(line.needs[line.running] || line.need)} ⚡ – ${fmtPow(T.rail.power.supply)} ⚡ erzeugt, ${fmtPow(T.rail.power.demand)} ⚡ gebraucht</div>`);
+  if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehrere Züge drauf.</div>');
+  return out;
+}
+// Fahrgäste, Plätze, Auslastung und was es bringt
+const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
+function trafficStatus(line, tr) {
+  const pct = tr.seats ? Math.round(tr.demand / tr.seats * 100) : 0, out = [];
+  const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
+  const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
+  if (!tr.demand) {
+    out.push('<div class="muted">👥 Noch will niemand mitfahren: Häuser auf der anderen Insel, eine restaurierte Sehenswürdigkeit oder ein Wunderwerk bringen Fahrgäste.</div>');
+    return out;
+  }
+  out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min – ${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')}</div>`);
+  out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} ${cars === 1 ? 'Wagen' : 'Wagen'}</div>`);
+  out.push(`<div class="load"><i style="width:${Math.min(100, pct)}%" class="${tr.served < 1 ? 'full' : ''}"></i></div>`);
+  out.push(tr.served < 1 ? `<div class="bad">😣 Überfüllt (${pct} %): nur ${Math.round(tr.served * 100)} % kommen mit</div>`
+    : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
+  out.push(`<div class="ok">🪙 +${fmtRate(tr.fare * masteryMul('taler'))}/s Fahrkarten · +${fmtRate(tr.spend * masteryMul('taler'))}/s von Besuchern</div>`);
+  if (tr.served < 1) out.push(`<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
   return out;
 }
 // Züge der Linie: Modell und Farbe wählt der Spieler für jeden Zug; gespeichert an allen Bahnhöfen der Linie
 const TRAIN_MODELS = [['regio', 'Regionalbahn'], ['tram', 'Straßenbahn'], ['modern', 'Triebwagen']];
+const modelName = id => TRAIN_MODELS.find(m => m[0] === id)[1];
 const TRAIN_COLS = ['#d9534a', '#3e7fd0', '#58b36a', '#f2b53a', '#b07ad6', '#f28cb1', '#4a4a58'];
 const lineTrain = line => line.looks[0];
 function trainChooser(line) {
   const n = line.count, { money, ...mat } = EXTRA_TRAIN;
-  const one = (lk, i) => `<div class="label">${n > 1 ? `Zug ${i + 1}` : 'Zug dieser Linie'}${i > 0 ? ` <button class="btn ghost small" data-tdel="${i}">Entfernen · +🪙 ${fmt(money)}</button>` : ''}</div>
-    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === lk.model ? ' on' : ''}" data-train="${i}:${id}">${name}</button>`).join('')}</div>
-    <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>`;
+  const { money: cm, ...cmat } = EXTRA_CAR;
+  const one = (lk, i) => `<div class="label">${n > 1 ? `Zug ${i + 1}` : 'Zug dieser Linie'}${i > 0 ? ` <button class="btn ghost small" data-tdel="${i}">Entfernen · +🪙 ${fmt(money + (lk.plus || 0) * cm)}</button>` : ''}</div>
+    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === lk.model ? ' on' : ''}" data-train="${i}:${id}">${name} · ${TRAIN_CARS[id]} 🚃</button>`).join('')}</div>
+    <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>
+    <div class="row cars"><span>🚃 ${carsOf(lk)} Wagen · ${carsOf(lk) * SEATS_PER_CAR} Plätze/min · ${fmtPow(carNeed(line.tiles, carsOf(lk)))} ⚡</span>
+      ${(lk.plus || 0) < MAX_PLUS_CARS ? `<button class="btn small" data-carplus="${i}" data-cost="${cm}" data-mat='${JSON.stringify(cmat)}'>+ Wagen · 🪙 ${fmt(cm)} ${matText(cmat)}</button>` : ''}
+      ${lk.plus ? `<button class="btn ghost small" data-carminus="${i}">− Wagen</button>` : ''}</div>`;
   const more = line.loop && n < line.max
     ? `<div class="row"><button class="btn" data-tadd data-cost="${money}" data-mat='${JSON.stringify(mat)}'>🚆 + Zug · 🪙 ${fmt(money)} ${matText(mat)}</button></div>
-       <p class="muted">Braucht noch einmal ${line.need} ⚡ und bringt je Bahnhof 👥 +${COMMUTERS / 2} Pendler.</p>`
+       <p class="muted">Ein weiterer ${modelName(line.looks[0].model)}: +${carsOf({ model: line.looks[0].model }) * SEATS_PER_CAR} Plätze/min, braucht ${fmtPow(carNeed(line.tiles, carsOf({ model: line.looks[0].model })))} ⚡.</p>`
     : line.loop ? `<p class="muted">Mehr Züge ab ${(n + 1) * KM_PER_TRAIN} km Rundkurs (1 Zug je ${KM_PER_TRAIN} km).</p>` : '';
   return line.looks.slice(0, n).map(one).join('') + more;
 }
@@ -802,14 +831,34 @@ function wireTrainChooser(el, line, reopen) {
       const t = state.tiles.get(k);
       if (!t) continue;
       t.train = looks[0].model; t.trainCol = looks[0].col;
-      if (looks.length > 1) t.extra = looks.slice(1).map(l => ({ ...l })); else delete t.extra;
+      if (looks[0].plus) t.trainPlus = looks[0].plus; else delete t.trainPlus;
+      if (looks.length > 1) t.extra = looks.slice(1).map(l => ({ model: l.model, col: l.col, ...(l.plus ? { plus: l.plus } : {}) })); else delete t.extra;
     }
     sfx('deco'); save(); recalc(); syncTrains(); reopen();
   };
   const looks = line.looks.map(l => ({ ...l }));
   for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => { const [i, m] = b.dataset.train.split(':'); looks[+i].model = m; store(looks); };
   for (const b of el.querySelectorAll('[data-tcol]')) b.onclick = () => { const [i, c] = b.dataset.tcol.split(':'); looks[+i].col = +c; store(looks); };
-  for (const b of el.querySelectorAll('[data-tdel]')) b.onclick = () => { state.money += EXTRA_TRAIN.money; addCost({ ...EXTRA_TRAIN, money: 0 }, 1); looks.splice(+b.dataset.tdel, 1); store(looks); };
+  for (const b of el.querySelectorAll('[data-tdel]')) b.onclick = () => {
+    const lk = looks[+b.dataset.tdel];
+    addCost(EXTRA_TRAIN, 1);
+    for (let c = 0; c < (lk.plus || 0); c++) addCost(EXTRA_CAR, 1);                  // angehängte Wagen gibt es mit zurück
+    looks.splice(+b.dataset.tdel, 1); store(looks);
+  };
+  for (const b of el.querySelectorAll('[data-carplus]')) b.onclick = () => {
+    if (!canPay(EXTRA_CAR)) { fail(state.money < EXTRA_CAR.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
+    addCost(EXTRA_CAR, -1);
+    looks[+b.dataset.carplus].plus = (looks[+b.dataset.carplus].plus || 0) + 1;
+    toast('🚃 Ein Wagen mehr: +' + SEATS_PER_CAR + ' Plätze');
+    store(looks);
+  };
+  for (const b of el.querySelectorAll('[data-carminus]')) b.onclick = () => {
+    const lk = looks[+b.dataset.carminus];
+    if (!lk.plus) return;
+    addCost(EXTRA_CAR, 1);
+    lk.plus--;
+    store(looks);
+  };
   const add = el.querySelector('[data-tadd]');
   if (add) add.onclick = () => {
     if (!canPay(EXTRA_TRAIN)) { fail(state.money < EXTRA_TRAIN.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
@@ -1091,7 +1140,7 @@ function openTownHall(tab = hallTab) {
     }
     const nx = nextIsle();
     const row = (id, icon, name, open, extra) => {
-      const e = per.get(id), rail = T.rail.regions.has(id);
+      const e = per.get(id), rail = T.rail.lines.some(l => l.traffic && l.regions.includes(id));
       const state_ = open ? `🏠 ${e.n} · 👥 ${e.pop}${rail ? ' · 🚆' : ''}${extra || ''}` : id === (nx && nx.id) ? 'als Nächstes' : '🔒';
       return `<div class="hall-row"><span>${icon} <b>${name}</b> <small class="muted">${state_}</small></span>
         <button class="btn ${id === (nx && nx.id) ? '' : 'ghost '}small" data-isle-go="${id}">${open ? 'Hin' : id === (nx && nx.id) ? 'Erschließen …' : 'Ansehen'}</button></div>`;

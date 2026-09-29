@@ -136,18 +136,18 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
     expect(game('T.rail.lines[0].loop')).toBe(null);                           // keine Kreisbahn
   });
 
-  it('mit genug Windrädern fährt der Zug: +8 Pendler je Bahnhof, +10 % auf beiden Inseln', () => {
-    line();
-    game("state.tiles.set('6,4', { b: 'feld', lvl: 1 }); recalc()");
-    const pop = game('T.pop'), inc = game("T.st.get('6,4').inc"), need = game('T.rail.lines[0].need');
+  it('mit genug Strom fährt der Zug – ein Betrieb nah am Waldbahnhof ist dann ans Dorf angebunden (kein 🐌)', () => {
+    const [wx, wy] = line();
+    game(`state.terra.set('${wx},${wy + 3}', 'forest'); state.tiles.set('${wx},${wy + 3}', { b: 'holz', lvl: 1 }); recalc()`);
+    expect(game(`T.st.get('${wx},${wy + 3}').how`)).toBe('weit');
+    const need = game('T.rail.lines[0].need');
     for (let i = 0; i < need - 1; i++) game(`state.tiles.set('${6 + i},12', { b: 'windrad', lvl: 1 })`);
     game('recalc()');
     expect(game('T.rail.lines[0].powered')).toBe(false);                       // ein Windrad zu wenig
     game(`state.tiles.set('${6 + need - 1},12', { b: 'windrad', lvl: 1 }); recalc()`);
     expect(game('T.rail.lines[0].powered')).toBe(true);
-    expect(game('T.pop')).toBe(pop + 16);
-    expect(game("T.st.get('6,4').inc")).toBeCloseTo(inc * 1.1);
-    expect(game("T.rail.regions.has('home') && T.rail.regions.has('wald')")).toBe(true);
+    expect(game(`T.st.get('${wx},${wy + 3}').how`)).toBe('bahn');
+    expect(game(`T.st.get('${wx},${wy + 3}').eff`)).toBe(1);                  // niemand will mit: nichts ist überfüllt
   });
 
   it('Infofenster: Linie, Strom, Zug wählen – gilt für alle Bahnhöfe der Linie', () => {

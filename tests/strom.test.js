@@ -87,12 +87,12 @@ describe('Mehrere Züge', () => {
     expect(game('trains.length')).toBe(1);
   });
 
-  it('zweiter Zug: +4 Pendler je Bahnhof dazu; Aussehen je Zug; wird gespeichert', () => {
+  it('zweiter Zug: mehr Plätze; Aussehen je Zug; wird gespeichert', () => {
     ring(4, 16); wind(6); game('recalc()');
-    const pop1 = game('T.pop');
+    expect(game('T.rail.lines[0].seats')).toBe(2 * 60);                      // Regionalbahn: 2 Wagen
     game("for (const k of ['3,10', '17,10']) state.tiles.get(k).extra = [{ model: 'modern', col: 4 }]");
-    wind(12); game('recalc(); syncMovers()');
-    expect(game('T.pop')).toBe(pop1 + 2 * 4);
+    wind(20); game('recalc(); syncMovers()');
+    expect(game('T.rail.lines[0].seats')).toBe(2 * 60 + 3 * 60);             // dazu ein Triebwagen mit 3 Wagen
     expect(game('trains.map(t => t.model)')).toEqual(['regio', 'modern']);
     game('save()');
     expect(game("load().tiles.get('3,10').extra")).toEqual([{ model: 'modern', col: 4 }]);

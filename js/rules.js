@@ -161,20 +161,39 @@ function totals() {
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
   let pop = 0, jobs = 0;
   const rail = computeRail();
-  for (const n of rail.commuters.values()) pop += n;       // Pendler, die mit dem Zug kommen
-  const railMul = (x, y) => rail.regions.size && rail.regions.has(regionAt(x, y)) ? 1 + RAIL_BONUS : 1;
+  // Verkehr: Fahrgäste je fahrender Linie; Anbindung über Bahnhöfe (ihr Viertel und bis 4 Felder darum)
+  const places = placeStats();
+  for (const l of rail.lines) l.traffic = l.powered ? lineTraffic(l, places) : null;
+  const railV = new Map(), railSt = [];
+  for (const l of rail.lines) if (l.traffic) for (const s of l.stations) {
+    const f = l.traffic.served, v = net.vOf(s), t = state.tiles.get(s), [sx, sy] = keyXY(s), [sw, sh] = sizeOf(t.b, t.rot);
+    if (v) railV.set(v, Math.max(railV.get(v) || 0, f));
+    railSt.push([sx, sy, sx + sw - 1, sy + sh - 1, f]);
+  }
+  const railReach = (k, t, x, y) => {
+    const [w, h] = sizeOf(t.b, t.rot), x1 = x + w - 1, y1 = y + h - 1;
+    let f = railV.get(net.vOf(k)) || 0;
+    for (const [a0, b0, a1, b1, g] of railSt) {
+      if (Math.max(0, a0 - x1, x - a1, b0 - y1, y - b1) <= WALK_REACH) f = Math.max(f, g);
+    }
+    return f;
+  };
   // Erreichbarkeit, Viertel, Sehenswürdigkeiten
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
     jobs += jobsOf(t);
-    pop += t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (d.pop || 0) * t.lvl;
+    pop += popOf(t);
     const s = { ...(needsReach(t.b) ? reachOf(net, k, x, y) : { eff: 1, how: null }), ...viertelBonus(net, k) };
+    if (s.how === 'weit') {                                    // mit dem Zug erreichbar: so gut, wie die Linie es schafft
+      const f = railReach(k, t, x, y);
+      if (f > 0) { s.how = 'bahn'; s.served = f; s.eff = FAR_EFF + (1 - FAR_EFF) * f; }
+    }
     st.set(k, s);
     // Sehenswürdigkeiten wirken erst, wenn sie mindestens eine Stufe restauriert sind
     if (t.b === 'lm' && ownedTile(x, y) && lmStage(t.lm) >= 1) {
-      s.road = s.how === 'viertel';
-      (s.how === 'weit' ? lmHalf : lmOn).set(t.lm, [x, y]);
+      s.road = s.how === 'viertel' || s.how === 'bahn';
+      (s.how === 'weit' || (s.how === 'bahn' && s.served < 0.5) ? lmHalf : lmOn).set(t.lm, [x, y]);
     }
   }
   const lmFactor = type => lmOn.has(type) ? 1 : lmHalf.has(type) ? 0.5 : 0;
@@ -201,8 +220,7 @@ function totals() {
     const s = st.get(k);
     if (idle.has(k)) s.noPower = true;
     s.lmb = lmNear(x, y);
-    s.rail = railMul(x, y);
-    const m = s.eff * (1 + s.bonus) * s.lmb * s.rail;
+    const m = s.eff * (1 + s.bonus) * s.lmb;
     if (d.prod) {
       s.prod = {};
       for (const [r, base] of Object.entries(d.prod)) {
@@ -251,6 +269,10 @@ function totals() {
     if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f * mR;
     if (e.allMul) allMul += e.allMul * f;
   }
+  // Verkehr: Fahrkarten und was die Besucher am Ziel ausgeben
+  let fare = 0, spend = 0;
+  for (const l of rail.lines) if (l.traffic) { fare += l.traffic.fare; spend += l.traffic.spend; }
+  inc += (fare + spend) * mT;
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
@@ -258,11 +280,13 @@ function totals() {
   // Gebäude-Stufen (für ✨ und Infofenster)
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
   pop = Math.round(pop * masteryMul('einwohner'));
-  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail };
+  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
+    traffic: { fare: fare * mT, spend: spend * mT, places } };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
-  rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, regions: new Set(), commuters: new Map(), comp: new Map(),
-    power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } } };
+  rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
+    power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
+  traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() } } };
 function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -540,10 +564,19 @@ function setCrossing(x, y, foot, style) {
 }
 // Bahn: zusammenhängende Schienen sind ein Netz, Bahnhöfe gehören zum Netz direkt neben ihrer Grundfläche.
 // Ein Netz mit Bahnhöfen auf mindestens zwei Inseln ist eine Linie. Ist das Netz ein Kreis (Rundkurs), fährt der Zug
-// im Kreis, und ab 4 km darf man weitere Züge kaufen (1 je 2 km). Fährt ein Zug, bringt jeder Bahnhof der Linie
-// Pendler (jeder weitere Zug noch einmal halb so viele), und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
-const COMMUTERS = 8, RAIL_BONUS = 0.1, KM = 10, KM_PER_TRAIN = 2;
+// im Kreis, und ab 4 km darf man weitere Züge kaufen (1 je 2 km). Was die Züge bringen, rechnet der Verkehr (unten).
+const KM = 10, KM_PER_TRAIN = 2;
 const EXTRA_TRAIN = { money: 1500, metall: 10 };
+// Verkehr (Block 17): Jeder Ort (Heimatinsel, Themen-Inseln) hat Einwohner und Anziehung. Eine fahrende Linie
+// befördert Pendler (½ Fahrt/min je Einwohner außerhalb ihres größten Orts) und Besucher (so viele, wie ein Ort
+// anzieht – höchstens ½ je Einwohner der anderen Orte). Plätze: 60 je Wagen und Minute. Reichen sie nicht, kommt nur
+// ein Teil mit (served). Fahrkarten und Besucher bringen Taler; was nah am Bahnhof steht, ist ans Dorf angebunden.
+const COMMUTE_SHARE = 0.5, VISIT_SHARE = 0.5, SEATS_PER_CAR = 60, FARE = 2, VISIT_SPEND = 10;
+const TRAIN_CARS = { tram: 1, regio: 2, modern: 3 }, MAX_PLUS_CARS = 4;       // Wagen je Modell, dazu anhängbar
+const EXTRA_CAR = { money: 400, metall: 3 };
+const LM_ATTRACT = [0, 40, 80, 150];                                            // Sehenswürdigkeit je Stufe
+const WONDER_ATTRACT = { seebruecke: 150, sternwarte: 200, riesenrad: 300, botgarten: 350, schloss: 500 };
+const carsOf = look => (TRAIN_CARS[look.model] || TRAIN_CARS.regio) + Math.min(MAX_PLUS_CARS, look.plus || 0);
 // Strom ⚡: Kraftwerke liefern, egal wo sie stehen (Windrad je Stufe mehr; Forschung „Leichte Rotorblätter“ +50 % Wind,
 // „Intelligentes Stromnetz“ +25 % auf alles). Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡), dann
 // die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
@@ -563,6 +596,8 @@ function powerOf(t) {
   return v * masteryMul('strom');
 }
 const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
+// Strom eines Zugs: die Regionalbahn (2 Wagen) wie oben, jeder Wagen mehr oder weniger ein halbes Mal
+const carNeed = (tiles, cars) => trainNeed(tiles) * cars / 2;
 // Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs
 function railLoop(tiles, rails) {
   const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k); return DIRS.map(([dx, dy]) => (x + dx) + ',' + (y + dy)).filter(n => core.has(n)); };
@@ -620,23 +655,46 @@ function computeRail() {
     const onRing = ring && list.every(s => { const t = state.tiles.get(s), [x, y] = keyXY(s), R = new Set(ring);
       return footprint(t.b, x, y, t.rot).some(([fx, fy]) => DIRS.some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
     const loop = onRing ? ring : null, max = loop ? Math.max(1, Math.floor(tiles / KM / KM_PER_TRAIN)) : 1;
-    const looks = lineLooks(list);
-    lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count: Math.min(max, looks.length), need: trainNeed(tiles) });
+    const looks = lineLooks(list), count = Math.min(max, looks.length);
+    const needs = looks.slice(0, count).map(lk => carNeed(tiles, carsOf(lk)));
+    lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count, need: needs[0], needs });
   }
   lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
   const power = computePower(lines, wind, plants);
-  const regions = new Set(), commuters = new Map();
-  for (const l of lines) if (l.powered) {
-    l.regions.forEach(r => regions.add(r));
-    const per = COMMUTERS * (1 + 0.5 * (l.running - 1));
-    l.stations.forEach(s => commuters.set(s, Math.max(commuters.get(s) || 0, per)));
-  }
-  return { lines, stationNet, wind, trains: power.trains, regions, commuters, comp, power };
+  for (const l of lines) l.seats = l.looks.slice(0, l.running).reduce((s, lk) => s + carsOf(lk) * SEATS_PER_CAR, 0);
+  return { lines, stationNet, wind, trains: power.trains, comp, power };
 }
-// Aussehen der Züge einer Linie (am Bahnhof gespeichert): erster Zug train/trainCol, weitere in extra
+// Aussehen der Züge einer Linie (am Bahnhof gespeichert): erster Zug train/trainCol/trainPlus, weitere in extra.
+// plus = angehängte Wagen (zusätzlich zu denen des Modells)
 function lineLooks(stations) {
   const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
-  return [{ model: t.train || 'regio', col: t.trainCol || 0 }].concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0 })));
+  return [{ model: t.train || 'regio', col: t.trainCol || 0, plus: t.trainPlus || 0 }]
+    .concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0, plus: e.plus || 0 })));
+}
+// Einwohner und Anziehung je Ort
+const popOf = t => t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (ITEMS[t.b].pop || 0) * t.lvl;
+function placeStats() {
+  const pop = new Map(), attr = new Map(), add = (m, r, v) => m.set(r, (m.get(r) || 0) + v);
+  for (const [k, t] of state.tiles) {
+    const [x, y] = keyXY(k), r = regionAt(x, y), d = ITEMS[t.b];
+    add(pop, r, popOf(t));
+    if (t.b === 'lm' && ownedTile(x, y)) add(attr, r, LM_ATTRACT[lmStage(t.lm)] || 0);
+    else if (WONDER_ATTRACT[t.b] && wonderDone(t)) add(attr, r, WONDER_ATTRACT[t.b]);
+    else if (d.cat === 'deko' && d.beauty) add(attr, r, d.beauty / 10);           // Schönes zieht auch ein wenig an
+  }
+  for (const [k, ds] of state.decos) { const r = regionAt(...keyXY(k)); for (const d of ds) if (d) add(attr, r, ITEMS[d.b].beauty / 10); }
+  return { pop, attr };
+}
+// Fahrgäste einer Linie: Pendler + Besucher je Ort, Plätze, beförderter Anteil
+function lineTraffic(l, places) {
+  const pops = l.regions.map(r => places.pop.get(r) || 0), total = pops.reduce((a, b) => a + b, 0);
+  const main = l.regions[pops.indexOf(Math.max(...pops))];
+  const commute = l.regions.reduce((s, r, i) => s + (r === main ? 0 : pops[i] * COMMUTE_SHARE), 0);
+  const visits = new Map(l.regions.map((r, i) => [r, Math.min(places.attr.get(r) || 0, (total - pops[i]) * VISIT_SHARE)]));
+  const visitors = [...visits.values()].reduce((a, b) => a + b, 0), demand = commute + visitors;
+  const served = demand > 0 ? Math.min(1, l.seats / demand) : 1;
+  return { commute, visits, visitors, demand, seats: l.seats, served, carried: demand * served,
+    fare: demand * served * FARE / 60, spend: visitors * served * VISIT_SPEND / 60 };
 }
 function computePower(lines, supply, plants = 0) {
   const city = plants > 0 || available('windrad');
@@ -656,7 +714,7 @@ function computePower(lines, supply, plants = 0) {
   }
   for (const l of lines) {
     l.running = 0;
-    for (let i = 0; i < l.count; i++) if (take(l.need, 'trains')) { l.running++; trains++; }
+    for (let i = 0; i < l.count; i++) if (take(l.needs ? l.needs[i] : l.need, 'trains')) { l.running++; trains++; }
     l.powered = l.running > 0;
   }
   return { supply, demand, left, dark, idle, trains, city, use };

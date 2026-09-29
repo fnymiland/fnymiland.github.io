@@ -69,7 +69,7 @@ const ITEMS = {
              desc: 'Für den elektrischen Zug. Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
   station: { cat: 'netz', name: 'Bahnhof', size: [1, 2], cost: 800, mat: { bretter: 10, quader: 6, metall: 4 }, needs: 'grass', tech: 'bahn',
-             desc: 'Braucht Schienen direkt am Bahnsteig. Zwei verbundene Bahnhöfe auf verschiedenen Inseln: Pendler und +10 % für beide.' },
+             desc: 'Braucht Schienen direkt am Bahnsteig. Zwei verbundene Bahnhöfe auf verschiedenen Inseln: Der Zug bringt Pendler und Besucher (Fahrkarten + Ausgaben am Ziel) und bindet alles in der Nähe ans Dorf an.' },
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
@@ -294,7 +294,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler', seilbahn: '🚡 Gondeln · 🌸 +10',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', seilbahn: '🚡 Gondeln · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +320 · 🍎', schloss: '+20 % auf alles',
@@ -324,7 +324,7 @@ const ITEM_TIPS = {
   leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
-  station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und 2 Windräder: Der Zug fährt.',
+  station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und Strom: Der Zug fährt, bringt Fahrgäste und bindet die Umgebung ans Dorf an.',
   schule: 'Bringt Ideen für die Forschung – je mehr Einwohner, desto mehr. Villen wünschen sich eine Schule.',
   bibliothek: 'Mehr Ideen und die zweite Stufe der Forschung.',
   uni: 'Viele Ideen und die dritte Stufe der Forschung.',

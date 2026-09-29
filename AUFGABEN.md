@@ -222,11 +222,11 @@ Entschieden: Nachfrage + Auslastung. Modell (Zahlen zum Nachjustieren in rules.j
 - **Anbindung**: Was im Viertel eines Bahnhofs oder bis 4 Felder davon steht, ist ans Dorf angebunden (kein 🐌) – so
   gut, wie die Linie ihre Fahrgäste schafft. Die alten Regeln (+8 Pendler je Bahnhof, +10 % für die Inseln) entfallen.
 
-- [ ] **17a** Anbindung über den Bahnhof (Monument drüben nicht mehr „weit weg“).
-- [ ] **17b** Einwohner und Anziehung je Ort; Nachfrage je Linie (Pendler + Besucher).
-- [ ] **17c** Plätze: Wagen je Zug (anhängen/abhängen), Strom je Wagen; Auslastung.
-- [ ] **17d** Einnahmen aus Fahrkarten und Besuchern; alte Pendler-/Bonus-Regel entfernen.
-- [ ] **17e** Anzeige: Bahnhof-Fenster (Fahrgäste, Plätze, Auslastung, Einnahmen, Tipp), „überfüllt“-Zeichen am Bahnhof,
+- [x] **17a** Anbindung über den Bahnhof (Monument drüben nicht mehr „weit weg“).
+- [x] **17b** Einwohner und Anziehung je Ort; Nachfrage je Linie (Pendler + Besucher).
+- [x] **17c** Plätze: Wagen je Zug (anhängen/abhängen), Strom je Wagen; Auslastung.
+- [x] **17d** Einnahmen aus Fahrkarten und Besuchern; alte Pendler-/Bonus-Regel entfernen.
+- [x] **17e** Anzeige: Bahnhof-Fenster (Fahrgäste, Plätze, Auslastung, Einnahmen, Tipp), „überfüllt“-Zeichen am Bahnhof,
       Verkehr im 📦 Lager.
 
 ## Block 18 – Schiffe (geplant)

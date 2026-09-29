@@ -522,6 +522,12 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 
 .mastery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 8px 0; }
 
+/* Bahnhof: Auslastung der Linie */
+.status .load { height: 8px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 2px 0; }
+.status .load i { display: block; height: 100%; background: var(--green); border-radius: 99px; }
+.status .load i.full { background: var(--red); }
+.row.cars { align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 800; gap: 6px; }
+
 /* ---------- Handy (body.phone: kürzere Bildschirmseite < 540 px, gesetzt in resize) ----------
    iPad und Desktop sind nie .phone – hier nur, was aufs Handy gehört. */
 /* Leiste eingeklappt: nur Schnellwerkzeuge + Bereiche; ein Bereich klappt den Katalog auf (#toolbar.open) */

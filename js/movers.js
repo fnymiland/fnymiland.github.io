@@ -250,7 +250,7 @@ function loopPos(route, tau) {
 function syncTrains() {
   if (!T.rail) return;
   const looksOf = new Map(T.rail.lines.map(l => [l, lineLooks(l.stations)]));
-  const sig = groundVersion + '|' + T.rail.lines.map(l => looksOf.get(l).map(lk => lk.model + lk.col).join('/') + ':' + l.running).join();   // Umbau, Modell, Strom
+  const sig = groundVersion + '|' + T.rail.lines.map(l => looksOf.get(l).map(lk => lk.model + lk.col + '+' + (lk.plus || 0)).join('/') + ':' + l.running).join();   // Umbau, Modell, Wagen, Strom
   if (syncTrains.sig === sig) return;
   syncTrains.sig = sig;
   const old = new Map(trains.map(tr => [tr.id, tr]));
@@ -258,7 +258,7 @@ function syncTrains() {
   for (const line of T.rail.lines) {
     const route = lineRoute(line);
     if (!route) continue;
-    const kindOf = look => TRAIN_KIND[look.model] || TRAIN_KIND.regio;
+    const kindOf = look => ({ ...(TRAIN_KIND[look.model] || TRAIN_KIND.regio), n: carsOf(look) });     // so viele Wagen, wie dran sind
     if (route.loop) {
       // alle fahrenden Züge gleichmäßig über den Ring verteilt; ohne Strom steht einer am ersten Bahnhof
       const n = Math.max(1, line.running), prev = old.get(line.stations[0] + '#0'), ls = prev && prev.ls ? prev.ls : { tau: 0 };
