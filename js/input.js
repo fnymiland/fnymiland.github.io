@@ -140,6 +140,8 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { setTool('look'); closePanel(); closeModal(); return; }
   if (!document.getElementById('modal').hidden) return;
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
+  const quick = { a: 'look', w: 'weg', v: 'verschieben', e: 'abriss', Delete: 'abriss', Backspace: 'abriss' }[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+  if (quick) { setTool(tool === quick && quick !== 'look' ? 'look' : quick); return; }
   const list = Object.keys(ITEMS).filter(id => ITEMS[id].cat === cat);
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= list.length) setTool(list[n - 1]);

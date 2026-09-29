@@ -14,11 +14,11 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 
 ## Block 2 – Bedienung
 
-- [ ] **Schnellzugriff** auf Ansehen, Weg, Verschieben und Abreißen (ohne erst Kategorie → Werkzeug), plus Tastenkürzel.
+- [x] **Schnellzugriff** auf Ansehen, Weg, Verschieben und Abreißen (ohne erst Kategorie → Werkzeug), plus Tastenkürzel.
 
 ## Block 2b – Wege
 
-- [ ] **Breite Wege:** Zwei Wege nebeneinander ergeben einen doppelt so breiten Weg (statt zwei schmaler Bänder).
+- [x] **Breite Wege:** Zwei Wege nebeneinander ergeben einen doppelt so breiten Weg (statt zwei schmaler Bänder).
 
 ## Block 3 – Aussehen und Rathaus
 

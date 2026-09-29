@@ -74,9 +74,11 @@ function roadCurve(arms) {
   const a0 = ang(ax * 0.5 - cu, ay * 0.5 - cv);
   return { cu, cv, a0, a1: sweep(a0, ang(bx * 0.5 - cu, by * 0.5 - cv)) };
 }
-// Umriss der Fahrbahn (halbe Breite w) als Liste von Polygonen im Feld-Koordinatensystem
-function roadShapes(arms, t, w) {
-  const out = [];
+// Umriss der Fahrbahn (halbe Breite w) als Liste von Polygonen im Feld-Koordinatensystem.
+// quads: Ecken [su, sv], die ganz gefüllt werden, weil dort vier Wegfelder ein 2×2-Quadrat bilden –
+// so verschmelzen Wege nebeneinander zu einem breiten Weg
+function roadShapes(arms, t, w, quads = []) {
+  const out = quads.map(([su, sv]) => [[0, 0], [0.5 * su, 0], [0.5 * su, 0.5 * sv], [0, 0.5 * sv]]);
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
   const arm = ([dx, dy], from = 0) => dx > 0 ? rect(from, 0.5, -w, w) : dx < 0 ? rect(-0.5, -from, -w, w)
     : dy > 0 ? rect(-w, w, from, 0.5) : rect(-w, w, -0.5, -from);
@@ -207,6 +209,9 @@ function drawPath(cx, cy, z, x, y, t) {
     return;
   }
   const arms = pathArms(x, y);
+  const band = (px, py) => { const n = state.tiles.get(px + ',' + py); return !!n && n.b === 'weg' && styleDef('weg', n.style).shape === 'band'; };
+  const quads = [];
+  for (const su of [1, -1]) for (const sv of [1, -1]) if (band(x + su, y) && band(x, y + sv) && band(x + su, y + sv)) quads.push([su, sv]);
   if (lk.stones) {
     // Trittsteine entlang der Mittellinie
     const cl = roadCenterline(arms, t) || [[0, 0]];
@@ -224,14 +229,14 @@ function drawPath(cx, cy, z, x, y, t) {
     return;
   }
   for (const [w, col] of [[ROAD_W + 0.04, lk.edge], [ROAD_W, lk.fill]]) {
-    for (const sh of roadShapes(arms, t, w)) poly(sh.map(L), C(col));
+    for (const sh of roadShapes(arms, t, w, quads)) poly(sh.map(L), C(col));
   }
   if (lk.pat) {
-    g.save(); clipTo(roadShapes(arms, t, ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    g.save(); clipTo(roadShapes(arms, t, ROAD_W, quads), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
-  if (lk.dash && cl) {
+  if (lk.dash && cl && !quads.length) {
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
     g.setLineDash([2.5 * z, 3 * z]);
     g.beginPath();

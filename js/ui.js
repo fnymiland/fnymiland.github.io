@@ -49,9 +49,21 @@ function thumb(type) {
   return c;
 }
 
+// Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
+const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Verschieben (V)'], ['abriss', '🧹', 'Abreißen (E)']];
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
+  for (const [id, icon, label] of QUICK) {
+    const b = document.createElement('button');
+    b.className = 'quick' + (tool === id ? ' active' : '');
+    b.dataset.quick = id;
+    b.textContent = icon;
+    b.title = label; b.setAttribute('aria-label', label);
+    b.onclick = () => { audio(); setTool(tool === id && id !== 'look' ? 'look' : id); };
+    cats.append(b);
+  }
+  const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
   for (const c of CATS) {
     const b = document.createElement('button');
     b.className = 'cat' + (c.id === cat ? ' active' : '');
@@ -95,6 +107,7 @@ function setTool(t) {
   previewCache = null;
   if (t !== 'look') closePanel();
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
+  for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
   const hint = $('hint');
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
