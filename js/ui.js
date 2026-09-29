@@ -297,8 +297,10 @@ $('pop-btn').onclick = hudMore;
 function storeHtml() {
   const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
   const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0)
-    - (state.res[r] > 0 ? (T.sales || []).filter(sl => sl.res === r).reduce((s, sl) => s + sl.rate, 0) : 0);          // Läden verkaufen
-  const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small></div>`; });
+    - (saleable(r) > 0 ? (T.sales || []).filter(sl => sl.res === r).reduce((s, sl) => s + sl.rate, 0) : 0);          // Läden verkaufen
+  const sold = new Set((T.sales || []).map(sl => sl.res));
+  const keepBtn = r => { const k = keepOf(r); return sold.has(r) ? `<button class="keep" data-keep="${r}" title="Läden verkaufen nur, was darüber liegt – antippen zum Ändern">🔒 ${k >= KEEP_ALL ? 'alles' : fmt(k)}</button>` : '<span></span>'; };
+  const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small>${keepBtn(r)}</div>`; });
   const P = T.rail.power, power = P.city || P.supply
     ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
   // Verkehr: alle fahrenden Linien zusammen
@@ -306,6 +308,7 @@ function storeHtml() {
   const full = want > got + 0.5, money = (T.traffic.fare + T.traffic.spend);
   const traffic = run.length ? `<div class="store-row${full ? ' bad' : ''}"><span>🚆 Fahrgäste</span><b>${fmt(got)}/min</b><small${full ? ' class="minus"' : ''}>${full ? `${fmt(want)} wollen mit` : money >= 0.05 ? '+' + fmtRate(money) + '/s' : ''}</small></div>` : '';
   return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
+    ${sold.size ? '<p class="muted store-note">🔒 Vorrat: Läden verkaufen nur, was darüber liegt.</p>' : ''}
     <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}${traffic}`;
 }
 function toggleStore(open = $('store').hidden) {
@@ -314,6 +317,8 @@ function toggleStore(open = $('store').hidden) {
   if (open) { const b = $('store-btn').getBoundingClientRect(); el.style.top = (b.bottom + 8) + 'px'; el.style.right = Math.max(10, window.innerWidth - b.right) + 'px'; setHtml(el, storeHtml()); }
 }
 $('store-btn').onclick = e => { e.stopPropagation(); toggleStore(); };
+// Vorrat je Ware umschalten (das Lager wird laufend neu gezeichnet – daher am Rahmen lauschen)
+$('store').addEventListener('click', e => { const b = e.target.closest('[data-keep]'); if (!b) return; cycleKeep(b.dataset.keep); sfx('deco'); setHtml($('store'), storeHtml(), true); });
 document.addEventListener('pointerdown', e => { if (!$('store').hidden && !e.target.closest('#store, #store-btn')) toggleStore(false); });
 // Ausgegebenes Material blitzt kurz am 📦 auf
 let flashTimer = 0;
@@ -877,12 +882,14 @@ function shopStatus(t, s) {
     : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) – oder Besucher per Bahn und Schiff</div>');
   const next = [...INNER_STEPS].reverse().find(([min]) => (s.types || 0) < min);
   out.push(`<div class="${s.inner ? 'ok' : ''}">🛍️ Innenstadt: ${s.types || 0} verschiedene Läden im Viertel${s.inner ? ` · +${Math.round(s.inner * 100)} %` : ''}${next ? ` <small class="muted">(ab ${next[0]}: +${Math.round(next[1] * 100)} %)</small>` : ''}</div>`);
-  const sales = (s.sales || []).filter(sl => state.res[sl.res] > 0);
+  const sales = (s.sales || []).filter(sl => saleable(sl.res) > 0);
   if (S.all || S.raw) out.push(sales.length ? `<div class="ok">📦 Verkauft ${sales.map(sl => RES[sl.res].icon).join('')} aus dem Lager → +${fmtRate(sales.reduce((a, sl) => a + sl.rate * sl.pay, 0))}/s</div>`
     : '<div class="bad">📦 Das Lager ist leer – nichts zu verkaufen</div>');
   else if (S.ware) {
     const sl = (s.sales || [])[0], r = RES[S.ware];
-    out.push(state.res[S.ware] > 0 && sl ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sl.rate * 60)} ${r.name}/min → +${fmtRate(sl.rate * sl.pay)}/s</div>`
+    const kp = keepOf(S.ware), keepTxt = kp ? ` <small class="muted">(🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)} bleiben im Lager)</small>` : '';
+    out.push(saleable(S.ware) > 0 && sl ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sl.rate * 60)} ${r.name}/min → +${fmtRate(sl.rate * sl.pay)}/s${keepTxt}</div>`
+      : state.res[S.ware] > 0 ? `<div>${r.icon} ${r.name}: nur der Vorrat ist da (🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)}) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
       : `<div class="bad">${r.icon} Kein ${r.name} im Lager${WARE_FROM[S.ware] ? ` – wächst auf fernen Inseln (${WARE_FROM[S.ware]})` : ''}. Mit ${r.name} verdient der Laden viel mehr.</div>`);
   }
   if (S.attr) out.push(`<div class="ok">👥 Zieht ${S.attr} Besucher auf die Insel (per Bahn und Schiff)</div>`);
@@ -1571,7 +1578,7 @@ function produce(dt) {
   for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * m * dt;
   let got = 0;
   for (const sl of T.sales || []) {
-    const n = Math.min(sl.rate * dt, Math.max(0, state.res[sl.res]));
+    const n = Math.min(sl.rate * dt, saleable(sl.res));                   // nur, was über dem Vorrat liegt
     if (n <= 0) continue;
     state.res[sl.res] -= n; got += n * sl.pay;
   }

@@ -356,3 +356,8 @@ Läden in einem Viertel, neue Hauswünsche (Laden, Café, Kultur). Kaffee, Tee, 
       Posthorn, Buch, Pizza, Nudelschale, Torte, Teddy, Kleid, Uhrturm, Diamant, Schokotafel …).
 - [x] Große neu: Museum (Tempel mit Dino-Skelett), Hotel (HOTEL-Leuchtschild, Sterne), Grand Hotel, Markthalle, Kino
       (Filmrolle), Theater (Masken), Konzerthalle (Glaswelle, Note), Kaufhaus (Riesentüte), Passage, Möbelhaus (Sessel).
+
+## Block 33 – Läden kaufen das Lager nicht mehr leer (01.10.)
+
+- [x] Vorrat je Ware: Läden verkaufen nur, was darüber liegt (Baumaterial standardmäßig 2.000), im 📦 Lager einstellbar.
+- [x] Möbelhaus verkauft halb so viele Bretter (0,5 je 100 Kunden und Sekunde).

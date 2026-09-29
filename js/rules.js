@@ -245,6 +245,19 @@ function beautyOf(t, x, y) {
 // Läden (Block 30): Einwohner je Viertel, Besucher je Insel (so viele, wie ankommen), gleiche Läden je Viertel,
 // Innenstadt: verschiedene Läden in einem Viertel (die Passage zählt dreifach, das Kaufhaus doppelt)
 const INNER_STEPS = [[15, 1], [10, 0.5], [6, 0.25], [3, 0.1]];
+// Vorrat (Block 33): Läden verkaufen nur, was über dem Vorrat liegt – Baumaterial bleibt standardmäßig 2.000 im Lager.
+// Einstellbar je Ware im 📦 Lager (state.keep; fehlt ein Eintrag, gilt KEEP_DEFAULT). KEEP_ALL = alles behalten.
+const KEEP_DEFAULT = { bretter: 2000, quader: 2000, metall: 2000, kristall: 2000 }, KEEP_ALL = 1e15;
+const KEEP_STEPS = [0, 500, 2000, 10000, 50000, 250000, KEEP_ALL];
+const keepOf = r => (state.keep && state.keep[r] != null ? state.keep[r] : KEEP_DEFAULT[r] || 0);
+const saleable = r => Math.max(0, state.res[r] - keepOf(r));
+function cycleKeep(r) {
+  const i = KEEP_STEPS.indexOf(keepOf(r)), next = KEEP_STEPS[(i + 1) % KEEP_STEPS.length];
+  if (!state.keep) state.keep = {};
+  state.keep[r] = next;
+  save();
+  return next;
+}
 function shopWorld(net, links) {
   const vPop = new Map(), visitors = new Map(), kinds = new Map();
   for (const [k, t] of state.tiles) {

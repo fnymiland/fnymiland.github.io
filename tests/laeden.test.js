@@ -133,3 +133,39 @@ describe('Anzeige', () => {
     for (const id of game('Object.keys(SHOPS)')) { expect(inMenu).toContain(id); expect(game(`!!ITEM_TIPS.${id}`)).toBe(true); }
   });
 });
+
+describe('Vorrat (Block 33)', () => {
+  it('Möbelhaus verkauft Bretter nur über dem Vorrat – 2.000 bleiben standardmäßig liegen', () => {
+    street();
+    put('12,11', { b: 'moebelhaus', lvl: 1, rot: 1 });
+    game('recalc(); state.res.bretter = 2020');
+    const m0 = game('state.money');
+    for (let i = 0; i < 200; i++) game('produce(1)');
+    expect(game('state.res.bretter')).toBeCloseTo(2000);
+    expect(game('state.money')).toBeGreaterThan(m0);
+    game('state.res.bretter = 1500; produce(1)');
+    expect(game('state.res.bretter')).toBe(1500);                           // unter dem Vorrat: nichts
+  });
+
+  it('im Lager je Ware einstellbar (antippen schaltet weiter), wird gespeichert', () => {
+    street();
+    put('12,11', { b: 'moebelhaus', lvl: 1, rot: 1 });
+    game('recalc(); state.res.bretter = 5000; toggleStore(true)');
+    const btn = () => document.querySelector('#store [data-keep="bretter"]');
+    expect(btn().textContent).toMatch(/2\.000/);
+    btn().click();
+    expect(game('keepOf("bretter")')).toBe(10000);
+    game('state.keep.bretter = 250000'); game("setHtml($('store'), storeHtml(), true)");
+    btn().click();
+    expect(btn().textContent).toMatch(/alles/);
+    btn().click();
+    expect(game('keepOf("bretter")')).toBe(0);
+    game('save()');
+    expect(game('load().keep.bretter')).toBe(0);
+    game('toggleStore(false)');
+  });
+
+  it('das Möbelhaus verkauft halb so viel wie vorher (0,5 je 100 Kunden)', () => {
+    expect(game('SHOPS.moebelhaus.sell')).toBe(0.5);
+  });
+});

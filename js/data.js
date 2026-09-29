@@ -206,7 +206,7 @@ const SHOPS = {
   juwelier:    { name: 'Juwelier', icon: '💍', rate: 12, cost: 30000, mat: { kristall: 10 }, workers: 2, lm: 'kristall:1', ware: 'kristall', sell: 0.06, look: ['#f5f0ff', '#3e3e4a', '#c3a8e6', 'uhr'] },
   chocolaterie:{ name: 'Chocolaterie', icon: '🍫', rate: 10, cost: 50000, workers: 2, festival: true, ware: 'kakao', sell: 0.5, look: ['#f3e3cc', '#6b4a2e', '#8a5a3c', 'tische'] },
   // größere Stadt-Läden
-  moebelhaus:  { name: 'Möbelhaus', icon: '🛋️', size: [2, 2], rate: 12, cost: 20000, mat: { bretter: 40 }, workers: 4, lanterns: 9, ware: 'bretter', sell: 1, look: ['#e9d3a8', '#8a5a3c', '#efcf8a', 'sofa'] },
+  moebelhaus:  { name: 'Möbelhaus', icon: '🛋️', size: [2, 2], rate: 12, cost: 20000, mat: { bretter: 40 }, workers: 4, lanterns: 9, ware: 'bretter', sell: 0.5, look: ['#e9d3a8', '#8a5a3c', '#efcf8a', 'sofa'] },
   kino:        { name: 'Kino', icon: '🎬', size: [2, 2], cat: 'kultur', rate: 15, attr: 60, cost: 40000, mat: { quader: 30 }, workers: 4, lanterns: 12, look: ['#3e3e4a', '#e8604f', '#ffd23f', 'kino'] },
   hotel:       { name: 'Hotel', icon: '🏨', size: [2, 2], rate: 10, hotel: 0.25, cost: 50000, mat: { quader: 30, bretter: 20 }, workers: 4, lanterns: 11, look: ['#fff6e4', '#5f8fe8', '#93c2e0', 'hotel'],
                  tip: 'Übernachtungsgäste: Die Insel zieht ein Viertel mehr Besucher an (per Bahn und Schiff).' },
