@@ -737,7 +737,7 @@ const BUILDING_ART = {
     })) return;
     const steam = (x0, y0, k, big) => {
       for (let i = 0; i < (big ? 4 : 2); i++) {
-        const ph = (now / (big ? 2600 : 1800) + i / (big ? 4 : 2) + k) % 1;
+        const ph = (((now / (big ? 2600 : 1800) + i / (big ? 4 : 2) + k) % 1) + 1) % 1;   // k kann negativ sein → Phase immer 0…1
         circle(x0 + Math.sin(ph * 5 + k) * 3 * z, y0 - ph * (big ? 34 : 14) * z, ((big ? 5 : 2.5) + ph * (big ? 8 : 4)) * z, `rgba(255,255,255,${(big ? 0.75 : 0.6) * (1 - ph)})`);
       }
     };

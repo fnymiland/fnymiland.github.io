@@ -15,6 +15,19 @@ const fmtMoney = n => n < 1e7 ? nf.format(Math.floor(n)) : `${nf.format(Math.flo
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 let toastTimer = 0;
+// Unerwartete Fehler: einmal sichtbar melden statt stumm (sonst bleibt der Bildschirm z. B. einfach blau)
+let errorShown = false;
+function reportError(e) {
+  console.error(e);
+  if (errorShown) return;
+  errorShown = true;
+  const bar = document.createElement('div');
+  bar.id = 'err-bar';
+  bar.textContent = `Hoppla, da ist etwas schiefgegangen: ${e && e.message || e}. Bitte Bescheid sagen – dein Spielstand ist sicher.`;
+  bar.onclick = () => bar.remove();
+  document.body.appendChild(bar);
+}
+window.addEventListener('error', e => reportError(e.error || e.message));
 function toast(msg) {
   const el = $('toast');
   el.textContent = msg;
@@ -24,7 +37,12 @@ function toast(msg) {
   toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
 }
 
+// Vorschaubild; ein Fehler in einer Zeichnung lässt nur dieses Bild leer – das Spiel startet trotzdem
 function thumb(type, lvl = 1, tile = null) {
+  const prev = g;
+  try { return thumbRaw(type, lvl, tile); } catch (e) { g = prev; reportError(e); const c = document.createElement('canvas'); c.width = 112; c.height = 88; return c; }
+}
+function thumbRaw(type, lvl = 1, tile = null) {
   const c = document.createElement('canvas');
   c.width = 112; c.height = 88;
   const prev = g; g = c.getContext('2d'); FOG = false;

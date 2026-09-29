@@ -15,6 +15,10 @@ const fakeCtx = new Proxy({}, {
     if (prop === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
     if (prop === 'measureText') return () => ({ width: 10 });
     if (prop === 'createRadialGradient' || prop === 'createLinearGradient') return () => ({ addColorStop: noop });
+    // wie im Browser: negativer Radius wirft (IndexSizeError) – im echten Spiel hält das alles an (blauer Bildschirm)
+    const neg = (name, rs) => { if (rs.some(r => r < 0)) throw new Error(`${name}: negativer Radius ${rs.join(', ')}`); };
+    if (prop === 'arc') return (x, y, r) => neg('arc', [r]);
+    if (prop === 'ellipse') return (x, y, rx, ry) => neg('ellipse', [rx, ry]);
     return noop;
   },
   set(target, prop, value) { target[prop] = value; return true; },
