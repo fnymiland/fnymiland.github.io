@@ -225,3 +225,90 @@ describe('Rechteck: Abriss und kleine Deko', () => {
     for (const [x, y] of [[4, 4], [5, 4], [6, 4], [4, 5], [5, 5], [6, 5]]) expect(game(`decosAt('${x},${y}')[${slot}].b`)).toBe('blumentopf');
   });
 });
+
+describe('Mehrere Dinge verschieben', () => {
+  const town = () => {
+    game("state.tiles.set('4,4', { b: 'haus', lvl: 2 }); state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'mulch' }); state.tiles.set('4,5', { b: 'brunnen', lvl: 1 })");
+    game("state.decos.set('5,5', [null, { b: 'blumentopf', rot: 0 }, null, null]); recalc(); setTool('verschieben')");
+  };
+  it('Rechteck aufziehen hebt alles darin an, ein Klick setzt es mit gleichen Abständen ab', () => {
+    town();
+    dragFromTo([4, 4], [5, 5]);
+    expect(game('moving.kind')).toBe('group');
+    expect(game('moving.items.length')).toBe(4);
+    expect(at(4, 4)).toBe(undefined);                                    // angehoben: der alte Platz ist frei
+    hoverAt(10, 10);
+    expect(game('groupErrors(10, 10).first')).toBe(null);
+    click(10, 10);                                                        // Mitte der Gruppe (cx = cy = 1 → gerundet)
+    const o = game('[10 - 1, 10 - 1]');
+    expect(at(o[0], o[1])).toBe('haus');
+    expect(game(`state.tiles.get('${o[0]},${o[1]}').lvl`)).toBe(2);
+    expect(game(`state.tiles.get('${o[0] + 1},${o[1]}').style`)).toBe('mulch');
+    expect(at(o[0], o[1] + 1)).toBe('brunnen');
+    expect(game(`decosAt('${o[0] + 1},${o[1] + 1}')[1].b`)).toBe('blumentopf');
+    expect(game('moving')).toBe(null);
+  });
+
+  it('besetztes Ziel: nichts passiert, die Gruppe bleibt in der Hand', () => {
+    town();
+    game("state.tiles.set('9,9', { b: 'haus', lvl: 1 }); recalc()");        // genau dort, wo das Haus hin soll
+    dragFromTo([4, 4], [5, 5]);
+    click(10, 10);
+    expect(game('moving && moving.kind')).toBe('group');
+    expect(game('groupErrors(10, 10).first')).toMatch(/steht/);
+    expect(at(9, 9)).toBe('haus');
+  });
+
+  it('Esc bzw. anderes Werkzeug legt alles an den alten Platz zurück', () => {
+    town();
+    dragFromTo([4, 4], [5, 5]);
+    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(game('moving')).toBe(null);
+    expect(at(4, 4)).toBe('haus'); expect(at(5, 4)).toBe('weg'); expect(at(4, 5)).toBe('brunnen');
+    expect(game("decosAt('5,5')[1].b")).toBe('blumentopf');
+  });
+
+  it('während des Tragens bleibt im Spielstand alles am alten Platz', () => {
+    town();
+    dragFromTo([4, 4], [5, 5]);
+    game('save()');
+    const s = game('load()');
+    expect(s.tiles.get('4,4').b).toBe('haus');
+    expect(s.tiles.get('5,4').b).toBe('weg');
+    expect(s.decos.get('5,5')[1].b).toBe('blumentopf');
+  });
+
+  it('was hinausragt und das Rathaus bleiben stehen; ein einzelnes Ding wird wie gewohnt getragen', () => {
+    game("state.tiles.set('5,5', { b: 'schule', lvl: 1, rot: 0 }); state.tiles.set('8,8', { b: 'haus', lvl: 1 }); recalc(); setTool('verschieben')");
+    dragFromTo([4, 4], [5, 5]);
+    expect(game('moving')).toBe(null);
+    expect(at(5, 5)).toBe('schule');
+    dragFromTo([7, 7], [9, 9]);
+    expect(game('moving.kind')).toBe('tile');                             // nur das Haus
+    game("setTool('look')");
+    dragFromTo([1, 1], [3, 3]);                                            // Rathaus (Werkzeug „Ansehen“: Karte ziehen)
+    game("setTool('verschieben')");
+    dragFromTo([1, 1], [3, 3]);
+    expect(at(2, 2)).toBe('rathaus');
+  });
+
+  it('iPad: Ziel antippen zeigt die Vorschau, nochmal antippen setzt ab', () => {
+    town();
+    dragFromTo([4, 4], [5, 5], { touch: true });
+    click(11, 11, { touch: true });
+    expect(game('moving && moving.kind')).toBe('group');
+    click(11, 11, { touch: true });
+    expect(game('moving')).toBe(null);
+    expect(at(10, 10)).toBe('haus');
+  });
+});
+
+describe('Neues Spiel oder Import', () => {
+  it('was man gerade trägt, kommt nicht mit in den neuen Stand', () => {
+    game("state.tiles.set('4,4', { b: 'haus', lvl: 1 }); recalc(); setTool('verschieben'); pickUp(4, 4, 0)");
+    expect(game('moving.kind')).toBe('tile');
+    game('startNew(); closeModal()');
+    expect(game('moving')).toBe(null);
+    expect(game('plan')).toBe(null);
+  });
+});

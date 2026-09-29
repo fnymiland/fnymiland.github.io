@@ -6,7 +6,8 @@
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'schiene']);
 const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels']);
-const dragKind = t => t === 'schiene' ? 'line' : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) ? 'rect' : null;
+const dragKind = t => t === 'schiene' ? 'line'
+  : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, rect: 24 };        // Linie: Felder insgesamt, Rechteck: Seitenlänge
 
 // { kind: 'line'|'rect', tool, a: {x, y}, b: {x, y}, fixed, dragging, slot (kleine Deko: in welche Ecke) }
@@ -69,6 +70,7 @@ function planCheck(b, x, y) {
 // prüfen und die neuen Felder dabei kurz als eigen zählen (danach wieder weg).
 function planScan(p) {
   if (p.tool === 'abriss') return scanDemolish(p);
+  if (p.tool === 'verschieben') return scanSelect(p);
   if (ITEMS[p.tool].small) return scanSmall(p);
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [];
   let cost = 0, firstErr = null, rest = planTiles(p);
@@ -109,6 +111,25 @@ function scanSmall(p) {
   }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
+}
+// Verschieben: welche Dinge die Auswahl anhebt (wie pickUpGroup) – nur zum Anzeigen
+function scanSelect(p) {
+  const states = new Map(), [x0, y0, x1, y1] = planBox(p), seen = new Set();
+  let things = 0;
+  const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  for (const [x, y] of planTiles(p)) {
+    const k = x + ',' + y, a = anchorAt(x, y), t = a && state.tiles.get(a);
+    if ((decosAt(k) || []).some(Boolean)) { things += decosAt(k).filter(Boolean).length; states.set(k, 'ok'); }
+    if (!t) { if (!states.has(k)) states.set(k, 'same'); continue; }
+    if (seen.has(a)) continue;
+    seen.add(a);
+    const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0);
+    const ok = t.b !== 'lm' && !ITEMS[t.b].fixed && fp.every(([fx, fy]) => inside(fx, fy));
+    for (const [fx, fy] of fp) if (inside(fx, fy)) states.set(fx + ',' + fy, ok ? 'ok' : 'bad');
+    if (ok) things++;
+  }
+  const bad = [...states.values()].filter(s => s === 'bad').length;
+  return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, firstErr: 'Hier ist nichts zum Verschieben' };
 }
 // Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt.
 // Leeres bleibt hell, was nicht geht (Rathaus, Sehenswürdigkeit, ragt hinaus) rot.
@@ -159,6 +180,7 @@ function planInfo(p) {
 }
 function planText(p, info) {
   const d = ITEMS[p.tool], parts = [];
+  if (p.tool === 'verschieben') return `Verschieben: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · loslassen: anheben`;
   if (p.tool === 'abriss') {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);

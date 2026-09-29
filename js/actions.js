@@ -93,8 +93,10 @@ function demolish(x, y) {
 
 // Verschieben: aufnehmen, Ziel antippen, ablegen – kostenlos. Während des Tragens bleibt das Objekt
 // im Spielstand an seinem alten Platz (serialize), damit beim Schließen der App nichts verloren geht.
-let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] }
-const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving.d.b);
+let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] } | { kind: 'group', items, cx, cy }
+const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving.kind === 'deco' ? moving.d.b : null);
+// Was man trägt, als Liste (eine Gruppe oder ein einzelnes Ding) – fürs Speichern und Zurücklegen
+const carried = () => !moving ? [] : moving.kind === 'group' ? moving.items : [moving];
 function pickUp(x, y, slot) {
   const k = x + ',' + y, ds = decosAt(k);
   if (ds && ds[slot]) {
@@ -117,11 +119,83 @@ function pickUp(x, y, slot) {
   $('rot-btn').hidden = !ROTATABLE.has(movingType());
   toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : ''));
 }
+// Mehrere Dinge auf einmal: alles, was ganz im Rechteck steht (samt Deko, Wegen, Schienen), wird angehoben und
+// zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus und Sehenswürdigkeiten bleiben stehen.
+function pickUpGroup(x0, y0, x1, y1) {
+  const items = [], seen = new Set();
+  let stays = 0;
+  const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const k = x + ',' + y, a = anchorAt(x, y), t = a && state.tiles.get(a);
+    if (t && !seen.has(a)) {
+      seen.add(a);
+      const [ax, ay] = keyXY(a);
+      if (t.b === 'lm' || ITEMS[t.b].fixed || !footprint(t.b, ax, ay, t.rot || 0).every(([fx, fy]) => inside(fx, fy))) stays++;
+      else items.push({ kind: 'tile', t, from: a, dx: ax - x0, dy: ay - y0 });
+    }
+    (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
+  }
+  if (!items.length) { toast(stays ? 'Das bleibt stehen (Rathaus, Sehenswürdigkeit oder ragt hinaus)' : 'Hier ist nichts zum Verschieben'); return false; }
+  if (items.length === 1) {                          // ein einzelnes Ding: wie gewohnt (mit Drehen)
+    const it = items[0], [x, y] = it.kind === 'tile' ? keyXY(it.from) : keyXY(it.from[0]);
+    pickUp(x, y, it.kind === 'deco' ? it.from[1] : 0);
+    return true;
+  }
+  for (const it of items) {
+    if (it.kind === 'tile') state.tiles.delete(it.from);
+    else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
+  }
+  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2) };
+  $('rot-btn').hidden = true;
+  recalc();
+  sfx('deco');
+  toast(`${items.length} Dinge angehoben – tippe, wohin sie sollen` + (stays ? ' (manches bleibt stehen)' : ''));
+  return true;
+}
+// Passt die Gruppe mit ihrer Mitte auf (hx, hy)? Fehler je Ding (Map) und der erste
+function groupErrors(hx, hy) {
+  const ox = hx - moving.cx, oy = hy - moving.cy, errs = new Map();
+  let first = null;
+  for (const it of moving.items) {
+    const x = ox + it.dx, y = oy + it.dy;
+    let err = null;
+    if (it.kind === 'deco') err = smallError(it.d.b, x, y, it.from[1], { move: true });
+    else {
+      const b = it.t.b;
+      if (b === 'schiene' || b === 'weg') {
+        const water = terrainAt(x, y) === 'water';
+        if (!ownedTile(x, y)) err = notMine(x, y);
+        else if (it.t.bridge && !water) err = 'Brücken nur übers Wasser';
+        else if (b === 'schiene' && !it.t.bridge && water) err = 'Übers Wasser braucht die Schiene eine Brücke';
+      }
+      err = err || placeError(b, x, y, it.t.rot || 0, { move: true });
+    }
+    errs.set(it, err);
+    first = first || err;
+  }
+  return { ox, oy, errs, first };
+}
+function dropGroup(hx, hy) {
+  const { ox, oy, first } = groupErrors(hx, hy);
+  if (first) { fail(first); return false; }
+  const now = performance.now();
+  for (const it of moving.items) {
+    const k = (ox + it.dx) + ',' + (oy + it.dy);
+    if (it.kind === 'tile') state.tiles.set(k, { ...it.t, born: now });
+    else { if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
+  }
+  moving = null;
+  sfx('build');
+  recalc();
+  save();
+  return true;
+}
 function moveError(x, y, slot) {
   if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
   return placeError(moving.t.b, x, y, placeRot(moving.t.b, x, y), { move: true });
 }
 function dropAt(x, y, slot) {
+  if (moving.kind === 'group') return dropGroup(x, y);
   const err = moveError(x, y, slot);
   if (err) { fail(err); return; }
   const rot = moving.kind === 'deco' ? (ROTATABLE.has(movingType()) ? buildRot : 0) : placeRot(movingType(), x, y);
@@ -140,12 +214,12 @@ function dropAt(x, y, slot) {
 }
 function cancelMove() {
   if (!moving) return;
-  if (moving.kind === 'deco') {
-    const [k, slot] = moving.from;
-    if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
-    state.decos.get(k)[slot] = moving.d;
-  } else {
-    state.tiles.set(moving.from, moving.t);
+  for (const it of carried()) {
+    if (it.kind === 'deco') {
+      const [k, slot] = it.from;
+      if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+      state.decos.get(k)[slot] = it.d;
+    } else state.tiles.set(it.from, it.t);
   }
   moving = null;
   recalc();

@@ -65,12 +65,14 @@ function serialize() {
   const tiles = [];
   for (const [k, t] of state.tiles) tiles.push([k, tileOut(t)]);
   // was man gerade trägt, wird an seinem alten Platz gespeichert
-  if (typeof moving !== 'undefined' && moving && moving.kind === 'tile') tiles.push([moving.from, tileOut(moving.t)]);
+  const held = typeof moving !== 'undefined' ? carried() : [];     // auch eine ganze Gruppe
+  for (const it of held) if (it.kind === 'tile') tiles.push([it.from, tileOut(it.t)]);
   const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
-  if (typeof moving !== 'undefined' && moving && moving.kind === 'deco') {
-    const [k, slot] = moving.from;
+  for (const it of held) {
+    if (it.kind !== 'deco') continue;
+    const [k, slot] = it.from;
     if (!decoMap.has(k)) decoMap.set(k, [null, null, null, null]);
-    decoMap.get(k)[slot] = moving.d;
+    decoMap.get(k)[slot] = it.d;
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
@@ -242,7 +244,7 @@ function adoptState(s) {
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
   migrateLandmarks();
-  plan = null;                                     // eine halbe Planung gehört zum alten Stand
+  plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
   const moved = migrateIslands();
   ownIslandsFully();
   const grown = growWonders();

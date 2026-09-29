@@ -260,6 +260,38 @@ function planPreview(z) {
   const p = plan.kind === 'line' ? toScreen(plan.b.x, plan.b.y) : toScreen((x0 + x1) / 2, (y0 + y1) / 2);
   return { ok: !info.err, text: planText(plan, info), p };
 }
+// Vorschau beim Verschieben einer Gruppe: Grundflächen grün/rot, die Dinge als Geister an ihrem vordersten Feld
+function groupPreview(z) {
+  const { ox, oy, errs, first } = groupErrors(hover.x, hover.y), ghosts = new Map(), now = performance.now();
+  const add = (k, f) => { if (!ghosts.has(k)) ghosts.set(k, []); ghosts.get(k).push(f); };
+  const dia = (x, y, bad) => {
+    const c = [toScreen(x - 0.44, y - 0.44), toScreen(x + 0.44, y - 0.44), toScreen(x + 0.44, y + 0.44), toScreen(x - 0.44, y + 0.44)];
+    g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
+    g.fillStyle = bad ? 'rgba(229,72,77,0.45)' : 'rgba(255,255,255,0.5)'; g.fill();
+    g.strokeStyle = bad ? '#e5484d' : '#2f9f55'; g.lineWidth = 1.6 * z; g.stroke();
+  };
+  g.save(); g.lineJoin = 'round';
+  for (const it of moving.items) {
+    const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
+    if (it.kind === 'deco') {
+      const slot = it.from[1], [u, v] = slotUV(slot);
+      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot); });
+      continue;
+    }
+    const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0);
+    for (const [fx, fy] of footprint(t.b, x, y, t.rot || 0)) dia(fx, fy, bad);
+    if (t.b === 'weg' || t.b === 'schiene') continue;                // Wege: die Fläche genügt
+    add((x + w - 1) + ',' + (y + h - 1), () => {
+      const c = toScreen(x + (w - 1) / 2, y + (h - 1) / 2), s = decoScale(t.b);
+      g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -s : s, s);
+      drawObject(t.b, 0, 0, z, now, x, y, t.lvl, t);
+      g.restore();
+    });
+  }
+  g.restore();
+  const n = moving.items.length;
+  return { groupGhost: ghosts, preview: { ok: !first, text: first || `${n} Dinge · hierhin`, p: toScreen(hover.x, hover.y) } };
+}
 // Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
 // hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in
 // Streifen gezeichnet und tragen ihre Lichter mehrfach ein: jedes nur einmal hinterlegen.
@@ -373,7 +405,9 @@ function render(now) {
   };
   const ghostType = tool === 'verschieben' ? movingType() : tool;
   const smallMode = tool === 'verschieben' ? !!moving && moving.kind === 'deco' : !!(ITEMS[tool] && ITEMS[tool].small);
+  let groupGhost = null;                                   // mehrere Dinge verschieben: je vorderstem Feld, was dort als Geist steht
   if (plan) preview = planPreview(z);                       // Linie/Rechteck: alle Felder mit Preis
+  else if (tool === 'verschieben' && moving && moving.kind === 'group') { if (hover) ({ preview, groupGhost } = groupPreview(z)); }
   else if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (CLAIM_TOOLS.has(tool) && isSea(hover.x, hover.y)))) {
     const hx = hover.x, hy = hover.y;
     const hds = decosAt(hx + ',' + hy);
@@ -519,6 +553,11 @@ function render(now) {
       const [u, v] = slotUV(preview.slot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
       drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1, preview.slot);
+      g.globalAlpha = 1;
+    }
+    if (groupGhost && groupGhost.has(k)) {
+      g.globalAlpha = 0.65;
+      for (const f of groupGhost.get(k)) f();
       g.globalAlpha = 1;
     }
     if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {

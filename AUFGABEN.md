@@ -190,5 +190,5 @@ beim Verschieben zieht alles im Rechteck mit (Gebäude, Deko, Wege, Schienen) �
       und aufziehen, Vorschau mit Anzahl/Preis, Klick hinein baut. Ein einzelner Klick wie bisher: ein Feld.
 - [x] **15c Rechteck für Abriss, Weg-Fläche, kleine Deko:** Abriss zeigt, was wegkommt (und Erstattung/Rodungskosten);
       Weg aufziehen = Fläche; Deko = je Feld eine in derselben Ecke.
-- [ ] **15d Mehrere Dinge verschieben:** Rechteck aufziehen, alles darin (ganz drin) wird angehoben und zieht zusammen
+- [x] **15d Mehrere Dinge verschieben:** Rechteck aufziehen, alles darin (ganz drin) wird angehoben und zieht zusammen
       um; Sehenswürdigkeiten und Rathaus bleiben.
