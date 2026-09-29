@@ -693,6 +693,7 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
+  const boat = t.b === 'bootssteg' ? expeditionHtml() : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
     return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
@@ -713,6 +714,7 @@ function openInfo(x, y) {
     <p class="muted">${d.desc}</p>
     ${grow}
     ${wonder}
+    ${boat}
     ${train}
     ${colors}
     <div class="row">
@@ -722,6 +724,7 @@ function openInfo(x, y) {
     </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
   $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
+  if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
     const nm = $('p-name');
@@ -920,22 +923,33 @@ function openLandmark(x, y) {
 
 // Themen-Insel: was sie bietet, was zum Erschließen fehlt
 function openIsle(id, sx, sy) {
-  const i = ISLE_BY_ID[id], nxt = nextIsle(), L = LANDMARKS[i.lm];
-  const need = isleNeeds(i), ok = need.every(c => c.ok), isNext = nxt === i;
+  const i = ISLE_BY_ID[id], nxt = nextIsle(), L = LANDMARKS[i.lm], isNext = nxt === i;
   showPanel(`
     <h3>${i.icon} ${i.name}</h3>
     <p class="muted">${i.text}</p>
     <p>${L.icon} <b>${L.name}</b><br><span class="muted">${L.effect}</span></p>
-    ${isNext ? `
-      <div class="label">Zum Erschließen</div>
-      <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}</div>
-      ${i.need.money || i.need.science ? '<p class="muted">Taler und Ideen werden dabei ausgegeben.</p>' : ''}
-      <div class="row"><button class="btn" id="p-isle" ${ok ? '' : 'disabled'}>🏝️ Erschließen</button><button class="btn ghost" id="p-close">Schließen</button></div>`
-    : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} erschließen</div></div>
-      <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`}`, () => isleOpen(id) ? closePanel() : openIsle(id));
-  if ($('p-isle')) $('p-isle').onclick = () => { closePanel(); unlockIsland(id); };
+    ${isNext ? expeditionHtml(true) : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} entdecken</div></div>`}
+    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => isleOpen(id) ? closePanel() : openIsle(id));
+  if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition()) openIsle(id); };
+  if ($('p-steg')) $('p-steg').onclick = () => { closePanel(); menuTop = 'verbinden'; menuSub = 'alle'; buildToolbar(); setTool('bootssteg'); };
   $('p-close').onclick = closePanel;
   panelAt(sx, sy);
+}
+// Expedition: was fehlt, Boot losschicken, Countdown (am Steg und an der Insel)
+function expeditionHtml(atIsle) {
+  const i = nextIsle(), e = state.expedition;
+  if (e) {
+    const to = ISLE_BY_ID[e.isle];
+    return `<div class="label">⛵ Expedition</div><div class="status"><div class="ok">⛵ Das Boot ist unterwegs zur ${to.icon} ${to.name} – zurück in ${fmtClock(expeditionLeft())}</div></div>`;
+  }
+  if (!i) return '<p class="ok">⛵ Alle Inseln sind entdeckt.</p>';
+  const need = isleNeeds(i), ok = need.every(c => c.ok), steg = stegs().length > 0;
+  return `<div class="label">⛵ Nächste Insel entdecken: ${i.icon} ${i.name}</div>
+    <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}
+      ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🛤️ Verbinden → Steg)</div>'}</div>
+    <p class="muted">Das Boot ist etwa ${EXPEDITION_MIN[i.id]} Min. unterwegs.${i.need.money || i.need.science ? ' Taler und Ideen werden beim Ablegen ausgegeben.' : ''}</p>
+    <div class="row">${steg ? `<button class="btn" id="p-expo" ${ok ? '' : 'disabled'}>⛵ Boot losschicken</button>`
+      : atIsle ? '<button class="btn" id="p-steg">🪵 Steg bauen</button>' : ''}</div>`;
 }
 // Alte Spielstände: einmal erklären, was sich geändert hat
 function announceIslands(m) {
@@ -1143,7 +1157,7 @@ function openTownHall(tab = hallTab) {
       const e = per.get(id), rail = T.rail.lines.some(l => l.traffic && l.regions.includes(id));
       const state_ = open ? `🏠 ${e.n} · 👥 ${e.pop}${rail ? ' · 🚆' : ''}${extra || ''}` : id === (nx && nx.id) ? 'als Nächstes' : '🔒';
       return `<div class="hall-row"><span>${icon} <b>${name}</b> <small class="muted">${state_}</small></span>
-        <button class="btn ${id === (nx && nx.id) ? '' : 'ghost '}small" data-isle-go="${id}">${open ? 'Hin' : id === (nx && nx.id) ? 'Erschließen …' : 'Ansehen'}</button></div>`;
+        <button class="btn ${id === (nx && nx.id) ? '' : 'ghost '}small" data-isle-go="${id}">${open ? 'Hin' : id === (nx && nx.id) ? 'Entdecken …' : 'Ansehen'}</button></div>`;
     };
     body = `
       <div class="label">Deine Inseln</div>

@@ -738,6 +738,17 @@ const BUILDING_ART = {
     // ein paar Blätter vorn, damit das Haus im Baum sitzt
     leaf(-13, P1 - 2, 5, '#55b562'); leaf(12, P1 + 1, 4.5, '#4aa857');
   },
+  // Steg: Holzplanken vom Ufer übers Wasser, Pfähle; ist das Boot zu Hause, schaukelt es am Ende (sonst: Expedition)
+  bootssteg(K, s, now, x, y, t) {
+    const [dx, dy] = DIRS.find(([ex, ey]) => terrainAt(x + ex, y + ey) !== 'water') || [-1, 0];   // Richtung zum Ufer
+    const ca = dx * 0.12, cb = dy * 0.12, ha = dx ? 0.42 : 0.12, hb = dy ? 0.42 : 0.12;
+    for (const [pa, pb] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) kPost(K, ca + pa * (ha - 0.03), cb + pb * (hb - 0.03), 3.4, '#6b4f3a', 1.4);
+    K.block({ a: ca, b: cb, ha, hb, h: 1, lift: 2.4, wall: '#8a5a3c', type: 'flat', roof: '#c9a26f' });
+    const [ex, ey] = K.P(ca - dx * (ha - 0.06), cb - dy * (hb - 0.06), 3.4);       // Poller am Ende, dort hängt die Leine
+    circle(ex, ey - 1 * K.z, 1.2 * K.z, C('#5a3f2c'));
+    const home = !state.expedition || state.expedition.from !== x + ',' + y;
+    if (home) kBoat(K, -dx * 0.36 + dy * 0.26, -dy * 0.36 + dx * 0.26, now, true);
+  },
   // Hausboot: runder Rumpf, Kajüte mit Walmdach, Blumenkübel; wippt auf dem Wasser. Stufe 2 größer, Stufe 3 mit Dachgarten
   hausboot(K, s, now, x, y, t) {
     const z = K.z, bob = Math.sin(now / 900 + x) * 0.8;

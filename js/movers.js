@@ -353,3 +353,27 @@ function drawTrainCar(car, z, now) {
     g.beginPath(); g.moveTo(bx, by); g.lineTo(kx, ky); g.lineTo(tx, ty); g.moveTo(tx - 2.5 * z, ty); g.lineTo(tx + 2.5 * z, ty); g.stroke();
   }
 }
+
+// Expedition: das Boot fährt vom Steg zur nächsten Insel, sucht dort eine Weile und kommt zurück (echte Zeit)
+function expeditionBoat() {
+  const e = state.expedition, i = e && ISLE_BY_ID[e.isle];
+  if (!i) return null;
+  const [sx, sy] = keyXY(e.from), p = Math.min(1, (Date.now() - e.t0) / Math.max(1, e.until - e.t0));
+  const vx = i.cx - sx, vy = i.cy - sy, d = Math.hypot(vx, vy) || 1, stop = Math.max(0, d - ISLE_R - 2);
+  const tx = sx + vx / d * stop, ty = sy + vy / d * stop;                                  // vor der Küste der Insel
+  let px, py, du, dv;
+  if (p < 0.45) { const k = p / 0.45; px = sx + (tx - sx) * k; py = sy + (ty - sy) * k; du = vx / d; dv = vy / d; }
+  else if (p < 0.55) { const a = (p - 0.45) / 0.1 * Math.PI * 2; px = tx + Math.cos(a) * 2 - 2; py = ty + Math.sin(a) * 2; du = -Math.sin(a); dv = Math.cos(a); }
+  else { const k = (p - 0.55) / 0.45; px = tx + (sx - tx) * k; py = ty + (sy - ty) * k; du = -vx / d; dv = -vy / d; }
+  return { boat: true, px, py, du, dv };
+}
+function drawBoatMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 600) * 1.2 * z;
+  const flip = (m.du - m.dv) < 0 ? -1 : 1;                                                 // Bug zeigt in Fahrtrichtung
+  ellipse(x, y + 3 * z, 20 * z, 6 * z, 'rgba(230,248,255,0.45)');                         // Kielwasser
+  ellipse(x, y + 2 * z + bob, 13 * z, 4.5 * z, C('#8b5a3c'));
+  g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.3 * z;
+  g.beginPath(); g.moveTo(x, y + bob); g.lineTo(x, y - 26 * z + bob); g.stroke();
+  poly([[x + flip * 1 * z, y - 24 * z + bob], [x + flip * 12 * z, y - 5 * z + bob], [x + flip * 1 * z, y - 3 * z + bob]], C('#fffaf0'));
+  poly([[x, y - 27 * z + bob], [x - flip * 5 * z, y - 25 * z + bob], [x, y - 23 * z + bob]], C('#e8604f'));  // Wimpel
+}

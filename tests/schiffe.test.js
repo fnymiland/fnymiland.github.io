@@ -1,0 +1,94 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+// Inseln entdecken: Steg am Ufer, Boot losschicken, nach einer Weile ist die Insel entdeckt
+beforeAll(() => loadGame());
+beforeEach(() => {
+  game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true');
+  game("state.money = 5000; for (let i = 0; i < 3; i++) state.tiles.set((4 + 2 * i) + ',4', { b: 'haus', lvl: 1 }); recalc()");
+});
+const $ = id => document.getElementById(id);
+// Wasser am eigenen Ufer (für den Steg)
+const shore = () => game(`(() => {
+  for (let y = -20; y < 40; y++) for (let x = -20; x < 40; x++) if (placeError('bootssteg', x, y) === null) return [x, y];
+})()`);
+
+describe('Steg', () => {
+  it('von Anfang an baubar, aber nur ins Meer direkt an der Küste (nicht in den Teich)', () => {
+    expect(game("available('bootssteg')")).toBe(true);
+    expect(game("placeError('bootssteg', 4, 6)")).toMatch(/Meer/);
+    game("state.terra.set('8,8', 'water'); sandCache.clear()");
+    expect(game("placeError('bootssteg', 8, 8)")).toMatch(/Meer/);
+    const [x, y] = shore();
+    expect(game(`build('bootssteg', ${x}, ${y}, true)`)).toBe(true);
+    expect(game(`ownedTile(${x}, ${y})`)).toBe(true);
+  });
+
+  it('lässt sich zeichnen – mit Boot zu Hause und ohne (unterwegs)', () => {
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true)`);
+    expect(() => game(`drawObject('bootssteg', 300, 300, 1.5, 1000, ${x}, ${y}, 1, state.tiles.get('${x},${y}'))`)).not.toThrow();
+    game('sendExpedition()');
+    expect(() => game(`drawObject('bootssteg', 300, 300, 1.5, 1000, ${x}, ${y}, 1, state.tiles.get('${x},${y}'))`)).not.toThrow();
+    expect(() => game('drawBoatMover(expeditionBoat(), 1.5, 1000)')).not.toThrow();
+  });
+});
+
+describe('Expedition', () => {
+  it('ohne Steg geht es nicht; mit Steg kostet das Ablegen, das Boot ist dann unterwegs', () => {
+    expect(game('expeditionError()')).toMatch(/Steg/);
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true)`);
+    const m = game('state.money');
+    expect(game('sendExpedition()')).toBe(true);
+    expect(game('state.money')).toBe(m - 150);
+    expect(game('state.expedition.isle')).toBe('wald');
+    expect(game('(state.expedition.until - state.expedition.t0) / 60000')).toBe(1);   // Waldinsel: 1 Minute
+    expect(game('sendExpedition()')).toBe(false);                                     // schon unterwegs
+    expect(game('checkExpedition()')).toBe(false);                                    // noch nicht zurück
+    expect(game("isleOpen('wald')")).toBe(false);
+  });
+
+  it('kommt das Boot zurück, ist die Insel entdeckt – mit Tagebuchseite', () => {
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true); sendExpedition(); state.expedition.until = Date.now() - 1`);
+    expect(game('checkExpedition()')).toBe(true);
+    expect(game("isleOpen('wald')")).toBe(true);
+    expect(game('state.expedition')).toBe(null);
+    expect(game('state.diary.includes("isle:wald")')).toBe(true);
+    expect(game('diaryPage("isle:wald").title')).toContain('Waldinsel');
+    expect($('modal').textContent).toContain('Land in Sicht');
+    game('closeModal()');
+  });
+
+  it('wird gespeichert (auch wenn das Spiel zwischendurch zu ist)', () => {
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true); sendExpedition(); save()`);
+    const e = game('load().expedition');
+    expect(e.isle).toBe('wald');
+    expect(e.from).toBe(`${x},${y}`);
+  });
+
+  it('das Boot fährt hin, sucht und kommt zurück', () => {
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true); sendExpedition()`);
+    const at = p => game(`(() => { const e = state.expedition; e.t0 = Date.now() - ${p} * 60000; e.until = e.t0 + 60000; const b = expeditionBoat(); return [b.px, b.py]; })()`);
+    const [sx, sy] = at(0.001), [mx, my] = at(0.45), [ex, ey] = at(0.999);
+    const [ix, iy] = game('[ISLE_BY_ID.wald.cx, ISLE_BY_ID.wald.cy]');
+    expect(Math.hypot(sx - x, sy - y)).toBeLessThan(1);
+    expect(Math.hypot(mx - ix, my - iy)).toBeLessThan(game('ISLE_R') + 3);
+    expect(Math.hypot(ex - x, ey - y)).toBeLessThan(1);
+  });
+
+  it('Inselfenster: ohne Steg „Steg bauen“, mit Steg „Boot losschicken“', () => {
+    game("openIsle('wald')");
+    expect($('p-steg')).not.toBe(null);
+    $('p-steg').onclick();
+    expect(game('tool')).toBe('bootssteg');
+    const [x, y] = shore();
+    game(`build('bootssteg', ${x}, ${y}, true); openIsle('wald')`);
+    expect($('p-expo').disabled).toBe(false);
+    $('p-expo').onclick();
+    expect(game('!!state.expedition')).toBe(true);
+    expect($('panel').textContent).toContain('unterwegs');
+  });
+});

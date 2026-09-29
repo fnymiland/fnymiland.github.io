@@ -232,8 +232,8 @@ Entschieden: Nachfrage + Auslastung. Modell (Zahlen zum Nachjustieren in rules.j
 ## Block 18 – Schiffe (geplant)
 
 Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Handel, Kreuzfahrt, Fischkuttern.
-- [ ] **18a** Steg (von Anfang an, am Ufer) mit Holzboot.
-- [ ] **18b** Expedition: Boot losschicken (Taler wie bisher, Laternen/Einwohner als Voraussetzung), es fährt sichtbar
+- [x] **18a** Steg (von Anfang an, ins Meer an der Küste) mit Holzboot.
+- [x] **18b** Expedition: Boot losschicken (Taler wie bisher, Laternen/Einwohner als Voraussetzung), es fährt sichtbar
       hinaus und kommt nach 1–10 Min zurück → Insel entdeckt, Tagebuch. Inseln nicht mehr per Schild freischalten.
 - [ ] **18c** Fähren zwischen Häfen (Fahrgäste wie der Zug, ohne Schienen und Strom, weniger Plätze).
 - [ ] **18d** Handel: Frachter verkaufen Überschuss, kaufen Fehlendes (schwankende Preise).

@@ -476,8 +476,8 @@ function render(now) {
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map();
-  const cars4 = trainCars();
-  for (const m of walkers.concat(cars, cars4)) {
+  const cars4 = trainCars(), boat = expeditionBoat();
+  for (const m of walkers.concat(cars, cars4, boat ? [boat] : [])) {
     const k = Math.round(m.px) + ',' + Math.round(m.py);
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
@@ -585,7 +585,7 @@ function render(now) {
         // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
         const ar = m.fur && archAt(m.px, m.py);
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-        if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else drawCar(m, z);
+        if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
       }
     }
     if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }
@@ -622,7 +622,8 @@ function render(now) {
     const ly = p.y - (LM_LABEL_H[i.lm] || 80) * z;
     if (p.x < -150 || p.x > W + 150 || ly < -100 || ly > H + 150) continue;
     const isNext = i === nxt, sz = Math.max(11, 12 * z);
-    pill(`${i.icon} ${i.name} ${isNext ? '· erschließen' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
+    const away = isNext && state.expedition && state.expedition.isle === i.id;
+    pill(`${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : isNext ? '· entdecken' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
   }
 
   drawSparkles(now, z);

@@ -32,16 +32,54 @@ function isleNeeds(i) {
   return out;
 }
 const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || null;
-function unlockIsland(id) {
-  const i = ISLE_BY_ID[id];
-  if (!i || isleOpen(id)) return false;
-  if (nextIsle() !== i) { fail(`Erst die ${nextIsle().name} erschließen`); return false; }
+// Inseln entdecken: vom Steg aus fährt ein Holzboot hinaus (Taler/Ideen beim Ablegen), kommt nach einiger Zeit zurück
+// – dann ist die nächste Insel entdeckt. Die Zeit läuft echt weiter, auch wenn das Spiel zu ist.
+const EXPEDITION_MIN = { wald: 1, obst: 2, wind: 3, ruine: 4, erz: 6, quelle: 8, kristall: 10 };
+const DISCOVERY = {
+  wald: 'Mit dem kleinen Holzboot hinaus aufs Meer. Nach einer Weile tauchte ein dunkelgrüner Streifen auf: Wald, so dicht, dass kaum Licht hindurchfällt – und mittendrin ein Baum, älter als alle Geschichten.',
+  obst: 'Diesmal trug der Wind den Duft von Äpfeln herüber. Eine Insel voller wilder Obstbäume, die seit Jahren niemand mehr geerntet hat.',
+  wind: 'Die Wellen wurden höher, der Wind rauer. Hinter der Gischt: Felsen, Klippen und Wiesen, über die der Wind pfeift.',
+  ruine: 'Im Nebel zeichneten sich Mauern ab. Eine Insel voller alter Steine – hier muss einmal eine Schule gestanden haben, vielleicht sogar mehr.',
+  erz: 'Ein Berg, der im Abendlicht rötlich glänzt. Die alten Seeleute erzählen, dass man hier früher Erz gegraben hat.',
+  quelle: 'Dampf stieg aus dem Meer auf – nein, von einer Insel! Zwischen den Felsen sprudeln warme Quellen.',
+  kristall: 'Die längste Fahrt von allen. In der Nacht leuchtete der Horizont: eine Insel aus Kristall, in der das Mondlicht funkelt.',
+};
+const stegs = () => [...state.tiles].filter(([, t]) => t.b === 'bootssteg').map(([k]) => k);
+function expeditionError(i = nextIsle()) {
+  if (!i) return 'Alle Inseln sind entdeckt';
+  if (state.expedition) return 'Das Boot ist schon unterwegs';
+  if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🛤️ Verbinden → Steg)';
   const miss = isleNeeds(i).filter(c => !c.ok);
-  if (miss.length) { fail('Es fehlt noch: ' + miss.map(c => c.text).join(', ')); return false; }
+  return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
+}
+function sendExpedition(from = stegs()[0]) {
+  const i = nextIsle(), err = expeditionError(i);
+  if (err) { fail(err); return false; }
   state.money -= i.need.money || 0;
   state.science -= i.need.science || 0;
+  const now = Date.now();
+  state.expedition = { isle: i.id, from, t0: now, until: now + EXPEDITION_MIN[i.id] * 60e3 };
+  sfx('star');
+  toast(`⛵ Das Boot sticht in See – es sucht die ${i.name} (zurück in ${EXPEDITION_MIN[i.id]} Min.)`);
+  recalc(); save();
+  return true;
+}
+const expeditionLeft = () => state.expedition ? Math.max(0, state.expedition.until - Date.now()) : 0;
+const fmtClock = ms => { const s = Math.ceil(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+// Läuft im Takt: ist das Boot zurück, ist die Insel entdeckt
+function checkExpedition() {
+  const e = state.expedition;
+  if (!e || Date.now() < e.until) return false;
+  state.expedition = null;
+  discoverIsland(e.isle);
+  return true;
+}
+function discoverIsland(id) {
+  const i = ISLE_BY_ID[id];
+  if (!i || isleOpen(id)) return false;
   state.islands.add(id);
   ownIsland(id);
+  state.diary.push('isle:' + id);
   recalc();
   const [x, y] = isleAnchor(i);
   jumpTo(x, y, 3, 3);
@@ -49,10 +87,10 @@ function unlockIsland(id) {
   confettiBurst();
   sfx('star');
   openModal(`
-    <h2>${i.icon} ${i.name} erschlossen!</h2>
-    <p>${i.text}</p>
-    <p>In der Mitte wartet ${LANDMARKS[i.lm].icon} <b>${LANDMARKS[i.lm].name}</b> darauf, restauriert zu werden.</p>
-    <p class="muted">Bau dir hier ein kleines Dorf – Betriebe weit weg von Häusern arbeiten nur halb so schnell.</p>
+    <h2>⛵ Land in Sicht: ${i.icon} ${i.name}!</h2>
+    <p>${DISCOVERY[id]}</p>
+    <p>${i.text} In der Mitte wartet ${LANDMARKS[i.lm].icon} <b>${LANDMARKS[i.lm].name}</b> darauf, restauriert zu werden.</p>
+    <p class="muted">Bau dir hier ein kleines Dorf – oder verbinde die Insel per Zug. Betriebe weit weg von Häusern arbeiten nur halb so schnell.</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
   $('m-ok').onclick = closeModal;
   checkStars();
@@ -73,7 +111,7 @@ function restoreInfo(type) {
   for (const [r, n] of Object.entries(raw)) mat[r] = Math.ceil(n * k);
   let err = null;
   const isle = ISLE_OF_LM[type];
-  if (!pos || !ownedTile(pos[0], pos[1])) err = `Erschließe zuerst die ${isle ? isle.name : 'Insel'}`;
+  if (!pos || !ownedTile(pos[0], pos[1])) err = `Entdecke zuerst die ${isle ? isle.name : 'Insel'}`;
   else if (state.money < money) err = 'Zu wenig Taler';
   else err = matError(mat);
   return { stage, next, pos, err, money, mat };
@@ -142,6 +180,7 @@ function migrateLandmarks() {
 function diaryPage(id) {
   if (id === 'start') return { title: 'Die erste Seite', text: DIARY_START, pic: { lighthouse: true, lit: false } };
   if (id === 'finale') return { title: 'Das Laternenfest', text: DIARY_FINALE, pic: { lighthouse: true, lit: true } };
+  if (id.startsWith('isle:')) { const i = ISLE_BY_ID[id.slice(5)]; return { title: `⛵ ${i.icon} ${i.name} entdeckt`, text: DISCOVERY[i.id], pic: { type: i.lm, stage: 0 } }; }
   const [type, n] = id.split(':'), st = LM_STAGES[type][+n - 1];
   return { title: `${LANDMARKS[type].icon} ${LANDMARKS[type].name} · ${st.name}`, text: st.diary, pic: { type, stage: +n } };
 }
@@ -196,7 +235,7 @@ const TUTORIAL = [
   { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Verbinden → Weg (ziehen) – oder 🛤️ ganz links',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
   { text: 'Stell einen Holzfäller in den Wald.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
-  { text: 'Erschließe die Waldinsel.', hint: 'Braucht 8 Einwohner (2 Häuser) und 🪙 150 – Insel im Meer antippen',
+  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Verbinden), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
   { text: 'Bau ein Sägewerk.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Sägewerk', done: () => hasBuilt('saege') },
@@ -252,9 +291,11 @@ function goalHtml() {
   }).join('');
   const i = nextIsle();
   if (i) {
-    const need = isleNeeds(i), ok = need.every(c => c.ok);
-    html += `<div class="req${ok ? ' done' : ''}" data-isle="${i.id}">🏝️ Nächste Insel: ${i.icon} ${i.name}<br><small>${ok ? '✨ bereit – antippen!'
-      : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ')}</small></div>`;
+    const need = isleNeeds(i), ok = need.every(c => c.ok), away = state.expedition && state.expedition.isle === i.id;
+    const detail = away ? `⛵ Boot unterwegs · zurück in ${fmtClock(expeditionLeft())}`
+      : ok ? (stegs().length ? '✨ bereit – Boot losschicken!' : '✨ bereit – erst einen Steg bauen')
+      : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ');
+    html += `<div class="req${ok || away ? ' done' : ''}" data-isle="${i.id}">🏝️ Nächste Insel: ${i.icon} ${i.name}<br><small>${detail}</small></div>`;
   }
   return html;
 }
@@ -280,7 +321,7 @@ const GUIDE = [
   { id: 'laterne', icon: '🏮', title: 'Laternen', when: () => lanternCount() >= 1,
     text: 'Jede Sehenswürdigkeit hat drei Laternen. Jede Laterne schaltet Neues frei und bringt eine Seite im Tagebuch 📖. Oben links steht immer, welche Laternen als Nächstes gehen.' },
   { id: 'insel', icon: '🏝️', title: 'Neue Inseln', when: () => { const i = nextIsle(); return !!i && isleNeeds(i).every(c => c.ok); },
-    text: 'Die nächste Insel kann erschlossen werden! Tipp sie im Meer an (oder oben links). Jede Insel hat eigene Rohstoffe und eine Sehenswürdigkeit.' },
+    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🛤️ Verbinden → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
   { id: 'deko', icon: '🌸', title: 'Kleine Deko', when: () => T.pop >= 12,
     text: 'Kleine Deko – Baum, Busch, Bank, Blumentopf – passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
   { id: 'rathaus', icon: '🏛️', title: 'Das Rathaus', when: () => T.pop >= 20,

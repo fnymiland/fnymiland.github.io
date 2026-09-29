@@ -119,6 +119,9 @@ const ITEMS = {
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
   karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
+  // Steg: von Anfang an; hier startet das Boot, das neue Inseln entdeckt (Expedition, story.js)
+  bootssteg: { cat: 'netz', name: 'Steg', cost: 60, needs: 'meer', beauty: 2,
+             desc: 'Ein Holzsteg ins Meer, direkt an der Küste. Von hier schickst du ein Boot hinaus, um neue Inseln zu entdecken.' },
   seilbahn: { cat: 'deko', name: 'Seilbahn-Station', invention: 'seilbahn', cost: 800, mat: { metall: 10, bretter: 6 }, needs: 'grass', beauty: 10,
              desc: 'Zwei Stationen verbinden sich mit einem Seil (bis 20 Felder weit), die Gondeln schweben hin und her.' },
   // --- Strom: Kraftwerke liefern ⚡ (POWER_OUT in rules.js), egal wo sie stehen ---
@@ -271,7 +274,7 @@ const MENU = [
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
-  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'seilbahn'] },
+  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'seilbahn'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
 ];
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
@@ -289,7 +292,7 @@ const menuItemsOf = (top, sub = 'alle') => {
 };
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
-  haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
+  haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
   holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
@@ -304,6 +307,7 @@ const ITEM_TIPS = {
   reihenhaus: 'Ins Dorf, Tür zum Weg: drei Häuser auf zwei Feldern. Mit Markt und Schule in der Nähe wachsen sie.',
   baumhaus: 'Mitten in den Wald stellen – die Bäume bleiben. Mit schöner Umgebung und Nachbar-Baumhäusern wird ein Baumhaus-Dorf daraus.',
   hausboot: 'Aufs Wasser direkt am Ufer (auch im Teich). Mit Nachbar-Booten und viel Wasser wächst es.',
+  bootssteg: 'Ins Meer direkt an die Küste bauen. Antippen: Boot losschicken und die nächste Insel entdecken.',
   ferienhaus: 'Auf Sand am Wasser (Strand – auch mit Terraforming angelegt). Feriengäste bringen Taler.',
   haus: 'Häuser bringen Einwohner. Tipp ein Haus an: Erfüllst du seine Wünsche, kannst du es ausbauen – bis zur Villa.',
   feld: 'Bringt Taler. Mit einer Mühle direkt daneben wird es noch mehr.',

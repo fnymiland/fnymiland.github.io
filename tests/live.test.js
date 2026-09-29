@@ -23,10 +23,10 @@ describe('Fenster aktualisieren sich live', () => {
   });
 
   it('Insel: Bedingungen werden abgehakt, sobald sie erfüllt sind', () => {
-    game("openIsle('wald')");
-    expect($('p-isle').disabled).toBe(true);
+    game("state.tiles.set('0,0', { b: 'bootssteg', lvl: 1 }); recalc(); openIsle('wald')");
+    expect($('p-expo').disabled).toBe(true);
     game("state.money = 1000; state.tiles.set('4,4', { b: 'haus', lvl: 1 }); state.tiles.set('6,4', { b: 'haus', lvl: 1 }); recalc(); updateHud()");
-    expect($('p-isle').disabled).toBe(false);
+    expect($('p-expo').disabled).toBe(false);
   });
 
   it('Forschung: Erforschen-Knopf und Ideen-Anzeige folgen dem Stand', () => {

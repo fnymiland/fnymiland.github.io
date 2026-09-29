@@ -15,7 +15,7 @@ describe('Laternen und Restaurieren', () => {
 
   it('restaurieren braucht die erschlossene Insel und Material', () => {
     build('haus', 4, 4);
-    expect(game("restoreInfo('baum').err")).toBe('Erschließe zuerst die Waldinsel');
+    expect(game("restoreInfo('baum').err")).toBe('Entdecke zuerst die Waldinsel');
     game("state.islands.add('wald'); ownIsland('wald'); recalc()");
     game('state.res.holz = 0; recalc()');
     expect(game("restoreInfo('baum').err")).toMatch(/Zu wenig Holz/);
@@ -118,15 +118,17 @@ describe('Themen-Inseln', () => {
     expect(game('ISLES.every((a, i) => ISLES.every((b, j) => i === j || Math.hypot(a.cx - b.cx, a.cy - b.cy) > 2 * ISLE_R * 1.5))')).toBe(true);
   });
 
-  it('Inseln werden der Reihe nach erschlossen – mit Einwohnern und Talern', () => {
+  it('Inseln werden der Reihe nach entdeckt – per Boot vom Steg, mit Einwohnern und Talern', () => {
     expect(game('nextIsle().id')).toBe('wald');
-    expect(game("unlockIsland('obst')")).toBe(false);                 // erst die Waldinsel
     game('state.money = 1000; recalc()');
-    expect(game("unlockIsland('wald')")).toBe(false);                 // noch zu wenig Einwohner
+    game("state.tiles.set('0,0', { b: 'bootssteg', lvl: 1 }); recalc()");
+    expect(game('sendExpedition()')).toBe(false);                    // noch zu wenig Einwohner
     build('haus', 4, 4); build('haus', 6, 4);
     expect(game('T.pop')).toBeGreaterThanOrEqual(8);
-    expect(game("unlockIsland('wald')")).toBe(true);
+    expect(game('sendExpedition()')).toBe(true);
     expect(game('state.money')).toBe(1000 - 80 - 150);
+    expect(game("isleOpen('wald')")).toBe(false);                    // das Boot ist noch unterwegs
+    game('state.expedition.until = Date.now() - 1; checkExpedition(); closeModal()');
     expect(game("ownedTile(...lmTile('baum'))")).toBe(true);
     expect(game('nextIsle().id')).toBe('obst');
   });
