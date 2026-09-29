@@ -60,7 +60,7 @@ function tileOut(t) {
   if (t.phase != null) { o.phase = t.phase; if (t.rate != null) o.rate = t.rate; if (t.paid) o.paid = t.paid; }
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
-  if (t.ferry) o.ferry = t.ferry;                                   // Fähre zum Hafen auf diesem Feld
+  if (t.ships && t.ships.length) o.ships = t.ships.map(s => ({ model: s.model, to: s.to }));   // Schiffe am Hafen
   if (t.cruise) o.cruise = t.cruise;                                // nächstes Kreuzfahrtschiff (Zeitpunkt)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
@@ -128,6 +128,8 @@ function parseSave(d) {
     if (!t.train) { t.train = 'regio'; t.trainCol = t.trainCol || 0; }
     grandfathered.push('zug:' + t.train, ...(t.extra || []).map(e => 'zug:' + (e.model || (e.model = 'regio'))));
   }
+  // 29.09.2026 (Block 23): die alte Fähre am Hafen wird ein Schiff (Holzfähre) mit demselben Ziel
+  for (const [, t] of d.tiles) if (t.b === 'hafen' && t.ferry) { t.ships = (t.ships || []).concat([{ model: 'holz', to: t.ferry }]); delete t.ferry; }
   // 29.09.2026: Gebäude haben höchstens 3 Stufen – was darüber per Taler ausgebaut war, gibt es zurück
   for (const [, t] of d.tiles) {
     if (!BUILD_STAGES[t.b] || !(t.lvl > MAX_LVL)) continue;

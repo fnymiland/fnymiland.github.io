@@ -381,34 +381,75 @@ function drawBoatMover(m, z, now) {
   poly([[x, y - 27 * z + bob], [x - flip * 5 * z, y - 25 * z + bob], [x, y - 23 * z + bob]], C('#e8604f'));  // Wimpel
 }
 
-// Fähren: pendeln zwischen ihren Häfen (vom Wasser vor dem einen zum Wasser vor dem anderen), warten kurz am Anleger
-const FERRY_SPEED = 1.6, FERRY_WAIT = 3;
-function ferryBoats(now) {
+// Schiffe (Block 23b): jedes pendelt zwischen dem Pier seines Hafens und seinem Ziel (Steg oder Hafen), wartet kurz
+// am Anleger; Schiffe auf derselben Strecke fahren zeitversetzt. Schnellere Modelle fahren schneller.
+const SHIP_SPEED = 1.4, SHIP_WAIT = 3;
+function dockPoint(k) {                                         // wo Schiffe anlegen: vor dem Pier bzw. am Steg
+  const t = state.tiles.get(k), [x, y] = keyXY(k);
+  if (!t || t.b !== 'hafen') return [x, y];
+  const [w, h] = sizeOf(t.b, t.rot), [dx, dy] = FRONT_DIR[(t.rot || 0) & 3], cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  return [cx + dx * ((dx ? w : h) / 2 + 1.3), cy + dy * ((dx ? w : h) / 2 + 1.3)];
+}
+function shipMovers(now) {
   const out = [];
   for (const f of T.ferries || []) {
-    const [a, b] = f.stations.map(k => { const [x, y] = keyXY(k); return [x + 0.5, y + 0.5]; });
-    const vx = b[0] - a[0], vy = b[1] - a[1], d = Math.hypot(vx, vy) || 1, ux = vx / d, uy = vy / d;
-    const s0 = [a[0] + ux * 1.6, a[1] + uy * 1.6], len = Math.max(0.1, d - 3.2), lap = 2 * (len / FERRY_SPEED + FERRY_WAIT);
-    let t = ((now / 1000) + hash(a[0], a[1], 9) * lap) % lap, k, dir = 1;
-    const leg = len / FERRY_SPEED + FERRY_WAIT;
-    if (t > leg) { t -= leg; dir = -1; }
-    k = Math.max(0, Math.min(1, (t - FERRY_WAIT) / (len / FERRY_SPEED)));
-    if (dir < 0) k = 1 - k;
-    out.push({ boat: true, ferry: true, px: s0[0] + ux * len * k, py: s0[1] + uy * len * k, du: ux * dir, dv: uy * dir });
+    const a = dockPoint(f.stations[0]), b = dockPoint(f.stations[1]);
+    const vx = b[0] - a[0], vy = b[1] - a[1], len = Math.max(0.1, Math.hypot(vx, vy)), ux = vx / len, uy = vy / len;
+    f.ships.forEach((s, i) => {
+      const spd = SHIP_SPEED * shipModel(s).speed, leg = len / spd + SHIP_WAIT, lap = 2 * leg;
+      let t = ((now / 1000) + i * lap / f.ships.length + hash(a[0] | 0, a[1] | 0, 9) * lap) % lap, dir = 1;
+      if (t > leg) { t -= leg; dir = -1; }
+      let k = Math.max(0, Math.min(1, (t - SHIP_WAIT) / (len / spd)));
+      if (dir < 0) k = 1 - k;
+      const side = (i - (f.ships.length - 1) / 2) * 1.1;                // nebeneinander statt übereinander am Anleger
+      out.push({ boat: true, ship: s.model, px: a[0] + vx * k - uy * side, py: a[1] + vy * k + ux * side, du: ux * dir, dv: uy * dir });
+    });
   }
   return out;
 }
-function drawFerryMover(m, z, now) {
-  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 800 + m.px) * 1 * z;
-  ellipse(x, y + 3 * z, 26 * z, 8 * z, 'rgba(230,248,255,0.45)');
-  ellipse(x, y + 2 * z + bob, 18 * z, 6 * z, C('#2f5e9e'));
-  ellipse(x, y + bob, 17 * z, 5.2 * z, C('#fffaf0'));
-  box(x - 3 * z, y - 1 * z + bob, 9 * z, 4 * z, 7 * z, '#fffaf0', '#e8604f', 3 * z);                       // Kajüte, rotes Dach
-  g.strokeStyle = C('#4a4a58'); g.lineWidth = 1.2 * z;
-  g.beginPath(); g.moveTo(x + 4 * z, y - 8 * z + bob); g.lineTo(x + 4 * z, y - 15 * z + bob); g.stroke();   // Schornstein-Mast
-  circle(x + 4 * z, y - 16 * z + bob, 1.4 * z, C('#ffd36e'));
+// Schiffe nach Modell: Holzfähre, Raddampfer (Schaufelrad, Schornstein), Motorfähre (zwei Decks), Katamaran (zwei Rümpfe)
+function drawShipMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 800 + m.px) * 1 * z, lit = night > 0.15 && isLive();
+  const flip = (m.du - m.dv) < 0 ? -1 : 1, win = lit ? '#ffd873' : C('#3e7fd0');
+  const wake = r => ellipse(x - flip * r * 0.4 * z, y + 3 * z, r * z, r * 0.3 * z, 'rgba(230,248,255,0.45)');
+  if (m.ship === 'dampfer') {
+    wake(28);
+    ellipse(x, y + 2 * z + bob, 20 * z, 6.5 * z, C('#3a3f4a'));
+    ellipse(x, y + bob, 19 * z, 5.6 * z, C('#fffaf0'));
+    box(x - flip * 2 * z, y - 1 * z + bob, 20 * z, 4.5 * z, 6 * z, '#fffaf0', '#e8604f', 2 * z);
+    for (let i = 0; i < 5; i++) { g.fillStyle = win; g.fillRect(x - flip * 2 * z - 8 * z + i * 3.6 * z, y - 5 * z + bob, 1.8 * z, 1.6 * z); }
+    const wx = x + flip * 3 * z, wy = y + 1 * z + bob, a = now / 400;                     // Schaufelrad
+    circle(wx, wy, 4.6 * z, C('#e8604f'));
+    g.strokeStyle = C('#fffaf0'); g.lineWidth = 0.9 * z;
+    for (let i = 0; i < 4; i++) { const b2 = a + i * Math.PI / 4; g.beginPath(); g.moveTo(wx - Math.cos(b2) * 4.2 * z, wy - Math.sin(b2) * 4.2 * z); g.lineTo(wx + Math.cos(b2) * 4.2 * z, wy + Math.sin(b2) * 4.2 * z); g.stroke(); }
+    box(x + flip * 6 * z, y - 7 * z + bob, 2.6 * z, 1.6 * z, 9 * z, '#3a3f4a', '#e8604f', 1.4 * z);   // Schornstein
+    smoke(x + flip * 6 * z, y - 18 * z + bob, z, now, true);
+  } else if (m.ship === 'motor') {
+    wake(34);
+    ellipse(x, y + 2 * z + bob, 22 * z, 7 * z, C('#2f5e9e'));
+    ellipse(x, y + bob, 21 * z, 6 * z, C('#fffaf0'));
+    box(x - flip * 1 * z, y - 1 * z + bob, 26 * z, 5 * z, 6 * z, '#fffaf0', null, 0);
+    box(x - flip * 3 * z, y - 7 * z + bob, 16 * z, 3.6 * z, 5 * z, '#f5ecdc', '#3e7fd0', 1.6 * z);
+    for (let i = 0; i < 6; i++) { g.fillStyle = win; g.fillRect(x - flip * 1 * z - 11 * z + i * 4 * z, y - 5 * z + bob, 2.2 * z, 1.6 * z); }
+    box(x + flip * 6 * z, y - 12 * z + bob, 3 * z, 2 * z, 4 * z, '#e8604f', '#4a4a58', 1.4 * z);
+  } else if (m.ship === 'katamaran') {
+    wake(38);
+    for (const o of [-3, 3]) ellipse(x + o * 0.6 * z, y + 2 * z + o * z + bob, 19 * z, 3 * z, C('#e9f4f7'));
+    poly([[x - 14 * z, y - 2 * z + bob], [x + 16 * z, y - 2 * z + bob], [x + 12 * z, y - 7 * z + bob], [x - 10 * z, y - 7 * z + bob]], C('#fffaf0'));
+    poly([[x - 8 * z, y - 7 * z + bob], [x + 10 * z, y - 7 * z + bob], [x + 6 * z, y - 11 * z + bob], [x - 5 * z, y - 11 * z + bob]], C('#2aa6a1'));
+    for (let i = 0; i < 5; i++) { g.fillStyle = lit ? '#ffd873' : C('#1f4f63'); g.fillRect(x - 7 * z + i * 3.4 * z, y - 6 * z + bob, 2.2 * z, 1.3 * z); }
+  } else {                                                                                  // Holzfähre
+    wake(22);
+    ellipse(x, y + 2 * z + bob, 15 * z, 5 * z, C('#8b5a3c'));
+    ellipse(x, y + 0.6 * z + bob, 14 * z, 4.2 * z, C('#c9a26f'));
+    box(x - flip * 2 * z, y - 1 * z + bob, 8 * z, 3.6 * z, 6 * z, '#fff6e4', '#e8604f', 2.4 * z);
+    g.fillStyle = win; g.fillRect(x - flip * 2 * z - 1 * z, y - 4.5 * z + bob, 2 * z, 1.6 * z);
+    g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;
+    g.beginPath(); g.moveTo(x + flip * 6 * z, y + bob); g.lineTo(x + flip * 6 * z, y - 14 * z + bob); g.stroke();
+    poly([[x + flip * 6 * z, y - 14 * z + bob], [x + flip * 11 * z, y - 12 * z + bob], [x + flip * 6 * z, y - 10 * z + bob]], C('#e8604f'));
+  }
+  if (lit) kGlow(x, y - 4 * z + bob, z, 18);
 }
-
 // Fischkutter: je Hafen-Stufe einer; sie ziehen draußen vor dem Hafen ihre Kreise
 function fishBoats(now) {
   const out = [];

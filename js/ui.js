@@ -695,7 +695,7 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
-  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? ferryHtml(x + ',' + y) + tradeHtml(t) + cruiseHtml(t, x, y) : '';
+  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + tradeHtml(t) + cruiseHtml(t, x, y) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
     return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
@@ -727,19 +727,12 @@ function openInfo(x, y) {
   $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-ferry]')) b.onclick = () => {
-    if (!canPay(FERRY_COST)) { fail(state.money < FERRY_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
-    addCost(FERRY_COST, -1);
-    t.ferry = b.dataset.ferry;
-    sfx('build'); toast('⛴️ Die Fähre legt ab!'); recalc(); save(); openInfo(x, y);
-  };
-  for (const b of el.querySelectorAll('[data-trade]')) b.onclick = () => { const [r, n] = b.dataset.trade.split(':'); if (trade(r, +n, x + ',' + y)) openInfo(x, y); };
-  if (el.querySelector('[data-ferry-off]')) el.querySelector('[data-ferry-off]').onclick = () => {
-    const f = ferryOf(x + ',' + y);
-    for (const k of f ? f.stations : []) { const h = state.tiles.get(k); if (h) delete h.ferry; }
-    addCost(FERRY_COST, 1);
-    sfx('dig'); recalc(); save(); openInfo(x, y);
-  };
+  // Schiffe: Modell und Ziel wählen, kaufen, verkaufen
+  for (const b of el.querySelectorAll('[data-shipmodel]')) b.onclick = () => { shipPick.model = b.dataset.shipmodel; openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-shipto]')) b.onclick = () => { shipPick.to = b.dataset.shipto; openInfo(x, y); };
+  if (el.querySelector('[data-shipbuy]')) el.querySelector('[data-shipbuy]').onclick = () => { if (buyShip(x + ',' + y, shipPick.model, shipPick.to)) openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-shipsell]')) b.onclick = () => { if (sellShip(x + ',' + y, +b.dataset.shipsell)) openInfo(x, y); };
+
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
     const nm = $('p-name');
@@ -804,17 +797,27 @@ function stationStatus(k) {
   if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehrere Züge drauf.</div>');
   return out;
 }
-// Hafen: Fähre einrichten (zu einem Hafen auf einer anderen Insel) oder zeigen, was sie befördert
-function ferryHtml(k) {
-  const f = ferryOf(k), here = regionAt(...keyXY(k)), { money, ...mat } = FERRY_COST;
-  if (f) return `<div class="label">⛴️ Fähre</div><div class="status"><div class="ok">⛴️ Fähre ${f.regions.map(regionName).join(' ↔ ')} · ${nf1.format(f.km)} km · ${fmt(f.seats)} Plätze/min (Hafen-Stufe ${f.lvl})</div>
-    ${trafficStatus(f, f.traffic).join('')}</div>
-    <div class="row"><button class="btn ghost small" data-ferry-off>Fähre einstellen · +🪙 ${fmt(money)} ${matText(mat)}</button></div>`;
-  const free = [...state.tiles].filter(([o, u]) => u.b === 'hafen' && o !== k && regionAt(...keyXY(o)) !== here && !ferryOf(o));
-  if (!free.length) return `<div class="label">⛴️ Fähre</div><p class="muted">Bau einen zweiten Hafen auf einer anderen Insel – dann kann von hier eine Fähre hinüberfahren (${FERRY_SEATS[0]}–${FERRY_SEATS[2]} Plätze/min je nach Hafen-Stufe, ohne Strom).</p>`;
-  return `<div class="label">⛴️ Fähre einrichten</div>
-    <div class="looks">${free.map(([o]) => `<button class="look" data-ferry="${o}" data-cost="${money}" data-mat='${JSON.stringify(mat)}'>⛴️ zur ${regionName(regionAt(...keyXY(o)))} · 🪙 ${fmt(money)} ${matText(mat)}</button>`).join('')}</div>
-    <p class="muted">Bringt Pendler und Besucher hinüber (ohne Strom) und bindet die Gegend um beide Häfen an.</p>`;
+// Hafen: Schiffe (Liegeplätze je Stufe), je Ziel was sie befördern, ein neues kaufen (Modell + Ziel)
+const shipPick = { model: null, to: null };
+const landingName = k => { const t = state.tiles.get(k); return `${regionIcon(regionAt(...keyXY(k)))} ${regionName(regionAt(...keyXY(k)))} · ${t && t.b === 'hafen' ? 'Hafen' : 'Steg'}`; };
+function shipsHtml(k, t) {
+  const ships = t.ships || [], berths = berthsOf(t), targets = shipTargets(k);
+  let html = `<div class="label">⛴️ Schiffe · ${ships.length} von ${berths} Liegeplätzen${(t.lvl || 1) < 3 ? ` (Stufe ${(t.lvl || 1) + 1}: ${BERTHS[t.lvl || 1]})` : ''}</div>`;
+  if (ships.length) html += `<div class="ships">${ships.map((s, i) => { const m = shipModel(s);
+    return `<div class="hall-row"><span>${m.icon} ${m.name} → ${state.tiles.get(s.to) ? landingName(s.to) : '<span class="bad">Ziel fehlt</span>'} <small class="muted">${shipSeats(s)}/min</small></span>
+      <button class="btn ghost small" data-shipsell="${i}">Verkaufen · +${costText(m.buy)}</button></div>`; }).join('')}</div>`;
+  for (const f of ferriesAt(k)) html += `<div class="status"><div class="ok">⛴️ ${f.regions.map(regionName).join(' ↔ ')} · ${f.ships.length} ${f.ships.length === 1 ? 'Schiff' : 'Schiffe'}</div>${trafficStatus(f, f.traffic).join('')}</div>`;
+  if (!targets.length) return html + '<p class="muted">Bau einen Steg (oder Hafen) auf einer anderen Insel – dort legen deine Schiffe an und bringen Pendler und Besucher.</p>';
+  if (ships.length >= berths) return html + `<p class="muted">Alle Liegeplätze belegt${(t.lvl || 1) < 3 ? ' – ausbauen bringt mehr' : ''}. Mehr Fahrgäste schafft auch ein schnelleres Modell (Forschung → 🚢 Verkehr).</p>`;
+  if (!shipPick.model || !vehicleOk('schiff', shipPick.model)) shipPick.model = bestVehicle('schiff').id;
+  if (!targets.includes(shipPick.to)) shipPick.to = targets[0];
+  const m = SHIP_BY_ID[shipPick.model];
+  return html + `<div class="label">Neues Schiff</div>
+    <div class="looks">${SHIP_MODELS.map(v => vehicleOk('schiff', v.id) ? `<button class="look${v.id === m.id ? ' on' : ''}" data-shipmodel="${v.id}">${v.icon} ${v.name}</button>`
+      : `<button class="look" disabled title="Forschung → 🚢 Verkehr">🔒 ${v.name}</button>`).join('')}</div>
+    <div class="looks">${targets.map(o => `<button class="look${o === shipPick.to ? ' on' : ''}" data-shipto="${o}">${landingName(o)}</button>`).join('')}</div>
+    <div class="row"><button class="btn" data-shipbuy data-cost="${m.buy.money}" data-mat='${JSON.stringify({ ...m.buy, money: undefined })}'>${m.icon} ${m.name} kaufen · ${costText(m.buy)}</button></div>
+    <p class="muted">${Math.round(m.seats * m.speed)} Fahrgäste/min, ohne Strom. Schiffe zum selben Ziel teilen sich die Fahrgäste.</p>`;
 }
 // Handel (ab Handelshafen): Lager, Preis mit Tendenz, je 10 verkaufen oder kaufen
 function tradeHtml(t) {
@@ -852,7 +855,7 @@ const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 function trafficStatus(line, tr) {
   const all = tr.groupSeats || tr.seats, pct = all ? Math.round(tr.demand / all * 100) : 0, out = [];
   const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
-  const vehicles = line.kind === 'seil' ? 'Gondeln' : line.kind === 'faehre' ? `Fähre (Hafen-Stufe ${line.lvl})` : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
+  const vehicles = line.kind === 'seil' ? 'Gondeln' : line.kind === 'faehre' ? `${line.ships.length} ${line.ships.length === 1 ? 'Schiff' : 'Schiffe'}` : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
     return `${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} Wagen`; })();
   if (!tr.demand) {
     out.push('<div class="muted">👥 Noch will niemand mitfahren: Häuser auf der anderen Insel, eine restaurierte Sehenswürdigkeit oder ein Wunderwerk bringen Fahrgäste.</div>');
@@ -865,7 +868,7 @@ function trafficStatus(line, tr) {
     : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
   out.push(`<div class="ok">🪙 +${fmtRate(tr.fare * masteryMul('taler'))}/s Fahrkarten · +${fmtRate(tr.spend * masteryMul('taler'))}/s von Besuchern</div>`);
   if (tr.served < 1) out.push(line.kind === 'seil' ? '<div class="muted">Mehr Plätze: eine zweite Verbindung dorthin (Zug, weitere Seilbahn).</div>'
-    : line.kind === 'faehre' ? '<div class="muted">Mehr Plätze: Häfen ausbauen oder eine zweite Verbindung dorthin (Zug, Seilbahn).</div>'
+    : line.kind === 'faehre' ? '<div class="muted">Mehr Plätze: ein weiteres Schiff, ein schnelleres Modell (Forschung → 🚢 Verkehr) oder eine zweite Verbindung (Zug, Seilbahn).</div>'
     : `<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
   return out;
 }

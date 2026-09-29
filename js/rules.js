@@ -166,8 +166,7 @@ function totals() {
   const places = placeStats();
   const cables = cablePairs().map(([a, b, d]) => ({ kind: 'seil', stations: [a, b], km: d / KM, seats: SEIL_SEATS,
     regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) }));
-  const ferries = ferryPairs().map(([a, b, lvl, d]) => ({ kind: 'faehre', stations: [a, b], km: d / KM, lvl, seats: FERRY_SEATS[lvl - 1],
-    regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) })).filter(f => f.regions.length > 1);
+  const ferries = shipLinks();
   for (const l of rail.lines) l.traffic = null;
   const links = [...rail.lines.filter(l => l.powered), ...cables, ...ferries];
   transitTraffic(links, places);
@@ -701,9 +700,32 @@ function cablePairs() {
   for (const [d, a, b] of pairs) if (!used.has(a) && !used.has(b)) { used.add(a); used.add(b); out.push([a, b, d]); }
   return out;
 }
-// Fähren (Block 18c): Hafen ↔ Hafen auf einer anderen Insel, ohne Schienen und Strom. Plätze nach der kleineren
-// Hafen-Stufe. Eingerichtet am Hafen (t.ferry = Feld des anderen Hafens), kostet einmal FERRY_COST.
-const FERRY_SEATS = [100, 180, 260], FERRY_COST = { money: 2000, bretter: 20 };
+// Schiffe (Block 23b): Am Hafen liegen je Stufe 2/4/6 Schiffe. Jedes hat ein Modell (Forschung „Verkehr“) und ein
+// Ziel – einen Steg oder Hafen auf einer anderen Insel (t.ships = [{ model, to }]). Alle Schiffe zum selben Ziel sind
+// eine Verbindung: ihre Plätze zählen zusammen (Fahrgäste/min = Plätze × Tempo), ohne Schienen und ohne Strom.
+const BERTHS = [2, 4, 6];
+const berthsOf = t => BERTHS[Math.min(3, t.lvl || 1) - 1];
+const shipModel = s => SHIP_BY_ID[s.model] || SHIP_BY_ID.holz;
+const shipSeats = s => Math.round(shipModel(s).seats * shipModel(s).speed);
+const isLanding = t => !!t && (t.b === 'bootssteg' || t.b === 'hafen');
+function shipLinks() {
+  const out = [];
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'hafen' || !t.ships) continue;
+    const by = new Map();
+    for (const s of t.ships.slice(0, berthsOf(t))) if (s.to !== k && isLanding(state.tiles.get(s.to))) by.set(s.to, (by.get(s.to) || []).concat([s]));
+    const [hx, hy] = keyXY(k);
+    for (const [to, ships] of by) {
+      const regions = [...new Set([k, to].map(kk => regionAt(...keyXY(kk))))].sort(byRegion), [tx, ty] = keyXY(to);
+      if (regions.length < 2) continue;
+      out.push({ kind: 'faehre', stations: [k, to], regions, ships, lvl: t.lvl || 1, km: Math.hypot(hx - tx, hy - ty) / KM,
+        seats: ships.reduce((a, s) => a + shipSeats(s), 0) });
+    }
+  }
+  return out;
+}
+// Wohin Schiffe von diesem Hafen fahren können: Stege und Häfen auf anderen Inseln
+const shipTargets = k => [...state.tiles].filter(([o, u]) => o !== k && isLanding(u) && regionAt(...keyXY(o)) !== regionAt(...keyXY(k))).map(([o]) => o);
 const FISH_INC = 5;                                  // Fischkutter (18f): je Hafen-Stufe einer, jeder bringt so viele Taler/s
 // Handel (18d): ab dem Handelshafen (Stufe 2) kaufen und verkaufen Frachter je 10 Stück. Die Preise schwanken langsam
 // (jede Ware ihr eigener Takt, etwa 9–13 Minuten, zwischen 60 % und 140 %); Kaufen kostet anderthalbmal so viel.
@@ -731,20 +753,7 @@ function cruiseAttraction(x, y) {
   return a;
 }
 const cruiseGuests = a => Math.round(a * 1.5);
-function ferryPairs() {
-  const out = [], seen = new Set();
-  for (const [k, t] of state.tiles) {
-    const o = t.b === 'hafen' && t.ferry && state.tiles.get(t.ferry);
-    if (!o || o.b !== 'hafen') continue;
-    const key = [k, t.ferry].sort().join('|');
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const [ax, ay] = keyXY(k), [bx, by] = keyXY(t.ferry);
-    out.push([k, t.ferry, Math.min(t.lvl || 1, o.lvl || 1), Math.hypot(ax - bx, ay - by)]);
-  }
-  return out;
-}
-const ferryOf = k => T.ferries.find(l => l.stations.includes(k));
+const ferriesAt = k => T.ferries.filter(l => l.stations.includes(k));
 // Verkehr aller Verbindungen: Wer zwischen denselben Orten fährt (Zug, Seilbahn, Fähre), teilt sich die Fahrgäste –
 // nach Plätzen. Jede Verbindung bekommt ihren Anteil an Fahrkarten und Besuchern, die Auslastung gilt für alle zusammen.
 function transitTraffic(links, places) {

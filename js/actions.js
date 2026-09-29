@@ -450,3 +450,26 @@ function researchVehicle(kind, id) {
   toast(`${m.icon} Erforscht: ${m.name}!`);
   return true;
 }
+
+// Schiffe am Hafen kaufen und verkaufen (volle Erstattung)
+function buyShip(k, model, to) {
+  const t = state.tiles.get(k), m = SHIP_BY_ID[model];
+  if (!t || t.b !== 'hafen' || !m) return false;
+  if (!vehicleOk('schiff', model)) { fail(`${m.name}: erst erforschen (Forschung → Verkehr)`); return false; }
+  if ((t.ships || []).length >= berthsOf(t)) { fail('Alle Liegeplätze sind belegt'); return false; }
+  if (!shipTargets(k).includes(to)) { fail('Das Ziel braucht einen Steg oder Hafen auf einer anderen Insel'); return false; }
+  if (!canPay(m.buy)) { fail(state.money < m.buy.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  addCost(m.buy, -1);
+  t.ships = (t.ships || []).concat([{ model, to }]);
+  sfx('build'); toast(`${m.icon} ${m.name} legt ab!`); recalc(); save();
+  return true;
+}
+function sellShip(k, i) {
+  const t = state.tiles.get(k), s = t && t.ships && t.ships[i];
+  if (!s) return false;
+  addCost(shipModel(s).buy, 1);
+  t.ships.splice(i, 1);
+  if (!t.ships.length) delete t.ships;
+  sfx('dig'); recalc(); save();
+  return true;
+}

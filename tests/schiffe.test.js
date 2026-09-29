@@ -93,48 +93,69 @@ describe('Expedition', () => {
   });
 });
 
-describe('Fähre', () => {
-  // zwei Häfen, links „Heimatinsel“, rechts „Waldinsel“
+describe('Schiffe am Hafen', () => {
+  // Hafen links („Heimatinsel“), Steg rechts („Waldinsel“)
   const ports = () => {
     game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
-    game("for (const k of ['4,12', '16,12']) state.tiles.set(k, { b: 'hafen', lvl: 1, rot: 0 }); state.res.bretter = 50; recalc()");
+    game("state.techs.add('seehandel'); state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0 }); state.tiles.set('16,12', { b: 'bootssteg', lvl: 1 }); state.res.bretter = 99; state.res.metall = 99; recalc()");
   };
   afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
 
-  it('am Hafen einrichten: kostet einmal, dann fährt sie – Plätze nach Hafen-Stufe, ohne Strom', () => {
+  it('am Hafen ein Schiff kaufen: Modell und Ziel (ein Steg auf einer anderen Insel reicht)', () => {
     ports();
     game('openInfo(4, 12)');
     const m = game('state.money');
-    document.querySelector('[data-ferry="16,12"]').onclick();
-    expect(game('state.money')).toBe(m - game('FERRY_COST.money'));
+    document.querySelector('[data-shipbuy]').onclick();
+    expect(game('state.money')).toBe(m - game('SHIP_BY_ID.holz.buy.money'));
+    expect(game("state.tiles.get('4,12').ships")).toEqual([{ model: 'holz', to: '16,12' }]);
     expect(game('T.ferries.length')).toBe(1);
     expect(game('T.ferries[0].regions')).toEqual(['home', 'wald']);
-    expect(game('T.ferries[0].seats')).toBe(100);
-    game("state.tiles.get('4,12').lvl = 3; state.tiles.get('16,12').lvl = 2; recalc()");
-    expect(game('T.ferries[0].seats')).toBe(180);                        // die kleinere Stufe zählt
+    expect(game('T.ferries[0].seats')).toBe(60);
     game('save()');
-    expect(game("load().tiles.get('4,12').ferry")).toBe('16,12');         // bleibt gespeichert
+    expect(game("load().tiles.get('4,12').ships")).toEqual([{ model: 'holz', to: '16,12' }]);
   });
 
-  it('befördert Fahrgäste, bindet an und lässt sich wieder einstellen (Geld zurück)', () => {
+  it('Liegeplätze je Stufe 2/4/6; mehr Schiffe zum selben Ziel = mehr Plätze; bessere Modelle erst erforschen', () => {
+    ports();
+    expect(game("buyShip('4,12', 'holz', '16,12')")).toBe(true);
+    expect(game("buyShip('4,12', 'holz', '16,12')")).toBe(true);
+    expect(game("buyShip('4,12', 'holz', '16,12')")).toBe(false);                   // Stufe 1: 2 Liegeplätze
+    expect(game('T.ferries[0].seats')).toBe(120);
+    game("state.tiles.get('4,12').lvl = 2; recalc()");
+    expect(game("buyShip('4,12', 'dampfer', '16,12')")).toBe(false);                // noch nicht erforscht
+    game("state.vehicles.add('schiff:dampfer')");
+    expect(game("buyShip('4,12', 'dampfer', '16,12')")).toBe(true);
+    expect(game('T.ferries[0].seats')).toBe(120 + Math.round(110 * 1.3));
+  });
+
+  it('befördert Fahrgäste, bindet an und lässt sich verkaufen (Geld zurück)', () => {
     ports();
     for (let i = 0; i < 12; i++) game(`state.tiles.set('${2 + (i % 4)},${2 + Math.floor(i / 4)}', { b: 'haus', lvl: 3 })`);
     game("state.tiles.set('14,4', { b: 'riesenrad', lvl: 1, phase: 99 }); state.terra.set('18,14', 'forest'); state.tiles.set('18,14', { b: 'holz', lvl: 1 })");
-    game("state.tiles.get('4,12').ferry = '16,12'; recalc()");
+    game("buyShip('4,12', 'holz', '16,12')");
     expect(game('T.ferries[0].traffic.demand')).toBeGreaterThan(0);
     expect(game("T.st.get('18,14').how")).toBe('bahn');
-    expect(() => game('for (const b of ferryBoats(1000)) drawFerryMover(b, 1.5, 1000)')).not.toThrow();
-    game('openInfo(16, 12)');
-    expect(document.getElementById('panel').textContent).toMatch(/Fähre Heimatinsel ↔ Waldinsel/);
+    expect(() => game('for (const b of shipMovers(1000)) drawShipMover(b, 1.5, 1000)')).not.toThrow();
+    for (const model of ['dampfer', 'motor', 'katamaran']) expect(() => game(`drawShipMover({ px: 5, py: 5, du: 1, dv: 0, ship: '${model}' }, 1.5, 1000)`)).not.toThrow();
+    game('openInfo(4, 12)');
+    expect(document.getElementById('panel').textContent).toMatch(/Heimatinsel ↔ Waldinsel/);
     const m = game('state.money');
-    document.querySelector('[data-ferry-off]').onclick();
+    document.querySelector('[data-shipsell="0"]').onclick();
     expect(game('T.ferries.length')).toBe(0);
-    expect(game('state.money')).toBe(m + game('FERRY_COST.money'));
+    expect(game('state.money')).toBe(m + game('SHIP_BY_ID.holz.buy.money'));
   });
 
-  it('ohne zweiten Hafen auf einer anderen Insel: nur der Hinweis', () => {
-    game("state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0 }); recalc(); openInfo(4, 12)");
-    expect(document.getElementById('panel').textContent).toMatch(/zweiten Hafen auf einer anderen Insel/);
+  it('ohne Steg oder Hafen auf einer anderen Insel: nur der Hinweis', () => {
+    game("state.techs.add('seehandel'); state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0 }); recalc(); openInfo(4, 12)");
+    expect(document.getElementById('panel').textContent).toMatch(/Bau einen Steg \(oder Hafen\) auf einer anderen Insel/);
+  });
+
+  it('alte Stände: die Fähre wird eine Holzfähre mit demselben Ziel', () => {
+    game("state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0, ferry: '16,12' }); state.tiles.set('16,12', { b: 'hafen', lvl: 1, rot: 0 })");
+    const raw = game('serialize()');
+    raw.tiles.find(([k]) => k === '4,12')[1].ferry = '16,12';
+    game(`localStorage.setItem(SAVE_KEY, ${JSON.stringify(JSON.stringify(raw))})`);
+    expect(game("load().tiles.get('4,12').ships")).toEqual([{ model: 'holz', to: '16,12' }]);
   });
 });
 
