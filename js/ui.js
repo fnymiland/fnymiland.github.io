@@ -1214,7 +1214,7 @@ function openTownHall(tab = hallTab) {
     }
     const nx = nextIsle();
     const row = (id, icon, name, open, extra) => {
-      const e = per.get(id), rail = T.rail.lines.some(l => l.traffic && l.regions.includes(id));
+      const e = per.get(id), rail = T.traffic.links.some(l => l.regions.length > 1 && l.regions.includes(id));   // Zug, Seilbahn oder Fähre
       const state_ = open ? `🏠 ${e.n} · 👥 ${e.pop}${rail ? ' · 🚆' : ''}${extra || ''}` : id === (nx && nx.id) ? 'als Nächstes' : '🔒';
       return `<div class="hall-row"><span>${icon} <b>${name}</b> <small class="muted">${state_}</small></span>
         <button class="btn ${id === (nx && nx.id) ? '' : 'ghost '}small" data-isle-go="${id}">${open ? 'Hin' : id === (nx && nx.id) ? 'Entdecken …' : 'Ansehen'}</button></div>`;
