@@ -40,7 +40,22 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 - [x] **5a Themen-Inseln:** Heimatinsel ganz, 7 Inseln mit Sehenswürdigkeit in der Mitte, nacheinander erschließen
       (Taler, Ideen, Ansehen), Führung „welche Insel als Nächstes“, alte Stände ziehen um.
 - [x] **5b Forschung mit Seiten**, Kunstakademie-Seite, Farben und Wege-Stile einzeln freischalten, langsamer.
-- [ ] **5c Zug** zwischen den Dörfern (mehr Einwohner, Bonus) – eigener Schritt.
+- [ ] **5c Zug** zwischen den Dörfern – entschieden: Schienen als Brücke übers Wasser *oder* aufschütten und an Land legen
+      (wie der Spieler will); Bonus für beide Orte; Forschung „Eisenbahn“ passend zur Erzinsel, Schienen brauchen Holz und
+      Metall; **elektrisch** (keine Dampflok) – Strom von Windrädern.
+
+## Block 6 – Rückmeldung vom 29.09. abends
+
+- [x] **Überall bauen nach Forschung:** Obstplantage nur im Obsthain, Holzfäller nur im Wald usw. – per Forschung überall
+      („Höhere Agrartechnik“, Forstwirtschaft, …).
+- [x] **Alte Ruine und Erzberg schöner** und mehr nach dem, was sie sind (Erzberg sieht aus wie …).
+- [ ] **Wege:** alle abgerundet (auch Plätze), Pastell-Mosaik + Mosaik zu einem Stil (eher „Konfetti“), schönere Übergänge
+      zwischen verschiedenen Wegtypen, Trittsteine ohne Lücken, Stil-Leiste nicht breiter als der Bildschirm.
+- [ ] **Mehrere kleine Dekos auf einem Feld** – auch der Baum (Baum, Blumentopf, Busch, Bank).
+- [ ] **Kristall-Deko mit Sinn:** Kristall-Laternen, Glas-/Kristalldinge.
+- [ ] **Alles aktualisiert sich live:** offene Fenster (Sehenswürdigkeit, Gebäude, Insel, Forschung, Rathaus) werden
+      grün, sobald man sich etwas leisten kann – ohne neu anzuklicken.
+- [x] **Namensschilder** einiger Sehenswürdigkeiten sitzen noch verschoben.
 
 ## Ursprüngliche Notizen zu Block 5
 

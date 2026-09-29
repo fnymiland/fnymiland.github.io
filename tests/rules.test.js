@@ -32,7 +32,7 @@ describe('Bauen', () => {
 
   it('Holzfäller nur im Wald', () => {
     build('haus', 4, 4);
-    expect(game("placeError('holz', 4, 3)")).toBe('Nur im Wald');
+    expect(game("placeError('holz', 4, 3)")).toBe('Nur im Wald – überall mit „Forstwirtschaft“');
     game("state.terra.set('4,3', 'forest')");
     expect(build('holz', 4, 3)).toBe(true);
     game('recalc()');

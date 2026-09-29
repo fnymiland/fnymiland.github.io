@@ -64,3 +64,19 @@ describe('Forschung in Stufen', () => {
     expect(game('T.prod.holz')).toBeCloseTo(before * 1.3);
   });
 });
+
+describe('Überall bauen nach Forschung', () => {
+  beforeEach(() => game("state.tiles.set('11,11', { b: 'haus', lvl: 5 }); state.tiles.set('11,10', { b: 'haus', lvl: 5 }); recalc()"));
+  it('Obstplantage erst im Obsthain, mit „Höhere Agrartechnik“ auf jeder Wiese', () => {
+    expect(game("placeError('obst', 8, 8)")).toMatch(/Höhere Agrartechnik/);
+    game("state.techs.add('agrar')");
+    expect(game("placeError('obst', 8, 8)")).toBe(null);
+  });
+  it('Holzfäller mit Forstwirtschaft, Steinbruch mit Tiefbau, Bergwerk mit Tiefbohrung', () => {
+    expect(game("placeError('holz', 8, 8)")).not.toBe(null);
+    game("state.techs.add('forst'); state.techs.add('tiefbau'); state.techs.add('bohrung')");
+    expect(game("placeError('holz', 8, 8)")).toBe(null);
+    expect(game("placeError('stein', 8, 8)")).toBe(null);
+    expect(game("placeError('mine', 8, 8)")).toBe(null);
+  });
+});

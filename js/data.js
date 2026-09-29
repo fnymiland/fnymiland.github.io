@@ -292,14 +292,18 @@ const TECHS = [
   { id: 'netze', tier: 1, name: 'Fischernetze', cost: 30, desc: 'Fischerhütten bringen 30 % mehr.' },
   { id: 'handel', tier: 1, name: 'Handel', cost: 50, desc: 'Schaltet den Markt frei.' },
   { id: 'bibliothek', tier: 1, name: 'Bibliotheken', cost: 40, desc: 'Bibliotheken bringen doppelt so viele Ideen.' },
+  { id: 'forst', tier: 1, name: 'Forstwirtschaft', cost: 50, desc: 'Holzfäller pflanzen ihren Wald selbst – auch auf Wiesen.' },
+  { id: 'agrar', tier: 1, name: 'Höhere Agrartechnik', cost: 60, desc: 'Obstplantagen auf jeder Wiese, nicht nur im Obsthain.' },
   { id: 'muehlrad', tier: 2, name: 'Mühlräder', cost: 90, desc: 'Mühlen bringen 30 % mehr.' },
   { id: 'ofen', tier: 2, name: 'Steinofen', cost: 110, desc: 'Bäckereien bringen 30 % mehr.' },
   { id: 'industrie', tier: 2, name: 'Industrie', cost: 120, req: ['handel'], desc: 'Schaltet die Werkstatt frei.' },
   { id: 'seehandel', tier: 2, name: 'Seehandel', cost: 180, req: ['handel'], desc: 'Schaltet den Hafen frei.' },
+  { id: 'tiefbau', tier: 2, name: 'Tiefbau', cost: 150, desc: 'Steinbrüche auch auf Wiesen – sie graben nach Stein.' },
   { id: 'kunst', tier: 2, name: 'Kunstschule', cost: 80, desc: 'Kunstakademien machen die Umgebung 50 % schöner.' },
   { id: 'uni', tier: 2, name: 'Universität', cost: 200, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
   { id: 'dampf', tier: 3, name: 'Dampfkraft', cost: 350, req: ['industrie'], desc: 'Werkstätten bringen 50 % mehr.' },
   { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf alle Einnahmen.' },
+  { id: 'bohrung', tier: 3, name: 'Tiefbohrung', cost: 300, req: ['tiefbau'], desc: 'Bergwerke überall, nicht nur auf Erzadern.' },
   { id: 'sterne', tier: 3, name: 'Sternkunde', cost: 400, desc: 'Alle Ideen 20 % mehr.' },
 ];
 const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));

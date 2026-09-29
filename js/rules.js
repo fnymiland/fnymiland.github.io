@@ -394,6 +394,8 @@ function placeRot(b, x, y) {
   return autoRot(b, x, y, buildRot);
 }
 
+// Forschung, mit der ein Rohstoff-Betrieb auch außerhalb seines Geländes gebaut werden darf
+const ANYWHERE = { forest: { tech: 'forst' }, obst: { tech: 'agrar' }, rock: { tech: 'tiefbau' }, erz: { tech: 'bohrung' } };
 // Passt das Objekt mit Anker (x, y) hierhin? opts.move: beim Verschieben zählen Kosten und Einwohner nicht
 function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
@@ -415,11 +417,13 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (COVER.has(k)) return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
       if (ter === 'water') return 'Nicht auf dem Wasser';
       if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
-      const need = d.needs;
-      if (need === 'forest' && ter !== 'forest') return 'Nur im Wald';
-      if (need === 'rock' && ter !== 'rock') return 'Nur auf Fels';
-      if (need === 'erz' && ter !== 'erz') return 'Nur auf Erzadern (am Erzberg)';
-      if (need === 'obst' && ter !== 'obst') return 'Nur im Wilden Obsthain';
+      // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
+      const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
+      if (need === 'forest' && ter !== 'forest' && !anywhere) return 'Nur im Wald – überall mit „Forstwirtschaft“';
+      if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels – überall mit „Tiefbau“';
+      if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
+      if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
+      if (anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
       if ((need === 'grass' || need === 'shore') && ter !== 'grass') {
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
       }

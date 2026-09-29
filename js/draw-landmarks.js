@@ -220,4 +220,143 @@ const LANDMARK_ART = {
       poly([[sx - r * 1.8, sy], [sx, sy - r * 0.5], [sx + r * 1.8, sy], [sx, sy + r * 0.5]], '#ffffff');
     }
   },
+
+  // Erzberg: wuchtiger Berg aus warmem Fels mit glänzenden Erzadern, Stollen mit Lore; später Schmiede und Glockenturm
+  erzberg(K, stage, now, x, y) {
+    const S = lmScreen(K), z = K.z, dim = stage <= 0;
+    if (groundPart(() => { K.oval(0, 0, 0.95, C('#a7c98a')); K.oval(0.05, 0.1, 0.8, C('#b3c79a')); })) return;
+    const b0 = [-60, 6], b1 = [-38, 20], b2 = [-6, 28], b3 = [26, 24], b4 = [50, 14], b5 = [62, 2];
+    const p1 = [-18, -62], p1b = [-8, -64], p2 = [26, -42], m1 = [-44, -24], m2 = [6, -38], m3 = [48, -12], c1 = [-14, -16], c2 = [16, -4];
+    ellipse(...S(2, 18), 64 * z, 21 * z, 'rgba(50,40,30,0.16)');
+    facets(S, [                                              // grauer Fels mit warmem Schimmer
+      [[b0, m1, p1, p1b, m2, p2, m3, b5, b4, b3, b2, b1], '#9a948c'],
+      [[b0, b1, c1, m1], '#bcb5aa'],
+      [[m1, c1, p1b, p1], '#ccc5b9'],
+      [[c1, b1, b2], '#aaa397'],
+      [[p1b, c1, b2, c2, m2], '#8a847b'],
+      [[m2, c2, p2], '#a9a296'],
+      [[p2, c2, b3, b4, m3], '#7f7970'],
+      [[m3, b4, b5], '#716c64'],
+      [[c2, b2, b3], '#958f85'],
+    ]);
+    facets(S, [[[b0, b1, b2, [-6, 20], [-26, 13], [-44, 6]], '#8cc66a'], [[b2, b3, b4, b5, [52, 6], [30, 14], [-6, 20]], '#72ad55']]);   // Wiese am Fuß
+    // Erzadern (Gold, Kupfer, Silber) und funkelnde Brocken
+    const vein = (pts, col) => { g.strokeStyle = C(dim ? '#8f887c' : col); g.lineWidth = 1.6 * z; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...S(...p)) : g.moveTo(...S(...p))); g.stroke(); };
+    vein([[-44, -8], [-38, -14], [-30, -10], [-22, -22]], '#f2c14e');
+    vein([[-30, -40], [-24, -34], [-18, -42]], '#e08a4a');
+    vein([[4, -20], [12, -26], [18, -18], [26, -24]], '#f2c14e');
+    vein([[32, 4], [40, -4], [46, 2]], '#9cc3d8');
+    for (const [nx, ny, c] of [[-36, -12, '#ffd75e'], [-20, -24, '#ffe28a'], [12, -24, '#ffd75e'], [40, -2, '#d9f0ff'], [-26, -38, '#f0a060'], [22, -30, '#ffe28a']]) {
+      const [px, py] = S(nx, ny);
+      circle(px, py, 2 * z, C(dim ? '#8f887c' : c));
+      if (!dim) { const tw = (Math.sin(now / 400 + nx) + 1) / 2; circle(px - 0.7 * z, py - 0.7 * z, 0.8 * z * tw, '#ffffff'); }
+    }
+    // Stolleneingang
+    const [ex, ey] = S(2, 18);
+    g.beginPath(); g.ellipse(ex, ey, 8 * z, 11 * z, 0, Math.PI, 0); g.lineTo(ex + 8 * z, ey + 2 * z); g.lineTo(ex - 8 * z, ey + 2 * z); g.closePath();
+    g.fillStyle = C('#2f2a2a'); g.fill();
+    if (dim) { for (const [ox, oy] of [[-3, 4], [4, 6], [0, 1]]) { const [bx, by] = S(2 + ox, 18 + oy); boulder(bx, by, 4 * z); } for (let i = 0; i < 5; i++) { const [bx, by] = S(-40 + i * 20, 14 + (i % 2) * 6); circle(bx, by, 3 * z, C('#7d9a55')); } return; }
+    g.strokeStyle = C('#8a5a3c'); g.lineWidth = 2.2 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(ex - 9 * z, ey + 2 * z); g.lineTo(ex - 9 * z, ey - 12 * z); g.lineTo(ex + 9 * z, ey - 12 * z); g.lineTo(ex + 9 * z, ey + 2 * z); g.stroke();
+    // Schienen mit Lore voller Erz
+    const r0 = S(4, 22), r1 = S(30, 40);
+    g.strokeStyle = C('#6b6f78'); g.lineWidth = 0.9 * z;
+    g.beginPath(); g.moveTo(r0[0] - 3 * z, r0[1]); g.lineTo(r1[0] - 3 * z, r1[1]); g.moveTo(r0[0] + 3 * z, r0[1] + 1 * z); g.lineTo(r1[0] + 3 * z, r1[1] + 1 * z); g.stroke();
+    const [lx, ly] = S(18, 32);
+    poly([[lx - 6 * z, ly - 6 * z], [lx + 6 * z, ly - 6 * z], [lx + 4.5 * z, ly], [lx - 4.5 * z, ly]], C('#6b7a8f'));
+    for (const [ox, c] of [[-3, '#f2c14e'], [0, '#8f95a0'], [3, '#e08a4a']]) circle(lx + ox * z, ly - 7 * z, 2.2 * z, C(c));
+    circle(lx - 3 * z, ly + 1 * z, 1.2 * z, C('#3b3440')); circle(lx + 3 * z, ly + 1 * z, 1.2 * z, C('#3b3440'));
+    const [mx, my] = S(-10, 14);
+    lampPost(mx, my, z, 12);
+    if (stage >= 2) {                                          // Schmiedeplatz: kleine Esse mit Glut und Rauch
+      const [fx, fy] = S(40, 22);
+      const B = kit(fx, fy, z, 1).block({ ha: 0.13, hb: 0.16, h: 11, wall: '#a86f5c', roof: '#4a4a58', roofH: 7 });
+      const F = B.faces.front || B.faces.right || B.faces.left, glow = 0.6 + 0.4 * Math.sin(now / 180);
+      if (F) faceQuad(F.P, F.Q, 0.3, 0.7, F.H * 0.1, F.H * 0.55, `rgba(255,${Math.round(120 + 60 * glow)},60,1)`);
+      box(fx + 6 * z, fy - 16 * z, 2 * z, 1 * z, 8 * z, '#6b4f3a', null, 0);
+      smoke(fx + 6 * z, fy - 26 * z, z, now, true);
+      const [ax, ay] = S(30, 30);
+      g.fillStyle = C('#4a4a58'); g.fillRect(ax - 1.4 * z, ay - 4 * z, 2.8 * z, 4 * z);
+      poly([[ax - 4 * z, ay - 4 * z], [ax + 4 * z, ay - 4 * z], [ax + 3 * z, ay - 6 * z], [ax - 3 * z, ay - 6 * z]], C('#5a5a68'));
+    }
+    if (stage >= 3) {                                          // Glockenturm auf dem Nebengipfel
+      const [tx, ty] = S(p2[0], p2[1] + 4);
+      const T = kit(tx, ty, z, 0);
+      for (const [a, b] of [[-0.06, -0.06], [0.06, -0.06], [0.06, 0.06], [-0.06, 0.06]]) { const p0 = T.P(a, b), p1x = T.P(a, b, 16); g.strokeStyle = C('#8a5a3c'); g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1x); g.stroke(); }
+      T.block({ ha: 0.1, hb: 0.1, h: 0.1, lift: 16, wall: '#8a5a3c', roof: '#c65a45', roofH: 8 });
+      const sw = Math.sin(now / 600) * 0.4, [bx, by] = T.P(0, 0, 13);
+      g.save(); g.translate(bx, by - 2 * z); g.rotate(sw); g.beginPath(); g.moveTo(-2.4 * z, 3 * z); g.quadraticCurveTo(0, -4 * z, 2.4 * z, 3 * z); g.closePath(); g.fillStyle = C('#e9a23b'); g.fill(); g.restore();
+    }
+  },
+
+  // Alte Ruine: antiker Tempel auf einem Steinsockel – gebrochene Säulen, umgestürzte Säule, Efeu.
+  // Stufe 1 Ausgrabung (Grube, Zelt, Schubkarre), 2 Museum (kleiner Tempel), 3 Amphitheater
+  ruine(K, stage, now, x, y) {
+    const z = K.z, dim = stage <= 0;
+    if (groundPart(() => {
+      K.oval(0, 0, 0.95, C('#a9cf86'));
+      K.rect(-0.55, -0.75, 0.45, 0.6, C('#cfc6b3'));                            // Sockel
+      K.rect(-0.5, -0.7, 0.4, 0.55, C('#e5dccb'));
+      g.strokeStyle = C('#d2c8b4'); g.lineWidth = 0.8 * z; g.beginPath();
+      for (let i = 1; i < 5; i++) { const a0 = K.P(-0.5 + i * 0.18, -0.7), a1 = K.P(-0.5 + i * 0.18, 0.55); g.moveTo(...a0); g.lineTo(...a1); }
+      g.stroke();
+      if (stage >= 1) { K.rect(0.5, -0.45, 0.85, 0.05, C('#8a7456')); K.rect(0.55, -0.4, 0.8, 0, C('#6f5c44')); }   // Ausgrabungsgrube
+      if (stage >= 3) for (let i = 0; i < 3; i++) {                              // Amphitheater: Stufen im Halbkreis
+        const r = 0.35 + i * 0.13, pts = [];
+        for (let k = 0; k <= 12; k++) { const an = Math.PI * 0.5 + k / 12 * Math.PI; pts.push([-0.05 + Math.cos(an) * r * 0.3 + 0.62, 0.62 + Math.sin(an) * r]); }
+        g.strokeStyle = C(i % 2 ? '#d6ccb8' : '#e8dfcc'); g.lineWidth = 3.4 * z; g.lineCap = 'round';
+        g.beginPath(); pts.forEach((p, j) => j ? g.lineTo(...K.P(...p)) : g.moveTo(...K.P(...p))); g.stroke();
+      }
+    })) return;
+    // Säule: Schaft (links hell, rechts im Schatten), Kapitell, Efeu; h = Höhe (gebrochen = niedrig)
+    const column = (a, b, h, ivy) => {
+      const [px, py] = K.P(a, b), w = 3.2 * z, H = h * z;
+      g.fillStyle = C(dim ? '#b8b0a2' : '#f1e9da'); g.fillRect(px - w, py - H, w, H);
+      g.fillStyle = C(dim ? '#9f978a' : '#d6ccb8'); g.fillRect(px, py - H, w, H);
+      ellipse(px, py - H, w, w * 0.45, C(dim ? '#c9c1b3' : '#faf4e8'));
+      if (h > 20) box(px, py - H, w * 1.25, w * 0.6, 2 * z, dim ? '#c9c1b3' : '#faf4e8', null, 0);
+      if (ivy) for (let i = 0; i < 4; i++) circle(px - w * 0.4 + (i % 2) * w * 0.8, py - H * (0.2 + i * 0.18), 1.8 * z, C('#62b85a'));
+    };
+    const parts = [];
+    // hintere Reihe: zwei heile Säulen mit Querbalken, dann gebrochene
+    parts.push([-0.45, -0.45, () => {
+      column(-0.42, -0.6, 30, false); column(-0.42, -0.2, 30, true);
+      const a0 = K.P(-0.42, -0.66, 32), a1 = K.P(-0.42, -0.14, 32);
+      poly([[a0[0] - 4 * z, a0[1]], [a1[0] + 4 * z, a1[1]], [a1[0] + 4 * z, a1[1] - 5 * z], [a0[0] - 4 * z, a0[1] - 5 * z]], C(dim ? '#c9c1b3' : '#efe6d6'));
+    }]);
+    parts.push([-0.42, 0.25, () => column(-0.42, 0.22, 14, true)]);
+    parts.push([0.05, -0.62, () => column(0.02, -0.62, 20, false)]);
+    parts.push([0.1, 0.35, () => column(0.1, 0.4, 9, false)]);
+    parts.push([0.1, -0.1, () => {                               // umgestürzte Säule
+      const p0 = K.P(-0.1, -0.25, 3), p1 = K.P(0.3, 0.05, 3);
+      g.strokeStyle = C(dim ? '#b8b0a2' : '#ebe2d2'); g.lineWidth = 6 * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke();
+      ellipse(p1[0], p1[1], 3 * z, 3 * z, C(dim ? '#9f978a' : '#d6ccb8'));
+      for (const [a, b] of [[0.35, -0.3], [-0.2, 0.45], [0.3, 0.45]]) kCrate(K, a, b, dim ? '#b8b0a2' : '#e5dccb', 1.2);
+    }]);
+    if (dim) for (let i = 0; i < 6; i++) parts.push([0.5, -0.6 + i * 0.25, () => kitBush(K, 0.55, -0.6 + i * 0.25, 0.8, '#7d9a55')]);
+    if (stage >= 1) {
+      parts.push([0.75, -0.75, () => {                           // Zelt der Ausgräber
+        const [tx, ty] = K.P(0.72, -0.75), zz = z;
+        poly([[tx - 10 * zz, ty], [tx, ty - 12 * zz], [tx + 3 * zz, ty + 3 * zz]], C('#f3e6c8'));
+        poly([[tx + 3 * zz, ty + 3 * zz], [tx, ty - 12 * zz], [tx + 10 * zz, ty - 1 * zz]], C('#d9c7a2'));
+      }]);
+      parts.push([0.9, 0.2, () => {                              // Schubkarre und Seil-Pflöcke
+        const [wx, wy] = K.P(0.92, 0.2);
+        poly([[wx - 4 * z, wy - 5 * z], [wx + 4 * z, wy - 5 * z], [wx + 3 * z, wy - 1 * z], [wx - 3 * z, wy - 1 * z]], C('#6b7a8f'));
+        circle(wx + 3 * z, wy, 1.6 * z, C('#3b3440'));
+        for (const [a, b] of [[0.48, -0.5], [0.88, -0.5], [0.88, 0.1]]) kPost(K, a, b, 5, '#8a5a3c', 1);
+      }]);
+    }
+    if (stage >= 2) parts.push([-0.75, 0.6, () => {              // Museum: kleiner Tempel mit Giebel
+      const B = K.block({ a: -0.72, b: 0.62, ha: 0.2, hb: 0.28, h: 14, wall: '#f5eee0', roof: '#b9a5d6', roofH: 7, ridge: 'b', entry: true });
+      kColumns(B, 'front', 4, z);
+      K.door(B, 'front', 0.42, 0.58, 0.6);
+    }]);
+    if (stage >= 3) for (const [a, c] of [[0.95, '#e8705f'], [0.35, '#5f8fe8']]) parts.push([a, 0.95, () => {
+      const [px, py] = kPost(K, a, 0.95, 18), wv = Math.sin(now / 300 + a * 5) * 1.5 * z;
+      poly([[px, py], [px + 8 * z, py + 2 * z + wv], [px, py + 5 * z]], C(c));
+    }]);
+    K.scene(parts);
+  },
 };

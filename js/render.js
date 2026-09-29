@@ -75,8 +75,8 @@ const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feld
   rathaus: [40, 0.4], leuchtturm: [50, 0.37], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
 };
 // Höhe des Namensschilds über der Mitte (passend zur Zeichnung)
-const LM_LABEL_H = { baum: 134, obsthain: 108, klippe: 172, ruine: 80, erzberg: 86, quelle: 70, kristall: 120 };
-const LM_SHADOW = { baum: [56, 0.85], klippe: [50, 0.75], ruine: [26, 0.7], kristall: [38, 0.8], obsthain: [34, 0.85] };
+const LM_LABEL_H = { baum: 128, obsthain: 82, klippe: 172, ruine: 80, erzberg: 104, quelle: 70, kristall: 118 };
+const LM_SHADOW = { baum: [56, 0.85], klippe: [50, 0.75], ruine: [26, 0.7], kristall: [38, 0.8], obsthain: [34, 0.85], erzberg: [44, 0.75] };
 function shadowOf(t, ax, ay) {
   let hgt, inset;
   if (t.b === 'haus') { const look = houseLook(t); hgt = HOUSE_SHADOW[look]; inset = look === 5 ? 0.16 : 0.24; }
