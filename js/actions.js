@@ -13,7 +13,7 @@ function fail(msg) { toast(msg); sfx('error'); }
 function build(b, x, y, quiet) {
   // Umfärben: bestehenden Weg im anderen Stil übermalen
   const k0 = x + ',' + y, old = state.tiles.get(k0);
-  if (STYLES[b] && ownedTile(x, y) && old && old.b === b) {
+  if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {
     const style = currentStyle(b);
     if ((old.style || 'kies') === style) return false;
     if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
@@ -21,6 +21,16 @@ function build(b, x, y, quiet) {
     old.style = style;
     groundVersion++;
     sfx('road'); save();
+    return true;
+  }
+  if (ownedTile(x, y) && crossCandidate(b, x, y)) {    // Weg über Schiene / Schiene über Weg: Bahnübergang
+    const err = crossError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    const c = costOf(b, x, y);
+    state.money -= c.cost; payMat(c.mat);
+    if (b === 'weg') { old.cross = true; old.style = currentStyle('weg'); }
+    else state.tiles.set(k0, { b: 'schiene', lvl: 1, rot: 0, cross: true, style: old.style || 'sand', born: performance.now() });
+    sfx('road'); recalc(); save();
     return true;
   }
   const err = placeError(b, x, y);

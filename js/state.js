@@ -49,6 +49,7 @@ function tileOut(t) {
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; }
+  if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = true; }
   return o;
 }
 function serialize() {

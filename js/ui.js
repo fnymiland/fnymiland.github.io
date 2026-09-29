@@ -394,8 +394,10 @@ function openInfo(x, y) {
       ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
-  const train = line ? trainChooser(line) : '';
-  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : stageName(t);
+  const train = line ? trainChooser(line) : isCrossing(t) ? `<div class="label">Bahnübergang</div>
+    <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button>
+      <button class="look${t.foot ? ' on' : ''}" data-cross="1">🌉 Fußgängerbrücke${t.footPaid ? '' : ` · 🪙 ${FOOTBRIDGE.money} 🪚${FOOTBRIDGE.bretter} 🔩${FOOTBRIDGE.metall}`}</button></div>` : '';
+  const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang' : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
     ${house}
@@ -444,6 +446,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
+  for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
   if (!liveNow) updateHud();
 }
 

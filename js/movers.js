@@ -9,8 +9,13 @@ const walkers = [], cars = [];
 const walkable = (x, y) => {
   if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
   const t = objAt(x, y);
-  return !t || t.b === 'weg';
+  return !t || t.b === 'weg' || (isCrossing(t) && !crossingClosed(x, y));   // am Übergang warten, wenn die Schranke zu ist
 };
+// Schranke zu, sobald ein Zugwagen in der Nähe ist
+function crossingClosed(x, y) {
+  if (!trains.length) return false;
+  return trainCars().some(c => Math.abs(c.px - x) + Math.abs(c.py - y) < 2.3);
+}
 const drivable = () => false;
 
 function syncMovers() {

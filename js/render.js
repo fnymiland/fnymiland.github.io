@@ -359,6 +359,7 @@ function render(now) {
       let text = err;
       if (!err) {
         if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(d.cost)}`;
+        else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
@@ -488,6 +489,7 @@ function render(now) {
       ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
       for (const m of ms) { if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else drawCar(m, z); }
     }
+    if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }
   }
   FOG = false;
   if (staleCover) recalc();

@@ -79,4 +79,5 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 - [x] **Geldanzeige oben** ohne Kommazahlen.
 - [x] **Baumenü Variante B:** Bauen (Filter: Alle, Wohnen, Geld, Rohstoffe, Verstärker, Bildung) · Verschönern ·
       Verbinden · Gelände; jedes Gebäude in genau einer Gruppe; Wirkung auf jeder Karte.
-- [ ] **Bahnübergänge** – Vorschlag besprechen (Schranke, Brücke oder beides).
+- [x] **Bahnübergänge:** Weg über gerade Schiene (oder Schiene über Weg) = Übergang mit Schranken (senken sich beim Zug,
+      nachts rotes Blinken, Bewohner warten); im Infofenster zur Fußgängerbrücke umbaubar (einmal 🪙 60 🪚4 🔩2).

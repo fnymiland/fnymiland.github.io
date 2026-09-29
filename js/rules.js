@@ -88,7 +88,7 @@ function unionFind() {
 function computeNet() {
   const uf = unionFind();
   // Schienen verbinden keine Viertel: verbundene Inseln bleiben eigene Orte (der Zug bringt Pendler und Bonus)
-  const occupied = new Set([...[...COVER].filter(([, a]) => (state.tiles.get(a) || {}).b !== 'schiene').map(([k]) => k), ...state.decos.keys()]);
+  const occupied = new Set([...[...COVER].filter(([, a]) => { const t = state.tiles.get(a) || {}; return t.b !== 'schiene' || t.cross; }).map(([k]) => k), ...state.decos.keys()]);
   for (const k of occupied) {
     uf.add(k);
     const [x, y] = keyXY(k);
@@ -438,6 +438,42 @@ function placeRot(b, x, y) {
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 const railArms = (x, y) => DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
+// Bahnübergang: ein Schienenfeld mit cross (und dem Stil des Wegs), gehört zu Schienen- und Wegenetz.
+// Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
+// foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
+const isCrossing = t => !!t && t.b === 'schiene' && !!t.cross;
+const crossingAt = (x, y) => isCrossing(state.tiles.get(x + ',' + y));
+const FOOTBRIDGE = { money: 60, bretter: 4, metall: 2 };
+function crossCandidate(b, x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!t) return null;
+  if (b === 'weg' && t.b === 'schiene' && !t.cross) return t;
+  if (b === 'schiene' && t.b === 'weg') return t;
+  return null;
+}
+function crossError(b, x, y) {
+  const t = crossCandidate(b, x, y);
+  if (!t) return 'Hier steht schon etwas';
+  if (!available(b)) return `${ITEMS[b].name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (t.bridge) return 'Kein Übergang auf einer Brücke';
+  const ra = railArms(x, y);
+  if (ra.length > 2 || (ra.length === 2 && (ra[0][0] !== -ra[1][0] || ra[0][1] !== -ra[1][1]))) return 'Übergang nur über gerade Schienen';
+  const c = costOf(b, x, y);
+  if (state.money < c.cost) return 'Zu wenig Taler';
+  return matError(c.mat);
+}
+function setCrossing(x, y, foot) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!isCrossing(t)) return false;
+  if (foot && !t.footPaid) {
+    if (!canPay(FOOTBRIDGE)) { fail(state.money < FOOTBRIDGE.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+    const { money, ...mat } = FOOTBRIDGE;
+    state.money -= money; payMat(mat); t.footPaid = true;
+  }
+  t.foot = !!foot;
+  sfx('deco'); groundVersion++; save();
+  return true;
+}
 // Bahn: zusammenhängende Schienen sind ein Netz, Bahnhöfe gehören zum Netz direkt neben ihrer Grundfläche.
 // Ein Netz mit Bahnhöfen auf mindestens zwei Inseln ist eine Linie mit einem Zug. Jeder Zug braucht 2 Windräder
 // (egal wo). Fährt er, bringt jeder Bahnhof der Linie Pendler, und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
@@ -508,7 +544,11 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       const rail = b === 'schiene';               // Schienen dürfen übers Wasser (Brücke), auch ins offene Meer
       if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : 'Das ist nicht dein Grundstück';
-      if (COVER.has(k)) return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
+      if (COVER.has(k)) {
+        if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
+        if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
+        return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
+      }
       if (ter === 'water') { if (rail) continue; return 'Nicht auf dem Wasser'; }
       if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
       // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
@@ -614,7 +654,7 @@ function beautyAround(x, y, r) {
 }
 function wishMet(w, x, y) {
   switch (w) {
-    case 'weg': return DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'weg');
+    case 'weg': return DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'weg' || crossingAt(x + dx, y + dy));
     case 'deko': {
       if (state.decos.has(x + ',' + y)) return true;
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;
@@ -656,6 +696,11 @@ function demolishInfo(x, y) {
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || t.b === 'weg' || t.b === 'schiene';
     const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: d.cost, mat: d.mat };
+    if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
+      const { money: fm, ...fmat } = t.footPaid ? FOOTBRIDGE : { money: 0 }, mat = { ...d.mat };
+      for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
+      return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
+    }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0) : 0;
     return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }

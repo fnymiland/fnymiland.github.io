@@ -63,7 +63,7 @@ function arcPts(cu, cv, r, a0, a1, n = 12) {
 }
 const sweep = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return a0 + d; };
 function pathArms(x, y) {
-  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus'; });
+  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy); });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
 function roadCurve(arms) {
@@ -384,6 +384,12 @@ function drawRailBed(cx, cy, z, x, y, t) {
     g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
   });
   g.stroke();
+  if (t && t.cross) {                                // Bahnübergang: Wegbelag quer über die Gleise
+    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id], pa = pathArms(x, y);
+    const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
+    const across = { rot: arms.length && arms[0][0] ? 1 : 0 };      // ohne Weg-Nachbarn: quer zur Schiene
+    for (const [w, col] of [[EDGE_W, edge], [ROAD_W, fill]]) for (const sh of roadShapes(pa, across, w)) poly(sh.map(L), C(col));
+  }
   // Schienen: dunkel, darauf ein heller Glanz
   const rails = segs.flatMap(seg => [offsetPath(seg, RAIL_GAUGE), offsetPath(seg, -RAIL_GAUGE)]);
   stroke(rails, '#6f7682', 1.3);
@@ -403,6 +409,54 @@ function drawRailBed(cx, cy, z, x, y, t) {
       side.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
     }
     g.stroke();
+  }
+}
+const afterMovers = [];                  // Zeichnungen, die über die Fahrzeuge ihres Felds gehören (Fußgängerbrücke)
+// Bahnübergang: Schranken (senken sich, wenn ein Zug kommt; nachts blinkt es rot) oder eine Fußgängerbrücke
+const crossAnim = new Map();
+function drawCrossing(cx, cy, z, x, y, t, now) {
+  const ra = railArms(x, y), along = ra.length ? ra[0] : [1, 0];
+  const d = [Math.abs(along[0]), Math.abs(along[1])], n = [d[1], d[0]];     // Schiene entlang d, Weg entlang n
+  if (t.foot) {
+    const K = kit(cx, cy, z, n[0] ? 0 : 1), wood = '#c29a6a';
+    const tower = a => () => {                        // Treppe: schlanker Aufgang mit Stufen
+      const B = K.block({ a, ha: 0.05, hb: 0.13, h: 24, wall: wood, type: 'flat', roof: shade(wood, 0.1) });
+      for (const F of Object.values(B.faces)) if (F) for (let i = 1; i < 7; i++) faceQuad(F.P, F.Q, 0, 1, F.H * i / 7, F.H * i / 7 + 0.8 * z, C(shade(wood, -0.25)));
+    };
+    const deck = () => {
+      K.block({ ha: 0.47, hb: 0.13, h: 2.5, lift: 23, wall: '#8a6440', type: 'flat', roof: wood });
+      for (const s of [1, -1]) {
+        kLine(K, K.P(-0.47, 0.13 * s, 29.5), K.P(0.47, 0.13 * s, 29.5), '#6f5238', 0.9);
+        for (let i = 0; i <= 6; i++) { const a = -0.47 + i * 0.94 / 6; kLine(K, K.P(a, 0.13 * s, 25.5), K.P(a, 0.13 * s, 29.5), '#6f5238', 0.7); }
+      }
+    };
+    // hinterer Turm jetzt; Deck und vorderer Turm erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
+    const [back, front] = [-0.42, 0.42].sort((p, q) => K.depth(p, 0) - K.depth(q, 0));
+    tower(back)();
+    const late = () => { deck(); tower(front)(); };
+    if (PASS === 'object') { const m = g.getTransform(); afterMovers.push(() => { g.save(); g.setTransform(m); late(); g.restore(); }); }
+    else late();
+    return;
+  }
+  const key = x + ',' + y, target = crossingClosed(x, y) ? 1 : 0;
+  let k = crossAnim.has(key) ? crossAnim.get(key) : target;
+  k += Math.max(-0.05, Math.min(0.05, target - k));
+  crossAnim.set(key, k);
+  const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
+  const th = (1 - k) * Math.PI * 0.44, blink = k > 0.5 && Math.floor(now / 420) % 2 === 0;
+  for (const s of [1, -1]) {
+    const pa = -0.4 * s, pb = 0.38 * s, foot = P(pa, pb), top = P(pa, pb, 10);
+    ellipse(foot[0], foot[1] + 0.4 * z, 1.8 * z, 0.9 * z, 'rgba(40,60,20,0.18)');
+    g.strokeStyle = C('#6b6f78'); g.lineWidth = 1.3 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(foot[0], foot[1]); g.lineTo(top[0], top[1]); g.stroke();
+    circle(top[0], top[1] - 1 * z, 1.3 * z, k > 0.5 ? (blink ? '#ff4a3d' : C('#b8352c')) : C('#7a2a24'));
+    if (blink) glowQuad([[top[0] - 1, top[1] - 2], [top[0] + 1, top[1] - 2], [top[0] + 1, top[1]], [top[0] - 1, top[1]]], 12 * z);
+    const piv = P(pa, pb, 7), end = P(pa + s * 0.7 * Math.cos(th), pb, 7 + 0.7 * 26 * Math.sin(th));
+    g.lineWidth = 1.9 * z; g.strokeStyle = C('#ffffff');
+    g.beginPath(); g.moveTo(piv[0], piv[1]); g.lineTo(end[0], end[1]); g.stroke();
+    g.strokeStyle = C('#d9534a'); g.setLineDash([2.2 * z, 2.2 * z]);
+    g.beginPath(); g.moveTo(piv[0], piv[1]); g.lineTo(end[0], end[1]); g.stroke();
+    g.setLineDash([]);
   }
 }
 const drawFlat = (cx, cy, z, x, y, t) => t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t);
@@ -821,7 +875,11 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     // --- Bildung ---
     // --- Deko ---
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
-    case 'schiene': if (PASS === 'object') drawRailWire(cx, cy, z, x, y, t); else { drawRailBed(cx, cy, z, x, y, t); drawRailWire(cx, cy, z, x, y, t); } break;
+    case 'schiene':
+      if (PASS !== 'object') drawRailBed(cx, cy, z, x, y, t);
+      drawRailWire(cx, cy, z, x, y, t);
+      if (t && t.cross) drawCrossing(cx, cy, z, x, y, t, now);
+      break;
     case 'baum': {                        // Obstbaum; je Ecke eine andere Frucht, damit vier Bäume nicht gleich aussehen
       const h = hash(x, y, 40 + (t && t.slot || 0));
       tree(cx, cy + 2 * z, z * 1.05, 0.9, h < 0.4 ? '#ff6b5e' : h < 0.7 ? '#ffb13b' : h < 0.85 ? '#b07ad6' : '#ff8fb1');
