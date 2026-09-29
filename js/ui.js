@@ -537,14 +537,14 @@ function openInfo(x, y) {
   if (WONDERS[t.b]) {
     const W = WONDERS[t.b], p = t.phase || 0, N = W.phases.length;
     if (p < N) {
-      const { money = 0, ...mat } = W.phases[p];
+      const { money = 0, ...mat } = wonderCost(t);
       const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
         ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
       wonder = `<div class="label">Abschnitt ${p + 1} von ${N}: ${W.names[p]}</div>
         <div class="wbar"><i style="width:${p / N * 100}%"></i></div>
         <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
-        <p class="muted">Wenn fertig: ${W.text}.</p>
-        <div class="row"><button class="btn" id="p-wonder" ${canPay(W.phases[p]) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
+        <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem Einkommen beim Aufstellen (🪙 ${fmt(t.rate || 0)}/s).</p>
+        <div class="row"><button class="btn" id="p-wonder" ${canPay(wonderCost(t)) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
@@ -858,8 +858,8 @@ function readyList() {
       const miss = s.grow.conds.filter(c => !c.ok);
       if (s.grow.ready) ready.push({ ...where, kind: 'stage', cost: s.grow.next.cost, text: `${stageName(t)} → ${s.grow.next.name}` });
       else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)} – fehlt: ${miss[0].text}` });
-    } else if (WONDERS[t.b] && !wonderDone(t) && canPay(WONDERS[t.b].phases[t.phase || 0])) {          // Wunderwerk: nächster Abschnitt bezahlbar
-      ready.push({ ...where, kind: 'wonder', cost: WONDERS[t.b].phases[t.phase || 0], text: `🏗️ ${ITEMS[t.b].name}: ${WONDERS[t.b].names[t.phase || 0]}` });
+    } else if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) {          // Wunderwerk: nächster Abschnitt bezahlbar
+      ready.push({ ...where, kind: 'wonder', cost: wonderCost(t), text: `🏗️ ${ITEMS[t.b].name}: ${WONDERS[t.b].names[t.phase || 0]}` });
     }
   }
   for (const type of Object.keys(LM_STAGES)) {

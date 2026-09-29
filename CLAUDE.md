@@ -130,6 +130,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `phase` (0 = Baustelle … phases.length = fertig, `wonderDone`). Wirkung (`effect`) und Schönheit erst fertig.
     Abschnitt bauen: `wonderStep`. Baustelle zeichnet `drawWonder` (Gerüst, fertiges Bild von unten abgeschnitten).
     Seebrücke: `needs: 'pier'` (hinterstes Feld an Land, Rest Wasser). Schloss: `festival: true`, Titel.
+    Preise immer über `wonderCost(t)`: `min` Minuten Einkommen (`t.rate`, beim Aufstellen gemerkt), mindestens `money`.
+    Bezahltes steht in `t.paid` (`wonderPaid`, alte Stände nach `OLD_WONDER_PHASES`). Größen seit v9: Riesenrad 5×5,
+    Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 – alte Bauwerke wachsen beim Laden (`growWonders`).
 32. **Wegübergänge** (`crossFade`): Zwei Wegstile nebeneinander blenden ineinander – jedes Feld legt den Belag des
     Nachbarn in Schichten bis 50 % über seine Kante. Muster (`pattern`) liegen dafür in einem festen Raster und lassen
     sich mit `ext` über das Feld hinaus fortsetzen (`box` begrenzt die Punkte). Keine Schwellen/Fugenlinien mehr.

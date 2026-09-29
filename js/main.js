@@ -90,10 +90,12 @@ if (PROBE) {
   normalizeSmall();
   migrateLandmarks();                  // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
   const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
+  const grown = growWonders();
   const refunded = fitFootprints();
   delete state.fitLm;
   if (moved) setTimeout(() => announceIslands(moved), 900);
   nameHouses();
+  if (grown.length) setTimeout(() => announceWonders(grown), 1200);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

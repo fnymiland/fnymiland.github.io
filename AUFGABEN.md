@@ -110,8 +110,8 @@ zweiter Zug selbst kaufen (nur Rundkurs, je 2 km einer); Wunderwerke als Langzei
 - [x] Strom: Zug braucht mehr, je länger die Strecke; auch die Stadt braucht Strom (Fabrik, Laternen …).
 
 **9c Wunderwerke imposant**
-- [ ] Größen: Riesenrad 5×5, Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 (Seebrücke bleibt).
-- [ ] Viel teurer (Langzeitziel, viele Rohstoffe); Wege darin in normaler Kachelgröße.
+- [x] Größen: Riesenrad 5×5, Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 (Seebrücke bleibt).
+- [x] Viel teurer (Langzeitziel, viele Rohstoffe); Wege darin in normaler Kachelgröße.
 
 **9d Aussehen**
 - [ ] Alte Ruine: voll ausgebaut wieder ein **Amphitheater**.

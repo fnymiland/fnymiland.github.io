@@ -692,6 +692,56 @@ function lmSpot(x, y, tries) {
   return all.find(p => inChunk(p) && free(p)) || (free([x, y]) ? [x, y] : null) || all.find(inChunk) || null;
 }
 
+// v9 (30.09.): Riesenrad, Sternwarte, Botanischer Garten und Schloss sind größer. Alte Bauwerke wachsen um ihre Mitte
+// herum; Natur weicht, kleine Dekos gibt es erstattet. Wo nichts Selbstgebautes weicht, bleibt der Fortschritt –
+// sonst kommt alles zurück (Baustelle und bezahlte Abschnitte).
+const OLD_WONDER_SIZE = { riesenrad: [3, 3], sternwarte: [2, 2], botgarten: [3, 3], schloss: [4, 4] };
+function growWonders() {
+  if (!state.growWonders) return [];
+  delete state.growWonders;
+  const out = [];
+  rebuildCover();
+  for (const [k, t] of [...state.tiles]) {
+    if (!OLD_WONDER_SIZE[t.b]) continue;
+    const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot), [ow, oh] = OLD_WONDER_SIZE[t.b];
+    state.tiles.delete(k); rebuildCover();
+    const tries = [];
+    for (let dy = 0; dy <= h - oh; dy++) for (let dx = 0; dx <= w - ow; dx++) tries.push([x - dx, y - dy]);
+    const mx = (w - ow) / 2, my = (h - oh) / 2, off = ([ax, ay]) => Math.hypot(x - ax - mx, y - ay - my);
+    tries.sort((a, b) => off(a) - off(b));
+    const fits = ([ax, ay], decosOk) => footprint(t.b, ax, ay, t.rot).every(([fx, fy]) => {
+      const kk = fx + ',' + fy;
+      return ownedTile(fx, fy) && !COVER.has(kk) && terrainAt(fx, fy) !== 'water' && (decosOk || !state.decos.has(kk));
+    });
+    const spot = tries.find(p => fits(p, false)) || tries.find(p => fits(p, true));
+    if (spot) {
+      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot)) {
+        const kk = fx + ',' + fy, ds = state.decos.get(kk);
+        if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
+        if (ds) {
+          for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; }
+          state.decos.delete(kk);
+        }
+      }
+      state.tiles.set(spot[0] + ',' + spot[1], t);
+      out.push({ name: ITEMS[t.b].name });
+    } else {
+      const paid = wonderPaid(t);
+      state.money += (ITEMS[t.b].cost || 0) + (paid.money || 0);
+      for (const [r, n] of Object.entries(paid)) if (r !== 'money') state.res[r] += n;
+      out.push({ name: ITEMS[t.b].name, refunded: true });
+    }
+    rebuildCover();
+  }
+  terrainCache.clear(); sandCache.clear(); landCache.clear();
+  return out;
+}
+function announceWonders(list) {
+  if (!list.length) return;
+  const back = list.filter(e => e.refunded).map(e => e.name), grown = list.filter(e => !e.refunded).map(e => e.name);
+  toast([grown.length ? `🏛️ Größer geworden: ${grown.join(', ')}` : '', back.length ? `Kein Platz für ${back.join(', ')} – alles erstattet` : ''].filter(Boolean).join(' · '));
+}
+
 // Alte Spielstände: Gebäude, die jetzt mehrere Felder belegen, bekommen ihre Grundfläche.
 // Passt es nirgends, werden Kosten und Material erstattet. Das Rathaus bleibt immer: was im Weg liegt, weicht.
 function fitFootprints() {
@@ -813,7 +863,7 @@ function demolishInfo(x, y) {
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? WONDERS[t.b].phases.slice(0, t.phase || 0).reduce((s, p) => s + (p.money || 0), 0) : 0;
+      : WONDERS[t.b] ? wonderPaid(t).money : 0;
     return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);

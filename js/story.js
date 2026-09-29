@@ -399,31 +399,64 @@ function collectAlbum() {
 // ---------------------------------------------------------------------------
 // Wunderwerke: Baustelle (phase 0), dann Abschnitt für Abschnitt; Wirkung (effect) erst, wenn alle fertig sind
 // ---------------------------------------------------------------------------
+// Preise: Jeder Abschnitt kostet min Minuten Einkommen – gemessen beim Aufstellen der Baustelle (t.rate) –,
+// mindestens money, dazu viel Material. So bleibt ein Wunderwerk ein Langzeitziel (etwa eine Stunde, das Schloss
+// mehrere Stunden), egal wie reich man schon ist.
 const WONDERS = {
-  riesenrad: { the: 'Das Riesenrad', h: 96, text: 'Touristen kommen: +80 Taler/s', effect: { inc: 80 },
+  riesenrad: { the: 'Das Riesenrad', h: 215, text: 'Touristen kommen: +80 Taler/s', effect: { inc: 80 },
     names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
-    phases: [{ money: 8000, quader: 40 }, { money: 12000, metall: 40 }, { money: 16000, metall: 60, bretter: 60 }, { money: 20000, bretter: 40, metall: 30 }] },
-  sternwarte: { the: 'Die Sternwarte', h: 56, text: '+25 % Ideen für die ganze Insel', effect: { sciMul: 0.25 },
+    phases: [{ min: 12, money: 30000, quader: 150 }, { min: 15, money: 40000, metall: 150 },
+             { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 60000, bretter: 150, metall: 100 }] },
+  sternwarte: { the: 'Die Sternwarte', h: 95, text: '+25 % Ideen für die ganze Insel', effect: { sciMul: 0.25 },
     names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
-    phases: [{ money: 10000, quader: 60 }, { money: 15000, metall: 50, bretter: 40 }, { money: 20000, metall: 40, quader: 40 }] },
+    phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 60000, metall: 150, quader: 150 }] },
   seebruecke: { the: 'Die Seebrücke', h: 40, text: 'Kurgäste: +40 Einwohner und +40 Taler/s', effect: { pop: 40, inc: 40 },
     names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
-    phases: [{ money: 8000, bretter: 80 }, { money: 12000, bretter: 60, metall: 20 }, { money: 16000, quader: 40, metall: 30 }] },
-  botgarten: { the: 'Der Botanische Garten', h: 60, text: 'Sehr viel Schönheit und +0,5 Obst/s', effect: { prod: { obst: 0.5 } },
+    phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 40000, quader: 150, metall: 100 }] },
+  botgarten: { the: 'Der Botanische Garten', h: 80, text: 'Sehr viel Schönheit und +0,5 Obst/s', effect: { prod: { obst: 0.5 } },
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
-    phases: [{ money: 12000, quader: 60 }, { money: 18000, metall: 50, kristall: 20 }, { money: 24000, kristall: 40, bretter: 50 }, { money: 30000, obst: 200, kristall: 30 }] },
-  schloss: { the: 'Das Schloss', h: 90, text: '+20 % auf alles – deine Insel ist jetzt eine Königliche Inselperle', effect: { allMul: 0.2 },
+    phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
+             { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 80000, obst: 600, kristall: 80 }] },
+  schloss: { the: 'Das Schloss', h: 195, text: '+20 % auf alles – deine Insel ist jetzt eine Königliche Inselperle', effect: { allMul: 0.2 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
-    phases: [{ money: 40000, quader: 150 }, { money: 60000, quader: 150, bretter: 100 }, { money: 80000, metall: 120 },
-             { money: 100000, quader: 100, metall: 100 }, { money: 120000, kristall: 60, bretter: 100 }, { money: 150000, metall: 80, kristall: 80, obst: 300 }] },
+    phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
+             { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
+             { min: 50, money: 500000, metall: 250, kristall: 250, obst: 1000 }] },
 };
+// Preise vor dem 30.09. (fest, viel billiger) – nur zum Erstatten alter Baustellen
+const OLD_WONDER_PHASES = {
+  riesenrad: [{ money: 8000, quader: 40 }, { money: 12000, metall: 40 }, { money: 16000, metall: 60, bretter: 60 }, { money: 20000, bretter: 40, metall: 30 }],
+  sternwarte: [{ money: 10000, quader: 60 }, { money: 15000, metall: 50, bretter: 40 }, { money: 20000, metall: 40, quader: 40 }],
+  seebruecke: [{ money: 8000, bretter: 80 }, { money: 12000, bretter: 60, metall: 20 }, { money: 16000, quader: 40, metall: 30 }],
+  botgarten: [{ money: 12000, quader: 60 }, { money: 18000, metall: 50, kristall: 20 }, { money: 24000, kristall: 40, bretter: 50 }, { money: 30000, obst: 200, kristall: 30 }],
+  schloss: [{ money: 40000, quader: 150 }, { money: 60000, quader: 150, bretter: 100 }, { money: 80000, metall: 120 },
+            { money: 100000, quader: 100, metall: 100 }, { money: 120000, kristall: 60, bretter: 100 }, { money: 150000, metall: 80, kristall: 80, obst: 300 }],
+};
+const niceRound = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.round(v / p) * p; };
+function wonderCost(t, p = t.phase || 0) {
+  const ph = WONDERS[t.b].phases[p];
+  if (!ph) return null;
+  if (t.rate == null && T.inc > 0) t.rate = Math.round(T.inc);      // alte Baustellen: Einkommen von jetzt festhalten
+  const { min, money, ...mat } = ph;
+  return { money: niceRound(Math.max(money, (t.rate || 0) * 60 * min)), ...mat };
+}
+// Was in die Baustelle schon geflossen ist (Abriss, Umzug); alte Stände ohne t.paid: nach den alten Preisen
+function wonderPaid(t) {
+  if (t.paid) return { ...t.paid };
+  const out = { money: 0 };
+  for (const ph of (OLD_WONDER_PHASES[t.b] || []).slice(0, t.phase || 0)) for (const [r, n] of Object.entries(ph)) out[r] = (out[r] || 0) + n;
+  return out;
+}
 const wonderDone = t => !!t && !!WONDERS[t.b] && (t.phase || 0) >= WONDERS[t.b].phases.length;
 // Nächsten Abschnitt bauen (stay: aus dem Rathaus – kein Infofenster danach)
 function wonderStep(x, y, stay = false) {
   const t = state.tiles.get(x + ',' + y), W = t && WONDERS[t.b];
   if (!W || wonderDone(t)) return false;
-  const cost = W.phases[t.phase || 0];
+  const cost = wonderCost(t);
   if (!canPay(cost)) { fail(state.money < (cost.money || 0) ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  const paid = wonderPaid(t);
+  for (const [r, n] of Object.entries(cost)) paid[r] = (paid[r] || 0) + n;
+  t.paid = paid;
   const { money = 0, ...mat } = cost;
   state.money -= money; payMat(mat);
   t.phase = (t.phase || 0) + 1;

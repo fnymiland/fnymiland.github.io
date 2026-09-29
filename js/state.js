@@ -53,7 +53,7 @@ function tileOut(t) {
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
-  if (t.phase != null) o.phase = t.phase;
+  if (t.phase != null) { o.phase = t.phase; if (t.rate != null) o.rate = t.rate; if (t.paid) o.paid = t.paid; }
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col }));
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
@@ -72,7 +72,7 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 8, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 9, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
@@ -153,6 +153,7 @@ function parseSave(d) {
     design: new Set(d.design || []),
     oldSave: !d.restore,
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
+    growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
@@ -225,6 +226,7 @@ function adoptState(s) {
   normalizeSmall();
   migrateLandmarks();
   const moved = migrateIslands();
+  const grown = growWonders();
   fitFootprints();
   delete state.fitLm;
   nameHouses();
@@ -232,6 +234,7 @@ function adoptState(s) {
   collectAlbum();
   checkAchievements(true);                         // schon Erreichtes still zählen
   if (moved) setTimeout(() => announceIslands(moved), 300);
+  if (grown.length) setTimeout(() => announceWonders(grown), 600);
   buildToolbar();
   save();
 }
