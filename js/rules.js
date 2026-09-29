@@ -880,6 +880,8 @@ function wishMet(w, x, y) {
   }
 }
 // Wünsche für die nächste Stufe (alle bisherigen zählen weiter mit)
+// Hausausbau: Taler (steigend mit der Stufe) und Material
+const houseCost = st => ({ money: st.money || 0, ...(st.mat || {}) });
 function houseWishes(t, x, y) {
   const next = HOUSE_STAGES[t.lvl];
   if (!next) return { next: null, list: [], met: 0, total: 0, ready: false };

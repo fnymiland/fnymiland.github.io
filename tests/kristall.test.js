@@ -133,9 +133,10 @@ describe('Glasvilla', () => {
 
   it('Ausbau kostet Kristall, danach zeigt das Haus die Glasvilla', () => {
     villa();
-    game('state.restore.kristall = 1; globalThis.__wm = wishMet; wishMet = () => true');
+    game('state.restore.kristall = 1; state.money = 200000; globalThis.__wm = wishMet; wishMet = () => true');
     const k = game('state.res.kristall');
     game('houseUpgrade(8, 6)');
+    expect(game('state.money')).toBe(200000 - 100000);                          // Glasvilla kostet 100.000 Taler
     game('wishMet = globalThis.__wm');
     expect(game("state.tiles.get('8,6').lvl")).toBe(6);
     expect(game('state.res.kristall')).toBe(k - game('HOUSE_STAGES[5].mat.kristall'));

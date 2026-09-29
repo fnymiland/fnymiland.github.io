@@ -69,7 +69,8 @@ function lmTile(type) {
 function restoreInfo(type) {
   const stage = lmStage(type), next = LM_STAGES[type][stage], pos = lmTile(type);
   if (!next) return { stage, next: null, pos };
-  const { money = 0, ...mat } = next.cost;
+  const { money: _base, ...raw } = next.cost, money = LM_PRICE[type][stage], k = LM_MAT_MUL[type], mat = {};
+  for (const [r, n] of Object.entries(raw)) mat[r] = Math.ceil(n * k);
   let err = null;
   const isle = ISLE_OF_LM[type];
   if (!pos || !ownedTile(pos[0], pos[1])) err = `Erschließe zuerst die ${isle ? isle.name : 'Insel'}`;

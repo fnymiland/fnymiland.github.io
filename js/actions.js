@@ -205,8 +205,11 @@ function houseUpgrade(x, y, stay = false) {
   const w = houseWishes(t, x, y);
   if (!w.next) return;
   if (!w.ready) { fail('Erst alle Wünsche erfüllen'); return; }
+  const cost = houseCost(w.next);
+  if (state.money < cost.money) { fail('Zu wenig Taler'); return; }
   const err = matError(w.next.mat);
   if (err) { fail(err); return; }
+  state.money -= cost.money;
   payMat(w.next.mat);
   t.lvl++;
   delete t.look;                 // nach dem Ausbau zeigt das Haus seine neue Stufe

@@ -605,8 +605,9 @@ function openInfo(x, y) {
         <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}</div>`).join('')}</div>`
         : w.later ? `<p class="muted">✨ Mit Kristall 💎 von der Kristallinsel kann daraus eine ${w.later.name} werden.</p>`
         : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
-    house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
-      ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
+    const hc = w.next && houseCost(w.next), hcText = hc ? [hc.money ? `🪙 ${fmt(hc.money)}` : '', matText(w.next.mat)].filter(Boolean).join(' ') : '';
+    house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && canPay(hc) ? '' : 'disabled'}>
+      ${w.ready ? `Ausbauen · ${hcText}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
   // Wunderwerk: Fortschritt, Kosten des nächsten Abschnitts, Knopf
   let wonder = '';
@@ -780,9 +781,9 @@ function openLandmark(x, y) {
   const stageName = info.stage ? LM_STAGES[type][info.stage - 1].name : 'verfallen';
   let body = '';
   if (info.next) {
-    const { money = 0, ...mat } = info.next.cost;
+    const { money, mat } = info;
     const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
-      ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${n}`)].filter(Boolean);
+      ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
     const unl = info.next.unlock.map(unlockName);
     body = `
       <div class="label">Nächste Stufe: ${info.next.name}</div>
@@ -951,7 +952,7 @@ function readyList() {
     const where = { x, y, b: t.b };
     if (t.b === 'haus' && s.wish && s.wish.next) {
       const who = `${animalOf(t).icon} ${escHtml(t.name || '')}: ${HOUSE_STAGES[t.lvl - 1].name}`;
-      if (s.wish.ready) ready.push({ ...where, kind: 'haus', cost: s.wish.next.mat || {}, text: `${who} → ${s.wish.next.name}` });
+      if (s.wish.ready) ready.push({ ...where, kind: 'haus', cost: houseCost(s.wish.next), text: `${who} → ${s.wish.next.name}` });
       else if (s.wish.met === s.wish.total - 1) almost.push({ ...where, text: `${who} – fehlt: ${s.wish.list.find(w => !w.ok).text}` });
     } else if (s.grow && s.grow.next) {
       const miss = s.grow.conds.filter(c => !c.ok);
@@ -963,7 +964,7 @@ function readyList() {
   }
   for (const type of Object.keys(LM_STAGES)) {
     const info = restoreInfo(type);
-    if (info.next && !info.err && info.pos) ready.push({ x: info.pos[0], y: info.pos[1], b: 'lm', kind: 'lm', type, cost: info.next.cost, text: `🏮 ${lmStepName(type, info.stage + 1)}` });
+    if (info.next && !info.err && info.pos) ready.push({ x: info.pos[0], y: info.pos[1], b: 'lm', kind: 'lm', type, cost: { money: info.money, ...info.mat }, text: `🏮 ${lmStepName(type, info.stage + 1)}` });
   }
   return { ready, almost };
 }

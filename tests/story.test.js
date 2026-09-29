@@ -162,3 +162,30 @@ describe('Themen-Inseln', () => {
     expect(game('state.money')).toBe(money + 390);
   });
 });
+
+describe('Preise für ein langes Spiel (Ziel: Laternenfest nach etwa 10 Stunden)', () => {
+  it('Laternen werden von Insel zu Insel teurer, das Material wächst mit', () => {
+    game('startNew()');
+    expect(game("restoreInfo('baum').money")).toBe(50);
+    expect(game("LM_PRICE.kristall[2]")).toBe(25000000);
+    game('state.restore.kristall = 2');
+    const info = game("restoreInfo('kristall')");
+    expect(info.money).toBe(25000000);
+    expect(info.mat.metall).toBe(15 * 8);
+  });
+
+  it('Inseln: Waldinsel 150 … Kristallinsel 5 Mio.; Leuchtturm 15 Mio.', () => {
+    expect(game("ISLES.map(i => i.need.money)")).toEqual([150, 1500, 10000, 60000, 300000, 1500000, 5000000]);
+    expect(game('ITEMS.leuchtturm.cost')).toBe(15000000);
+  });
+
+  it('Hausausbau kostet Taler – je Stufe mehr', () => {
+    expect(game('HOUSE_STAGES.slice(1).map(h => h.money)')).toEqual([100, 600, 3000, 20000, 100000]);
+    game("startNew(); closeModal(); state.money = 50; state.res.bretter = 10; state.tiles.set('8,8', { b: 'haus', lvl: 1 }); globalThis.__wm = wishMet; wishMet = () => true; recalc()");
+    game('houseUpgrade(8, 8, true)');
+    expect(game("state.tiles.get('8,8').lvl")).toBe(1);                         // 100 Taler fehlen
+    game('state.money = 150; houseUpgrade(8, 8, true); wishMet = globalThis.__wm');
+    expect(game("state.tiles.get('8,8').lvl")).toBe(2);
+    expect(game('state.money')).toBe(50);
+  });
+});

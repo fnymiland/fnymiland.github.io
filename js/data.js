@@ -51,7 +51,7 @@ const ITEMS = {
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3. Braucht 2 ⚡ Strom, sobald es Windräder gibt.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [2, 2], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
              desc: 'Handel mit der Welt: +8 % auf alle Einnahmen.' },
-  leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 3000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40,
+  leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 15000000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40,
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
@@ -158,12 +158,12 @@ function matError(mat) {
 // Häuser wachsen: jede Stufe bringt neue Wünsche; sind alle erfüllt, kann man ausbauen (Material aus dem Lager)
 const HOUSE_STAGES = [
   { name: 'Häuschen', pop: 4 },
-  { name: 'Fachwerkhaus', pop: 6, wishes: ['weg', 'deko'], mat: { bretter: 2 } },
-  { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], mat: { bretter: 4 } },
-  { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], mat: { quader: 4 } },
-  { name: 'Villa', pop: 16, wishes: ['schule', 'schoen'], mat: { quader: 4, metall: 2 } },
+  { name: 'Fachwerkhaus', pop: 6, wishes: ['weg', 'deko'], money: 100, mat: { bretter: 2 } },
+  { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], money: 600, mat: { bretter: 4 } },
+  { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], money: 3000, mat: { quader: 4 } },
+  { name: 'Villa', pop: 16, wishes: ['schule', 'schoen'], money: 20000, mat: { quader: 4, metall: 2 } },
   // erst mit Kristall von der Kristallinsel: moderne Villa mit viel Glas
-  { name: 'Glasvilla', pop: 22, wishes: ['wasser'], mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
+  { name: 'Glasvilla', pop: 22, wishes: ['wasser'], money: 100000, mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
@@ -362,6 +362,13 @@ const LANDMARKS = {
   kristall: { name: 'Kristallhöhle', icon: '💎', effect: 'Forschung: +3 💡/s' },
 };
 // Jede Stufe: Kosten, was sie freischaltet, Tagebuchseite der alten Leuchtturmwärterin
+// Preise der Laternen (Taler je Stufe): steigen mit der Reihenfolge der Inseln – Ziel: Laternenfest nach etwa
+// 10 Stunden. Das Material aus LM_STAGES wächst mit (LM_MAT_MUL).
+const LM_PRICE = {
+  baum: [50, 150, 600], obsthain: [400, 2000, 8000], klippe: [3000, 12000, 50000], ruine: [20000, 80000, 300000],
+  erzberg: [100000, 400000, 1500000], quelle: [500000, 2000000, 6000000], kristall: [2000000, 8000000, 25000000],
+};
+const LM_MAT_MUL = { baum: 1, obsthain: 1.5, klippe: 2, ruine: 3, erzberg: 4, quelle: 6, kristall: 8 };
 const LM_STAGES = {
   baum: [
     { name: 'Freischneiden', cost: { money: 50, holz: 10 }, unlock: ['saege'],
@@ -431,17 +438,17 @@ const ISLES = [
   { id: 'wald', name: 'Waldinsel', lm: 'baum', icon: '🌲', deg: 20, ter: 'wald',
     text: 'Dichter Wald um den Uralten Baum – hier gibt es Holz für Bretter.', need: { pop: 8, money: 150 } },
   { id: 'obst', name: 'Obstinsel', lm: 'obsthain', icon: '🍎', deg: 72, ter: 'obst',
-    text: 'Wilde Apfel- und Kirschbäume – Obst für Plantagen und Bäckereien.', need: { lanterns: 1, pop: 25, money: 1200 } },
+    text: 'Wilde Apfel- und Kirschbäume – Obst für Plantagen und Bäckereien.', need: { lanterns: 1, pop: 25, money: 1500 } },
   { id: 'wind', name: 'Windinsel', lm: 'klippe', icon: '🌬️', deg: 124, ter: 'fels',
-    text: 'Felsen und windige Wiesen – Stein für Pflastersteine, Wind für Mühlen.', need: { lanterns: 3, pop: 40, money: 2500 } },
+    text: 'Felsen und windige Wiesen – Stein für Pflastersteine, Wind für Mühlen.', need: { lanterns: 3, pop: 40, money: 10000 } },
   { id: 'ruine', name: 'Ruineninsel', lm: 'ruine', icon: '🏛️', deg: 176, ter: 'ruine',
-    text: 'Alte Mauern im Gras – hier beginnt die Bildung: Schule, Bibliothek, Kunst.', need: { lanterns: 5, pop: 60, money: 4000 } },
+    text: 'Alte Mauern im Gras – hier beginnt die Bildung: Schule, Bibliothek, Kunst.', need: { lanterns: 5, pop: 60, money: 60000 } },
   { id: 'erz', name: 'Erzinsel', lm: 'erzberg', icon: '⛏️', deg: 228, ter: 'erz',
-    text: 'Ein Berg voller Erz – Metall für Laternen, Werkzeug und Maschinen.', need: { lanterns: 8, pop: 90, money: 7000, science: 50 } },
+    text: 'Ein Berg voller Erz – Metall für Laternen, Werkzeug und Maschinen.', need: { lanterns: 8, pop: 90, money: 300000, science: 50 } },
   { id: 'quelle', name: 'Quelleninsel', lm: 'quelle', icon: '♨️', deg: 280, ter: 'quelle',
-    text: 'Warme Quellen und Teiche – schön zum Wohnen, Gäste kommen gern.', need: { lanterns: 11, pop: 130, money: 12000, science: 150 } },
+    text: 'Warme Quellen und Teiche – schön zum Wohnen, Gäste kommen gern.', need: { lanterns: 11, pop: 130, money: 1500000, science: 150 } },
   { id: 'kristall', name: 'Kristallinsel', lm: 'kristall', icon: '💎', deg: 332, ter: 'kristall',
-    text: 'Leuchtende Kristalle im Fels – Kristall 💎 für Glas und Kristall-Deko. Nur wer viel weiß, findet den Weg.', need: { lanterns: 14, pop: 160, money: 20000, science: 600 } },
+    text: 'Leuchtende Kristalle im Fels – Kristall 💎 für Glas und Kristall-Deko. Nur wer viel weiß, findet den Weg.', need: { lanterns: 14, pop: 160, money: 5000000, science: 600 } },
 ];
 const ISLE_BY_ID = Object.fromEntries(ISLES.map(i => [i.id, i]));
 const ISLE_OF_LM = Object.fromEntries(ISLES.map(i => [i.lm, i]));
