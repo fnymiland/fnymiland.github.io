@@ -1475,7 +1475,7 @@ function showIntro(first) {
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-10-01', items: [
-  '🛍️ <b>Läden!</b> Café, Teeladen, Bubble Tea, Eisdiele, Buchladen, Pizzeria, Juwelier, Möbelhaus … Sie verdienen an den Leuten im Viertel und an Besuchern – und verkaufen Waren aus dem Lager zum Dreifachen.',
+  '🛍️ <b>Läden!</b> Café, Teeladen, Bubble Tea, Eisdiele, Buchladen, Pizzeria, Juwelier, Möbelhaus … jeder mit eigenen Farben und einem Wahrzeichen auf dem Dach. Sie verdienen an den Leuten im Viertel und an Besuchern – und verkaufen Waren aus dem Lager zum Dreifachen.',
   '🏙️ <b>Innenstadt:</b> Viele verschiedene Läden in einem Viertel bringen bis zu +100 %. Gleiche Läden teilen sich die Kundschaft.',
   '🎭 <b>Kultur und Endgame:</b> Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion, Hotels, Kaufhaus und Einkaufspassage ziehen Besucher an.',
   '☕ <b>Kaffee, Tee und Kakao</b> wachsen auf den fernen Inseln – Cafés und Chocolaterien brauchen sie.',

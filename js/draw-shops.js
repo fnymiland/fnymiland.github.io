@@ -2,7 +2,7 @@
 // ---------------------------------------------------------------------------
 // Läden, Kultur und Plantagen (Block 30) – im Baukasten (draw-kit.js), vorn (+a) ist die Tür.
 // Kleine Läden teilen sich ein Ladenhaus (Schaufenster, Markise, rundes Schild mit Symbol, Auslage vor der Tür);
-// die großen haben je ein eigenes Bild. Farben aus SHOPS[id].look (Wand und Dach kann man selbst wählen).
+// die großen haben je ein eigenes Bild. Farben fest je Laden (Marke, Block 32).
 // ---------------------------------------------------------------------------
 // Rundes Schild mit Symbol, das seitlich am Haus hängt
 function kShopSign(K, a, b, up, icon, col) {
@@ -75,6 +75,38 @@ function smallShopArt(id) {
     K.scene(parts.concat(shopProps(K, props, awn, now)));
   };
 }
+// ---------------------------------------------------------------------------
+// Marken (Block 32): Jeder Laden hat feste Farben und ein Wahrzeichen, an dem man ihn von weitem erkennt (Riesen-Becher
+// auf dem Dach, Friseur-Säule, grünes Apothekenkreuz …). Die Bilder stehen je Gruppe in js/shopart/*.js und tragen sich
+// in SHOP_ART ein; wer dort fehlt, bekommt das einfache Ladenhaus oben.
+// ---------------------------------------------------------------------------
+// Grundhaus eines kleinen Ladens (1×1) in festen Farben: Schaufenster und Tür unter der Markise, oben Fenster.
+// spec: wall, roof, awning (Markisenfarbe; null = keine), roofType ('hip' | 'gable' | 'flat' | 'mansard' | 'barrel'),
+// h (Wandhöhe in px), roofH, ridge ('a' | 'b' bei gable), shopWin (Farbe der Schaufenster-Rahmung, optional),
+// upperWins (Fenster oben: Anzahl, 0 = keine). Gibt den Block zurück (B.faces.front/right/left/back, je { P, Q, H }).
+function shopHouse(K, { wall, roof, awning = null, roofType = 'hip', h = 20, roofH = 9, ridge = null, ha = 0.34, hb = 0.37, a = -0.08, b = 0, upperWins = 2, trim = null }) {
+  const B = K.block({ a, b, ha, hb, h, wall, roof, roofH, type: roofType, ridge, entry: true });
+  const F = B.faces.front;
+  if (F) {
+    if (trim) faceQuad(F.P, F.Q, 0.06, 0.6, F.H * 0.05, F.H * 0.45, C(trim));                  // Rahmen ums Schaufenster
+    windowOn(F.P, F.Q, 0.1, 0.56, F.H * 0.08, F.H * 0.42, K.z);
+    faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, C(DOOR_COL));
+  }
+  if (awning) kAwning(K, B, 'front', awning, 0.44, 0.56);
+  if (upperWins) { K.wins(B, 'front', upperWins, 0.64, 0.86); K.sideWins(B, upperWins, 0.64, 0.86); }
+  if (!F) K.sideWins(B, 2, 0.12, 0.4);
+  return B;
+}
+// Aufrechter Text (Schriftzug, Buchstaben) mittig bei (x, y) – Größe in px × z
+function kText(x, y, text, size, col, z, weight = 900) {
+  g.font = `${weight} ${Math.max(1, size * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = C(col); g.fillText(text, x, y);
+}
+// Punkt auf einer Seite: t (0 … 1 von P nach Q), in Höhe up (px, schon mit z)
+const faceAt = (F, t, up) => { const m = lerp(F.P, F.Q, t); return [m[0], m[1] - up]; };
+// Die Seite, die man sieht: Tür-Seite, sonst die rechte oder linke (für Schilder, die immer zu sehen sein sollen)
+const shownFace = B => B.faces.front || B.faces.right || B.faces.left || B.faces.back;
+
 // Großer Block mit Fensterreihen (Möbelhaus, Hotel, Kaufhaus …)
 function kFloors(K, B, n, per, from = 0.1, to = 0.9) {
   for (let f = 0; f < n; f++) { const h0 = (f + 0.25) / n, h1 = (f + 0.75) / n; K.wins(B, 'front', per, h0, h1, from, to); K.sideWins(B, per, h0, h1); }
@@ -257,7 +289,9 @@ function plantRows(K, leaf, fruit, rows) {
   }
   K.scene(parts);
 }
-for (const id of Object.keys(SHOPS)) BUILDING_ART[id] = SHOP_ART[id] || smallShopArt(id);
+// erst beim Zeichnen nachsehen: die Gruppen-Dateien (js/shopart/*.js) laden danach und tragen sich in SHOP_ART ein
+const SMALL_SHOP = {};
+for (const id of Object.keys(SHOPS)) BUILDING_ART[id] = (...args) => (SHOP_ART[id] || SMALL_SHOP[id] || (SMALL_SHOP[id] = smallShopArt(id)))(...args);
 for (const id of ['kaffeeplantage', 'teegarten', 'kakaoplantage']) BUILDING_ART[id] = SHOP_ART[id];
-for (const id of Object.keys(SHOPS)) PAINTABLE.add(id);
+// Läden haben feste Markenfarben (man soll sie erkennen) – nicht umfärbbar
 for (const id of ['zoo', 'stadion', 'kaffeeplantage', 'teegarten', 'kakaoplantage']) GROUND_TYPES.add(id);   // haben flache Teile (groundPart)
