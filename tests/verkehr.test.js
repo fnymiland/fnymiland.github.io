@@ -76,6 +76,17 @@ describe('Jede Insel zählt einmal (25b)', () => {
   });
 });
 
+describe('Ortsteil eines Halts', () => {
+  it('Infofenster und Vorschau nennen den Ortsteil; aufgeschüttetes Meer gehört zur nächsten Insel', () => {
+    line();
+    game('openInfo(17, 10)');
+    expect(document.getElementById('panel').textContent).toMatch(/Ortsteil .*Waldinsel/);
+    const [x, y] = game(`(() => { const w = ISLE_BY_ID.wald; for (let d = 12; d < 30; d++) { const x = Math.round(w.cx - d), y = Math.round(w.cy); if (isSea(x, y)) return [x, y]; } })()`);
+    game('regionAt = globalThis.__ra; delete globalThis.__ra');
+    expect(game(`placeLabel(${x}, ${y})`)).toMatch(/(aufgeschüttet)/);
+  });
+});
+
 describe('Züge im Spiel', () => {
   it('Fahrkarten und Besucher bringen Taler; die Sehenswürdigkeit drüben ist angebunden', () => {
     for (let i = 0; i < 30; i++) game(`state.tiles.set('${3 + (i % 6)},${3 + Math.floor(i / 6)}', { b: 'haus', lvl: 3 })`);  // 30 Häuser daheim

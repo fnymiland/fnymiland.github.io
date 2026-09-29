@@ -503,7 +503,7 @@ function render(now) {
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
-          const pv = previewDelta(tool, hx, hy), parts = [];
+          const pv = previewDelta(tool, hx, hy), parts = STOPS.has(tool) ? [placeLabel(hx, hy)] : [];
           if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
           if (Math.abs(pv.inc) >= 0.05) parts.push(`${pv.inc > 0 ? '+' : ''}${fmtRate(pv.inc)}/s`);
           if (Math.abs(pv.sci) >= 0.05) parts.push(`💡 +${fmtRate(pv.sci)}`);

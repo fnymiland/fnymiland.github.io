@@ -615,6 +615,7 @@ function openInfo(x, y) {
   else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
+  if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
@@ -863,6 +864,12 @@ function cableStatus(k) {
 }
 // Fahrgäste, Plätze, Auslastung und was es bringt
 const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
+// Zu welchem Ortsteil ein Halt zählt (Fahrgäste rechnen je Ortsteil) – auf aufgeschüttetem Land die nächste Insel
+const STOPS = new Set(['station', 'seilbahn', 'hafen', 'bootssteg']);
+function placeLabel(x, y) {
+  const r = regionAt(x, y), filled = islandAt(x, y) !== r;
+  return `📍 Ortsteil ${regionIcon(r)} ${regionName(r)}${filled ? ' (aufgeschüttet)' : ''}`;
+}
 function trafficStatus(line, tr) {
   const pct = tr.seats ? Math.round(tr.demand / tr.seats * 100) : 0, out = [];
   const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
