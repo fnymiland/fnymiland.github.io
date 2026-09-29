@@ -19,7 +19,8 @@ describe('Wunderwerke', () => {
   });
 
   it('erst eine Baustelle: ohne Wirkung, Abschnitt für Abschnitt – fertig gibt es ein Fest und die Wirkung', () => {
-    game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; for (let i = 0; i < 5; i++) state.tiles.set((5 + i * 2) + ',13', { b: 'geothermie', lvl: 3 }); recalc()");
+    game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; for (let i = 0; i < 5; i++) state.tiles.set((5 + i * 2) + ',13', { b: 'geothermie', lvl: 3 })");
+    game("for (let x = 5; x <= 7; x++) state.tiles.set(x + ',3', { b: 'feld', lvl: 1 }); recalc()");
     const inc0 = game('T.inc');
     expect(game("build('riesenrad', 8, 8, true)")).toBe(true);
     expect(game("state.tiles.get('8,8').phase")).toBe(0);
@@ -32,7 +33,7 @@ describe('Wunderwerke', () => {
     finish(8, 8);
     expect(game("wonderDone(state.tiles.get('8,8'))")).toBe(true);
     expect($('modal-card').textContent).toContain('Riesenrad');
-    expect(game('T.inc')).toBeGreaterThan(inc0 + 70);
+    expect(game('T.inc')).toBeCloseTo(inc0 * 1.25);                          // +25 % Einnahmen
   });
 
   it('jedes Wunderwerk nur einmal', () => {
@@ -40,32 +41,32 @@ describe('Wunderwerke', () => {
     expect(game("placeError('riesenrad', 10, 10)")).toBe('Das Riesenrad gibt es schon');
   });
 
-  it('Sternwarte: +25 % Ideen', () => {
+  it('Sternwarte: +50 % Ideen', () => {
     game("state.techs.add('uni'); state.tiles.set('5,12', { b: 'bibliothek', lvl: 1 }); recalc()");
     const sci = game('T.sci');
     expect(game("build('sternwarte', 8, 8, true)")).toBe(true);
     finish(8, 8);
-    expect(game('T.sci')).toBeCloseTo(sci * 1.25);
+    expect(game('T.sci')).toBeCloseTo(sci * 1.5);
   });
 
-  it('Seebrücke: vom Ufer ins Wasser, Kurgäste bringen Einwohner', () => {
-    game("state.restore.quelle = 1; for (let x = 9; x <= 13; x++) state.terra.set(x + ',8', 'water'); recalc()");
+  it('Seebrücke: vom Ufer ins Wasser, Kurgäste bringen +20 % Einwohner', () => {
+    game("state.restore.quelle = 1; for (let x = 9; x <= 13; x++) state.terra.set(x + ',8', 'water'); for (let x = 5; x <= 9; x++) state.tiles.set(x + ',13', { b: 'haus', lvl: 3 }); recalc()");
     expect(game("placeError('seebruecke', 5, 5, 0)")).toBe('Vom Ufer aus ins Wasser bauen');
     const pop = game('T.pop');
     expect(game("placeError('seebruecke', 8, 8, 0)")).toBe(null);
     expect(game("build('seebruecke', 8, 8, true)")).toBe(true);
     finish(8, 8);
-    expect(game('T.pop')).toBe(pop + 40);
+    expect(game('T.pop')).toBe(Math.round(pop * 1.2));                        // +20 % Einwohner
   });
 
-  it('Schloss erst nach dem Laternenfest – danach „Königliche Inselperle“ und +20 % auf alles', () => {
+  it('Schloss erst nach dem Laternenfest – danach „Königliche Inselperle“ und +50 % auf alles', () => {
     expect(game("available('schloss')")).toBe(false);
     game("state.festival = true; state.tiles.set('5,12', { b: 'feld', lvl: 1 }); recalc()");
     const inc = game('T.inc');
     expect(game("build('schloss', 8, 5, true)")).toBe(true);
     finish(8, 5);
     expect(game('townTitle()')).toBe('Königliche Inselperle');
-    expect(game('T.inc')).toBeCloseTo(inc * 1.2);
+    expect(game('T.inc')).toBeCloseTo(inc * 1.5);
   });
 
   it('Infofenster: nächster Abschnitt mit Kosten und Knopf; bezahlbar steht es im Rathaus unter „Bereit“', () => {

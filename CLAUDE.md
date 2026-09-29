@@ -262,6 +262,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     (`far: true`, eigenes `r`, kein `lm`). Wer über Inseln läuft: `ISLES` sind nur die sieben Themen-Inseln; Reihenfolge
     über `regionRank`/`byRegion`. Entdecken per Boot (`expMinutes`), in der Mitte eine Truhe (`truhe`, `t.isle`),
     `openChest` rechnet die Belohnung beim Öffnen (`chestLoot`).
+56. **Wunder** (Block 28): dauerhafte Boni in `WONDERS[b].effect` (`incMul`, `sciMul`, `popMul`, `beautyMul`, `allMul`), in
+    `totals` über `won` (Wunder → 1, ohne Strom ½) → `T.wonders`; `wonderOn(b)` für Fähigkeiten. Schübe auf Zeit (Jahrmarkt:
+    `fairLeft`, echte Uhr; Erlasse: `state.decree`/`decreeNext`) wirken nur über `boostMul(kind)` beim Verdienen (`earn`),
+    Erzeugen (`produce`) und bei den Ideen (main.js) – nie in `T` einrechnen. Sternschnuppen (`fallenStars`, nicht gespeichert)
+    per `starTick`/`collectStarAt` (im `tap` vor allem anderen). Garten: `access.green` erfüllt „Park“/„schön“ (`how: 'garten'`),
+    exotische Deko mit `garden: 'botgarten'` (in `unlockOk`, zählt nicht fürs Album).
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).

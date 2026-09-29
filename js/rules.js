@@ -214,6 +214,10 @@ function totals() {
   const idle = rail.power.idle, off = k => idle.has(k) ? NO_POWER : 1;      // ohne Strom: halbe Wirkung
   const harbors = [...state.tiles].filter(([, t]) => t.b === 'hafen').reduce((n, [k]) => n + off(k), 0);
   const gmul = 1 + (hasTech('schiffbau') ? 0.12 : 0.08) * harbors;
+  // Fertige Wunderwerke (Block 28): Wunder → 1, ohne Strom ½
+  const won = {};
+  for (const [k, t] of state.tiles) if (WONDERS[t.b] && wonderDone(t)) won[t.b] = Math.max(won[t.b] || 0, off(k));
+  const green = won.botgarten ? 1 + won.botgarten : 1;                   // Botanischer Garten: Obst und Felder doppelt
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
@@ -233,6 +237,7 @@ function totals() {
         let v = base * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * mR;
         if (t.b === 'mine' && lmOn.has('erzberg')) v *= 1.25;
         if (t.b === 'holz' && hasTech('axt')) v *= 1.3;
+        if (t.b === 'obst') v *= green;
         s.prod[r] = v; prod[r] = (prod[r] || 0) + v;
       }
     }
@@ -242,7 +247,7 @@ function totals() {
     }
     if (d.cat === 'bau' && !d.prod && !d.conv) {
       let v = rawIncome(t.b, x, y) * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * gmul;
-      v *= off(k) * mT;                                                       // ohne Strom halb; Handelskunst
+      v *= off(k) * mT * (t.b === 'feld' ? green : 1);                         // ohne Strom halb; Handelskunst; Garten
       if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
     }
@@ -263,32 +268,29 @@ function totals() {
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
   if (hasTech('sterne')) sci *= 1.2;
-  // Wunderwerke (nur fertige): Touristen, Kurgäste, Ideen, Obst – das Schloss gibt +20 % auf alles
-  let allMul = 0;
-  for (const [k, t] of state.tiles) {
-    const W = WONDERS[t.b];
-    if (!W || !wonderDone(t)) continue;
-    const e = W.effect, f = off(k);                                             // Riesenrad, Sternwarte, Garten ohne Strom: halb
-    if (e.inc) inc += e.inc * gmul * f * mT;
-    if (e.pop) pop += e.pop * f;
-    if (e.sciMul) sci *= 1 + e.sciMul * f;
-    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f * mR;
-    if (e.allMul) allMul += e.allMul * f;
-  }
+  // Wunderwerke (nur fertige): dauerhafte Boni (ohne Strom halb) – Riesenrad Einnahmen, Sternwarte Ideen, Seebrücke
+  // Einwohner, Garten Schönheit, Schloss alles
+  const wm = key => Object.entries(won).reduce((a, [b, f]) => a + (WONDERS[b].effect[key] || 0) * f, 0);
+  const allMul = wm('allMul');
+  sci *= 1 + wm('sciMul');
+  pop *= 1 + wm('popMul');
+  beauty *= 1 + wm('beautyMul');
   // Verkehr: Fahrkarten und was die Besucher am Ziel ausgeben
   let fare = 0, spend = 0;
   for (const l of links) { fare += l.traffic.fare; spend += l.traffic.spend; }
   inc += (fare + spend) * mT;
+  inc *= 1 + wm('incMul');
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   const access = buildAccess(net, links);
+  access.green = !!won.botgarten;
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y, access); }
   // Gebäude-Stufen (für ✨ und Infofenster)
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
@@ -306,6 +308,7 @@ function unlockOk(def, key) {
   if (def.tech && !hasTech(def.tech)) return false;
   if (def.rank && starCount() < def.rank) return false;                // Pokale: genug Erfolgs-Sterne
   if (def.festival && !state.festival) return false;                    // Schloss: nach dem Laternenfest
+  if (def.garden && !wonderOn(def.garden)) return false;               // exotische Deko: erst mit dem Botanischen Garten
   if (def.album && !albumDone(def.album)) return false;                // Album-Belohnung: volle Seite
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return false;   // Erfindung (für Ideen)
   return true;
@@ -322,6 +325,7 @@ function unlockText(def, short) {
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
   if (def.festival && !state.festival) return '🎆 nach dem Laternenfest';
+  if (def.garden && !wonderOn(def.garden)) return '🌿 Botanischer Garten';
   if (def.album && !albumDone(def.album)) return `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
   return '';
@@ -468,11 +472,12 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs, acc = T.access) {
   if (up.pop) conds.push({ text: `👥 ${up.pop} Einwohner auf der Insel`, ok: pop >= up.pop });
   if (up.tech) conds.push({ text: `💡 Forschung „${TECH_BY_ID[up.tech].name}“`, ok: hasTech(up.tech) });
   if (up.water) conds.push({ text: `💧 Am Wasser mit mindestens ${up.water} Feldern (auch Flüsse)`, ok: waterBody(x, y, up.water) >= up.water });
-  if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
+  if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ...(acc && acc.green ? { ok: true, how: 'garten' } : { ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] }) });
   if (up.near) {
     const [types0, n, r] = up.near, types = [].concat(types0);
     const pred = b => types.some(k => isKind(k, b));
-    if (r < 2) conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, pred) >= n });   // direkt daneben: nur vor Ort
+    if (acc && acc.green && types.includes('park')) conds.push({ text: nearText(types, n, r, t.b), ok: true, how: 'garten' });
+    else if (r < 2) conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, pred) >= n });   // direkt daneben: nur vor Ort
     else { const got = reachKind(acc, x + ',' + y, x, y, r, pred, n); conds.push({ text: nearText(types, n, r, t.b), ok: !!got.how, how: got.how }); }
   }
   return { next: { name: S.names[t.lvl], cost: up.cost }, conds, ready: conds.every(c => c.ok) };
@@ -709,7 +714,9 @@ function cablePairs() {
 const BERTHS = [2, 4, 6];
 const berthsOf = t => BERTHS[Math.min(3, t.lvl || 1) - 1];
 const shipModel = s => SHIP_BY_ID[s.model] || SHIP_BY_ID.holz;
-const shipSeats = s => Math.round(shipModel(s).seats * shipModel(s).speed);
+const SHIP_FAST = 1.25;                                                   // Seebrücke: Schiffe fahren schneller
+const shipSpeed = s => shipModel(s).speed * (wonderOn('seebruecke') ? SHIP_FAST : 1);
+const shipSeats = s => Math.round(shipModel(s).seats * shipSpeed(s));
 const isLanding = t => !!t && (t.b === 'bootssteg' || t.b === 'hafen');
 // Seewege (Block 24b): Schiffe fahren nur übers Wasser – kürzester Weg über Wasserfelder (8 Richtungen, nie schräg an
 // einer Landecke vorbei), dann geglättet (gerade Stücke, solange die Sichtlinie übers Wasser geht). Gemerkt, bis sich
@@ -850,7 +857,7 @@ const RES_SOURCE = { holz: 'holz', stein: 'stein', erz: 'mine', obst: 'obst', br
 const ORDER_TTL = 12 * 60e3, ORDER_EVERY = 3 * 60e3, ORDER_SLOTS = [0, 2, 4];         // Plätze je Hafen-Stufe 1/2/3
 const tradeLevel = () => Math.max(0, ...[...state.tiles.values()].filter(t => t.b === 'hafen').map(t => Math.min(3, t.lvl || 1)));
 const canTrade = () => tradeLevel() >= 2;
-const orderSlots = () => tradeLevel() ? ORDER_SLOTS[tradeLevel() - 1] : 0;
+const orderSlots = () => tradeLevel() ? ORDER_SLOTS[tradeLevel() - 1] + (tradeLevel() >= 2 && wonderOn('seebruecke') ? 1 : 0) : 0;   // Seebrücke: +1
 function makeOrder(now, rnd = Math.random) {
   const big = tradeLevel() >= 3, taken = r => state.orders.some(o => o.res === r);
   const stock = Object.keys(TRADE_PRICE).filter(r => state.res[r] >= 50 && !taken(r));
@@ -858,7 +865,7 @@ function makeOrder(now, rnd = Math.random) {
     const w = stock.map(r => state.res[r] * TRADE_PRICE[r]);
     let pick = rnd() * w.reduce((a, b) => a + b, 0), res = stock[stock.length - 1];
     for (let i = 0; i < stock.length; i++) { pick -= w[i]; if (pick <= 0) { res = stock[i]; break; } }
-    const huge = big && rnd() < 0.3, share = huge ? 0.8 + rnd() * 0.2 : 0.3 + rnd() * 0.5, prem = huge ? 2 + rnd() : 1.2 + rnd() * 0.6;
+    const huge = big && rnd() < 0.3, share = huge ? 0.8 + rnd() * 0.2 : 0.3 + rnd() * 0.5, prem = (huge ? 2 + rnd() : 1.2 + rnd() * 0.6) * (wonderOn('seebruecke') ? 1.5 : 1);
     const amount = Math.max(10, niceRound(Math.floor(state.res[res] * share)));
     return { id: now + ':' + res, kind: 'sell', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * prem), prem, huge, until: now + ORDER_TTL };
   }
@@ -1303,6 +1310,7 @@ function reachKind(acc, k, x, y, r, pred, n = 1) {
 const WISH_REACH = { baecker: [6, b => isKind('baecker', b)], markt: [8, b => isKind('markt', b)],
   park: [4, b => isKind('park', b) || isKind('brunnen', b)], schule: [10, b => isKind('schule', b)] };
 function wishCheck(w, x, y, acc = T.access) {
+  if (acc && acc.green && (w === 'park' || w === 'schoen')) return { ok: true, how: 'garten' };     // Botanischer Garten
   if (!WISH_REACH[w]) return { ok: wishMet(w, x, y), how: null };
   const [r, pred] = WISH_REACH[w], got = reachKind(acc, x + ',' + y, x, y, r, pred);
   return { ok: !!got.how, how: got.how };

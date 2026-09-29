@@ -182,6 +182,27 @@ function renderGroundChunk(cx, cy, scale) {
   g = prev;
   return { c, b, scale, v: groundVersion, waves, used: frameNo };
 }
+// Sternschnuppe (Sternwarte): fällt in der ersten Sekunde schräg vom Himmel, liegt dann funkelnd da und verblasst am Ende
+function drawFallenStar(s, z, now) {
+  const age = now - s.t0, p = toScreen(s.x, s.y), fall = Math.min(1, age / 1000);
+  const x = p.x + (1 - fall) * 220 * z, y = p.y - 14 * z - (1 - fall) * 320 * z, fade = Math.min(1, (STAR_LIFE - age) / 5000);
+  if (fade <= 0 || x < -60 || x > W + 60 || y < -60 || y > H + 60) return;
+  g.save();
+  g.globalAlpha = Math.max(0, fade);
+  if (fall < 1) {                                                       // Schweif
+    const grd = g.createLinearGradient(x, y, x + 60 * z, y - 90 * z);
+    grd.addColorStop(0, 'rgba(255,240,170,0.9)'); grd.addColorStop(1, 'rgba(255,240,170,0)');
+    g.strokeStyle = grd; g.lineWidth = 2.5 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x, y); g.lineTo(x + 60 * z, y - 90 * z); g.stroke();
+  }
+  const r = (8 + Math.sin(now / 250) * 1) * z;
+  g.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  g.closePath(); g.fillStyle = '#ffe27a'; g.fill();
+  circle(x, y, r * 0.3, '#fffbe6');
+  g.restore();
+  glowQuad([[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]], 50 * z);
+}
 // Tiefes Meer (Block 27b): weit draußen dunkler. Ein kleines Bild mit einem Punkt je Feld (depthAlpha), gedreht und
 // gestaucht wie die Felder über den Boden gelegt (ohne Glätten: jeder Punkt ist genau ein Feld). Neu gerechnet, wenn
 // der sichtbare Bereich es verlässt oder sich Wasser ändert.
@@ -567,6 +588,7 @@ function render(now) {
         if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
         if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
         if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
+        if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet
         if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
         if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
         if (s && s.wish && s.wish.next) {
@@ -638,6 +660,7 @@ function render(now) {
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
 
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
+  for (const s of fallenStars) drawFallenStar(s, z, now);
   for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“

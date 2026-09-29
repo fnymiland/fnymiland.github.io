@@ -85,6 +85,9 @@ const ITEMS = {
   blumentopf: { cat: 'deko', name: 'Blumentopf', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   busch:   { cat: 'deko', name: 'Kleiner Busch', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   hecke:   { cat: 'deko', name: 'Hecke', cost: 10, beauty: 1, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
+  // exotisch – aus dem Botanischen Garten (garden)
+  palme:   { cat: 'deko', name: 'Palme', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten. Klein – bis zu 4 pro Feld.' },
+  riesenblume: { cat: 'deko', name: 'Riesenblume', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten: so groß wie ein Mensch. Bis zu 4 pro Feld.' },
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
@@ -105,15 +108,15 @@ const ITEMS = {
   pokal_gold: { cat: 'deko', name: 'Gold-Pokal', cost: 0, beauty: 16, small: true, rank: 30, desc: 'Für die Ehrennadel in Gold (30 ⭐ Erfolge). Funkelt.' },
   // --- Wunderwerke: erst eine Baustelle, dann Abschnitt für Abschnitt (WONDERS in story.js); Wirkung erst fertig ---
   riesenrad:  { cat: 'wunder', name: 'Riesenrad', size: [5, 5], cost: 2000, needs: 'grass', lanterns: 10, beauty: 200, wonder: true,
-                desc: 'Touristen kommen: +80 Taler/s und viel Schönheit. Dreht sich, nachts bunt. Fertig braucht es 100 ⚡ Strom.' },
+                desc: '+25 % Einnahmen und alle 15 Minuten Jahrmarkt (3 Minuten dreifache Einnahmen). Dreht sich, nachts bunt. Fertig braucht es 100 ⚡ Strom.' },
   sternwarte: { cat: 'wunder', name: 'Sternwarte', size: [3, 3], cost: 2000, needs: 'grass', tech: 'uni', beauty: 90, wonder: true,
-                desc: '+25 % Ideen für die ganze Insel. Nachts öffnet sich die Kuppel. Fertig braucht sie 100 ⚡ Strom.' },
+                desc: '+50 % Ideen, nachts Sternschnuppen zum Antippen, das Boot findet Inseln doppelt so schnell. Fertig braucht sie 100 ⚡ Strom.' },
   seebruecke: { cat: 'wunder', name: 'Seebrücke', size: [4, 1], cost: 1500, needs: 'pier', lm: 'quelle:1', beauty: 80, wonder: true,
-                desc: 'Vom Ufer ins Meer, mit Pavillon: Kurgäste bringen +40 Einwohner und +40 Taler/s. Fertig braucht sie 100 ⚡ Strom.' },
+                desc: 'Vom Ufer ins Meer, mit Pavillon: +20 % Einwohner; Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe schneller. Fertig braucht sie 100 ⚡ Strom.' },
   botgarten:  { cat: 'wunder', name: 'Botanischer Garten', size: [5, 5], cost: 3000, needs: 'grass', lm: 'kristall:1', beauty: 320, wonder: true,
-                desc: 'Palmenhaus aus Glas mit Gärten: sehr viel Schönheit und Obst. Fertig braucht er 100 ⚡ Strom (Heizung).' },
+                desc: 'Palmenhaus aus Glas: +50 % Schönheit, „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, Palmen und Riesenblumen. Fertig braucht er 100 ⚡ Strom (Heizung).' },
   schloss:    { cat: 'wunder', name: 'Schloss', size: [7, 7], cost: 10000, needs: 'grass', festival: true, beauty: 500, wonder: true,
-                desc: 'Das Finale nach dem Laternenfest: +20 % auf alles, „Königliche Inselperle“. Fertig braucht es 300 ⚡ Strom.' },
+                desc: 'Das Finale nach dem Laternenfest: +50 % auf alles, „Königliche Inselperle“, alle 10 Minuten ein Erlass nach Wahl. Fertig braucht es 300 ⚡ Strom.' },
   // Belohnungen fürs Sammelalbum (album = Seite, die voll sein muss)
   denkmal:    { cat: 'deko', name: 'Baumeister-Denkmal', cost: 0, needs: 'grass', beauty: 40, album: 'gebaeude', desc: 'Für die volle Album-Seite „Gebäude“.' },
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
@@ -304,7 +307,7 @@ const MENU = [
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
-  { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
+  { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'seilbahn'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
@@ -332,7 +335,7 @@ const FX = {
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
-  riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +320 · 🍎', schloss: '+20 % auf alles',
+  riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
 const ITEM_TIPS = {
@@ -370,6 +373,8 @@ const ITEM_TIPS = {
   blumentopf: 'Kleine Deko für eine Ecke, auch vors Haus. Häuser wünschen sich Deko in der Nähe.',
   busch: 'Kleine Deko für eine Ecke – bis zu 4 pro Feld, gut zum Mischen mit Baum und Bank.',
   hecke: 'Kleine Deko für eine Ecke – als Rand um Gärten und Plätze.',
+  palme: 'Ein Gruß aus dem Botanischen Garten – schön am Strand und am Hafen.',
+  riesenblume: 'Aus dem Palmenhaus: riesige Blüten in bunten Farben, bis zu 4 pro Feld.',
   bank: 'Kleine Deko für eine Ecke, gern an den Weg oder vors Haus.',
   laterne: 'Kleine Deko, leuchtet nachts – schön entlang der Wege.',
   brunnen: 'Stadthäuser wünschen sich einen Park oder Brunnen in der Nähe.',

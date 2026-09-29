@@ -391,7 +391,7 @@ function shipMovers(now) {
     if (!f.route) continue;                                     // kein Seeweg: die Schiffe liegen am Pier
     const r = f.route, len = Math.max(0.1, r.len);
     f.ships.forEach((s, i) => {
-      const spd = SHIP_SPEED * shipModel(s).speed, leg = len / spd + SHIP_WAIT, lap = 2 * leg;
+      const spd = SHIP_SPEED * shipSpeed(s), leg = len / spd + SHIP_WAIT, lap = 2 * leg;
       let t = ((now / 1000) + i * lap / f.ships.length + hash(r.pts[0][0] | 0, r.pts[0][1] | 0, 9) * lap) % lap, dir = 1;
       if (t > leg) { t -= leg; dir = -1; }
       let k = Math.max(0, Math.min(1, (t - SHIP_WAIT) / (len / spd)));

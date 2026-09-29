@@ -105,12 +105,12 @@ describe('Neue Verbraucher', () => {
     expect(game("['riesenrad', 'sternwarte', 'botgarten', 'seebruecke', 'schloss'].map(b => CONSUMERS[b])")).toEqual([100, 100, 100, 100, 300]);
     game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; state.tiles.set('5,5', { b: 'riesenrad', lvl: 1, phase: 0 })"); finish('5,5');
     game("state.tiles.set('12,12', { b: 'geothermie', lvl: 3 }); recalc()");                   // 24 ⚡ reichen nicht
-    const half = game('T.inc');
     expect(game("T.st.get('5,5').noPower")).toBe(true);
+    expect(game('T.wonders.riesenrad')).toBe(0.5);                                            // Bonus halb
     for (let i = 0; i < 4; i++) game(`state.tiles.set('${10 + i * 2},3', { b: 'geothermie', lvl: 3 })`);   // 5 × 24 = 120 ⚡
     game('recalc()');
     expect(game("T.st.get('5,5').noPower")).toBeFalsy();
-    expect(game('T.inc') - half).toBeGreaterThan(35);
+    expect(game('T.wonders.riesenrad')).toBe(1);
   });
 
   it('der letzte Abschnitt jedes Wunderwerks kostet mindestens 1 Mio. Taler', () => {

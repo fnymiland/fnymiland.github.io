@@ -999,6 +999,35 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       circle(cx - 2 * z, cy - 11 * z, 2.6 * z, C('#86d37c'));
       break;
     }
+    case 'palme': {                        // gebogener Stamm in Ringen, Wedel hängen rundum herab, Kokosnüsse
+      ellipse(cx, cy + 1 * z, 8 * z, 3 * z, 'rgba(40,60,20,0.18)');
+      const tx = cx + 4 * z, ty = cy - 24 * z;
+      g.lineCap = 'round';
+      for (let i = 0; i < 7; i++) {
+        const a = i / 7, b = (i + 1) / 7;
+        g.strokeStyle = C(i % 2 ? '#9b7045' : '#b0835a'); g.lineWidth = (3.4 - 1.4 * a) * z;
+        g.beginPath(); g.moveTo(cx + 4 * z * a * a, cy - 24 * z * a); g.lineTo(cx + 4 * z * b * b, cy - 24 * z * b); g.stroke();
+      }
+      for (let i = 0; i < 7; i++) {
+        const a = -Math.PI / 2 + (i - 3) * 0.52 + Math.sin(now / 900 + i) * 0.04, len = 12 * z;
+        const ex = tx + Math.cos(a) * len * 1.25, ey = ty + Math.sin(a) * len * 0.5 + 6 * z;
+        g.strokeStyle = C(i % 2 ? '#3f9a4a' : '#56b35a'); g.lineWidth = 3 * z;
+        g.beginPath(); g.moveTo(tx, ty); g.quadraticCurveTo(tx + Math.cos(a) * len * 0.7, ty + Math.sin(a) * len * 0.45 - 4 * z, ex, ey); g.stroke();
+      }
+      circle(tx - 1.2 * z, ty + 1.8 * z, 1.7 * z, C('#7a5a34')); circle(tx + 1.3 * z, ty + 2.2 * z, 1.7 * z, C('#6b4c2a'));
+      break;
+    }
+    case 'riesenblume': {                  // hoher Stiel, zwei Blätter, große Blüte (Farbe je Platz)
+      ellipse(cx, cy + 1 * z, 7 * z, 2.8 * z, 'rgba(40,60,20,0.18)');
+      g.strokeStyle = C('#4f9a45'); g.lineWidth = 1.9 * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx - 2 * z, cy - 10 * z, cx + 1 * z, cy - 19 * z); g.stroke();
+      poly([[cx - 0.5 * z, cy - 5 * z], [cx - 7 * z, cy - 9 * z], [cx - 1 * z, cy - 8.5 * z]], C('#5aae54'));
+      poly([[cx, cy - 9 * z], [cx + 7 * z, cy - 13 * z], [cx + 1 * z, cy - 12.5 * z]], C('#62b85a'));
+      const hx = cx + 1 * z, hy = cy - 21 * z, col = FLOWER_COLS[Math.floor(hash(x, y, 71 + ((t && t.slot) || 0)) * FLOWER_COLS.length)];
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2 + now / 5000; ellipse(hx + Math.cos(a) * 4.2 * z, hy + Math.sin(a) * 4.2 * z, 3.1 * z, 3.1 * z, C(col)); }
+      circle(hx, hy, 2.8 * z, C('#f2c14e')); circle(hx - 0.8 * z, hy - 0.8 * z, 1 * z, C('#ffe28a'));
+      break;
+    }
     case 'hecke': {
       box(cx, cy, hw * 0.45, hh * 0.45, 6 * z, '#4f9e4a', null, 0);
       for (let i = 0; i < 5; i++) {

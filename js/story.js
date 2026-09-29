@@ -45,7 +45,7 @@ const DISCOVERY = {
   kristall: 'Die längste Fahrt von allen. In der Nacht leuchtete der Horizont: eine Insel aus Kristall, in der das Mondlicht funkelt.',
 };
 // Wie lange das Boot unterwegs ist: Themen-Inseln fest, ferne Inseln jedes Mal etwas länger (höchstens 30 Min.)
-const expMinutes = i => i.far ? Math.min(30, 10 + 2 * (i.n - 1)) : EXPEDITION_MIN[i.id];
+const expMinutes = i => { const m = i.far ? Math.min(30, 10 + 2 * (i.n - 1)) : EXPEDITION_MIN[i.id]; return T.wonders && T.wonders.sternwarte ? Math.ceil(m / 2) : m; };
 const stegs = () => [...state.tiles].filter(([, t]) => t.b === 'bootssteg').map(([k]) => k);
 function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
@@ -388,20 +388,21 @@ function goalHtml() {
       <div class="req">${s.text}</div><div class="req muted">${s.hint}</div>
       <div class="req"><span class="link" data-skip="1">Einführung überspringen</span></div>`;
   }
+  const boosts = boostLines();
   if (state.festival) {                            // danach: das Schloss, Erfolge und Album
     const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
     const line = !s ? '🏰 Bau das Schloss: 🏗️ Bauen → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
     const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4><div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}<div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
   }
   if (n >= ITEMS.leuchtturm.lanterns) {
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4><div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}<div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
   }
   // Laternen auf den schon erschlossenen Inseln, dazu immer die nächste Insel
   const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) }))
     .filter(o => o.info.next && o.info.pos && ownedTile(o.info.pos[0], o.info.pos[1]));
   opts.sort((a, b) => (a.info.err ? 1 : 0) - (b.info.err ? 1 : 0) || a.info.stage - b.info.stage);
-  let html = `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + opts.slice(0, 2).map(({ type, info }) => {
+  let html = `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + boosts + opts.slice(0, 2).map(({ type, info }) => {
     const parts = Object.entries(info.mat).map(([r, need]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], need))}/${need}`);
     if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
     const detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
@@ -515,7 +516,7 @@ function checkAchievements(silent = false) {
 }
 // verdiente Taler zählen (für den Erfolg „Taler verdient“)
 function earn(dt) {
-  const got = T.inc * dt;
+  const got = T.inc * boostMul('inc') * dt;
   state.money += got;
   state.stats.earned += got;
 }
@@ -532,7 +533,7 @@ const ALBUM = [
   { id: 'wege', icon: '🛤️', name: 'Wegstile', reward: 'weg:goldpflaster' },
   { id: 'bewohner', icon: '🐾', name: 'Bewohner', reward: 'karussell' },
 ];
-const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder);   // Wunderwerke haben ihren eigenen Fortschritt
+const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder || ITEMS[id].garden);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
   switch (p.id) {
     case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung', 'strom'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
@@ -570,26 +571,117 @@ const LATE_ALBUM = new Set(['b:reihenhaus', 'b:baumhaus', 'b:hausboot', 'b:ferie
 // mindestens money, dazu viel Material. So bleibt ein Wunderwerk ein Langzeitziel (etwa eine Stunde, das Schloss
 // mehrere Stunden), egal wie reich man schon ist.
 const WONDERS = {
-  riesenrad: { the: 'Das Riesenrad', h: 215, text: 'Touristen kommen: +80 Taler/s', effect: { inc: 80 },
+  riesenrad: { the: 'Das Riesenrad', h: 215, text: '+25 % Einnahmen – und alle 15 Minuten Jahrmarkt: 3 Minuten lang dreifache Einnahmen', effect: { incMul: 0.25 },
     names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
     phases: [{ min: 12, money: 30000, quader: 150 }, { min: 15, money: 40000, metall: 150 },
              { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 1e6, bretter: 150, metall: 100 }] },
-  sternwarte: { the: 'Die Sternwarte', h: 95, text: '+25 % Ideen für die ganze Insel', effect: { sciMul: 0.25 },
+  sternwarte: { the: 'Die Sternwarte', h: 95, text: '+50 % Ideen – nachts fallen Sternschnuppen (antippen: Ideen), und das Boot findet Inseln doppelt so schnell', effect: { sciMul: 0.5 },
     names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
     phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 1e6, metall: 150, quader: 150 }] },
-  seebruecke: { the: 'Die Seebrücke', h: 40, text: 'Kurgäste: +40 Einwohner und +40 Taler/s', effect: { pop: 40, inc: 40 },
+  seebruecke: { the: 'Die Seebrücke', h: 40, text: '+20 % Einwohner (Kurgäste) – und die Hafenstadt: Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe fahren schneller', effect: { popMul: 0.2 },
     names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
     phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 1e6, quader: 150, metall: 100 }] },
-  botgarten: { the: 'Der Botanische Garten', h: 80, text: 'Sehr viel Schönheit und +0,5 Obst/s', effect: { prod: { obst: 0.5 } },
+  botgarten: { the: 'Der Botanische Garten', h: 80, text: '+50 % Schönheit – und der grüne Daumen: „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, exotische Deko', effect: { beautyMul: 0.5 },
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
     phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
              { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 1e6, obst: 600, kristall: 80 }] },
-  schloss: { the: 'Das Schloss', h: 195, text: '+20 % auf alles – deine Insel ist jetzt eine Königliche Inselperle', effect: { allMul: 0.2 },
+  schloss: { the: 'Das Schloss', h: 195, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
     phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
              { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
              { min: 50, money: 1e6, metall: 250, kristall: 250, obst: 1000 }] },   // letzter Abschnitt: mindestens 1 Mio.
 };
+// ---------------------------------------------------------------------------
+// Fähigkeiten der Wunder (Block 28). Dauerhafte Boni rechnet totals (T.wonders: Wunder → 1, ohne Strom ½); Schübe auf
+// Zeit (Jahrmarkt, Erlasse) wirken beim Verdienen und Erzeugen (boostMul) – so muss beim Ablaufen nichts neu gerechnet werden.
+// ---------------------------------------------------------------------------
+const wonderOn = b => !!(T.wonders && T.wonders[b]);
+// 🎡 Jahrmarkt: die ersten 3 Minuten jeder Viertelstunde (echte Uhr), dreifache Einnahmen
+const FAIR_EVERY = 15 * 60e3, FAIR_LEN = 3 * 60e3, FAIR_MUL = 3;
+const fairLeft = (now = Date.now()) => wonderOn('riesenrad') ? Math.max(0, FAIR_LEN - now % FAIR_EVERY) : 0;
+const fairNext = (now = Date.now()) => FAIR_EVERY - now % FAIR_EVERY;
+// 👑 Erlasse: im Schloss wählen, wirken 5 Minuten; der nächste 10 Minuten nach der Wahl
+const DECREE_LEN = 5 * 60e3, DECREE_EVERY = 10 * 60e3;
+const DECREES = {
+  ernte:   { icon: '🌾', name: 'Doppelte Ernte', text: 'Rohstoffe und Waren ×2', kind: 'prod', mul: 2 },
+  fest:    { icon: '🎉', name: 'Festtag', text: 'Einnahmen ×2', kind: 'inc', mul: 2 },
+  gelehrt: { icon: '📚', name: 'Gelehrtentag', text: 'Ideen ×3', kind: 'sci', mul: 3 },
+  handel:  { icon: '⚓', name: 'Handelstag', text: 'Sofort Frachter an alle Auftragsplätze', kind: 'orders' },
+};
+const decreeActive = (now = Date.now()) => state.decree && now < state.decree.until ? state.decree : null;
+const decreeReady = (now = Date.now()) => wonderOn('schloss') && !decreeActive(now) && now >= (state.decreeNext || 0);
+function chooseDecree(id) {
+  const D = DECREES[id], now = Date.now();
+  if (!D || !decreeReady(now)) return false;
+  state.decree = { id, until: now + DECREE_LEN };
+  state.decreeNext = now + DECREE_EVERY;
+  if (D.kind === 'orders') { let o; while (state.orders.length < orderSlots() && (o = makeOrder(now))) state.orders.push(o); state.orderNext = now + ORDER_EVERY; }
+  sfx('star'); confettiBurst();
+  toast(`👑 Erlass: ${D.icon} ${D.name} – ${D.text}${D.mul ? ' für 5 Minuten' : ''}`);
+  save();
+  return true;
+}
+function boostMul(kind, now = Date.now()) {
+  let m = 1;
+  if (kind === 'inc' && fairLeft(now) > 0) m *= FAIR_MUL;
+  const d = decreeActive(now), D = d && DECREES[d.id];
+  if (D && D.kind === kind) m *= D.mul;
+  return m;
+}
+// 🔭 Sternschnuppen: nachts fällt ab und zu eine neben ein Haus – antippen bringt Ideen (3 Minuten Ideen, mindestens 50)
+const fallenStars = [];
+const STAR_LIFE = 45e3, STAR_CHANCE = 0.02;                // je Takt (0,7 s) → etwa alle 35 s eine
+function spawnStar(rnd = Math.random, now = performance.now()) {
+  const homes = [...state.tiles].filter(([, t]) => isHome(t.b));
+  if (!homes.length || fallenStars.length >= 3) return null;
+  const [k] = homes[Math.floor(rnd() * homes.length)], [x, y] = keyXY(k);
+  const s = { x: x + Math.round(rnd() * 4 - 2), y: y + Math.round(rnd() * 4 - 2), t0: now };
+  fallenStars.push(s);
+  return s;
+}
+function starTick(now = performance.now()) {
+  for (let i = fallenStars.length - 1; i >= 0; i--) if (now - fallenStars[i].t0 > STAR_LIFE) fallenStars.splice(i, 1);
+  if (wonderOn('sternwarte') && nightAt(now) > 0.5 && Math.random() < STAR_CHANCE) spawnStar();
+}
+function collectStarAt(x, y) {
+  const i = fallenStars.findIndex(s => Math.abs(s.x - x) <= 1 && Math.abs(s.y - y) <= 1);
+  if (i < 0) return false;
+  const [s] = fallenStars.splice(i, 1), got = Math.max(50, Math.round(T.sci * 180));
+  state.science += got;
+  sparkle(s.x, s.y); sfx('star');
+  addFloat(s.x, s.y, `💡 +${fmt(got)}`, '#f2c14e');
+  toast(`🌠 Sternschnuppe: +${fmt(got)} Ideen`);
+  return true;
+}
+// Jahrmarkt: beim Beginn Bescheid sagen, solange er läuft funkelt es am Riesenrad
+let fairWas = false;
+function fairTick(now = Date.now()) {
+  const on = fairLeft(now) > 0;
+  if (on && !fairWas) { toast(`🎡 Jahrmarkt! ${FAIR_LEN / 60e3} Minuten lang ${FAIR_MUL}-fache Einnahmen`); sfx('star'); }
+  fairWas = on;
+  if (!on) return;
+  const w = [...state.tiles].find(([, t]) => t.b === 'riesenrad');
+  if (w) { const [x, y] = keyXY(w[0]); sparkle(x + Math.random() * 5, y + Math.random() * 5); }
+}
+// Erlass im Schloss-Fenster: läuft, wartet (Auswahl) oder kommt bald
+function decreeHtml(now = Date.now()) {
+  const d = decreeActive(now);
+  if (d) return `<div class="label">👑 Erlass</div><div class="status"><div class="ok">${DECREES[d.id].icon} ${DECREES[d.id].name}: ${DECREES[d.id].text} · noch ${fmtClock(d.until - now)}</div></div>`;
+  if (!decreeReady(now)) return `<div class="label">👑 Erlass</div><p class="muted">Der nächste Erlass in ${fmtClock((state.decreeNext || 0) - now)}.</p>`;
+  return `<div class="label">👑 Ein Erlass wartet – was soll gelten?</div>
+    <div class="decrees">${Object.entries(DECREES).map(([id, D]) => `<button class="btn ghost" data-decree-pick="${id}">${D.icon} ${D.name}<small>${D.text}${D.mul ? ' · 5 Min.' : ''}</small></button>`).join('')}</div>`;
+}
+// Zeile für die Ziel-Karte: Jahrmarkt, Erlass
+function boostLines(now = Date.now()) {
+  const out = [];
+  if (wonderOn('riesenrad')) out.push(fairLeft(now) > 0 ? `<div class="req done">🎡 Jahrmarkt! Einnahmen ×${FAIR_MUL} · noch ${fmtClock(fairLeft(now))}</div>`
+    : `<div class="req"><small>🎡 Nächster Jahrmarkt in ${fmtClock(fairNext(now))}</small></div>`);
+  const d = decreeActive(now);
+  if (d) out.push(`<div class="req done">👑 ${DECREES[d.id].icon} ${DECREES[d.id].name} · noch ${fmtClock(d.until - now)}</div>`);
+  else if (decreeReady(now)) out.push('<div class="req done" data-decree="1">👑 Ein Erlass wartet – im Schloss wählen</div>');
+  return out.join('');
+}
+
 // Preise vor dem 30.09. (fest, viel billiger) – nur zum Erstatten alter Baustellen
 const OLD_WONDER_PHASES = {
   riesenrad: [{ money: 8000, quader: 40 }, { money: 12000, metall: 40 }, { money: 16000, metall: 60, bretter: 60 }, { money: 20000, bretter: 40, metall: 30 }],

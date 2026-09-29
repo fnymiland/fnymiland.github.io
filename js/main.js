@@ -147,10 +147,10 @@ function frame(now) {
   const dt = Math.min(2, (t - lastTick) / 1000);
   lastTick = t;
   earn(dt);
-  state.science += T.sci * dt;
+  state.science += T.sci * boostMul('sci') * dt;
   produce(dt);
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

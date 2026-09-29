@@ -243,12 +243,13 @@ let hudMoreUntil = 0;
 const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
 function updateHud() {
   $('money').textContent = fmtMoney(state.money);
-  $('rate').textContent = '+' + fmtWhole(T.inc) + '/s';
+  const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
+  $('rate').textContent = '+' + fmtWhole(T.inc * bi) + '/s' + (bi > 1 ? ` ×${bi}` : '');
   $('pop').textContent = fmt(T.pop);
   $('jobs').textContent = `💼 ${fmt(T.jobs)}`;                  // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
   $('sci').textContent = fmtMoney(state.science);              // glatt wie das Geld (vorher „1,2 Mio.“)
-  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci) + '/s' : '';
+  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${bs}` : '') : '';
   $('sci-dot').hidden = !canResearch();
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
@@ -281,6 +282,11 @@ $('goal').onclick = e => {
   if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
   const req = e.target.closest('[data-lm]'), pos = req && lmTile(req.dataset.lm);
   if (pos) { jumpTo(pos[0], pos[1], 3, 3); sparkle(pos[0] + 1, pos[1] + 1); return; }
+  if (e.target.closest('[data-decree]')) {                       // Erlass wartet: zum Schloss
+    const sl = [...state.tiles].find(([, t]) => t.b === 'schloss');
+    if (sl) { const [x, y] = keyXY(sl[0]); jumpTo(x, y, 7, 7); openInfo(x, y); }
+    return;
+  }
   const isl = e.target.closest('[data-isle]');
   if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
   goalSmall = !(goalSmall ?? PHONE); updateHud();
@@ -586,7 +592,7 @@ function startMove(x, y, slot = 0) {
 const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
 
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
-const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff' };
+const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
@@ -696,7 +702,11 @@ function openInfo(x, y) {
         <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
         <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem Einkommen beim Aufstellen (🪙 ${fmt(t.rate || 0)}/s).</p>
         <div class="row"><button class="btn" id="p-wonder" ${canPay(wonderCost(t)) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
-    } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
+    } else {
+      wonder = '<p class="ok">✓ Fertig – wirkt jetzt.</p>';
+      if (t.b === 'riesenrad') wonder += `<div class="status"><div class="${fairLeft() ? 'ok' : ''}">🎡 ${fairLeft() ? `Jahrmarkt! Einnahmen ×${FAIR_MUL} · noch ${fmtClock(fairLeft())}` : `Nächster Jahrmarkt in ${fmtClock(fairNext())}`}</div></div>`;
+      if (t.b === 'schloss') wonder += decreeHtml();
+    }
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
@@ -769,6 +779,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
+  for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (setCrossing(x, y, true, b.dataset.foot)) openInfo(x, y); };
   if (!liveNow) updateHud();
@@ -1390,9 +1401,10 @@ function showIntro(first) {
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-09-30', items: [
-  '🚢 <b>Aufträge statt Börse:</b> Am Handelshafen legen Frachter an und kaufen dir ab, was sich stapelt – zu 120–180 % des Werts. Am Großen Hafen gibt es Großaufträge (fast alles, bis 300 %): die Finanzspritze fürs Schloss.',
-  '🌊 <b>Schiffe fahren übers Wasser</b> und suchen sich den Weg um die Inseln herum. Ist er zugeschüttet, bleiben sie am Pier.',
-  '🛳️ Die Kreuzfahrt ist weg – der Große Hafen hat dafür mehr Auftragsplätze.',
+  '🏛️ <b>Wunder können jetzt richtig was:</b> Jahrmarkt am Riesenrad (3 Minuten dreifache Einnahmen), Sternschnuppen an der Sternwarte, Hafenstadt an der Seebrücke, grüner Daumen im Botanischen Garten (mit Palmen und Riesenblumen), königliche Erlasse im Schloss – dazu dauerhafte Boni.',
+  '🛤️ <b>Häuser und Betriebe sind genügsamer:</b> Markt, Schule, Bäckerei, Park & Co. zählen auch, wenn ein Weg oder eine Bahn dorthin führt.',
+  '🌊 <b>Die Welt hat keinen Rand mehr:</b> Aufschütten geht überall – weit draußen ist das Meer tiefer und teurer. Nach dem Laternenfest tauchen ferne Inseln mit Schatztruhen auf.',
+  '🚢 <b>Aufträge statt Börse:</b> Frachter kaufen dir ab, was sich stapelt – bis 300 % des Werts. Schiffe fahren übers Wasser um die Inseln herum. Die Kreuzfahrt ist weg.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
@@ -1478,10 +1490,10 @@ $('import-file').addEventListener('change', async e => {
 
 // Rohstoffe fließen ins Lager; Verarbeitung nimmt, was da ist
 function produce(dt) {
-  const before = { ...state.res };
-  for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * dt;
+  const before = { ...state.res }, m = boostMul('prod');                // Erlass „Doppelte Ernte“
+  for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * m * dt;
   for (const c of T.conv) {
-    const want = c.rate * dt, can = Math.min(want, state.res[c.from] / CONV_RATIO);
+    const want = c.rate * m * dt, can = Math.min(want, state.res[c.from] / CONV_RATIO);
     if (can <= 0) continue;
     state.res[c.from] -= can * CONV_RATIO;
     state.res[c.to] += can;
