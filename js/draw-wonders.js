@@ -29,6 +29,7 @@ function pennant(x, y, z, now, col) {
   poly([[x, y - 9 * z], [x + 7 * z, y - 7.5 * z + w], [x, y - 5.5 * z]], C(col));
 }
 
+const PLANK_LOOK = { fill: '#c89a6a', pat: ['planks', '#a97d52'] };        // Holzbohlen (Zugbrücke)
 // Boden mit Wegbelag (Muster wie die Wege) in einer Fläche: clip zeichnet den Umriss (Pfad) im Rahmen K
 function kPave(K, clip, lk, x, y, ext = 3, evenodd = false) {
   g.save(); g.beginPath(); clip(); evenodd ? g.clip('evenodd') : g.clip();
@@ -206,8 +207,8 @@ const WONDER_ART = {
   botgarten(K, cx, cy, z, now, x, y) {
     if (groundPart(() => {
       K.rect(-2.48, -2.48, 2.48, 2.48, C('#8ccb67'));
-      kPave(K, () => { kRectPath(K, -2.2, -2.2, 2.2, 2.2); kRectPath(K, -1.56, -1.56, 1.56, 1.56); }, PATH_LOOK.kies, x, y, 3, true);   // Rundweg
-      kPave(K, () => kRectPath(K, 0.6, -0.32, 2.48, 0.32), PATH_LOOK.kies, x, y);             // Zugang
+      kPave(K, () => { kRectPath(K, -2.2, -2.2, 2.2, 2.2); kRectPath(K, -1.56, -1.56, 1.56, 1.56); }, PATH_LOOK.sand, x, y, 3, true);   // Rundweg
+      kPave(K, () => kRectPath(K, 0.6, -0.32, 2.48, 0.32), PATH_LOOK.sand, x, y);             // Zugang
       K.oval(-1.05, -1.05, 0.42, C('#5fb8d0')); K.oval(-1.05, -1.05, 0.36, C('#74d0e6'));    // Teich
       for (const [a, b] of [[-1.2, -0.85], [-0.9, -1.25]]) K.oval(a, b, 0.06, C('#8fd48a'));   // Seerosen
       for (const [a, b, i] of [[1.1, 1.1, 1], [1.1, -1.1, 2], [-1.1, 1.1, 3], [-2.35, 0, 4], [0, 2.35, 0], [0, -2.35, 2]]) kBed(K, a, b, 0.3, i);
@@ -257,7 +258,7 @@ const WONDER_ART = {
       K.rect(-3.3, -3.3, 3.3, 3.3, C('#5fb8d0')); K.rect(-3.22, -3.22, 3.22, 3.22, C('#74d0e6'));
       g.restore();
       kPave(K, () => kRectPath(K, -2.6, -2.6, 2.6, 2.6), PATH_LOOK.kopf, x, y, 3);
-      K.rect(2.7, -0.4, 3.48, 0.4, C('#8a6440')); kPave(K, () => kRectPath(K, 2.7, -0.36, 3.48, 0.36), PATH_LOOK.holz, x, y, 3);   // Zugbrücke
+      K.rect(2.7, -0.4, 3.48, 0.4, C('#8a6440')); kPave(K, () => kRectPath(K, 2.7, -0.36, 3.48, 0.36), PLANK_LOOK, x, y, 3);   // Zugbrücke
       for (const s of [-1, 1]) {                                                   // Gartenbeete im Hof
         K.rect(0.35, s * 0.55, 1.95, s * 1.95, C('#6cc062'));
         K.rect(0.45, s * 0.65, 1.85, s * 1.85, C('#8ccb67'));

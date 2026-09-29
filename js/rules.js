@@ -326,6 +326,7 @@ const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue',
 // (Holzfäller im Wald, Kristallmine auf Kristallfels; Steinbruch und Bergwerk graben im Fels).
 // Selbst Gebautes wird nie weggeräumt (das prüft COVER vorher), Wasser auch nicht (dafür gibt es Aufschütten).
 const CLEAR_COST = { forest: 10, obst: 10, rock: 50, erz: 50, kristall: 50 };
+const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'obst', fels: 'rock' };   // Pinsel → Gelände
 function willClear(b, ter) {
   if (!(ter in CLEAR_COST)) return false;
   const need = ITEMS[b].needs;
@@ -650,7 +651,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
   const r = ROTATABLE.has(b) ? rot : 0;
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
-  if (b === 'graben' || b === 'schuett') {
+  if (TERRAFORM[b]) {                                   // Terraforming-Pinsel
+    if (!ownedTile(x, y)) return notMine(x, y);
+    const k = x + ',' + y, ter = terrainAt(x, y), look = terraLook(x, y);
+    if (ter === 'water') return 'Nicht auf dem Wasser – erst aufschütten';
+    if (COVER.has(k)) return 'Hier steht etwas';
+    if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
+    const want = TERRAFORM[b], now = look || (ter === 'grass' && isBeach(x, y) ? 'sand' : ter);
+    if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels' }[want]}`;
+  } else if (b === 'graben' || b === 'schuett') {
     if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : isSea(x, y) ? 'Hier ist schon Wasser' : 'Das ist nicht dein Grundstück';
     const ter = terrainAt(x, y);
     if (b === 'graben') {

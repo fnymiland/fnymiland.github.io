@@ -218,11 +218,9 @@ function roadCenterline(arms, t) {
 }
 const PATH_LOOK = {
   // Bänder
-  sand:    { edge: '#c9b083', fill: '#dcc69d', pat: ['dots', null], cols: ['#cbb286', '#e6d3ad'] },
-  kies:    { edge: '#d9c393', fill: '#eadbb2', pat: ['dots', null], cols: ['#c9b183', '#d8c79d'] },
+  sand:    { edge: '#d9c393', fill: '#eadbb2', pat: ['dots', null], cols: ['#c9b183', '#d8c79d'] },   // Kiesweg
   mulch:   { edge: '#6f4a2e', fill: '#8b5e3c', pat: ['dots', null], cols: ['#6f4a2e', '#a0714d'] },
   asphalt: { edge: '#cfc8bb', fill: '#9e988e', dash: true },
-  holz:    { edge: '#9c7449', fill: '#c89a6a', pat: ['planks', '#a97d52'] },
   regenbogen: { edge: '#ecd3de', fill: '#fff7fb', pat: ['rainbow', null] },
   konfetti: { edge: '#e8d8cf', fill: '#fbf4ec', pat: ['confetti', null], cols: ['#f2a7c0', '#8fd3bf', '#b9a3ee', '#ffd36e', '#8fc1f0', '#f7b58a'] },
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
@@ -233,7 +231,6 @@ const PATH_LOOK = {
   kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
   klinker:    { fill: '#c97a5e', pat: ['bricks', '#a95a43'] },
   terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
-  schach:     { fill: '#f5dce6', checker: '#dcefe6' },
   fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
   goldpflaster: { fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
 };
@@ -242,13 +239,13 @@ const isFillPath = (x, y) => { const s = pathAt(x, y); return !!s && s.shape ===
 
 // Plätze: Ecken rund, wo die Fläche frei endet; wo ein Weg einmündet, bleibt die Ecke spitz (dort sitzt sein Trichter)
 const PLAZA_R = 0.2, CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]], SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-function plazaSides(x, y) {
-  const own = pathAt(x, y);
+// own: Stil des Felds – bei der Vorschau (noch kein Weg dort) der Stil, der gleich gebaut wird
+function plazaSides(x, y, own = pathAt(x, y)) {
   return SIDES.map(([dx, dy]) => {
     const n = pathAt(x + dx, y + dy);
     if (!n || n.id === 'tritt') return 'open';
     if (n.shape === 'band') return 'band';
-    return n.id === own.id ? 'same' : 'seam';
+    return own && n.id === own.id ? 'same' : 'seam';
   });
 }
 function plazaCorners(x, y, sides = plazaSides(x, y)) {
@@ -258,8 +255,8 @@ function plazaCorners(x, y, sides = plazaSides(x, y)) {
     return arcPts(sx * c, sy * c, PLAZA_R, a - Math.PI / 4, a + Math.PI / 4, 6);
   });
 }
-function drawPlaza(L, x, y, z, lk) {
-  const sides = plazaSides(x, y), corners = plazaCorners(x, y, sides), outline = corners.flat();
+function drawPlaza(L, x, y, z, lk, st) {
+  const sides = plazaSides(x, y, st), corners = plazaCorners(x, y, sides), outline = corners.flat();
   poly(outline.map(L), C(lk.fill));
   if (lk.checker || lk.pat) {
     g.save(); clipTo([outline], L);
@@ -574,7 +571,7 @@ function drawRailWire(cx, cy, z, x, y, t) {
 function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
-  if (st.shape === 'fill') { drawPlaza(L, x, y, z, lk); return; }
+  if (st.shape === 'fill') { drawPlaza(L, x, y, z, lk, st); return; }
   const arms = pathArms(x, y);
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
   const quads = pathQuads(x, y);

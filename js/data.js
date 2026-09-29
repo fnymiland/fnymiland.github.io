@@ -55,7 +55,7 @@ const ITEMS = {
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
-             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Klinkerplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
+             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Kiesweg bis zum Klinkerplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
   schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
              desc: 'Für den elektrischen Zug. Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2). Ziehen = mehrere legen.' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
@@ -125,6 +125,12 @@ const ITEMS = {
   // --- Gelände ---
   graben:  { cat: 'land', name: 'Teich graben', cost: 30, paint: true, desc: 'Macht aus Wiese Wasser (gut für Fischer).' },
   schuett: { cat: 'land', name: 'Aufschütten', cost: 60, paint: true, desc: 'Macht aus Wasser neues Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.' },
+  // Terraforming (Forschung): Gelände selbst gestalten – alles, was natürlich vorkommt (außer Erz und Kristall)
+  wiese:   { cat: 'land', name: 'Wiese', tech: 'terraform', cost: 10, paint: true, desc: 'Macht Wald, Fels oder Strand wieder zu grüner Wiese – auch direkt am Wasser. Ziehen = mehrere.' },
+  strand:  { cat: 'land', name: 'Strand', tech: 'terraform', cost: 15, paint: true, desc: 'Heller Sand – am Wasser oder wo du willst. Bauen kann man darauf trotzdem. Ziehen = mehrere.' },
+  wald:    { cat: 'land', name: 'Wald pflanzen', tech: 'terraform', cost: 20, paint: true, desc: 'Pflanzt Wald – Gelände für Holzfäller. Ziehen = mehrere.' },
+  obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen. Ziehen = mehrere.' },
+  fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche. Ziehen = mehrere.' },
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
@@ -238,7 +244,7 @@ const MENU = [
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station'] },
-  { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'verschieben', 'abriss'] },
+  { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
 ];
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
 function menuPlaceOf(id) {
@@ -262,7 +268,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler',
   windrad: '⚡ +1 bis +4', wasserkraft: '⚡ +4', solarfeld: '⚡ +3', geothermie: '⚡ +8', wellen: '⚡ +5',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +320 · 🍎', schloss: '+20 % auf alles',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -326,6 +332,11 @@ const ITEM_TIPS = {
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.',
+  wiese: 'Terraforming: Zieh über Wald, Felsen oder Strand – alles wird grüne Wiese.',
+  strand: 'Terraforming: Sandstrand, wo du willst. Häuser und Wege gehen darauf wie auf Wiese.',
+  wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
+  obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
+  fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
 };
 const effectText = id => FX[id] || (ITEMS[id] && ITEMS[id].beauty ? `🌸 +${ITEMS[id].beauty}` : '');
 
@@ -455,6 +466,7 @@ const TECHS = [
   { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf alle Einnahmen.' },
   { id: 'bohrung', tier: 3, name: 'Tiefbohrung', cost: 300, req: ['tiefbau'], desc: 'Bergwerke überall, nicht nur auf Erzadern.' },
   { id: 'sterne', tier: 3, name: 'Sternkunde', cost: 400, desc: 'Alle Ideen 20 % mehr.' },
+  { id: 'terraform', tier: 2, name: 'Terraforming', cost: 200, desc: 'Gelände selbst gestalten: Wald und Obstbäume pflanzen, Felsen setzen, Wiese und Strand anlegen (unter Gelände).' },
   { id: 'rotor', tier: 2, name: 'Leichte Rotorblätter', cost: 160, lm: 'klippe:3', desc: 'Windräder liefern 50 % mehr Strom. Schaltet die Windturbine frei.' },
   { id: 'wasserkraft', tier: 2, name: 'Wasserkraft', cost: 180, desc: 'Schaltet das Wasserkraftwerk frei: Strom aus Teichen und Flüssen.' },
   { id: 'wellen', tier: 3, name: 'Wellenkraft', cost: 380, req: ['wasserkraft'], desc: 'Schaltet das Wellenkraftwerk frei: Strom aus dem Meer.' },
@@ -462,22 +474,19 @@ const TECHS = [
 ];
 const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));
 
-// Stile für Wege: Sandweg von Anfang an, die anderen einzeln in der Kunstakademie (design = Preis in Talern)
+// Stile für Wege: Kiesweg (id 'sand') von Anfang an, die anderen einzeln in der Kunstakademie (design = Preis in Talern)
 // oder als Geschenk einer Sehenswürdigkeit (lm)
 // shape: 'band' = Weg, der sich mit Nachbar-Wegen verbindet; 'fill' = ganze Fläche (Platz)
 const STYLES = {
   weg: [
-    { id: 'sand', name: 'Sandweg', col: '#d8c197', shape: 'band' },
-    { id: 'kies', name: 'Kies', col: '#eadbb2', shape: 'band', design: 40 },
-    { id: 'mulch', name: 'Rindenmulch', col: '#8b5e3c', shape: 'band', design: 40 },
-    { id: 'platten', name: 'Platten', col: '#e6dfd0', shape: 'fill', lm: 'baum:2' },
+    { id: 'sand', name: 'Kiesweg', col: '#eadbb2', shape: 'band' },                  // 30.09.: Sand und Kies sind eins
+    { id: 'mulch', name: 'Erde', col: '#8b5e3c', shape: 'band', design: 40 },
+    { id: 'platten', name: 'Schachbrett', col: '#e6dfd0', shape: 'fill', lm: 'baum:2' },
     { id: 'asphalt', name: 'Asphalt', col: '#9e988e', shape: 'band', design: 200 },
     { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', shape: 'band', design: 120 },
-    { id: 'holz', name: 'Holzbohlen', col: '#c89a6a', shape: 'band', design: 120 },
     { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', shape: 'fill', lm: 'quelle:2' },
     { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', design: 180 },
     { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', design: 180 },
-    { id: 'schach', name: 'Schachbrett', col: '#f5dce6', shape: 'fill', design: 250 },
     { id: 'konfetti', name: 'Konfetti', col: '#f6dce6', shape: 'band', design: 300 },
     { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', design: 350, master: true },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
@@ -495,7 +504,7 @@ const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8',
 const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1', '#6b7a8f',
                '#2f9e9e', '#8b5a3c', '#3c4a6b', '#d94f8a', '#7cb342', '#ff8a3d', '#4a4a58'];
 // Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern). Die ersten drei Wand- und Dachfarben
-// und der Sandweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
+// und der Kiesweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
 const FREE_COLORS = 3;
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),

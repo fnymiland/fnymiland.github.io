@@ -59,6 +59,13 @@ function thumbRaw(type, lvl = 1, tile = null) {
   } else if (type === 'schuett') {
     diamond(cx, cy + 5, hw, hh, '#74d0e6');
     block(0.6, '#96d56f');
+  } else if (TERRAFORM[type]) {                           // Terraforming: ein Feld im neuen Gelände
+    const tf = TERRAFORM[type];
+    block(1, tf === 'sand' ? '#f1dfae' : tf === 'forest' ? '#7fc460' : tf === 'obst' ? '#86c35b' : tf === 'rock' ? '#aabb94' : '#96d56f');
+    if (tf === 'forest' || tf === 'obst') { tree(cx - 9, cy + 2, z * 0.8, 0.3, tf === 'obst' ? '#ff6b5e' : null); tree(cx + 8, cy + 4, z * 0.9, 0.7, tf === 'obst' ? '#ffb13b' : null); }
+    else if (tf === 'rock') drawRocks(cx, cy, z * 0.9, 5003, 5007, false);
+    else if (tf === 'wiese') for (let i = 0; i < 6; i++) circle(cx - 14 + i * 6, cy + (i % 2 ? 3 : -2), 2.4, FLOWER_COLS[i % FLOWER_COLS.length]);
+    else ellipse(cx + 6, cy + 2, 3, 2, '#ffd9e0');
   } else if (type === 'weg') {
     block(1, '#96d56f');
     drawPath(cx, cy, z, 1e6, 1e6, { style: currentStyle('weg') });
@@ -171,14 +178,33 @@ function setTool(t) {
 }
 
 // Stil-Leiste für Wege: nur, was man schon hat – alles Weitere gibt es in der Kunstakademie
+// Kreis mit dem echten Muster des Wegs (einmal gezeichnet, dann gemerkt); ohne Canvas nur die Farbe
+const swatchCache = new Map();
+function styleSwatch(st) {
+  if (swatchCache.has(st.id)) return swatchCache.get(st.id);
+  let bg = st.col;
+  try {
+    const lk = PATH_LOOK[st.id], c = document.createElement('canvas');
+    c.width = c.height = 48;
+    const prev = g; g = c.getContext('2d');
+    if (lk && lk.stones) { poly([[0, 0], [48, 0], [48, 48], [0, 48]], '#8ccb67'); for (const [u, v] of [[14, 16], [34, 18], [22, 34], [38, 38]]) { ellipse(u, v + 1, 8, 5, '#aaa498'); ellipse(u, v, 8, 5, '#dcd7cc'); } }
+    else if (lk) paintLook(([u, v]) => [24 + u * 48, 24 + v * 48], lk, 3, 3, 1.3, false, 0.1);
+    g = prev;
+    const url = c.toDataURL();
+    if (url && url.startsWith('data:image')) bg = `${st.col} url(${url}) center / cover`;
+  } catch (e) { /* ohne Canvas (Test) bleibt die Farbe */ }
+  swatchCache.set(st.id, bg);
+  return bg;
+}
+// Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
 function renderStyleBar(t) {
   const bar = $('style-bar');
   document.body.classList.toggle('has-styles', !!STYLES[t]);
   if (!STYLES[t]) { bar.hidden = true; return; }
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
-      <i style="background:${st.col}"></i><span>${st.name}</span></button>`).join('')
-    + (more ? `<button class="style-chip more" data-more="1" title="Weitere Wege freischalten">🎨 <span>${more} weitere</span></button>` : '');
+      <i style="background:${styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
+    + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '');
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
   bar.hidden = false;

@@ -119,9 +119,9 @@ describe('Viertel und Wege', () => {
     field();
     build('weg', 8, 8);
     expect(game("state.tiles.get('8,8').style")).toBe('sand');
-    game("state.design.add('weg:kies'); chosenStyle.weg = 'kies'");
+    game("state.design.add('weg:mulch'); chosenStyle.weg = 'mulch'");
     expect(build('weg', 8, 8)).toBe(true);
-    expect(game("state.tiles.get('8,8').style")).toBe('kies');
+    expect(game("state.tiles.get('8,8').style")).toBe('mulch');
     expect(build('weg', 8, 8)).toBe(false);
   });
 
@@ -144,13 +144,13 @@ describe('Speichern und Laden', () => {
   it('ein gespeicherter Stand kommt unverändert zurück', () => {
     game('state.money = 1000; state.res.holz = 7');
     build('haus', 4, 4);
-    game("state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'kies' })");
+    game("state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'mulch' })");
     game("buildSmall('blumentopf', 4, 4, 1)");
     game('save()');
     const loaded = game('load()');
     expect(loaded.res.holz).toBe(7);
     expect(loaded.tiles.get('4,4').b).toBe('haus');
-    expect(loaded.tiles.get('5,4').style).toBe('kies');
+    expect(loaded.tiles.get('5,4').style).toBe('mulch');
     expect(loaded.decos.get('4,4')[1].b).toBe('blumentopf');
   });
 
@@ -169,11 +169,11 @@ describe('Speichern und Laden', () => {
     expect(d.money).toBe(500 + 120);                         // Kraftwerk + Bushaltestelle
     expect(d.science).toBe(30 + 70);                         // Windkraft + Schnellbusse
     expect([...d.techs]).toEqual([]);                         // Farbenlehre ist jetzt Kunstakademie …
-    expect(d.design.has('wall:12') && d.design.has('weg:schach')).toBe(true);   // … und bleibt freigeschaltet
+    expect(d.design.has('wall:12') && d.design.has('weg:konfetti')).toBe(true);   // … und bleibt freigeschaltet
     expect(d.tiles.has('3,3')).toBe(false);
     expect(d.tiles.get('4,3')).toMatchObject({ b: 'weg', style: 'asphalt' });
     expect(d.tiles.get('5,3')).toMatchObject({ b: 'weg', style: 'kopf' });
-    expect(d.tiles.get('6,3')).toMatchObject({ b: 'weg', style: 'holz' });
+    expect(d.tiles.get('6,3')).toMatchObject({ b: 'weg', style: 'sand' });
     expect(d.tiles.has('7,3')).toBe(false);
     expect(d.tiles.get('8,3')).toMatchObject({ b: 'weg', style: 'terrakotta' });
     expect(d.tiles.get('9,6')).toMatchObject({ b: 'weg', style: 'platten' });

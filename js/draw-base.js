@@ -100,7 +100,7 @@ function drawGround(x, y, p, z, now, noWaves) {
     if (!noWaves && hasWave(x, y)) drawWave(x, y, p, z, now);
     return;
   }
-  const beach = ter === 'grass' && isBeach(x, y);
+  const look = terraLook(x, y), beach = look === 'sand' || (ter === 'grass' && look !== 'wiese' && isBeach(x, y));
   poly([[p.x - hw, p.y], [p.x, p.y + hh], [p.x, p.y + hh + d], [p.x - hw, p.y + d]], C(beach ? '#e6cf97' : '#caa26c'));
   poly([[p.x, p.y + hh], [p.x + hw, p.y], [p.x + hw, p.y + d], [p.x, p.y + hh + d]], C(beach ? '#d4ba7f' : '#b0895a'));
   const alt = (x + y) & 1;

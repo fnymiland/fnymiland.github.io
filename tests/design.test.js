@@ -8,22 +8,22 @@ beforeEach(() => {
 });
 
 describe('Kunstakademie: Aussehen einzeln freischalten', () => {
-  it('am Anfang: drei Wand- und Dachfarben und der Sandweg', () => {
+  it('am Anfang: drei Wand- und Dachfarben und der Kiesweg', () => {
     expect(game("colorsOf('wall').length")).toBe(3);
     expect(game("colorsOf('roof').length")).toBe(3);
     expect(game("STYLES.weg.filter(styleOk).map(s => s.id)")).toEqual(expect.arrayContaining(['sand']));
-    expect(game("styleOk(styleDef('weg', 'kies'))")).toBe(false);
     expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(false);
+    expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(false);
   });
 
-  it('jedes Stück einzeln kaufen – Kies ja, Rindenmulch nicht', () => {
-    expect(game("buyDesign('weg:kies')")).toBe(true);
+  it('jedes Stück einzeln kaufen – Erde ja, Asphalt nicht', () => {
+    expect(game("buyDesign('weg:mulch')")).toBe(true);
     expect(game('state.money')).toBe(5000 - 40);
-    expect(game("styleOk(styleDef('weg', 'kies'))")).toBe(true);
-    expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(false);
+    expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(true);
+    expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(false);
     expect(game("buyDesign('wall:5')")).toBe(true);
     expect(game("colorOk('wall', 5) && !colorOk('wall', 6)")).toBe(true);
-    expect(game("buyDesign('weg:kies')")).toBe(false);                 // schon da
+    expect(game("buyDesign('weg:mulch')")).toBe(false);                // schon da
   });
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {

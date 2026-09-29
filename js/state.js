@@ -20,7 +20,7 @@ function newState() {
     diarySeen: 0,              // so viele Seiten hat man schon gelesen
     tutorial: 0,               // Schritt der Einführung, -1 = fertig/übersprungen
     legacy: new Set(),         // früher per Stern/Forschung Freigeschaltetes bleibt frei
-    design: new Set(),         // in der Kunstakademie gekauft: 'wall:4', 'roof:7', 'weg:kies', 'laterne' …
+    design: new Set(),         // in der Kunstakademie gekauft: 'wall:4', 'roof:7', 'weg:mulch', 'laterne' …
     festival: false,
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(['0,0']),   // Grundstücke (6×6) der erschlossenen Inseln
@@ -95,11 +95,11 @@ function parseSave(d) {
   }
   // 28.09.2026: Straßen, Gartenwege und Pflaster werden zu Wegen; Gehwege an Kanten entfallen
   const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
-  const WEG_TO = { mulch: 'mulch', kies: 'kies', tritt: 'tritt', steg: 'holz', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti' };
-  const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'schach', fisch: 'fisch', mosaik: 'konfetti', alt: 'platten' };
+  const WEG_TO = { mulch: 'mulch', kies: 'sand', tritt: 'tritt', steg: 'sand', holz: 'sand', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti', schach: 'platten' };
+  const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'platten', fisch: 'fisch', mosaik: 'konfetti', alt: 'platten' };
   for (const [, t] of d.tiles) {
     if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
-    else if (t.b === 'weg' && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'kies';
+    else if ((t.b === 'weg' || t.cross) && t.style && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'sand';
   }
   // v4 (28.09.2026): Drehung in 4 Richtungen. Lange Gebäude sind jetzt „1 tief, 2 breit“ (Tür an der Längsseite):
   // die alte Drehung um eins versetzen, damit Grundfläche und Tür bleiben, wo sie waren.
@@ -130,13 +130,21 @@ function parseSave(d) {
     const had = new Set(d.techs), grant = new Set(d.design || []);
     const lanterns = Object.values(d.restore || {}).reduce((s, n) => s + n, 0);
     for (let i = FREE_COLORS; i < (had.has('farben') ? 14 : 7); i++) { grant.add('wall:' + i); grant.add('roof:' + i); }
-    grant.add('weg:kies'); grant.add('weg:mulch');
+    grant.add('weg:mulch');
     if (lanterns >= 3 || (d.legacy || []).includes('weg:asphalt')) grant.add('weg:asphalt');
-    const byTech = { garten: ['weg:tritt', 'weg:holz', 'laterne'], pflasterkunst: ['weg:klinker', 'weg:terrakotta'],
-      farben: ['weg:schach', 'weg:pastell'], kunst: ['weg:fisch'], skulptur: ['weg:mosaik', 'pavillon', 'statue'] };
+    const byTech = { garten: ['weg:tritt', 'laterne'], pflasterkunst: ['weg:klinker', 'weg:terrakotta'],
+      farben: ['weg:pastell'], kunst: ['weg:fisch'], skulptur: ['weg:mosaik', 'pavillon', 'statue'] };
     for (const [tech, ids] of Object.entries(byTech)) if (had.has(tech)) ids.forEach(id => grant.add(id));
     d.design = [...grant];
   }
+  // 30.09.2026 abends: Kies und Sandweg sind eins (Kiesweg), Holzbohlen und das rosa Schachbrett entfallen –
+  // bezahlte Stile gibt es in Talern zurück (die Wege selbst wurden oben umgestellt)
+  const DROPPED = { 'weg:kies': 40, 'weg:holz': 120, 'weg:schach': 250 };
+  if ((d.design || []).some(id => id in DROPPED)) {
+    d.money = (+d.money || 0) + d.design.filter(id => id in DROPPED).reduce((sum, id) => sum + DROPPED[id], 0);
+    d.design = d.design.filter(id => !(id in DROPPED));
+  }
+  if (d.legacy) d.legacy = d.legacy.filter(id => !(id in DROPPED));
   // 30.09.2026: Pastell-Mosaik und Mosaik sind ein Stil „Konfetti“ – wer zusammen mehr bezahlt hat, bekommt die Differenz
   const MERGED = { 'weg:pastell': 250, 'weg:mosaik': 500 };
   if ((d.design || []).some(id => id in MERGED)) {

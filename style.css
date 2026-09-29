@@ -360,26 +360,27 @@ html, body {
 #style-bar[hidden] { display: none; }
 .style-chip {
   flex: none;
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 7px;
   border: 0; border-radius: 99px;
-  padding: 5px 12px 5px 6px;
-  font: inherit; font-size: 12px; font-weight: 800; color: var(--brown);
+  padding: 3px;
+  font: inherit; font-size: 13px; font-weight: 800; color: var(--brown);
   background: rgba(255, 250, 240, .95);
   box-shadow: 0 3px 0 var(--shadow);
   cursor: pointer;
+  transition: padding .15s;
 }
-.style-chip i { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
-.style-chip.on { background: var(--yellow); box-shadow: 0 3px 0 #e0c060; }
+/* nur Kreise; der gewählte Stil wird größer und zeigt seinen Namen */
+.style-chip i { width: 26px; height: 26px; border-radius: 50%; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); transition: width .15s, height .15s; }
+.style-chip span { display: none; }
+.style-chip.on { background: var(--yellow); box-shadow: 0 3px 0 #e0c060; padding: 4px 14px 4px 4px; }
+.style-chip.on i { width: 36px; height: 36px; }
+.style-chip.on span { display: inline; }
 .style-chip:disabled { opacity: .55; cursor: default; }
 .style-chip small { font-size: 10px; font-weight: 800; }
 body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16px); }
-.style-chip.more { background: var(--cream2); }
+.style-chip.more { background: var(--cream2); padding: 4px 10px; gap: 3px; font-size: 12px; min-height: 32px; }
+.style-chip.more span { display: inline; }
 .design.gift small { font-size: 10px; text-align: center; line-height: 1.15; }
-/* schmale Bildschirme: nur Farbtupfer, der Name nur beim gewählten Stil */
-@media (max-width: 700px) {
-  .style-chip:not(.on):not(.more) span { display: none; }
-  .style-chip:not(.on):not(.more) { padding: 5px; }
-}
 
 /* ---------- v6: Lager ---------- */
 .pill.res { gap: 10px; }

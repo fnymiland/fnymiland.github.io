@@ -21,11 +21,11 @@ describe('Bahnübergang', () => {
   });
 
   it('Schiene über einen Weg: der Stil des Wegs bleibt', () => {
-    game("state.design.add('weg:kies'); chosenStyle.weg = 'kies'");
+    game("state.design.add('weg:mulch'); chosenStyle.weg = 'mulch'");
     for (let y = 4; y <= 6; y++) game(`build('weg', 13, ${y}, true)`);
     game("chosenStyle.weg = 'sand'");
     for (let x = 12; x <= 14; x++) game(`build('schiene', ${x}, 5, true)`);
-    expect(t(13, 5)).toMatchObject({ b: 'schiene', cross: true, style: 'kies' });
+    expect(t(13, 5)).toMatchObject({ b: 'schiene', cross: true, style: 'mulch' });
   });
 
   it('nicht auf Kurven und nicht auf Brücken', () => {

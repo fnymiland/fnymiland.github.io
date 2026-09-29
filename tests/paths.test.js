@@ -54,7 +54,7 @@ describe('Plätze und Übergänge', () => {
   });
 
   it('zwei Weg-Stile stoßen bündig aneinander: kein Strich, keine Schwelle, kein Überblenden', () => {
-    W(8, 8, 'sand'); W(9, 8, 'kies');
+    W(8, 8, 'sand'); W(9, 8, 'mulch');
     for (const f of ['drawThreshold', 'pathThresholds', 'crossFade', 'pathBlends']) expect(game(`typeof ${f}`), f).toBe('undefined');
     const reach = k => game(`(() => { const sh = roadShapes(pathArms(${k}), null, ROAD_W, pathQuads(${k}), pathFlares(${k})); return [Math.min(...sh.flat().map(p => p[0])), Math.max(...sh.flat().map(p => p[0]))]; })()`);
     expect(reach('8, 8')[1]).toBeGreaterThanOrEqual(0.5);          // Sand reicht bis an die Kante …
@@ -106,9 +106,9 @@ describe('Konfetti', () => {
     const s = game(`parseSave(${JSON.stringify(d)})`);
     expect(s.tiles.get('8,8').style).toBe('konfetti');
     expect(s.tiles.get('9,8').style).toBe('konfetti');
-    expect([...s.design].sort()).toEqual(['weg:kies', 'weg:konfetti']);
+    expect([...s.design].sort()).toEqual(['weg:konfetti']);            // Kies gibt es nicht mehr: 40 zurück
     const price = game("styleDef('weg', 'konfetti').design");
-    expect(s.money).toBe(money + 250 + 500 - price);
+    expect(s.money).toBe(money + 40 + 250 + 500 - price);
     // nur Pastell gehabt: nichts zurück (Konfetti ist ja da)
     d.design = ['weg:pastell'];
     expect(game(`parseSave(${JSON.stringify(d)}).money`)).toBe(money);
@@ -134,5 +134,39 @@ describe('Breite Wege am Platz', () => {
     expect(game('pathQuads(8, 8)')).toEqual([[1, 1]]);
     W(10, 10, 'tritt'); W(10, 11, 'tritt'); W(11, 10, 'tritt'); W(11, 11, 'tritt');
     expect(game('pathQuads(10, 10)')).toEqual([]);                 // Trittsteine bleiben Steine
+  });
+});
+
+describe('Vorschau beim Platzieren', () => {
+  beforeEach(() => { game('startNew()'); game("for (let y = 5; y <= 12; y++) for (let x = 5; x <= 12; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); }"); });
+  it('ein Platz-Stil neben vorhandenen Wegen und Plätzen lässt sich als Vorschau zeichnen (vorher Absturz → Rastermuster)', () => {
+    for (const [k, st] of [['7,8', 'platten'], ['9,8', 'sand'], ['8,7', 'klinker']]) game(`state.tiles.set('${k}', { b: 'weg', lvl: 1, style: '${st}' })`);
+    game('recalc()');
+    for (const st of game("STYLES.weg.map(s => s.id)")) {
+      expect(() => game(`drawPath(100, 100, 1, 8, 8, { style: '${st}' })`), st).not.toThrow();
+    }
+  });
+});
+
+describe('Wegstile aufgeräumt (30.09. abends)', () => {
+  it('Kiesweg (früher Sand + Kies), Erde (früher Rindenmulch), Schachbrett (früher Platten); Holzbohlen und das rosa Schachbrett sind weg', () => {
+    const st = game("Object.fromEntries(STYLES.weg.map(s => [s.id, s.name]))");
+    expect(st.sand).toBe('Kiesweg');
+    expect(st.mulch).toBe('Erde');
+    expect(st.platten).toBe('Schachbrett');
+    for (const id of ['kies', 'holz', 'schach']) expect(st[id], id).toBeUndefined();
+    expect(game('PATH_LOOK.sand.fill')).toBe('#eadbb2');                         // sieht aus wie der alte Kiesweg
+  });
+
+  it('alte Stände: Wege werden umgestellt, bezahlte Stile gibt es in Talern zurück', () => {
+    const d = game('serialize()');
+    d.tiles.push(['8,8', { b: 'weg', lvl: 1, style: 'kies' }], ['9,8', { b: 'weg', lvl: 1, style: 'holz' }], ['10,8', { b: 'weg', lvl: 1, style: 'schach' }],
+                 ['11,8', { b: 'schiene', lvl: 1, cross: true, style: 'holz' }]);
+    d.design = ['weg:kies', 'weg:holz', 'weg:schach', 'weg:mulch'];
+    const money = d.money;
+    const s = game(`parseSave(${JSON.stringify(d)})`);
+    expect(['8,8', '9,8', '10,8', '11,8'].map(k => s.tiles.get(k).style)).toEqual(['sand', 'sand', 'platten', 'sand']);
+    expect([...s.design]).toEqual(['weg:mulch']);
+    expect(s.money).toBe(money + 40 + 120 + 250);
   });
 });

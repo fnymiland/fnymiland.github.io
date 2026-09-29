@@ -15,7 +15,7 @@ function build(b, x, y, quiet) {
   const k0 = x + ',' + y, old = state.tiles.get(k0);
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {
     const style = currentStyle(b);
-    if ((old.style || 'kies') === style) return false;
+    if ((old.style || 'sand') === style) return false;
     if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
     state.money -= ITEMS[b].cost;
     old.style = style;
@@ -42,6 +42,7 @@ function build(b, x, y, quiet) {
   if ((CLAIM_TOOLS.has(b) || d.needs === 'meer') && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); sfx('dig'); }
+  else if (TERRAFORM[b]) { state.terra.set(k, TERRAFORM[b]); sandCache.clear(); landCache.clear(); sfx('dig'); }
   else if (b === 'schuett') {
     state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig');
     const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück

@@ -40,7 +40,7 @@ describe('Neu freigeschaltet', () => {
 
   it('Geschenk-Wegstile und die Glasvilla bekommen auch ein Fenster', () => {
     game('state.restore.baum = 2; updateHud()');
-    expect($('modal-card').textContent).toContain('Platten');
+    expect($('modal-card').textContent).toContain('Schachbrett');
     game('closeModal(); state.restore.kristall = 1; updateHud()');
     expect($('modal-card').textContent).toContain('Glasvilla');
   });
