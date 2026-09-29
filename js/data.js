@@ -534,23 +534,24 @@ const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));
 
 // Stile für Wege: Kiesweg (id 'sand') von Anfang an, die anderen einzeln in der Kunstakademie (design = Preis in Talern)
 // oder als Geschenk einer Sehenswürdigkeit (lm)
-// shape: 'band' = Weg, der sich mit Nachbar-Wegen verbindet; 'fill' = ganze Fläche (Platz)
+// Alle Wege sind so breit wie der Kiesweg (30.09.: vorher füllten Platz-Stile das ganze Feld). Plätze entstehen,
+// wenn man Wege als Block nebeneinander legt – dann wachsen sie zu einer Fläche zusammen (pathQuads).
 const STYLES = {
   weg: [
     { id: 'sand', name: 'Kiesweg', col: '#eadbb2', shape: 'band' },                  // 30.09.: Sand und Kies sind eins
     { id: 'mulch', name: 'Erde', col: '#8b5e3c', shape: 'band', design: 40 },
-    { id: 'platten', name: 'Schachbrett', col: '#e6dfd0', shape: 'fill', lm: 'baum:2' },
+    { id: 'platten', name: 'Schachbrett', col: '#e6dfd0', shape: 'band', lm: 'baum:2' },
     { id: 'asphalt', name: 'Asphalt', col: '#9e988e', shape: 'band', design: 200 },
     { id: 'tritt', name: 'Trittsteine', col: '#cfcac0', shape: 'band', design: 120 },
-    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', shape: 'fill', lm: 'quelle:2' },
-    { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', design: 180 },
-    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', design: 180 },
+    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', shape: 'band', lm: 'quelle:2' },
+    { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'band', design: 180 },
+    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'band', design: 180 },
     { id: 'konfetti', name: 'Konfetti', col: '#f6dce6', shape: 'band', design: 300 },
-    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', design: 350, master: true },
+    { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'band', design: 350, master: true },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
     { id: 'regenbogen', name: 'Regenbogenweg', col: '#f7c6d8', shape: 'band', album: 'farben' },
-    { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'fill', album: 'wege' },
+    { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'band', album: 'wege' },
   ],
 };
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];

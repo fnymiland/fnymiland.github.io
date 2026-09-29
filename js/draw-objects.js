@@ -226,65 +226,15 @@ const PATH_LOOK = {
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
   kristall: { edge: '#9fcfe8', fill: '#e1f4fb', pat: ['dots', null], cols: ['#9fdcf7', '#ffffff', '#62b1dc'], glow: true },
-  // Flächen
-  platten:    { fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
-  kopf:       { fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
-  klinker:    { fill: '#c97a5e', pat: ['bricks', '#a95a43'] },
-  terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
-  fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
-  goldpflaster: { fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
+  // früher Flächen (Plätze), jetzt Bänder wie alle
+  platten:    { edge: '#cfc5b1', fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
+  kopf:       { edge: '#b3ab9c', fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
+  klinker:    { edge: '#a95a43', fill: '#c97a5e', pat: ['bricks', '#a95a43'] },
+  terrakotta: { edge: '#bf7f58', fill: '#d99a73', pat: ['tiles', '#c4805a'] },
+  fisch:      { edge: '#d3ada1', fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
+  goldpflaster: { edge: '#d9b152', fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
 };
 const pathAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return t && t.b === 'weg' ? styleDef('weg', t.style) : null; };
-const isFillPath = (x, y) => { const s = pathAt(x, y); return !!s && s.shape === 'fill'; };
-
-// Plätze: Ecken rund, wo die Fläche frei endet; wo ein Weg einmündet, bleibt die Ecke spitz (dort sitzt sein Trichter)
-const PLAZA_R = 0.2, CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]], SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-// own: Stil des Felds – bei der Vorschau (noch kein Weg dort) der Stil, der gleich gebaut wird
-function plazaSides(x, y, own = pathAt(x, y)) {
-  return SIDES.map(([dx, dy]) => {
-    const n = pathAt(x + dx, y + dy);
-    if (!n || n.id === 'tritt') return 'open';
-    if (n.shape === 'band') return 'band';
-    return own && n.id === own.id ? 'same' : 'seam';
-  });
-}
-function plazaCorners(x, y, sides = plazaSides(x, y)) {
-  return CORNERS.map(([sx, sy], i) => {
-    if (sides[(i + 3) % 4] !== 'open' || sides[i] !== 'open') return [[sx * 0.5, sy * 0.5]];
-    const a = Math.atan2(sy, sx), c = 0.5 - PLAZA_R;
-    return arcPts(sx * c, sy * c, PLAZA_R, a - Math.PI / 4, a + Math.PI / 4, 6);
-  });
-}
-function drawPlaza(L, x, y, z, lk, st) {
-  const sides = plazaSides(x, y, st), corners = plazaCorners(x, y, sides), outline = corners.flat();
-  poly(outline.map(L), C(lk.fill));
-  if (lk.checker || lk.pat) {
-    g.save(); clipTo([outline], L);
-    if (lk.checker) {
-      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-        if ((i + j) & 1) continue;
-        const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
-        poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
-      }
-    } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
-    g.restore();
-  }
-  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter; zu anderem Pflaster keine (bündig)
-  const line = pts => pts.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-  g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineCap = 'round'; g.lineJoin = 'round';
-  g.lineWidth = 1.4 * z;
-  g.beginPath();
-  for (let i = 0; i < 4; i++) {
-    const c = corners[i], p0 = c[c.length - 1], p1 = corners[(i + 1) % 4][0];
-    if (c.length > 1) line(c);
-    if (sides[i] === 'open') line([p0, p1]);
-    else if (sides[i] === 'band') {
-      const gap = EDGE_W + FLARE_R;
-      line([p0, lerp(p0, p1, 0.5 - gap)]); line([lerp(p0, p1, 0.5 + gap), p1]);
-    }
-  }
-  g.stroke();
-}
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
 function pathQuads(x, y) {
   const paved = (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
@@ -292,8 +242,8 @@ function pathQuads(x, y) {
   for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
   return out;
 }
-// Arme, die in einen Platz münden (Trichter)
-const pathFlares = (x, y) => pathArms(x, y).filter(([dx, dy]) => isFillPath(x + dx, y + dy));
+// (Trichter zu Plätzen gibt es nicht mehr – alle Wege sind Bänder; roadShapes kann sie aber noch)
+const pathFlares = () => [];
 // Belag eines Felds zeichnen (ext: über seine Kante hinaus verlängert – z. B. für große Flächen der Wunderwerke)
 function paintLook(L, lk, x, y, z, band, ext, box = null) {
   const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
@@ -571,7 +521,6 @@ function drawRailWire(cx, cy, z, x, y, t) {
 function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
-  if (st.shape === 'fill') { drawPlaza(L, x, y, z, lk, st); return; }
   const arms = pathArms(x, y);
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
   const quads = pathQuads(x, y);

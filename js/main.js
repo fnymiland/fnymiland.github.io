@@ -62,7 +62,7 @@ function probeScene() {
   STYLES.weg.forEach((st, i) => {
     const x = -5 + (i % 8) * 2, y = i < 8 ? 13 : 15;
     weg(x, y, st.id);
-    if (st.shape === 'band') weg(x, y + 1, st.id); else weg(x + 1, y, st.id);
+    weg(x, y + 1, st.id);
   });
   const c = iso(6, 5);
   cam.x = c.x; cam.y = c.y; cam.z = 1.1;

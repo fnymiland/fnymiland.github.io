@@ -38,19 +38,18 @@ describe('Trittsteine', () => {
   });
 });
 
-describe('Plätze und Übergänge', () => {
-  it('ein einzelnes Platzfeld hat vier runde Ecken, eines mit Nachbarn nur die freien', () => {
-    W(8, 8, 'platten');
-    expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(4);
-    W(9, 8, 'platten');
-    expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);
+describe('Breite und Übergänge', () => {
+  it('alle Wege sind so breit wie der Kiesweg – auch Terrakotta, Klinker, Schachbrett …', () => {
+    expect(game("STYLES.weg.every(st => st.shape === 'band')")).toBe(true);
+    const width = st => { W(8, 8, st); W(9, 8, st); W(7, 8, st); game('recalc()');
+      return game("Math.max(...roadShapes(pathArms(8, 8), null, EDGE_W, pathQuads(8, 8), pathFlares(8, 8)).flat().map(p => Math.abs(p[1])))"); };
+    const kies = width('sand');
+    for (const st of ['terrakotta', 'klinker', 'platten', 'kopf', 'fisch', 'goldpflaster']) expect(width(st), st).toBeCloseTo(kies);
   });
 
-  it('mündet ein Weg in den Platz, weitet er sich (Trichter) und die Platzkante hat dort eine Lücke', () => {
-    W(8, 8, 'platten'); W(7, 8, 'sand');
-    expect(game("pathFlares(7, 8)")).toEqual([[1, 0]]);
-    expect(game("plazaSides(8, 8)")).toEqual(['open', 'open', 'open', 'band']);
-    expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);   // Ecken an der Einmündung bleiben spitz
+  it('als Block nebeneinander gelegt wachsen Wege zu einem Platz zusammen', () => {
+    W(8, 8, 'terrakotta'); W(9, 8, 'terrakotta'); W(8, 9, 'terrakotta'); W(9, 9, 'terrakotta');
+    expect(game('pathQuads(8, 8)')).toEqual([[1, 1]]);
   });
 
   it('zwei Weg-Stile stoßen bündig aneinander: kein Strich, keine Schwelle, kein Überblenden', () => {
@@ -59,12 +58,6 @@ describe('Plätze und Übergänge', () => {
     const reach = k => game(`(() => { const sh = roadShapes(pathArms(${k}), null, ROAD_W, pathQuads(${k}), pathFlares(${k})); return [Math.min(...sh.flat().map(p => p[0])), Math.max(...sh.flat().map(p => p[0]))]; })()`);
     expect(reach('8, 8')[1]).toBeGreaterThanOrEqual(0.5);          // Sand reicht bis an die Kante …
     expect(reach('9, 8')[0]).toBeLessThanOrEqual(-0.5);            // … und Kies beginnt genau dort
-  });
-
-  it('auch zwei verschiedene Plätze liegen bündig nebeneinander (Ecken spitz, keine Fugenlinie)', () => {
-    W(8, 8, 'platten'); W(9, 8, 'klinker');
-    expect(game('plazaSides(8, 8)')[1]).toBe('seam');
-    expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);   // nur die freien Ecken rund
   });
 
   it('Muster lassen sich über das Feld hinaus fortsetzen – im selben Raster wie beim Nachbarn', () => {
