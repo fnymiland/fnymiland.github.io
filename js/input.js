@@ -38,6 +38,10 @@ function zoomAt(px, py, nz) {
 
 const pointers = new Map();
 let drag = null, pinch = null, moved = false, painting = false, lastPaint = null;
+// Karte ziehen, egal welches Werkzeug man hält: rechte oder mittlere Maustaste, Leertaste oder Ctrl gedrückt
+// (Ctrl-Klick ist am Mac der Rechtsklick; mit dem Trackpad geht so das Ziehen am leichtesten)
+let spaceDown = false;
+const panButton = e => e.button === 1 || e.button === 2 || (e.buttons & 6) !== 0 || e.ctrlKey || spaceDown;
 
 let hoverSlot = 0;
 function paintAt(sx, sy) {
@@ -59,8 +63,10 @@ canvas.addEventListener('pointerdown', e => {
     moved = false;
     painting = false;
     lastPaint = null;
-    drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button };
-    if (tool !== 'look' && ITEMS[tool].paint && e.button === 0) { painting = true; paintAt(e.clientX, e.clientY); }
+    const pan = panButton(e);
+    drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button, pan, right: e.button === 2 || (e.ctrlKey && e.button === 0) };
+    if (pan) canvas.style.cursor = 'grabbing';
+    else if (tool !== 'look' && ITEMS[tool].paint && e.button === 0) { painting = true; paintAt(e.clientX, e.clientY); }
   } else if (pointers.size === 2) {
     painting = false;
     const [a, b] = [...pointers.values()];
@@ -84,7 +90,7 @@ canvas.addEventListener('pointermove', e => {
   if (painting && pointers.size === 1) { paintAt(e.clientX, e.clientY); return; }
   if (drag && pointers.size === 1) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!moved && Math.hypot(dx, dy) > 6) { moved = true; canvas.style.cursor = 'grabbing'; }
+    if (!moved && Math.hypot(dx, dy) > (drag.pan ? 3 : 6)) { moved = true; canvas.style.cursor = 'grabbing'; }
     if (moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); }
     return;
   }
@@ -101,11 +107,11 @@ function endPointer(e) {
   } else if (pointers.size === 0) {
     if (painting) painting = false;
     else if (drag && !moved && e.type === 'pointerup') {
-      if (drag.button === 2) setTool('look');
-      else tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
+      if (drag.right) setTool('look');                     // Rechtsklick (ohne Ziehen) legt das Werkzeug weg
+      else if (!drag.pan) tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
     }
     drag = null;
-    canvas.style.cursor = '';
+    canvas.style.cursor = spaceDown ? 'grab' : '';
   }
 }
 canvas.addEventListener('pointerup', endPointer);
@@ -137,6 +143,11 @@ function setHover(sx, sy) {
 
 window.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
+  if (e.key === ' ' && document.getElementById('modal').hidden) {   // Leertaste halten: Karte ziehen
+    e.preventDefault();
+    if (!spaceDown) { spaceDown = true; if (!drag) canvas.style.cursor = 'grab'; }
+    return;
+  }
   if (e.key === 'Escape') { setTool('look'); closePanel(); closeModal(); return; }
   if (!document.getElementById('modal').hidden) return;
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
@@ -146,3 +157,5 @@ window.addEventListener('keydown', e => {
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= list.length) setTool(list[n - 1]);
 });
+window.addEventListener('keyup', e => { if (e.key === ' ') { spaceDown = false; if (!drag) canvas.style.cursor = ''; } });
+window.addEventListener('blur', () => { spaceDown = false; });

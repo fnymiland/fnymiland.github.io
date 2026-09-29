@@ -294,6 +294,8 @@ const GUIDE = [
     text: 'Mit „Aufschütten“ (⛰️ Gelände) machst du Wasser zu Land – auch im Meer direkt neben deinem Land. So kannst du Inseln vergrößern oder verbinden.' },
   { id: 'bahn', icon: '🚆', title: 'Eisenbahn', when: () => hasTech('bahn'),
     text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke) und stell an beide Enden einen Bahnhof. Der Zug fährt mit Strom von Windrädern: 1 ⚡ + 1 ⚡ je km Strecke. Dann gibt es +8 Pendler je Bahnhof und +10 % für beide Inseln. Als geschlossener Kreis fährt er im Kreis – und auf großen Kreisen passen mehr Züge.' },
+  { id: 'ziehen', icon: '🖐️', title: 'Karte ziehen beim Bauen', when: () => tool !== 'look' && !!ITEMS[tool] && !!ITEMS[tool].paint,
+    text: 'Mit einem Weg in der Hand baut Ziehen neue Felder. Um trotzdem die Karte zu verschieben: rechte Maustaste gedrückt halten und ziehen – oder Leertaste bzw. Ctrl halten. Auf dem iPad mit zwei Fingern. Ein kurzer Rechtsklick legt das Werkzeug weg.' },
   { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
     text: 'Werkstätten, Laternen und Züge brauchen Strom. Jedes Windrad liefert 1 ⚡, egal wo es steht. Ohne Strom laufen Werkstätten nur halb (⚡ über dem Gebäude), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im Windrad und im Rathaus.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),

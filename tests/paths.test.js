@@ -53,18 +53,18 @@ describe('Plätze und Übergänge', () => {
     expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);   // Ecken an der Einmündung bleiben spitz
   });
 
-  it('zwei Weg-Stile gehen fließend ineinander über: jedes Feld blendet den Belag des Nachbarn ein, ohne Schwelle', () => {
-    W(8, 8, 'sand'); W(9, 8, 'kies'); W(10, 8, 'kies'); W(11, 8, 'tritt');
-    expect(game("pathBlends(8, 8).map(e => [e.d, e.look === PATH_LOOK.kies])")).toEqual([[[1, 0], true]]);
-    expect(game("pathBlends(9, 8).map(e => [e.d, e.look === PATH_LOOK.sand])")).toEqual([[[-1, 0], true]]);
-    expect(game('pathBlends(10, 8)')).toEqual([]);               // gleicher Stil, Trittsteine: nichts
-    expect(game('typeof drawThreshold')).toBe('undefined');
+  it('zwei Weg-Stile stoßen bündig aneinander: kein Strich, keine Schwelle, kein Überblenden', () => {
+    W(8, 8, 'sand'); W(9, 8, 'kies');
+    for (const f of ['drawThreshold', 'pathThresholds', 'crossFade', 'pathBlends']) expect(game(`typeof ${f}`), f).toBe('undefined');
+    const reach = k => game(`(() => { const sh = roadShapes(pathArms(${k}), null, ROAD_W, pathQuads(${k}), pathFlares(${k})); return [Math.min(...sh.flat().map(p => p[0])), Math.max(...sh.flat().map(p => p[0]))]; })()`);
+    expect(reach('8, 8')[1]).toBeGreaterThanOrEqual(0.5);          // Sand reicht bis an die Kante …
+    expect(reach('9, 8')[0]).toBeLessThanOrEqual(-0.5);            // … und Kies beginnt genau dort
   });
 
-  it('auch zwei verschiedene Plätze laufen ineinander (keine Fugenlinie)', () => {
+  it('auch zwei verschiedene Plätze liegen bündig nebeneinander (Ecken spitz, keine Fugenlinie)', () => {
     W(8, 8, 'platten'); W(9, 8, 'klinker');
     expect(game('plazaSides(8, 8)')[1]).toBe('seam');
-    expect(game("plazaBlends(8, 8).map(e => [e.d, e.look === PATH_LOOK.klinker])")).toEqual([[[1, 0], true]]);
+    expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);   // nur die freien Ecken rund
   });
 
   it('Muster lassen sich über das Feld hinaus fortsetzen – im selben Raster wie beim Nachbarn', () => {

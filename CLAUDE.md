@@ -133,9 +133,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Preise immer über `wonderCost(t)`: `min` Minuten Einkommen (`t.rate`, beim Aufstellen gemerkt), mindestens `money`.
     Bezahltes steht in `t.paid` (`wonderPaid`, alte Stände nach `OLD_WONDER_PHASES`). Größen seit v9: Riesenrad 5×5,
     Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 – alte Bauwerke wachsen beim Laden (`growWonders`).
-32. **Wegübergänge** (`crossFade`): Zwei Wegstile nebeneinander blenden ineinander – jedes Feld legt den Belag des
-    Nachbarn in Schichten bis 50 % über seine Kante. Muster (`pattern`) liegen dafür in einem festen Raster und lassen
-    sich mit `ext` über das Feld hinaus fortsetzen (`box` begrenzt die Punkte). Keine Schwellen/Fugenlinien mehr.
+32. **Wegübergänge**: Zwei Wegstile nebeneinander stoßen **bündig** aneinander – einer hört an der Feldkante auf, der
+    nächste beginnt. Kein Strich, keine Schwelle, kein Überblenden (vom Nutzer so gewünscht, das Überblenden war falsch
+    verstanden). Muster (`pattern`) liegen in einem festen Raster und lassen sich mit `ext` fortsetzen (Wunderwerke).
     Fußgängerbrücke: `footPaid` ist das Design (`FOOT_STYLES`; alte Stände `true` = Holz, `footPaidOf`).
 33. **Strom und Züge** (`computeRail`/`computePower`): Windrad = 1 ⚡. Verbraucher der Reihe nach: Laternen (je 10
     eine ⚡, sonst `power.dark` → nachts aus, halbe Schönheit), Werkstätten (2 ⚡, sonst `power.idle` → 50 %, ⚡-Symbol),
@@ -147,6 +147,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Arbeitsplätze nur nach Antippen (`hudMore`, Klasse `more`), Rohstoffe/Schönheit/Strom im Lager (`storeHtml`,
     `toggleStore`), bezahltes Material blitzt am 📦 (`flashStore` aus `payMat`). Tagebuch steht im Menü. Keine neuen
     Anzeigen oben ergänzen – lieber ins Lager oder ins Rathaus. Bei ≤ 480 px muss alles in eine Zeile passen.
+36. **Karte ziehen mit Werkzeug**: rechte/mittlere Maustaste, Ctrl oder gehaltene Leertaste ziehen immer die Karte
+    (`panButton`, `drag.pan`); nur die linke Maustaste baut beim Ziehen (Wege, Schienen …). Kurzer Rechtsklick legt
+    das Werkzeug weg. Test: tests/ziehen.test.js (jsdom hat kein PointerEvent → MouseEvent mit pointerId).
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
     Felder werden per `claimTile` eigen). Erschlossene Inseln gehören ganz dir (`ownIslandsFully` beim Laden).

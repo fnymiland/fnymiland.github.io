@@ -272,8 +272,7 @@ function drawPlaza(L, x, y, z, lk) {
     } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
     g.restore();
   }
-  crossFade(L, plazaBlends(x, y), x, y, z, [outline], false);
-  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter; zu anderem Pflaster ein Farbverlauf
+  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter; zu anderem Pflaster keine (bündig)
   const line = pts => pts.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
   g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineCap = 'round'; g.lineJoin = 'round';
   g.lineWidth = 1.4 * z;
@@ -298,25 +297,7 @@ function pathQuads(x, y) {
 }
 // Arme, die in einen Platz münden (Trichter)
 const pathFlares = (x, y) => pathArms(x, y).filter(([dx, dy]) => isFillPath(x + dx, y + dy));
-// Übergang zu einem Weg in anderem Stil: Der Belag des Nachbarn läuft über die Feldkante herein und blendet aus
-// (an der Kante halb/halb – auf beiden Seiten gleich). So geht ein Belag fließend in den anderen über, ohne Fuge.
-const BLEND = 0.3, BLEND_STEPS = 10;
-function pathBlends(x, y) {
-  const own = pathAt(x, y);
-  if (!own || own.shape !== 'band' || own.id === 'tritt') return [];
-  const out = [];
-  for (const d of pathArms(x, y)) {
-    const n = pathAt(x + d[0], y + d[1]);
-    if (n && n.shape === 'band' && n.id !== own.id && n.id !== 'tritt') out.push({ d, look: PATH_LOOK[n.id] });
-  }
-  return out;
-}
-function plazaBlends(x, y) {
-  const sides = plazaSides(x, y), out = [];
-  SIDES.forEach(([dx, dy], i) => { if (sides[i] === 'seam') out.push({ d: [dx, dy], look: PATH_LOOK[pathAt(x + dx, y + dy).id] }); });
-  return out;
-}
-// Belag eines Felds zeichnen (für Übergänge über seine Kante hinaus verlängert)
+// Belag eines Felds zeichnen (ext: über seine Kante hinaus verlängert – z. B. für große Flächen der Wunderwerke)
 function paintLook(L, lk, x, y, z, band, ext, box = null) {
   const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
   const fillArea = band ? [rect(-E, E, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -E, E)] : [rect(-E, E, -E, E)];
@@ -334,27 +315,6 @@ function paintLook(L, lk, x, y, z, band, ext, box = null) {
   } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box);
   g.restore();
 }
-// clip: Umriss des eigenen Felds. Der Nachbarbelag wird in Schichten übereinandergelegt, jede ab einer Linie näher an
-// der Kante bis zur Kante – so wächst die Deckkraft stufenweise bis 1/2, ohne helle Fugen zwischen den Stufen.
-function crossFade(L, list, x, y, z, clip, band) {
-  for (const { d, look } of list) {
-    const Ln = ([u, v]) => L([u + d[0], v + d[1]]);           // Koordinaten des Nachbarfelds
-    const cs = [[-0.9, -0.65], [-0.4, -0.65], [-0.4, 0.65], [-0.9, 0.65]].map(([a, b]) => armUV(d, a, b));
-    const box = [Math.min(...cs.map(c => c[0])), Math.max(...cs.map(c => c[0])), Math.min(...cs.map(c => c[1])), Math.max(...cs.map(c => c[1]))];
-    let prev = 0;
-    for (let k = 0; k < BLEND_STEPS; k++) {
-      const a0 = 0.5 - BLEND + BLEND * k / BLEND_STEPS, want = 0.5 * (k + 1) / BLEND_STEPS;
-      g.save();
-      clipTo(clip, L);
-      clipTo([[[a0, -0.6], [0.52, -0.6], [0.52, 0.6], [a0, 0.6]].map(([a, b]) => armUV(d, a, b))], L);
-      g.globalAlpha = 1 - (1 - want) / (1 - prev);           // gestapelt: 1 − (1−α₁)(1−α₂)… = want
-      paintLook(Ln, look, x + d[0], y + d[1], z, band, BLEND + 0.05, box);
-      g.restore();
-      prev = want;
-    }
-  }
-}
-
 // Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
 // Kreuzungen bekommen einen großen Stein in der Mitte, Kurven drei Steine auf dem Bogen.
 function stonePoints(arms, t) {
@@ -635,7 +595,6 @@ function drawPath(cx, cy, z, x, y, t) {
     g.stroke();
     g.setLineDash([]);
   }
-  crossFade(L, pathBlends(x, y), x, y, z, roadShapes(arms, t, EDGE_W, quads, flares), true);
 }
 
 // ---------------------------------------------------------------------------

@@ -147,7 +147,7 @@ function setTool(t) {
   if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
   hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
-    + (d.paint ? ' · verschieben mit zwei Fingern / rechter Maustaste' : '')
+    + (d.paint ? ' · Karte ziehen: rechte Maustaste, Leertaste oder Ctrl gedrückt halten (iPad: zwei Finger)' : '')
     + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
   hint.hidden = false;
 }

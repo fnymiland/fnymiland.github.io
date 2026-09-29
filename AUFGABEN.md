@@ -100,7 +100,7 @@ Entschieden: Leiste oben schlank + 📦-Lager-Knopf; Strom nach Streckenlänge *
 zweiter Zug selbst kaufen (nur Rundkurs, je 2 km einer); Wunderwerke als Langzeitziel (~1 Std., Schloss mehrere Std.).
 
 **9a Wege und Brücken**
-- [x] Verschiedene Wegstile gehen **ohne Strich** ineinander über (fließend, keine Lücke).
+- [x] Verschiedene Wegstile stoßen **bündig** aneinander (kein Strich, kein Überblenden – einer hört auf, der nächste beginnt).
 - [x] Bahnübergang (Schranken) zeigt das **Muster** des Wegs, nicht nur die Farbe.
 - [x] Fußgängerbrücke **breiter** und im Design wählbar: Stein, Kristall, farbig (wie die Wege).
 
@@ -120,3 +120,4 @@ zweiter Zug selbst kaufen (nur Rundkurs, je 2 km einer); Wunderwerke als Langzei
 **9e Oben aufräumen**
 - [x] Leiste oben schlank: Rathaus, Geld (glatt, ohne Komma), Einwohner, Ideen, 📦 Lager, Menü.
 - [x] „Nicht dein Grundstück“ am Rand verschwindet, wenn das Nachbarstück schon dir gehört.
+- [x] Karte ziehen, während man einen Weg o. Ä. in der Hand hat: rechte/mittlere Maustaste, Leertaste oder Ctrl.
