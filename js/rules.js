@@ -282,12 +282,13 @@ function totals() {
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
-  for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
+  const access = buildAccess(net, links);
+  for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y, access); }
   // Gebäude-Stufen (für ✨ und Infofenster)
-  for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
+  for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
@@ -455,11 +456,11 @@ const lockText = (id, short) => {
 const stageName = t => BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].names[Math.min(t.lvl, MAX_LVL) - 1] : ITEMS[t.b].name;
 const jobsOf = t => (ITEMS[t.b].workers || 0) * (BUILD_STAGES[t.b] ? Math.min(t.lvl, MAX_LVL) : 1);
 function nearText(types, n, r, self) {
-  const where = r === 1 ? 'direkt daneben' : `in der Nähe (${r} Felder)`;
+  const where = r === 1 ? 'direkt daneben' : `erreichbar (${r} Felder, oder per Weg/Bahn)`;
   if (n === 1) return `${types.map(kindName).join(' oder ')} ${where}`;
   return `${n} ${types.some(k => isKind(k, self)) ? 'weitere ' : ''}${types.map(kindPlural).join(' oder ')} ${where}`;
 }
-function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
+function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs, acc = T.access) {
   const S = BUILD_STAGES[t.b], d = ITEMS[t.b], up = S && S.up[t.lvl - 1];
   if (!up) return { next: null, conds: [], ready: false };
   const conds = [];
@@ -470,7 +471,9 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
   if (up.near) {
     const [types0, n, r] = up.near, types = [].concat(types0);
-    conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, b => types.some(k => isKind(k, b))) >= n });
+    const pred = b => types.some(k => isKind(k, b));
+    if (r < 2) conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, pred) >= n });   // direkt daneben: nur vor Ort
+    else { const got = reachKind(acc, x + ',' + y, x, y, r, pred, n); conds.push({ text: nearText(types, n, r, t.b), ok: !!got.how, how: got.how }); }
   }
   return { next: { name: S.names[t.lvl], cost: up.cost }, conds, ready: conds.every(c => c.ok) };
 }
@@ -1257,7 +1260,48 @@ function beautyAround(x, y, r) {
   }
   return sum;
 }
+// Erreichbar per Weg oder Bahn (Block 26): Versorgung zählt auch, wenn sie im selben Viertel steht (über Wege oder
+// Aneinandergrenzen verbunden) oder mit einer fahrenden Verbindung (Zug, Seilbahn, Fähre) erreichbar ist – beides nah an
+// Stationen derselben Verbindung (im Viertel der Station oder bis WALK_REACH davon). Schönheit, Wasser, Ruhe und
+// „direkt daneben“ bleiben Sache der Umgebung.
+function buildAccess(net, links) {
+  const add = (m, b, k) => { if (!m.has(b)) m.set(b, []); m.get(b).push(k); }, inV = new Map();
+  for (const [k, t] of state.tiles) { const v = net.vOf(k); if (!v) continue; if (!inV.has(v)) inV.set(v, new Map()); add(inV.get(v), t.b, k); }
+  const byLink = links.filter(l => l.regions.length > 1 || l.kind === 'seil').map(l => {
+    const near = new Set();
+    for (const s of l.stations) {
+      const v = net.vOf(s), t = state.tiles.get(s), [sx, sy] = keyXY(s), [w, h] = sizeOf(t.b, t.rot);
+      if (v && inV.has(v)) for (const ks of inV.get(v).values()) for (const k of ks) near.add(k);
+      for (let y = sy - WALK_REACH; y < sy + h + WALK_REACH; y++) for (let x = sx - WALK_REACH; x < sx + w + WALK_REACH; x++) { const a = COVER.get(x + ',' + y); if (a) near.add(a); }
+    }
+    const kinds = new Map();
+    for (const k of near) add(kinds, state.tiles.get(k).b, k);
+    return { how: l.kind || 'bahn', near, kinds };
+  });
+  return { net, inV, byLink };
+}
+// Erreicht das Objekt (Anker k) n Gebäude der Sorte? how: 'nah' (Umkreis r), 'viertel', 'bahn'/'seil'/'faehre' – oder null
+function reachKind(acc, k, x, y, r, pred, n = 1) {
+  const got = new Set();
+  for (const [a, b] of aroundTiles(x, y, r)) { const q = anchorAt(a, b); if (q && q !== k && pred(state.tiles.get(q).b)) got.add(q); }
+  if (got.size >= n) return { count: got.size, how: 'nah' };
+  if (!acc) return { count: got.size, how: null };
+  const take = kinds => { for (const [b, ks] of kinds) if (pred(b)) for (const q of ks) { if (q !== k && state.tiles.has(q)) got.add(q); if (got.size >= n) return true; } return false; };
+  const v = acc.net.vOf(k);
+  if (v && acc.inV.has(v) && take(acc.inV.get(v))) return { count: got.size, how: 'viertel' };
+  for (const L of acc.byLink) if (L.near.has(k) && take(L.kinds)) return { count: got.size, how: L.how };
+  return { count: got.size, how: null };
+}
+// Versorgungs-Wünsche: Umkreis und Sorte
+const WISH_REACH = { baecker: [6, b => isKind('baecker', b)], markt: [8, b => isKind('markt', b)],
+  park: [4, b => isKind('park', b) || isKind('brunnen', b)], schule: [10, b => isKind('schule', b)] };
+function wishCheck(w, x, y, acc = T.access) {
+  if (!WISH_REACH[w]) return { ok: wishMet(w, x, y), how: null };
+  const [r, pred] = WISH_REACH[w], got = reachKind(acc, x + ',' + y, x, y, r, pred);
+  return { ok: !!got.how, how: got.how };
+}
 function wishMet(w, x, y) {
+  if (WISH_REACH[w]) return wishCheck(w, x, y).ok;
   switch (w) {
     case 'weg': return DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'weg' || crossingAt(x + dx, y + dy));
     case 'deko': {
@@ -1265,11 +1309,7 @@ function wishMet(w, x, y) {
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;
       return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg');
     }
-    case 'baecker': return objWithin(x, y, 6, b => isKind('baecker', b));
     case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));
-    case 'markt': return objWithin(x, y, 8, b => isKind('markt', b));
-    case 'park': return objWithin(x, y, 4, b => isKind('park', b) || isKind('brunnen', b));    // auch Kristallbrunnen, Botanischer Garten
-    case 'schule': return objWithin(x, y, 10, b => isKind('schule', b));
     case 'schoen': return beautyAround(x, y, 3) >= 30;
     case 'wasser': return countAround(x, y, 3, isWater) > 0;
     default: return false;
@@ -1278,13 +1318,13 @@ function wishMet(w, x, y) {
 // Wünsche für die nächste Stufe (alle bisherigen zählen weiter mit)
 // Hausausbau: Taler (steigend mit der Stufe) und Material
 const houseCost = st => ({ money: st.money || 0, ...(st.mat || {}) });
-function houseWishes(t, x, y) {
+function houseWishes(t, x, y, acc = T.access) {
   const next = HOUSE_STAGES[t.lvl];
   if (!next) return { next: null, list: [], met: 0, total: 0, ready: false };
   // Stufen mit Freischaltung (Glasvilla: Kristallhöhle) bleiben bis dahin nur ein Ausblick
   if (next.lm && !unlockOk(next, 'haus:' + next.name)) return { next: null, later: next, list: [], met: 0, total: 0, ready: false };
   const ids = HOUSE_STAGES.slice(1, t.lvl + 1).flatMap(st => st.wishes);
-  const list = ids.map(id => ({ id, text: WISHES[id].text, ok: wishMet(id, x, y) }));
+  const list = ids.map(id => ({ id, text: WISHES[id].text, ...wishCheck(id, x, y, acc) }));
   const met = list.filter(w => w.ok).length;
   return { next, list, met, total: list.length, ready: met === list.length };
 }

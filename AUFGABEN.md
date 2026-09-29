@@ -298,9 +298,9 @@ Große Hafen bekommt mehr Auftragsplätze und Großaufträge. Schiffe fahren nur
 Entschieden: Versorgung (Bäckerei, Markt, Schule, Park/Brunnen und die „in der Nähe“-Bedingungen der Gebäude) zählt
 auch, wenn ein Weg (beliebig lang) oder eine Bahnlinie dorthin führt. Schönheit, Wasser, Ruhe und „direkt daneben“
 bleiben Sache der Umgebung.
-- [ ] **26a** Wegenetz: Haus/Gebäude berührt einen Weg, das Ziel berührt denselben Weg (Bahnübergänge verbinden).
-- [ ] **26b** Bahn: Haus nah an einem Bahnhof, Ziel nah an einem Bahnhof derselben Linie (fahrende Linie).
-- [ ] **26c** Anzeige: „✓ per Weg“ / „✓ per Bahn“ im Infofenster.
+- [x] **26a** Weg: Ziel im selben Viertel (über Wege oder aneinandergrenzend verbunden).
+- [x] **26b** Bahn: Haus nah an einem Bahnhof, Ziel nah an einem Bahnhof derselben Linie (fahrende Linie; auch Seilbahn und Fähre).
+- [x] **26c** Anzeige: „· 🏘️ im selben Viertel“ / „· 🚆 per Bahn“ im Infofenster.
 
 ## Block 27 – Endlose Karte (30.09.)
 

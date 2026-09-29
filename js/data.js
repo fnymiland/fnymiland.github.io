@@ -180,11 +180,11 @@ const HOUSE_STAGES = [
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
   deko:    { text: 'Deko in der Nähe (2 Felder)' },
-  baecker: { text: 'Bäckerei in Laufweite (6 Felder)' },
+  baecker: { text: 'Bäckerei erreichbar (6 Felder, oder per Weg/Bahn)' },
   ruhe:    { text: 'Ruhe – kein lauter Betrieb direkt daneben' },
-  markt:   { text: 'Markt in Laufweite (8 Felder)' },
-  park:    { text: 'Park oder Brunnen in der Nähe (4 Felder, auch Kristallbrunnen und Botanischer Garten)' },
-  schule:  { text: 'Schule in der Nähe (10 Felder)' },
+  markt:   { text: 'Markt erreichbar (8 Felder, oder per Weg/Bahn)' },
+  park:    { text: 'Park oder Brunnen erreichbar (4 Felder, oder per Weg/Bahn)' },
+  schule:  { text: 'Schule erreichbar (10 Felder, oder per Weg/Bahn)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
   wasser:  { text: 'Blick aufs Wasser (Teich, See oder Meer in 3 Feldern)' },
 };
@@ -335,7 +335,7 @@ const FX = {
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
 const ITEM_TIPS = {
-  reihenhaus: 'Ins Dorf, Tür zum Weg: drei Häuser auf zwei Feldern. Mit Markt und Schule in der Nähe wachsen sie.',
+  reihenhaus: 'Ins Dorf, Tür zum Weg: drei Häuser auf zwei Feldern. Mit Markt und Schule (in der Nähe oder per Weg/Bahn erreichbar) wachsen sie.',
   baumhaus: 'Mitten in den Wald stellen – die Bäume bleiben. Mit schöner Umgebung und Nachbar-Baumhäusern wird ein Baumhaus-Dorf daraus.',
   hausboot: 'Aufs Wasser direkt am Ufer (auch im Teich). Mit Nachbar-Booten und viel Wasser wächst es.',
   bootssteg: 'Ins Meer direkt an die Küste bauen. Antippen: Boot losschicken und die nächste Insel entdecken.',
@@ -352,7 +352,7 @@ const ITEM_TIPS = {
   saege: 'In die Nähe deiner Holzfäller. Bretter brauchst du für fast alles: Hausausbau, Bank, Park …',
   steinmetz: 'In die Nähe des Steinbruchs. Pflastersteine brauchen Stadthäuser und große Gebäude.',
   schmiede: 'In die Nähe des Bergwerks. Metall brauchen Laternen, Villen und die Bahn.',
-  baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in Laufweite.',
+  baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in der Nähe oder am Weg.',
   markt: 'Mitten ins Dorf: Jedes Gebäude im Umkreis von 2 Feldern bringt +1,5 Taler/s.',
   fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
   hafen: 'Ans Wasser. +8 % auf alle Einnahmen, Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',

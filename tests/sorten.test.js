@@ -18,7 +18,7 @@ describe('Wohnhäuser', () => {
     for (const [i, b] of [['reihenhaus'], ['reihenhaus'], ['baumhaus'], ['ferienhaus'], ['haus']].map((b, i) => [i, b[0]])) game(`state.tiles.set('${6 + 2 * i},6', { b: '${b}', lvl: 1, rot: 0 })`);
     game('recalc()');
     const c = game("stageInfo(state.tiles.get('10,10'), 10, 10).conds.find(c => /Wohnhäuser/.test(c.text))");
-    expect(c.text).toBe('5 Wohnhäuser in der Nähe (8 Felder)');
+    expect(c.text).toBe('5 Wohnhäuser erreichbar (8 Felder, oder per Weg/Bahn)');
     expect(c.ok).toBe(true);
   });
 

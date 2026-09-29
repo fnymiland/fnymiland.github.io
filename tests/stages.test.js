@@ -22,7 +22,7 @@ describe('Gebäude wachsen in drei Stufen', () => {
     let i = info(8, 8);
     expect(i.next.name).toBe('Großes Sägewerk');
     expect(i.ready).toBe(false);
-    expect(i.conds.map(c => c.text)).toEqual(['👷 2 freie Einwohner als Mitarbeiter', '2 Holzfäller in der Nähe (6 Felder)']);
+    expect(i.conds.map(c => c.text)).toEqual(['👷 2 freie Einwohner als Mitarbeiter', '2 Holzfäller erreichbar (6 Felder, oder per Weg/Bahn)']);
     game("state.terra.set('7,6', 'forest'); state.terra.set('8,6', 'forest')");
     put('holz', 7, 6); put('holz', 8, 6);
     i = info(8, 8);
@@ -74,7 +74,7 @@ describe('Gebäude wachsen in drei Stufen', () => {
 
   it('„weitere“, wenn es um die eigene Sorte geht', () => {
     put('holz', 8, 8, 2);
-    expect(info(8, 8).conds[1].text).toBe('2 weitere Holzfäller in der Nähe (4 Felder)');
+    expect(info(8, 8).conds[1].text).toBe('2 weitere Holzfäller erreichbar (4 Felder, oder per Weg/Bahn)');
   });
 
   it('nach Stufe 3 ist Schluss', () => {

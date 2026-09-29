@@ -585,6 +585,9 @@ function startMove(x, y, slot = 0) {
 }
 const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
 
+// Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
+const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff' };
+const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -640,7 +643,7 @@ function openInfo(x, y) {
         ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${n}`)].filter(Boolean);
       grow = `
         <div class="label">Nächste Stufe: ${info.next.name} · ×${t.lvl + 1}</div>
-        <div class="status">${info.conds.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}</div>`).join('')}</div>
+        <div class="status">${info.conds.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${reachHow(c)}</div>`).join('')}</div>
         <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
         <div class="row"><button class="btn" id="p-stage" ${info.ready && canPay(info.next.cost) ? '' : 'disabled'}>
           ${info.ready ? (canPay(info.next.cost) ? '✨ Ausbauen' : 'Material fehlt noch') : `Noch ${missing} ${missing > 1 ? 'Bedingungen' : 'Bedingung'}`}</button></div>`;
@@ -672,7 +675,7 @@ function openInfo(x, y) {
       <p class="resident">${a.icon} <b id="p-name">${escHtml(t.name)} ${a.family}</b> <button class="link" id="p-rename" aria-label="Namen ändern">✎</button></p>
       <p class="hearts">${hearts}</p>
       ${w.next ? `<div class="label">Wünsche für: ${w.next.name}</div>
-        <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}</div>`).join('')}</div>`
+        <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}${reachHow(v)}</div>`).join('')}</div>`
         : w.later ? `<p class="muted">✨ Mit Kristall 💎 von der Kristallinsel kann daraus eine ${w.later.name} werden.</p>`
         : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
     const hc = w.next && houseCost(w.next), hcText = hc ? [hc.money ? `🪙 ${fmt(hc.money)}` : '', matText(w.next.mat)].filter(Boolean).join(' ') : '';

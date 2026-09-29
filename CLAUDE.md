@@ -246,6 +246,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     hinten; was weicht, gibt es mit `fullValue` voll zurück (samt Ausbau). **Rathaus „Bereit“**: Gruppen wie das Bau-Menü
     (`readyGroups`), „Alle ausbauen“ je Gruppe und „Alles ausbauen“ → `upgradeMany` (Günstigstes zuerst, nach jedem Ausbau
     neu rechnen, `QUIET` statt Einzel-Meldungen). Wunderwerke und Laternen nur einzeln.
+53. **Bedingungen per Weg oder Bahn** (Block 26): Versorgungs-Wünsche (`WISH_REACH`: Bäckerei, Markt, Park/Brunnen,
+    Schule) und `near`-Bedingungen ab 2 Feldern gelten auch, wenn das Ziel im selben Viertel steht oder über eine fahrende
+    Verbindung erreichbar ist (`buildAccess` in `totals` → `T.access`, `reachKind` → `how`: 'nah' | 'viertel' | 'bahn' |
+    'seil' | 'faehre'). Schönheit, Wasser, Ruhe, Deko und „direkt daneben“ (r = 1) bleiben vor Ort. Wer Wünsche prüft:
+    `wishCheck` (mit `how`), `houseWishes`/`stageInfo` bekommen den Zugang als letztes Argument (in `totals` den frischen).
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).
