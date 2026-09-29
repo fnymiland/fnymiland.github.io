@@ -252,6 +252,7 @@ function unlockOk(def, key) {
   if (def.lm) { const [type, n] = def.lm.split(':'); if (lmStage(type) < +n) return false; }
   if (def.lanterns && lanternCount() < def.lanterns) return false;
   if (def.tech && !hasTech(def.tech)) return false;
+  if (def.rank && starCount() < def.rank) return false;                // Pokale: genug Erfolgs-Sterne
   return true;
 }
 // Ort und Stufe zusammen („🌬️ Windige Klippe → Aussichtspunkt“), kurz nur der Ort (Leiste unten)
@@ -264,6 +265,7 @@ function unlockText(def, short) {
   if (def.design) return `🎨 Kunstakademie · 🪙 ${fmt(def.design)}`;
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
+  if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
   return '';
 }
 const styleOk = st => unlockOk(st, 'weg:' + st.id);

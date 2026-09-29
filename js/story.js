@@ -291,3 +291,59 @@ const GUIDE = [
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
     text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
 ];
+
+// ---------------------------------------------------------------------------
+// Erfolge: jede erreichte Stufe = ⭐. Sterne bringen Ehrennadeln (RANKS), die schalten Pokale frei.
+// Werte kommen aus dem aktuellen Stand; „Taler verdient“ zählt state.stats.earned (auch wenn man sie ausgibt).
+// ---------------------------------------------------------------------------
+const tileCount = f => { let n = 0; for (const t of state.tiles.values()) if (f(t)) n++; return n; };
+const decoCount = f => { let n = 0; for (const ds of state.decos.values()) for (const d of ds) if (d && f(d)) n++; return n; };
+const ACHIEVEMENTS = [
+  { id: 'taler', icon: '🪙', name: 'Taler verdient', tiers: [1e4, 1e5, 1e6, 1e7, 1e8], value: () => state.stats.earned },
+  { id: 'einwohner', icon: '👥', name: 'Einwohner', tiers: [50, 200, 1000, 5000, 10000], value: () => T.pop },
+  { id: 'haeuser', icon: '🏠', name: 'Häuser', tiers: [10, 50, 150], value: () => tileCount(t => t.b === 'haus') },
+  { id: 'villen', icon: '🏡', name: 'Villen', tiers: [1, 10, 50], value: () => tileCount(t => t.b === 'haus' && t.lvl >= 5) },
+  { id: 'glasvillen', icon: '💎', name: 'Glasvillen', tiers: [1, 10], value: () => tileCount(t => t.b === 'haus' && t.lvl >= 6) },
+  { id: 'bahn', icon: '🚆', name: 'Eisenbahn', unit: 'km', tiers: [1, 5, 20, 50], value: () => tileCount(t => t.b === 'schiene') * 0.1 },
+  { id: 'zuege', icon: '🚉', name: 'Fahrende Züge', tiers: [1, 3, 5], value: () => T.rail.trains },
+  { id: 'bruecken', icon: '🌉', name: 'Brückenfelder', tiers: [10, 50], value: () => tileCount(t => t.bridge) },
+  { id: 'schoen', icon: '🌸', name: 'Schönheit', tiers: [200, 1000, 5000], value: () => T.beauty },
+  { id: 'baeume', icon: '🌳', name: 'Bäume gepflanzt', tiers: [25, 100, 500], value: () => decoCount(d => d.b === 'baum') },
+  { id: 'deko', icon: '🪴', name: 'Deko aufgestellt', tiers: [50, 250, 1000], value: () => decoCount(() => true) + tileCount(t => ITEMS[t.b].cat === 'deko') },
+  { id: 'laternen', icon: '🏮', name: 'Laternen', tiers: [3, 10, 22], value: () => lanternCount() },
+  { id: 'inseln', icon: '🏝️', name: 'Inseln', tiers: [2, 5, 8], value: () => state.islands.size },
+  { id: 'forschung', icon: '💡', name: 'Forschungen', tiers: [5, 15, TECHS.length], value: () => state.techs.size },
+  { id: 'wege', icon: '🛤️', name: 'Wege', unit: 'km', tiers: [1, 5, 20], value: () => tileCount(t => t.b === 'weg') * 0.1 },
+  { id: 'land', icon: '🌊', name: 'Land aus dem Meer', unit: 'Felder', tiers: [20, 100, 500],
+    value: () => [...state.claimed].filter(k => terrainAt(...keyXY(k)) !== 'water').length },
+  { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.length], value: () => state.design.size },
+];
+const RANKS = [
+  { stars: 0, name: 'Noch ohne Ehrennadel' },
+  { stars: 5, name: 'Ehrennadel Bronze', item: 'pokal_bronze' },
+  { stars: 15, name: 'Ehrennadel Silber', item: 'pokal_silber' },
+  { stars: 30, name: 'Ehrennadel Gold', item: 'pokal_gold' },
+  { stars: 45, name: 'Goldene Inselkrone' },
+];
+const starCount = () => Object.values((state && state.achieved) || {}).reduce((sum, n) => sum + n, 0);
+const rankOf = stars => [...RANKS].reverse().find(r => stars >= r.stars);
+// silent: beim Laden – schon Erreichtes still zählen, ohne Band-Gewitter
+function checkAchievements(silent = false) {
+  if (!state.achieved) state.achieved = {};
+  const before = rankOf(starCount());
+  for (const a of ACHIEVEMENTS) {
+    const v = a.value();
+    let n = state.achieved[a.id] || 0;
+    while (n < a.tiers.length && v >= a.tiers[n] - 1e-9) { n++; if (!silent) achvQueue.push({ a, tier: n }); }
+    state.achieved[a.id] = n;
+  }
+  const after = rankOf(starCount());
+  if (!silent && after !== before) achvQueue.push({ rank: after });
+  if (!silent) showNextAchv();
+}
+// verdiente Taler zählen (für den Erfolg „Taler verdient“)
+function earn(dt) {
+  const got = T.inc * dt;
+  state.money += got;
+  state.stats.earned += got;
+}

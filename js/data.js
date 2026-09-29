@@ -90,6 +90,10 @@ const ITEMS = {
              desc: 'Plätschert, glitzert und leuchtet nachts.' },
   glashaus: { cat: 'deko', name: 'Glashaus', lm: 'kristall:3', size: [1, 2], cost: 900, mat: { kristall: 6, metall: 4, bretter: 6 }, needs: 'grass', beauty: 28,
              desc: 'Ein Gewächshaus aus Glas voller Blumen und Palmen. Leuchtet abends warm.' },
+  // Belohnungen für Erfolge (rank = so viele ⭐ nötig): nur so zu bekommen, kosten nichts
+  pokal_bronze: { cat: 'deko', name: 'Bronze-Pokal', cost: 0, beauty: 6, small: true, rank: 5, desc: 'Für die Ehrennadel in Bronze (5 ⭐ Erfolge).' },
+  pokal_silber: { cat: 'deko', name: 'Silber-Pokal', cost: 0, beauty: 10, small: true, rank: 15, desc: 'Für die Ehrennadel in Silber (15 ⭐ Erfolge).' },
+  pokal_gold: { cat: 'deko', name: 'Gold-Pokal', cost: 0, beauty: 16, small: true, rank: 30, desc: 'Für die Ehrennadel in Gold (30 ⭐ Erfolge). Funkelt.' },
   windrad: { cat: 'deko', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind.' },
   pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, design: 600, master: true, desc: 'Für Konzerte im Park.' },
   statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, design: 900, master: true, desc: 'Glänzt golden.' },
@@ -203,7 +207,7 @@ const MENU = [
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
-    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'leuchtturm'] },
+    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'leuchtturm'] },
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'windrad'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'verschieben', 'abriss'] },
 ];
@@ -274,6 +278,9 @@ const ITEM_TIPS = {
   pavillon: 'Große Deko mit viel Schönheit – schön im Park.',
   statue: 'Große Deko mit sehr viel Schönheit.',
   graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Ziehen = mehrere.',
+  pokal_bronze: 'Deine erste Ehrennadel! Stell den Pokal vors Rathaus – kostet nichts.',
+  pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
+  pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.',
 };
 const effectText = id => FX[id] || (ITEMS[id] && ITEMS[id].beauty ? `🌸 +${ITEMS[id].beauty}` : '');

@@ -132,11 +132,11 @@ function frame(now) {
   const t = Date.now();
   const dt = Math.min(2, (t - lastTick) / 1000);
   lastTick = t;
-  state.money += T.inc * dt;
+  earn(dt);
   state.science += T.sci * dt;
   produce(dt);
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); checkAchievements(); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

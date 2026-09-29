@@ -830,7 +830,7 @@ const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine'
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
+const DECO_SCALE = { pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
 const decoScale = b => DECO_SCALE[b] || 1;
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
@@ -963,6 +963,9 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
       break;
     }
+    case 'pokal_bronze': drawTrophy(cx, cy, z, now, ['#c98a4b', '#e3ad76', '#9a6534']); break;
+    case 'pokal_silber': drawTrophy(cx, cy, z, now, ['#c7ced8', '#eef2f6', '#98a1ad']); break;
+    case 'pokal_gold': drawTrophy(cx, cy, z, now, ['#f2c14e', '#ffe28a', '#c9962b']); break;
     case 'kristallaterne': {              // silberner Pfahl, oben ein Kristall als Lampe
       ellipse(cx, cy + 1 * z, 4 * z, 2 * z, 'rgba(40,50,70,0.16)');
       g.strokeStyle = C('#c3cad3'); g.lineWidth = 1.8 * z; g.lineCap = 'round';
@@ -1218,6 +1221,28 @@ function drawLandmarkBase(type, cx, cy, z, now, x, y) {
   }
 }
 
+// Pokal: Sockel, Fuß, Schale mit zwei Henkeln, Glanz; ab und zu blitzt es
+function drawTrophy(cx, cy, z, now, [base, light, dark]) {
+  ellipse(cx, cy + 1 * z, 7 * z, 3 * z, 'rgba(40,40,40,0.15)');
+  box(cx, cy, 4.6 * z, 2.4 * z, 5 * z, '#5a4636', '#6f5745', 0);
+  poly([[cx - 3.2 * z, cy - 5 * z], [cx + 3.2 * z, cy - 5 * z], [cx + 1.1 * z, cy - 8 * z], [cx - 1.1 * z, cy - 8 * z]], C(dark));
+  g.fillStyle = C(base); g.fillRect(cx - 0.9 * z, cy - 12 * z, 1.8 * z, 4.5 * z);
+  g.strokeStyle = C(dark); g.lineWidth = 1.3 * z;
+  g.beginPath(); g.arc(cx - 5.4 * z, cy - 17 * z, 2.3 * z, Math.PI * 0.5, Math.PI * 1.5); g.stroke();
+  g.beginPath(); g.arc(cx + 5.4 * z, cy - 17 * z, 2.3 * z, -Math.PI * 0.5, Math.PI * 0.5); g.stroke();
+  g.beginPath(); g.moveTo(cx - 5.6 * z, cy - 20 * z);
+  g.quadraticCurveTo(cx - 5.2 * z, cy - 11.2 * z, cx, cy - 11.5 * z); g.quadraticCurveTo(cx + 5.2 * z, cy - 11.2 * z, cx + 5.6 * z, cy - 20 * z);
+  g.closePath(); g.fillStyle = C(base); g.fill();
+  ellipse(cx, cy - 20 * z, 5.6 * z, 1.6 * z, C(dark));
+  poly([[cx - 3.8 * z, cy - 19 * z], [cx - 2.6 * z, cy - 19 * z], [cx - 2.2 * z, cy - 14 * z], [cx - 3 * z, cy - 14 * z]], C(light));
+  const tw = Math.sin(now / 450 + cx * 0.1);
+  if (tw > 0.75) {
+    const s = 2.4 * z * (tw - 0.75) * 4, sx = cx + 3.4 * z, sy = cy - 19 * z;
+    g.fillStyle = 'rgba(255,255,255,0.95)';
+    g.beginPath(); g.moveTo(sx, sy - s); g.lineTo(sx + s * 0.3, sy); g.lineTo(sx, sy + s); g.lineTo(sx - s * 0.3, sy); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
+  }
+}
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0) {
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);

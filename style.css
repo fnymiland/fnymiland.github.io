@@ -448,3 +448,21 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .card details { background: var(--cream2); border-radius: 12px; padding: 6px 12px; margin: 6px 0; }
 .card details summary { font-weight: 800; cursor: pointer; }
 .card details p { margin: 6px 0 2px; }
+
+/* ---------- Erfolge ---------- */
+#achv {
+  position: fixed; left: 50%; top: 64px; transform: translateX(-50%); z-index: 30; cursor: pointer;
+  background: var(--yellow); color: var(--brown); border-radius: 99px; padding: 8px 18px; font-weight: 800; font-size: 14px;
+  box-shadow: 0 4px 0 #e0c060, 0 10px 24px rgba(60, 40, 20, .2); max-width: calc(100% - 24px); text-align: center;
+  animation: achv-pop .35s ease-out;
+}
+#achv[hidden] { display: none; }
+@keyframes achv-pop { from { transform: translateX(-50%) scale(.6); opacity: 0; } to { transform: translateX(-50%) scale(1); opacity: 1; } }
+.achv-row { display: flex; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); }
+.achv-row .ai { font-size: 22px; width: 30px; text-align: center; }
+.achv-row .at { flex: 1; min-width: 0; font-size: 13px; }
+.achv-row .stars { font-size: 11px; }
+.achv-row .stars .off { filter: grayscale(1); opacity: .3; }
+.achv-row .bar { height: 7px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 4px 0 2px; }
+.achv-row .bar i { display: block; height: 100%; background: var(--green, #6cc04a); border-radius: 99px; }
+.achv-row.done b { color: var(--green-d); }

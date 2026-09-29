@@ -263,6 +263,27 @@ function openUnlocks() {
   for (const b of document.querySelectorAll('#modal-card [data-try]')) b.onclick = () => tryUnlock(b.dataset.try);
   $('m-close').onclick = closeModal;
 }
+// Erfolg erreicht: kurzes Band oben (kein Fenster zum Wegtippen); antippen öffnet die Erfolge im Rathaus
+const achvQueue = [];
+let achvTimer = 0;
+const fmtBig = v => v >= 1e6 ? `${nf1.format(v / 1e6)} Mio.` : fmt(v);
+const tierText = (a, v) => a.unit === 'km' ? `${nf1.format(v)} km` : fmtBig(v) + (a.unit ? ' ' + a.unit : '');
+const achvEl = () => $('achv');
+$('achv').onclick = () => { hideAchv(); setTool('look'); openTownHall('erfolge'); };
+function showNextAchv() {
+  const el = achvEl();
+  if (!el.hidden || !achvQueue.length) return;
+  const e = achvQueue.shift();
+  el.innerHTML = e.rank
+    ? `🎖️ <b>${e.rank.name}</b>${e.rank.item ? ` – ${ITEMS[e.rank.item].name} freigeschaltet!` : '!'}`
+    : `🏆 Erfolg: <b>${e.a.icon} ${e.a.name} – ${tierText(e.a, e.a.tiers[e.tier - 1])}</b> ⭐`;
+  el.hidden = false;
+  sfx('star');
+  clearTimeout(achvTimer);
+  achvTimer = setTimeout(() => { el.hidden = true; showNextAchv(); }, 3800);
+}
+function hideAchv() { const el = achvEl(); el.hidden = true; clearTimeout(achvTimer); achvQueue.length = 0; }
+
 // Tipps beim ersten Mal: einer nach dem anderen, mit Abstand, nicht in der Einführung und nie über einem anderen Fenster
 let lastTipAt = -1e9;
 const TIP_GAP = 25000;
@@ -766,7 +787,7 @@ function readyList() {
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['wishes', 'Wünsche'], ['town', 'Ort']];
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['town', 'Ort']];
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -829,6 +850,18 @@ function openTownHall(tab = hallTab) {
       <div class="label">Deine Inseln</div>
       ${row('home', '🏠', 'Heimatinsel', true, '')}
       ${ISLES.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), ` · ${LANDMARKS[i.lm].icon} ${'🏮'.repeat(lmStage(i.lm))}`)).join('')}`;
+  } else if (tab === 'erfolge') {
+    const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
+    body = `
+      <p class="big" style="font-size:18px">⭐ ${stars} · ${rank.name}</p>
+      ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? ` – schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
+      ${ACHIEVEMENTS.map(a => {
+        const n = state.achieved[a.id] || 0, v = a.value(), done = n >= a.tiers.length, goal = a.tiers[Math.min(n, a.tiers.length - 1)];
+        return `<div class="achv-row${done ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at">
+          <div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div>
+          <div class="bar"><i style="width:${done ? 100 : Math.min(100, v / goal * 100)}%"></i></div>
+          <small>${done ? '✓ alle Stufen geschafft' : `${tierText(a, v)} / ${tierText(a, goal)}`}</small></div></div>`;
+      }).join('')}`;
   } else if (tab === 'wishes') {
     const miss = new Map();
     for (const [k, t] of state.tiles) {
@@ -929,7 +962,7 @@ function showMenu() {
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button></div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
       <button class="btn ghost" style="flex:1" id="m-import">📂 Spielstand laden</button>
@@ -938,6 +971,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => showIntro(false);
   $('m-tips').onclick = openTipBook;
+  $('m-achv').onclick = () => openTownHall('erfolge');
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
   $('m-close').onclick = closeModal;
