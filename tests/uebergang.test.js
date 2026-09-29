@@ -64,6 +64,39 @@ describe('Bahnübergang', () => {
     expect(game('load()').tiles.get('9,8')).toMatchObject({ cross: true, foot: true });
   });
 
+  it('Brücke im Design wählbar: Stein, wie der Weg, Kristall – das alte Design gibt es voll zurück', () => {
+    for (let y = 7; y <= 9; y++) game(`build('weg', 9, ${y}, true)`);
+    const m = game('state.money'), q = game('state.res.quader');
+    expect(game("setCrossing(9, 8, true, 'holz')")).toBe(true);
+    expect(game("setCrossing(9, 8, true, 'stein')")).toBe(true);
+    expect(game('state.money')).toBe(m - 150);                          // Holz zurück, Stein bezahlt
+    expect(game('state.res.quader')).toBe(q - 8);
+    expect(t(9, 8)).toMatchObject({ foot: true, footPaid: 'stein' });
+    game('state.res.kristall = 0');
+    expect(game("setCrossing(9, 8, true, 'kristall')")).toBe(false);    // ohne Kristall geht es nicht – Stein bleibt
+    expect(t(9, 8).footPaid).toBe('stein');
+    expect(game('state.money')).toBe(m - 150);
+    game('save()');
+    expect(game('load()').tiles.get('9,8').footPaid).toBe('stein');
+  });
+
+  it('alte Stände (footPaid: true) sind eine Holzbrücke; alle Designs lassen sich zeichnen', () => {
+    for (let y = 7; y <= 9; y++) game(`build('weg', 9, ${y}, true)`);
+    game("Object.assign(state.tiles.get('9,8'), { foot: true, footPaid: true })");
+    expect(game("footPaidOf(state.tiles.get('9,8'))")).toBe('holz');
+    for (const id of game('Object.keys(FOOT_STYLES)')) {
+      game(`state.tiles.get('9,8').footPaid = '${id}'`);
+      for (const night of [0, 0.8]) expect(() => game(`night = ${night}; drawCrossing(300, 300, 1, 9, 8, state.tiles.get('9,8'), 1000)`), id).not.toThrow();
+    }
+    game('night = 0');
+    game('openInfo(9, 8)');
+    expect(document.querySelectorAll('#panel [data-foot]').length).toBe(4);
+  });
+
+  it('die Brücke ist so breit wie ein Weg', () => {
+    expect(game('ARCH_W')).toBeGreaterThanOrEqual(game('ROAD_W') - 0.05);
+  });
+
   it('über die Bogenbrücke gehen die Bewohner auch, wenn ein Zug kommt – in der Mitte oben', () => {
     for (let y = 7; y <= 9; y++) game(`build('weg', 9, ${y}, true)`);
     game('setCrossing(9, 8, true)');

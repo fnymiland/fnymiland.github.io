@@ -550,9 +550,15 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
+  const footBtn = ([id, fs]) => {
+    const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
+    return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
+  };
   const train = line ? trainChooser(line) : isCrossing(t) ? `<div class="label">Bahnübergang</div>
-    <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button>
-      <button class="look${t.foot ? ' on' : ''}" data-cross="1">🌉 Bogenbrücke${t.footPaid ? '' : ` · 🪙 ${FOOTBRIDGE.money} 🪚${FOOTBRIDGE.bretter} 🔩${FOOTBRIDGE.metall}`}</button></div>` : '';
+    <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button></div>
+    <div class="label">🌉 Fußgängerbrücke</div>
+    <div class="looks">${Object.entries(FOOT_STYLES).map(footBtn).join('')}</div>
+    ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
@@ -606,6 +612,7 @@ function openInfo(x, y) {
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (setCrossing(x, y, true, b.dataset.foot)) openInfo(x, y); };
   if (!liveNow) updateHud();
 }
 

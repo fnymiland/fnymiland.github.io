@@ -134,11 +134,17 @@ function clipTo(shapes, L) {
   }
   g.clip();
 }
-function pattern(L, kind, x, y, z, col, cols) {
-  const R = 0.55;
+// ext: Muster über das Feld hinaus fortsetzen (gleiches Raster, wie es das Nachbarfeld selbst zeichnet) – für Übergänge
+// box [u0, u1, v0, v1]: nur Punkte darin zeichnen (Übergänge brauchen nur einen Streifen)
+function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
+  const R = 0.55, E = R + ext;
+  const out = (u, v) => box && (u < box[0] || u > box[1] || v < box[2] || v > box[3]);
+  const span = step => [-Math.ceil(ext / step - 1e-9), Math.floor((2 * R + ext) / step + 1e-9)];   // Indizes im festen Raster
   if (kind === 'stones' || kind === 'dots') {
-    const step = kind === 'stones' ? 0.11 : 0.09;
-    for (let u = -R, i = 0; u <= R; u += step, i++) for (let v = -R, j = 0; v <= R; v += step, j++) {
+    const step = kind === 'stones' ? 0.11 : 0.09, [i0, i1] = span(step);
+    for (let i = i0; i <= i1; i++) for (let j = i0; j <= i1; j++) {
+      const u = -R + i * step, v = -R + j * step;
+      if (out(u, v)) continue;
       const h = hash(x * 16 + i, y * 16 + j, 333);
       if (kind === 'dots' && h > 0.45) continue;
       const q = L([u + (h - 0.5) * 0.04, v + (hash(x * 16 + i, y * 16 + j, 334) - 0.5) * 0.04]);
@@ -148,17 +154,19 @@ function pattern(L, kind, x, y, z, col, cols) {
     return;
   }
   if (kind === 'rainbow') {                // schräge Streifen in Regenbogenfarben (pastell)
-    const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1;
-    for (let i = -14; i <= 14; i++) {
+    const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1, n = Math.ceil(2 * E / w) + 1;
+    for (let i = -n; i <= n; i++) {
       const c0 = i * w;
-      poly([[c0 + R, -R], [c0 + w * 0.8 + R, -R], [c0 + w * 0.8 - R, R], [c0 - R, R]].map(L), C(RB[(i + 60) % RB.length]));
+      poly([[c0 + E, -E], [c0 + w * 0.8 + E, -E], [c0 + w * 0.8 - E, E], [c0 - E, E]].map(L), C(RB[(i + 600) % RB.length]));
     }
     return;
   }
   if (kind === 'confetti') {
     // kleine, zufällig gedrehte Papierstreifen – je Farbe ein Pfad, das spart Zeichenaufrufe
-    const bits = cols.map(() => []);
-    for (let u = -R, i = 0; u <= R; u += 0.085, i++) for (let v = -R, j = 0; v <= R; v += 0.085, j++) {
+    const bits = cols.map(() => []), [i0, i1] = span(0.085);
+    for (let i = i0; i <= i1; i++) for (let j = i0; j <= i1; j++) {
+      const u = -R + i * 0.085, v = -R + j * 0.085;
+      if (out(u, v)) continue;
       const h = hash(x * 16 + i, y * 16 + j, 335);
       if (h > 0.6) continue;
       const cu = u + (hash(x * 16 + i, y * 16 + j, 336) - 0.5) * 0.05, cv = v + (hash(x * 16 + i, y * 16 + j, 337) - 0.5) * 0.05;
@@ -177,17 +185,21 @@ function pattern(L, kind, x, y, z, col, cols) {
   g.beginPath();
   const line = (a, b) => { const p0 = L(a), p1 = L(b); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); };
   if (kind === 'bricks') {
-    for (let r = 0; r < 11; r++) {
+    const [r0, r1] = span(0.1), [c0, c1] = span(0.2);
+    for (let r = r0; r <= r1; r++) {
       const v = -R + r * 0.1;
-      line([-R, v], [R, v]);
-      for (let u = -R + (r & 1 ? 0.1 : 0); u <= R; u += 0.2) line([u, v], [u, v + 0.1]);
+      line([-E, v], [E, v]);
+      for (let c = c0; c <= c1; c++) { const u = -R + c * 0.2 + (r & 1 ? 0.1 : 0); line([u, v], [u, v + 0.1]); }
     }
   } else if (kind === 'planks') {
-    for (let v = -R; v <= R; v += 0.07) line([-R, v], [R, v]);
+    const [i0, i1] = span(0.07);
+    for (let i = i0; i <= i1; i++) { const v = -R + i * 0.07; line([-E, v], [E, v]); }
   } else if (kind === 'tiles') {
-    for (let k = -2; k <= 2; k++) { line([-R, k * 0.25], [R, k * 0.25]); line([k * 0.25, -R], [k * 0.25, R]); }
+    const n = 2 + Math.ceil(ext / 0.25);
+    for (let k = -n; k <= n; k++) { line([-E, k * 0.25], [E, k * 0.25]); line([k * 0.25, -E], [k * 0.25, E]); }
   } else if (kind === 'herring') {
-    for (let i = 0; i < 9; i++) for (let j = 0; j < 9; j++) {
+    const n = Math.ceil(ext / 0.125);
+    for (let i = -n; i < 9 + n; i++) for (let j = -n; j < 9 + n; j++) {
       const u = -0.5 + i * 0.125, v = -0.5 + j * 0.125;
       if ((i + j) & 1) line([u, v], [u + 0.125, v]); else line([u, v], [u, v + 0.125]);
     }
@@ -260,7 +272,8 @@ function drawPlaza(L, x, y, z, lk) {
     } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
     g.restore();
   }
-  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter, zu anderem Pflaster eine feine Fuge
+  crossFade(L, plazaBlends(x, y), x, y, z, [outline], false);
+  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter; zu anderem Pflaster ein Farbverlauf
   const line = pts => pts.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
   g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineCap = 'round'; g.lineJoin = 'round';
   g.lineWidth = 1.4 * z;
@@ -275,12 +288,6 @@ function drawPlaza(L, x, y, z, lk) {
     }
   }
   g.stroke();
-  if (sides.includes('seam')) {
-    g.lineWidth = 0.9 * z;
-    g.beginPath();
-    sides.forEach((sd, i) => { if (sd === 'seam') line([corners[i][corners[i].length - 1], corners[(i + 1) % 4][0]]); });
-    g.stroke();
-  }
 }
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
 function pathQuads(x, y) {
@@ -289,27 +296,65 @@ function pathQuads(x, y) {
   for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
   return out;
 }
-// Arme, die in einen Platz münden (Trichter), und Arme zu einem Weg in anderem Stil (Schwelle)
+// Arme, die in einen Platz münden (Trichter)
 const pathFlares = (x, y) => pathArms(x, y).filter(([dx, dy]) => isFillPath(x + dx, y + dy));
-function pathThresholds(x, y) {
+// Übergang zu einem Weg in anderem Stil: Der Belag des Nachbarn läuft über die Feldkante herein und blendet aus
+// (an der Kante halb/halb – auf beiden Seiten gleich). So geht ein Belag fließend in den anderen über, ohne Fuge.
+const BLEND = 0.3, BLEND_STEPS = 10;
+function pathBlends(x, y) {
   const own = pathAt(x, y);
   if (!own || own.shape !== 'band' || own.id === 'tritt') return [];
-  return pathArms(x, y).filter(([dx, dy]) => {
-    const n = pathAt(x + dx, y + dy);
-    return n && n.shape === 'band' && n.id !== own.id && n.id !== 'tritt';
-  });
+  const out = [];
+  for (const d of pathArms(x, y)) {
+    const n = pathAt(x + d[0], y + d[1]);
+    if (n && n.shape === 'band' && n.id !== own.id && n.id !== 'tritt') out.push({ d, look: PATH_LOOK[n.id] });
+  }
+  return out;
 }
-// Schwelle aus hellem Stein quer über den Weg; jedes der beiden Felder zeichnet seine Hälfte
-function drawThreshold(L, d, z) {
-  const B = EDGE_W + 0.03, T = 0.05;
-  const pts = [[0.5, -B], [0.5, B]].concat(arcPts(0.5, B - T, T, Math.PI / 2, Math.PI, 4))
-    .concat(arcPts(0.5, -(B - T), T, Math.PI, Math.PI * 1.5, 4)).map(([a, b]) => armUV(d, a, b));
-  poly(pts.map(L), C('#efe8da'));
-  g.strokeStyle = C('#c8bca5'); g.lineWidth = 0.9 * z; g.lineJoin = 'round';
-  g.beginPath();
-  pts.slice(1).forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-  g.stroke();
+function plazaBlends(x, y) {
+  const sides = plazaSides(x, y), out = [];
+  SIDES.forEach(([dx, dy], i) => { if (sides[i] === 'seam') out.push({ d: [dx, dy], look: PATH_LOOK[pathAt(x + dx, y + dy).id] }); });
+  return out;
 }
+// Belag eines Felds zeichnen (für Übergänge über seine Kante hinaus verlängert)
+function paintLook(L, lk, x, y, z, band, ext, box = null) {
+  const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+  const fillArea = band ? [rect(-E, E, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -E, E)] : [rect(-E, E, -E, E)];
+  if (band) for (const sh of [rect(-E, E, -EDGE_W, EDGE_W), rect(-EDGE_W, EDGE_W, -E, E)]) poly(sh.map(L), C(lk.edge));
+  for (const sh of fillArea) poly(sh.map(L), C(lk.fill));
+  if (!lk.pat && !lk.checker) return;
+  g.save(); clipTo(fillArea, L);
+  if (lk.checker) {
+    const n = Math.ceil(ext / 0.25);
+    for (let i = -n; i < 4 + n; i++) for (let j = -n; j < 4 + n; j++) {
+      if ((i + j) & 1) continue;
+      const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
+      poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
+    }
+  } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box);
+  g.restore();
+}
+// clip: Umriss des eigenen Felds. Der Nachbarbelag wird in Schichten übereinandergelegt, jede ab einer Linie näher an
+// der Kante bis zur Kante – so wächst die Deckkraft stufenweise bis 1/2, ohne helle Fugen zwischen den Stufen.
+function crossFade(L, list, x, y, z, clip, band) {
+  for (const { d, look } of list) {
+    const Ln = ([u, v]) => L([u + d[0], v + d[1]]);           // Koordinaten des Nachbarfelds
+    const cs = [[-0.9, -0.65], [-0.4, -0.65], [-0.4, 0.65], [-0.9, 0.65]].map(([a, b]) => armUV(d, a, b));
+    const box = [Math.min(...cs.map(c => c[0])), Math.max(...cs.map(c => c[0])), Math.min(...cs.map(c => c[1])), Math.max(...cs.map(c => c[1]))];
+    let prev = 0;
+    for (let k = 0; k < BLEND_STEPS; k++) {
+      const a0 = 0.5 - BLEND + BLEND * k / BLEND_STEPS, want = 0.5 * (k + 1) / BLEND_STEPS;
+      g.save();
+      clipTo(clip, L);
+      clipTo([[[a0, -0.6], [0.52, -0.6], [0.52, 0.6], [a0, 0.6]].map(([a, b]) => armUV(d, a, b))], L);
+      g.globalAlpha = 1 - (1 - want) / (1 - prev);           // gestapelt: 1 − (1−α₁)(1−α₂)… = want
+      paintLook(Ln, look, x + d[0], y + d[1], z, band, BLEND + 0.05, box);
+      g.restore();
+      prev = want;
+    }
+  }
+}
+
 // Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
 // Kreuzungen bekommen einen großen Stein in der Mitte, Kurven drei Steine auf dem Bogen.
 function stonePoints(arms, t) {
@@ -399,6 +444,12 @@ function drawRailBed(cx, cy, z, x, y, t) {
     const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
     const across = { rot: arms.length && arms[0][0] ? 1 : 0 };      // ohne Weg-Nachbarn: quer zur Schiene
     for (const [w, col] of [[EDGE_W, edge], [ROAD_W, fill]]) for (const sh of roadShapes(pa, across, w)) poly(sh.map(L), C(col));
+    if (lk.pat || lk.checker) {                      // Muster des Wegs auch zwischen den Schienen
+      g.save(); clipTo(roadShapes(pa, across, ROAD_W), L);
+      if (lk.checker) paintLook(L, lk, x, y, z, false, 0);
+      else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
+      g.restore();
+    }
   }
   // Schienen: dunkel, darauf ein heller Glanz
   const rails = segs.flatMap(seg => [offsetPath(seg, RAIL_GAUGE), offsetPath(seg, -RAIL_GAUGE)]);
@@ -430,10 +481,23 @@ function crossingAxes(x, y) {
   const d = [Math.abs(along[0]), Math.abs(along[1])];
   return { d, n: [d[1], d[0]] };
 }
-// Bogenbrücke: flacher Holzbogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
-// und rechts), in der Mitte über dem Fahrdraht. b = Abstand zur Mitte entlang des Wegs in Feldern
-const ARCH_H = 22, ARCH_W = 0.16, ARCH_SPAN = 1;
+// Bogenbrücke: flacher Bogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
+// und rechts), in der Mitte über dem Fahrdraht. b = Abstand zur Mitte entlang des Wegs in Feldern.
+// So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
+const ARCH_H = 22, ARCH_W = 0.3, ARCH_SPAN = 1;
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
+const ARCH_LOOK = {
+  holz:     { deck: '#c9a26f', seam: '#b08a5e', side: '#8a6440', rail: '#7a5236', th: 4, kind: 'posts' },
+  stein:    { deck: '#ddd6c8', seam: '#c9c0ae', side: '#b8ad98', rail: '#e7e1d4', th: 7, kind: 'wall' },
+  kristall: { deck: '#e6f6fc', seam: '#c3e7f5', side: '#8fcbe6', rail: '#8fd3f2', th: 3, kind: 'glass' },
+};
+function archLook(t) {
+  const id = footPaidOf(t) || 'holz';
+  if (id !== 'weg') return ARCH_LOOK[id];
+  const st = styleDef('weg', t.style), lk = st.id === 'tritt' ? PATH_LOOK.kopf : PATH_LOOK[st.id];
+  const edge = lk.edge || shade(lk.fill, -0.18);
+  return { deck: lk.fill, side: shade(edge, -0.12), rail: shade(edge, -0.25), th: 4, kind: 'posts', path: lk };
+}
 // Steht ein Bewohner auf einer Bogenbrücke? → Feld der Brücke und seine Lage b auf ihr
 function archAt(px, py) {
   const rx = Math.round(px), ry = Math.round(py);
@@ -445,23 +509,53 @@ function archAt(px, py) {
   }
   return null;
 }
-function drawArch(P, z, b0, b1) {
+function drawArch(P, z, b0, b1, lk, x, y, d, n) {
   const bs = [];
   for (let i = 0; i <= 12; i++) bs.push(b0 + (b1 - b0) * i / 12);
   const rail = (s, off) => bs.map(b => P(s * ARCH_W, b, archH(b) + off));
   const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
-  const railing = s => {
-    line(rail(s, 6), '#7a5236', 1.1);
+  const posts = (s, h, col, w) => {
     g.beginPath();
-    for (const b of bs) { const p = P(s * ARCH_W, b, archH(b)), q = P(s * ARCH_W, b, archH(b) + 6); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
-    g.lineWidth = 0.8 * z; g.stroke();
+    for (const b of bs) { const p = P(s * ARCH_W, b, archH(b)), q = P(s * ARCH_W, b, archH(b) + h); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.strokeStyle = C(col); g.lineWidth = w * z; g.stroke();
+  };
+  const railing = s => {
+    if (lk.kind === 'wall') {                              // Stein: niedrige Brüstung mit heller Abdeckung
+      poly(rail(s, 0).concat(rail(s, 5).reverse()), C(s < 0 ? shade(lk.rail, -0.06) : lk.side));
+      line(rail(s, 5), shade(lk.rail, 0.2), 1.3);
+    } else if (lk.kind === 'glass') {                      // Kristall: Glasscheiben, oben ein leuchtender Handlauf
+      poly(rail(s, 0).concat(rail(s, 7).reverse()), 'rgba(175,225,248,0.38)');
+      posts(s, 7, '#cfeefb', 0.6);
+      line(rail(s, 7), lk.rail, 1.2);
+    } else {
+      line(rail(s, 6), lk.rail, 1.1);
+      posts(s, 6, lk.rail, 0.8);
+    }
   };
   railing(-1);                                             // hinteres Geländer
-  poly(rail(-1, 0).concat(rail(1, 0).reverse()), C('#c9a26f'));   // Bohlen
-  g.strokeStyle = C('#b08a5e'); g.lineWidth = 0.6 * z; g.beginPath();
-  for (const b of bs) { const p = P(-ARCH_W, b, archH(b)), q = P(ARCH_W, b, archH(b)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
-  g.stroke();
-  poly(rail(1, 0).concat(rail(1, -4).reverse()), C('#8a6440'));  // vordere Wange
+  const deck = rail(-1, 0).concat(rail(1, 0).reverse());
+  poly(deck, C(lk.deck));
+  if (lk.path) {
+    // Belag wie der Weg: je Abschnitt eine eigene (ebene) Abbildung, damit Muster dem Bogen folgen
+    for (let i = 0; i < 12; i++) {
+      const bA = bs[i], bB = bs[i + 1], hA = archH(bA), hB = archH(bB), k = (hB - hA) / ((bB - bA) || 1);
+      const Ls = ([u, v]) => { const a = u * d[0] + v * d[1], b = u * n[0] + v * n[1]; return P(a, b, hA + (b - bA) * k); };
+      const cs = [[-ARCH_W, bA], [ARCH_W, bA], [ARCH_W, bB], [-ARCH_W, bB]].map(([a, b]) => [a * d[0] + b * n[0], a * d[1] + b * n[1]]);
+      const only = [Math.min(...cs.map(c => c[0])) - 0.1, Math.max(...cs.map(c => c[0])) + 0.1, Math.min(...cs.map(c => c[1])) - 0.1, Math.max(...cs.map(c => c[1])) + 0.1];
+      g.save();
+      g.beginPath(); cs.forEach((c, j) => { const q = Ls(c); j ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
+      paintLook(Ls, lk.path, x, y, z, false, 0.55, only);
+      g.restore();
+    }
+  } else if (lk.kind !== 'glass') {
+    g.strokeStyle = C(lk.seam); g.lineWidth = 0.6 * z; g.beginPath();
+    for (const b of lk.kind === 'wall' ? bs.filter((_, i) => i % 2 === 0) : bs) { const p = P(-ARCH_W, b, archH(b)), q = P(ARCH_W, b, archH(b)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.stroke();
+  } else {
+    line(bs.map(b => P(0, b, archH(b))), '#ffffff', 1.4);  // Kristall: heller Glanz in der Mitte
+    glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
+  }
+  poly(rail(1, 0).concat(rail(1, -lk.th).reverse()), C(lk.side));  // vordere Wange
   railing(1);
 }
 function drawCrossing(cx, cy, z, x, y, t, now) {
@@ -469,11 +563,12 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
   const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   if (t.foot) {
     // hintere Hälfte jetzt, vordere erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
+    const lk = archLook(t);
     if (PASS === 'object') {
-      drawArch(P, z, -ARCH_SPAN, 0);
+      drawArch(P, z, -ARCH_SPAN, 0, lk, x, y, d, n);
       const m = g.getTransform();
-      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN); g.restore(); });
-    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN);
+      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN, lk, x, y, d, n); g.restore(); });
+    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, lk, x, y, d, n);
     return;
   }
   const key = x + ',' + y, target = crossingClosed(x, y) ? 1 : 0;
@@ -540,7 +635,7 @@ function drawPath(cx, cy, z, x, y, t) {
     g.stroke();
     g.setLineDash([]);
   }
-  for (const d of pathThresholds(x, y)) drawThreshold(L, d, z);
+  crossFade(L, pathBlends(x, y), x, y, z, roadShapes(arms, t, EDGE_W, quads, flares), true);
 }
 
 // ---------------------------------------------------------------------------

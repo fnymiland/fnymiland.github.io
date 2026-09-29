@@ -469,7 +469,16 @@ const railArms = (x, y) => DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'sc
 // foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
 const isCrossing = t => !!t && t.b === 'schiene' && !!t.cross;
 const crossingAt = (x, y) => isCrossing(state.tiles.get(x + ',' + y));
-const FOOTBRIDGE = { money: 60, bretter: 4, metall: 2 };
+// Designs der Fußgängerbrücke. Wer umgestaltet, bekommt die alte Brücke voll zurück und zahlt die neue.
+const FOOT_STYLES = {
+  holz:     { name: 'Holz', icon: '🪵', cost: { money: 60, bretter: 4, metall: 2 } },
+  stein:    { name: 'Stein', icon: '🧱', cost: { money: 150, quader: 8 } },
+  weg:      { name: 'Wie der Weg', icon: '🎨', cost: { money: 120, bretter: 4, quader: 4 } },
+  kristall: { name: 'Kristall', icon: '💎', cost: { money: 300, kristall: 5, metall: 2 } },
+};
+const FOOTBRIDGE = FOOT_STYLES.holz.cost;
+const footPaidOf = t => t.footPaid === true ? 'holz' : (t.footPaid || null);     // alte Stände: true = Holz
+const addCost = (c, sgn) => { state.money += sgn * (c.money || 0); for (const [r, n] of Object.entries(c)) if (r !== 'money') state.res[r] += sgn * n; };
 function crossCandidate(b, x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) return null;
@@ -488,13 +497,19 @@ function crossError(b, x, y) {
   if (state.money < c.cost) return 'Zu wenig Taler';
   return matError(c.mat);
 }
-function setCrossing(x, y, foot) {
+function setCrossing(x, y, foot, style) {
   const t = state.tiles.get(x + ',' + y);
   if (!isCrossing(t)) return false;
-  if (foot && !t.footPaid) {
-    if (!canPay(FOOTBRIDGE)) { fail(state.money < FOOTBRIDGE.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
-    const { money, ...mat } = FOOTBRIDGE;
-    state.money -= money; payMat(mat); t.footPaid = true;
+  if (foot) {
+    const had = footPaidOf(t);
+    style = FOOT_STYLES[style] ? style : had || 'holz';
+    if (had !== style) {
+      const cost = FOOT_STYLES[style].cost, back = had ? FOOT_STYLES[had].cost : {};
+      addCost(back, 1);
+      if (!canPay(cost)) { addCost(back, -1); fail(state.money < cost.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+      addCost(cost, -1);
+      t.footPaid = style;
+    }
   }
   t.foot = !!foot;
   sfx('deco'); groundVersion++; save();
@@ -734,7 +749,7 @@ function demolishInfo(x, y) {
     const full = d.cat === 'deko' || t.b === 'weg' || t.b === 'schiene';
     const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: d.cost, mat: d.mat };
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
-      const { money: fm, ...fmat } = t.footPaid ? FOOTBRIDGE : { money: 0 }, mat = { ...d.mat };
+      const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }

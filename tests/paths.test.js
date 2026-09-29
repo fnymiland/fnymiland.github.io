@@ -53,11 +53,24 @@ describe('Plätze und Übergänge', () => {
     expect(game("plazaCorners(8, 8).filter(c => c.length > 1).length")).toBe(2);   // Ecken an der Einmündung bleiben spitz
   });
 
-  it('zwischen zwei Weg-Stilen liegt eine Schwelle, zwischen gleichen nicht', () => {
+  it('zwei Weg-Stile gehen fließend ineinander über: jedes Feld blendet den Belag des Nachbarn ein, ohne Schwelle', () => {
     W(8, 8, 'sand'); W(9, 8, 'kies'); W(10, 8, 'kies'); W(11, 8, 'tritt');
-    expect(game('pathThresholds(8, 8)')).toEqual([[1, 0]]);
-    expect(game('pathThresholds(9, 8)')).toEqual([[-1, 0]]);
-    expect(game('pathThresholds(10, 8)')).toEqual([]);            // Trittsteine brauchen keine Schwelle
+    expect(game("pathBlends(8, 8).map(e => [e.d, e.look === PATH_LOOK.kies])")).toEqual([[[1, 0], true]]);
+    expect(game("pathBlends(9, 8).map(e => [e.d, e.look === PATH_LOOK.sand])")).toEqual([[[-1, 0], true]]);
+    expect(game('pathBlends(10, 8)')).toEqual([]);               // gleicher Stil, Trittsteine: nichts
+    expect(game('typeof drawThreshold')).toBe('undefined');
+  });
+
+  it('auch zwei verschiedene Plätze laufen ineinander (keine Fugenlinie)', () => {
+    W(8, 8, 'platten'); W(9, 8, 'klinker');
+    expect(game('plazaSides(8, 8)')[1]).toBe('seam');
+    expect(game("plazaBlends(8, 8).map(e => [e.d, e.look === PATH_LOOK.klinker])")).toEqual([[[1, 0], true]]);
+  });
+
+  it('Muster lassen sich über das Feld hinaus fortsetzen – im selben Raster wie beim Nachbarn', () => {
+    for (const k of ['stones', 'dots', 'rainbow', 'bricks', 'planks', 'tiles', 'herring'])
+      expect(() => game(`pattern(p => p, '${k}', 3, 3, 1, '#000000', null, 0.35)`), k).not.toThrow();
+    expect(() => game(`pattern(p => p, 'confetti', 3, 3, 1, '#000000', ['#ffffff'], 0.35)`)).not.toThrow();
   });
 
   it('ein einzelnes Wegfeld ist rund (Kapsel), nicht eckig', () => {
