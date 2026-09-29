@@ -89,7 +89,7 @@ Entschieden: Erfolge (Stufen wie 1 Mio./10 Mio. Taler, 10.000 Einwohner, 20 km B
 
 - [x] **Neu freigeschaltet:** Fenster bei jeder Freischaltung (Laterne, Forschung, Kunstakademie, Geschenk-Wegstile,
       Glasvilla) mit Bild, Wirkung, Tipp und „Ausprobieren“ (springt in die richtige Gruppe der Leiste).
-- [ ] **Tipps beim ersten Mal** + **Tipp-Buch** im Menü.
+- [x] **Tipps beim ersten Mal** (16 Themen, einer nach dem anderen, nicht in der Einführung, abschaltbar) + **Tipp-Buch** im Menü und im Rathaus.
 - [ ] **Erfolge** mit Stufen und Belohnungen.
 - [ ] **Sammelalbum** mit Fortschritt und Belohnung je voller Seite.
 - [ ] **Große Bauprojekte** (Wunderwerke) – Auswahl vorher besprechen.

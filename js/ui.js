@@ -203,6 +203,7 @@ function updateHud() {
   const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('');
   if (sig !== unlockSig) { if (unlockSig) buildToolbar(); unlockSig = sig; }
   watchUnlocks();
+  watchTips();
   refreshLive();
 }
 $('goal').onclick = e => {
@@ -260,6 +261,38 @@ function openUnlocks() {
   $('modal-card').classList.add('unlock');
   for (const el of document.querySelectorAll('#modal-card [data-thumb]')) el.append(thumb(el.dataset.thumb));
   for (const b of document.querySelectorAll('#modal-card [data-try]')) b.onclick = () => tryUnlock(b.dataset.try);
+  $('m-close').onclick = closeModal;
+}
+// Tipps beim ersten Mal: einer nach dem anderen, mit Abstand, nicht in der Einführung und nie über einem anderen Fenster
+let lastTipAt = -1e9;
+const TIP_GAP = 25000;
+function watchTips() {
+  if (state.tutorial >= 0 || state.tipsOff || !$('modal').hidden || pendingUnlocks.length) return;
+  const now = performance.now();
+  if (now - lastTipAt < TIP_GAP) return;
+  const tip = GUIDE.find(g => !state.tipsSeen.has(g.id) && g.when());
+  if (!tip) return;
+  lastTipAt = now;
+  state.tipsSeen.add(tip.id);
+  save();
+  openModal(`
+    <h2>💡 Tipp: ${tip.icon} ${tip.title}</h2>
+    <p>${tip.text}</p>
+    <div class="row"><button class="btn" id="m-ok" style="flex:1">Verstanden</button></div>
+    <p class="muted tip-links"><span class="link" id="m-tipbook">Alle Tipps im Tipp-Buch</span> · <span class="link" id="m-notips">Keine Tipps mehr</span></p>`);
+  $('modal-card').classList.add('tipcard');
+  $('m-ok').onclick = closeModal;
+  $('m-tipbook').onclick = openTipBook;
+  $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr – im Tipp-Buch wieder einschaltbar'); };
+}
+function openTipBook() {
+  openModal(`
+    <h2>💡 Tipp-Buch</h2>
+    ${GUIDE.map(g => `<details><summary>${g.icon} ${g.title}</summary><p>${g.text}</p></details>`).join('')}
+    <div class="row"><button class="btn ghost" id="m-tipsonoff" style="flex:1">Tipps beim ersten Mal: ${state.tipsOff ? 'aus' : 'an'}</button></div>
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+  $('modal-card').classList.add('tipbook');
+  $('m-tipsonoff').onclick = () => { state.tipsOff = !state.tipsOff; save(); openTipBook(); };
   $('m-close').onclick = closeModal;
 }
 // „Ausprobieren“: in die passende Gruppe der Leiste springen und das Ding zum Bauen auswählen
@@ -748,6 +781,7 @@ function openTownHall(tab = hallTab) {
         <button class="btn ghost small" data-quick-go="wissen">🔬 Forschung</button>
         <button class="btn ghost small" data-quick-go="design">🎨 Kunstakademie</button>
         <button class="btn ghost small" data-quick-go="diary">📖 Tagebuch</button>
+        <button class="btn ghost small" data-quick-go="tips">💡 Tipps</button>
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
@@ -834,7 +868,7 @@ function openTownHall(tab = hallTab) {
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
     const q = b.dataset.quickGo;
-    if (q === 'diary') openDiary(); else openResearch(q);
+    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else openResearch(q);
   };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);
@@ -893,7 +927,7 @@ function showIntro(first) {
 function showMenu() {
   openModal(`
     <h2>Menü</h2>
-    <div class="row"><button class="btn" id="m-help">Anleitung</button></div>
+    <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
@@ -903,6 +937,7 @@ function showMenu() {
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => showIntro(false);
+  $('m-tips').onclick = openTipBook;
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
   $('m-close').onclick = closeModal;

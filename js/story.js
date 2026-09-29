@@ -251,3 +251,43 @@ function goalHtml() {
   }
   return html;
 }
+
+// ---------------------------------------------------------------------------
+// Tipps beim ersten Mal (und im Tipp-Buch): when() sagt, ab wann der Tipp passt. Reihenfolge = Vorrang.
+// ---------------------------------------------------------------------------
+const anyStatus = fn => { for (const s of T.st.values()) if (fn(s)) return true; return false; };
+const GUIDE = [
+  { id: 'wunsch', icon: '🏠', title: 'Häuser wachsen', when: () => hasBuilt('haus'),
+    text: 'Jedes Haus hat Wünsche: einen Weg vor der Tür, Deko in der Nähe, später Bäckerei, Markt, Schule … Tipp ein Haus an, um sie zu sehen. Sind alle erfüllt, wird es größer und bringt mehr Einwohner.' },
+  { id: 'ausbau', icon: '✨', title: 'Bereit zum Ausbauen', when: () => anyStatus(s => (s.wish && s.wish.ready) || (s.grow && s.grow.ready)),
+    text: 'Wo es über einem Haus oder Betrieb funkelt, sind alle Bedingungen erfüllt: antippen und „Ausbauen“. Im Rathaus unter „Bereit“ siehst du alles auf einmal und kannst direkt ausbauen.' },
+  { id: 'lager', icon: '📦', title: 'Rohstoffe und Lager', when: () => Object.values(state.res).some(v => v >= 1),
+    text: 'Rohstoffe wie Holz und Stein sammeln sich im Lager (oben). Sägewerk, Steinmetz und Schmiede machen daraus Bretter, Pflastersteine und Metall – die brauchst du für Ausbauten und Laternen.' },
+  { id: 'weit', icon: '🐌', title: 'Weit weg vom Dorf',
+    when: () => [...state.tiles].some(([k, t]) => t.b !== 'lm' && needsReach(t.b) && (T.st.get(k) || {}).how === 'weit'),   // wie die 🐌
+    text: 'Die Schnecke heißt: Hier arbeiten die Leute nur halb, weil es weit bis zum Dorf ist. Ein Weg zum Dorf oder Häuser in der Nähe bringen volle Kraft.' },
+  { id: 'viertel', icon: '🏘️', title: 'Viertel', when: () => anyStatus(s => s.bonus > 0),
+    text: 'Gebäude, die aneinandergrenzen oder über Wege verbunden sind, bilden ein Viertel. Ab 3, 8 und 15 Gebäuden arbeitet das ganze Viertel 10, 20 und 30 % besser.' },
+  { id: 'stufen', icon: '⬆️', title: 'Auch Betriebe wachsen', when: () => [...state.tiles.values()].some(t => BUILD_STAGES[t.b]),
+    text: 'Auch Betriebe haben drei Stufen. Tipp einen an: Dort steht, was für die nächste Stufe fehlt – zum Beispiel eine Mühle mit Feldern daneben.' },
+  { id: 'laterne', icon: '🏮', title: 'Laternen', when: () => lanternCount() >= 1,
+    text: 'Jede Sehenswürdigkeit hat drei Laternen. Jede Laterne schaltet Neues frei und bringt eine Seite im Tagebuch 📖. Oben links steht immer, welche Laternen als Nächstes gehen.' },
+  { id: 'insel', icon: '🏝️', title: 'Neue Inseln', when: () => { const i = nextIsle(); return !!i && isleNeeds(i).every(c => c.ok); },
+    text: 'Die nächste Insel kann erschlossen werden! Tipp sie im Meer an (oder oben links). Jede Insel hat eigene Rohstoffe und eine Sehenswürdigkeit.' },
+  { id: 'deko', icon: '🌸', title: 'Kleine Deko', when: () => T.pop >= 12,
+    text: 'Kleine Deko – Baum, Busch, Bank, Blumentopf – passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
+  { id: 'rathaus', icon: '🏛️', title: 'Das Rathaus', when: () => T.pop >= 20,
+    text: 'Das Rathaus ist deine Zentrale: Übersicht, alles Bereite zum direkten Ausbauen, alle Inseln per Knopf, die Wünsche der Bewohner und dein Ort.' },
+  { id: 'forschung', icon: '💡', title: 'Forschung', when: () => tierOpen(1),
+    text: 'Schulen bringen Ideen. Oben bei 💡 kannst du forschen: stärkere Betriebe, neue Gebäude, Bauen überall. Bibliothek und Universität öffnen weitere Stufen.' },
+  { id: 'kunst', icon: '🎨', title: 'Kunstakademie', when: () => lanternCount() >= 1 && state.money >= 300,
+    text: 'Farben für Häuser, schöne Wege und besondere Deko gibt es einzeln in der Kunstakademie: oben 💡 → 🎨 Kunstakademie.' },
+  { id: 'verschieben', icon: '✋', title: 'Alles lässt sich verschieben', when: () => state.tiles.size >= 25,
+    text: 'Nichts ist für immer: Mit ✋ (unten links) verschiebst du alles kostenlos, auch das Rathaus. Mit ⟳ oder dem Mausrad drehst du Gebäude.' },
+  { id: 'meer', icon: '🌊', title: 'Land gewinnen', when: () => state.islands.size >= 2,
+    text: 'Mit „Aufschütten“ (⛰️ Gelände) machst du Wasser zu Land – auch im Meer direkt neben deinem Land. So kannst du Inseln vergrößern oder verbinden.' },
+  { id: 'bahn', icon: '🚆', title: 'Eisenbahn', when: () => hasTech('bahn'),
+    text: 'Zieh Schienen zwischen zwei Inseln (über Wasser als Brücke), stell an beide Enden einen Bahnhof und baue 2 Windräder. Dann fährt der Zug: +8 Pendler je Bahnhof und +10 % für beide Inseln.' },
+  { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
+    text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
+];

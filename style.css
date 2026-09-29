@@ -442,3 +442,9 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .uc-txt .tip { color: var(--green-d); font-weight: 700; }
 .card.unlock { width: min(520px, 100%); }
 .uc-txt .btn { margin-top: 6px; }
+
+/* ---------- Tipps ---------- */
+.tip-links { text-align: center; margin-top: 8px; }
+.card details { background: var(--cream2); border-radius: 12px; padding: 6px 12px; margin: 6px 0; }
+.card details summary { font-weight: 800; cursor: pointer; }
+.card details p { margin: 6px 0 2px; }

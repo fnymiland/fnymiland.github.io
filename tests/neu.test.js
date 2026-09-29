@@ -3,7 +3,7 @@ const { loadGame, game } = require('./helpers/load-game');
 // „Neu freigeschaltet“: Fenster in der Mitte mit Bild, Wirkung, Tipp und „Ausprobieren“
 beforeAll(() => loadGame());
 beforeEach(() => {
-  game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; updateHud()');
+  game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; updateHud()');
 });
 const $ = id => document.getElementById(id);
 
