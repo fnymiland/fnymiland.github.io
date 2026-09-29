@@ -66,3 +66,35 @@ describe('Leiste auf dem Handy', () => {
     expect(document.getElementById('hint').textContent.length).toBeGreaterThan(60);
   });
 });
+
+describe('Zielkasten auf dem Handy', () => {
+  it('von selbst klein, antippen klappt ihn auf; auf dem Desktop von selbst groß', () => {
+    size(375, 812);
+    game('goalSmall = null; updateHud()');
+    const goal = document.getElementById('goal');
+    expect(goal.classList.contains('small')).toBe(true);
+    goal.click();
+    expect(goal.classList.contains('small')).toBe(false);
+    size(1024, 768);
+    game('goalSmall = null; updateHud()');
+    expect(goal.classList.contains('small')).toBe(false);
+  });
+});
+
+describe('Infofenster auf dem Handy', () => {
+  it('hat oben einen Griff (antippen = groß/klein), auf dem Desktop nicht', () => {
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 1 }); recalc()");
+    size(375, 812);
+    game('openInfo(6, 6)');
+    const panel = document.getElementById('panel'), grip = () => panel.querySelector('.grip');
+    expect(grip()).not.toBe(null);
+    grip().click();
+    expect(panel.classList.contains('tall')).toBe(true);
+    grip().click();
+    expect(panel.classList.contains('tall')).toBe(false);
+    game('closePanel()');
+    size(1024, 768);
+    game('openInfo(6, 6)');
+    expect(grip()).toBe(null);
+  });
+});

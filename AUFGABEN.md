@@ -203,7 +203,7 @@ angetippte Gebäude sichtbar bleibt. **iPad und Desktop bleiben unverändert** �
 - [x] **16a** Handy erkennen (`body.phone`, `body.phone-land`), Tests dafür.
 - [x] **16b** Leiste einklappbar: unten nur Schnellwerkzeuge + Bereiche; Bereich antippen öffnet den Katalog (Filter +
       Kacheln als Raster), Wahl oder Tippen auf die Karte klappt ihn zu.
-- [ ] **16c** Kopf und Hinweis kompakt: Zielkasten nur eine Zeile, Hinweis nur Name + Preis.
-- [ ] **16d** Infofenster als untere Hälfte mit Griff (antippen = ganz hoch); Karte rückt das Gebäude ins Bild.
-- [ ] **16e** Querformat: Leiste flach, Katalog halbhoch, Infofenster rechts.
+- [x] **16c** Kopf und Hinweis kompakt: Zielkasten nur eine Zeile, Hinweis nur Name + Preis.
+- [x] **16d** Infofenster als untere Hälfte mit Griff (antippen = ganz hoch); Karte rückt das Gebäude ins Bild.
+- [x] **16e** Querformat: Leiste flach, Katalog halbhoch, Infofenster rechts.
 - [ ] **16f** Feinschliff: alle Fenster, Schilder, Drehknopf, Stil-Leiste, Lager bei 375×812 und 812×375 nachsehen.

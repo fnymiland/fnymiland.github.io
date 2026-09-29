@@ -235,7 +235,7 @@ function renderStyleBar(t) {
 
 const canResearch = () => TECHS.some(t => techReady(t) && state.science >= techCost(t));
 
-let goalSmall = false, unlockSig = '';
+let goalSmall = null, unlockSig = '';        // null: von selbst – auf dem Handy klein, sonst groß
 // Leiste oben: nur Rathaus, Geld, Einwohner, Ideen, Lager und Menü. Raten und Arbeitsplätze erst beim Antippen
 // (hudMore, ein paar Sekunden), Rohstoffe, Schönheit und Strom im Lager (📦).
 let hudMoreUntil = 0;
@@ -267,7 +267,7 @@ function updateHud() {
   const goal = $('goal');
   goal.style.top = top + 'px';
   if (window.innerWidth > 600 && !$('panel').classList.contains('float')) $('panel').style.top = top + 'px';
-  goal.classList.toggle('small', goalSmall);
+  goal.classList.toggle('small', goalSmall ?? PHONE);
   setHtml(goal, goalHtml(), true);
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
   const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('');
@@ -282,7 +282,7 @@ $('goal').onclick = e => {
   if (pos) { jumpTo(pos[0], pos[1], 3, 3); sparkle(pos[0] + 1, pos[1] + 1); return; }
   const isl = e.target.closest('[data-isle]');
   if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
-  goalSmall = !goalSmall; updateHud();
+  goalSmall = !(goalSmall ?? PHONE); updateHud();
 };
 $('money-btn').onclick = hudMore;
 $('pop-btn').onclick = hudMore;
@@ -500,18 +500,58 @@ addEventListener('pointerdown', e => { pressIn = e.target.closest && e.target.cl
 for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { pressIn = null; }, true);
 
 // Infofenster
-function closePanel() { $('panel').hidden = true; panelLive = null; }
+function closePanel() { $('panel').hidden = true; $('panel').classList.remove('tall'); panelLive = null; }
+// Handy: das Fenster ist die untere Hälfte (quer: rechte Seite); oben ein Griff – antippen oder hochwischen = ganz groß
+const GRIP = '<button class="grip" aria-label="Fenster größer oder kleiner"></button>';
 function showPanel(html, live = null) {
-  const el = $('panel');
+  const el = $('panel'), fresh = el.hidden;
   if (!liveNow) { el.classList.remove('float'); el.style.left = ''; }
-  setHtml(el, html); el.hidden = false;
+  setHtml(el, (PHONE ? GRIP : '') + html); el.hidden = false;
   panelLive = live;
+  if (PHONE && !liveNow) { if (fresh) el.classList.remove('tall'); requestAnimationFrame(revealTap); }
   return el;
 }
+// Das angetippte Gebäude soll neben dem Fenster sichtbar bleiben: Karte sanft verschieben
+let lastTap = null;
+function revealTap() {
+  const el = $('panel');
+  if (!lastTap || el.hidden || performance.now() - lastTap.t > 800) return;
+  const r = el.getBoundingClientRect(), top = $('hud').getBoundingClientRect().bottom, land = document.body.classList.contains('phone-land');
+  let dx = 0, dy = 0;
+  if (land) { if (lastTap.sx > r.left - 40) dx = lastTap.sx - r.left * 0.5; }
+  else if (lastTap.sy > r.top - 40 || lastTap.sy < top + 40) dy = lastTap.sy - (top + (r.top - top) * 0.62);
+  lastTap = null;
+  if (!dx && !dy) return;
+  const x0 = cam.x, y0 = cam.y, t0 = performance.now();
+  const step = () => {
+    const k = Math.min(1, (performance.now() - t0) / 240), e = 1 - Math.pow(1 - k, 3);
+    cam.x = x0 + dx / cam.z * e; cam.y = y0 + dy / cam.z * e; clampCam();
+    if (k < 1) requestAnimationFrame(step);
+  };
+  step();
+}
+// Griff: antippen schaltet groß/klein, wischen: hoch = groß, runter = kleiner bzw. zu
+let gripY = null, gripSwiped = false;
+$('panel').addEventListener('pointerdown', e => { if (e.target.closest('.grip')) gripY = e.clientY; });
+$('panel').addEventListener('pointerup', e => {
+  if (gripY == null) return;
+  const dy = e.clientY - gripY, el = $('panel');
+  gripY = null;
+  if (Math.abs(dy) < 25) return;
+  gripSwiped = true;
+  if (dy < 0) el.classList.add('tall');
+  else if (el.classList.contains('tall')) el.classList.remove('tall');
+  else closePanel();
+});
+$('panel').addEventListener('click', e => {
+  if (!e.target.closest('.grip')) return;
+  if (gripSwiped) { gripSwiped = false; return; }
+  $('panel').classList.toggle('tall');
+});
 // Fenster neben eine Stelle auf dem Bildschirm setzen (nicht auf schmalen Bildschirmen)
 function panelAt(sx, sy) {
   const el = $('panel');
-  if (sx == null || window.innerWidth <= 600) return;
+  if (sx == null || window.innerWidth <= 600 || PHONE) return;
   el.classList.add('float');
   const w = el.offsetWidth, h = el.offsetHeight, gap = 24;
   const top0 = $('hud').getBoundingClientRect().bottom + 8, bottom0 = $('toolbar').getBoundingClientRect().top - 8;

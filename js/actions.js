@@ -329,6 +329,7 @@ function buyDesign(id) {
 
 function tap(sx, sy, isTouch) {
   const { x, y, slot } = slotAt(sx, sy);
+  lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   if (planTap(x, y, isTouch)) return;                       // Linie/Rechteck: Ende setzen, bauen oder abbrechen
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);

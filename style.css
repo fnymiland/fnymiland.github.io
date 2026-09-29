@@ -533,3 +533,17 @@ body.phone .cats { margin-bottom: 0; }
 body.phone:not(.phone-land) #toolbar.open .tools { flex-wrap: wrap; justify-content: center; width: auto; max-height: 46dvh;
   overflow-x: hidden; overflow-y: auto; padding: 8px 0 6px; }
 body.phone #toolbar .tool[data-tool="look"] { display: none; }    /* „Ansehen“ ist schon vorn in der Zeile */
+/* Zielkasten: von selbst nur eine Zeile (antippen klappt ihn auf) */
+body.phone #goal { width: auto; max-width: min(260px, 62vw); padding: 7px 12px 8px; border-radius: 14px; }
+body.phone #goal.small h4 { font-size: 12px; }
+/* Infofenster: Hochformat untere Hälfte, Querformat rechte Seite; .tall = ganz groß (Griff) */
+#panel .grip { display: none; }
+body.phone #panel .grip { display: block; width: 100%; height: 20px; margin: -8px 0 4px; border: 0; background: none; cursor: pointer; position: relative; }
+body.phone #panel .grip::before { content: ''; position: absolute; left: 50%; top: 7px; width: 44px; height: 5px; margin-left: -22px;
+  border-radius: 99px; background: rgba(107, 79, 58, .28); }
+body.phone:not(.phone-land) #panel { left: 0; right: 0; top: auto !important; bottom: var(--bar, 57px); width: auto;
+  border-radius: 22px 22px 0 0; max-height: 48dvh; padding: 12px 16px 14px; }
+body.phone:not(.phone-land) #panel.tall { max-height: calc(100dvh - var(--bar, 57px) - 64px); }
+body.phone.phone-land #panel { left: auto; right: 8px; width: min(360px, 48vw); bottom: calc(var(--bar, 57px) + 8px);
+  max-height: calc(100dvh - var(--bar, 57px) - 64px); padding: 12px 16px 14px; }
+body.phone.phone-land #panel .grip { display: none; }          /* quer ist das Fenster schon so hoch wie möglich */
