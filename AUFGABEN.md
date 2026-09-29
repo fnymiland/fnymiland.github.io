@@ -207,3 +207,41 @@ angetippte Gebäude sichtbar bleibt. **iPad und Desktop bleiben unverändert** �
 - [x] **16d** Infofenster als untere Hälfte mit Griff (antippen = ganz hoch); Karte rückt das Gebäude ins Bild.
 - [x] **16e** Querformat: Leiste flach, Katalog halbhoch, Infofenster rechts.
 - [x] **16f** Feinschliff: alle Fenster, Schilder, Drehknopf, Stil-Leiste, Lager bei 375×812 und 812×375 nachsehen.
+
+## Block 17 – Verkehr mit Fahrgästen: Züge (29.09. abends)
+
+Entschieden: Nachfrage + Auslastung. Modell (Zahlen zum Nachjustieren in rules.js):
+- Jeder Ort (Heimatinsel, jede Themen-Insel) hat **Einwohner** und **Anziehung**: Sehenswürdigkeit 40/80/150 je
+  Stufe, Wunderwerke (Seebrücke 150, Sternwarte 200, Riesenrad 300, Botanischer Garten 350, Schloss 500), dazu die
+  Schönheit des Orts / 10.
+- Eine fahrende Linie verbindet Orte. **Pendler**: je Einwohner außerhalb des größten Orts der Linie ½ Fahrt/min.
+  **Besucher** je Ort: so viele, wie er anzieht – höchstens ½ je Einwohner der anderen Orte der Linie.
+- **Plätze**: jeder Wagen 60 Fahrgäste/min; Wagen anhängen kostet Taler + Metall und etwas mehr Strom; auf Rundkursen
+  zusätzlich mehrere Züge. Zu wenig Plätze → „überfüllt“, nur der beförderte Anteil zählt.
+- **Einnahmen**: Fahrkarten je Fahrgast, Besucher geben am Ziel Geld aus.
+- **Anbindung**: Was im Viertel eines Bahnhofs oder bis 4 Felder davon steht, ist ans Dorf angebunden (kein 🐌) – so
+  gut, wie die Linie ihre Fahrgäste schafft. Die alten Regeln (+8 Pendler je Bahnhof, +10 % für die Inseln) entfallen.
+
+- [ ] **17a** Anbindung über den Bahnhof (Monument drüben nicht mehr „weit weg“).
+- [ ] **17b** Einwohner und Anziehung je Ort; Nachfrage je Linie (Pendler + Besucher).
+- [ ] **17c** Plätze: Wagen je Zug (anhängen/abhängen), Strom je Wagen; Auslastung.
+- [ ] **17d** Einnahmen aus Fahrkarten und Besuchern; alte Pendler-/Bonus-Regel entfernen.
+- [ ] **17e** Anzeige: Bahnhof-Fenster (Fahrgäste, Plätze, Auslastung, Einnahmen, Tipp), „überfüllt“-Zeichen am Bahnhof,
+      Verkehr im 📦 Lager.
+
+## Block 18 – Schiffe (geplant)
+
+Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Handel, Kreuzfahrt, Fischkuttern.
+- [ ] **18a** Steg (von Anfang an, am Ufer) mit Holzboot.
+- [ ] **18b** Expedition: Boot losschicken (Taler wie bisher, Laternen/Einwohner als Voraussetzung), es fährt sichtbar
+      hinaus und kommt nach 1–10 Min zurück → Insel entdeckt, Tagebuch. Inseln nicht mehr per Schild freischalten.
+- [ ] **18c** Fähren zwischen Häfen (Fahrgäste wie der Zug, ohne Schienen und Strom, weniger Plätze).
+- [ ] **18d** Handel: Frachter verkaufen Überschuss, kaufen Fehlendes (schwankende Preise).
+- [ ] **18e** Kreuzfahrt (spät): Touristen für Monumente/Wunderwerke nahe am Hafen.
+- [ ] **18f** Fischkutter.
+
+## Block 19 – Seilbahn als Verkehrsmittel (geplant)
+- [ ] Seilbahn befördert Fahrgäste wie eine kurze Linie (wenige Plätze, auch über Wasser), bindet an.
+
+## Block 20 – Berge (später)
+- [ ] Berge als Gelände, nur per Seilbahn erreichbar; oben Berghütte, Aussichtsturm, Gipfelkreuz als Attraktionen.
