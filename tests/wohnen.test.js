@@ -54,3 +54,20 @@ describe('Wohnen', () => {
     game('night = 0');
   });
 });
+
+describe('Hausboot an gezackten Küsten', () => {
+  it('überall am Ufer der Quelleninsel – auch dort, wo das Wasser das Land nur mit der Ecke berührt', () => {
+    game("state.islands.add('quelle'); ownIsland('quelle'); recalc()");
+    const bad = game(`(() => {
+      const i = ISLE_BY_ID.quelle, out = [];
+      for (let y = Math.floor(i.cy - 20); y < i.cy + 20; y++) for (let x = Math.floor(i.cx - 20); x < i.cx + 20; x++) {
+        if (terrainAt(x, y) !== 'water' || COVER.has(x + ',' + y)) continue;
+        if (!NEAR8.some(([dx, dy]) => ownedTile(x + dx, y + dy) && terrainAt(x + dx, y + dy) !== 'water')) continue;
+        const e = placeError('hausboot', x, y);
+        if (e) out.push([x, y, e]);
+      }
+      return out;
+    })()`);
+    expect(bad).toEqual([]);
+  });
+});

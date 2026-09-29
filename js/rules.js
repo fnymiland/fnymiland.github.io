@@ -700,7 +700,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
       const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot';
-      if (!ownedTile(fx, fy) && !((rail || sea) && claimable(fx, fy))) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
+      const seaOk = sea && isSea(fx, fy) && inWorld(fx, fy) && nearOwnLand(fx, fy);   // auch schräg am Ufer (Ecke an Ecke)
+      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';
         if (d.needs === 'meer' && (ter !== 'water' || !isSea(fx, fy))) return 'Ins Meer vor die Küste bauen';
@@ -727,7 +728,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       }
     }
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
-    if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => ownedTile(fx + dx, fy + dy) && terrainAt(fx + dx, fy + dy) !== 'water'))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';
+    if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => nearOwnLand(fx, fy))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';
     if (d.needs === 'strand' && !tiles.every(([fx, fy]) => terraLook(fx, fy) === 'sand' || (terrainAt(fx, fy) === 'grass' && terraLook(fx, fy) !== 'wiese' && isBeach(fx, fy)))) return 'Nur auf Sand am Wasser (Strand)';
     if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)} – dort ist der Boden warm`;
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
