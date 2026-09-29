@@ -183,7 +183,7 @@ const WISHES = {
   baecker: { text: 'Bäckerei in Laufweite (6 Felder)' },
   ruhe:    { text: 'Ruhe – kein lauter Betrieb direkt daneben' },
   markt:   { text: 'Markt in Laufweite (8 Felder)' },
-  park:    { text: 'Park oder Brunnen in der Nähe (4 Felder)' },
+  park:    { text: 'Park oder Brunnen in der Nähe (4 Felder, auch Kristallbrunnen und Botanischer Garten)' },
   schule:  { text: 'Schule in der Nähe (10 Felder)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
   wasser:  { text: 'Blick aufs Wasser (Teich, See oder Meer in 3 Feldern)' },
@@ -252,6 +252,20 @@ const BUILD_STAGES = {
 };
 const PLURAL = { feld: 'Felder', muehle: 'Mühlen', holz: 'Holzfäller', fischer: 'Fischerhütten', obst: 'Obstplantagen', stein: 'Steinbrüche',
   mine: 'Bergwerke', haus: 'Häuser', schmiede: 'Schmieden', saege: 'Sägewerke', steinmetz: 'Steinmetze', kristallmine: 'Kristallminen' };
+// Sorten: Bedingungen fragen nach einer Sorte, nicht nach genau einem Gebäude – „ein Haus in der Nähe“ ist jedes
+// Wohnhaus, „ein Brunnen“ auch der Kristallbrunnen, „ein Park“ auch der Botanische Garten. In `near` (BUILD_STAGES) und
+// bei den Wünschen steht der Name der Sorte; ist er keine Sorte, gilt genau dieses Gebäude.
+const KINDS = {
+  haus:    { name: 'Wohnhaus', plural: 'Wohnhäuser', of: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+  brunnen: { name: 'Brunnen', plural: 'Brunnen', of: ['brunnen', 'kristallbrunnen'] },
+  park:    { name: 'Park', plural: 'Parks', of: ['park', 'botgarten'] },
+  statue:  { name: 'Statue', plural: 'Statuen', of: ['statue', 'denkmal'] },
+};
+const kindOf = k => KINDS[k] ? KINDS[k].of : [k];
+const isKind = (k, b) => kindOf(k).includes(b);
+const isHome = b => KINDS.haus.of.includes(b);
+const kindName = k => KINDS[k] ? KINDS[k].name : ITEMS[k].name;
+const kindPlural = k => KINDS[k] ? KINDS[k].plural : PLURAL[k] || ITEMS[k].name;
 const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine', 'kristallmine']);
 // Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname
 const ANIMALS = [

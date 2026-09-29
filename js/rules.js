@@ -62,7 +62,7 @@ function waterBody(x, y, limit = 64) {
   return Math.min(seen.size, limit);
 }
 const isProducerB = b => ITEMS[b].cat === 'bau' && b !== 'markt';
-const isHouse = (x, y) => bAt(x, y) === 'haus';
+const isHouse = (x, y) => isHome(bAt(x, y));               // jedes Wohnhaus (Sorte „haus“)
 // Regeln (gemeinsam festgelegt): Viertel über Nachbarschaft und Wege, Fußweg 4 Felder, sonst halbe Kraft
 const WALK_REACH = 4, FAR_EFF = 0.5;
 const VIERTEL_STEPS = [[15, 0.3], [8, 0.2], [3, 0.1]];
@@ -102,12 +102,12 @@ function computeNet() {
   for (const [k, t] of state.tiles) {
     const v = vOf(k);
     if (countsForViertel(t.b)) vSize.set(v, (vSize.get(v) || 0) + 1);
-    if (t.b === 'haus') vHome.add(v);
+    if (isHome(t.b)) vHome.add(v);
   }
   for (const k of state.decos.keys()) if (!COVER.has(k)) { const v = vOf(k); vSize.set(v, (vSize.get(v) || 0) + 1); }
   // Häuser in Laufweite
   const houses = [];
-  for (const [k, t] of state.tiles) if (t.b === 'haus') houses.push(keyXY(k));
+  for (const [k, t] of state.tiles) if (isHome(t.b)) houses.push(keyXY(k));
   const nearHome = (x, y) => houses.some(([hx, hy]) => Math.max(Math.abs(hx - x), Math.abs(hy - y)) <= WALK_REACH);
   const paths = [...state.tiles].filter(([, t]) => t.b === 'weg').map(([k]) => k);
   return { vOf, vSize, vHome, nearHome, paths };
@@ -143,7 +143,7 @@ function rawIncome(b, x, y) {
   }
 }
 const beetBonus = (x, y) => countNear(x, y, 1, b => b === 'blumen');
-const nearHouse = (x, y) => countNear(x, y, 2, b => b === 'haus') > 0;
+const nearHouse = (x, y) => countNear(x, y, 2, isHome) > 0;
 function beautyOf(t, x, y) {
   const d = ITEMS[t.b];
   const nearHome = nearHouse(x, y);
@@ -457,8 +457,8 @@ const stageName = t => BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].names[Math.min(t.lv
 const jobsOf = t => (ITEMS[t.b].workers || 0) * (BUILD_STAGES[t.b] ? Math.min(t.lvl, MAX_LVL) : 1);
 function nearText(types, n, r, self) {
   const where = r === 1 ? 'direkt daneben' : `in der Nähe (${r} Felder)`;
-  if (n === 1) return `${types.map(b => ITEMS[b].name).join(' oder ')} ${where}`;
-  return `${n} ${types.includes(self) ? 'weitere ' : ''}${types.map(b => PLURAL[b] || ITEMS[b].name).join(' oder ')} ${where}`;
+  if (n === 1) return `${types.map(kindName).join(' oder ')} ${where}`;
+  return `${n} ${types.some(k => isKind(k, self)) ? 'weitere ' : ''}${types.map(kindPlural).join(' oder ')} ${where}`;
 }
 function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   const S = BUILD_STAGES[t.b], d = ITEMS[t.b], up = S && S.up[t.lvl - 1];
@@ -471,7 +471,7 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
   if (up.near) {
     const [types0, n, r] = up.near, types = [].concat(types0);
-    conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, b => types.includes(b)) >= n });
+    conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, b => types.some(k => isKind(k, b))) >= n });
   }
   return { next: { name: S.names[t.lvl], cost: up.cost }, conds, ready: conds.every(c => c.ok) };
 }
@@ -1012,11 +1012,11 @@ function wishMet(w, x, y) {
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;
       return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg');
     }
-    case 'baecker': return objWithin(x, y, 6, b => b === 'baecker');
+    case 'baecker': return objWithin(x, y, 6, b => isKind('baecker', b));
     case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));
-    case 'markt': return objWithin(x, y, 8, b => b === 'markt');
-    case 'park': return objWithin(x, y, 4, b => b === 'park' || b === 'brunnen');
-    case 'schule': return objWithin(x, y, 10, b => b === 'schule');
+    case 'markt': return objWithin(x, y, 8, b => isKind('markt', b));
+    case 'park': return objWithin(x, y, 4, b => isKind('park', b) || isKind('brunnen', b));    // auch Kristallbrunnen, Botanischer Garten
+    case 'schule': return objWithin(x, y, 10, b => isKind('schule', b));
     case 'schoen': return beautyAround(x, y, 3) >= 30;
     case 'wasser': return countAround(x, y, 3, isWater) > 0;
     default: return false;

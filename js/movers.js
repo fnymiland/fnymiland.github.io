@@ -22,7 +22,7 @@ function syncMovers() {
   const wantW = Math.min(24, Math.floor(T.pop / 4));
   while (walkers.length > wantW) walkers.pop();
   if (walkers.length < wantW) {
-    const houses = [...state.tiles].filter(([, t]) => t.b === 'haus');
+    const houses = [...state.tiles].filter(([, t]) => isHome(t.b));        // Bewohner kommen aus jedem Wohnhaus
     if (houses.length) {
       const [x, y] = keyXY(houses[Math.floor(Math.random() * houses.length)][0]);
       const free = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => walkable(a, b));

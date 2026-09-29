@@ -913,22 +913,32 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Verkehr & Strom ---
-    case 'windrad': {                        // Stufe 1 Windrad, 2 Großes Windrad, 3 Windturbine (schlank, rote Spitzen)
-      const s = Math.max(1, Math.min(lvl || 1, 3)), H = [38, 56, 80][s - 1], w0 = [3, 4.4, 5.4][s - 1] * z, w1 = [3, 2.4, 2.6][s - 1] * z;
+    case 'windrad': {                        // Stufe 1 Windrad, 2 Großes Windrad, 3 Windturbine – alle in gemütlicher Größe
+      const s = Math.max(1, Math.min(lvl || 1, 3)), H = [38, 46, 50][s - 1], L = [16, 20, 22][s - 1] * z;
+      const w0 = [3, 4, 3.8][s - 1] * z, w1 = [3, 2.6, 1.8][s - 1] * z;
       ellipse(cx, cy + 1 * z, (4 + s * 2) * z, (2 + s) * z, 'rgba(40,60,20,0.15)');
       if (s > 1) box(cx, cy, 5 * z, 2.6 * z, 3 * z, '#e3ddd1', null, 0);                   // Sockel
       poly([[cx - w0 / 2, cy], [cx + w0 / 2, cy], [cx + w1 / 2, cy - H * z], [cx - w1 / 2, cy - H * z]], C('#f4f4f4'));
       poly([[cx, cy], [cx + w0 / 2, cy], [cx + w1 / 2, cy - H * z], [cx, cy - H * z]], C('#dedbd4'));
+      if (s === 3) {                                                                      // Windturbine: Tür und roter Ring
+        poly([[cx - 1.1 * z, cy - 3 * z], [cx + 0.3 * z, cy - 3 * z], [cx + 0.3 * z, cy - 7 * z], [cx - 1.1 * z, cy - 7 * z]], C('#8a8f99'));
+        const ry = cy - H * 0.62 * z, rw = w0 + (w1 - w0) * 0.62;
+        poly([[cx - rw / 2, ry], [cx + rw / 2, ry], [cx + rw / 2, ry - 2 * z], [cx - rw / 2, ry - 2 * z]], C('#e8604f'));
+      }
       const hy = cy - (H + 1) * z;
-      if (s > 1) ellipse(cx + 1.5 * z, hy, (2.5 + s) * z, 2.4 * z, C('#e9e6df'));        // Gondel
-      blades(cx, hy, z, now * (s === 3 ? 0.9 : 1.2), 3, [16, 24, 34][s - 1] * z, '#ffffff');
+      if (s === 2) ellipse(cx + 1.5 * z, hy, 4.5 * z, 2.4 * z, C('#e9e6df'));               // Gondel
+      if (s === 3) {                                                                      // schlanke, lange Gondel mit Kappe
+        ellipse(cx + 3 * z, hy, 6 * z, 2.4 * z, C('#f4f4f4'));
+        ellipse(cx + 3 * z, hy + 0.8 * z, 5.6 * z, 1.4 * z, C('#dedbd4'));
+      }
+      blades(cx, hy, z, now * (s === 3 ? 0.9 : 1.2), 3, L, '#ffffff');
       if (s === 3) {                                                                      // rote Flügelspitzen
         const ang = now * 0.9 / 650;
-        for (let i = 0; i < 3; i++) { const a = ang + i * Math.PI * 2 / 3; circle(cx + Math.cos(a) * 32 * z, hy + Math.sin(a) * 32 * z, 1.6 * z, C('#e8604f')); }
+        for (let i = 0; i < 3; i++) { const a = ang + i * Math.PI * 2 / 3; circle(cx + Math.cos(a) * (L - 2 * z), hy + Math.sin(a) * (L - 2 * z), 1.3 * z, C('#e8604f')); }
       }
-      circle(cx, hy, (1.8 + s * 0.4) * z, C('#8a8f99'));
+      circle(cx, hy, (1.8 + s * 0.3) * z, C(s === 3 ? '#f4f4f4' : '#8a8f99'));
       if (s === 3 && night > 0.15 && isLive() && Math.floor(now / 700) % 2 === 0) {       // Warnlicht nachts
-        circle(cx + 3 * z, hy - 2.5 * z, 1.4 * z, '#ff4a3d'); glowQuad([[cx + 2, hy - 4 * z], [cx + 4, hy - 4 * z], [cx + 4, hy - 1 * z], [cx + 2, hy - 1 * z]], 14 * z);
+        circle(cx + 5 * z, hy - 2.4 * z, 1.2 * z, '#ff4a3d'); glowQuad([[cx + 4 * z, hy - 4 * z], [cx + 6 * z, hy - 4 * z], [cx + 6 * z, hy - 1 * z], [cx + 4 * z, hy - 1 * z]], 12 * z);
       }
       break;
     }

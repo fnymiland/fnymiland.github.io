@@ -353,7 +353,7 @@ const decoCount = f => { let n = 0; for (const ds of state.decos.values()) for (
 const ACHIEVEMENTS = [
   { id: 'taler', icon: '🪙', name: 'Taler verdient', tiers: [1e4, 1e5, 1e6, 1e7, 1e8], value: () => state.stats.earned },
   { id: 'einwohner', icon: '👥', name: 'Einwohner', tiers: [50, 200, 1000, 5000, 10000], value: () => T.pop },
-  { id: 'haeuser', icon: '🏠', name: 'Häuser', tiers: [10, 50, 150], value: () => tileCount(t => t.b === 'haus') },
+  { id: 'haeuser', icon: '🏠', name: 'Wohnhäuser', tiers: [10, 50, 150], value: () => tileCount(t => isHome(t.b)) },
   { id: 'villen', icon: '🏡', name: 'Villen', tiers: [1, 10, 50], value: () => tileCount(t => t.b === 'haus' && t.lvl >= 5) },
   { id: 'glasvillen', icon: '💎', name: 'Glasvillen', tiers: [1, 10], value: () => tileCount(t => t.b === 'haus' && t.lvl >= 6) },
   { id: 'bahn', icon: '🚆', name: 'Eisenbahn', unit: 'km', tiers: [1, 5, 20, 50], value: () => tileCount(t => t.b === 'schiene') * 0.1 },
