@@ -90,6 +90,7 @@ if (PROBE) {
   normalizeSmall();
   migrateLandmarks();                  // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
   const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
+  ownIslandsFully();
   const grown = growWonders();
   const refunded = fitFootprints();
   delete state.fitLm;

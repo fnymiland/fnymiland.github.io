@@ -10,6 +10,8 @@ function fmt(n) { return Math.abs(n) < 100000 ? nf.format(Math.floor(n)) : nfc.f
 function fmtRate(n) { return Math.abs(n) < 100 ? nf1.format(n) : fmt(n); }
 // oben in der Leiste: glatte Zahlen (unter 1 aber nicht „0“)
 function fmtWhole(n) { return n > 0 && n < 0.5 ? '<1' : fmt(Math.round(n)); }
+// Geld oben: immer glatt, ab 10 Mio. in Millionen (ohne Komma)
+const fmtMoney = n => n < 1e7 ? nf.format(Math.floor(n)) : `${nf.format(Math.floor(n / 1e6))} Mio.`;
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 let toastTimer = 0;
@@ -167,21 +169,22 @@ function renderStyleBar(t) {
 const canResearch = () => TECHS.some(t => techReady(t) && state.science >= t.cost);
 
 let goalSmall = false, unlockSig = '';
+// Leiste oben: nur Rathaus, Geld, Einwohner, Ideen, Lager und Menü. Raten und Arbeitsplätze erst beim Antippen
+// (hudMore, ein paar Sekunden), Rohstoffe, Schönheit und Strom im Lager (📦).
+let hudMoreUntil = 0;
+const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
 function updateHud() {
-  $('money').textContent = fmt(state.money);
+  $('money').textContent = fmtMoney(state.money);
   $('rate').textContent = '+' + fmtWhole(T.inc) + '/s';
-  $('pop').textContent = T.jobs + '/' + T.pop;
+  $('pop').textContent = fmt(T.pop);
+  $('jobs').textContent = `💼 ${fmt(T.jobs)}`;                  // Arbeitsplätze
+  $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
   $('sci').textContent = fmt(state.science);
   $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci) + '/s' : '';
   $('sci-dot').hidden = !canResearch();
-  $('beauty').textContent = T.beauty;
-  // Lager: nur Waren zeigen, die man hat oder gerade herstellt
-  const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
-  const rp = $('res-pill');
-  rp.hidden = !shown.length;
-  rp.innerHTML = shown.map(r => `<span title="${RES[r].name}">${RES[r].icon} <b>${fmt(state.res[r])}</b></span>`).join('');
+  $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
+  if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
   $('town-name').textContent = state.town.name;
-  $('hud-lantern').textContent = `${townTitle()} · 🏮 ${lanternCount()}`;
   $('diary-dot').hidden = state.diarySeen >= state.diary.length;
   const fl = $('hud-flag');
   fl.style.background = state.town.color;
@@ -214,7 +217,35 @@ $('goal').onclick = e => {
   if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
   goalSmall = !goalSmall; updateHud();
 };
-$('diary-btn').onclick = () => openDiary();
+$('money-btn').onclick = hudMore;
+$('pop-btn').onclick = hudMore;
+// Lager (📦): Rohstoffe mit Menge pro Minute, Schönheit und Strom – klappt unter der Leiste auf
+function storeHtml() {
+  const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
+  const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0);
+  const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small></div>`; });
+  const P = T.rail.power, power = P.city || P.supply
+    ? `<div class="store-row${P.demand > P.supply ? ' bad' : ''}"><span>⚡ Strom</span><b>${P.supply}/${P.demand}</b><small>erzeugt/gebraucht</small></div>` : '';
+  return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
+    <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}`;
+}
+function toggleStore(open = $('store').hidden) {
+  const el = $('store');
+  el.hidden = !open;
+  if (open) { const b = $('store-btn').getBoundingClientRect(); el.style.top = (b.bottom + 8) + 'px'; el.style.right = Math.max(10, window.innerWidth - b.right) + 'px'; setHtml(el, storeHtml()); }
+}
+$('store-btn').onclick = e => { e.stopPropagation(); toggleStore(); };
+document.addEventListener('pointerdown', e => { if (!$('store').hidden && !e.target.closest('#store, #store-btn')) toggleStore(false); });
+// Ausgegebenes Material blitzt kurz am 📦 auf
+let flashTimer = 0;
+function flashStore(mat) {
+  const txt = Object.entries(mat || {}).filter(([, n]) => n >= 1).map(([r, n]) => `−${RES[r].icon}${fmt(n)}`).join(' ');
+  if (!txt) return;
+  const el = $('store-flash');
+  el.textContent = txt; el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => { el.hidden = true; }, 1600);
+}
 
 // „Neu freigeschaltet“: Was jetzt verfügbar ist und vorher nicht, kommt in ein Fenster in der Mitte – egal ob durch
 // Laterne, Forschung, Insel oder Kunstakademie. Beim Laden/Neustart wird nur gemerkt (resetUnlockWatch).
@@ -1049,6 +1080,7 @@ function showMenu() {
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
@@ -1059,6 +1091,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => showIntro(false);
   $('m-tips').onclick = openTipBook;
+  $('m-diary').onclick = () => openDiary();
   $('m-achv').onclick = () => openTownHall('erfolge');
   $('m-album').onclick = openAlbum;
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };

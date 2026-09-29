@@ -127,7 +127,8 @@ function placeIslandLandmarks() {
 // Alle Grundstücke (6×6), auf denen Land der Insel liegt
 function isleChunks(id) {
   const out = [];
-  const box = id === 'home' ? [ISLAND.cMin, ISLAND.cMax, ISLAND.cMin, ISLAND.cMax] : (() => {
+  // Heimatinsel: Land reicht mit dem Rauschen bis 1,25 × Radius (vorher fehlte der äußerste Rand)
+  const box = id === 'home' ? (() => { const r = ISLAND.r * 1.25; return [Math.floor((ISLAND.cx - r) / CHUNK), Math.floor((ISLAND.cx + r) / CHUNK), Math.floor((ISLAND.cy - r) / CHUNK), Math.floor((ISLAND.cy + r) / CHUNK)]; })() : (() => {
     const i = ISLE_BY_ID[id], r = ISLE_R * 1.5;
     return [Math.floor((i.cx - r) / CHUNK), Math.floor((i.cx + r) / CHUNK), Math.floor((i.cy - r) / CHUNK), Math.floor((i.cy + r) / CHUNK)];
   })();
@@ -140,6 +141,11 @@ function isleChunks(id) {
   return out;
 }
 function ownIsland(id) { for (const ck of isleChunks(id)) state.owned.add(ck); }
+// Beim Laden: erschlossene Inseln ganz besitzen (alte Stände hatten den Rand der Heimatinsel nicht)
+function ownIslandsFully() { for (const id of state.islands) ownIsland(id); }
+// Meer gehört niemandem: dort heißt es nie „nicht dein Grundstück“
+const notMine = (x, y) => isSea(x, y) ? 'Nicht auf dem Wasser' : 'Das ist nicht dein Grundstück';
+const inWorld = (x, y) => { const cx = Math.floor(x / CHUNK), cy = Math.floor(y / CHUNK); return cx >= WORLD.cMin && cx <= WORLD.cMax && cy >= WORLD.cMin && cy <= WORLD.cMax; };
 const isleOf = (x, y) => { const id = islandAt(x, y); return id && id !== 'home' ? ISLE_BY_ID[id] : null; };
 
 const chunkOf = (x, y) => Math.floor(x / CHUNK) + ',' + Math.floor(y / CHUNK);
@@ -148,8 +154,7 @@ const ownedTile = (x, y) => state.owned.has(chunkOf(x, y)) || state.claimed.has(
 // Land und innerhalb der Welt – so wächst das Land Schritt für Schritt, auf Wunsch bis zur Megainsel
 function claimable(x, y) {
   if (ownedTile(x, y) || !isSea(x, y)) return false;
-  const cx = Math.floor(x / CHUNK), cy = Math.floor(y / CHUNK);
-  if (cx < WORLD.cMin || cx > WORLD.cMax || cy < WORLD.cMin || cy > WORLD.cMax) return false;
+  if (!inWorld(x, y)) return false;
   return DIRS.some(([dx, dy]) => ownedTile(x + dx, y + dy));
 }
 const CLAIM_TOOLS = new Set(['schuett', 'schiene']);

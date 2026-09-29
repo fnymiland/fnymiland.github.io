@@ -132,7 +132,7 @@ const CONV_RATIO = 2;           // 2 Rohstoff → 1 Ware
 const newRes = () => Object.fromEntries(Object.keys(RES).map(k => [k, 0]));
 const matText = mat => Object.entries(mat || {}).map(([r, n]) => `${RES[r].icon}${n}`).join(' ');
 const hasMat = mat => Object.entries(mat || {}).every(([r, n]) => state.res[r] >= n);
-const payMat = mat => { for (const [r, n] of Object.entries(mat || {})) state.res[r] -= n; };
+const payMat = mat => { for (const [r, n] of Object.entries(mat || {})) state.res[r] -= n; if (typeof flashStore === 'function') flashStore(mat); };
 function matError(mat) {
   for (const [r, n] of Object.entries(mat || {})) if (state.res[r] < n) return `Zu wenig ${RES[r].name} (${n} ${RES[r].icon} nötig)`;
   return null;

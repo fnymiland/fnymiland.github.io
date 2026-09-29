@@ -482,3 +482,34 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .al-reward { margin: 4px 0 0; font-size: 13px; }
 .wbar { height: 9px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 4px 0 6px; }
 .wbar i { display: block; height: 100%; background: var(--yellow); border-radius: 99px; }
+
+/* ---------- Leiste oben (schlank) + Lager ---------- */
+#hud .pill { cursor: pointer; }
+#hud:not(.more) .more { display: none; }
+#hud .more { font-size: 12px; }
+#town-name { max-width: 34vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#menu-btn, .pill.store { position: relative; }
+.pill.warn b { color: var(--red); }
+#store {
+  position: fixed; z-index: 30; min-width: 230px; max-width: calc(100vw - 20px);
+  background: var(--cream); border-radius: 18px; padding: 10px 14px 12px;
+  box-shadow: 0 4px 0 var(--shadow), 0 10px 24px rgba(60, 40, 20, .18);
+  color: var(--brown); font-weight: 800; font-size: 14px;
+}
+#store[hidden] { display: none; }
+.store-title { font-size: 15px; margin-bottom: 6px; }
+.store-row { display: grid; grid-template-columns: 1fr auto 74px; gap: 10px; align-items: baseline; padding: 3px 0; }
+.store-row b { text-align: right; }
+.store-row small { color: var(--green-d); font-size: 11px; text-align: right; }
+.store-row small.minus { color: var(--red); }
+.store-row.sep { border-top: 1px dashed rgba(107, 79, 58, .25); margin-top: 4px; padding-top: 7px; }
+.store-row.bad b, .store-row.bad span { color: var(--red); }
+.pill .flash {
+  position: absolute; top: calc(100% + 6px); right: 0; white-space: nowrap;
+  background: var(--brown); color: #fff; font-size: 12px; font-weight: 800; border-radius: 999px; padding: 3px 9px;
+  animation: flashUp 1.6s ease-out forwards; pointer-events: none;
+}
+@keyframes flashUp { 0% { opacity: 0; transform: translateY(-4px); } 15% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(4px); } }
+.btn .dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #e8604f; box-shadow: 0 0 0 2px var(--cream); }
+@media (max-width: 600px) { #town-name { max-width: 22vw; } }
+@media (max-width: 480px) { #town-name { display: none; } #hud { gap: 5px; left: 8px; right: 8px; } #hud .pill { padding: 5px 8px; } }

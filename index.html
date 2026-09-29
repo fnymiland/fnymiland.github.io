@@ -7,21 +7,20 @@
 <title>Kachelhausen</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap">
-<link rel="stylesheet" href="style.css?v=115">
+<link rel="stylesheet" href="style.css?v=117">
 </head>
 <body>
 <canvas id="world"></canvas>
 
 <div id="hud">
-  <button class="pill town" id="town-btn" aria-label="Rathaus"><span class="flag" id="hud-flag"></span><b id="town-name"></b><span class="lantern" id="hud-lantern"></span></button>
-  <div class="pill money" title="Taler">🪙 <b id="money">0</b><small id="rate">+0/s</small></div>
-  <div class="pill" title="Arbeitsplätze / Einwohner">👥 <b id="pop">0/0</b></div>
-  <button class="pill sci" id="sci-btn" title="Forschung">💡 <b id="sci">0</b><small id="sci-rate"></small><span class="dot" id="sci-dot" hidden></span></button>
-  <div class="pill" title="Schönheit">🌸 <b id="beauty">0</b></div>
-  <div class="pill res" id="res-pill" hidden></div>
-  <button class="pill diary" id="diary-btn" aria-label="Tagebuch">📖<span class="dot" id="diary-dot" hidden></span></button>
-  <button class="pill" id="menu-btn" aria-label="Menü">☰</button>
+  <button class="pill town" id="town-btn" aria-label="Rathaus"><span class="flag" id="hud-flag"></span><b id="town-name"></b></button>
+  <button class="pill money" id="money-btn" aria-label="Taler">🪙 <b id="money">0</b><small class="more" id="rate">+0/s</small></button>
+  <button class="pill" id="pop-btn" aria-label="Einwohner und Arbeitsplätze">👥 <b id="pop">0</b><small class="more" id="jobs"></small></button>
+  <button class="pill sci" id="sci-btn" aria-label="Forschung">💡 <b id="sci">0</b><small class="more" id="sci-rate"></small><span class="dot" id="sci-dot" hidden></span></button>
+  <button class="pill store" id="store-btn" aria-label="Lager">📦<span class="flash" id="store-flash" hidden></span></button>
+  <button class="pill" id="menu-btn" aria-label="Menü">☰<span class="dot" id="diary-dot" hidden></span></button>
 </div>
+<div id="store" hidden></div>
 
 <button id="goal" aria-label="Nächstes Ziel"></button>
 <div id="hint" hidden></div>
@@ -38,23 +37,23 @@
 <div id="modal" hidden><div class="card" id="modal-card"></div></div>
 <input type="file" id="import-file" accept="application/json,.json" hidden>
 
-<script src="js/data.js?v=115"></script>
-<script src="js/state.js?v=115"></script>
-<script src="js/world.js?v=115"></script>
-<script src="js/rules.js?v=115"></script>
-<script src="js/audio.js?v=115"></script>
-<script src="js/actions.js?v=115"></script>
-<script src="js/story.js?v=115"></script>
-<script src="js/input.js?v=115"></script>
-<script src="js/draw-base.js?v=115"></script>
-<script src="js/draw-kit.js?v=115"></script>
-<script src="js/draw-objects.js?v=115"></script>
-<script src="js/draw-buildings.js?v=115"></script>
-<script src="js/draw-landmarks.js?v=115"></script>
-<script src="js/draw-wonders.js?v=115"></script>
-<script src="js/movers.js?v=115"></script>
-<script src="js/render.js?v=115"></script>
-<script src="js/ui.js?v=115"></script>
-<script src="js/main.js?v=115"></script>
+<script src="js/data.js?v=117"></script>
+<script src="js/state.js?v=117"></script>
+<script src="js/world.js?v=117"></script>
+<script src="js/rules.js?v=117"></script>
+<script src="js/audio.js?v=117"></script>
+<script src="js/actions.js?v=117"></script>
+<script src="js/story.js?v=117"></script>
+<script src="js/input.js?v=117"></script>
+<script src="js/draw-base.js?v=117"></script>
+<script src="js/draw-kit.js?v=117"></script>
+<script src="js/draw-objects.js?v=117"></script>
+<script src="js/draw-buildings.js?v=117"></script>
+<script src="js/draw-landmarks.js?v=117"></script>
+<script src="js/draw-wonders.js?v=117"></script>
+<script src="js/movers.js?v=117"></script>
+<script src="js/render.js?v=117"></script>
+<script src="js/ui.js?v=117"></script>
+<script src="js/main.js?v=117"></script>
 </body>
 </html>

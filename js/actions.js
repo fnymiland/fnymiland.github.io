@@ -40,6 +40,7 @@ function build(b, x, y, quiet) {
   state.money -= c.cost;
   payMat(c.mat);
   if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) claimTile(x, y);
+  if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); sfx('dig'); }
   else if (b === 'schuett') {
     state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig');

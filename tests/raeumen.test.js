@@ -62,6 +62,44 @@ describe('Natur wird beim Bauen weggeräumt', () => {
   });
 });
 
+describe('Leiste oben', () => {
+  it('Geld glatt – auch bei großen Summen (ab 10 Mio. in Millionen, ohne Komma)', () => {
+    game('state.money = 1234567.8; updateHud()');
+    expect(document.getElementById('money').textContent).toBe('1.234.567');
+    game('state.money = 15.7e6; updateHud()');
+    expect(document.getElementById('money').textContent).toBe('15 Mio.');
+  });
+
+  it('schlank: Raten und Arbeitsplätze erst beim Antippen, Lager und Schönheit hinter 📦', () => {
+    const hud = document.getElementById('hud');
+    expect(hud.querySelectorAll('.pill').length).toBe(6);
+    game('updateHud()');
+    expect(hud.classList.contains('more')).toBe(false);
+    document.getElementById('money-btn').onclick();
+    expect(hud.classList.contains('more')).toBe(true);
+    game("state.res.holz = 12; state.tiles.set('6,6', { b: 'windrad', lvl: 1 }); recalc(); toggleStore(true)");
+    const txt = document.getElementById('store').textContent;
+    expect(txt).toContain('Holz');
+    expect(txt).toContain('Schönheit');
+    expect(txt).toContain('Strom');
+    game('toggleStore(false)');
+    expect(document.getElementById('store').hidden).toBe(true);
+  });
+
+  it('ausgegebenes Material blitzt am 📦 auf', () => {
+    game('state.res.holz = 20; payMat({ holz: 4 })');
+    const f = document.getElementById('store-flash');
+    expect(f.hidden).toBe(false);
+    expect(f.textContent).toContain('4');
+  });
+
+  it('das Tagebuch steht im Menü (mit Punkt, wenn es Neues gibt)', () => {
+    game("state.diarySeen = 0; state.diary = ['start', 'x']; showMenu()");
+    expect(document.getElementById('m-diary').querySelector('.dot')).not.toBe(null);
+    game('closeModal()');
+  });
+});
+
 describe('Geldanzeige', () => {
   it('oben nur glatte Zahlen', () => {
     game("state.tiles.set('6,6', { b: 'feld', lvl: 1 }); recalc(); T.inc = 79.3; T.sci = 4.3; updateHud()");

@@ -345,7 +345,7 @@ const clearLabel = (b, x, y, rot) => {
 };
 function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
-  if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
+  if (!ownedTile(x, y)) return notMine(x, y);
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   const t = objAt(x, y);
@@ -631,7 +631,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const r = ROTATABLE.has(b) ? rot : 0;
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'graben' || b === 'schuett') {
-    if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : 'Das ist nicht dein Grundstück';
+    if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : isSea(x, y) ? 'Hier ist schon Wasser' : 'Das ist nicht dein Grundstück';
     const ter = terrainAt(x, y);
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
@@ -641,7 +641,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
     const tiles = footprint(b, x, y, r), [dx, dy] = FRONT_DIR[r];
     for (const [tx, ty] of tiles) {
-      if (!ownedTile(tx, ty)) return 'Das ist nicht dein Grundstück';
+      if (!ownedTile(tx, ty) && !(isSea(tx, ty) && inWorld(tx, ty))) return 'Das ist nicht dein Grundstück';   // ins offene Meer darf sie
       if (COVER.has(tx + ',' + ty)) return 'Hier ist nicht genug Platz';
     }
     const back = tiles.reduce((p, q) => q[0] * dx + q[1] * dy < p[0] * dx + p[1] * dy ? q : p);
@@ -653,7 +653,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       const rail = b === 'schiene';               // Schienen dürfen übers Wasser (Brücke), auch ins offene Meer
-      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : 'Das ist nicht dein Grundstück';
+      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
       if (COVER.has(k)) {
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
         if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
@@ -844,7 +844,7 @@ function houseWishes(t, x, y) {
 }
 
 function demolishInfo(x, y) {
-  if (!ownedTile(x, y)) return { err: 'Das ist nicht dein Grundstück' };
+  if (!ownedTile(x, y)) return { err: isSea(x, y) ? 'Hier ist nur Meer' : 'Das ist nicht dein Grundstück' };
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t) {
     const d = ITEMS[t.b];

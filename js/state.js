@@ -226,6 +226,7 @@ function adoptState(s) {
   normalizeSmall();
   migrateLandmarks();
   const moved = migrateIslands();
+  ownIslandsFully();
   const grown = growWonders();
   fitFootprints();
   delete state.fitLm;
