@@ -140,7 +140,8 @@ function cancelMove() {
 
 
 // Gebäude ausbauen: nur wenn alle Bedingungen erfüllt sind; kostet Taler und Material
-function stageUpgrade(x, y) {
+// stay: aus dem Rathaus heraus – danach kein Infofenster öffnen
+function stageUpgrade(x, y, stay = false) {
   const t = state.tiles.get(x + ',' + y);
   if (!t || !BUILD_STAGES[t.b]) return;
   const info = stageInfo(t, x, y);
@@ -161,7 +162,8 @@ function stageUpgrade(x, y) {
   toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`);
   checkStars();
   save();
-  openInfo(x, y);
+  if (!stay) openInfo(x, y);
+  return true;
 }
 
 // Bewohner: Tierart und Vorname (zufällig beim Bau, bei alten Häusern fest aus der Lage)
@@ -184,7 +186,7 @@ function nameHouses() {
 const animalOf = t => ANIMALS.find(a => a.id === t.animal) || ANIMALS[0];
 
 // Haus ausbauen: nur wenn alle Wünsche erfüllt sind; kostet Material
-function houseUpgrade(x, y) {
+function houseUpgrade(x, y, stay = false) {
   const t = state.tiles.get(x + ',' + y);
   if (!t || t.b !== 'haus') return;
   const w = houseWishes(t, x, y);
@@ -202,7 +204,8 @@ function houseUpgrade(x, y) {
   toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`);
   checkStars();
   save();
-  openInfo(x, y);
+  if (!stay) openInfo(x, y);
+  return true;
 }
 
 function research(id) {

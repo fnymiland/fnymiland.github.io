@@ -630,24 +630,24 @@ function readyList() {
     const where = { x, y, b: t.b };
     if (t.b === 'haus' && s.wish && s.wish.next) {
       const who = `${animalOf(t).icon} ${escHtml(t.name || '')}: ${HOUSE_STAGES[t.lvl - 1].name}`;
-      if (s.wish.ready) ready.push({ ...where, text: `${who} → ${s.wish.next.name}` });
+      if (s.wish.ready) ready.push({ ...where, kind: 'haus', cost: s.wish.next.mat || {}, text: `${who} → ${s.wish.next.name}` });
       else if (s.wish.met === s.wish.total - 1) almost.push({ ...where, text: `${who} – fehlt: ${s.wish.list.find(w => !w.ok).text}` });
     } else if (s.grow && s.grow.next) {
       const miss = s.grow.conds.filter(c => !c.ok);
-      if (s.grow.ready) ready.push({ ...where, text: `${stageName(t)} → ${s.grow.next.name}` });
+      if (s.grow.ready) ready.push({ ...where, kind: 'stage', cost: s.grow.next.cost, text: `${stageName(t)} → ${s.grow.next.name}` });
       else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)} – fehlt: ${miss[0].text}` });
     }
   }
   for (const type of Object.keys(LM_STAGES)) {
     const info = restoreInfo(type);
-    if (info.next && !info.err && info.pos) ready.push({ x: info.pos[0], y: info.pos[1], b: 'lm', text: `🏮 ${lmStepName(type, info.stage + 1)}` });
+    if (info.next && !info.err && info.pos) ready.push({ x: info.pos[0], y: info.pos[1], b: 'lm', kind: 'lm', type, cost: info.next.cost, text: `🏮 ${lmStepName(type, info.stage + 1)}` });
   }
   return { ready, almost };
 }
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['wishes', 'Wünsche'], ['town', 'Ort']];
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['wishes', 'Wünsche'], ['town', 'Ort']];
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -656,7 +656,14 @@ function openTownHall(tab = hallTab) {
       return `<span>${RES[r].icon} ${fmt(state.res[r])}${made ? ` <small>+${fmtRate(made * 60)}/min</small>` : ''}</span>`;
     });
     const count = [...state.tiles.values()].filter(t => t.b !== 'weg' && t.b !== 'lm' && ITEMS[t.b].cat).length;
+    const nx = nextIsle();
     body = `
+      <div class="hall-quick">
+        <button class="btn ghost small" data-quick-go="wissen">🔬 Forschung</button>
+        <button class="btn ghost small" data-quick-go="design">🎨 Kunstakademie</button>
+        <button class="btn ghost small" data-quick-go="diary">📖 Tagebuch</button>
+        ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
+      </div>
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
       ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
       <div class="stats">
@@ -666,19 +673,42 @@ function openTownHall(tab = hallTab) {
       </div>
       ${rates.length ? `<div class="label">Lager</div><div class="stats">${rates.join('')}</div>` : ''}
       <div class="label">Laternen</div>
-      <ul class="starlist">${Object.keys(LM_STAGES).map(type => {
-        const st = lmStage(type);
-        return `<li class="${st >= 3 ? 'done' : ''}">${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</li>`;
+      ${Object.keys(LM_STAGES).map(type => {
+        const st = lmStage(type), open = !!lmTile(type) && ownedTile(...lmTile(type));
+        return `<div class="hall-row${st >= 3 ? ' done' : ''}"><span>${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</span>
+          ${open ? `<button class="btn ghost small" data-lm-go="${type}">Hin</button>` : '<span class="muted">🔒</span>'}</div>`;
       }).join('')}
-        <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>
-      <div class="label">Inseln</div>
-      <ul class="starlist">${ISLES.map(i => `<li class="${isleOpen(i.id) ? 'done' : ''}">${i.icon} ${i.name} ${isleOpen(i.id) ? '✓' : i === nextIsle() ? '– als Nächstes' : '🔒'}</li>`).join('')}</ul>`;
+      <div class="hall-row${state.festival ? ' done' : ''}"><span>🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</span></div>`;
   } else if (tab === 'ready') {
-    const row = (e, i, icon) => `<div class="hall-row"><span>${icon} ${e.text}</span><button class="btn ghost small" data-jump="${i}">Hin</button></div>`;
+    // Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
+    const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
+    const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
+    const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
     body = `
       <div class="label">Bereit zum Ausbauen</div>
-      ${ready.length ? ready.map((e, i) => row(e, i, '✨')).join('') : '<p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
-      ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭')).join('')}` : ''}`;
+      ${ready.length ? ready.map((e, i) => row(e, i, '✨', true)).join('') : '<p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
+      ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}`;
+  } else if (tab === 'isles') {
+    // Alle Inseln auf einen Blick: Stand, was dort steht, Bahnanschluss – und per Knopf hin
+    const per = new Map([['home', { n: 0, pop: 0 }], ...ISLES.map(i => [i.id, { n: 0, pop: 0 }])]);
+    for (const [k, t] of state.tiles) {
+      if (t.b === 'weg' || t.b === 'schiene' || t.b === 'lm') continue;
+      const e = per.get(regionAt(...keyXY(k)));
+      if (!e) continue;
+      e.n++;
+      if (t.b === 'haus') e.pop += HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop;
+    }
+    const nx = nextIsle();
+    const row = (id, icon, name, open, extra) => {
+      const e = per.get(id), rail = T.rail.regions.has(id);
+      const state_ = open ? `🏠 ${e.n} · 👥 ${e.pop}${rail ? ' · 🚆' : ''}${extra || ''}` : id === (nx && nx.id) ? 'als Nächstes' : '🔒';
+      return `<div class="hall-row"><span>${icon} <b>${name}</b> <small class="muted">${state_}</small></span>
+        <button class="btn ${id === (nx && nx.id) ? '' : 'ghost '}small" data-isle-go="${id}">${open ? 'Hin' : id === (nx && nx.id) ? 'Erschließen …' : 'Ansehen'}</button></div>`;
+    };
+    body = `
+      <div class="label">Deine Inseln</div>
+      ${row('home', '🏠', 'Heimatinsel', true, '')}
+      ${ISLES.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), ` · ${LANDMARKS[i.lm].icon} ${'🏮'.repeat(lmStage(i.lm))}`)).join('')}`;
   } else if (tab === 'wishes') {
     const miss = new Map();
     for (const [k, t] of state.tiles) {
@@ -711,6 +741,20 @@ function openTownHall(tab = hallTab) {
   card.classList.add('hall');
   for (const b of card.querySelectorAll('[data-tab]')) b.onclick = () => { sfx('deco'); openTownHall(b.dataset.tab); };
   const all = ready.concat(almost);
+  for (const b of card.querySelectorAll('[data-up]')) b.onclick = () => {
+    const e = all[+b.dataset.up];
+    if (e.kind === 'lm') { restoreLandmark(e.type); return; }            // öffnet das Laternen-Fenster
+    if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('ready');
+  };
+  for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
+    const q = b.dataset.quickGo;
+    if (q === 'diary') openDiary(); else openResearch(q);
+  };
+  for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
+    const [x, y] = lmTile(b.dataset.lmGo);
+    closeModal(); jumpTo(x, y, 3, 3); sparkle(x + 1, y + 1); openLandmark(x, y);
+  };
+  for (const b of card.querySelectorAll('[data-isle-go]')) b.onclick = () => goIsle(b.dataset.isleGo);
   for (const b of card.querySelectorAll('[data-jump]')) b.onclick = () => {
     const e = all[+b.dataset.jump], [w, h] = sizeOf(e.b, (state.tiles.get(e.x + ',' + e.y) || {}).rot);
     closeModal();
@@ -726,6 +770,14 @@ function openTownHall(tab = hallTab) {
     if ($('h-move')) $('h-move').onclick = () => { closeModal(); startMove(...hall); };
   }
   $('m-close').onclick = closeModal;
+}
+// Zu einer Insel springen: Heimatinsel zum Rathaus, sonst zur Sehenswürdigkeit; die nächste gesperrte zeigt „Erschließen“
+function goIsle(id) {
+  closeModal();
+  if (id === 'home') { const h = townHallAt() || [Math.round(ISLAND.cx), Math.round(ISLAND.cy)]; jumpTo(h[0], h[1], 3, 3); return; }
+  const i = ISLE_BY_ID[id], pos = lmTile(i.lm) || isleAnchor(i);
+  jumpTo(pos[0], pos[1], 3, 3);
+  if (!isleOpen(id)) openIsle(id);
 }
 $('town-btn').onclick = () => { setTool('look'); openTownHall(); };
 $('rot-btn').onclick = () => rotateBuild();

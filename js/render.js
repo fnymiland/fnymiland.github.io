@@ -37,8 +37,8 @@ function pill(text, x, y, bg, fg, size) {
   g.beginPath(); g.roundRect(x - w / 2, y - h / 2 + 3, w, h, h / 2); g.fill();
   g.fillStyle = bg;
   g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill();
-  g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(text, x, y + 1);
+  g.fillStyle = fg; g.textBaseline = 'middle';
+  centerText(text, x, y + 1);
 }
 
 
@@ -516,12 +516,12 @@ function render(now) {
   const nxt = nextIsle();
   for (const i of ISLES) {
     if (isleOpen(i.id)) continue;
-    const p = toScreen(i.cx, i.cy - ISLE_R * 0.2);
-    if (p.x < -150 || p.x > W + 150 || p.y < -100 || p.y > H + 150) continue;
+    // über der Sehenswürdigkeit schweben (wie deren Schild), nicht an einem Pfahl mitten im Berg
+    const pos = lmTile(i.lm), p = pos ? toScreen(pos[0] + 1, pos[1] + 1) : toScreen(i.cx, i.cy);
+    const ly = p.y - (LM_LABEL_H[i.lm] || 80) * z;
+    if (p.x < -150 || p.x > W + 150 || ly < -100 || ly > H + 150) continue;
     const isNext = i === nxt, sz = Math.max(11, 12 * z);
-    g.fillStyle = '#8a5a3c';
-    g.fillRect(p.x - 1.5 * z, p.y - 26 * z, 3 * z, 26 * z);
-    pill(`${i.icon} ${i.name} ${isNext ? '· erschließen' : '🔒'}`, p.x, p.y - 30 * z, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
+    pill(`${i.icon} ${i.name} ${isNext ? '· erschließen' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
   }
 
   drawSparkles(now, z);
@@ -533,11 +533,10 @@ function render(now) {
     const p = toScreen(f.x, f.y);
     g.globalAlpha = a < 0.8 ? 1 : (1 - a) / 0.2;
     g.font = `900 ${Math.max(12, 12 * z)}px Nunito, system-ui, sans-serif`;
-    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.textBaseline = 'middle';
     g.lineWidth = 4; g.strokeStyle = '#fffaf0'; g.lineJoin = 'round';
     const fy = p.y - 30 * z - a * 26 * z;
-    g.strokeText(f.text, p.x, fy);
-    g.fillStyle = f.color; g.fillText(f.text, p.x, fy);
+    g.fillStyle = f.color; centerText(f.text, p.x, fy, true);
     g.globalAlpha = 1;
   }
 

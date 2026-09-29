@@ -49,8 +49,8 @@ function drawFlag(px, py, z, now, town) {
   g.closePath();
   g.fillStyle = C(town.color); g.fill();
   g.font = `${7.5 * z}px system-ui, sans-serif`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(town.symbol, px + fw / 2, top + fh / 2 + 0.5 * z);
+  g.textBaseline = 'middle';
+  centerText(town.symbol, px + fw / 2, top + fh / 2 + 0.5 * z);
 }
 
 // Wege: schmale Bänder, die sich mit Nachbar-Wegen verbinden, oder ganze Flächen (Plätze)
@@ -622,11 +622,12 @@ const HOUSE_ART = [
       if (i % 2) circle(gx, gy - 3.5 * z, 1.3 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
     }
     kShadow(K, 0.29);
-    const B = K.block({ ha: 0.26, hb: 0.26, h: 13, wall, roof: '#c9a25a', roofH: 19, over: 1.18, entry: true });
+    const reet = mix(roof, '#c9a25a', 0.3);          // Reetdach in der gewählten Dachfarbe, mit etwas Stroh
+    const B = K.block({ ha: 0.26, hb: 0.26, h: 13, wall, roof: reet, roofH: 19, over: 1.18, entry: true });
     K.door(B);
     houseWins(K, B, [[0.32, 0.62]]);
     const top = K.P(0, 0, 13 + 17);
-    circle(top[0] - 1 * z, top[1], 1.3 * z, C('#a8833f'));
+    circle(top[0] - 1 * z, top[1], 1.3 * z, C(shade(reet, -0.2)));
     kitChimney(K, 0.1, -0.12, 13 + 6, now);
   },
   // 4 Stadthaus mit Balkon
@@ -1156,6 +1157,6 @@ function drawStatusIcon(cx, cy, z, icon, now) {
   circle(x, y + 1.5, r, 'rgba(107,79,58,0.3)');
   circle(x, y, r, '#fffaf0');
   g.font = `${8 * z}px system-ui, sans-serif`;
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(icon, x, y + 0.5 * z);
+  g.textBaseline = 'middle';
+  centerText(icon, x, y + 0.5 * z);
 }

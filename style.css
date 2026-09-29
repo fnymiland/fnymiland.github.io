@@ -404,3 +404,9 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 #goal .req small { font-weight: 700; color: var(--brown2); }
 #goal .link { text-decoration: underline; color: var(--brown2); font-size: 11px; }
 .btn.ghost:disabled { opacity: .4; cursor: default; }
+
+/* ---------- Rathaus: Knöpfe ---------- */
+.hall-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.hall-btns { display: flex; gap: 6px; flex: none; }
+.hall-row.done { color: var(--green-d); }
+.hall-row small { font-weight: 700; }

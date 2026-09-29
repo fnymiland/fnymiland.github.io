@@ -38,6 +38,14 @@ function poly(pts, fill) {
   g.fill();
 }
 function diamond(cx, cy, a, b, fill) { poly([[cx, cy - b], [cx + a, cy], [cx, cy + b], [cx - a, cy]], fill); }
+// Text mittig setzen – selbst gerechnet statt textAlign 'center': Safari zentriert Text mit Emojis (🏛 🏮 ⛏️) falsch,
+// der Text stand dann ab der Mitte des Schildes. measureText stimmt dort, also daran ausrichten.
+function centerText(text, x, y, stroke = false) {
+  g.textAlign = 'left';
+  const w = g.measureText(text).width;
+  if (stroke) g.strokeText(text, x - w / 2, y);
+  g.fillText(text, x - w / 2, y);
+}
 function circle(x, y, r, fill) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); }
 function ellipse(x, y, rx, ry, fill) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); }
 const lerp = (P, Q, t) => [P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t];
