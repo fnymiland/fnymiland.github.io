@@ -694,7 +694,7 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
-  const boat = t.b === 'bootssteg' ? expeditionHtml() : '';
+  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? ferryHtml(x + ',' + y) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
     return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
@@ -726,6 +726,18 @@ function openInfo(x, y) {
   $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-ferry]')) b.onclick = () => {
+    if (!canPay(FERRY_COST)) { fail(state.money < FERRY_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
+    addCost(FERRY_COST, -1);
+    t.ferry = b.dataset.ferry;
+    sfx('build'); toast('⛴️ Die Fähre legt ab!'); recalc(); save(); openInfo(x, y);
+  };
+  if (el.querySelector('[data-ferry-off]')) el.querySelector('[data-ferry-off]').onclick = () => {
+    const f = ferryOf(x + ',' + y);
+    for (const k of f ? f.stations : []) { const h = state.tiles.get(k); if (h) delete h.ferry; }
+    addCost(FERRY_COST, 1);
+    sfx('dig'); recalc(); save(); openInfo(x, y);
+  };
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
     const nm = $('p-name');
@@ -790,6 +802,18 @@ function stationStatus(k) {
   if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehrere Züge drauf.</div>');
   return out;
 }
+// Hafen: Fähre einrichten (zu einem Hafen auf einer anderen Insel) oder zeigen, was sie befördert
+function ferryHtml(k) {
+  const f = ferryOf(k), here = regionAt(...keyXY(k)), { money, ...mat } = FERRY_COST;
+  if (f) return `<div class="label">⛴️ Fähre</div><div class="status"><div class="ok">⛴️ Fähre ${f.regions.map(regionName).join(' ↔ ')} · ${nf1.format(f.km)} km · ${fmt(f.seats)} Plätze/min (Hafen-Stufe ${f.lvl})</div>
+    ${trafficStatus(f, f.traffic).join('')}</div>
+    <div class="row"><button class="btn ghost small" data-ferry-off>Fähre einstellen · +🪙 ${fmt(money)} ${matText(mat)}</button></div>`;
+  const free = [...state.tiles].filter(([o, u]) => u.b === 'hafen' && o !== k && regionAt(...keyXY(o)) !== here && !ferryOf(o));
+  if (!free.length) return `<div class="label">⛴️ Fähre</div><p class="muted">Bau einen zweiten Hafen auf einer anderen Insel – dann kann von hier eine Fähre hinüberfahren (${FERRY_SEATS[0]}–${FERRY_SEATS[2]} Plätze/min je nach Hafen-Stufe, ohne Strom).</p>`;
+  return `<div class="label">⛴️ Fähre einrichten</div>
+    <div class="looks">${free.map(([o]) => `<button class="look" data-ferry="${o}" data-cost="${money}" data-mat='${JSON.stringify(mat)}'>⛴️ zur ${regionName(regionAt(...keyXY(o)))} · 🪙 ${fmt(money)} ${matText(mat)}</button>`).join('')}</div>
+    <p class="muted">Bringt Pendler und Besucher hinüber (ohne Strom) und bindet die Gegend um beide Häfen an.</p>`;
+}
 // Seilbahn: mit welcher Station verbunden, was sie befördert
 function cableStatus(k) {
   const c = T.cables.find(l => l.stations.includes(k));
@@ -804,7 +828,7 @@ const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 function trafficStatus(line, tr) {
   const all = tr.groupSeats || tr.seats, pct = all ? Math.round(tr.demand / all * 100) : 0, out = [];
   const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
-  const vehicles = line.kind === 'seil' ? 'Gondeln' : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
+  const vehicles = line.kind === 'seil' ? 'Gondeln' : line.kind === 'faehre' ? `Fähre (Hafen-Stufe ${line.lvl})` : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
     return `${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} Wagen`; })();
   if (!tr.demand) {
     out.push('<div class="muted">👥 Noch will niemand mitfahren: Häuser auf der anderen Insel, eine restaurierte Sehenswürdigkeit oder ein Wunderwerk bringen Fahrgäste.</div>');
@@ -817,6 +841,7 @@ function trafficStatus(line, tr) {
     : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
   out.push(`<div class="ok">🪙 +${fmtRate(tr.fare * masteryMul('taler'))}/s Fahrkarten · +${fmtRate(tr.spend * masteryMul('taler'))}/s von Besuchern</div>`);
   if (tr.served < 1) out.push(line.kind === 'seil' ? '<div class="muted">Mehr Plätze: eine zweite Verbindung dorthin (Zug, weitere Seilbahn).</div>'
+    : line.kind === 'faehre' ? '<div class="muted">Mehr Plätze: Häfen ausbauen oder eine zweite Verbindung dorthin (Zug, Seilbahn).</div>'
     : `<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
   return out;
 }

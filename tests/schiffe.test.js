@@ -92,3 +92,46 @@ describe('Expedition', () => {
     expect($('panel').textContent).toContain('unterwegs');
   });
 });
+
+describe('Fähre', () => {
+  // zwei Häfen, links „Heimatinsel“, rechts „Waldinsel“
+  const ports = () => {
+    game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
+    game("for (const k of ['4,12', '16,12']) state.tiles.set(k, { b: 'hafen', lvl: 1, rot: 0 }); state.res.bretter = 50; recalc()");
+  };
+  afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
+
+  it('am Hafen einrichten: kostet einmal, dann fährt sie – Plätze nach Hafen-Stufe, ohne Strom', () => {
+    ports();
+    game('openInfo(4, 12)');
+    const m = game('state.money');
+    document.querySelector('[data-ferry="16,12"]').onclick();
+    expect(game('state.money')).toBe(m - game('FERRY_COST.money'));
+    expect(game('T.ferries.length')).toBe(1);
+    expect(game('T.ferries[0].regions')).toEqual(['home', 'wald']);
+    expect(game('T.ferries[0].seats')).toBe(100);
+    game("state.tiles.get('4,12').lvl = 3; state.tiles.get('16,12').lvl = 2; recalc()");
+    expect(game('T.ferries[0].seats')).toBe(180);                        // die kleinere Stufe zählt
+  });
+
+  it('befördert Fahrgäste, bindet an und lässt sich wieder einstellen (Geld zurück)', () => {
+    ports();
+    for (let i = 0; i < 12; i++) game(`state.tiles.set('${2 + (i % 4)},${2 + Math.floor(i / 4)}', { b: 'haus', lvl: 3 })`);
+    game("state.tiles.set('14,4', { b: 'riesenrad', lvl: 1, phase: 99 }); state.terra.set('18,14', 'forest'); state.tiles.set('18,14', { b: 'holz', lvl: 1 })");
+    game("state.tiles.get('4,12').ferry = '16,12'; recalc()");
+    expect(game('T.ferries[0].traffic.demand')).toBeGreaterThan(0);
+    expect(game("T.st.get('18,14').how")).toBe('bahn');
+    expect(() => game('for (const b of ferryBoats(1000)) drawFerryMover(b, 1.5, 1000)')).not.toThrow();
+    game('openInfo(16, 12)');
+    expect(document.getElementById('panel').textContent).toMatch(/Fähre Heimatinsel ↔ Waldinsel/);
+    const m = game('state.money');
+    document.querySelector('[data-ferry-off]').onclick();
+    expect(game('T.ferries.length')).toBe(0);
+    expect(game('state.money')).toBe(m + game('FERRY_COST.money'));
+  });
+
+  it('ohne zweiten Hafen auf einer anderen Insel: nur der Hinweis', () => {
+    game("state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0 }); recalc(); openInfo(4, 12)");
+    expect(document.getElementById('panel').textContent).toMatch(/zweiten Hafen auf einer anderen Insel/);
+  });
+});

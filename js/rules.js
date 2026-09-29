@@ -165,8 +165,10 @@ function totals() {
   const places = placeStats();
   const cables = cablePairs().map(([a, b, d]) => ({ kind: 'seil', stations: [a, b], km: d / KM, seats: SEIL_SEATS,
     regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) }));
+  const ferries = ferryPairs().map(([a, b, lvl, d]) => ({ kind: 'faehre', stations: [a, b], km: d / KM, lvl, seats: FERRY_SEATS[lvl - 1],
+    regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) })).filter(f => f.regions.length > 1);
   for (const l of rail.lines) l.traffic = null;
-  const links = [...rail.lines.filter(l => l.powered), ...cables];
+  const links = [...rail.lines.filter(l => l.powered), ...cables, ...ferries];
   transitTraffic(links, places);
   const railV = new Map(), railSt = [];
   for (const l of links) for (const s of l.stations) {
@@ -285,12 +287,12 @@ function totals() {
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
-  traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [] };
+  traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
 function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -685,6 +687,23 @@ function cablePairs() {
   for (const [d, a, b] of pairs) if (!used.has(a) && !used.has(b)) { used.add(a); used.add(b); out.push([a, b, d]); }
   return out;
 }
+// Fähren (Block 18c): Hafen ↔ Hafen auf einer anderen Insel, ohne Schienen und Strom. Plätze nach der kleineren
+// Hafen-Stufe. Eingerichtet am Hafen (t.ferry = Feld des anderen Hafens), kostet einmal FERRY_COST.
+const FERRY_SEATS = [100, 180, 260], FERRY_COST = { money: 2000, bretter: 20 };
+function ferryPairs() {
+  const out = [], seen = new Set();
+  for (const [k, t] of state.tiles) {
+    const o = t.b === 'hafen' && t.ferry && state.tiles.get(t.ferry);
+    if (!o || o.b !== 'hafen') continue;
+    const key = [k, t.ferry].sort().join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const [ax, ay] = keyXY(k), [bx, by] = keyXY(t.ferry);
+    out.push([k, t.ferry, Math.min(t.lvl || 1, o.lvl || 1), Math.hypot(ax - bx, ay - by)]);
+  }
+  return out;
+}
+const ferryOf = k => T.ferries.find(l => l.stations.includes(k));
 // Verkehr aller Verbindungen: Wer zwischen denselben Orten fährt (Zug, Seilbahn, Fähre), teilt sich die Fahrgäste –
 // nach Plätzen. Jede Verbindung bekommt ihren Anteil an Fahrkarten und Besuchern, die Auslastung gilt für alle zusammen.
 function transitTraffic(links, places) {

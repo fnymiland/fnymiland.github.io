@@ -377,3 +377,31 @@ function drawBoatMover(m, z, now) {
   poly([[x + flip * 1 * z, y - 24 * z + bob], [x + flip * 12 * z, y - 5 * z + bob], [x + flip * 1 * z, y - 3 * z + bob]], C('#fffaf0'));
   poly([[x, y - 27 * z + bob], [x - flip * 5 * z, y - 25 * z + bob], [x, y - 23 * z + bob]], C('#e8604f'));  // Wimpel
 }
+
+// Fähren: pendeln zwischen ihren Häfen (vom Wasser vor dem einen zum Wasser vor dem anderen), warten kurz am Anleger
+const FERRY_SPEED = 1.6, FERRY_WAIT = 3;
+function ferryBoats(now) {
+  const out = [];
+  for (const f of T.ferries || []) {
+    const [a, b] = f.stations.map(k => { const [x, y] = keyXY(k); return [x + 0.5, y + 0.5]; });
+    const vx = b[0] - a[0], vy = b[1] - a[1], d = Math.hypot(vx, vy) || 1, ux = vx / d, uy = vy / d;
+    const s0 = [a[0] + ux * 1.6, a[1] + uy * 1.6], len = Math.max(0.1, d - 3.2), lap = 2 * (len / FERRY_SPEED + FERRY_WAIT);
+    let t = ((now / 1000) + hash(a[0], a[1], 9) * lap) % lap, k, dir = 1;
+    const leg = len / FERRY_SPEED + FERRY_WAIT;
+    if (t > leg) { t -= leg; dir = -1; }
+    k = Math.max(0, Math.min(1, (t - FERRY_WAIT) / (len / FERRY_SPEED)));
+    if (dir < 0) k = 1 - k;
+    out.push({ boat: true, ferry: true, px: s0[0] + ux * len * k, py: s0[1] + uy * len * k, du: ux * dir, dv: uy * dir });
+  }
+  return out;
+}
+function drawFerryMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 800 + m.px) * 1 * z;
+  ellipse(x, y + 3 * z, 26 * z, 8 * z, 'rgba(230,248,255,0.45)');
+  ellipse(x, y + 2 * z + bob, 18 * z, 6 * z, C('#2f5e9e'));
+  ellipse(x, y + bob, 17 * z, 5.2 * z, C('#fffaf0'));
+  box(x - 3 * z, y - 1 * z + bob, 9 * z, 4 * z, 7 * z, '#fffaf0', '#e8604f', 3 * z);                       // Kajüte, rotes Dach
+  g.strokeStyle = C('#4a4a58'); g.lineWidth = 1.2 * z;
+  g.beginPath(); g.moveTo(x + 4 * z, y - 8 * z + bob); g.lineTo(x + 4 * z, y - 15 * z + bob); g.stroke();   // Schornstein-Mast
+  circle(x + 4 * z, y - 16 * z + bob, 1.4 * z, C('#ffd36e'));
+}
