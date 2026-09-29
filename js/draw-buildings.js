@@ -675,13 +675,18 @@ const BUILDING_ART = {
     const WALLS3 = ['#ffe3e0', '#e4f1ff', '#fff0b8'], ROOFS3 = ['#e8705f', '#5f8fe8', '#58b36a'];
     const parts = [];
     kShadow(K, 0.5);
+    // Fensterreihen je Stockwerk (Höhe über dem Boden): unten neben der Tür, darüber je Stockwerk eine Reihe
+    const row = r => r ? [12 + 5 * (r - 1), 15.4 + 5 * (r - 1)] : [4.5, 8.5];
     [-0.64, 0, 0.64].forEach((b, i) => parts.push([0, b, () => {
       const H = 12 + s * 5 + (i === 1 ? 3 : 0);
       const B = K.block({ a: -0.04, b, ha: 0.3, hb: 0.3, h: H, wall: WALLS3[i], roof: ROOFS3[i], roofH: 9, entry: i === 1 });
-      K.door(B, 'front', 0.38, 0.62, 0.62 * 12 / H + 0.1);
-      K.wins(B, 'front', 1, 0.62, 0.86, 0.3, 0.7);
-      if (s >= 2) K.wins(B, 'front', 2, 0.66 - 0.28 * (s - 1) / 2, 0.86 - 0.28 * (s - 1) / 2 + 0.1, 0.1, 0.9);
-      K.sideWins(B, s, 0.4, 0.8);
+      K.door(B, 'front', 0.4, 0.6, 8.5 / H);
+      for (let r = 0; r <= s; r++) {
+        const h0 = row(r)[0] / H, h1 = row(r)[1] / H;
+        if (r) K.wins(B, 'front', 2, h0, h1);
+        else { K.wins(B, 'front', 1, h0, h1, 0.06, 0.36); K.wins(B, 'front', 1, h0, h1, 0.64, 0.94); }
+        K.sideWins(B, 2, h0, h1);
+      }
       kitChimney(K, -0.12, b + 0.12, H + 7, now, '#c0694a');
     }]));
     parts.push([0.42, -0.64, () => kitBush(K, 0.42, -0.4, 0.5, '#62b85a')], [0.42, 0.64, () => kitBush(K, 0.42, 0.4, 0.5, '#f28cb1')]);

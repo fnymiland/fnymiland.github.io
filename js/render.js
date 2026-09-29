@@ -225,7 +225,7 @@ function tileSprite(kind, x, y, px, py, z) {
     const vx = 5000 + v * 7, vy = 5000 + v * 13;
     if (kind === 'forest') drawForest(0, 0, 1, vx, vy, 3);
     else if (kind === 'obst') drawForest(0, 0, 1, vx, vy, 3, true);
-    else if (kind === 'kristall') { const ng = NO_GLOW; NO_GLOW = true; drawCrystalRocks(0, 0, 1, vx, vy); NO_GLOW = ng; }
+    else if (kind === 'kristall') drawCrystalRocks(0, 0, 1, vx, vy);
     else drawRocks(0, 0, 1, vx, vy, kind === 'erz');
     g = prev;
     e = { c, scale: want };
@@ -233,6 +233,29 @@ function tileSprite(kind, x, y, px, py, z) {
   }
   const B = SPRITE_BOX;
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
+}
+// Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
+// hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in
+// Streifen gezeichnet und tragen ihre Lichter mehrfach ein: jedes nur einmal hinterlegen.
+function drawNight() {
+  g.globalCompositeOperation = 'source-atop';
+  g.fillStyle = `rgba(25,35,85,${night})`;
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-over';
+  const seen = new Set(), lights = glows.filter(({ q, r }) => {
+    const k = [q[0][0], q[0][1], q[2][0], q[2][1], r].map(v => Math.round(v * 4)).join();
+    return !seen.has(k) && seen.add(k);
+  });
+  for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');      // Fenster zuerst, ganz hell
+  for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
+    const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+    g.fillStyle = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
+    g.fillRect(gx - r, gy - r, r * 2, r * 2);
+  }
+  g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'source-over';
+  return lights.length;
 }
 // Nachtlicht: ein vorgezeichneter weicher Lichtfleck statt eines Farbverlaufs pro Fenster
 const glowSprites = {};
@@ -431,9 +454,7 @@ function render(now) {
         const left = d === dMin ? -1e5 : mid - half, right = d === dMax ? 1e5 : mid + half;
         if (t.b === 'lm') FOG = false;
         g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
-        NO_GLOW = !corner;                   // Nachtlicht nur einmal eintragen
         drawIt();
-        NO_GLOW = false;
         g.restore();
       }
       if (corner) {
@@ -506,18 +527,7 @@ function render(now) {
   drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
 
   // 5) Nacht
-  if (night > 0) {
-    g.fillStyle = `rgba(25,35,85,${night})`;
-    g.fillRect(0, 0, W, H);
-    const strength = night / 0.45;
-    for (const { q, r, tint } of glows) {
-      const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, blue = tint === 'blue';
-      g.globalAlpha = 0.45 * strength;
-      g.drawImage(glowImage(blue), gx - r, gy - r, r * 2, r * 2);
-      if (!blue) { g.globalAlpha = Math.min(1, strength); poly(q, '#ffd873'); }
-      g.globalAlpha = 1;
-    }
-  }
+  if (night > 0) drawNight();
 
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
 

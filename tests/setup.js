@@ -9,9 +9,14 @@ document.body.innerHTML = body ? body[1].replace(/<script[\s\S]*?<\/script>/g, '
 
 // jsdom kann kein Canvas: ein Zeichenkontext, der alles schluckt
 const noop = () => {};
-const fakeCtx = new Proxy({}, {
+const STATE_PROPS = ['globalCompositeOperation', 'globalAlpha', 'fillStyle', 'strokeStyle', 'lineWidth'];
+const stack = [];
+const fakeCtx = new Proxy({ globalCompositeOperation: 'source-over', globalAlpha: 1 }, {
   get(target, prop) {
     if (prop in target) return target[prop];
+    // save/restore wie im Browser (Mischart, Deckkraft, Farben), damit Tests den Zustand prüfen können
+    if (prop === 'save') return () => stack.push(STATE_PROPS.map(k => target[k]));
+    if (prop === 'restore') return () => { const s = stack.pop(); if (s) STATE_PROPS.forEach((k, i) => { target[k] = s[i]; }); };
     if (prop === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
     if (prop === 'measureText') return () => ({ width: 10 });
     if (prop === 'createRadialGradient' || prop === 'createLinearGradient') return () => ({ addColorStop: noop });

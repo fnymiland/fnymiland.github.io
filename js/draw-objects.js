@@ -6,11 +6,22 @@ let night = 0;
 const glows = [];
 const isLive = () => g === ctx;
 
-let NO_GLOW = false;                        // große Gebäude werden in Streifen gezeichnet: Licht nur einmal
+// Nachtlicht: stanzt an Ort und Stelle ein Loch ins Bild (Fenster ganz, Lichtschein weich). Was danach davor
+// gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
+// Am Ende wird die Nacht nur über das Bild gelegt und die Löcher mit Licht hinterlegt (render.js, „Nacht“).
 function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
-  if (NO_GLOW || !(night > 0.15 && isLive())) return;
-  const m = g.getTransform(), k = 1 / DPR;
-  glows.push({ q: pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]), r, tint });
+  if (!(night > 0.15 && isLive())) return;
+  const m = g.getTransform(), k = 1 / DPR, strength = night / NIGHT_MAX, blue = tint === 'blue';
+  const q = pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]);
+  const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+  g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  g.globalCompositeOperation = 'destination-out';
+  g.globalAlpha = 0.45 * strength;
+  g.drawImage(glowImage(blue), gx - r, gy - r, r * 2, r * 2);
+  if (!blue) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
+  g.restore();
+  glows.push({ q, r, tint });               // große Gebäude (Streifen) tragen es mehrfach ein – drawNight fasst zusammen
 }
 function windowOn(P, Q, t0, t1, h0, h1, z) {
   const lit = night > 0.15 && isLive();
