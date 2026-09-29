@@ -80,6 +80,8 @@ const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feld
   fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [26, 0.2], uni: [30, 0.14], kunst: [[26, 26, 30], 0.2],
   rathaus: [40, 0.4], leuchtturm: [50, 0.37], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
 };
+// Höhe des Namensschilds über der Mitte (passend zur Zeichnung)
+const LM_LABEL_H = { baum: 104, obsthain: 82, klippe: 118, ruine: 62, erzberg: 66, quelle: 52, kristall: 84 };
 const LM_SHADOW = { baum: [44, 0.55], klippe: [34, 0.5], ruine: [20, 0.45], kristall: [26, 0.55], obsthain: [26, 0.55] };
 function shadowOf(t, ax, ay) {
   let hgt, inset;
@@ -427,25 +429,42 @@ function render(now) {
     const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
     if (a0 && !t) staleCover = true;
     if (a) {
-      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
-      if (x === ax + w - 1 && y === ay + h - 1) {
-        const c = w === 1 && h === 1 ? { x: px, y: py } : toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2);
-        if (t.b === 'lm') { FOG = false; labels.push([ax, ay, t.lm]); }
+      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot), big = w > 1 || h > 1;
+      const corner = x === ax + w - 1 && y === ay + h - 1;
+      const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
+      const drawIt = () => {
         let sc = 1;
         if (t.born) {
           const an = (now - t.born) / 380;
           if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
         }
         const ds = sc * decoScale(t.b);
-        if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [0]);
-        if (t.b !== 'weg') {
-          g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-          PASS = 'object';
-          drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
-          PASS = null;
-          g.restore();
+        g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+        PASS = 'object';
+        drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
+        PASS = null;
+        g.restore();
+      };
+      // Große Gebäude in senkrechten Streifen: jede Diagonale (x − y) der Grundfläche wird an ihrem vordersten
+      // Feld gezeichnet – so überdecken sie nichts, was seitlich vor ihnen steht (Bäume, Häuser, Bewohner)
+      if (big && t.b !== 'weg' && (x === ax + w - 1 || y === ay + h - 1)) {
+        const d = x - y, dMin = ax - (ay + h - 1), dMax = ax + w - 1 - ay;
+        const mid = (d * TW / 2 - cam.x) * z + W / 2, half = TW / 4 * z;
+        const left = d === dMin ? -1e5 : mid - half, right = d === dMax ? 1e5 : mid + half;
+        if (t.b === 'lm') FOG = false;
+        g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
+        NO_GLOW = !corner;                   // Nachtlicht nur einmal eintragen
+        drawIt();
+        NO_GLOW = false;
+        g.restore();
+      }
+      if (corner) {
+        if (t.b === 'lm') { FOG = false; labels.push([ax, ay, t.lm]); }
+        if (!big) {
+          drawSmall(k, px, py, z, now, x, y, [0]);
+          if (t.b !== 'weg') drawIt();
+          drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
         }
-        if (w === 1 && h === 1) drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
         if (s && s.grow && s.grow.ready) icons.push([c.x, c.y, '✨']);
@@ -509,10 +528,10 @@ function render(now) {
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
   for (const [x, y, type] of labels) {
-    const p = toScreen(x + 0.5, y + 0.5), L = LANDMARKS[type], st = lmStage(type), on = st >= 1;
+    const [w, h] = sizeOf('lm', 0), p = toScreen(x + (w - 1) / 2, y + (h - 1) / 2), L = LANDMARKS[type], st = lmStage(type);
     const ready = ownedTile(x, y) && st < 3 && !restoreInfo(type).err;
     const lanterns = '🏮'.repeat(st) + '·'.repeat(3 - st);
-    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - 96 * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
+    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - (LM_LABEL_H[type] || 80) * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
       st >= 3 ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
   }
   const price = plotPrice();

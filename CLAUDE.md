@@ -97,7 +97,7 @@ Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse. Züge/Straßenbah
 ## Online (GitHub Pages)
 
 Das Spiel liegt unter **https://fnymiland.github.io** (Repository `fnymiland/fnymiland.github.io`, Remote `origin`,
-Branch `main`). **Jeder Push auf `main` ist nach ~1 Minute live** – nur nach Rücksprache pushen. Vorher `npm test`
+Branch `main`). **Jeder Push auf `main` ist nach ~1 Minute live** – **nur pushen, wenn der Nutzer es ausdrücklich sagt** (lokal bauen, zeigen, dann auf Zuruf hochladen). Offene Aufgaben: [AUFGABEN.md](AUFGABEN.md). Vorher `npm test`
 und `npm run bump`. Der Zugang (Token) ist im macOS-Schlüsselbund nur für dieses Repository gespeichert
 (`credential.useHttpPath`). Spielstände liegen pro Adresse im Browser – beim Adresswechsel per Datei übertragen.
 

@@ -6,8 +6,9 @@ let night = 0;
 const glows = [];
 const isLive = () => g === ctx;
 
+let NO_GLOW = false;                        // große Gebäude werden in Streifen gezeichnet: Licht nur einmal
 function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
-  if (!(night > 0.15 && isLive())) return;
+  if (NO_GLOW || !(night > 0.15 && isLive())) return;
   const m = g.getTransform(), k = 1 / DPR;
   glows.push({ q: pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]), r, tint });
 }

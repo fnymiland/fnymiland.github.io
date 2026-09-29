@@ -50,6 +50,17 @@ function countNear(x, y, r, pred) {           // Gebäude zählen – jedes nur 
   return seen.size;
 }
 const isWater = (x, y) => terrainAt(x, y) === 'water';
+// Größe des Gewässers, an dem ein Gebäude liegt (alle Wasserfelder, die zusammenhängen und direkt angrenzen –
+// so zählen auch schmale, lange Flüsse). Gezählt wird höchstens bis limit.
+function waterBody(x, y, limit = 64) {
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
+  const [ax, ay] = t ? keyXY(a) : [x, y], [w, h] = t ? sizeOf(t.b, t.rot) : [1, 1];
+  const seen = new Set(), todo = [];
+  const add = (px, py) => { const k = px + ',' + py; if (!seen.has(k) && isWater(px, py)) { seen.add(k); todo.push([px, py]); } };
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) for (const [dx, dy] of DIRS) add(ax + i + dx, ay + j + dy);
+  while (todo.length && seen.size < limit) { const [px, py] = todo.pop(); for (const [dx, dy] of DIRS) add(px + dx, py + dy); }
+  return Math.min(seen.size, limit);
+}
 const isProducerB = b => ITEMS[b].cat === 'bau' && b !== 'markt';
 const isHouse = (x, y) => bAt(x, y) === 'haus';
 // Regeln (gemeinsam festgelegt): Viertel über Nachbarschaft und Wege, Fußweg 4 Felder, sonst halbe Kraft
@@ -327,7 +338,7 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   const conds = [];
   if (d.workers) conds.push({ text: `👷 ${d.workers} ${d.workers === 1 ? 'freier Einwohner' : 'freie Einwohner'} als Mitarbeiter`, ok: pop - jobs >= d.workers });
   if (up.pop) conds.push({ text: `👥 ${up.pop} Einwohner auf der Insel`, ok: pop >= up.pop });
-  if (up.water) conds.push({ text: `💧 ${up.water} Wasserfelder direkt daneben`, ok: countAround(x, y, 1, isWater) >= up.water });
+  if (up.water) conds.push({ text: `💧 Am Wasser mit mindestens ${up.water} Feldern (auch Flüsse)`, ok: waterBody(x, y, up.water) >= up.water });
   if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
   if (up.near) {
     const [types0, n, r] = up.near, types = [].concat(types0);
@@ -351,9 +362,11 @@ function frontTiles(b, x, y, rot) {
 function autoRot(b, x, y, fallback) {
   const fits = r => footprint(b, x, y, r).every(([fx, fy]) => !COVER.has(fx + ',' + fy));
   let best = fallback, bestScore = fits(fallback) ? 0 : -1;
+  const shore = ITEMS[b].needs === 'shore';           // Fischerhütte, Hafen: vorn ist das Wasser
   for (const r of [fallback, 0, 1, 2, 3]) {
     if (!fits(r)) continue;
-    const score = frontTiles(b, x, y, r).filter(([fx, fy]) => bAt(fx, fy) === 'weg').length;
+    const front = frontTiles(b, x, y, r);
+    const score = front.filter(([fx, fy]) => bAt(fx, fy) === 'weg').length + (shore ? 10 * front.filter(([fx, fy]) => isWater(fx, fy)).length : 0);
     if (score > bestScore) { best = r; bestScore = score; }
   }
   return best;

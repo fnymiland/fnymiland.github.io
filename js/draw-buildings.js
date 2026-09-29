@@ -243,13 +243,15 @@ const BUILDING_ART = {
   },
   obst(K, s, now, x, y) {
     if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#86c35b')))) return;
-    const spots = s === 1 ? [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]
-      : [[-0.26, -0.26], [0.02, -0.28], [-0.28, 0.02], [-0.02, 0.02], [0.26, -0.24], [-0.24, 0.28]];
-    const fruits = ['#ff6b5e', '#ffb13b', '#ff6b5e', '#b07ad6', '#ff6b5e', '#ffb13b'];
-    const parts = spots.map(([a, b], i) => [a, b, () => kitTree(K, a, b, s === 1 ? 0.62 : 0.72, fruits[i])]);
+    // Bäume so groß wie die wilden Obstbäume im Obsthain
+    const spots = s === 1 ? [[-0.22, -0.2], [0.18, -0.24], [-0.24, 0.18]]
+      : s === 2 ? [[-0.22, -0.2], [0.18, -0.24], [-0.24, 0.18], [0.14, 0.12]]
+      : [[-0.26, -0.26], [0.02, -0.3], [-0.3, 0.02], [-0.04, 0.02]];
+    const fruits = ['#ff6b5e', '#ffb13b', '#ff6b5e', '#b07ad6'];
+    const parts = spots.map(([a, b], i) => [a, b, () => kitTree(K, a, b, 1, fruits[i])]);
     parts.push([0.32, 0.3, () => { kCrate(K, 0.32, 0.3, '#c98d5c'); if (s >= 2) kCrate(K, 0.36, 0.2, '#c98d5c', 1, 0); }]);
-    if (s >= 2) parts.push([0.1, 0.2, () => {            // Leiter am Baum
-      const p = K.P(0.14, 0.22), q = K.P(0.06, 0.1, 16);
+    if (s === 2) parts.push([0.24, 0.2, () => {           // Leiter am Baum
+      const p = K.P(0.26, 0.2), q = K.P(0.18, 0.12, 16);
       kLine(K, p, q, '#a0714d', 1); kLine(K, [p[0] + 3 * K.z, p[1]], [q[0] + 3 * K.z, q[1]], '#a0714d', 1);
       for (let i = 1; i < 5; i++) { const m = lerp(p, q, i / 5); kLine(K, m, [m[0] + 3 * K.z, m[1]], '#a0714d', 0.8); }
     }]);

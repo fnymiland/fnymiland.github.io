@@ -198,6 +198,15 @@ $('tools').addEventListener('wheel', e => {
 // Höhe der Leiste unten merken, damit Infozeile und Fenster immer darüber sitzen
 if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--bar', $('toolbar').offsetHeight + 'px')).observe($('toolbar'));
 
+// Aus einem Infofenster heraus verschieben: aufnehmen und dem Finger bzw. der Maus folgen lassen
+function startMove(x, y, slot = 0) {
+  closePanel();
+  setTool('verschieben');
+  pickUp(x, y, slot);
+  hover = { x, y }; hoverSlot = slot;
+}
+const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
+
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -220,7 +229,7 @@ function openInfo(x, y) {
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
   else if (d.pop) why.push(`👥 ${d.pop * t.lvl} Einwohner`);
-  if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben`);
+  if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben · Gewässer ${waterBody(x, y) >= 64 ? '64+' : waterBody(x, y)} Felder`);
   if (t.b === 'muehle') why.push(`${countNear(x, y, 1, b => b === 'feld')} Felder daneben`);
   if (t.b === 'baecker') why.push(`${countNear(x, y, 1, b => b === 'muehle')} Mühlen daneben`);
   if (t.b === 'markt') why.push(`${countNear(x, y, 2, isProducerB)} Gebäude in der Nähe`);
@@ -293,8 +302,10 @@ function openInfo(x, y) {
     ${colors}
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${moveBtn}
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
+  $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
@@ -334,11 +345,13 @@ function openDecoInfo(x, y, slot) {
     <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${moveBtn}
       <button class="btn danger" id="p-del">Entfernen · +🪙 ${fmt(Math.floor(it.cost / 2))}</button>
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
   if ($('p-rot')) $('p-rot').onclick = () => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); };
   $('p-del').onclick = () => { removeSmall(x, y, slot); closePanel(); };
+  $('p-move').onclick = () => startMove(x, y, slot);
   $('p-close').onclick = closePanel;
 }
 
@@ -367,8 +380,9 @@ function openLandmark(x, y) {
     ${info.stage && half ? '<div class="status"><div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb.</div></div>' : ''}
     ${info.stage && owned ? `<p class="muted">✨ Alles in ${LM_RADIUS} Feldern Umkreis: +${Math.round(LM_BOOST * 100 * (half ? 0.5 : 1))} % Produktion</p>` : ''}
     ${body}
-    <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`);
+    <div class="row">${info.stage && owned ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`);
   if ($('p-restore')) $('p-restore').onclick = () => { if (restoreLandmark(type)) closePanel(); };
+  if ($('p-move')) $('p-move').onclick = () => startMove(x, y);
   $('p-close').onclick = closePanel;
 }
 
@@ -439,6 +453,7 @@ function wireTownEditor(root, town, onChange) {
     town.symbol = b.dataset.fs; root.querySelectorAll('[data-fs]').forEach(o => o.classList.toggle('on', o === b)); sfx('deco'); onChange();
   };
 }
+const townHallAt = () => { const e = [...state.tiles].find(([, t]) => t.b === 'rathaus'); return e ? keyXY(e[0]) : null; };
 function openTownHall() {
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
   const el = showPanel(`
@@ -451,7 +466,8 @@ function openTownHall() {
     }).join('')}
       <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>
     ${townEditor(state.town)}
-    <div class="row"><button class="btn ghost" id="p-close" style="flex:1">Fertig</button></div>`);
+    <div class="row">${townHallAt() ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Fertig</button></div>`);
+  if ($('p-move')) $('p-move').onclick = () => startMove(...townHallAt());
   wireTownEditor(el, state.town, () => { updateHud(); save(); });
   $('p-close').onclick = closePanel;
 }

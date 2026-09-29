@@ -67,7 +67,7 @@ describe('Gebäude wachsen in drei Stufen', () => {
 
   it('Fischerhütte braucht Wasser, Schule braucht Einwohner', () => {
     put('fischer', 8, 8);
-    expect(info(8, 8).conds.some(c => c.text.startsWith('💧 4 Wasserfelder'))).toBe(true);
+    expect(info(8, 8).conds.some(c => c.text.startsWith('💧 Am Wasser mit mindestens 4 Feldern'))).toBe(true);
     put('schule', 6, 6);
     expect(info(6, 6).conds.find(c => c.text.startsWith('👥')).ok).toBe(true);   // 64 ≥ 25
   });
@@ -101,5 +101,25 @@ describe('Abreißen', () => {
   it('gibt die Hälfte von Baupreis und Ausbau-Talern zurück', () => {
     put('saege', 8, 8, 3);
     expect(game('demolishInfo(8, 8).refund')).toBe(Math.floor((200 + 250 + 600) / 2));
+  });
+});
+
+describe('Fischerhütte', () => {
+  it('ein schmaler, langer Fluss reicht für Stufe 2', () => {
+    game("for (let y = 0; y <= 8; y++) state.terra.set('9,' + y, 'water')");       // Fluss, 1 Feld breit
+    put('fischer', 8, 4);
+    expect(game('countAround(8, 4, 1, isWater)')).toBe(3);
+    const c = info(8, 4).conds.find(c => c.text.startsWith('💧'));
+    expect(c.ok).toBe(true);
+  });
+  it('eine kleine Pfütze reicht nicht', () => {
+    game("state.terra.set('9,4', 'water'); state.terra.set('9,5', 'water')");
+    put('fischer', 8, 4);
+    expect(info(8, 4).conds.find(c => c.text.startsWith('💧')).ok).toBe(false);
+  });
+  it('dreht sich beim Setzen zum Wasser', () => {
+    game("rotManual = false; state.terra.set('8,5', 'water'); state.terra.set('8,6', 'water'); recalc()");
+    expect(game("build('fischer', 8, 4, true)")).toBe(true);
+    expect(game("state.tiles.get('8,4').rot")).toBe(1);
   });
 });

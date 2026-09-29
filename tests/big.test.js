@@ -135,3 +135,24 @@ describe('Alte Spielstände', () => {
     expect(game("[...state.tiles.values()].filter(t => t.b === 'markt').length")).toBe(1);
   });
 });
+
+describe('Verschieben aus dem Infofenster', () => {
+  it('der Knopf nimmt das Rathaus auf', () => {
+    game('openTownHall()');
+    game("$('p-move').click()");
+    expect(game('movingType()')).toBe('rathaus');
+    expect(game('tool')).toBe('verschieben');
+    game("setTool('look')");
+    expect(game("state.tiles.get('2,2').b")).toBe('rathaus');
+  });
+  it('auch Häuser und Deko', () => {
+    build('haus', 8, 8);
+    game('openInfo(8, 8)'); game("$('p-move').click()");
+    expect(game('movingType()')).toBe('haus');
+    game("setTool('look')");
+    game("state.res.bretter = 5; buildSmall('bank', 9, 9, 2)");
+    game('openDecoInfo(9, 9, 2)'); game("$('p-move').click()");
+    expect(game('movingType()')).toBe('bank');
+    game("setTool('look')");
+  });
+});
