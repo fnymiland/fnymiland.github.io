@@ -312,7 +312,7 @@ function watchUnlocks() {
 function unlockCard(k) {
   if (k.startsWith('weg:')) {
     const st = styleDef('weg', k.slice(4));
-    return `<div class="unlock-card"><div class="uc-pic"><i class="uc-sw" style="background:${st.col}"></i></div>
+    return `<div class="unlock-card"><div class="uc-pic"><i class="uc-sw" style="background:${styleSwatch(st)}"></i></div>
       <div class="uc-txt"><b>Neuer Wegstil: ${st.name}</b><p class="tip">💡 Ein Geschenk – beim Weg in der Stil-Leiste auswählen.</p>
       <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
   }
