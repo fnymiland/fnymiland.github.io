@@ -93,7 +93,6 @@ if (PROBE) {
   cam = state.cam;
   recalc();
   buildToolbar();
-  creditAway(Date.now() - saved.last, true);
 } else {
   startNew();
   showIntro(true);
@@ -127,7 +126,7 @@ window.addEventListener('resize', resize);
 setInterval(save, 5000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { state.last = Date.now(); save(); }
-  else { creditAway(Date.now() - state.last, true); lastTick = Date.now(); }
+  else lastTick = Date.now();          // bewusst nichts nachzahlen: gebaut und verdient wird nur beim Spielen
 });
 window.addEventListener('pagehide', save);
 

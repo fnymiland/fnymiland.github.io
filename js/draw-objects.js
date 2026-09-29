@@ -299,11 +299,12 @@ const BIG_ART = {
       g.restore();
     })) return;
     const hall = () => {
-      const B = K.block({ ha: 0.6, hb: 0.6, h: 24, wall: '#fff1d6', roof: '#6f8fd8', roofH: 18, over: 1.15, entry: true });
+      const [wall, roof] = paint(t, '#fff1d6', '#6f8fd8');
+      const B = K.block({ ha: 0.6, hb: 0.6, h: 24, wall, roof, roofH: 18, over: 1.15, entry: true });
       K.door(B, 'front', 0.42, 0.58, 0.5);
       K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2]);
       K.sideWins(B, 3, 0.35, 0.72);
-      const T2 = K.block({ ha: 0.17, hb: 0.17, h: 20, lift: 28, wall: '#fff1d6', roof: '#e8705f', roofH: 12 });
+      const T2 = K.block({ ha: 0.17, hb: 0.17, h: 20, lift: 28, wall, roof: '#e8705f', roofH: 12 });
       const F = T2.faces.front || T2.faces.right || T2.faces.left, m = lerp(F.P, F.Q, 0.5), cyc = m[1] - 20 * z * 0.6;
       circle(m[0], cyc, 4.2 * z, C('#ffffff'));
       g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;

@@ -173,6 +173,11 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 - **Verschieben:** alles, auch Rathaus; Sehenswürdigkeiten erst restauriert und nur auf eigenes Land. Ganze Bereiche verschieben: nicht nötig.
 - **Infozeile** sitzt immer über der Leiste unten; **Grundstück kaufen** direkt dort, wo man getippt hat.
 
+## Entschieden (29.09.2026)
+
+- **Kein Einsammeln im Hintergrund:** Wer die App schließt, bekommt nichts nachgezahlt – sonst schaltet man noch schneller frei.
+- **Nur auf Zuruf veröffentlichen:** lokal bauen und zeigen, hochladen (fnymiland.github.io) erst, wenn der Nutzer es sagt.
+
 ## Bau-Reihenfolge (jeweils einzeln, mit dir abgestimmt)
 
 1. ✓ Rohstoffe + Lager + Sägewerk/Steinmetz/Schmiede

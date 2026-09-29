@@ -8,6 +8,9 @@ const WOOD = '#c98d5c', WOOD_D = '#7a4f2a', STONE = '#dcd6ca', STONE_D = '#8a8f9
 // sanfte Akzentfarben (Stände, Schirme, Markisen, Kuppeln) – nicht grell
 const SOFT = { red: '#e39a8c', blue: '#93c2e0', yellow: '#efcf8a', green: '#9fcf8f', purple: '#c3a8e6', pink: '#eeb3c6' };
 
+// Wand- und Dachfarbe: selbst gewählt (t.wall/t.roof aus WALLS/ROOFS, wie bei Häusern) oder die des Gebäudes
+function paint(t, wall, roof) { return [t && t.wall != null ? WALLS[t.wall] : wall, t && t.roof != null ? ROOFS[t.roof] : roof]; }
+
 // --- kleine Teile ---
 function kCrate(K, a, b, col = '#c9955f', s = 1, up = 0) {
   const B = K.block({ a, b, ha: 0.055 * s, hb: 0.055 * s, h: 4.5 * s, lift: up, wall: col, type: 'flat' });
@@ -45,8 +48,8 @@ function kUmbrella(K, a, b, col, hgt = 15) {
   poly([[x - 3.6 * z, t - 1.6 * z], [x, t - 4 * z], [x + 3.6 * z, t - 1.6 * z], [x, t + 0.4 * z]], C('#ffffff'));
 }
 function kTable(K, a, b, col) { kUmbrella(K, a, b, col, 13); const [x, y] = K.P(a, b); ellipse(x, y - 5 * K.z, 5 * K.z, 2.2 * K.z, C('#fff6e4')); }
-function kStall(K, a, b, col, i) {
-  const B = K.block({ a, b, ha: 0.2, hb: 0.3, h: 10, wall: '#f5e1b8', roof: col, roofH: 8, over: 1.25 });
+function kStall(K, a, b, col, i, wall = '#f5e1b8') {
+  const B = K.block({ a, b, ha: 0.2, hb: 0.3, h: 10, wall, roof: col, roofH: 8, over: 1.25 });
   const F = B.faces.front || B.faces.right || B.faces.left;
   const fruit = ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a', '#c77dff'];
   if (F) for (let j = 0; j < 5; j++) { const m = lerp(F.P, F.Q, 0.14 + j * 0.18); circle(m[0], m[1] - F.H * 0.5, 2 * K.z, C(fruit[(j + i) % 5])); }
@@ -157,7 +160,7 @@ const BUILDING_ART = {
     }
     K.scene(parts);
   },
-  muehle(K, s, now) {
+  muehle(K, s, now, x, y, t) {
     const H = [0, 20, 25, 31][s], w = [0, 0.16, 0.18, 0.2][s];
     kShadow(K, 0.3);
     if (s === 3) { K.oval(0, 0, 0.36, C('#86c35b')); for (let i = 0; i < 8; i++) { const an = i / 8 * Math.PI * 2; const [fx, fy] = K.P(Math.cos(an) * 0.33, Math.sin(an) * 0.33); circle(fx, fy - 1 * K.z, 1.6 * K.z, C(FLOWER_COLS[i % 5])); } }
@@ -166,7 +169,7 @@ const BUILDING_ART = {
     const sails = () => blades(hub[0], hub[1], K.z, now, 4, len * K.z, s === 1 ? '#e9d3ad' : '#f7ecd8');
     const front = K.facing(1, 0) > 0;
     if (!front) sails();
-    const wall = s === 1 ? WOOD : '#fff6e4', roof = s === 1 ? WOOD_D : '#c65a45', roofH = s === 1 ? 9 : 12;
+    const [wall, roof] = paint(t, s === 1 ? WOOD : '#fff6e4', s === 1 ? WOOD_D : '#c65a45'), roofH = s === 1 ? 9 : 12;
     if (s < 3) {
       const B = K.block({ ha: w, hb: w, h: H, wall, roof, roofH, entry: true });
       K.door(B, 'front', 0.36, 0.64, 0.4);
@@ -185,14 +188,15 @@ const BUILDING_ART = {
     if (front) sails();
     if (s >= 2) K.scene([[w + 0.14, -0.2, () => kSack(K, w + 0.14, -0.2)], [w + 0.2, -0.12, () => kSack(K, w + 0.2, -0.12)]]);
   },
-  holz(K, s, now, x, y) {
+  holz(K, s, now, x, y, t) {
     const parts = [
       [-0.3, -0.26, () => kitTree(K, -0.3, -0.26, 0.95)],
       [-0.26, 0.28, () => kitTree(K, -0.26, 0.28, 0.9)],
     ];
     if (s === 3) parts.push([0.05, -0.36, () => kitTree(K, 0.05, -0.36, 0.8)]);
-    const hut = s === 1 ? { a: 0.1, b: 0.08, ha: 0.15, hb: 0.15, h: 9, wall: WOOD, roof: WOOD_D, roofH: 8 }
-      : { a: 0.08, b: 0.06, ha: 0.17, hb: 0.23, h: s === 3 ? 13 : 11, wall: WOOD, roof: s === 3 ? '#4f8a4a' : WOOD_D, roofH: 10, ridge: 'b' };
+    const [hw, hr] = paint(t, WOOD, s === 3 ? '#4f8a4a' : WOOD_D);
+    const hut = s === 1 ? { a: 0.1, b: 0.08, ha: 0.15, hb: 0.15, h: 9, wall: hw, roof: hr, roofH: 8 }
+      : { a: 0.08, b: 0.06, ha: 0.17, hb: 0.23, h: s === 3 ? 13 : 11, wall: hw, roof: hr, roofH: 10, ridge: 'b' };
     parts.push([hut.a, hut.b, () => {
       const B = K.block({ ...hut, entry: true });
       if (s === 3) timber(B, K.z, '#6b4a2e');
@@ -211,12 +215,13 @@ const BUILDING_ART = {
     if (s === 3) for (let i = 0; i < 3; i++) parts.push([0.34, 0.02 + i * 0.09 - 0.1, () => kitBush(K, 0.36, -0.08 + i * 0.09, 0.35, '#7ccf5b')]);
     K.scene(parts);
   },
-  fischer(K, s, now) {
+  fischer(K, s, now, x, y, t) {
     const big = s === 3;
     const hut = big ? { ha: 0.18, hb: 0.24, h: 13, roofH: 11 } : { ha: 0.15, hb: 0.17, h: 10 + s, roofH: 9 };
     const parts = [[-0.06, 0, () => {
       kShadow(K, 0.26);
-      const B = K.block({ a: -0.06, b: 0, ...hut, wall: '#eef8ff', roof: '#3e8ed0', entry: true });
+      const [wall, roof] = paint(t, '#eef8ff', '#3e8ed0');
+      const B = K.block({ a: -0.06, b: 0, ...hut, wall, roof, entry: true });
       K.door(B, 'front', 0.38, 0.62, 0.66);
       K.sideWins(B, 1, 0.38, 0.72);
       if (big) kitChimney(K, -0.12, 0.12, hut.h + 6, now, '#8a8f99');
@@ -241,7 +246,7 @@ const BUILDING_ART = {
     if (big) parts.push([0.36, -0.1, () => { kCrate(K, 0.36, -0.12, '#8fc1f0'); kCrate(K, 0.4, -0.02, '#c9955f'); }]);
     K.scene(parts);
   },
-  obst(K, s, now, x, y) {
+  obst(K, s, now, x, y, t) {
     if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#86c35b')))) return;
     // Bäume so groß wie die wilden Obstbäume im Obsthain
     const spots = s === 1 ? [[-0.22, -0.2], [0.18, -0.24], [-0.24, 0.18]]
@@ -256,14 +261,15 @@ const BUILDING_ART = {
       for (let i = 1; i < 5; i++) { const m = lerp(p, q, i / 5); kLine(K, m, [m[0] + 3 * K.z, m[1]], '#a0714d', 0.8); }
     }]);
     if (s === 3) parts.push([0.3, -0.2, () => {         // Hofladen
-      const B = K.block({ a: 0.3, b: -0.22, ha: 0.1, hb: 0.14, h: 9, wall: '#fff1d6', roof: '#e8705f', roofH: 6, entry: true });
+      const [wall, roof] = paint(t, '#fff1d6', '#e8705f');
+      const B = K.block({ a: 0.3, b: -0.22, ha: 0.1, hb: 0.14, h: 9, wall, roof, roofH: 6, entry: true });
       kAwning(K, B, 'front', SOFT.red, 0.55, 0.8);
       const F = B.faces.front;
       if (F) for (let j = 0; j < 3; j++) { const m = lerp(F.P, F.Q, 0.25 + j * 0.25); circle(m[0], m[1] - F.H * 0.35, 1.6 * K.z, C(fruits[j])); }
     }], [0.42, 0.02, () => kBarrel(K, 0.42, 0.02, '#a0714d')]);
     K.scene(parts);
   },
-  stein(K, s, now, x, y) {
+  stein(K, s, now, x, y, t) {
     if (groundPart(() => {
       K.rect(-0.42, -0.42, 0.42, 0.42, C('#9ea3ab'));
       if (s === 3) {                                       // Abbaugrube in Stufen
@@ -276,7 +282,8 @@ const BUILDING_ART = {
     parts.push([-0.28, -0.24, () => { const [bx, by] = K.P(-0.28, -0.24); boulder(bx, by, (s === 3 ? 5 : 7) * K.z); }]);
     parts.push([-0.22, 0.26, () => { const [bx, by] = K.P(-0.22, 0.26); boulder(bx, by, 5.5 * K.z); }]);
     parts.push([0.14, 0.2, () => {
-      const B = K.block({ a: 0.18, b: 0.22, ha: 0.1, hb: 0.12, h: 8, wall: '#a86f5c', roof: '#6b7a8f', roofH: 6, entry: true });
+      const [wall, roof] = paint(t, '#a86f5c', '#6b7a8f');
+      const B = K.block({ a: 0.18, b: 0.22, ha: 0.1, hb: 0.12, h: 8, wall, roof, roofH: 6, entry: true });
       K.door(B, 'front', 0.35, 0.65, 0.7);
     }]);
     if (s >= 2) {
@@ -296,7 +303,7 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
-  mine(K, s, now) {
+  mine(K, s, now, x, y, t) {
     if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#a89a80')))) return;
     const parts = [];
     const mound = () => {
@@ -331,15 +338,17 @@ const BUILDING_ART = {
       } else circle(top[0], top[1], 1.8 * z, C('#4a4a58'));
     }]);
     if (s === 3) parts.push([0.2, -0.3, () => {
-      const B = K.block({ a: 0.22, b: -0.28, ha: 0.12, hb: 0.12, h: 11, wall: '#d98a6a', roof: '#4a4a58', roofH: 7, entry: true });
+      const [wall, roof] = paint(t, '#d98a6a', '#4a4a58');
+      const B = K.block({ a: 0.22, b: -0.28, ha: 0.12, hb: 0.12, h: 11, wall, roof, roofH: 7, entry: true });
       K.door(B, 'front', 0.35, 0.65, 0.66); K.sideWins(B, 1, 0.4, 0.75);
     }]);
     K.scene(parts);
   },
-  steinmetz(K, s, now) {
+  steinmetz(K, s, now, x, y, t) {
     const parts = [[0, -0.05, () => {
       kShadow(K, 0.3);
-      const B = K.block({ a: -0.04, b: -0.05, ha: s === 1 ? 0.17 : 0.2, hb: s === 1 ? 0.2 : 0.25, h: 11 + s, wall: STONE, roof: STONE_D, roofH: 9, entry: true });
+      const [wall, roof] = paint(t, STONE, STONE_D);
+      const B = K.block({ a: -0.04, b: -0.05, ha: s === 1 ? 0.17 : 0.2, hb: s === 1 ? 0.2 : 0.25, h: 11 + s, wall, roof, roofH: 9, entry: true });
       K.door(B, 'front', 0.38, 0.62, 0.66);
       K.sideWins(B, s === 1 ? 1 : 2, 0.38, 0.72);
       if (s >= 2) kAwning(K, B, 'front', '#6b7a8f', 0.7, 0.86);
@@ -351,11 +360,12 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
-  schmiede(K, s, now) {
+  schmiede(K, s, now, x, y, t) {
+    const [SW, SR] = paint(t, '#a86f5c', '#4a4a58');
     const glow = 0.6 + 0.4 * Math.sin(now / 180);
     const main = () => {
       kShadow(K, 0.32);
-      const B = K.block({ ha: s === 1 ? 0.18 : 0.22, hb: s === 1 ? 0.2 : 0.26, h: 12 + s, wall: '#a86f5c', roof: '#4a4a58', roofH: 9, entry: true });
+      const B = K.block({ ha: s === 1 ? 0.18 : 0.22, hb: s === 1 ? 0.2 : 0.26, h: 12 + s, wall: SW, roof: SR, roofH: 9, entry: true });
       K.door(B, 'front', 0.2, 0.44, 0.66);
       const F = B.faces.front || B.faces.right || B.faces.left;
       if (F) faceQuad(F.P, F.Q, 0.56, 0.84, F.H * 0.15, F.H * 0.55, `rgba(255,${Math.round(120 + 60 * glow)},60,1)`);
@@ -369,7 +379,7 @@ const BUILDING_ART = {
       poly([[ax - 4 * z, ay - 4 * z], [ax + 4 * z, ay - 4 * z], [ax + 3 * z, ay - 6 * z], [ax - 3 * z, ay - 6 * z]], C('#5a5a68'));
     }], [0.3, 0.02, () => kSign(K, 0.4, 0.04, '#fff1d6', (x, y, z) => { g.strokeStyle = C('#6b6f78'); g.lineWidth = 1.2 * z; g.beginPath(); g.arc(x, y, 2 * z, Math.PI * 0.1, Math.PI * 0.9, true); g.stroke(); })]);
     if (s === 3) parts.push([-0.3, 0.3, () => {         // Hammerwerk: Anbau mit hohem Schlot
-      const B = K.block({ a: -0.28, b: 0.3, ha: 0.12, hb: 0.14, h: 10, wall: '#8f5a4a', roof: '#4a4a58', roofH: 6 });
+      const B = K.block({ a: -0.28, b: 0.3, ha: 0.12, hb: 0.14, h: 10, wall: shade(SW, -0.1), roof: SR, roofH: 6 });
       K.sideWins(B, 1, 0.4, 0.75);
       const [cx2, cy2] = K.P(-0.3, 0.3, 16);
       box(cx2, cy2, 2.4 * K.z, 1.2 * K.z, 16 * K.z, '#6b4f3a', null, 0);
@@ -381,7 +391,8 @@ const BUILDING_ART = {
     const hall = s === 1 ? { ha: 0.28, hb: 0.52, h: 13 } : { ha: 0.32, hb: 0.6, h: 16 };
     const parts = [[0, -0.05, () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.04, b: -0.05, ...hall, wall: WOOD, roof: WOOD_D, roofH: 11, entry: true });
+      const [wall, roof] = paint(t, WOOD, WOOD_D);
+      const B = K.block({ a: -0.04, b: -0.05, ...hall, wall, roof, roofH: 11, entry: true });
       K.door(B, 'front', 0.38, 0.62, 0.78, '#6b4a2e');
       K.wins(B, 'front', 4, 0.4, 0.72, 0.05, 0.95, [1, 2]);
       K.sideWins(B, 1, 0.4, 0.72);
@@ -402,7 +413,7 @@ const BUILDING_ART = {
   },
   baecker(K, s, now, x, y, t, ha, hb) {
     const pink = s === 3;
-    const wall = pink ? '#fbe6ee' : '#ffe8b0', roof = pink ? '#e3a1b8' : '#9c5a32', H = s === 1 ? 15 : 24;
+    const [wall, roof] = paint(t, pink ? '#fbe6ee' : '#ffe8b0', pink ? '#e3a1b8' : '#9c5a32'), H = s === 1 ? 15 : 24;
     const main = () => {
       kShadow(K, 0.5);
       const B = K.block({ a: -0.04, ha: 0.3, hb: 0.56, h: H, wall, roof, roofH: 12, entry: true });
@@ -425,7 +436,7 @@ const BUILDING_ART = {
     if (s === 3) parts.push([0.42, -0.66, () => kTable(K, 0.42, -0.7, SOFT.yellow)], [0.4, 0, () => kitBush(K, 0.4, 0.2, 0.5, '#62b85a')]);
     K.scene(parts);
   },
-  markt(K, s, now, x, y) {
+  markt(K, s, now, x, y, t) {
     if (groundPart(() => {
       K.rect(-1.44, -1.44, 1.44, 1.44, C('#eadcbf'));
       g.save(); clipTo([[[-1.44, -1.44], [1.44, -1.44], [1.44, 1.44], [-1.44, 1.44]]], p => K.P(p[0], p[1]));
@@ -435,7 +446,8 @@ const BUILDING_ART = {
     const parts = [];
     const stalls = s === 1 ? [[-1, -0.9, SOFT.red], [-0.9, 0.5, SOFT.blue], [0.2, -1.05, SOFT.yellow]]
       : [[-1.05, -1.05, SOFT.red], [0, -1.1, SOFT.blue], [-1.1, 0, SOFT.yellow], [1.05, -1.05, SOFT.green], [-1.05, 1.05, SOFT.purple]];
-    stalls.forEach(([a, b, c], i) => parts.push([a, b, () => kStall(K, a, b, c, i)]));
+    const [sw, sr] = paint(t, '#f5e1b8', null);
+    stalls.forEach(([a, b, c], i) => parts.push([a, b, () => kStall(K, a, b, sr || c, i, sw)]));
     parts.push([0, 0, () => {                            // Brunnen in der Mitte
       K.oval(0, 0, s === 3 ? 0.36 : 0.28, C('#aeb2bd'));
       K.oval(0, 0, s === 3 ? 0.3 : 0.23, C('#74d0e6'), 2);
@@ -455,12 +467,13 @@ const BUILDING_ART = {
     }
     K.scene(parts);
   },
-  fabrik(K, s, now) {
+  fabrik(K, s, now, x, y, t) {
     const H = s === 3 ? 18 : 14;
     const main = () => {
       kShadow(K, 0.5);
-      const B = K.block({ ha: 0.32, hb: 0.6, h: H, wall: '#d98a6a', type: 'flat', roof: '#b8735a', entry: true });
-      for (let i = 0; i < 4; i++) K.block({ b: -0.45 + i * 0.3, ha: 0.3, hb: 0.14, h: 0.1, lift: H, wall: '#8fa3b8', roof: '#8fa3b8', roofH: 7, type: 'gable', ridge: 'a', over: 1 });
+      const [wall, roof] = paint(t, '#d98a6a', '#8fa3b8');
+      const B = K.block({ ha: 0.32, hb: 0.6, h: H, wall, type: 'flat', roof: shade(wall, -0.15), entry: true });
+      for (let i = 0; i < 4; i++) K.block({ b: -0.45 + i * 0.3, ha: 0.3, hb: 0.14, h: 0.1, lift: H, wall: roof, roof, roofH: 7, type: 'gable', ridge: 'a', over: 1 });
       K.door(B, 'front', 0.42, 0.58, 0.7, '#6b4a2e');
       K.wins(B, 'front', 6, 0.35, 0.72, 0.04, 0.96, [2, 3]);
       K.sideWins(B, 2, 0.35, 0.72);
@@ -493,8 +506,9 @@ const BUILDING_ART = {
     })) return;
     const [wa, wb] = waterSide(K, x, y, t, 'hafen');         // dort liegen die Schiffe
     const parts = [];
-    const ware = s === 3 ? { a: -0.4, b: -0.3, ha: 0.42, hb: 0.5, h: 20, wall: '#d98a6a', roof: '#c65a45', roofH: 12 }
-      : { a: -0.45, b: -0.45, ha: s === 1 ? 0.3 : 0.4, hb: s === 1 ? 0.3 : 0.4, h: 14 + s * 2, wall: '#d98a6a', roof: '#8b5a3c', roofH: 10 };
+    const [ww, wr] = paint(t, '#d98a6a', s === 3 ? '#c65a45' : '#8b5a3c');
+    const ware = s === 3 ? { a: -0.4, b: -0.3, ha: 0.42, hb: 0.5, h: 20, wall: ww, roof: wr, roofH: 12 }
+      : { a: -0.45, b: -0.45, ha: s === 1 ? 0.3 : 0.4, hb: s === 1 ? 0.3 : 0.4, h: 14 + s * 2, wall: ww, roof: wr, roofH: 10 };
     parts.push([ware.a, ware.b, () => {
       const B = K.block({ ...ware, entry: true });
       K.door(B, 'front', 0.35, 0.65, 0.72, '#6b4a2e');
@@ -519,7 +533,8 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   // --- Bildung ---
-  schule(K, s, now, x, y) {
+  schule(K, s, now, x, y, t) {
+    const [SW, SR] = paint(t, '#f6d7a7', '#d96c4f');
     const parts = [];
     if (groundPart(() => {
       K.rect(-0.96, -0.96, 0.96, 0.96, C('#e2d9c6'));
@@ -529,14 +544,14 @@ const BUILDING_ART = {
     const H = s === 3 ? 26 : 16 + s * 2, hb2 = s === 1 ? 0.55 : 0.72;
     parts.push([-0.25, -0.3, () => {
       kShadow(K, 0.6);
-      const B = K.block({ a: -0.25, b: -0.3, ha: 0.38, hb: hb2, h: H, wall: '#f6d7a7', roof: '#d96c4f', roofH: 14, entry: true });
+      const B = K.block({ a: -0.25, b: -0.3, ha: 0.38, hb: hb2, h: H, wall: SW, roof: SR, roofH: 14, entry: true });
       K.door(B, 'front', 0.44, 0.56, s === 3 ? 0.36 : 0.56);
       K.wins(B, 'front', 4, s === 3 ? 0.1 : 0.32, s === 3 ? 0.34 : 0.7, 0.04, 0.96, [1, 2]);
       if (s === 3) K.wins(B, 'front', 4, 0.58, 0.84, 0.04, 0.96);
       K.sideWins(B, 2, 0.35, 0.72);
       // Glockentürmchen bzw. Uhrturm
       const tH = s === 3 ? 16 : 8, tw = s === 3 ? 0.13 : 0.09;
-      K.block({ a: -0.25, b: -0.3, ha: tw, hb: tw, h: tH, lift: H + (s === 3 ? 4 : 8), wall: '#fff4dc', roof: '#d96c4f', roofH: 8 });
+      K.block({ a: -0.25, b: -0.3, ha: tw, hb: tw, h: tH, lift: H + (s === 3 ? 4 : 8), wall: shade(SW, 0.3), roof: SR, roofH: 8 });
       const [bx, by] = K.P(-0.25 + tw, -0.3, H + (s === 3 ? 4 : 8) + tH * 0.55);
       if (s === 3 && K.facing(1, 0) > 0) { circle(bx, by, 3 * K.z, C('#ffffff')); kLine(K, [bx, by], [bx, by - 2.4 * K.z], '#6b4f3a', 0.7); kLine(K, [bx, by], [bx + 1.8 * K.z, by], '#6b4f3a', 0.7); }
       else circle(bx, by, 1.6 * K.z, C('#e9a23b'));
@@ -558,18 +573,19 @@ const BUILDING_ART = {
     if (s === 3) parts.push([0.75, 0.1, () => kitTree(K, 0.75, 0.1, 0.9)], [-0.85, -0.85, () => kitTree(K, -0.85, -0.85, 0.9)]);
     K.scene(parts);
   },
-  bibliothek(K, s, now) {
+  bibliothek(K, s, now, x, y, t) {
+    const [SW, SR] = paint(t, '#efe6d8', '#7d6bb0');
     const H = 16 + (s - 1) * 2;
     const main = () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: H, wall: '#efe6d8', roof: '#7d6bb0', roofH: 10, entry: s === 1 });
+      const B = K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: H, wall: SW, roof: SR, roofH: 10, entry: s === 1 });
       if (s === 1) { K.door(B, 'front', 0.44, 0.56, 0.6); K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2]); }
       else K.wins(B, 'front', 4, 0.35, 0.75, 0.04, 0.96, [1, 2]);
       K.sideWins(B, 2, 0.35, 0.75);
       if (s === 3) { const top = kDome(K, -0.06, 0, H + 8, 9, '#8fb4f2'); kLine(K, top, [top[0], top[1] - 5 * K.z], '#e9a23b', 1.2); }
     };
     const portico = () => {                               // Säulenvorbau mit Giebel
-      const B = K.block({ a: 0.26, ha: 0.08, hb: 0.26, h: H, wall: '#f7f1e6', roof: '#7d6bb0', roofH: 8, entry: true });
+      const B = K.block({ a: 0.26, ha: 0.08, hb: 0.26, h: H, wall: shade(SW, 0.3), roof: SR, roofH: 8, entry: true });
       K.door(B, 'front', 0.4, 0.6, 0.55);
       kColumns(B, 'front', 4, K.z);
       kColumns(B, 'right', 2, K.z); kColumns(B, 'left', 2, K.z);
@@ -580,20 +596,21 @@ const BUILDING_ART = {
     if (s === 3) parts.push([0.38, -0.7, () => { drawObjectAt('bank', K, 0.38, -0.7, 0.45, 1); }], [0.34, 0.72, () => kitTree(K, 0.36, 0.74, 0.7)], [-0.36, 0.8, () => kitTree(K, -0.36, 0.8, 0.7, '#ffb13b')]);
     K.scene(parts);
   },
-  uni(K, s, now) {
+  uni(K, s, now, x, y, t) {
+    const [SW, SR] = paint(t, '#f3ead9', '#5f8fe8');
     if (groundPart(() => K.rect(-0.96, -0.96, 0.96, 0.96, C('#9ad26f')))) return;
     const H = 22;
     const main = () => {
       kShadow(K, 0.6);
-      const B = K.block({ a: -0.1, ha: 0.42, hb: 0.5, h: H, wall: '#f3ead9', type: 'flat', roof: '#e8dcc6', entry: true });
+      const B = K.block({ a: -0.1, ha: 0.42, hb: 0.5, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.06), entry: true });
       kColumns(B, 'front', 6, K.z);
       K.door(B, 'front', 0.44, 0.56, 0.6);
       K.sideWins(B, 3, 0.35, 0.75);
-      const top = kDome(K, -0.1, 0, H, s === 1 ? 13 : 16, '#5f8fe8');
+      const top = kDome(K, -0.1, 0, H, s === 1 ? 13 : 16, SR);
       kLine(K, top, [top[0], top[1] - 6 * K.z], '#e9a23b', 1.6);
     };
     const wing = b => () => {
-      const B = K.block({ a: -0.15, b, ha: 0.32, hb: 0.2, h: H - 5, wall: '#efe4d0', roof: '#5f8fe8', roofH: 8 });
+      const B = K.block({ a: -0.15, b, ha: 0.32, hb: 0.2, h: H - 5, wall: shade(SW, -0.03), roof: SR, roofH: 8 });
       K.sideWins(B, 2, 0.35, 0.75); K.wins(B, 'front', 2, 0.35, 0.75);
     };
     const parts = [[-0.1, 0, main]];
@@ -605,11 +622,12 @@ const BUILDING_ART = {
     }], [0.7, -0.7, () => { const p = kPost(K, 0.7, -0.7, 26, '#c7cad2', 1); poly([[p[0], p[1]], [p[0] + 9 * K.z, p[1] + 2.5 * K.z + Math.sin(now / 400) * K.z], [p[0], p[1] + 6 * K.z]], C('#7d6bb0')); }]);
     K.scene(parts);
   },
-  kunst(K, s, now) {
+  kunst(K, s, now, x, y, t) {
     const H = s === 3 ? 22 : 17;
     const main = () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.04, ha: 0.28, hb: 0.54, h: H, wall: '#ffe3ef', roof: s === 3 ? '#c3a8e6' : '#eaa6c0', roofH: s === 3 ? 0 : 12, type: s === 3 ? 'flat' : 'hip', entry: true });
+      const [wall, roof] = paint(t, '#ffe3ef', s === 3 ? '#c3a8e6' : '#eaa6c0');
+      const B = K.block({ a: -0.04, ha: 0.28, hb: 0.54, h: H, wall, roof, roofH: s === 3 ? 0 : 12, type: s === 3 ? 'flat' : 'hip', entry: true });
       K.door(B, 'front', 0.44, 0.56, 0.6);
       K.wins(B, 'front', 4, 0.2, 0.85, 0.05, 0.95, [1, 2]);
       K.sideWins(B, 1, 0.2, 0.85);
@@ -643,6 +661,8 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
   const [x, y] = K.P(a, bb);
   g.save(); g.translate(x, y); g.scale(s, s); drawObject(b, 0, 0, K.z, 0, 0, 0, 1, { rot }); g.restore();
 }
+// Gebäude, deren Wand- und Dachfarbe man wählen kann (Häuser zusätzlich mit Aussehen)
+const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => b !== 'feld'), 'rathaus']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
   const [da, wb] = ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);

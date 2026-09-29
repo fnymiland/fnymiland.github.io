@@ -161,7 +161,8 @@ function updateHud() {
   fl.style.background = state.town.color;
   fl.textContent = state.town.symbol;
   for (const b of document.querySelectorAll('[data-cost]')) {
-    const poor = state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat)));
+    // !! wichtig: toggle(…, undefined) würde bei jedem Aufruf umschalten (der Preis blinkte)
+    const poor = !!(state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat))));
     if (b.classList.contains('tool')) b.classList.toggle('poor', poor);
     else b.disabled = poor;
   }
@@ -275,14 +276,16 @@ function openInfo(x, y) {
     } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
   }
   let colors = '';
-  if (t.b === 'haus') {
-    const n = hasTech('farben') ? 14 : 7, look = houseLook(t);
-    if (t.lvl > 1) colors += `
+  if (t.b === 'haus' || PAINTABLE.has(t.b)) {
+    const n = hasTech('farben') ? 14 : 7, house = t.b === 'haus';
+    if (house && t.lvl > 1) colors += `
       <div class="label">Aussehen</div>
-      <div class="looks">${HOUSE_STAGES.slice(0, t.lvl).map((st, i) => `<button class="look${i + 1 === look ? ' on' : ''}" data-look="${i + 1}">${st.name}</button>`).join('')}</div>`;
-    const wall = t.wall != null ? t.wall : Math.floor(hash(x, y, 3) * 7);
-    const roof = t.roof != null ? t.roof : Math.floor(hash(x, y, 4) * 7);
+      <div class="looks">${HOUSE_STAGES.slice(0, t.lvl).map((st, i) => `<button class="look${i + 1 === houseLook(t) ? ' on' : ''}" data-look="${i + 1}">${st.name}</button>`).join('')}</div>`;
+    // Häuser haben immer eine Farbe (sonst aus der Lage), andere Gebäude ihre eigene, bis man eine wählt
+    const wall = t.wall != null ? t.wall : house ? Math.floor(hash(x, y, 3) * 7) : -1;
+    const roof = t.roof != null ? t.roof : house ? Math.floor(hash(x, y, 4) * 7) : -1;
     colors += `
+      ${!house && (t.wall != null || t.roof != null) ? '<div class="looks"><button class="look" data-orig="1">↺ Originalfarben</button></div>' : ''}
       <div class="label">Wand</div>
       <div class="swatches">${WALLS.slice(0, n).map((c, i) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
       <div class="label">Dach</div>
@@ -346,6 +349,7 @@ function openInfo(x, y) {
     groundVersion++;                   // anderer Schatten
     t.born = performance.now(); sfx('deco'); save(); openInfo(x, y);
   };
+  if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   updateHud();
@@ -467,22 +471,114 @@ function wireTownEditor(root, town, onChange) {
   };
 }
 const townHallAt = () => { const e = [...state.tiles].find(([, t]) => t.b === 'rathaus'); return e ? keyXY(e[0]) : null; };
-function openTownHall() {
+// Rathaus: die Zentrale des Orts – Übersicht, was bereit ist, was sich die Leute wünschen, Name/Flagge/Farben
+let hallTab = 'overview';
+function jumpTo(x, y, w = 1, h = 1) {
+  const c = iso(x + (w - 1) / 2, y + (h - 1) / 2);
+  cam.x = c.x; cam.y = c.y; clampCam();
+}
+// Alles, was bereit ist (✨) oder bei dem nur noch eine Sache fehlt (💭)
+function readyList() {
+  const ready = [], almost = [];
+  for (const [k, t] of state.tiles) {
+    const s = T.st.get(k), [x, y] = keyXY(k);
+    if (!s) continue;
+    const where = { x, y, b: t.b };
+    if (t.b === 'haus' && s.wish && s.wish.next) {
+      const who = `${animalOf(t).icon} ${escHtml(t.name || '')}: ${HOUSE_STAGES[t.lvl - 1].name}`;
+      if (s.wish.ready) ready.push({ ...where, text: `${who} → ${s.wish.next.name}` });
+      else if (s.wish.met === s.wish.total - 1) almost.push({ ...where, text: `${who} – fehlt: ${s.wish.list.find(w => !w.ok).text}` });
+    } else if (s.grow && s.grow.next) {
+      const miss = s.grow.conds.filter(c => !c.ok);
+      if (s.grow.ready) ready.push({ ...where, text: `${stageName(t)} → ${s.grow.next.name}` });
+      else if (miss.length === 1) almost.push({ ...where, text: `${stageName(t)} – fehlt: ${miss[0].text}` });
+    }
+  }
+  for (const type of Object.keys(LM_STAGES)) {
+    const info = restoreInfo(type);
+    if (info.next && !info.err && info.pos) ready.push({ x: info.pos[0], y: info.pos[1], b: 'lm', text: `🏮 ${lmStepName(type, info.stage + 1)}` });
+  }
+  return { ready, almost };
+}
+function openTownHall(tab = hallTab) {
+  hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const el = showPanel(`
-    <h3>Rathaus von ${escHtml(state.town.name)}</h3>
-    <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
-    ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
-    <ul class="starlist">${Object.keys(LM_STAGES).map(type => {
-      const st = lmStage(type);
-      return `<li class="${st >= 3 ? 'done' : ''}">${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</li>`;
-    }).join('')}
-      <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>
-    ${townEditor(state.town)}
-    <div class="row">${townHallAt() ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Fertig</button></div>`);
-  if ($('p-move')) $('p-move').onclick = () => startMove(...townHallAt());
-  wireTownEditor(el, state.town, () => { updateHud(); save(); });
-  $('p-close').onclick = closePanel;
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['wishes', 'Wünsche'], ['town', 'Ort']];
+  const { ready, almost } = readyList();
+  let body = '';
+  if (tab === 'overview') {
+    const rates = Object.keys(RES).filter(r => T.prod[r] || T.conv.some(c => c.to === r) || state.res[r] >= 1).map(r => {
+      const made = (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0);
+      return `<span>${RES[r].icon} ${fmt(state.res[r])}${made ? ` <small>+${fmtRate(made * 60)}/min</small>` : ''}</span>`;
+    });
+    const count = [...state.tiles.values()].filter(t => t.b !== 'weg' && t.b !== 'lm' && ITEMS[t.b].cat).length;
+    body = `
+      <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
+      ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
+      <div class="stats">
+        <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
+        <span>🪙 +${fmtRate(T.inc)}/s</span><span>💡 +${fmtRate(T.sci)}/s</span><span>🌸 ${T.beauty}</span>
+      </div>
+      ${rates.length ? `<div class="label">Lager</div><div class="stats">${rates.join('')}</div>` : ''}
+      <div class="label">Laternen</div>
+      <ul class="starlist">${Object.keys(LM_STAGES).map(type => {
+        const st = lmStage(type);
+        return `<li class="${st >= 3 ? 'done' : ''}">${LANDMARKS[type].icon} ${LANDMARKS[type].name} ${'🏮'.repeat(st)}${'<span class="off">🏮</span>'.repeat(3 - st)}</li>`;
+      }).join('')}
+        <li class="${state.festival ? 'done' : ''}">🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</li></ul>`;
+  } else if (tab === 'ready') {
+    const row = (e, i, icon) => `<div class="hall-row"><span>${icon} ${e.text}</span><button class="btn ghost small" data-jump="${i}">Hin</button></div>`;
+    body = `
+      <div class="label">Bereit zum Ausbauen</div>
+      ${ready.length ? ready.map((e, i) => row(e, i, '✨')).join('') : '<p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
+      ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭')).join('')}` : ''}`;
+  } else if (tab === 'wishes') {
+    const miss = new Map();
+    for (const [k, t] of state.tiles) {
+      const s = T.st.get(k);
+      if (t.b !== 'haus' || !s || !s.wish || !s.wish.next) continue;
+      for (const w of s.wish.list) if (!w.ok) miss.set(w.text, (miss.get(w.text) || 0) + 1);
+    }
+    const list = [...miss].sort((a, b) => b[1] - a[1]);
+    body = `
+      <div class="label">Das wünschen sich die Bewohner noch</div>
+      ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
+        : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
+  } else {
+    const hall = townHallAt(), t = hall && state.tiles.get(hall.join(',')), cols = hasTech('farben') ? 14 : 7;
+    body = `
+      ${townEditor(state.town)}
+      ${t ? `
+        <div class="label">Rathaus: Wand</div>
+        <div class="swatches">${WALLS.slice(0, cols).map((c, i) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
+        <div class="label">Rathaus: Dach</div>
+        <div class="swatches">${ROOFS.slice(0, cols).map((c, i) => `<button class="sw${i === t.roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+        <div class="row"><button class="btn ghost" id="h-move">✋ Rathaus verschieben</button></div>` : ''}`;
+  }
+  openModal(`
+    <h2>🏛️ Rathaus von ${escHtml(state.town.name)}</h2>
+    <div class="looks hall-tabs">${tabs.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-tab="${id}">${label}${id === 'ready' && ready.length ? ` ✨${ready.length}` : ''}</button>`).join('')}</div>
+    ${body}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`);
+  const card = $('modal-card');
+  card.classList.add('hall');
+  for (const b of card.querySelectorAll('[data-tab]')) b.onclick = () => { sfx('deco'); openTownHall(b.dataset.tab); };
+  const all = ready.concat(almost);
+  for (const b of card.querySelectorAll('[data-jump]')) b.onclick = () => {
+    const e = all[+b.dataset.jump], [w, h] = sizeOf(e.b, (state.tiles.get(e.x + ',' + e.y) || {}).rot);
+    closeModal();
+    jumpTo(e.x, e.y, w, h);
+    sparkle(e.x + (w - 1) / 2, e.y + (h - 1) / 2);
+    if (e.b === 'lm') openLandmark(e.x, e.y); else openInfo(e.x, e.y);
+  };
+  if (tab === 'town') {
+    wireTownEditor(card, state.town, () => { updateHud(); save(); });
+    const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
+    for (const sw of card.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openTownHall('town'); };
+    for (const sw of card.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openTownHall('town'); };
+    if ($('h-move')) $('h-move').onclick = () => { closeModal(); startMove(...hall); };
+  }
+  $('m-close').onclick = closeModal;
 }
 $('town-btn').onclick = () => { setTool('look'); openTownHall(); };
 $('rot-btn').onclick = () => rotateBuild();
@@ -577,26 +673,4 @@ function produce(dt) {
     state.res[c.to] += can;
   }
   return before;
-}
-function creditAway(ms, announce) {
-  const s = Math.min(Math.max(0, ms / 1000), OFFLINE_MAX_S);
-  const earned = T.inc * s, ideas = T.sci * s;
-  state.money += earned;
-  state.science += ideas;
-  const start = { ...state.res };
-  for (let left = s; left > 0; left -= 30) produce(Math.min(30, left));
-  const gained = Object.keys(RES).map(r => [r, state.res[r] - start[r]]).filter(([, n]) => n >= 1);
-  if (announce && s > 60 && earned >= 1) {
-    const mins = Math.round(s / 60);
-    const dur = mins < 90 ? `${mins} Minuten` : `${nf1.format(mins / 60)} Stunden`;
-    openModal(`
-      <h2>Schön, dass du da bist!</h2>
-      <p>In den letzten ${dur} haben die Leute in ${escHtml(state.town.name)} fleißig gearbeitet:</p>
-      <p style="font-size:30px;font-weight:900;color:#3f8f43;margin:6px 0">+ 🪙 ${fmt(earned)}</p>
-      ${ideas >= 1 ? `<p style="font-size:20px;font-weight:900;color:#7d6bb0;margin:0">+ 💡 ${fmt(ideas)}</p>` : ''}
-      ${gained.length ? `<p style="font-size:18px;font-weight:900;margin:6px 0">${gained.map(([r, n]) => `+ ${RES[r].icon} ${fmt(n)}`).join(' · ')}</p>` : ''}
-      ${s >= OFFLINE_MAX_S ? '<p class="muted">(Höchstens 8 Stunden werden angerechnet.)</p>' : ''}
-      <div class="row"><button class="btn" id="m-ok">Danke!</button></div>`);
-    $('m-ok').onclick = () => { closeModal(); sfx('coin'); };
-  }
 }

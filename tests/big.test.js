@@ -138,8 +138,8 @@ describe('Alte Spielstände', () => {
 
 describe('Verschieben aus dem Infofenster', () => {
   it('der Knopf nimmt das Rathaus auf', () => {
-    game('openTownHall()');
-    game("$('p-move').click()");
+    game("openTownHall('town')");
+    game("$('h-move').click()");
     expect(game('movingType()')).toBe('rathaus');
     expect(game('tool')).toBe('verschieben');
     game("setTool('look')");

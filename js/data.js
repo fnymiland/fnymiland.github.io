@@ -8,7 +8,6 @@
 const TW = 64, TH = 32, DEPTH = 9, CHUNK = 6;
 const SAVE_KEY = 'kachelhausen_v3';
 const MAX_LVL = 3;              // Gebäude-Stufen (Häuser: HOUSE_STAGES)
-const OFFLINE_MAX_S = 8 * 3600;
 const ZOOM_MIN = 0.45, ZOOM_MAX = 2.6;
 const ISLAND = { cMin: -4, cMax: 4, cx: 2.5, cy: 2.5, r: 26 };
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
