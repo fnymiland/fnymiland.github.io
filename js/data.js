@@ -162,6 +162,8 @@ const RES = {
   holz: { name: 'Holz', icon: '🪵' }, stein: { name: 'Stein', icon: '🪨' }, erz: { name: 'Erz', icon: '⛏️' },
   obst: { name: 'Obst', icon: '🍎' }, bretter: { name: 'Bretter', icon: '🪚' }, quader: { name: 'Pflastersteine', icon: '🧱' },
   metall: { name: 'Metall', icon: '🔩' }, kristall: { name: 'Kristall', icon: '💎' },
+  // exotisch – wächst nur auf fernen Inseln (Block 30)
+  kaffee: { name: 'Kaffee', icon: '☕' }, tee: { name: 'Tee', icon: '🍵' }, kakao: { name: 'Kakao', icon: '🍫' },
 };
 const CONV_RATIO = 2;           // 2 Rohstoff → 1 Ware
 const newRes = () => Object.fromEntries(Object.keys(RES).map(k => [k, 0]));
@@ -173,15 +175,87 @@ function matError(mat) {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Läden und Kultur (Block 30). Kundschaft = Einwohner im selben Viertel + Besucher, die auf die Insel kommen (Bahn, Schiff);
+// gleiche Läden im Viertel teilen sich die Kunden. rate: Taler/s je 100 Kunden. ware/sell: verkauft Ware aus dem Lager
+// (Stück/s je 100 Kunden, zum SALE_MUL-fachen Grundpreis). attr: zieht Besucher an. hotel: Insel zieht mehr Besucher an.
+// types: zählt für die Innenstadt so oft. size: [tief, breit]. Freischalten wie andere Gebäude (lanterns, lm, festival).
+// look: fürs Bild (Wand, Dach, Markise, Auslage vor der Tür)
+// ---------------------------------------------------------------------------
+const SHOPS = {
+  kiosk:       { name: 'Kiosk', icon: '📰', rate: 3, cost: 150, workers: 1, lanterns: 1, look: ['#f5e1b8', '#e8604f', '#e8604f', 'zeitung'],
+                 tip: 'Der kleinste Laden – billig, überall. Häuser wünschen sich ab dem Stadthaus einen Laden in der Nähe.' },
+  blumenladen: { name: 'Blumenladen', icon: '💐', rate: 3, cost: 300, workers: 1, lanterns: 2, beauty: 8, look: ['#fff0f4', '#58b36a', '#f28cb1', 'blumen'],
+                 tip: 'Bringt Kundschaft und macht die Straße schön.' },
+  friseur:     { name: 'Friseur', icon: '💈', rate: 4, cost: 400, workers: 1, lanterns: 3, look: ['#e4f1ff', '#5f8fe8', '#5f8fe8', 'bank'] },
+  cafe:        { name: 'Café', icon: '☕', rate: 5, cost: 500, mat: { bretter: 4 }, workers: 1, lanterns: 3, ware: 'kaffee', sell: 0.3, look: ['#f3e3cc', '#8a5a3c', '#c98d5c', 'tische'],
+                 tip: 'Mit Kaffee von den fernen Inseln verkauft es viel mehr. Villen wünschen sich ein Café in der Nähe.' },
+  teeladen:    { name: 'Teeladen', icon: '🍵', rate: 5, cost: 500, mat: { bretter: 4 }, workers: 1, lanterns: 3, ware: 'tee', sell: 0.3, look: ['#e8f5e4', '#58b36a', '#9fcf8f', 'tische'] },
+  post:        { name: 'Post', icon: '📮', rate: 4, cost: 600, workers: 2, lanterns: 5, look: ['#fff6d6', '#e9a23b', '#e9c46a', 'kisten'] },
+  apotheke:    { name: 'Apotheke', icon: '💊', rate: 6, cost: 900, workers: 2, lanterns: 6, look: ['#ffffff', '#58b36a', '#58b36a', 'bank'] },
+  eisdiele:    { name: 'Eisdiele', icon: '🍦', rate: 5, cost: 600, workers: 1, lm: 'obsthain:1', ware: 'obst', sell: 0.6, look: ['#fff0f4', '#f28cb1', '#f28cb1', 'tische'] },
+  hofladen:    { name: 'Hofladen', icon: '🧺', rate: 4, cost: 400, workers: 1, lm: 'obsthain:1', ware: 'obst', sell: 0.6, look: ['#f5e1b8', '#b5654a', '#9fcf8f', 'kisten'] },
+  buchladen:   { name: 'Buchladen', icon: '📚', rate: 4, cost: 700, workers: 1, lm: 'ruine:1', science: 0.5, look: ['#efe6d8', '#6b4f3a', '#c3a8e6', 'buecher'] },
+  bubbletea:   { name: 'Bubble-Tea-Laden', icon: '🧋', rate: 7, cost: 2500, workers: 2, lanterns: 8, ware: 'tee', sell: 0.4, look: ['#f3e8ff', '#c3a8e6', '#f28cb1', 'tische'] },
+  pizzeria:    { name: 'Pizzeria', icon: '🍕', rate: 8, cost: 3000, workers: 2, lanterns: 8, look: ['#fff6e4', '#c0694a', '#58b36a', 'tische'] },
+  nudelbar:    { name: 'Nudelbar', icon: '🍜', rate: 8, cost: 3500, workers: 2, lanterns: 9, look: ['#fff3e0', '#3e3e4a', '#e8604f', 'laternen'] },
+  konditorei:  { name: 'Konditorei', icon: '🎂', rate: 8, cost: 4000, workers: 2, lm: 'obsthain:2', ware: 'kakao', sell: 0.3, look: ['#fff0f4', '#e39a8c', '#eeb3c6', 'tische'] },
+  spielzeug:   { name: 'Spielzeugladen', icon: '🧸', rate: 9, cost: 8000, workers: 2, lanterns: 10, look: ['#fff6d6', '#5f8fe8', '#efcf8a', 'ballons'] },
+  boutique:    { name: 'Boutique', icon: '👗', rate: 10, cost: 10000, workers: 2, lanterns: 10, look: ['#ffffff', '#3e3e4a', '#eeb3c6', 'puppen'] },
+  uhrmacher:   { name: 'Uhrmacher', icon: '⏰', rate: 8, cost: 12000, mat: { metall: 10 }, workers: 2, lm: 'erzberg:2', ware: 'metall', sell: 0.15, look: ['#e8e2d6', '#6b4f3a', '#93c2e0', 'uhr'] },
+  juwelier:    { name: 'Juwelier', icon: '💍', rate: 12, cost: 30000, mat: { kristall: 10 }, workers: 2, lm: 'kristall:1', ware: 'kristall', sell: 0.06, look: ['#f5f0ff', '#3e3e4a', '#c3a8e6', 'uhr'] },
+  chocolaterie:{ name: 'Chocolaterie', icon: '🍫', rate: 10, cost: 50000, workers: 2, festival: true, ware: 'kakao', sell: 0.5, look: ['#f3e3cc', '#6b4a2e', '#8a5a3c', 'tische'] },
+  // größere Stadt-Läden
+  moebelhaus:  { name: 'Möbelhaus', icon: '🛋️', size: [2, 2], rate: 12, cost: 20000, mat: { bretter: 40 }, workers: 4, lanterns: 9, ware: 'bretter', sell: 1, look: ['#e9d3a8', '#8a5a3c', '#efcf8a', 'sofa'] },
+  kino:        { name: 'Kino', icon: '🎬', size: [2, 2], cat: 'kultur', rate: 15, attr: 60, cost: 40000, mat: { quader: 30 }, workers: 4, lanterns: 12, look: ['#3e3e4a', '#e8604f', '#ffd23f', 'kino'] },
+  hotel:       { name: 'Hotel', icon: '🏨', size: [2, 2], rate: 10, hotel: 0.25, cost: 50000, mat: { quader: 30, bretter: 20 }, workers: 4, lanterns: 11, look: ['#fff6e4', '#5f8fe8', '#93c2e0', 'hotel'],
+                 tip: 'Übernachtungsgäste: Die Insel zieht ein Viertel mehr Besucher an (per Bahn und Schiff).' },
+  markthalle:  { name: 'Markthalle', icon: '🏛', size: [2, 3], rate: 15, cost: 80000, mat: { quader: 40, metall: 20 }, workers: 5, lanterns: 14, raw: true, sell: 1, look: ['#e6d8bd', '#7fa39a', '#9fcf8f', 'halle'],
+                 tip: 'Verkauft Holz, Stein, Erz und Obst aus dem Lager an die Kundschaft – die Lagerberge werden zu Talern.' },
+  // Endgame (nach dem Laternenfest)
+  kaufhaus:    { name: 'Kaufhaus', icon: '🏬', size: [3, 3], rate: 40, cost: 500000, mat: { quader: 150, metall: 80, kristall: 20 }, workers: 10, festival: true, all: true, sell: 0.15, types: 2, look: ['#f5f0e6', '#3e7fd0', '#e8604f', 'kaufhaus'],
+                 tip: 'Verkauft ein bisschen von allen Waren im Lager und zählt für die Innenstadt doppelt.' },
+  passage:     { name: 'Einkaufspassage', icon: '🛍️', size: [2, 4], rate: 30, cost: 400000, mat: { quader: 100, metall: 60, kristall: 30 }, workers: 8, festival: true, types: 3, look: ['#fff6e4', '#c9735a', '#93c2e0', 'passage'],
+                 tip: 'Glasdach über einer Ladenstraße – zählt für die Innenstadt dreifach.' },
+  theater:     { name: 'Theater', icon: '🎭', size: [3, 3], cat: 'kultur', rate: 25, attr: 150, cost: 600000, mat: { quader: 200, bretter: 100 }, workers: 8, festival: true, look: ['#f3e3cc', '#9c4f3a', '#e8604f', 'saeulen'] },
+  museum:      { name: 'Museum', icon: '🖼️', size: [3, 3], cat: 'kultur', rate: 20, attr: 150, science: 3, cost: 600000, mat: { quader: 250, metall: 50 }, workers: 8, festival: true, look: ['#efe9dc', '#7fa39a', '#c3a8e6', 'kuppel'] },
+  konzerthalle:{ name: 'Konzerthalle', icon: '🎵', size: [3, 3], cat: 'kultur', rate: 25, attr: 150, cost: 700000, mat: { quader: 150, metall: 100, kristall: 40 }, workers: 8, festival: true, look: ['#ffffff', '#93c2e0', '#5f8fe8', 'welle'] },
+  aquarium:    { name: 'Aquarium', icon: '🐠', size: [3, 3], cat: 'kultur', rate: 25, attr: 200, cost: 900000, mat: { kristall: 80, metall: 100 }, workers: 8, festival: true, look: ['#e4f1ff', '#3e7fd0', '#93c2e0', 'glaskuppel'] },
+  zoo:         { name: 'Zoo', icon: '🦒', size: [4, 4], cat: 'kultur', rate: 30, attr: 300, cost: 1200000, mat: { bretter: 300, quader: 100 }, workers: 12, festival: true, look: ['#e9d3a8', '#58b36a', '#efcf8a', 'zoo'] },
+  stadion:     { name: 'Stadion', icon: '🏟️', size: [5, 5], cat: 'kultur', rate: 40, attr: 400, cost: 2000000, mat: { quader: 400, metall: 200 }, workers: 15, festival: true, look: ['#dcd6ca', '#e8604f', '#ffffff', 'stadion'] },
+  grandhotel:  { name: 'Grand Hotel', icon: '🏩', size: [3, 3], rate: 25, hotel: 0.6, cost: 1000000, mat: { quader: 200, metall: 80, kristall: 40 }, workers: 10, festival: true, look: ['#f5f0e6', '#7fa39a', '#e9c46a', 'grand'],
+                 tip: 'Der Luxus: Die Insel zieht 60 % mehr Besucher an.' },
+};
+const SALE_MUL = 3;              // Läden zahlen das Dreifache des Grundpreises (Aufträge: 1,2–3×, aber nur ab und zu)
+for (const [id, S] of Object.entries(SHOPS)) {
+  const fx = [S.ware ? `${RES[S.ware].icon} → 🪙` : S.raw ? '🪵🪨⛏️🍎 → 🪙' : S.all ? '📦 → 🪙' : '🪙 Kundschaft', S.attr ? `👥 zieht an` : '', S.hotel ? `+${Math.round(S.hotel * 100)} % Besucher` : '',
+    S.science ? '💡' : '', S.beauty ? `🌸 +${S.beauty}` : ''].filter(Boolean).join(' · ');
+  ITEMS[id] = { cat: S.cat || 'laden', name: S.name, size: S.size, cost: S.cost, mat: S.mat, needs: 'grass', workers: S.workers, beauty: S.beauty, science: S.science,
+    lanterns: S.lanterns, lm: S.lm, festival: S.festival, shop: true,
+    desc: `${S.icon} Verdient an Kundschaft (Einwohner im Viertel, Besucher der Insel)${S.ware ? `, verkauft ${RES[S.ware].name} aus dem Lager` : S.raw ? ', verkauft Rohstoffe aus dem Lager' : S.all ? ', verkauft alle Waren aus dem Lager' : ''}${S.attr ? ', zieht Besucher an' : ''}.` };
+  for (const k of Object.keys(ITEMS[id])) if (ITEMS[id][k] === undefined) delete ITEMS[id][k];
+  SHOPS[id].fx = fx;
+}
+// Plantagen für exotische Waren – nur auf fernen Inseln (far)
+Object.assign(ITEMS, {
+  kaffeeplantage: { cat: 'bau', name: 'Kaffeeplantage', cost: 20000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { kaffee: 0.25 },
+                    desc: 'Nur auf fernen Inseln. Kaffee für Cafés – dort bringt er das Dreifache.' },
+  teegarten:      { cat: 'bau', name: 'Teegarten', cost: 20000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { tee: 0.25 },
+                    desc: 'Nur auf fernen Inseln. Tee für Teeläden und Bubble Tea.' },
+  kakaoplantage:  { cat: 'bau', name: 'Kakaoplantage', cost: 25000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { kakao: 0.2 },
+                    desc: 'Nur auf fernen Inseln. Kakao für Konditorei und Chocolaterie.' },
+});
+
+
 // Häuser wachsen: jede Stufe bringt neue Wünsche; sind alle erfüllt, kann man ausbauen (Material aus dem Lager)
 const HOUSE_STAGES = [
   { name: 'Häuschen', pop: 4 },
   { name: 'Fachwerkhaus', pop: 6, wishes: ['weg', 'deko'], money: 100, mat: { bretter: 2 } },
   { name: 'Reetdachhaus', pop: 9, wishes: ['baecker', 'ruhe'], money: 600, mat: { bretter: 4 } },
-  { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park'], money: 3000, mat: { quader: 4 } },
-  { name: 'Villa', pop: 16, wishes: ['schule', 'schoen'], money: 20000, mat: { quader: 4, metall: 2 } },
+  { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park', 'laden'], money: 3000, mat: { quader: 4 } },
+  { name: 'Villa', pop: 16, wishes: ['schule', 'schoen', 'cafe'], money: 20000, mat: { quader: 4, metall: 2 } },
   // erst mit Kristall von der Kristallinsel: moderne Villa mit viel Glas
-  { name: 'Glasvilla', pop: 22, wishes: ['wasser'], money: 100000, mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
+  { name: 'Glasvilla', pop: 22, wishes: ['wasser', 'kultur'], money: 100000, mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
@@ -193,6 +267,9 @@ const WISHES = {
   schule:  { text: 'Schule erreichbar (10 Felder, oder per Weg/Bahn)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
   wasser:  { text: 'Blick aufs Wasser (Teich, See oder Meer in 3 Feldern)' },
+  laden:   { text: 'Ein Laden erreichbar (8 Felder, oder per Weg/Bahn)' },
+  cafe:    { text: 'Café, Teeladen oder Eisdiele erreichbar (8 Felder, oder per Weg/Bahn)' },
+  kultur:  { text: 'Kino, Theater, Museum … erreichbar (12 Felder, oder per Weg/Bahn)' },
 };
 // Gebäude wachsen in drei Stufen (wie Häuser): Bedingungen erfüllen (✨), dann selbst ausbauen – mit neuem Aussehen.
 // Jede Stufe braucht workers weitere Mitarbeiter (freie Einwohner). Bedingungen: near = [Sorte(n), Anzahl, Umkreis],
@@ -283,6 +360,9 @@ const KINDS = {
   brunnen: { name: 'Brunnen', plural: 'Brunnen', of: ['brunnen', 'kristallbrunnen'] },
   park:    { name: 'Park', plural: 'Parks', of: ['park', 'botgarten'] },
   statue:  { name: 'Statue', plural: 'Statuen', of: ['statue', 'denkmal'] },
+  laden:   { name: 'Laden', plural: 'Läden', of: Object.keys(SHOPS).filter(id => (SHOPS[id].cat || 'laden') === 'laden') },
+  cafe:    { name: 'Café', plural: 'Cafés', of: ['cafe', 'teeladen', 'bubbletea', 'eisdiele', 'konditorei', 'chocolaterie'] },
+  kultur:  { name: 'Kulturbau', plural: 'Kulturbauten', of: Object.keys(SHOPS).filter(id => SHOPS[id].cat === 'kultur') },
 };
 const kindOf = k => KINDS[k] ? KINDS[k].of : [k];
 const isKind = (k, b) => kindOf(k).includes(b);
@@ -303,10 +383,12 @@ const MENU = [
   { id: 'bauen', label: '🏗️ Bauen', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
     { id: 'geld', label: '🪙 Geld', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
-    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede'] },
+    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'boost', label: '📈 Verstärker', items: ['markt', 'hafen', 'blumen'] },
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
+    { id: 'laeden', label: '🛍️ Läden', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'laden') },
+    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
@@ -415,6 +497,19 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
 };
+// Läden, Kultur und Plantagen: Kurzwirkung und Tipp aus der Tabelle
+for (const [id, S] of Object.entries(SHOPS)) {
+  FX[id] = S.fx;
+  ITEM_TIPS[id] = S.tip || (S.ware ? `Ins Dorf an den Weg – verdient an den Leuten im Viertel und verkauft ${RES[S.ware].name} aus dem Lager.`
+    : S.attr ? 'Zieht Besucher auf die Insel – mit Bahn oder Schiff kommen sie. Viele verschiedene Läden im Viertel sind eine Innenstadt.'
+    : 'Ins Dorf an den Weg – verdient an den Leuten im Viertel. Viele verschiedene Läden im Viertel sind eine Innenstadt.');
+}
+Object.assign(FX, { kaffeeplantage: '☕ Kaffee', teegarten: '🍵 Tee', kakaoplantage: '🍫 Kakao' });
+Object.assign(ITEM_TIPS, {
+  kaffeeplantage: 'Nur auf fernen Inseln: Kaffee für die Cafés – per Lager, keine Straße nötig.',
+  teegarten: 'Nur auf fernen Inseln: Tee für Teeläden und Bubble Tea.',
+  kakaoplantage: 'Nur auf fernen Inseln: Kakao für Konditorei und Chocolaterie.',
+});
 const effectText = id => FX[id] || (ITEMS[id] && ITEMS[id].beauty ? `🌸 +${ITEMS[id].beauty}` : '');
 
 const LANDMARKS = {

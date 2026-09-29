@@ -40,7 +40,9 @@ describe('Neu freigeschaltet', () => {
 
   it('Geschenk-Wegstile und die Glasvilla bekommen auch ein Fenster', () => {
     game('state.restore.baum = 2; updateHud()');
-    expect($('modal-card').textContent).toContain('Schachbrett');
+    let txt = $('modal-card').textContent;                          // mehrere Seiten („Weiter“)
+    while (!txt.includes('Schachbrett') && /Weiter/.test($('m-close').textContent)) { $('m-close').click(); game('updateHud()'); txt = $('modal-card').textContent; }
+    expect(txt).toContain('Schachbrett');
     game('closeModal(); state.restore.kristall = 1; updateHud()');
     expect($('modal-card').textContent).toContain('Glasvilla');
   });

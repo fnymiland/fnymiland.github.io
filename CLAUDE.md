@@ -277,6 +277,14 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Züge fahren bis in die Halle (`HALL`) und werden dort ganz hinten gezeichnet (Dächer darüber); die Schiene vor dem Gleis
     hat keinen Prellbock (`GEXIT`). Umsteigen: `transitTraffic` verbindet alle Inseln der Linien am selben Hbf (`transfer`).
     „+ Gleis“ wächst zur Seite +b (bei Drehung 1/2 rückt der Anker, `hbfResize`), die alten Gleise bleiben liegen.
+58. **Läden und Kultur** (Block 30): alles aus der Tabelle `SHOPS` (data.js) – daraus entstehen ITEMS (`cat: 'laden' | 'kultur'`,
+    `shop: true`), Menü-Gruppen, FX, Tipps, Sorten (`laden`, `cafe`, `kultur`). Einnahmen in `totals` über `shopWorld`:
+    Kundschaft = Einwohner im Viertel + ankommende Besucher der Insel, geteilt durch gleiche Läden im Viertel; Innenstadt-
+    Bonus nach verschiedenen Läden (`INNER_STEPS`, `types`). Warenverkauf steht in `T.sales` und läuft in `produce`
+    (Lager → Taler, `SALE_MUL`); die Leiste zeigt ihn über `saleRate`. Kultur (`attr`) und Hotels (`hotel`) wirken in
+    `placeStats`. Bilder in js/draw-shops.js (kleine Läden: `smallShopArt`, große: `SHOP_ART`); wer flache Teile hat,
+    muss in `GROUND_TYPES` und oben `groundPart` aufrufen, sonst niemand. Kaffee/Tee/Kakao: Plantagen mit `far: true`
+    (nur auf fernen Inseln).
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).

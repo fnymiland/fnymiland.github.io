@@ -27,7 +27,7 @@ describe('Drehen in vier Richtungen', () => {
   });
 
   it('alle Gebäude lassen sich drehen', () => {
-    const b = game("Object.keys(ITEMS).filter(id => ['bau', 'bildung'].includes(ITEMS[id].cat) && id !== 'feld' && !ROTATABLE.has(id))");
+    const b = game("Object.keys(ITEMS).filter(id => ['bau', 'bildung', 'laden', 'kultur'].includes(ITEMS[id].cat) && id !== 'feld' && !ROTATABLE.has(id))");
     expect(b).toEqual([]);
   });
 });

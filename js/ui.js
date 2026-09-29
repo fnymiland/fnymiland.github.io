@@ -244,7 +244,7 @@ const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
 function updateHud() {
   $('money').textContent = fmtMoney(state.money);
   const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
-  $('rate').textContent = '+' + fmtWhole(T.inc * bi) + '/s' + (bi > 1 ? ` ×${bi}` : '');
+  $('rate').textContent = '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${bi}` : '');
   $('pop').textContent = fmt(T.pop);
   $('jobs').textContent = `💼 ${fmt(T.jobs)}`;                  // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
@@ -296,7 +296,8 @@ $('pop-btn').onclick = hudMore;
 // Lager (📦): Rohstoffe mit Menge pro Minute, Schönheit und Strom – klappt unter der Leiste auf
 function storeHtml() {
   const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
-  const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0);
+  const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0)
+    - (state.res[r] > 0 ? (T.sales || []).filter(sl => sl.res === r).reduce((s, sl) => s + sl.rate, 0) : 0);          // Läden verkaufen
   const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small></div>`; });
   const P = T.rail.power, power = P.city || P.supply
     ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
@@ -615,6 +616,7 @@ function openInfo(x, y) {
   else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
+  if (d.shop) status.push(...shopStatus(t, s));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
@@ -865,6 +867,26 @@ function cableStatus(k) {
   const out = [`<div class="ok">🚡 Seil zur Station ${c.regions.length > 1 ? `auf der ${regionName(c.regions.find(r => r !== regionAt(...keyXY(k))))}` : 'gegenüber'} · ${nf1.format(c.km)} km – was nah an beiden Stationen steht, ist angebunden</div>`];
   if (c.regions.length > 1) out.push(...trafficStatus(c, c.traffic));
   else out.push('<div class="muted">👥 Fahrgäste gibt es zwischen zwei Inseln – hier bindet sie die Gegend ans Dorf an.</div>');
+  return out;
+}
+// Laden: Kundschaft, Innenstadt, was er aus dem Lager verkauft
+const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaoplantage' };
+function shopStatus(t, s) {
+  const S = SHOPS[t.b], out = [], kd = s.kunden || 0;
+  out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)}${s.same > 1 ? ` – teilt sich die Leute mit ${s.same - 1} weiteren ${ITEMS[t.b].name} im Viertel` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
+    : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) – oder Besucher per Bahn und Schiff</div>');
+  const next = [...INNER_STEPS].reverse().find(([min]) => (s.types || 0) < min);
+  out.push(`<div class="${s.inner ? 'ok' : ''}">🛍️ Innenstadt: ${s.types || 0} verschiedene Läden im Viertel${s.inner ? ` · +${Math.round(s.inner * 100)} %` : ''}${next ? ` <small class="muted">(ab ${next[0]}: +${Math.round(next[1] * 100)} %)</small>` : ''}</div>`);
+  const sales = (s.sales || []).filter(sl => state.res[sl.res] > 0);
+  if (S.all || S.raw) out.push(sales.length ? `<div class="ok">📦 Verkauft ${sales.map(sl => RES[sl.res].icon).join('')} aus dem Lager → +${fmtRate(sales.reduce((a, sl) => a + sl.rate * sl.pay, 0))}/s</div>`
+    : '<div class="bad">📦 Das Lager ist leer – nichts zu verkaufen</div>');
+  else if (S.ware) {
+    const sl = (s.sales || [])[0], r = RES[S.ware];
+    out.push(state.res[S.ware] > 0 && sl ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sl.rate * 60)} ${r.name}/min → +${fmtRate(sl.rate * sl.pay)}/s</div>`
+      : `<div class="bad">${r.icon} Kein ${r.name} im Lager${WARE_FROM[S.ware] ? ` – wächst auf fernen Inseln (${WARE_FROM[S.ware]})` : ''}. Mit ${r.name} verdient der Laden viel mehr.</div>`);
+  }
+  if (S.attr) out.push(`<div class="ok">👥 Zieht ${S.attr} Besucher auf die Insel (per Bahn und Schiff)</div>`);
+  if (S.hotel) out.push(`<div class="ok">🏨 Die Insel zieht ${Math.round(S.hotel * 100)} % mehr Besucher an</div>`);
   return out;
 }
 // Hauptbahnhof: Gleise mit ihrem Ziel, Umsteigen, + Gleis / − Gleis, Aussehen
@@ -1452,12 +1474,12 @@ function showIntro(first) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-09-30', items: [
-  '🏛️ <b>Wunder können jetzt richtig was:</b> Jahrmarkt am Riesenrad (3 Minuten dreifache Einnahmen), Sternschnuppen an der Sternwarte, Hafenstadt an der Seebrücke, grüner Daumen im Botanischen Garten (mit Palmen und Riesenblumen), königliche Erlasse im Schloss – dazu dauerhafte Boni.',
-  '🛤️ <b>Häuser und Betriebe sind genügsamer:</b> Markt, Schule, Bäckerei, Park & Co. zählen auch, wenn ein Weg oder eine Bahn dorthin führt.',
-  '🌊 <b>Die Welt hat keinen Rand mehr:</b> Aufschütten geht überall – weit draußen ist das Meer tiefer und teurer. Nach dem Laternenfest tauchen ferne Inseln mit Schatztruhen auf.',
-  '🚉 <b>Hauptbahnhof:</b> ein Kopfbahnhof mit so vielen Gleisen, wie du willst – jedes Gleis eine eigene Linie mit eigenem Zug, und am Bahnhof steigen die Leute um. Drei Designs zur Auswahl.',
-  '🚢 <b>Aufträge statt Börse:</b> Frachter kaufen dir ab, was sich stapelt – bis 300 % des Werts. Schiffe fahren übers Wasser um die Inseln herum. Die Kreuzfahrt ist weg.',
+const NEWS = { id: '2026-10-01', items: [
+  '🛍️ <b>Läden!</b> Café, Teeladen, Bubble Tea, Eisdiele, Buchladen, Pizzeria, Juwelier, Möbelhaus … Sie verdienen an den Leuten im Viertel und an Besuchern – und verkaufen Waren aus dem Lager zum Dreifachen.',
+  '🏙️ <b>Innenstadt:</b> Viele verschiedene Läden in einem Viertel bringen bis zu +100 %. Gleiche Läden teilen sich die Kundschaft.',
+  '🎭 <b>Kultur und Endgame:</b> Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion, Hotels, Kaufhaus und Einkaufspassage ziehen Besucher an.',
+  '☕ <b>Kaffee, Tee und Kakao</b> wachsen auf den fernen Inseln – Cafés und Chocolaterien brauchen sie.',
+  '🏠 Häuser wünschen sich jetzt auch einen Laden (Stadthaus), ein Café (Villa) und Kultur (Glasvilla).',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
@@ -1542,9 +1564,19 @@ $('import-file').addEventListener('change', async e => {
 });
 
 // Rohstoffe fließen ins Lager; Verarbeitung nimmt, was da ist
+// Läden verkaufen aus dem Lager (so viel da ist) – das Geld kommt sofort, die Rate zeigt oben die Leiste
+let saleRate = 0;
 function produce(dt) {
   const before = { ...state.res }, m = boostMul('prod');                // Erlass „Doppelte Ernte“
   for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * m * dt;
+  let got = 0;
+  for (const sl of T.sales || []) {
+    const n = Math.min(sl.rate * dt, Math.max(0, state.res[sl.res]));
+    if (n <= 0) continue;
+    state.res[sl.res] -= n; got += n * sl.pay;
+  }
+  if (got) { state.money += got; state.stats.earned += got; }
+  if (dt > 0) saleRate += (got / dt - saleRate) * Math.min(1, dt);
   for (const c of T.conv) {
     const want = c.rate * m * dt, can = Math.min(want, state.res[c.from] / CONV_RATIO);
     if (can <= 0) continue;

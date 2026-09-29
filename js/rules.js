@@ -223,6 +223,23 @@ function beautyOf(t, x, y) {
   return v;
 }
 
+// Läden (Block 30): Einwohner je Viertel, Besucher je Insel (so viele, wie ankommen), gleiche Läden je Viertel,
+// Innenstadt: verschiedene Läden in einem Viertel (die Passage zählt dreifach, das Kaufhaus doppelt)
+const INNER_STEPS = [[15, 1], [10, 0.5], [6, 0.25], [3, 0.1]];
+function shopWorld(net, links) {
+  const vPop = new Map(), visitors = new Map(), kinds = new Map();
+  for (const [k, t] of state.tiles) {
+    const v = net.vOf(k);
+    if (!v) continue;
+    if (isHome(t.b)) vPop.set(v, (vPop.get(v) || 0) + popOf(t));
+    if (SHOPS[t.b]) { if (!kinds.has(v)) kinds.set(v, new Map()); const m = kinds.get(v); m.set(t.b, (m.get(t.b) || 0) + 1); }
+  }
+  for (const l of links) if (l.traffic) for (const [r, n] of l.traffic.visits) visitors.set(r, (visitors.get(r) || 0) + n * l.traffic.served);
+  const types = v => { const m = v && kinds.get(v); return m ? [...m.keys()].reduce((a, b) => a + (SHOPS[b].types || 1), 0) : 0; };
+  const inner = v => { const n = types(v); for (const [min, b] of INNER_STEPS) if (n >= min) return b; return 0; };
+  return { vPop, visitors, count: (v, b) => (kinds.get(v) && kinds.get(v).get(b)) || 0, types, inner };
+}
+
 let NET = null;
 function totals() {
   rebuildCover();
@@ -287,6 +304,7 @@ function totals() {
   const won = {};
   for (const [k, t] of state.tiles) if (WONDERS[t.b] && wonderDone(t)) won[t.b] = Math.max(won[t.b] || 0, off(k));
   const green = won.botgarten ? 1 + won.botgarten : 1;                   // Botanischer Garten: Obst und Felder doppelt
+  const SW = shopWorld(net, links), sales = [];
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
@@ -319,6 +337,15 @@ function totals() {
       v *= off(k) * mT * (t.b === 'feld' ? green : 1);                         // ohne Strom halb; Handelskunst; Garten
       if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
+    }
+    if (d.shop) {                                                             // Läden und Kultur (Block 30)
+      const S = SHOPS[t.b], v = net.vOf(k), share = 1 / Math.max(1, v ? SW.count(v, t.b) : 1), inner = SW.inner(v);
+      const kd = (((v && SW.vPop.get(v)) || 0) + (SW.visitors.get(regionAt(x, y)) || 0)) * share, f = m * off(k);
+      s.kunden = kd; s.inner = inner; s.types = SW.types(v); s.same = v ? SW.count(v, t.b) : 1;
+      s.inc = S.rate / 100 * kd * f * mT * (1 + inner); inc += s.inc;
+      const wares = S.ware ? [S.ware] : S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : [];
+      s.sales = wares.map(r => ({ k, res: r, rate: S.sell / 100 * kd * f, pay: TRADE_PRICE[r] * SALE_MUL * mT * (1 + inner) }));
+      sales.push(...s.sales);
     }
     if (d.science) {
       const v = d.science * t.lvl * m * (t.b === 'schule' ? schoolFactor : 1) * (t.b === 'bibliothek' && hasTech('bibliothek') ? 2 : 1) * off(k);
@@ -359,7 +386,7 @@ function totals() {
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
@@ -923,8 +950,9 @@ const FISH_INC = 5;                                  // Fischkutter (18f): je Ha
 // stapelt – ein guter Teil des Lagers zu 120–180 % des Grundpreises; am Großen Hafen (Stufe 3) manchmal ein Großauftrag
 // (fast alles, 200–300 %). Angebot: Sie verkaufen dir eine Ware, deren Betrieb du schon bauen kannst (kein Kristall vor der
 // Kristallinsel). Jeder Auftrag gilt ORDER_TTL; alle ORDER_EVERY kommt ein neuer, solange Plätze frei sind.
-const TRADE_PRICE = { holz: 4, stein: 4, erz: 8, obst: 5, bretter: 15, quader: 15, metall: 40, kristall: 120 };
-const RES_SOURCE = { holz: 'holz', stein: 'stein', erz: 'mine', obst: 'obst', bretter: 'saege', quader: 'steinmetz', metall: 'schmiede', kristall: 'kristallmine' };
+const TRADE_PRICE = { holz: 4, stein: 4, erz: 8, obst: 5, bretter: 15, quader: 15, metall: 40, kristall: 120, kaffee: 20, tee: 20, kakao: 25 };
+const RES_SOURCE = { holz: 'holz', stein: 'stein', erz: 'mine', obst: 'obst', bretter: 'saege', quader: 'steinmetz', metall: 'schmiede', kristall: 'kristallmine',
+  kaffee: 'kaffeeplantage', tee: 'teegarten', kakao: 'kakaoplantage' };
 const ORDER_TTL = 12 * 60e3, ORDER_EVERY = 3 * 60e3, ORDER_SLOTS = [0, 2, 4];         // Plätze je Hafen-Stufe 1/2/3
 const tradeLevel = () => Math.max(0, ...[...state.tiles.values()].filter(t => t.b === 'hafen').map(t => Math.min(3, t.lvl || 1)));
 const canTrade = () => tradeLevel() >= 2;
@@ -992,6 +1020,10 @@ function placeStats() {
     else if (d.cat === 'deko' && d.beauty) add(attr, r, d.beauty / 10);           // Schönes zieht auch ein wenig an
   }
   for (const [k, ds] of state.decos) { const r = regionAt(...keyXY(k)); for (const d of ds) if (d) add(attr, r, ITEMS[d.b].beauty / 10); }
+  // Kultur zieht an, Hotels machen die ganze Insel anziehender (Übernachtungsgäste)
+  const hotel = new Map();
+  for (const [k, t] of state.tiles) { const S = SHOPS[t.b]; if (!S) continue; const r = regionAt(...keyXY(k)); if (S.attr) add(attr, r, S.attr); if (S.hotel) add(hotel, r, S.hotel); }
+  for (const [r, h] of hotel) attr.set(r, (attr.get(r) || 0) * (1 + h));
   return { pop, attr };
 }
 // Fahrgäste einer einzelnen Linie (so, als gäbe es nur sie)
@@ -1091,6 +1123,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => nearOwnLand(fx, fy))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';
     if (d.needs === 'strand' && !tiles.every(([fx, fy]) => terraLook(fx, fy) === 'sand' || (terrainAt(fx, fy) === 'grass' && terraLook(fx, fy) !== 'wiese' && isBeach(fx, fy)))) return 'Nur auf Sand am Wasser (Strand)';
     if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)} – dort ist der Boden warm`;
+    if (d.far && !tiles.every(([fx, fy]) => (ISLE_BY_ID[regionAt(fx, fy)] || {}).far)) return 'Nur auf fernen Inseln – dort ist es warm genug';
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
   if (d.wonder && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${WONDERS[b].the} gibt es schon`;
@@ -1384,7 +1417,8 @@ function reachKind(acc, k, x, y, r, pred, n = 1) {
 }
 // Versorgungs-Wünsche: Umkreis und Sorte
 const WISH_REACH = { baecker: [6, b => isKind('baecker', b)], markt: [8, b => isKind('markt', b)],
-  park: [4, b => isKind('park', b) || isKind('brunnen', b)], schule: [10, b => isKind('schule', b)] };
+  park: [4, b => isKind('park', b) || isKind('brunnen', b)], schule: [10, b => isKind('schule', b)],
+  laden: [8, b => isKind('laden', b)], cafe: [8, b => isKind('cafe', b)], kultur: [12, b => isKind('kultur', b)] };
 function wishCheck(w, x, y, acc = T.access) {
   if (acc && acc.green && (w === 'park' || w === 'schoen')) return { ok: true, how: 'garten' };     // Botanischer Garten
   if (!WISH_REACH[w]) return { ok: wishMet(w, x, y), how: null };
