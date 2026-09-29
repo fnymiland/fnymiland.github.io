@@ -92,8 +92,10 @@ describe('Züge im Spiel', () => {
     document.querySelector('[data-carminus="0"]').onclick();
     expect(game('state.money')).toBe(m0);
     expect(game("state.tiles.get('3,10').trainPlus")).toBe(undefined);
+    document.querySelector('[data-carplus="0"]') || game('openInfo(3, 10)');
+    document.querySelector('[data-carplus="0"]').onclick();
     game('save()');
-    expect(game("load().tiles.get('3,10').train")).toBe('regio');
+    expect(game("load().tiles.get('3,10').trainPlus")).toBe(1);             // angehängte Wagen bleiben gespeichert
   });
 
   it('Bahnhof-Fenster zeigt Fahrgäste, Plätze, Auslastung und Einnahmen', () => {

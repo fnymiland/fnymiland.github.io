@@ -57,8 +57,10 @@ function tileOut(t) {
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
   if (t.phase != null) { o.phase = t.phase; if (t.rate != null) o.rate = t.rate; if (t.paid) o.paid = t.paid; }
-  if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; }
-  if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col }));
+  if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
+  if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
+  if (t.ferry) o.ferry = t.ferry;                                   // Fähre zum Hafen auf diesem Feld
+  if (t.cruise) o.cruise = t.cruise;                                // nächstes Kreuzfahrtschiff (Zeitpunkt)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }

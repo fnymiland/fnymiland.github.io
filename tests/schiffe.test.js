@@ -112,6 +112,8 @@ describe('Fähre', () => {
     expect(game('T.ferries[0].seats')).toBe(100);
     game("state.tiles.get('4,12').lvl = 3; state.tiles.get('16,12').lvl = 2; recalc()");
     expect(game('T.ferries[0].seats')).toBe(180);                        // die kleinere Stufe zählt
+    game('save()');
+    expect(game("load().tiles.get('4,12').ferry")).toBe('16,12');         // bleibt gespeichert
   });
 
   it('befördert Fahrgäste, bindet an und lässt sich wieder einstellen (Geld zurück)', () => {
