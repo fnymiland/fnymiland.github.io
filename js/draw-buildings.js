@@ -669,6 +669,22 @@ const BUILDING_ART = {
     if (s === 3) { const a2 = wa * 1.35 - (wb ? 0.5 : 0), b2 = wb * 1.35 - (wa ? 0.5 : 0); parts.push([a2, b2, () => kBoat(K, a2, b2, now, true)]); }
     K.scene(parts);
   },
+  // Seilbahn-Station: Bahnsteig, vier Stützen, oben das Radhaus mit dem Seilrad (das Seil zeichnet der Himmel)
+  seilbahn(K, s, now, x, y, t) {
+    const z = K.z;
+    kShadow(K, 0.26);
+    K.block({ ha: 0.24, hb: 0.24, h: 5, wall: '#dcd6ca', type: 'flat', roof: '#ece6da' });
+    for (const [a, b] of [[-0.15, -0.15], [0.15, -0.15], [0.15, 0.15], [-0.15, 0.15]]) {
+      const [px, py] = K.P(a, b, 5); g.strokeStyle = C('#8a5a3c'); g.lineWidth = 1.6 * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 22 * z); g.stroke();
+    }
+    K.block({ ha: 0.2, hb: 0.2, h: 4, lift: 26, wall: '#8a5a3c', roof: '#d9534a', roofH: 8 });
+    const [wx, wy] = K.P(0, 0, SEIL_H), sp = now / 700;
+    circle(wx, wy, 4.2 * z, C('#6b6f78')); circle(wx, wy, 3 * z, C('#dcdfe5'));
+    g.strokeStyle = C('#6b6f78'); g.lineWidth = 0.7 * z; g.beginPath();
+    for (let i = 0; i < 4; i++) { const an = sp + i * Math.PI / 2; g.moveTo(wx, wy); g.lineTo(wx + Math.cos(an) * 3 * z, wy + Math.sin(an) * 3 * z); }
+    g.stroke();
+  },
   // --- Strom ---
   // Wasserkraftwerk: Steinhäuschen, das Wasserrad dreht sich auf der Wasserseite (vorn)
   wasserkraft(K, s, now, x, y, t) {

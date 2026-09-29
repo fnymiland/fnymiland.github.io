@@ -191,6 +191,7 @@ function totals() {
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
+  const mT = masteryMul('taler'), mR = masteryMul('rohstoffe');          // Stufen-Forschung
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
@@ -204,19 +205,19 @@ function totals() {
     if (d.prod) {
       s.prod = {};
       for (const [r, base] of Object.entries(d.prod)) {
-        let v = base * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m;
+        let v = base * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * mR;
         if (t.b === 'mine' && lmOn.has('erzberg')) v *= 1.25;
         if (t.b === 'holz' && hasTech('axt')) v *= 1.3;
         s.prod[r] = v; prod[r] = (prod[r] || 0) + v;
       }
     }
     if (d.conv) {
-      s.conv = d.conv.rate * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * off(k);
+      s.conv = d.conv.rate * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * off(k) * mR;
       conv.push({ ...d.conv, rate: s.conv });
     }
     if (d.cat === 'bau' && !d.prod && !d.conv) {
       let v = rawIncome(t.b, x, y) * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * gmul;
-      v *= off(k);                                                            // Werkstatt ohne Strom
+      v *= off(k) * mT;                                                       // ohne Strom halb; Handelskunst
       if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
     }
@@ -233,7 +234,7 @@ function totals() {
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
   if (quelle && (lmOn.has('quelle') || lmHalf.has('quelle'))) {
     beauty += 40 * lmFactor('quelle');
-    if (st.get(quelle[0]).road && lmStage('quelle') >= 3) inc += 12 * gmul;
+    if (st.get(quelle[0]).road && lmStage('quelle') >= 3) inc += 12 * gmul * mT;
   }
   sci += 1.5 * lmFactor('ruine') + 3 * lmFactor('kristall');
   if (hasTech('sterne')) sci *= 1.2;
@@ -243,10 +244,10 @@ function totals() {
     const W = WONDERS[t.b];
     if (!W || !wonderDone(t)) continue;
     const e = W.effect, f = off(k);                                             // Riesenrad, Sternwarte, Garten ohne Strom: halb
-    if (e.inc) inc += e.inc * gmul * f;
+    if (e.inc) inc += e.inc * gmul * f * mT;
     if (e.pop) pop += e.pop * f;
     if (e.sciMul) sci *= 1 + e.sciMul * f;
-    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f;
+    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f * mR;
     if (e.allMul) allMul += e.allMul * f;
   }
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
@@ -255,7 +256,8 @@ function totals() {
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
   // Gebäude-Stufen (für ✨ und Infofenster)
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
-  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net, rail };
+  pop = Math.round(pop * masteryMul('einwohner'));
+  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, regions: new Set(), commuters: new Map(), comp: new Map(),
@@ -273,6 +275,7 @@ function unlockOk(def, key) {
   if (def.rank && starCount() < def.rank) return false;                // Pokale: genug Erfolgs-Sterne
   if (def.festival && !state.festival) return false;                    // Schloss: nach dem Laternenfest
   if (def.album && !albumDone(def.album)) return false;                // Album-Belohnung: volle Seite
+  if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return false;   // Erfindung (für Ideen)
   return true;
 }
 // Ort und Stufe zusammen („🌬️ Windige Klippe → Aussichtspunkt“), kurz nur der Ort (Leiste unten)
@@ -288,6 +291,7 @@ function unlockText(def, short) {
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
   if (def.festival && !state.festival) return '🎆 nach dem Laternenfest';
   if (def.album && !albumDone(def.album)) return `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
+  if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
   return '';
 }
 const styleOk = st => unlockOk(st, 'weg:' + st.id);
@@ -299,6 +303,16 @@ const tierOpen = tier => hasBuilt(TECH_TIERS[tier].b);
 // t.lm: Forschung, die erst eine Sehenswürdigkeit möglich macht (Eisenbahn: Erzinsel)
 const techLmOk = t => !t.lm || lmStage(t.lm.split(':')[0]) >= +t.lm.split(':')[1];
 const techReady = t => !hasTech(t.id) && tierOpen(t.tier) && (t.req || []).every(hasTech) && techLmOk(t);
+// Preis einer Forschung: Grundpreis × Stufe (1: ×5, 2: ×25, 3: ×80), und jede schon erforschte macht die nächste 10 % teurer
+const TIER_MUL = [0, 5, 25, 80];
+const niceSci = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.round(v / p) * p; };
+const masteryLvl = id => (state.mastery && state.mastery[id]) || 0;
+const masteryMul = id => 1 + MASTERY_STEP * masteryLvl(id);
+const masteryCost = id => niceSci(MASTERY_BASE * Math.pow(MASTERY_GROW, masteryLvl(id)));
+const masteryOpen = () => tierOpen(2);
+const inventionsOpen = () => tierOpen(3);
+const hasInvention = id => !!state.inventions && state.inventions.has(id);
+const techCost = t => niceSci(t.cost * TIER_MUL[t.tier] * (1 + 0.1 * [...state.techs].filter(id => TECH_BY_ID[id]).length));
 // Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
   if (!d || state.design.has(d.id) || !d.price) return 'Schon da';
@@ -543,7 +557,7 @@ function powerOf(t) {
   let v = o[Math.min(t.lvl || 1, o.length) - 1];
   if (t.b === 'windrad' && hasTech('rotor')) v *= 1.5;
   if (hasTech('stromnetz')) v *= 1.25;
-  return v;
+  return v * masteryMul('strom');
 }
 const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
 // Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs

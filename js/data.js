@@ -110,6 +110,8 @@ const ITEMS = {
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
   karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
+  seilbahn: { cat: 'deko', name: 'Seilbahn-Station', invention: 'seilbahn', cost: 800, mat: { metall: 10, bretter: 6 }, needs: 'grass', beauty: 10,
+             desc: 'Zwei Stationen verbinden sich mit einem Seil (bis 20 Felder weit), die Gondeln schweben hin und her.' },
   // --- Strom: Kraftwerke liefern ⚡ (POWER_OUT in rules.js), egal wo sie stehen ---
   windrad: { cat: 'strom', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind und liefert Strom: 1 ⚡, ausgebaut bis 3 ⚡.' },
   wasserkraft: { cat: 'strom', name: 'Wasserkraftwerk', tech: 'wasserkraft', cost: 900, mat: { quader: 10, metall: 4 }, needs: 'shore', beauty: 4,
@@ -252,7 +254,7 @@ const MENU = [
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
-  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station'] },
+  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'seilbahn'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
 ];
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
@@ -275,7 +277,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler', seilbahn: '🚡 Gondeln · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +320 · 🍎', schloss: '+20 % auf alles',
@@ -341,6 +343,7 @@ const ITEM_TIPS = {
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.',
+  seilbahn: 'Stell zwei Stationen auf, bis zu 20 Felder auseinander – gern über Wasser oder quer übers Dorf. Das Seil spannt sich von selbst.',
   wiese: 'Terraforming: Zieh über Wald, Felsen oder Strand – alles wird grüne Wiese.',
   strand: 'Terraforming: Sandstrand, wo du willst. Häuser und Wege gehen darauf wie auf Wiese.',
   wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
@@ -454,6 +457,22 @@ const DIARY_FINALE = 'Der Leuchtturm brennt wieder. Heute Nacht feiern wir das L
 
 // Forschung (Seite „Wissen“, bezahlt mit Ideen 💡) in drei Stufen: 1 braucht eine Schule, 2 eine Bibliothek,
 // 3 eine Universität. Das Aussehen (Farben, Wege-Stile, Deko) gibt es auf der Seite „Kunstakademie“ (DESIGN).
+// Stufen-Forschung (endlos, ab der Bibliothek): jede Stufe +5 %, jede nächste 1,5× teurer
+const MASTERY = [
+  { id: 'taler', icon: '🪙', name: 'Handelskunst', text: 'auf alle Einnahmen' },
+  { id: 'rohstoffe', icon: '🪵', name: 'Werkzeugbau', text: 'auf Rohstoffe und Waren' },
+  { id: 'strom', icon: '⚡', name: 'Energietechnik', text: 'auf allen Strom' },
+  { id: 'einwohner', icon: '👥', name: 'Stadtplanung', text: 'Einwohner' },
+  { id: 'schoen', icon: '🌸', name: 'Gartenkunst', text: 'Schönheit' },
+];
+const MASTERY_STEP = 0.05, MASTERY_BASE = 3000, MASTERY_GROW = 1.5;
+// Erfindungen (nur für Ideen, ab der Universität): besondere Dinge, wenn alles andere erforscht ist
+const INVENTIONS = [
+  { id: 'ballon', icon: '🎈', name: 'Heißluftballon', cost: 25000, text: 'Bunte Ballons schweben über deinem Dorf – nachts leuchten die Brenner.' },
+  { id: 'feuerwerk', icon: '🎆', name: 'Feuerwerk', cost: 50000, text: 'Im Rathaus kannst du ein Feuerwerk zünden, so oft du willst – nachts am schönsten.' },
+  { id: 'seilbahn', icon: '🚡', name: 'Seilbahn', cost: 100000, text: 'Schaltet Seilbahn-Stationen frei: Zwei Stationen verbinden sich mit einem Seil, die Gondeln schweben hin und her.' },
+  { id: 'zeppelin', icon: '🛸', name: 'Zeppelin', cost: 150000, text: 'Ein Zeppelin mit deiner Flagge zieht gemächlich seine Runden über die Insel.' },
+];
 const TECH_TIERS = [null, { b: 'schule', name: 'Schule' }, { b: 'bibliothek', name: 'Bibliothek' }, { b: 'uni', name: 'Universität' }];
 const TECHS = [
   { id: 'duenger', tier: 1, name: 'Dünger', cost: 20, desc: 'Felder bringen 50 % mehr.' },

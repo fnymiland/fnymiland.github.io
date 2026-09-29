@@ -223,8 +223,9 @@ function houseUpgrade(x, y, stay = false) {
 
 function research(id) {
   const tch = TECH_BY_ID[id];
-  if (!tch || !techReady(tch) || state.science < tch.cost) return;
-  state.science -= tch.cost;
+  const cost = tch && techCost(tch);
+  if (!tch || !techReady(tch) || state.science < cost) return;
+  state.science -= cost;
   state.techs.add(id);
   sfx('research');
   recalc();
@@ -281,3 +282,25 @@ function tap(sx, sy, isTouch) {
   else build(tool, x, y);
 }
 
+// Stufen-Forschung: nächste Stufe kaufen (Ideen)
+function studyMastery(id) {
+  const m = MASTERY.find(e => e.id === id), cost = m && masteryCost(id);
+  if (!m || !masteryOpen() || state.science < cost) return false;
+  state.science -= cost;
+  state.mastery[id] = masteryLvl(id) + 1;
+  sfx('research'); recalc(); save();
+  toast(`${m.icon} ${m.name} ${roman(state.mastery[id])}: +${Math.round(MASTERY_STEP * 100 * state.mastery[id])} % ${m.text}`);
+  return true;
+}
+const roman = n => { let out = ''; for (const [v, r] of [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]) while (n >= v) { out += r; n -= v; } return out; };
+// Erfindung kaufen (Ideen)
+function invent(id) {
+  const inv = INVENTIONS.find(i => i.id === id);
+  if (!inv || hasInvention(id) || !inventionsOpen() || state.science < inv.cost) return false;
+  state.science -= inv.cost;
+  state.inventions.add(id);
+  sfx('star'); confettiBurst(); recalc(); buildToolbar(); save();
+  toast(`${inv.icon} Erfunden: ${inv.name}!`);
+  if (id === 'feuerwerk') startFireworks();
+  return true;
+}

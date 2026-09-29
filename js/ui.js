@@ -210,7 +210,7 @@ function renderStyleBar(t) {
   bar.hidden = false;
 }
 
-const canResearch = () => TECHS.some(t => techReady(t) && state.science >= t.cost);
+const canResearch = () => TECHS.some(t => techReady(t) && state.science >= techCost(t));
 
 let goalSmall = false, unlockSig = '';
 // Leiste oben: nur Rathaus, Geld, Einwohner, Ideen, Lager und Menü. Raten und Arbeitsplätze erst beim Antippen
@@ -863,10 +863,26 @@ function openResearch(tab = researchTab) {
             const need = needs.length && !done ? `<span class="muted">braucht ${needs.join(', ')}</span>` : '';
             return `<div class="tech${done ? ' done' : ''}${!ready && !done ? ' locked' : ''}">
               <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
-              ${ready ? `<button class="btn" data-tech="${t.id}" data-sci="${t.cost}" ${state.science < t.cost ? 'disabled' : ''}>Erforschen · 💡 ${t.cost}</button>` : ''}
+              ${ready ? `<button class="btn" data-tech="${t.id}" data-sci="${techCost(t)}" ${state.science < techCost(t) ? 'disabled' : ''}>Erforschen · 💡 ${fmt(techCost(t))}</button>` : ''}
             </div>`;
           }).join('')}</div>`;
       }).join('')}</div>`;
+  } else if (tab === 'stufen') {
+    const have = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen${T.sci > 0 ? ` (+${fmtRate(T.sci)}/s)` : ''}. Jede Stufe bringt +${Math.round(MASTERY_STEP * 100)} % und geht endlos weiter – die nächste kostet jeweils das 1,5-Fache.</p>`;
+    body = have + (masteryOpen() ? `<div class="mastery">${MASTERY.map(m => {
+      const lvl = masteryLvl(m.id), cost = masteryCost(m.id);
+      return `<div class="tech${lvl ? ' done' : ''}"><b>${m.icon} ${m.name}${lvl ? ' ' + roman(lvl) : ''}</b>
+        <span>${lvl ? `Jetzt +${Math.round(MASTERY_STEP * 100 * lvl)} % ${m.text}` : `+${Math.round(MASTERY_STEP * 100)} % ${m.text} je Stufe`}</span>
+        <button class="btn" data-mastery="${m.id}" data-sci="${cost}" ${state.science < cost ? 'disabled' : ''}>Stufe ${roman(lvl + 1)} · 💡 ${fmt(cost)}</button></div>`;
+    }).join('')}</div>` : '<p class="muted">🔒 Baue eine Bibliothek – dann gibt es die Stufen-Forschung.</p>');
+  } else if (tab === 'erfindung') {
+    body = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen. Erfindungen gibt es nur für Ideen – besondere Dinge für deine Insel.</p>`
+      + (inventionsOpen() ? `<div class="mastery">${INVENTIONS.map(inv => {
+        const have = hasInvention(inv.id);
+        return `<div class="tech${have ? ' done' : ''}"><b>${have ? '✓ ' : ''}${inv.icon} ${inv.name}</b><span>${inv.text}</span>
+          ${have ? (inv.id === 'feuerwerk' ? '<button class="btn" data-fire="1">🎆 Feuerwerk zünden</button>' : '')
+            : `<button class="btn" data-invent="${inv.id}" data-sci="${inv.cost}" ${state.science < inv.cost ? 'disabled' : ''}>Erfinden · 💡 ${fmt(inv.cost)}</button>`}</div>`;
+      }).join('')}</div>` : '<p class="muted">🔒 Baue eine Universität – dann kannst du erfinden.</p>');
   } else {
     const groups = [...new Set(DESIGN.map(d => d.group))], master = hasBuilt('kunst');
     body = `
@@ -884,6 +900,8 @@ function openResearch(tab = researchTab) {
     <h2>🔬 Forschung</h2>
     <div class="looks hall-tabs">
       <button class="look${tab === 'wissen' ? ' on' : ''}" data-rtab="wissen">📚 Wissen</button>
+      <button class="look${tab === 'stufen' ? ' on' : ''}" data-rtab="stufen">📈 Stufen</button>
+      <button class="look${tab === 'erfindung' ? ' on' : ''}" data-rtab="erfindung">💡 Erfindungen</button>
       <button class="look${tab === 'design' ? ' on' : ''}" data-rtab="design">🎨 Kunstakademie</button>
     </div>
     ${body}
@@ -891,6 +909,9 @@ function openResearch(tab = researchTab) {
   $('modal-card').classList.add('research');
   for (const b of document.querySelectorAll('[data-rtab]')) b.onclick = () => { sfx('deco'); openResearch(b.dataset.rtab); };
   for (const b of document.querySelectorAll('[data-tech]')) b.onclick = () => research(b.dataset.tech);
+  for (const b of document.querySelectorAll('[data-mastery]')) b.onclick = () => { if (studyMastery(b.dataset.mastery)) openResearch('stufen'); };
+  for (const b of document.querySelectorAll('[data-invent]')) b.onclick = () => { if (invent(b.dataset.invent)) openResearch('erfindung'); };
+  for (const b of document.querySelectorAll('[data-fire]')) b.onclick = () => { closeModal(); startFireworks(); };
   for (const b of document.querySelectorAll('[data-design]')) b.onclick = () => { if (buyDesign(b.dataset.design)) openResearch('design'); };
   $('m-close').onclick = closeModal;
 }
@@ -966,6 +987,7 @@ function openTownHall(tab = hallTab) {
         <button class="btn ghost small" data-quick-go="diary">📖 Tagebuch</button>
         <button class="btn ghost small" data-quick-go="album">📒 Album</button>
         <button class="btn ghost small" data-quick-go="tips">💡 Tipps</button>
+        ${hasInvention('feuerwerk') ? '<button class="btn ghost small" data-quick-go="fire">🎆 Feuerwerk</button>' : ''}
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
@@ -1066,7 +1088,8 @@ function openTownHall(tab = hallTab) {
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
     const q = b.dataset.quickGo;
-    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else if (q === 'album') openAlbum(); else openResearch(q);
+    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else if (q === 'album') openAlbum();
+    else if (q === 'fire') { closeModal(); startFireworks(); } else openResearch(q);
   };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);

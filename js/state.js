@@ -27,6 +27,8 @@ function newState() {
     islands: new Set(['home']),
     claimed: new Set(),        // einzelne Meerfelder, die man sich per Aufschütten oder Brücke genommen hat
     tipsSeen: new Set(),       // gezeigte Tipps (GUIDE)
+    mastery: {},               // Stufen-Forschung: id → Stufe
+    inventions: new Set(),     // Erfindungen (für Ideen)
     stats: { earned: 0 },      // für Erfolge: insgesamt verdiente Taler
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
     album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
@@ -75,7 +77,7 @@ function serialize() {
     game: 'kachelhausen', v: 9, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -167,6 +169,7 @@ function parseSave(d) {
     islands: new Set(d.islands || ['home']),
     claimed: new Set(d.claimed || []),
     tipsSeen: new Set(d.tipsSeen || []), tipsOff: !!d.tipsOff,
+    mastery: { ...(d.mastery || {}) }, inventions: new Set(d.inventions || []),
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie

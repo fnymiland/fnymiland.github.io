@@ -503,6 +503,8 @@ function render(now) {
   archWalkers.clear();
   if (staleCover) recalc();
 
+  drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
+
   // 5) Nacht
   if (night > 0) {
     g.fillStyle = `rgba(25,35,85,${night})`;
@@ -516,6 +518,8 @@ function render(now) {
       g.globalAlpha = 1;
     }
   }
+
+  drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
 
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
@@ -604,4 +608,129 @@ function confettiBurst() {
     confetti.push({ x: Math.random() * W, y: -20 - Math.random() * H * 0.4, vx: (Math.random() - 0.5) * 200,
       vy: Math.random() * 120, r: Math.random() * 6, vr: (Math.random() - 0.5) * 12, col: cols[i % cols.length], life: 5 });
   }
+}
+
+// ---------------------------------------------------------------------------
+// Himmel: Erfindungen (Heißluftballons, Zeppelin, Seilbahn-Gondeln) und das Feuerwerk über dem Rathaus
+// ---------------------------------------------------------------------------
+let skyCache = { v: -1, center: null, cables: [] };
+function skyInfo() {
+  if (skyCache.v === groundVersion) return skyCache;
+  let center = null;
+  const stations = [];
+  for (const [k, t] of state.tiles) {
+    if (t.b === 'rathaus' && !center) { const [x, y] = keyXY(k); center = [x + 0.5, y + 0.5]; }
+    if (t.b === 'seilbahn') stations.push(keyXY(k));
+  }
+  // Seilbahn: jede Station mit der nächsten freien (bis 20 Felder), paarweise
+  const cables = [], used = new Set();
+  const pairs = [];
+  stations.forEach((a, i) => stations.forEach((b, j) => { if (j > i) { const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (d <= SEIL_MAX) pairs.push([d, i, j]); } }));
+  pairs.sort((p, q) => p[0] - q[0]);
+  for (const [d, i, j] of pairs) if (!used.has(i) && !used.has(j)) { used.add(i); used.add(j); cables.push([stations[i], stations[j], d]); }
+  skyCache = { v: groundVersion, center: center || [ISLAND.cx, ISLAND.cy], cables };
+  return skyCache;
+}
+const SEIL_MAX = 20, SEIL_H = 30;
+const BALLOONS = [
+  { r: 7, sp: 1 / 52000, ph: 0, h: 150, col: ['#e8604f', '#ffd36e'] }, { r: 11, sp: -1 / 70000, ph: 2, h: 195, col: ['#6f8fd8', '#ffffff'] },
+  { r: 5, sp: 1 / 45000, ph: 4, h: 120, col: ['#58b36a', '#f7c6d8'] }, { r: 14, sp: 1 / 90000, ph: 5.3, h: 230, col: ['#b07ad6', '#ffd36e'] },
+];
+function drawBalloon(b, cx, cy, z, now) {
+  const a = b.ph + now * b.sp * Math.PI * 2, p = toScreen(cx + Math.cos(a) * b.r, cy + Math.sin(a) * b.r * 0.8);
+  const x = p.x, y = p.y - b.h * z + Math.sin(now / 1300 + b.ph) * 4 * z, R = 13 * z;
+  if (x < -60 || x > W + 60 || y < -80 || y > H + 60) return;
+  ellipse(p.x, p.y, 7 * z, 3 * z, 'rgba(40,60,20,0.08)');                    // Schatten weit unten
+  poly([[x - R * 0.72, y + R * 0.7], [x + R * 0.72, y + R * 0.7], [x + R * 0.26, y + R * 1.38], [x - R * 0.26, y + R * 1.38]], C(shade(b.col[0], -0.12)));
+  ellipse(x, y, R, R * 1.1, C(b.col[0]));
+  ellipse(x, y, R * 0.42, R * 1.1, C(b.col[1]));
+  ellipse(x - R * 0.35, y - R * 0.45, R * 0.22, R * 0.3, 'rgba(255,255,255,0.35)');
+  g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.7 * z; g.beginPath();
+  g.moveTo(x - R * 0.26, y + R * 1.38); g.lineTo(x - R * 0.2, y + R * 1.75); g.moveTo(x + R * 0.26, y + R * 1.38); g.lineTo(x + R * 0.2, y + R * 1.75); g.stroke();
+  poly([[x - R * 0.24, y + R * 1.75], [x + R * 0.24, y + R * 1.75], [x + R * 0.2, y + R * 2.05], [x - R * 0.2, y + R * 2.05]], C('#a57645'));
+  if (night > 0.15 && isLive()) {                                             // Brenner leuchtet
+    const f = 1 + Math.sin(now / 90 + b.ph) * 0.2;
+    ellipse(x, y + R * 1.5, 2 * z * f, 3 * z * f, '#ffb347');
+    glowQuad([[x - 2, y + R * 1.3], [x + 2, y + R * 1.3], [x + 2, y + R * 1.7], [x - 2, y + R * 1.7]], 30 * z);
+  }
+}
+function drawZeppelin(cx, cy, z, now) {
+  const a = now / 150000 * Math.PI * 2, wx = cx + Math.cos(a) * 20, wy = cy + Math.sin(a) * 16;
+  const p = toScreen(wx, wy), q = toScreen(cx + Math.cos(a + 0.01) * 20, cy + Math.sin(a + 0.01) * 16), dir = q.x >= p.x ? 1 : -1;
+  const x = p.x, y = p.y - 270 * z + Math.sin(now / 2000) * 5 * z, L = 34 * z, R = 10 * z;
+  if (x < -120 || x > W + 120 || y < -60 || y > H + 60) return;
+  ellipse(p.x, p.y, 20 * z, 6 * z, 'rgba(40,60,20,0.07)');
+  for (const s of [-1, 1]) poly([[x - dir * L * 0.8, y], [x - dir * L * 1.05, y + s * R * 1.1], [x - dir * L * 0.95, y + s * R * 1.15], [x - dir * L * 0.62, y + s * R * 0.2]], C('#c9c2b4'));   // Leitwerk
+  ellipse(x, y, L, R, C('#efe9dc'));
+  g.save(); g.beginPath(); g.ellipse(x, y, L, R, 0, 0, Math.PI * 2); g.clip();
+  g.fillStyle = C(state.town.color); g.fillRect(x - L * 0.18, y - R, L * 0.36, R * 2);            // Band in Flaggenfarbe
+  g.restore();
+  ellipse(x - dir * L * 0.3, y - R * 0.45, L * 0.45, R * 0.28, 'rgba(255,255,255,0.35)');
+  poly([[x - L * 0.22, y + R * 0.9], [x + L * 0.22, y + R * 0.9], [x + L * 0.16, y + R * 1.45], [x - L * 0.16, y + R * 1.45]], C('#8a6440'));   // Gondel
+  const lit = night > 0.15 && isLive();
+  for (let i = 0; i < 3; i++) circle(x - L * 0.12 + i * L * 0.12, y + R * 1.18, 1.2 * z, lit ? '#ffd873' : C('#bfe3ff'));
+  if (lit) glowQuad([[x - L * 0.2, y + R], [x + L * 0.2, y + R], [x + L * 0.2, y + R * 1.4], [x - L * 0.2, y + R * 1.4]], 24 * z);
+  g.font = `${9 * z}px system-ui, sans-serif`; g.textBaseline = 'middle'; g.fillStyle = '#fff';
+  centerText(state.town.symbol, x, y + 0.5 * z);
+}
+function drawCables(cables, z, now) {
+  for (const [a, b, d] of cables) {
+    const pa = toScreen(a[0], a[1]), pb = toScreen(b[0], b[1]);
+    const A = [pa.x, pa.y - SEIL_H * z], B = [pb.x, pb.y - SEIL_H * z], M = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2 + d * 1.2 * z];   // leicht durchhängend
+    const at = t => [(1 - t) * (1 - t) * A[0] + 2 * (1 - t) * t * M[0] + t * t * B[0], (1 - t) * (1 - t) * A[1] + 2 * (1 - t) * t * M[1] + t * t * B[1]];
+    g.strokeStyle = C('#4f545e'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(...A); g.quadraticCurveTo(...M, ...B); g.stroke();
+    const f = (Math.sin(now / (900 * d / 4 + 1500)) + 1) / 2;
+    [[f, '#e8604f'], [1 - f, '#6f8fd8']].forEach(([t, col]) => {
+      const [gx, gy] = at(0.06 + t * 0.88);
+      g.strokeStyle = C('#4f545e'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(gx, gy); g.lineTo(gx, gy + 4 * z); g.stroke();
+      poly([[gx - 4 * z, gy + 4 * z], [gx + 4 * z, gy + 4 * z], [gx + 3.4 * z, gy + 11 * z], [gx - 3.4 * z, gy + 11 * z]], C(col));
+      poly([[gx - 2.8 * z, gy + 5.5 * z], [gx + 2.8 * z, gy + 5.5 * z], [gx + 2.5 * z, gy + 8 * z], [gx - 2.5 * z, gy + 8 * z]], night > 0.15 && isLive() ? '#ffd873' : C('#e6f4ff'));
+    });
+  }
+}
+function drawSky(now, z) {
+  const inv = state.inventions;
+  if (!inv || !inv.size) return;
+  const { center: [cx, cy], cables } = skyInfo();
+  if (cables.length) drawCables(cables, z, now);
+  if (inv.has('ballon')) for (const b of BALLOONS) drawBalloon(b, cx, cy, z, now);
+  if (inv.has('zeppelin')) drawZeppelin(cx, cy, z, now);
+}
+// Feuerwerk: ein paar Dutzend Raketen über dem Rathaus, jede steigt auf und zerplatzt in bunten Funken
+let fireworksUntil = 0, lastFire = 0;
+const bursts = [];
+function startFireworks() { fireworksUntil = performance.now() + 22000; sfx('star'); toast('🎆 Feuerwerk!'); }
+const FIRE_COLS = ['#ff6b8a', '#ffd36e', '#8fe3ff', '#b6ff9e', '#d9a8ff', '#ffffff', '#ff9f5a'];
+function drawFireworks(now, z) {
+  if (now < fireworksUntil && now - lastFire > 350 + Math.random() * 500) {
+    lastFire = now;
+    const [cx, cy] = skyInfo().center;
+    bursts.push({ x: cx + (Math.random() - 0.5) * 10, y: cy + (Math.random() - 0.5) * 10, h: 150 + Math.random() * 130, t0: now,
+      col: FIRE_COLS[Math.floor(Math.random() * FIRE_COLS.length)], col2: FIRE_COLS[Math.floor(Math.random() * FIRE_COLS.length)], n: 28 + Math.floor(Math.random() * 16), R: 60 + Math.random() * 50 });
+  }
+  if (!bursts.length) return;
+  g.save();
+  if (night > 0.15) g.globalCompositeOperation = 'lighter';
+  for (let i = bursts.length - 1; i >= 0; i--) {
+    const b = bursts[i], age = (now - b.t0) / 2200;
+    if (age >= 1) { bursts.splice(i, 1); continue; }
+    const p = toScreen(b.x, b.y), top = p.y - b.h * z;
+    if (age < 0.28) {                                                          // Rakete steigt
+      const k = age / 0.28, ry = p.y - (b.h * z) * k;
+      circle(p.x, ry, 1.6 * z, '#fff3b0');
+      g.strokeStyle = 'rgba(255,230,160,0.6)'; g.lineWidth = 1 * z; g.beginPath(); g.moveTo(p.x, ry); g.lineTo(p.x, ry + 10 * z); g.stroke();
+      continue;
+    }
+    const k = (age - 0.28) / 0.72, ease = 1 - Math.pow(1 - k, 3), fall = k * k * 26 * z;
+    if (k < 0.15) { g.globalAlpha = (0.15 - k) / 0.15 * 0.5; circle(p.x, top, b.R * 0.5 * z, b.col); }   // Aufblitzen
+    g.globalAlpha = Math.max(0, 1 - k);
+    for (let j = 0; j < b.n; j++) {
+      const an = j / b.n * Math.PI * 2, r = ease * b.R * z, px = p.x + Math.cos(an) * r, py = top + Math.sin(an) * r * 0.85 + fall;
+      circle(px, py, (2.6 - k * 1.8) * z + 0.5, j % 2 ? b.col : b.col2);
+      const r2 = r * 0.82;                                                    // kurzer Schweif nach innen
+      circle(p.x + Math.cos(an) * r2, top + Math.sin(an) * r2 * 0.85 + fall * 0.9, (1.4 - k) * z + 0.3, j % 2 ? b.col : b.col2);
+    }
+    g.globalAlpha = 1;
+  }
+  g.restore();
 }
