@@ -57,3 +57,48 @@ describe('Kristall als Rohstoff', () => {
     expect(game("BUILD_STAGES.kristallmine.names.length")).toBe(3);
   });
 });
+
+describe('Kristall- und Glas-Dekos', () => {
+  const NEW = ['kristall', 'kristallaterne', 'glaskugel', 'kristallbrunnen', 'glashaus'];
+
+  it('alle brauchen Kristall 💎 und kommen nach und nach mit den Laternen der Kristallhöhle', () => {
+    for (const id of NEW) expect(game(`ITEMS.${id}.mat.kristall`)).toBeGreaterThan(0);
+    game('state.restore.kristall = 1');
+    expect(game("['kristall', 'kristallaterne', 'glaskugel', 'kristallbrunnen', 'glashaus'].map(available)")).toEqual([true, false, false, false, false]);
+    game('state.restore.kristall = 2');
+    expect(game("['kristallaterne', 'glaskugel', 'kristallbrunnen'].map(available)")).toEqual([true, true, false]);
+    game('state.restore.kristall = 3');
+    expect(game("['kristallbrunnen', 'glashaus'].map(available)")).toEqual([true, true]);
+  });
+
+  it('Kristall-Laterne und Glaskugel sind klein – mit Bank und Baum auf einem Feld', () => {
+    game("state.restore.kristall = 2; for (let y = 3; y <= 9; y++) for (let x = 6; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } recalc()");
+    expect(game("buildSmall('kristallaterne', 7, 7, 0)")).toBe(true);
+    expect(game("buildSmall('glaskugel', 7, 7, 1)")).toBe(true);
+    expect(game("buildSmall('baum', 7, 7, 2)")).toBe(true);
+    expect(game('state.res.kristall')).toBe(99 - 2);
+  });
+
+  it('Kristallbrunnen belegt ein Feld, das Glashaus zwei', () => {
+    game("state.restore.kristall = 3; for (let y = 3; y <= 9; y++) for (let x = 6; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } recalc()");
+    expect(game("build('kristallbrunnen', 7, 4, true)")).toBe(true);
+    expect(game("smallError('blumentopf', 7, 4, 0)")).toBe('Hier ist kein Platz für Deko');
+    expect(game("sizeOf('glashaus', 0)")).toEqual([1, 2]);
+    expect(game("build('glashaus', 7, 7, true)")).toBe(true);
+  });
+
+  it('die Schaltet-frei-Liste der Kristallhöhle nennt sie', () => {
+    const names = game("LM_STAGES.kristall.map(st => st.unlock.map(unlockName).join(', '))");
+    expect(names[0]).toMatch(/Kristallmine/);
+    expect(names[1]).toMatch(/Kristall-Laterne/);
+    expect(names[2]).toMatch(/Kristallbrunnen/);
+  });
+
+  it('zeichnen geht ohne Fehler, tags und nachts', () => {
+    for (const n of [0, 0.8]) {
+      game(`night = ${n}`);
+      for (const id of NEW) expect(() => game(`drawObject('${id}', 100, 100, 1, 1000, 3, 3, 1, { rot: 0, slot: 1 })`)).not.toThrow();
+    }
+    game('night = 0');
+  });
+});

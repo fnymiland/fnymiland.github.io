@@ -289,7 +289,7 @@ function slotAt(sx, sy) {
   const x = Math.round(a), y = Math.round(b);
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
-const BIG_ON_TILE = new Set(['brunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'lm']);
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'lm']);
 function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';

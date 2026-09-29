@@ -593,11 +593,11 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 }
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
 const MIRROR = new Set(['bank']);
-const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'haus', 'muehle', 'steinmetz', 'schmiede',
+const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { bank: 0.45, laterne: 0.62, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
+const DECO_SCALE = { bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
 const decoScale = b => DECO_SCALE[b] || 1;
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
@@ -723,6 +723,52 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       const lit = night > 0.15 && isLive();
       const lb = box(cx, cy - 22 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : '#fff7d6', '#4a4a58', 3 * z);
       glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
+      break;
+    }
+    case 'kristallaterne': {              // silberner Pfahl, oben ein Kristall als Lampe
+      ellipse(cx, cy + 1 * z, 4 * z, 2 * z, 'rgba(40,50,70,0.16)');
+      g.strokeStyle = C('#c3cad3'); g.lineWidth = 1.8 * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 19 * z); g.stroke();
+      ellipse(cx, cy - 19 * z, 4.2 * z, 1.9 * z, C('#aeb7c2'));          // Fassung
+      ellipse(cx, cy - 19.8 * z, 3.6 * z, 1.5 * z, C('#e8edf2'));
+      crystal(cx - 2 * z, cy - 19.5 * z, z, 6 * z, 1.7 * z, -0.25);
+      crystal(cx + 2.2 * z, cy - 19.3 * z, z, 5.5 * z, 1.6 * z, 0.25);
+      crystal(cx, cy - 18.8 * z, z, 11 * z, 2.9 * z, 0.03);
+      glowQuad([[cx - 3 * z, cy - 32 * z], [cx + 3 * z, cy - 32 * z], [cx + 3 * z, cy - 20 * z], [cx - 3 * z, cy - 20 * z]], 40 * z, 'blue');
+      break;
+    }
+    case 'glaskugel': {                   // Sockel mit schillernder Kugel; der Glanzpunkt wandert langsam
+      ellipse(cx, cy + 1 * z, 6 * z, 2.6 * z, 'rgba(40,50,70,0.16)');
+      box(cx, cy, 3.2 * z, 1.7 * z, 7 * z, '#ebe5da', '#d8d0c2', 0);
+      ellipse(cx, cy - 7 * z, 4.4 * z, 2.2 * z, C('#f6f1e8'));
+      const r = 6.5 * z, ky = cy - 7 * z - r * 0.85, sh = Math.sin(now / 1600) * 0.25;
+      const grd = g.createRadialGradient(cx - r * (0.35 + sh * 0.3), ky - r * 0.4, r * 0.1, cx, ky, r);
+      grd.addColorStop(0, C('#ffffff')); grd.addColorStop(0.35, C('#d9ccfa')); grd.addColorStop(0.7, C('#9fd0f3')); grd.addColorStop(1, C('#8fd3bf'));
+      g.fillStyle = grd; g.beginPath(); g.arc(cx, ky, r, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 0.9 * z;
+      g.beginPath(); g.arc(cx, ky, r * 0.72, Math.PI * 0.15 + sh, Math.PI * 0.55 + sh); g.stroke();
+      ellipse(cx - r * (0.35 + sh * 0.3), ky - r * 0.42, 1.6 * z, 1.1 * z, 'rgba(255,255,255,0.9)');
+      glowQuad([[cx - 3 * z, ky - 3 * z], [cx + 3 * z, ky - 3 * z], [cx + 3 * z, ky + 3 * z], [cx - 3 * z, ky + 3 * z]], 20 * z, 'blue');
+      break;
+    }
+    case 'kristallbrunnen': {             // Becken mit hellem Wasser, in der Mitte wachsen Kristalle; Funkeln
+      ellipse(cx, cy, hw * 0.72, hh * 0.72, C('#b9c3cf'));
+      ellipse(cx, cy - 3 * z, hw * 0.72, hh * 0.72, C('#e3e8ef'));
+      ellipse(cx, cy - 3 * z, hw * 0.57, hh * 0.57, C('#9fdcf7'));
+      ellipse(cx - 5 * z, cy - 4.5 * z, hw * 0.2, hh * 0.12, 'rgba(255,255,255,0.45)');
+      crystal(cx - 5 * z, cy - 2 * z, z, 9 * z, 2.4 * z, -0.28);
+      crystal(cx + 5.5 * z, cy - 1.5 * z, z, 8 * z, 2.3 * z, 0.3);
+      crystal(cx, cy - 1 * z, z, 17 * z, 3.4 * z, 0.04);
+      for (let i = 0; i < 5; i++) {                      // kleine Sterne, die nacheinander aufblitzen
+        const ph = (now / 1300 + i / 5) % 1, a = ph < 0.5 ? Math.sin(ph * 2 * Math.PI) : 0;
+        if (a <= 0.05) continue;
+        const sx = cx + (hash(x, y, 150 + i) - 0.5) * hw * 0.9, sy = cy - 3 * z + (hash(x, y, 160 + i) - 0.5) * hh * 0.7 - hash(x, y, 170 + i) * 16 * z;
+        const s = 2.2 * z * a;
+        g.fillStyle = `rgba(255,255,255,${a})`;
+        g.beginPath(); g.moveTo(sx, sy - s); g.lineTo(sx + s * 0.3, sy); g.lineTo(sx, sy + s); g.lineTo(sx - s * 0.3, sy); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
+      }
+      glowQuad([[cx - 4 * z, cy - 18 * z], [cx + 4 * z, cy - 18 * z], [cx + 4 * z, cy - 2 * z], [cx - 4 * z, cy - 2 * z]], 46 * z, 'blue');
       break;
     }
     case 'brunnen': {

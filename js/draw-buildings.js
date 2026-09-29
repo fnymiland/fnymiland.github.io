@@ -303,6 +303,66 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
+  // Glashaus: weißes Gerippe, Glaswände mit Pflanzen dahinter, Satteldach aus Glas; abends warmes Licht innen
+  glashaus(K, s, now, x, y, t) {
+    const z = K.z;
+    if (groundPart(() => K.rect(-0.46, -0.94, 0.46, 0.94, C('#e7e1d4')))) return;
+    const house = () => {
+      kShadow(K, 0.5);
+      K.block({ ha: 0.36, hb: 0.8, h: 3, wall: '#dcd5c8', type: 'flat', roof: '#efeae0' });
+      const lit = night > 0.15 && isLive();
+      const B = K.block({ ha: 0.34, hb: 0.78, h: 16, lift: 3, wall: lit ? '#ffe7a8' : '#cbecf8', type: 'none' });
+      for (const [side, F] of Object.entries(B.faces)) {
+        if (!F) continue;
+        // Pflanzen hinter dem Glas
+        for (let i = 0; i < 6; i++) {
+          const m = lerp(F.P, F.Q, (i + 0.5) / 6), hh = hash(x + i, y, side.length) * 5 * z;
+          circle(m[0], m[1] - 5 * z - hh, (3.2 + hash(x, y + i, 7) * 1.6) * z, lit ? 'rgba(96,120,58,0.75)' : C(i % 2 ? '#7cc08a' : '#96d09a'));
+          if (i % 3 === 1) circle(m[0] + 1.5 * z, m[1] - 8 * z - hh, 1.3 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
+        }
+        // Spiegelung: schräge helle Streifen
+        g.fillStyle = 'rgba(255,255,255,0.35)';
+        for (const t0 of [0.18, 0.62]) {
+          const a0 = lerp(F.P, F.Q, t0), a1 = lerp(F.P, F.Q, t0 + 0.08), b0 = lerp(F.P, F.Q, t0 + 0.14), b1 = lerp(F.P, F.Q, t0 + 0.22);
+          g.beginPath(); g.moveTo(a0[0], a0[1] - 2 * z); g.lineTo(a1[0], a1[1] - 2 * z); g.lineTo(b1[0], b1[1] - F.H + 2 * z); g.lineTo(b0[0], b0[1] - F.H + 2 * z); g.closePath(); g.fill();
+        }
+        // weißes Gerippe
+        g.strokeStyle = C('#ffffff'); g.lineWidth = 1.1 * z; g.lineCap = 'round';
+        g.beginPath();
+        const n = side === 'front' || side === 'back' ? 3 : 6;
+        for (let i = 0; i <= n; i++) { const m = lerp(F.P, F.Q, i / n); g.moveTo(m[0], m[1]); g.lineTo(m[0], m[1] - F.H); }
+        g.moveTo(F.P[0], F.P[1] - F.H * 0.55); g.lineTo(F.Q[0], F.Q[1] - F.H * 0.55);
+        g.moveTo(F.P[0], F.P[1] - F.H); g.lineTo(F.Q[0], F.Q[1] - F.H);
+        g.stroke();
+        if (lit) {                        // sanftes Licht aus der Mitte der Scheibe, damit Gerippe und Pflanzen sichtbar bleiben
+          const m0 = lerp(F.P, F.Q, 0.12), m1 = lerp(F.P, F.Q, 0.88);
+          glowQuad([[m0[0], m0[1] - F.H * 0.2], [m1[0], m1[1] - F.H * 0.2], [m1[0], m1[1] - F.H * 0.8], [m0[0], m0[1] - F.H * 0.8]], 15 * z);
+        }
+      }
+      K.door(B, 'front', 0.44, 0.56, 0.72, '#ffffff');
+      // Glasdach selbst zeichnen: Glas bleibt auch auf der Schattenseite hell (sonst sähe es aus wie Blech)
+      const ea = 0.36, eb = 0.8, top = 19, rh = 12, R1 = K.P(0, -eb, top + rh), R2 = K.P(0, eb, top + rh);
+      const glass = (na, nb) => { const [u, v] = K.turn(na, nb); return C(lit ? '#fff0c4' : u > 0.5 ? '#b9dcee' : v < -0.5 ? '#cdeaf6' : '#e6f6fc'); };
+      const rafters = sa => {
+        g.strokeStyle = C('#ffffff'); g.lineWidth = 1.2 * z;
+        g.beginPath();
+        for (let i = 0; i <= 5; i++) { const b = -eb + i * eb * 0.4, p = K.P(0, b, top + rh), q = K.P(sa * ea, b, top); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+        g.moveTo(R1[0], R1[1]); g.lineTo(R2[0], R2[1]);
+        g.stroke();
+      };
+      const slopes = [1, -1].sort((p, q) => K.facing(p, 0) - K.facing(q, 0));
+      const slope = sa => { poly([K.P(sa * ea, -eb, top), K.P(sa * ea, eb, top), R2, R1], glass(sa, 0)); rafters(sa); };
+      slope(slopes[0]);
+      for (const sb of [1, -1]) if (K.facing(0, sb) > 0.01) {        // Giebeldreieck an der sichtbaren Stirnseite
+        const p = K.P(0.34, sb * 0.78, top), q = K.P(-0.34, sb * 0.78, top), r = K.P(0, sb * 0.78, top + rh);
+        poly([p, q, r], lit ? C('#ffe7a8') : K.wallCol('#cbecf8', [0, sb]));
+        g.strokeStyle = C('#ffffff'); g.lineWidth = 1.1 * z;
+        g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(r[0], r[1]); g.lineTo(q[0], q[1]); const m = lerp(p, q, 0.5); g.moveTo(m[0], m[1]); g.lineTo(r[0], r[1]); g.stroke();
+      }
+      slope(slopes[1]);
+    };
+    K.scene([[0, 0, house], [0.46, -0.6, () => kitBush(K, 0.46, -0.62, 0.7, '#6fbf6a')], [0.46, 0.6, () => kitBush(K, 0.46, 0.62, 0.7, '#e89bb5')]]);
+  },
   // Kristallmine: bläulicher Felshügel mit Kristallen, Stollen, Lore voller Kristalle;
   // Stufe 2 eine Kristall-Laterne und ein Schuppen, Stufe 3 die Schleiferei mit Glasdach
   kristallmine(K, s, now, x, y, t) {
