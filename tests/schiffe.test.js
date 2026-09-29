@@ -220,6 +220,20 @@ describe('Aufträge am Handelshafen', () => {
     expect(game(`fulfillOrder('b', '${x},${y}')`)).toBe(false);          // nicht genug Erz
   });
 
+  it('im Hafen-Fenster: „Liefern“ und „Kaufen“ antippen führt den Auftrag aus', () => {
+    const [x, y] = harbor(2);
+    game(`state.res.erz = 1000; state.orders = [{ id: 'a', kind: 'sell', res: 'erz', amount: 800, pay: 9600, prem: 1.5, until: Date.now() + 60000 },
+      { id: 'b', kind: 'buy', res: 'holz', amount: 100, pay: 500, until: Date.now() + 60000 }]`);
+    const m = game('state.money'), h = game('state.res.holz');
+    game(`openInfo(${x}, ${y})`);
+    document.querySelector('#panel [data-order="a"]').click();
+    expect(game('state.res.erz')).toBe(200);
+    expect(game('state.money')).toBe(m + 9600);
+    document.querySelector('#panel [data-order="b"]').click();               // Fenster ist neu gezeichnet: Knopf neu suchen
+    expect(game('state.res.holz')).toBe(h + 100);
+    expect(game('state.orders.length')).toBe(0);
+  });
+
   it('Angebote nur für Waren, deren Betrieb man bauen kann (kein Kristall vor der Kristallinsel)', () => {
     harbor(2);
     game('for (const r of Object.keys(RES)) state.res[r] = 0; state.orders = []');

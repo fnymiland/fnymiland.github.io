@@ -97,6 +97,20 @@ function shopHouse(K, { wall, roof, awning = null, roofType = 'hip', h = 20, roo
   if (!F) K.sideWins(B, 2, 0.12, 0.4);
   return B;
 }
+// Kleines Ausleger-Schild (Block 34): hängt an der Hausecke, die man sieht (in jeder Drehung), runde Tafel mit
+// Mini-Symbol. draw(cx, cy, z) zeichnet das Symbol mittig bei (cx, cy) – es soll in einen Kreis mit Radius ≈ 4 × z passen.
+// col: Rand/Halter in der Markenfarbe. Rückgabe: ein Teil für K.scene (nach dem Haus einsortieren).
+function hangSign(K, draw, col, { up = 16, a0 = 0.3, b0 = 0.42, back = -0.44 } = {}) {
+  const [sa, sb] = [[a0, b0], [a0, -b0], [back, b0], [back, -b0]].reduce((p, q) => K.depth(...q) > K.depth(...p) ? q : p);
+  return [sa, sb, () => {
+    const [x, y] = K.P(sa, sb, up), z = K.z;
+    kLine(K, [x, y - 5.4 * z], [x, y - 8 * z], '#6b4f3a', 0.8);
+    kLine(K, [x - 3 * z, y - 8 * z], [x + 3 * z, y - 8 * z], '#6b4f3a', 0.9);            // kleiner Querbalken
+    circle(x, y, 5.4 * z, C(col));
+    circle(x, y, 4.5 * z, C('#fffaf0'));
+    draw(x, y, z);
+  }];
+}
 // Aufrechter Text (Schriftzug, Buchstaben) mittig bei (x, y) – Größe in px × z
 function kText(x, y, text, size, col, z, weight = 900) {
   g.font = `${weight} ${Math.max(1, size * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';

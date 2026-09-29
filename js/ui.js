@@ -755,6 +755,7 @@ function openInfo(x, y) {
   for (const b of el.querySelectorAll('[data-shipto]')) b.onclick = () => { shipPick.to = b.dataset.shipto; openInfo(x, y); };
   if (el.querySelector('[data-shipbuy]')) el.querySelector('[data-shipbuy]').onclick = () => { if (buyShip(x + ',' + y, shipPick.model, shipPick.to)) openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-shipsell]')) b.onclick = () => { if (sellShip(x + ',' + y, +b.dataset.shipsell)) openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-order]')) b.onclick = () => { if (fulfillOrder(b.dataset.order, x + ',' + y)) openInfo(x, y); };   // Aufträge
 
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   if ($('p-rename')) $('p-rename').onclick = () => {
