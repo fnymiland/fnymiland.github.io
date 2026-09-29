@@ -347,3 +347,42 @@ function earn(dt) {
   state.money += got;
   state.stats.earned += got;
 }
+
+// ---------------------------------------------------------------------------
+// Sammelalbum: sechs Seiten mit allem, was es gibt. Gesammelt wird, was auf der Insel steht (bleibt gesammelt).
+// Eine volle Seite schaltet eine Belohnung frei, die es nur so gibt (ITEMS[].album bzw. STYLES[].album).
+// ---------------------------------------------------------------------------
+const ALBUM = [
+  { id: 'gebaeude', icon: '🏗️', name: 'Gebäude', reward: 'denkmal' },
+  { id: 'deko', icon: '🌸', name: 'Deko', reward: 'rosenbogen' },
+  { id: 'haeuser', icon: '🏠', name: 'Hausformen', reward: 'uhrturm' },
+  { id: 'farben', icon: '🎨', name: 'Farben', reward: 'weg:regenbogen' },
+  { id: 'wege', icon: '🛤️', name: 'Wegstile', reward: 'weg:goldpflaster' },
+  { id: 'bewohner', icon: '🐾', name: 'Bewohner', reward: 'karussell' },
+];
+const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank);
+function albumKeys(p) {
+  switch (p.id) {
+    case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
+    case 'deko': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'deko' && !isRewardItem(id)).map(id => 'b:' + id);
+    case 'haeuser': return HOUSE_STAGES.map((_, i) => 'hs:' + (i + 1));
+    case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i));
+    case 'wege': return STYLES.weg.filter(st => !st.album).map(st => 'weg:' + st.id);
+    case 'bewohner': return ANIMALS.map(a => 'tier:' + a.id);
+    default: return [];
+  }
+}
+const albumDone = id => { const p = ALBUM.find(q => q.id === id); return !!p && !!state.album && albumKeys(p).every(k => state.album.has(k)); };
+const rewardName = r => r.startsWith('weg:') ? styleDef('weg', r.slice(4)).name : ITEMS[r].name;
+function collectAlbum() {
+  if (!state.album) state.album = new Set();
+  const add = k => state.album.add(k);
+  for (const t of state.tiles.values()) {
+    if (ITEMS[t.b] && ITEMS[t.b].cat) add('b:' + t.b);
+    if (t.b === 'haus') { add('hs:' + t.lvl); if (t.animal) add('tier:' + t.animal); }
+    if (t.wall != null) add('wall:' + t.wall);
+    if (t.roof != null) add('roof:' + t.roof);
+    if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
+  }
+  for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + d.b);
+}

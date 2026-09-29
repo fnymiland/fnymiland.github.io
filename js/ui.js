@@ -22,7 +22,7 @@ function toast(msg) {
   toastTimer = setTimeout(() => { el.hidden = true; }, 2800);
 }
 
-function thumb(type) {
+function thumb(type, lvl = 1, tile = null) {
   const c = document.createElement('canvas');
   c.width = 112; c.height = 88;
   const prev = g; g = c.getContext('2d'); FOG = false;
@@ -48,7 +48,7 @@ function thumb(type) {
   } else {
     const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
-    drawObject(type, cx, cy, z, 0, 3, 7, 1, null);
+    drawObject(type, cx, cy, z, 0, 3, 7, lvl, tile);
   }
   g = prev;
   return c;
@@ -224,7 +224,7 @@ function resetUnlockWatch() { unlockSeen = null; pendingUnlocks.length = 0; }
 function unlockKeys() {
   const out = new Set();
   for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
-  for (const st of STYLES.weg) if (st.lm && styleOk(st)) out.add('weg:' + st.id);
+  for (const st of STYLES.weg) if ((st.lm || st.album) && styleOk(st)) out.add('weg:' + st.id);
   for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
   return out;
 }
@@ -305,6 +305,34 @@ function watchTips() {
   $('m-ok').onclick = closeModal;
   $('m-tipbook').onclick = openTipBook;
   $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr – im Tipp-Buch wieder einschaltbar'); };
+}
+// Sammelalbum: Seiten mit Fortschritt; Fehlendes grau, damit man sieht, was noch fehlt
+function openAlbum() {
+  collectAlbum();
+  const all = ALBUM.flatMap(albumKeys), got = all.filter(k => state.album.has(k)).length;
+  const entry = k => {
+    const [kind, id] = k.split(':');
+    let pic, name;
+    if (kind === 'b') { name = ITEMS[id].name; pic = `<span data-thumb="${id}"></span>`; }
+    else if (kind === 'hs') { name = HOUSE_STAGES[+id - 1].name; pic = `<span data-hthumb="${id}"></span>`; }
+    else if (kind === 'wall' || kind === 'roof') { name = kind === 'wall' ? 'Wand' : 'Dach'; pic = `<i class="al-sw" style="background:${(kind === 'wall' ? WALLS : ROOFS)[+id]}"></i>`; }
+    else if (kind === 'weg') { const st = styleDef('weg', id); name = st.name; pic = `<i class="al-sw" style="background:${st.col}"></i>`; }
+    else { const a = ANIMALS.find(q => q.id === id); name = a.family; pic = `<span class="emoji">${a.icon}</span>`; }
+    return `<div class="al-e${state.album.has(k) ? '' : ' miss'}" title="${name}">${pic}<small>${name}</small></div>`;
+  };
+  openModal(`
+    <h2>📒 Sammelalbum · ${Math.floor(got / all.length * 100)} %</h2>
+    ${ALBUM.map(p => {
+      const ks = albumKeys(p), n = ks.filter(k => state.album.has(k)).length, done = n === ks.length;
+      return `<div class="album-page${done ? ' done' : ''}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
+        <div class="al-grid">${ks.map(entry).join('')}</div>
+        <p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ' – freigeschaltet!' : ''}</p></div>`;
+    }).join('')}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+  $('modal-card').classList.add('album');
+  for (const el of document.querySelectorAll('#modal-card [data-thumb]')) el.append(thumb(el.dataset.thumb));
+  for (const el of document.querySelectorAll('#modal-card [data-hthumb]')) el.append(thumb('haus', +el.dataset.hthumb, { lvl: +el.dataset.hthumb, wall: 1, roof: 0 }));
+  $('m-close').onclick = closeModal;
 }
 function openTipBook() {
   openModal(`
@@ -802,6 +830,7 @@ function openTownHall(tab = hallTab) {
         <button class="btn ghost small" data-quick-go="wissen">🔬 Forschung</button>
         <button class="btn ghost small" data-quick-go="design">🎨 Kunstakademie</button>
         <button class="btn ghost small" data-quick-go="diary">📖 Tagebuch</button>
+        <button class="btn ghost small" data-quick-go="album">📒 Album</button>
         <button class="btn ghost small" data-quick-go="tips">💡 Tipps</button>
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>
@@ -901,7 +930,7 @@ function openTownHall(tab = hallTab) {
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
     const q = b.dataset.quickGo;
-    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else openResearch(q);
+    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else if (q === 'album') openAlbum(); else openResearch(q);
   };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);
@@ -962,7 +991,8 @@ function showMenu() {
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
       <button class="btn ghost" style="flex:1" id="m-import">📂 Spielstand laden</button>
@@ -972,6 +1002,7 @@ function showMenu() {
   $('m-help').onclick = () => showIntro(false);
   $('m-tips').onclick = openTipBook;
   $('m-achv').onclick = () => openTownHall('erfolge');
+  $('m-album').onclick = openAlbum;
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
   $('m-close').onclick = closeModal;

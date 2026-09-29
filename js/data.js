@@ -94,6 +94,11 @@ const ITEMS = {
   pokal_bronze: { cat: 'deko', name: 'Bronze-Pokal', cost: 0, beauty: 6, small: true, rank: 5, desc: 'Für die Ehrennadel in Bronze (5 ⭐ Erfolge).' },
   pokal_silber: { cat: 'deko', name: 'Silber-Pokal', cost: 0, beauty: 10, small: true, rank: 15, desc: 'Für die Ehrennadel in Silber (15 ⭐ Erfolge).' },
   pokal_gold: { cat: 'deko', name: 'Gold-Pokal', cost: 0, beauty: 16, small: true, rank: 30, desc: 'Für die Ehrennadel in Gold (30 ⭐ Erfolge). Funkelt.' },
+  // Belohnungen fürs Sammelalbum (album = Seite, die voll sein muss)
+  denkmal:    { cat: 'deko', name: 'Baumeister-Denkmal', cost: 0, needs: 'grass', beauty: 40, album: 'gebaeude', desc: 'Für die volle Album-Seite „Gebäude“.' },
+  rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
+  uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
+  karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
   windrad: { cat: 'deko', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind.' },
   pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, design: 600, master: true, desc: 'Für Konzerte im Park.' },
   statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, design: 900, master: true, desc: 'Glänzt golden.' },
@@ -207,7 +212,7 @@ const MENU = [
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
-    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'leuchtturm'] },
+    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'windrad'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'verschieben', 'abriss'] },
 ];
@@ -279,6 +284,10 @@ const ITEM_TIPS = {
   statue: 'Große Deko mit sehr viel Schönheit.',
   graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Ziehen = mehrere.',
   pokal_bronze: 'Deine erste Ehrennadel! Stell den Pokal vors Rathaus – kostet nichts.',
+  denkmal: 'Alle Gebäude einmal gebaut! Ein Denkmal für dich – kostet nichts.',
+  rosenbogen: 'Alle Deko einmal aufgestellt! Der Rosenbogen passt über jeden Weg – kostet nichts.',
+  uhrturm: 'Alle Hausformen erreicht! Der Uhrturm gehört auf den Marktplatz – kostet nichts.',
+  karussell: 'Alle Bewohner-Arten wohnen bei dir! Das Karussell dreht sich – kostet nichts.',
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.',
@@ -434,6 +443,8 @@ const STYLES = {
     { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', design: 350, master: true },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
+    { id: 'regenbogen', name: 'Regenbogenweg', col: '#f7c6d8', shape: 'band', album: 'farben' },
+    { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'fill', album: 'wege' },
   ],
 };
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];

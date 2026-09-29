@@ -29,6 +29,7 @@ function newState() {
     tipsSeen: new Set(),       // gezeigte Tipps (GUIDE)
     stats: { earned: 0 },      // für Erfolge: insgesamt verdiente Taler
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
+    album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
     tipsOff: false,
     tiles: new Map(),
     terra: new Map(),
@@ -72,7 +73,7 @@ function serialize() {
     game: 'kachelhausen', v: 8, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, stats: state.stats, achieved: state.achieved, tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -155,7 +156,7 @@ function parseSave(d) {
     islands: new Set(d.islands || ['home']),
     claimed: new Set(d.claimed || []),
     tipsSeen: new Set(d.tipsSeen || []), tipsOff: !!d.tipsOff,
-    stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) },
+    stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     decos: new Map(d.decos || []),
@@ -226,6 +227,7 @@ function adoptState(s) {
   delete state.fitLm;
   nameHouses();
   recalc();
+  collectAlbum();
   checkAchievements(true);                         // schon Erreichtes still zählen
   if (moved) setTimeout(() => announceIslands(moved), 300);
   buildToolbar();

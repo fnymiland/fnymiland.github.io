@@ -136,7 +136,7 @@ function frame(now) {
   state.science += T.sci * dt;
   produce(dt);
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); checkAchievements(); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

@@ -147,6 +147,14 @@ function pattern(L, kind, x, y, z, col, cols) {
     }
     return;
   }
+  if (kind === 'rainbow') {                // schräge Streifen in Regenbogenfarben (pastell)
+    const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1;
+    for (let i = -14; i <= 14; i++) {
+      const c0 = i * w;
+      poly([[c0 + R, -R], [c0 + w * 0.8 + R, -R], [c0 + w * 0.8 - R, R], [c0 - R, R]].map(L), C(RB[(i + 60) % RB.length]));
+    }
+    return;
+  }
   if (kind === 'confetti') {
     // kleine, zufällig gedrehte Papierstreifen – je Farbe ein Pfad, das spart Zeichenaufrufe
     const bits = cols.map(() => []);
@@ -203,6 +211,7 @@ const PATH_LOOK = {
   mulch:   { edge: '#6f4a2e', fill: '#8b5e3c', pat: ['dots', null], cols: ['#6f4a2e', '#a0714d'] },
   asphalt: { edge: '#cfc8bb', fill: '#9e988e', dash: true },
   holz:    { edge: '#9c7449', fill: '#c89a6a', pat: ['planks', '#a97d52'] },
+  regenbogen: { edge: '#ecd3de', fill: '#fff7fb', pat: ['rainbow', null] },
   konfetti: { edge: '#e8d8cf', fill: '#fbf4ec', pat: ['confetti', null], cols: ['#f2a7c0', '#8fd3bf', '#b9a3ee', '#ffd36e', '#8fc1f0', '#f7b58a'] },
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
@@ -214,6 +223,7 @@ const PATH_LOOK = {
   terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
   schach:     { fill: '#f5dce6', checker: '#dcefe6' },
   fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
+  goldpflaster: { fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
 };
 const pathAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return t && t.b === 'weg' ? styleDef('weg', t.style) : null; };
 const isFillPath = (x, y) => { const s = pathAt(x, y); return !!s && s.shape === 'fill'; };
@@ -830,7 +840,7 @@ const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine'
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
+const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
 const decoScale = b => DECO_SCALE[b] || 1;
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
@@ -961,6 +971,74 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       const lit = night > 0.15 && isLive();
       const lb = box(cx, cy - 22 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : '#fff7d6', '#4a4a58', 3 * z);
       glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
+      break;
+    }
+    case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel
+      ellipse(cx, cy + 1 * z, 16 * z, 7 * z, 'rgba(40,40,40,0.15)');
+      box(cx, cy, hw * 0.42, hh * 0.42, 6 * z, '#d8d2c4', '#c2baa8', 0);
+      box(cx, cy - 6 * z, hw * 0.3, hh * 0.3, 4 * z, '#e8e3d6', '#cfc8b7', 0);
+      const b = box(cx, cy - 10 * z, hw * 0.16, hh * 0.16, 26 * z, '#efeae0', '#d6cfbf', 0);
+      const top = cy - 36 * z;
+      poly([[b.L[0], b.L[1] - 26 * z], [b.B[0], b.B[1] - 26 * z], [cx, top - 8 * z]], C('#f2c14e'));
+      poly([[b.B[0], b.B[1] - 26 * z], [b.R[0], b.R[1] - 26 * z], [cx, top - 8 * z]], C('#c9962b'));
+      faceQuad(b.L, b.B, 0.25, 0.75, 8 * z, 14 * z, C('#c9962b'));
+      glowQuad([[cx - 2, top - 8 * z], [cx + 2, top - 8 * z], [cx + 2, top - 4 * z], [cx - 2, top - 4 * z]], 18 * z);
+      break;
+    }
+    case 'rosenbogen': {                     // Bogen mit Rosen
+      ellipse(cx, cy + 1 * z, 9 * z, 3 * z, 'rgba(40,60,20,0.15)');
+      g.strokeStyle = C('#ffffff'); g.lineWidth = 1.6 * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(cx - 7 * z, cy); g.lineTo(cx - 7 * z, cy - 13 * z); g.arc(cx, cy - 13 * z, 7 * z, Math.PI, 0); g.lineTo(cx + 7 * z, cy); g.stroke();
+      for (let i = 0; i < 14; i++) {
+        const a = Math.PI + i / 13 * Math.PI, r = 7 * z, px = cx + Math.cos(a) * r, py = cy - 13 * z + Math.sin(a) * r;
+        circle(px, py, 1.9 * z, C(i % 2 ? '#5aa84f' : '#6fbf5f'));
+        if (i % 2 === 0) circle(px + 0.6 * z, py - 0.4 * z, 1.3 * z, C(i % 4 ? '#f28cb1' : '#e8604f'));
+      }
+      for (const sx of [-7, 7]) for (let j = 0; j < 3; j++) circle(cx + sx * z, cy - (3 + j * 4) * z, 1.7 * z, C(j % 2 ? '#f28cb1' : '#5aa84f'));
+      break;
+    }
+    case 'uhrturm': {                        // schlanker Turm mit Uhr und spitzem Dach
+      const K = kit(cx, cy, z, t && t.rot);
+      kShadow(K, 0.25);
+      const B = K.block({ ha: 0.15, hb: 0.15, h: 40, wall: '#f3e1c4', roof: '#6f8fd8', roofH: 16, over: 1.2 });
+      for (const F of Object.values(B.faces)) if (F) {
+        const m = lerp(F.P, F.Q, 0.5), yc = m[1] - F.H * 0.8;
+        circle(m[0], yc, 3.4 * z, C('#ffffff'));
+        g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.7 * z;
+        const an = (now / 60000) * Math.PI * 2;
+        g.beginPath(); g.arc(m[0], yc, 3.4 * z, 0, Math.PI * 2); g.moveTo(m[0], yc); g.lineTo(m[0] + Math.sin(an) * 2.6 * z, yc - Math.cos(an) * 2.6 * z);
+        g.moveTo(m[0], yc); g.lineTo(m[0], yc - 1.8 * z); g.stroke();
+        faceQuad(F.P, F.Q, 0.35, 0.65, 0, F.H * 0.25, C('#8a5a3c'));
+      }
+      const [px, py] = K.P(0, 0, 40 + 16);
+      circle(px, py, 1.4 * z, C('#f2c14e'));
+      break;
+    }
+    case 'karussell': {                      // runder Boden, Mittelstange, gestreiftes Zeltdach, Pferdchen drehen sich
+      const rx = hw * 0.62, ry = hh * 0.62, H = 16 * z, rot = now / 1500;
+      ellipse(cx, cy + 1 * z, rx + 2 * z, ry + 1 * z, 'rgba(40,40,40,0.15)');
+      ellipse(cx, cy, rx, ry, C('#c9a26f'));
+      ellipse(cx, cy - 1.5 * z, rx, ry, C('#f3e1c4'));
+      const seats = [];
+      for (let i = 0; i < 6; i++) { const a = rot + i / 6 * Math.PI * 2; seats.push([cx + Math.cos(a) * rx * 0.72, cy - 1.5 * z + Math.sin(a) * ry * 0.72, i]); }
+      const drawSeat = ([sx, sy, i]) => {
+        const bob = Math.sin(now / 300 + i) * 1.5 * z;
+        g.strokeStyle = C('#d6b35a'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(sx, sy - H); g.lineTo(sx, sy); g.stroke();
+        ellipse(sx, sy - 6 * z + bob, 3 * z, 1.8 * z, C(['#ffffff', '#f7c6d8', '#bfe3ff'][i % 3]));
+        circle(sx + 2.4 * z, sy - 7.6 * z + bob, 1.3 * z, C(['#ffffff', '#f7c6d8', '#bfe3ff'][i % 3]));
+      };
+      seats.filter(p => p[1] < cy - 1.5 * z).forEach(drawSeat);          // hintere Sitze
+      g.fillStyle = C('#d6b35a'); g.fillRect(cx - 1.2 * z, cy - H - 2 * z, 2.4 * z, H + 1 * z);
+      seats.filter(p => p[1] >= cy - 1.5 * z).forEach(drawSeat);         // vordere Sitze
+      const top = cy - H - 12 * z;
+      for (let i = 0; i < 12; i++) {                                       // Zeltdach in Streifen
+        const a0 = i / 12 * Math.PI * 2 + rot * 0.2, a1 = (i + 1) / 12 * Math.PI * 2 + rot * 0.2;
+        if (Math.sin((a0 + a1) / 2) < -0.2) continue;
+        poly([[cx, top], [cx + Math.cos(a0) * rx * 1.08, cy - H + Math.sin(a0) * ry * 1.08], [cx + Math.cos(a1) * rx * 1.08, cy - H + Math.sin(a1) * ry * 1.08]],
+          C(i % 2 ? '#e8604f' : '#fffaf0'));
+      }
+      circle(cx, top - 1 * z, 1.6 * z, C('#f2c14e'));
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; glowQuad([[cx + Math.cos(a) * rx - 1, cy - H + Math.sin(a) * ry - 1], [cx + Math.cos(a) * rx + 1, cy - H + Math.sin(a) * ry - 1], [cx + Math.cos(a) * rx + 1, cy - H + Math.sin(a) * ry + 1], [cx + Math.cos(a) * rx - 1, cy - H + Math.sin(a) * ry + 1]], 8 * z); }
       break;
     }
     case 'pokal_bronze': drawTrophy(cx, cy, z, now, ['#c98a4b', '#e3ad76', '#9a6534']); break;
