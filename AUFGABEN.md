@@ -206,4 +206,4 @@ angetippte Gebäude sichtbar bleibt. **iPad und Desktop bleiben unverändert** �
 - [x] **16c** Kopf und Hinweis kompakt: Zielkasten nur eine Zeile, Hinweis nur Name + Preis.
 - [x] **16d** Infofenster als untere Hälfte mit Griff (antippen = ganz hoch); Karte rückt das Gebäude ins Bild.
 - [x] **16e** Querformat: Leiste flach, Katalog halbhoch, Infofenster rechts.
-- [ ] **16f** Feinschliff: alle Fenster, Schilder, Drehknopf, Stil-Leiste, Lager bei 375×812 und 812×375 nachsehen.
+- [x] **16f** Feinschliff: alle Fenster, Schilder, Drehknopf, Stil-Leiste, Lager bei 375×812 und 812×375 nachsehen.

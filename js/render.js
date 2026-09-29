@@ -30,9 +30,13 @@ function clockNow() {
   return d;
 }
 
-function pill(text, x, y, bg, fg, size) {
+// fit: im Bild halten (Vorschau-Schild) – notfalls kleiner, dann seitlich hineinrücken
+function pill(text, x, y, bg, fg, size, fit) {
   g.font = `900 ${size}px Nunito, system-ui, sans-serif`;
-  const w = g.measureText(text).width + size * 1.2, h = size * 1.7;
+  let w = g.measureText(text).width + size * 1.2;
+  while (fit && w > W - 16 && size > 9) { size--; g.font = `900 ${size}px Nunito, system-ui, sans-serif`; w = g.measureText(text).width + size * 1.2; }
+  if (fit) x = Math.max(w / 2 + 8, Math.min(W - w / 2 - 8, x));
+  const h = size * 1.7;
   g.fillStyle = 'rgba(107,79,58,0.25)';
   g.beginPath(); g.roundRect(x - w / 2, y - h / 2 + 3, w, h, h / 2); g.fill();
   g.fillStyle = bg;
@@ -638,7 +642,7 @@ function render(now) {
 
   // 8) Vorschau-Text
   if (preview) pill(preview.text, preview.p.x, preview.p.y - 44 * z, preview.ok ? '#eaffea' : '#ffe9e7',
-    preview.ok ? '#2f7f36' : '#c0392b', 13);
+    preview.ok ? '#2f7f36' : '#c0392b', 13, true);
 
   // 9) Konfetti
   for (let i = confetti.length - 1; i >= 0; i--) {

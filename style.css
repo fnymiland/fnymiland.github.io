@@ -547,3 +547,4 @@ body.phone:not(.phone-land) #panel.tall { max-height: calc(100dvh - var(--bar, 5
 body.phone.phone-land #panel { left: auto; right: 8px; width: min(360px, 48vw); bottom: calc(var(--bar, 57px) + 8px);
   max-height: calc(100dvh - var(--bar, 57px) - 64px); padding: 12px 16px 14px; }
 body.phone.phone-land #panel .grip { display: none; }          /* quer ist das Fenster schon so hoch wie möglich */
+body.phone #rot-btn { bottom: calc(var(--bar, 57px) + 10px); }    /* neben dem Hinweis, direkt über der Leiste */
