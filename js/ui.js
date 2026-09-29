@@ -804,8 +804,8 @@ function shipsHtml(k, t) {
   const ships = t.ships || [], berths = berthsOf(t), targets = shipTargets(k);
   let html = `<div class="label">⛴️ Schiffe · ${ships.length} von ${berths} Liegeplätzen${(t.lvl || 1) < 3 ? ` (Stufe ${(t.lvl || 1) + 1}: ${BERTHS[t.lvl || 1]})` : ''}</div>`;
   if (ships.length) html += `<div class="ships">${ships.map((s, i) => { const m = shipModel(s);
-    return `<div class="hall-row"><span>${m.icon} ${m.name} → ${state.tiles.get(s.to) ? landingName(s.to) : '<span class="bad">Ziel fehlt</span>'} <small class="muted">${shipSeats(s)}/min</small></span>
-      <button class="btn ghost small" data-shipsell="${i}">Verkaufen · +${costText(m.buy)}</button></div>`; }).join('')}</div>`;
+    return `<div class="hall-row"><span>${m.icon} <b>${m.name}</b><br><small class="muted">→ ${state.tiles.get(s.to) ? landingName(s.to) : 'Ziel fehlt'} · ${shipSeats(s)}/min</small></span>
+      <button class="btn ghost small" data-shipsell="${i}" title="Verkaufen: ${costText(m.buy)} zurück">Verkaufen · +🪙 ${fmt(m.buy.money)}</button></div>`; }).join('')}</div>`;
   for (const f of ferriesAt(k)) html += `<div class="status"><div class="ok">⛴️ ${f.regions.map(regionName).join(' ↔ ')} · ${f.ships.length} ${f.ships.length === 1 ? 'Schiff' : 'Schiffe'}</div>${trafficStatus(f, f.traffic).join('')}</div>`;
   if (!targets.length) return html + '<p class="muted">Bau einen Steg (oder Hafen) auf einer anderen Insel – dort legen deine Schiffe an und bringen Pendler und Besucher.</p>';
   if (ships.length >= berths) return html + `<p class="muted">Alle Liegeplätze belegt${(t.lvl || 1) < 3 ? ' – ausbauen bringt mehr' : ''}. Mehr Fahrgäste schafft auch ein schnelleres Modell (Forschung → 🚢 Verkehr).</p>`;
