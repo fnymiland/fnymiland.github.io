@@ -40,6 +40,9 @@ function thumb(type) {
   } else if (type === 'weg') {
     block(1, '#96d56f');
     drawPath(cx, cy, z, 1e6, 1e6, { style: currentStyle('weg') });
+  } else if (type === 'schiene') {
+    block(1, '#96d56f');
+    drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
   } else {
     const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
@@ -512,8 +515,9 @@ function openResearch(tab = researchTab) {
         return `<div class="tech-cat${open ? '' : ' closed'}"><h4>Stufe ${tier} · ${TECH_TIERS[tier].name}${open ? '' : ' 🔒'}</h4>
           ${open ? '' : `<p class="muted">Baue eine ${TECH_TIERS[tier].name}, um hier zu forschen.</p>`}
           ${TECHS.filter(t => t.tier === tier).map(t => {
-            const done = hasTech(t.id), ready = techReady(t), reqOk = (t.req || []).every(hasTech);
-            const need = !reqOk && !done ? `<span class="muted">braucht ${t.req.map(r => TECH_BY_ID[r].name).join(', ')}</span>` : '';
+            const done = hasTech(t.id), ready = techReady(t), reqOk = (t.req || []).every(hasTech), lmOk = techLmOk(t);
+            const needs = [...(reqOk ? [] : t.req.map(r => TECH_BY_ID[r].name)), ...(lmOk ? [] : [unlockText({ lm: t.lm })])];
+            const need = needs.length && !done ? `<span class="muted">braucht ${needs.join(', ')}</span>` : '';
             return `<div class="tech${done ? ' done' : ''}${!ready && !done ? ' locked' : ''}">
               <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
               ${ready ? `<button class="btn" data-tech="${t.id}" data-sci="${t.cost}" ${state.science < t.cost ? 'disabled' : ''}>Erforschen · 💡 ${t.cost}</button>` : ''}

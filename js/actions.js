@@ -25,14 +25,21 @@ function build(b, x, y, quiet) {
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
-  const d = ITEMS[b], k = x + ',' + y;
-  state.money -= d.cost;
-  payMat(d.mat);
+  const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water';
+  state.money -= c.cost;
+  payMat(c.mat);
   if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) claimTile(x, y);
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); sfx('dig'); }
-  else if (b === 'schuett') { state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig'); }
-  else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
+  else if (b === 'schuett') {
+    state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig');
+    const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück
+    if (rt && rt.bridge) {
+      delete rt.bridge;
+      state.money += BRIDGE.cost - ITEMS.schiene.cost;
+      for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
+    }
+  } else {
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}) });
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
       assignResident(t, Math.random, Math.random);

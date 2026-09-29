@@ -322,6 +322,109 @@ function drawStones(L, arms, t, x, y, z) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Schienen: Schotterbett, Schwellen, zwei Stahlschienen; über Wasser eine Holzbrücke. Fahrdraht und Masten
+// (elektrischer Zug) kommen als Objekt dazu (drawObject 'schiene').
+// ---------------------------------------------------------------------------
+const RAIL_W = 0.2, RAIL_GAUGE = 0.075, WIRE_H = 17;
+// Mittellinien einer Schiene als Punktfolgen im Feld (Kurve als Bogen, sonst gerade Stücke von der Mitte)
+function railSegments(arms, t) {
+  const curve = roadCurve(arms);
+  if (curve) return [arcPts(curve.cu, curve.cv, 0.5, curve.a0, curve.a1, 10)];
+  if (!arms.length) { const d = (t && t.rot & 1) ? [0, 1] : [1, 0]; return [[[-d[0] * 0.36, -d[1] * 0.36], [d[0] * 0.36, d[1] * 0.36]]]; }
+  const [a, b] = arms;
+  if (arms.length === 2 && a[0] === -b[0] && a[1] === -b[1]) return [[[b[0] * 0.5, b[1] * 0.5], [a[0] * 0.5, a[1] * 0.5]]];
+  return arms.map(([dx, dy]) => [[0, 0], [dx * 0.5, dy * 0.5]]);
+}
+// Punkte entlang einer Folge im Abstand step (ab step/2) mit Richtung – für Schwellen
+function alongPath(pts, step, fn) {
+  let carry = step / 2;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [a, b] = [pts[i], pts[i + 1]], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (!len) continue;
+    const dir = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+    for (let d = carry; d < len; d += step) fn([a[0] + dir[0] * d, a[1] + dir[1] * d], dir);
+    carry = (carry - len) % step; if (carry < 0) carry += step;
+  }
+}
+// dieselbe Folge seitlich versetzt (für die beiden Schienen)
+function offsetPath(pts, off) {
+  return pts.map((p, i) => {
+    const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    return [p[0] - (b[1] - a[1]) / len * off, p[1] + (b[0] - a[0]) / len * off];
+  });
+}
+function drawRailBed(cx, cy, z, x, y, t) {
+  const arms = railArms(x, y), segs = railSegments(arms, t);
+  const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
+  const stroke = (paths, col, w) => {
+    g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.beginPath();
+    for (const p of paths) p.forEach((q, i) => { const s = L(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
+    g.stroke();
+  };
+  if (t && t.bridge) {                               // Holzbrücke: Pfähle ins Wasser, Deck, Geländer
+    g.fillStyle = C('#6f5238');
+    alongPath(segs[0], 0.5, (p, dir) => {
+      for (const s of [1, -1]) {
+        const q = L([p[0] - dir[1] * 0.27 * s, p[1] + dir[0] * 0.27 * s]);
+        g.fillRect(q[0] - 1.2 * z, q[1] - 1 * z, 2.4 * z, 7 * z);
+      }
+    });
+    for (const sh of roadShapes(arms, t, 0.3)) poly(sh.map(L), C('#8a6440'));
+    for (const sh of roadShapes(arms, t, 0.27)) poly(sh.map(L), C('#b08a5e'));
+  }
+  for (const sh of roadShapes(arms, t, RAIL_W + 0.03)) poly(sh.map(L), C(t && t.bridge ? '#9a8f80' : '#a79d8c'));
+  for (const sh of roadShapes(arms, t, RAIL_W)) poly(sh.map(L), C('#c3b9a8'));
+  // Schwellen
+  g.strokeStyle = C('#8a6440'); g.lineWidth = 1.7 * z; g.lineCap = 'butt';
+  g.beginPath();
+  for (const seg of segs) alongPath(seg, 0.125, (p, dir) => {
+    const n = [-dir[1] * 0.15, dir[0] * 0.15], a = L([p[0] + n[0], p[1] + n[1]]), b = L([p[0] - n[0], p[1] - n[1]]);
+    g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+  });
+  g.stroke();
+  // Schienen: dunkel, darauf ein heller Glanz
+  const rails = segs.flatMap(seg => [offsetPath(seg, RAIL_GAUGE), offsetPath(seg, -RAIL_GAUGE)]);
+  stroke(rails, '#6f7682', 1.3);
+  g.save(); g.translate(0, -0.45 * z); stroke(rails, '#d6dbe2', 0.5); g.restore();
+  if (arms.length === 1) {                           // Prellbock am Ende
+    const [dx, dy] = arms[0], n = [-dy * 0.17, dx * 0.17], a = L([-dx * 0.02 + n[0], -dy * 0.02 + n[1]]), b = L([-dx * 0.02 - n[0], -dy * 0.02 - n[1]]);
+    g.strokeStyle = C('#d9534a'); g.lineWidth = 2.6 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(a[0], a[1] - 1.5 * z); g.lineTo(b[0], b[1] - 1.5 * z); g.stroke();
+    g.strokeStyle = C('#ffffff'); g.lineWidth = 1 * z;
+    g.beginPath(); g.moveTo(...lerp(a, b, 0.35)); g.lineTo(...lerp(a, b, 0.65)); g.stroke();
+  }
+  if (t && t.bridge) {                               // Geländer an den Seiten, wo kein Nachbar-Gleis anschließt
+    g.strokeStyle = C('#6f5238'); g.lineWidth = 0.9 * z;
+    g.beginPath();
+    for (const seg of segs) for (const s of [1, -1]) {
+      const side = offsetPath(seg, 0.29 * s).map(q => { const p = L(q); return [p[0], p[1] - 3 * z]; });
+      side.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    }
+    g.stroke();
+  }
+}
+const drawFlat = (cx, cy, z, x, y, t) => t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t);
+// Fahrdraht über der Schiene, auf jedem zweiten Feld ein Mast seitlich
+function drawRailWire(cx, cy, z, x, y, t) {
+  const segs = railSegments(railArms(x, y), t);
+  const L = ([u, v], up = 0) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
+  if ((x + y) % 2 === 0) {
+    const seg = segs[0], m = seg[Math.floor(seg.length / 2)], a = seg[Math.max(0, Math.floor(seg.length / 2) - 1)], b = seg[Math.min(seg.length - 1, Math.floor(seg.length / 2) + 1)];
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, n = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
+    const side = n[0] + n[1] > 0 ? -1 : 1;             // Mast auf die hintere Seite, damit er den Zug nicht verdeckt
+    const foot = L([m[0] + n[0] * 0.3 * side, m[1] + n[1] * 0.3 * side]), top = [foot[0], foot[1] - (WIRE_H + 3) * z], hook = L(m, WIRE_H + 1);
+    ellipse(foot[0], foot[1] + 0.4 * z, 1.8 * z, 0.9 * z, 'rgba(40,60,20,0.18)');
+    g.strokeStyle = C('#8d939e'); g.lineWidth = 1.3 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(foot[0], foot[1]); g.lineTo(top[0], top[1]); g.lineTo(hook[0], hook[1]); g.stroke();
+  }
+  g.strokeStyle = C('#4f545e'); g.lineWidth = 0.6 * z;
+  g.beginPath();
+  for (const seg of segs) seg.forEach((p, i) => { const q = L(p, WIRE_H); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+  g.stroke();
+}
+
 function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
@@ -717,6 +820,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     // --- Bildung ---
     // --- Deko ---
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
+    case 'schiene': if (PASS === 'object') drawRailWire(cx, cy, z, x, y, t); else { drawRailBed(cx, cy, z, x, y, t); drawRailWire(cx, cy, z, x, y, t); } break;
     case 'baum': {                        // Obstbaum; je Ecke eine andere Frucht, damit vier Bäume nicht gleich aussehen
       const h = hash(x, y, 40 + (t && t.slot || 0));
       tree(cx, cy + 2 * z, z * 1.05, 0.9, h < 0.4 ? '#ff6b5e' : h < 0.7 ? '#ffb13b' : h < 0.85 ? '#b07ad6' : '#ff8fb1');

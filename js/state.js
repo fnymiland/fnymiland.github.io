@@ -47,6 +47,7 @@ function tileOut(t) {
   if (t.animal) { o.animal = t.animal; o.name = t.name; }
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
+  if (t.bridge) o.bridge = true;
   return o;
 }
 function serialize() {

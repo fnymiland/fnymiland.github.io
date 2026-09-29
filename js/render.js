@@ -62,7 +62,7 @@ function chunkBounds(cx, cy) {
   const top = (x0 + y0) * TH / 2 - TH / 2 - 2, bottom = (x1 + y1) * TH / 2 + TH / 2 + DEPTH + 4;
   return { left, top, w: right - left, h: bottom - top };
 }
-const cachedPath = t => t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id].glow;
+const cachedPath = t => t.b === 'schiene' || (t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id].glow);
 
 // Schlagschatten: Die Sonne steht links, jedes Gebäude wirft einen weichen Schatten nach rechts
 // (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
@@ -171,7 +171,7 @@ function renderGroundChunk(cx, cy, scale) {
     const j = s - i;
     if (j < 0 || j >= CHUNK) continue;
     const x = cx * CHUNK + i, y = cy * CHUNK + j, t = state.tiles.get(x + ',' + y);
-    if (t && cachedPath(t)) { const p = iso(x, y); drawPath(p.x, p.y, 1, x, y, t); }
+    if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
   }
   drawShadows(near);
   g.restore();
@@ -295,9 +295,9 @@ function render(now) {
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
   for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1], t = state.tiles.get(x + ',' + y);
-    if (!t || t.b !== 'weg' || (groundCached && cachedPath(t))) continue;
+    if (!t || (t.b !== 'weg' && t.b !== 'schiene') || (groundCached && cachedPath(t))) continue;
     FOG = !ownedTile(x, y);
-    drawPath(visible[i + 2], visible[i + 3], z, x, y, t);
+    drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
   }
   FOG = false;
   if (!groundCached) {
@@ -359,6 +359,7 @@ function render(now) {
       if (!err) {
         if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(d.cost)}`;
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
+        else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
           const pv = previewDelta(tool, hx, hy), parts = [];
           if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
@@ -372,7 +373,7 @@ function render(now) {
           text = parts.join('  ') || d.name;
         }
       }
-      const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && terrainAt(fx, fy) !== 'water');
+      const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
     }
     preview.p = outline(box[0], box[1], box[2], box[3], preview.ok);

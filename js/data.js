@@ -56,6 +56,11 @@ const ITEMS = {
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
              desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Klinkerplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
+  schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
+             desc: 'Für den elektrischen Zug. Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2). Ziehen = mehrere legen.' },
+  // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
+  station: { cat: 'netz', name: 'Bahnhof', size: [1, 2], cost: 800, mat: { bretter: 10, quader: 6, metall: 4 }, needs: 'grass', tech: 'bahn',
+             desc: 'Braucht Schienen direkt am Bahnsteig. Zwei verbundene Bahnhöfe auf verschiedenen Inseln: Pendler und +10 % für beide.' },
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
@@ -316,6 +321,7 @@ const TECHS = [
   { id: 'tiefbau', tier: 2, name: 'Tiefbau', cost: 150, desc: 'Steinbrüche auch auf Wiesen – sie graben nach Stein.' },
   { id: 'kunst', tier: 2, name: 'Kunstschule', cost: 80, desc: 'Kunstakademien machen die Umgebung 50 % schöner.' },
   { id: 'uni', tier: 2, name: 'Universität', cost: 200, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
+  { id: 'bahn', tier: 2, name: 'Eisenbahn', cost: 250, lm: 'erzberg:1', desc: 'Schienen, Brücken und Bahnhöfe: elektrische Züge zwischen deinen Inseln. Strom kommt von Windrädern.' },
   { id: 'dampf', tier: 3, name: 'Dampfkraft', cost: 350, req: ['industrie'], desc: 'Werkstätten bringen 50 % mehr.' },
   { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf alle Einnahmen.' },
   { id: 'bohrung', tier: 3, name: 'Tiefbohrung', cost: 300, req: ['tiefbau'], desc: 'Bergwerke überall, nicht nur auf Erzadern.' },

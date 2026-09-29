@@ -68,7 +68,7 @@ const WALK_REACH = 4, FAR_EFF = 0.5;
 const VIERTEL_STEPS = [[15, 0.3], [8, 0.2], [3, 0.1]];
 const LM_RADIUS = 10, LM_BOOST = 0.15;
 const needsReach = b => b === 'lm' || !!ITEMS[b].workers;
-const countsForViertel = b => b !== 'weg';
+const countsForViertel = b => b !== 'weg' && b !== 'schiene';
 
 function unionFind() {
   const parent = new Map();
@@ -87,7 +87,8 @@ function unionFind() {
 // Wege verbinden so auch weit entfernte Orte mit dem Dorf.
 function computeNet() {
   const uf = unionFind();
-  const occupied = new Set([...COVER.keys(), ...state.decos.keys()]);
+  // Schienen verbinden keine Viertel: verbundene Inseln bleiben eigene Orte (der Zug bringt Pendler und Bonus)
+  const occupied = new Set([...[...COVER].filter(([, a]) => (state.tiles.get(a) || {}).b !== 'schiene').map(([k]) => k), ...state.decos.keys()]);
   for (const k of occupied) {
     uf.add(k);
     const [x, y] = keyXY(k);
@@ -266,7 +267,9 @@ const colorOk = (kind, i) => i < FREE_COLORS || state.design.has(kind + ':' + i)
 const colorsOf = kind => (kind === 'wall' ? WALLS : ROOFS).map((c, i) => [c, i]).filter(([, i]) => colorOk(kind, i));
 // Forschung: Stufe n braucht das passende Gebäude (Schule, Bibliothek, Universität)
 const tierOpen = tier => hasBuilt(TECH_TIERS[tier].b);
-const techReady = t => !hasTech(t.id) && tierOpen(t.tier) && (t.req || []).every(hasTech);
+// t.lm: Forschung, die erst eine Sehenswürdigkeit möglich macht (Eisenbahn: Erzinsel)
+const techLmOk = t => !t.lm || lmStage(t.lm.split(':')[0]) >= +t.lm.split(':')[1];
+const techReady = t => !hasTech(t.id) && tierOpen(t.tier) && (t.req || []).every(hasTech) && techLmOk(t);
 // Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
   if (!d || state.design.has(d.id) || !d.price) return 'Schon da';
@@ -402,6 +405,10 @@ function placeRot(b, x, y) {
   return autoRot(b, x, y, buildRot);
 }
 
+// Schienen über Wasser sind Brücken und kosten mehr
+const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
+const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
+const railArms = (x, y) => DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'schiene' || b === 'station'; });
 // Forschung, mit der ein Rohstoff-Betrieb auch außerhalb seines Geländes gebaut werden darf
 const ANYWHERE = { forest: { tech: 'forst' }, obst: { tech: 'agrar' }, rock: { tech: 'tiefbau' }, erz: { tech: 'bohrung' } };
 // Passt das Objekt mit Anker (x, y) hierhin? opts.move: beim Verschieben zählen Kosten und Einwohner nicht
@@ -421,9 +428,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     const tiles = footprint(b, x, y, r);
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, ter = terrainAt(fx, fy);
-      if (!ownedTile(fx, fy)) return 'Das ist nicht dein Grundstück';
+      const rail = b === 'schiene';               // Schienen dürfen übers Wasser (Brücke), auch ins offene Meer
+      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : 'Das ist nicht dein Grundstück';
       if (COVER.has(k)) return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
-      if (ter === 'water') return 'Nicht auf dem Wasser';
+      if (ter === 'water') { if (rail) continue; return 'Nicht auf dem Wasser'; }
       if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
       // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
       const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
@@ -441,8 +449,9 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
   if (opts.move) return null;
-  if (state.money < (d.cost || 0)) return 'Zu wenig Taler';
-  return matError(d.mat);
+  const c = costOf(b, x, y);
+  if (state.money < c.cost) return 'Zu wenig Taler';
+  return matError(c.mat);
 }
 
 // Sehenswürdigkeiten (seit 29.09. 2×2): im selben Grundstück bleiben, am liebsten dort, wo nichts im Weg ist
@@ -567,9 +576,10 @@ function demolishInfo(x, y) {
       if (T.pop - lost < T.jobs) return { err: 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.' };
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
-    const full = d.cat === 'deko' || t.b === 'weg';
+    const full = d.cat === 'deko' || t.b === 'weg' || t.b === 'schiene';
+    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: d.cost, mat: d.mat };
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0) : 0;
-    return { anchor: a, refund: full ? d.cost : Math.floor((d.cost + staged) / 2), mat: full ? d.mat : null, label: `${d.name} ${full ? 'entfernen' : 'abreißen'}` };
+    return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
