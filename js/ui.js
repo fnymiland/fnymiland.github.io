@@ -593,6 +593,7 @@ function openInfo(x, y) {
   if (!t) { closePanel(); return; }
   if (t.b === 'rathaus') { openTownHall(); return; }
   if (t.b === 'lm') { openLandmark(x, y); return; }
+  if (t.b === 'truhe') { openChestInfo(x, y, t); return; }
   const d = ITEMS[t.b], s = statusOf(x, y) || {};
   const status = [];
   if (needsReach(t.b)) {
@@ -986,13 +987,25 @@ function openLandmark(x, y) {
   $('p-close').onclick = closePanel;
 }
 
+// Truhe auf einer fernen Insel: selbst öffnen
+function openChestInfo(x, y, t) {
+  const i = ISLE_BY_ID[t.isle || regionAt(x, y)], c = i && CHESTS[i.chest];
+  if (!c) { closePanel(); return; }
+  showPanel(`
+    <h3>🎁 ${c.name}</h3>
+    <p>Auf der ${i.icon} ${i.name} gefunden – ${c.text}.</p>
+    <div class="row"><button class="btn" id="p-chest">🎁 Öffnen</button><button class="btn ghost" id="p-close">Schließen</button></div>`);
+  $('p-chest').onclick = () => { closePanel(); openChest(x + ',' + y); };
+  $('p-close').onclick = closePanel;
+}
 // Themen-Insel: was sie bietet, was zum Erschließen fehlt
 function openIsle(id, sx, sy) {
   const i = ISLE_BY_ID[id], nxt = nextIsle(), L = LANDMARKS[i.lm], isNext = nxt === i;
   showPanel(`
     <h3>${i.icon} ${i.name}</h3>
-    <p class="muted">${i.text}</p>
-    <p>${L.icon} <b>${L.name}</b><br><span class="muted">${L.effect}</span></p>
+    <p class="muted">${i.far ? FAR_KINDS[i.ter].text : i.text}</p>
+    ${i.far ? `<p>🌫️ <b>Ferne Insel</b><br><span class="muted">Noch im Nebel. Wer sie entdeckt, findet dort eine alte Truhe.</span></p>`
+      : `<p>${L.icon} <b>${L.name}</b><br><span class="muted">${L.effect}</span></p>`}
     ${isNext ? expeditionHtml(true) : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} entdecken</div></div>`}
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => isleOpen(id) ? closePanel() : openIsle(id));
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition()) openIsle(id); };
@@ -1012,7 +1025,7 @@ function expeditionHtml(atIsle) {
   return `<div class="label">⛵ Nächste Insel entdecken: ${i.icon} ${i.name}</div>
     <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}
       ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🛤️ Verbinden → Steg)</div>'}</div>
-    <p class="muted">Das Boot ist etwa ${EXPEDITION_MIN[i.id]} Min. unterwegs.${i.need.money || i.need.science ? ' Taler und Ideen werden beim Ablegen ausgegeben.' : ''}</p>
+    <p class="muted">Das Boot ist etwa ${expMinutes(i)} Min. unterwegs.${i.need.money || i.need.science ? ' Taler und Ideen werden beim Ablegen ausgegeben.' : ''}</p>
     <div class="row">${steg ? `<button class="btn" id="p-expo" ${ok ? '' : 'disabled'}>⛵ Boot losschicken</button>`
       : atIsle ? '<button class="btn" id="p-steg">🪵 Steg bauen</button>' : ''}</div>`;
 }
@@ -1241,7 +1254,7 @@ function openTownHall(tab = hallTab) {
       ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}`;
   } else if (tab === 'isles') {
     // Alle Inseln auf einen Blick: Stand, was dort steht, Bahnanschluss – und per Knopf hin
-    const per = new Map([['home', { n: 0, pop: 0 }], ...ISLES.map(i => [i.id, { n: 0, pop: 0 }])]);
+    const per = new Map([['home', { n: 0, pop: 0 }], ...ISLES.concat(FAR).map(i => [i.id, { n: 0, pop: 0 }])]);
     for (const [k, t] of state.tiles) {
       if (t.b === 'weg' || t.b === 'schiene' || t.b === 'lm') continue;
       const e = per.get(regionAt(...keyXY(k)));
@@ -1259,7 +1272,8 @@ function openTownHall(tab = hallTab) {
     body = `
       <div class="label">Deine Inseln</div>
       ${row('home', '🏠', 'Heimatinsel', true, '')}
-      ${ISLES.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), ` · ${LANDMARKS[i.lm].icon} ${'🏮'.repeat(lmStage(i.lm))}`)).join('')}`;
+      ${ISLES.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), ` · ${LANDMARKS[i.lm].icon} ${'🏮'.repeat(lmStage(i.lm))}`)).join('')}
+      ${FAR.length ? `<div class="label">Ferne Inseln</div>${FAR.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), '')).join('')}` : ''}`;
   } else if (tab === 'erfolge') {
     const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
     body = `

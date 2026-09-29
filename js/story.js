@@ -31,7 +31,7 @@ function isleNeeds(i) {
   if (n.money) out.push({ text: `🪙 ${fmt(n.money)} Taler`, ok: state.money >= n.money, have: state.money, want: n.money, pay: true });
   return out;
 }
-const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || null;
+const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || FAR.find(i => !isleOpen(i.id)) || null;
 // Inseln entdecken: vom Steg aus fährt ein Holzboot hinaus (Taler/Ideen beim Ablegen), kommt nach einiger Zeit zurück
 // – dann ist die nächste Insel entdeckt. Die Zeit läuft echt weiter, auch wenn das Spiel zu ist.
 const EXPEDITION_MIN = { wald: 1, obst: 2, wind: 3, ruine: 4, erz: 6, quelle: 8, kristall: 10 };
@@ -44,6 +44,8 @@ const DISCOVERY = {
   quelle: 'Dampf stieg aus dem Meer auf – nein, von einer Insel! Zwischen den Felsen sprudeln warme Quellen.',
   kristall: 'Die längste Fahrt von allen. In der Nacht leuchtete der Horizont: eine Insel aus Kristall, in der das Mondlicht funkelt.',
 };
+// Wie lange das Boot unterwegs ist: Themen-Inseln fest, ferne Inseln jedes Mal etwas länger (höchstens 30 Min.)
+const expMinutes = i => i.far ? Math.min(30, 10 + 2 * (i.n - 1)) : EXPEDITION_MIN[i.id];
 const stegs = () => [...state.tiles].filter(([, t]) => t.b === 'bootssteg').map(([k]) => k);
 function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
@@ -60,9 +62,9 @@ function sendExpedition(from) {
   state.money -= i.need.money || 0;
   state.science -= i.need.science || 0;
   const now = Date.now();
-  state.expedition = { isle: i.id, from, t0: now, until: now + EXPEDITION_MIN[i.id] * 60e3 };
+  state.expedition = { isle: i.id, from, t0: now, until: now + expMinutes(i) * 60e3 };
   sfx('star');
-  toast(`⛵ Das Boot sticht in See – es sucht die ${i.name} (zurück in ${EXPEDITION_MIN[i.id]} Min.)`);
+  toast(`⛵ Das Boot sticht in See – es sucht die ${i.name} (zurück in ${expMinutes(i)} Min.)`);
   recalc(); save();
   return true;
 }
@@ -79,6 +81,7 @@ function checkExpedition() {
 function discoverIsland(id) {
   const i = ISLE_BY_ID[id];
   if (!i || isleOpen(id)) return false;
+  if (i.far) return discoverFar(i);
   state.islands.add(id);
   ownIsland(id);
   state.diary.push('isle:' + id);
@@ -96,6 +99,117 @@ function discoverIsland(id) {
     <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
   $('m-ok').onclick = closeModal;
   checkStars();
+  save();
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Ferne Inseln (Block 27c): Nach dem Laternenfest taucht draußen im Nebel eine Insel nach der anderen auf – zufällig
+// (fester Startwert je Spielstand) auf einer Spirale nach außen, mit Namen, Gelände und einer Truhe in der Mitte.
+// Entdeckt wird per Boot wie bisher; jede weitere kostet mehr und dauert länger. Gespeichert in state.far.
+// ---------------------------------------------------------------------------
+const FAR_KINDS = {
+  wald:     { icon: '🌲', names: ['Kiefern', 'Farn', 'Moos', 'Eulen', 'Hirsch'], text: 'Dichter Wald bis ans Ufer – Holz für viele Jahre.' },
+  obst:     { icon: '🍒', names: ['Kirsch', 'Pflaumen', 'Birnen', 'Beeren', 'Quitten'], text: 'Wilde Obstbäume, schwer von Früchten.' },
+  fels:     { icon: '🪨', names: ['Möwen', 'Klippen', 'Sturm', 'Robben', 'Kiesel'], text: 'Felsen, Wind und kreischende Möwen – Stein für Pflaster.' },
+  erz:      { icon: '⛏️', names: ['Kupfer', 'Eisen', 'Zinn', 'Funken', 'Amboss'], text: 'Rötlicher Fels mit dicken Erzadern.' },
+  quelle:   { icon: '♨️', names: ['Nebel', 'Seerosen', 'Dampf', 'Muschel', 'Libellen'], text: 'Warme Teiche zwischen weichen Wiesen.' },
+  kristall: { icon: '💎', names: ['Mond', 'Sternen', 'Glitzer', 'Opal', 'Frost'], text: 'Zwischen den Felsen glitzert Kristall.' },
+  ruine:    { icon: '🏛️', names: ['Säulen', 'Tempel', 'Glocken', 'Laternen', 'Bogen'], text: 'Alte Mauern im Gras – wer hat hier wohl einmal gewohnt?' },
+  wiese:    { icon: '🌼', names: ['Sonnen', 'Blumen', 'Lavendel', 'Wolken', 'Schmetterlings'], text: 'Weite Wiesen voller Blumen – viel Platz zum Bauen.' },
+};
+// Was in der Truhe steckt: Taler (Einkommen), Ideen oder eine Ladung Waren – so viel, dass es sich lohnt
+const CHESTS = {
+  taler: { icon: '💰', name: 'Schatztruhe', text: 'Goldmünzen bis zum Rand' },
+  ideen: { icon: '📜', name: 'Kiste mit Seekarten', text: 'alte Karten und Bücher voller Ideen' },
+  waren: { icon: '📦', name: 'Frachtkiste', text: 'die Ladung eines alten Frachters' },
+};
+const CHEST_RES = ['bretter', 'quader', 'metall', 'kristall'];
+const FAR_R0 = ISLE_DIST + ISLE_R + 32, FAR_AREA = 1800, GOLDEN = 2.39996;
+// Platz frei? Nicht auf oder zu nah an Inseln und eigenem Land im Meer
+function farFree(cx, cy, r) {
+  if (Math.hypot(cx - ISLAND.cx, cy - ISLAND.cy) < ISLAND.r * 1.3 + r * 1.5 + 8) return false;
+  if (ISLES.some(i => Math.hypot(cx - i.cx, cy - i.cy) < ISLE_R * 1.5 + r * 1.5 + 8)) return false;
+  if (state.far.some(f => Math.hypot(cx - f.cx, cy - f.cy) < (f.r + r) * 1.5 + 8)) return false;
+  for (const k of state.claimed) { const [x, y] = keyXY(k); if (Math.hypot(x - cx, y - cy) < r * 1.5 + 4) return false; }
+  return true;
+}
+function makeFar(n) {
+  const rnd = k => hash(n, k, 7001), kinds = Object.keys(FAR_KINDS), ter = kinds[Math.floor(rnd(2) * kinds.length)], K = FAR_KINDS[ter];
+  const r = Math.round(8 + rnd(1) * 5), used = new Set(state.far.map(f => f.name)), start = Math.floor(rnd(3) * K.names.length);
+  let name = null;
+  for (let j = 0; j < K.names.length && !name; j++) { const nm = K.names[(start + j) % K.names.length] + 'insel'; if (!used.has(nm)) name = nm; }
+  if (!name) name = `${K.names[start]}insel ${state.far.filter(f => f.name.startsWith(K.names[start])).length + 1}`;
+  const off = hash(0, 0, 7003) * Math.PI * 2;
+  for (let m = state.far.length ? state.far[state.far.length - 1].m + 1 : 1; ; m++) {     // Spirale nach außen
+    const d = Math.sqrt(FAR_R0 * FAR_R0 + FAR_AREA * m / Math.PI), a = off + m * GOLDEN;
+    const cx = Math.round(ISLAND.cx + Math.cos(a) * d), cy = Math.round(ISLAND.cy + Math.sin(a) * d);
+    if (!farFree(cx, cy, r)) continue;
+    return { id: 'far' + n, n, m, name, icon: K.icon, ter, cx, cy, r, deg: 1000 + n * 37,
+      need: { money: niceRound(5e6 * Math.pow(1.35, n - 1)), science: niceRound(800 * Math.pow(1.3, n - 1)) },
+      chest: ['taler', 'ideen', 'waren'][Math.floor(rnd(4) * 3)], res: CHEST_RES[Math.floor(rnd(5) * CHEST_RES.length)] };
+  }
+}
+// state.far → FAR und ISLE_BY_ID; die Welt, Gelände und Bilder neu, weil jetzt dort Land ist
+function registerFar() {
+  for (const k of Object.keys(ISLE_BY_ID)) if (ISLE_BY_ID[k].far) delete ISLE_BY_ID[k];
+  FAR.length = 0;
+  for (const f of state.far) { f.far = true; FAR.push(f); ISLE_BY_ID[f.id] = f; }
+  terrainCache.clear(); regionCache.clear(); landCache.clear(); sandCache.clear();
+  if (typeof groundVersion !== 'undefined') groundVersion++;
+  waterChanged(); growWorld();
+}
+// Nach dem Fest gibt es immer eine ferne Insel, die noch zu entdecken ist
+function ensureFar() {
+  if (!state.festival || FAR.some(f => !isleOpen(f.id))) return false;
+  state.far.push(makeFar(state.far.length + 1));
+  registerFar();
+  return true;
+}
+function discoverFar(i) {
+  state.islands.add(i.id);
+  ownIsland(i.id);
+  const k = i.cx + ',' + i.cy;
+  state.terra.set(k, 'grass');
+  state.tiles.set(k, { b: 'truhe', lvl: 1, isle: i.id });
+  ensureFar();
+  recalc();
+  jumpTo(i.cx, i.cy);
+  sparkle(i.cx, i.cy); confettiBurst(); sfx('star');
+  const nxt = FAR.find(f => !isleOpen(f.id));
+  openModal(`
+    <h2>⛵ Land in Sicht: ${i.icon} ${i.name}!</h2>
+    <p>${FAR_KINDS[i.ter].text}</p>
+    <p>🎁 Mitten auf der Insel steht eine alte Truhe – tipp sie an!</p>
+    ${nxt ? `<p class="muted">Draußen im Nebel zeichnet sich schon die nächste ab: ${nxt.icon} ${nxt.name} …</p>` : ''}
+    <div class="row"><button class="btn" id="m-ok">Los geht's</button></div>`);
+  $('m-ok').onclick = closeModal;
+  checkStars();
+  save();
+  return true;
+}
+// Was die Truhe bringt: jetzt gerechnet, damit es zum Stand passt (Einkommen, Ideen/s)
+function chestLoot(i) {
+  if (i.chest === 'taler') return { money: niceRound(Math.max(1e6 * i.n, T.inc * 60 * 20)) };
+  if (i.chest === 'ideen') return { science: niceRound(Math.max(500 * i.n, T.sci * 60 * 30)) };
+  const r = i.res, base = (r === 'kristall' ? 60 : 250) * Math.pow(1.35, i.n);    // Waren: auch nach Produktion und Lager
+  return { [r]: niceRound(Math.max(base, ((T.prod && T.prod[r]) || 0) * 60 * 30, state.res[r] * 0.25)) };
+}
+const lootText = l => Object.entries(l).map(([r, n]) => r === 'money' ? `🪙 ${fmt(n)} Taler` : r === 'science' ? `💡 ${fmt(n)} Ideen` : `${RES[r].icon} ${fmt(n)} ${RES[r].name}`).join(', ');
+function openChest(k) {
+  const t = state.tiles.get(k), i = t && t.b === 'truhe' && ISLE_BY_ID[t.isle || regionAt(...keyXY(k))];
+  if (!i) return false;
+  const loot = chestLoot(i);
+  for (const [r, n] of Object.entries(loot)) {
+    if (r === 'money') { state.money += n; state.stats.earned += n; }
+    else if (r === 'science') state.science += n;
+    else state.res[r] += n;
+  }
+  state.tiles.delete(k);
+  recalc();
+  const [x, y] = keyXY(k);
+  sparkle(x, y); confettiBurst(); sfx('star');
+  toast(`${CHESTS[i.chest].icon} ${CHESTS[i.chest].name}: ${lootText(loot)}!`);
   save();
   return true;
 }
@@ -153,6 +267,7 @@ function festival() {
   if (state.festival) return;
   state.festival = true;
   state.diary.push('finale');
+  ensureFar();
   recalc();
   confettiBurst(); confettiBurst();
   sfx('star');
@@ -160,6 +275,7 @@ function festival() {
     <h2>🎆 Das Laternenfest!</h2>
     <p>Der Leuchtturm brennt wieder, und alle ${LANTERN_TOTAL} Laternen leuchten. Ganz ${escHtml(state.town.name)} feiert bis tief in die Nacht.</p>
     <p>${escHtml(state.town.name)} ist jetzt eine <b>Inselperle</b>. Die Insel gehört dir – bau und gestalte weiter, so lange du magst.</p>
+    <p>🌫️ Und draußen im Nebel, weit hinter den Themen-Inseln, zeichnet sich eine neue Insel ab …</p>
     <div class="row"><button class="btn" id="m-diary">Letzte Tagebuchseite</button><button class="btn ghost" id="m-ok">Hurra!</button></div>`);
   $('m-diary').onclick = () => openDiary(state.diary.length - 1);
   $('m-ok').onclick = closeModal;
@@ -276,7 +392,7 @@ function goalHtml() {
     const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
     const line = !s ? '🏰 Bau das Schloss: 🏗️ Bauen → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
     const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4><div class="req">${line}</div><div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4><div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
   }
   if (n >= ITEMS.leuchtturm.lanterns) {
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4><div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
@@ -291,15 +407,16 @@ function goalHtml() {
     const detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
     return `<div class="req${info.err ? '' : ' done'}" data-lm="${type}">${lmStepName(type, info.stage + 1)}<br><small>${detail}</small></div>`;
   }).join('');
-  const i = nextIsle();
-  if (i) {
-    const need = isleNeeds(i), ok = need.every(c => c.ok), away = state.expedition && state.expedition.isle === i.id;
-    const detail = away ? `⛵ Boot unterwegs · zurück in ${fmtClock(expeditionLeft())}`
-      : ok ? (stegs().length ? '✨ bereit – Boot losschicken!' : '✨ bereit – erst einen Steg bauen')
-      : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ');
-    html += `<div class="req${ok || away ? ' done' : ''}" data-isle="${i.id}">🏝️ Nächste Insel: ${i.icon} ${i.name}<br><small>${detail}</small></div>`;
-  }
-  return html;
+  return html + isleReq(nextIsle());
+}
+// Ziel-Zeile „Nächste Insel“ (auch nach dem Fest für die fernen Inseln)
+function isleReq(i) {
+  if (!i) return '';
+  const need = isleNeeds(i), ok = need.every(c => c.ok), away = state.expedition && state.expedition.isle === i.id;
+  const detail = away ? `⛵ Boot unterwegs · zurück in ${fmtClock(expeditionLeft())}`
+    : ok ? (stegs().length ? '✨ bereit – Boot losschicken!' : '✨ bereit – erst einen Steg bauen')
+    : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ');
+  return `<div class="req${ok || away ? ' done' : ''}" data-isle="${i.id}">🏝️ ${i.far ? 'Ferne Insel' : 'Nächste Insel'}: ${i.icon} ${i.name}<br><small>${detail}</small></div>`;
 }
 
 // ---------------------------------------------------------------------------

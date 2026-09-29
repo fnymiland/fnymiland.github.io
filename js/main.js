@@ -15,7 +15,7 @@ function startNew() {
   for (let x = 4; x <= 5; x++) state.tiles.set(x + ',2', { b: 'weg', lvl: 1, style: 'sand' });
   for (let y = 4; y <= 5; y++) state.tiles.set('2,' + y, { b: 'weg', lvl: 1, style: 'sand' });
   state.owned = new Set();
-  growWorld();
+  registerFar();                                   // keine fernen Inseln mehr, Welt wieder klein
   ownIsland('home');
   placeIslandLandmarks();
   recalc();
@@ -90,11 +90,12 @@ if (PROBE) {
   toast('Probeansicht – hier wird nichts gespeichert');
 } else if (saved) {
   state = saved;
+  registerFar();                       // ferne Inseln zuerst: sie sind Land
   normalizeSmall();
   migrateLandmarks();                  // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
   const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
   ownIslandsFully();
-  growWorld();
+  ensureFar();
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();

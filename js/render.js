@@ -566,6 +566,7 @@ function render(now) {
         if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
         if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
         if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
+        if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
         if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
         if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
         if (s && s.wish && s.wish.next) {
@@ -658,6 +659,15 @@ function render(now) {
     const isNext = i === nxt, sz = Math.max(11, 12 * z);
     const away = isNext && state.expedition && state.expedition.isle === i.id;
     pill(`${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : isNext ? '· entdecken' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
+  }
+
+  // Ferne Insel im Nebel (die nächste): Schild über der Mitte
+  for (const i of FAR) {
+    if (isleOpen(i.id)) continue;
+    const p = toScreen(i.cx, i.cy), ly = p.y - 40 * z;
+    if (p.x < -150 || p.x > W + 150 || ly < -100 || ly > H + 150) continue;
+    const away = state.expedition && state.expedition.isle === i.id;
+    pill(`🌫️ ${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : '· entdecken'}`, p.x, ly, '#fff3b0', '#6b4f3a', Math.max(11, 12 * z));
   }
 
   drawSparkles(now, z);

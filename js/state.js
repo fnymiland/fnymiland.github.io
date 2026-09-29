@@ -32,6 +32,7 @@ function newState() {
     orders: [], orderNext: 0,  // Aufträge der Frachter am Handelshafen (Block 24), nächster ab orderNext
     vehicles: new Set(),       // erforschte Verkehrsmittel: 'zug:regio', 'schiff:dampfer' … (Forschung „Verkehr“)
     expedition: null,          // Boot unterwegs: { isle, from: Steg-Feld, t0, until } (echte Zeit, läuft auch geschlossen weiter)
+    far: [],                   // ferne Inseln (nach dem Laternenfest, Block 27c): { id, n, name, icon, ter, cx, cy, r, need, chest, res }
     stats: { earned: 0 },      // für Erfolge: insgesamt verdiente Taler
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
     album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
@@ -62,6 +63,7 @@ function tileOut(t) {
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
   if (t.ships && t.ships.length) o.ships = t.ships.map(s => ({ model: s.model, to: s.to }));   // Schiffe am Hafen
+  if (t.isle) o.isle = t.isle;                                                         // Truhe: von welcher fernen Insel
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }
@@ -83,7 +85,7 @@ function serialize() {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -194,7 +196,8 @@ function parseSave(d) {
     claimed: new Set(d.claimed || []),
     tipsSeen: new Set(d.tipsSeen || []), tipsOff: !!d.tipsOff,
     mastery: { ...(d.mastery || {}) }, inventions: new Set(d.inventions || []),
-    expedition: d.expedition && ISLE_BY_ID[d.expedition.isle] && +d.expedition.until ? { ...d.expedition } : null,
+    far: Array.isArray(d.far) ? d.far.filter(f => f && typeof f.id === 'string' && isFinite(f.cx) && isFinite(f.cy) && f.r > 0 && f.name) : [],
+    expedition: d.expedition && (ISLE_BY_ID[d.expedition.isle] || (d.far || []).some(f => f && f.id === d.expedition.isle)) && +d.expedition.until ? { ...d.expedition } : null,
     vehicles: new Set([...(d.vehicles || []), ...grandfathered.filter(v => v !== 'zug:tram')]),
     orders: Array.isArray(d.orders) ? d.orders.filter(o => o && RES[o.res] && o.amount > 0) : [], orderNext: +d.orderNext || 0,
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
@@ -264,9 +267,10 @@ function adoptState(s) {
   normalizeSmall();
   migrateLandmarks();
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
+  registerFar();
   const moved = migrateIslands();
   ownIslandsFully();
-  growWorld();
+  ensureFar();
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();

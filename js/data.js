@@ -150,6 +150,7 @@ const ITEMS = {
   // --- fest ---
   rathaus: { cat: null, name: 'Rathaus', size: [3, 3], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
   lm:      { cat: null, name: 'Sehenswürdigkeit', size: [3, 3], fixed: true, desc: '' },
+  truhe:   { cat: null, name: 'Truhe', fixed: true, desc: 'Auf einer fernen Insel gefunden – antippen und öffnen.' },
 };
 // Rohstoffe und Waren im gemeinsamen Lager
 const RES = {

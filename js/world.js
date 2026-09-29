@@ -22,14 +22,15 @@ function fbm(x, y, s) {
 const islandDist = (x, y) => Math.hypot(x - ISLAND.cx, y - ISLAND.cy) / ISLAND.r;
 const homeLand = (x, y) => islandDist(x, y) + (fbm(x * 0.08, y * 0.08, 1) - 0.5) * 0.5 <= 0.95;   // wie früher
 function isleLand(i, x, y) {
-  const d = Math.hypot(x - i.cx, y - i.cy);
-  if (d > ISLE_R * 1.5) return false;
-  return d / ISLE_R + (fbm(x * 0.15, y * 0.15, 17 + i.deg) - 0.5) * 0.6 <= 0.95;
+  const R = i.r || ISLE_R, d = Math.hypot(x - i.cx, y - i.cy);          // ferne Inseln haben ihre eigene Größe
+  if (d > R * 1.5) return false;
+  return d / R + (fbm(x * 0.15, y * 0.15, 17 + i.deg) - 0.5) * 0.6 <= 0.95;
 }
 // Zu welcher Insel gehört das Feld? 'home', die id einer Themen-Insel, oder null (Meer)
 function islandAt(x, y) {
   if (homeLand(x, y)) return 'home';
   for (const i of ISLES) if (isleLand(i, x, y)) return i.id;
+  for (const i of FAR) if (isleLand(i, x, y)) return i.id;
   return null;
 }
 function isSea(x, y) { return islandAt(x, y) === null; }
@@ -45,6 +46,7 @@ function isleTerrain(i, x, y) {
     case 'erz': return n1 > 0.58 ? 'erz' : n1 > 0.44 ? 'rock' : 'grass';
     case 'quelle': return n2 < 0.32 ? 'water' : n1 > 0.7 ? 'forest' : 'grass';
     case 'kristall': return n1 > 0.5 ? (n2 > 0.5 ? 'kristall' : 'rock') : 'grass';
+    case 'wiese': return n1 > 0.64 ? 'forest' : n2 < 0.24 ? 'water' : 'grass';          // ferne Wieseninseln
     default: return 'grass';
   }
 }
@@ -131,7 +133,7 @@ function isleChunks(id) {
   const out = [];
   // Heimatinsel: Land reicht mit dem Rauschen bis 1,25 × Radius (vorher fehlte der äußerste Rand)
   const box = id === 'home' ? (() => { const r = ISLAND.r * 1.25; return [Math.floor((ISLAND.cx - r) / CHUNK), Math.floor((ISLAND.cx + r) / CHUNK), Math.floor((ISLAND.cy - r) / CHUNK), Math.floor((ISLAND.cy + r) / CHUNK)]; })() : (() => {
-    const i = ISLE_BY_ID[id], r = ISLE_R * 1.5;
+    const i = ISLE_BY_ID[id], r = (i.r || ISLE_R) * 1.5;
     return [Math.floor((i.cx - r) / CHUNK), Math.floor((i.cx + r) / CHUNK), Math.floor((i.cy - r) / CHUNK), Math.floor((i.cy + r) / CHUNK)];
   })();
   for (let cy = box[2]; cy <= box[3]; cy++) for (let cx = box[0]; cx <= box[1]; cx++) {
@@ -212,11 +214,14 @@ function regionAt(x, y) {
     let best = Math.hypot(x - ISLAND.cx, y - ISLAND.cy) - ISLAND.r;
     r = 'home';
     for (const i of ISLES) { const d = Math.hypot(x - i.cx, y - i.cy) - ISLE_R; if (d < best) { best = d; r = i.id; } }
+    for (const i of FAR) { const d = Math.hypot(x - i.cx, y - i.cy) - i.r; if (d < best) { best = d; r = i.id; } }
   }
   regionCache.set(k, r);
   return r;
 }
 const regionName = r => r === 'home' ? 'Heimatinsel' : ISLE_BY_ID[r].name;
+// Reihenfolge der Orte: Heimatinsel, Themen-Inseln, ferne Inseln (in der Reihenfolge ihres Auftauchens)
+const regionRank = r => r === 'home' ? -1 : ISLE_BY_ID[r] && ISLE_BY_ID[r].far ? 100 + ISLE_BY_ID[r].n : ISLES.findIndex(i => i.id === r);
 function claimTile(x, y) { if (!state.owned.has(chunkOf(x, y))) { state.claimed.add(x + ',' + y); worldInclude(x, y); } }
 // Felder von a nach b in Schritten zu direkten Nachbarn (fürs Ziehen: nichts überspringen)
 function tilesBetween(a, b) {

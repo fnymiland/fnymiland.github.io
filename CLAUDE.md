@@ -251,6 +251,17 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Verbindung erreichbar ist (`buildAccess` in `totals` → `T.access`, `reachKind` → `how`: 'nah' | 'viertel' | 'bahn' |
     'seil' | 'faehre'). Schönheit, Wasser, Ruhe, Deko und „direkt daneben“ (r = 1) bleiben vor Ort. Wer Wünsche prüft:
     `wishCheck` (mit `how`), `houseWishes`/`stageInfo` bekommen den Zugang als letztes Argument (in `totals` den frischen).
+54. **Welt ohne Rand** (Block 27): `WORLD` wächst mit (`growWorld`/`worldInclude`: eigenes Land im Meer, ferne Inseln,
+    `WORLD_MARGIN` Grundstücke Meer drumherum; `WORLD.R` = wie weit die Kamera darf). Aufschütten geht überall, kostet ab
+    `DEEP_FROM` Feldern vor der Küste mehr (`fillCost`, `seaDepth` = Abstand zu den Insel-Kreisen); tiefes Meer wird per
+    `drawDepth` (ein Punkt je Feld, `depthAlpha`) dunkler. Seewege suchen nur in einem Kasten um Start und Ziel (`seaBox`).
+    Neue Geometrie (Inseln) immer über `registerFar()` – leert Gelände-/Orts-Zwischenspeicher, `groundVersion++`,
+    `waterChanged()`, `growWorld()`.
+55. **Ferne Inseln** (Block 27c): nach dem Laternenfest immer genau eine unentdeckte (`ensureFar`), erzeugt per `makeFar(n)`
+    (fester Startwert, Spirale nach außen, `farFree`), gespeichert in `state.far`, registriert in `FAR` und `ISLE_BY_ID`
+    (`far: true`, eigenes `r`, kein `lm`). Wer über Inseln läuft: `ISLES` sind nur die sieben Themen-Inseln; Reihenfolge
+    über `regionRank`/`byRegion`. Entdecken per Boot (`expMinutes`), in der Mitte eine Truhe (`truhe`, `t.isle`),
+    `openChest` rechnet die Belohnung beim Öffnen (`chestLoot`).
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).
@@ -274,7 +285,7 @@ npm run serve     # Server für WLAN/iPad auf Port 4173
   viel Gestaltungsfreiheit, keine unnötige Verwaltung. Größenverhältnisse müssen stimmen (Deko nicht so groß wie Häuser).
 
 **Schon ausprobiert und verworfen – nicht wieder einbauen:**
-unendliches Land ohne Ziel · Inselhüpfen (eine Insel bleibt) · Straßenpflicht zum Rathaus · Strom/Kraftwerke als
+unendliches Land ohne Ziel (seit Block 27 endlos, aber mit Zielen: ferne Inseln, teures tiefes Wasser) · Inselhüpfen (eine Insel bleibt) · Straßenpflicht zum Rathaus · Strom/Kraftwerke als
 allgemeines Netz (Strom gibt es nur für Züge, von Windrädern) · Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse.
 
 ## Online (GitHub Pages)

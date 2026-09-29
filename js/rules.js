@@ -670,8 +670,7 @@ function computeRail() {
   }
   const lines = [];
   for (const [net, list] of byNet) {
-    const order = r => r === 'home' ? -1 : ISLES.findIndex(i => i.id === r);   // Heimatinsel zuerst
-    const regions = [...new Set(list.map(s => regionAt(...keyXY(s))))].sort((p, q) => order(p) - order(q));
+    const regions = [...new Set(list.map(s => regionAt(...keyXY(s))))].sort(byRegion);          // Heimatinsel zuerst
     if (regions.length < 2) continue;
     const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails);
     // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
@@ -696,7 +695,7 @@ function lineLooks(stations) {
 }
 // Seilbahn: jede Station mit der nächsten freien (bis SEIL_MAX Felder), paarweise; die Gondeln befördern Fahrgäste
 const SEIL_MAX = 20, SEIL_SEATS = 80;
-const byRegion = (p, q) => (p === 'home' ? -1 : ISLES.findIndex(i => i.id === p)) - (q === 'home' ? -1 : ISLES.findIndex(i => i.id === q));   // Heimatinsel zuerst
+const byRegion = (p, q) => regionRank(p) - regionRank(q);   // Heimatinsel zuerst
 function cablePairs() {
   const st = [...state.tiles].filter(([, t]) => t.b === 'seilbahn').map(([k]) => k).sort(), pairs = [], used = new Set(), out = [];
   st.forEach((a, i) => st.forEach((b, j) => { if (j > i) { const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), d = Math.hypot(ax - bx, ay - by); if (d <= SEIL_MAX) pairs.push([d, a, b]); } }));
@@ -874,7 +873,7 @@ const ferriesAt = k => T.ferries.filter(l => l.stations.includes(k));
 // Anziehung, höchstens ½ je Einwohner aller Inseln, mit denen sie verbunden ist. Das teilen sich alle Verbindungen, die
 // dort halten (Zug, Seilbahn, Fähre) – nach Plätzen. Jede Verbindung hat so ihre Fahrgäste und ihre Auslastung.
 function transitTraffic(links, places) {
-  const pop = r => places.pop.get(r) || 0, rank = r => r === 'home' ? -1 : ISLES.findIndex(i => i.id === r);
+  const pop = r => places.pop.get(r) || 0, rank = regionRank;
   const at = new Map();                                                            // Insel → Verbindungen, die dort halten
   for (const l of links) if (l.regions.length > 1) for (const r of l.regions) { if (!at.has(r)) at.set(r, []); at.get(r).push(l); }
   const need = new Map();
@@ -1343,6 +1342,7 @@ function demolishInfo(x, y) {
   if (t) {
     const d = ITEMS[t.b];
     if (t.b === 'lm') return { err: 'Sehenswürdigkeiten bleiben stehen' };
+    if (t.b === 'truhe') return { err: 'Die Truhe erst öffnen (antippen)' };
     if (d.fixed) return { err: 'Das Rathaus bleibt stehen' };
     if (d.pop) {
       const lost = d.pop * t.lvl;

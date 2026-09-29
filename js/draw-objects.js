@@ -1093,6 +1093,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; glowQuad([[cx + Math.cos(a) * rx - 1, cy - H + Math.sin(a) * ry - 1], [cx + Math.cos(a) * rx + 1, cy - H + Math.sin(a) * ry - 1], [cx + Math.cos(a) * rx + 1, cy - H + Math.sin(a) * ry + 1], [cx + Math.cos(a) * rx - 1, cy - H + Math.sin(a) * ry + 1]], 8 * z); }
       break;
     }
+    case 'truhe': drawChest(cx, cy, z, now); break;
     case 'pokal_bronze': drawTrophy(cx, cy, z, now, ['#c98a4b', '#e3ad76', '#9a6534']); break;
     case 'pokal_silber': drawTrophy(cx, cy, z, now, ['#c7ced8', '#eef2f6', '#98a1ad']); break;
     case 'pokal_gold': drawTrophy(cx, cy, z, now, ['#f2c14e', '#ffe28a', '#c9962b']); break;
@@ -1352,6 +1353,31 @@ function drawLandmarkBase(type, cx, cy, z, now, x, y) {
 }
 
 // Pokal: Sockel, Fuß, Schale mit zwei Henkeln, Glanz; ab und zu blitzt es
+// Truhe auf einer fernen Insel: Holzkiste mit Goldbeschlägen, leicht offener Deckel, Goldschimmer
+function drawChest(cx, cy, z, now) {
+  ellipse(cx, cy + 1.5 * z, 12 * z, 5 * z, 'rgba(40,40,40,0.18)');
+  box(cx, cy, 10 * z, 5 * z, 7 * z, '#8a5a34', null);                     // Kiste
+  g.strokeStyle = C('#e2b448'); g.lineWidth = 1.4 * z;                    // Beschläge
+  for (const f of [-0.55, 0.55]) {
+    g.beginPath(); g.moveTo(cx + f * 10 * z, cy + (1 - Math.abs(f)) * 5 * z); g.lineTo(cx + f * 10 * z, cy + (1 - Math.abs(f)) * 5 * z - 7 * z); g.stroke();
+  }
+  const top = cy - 7 * z;
+  ellipse(cx, top - 1.5 * z, 8 * z, 3 * z, C('#ffd873'));                // Gold schaut heraus
+  circle(cx - 3 * z, top - 2.5 * z, 1.6 * z, C('#fff0a8')); circle(cx + 2.5 * z, top - 2 * z, 1.4 * z, C('#f2c14e'));
+  poly([[cx - 10 * z, top], [cx, top - 5 * z], [cx + 1 * z, top - 12 * z], [cx - 9 * z, top - 7 * z]], C('#a06b3f'));   // Deckel, hinten hochgeklappt
+  poly([[cx, top - 5 * z], [cx + 10 * z, top], [cx + 11 * z, top - 7 * z], [cx + 1 * z, top - 12 * z]], C('#7a4c2a'));
+  g.strokeStyle = C('#e2b448'); g.lineWidth = 1.2 * z;
+  g.beginPath(); g.moveTo(cx - 9.5 * z, top - 3.5 * z); g.lineTo(cx + 0.5 * z, top - 8.5 * z); g.lineTo(cx + 10.5 * z, top - 3.5 * z); g.stroke();
+  diamond(cx, cy + 1.2 * z, 1.6 * z, 1.2 * z, C('#e2b448'));                // Schloss
+  glowQuad([[cx - 6 * z, top - 5 * z], [cx + 6 * z, top - 5 * z], [cx + 6 * z, top + 1 * z], [cx - 6 * z, top + 1 * z]], 30 * z);
+  const tw = Math.sin(now / 380 + cx * 0.07);
+  if (tw > 0.6) {                                                         // funkeln
+    const s = 3 * z * (tw - 0.6) * 2.5, sx = cx + 4 * z, sy = top - 6 * z;
+    g.fillStyle = 'rgba(255,255,255,0.95)';
+    g.beginPath(); g.moveTo(sx, sy - s); g.lineTo(sx + s * 0.3, sy); g.lineTo(sx, sy + s); g.lineTo(sx - s * 0.3, sy); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
+  }
+}
 function drawTrophy(cx, cy, z, now, [base, light, dark]) {
   ellipse(cx, cy + 1 * z, 7 * z, 3 * z, 'rgba(40,40,40,0.15)');
   box(cx, cy, 4.6 * z, 2.4 * z, 5 * z, '#5a4636', '#6f5745', 0);
