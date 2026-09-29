@@ -126,7 +126,7 @@ describe('Viertel und Wege', () => {
   });
 
   it('gesperrte Stile können nicht gemalt werden', () => {
-    game("chosenStyle.weg = 'mosaik'");
+    game("chosenStyle.weg = 'fisch'");
     expect(game("currentStyle('weg')")).toBe('sand');
   });
 

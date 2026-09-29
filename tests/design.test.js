@@ -27,9 +27,9 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
   });
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {
-    expect(game("designError(DESIGN_BY_ID['weg:mosaik'])")).toBe('Braucht eine Kunstakademie');
+    expect(game("designError(DESIGN_BY_ID['weg:fisch'])")).toBe('Braucht eine Kunstakademie');
     game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc()");
-    expect(game("buyDesign('weg:mosaik')")).toBe(true);
+    expect(game("buyDesign('weg:fisch')")).toBe(true);
   });
 
   it('Deko wie die Laterne gibt es auch dort', () => {

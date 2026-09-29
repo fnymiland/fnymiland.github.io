@@ -84,8 +84,8 @@ function parseSave(d) {
   }
   // 28.09.2026: Straßen, Gartenwege und Pflaster werden zu Wegen; Gehwege an Kanten entfallen
   const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
-  const WEG_TO = { mulch: 'mulch', kies: 'kies', tritt: 'tritt', steg: 'holz', blueten: 'blueten' };
-  const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'schach', fisch: 'fisch', mosaik: 'mosaik', alt: 'platten' };
+  const WEG_TO = { mulch: 'mulch', kies: 'kies', tritt: 'tritt', steg: 'holz', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti' };
+  const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'schach', fisch: 'fisch', mosaik: 'konfetti', alt: 'platten' };
   for (const [, t] of d.tiles) {
     if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
     else if (t.b === 'weg' && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'kies';
@@ -125,6 +125,13 @@ function parseSave(d) {
       farben: ['weg:schach', 'weg:pastell'], kunst: ['weg:fisch'], skulptur: ['weg:mosaik', 'pavillon', 'statue'] };
     for (const [tech, ids] of Object.entries(byTech)) if (had.has(tech)) ids.forEach(id => grant.add(id));
     d.design = [...grant];
+  }
+  // 30.09.2026: Pastell-Mosaik und Mosaik sind ein Stil „Konfetti“ – wer zusammen mehr bezahlt hat, bekommt die Differenz
+  const MERGED = { 'weg:pastell': 250, 'weg:mosaik': 500 };
+  if ((d.design || []).some(id => id in MERGED)) {
+    const paid = d.design.filter(id => id in MERGED).reduce((sum, id) => sum + MERGED[id], 0);
+    d.money = (+d.money || 0) + Math.max(0, paid - styleDef('weg', 'konfetti').design);
+    d.design = d.design.filter(id => !(id in MERGED) && id !== 'weg:konfetti').concat(['weg:konfetti']);
   }
   return {
     seed: d.seed, money: +d.money || 0, res: { ...newRes(), ...(d.res || {}) }, science: d.science || 0,

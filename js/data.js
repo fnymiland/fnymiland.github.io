@@ -53,7 +53,7 @@ const ITEMS = {
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
-             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Mosaikplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
+             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Sandweg bis zum Klinkerplatz. Verbindet Viertel. Ziehen = mehrere legen.' },
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
@@ -324,10 +324,9 @@ const STYLES = {
     { id: 'klinker', name: 'Klinker', col: '#c97a5e', shape: 'fill', design: 180 },
     { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', shape: 'fill', design: 180 },
     { id: 'schach', name: 'Schachbrett', col: '#f5dce6', shape: 'fill', design: 250 },
-    { id: 'pastell', name: 'Pastell-Mosaik', col: '#f3dfe6', shape: 'band', design: 250 },
+    { id: 'konfetti', name: 'Konfetti', col: '#f6dce6', shape: 'band', design: 300 },
     { id: 'fisch', name: 'Fischgrät rosé', col: '#ecccc2', shape: 'fill', design: 350, master: true },
     { id: 'blueten', name: 'Blütenpfad', col: '#f7dbe4', shape: 'band', lm: 'obsthain:3' },
-    { id: 'mosaik', name: 'Mosaik', col: '#efe6d8', shape: 'fill', design: 500, master: true },
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
   ],
 };

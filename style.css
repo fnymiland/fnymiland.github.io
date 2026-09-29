@@ -351,9 +351,10 @@ html, body {
   bottom: calc(var(--bar, 160px) + 10px);
   display: flex;
   gap: 6px;
-  max-width: calc(100% - 90px);
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: max-content;
+  max-width: min(720px, calc(100% - 24px));
   padding: 4px;
 }
 #style-bar[hidden] { display: none; }
@@ -371,7 +372,14 @@ html, body {
 .style-chip.on { background: var(--yellow); box-shadow: 0 3px 0 #e0c060; }
 .style-chip:disabled { opacity: .55; cursor: default; }
 .style-chip small { font-size: 10px; font-weight: 800; }
-body.has-styles #hint { bottom: calc(var(--bar, 160px) + 60px); }
+body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16px); }
+.style-chip.more { background: var(--cream2); }
+.design.gift small { font-size: 10px; text-align: center; line-height: 1.15; }
+/* schmale Bildschirme: nur Farbtupfer, der Name nur beim gewählten Stil */
+@media (max-width: 700px) {
+  .style-chip:not(.on):not(.more) span { display: none; }
+  .style-chip:not(.on):not(.more) { padding: 5px; }
+}
 
 /* ---------- v6: Lager ---------- */
 .pill.res { gap: 10px; }

@@ -132,7 +132,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 **Wege statt Straßen**
 - Keine Straßen und keine Gehwege auf Feldkanten mehr. Es gibt nur noch **Wege**, jeder belegt **ein ganzes Feld**.
 - Wege gibt es in **vielen Stilen**: Sandweg, Kies, Rindenmulch, Trittsteine, Holzsteg, Platten, Kopfstein,
-  Klinker, Terrakotta, Fischgrät, Mosaik, Schachbrett, **Asphalt** (Straßen-Look) … – das bisherige Pflaster
+  Klinker, Terrakotta, Fischgrät, Konfetti, Schachbrett, **Asphalt** (Straßen-Look) … – das bisherige Pflaster
   wird ein Weg-Stil („Platz“). Stile weiter per Stern/Forschung freischalten, Umfärben durch Übermalen.
 - **Kleine Dekos dürfen auf Wege** (Laterne am Wegrand, Blumenkübel auf dem Platz).
 - **Viertel** = was direkt aneinandergrenzt oder über Wege verbunden ist.

@@ -123,21 +123,17 @@ function setTool(t) {
   hint.hidden = false;
 }
 
-// Stil-Leiste für Wege: gewählter Stil wird gemalt, gesperrte zeigen, wie man sie freischaltet
+// Stil-Leiste für Wege: nur, was man schon hat – alles Weitere gibt es in der Kunstakademie
 function renderStyleBar(t) {
   const bar = $('style-bar');
   document.body.classList.toggle('has-styles', !!STYLES[t]);
   if (!STYLES[t]) { bar.hidden = true; return; }
-  const cur = currentStyle(t);
-  bar.innerHTML = STYLES[t].map(st => {
-    const ok = styleOk(st);
-    return `<button class="style-chip${st.id === cur ? ' on' : ''}${ok ? '' : ' locked'}" data-style="${st.id}" ${ok || st.design ? '' : 'disabled'} title="${ok ? st.name : 'Freischalten: ' + styleLock(st)}">
-      <i style="background:${st.col}"></i>${st.name}${ok ? '' : ` <small>🔒 ${styleLock(st)}</small>`}</button>`;
-  }).join('');
-  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => {
-    if (b.classList.contains('locked')) { openResearch('design'); return; }        // in der Kunstakademie kaufen
-    chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t);
-  };
+  const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
+  bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
+      <i style="background:${st.col}"></i><span>${st.name}</span></button>`).join('')
+    + (more ? `<button class="style-chip more" data-more="1" title="Weitere Wege freischalten">🎨 <span>${more} weitere</span></button>` : '');
+  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
+  if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
   bar.hidden = false;
 }
 
@@ -267,6 +263,7 @@ $('tools').addEventListener('wheel', e => {
 }, { passive: false });
 // Höhe der Leiste unten merken, damit Infozeile und Fenster immer darüber sitzen
 if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--bar', $('toolbar').offsetHeight + 'px')).observe($('toolbar'));
+if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--sbar', $('style-bar').offsetHeight + 'px')).observe($('style-bar'));
 
 // Aus einem Infofenster heraus verschieben: aufnehmen und dem Finger bzw. der Maus folgen lassen
 function startMove(x, y, slot = 0) {
@@ -492,6 +489,14 @@ function announceIslands(m) {
   $('m-ok').onclick = closeModal;
 }
 
+// Wege, die es nur als Geschenk einer Sehenswürdigkeit gibt – zur Vorschau zwischen den käuflichen
+const giftStyles = () => STYLES.weg.filter(st => st.lm).map(st => {
+  const have = styleOk(st);
+  return `<button class="design gift${have ? ' have' : ''}" disabled title="${st.name}">
+    <i style="background:${st.col}"></i><span class="dn">${st.name}</span>
+    <small>${have ? '✓' : '🎁 ' + unlockText(st, true)}</small></button>`;
+}).join('');
+
 // Forschung
 // Forschung mit zwei Seiten: Wissen (Ideen, drei Stufen nach Schule/Bibliothek/Uni) und Kunstakademie (Aussehen, Taler)
 let researchTab = 'wissen';
@@ -525,7 +530,7 @@ function openResearch(tab = researchTab) {
         return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
           ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name}</span>
           <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(d.price)}`}</small></button>`;
-      }).join('')}</div>`).join('')}`;
+      }).join('')}${gr === 'Wege' ? giftStyles() : ''}</div>`).join('')}`;
   }
   openModal(`
     <h2>🔬 Forschung</h2>

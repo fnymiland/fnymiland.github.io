@@ -76,14 +76,26 @@ function roadCurve(arms) {
 }
 // Umriss der Fahrbahn (halbe Breite w) als Liste von Polygonen im Feld-Koordinatensystem.
 // quads: Ecken [su, sv], die ganz gefüllt werden, weil dort vier Wegfelder ein 2×2-Quadrat bilden –
-// so verschmelzen Wege nebeneinander zu einem breiten Weg
-function roadShapes(arms, t, w, quads = []) {
+// so verschmelzen Wege nebeneinander zu einem breiten Weg.
+// flares: Arme, die auf einen Platz treffen – dort weitet sich der Weg mit runden Ecken (Trichter).
+const EDGE_W = ROAD_W + 0.04, FLARE_R = 0.1;
+// Arm-System (a entlang des Arms [dx, dy], b quer dazu) → Feld-Koordinaten
+const armUV = ([dx, dy], a, b) => [a * dx - b * dy, a * dy + b * dx];
+function roadShapes(arms, t, w, quads = [], flares = []) {
   const out = quads.map(([su, sv]) => [[0, 0], [0.5 * su, 0], [0.5 * su, 0.5 * sv], [0, 0.5 * sv]]);
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
   const arm = ([dx, dy], from = 0) => dx > 0 ? rect(from, 0.5, -w, w) : dx < 0 ? rect(-0.5, -from, -w, w)
     : dy > 0 ? rect(-w, w, from, 0.5) : rect(-w, w, -0.5, -from);
-  if (!arms.length) {
-    out.push((t && t.rot & 1) ? rect(-w, w, -0.5, 0.5) : rect(-0.5, 0.5, -w, w));
+  // Trichter: fester Mittelpunkt für Rand und Belag, damit beide parallel laufen
+  for (const d of flares) for (const sb of [1, -1]) {
+    const ca = 0.5 - FLARE_R, cb = EDGE_W + FLARE_R, r = cb - w;
+    const pts = arcPts(ca, cb, r, -Math.PI / 2, -Math.acos(Math.min(1, FLARE_R / r)), 6).concat([[0.5, w]]);
+    out.push(pts.map(([a, b]) => armUV(d, a, b * sb)));
+  }
+  if (!arms.length) {                            // einzelnes Feld: Kapsel mit runden Enden
+    const c = 0.5 - EDGE_W;
+    const pts = arcPts(c, 0, w, -Math.PI / 2, Math.PI / 2, 10).concat(arcPts(-c, 0, w, Math.PI / 2, Math.PI * 1.5, 10));
+    out.push((t && t.rot & 1) ? pts.map(([u, v]) => [v, u]) : pts);
     return out;
   }
   const curve = roadCurve(arms);
@@ -100,7 +112,7 @@ function roadShapes(arms, t, w, quads = []) {
   out.push(rect(-w, w, -w, w));
   for (const a of arms) out.push(arm(a));
   // Innenecken zwischen zwei Armen abrunden (Mittelpunkt fest, damit die Bordsteinbreite gleich bleibt)
-  const c0 = ROAD_W + 0.04 + 0.1, r = c0 - w;
+  const c0 = EDGE_W + 0.1, r = c0 - w;
   const has = (dx, dy) => arms.some(a => a[0] === dx && a[1] === dy);
   for (const su of [1, -1]) for (const sv of [1, -1]) {
     if (!has(su, 0) || !has(0, sv)) continue;
@@ -109,10 +121,17 @@ function roadShapes(arms, t, w, quads = []) {
   }
   return out;
 }
-// Muster innerhalb einer Fläche (Feld-Koordinaten, L bildet auf den Bildschirm ab)
+// Muster innerhalb einer Fläche (Feld-Koordinaten, L bildet auf den Bildschirm ab).
+// Alle Teilflächen im selben Drehsinn, sonst heben sich Überlappungen beim Zuschneiden auf.
 function clipTo(shapes, L) {
   g.beginPath();
-  for (const sh of shapes) { sh.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); }
+  for (const sh of shapes) {
+    let area = 0;
+    for (let i = 0; i < sh.length; i++) { const p = sh[i], q = sh[(i + 1) % sh.length]; area += p[0] * q[1] - q[0] * p[1]; }
+    const pts = area < 0 ? [...sh].reverse() : sh;
+    pts.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+    g.closePath();
+  }
   g.clip();
 }
 function pattern(L, kind, x, y, z, col, cols) {
@@ -126,6 +145,24 @@ function pattern(L, kind, x, y, z, col, cols) {
       g.fillStyle = cols ? cols[Math.floor(h * 97) % cols.length] : col;
       g.beginPath(); g.ellipse(q[0], q[1], (kind === 'stones' ? 2.6 : 1.3) * z, (kind === 'stones' ? 1.6 : 0.9) * z, 0, 0, Math.PI * 2); g.fill();
     }
+    return;
+  }
+  if (kind === 'confetti') {
+    // kleine, zufällig gedrehte Papierstreifen – je Farbe ein Pfad, das spart Zeichenaufrufe
+    const bits = cols.map(() => []);
+    for (let u = -R, i = 0; u <= R; u += 0.085, i++) for (let v = -R, j = 0; v <= R; v += 0.085, j++) {
+      const h = hash(x * 16 + i, y * 16 + j, 335);
+      if (h > 0.6) continue;
+      const cu = u + (hash(x * 16 + i, y * 16 + j, 336) - 0.5) * 0.05, cv = v + (hash(x * 16 + i, y * 16 + j, 337) - 0.5) * 0.05;
+      const a = h * 23, ca = Math.cos(a), sa = Math.sin(a);
+      bits[Math.floor(h * 97) % cols.length].push([[0.042, 0.02], [-0.042, 0.02], [-0.042, -0.02], [0.042, -0.02]]
+        .map(([du, dv]) => L([cu + du * ca - dv * sa, cv + du * sa + dv * ca])));
+    }
+    bits.forEach((list, k) => {
+      g.beginPath();
+      for (const pts of list) { pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); }
+      g.fillStyle = C(cols[k]); g.fill();
+    });
     return;
   }
   g.strokeStyle = col; g.lineWidth = 0.8 * z;
@@ -153,8 +190,8 @@ function roadCenterline(arms, t) {
   const curve = roadCurve(arms);
   if (curve) return arcPts(curve.cu, curve.cv, 0.5, curve.a0, curve.a1);
   if (arms.length === 2 || !arms.length) {
-    const d = arms.length ? arms[0] : ((t && t.rot & 1) ? [0, 1] : [1, 0]);
-    return [[d[0] * 0.5, d[1] * 0.5], [-d[0] * 0.5, -d[1] * 0.5]];
+    const d = arms.length ? arms[0] : ((t && t.rot & 1) ? [0, 1] : [1, 0]), e = arms.length ? 0.5 : 0.5 - EDGE_W;
+    return [[d[0] * e, d[1] * e], [-d[0] * e, -d[1] * e]];
   }
   if (arms.length === 1) return [[arms[0][0] * 0.5, arms[0][1] * 0.5], [0, 0]];
   return null;
@@ -166,7 +203,7 @@ const PATH_LOOK = {
   mulch:   { edge: '#6f4a2e', fill: '#8b5e3c', pat: ['dots', null], cols: ['#6f4a2e', '#a0714d'] },
   asphalt: { edge: '#cfc8bb', fill: '#9e988e', dash: true },
   holz:    { edge: '#9c7449', fill: '#c89a6a', pat: ['planks', '#a97d52'] },
-  pastell: { edge: '#d9bcc6', fill: '#f5e4ea', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffe08a'] },
+  konfetti: { edge: '#e8d8cf', fill: '#fbf4ec', pat: ['confetti', null], cols: ['#f2a7c0', '#8fd3bf', '#b9a3ee', '#ffd36e', '#8fc1f0', '#f7b58a'] },
   blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
   kristall: { edge: '#9fcfe8', fill: '#e1f4fb', pat: ['dots', null], cols: ['#9fdcf7', '#ffffff', '#62b1dc'], glow: true },
@@ -177,62 +214,127 @@ const PATH_LOOK = {
   terrakotta: { fill: '#d99a73', pat: ['tiles', '#c4805a'] },
   schach:     { fill: '#f5dce6', checker: '#dcefe6' },
   fisch:      { fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
-  mosaik:     { fill: '#efe6d8', pat: ['dots', null], cols: ['#f2a7c0', '#a7d8c9', '#c7b4ee', '#ffd36e', '#8fc1f0'] },
 };
-const isFillPath = (x, y) => { const t = state.tiles.get(x + ',' + y); return !!t && t.b === 'weg' && styleDef('weg', t.style).shape === 'fill'; };
+const pathAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return t && t.b === 'weg' ? styleDef('weg', t.style) : null; };
+const isFillPath = (x, y) => { const s = pathAt(x, y); return !!s && s.shape === 'fill'; };
 
-function drawPath(cx, cy, z, x, y, t) {
-  const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-  const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
-  if (st.shape === 'fill') {
-    const sq = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]];
-    poly(sq.map(L), C(lk.fill));
+// Plätze: Ecken rund, wo die Fläche frei endet; wo ein Weg einmündet, bleibt die Ecke spitz (dort sitzt sein Trichter)
+const PLAZA_R = 0.2, CORNERS = [[-1, -1], [1, -1], [1, 1], [-1, 1]], SIDES = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+function plazaSides(x, y) {
+  const own = pathAt(x, y);
+  return SIDES.map(([dx, dy]) => {
+    const n = pathAt(x + dx, y + dy);
+    if (!n || n.id === 'tritt') return 'open';
+    if (n.shape === 'band') return 'band';
+    return n.id === own.id ? 'same' : 'seam';
+  });
+}
+function plazaCorners(x, y, sides = plazaSides(x, y)) {
+  return CORNERS.map(([sx, sy], i) => {
+    if (sides[(i + 3) % 4] !== 'open' || sides[i] !== 'open') return [[sx * 0.5, sy * 0.5]];
+    const a = Math.atan2(sy, sx), c = 0.5 - PLAZA_R;
+    return arcPts(sx * c, sy * c, PLAZA_R, a - Math.PI / 4, a + Math.PI / 4, 6);
+  });
+}
+function drawPlaza(L, x, y, z, lk) {
+  const sides = plazaSides(x, y), corners = plazaCorners(x, y, sides), outline = corners.flat();
+  poly(outline.map(L), C(lk.fill));
+  if (lk.checker || lk.pat) {
+    g.save(); clipTo([outline], L);
     if (lk.checker) {
       for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
         if ((i + j) & 1) continue;
         const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
         poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
       }
-    } else if (lk.pat) {
-      g.save(); clipTo([sq], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
+    g.restore();
+  }
+  // Randkante: wo die Fläche endet ganz, an einer Einmündung bis zum Trichter, zu anderem Pflaster eine feine Fuge
+  const line = pts => pts.forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+  g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineCap = 'round'; g.lineJoin = 'round';
+  g.lineWidth = 1.4 * z;
+  g.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const c = corners[i], p0 = c[c.length - 1], p1 = corners[(i + 1) % 4][0];
+    if (c.length > 1) line(c);
+    if (sides[i] === 'open') line([p0, p1]);
+    else if (sides[i] === 'band') {
+      const gap = EDGE_W + FLARE_R;
+      line([p0, lerp(p0, p1, 0.5 - gap)]); line([lerp(p0, p1, 0.5 + gap), p1]);
     }
-    // Randkante, wo die Fläche endet
-    g.strokeStyle = C(shade(lk.fill, -0.18)); g.lineWidth = 1.4 * z; g.lineCap = 'round';
+  }
+  g.stroke();
+  if (sides.includes('seam')) {
+    g.lineWidth = 0.9 * z;
     g.beginPath();
-    for (const [dx, dy, a, b] of [[1, 0, [0.5, -0.5], [0.5, 0.5]], [-1, 0, [-0.5, -0.5], [-0.5, 0.5]],
-                                  [0, 1, [-0.5, 0.5], [0.5, 0.5]], [0, -1, [-0.5, -0.5], [0.5, -0.5]]]) {
-      if (isFillPath(x + dx, y + dy)) continue;
-      const p0 = L(a), p1 = L(b);
-      g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
-    }
+    sides.forEach((sd, i) => { if (sd === 'seam') line([corners[i][corners[i].length - 1], corners[(i + 1) % 4][0]]); });
     g.stroke();
-    return;
   }
+}
+// Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
+function pathQuads(x, y) {
+  const paved = (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
+  const out = [];
+  for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
+  return out;
+}
+// Arme, die in einen Platz münden (Trichter), und Arme zu einem Weg in anderem Stil (Schwelle)
+const pathFlares = (x, y) => pathArms(x, y).filter(([dx, dy]) => isFillPath(x + dx, y + dy));
+function pathThresholds(x, y) {
+  const own = pathAt(x, y);
+  if (!own || own.shape !== 'band' || own.id === 'tritt') return [];
+  return pathArms(x, y).filter(([dx, dy]) => {
+    const n = pathAt(x + dx, y + dy);
+    return n && n.shape === 'band' && n.id !== own.id && n.id !== 'tritt';
+  });
+}
+// Schwelle aus hellem Stein quer über den Weg; jedes der beiden Felder zeichnet seine Hälfte
+function drawThreshold(L, d, z) {
+  const B = EDGE_W + 0.03, T = 0.05;
+  const pts = [[0.5, -B], [0.5, B]].concat(arcPts(0.5, B - T, T, Math.PI / 2, Math.PI, 4))
+    .concat(arcPts(0.5, -(B - T), T, Math.PI, Math.PI * 1.5, 4)).map(([a, b]) => armUV(d, a, b));
+  poly(pts.map(L), C('#efe8da'));
+  g.strokeStyle = C('#c8bca5'); g.lineWidth = 0.9 * z; g.lineJoin = 'round';
+  g.beginPath();
+  pts.slice(1).forEach((p, i) => { const q = L(p); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
+  g.stroke();
+}
+// Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
+// Kreuzungen bekommen einen großen Stein in der Mitte, Kurven drei Steine auf dem Bogen.
+function stonePoints(arms, t) {
+  const curve = roadCurve(arms);
+  if (curve) return [1 / 6, 1 / 2, 5 / 6].map(f => {
+    const a = curve.a0 + (curve.a1 - curve.a0) * f;
+    return [curve.cu + Math.cos(a) * 0.5, curve.cv + Math.sin(a) * 0.5, 1];
+  });
+  const hub = arms.length > 2, pts = hub ? [[0, 0, 1.45]] : [];
+  const list = arms.length ? arms : ((t && t.rot & 1) ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]]);
+  for (const [dx, dy] of list) for (const d of hub ? [0.375] : [0.125, 0.375]) pts.push([dx * d, dy * d, 1]);
+  return pts;
+}
+function drawStones(L, arms, t, x, y, z) {
+  const pts = stonePoints(arms, t).sort((p, q) => (p[0] + p[1]) - (q[0] + q[1]));
+  pts.forEach(([u, v, s], i) => {
+    const h = hash(x * 7 + i, y * 7 - i, 91), k = s * (0.92 + h * 0.14), q = L([u, v]);
+    ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498'));
+    ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C(h > 0.5 ? '#d6d1c6' : '#ddd8cd'));
+  });
+}
+
+function drawPath(cx, cy, z, x, y, t) {
+  const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
+  const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
+  if (st.shape === 'fill') { drawPlaza(L, x, y, z, lk); return; }
   const arms = pathArms(x, y);
-  const band = (px, py) => { const n = state.tiles.get(px + ',' + py); return !!n && n.b === 'weg' && styleDef('weg', n.style).shape === 'band'; };
-  const quads = [];
-  for (const su of [1, -1]) for (const sv of [1, -1]) if (band(x + su, y) && band(x, y + sv) && band(x + su, y + sv)) quads.push([su, sv]);
-  if (lk.stones) {
-    // Trittsteine entlang der Mittellinie
-    const cl = roadCenterline(arms, t) || [[0, 0]];
-    const pts = [];
-    for (let i = 0; i < cl.length - 1; i++) {
-      const [a, b] = [cl[i], cl[i + 1]], len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      for (let d = 0; d < len; d += 0.26) pts.push([a[0] + (b[0] - a[0]) * d / len, a[1] + (b[1] - a[1]) * d / len]);
-    }
-    if (arms.length > 2 || cl.length < 2) pts.push([0, 0]);
-    for (const [u, v] of pts) {
-      const q = L([u, v]);
-      ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498'));
-      ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d6d1c6'));
-    }
-    return;
-  }
-  for (const [w, col] of [[ROAD_W + 0.04, lk.edge], [ROAD_W, lk.fill]]) {
-    for (const sh of roadShapes(arms, t, w, quads)) poly(sh.map(L), C(col));
+  if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
+  const quads = pathQuads(x, y);
+  const flares = pathFlares(x, y);
+  for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
+    for (const sh of roadShapes(arms, t, w, quads, flares)) poly(sh.map(L), C(col));
   }
   if (lk.pat) {
-    g.save(); clipTo(roadShapes(arms, t, ROAD_W, quads), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    g.save(); clipTo(roadShapes(arms, t, ROAD_W, quads, flares), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
@@ -244,6 +346,7 @@ function drawPath(cx, cy, z, x, y, t) {
     g.stroke();
     g.setLineDash([]);
   }
+  for (const d of pathThresholds(x, y)) drawThreshold(L, d, z);
 }
 
 // ---------------------------------------------------------------------------
