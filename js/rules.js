@@ -158,6 +158,9 @@ function totals() {
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
   let pop = 0, jobs = 0;
+  const rail = computeRail();
+  pop += COMMUTERS * rail.commuters.size;                  // Pendler, die mit dem Zug kommen
+  const railMul = (x, y) => rail.regions.size && rail.regions.has(regionAt(x, y)) ? 1 + RAIL_BONUS : 1;
   // Erreichbarkeit, Viertel, Sehenswürdigkeiten
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
@@ -193,7 +196,8 @@ function totals() {
     if (t.b === 'lm') continue;
     const s = st.get(k);
     s.lmb = lmNear(x, y);
-    const m = s.eff * (1 + s.bonus) * s.lmb;
+    s.rail = railMul(x, y);
+    const m = s.eff * (1 + s.bonus) * s.lmb * s.rail;
     if (d.prod) {
       s.prod = {};
       for (const [r, base] of Object.entries(d.prod)) {
@@ -234,9 +238,10 @@ function totals() {
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y); }
   // Gebäude-Stufen (für ✨ und Infofenster)
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
-  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net };
+  return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty)), lm: lmOn.size, lmOn, lmHalf, st, net, rail };
 }
-let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map() };
+let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
+  rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, needed: 0, regions: new Set(), commuters: new Set(), comp: new Map() } };
 function recalc() { T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -394,7 +399,8 @@ function autoRot(b, x, y, fallback) {
   for (const r of [fallback, 0, 1, 2, 3]) {
     if (!fits(r)) continue;
     const front = frontTiles(b, x, y, r);
-    const score = front.filter(([fx, fy]) => bAt(fx, fy) === 'weg').length + (shore ? 10 * front.filter(([fx, fy]) => isWater(fx, fy)).length : 0);
+    const score = front.filter(([fx, fy]) => bAt(fx, fy) === 'weg').length + (shore ? 10 * front.filter(([fx, fy]) => isWater(fx, fy)).length : 0)
+      + (b === 'station' ? 10 * front.filter(([fx, fy]) => bAt(fx, fy) === 'schiene').length : 0);   // Bahnsteig zur Schiene
     if (score > bestScore) { best = r; bestScore = score; }
   }
   return best;
@@ -408,7 +414,56 @@ function placeRot(b, x, y) {
 // Schienen über Wasser sind Brücken und kosten mehr
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
-const railArms = (x, y) => DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'schiene' || b === 'station'; });
+const railArms = (x, y) => DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
+// Bahn: zusammenhängende Schienen sind ein Netz, Bahnhöfe gehören zum Netz direkt neben ihrer Grundfläche.
+// Ein Netz mit Bahnhöfen auf mindestens zwei Inseln ist eine Linie mit einem Zug. Jeder Zug braucht 2 Windräder
+// (egal wo). Fährt er, bringt jeder Bahnhof der Linie Pendler, und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
+const TRAIN_POWER = 2, COMMUTERS = 8, RAIL_BONUS = 0.1;
+function computeRail() {
+  const rails = new Set(), stations = [];
+  let wind = 0;
+  for (const [k, t] of state.tiles) {
+    if (t.b === 'schiene') rails.add(k);
+    else if (t.b === 'station') stations.push(k);
+    else if (t.b === 'windrad') wind++;
+  }
+  const comp = new Map();
+  let nid = 0;
+  for (const k of rails) {
+    if (comp.has(k)) continue;
+    const q = [k];
+    comp.set(k, nid);
+    while (q.length) {
+      const [x, y] = keyXY(q.pop());
+      for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n)) { comp.set(n, nid); q.push(n); } }
+    }
+    nid++;
+  }
+  const byNet = new Map(), stationNet = new Map();
+  for (const s of stations.sort()) {
+    const t = state.tiles.get(s), [x, y] = keyXY(s);
+    let net = null;
+    for (const [fx, fy] of footprint(t.b, x, y, t.rot)) for (const [dx, dy] of DIRS) {
+      const n = comp.get((fx + dx) + ',' + (fy + dy));
+      if (n != null && net == null) net = n;
+    }
+    stationNet.set(s, net);
+    if (net != null) { if (!byNet.has(net)) byNet.set(net, []); byNet.get(net).push(s); }
+  }
+  const lines = [];
+  for (const [net, list] of byNet) {
+    const order = r => r === 'home' ? -1 : ISLES.findIndex(i => i.id === r);   // Heimatinsel zuerst
+    const regions = [...new Set(list.map(s => regionAt(...keyXY(s))))].sort((p, q) => order(p) - order(q));
+    if (regions.length >= 2) lines.push({ net, stations: list, regions });
+  }
+  lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
+  const trains = Math.floor(wind / TRAIN_POWER);
+  lines.forEach((l, i) => { l.powered = i < trains; });
+  const regions = new Set(), commuters = new Set();
+  for (const l of lines) if (l.powered) { l.regions.forEach(r => regions.add(r)); l.stations.forEach(s => commuters.add(s)); }
+  return { lines, stationNet, wind, trains: Math.min(trains, lines.length), needed: lines.length * TRAIN_POWER, regions, commuters, comp };
+}
+const lineOf = k => T.rail && T.rail.lines.find(l => l.stations.includes(k));
 // Forschung, mit der ein Rohstoff-Betrieb auch außerhalb seines Geländes gebaut werden darf
 const ANYWHERE = { forest: { tech: 'forst' }, obst: { tech: 'agrar' }, rock: { tech: 'tiefbau' }, erz: { tech: 'bohrung' } };
 // Passt das Objekt mit Anker (x, y) hierhin? opts.move: beim Verschieben zählen Kosten und Einwohner nicht

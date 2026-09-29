@@ -153,6 +153,22 @@ function claimable(x, y) {
   return DIRS.some(([dx, dy]) => ownedTile(x + dx, y + dy));
 }
 const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
+// Zu welchem Ort gehört ein Feld? Insel-id bzw. 'home'; aufgeschüttetes Meer zählt zur nächsten Insel
+const regionCache = new Map();
+function regionAt(x, y) {
+  const k = x + ',' + y;
+  let r = regionCache.get(k);
+  if (r) return r;
+  r = islandAt(x, y);
+  if (!r) {
+    let best = Math.hypot(x - ISLAND.cx, y - ISLAND.cy) - ISLAND.r;
+    r = 'home';
+    for (const i of ISLES) { const d = Math.hypot(x - i.cx, y - i.cy) - ISLE_R; if (d < best) { best = d; r = i.id; } }
+  }
+  regionCache.set(k, r);
+  return r;
+}
+const regionName = r => r === 'home' ? 'Heimatinsel' : ISLE_BY_ID[r].name;
 function claimTile(x, y) { if (!state.owned.has(chunkOf(x, y))) state.claimed.add(x + ',' + y); }
 // Felder von a nach b in Schritten zu direkten Nachbarn (fürs Ziehen: nichts überspringen)
 function tilesBetween(a, b) {

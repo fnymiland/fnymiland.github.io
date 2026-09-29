@@ -744,7 +744,7 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 }
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
 const MIRROR = new Set(['bank']);
-const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'haus', 'muehle', 'steinmetz', 'schmiede',
+const ROTATABLE = new Set([...MIRROR, 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen

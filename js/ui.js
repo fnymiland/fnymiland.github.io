@@ -295,6 +295,12 @@ function openInfo(x, y) {
   else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
+  if (s.rail > 1 && t.b !== 'station') status.push(`<div class="ok">🚆 Bahnanschluss der Insel: +${Math.round(RAIL_BONUS * 100)} %</div>`);
+  if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
+  if (t.b === 'windrad' && (hasTech('bahn') || T.rail.lines.length)) {
+    status.push(`<div>⚡ Strom für Züge: ${T.rail.wind} ${T.rail.wind === 1 ? 'Windrad' : 'Windräder'} – je Zug ${TRAIN_POWER}` +
+      (T.rail.lines.length ? ` · ${T.rail.trains} von ${T.rail.lines.length} ${T.rail.lines.length > 1 ? 'Zügen fahren' : 'Zug fährt'}` : '') + '</div>');
+  }
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -363,6 +369,8 @@ function openInfo(x, y) {
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && hasMat(w.next.mat) ? '' : 'disabled'}>
       ${w.ready ? `Ausbauen · ${matText(w.next.mat)}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
   }
+  const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
+  const train = line ? trainChooser(line) : '';
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
@@ -372,6 +380,7 @@ function openInfo(x, y) {
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
     <p class="muted">${d.desc}</p>
     ${grow}
+    ${train}
     ${colors}
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
@@ -410,7 +419,41 @@ function openInfo(x, y) {
   if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
+  if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   if (!liveNow) updateHud();
+}
+
+// Bahnhof: wohin fährt der Zug, hat er Strom?
+function stationStatus(k) {
+  const line = lineOf(k), names = l => l.regions.map(regionName);
+  if (T.rail.stationNet.get(k) == null) return ['<div class="bad">✗ Keine Schiene direkt am Bahnhof</div>'];
+  if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen bis zu einem Bahnhof auf einer anderen Insel legen</div>'];
+  const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')}</div>`];
+  if (line.powered) out.push(`<div class="ok">✓ Der Zug fährt: 👥 +${COMMUTERS} Pendler, +${Math.round(RAIL_BONUS * 100)} % für ${names(line).join(' und ')}</div>`);
+  else out.push(`<div class="bad">⚡ Zu wenig Strom: ${T.rail.wind} von ${T.rail.needed} Windrädern (je Zug ${TRAIN_POWER})</div>`);
+  return out;
+}
+// Zug der Linie: Modell und Farbe wählt der Spieler; gespeichert an allen Bahnhöfen der Linie
+const TRAIN_MODELS = [['regio', 'Regionalbahn'], ['tram', 'Straßenbahn'], ['modern', 'Triebwagen']];
+const TRAIN_COLS = ['#d9534a', '#3e7fd0', '#58b36a', '#f2b53a', '#b07ad6', '#f28cb1', '#4a4a58'];
+function lineTrain(line) {
+  const t = line.stations.map(k => state.tiles.get(k)).find(t => t && t.train);
+  return t ? { model: t.train, col: t.trainCol || 0 } : { model: 'regio', col: 0 };
+}
+function trainChooser(line) {
+  const cur = lineTrain(line);
+  return `<div class="label">Zug dieser Linie</div>
+    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === cur.model ? ' on' : ''}" data-train="${id}">${name}</button>`).join('')}</div>
+    <div class="swatches">${TRAIN_COLS.map((c, i) => `<button class="sw${i === cur.col ? ' on' : ''}" data-tcol="${i}" style="background:${c}" aria-label="Zugfarbe ${i + 1}"></button>`).join('')}</div>`;
+}
+function wireTrainChooser(el, line, reopen) {
+  const set = (model, col) => {
+    for (const k of line.stations) { const t = state.tiles.get(k); if (t) { t.train = model; t.trainCol = col; } }
+    sfx('deco'); save(); reopen();
+  };
+  const cur = lineTrain(line);
+  for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => set(b.dataset.train, cur.col);
+  for (const b of el.querySelectorAll('[data-tcol]')) b.onclick = () => set(cur.model, +b.dataset.tcol);
 }
 
 function openDecoInfo(x, y, slot) {
@@ -619,6 +662,7 @@ function openTownHall(tab = hallTab) {
       <div class="stats">
         <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
         <span>🪙 +${fmtRate(T.inc)}/s</span><span>💡 +${fmtRate(T.sci)}/s</span><span>🌸 ${T.beauty}</span>
+        ${T.rail.lines.length ? `<span>🚆 ${T.rail.trains}/${T.rail.lines.length} ${T.rail.lines.length > 1 ? 'Züge' : 'Zug'} · ⚡ ${T.rail.wind}/${T.rail.needed}</span>` : ''}
       </div>
       ${rates.length ? `<div class="label">Lager</div><div class="stats">${rates.join('')}</div>` : ''}
       <div class="label">Laternen</div>

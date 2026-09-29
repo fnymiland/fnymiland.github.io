@@ -303,6 +303,39 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
+  // Bahnhof: Empfangsgebäude mit Uhr, vorn (zur Schiene) ein Bahnsteig mit gelber Linie und Dach, Bank und Schild
+  station(K, s, now, x, y, t) {
+    const z = K.z;
+    if (groundPart(() => {
+      K.rect(0.1, -0.94, 0.48, 0.94, C('#e6dfd0'));
+      K.rect(0.4, -0.94, 0.44, 0.94, C('#f2c14e'));
+    })) return;
+    const [wall, roof] = paint(t, '#f3e1c4', '#b8574a');
+    const hall = () => {
+      kShadow(K, 0.5);
+      const B = K.block({ a: -0.2, ha: 0.24, hb: 0.54, h: 17, wall, roof, roofH: 11 });
+      K.door(B, 'front', 0.44, 0.56, 0.62);
+      K.wins(B, 'front', 4, 0.35, 0.72, 0.06, 0.94, [1, 2]);
+      K.sideWins(B, 1, 0.35, 0.72);
+      const F = B.faces.front;
+      if (F) {                                             // Bahnhofsuhr über der Tür
+        const m = lerp(F.P, F.Q, 0.5), cx = m[0], cy = m[1] - F.H * 0.84;
+        circle(cx, cy, 2.8 * z, C('#ffffff'));
+        g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.7 * z;
+        g.beginPath(); g.arc(cx, cy, 2.8 * z, 0, Math.PI * 2); g.moveTo(cx, cy); g.lineTo(cx, cy - 2 * z); g.moveTo(cx, cy); g.lineTo(cx + 1.4 * z, cy); g.stroke();
+      }
+    };
+    const canopy = () => {
+      for (const b of [-0.72, -0.24, 0.24, 0.72]) kPost(K, 0.3, b, 13, '#6b6f78', 1.2);
+      K.block({ a: 0.28, ha: 0.13, hb: 0.88, h: 1.4, lift: 13, wall: shade(roof, -0.12), type: 'flat', roof: shade(roof, 0.06) });
+      const [sx, sy] = K.P(0.3, -0.5, 9);                 // blaues Schild
+      poly([[sx - 4 * z, sy - 2 * z], [sx + 4 * z, sy - 2 * z], [sx + 4 * z, sy + 1.5 * z], [sx - 4 * z, sy + 1.5 * z]], C('#3e7fd0'));
+      g.strokeStyle = C('#ffffff'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(sx - 2.5 * z, sy - 0.2 * z); g.lineTo(sx + 2.5 * z, sy - 0.2 * z); g.stroke();
+    };
+    K.scene([[-0.2, 0, hall], [0.3, 0, canopy], [0.22, 0.45, () => {
+      const [bx, by] = K.P(0.2, 0.45); g.save(); g.translate(bx, by); g.scale(0.45, 0.45); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: K.r }); g.restore();
+    }]]);
+  },
   // Glashaus: weißes Gerippe, Glaswände mit Pflanzen dahinter, Satteldach aus Glas; abends warmes Licht innen
   glashaus(K, s, now, x, y, t) {
     const z = K.z;

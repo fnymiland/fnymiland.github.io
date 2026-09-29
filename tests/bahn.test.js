@@ -108,3 +108,73 @@ describe('Alte Stände', () => {
     expect(game('load()').tiles.get('8,8').b).toBe('station');
   });
 });
+
+describe('Bahnhöfe, Linien, Strom und Bonus', () => {
+  // Bahnhof auf der Heimatinsel bei (8,8), einer auf der Waldinsel; Schienen direkt als Felder (ohne Baukosten)
+  const line = () => {
+    unlock();
+    const [wx, wy] = game('[Math.round(ISLE_BY_ID.wald.cx) + 4, Math.round(ISLE_BY_ID.wald.cy)]');
+    game(`state.tiles.set('8,8', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('${wx},${wy}', { b: 'station', lvl: 1, rot: 0 })`);
+    // Schiene: vor dem Heimatbahnhof (9,8) nach +x bis wx+1, dann in y bis wy – liegt dort direkt vor dem Waldbahnhof
+    let x = 9, y = 8;
+    const set = () => game(`if (!state.tiles.has('${x},${y}')) state.tiles.set('${x},${y}', { b: 'schiene', lvl: 1 })`);
+    set();
+    while (x !== wx + 1) { x += Math.sign(wx + 1 - x); set(); }
+    while (y !== wy) { y += Math.sign(wy - y); set(); }
+    game('recalc()');
+    return [wx, wy];
+  };
+
+  it('zwei Bahnhöfe auf verschiedenen Inseln, verbunden: eine Linie – ohne Strom fährt sie nicht', () => {
+    line();
+    expect(game('T.rail.lines.length')).toBe(1);
+    expect(game('T.rail.lines[0].regions')).toEqual(['home', 'wald']);
+    expect(game('T.rail.lines[0].powered')).toBe(false);
+    expect(game('T.rail.needed')).toBe(2);
+  });
+
+  it('mit 2 Windrädern fährt der Zug: +8 Pendler je Bahnhof, +10 % auf beiden Inseln', () => {
+    line();
+    game("state.tiles.set('6,4', { b: 'feld', lvl: 1 }); recalc()");
+    const pop = game('T.pop'), inc = game("T.st.get('6,4').inc");
+    game("state.tiles.set('12,3', { b: 'windrad', lvl: 1 }); state.tiles.set('12,5', { b: 'windrad', lvl: 1 }); recalc()");
+    expect(game('T.rail.lines[0].powered')).toBe(true);
+    expect(game('T.pop')).toBe(pop + 16);
+    expect(game("T.st.get('6,4').inc")).toBeCloseTo(inc * 1.1);
+    expect(game("T.rail.regions.has('home') && T.rail.regions.has('wald')")).toBe(true);
+  });
+
+  it('Infofenster: Linie, Strom, Zug wählen – gilt für alle Bahnhöfe der Linie', () => {
+    const [wx, wy] = line();
+    game('openInfo(8, 8)');
+    const txt = document.getElementById('panel').textContent;
+    expect(txt).toContain('Linie Heimatinsel ↔ Waldinsel');
+    expect(txt).toContain('Zu wenig Strom');
+    document.querySelector('[data-train="tram"]').onclick();
+    document.querySelector('[data-tcol="2"]').onclick();
+    expect(game(`[state.tiles.get('8,8').train, state.tiles.get('${wx},${wy}').train, state.tiles.get('${wx},${wy}').trainCol]`)).toEqual(['tram', 'tram', 2]);
+  });
+
+  it('zwei Bahnhöfe auf derselben Insel sind keine Linie', () => {
+    unlock();
+    game("state.tiles.set('8,4', { b: 'station', lvl: 1 }); state.tiles.set('8,8', { b: 'station', lvl: 1 })");
+    for (let y = 4; y <= 9; y++) game(`state.tiles.set('10,${y}', { b: 'schiene', lvl: 1 })`);
+    game("state.tiles.set('9,4', { b: 'schiene', lvl: 1 }); state.tiles.set('9,9', { b: 'schiene', lvl: 1 }); recalc()");
+    expect(game('T.rail.lines.length')).toBe(0);
+  });
+
+  it('der Bahnhof dreht sich beim Setzen zur Schiene', () => {
+    unlock();
+    game("rotManual = false; for (let y = 3; y <= 10; y++) state.tiles.set('10,' + y, { b: 'schiene', lvl: 1 }); recalc()");
+    expect(game("build('station', 9, 6, true)")).toBe(true);
+    const front = game("frontTiles('station', 9, 6, state.tiles.get('9,6').rot)");
+    expect(front.some(([x]) => x === 10)).toBe(true);
+  });
+
+  it('Zugmodell und Farbe werden gespeichert', () => {
+    unlock();
+    game("state.tiles.set('8,8', { b: 'station', lvl: 1, train: 'tram', trainCol: 3 }); save()");
+    const t = game('load()').tiles.get('8,8');
+    expect([t.train, t.trainCol]).toEqual(['tram', 3]);
+  });
+});
