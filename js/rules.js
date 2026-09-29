@@ -692,6 +692,32 @@ function cablePairs() {
 // Hafen-Stufe. Eingerichtet am Hafen (t.ferry = Feld des anderen Hafens), kostet einmal FERRY_COST.
 const FERRY_SEATS = [100, 180, 260], FERRY_COST = { money: 2000, bretter: 20 };
 const FISH_INC = 5;                                  // Fischkutter (18f): je Hafen-Stufe einer, jeder bringt so viele Taler/s
+// Handel (18d): ab dem Handelshafen (Stufe 2) kaufen und verkaufen Frachter je 10 Stück. Die Preise schwanken langsam
+// (jede Ware ihr eigener Takt, etwa 9–13 Minuten, zwischen 60 % und 140 %); Kaufen kostet anderthalbmal so viel.
+const TRADE_PRICE = { holz: 3, stein: 3, erz: 6, obst: 4, bretter: 10, quader: 10, metall: 30, kristall: 80 };
+const TRADE_LOT = 10, TRADE_BUY = 1.5;
+function tradePrice(r, now = Date.now()) {
+  const i = Object.keys(RES).indexOf(r), per = 540e3 + i * 37e3;
+  return TRADE_PRICE[r] * (1 + 0.4 * Math.sin(now / per * Math.PI * 2 + i * 1.7));
+}
+const canTrade = () => [...state.tiles.values()].some(t => t.b === 'hafen' && t.lvl >= 2);
+// Kreuzfahrt (18e): Am Großen Hafen (Stufe 3) legt alle 6 Minuten ein Schiff an. Die Gäste besuchen, was bis 15 Felder
+// um den Hafen anzieht (Sehenswürdigkeiten, Wunderwerke, Schönes), und geben dort Geld aus.
+const CRUISE_EVERY = 6 * 60e3, CRUISE_STAY = 60e3, CRUISE_R = 15, CRUISE_PAY = 40;
+function cruiseAttraction(x, y) {
+  let a = 0;
+  const near = (px, py) => Math.hypot(px - x, py - y) <= CRUISE_R;
+  for (const [k, t] of state.tiles) {
+    const [tx, ty] = keyXY(k), [w, h] = sizeOf(t.b, t.rot), cx = tx + (w - 1) / 2, cy = ty + (h - 1) / 2;
+    if (!near(cx, cy)) continue;
+    if (t.b === 'lm') a += ownedTile(tx, ty) ? LM_ATTRACT[lmStage(t.lm)] || 0 : 0;
+    else if (WONDER_ATTRACT[t.b]) a += wonderDone(t) ? WONDER_ATTRACT[t.b] : 0;
+    else if (ITEMS[t.b].cat === 'deko' && ITEMS[t.b].beauty) a += ITEMS[t.b].beauty / 10;
+  }
+  for (const [k, ds] of state.decos) { const [dx, dy] = keyXY(k); if (near(dx, dy)) for (const d of ds) if (d) a += ITEMS[d.b].beauty / 10; }
+  return a;
+}
+const cruiseGuests = a => Math.round(a * 1.5);
 function ferryPairs() {
   const out = [], seen = new Set();
   for (const [k, t] of state.tiles) {

@@ -217,6 +217,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `state.expedition` (echte Zeit, `EXPEDITION_MIN`, gespeichert) → `checkExpedition` im Takt (nur ohne offenes Fenster)
     → `discoverIsland` (Tagebuchseite `isle:<id>`, `DISCOVERY`-Texte). Das Boot zeichnet `expeditionBoat`/`drawBoatMover`
     als Mover; der Steg zeigt sein Boot nur, solange es zu Hause ist.
+48. **Hafen** (Block 18): Fähre (`t.ferry` = Feld des anderen Hafens, `ferryPairs`, `FERRY_SEATS` nach der kleineren Stufe,
+    läuft durch `transitTraffic`), Fischkutter (`rawIncome` hafen = `FISH_INC` × Stufe), Handel ab Stufe 2 (`trade`,
+    `tradePrice` aus der Uhrzeit, kein Zustand), Kreuzfahrt ab Stufe 3 (`checkCruises` im Takt, `t.cruise`/`t.docked`,
+    `cruiseAttraction` im Umkreis). Schiffe sind Mover (`ferryBoats`, `fishBoats`, `cargoShip`, `cruiseShips`).
+    **Neue Felder an Kacheln müssen in `tileOut` (state.js)** – sonst gehen sie beim Speichern verloren (Wagen, Fähre).
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

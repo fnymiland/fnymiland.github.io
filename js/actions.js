@@ -383,3 +383,41 @@ function invent(id) {
   if (id === 'feuerwerk') startFireworks();
   return true;
 }
+
+// Handel am Hafen: n > 0 kaufen, n < 0 verkaufen (je TRADE_LOT). Danach fährt ein Frachter los.
+let lastTrade = null;                                // { at: Feld des Hafens, t } – nur fürs Bild
+function trade(r, n, from) {
+  if (!canTrade()) { fail('Handel gibt es ab dem Handelshafen (Hafen Stufe 2)'); return false; }
+  const p = tradePrice(r);
+  if (n < 0) {
+    if (state.res[r] < -n) { fail(`Zu wenig ${RES[r].name}`); return false; }
+    state.res[r] += n; state.money += -n * p;
+  } else {
+    const cost = n * p * TRADE_BUY;
+    if (state.money < cost) { fail('Zu wenig Taler'); return false; }
+    state.money -= cost; state.res[r] += n;
+  }
+  lastTrade = { at: from, t: Date.now() };
+  sfx('deco'); save();
+  return true;
+}
+// Kreuzfahrt: im Takt prüfen, ob an einem Großen Hafen ein Schiff anlegt
+function checkCruises(now = Date.now()) {
+  let n = 0;
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'hafen' || (t.lvl || 1) < 3) continue;
+    if (!t.cruise) { t.cruise = now + CRUISE_EVERY / 2; continue; }
+    if (now < t.cruise) continue;
+    const [x, y] = keyXY(k), a = cruiseAttraction(x + 0.5, y + 0.5), pay = a * CRUISE_PAY * masteryMul('taler');
+    t.cruise = now + CRUISE_EVERY;
+    t.docked = now;
+    if (pay >= 1) {
+      state.money += pay;
+      addFloat(x, y, '+' + fmt(pay), '#3f8f43');
+      toast(`🛳️ Ein Kreuzfahrtschiff legt an: ${fmt(cruiseGuests(a))} Gäste – 🪙 +${fmt(pay)}`);
+      sfx('star');
+    }
+    n++;
+  }
+  return n;
+}

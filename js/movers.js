@@ -429,3 +429,51 @@ function drawFishMover(m, z, now) {
   g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.9 * z;
   g.beginPath(); g.moveTo(x + 3 * z, y + bob); g.lineTo(x + 8 * z, y - 9 * z + bob); g.stroke();       // Angelausleger
 }
+
+// Richtung vom Hafen aufs offene Wasser (für Kutter, Frachter, Kreuzfahrtschiff)
+function seaDir(cx, cy) { return DIRS.find(([dx, dy]) => terrainAt(Math.round(cx + dx * 4), Math.round(cy + dy * 4)) === 'water'); }
+// Frachter: fährt nach einem Handel eine Minute lang vom Hafen hinaus
+function cargoShip() {
+  if (!lastTrade || Date.now() - lastTrade.t > 60e3 || !state.tiles.get(lastTrade.at)) return null;
+  const [x, y] = keyXY(lastTrade.at), cx = x + 0.5, cy = y + 0.5, dir = seaDir(cx, cy);
+  if (!dir) return null;
+  const k = (Date.now() - lastTrade.t) / 60e3, d = 2.5 + k * 18;
+  return { boat: true, cargo: true, px: cx + dir[0] * d, py: cy + dir[1] * d, du: dir[0], dv: dir[1] };
+}
+// Kreuzfahrtschiff: kommt herein, liegt vor dem Großen Hafen und fährt wieder hinaus
+function cruiseShips() {
+  const out = [], now = Date.now();
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'hafen' || !t.docked || now - t.docked > CRUISE_STAY) continue;
+    const [x, y] = keyXY(k), cx = x + 0.5, cy = y + 0.5, dir = seaDir(cx, cy);
+    if (!dir) continue;
+    const e = (now - t.docked) / 1000, far = Math.max(0, 8 - e) + Math.max(0, e - (CRUISE_STAY / 1000 - 8));   // ein- und auslaufen
+    const d = 3.2 + far * 1.2;
+    out.push({ boat: true, cruise: true, px: cx + dir[0] * d, py: cy + dir[1] * d, du: dir[1], dv: -dir[0] });
+  }
+  return out;
+}
+function drawCargoMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 900) * 0.8 * z;
+  ellipse(x, y + 3 * z, 30 * z, 9 * z, 'rgba(230,248,255,0.4)');
+  ellipse(x, y + 2 * z + bob, 22 * z, 7 * z, C('#8e3b32'));
+  ellipse(x, y + bob, 21 * z, 6 * z, C('#b8574b'));
+  const cols = ['#3e7fd0', '#f2b53a', '#58b36a', '#e8604f'];
+  for (let i = 0; i < 4; i++) box(x - 12 * z + i * 6 * z, y - 1 * z + bob, 5 * z, 3 * z, 5 * z, cols[i], null, 0);
+  box(x + 13 * z, y - 1 * z + bob, 5 * z, 3 * z, 10 * z, '#fffaf0', '#4a4a58', 2 * z);          // Brücke
+}
+function drawCruiseMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 1100) * 0.7 * z;
+  ellipse(x, y + 4 * z, 42 * z, 12 * z, 'rgba(230,248,255,0.45)');
+  ellipse(x, y + 3 * z + bob, 34 * z, 9 * z, C('#2f5e9e'));
+  ellipse(x, y + 1 * z + bob, 33 * z, 8 * z, C('#fffaf0'));
+  box(x - 2 * z, y - 1 * z + bob, 44 * z, 7 * z, 8 * z, '#fffaf0', null, 0);                     // Decks
+  box(x - 2 * z, y - 9 * z + bob, 34 * z, 5 * z, 6 * z, '#f5ecdc', null, 0);
+  const lit = night > 0.15 && isLive();
+  for (let i = 0; i < 9; i++) {                                                                 // Fensterreihe
+    const wx = x - 22 * z + i * 5 * z;
+    g.fillStyle = lit ? '#ffd873' : C('#3e7fd0'); g.fillRect(wx, y - 5 * z + bob, 2.6 * z, 1.8 * z);
+  }
+  box(x + 8 * z, y - 15 * z + bob, 4 * z, 3 * z, 8 * z, '#e8604f', '#4a4a58', 2 * z);           // Schornstein
+  if (lit) kGlow(x, y - 5 * z + bob, z, 26);
+}

@@ -694,7 +694,7 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
-  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? ferryHtml(x + ',' + y) : '';
+  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? ferryHtml(x + ',' + y) + tradeHtml(t) + cruiseHtml(t, x, y) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
     return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
@@ -732,6 +732,7 @@ function openInfo(x, y) {
     t.ferry = b.dataset.ferry;
     sfx('build'); toast('⛴️ Die Fähre legt ab!'); recalc(); save(); openInfo(x, y);
   };
+  for (const b of el.querySelectorAll('[data-trade]')) b.onclick = () => { const [r, n] = b.dataset.trade.split(':'); if (trade(r, +n, x + ',' + y)) openInfo(x, y); };
   if (el.querySelector('[data-ferry-off]')) el.querySelector('[data-ferry-off]').onclick = () => {
     const f = ferryOf(x + ',' + y);
     for (const k of f ? f.stations : []) { const h = state.tiles.get(k); if (h) delete h.ferry; }
@@ -813,6 +814,28 @@ function ferryHtml(k) {
   return `<div class="label">⛴️ Fähre einrichten</div>
     <div class="looks">${free.map(([o]) => `<button class="look" data-ferry="${o}" data-cost="${money}" data-mat='${JSON.stringify(mat)}'>⛴️ zur ${regionName(regionAt(...keyXY(o)))} · 🪙 ${fmt(money)} ${matText(mat)}</button>`).join('')}</div>
     <p class="muted">Bringt Pendler und Besucher hinüber (ohne Strom) und bindet die Gegend um beide Häfen an.</p>`;
+}
+// Handel (ab Handelshafen): Lager, Preis mit Tendenz, je 10 verkaufen oder kaufen
+function tradeHtml(t) {
+  if ((t.lvl || 1) < 2) return '<div class="label">🚢 Handel</div><p class="muted">Ab Stufe 2 (Handelshafen) kaufen und verkaufen Frachter hier Rohstoffe – zu Preisen, die langsam schwanken.</p>';
+  const now = Date.now(), rows = Object.keys(RES).map(r => {
+    const p = tradePrice(r, now), up = p >= tradePrice(r, now - 60e3), sell = TRADE_LOT * p, buy = TRADE_LOT * p * TRADE_BUY;
+    return `<div class="trade-row"><span title="${RES[r].name}">${RES[r].icon} <small>${fmt(state.res[r])}</small></span><b class="${up ? 'up' : 'down'}">${up ? '↗' : '↘'} ${nf1.format(p)}</b>
+      <button class="btn ghost small" data-trade="${r}:${-TRADE_LOT}" aria-label="${TRADE_LOT} ${RES[r].name} verkaufen" ${state.res[r] >= TRADE_LOT ? '' : 'disabled'}>+${fmt(sell)}</button>
+      <button class="btn ghost small" data-trade="${r}:${TRADE_LOT}" aria-label="${TRADE_LOT} ${RES[r].name} kaufen" data-cost="${Math.ceil(buy)}">−${fmt(buy)}</button></div>`;
+  }).join('');
+  return `<div class="label">🚢 Handel</div><div class="trade">
+      <div class="trade-row head"><span>Ware · Lager</span><span>🪙 je Stück</span><span>${TRADE_LOT} verkaufen</span><span>${TRADE_LOT} kaufen</span></div>${rows}</div>
+    <p class="muted">Verkaufen, was sich staut; kaufen, was fehlt (kostet anderthalbmal so viel). ↗ Preis steigt gerade, ↘ fällt.</p>`;
+}
+// Kreuzfahrt (Großer Hafen): wann das nächste Schiff kommt und was die Gäste hier finden
+function cruiseHtml(t, x, y) {
+  if ((t.lvl || 1) < 3) return '<div class="label">🛳️ Kreuzfahrt</div><p class="muted">Ab Stufe 3 (Großer Hafen) legen Kreuzfahrtschiffe an – ihre Gäste besuchen Sehenswürdigkeiten und Wunderwerke in der Nähe.</p>';
+  const a = cruiseAttraction(x + 0.5, y + 0.5), pay = a * CRUISE_PAY * masteryMul('taler');
+  const docked = t.docked && Date.now() - t.docked < CRUISE_STAY, left = t.cruise ? Math.max(0, t.cruise - Date.now()) : CRUISE_EVERY / 2;
+  return `<div class="label">🛳️ Kreuzfahrt</div><div class="status">
+    <div class="${docked ? 'ok' : ''}">${docked ? '🛳️ Ein Schiff liegt gerade im Hafen' : `🛳️ Nächstes Schiff in ${fmtClock(left)}`}</div>
+    <div class="${a >= 1 ? 'ok' : 'bad'}">${a >= 1 ? `✨ Anziehung bis ${CRUISE_R} Felder: ${fmt(a)} → ${fmt(cruiseGuests(a))} Gäste, 🪙 +${fmt(pay)} je Schiff` : `✗ Bis ${CRUISE_R} Felder gibt es nichts zu sehen – Sehenswürdigkeiten, Wunderwerke und Schönes locken Gäste.`}</div></div>`;
 }
 // Seilbahn: mit welcher Station verbunden, was sie befördert
 function cableStatus(k) {

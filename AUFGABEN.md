@@ -236,8 +236,10 @@ Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Hand
 - [x] **18b** Expedition: Boot losschicken (Taler wie bisher, Laternen/Einwohner als Voraussetzung), es fährt sichtbar
       hinaus und kommt nach 1–10 Min zurück → Insel entdeckt, Tagebuch. Inseln nicht mehr per Schild freischalten.
 - [x] **18c** Fähren zwischen Häfen (Fahrgäste wie der Zug, ohne Schienen und Strom; 100/180/260 Plätze je Hafen-Stufe).
-- [ ] **18d** Handel: Frachter verkaufen Überschuss, kaufen Fehlendes (schwankende Preise).
-- [ ] **18e** Kreuzfahrt (spät): Touristen für Monumente/Wunderwerke nahe am Hafen.
+- [x] **18d** Handel ab Handelshafen (Stufe 2): je 10 verkaufen/kaufen, Preise schwanken 60–140 % (Kaufen ×1,5),
+      danach läuft ein Frachter aus.
+- [x] **18e** Kreuzfahrt am Großen Hafen (Stufe 3): alle 6 Min legt ein Schiff an; Gäste bringen Geld nach der Anziehung
+      bis 15 Felder um den Hafen.
 - [x] **18f** Fischkutter: je Hafen-Stufe einer (🪙 +5/s je Kutter), ziehen vor dem Hafen ihre Kreise.
 
 ## Block 19 – Seilbahn als Verkehrsmittel (geplant)

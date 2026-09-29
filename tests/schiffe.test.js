@@ -150,3 +150,49 @@ describe('Fischkutter', () => {
     expect(() => game('for (const b of fishBoats(1000)) drawFishMover(b, 1.5, 1000)')).not.toThrow();
   });
 });
+
+describe('Handel und Kreuzfahrt', () => {
+  const harbor = lvl => {
+    const [x, y] = game(`(() => { for (let yy = -20; yy < 40; yy++) for (let xx = -20; xx < 40; xx++) if (placeError('hafen', xx, yy, 0, { move: true }) === null && seaDir(xx + 0.5, yy + 0.5)) return [xx, yy]; })()`);
+    game(`state.tiles.set('${x},${y}', { b: 'hafen', lvl: ${lvl}, rot: 0 }); recalc()`);
+    return [x, y];
+  };
+  it('Handel erst ab dem Handelshafen; verkaufen bringt den Preis, kaufen kostet anderthalbmal so viel', () => {
+    harbor(1);
+    game('state.res.holz = 30');
+    expect(game("trade('holz', -10)")).toBe(false);
+    game("for (const t of state.tiles.values()) if (t.b === 'hafen') t.lvl = 2");
+    const m = game('state.money'), p = game("tradePrice('holz')");
+    expect(game("trade('holz', -10)")).toBe(true);
+    expect(game('state.res.holz')).toBe(20);
+    expect(game('state.money')).toBeCloseTo(m + 10 * p, 5);
+    const m2 = game('state.money');
+    expect(game("trade('metall', 10)")).toBe(true);
+    expect(game('state.res.metall')).toBe(10);
+    expect(game('state.money')).toBeCloseTo(m2 - 10 * game("tradePrice('metall')") * 1.5, 1);
+    expect(game("trade('holz', -100)")).toBe(false);                     // so viel ist nicht da
+  });
+
+  it('die Preise schwanken zwischen 60 % und 140 %', () => {
+    const ps = [];
+    for (let t = 0; t < 30 * 60e3; t += 30e3) ps.push(game(`tradePrice('bretter', ${t})`));
+    expect(Math.min(...ps)).toBeGreaterThanOrEqual(10 * 0.6 - 1e-9);
+    expect(Math.max(...ps)).toBeLessThanOrEqual(10 * 1.4 + 1e-9);
+    expect(Math.max(...ps) - Math.min(...ps)).toBeGreaterThan(5);
+  });
+
+  it('Kreuzfahrt am Großen Hafen: Gäste bringen Geld, je mehr es in der Nähe anzieht', () => {
+    const [x, y] = harbor(3);
+    game(`state.tiles.set('${x + 4},${y - 6}', { b: 'riesenrad', lvl: 1, phase: 99 }); recalc()`);
+    const a = game(`cruiseAttraction(${x + 0.5}, ${y + 0.5})`);
+    expect(a).toBeGreaterThanOrEqual(300);
+    expect(game('checkCruises(1000)')).toBe(0);                          // erstes Mal: Termin setzen
+    const m = game('state.money');
+    expect(game(`checkCruises(state.tiles.get('${x},${y}').cruise + 1)`)).toBe(1);
+    expect(game('state.money')).toBeCloseTo(m + a * game('CRUISE_PAY'), 5);
+    expect(() => game('for (const s of cruiseShips()) drawCruiseMover(s, 1.5, 1000)')).not.toThrow();
+    game(`openInfo(${x}, ${y})`);
+    expect(document.getElementById('panel').textContent).toMatch(/Kreuzfahrt/);
+    expect(document.getElementById('panel').textContent).toMatch(/Handel/);
+  });
+});

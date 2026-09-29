@@ -528,6 +528,15 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .status .load i.full { background: var(--red); }
 .row.cars { align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 800; gap: 6px; }
 
+/* Hafen: Handel */
+.trade { display: flex; flex-direction: column; gap: 4px; margin: 4px 0; }
+.trade-row { display: grid; grid-template-columns: 1fr 58px 68px 68px; gap: 6px; align-items: center; font-size: 13px; font-weight: 800; }
+.trade-row.head { font-size: 10.5px; color: var(--brown2); line-height: 1.1; }
+.trade-row b { text-align: right; }
+.trade-row small { color: var(--brown2); font-weight: 700; }
+.trade-row .up { color: var(--green-d); } .trade-row .down { color: var(--red); }
+.trade-row .btn { padding: 4px 6px; font-size: 12px; }
+
 /* ---------- Handy (body.phone: kürzere Bildschirmseite < 540 px, gesetzt in resize) ----------
    iPad und Desktop sind nie .phone – hier nur, was aufs Handy gehört. */
 /* Leiste eingeklappt: nur Schnellwerkzeuge + Bereiche; ein Bereich klappt den Katalog auf (#toolbar.open) */
