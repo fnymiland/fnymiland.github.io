@@ -3,6 +3,7 @@
 // Start & Spielschleife
 // ---------------------------------------------------------------------------
 function startNew() {
+  resetUnlockWatch();
   state = newState();
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();

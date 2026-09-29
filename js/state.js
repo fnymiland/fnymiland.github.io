@@ -208,6 +208,7 @@ function load() {
 
 // Einen anderen Stand übernehmen (Import): Zwischenspeicher leeren, alles neu zeichnen
 function adoptState(s) {
+  resetUnlockWatch();
   state = s;
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();

@@ -202,6 +202,7 @@ function updateHud() {
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
   const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('');
   if (sig !== unlockSig) { if (unlockSig) buildToolbar(); unlockSig = sig; }
+  watchUnlocks();
   refreshLive();
 }
 $('goal').onclick = e => {
@@ -213,6 +214,64 @@ $('goal').onclick = e => {
   goalSmall = !goalSmall; updateHud();
 };
 $('diary-btn').onclick = () => openDiary();
+
+// „Neu freigeschaltet“: Was jetzt verfügbar ist und vorher nicht, kommt in ein Fenster in der Mitte – egal ob durch
+// Laterne, Forschung, Insel oder Kunstakademie. Beim Laden/Neustart wird nur gemerkt (resetUnlockWatch).
+let unlockSeen = null;
+const pendingUnlocks = [];
+function resetUnlockWatch() { unlockSeen = null; pendingUnlocks.length = 0; }
+function unlockKeys() {
+  const out = new Set();
+  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
+  for (const st of STYLES.weg) if (st.lm && styleOk(st)) out.add('weg:' + st.id);
+  for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
+  return out;
+}
+function watchUnlocks() {
+  const now = unlockKeys();
+  if (unlockSeen) for (const k of now) if (!unlockSeen.has(k) && !pendingUnlocks.includes(k)) pendingUnlocks.push(k);
+  unlockSeen = now;
+  if (pendingUnlocks.length && $('modal').hidden) openUnlocks();
+}
+function unlockCard(k) {
+  if (k.startsWith('weg:')) {
+    const st = styleDef('weg', k.slice(4));
+    return `<div class="unlock-card"><div class="uc-pic"><i class="uc-sw" style="background:${st.col}"></i></div>
+      <div class="uc-txt"><b>Neuer Wegstil: ${st.name}</b><p class="tip">💡 Ein Geschenk – beim Weg in der Stil-Leiste auswählen.</p>
+      <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
+  }
+  if (k.startsWith('stufe:')) {
+    return `<div class="unlock-card"><div class="uc-pic"><span class="emoji">🏡</span></div>
+      <div class="uc-txt"><b>Neue Hausstufe: ${k.slice(6)}</b><p>Villen können jetzt weiterwachsen – mit Kristall 💎 und Blick aufs Wasser.</p>
+      <p class="tip">💡 Tipp eine Villa an, dort stehen ihre neuen Wünsche.</p></div></div>`;
+  }
+  const d = ITEMS[k];
+  return `<div class="unlock-card"><div class="uc-pic" data-thumb="${k}"></div>
+    <div class="uc-txt"><b>${d.name}</b> <span class="fx">${effectText(k)}</span><p class="tip">💡 ${ITEM_TIPS[k] || d.desc}</p>
+    <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
+}
+function openUnlocks() {
+  const list = pendingUnlocks.splice(0, 4);
+  sfx('star');
+  openModal(`
+    <h2>✨ Neu freigeschaltet</h2>
+    ${list.map(unlockCard).join('')}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">${pendingUnlocks.length ? 'Weiter' : 'Später'}</button></div>`);
+  $('modal-card').classList.add('unlock');
+  for (const el of document.querySelectorAll('#modal-card [data-thumb]')) el.append(thumb(el.dataset.thumb));
+  for (const b of document.querySelectorAll('#modal-card [data-try]')) b.onclick = () => tryUnlock(b.dataset.try);
+  $('m-close').onclick = closeModal;
+}
+// „Ausprobieren“: in die passende Gruppe der Leiste springen und das Ding zum Bauen auswählen
+function tryUnlock(k) {
+  closeModal();
+  let id = k;
+  if (k.startsWith('weg:')) { chosenStyle.weg = k.slice(4); id = 'weg'; }
+  const p = menuPlaceOf(id);
+  menuTop = p.top; menuSub = p.sub;
+  buildToolbar();
+  setTool(id);
+}
 
 // Offene Fenster aktualisieren sich live: Jedes merkt sich, wie es geöffnet wurde (live), updateHud baut es
 // neu, und patch() ändert nur, was sich unterscheidet – Knöpfe, Fokus und Scrollstand bleiben erhalten.

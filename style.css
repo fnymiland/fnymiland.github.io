@@ -428,3 +428,17 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
   .quick { width: 31px; }
   .quick-sep { margin: 4px 2px; }
 }
+
+/* ---------- Neu freigeschaltet ---------- */
+.unlock-card { display: flex; gap: 10px; align-items: center; background: var(--cream2); border-radius: 16px; padding: 8px 10px; margin: 8px 0; }
+.uc-pic { flex: none; width: 70px; display: flex; justify-content: center; }
+.uc-pic canvas { width: 70px; height: 55px; }
+.uc-pic .emoji { font-size: 34px; }
+.uc-sw { display: block; width: 40px; height: 40px; border-radius: 50%; box-shadow: inset 0 0 0 3px rgba(0,0,0,.08); }
+.uc-txt { flex: 1; min-width: 0; font-size: 13px; }
+.uc-txt b { font-size: 15px; }
+.uc-txt p { margin: 3px 0 0; }
+.uc-txt .fx { font-size: 12px; font-weight: 800; color: var(--green-d); }
+.uc-txt .tip { color: var(--green-d); font-weight: 700; }
+.card.unlock { width: min(520px, 100%); }
+.uc-txt .btn { margin-top: 6px; }

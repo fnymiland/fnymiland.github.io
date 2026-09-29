@@ -207,6 +207,14 @@ const MENU = [
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'windrad'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'verschieben', 'abriss'] },
 ];
+// Wo steht ein Ding im Menü? (für „Ausprobieren“)
+function menuPlaceOf(id) {
+  for (const m of MENU) {
+    if (m.groups) { for (const g of m.groups) if (g.items.includes(id)) return { top: m.id, sub: g.id }; }
+    else if (m.items.includes(id)) return { top: m.id, sub: 'alle' };
+  }
+  return { top: 'bauen', sub: 'alle' };
+}
 const menuItemsOf = (top, sub = 'alle') => {
   const m = MENU.find(e => e.id === top) || MENU[0];
   if (!m.groups) return m.items;
@@ -221,6 +229,52 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler', windrad: '⚡ Strom für Züge',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', leuchtturm: '🏮 Laternenfest',
+};
+// Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
+const ITEM_TIPS = {
+  haus: 'Häuser bringen Einwohner. Tipp ein Haus an: Erfüllst du seine Wünsche, kannst du es ausbauen – bis zur Villa.',
+  feld: 'Bringt Taler. Mit einer Mühle direkt daneben wird es noch mehr.',
+  muehle: 'Stell sie mitten zwischen Felder: Jedes Feld direkt daneben bringt +2 Taler/s.',
+  holz: 'In den Wald stellen. Holz wird im Sägewerk zu Brettern und steckt in jeder Schiene.',
+  fischer: 'Direkt ans Wasser: Je mehr Wasser drumherum, desto mehr Taler.',
+  obst: 'In den Obsthain stellen (mit „Höhere Agrartechnik“ überall). Obst brauchen Sehenswürdigkeiten und Feste.',
+  stein: 'Auf Fels stellen. Der Steinmetz macht aus Stein Pflastersteine.',
+  mine: 'Auf die Erzader am Erzberg. Die Schmiede macht aus Erz Metall.',
+  kristallmine: 'Auf Kristallfels der Kristallinsel. Kristall brauchst du für Glas-Deko und die Glasvilla.',
+  saege: 'In die Nähe deiner Holzfäller. Bretter brauchst du für fast alles: Hausausbau, Bank, Park …',
+  steinmetz: 'In die Nähe des Steinbruchs. Pflastersteine brauchen Stadthäuser und große Gebäude.',
+  schmiede: 'In die Nähe des Bergwerks. Metall brauchen Laternen, Villen und die Bahn.',
+  baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in Laufweite.',
+  markt: 'Mitten ins Dorf: Jedes Gebäude im Umkreis von 2 Feldern bringt +1,5 Taler/s.',
+  fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
+  hafen: 'Ans Wasser. Jeder Hafen erhöht alle Einnahmen der Insel um 8 %.',
+  leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
+  weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
+  schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
+  station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und 2 Windräder: Der Zug fährt.',
+  schule: 'Bringt Ideen für die Forschung – je mehr Einwohner, desto mehr. Villen wünschen sich eine Schule.',
+  bibliothek: 'Mehr Ideen und die zweite Stufe der Forschung.',
+  uni: 'Viele Ideen und die dritte Stufe der Forschung.',
+  kunst: 'Macht die Umgebung schön und öffnet die Meisterstücke der Kunstakademie.',
+  blumen: 'Direkt neben ein Gebäude: Jedes Beet daneben bringt ihm +15 %.',
+  baum: 'Kleine Deko für eine Ecke – bis zu 4 pro Feld, auch hinters Haus oder an den Weg (Allee!).',
+  blumentopf: 'Kleine Deko für eine Ecke, auch vors Haus. Häuser wünschen sich Deko in der Nähe.',
+  busch: 'Kleine Deko für eine Ecke – bis zu 4 pro Feld, gut zum Mischen mit Baum und Bank.',
+  hecke: 'Kleine Deko für eine Ecke – als Rand um Gärten und Plätze.',
+  bank: 'Kleine Deko für eine Ecke, gern an den Weg oder vors Haus.',
+  laterne: 'Kleine Deko, leuchtet nachts – schön entlang der Wege.',
+  brunnen: 'Stadthäuser wünschen sich einen Park oder Brunnen in der Nähe.',
+  park: 'Viel Schönheit auf 3×3 Feldern. Erfüllt den Park-Wunsch der Stadthäuser.',
+  kristall: 'Kleine leuchtende Deko für eine Ecke.',
+  kristallaterne: 'Kleine Deko, leuchtet nachts hellblau.',
+  glaskugel: 'Kleine schillernde Deko für eine Ecke.',
+  kristallbrunnen: 'Große Deko mit viel Schönheit, glitzert und leuchtet nachts.',
+  glashaus: 'Große Deko mit viel Schönheit, leuchtet abends warm.',
+  windrad: 'Liefert Strom für Züge: 2 Windräder pro Zug, egal wo.',
+  pavillon: 'Große Deko mit viel Schönheit – schön im Park.',
+  statue: 'Große Deko mit sehr viel Schönheit.',
+  graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Ziehen = mehrere.',
+  schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.',
 };
 const effectText = id => FX[id] || (ITEMS[id] && ITEMS[id].beauty ? `🌸 +${ITEMS[id].beauty}` : '');
 
