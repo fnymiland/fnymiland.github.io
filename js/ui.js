@@ -174,7 +174,9 @@ function setTool(t) {
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
   hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
     + (LINE_TOOLS.has(t) ? ' · Linie: Anfang und Ende anklicken' : '')
-    + (dragKind(t) === 'rect' ? ' · Fläche: aufziehen, hineinklicken baut' : '')
+    + (t === 'verschieben' ? ' · Mehrere auf einmal: Rechteck aufziehen'
+      : t === 'abriss' ? ' · Fläche: aufziehen, hineinklicken reißt ab'
+      : dragKind(t) === 'rect' ? ' · Fläche: aufziehen, hineinklicken baut' : '')
     + (d.paint ? ' · Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '')
     + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
   hint.hidden = false;
