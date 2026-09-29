@@ -44,7 +44,7 @@ function isleTerrain(i, x, y) {
     case 'ruine': return n1 > 0.64 ? 'rock' : n2 > 0.68 ? 'forest' : 'grass';
     case 'erz': return n1 > 0.58 ? 'erz' : n1 > 0.44 ? 'rock' : 'grass';
     case 'quelle': return n2 < 0.32 ? 'water' : n1 > 0.7 ? 'forest' : 'grass';
-    case 'kristall': return n1 > 0.5 ? 'rock' : n2 > 0.74 ? 'erz' : 'grass';
+    case 'kristall': return n1 > 0.5 ? (n2 > 0.5 ? 'kristall' : 'rock') : 'grass';
     default: return 'grass';
   }
 }

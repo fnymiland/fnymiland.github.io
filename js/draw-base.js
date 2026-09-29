@@ -101,6 +101,7 @@ function drawGround(x, y, p, z, now, noWaves) {
             : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')
             : ter === 'obst' ? (alt ? '#8fcb62' : '#86c35b')
             : ter === 'erz' ? (alt ? '#b9ab8f' : '#b0a287')
+            : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
             : (alt ? '#b3c29c' : '#aabb94');
   diamond(p.x, p.y, hw, hh, C(top));
   if (ter === 'grass' && !beach && !COVER.has(x + ',' + y) && hash(x, y, 5) < 0.08) {
@@ -148,6 +149,15 @@ function boulder(x, y, r, gold) {
     circle(x - r * 0.1, y - r * 0.1, r * 0.12, C('#f2c14e'));
     circle(x + r * 0.05, y - r * 0.7, r * 0.1, C('#ffe28a'));
   }
+}
+// Kristallfels: bläuliche Felsen, aus denen Kristalle wachsen
+function drawCrystalRocks(px, py, z, x, y) {
+  boulder(px - 8 * z, py - 1 * z, 6.5 * z);
+  boulder(px + 9 * z, py + 2 * z, 5 * z);
+  crystal(px - 1 * z, py + 2 * z, z, 15 * z, 3.4 * z, 0.08);
+  crystal(px + 5 * z, py + 4 * z, z, 9 * z, 2.6 * z, 0.3);
+  crystal(px - 6 * z, py + 3.5 * z, z, 8 * z, 2.4 * z, -0.3);
+  if (hash(x, y, 91) < 0.5) crystal(px + 10 * z, py - 4 * z, z, 7 * z, 2.2 * z, 0.2);
 }
 function drawRocks(px, py, z, x, y, gold) {
   boulder(px - 7 * z, py - 1 * z, 7 * z, gold);

@@ -41,7 +41,7 @@ function thumb(type) {
     block(1, '#96d56f');
     drawPath(cx, cy, z, 1e6, 1e6, { style: currentStyle('weg') });
   } else {
-    const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287' }[type] || '#96d56f';
+    const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
     drawObject(type, cx, cy, z, 0, 3, 7, 1, null);
   }

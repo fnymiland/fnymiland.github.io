@@ -303,6 +303,50 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
+  // Kristallmine: bläulicher Felshügel mit Kristallen, Stollen, Lore voller Kristalle;
+  // Stufe 2 eine Kristall-Laterne und ein Schuppen, Stufe 3 die Schleiferei mit Glasdach
+  kristallmine(K, s, now, x, y, t) {
+    if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#b7c3cc')))) return;
+    const z = K.z, parts = [];
+    parts.push([-0.14, 0, () => {
+      const [mx, my] = K.P(-0.14, 0);
+      ellipse(mx, my - 4 * z, 15 * z, 10 * z, C('#a3adbb'));
+      ellipse(mx - 4 * z, my - 9 * z, 8 * z, 4.5 * z, C('#ccd4de'));
+      crystalCluster(K.P, z, -0.24, -0.08, 0.75);
+      if (s >= 2) crystalCluster(K.P, z, -0.02, -0.2, 0.55);
+    }]);
+    parts.push([0.12, 0, () => {                         // Stollen mit Holzrahmen
+      const p = K.P(0.12, 0);
+      poly([[p[0] - 4 * z, p[1] + 1 * z], [p[0] + 4 * z, p[1] + 1 * z], [p[0] + 4 * z, p[1] - 8 * z], [p[0] - 4 * z, p[1] - 8 * z]], C('#34384a'));
+      g.strokeStyle = C('#8a5a3c'); g.lineWidth = 2 * z;
+      g.beginPath(); g.moveTo(p[0] - 5 * z, p[1] + 1 * z); g.lineTo(p[0] - 5 * z, p[1] - 9 * z); g.lineTo(p[0] + 5 * z, p[1] - 9 * z); g.lineTo(p[0] + 5 * z, p[1] + 1 * z); g.stroke();
+      if (s >= 2) {                                      // Kristall-Laterne am Eingang
+        const lx = p[0] + 7 * z, ly = p[1] - 9 * z;
+        g.strokeStyle = C('#8a8f99'); g.lineWidth = 1 * z; g.beginPath(); g.moveTo(lx, p[1] + 1 * z); g.lineTo(lx, ly); g.stroke();
+        crystal(lx, ly + 1 * z, z, 3.5 * z, 1.3 * z);
+      }
+    }]);
+    parts.push([0.34, 0.12, () => {                      // Schienen und Lore voller Kristalle
+      kLine(K, K.P(0.14, 0.02), K.P(0.44, 0.26), '#6b6f78', 0.8);
+      K.block({ a: 0.34, b: 0.16, ha: 0.06, hb: 0.08, h: 4, lift: 1, wall: '#7a8494', type: 'flat', roof: '#a3adbb' });
+      const [ox, oy] = K.P(0.34, 0.16, 5);
+      crystal(ox - 1.8 * z, oy + 1 * z, z, 3 * z, 1.1 * z, -0.2);
+      crystal(ox + 1.6 * z, oy + 1.2 * z, z, 2.6 * z, 1 * z, 0.25);
+    }]);
+    if (s >= 2) parts.push([-0.28, 0.3, () => {         // Schuppen
+      const [wall, roof] = paint(t, '#e9eef3', '#6f8fd8');
+      const B = K.block({ a: -0.28, b: 0.3, ha: 0.1, hb: 0.1, h: 8, wall, roof, roofH: 6, entry: true });
+      K.door(B, 'front', 0.3, 0.7, 0.7);
+    }]);
+    if (s === 3) parts.push([0.22, -0.3, () => {        // Schleiferei mit Glasdach und großem Kristall
+      const [wall] = paint(t, '#e9eef3', '#bfe6f7');
+      const B = K.block({ a: 0.22, b: -0.28, ha: 0.13, hb: 0.12, h: 10, wall, roof: '#cdeefa', roofH: 7, entry: true });
+      K.door(B, 'front', 0.35, 0.65, 0.66); K.sideWins(B, 1, 0.4, 0.75);
+      const [cx, cy] = K.P(0.22, -0.28, 17);
+      crystal(cx, cy + 2 * z, z, 7 * z, 2 * z, 0.05);
+    }]);
+    K.scene(parts);
+  },
   mine(K, s, now, x, y, t) {
     if (groundPart(() => K.rect(-0.42, -0.42, 0.42, 0.42, C('#a89a80')))) return;
     const parts = [];

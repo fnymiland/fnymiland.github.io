@@ -431,6 +431,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels – überall mit „Tiefbau“';
       if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
       if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
+      if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
       if (anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
       if ((need === 'grass' || need === 'shore') && ter !== 'grass') {
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
@@ -569,7 +570,7 @@ function demolishInfo(x, y) {
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
-  if (ter === 'rock' || ter === 'erz') return { cost: 50, label: 'Sprengen' };
+  if (ter === 'rock' || ter === 'erz' || ter === 'kristall') return { cost: 50, label: 'Sprengen' };
   return { err: ter === 'water' ? 'Wasser: nimm „Aufschütten“' : 'Hier ist nichts zum Abreißen' };
 }
 

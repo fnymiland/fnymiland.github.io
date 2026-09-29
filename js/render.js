@@ -212,7 +212,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
 const spriteCache = new Map();
 const SPRITE_BOX = { left: -TW / 2 - 12, top: -46, w: TW + 24, h: 66 };
 function tileSprite(kind, x, y, px, py, z) {
-  const variants = kind === 'rock' || kind === 'erz' ? 4 : 6;
+  const variants = kind === 'rock' || kind === 'erz' || kind === 'kristall' ? 4 : 6;
   const v = Math.floor(hash(x, y, 61) * variants), key = kind + v + (FOG ? 'n' : '');
   const want = z * DPR;
   let e = spriteCache.get(key);
@@ -225,6 +225,7 @@ function tileSprite(kind, x, y, px, py, z) {
     const vx = 5000 + v * 7, vy = 5000 + v * 13;
     if (kind === 'forest') drawForest(0, 0, 1, vx, vy, 3);
     else if (kind === 'obst') drawForest(0, 0, 1, vx, vy, 3, true);
+    else if (kind === 'kristall') { const ng = NO_GLOW; NO_GLOW = true; drawCrystalRocks(0, 0, 1, vx, vy); NO_GLOW = ng; }
     else drawRocks(0, 0, 1, vx, vy, kind === 'erz');
     g = prev;
     e = { c, scale: want };
@@ -449,6 +450,10 @@ function render(now) {
       else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
       else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
       else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);
+      else if (ter === 'kristall' && !(hide && ghostType === 'kristallmine')) {
+        tileSprite('kristall', x, y, px, py, z);
+        glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
+      }
       drawSmall(k, px, py, z, now, x, y, [0, 1, 2, 3]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {

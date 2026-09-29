@@ -35,6 +35,8 @@ const ITEMS = {
              desc: 'Nur auf Fels. Liefert Stein 🪨, staubig.' },
   mine:    { cat: 'bau', name: 'Bergwerk', lm: 'erzberg:1', cost: 300, needs: 'erz', workers: 3, ugly: 8, prod: { erz: 0.2 },
              desc: 'Nur am Erzberg. Liefert Erz ⛏️.' },
+  kristallmine: { cat: 'bau', name: 'Kristallmine', lm: 'kristall:1', cost: 1500, mat: { bretter: 10, metall: 4 }, needs: 'kristall', workers: 3,
+             ugly: 4, prod: { kristall: 0.08 }, desc: 'Nur auf Kristallfels. Liefert Kristall 💎 für Glas und Kristall-Deko.' },
   saege:   { cat: 'bau', name: 'Sägewerk', lm: 'baum:1', size: [1, 2], cost: 200, needs: 'grass', workers: 2, ugly: 3, rot: true,
              conv: { from: 'holz', to: 'bretter', rate: 0.15 }, desc: 'Macht aus 2 Holz 🪵 ein Brett 🪚.' },
   steinmetz: { cat: 'bau', name: 'Steinmetz', lm: 'klippe:1', cost: 250, needs: 'grass', workers: 2, ugly: 4, rot: true,
@@ -91,7 +93,7 @@ const ITEMS = {
 const RES = {
   holz: { name: 'Holz', icon: '🪵' }, stein: { name: 'Stein', icon: '🪨' }, erz: { name: 'Erz', icon: '⛏️' },
   obst: { name: 'Obst', icon: '🍎' }, bretter: { name: 'Bretter', icon: '🪚' }, quader: { name: 'Pflastersteine', icon: '🧱' },
-  metall: { name: 'Metall', icon: '🔩' },
+  metall: { name: 'Metall', icon: '🔩' }, kristall: { name: 'Kristall', icon: '💎' },
 };
 const CONV_RATIO = 2;           // 2 Rohstoff → 1 Ware
 const newRes = () => Object.fromEntries(Object.keys(RES).map(k => [k, 0]));
@@ -139,6 +141,8 @@ const BUILD_STAGES = {
                up: [{ near: ['steinmetz', 1, 6], cost: { money: 180, bretter: 6 } }, { near: ['stein', 2, 3], cost: { money: 450, bretter: 10, metall: 2 } }] },
   mine:      { names: ['Bergwerk', 'Stollen mit Lore', 'Großes Bergwerk'],
                up: [{ near: ['schmiede', 1, 8], cost: { money: 350, bretter: 8, quader: 4 } }, { near: ['fabrik', 1, 8], cost: { money: 800, quader: 10, metall: 4 } }] },
+  kristallmine: { names: ['Kristallmine', 'Kristallstollen', 'Kristallschleiferei'],
+               up: [{ near: ['kristallmine', 1, 6], cost: { money: 1200, bretter: 10, metall: 4 } }, { near: ['haus', 4, 6], cost: { money: 2500, quader: 10, metall: 6 } }] },
   saege:     { names: ['Sägewerk', 'Großes Sägewerk', 'Holzhof'],
                up: [{ near: ['holz', 2, 6], cost: { money: 250, bretter: 6, quader: 2 } }, { near: ['holz', 4, 6], cost: { money: 600, bretter: 10, quader: 6, metall: 2 } }] },
   steinmetz: { names: ['Steinmetz', 'Steinmetzhof', 'Bildhauerei'],
@@ -163,8 +167,8 @@ const BUILD_STAGES = {
                up: [{ pop: 40, beauty: [40, 3], cost: { money: 800, bretter: 8, quader: 6 } }, { pop: 80, near: [['pavillon', 'statue'], 1, 4], cost: { money: 1800, quader: 12, metall: 5 } }] },
 };
 const PLURAL = { feld: 'Felder', muehle: 'Mühlen', holz: 'Holzfäller', fischer: 'Fischerhütten', obst: 'Obstplantagen', stein: 'Steinbrüche',
-  mine: 'Bergwerke', haus: 'Häuser', schmiede: 'Schmieden', saege: 'Sägewerke', steinmetz: 'Steinmetze' };
-const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine']);
+  mine: 'Bergwerke', haus: 'Häuser', schmiede: 'Schmieden', saege: 'Sägewerke', steinmetz: 'Steinmetze', kristallmine: 'Kristallminen' };
+const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine', 'kristallmine']);
 // Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname
 const ANIMALS = [
   { id: 'katze', icon: '🐱', family: 'Katz', names: ['Ottilie', 'Minka', 'Leo', 'Frida', 'Tom', 'Lotte', 'Pepe', 'Nala'] },
@@ -240,7 +244,7 @@ const LM_STAGES = {
       diary: 'Das Badehaus ist offen! Bald kommen die Gäste von den anderen Inseln wieder.' },
   ],
   kristall: [
-    { name: 'Eingang sichern', cost: { money: 100, metall: 4 }, unlock: [],
+    { name: 'Eingang sichern', cost: { money: 100, metall: 4 }, unlock: ['kristallmine'],
       diary: 'In der Höhle leuchten die Kristalle ganz von allein. Die Kinder hielten sie für schlafende Sterne.' },
     { name: 'Laternenpfad', cost: { money: 300, metall: 8, quader: 10 }, unlock: ['kristall'],
       diary: 'Ein Pfad aus Laternen führt jetzt hinein. Man verläuft sich nicht mehr – schade eigentlich.' },
@@ -269,7 +273,7 @@ const ISLES = [
   { id: 'quelle', name: 'Quelleninsel', lm: 'quelle', icon: '♨️', deg: 280, ter: 'quelle',
     text: 'Warme Quellen und Teiche – schön zum Wohnen, Gäste kommen gern.', need: { lanterns: 11, pop: 130, money: 12000, science: 150 } },
   { id: 'kristall', name: 'Kristallinsel', lm: 'kristall', icon: '💎', deg: 332, ter: 'kristall',
-    text: 'Leuchtende Kristalle im Fels – nur wer viel weiß, findet den Weg.', need: { lanterns: 14, pop: 160, money: 20000, science: 600 } },
+    text: 'Leuchtende Kristalle im Fels – Kristall 💎 für Glas und Kristall-Deko. Nur wer viel weiß, findet den Weg.', need: { lanterns: 14, pop: 160, money: 20000, science: 600 } },
 ];
 const ISLE_BY_ID = Object.fromEntries(ISLES.map(i => [i.id, i]));
 const ISLE_OF_LM = Object.fromEntries(ISLES.map(i => [i.lm, i]));
@@ -350,4 +354,4 @@ const DESIGN = [
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
-const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain' };
+const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain', kristall: 'Kristallfels' };
