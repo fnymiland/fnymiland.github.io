@@ -285,6 +285,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `placeStats`. Bilder in js/draw-shops.js (kleine Läden: `smallShopArt`, große: `SHOP_ART`); wer flache Teile hat,
     muss in `GROUND_TYPES` und oben `groundPart` aufrufen, sonst niemand. Kaffee/Tee/Kakao: Plantagen mit `far: true`
     (nur auf fernen Inseln).
+    Aussehen (Block 32): jeder Laden hat feste Markenfarben (nicht umfärbbar) und ein Wahrzeichen; die Bilder stehen je
+    Gruppe in js/shopart/a–g.js (je eine IIFE, trägt sich in `SHOP_ART` ein; Grundhaus `shopHouse`, Schrift `kText`).
+    Eine Gruppe allein prüfen: `ART_FILE=js/shopart/b.js ART_IDS=cafe,… npx vitest run tests/shopart.test.js`.
 59. **Tempo weit weg** (Block 31): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen
     (`objSprites`, `spriteTile`/`spriteSmall`); gleich aussehende teilen sich eins (Häuser außer Hausboot, kleine Läden,
     Dekos), alles andere hat ein eigenes (Schlüssel mit Platz und `groundVersion`). Was das Aussehen ändert, gehört in
