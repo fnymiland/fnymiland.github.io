@@ -59,11 +59,11 @@ function placeLandmarks() {
     // Der Uralte Baum steht direkt am Dorfrand (Grundstück gleich nebenan) – dort beginnt die Einführung
     const tx = type === 'baum' ? 9 : Math.round(ISLAND.cx + Math.cos(ang) * r);
     const ty = type === 'baum' ? 3 : Math.round(ISLAND.cy + Math.sin(ang) * r);
-    // 2×2 Felder, ganz in einem Grundstück, nicht im Meer, nichts anderes im Weg
+    // 3×3 Felder, ganz in einem Grundstück, nicht im Meer, nichts anderes im Weg
     const fits = (x, y) => {
       const mx = ((x % CHUNK) + CHUNK) % CHUNK, my = ((y % CHUNK) + CHUNK) % CHUNK;
-      if (mx === CHUNK - 1 || my === CHUNK - 1) return false;
-      for (const [fx, fy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) {
+      if (mx > CHUNK - 3 || my > CHUNK - 3) return false;
+      for (const [fx, fy] of footprint('lm', x, y, 0)) {
         if (isSea(fx, fy) || isSea(fx + 1, fy) || isSea(fx, fy + 1)) return false;
         for (const [k, t] of state.tiles) { const [ax, ay] = keyXY(k); if (footprint(t.b, ax, ay, t.rot).some(([px, py]) => px === fx && py === fy)) return false; }
       }
@@ -74,16 +74,15 @@ function placeLandmarks() {
       for (let dy = -rr; dy <= rr && !spot; dy++) for (let dx = -rr; dx <= rr && !spot; dx++) if (fits(tx + dx, ty + dy)) spot = [tx + dx, ty + dy];
     if (!spot) return;
     const [x, y] = spot;
-    // Umgebung (gemessen von der Mitte der 2×2 Felder): Zugang freimachen, Rohstoffe verteilen
-    for (let dy = -3; dy <= 4; dy++) for (let dx = -3; dx <= 4; dx++) {
-      const ax = x + dx, ay = y + dy, dist = Math.hypot(dx - 0.5, dy - 0.5);
+    // Umgebung (gemessen von der Mitte der 3×3 Felder): Zugang freimachen, Rohstoffe verteilen
+    for (let dy = -3; dy <= 5; dy++) for (let dx = -3; dx <= 5; dx++) {
+      const ax = x + dx, ay = y + dy, dist = Math.hypot(dx - 1, dy - 1);
       if (isSea(ax, ay)) continue;
       const k = ax + ',' + ay;
-      if (dist < 1) state.terra.set(k, 'grass');
-      else if (type === 'erzberg' && dist <= 3.1 && dist > 1.6) state.terra.set(k, 'erz');
-      else if (type === 'obsthain' && dist <= 3.1 && dist > 1.6) state.terra.set(k, 'obst');
-      else if (type === 'kristall' && dist <= 2.2 && dist > 1.6) state.terra.set(k, 'rock');
-      else if (dist <= 1.6) state.terra.set(k, 'grass');
+      if (dist <= 2.2) state.terra.set(k, 'grass');
+      else if (type === 'erzberg' && dist <= 3.7) state.terra.set(k, 'erz');
+      else if (type === 'obsthain' && dist <= 3.7) state.terra.set(k, 'obst');
+      else if (type === 'kristall' && dist <= 2.9) state.terra.set(k, 'rock');
     }
     state.tiles.set(x + ',' + y, { b: 'lm', lm: type, lvl: 1 });
   });

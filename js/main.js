@@ -43,8 +43,8 @@ function probeScene() {
   for (let x = 3; x <= 8; x++) weg(x, 10, 'sand');
   for (let y = 6; y <= 9; y++) put(1, y, 'haus', { rot: 0 });
   put(3, 6, 'park');
-  put(3, 8, 'bibliothek');
-  put(5, 8, 'kunst', { rot: 1 });
+  put(3, 9, 'bibliothek', { rot: 1 });
+  put(5, 9, 'kunst', { rot: 1 });
   // Teich mit Hafen, Sägewerk und Werkstatt am Rand
   for (let y = 6; y <= 9; y++) for (let x = 9; x <= 12; x++) state.terra.set(x + ',' + y, 'water');
   put(7, 6, 'hafen', { lvl: 2 });

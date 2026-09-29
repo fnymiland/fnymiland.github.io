@@ -32,8 +32,8 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 
 ## Block 4 – Sehenswürdigkeiten 3×3
 
-- [ ] Alle Sehenswürdigkeiten **3×3**, damit ein Weg mittig darauf zulaufen kann (alte Stände rücken einmalig).
-- [ ] **Park 3×3** (statt 2×2).
+- [x] Alle Sehenswürdigkeiten **3×3**, damit ein Weg mittig darauf zulaufen kann (alte Stände rücken einmalig).
+- [x] **Park 3×3** (statt 2×2).
 
 ## Block 5 – erst besprechen
 

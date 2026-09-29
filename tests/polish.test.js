@@ -62,7 +62,7 @@ describe('Alles verschieben', () => {
     expect(game('movingType()')).toBe('lm');
     game('dropAt(40, 40, 0)');
     expect(game('moving')).not.toBe(null);
-    game('dropAt(10, 10, 0)');
-    expect(game("state.tiles.get('10,10').lm")).toBe('ruine');
+    game('dropAt(9, 8, 0)');
+    expect(game("state.tiles.get('9,8').lm")).toBe('ruine');
   });
 });

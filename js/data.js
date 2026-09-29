@@ -72,8 +72,8 @@ const ITEMS = {
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, tech: 'garten', desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
-  park:    { cat: 'deko', name: 'Park', lm: 'baum:2', size: [2, 2], cost: 300, needs: 'grass', beauty: 25, mat: { bretter: 2 },
-             desc: 'Eine kleine grüne Oase mit Teich, Bäumen und Bank. Belegt 2×2 Felder.' },
+  park:    { cat: 'deko', name: 'Park', lm: 'baum:2', size: [3, 3], cost: 300, needs: 'grass', beauty: 30, mat: { bretter: 2 },
+             desc: 'Eine grüne Oase mit Teich, Bäumen und Bänken. Belegt 3×3 Felder.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:2', cost: 20, mat: { metall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
   windrad: { cat: 'deko', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind.' },
   pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, tech: 'skulptur', desc: 'Für Konzerte im Park.' },
@@ -85,7 +85,7 @@ const ITEMS = {
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
   rathaus: { cat: null, name: 'Rathaus', size: [2, 2], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
-  lm:      { cat: null, name: 'Sehenswürdigkeit', size: [2, 2], fixed: true, desc: '' },
+  lm:      { cat: null, name: 'Sehenswürdigkeit', size: [3, 3], fixed: true, desc: '' },
 };
 // Rohstoffe und Waren im gemeinsamen Lager
 const RES = {

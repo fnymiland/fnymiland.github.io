@@ -317,28 +317,31 @@ const BIG_ART = {
   park(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
     const F = (u, v) => L([u, v]);
-    const [px2, py2] = F(-hu * 0.5, hv * 0.5);
+    const [px2, py2] = F(-hu * 0.45, hv * 0.45);
     if (groundPart(() => {
       groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#8fd16a');
-      poly([[-hu * 0.98, -0.1], [hu * 0.98, -0.1], [hu * 0.98, 0.1], [-hu * 0.98, 0.1]].map(L), C('#eadbb2'));
-      poly([[-0.1, -hv * 0.98], [0.1, -hv * 0.98], [0.1, hv * 0.98], [-0.1, hv * 0.98]].map(L), C('#eadbb2'));
-      ellipse(px2, py2, 16 * z, 7 * z, C('#74d0e6'));
-      ellipse(px2 - 4 * z, py2 - 1.5 * z, 5 * z, 2 * z, C('#b8ecf6'));
-      for (let i = 0; i < 10; i++) {
-        const u = (hash(x, y, 300 + i) - 0.5) * 1.6 * hu, v = (hash(x, y, 320 + i) - 0.5) * 1.6 * hv;
-        if (Math.abs(u) < 0.15 || Math.abs(v) < 0.15) continue;
+      poly([[-hu * 0.98, -0.12], [hu * 0.98, -0.12], [hu * 0.98, 0.12], [-hu * 0.98, 0.12]].map(L), C('#eadbb2'));
+      poly([[-0.12, -hv * 0.98], [0.12, -hv * 0.98], [0.12, hv * 0.98], [-0.12, hv * 0.98]].map(L), C('#eadbb2'));
+      ellipse(px2, py2, 24 * z, 11 * z, C('#5fb8cf'));
+      ellipse(px2, py2 - 1 * z, 22 * z, 9.6 * z, C('#74d0e6'));
+      ellipse(px2 - 6 * z, py2 - 2.5 * z, 7 * z, 2.6 * z, C('#b8ecf6'));
+      for (let i = 0; i < 18; i++) {
+        const u = (hash(x, y, 300 + i) - 0.5) * 1.7 * hu, v = (hash(x, y, 320 + i) - 0.5) * 1.7 * hv;
+        if (Math.abs(u) < 0.2 || Math.abs(v) < 0.2 || Math.hypot(u + hu * 0.45, v - hv * 0.45) < 0.7) continue;
         const [fx, fy] = F(u, v);
         circle(fx, fy, 1.8 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
       }
     })) return;
-    const dx = Math.sin(now / 1800) * 4 * z;
+    const dx = Math.sin(now / 1800) * 6 * z;                 // Ente auf dem Teich
     ellipse(px2 + dx, py2 + 1 * z, 2.2 * z, 1.4 * z, C('#fffaf0')); circle(px2 + dx + 1.8 * z, py2 - 0.8 * z, 1.2 * z, C('#fffaf0'));
-    for (const [u, v] of [[-0.55, -0.55], [0.55, -0.55], [0.55, 0.2]]) { const [tx, ty] = F(u * hu, v * hv); tree(tx, ty + 2 * z, z * 0.95, hash(x, y, u * 7 + v) + 0.3); }
-    const [bx2, by2] = F(hu * 0.4, hv * 0.55);
     const pass = PASS; PASS = null;
-    g.save(); g.translate(bx2, by2); g.scale(0.6, 0.6); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: 1 }); g.restore();
+    const bench = (u, v, rot) => { const [bx2, by2] = F(u, v); g.save(); g.translate(bx2, by2); g.scale(0.6, 0.6); drawObject('bank', 0, 0, z, now, x, y, 1, { rot }); g.restore(); };
+    const parts = [[-1.05, -1.05], [0.35, -1.1], [1.05, -0.4], [1.1, 0.85], [-1.1, -0.15]].map(([u, v], i) => [u + v, () => { const [tx, ty] = F(u, v); tree(tx, ty + 2 * z, z * 0.95, hash(x, y, i * 7) + 0.3); }]);
+    parts.push([0.9, () => bench(0.5, 0.4, 1)], [-0.85, () => bench(-0.4, -0.45, 0)]);
+    parts.sort((p, q) => p[0] - q[0]).forEach(p => p[1]());
     PASS = pass;
   },
+
 };
 
 // ---------------------------------------------------------------------------
@@ -658,8 +661,9 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
 
 // Auf der Karte belegt eine Sehenswürdigkeit 2×2 Felder: weicher Untergrund, darauf das Wahrzeichen in groß
 const LM_GROUND = { baum: '#8fd16a', obsthain: '#94d36c', klippe: '#b7bcb2', ruine: '#dcd3c2', erzberg: '#b9ad94', quelle: '#cfc9bb', kristall: '#b4aac6' };
-function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
-  const K = kit(cx, cy, z, 0);
+// Auf der Karte 3×3 Felder: die Zeichnungen (für 2×2 entworfen) werden 1,5-mal so groß gezeichnet
+function drawLandmarkBig(type, cx, cy, z0, now, x, y, stage) {
+  const z = z0 * 1.5, K = kit(cx, cy, z, 0);
   if (LANDMARK_ART[type]) {
     if (stage <= 0) RUIN = true;
     LANDMARK_ART[type](K, stage, now, x, y);
@@ -672,7 +676,7 @@ function drawLandmarkBig(type, cx, cy, z, now, x, y, stage) {
     K.oval(0, 0, 0.84, C(LM_GROUND[type] || '#8fd16a'));
     RUIN = false;
   })) return;
-  drawLandmark(type, cx, cy + 3 * z, z * 1.4, now, x, y, stage);
+  drawLandmark(type, cx, cy + 3 * z, z * 1.2, now, x, y, stage);
 }
 // Sehenswürdigkeit in ihrer Stufe: 0 = verfallen (grau, überwuchert), 1–3 mit immer mehr Details
 function drawLandmark(type, cx, cy, z, now, x, y, stage = 1) {
