@@ -21,7 +21,10 @@ const unlockName = u => u.startsWith('weg:') ? `Weg-Stil „${styleDef('weg', u.
 const isleOpen = id => state.islands.has(id);
 function isleNeeds(i) {
   const n = i.need, out = [];
-  if (n.lanterns) out.push({ text: `🏮 ${n.lanterns} Laternen (${townTitle(n.lanterns)})`, ok: lanternCount() >= n.lanterns });
+  if (n.lanterns) {
+    const title = TITLES.find(([min]) => min === n.lanterns);          // „3 Laternen (Dorf)“, sonst nur die Zahl
+    out.push({ text: `🏮 ${n.lanterns} ${n.lanterns === 1 ? 'Laterne' : 'Laternen'}${title ? ` (${title[1]})` : ''}`, ok: lanternCount() >= n.lanterns });
+  }
   if (n.pop) out.push({ text: `👥 ${n.pop} Einwohner`, ok: T.pop >= n.pop, have: T.pop, want: n.pop });
   if (n.science) out.push({ text: `💡 ${fmt(n.science)} Ideen`, ok: state.science >= n.science, have: state.science, want: n.science, pay: true });
   if (n.money) out.push({ text: `🪙 ${fmt(n.money)} Taler`, ok: state.money >= n.money, have: state.money, want: n.money, pay: true });
