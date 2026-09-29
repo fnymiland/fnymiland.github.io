@@ -446,10 +446,10 @@ function render(now) {
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
         if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
-        if (s && s.grow && s.grow.ready) icons.push([c.x, c.y, '✨']);
+        if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
         if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
         if (s && s.wish && s.wish.next) {
-          if (s.wish.ready) icons.push([c.x, c.y, '✨']);
+          if (s.wish.ready && canPay(houseCost(s.wish.next))) icons.push([c.x, c.y, '✨']);
           else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);
         }
       }

@@ -95,7 +95,8 @@ html, body {
 }
 .tool canvas { width: 56px; height: 44px; }
 .tool .emoji { font-size: 28px; height: 44px; display: flex; align-items: center; }
-.tool .name { font-size: 12px; font-weight: 800; line-height: 1.15; }
+.tool .name { font-size: 12px; font-weight: 800; line-height: 1.15; max-width: 100%; text-align: center;
+  -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }   /* lange Namen (Wasserkraftwerk) umbrechen statt überstehen */
 .tool .cost { font-size: 11px; font-weight: 800; color: var(--brown2); }
 .tool.active { background: var(--yellow); box-shadow: 0 4px 0 #e0c060, 0 8px 16px rgba(60, 40, 20, .15); transform: translateY(-5px); }
 .tool.poor .cost { color: var(--red); }
@@ -353,6 +354,7 @@ html, body {
   gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
+  align-items: center;                         /* sonst werden die kleinen Kreise auf die Höhe des gewählten gestreckt (oval) */
   width: max-content;
   max-width: min(720px, calc(100% - 24px));
   padding: 4px;
