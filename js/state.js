@@ -187,6 +187,7 @@ function parseSave(d) {
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
     growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)
     growHall: (d.v || 3) < 10,       // v10 (29.09.): Das Rathaus ist 3×3 (growTownHall)
+    growHarbors: (d.v || 3) < 11,    // v11 (29.09.): Häfen sind 3×4 mit Kai und Pier (growHarbors)
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
@@ -266,6 +267,7 @@ function adoptState(s) {
   ownIslandsFully();
   const grown = growWonders();
   const hall = growTownHall();
+  const ports = growHarbors();
   fitFootprints();
   delete state.fitLm;
   nameHouses();
@@ -275,6 +277,7 @@ function adoptState(s) {
   if (moved) setTimeout(() => announceIslands(moved), 300);
   if (grown.length) setTimeout(() => announceWonders(grown), 600);
   if (hall) setTimeout(() => announceHall(hall), 900);
+  if (ports) setTimeout(() => announceHarbors(ports), 1300);
   buildToolbar();
   save();
 }

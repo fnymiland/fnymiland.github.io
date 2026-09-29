@@ -94,12 +94,14 @@ if (PROBE) {
   ownIslandsFully();
   const grown = growWonders();
   const hall = growTownHall();
+  const ports = growHarbors();
   const refunded = fitFootprints();
   delete state.fitLm;
   if (moved) setTimeout(() => announceIslands(moved), 900);
   nameHouses();
   if (grown.length) setTimeout(() => announceWonders(grown), 1200);
   if (hall) setTimeout(() => announceHall(hall), 1600);
+  if (ports) setTimeout(() => announceHarbors(ports), 2000);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

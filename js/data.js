@@ -58,7 +58,7 @@ const ITEMS = {
              desc: '+1,5 Taler/s für jedes Gebäude im Umkreis von 2.' },
   fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3. Braucht 2 ⚡ Strom, sobald es Windräder gibt.' },
-  hafen:   { cat: 'bau', name: 'Hafen', size: [2, 2], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
+  hafen:   { cat: 'bau', name: 'Hafen', size: [3, 4], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
              desc: 'Handel mit der Welt: +8 % auf alle Einnahmen. Je Stufe fährt ein Fischkutter hinaus (🪙 +5/s). Liegeplätze für 2/4/6 Schiffe, die zu Stegen und Häfen auf anderen Inseln fahren. Ab Stufe 2 Handel, ab Stufe 3 legen Kreuzfahrtschiffe an.' },
   leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 15000000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40,
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },

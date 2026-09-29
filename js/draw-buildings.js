@@ -634,39 +634,64 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
+  // Hafen (3 tief × 4 breit, vorn das Wasser): Kai mit Kaimauer und Pollern, Holzpier ins Wasser, Lagerhaus, Hafenmeisterei,
+  // Kran, Kisten und Fässer. Stufe 2: längerer Pier, großer Kran, mehr Ware; Stufe 3: zweiter Pier und Leuchtfeuer.
+  // Die Schiffe (Mover) legen vorn am Pier an.
   hafen(K, s, now, x, y, t) {
+    const E = 1.47, B = 1.97;
     if (groundPart(() => {
-      K.rect(-0.98, -0.98, 0.98, 0.98, C('#c9955f'));
-      g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
-      for (let i = -7; i <= 7; i++) kLine(K, K.P(-0.98, i * 0.13), K.P(0.98, i * 0.13), '#a57645', 0.8);
+      K.rect(-E, -B, E, B, C('#d8cfbf'));
+      g.save(); clipTo([[[-E, -B], [E, -B], [E, B], [-E, B]]], p => K.P(p[0], p[1]));
+      pattern(p => K.P(p[0] * 1.6, p[1] * 1.6), 'tiles', x, y, K.z, C('#c9bfae'));
       g.restore();
+      K.rect(1.12, -B, E, B, C('#9c9486'));                                              // Kaimauer
+      K.rect(1.05, -B, 1.12, B, C('#e9c46a'));                                            // gelbe Kante
+      for (const b of [-1.6, -0.55, 0.55, 1.6]) { const [px, py] = K.P(1.3, b); circle(px, py - 1 * K.z, 1.6 * K.z, C('#4a4a58')); }   // Poller
     })) return;
-    const [wa, wb] = waterSide(K, x, y, t, 'hafen');         // dort liegen die Schiffe
-    const parts = [];
-    const [ww, wr] = paint(t, '#d98a6a', s === 3 ? '#c65a45' : '#8b5a3c');
-    const ware = s === 3 ? { a: -0.4, b: -0.3, ha: 0.42, hb: 0.5, h: 20, wall: ww, roof: wr, roofH: 12 }
-      : { a: -0.45, b: -0.45, ha: s === 1 ? 0.3 : 0.4, hb: s === 1 ? 0.3 : 0.4, h: 14 + s * 2, wall: ww, roof: wr, roofH: 10 };
-    parts.push([ware.a, ware.b, () => {
-      const B = K.block({ ...ware, entry: true });
-      K.door(B, 'front', 0.35, 0.65, 0.72, '#6b4a2e');
-      K.sideWins(B, s === 3 ? 3 : 2, 0.45, 0.75);
+    const parts = [], z = K.z;
+    const [ww, wr] = paint(t, '#c9735a', '#6b4f3a');
+    parts.push([-0.8, -1.05, () => {                                                     // Lagerhaus
+      const L = K.block({ a: -0.8, b: -1.05, ha: 0.6, hb: 0.85, h: 14 + s * 3, wall: ww, roof: wr, roofH: 10, type: 'gable', entry: true });
+      K.door(L, 'front', 0.3, 0.7, 0.62, '#6b4a2e');
+      K.sideWins(L, 3, 0.55, 0.8);
     }]);
-    const crates = [[0.3, 0.5, '#9fb8d6'], [0.45, 0.35, '#d9a08f'], [0.2, 0.3, '#d9b27a']].slice(0, s === 1 ? 2 : 3);
-    for (const [a, b, c] of crates) parts.push([a, b, () => kCrate(K, a, b, c, 1.3)]);
-    if (s >= 2) parts.push([0.5, -0.45, () => {           // Kran
-      const p0 = kPost(K, 0.5, -0.45, 36, '#e9a23b', 2.2), p1 = K.P(0.5 + wa * 0.45, -0.45 + wb * 0.45, 30);
-      kLine(K, p0, p1, '#e9a23b', 2);
-      kLine(K, p1, [p1[0], p1[1] + 14 * K.z], '#6b6f78', 0.7);
-      box(p1[0], p1[1] + 18 * K.z, 3 * K.z, 1.5 * K.z, 4 * K.z, '#5f8fe8', null, 0);
+    parts.push([-0.85, 1.3, () => {                                                      // Hafenmeisterei
+      const O = K.block({ a: -0.85, b: 1.3, ha: 0.45, hb: 0.45, h: 12, wall: '#fff6e4', roof: '#3e7fd0', roofH: 8 });
+      K.door(O, 'front', 0.38, 0.62, 0.6, '#3e7fd0');
+      K.sideWins(O, 2, 0.4, 0.75);
+      const [fx, fy] = K.P(-0.85, 1.75, 20);
+      kLine(K, [fx, fy + 20 * z], [fx, fy - 4 * z], '#6b4f3a', 0.8);
+      poly([[fx, fy - 4 * z], [fx + 6 * z, fy - 2 * z], [fx, fy]], C('#e8604f'));
     }]);
-    if (s === 3) parts.push([0.75, 0.75, () => {          // Hafenlicht
-      K.block({ a: 0.75, b: 0.75, ha: 0.07, hb: 0.07, h: 22, wall: '#ffffff', roof: '#e8604f', roofH: 6 });
-      const [lx, ly] = K.P(0.75, 0.75, 24);
-      circle(lx, ly, 1.8 * K.z, night > 0.15 && isLive() ? '#ffd873' : C('#fff3b0')); kGlow(lx, ly, K.z, 30);
+    const goods = [[0.35, 0.1, '#9fb8d6'], [0.5, 0.35, '#d9a08f'], [0.25, 0.45, '#d9b27a'], [0.6, 0.85, '#9fcf8f'], [0.4, 1.05, '#c9955f'], [0.55, -0.3, '#d9b27a']]
+      .slice(0, 2 + s * 2);
+    for (const [a, b, c] of goods) parts.push([a, b, () => kCrate(K, a, b, c, 1.4)]);
+    if (s >= 2) parts.push([0.35, 0.1, () => kCrate(K, 0.35, 0.1, '#e9a23b', 1.3, 6.3)]);          // gestapelt
+    for (const [a, b] of [[0.75, 1.45], [0.6, 1.6]].slice(0, s)) parts.push([a, b, () => kBarrel(K, a, b)]);
+    // Kran am Kai: Turm, Ausleger übers Wasser, Seil mit Last
+    parts.push([0.75, -1.3, () => {
+      const H = s === 1 ? 26 : 38, reach = s === 1 ? 1.1 : 1.7;
+      const top = kPost(K, 0.75, -1.3, H, '#e9a23b', s === 1 ? 1.8 : 2.4);
+      if (s >= 2) kPost(K, 0.85, -1.2, H - 2, '#d38f2e', 1.6);
+      const tip = K.P(0.75 + reach, -1.3, H - 4);
+      kLine(K, top, tip, '#e9a23b', s === 1 ? 1.6 : 2.2);
+      const sw = Math.sin(now / 1500) * 2 * z;
+      kLine(K, tip, [tip[0] + sw, tip[1] + 16 * z], '#6b6f78', 0.7);
+      box(tip[0] + sw, tip[1] + 20 * z, 3.4 * z, 1.7 * z, 4 * z, '#5f8fe8', null, 0);
     }]);
-    const ba = wa * 1.25 + (wb ? 0.3 : 0), bb = wb * 1.25 + (wa ? 0.3 : 0);
-    parts.push([ba, bb, () => kBoat(K, ba, bb, now, false)]);
-    if (s === 3) { const a2 = wa * 1.35 - (wb ? 0.5 : 0), b2 = wb * 1.35 - (wa ? 0.5 : 0); parts.push([a2, b2, () => kBoat(K, a2, b2, now, true)]); }
+    // Pier(s) ins Wasser – auf Pfählen, ragen vorn aus dem Grundstück
+    const pier = (b, len) => () => {
+      for (let a = 1.6; a <= 1.5 + len; a += 0.5) for (const db of [-0.26, 0.26]) kPost(K, a, b + db, 3, '#6b4f3a', 1.3);
+      K.block({ a: 1.5 + len / 2, b, ha: len / 2, hb: 0.3, h: 0.9, lift: 2.2, wall: '#8a5a3c', type: 'flat', roof: '#c9a26f' });
+    };
+    const len = s === 1 ? 1.2 : 1.7;
+    parts.push([1.5 + len, 0, pier(0, len)]);
+    if (s === 3) parts.push([1.5 + len, 1.45, pier(1.45, len)]);
+    if (s === 3) parts.push([1.5 + len + 0.1, -0.4, () => {                                 // Leuchtfeuer am Pierende
+      K.block({ a: 1.5 + len - 0.05, b: -0.42, ha: 0.08, hb: 0.08, h: 16, lift: 3, wall: '#ffffff', roof: '#e8604f', roofH: 5 });
+      const [lx, ly] = K.P(1.5 + len - 0.05, -0.42, 20);
+      circle(lx, ly, 1.8 * z, night > 0.15 && isLive() ? '#ffd873' : C('#fff3b0')); kGlow(lx, ly, z, 30);
+    }]);
     K.scene(parts);
   },
   // --- Wohnen ---

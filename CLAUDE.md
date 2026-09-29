@@ -217,11 +217,17 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `state.expedition` (echte Zeit, `EXPEDITION_MIN`, gespeichert) → `checkExpedition` im Takt (nur ohne offenes Fenster)
     → `discoverIsland` (Tagebuchseite `isle:<id>`, `DISCOVERY`-Texte). Das Boot zeichnet `expeditionBoat`/`drawBoatMover`
     als Mover; der Steg zeigt sein Boot nur, solange es zu Hause ist.
-48. **Hafen** (Block 18): Fähre (`t.ferry` = Feld des anderen Hafens, `ferryPairs`, `FERRY_SEATS` nach der kleineren Stufe,
-    läuft durch `transitTraffic`), Fischkutter (`rawIncome` hafen = `FISH_INC` × Stufe), Handel ab Stufe 2 (`trade`,
-    `tradePrice` aus der Uhrzeit, kein Zustand), Kreuzfahrt ab Stufe 3 (`checkCruises` im Takt, `t.cruise`/`t.docked`,
-    `cruiseAttraction` im Umkreis). Schiffe sind Mover (`ferryBoats`, `fishBoats`, `cargoShip`, `cruiseShips`).
-    **Neue Felder an Kacheln müssen in `tileOut` (state.js)** – sonst gehen sie beim Speichern verloren (Wagen, Fähre).
+48. **Hafen** (Block 18/23): 3 tief × 4 breit, vorn das Wasser (`autoRot` für 'shore'); Kai, Pier(s) ragen ins Wasser.
+    Schiffe: `t.ships = [{ model, to }]` (Liegeplätze `BERTHS` 2/4/6 je Stufe, `buyShip`/`sellShip`, Ziel = Steg oder Hafen
+    auf einer anderen Insel, `shipTargets`); `shipLinks` fasst Schiffe zum selben Ziel zu einer Verbindung (Plätze ×
+    Tempo, `shipSeats`) → `transitTraffic`. Alte `t.ferry` werden beim Laden eine Holzfähre; alte 2×2-Häfen wachsen per
+    `growHarbors` (v11). Fischkutter (`FISH_INC` × Stufe), Handel ab Stufe 2 (`trade`, `tradePrice` aus der Uhrzeit),
+    Kreuzfahrt ab Stufe 3 (`checkCruises`, `t.cruise`/`t.docked`). Mover: `shipMovers` (je Modell `drawShipMover`),
+    `fishBoats`, `cargoShip`, `cruiseShips`; Anlegestelle `dockPoint`.
+    **Neue Felder an Kacheln müssen in `tileOut` (state.js)** – sonst gehen sie beim Speichern verloren (Wagen, Schiffe).
+    **Verkehrsmittel** (Forschungs-Reiter „Verkehr“, `SHIP_MODELS`/`TRAIN_MODELS`, `state.vehicles`, `vehicleOk`,
+    `researchVehicle`): Fahrgäste/min = Plätze × Tempo (`trainSeats`, `shipSeats`); das erste Modell ist mit der
+    Grundforschung frei. Neue Linien fahren Straßenbahn; alte Stände behalten, was schon fuhr (Regionalbahn).
 49. **Sorten statt Einzelgebäude** (`KINDS` in data.js): Bedingungen (`near` in BUILD_STAGES, Wünsche, Laufweite,
     Viertel mit Häusern, Deko neben Häusern, Bewohner) fragen nach einer Sorte – `isKind(sorte, b)`, `isHome(b)` für alle
     fünf Wohnformen, Brunnen = auch Kristallbrunnen, Park = auch Botanischer Garten, Statue = auch Denkmal. Wer ein neues

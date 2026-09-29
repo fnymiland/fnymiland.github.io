@@ -217,3 +217,42 @@ describe('Handel und Kreuzfahrt', () => {
     expect(document.getElementById('panel').textContent).toMatch(/Handel/);
   });
 });
+
+describe('Hafen 4×3 (Spielstand v11)', () => {
+  // Küste im eigenen Land: ab x = 12 Wasser
+  const coastline = () => game("for (let y = 0; y <= 20; y++) for (let x = 5; x <= 16; x++) { const k = x + ',' + y; state.terra.set(k, x >= 12 ? 'water' : 'grass'); if (!state.tiles.get(k) || state.tiles.get(k).b !== 'rathaus') state.tiles.delete(k); state.decos.delete(k); } sandCache.clear(); recalc()");
+  const reload = () => {
+    const raw = game('serialize()');
+    raw.v = 10;
+    game(`localStorage.setItem(SAVE_KEY, ${JSON.stringify(JSON.stringify(raw))})`);
+    game('state = load(); globalThis.__ports = growHarbors(); fitFootprints(); recalc()');
+  };
+  it('ist 3 tief und 4 breit, die Vorderseite zum Wasser', () => {
+    expect(game("sizeOf('hafen', 0)")).toEqual([3, 4]);
+    coastline();
+    expect(game("autoRot('hafen', 9, 6, 2)")).toBe(0);                         // vorn (+x) liegt das Wasser
+    expect(() => game("for (let s = 1; s <= 3; s++) for (let r = 0; r < 4; r++) drawObject('hafen', 300, 300, 1.5, 1000, 9, 6, s, { b: 'hafen', lvl: s, rot: r })")).not.toThrow();
+  });
+
+  it('alte Häfen (2×2) wachsen zur Wasserseite, ihre Schiffe finden sie wieder', () => {
+    coastline();
+    game("state.tiles.set('10,8', { b: 'hafen', lvl: 2, rot: 0 }); state.tiles.set('7,15', { b: 'hafen', lvl: 1, rot: 0, ships: [{ model: 'holz', to: '10,8' }] })");
+    reload();
+    const h = game("[...state.tiles].filter(([, t]) => t.b === 'hafen').map(([k, t]) => [k, t.rot, t.lvl])");
+    const big = h.find(e => e[2] === 2);
+    expect(big[1]).toBe(0);
+    expect(game(`footprint('hafen', ...keyXY('${big[0]}'), 0).every(([x, y]) => x <= 11)`)).toBe(true);
+    expect(game(`footprint('hafen', ...keyXY('${big[0]}'), 0).some(([x, y]) => x === 10 && y === 8)`)).toBe(true);
+    expect(game("globalThis.__ports.grown")).toBeGreaterThanOrEqual(1);
+  });
+
+  it('passt ein alter Hafen nirgends mehr hin, gibt es ihn samt Schiffen zurück', () => {
+    coastline();
+    game("for (let y = 0; y <= 20; y++) for (let x = 5; x <= 16; x++) if (x !== 11 || y < 8 || y > 9) state.terra.set(x + ',' + y, x >= 12 ? 'water' : 'water'); state.terra.set('10,8', 'grass'); state.terra.set('11,8', 'grass'); state.terra.set('10,9', 'grass'); state.terra.set('11,9', 'grass'); sandCache.clear()");
+    game("state.tiles.set('10,8', { b: 'hafen', lvl: 1, rot: 0, ships: [{ model: 'holz', to: '1,1' }] }); state.money = 0; state.res.bretter = 0");
+    reload();
+    expect(game("[...state.tiles.values()].some(t => t.b === 'hafen')")).toBe(false);
+    expect(game('state.money')).toBe(game('ITEMS.hafen.cost + SHIP_BY_ID.holz.buy.money'));
+    expect(game("globalThis.__ports.refunded")).toBe(1);
+  });
+});

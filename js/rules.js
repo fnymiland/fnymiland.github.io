@@ -1000,6 +1000,71 @@ function growTownHall() {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   return { gone };
 }
+// v11 (29.09.): Der Hafen ist 3 tief × 4 breit (vorn das Wasser). Alte Häfen (2×2) wachsen dorthin, wo am wenigsten
+// im Weg steht und die Vorderseite am Wasser liegt; was weicht, gibt es voll zurück. Passt er nirgends: Hafen samt Schiffen
+// zurück (alles erstattet).
+function growHarbors() {
+  if (!state.growHarbors) return null;
+  delete state.growHarbors;
+  const out = { grown: 0, gone: [], refunded: 0 };
+  for (const [k, t] of [...state.tiles]) {
+    if (t.b !== 'hafen') continue;
+    const [x, y] = keyXY(k);
+    state.tiles.delete(k); rebuildCover();
+    const cands = [];
+    for (const r of [t.rot || 0, 0, 1, 2, 3]) {
+      const [w, h] = sizeOf('hafen', r);
+      for (let ay = y + 2 - h; ay <= y; ay++) for (let ax = x + 2 - w; ax <= x; ax++) {
+        let score = 0, ok = true;
+        for (const [fx, fy] of footprint('hafen', ax, ay, r)) {
+          if (!ownedTile(fx, fy) || terrainAt(fx, fy) === 'water') { ok = false; break; }
+          const a = anchorAt(fx, fy), o = a && state.tiles.get(a);
+          if (o && (o.b === 'lm' || o.b === 'rathaus' || WONDERS[o.b])) { ok = false; break; }
+          if (o) score += o.b === 'weg' || o.b === 'schiene' ? 1 : 50;
+          const ds = state.decos.get(fx + ',' + fy);
+          if (ds) score += ds.filter(Boolean).length * 0.5;
+        }
+        if (!ok) continue;
+        const wet = frontTiles('hafen', ax, ay, r).filter(([fx, fy]) => isWater(fx, fy)).length;
+        if (!wet) continue;
+        cands.push({ ax, ay, r, score: score - wet * 0.1 });
+      }
+    }
+    cands.sort((p, q) => p.score - q.score);
+    const c = cands[0];
+    if (!c) {                                                    // passt nirgends: alles zurück
+      const back = fullValue(t);
+      for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) back[r] = (back[r] || 0) + n;
+      for (const [r, n] of Object.entries(back)) if (r === 'money') state.money += n; else state.res[r] += n;
+      out.refunded++;
+      continue;
+    }
+    for (const [fx, fy] of footprint('hafen', c.ax, c.ay, c.r)) {
+      const kk = fx + ',' + fy, a = anchorAt(fx, fy), o = a && state.tiles.get(a);
+      if (o) {
+        for (const [r, n] of Object.entries(fullValue(o))) if (r === 'money') state.money += n; else state.res[r] += n;
+        if (o.b !== 'weg' && o.b !== 'schiene') out.gone.push(ITEMS[o.b].name);
+        state.tiles.delete(a); rebuildCover();
+      }
+      const ds = state.decos.get(kk);
+      if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+      if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
+    }
+    // Schiffe, die zu diesem Hafen fuhren, finden ihn am neuen Anker
+    const nk = c.ax + ',' + c.ay;
+    for (const u of state.tiles.values()) if (u.ships) for (const s of u.ships) if (s.to === k) s.to = nk;
+    state.tiles.set(nk, { ...t, rot: c.r });
+    rebuildCover();
+    out.grown++;
+  }
+  terrainCache.clear(); sandCache.clear(); landCache.clear();
+  return out.grown || out.refunded ? out : null;
+}
+function announceHarbors(r) {
+  if (!r) return;
+  toast([r.grown ? `⚓ Neu: größere Häfen mit Kai und Pier${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (erstattet)` : ''}` : '',
+    r.refunded ? `${r.refunded} ${r.refunded === 1 ? 'Hafen passte' : 'Häfen passten'} nicht mehr – alles erstattet` : ''].filter(Boolean).join(' · '));
+}
 function announceHall(r) {
   if (!r) return;
   toast(`🏛️ Das Rathaus ist gewachsen (3×3)${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (alles erstattet)` : ''}`);
