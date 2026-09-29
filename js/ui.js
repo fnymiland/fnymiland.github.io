@@ -177,7 +177,7 @@ function setTool(t) {
     + (t === 'verschieben' ? ' · Mehrere auf einmal: Rechteck aufziehen'
       : t === 'abriss' ? ' · Fläche: aufziehen, hineinklicken reißt ab'
       : dragKind(t) === 'rect' ? ' · Fläche: aufziehen, hineinklicken baut' : '')
-    + (d.paint ? ' · Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '')
+    + (d.paint || dragKind(t) ? ' · Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '')
     + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
   hint.hidden = false;
 }
