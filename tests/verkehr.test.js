@@ -53,6 +53,29 @@ describe('Fahrgäste einer Linie', () => {
   });
 });
 
+describe('Jede Insel zählt einmal (25b)', () => {
+  const places = "{ pop: new Map([['home', 400], ['wald', 60], ['obst', 40]]), attr: new Map([['home', 20], ['wald', 150], ['obst', 100]]) }";
+  it('große Linie + Fähre zur selben Insel: deren Fahrgäste teilen sich beide Verbindungen, statt doppelt zu zählen', () => {
+    const r = game(`(() => { const big = { regions: ['home', 'wald', 'obst'], seats: 120 }, ferry = { regions: ['home', 'wald'], seats: 120 };
+      transitTraffic([big, ferry], ${places}); return { big: big.traffic, ferry: ferry.traffic }; })()`);
+    // Waldinsel: 30 Pendler + 150 Besucher, je zur Hälfte; Obstinsel: 20 + 100 nur mit der großen Linie;
+    // Heimatinsel: 20 Besucher (Anziehung), je zur Hälfte
+    expect(r.big.commute + r.ferry.commute).toBeCloseTo(30 + 20);
+    expect(r.ferry.demand).toBeCloseTo(90 + 10);
+    expect(r.big.demand).toBeCloseTo(90 + 120 + 10);
+    expect(r.ferry.served).toBe(1);
+    expect(r.big.served).toBeCloseTo(120 / 220);
+  });
+
+  it('Verbindung innerhalb einer Insel nimmt niemandem Fahrgäste weg', () => {
+    const r = game(`(() => { const a = { regions: ['home', 'wald'], seats: 120 }, b = { regions: ['home'], seats: 80 };
+      transitTraffic([a, b], ${places}); return { a: a.traffic, b: b.traffic }; })()`);
+    expect(r.b.demand).toBe(0);
+    expect(r.b.served).toBe(1);
+    expect(r.a.demand).toBeCloseTo(30 + 150 + 20);
+  });
+});
+
 describe('Züge im Spiel', () => {
   it('Fahrkarten und Besucher bringen Taler; die Sehenswürdigkeit drüben ist angebunden', () => {
     for (let i = 0; i < 30; i++) game(`state.tiles.set('${3 + (i % 6)},${3 + Math.floor(i / 6)}', { b: 'haus', lvl: 3 })`);  // 30 Häuser daheim
@@ -157,9 +180,9 @@ describe('Seilbahn', () => {
     line(60);
     game("state.inventions.add('seilbahn'); state.tiles.set('6,15', { b: 'seilbahn', lvl: 1 }); state.tiles.set('20,15', { b: 'seilbahn', lvl: 1 }); recalc()");
     const rail = game(`${L()}.traffic`), cab = game('T.cables[0].traffic');
-    expect(rail.groupSeats).toBe(120 + 80);
+    expect(rail.shared).toBe(1);
     expect(rail.served).toBeCloseTo(cab.served);
-    expect(rail.carried + cab.carried).toBeCloseTo(rail.demand * rail.served);
+    expect(rail.demand / cab.demand).toBeCloseTo(120 / 80);
     expect(rail.carried / cab.carried).toBeCloseTo(120 / 80);
   });
 });

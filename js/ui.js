@@ -849,7 +849,7 @@ function cableStatus(k) {
 // Fahrgäste, Plätze, Auslastung und was es bringt
 const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 function trafficStatus(line, tr) {
-  const all = tr.groupSeats || tr.seats, pct = all ? Math.round(tr.demand / all * 100) : 0, out = [];
+  const pct = tr.seats ? Math.round(tr.demand / tr.seats * 100) : 0, out = [];
   const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
   const vehicles = line.kind === 'seil' ? 'Gondeln' : line.kind === 'faehre' ? `${line.ships.length} ${line.ships.length === 1 ? 'Schiff' : 'Schiffe'}` : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
     return `${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} Wagen`; })();
@@ -858,7 +858,8 @@ function trafficStatus(line, tr) {
     return out;
   }
   out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min – ${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')}</div>`);
-  out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${vehicles}${all > tr.seats ? ` · mit den anderen Verbindungen dorthin ${fmt(all)}/min` : ''}</div>`);
+  out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${vehicles}</div>`);
+  if (tr.shared) out.push(`<div class="muted">🔀 Teilt sich die Fahrgäste mit ${tr.shared === 1 ? 'einer weiteren Verbindung' : `${tr.shared} weiteren Verbindungen`} zu denselben Inseln – nach Plätzen.</div>`);
   out.push(`<div class="load"><i style="width:${Math.min(100, pct)}%" class="${tr.served < 1 ? 'full' : ''}"></i></div>`);
   out.push(tr.served < 1 ? `<div class="bad">😣 Überfüllt (${pct} %): nur ${Math.round(tr.served * 100)} % kommen mit</div>`
     : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
@@ -1369,10 +1370,35 @@ function showIntro(first) {
   if (first) wireTownEditor($('modal-card'), state.town, updateHud);
   $('m-ok').onclick = () => { closeModal(); save(); };
 }
+// „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
+// nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
+const NEWS = { id: '2026-09-30', items: [
+  '🚢 <b>Aufträge statt Börse:</b> Am Handelshafen legen Frachter an und kaufen dir ab, was sich stapelt – zu 120–180 % des Werts. Am Großen Hafen gibt es Großaufträge (fast alles, bis 300 %): die Finanzspritze fürs Schloss.',
+  '🌊 <b>Schiffe fahren übers Wasser</b> und suchen sich den Weg um die Inseln herum. Ist er zugeschüttet, bleiben sie am Pier.',
+  '🛳️ Die Kreuzfahrt ist weg – der Große Hafen hat dafür mehr Auftragsplätze.',
+] };
+const NEWS_KEY = 'kachelhausen_news';
+const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
+function markNewsSeen() { try { localStorage.setItem(NEWS_KEY, NEWS.id); } catch (e) { /* privates Fenster: dann eben nicht */ } }
+function showNews() {
+  markNewsSeen();
+  openModal(`
+    <h2>✨ Das ist neu</h2>
+    <ul class="news">${NEWS.items.map(i => `<li>${i}</li>`).join('')}</ul>
+    <div class="row"><button class="btn" id="m-ok" style="flex:1">Los geht's!</button></div>`);
+  $('m-ok').onclick = closeModal;
+}
+// Beim Start: mit Spielstand zeigen, sobald kein anderes Fenster (Hinweise zu Umbauten, Expedition …) offen ist
+function newsAfterLoad(hadSave) {
+  if (!hadSave) { markNewsSeen(); return; }
+  const tryShow = () => { if (newsSeen()) return; if (!$('modal').hidden) { setTimeout(tryShow, 1000); return; } showNews(); };
+  setTimeout(tryShow, 2500);
+}
 function showMenu() {
   openModal(`
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
@@ -1384,6 +1410,7 @@ function showMenu() {
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => showIntro(false);
+  $('m-news').onclick = showNews;
   $('m-tips').onclick = openTipBook;
   $('m-diary').onclick = () => openDiary();
   $('m-achv').onclick = () => openTownHall('erfolge');

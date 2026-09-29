@@ -858,17 +858,33 @@ function makeOrder(now, rnd = Math.random) {
   return { id: now + ':' + res, kind: 'buy', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * (1.1 + rnd() * 0.3)), until: now + ORDER_TTL };
 }
 const ferriesAt = k => T.ferries.filter(l => l.stations.includes(k));
-// Verkehr aller Verbindungen: Wer zwischen denselben Orten fährt (Zug, Seilbahn, Fähre), teilt sich die Fahrgäste –
-// nach Plätzen. Jede Verbindung bekommt ihren Anteil an Fahrkarten und Besuchern, die Auslastung gilt für alle zusammen.
+// Verkehr aller Verbindungen (Block 25b): Jede Insel zählt einmal. Pendler: ½ je Einwohner, wenn eine Insel, mit der
+// sie verbunden ist, größer ist (Gleichstand: die Heimatinsel bzw. die frühere zählt als größer). Besucher: ihre
+// Anziehung, höchstens ½ je Einwohner aller Inseln, mit denen sie verbunden ist. Das teilen sich alle Verbindungen, die
+// dort halten (Zug, Seilbahn, Fähre) – nach Plätzen. Jede Verbindung hat so ihre Fahrgäste und ihre Auslastung.
 function transitTraffic(links, places) {
-  const groups = new Map();
-  for (const l of links) { const key = [...l.regions].sort().join('+'); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(l); }
-  for (const list of groups.values()) {
-    const seats = list.reduce((s, l) => s + l.seats, 0), tr = lineTraffic({ regions: list[0].regions, seats }, places);
-    for (const l of list) {
-      const f = seats ? l.seats / seats : 1 / list.length;
-      l.traffic = { ...tr, seats: l.seats, groupSeats: seats, share: f, carried: tr.carried * f, fare: tr.fare * f, spend: tr.spend * f };
+  const pop = r => places.pop.get(r) || 0, rank = r => r === 'home' ? -1 : ISLES.findIndex(i => i.id === r);
+  const at = new Map();                                                            // Insel → Verbindungen, die dort halten
+  for (const l of links) if (l.regions.length > 1) for (const r of l.regions) { if (!at.has(r)) at.set(r, []); at.get(r).push(l); }
+  const need = new Map();
+  for (const [r, ls] of at) {
+    const other = [...new Set(ls.flatMap(l => l.regions))].filter(q => q !== r), seats = ls.reduce((s, l) => s + l.seats, 0);
+    const bigger = other.some(q => pop(q) > pop(r) || (pop(q) === pop(r) && rank(q) < rank(r)));
+    need.set(r, { commute: bigger ? pop(r) * COMMUTE_SHARE : 0,
+      visit: Math.min(places.attr.get(r) || 0, other.reduce((s, q) => s + pop(q), 0) * VISIT_SHARE),
+      share: l => seats ? l.seats / seats : 1 / ls.length });
+  }
+  for (const l of links) {
+    let commute = 0, visitors = 0;
+    const visits = new Map();
+    if (l.regions.length > 1) for (const r of l.regions) {
+      const n = need.get(r), f = n.share(l);
+      commute += n.commute * f; visitors += n.visit * f; visits.set(r, n.visit * f);
     }
+    const demand = commute + visitors, served = demand > 0 ? Math.min(1, l.seats / demand) : 1;
+    const shared = l.regions.length > 1 ? links.filter(o => o !== l && o.regions.length > 1 && o.regions.some(r => l.regions.includes(r))).length : 0;
+    l.traffic = { commute, visits, visitors, demand, seats: l.seats, served, carried: demand * served, shared,
+      fare: demand * served * FARE / 60, spend: visitors * served * VISIT_SPEND / 60 };
   }
 }
 // Einwohner und Anziehung je Ort
@@ -885,17 +901,8 @@ function placeStats() {
   for (const [k, ds] of state.decos) { const r = regionAt(...keyXY(k)); for (const d of ds) if (d) add(attr, r, ITEMS[d.b].beauty / 10); }
   return { pop, attr };
 }
-// Fahrgäste einer Linie: Pendler + Besucher je Ort, Plätze, beförderter Anteil
-function lineTraffic(l, places) {
-  const pops = l.regions.map(r => places.pop.get(r) || 0), total = pops.reduce((a, b) => a + b, 0);
-  const main = l.regions[pops.indexOf(Math.max(...pops))];
-  const commute = l.regions.reduce((s, r, i) => s + (r === main ? 0 : pops[i] * COMMUTE_SHARE), 0);
-  const visits = new Map(l.regions.map((r, i) => [r, Math.min(places.attr.get(r) || 0, (total - pops[i]) * VISIT_SHARE)]));
-  const visitors = [...visits.values()].reduce((a, b) => a + b, 0), demand = commute + visitors;
-  const served = demand > 0 ? Math.min(1, l.seats / demand) : 1;
-  return { commute, visits, visitors, demand, seats: l.seats, served, carried: demand * served,
-    fare: demand * served * FARE / 60, spend: visitors * served * VISIT_SPEND / 60 };
-}
+// Fahrgäste einer einzelnen Linie (so, als gäbe es nur sie)
+const lineTraffic = (l, places) => { const c = { ...l }; transitTraffic([c], places); return c.traffic; };
 function computePower(lines, supply, plants = 0) {
   const city = plants > 0 || available('windrad');
   let left = supply, demand = 0, trains = 0;

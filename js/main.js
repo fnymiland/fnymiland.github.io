@@ -107,9 +107,11 @@ if (PROBE) {
   cam = state.cam;
   recalc();
   buildToolbar();
+  newsAfterLoad(true);
 } else {
   startNew();
   showIntro(true);
+  newsAfterLoad(false);
   if (loadFailure) {
     openModal(`
       <h2>Spielstand nicht lesbar</h2>

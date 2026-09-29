@@ -205,6 +205,7 @@ html, body {
 .card h2 { margin: 0 0 8px; font-weight: 900; font-size: 24px; }
 .card p, .card li { font-weight: 700; font-size: 15px; line-height: 1.45; }
 .card ul { padding-left: 20px; margin: 8px 0; }
+.card ul.news li { margin: 6px 0; line-height: 1.4; }
 
 /* ---------- v2: Stadt, Ziele, Kategorien ---------- */
 .town { cursor: pointer; align-items: center; }

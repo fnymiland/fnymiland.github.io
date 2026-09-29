@@ -288,9 +288,9 @@ Große Hafen bekommt mehr Auftragsplätze und Großaufträge. Schiffe fahren nur
 
 ## Block 25 – „Das ist neu“ und Verkehr zählt jede Insel einmal (30.09.)
 
-- [ ] **25a** „Das ist neu“-Fenster: einmal pro Gerät nach einem Update, nicht bei neuen Spielern (ohne Spielstand);
+- [x] **25a** „Das ist neu“-Fenster: einmal pro Gerät nach einem Update, nicht bei neuen Spielern (ohne Spielstand);
       3–5 Punkte, Kennung in `NEWS.id` (bei jedem Push mit Sichtbarem neu setzen).
-- [ ] **25b** Verkehr: Ist eine Insel über verschiedene Verbindungen angebunden (große Bahnlinie + Fähre), zählen ihre
+- [x] **25b** Verkehr: Ist eine Insel über verschiedene Verbindungen angebunden (große Bahnlinie + Fähre), zählen ihre
       Pendler/Besucher nicht mehr doppelt – jede Insel einmal, die Verbindungen teilen sie sich nach Plätzen.
 
 ## Block 26 – Bedingungen per Weg oder Bahn (30.09.)
