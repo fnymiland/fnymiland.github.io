@@ -74,4 +74,9 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 - [x] **Reetdachhaus:** Dachfarbe lässt sich ändern (Reet in der gewählten Farbe).
 - [x] **Schilder verrutscht (Safari):** Text wird selbst zentriert (`centerText`); Schilder gesperrter Inseln schweben
       über der Sehenswürdigkeit statt an einem Pfahl im Berg.
-- [ ] **Baumenü neu ordnen** (nach Zweck: Geld, Einwohner, Rohstoffe, Verstärker, Bildung …) – Vorschlag besprechen.
+- [x] **Natur räumt sich weg:** Bauen auf Wald/Obsthain/Fels/Erz/Kristallfels rodet bzw. sprengt automatisch (Kosten wie
+      von Hand, in der Vorschau); Betriebe behalten ihr Gelände, Selbstgebautes wird nie weggeräumt.
+- [x] **Geldanzeige oben** ohne Kommazahlen.
+- [ ] **Baumenü Variante B:** Bauen (Filter: Alle, Wohnen, Geld, Rohstoffe, Verstärker, Bildung) · Verschönern ·
+      Verbinden · Gelände; jedes Gebäude in genau einer Gruppe; Wirkung auf jeder Karte.
+- [ ] **Bahnübergänge** – Vorschlag besprechen (Schranke, Brücke oder beides).

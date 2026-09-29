@@ -8,6 +8,8 @@ const nfc = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractio
 const nf1 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function fmt(n) { return Math.abs(n) < 100000 ? nf.format(Math.floor(n)) : nfc.format(n); }
 function fmtRate(n) { return Math.abs(n) < 100 ? nf1.format(n) : fmt(n); }
+// oben in der Leiste: glatte Zahlen (unter 1 aber nicht „0“)
+function fmtWhole(n) { return n > 0 && n < 0.5 ? '<1' : fmt(Math.round(n)); }
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]); }
 
 let toastTimer = 0;
@@ -145,10 +147,10 @@ const canResearch = () => TECHS.some(t => techReady(t) && state.science >= t.cos
 let goalSmall = false, unlockSig = '';
 function updateHud() {
   $('money').textContent = fmt(state.money);
-  $('rate').textContent = '+' + fmtRate(T.inc) + '/s';
+  $('rate').textContent = '+' + fmtWhole(T.inc) + '/s';
   $('pop').textContent = T.jobs + '/' + T.pop;
   $('sci').textContent = fmt(state.science);
-  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtRate(T.sci) + '/s' : '';
+  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci) + '/s' : '';
   $('sci-dot').hidden = !canResearch();
   $('beauty').textContent = T.beauty;
   // Lager: nur Waren zeigen, die man hat oder gerade herstellt

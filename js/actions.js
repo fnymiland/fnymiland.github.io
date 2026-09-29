@@ -25,7 +25,8 @@ function build(b, x, y, quiet) {
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
-  const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water';
+  const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);
+  clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
   if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) claimTile(x, y);
@@ -39,7 +40,7 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
     }
   } else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}) });
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}) });
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
       assignResident(t, Math.random, Math.random);

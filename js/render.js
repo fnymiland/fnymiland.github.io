@@ -336,7 +336,8 @@ function render(now) {
     } else if (smallMode) {
       const slot = freeSlot(hx, hy, hoverSlot);
       const err = tool === 'verschieben' ? moveError(hx, hy, slot) : smallError(tool, hx, hy, slot);
-      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', slot, text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}`) };
+      const cl = tool === 'verschieben' ? '' : clearLabel(tool, hx, hy);
+      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', slot, text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}${cl ? '  ' + cl : ''}`) };
     } else if (tool === 'verschieben') {
       const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType));
       box = [hx, hy, w, h];
@@ -372,6 +373,8 @@ function render(now) {
           if (pv.bonus) parts.push(`🏘️ +${Math.round(pv.bonus * 100)} %`);
           text = parts.join('  ') || d.name;
         }
+        const cl = clearLabel(tool, hx, hy, rotOf(tool));      // Wald/Fels auf dem Bauplatz verschwinden
+        if (cl) text += '  ' + cl;
       }
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
@@ -449,7 +452,9 @@ function render(now) {
       }
     } else {
       const ter = terrainAt(x, y), hide = inGhost(x, y);
-      if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
+      const gone = hide && tool !== 'verschieben' && ITEMS[ghostType] && willClear(ghostType, ter);   // wird beim Bauen weggeräumt
+      if (gone) { /* Vorschau: Natur schon ausblenden */ }
+      else if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
       else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
       else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
       else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);

@@ -298,6 +298,29 @@ function slotAt(sx, sy) {
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
 const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'lm']);
+// Natur räumt das Bauen selbst weg – zum Preis von Roden bzw. Sprengen. Was ein Betrieb braucht, bleibt
+// (Holzfäller im Wald, Kristallmine auf Kristallfels; Steinbruch und Bergwerk graben im Fels).
+// Selbst Gebautes wird nie weggeräumt (das prüft COVER vorher), Wasser auch nicht (dafür gibt es Aufschütten).
+const CLEAR_COST = { forest: 10, obst: 10, rock: 50, erz: 50, kristall: 50 };
+function willClear(b, ter) {
+  if (!(ter in CLEAR_COST)) return false;
+  const need = ITEMS[b].needs;
+  return ter !== need && !(ter === 'rock' && (need === 'rock' || need === 'erz'));
+}
+function clearTiles(b, x, y, rot) {
+  const tiles = ITEMS[b].small || b === 'graben' ? [[x, y]] : footprint(b, x, y, ROTATABLE.has(b) ? rot : 0);
+  return tiles.filter(([fx, fy]) => willClear(b, terrainAt(fx, fy)) && !(ITEMS[b].small && objAt(fx, fy)));
+}
+const clearCost = (b, x, y, rot = placeRot(b, x, y)) => clearTiles(b, x, y, rot).reduce((s, [fx, fy]) => s + CLEAR_COST[terrainAt(fx, fy)], 0);
+function clearNature(b, x, y, rot) {
+  for (const [fx, fy] of clearTiles(b, x, y, rot)) { state.money -= CLEAR_COST[terrainAt(fx, fy)]; state.terra.set(fx + ',' + fy, 'grass'); }
+}
+const clearLabel = (b, x, y, rot) => {
+  const ters = clearTiles(b, x, y, rot).map(([fx, fy]) => terrainAt(fx, fy));
+  if (!ters.length) return '';
+  const blast = ters.some(t => CLEAR_COST[t] >= 50), cut = ters.some(t => CLEAR_COST[t] < 50);
+  return `${blast && cut ? '🧹 Roden/Sprengen' : blast ? '🧨 Sprengen' : '🪓 Roden'} −${fmt(clearCost(b, x, y, rot))}`;
+};
 function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
@@ -305,10 +328,9 @@ function smallError(b, x, y, slot, opts = {}) {
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
-  if (!t && terrainAt(x, y) !== 'grass') return 'Erst roden bzw. sprengen';
   if (decosAt(k) && decosAt(k)[slot]) return decosAt(k).every(Boolean) ? 'Alle 4 Ecken sind belegt' : 'Diese Ecke ist schon belegt';
-  if (opts.move) return null;
-  if (state.money < d.cost) return 'Zu wenig Taler';
+  if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
+  if (state.money < d.cost + clearCost(b, x, y)) return 'Zu wenig Taler';
   return matError(d.mat);
 }
 // Ist die angetippte Ecke belegt, die nächste freie nehmen: erst die beiden Nachbarecken, dann die gegenüber
@@ -322,6 +344,7 @@ function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
   const k = x + ',' + y;
+  clearNature(b, x, y);
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
@@ -477,12 +500,12 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
       if (ter === 'water') return 'Hier ist schon Wasser';
-      if (ter !== 'grass') return 'Erst roden bzw. sprengen';
+      if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
     } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
   } else {
     const tiles = footprint(b, x, y, r);
     for (const [fx, fy] of tiles) {
-      const k = fx + ',' + fy, ter = terrainAt(fx, fy);
+      const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       const rail = b === 'schiene';               // Schienen dürfen übers Wasser (Brücke), auch ins offene Meer
       if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : 'Das ist nicht dein Grundstück';
       if (COVER.has(k)) return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
@@ -495,8 +518,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
       if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
       if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
-      if (anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
-      if ((need === 'grass' || need === 'shore') && ter !== 'grass') {
+      if (opts.move && anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
+      if ((need === 'grass' || need === 'shore') && ter !== 'grass') {                  // nur noch beim Verschieben
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
       }
     }
@@ -505,7 +528,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   }
   if (opts.move) return null;
   const c = costOf(b, x, y);
-  if (state.money < c.cost) return 'Zu wenig Taler';
+  if (state.money < c.cost + clearCost(b, x, y, r)) return 'Zu wenig Taler';
   return matError(c.mat);
 }
 
