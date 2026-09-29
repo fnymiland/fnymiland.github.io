@@ -1154,6 +1154,15 @@ function readyList() {
   }
   return { ready, almost };
 }
+// Bereites nach Art ordnen – wie das Bau-Menü; Wunderwerke und Laternen am Ende und nur einzeln
+function readyGroups(ready) {
+  const menu = MENU.find(m => m.id === 'bauen').groups;
+  const groupOf = e => e.kind === 'lm' ? 'lm' : e.kind === 'wonder' ? 'wunder' : isHome(e.b) ? 'wohnen'
+    : (menu.find(g => g.items.includes(e.b)) || { id: 'andere' }).id;
+  const defs = [...menu.map(g => ({ id: g.id, label: g.label, bulk: g.id !== 'wunder' })), { id: 'andere', label: '🧩 Sonstiges', bulk: true }, { id: 'lm', label: '🏮 Sehenswürdigkeiten', bulk: false }];
+  return defs.map(d => ({ ...d, items: ready.filter(e => groupOf(e) === d.id) })).filter(g => g.items.length);
+}
+const sumCost = list => { const c = {}; for (const e of list) for (const [r, n] of Object.entries(e.cost || {})) c[r] = (c[r] || 0) + n; return c; };
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
@@ -1198,9 +1207,18 @@ function openTownHall(tab = hallTab) {
     const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
     const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
     const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
+    // Gruppen wie im Bau-Menü (Wohnen, Geld, Rohstoffe …), je mit „Alle ausbauen“; ganz oben „Alles ausbauen“
+    const many = ready.filter(e => e.kind === 'haus' || e.kind === 'stage');
+    const allBtn = (list, key, label) => { const c = sumCost(list), ok = list.some(e => canPay(e.cost));
+      return `<button class="btn${key === 'all' ? '' : ' small'}" data-upall="${key}" ${ok ? '' : 'disabled'}>${label} · ${list.length} · ${costText(c)}</button>`; };
+    const groups = readyGroups(ready);
     body = `
-      <div class="label">Bereit zum Ausbauen</div>
-      ${ready.length ? ready.map((e, i) => row(e, i, '✨', true)).join('') : '<p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
+      ${many.length > 1 ? `<div class="row">${allBtn(many, 'all', '✨ Alles ausbauen')}</div>
+        <p class="muted">Das Günstigste zuerst, so weit Taler und Material reichen. Wunderwerke und Laternen einzeln.</p>` : ''}
+      ${ready.length ? groups.map(g => `<div class="label hall-group"><span>${g.label} (${g.items.length})</span>
+          ${g.bulk && g.items.length > 1 ? allBtn(g.items, g.id, 'Alle ausbauen') : ''}</div>
+          ${g.items.map(e => row(e, ready.indexOf(e), '✨', true)).join('')}`).join('')
+        : '<div class="label">Bereit zum Ausbauen</div><p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
       ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}`;
   } else if (tab === 'isles') {
     // Alle Inseln auf einen Blick: Stand, was dort steht, Bahnanschluss – und per Knopf hin
@@ -1267,6 +1285,10 @@ function openTownHall(tab = hallTab) {
   card.classList.add('hall');
   for (const b of card.querySelectorAll('[data-tab]')) b.onclick = () => { sfx('deco'); openTownHall(b.dataset.tab); };
   const all = ready.concat(almost);
+  for (const b of card.querySelectorAll('[data-upall]')) b.onclick = () => {
+    const key = b.dataset.upall, list = key === 'all' ? ready : (readyGroups(ready).find(g => g.id === key) || { items: [] }).items;
+    if (upgradeMany(list)) openTownHall('ready');
+  };
   for (const b of card.querySelectorAll('[data-up]')) b.onclick = () => {
     const e = all[+b.dataset.up];
     if (e.kind === 'lm') { restoreLandmark(e.type); return; }            // öffnet das Laternen-Fenster

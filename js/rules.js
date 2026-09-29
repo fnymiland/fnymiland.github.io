@@ -927,6 +927,61 @@ function growWonders() {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   return out;
 }
+// v10 (29.09.): Das Rathaus ist 3×3 statt 2×2. Es wächst in die Richtung, in der am wenigsten im Weg steht – am
+// liebsten nach hinten (die Wege liegen meist vorn). Nie ins Wasser, nie über Sehenswürdigkeiten oder Wunderwerke.
+// Was weichen muss, gibt es voll zurück – samt Ausbau.
+function fullValue(t) {
+  const d = ITEMS[t.b], c = { money: d.cost || 0, ...(d.mat || {}) }, add = o => { for (const [r, n] of Object.entries(o || {})) c[r] = (c[r] || 0) + n; };
+  if (t.b === 'haus') for (let l = 1; l < t.lvl; l++) add(houseCost(HOUSE_STAGES[l]));
+  else if (BUILD_STAGES[t.b]) BUILD_STAGES[t.b].up.slice(0, (t.lvl || 1) - 1).forEach(u => add(u.cost));
+  if (t.b === 'schiene' && t.bridge) { c.money = BRIDGE.cost; }
+  return c;
+}
+function growTownHall() {
+  if (!state.growHall) return null;
+  delete state.growHall;
+  const e = [...state.tiles].find(([, t]) => t.b === 'rathaus');
+  if (!e) return null;
+  const [k, t] = e, [x, y] = keyXY(k);
+  state.tiles.delete(k);
+  rebuildCover();
+  const score = ([ax, ay]) => {
+    let s = 0;
+    for (const [fx, fy] of footprint('rathaus', ax, ay, 0)) {
+      if (!ownedTile(fx, fy) || terrainAt(fx, fy) === 'water') return Infinity;
+      const a = anchorAt(fx, fy), o = a && state.tiles.get(a);
+      if (o && (o.b === 'lm' || WONDERS[o.b])) return Infinity;
+      if (o) s += o.b === 'weg' || o.b === 'schiene' ? 1 : 50;
+      const ds = state.decos.get(fx + ',' + fy);
+      if (ds) s += ds.filter(Boolean).length * 0.5;
+    }
+    return s;
+  };
+  const spots = [[x - 1, y - 1], [x, y - 1], [x - 1, y], [x, y]].map(p => [score(p), p]).filter(p => isFinite(p[0]));
+  spots.sort((a, b) => a[0] - b[0]);                  // stabil: bei Gleichstand nach hinten
+  if (!spots.length) { state.tiles.set(k, t); rebuildCover(); return { gone: [] }; }   // fitFootprints räumt dann
+  const [ax, ay] = spots[0][1], gone = [];
+  for (const [fx, fy] of footprint('rathaus', ax, ay, 0)) {
+    const kk = fx + ',' + fy, a = anchorAt(fx, fy), o = a && state.tiles.get(a);
+    if (o) {
+      for (const [r, n] of Object.entries(fullValue(o))) if (r === 'money') state.money += n; else state.res[r] += n;
+      if (o.b !== 'weg' && o.b !== 'schiene') gone.push(ITEMS[o.b].name);
+      state.tiles.delete(a);
+      rebuildCover();
+    }
+    const ds = state.decos.get(kk);
+    if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+    if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
+  }
+  state.tiles.set(ax + ',' + ay, t);
+  rebuildCover();
+  terrainCache.clear(); sandCache.clear(); landCache.clear();
+  return { gone };
+}
+function announceHall(r) {
+  if (!r) return;
+  toast(`🏛️ Das Rathaus ist gewachsen (3×3)${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (alles erstattet)` : ''}`);
+}
 function announceWonders(list) {
   if (!list.length) return;
   const back = list.filter(e => e.refunded).map(e => e.name), grown = list.filter(e => !e.refunded).map(e => e.name);

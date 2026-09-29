@@ -121,9 +121,9 @@ describe('Wunderwerke', () => {
     expect(game('state.res.quader')).toBe(q + 150);
   });
 
-  it('Speichern: Stand v9, alte Stände (v8) wachsen beim Laden', () => {
+  it('Speichern: Stand v10, alte Stände (v8) wachsen beim Laden', () => {
     game('save()');
-    expect(JSON.parse(game("localStorage.getItem(SAVE_KEY)")).v).toBe(9);
+    expect(JSON.parse(game("localStorage.getItem(SAVE_KEY)")).v).toBe(10);
     expect(game('load().growWonders')).toBe(false);
   });
 

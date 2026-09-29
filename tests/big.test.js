@@ -143,7 +143,7 @@ describe('Verschieben aus dem Infofenster', () => {
     expect(game('movingType()')).toBe('rathaus');
     expect(game('tool')).toBe('verschieben');
     game("setTool('look')");
-    expect(game("state.tiles.get('2,2').b")).toBe('rathaus');
+    expect(game("state.tiles.get('1,1').b")).toBe('rathaus');
   });
   it('auch Häuser und Deko', () => {
     build('haus', 8, 8);

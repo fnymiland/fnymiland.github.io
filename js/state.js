@@ -79,7 +79,7 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 9, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 10, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
@@ -175,6 +175,7 @@ function parseSave(d) {
     oldSave: !d.restore,
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
     growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)
+    growHall: (d.v || 3) < 10,       // v10 (29.09.): Das Rathaus ist 3×3 (growTownHall)
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
@@ -252,6 +253,7 @@ function adoptState(s) {
   const moved = migrateIslands();
   ownIslandsFully();
   const grown = growWonders();
+  const hall = growTownHall();
   fitFootprints();
   delete state.fitLm;
   nameHouses();
@@ -260,6 +262,7 @@ function adoptState(s) {
   checkAchievements(true);                         // schon Erreichtes still zählen
   if (moved) setTimeout(() => announceIslands(moved), 300);
   if (grown.length) setTimeout(() => announceWonders(grown), 600);
+  if (hall) setTimeout(() => announceHall(hall), 900);
   buildToolbar();
   save();
 }

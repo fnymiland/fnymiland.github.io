@@ -289,7 +289,7 @@ describe('Mehrere Dinge verschieben', () => {
     dragFromTo([1, 1], [3, 3]);                                            // Rathaus (Werkzeug „Ansehen“: Karte ziehen)
     game("setTool('verschieben')");
     dragFromTo([1, 1], [3, 3]);
-    expect(at(2, 2)).toBe('rathaus');
+    expect(game("state.tiles.get(anchorAt(2, 2)).b")).toBe('rathaus');
   });
 
   it('iPad: Ziel antippen zeigt die Vorschau, nochmal antippen setzt ab', () => {

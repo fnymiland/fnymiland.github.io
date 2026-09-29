@@ -537,6 +537,10 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .trade-row .up { color: var(--green-d); } .trade-row .down { color: var(--red); }
 .trade-row .btn { padding: 4px 6px; font-size: 12px; }
 
+/* Rathaus „Bereit“: Gruppen mit „Alle ausbauen“ */
+.label.hall-group { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.label.hall-group .btn { text-transform: none; letter-spacing: 0; }
+
 /* ---------- Handy (body.phone: kürzere Bildschirmseite < 540 px, gesetzt in resize) ----------
    iPad und Desktop sind nie .phone – hier nur, was aufs Handy gehört. */
 /* Leiste eingeklappt: nur Schnellwerkzeuge + Bereiche; ein Bereich klappt den Katalog auf (#toolbar.open) */

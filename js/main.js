@@ -9,7 +9,7 @@ function startNew() {
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   walkers.length = 0; cars.length = 0;
-  state.tiles.set('2,2', { b: 'rathaus', lvl: 1 });
+  state.tiles.set('1,1', { b: 'rathaus', lvl: 1 });           // 3×3 (1–3): die Wege unten führen an seine Seiten
   // ein kleiner Sandweg vom Rathaus aus
   for (let x = 4; x <= 5; x++) state.tiles.set(x + ',2', { b: 'weg', lvl: 1, style: 'sand' });
   for (let y = 4; y <= 5; y++) state.tiles.set('2,' + y, { b: 'weg', lvl: 1, style: 'sand' });
@@ -93,11 +93,13 @@ if (PROBE) {
   const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
   ownIslandsFully();
   const grown = growWonders();
+  const hall = growTownHall();
   const refunded = fitFootprints();
   delete state.fitLm;
   if (moved) setTimeout(() => announceIslands(moved), 900);
   nameHouses();
   if (grown.length) setTimeout(() => announceWonders(grown), 1200);
+  if (hall) setTimeout(() => announceHall(hall), 1600);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();

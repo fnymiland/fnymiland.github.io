@@ -233,11 +233,11 @@ function stageUpgrade(x, y, stay = false) {
   if (!t || !BUILD_STAGES[t.b]) return;
   const info = stageInfo(t, x, y);
   if (!info.next) return;
-  if (!info.ready) { fail('Erst alle Bedingungen erfüllen'); return; }
+  if (!info.ready) { say('Erst alle Bedingungen erfüllen'); return; }
   const { money = 0, ...mat } = info.next.cost;
-  if (state.money < money) { fail('Zu wenig Taler'); return; }
+  if (state.money < money) { say('Zu wenig Taler'); return; }
   const err = matError(mat);
-  if (err) { fail(err); return; }
+  if (err) { say(err); return; }
   state.money -= money;
   payMat(mat);
   t.lvl++;
@@ -245,12 +245,32 @@ function stageUpgrade(x, y, stay = false) {
   recalc();
   const [w, h] = sizeOf(t.b, t.rot);
   sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
-  sfx('star');
-  toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`);
-  checkStars();
-  save();
+  if (!QUIET) { sfx('star'); toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`); checkStars(); save(); }
   if (!stay) openInfo(x, y);
   return true;
+}
+
+// Mehrere auf einmal ausbauen (Rathaus): das Günstigste zuerst, solange Taler und Material reichen. Nach jedem Ausbau
+// wird neu gerechnet (Mitarbeiter, Wünsche), gesagt und gespeichert wird einmal am Ende.
+let QUIET = false;
+const say = msg => { if (!QUIET) fail(msg); };
+function upgradeMany(list) {
+  const todo = list.filter(e => e.kind === 'haus' || e.kind === 'stage').sort((a, b) => (a.cost.money || 0) - (b.cost.money || 0));
+  const m0 = state.money;
+  let done = 0;
+  QUIET = true;
+  try {
+    for (const e of todo) {
+      if (!canPay(e.cost)) continue;
+      if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) done++;
+    }
+  } finally { QUIET = false; }
+  if (!done) { fail('Dafür reicht es gerade nicht'); return 0; }
+  sfx('star');
+  toast(`✨ ${done} ausgebaut · 🪙 −${fmt(m0 - state.money)}${done < todo.length ? ` – für ${todo.length - done} reicht es gerade nicht` : ''}`);
+  checkStars();
+  save();
+  return done;
 }
 
 // Bewohner: Tierart und Vorname (zufällig beim Bau, bei alten Häusern fest aus der Lage)
@@ -278,11 +298,11 @@ function houseUpgrade(x, y, stay = false) {
   if (!t || t.b !== 'haus') return;
   const w = houseWishes(t, x, y);
   if (!w.next) return;
-  if (!w.ready) { fail('Erst alle Wünsche erfüllen'); return; }
+  if (!w.ready) { say('Erst alle Wünsche erfüllen'); return; }
   const cost = houseCost(w.next);
-  if (state.money < cost.money) { fail('Zu wenig Taler'); return; }
+  if (state.money < cost.money) { say('Zu wenig Taler'); return; }
   const err = matError(w.next.mat);
-  if (err) { fail(err); return; }
+  if (err) { say(err); return; }
   state.money -= cost.money;
   payMat(w.next.mat);
   t.lvl++;
@@ -290,10 +310,7 @@ function houseUpgrade(x, y, stay = false) {
   t.born = performance.now();
   recalc();
   sparkle(x, y);
-  sfx('star');
-  toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`);
-  checkStars();
-  save();
+  if (!QUIET) { sfx('star'); toast(`${t.name}s Haus ist jetzt ein ${HOUSE_STAGES[t.lvl - 1].name}!`); checkStars(); save(); }
   if (!stay) openInfo(x, y);
   return true;
 }

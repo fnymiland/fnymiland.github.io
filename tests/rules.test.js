@@ -11,7 +11,9 @@ const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`)
 
 describe('Neues Spiel', () => {
   it('startet mit Rathaus, 300 Talern und allen Sehenswürdigkeiten', () => {
-    expect(game("state.tiles.get('2,2').b")).toBe('rathaus');
+    expect(game("state.tiles.get('1,1').b")).toBe('rathaus');
+    expect(game("sizeOf('rathaus', 0)")).toEqual([3, 3]);                      // 3×3 (1–3), die Startwege führen an seine Seiten
+    expect(game("anchorAt(3, 3)")).toBe('1,1');
     expect(game('state.money')).toBe(300);
     const lms = game("[...state.tiles.values()].filter(t => t.b === 'lm').map(t => t.lm).sort()");
     expect(lms).toEqual(['baum', 'erzberg', 'klippe', 'kristall', 'obsthain', 'quelle', 'ruine']);

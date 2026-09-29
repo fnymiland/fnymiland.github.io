@@ -598,29 +598,47 @@ function groundRect(cx, cy, z, hu, hv, fill, pat, x, y) {
   return L;
 }
 const BIG_ART = {
+  // Rathaus (3×3): großes Haus mit Uhrturm hinten, davor ein kleiner Platz mit Treppe, Laternen, Brunnen und Fahne
   rathaus(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const K = kit(cx, cy, z, t.rot);
+    const K = kit(cx, cy, z, t.rot), E = 1.47;
     if (groundPart(() => {
-      K.rect(-0.98, -0.98, 0.98, 0.98, C('#e6dfd0'));
-      g.save(); clipTo([[[-0.98, -0.98], [0.98, -0.98], [0.98, 0.98], [-0.98, 0.98]]], p => K.P(p[0], p[1]));
+      K.rect(-E, -E, E, E, C('#e6dfd0'));
+      g.save(); clipTo([[[-E, -E], [E, -E], [E, E], [-E, E]]], p => K.P(p[0], p[1]));
       pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
       g.restore();
+      K.rect(0.35, -0.28, E, 0.28, C('#efe8da'));                                        // heller Weg zur Tür
+      for (const [a, b] of [[-1.3, 1.3], [-1.3, -1.3]]) K.rect(a - 0.12, b - 0.12, a + 0.12, b + 0.12, C('#86c35b'));   // Beete hinten
     })) return;
+    const [wall, roof] = paint(t, '#fff1d6', '#6f8fd8');
     const hall = () => {
-      const [wall, roof] = paint(t, '#fff1d6', '#6f8fd8');
-      const B = K.block({ ha: 0.6, hb: 0.6, h: 24, wall, roof, roofH: 18, over: 1.15, entry: true });
-      K.door(B, 'front', 0.42, 0.58, 0.5);
-      K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2]);
-      K.sideWins(B, 3, 0.35, 0.72);
-      const T2 = K.block({ ha: 0.17, hb: 0.17, h: 20, lift: 28, wall, roof: '#e8705f', roofH: 12 });
-      const F = T2.faces.front || T2.faces.right || T2.faces.left, m = lerp(F.P, F.Q, 0.5), cyc = m[1] - 20 * z * 0.6;
-      circle(m[0], cyc, 4.2 * z, C('#ffffff'));
+      const B = K.block({ a: -0.45, ha: 0.85, hb: 1.1, h: 26, wall, roof, roofH: 18, over: 1.12, entry: true });
+      K.door(B, 'front', 0.44, 0.56, 0.5);
+      K.wins(B, 'front', 6, 0.36, 0.7, 0.04, 0.96, [2, 3]);
+      K.sideWins(B, 3, 0.36, 0.7);
+      const T2 = K.block({ a: -0.45, ha: 0.2, hb: 0.2, h: 22, lift: 30, wall, roof: '#e8705f', roofH: 12 });
+      const F = T2.faces.front || T2.faces.right || T2.faces.left, m = lerp(F.P, F.Q, 0.5), cyc = m[1] - 22 * z * 0.6;
+      circle(m[0], cyc, 4.6 * z, C('#ffffff'));
       g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;
-      g.beginPath(); g.arc(m[0], cyc, 4.2 * z, 0, Math.PI * 2); g.stroke();
-      g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0], cyc - 3 * z); g.moveTo(m[0], cyc); g.lineTo(m[0] + 2.2 * z, cyc); g.stroke();
+      g.beginPath(); g.arc(m[0], cyc, 4.6 * z, 0, Math.PI * 2); g.stroke();
+      const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
+      g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0] + Math.sin(hr) * 2.4 * z, cyc - Math.cos(hr) * 2.4 * z);
+      g.moveTo(m[0], cyc); g.lineTo(m[0] + Math.sin(mi) * 3.4 * z, cyc - Math.cos(mi) * 3.4 * z); g.stroke();
     };
-    const flag = () => { const [fx, fy] = K.P(0.78, -0.78); drawFlag(fx, fy, z * 1.3, now, state.town); };
-    K.scene([[0, 0, hall], [0.78, -0.78, flag], [0.8, 0.75, () => kitBush(K, 0.8, 0.75, 0.9)]]);
+    const steps = () => K.block({ a: 0.5, ha: 0.1, hb: 0.3, h: 1.6, wall: '#d6ccb9', type: 'flat', roof: '#efe8da' });
+    const lamp = b => () => { const [lx, ly] = K.P(0.95, b); lampPost(lx, ly, z, 15); };
+    const fountain = () => {
+      const [fx, fy] = K.P(1.05, 0.95);
+      ellipse(fx, fy + 1 * z, 9 * z, 4.4 * z, C('#c9c1b1'));
+      ellipse(fx, fy - 0.5 * z, 7.6 * z, 3.6 * z, C('#74d0e6'));
+      ellipse(fx - 2 * z, fy - 1.2 * z, 2.6 * z, 1 * z, C('#b8ecf6'));
+      const jet = 7 + Math.sin(now / 300) * 0.8;
+      g.strokeStyle = C('#b8ecf6'); g.lineWidth = 1.4 * z;
+      g.beginPath(); g.moveTo(fx, fy - 1 * z); g.lineTo(fx, fy - jet * z); g.stroke();
+      circle(fx, fy - jet * z, 1.4 * z, C('#e6f8fc'));
+    };
+    const flag = () => { const [fx, fy] = K.P(1.15, -1.1); drawFlag(fx, fy, z * 1.35, now, state.town); };
+    K.scene([[-0.45, 0, hall], [0.5, 0, steps], [0.95, -0.55, lamp(-0.55)], [0.95, 0.55, lamp(0.55)], [1.05, 0.95, fountain], [1.15, -1.1, flag],
+      [-1.3, 1.3, () => kitBush(K, -1.3, 1.3, 0.9)], [-1.3, -1.3, () => kitBush(K, -1.3, -1.3, 0.8, '#62b85a')], [1.25, 1.35, () => kitBush(K, 1.3, 1.35, 0.7, '#f28cb1')]]);
   },
   park(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];

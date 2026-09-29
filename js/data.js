@@ -148,7 +148,7 @@ const ITEMS = {
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
-  rathaus: { cat: null, name: 'Rathaus', size: [2, 2], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
+  rathaus: { cat: null, name: 'Rathaus', size: [3, 3], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
   lm:      { cat: null, name: 'Sehenswürdigkeit', size: [3, 3], fixed: true, desc: '' },
 };
 // Rohstoffe und Waren im gemeinsamen Lager
