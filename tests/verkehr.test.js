@@ -123,3 +123,41 @@ describe('Anzeige', () => {
     game('drawStatusIcon = globalThis.__dsi');
   });
 });
+
+describe('Seilbahn', () => {
+  const cable = () => {
+    game("state.inventions.add('seilbahn')");
+    game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
+    game("state.tiles.set('6,15', { b: 'seilbahn', lvl: 1 }); state.tiles.set('20,15', { b: 'seilbahn', lvl: 1 }); recalc()");
+  };
+  it('zwei Stationen bis 20 Felder: eine Verbindung mit 80 Plätzen, ohne Strom', () => {
+    cable();
+    expect(game('T.cables.length')).toBe(1);
+    expect(game('T.cables[0].regions')).toEqual(['home', 'wald']);
+    expect(game('T.cables[0].seats')).toBe(80);
+  });
+
+  it('befördert Besucher und bindet die Gegend drüben an', () => {
+    for (let i = 0; i < 30; i++) game(`state.tiles.set('${3 + (i % 6)},${3 + Math.floor(i / 6)}', { b: 'haus', lvl: 3 })`);
+    game("state.tiles.set('12,3', { b: 'riesenrad', lvl: 1, phase: 99 }); state.terra.set('20,18', 'forest'); state.tiles.set('20,18', { b: 'holz', lvl: 1 })");
+    cable();
+    const tr = game('T.cables[0].traffic');
+    expect(tr.demand).toBeGreaterThan(80);
+    expect(tr.served).toBeCloseTo(80 / tr.demand);
+    expect(game("T.st.get('20,18').how")).toBe('bahn');
+    game('openInfo(20, 15)');
+    expect(document.getElementById('panel').textContent).toMatch(/Seil zur Station auf der Heimatinsel/);
+  });
+
+  it('Zug und Seilbahn zwischen denselben Inseln teilen sich die Fahrgäste nach Plätzen', () => {
+    for (let i = 0; i < 30; i++) game(`state.tiles.set('${3 + (i % 6)},${3 + Math.floor(i / 6)}', { b: 'haus', lvl: 3 })`);
+    game("state.tiles.set('12,3', { b: 'riesenrad', lvl: 1, phase: 99 })");
+    line(60);
+    game("state.inventions.add('seilbahn'); state.tiles.set('6,15', { b: 'seilbahn', lvl: 1 }); state.tiles.set('20,15', { b: 'seilbahn', lvl: 1 }); recalc()");
+    const rail = game(`${L()}.traffic`), cab = game('T.cables[0].traffic');
+    expect(rail.groupSeats).toBe(120 + 80);
+    expect(rail.served).toBeCloseTo(cab.served);
+    expect(rail.carried + cab.carried).toBeCloseTo(rail.demand * rail.served);
+    expect(rail.carried / cab.carried).toBeCloseTo(120 / 80);
+  });
+});

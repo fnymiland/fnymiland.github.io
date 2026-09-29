@@ -241,7 +241,8 @@ Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Hand
 - [ ] **18f** Fischkutter.
 
 ## Block 19 – Seilbahn als Verkehrsmittel (geplant)
-- [ ] Seilbahn befördert Fahrgäste wie eine kurze Linie (wenige Plätze, auch über Wasser), bindet an.
+- [x] Seilbahn befördert Fahrgäste wie eine kurze Linie (80 Plätze/min, ohne Strom, auch über Wasser), bindet an. Wer
+      zwischen denselben Inseln fährt (Zug, Seilbahn, später Fähre), teilt sich die Fahrgäste nach Plätzen.
 
 ## Block 20 – Berge (später)
 - [ ] Berge als Gelände, nur per Seilbahn erreichbar; oben Berghütte, Aussichtsturm, Gipfelkreuz als Attraktionen.

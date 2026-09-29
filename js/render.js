@@ -700,21 +700,12 @@ let skyCache = { v: -1, center: null, cables: [] };
 function skyInfo() {
   if (skyCache.v === groundVersion) return skyCache;
   let center = null;
-  const stations = [];
-  for (const [k, t] of state.tiles) {
-    if (t.b === 'rathaus' && !center) { const [x, y] = keyXY(k); center = [x + 0.5, y + 0.5]; }
-    if (t.b === 'seilbahn') stations.push(keyXY(k));
-  }
-  // Seilbahn: jede Station mit der nächsten freien (bis 20 Felder), paarweise
-  const cables = [], used = new Set();
-  const pairs = [];
-  stations.forEach((a, i) => stations.forEach((b, j) => { if (j > i) { const d = Math.hypot(a[0] - b[0], a[1] - b[1]); if (d <= SEIL_MAX) pairs.push([d, i, j]); } }));
-  pairs.sort((p, q) => p[0] - q[0]);
-  for (const [d, i, j] of pairs) if (!used.has(i) && !used.has(j)) { used.add(i); used.add(j); cables.push([stations[i], stations[j], d]); }
+  for (const [k, t] of state.tiles) if (t.b === 'rathaus' && !center) { const [x, y] = keyXY(k); center = [x + 0.5, y + 0.5]; }
+  const cables = cablePairs().map(([a, b, d]) => [keyXY(a), keyXY(b), d]);          // Paare wie im Verkehr (rules.js)
   skyCache = { v: groundVersion, center: center || [ISLAND.cx, ISLAND.cy], cables };
   return skyCache;
 }
-const SEIL_MAX = 20, SEIL_H = 30;
+const SEIL_H = 30;
 const BALLOONS = [
   { r: 7, sp: 1 / 52000, ph: 0, h: 150, col: ['#e8604f', '#ffd36e'] }, { r: 11, sp: -1 / 70000, ph: 2, h: 195, col: ['#6f8fd8', '#ffffff'] },
   { r: 5, sp: 1 / 45000, ph: 4, h: 120, col: ['#58b36a', '#f7c6d8'] }, { r: 14, sp: 1 / 90000, ph: 5.3, h: 230, col: ['#b07ad6', '#ffd36e'] },

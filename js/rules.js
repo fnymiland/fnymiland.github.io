@@ -163,9 +163,13 @@ function totals() {
   const rail = computeRail();
   // Verkehr: Fahrgäste je fahrender Linie; Anbindung über Bahnhöfe (ihr Viertel und bis 4 Felder darum)
   const places = placeStats();
-  for (const l of rail.lines) l.traffic = l.powered ? lineTraffic(l, places) : null;
+  const cables = cablePairs().map(([a, b, d]) => ({ kind: 'seil', stations: [a, b], km: d / KM, seats: SEIL_SEATS,
+    regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) }));
+  for (const l of rail.lines) l.traffic = null;
+  const links = [...rail.lines.filter(l => l.powered), ...cables];
+  transitTraffic(links, places);
   const railV = new Map(), railSt = [];
-  for (const l of rail.lines) if (l.traffic) for (const s of l.stations) {
+  for (const l of links) for (const s of l.stations) {
     const f = l.traffic.served, v = net.vOf(s), t = state.tiles.get(s), [sx, sy] = keyXY(s), [sw, sh] = sizeOf(t.b, t.rot);
     if (v) railV.set(v, Math.max(railV.get(v) || 0, f));
     railSt.push([sx, sy, sx + sw - 1, sy + sh - 1, f]);
@@ -271,7 +275,7 @@ function totals() {
   }
   // Verkehr: Fahrkarten und was die Besucher am Ziel ausgeben
   let fare = 0, spend = 0;
-  for (const l of rail.lines) if (l.traffic) { fare += l.traffic.fare; spend += l.traffic.spend; }
+  for (const l of links) { fare += l.traffic.fare; spend += l.traffic.spend; }
   inc += (fare + spend) * mT;
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
@@ -281,12 +285,12 @@ function totals() {
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places } };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
-  traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() } } };
+  traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [] };
 function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -670,6 +674,29 @@ function lineLooks(stations) {
   const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
   return [{ model: t.train || 'regio', col: t.trainCol || 0, plus: t.trainPlus || 0 }]
     .concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0, plus: e.plus || 0 })));
+}
+// Seilbahn: jede Station mit der nächsten freien (bis SEIL_MAX Felder), paarweise; die Gondeln befördern Fahrgäste
+const SEIL_MAX = 20, SEIL_SEATS = 80;
+const byRegion = (p, q) => (p === 'home' ? -1 : ISLES.findIndex(i => i.id === p)) - (q === 'home' ? -1 : ISLES.findIndex(i => i.id === q));   // Heimatinsel zuerst
+function cablePairs() {
+  const st = [...state.tiles].filter(([, t]) => t.b === 'seilbahn').map(([k]) => k).sort(), pairs = [], used = new Set(), out = [];
+  st.forEach((a, i) => st.forEach((b, j) => { if (j > i) { const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), d = Math.hypot(ax - bx, ay - by); if (d <= SEIL_MAX) pairs.push([d, a, b]); } }));
+  pairs.sort((p, q) => p[0] - q[0]);
+  for (const [d, a, b] of pairs) if (!used.has(a) && !used.has(b)) { used.add(a); used.add(b); out.push([a, b, d]); }
+  return out;
+}
+// Verkehr aller Verbindungen: Wer zwischen denselben Orten fährt (Zug, Seilbahn, Fähre), teilt sich die Fahrgäste –
+// nach Plätzen. Jede Verbindung bekommt ihren Anteil an Fahrkarten und Besuchern, die Auslastung gilt für alle zusammen.
+function transitTraffic(links, places) {
+  const groups = new Map();
+  for (const l of links) { const key = [...l.regions].sort().join('+'); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(l); }
+  for (const list of groups.values()) {
+    const seats = list.reduce((s, l) => s + l.seats, 0), tr = lineTraffic({ regions: list[0].regions, seats }, places);
+    for (const l of list) {
+      const f = seats ? l.seats / seats : 1 / list.length;
+      l.traffic = { ...tr, seats: l.seats, groupSeats: seats, share: f, carried: tr.carried * f, fare: tr.fare * f, spend: tr.spend * f };
+    }
+  }
 }
 // Einwohner und Anziehung je Ort
 const popOf = t => t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (ITEMS[t.b].pop || 0) * t.lvl;

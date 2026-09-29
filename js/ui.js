@@ -605,6 +605,7 @@ function openInfo(x, y) {
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
+  if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
   if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (⚡ Strom unter Bauen).</div>`);
@@ -789,23 +790,34 @@ function stationStatus(k) {
   if (!line.loop) out.push('<div class="muted">🔁 Als geschlossener Kreis fährt der Zug im Kreis – und ab 4 km passen mehrere Züge drauf.</div>');
   return out;
 }
+// Seilbahn: mit welcher Station verbunden, was sie befördert
+function cableStatus(k) {
+  const c = T.cables.find(l => l.stations.includes(k));
+  if (!c) return [`<div class="bad">✗ Noch keine Gegenstation: eine zweite Seilbahn-Station bis ${SEIL_MAX} Felder entfernt aufstellen</div>`];
+  const out = [`<div class="ok">🚡 Seil zur Station ${c.regions.length > 1 ? `auf der ${regionName(c.regions.find(r => r !== regionAt(...keyXY(k))))}` : 'gegenüber'} · ${nf1.format(c.km)} km – was nah an beiden Stationen steht, ist angebunden</div>`];
+  if (c.regions.length > 1) out.push(...trafficStatus(c, c.traffic));
+  else out.push('<div class="muted">👥 Fahrgäste gibt es zwischen zwei Inseln – hier bindet sie die Gegend ans Dorf an.</div>');
+  return out;
+}
 // Fahrgäste, Plätze, Auslastung und was es bringt
 const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 function trafficStatus(line, tr) {
-  const pct = tr.seats ? Math.round(tr.demand / tr.seats * 100) : 0, out = [];
+  const all = tr.groupSeats || tr.seats, pct = all ? Math.round(tr.demand / all * 100) : 0, out = [];
   const visits = [...tr.visits].filter(([, v]) => v >= 1).map(([r, v]) => `${regionIcon(r)} ${fmt(v)}`).join(', ');
-  const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
+  const vehicles = line.kind === 'seil' ? 'Gondeln' : (() => { const cars = line.looks.slice(0, line.running).reduce((s, lk) => s + carsOf(lk), 0);
+    return `${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} Wagen`; })();
   if (!tr.demand) {
     out.push('<div class="muted">👥 Noch will niemand mitfahren: Häuser auf der anderen Insel, eine restaurierte Sehenswürdigkeit oder ein Wunderwerk bringen Fahrgäste.</div>');
     return out;
   }
   out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min – ${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')}</div>`);
-  out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${line.running > 1 ? `${line.running} Züge` : '1 Zug'}, ${cars} ${cars === 1 ? 'Wagen' : 'Wagen'}</div>`);
+  out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${vehicles}${all > tr.seats ? ` · mit den anderen Verbindungen dorthin ${fmt(all)}/min` : ''}</div>`);
   out.push(`<div class="load"><i style="width:${Math.min(100, pct)}%" class="${tr.served < 1 ? 'full' : ''}"></i></div>`);
   out.push(tr.served < 1 ? `<div class="bad">😣 Überfüllt (${pct} %): nur ${Math.round(tr.served * 100)} % kommen mit</div>`
     : `<div class="ok">✓ Alle kommen mit · Auslastung ${pct} %</div>`);
   out.push(`<div class="ok">🪙 +${fmtRate(tr.fare * masteryMul('taler'))}/s Fahrkarten · +${fmtRate(tr.spend * masteryMul('taler'))}/s von Besuchern</div>`);
-  if (tr.served < 1) out.push(`<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
+  if (tr.served < 1) out.push(line.kind === 'seil' ? '<div class="muted">Mehr Plätze: eine zweite Verbindung dorthin (Zug, weitere Seilbahn).</div>'
+    : `<div class="muted">Mehr Plätze: Wagen anhängen${line.loop ? ' oder einen weiteren Zug' : ' – als Rundkurs passen auch mehrere Züge'}.</div>`);
   return out;
 }
 // Züge der Linie: Modell und Farbe wählt der Spieler für jeden Zug; gespeichert an allen Bahnhöfen der Linie

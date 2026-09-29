@@ -123,7 +123,7 @@ const ITEMS = {
   bootssteg: { cat: 'netz', name: 'Steg', cost: 60, needs: 'meer', beauty: 2,
              desc: 'Ein Holzsteg ins Meer, direkt an der Küste. Von hier schickst du ein Boot hinaus, um neue Inseln zu entdecken.' },
   seilbahn: { cat: 'deko', name: 'Seilbahn-Station', invention: 'seilbahn', cost: 800, mat: { metall: 10, bretter: 6 }, needs: 'grass', beauty: 10,
-             desc: 'Zwei Stationen verbinden sich mit einem Seil (bis 20 Felder weit), die Gondeln schweben hin und her.' },
+             desc: 'Zwei Stationen verbinden sich mit einem Seil (bis 20 Felder weit). Die Gondeln befördern 80 Fahrgäste/min – auch übers Wasser zwischen Inseln – und binden die Gegend an beiden Stationen ans Dorf an.' },
   // --- Strom: Kraftwerke liefern ⚡ (POWER_OUT in rules.js), egal wo sie stehen ---
   windrad: { cat: 'strom', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind und liefert Strom: 1 ⚡, ausgebaut bis 3 ⚡.' },
   wasserkraft: { cat: 'strom', name: 'Wasserkraftwerk', tech: 'wasserkraft', cost: 900, mat: { quader: 10, metall: 4 }, needs: 'shore', beauty: 4,
@@ -297,7 +297,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', seilbahn: '🚡 Gondeln · 🌸 +10',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +80/s · 🌸', sternwarte: '💡 +25 %', seebruecke: '👥 +40 · 🪙 +40/s', botgarten: '🌸 +320 · 🍎', schloss: '+20 % auf alles',
