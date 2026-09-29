@@ -285,6 +285,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `placeStats`. Bilder in js/draw-shops.js (kleine Läden: `smallShopArt`, große: `SHOP_ART`); wer flache Teile hat,
     muss in `GROUND_TYPES` und oben `groundPart` aufrufen, sonst niemand. Kaffee/Tee/Kakao: Plantagen mit `far: true`
     (nur auf fernen Inseln).
+59. **Tempo weit weg** (Block 31): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen
+    (`objSprites`, `spriteTile`/`spriteSmall`); gleich aussehende teilen sich eins (Häuser außer Hausboot, kleine Läden,
+    Dekos), alles andere hat ein eigenes (Schlüssel mit Platz und `groundVersion`). Was das Aussehen ändert, gehört in
+    den Schlüssel (`look` in `spriteTile`)! Nachtlicht beim Bildchen-Malen nur merken (`GLOW_SINK`), beim Einsetzen
+    stanzen (`punchGlow`); `SPRITE_PAINT` zählt als live. Was sich sichtbar dreht, bleibt live (`SPRITE_LIVE`).
+    Neumalen (Bildchen und Boden-Grundstücke) nur im Zeitbudget je Bild (`SPRITE_MS`, `GROUND_MS`) – sonst das alte Bild.
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).

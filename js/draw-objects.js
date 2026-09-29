@@ -4,15 +4,24 @@
 // ---------------------------------------------------------------------------
 let night = 0;
 const glows = [];
-const isLive = () => g === ctx;
+let SPRITE_PAINT = false;                   // render.js malt gerade ein Bildchen fürs Spiel (zählt wie live)
+const isLive = () => g === ctx || SPRITE_PAINT;
 
 // Nachtlicht: stanzt an Ort und Stelle ein Loch ins Bild (Fenster ganz, Lichtschein weich). Was danach davor
 // gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
 // Am Ende wird die Nacht nur über das Bild gelegt und die Löcher mit Licht hinterlegt (render.js, „Nacht“).
+// Beim Zeichnen eines Bildchens (render.js, weit weg) werden die Lichter nur gemerkt und beim Einsetzen gestanzt
+let GLOW_SINK = null;
 function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
   if (!(night > 0.15 && isLive())) return;
-  const m = g.getTransform(), k = 1 / DPR, strength = night / NIGHT_MAX, blue = tint === 'blue';
+  const m = g.getTransform(), k = 1 / DPR;
   const q = pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]);
+  if (GLOW_SINK) { GLOW_SINK.push({ q, r, tint }); return; }
+  punchGlow(q, r, tint);
+}
+// Licht in Bildschirm-Punkten (q) ins Bild stanzen und für die Nacht merken
+function punchGlow(q, r, tint) {
+  const strength = night / NIGHT_MAX, blue = tint === 'blue';
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
@@ -1430,6 +1439,7 @@ function drawTrophy(cx, cy, z, now, [base, light, dark]) {
   }
 }
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0) {
+  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot)) return;   // weit weg: Bildchen (render.js)
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
   drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot });

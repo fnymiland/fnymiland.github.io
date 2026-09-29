@@ -182,6 +182,87 @@ function renderGroundChunk(cx, cy, scale) {
   g = prev;
   return { c, b, scale, v: groundVersion, waves, used: frameNo };
 }
+// ---------------------------------------------------------------------------
+// Weit weg (Block 31): Gebäude und kleine Dekos als fertige Bildchen, statt sie jedes Bild neu zu zeichnen. Gleich
+// aussehende teilen sich eins (Häuser, kleine Läden, Dekos); große Gebäude und alles, was vom Platz abhängt, haben ihr
+// eigenes (neu, wenn sich Boden oder Gebäude ändern). Nachtlicht wird beim Zeichnen gemerkt (GLOW_SINK) und beim
+// Einsetzen gestanzt. Neu gezeichnet wird nur so viel, wie ins Zeitbudget je Bild passt – der Rest wie bisher.
+// Nah dran (z ≥ SPRITE_FROM) zeichnet alles live, mit allen Bewegungen.
+// ---------------------------------------------------------------------------
+const SPRITE_FROM = 1.0, SPRITE_MS = 6;
+const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
+let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
+const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'muehle']);   // drehen sich auch von weitem sichtbar
+const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].includes(b);
+function spriteTop(b, w, h) {
+  if (WONDERS[b]) return WONDERS[b].h + 50;
+  if (b === 'leuchtturm') return 220;
+  return w * h >= 9 ? 150 : w * h >= 4 ? 120 : 100;
+}
+// Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
+function getSprite(key, z, make) {
+  let e = objSprites.get(key);
+  const ratio = e ? z / e.z : 0;
+  const fresh = e && (spriteZooming ? ratio > 0.6 && ratio < 1.6 : Math.abs(ratio - 1) < 0.02);
+  if (!fresh) {
+    if (performance.now() > spriteDeadline) return e && ratio > 0.6 && ratio < 1.6 ? (e.used = frameNo, e) : null;
+    e = make(); objSprites.set(key, e);
+  }
+  e.used = frameNo;
+  return e;
+}
+function paintSprite(halfW, up, down, drawFn) {
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.ceil(2 * halfW * DPR)); c.height = Math.max(1, Math.ceil((up + down) * DPR));
+  const prev = g, sink = [];
+  g = c.getContext('2d');
+  g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR);
+  GLOW_SINK = sink; SPRITE_PAINT = true;
+  try { drawFn(); } finally { GLOW_SINK = null; SPRITE_PAINT = false; g = prev; }
+  return { c, ox: halfW, oy: up, glows: sink };
+}
+function putSprite(e, cx, cy, z) {
+  const r = z / e.z, w = e.c.width / DPR * r, h = e.c.height / DPR * r, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
+  g.drawImage(e.c, x0, y0, w, h);
+  for (const gl of e.glows) punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint);
+}
+// Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
+function spriteTile(t, ax, ay, c, z, now, w, h) {
+  const lit = night > 0.15 && isLive() ? 1 : 0;
+  const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : Math.floor(hash(ax, ay, 4) * 7),
+    t.look || '', t.style || '', FOG ? 1 : 0, lit].join('|');
+  const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
+  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
+  const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
+  const e = getSprite(key, z, () => {
+    const halfW = ((w + h) * TW / 4 + 26) * z * ds, up = spriteTop(t.b, w, h) * z * ds, down = ((w + h) * TH / 4 + 12) * z * ds;
+    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
+    sp.z = z;
+    return sp;
+  });
+  if (!e) return false;
+  putSprite(e, c.x, c.y, z);
+  return true;
+}
+// Kleine Deko in einer Ecke
+function spriteSmall(b, rot, sx, sy, z, now, x, y, slot) {
+  const lit = night > 0.15 && isLive() ? 1 : 0;
+  const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
+  const key = `deco|${b}|${rot}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);
+  const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
+  const e = getSprite(key, z, () => {
+    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot }); });
+    sp.z = z;
+    return sp;
+  });
+  if (!e) return false;
+  putSprite(e, sx, sy, z);
+  return true;
+}
+function spriteHousekeeping() {
+  if (frameNo % 120 === 0) for (const [k, e] of objSprites) if (frameNo - e.used > 600) objSprites.delete(k);
+}
+
 // Sternschnuppe (Sternwarte): fällt in der ersten Sekunde schräg vom Himmel, liegt dann funkelnd da und verblasst am Ende
 function drawFallenStar(s, z, now) {
   const age = now - s.t0, p = toScreen(s.x, s.y), fall = Math.min(1, age / 1000);
@@ -232,8 +313,11 @@ function drawDepth(minX, maxX, minY, maxY, z) {
   g.drawImage(depthImg.c, 0, 0);
   g.restore();
 }
+let groundDeadline = 0;
+const GROUND_MS = 8;
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   const want = z * DPR, zooming = now - lastZoomChange < 250;
+  groundDeadline = performance.now() + GROUND_MS;
   const order = [];
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
@@ -250,7 +334,9 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     } else {
       const ck = cx + ',' + cy;
       let e = groundCache.get(ck);
-      if (!e || e.v !== groundVersion || stale(e)) { e = renderGroundChunk(cx, cy, want); groundCache.set(ck, e); }
+      // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
+      const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
+      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || performance.now() < groundDeadline))) { e = renderGroundChunk(cx, cy, want); groundCache.set(ck, e); }
       e.used = frameNo;
       img = e.c;
     }
@@ -395,6 +481,10 @@ function render(now) {
   glows.length = 0;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
+  SPRITES_ON = z < SPRITE_FROM && isLive();
+  spriteZooming = now - lastZoomChange < 250;
+  spriteDeadline = performance.now() + SPRITE_MS;
+  spriteHousekeeping();
 
   const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];
   groundCached = z * DPR <= GROUND_MAX_SCALE && isLive();
@@ -558,6 +648,7 @@ function render(now) {
           const an = (now - t.born) / 380;
           if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
         }
+        if (SPRITES_ON && sc === 1 && !SPRITE_LIVE.has(t.b) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen
         const ds = sc * decoScale(t.b);
         g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
         PASS = 'object';

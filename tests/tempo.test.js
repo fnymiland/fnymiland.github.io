@@ -1,0 +1,57 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+// Block 31: weit weg Gebäude und Dekos als fertige Bildchen (schneller), nah dran alles live
+beforeAll(() => loadGame());
+beforeEach(() => {
+  game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true');
+  game("for (let y = 2; y <= 14; y++) for (let x = 2; x <= 14; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }");
+  game("for (let i = 0; i < 6; i++) state.tiles.set((3 + i * 2) + ',6', { b: 'haus', lvl: 2, wall: 1, roof: 2 }); state.tiles.set('4,10', { b: 'schule', lvl: 1 })");
+  game("state.decos.set('5,8', [{ b: 'laterne' }, null, { b: 'bank' }, null]); recalc(); resize()");
+  game('objSprites.clear(); cam.x = iso(8, 8).x; cam.y = iso(8, 8).y');
+});
+// ein paar Bilder: das Zeitbudget je Bild verteilt das Neumalen
+const frame = z => game(`cam.z = ${z}; lastZoom = ${z}; lastZoomChange = -1e9; for (let i = 0; i < 6; i++) render(performance.now() + 1e6)`);
+
+describe('Bildchen weit weg', () => {
+  it('weit weg: Gebäude und Dekos kommen aus Bildchen – gleiche Häuser teilen sich eins', () => {
+    frame(0.5);
+    const keys = game('[...objSprites.keys()]');
+    expect(keys.filter(k => k.startsWith('haus|')).length).toBe(1);        // sechs gleiche Häuser, ein Bild
+    expect(keys.some(k => k.includes('|schule|'))).toBe(true);              // eigenes Bild (vom Platz abhängig)
+    expect(keys.some(k => k.startsWith('deco|laterne'))).toBe(true);
+    let drawn = 0;
+    game('globalThis.__do = drawObject; drawObject = (...a) => { globalThis.__n = (globalThis.__n || 0) + 1; return globalThis.__do(...a); }; globalThis.__n = 0');
+    frame(0.5);
+    drawn = game('globalThis.__n'); game('drawObject = globalThis.__do');
+    expect(drawn).toBe(0);                                                    // nichts mehr neu gezeichnet
+  });
+
+  it('nah dran wird alles live gezeichnet', () => {
+    frame(1.5);
+    expect(game('objSprites.size')).toBe(0);
+  });
+
+  it('ändert sich ein Haus, bekommt es ein neues Bild', () => {
+    frame(0.5);
+    game("state.tiles.get('3,6').lvl = 3");
+    frame(0.5);
+    expect(game('[...objSprites.keys()].filter(k => k.startsWith("haus|")).length')).toBe(2);
+  });
+
+  it('nachts: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
+    game('globalThis.__nightAt = nightAt; nightAt = () => 0.45');
+    try {
+      frame(1.5); const live = game('glows.length');
+      frame(0.5); const cached = game('glows.length');
+      expect(live).toBeGreaterThan(0);
+      expect(cached).toBeGreaterThan(0);
+      expect(game('[...objSprites.values()].some(e => e.glows.length > 0)')).toBe(true);
+    } finally { game('nightAt = globalThis.__nightAt'); }
+  });
+
+  it('Riesenrad und Windräder drehen sich auch von weitem (live)', () => {
+    game("state.tiles.set('10,10', { b: 'windrad', lvl: 1 }); recalc()");
+    frame(0.5);
+    expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
+  });
+});
