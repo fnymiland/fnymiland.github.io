@@ -96,7 +96,7 @@ function placeLandmarks() {
       if (mx > CHUNK - 3 || my > CHUNK - 3) return false;
       for (const [fx, fy] of footprint('lm', x, y, 0)) {
         if (isSea(fx, fy) || isSea(fx + 1, fy) || isSea(fx, fy + 1)) return false;
-        for (const [k, t] of state.tiles) { const [ax, ay] = keyXY(k); if (footprint(t.b, ax, ay, t.rot).some(([px, py]) => px === fx && py === fy)) return false; }
+        for (const [k, t] of state.tiles) { const [ax, ay] = keyXY(k); if (footprint(t.b, ax, ay, t.rot, t).some(([px, py]) => px === fx && py === fy)) return false; }
       }
       return true;
     };

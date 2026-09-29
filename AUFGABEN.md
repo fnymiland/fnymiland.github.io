@@ -320,3 +320,13 @@ Entschieden: jedes Wunder eine eigene Fähigkeit plus dauerhaften Prozent-Bonus;
 - [x] **28d** 🌿 Botanischer Garten: +50 % Schönheit; „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder
       doppelt, exotische Deko (Palmen, Riesenblumen).
 - [x] **28e** 🏰 Schloss: +50 % auf alles; alle 10 Min ein Erlass nach Wahl (5 Min).
+
+## Block 29 – Hauptbahnhof (30.09.)
+
+Entschieden: ein Gebäude mit „+ Gleis“ (wird zur Seite breiter, so viele Gleise wie man will), jedes Gleis eine eigene
+Linie mit eigenem Zug; Umsteigen: Inseln, deren Linien am selben Hauptbahnhof enden, gelten als verbunden; mehrere
+Designs zur Auswahl (Glashalle wie Leipzig, Backstein, Landbahnhof).
+- [x] **29a** Gebäude mit variabler Breite (`t.gleise`, je Gleis 2 Felder, 4 tief), „+ Gleis“ / „− Gleis“.
+- [x] **29b** Jedes Gleis ist ein Halt (eigene Linie, eigener Zug, Züge fahren in die Halle).
+- [x] **29c** Umsteigen am Hauptbahnhof (Verkehr).
+- [x] **29d** Aussehen: drei Designs, Züge in der Halle.

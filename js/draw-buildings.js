@@ -117,7 +117,7 @@ function kBoat(K, a, b, now, big) {
 }
 // Wo liegt Wasser? (erste Seite der Grundfläche mit Wasser daneben, im eigenen Rahmen)
 function waterSide(K, x, y, t, b) {
-  const [w, h] = sizeOf(b, t && t.rot);
+  const [w, h] = sizeOf(b, t && t.rot, t);
   for (const [dx, dy] of FRONT_DIR) {
     const side = dx ? Array.from({ length: h }, (_, j) => [dx > 0 ? x + w : x - 1, y + j]) : Array.from({ length: w }, (_, i) => [x + i, dy > 0 ? y + h : y - 1]);
     if (side.some(([sx, sy]) => terrainAt(sx, sy) === 'water')) return K.local(dx, dy);
@@ -694,6 +694,62 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
+  // Hauptbahnhof (Block 29): 4 tief, je Gleis 2 Felder breit. Vorn (+a) die Gleise mit Bahnsteigen und Prellböcken, hinten
+  // (a < −1) das Empfangsgebäude über die ganze Breite mit Uhrturm. Drei Designs (t.look): Glashalle (Sandstein, gewölbte
+  // Glasdächer wie in Leipzig), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz).
+  hbf(K, s, now, x, y, t, ha, hb) {
+    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g;
+    if (groundPart(() => {
+      K.rect(-1, -hb, 2, hb, C('#cdc6b8'));
+      K.rect(-2, -hb, -1, hb, C('#dad2c2'));
+      for (let i = 0; i < n; i++) {
+        const b = gb(i);
+        K.rect(-0.95, b - 0.32, 2, b + 0.32, C('#a89f92'));                                   // Schotter
+        for (let a = -0.85; a < 1.95; a += 0.22) K.rect(a, b - 0.26, a + 0.09, b + 0.26, C('#7a5a3c'));   // Schwellen
+        for (const d of [-0.15, 0.15]) K.rect(-0.9, b + d - 0.025, 2, b + d + 0.025, C('#6b6f78'));       // Schienen
+      }
+    })) return;
+    const [wall, roof] = paint(t, look === 'glas' ? '#e8dcc4' : look === 'backstein' ? '#b8664a' : '#efd9b0', look === 'glas' ? '#7fa39a' : look === 'backstein' ? '#6b4f3a' : '#c0694a');
+    const parts = [];
+    for (let i = 0; i < n; i++) {
+      const b = gb(i), bp = b + 1;
+      parts.push([-0.85, b, () => K.block({ a: -0.85, b, ha: 0.06, hb: 0.22, h: 4, wall: '#e8604f', type: 'flat', roof: '#fff6e4' })]);   // Prellbock
+      parts.push([0.45, bp, () => K.block({ a: 0.45, b: bp, ha: 1.45, hb: 0.38, h: 2.6, wall: '#e2dccf', type: 'flat', roof: '#efe9dc' })]);   // Bahnsteig
+      if (look === 'glas') {                                        // Stahlstützen und gewölbtes Glasdach über Gleis und Bahnsteig
+        parts.push([0.5, b + 0.5, () => {
+          for (const a of [-0.9, 0.5, 1.9]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, 17, '#7d8794', 1.4);
+          g.save(); g.globalAlpha *= 0.62;
+          K.block({ a: 0.5, b: b + 0.5, ha: 1.5, hb: 0.98, h: 1, lift: 17, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });
+          g.restore();
+        }]);
+      } else {                                                      // Bahnsteigdach auf Pfosten
+        const col = look === 'backstein' ? '#9c4f3a' : '#8a5a3c', post = look === 'backstein' ? '#4a4a58' : '#6b4f3a';
+        parts.push([0.5, bp, () => {
+          for (const a of [-0.6, 0.5, 1.6]) kPost(K, a, bp, 11, post, 1.3);
+          K.block({ a: 0.5, b: bp, ha: 1.45, hb: 0.5, h: 0.6, lift: 11, wall: post, roof: col, roofH: 4, type: 'gable', ridge: 'a' });
+        }]);
+      }
+      // Empfangsgebäude in Stücken (je Gleis eins), damit es richtig vor und hinter den Hallen liegt
+      parts.push([-1.5, b + 0.5, () => {
+        const H = look === 'land' ? 13 : look === 'backstein' ? 19 : 23;
+        const B = K.block({ a: -1.5, b: b + 0.5, ha: 0.48, hb: 1, h: H, wall, roof, roofH: look === 'land' ? 7 : 8,
+          type: look === 'glas' ? 'mansard' : look === 'backstein' ? 'gable' : 'hip', ridge: 'b' });
+        K.wins(B, 'front', 2, 0.3, 0.72); K.wins(B, 'back', 2, 0.3, 0.72);
+        if (i === Math.floor((n - 1) / 2)) K.door(B, 'back', 0.35, 0.65, 0.6);
+      }]);
+    }
+    // Uhrturm in der Mitte (Landbahnhof: kleines Türmchen)
+    parts.push([-1.5, 0.01, () => {
+      const tall = look === 'land' ? 20 : look === 'backstein' ? 30 : 38;
+      K.block({ a: -1.5, b: 0, ha: 0.3, hb: 0.3, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9 });
+      const [cx, cy] = K.P(-1.2, 0, tall - 6);
+      circle(cx, cy, 3.2 * z, C('#fffaf0')); g.strokeStyle = C('#3c3c46'); g.lineWidth = 0.7 * z;
+      const m = new Date(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 12 * Math.PI * 2, mi = m.getMinutes() / 60 * Math.PI * 2;
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.sin(hr) * 1.6 * z, cy - Math.cos(hr) * 1.6 * z);
+      g.moveTo(cx, cy); g.lineTo(cx + Math.sin(mi) * 2.5 * z, cy - Math.cos(mi) * 2.5 * z); g.stroke();
+    }]);
+    K.scene(parts);
+  },
   // --- Wohnen ---
   // Reihenhäuser (1×2): drei schmale Häuser in Pastell, Walmdächer in verschiedenen Farben; jede Stufe ein Stockwerk mehr
   reihenhaus(K, s, now, x, y, t) {
@@ -1084,6 +1140,6 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
 // Gebäude, deren Wand- und Dachfarbe man wählen kann (Häuser zusätzlich mit Aussehen)
 const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => b !== 'feld'), 'rathaus']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
-  const [da, wb] = ITEMS[type].size || [1, 1];
+  const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);
 }

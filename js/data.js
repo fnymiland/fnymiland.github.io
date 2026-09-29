@@ -70,6 +70,8 @@ const ITEMS = {
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
   station: { cat: 'netz', name: 'Bahnhof', size: [1, 2], cost: 800, mat: { bretter: 10, quader: 6, metall: 4 }, needs: 'grass', tech: 'bahn',
              desc: 'Braucht Schienen direkt am Bahnsteig. Zwei verbundene Bahnhöfe auf verschiedenen Inseln: Der Zug bringt Pendler und Besucher (Fahrkarten + Ausgaben am Ziel) und bindet alles in der Nähe ans Dorf an.' },
+  hbf:     { cat: 'netz', name: 'Hauptbahnhof', size: [4, 4], cost: 6000, mat: { quader: 30, metall: 12, bretter: 20 }, needs: 'grass', tech: 'bahn',
+             desc: 'Kopfbahnhof: Jedes Gleis ist eine eigene Linie mit eigenem Zug. Inseln, deren Linien hier enden, sind verbunden (Umsteigen). Im Infofenster: + Gleis.' },
   // --- Bildung ---
   schule:  { cat: 'bildung', name: 'Schule', lm: 'ruine:1', size: [2, 2], cost: 300, needs: 'grass', workers: 2, science: 0.6,
              desc: 'Erzeugt Ideen 💡 für die Forschung (je mehr Einwohner, desto mehr).' },
@@ -309,7 +311,7 @@ const MENU = [
   ] },
   { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
-  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'seilbahn'] },
+  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'hbf', 'seilbahn'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
 ];
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
@@ -332,7 +334,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % · 🎣 · ⛴️ Schiffe', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
@@ -363,6 +365,7 @@ const ITEM_TIPS = {
   leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
+  hbf: 'Der große Kopfbahnhof: Vor jedes Gleis eine eigene Strecke legen (mit einem Feld Abstand, sonst wird es eine Linie). Jede fährt mit eigenem Zug – und am Bahnhof steigen die Leute um. Mehr Gleise im Infofenster.',
   station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und Strom: Der Zug fährt, bringt Fahrgäste und bindet die Umgebung ans Dorf an.',
   schule: 'Bringt Ideen für die Forschung – je mehr Einwohner, desto mehr. Villen wünschen sich eine Schule.',
   bibliothek: 'Mehr Ideen und die zweite Stufe der Forschung.',

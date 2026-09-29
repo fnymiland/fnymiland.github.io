@@ -709,7 +709,7 @@ function openInfo(x, y) {
       if (t.b === 'schloss') wonder += decreeHtml();
     }
   }
-  const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
+  const line = t.b === 'station' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
@@ -732,6 +732,7 @@ function openInfo(x, y) {
     ${grow}
     ${wonder}
     ${boat}
+    ${hub}
     ${train}
     ${colors}
     <div class="row">
@@ -762,7 +763,7 @@ function openInfo(x, y) {
     // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
     const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4;
     state.tiles.delete(k); rebuildCover();
-    const err = isBig(t.b) ? placeError(t.b, x, y, nr, { move: true }) : null;
+    const err = isBig(t.b) ? placeError(t.b, x, y, nr, { move: true, t }) : null;
     state.tiles.set(k, t);
     if (err) { recalc(); fail('Zum Drehen ist hier nicht genug Platz'); return; }
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
@@ -779,6 +780,10 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
+  // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
+  for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);
+  for (const [id, d] of [['p-gplus', 1], ['p-gminus', -1]]) if ($(id)) $(id).onclick = () => { const nk = hbfResize(x + ',' + y, d); if (nk) openInfo(...keyXY(nk)); };
+  for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
@@ -804,7 +809,7 @@ function powerStatus() {
 const kmText = l => `${nf1.format(l.km)} km`;
 function stationStatus(k) {
   const line = lineOf(k), names = l => l.regions.map(regionName);
-  if (T.rail.stationNet.get(k) == null) return ['<div class="bad">✗ Keine Schiene direkt am Bahnhof</div>'];
+  if (T.rail.stationNet.get(k) == null) return [`<div class="bad">✗ ${GLEIS.has(k) ? 'Noch keine Schiene vor dem Gleis' : 'Keine Schiene direkt am Bahnhof'}</div>`];
   if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen bis zu einem Bahnhof auf einer anderen Insel legen</div>'];
   const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
   const tr = line.traffic;
@@ -862,10 +867,49 @@ function cableStatus(k) {
   else out.push('<div class="muted">👥 Fahrgäste gibt es zwischen zwei Inseln – hier bindet sie die Gegend ans Dorf an.</div>');
   return out;
 }
+// Hauptbahnhof: Gleise mit ihrem Ziel, Umsteigen, + Gleis / − Gleis, Aussehen
+const HBF_LOOKS = { glas: '🏛️ Glashalle', backstein: '🧱 Backstein', land: '🌾 Landbahnhof' };
+function hbfHtml(x, y, t) {
+  const n = hbfGleise(t), home = regionAt(x, y), seen = new Map(), rows = [], hubRegions = new Set();
+  for (let g = 0; g < n; g++) {
+    const gk = gleisTiles(t, x, y, g).hall[0].join(), l = lineOf(gk);
+    let where = '<span class="muted">noch keine Strecke vor dem Gleis</span>';
+    if (T.rail.stationNet.get(gk) != null) where = l ? `→ ${l.regions.filter(r => r !== home).map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ') || l.regions.map(regionName).join(' ↔ ')}` : '<span class="muted">Strecke ohne Ziel</span>';
+    if (l && l.traffic && l.traffic.served < 1) where += ` · 😣 ${Math.round(l.traffic.served * 100)} %`;
+    if (l) { l.regions.forEach(r => hubRegions.add(r)); if (seen.has(l)) where += ` <span class="bad">· hängt an Gleis ${seen.get(l) + 1}</span>`; else seen.set(l, g); }
+    rows.push(`<div class="hall-row"><span><b>Gleis ${g + 1}</b> <small>${where}</small></span><button class="btn ghost small" data-gleis="${gk}">🚆 Zug</button></div>`);
+  }
+  hubRegions.delete(home);
+  const addErr = hbfResizeError(x + ',' + y, 1), { money: gm, ...gmat } = GLEIS_COST;
+  return `<div class="label">🚉 ${n} Gleise</div>
+    <div class="ships">${rows.join('')}</div>
+    ${hubRegions.size > 1 ? `<div class="status"><div class="ok">🔀 Umsteigen: ${[...hubRegions].map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')} sind hier miteinander verbunden</div></div>` : ''}
+    <div class="row"><button class="btn" id="p-gplus" data-cost="${gm}" data-mat='${JSON.stringify(gmat)}' ${addErr && !/Taler|Material/.test(addErr) ? 'disabled' : ''}>+ Gleis · ${costText(GLEIS_COST)}</button>
+      ${n > HBF_MIN ? '<button class="btn ghost" id="p-gminus">− Gleis</button>' : ''}</div>
+    ${addErr && !/Taler|Material/.test(addErr) ? `<p class="muted">+ Gleis: ${addErr}.</p>` : ''}
+    <p class="muted">Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
+    <div class="label">Aussehen</div>
+    <div class="looks">${Object.entries(HBF_LOOKS).map(([id, nm]) => `<button class="look${(t.look || 'glas') === id ? ' on' : ''}" data-hlook="${id}">${nm}</button>`).join('')}</div>`;
+}
+// Ein Gleis des Hauptbahnhofs: wie ein Bahnhof (Linie, Fahrgäste, Zug, Wagen)
+function openGleis(gk) {
+  const G = GLEIS.get(gk);
+  if (!G) { closePanel(); return; }
+  const line = lineOf(gk);
+  const el = showPanel(`
+    <h3>Gleis ${G.g + 1} <span class="lvl">Hauptbahnhof</span></h3>
+    <div class="status">${stationStatus(gk).join('')}</div>
+    ${line ? trainChooser(line) : ''}
+    <div class="row"><button class="btn ghost" id="p-back">← Hauptbahnhof</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => GLEIS.has(gk) ? openGleis(gk) : closePanel());
+  if (line) wireTrainChooser(el, line, () => openGleis(gk));
+  $('p-back').onclick = () => { const H = GLEIS.get(gk); if (H) openInfo(...keyXY(H.hub)); else closePanel(); };
+  $('p-close').onclick = closePanel;
+}
 // Fahrgäste, Plätze, Auslastung und was es bringt
 const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 // Zu welchem Ortsteil ein Halt zählt (Fahrgäste rechnen je Ortsteil) – auf aufgeschüttetem Land die nächste Insel
-const STOPS = new Set(['station', 'seilbahn', 'hafen', 'bootssteg']);
+const STOPS = new Set(['station', 'hbf', 'seilbahn', 'hafen', 'bootssteg']);
 function placeLabel(x, y) {
   const r = regionAt(x, y), filled = islandAt(x, y) !== r;
   return `📍 Ortsteil ${regionIcon(r)} ${regionName(r)}${filled ? ' (aufgeschüttet)' : ''}`;
@@ -881,6 +925,7 @@ function trafficStatus(line, tr) {
   }
   out.push(`<div>👥 Fahrgäste: ${fmt(tr.demand)}/min – ${[tr.commute >= 1 ? `Pendler ${fmt(tr.commute)}` : '', tr.visitors >= 1 ? `Besucher ${fmt(tr.visitors)}${visits ? ` (${visits})` : ''}` : ''].filter(Boolean).join(', ')}</div>`);
   out.push(`<div>💺 Plätze: ${fmt(tr.seats)}/min · ${vehicles}</div>`);
+  if (tr.transfer && tr.transfer.length) out.push(`<div class="ok">🔀 Umsteigen am Hauptbahnhof: auch ${tr.transfer.map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')}</div>`);
   if (tr.shared) out.push(`<div class="muted">🔀 Teilt sich die Fahrgäste mit ${tr.shared === 1 ? 'einer weiteren Verbindung' : `${tr.shared} weiteren Verbindungen`} zu denselben Inseln – nach Plätzen.</div>`);
   out.push(`<div class="load"><i style="width:${Math.min(100, pct)}%" class="${tr.served < 1 ? 'full' : ''}"></i></div>`);
   out.push(tr.served < 1 ? `<div class="bad">😣 Überfüllt (${pct} %): nur ${Math.round(tr.served * 100)} % kommen mit</div>`
@@ -915,7 +960,7 @@ function trainChooser(line) {
 function wireTrainChooser(el, line, reopen) {
   const store = looks => {
     for (const k of line.stations) {
-      const t = state.tiles.get(k);
+      const t = stopConf(k);
       if (!t) continue;
       t.train = looks[0].model; t.trainCol = looks[0].col;
       if (looks[0].plus) t.trainPlus = looks[0].plus; else delete t.trainPlus;
@@ -1357,7 +1402,7 @@ function openTownHall(tab = hallTab) {
   };
   for (const b of card.querySelectorAll('[data-isle-go]')) b.onclick = () => goIsle(b.dataset.isleGo);
   for (const b of card.querySelectorAll('[data-jump]')) b.onclick = () => {
-    const e = all[+b.dataset.jump], [w, h] = sizeOf(e.b, (state.tiles.get(e.x + ',' + e.y) || {}).rot);
+    const e = all[+b.dataset.jump], et = state.tiles.get(e.x + ',' + e.y) || {}, [w, h] = sizeOf(e.b, et.rot, et);
     closeModal();
     jumpTo(e.x, e.y, w, h);
     sparkle(e.x + (w - 1) / 2, e.y + (h - 1) / 2);
@@ -1411,6 +1456,7 @@ const NEWS = { id: '2026-09-30', items: [
   '🏛️ <b>Wunder können jetzt richtig was:</b> Jahrmarkt am Riesenrad (3 Minuten dreifache Einnahmen), Sternschnuppen an der Sternwarte, Hafenstadt an der Seebrücke, grüner Daumen im Botanischen Garten (mit Palmen und Riesenblumen), königliche Erlasse im Schloss – dazu dauerhafte Boni.',
   '🛤️ <b>Häuser und Betriebe sind genügsamer:</b> Markt, Schule, Bäckerei, Park & Co. zählen auch, wenn ein Weg oder eine Bahn dorthin führt.',
   '🌊 <b>Die Welt hat keinen Rand mehr:</b> Aufschütten geht überall – weit draußen ist das Meer tiefer und teurer. Nach dem Laternenfest tauchen ferne Inseln mit Schatztruhen auf.',
+  '🚉 <b>Hauptbahnhof:</b> ein Kopfbahnhof mit so vielen Gleisen, wie du willst – jedes Gleis eine eigene Linie mit eigenem Zug, und am Bahnhof steigen die Leute um. Drei Designs zur Auswahl.',
   '🚢 <b>Aufträge statt Börse:</b> Frachter kaufen dir ab, was sich stapelt – bis 300 % des Werts. Schiffe fahren übers Wasser um die Inseln herum. Die Kreuzfahrt ist weg.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';

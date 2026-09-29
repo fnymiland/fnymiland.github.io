@@ -86,7 +86,7 @@ function shadowOf(t, ax, ay) {
   if (t.b === 'haus') { const look = houseLook(t); hgt = HOUSE_SHADOW[look]; inset = look === 5 ? 0.16 : 0.24; }
   else if (t.b === 'lm') { const s = LM_SHADOW[t.lm]; if (!s) return null; [hgt, inset] = s; }
   else { const s = SHADOW[t.b]; if (!s) return null; hgt = Array.isArray(s[0]) ? s[0][Math.min(t.lvl, 3) - 1] : s[0]; inset = s[1]; }
-  const [w, h] = sizeOf(t.b, t.rot), dx = SUN.dx * hgt, dy = SUN.dy * hgt;
+  const [w, h] = sizeOf(t.b, t.rot, t), dx = SUN.dx * hgt, dy = SUN.dy * hgt;
   const base = [[ax - 0.5 + inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay + h - 0.5 - inset], [ax - 0.5 + inset, ay + h - 0.5 - inset]]
     .map(([x, y]) => { const p = iso(x, y); return [p.x, p.y]; });
   return hull(base.concat(base.map(([x, y]) => [x + dx, y + dy])));
@@ -106,7 +106,7 @@ function drawGroundParts(want, at, z) {
     if (!hasGroundPart(t)) continue;
     const [ax, ay] = keyXY(k);
     if (!want([ax, ay])) continue;
-    const [w, h] = sizeOf(t.b, t.rot), c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
+    const [w, h] = sizeOf(t.b, t.rot, t), c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
     FOG = t.b !== 'lm' && !ownedTile(ax, ay);
     drawObject(t.b, c.x, c.y, z, 0, ax, ay, t.lvl, t);
   }
@@ -332,8 +332,8 @@ function groupPreview(z) {
       add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot); });
       continue;
     }
-    const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0);
-    for (const [fx, fy] of footprint(t.b, x, y, t.rot || 0)) dia(fx, fy, bad);
+    const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0, t);
+    for (const [fx, fy] of footprint(t.b, x, y, t.rot || 0, t)) dia(fx, fy, bad);
     if (t.b === 'weg' || t.b === 'schiene') continue;                // Wege: die Fläche genügt
     add((x + w - 1) + ',' + (y + h - 1), () => {
       const c = toScreen(x + (w - 1) / 2, y + (h - 1) / 2), s = decoScale(t.b);
@@ -456,7 +456,7 @@ function render(now) {
   const objBox = (x, y) => {           // Grundfläche des Objekts unter dem Zeiger
     const a = anchorAt(x, y);
     if (!a) return [x, y, 1, 1];
-    const t = state.tiles.get(a), [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot);
+    const t = state.tiles.get(a), [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t);
     return [ax, ay, w, h];
   };
   const ghostType = tool === 'verschieben' ? movingType() : tool;
@@ -479,7 +479,7 @@ function render(now) {
       const cl = tool === 'verschieben' ? '' : clearLabel(tool, hx, hy);
       preview = { ok: !err, small: !err || err === 'Zu wenig Taler', slot, text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}${cl ? '  ' + cl : ''}`) };
     } else if (tool === 'verschieben') {
-      const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType));
+      const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType), moving.t);
       box = [hx, hy, w, h];
       preview = { ok: !err, ghost: !err || true, text: err || 'Hierhin' };
     } else if (tool === 'abriss' && hds && hds[hoverSlot]) {
@@ -531,7 +531,8 @@ function render(now) {
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
   for (const m of walkers.concat(cars, cars4, ships)) {
-    const k = Math.round(m.px) + ',' + Math.round(m.py);
+    let k = Math.round(m.px) + ',' + Math.round(m.py);
+    if (m.train && HALL.has(k)) k = COVER.get(k) || k;     // Zug in der Halle: ganz hinten zeichnen, Dächer und Bahnsteige kommen darüber
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }
@@ -548,7 +549,7 @@ function render(now) {
     const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
     if (a0 && !t) staleCover = true;
     if (a) {
-      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot), big = w > 1 || h > 1;
+      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
       const corner = x === ax + w - 1 && y === ay + h - 1;
       const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
       const drawIt = () => {
@@ -586,6 +587,7 @@ function render(now) {
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
         if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
         if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
+        if (t.b === 'hbf' && [...GLEIS].some(([gk, G]) => { if (G.hub !== a) return false; const l = lineOf(gk); return l && l.traffic && l.traffic.served < 0.8; })) icons.push([c.x, c.y, '😣']);
         if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
         if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
         if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet

@@ -721,7 +721,7 @@ function wonderStep(x, y, stay = false) {
   t.phase = (t.phase || 0) + 1;
   t.born = performance.now();
   recalc();
-  const [w, h] = sizeOf(t.b, t.rot);
+  const [w, h] = sizeOf(t.b, t.rot, t);
   sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
   if (wonderDone(t)) {
     confettiBurst(); confettiBurst();

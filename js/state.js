@@ -64,7 +64,10 @@ function tileOut(t) {
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
   if (t.ships && t.ships.length) o.ships = t.ships.map(s => ({ model: s.model, to: s.to }));   // Schiffe am Hafen
-  if (t.isle) o.isle = t.isle;                                                         // Truhe: von welcher fernen Insel
+  if (t.isle) o.isle = t.isle;
+  if (t.gleise) o.gleise = t.gleise;                                                     // Hauptbahnhof: Gleise und ihre Züge
+  if (t.gleis) o.gleis = t.gleis.map(c => c ? { ...(c.train ? { train: c.train, trainCol: c.trainCol || 0 } : {}), ...(c.trainPlus ? { trainPlus: c.trainPlus } : {}),
+    ...(c.extra ? { extra: c.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) })) } : {}) } : {});                                                         // Truhe: von welcher fernen Insel
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }

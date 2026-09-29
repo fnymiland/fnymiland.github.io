@@ -130,7 +130,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     if (t && !seen.has(a)) {
       seen.add(a);
       const [ax, ay] = keyXY(a);
-      if (t.b === 'lm' || ITEMS[t.b].fixed || !footprint(t.b, ax, ay, t.rot || 0).every(([fx, fy]) => inside(fx, fy))) stays++;
+      if (t.b === 'lm' || ITEMS[t.b].fixed || !footprint(t.b, ax, ay, t.rot || 0, t).every(([fx, fy]) => inside(fx, fy))) stays++;
       else items.push({ kind: 'tile', t, from: a, dx: ax - x0, dy: ay - y0 });
     }
     (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
@@ -168,7 +168,7 @@ function groupErrors(hx, hy) {
         else if (it.t.bridge && !water) err = 'Brücken nur übers Wasser';
         else if (b === 'schiene' && !it.t.bridge && water) err = 'Übers Wasser braucht die Schiene eine Brücke';
       }
-      err = err || placeError(b, x, y, it.t.rot || 0, { move: true });
+      err = err || placeError(b, x, y, it.t.rot || 0, { move: true, t: it.t });
     }
     errs.set(it, err);
     first = first || err;
@@ -192,7 +192,7 @@ function dropGroup(hx, hy) {
 }
 function moveError(x, y, slot) {
   if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
-  return placeError(moving.t.b, x, y, placeRot(moving.t.b, x, y), { move: true });
+  return placeError(moving.t.b, x, y, placeRot(moving.t.b, x, y), { move: true, t: moving.t });
 }
 function dropAt(x, y, slot) {
   if (moving.kind === 'group') return dropGroup(x, y);
@@ -243,7 +243,7 @@ function stageUpgrade(x, y, stay = false) {
   t.lvl++;
   t.born = performance.now();
   recalc();
-  const [w, h] = sizeOf(t.b, t.rot);
+  const [w, h] = sizeOf(t.b, t.rot, t);
   sparkle(x + (w - 1) / 2, y + (h - 1) / 2);
   if (!QUIET) { sfx('star'); toast(`${ITEMS[t.b].name} ist jetzt: ${stageName(t)}!`); checkStars(); save(); }
   if (!stay) openInfo(x, y);

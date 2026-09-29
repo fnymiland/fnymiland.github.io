@@ -123,7 +123,7 @@ function scanSelect(p) {
     if (!t) { if (!states.has(k)) states.set(k, 'same'); continue; }
     if (seen.has(a)) continue;
     seen.add(a);
-    const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0);
+    const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0, t);
     const ok = t.b !== 'lm' && !ITEMS[t.b].fixed && fp.every(([fx, fy]) => inside(fx, fy));
     for (const [fx, fy] of fp) if (inside(fx, fy)) states.set(fx + ',' + fy, ok ? 'ok' : 'bad');
     if (ok) things++;
@@ -148,7 +148,7 @@ function scanDemolish(p) {
     if (t) {
       if (seen.has(a)) continue;
       seen.add(a);
-      const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0), info = demolishInfo(ax, ay);
+      const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0, t), info = demolishInfo(ax, ay);
       const whole = fp.every(([fx, fy]) => inside(fx, fy)), err = !whole ? 'Ragt aus dem Rechteck heraus' : info.err;
       for (const [fx, fy] of fp) if (inside(fx, fy)) states.set(fx + ',' + fy, err ? 'bad' : 'ok');
       if (err) { firstErr = firstErr || err; continue; }

@@ -865,7 +865,7 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 }
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
 const MIRROR = new Set(['bank']);
-const ROTATABLE = new Set([...MIRROR, 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'haus', 'muehle', 'steinmetz', 'schmiede',
+const ROTATABLE = new Set([...MIRROR, 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
@@ -881,12 +881,12 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
-const GROUND_TYPES = new Set(['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
+const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
 const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
-  if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
+  if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;

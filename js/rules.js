@@ -5,20 +5,89 @@
 const hasTech = id => state.techs.has(id);
 // Grundflächen: Gebäude können mehrere Felder belegen. Gespeichert wird nur das Ankerfeld (hinterste Ecke);
 // COVER sagt für jedes belegte Feld, zu welchem Anker es gehört.
-const sizeOf = (b, rot) => { const s = ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
-function footprint(b, ax, ay, rot) {
-  const [w, h] = sizeOf(b, rot || 0), out = [];
+// Größe (Breite in x, Höhe in y). Der Hauptbahnhof ist so breit, wie er Gleise hat (t.gleise, je 2 Felder) – dafür das
+// Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
+const HBF_MIN = 2, HBF_MAX = 16;
+const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
+const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+function footprint(b, ax, ay, rot, t) {
+  const [w, h] = sizeOf(b, rot || 0, t), out = [];
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
   return out;
 }
 let COVER = new Map();
 function rebuildCover() {
   COVER = new Map();
+  GLEIS.clear(); HALL.clear(); GEXIT.clear();
   for (const [k, t] of state.tiles) {
     const [x, y] = keyXY(k);
-    for (const [fx, fy] of footprint(t.b, x, y, t.rot)) COVER.set(fx + ',' + fy, k);
+    for (const [fx, fy] of footprint(t.b, x, y, t.rot, t)) COVER.set(fx + ',' + fy, k);
+    if (t.b === 'hbf') for (let g = 0; g < hbfGleise(t); g++) {
+      const G = gleisTiles(t, x, y, g);
+      GLEIS.set(G.hall[0].join(), { hub: k, g });
+      for (const h of G.hall) HALL.add(h.join());
+      GEXIT.set(G.exit.join(), [G.hall[0][0] - G.exit[0], G.hall[0][1] - G.exit[1]]);
+    }
   }
 }
+// Hauptbahnhof (Block 29): 4 tief (vorn die Gleise, hinten das Empfangsgebäude), je Gleis 2 Felder breit (Gleis + Bahnsteig).
+// Jedes Gleis ist ein Halt wie ein Bahnhof – Schlüssel: sein vorderstes Hallenfeld (GLEIS), der Zug fährt bis in die Halle
+// (HALL). Im eigenen Rahmen (wie draw-kit): a nach vorn, b zur Seite; Gleis g liegt bei b = −n + ½ + 2g.
+const GLEIS = new Map(), HALL = new Set(), GEXIT = new Map();   // GEXIT: Feld vor dem Gleis → Richtung in die Halle
+const kitTurn = (r, a, b) => r === 0 ? [a, b] : r === 1 ? [-b, a] : r === 2 ? [-a, -b] : [b, -a];
+function gleisTiles(t, x, y, g) {
+  const n = hbfGleise(t), r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2, b = -n + 0.5 + 2 * g;
+  const at = a => { const [u, v] = kitTurn(r, a, b); return [Math.round(cx + u), Math.round(cy + v)]; };
+  return { hall: [1.5, 0.5, -0.5].map(at), exit: at(2.5) };
+}
+// Gleise dazu/weg: Der Bahnhof wächst zur Seite +b (im eigenen Rahmen) – bei Drehung 1 und 2 rückt dafür der Anker, damit die
+// alten Gleise bleiben, wo sie sind. Ein Gleis kostet GLEIS_COST, zurück gibt es die Hälfte der Taler.
+const GLEIS_COST = { money: 2000, quader: 6, metall: 4 };
+function hbfResizeError(k, d) {
+  const t = state.tiles.get(k);
+  if (!t || t.b !== 'hbf') return 'Kein Hauptbahnhof';
+  const n = hbfGleise(t), m = n + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k);
+  if (m < HBF_MIN) return `Mindestens ${HBF_MIN} Gleise`;
+  if (m > HBF_MAX) return `Höchstens ${HBF_MAX} Gleise`;
+  if (d < 0) return null;
+  const nx = r === 1 ? x - 2 * d : x, ny = r === 2 ? y - 2 * d : y, old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
+  for (const [fx, fy] of footprint('hbf', nx, ny, r, { ...t, gleise: m })) {
+    if (old.has(fx + ',' + fy)) continue;
+    if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
+    if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für ein Gleis';
+    if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
+    if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
+  }
+  return canPay(GLEIS_COST) ? null : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
+}
+function hbfResize(k, d) {
+  const err = hbfResizeError(k, d);
+  if (err) { fail(err); return null; }
+  const t = state.tiles.get(k), m = hbfGleise(t) + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k);
+  const nk = (r === 1 ? x - 2 * d : x) + ',' + (r === 2 ? y - 2 * d : y);
+  if (d > 0) addCost(GLEIS_COST, -1);
+  else { state.money += Math.floor(GLEIS_COST.money / 2); if (t.gleis) t.gleis.length = Math.min(t.gleis.length, m); }
+  t.gleise = m; t.born = performance.now();
+  if (nk !== k) { state.tiles.delete(k); state.tiles.set(nk, t); }
+  sfx('build'); recalc(); save();
+  return nk;
+}
+// Halte der Bahn: Felder, an denen er liegt (Bahnhof: Grundfläche; Gleis: seine Hallenfelder), und wo sein Zug steht
+function stopFoot(k) {
+  const G = GLEIS.get(k);
+  if (G) { const t = state.tiles.get(G.hub), [x, y] = keyXY(G.hub); return gleisTiles(t, x, y, G.g).hall; }
+  const t = state.tiles.get(k), [x, y] = keyXY(k);
+  return t ? footprint(t.b, x, y, t.rot, t) : [];
+}
+function stopConf(k) {
+  const G = GLEIS.get(k);
+  if (!G) return state.tiles.get(k);
+  const t = state.tiles.get(G.hub);
+  if (!t.gleis) t.gleis = [];
+  return t.gleis[G.g] || (t.gleis[G.g] = {});
+}
+// Kasten um einen Halt (für Laufweite)
+const stopBox = k => { const f = stopFoot(k), xs = f.map(p => p[0]), ys = f.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
 const anchorAt = (x, y) => COVER.get(x + ',' + y) || null;
 const objAt = (x, y) => { const a = anchorAt(x, y); return a ? state.tiles.get(a) : null; };
 function bAt(x, y) { const t = objAt(x, y); return t ? t.b : null; }
@@ -28,7 +97,7 @@ const isBig = b => { const s = ITEMS[b].size; return !!s && (s[0] > 1 || s[1] > 
 function aroundTiles(x, y, r) {
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   const [ax, ay] = t ? keyXY(a) : [x, y];
-  const [w, h] = t ? sizeOf(t.b, t.rot) : [1, 1];
+  const [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
   const out = [];
   for (let yy = ay - r; yy <= ay + h - 1 + r; yy++) for (let xx = ax - r; xx <= ax + w - 1 + r; xx++) {
     if (xx >= ax && xx < ax + w && yy >= ay && yy < ay + h) continue;
@@ -54,7 +123,7 @@ const isWater = (x, y) => terrainAt(x, y) === 'water';
 // so zählen auch schmale, lange Flüsse). Gezählt wird höchstens bis limit.
 function waterBody(x, y, limit = 64) {
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
-  const [ax, ay] = t ? keyXY(a) : [x, y], [w, h] = t ? sizeOf(t.b, t.rot) : [1, 1];
+  const [ax, ay] = t ? keyXY(a) : [x, y], [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
   const seen = new Set(), todo = [];
   const add = (px, py) => { const k = px + ',' + py; if (!seen.has(k) && isWater(px, py)) { seen.add(k); todo.push([px, py]); } };
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) for (const [dx, dy] of DIRS) add(ax + i + dx, ay + j + dy);
@@ -172,12 +241,12 @@ function totals() {
   transitTraffic(links, places);
   const railV = new Map(), railSt = [];
   for (const l of links) for (const s of l.stations) {
-    const f = l.traffic.served, v = net.vOf(s), t = state.tiles.get(s), [sx, sy] = keyXY(s), [sw, sh] = sizeOf(t.b, t.rot);
+    const f = l.traffic.served, v = net.vOf(s);
     if (v) railV.set(v, Math.max(railV.get(v) || 0, f));
-    railSt.push([sx, sy, sx + sw - 1, sy + sh - 1, f]);
+    railSt.push([...stopBox(s), f]);
   }
   const railReach = (k, t, x, y) => {
-    const [w, h] = sizeOf(t.b, t.rot), x1 = x + w - 1, y1 = y + h - 1;
+    const [w, h] = sizeOf(t.b, t.rot, t), x1 = x + w - 1, y1 = y + h - 1;
     let f = railV.get(net.vOf(k)) || 0;
     for (const [a0, b0, a1, b1, g] of railSt) {
       if (Math.max(0, a0 - x1, x - a1, b0 - y1, y - b1) <= WALK_REACH) f = Math.max(f, g);
@@ -489,8 +558,8 @@ const hasBuilt = b => [...state.tiles.values()].some(t => t.b === b);
 // behält seine Richtung, bis er das Werkzeug wechselt.
 let rotManual = false;
 // Felder direkt vor der Tür (vor der ganzen Vorderseite)
-function frontTiles(b, x, y, rot) {
-  const [w, h] = sizeOf(b, rot), [dx, dy] = FRONT_DIR[rot & 3], out = [];
+function frontTiles(b, x, y, rot, t) {
+  const [w, h] = sizeOf(b, rot, t), [dx, dy] = FRONT_DIR[rot & 3], out = [];
   if (dx) for (let j = 0; j < h; j++) out.push([dx > 0 ? x + w : x - 1, y + j]);
   else for (let i = 0; i < w; i++) out.push([x + i, dy > 0 ? y + h : y - 1]);
   return out;
@@ -503,7 +572,7 @@ function autoRot(b, x, y, fallback) {
     if (!fits(r)) continue;
     const front = frontTiles(b, x, y, r);
     const score = front.filter(([fx, fy]) => bAt(fx, fy) === 'weg').length + (shore ? 10 * front.filter(([fx, fy]) => isWater(fx, fy)).length : 0)
-      + (b === 'station' ? 10 * front.filter(([fx, fy]) => bAt(fx, fy) === 'schiene').length : 0);   // Bahnsteig zur Schiene
+      + (b === 'station' || b === 'hbf' ? 10 * front.filter(([fx, fy]) => bAt(fx, fy) === 'schiene').length : 0);   // Bahnsteig/Gleise zur Schiene
     if (score > bestScore) { best = r; bestScore = score; }
   }
   return best;
@@ -524,7 +593,9 @@ function placeRot(b, x, y) {
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
-const railArms = (x, y) => DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
+// Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)
+const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
+  return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || (e && e[0] === dx && e[1] === dy)); };
 // Bahnübergang: ein Schienenfeld mit cross (und dem Stil des Wegs), gehört zu Schienen- und Wegenetz.
 // Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
 // foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
@@ -647,6 +718,7 @@ function computeRail() {
   for (const [k, t] of state.tiles) {
     if (t.b === 'schiene') rails.add(k);
     else if (t.b === 'station') stations.push(k);
+    else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
     else if (POWER_OUT[t.b]) { wind += powerOf(t); plants++; }
   }
   const comp = new Map(), netTiles = [];
@@ -664,9 +736,8 @@ function computeRail() {
   }
   const byNet = new Map(), stationNet = new Map();
   for (const s of stations.sort()) {
-    const t = state.tiles.get(s), [x, y] = keyXY(s);
     let net = null;
-    for (const [fx, fy] of footprint(t.b, x, y, t.rot)) for (const [dx, dy] of DIRS) {
+    for (const [fx, fy] of stopFoot(s)) for (const [dx, dy] of DIRS) {
       const n = comp.get((fx + dx) + ',' + (fy + dy));
       if (n != null && net == null) net = n;
     }
@@ -679,8 +750,8 @@ function computeRail() {
     if (regions.length < 2) continue;
     const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails);
     // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
-    const onRing = ring && list.every(s => { const t = state.tiles.get(s), [x, y] = keyXY(s), R = new Set(ring);
-      return footprint(t.b, x, y, t.rot).some(([fx, fy]) => DIRS.some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
+    const onRing = ring && list.every(s => { const R = new Set(ring);
+      return stopFoot(s).some(([fx, fy]) => DIRS.some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
     const loop = onRing ? ring : null, max = loop ? Math.max(1, Math.floor(tiles / KM / KM_PER_TRAIN)) : 1;
     const looks = lineLooks(list), count = Math.min(max, looks.length);
     const needs = looks.slice(0, count).map(lk => carNeed(tiles, carsOf(lk)));
@@ -694,7 +765,7 @@ function computeRail() {
 // Aussehen der Züge einer Linie (am Bahnhof gespeichert): erster Zug train/trainCol/trainPlus, weitere in extra.
 // plus = angehängte Wagen (zusätzlich zu denen des Modells)
 function lineLooks(stations) {
-  const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
+  const t = stations.map(stopConf).find(t => t && t.train) || stopConf(stations[0]) || {};
   return [{ model: t.train || 'tram', col: t.trainCol || 0, plus: t.trainPlus || 0 }]
     .concat((t.extra || []).map(e => ({ model: e.model || 'tram', col: e.col || 0, plus: e.plus || 0 })));
 }
@@ -825,7 +896,7 @@ function fishingGround(k) {
 function dockPoint(k) {
   const t = state.tiles.get(k), [x, y] = keyXY(k);
   if (!t || t.b !== 'hafen') return [x, y];
-  const [w, h] = sizeOf(t.b, t.rot), [dx, dy] = FRONT_DIR[(t.rot || 0) & 3], cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  const [w, h] = sizeOf(t.b, t.rot, t), [dx, dy] = FRONT_DIR[(t.rot || 0) & 3], cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
   return [cx + dx * ((dx ? w : h) / 2 + 1.3), cy + dy * ((dx ? w : h) / 2 + 1.3)];
 }
 function shipLinks() {
@@ -883,9 +954,13 @@ function transitTraffic(links, places) {
   const pop = r => places.pop.get(r) || 0, rank = regionRank;
   const at = new Map();                                                            // Insel → Verbindungen, die dort halten
   for (const l of links) if (l.regions.length > 1) for (const r of l.regions) { if (!at.has(r)) at.set(r, []); at.get(r).push(l); }
+  // Umsteigen (Block 29): Linien, die am selben Hauptbahnhof enden, verbinden alle ihre Inseln miteinander
+  const hubOf = l => (l.stations || []).map(s => GLEIS.get(s)).filter(Boolean).map(G => G.hub), hubR = new Map();
+  for (const l of links) if (l.regions.length > 1) for (const h of hubOf(l)) { if (!hubR.has(h)) hubR.set(h, new Set()); for (const r of l.regions) hubR.get(h).add(r); }
+  const reach = l => [...l.regions, ...hubOf(l).flatMap(h => [...hubR.get(h)])];
   const need = new Map();
   for (const [r, ls] of at) {
-    const other = [...new Set(ls.flatMap(l => l.regions))].filter(q => q !== r), seats = ls.reduce((s, l) => s + l.seats, 0);
+    const other = [...new Set(ls.flatMap(reach))].filter(q => q !== r), seats = ls.reduce((s, l) => s + l.seats, 0);
     const bigger = other.some(q => pop(q) > pop(r) || (pop(q) === pop(r) && rank(q) < rank(r)));
     need.set(r, { commute: bigger ? pop(r) * COMMUTE_SHARE : 0,
       visit: Math.min(places.attr.get(r) || 0, other.reduce((s, q) => s + pop(q), 0) * VISIT_SHARE),
@@ -900,7 +975,8 @@ function transitTraffic(links, places) {
     }
     const demand = commute + visitors, served = demand > 0 ? Math.min(1, l.seats / demand) : 1;
     const shared = l.regions.length > 1 ? links.filter(o => o !== l && o.regions.length > 1 && o.regions.some(r => l.regions.includes(r))).length : 0;
-    l.traffic = { commute, visits, visitors, demand, seats: l.seats, served, carried: demand * served, shared,
+    const transfer = l.regions.length > 1 ? [...new Set(reach(l))].filter(q => !l.regions.includes(q)) : [];   // per Umsteigen erreichbar
+    l.traffic = { commute, visits, visitors, demand, seats: l.seats, served, carried: demand * served, shared, transfer,
       fare: demand * served * FARE / 60, spend: visitors * served * VISIT_SPEND / 60 };
   }
 }
@@ -968,7 +1044,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
     } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
   } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
-    const tiles = footprint(b, x, y, r), [dx, dy] = FRONT_DIR[r];
+    const tiles = footprint(b, x, y, r, opts.t), [dx, dy] = FRONT_DIR[r];
     for (const [tx, ty] of tiles) {
       if (!ownedTile(tx, ty) && !isSea(tx, ty)) return 'Das ist nicht dein Grundstück';   // ins offene Meer darf sie
       if (COVER.has(tx + ',' + ty)) return 'Hier ist nicht genug Platz';
@@ -979,7 +1055,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (land.length !== 1 || land[0] !== back) return 'Vom Ufer aus ins Wasser bauen';
     if (terrainAt(...back) !== 'grass' && !willClear(b, terrainAt(...back))) return 'Vom Ufer aus ins Wasser bauen';
   } else {
-    const tiles = footprint(b, x, y, r);
+    const tiles = footprint(b, x, y, r, opts.t);
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
@@ -1044,19 +1120,19 @@ function growWonders() {
   rebuildCover();
   for (const [k, t] of [...state.tiles]) {
     if (!OLD_WONDER_SIZE[t.b]) continue;
-    const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot), [ow, oh] = OLD_WONDER_SIZE[t.b];
+    const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t), [ow, oh] = OLD_WONDER_SIZE[t.b];
     state.tiles.delete(k); rebuildCover();
     const tries = [];
     for (let dy = 0; dy <= h - oh; dy++) for (let dx = 0; dx <= w - ow; dx++) tries.push([x - dx, y - dy]);
     const mx = (w - ow) / 2, my = (h - oh) / 2, off = ([ax, ay]) => Math.hypot(x - ax - mx, y - ay - my);
     tries.sort((a, b) => off(a) - off(b));
-    const fits = ([ax, ay], decosOk) => footprint(t.b, ax, ay, t.rot).every(([fx, fy]) => {
+    const fits = ([ax, ay], decosOk) => footprint(t.b, ax, ay, t.rot, t).every(([fx, fy]) => {
       const kk = fx + ',' + fy;
       return ownedTile(fx, fy) && !COVER.has(kk) && terrainAt(fx, fy) !== 'water' && (decosOk || !state.decos.has(kk));
     });
     const spot = tries.find(p => fits(p, false)) || tries.find(p => fits(p, true));
     if (spot) {
-      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot)) {
+      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot, t)) {
         const kk = fx + ',' + fy, ds = state.decos.get(kk);
         if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
         if (ds) {
@@ -1216,7 +1292,7 @@ function fitFootprints() {
   rebuildCover();
   for (const [k, t] of [...state.tiles]) {
     if (!isBig(t.b)) continue;
-    const [w, h] = sizeOf(t.b, t.rot);
+    const [w, h] = sizeOf(t.b, t.rot, t);
     let [x, y] = keyXY(k);
     // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?
     state.tiles.delete(k); rebuildCover();
@@ -1230,7 +1306,7 @@ function fitFootprints() {
     if ((!spot && t.b === 'rathaus') || t.b === 'lm') {
       if (!spot) spot = [x, y];
       [x, y] = spot;
-      for (const [fx, fy] of footprint(t.b, x, y, t.rot)) {
+      for (const [fx, fy] of footprint(t.b, x, y, t.rot, t)) {
         const kk = fx + ',' + fy, a = anchorAt(fx, fy);
         if (a && state.tiles.get(a).b !== 'lm') { const o = state.tiles.get(a); if (o.b !== 'weg') removed.push(ITEMS[o.b].name); refundObj(a, o); }
         const ds = state.decos.get(kk);
@@ -1241,7 +1317,7 @@ function fitFootprints() {
     }
     if (spot) {
       state.tiles.set(spot[0] + ',' + spot[1], t);
-      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot)) state.decos.delete(fx + ',' + fy);
+      for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot, t)) state.decos.delete(fx + ',' + fy);
     } else {
       removed.push(ITEMS[t.b].name);
       state.money += ITEMS[t.b].cost || 0;
@@ -1284,9 +1360,9 @@ function buildAccess(net, links) {
   const byLink = links.filter(l => l.regions.length > 1 || l.kind === 'seil').map(l => {
     const near = new Set();
     for (const s of l.stations) {
-      const v = net.vOf(s), t = state.tiles.get(s), [sx, sy] = keyXY(s), [w, h] = sizeOf(t.b, t.rot);
+      const v = net.vOf(s), [x0, y0, x1, y1] = stopBox(s);
       if (v && inV.has(v)) for (const ks of inV.get(v).values()) for (const k of ks) near.add(k);
-      for (let y = sy - WALK_REACH; y < sy + h + WALK_REACH; y++) for (let x = sx - WALK_REACH; x < sx + w + WALK_REACH; x++) { const a = COVER.get(x + ',' + y); if (a) near.add(a); }
+      for (let y = y0 - WALK_REACH; y <= y1 + WALK_REACH; y++) for (let x = x0 - WALK_REACH; x <= x1 + WALK_REACH; x++) { const a = COVER.get(x + ',' + y); if (a) near.add(a); }
     }
     const kinds = new Map();
     for (const k of near) add(kinds, state.tiles.get(k).b, k);
@@ -1365,7 +1441,7 @@ function demolishInfo(x, y) {
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? wonderPaid(t).money : 0;
+      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
     return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);

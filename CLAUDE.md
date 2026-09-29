@@ -270,6 +270,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Erzeugen (`produce`) und bei den Ideen (main.js) – nie in `T` einrechnen. Sternschnuppen (`fallenStars`, nicht gespeichert)
     per `starTick`/`collectStarAt` (im `tap` vor allem anderen). Garten: `access.green` erfüllt „Park“/„schön“ (`how: 'garten'`),
     exotische Deko mit `garden: 'botgarten'` (in `unlockOk`, zählt nicht fürs Album).
+57. **Hauptbahnhof** (`hbf`, Block 29): Größe hängt am Gebäude (`t.gleise`) – `sizeOf(b, rot, t)`/`footprint(…, rot, t)`
+    immer mit dem Gebäude aufrufen, wenn eins da ist (auch `placeError(…, { move: true, t })`). Jedes Gleis ist ein Halt:
+    Schlüssel = vorderstes Hallenfeld (`GLEIS`, in `rebuildCover`), Felder per `gleisTiles`, Zug-Einstellungen in
+    `t.gleis[g]`. Wer über Halte läuft, nimmt `stopFoot(k)` (Felder) und `stopConf(k)` (Zug), nie `state.tiles.get(k)`.
+    Züge fahren bis in die Halle (`HALL`) und werden dort ganz hinten gezeichnet (Dächer darüber); die Schiene vor dem Gleis
+    hat keinen Prellbock (`GEXIT`). Umsteigen: `transitTraffic` verbindet alle Inseln der Linien am selben Hbf (`transfer`).
+    „+ Gleis“ wächst zur Seite +b (bei Drehung 1/2 rückt der Anker, `hbfResize`), die alten Gleise bleiben liegen.
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).

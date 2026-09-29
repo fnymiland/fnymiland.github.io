@@ -119,8 +119,7 @@ const TRAIN_KIND = {
 const trainSpeed = model => TRAIN_SPEED * (TRAIN_BY_ID[model] || TRAIN_BY_ID.tram).speed;   // schnellere Modelle fahren schneller
 // Schienenfeld direkt am Bahnhof (dort hält der Zug)
 function railStop(k) {
-  const t = state.tiles.get(k), [x, y] = keyXY(k);
-  for (const [fx, fy] of footprint(t.b, x, y, t.rot)) for (const [dx, dy] of DIRS) {
+  for (const [fx, fy] of stopFoot(k)) for (const [dx, dy] of DIRS) {
     const n = (fx + dx) + ',' + (fy + dy);
     if (T.rail.comp.has(n)) return n;
   }
@@ -186,11 +185,12 @@ function lineRoute(line) {
     keys = keys.concat(p.slice(1));
   }
   // an beiden Enden bis zu 2 Felder geradeaus weiter, damit der Zug mittig am Bahnsteig halten kann
+  // (am Hauptbahnhof bis ans Ende der Halle)
   const extend = (list, atEnd) => {
-    for (let n = 0; n < 2 && list.length > 1; n++) {
+    for (let n = 0; n < 3 && list.length > 1; n++) {
       const [a, b] = atEnd ? [list[list.length - 2], list[list.length - 1]] : [list[1], list[0]];
       const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = 2 * bx - ax, ny = 2 * by - ay, nk = nx + ',' + ny;
-      if (bAt(nx, ny) !== 'schiene' || list.includes(nk)) break;
+      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || bAt(nx, ny) !== 'schiene'))) break;
       if (atEnd) list.push(nk); else list.unshift(nk);
     }
   };
@@ -199,8 +199,8 @@ function lineRoute(line) {
   const distOf = k => { const [x, y] = keyXY(k); let best = 0, bd = 1e9; route.pts.forEach((p, i) => { const d = Math.hypot(p[0] - x, p[1] - y); if (d < bd) { bd = d; best = route.cum[i]; } }); return [best, bd]; };
   // Halt: Mitte aller Schienenfelder direkt am Bahnhof, die auf der Strecke liegen
   route.stops = order.map(stop => {
-    const st = line.stations.find(s => railStop(s) === stop), t = state.tiles.get(st), [sx, sy] = keyXY(st), ds = [];
-    for (const [fx, fy] of footprint(t.b, sx, sy, t.rot)) for (const [dx, dy] of DIRS) {
+    const st = line.stations.find(s => railStop(s) === stop), ds = [];
+    for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of DIRS) {
       const [d, off] = distOf((fx + dx) + ',' + (fy + dy));
       if (off < 0.01) ds.push(d);
     }
@@ -210,9 +210,9 @@ function lineRoute(line) {
 }
 // Halt eines Bahnhofs auf einer Route: Mitte aller Felder direkt am Bahnhof, die auf der Strecke liegen
 function stopOn(route, st) {
-  const t = state.tiles.get(st), [sx, sy] = keyXY(st), ds = [];
+  const ds = [];
   let best = null, bd = 0.8;                                  // sonst: nächster Punkt (Bahnhof nur an einer Kurve)
-  for (const [fx, fy] of footprint(t.b, sx, sy, t.rot)) for (const [dx, dy] of DIRS) {
+  for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of DIRS) {
     const x = fx + dx, y = fy + dy;
     route.pts.forEach((p, i) => {
       const d = Math.hypot(p[0] - x, p[1] - y);
@@ -225,10 +225,7 @@ function stopOn(route, st) {
 // Rundkurs: Ring ab einem Feld, an dem kein Bahnhof liegt (sonst läge ein Halt über dem Nahtpunkt)
 function loopRoute(line) {
   const near = new Set();
-  for (const st of line.stations) {
-    const t = state.tiles.get(st), [sx, sy] = keyXY(st);
-    for (const [fx, fy] of footprint(t.b, sx, sy, t.rot)) for (const [dx, dy] of [[0, 0], ...DIRS]) near.add((fx + dx) + ',' + (fy + dy));
-  }
+  for (const st of line.stations) for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of [[0, 0], ...DIRS]) near.add((fx + dx) + ',' + (fy + dy));
   const i0 = Math.max(0, line.loop.findIndex(k => !near.has(k)));
   const route = railPolyline(line.loop.slice(i0).concat(line.loop.slice(0, i0)), true);
   route.stops = line.stations.map(st => stopOn(route, st)).filter(d => d != null).sort((a, b) => a - b);
