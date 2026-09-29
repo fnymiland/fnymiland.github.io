@@ -179,3 +179,49 @@ describe('Rechteck', () => {
     expect(game('plan')).toBe(null);
   });
 });
+
+describe('Rechteck: Abriss und kleine Deko', () => {
+  it('Abriss: alles, was ganz drin steht, kommt weg – mit Erstattung; Wald wird gerodet', () => {
+    game("state.tiles.set('5,5', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('5,6', { b: 'brunnen', lvl: 1 })");
+    game("state.decos.set('6,6', [{ b: 'blumentopf', rot: 0 }, null, null, null]); state.terra.set('7,6', 'forest'); recalc(); setTool('abriss')");
+    const m0 = game('state.money');
+    dragFromTo([5, 5], [7, 6]);
+    const info = game('(() => { const i = planInfo(plan); return { things: i.things, cleared: i.cleared, err: i.err }; })()');
+    expect(info).toEqual({ things: 4, cleared: 1, err: null });
+    expect(game('planText(plan, planInfo(plan))')).toMatch(/^Abreißen: 4 Dinge \+\d+ · 1 Feld roden\/sprengen −10 · hineinklicken: abreißen$/);
+    const gain = game('planInfo(plan).gain');
+    click(6, 6);
+    expect(at(5, 5)).toBe(undefined); expect(at(6, 5)).toBe(undefined); expect(at(5, 6)).toBe(undefined);
+    expect(game("state.decos.has('6,6')")).toBe(false);
+    expect(game("state.terra.get('7,6')")).toBe('grass');
+    expect(game('state.money')).toBe(m0 + gain - 10);
+  });
+
+  it('Abriss: was aus dem Rechteck ragt, bleibt stehen (rot)', () => {
+    game("state.tiles.set('5,5', { b: 'schule', lvl: 1, rot: 0 }); recalc(); setTool('abriss')");
+    dragFromTo([4, 4], [5, 5]);
+    expect(game("planInfo(plan).states.get('5,5')")).toBe('bad');
+    click(4, 4);
+    expect(at(5, 5)).toBe('schule');
+  });
+
+  it('Abriss: Bewohner, die gebraucht werden, bleiben – dann geht gar nichts', () => {
+    game("state.tiles.set('5,5', { b: 'haus', lvl: 1 }); state.tiles.set('6,5', { b: 'haus', lvl: 1 }); state.tiles.set('10,10', { b: 'baecker', lvl: 1, rot: 0 }); recalc()");
+    game("setTool('abriss')");
+    dragFromTo([5, 5], [6, 5]);
+    expect(game('T.pop - 8 < T.jobs')).toBe(true);                     // ohne die beiden Häuser fehlen Bäcker
+    expect(game('planInfo(plan).err')).toMatch(/arbeiten/);
+    click(5, 5);
+    expect(at(5, 5)).toBe('haus');
+  });
+
+  it('kleine Deko: je Feld eine, in derselben Ecke', () => {
+    game("setTool('blumentopf')");
+    dragFromTo([4, 4], [6, 5]);
+    expect(game('planInfo(plan).n')).toBe(6);
+    expect(game('planText(plan, planInfo(plan))')).toMatch(/^Blumentopf ×6 · −\d+/);
+    const slot = game('plan.slot');
+    click(5, 5);
+    for (const [x, y] of [[4, 4], [5, 4], [6, 4], [4, 5], [5, 5], [6, 5]]) expect(game(`decosAt('${x},${y}')[${slot}].b`)).toBe('blumentopf');
+  });
+});

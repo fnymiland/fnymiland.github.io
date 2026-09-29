@@ -55,7 +55,7 @@ canvas.addEventListener('pointerdown', e => {
     drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button, pan, right: e.button === 2 || (e.ctrlKey && e.button === 0) };
     // Mit Weg, Schiene oder Gelände in der Hand zieht man eine Linie bzw. ein Rechteck auf (erst Vorschau)
     if (pan) canvas.style.cursor = 'grabbing';
-    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) drag.plan = toTile(e.clientX, e.clientY);
+    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) { drag.plan = toTile(e.clientX, e.clientY); drag.slot = slotAt(e.clientX, e.clientY).slot; }
   } else if (pointers.size === 2) {
     if (plan && plan.dragging) plan = null;              // zweiter Finger: doch lieber Karte bewegen
     const [a, b] = [...pointers.values()];
@@ -80,7 +80,7 @@ canvas.addEventListener('pointermove', e => {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
     if (!moved && Math.hypot(dx, dy) > (drag.pan ? 3 : 6)) {
       moved = true;
-      if (drag.plan && dragKind(tool)) { planTouch = e.pointerType !== 'mouse'; startPlan(dragKind(tool), drag.plan, drag.plan, false); plan.dragging = true; }
+      if (drag.plan && dragKind(tool)) { planTouch = e.pointerType !== 'mouse'; startPlan(dragKind(tool), drag.plan, drag.plan, false, drag.slot); plan.dragging = true; }
       else canvas.style.cursor = 'grabbing';
     }
     if (moved && plan && plan.dragging) { const t = toTile(e.clientX, e.clientY); setPlanEnd(t); hover = t; return; }

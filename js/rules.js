@@ -370,6 +370,7 @@ function smallError(b, x, y, slot, opts = {}) {
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (decosAt(k) && decosAt(k)[slot]) return decosAt(k).every(Boolean) ? 'Alle 4 Ecken sind belegt' : 'Diese Ecke ist schon belegt';
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
+  if (opts.noCost) return null;
   if (state.money < d.cost + clearCost(b, x, y)) return 'Zu wenig Taler';
   return matError(d.mat);
 }

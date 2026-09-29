@@ -635,6 +635,7 @@ function drawSparkles(now, z) {
 }
 
 function addFloat(x, y, text, color) {
+  if (BATCH) return;                                    // viele auf einmal: runPlan zeigt die Summe
   if (floats.length > 60) floats.shift();
   floats.push({ x, y, text, color, t0: performance.now() });
 }

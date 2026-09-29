@@ -1,15 +1,15 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Planen: Linie (Weg, Schiene) und Rechteck (Gelände, Weg-Fläche)
+// Planen: Linie (Weg, Schiene) und Rechteck (Gelände, Weg-Fläche, Abriss, kleine Deko)
 // Erst die Vorschau mit Anzahl und Preis, dann bestätigen – so passiert nichts aus Versehen.
 // ---------------------------------------------------------------------------
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'schiene']);
 const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels']);
-const dragKind = t => t === 'schiene' ? 'line' : RECT_TOOLS.has(t) ? 'rect' : null;
+const dragKind = t => t === 'schiene' ? 'line' : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) ? 'rect' : null;
 const PLAN_MAX = { line: 80, rect: 24 };        // Linie: Felder insgesamt, Rechteck: Seitenlänge
 
-// { kind: 'line'|'rect', tool, a: {x, y}, b: {x, y}, fixed, dragging }
+// { kind: 'line'|'rect', tool, a: {x, y}, b: {x, y}, fixed, dragging, slot (kleine Deko: in welche Ecke) }
 //   fixed = false: Linie per Klick begonnen, das Ende folgt der Maus – der nächste Klick baut
 //   fixed = true:  die Vorschau steht – Klick/Tippen hinein baut, daneben bricht ab (Touch-Linie: neues Ende)
 let plan = null;
@@ -44,8 +44,8 @@ function planEnd(kind, a, b) {
   if (over > 0) { const f = (m - 1) / (Math.abs(dx) + Math.abs(dy)); dx = Math.round(dx * f); dy = Math.round(dy * f); }
   return { x: a.x + dx, y: a.y + dy };
 }
-function startPlan(kind, a, b, fixed) {
-  plan = { kind, tool, a: { x: a.x, y: a.y }, b: planEnd(kind, a, b), fixed, dragging: false };
+function startPlan(kind, a, b, fixed, slot = 0) {
+  plan = { kind, tool, a: { x: a.x, y: a.y }, b: planEnd(kind, a, b), fixed, dragging: false, slot };
 }
 function setPlanEnd(b) { if (plan) plan.b = planEnd(plan.kind, plan.a, b); }
 function cancelPlan() { plan = null; }
@@ -68,6 +68,8 @@ function planCheck(b, x, y) {
 // Alle Felder prüfen. Schiene/Aufschütten ins Meer: jedes Feld macht das nächste erreichbar – also in Runden
 // prüfen und die neuen Felder dabei kurz als eigen zählen (danach wieder weg).
 function planScan(p) {
+  if (p.tool === 'abriss') return scanDemolish(p);
+  if (ITEMS[p.tool].small) return scanSmall(p);
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [];
   let cost = 0, firstErr = null, rest = planTiles(p);
   try {
@@ -78,7 +80,7 @@ function planScan(p) {
         if (c.err) { next.push([x, y, c.err]); continue; }
         states.set(k, c.same ? 'same' : 'ok');
         if (c.same) continue;
-        order.push([x, y]);
+        order.push([x, y, () => build(b, x, y, true)]);
         cost += c.cost || 0;
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
@@ -91,25 +93,84 @@ function planScan(p) {
     }
   } finally { for (const k of tmp) state.claimed.delete(k); }
   const bad = [...states.values()].filter(s => s === 'bad').length;
-  return { states, order, n: order.length, cost, mat, bad, firstErr };
+  return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
+}
+// Kleine Deko: je Feld eine, in derselben Ecke wie am Anfang (ist sie belegt, die nächste freie)
+function scanSmall(p) {
+  const b = p.tool, d = ITEMS[b], states = new Map(), order = [], mat = {};
+  let cost = 0, firstErr = null;
+  for (const [x, y] of planTiles(p)) {
+    const slot = freeSlot(x, y, p.slot), err = smallError(b, x, y, slot, { noCost: true });
+    states.set(x + ',' + y, err ? 'bad' : 'ok');
+    if (err) { firstErr = firstErr || err; continue; }
+    order.push([x, y, () => buildSmall(b, x, y, slot)]);
+    cost += d.cost + clearCost(b, x, y);
+    for (const [r, n] of Object.entries(d.mat || {})) mat[r] = (mat[r] || 0) + n;
+  }
+  const bad = [...states.values()].filter(s => s === 'bad').length;
+  return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
+}
+// Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt.
+// Leeres bleibt hell, was nicht geht (Rathaus, Sehenswürdigkeit, ragt hinaus) rot.
+function scanDemolish(p) {
+  const states = new Map(), order = [], clear = [], [x0, y0, x1, y1] = planBox(p), seen = new Set();
+  let gain = 0, cost = 0, things = 0, firstErr = null, lost = 0, freed = 0;
+  const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  for (const [x, y] of planTiles(p)) {
+    const k = x + ',' + y, ds = decosAt(k);
+    if (ds) ds.forEach((dd, slot) => {
+      if (!dd) return;
+      order.push([x, y, () => { removeSmall(x, y, slot); return true; }]);
+      gain += ITEMS[dd.b].cost; things++; states.set(k, 'ok');
+    });
+    const a = anchorAt(x, y), t = a && state.tiles.get(a);
+    if (t) {
+      if (seen.has(a)) continue;
+      seen.add(a);
+      const [ax, ay] = keyXY(a), fp = footprint(t.b, ax, ay, t.rot || 0), info = demolishInfo(ax, ay);
+      const whole = fp.every(([fx, fy]) => inside(fx, fy)), err = !whole ? 'Ragt aus dem Rechteck heraus' : info.err;
+      for (const [fx, fy] of fp) if (inside(fx, fy)) states.set(fx + ',' + fy, err ? 'bad' : 'ok');
+      if (err) { firstErr = firstErr || err; continue; }
+      order.push([ax, ay, () => { demolish(ax, ay); return true; }]);
+      gain += info.refund; things++;
+      lost += t.b === 'haus' ? HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop : (ITEMS[t.b].pop || 0) * t.lvl;
+      freed += jobsOf(t);
+      continue;
+    }
+    const info = ownedTile(x, y) ? demolishInfo(x, y) : { err: 'nichts' };
+    if (info.cost) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
+    else if (!states.has(k)) states.set(k, 'same');
+  }
+  if (lost && T.pop - lost < T.jobs - freed) firstErr = 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.';
+  const bad = [...states.values()].filter(s => s === 'bad').length;
+  return { states, order: order.concat(clear), n: things + clear.length, things, cleared: clear.length, cost, gain, mat: {}, bad, firstErr,
+    block: lost && T.pop - lost < T.jobs - freed };
 }
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch
 let planMemo = null;
 function planInfo(p) {
-  const key = [p.kind, p.tool, p.a.x, p.a.y, p.b.x, p.b.y, STYLES[p.tool] ? currentStyle(p.tool) : '', groundVersion].join();
+  const key = [p.kind, p.tool, p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', groundVersion].join();
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
-  const err = !m.n ? m.firstErr || 'Hier ist schon alles fertig'
-    : state.money < m.cost ? `Zu wenig Taler (${fmt(m.cost)} nötig)` : matError(m.mat);
+  const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')
+    : m.block ? m.firstErr
+    : state.money + m.gain < m.cost ? `Zu wenig Taler (${fmt(m.cost)} nötig)` : matError(m.mat);
   return { ...m, err };
 }
 function planText(p, info) {
-  const d = ITEMS[p.tool], parts = [`${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`];
-  if (info.cost) parts.push('−' + fmt(info.cost));
+  const d = ITEMS[p.tool], parts = [];
+  if (p.tool === 'abriss') {
+    if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
+    if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
+  } else {
+    parts.push(d.small ? `${d.name} ×${info.n}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
+    if (info.cost) parts.push('−' + fmt(info.cost));
+  }
   if (matText(info.mat)) parts.push(matText(info.mat));
   if (info.bad) parts.push(`${info.bad} ${info.bad === 1 ? 'geht' : 'gehen'} nicht`);
   if (info.err) return info.n ? `${info.err} · ${parts.join(' · ')}` : info.err;
-  parts.push(planTouch ? 'nochmal tippen: bauen' : p.fixed ? 'hineinklicken: bauen' : 'Klick: bauen');
+  const verb = p.tool === 'abriss' ? 'abreißen' : 'bauen';
+  parts.push(planTouch ? `${p.kind === 'line' ? 'nochmal tippen' : 'hineintippen'}: ${verb}` : `${p.fixed ? 'hineinklicken' : 'Klick'}: ${verb}`);
   return parts.join(' · ');
 }
 
@@ -120,11 +181,11 @@ function runPlan() {
   plan = null;
   const money0 = state.money;
   let n = 0;
-  batch(() => { for (const [x, y] of info.order) if (build(p.tool, x, y, true)) n++; });
+  batch(() => { for (const [, , run] of info.order) if (run()) n++; });
   if (!n) return false;
-  sfx(TERRAFORM[p.tool] || p.tool === 'graben' || p.tool === 'schuett' ? 'dig' : 'road');
-  const [ex, ey] = info.order[info.order.length - 1];
-  if (money0 > state.money) addFloat(ex, ey, '−' + fmt(money0 - state.money), '#d9534a');
+  sfx(ITEMS[p.tool].small ? 'deco' : p.tool === 'weg' || p.tool === 'schiene' ? 'road' : 'dig');
+  const [ex, ey] = info.order[info.order.length - 1], diff = state.money - money0;
+  if (Math.round(diff)) addFloat(ex, ey, (diff > 0 ? '+' : '−') + fmt(Math.abs(diff)), diff > 0 ? '#3f8f43' : '#d9534a');
   checkStars();
   return true;
 }
