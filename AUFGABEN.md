@@ -53,7 +53,7 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
       zwischen verschiedenen Wegtypen, Trittsteine ohne Lücken, Stil-Leiste nicht breiter als der Bildschirm.
 - [ ] **Mehrere kleine Dekos auf einem Feld** – auch der Baum (Baum, Blumentopf, Busch, Bank).
 - [ ] **Kristall-Deko mit Sinn:** Kristall-Laternen, Glas-/Kristalldinge.
-- [ ] **Alles aktualisiert sich live:** offene Fenster (Sehenswürdigkeit, Gebäude, Insel, Forschung, Rathaus) werden
+- [x] **Alles aktualisiert sich live:** offene Fenster (Sehenswürdigkeit, Gebäude, Insel, Forschung, Rathaus) werden
       grün, sobald man sich etwas leisten kann – ohne neu anzuklicken.
 - [x] **Namensschilder** einiger Sehenswürdigkeiten sitzen noch verschoben.
 

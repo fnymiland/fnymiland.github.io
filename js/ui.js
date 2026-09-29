@@ -143,7 +143,7 @@ function renderStyleBar(t) {
 
 const canResearch = () => TECHS.some(t => techReady(t) && state.science >= t.cost);
 
-let goalSmall = false;
+let goalSmall = false, unlockSig = '';
 function updateHud() {
   $('money').textContent = fmt(state.money);
   $('rate').textContent = '+' + fmtRate(T.inc) + '/s';
@@ -175,7 +175,11 @@ function updateHud() {
   goal.style.top = top + 'px';
   if (window.innerWidth > 600 && !$('panel').classList.contains('float')) $('panel').style.top = top + 'px';
   goal.classList.toggle('small', goalSmall);
-  goal.innerHTML = goalHtml();
+  setHtml(goal, goalHtml(), true);
+  // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
+  const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('');
+  if (sig !== unlockSig) { if (unlockSig) buildToolbar(); unlockSig = sig; }
+  refreshLive();
 }
 $('goal').onclick = e => {
   if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }
@@ -187,12 +191,59 @@ $('goal').onclick = e => {
 };
 $('diary-btn').onclick = () => openDiary();
 
+// Offene Fenster aktualisieren sich live: Jedes merkt sich, wie es geöffnet wurde (live), updateHud baut es
+// neu, und patch() ändert nur, was sich unterscheidet – Knöpfe, Fokus und Scrollstand bleiben erhalten.
+let panelLive = null, modalLive = null, liveNow = false, pressIn = null;
+const nodeKey = n => n.nodeType === 1 ? n.nodeName + '#' + n.id + '.' + n.className : n.nodeName;
+function patch(from, to) {
+  // gleicher Anfang und gleiches Ende bleiben stehen, nur die Mitte wird ausgetauscht
+  const a = [...from.childNodes], b = [...to.childNodes];
+  let s = 0, ea = a.length, eb = b.length;
+  while (s < ea && s < eb && nodeKey(a[s]) === nodeKey(b[s])) s++;
+  while (ea > s && eb > s && nodeKey(a[ea - 1]) === nodeKey(b[eb - 1])) { ea--; eb--; }
+  const ref = a[ea] || null;
+  for (let i = s; i < ea; i++) from.removeChild(a[i]);
+  for (let i = s; i < eb; i++) from.insertBefore(b[i], ref);
+  const pairs = [];
+  for (let i = 0; i < s; i++) pairs.push([a[i], b[i]]);
+  for (let i = 0; i < a.length - ea; i++) pairs.push([a[ea + i], b[eb + i]]);
+  for (const [n, m] of pairs) {
+    if (n.nodeType !== 1) { if (n.nodeValue !== m.nodeValue) n.nodeValue = m.nodeValue; continue; }
+    for (const at of [...n.attributes]) if (!m.hasAttribute(at.name)) n.removeAttribute(at.name);
+    for (const at of m.attributes) if (n.getAttribute(at.name) !== at.value) n.setAttribute(at.name, at.value);
+    if ('disabled' in n) n.disabled = m.hasAttribute('disabled');
+    patch(n, m);
+  }
+}
+function setHtml(el, html, keep = liveNow) {
+  if (!keep) { el.innerHTML = html; return; }
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  patch(el, tpl.content);
+}
+// Nicht auffrischen, während jemand tippt oder gerade einen Knopf drückt
+const busy = el => pressIn === el || (el.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
+function refreshLive() {
+  if (liveNow) return;
+  liveNow = true;
+  try {
+    if (panelLive && !$('panel').hidden && !busy($('panel'))) panelLive();
+  } catch (e) { console.error(e); closePanel(); }
+  try {
+    if (modalLive && !$('modal').hidden && !busy($('modal'))) modalLive();
+  } catch (e) { console.error(e); modalLive = null; }
+  liveNow = false;
+}
+addEventListener('pointerdown', e => { pressIn = e.target.closest && e.target.closest('#panel, #modal'); }, true);
+for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { pressIn = null; }, true);
+
 // Infofenster
-function closePanel() { $('panel').hidden = true; }
-function showPanel(html) {
+function closePanel() { $('panel').hidden = true; panelLive = null; }
+function showPanel(html, live = null) {
   const el = $('panel');
-  el.classList.remove('float'); el.style.left = '';
-  el.innerHTML = html; el.hidden = false;
+  if (!liveNow) { el.classList.remove('float'); el.style.left = ''; }
+  setHtml(el, html); el.hidden = false;
+  panelLive = live;
   return el;
 }
 // Fenster neben eine Stelle auf dem Bildschirm setzen (nicht auf schmalen Bildschirmen)
@@ -325,7 +376,7 @@ function openInfo(x, y) {
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
       <button class="btn ghost" id="p-close">Schließen</button>
-    </div>`);
+    </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
   $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
@@ -358,7 +409,7 @@ function openInfo(x, y) {
   if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
-  updateHud();
+  if (!liveNow) updateHud();
 }
 
 function openDecoInfo(x, y, slot) {
@@ -403,7 +454,8 @@ function openLandmark(x, y) {
     ${info.stage && half ? '<div class="status"><div class="bad">🐌 Weit weg vom Dorf: wirkt nur halb.</div></div>' : ''}
     ${info.stage && owned ? `<p class="muted">✨ Alles in ${LM_RADIUS} Feldern Umkreis: +${Math.round(LM_BOOST * 100 * (half ? 0.5 : 1))} % Produktion</p>` : ''}
     ${body}
-    <div class="row">${info.stage && owned ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`);
+    <div class="row">${info.stage && owned ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`,
+    () => state.tiles.get(x + ',' + y) === t ? openLandmark(x, y) : closePanel());
   if ($('p-restore')) $('p-restore').onclick = () => { if (restoreLandmark(type)) closePanel(); };
   if ($('p-move')) $('p-move').onclick = () => startMove(x, y);
   $('p-close').onclick = closePanel;
@@ -423,7 +475,7 @@ function openIsle(id, sx, sy) {
       ${i.need.money || i.need.science ? '<p class="muted">Taler und Ideen werden dabei ausgegeben.</p>' : ''}
       <div class="row"><button class="btn" id="p-isle" ${ok ? '' : 'disabled'}>🏝️ Erschließen</button><button class="btn ghost" id="p-close">Schließen</button></div>`
     : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} erschließen</div></div>
-      <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`}`);
+      <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`}`, () => isleOpen(id) ? closePanel() : openIsle(id));
   if ($('p-isle')) $('p-isle').onclick = () => { closePanel(); unlockIsland(id); };
   $('p-close').onclick = closePanel;
   panelAt(sx, sy);
@@ -482,7 +534,7 @@ function openResearch(tab = researchTab) {
       <button class="look${tab === 'design' ? ' on' : ''}" data-rtab="design">🎨 Kunstakademie</button>
     </div>
     ${body}
-    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`, () => openResearch(tab));
   $('modal-card').classList.add('research');
   for (const b of document.querySelectorAll('[data-rtab]')) b.onclick = () => { sfx('deco'); openResearch(b.dataset.rtab); };
   for (const b of document.querySelectorAll('[data-tech]')) b.onclick = () => research(b.dataset.tech);
@@ -600,7 +652,7 @@ function openTownHall(tab = hallTab) {
     <h2>🏛️ Rathaus von ${escHtml(state.town.name)}</h2>
     <div class="looks hall-tabs">${tabs.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-tab="${id}">${label}${id === 'ready' && ready.length ? ` ✨${ready.length}` : ''}</button>`).join('')}</div>
     ${body}
-    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`);
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`, () => openTownHall(tab));
   const card = $('modal-card');
   card.classList.add('hall');
   for (const b of card.querySelectorAll('[data-tab]')) b.onclick = () => { sfx('deco'); openTownHall(b.dataset.tab); };
@@ -625,8 +677,8 @@ $('town-btn').onclick = () => { setTool('look'); openTownHall(); };
 $('rot-btn').onclick = () => rotateBuild();
 
 // Dialoge
-function openModal(html) { const c = $('modal-card'); c.className = 'card'; c.innerHTML = html; $('modal').hidden = false; }
-function closeModal() { $('modal').hidden = true; }
+function openModal(html, live = null) { const c = $('modal-card'); c.className = 'card'; setHtml(c, html); $('modal').hidden = false; modalLive = live; }
+function closeModal() { $('modal').hidden = true; modalLive = null; }
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 
 function showIntro(first) {
