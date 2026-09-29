@@ -16,7 +16,7 @@ describe('Baumenü', () => {
   it('oben vier Bereiche, bei „Bauen“ darunter die Filter', () => {
     game("menuTop = 'bauen'; menuSub = 'alle'; buildToolbar()");
     expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['bauen', 'schoen', 'verbinden', 'land']);
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['alle', 'wohnen', 'geld', 'rohstoffe', 'boost', 'bildung', 'wunder']);
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['alle', 'wohnen', 'geld', 'rohstoffe', 'boost', 'bildung', 'strom', 'wunder']);
     expect(document.getElementById('subcats').hidden).toBe(false);
   });
 

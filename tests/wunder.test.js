@@ -19,7 +19,7 @@ describe('Wunderwerke', () => {
   });
 
   it('erst eine Baustelle: ohne Wirkung, Abschnitt für Abschnitt – fertig gibt es ein Fest und die Wirkung', () => {
-    game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; recalc()");
+    game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; for (let i = 0; i < 4; i++) state.tiles.set((5 + i) + ',14', { b: 'windrad', lvl: 1 }); recalc()");
     const inc0 = game('T.inc');
     expect(game("build('riesenrad', 8, 8, true)")).toBe(true);
     expect(game("state.tiles.get('8,8').phase")).toBe(0);

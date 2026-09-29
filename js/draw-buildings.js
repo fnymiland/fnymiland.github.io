@@ -669,6 +669,119 @@ const BUILDING_ART = {
     if (s === 3) { const a2 = wa * 1.35 - (wb ? 0.5 : 0), b2 = wb * 1.35 - (wa ? 0.5 : 0); parts.push([a2, b2, () => kBoat(K, a2, b2, now, true)]); }
     K.scene(parts);
   },
+  // --- Strom ---
+  // Wasserkraftwerk: Steinhäuschen, das Wasserrad dreht sich auf der Wasserseite (vorn)
+  wasserkraft(K, s, now, x, y, t) {
+    const z = K.z;
+    const house = () => {
+      kShadow(K, 0.3);
+      const [wall, roof] = paint(t, '#e7dccb', '#6f8fd8');
+      const B = K.block({ a: -0.12, ha: 0.24, hb: 0.3, h: 17, wall, roof, roofH: 11, entry: true });
+      K.door(B, 'front', 0.62, 0.82, 0.6);
+      K.sideWins(B, 1, 0.4, 0.75);
+      const [px, py] = K.P(-0.2, 0.22, 17 + 12);                           // Isolatoren und Leitung
+      kLine(K, [px, py], [px, py - 8 * z], '#6b6f78', 1.2); circle(px, py - 8 * z, 1.3 * z, C('#f2f2ee'));
+    };
+    const wheel = () => {
+      const a0 = 0.3, b0 = -0.06, rb = 0.24, rh = rb * 36, h0 = rh + 1, spin = now / 900;
+      const P = (th, r = 1) => K.P(a0, b0 + Math.cos(th) * rb * r, h0 + Math.sin(th) * rh * r);
+      const rim = r => { g.beginPath(); for (let i = 0; i <= 24; i++) { const p = P(i / 24 * Math.PI * 2, r); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke(); };
+      g.strokeStyle = C('#8a5a3c'); g.lineWidth = 2.2 * z; rim(1);
+      g.lineWidth = 1.2 * z; rim(0.55);
+      g.beginPath();
+      for (let i = 0; i < 8; i++) { const th = spin + i * Math.PI / 4, p = P(th, 0.2), q = P(th, 1.12); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+      g.stroke();
+      const c = P(0, 0); circle(c[0], c[1], 1.8 * z, C('#5a5a68'));
+      const bot = P(Math.PI * 1.5 + 0.0001, 1);                            // unten spritzt es
+      for (let i = 0; i < 4; i++) { const f = (now / 500 + i / 4) % 1; circle(bot[0] + (i - 1.5) * 3 * z, bot[1] + 2 * z - f * 5 * z, (1.4 - f) * z, `rgba(230,248,255,${0.9 - f * 0.8})`); }
+    };
+    K.scene([[-0.12, 0, house], [0.3, -0.06, wheel]]);
+  },
+  // Solarfeld (2×2): drei Reihen schräger Paneele aus Kristallglas auf Kies, mit Wechselrichter-Kasten
+  solarfeld(K, s, now, x, y, t, ha, hb) {
+    const z = K.z;
+    if (groundPart(() => {
+      K.rect(-0.96, -0.96, 0.96, 0.96, C('#dcd4c3'));
+      g.save(); clipTo([[[-0.96, -0.96], [0.96, -0.96], [0.96, 0.96], [-0.96, 0.96]]], p => K.P(p[0], p[1]));
+      pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'dots', x, y, z, null, ['#cbc2ae', '#e8e1d2']);
+      g.restore();
+    })) return;
+    const lit = night > 0.15 && isLive();
+    const row = a0 => () => {
+      for (const b of [-0.72, 0, 0.72]) { kPost(K, a0 + 0.08, b, 4, '#8a8f99', 1); kPost(K, a0 - 0.1, b, 10, '#8a8f99', 1); }
+      const lo = 4, hi = 12, pa = a0 + 0.14, pb = a0 - 0.16;
+      const Q = (a, b, up) => K.P(a, b, up);
+      const quad = [Q(pa, -0.8, lo), Q(pa, 0.8, lo), Q(pb, 0.8, hi), Q(pb, -0.8, hi)];
+      poly(quad, C('#e8eef5'));
+      const inner = [Q(pa - 0.02, -0.76, lo + 0.5), Q(pa - 0.02, 0.76, lo + 0.5), Q(pb + 0.02, 0.76, hi - 0.5), Q(pb + 0.02, -0.76, hi - 0.5)];
+      poly(inner, lit ? '#2f3f63' : C('#6fa6de'));
+      g.strokeStyle = lit ? 'rgba(140,170,220,0.5)' : C('#b9dcf7'); g.lineWidth = 0.7 * z; g.beginPath();
+      for (let i = 1; i < 6; i++) { const p = lerp(inner[0], inner[1], i / 6), q = lerp(inner[3], inner[2], i / 6); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+      const m0 = lerp(inner[0], inner[3], 0.5), m1 = lerp(inner[1], inner[2], 0.5); g.moveTo(m0[0], m0[1]); g.lineTo(m1[0], m1[1]);
+      g.stroke();
+      if (!lit) {                                                              // wandernder Glanz
+        const f = ((now / 4000 + a0) % 1 + 1) % 1, p0 = lerp(inner[0], inner[1], f), p1 = lerp(inner[3], inner[2], Math.min(1, f + 0.08));
+        g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2 * z; g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke();
+      }
+    };
+    K.scene([[-0.6, 0, row(-0.6)], [0, 0, row(0)], [0.6, 0, row(0.6)],
+      [0.82, 0.82, () => { const B = K.block({ a: 0.82, b: 0.82, ha: 0.08, hb: 0.1, h: 8, wall: '#f2efe8', type: 'flat', roof: '#dcd6ca' }); K.door(B, 'front', 0.3, 0.7, 0.7, '#8fa3b8'); }]]);
+  },
+  // Geothermie (2×2): warmer Boden mit dampfenden Becken, Maschinenhaus und zwei runde Kühltürme mit Dampf
+  geothermie(K, s, now, x, y, t) {
+    const z = K.z;
+    if (groundPart(() => {
+      K.rect(-0.96, -0.96, 0.96, 0.96, C('#d8c7a6'));
+      K.oval(0.62, 0.55, 0.26, C('#b9a680')); K.oval(0.62, 0.55, 0.21, C('#7fd6d6'));
+      K.oval(-0.62, 0.6, 0.2, C('#b9a680')); K.oval(-0.62, 0.6, 0.16, C('#8fdcd0'));
+    })) return;
+    const steam = (x0, y0, k, big) => {
+      for (let i = 0; i < (big ? 4 : 2); i++) {
+        const ph = (now / (big ? 2600 : 1800) + i / (big ? 4 : 2) + k) % 1;
+        circle(x0 + Math.sin(ph * 5 + k) * 3 * z, y0 - ph * (big ? 34 : 14) * z, ((big ? 5 : 2.5) + ph * (big ? 8 : 4)) * z, `rgba(255,255,255,${(big ? 0.75 : 0.6) * (1 - ph)})`);
+      }
+    };
+    const tower = (a, b) => () => {
+      const [px, py] = K.P(a, b), rx = 13 * z, H = 24 * z;
+      cyl(px, py, rx, rx / 2, H, '#e6e0d3');
+      ellipse(px, py - H, rx * 0.86, rx * 0.43, C('#9a948a'));
+      g.strokeStyle = C('#cfc8ba'); g.lineWidth = 1.4 * z; g.beginPath(); g.ellipse(px, py - H * 0.45, rx, rx / 2, 0, 0, Math.PI); g.stroke();
+      steam(px, py - H - 2 * z, a + b, true);
+    };
+    const hall = () => {
+      kShadow(K, 0.6);
+      const [wall, roof] = paint(t, '#f1e7d6', '#d9825b');
+      const B = K.block({ a: -0.2, b: 0.2, ha: 0.42, hb: 0.3, h: 16, wall, roof, roofH: 9, entry: true });
+      K.door(B, 'front', 0.4, 0.62, 0.62);
+      K.wins(B, 'front', 3, 0.35, 0.72, 0.1, 0.9, [1]); K.sideWins(B, 2, 0.35, 0.72);
+      const p0 = K.P(0.25, -0.2, 6), p1 = K.P(0.45, -0.55, 6), p2 = K.P(-0.35, -0.2, 6), p3 = K.P(-0.55, -0.55, 6);   // Rohre
+      kLine(K, p0, p1, '#b9c0ca', 2.2); kLine(K, p2, p3, '#b9c0ca', 2.2);
+    };
+    const pools = () => { const [ax, ay] = K.P(0.62, 0.55); steam(ax, ay - 1 * z, 0.3, false); const [bx, by] = K.P(-0.62, 0.6); steam(bx, by - 1 * z, 0.7, false); };
+    K.scene([[-0.55, -0.55, tower(-0.55, -0.55)], [0.45, -0.55, tower(0.45, -0.55)], [-0.2, 0.2, hall], [0.62, 0.62, pools]]);
+  },
+  // Wellenkraftwerk: Plattform auf Pfählen im Meer, kleines Häuschen, ringsum wippende gelbe Bojen an Leinen
+  wellen(K, s, now, x, y, t) {
+    const z = K.z, lit = night > 0.15 && isLive();
+    const buoys = [[0.36, 0.3], [-0.34, 0.34], [0.34, -0.36], [-0.3, -0.3]];
+    const bob = (i) => Math.sin(now / 520 + i * 1.7) * 2 * z;
+    const buoy = (i) => () => {
+      const [a, b] = buoys[i], [px, py0] = K.P(a, b), py = py0 + bob(i);
+      const [cx0, cy0] = K.P(0, 0, 8);
+      g.strokeStyle = C('#6b6f78'); g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(px, py - 2 * z); g.lineTo(cx0, cy0); g.stroke();
+      ellipse(px, py + 1 * z, 5 * z, 2 * z, 'rgba(230,248,255,0.7)');
+      cyl(px, py, 4 * z, 2 * z, 5 * z, '#f2c14e');
+      ellipse(px, py - 5 * z, 4 * z, 2 * z, C('#e8604f'));
+    };
+    const platform = () => {
+      for (const [a, b] of [[-0.18, -0.18], [0.18, -0.18], [0.18, 0.18], [-0.18, 0.18]]) kPost(K, a, b, 8, '#6f5238', 1.6);
+      K.block({ ha: 0.24, hb: 0.24, h: 2, lift: 7, wall: '#8a6440', type: 'flat', roof: '#c29a6a' });
+      const B = K.block({ a: -0.04, ha: 0.12, hb: 0.14, h: 10, lift: 9, wall: '#f7f5f0', roof: '#e8604f', roofH: 7 });
+      K.door(B, 'front', 0.35, 0.65, 0.7, '#8fa3b8');
+      if (lit && Math.floor(now / 800) % 2 === 0) { const [lx, ly] = K.P(-0.04, 0, 27); circle(lx, ly, 1.5 * z, '#fff3b0'); glowQuad([[lx - 2, ly - 2], [lx + 2, ly - 2], [lx + 2, ly + 2], [lx - 2, ly + 2]], 20 * z); }
+    };
+    K.scene(buoys.map(([a, b], i) => [a, b, buoy(i)]).concat([[0, 0, platform]]));
+  },
   // --- Bildung ---
   schule(K, s, now, x, y, t) {
     const [SW, SR] = paint(t, '#f6d7a7', '#d96c4f');

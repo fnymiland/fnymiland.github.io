@@ -891,7 +891,7 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
 const MIRROR = new Set(['bank']);
 const ROTATABLE = new Set([...MIRROR, 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'haus', 'muehle', 'steinmetz', 'schmiede',
-  'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm']);
+  'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld']);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
@@ -906,7 +906,7 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
-const GROUND_TYPES = new Set(['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm']);
+const GROUND_TYPES = new Set(['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
 const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
@@ -956,11 +956,23 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Verkehr & Strom ---
-    case 'windrad': {
-      ellipse(cx, cy + 1 * z, 5 * z, 2.5 * z, 'rgba(40,60,20,0.15)');
-      g.strokeStyle = C('#f4f4f4'); g.lineWidth = 3 * z; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 38 * z); g.stroke();
-      blades(cx, cy - 39 * z, z, now * 1.4, 3, 16 * z, '#ffffff');
+    case 'windrad': {                        // Stufe 1 Windrad, 2 Großes Windrad, 3 Windturbine (schlank, rote Spitzen)
+      const s = Math.max(1, Math.min(lvl || 1, 3)), H = [38, 56, 80][s - 1], w0 = [3, 4.4, 5.4][s - 1] * z, w1 = [3, 2.4, 2.6][s - 1] * z;
+      ellipse(cx, cy + 1 * z, (4 + s * 2) * z, (2 + s) * z, 'rgba(40,60,20,0.15)');
+      if (s > 1) box(cx, cy, 5 * z, 2.6 * z, 3 * z, '#e3ddd1', null, 0);                   // Sockel
+      poly([[cx - w0 / 2, cy], [cx + w0 / 2, cy], [cx + w1 / 2, cy - H * z], [cx - w1 / 2, cy - H * z]], C('#f4f4f4'));
+      poly([[cx, cy], [cx + w0 / 2, cy], [cx + w1 / 2, cy - H * z], [cx, cy - H * z]], C('#dedbd4'));
+      const hy = cy - (H + 1) * z;
+      if (s > 1) ellipse(cx + 1.5 * z, hy, (2.5 + s) * z, 2.4 * z, C('#e9e6df'));        // Gondel
+      blades(cx, hy, z, now * (s === 3 ? 0.9 : 1.2), 3, [16, 24, 34][s - 1] * z, '#ffffff');
+      if (s === 3) {                                                                      // rote Flügelspitzen
+        const ang = now * 0.9 / 650;
+        for (let i = 0; i < 3; i++) { const a = ang + i * Math.PI * 2 / 3; circle(cx + Math.cos(a) * 32 * z, hy + Math.sin(a) * 32 * z, 1.6 * z, C('#e8604f')); }
+      }
+      circle(cx, hy, (1.8 + s * 0.4) * z, C('#8a8f99'));
+      if (s === 3 && night > 0.15 && isLive() && Math.floor(now / 700) % 2 === 0) {       // Warnlicht nachts
+        circle(cx + 3 * z, hy - 2.5 * z, 1.4 * z, '#ff4a3d'); glowQuad([[cx + 2, hy - 4 * z], [cx + 4, hy - 4 * z], [cx + 4, hy - 1 * z], [cx + 2, hy - 1 * z]], 14 * z);
+      }
       break;
     }
     // --- Bildung ---

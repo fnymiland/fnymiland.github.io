@@ -50,3 +50,13 @@ describe('Sammelalbum', () => {
     }
   });
 });
+
+describe('Album-Belohnungen bleiben', () => {
+  it('wer die Seite „Gebäude“ voll hatte, behält das Denkmal – auch wenn die Kraftwerke neu dazukommen', () => {
+    game("for (const k of albumKeys(ALBUM.find(p => p.id === 'gebaeude'))) if (!LATE_ALBUM.has(k)) state.album.add(k)");
+    game('collectAlbum()');
+    expect(game("available('denkmal')")).toBe(true);
+    game('save()');
+    expect(game("load().legacy.has('denkmal')")).toBe(true);
+  });
+});

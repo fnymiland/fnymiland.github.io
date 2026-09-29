@@ -185,7 +185,8 @@ function totals() {
     return b;
   };
   const klippe = lmOn.get('klippe') || lmHalf.get('klippe');
-  const harbors = [...state.tiles.values()].filter(t => t.b === 'hafen').length;
+  const idle = rail.power.idle, off = k => idle.has(k) ? NO_POWER : 1;      // ohne Strom: halbe Wirkung
+  const harbors = [...state.tiles].filter(([, t]) => t.b === 'hafen').reduce((n, [k]) => n + off(k), 0);
   const gmul = 1 + (hasTech('schiffbau') ? 0.12 : 0.08) * harbors;
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
@@ -193,9 +194,10 @@ function totals() {
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
-    beauty += beautyOf(t, x, y);
+    beauty += beautyOf(t, x, y) * (t.b === 'glashaus' || t.b === 'botgarten' ? off(k) : 1);
     if (t.b === 'lm') continue;
     const s = st.get(k);
+    if (idle.has(k)) s.noPower = true;
     s.lmb = lmNear(x, y);
     s.rail = railMul(x, y);
     const m = s.eff * (1 + s.bonus) * s.lmb * s.rail;
@@ -209,17 +211,17 @@ function totals() {
       }
     }
     if (d.conv) {
-      s.conv = d.conv.rate * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m;
+      s.conv = d.conv.rate * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * off(k);
       conv.push({ ...d.conv, rate: s.conv });
     }
     if (d.cat === 'bau' && !d.prod && !d.conv) {
       let v = rawIncome(t.b, x, y) * t.lvl * (1 + 0.15 * beetBonus(x, y)) * m * gmul;
-      if (rail.power.idle.has(k)) { v *= NO_POWER; s.noPower = true; }        // Werkstatt ohne Strom
+      v *= off(k);                                                            // Werkstatt ohne Strom
       if (t.b === 'muehle' && klippe && lmStage('klippe') >= 2 && Math.hypot(x - klippe[0], y - klippe[1]) <= LM_RADIUS) v *= 1 + lmFactor('klippe');
       s.inc = v; inc += v;
     }
     if (d.science) {
-      const v = d.science * t.lvl * m * (t.b === 'schule' ? schoolFactor : 1) * (t.b === 'bibliothek' && hasTech('bibliothek') ? 2 : 1);
+      const v = d.science * t.lvl * m * (t.b === 'schule' ? schoolFactor : 1) * (t.b === 'bibliothek' && hasTech('bibliothek') ? 2 : 1) * off(k);
       s.sci = v; sci += v;
     }
   }
@@ -237,14 +239,14 @@ function totals() {
   if (hasTech('sterne')) sci *= 1.2;
   // Wunderwerke (nur fertige): Touristen, Kurgäste, Ideen, Obst – das Schloss gibt +20 % auf alles
   let allMul = 0;
-  for (const t of state.tiles.values()) {
+  for (const [k, t] of state.tiles) {
     const W = WONDERS[t.b];
     if (!W || !wonderDone(t)) continue;
-    const e = W.effect;
-    if (e.inc) inc += e.inc * gmul;
+    const e = W.effect, f = off(k);                                             // Riesenrad, Sternwarte, Garten ohne Strom: halb
+    if (e.inc) inc += e.inc * gmul * f;
     if (e.pop) pop += e.pop;
-    if (e.sciMul) sci *= 1 + e.sciMul;
-    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v;
+    if (e.sciMul) sci *= 1 + e.sciMul * f;
+    if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f;
     if (e.allMul) allMul += e.allMul;
   }
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
@@ -416,6 +418,7 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs) {
   const conds = [];
   if (d.workers) conds.push({ text: `👷 ${d.workers} ${d.workers === 1 ? 'freier Einwohner' : 'freie Einwohner'} als Mitarbeiter`, ok: pop - jobs >= d.workers });
   if (up.pop) conds.push({ text: `👥 ${up.pop} Einwohner auf der Insel`, ok: pop >= up.pop });
+  if (up.tech) conds.push({ text: `💡 Forschung „${TECH_BY_ID[up.tech].name}“`, ok: hasTech(up.tech) });
   if (up.water) conds.push({ text: `💧 Am Wasser mit mindestens ${up.water} Feldern (auch Flüsse)`, ok: waterBody(x, y, up.water) >= up.water });
   if (up.beauty) conds.push({ text: `🌸 Schöne Umgebung (${up.beauty[0]} in ${up.beauty[1]} Feldern)`, ok: beautyAround(x, y, up.beauty[1]) >= up.beauty[0] });
   if (up.near) {
@@ -523,11 +526,23 @@ function setCrossing(x, y, foot, style) {
 // Pendler (jeder weitere Zug noch einmal halb so viele), und alle Gebäude auf ihren Inseln schaffen 10 % mehr.
 const COMMUTERS = 8, RAIL_BONUS = 0.1, KM = 10, KM_PER_TRAIN = 2;
 const EXTRA_TRAIN = { money: 1500, metall: 10 };
-// Strom ⚡: Jedes Windrad liefert 1 ⚡, egal wo. Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡),
-// Werkstätten (je 2 ⚡), dann die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben nachts
-// dunkel (halbe Schönheit), Werkstätten schaffen die Hälfte, Züge stehen. Die Stadt braucht erst Strom, wenn es
-// Windräder gibt – vorher läuft alles ohne.
-const WIND_POWER = 1, LAMPS_PER_POWER = 10, WORKSHOP_POWER = 2, NO_POWER = 0.5;
+// Strom ⚡: Kraftwerke liefern, egal wo sie stehen (Windrad je Stufe mehr; Forschung „Leichte Rotorblätter“ +50 % Wind,
+// „Intelligentes Stromnetz“ +25 % auf alles). Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡), dann
+// die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
+// nachts dunkel (halbe Schönheit), Gebäude schaffen die Hälfte (⚡ darüber), Züge stehen. Die Stadt braucht erst Strom,
+// wenn es Kraftwerke gibt (oder Windräder freigeschaltet sind) – vorher läuft alles ohne.
+const POWER_OUT = { windrad: [1, 2, 4], wasserkraft: [4], solarfeld: [3], geothermie: [8], wellen: [5] };
+const LAMPS_PER_POWER = 10, NO_POWER = 0.5;
+const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, sternwarte: 3, glashaus: 1, botgarten: 3, riesenrad: 4 };   // Reihenfolge = Vorrang
+const WORKSHOP_POWER = CONSUMERS.fabrik;
+function powerOf(t) {
+  const o = POWER_OUT[t.b];
+  if (!o) return 0;
+  let v = o[Math.min(t.lvl || 1, o.length) - 1];
+  if (t.b === 'windrad' && hasTech('rotor')) v *= 1.5;
+  if (hasTech('stromnetz')) v *= 1.25;
+  return v;
+}
 const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
 // Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs
 function railLoop(tiles, rails) {
@@ -546,11 +561,11 @@ function railLoop(tiles, rails) {
 }
 function computeRail() {
   const rails = new Set(), stations = [];
-  let wind = 0;
+  let wind = 0, plants = 0;
   for (const [k, t] of state.tiles) {
     if (t.b === 'schiene') rails.add(k);
     else if (t.b === 'station') stations.push(k);
-    else if (t.b === 'windrad') wind++;
+    else if (POWER_OUT[t.b]) { wind += powerOf(t); plants++; }
   }
   const comp = new Map(), netTiles = [];
   let nid = 0;
@@ -590,7 +605,7 @@ function computeRail() {
     lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count: Math.min(max, looks.length), need: trainNeed(tiles) });
   }
   lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
-  const power = computePower(lines, wind);
+  const power = computePower(lines, wind, plants);
   const regions = new Set(), commuters = new Map();
   for (const l of lines) if (l.powered) {
     l.regions.forEach(r => regions.add(r));
@@ -604,16 +619,21 @@ function lineLooks(stations) {
   const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
   return [{ model: t.train || 'regio', col: t.trainCol || 0 }].concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0 })));
 }
-function computePower(lines, wind) {
-  const supply = wind * WIND_POWER, city = wind > 0 || available('windrad');
+function computePower(lines, supply, plants = 0) {
+  const city = plants > 0 || available('windrad');
   let left = supply, demand = 0, trains = 0;
   const dark = new Set(), idle = new Set(), use = { lamps: 0, work: 0, trains: 0 };
-  const take = (n, what) => { demand += n; use[what] += n; if (left >= n) { left -= n; return true; } return false; };
+  const take = (n, what) => { demand += n; use[what] = (use[what] || 0) + n; if (left >= n - 1e-9) { left -= n; return true; } return false; };
   if (city) {
     const lamps = [];
     for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); });
     for (let i = 0; i < lamps.length; i += LAMPS_PER_POWER) if (!take(1, 'lamps')) lamps.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
-    for (const k of [...state.tiles.keys()].sort()) if (state.tiles.get(k).b === 'fabrik' && !take(WORKSHOP_POWER, 'work')) idle.add(k);
+    const keys = [...state.tiles.keys()].sort();
+    for (const b of Object.keys(CONSUMERS)) for (const k of keys) {
+      const t = state.tiles.get(k);
+      if (t.b !== b || (WONDERS[b] && !wonderDone(t))) continue;          // Baustellen brauchen noch nichts
+      if (!take(CONSUMERS[b], b === 'fabrik' ? 'work' : 'build')) idle.add(k);
+    }
   }
   for (const l of lines) {
     l.running = 0;
@@ -643,6 +663,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     for (const [tx, ty] of tiles) {
       if (!ownedTile(tx, ty) && !(isSea(tx, ty) && inWorld(tx, ty))) return 'Das ist nicht dein Grundstück';   // ins offene Meer darf sie
       if (COVER.has(tx + ',' + ty)) return 'Hier ist nicht genug Platz';
+      if (decosAt(tx + ',' + ty)) return 'Hier stehen schon kleine Dekos';
     }
     const back = tiles.reduce((p, q) => q[0] * dx + q[1] * dy < p[0] * dx + p[1] * dy ? q : p);
     const land = tiles.filter(([tx, ty]) => terrainAt(tx, ty) !== 'water');
@@ -652,8 +673,9 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     const tiles = footprint(b, x, y, r);
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
-      const rail = b === 'schiene';               // Schienen dürfen übers Wasser (Brücke), auch ins offene Meer
-      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy))) return rail && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
+      const rail = b === 'schiene', sea = d.needs === 'meer';   // Schienen dürfen übers Wasser (Brücke), das Wellenkraftwerk ins Meer
+      if (!ownedTile(fx, fy) && !((rail || sea) && claimable(fx, fy))) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
+      if (sea) { if (COVER.has(k)) return 'Hier steht schon etwas'; if (ter !== 'water' || !isSea(fx, fy)) return 'Ins Meer vor die Küste bauen'; continue; }
       if (COVER.has(k)) {
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
         if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
@@ -674,6 +696,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       }
     }
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
+    if (d.needs === 'meer' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => ownedTile(fx + dx, fy + dy) && terrainAt(fx + dx, fy + dy) !== 'water'))) return 'Direkt vor die Küste bauen';
+    if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)} – dort ist der Boden warm`;
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
   if (d.wonder && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${WONDERS[b].the} gibt es schon`;

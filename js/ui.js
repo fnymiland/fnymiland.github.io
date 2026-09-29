@@ -225,7 +225,7 @@ function storeHtml() {
   const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0);
   const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small></div>`; });
   const P = T.rail.power, power = P.city || P.supply
-    ? `<div class="store-row${P.demand > P.supply ? ' bad' : ''}"><span>⚡ Strom</span><b>${P.supply}/${P.demand}</b><small>erzeugt/gebraucht</small></div>` : '';
+    ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
   return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
     <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}`;
 }
@@ -493,8 +493,9 @@ function openInfo(x, y) {
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (s.rail > 1 && t.b !== 'station') status.push(`<div class="ok">🚆 Bahnanschluss der Insel: +${Math.round(RAIL_BONUS * 100)} %</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
-  if (t.b === 'windrad') status.push(...powerStatus());
-  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. Eine Werkstatt braucht ${WORKSHOP_POWER} ⚡ – mehr Windräder bauen.</div>`);
+  if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
+  else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
+  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (⚡ Strom unter Bauen).</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -646,15 +647,17 @@ function openInfo(x, y) {
 }
 
 // Strom-Bilanz: wer wie viel braucht (Windrad, Rathaus, Lager)
+const fmtPow = v => Number.isInteger(v) ? String(v) : nf1.format(v);
 function powerStatus() {
   const P = T.rail.power, parts = [];
   if (P.use.lamps) parts.push(`Laternen ${P.use.lamps}`);
   if (P.use.work) parts.push(`Werkstätten ${P.use.work}`);
+  if (P.use.build) parts.push(`andere Gebäude ${P.use.build}`);
   if (P.use.trains) parts.push(`Züge ${P.use.trains}`);
-  const out = [`<div class="${P.demand > P.supply ? 'bad' : 'ok'}">⚡ Strom: ${P.supply} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
+  const out = [`<div class="${P.demand > P.supply + 1e-9 ? 'bad' : 'ok'}">⚡ Strom: ${fmtPow(P.supply)} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
   if (P.dark.size) out.push(`<div class="bad">🌙 ${P.dark.size} ${P.dark.size === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
-  if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Werkstatt läuft' : 'Werkstätten laufen'} nur halb</div>`);
-  out.push(`<div class="muted">Je Windrad 1 ⚡ · je 10 Laternen 1 ⚡ · Werkstatt ${WORKSHOP_POWER} ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
+  if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);
+  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Sternwarte, Botanischer Garten 3 ⚡ · Riesenrad 4 ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
   return out;
 }
 // Bahnhof: wohin fährt der Zug, hat er Strom?
@@ -927,7 +930,7 @@ function openTownHall(tab = hallTab) {
         <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
         <span>🪙 +${fmtRate(T.inc)}/s</span><span>💡 +${fmtRate(T.sci)}/s</span><span>🌸 ${T.beauty}</span>
         ${T.rail.lines.length ? `<span>🚆 ${T.rail.trains} ${T.rail.trains === 1 ? 'Zug fährt' : 'Züge fahren'}</span>` : ''}
-        ${T.rail.power.city || T.rail.power.supply ? `<span>⚡ ${T.rail.power.supply}/${T.rail.power.demand}</span>` : ''}
+        ${T.rail.power.city || T.rail.power.supply ? `<span>⚡ ${fmtPow(T.rail.power.supply)}/${T.rail.power.demand}</span>` : ''}
       </div>
       ${rates.length ? `<div class="label">Lager</div><div class="stats">${rates.join('')}</div>` : ''}
       <div class="label">Laternen</div>

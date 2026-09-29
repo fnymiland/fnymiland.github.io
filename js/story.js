@@ -297,7 +297,7 @@ const GUIDE = [
   { id: 'ziehen', icon: '🖐️', title: 'Karte ziehen beim Bauen', when: () => tool !== 'look' && !!ITEMS[tool] && !!ITEMS[tool].paint,
     text: 'Mit einem Weg in der Hand baut Ziehen neue Felder. Um trotzdem die Karte zu verschieben: rechte Maustaste gedrückt halten und ziehen – oder Leertaste bzw. Ctrl halten. Auf dem iPad mit zwei Fingern. Ein kurzer Rechtsklick legt das Werkzeug weg.' },
   { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
-    text: 'Werkstätten, Laternen und Züge brauchen Strom. Jedes Windrad liefert 1 ⚡, egal wo es steht. Ohne Strom laufen Werkstätten nur halb (⚡ über dem Gebäude), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im Windrad und im Rathaus.' },
+    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter Bauen → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
     text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
 ];
@@ -374,7 +374,7 @@ const ALBUM = [
 const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
   switch (p.id) {
-    case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
+    case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung', 'strom'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
     case 'deko': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'deko' && !isRewardItem(id)).map(id => 'b:' + id);
     case 'haeuser': return HOUSE_STAGES.map((_, i) => 'hs:' + (i + 1));
     case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i));
@@ -396,7 +396,11 @@ function collectAlbum() {
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
   }
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + d.b);
+  // Belohnungen bleiben, auch wenn später Neues ins Album kommt (LATE_ALBUM: erst nach dem Album dazugekommen)
+  if (!state.legacy) state.legacy = new Set();
+  for (const p of ALBUM) if (albumKeys(p).every(k => state.album.has(k) || LATE_ALBUM.has(k))) state.legacy.add(p.reward);
 }
+const LATE_ALBUM = new Set(['b:windrad', 'b:wasserkraft', 'b:solarfeld', 'b:geothermie', 'b:wellen']);
 
 // ---------------------------------------------------------------------------
 // Wunderwerke: Baustelle (phase 0), dann Abschnitt für Abschnitt; Wirkung (effect) erst, wenn alle fertig sind

@@ -82,7 +82,8 @@ const WONDER_ART = {
       for (const [a, b, i] of [[-2.05, -2.05, 1], [-2.05, 2.05, 2], [2.05, -2.05, 3], [2.05, 2.05, 4]]) kBed(K, a, b, 0.38, i);
     })) return;
     kShadow(K, 1.7);
-    const R = 86 * z, hx = cx, hy = cy - 120 * z, rot = now / 11000, lit = night > 0.15 && isLive();
+    const idle = T.rail.power.idle.has(x + ',' + y);                          // ohne Strom: Rad steht, Lichter aus
+    const R = 86 * z, hx = cx, hy = cy - 120 * z, rot = idle ? 0.12 : now / 11000, lit = night > 0.15 && isLive() && !idle;
     const leg = (bx, by, w, col) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(bx, by); g.lineTo(hx, hy); g.stroke(); };
     const wheel = () => {
       cyl(cx, cy + 2 * z, 34 * z, 17 * z, 6 * z, '#e8e2d6');                            // Einstiegsplattform

@@ -126,6 +126,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Ehrennadeln → Pokale, `ITEMS[].rank`), `ALBUM` (volle Seite → Belohnung, `ITEMS[].album`/`STYLES[].album`).
     „Neu freigeschaltet“ entsteht automatisch aus `unlockKeys` (ui.js) – neue Dinge brauchen einen Eintrag in
     `ITEM_TIPS`. Belohnungen stehen nie selbst im Album. Beim Laden wird still gezählt (keine Fenster/Bänder).
+    Eine einmal volle Seite behält ihre Belohnung (`state.legacy`); wer neue Dinge ins Album bringt, trägt ihre Schlüssel
+    in `LATE_ALBUM` ein, damit alte Stände ihre Belohnung nicht verlieren.
 31. **Wunderwerke** (`WONDERS` in story.js, Zeichnungen in draw-wonders.js): `cat: 'wunder'`, jedes nur einmal; Tile hat
     `phase` (0 = Baustelle … phases.length = fertig, `wonderDone`). Wirkung (`effect`) und Schönheit erst fertig.
     Abschnitt bauen: `wonderStep`. Baustelle zeichnet `drawWonder` (Gerüst, fertiges Bild von unten abgeschnitten).
@@ -137,9 +139,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     nächste beginnt. Kein Strich, keine Schwelle, kein Überblenden (vom Nutzer so gewünscht, das Überblenden war falsch
     verstanden). Muster (`pattern`) liegen in einem festen Raster und lassen sich mit `ext` fortsetzen (Wunderwerke).
     Fußgängerbrücke: `footPaid` ist das Design (`FOOT_STYLES`; alte Stände `true` = Holz, `footPaidOf`).
-33. **Strom und Züge** (`computeRail`/`computePower`): Windrad = 1 ⚡. Verbraucher der Reihe nach: Laternen (je 10
-    eine ⚡, sonst `power.dark` → nachts aus, halbe Schönheit), Werkstätten (2 ⚡, sonst `power.idle` → 50 %, ⚡-Symbol),
-    Züge (`trainNeed`: 1 + 1 je km, 10 Schienen = 1 km). Die Stadt braucht erst Strom, wenn es Windräder gibt.
+33. **Strom und Züge** (`computeRail`/`computePower`): Kraftwerke `POWER_OUT` (Windrad je Stufe 1/2/4, Wasserkraft 4,
+    Solarfeld 3, Geothermie 8, Wellen 5; `powerOf` mit Forschung „rotor“ +50 % Wind, „stromnetz“ +25 %). Verbraucher der
+    Reihe nach: Laternen (je 10 eine ⚡, sonst `power.dark` → nachts aus, halbe Schönheit), dann `CONSUMERS` (Reihenfolge
+    = Vorrang; ohne Strom `power.idle` → alles halb über `off(k)` in `totals`, ⚡-Symbol; Wunderwerke erst fertig),
+    zuletzt Züge (`trainNeed`: 1 + 1 je km). Die Stadt braucht erst Strom, wenn es Kraftwerke gibt oder Windräder frei sind.
+    Kraftwerke haben `cat: 'strom'` (Album-Seite Gebäude, Menü-Filter „⚡ Strom“). Wellenkraftwerk `needs: 'meer'`
+    (Meer vor eigener Küste, Feld wird per `claimTile` eigen), Geothermie `isle: 'quelle'`.
     Rundkurs: `railLoop` (Äste abschneiden, genau ein Ring, alle Bahnhöfe daran) → `line.loop`; Züge darauf sind
     zeitversetzte Kopien (`loopPos(route, tau)`, gemeinsames `ls.tau`) und stoßen so nie zusammen. Weitere Züge
     (`t.extra` an allen Bahnhöfen, `EXTRA_TRAIN`) nur auf Rundkursen, 1 je 2 km (`line.max`).
