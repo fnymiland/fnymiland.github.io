@@ -137,6 +137,7 @@ function rawIncome(b, x, y) {
     case 'markt': return 1.5 * countNear(x, y, 2, isProducerB);
     case 'fabrik': return (25 + 5 * countNear(x, y, 3, b => b === 'mine')) * (hasTech('dampf') ? 1.5 : 1);
     case 'leuchtturm': return 10;
+    case 'ferienhaus': return 6;                     // Feriengäste
     default: return 0;
   }
 }
@@ -697,9 +698,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     const tiles = footprint(b, x, y, r);
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
-      const rail = b === 'schiene', sea = d.needs === 'meer';   // Schienen dürfen übers Wasser (Brücke), das Wellenkraftwerk ins Meer
+      // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
+      const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot';
       if (!ownedTile(fx, fy) && !((rail || sea) && claimable(fx, fy))) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
-      if (sea) { if (COVER.has(k)) return 'Hier steht schon etwas'; if (ter !== 'water' || !isSea(fx, fy)) return 'Ins Meer vor die Küste bauen'; continue; }
+      if (sea) {
+        if (COVER.has(k)) return 'Hier steht schon etwas';
+        if (d.needs === 'meer' && (ter !== 'water' || !isSea(fx, fy))) return 'Ins Meer vor die Küste bauen';
+        if (d.needs === 'boot' && ter !== 'water') return 'Aufs Wasser, direkt ans Ufer';
+        continue;
+      }
       if (COVER.has(k)) {
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
         if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
@@ -715,12 +722,13 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
       if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
       if (opts.move && anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
-      if ((need === 'grass' || need === 'shore') && ter !== 'grass') {                  // nur noch beim Verschieben
+      if ((need === 'grass' || need === 'shore' || need === 'strand') && ter !== 'grass') {                  // nur noch beim Verschieben
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
       }
     }
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
-    if (d.needs === 'meer' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => ownedTile(fx + dx, fy + dy) && terrainAt(fx + dx, fy + dy) !== 'water'))) return 'Direkt vor die Küste bauen';
+    if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => ownedTile(fx + dx, fy + dy) && terrainAt(fx + dx, fy + dy) !== 'water'))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';
+    if (d.needs === 'strand' && !tiles.every(([fx, fy]) => terraLook(fx, fy) === 'sand' || (terrainAt(fx, fy) === 'grass' && terraLook(fx, fy) !== 'wiese' && isBeach(fx, fy)))) return 'Nur auf Sand am Wasser (Strand)';
     if (d.isle && !tiles.every(([fx, fy]) => regionAt(fx, fy) === d.isle)) return `Nur auf der ${regionName(d.isle)} – dort ist der Boden warm`;
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }

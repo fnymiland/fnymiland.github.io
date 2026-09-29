@@ -669,6 +669,99 @@ const BUILDING_ART = {
     if (s === 3) { const a2 = wa * 1.35 - (wb ? 0.5 : 0), b2 = wb * 1.35 - (wa ? 0.5 : 0); parts.push([a2, b2, () => kBoat(K, a2, b2, now, true)]); }
     K.scene(parts);
   },
+  // --- Wohnen ---
+  // Reihenhäuser (1×2): drei schmale Häuser in Pastell, Walmdächer in verschiedenen Farben; jede Stufe ein Stockwerk mehr
+  reihenhaus(K, s, now, x, y, t) {
+    const WALLS3 = ['#ffe3e0', '#e4f1ff', '#fff0b8'], ROOFS3 = ['#e8705f', '#5f8fe8', '#58b36a'];
+    const parts = [];
+    kShadow(K, 0.5);
+    [-0.64, 0, 0.64].forEach((b, i) => parts.push([0, b, () => {
+      const H = 12 + s * 5 + (i === 1 ? 3 : 0);
+      const B = K.block({ a: -0.04, b, ha: 0.3, hb: 0.3, h: H, wall: WALLS3[i], roof: ROOFS3[i], roofH: 9, entry: i === 1 });
+      K.door(B, 'front', 0.38, 0.62, 0.62 * 12 / H + 0.1);
+      K.wins(B, 'front', 1, 0.62, 0.86, 0.3, 0.7);
+      if (s >= 2) K.wins(B, 'front', 2, 0.66 - 0.28 * (s - 1) / 2, 0.86 - 0.28 * (s - 1) / 2 + 0.1, 0.1, 0.9);
+      K.sideWins(B, s, 0.4, 0.8);
+      kitChimney(K, -0.12, b + 0.12, H + 7, now, '#c0694a');
+    }]));
+    parts.push([0.42, -0.64, () => kitBush(K, 0.42, -0.4, 0.5, '#62b85a')], [0.42, 0.64, () => kitBush(K, 0.42, 0.4, 0.5, '#f28cb1')]);
+    K.scene(parts);
+  },
+  // Baumhaus: großer Baum, oben ein Häuschen auf einer Plattform, Leiter; Stufe 2 mit Schaukel, Stufe 3 zweites Baumhaus mit Hängebrücke
+  baumhaus(K, s, now, x, y, t) {
+    const z = K.z;
+    const treeHouse = (a, b, sc, roof) => () => {
+      const [tx, ty] = K.P(a, b);
+      ellipse(tx, ty + 1 * z, 12 * z * sc, 5 * z * sc, 'rgba(40,60,20,0.15)');
+      g.fillStyle = C('#8a5a3c'); g.fillRect(tx - 3 * z * sc, ty - 26 * z * sc, 6 * z * sc, 26 * z * sc);   // Stamm
+      circle(tx - 8 * z * sc, ty - 34 * z * sc, 11 * z * sc, C('#4aa857'));
+      circle(tx + 9 * z * sc, ty - 32 * z * sc, 10 * z * sc, C('#3f9a4f'));
+      circle(tx, ty - 44 * z * sc, 12 * z * sc, C('#55b562'));
+      const P = K.P(a, b, 22 * sc);                                             // Plattform
+      K.block({ a, b, ha: 0.2 * sc, hb: 0.2 * sc, h: 1.6, lift: 22 * sc, wall: '#8a5a3c', type: 'flat', roof: '#b58a5c' });
+      const [wall, rf] = paint(t, '#f3e1c4', roof);
+      const B = K.block({ a, b, ha: 0.12 * sc, hb: 0.13 * sc, h: 9 * sc, lift: 23.6 * sc, wall, roof: rf, roofH: 7 * sc });
+      K.door(B, 'front', 0.35, 0.65, 0.7); K.sideWins(B, 1, 0.4, 0.8);
+      const [lx, ly] = K.P(a + 0.2 * sc, b + 0.08, 0);                          // Leiter
+      g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.9 * z; g.beginPath();
+      g.moveTo(lx - 1.5 * z, ly); g.lineTo(lx - 1.5 * z, ly - 22 * z * sc); g.moveTo(lx + 1.5 * z, ly); g.lineTo(lx + 1.5 * z, ly - 22 * z * sc);
+      for (let i = 1; i < 6; i++) { g.moveTo(lx - 1.5 * z, ly - i * 4 * z * sc); g.lineTo(lx + 1.5 * z, ly - i * 4 * z * sc); }
+      g.stroke();
+      void P;
+    };
+    const parts = [[-0.08, -0.06, treeHouse(-0.08, -0.06, 1, '#e8705f')]];
+    if (s >= 2) parts.push([0.3, 0.28, () => {                                  // Schaukel am Ast
+      const [sx, sy] = K.P(0.3, 0.28), sw = Math.sin(now / 600) * 2 * z;
+      kLine(K, [sx - 2 * z, sy - 20 * z], [sx - 2 * z + sw, sy - 6 * z], '#6b4f3a', 0.7); kLine(K, [sx + 2 * z, sy - 20 * z], [sx + 2 * z + sw, sy - 6 * z], '#6b4f3a', 0.7);
+      g.fillStyle = C('#e8705f'); g.fillRect(sx - 3 * z + sw, sy - 6 * z, 6 * z, 1.6 * z);
+      kitTree(K, 0.34, 0.42, 0.6);
+    }]);
+    if (s === 3) {
+      parts.push([0.3, -0.34, treeHouse(0.3, -0.34, 0.75, '#6f8fd8')]);
+      parts.push([0.12, -0.2, () => {                                           // Hängebrücke zwischen den Häusern
+        const A = K.P(0.06, -0.14, 24), Bp = K.P(0.24, -0.28, 18.5), M = [(A[0] + Bp[0]) / 2, (A[1] + Bp[1]) / 2 + 3 * z];
+        g.strokeStyle = C('#8a5a3c'); g.lineWidth = 1.6 * z; g.beginPath(); g.moveTo(...A); g.quadraticCurveTo(...M, ...Bp); g.stroke();
+        g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(A[0], A[1] - 4 * z); g.quadraticCurveTo(M[0], M[1] - 4 * z, Bp[0], Bp[1] - 4 * z); g.stroke();
+      }]);
+    }
+    K.scene(parts);
+  },
+  // Hausboot: runder Rumpf, Kajüte mit Walmdach, Blumenkübel; wippt auf dem Wasser. Stufe 2 größer, Stufe 3 mit Dachgarten
+  hausboot(K, s, now, x, y, t) {
+    const z = K.z, bob = Math.sin(now / 900 + x) * 0.8;
+    const [cx, cy] = K.P(0, 0);
+    ellipse(cx, cy + 2 * z, 26 * z, 10 * z, 'rgba(230,248,255,0.5)');          // Kielwasser
+    const len = 0.36 + s * 0.04, wid = 0.2;
+    const hull = [[-len, -wid], [len * 0.8, -wid], [len, 0], [len * 0.8, wid], [-len, wid]];
+    K.poly(hull, C('#3e6fb0'), bob);
+    K.poly(hull, C('#5f8fe8'), bob + 3);
+    K.poly(hull.map(([a, b]) => [a * 0.94, b * 0.86]), C('#c9a26f'), bob + 3.4);  // Deck
+    const [wall, roof] = paint(t, '#fff6e4', '#e8705f');
+    const B = K.block({ a: -0.06, ha: 0.14 + s * 0.03, hb: 0.13, h: 9 + (s - 1) * 2, lift: bob + 3.4, wall, roof, roofH: 6, entry: true });
+    K.door(B, 'front', 0.38, 0.62, 0.7, '#6b4f3a'); K.sideWins(B, s + 1, 0.4, 0.8);
+    if (s === 3) { const top = 3.4 + bob + 9 + 4 + 6; for (const [a, b] of [[-0.14, -0.06], [0.02, 0.07]]) { const [px, py] = K.P(a, b, top); circle(px, py, 2.4 * z, C('#58ad52')); circle(px + 1 * z, py - 1 * z, 1 * z, C('#ff8fb1')); } }
+    for (const b of [-0.12, 0.12]) { const [px, py] = K.P(len * 0.62, b, bob + 3.4); box(px, py, 1.6 * z, 0.8 * z, 2.4 * z, '#c0694a', null, 0); circle(px, py - 3.4 * z, 1.8 * z, C(b > 0 ? '#ffd36e' : '#f28cb1')); }
+  },
+  // Ferienhäuschen: Strandhütten auf Pfählen, gestreift, mit Veranda, Liegestuhl und Sonnenschirm; je Stufe eine Hütte mehr
+  ferienhaus(K, s, now, x, y, t) {
+    const z = K.z, cols = [['#ffffff', '#6f8fd8'], ['#ffffff', '#f28cb1'], ['#ffffff', '#58b36a']];
+    const spots = [[-0.12, -0.12], [0.2, 0.22], [-0.22, 0.26]].slice(0, s);
+    const hut = (a, b, i) => () => {
+      for (const [da, db] of [[-0.1, -0.1], [0.1, -0.1], [0.1, 0.1], [-0.1, 0.1]]) kPost(K, a + da, b + db, 4, '#8a5a3c', 1.1);
+      K.block({ a, b, ha: 0.14, hb: 0.14, h: 1.2, lift: 4, wall: '#b58a5c', type: 'flat', roof: '#d9b98f' });
+      const [w, st] = cols[i], B = K.block({ a, b, ha: 0.11, hb: 0.11, h: 9, lift: 5.2, wall: w, roof: st, roofH: 6 });
+      for (const F of Object.values(B.faces)) if (F) for (let k = 0; k < 3; k++) faceQuad(F.P, F.Q, 0.12 + k * 0.3, 0.26 + k * 0.3, F.H * 0.05 + 5.2 * z, F.H + 5.2 * z, C(shade(st, 0.35)));
+      K.door(B, 'front', 0.38, 0.62, 0.7, '#6b4f3a');
+    };
+    const parts = spots.map(([a, b], i) => [a, b, hut(a, b, i)]);
+    parts.push([0.36, -0.3, () => {                                              // Sonnenschirm und Liegestuhl
+      const p = kPost(K, 0.36, -0.3, 14, '#f4f1ea', 0.9);
+      g.beginPath(); g.ellipse(p[0], p[1], 8 * z, 3 * z, 0, Math.PI, 0); g.fillStyle = C('#e8604f'); g.fill();
+      g.beginPath(); g.ellipse(p[0], p[1], 8 * z, 3 * z, 0, Math.PI * 1.33, Math.PI * 1.66); g.lineTo(p[0], p[1]); g.fillStyle = C('#ffffff'); g.fill();
+      const [lx, ly] = K.P(0.34, -0.12); poly([[lx - 5 * z, ly], [lx + 4 * z, ly - 1 * z], [lx + 6 * z, ly - 5 * z], [lx - 3 * z, ly - 4 * z]], C('#6fbfd8'));
+    }]);
+    K.scene(parts);
+  },
   // Seilbahn-Station: Bahnsteig, vier Stützen, oben das Radhaus mit dem Seilrad (das Seil zeichnet der Himmel)
   seilbahn(K, s, now, x, y, t) {
     const z = K.z;

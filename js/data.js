@@ -22,6 +22,15 @@ const ITEMS = {
   // --- Wohnen & Arbeit ---
   haus:    { cat: 'bau', name: 'Haus', cost: 40, needs: 'grass', pop: 4,
              desc: 'Hier wohnt jemand. Wünsche erfüllen, dann ausbauen.' },
+  // weitere Wohnformen: feste Einwohner je Stufe (pop × Stufe), keine Wünsche – dafür besondere Orte
+  reihenhaus: { cat: 'bau', name: 'Reihenhäuser', lm: 'obsthain:1', size: [1, 2], cost: 1500, mat: { quader: 8 }, needs: 'grass', pop: 10,
+               desc: 'Drei schmale bunte Häuser nebeneinander – viele Einwohner auf wenig Platz.' },
+  baumhaus: { cat: 'bau', name: 'Baumhaus', lm: 'baum:2', cost: 300, mat: { bretter: 8 }, needs: 'forest', pop: 5, beauty: 4,
+               desc: 'Ein Häuschen hoch im Baum – mitten im Wald, der Wald bleibt stehen.' },
+  hausboot: { cat: 'bau', name: 'Hausboot', lm: 'klippe:1', cost: 600, mat: { bretter: 12 }, needs: 'boot', pop: 4, beauty: 3,
+               desc: 'Wohnen auf dem Wasser – auf Teich, See oder Meer, direkt am Ufer.' },
+  ferienhaus: { cat: 'bau', name: 'Ferienhäuschen', lm: 'quelle:1', cost: 900, mat: { bretter: 10 }, needs: 'strand', pop: 2, beauty: 5,
+               desc: 'Strandhütte für Feriengäste: bringt Taler und ein paar Einwohner. Nur auf Sand am Wasser.' },
   feld:    { cat: 'bau', name: 'Feld', cost: 20, needs: 'grass', workers: 1, desc: '1 Taler/s.' },
   muehle:  { cat: 'bau', name: 'Mühle', cost: 150, needs: 'grass', workers: 1,
              desc: '+2 Taler/s für jedes Feld direkt daneben.' },
@@ -217,6 +226,14 @@ const BUILD_STAGES = {
                up: [{ tech: 'kraftwerk2', cost: { money: 8000, quader: 30, metall: 20 } }, { tech: 'kraftwerk3', cost: { money: 25000, quader: 60, metall: 40 } }] },
   wellen:    { names: ['Wellenkraftwerk', 'Wellenpark', 'Großer Wellenpark'],
                up: [{ tech: 'kraftwerk2', cost: { money: 5000, metall: 20, bretter: 15 } }, { tech: 'kraftwerk3', cost: { money: 15000, metall: 40, bretter: 30 } }] },
+  reihenhaus: { names: ['Reihenhäuser', 'Stadtreihe', 'Große Stadtreihe'],
+               up: [{ near: ['markt', 1, 6], cost: { money: 5000, quader: 12, bretter: 10 } }, { near: ['schule', 1, 8], cost: { money: 20000, quader: 20, metall: 8 } }] },
+  baumhaus:  { names: ['Baumhaus', 'Großes Baumhaus', 'Baumhaus-Dorf'],
+               up: [{ beauty: [15, 2], cost: { money: 800, bretter: 12 } }, { near: ['baumhaus', 2, 4], cost: { money: 4000, bretter: 25, metall: 4 } }] },
+  hausboot:  { names: ['Hausboot', 'Großes Hausboot', 'Hausboot mit Garten'],
+               up: [{ near: ['hausboot', 1, 3], cost: { money: 1000, bretter: 15 } }, { water: 20, cost: { money: 5000, bretter: 20, metall: 6 } }] },
+  ferienhaus: { names: ['Ferienhäuschen', 'Ferienhütten', 'Ferienanlage'],
+               up: [{ beauty: [20, 3], cost: { money: 3000, bretter: 12 } }, { near: ['ferienhaus', 2, 4], cost: { money: 12000, bretter: 20, quader: 8 } }] },
   fabrik:    { names: ['Werkstatt', 'Manufaktur', 'Große Werkstatt'],
                up: [{ near: ['mine', 1, 4], cost: { money: 1300, quader: 8, metall: 4 } }, { near: ['schmiede', 1, 6], cost: { money: 3000, quader: 14, metall: 8 } }] },
   hafen:     { names: ['Hafen', 'Handelshafen', 'Großer Hafen'],
@@ -244,7 +261,7 @@ const ANIMALS = [
 // Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie (das Blumenbeet zählt weiter als Deko).
 const MENU = [
   { id: 'bauen', label: '🏗️ Bauen', groups: [
-    { id: 'wohnen', label: '🏠 Wohnen', items: ['haus'] },
+    { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
     { id: 'geld', label: '🪙 Geld', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede'] },
     { id: 'boost', label: '📈 Verstärker', items: ['markt', 'hafen', 'blumen'] },
@@ -272,7 +289,7 @@ const menuItemsOf = (top, sub = 'alle') => {
 };
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
-  haus: '👥 +4', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
+  haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
   holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
@@ -284,6 +301,10 @@ const FX = {
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
 const ITEM_TIPS = {
+  reihenhaus: 'Ins Dorf, Tür zum Weg: drei Häuser auf zwei Feldern. Mit Markt und Schule in der Nähe wachsen sie.',
+  baumhaus: 'Mitten in den Wald stellen – die Bäume bleiben. Mit schöner Umgebung und Nachbar-Baumhäusern wird ein Baumhaus-Dorf daraus.',
+  hausboot: 'Aufs Wasser direkt am Ufer (auch im Teich). Mit Nachbar-Booten und viel Wasser wächst es.',
+  ferienhaus: 'Auf Sand am Wasser (Strand – auch mit Terraforming angelegt). Feriengäste bringen Taler.',
   haus: 'Häuser bringen Einwohner. Tipp ein Haus an: Erfüllst du seine Wünsche, kannst du es ausbauen – bis zur Villa.',
   feld: 'Bringt Taler. Mit einer Mühle direkt daneben wird es noch mehr.',
   muehle: 'Stell sie mitten zwischen Felder: Jedes Feld direkt daneben bringt +2 Taler/s.',

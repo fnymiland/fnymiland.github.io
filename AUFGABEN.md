@@ -165,3 +165,11 @@ und Laternen, Hausausbau kostet Taler. (Bewusst nicht: „mehr vom Gleichen wird
 - [x] Inseln 150 … 5 Mio.; Leuchtturm 15 Mio.
 - [x] Hausausbau: Fachwerkhaus 100, Reetdach 600, Stadthaus 3.000, Villa 20.000, Glasvilla 100.000 Taler.
 - [ ] Nach dem nächsten langen Spiel nachmessen und nachjustieren.
+
+## Block 14 – Rückmeldung (30.09. abends)
+
+- [x] ✨ erschien nach der Forschung über allen Kraftwerken (auch unbezahlbar) – jetzt nur, wenn der Ausbau bezahlbar ist.
+- [x] Stil-Kreise waren oval (auf die Höhe des gewählten gestreckt) – wieder rund.
+- [x] Lange Namen in den Kacheln (Kunstakademie, Wasserkraftwerk …) brechen um statt überzustehen.
+- [x] Wohnen: Reihenhäuser (2×1, 10/20/30 👥), Baumhaus (im Wald), Hausboot (auf dem Wasser am Ufer), Ferienhäuschen
+      (auf Sand am Wasser, Feriengäste bringen Taler) – je drei Stufen mit einfachen Bedingungen.
