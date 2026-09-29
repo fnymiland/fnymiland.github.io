@@ -16,11 +16,19 @@ function footprint(b, ax, ay, rot, t) {
   return out;
 }
 let COVER = new Map();
+// Zum Nachschlagen (Block 31, Tempo): je Gebäudesorte alle Gebäude mit ihrem Kasten, Felder nah an einem Haus (2) und
+// neben einem Blumenbeet (1) – so muss nicht jedes Gebäude seine Umgebung Feld für Feld absuchen
+const BY_TYPE = new Map(), HOME_NEAR = new Set(), BEET_NEAR = new Set();
 function rebuildCover() {
   COVER = new Map();
-  GLEIS.clear(); HALL.clear(); GEXIT.clear();
+  GLEIS.clear(); HALL.clear(); GEXIT.clear(); BY_TYPE.clear(); HOME_NEAR.clear(); BEET_NEAR.clear();
   for (const [k, t] of state.tiles) {
-    const [x, y] = keyXY(k);
+    const [x, y] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t);
+    if (!BY_TYPE.has(t.b)) BY_TYPE.set(t.b, []);
+    BY_TYPE.get(t.b).push([k, x, y, x + w - 1, y + h - 1]);
+    const mark = (set, r) => { for (let yy = y - r; yy < y + h + r; yy++) for (let xx = x - r; xx < x + w + r; xx++) set.add(xx + ',' + yy); };
+    if (isHome(t.b)) mark(HOME_NEAR, 2);
+    else if (t.b === 'blumen') mark(BEET_NEAR, 1);
     for (const [fx, fy] of footprint(t.b, x, y, t.rot, t)) COVER.set(fx + ',' + fy, k);
     if (t.b === 'hbf') for (let g = 0; g < hbfGleise(t); g++) {
       const G = gleisTiles(t, x, y, g);
@@ -110,13 +118,28 @@ function countAround(x, y, r, fn) {           // Felder zählen (z. B. Wasser)
   for (const [a, b] of aroundTiles(x, y, r)) if (fn(a, b)) n++;
   return n;
 }
-function countNear(x, y, r, pred) {           // Gebäude zählen – jedes nur einmal, auch wenn es groß ist
+function countNear(x, y, r, pred, stop = Infinity) {   // Gebäude zählen – jedes nur einmal, auch wenn es groß ist
+  if (r > 2) return nearList(x, y, r, pred, stop).length;   // weit: über die Liste je Sorte statt Feld für Feld
   const seen = new Set();
   for (const [a, b] of aroundTiles(x, y, r)) {
     const k = anchorAt(a, b);
     if (k && !seen.has(k) && pred(state.tiles.get(k).b)) seen.add(k);
   }
   return seen.size;
+}
+// Gebäude der Sorte (pred) mit einem Feld im Umkreis r um das Objekt bei (x, y) – ohne es selbst; höchstens stop Stück
+function nearList(x, y, r, pred, stop = Infinity) {
+  const a = anchorAt(x, y), t = a && state.tiles.get(a), [ax, ay] = t ? keyXY(a) : [x, y], [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
+  const x1 = ax + w - 1, y1 = ay + h - 1, out = [];
+  for (const [b, list] of BY_TYPE) {
+    if (!pred(b)) continue;
+    for (const e of list) {
+      if (e[0] === a || Math.max(0, e[1] - x1, ax - e[3], e[2] - y1, ay - e[4]) > r) continue;
+      out.push(e[0]);
+      if (out.length >= stop) return out;
+    }
+  }
+  return out;
 }
 const isWater = (x, y) => terrainAt(x, y) === 'water';
 // Größe des Gewässers, an dem ein Gebäude liegt (alle Wasserfelder, die zusammenhängen und direkt angrenzen –
@@ -139,34 +162,26 @@ const LM_RADIUS = 10, LM_BOOST = 0.15;
 const needsReach = b => b === 'lm' || !!ITEMS[b].workers;
 const countsForViertel = b => b !== 'weg' && b !== 'schiene';
 
-function unionFind() {
-  const parent = new Map();
-  const add = k => { if (!parent.has(k)) parent.set(k, k); };
-  const find = k => {
-    let r = k;
-    while (parent.get(r) !== r) r = parent.get(r);
-    while (parent.get(k) !== r) { const n = parent.get(k); parent.set(k, r); k = n; }
-    return r;
-  };
-  const union = (a, b) => { add(a); add(b); const ra = find(a), rb = find(b); if (ra !== rb) parent.set(ra, rb); };
-  return { parent, find, union, add };
-}
-
 // Viertel: alles Bebaute (Gebäude, Wege, Dekos), das direkt oder über Eck aneinandergrenzt.
 // Wege verbinden so auch weit entfernte Orte mit dem Dorf.
+// (Tempo, Block 31: Felder als Zahlen, zusammengefasst in einem Feld statt über Text-Schlüssel)
+const NET_OFF = 1 << 15, netNum = (x, y) => (x + NET_OFF) * 65536 + (y + NET_OFF);
 function computeNet() {
-  const uf = unionFind();
   // Schienen verbinden keine Viertel: verbundene Inseln bleiben eigene Orte (der Zug bringt Pendler und Bonus)
-  const occupied = new Set([...[...COVER].filter(([, a]) => { const t = state.tiles.get(a) || {}; return t.b !== 'schiene' || t.cross; }).map(([k]) => k), ...state.decos.keys()]);
-  for (const k of occupied) {
-    uf.add(k);
-    const [x, y] = keyXY(k);
-    for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
-      const n = (x + dx) + ',' + (y + dy);
-      if (occupied.has(n)) uf.union(k, n);
-    }
+  const keys = [], xs = [], ys = [], idOf = new Map(), idKey = new Map();
+  const occ = k => { if (idKey.has(k)) return; const [x, y] = keyXY(k); idKey.set(k, keys.length); idOf.set(netNum(x, y), keys.length); keys.push(k); xs.push(x); ys.push(y); };
+  for (const [k, a] of COVER) { const t = state.tiles.get(a); if (!t || t.b !== 'schiene' || t.cross) occ(k); }
+  for (const k of state.decos.keys()) occ(k);
+  const parent = new Int32Array(keys.length);
+  for (let i = 0; i < parent.length; i++) parent[i] = i;
+  const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+  for (let i = 0; i < keys.length; i++) for (const [dx, dy] of [[1, 0], [0, 1], [1, 1], [1, -1]]) {
+    const j = idOf.get(netNum(xs[i] + dx, ys[i] + dy));
+    if (j === undefined) continue;
+    const a = find(i), b = find(j);
+    if (a !== b) parent[a] = b;
   }
-  const vOf = k => uf.parent.has(k) ? uf.find(k) : null;
+  const vOf = k => { const i = idKey.get(k); return i === undefined ? null : keys[find(i)]; };
   const vSize = new Map(), vHome = new Set();
   for (const [k, t] of state.tiles) {
     const v = vOf(k);
@@ -211,11 +226,15 @@ function rawIncome(b, x, y) {
     default: return 0;
   }
 }
-const beetBonus = (x, y) => countNear(x, y, 1, b => b === 'blumen');
-const nearHouse = (x, y) => countNear(x, y, 2, isHome) > 0;
+// Blumenbeet daneben / Haus in der Nähe: erst im Nachschlage-Satz fragen (fast immer: nein), nur dann genau zählen
+const inSet = (set, x, y) => { const a = anchorAt(x, y), t = a && state.tiles.get(a); if (!t) return set.has(x + ',' + y);
+  const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (set.has((ax + i) + ',' + (ay + j))) return true; return false; };
+const beetBonus = (x, y) => inSet(BEET_NEAR, x, y) ? countNear(x, y, 1, b => b === 'blumen') : 0;
+// (für alles außer Häusern ist der Satz schon genau; ein Haus zählt sich selbst nicht)
+const nearHouse = (x, y) => { if (!inSet(HOME_NEAR, x, y)) return false; const t = objAt(x, y); return !(t && isHome(t.b)) || countNear(x, y, 2, isHome) > 0; };
 function beautyOf(t, x, y) {
   const d = ITEMS[t.b];
-  const nearHome = nearHouse(x, y);
+  const nearHome = ((d.beauty && d.cat === 'deko') || d.ugly) && nearHouse(x, y);   // nur fragen, wenn es zählt
   let v = 0;
   if (d.wonder && !wonderDone(t)) return 0;                              // Baustelle
   if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1);
@@ -1405,8 +1424,7 @@ function buildAccess(net, links) {
 }
 // Erreicht das Objekt (Anker k) n Gebäude der Sorte? how: 'nah' (Umkreis r), 'viertel', 'bahn'/'seil'/'faehre' – oder null
 function reachKind(acc, k, x, y, r, pred, n = 1) {
-  const got = new Set();
-  for (const [a, b] of aroundTiles(x, y, r)) { const q = anchorAt(a, b); if (q && q !== k && pred(state.tiles.get(q).b)) got.add(q); }
+  const got = new Set(nearList(x, y, r, pred, n));
   if (got.size >= n) return { count: got.size, how: 'nah' };
   if (!acc) return { count: got.size, how: null };
   const take = kinds => { for (const [b, ks] of kinds) if (pred(b)) for (const q of ks) { if (q !== k && state.tiles.has(q)) got.add(q); if (got.size >= n) return true; } return false; };

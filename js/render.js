@@ -313,6 +313,8 @@ function drawDepth(minX, maxX, minY, maxY, z) {
   g.drawImage(depthImg.c, 0, 0);
   g.restore();
 }
+let hoverKey = '', hoverSince = 0;
+const HOVER_CALM = 120;                // ms Ruhe, bevor die Vorschau (+Taler, +Einwohner …) rechnet
 let groundDeadline = 0;
 const GROUND_MS = 8;
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
@@ -593,7 +595,11 @@ function render(now) {
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
-          const pv = previewDelta(tool, hx, hy), parts = STOPS.has(tool) ? [placeLabel(hx, hy)] : [];
+          // Die ganze Insel neu rechnen kostet: erst, wenn die Maus kurz auf dem Feld ruht (beim Drüberfahren nur Name/Ort)
+          const hk = hx + ',' + hy + tool;
+          if (hk !== hoverKey) { hoverKey = hk; hoverSince = now; }
+          const ready = now - hoverSince > HOVER_CALM || (previewCache && previewCache.k === hx + ',' + hy && previewCache.b === tool);
+          const pv = ready ? previewDelta(tool, hx, hy) : { inc: 0, sci: 0, beauty: 0 }, parts = STOPS.has(tool) ? [placeLabel(hx, hy)] : [];
           if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
           if (Math.abs(pv.inc) >= 0.05) parts.push(`${pv.inc > 0 ? '+' : ''}${fmtRate(pv.inc)}/s`);
           if (Math.abs(pv.sci) >= 0.05) parts.push(`💡 +${fmtRate(pv.sci)}`);

@@ -55,3 +55,14 @@ describe('Bildchen weit weg', () => {
     expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
   });
 });
+
+describe('Schnelles Nachschlagen', () => {
+  it('Zählen über die Liste je Sorte ergibt dasselbe wie Feld für Feld', () => {
+    game("for (let i = 0; i < 40; i++) { const x = 5 + (i * 7) % 9, y = 5 + (i * 5) % 9; if (!COVER.has(x + ',' + y)) state.tiles.set(x + ',' + y, { b: ['haus', 'blumen', 'feld', 'schule'][i % 4], lvl: 1 }); } recalc()");
+    const slow = game(`(() => { const out = []; for (const [k] of state.tiles) { const [x, y] = keyXY(k); for (const r of [1, 3, 6]) { const seen = new Set(); for (const [a, b] of aroundTiles(x, y, r)) { const q = anchorAt(a, b); if (q && isHome(state.tiles.get(q).b)) seen.add(q); } out.push(seen.size); } } return out; })()`);
+    const fast = game(`(() => { const out = []; for (const [k] of state.tiles) { const [x, y] = keyXY(k); for (const r of [1, 3, 6]) out.push(countNear(x, y, r, isHome)); } return out; })()`);
+    expect(fast).toEqual(slow);
+    const near = game(`(() => { const out = []; for (const [k] of state.tiles) { const [x, y] = keyXY(k); const seen = new Set(); for (const [a, b] of aroundTiles(x, y, 2)) { const q = anchorAt(a, b); if (q && isHome(state.tiles.get(q).b)) seen.add(q); } out.push([seen.size > 0, nearHouse(x, y)]); } return out; })()`);
+    expect(near.every(([a, b]) => a === b)).toBe(true);
+  });
+});

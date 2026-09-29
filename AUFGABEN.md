@@ -347,3 +347,5 @@ Läden in einem Viertel, neue Hauswünsche (Laden, Café, Kultur). Kaffee, Tee, 
 - [x] Weit weg: Gebäude und Dekos als fertige Bildchen (gleiche teilen sich eins), Nachtlicht bleibt; Riesenrad,
       Windräder, Mühlen weiter live.
 - [x] Nach dem Zoomen und Bauen: Boden und Bildchen nur im Zeitbudget je Bild neu malen (kein Ruckler mehr auf einmal).
+- [x] Rechnen schneller (recalc ≈ ein Drittel): Nachschlage-Listen statt Umkreis Feld für Feld, Viertel mit Zahlen,
+      Vorschau beim Bauen erst, wenn die Maus kurz ruht.
