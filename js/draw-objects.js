@@ -384,7 +384,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
   });
   g.stroke();
-  if (t && t.cross) {                                // Bahnübergang: Wegbelag quer über die Gleise
+  if (t && t.cross && !t.foot) {                     // Bahnübergang: Wegbelag quer über die Gleise (nicht unter der Brücke)
     const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id], pa = pathArms(x, y);
     const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
     const across = { rot: arms.length && arms[0][0] ? 1 : 0 };      // ohne Weg-Nachbarn: quer zur Schiene
@@ -411,38 +411,65 @@ function drawRailBed(cx, cy, z, x, y, t) {
     g.stroke();
   }
 }
-const afterMovers = [];                  // Zeichnungen, die über die Fahrzeuge ihres Felds gehören (Fußgängerbrücke)
+const afterMovers = [], archWalkers = new Map();  // Zeichnungen über den Fahrzeugen ihres Felds (Bogenbrücke), Bewohner darauf
 // Bahnübergang: Schranken (senken sich, wenn ein Zug kommt; nachts blinkt es rot) oder eine Fußgängerbrücke
 const crossAnim = new Map();
-function drawCrossing(cx, cy, z, x, y, t, now) {
+// Richtung eines Übergangs: Schiene entlang d, Weg entlang n (beide als positive Einheitsachse)
+function crossingAxes(x, y) {
   const ra = railArms(x, y), along = ra.length ? ra[0] : [1, 0];
-  const d = [Math.abs(along[0]), Math.abs(along[1])], n = [d[1], d[0]];     // Schiene entlang d, Weg entlang n
+  const d = [Math.abs(along[0]), Math.abs(along[1])];
+  return { d, n: [d[1], d[0]] };
+}
+// Bogenbrücke: flacher Holzbogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
+// und rechts), in der Mitte über dem Fahrdraht. b = Abstand zur Mitte entlang des Wegs in Feldern
+const ARCH_H = 22, ARCH_W = 0.16, ARCH_SPAN = 1;
+const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
+// Steht ein Bewohner auf einer Bogenbrücke? → Feld der Brücke und seine Lage b auf ihr
+function archAt(px, py) {
+  const rx = Math.round(px), ry = Math.round(py);
+  for (const [dx, dy] of [[0, 0], ...DIRS]) {
+    const x = rx + dx, y = ry + dy, t = state.tiles.get(x + ',' + y);
+    if (!isCrossing(t) || !t.foot) continue;
+    const { d, n } = crossingAxes(x, y), a = (px - x) * d[0] + (py - y) * d[1], b = (px - x) * n[0] + (py - y) * n[1];
+    if (Math.abs(a) < 0.5 && Math.abs(b) < ARCH_SPAN) return { key: x + ',' + y, b };
+  }
+  return null;
+}
+function drawArch(P, z, b0, b1) {
+  const bs = [];
+  for (let i = 0; i <= 12; i++) bs.push(b0 + (b1 - b0) * i / 12);
+  const rail = (s, off) => bs.map(b => P(s * ARCH_W, b, archH(b) + off));
+  const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
+  const railing = s => {
+    line(rail(s, 6), '#7a5236', 1.1);
+    g.beginPath();
+    for (const b of bs) { const p = P(s * ARCH_W, b, archH(b)), q = P(s * ARCH_W, b, archH(b) + 6); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.lineWidth = 0.8 * z; g.stroke();
+  };
+  railing(-1);                                             // hinteres Geländer
+  poly(rail(-1, 0).concat(rail(1, 0).reverse()), C('#c9a26f'));   // Bohlen
+  g.strokeStyle = C('#b08a5e'); g.lineWidth = 0.6 * z; g.beginPath();
+  for (const b of bs) { const p = P(-ARCH_W, b, archH(b)), q = P(ARCH_W, b, archH(b)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+  g.stroke();
+  poly(rail(1, 0).concat(rail(1, -4).reverse()), C('#8a6440'));  // vordere Wange
+  railing(1);
+}
+function drawCrossing(cx, cy, z, x, y, t, now) {
+  const { d, n } = crossingAxes(x, y);
+  const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   if (t.foot) {
-    const K = kit(cx, cy, z, n[0] ? 0 : 1), wood = '#c29a6a';
-    const tower = a => () => {                        // Treppe: schlanker Aufgang mit Stufen
-      const B = K.block({ a, ha: 0.05, hb: 0.13, h: 24, wall: wood, type: 'flat', roof: shade(wood, 0.1) });
-      for (const F of Object.values(B.faces)) if (F) for (let i = 1; i < 7; i++) faceQuad(F.P, F.Q, 0, 1, F.H * i / 7, F.H * i / 7 + 0.8 * z, C(shade(wood, -0.25)));
-    };
-    const deck = () => {
-      K.block({ ha: 0.47, hb: 0.13, h: 2.5, lift: 23, wall: '#8a6440', type: 'flat', roof: wood });
-      for (const s of [1, -1]) {
-        kLine(K, K.P(-0.47, 0.13 * s, 29.5), K.P(0.47, 0.13 * s, 29.5), '#6f5238', 0.9);
-        for (let i = 0; i <= 6; i++) { const a = -0.47 + i * 0.94 / 6; kLine(K, K.P(a, 0.13 * s, 25.5), K.P(a, 0.13 * s, 29.5), '#6f5238', 0.7); }
-      }
-    };
-    // hinterer Turm jetzt; Deck und vorderer Turm erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
-    const [back, front] = [-0.42, 0.42].sort((p, q) => K.depth(p, 0) - K.depth(q, 0));
-    tower(back)();
-    const late = () => { deck(); tower(front)(); };
-    if (PASS === 'object') { const m = g.getTransform(); afterMovers.push(() => { g.save(); g.setTransform(m); late(); g.restore(); }); }
-    else late();
+    // hintere Hälfte jetzt, vordere erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
+    if (PASS === 'object') {
+      drawArch(P, z, -ARCH_SPAN, 0);
+      const m = g.getTransform();
+      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN); g.restore(); });
+    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN);
     return;
   }
   const key = x + ',' + y, target = crossingClosed(x, y) ? 1 : 0;
   let k = crossAnim.has(key) ? crossAnim.get(key) : target;
   k += Math.max(-0.05, Math.min(0.05, target - k));
   crossAnim.set(key, k);
-  const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   const th = (1 - k) * Math.PI * 0.44, blink = k > 0.5 && Math.floor(now / 420) % 2 === 0;
   for (const s of [1, -1]) {
     const pa = -0.4 * s, pb = 0.38 * s, foot = P(pa, pb), top = P(pa, pb, 10);

@@ -487,11 +487,18 @@ function render(now) {
     if (ms) {
       FOG = false;
       ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
-      for (const m of ms) { if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else drawCar(m, z); }
+      for (const m of ms) {
+        // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
+        const ar = m.fur && archAt(m.px, m.py);
+        if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
+        if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else drawCar(m, z);
+      }
     }
     if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }
+    if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) drawWalker(m, z, now); archWalkers.delete(k); }
   }
   FOG = false;
+  archWalkers.clear();
   if (staleCover) recalc();
 
   // 5) Nacht

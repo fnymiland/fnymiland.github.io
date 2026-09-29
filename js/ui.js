@@ -396,7 +396,7 @@ function openInfo(x, y) {
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
   const train = line ? trainChooser(line) : isCrossing(t) ? `<div class="label">Bahnübergang</div>
     <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button>
-      <button class="look${t.foot ? ' on' : ''}" data-cross="1">🌉 Fußgängerbrücke${t.footPaid ? '' : ` · 🪙 ${FOOTBRIDGE.money} 🪚${FOOTBRIDGE.bretter} 🔩${FOOTBRIDGE.metall}`}</button></div>` : '';
+      <button class="look${t.foot ? ' on' : ''}" data-cross="1">🌉 Bogenbrücke${t.footPaid ? '' : ` · 🪙 ${FOOTBRIDGE.money} 🪚${FOOTBRIDGE.bretter} 🔩${FOOTBRIDGE.metall}`}</button></div>` : '';
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang' : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>

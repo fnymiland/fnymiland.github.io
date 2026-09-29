@@ -9,7 +9,7 @@ const walkers = [], cars = [];
 const walkable = (x, y) => {
   if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
   const t = objAt(x, y);
-  return !t || t.b === 'weg' || (isCrossing(t) && !crossingClosed(x, y));   // am Übergang warten, wenn die Schranke zu ist
+  return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
 };
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
 function crossingClosed(x, y) {
@@ -72,7 +72,9 @@ function stepMovers(dt) {
 function drawWalker(w, z, now) {
   const p = toScreen(w.px, w.py);
   const bob = w.wait > 0 ? 0 : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;
-  const x = p.x + 6 * z, y = p.y - bob - 2 * z;
+  // auf einer Bogenbrücke geht es hoch und wieder runter
+  const arch = archAt(w.px, w.py), lift = arch ? archH(arch.b) * z : 0;
+  const x = p.x + 6 * z, y = p.y - bob - 2 * z - lift;
   ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
   const hy = y - 11 * z;
