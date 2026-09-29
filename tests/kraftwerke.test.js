@@ -18,29 +18,35 @@ describe('Menü', () => {
 });
 
 describe('Windrad: Stufen und Forschung', () => {
-  it('1 → 2 → 4 ⚡; Rotorblätter +50 %, Stromnetz +25 %', () => {
+  it('1 → 2 → 3 ⚡; Rotorblätter +50 %, Stromnetz +25 %', () => {
     game("state.tiles.set('6,6', { b: 'windrad', lvl: 1 }); recalc()");
     expect(game('T.rail.power.supply')).toBe(1);
     game("state.tiles.get('6,6').lvl = 2; recalc()");
     expect(game('T.rail.power.supply')).toBe(2);
     game("state.tiles.get('6,6').lvl = 3; state.techs.add('rotor'); recalc()");
-    expect(game('T.rail.power.supply')).toBe(6);
+    expect(game('T.rail.power.supply')).toBe(4.5);
     game("state.techs.add('stromnetz'); recalc()");
-    expect(game('T.rail.power.supply')).toBe(7.5);
+    expect(game('T.rail.power.supply')).toBeCloseTo(5.625);
   });
 
-  it('Ausbau zum Großen Windrad bei 50 Einwohnern, zur Windturbine erst mit der Forschung', () => {
-    game("state.tiles.set('6,6', { b: 'windrad', lvl: 2 }); recalc()");
+  it('alle Kraftwerke: Stufe 2 doppelt, Stufe 3 dreimal so viel – jede Stufe erst nach der Forschung', () => {
+    for (const [b, base] of [['windrad', 1], ['wasserkraft', 4], ['solarfeld', 3], ['geothermie', 8], ['wellen', 5]]) {
+      expect(game(`POWER_OUT.${b}`), b).toEqual([base, base * 2, base * 3]);
+      expect(game(`BUILD_STAGES.${b}.up.map(u => u.tech)`), b).toEqual(['kraftwerk2', 'kraftwerk3']);
+    }
+    game("state.tiles.set('6,6', { b: 'geothermie', lvl: 1 }); recalc()");
     const info = game("stageInfo(state.tiles.get('6,6'), 6, 6)");
-    expect(info.next.name).toBe('Windturbine');
+    expect(info.next.name).toBe('Geothermie-Werk');
     expect(info.ready).toBe(false);
-    expect(info.conds[0].text).toContain('Leichte Rotorblätter');
-    game("state.techs.add('rotor'); recalc()");
+    expect(info.conds[0].text).toContain('Größere Kraftwerke');
+    game("state.techs.add('kraftwerk2'); recalc()");
     expect(game("stageInfo(state.tiles.get('6,6'), 6, 6).ready")).toBe(true);
+    game("state.tiles.get('6,6').lvl = 3; recalc()");
+    expect(game('T.rail.power.supply')).toBe(24);
   });
 
   it('die Forschungen gibt es', () => {
-    for (const id of ['rotor', 'wasserkraft', 'wellen', 'stromnetz']) expect(game(`!!TECH_BY_ID.${id}`), id).toBe(true);
+    for (const id of ['rotor', 'wasserkraft', 'wellen', 'stromnetz', 'kraftwerk2', 'kraftwerk3']) expect(game(`!!TECH_BY_ID.${id}`), id).toBe(true);
   });
 });
 
@@ -95,14 +101,23 @@ describe('Kraftwerke', () => {
 
 describe('Neue Verbraucher', () => {
   const finish = (k) => game(`state.tiles.get('${k}').phase = WONDERS[state.tiles.get('${k}').b].phases.length`);
-  it('Riesenrad ohne Strom: halbe Taler und ⚡; mit 4 ⚡ voll', () => {
+  it('Monumente brauchen je 100 ⚡, das Schloss 300 – ohne Strom nur halb (Riesenrad steht)', () => {
+    expect(game("['riesenrad', 'sternwarte', 'botgarten', 'seebruecke', 'schloss'].map(b => CONSUMERS[b])")).toEqual([100, 100, 100, 100, 300]);
     game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; state.tiles.set('5,5', { b: 'riesenrad', lvl: 1, phase: 0 })"); finish('5,5');
-    game("state.tiles.set('12,12', { b: 'windrad', lvl: 1 }); recalc()");                     // 1 ⚡ reicht nicht
+    game("state.tiles.set('12,12', { b: 'geothermie', lvl: 3 }); recalc()");                   // 24 ⚡ reichen nicht
     const half = game('T.inc');
     expect(game("T.st.get('5,5').noPower")).toBe(true);
-    game("state.tiles.get('12,12').lvl = 3; recalc()");                                       // 4 ⚡
+    for (let i = 0; i < 4; i++) game(`state.tiles.set('${10 + i * 2},3', { b: 'geothermie', lvl: 3 })`);   // 5 × 24 = 120 ⚡
+    game('recalc()');
     expect(game("T.st.get('5,5').noPower")).toBeFalsy();
     expect(game('T.inc') - half).toBeGreaterThan(35);
+  });
+
+  it('der letzte Abschnitt jedes Wunderwerks kostet mindestens 1 Mio. Taler', () => {
+    for (const id of game('Object.keys(WONDERS)')) {
+      const n = game(`WONDERS.${id}.phases.length`);
+      expect(game(`wonderCost({ b: '${id}', rate: 1 }, ${n - 1}).money`), id).toBeGreaterThanOrEqual(1e6);
+    }
   });
 
   it('Universität ohne Strom: halbe Ideen', () => {
@@ -120,7 +135,7 @@ describe('Neue Verbraucher', () => {
   it('das Infofenster eines Kraftwerks zeigt Leistung und Bilanz', () => {
     game("state.tiles.set('6,6', { b: 'windrad', lvl: 3 }); state.techs.add('rotor'); recalc(); openInfo(6, 6)");
     const txt = document.getElementById('panel').textContent;
-    expect(txt).toContain('Liefert 6 Strom');
+    expect(txt).toContain('Liefert 4,5 Strom');
     expect(txt).toContain('erzeugt');
   });
 });

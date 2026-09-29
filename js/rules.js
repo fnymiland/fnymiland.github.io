@@ -244,10 +244,10 @@ function totals() {
     if (!W || !wonderDone(t)) continue;
     const e = W.effect, f = off(k);                                             // Riesenrad, Sternwarte, Garten ohne Strom: halb
     if (e.inc) inc += e.inc * gmul * f;
-    if (e.pop) pop += e.pop;
+    if (e.pop) pop += e.pop * f;
     if (e.sciMul) sci *= 1 + e.sciMul * f;
     if (e.prod) for (const [r, v] of Object.entries(e.prod)) prod[r] = (prod[r] || 0) + v * f;
-    if (e.allMul) allMul += e.allMul;
+    if (e.allMul) allMul += e.allMul * f;
   }
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
@@ -532,9 +532,10 @@ const EXTRA_TRAIN = { money: 1500, metall: 10 };
 // die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
 // nachts dunkel (halbe Schönheit), Gebäude schaffen die Hälfte (⚡ darüber), Züge stehen. Die Stadt braucht erst Strom,
 // wenn es Kraftwerke gibt (oder Windräder freigeschaltet sind) – vorher läuft alles ohne.
-const POWER_OUT = { windrad: [1, 2, 4], wasserkraft: [4], solarfeld: [3], geothermie: [8], wellen: [5] };
+const POWER_OUT = { windrad: [1, 2, 3], wasserkraft: [4, 8, 12], solarfeld: [3, 6, 9], geothermie: [8, 16, 24], wellen: [5, 10, 15] };   // Stufe 1–3
 const LAMPS_PER_POWER = 10, NO_POWER = 0.5;
-const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, sternwarte: 3, glashaus: 1, botgarten: 3, riesenrad: 4 };   // Reihenfolge = Vorrang
+// Monumente brauchen richtig viel (je 100 ⚡, das Schloss 300) – dafür baut man sich eine Energie-Insel
+const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, glashaus: 1, sternwarte: 100, botgarten: 100, riesenrad: 100, seebruecke: 100, schloss: 300 };   // Reihenfolge = Vorrang
 const WORKSHOP_POWER = CONSUMERS.fabrik;
 function powerOf(t) {
   const o = POWER_OUT[t.b];

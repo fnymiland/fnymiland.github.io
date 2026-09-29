@@ -701,7 +701,7 @@ function powerStatus() {
   const out = [`<div class="${P.demand > P.supply + 1e-9 ? 'bad' : 'ok'}">⚡ Strom: ${fmtPow(P.supply)} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
   if (P.dark.size) out.push(`<div class="bad">🌙 ${P.dark.size} ${P.dark.size === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
   if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);
-  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Sternwarte, Botanischer Garten 3 ⚡ · Riesenrad 4 ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
+  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
   return out;
 }
 // Bahnhof: wohin fährt der Zug, hat er Strom?

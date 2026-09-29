@@ -412,22 +412,22 @@ const WONDERS = {
   riesenrad: { the: 'Das Riesenrad', h: 215, text: 'Touristen kommen: +80 Taler/s', effect: { inc: 80 },
     names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
     phases: [{ min: 12, money: 30000, quader: 150 }, { min: 15, money: 40000, metall: 150 },
-             { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 60000, bretter: 150, metall: 100 }] },
+             { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 1e6, bretter: 150, metall: 100 }] },
   sternwarte: { the: 'Die Sternwarte', h: 95, text: '+25 % Ideen für die ganze Insel', effect: { sciMul: 0.25 },
     names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
-    phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 60000, metall: 150, quader: 150 }] },
+    phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 1e6, metall: 150, quader: 150 }] },
   seebruecke: { the: 'Die Seebrücke', h: 40, text: 'Kurgäste: +40 Einwohner und +40 Taler/s', effect: { pop: 40, inc: 40 },
     names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
-    phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 40000, quader: 150, metall: 100 }] },
+    phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 1e6, quader: 150, metall: 100 }] },
   botgarten: { the: 'Der Botanische Garten', h: 80, text: 'Sehr viel Schönheit und +0,5 Obst/s', effect: { prod: { obst: 0.5 } },
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
     phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
-             { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 80000, obst: 600, kristall: 80 }] },
+             { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 1e6, obst: 600, kristall: 80 }] },
   schloss: { the: 'Das Schloss', h: 195, text: '+20 % auf alles – deine Insel ist jetzt eine Königliche Inselperle', effect: { allMul: 0.2 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
     phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
              { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
-             { min: 50, money: 500000, metall: 250, kristall: 250, obst: 1000 }] },
+             { min: 50, money: 1e6, metall: 250, kristall: 250, obst: 1000 }] },   // letzter Abschnitt: mindestens 1 Mio.
 };
 // Preise vor dem 30.09. (fest, viel billiger) – nur zum Erstatten alter Baustellen
 const OLD_WONDER_PHASES = {

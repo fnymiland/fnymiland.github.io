@@ -676,14 +676,15 @@ const BUILDING_ART = {
     const house = () => {
       kShadow(K, 0.3);
       const [wall, roof] = paint(t, '#e7dccb', '#6f8fd8');
-      const B = K.block({ a: -0.12, ha: 0.24, hb: 0.3, h: 17, wall, roof, roofH: 11, entry: true });
+      const H = 13 + s * 4;                                                // Stufe 2/3: größeres Haus
+      const B = K.block({ a: -0.12, ha: 0.24, hb: 0.3, h: H, wall, roof, roofH: 10 + s, entry: true });
       K.door(B, 'front', 0.62, 0.82, 0.6);
-      K.sideWins(B, 1, 0.4, 0.75);
-      const [px, py] = K.P(-0.2, 0.22, 17 + 12);                           // Isolatoren und Leitung
+      K.sideWins(B, s, 0.4, 0.75);
+      const [px, py] = K.P(-0.2, 0.22, H + 12);                           // Isolatoren und Leitung
       kLine(K, [px, py], [px, py - 8 * z], '#6b6f78', 1.2); circle(px, py - 8 * z, 1.3 * z, C('#f2f2ee'));
     };
-    const wheel = () => {
-      const a0 = 0.3, b0 = -0.06, rb = 0.24, rh = rb * 36, h0 = rh + 1, spin = now / 900;
+    const wheel = (b0, r) => () => {
+      const a0 = 0.3, rb = r, rh = rb * 36, h0 = rh + 1, spin = now / 900 + b0 * 3;
       const P = (th, r = 1) => K.P(a0, b0 + Math.cos(th) * rb * r, h0 + Math.sin(th) * rh * r);
       const rim = r => { g.beginPath(); for (let i = 0; i <= 24; i++) { const p = P(i / 24 * Math.PI * 2, r); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); } g.stroke(); };
       g.strokeStyle = C('#8a5a3c'); g.lineWidth = 2.2 * z; rim(1);
@@ -695,7 +696,8 @@ const BUILDING_ART = {
       const bot = P(Math.PI * 1.5 + 0.0001, 1);                            // unten spritzt es
       for (let i = 0; i < 4; i++) { const f = (now / 500 + i / 4) % 1; circle(bot[0] + (i - 1.5) * 3 * z, bot[1] + 2 * z - f * 5 * z, (1.4 - f) * z, `rgba(230,248,255,${0.9 - f * 0.8})`); }
     };
-    K.scene([[-0.12, 0, house], [0.3, -0.06, wheel]]);
+    const R = [0.22, 0.27, 0.27][s - 1];
+    K.scene([[-0.12, 0, house], [0.3, -0.06, wheel(s === 3 ? -0.18 : -0.06, R)]].concat(s === 3 ? [[0.3, 0.22, wheel(0.22, 0.2)]] : []));
   },
   // Solarfeld (2×2): drei Reihen schräger Paneele aus Kristallglas auf Kies, mit Wechselrichter-Kasten
   solarfeld(K, s, now, x, y, t, ha, hb) {
@@ -707,9 +709,10 @@ const BUILDING_ART = {
       g.restore();
     })) return;
     const lit = night > 0.15 && isLive();
+    const lift = (s - 1) * 3, dp = s === 3 ? 0.12 : 0.15;                  // Stufe 2/3: höher, Stufe 3 vier Reihen
     const row = a0 => () => {
-      for (const b of [-0.72, 0, 0.72]) { kPost(K, a0 + 0.08, b, 4, '#8a8f99', 1); kPost(K, a0 - 0.1, b, 10, '#8a8f99', 1); }
-      const lo = 4, hi = 12, pa = a0 + 0.14, pb = a0 - 0.16;
+      for (const b of [-0.72, 0, 0.72]) { kPost(K, a0 + 0.08, b, 4 + lift, '#8a8f99', 1); kPost(K, a0 - 0.1, b, 10 + lift, '#8a8f99', 1); }
+      const lo = 4 + lift, hi = 12 + lift * 1.3, pa = a0 + dp, pb = a0 - dp - 0.01;
       const Q = (a, b, up) => K.P(a, b, up);
       const quad = [Q(pa, -0.8, lo), Q(pa, 0.8, lo), Q(pb, 0.8, hi), Q(pb, -0.8, hi)];
       poly(quad, C('#e8eef5'));
@@ -724,8 +727,12 @@ const BUILDING_ART = {
         g.strokeStyle = 'rgba(255,255,255,0.55)'; g.lineWidth = 2 * z; g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke();
       }
     };
-    K.scene([[-0.6, 0, row(-0.6)], [0, 0, row(0)], [0.6, 0, row(0.6)],
-      [0.82, 0.82, () => { const B = K.block({ a: 0.82, b: 0.82, ha: 0.08, hb: 0.1, h: 8, wall: '#f2efe8', type: 'flat', roof: '#dcd6ca' }); K.door(B, 'front', 0.3, 0.7, 0.7, '#8fa3b8'); }]]);
+    const rows = s === 3 ? [-0.7, -0.24, 0.22, 0.68] : [-0.6, 0, 0.6];
+    K.scene(rows.map(a => [a, 0, row(a)]).concat([[0.84, 0.84, () => {
+      const B = K.block({ a: 0.84, b: 0.84, ha: 0.08 + (s - 1) * 0.02, hb: 0.1, h: 8 + (s - 1) * 3, wall: '#f2efe8', type: 'flat', roof: '#dcd6ca' });
+      K.door(B, 'front', 0.3, 0.7, 0.7, '#8fa3b8');
+      if (s === 3) { const [bx, by] = K.P(0.84, 0.84, 14 + 2); circle(bx, by, 1.6 * z, night > 0.15 && isLive() ? '#9fffb0' : C('#58b36a')); }   // Batterie-Lämpchen
+    }]]));
   },
   // Geothermie (2×2): warmer Boden mit dampfenden Becken, Maschinenhaus und zwei runde Kühltürme mit Dampf
   geothermie(K, s, now, x, y, t) {
@@ -741,8 +748,8 @@ const BUILDING_ART = {
         circle(x0 + Math.sin(ph * 5 + k) * 3 * z, y0 - ph * (big ? 34 : 14) * z, ((big ? 5 : 2.5) + ph * (big ? 8 : 4)) * z, `rgba(255,255,255,${(big ? 0.75 : 0.6) * (1 - ph)})`);
       }
     };
-    const tower = (a, b) => () => {
-      const [px, py] = K.P(a, b), rx = 13 * z, H = 24 * z;
+    const tower = (a, b, small) => () => {
+      const [px, py] = K.P(a, b), rx = (small ? 10 : 13) * z, H = (small ? 22 : 18 + s * 6) * z;   // Stufe 2/3: höher
       cyl(px, py, rx, rx / 2, H, '#e6e0d3');
       ellipse(px, py - H, rx * 0.86, rx * 0.43, C('#9a948a'));
       g.strokeStyle = C('#cfc8ba'); g.lineWidth = 1.4 * z; g.beginPath(); g.ellipse(px, py - H * 0.45, rx, rx / 2, 0, 0, Math.PI); g.stroke();
@@ -758,12 +765,13 @@ const BUILDING_ART = {
       kLine(K, p0, p1, '#b9c0ca', 2.2); kLine(K, p2, p3, '#b9c0ca', 2.2);
     };
     const pools = () => { const [ax, ay] = K.P(0.62, 0.55); steam(ax, ay - 1 * z, 0.3, false); const [bx, by] = K.P(-0.62, 0.6); steam(bx, by - 1 * z, 0.7, false); };
-    K.scene([[-0.55, -0.55, tower(-0.55, -0.55)], [0.45, -0.55, tower(0.45, -0.55)], [-0.2, 0.2, hall], [0.62, 0.62, pools]]);
+    K.scene([[-0.55, -0.55, tower(-0.55, -0.55)], [0.45, -0.55, tower(0.45, -0.55)], [-0.2, 0.2, hall], [0.62, 0.62, pools]]
+      .concat(s === 3 ? [[0.66, -0.02, tower(0.66, -0.02, true)]] : []));
   },
   // Wellenkraftwerk: Plattform auf Pfählen im Meer, kleines Häuschen, ringsum wippende gelbe Bojen an Leinen
   wellen(K, s, now, x, y, t) {
     const z = K.z, lit = night > 0.15 && isLive();
-    const buoys = [[0.36, 0.3], [-0.34, 0.34], [0.34, -0.36], [-0.3, -0.3]];
+    const buoys = [[0.36, 0.3], [-0.34, 0.34], [0.34, -0.36], [-0.3, -0.3], [0.44, -0.02], [-0.42, 0.02], [0.02, 0.44], [0.02, -0.44]].slice(0, 2 + s * 2);   // Stufe: mehr Bojen
     const bob = (i) => Math.sin(now / 520 + i * 1.7) * 2 * z;
     const buoy = (i) => () => {
       const [a, b] = buoys[i], [px, py0] = K.P(a, b), py = py0 + bob(i);
