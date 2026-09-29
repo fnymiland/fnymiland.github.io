@@ -229,24 +229,7 @@ const SHOP_ART = {
       for (let i = 0; i < 3; i++) K.block({ a: -0.6 + i * 0.5, b: 0, ha: 0.3, hb: 1.2, h: 0.5, lift: 22 + [4, 10, 6][i], wall: roof, roof, roofH: 6 - i, type: 'barrel' });   // Wellen-Dach
     }], [1.2, 0, () => kShopSign(K, 1.2, 0, 26, '🎵', '#5f8fe8')]]);
   },
-  aquarium(K, s, now, x, y, t) {
-    const [wall] = paint(t, '#e4f1ff', '#3e7fd0');
-    K.scene([[0, 0, () => {
-      const B = K.block({ a: -0.1, b: 0, ha: 1.2, hb: 1.3, h: 12, wall, roof: null, type: 'flat', entry: true });
-      K.door(B, 'front', 0.42, 0.58, 0.7, '#3e7fd0');
-      const [cx, cy] = K.P(-0.1, 0, 12), z = K.z;
-      g.save(); g.globalAlpha *= 0.75;
-      g.beginPath(); g.ellipse(cx, cy, 34 * z, 34 * z, 0, Math.PI, 0); g.fillStyle = '#7fc4e6'; g.fill();
-      g.restore();
-      for (let i = 0; i < 5; i++) {                                                         // Fische ziehen ihre Kreise
-        const a = now / 2400 + i * 1.3, fx = cx + Math.cos(a) * (10 + i * 4) * z, fy = cy - (8 + i * 4) * z + Math.sin(a * 2) * 2 * z;
-        ellipse(fx, fy, 2.4 * z, 1.3 * z, C(['#ff9f5a', '#ffd23f', '#e8604f', '#c3a8e6', '#9fcf8f'][i]));
-      }
-      g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1 * z;
-      g.beginPath(); g.ellipse(cx, cy, 34 * z, 34 * z, 0, Math.PI, 0); g.stroke();
-      kGlow(cx, cy - 16 * z, z, 50);
-    }]]);
-  },
+  // Aquarium: js/shopart/g.js (eckiges Glasbecken, Block 34)
   zoo(K, s, now, x, y, t) {
     const parts = [];
     if (groundPart(() => { K.rect(-1.9, -1.9, 1.9, 1.9, C('#b8d98a')); K.rect(-1.6, 0.2, -0.2, 1.6, C('#7fc4e6')); K.rect(0.3, -1.6, 1.6, -0.3, C('#e0c48f')); })) return;

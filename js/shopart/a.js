@@ -1,6 +1,7 @@
 'use strict';
 // Ladenbilder, Gruppe a (Block 32): Kiosk, Blumenladen, Friseur, Post – trägt sich in SHOP_ART ein
-// (siehe draw-shops.js: shopHouse, kText, faceAt). Feste Markenfarben, Wahrzeichen auf dem Dach bzw. an der Ecke.
+// (siehe draw-shops.js: shopHouse, kText, faceAt, hangSign). Feste Markenfarben; das Symbol hängt klein als
+// Ausleger-Schild an der Hausecke (hangSign), nicht mehr groß auf dem Dach (Block 34).
 (() => {
   const lit = () => night > 0.15 && isLive();
 
@@ -126,16 +127,10 @@
   };
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Blumenladen: zartrosa Haus, grünes Satteldach, grün-weiße Markise, riesige Sonnenblume auf dem First,
-  // Blumenkästen an allen Fenstern, Eimer mit bunten Blumen vor der Tür
+  // Blumenladen: zartrosa Haus, grünes Satteldach, grün-weiße Markise, Blumenkästen an allen Fenstern, Eimer mit
+  // bunten Blumen vor der Tür; an der Ecke ein kleines Schild mit Sonnenblume
   // ---------------------------------------------------------------------------------------------------------------
-  function sunflower(K, a, b, up, now) {
-    const z = K.z, [bx, by] = K.P(a, b, up), sway = Math.sin(now / 1500), hx = bx + sway * 1.2 * z, hy = by - 15 * z;
-    g.strokeStyle = C('#3f8f3a'); g.lineWidth = 1.7 * z; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(bx, by); g.quadraticCurveTo(bx - 1.5 * z, by - 8 * z, hx, hy); g.stroke();
-    for (const [lx, ly, rot] of [[-2.6, -5, -0.5], [2.4, -8.5, 0.5]]) {                            // Blätter
-      g.beginPath(); g.ellipse(bx + lx * z, by + ly * z, 3.2 * z, 1.4 * z, rot, 0, Math.PI * 2); g.fillStyle = C('#4caf50'); g.fill();
-    }
+  function sunflowerHead(hx, hy, z, sway) {                                                         // Blüte, Radius ≈ 9.4 × z
     for (let layer = 0; layer < 2; layer++) for (let i = 0; i < 12; i++) {                          // Blütenblätter
       const ang = (i + layer * 0.5) * Math.PI / 6 + sway * 0.05, r = layer ? 5.4 : 5.9;
       g.beginPath(); g.ellipse(hx + Math.cos(ang) * r * z, hy + Math.sin(ang) * r * z, 3.5 * z, 1.7 * z, ang, 0, Math.PI * 2);
@@ -144,6 +139,15 @@
     circle(hx, hy, 4.4 * z, C('#6b3f22'));
     circle(hx - 0.8 * z, hy - 0.8 * z, 2.8 * z, C('#8a5530'));
     for (let i = 0; i < 5; i++) circle(hx + Math.cos(i * 1.26) * 2.6 * z, hy + Math.sin(i * 1.26) * 2.6 * z, 0.55 * z, C('#4a2a15'));
+  }
+  // Mini-Sonnenblume fürs Schild: kurzer Stiel mit Blatt, Blüte darüber (passt in den Kreis mit Radius 4 × z)
+  function miniSunflower(cx, cy, z, now) {
+    g.strokeStyle = C('#3f8f3a'); g.lineWidth = 0.8 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx, cy); g.quadraticCurveTo(cx - 0.5 * z, cy + 2 * z, cx + 0.2 * z, cy + 3.9 * z); g.stroke();
+    g.beginPath(); g.ellipse(cx + 1.3 * z, cy + 2.6 * z, 1.4 * z, 0.6 * z, -0.5, 0, Math.PI * 2); g.fillStyle = C('#4caf50'); g.fill();
+    g.save(); g.translate(cx, cy - 0.9 * z); g.scale(0.33, 0.33);
+    sunflowerHead(0, 0, z, Math.sin(now / 1500));
+    g.restore();
   }
   function bucket(K, a, b, col, eye) {
     return () => {
@@ -173,7 +177,7 @@
         g.beginPath(); g.arc(wx, wy, 2.3 * z, 0, Math.PI * 2); g.stroke();
         for (let i = 0; i < 4; i++) circle(wx + Math.cos(i * 1.57 + 0.6) * 2.3 * z, wy + Math.sin(i * 1.57 + 0.6) * 2.3 * z, 0.9 * z, C(BLOOM[i]));
       }
-    }], [-0.08, 0, () => sunflower(K, -0.08, 0, 31, now)],
+    }], hangSign(K, (cx, cy, z) => miniSunflower(cx, cy, z, now), GREEN),
       [0.42, -0.36, bucket(K, 0.42, -0.36, '#e8413c')], [0.42, -0.2, bucket(K, 0.42, -0.2, '#ffd23f', '#e8913c')],
       [0.42, -0.04, bucket(K, 0.42, -0.04, '#b57bff')], [0.53, -0.28, bucket(K, 0.53, -0.28, '#ffffff', '#ffd23f')],
       [0.53, -0.12, bucket(K, 0.53, -0.12, '#ff5d8f')]]);
@@ -181,7 +185,7 @@
 
   // ---------------------------------------------------------------------------------------------------------------
   // Friseur: hellblaues Haus, marineblaues Walmdach, Markise marine-weiß, hohe Friseur-Säule (drehende rot-weiß-blaue
-  // Spirale, Kugel oben) an der vorderen Ecke, großes Scheren-Schild auf dem Dach
+  // Spirale, Kugel oben) an einer vorderen Ecke, kleines Scheren-Schild an der anderen
   // ---------------------------------------------------------------------------------------------------------------
   const NAVY = '#2c3e70';
   function barberPole(K, a, b, now, L) {
@@ -206,22 +210,20 @@
     circle(px - 1 * z, gy - 1 * z, 1 * z, C('#ffffff'));
     kGlow(px, gy, z, 16);
   }
-  function scissorsSign(K, a, b, up, L) {
-    const z = K.z, [x0, y0] = K.P(a, b, up), cx = x0, cy = y0 - 13 * z, R = 9 * z;
-    kLine(K, [x0, y0 + 1 * z], [x0, cy + R], '#1c2748', 1.5);
-    circle(cx, cy, R + 1.2 * z, C('#ffffff'));
-    circle(cx, cy, R, L ? '#3a5298' : C(NAVY));
+  // Schere (Klingen oben, rote Griffe unten), Mitte bei (cx, cy + 0.4 × z), Radius ≈ 7 × z
+  function scissors(cx, cy, z, blade) {
     const piv = [cx, cy + 1 * z];
+    g.lineCap = 'round';
     for (const d of [-1, 1]) {
       const hx = cx + d * 2.5 * z, hy = cy + 4.9 * z, dx = piv[0] - hx, dy = piv[1] - hy;                 // Griff → Drehpunkt
       const tip = [piv[0] + dx * 1.95, piv[1] + dy * 1.95], len = Math.hypot(dx, dy) || 1, nx = -dy / len, ny = dx / len;
-      poly([[piv[0] + nx * 1.3 * z, piv[1] + ny * 1.3 * z], tip, [piv[0] - nx * 0.5 * z, piv[1] - ny * 0.5 * z]], L ? '#ffffff' : C('#f4f7fb'));
-      kLine(K, piv, [hx - d * 0.8 * z, hy - 1.2 * z], '#e8413c', 1.2);
-      g.strokeStyle = C('#e8413c'); g.lineWidth = 1.3 * z;
+      poly([[piv[0] + nx * 1.3 * z, piv[1] + ny * 1.3 * z], tip, [piv[0] - nx * 0.5 * z, piv[1] - ny * 0.5 * z]], blade);
+      g.strokeStyle = C('#e8413c'); g.lineWidth = 1.2 * z;
+      g.beginPath(); g.moveTo(...piv); g.lineTo(hx - d * 0.8 * z, hy - 1.2 * z); g.stroke();
+      g.lineWidth = 1.3 * z;
       g.beginPath(); g.arc(hx, hy, 1.8 * z, 0, Math.PI * 2); g.stroke();
     }
     circle(piv[0], piv[1], 0.8 * z, C('#c7cdd6'));
-    kGlow(cx, cy, z, 24);
   }
   function potShrub(K, a, b) {
     return () => {
@@ -246,16 +248,21 @@
         ellipse(m[0], m[1], 1.5 * z, 2.1 * z, C('#eaf6ff'));
       }
       barberPole(K, 0.37, sb, now, L);                                                              // steht neben dem Haus
-    }], [-0.08, 0, () => scissorsSign(K, -0.08, 0, 31, L)],
+    }], hangSign(K, (cx, cy, z) => {                                                               // Mini-Schere
+      g.save(); g.translate(cx, cy); g.scale(0.55, 0.55);
+      scissors(0, -0.4 * z, z, L ? '#3a5298' : C(NAVY));
+      g.restore();
+      kGlow(cx, cy, z, 14);
+    }, NAVY),
       [0.44, -0.04, potShrub(K, 0.44, -0.04)], [0.44, 0.34, potShrub(K, 0.44, 0.34)]]);
   };
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Post: posthorn-gelbes Haus, fast schwarzes Dach, Markise schwarz-gelb, großes Posthorn-Schild auf dem First,
+  // Post: posthorn-gelbes Haus, fast schwarzes Dach, Markise schwarz-gelb, kleines Posthorn-Schild an der Ecke,
   // gelber Briefkasten und Paketstapel vor der Tür
   // ---------------------------------------------------------------------------------------------------------------
   const PYEL = '#ffcc00', PDARK = '#2d2d38';
-  function posthorn(cx, cy, z, col) {
+  function posthorn(cx, cy, z, col) {                                                              // etwa 19 × 11 z groß
     g.strokeStyle = col; g.lineCap = 'round';
     g.lineWidth = 1.7 * z;
     g.beginPath(); g.arc(cx - 2.4 * z, cy + 0.3 * z, 3.1 * z, 0, Math.PI * 2); g.stroke();             // Windung
@@ -264,9 +271,6 @@
     g.lineWidth = 1.2 * z;
     g.beginPath(); g.moveTo(cx - 4.8 * z, cy + 2.4 * z); g.lineTo(cx - 8.6 * z, cy + 4.4 * z); g.stroke();   // Mundstück
     circle(cx - 8.8 * z, cy + 4.5 * z, 1 * z, col);
-    g.lineWidth = 0.7 * z;                                                                            // Kordel mit Quasten
-    g.beginPath(); g.moveTo(cx - 3.4 * z, cy + 3.3 * z); g.quadraticCurveTo(cx - 0.6 * z, cy + 7.4 * z, cx + 2.4 * z, cy + 2.8 * z); g.stroke();
-    circle(cx - 0.9 * z, cy + 6.4 * z, 0.8 * z, col);
   }
   function mailbox(K, a, b) {
     return () => {
@@ -290,19 +294,20 @@
     };
   }
   SHOP_ART.post = function (K, s, now, x, y, t, ha, hb) {
-    const z = K.z, L = lit();
+    const L = lit();
     K.scene([[-0.08, 0, () => {
       const B = shopHouse(K, { wall: PYEL, roof: PDARK, roofType: 'gable', ridge: 'b', h: 20, roofH: 9, trim: PDARK, upperWins: 2 });
       awning(K, B, PDARK, PYEL);
-    }], [-0.08, 0, () => {                                                                          // Posthorn-Schild auf dem First
-      for (const sb of [-0.2, 0.2]) kLine(K, K.P(-0.08, sb, 27), K.P(-0.08, sb, 31), '#1c1c24', 1.2);
-      board(K, -0.08, 0, 30.5, 0.35, 17, PDARK, (w, H) => {
-        g.strokeStyle = L ? '#ffe14d' : C(PYEL); g.lineWidth = 0.9 * z;
-        g.beginPath(); g.roundRect(1.5 * z, -H + 1.5 * z, w - 3 * z, H - 3 * z, 2 * z); g.stroke();
-        posthorn(w / 2 - 0.4 * z, -H / 2 - 0.6 * z, z, L ? '#ffe14d' : C(PYEL));
-        glowQuad([[0, -H], [w, -H], [w, 0], [0, 0]], 30 * z);
-      });
-    }], [0.44, -0.24, mailbox(K, 0.44, -0.24)],
+    }], hangSign(K, (cx, cy, z) => {                                                               // Mini-Posthorn, gelb auf dunkel
+      const col = L ? '#ffe14d' : C(PYEL);
+      circle(cx, cy, 4.5 * z, C(PDARK));
+      g.strokeStyle = col; g.lineWidth = 0.45 * z;
+      g.beginPath(); g.arc(cx, cy, 4.85 * z, 0, Math.PI * 2); g.stroke();
+      g.save(); g.translate(cx, cy); g.scale(0.43, 0.43);
+      posthorn(0.35 * z, -0.25 * z, z, col);
+      g.restore();
+      kGlow(cx, cy, z, 14);
+    }, PDARK), [0.44, -0.24, mailbox(K, 0.44, -0.24)],
       [0.43, 0.33, parcel(K, 0.43, 0.33, 1, 0, '#c9955f')], [0.43, 0.33, parcel(K, 0.43, 0.34, 0.75, 4.6, '#dcb07a')],
       [0.5, 0.46, parcel(K, 0.5, 0.46, 0.7, 0, '#d9a86a')]]);
   };

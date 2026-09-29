@@ -1,11 +1,9 @@
 'use strict';
-// Ladenbilder, Gruppe b (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Café, Teeladen, Bubble Tea, Eisdiele: feste Markenfarben und ein großes Wahrzeichen auf dem Dach. Das Wahrzeichen
-// ist ein aufrechtes Bildchen (Tasse, Teeblatt, Becher, Eiswaffel) und sieht aus allen vier Richtungen gleich aus.
+// Ladenbilder, Gruppe b (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt, hangSign)
+// Café, Teeladen, Bubble Tea, Eisdiele: feste Markenfarben. Das Wahrzeichen (Tasse, Teeblatt, Becher, Eiswaffel) hängt
+// klein im Ausleger-Schild an der Hausecke (hangSign), das Dach bleibt frei (Block 34).
 (function () {
   const isLit = () => night > 0.15 && isLive();
-  // Ecke des Hauses, die der Kamera am nächsten ist (Schilder, die man immer sehen soll)
-  const nearCorner = K => [[0.3, 0.42], [0.3, -0.42], [-0.44, 0.42], [-0.44, -0.42]].reduce((p, q) => K.depth(...q) > K.depth(...p) ? q : p);
   const withAlpha = (a, fn) => { g.save(); g.globalAlpha *= a; try { fn(); } finally { g.restore(); } };
   const line = (p, q, col, w, z) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); };
   // Becher/Tasse als Pfad: unten Radius rb (Boden rund), oben rt; bulge wölbt die Seiten nach außen
@@ -25,51 +23,38 @@
     g.ellipse(x, yB, rB, rB * ry, 0, 0, Math.PI, false);
     g.closePath();
   }
-  // Rundes Hängeschild an der Ecke mit selbst gezeichnetem Bild
-  function hangSign(K, a, b, up, ring, draw) {
-    const [x, y] = K.P(a, b, up), z = K.z;
-    line([x, y - 5.2 * z], [x, y - 8 * z], '#6b4f3a', 0.8, z);
-    circle(x, y, 5.4 * z, C(ring));
-    circle(x, y, 4.3 * z, C('#fffaf0'));
-    draw(x, y, z);
-  }
 
   // ---------------------------------------------------------------- Café
-  function coffeeCup(x, y, z, now) {
-    const ry = 0.3, y0 = y - 2.6 * z, y1 = y - 16 * z, rb = 6 * z, rt = 8.8 * z;
-    ellipse(x, y + 1 * z, 10 * z, 2.8 * z, 'rgba(50,25,10,0.22)');                  // Schatten aufs Dach
-    ellipse(x, y - 0.4 * z, 12.5 * z, 3.8 * z, C('#d6cabb'));                        // Untertasse
-    ellipse(x, y - 1.3 * z, 12.5 * z, 3.6 * z, C('#fffaf2'));
-    ellipse(x, y - 1.5 * z, 7.4 * z, 2.2 * z, C('#ebe1d3'));
-    g.strokeStyle = C('#e9dfd1'); g.lineWidth = 2.5 * z; g.lineCap = 'round';        // Henkel
-    g.beginPath(); g.arc(x + rt - 0.4 * z, (y0 + y1) / 2 - 1 * z, 3.9 * z, -Math.PI / 2 - 0.25, Math.PI / 2 + 0.25); g.stroke();
-    cupPath(x, y0, y1, rb, rt, ry, 1.1 * z);
-    g.fillStyle = C('#fffaf2'); g.fill();
+  // Kaffeetasse klein fürs Ausleger-Schild (passt in einen Kreis mit Radius 4 × z): Untertasse, weiße Tasse mit
+  // Espresso-Band, Kaffee und zwei Dampfkringel
+  function miniCup(x, y, z, now) {
+    const ry = 0.3, y0 = y + 2.1 * z, y1 = y - 0.9 * z, rb = 1.7 * z, rt = 2.4 * z, bulge = 0.3 * z;
+    ellipse(x, y + 2.55 * z, 3.1 * z, 0.95 * z, C('#b9a896'));                          // Untertasse
+    ellipse(x, y + 2.35 * z, 2.9 * z, 0.8 * z, C('#ebe1d3'));
+    g.strokeStyle = C('#5b3a26'); g.lineWidth = 0.7 * z; g.lineCap = 'round';           // Henkel
+    g.beginPath(); g.arc(x + rt - 0.1 * z, (y0 + y1) / 2 - 0.2 * z, 1.05 * z, -Math.PI / 2, Math.PI / 2); g.stroke();
+    cupPath(x, y0, y1, rb, rt, ry, bulge);
+    g.fillStyle = C('#ffffff'); g.fill();
     g.save(); g.clip();
-    g.fillStyle = C('#e8ddcf'); g.fillRect(x + rt * 0.38, y1 - 4 * z, rt, y0 - y1 + 8 * z);    // Schattenseite
-    g.fillStyle = C('#ffffff'); g.fillRect(x - rt * 0.72, y1 + 1.5 * z, 1.5 * z, y0 - y1 - 3 * z);   // Glanz
-    bandPath(x, y1 + 4.6 * z, y1 + 8.2 * z, rt * 1.05, rt * 1.0, ry);                // Espresso-Band
+    g.fillStyle = C('#e8ddcf'); g.fillRect(x + rt * 0.38, y1 - 1 * z, rt, y0 - y1 + 2 * z);   // Schattenseite
+    bandPath(x, y1 + 1.2 * z, y1 + 2.2 * z, rt * 1.05, rt, ry);                            // Espresso-Band
     g.fillStyle = C('#5b3a26'); g.fill();
     g.restore();
-    const by = y1 + 6.4 * z + rt * ry * 0.9;                                           // Bohne auf dem Band
-    g.beginPath(); g.ellipse(x - 0.6 * z, by, 1.9 * z, 1.25 * z, -0.45, 0, Math.PI * 2); g.fillStyle = C('#e8d3b5'); g.fill();
-    line([x - 1.6 * z, by + 0.6 * z], [x + 0.4 * z, by - 0.6 * z], '#5b3a26', 0.45, z);
-    ellipse(x, y1, rt, rt * ry, C('#fffaf2'));                                         // Rand und Kaffee
-    ellipse(x, y1 + 0.25 * z, rt - 1.1 * z, (rt - 1.1 * z) * ry, C('#6b3e22'));
-    ellipse(x - 0.4 * z, y1 + 0.2 * z, rt - 2.6 * z, (rt - 2.6 * z) * ry, C('#9a6236'));
-    const hy = y1 + 0.1 * z;                                                           // Milchschaum-Herz
-    ellipse(x - 1.1 * z, hy, 1.3 * z, 0.75 * z, C('#f3e2c4'));
-    ellipse(x + 1.1 * z, hy, 1.3 * z, 0.75 * z, C('#f3e2c4'));
-    poly([[x - 2.35 * z, hy + 0.15 * z], [x + 2.35 * z, hy + 0.15 * z], [x, hy + 1.7 * z]], C('#f3e2c4'));
-    g.lineWidth = 1.5 * z; g.lineCap = 'round';                                        // Dampfkringel
-    for (let i = 0; i < 3; i++) {
-      const ph = (now / 2600 + i / 3) % 1, sx = x + (i - 1) * 3.8 * z, sy = y1 - 3 * z - ph * 9 * z, w = (i === 1 ? -2.4 : 2.4) * z;
-      withAlpha(Math.sin(ph * Math.PI) * 0.9, () => {
-        g.strokeStyle = C('#ffffff'); g.beginPath(); g.moveTo(sx, sy);
-        g.bezierCurveTo(sx + w, sy - 2.5 * z, sx - w, sy - 4.8 * z, sx, sy - 7.5 * z); g.stroke();
+    cupPath(x, y0, y1, rb, rt, ry, bulge);
+    g.lineWidth = 0.4 * z; g.strokeStyle = C('#5b3a26'); g.stroke();
+    ellipse(x, y1, rt, rt * ry, C('#ffffff'));                                             // Rand und Kaffee
+    g.beginPath(); g.ellipse(x, y1, rt, rt * ry, 0, 0, Math.PI * 2); g.stroke();
+    ellipse(x, y1 + 0.1 * z, rt - 0.45 * z, (rt - 0.45 * z) * ry, C('#6b3e22'));
+    ellipse(x - 0.2 * z, y1 + 0.08 * z, rt - 1.2 * z, (rt - 1.2 * z) * ry, C('#9a6236'));
+    g.lineWidth = 0.45 * z; g.lineCap = 'round';                                          // Dampfkringel
+    for (let i = 0; i < 2; i++) {
+      const ph = (now / 2600 + i / 2) % 1, sx = x + (i ? 0.8 : -0.8) * z, sy = y1 - 0.6 * z - ph * 0.5 * z, w = (i ? -0.6 : 0.6) * z;
+      withAlpha(0.3 + 0.6 * Math.sin(ph * Math.PI), () => {
+        g.strokeStyle = C('#a07a5a'); g.beginPath(); g.moveTo(sx, sy);
+        g.bezierCurveTo(sx + w, sy - 0.6 * z, sx - w, sy - 1.2 * z, sx, sy - 1.8 * z); g.stroke();
       });
     }
-    kGlow(x, (y0 + y1) / 2, z, 26);
+    kGlow(x, y, z, 14);
   }
   function chalkBoard(K, a, b) {
     const [x, y] = K.P(a, b), z = K.z;
@@ -85,14 +70,9 @@
     g.beginPath(); g.arc(x + 1 * z, y - 5 * z, 0.7 * z, -Math.PI / 2, Math.PI / 2); g.stroke();
   }
   SHOP_ART.cafe = function (K, s, now, x, y, t, ha, hb) {
-    const z = K.z, [sa, sb] = nearCorner(K);
     K.scene([
       [-0.08, 0, () => shopHouse(K, { wall: '#e8d3b5', roof: '#5b3a26', awning: '#7a4a2e', roofType: 'hip', h: 20, roofH: 8, trim: '#5b3a26' })],
-      [-0.08, 0, () => { const [cx, cy] = K.P(-0.08, 0, 27.5); coffeeCup(cx, cy, z, now); }],
-      [sa, sb, () => hangSign(K, sa, sb, 15, '#5b3a26', (px, py) => {
-        g.beginPath(); g.ellipse(px, py, 2.6 * z, 1.8 * z, -0.5, 0, Math.PI * 2); g.fillStyle = C('#6b3e22'); g.fill();
-        line([px - 1.6 * z, py + 0.9 * z], [px + 1.6 * z, py - 0.9 * z], '#e8d3b5', 0.5, z);
-      })],
+      hangSign(K, (cx, cy, z) => miniCup(cx, cy, z, now), '#5b3a26'),                    // Tasse klein am Ausleger
       [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#7a4a2e')],
       [0.44, 0.02, () => chalkBoard(K, 0.44, 0.02)],
     ]);
@@ -128,13 +108,21 @@
     g.lineWidth = 1.1 * z; g.strokeStyle = C('#1f5e3a'); g.stroke();
     g.restore();
   }
+  // Teezweig: Knospe, kleines und großes Blatt am Stiel (Fuß bei x, y; etwa 23 × 29 px groß)
   function teaSprig(x, y, z, now) {
     const sway = Math.sin(now / 1500) * 0.05;
-    ellipse(x, y + 1 * z, 7 * z, 2 * z, 'rgba(20,50,30,0.22)');
     line([x, y + 0.5 * z], [x, y - 3.5 * z], '#4f7a2e', 1.6, z);
     teaLeaf(x, y - 3 * z, z, 10, 2.6, -0.2 + sway, '#d4f59c', '#aee27a', 2);                  // Knospe
     teaLeaf(x - 0.5 * z, y - 2 * z, z, 14, 4.2, -0.95 + sway, '#a6e878', '#7acb5c', 3);       // kleines Blatt
     teaLeaf(x + 0.3 * z, y - 2.5 * z, z, 27, 7.5, 0.3 + sway, '#8ee06a', '#5cbf55', 4);       // großes Blatt
+  }
+  // derselbe Zweig verkleinert fürs Ausleger-Schild (Mitte des Zweigs liegt bei etwa 1 | −15 über dem Fuß)
+  function miniTea(x, y, z, now) {
+    const k = 0.26;
+    g.save(); g.translate(x - 1 * k * z, y + 14.5 * k * z); g.scale(k, k);
+    teaSprig(0, 0, z, now);
+    g.restore();
+    kGlow(x, y, z, 14);
   }
   // Traufe mit hochgebogenen Ecken (Pagodenart) und goldenen Knöpfen
   // (nur an den Ecken links und rechts im Bild – dort liegt der Bogen außerhalb der Dachfläche)
@@ -152,15 +140,6 @@
       circle(tip[0], tip[1], 0.85 * z, C('#e9c46a'));
     }
   }
-  function teapot(px, py, z) {
-    g.strokeStyle = C('#2e7d4f'); g.lineWidth = 1.2 * z; g.lineCap = 'round';           // Henkel
-    g.beginPath(); g.arc(px + 3.4 * z, py + 0.2 * z, 2 * z, -Math.PI / 2, Math.PI / 2); g.stroke();
-    poly([[px - 2.6 * z, py + 0.6 * z], [px - 5.6 * z, py - 2.6 * z], [px - 5 * z, py - 3.1 * z], [px - 2.4 * z, py - 1 * z]], C('#3f9e62'));   // Tülle
-    ellipse(px, py + 0.7 * z, 3.6 * z, 2.9 * z, C('#3f9e62'));
-    ellipse(px - 1.2 * z, py - 0.3 * z, 1.2 * z, 0.8 * z, C('#a8e6b4'));
-    ellipse(px, py - 2 * z, 2 * z, 0.7 * z, C('#2e7d4f'));                              // Deckel
-    circle(px, py - 2.8 * z, 0.7 * z, C('#e9c46a'));
-  }
   function bambooPot(K, a, b, tall) {
     const [x, y] = K.P(a, b), z = K.z;
     ellipse(x, y + 0.5 * z, 3.6 * z, 1.4 * z, 'rgba(40,60,20,0.18)');
@@ -177,69 +156,49 @@
     ellipse(x, y - 4.6 * z, 2.4 * z, 0.7 * z, C('#5a3a26'));
   }
   SHOP_ART.teeladen = function (K, s, now, x, y, t, ha, hb) {
-    const z = K.z, roof = '#2e7d4f', [sa, sb] = nearCorner(K);
+    const roof = '#2e7d4f';
     K.scene([
       [-0.08, 0, () => {
         shopHouse(K, { wall: '#e3f2e1', roof, awning: '#3f9e62', roofType: 'hip', h: 20, roofH: 10, trim: '#2e7d4f' });
         curlyEaves(K, -0.08, 0, 0.34, 0.37, 20, roof);
       }],
-      [-0.08, 0, () => { const [cx, cy] = K.P(-0.08, 0, 29); teaSprig(cx, cy, z, now); }],
-      [sa, sb, () => {
-        const [px, py] = K.P(sa, sb, 15);
-        line([px, py - 3.6 * z], [px, py - 8 * z], '#6b4f3a', 0.8, z);
-        teapot(px, py, z);
-        kGlow(px, py, z, 10);
-      }],
+      hangSign(K, (cx, cy, z) => miniTea(cx, cy, z, now), roof),                          // Teezweig klein am Ausleger
       [0.38, -0.32, () => bambooPot(K, 0.38, -0.32, 1)],
       [0.4, 0.38, () => bambooPot(K, 0.4, 0.38, 0.85)],
     ]);
   };
 
   // ---------------------------------------------------------------- Bubble Tea
-  const PEARLS = [[-4.1, 0.2], [-1.4, 0.6], [1.4, 0.6], [4.1, 0.2], [-2.8, -2.2], [0, -2], [2.8, -2.2], [-1.4, -4.4], [1.6, -4.5], [-4.2, -3.6]];
-  function bobaCup(x, y, z, now, lit) {
-    const ry = 0.3, H = 21 * z, y0 = y - 1.2 * z, y1 = y0 - H, rb = 5.8 * z, rt = 8 * z, tea = y1 + H * 0.2;
+  // Bubble-Tea-Becher klein fürs Ausleger-Schild (passt in einen Kreis mit Radius 4 × z): Milchtee mit dunklen
+  // Tapioka-Perlen, gewölbter Deckel, dicker türkiser Strohhalm mit rosa Ringeln; Kante nachts in Neon-Pink
+  const MINI_PEARLS = [[-0.95, -0.55], [0, -0.45], [0.95, -0.55], [-0.5, -1.35], [0.5, -1.35]];
+  function miniBoba(x, y, z, lit) {
+    const ry = 0.3, y0 = y + 3.2 * z, y1 = y - 0.5 * z, H = y0 - y1, rb = 1.55 * z, rt = 2.2 * z, tea = y1 + H * 0.24;
     const rAt = yy => rb + (rt - rb) * (y0 - yy) / H;
-    const sx = yy => x - 1.4 * z + (y0 - 2 * z - yy) * 0.27;                              // Strohhalm, schräg nach rechts
-    ellipse(x, y + 0.6 * z, 8.5 * z, 2.5 * z, 'rgba(60,30,70,0.22)');
     cupPath(x, y0, y1, rb, rt, ry);
     g.save(); g.clip();
-    g.fillStyle = C('#f6f2ff'); g.fillRect(x - rt - 2 * z, y1 - rt, 2 * rt + 4 * z, H + 2 * rt);   // leerer Teil
-    g.fillStyle = C('#d6ad84'); g.fillRect(x - rt - 2 * z, tea, 2 * rt + 4 * z, y0 - tea + rt);     // Milchtee
+    g.fillStyle = C('#f6f2ff'); g.fillRect(x - rt - z, y1 - rt, 2 * rt + 2 * z, H + 2 * rt);         // leerer Teil
+    g.fillStyle = C('#d6ad84'); g.fillRect(x - rt - z, tea, 2 * rt + 2 * z, y0 - tea + rt);         // Milchtee
     ellipse(x, tea, rAt(tea), rAt(tea) * ry, C('#e7c7a0'));
-    withAlpha(0.55, () => line([sx(y0 - 2 * z), y0 - 2 * z], [sx(y1), y1], '#39c5bb', 3, z));
-    for (const [px, py] of PEARLS) {                                                     // Tapioka-Perlen
-      circle(x + px * z, y0 + py * z, 1.55 * z, C('#3a2216'));
-      circle(x + (px - 0.5) * z, y0 + (py - 0.55) * z, 0.5 * z, C('#8a6552'));
+    for (const [px, py] of MINI_PEARLS) {                                                // Tapioka-Perlen
+      circle(x + px * z, y0 + py * z, 0.52 * z, C('#3a2216'));
+      circle(x + (px - 0.16) * z, y0 + (py - 0.18) * z, 0.17 * z, C('#8a6552'));
     }
     withAlpha(0.16, () => { g.fillStyle = C('#5a2d5e'); g.fillRect(x + rt * 0.42, y1 - rt, rt, H + 2 * rt); });
-    withAlpha(0.75, () => { g.fillStyle = C('#ffffff'); g.fillRect(x - rt * 0.7, y1 + 1.2 * z, 1.4 * z, H * 0.78); });
     g.restore();
-    const ly = y1 + H * 0.5;                                                             // Aufkleber mit Herz
-    circle(x - 0.4 * z, ly, 3.3 * z, C('#ff5fa8'));
-    circle(x - 1.2 * z, ly - 0.4 * z, 0.95 * z, C('#ffffff'));
-    circle(x + 0.4 * z, ly - 0.4 * z, 0.95 * z, C('#ffffff'));
-    poly([[x - 2.1 * z, ly - 0.1 * z], [x + 1.3 * z, ly - 0.1 * z], [x - 0.4 * z, ly + 1.8 * z]], C('#ffffff'));
     cupPath(x, y0, y1, rb, rt, ry);                                                      // Kante (nachts Neon)
-    g.lineWidth = (lit ? 1.8 : 0.9) * z; g.strokeStyle = lit ? '#ff6fc0' : C('#ffffff'); g.stroke();
-    ellipse(x, y1, rt + 0.8 * z, (rt + 0.8 * z) * ry, C('#e6ddf5'));                      // Deckel: Rand
-    withAlpha(0.88, () => {                                                              // gewölbte Kuppel
-      g.beginPath(); g.ellipse(x, y1 - 0.3 * z, rt * 0.93, rt * 0.64, 0, Math.PI, 0); g.closePath();
-      g.fillStyle = C('#f8f5ff'); g.fill();
-      g.lineWidth = 0.7 * z; g.strokeStyle = C('#d2c6ea'); g.stroke();
-    });
-    ellipse(x - rt * 0.36, y1 - rt * 0.36, 1.9 * z, 1 * z, C('#ffffff'));
-    bandPath(x, y1 - 0.5 * z, y1 + 0.7 * z, rt + 0.8 * z, rt + 0.8 * z, ry);
-    g.fillStyle = C('#d9cdef'); g.fill();
-    const s0y = y1 - 4.6 * z, s1y = y1 - 17 * z, p0 = [sx(s0y), s0y], p1 = [sx(s1y), s1y];   // dicker bunter Strohhalm
-    line(p0, p1, '#39c5bb', 3.6, z);
-    const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1, nx = -(p1[1] - p0[1]) / len, ny = (p1[0] - p0[0]) / len;
-    for (const k of [0.18, 0.42, 0.66, 0.9]) {
+    g.lineWidth = (lit ? 0.7 : 0.45) * z; g.strokeStyle = lit ? '#ff6fc0' : C('#b39ddb'); g.stroke();
+    ellipse(x, y1, rt + 0.3 * z, (rt + 0.3 * z) * ry, C('#d9cdef'));                      // Deckel: Rand
+    g.beginPath(); g.ellipse(x, y1 - 0.1 * z, rt * 0.93, rt * 0.6, 0, Math.PI, 0); g.closePath();   // gewölbte Kuppel
+    g.fillStyle = C('#f8f5ff'); g.fill();
+    g.lineWidth = 0.35 * z; g.strokeStyle = C('#b39ddb'); g.stroke();
+    const p0 = [x + 0.15 * z, y1 - 0.9 * z], p1 = [x + 1.05 * z, y - 3.75 * z];               // dicker bunter Strohhalm
+    line(p0, p1, '#39c5bb', 0.95, z);
+    for (const k of [0.35, 0.75]) {
       const m = lerp(p0, p1, k);
-      line([m[0] - nx * 1.4 * z, m[1] - ny * 1.4 * z - 0.6 * z], [m[0] + nx * 1.4 * z, m[1] + ny * 1.4 * z + 0.6 * z], '#ff8fc4', 1, z);
+      line([m[0] - 0.45 * z, m[1] + 0.05 * z], [m[0] + 0.45 * z, m[1] - 0.05 * z], '#ff8fc4', 0.35, z);
     }
-    ellipse(p1[0], p1[1], 1.8 * z, 0.8 * z, C('#23978f'));
-    kGlow(x, y1 + H * 0.45, z, 30);
+    kGlow(x, y, z, 14);
   }
   // Leuchtband (Neon) über eine Seite
   function neonBand(F, h0, h1, lit, col, litCol, z) {
@@ -256,7 +215,7 @@
         K.block({ a: -0.08, b: 0, ha: 0.35, hb: 0.38, h: 2.6, lift: 22, wall: '#9f86cc', roof: '#b39ddb', type: 'flat' });   // Dachrand
         K.rect(-0.08 - 0.28, -0.31, -0.08 + 0.28, 0.31, C('#c7b6e6'), 24.6);
       }],
-      [-0.08, 0, () => { const [cx, cy] = K.P(-0.08, 0, 24.6); bobaCup(cx, cy, z, now, lit); }],
+      hangSign(K, (cx, cy, zz) => miniBoba(cx, cy, zz, lit), '#ff5fa8'),                 // Becher klein am Ausleger
       [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#ff8fc4')],
     ]);
   };
@@ -269,33 +228,32 @@
     for (let i = -2; i <= 1; i++) circle(sx + (i + 0.5) * r * 0.42 - r * 0.06, sy + r * 0.62, r * 0.26, C(col));
     ellipse(sx - r * 0.38, sy - r * 0.42, r * 0.32, r * 0.2, C(hi));
   }
-  function iceCone(x, y, z, now) {
-    const yT = y - 15 * z, w = 7.2 * z;
-    const cone = () => { g.beginPath(); g.moveTo(x - w, yT); g.lineTo(x + w, yT); g.lineTo(x, y); g.closePath(); };
-    ellipse(x, y + 0.8 * z, 5 * z, 1.6 * z, 'rgba(80,30,40,0.22)');
+  // Eiswaffel klein fürs Ausleger-Schild (passt in einen Kreis mit Radius 4 × z): Waffel mit Rautenmuster,
+  // Schoko- und Pistazienkugel, oben Erdbeer mit Streuseln und Kirsche
+  function miniCone(x, y, z) {
+    const yT = y + 0.55 * z, yB = y + 4 * z, w = 1.85 * z;
+    const cone = () => { g.beginPath(); g.moveTo(x - w, yT); g.lineTo(x + w, yT); g.lineTo(x, yB); g.closePath(); };
     cone(); g.fillStyle = C('#e6ac5c'); g.fill();
     g.save(); cone(); g.clip();
-    poly([[x + 2.4 * z, yT], [x + w + 1, yT], [x, y + 1]], C('#cf9447'));                 // Schattenseite
-    g.strokeStyle = C('#a8692c'); g.lineWidth = 0.7 * z; g.beginPath();                    // Rautenmuster
-    for (let k = -5; k <= 5; k++) {
-      const bx = x + k * 3 * z;
-      g.moveTo(bx, yT - 1 * z); g.lineTo(bx + 14 * z, yT + 17 * z);
-      g.moveTo(bx, yT - 1 * z); g.lineTo(bx - 14 * z, yT + 17 * z);
+    poly([[x + 0.6 * z, yT], [x + w + 1, yT], [x, yB + 1]], C('#cf9447'));                // Schattenseite
+    g.strokeStyle = C('#a8692c'); g.lineWidth = 0.28 * z; g.beginPath();                   // Rautenmuster
+    for (let k = -3; k <= 3; k++) {
+      const bx = x + k * 1 * z;
+      g.moveTo(bx, yT - 0.3 * z); g.lineTo(bx + 4.5 * z, yT + 5.4 * z);
+      g.moveTo(bx, yT - 0.3 * z); g.lineTo(bx - 4.5 * z, yT + 5.4 * z);
     }
     g.stroke(); g.restore();
-    ellipse(x, yT, w + 0.5 * z, 1.9 * z, C('#f2c681'));
-    scoop(x - 3.9 * z, yT - 3.4 * z, 5.4 * z, '#8a5a3c', '#b98c68');                      // Schoko
-    scoop(x + 3.9 * z, yT - 3.4 * z, 5.4 * z, '#8fdcaa', '#d6f7e3');                      // Pistazie
-    scoop(x, yT - 10.4 * z, 5.8 * z, '#ff8fb1', '#ffd0de');                               // Erdbeer
-    for (const [dx, dy, col, ang] of [[-2.6, -12.6, '#fff27a', 0.6], [1.8, -13.4, '#5f8fe8', -0.5], [3, -10.6, '#ffffff', 0.3], [-1.2, -9.4, '#7ccf5b', -0.8], [0.8, -11.2, '#ffffff', 1.2]]) {
+    ellipse(x, yT, w + 0.2 * z, 0.5 * z, C('#f2c681'));
+    scoop(x - 1.05 * z, yT - 0.85 * z, 1.4 * z, '#8a5a3c', '#b98c68');                    // Schoko
+    scoop(x + 1.05 * z, yT - 0.85 * z, 1.4 * z, '#8fdcaa', '#d6f7e3');                    // Pistazie
+    scoop(x, yT - 2.6 * z, 1.5 * z, '#ff8fb1', '#ffd0de');                                // Erdbeer
+    for (const [dx, dy, col, ang] of [[-0.7, -3, '#fff27a', 0.6], [0.6, -3.3, '#5f8fe8', -0.5], [0.8, -2.3, '#ffffff', 0.3]]) {
       const cx = x + dx * z, cy = yT + dy * z;
-      line([cx - Math.cos(ang) * 0.8 * z, cy - Math.sin(ang) * 0.8 * z], [cx + Math.cos(ang) * 0.8 * z, cy + Math.sin(ang) * 0.8 * z], col, 0.8, z);
+      line([cx - Math.cos(ang) * 0.25 * z, cy - Math.sin(ang) * 0.25 * z], [cx + Math.cos(ang) * 0.25 * z, cy + Math.sin(ang) * 0.25 * z], col, 0.3, z);
     }
-    g.strokeStyle = C('#5e8a2e'); g.lineWidth = 0.8 * z; g.lineCap = 'round';           // Kirsche
-    g.beginPath(); g.moveTo(x + 0.8 * z, yT - 18.6 * z); g.quadraticCurveTo(x + 1.2 * z, yT - 21.8 * z, x + 3.6 * z, yT - 22.4 * z); g.stroke();
-    circle(x + 0.6 * z, yT - 17 * z, 2.3 * z, C('#d91f3a'));
-    circle(x - 0.1 * z, yT - 17.8 * z, 0.75 * z, C('#ff9aa8'));
-    kGlow(x, yT - 7 * z, z, 22);
+    circle(x + 0.25 * z, yT - 4.05 * z, 0.6 * z, C('#d91f3a'));                           // Kirsche
+    circle(x + 0.05 * z, yT - 4.25 * z, 0.2 * z, C('#ff9aa8'));
+    kGlow(x, y, z, 14);
   }
   // Eisdielen-Haus: Vanille mit Pistazien-Streifen, Sahne-Tupfen an der Traufe, Markise pink-mint
   function iceHouse(K) {
@@ -323,10 +281,9 @@
     return B;
   }
   SHOP_ART.eisdiele = function (K, s, now, x, y, t, ha, hb) {
-    const z = K.z;
     K.scene([
       [-0.08, 0, () => iceHouse(K)],
-      [-0.08, 0, () => { const [cx, cy] = K.P(-0.08, 0, 27); iceCone(cx, cy, z, now); }],
+      hangSign(K, (cx, cy, z) => miniCone(cx, cy, z), '#f06d98'),                        // Eiswaffel klein am Ausleger
       [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#8fdcaa')],
     ]);
   };

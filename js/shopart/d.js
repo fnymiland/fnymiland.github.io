@@ -1,7 +1,8 @@
 'use strict';
 // Ladenbilder, Gruppe d (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
 // Nudelbar (Lack-Rot, Pagodendach, Nudelschale), Konditorei (Rosa, Zuckerguss, Torte), Chocolaterie (Zartbitter/Rosé/Gold,
-// Schokoladentafel), Spielzeugladen (Sonnengelb/Blau, Regenbogen-Markise, Teddy mit Windrad).
+// Schokoladentafel), Spielzeugladen (Sonnengelb/Blau, Regenbogen-Markise, Teddy). Das Symbol hängt jeweils klein im
+// Ausleger-Schild an der Hausecke (hangSign, Block 34), nicht mehr groß auf dem Dach.
 // Alles in einer Klammer: die Hilfsfunktionen sollen nicht mit denen der anderen Gruppen zusammenstoßen.
 (() => {
   const TAU = Math.PI * 2;
@@ -29,8 +30,8 @@
   }
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Nudelbar: lackrotes Haus, dunkles Dach mit hochgeschwungenen Ecken, Nudelschale mit Stäbchen auf dem Dach,
-  // rote Papierlaternen an den Traufecken, Noren-Vorhang an der Tür, Nobori-Fahne davor.
+  // Nudelbar: lackrotes Haus, dunkles Dach mit hochgeschwungenen Ecken, rote Papierlaternen an den Traufecken,
+  // Ausleger-Schild mit Nudelschale an der vorderen Ecke, Noren-Vorhang an der Tür, Nobori-Fahne davor.
   // ---------------------------------------------------------------------------------------------------------------
   function pagodaEaves(K, B) {
     const z = K.z, E = eaveCorners(K, B);
@@ -60,46 +61,29 @@
     kLine({ z }, [x, y + 5.9 * z], [x, y + 7.6 * z], '#e0b44a', 0.6);                  // Quaste
     if (L) kGlow(x, y + 2.2 * z, z, 16);
   }
-  function noodleBowl(x, y, z, now) {                                     // (x, y): Mitte des Randes
-    const W = 10 * z, D = 8 * z, R = 3.3 * z;
-    ellipse(x, y + D + 0.2 * z, 4.2 * z, 1.5 * z, C('#d9cfc0'));          // Fuß
-    g.beginPath(); g.ellipse(x, y, W, D, 0, 0, Math.PI); g.fillStyle = C('#fbf7f0'); g.fill();
-    g.beginPath(); g.ellipse(x + 3 * z, y, W - 3 * z, D - 0.6 * z, 0, 0, Math.PI / 2); g.lineTo(x + 3 * z, y); g.fillStyle = C('#e6dfd3'); g.fill();   // Schatten rechts
-    g.strokeStyle = C('#c0392b'); g.lineWidth = 1.3 * z;                   // rotes Band mit Wellen
-    g.beginPath(); g.ellipse(x, y + 1.2 * z, W - 0.4 * z, D - 3.2 * z, 0, 0.12, Math.PI - 0.12); g.stroke();
-    for (let i = 0; i < 4; i++) circle(x + (i - 1.5) * 4 * z, y + 4.6 * z - Math.abs(i - 1.5) * 0.6 * z, 0.8 * z, C('#c0392b'));
-    ellipse(x, y, W, R, C('#efe6d8'));                                    // Innenwand
-    poly([[x + 2.5 * z, y - 0.5 * z], [x + 6.5 * z, y - 1.5 * z], [x + 6.8 * z, y - 7.5 * z], [x + 2.8 * z, y - 6.5 * z]], C('#27432e'));   // Nori
-    ellipse(x, y + 0.5 * z, W - 1.3 * z, R - 0.8 * z, C('#e9b949'));    // Brühe mit Nudeln
-    g.strokeStyle = C('#fbe09a'); g.lineWidth = 0.7 * z;
-    for (let r = 0; r < 3; r++) {
-      g.beginPath();
-      for (let i = 0; i <= 8; i++) { const px = x - 6.5 * z + i * 1.6 * z, py = y - 0.4 * z + r * 1 * z + (i & 1 ? -0.5 : 0.5) * z; i ? g.lineTo(px, py) : g.moveTo(px, py); }
-      g.stroke();
-    }
-    oval(x - 4 * z, y + 0.1 * z, 2.1 * z, 1.3 * z, -0.2, C('#fffaf0'));   // Ei
-    circle(x - 3.7 * z, y + 0.1 * z, 0.9 * z, C('#f2a33a'));
-    circle(x + 2.8 * z, y + 0.4 * z, 1.7 * z, C('#fffaf0'));             // Narutomaki
-    circle(x + 2.8 * z, y + 0.4 * z, 0.8 * z, C('#f07aa0'));
-    for (const [dx, dy] of [[-1, -0.6], [0.4, 1], [-1.8, 1.2], [5.5, 0.8]]) circle(x + dx * z, y + dy * z, 0.55 * z, C('#6cbf4f'));   // Lauch
-    g.strokeStyle = C('#c0392b'); g.lineWidth = 1.3 * z;                   // roter Rand
-    g.beginPath(); g.ellipse(x, y, W, R, 0, 0, TAU); g.stroke();
-    // Stäbchen schräg in der Schale
-    kLine({ z }, [x + 0.5 * z, y + 0.3 * z], [x + 8.5 * z, y - 16 * z], '#d9a066', 1.3);
-    kLine({ z }, [x + 2.5 * z, y + 0.6 * z], [x + 11.5 * z, y - 14 * z], '#c98d5c', 1.3);
-    kLine({ z }, [x + 7.8 * z, y - 14.6 * z], [x + 8.5 * z, y - 16 * z], '#c0392b', 1.4);
-    kLine({ z }, [x + 10.7 * z, y - 12.6 * z], [x + 11.5 * z, y - 14 * z], '#c0392b', 1.4);
-    // Dampf
-    g.save(); g.globalAlpha *= 0.75; g.strokeStyle = C('#ffffff'); g.lineWidth = 1 * z;
-    for (let i = 0; i < 3; i++) {
-      const ph = (now / 1600 + i / 3) % 1, sx = x + (i - 1.3) * 3 * z, sy = y - 2 * z - ph * 9 * z;
-      g.globalAlpha = 0.75 * (1 - ph);
-      g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(sx + 1.6 * z, sy - 1.8 * z, sx, sy - 3.6 * z); g.quadraticCurveTo(sx - 1.6 * z, sy - 5.4 * z, sx, sy - 7 * z); g.stroke();
-    }
-    g.restore();
+  function miniBowl(x, y, z) {                                            // Mini-Nudelschale fürs Schild, (x, y): Mitte
+    const by = y + 0.5 * z, W = 3.5 * z, D = 2.9 * z, R = 1.15 * z;
+    ellipse(x, by + D - 0.1 * z, 1.5 * z, 0.5 * z, C('#8e2a1f'));           // Fuß
+    g.beginPath(); g.ellipse(x, by, W, D, 0, 0, Math.PI); g.fillStyle = C('#c0392b'); g.fill();
+    g.strokeStyle = C('#fbf7f0'); g.lineWidth = 0.45 * z;                   // helles Band
+    g.beginPath(); g.ellipse(x, by + 0.3 * z, W - 0.3 * z, D - 1.3 * z, 0, 0.25, Math.PI - 0.25); g.stroke();
+    ellipse(x, by, W, R, C('#e9b949'));                                     // Brühe mit Nudeln
+    g.strokeStyle = C('#fff1b8'); g.lineWidth = 0.35 * z;
+    g.beginPath();
+    for (let i = 0; i <= 6; i++) { const px = x - 2.4 * z + i * 0.8 * z, py = by + (i & 1 ? -0.3 : 0.3) * z; i ? g.lineTo(px, py) : g.moveTo(px, py); }
+    g.stroke();
+    circle(x - 1.3 * z, by - 0.1 * z, 0.55 * z, C('#fffaf0')); circle(x - 1.3 * z, by - 0.1 * z, 0.3 * z, C('#f2a33a'));   // Ei
+    g.strokeStyle = C('#8e2a1f'); g.lineWidth = 0.4 * z;                    // Rand
+    g.beginPath(); g.ellipse(x, by, W, R, 0, 0, TAU); g.stroke();
+    kLine({ z }, [x + 0.3 * z, by - 0.2 * z], [x + 2.1 * z, y - 3.4 * z], '#d9a066', 0.55);   // Stäbchen
+    kLine({ z }, [x + 1.2 * z, by - 0.1 * z], [x + 3 * z, y - 2.7 * z], '#c98d5c', 0.55);
+    kLine({ z }, [x + 1.8 * z, y - 2.9 * z], [x + 2.1 * z, y - 3.4 * z], '#c0392b', 0.6);
+    kLine({ z }, [x + 2.7 * z, y - 2.2 * z], [x + 3 * z, y - 2.7 * z], '#c0392b', 0.6);
   }
   SHOP_ART.nudelbar = function (K, s, now, x, y, t) {
     const z = K.z, L = lit(), H0 = 20, RH = 10;
+    const sign = hangSign(K, (cx, cy, zz) => { miniBowl(cx, cy, zz); if (L) kGlow(cx, cy, zz, 14); }, '#c0392b');
+    const fb = sign[0] > 0 && sign[1] < 0 ? 0.38 : -0.38;                   // Fahne an die andere vordere Ecke als das Schild
     K.scene([[-0.08, 0, () => {
       const B = shopHouse(K, { wall: '#c0392b', roof: '#2d2d38', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#2d2d38' });
       const F = B.faces.front;
@@ -113,14 +97,11 @@
         const m = faceAt(F, 0.75, F.H * 0.3);
         g.beginPath(); g.ellipse(m[0], m[1], 1.5 * z, 1.1 * z, 0, 0, Math.PI); g.fillStyle = C('#c0392b'); g.fill();
       }
-      // Pagodendach und Laternen an den drei vorderen Ecken
+      // Pagodendach und Laternen an den beiden seitlichen Ecken (an der vorderen hängt das Schild)
       const E = pagodaEaves(K, B).slice().sort((p, q) => p.d - q.d);
-      for (const c of E.slice(1)) paperLantern(c.p[0], c.p[1] + 1.5 * z, z, L);
-    }], [-0.08, 0, () => {
-      const [px, py] = K.P(-0.08, 0, H0 + RH);
-      noodleBowl(px, py - 8 * z, z, now);
-    }], [0.42, -0.38, () => {                                                                // Nobori-Fahne
-      const top = kPost(K, 0.42, -0.38, 21, '#2d2d38', 0.9);
+      for (const c of E.slice(1, 3)) paperLantern(c.p[0], c.p[1] + 1.5 * z, z, L);
+    }], sign, [0.42, fb, () => {                                                             // Nobori-Fahne
+      const top = kPost(K, 0.42, fb, 21, '#2d2d38', 0.9);
       kLine(K, top, [top[0] + 4.6 * z, top[1]], '#2d2d38', 0.7);
       g.fillStyle = C('#f7efdc'); g.fillRect(top[0] + 0.5 * z, top[1] + 0.4 * z, 4 * z, 12 * z);
       g.fillStyle = C('#c0392b'); g.fillRect(top[0] + 0.5 * z, top[1] + 0.4 * z, 4 * z, 2 * z); g.fillRect(top[0] + 0.5 * z, top[1] + 10.8 * z, 4 * z, 1.6 * z);
@@ -129,8 +110,8 @@
   };
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Konditorei: zuckerwatte-rosa Haus, schokobraunes Dach mit Zuckerguss-Kante, dreistöckige Torte mit Erdbeere und
-  // Kerze auf dem Dach, Tortenvitrine im Schaufenster, Tischchen mit rosa Schirm.
+  // Konditorei: zuckerwatte-rosa Haus, schokobraunes Dach mit Zuckerguss-Kante, Ausleger-Schild mit kleiner Torte
+  // (Erdbeere, Kerze) an der Ecke, Tortenvitrine im Schaufenster, Tischchen mit rosa Schirm.
   // ---------------------------------------------------------------------------------------------------------------
   function icingEaves(K, B) {
     const z = K.z, E = eaveCorners(K, B), col = C('#fffaf5');
@@ -158,31 +139,27 @@
       ellipse(px, py + 0.4 * z, rx / 7, (i & 1 ? 1.5 : 0.9) * z, C(drip));
     }
   }
-  function tieredCake(x, y, z, now, L) {                                  // (x, y): Boden der Torte
-    const h1 = 6 * z, h2 = 5 * z, h3 = 4.5 * z;
-    ellipse(x, y + 0.6 * z, 11.5 * z, 4.3 * z, C('#fffaf5'));            // Tortenplatte
-    cakeTier(x, y, 10 * z, h1, '#f7a8c4', '#fffaf5', '#fffaf5', z);
-    for (let i = 0; i < 5; i++) circle(x + (i - 2) * 3.8 * z, y - h1 - 1.6 * z + Math.abs(i - 2) * 0.9 * z, 0.9 * z, C('#e8384f'));   // Beeren
-    cakeTier(x, y - h1, 7 * z, h2, '#fff4e6', '#f7a8c4', '#f7a8c4', z);
-    cakeTier(x, y - h1 - h2, 4.5 * z, h3, '#f7a8c4', '#fffaf5', '#fffaf5', z);
-    const ty = y - h1 - h2 - h3;
+  function miniCake(x, y, z, now, L) {                                    // Mini-Torte fürs Schild, (x, y): Mitte
+    const d = z * 0.4;                                                     // Guss-Tropfen klein
+    cakeTier(x, y + 2.6 * z, 3 * z, 2.2 * z, '#f7a8c4', '#fffaf5', '#fffaf5', d);
+    for (const sx of [-1, 1]) circle(x + sx * 2.35 * z, y + 0.75 * z, 0.45 * z, C('#e8384f'));   // Beeren
+    cakeTier(x, y + 0.4 * z, 2 * z, 1.8 * z, '#7b4a2e', '#f7a8c4', '#f7a8c4', d);
     // Erdbeere
-    const ex = x - 1.3 * z, ey = ty - 1.8 * z;
-    g.beginPath(); g.moveTo(ex - 2.2 * z, ey - 0.8 * z); g.quadraticCurveTo(ex, ey - 2.6 * z, ex + 2.2 * z, ey - 0.8 * z); g.quadraticCurveTo(ex + 1.8 * z, ey + 2 * z, ex, ey + 2.8 * z);
-    g.quadraticCurveTo(ex - 1.8 * z, ey + 2 * z, ex - 2.2 * z, ey - 0.8 * z); g.fillStyle = C('#e8384f'); g.fill();
-    poly([[ex - 1.8 * z, ey - 1.2 * z], [ex, ey - 2.8 * z], [ex + 1.8 * z, ey - 1.2 * z], [ex, ey - 1.7 * z]], C('#58b36a'));
-    for (const [dx, dy] of [[-0.8, 0], [0.8, 0.2], [0, 1.2], [-0.5, 1.8], [0.6, 1.5]]) circle(ex + dx * z, ey + dy * z, 0.25 * z, C('#ffe28a'));
+    const ex = x - 0.6 * z, ey = y - 1.9 * z;
+    g.beginPath(); g.moveTo(ex - 0.8 * z, ey - 0.3 * z); g.quadraticCurveTo(ex, ey - 1 * z, ex + 0.8 * z, ey - 0.3 * z); g.quadraticCurveTo(ex + 0.7 * z, ey + 0.7 * z, ex, ey + 1 * z);
+    g.quadraticCurveTo(ex - 0.7 * z, ey + 0.7 * z, ex - 0.8 * z, ey - 0.3 * z); g.fillStyle = C('#e8384f'); g.fill();
+    poly([[ex - 0.6 * z, ey - 0.45 * z], [ex, ey - 1.05 * z], [ex + 0.6 * z, ey - 0.45 * z], [ex, ey - 0.65 * z]], C('#58b36a'));
     // Kerze
-    const cx = x + 1.9 * z, cb = ty - 0.2 * z;
-    g.fillStyle = C('#fffaf5'); g.fillRect(cx - 0.6 * z, cb - 6 * z, 1.2 * z, 6 * z);
-    g.fillStyle = C('#f28cb1'); for (let i = 0; i < 3; i++) g.fillRect(cx - 0.6 * z, cb - (1.4 + i * 2) * z, 1.2 * z, 0.8 * z);
-    const fl = Math.sin(now / 160) * 0.25 * z;
-    oval(cx + fl * 0.5, cb - 7.4 * z, 1 * z, 1.7 * z + fl, 0, L ? '#fff3b0' : C('#ffb13b'));
-    oval(cx + fl * 0.5, cb - 7 * z, 0.45 * z, 0.8 * z, 0, L ? '#ffffff' : C('#fff3b0'));
-    if (L) kGlow(cx, cb - 7.4 * z, z, 12);
+    const cx = x + 0.9 * z, cb = y - 1.3 * z;
+    g.fillStyle = C('#f28cb1'); g.fillRect(cx - 0.3 * z, cb - 1.7 * z, 0.6 * z, 1.7 * z);
+    const fl = Math.sin(now / 160) * 0.1 * z;
+    oval(cx + fl * 0.5, cb - 2.3 * z, 0.4 * z, 0.65 * z + fl, 0, L ? '#fff3b0' : C('#ffb13b'));
+    if (L) kGlow(cx, cb - 2.3 * z, z, 10);
   }
   SHOP_ART.konditorei = function (K, s, now, x, y, t) {
     const z = K.z, L = lit(), H0 = 20, RH = 10;
+    const sign = hangSign(K, (cx, cy, zz) => miniCake(cx, cy, zz, now, L), '#f28cb1');
+    const tb = sign[0] > 0 && sign[1] < 0 ? 0.44 : -0.44;                   // Tischchen an die andere vordere Ecke als das Schild
     K.scene([[-0.08, 0, () => {
       const B = shopHouse(K, { wall: '#fde8ef', roof: '#7b4a2e', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#f28cb1' });
       for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, 0, Math.min(2.4 * z, F.H * 0.12), C('#f6b3c8'));   // rosa Sockel
@@ -199,11 +176,8 @@
         });
       }
       icingEaves(K, B);
-    }], [-0.08, 0, () => {
-      const [px, py] = K.P(-0.08, 0, H0 + RH);
-      tieredCake(px, py + 1 * z, z, now, L);
-    }], [0.42, -0.44, () => {                                                                // Tischchen mit rosa Schirm
-      const [px, py] = K.P(0.42, -0.44), top = py - 11 * z;
+    }], sign, [0.42, tb, () => {                                                                   // Tischchen mit rosa Schirm
+      const [px, py] = K.P(0.42, tb), top = py - 11 * z;
       kLine(K, [px, py], [px, top], '#8a6a4a', 0.9);
       ellipse(px, py - 4.2 * z, 3.6 * z, 1.5 * z, C('#fffaf5'));
       poly([[px - 7 * z, top + 2.2 * z], [px, top - 3 * z], [px + 7 * z, top + 2.2 * z], [px, top + 5 * z]], C('#f28cb1'));
@@ -213,8 +187,8 @@
   };
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Chocolaterie: zartbitterbraunes Haus mit Rosé-Mansarddach und Gold, aufrechte Schokoladentafel (angebissen, halb in
-  // Goldfolie) auf dem Dach, Pralinen-Schachteln im Schaufenster, Kundenstopper mit Goldherz, Kugelbäumchen im Goldtopf.
+  // Chocolaterie: zartbitterbraunes Haus mit Rosé-Mansarddach und Gold, Ausleger-Schild mit kleiner Schokoladentafel
+  // (angebissen, halb in Goldfolie), Pralinen-Schachteln im Schaufenster, Kundenstopper mit Goldherz, Kugelbäumchen im Goldtopf.
   // ---------------------------------------------------------------------------------------------------------------
   const GOLD = '#d4af37';
   function chocolateBar(x, y, z) {                                         // (x, y): Fuß der Tafel, Mitte
@@ -251,8 +225,12 @@
     poly([[hx - 1.3 * z, hy], [hx + 1.3 * z, hy], [hx, hy + 1.3 * z]], C(GOLD));
     g.restore();
   }
+  function miniBar(x, y, z) {                                              // dieselbe Tafel verkleinert, (x, y): Mitte
+    g.save(); g.translate(x + 0.06 * z, y + 3 * z); g.scale(0.3, 0.3); chocolateBar(0, 0, z); g.restore();
+  }
   SHOP_ART.chocolaterie = function (K, s, now, x, y, t) {
     const z = K.z, H0 = 20, RH = 11;
+    const sign = hangSign(K, (cx, cy, zz) => { miniBar(cx, cy, zz); kGlow(cx, cy, zz, 12); }, GOLD, { up: 18.5 });   // etwas höher: über Bäumchen/Kundenstopper
     K.scene([[-0.08, 0, () => {
       const B = shopHouse(K, { wall: '#5a3420', roof: '#f3a6c1', awning: null, roofType: 'mansard', h: H0, roofH: RH, trim: GOLD });
       for (const F of Object.values(B.faces)) if (F) {
@@ -276,10 +254,7 @@
         });
         const k = faceAt(F, 0.83, F.H * 0.22); circle(k[0], k[1], 0.6 * z, C(GOLD));   // Türknauf
       }
-    }], [-0.08, 0, () => {
-      const [px, py] = K.P(-0.08, 0, H0 + RH);
-      chocolateBar(px, py + 1.5 * z, z);
-    }], [0.42, -0.4, () => {                                                                 // Kundenstopper mit Goldherz
+    }], sign, [0.42, -0.4, () => {                                                                 // Kundenstopper mit Goldherz
       const B = K.block({ a: 0.42, b: -0.4, ha: 0.022, hb: 0.075, h: 8, wall: '#3b2417', type: 'flat', roof: GOLD });
       const F = shownFace(B);
       if (F) {
@@ -298,7 +273,7 @@
   };
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Spielzeugladen: sonnengelbes Haus, blaues Dach, Regenbogen-Markise, Teddy sitzt auf dem Dach, daneben ein Windrad;
+  // Spielzeugladen: sonnengelbes Haus, blaues Dach, Regenbogen-Markise, Ausleger-Schild mit kleinem Teddy an der Ecke;
   // vorn Luftballons an einem Geschenk, Bauklötze.
   // ---------------------------------------------------------------------------------------------------------------
   function teddy(x, y, z) {                                                // (x, y): Sitzfläche, Mitte
@@ -326,18 +301,8 @@
     poly([[x, y - 12.4 * z], [x + 3.2 * z, y - 14 * z], [x + 3.2 * z, y - 10.8 * z]], C('#d24f40'));
     circle(x, y - 12.4 * z, 0.9 * z, C('#ff8a70'));
   }
-  function pinwheel(x, y, z, now) {                                        // (x, y): Fuß des Stiels
-    const hub = [x, y - 17 * z], R = 6 * z, rot = now / 380;
-    kLine({ z }, [x, y], hub, '#f5f0e6', 1);
-    const cols = ['#e8604f', '#ffd23f', '#3e7fd0', '#58b36a'];
-    for (let i = 0; i < 4; i++) {
-      const a = rot + i * Math.PI / 2, tip = [hub[0] + Math.cos(a) * R, hub[1] + Math.sin(a) * R * 0.92];
-      const side = [hub[0] + Math.cos(a + 1.1) * R * 0.62, hub[1] + Math.sin(a + 1.1) * R * 0.62 * 0.92];
-      const mid = [hub[0] + Math.cos(a + 0.45) * R * 0.55, hub[1] + Math.sin(a + 0.45) * R * 0.55 * 0.92];
-      poly([hub, tip, side], C(cols[i]));
-      poly([hub, tip, mid], C(shade(cols[i], 0.3)));
-    }
-    circle(hub[0], hub[1], 1 * z, C('#ffffff'));
+  function miniTeddy(x, y, z) {                                            // derselbe Teddy verkleinert, (x, y): Mitte
+    g.save(); g.translate(x, y + 3.6 * z); g.scale(0.31, 0.31); teddy(0, 0, z); g.restore();
   }
   function balloonBunch(K, a, b, now) {
     const [x, y] = K.P(a, b), z = K.z;
@@ -356,6 +321,8 @@
   }
   SHOP_ART.spielzeug = function (K, s, now, x, y, t) {
     const z = K.z, H0 = 20, RH = 10;
+    const sign = hangSign(K, (cx, cy, zz) => { miniTeddy(cx, cy, zz); kGlow(cx, cy, zz, 12); }, '#3e7fd0');
+    const m = sign[0] > 0 && sign[1] < 0 ? -1 : 1;                           // Ballons an die andere vordere Ecke als das Schild
     K.scene([[-0.08, 0, () => {
       const B = shopHouse(K, { wall: '#ffe08a', roof: '#3e7fd0', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#3e7fd0' });
       for (const F of Object.values(B.faces)) if (F) {                                     // bunte Punkte unterm Dach
@@ -372,15 +339,11 @@
         faceQuad(F.P, F.Q, 0.34, 0.41, F.H * 0.19, F.H * 0.29, C('#ffd23f'));
         faceQuad(F.P, F.Q, 0.47, 0.53, F.H * 0.09, F.H * 0.3, C('#c77dff'));
       }
-    }], [-0.08, 0, () => {
-      const [px, py] = K.P(-0.08, 0, H0 + RH);
-      pinwheel(px + 10.5 * z, py + 6 * z, z, now);
-      teddy(px - 2 * z, py + 2 * z, z);
-    }], [0.4, -0.3, () => balloonBunch(K, 0.4, -0.3, now)],
-    [0.34, 0.42, () => {                                                                        // Bauklötze
-      K.block({ a: 0.32, b: 0.38, ha: 0.05, hb: 0.05, h: 4.5, wall: '#3e7fd0', type: 'flat', roof: '#6fa3e8' });
-      K.block({ a: 0.36, b: 0.47, ha: 0.05, hb: 0.05, h: 4.5, wall: '#e8604f', type: 'flat', roof: '#ff8a70' });
-      K.block({ a: 0.34, b: 0.425, ha: 0.05, hb: 0.05, h: 4.5, lift: 4.5, wall: '#58b36a', type: 'flat', roof: '#8fd08a' });
+    }], sign, [0.4, -0.3 * m, () => balloonBunch(K, 0.4, -0.3 * m, now)],
+    [0.34, 0.42 * m, () => {                                                                    // Bauklötze
+      K.block({ a: 0.32, b: 0.38 * m, ha: 0.05, hb: 0.05, h: 4.5, wall: '#3e7fd0', type: 'flat', roof: '#6fa3e8' });
+      K.block({ a: 0.36, b: 0.47 * m, ha: 0.05, hb: 0.05, h: 4.5, wall: '#e8604f', type: 'flat', roof: '#ff8a70' });
+      K.block({ a: 0.34, b: 0.425 * m, ha: 0.05, hb: 0.05, h: 4.5, lift: 4.5, wall: '#58b36a', type: 'flat', roof: '#8fd08a' });
     }]]);
   };
 })();

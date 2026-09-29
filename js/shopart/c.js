@@ -8,20 +8,7 @@
   const byDepth = K => (p, q) => K.depth(p[0], p[1]) - K.depth(q[0], q[1]);
 
   // --- gemeinsame Teile -------------------------------------------------------------------------------------------
-  // Ecke der Tür-Seite, die am Bildrand steht: dort hängt ein Ausleger-Schild, das man aus jeder Richtung sieht
-  function edgeCorner(K, B) {
-    const mid = K.depth(B.a, B.b), fa = B.a + B.ha, c1 = [fa, B.b + B.hb], c2 = [fa, B.b - B.hb];
-    return Math.abs(K.depth(...c1) - mid) <= Math.abs(K.depth(...c2) - mid) ? c1 : c2;
-  }
-  // Ausleger (Nasenschild) an dieser Ecke in Höhe up; draw(x, y) bekommt den Aufhängepunkt am Ende des Arms
-  function bracket(K, B, up, out, draw) {
-    const [ca, cb] = edgeCorner(K, B), z = K.z, w = K.P(ca, cb, up), o = K.P(ca + out, cb, up), m = lerp(w, o, 0.55);
-    kLine(K, [w[0], w[1] + 3 * z], [w[0], w[1] - 1.5 * z], '#3e3e4a', 1.4);         // Wandhalter
-    kLine(K, [w[0], w[1] + 3 * z], m, '#3e3e4a', 0.7);                               // Strebe
-    kLine(K, w, o, '#3e3e4a', 1);                                                     // Arm
-    circle(o[0], o[1], 0.9 * z, C('#3e3e4a'));
-    draw(o[0], o[1]);
-  }
+  // Das Wahrzeichen hängt klein im Ausleger-Schild an der Hausecke (hangSign in draw-shops.js), nicht auf dem Dach.
   // Dachflächen eines Walm- bzw. Satteldachs mit First entlang b (ha ≤ hb):
   // [Normale, Traufe Anfang, Traufe Ende, First über dem Anfang, First über dem Ende] – Punkte als [a, b, Höhe]
   function slopes(B, roofH, gable) {
@@ -63,16 +50,16 @@
     ellipse(x + r * 0.35, y - r * 1.05, r * 0.4, r * 0.2, C('#58b36a'));
   }
 
-  // --- Apotheke: weiß mit grünem Kreuz ------------------------------------------------------------------------------
+  // --- Apotheke: weiß mit grünem Kreuz im Ausleger-Schild -----------------------------------------------------------
   const APO = '#1fa84f';
   const crossPts = (x, y, s, t) => [[x - t, y - s], [x + t, y - s], [x + t, y - t], [x + s, y - t], [x + s, y + t], [x + t, y + t],
     [x + t, y + s], [x - t, y + s], [x - t, y + t], [x - s, y + t], [x - s, y - t], [x - t, y - t]];
-  // Grünes Apothekenkreuz um (x, y) – s halbe Länge, t halbe Balkenbreite (px): weißer Rand, dunkle Kante, nachts hell
-  function greenCross(x, y, s, t, z, on) {
-    poly(crossPts(x, y, s + 1.1 * z, t + 1.1 * z), C('#ffffff'));
-    poly(crossPts(x + 1.1 * z, y + 0.8 * z, s, t), on ? '#1f9a52' : C('#11773a'));
+  // Kleines grünes Apothekenkreuz mittig bei (x, y) für das Schild: dunkle Kante, Glanzstreif, nachts hell leuchtend
+  function greenCross(x, y, z, on) {
+    const s = 3.2 * z, t = 1.15 * z;
+    poly(crossPts(x + 0.55 * z, y + 0.45 * z, s, t), on ? '#1f9a52' : C('#11773a'));
     poly(crossPts(x, y, s, t), on ? '#6dffa3' : C(APO));
-    poly([[x - t + 0.5 * z, y - s + 0.6 * z], [x - t + 1.5 * z, y - s + 0.6 * z], [x - t + 1.5 * z, y - t], [x - t + 0.5 * z, y - t]], on ? '#e0ffea' : C('#74dd99'));
+    poly([[x - t + 0.3 * z, y - s + 0.35 * z], [x - t + 0.85 * z, y - s + 0.35 * z], [x - t + 0.85 * z, y - t], [x - t + 0.3 * z, y - t]], on ? '#e0ffea' : C('#74dd99'));
     if (on) glowQuad([[x - t, y - s], [x + t, y - s], [x + t, y + s], [x - t, y + s]], s * 3.4, 'blue');
   }
   function bottles(F, z) {                                  // Regal mit bunten Fläschchen im Schaufenster
@@ -121,24 +108,15 @@
           faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, K.wallCol(APO, F.n));               // Glastür mit grünem Rahmen
           windowOn(F.P, F.Q, 0.675, 0.825, F.H * 0.03, F.H * 0.38, z);
         }
-        bracket(K, B, 19.5, 0.13, (bx, by) => {                                              // leuchtendes Kreuz an der Ecke
-          kLine(K, [bx, by], [bx, by + 2.2 * z], '#3e3e4a', 0.6);
-          greenCross(bx, by + 8.4 * z, 5.6 * z, 2 * z, z, on);
-        });
       }],
-      [-0.08, 0, () => {                                                                   // großes Kreuz auf dem Dach
-        const [px, py] = K.P(-0.08, 0, H + RH - 1);
-        box(px, py, 2.8 * z, 1.4 * z, 3 * z, '#e6ece9', null, 0);
-        kLine(K, [px, py - 3 * z], [px, py - 6.5 * z], '#8a8f99', 1.6);
-        greenCross(px, py - 15.5 * z, 8.6 * z, 3 * z, z, on);
-      }],
+      hangSign(K, (cx, cy, zz) => greenCross(cx, cy, zz, on), APO),                        // Kreuz im Schild an der Ecke
       [0.36, 0.03, () => topiary(K, 0.36, 0.03)],
       [0.36, 0.34, () => topiary(K, 0.36, 0.34)],
       [0.4, -0.13, () => herbPlanter(K, 0.4, -0.13)],
     ]);
   };
 
-  // --- Hofladen: Holz-Fachwerk, dickes Reetdach, Wetterhahn, Korb voller Obst -------------------------------------
+  // --- Hofladen: Holz-Fachwerk, dickes Reetdach, Korb voller Obst, Apfel im Schild ---------------------------------
   const THATCH = '#d9b25a';
   function beams(K, B) {                                    // dunkle Fachwerk-Balken, frei um Fenster und Tür
     const z = K.z, lowWins = !B.faces.front;               // Tür hinten: die Seiten haben unten Fenster
@@ -164,24 +142,13 @@
       poly([E(f.p, top), E(f.q, top), E(f.q, top - hgt), E(f.p, top - hgt)], K.wallCol(col, f.n));
     }
   }
-  function weathervane(K, a, b, up, now) {                  // Wetterhahn auf dem First
-    const z = K.z, [x, y] = K.P(a, b, up), col = '#353a46', sx = 0.88 + 0.12 * Math.sin(now / 2300);
-    kLine(K, [x, y + 1 * z], [x, y - 9 * z], col, 1.1);
-    kLine(K, [x - 4.5 * z, y - 4 * z], [x + 4.5 * z, y - 4 * z], col, 0.6);
-    kLine(K, [x - 2.2 * z, y - 5.3 * z], [x + 2.2 * z, y - 2.7 * z], col, 0.6);
-    circle(x, y - 4 * z, 1 * z, C('#e9b949'));
-    const R = (dx, dy) => [x + dx * z * sx, y - 9 * z + dy * z];
-    kLine(K, R(-6, 0), R(7, 0), col, 0.8);                                                  // Pfeil
-    poly([R(-7.8, 0), R(-5, -1.6), R(-5, 1.6)], C(col));
-    poly([R(5, 0), R(7.8, -2), R(8.8, -2), R(6.8, 0), R(8.8, 2), R(7.8, 2)], C(col));
-    poly([R(1.5, -3), R(5.2, -11.8), R(8.6, -9.2), R(7.6, -5), R(4, -1.8)], C(col));        // Schwanz
-    ellipse(...R(0.6, -3.8), 4.2 * z * sx, 2.8 * z, C(col));                               // Körper
-    poly([R(-3.3, -3.6), R(-1.2, -3), R(-1.6, -7.8), R(-3.9, -7.8)], C(col));             // Hals
-    circle(...R(-2.9, -8.4), 1.9 * z, C(col));                                              // Kopf
-    for (const [dx, dy, r] of [[-3.8, -10.3, 0.9], [-2.7, -10.8, 1], [-1.6, -10.2, 0.85]]) circle(...R(dx, dy), r * z, C('#e8604f'));
-    poly([R(-4.6, -8.9), R(-6.7, -8.2), R(-4.6, -7.6)], C('#e9b949'));                     // Schnabel
-    ellipse(...R(-4.1, -6.7), 0.6 * z * sx, 1 * z, C('#e8604f'));                          // Kehllappen
-    kLine(K, R(-0.6, -1.2), R(-0.6, 0), col, 0.6); kLine(K, R(1.6, -1.2), R(1.6, 0), col, 0.6);
+  function miniApple(K, x, y, z) {                          // roter Apfel mit Stiel und Blatt für das Schild
+    kLine(K, [x - 0.1 * z, y - 1.5 * z], [x + 0.4 * z, y - 3.3 * z], '#6b4424', 0.6);
+    circle(x - 1 * z, y + 0.85 * z, 2.5 * z, C('#e8413b'));
+    circle(x + 1 * z, y + 0.85 * z, 2.5 * z, C('#e8413b'));
+    circle(x, y + 0.55 * z, 2.7 * z, C('#e8413b'));
+    circle(x - 1.3 * z, y - 0.25 * z, 0.8 * z, C(shade('#e8413b', 0.45)));
+    g.beginPath(); g.ellipse(x + 1.3 * z, y - 2.5 * z, 1.2 * z, 0.55 * z, -0.45, 0, Math.PI * 2); g.fillStyle = C('#58b36a'); g.fill();
   }
   function hayBale(K, a, b) {
     const B = K.block({ a, b, ha: 0.075, hb: 0.115, h: 4.5, wall: '#e2bd5c', type: 'flat', roof: '#f0d27e' });
@@ -251,7 +218,7 @@
         eaveBand(K, B, shade(THATCH, -0.2), 2.6);
         roofLines(K, B, RH, false, [0.3, 0.6], shade(THATCH, -0.24), 0.9);
       }],
-      [-0.08, 0, () => weathervane(K, -0.08, 0, H + RH - 0.5, now)],
+      hangSign(K, (cx, cy, zz) => miniApple(K, cx, cy, zz), '#8a5a3c', { b0: 0.52 }),   // Apfel im Schild, etwas weiter draußen (sonst verdeckt der Obstkorb es)
       [0.07, 0.45, () => fruitCrates(K, 0.07, 0.45)],
       [0.42, -0.33, () => { hayBale(K, 0.42, -0.33); bigBasket(K, 0.42, -0.33, 4.5); }],
       [0.42, -0.02, () => pumpkinCart(K, 0.42, -0.02)],
@@ -264,7 +231,7 @@
     ]);
   };
 
-  // --- Buchladen: Flaschengrün mit Gold, aufgeschlagenes Buch auf dem Dach ------------------------------------------
+  // --- Buchladen: Flaschengrün mit Gold, aufgeschlagenes Buch im Schild ---------------------------------------------
   const GOLD = '#d4af37';
   const SPINES = ['#e8604f', '#5f8fe8', '#e9c46a', '#58b36a', '#c3a8e6', '#f28cb1', '#ff9f5a', '#fffaf0', '#8e2c3a'];
   function bookSpines(F, t0, t1, h0, h1, z, seed) {         // zwei Regalböden voller bunter Buchrücken
@@ -293,33 +260,26 @@
       glowQuad(q, 14 * z);
     }
   }
-  function openBook(K, a, b, up, on) {                      // großes aufgeschlagenes Buch, aufrecht auf dem Dach
-    const z = K.z, [x0, y0] = K.P(a, b, up), W = 12 * z, Hh = 14 * z, y = y0 - 4 * z;
-    kLine(K, [x0 - 5 * z, y0 + 0.5 * z], [x0 - 5 * z, y - 1 * z], '#a8862a', 1.3);
-    kLine(K, [x0 + 5 * z, y0 + 0.5 * z], [x0 + 5 * z, y - 1 * z], '#a8862a', 1.3);
-    poly([[x0, y + 1.9 * z], [x0 - W - 1.5 * z, y - 0.9 * z], [x0 - W - 1.5 * z, y - Hh - 0.7 * z], [x0, y - Hh + 2.6 * z],
-          [x0 + W + 1.5 * z, y - Hh - 0.7 * z], [x0 + W + 1.5 * z, y - 0.9 * z]], C('#8e2c3a'));                  // Einband
-    for (const d of [-1, 1]) {                                                            // goldene Buchecken
-      poly([[x0 + d * (W + 1.5 * z), y - Hh - 0.7 * z], [x0 + d * (W - 1.5 * z), y - Hh - 0.4 * z], [x0 + d * (W + 1.5 * z), y - Hh + 2.4 * z]], C(GOLD));
-      poly([[x0 + d * (W + 1.5 * z), y - 0.9 * z], [x0 + d * (W - 1.5 * z), y - 1 * z], [x0 + d * (W + 1.5 * z), y - 3.9 * z]], C(GOLD));
-    }
-    const page = d => {
-      g.beginPath(); g.moveTo(x0, y);
-      g.quadraticCurveTo(x0 + d * W * 0.4, y - 2.3 * z, x0 + d * W, y - 2 * z);
-      g.lineTo(x0 + d * W, y - Hh);
-      g.quadraticCurveTo(x0 + d * W * 0.4, y - Hh - 0.6 * z, x0, y - Hh + 2.4 * z);
+  function miniBook(K, x, y, z, on) {                       // kleines aufgeschlagenes Buch mittig bei (x, y) für das Schild
+    const W = 3.1 * z, Hh = 4.4 * z, yb = y + 2.2 * z;      // yb: Unterkante am Falz
+    poly([[x, yb + 0.6 * z], [x - W - 0.5 * z, yb - 0.4 * z], [x - W - 0.5 * z, yb - Hh - 0.3 * z], [x, yb - Hh + 0.8 * z],
+          [x + W + 0.5 * z, yb - Hh - 0.3 * z], [x + W + 0.5 * z, yb - 0.4 * z]], C('#8e2c3a'));                   // Einband
+    for (const d of [-1, 1]) {                                                            // Seiten
+      g.beginPath(); g.moveTo(x, yb);
+      g.quadraticCurveTo(x + d * W * 0.4, yb - 0.8 * z, x + d * W, yb - 0.7 * z);
+      g.lineTo(x + d * W, yb - Hh);
+      g.quadraticCurveTo(x + d * W * 0.4, yb - Hh - 0.2 * z, x, yb - Hh + 0.8 * z);
       g.closePath(); g.fillStyle = d < 0 ? C('#fffaf0') : C('#f1e6cf'); g.fill();
-      if (on) glowQuad([[x0, y], [x0 + d * W, y - 2 * z], [x0 + d * W, y - Hh], [x0, y - Hh + 2.4 * z]], 18 * z);
-    };
-    page(-1); page(1);
-    g.strokeStyle = C('#8a8f99'); g.lineWidth = 0.7 * z; g.lineCap = 'round'; g.beginPath();
-    for (const d of [-1, 1]) for (let i = 0; i < 4; i++) {
-      const yy = y - Hh + 4.4 * z + i * 2.3 * z, x1 = x0 + d * 2 * z, x2 = x0 + d * (W - (i === 3 && d > 0 ? 5 : 1.6) * z);
-      g.moveTo(x1, yy + 1.2 * z); g.quadraticCurveTo(x0 + d * W * 0.45, yy - 0.3 * z, x2, yy - 0.3 * z);
+    }
+    g.strokeStyle = C('#8a8f99'); g.lineWidth = 0.4 * z; g.lineCap = 'round'; g.beginPath();
+    for (const d of [-1, 1]) for (let i = 0; i < 2; i++) {                                // Zeilen
+      const yy = yb - Hh + 1.9 * z + i * 1.2 * z;
+      g.moveTo(x + d * 0.7 * z, yy + 0.3 * z); g.quadraticCurveTo(x + d * W * 0.45, yy - 0.2 * z, x + d * (W - 0.6 * z), yy - 0.1 * z);
     }
     g.stroke();
-    kLine(K, [x0, y], [x0, y - Hh + 2.4 * z], '#cbbd9f', 0.8);                           // Falz
-    poly([[x0 + 0.3 * z, y - Hh + 2.6 * z], [x0 + 1.5 * z, y - Hh + 2.8 * z], [x0 + 1.9 * z, y + 3.6 * z], [x0 + 1.1 * z, y + 2.7 * z], [x0 + 0.4 * z, y + 3.7 * z]], C('#e8604f'));   // Lesebändchen
+    kLine(K, [x, yb], [x, yb - Hh + 0.8 * z], '#cbbd9f', 0.5);                           // Falz
+    poly([[x + 0.15 * z, yb - 0.4 * z], [x + 0.75 * z, yb - 0.3 * z], [x + 0.85 * z, yb + 1.6 * z], [x + 0.45 * z, yb + 1.2 * z], [x + 0.15 * z, yb + 1.6 * z]], C('#e8604f'));   // Lesebändchen
+    if (on) kGlow(x, y, z, 14);
   }
   function bookTrolley(K, a, b) {                           // Bücherwagen vor dem Laden
     const z = K.z;
@@ -350,13 +310,13 @@
         }
         dormers(K, B, RH);
       }],
-      [-0.08, 0, () => openBook(K, -0.08, 0, H + RH, on)],
+      hangSign(K, (cx, cy, zz) => miniBook(K, cx, cy, zz, on), GOLD),                     // Buch im Schild an der Ecke
       [0.4, -0.3, () => bookTrolley(K, 0.4, -0.3)],
       [0.34, 0.45, () => bookStack(K, 0.34, 0.45)],
     ]);
   };
 
-  // --- Pizzeria: Terrakotta, Ziegeldach, grün-weiß-rote Markise, Pizza-Schild und Ofen-Schornstein ------------------
+  // --- Pizzeria: Terrakotta, Ziegeldach, grün-weiß-rote Markise, Ofen-Schornstein, Pizza im Schild ------------------
   function tricolorAwning(K, B, h0, h1, out) {
     if (!B.faces.front) return;
     const fa = B.a + B.ha, n = 9, b0 = B.b - B.hb * 0.94, b1 = B.b + B.hb * 0.94, cols = ['#2e9e4f', '#fbf2e2', '#d93a2b'];
@@ -394,11 +354,9 @@
   const CHEESE = [[-3, -2, 2.2], [2.5, -3.5, 1.8], [3.2, 2.2, 2.3], [-2.2, 3, 1.9], [0.3, 0.2, 1.7], [-5, 0.8, 1.3], [5.2, -0.8, 1.2]];
   const SALAMI = [[-3.5, -3.5], [3, -1], [-1, 3.8], [3.6, 3.6], [-4.4, 1.6], [0.6, -5]];
   const BASIL = [[0.8, -2.2], [-2.6, 0.9], [1.8, 4.8], [4.7, 0.9], [-1.4, -5.3]];
-  function pizzaSign(K, a, b, up, on) {                     // großes rundes Pizza-Schild
-    const z = K.z, [bx, by] = K.P(a, b, up), R = 9.5 * z, x = bx, y = by - 4 * z - R;
-    kLine(K, [bx - 3 * z, by + 0.8 * z], [x - 3 * z, y], '#4a4a58', 1.2);
-    kLine(K, [bx + 3 * z, by + 0.8 * z], [x + 3 * z, y], '#4a4a58', 1.2);
-    circle(x + 1.3 * z, y + 1.1 * z, R, C('#a8642a'));                                    // Kante (Tiefe)
+  // Kleine Pizza mittig bei (x, y) für das Schild: Maße wie beim früheren großen Schild, nur mit z = 0.4 × Zoom
+  function miniPizza(x, y, zz, on) {
+    const z = zz * 0.4, R = 9.5 * z;
     circle(x, y, R, C('#e7a950'));                                                        // Teigrand
     g.strokeStyle = C('#f6d08c'); g.lineWidth = 1 * z;
     g.beginPath(); g.arc(x, y, R - 1 * z, Math.PI * 1.05, Math.PI * 1.5); g.stroke();
@@ -409,11 +367,7 @@
     g.strokeStyle = C('#c98a3c'); g.lineWidth = 0.5 * z; g.beginPath();
     for (let k = 0; k < 3; k++) { const ang = k * Math.PI / 3 + 0.3, c = Math.cos(ang) * (R - 2.2 * z), s = Math.sin(ang) * (R - 2.2 * z); g.moveTo(x - c, y - s); g.lineTo(x + c, y + s); }
     g.stroke();
-    if (on) {                                                                             // Neonring
-      g.strokeStyle = '#fff0a8'; g.lineWidth = 1.4 * z;
-      g.beginPath(); g.arc(x, y, R + 1 * z, 0, Math.PI * 2); g.stroke();
-      kGlow(x, y, z, 34);
-    }
+    if (on) kGlow(x, y, zz, 14);
   }
   function ovenChimney(K, a, b, up, now) {                  // gemauerter Ofen-Schornstein mit Rauch
     const z = K.z, B = K.block({ a, b, ha: 0.06, hb: 0.06, h: 11, lift: up, wall: '#b5523a', type: 'flat', roof: '#4a2a22' });
@@ -466,8 +420,8 @@
         if (B.faces.front) ovenInWindow(B.faces.front, now, on, z);
         tricolorAwning(K, B, 8.6, 12, 0.1);
       }],
-      [-0.08, 0, () => [[-0.08, 0.24, () => ovenChimney(K, -0.08, 0.24, H + RH - 2, now)], [-0.08, -0.1, () => pizzaSign(K, -0.08, -0.1, H + RH, on)]]
-        .sort(byDepth(K)).forEach(p => p[2]())],
+      [-0.08, 0, () => ovenChimney(K, -0.08, 0.24, H + RH - 2, now)],
+      hangSign(K, (cx, cy, zz) => miniPizza(cx, cy, zz, on), '#d93a2b'),                  // Pizza im Schild an der Ecke
       [0.41, -0.25, () => checkeredTable(K, 0.41, -0.25, on)],
       [0.36, 0.04, () => basilPot(K, 0.36, 0.04)],
       [0.33, 0.47, () => standBoard(K, 0.33, 0.47, '#8a5a3c', '#2f3a33', (bx, by, zz) => {

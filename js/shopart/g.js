@@ -1,7 +1,8 @@
 'use strict';
 // Ladenbilder, Gruppe g (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Kino, Theater, Konzerthalle, Kaufhaus, Passage: feste Markenfarben und ein großes Wahrzeichen, das man aus allen
-// vier Richtungen sieht (auf dem Dach bzw. über dem Dach). Alles in einer Klammer, damit keine Namen mit den anderen
+// Kino, Theater, Konzerthalle, Kaufhaus, Passage, Aquarium: feste Markenfarben. Kino, Theater und Konzerthalle tragen
+// nichts mehr auf dem Dach (Filmrolle, Masken, Noten waren zu viel); man erkennt sie an Leuchtreklame, Säulenvorbau
+// bzw. Wellendach. Das Aquarium ist ein großes Glasbecken. Alles in einer Klammer, damit keine Namen mit den anderen
 // Gruppen-Dateien zusammenstoßen.
 (function () {
   const lightsOn = () => night > 0.15 && isLive();
@@ -110,25 +111,6 @@
       circle(x + dx * z, top + dy * z, 2.1 * z, C(i % 3 ? '#fff6d2' : '#ffe08a')));
     kGlow(x, top, z, 18);
   }
-  // Filmrolle auf dem Dach (Ständer, Rolle mit fünf Löchern, Filmstreifen, der sich aufs Dach legt)
-  function filmReel(K, a, b, up, z, now) {
-    const [bx, by] = K.P(a, b, up), r = 15 * z, cx = bx, cy = by - 23 * z, [ex, ey] = K.P(a + 0.55, b + 0.38, up);
-    const strip = dy => { g.beginPath(); g.moveTo(cx + r * 0.55, cy + r * 0.55 + dy); g.bezierCurveTo(cx + r * 1.6, cy + r * 1.3 + dy, ex + 12 * z, ey - 12 * z + dy, ex, ey + dy); g.stroke(); };
-    g.lineCap = 'butt';
-    g.strokeStyle = C('#1d1622'); g.lineWidth = 6 * z; strip(0);                              // Filmstreifen mit Lochreihen
-    g.strokeStyle = C('#6b5a86'); g.lineWidth = 2.4 * z; strip(0);
-    g.strokeStyle = C('#e9e2f5'); g.lineWidth = 0.8 * z; g.setLineDash([1 * z, 1.2 * z]); strip(-2.1 * z); strip(2.1 * z); g.setLineDash([]);
-    g.lineCap = 'round';
-    kLine(K, [cx, cy], [bx - 7 * z, by], '#6d7380', 1.8); kLine(K, [cx, cy], [bx + 7 * z, by], '#6d7380', 1.8);
-    circle(cx, cy, r, C('#6d7380'));
-    circle(cx, cy, r * 0.88, C('#d5dae2'));
-    const spin = now / 2600;
-    for (let i = 0; i < 5; i++) { const w = spin + i * Math.PI * 2 / 5; circle(cx + Math.cos(w) * r * 0.52, cy + Math.sin(w) * r * 0.52, r * 0.2, C('#3b2a4a')); }
-    circle(cx, cy, r * 0.17, C('#8d93a0')); circle(cx, cy, r * 0.07, C('#2a1d36'));
-    g.strokeStyle = C('#ffffff'); g.lineWidth = 1.2 * z;
-    g.beginPath(); g.arc(cx, cy, r * 0.78, Math.PI * 1.1, Math.PI * 1.45); g.stroke();
-    kGlow(cx, cy, z, 34);
-  }
   SHOP_ART.kino = function (K, s, now, x, y, t) {
     const z = K.z, on = lightsOn(), WALL = '#3b2a4a', A = -0.14, HA = 0.8, HB = 0.86, H = 32, FRONT = A + HA;
     const parts = [[A, 0, () => {
@@ -145,8 +127,7 @@
         const S = B.faces[side];
         if (S) [[0.1, 0.26], [0.42, 0.58], [0.74, 0.9]].forEach(([t0, t1], i) => poster(S, t0, t1, S.H * 0.16, S.H * 0.68, i + 2, z, on));
       }
-    }], [A, 0, () => filmReel(K, A - 0.2, 0.04, H, z, now)],
-    [FRONT + 0.15, 0, () => {                                                                      // Leuchtreklame über dem Eingang
+    }], [FRONT + 0.15, 0, () => {                                                                      // Leuchtreklame über dem Eingang
       const M = K.block({ a: FRONT + 0.15, b: 0, ha: 0.15, hb: 0.68, h: 15, lift: 12, wall: '#241a2e', type: 'flat', roof: '#f2c14e' });
       const F = M.faces.front;
       if (F) {
@@ -238,10 +219,6 @@
         const S = B.faces[side];
         if (S) for (let i = 0; i < 5; i++) { const t0 = 0.08 + i * 0.172; archWindow(S, t0, t0 + 0.1, S.H * 0.3, S.H * 0.64, z, GOLD, CURTAIN); }
       }
-    }], [A, 0, () => {                                                                             // Wahrzeichen: Masken auf dem Giebel
-      const [mx, my] = K.P(FR, 0, H + RH + 10);
-      masks(mx, my, z, 1.25);
-      kGlow(mx, my, z, 36);
     }], [PA, 0, () => {                                                                            // Säulenvorbau mit Treppe und Leuchtschild
       K.block({ a: PA + 0.05, b: 0, ha: 0.34, hb: 0.98, h: 3, wall: '#e9dcc4', type: 'flat', roof: '#f5ecdc' });
       K.rect(PA - 0.28, -0.19, PA + 0.39, 0.19, C('#c0283a'), 3);                                 // roter Teppich
@@ -262,23 +239,6 @@
   };
 
   // --- Konzerthalle -----------------------------------------------------------
-  // Achtelnote: Kopf bei (x, y); grow > 0 zeichnet sie etwas dicker (für den dunklen Rand)
-  function noteShape(x, y, z, fill, grow) {
-    g.fillStyle = fill;
-    g.beginPath(); g.ellipse(x, y, 6.2 * z + grow, 4.4 * z + grow, -0.4, 0, Math.PI * 2); g.fill();
-    g.fillRect(x + 4 * z - grow, y - 30 * z - grow, 2.4 * z + 2 * grow, 29 * z + 2 * grow);
-    const sx = x + 6.4 * z, sy = y - 30 * z;
-    g.beginPath(); g.moveTo(sx - 1 * z - grow, sy - grow);
-    g.bezierCurveTo(sx + 5 * z + grow, sy + 3 * z, sx + 12 * z + grow, sy + 9 * z, sx + 7 * z + grow, sy + 20 * z + grow);
-    g.bezierCurveTo(sx + 8 * z, sy + 12 * z, sx + 4 * z, sy + 9.5 * z, sx - 1 * z - grow, sy + 8 * z + grow);
-    g.closePath(); g.fill();
-  }
-  function musicNote(x, y, z, col = '#f2c14e', edge = '#a8771c', shine = '#fff1b8') {
-    noteShape(x, y, z, C(edge), 1.1 * z);
-    noteShape(x, y, z, C(col), 0);
-    ellipse(x - 2 * z, y - 1.4 * z, 2.2 * z, 1.1 * z, C(shine));
-    g.fillStyle = C(shine); g.fillRect(x + 4.4 * z, y - 28 * z, 0.7 * z, 22 * z);
-  }
   SHOP_ART.konzerthalle = function (K, s, now, x, y, t) {
     const z = K.z, on = lightsOn(), BRICK = '#9c4f3a', STONE = '#efe3cc', A = -0.1, HA = 1.3, HB = 1.35, H = 16;
     const GA = -0.2, GHA = 1.12, GHB = 1.18, GH = 17, TOP = H + GH, A0 = GA - GHA, A1 = GA + GHA, N = 20;
@@ -338,16 +298,6 @@
         faceQuad(E.P, E.Q, 0, 1, (fe - TOP - 2.6) * z, (fe - TOP) * z, C('#f6fbff'));
         glowQuad(quadOf(E, 0, 1, 0, (fe - TOP) * z), 30 * z);
       }
-    }], [A, 0, () => {                                                                             // Wahrzeichen: goldene Achtelnote auf der Welle
-      const [nx, ny0] = K.P(A0 + (A1 - A0) * 0.75, 0, wave(0.75) + 3), ny = ny0 + Math.sin(now / 900) * 1 * z;
-      for (let i = 0; i < 2; i++) {                                                              // kleine Noten steigen auf
-        const ph = (now / 3400 + i * 0.5) % 1;
-        g.save(); g.globalAlpha *= Math.sin(ph * Math.PI);
-        musicNote(nx + (i ? -15 : 17) * z + Math.sin(ph * 6 + i) * 2 * z, ny - 4 * z - ph * 24 * z, z * 0.38, i ? '#93c2e0' : '#f28cb1', i ? '#5f8fe8' : '#d45d8a', '#ffffff');
-        g.restore();
-      }
-      musicNote(nx, ny, z);
-      kGlow(nx + 4 * z, ny - 14 * z, z, 36);
     }]]);
   };
 
@@ -549,5 +499,218 @@
       kGlow(cx, cy, z, 14);
     };
     K.scene([[RA, -1.45, row(-1)], [RA, 1.45, row(1)], [RA, 0, arcade], [5, 0, arch]]);
+  };
+
+  // --- Aquarium (3×3) ---------------------------------------------------------
+  // Ein großes, eckiges Glasbecken auf einem Sockel mit Bullaugen: blaues Wasser, Sand, Steine, Wasserpflanzen, Korallen,
+  // eine Schatzkiste, bunte Fische, die hin und her schwimmen, und aufsteigende Luftblasen. Davor der Eingang (Tür, Kasse).
+  // Gezeichnet wird das Becken von hinten nach vorn: Rückwände (innen), Sandboden, Inhalt, dann die vorderen Glasscheiben
+  // (durchsichtig getönt), Wasseroberfläche, Glanzstreifen und Rahmen. Nachts leuchtet das Wasser sanft blau.
+  const AQ = { A: -0.32, HA: 1.08, HB: 1.3, PH: 14, TH: 66, SD: 5, WL: 60 };   // Becken: Mitte, halbe Maße; Sockel-, Becken-, Sand-, Wasserhöhe (px)
+  const FL = AQ.PH + AQ.SD;                                                     // Höhe des Sandbodens
+  // Fische: Bahn entlang a oder b (Mitte a/b, halbe Länge amp in Feldern), Höhe über dem Sand, Tempo, Farben
+  const FISH = [
+    { ax: 'b', a: 0.35, b: -0.1, amp: 0.75, up: 14, per: 5200, ph: 0, s: 4.6, body: '#ff8a3d', fin: '#e0602a', band: '#ffffff' },   // Clownfisch
+    { ax: 'b', a: -0.75, b: 0.25, amp: 0.75, up: 36, per: 6100, ph: 2.1, s: 4.2, body: '#ffd23f', fin: '#f2a93b' },
+    { ax: 'a', a: -0.35, b: -0.7, amp: 0.5, up: 24, per: 4700, ph: 1.2, s: 4.6, body: '#3e7fd0', fin: '#ffd23f', spot: '#1f3f7a' },
+    { ax: 'a', a: -0.3, b: 0.75, amp: 0.55, up: 10, per: 5600, ph: 4, s: 3.6, body: '#f28cb1', fin: '#d45d8a' },
+    { ax: 'b', a: -1.05, b: -0.15, amp: 0.8, up: 46, per: 7000, ph: 3.3, s: 3.5, body: '#b79be8', fin: '#8a6fd0' },
+    { ax: 'b', a: 0.05, b: 0.35, amp: 0.65, up: 30, per: 4300, ph: 5.2, s: 3.2, body: '#e8604f', fin: '#b8433b', band: '#ffe3d6' },
+  ];
+  const SCHOOL = [[0, 0], [6.5, 3], [7, -2.8], [13, 1], [16, -2]];                     // kleiner Schwarm: Abstand hinter dem ersten, Höhe (px)
+  // Fisch mit Blick nach dir (1 = rechts, −1 = links auf dem Bildschirm), Mitte (x, y), Größe s (px)
+  function fish(x, y, s, dir, f, wag = 0) {
+    const tx = x - dir * s * 0.8;
+    poly([[tx + dir * s * 0.1, y], [tx - dir * s * 0.8, y - s * (0.62 + wag)], [tx - dir * s * 0.6, y], [tx - dir * s * 0.8, y + s * (0.62 - wag)]], C(f.fin));   // Schwanz
+    poly([[x - dir * s * 0.45, y - s * 0.4], [x + dir * s * 0.3, y - s * 0.5], [x - dir * s * 0.35, y - s * 1.0]], C(f.fin));   // Rückenflosse
+    ellipse(x, y, s, s * 0.62, C(f.body));
+    if (f.band) for (const k of [0.2, -0.35]) ellipse(x + dir * k * s, y, s * 0.13, s * 0.55, C(f.band));
+    if (f.spot) ellipse(x - dir * s * 0.1, y - s * 0.12, s * 0.45, s * 0.2, C(f.spot));
+    ellipse(x + dir * s * 0.1, y + s * 0.3, s * 0.5, s * 0.2, C(shade(f.body, 0.25)));                                           // heller Bauch
+    circle(x + dir * s * 0.55, y - s * 0.14, s * 0.17, C('#ffffff'));
+    circle(x + dir * s * 0.6, y - s * 0.14, s * 0.09, C('#1d2733'));
+  }
+  // Wasserpflanze: drei wogende Halme
+  function seaweed(K, a, b, hgt, col, now, ph) {
+    const [x, y] = K.P(a, b, FL), z = K.z;
+    g.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const dx = (i - 1) * 1.7 * z, h = (hgt - Math.abs(i - 1) * 6) * z, sw = Math.sin(now / 1300 + ph + i * 0.8) * 2.4 * z;
+      g.strokeStyle = C(i === 1 ? col : shade(col, i ? -0.14 : 0.12)); g.lineWidth = 1.6 * z;
+      g.beginPath(); g.moveTo(x + dx, y);
+      g.bezierCurveTo(x + dx + 2.6 * z, y - h * 0.35, x + dx - 2.6 * z + sw * 0.5, y - h * 0.68, x + dx + sw, y - h);
+      g.stroke();
+    }
+  }
+  // Ast-Koralle
+  function branchCoral(K, a, b, col) {
+    const [x, y] = K.P(a, b, FL), z = K.z;
+    g.strokeStyle = C(col); g.lineCap = 'round';
+    for (const [x0, y0, x1, y1, w] of [[0, 0, 0, -7, 1.9], [0, -2.5, -3.6, -7.5, 1.4], [0, -3.5, 3.4, -9, 1.4], [-2.2, -5.5, -5, -10, 1.1], [1.8, -6.5, 4.6, -12, 1.1], [0, -6, -0.6, -12.5, 1.1]]) {
+      g.lineWidth = w * z; g.beginPath(); g.moveTo(x + x0 * z, y + y0 * z); g.lineTo(x + x1 * z, y + y1 * z); g.stroke();
+      circle(x + x1 * z, y + y1 * z, w * 0.62 * z, C(shade(col, 0.25)));
+    }
+  }
+  // runde Koralle (Hügel mit Tupfen)
+  function roundCoral(K, a, b, col) {
+    const [x, y] = K.P(a, b, FL), z = K.z;
+    g.beginPath(); g.ellipse(x, y, 5 * z, 5 * z, 0, Math.PI, 0); g.fillStyle = C(col); g.fill();
+    ellipse(x, y, 5 * z, 1.4 * z, C(shade(col, -0.1)));
+    for (const [dx, dy] of [[-2.6, -2], [0, -3.6], [2.4, -1.8], [-0.8, -1.2], [1.2, -2.8]]) circle(x + dx * z, y + dy * z, 0.6 * z, C(shade(col, 0.3)));
+  }
+  function stones(K, a, b, sc) {
+    const [x, y] = K.P(a, b, FL), z = K.z * sc;
+    ellipse(x - 2.4 * z, y - 1.3 * z, 3.2 * z, 2.2 * z, C('#8f9aa6'));
+    ellipse(x + 2.2 * z, y - 0.9 * z, 2.5 * z, 1.7 * z, C('#a9b3bd'));
+    ellipse(x - 0.4 * z, y - 2.6 * z, 2.1 * z, 1.6 * z, C('#b9c2cb'));
+    ellipse(x - 1 * z, y - 3.3 * z, 0.9 * z, 0.5 * z, C('#dde3e8'));
+  }
+  function starfish(K, a, b) {
+    const [x, y] = K.P(a, b, FL), z = K.z, pts = [];
+    for (let i = 0; i < 10; i++) { const w = -Math.PI / 2 + i * Math.PI / 5, r = (i & 1 ? 1.8 : 4.6) * z; pts.push([x + Math.cos(w) * r, y + Math.sin(w) * r * 0.5]); }
+    poly(pts, C('#ff9f5a'));
+    circle(x, y, 1 * z, C('#ffd0a8'));
+  }
+  function chest(K, a, b) {
+    const Bx = K.block({ a, b, ha: 0.1, hb: 0.14, h: 4.5, lift: FL, wall: '#a0714d', type: 'flat', roof: '#c9955f' });
+    for (const f of Object.values(Bx.faces)) if (f) { faceQuad(f.P, f.Q, 0, 1, f.H * 0.55, f.H * 0.72, C('#e9c46a')); faceQuad(f.P, f.Q, 0.45, 0.55, f.H * 0.3, f.H * 0.72, C('#e9c46a')); }
+  }
+  function bubbles(K, a, b, up0, now, ph, n = 4) {
+    const z = K.z, up1 = AQ.PH + AQ.WL - 1;
+    g.lineWidth = 0.45 * z;
+    for (let i = 0; i < n; i++) {
+      const k = (now / 2800 + ph + i / n) % 1, [x, y] = K.P(a, b, up0 + (up1 - up0) * k);
+      const r = (0.55 + k * 0.75) * z, bx = x + Math.sin(k * 9 + ph * 5) * 1.3 * z;
+      g.save(); g.globalAlpha *= 0.5; circle(bx, y, r, C('#eaf8ff')); g.restore();
+      g.strokeStyle = C('#ffffff'); g.beginPath(); g.arc(bx, y, r, 0, Math.PI * 2); g.stroke();
+    }
+  }
+  // Glasbecken mit Sockel und allem darin
+  function aquariumTank(K, now, on) {
+    const { A, HA, HB, PH, TH, WL } = AQ, z = K.z, top = PH + TH, wl = PH + WL, FRAME = '#2c5f9e';
+    const Pl = K.block({ a: A, b: 0, ha: HA + 0.07, hb: HB + 0.07, h: PH, wall: '#e4ecf4', type: 'flat', roof: '#cdd9e4' });   // Sockel
+    for (const [side, f] of Object.entries(Pl.faces)) {
+      if (!f) continue;
+      faceQuad(f.P, f.Q, 0, 1, f.H - 3.2 * z, f.H, C('#3e7fd0'));                                      // blaues Band mit Welle
+      g.strokeStyle = C('#ffffff'); g.lineWidth = 0.7 * z; g.beginPath();
+      for (let i = 0; i <= 24; i++) { const [wx, wy] = faceAt(f, i / 24, f.H - 1.6 * z + Math.sin(i * Math.PI / 2) * 0.7 * z); i ? g.lineTo(wx, wy) : g.moveTo(wx, wy); }
+      g.stroke();
+      const ts = side === 'front' ? [0.12, 0.27, 0.73, 0.88] : [0.14, 0.32, 0.5, 0.68, 0.86];
+      for (const tt of ts) {                                                                               // Bullaugen
+        const [bx, by] = faceAt(f, tt, f.H * 0.42);
+        circle(bx, by, 2.5 * z, C(FRAME)); circle(bx, by, 1.8 * z, on ? '#bfeaff' : C('#7fc4e6'));
+        circle(bx - 0.6 * z, by - 0.6 * z, 0.5 * z, C('#ffffff'));
+        glowQuad([[bx - z, by - z], [bx + z, by - z], [bx + z, by + z], [bx - z, by + z]], 8 * z, 'blue');
+      }
+    }
+    const W = (sa, sb, up) => K.P(A + sa * HA, sb * HB, up);
+    const faceOf = (f, up = PH) => ({ P: W(...f.p, up), Q: W(...f.q, up), n: f.n });
+    const shown = [], hidden = [];
+    for (const f of Object.values(FACES)) (K.facing(...f.n) > 0.01 ? shown : hidden).push(f);
+    // 1. Rückwände von innen: Wasser (unten dunkler), darüber Glas
+    for (const f of hidden) {
+      const F = faceOf(f), m0 = lerp(F.P, F.Q, 0.5), grad = g.createLinearGradient(m0[0], m0[1], m0[0], m0[1] - WL * z);
+      grad.addColorStop(0, C(on ? '#3f9ad8' : '#2f7fc0')); grad.addColorStop(1, C(on ? '#94dcf7' : '#6cc4ec'));
+      poly(quadOf(F, 0, 1, 0, WL * z), grad);
+      g.save(); g.globalAlpha *= 0.35; poly(quadOf(F, 0, 1, WL * z, TH * z), C('#e8f7fd')); g.restore();
+      kLine(K, F.P, [F.P[0], F.P[1] - TH * z], FRAME, 0.9); kLine(K, [F.P[0], F.P[1] - TH * z], [F.Q[0], F.Q[1] - TH * z], FRAME, 1.1);
+    }
+    // 2. Sandboden mit Lichtflecken
+    K.rect(A - HA, -HB, A + HA, HB, C('#fbd585'), FL);
+    for (const [sa, sb, r] of [[-0.9, -0.3, 0.2], [0.1, -0.6, 0.16], [-0.3, 0.5, 0.22], [0.4, 0.9, 0.14], [-1.1, 0.9, 0.15]]) K.oval(sa, sb, r, C('#efc373'), FL);
+    g.save();
+    for (let i = 0; i < 6; i++) {
+      g.globalAlpha = 0.25 + 0.2 * Math.sin(now / 900 + i * 1.7);
+      K.oval(-1.1 + (i % 3) * 0.75 + Math.sin(now / 2100 + i) * 0.08, -0.8 + Math.floor(i / 3) * 1.1, 0.1, C('#fff8e0'), FL);
+    }
+    g.restore();
+    // 3. Inhalt, von hinten nach vorn
+    const parts = [
+      [-1.1, -0.95, () => stones(K, -1.1, -0.95, 1.2)], [0.5, 0.95, () => stones(K, 0.5, 0.95, 0.9)], [-0.15, -0.15, () => stones(K, -0.15, -0.15, 0.7)],
+      [-1.15, 0.75, () => seaweed(K, -1.15, 0.75, 40, '#3f9e57', now, 0)], [-0.95, -0.35, () => seaweed(K, -0.95, -0.35, 48, '#4fae5f', now, 2)],
+      [0.5, -0.95, () => seaweed(K, 0.5, -0.95, 26, '#5cc06b', now, 4)], [-0.2, 1.05, () => seaweed(K, -0.2, 1.05, 32, '#3f9e57', now, 1)],
+      [0.3, 0.2, () => branchCoral(K, 0.3, 0.2, '#f28cb1')], [-0.6, 0.95, () => roundCoral(K, -0.6, 0.95, '#ff9f5a')],
+      [-0.35, -1.05, () => branchCoral(K, -0.35, -1.05, '#e8604f')],
+      [0.55, 0.45, () => starfish(K, 0.55, 0.45)],
+      [-0.55, -0.6, () => { chest(K, -0.55, -0.6); bubbles(K, -0.55, -0.6, FL + 5, now, 0.2, 5); }],
+      [-1.2, 0.2, () => bubbles(K, -1.2, 0.2, FL, now, 0.6)], [0.35, -0.55, () => bubbles(K, 0.35, -0.55, FL, now, 0.35, 3)],
+    ];
+    const dirOf = (a, b, up, da, db) => (K.P(a + da * 0.05, b + db * 0.05, up)[0] >= K.P(a, b, up)[0] ? 1 : -1);
+    for (const f of FISH) {
+      const ph = now / f.per + f.ph, sn = Math.sin(ph), cs = Math.cos(ph);
+      const a = f.a + (f.ax === 'a' ? f.amp * sn : 0), b = f.b + (f.ax === 'b' ? f.amp * sn : 0), up = FL + f.up + Math.sin(ph * 2.7) * 1.6;
+      const dir = dirOf(a, b, up, f.ax === 'a' ? cs : 0, f.ax === 'b' ? cs : 0);
+      parts.push([a, b, () => { const [fx, fy] = K.P(a, b, up); fish(fx, fy, f.s * z, dir, f, Math.sin(now / 160 + f.ph * 3) * 0.22); }]);
+    }
+    {                                                                                                  // kleiner silberner Schwarm
+      const ph = now / 3900, a = -0.95, b = Math.sin(ph) * 0.7, up = FL + 22 + Math.sin(ph * 2) * 3;
+      const dir = dirOf(a, b, up, 0, Math.cos(ph)), sf = { body: '#cfe3f0', fin: '#9fb8cc' };
+      parts.push([a, b, () => {
+        const [lx, ly] = K.P(a, b, up);
+        for (const [back, du] of SCHOOL) fish(lx - dir * back * z, ly - du * z, 1.9 * z, dir, sf, Math.sin(now / 120 + du) * 0.2);
+      }]);
+    }
+    K.scene(parts);
+    // 4. Vordere Scheiben: Sand im Schnitt, Wasser getönt, darüber Glas
+    for (const f of shown) {
+      const F = faceOf(f);
+      poly(quadOf(F, 0, 1, 0, AQ.SD * z), K.wallCol('#e9c98a', f.n));
+      const m0 = lerp(F.P, F.Q, 0.5), grad = g.createLinearGradient(m0[0], m0[1], m0[0], m0[1] - WL * z);
+      grad.addColorStop(0, K.wallCol(on ? '#3f9ad8' : '#2a8ad0', f.n)); grad.addColorStop(1, K.wallCol(on ? '#94dcf7' : '#5cc0ee', f.n));
+      g.save();
+      g.globalAlpha *= 0.32; poly(quadOf(F, 0, 1, 0, WL * z), grad);
+      g.globalAlpha = 0.2; poly(quadOf(F, 0, 1, WL * z, TH * z), K.wallCol('#e8f7fd', f.n));
+      g.restore();
+      glowQuad(quadOf(F, 0.1, 0.9, AQ.SD * z, WL * z), 40 * z, 'blue');
+    }
+    // 5. Wasseroberfläche mit Ringen
+    g.save(); g.globalAlpha *= 0.2;
+    poly([W(-1, -1, wl), W(1, -1, wl), W(1, 1, wl), W(-1, 1, wl)], C(on ? '#9fe3ff' : '#4fb0e6'));
+    g.restore();
+    g.strokeStyle = C('#ffffff'); g.lineWidth = 0.6 * z;
+    for (let i = 0; i < 3; i++) {
+      const k = (now / 3000 + i / 3) % 1, [ra, rb] = [[-0.7, 0.45], [0.2, -0.5], [-1.0, -0.7]][i], [rx, ry] = K.P(ra, rb, wl);
+      g.save(); g.globalAlpha *= (1 - k) * 0.8;
+      g.beginPath(); g.ellipse(rx, ry, (2 + k * 9) * z, (1 + k * 4.5) * z, 0, 0, Math.PI * 2); g.stroke();
+      g.restore();
+    }
+    { const [cx, cy] = K.P(A, 0, wl); glowQuad([[cx - 4 * z, cy - 2 * z], [cx + 4 * z, cy - 2 * z], [cx + 4 * z, cy + 2 * z], [cx - 4 * z, cy + 2 * z]], 34 * z, 'blue'); }
+    // 6. Glanzstreifen und Rahmen der vorderen Scheiben
+    for (const f of shown) {
+      const F = faceOf(f);
+      g.save(); g.globalAlpha *= 0.3;
+      for (const [t0, w] of [[0.1, 0.06], [0.2, 0.025]]) poly([faceAt(F, t0, 4 * z), faceAt(F, t0 + w, 4 * z), faceAt(F, t0 + w + 0.14, (TH - 4) * z), faceAt(F, t0 + 0.14, (TH - 4) * z)], '#ffffff');
+      g.restore();
+      kLine(K, faceAt(F, 0, WL * z), faceAt(F, 1, WL * z), '#e8f9ff', 0.7);                              // Wasserlinie
+      for (const p of [F.P, F.Q]) kLine(K, p, [p[0], p[1] - TH * z], FRAME, 1.3);
+      kLine(K, F.P, F.Q, FRAME, 1.5);
+      kLine(K, [F.P[0], F.P[1] - TH * z], [F.Q[0], F.Q[1] - TH * z], '#3e7fd0', 1.6);
+    }
+  }
+  // Eingang vor dem Becken: Glastür, Kasse mit Markise, Plakat mit Fisch
+  function aquariumEntry(K, PA, on) {
+    const z = K.z, B = K.block({ a: PA, b: 0, ha: 0.3, hb: 0.55, h: 12, wall: '#fffaf0', type: 'flat', roof: '#3e7fd0', entry: true, trim: '#93c2e0' });
+    const F = B.faces.front;
+    if (F) {
+      faceQuad(F.P, F.Q, 0.36, 0.64, 0, F.H * 0.76, C('#2c5f9e'));
+      windowOn(F.P, F.Q, 0.39, 0.495, 0, F.H * 0.7, z); windowOn(F.P, F.Q, 0.505, 0.61, 0, F.H * 0.7, z);
+      faceQuad(F.P, F.Q, 0.06, 0.3, F.H * 0.26, F.H * 0.66, C('#2c5f9e'));                              // Kasse
+      windowOn(F.P, F.Q, 0.08, 0.28, F.H * 0.34, F.H * 0.63, z);
+      faceQuad(F.P, F.Q, 0.05, 0.31, F.H * 0.26, F.H * 0.33, C('#93c2e0'));                              // Tresen
+      miniAwning(K, F, 0.04, 0.32, F.H * 0.68, F.H * 0.84, '#3e7fd0', z, 0.07);
+      faceQuad(F.P, F.Q, 0.71, 0.93, F.H * 0.26, F.H * 0.74, C('#93c2e0'));                              // Plakat mit Fisch
+      const [px, py] = faceAt(F, 0.82, F.H * 0.5);
+      fish(px, py, 1.6 * z, 1, { body: '#ff8a3d', fin: '#e0602a', band: '#ffffff' });
+    }
+    for (const side of ['right', 'left']) K.wins(B, side, 1, 0.3, 0.7);
+  }
+  SHOP_ART.aquarium = function (K, s, now, x, y, t, ha, hb) {
+    const on = lightsOn(), PA = 1.12;
+    const parts = [[AQ.A, 0, () => aquariumTank(K, now, on)], [PA, 0, () => aquariumEntry(K, PA, on)]];
+    for (const sb of [-1, 1]) {
+      parts.push([1.36, sb * 0.8, () => { const [lx, ly] = K.P(1.36, sb * 0.8); lampPost(lx, ly, K.z, 14); }]);
+      parts.push([1.28, sb * 1.18, () => kitBush(K, 1.28, sb * 1.18, 0.6, sb < 0 ? '#58ad52' : '#4f9e4a')]);
+    }
+    K.scene(parts);
   };
 })();

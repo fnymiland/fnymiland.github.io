@@ -89,7 +89,7 @@
       parts.push([(p0[0] + p1[0]) / 2, sb * bS, () => banner(K, p0, p1, col, [0, sb])]);
     });
     K.scene(parts);
-    // Gebälk und flaches Satteldach; die Giebelseiten (vorn und hinten) bekommen Giebelfeld, Relief und Schrift
+    // Gebälk und flaches Satteldach; die Giebelseiten (vorn und hinten) bekommen Giebelfeld und Relief
     const ea = HA - 0.05, eb = HB - 0.05, top = 43;
     K.block({ a: A0, b: 0, ha: ea, hb: eb, h: 7, lift: 36, wall: '#f3eada', roof: SLATE, roofH: 18, type: 'gable', ridge: 'a', over: 1.05 });
     for (const sg of [1, -1]) {
@@ -97,7 +97,6 @@
       const a1 = A0 + sg * ea, n = [sg, 0];
       poly([K.P(a1, -eb * 0.8, top + 1.8), K.P(a1, eb * 0.8, top + 1.8), K.P(a1, 0, top + 14)], K.wallCol('#d8c7a1', n));
       const [mx, my] = K.P(a1, 0, top + 6.5); circle(mx, my, 3.2 * z, C(GOLD_D)); circle(mx, my, 2.1 * z, C('#f6dc8a'));
-      const [fx, fy] = K.P(a1, 0, 39.6); kText(fx, fy, 'MUSEUM', 5.4, '#6f5a3a', z);
       for (const [ab, up] of [[0, top + 18.6], [-eb * 1.02, top + 0.8], [eb * 1.02, top + 0.8]]) { const [tx, ty] = K.P(a1, ab, up); circle(tx, ty, 1.6 * z, C(GOLD)); }
     }
   }

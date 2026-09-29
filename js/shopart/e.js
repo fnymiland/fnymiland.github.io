@@ -1,7 +1,8 @@
 'use strict';
 // Ladenbilder, Gruppe e (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Boutique, Uhrmacher, Juwelier, Möbelhaus: feste Markenfarben und ein Wahrzeichen auf dem Dach, das man aus jeder
-// Richtung und auch von weitem erkennt (Kleid am Bügel, Uhrtürmchen, Ring mit Brillant, Riesen-Sofa).
+// Boutique, Uhrmacher, Juwelier, Möbelhaus: feste Markenfarben. Boutique und Juwelier zeigen ihr Symbol klein am
+// Ausleger-Schild an der Hausecke (hangSign: Kleid am Bügel, Brillant), der Uhrmacher sein Uhrtürmchen, das Möbelhaus
+// seinen Schriftzug – keine großen Figuren mehr auf den Dächern (Block 34).
 (function () {
   const lit = () => night > 0.15 && isLive();
   const allFaces = B => Object.values(B.faces).filter(Boolean);
@@ -61,28 +62,23 @@
     g.fillStyle = C('#efe2d2'); g.fillRect(-0.35 * u, -10.2 * u, 0.7 * u, 1.1 * u);
     circle(0, -11.1 * u, 1.2 * u, C('#efe2d2'));
   }
-  // Dachschild: Kleid auf goldenem Bügel, Haken bei (x, y), schwingt sacht
-  function hangerDress(x, y, z, now, on) {
+  // Mini-Symbol fürs Ausleger-Schild: Kleid auf goldenem Bügel, mittig bei (x, y), passt in einen Kreis mit Radius 4 × z
+  function miniDress(x, y, z, on) {
     const D = on ? '#ff9cbd' : C('#e8799a'), Dd = on ? '#f27aa2' : C('#c95a7d'), Dl = on ? '#ffc6d8' : C('#f6a9c0');
-    g.save(); g.translate(x, y); g.rotate(Math.sin(now / 1400) * 0.05);
+    const P = (px, py) => [x + px * z, y + py * z];
     g.lineCap = 'round'; g.lineJoin = 'round';
-    g.strokeStyle = C('#c9a24a'); g.lineWidth = 1.2 * z;                                   // Haken
-    g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -1.8 * z); g.arc(1.5 * z, -1.8 * z, 1.5 * z, Math.PI, Math.PI * 2.2); g.stroke();
-    g.strokeStyle = C('#d4af37'); g.lineWidth = 1.6 * z;                                   // Bügel
-    g.beginPath(); g.moveTo(-9.5 * z, 5.2 * z); g.lineTo(0, 0); g.lineTo(9.5 * z, 5.2 * z); g.closePath(); g.stroke();
-    g.strokeStyle = Dd; g.lineWidth = 0.8 * z;                                             // Träger
-    g.beginPath(); g.moveTo(-3.8 * z, 4.3 * z); g.lineTo(-3.3 * z, 7 * z); g.moveTo(3.8 * z, 4.3 * z); g.lineTo(3.3 * z, 7 * z); g.stroke();
-    poly([[-3.2 * z, 12.5 * z], [3.2 * z, 12.5 * z], [9.6 * z, 25 * z], [-9.6 * z, 25 * z]], D);          // Rock
-    for (let i = 0; i < 6; i++) circle((-7.9 + i * 3.16) * z, 25 * z, 1.65 * z, D);                    // Wellensaum
-    poly([[-3.2 * z, 12.5 * z], [-1.2 * z, 12.5 * z], [-4.6 * z, 25 * z], [-9.6 * z, 25 * z]], Dl);
-    g.strokeStyle = Dd; g.lineWidth = 0.6 * z;
-    g.beginPath(); g.moveTo(0.9 * z, 14 * z); g.lineTo(2.6 * z, 25 * z); g.moveTo(2.4 * z, 14 * z); g.lineTo(6 * z, 25 * z); g.stroke();
-    poly([[-4 * z, 6.8 * z], [-1.6 * z, 6 * z], [0, 7.4 * z], [1.6 * z, 6 * z], [4 * z, 6.8 * z], [3.3 * z, 13 * z], [-3.3 * z, 13 * z]], D);
-    g.fillStyle = C('#2d2d38'); g.fillRect(-3.5 * z, 12 * z, 7 * z, 1.6 * z);            // Gürtel mit Schleife
-    poly([[0, 12.8 * z], [-2.6 * z, 11.5 * z], [-2.6 * z, 14.1 * z]], C('#f2b8c6'));
-    poly([[0, 12.8 * z], [2.6 * z, 11.5 * z], [2.6 * z, 14.1 * z]], C('#f2b8c6'));
-    circle(0, 12.8 * z, 0.7 * z, C('#d4af37'));
-    g.restore();
+    g.strokeStyle = C('#c9a24a'); g.lineWidth = 0.45 * z;                                  // Haken
+    g.beginPath(); g.moveTo(...P(0, -2.4)); g.lineTo(...P(0, -2.9)); g.arc(x + 0.5 * z, y - 2.9 * z, 0.5 * z, Math.PI, Math.PI * 2.2); g.stroke();
+    g.strokeStyle = C('#d4af37'); g.lineWidth = 0.55 * z;                                  // Bügel
+    g.beginPath(); g.moveTo(...P(-3, -1)); g.lineTo(...P(0, -2.4)); g.lineTo(...P(3, -1)); g.closePath(); g.stroke();
+    poly([P(-1.05, 0.6), P(1.05, 0.6), P(2.5, 3.2), P(-2.5, 3.2)], D);                     // Rock
+    for (let i = 0; i < 5; i++) circle(x + (-2 + i) * z, y + 3.2 * z, 0.5 * z, D);          // Wellensaum
+    poly([P(-1.05, 0.6), P(-0.45, 0.6), P(-1.2, 3.2), P(-2.5, 3.2)], Dl);
+    g.strokeStyle = Dd; g.lineWidth = 0.3 * z;                                             // Falte
+    g.beginPath(); g.moveTo(...P(0.5, 1.1)); g.lineTo(...P(1.2, 3.2)); g.stroke();
+    poly([P(-1.25, -0.9), P(-0.5, -1.1), P(0, -0.7), P(0.5, -1.1), P(1.25, -0.9), P(1.05, 0.7), P(-1.05, 0.7)], D);   // Oberteil
+    g.fillStyle = C('#2d2d38'); g.fillRect(x - 1.15 * z, y + 0.35 * z, 2.3 * z, 0.55 * z);   // Gürtel
+    circle(x, y + 0.62 * z, 0.32 * z, C('#d4af37'));
   }
   SHOP_ART.boutique = function (K, s, now, x, y, t, ha, hb) {
     const WALL = '#2d2d38', BLUSH = '#f2b8c6', GOLD = '#d4af37', ROSE = '#e8799a', on = lit(), z = K.z;
@@ -108,13 +104,10 @@
       }
       K.sideWins(B, 2, 0.62, 0.84);
     };
-    const sign = () => {                                                                    // Kleid am Bügel auf dem Dach
-      const [px, py] = K.P(-0.08, 0, 26), top = py - 33 * z;
-      ellipse(px + 1.5 * z, py, 3.2 * z, 1.4 * z, C(shade(GOLD, -0.2)));
-      kLine(K, [px + 1.5 * z, py], [px + 1.5 * z, top - 3.3 * z], GOLD, 1.3);
-      if (on) kGlow(px, top + 15 * z, z, 28);
-      hangerDress(px, top, z, now, on);
-    };
+    const sign = hangSign(K, (cx, cy, zz) => {                                              // Kleid am Bügel, klein am Ausleger
+      if (on) kGlow(cx, cy, zz, 14);
+      miniDress(cx, cy, zz, on);
+    }, ROSE, { up: 15, b0: 0.45 });                                                     // unter „MODE“, neben der Markise
     const rack = () => {                                                                    // Kleiderständer vor der Tür
       const p0 = K.P(0.44, -0.48), p1 = K.P(0.44, -0.24);
       for (const p of [p0, p1]) { ellipse(p[0], p[1], 1.6 * z, 0.7 * z, C('#8a8f99')); kLine(K, p, [p[0], p[1] - 11 * z], GOLD, 0.9); }
@@ -125,7 +118,7 @@
         poly([[gx - 1.5 * z, gy + 1.2 * z], [gx + 1.5 * z, gy + 1.2 * z], [gx + 2 * z, gy + 6.2 * z], [gx - 2 * z, gy + 6.2 * z]], C(c));
       });
     };
-    K.scene([[-0.08, 0, house], [-0.08, 0, sign], [0.44, -0.36, rack]]);
+    K.scene([[-0.08, 0, house], sign, [0.44, -0.36, rack]]);
   };
 
   // ------------------------------------------------------------------ Uhrmacher
@@ -193,7 +186,6 @@
     const pav = [[P(G[0], 0), P(G[1], 0), P(0, bot)], [P(G[1], 0), P(G[2], 0), P(0, bot)], [P(G[2], 0), P(G[3], 0), P(0, bot)]];
     const cc = on ? ['#e6f7ff', '#ffffff', '#c6ecff', '#f2fbff', '#a8e0ff'] : ['#d4efff', '#f4fbff', '#a9dcf8', '#e6f6ff', '#86c6ec'];
     const pc = on ? ['#bfe8ff', '#e3f6ff', '#8fd0f5'] : ['#9fd5f4', '#cdeeff', '#5fa9d9'];
-    if (on) glowQuad([P(G[0], top), P(G[3], top), P(G[3], bot), P(G[0], bot)], 34 * z, 'blue');
     g.lineJoin = 'round'; g.strokeStyle = C('#3d6f9e'); g.lineWidth = 1.8 * z;              // Umriss (halb verdeckt)
     g.beginPath(); [P(T[0], top), P(T[2], top), P(G[3], 0), P(0, bot), P(G[0], 0)].forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p));
     g.closePath(); g.stroke();
@@ -233,31 +225,23 @@
         onFace(S, 0.5, S.H * 0.1, () => ringDisplay(z, now));
       }
     };
-    const jewel = () => {                                                                   // Ring mit Brillant auf dem Dach
-      const [px, py] = K.P(-0.08, 0, 29), cy = py - 8.6 * z;
-      g.strokeStyle = C('#a8862a'); g.lineWidth = 3 * z;
-      g.beginPath(); g.ellipse(px, cy, 7.2 * z, 7.8 * z, 0, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = C(GOLD); g.lineWidth = 2.2 * z;
-      g.beginPath(); g.ellipse(px, cy, 7.2 * z, 7.8 * z, 0, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = C('#f6e08a'); g.lineWidth = 0.8 * z;
-      g.beginPath(); g.ellipse(px, cy, 7.2 * z, 7.8 * z, 0, Math.PI * 0.7, Math.PI * 1.25); g.stroke();
-      poly([[px - 4 * z, cy - 6.4 * z], [px + 4 * z, cy - 6.4 * z], [px + 2.6 * z, cy - 9.6 * z], [px - 2.6 * z, cy - 9.6 * z]], C(GOLD));   // Fassung
-      const gy = cy - 19.6 * z;
-      gem(px, gy, 1.05, z, now, on);
-      [[-14, -4], [13, -9], [10, 7], [-10, 9], [1, -12], [-4, -16]].forEach(([dx, dy], i) => {   // Funkeln
-        const ph = (now / 900 + i * 0.37) % 1, k = Math.sin(ph * Math.PI);
-        if (k < 0.2) return;
-        star(px + dx * z, gy + dy * z, (on ? 3.6 : 2.8) * k * z, on ? '#fffbe0' : C('#ffffff'));
-        if (on && k > 0.8) kGlow(px + dx * z, gy + dy * z, z, 10);
+    const jewel = hangSign(K, (cx, cy, zz) => {                                             // Brillant, klein am Ausleger
+      if (on) kGlow(cx, cy, zz, 14);
+      g.save(); g.translate(cx, cy - 0.8 * zz); g.scale(0.32, 0.32);
+      gem(0, 0, 1, zz, now, on);
+      g.restore();
+      [[2.5, -2.5], [-2.6, 1.7]].forEach(([dx, dy], i) => {                                 // Funkeln
+        const k = Math.sin(((now / 900 + i * 0.5) % 1) * Math.PI);
+        if (k > 0.2) star(cx + dx * zz, cy + dy * zz, 0.95 * k * zz, on ? '#ffe9a6' : C(GOLD));
       });
-    };
+    }, GOLD);
     const pot = b => () => {                                                                // Buchskugeln neben der Tür
       K.block({ a: 0.33, b, ha: 0.035, hb: 0.035, h: 3, wall: '#6d3f8c', type: 'flat', roof: '#3c2a1a' });
       const [bx, by] = K.P(0.33, b, 3);
       circle(bx, by - 2.1 * z, 2.3 * z, C('#4f9e4a'));
       circle(bx - 0.8 * z, by - 2.9 * z, 1 * z, C('#6fbf5a'));
     };
-    K.scene([[-0.08, 0, house], [-0.08, 0, jewel], [0.33, 0.05, pot(0.05)], [0.33, 0.33, pot(0.33)]]);
+    K.scene([[-0.08, 0, house], jewel, [0.33, 0.05, pot(0.05)], [0.33, 0.33, pot(0.33)]]);
   };
 
   // ------------------------------------------------------------------ Möbelhaus
@@ -321,37 +305,6 @@
         if (on) { const [mx, my] = faceAt(W, 0.5, W.H * 0.9); kGlow(mx, my, z, 18); }
       }
     };
-    const sofa = () => {                                                                    // Riesen-Sofa und Stehlampe auf dem Dach
-      const lift = RT + 3, pieces = [];
-      for (const [a, b] of [[-0.53, -0.77], [-0.53, 0.27], [0.01, -0.77], [0.01, 0.27]]) K.block({ a, b, ha: 0.03, hb: 0.03, h: 3, lift: RT, wall: '#6b4a2e', type: 'flat' });
-      const cols = [[-0.8, -0.66], [-0.66, 0.16], [0.16, 0.3]], rows = [[-0.56, -0.42], [-0.42, 0.04]];
-      rows.forEach(([a0, a1], ri) => cols.forEach(([b0, b1], ci) => {
-        const a = (a0 + a1) / 2, b = (b0 + b1) / 2, hgt = ri === 0 ? 22 : ci !== 1 ? 13 : 8;
-        pieces.push([a, b, () => {
-          const S = K.block({ a, b, ha: (a1 - a0) / 2, hb: (b1 - b0) / 2, h: hgt, lift, wall: ORANGE, type: 'flat', roof: shade(ORANGE, 0.14) });
-          const Fs = S.faces.front;
-          if (ri === 0 && ci === 1 && Fs) for (const [t0, t1] of [[0.04, 0.48], [0.52, 0.96]]) faceQuad(Fs.P, Fs.Q, t0, t1, Fs.H * 0.42, Fs.H * 0.94, C(shade(ORANGE, 0.12)));
-          const Bk = S.faces.back;
-          if (ri === 0 && Bk) faceQuad(Bk.P, Bk.Q, 0, 1, Bk.H * 0.5, Bk.H * 0.55, C(shade(ORANGE, -0.18)));   // Naht hinten
-          if (ri === 1 && ci === 1) {
-            kLine(K, K.P(a0, -0.25, lift + hgt), K.P(a1, -0.25, lift + hgt), shade(ORANGE, -0.22), 0.6);
-            if (Fs) kLine(K, faceAt(Fs, 0.5, 0), faceAt(Fs, 0.5, Fs.H), shade(ORANGE, -0.22), 0.6);
-            const [cx, cy] = K.P(-0.34, 0.04, lift + hgt), c = [cx, cy - 3.6 * z];   // Kissen
-            poly([[c[0] - 3.4 * z, c[1] - 0.4 * z], [c[0] + 0.4 * z, c[1] - 3.6 * z], [c[0] + 3.4 * z, c[1] + 0.3 * z], [c[0] - 0.4 * z, c[1] + 3.4 * z]], C('#4fb3a9'));
-            circle(c[0], c[1], 0.6 * z, C('#fffaf0'));
-          }
-        }]);
-      }));
-      pieces.push([-0.3, 0.45, () => {
-        const [lx, ly] = K.P(-0.3, 0.45, RT), top = ly - 30 * z;
-        ellipse(lx, ly, 3.4 * z, 1.5 * z, C('#2f3542'));
-        kLine(K, [lx, ly], [lx, top], '#2f3542', 1.3);
-        poly([[lx - 5.4 * z, top + 1.5 * z], [lx + 5.4 * z, top + 1.5 * z], [lx + 3.2 * z, top - 6.5 * z], [lx - 3.2 * z, top - 6.5 * z]], on ? '#fff3b0' : C('#ffe3a1'));
-        ellipse(lx, top + 1.5 * z, 5.4 * z, 1.3 * z, on ? '#fff8d0' : C('#f4c86a'));
-        if (on) kGlow(lx, top, z, 34);
-      }]);
-      K.scene(pieces);
-    };
     const van = () => {                                                                     // Lieferwagen im Möbelhaus-Blau
       const side = K.facing(0, 1) > 0 ? 0.95 : 0.61;
       K.scene([
@@ -388,7 +341,7 @@
       const [px, py] = K.P(0.8, b, 4);
       for (const [dx, dy, r, c] of [[-1.8, -3, 2.4, '#4f9e4a'], [1.8, -3.4, 2.4, '#3f8a3f'], [0, -5.6, 2.6, '#6fbf5a']]) circle(px + dx * z, py + dy * z, r * z, C(c));
     };
-    K.scene([[-0.1, -0.2, house], [-0.1, -0.2, sofa], [0.4, 0.78, van], [-0.1, 0.66, crates(-0.1, 0.69, 3)], [-0.8, 0.66, crates(-0.8, 0.69, 2)],
+    K.scene([[-0.1, -0.2, house], [0.4, 0.78, van], [-0.1, 0.66, crates(-0.1, 0.69, 3)], [-0.8, 0.66, crates(-0.8, 0.69, 2)],
       [0.86, -0.64, chair], [0.8, -0.36, plant(-0.36)], [0.8, -0.04, plant(-0.04)]]);
   };
   GROUND_TYPES.add('moebelhaus');                                                           // hat einen gepflasterten Ladehof

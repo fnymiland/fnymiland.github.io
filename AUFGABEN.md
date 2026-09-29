@@ -361,3 +361,11 @@ Läden in einem Viertel, neue Hauswünsche (Laden, Café, Kultur). Kaffee, Tee, 
 
 - [x] Vorrat je Ware: Läden verkaufen nur, was darüber liegt (Baumaterial standardmäßig 2.000), im 📦 Lager einstellbar.
 - [x] Möbelhaus verkauft halb so viele Bretter (0,5 je 100 Kunden und Sekunde).
+
+## Block 34 – Symbole kleiner, Hafen-Aufträge (01.10.)
+
+- [x] Hafen: „Liefern“/„Kaufen“ bei Aufträgen waren nicht verbunden – jetzt schon (Test klickt sie).
+- [x] Kleine Läden: kein großes Symbol mehr auf dem Dach, dasselbe Symbol klein im Ausleger-Schild an der Hausecke
+      (`hangSign`); Kiosk und Uhrmacher unverändert.
+- [x] Theater ohne Dach-Masken, Kino ohne Filmrolle, Museum ohne Schriftzug, Konzerthalle ohne Noten, Möbelhaus ohne
+      Sofa/Lampe; Aquarium neu als eckiges Glasbecken mit Wasser und Fischen.
