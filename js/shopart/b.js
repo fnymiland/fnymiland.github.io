@@ -1,11 +1,21 @@
 'use strict';
-// Ladenbilder, Gruppe b (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt, hangSign)
-// Café, Teeladen, Bubble Tea, Eisdiele: feste Markenfarben. Das Wahrzeichen (Tasse, Teeblatt, Becher, Eiswaffel) hängt
-// klein im Ausleger-Schild an der Hausecke (hangSign), das Dach bleibt frei (Block 34).
+// Ladenbilder, Gruppe b (Block 32, Block 35) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, hangSign)
+// Café, Teeladen, Bubble Tea, Eisdiele – so wie die alten Gebäude: helle Wände, klare Dachfarben, große ruhige Flächen,
+// und jeder Laden hat seine eigene Bauform (Café: Mansarddach mit Gauben; Teeladen: niedriges Teehaus mit geschwungenem
+// Dach; Bubble Tea: moderner Rundbau mit runden Ecken; Eisdiele: achteckiger Pavillon mit Zeltdach). Das Wahrzeichen
+// (Tasse, Teeblatt, Becher, Eiswaffel) hängt klein im Ausleger-Schild an der Hausecke (hangSign), das Dach bleibt frei.
 (function () {
   const isLit = () => night > 0.15 && isLive();
-  const withAlpha = (a, fn) => { g.save(); g.globalAlpha *= a; try { fn(); } finally { g.restore(); } };
   const line = (p, q, col, w, z) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.stroke(); };
+  const q50 = t => Math.round(t * 50) / 50;                                              // wenige Farbstufen (shade merkt sie sich)
+  // Wandfarbe stufenlos nach der Richtung (für runde und schräge Wände; bei geraden Seiten wie K.wallCol)
+  const wallHexAt = (K, col, n) => shade(col, q50(LIGHT.side * Math.max(0, Math.min(1, K.turn(n[0], n[1])[0]))));
+  // Dachfarbe stufenlos nach der Richtung der Fläche (wie K.roofCol)
+  const roofHexAt = (K, col, n) => {
+    const [u, v] = K.turn(n[0], n[1]);
+    return shade(col, q50((u < 0 ? -u * LIGHT.roofSun : u * LIGHT.roofShade) + (v < 0 ? -v * LIGHT.roofBack : 0)));
+  };
+
   // Becher/Tasse als Pfad: unten Radius rb (Boden rund), oben rt; bulge wölbt die Seiten nach außen
   function cupPath(x, y0, y1, rb, rt, ry, bulge = 0) {
     const my = (y0 + y1) / 2, mr = (rb + rt) / 2 + bulge;
@@ -24,10 +34,66 @@
     g.closePath();
   }
 
+  // ---------------------------------------------------------------- Bauformen
+  // Aufrechte Wände um einen konvexen Grundriss (Ecken [a, b] im Rahmen, Reihenfolge wie FACES: vorn → rechts → hinten →
+  // links). Zeichnet nur die sichtbaren Seiten, mit Wandfuß und (deep) dunklem Streifen unter dem Dach.
+  // Rückgabe: die sichtbaren Seiten { P, Q, H, n, len, curved } (runde Teile bestehen aus vielen schmalen Seiten).
+  function prismWalls(K, pts, h, wall, { lift = 0, deep = false, foot = true } = {}) {
+    const z = K.z, out = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i], q = pts[(i + 1) % pts.length], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      if (len < 1e-6) continue;
+      const n = [(q[1] - p[1]) / len, -(q[0] - p[0]) / len];
+      if (K.facing(n[0], n[1]) <= 0.01) continue;
+      const F = { P: K.P(p[0], p[1], lift), Q: K.P(q[0], q[1], lift), H: h * z, n, len, curved: len < 0.1 };
+      // schmale Teile einer Rundung überlappen ein wenig, sonst schimmern feine Fugen durch
+      const t0 = F.curved ? -0.04 : 0, t1 = F.curved ? 1.04 : 1, hex = wallHexAt(K, wall, n);
+      faceQuad(F.P, F.Q, t0, t1, 0, F.H, C(hex));
+      if (foot && !lift && h >= 6) faceQuad(F.P, F.Q, t0, t1, 0, Math.min(1.6 * z, F.H * 0.15), C(shade(hex, -0.07)));
+      if (deep) faceQuad(F.P, F.Q, t0, t1, F.H - Math.min(2.6 * z, F.H * 0.22), F.H, C(shade(hex, -0.12)));
+      out.push(F);
+    }
+    return out;
+  }
+  // Glas auf einer Seite (bei Rundungen mit Überlappung, damit das Band durchgeht)
+  function glass(K, F, t0, t1, h0, h1) {
+    if (F.curved) { if (t0 <= 0) t0 = -0.04; if (t1 >= 1) t1 = 1.04; }
+    windowOn(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, K.z);
+  }
+  // Rechteck, dessen beide vorderen Ecken rund sind (Radius r), Ecken wie FACES
+  function roundFront(a, b, ha, hb, r, steps = 7) {
+    const A = a + ha, pts = [];
+    const arc = (ca, cb, th0) => { for (let k = 0; k < steps; k++) { const th = th0 + Math.PI / 2 * k / steps; pts.push([ca + Math.cos(th) * r, cb + Math.sin(th) * r]); } };
+    arc(A - r, b - hb + r, -Math.PI / 2);                                                // Ecke vorn links (−b)
+    pts.push([A, b - hb + r]);                                                           // gerade Vorderseite
+    arc(A - r, b + hb - r, 0);                                                           // Ecke vorn rechts (+b)
+    pts.push([A - r, b + hb], [a - ha, b + hb], [a - ha, b - hb]);
+    return pts;
+  }
+  // Achteck um (a, b) mit Abstand ap von der Mitte bis zu den Seiten; Seite 0 zeigt nach vorn (+a)
+  function octagon(a, b, ap) {
+    const R = ap / Math.cos(Math.PI / 8);
+    return Array.from({ length: 8 }, (_, k) => { const th = -Math.PI / 8 + k * Math.PI / 4; return [a + Math.cos(th) * R, b + Math.sin(th) * R]; });
+  }
+  // Zeltdach über einem konvexen Grundriss: alle Flächen laufen in einer Spitze zusammen. Rückgabe: die vorderen Flächen
+  // { E0, E1, n, hex } (für die Traufe) und die Spitze
+  function tentRoof(K, pts, a, b, top, roofH, over, col) {
+    const eave = pts.map(([pa, pb]) => K.P(a + (pa - a) * over, b + (pb - b) * over, top)), apex = K.P(a, b, top + roofH);
+    const slopes = pts.map((p, i) => {
+      const q = pts[(i + 1) % pts.length], len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+      const n = [(q[1] - p[1]) / len, -(q[0] - p[0]) / len];
+      return { E0: eave[i], E1: eave[(i + 1) % pts.length], n, f: K.facing(n[0], n[1]), hex: roofHexAt(K, col, n) };
+    });
+    const draw = s => { poly([s.E0, s.E1, apex], C(s.hex)); g.strokeStyle = C(s.hex); g.lineWidth = 0.6; g.stroke(); };
+    slopes.filter(s => s.f < 0).forEach(draw);
+    slopes.filter(s => s.f >= 0).forEach(draw);
+    return { front: slopes.filter(s => s.f > 0.01), apex };
+  }
+
   // ---------------------------------------------------------------- Café
   // Kaffeetasse klein fürs Ausleger-Schild (passt in einen Kreis mit Radius 4 × z): Untertasse, weiße Tasse mit
   // Espresso-Band, Kaffee und zwei Dampfkringel
-  function miniCup(x, y, z, now) {
+  function miniCup(x, y, z) {
     const ry = 0.3, y0 = y + 2.1 * z, y1 = y - 0.9 * z, rb = 1.7 * z, rt = 2.4 * z, bulge = 0.3 * z;
     ellipse(x, y + 2.55 * z, 3.1 * z, 0.95 * z, C('#b9a896'));                          // Untertasse
     ellipse(x, y + 2.35 * z, 2.9 * z, 0.8 * z, C('#ebe1d3'));
@@ -46,37 +112,37 @@
     g.beginPath(); g.ellipse(x, y1, rt, rt * ry, 0, 0, Math.PI * 2); g.stroke();
     ellipse(x, y1 + 0.1 * z, rt - 0.45 * z, (rt - 0.45 * z) * ry, C('#6b3e22'));
     ellipse(x - 0.2 * z, y1 + 0.08 * z, rt - 1.2 * z, (rt - 1.2 * z) * ry, C('#9a6236'));
-    g.lineWidth = 0.45 * z; g.lineCap = 'round';                                          // Dampfkringel
-    for (let i = 0; i < 2; i++) {
-      const ph = (now / 2600 + i / 2) % 1, sx = x + (i ? 0.8 : -0.8) * z, sy = y1 - 0.6 * z - ph * 0.5 * z, w = (i ? -0.6 : 0.6) * z;
-      withAlpha(0.3 + 0.6 * Math.sin(ph * Math.PI), () => {
-        g.strokeStyle = C('#a07a5a'); g.beginPath(); g.moveTo(sx, sy);
-        g.bezierCurveTo(sx + w, sy - 0.6 * z, sx - w, sy - 1.2 * z, sx, sy - 1.8 * z); g.stroke();
-      });
+    g.strokeStyle = C('#a07a5a'); g.lineWidth = 0.5 * z; g.lineCap = 'round';            // Dampfkringel (still)
+    for (const s of [-1, 1]) {
+      const sx = x + s * 0.8 * z, sy = y1 - 0.8 * z, w = s * 0.6 * z;
+      g.beginPath(); g.moveTo(sx, sy); g.bezierCurveTo(sx + w, sy - 0.6 * z, sx - w, sy - 1.2 * z, sx, sy - 1.8 * z); g.stroke();
     }
     kGlow(x, y, z, 14);
   }
-  function chalkBoard(K, a, b) {
-    const [x, y] = K.P(a, b), z = K.z;
-    ellipse(x, y + 0.4 * z, 3.6 * z, 1.2 * z, 'rgba(40,60,20,0.16)');
-    line([x - 2.4 * z, y], [x - 1.3 * z, y - 7 * z], '#7a4a2e', 0.9, z);
-    line([x + 2.4 * z, y], [x + 1.3 * z, y - 7 * z], '#7a4a2e', 0.9, z);
-    g.fillStyle = C('#a0714d'); g.beginPath(); g.roundRect(x - 3.1 * z, y - 10 * z, 6.2 * z, 7.6 * z, 1 * z); g.fill();
-    g.fillStyle = C('#36403a'); g.fillRect(x - 2.4 * z, y - 9.3 * z, 4.8 * z, 6.2 * z);
-    g.strokeStyle = C('#f5f0e6'); g.lineWidth = 0.5 * z; g.beginPath();
-    g.moveTo(x - 1.6 * z, y - 8.2 * z); g.lineTo(x + 1.6 * z, y - 8.2 * z);
-    g.moveTo(x - 1.6 * z, y - 7.1 * z); g.lineTo(x + 0.8 * z, y - 7.1 * z); g.stroke();
-    g.fillStyle = C('#f5f0e6'); g.fillRect(x - 1.2 * z, y - 5.9 * z, 2 * z, 1.9 * z);       // Kreide-Tasse
-    g.beginPath(); g.arc(x + 1 * z, y - 5 * z, 0.7 * z, -Math.PI / 2, Math.PI / 2); g.stroke();
+  // Gauben auf dem steilen unteren Teil des Mansarddachs, je eine auf jeder Seite, die man sieht: Häuschen mit
+  // Satteldach und Fenster, das nach außen schaut
+  function dormers(K, a, b, ha, hb, h, over, wall, roof) {
+    for (const [name, f] of Object.entries(FACES)) {
+      const [na, nb] = f.n;
+      if (K.facing(na, nb) <= 0.01) continue;
+      const d = 0.045, w = 0.08, out = (na ? ha : hb) * over * 0.86 - d;
+      const D = K.block({ a: a + na * out, b: b + nb * out, ha: na ? d : w, hb: na ? w : d, h: 5.5, lift: h + 2.5, wall, roof, roofH: 3.5, type: 'gable', ridge: na ? 'a' : 'b', over: 1.22 });
+      K.wins(D, name, 1, 0.15, 0.85, 0.2, 0.8);
+    }
   }
-  SHOP_ART.cafe = function (K, s, now, x, y, t, ha, hb) {
+  SHOP_ART.cafe = function (K, s, now) {
+    const a = -0.06, ha = 0.29, hb = 0.31, h = 18, roofH = 16, over = 1.14, wall = '#fff4dc', roof = '#8b5a3c';
     K.scene([
-      [-0.08, 0, () => shopHouse(K, { wall: '#e8d3b5', roof: '#5b3a26', awning: '#7a4a2e', roofType: 'hip', h: 20, roofH: 8, trim: '#5b3a26' })],
-      hangSign(K, (cx, cy, z) => miniCup(cx, cy, z, now), '#5b3a26'),                    // Tasse klein am Ausleger
-      [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#7a4a2e')],
-      [0.44, 0.02, () => chalkBoard(K, 0.44, 0.02)],
+      [a, 0, () => {
+        shopHouse(K, { wall, roof, awning: '#c98d5c', roofType: 'mansard', a, ha, hb, h, roofH, over, trim: roof });
+        kitChimney(K, a - 0.05, 0.09, h + 11.5, now, '#c9785f');                           // Schornstein mit Rauch
+        dormers(K, a, 0, ha, hb, h, over, wall, roof);
+      }],
+      hangSign(K, (cx, cy, z) => miniCup(cx, cy, z), roof, { up: 13 }),                 // Tasse klein am Ausleger
+      [0.38, -0.24, () => kTable(K, 0.38, -0.24, '#c98d5c')],
     ]);
   };
+  ART_SHADOW.cafe = [28, 0.2];
 
   // ---------------------------------------------------------------- Teeladen
   function leafPath(L, W) {
@@ -108,65 +174,94 @@
     g.lineWidth = 1.1 * z; g.strokeStyle = C('#1f5e3a'); g.stroke();
     g.restore();
   }
-  // Teezweig: Knospe, kleines und großes Blatt am Stiel (Fuß bei x, y; etwa 23 × 29 px groß)
-  function teaSprig(x, y, z, now) {
-    const sway = Math.sin(now / 1500) * 0.05;
-    line([x, y + 0.5 * z], [x, y - 3.5 * z], '#4f7a2e', 1.6, z);
-    teaLeaf(x, y - 3 * z, z, 10, 2.6, -0.2 + sway, '#d4f59c', '#aee27a', 2);                  // Knospe
-    teaLeaf(x - 0.5 * z, y - 2 * z, z, 14, 4.2, -0.95 + sway, '#a6e878', '#7acb5c', 3);       // kleines Blatt
-    teaLeaf(x + 0.3 * z, y - 2.5 * z, z, 27, 7.5, 0.3 + sway, '#8ee06a', '#5cbf55', 4);       // großes Blatt
-  }
-  // derselbe Zweig verkleinert fürs Ausleger-Schild (Mitte des Zweigs liegt bei etwa 1 | −15 über dem Fuß)
-  function miniTea(x, y, z, now) {
+  // Teezweig klein fürs Ausleger-Schild: Knospe, kleines und großes Blatt am Stiel (verkleinert, Mitte bei x, y)
+  function miniTea(x, y, z) {
     const k = 0.26;
     g.save(); g.translate(x - 1 * k * z, y + 14.5 * k * z); g.scale(k, k);
-    teaSprig(0, 0, z, now);
+    line([0, 0.5 * z], [0, -3.5 * z], '#4f7a2e', 1.6, z);
+    teaLeaf(0, -3 * z, z, 10, 2.6, -0.2, '#d4f59c', '#aee27a', 2);                         // Knospe
+    teaLeaf(-0.5 * z, -2 * z, z, 14, 4.2, -0.95, '#a6e878', '#7acb5c', 3);                 // kleines Blatt
+    teaLeaf(0.3 * z, -2.5 * z, z, 27, 7.5, 0.3, '#8ee06a', '#5cbf55', 4);                  // großes Blatt
     g.restore();
     kGlow(x, y, z, 14);
   }
-  // Traufe mit hochgebogenen Ecken (Pagodenart) und goldenen Knöpfen
-  // (nur an den Ecken links und rechts im Bild – dort liegt der Bogen außerhalb der Dachfläche)
-  function curlyEaves(K, a, b, ha, hb, h, roof, over = 1.12) {
-    const ea = ha * over, eb = hb * over, z = K.z;
-    const pts = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([sa, sb]) => K.P(a + sa * ea, b + sb * eb, h));   // im Kreis
-    const back = pts.reduce((p, q) => q[1] < p[1] ? q : p);
-    for (const p of pts) {
-      if (p === back || pts.every(q => q[1] <= p[1])) continue;                          // hintere und vordere Ecke nicht
-      const e = lerp(p, back, 0.32), out = p[0] < back[0] ? -1 : 1;
-      const tip = [p[0] + out * 3 * z, p[1] - 5.2 * z], ctl = [p[0] + (e[0] - p[0]) * 0.3, p[1] + (e[1] - p[1]) * 0.3 - 2.6 * z];
-      g.beginPath(); g.moveTo(e[0], e[1]); g.quadraticCurveTo(p[0], p[1] + 0.5 * z, tip[0], tip[1]);
-      g.quadraticCurveTo(ctl[0], ctl[1], e[0], e[1]); g.closePath();
-      g.fillStyle = C(shade(roof, out < 0 ? 0.1 : -0.12)); g.fill();
-      circle(tip[0], tip[1], 0.85 * z, C('#e9c46a'));
+  // Geschwungenes Teehaus-Dach: Walmdach mit weiter Traufe, die Ecken hochgebogen und die Grate durchhängend
+  function teaRoof(K, a, b, ha, hb, top, roofH, over, col, curl = 6) {
+    const z = K.z, ea = ha * over, eb = hb * over, alongA = ha >= hb;
+    const CORNERS = [[1, -1], [1, 1], [-1, 1], [-1, -1]];                               // im Kreis wie FACES
+    const at = (da, db, up) => K.P(a + da, b + db, up);
+    const tip = ([sa, sb]) => [sa * ea * 1.1, sb * eb * 1.1];                            // Ecke: weiter raus und hoch
+    const rid = ([sa, sb]) => alongA ? [sa * (ea - eb), 0] : [0, sb * (eb - ea)];
+    const E = CORNERS.map(c => at(...tip(c), top + curl));
+    const R = CORNERS.map(c => at(...rid(c), top + roofH));
+    const hip = CORNERS.map(c => { const [ta, tb] = tip(c), [ra, rb] = rid(c); return at((ta + ra) / 2, (tb + rb) / 2, top + curl + (roofH - curl) * 0.3); });
+    const slopes = CORNERS.map((c, i) => {
+      const j = (i + 1) % 4, d = CORNERS[j], n = [(c[0] + d[0]) / 2, (c[1] + d[1]) / 2];
+      const mid = at(n[0] * ea, n[1] * eb, top), eaveCtl = [2 * mid[0] - (E[i][0] + E[j][0]) / 2, 2 * mid[1] - (E[i][1] + E[j][1]) / 2];
+      return { i, j, n, eaveCtl, f: K.facing(n[0], n[1]), hex: roofHexAt(K, col, n) };
+    });
+    const outline = s => {
+      g.beginPath(); g.moveTo(...E[s.i]);
+      g.quadraticCurveTo(...s.eaveCtl, ...E[s.j]);
+      g.quadraticCurveTo(...hip[s.j], ...R[s.j]);
+      g.lineTo(...R[s.i]);
+      g.quadraticCurveTo(...hip[s.i], ...E[s.i]);
+      g.closePath();
+    };
+    const draw = s => { outline(s); g.fillStyle = C(s.hex); g.fill(); g.strokeStyle = C(s.hex); g.lineWidth = 0.6; g.stroke(); };
+    slopes.filter(s => s.f < 0).forEach(draw);
+    slopes.filter(s => s.f >= 0).forEach(draw);
+    g.lineCap = 'round';
+    for (const s of slopes) {                                                              // Traufkante vorn
+      if (s.f <= 0.01) continue;
+      g.strokeStyle = C(shade(s.hex, -0.22)); g.lineWidth = 1.3 * z;
+      g.beginPath(); g.moveTo(...E[s.i]); g.quadraticCurveTo(...s.eaveCtl, ...E[s.j]); g.stroke();
     }
+    const r0 = alongA ? R[3] : R[0], r1 = alongA ? R[0] : R[1];                            // Firstbalken
+    line(r0, r1, shade(col, -0.25), 1.6, z);
   }
-  function bambooPot(K, a, b, tall) {
+  // Bambus im Topf (neben der Tür)
+  function bambooPot(K, a, b) {
     const [x, y] = K.P(a, b), z = K.z;
     ellipse(x, y + 0.5 * z, 3.6 * z, 1.4 * z, 'rgba(40,60,20,0.18)');
-    for (const [dx, hgt] of [[-1.3, 13 * tall], [0.2, 18 * tall], [1.4, 11 * tall]]) {
+    for (const [dx, hgt] of [[-1.3, 12], [0.2, 16], [1.4, 10]]) {
       const sx = x + dx * z, top = y - (4.5 + hgt) * z;
       line([sx, y - 4 * z], [sx, top], '#8cc85a', 1.3, z);
-      for (let k = 1; k * 3.6 < hgt; k++) line([sx - 0.7 * z, y - (4.5 + k * 3.6) * z], [sx + 0.7 * z, y - (4.5 + k * 3.6) * z], '#5e9a3a', 0.5, z);
       poly([[sx, top + 1.2 * z], [sx + 4.2 * z, top - 0.6 * z], [sx + 0.6 * z, top + 2.4 * z]], C('#58b36a'));
       poly([[sx, top + 2.4 * z], [sx - 4 * z, top + 0.6 * z], [sx - 0.4 * z, top + 3.4 * z]], C('#4a9e50'));
     }
-    poly([[x - 3 * z, y - 4.6 * z], [x + 3 * z, y - 4.6 * z], [x + 2.2 * z, y], [x - 2.2 * z, y]], C('#2f6b4f'));   // Topf
-    poly([[x + 0.8 * z, y - 4.6 * z], [x + 3 * z, y - 4.6 * z], [x + 2.2 * z, y], [x + 0.6 * z, y]], C('#245a41'));
-    ellipse(x, y - 4.6 * z, 3.1 * z, 1 * z, C('#4a9a70'));
-    ellipse(x, y - 4.6 * z, 2.4 * z, 0.7 * z, C('#5a3a26'));
+    poly([[x - 3 * z, y - 4.6 * z], [x + 3 * z, y - 4.6 * z], [x + 2.2 * z, y], [x - 2.2 * z, y]], C('#2f9e9e'));   // Topf
+    poly([[x + 0.8 * z, y - 4.6 * z], [x + 3 * z, y - 4.6 * z], [x + 2.2 * z, y], [x + 0.6 * z, y]], C(shade('#2f9e9e', -0.2)));
+    ellipse(x, y - 4.6 * z, 3.1 * z, 1 * z, C(shade('#2f9e9e', 0.25)));
   }
-  SHOP_ART.teeladen = function (K, s, now, x, y, t, ha, hb) {
-    const roof = '#2e7d4f';
+  // Niedriges Teehaus auf einem Holzsockel: helle Wände zwischen Holzpfosten, Vorhang (Noren) über der Tür
+  function teaHouse(K, a, ha, hb, h, roofH, wall, roof) {
+    const z = K.z, wood = '#8b5a3c', base = 2;
+    K.block({ a, b: 0, ha: ha + 0.05, hb: hb + 0.05, h: base, wall: '#d8c3a5', roof: '#e8dcc6', type: 'flat' });   // Sockel
+    const B = K.block({ a, b: 0, ha, hb, h, lift: base, wall, type: 'none', entry: true });
+    for (const [name, F] of Object.entries(B.faces)) {
+      if (!F) continue;
+      faceQuad(F.P, F.Q, 0, 1, F.H - 2.2 * z, F.H, K.wallCol(wood, F.n));               // Balken unter der Traufe
+      kColumns(B, name, 2, z, wood);                                                      // Eckpfosten
+      if (name !== 'front') windowOn(F.P, F.Q, 0.28, 0.72, F.H * 0.3, F.H * 0.7, z);
+    }
+    const F = B.faces.front;
+    if (F) {
+      windowOn(F.P, F.Q, 0.16, 0.5, F.H * 0.3, F.H * 0.7, z);
+      faceQuad(F.P, F.Q, 0.6, 0.84, 0, F.H * 0.74, C(DOOR_COL));
+      faceQuad(F.P, F.Q, 0.57, 0.87, F.H * 0.5, F.H * 0.8, C(roof));                   // Noren in der Markenfarbe
+    }
+    teaRoof(K, a, 0, ha, hb, base + h, roofH, 1.22, roof);
+  }
+  SHOP_ART.teeladen = function (K, s, now) {
+    const a = -0.05, roof = '#58b36a';
     K.scene([
-      [-0.08, 0, () => {
-        shopHouse(K, { wall: '#e3f2e1', roof, awning: '#3f9e62', roofType: 'hip', h: 20, roofH: 10, trim: '#2e7d4f' });
-        curlyEaves(K, -0.08, 0, 0.34, 0.37, 20, roof);
-      }],
-      hangSign(K, (cx, cy, z) => miniTea(cx, cy, z, now), roof),                          // Teezweig klein am Ausleger
-      [0.38, -0.32, () => bambooPot(K, 0.38, -0.32, 1)],
-      [0.4, 0.38, () => bambooPot(K, 0.4, 0.38, 0.85)],
+      [a, 0, () => teaHouse(K, a, 0.27, 0.3, 13, 15, '#f0ffe0', roof)],
+      hangSign(K, (cx, cy, z) => miniTea(cx, cy, z), roof, { up: 11 }),                   // Teezweig klein am Ausleger
+      [0.4, -0.32, () => bambooPot(K, 0.4, -0.32)],
     ]);
   };
+  ART_SHADOW.teeladen = [22, 0.21];
 
   // ---------------------------------------------------------------- Bubble Tea
   // Bubble-Tea-Becher klein fürs Ausleger-Schild (passt in einen Kreis mit Radius 4 × z): Milchtee mit dunklen
@@ -184,7 +279,7 @@
       circle(x + px * z, y0 + py * z, 0.52 * z, C('#3a2216'));
       circle(x + (px - 0.16) * z, y0 + (py - 0.18) * z, 0.17 * z, C('#8a6552'));
     }
-    withAlpha(0.16, () => { g.fillStyle = C('#5a2d5e'); g.fillRect(x + rt * 0.42, y1 - rt, rt, H + 2 * rt); });
+    g.fillStyle = 'rgba(90,45,94,0.16)'; g.fillRect(x + rt * 0.42, y1 - rt, rt, H + 2 * rt);
     g.restore();
     cupPath(x, y0, y1, rb, rt, ry);                                                      // Kante (nachts Neon)
     g.lineWidth = (lit ? 0.7 : 0.45) * z; g.strokeStyle = lit ? '#ff6fc0' : C('#b39ddb'); g.stroke();
@@ -200,25 +295,33 @@
     }
     kGlow(x, y, z, 14);
   }
-  // Leuchtband (Neon) über eine Seite
-  function neonBand(F, h0, h1, lit, col, litCol, z) {
-    const a = lerp(F.P, F.Q, 0.03), b = lerp(F.P, F.Q, 0.97);
-    faceQuad(F.P, F.Q, 0.03, 0.97, h0, h1, lit ? litCol : C(col));
-    glowQuad([[a[0], a[1] - h0], [b[0], b[1] - h0], [b[0], b[1] - h1], [a[0], a[1] - h1]], 16 * z);
+  // Moderner Rundbau: Flachdach mit Rand, beide vorderen Ecken rund; unten Glas, das um die Ecken läuft, oben ein
+  // Fensterband rundum
+  function roundHouse(K, a, ha, hb, r, h, wall, rim, doorCol) {
+    const z = K.z;
+    if (K.facing(1, 0) <= 0.01) backEntry(K, a, 0, ha, hb);
+    for (const F of prismWalls(K, roundFront(a, 0, ha, hb, r), h, wall)) {
+      const [na, nb] = F.n, band = (t0, t1) => glass(K, F, t0, t1, 0.62, 0.84);
+      if (F.curved) { glass(K, F, 0, 1, 0.1, 0.5); band(0, 1); }                          // runde Ecke: Glas rundum
+      else if (na > 0.99) { faceQuad(F.P, F.Q, 0.14, 0.86, 0, F.H * 0.52, C(doorCol)); band(0, 1); }   // gerade Vorderseite: Tür
+      else if (nb > 0.99) { glass(K, F, 0, 0.3, 0.1, 0.5); band(0, 0.82); }            // rechts: läuft von der Rundung weg
+      else if (nb < -0.99) { glass(K, F, 0.7, 1, 0.1, 0.5); band(0.18, 1); }             // links
+      else { band(0.12, 0.88); windowOn(F.P, F.Q, 0.35, 0.65, F.H * 0.12, F.H * 0.46, z); }   // hinten
+    }
+    const d = 0.018, outer = roundFront(a, 0, ha + d, hb + d, r + d);                     // Dachrand und Flachdach
+    prismWalls(K, outer, 3, rim, { lift: h, foot: false });
+    poly(outer.map(p => K.P(p[0], p[1], h + 3)), C(shade(rim, 0.3)));
+    poly(roundFront(a, 0, ha - 0.03, hb - 0.03, r - 0.03).map(p => K.P(p[0], p[1], h + 3)), C(shade(rim, 0.62)));
   }
-  SHOP_ART.bubbletea = function (K, s, now, x, y, t, ha, hb) {
-    const z = K.z, lit = isLit();
-    K.scene([
-      [-0.08, 0, () => {
-        const B = shopHouse(K, { wall: '#ffc2dd', roof: '#b39ddb', awning: '#ff6fae', roofType: 'flat', h: 22, roofH: 0, trim: '#b39ddb' });
-        for (const F of Object.values(B.faces)) if (F) neonBand(F, F.H * 0.86, F.H * 0.94, lit, '#ff5fa8', '#ff7ac8', z);
-        K.block({ a: -0.08, b: 0, ha: 0.35, hb: 0.38, h: 2.6, lift: 22, wall: '#9f86cc', roof: '#b39ddb', type: 'flat' });   // Dachrand
-        K.rect(-0.08 - 0.28, -0.31, -0.08 + 0.28, 0.31, C('#c7b6e6'), 24.6);
-      }],
-      hangSign(K, (cx, cy, zz) => miniBoba(cx, cy, zz, lit), '#ff5fa8'),                 // Becher klein am Ausleger
-      [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#ff8fc4')],
+  SHOP_ART.bubbletea = function (K, s, now) {
+    const a = -0.06, ha = 0.29, hb = 0.31, r = 0.22, rim = '#b07ad6', lit = isLit();
+    K.scene([                                                                             // Schild seitlich neben der Rundung
+      [a, 0, () => roundHouse(K, a, ha, hb, r, 20, '#ffc2d9', rim, rim)],
+      hangSign(K, (cx, cy, zz) => miniBoba(cx, cy, zz, lit), rim, { up: 12, a0: a + ha - r, b0: hb + 0.01, back: a - ha - 0.02 }),
+      [0.38, -0.26, () => kTable(K, 0.38, -0.26, rim)],
     ]);
   };
+  ART_SHADOW.bubbletea = [23, 0.2];
 
   // ---------------------------------------------------------------- Eisdiele
   function scoop(sx, sy, r, col, hi) {
@@ -255,36 +358,29 @@
     circle(x + 0.05 * z, yT - 4.25 * z, 0.2 * z, C('#ff9aa8'));
     kGlow(x, y, z, 14);
   }
-  // Eisdielen-Haus: Vanille mit Pistazien-Streifen, Sahne-Tupfen an der Traufe, Markise pink-mint
-  function iceHouse(K) {
-    const z = K.z, a = -0.08, b = 0, ha = 0.34, hb = 0.37, h = 20, ea = ha * 1.12, eb = hb * 1.12;
-    const B = K.block({ a, b, ha, hb, h, wall: '#fff4e0', roof: '#ff8fb1', roofH: 9, type: 'hip', entry: true });
-    for (const F of Object.values(B.faces)) {
-      if (!F) continue;
-      for (let i = 0; i < 6; i++) { const t0 = 0.045 + i * 0.165; faceQuad(F.P, F.Q, t0, t0 + 0.08, Math.min(1.6 * z, F.H * 0.15), F.H - Math.min(2.6 * z, F.H * 0.22), K.wallCol('#b8f0d8', F.n)); }
+  // Achteckiger Pavillon: rundum große Fenster, vorn die Tür, spitzes Zeltdach mit gewellter Traufe (wie ein Sonnenschirm)
+  function pavilion(K, a, ap, h, roofH, wall, roof, doorCol) {
+    const z = K.z, pts = octagon(a, 0, ap);
+    if (K.facing(1, 0) <= 0.01) backEntry(K, a, 0, ap, ap);
+    for (const F of prismWalls(K, pts, h, wall, { deep: true })) {
+      if (F.n[0] > 0.99) faceQuad(F.P, F.Q, 0.28, 0.72, 0, F.H * 0.66, C(doorCol));     // Tür
+      else windowOn(F.P, F.Q, 0.16, 0.84, F.H * 0.22, F.H * 0.72, z);                    // Fenster rundum
     }
-    const F = B.faces.front;
-    if (F) {
-      faceQuad(F.P, F.Q, 0.06, 0.6, F.H * 0.05, F.H * 0.45, C('#ff8fb1'));
-      windowOn(F.P, F.Q, 0.1, 0.56, F.H * 0.08, F.H * 0.42, z);
-      faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, C(DOOR_COL));
-      for (let i = 0; i < 8; i++) faceQuad(F.P, F.Q, 0.06 + i * 0.11, 0.17 + i * 0.11, F.H * 0.44, F.H * 0.56, C(i & 1 ? '#b8f0d8' : '#ff8fb1'));   // Markise
-      for (let i = 0; i < 8; i++) { const m = faceAt(F, 0.115 + i * 0.11, F.H * 0.44); circle(m[0], m[1], 1.35 * z, C(i & 1 ? '#8fdcaa' : '#f06d98')); }
+    const R = tentRoof(K, pts, a, 0, h, roofH, 1.24, roof);
+    for (const s of R.front) {                                                             // gewellte Traufe: ein Bogen je Seite
+      const m = lerp(s.E0, s.E1, 0.5);
+      g.beginPath(); g.moveTo(...s.E0); g.quadraticCurveTo(m[0], m[1] + 5.2 * z, ...s.E1); g.closePath();
+      g.fillStyle = C(shade(s.hex, -0.1)); g.fill();
     }
-    K.wins(B, 'front', 2, 0.64, 0.86); K.sideWins(B, 2, 0.64, 0.86);
-    if (!F) K.sideWins(B, 2, 0.12, 0.4);
-    for (const [name, f] of Object.entries(FACES)) {                                     // Sahne-Tupfen an der Traufe
-      if (!B.faces[name]) continue;
-      const e0 = K.P(a + f.p[0] * ea, b + f.p[1] * eb, h), e1 = K.P(a + f.q[0] * ea, b + f.q[1] * eb, h);
-      for (let i = 0; i < 7; i++) { const m = lerp(e0, e1, (i + 0.5) / 7); circle(m[0], m[1] + 0.4 * z, 1.5 * z, C('#fffaf0')); }
-    }
-    return B;
+    circle(R.apex[0], R.apex[1] - 1.2 * z, 2 * z, C('#fff4dc'));                          // Knauf auf der Spitze
   }
-  SHOP_ART.eisdiele = function (K, s, now, x, y, t, ha, hb) {
+  SHOP_ART.eisdiele = function (K, s, now) {
+    const a = -0.04, ap = 0.26, roof = '#f28cb1', k = ap * Math.SQRT1_2 + 0.01;          // Schild an der schrägen Seite
     K.scene([
-      [-0.08, 0, () => iceHouse(K)],
-      hangSign(K, (cx, cy, z) => miniCone(cx, cy, z), '#f06d98'),                        // Eiswaffel klein am Ausleger
-      [0.36, -0.24, () => kTable(K, 0.36, -0.24, '#8fdcaa')],
+      [a, 0, () => pavilion(K, a, ap, 15, 16, '#fff4dc', roof, '#d94f8a')],
+      hangSign(K, (cx, cy, z) => miniCone(cx, cy, z), '#d94f8a', { up: 11, a0: a + k, b0: k, back: a - k }),
+      [0.38, -0.26, () => kTable(K, 0.38, -0.26, roof)],
     ]);
   };
+  ART_SHADOW.eisdiele = [23, 0.23];
 })();

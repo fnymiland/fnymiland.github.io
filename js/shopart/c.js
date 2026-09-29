@@ -1,57 +1,19 @@
 'use strict';
-// Ladenbilder, Gruppe c (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
+// Ladenbilder, Gruppe c (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: hangSign, faceAt, ART_SHADOW)
 // Apotheke, Hofladen, Buchladen, Pizzeria. Die Hilfen stehen in einer Klammer, damit sie sich nicht mit denen der
 // anderen Gruppen-Dateien beißen (alle Skripte teilen sich einen Namensraum).
+// Block 35: so gebaut wie die alten Häuser – helle, warme Wände, klare Dachfarben, große ruhige Flächen, Schatten,
+// keine Schrift. Jeder Laden hat seine eigene Bauform: Apotheke = Tempelchen mit Säulenvorbau, Hofladen = Scheune
+// mit tief heruntergezogenem Reetdach, Buchladen = schmales Haus mit Treppengiebel, Pizzeria = langes Satteldach
+// mit gemauertem Ofen-Schornstein. Das Wahrzeichen hängt klein im Ausleger-Schild an der Hausecke (hangSign).
 (() => {
   const litNow = () => night > 0.15 && isLive();
-  const l3 = (p, q, f) => [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f, p[2] + (q[2] - p[2]) * f];
   const byDepth = K => (p, q) => K.depth(p[0], p[1]) - K.depth(q[0], q[1]);
+  // Fenster mit Lichtschein in Höhe h0 … h1 (Anteile der Wand) – wie K.wins, nur mit freien Stellen t0 … t1
+  const win = (F, t0, t1, h0, h1, z) => windowOn(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, z);
 
-  // --- gemeinsame Teile -------------------------------------------------------------------------------------------
-  // Das Wahrzeichen hängt klein im Ausleger-Schild an der Hausecke (hangSign in draw-shops.js), nicht auf dem Dach.
-  // Dachflächen eines Walm- bzw. Satteldachs mit First entlang b (ha ≤ hb):
-  // [Normale, Traufe Anfang, Traufe Ende, First über dem Anfang, First über dem Ende] – Punkte als [a, b, Höhe]
-  function slopes(B, roofH, gable) {
-    const ea = B.ha * 1.12, eb = B.hb * 1.12, top = B.lift + B.h, d = gable ? eb : eb - ea;
-    const E = (sa, sb) => [B.a + sa * ea, B.b + sb * eb, top], R1 = [B.a, B.b - d, top + roofH], R2 = [B.a, B.b + d, top + roofH];
-    const list = [[[1, 0], E(1, -1), E(1, 1), R1, R2], [[-1, 0], E(-1, 1), E(-1, -1), R2, R1]];
-    if (!gable) list.push([[0, 1], E(1, 1), E(-1, 1), R2, R2], [[0, -1], E(-1, -1), E(1, -1), R1, R1]);
-    return list;
-  }
-  // Linien quer über die vorderen Dachflächen (Reet-Lagen, Ziegelreihen)
-  function roofLines(K, B, roofH, gable, fracs, col, w) {
-    g.strokeStyle = C(col); g.lineWidth = w * K.z; g.lineCap = 'round'; g.beginPath();
-    for (const [n, e0, e1, r0, r1] of slopes(B, roofH, gable)) {
-      if (K.facing(...n) < 0) continue;
-      for (const f of fracs) { const p = K.P(...l3(e0, r0, f)), q = K.P(...l3(e1, r1, f)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
-    }
-    g.stroke();
-  }
-  // Aufsteller (Kundenstopper) mit Rahmen, Tafel und Symbol
-  function standBoard(K, a, b, frame, board, icon) {
-    const z = K.z, [x, y] = K.P(a, b);
-    ellipse(x, y + 0.5 * z, 4.6 * z, 1.4 * z, 'rgba(40,60,20,0.15)');
-    kLine(K, [x - 3.4 * z, y], [x - 2.6 * z, y - 10 * z], shade(frame, -0.25), 1);
-    kLine(K, [x + 3.4 * z, y], [x + 2.6 * z, y - 10 * z], shade(frame, -0.25), 1);
-    poly([[x - 3.8 * z, y - 11 * z], [x + 3.8 * z, y - 11 * z], [x + 4.2 * z, y - 2.5 * z], [x - 4.2 * z, y - 2.5 * z]], C(frame));
-    poly([[x - 3.1 * z, y - 10.3 * z], [x + 3.1 * z, y - 10.3 * z], [x + 3.4 * z, y - 3.2 * z], [x - 3.4 * z, y - 3.2 * z]], C(board));
-    icon(x, y - 6.8 * z, z);
-  }
-  function pumpkinAt(K, x, y, r) {                         // (x, y) = Mitte, r in px (schon mit z)
-    const z = K.z;
-    ellipse(x, y, r * 1.2, r * 0.88, C('#f28c28'));
-    ellipse(x, y, r * 0.45, r * 0.88, C('#e2761a'));
-    ellipse(x - r * 0.55, y - r * 0.35, r * 0.28, r * 0.2, C('#ffb65c'));
-    kLine(K, [x, y - r * 0.8], [x + 0.6 * z, y - r * 1.3], '#4f7a2a', 1);
-  }
-  function appleAt(x, y, r, col, z) {
-    circle(x, y, r, C(col));
-    circle(x - r * 0.35, y - r * 0.35, r * 0.3, C(shade(col, 0.45)));
-    ellipse(x + r * 0.35, y - r * 1.05, r * 0.4, r * 0.2, C('#58b36a'));
-  }
-
-  // --- Apotheke: weiß mit grünem Kreuz im Ausleger-Schild -----------------------------------------------------------
-  const APO = '#1fa84f';
+  // --- Apotheke: weißes Tempelchen – Giebel zur Straße, Säulenvorbau mit Dreiecksgiebel über der Tür ---------------
+  const APO = '#1fa84f', APO_WALL = '#f5f5f5', APO_WARM = '#fff4dc', APO_ROOF = '#58b36a';
   const crossPts = (x, y, s, t) => [[x - t, y - s], [x + t, y - s], [x + t, y - t], [x + s, y - t], [x + s, y + t], [x + t, y + t],
     [x + t, y + s], [x - t, y + s], [x - t, y + t], [x - s, y + t], [x - s, y - t], [x - t, y - t]];
   // Kleines grünes Apothekenkreuz mittig bei (x, y) für das Schild: dunkle Kante, Glanzstreif, nachts hell leuchtend
@@ -62,86 +24,47 @@
     poly([[x - t + 0.3 * z, y - s + 0.35 * z], [x - t + 0.85 * z, y - s + 0.35 * z], [x - t + 0.85 * z, y - t], [x - t + 0.3 * z, y - t]], on ? '#e0ffea' : C('#74dd99'));
     if (on) glowQuad([[x - t, y - s], [x + t, y - s], [x + t, y + s], [x - t, y + s]], s * 3.4, 'blue');
   }
-  function bottles(F, z) {                                  // Regal mit bunten Fläschchen im Schaufenster
-    const cols = ['#1fa84f', '#e8604f', '#5f8fe8', '#ffffff', '#e9c46a', '#c3a8e6'];
-    for (let r = 0; r < 2; r++) {
-      const base = F.H * (0.1 + r * 0.16);
-      faceQuad(F.P, F.Q, 0.12, 0.54, base - 0.7 * z, base, C('#ffffff'));
-      for (let i = 0; i < 6; i++) {
-        const t0 = 0.145 + i * 0.066;
-        faceQuad(F.P, F.Q, t0, t0 + 0.034, base, base + F.H * (0.075 + (i % 2) * 0.03), C(cols[(i + r * 2) % 6]));
-      }
+  // Rundfenster mitten im sichtbaren Giebel (Satteldach mit First entlang a: Giebel vorn und hinten)
+  function gableOculus(K, B, roofH, ring) {
+    const z = K.z, on = litNow();
+    for (const s of [1, -1]) {
+      if (K.facing(s, 0) <= 0.01) continue;
+      const [x, y] = K.P(B.a + s * B.ha, B.b, B.lift + B.h + roofH * 0.36);
+      circle(x, y, 2.9 * z, K.wallCol(ring, [s, 0]));
+      circle(x, y, 2 * z, on ? '#ffd873' : C('#a8dcff'));
+      glowQuad([[x - 2 * z, y - 2 * z], [x + 2 * z, y - 2 * z], [x + 2 * z, y + 2 * z], [x - 2 * z, y + 2 * z]], 12 * z);
     }
   }
-  function herbPlanter(K, a, b) {                          // Kräuterkasten vor dem Schaufenster
-    const z = K.z, B = K.block({ a, b, ha: 0.045, hb: 0.12, h: 3.2, wall: '#ffffff', type: 'flat', roof: '#7a5a3c' });
-    for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, F.H * 0.62, F.H, K.wallCol(APO, F.n));
-    const herbs = [];
-    for (let i = 0; i < 5; i++) herbs.push([a, b - 0.09 + i * 0.045, i]);
-    for (const [ha, hb, i] of herbs.sort(byDepth(K))) {
-      const [hx, hy] = K.P(ha, hb, 3.2);
-      circle(hx, hy - 1.7 * z, 1.9 * z, C(i % 2 ? '#3f9a4a' : '#58b36a'));
-      if (i % 2 === 0) circle(hx + 0.6 * z, hy - 3 * z, 0.6 * z, C('#c3a8e6'));
-    }
-  }
-  function topiary(K, a, b) {
-    const z = K.z, [x, y] = K.P(a, b);
-    box(x, y, 2.2 * z, 1.1 * z, 3.4 * z, '#e6ece9', null, 0);
-    circle(x, y - 7 * z, 3.3 * z, C('#3f9a4a'));
-    circle(x - 1.1 * z, y - 8.1 * z, 1.5 * z, C('#66bd6e'));
+  // Säulenvorbau vor der Tür: Stufe, Vorbau mit Tür und Dreiecksgiebel, davor zwei Säulen an den Ecken
+  // (pa = Mitte des Vorbaus; die Tür sitzt vorn im Vorbau, sonst verdeckt sie im Schrägbild die linke Säule)
+  function portico(K, pa, pb, h) {
+    const ha = 0.06, hb = 0.13, cs = 0.024, z = K.z;
+    K.block({ a: pa + 0.02, b: pb, ha: ha + 0.02, hb: hb + 0.035, h: 1.6, wall: '#e8e2d6', type: 'flat', roof: '#f3efe8' });   // Stufe
+    const V = K.block({ a: pa, b: pb, ha, hb, h, lift: 1.6, wall: APO_WARM, roof: APO_ROOF, roofH: 6, type: 'gable', ridge: 'a', over: 1.14 });
+    const F = V.faces.front;
+    if (F) faceQuad(F.P, F.Q, 0.31, 0.69, 0, F.H * 0.7, C(shade(APO_ROOF, -0.28)));      // grüne Tür
+    for (const S of Object.values(V.faces)) if (S) faceQuad(S.P, S.Q, 0, 1, S.H - 2.2 * z, S.H, K.wallCol(shade(APO_WARM, -0.06), S.n));   // Gebälk
+    [[pa + ha - cs + 0.004, pb - hb + cs - 0.004], [pa + ha - cs + 0.004, pb + hb - cs + 0.004]].sort(byDepth(K))
+      .forEach(([ca, cb]) => K.block({ a: ca, b: cb, ha: cs, hb: cs, h: h - 2.2, lift: 1.6, wall: '#ffffff', type: 'flat', roof: '#ffffff' }));
   }
   SHOP_ART.apotheke = function (K, s, now, x, y, t) {
-    const z = K.z, on = litNow(), H = 22, RH = 9;
+    const z = K.z, on = litNow(), A = -0.08, HA = 0.28, HB = 0.3, H = 19, RH = 12;
     K.scene([
-      [-0.08, 0, () => {
-        const B = shopHouse(K, { wall: '#ffffff', roof: '#4f7a6a', roofType: 'hip', h: H, roofH: RH, trim: APO });
-        for (const [name, F] of Object.entries(B.faces)) {
-          if (!F) continue;
-          const col = K.wallCol(APO, F.n);
-          faceQuad(F.P, F.Q, 0, 1, F.H * 0.47, F.H * 0.53, col);                            // grünes Band zwischen den Geschossen
-          if (name === 'front') { faceQuad(F.P, F.Q, 0, 0.64, 0, F.H * 0.07, col); faceQuad(F.P, F.Q, 0.86, 1, 0, F.H * 0.07, col); }
-          else faceQuad(F.P, F.Q, 0, 1, 0, F.H * 0.07, col);                                // grüner Sockel
-        }
+      [A, 0, () => {
+        const B = K.block({ a: A, b: 0, ha: HA, hb: HB, h: H, wall: APO_WALL, roof: APO_ROOF, roofH: RH, type: 'gable', ridge: 'a', over: 1.15, entry: true });
         const F = B.faces.front;
-        if (F) {
-          bottles(F, z);
-          faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, K.wallCol(APO, F.n));               // Glastür mit grünem Rahmen
-          windowOn(F.P, F.Q, 0.675, 0.825, F.H * 0.03, F.H * 0.38, z);
-        }
+        if (F) for (const [t0, t1] of [[0.07, 0.25], [0.75, 0.93]]) win(F, t0, t1, 0.22, 0.66, z);   // streng symmetrisch
+        K.sideWins(B, 2, 0.24, 0.66);
+        gableOculus(K, B, RH, APO_ROOF);
       }],
-      hangSign(K, (cx, cy, zz) => greenCross(cx, cy, zz, on), APO),                        // Kreuz im Schild an der Ecke
-      [0.36, 0.03, () => topiary(K, 0.36, 0.03)],
-      [0.36, 0.34, () => topiary(K, 0.36, 0.34)],
-      [0.4, -0.13, () => herbPlanter(K, 0.4, -0.13)],
+      [A + HA + 0.06, 0, () => portico(K, A + HA + 0.06, 0, 12)],
+      hangSign(K, (cx, cy, zz) => greenCross(cx, cy, zz, on), APO, { up: H - 4, a0: A + HA + 0.04, b0: HB + 0.05, back: A - HA - 0.04 }),
     ]);
   };
+  ART_SHADOW.apotheke = [28, 0.2];
 
-  // --- Hofladen: Holz-Fachwerk, dickes Reetdach, Korb voller Obst, Apfel im Schild ---------------------------------
-  const THATCH = '#d9b25a';
-  function beams(K, B) {                                    // dunkle Fachwerk-Balken, frei um Fenster und Tür
-    const z = K.z, lowWins = !B.faces.front;               // Tür hinten: die Seiten haben unten Fenster
-    g.strokeStyle = C('#4a2e1c'); g.lineWidth = 1.25 * z; g.lineCap = 'round'; g.beginPath();
-    for (const [name, F] of Object.entries(B.faces)) {
-      if (!F) continue;
-      const seg = (t0, h0, t1, h1) => { const p = faceAt(F, t0, F.H * h0), q = faceAt(F, t1, F.H * h1); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); };
-      seg(0.02, 0, 0.02, 0.9); seg(0.98, 0, 0.98, 0.9);                                    // Eckständer
-      seg(0.02, 0.48, 0.98, 0.48);                                                         // Riegel zwischen den Geschossen
-      seg(0.5, 0.48, 0.5, 0.9);                                                            // Ständer oben
-      seg(0.05, 0.5, 0.2, 0.88); seg(0.95, 0.5, 0.8, 0.88);                                // Streben oben
-      if (name === 'front') { seg(0.6, 0, 0.6, 0.48); seg(0.9, 0, 0.9, 0.48); }
-      else if (lowWins) seg(0.5, 0, 0.5, 0.48);
-      else { seg(0.5, 0, 0.5, 0.48); seg(0.06, 0.06, 0.44, 0.44); seg(0.94, 0.06, 0.56, 0.44); }
-    }
-    g.stroke();
-  }
-  function eaveBand(K, B, col, hgt) {                       // dicke Traufkante des Reetdachs
-    const ea = B.ha * 1.12, eb = B.hb * 1.12, top = B.lift + B.h;
-    const E = (s, up) => K.P(B.a + s[0] * ea, B.b + s[1] * eb, up);
-    for (const f of Object.values(FACES)) {
-      if (K.facing(...f.n) <= 0.01) continue;
-      poly([E(f.p, top), E(f.q, top), E(f.q, top - hgt), E(f.p, top - hgt)], K.wallCol(col, f.n));
-    }
-  }
+  // --- Hofladen: Scheune – niedrige helle Holzwand, breites, tief heruntergezogenes Reetdach, Tor in der Mitte -------
+  const BARN_WALL = '#d8c3a5', THATCH = '#e9c46a', BARN_WOOD = '#8b5a3c';
   function miniApple(K, x, y, z) {                          // roter Apfel mit Stiel und Blatt für das Schild
     kLine(K, [x - 0.1 * z, y - 1.5 * z], [x + 0.4 * z, y - 3.3 * z], '#6b4424', 0.6);
     circle(x - 1 * z, y + 0.85 * z, 2.5 * z, C('#e8413b'));
@@ -150,115 +73,60 @@
     circle(x - 1.3 * z, y - 0.25 * z, 0.8 * z, C(shade('#e8413b', 0.45)));
     g.beginPath(); g.ellipse(x + 1.3 * z, y - 2.5 * z, 1.2 * z, 0.55 * z, -0.45, 0, Math.PI * 2); g.fillStyle = C('#58b36a'); g.fill();
   }
-  function hayBale(K, a, b) {
-    const B = K.block({ a, b, ha: 0.075, hb: 0.115, h: 4.5, wall: '#e2bd5c', type: 'flat', roof: '#f0d27e' });
-    for (const F of Object.values(B.faces)) if (F && F.n[0]) for (const tt of [0.28, 0.72]) faceQuad(F.P, F.Q, tt - 0.02, tt + 0.02, 0, F.H, C('#a8793a'));
-    K.rect(a - 0.075, b - 0.115 + 0.23 * 0.26, a + 0.075, b - 0.115 + 0.23 * 0.3, C('#b88a45'), 4.5);
-    K.rect(a - 0.075, b - 0.115 + 0.23 * 0.7, a + 0.075, b - 0.115 + 0.23 * 0.74, C('#b88a45'), 4.5);
+  // Dicke Reetkante an den Traufen (Satteldach mit First entlang b: Traufen vorn und hinten)
+  function thatchEdge(K, B, over, hgt, col) {
+    const ea = B.ha * over, eb = B.hb * over, top = B.lift + B.h;
+    for (const s of [1, -1]) {
+      if (K.facing(s, 0) <= 0.01) continue;
+      const p = K.P(B.a + s * ea, B.b - eb, top), q = K.P(B.a + s * ea, B.b + eb, top);
+      poly([p, q, [q[0], q[1] + hgt * K.z], [p[0], p[1] + hgt * K.z]], K.wallCol(col, [s, 0]));
+    }
   }
-  function bigBasket(K, a, b, up) {                         // großer Weidenkorb mit Äpfeln und Kürbissen
-    const z = K.z, [x, y] = K.P(a, b, up), top = y - 6.5 * z;
-    ellipse(x, y, 4.6 * z, 1.6 * z, C('#9a6530'));
-    poly([[x - 6.2 * z, top], [x + 6.2 * z, top], [x + 4.6 * z, y], [x - 4.6 * z, y]], C('#c68a45'));
-    poly([[x + 1.5 * z, top], [x + 6.2 * z, top], [x + 4.6 * z, y], [x + 1.1 * z, y]], C('#b27a3a'));
-    g.strokeStyle = C('#8f5d2c'); g.lineWidth = 0.6 * z; g.beginPath();
-    for (const f of [0.33, 0.66]) { const w = (4.6 + 1.6 * f) * z; g.moveTo(x - w, y - 6.5 * f * z); g.lineTo(x + w, y - 6.5 * f * z); }
-    for (const u of [-0.6, -0.2, 0.2, 0.6]) { g.moveTo(x + u * 4.6 * z, y); g.lineTo(x + u * 6.2 * z, top); }
+  function barnDoor(K, F) {                                 // zweiflügliges Scheunentor mit hellen Querstreben
+    const z = K.z, top = 0.86;
+    faceQuad(F.P, F.Q, 0.34, 0.66, 0, F.H * top, C(BARN_WOOD));
+    g.strokeStyle = C('#c69a6c'); g.lineWidth = 1.1 * z; g.lineCap = 'butt'; g.beginPath();
+    const seg = (t0, h0, t1, h1) => { const p = faceAt(F, t0, F.H * h0), q = faceAt(F, t1, F.H * h1); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); };
+    seg(0.5, 0, 0.5, top);                                                               // Mittelfuge
+    seg(0.37, 0.06, 0.47, top - 0.08); seg(0.63, 0.06, 0.53, top - 0.08);               // Streben
     g.stroke();
-    ellipse(x, top, 6.4 * z, 1.9 * z, C('#a86f35'));
-    ellipse(x, top - 0.2 * z, 5.4 * z, 1.3 * z, C('#6b4424'));
-    pumpkinAt(K, x - 2.6 * z, top - 1.6 * z, 2.6 * z);
-    pumpkinAt(K, x + 2.8 * z, top - 1.8 * z, 2.4 * z);
-    appleAt(x, top - 3.2 * z, 1.9 * z, '#e8413b', z);
-    appleAt(x - 4.4 * z, top - 0.4 * z, 1.6 * z, '#e8413b', z);
-    appleAt(x + 0.3 * z, top - 0.3 * z, 1.7 * z, '#8cc63f', z);
-    appleAt(x + 4.7 * z, top - 0.4 * z, 1.5 * z, '#e8413b', z);
-    g.beginPath(); g.ellipse(x, top, 6.4 * z, 1.9 * z, 0, 0, Math.PI); g.fillStyle = C('#a86f35'); g.fill();   // vordere Kante
-    g.strokeStyle = C('#8f5d2c'); g.lineWidth = 1.3 * z;
-    g.beginPath(); g.ellipse(x, top - 0.5 * z, 5.6 * z, 6.8 * z, 0, Math.PI, 0); g.stroke();                       // Henkel
   }
-  function pumpkinCart(K, a, b) {                           // Holzkarren mit Kürbissen
-    const z = K.z, side = K.facing(0, 1) > 0 ? 1 : -1, hb = 0.1;
-    const wheel = sgn => { const [wx, wy] = K.P(a, b + sgn * (hb + 0.012), 3); circle(wx, wy, 3 * z, C('#5b3a22')); circle(wx, wy, 2 * z, C('#a0714d')); circle(wx, wy, 0.7 * z, C('#5b3a22')); };
-    const shaft = () => { kLine(K, K.P(a - 0.04, b + hb, 4.5), K.P(a, b + hb + 0.09, 2), '#6b4424', 0.9); kLine(K, K.P(a + 0.04, b + hb, 4.5), K.P(a, b + hb + 0.09, 2), '#6b4424', 0.9); };
-    wheel(-side);
-    if (side < 0) shaft();
-    const B = K.block({ a, b, ha: 0.075, hb, h: 3.5, lift: 2.5, wall: '#9c6a3c', type: 'flat', roof: '#b98452' });
-    for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, F.H * 0.45, F.H * 0.55, C('#7a4f2a'));
-    if (side > 0) shaft();
-    wheel(side);
-    const low = [[a - 0.02, b - 0.045, 2.5], [a + 0.02, b + 0.045, 2.3]].sort(byDepth(K));
-    for (const [pa, pb, r] of low) { const [px, py] = K.P(pa, pb, 6); pumpkinAt(K, px, py - r * 0.7 * z, r * z); }
-    const [px, py] = K.P(a, b, 8); pumpkinAt(K, px, py - 1.6 * z, 2.1 * z);
-  }
-  function fruitCrates(K, a, b) {                           // Obstkisten an der Seite
-    const spots = [[a - 0.065, b, '#c9955f'], [a + 0.065, b, '#d9b27a']].sort(byDepth(K));
-    const fill = (ca, cb, up) => {
-      const [cx, cy] = K.P(ca, cb, up), z = K.z, cols = ['#e8413b', '#ffd23f', '#8cc63f', '#e8413b'];
-      [[-1.7, 0], [0, -0.8], [1.7, 0], [0, 0.8]].forEach(([dx, dy], i) => circle(cx + dx * z, cy + dy * z - 0.8 * z, 1.2 * z, C(cols[i])));
-    };
-    for (const [ca, cb, col] of spots) { kCrate(K, ca, cb, col); fill(ca, cb, 4.5); }
-    kCrate(K, a - 0.065, b, '#b98452', 1, 4.5); fill(a - 0.065, b, 9);
-  }
-  function produceInWindow(F, z) {
-    faceQuad(F.P, F.Q, 0.12, 0.54, F.H * 0.12 - 0.7 * z, F.H * 0.12, C('#7a4f2a'));
-    const cols = ['#e8413b', '#8cc63f', '#ffd23f', '#f28c28', '#e8413b', '#8cc63f', '#f28c28'];
-    for (let i = 0; i < 7; i++) { const [px, py] = faceAt(F, 0.155 + i * 0.058, F.H * 0.12 + 1.1 * z); circle(px, py, 1.1 * z, C(cols[i])); }
+  function appleCrate(K, a, b) {                           // eine Kiste voller Äpfel vor der Tür
+    kCrate(K, a, b, '#c9955f', 1.2);
+    const [x, y] = K.P(a, b, 5.4), z = K.z;
+    for (const [dx, dy, c] of [[0, -1.2, '#e8413b'], [-2.3, 0, '#7cb342'], [2.3, 0, '#e8413b'], [0, 1.2, '#e8413b']]) {
+      circle(x + dx * z, y + dy * z - 1 * z, 1.8 * z, C(c));
+    }
   }
   SHOP_ART.hofladen = function (K, s, now, x, y, t) {
-    const z = K.z, H = 20, RH = 15;
+    const z = K.z, A = -0.04, HA = 0.28, HB = 0.32, H = 10, RH = 19, OV = 1.3;
     K.scene([
-      [-0.47, 0.26, () => haystack(K, -0.47, 0.26)],
-      [-0.13, -0.46, () => [[-0.2, -0.46, 2.6], [-0.06, -0.47, 2.1]].sort(byDepth(K)).forEach(([pa, pb, r]) => { const [px, py] = K.P(pa, pb); pumpkinAt(K, px, py - r * 0.8 * z, r * z); })],
-      [-0.08, 0, () => {
-        const B = shopHouse(K, { wall: '#b5773f', roof: THATCH, roofType: 'hip', h: H, roofH: RH, ha: 0.33, hb: 0.39, upperWins: 0 });
-        for (const S of Object.values(B.faces)) if (S) for (const [t0, t1] of [[0.27, 0.43], [0.57, 0.73]]) windowOn(S.P, S.Q, t0, t1, S.H * 0.56, S.H * 0.8, z);
-        if (B.faces.front) produceInWindow(B.faces.front, z);
-        beams(K, B);
-        eaveBand(K, B, shade(THATCH, -0.2), 2.6);
-        roofLines(K, B, RH, false, [0.3, 0.6], shade(THATCH, -0.24), 0.9);
+      [A, 0, () => {
+        const B = K.block({ a: A, b: 0, ha: HA, hb: HB, h: H, wall: BARN_WALL, roof: THATCH, roofH: RH, type: 'gable', ridge: 'b', over: OV, entry: true });
+        const F = B.faces.front;
+        if (F) { barnDoor(K, F); for (const [t0, t1] of [[0.1, 0.24], [0.76, 0.9]]) win(F, t0, t1, 0.3, 0.72, z); }
+        for (const n of ['right', 'left']) { const G = B.faces[n]; if (G) win(G, 0.38, 0.62, 0.3, 0.72, z); }   // Giebelseiten
+        if (B.faces.back) K.wins(B, 'back', 2, 0.3, 0.72, 0.2, 0.8);
+        thatchEdge(K, B, OV, 2.6, shade(THATCH, -0.14));
       }],
-      hangSign(K, (cx, cy, zz) => miniApple(K, cx, cy, zz), '#8a5a3c', { b0: 0.52 }),   // Apfel im Schild, etwas weiter draußen (sonst verdeckt der Obstkorb es)
-      [0.07, 0.45, () => fruitCrates(K, 0.07, 0.45)],
-      [0.42, -0.33, () => { hayBale(K, 0.42, -0.33); bigBasket(K, 0.42, -0.33, 4.5); }],
-      [0.42, -0.02, () => pumpkinCart(K, 0.42, -0.02)],
-      [0.33, 0.47, () => standBoard(K, 0.33, 0.47, '#8a5a3c', '#2f3a33', (bx, by, zz) => {
-        kLine(K, [bx - 2.2 * zz, by - 2 * zz], [bx + 1.8 * zz, by - 2 * zz], '#f5f5f0', 0.5);
-        kLine(K, [bx - 2.2 * zz, by - 0.6 * zz], [bx + 0.6 * zz, by - 0.6 * zz], '#f5f5f0', 0.5);
-        appleAt(bx + 0.6 * zz, by + 1.6 * zz, 1.3 * zz, '#e8413b', zz);
-        kLine(K, [bx - 2.4 * zz, by + 1.6 * zz], [bx - 1 * zz, by + 1.6 * zz], '#f5f5f0', 0.5);
-      })],
+      hangSign(K, (cx, cy, zz) => miniApple(K, cx, cy, zz), BARN_WOOD, { up: 9, a0: A + 0.12, b0: HB + 0.04, back: A - 0.12 }),   // am Giebel
+      [0.42, -0.3, () => appleCrate(K, 0.42, -0.3)],
     ]);
   };
+  ART_SHADOW.hofladen = [24, 0.18];
 
-  // --- Buchladen: Flaschengrün mit Gold, aufgeschlagenes Buch im Schild ---------------------------------------------
-  const GOLD = '#d4af37';
-  const SPINES = ['#e8604f', '#5f8fe8', '#e9c46a', '#58b36a', '#c3a8e6', '#f28cb1', '#ff9f5a', '#fffaf0', '#8e2c3a'];
-  function bookSpines(F, t0, t1, h0, h1, z, seed) {         // zwei Regalböden voller bunter Buchrücken
-    const rowH = (h1 - h0) / 2;
-    for (let r = 0; r < 2; r++) {
-      const base = F.H * (h0 + r * rowH);
-      faceQuad(F.P, F.Q, t0, t1, base - 0.8 * z, base, C('#6b4f3a'));
-      let tt = t0 + 0.008;
-      for (let i = 0; i < 16 && tt < t1 - 0.025; i++) {
-        const w = 0.022 + ((i * 7 + r * 5 + seed) % 3) * 0.006, top = base + F.H * rowH * (0.6 + ((i * 5 + r * 3 + seed) % 4) * 0.09);
-        faceQuad(F.P, F.Q, tt, Math.min(tt + w, t1), base, top, C(SPINES[(i * 4 + r * 3 + seed) % SPINES.length]));
-        tt += w + 0.005;
-      }
-    }
-  }
-  function dormers(K, B, roofH) {                           // Gaubenfenster im steilen Teil des Mansarddachs
-    const z = K.z, on = litNow(), ea = B.ha * 1.12, eb = B.hb * 1.12, ka = ea * 0.66, kb = eb * 0.66, top = B.lift + B.h, m = top + roofH * 0.62;
-    for (const n of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
-      if (K.facing(...n) <= 0.01) continue;
-      const pt = (s, w) => n[0] ? K.P(B.a + n[0] * (ea + (ka - ea) * s), B.b + w, top + (m - top) * s)
-                                : K.P(B.a + w, B.b + n[1] * (eb + (kb - eb) * s), top + (m - top) * s);
-      const quad = (s0, s1, w) => [pt(s0, -w), pt(s0, w), pt(s1, w), pt(s1, -w)];
-      poly(quad(0.1, 0.94, 0.1), C(GOLD));
-      const q = quad(0.24, 0.82, 0.068);
-      poly(q, on ? '#ffd873' : C('#a8dcff'));
-      glowQuad(q, 14 * z);
-    }
+  // --- Buchladen: schmales, hohes Giebelhaus mit Treppengiebel zur Straße, Minzgrün und Petrol, Buch im Schild -------
+  const BOOK_WALL = '#c9f0e4', BOOK_ROOF = '#2f9e9e', GOLD = '#d4af37';
+  // Treppengiebel an der Giebelseite a = af (Normale n = ±1): Stufen ragen über die Dachlinie, oben mit Abdeckung
+  const STEPS = [[0, 0.2, 0.42], [0.2, 0.36, 0.74], [0.36, 0.64, 1], [0.64, 0.8, 0.74], [0.8, 1, 0.42]];
+  function stepGable(K, af, b0, hb, h, rh, n) {
+    const pt = (tt, up) => K.P(af, b0 - hb + 2 * hb * tt, up), top = f => h + rh * f + 2.4;
+    const pts = [pt(0, h)];
+    for (const [t0, t1, f] of STEPS) pts.push(pt(t0, top(f)), pt(t1, top(f)));
+    pts.push(pt(1, h));
+    poly(pts, K.wallCol(BOOK_WALL, [n, 0]));
+    const cap = K.wallCol(BOOK_ROOF, [n, 0]);
+    for (const [t0, t1, f] of STEPS) poly([pt(t0 - 0.02, top(f)), pt(t1 + 0.02, top(f)), pt(t1 + 0.02, top(f) - 1.7), pt(t0 - 0.02, top(f) - 1.7)], cap);
   }
   function miniBook(K, x, y, z, on) {                       // kleines aufgeschlagenes Buch mittig bei (x, y) für das Schild
     const W = 3.1 * z, Hh = 4.4 * z, yb = y + 2.2 * z;      // yb: Unterkante am Falz
@@ -281,75 +149,40 @@
     poly([[x + 0.15 * z, yb - 0.4 * z], [x + 0.75 * z, yb - 0.3 * z], [x + 0.85 * z, yb + 1.6 * z], [x + 0.45 * z, yb + 1.2 * z], [x + 0.15 * z, yb + 1.6 * z]], C('#e8604f'));   // Lesebändchen
     if (on) kGlow(x, y, z, 14);
   }
-  function bookTrolley(K, a, b) {                           // Bücherwagen vor dem Laden
-    const z = K.z;
-    for (const [da, db] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const [wx, wy] = K.P(a + da * 0.06, b + db * 0.1, 1); circle(wx, wy, 1.1 * z, C('#3e3e4a')); }
-    K.block({ a, b, ha: 0.08, hb: 0.12, h: 4, lift: 1.5, wall: '#7a4f2a', type: 'flat', roof: '#a0714d' });
-    const books = [];
-    for (let i = 0; i < 7; i++) books.push([a, b - 0.098 + i * 0.0325, i]);
-    books.sort(byDepth(K));
-    for (const [ba, bb, i] of books) K.block({ a: ba, b: bb, ha: 0.055, hb: 0.014, h: 4.5 + ((i * 5) % 3), lift: 5.5, wall: SPINES[i % SPINES.length], type: 'flat', roof: '#fffaf0' });
-  }
-  function bookStack(K, a, b) {
-    const cols = ['#5f8fe8', '#e8604f', '#e9c46a', '#58b36a'];
-    for (let i = 0; i < 4; i++) K.block({ a: a + (i % 2 ? 0.012 : -0.01), b: b + (i % 2 ? -0.014 : 0.01), ha: 0.05, hb: 0.07, h: 1.8, lift: i * 1.8, wall: cols[i], type: 'flat', roof: '#fffaf0' });
-  }
   SHOP_ART.buchladen = function (K, s, now, x, y, t) {
-    const z = K.z, on = litNow(), H = 21, RH = 12;
+    const z = K.z, on = litNow(), A = -0.02, HA = 0.31, HB = 0.26, H = 20, RH = 12;
+    const far = K.facing(1, 0) > 0.01 ? -1 : 1;             // der Giebel, der vom Betrachter weg zeigt
     K.scene([
-      [-0.08, 0, () => {
-        const B = shopHouse(K, { wall: '#2f5d50', roof: '#6b4f3a', roofType: 'mansard', h: H, roofH: RH, trim: GOLD });
-        const F = B.faces.front;
-        if (F) bookSpines(F, 0.11, 0.55, 0.1, 0.41, z, 0);
-        else ['right', 'left', 'back'].forEach((n, k) => { const S = B.faces[n]; if (S) for (let i = 0; i < 2; i++) bookSpines(S, 0.1 + 0.4 * (i + 0.12), 0.1 + 0.4 * (i + 0.88), 0.14, 0.39, z, i + k); });
-        for (const S of Object.values(B.faces)) {
-          if (!S) continue;
-          const gold = K.wallCol(GOLD, S.n);
-          faceQuad(S.P, S.Q, 0, 1, S.H * 0.46, S.H * 0.53, gold);                            // goldenes Gesims
-          for (let i = 0; i < 2; i++) faceQuad(S.P, S.Q, 0.1 + 0.4 * (i + 0.12) - 0.02, 0.1 + 0.4 * (i + 0.88) + 0.02, S.H * 0.6, S.H * 0.64, gold);   // Fensterbänke
-        }
-        dormers(K, B, RH);
+      [A, 0, () => {
+        stepGable(K, A + far * HA, 0, HB, H, RH, far);      // hinterer Treppengiebel: nur die Stufen über dem First sieht man
+        const B = shopHouse(K, { wall: BOOK_WALL, roof: BOOK_ROOF, awning: BOOK_ROOF, roofType: 'gable', ridge: 'a', h: H, roofH: RH, ha: HA, hb: HB, a: A, over: 1.02 });
+        stepGable(K, A - far * HA, 0, HB, H, RH, -far);
+        const F = B.faces.front || B.faces.back;
+        if (F) windowOn(F.P, F.Q, 0.42, 0.58, F.H + RH * 0.14 * z, F.H + RH * 0.58 * z, z);   // Giebelfenster
       }],
-      hangSign(K, (cx, cy, zz) => miniBook(K, cx, cy, zz, on), GOLD),                     // Buch im Schild an der Ecke
-      [0.4, -0.3, () => bookTrolley(K, 0.4, -0.3)],
-      [0.34, 0.45, () => bookStack(K, 0.34, 0.45)],
+      hangSign(K, (cx, cy, zz) => miniBook(K, cx, cy, zz, on), GOLD, { up: H - 4, a0: A + HA + 0.04, b0: HB + 0.05, back: A - HA - 0.04 }),
     ]);
   };
+  ART_SHADOW.buchladen = [30, 0.22];
 
-  // --- Pizzeria: Terrakotta, Ziegeldach, grün-weiß-rote Markise, Ofen-Schornstein, Pizza im Schild ------------------
+  // --- Pizzeria: langes Satteldach, gemauerter Ofen-Schornstein am Giebel, Tricolore-Markise, Pizza im Schild --------
+  const PIZ_WALL = '#ffd1b3', PIZ_ROOF = '#e8705f', PIZ_GREEN = '#58b36a', BRICK = '#c0694a';
   function tricolorAwning(K, B, h0, h1, out) {
     if (!B.faces.front) return;
-    const fa = B.a + B.ha, n = 9, b0 = B.b - B.hb * 0.94, b1 = B.b + B.hb * 0.94, cols = ['#2e9e4f', '#fbf2e2', '#d93a2b'];
+    const fa = B.a + B.ha, n = 6, b0 = B.b - B.hb * 0.94, b1 = B.b + B.hb * 0.94, cols = [PIZ_GREEN, '#fbf2e2', PIZ_ROOF];
     const bAt = i => b0 + (b1 - b0) * i / n;
     for (let i = 0; i < n; i++) {
       const col = cols[i % 3];
       poly([K.P(fa, bAt(i), h1), K.P(fa, bAt(i + 1), h1), K.P(fa + out, bAt(i + 1), h0), K.P(fa + out, bAt(i), h0)], C(col));
-      poly([K.P(fa + out, bAt(i), h0), K.P(fa + out, bAt(i + 1), h0), K.P(fa + out, bAt(i + 1), h0 - 1.6), K.P(fa + out, bAt(i + 0.5), h0 - 3), K.P(fa + out, bAt(i), h0 - 1.6)], K.wallCol(shade(col, -0.1), [1, 0]));
+      poly([K.P(fa + out, bAt(i), h0), K.P(fa + out, bAt(i + 1), h0), K.P(fa + out, bAt(i + 1), h0 - 1.8), K.P(fa + out, bAt(i + 0.5), h0 - 3.2), K.P(fa + out, bAt(i), h0 - 1.8)], K.wallCol(shade(col, -0.1), [1, 0]));
     }
   }
-  function shutters(K, B) {                                 // grüne Fensterläden an den oberen Fenstern
-    for (const F of Object.values(B.faces)) {
-      if (!F) continue;
-      const col = K.wallCol('#2e7d4f', F.n);
-      for (let i = 0; i < 2; i++) {
-        const t0 = 0.1 + 0.4 * (i + 0.12), t1 = 0.1 + 0.4 * (i + 0.88);
-        faceQuad(F.P, F.Q, t0 - 0.046, t0 - 0.004, F.H * 0.62, F.H * 0.88, col);
-        faceQuad(F.P, F.Q, t1 + 0.004, t1 + 0.046, F.H * 0.62, F.H * 0.88, col);
-      }
-    }
-  }
-  function ovenInWindow(F, now, on, z) {                    // Steinofen mit Feuer im Schaufenster
-    const arch = (tc, rt, h0, rh) => {
-      const pts = [faceAt(F, tc + rt, h0), faceAt(F, tc - rt, h0)];
-      for (let k = 0; k <= 8; k++) { const th = Math.PI * k / 8; pts.push(faceAt(F, tc - rt * Math.cos(th), h0 + rh * Math.sin(th))); }
-      return pts;
-    };
-    poly(arch(0.33, 0.14, F.H * 0.09, F.H * 0.26), C('#9c3b26'));
-    poly(arch(0.33, 0.08, F.H * 0.09, F.H * 0.14), C('#2b1610'));
-    const fl = Math.sin(now / 180) * 0.3 * z, [fx, fy] = faceAt(F, 0.33, F.H * 0.09);
-    ellipse(fx, fy - 1.5 * z, 2.4 * z, 1.4 * z + fl, C('#ff7a2e'));
-    ellipse(fx, fy - 1.6 * z, 1.3 * z, 0.9 * z + fl * 0.5, C('#ffd23f'));
-    if (on) kGlow(fx, fy - 2 * z, z, 16);
+  // Ein Fenster mit grünen Läden mitten auf der Seite (oben)
+  function shutteredWin(K, F, z) {
+    const col = K.wallCol(PIZ_GREEN, F.n);
+    win(F, 0.4, 0.6, 0.62, 0.88, z);
+    faceQuad(F.P, F.Q, 0.3, 0.39, F.H * 0.62, F.H * 0.88, col);
+    faceQuad(F.P, F.Q, 0.61, 0.7, F.H * 0.62, F.H * 0.88, col);
   }
   const CHEESE = [[-3, -2, 2.2], [2.5, -3.5, 1.8], [3.2, 2.2, 2.3], [-2.2, 3, 1.9], [0.3, 0.2, 1.7], [-5, 0.8, 1.3], [5.2, -0.8, 1.2]];
   const SALAMI = [[-3.5, -3.5], [3, -1], [-1, 3.8], [3.6, 3.6], [-4.4, 1.6], [0.6, -5]];
@@ -369,66 +202,50 @@
     g.stroke();
     if (on) kGlow(x, y, zz, 14);
   }
-  function ovenChimney(K, a, b, up, now) {                  // gemauerter Ofen-Schornstein mit Rauch
-    const z = K.z, B = K.block({ a, b, ha: 0.06, hb: 0.06, h: 11, lift: up, wall: '#b5523a', type: 'flat', roof: '#4a2a22' });
-    for (const F of Object.values(B.faces)) {
-      if (!F) continue;
-      const mortar = C('#e8b39a');
-      for (let r = 1; r < 4; r++) faceQuad(F.P, F.Q, 0, 1, F.H * r / 4 - 0.25 * z, F.H * r / 4 + 0.25 * z, mortar);
-      for (let r = 0; r < 4; r++) for (const tt of r % 2 ? [0.25, 0.75] : [0.5]) faceQuad(F.P, F.Q, tt - 0.035, tt + 0.035, F.H * r / 4, F.H * (r + 1) / 4, mortar);
+  // Gemauerter Ofen-Schornstein an der Giebelseite: breiter Ofen mit Feuerloch unten, schmaler Zug bis über den First
+  function ovenChimney(K, a, b, top, now, on) {
+    const z = K.z, base = 11, mortar = '#e9b8a0';
+    const bands = (S, fr) => { for (const F of Object.values(S.faces)) if (F) for (const f of fr) faceQuad(F.P, F.Q, 0, 1, F.H * f - 0.45 * z, F.H * f + 0.45 * z, K.wallCol(mortar, F.n)); };
+    const O = K.block({ a, b, ha: 0.09, hb: 0.06, h: base, wall: BRICK, type: 'flat', roof: shade(BRICK, 0.12) });
+    bands(O, [0.5]);
+    const F = O.faces.right;                                                              // Außenseite (Ofen an der Giebelseite +b)
+    if (F) {                                                                              // Feuerloch mit Glut
+      const pts = [faceAt(F, 0.76, 0), faceAt(F, 0.24, 0)];
+      for (let k = 0; k <= 8; k++) { const th = Math.PI * k / 8; pts.push(faceAt(F, 0.5 - 0.26 * Math.cos(th), F.H * 0.24 + F.H * 0.22 * Math.sin(th))); }
+      poly(pts, C('#5a2a1c'));
+      const [fx, fy] = faceAt(F, 0.5, 0);
+      ellipse(fx, fy - 1.3 * z, 1.4 * z, 1 * z, on ? '#ffc04d' : C('#ff8a3d'));
+      if (on) kGlow(fx, fy - 2 * z, z, 16);
     }
-    K.block({ a, b, ha: 0.08, hb: 0.08, h: 1.6, lift: up + 11, wall: '#8a3a28', type: 'flat', roof: '#3a1f18' });
-    const [sx, sy] = K.P(a, b, up + 12.6);
+    const S = K.block({ a, b, ha: 0.055, hb: 0.05, h: top - base, lift: base, wall: BRICK, type: 'flat', roof: shade(BRICK, 0.12) });
+    bands(S, [0.3, 0.62]);
+    K.block({ a, b, ha: 0.07, hb: 0.065, h: 2.2, lift: top, wall: shade(BRICK, -0.12), type: 'flat', roof: '#7a3a2a' });
+    const [sx, sy] = K.P(a, b, top + 2.2);
     smoke(sx, sy - 1 * z, z, now);
   }
-  function checkeredTable(K, a, b, on) {                    // Tisch mit rot-weiß kariertem Tischtuch, zwei Stühle
-    const z = K.z, A = 0.075, Bw = 0.075, up = 5.8;
-    const chair = (cb, sgn) => () => {
-      K.block({ a, b: cb, ha: 0.035, hb: 0.035, h: 3.4, wall: '#6b4f3a', type: 'flat', roof: '#8a5a3c' });
-      K.block({ a, b: cb + sgn * 0.03, ha: 0.035, hb: 0.007, h: 4, lift: 3.4, wall: '#6b4f3a', type: 'flat', roof: '#8a5a3c' });
-    };
-    const table = () => {
-      kLine(K, K.P(a, b), K.P(a, b, 3.6), '#5b3a22', 1.4);
-      const T = K.block({ a, b, ha: A, hb: Bw, h: 2.4, lift: 3.4, wall: '#d93a2b', type: 'none' });
-      for (const F of Object.values(T.faces)) if (F) for (let i = 1; i < 6; i += 2) faceQuad(F.P, F.Q, i / 6, (i + 1) / 6, 0, F.H, C('#ffffff'));
-      for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) {
-        K.rect(a - A + A * i / 2, b - Bw + Bw * j / 2, a - A + A * (i + 1) / 2, b - Bw + Bw * (j + 1) / 2, C((i + j) % 2 ? '#ffffff' : '#d93a2b'), up);
-      }
-      K.oval(a - 0.015, b + 0.015, 0.042, C('#e7a950'), up);                               // Pizza auf dem Tisch
-      K.oval(a - 0.015, b + 0.015, 0.031, C('#d9412b'), up);
-      const [cx, cy] = K.P(a + 0.04, b - 0.045, up);                                       // Kerze in der Flasche
-      ellipse(cx, cy - 1.8 * z, 1.2 * z, 1.8 * z, C('#2e7d4f'));
-      g.fillStyle = C('#2e7d4f'); g.fillRect(cx - 0.4 * z, cy - 4.4 * z, 0.8 * z, 1.4 * z);
-      g.fillStyle = C('#fff6e4'); g.fillRect(cx - 0.35 * z, cy - 5.4 * z, 0.7 * z, 1.1 * z);
-      circle(cx, cy - 6 * z, 0.6 * z, on ? '#ffe28a' : C('#ffb13b'));
-      if (on) kGlow(cx, cy - 6 * z, z, 10);
-    };
-    [[a, b - 0.155, chair(b - 0.155, -1)], [a, b + 0.155, chair(b + 0.155, 1)], [a, b, table]].sort(byDepth(K)).forEach(p => p[2]());
-  }
-  function basilPot(K, a, b) {
-    const z = K.z, [x, y] = K.P(a, b);
-    box(x, y, 2.6 * z, 1.3 * z, 4 * z, '#c0694a', null, 0);
-    for (const [dx, dy, r, c] of [[-1.6, -5.4, 2, '#3f9a3a'], [1.5, -5.2, 2, '#357f31'], [0, -7, 2.2, '#58b36a']]) circle(x + dx * z, y + dy * z, r * z, C(c));
-  }
   SHOP_ART.pizzeria = function (K, s, now, x, y, t) {
-    const z = K.z, on = litNow(), H = 21, RH = 11;
+    const z = K.z, on = litNow(), A = -0.06, HA = 0.28, HB = 0.29, H = 17, RH = 10;
+    const ca = A - 0.04, cb = HB + 0.06;                    // Ofen-Schornstein an der Giebelseite +b, nach hinten gerückt (vorn hängt das Schild)
     K.scene([
-      [-0.08, 0, () => {
-        const B = shopHouse(K, { wall: '#d9744a', roof: '#a33b24', roofType: 'gable', ridge: 'b', h: H, roofH: RH });
-        roofLines(K, B, RH, true, [0.25, 0.5, 0.75], '#7d2a18', 0.8);
-        shutters(K, B);
-        if (B.faces.front) ovenInWindow(B.faces.front, now, on, z);
-        tricolorAwning(K, B, 8.6, 12, 0.1);
+      [A, 0, () => {
+        const B = K.block({ a: A, b: 0, ha: HA, hb: HB, h: H, wall: PIZ_WALL, roof: PIZ_ROOF, roofH: RH, type: 'gable', ridge: 'b', over: 1.12, entry: true });
+        const F = B.faces.front;
+        for (const S of Object.values(B.faces)) {                                         // Backstein-Sockel (an der Tür frei)
+          if (!S) continue;
+          const col = K.wallCol(BRICK, S.n);
+          if (S === F) { faceQuad(S.P, S.Q, 0, 0.62, 0, 2.4 * z, col); faceQuad(S.P, S.Q, 0.88, 1, 0, 2.4 * z, col); }
+          else faceQuad(S.P, S.Q, 0, 1, 0, 2.4 * z, col);
+        }
+        if (F) {
+          win(F, 0.1, 0.56, 0.17, 0.42, z);                                               // Schaufenster
+          faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, C(shade(PIZ_GREEN, -0.3)));        // grüne Tür
+        } else K.sideWins(B, 2, 0.17, 0.42);
+        for (const S of Object.values(B.faces)) if (S) shutteredWin(K, S, z);
+        tricolorAwning(K, B, 7.8, 10.6, 0.09);
       }],
-      [-0.08, 0, () => ovenChimney(K, -0.08, 0.24, H + RH - 2, now)],
-      hangSign(K, (cx, cy, zz) => miniPizza(cx, cy, zz, on), '#d93a2b'),                  // Pizza im Schild an der Ecke
-      [0.41, -0.25, () => checkeredTable(K, 0.41, -0.25, on)],
-      [0.36, 0.04, () => basilPot(K, 0.36, 0.04)],
-      [0.33, 0.47, () => standBoard(K, 0.33, 0.47, '#8a5a3c', '#2f3a33', (bx, by, zz) => {
-        poly([[bx - 2.2 * zz, by - 1.8 * zz], [bx + 2.2 * zz, by - 1.8 * zz], [bx, by + 2.6 * zz]], C('#ffd766'));
-        poly([[bx - 2.2 * zz, by - 1.8 * zz], [bx + 2.2 * zz, by - 1.8 * zz], [bx + 2 * zz, by - 1 * zz], [bx - 2 * zz, by - 1 * zz]], C('#e7a950'));
-        circle(bx - 0.6 * zz, by - 0.2 * zz, 0.6 * zz, C('#d9412b')); circle(bx + 0.6 * zz, by + 0.6 * zz, 0.5 * zz, C('#d9412b'));
-      })],
+      [ca, cb, () => ovenChimney(K, ca, cb, H + RH + 3.5, now, on)],
+      hangSign(K, (cx, cy, zz) => miniPizza(cx, cy, zz, on), PIZ_ROOF, { up: H - 4, a0: A + HA + 0.04, b0: HB + 0.06, back: A - HA - 0.04 }),
     ]);
   };
+  ART_SHADOW.pizzeria = [25, 0.2];
 })();

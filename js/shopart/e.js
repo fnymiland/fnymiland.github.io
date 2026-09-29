@@ -1,348 +1,227 @@
 'use strict';
-// Ladenbilder, Gruppe e (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Boutique, Uhrmacher, Juwelier, Möbelhaus: feste Markenfarben. Boutique und Juwelier zeigen ihr Symbol klein am
-// Ausleger-Schild an der Hausecke (hangSign: Kleid am Bügel, Brillant), der Uhrmacher sein Uhrtürmchen, das Möbelhaus
-// seinen Schriftzug – keine großen Figuren mehr auf den Dächern (Block 34).
+// Ladenbilder, Gruppe e (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, hangSign, faceAt)
+// Boutique, Uhrmacher, Juwelier, Möbelhaus. Block 35: an die alten Gebäude angeglichen – helle Wände, klare Dächer,
+// Schatten (ART_SHADOW), keine Schrift, wenig Kleinkram. Jeder Laden hat seine eigene Bauform:
+// Boutique = weißer Kubus mit Glasfront über zwei Etagen, Uhrmacher = Häuschen mit Uhrtürmchen,
+// Juwelier = kleines Palais mit Säulenportal, Möbelhaus = Halle mit Sägezahndach und kleinem Hof.
 (function () {
   const lit = () => night > 0.15 && isLive();
   const allFaces = B => Object.values(B.faces).filter(Boolean);
   const sideFaces = B => ['right', 'left', 'back'].map(n => B.faces[n]).filter(Boolean);
-  // Band um alle sichtbaren Wände (Gesims, Leuchtband …), Höhen als Anteil der Wand
-  const band = (B, h0, h1, col) => { for (const F of allFaces(B)) faceQuad(F.P, F.Q, 0, 1, F.H * h0, F.H * h1, C(col)); };
   // Auf eine Wand malen: Ursprung bei t (0 … 1 von P nach Q) in Höhe up (px, schon mit z); x läuft auf dem Bildschirm
-  // nach rechts die Wand entlang (schräg wie die Wand), y nach unten. Nie gespiegelt – Schrift und Uhren bleiben richtig.
+  // nach rechts die Wand entlang (schräg wie die Wand), y nach unten. Nie gespiegelt – Uhren bleiben richtig.
   function onFace(F, t, up, fn) {
     const [ox, oy] = faceAt(F, t, up), dx = F.Q[0] - F.P[0], k = Math.abs(dx) > 1e-6 ? (F.Q[1] - F.P[1]) / dx : 0;
     g.save(); g.translate(ox, oy); g.transform(1, k, 0, 1, 0, 0);
     try { fn(); } finally { g.restore(); }
   }
-  // Markise, die vor der Tür-Seite schräg herausragt (gestreift, mit Volant) – liest sich auch auf dunkler Wand
-  function canopy(K, B, col, stripe = '#fbf2e2') {
-    if (!B.faces.front) return;
-    const af = B.a + B.ha, out = af + 0.1, up1 = B.h * 0.6, up0 = B.h * 0.45, b0 = B.b - B.hb * 0.92, span = B.hb * 1.84, n = 8;
-    for (let i = 0; i < n; i++) {
-      const s0 = b0 + span * i / n, s1 = b0 + span * (i + 1) / n, c = i & 1 ? stripe : col;
-      poly([K.P(af, s0, up1), K.P(af, s1, up1), K.P(out, s1, up0), K.P(out, s0, up0)], C(c));
-      poly([K.P(out, s0, up0), K.P(out, s1, up0), K.P(out, s1, up0 - 2.4), K.P(out, s0, up0 - 2.4)], C(shade(c, -0.12)));
-    }
+  // Glasfläche mit Rahmen in der Markenfarbe (t0 … t1 entlang der Wand, h0 … h1 als Anteil der Wandhöhe)
+  function framedGlass(F, t0, t1, h0, h1, frame, z) {
+    const ft = 1.3 * z / Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]);            // Rahmenbreite ≈ 1,3 px × z
+    faceQuad(F.P, F.Q, t0 - ft, t1 + ft, F.H * h0 - 1.3 * z, F.H * h1 + 1.3 * z, C(frame));
+    windowOn(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, z);
   }
-  function star(x, y, r, col) {                                                   // vierzackiger Funkelstern
-    const q = r * 0.28;
-    poly([[x, y - r], [x + q, y - q], [x + r, y], [x + q, y + q], [x, y + r], [x - q, y + q], [x - r, y], [x - q, y - q]], col);
-  }
-  // Zifferblatt um (0, 0) mit Radius r (px × z): Messingrand, Striche, Zeiger mit der echten Uhrzeit
-  function clockFace(r, z, date, on) {
-    circle(0, 0, r * 1.14 * z, C('#c9a24a'));
-    circle(0, 0, r * z, on ? '#fff6c8' : C('#fffdf6'));
-    g.strokeStyle = C('#2f3542'); g.lineCap = 'round';
-    for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6, big = i % 3 === 0, sx = Math.sin(a), cy = -Math.cos(a), r0 = r * (big ? 0.64 : 0.76) * z, r1 = r * 0.9 * z;
-      g.lineWidth = (big ? 0.11 : 0.06) * r * z;
-      g.beginPath(); g.moveTo(sx * r0, cy * r0); g.lineTo(sx * r1, cy * r1); g.stroke();
-    }
-    const m = date.getMinutes() + date.getSeconds() / 60, h = (date.getHours() % 12) + m / 60;
-    const hand = (f, len, w, col) => {
-      const a = f * Math.PI * 2;
-      g.strokeStyle = C(col); g.lineWidth = w * r * z;
-      g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.sin(a) * len * r * z, -Math.cos(a) * len * r * z); g.stroke();
-    };
-    hand(h / 12, 0.5, 0.16, '#2f3542');
-    hand(m / 60, 0.78, 0.1, '#2f3542');
-    circle(0, 0, 0.14 * r * z, C('#c0392b'));
+  // Vordach über einer Stelle der Tür-Seite (kleiner flacher Block in der Markenfarbe)
+  function doorCanopy(K, B, t, half, up, col) {
+    const b = B.b - B.hb + 2 * B.hb * t;
+    K.block({ a: B.a + B.ha + 0.045, b, ha: 0.045, hb: half, h: 1.8, lift: up, wall: col, type: 'flat', roof: shade(col, 0.25) });
   }
 
   // ------------------------------------------------------------------ Boutique
-  // Schaufensterpuppe im Kleid, Füße bei (0, 0), Größe u (px je Einheit, mit z)
-  function mannequin(u, dress) {
-    ellipse(0, 0, 1.8 * u, 0.5 * u, C('#3a3a44'));
-    g.fillStyle = C('#3a3a44'); g.fillRect(-0.25 * u, -3 * u, 0.5 * u, 3 * u);
-    poly([[-1.1 * u, -6.4 * u], [1.1 * u, -6.4 * u], [2.9 * u, -2.6 * u], [-2.9 * u, -2.6 * u]], C(dress));
-    poly([[-1.3 * u, -9.2 * u], [1.3 * u, -9.2 * u], [1 * u, -6.3 * u], [-1 * u, -6.3 * u]], C(shade(dress, 0.14)));
-    g.fillStyle = C('#2d2d38'); g.fillRect(-1.15 * u, -6.8 * u, 2.3 * u, 0.6 * u);
-    g.fillStyle = C('#efe2d2'); g.fillRect(-0.35 * u, -10.2 * u, 0.7 * u, 1.1 * u);
-    circle(0, -11.1 * u, 1.2 * u, C('#efe2d2'));
+  // Kleid an der Schaufensterpuppe – große, ruhige Form, Füße bei (0, 0), u = px je Einheit (mit z)
+  function dressForm(u, col) {
+    g.fillStyle = C('#b9bcc6'); g.fillRect(-0.45 * u, -3 * u, 0.9 * u, 3 * u);                 // Ständer
+    ellipse(0, 0, 1.8 * u, 0.6 * u, C('#b9bcc6'));
+    poly([[-1.3 * u, -7.4 * u], [1.3 * u, -7.4 * u], [3.3 * u, -2.6 * u], [-3.3 * u, -2.6 * u]], C(col));   // Rock
+    poly([[-1.5 * u, -10.6 * u], [1.5 * u, -10.6 * u], [1.2 * u, -7.3 * u], [-1.2 * u, -7.3 * u]], C(shade(col, 0.18)));
+    circle(0, -12 * u, 1.4 * u, C('#f3e6d8'));                                                // Kopf
   }
-  // Mini-Symbol fürs Ausleger-Schild: Kleid auf goldenem Bügel, mittig bei (x, y), passt in einen Kreis mit Radius 4 × z
+  // Mini-Symbol fürs Schild: Kleid am Bügel, mittig bei (x, y), passt in einen Kreis mit Radius 4 × z
   function miniDress(x, y, z, on) {
-    const D = on ? '#ff9cbd' : C('#e8799a'), Dd = on ? '#f27aa2' : C('#c95a7d'), Dl = on ? '#ffc6d8' : C('#f6a9c0');
+    const D = on ? '#ff8fbd' : C('#d94f8a'), Dl = on ? '#ffc2d9' : C('#f28cb1');
     const P = (px, py) => [x + px * z, y + py * z];
     g.lineCap = 'round'; g.lineJoin = 'round';
-    g.strokeStyle = C('#c9a24a'); g.lineWidth = 0.45 * z;                                  // Haken
-    g.beginPath(); g.moveTo(...P(0, -2.4)); g.lineTo(...P(0, -2.9)); g.arc(x + 0.5 * z, y - 2.9 * z, 0.5 * z, Math.PI, Math.PI * 2.2); g.stroke();
-    g.strokeStyle = C('#d4af37'); g.lineWidth = 0.55 * z;                                  // Bügel
+    g.strokeStyle = C('#8a8f99'); g.lineWidth = 0.6 * z;                                   // Bügel mit Haken
+    g.beginPath(); g.moveTo(...P(0, -2.4)); g.lineTo(...P(0, -3)); g.arc(x + 0.5 * z, y - 3 * z, 0.5 * z, Math.PI, Math.PI * 2.2); g.stroke();
     g.beginPath(); g.moveTo(...P(-3, -1)); g.lineTo(...P(0, -2.4)); g.lineTo(...P(3, -1)); g.closePath(); g.stroke();
-    poly([P(-1.05, 0.6), P(1.05, 0.6), P(2.5, 3.2), P(-2.5, 3.2)], D);                     // Rock
-    for (let i = 0; i < 5; i++) circle(x + (-2 + i) * z, y + 3.2 * z, 0.5 * z, D);          // Wellensaum
-    poly([P(-1.05, 0.6), P(-0.45, 0.6), P(-1.2, 3.2), P(-2.5, 3.2)], Dl);
-    g.strokeStyle = Dd; g.lineWidth = 0.3 * z;                                             // Falte
-    g.beginPath(); g.moveTo(...P(0.5, 1.1)); g.lineTo(...P(1.2, 3.2)); g.stroke();
-    poly([P(-1.25, -0.9), P(-0.5, -1.1), P(0, -0.7), P(0.5, -1.1), P(1.25, -0.9), P(1.05, 0.7), P(-1.05, 0.7)], D);   // Oberteil
-    g.fillStyle = C('#2d2d38'); g.fillRect(x - 1.15 * z, y + 0.35 * z, 2.3 * z, 0.55 * z);   // Gürtel
-    circle(x, y + 0.62 * z, 0.32 * z, C('#d4af37'));
+    poly([P(-1.1, 0.6), P(1.1, 0.6), P(2.7, 3.4), P(-2.7, 3.4)], D);                       // Rock
+    poly([P(-1.1, 0.6), P(-0.45, 0.6), P(-1.3, 3.4), P(-2.7, 3.4)], Dl);
+    poly([P(-1.3, -0.9), P(-0.5, -1.1), P(0, -0.7), P(0.5, -1.1), P(1.3, -0.9), P(1.1, 0.7), P(-1.1, 0.7)], D);   // Oberteil
   }
-  SHOP_ART.boutique = function (K, s, now, x, y, t, ha, hb) {
-    const WALL = '#2d2d38', BLUSH = '#f2b8c6', GOLD = '#d4af37', ROSE = '#e8799a', on = lit(), z = K.z;
+  SHOP_ART.boutique = function (K, s, now) {
+    const WALL = '#f5f5f5', PINK = '#f28cb1', on = lit(), z = K.z, H = 25;
     const house = () => {
-      const B = shopHouse(K, { wall: WALL, roof: BLUSH, roofType: 'flat', h: 26, upperWins: 0, trim: GOLD });
-      band(B, 0.9, 1, BLUSH);                                                               // rosa Gesims
+      const B = K.block({ a: -0.06, b: 0, ha: 0.29, hb: 0.31, h: H, wall: WALL, roof: '#ece4e8', type: 'flat', entry: true });
+      for (const f of Object.values(FACES)) if (K.facing(...f.n) <= 0.01) {                  // Brüstung: Innenseite hinten
+        const p = K.P(-0.06 + f.p[0] * 0.29, f.p[1] * 0.31, H), q = K.P(-0.06 + f.q[0] * 0.29, f.q[1] * 0.31, H);
+        poly([p, q, [q[0], q[1] - 2.6 * z], [p[0], p[1] - 2.6 * z]], C(shade(PINK, -0.08)));
+      }
+      K.block({ a: -0.06, b: 0, ha: 0.29, hb: 0.31, h: 2.6, lift: H, wall: PINK, type: 'none' });   // rosa Brüstung (Flachdach)
       const F = B.faces.front;
       if (F) {
-        onFace(F, 0.22, F.H * 0.09, () => mannequin(0.64 * z, ROSE));
-        onFace(F, 0.44, F.H * 0.09, () => mannequin(0.64 * z, BLUSH));
-        faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, C('#e9a3b8'));                        // rosa Tür
-        const [kx, ky] = faceAt(F, 0.68, F.H * 0.2); circle(kx, ky, 0.7 * z, C(GOLD));
-        K.wins(B, 'front', 1, 0.62, 0.84, 0.08, 0.56);
-        onFace(F, 0.75, F.H * 0.72, () => kText(0, 0, 'MODE', 3.6, on ? '#ffe9a6' : GOLD, z));
-        if (on) { const [mx, my] = faceAt(F, 0.75, F.H * 0.72); kGlow(mx, my, z, 12); }
-        canopy(K, B, '#1f1f28');
+        framedGlass(F, 0.1, 0.56, 0.06, 0.84, PINK, z);                                    // Glas über beide Etagen
+        onFace(F, 0.33, F.H * 0.07, () => dressForm(0.95 * z, PINK));
+        faceQuad(F.P, F.Q, 0.66, 0.88, 0, F.H * 0.44, C(PINK));                            // rosa Tür
+        windowOn(F.P, F.Q, 0.66, 0.88, F.H * 0.6, F.H * 0.84, z);
       }
-      for (const S of sideFaces(B)) {                                                      // Schaufenster auch um die Ecke
-        faceQuad(S.P, S.Q, 0.1, 0.9, S.H * 0.05, S.H * 0.47, C(GOLD));
-        windowOn(S.P, S.Q, 0.14, 0.86, S.H * 0.08, S.H * 0.44, z);
-        onFace(S, 0.33, S.H * 0.09, () => mannequin(0.64 * z, ROSE));
-        onFace(S, 0.67, S.H * 0.09, () => mannequin(0.64 * z, '#fffaf0'));
+      for (const S of sideFaces(B)) {                                                      // hohes Fenster auch um die Ecke
+        framedGlass(S, 0.3, 0.7, 0.06, 0.84, PINK, z);
+        onFace(S, 0.5, S.H * 0.07, () => dressForm(0.95 * z, '#ffc2d9'));
       }
-      K.sideWins(B, 2, 0.62, 0.84);
     };
-    const sign = hangSign(K, (cx, cy, zz) => {                                              // Kleid am Bügel, klein am Ausleger
+    const sign = hangSign(K, (cx, cy, zz) => {                                              // Kleid am Bügel
       if (on) kGlow(cx, cy, zz, 14);
       miniDress(cx, cy, zz, on);
-    }, ROSE, { up: 15, b0: 0.45 });                                                     // unter „MODE“, neben der Markise
-    const rack = () => {                                                                    // Kleiderständer vor der Tür
-      const p0 = K.P(0.44, -0.48), p1 = K.P(0.44, -0.24);
-      for (const p of [p0, p1]) { ellipse(p[0], p[1], 1.6 * z, 0.7 * z, C('#8a8f99')); kLine(K, p, [p[0], p[1] - 11 * z], GOLD, 0.9); }
-      kLine(K, [p0[0], p0[1] - 11 * z], [p1[0], p1[1] - 11 * z], GOLD, 0.9);
-      [ROSE, WALL, '#fffaf0', BLUSH].forEach((c, i) => {
-        const m = lerp(p0, p1, 0.2 + i * 0.2), gx = m[0], gy = m[1] - 11 * z;
-        kLine(K, [gx, gy], [gx, gy + 1.2 * z], '#8a8f99', 0.5);
-        poly([[gx - 1.5 * z, gy + 1.2 * z], [gx + 1.5 * z, gy + 1.2 * z], [gx + 2 * z, gy + 6.2 * z], [gx - 2 * z, gy + 6.2 * z]], C(c));
-      });
-    };
-    K.scene([[-0.08, 0, house], sign, [0.44, -0.36, rack]]);
+    }, PINK, { up: 14 });
+    K.scene([[-0.06, 0, house], sign]);
   };
+  ART_SHADOW.boutique = [27, 0.2];
 
   // ------------------------------------------------------------------ Uhrmacher
-  function windowClocks(z, date, small) {                                                   // Uhren im Schaufenster
-    if (!small) {
-      g.fillStyle = C('#7a4f2a'); g.fillRect(-7.2 * z, -7.4 * z, 2.8 * z, 7.4 * z);           // Standuhr mit Pendel
-      circle(-5.8 * z, -6 * z, 1 * z, C('#fffdf6'));
-      g.fillStyle = C('#c9a24a'); g.fillRect(-6.1 * z, -4 * z, 0.6 * z, 2.6 * z);
-    }
-    for (const [cx, cy, r] of small ? [[0, -3.2, 2]] : [[0, -4.3, 2.2], [5.2, -2.6, 1.6]]) {
-      g.save(); g.translate(cx * z, cy * z); clockFace(r, z, date, false); g.restore();
+  // Turmuhr um (0, 0) mit Radius r (px × z): Messingring, Zifferblatt, zwei Zeiger mit der echten Uhrzeit
+  function towerClock(r, z, date, on) {
+    circle(0, 0, (r + 1) * z, C('#c9a24a'));
+    circle(0, 0, r * z, on ? '#fff6c8' : C('#fffdf6'));
+    const m = date.getMinutes() + date.getSeconds() / 60, h = (date.getHours() % 12) + m / 60;
+    const hand = (f, len, w) => {
+      const a = f * Math.PI * 2;
+      g.strokeStyle = C('#4a5568'); g.lineWidth = w * z; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.sin(a) * len * r * z, -Math.cos(a) * len * r * z); g.stroke();
+    };
+    hand(h / 12, 0.5, 1);
+    hand(m / 60, 0.8, 0.85);
+  }
+  // Mini-Symbol fürs Schild: Taschenuhr, mittig bei (x, y)
+  function miniWatch(x, y, z, date, on) {
+    circle(x, y - 2.9 * z, 0.9 * z, C('#c9a24a'));                                          // Krone
+    circle(x, y + 0.5 * z, 3.2 * z, C('#c9a24a'));
+    circle(x, y + 0.5 * z, 2.5 * z, on ? '#fff6c8' : C('#fffdf6'));
+    const m = date.getMinutes(), h = (date.getHours() % 12) + m / 60;
+    g.strokeStyle = C('#4a5568'); g.lineCap = 'round'; g.lineWidth = 0.6 * z;
+    for (const [f, len] of [[h / 12, 1.3], [m / 60, 2]]) {
+      const a = f * Math.PI * 2;
+      g.beginPath(); g.moveTo(x, y + 0.5 * z); g.lineTo(x + Math.sin(a) * len * z, y + 0.5 * z - Math.cos(a) * len * z); g.stroke();
     }
   }
-  function pocketWatch(x, y, z, date, on) {                                                 // hängende Taschenuhr
-    g.strokeStyle = C('#d4af37'); g.lineWidth = 0.8 * z;
-    g.beginPath(); g.arc(x, y - 6.4 * z, 1.3 * z, 0, Math.PI * 2); g.stroke();              // Bügel
-    circle(x, y - 4.9 * z, 1 * z, C('#c9a24a'));                                            // Krone
-    circle(x, y, 4.9 * z, C('#b8922f'));
-    g.save(); g.translate(x, y); clockFace(3.9, z, date, on); g.restore();
-    ellipse(x - 2 * z, y - 2.4 * z, 1.1 * z, 0.6 * z, 'rgba(255,255,255,0.55)');         // Glanz
-  }
-  SHOP_ART.uhrmacher = function (K, s, now, x, y, t, ha, hb) {
-    const WALL = '#cfd8e3', SLATE = '#4a5568', BRASS = '#c9a24a', on = lit(), z = K.z, date = new Date();
+  SHOP_ART.uhrmacher = function (K, s, now) {
+    const WALL = '#e4f1ff', SLATE = '#6b7a8f', on = lit(), z = K.z, date = new Date(), H = 17;
+    const TL = 23.5, TH = 10, TR = 8;                                                       // Türmchen: Fuß im Dach, Höhe, Dach
     const house = () => {
-      const B = shopHouse(K, { wall: WALL, roof: SLATE, roofType: 'hip', h: 20, roofH: 9, trim: BRASS });
+      const B = shopHouse(K, { wall: WALL, roof: SLATE, roofType: 'hip', h: H, roofH: 11 });
       const F = B.faces.front;
-      if (F) { onFace(F, 0.33, F.H * 0.1, () => windowClocks(z, date)); canopy(K, B, SLATE); }
-      else for (const S of sideFaces(B)) for (const tc of [0.3, 0.7]) onFace(S, tc, S.H * 0.14, () => windowClocks(z, date, true));
-    };
-    const tower = () => {                                                                   // Uhrtürmchen: Uhr auf jeder Seite
-      const T = K.block({ a: -0.08, b: 0, ha: 0.22, hb: 0.22, h: 18, lift: 24, wall: '#e6ecf3', roof: SLATE, roofH: 13, type: 'hip' });
-      for (const F of allFaces(T)) {
-        faceQuad(F.P, F.Q, 0, 1, 0, 1.4 * z, C(BRASS));
-        onFace(F, 0.5, F.H * 0.52, () => clockFace(5.3, z, date, on));
-        if (on) { const [cx, cy] = faceAt(F, 0.5, F.H * 0.52); kGlow(cx, cy, z, 16); }
+      if (F) faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.42, C(SLATE));                     // Tür in Schiefergrau
+      const T = K.block({ a: -0.06, b: 0, ha: 0.14, hb: 0.14, h: TH, lift: TL, wall: WALL, roof: SLATE, roofH: TR, over: 1.25 });
+      for (const W of allFaces(T)) {
+        onFace(W, 0.5, W.H * 0.5, () => towerClock(3.1, z, date, on));
+        if (on) { const [cx, cy] = faceAt(W, 0.5, W.H * 0.5); kGlow(cx, cy, z, 14); }
       }
-      const [tx, ty] = K.P(-0.08, 0, 24 + 18 + 13);
-      kLine(K, [tx, ty], [tx, ty - 3.5 * z], BRASS, 0.8);
-      circle(tx, ty - 4.2 * z, 1.4 * z, C('#e9c46a'));
+      const [tx, ty] = K.P(-0.06, 0, TL + TH + TR);                                         // Turmspitze
+      kLine(K, [tx, ty], [tx, ty - 1.8 * z], '#c9a24a', 0.9);
+      circle(tx, ty - 2.2 * z, 1 * z, C('#e9c46a'));
     };
-    // Ausleger mit Taschenuhr: an der äußeren Ecke der Tür-Seite (sonst einer sichtbaren Seite), rechtwinklig von der Wand weg
-    const walls = [[[1, 0], [[0.26, -0.3], [0.26, 0.3]]], [[0, 1], [[0.19, 0.37], [-0.35, 0.37]]], [[0, -1], [[0.19, -0.37], [-0.35, -0.37]]], [[-1, 0], [[-0.42, -0.3], [-0.42, 0.3]]]];
-    const [n, ends] = walls.find(([nn]) => K.facing(...nn) > 0.01) || walls[0];
-    const [ea, eb] = K.depth(...ends[0]) < K.depth(...ends[1]) ? ends[0] : ends[1];
-    const [ta, tb] = [ea + n[0] * 0.24, eb + n[1] * 0.24];
-    const bracket = () => {
-      const w0 = K.P(ea, eb, 18), w1 = K.P(ta, tb, 18);
-      kLine(K, [w0[0], w0[1] + 2.5 * z], w1, '#2f3542', 0.7);                              // Strebe
-      kLine(K, w0, w1, '#2f3542', 1.1);
-      circle(w1[0], w1[1], 0.9 * z, C('#2f3542'));
-      kLine(K, w1, [w1[0], w1[1] + 2.2 * z], '#d4af37', 0.5);                                // Kette
-      pocketWatch(w1[0], w1[1] + 9.5 * z, z, date, on);
-      if (on) kGlow(w1[0], w1[1] + 9.5 * z, z, 12);
-    };
-    K.scene([[-0.08, 0, house], [-0.08, 0, tower], [ta, tb, bracket]]);
+    const sign = hangSign(K, (cx, cy, zz) => {                                              // Taschenuhr
+      if (on) kGlow(cx, cy, zz, 14);
+      miniWatch(cx, cy, zz, date, on);
+    }, SLATE);
+    K.scene([[-0.06, 0, house], sign]);
   };
+  ART_SHADOW.uhrmacher = [24, 0.2];
 
   // ------------------------------------------------------------------ Juwelier
-  // Brillant von der Seite, Rundiste bei (x, y): Krone mit fünf Facetten, Unterteil mit drei; eine Facette blitzt
-  function gem(x, y, s, z, now, on) {
+  // Brillant von der Seite, Rundiste bei (x, y): Krone mit fünf Facetten, Unterteil mit drei (ohne Geflacker)
+  function gem(x, y, s, z, on) {
     const u = s * z, P = (px, py) => [x + px * u, y + py * u];
-    const G = [-10.5, -4, 4, 10.5], T = [-5.2, 0, 5.2], top = -5.6, bot = 10.5, shine = Math.floor(now / 450) % 5;
+    const G = [-10.5, -4, 4, 10.5], T = [-5.2, 0, 5.2], top = -5.6, bot = 10.5;
     const crown = [[P(G[0], 0), P(T[0], top), P(G[1], 0)], [P(G[1], 0), P(T[0], top), P(T[1], top)], [P(G[1], 0), P(T[1], top), P(G[2], 0)],
       [P(G[2], 0), P(T[1], top), P(T[2], top)], [P(G[2], 0), P(T[2], top), P(G[3], 0)]];
     const pav = [[P(G[0], 0), P(G[1], 0), P(0, bot)], [P(G[1], 0), P(G[2], 0), P(0, bot)], [P(G[2], 0), P(G[3], 0), P(0, bot)]];
-    const cc = on ? ['#e6f7ff', '#ffffff', '#c6ecff', '#f2fbff', '#a8e0ff'] : ['#d4efff', '#f4fbff', '#a9dcf8', '#e6f6ff', '#86c6ec'];
+    const cc = on ? ['#e6f7ff', '#ffffff', '#c6ecff', '#f2fbff', '#a8e0ff'] : ['#d4efff', '#ffffff', '#a9dcf8', '#e6f6ff', '#86c6ec'];
     const pc = on ? ['#bfe8ff', '#e3f6ff', '#8fd0f5'] : ['#9fd5f4', '#cdeeff', '#5fa9d9'];
-    g.lineJoin = 'round'; g.strokeStyle = C('#3d6f9e'); g.lineWidth = 1.8 * z;              // Umriss (halb verdeckt)
+    g.lineJoin = 'round'; g.strokeStyle = C('#7a55a8'); g.lineWidth = 2.4 * z;             // Umriss
     g.beginPath(); [P(T[0], top), P(T[2], top), P(G[3], 0), P(0, bot), P(G[0], 0)].forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p));
     g.closePath(); g.stroke();
-    crown.forEach((f, i) => poly(f, i === shine ? '#ffffff' : on ? cc[i] : C(cc[i])));
+    crown.forEach((f, i) => poly(f, on ? cc[i] : C(cc[i])));
     pav.forEach((f, i) => poly(f, on ? pc[i] : C(pc[i])));
-    g.strokeStyle = on ? '#ffffff' : C('#ffffff'); g.lineWidth = 0.5 * z;
-    g.beginPath(); g.moveTo(...P(G[0], 0)); g.lineTo(...P(G[3], 0)); g.stroke();
   }
-  // Vitrine: Samtkissen mit drei Ringen, Mitte unten bei (0, 0)
-  function ringDisplay(z, now) {
-    g.fillStyle = C('#2a1640'); g.beginPath(); g.roundRect(-8 * z, -2.4 * z, 16 * z, 2.4 * z, 0.8 * z); g.fill();
-    [['#ffffff', -5], ['#ff8fb1', 0], ['#7fd0ff', 5]].forEach(([stone, cx], i) => {
-      poly([[(cx - 1.3) * z, -2.4 * z], [(cx + 1.3) * z, -2.4 * z], [cx * z, -4.2 * z]], C('#5a3a78'));
-      g.strokeStyle = C('#d4af37'); g.lineWidth = 0.6 * z;
-      g.beginPath(); g.ellipse(cx * z, -5 * z, 1.4 * z, 1.5 * z, 0, 0, Math.PI * 2); g.stroke();
-      circle(cx * z, -6.8 * z, 0.75 * z, C(stone));
-      if ((Math.floor(now / 500) + i) % 3 === 0) star(cx * z + 1 * z, -7.6 * z, 1.3 * z, C('#ffffff'));
-    });
-  }
-  SHOP_ART.juwelier = function (K, s, now, x, y, t, ha, hb) {
-    const WALL = '#4b2b63', GOLD = '#d4af37', on = lit(), z = K.z;
+  SHOP_ART.juwelier = function (K, s, now) {
+    const WALL = '#e6e0ff', LIGHT_WALL = '#fdeaff', ROOF = '#b07ad6', on = lit(), z = K.z, H = 17, A = -0.08;
     const house = () => {
-      const B = shopHouse(K, { wall: WALL, roof: GOLD, roofType: 'hip', h: 22, roofH: 7, trim: GOLD });
-      band(B, 0.9, 1, GOLD);
-      for (const F of allFaces(B)) { faceQuad(F.P, F.Q, 0, 0.045, 0, F.H, C(GOLD)); faceQuad(F.P, F.Q, 0.955, 1, 0, F.H, C(GOLD)); }
+      const B = K.block({ a: A, b: 0, ha: 0.27, hb: 0.31, h: H, wall: WALL, roof: ROOF, roofH: 12, over: 1.18, entry: true });
+      for (const F of allFaces(B)) for (const [t0, t1] of [[0, 0.09], [0.91, 1]]) faceQuad(F.P, F.Q, t0, t1, 0, F.H, K.wallCol(LIGHT_WALL, F.n));   // Eckpfeiler
       const F = B.faces.front;
       if (F) {
-        onFace(F, 0.33, F.H * 0.09, () => ringDisplay(z, now));
-        faceQuad(F.P, F.Q, 0.625, 0.875, 0, F.H * 0.44, C(GOLD));                          // Tür mit Goldrahmen
-        faceQuad(F.P, F.Q, 0.65, 0.85, 0, F.H * 0.41, C('#311a44'));
-        const [kx, ky] = faceAt(F, 0.69, F.H * 0.2); circle(kx, ky, 0.7 * z, C(GOLD));
-        canopy(K, B, '#7a4a9c');
+        faceQuad(F.P, F.Q, 0.41, 0.59, 0, F.H * 0.58, C(shade(ROOF, -0.18)));              // Tür unter dem Portal
+        for (const [t0, t1] of [[0.13, 0.3], [0.7, 0.87]]) windowOn(F.P, F.Q, t0, t1, F.H * 0.2, F.H * 0.74, z);   // hohe Fenster
       }
-      for (const S of sideFaces(B)) {                                                      // Vitrinen auch seitlich
-        faceQuad(S.P, S.Q, 0.12, 0.88, S.H * 0.06, S.H * 0.46, C(GOLD));
-        windowOn(S.P, S.Q, 0.16, 0.84, S.H * 0.09, S.H * 0.43, z);
-        onFace(S, 0.5, S.H * 0.1, () => ringDisplay(z, now));
-      }
+      K.sideWins(B, 2, 0.24, 0.74);
     };
-    const jewel = hangSign(K, (cx, cy, zz) => {                                             // Brillant, klein am Ausleger
+    const AP = A + 0.27 + 0.055;                                                            // Portal vor der Tür
+    const portal = () => {
+      const cols = [-0.095, 0.095].map(b => [AP + 0.035, b, () => K.block({ a: AP + 0.035, b, ha: 0.026, hb: 0.026, h: 11, wall: '#ffffff', type: 'flat', roof: '#ffffff' })]);
+      K.scene(cols);
+      K.block({ a: AP, b: 0, ha: 0.065, hb: 0.13, h: 2.6, lift: 11, wall: LIGHT_WALL, roof: ROOF, roofH: 5.5, type: 'gable', ridge: 'a', over: 1.14 });
+    };
+    const sign = hangSign(K, (cx, cy, zz) => {                                              // Brillant
       if (on) kGlow(cx, cy, zz, 14);
       g.save(); g.translate(cx, cy - 0.8 * zz); g.scale(0.32, 0.32);
-      gem(0, 0, 1, zz, now, on);
+      gem(0, 0, 1, zz, on);
       g.restore();
-      [[2.5, -2.5], [-2.6, 1.7]].forEach(([dx, dy], i) => {                                 // Funkeln
-        const k = Math.sin(((now / 900 + i * 0.5) % 1) * Math.PI);
-        if (k > 0.2) star(cx + dx * zz, cy + dy * zz, 0.95 * k * zz, on ? '#ffe9a6' : C(GOLD));
-      });
-    }, GOLD);
-    const pot = b => () => {                                                                // Buchskugeln neben der Tür
-      K.block({ a: 0.33, b, ha: 0.035, hb: 0.035, h: 3, wall: '#6d3f8c', type: 'flat', roof: '#3c2a1a' });
-      const [bx, by] = K.P(0.33, b, 3);
-      circle(bx, by - 2.1 * z, 2.3 * z, C('#4f9e4a'));
-      circle(bx - 0.8 * z, by - 2.9 * z, 1 * z, C('#6fbf5a'));
-    };
-    K.scene([[-0.08, 0, house], jewel, [0.33, 0.05, pot(0.05)], [0.33, 0.33, pot(0.33)]]);
+    }, ROOF);
+    K.scene([[A, 0, house], [AP, 0, portal], sign]);
   };
+  ART_SHADOW.juwelier = [23, 0.21];
 
   // ------------------------------------------------------------------ Möbelhaus
-  // Schaufenster-Einrichtung, Mitte unten bei (0, 0): Sofa mit Stehlampe bzw. Regal mit Sessel
-  function sofaScene(z, on) {
-    const O = C('#f08a24'), Od = C('#c96a12');
-    g.fillStyle = Od; g.fillRect(-6.8 * z, -1 * z, 0.8 * z, 1 * z); g.fillRect(3.4 * z, -1 * z, 0.8 * z, 1 * z);
-    g.fillStyle = O; g.fillRect(-7.2 * z, -6.6 * z, 11.6 * z, 3.4 * z);
-    g.fillStyle = Od; g.fillRect(-7.2 * z, -3.4 * z, 11.6 * z, 2.4 * z);
-    g.fillStyle = O; g.fillRect(-8.2 * z, -4.8 * z, 1.7 * z, 3.8 * z); g.fillRect(3.9 * z, -4.8 * z, 1.7 * z, 3.8 * z);
-    g.strokeStyle = C('#2f3542'); g.lineWidth = 0.6 * z;
-    g.beginPath(); g.moveTo(7 * z, 0); g.lineTo(7 * z, -8.6 * z); g.stroke();
-    poly([[5.3 * z, -8.3 * z], [8.7 * z, -8.3 * z], [7.8 * z, -10.8 * z], [6.2 * z, -10.8 * z]], on ? '#fff3b0' : C('#ffe3a1'));
-  }
-  function shelfScene(z) {
-    g.fillStyle = C('#8a5a3c'); g.fillRect(-7.6 * z, -11 * z, 7.2 * z, 11 * z);
-    const books = ['#e8604f', '#5f8fe8', '#58b36a', '#e9c46a', '#c3a8e6'];
-    for (let r = 0; r < 3; r++) {
-      g.fillStyle = C('#f5e9d3'); g.fillRect(-7 * z, (-10.4 + r * 3.5) * z, 6 * z, 2.9 * z);
-      for (let i = 0; i < 4; i++) { g.fillStyle = C(books[(i + r) % 5]); g.fillRect((-6.7 + i * 1.3) * z, (-10.4 + r * 3.5 + 0.6 + (i % 2) * 0.4) * z, 1 * z, (2.3 - (i % 2) * 0.4) * z); }
+  // Sägezahndach (Sheddach) auf einer Halle: n Zähne quer zur Breite (b), jeder steigt nach +b an und fällt dort
+  // senkrecht mit einem Glasband ab. Von vorn sieht man das Zickzack, von der Seite die Fensterbänder.
+  function sawRoof(K, { a, b, ha, hb, top, n, T, wall, roof }) {
+    const z = K.z, step = 2 * hb / n, order = [...Array(n).keys()];
+    if (K.facing(0, 1) <= 0) order.reverse();                                               // hintere Zähne zuerst
+    for (const i of order) {
+      const b0 = b - hb + i * step, b1 = b0 + step;
+      poly([K.P(a - ha, b0, top), K.P(a + ha, b0, top), K.P(a + ha, b1, top + T), K.P(a - ha, b1, top + T)], K.roofCol(roof, [0, -1]));
+      if (K.facing(0, 1) > 0.01) {                                                          // senkrechtes Glasband
+        const P = K.P(a + ha, b1, top), Q = K.P(a - ha, b1, top);
+        poly([P, Q, [Q[0], Q[1] - T * z], [P[0], P[1] - T * z]], K.wallCol(wall, [0, 1]));
+        for (let j = 0; j < 3; j++) windowOn(P, Q, 0.06 + j * 0.31, 0.32 + j * 0.31, T * z * 0.2, T * z * 0.82, z);
+      }
+      for (const sa of [1, -1]) {                                                           // Giebel-Dreiecke in der Wandflucht
+        if (K.facing(sa, 0) <= 0.01) continue;
+        poly([K.P(a + sa * ha, b0, top), K.P(a + sa * ha, b1, top), K.P(a + sa * ha, b1, top + T)], K.wallCol(wall, [sa, 0]));
+      }
+      g.strokeStyle = K.roofCol(shade(roof, -0.12), [0, -1]); g.lineWidth = 1 * z; g.lineCap = 'round';   // Firstkante
+      g.beginPath(); g.moveTo(...K.P(a - ha, b1, top + T)); g.lineTo(...K.P(a + ha, b1, top + T)); g.stroke();
     }
-    const T = C('#4fb3a9');                                                                 // Sessel
-    g.fillStyle = C('#2f3542'); g.fillRect(2 * z, -1 * z, 0.7 * z, 1 * z); g.fillRect(6.3 * z, -1 * z, 0.7 * z, 1 * z);
-    g.fillStyle = T; g.fillRect(2 * z, -6.6 * z, 5 * z, 3.6 * z);
-    g.fillStyle = C('#3a938a'); g.fillRect(1.6 * z, -3.4 * z, 5.8 * z, 2.4 * z);
   }
-  SHOP_ART.moebelhaus = function (K, s, now, x, y, t, ha, hb) {
-    const CREAM = '#f0e2c4', BLUE = '#3a6ea5', ORANGE = '#f08a24', MINT = '#6cc3b5', on = lit(), z = K.z, RT = 28;
+  SHOP_ART.moebelhaus = function (K, s, now) {
+    const WALL = '#fff4dc', BLUE = '#5f8fe8', SOFA = '#e9a23b', z = K.z, H = 13, A = -0.12, HA = 0.55, HB = 0.6;
     if (groundPart(() => {
-      K.rect(-0.96, 0.54, 0.96, 0.97, C('#c9c3b6'));                                       // Ladehof
-      K.rect(-0.96, 0.54, 0.96, 0.57, C('#e9c46a'));
-      for (let i = 0; i < 4; i++) K.poly([[-0.72 + i * 0.12, 0.6], [-0.66 + i * 0.12, 0.6], [-0.72 + i * 0.12, 0.72], [-0.78 + i * 0.12, 0.72]], C('#e9c46a'));
-      K.rect(0.72, -0.96, 0.97, 0.52, C('#e6dccb'));                                        // Gehweg vor den Schaufenstern
+      K.rect(A + HA, -0.94, 0.96, 0.94, C('#e6dcc8'));                                      // kleiner Hof vor der Halle
+      K.rect(A + HA, -0.16, 0.96, 0.16, C('#f2ebdc'));                                      // Weg zur Tür
+      for (const b of [-0.94, 0.66]) K.rect(0.7, b, 0.96, b + 0.28, C('#8cc96a'));        // zwei Rasenecken
     })) return;
-    const house = () => {
-      const B = K.block({ a: -0.1, b: -0.2, ha: 0.8, hb: 0.7, h: RT, wall: CREAM, roof: BLUE, type: 'flat', entry: true });
-      band(B, 0.8, 1, BLUE);
-      band(B, 0.77, 0.8, ORANGE);
-      const F = B.faces.front, L = B.faces.left, R = B.faces.right;
-      const showroom = (W, spots) => spots.forEach(([t0, t1, shelf]) => {
-        faceQuad(W.P, W.Q, t0 - 0.015, t1 + 0.015, W.H * 0.04, W.H * 0.54, C(BLUE));
-        windowOn(W.P, W.Q, t0, t1, W.H * 0.07, W.H * 0.51, z);
-        onFace(W, (t0 + t1) / 2, W.H * 0.08, () => (shelf ? shelfScene(z) : sofaScene(z, on)));
-      });
+    const hall = () => {
+      const B = K.block({ a: A, b: 0, ha: HA, hb: HB, h: H, wall: WALL, type: 'none', entry: true });
+      const F = B.faces.front;
       if (F) {
-        showroom(F, [[0.05, 0.42, false], [0.58, 0.95, true]]);
-        K.door(B, 'front', 0.45, 0.55, 0.47, BLUE);
-        windowOn(F.P, F.Q, 0.465, 0.535, F.H * 0.1, F.H * 0.42, z);
+        for (const [t0, t1] of [[0.07, 0.37], [0.63, 0.93]]) framedGlass(F, t0, t1, 0.14, 0.7, BLUE, z);   // große Schaufenster
+        faceQuad(F.P, F.Q, 0.44, 0.56, 0, F.H * 0.56, C(BLUE));                           // Tür
+        windowOn(F.P, F.Q, 0.465, 0.535, F.H * 0.1, F.H * 0.48, z);
       }
-      if (L) showroom(L, [[0.1, 0.45, true], [0.55, 0.9, false]]);
-      if (R) {                                                                              // Ladeluke mit Rolltor
-        faceQuad(R.P, R.Q, 0.53, 0.89, 0, R.H * 0.6, C(BLUE));
-        faceQuad(R.P, R.Q, 0.55, 0.87, 0, R.H * 0.56, C('#aab3bf'));
-        for (let i = 1; i < 6; i++) faceQuad(R.P, R.Q, 0.55, 0.87, R.H * i * 0.093, R.H * (i * 0.093 + 0.014), C('#8a94a3'));
-        faceQuad(R.P, R.Q, 0.5, 0.92, R.H * 0.6, R.H * 0.66, C(ORANGE));
-      }
-      K.wins(B, 'back', 4, 0.15, 0.48);
-      for (const side of ['front', 'right', 'left', 'back']) K.wins(B, side, 5, 0.59, 0.73);
-      for (const W of allFaces(B)) {                                                        // Schriftzug auf jeder Seite
-        onFace(W, 0.5, W.H * 0.9, () => kText(0, 0.3 * z, 'MÖBEL', 5, on ? '#fff6d8' : '#ffffff', z));
-        if (on) { const [mx, my] = faceAt(W, 0.5, W.H * 0.9); kGlow(mx, my, z, 18); }
-      }
+      K.sideWins(B, 3, 0.24, 0.7);
+      sawRoof(K, { a: A, b: 0, ha: HA, hb: HB, top: H, n: 3, T: 8, wall: WALL, roof: BLUE });
+      if (F) doorCanopy(K, B, 0.5, 0.12, 8.6, BLUE);
     };
-    const van = () => {                                                                     // Lieferwagen im Möbelhaus-Blau
-      const side = K.facing(0, 1) > 0 ? 0.95 : 0.61;
+    const sofa = () => {                                                                    // ein Sofa im Hof (Ausstellungsstück)
+      const a = 0.78, b = -0.48;
       K.scene([
-        [0.26, 0.78, () => {
-          const V = K.block({ a: 0.26, b: 0.78, ha: 0.26, hb: 0.16, h: 13, lift: 2.5, wall: BLUE, type: 'flat', roof: '#f5f0e6' });
-          for (const W of allFaces(V)) if (W.n[0] === 0) {
-            faceQuad(W.P, W.Q, 0.06, 0.94, W.H * 0.36, W.H * 0.5, C('#fffaf0'));
-            faceQuad(W.P, W.Q, 0.3, 0.7, W.H * 0.6, W.H * 0.82, C(ORANGE));
-          }
-        }],
-        [0.64, 0.78, () => {
-          const Cb = K.block({ a: 0.64, b: 0.78, ha: 0.12, hb: 0.16, h: 9, lift: 2.5, wall: BLUE, type: 'flat', roof: shade(BLUE, 0.2) });
-          const Wf = Cb.faces.front;
-          if (Wf) { windowOn(Wf.P, Wf.Q, 0.12, 0.88, Wf.H * 0.45, Wf.H * 0.9, z); circle(...faceAt(Wf, 0.18, Wf.H * 0.2), 0.8 * z, C('#fff6c0')); circle(...faceAt(Wf, 0.82, Wf.H * 0.2), 0.8 * z, C('#fff6c0')); }
-          for (const W of allFaces(Cb)) if (W.n[0] === 0) windowOn(W.P, W.Q, 0.2, 0.75, W.H * 0.45, W.H * 0.88, z);
-        }],
+        [a - 0.075, b, () => K.block({ a: a - 0.075, b, ha: 0.03, hb: 0.17, h: 7, wall: SOFA, type: 'flat', roof: shade(SOFA, 0.2) })],
+        [a, b, () => K.block({ a, b, ha: 0.06, hb: 0.14, h: 3.4, wall: SOFA, type: 'flat', roof: shade(SOFA, 0.25) })],
+        ...[-1, 1].map(sb => [a - 0.01, b + sb * 0.155, () => K.block({ a: a - 0.01, b: b + sb * 0.155, ha: 0.07, hb: 0.03, h: 5, wall: shade(SOFA, -0.05), type: 'flat', roof: shade(SOFA, 0.15) })]),
       ]);
-      for (const a of [0.08, 0.62]) {
-        const [wx, wy] = K.P(a, side, 2.4);
-        ellipse(wx, wy, 2.5 * z, 2.7 * z, C('#2f3542'));
-        circle(wx, wy, 1 * z, C('#c9ccd3'));
-      }
     };
-    const crates = (a, b, n) => () => {                                                     // Kisten aus dem Lieferwagen
-      K.scene([[a, b - 0.07, () => kCrate(K, a, b - 0.07, '#c9955f', 1.35)], [a, b + 0.07, () => kCrate(K, a, b + 0.07, '#d9b27a', 1.35)]]);
-      if (n > 2) kCrate(K, a, b, '#e3c08a', 1.2, 6.1);
-    };
-    const chair = () => K.scene([                                                           // Sessel und Pflanzen vor dem Laden
-      [0.82, -0.64, () => K.block({ a: 0.82, b: -0.64, ha: 0.03, hb: 0.11, h: 10, wall: MINT, type: 'flat', roof: shade(MINT, 0.15) })],
-      [0.9, -0.64, () => K.block({ a: 0.9, b: -0.64, ha: 0.05, hb: 0.11, h: 5, wall: MINT, type: 'flat', roof: shade(MINT, 0.15) })],
-    ]);
-    const plant = b => () => {
-      K.block({ a: 0.8, b, ha: 0.045, hb: 0.045, h: 4, wall: '#c9735a', type: 'flat', roof: '#6b4a2e' });
-      const [px, py] = K.P(0.8, b, 4);
-      for (const [dx, dy, r, c] of [[-1.8, -3, 2.4, '#4f9e4a'], [1.8, -3.4, 2.4, '#3f8a3f'], [0, -5.6, 2.6, '#6fbf5a']]) circle(px + dx * z, py + dy * z, r * z, C(c));
-    };
-    K.scene([[-0.1, -0.2, house], [0.4, 0.78, van], [-0.1, 0.66, crates(-0.1, 0.69, 3)], [-0.8, 0.66, crates(-0.8, 0.69, 2)],
-      [0.86, -0.64, chair], [0.8, -0.36, plant(-0.36)], [0.8, -0.04, plant(-0.04)]]);
+    K.scene([[A, 0, hall], [0.76, -0.48, sofa]]);
   };
-  GROUND_TYPES.add('moebelhaus');                                                           // hat einen gepflasterten Ladehof
+  ART_SHADOW.moebelhaus = [18, 0.36];
+  GROUND_TYPES.add('moebelhaus');                                                           // hat einen gepflasterten Hof
 })();

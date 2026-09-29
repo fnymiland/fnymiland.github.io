@@ -1,65 +1,60 @@
 'use strict';
-// Ladenbilder, Gruppe d (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Nudelbar (Lack-Rot, Pagodendach, Nudelschale), Konditorei (Rosa, Zuckerguss, Torte), Chocolaterie (Zartbitter/Rosé/Gold,
-// Schokoladentafel), Spielzeugladen (Sonnengelb/Blau, Regenbogen-Markise, Teddy). Das Symbol hängt jeweils klein im
-// Ausleger-Schild an der Hausecke (hangSign, Block 34), nicht mehr groß auf dem Dach.
+// Ladenbilder, Gruppe d (Block 32/35) – trägt sich in SHOP_ART und ART_SHADOW ein (siehe draw-shops.js: hangSign, faceAt).
+// Block 35: an die alten Gebäude angeglichen – helle Wände, klar-farbige Dächer, Schatten, kein Kleinkram, keine Schrift,
+// und je Laden eine eigene Bauform, an der man ihn erkennt:
+// Nudelbar (zweistufiges Pagodendach mit Eckspitzen), Konditorei (Zuckerbäckerhaus: Giebel mit Zuckerguss, Rundfenster,
+// Schornstein), Chocolaterie (kleines Stadtpalais: Flachdach mit Attika, Rundbogenfenster, Mittelvorbau), Spielzeugladen
+// (Knusperhäuschen: steiles Satteldach mit weitem Überstand, Gaube, bunte Fensterläden).
+// Das Symbol hängt jeweils klein im Ausleger-Schild an der Hausecke (hangSign).
 // Alles in einer Klammer: die Hilfsfunktionen sollen nicht mit denen der anderen Gruppen zusammenstoßen.
 (() => {
   const TAU = Math.PI * 2;
   const lit = () => night > 0.15 && isLive();
   function oval(x, y, rx, ry, rot, col) { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, TAU); g.fillStyle = col; g.fill(); }
-  // Traufecken eines Blocks (Überstand wie in K.block), im Kreis: vorn-links, vorn-rechts, hinten-rechts, hinten-links.
-  // Kante i läuft von Ecke i zu Ecke i+1, ihre Außenseite zeigt nach EDGE_N[i].
-  const EDGE_N = [[1, 0], [0, 1], [-1, 0], [0, -1]];
-  function eaveCorners(K, B, over = 1.12, up = 0) {
-    return [[1, -1], [1, 1], [-1, 1], [-1, -1]].map(([sa, sb]) => ({
-      sa, sb, p: K.P(B.a + sa * B.ha * over, B.b + sb * B.hb * over, B.lift + B.h + up), d: K.depth(B.a + sa * B.ha, B.b + sb * B.hb),
-    }));
+  const faceLen = F => Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]);
+  // Rundbogen in der Wandebene: unten gerade (h0), oben ein Halbrund bis h1
+  function archPts(F, t0, t1, h0, h1) {
+    const half = faceLen(F) * (t1 - t0) / 2, rise = Math.min(half * 0.9, (h1 - h0) * 0.5), spring = h1 - rise, tc = (t0 + t1) / 2;
+    const pts = [faceAt(F, t0, h0), faceAt(F, t1, h0)];
+    for (let i = 0; i <= 12; i++) { const th = Math.PI * i / 12; pts.push(faceAt(F, tc + (t1 - t0) / 2 * Math.cos(th), spring + rise * Math.sin(th))); }
+    return pts;
   }
-  // Markise in festen Farben (Streifen der Reihe nach) mit Zacken-Saum
-  function stripedAwning(K, B, cols, n = cols.length, h0 = 0.44, h1 = 0.56) {
-    const F = B.faces.front;
-    if (!F) return;
-    const z = K.z, w = 0.88 / n;
-    for (let i = 0; i < n; i++) {
-      const t0 = 0.06 + i * w, t1 = t0 + w, col = cols[i % cols.length];
-      faceQuad(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, C(col));
-      poly([faceAt(F, t0, F.H * h0), faceAt(F, t1, F.H * h0), faceAt(F, (t0 + t1) / 2, F.H * h0 - 1.8 * z)], C(shade(col, -0.1)));
-    }
-    faceQuad(F.P, F.Q, 0.06, 0.94, F.H * h1 - 0.8 * z, F.H * h1, C(shade(cols[0], 0.25)));
+  // Rundbogenfenster (leuchtet nachts wie windowOn), optional mit Rahmen in einer Farbe
+  function archWin(F, t0, t1, h0, h1, z, frame = null) {
+    if (frame) { const d = 1 * z / faceLen(F); poly(archPts(F, t0 - d, t1 + d, h0 - 1 * z, h1 + 1 * z), C(frame)); }
+    poly(archPts(F, t0, t1, h0, h1), lit() ? '#ffd873' : C('#a8dcff'));
+    const a = faceAt(F, t0, h0), b = faceAt(F, t1, h0);
+    glowQuad([a, b, [b[0], b[1] - (h1 - h0)], [a[0], a[1] - (h1 - h0)]], 18 * z);
+  }
+  // Fenster mit zwei Fensterläden daneben (Breite sw in Anteilen der Seite)
+  function shutterWin(F, t0, t1, h0, h1, col, z, sw = 0.11) {
+    faceQuad(F.P, F.Q, t0 - sw, t0, h0, h1, C(col));
+    faceQuad(F.P, F.Q, t1, t1 + sw, h0, h1, C(col));
+    windowOn(F.P, F.Q, t0, t1, h0, h1, z);
   }
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Nudelbar: lackrotes Haus, dunkles Dach mit hochgeschwungenen Ecken, rote Papierlaternen an den Traufecken,
-  // Ausleger-Schild mit Nudelschale an der vorderen Ecke, Noren-Vorhang an der Tür, Nobori-Fahne davor.
+  // Nudelbar: helles Haus mit zweistufigem Pagodendach (unten breite Traufe, oben ein kleines Obergeschoss mit
+  // steilerem Dach), hochgebogene Eckspitzen, rote Eckpfosten, Noren-Vorhang an der Tür, zwei Papierlaternen.
   // ---------------------------------------------------------------------------------------------------------------
-  function pagodaEaves(K, B) {
-    const z = K.z, E = eaveCorners(K, B);
-    const tip = c => K.P(B.a + c.sa * B.ha * 1.42, B.b + c.sb * B.hb * 1.42, B.lift + B.h + 6);
-    // Schwung-Keile an den Ecken, dann die dunkle Traufkante mit hochgebogenen Enden
-    for (let i = 0; i < 4; i++) {
-      const c = E[i], prev = E[(i + 3) % 4].p, next = E[(i + 1) % 4].p, T = tip(c);
-      const l1 = lerp(c.p, prev, 0.3), l2 = lerp(c.p, next, 0.3);
-      g.beginPath(); g.moveTo(...l1); g.quadraticCurveTo(c.p[0], c.p[1], T[0], T[1]); g.quadraticCurveTo(c.p[0], c.p[1], l2[0], l2[1]);
-      g.lineTo(c.p[0], c.p[1] - 1.5 * z); g.closePath(); g.fillStyle = C('#2d2d38'); g.fill();
-    }
-    g.strokeStyle = C('#191921'); g.lineWidth = 1.8 * z; g.lineCap = 'round'; g.lineJoin = 'round';
-    for (let i = 0; i < 4; i++) {
-      const A = E[i], Bc = E[(i + 1) % 4], TA = tip(A), TB = tip(Bc);
-      const m1 = lerp(A.p, Bc.p, 0.3), m2 = lerp(A.p, Bc.p, 0.7);
-      g.beginPath(); g.moveTo(...TA); g.quadraticCurveTo(A.p[0], A.p[1], m1[0], m1[1]); g.lineTo(...m2); g.quadraticCurveTo(Bc.p[0], Bc.p[1], TB[0], TB[1]); g.stroke();
-    }
-    for (const c of E) { const T = tip(c); circle(T[0], T[1], 1.1 * z, C('#e0b44a')); }
-    return E;
+  const N_WALL = '#ffe3e0', N_ROOF = '#e8705f', N_RED = '#e8604f';
+  // Eckspitzen: hochgebogene Traufecken. Vor dem Block zeichnen – das Dach deckt den Ansatz, nur die Spitze bleibt stehen.
+  function pagodaTips(K, a, b, ha, hb, up, over, roof, rise) {
+    const S4 = [[1, -1], [1, 1], [-1, 1], [-1, -1]];
+    const E = S4.map(([sa, sb]) => K.P(a + sa * ha * over, b + sb * hb * over, up));
+    S4.forEach(([sa, sb], i) => {
+      const e = E[i], l1 = lerp(e, E[(i + 3) % 4], 0.3), l2 = lerp(e, E[(i + 1) % 4], 0.3);
+      const T = K.P(a + sa * ha * over * 1.22, b + sb * hb * over * 1.22, up + rise);
+      const n = K.facing(sa, 0) >= K.facing(0, sb) ? [sa, 0] : [0, sb];
+      g.beginPath(); g.moveTo(l1[0], l1[1]); g.quadraticCurveTo(e[0], e[1], T[0], T[1]); g.quadraticCurveTo(e[0], e[1], l2[0], l2[1]); g.closePath();
+      g.fillStyle = K.roofCol(roof, n); g.fill();
+    });
   }
-  function paperLantern(x, y, z, L) {
-    kLine({ z }, [x, y - 3.5 * z], [x, y - 1.5 * z], '#2d2d38', 0.5);
-    oval(x, y + 2.2 * z, 2.5 * z, 3 * z, 0, L ? '#ffb56b' : C('#e8412e'));
-    oval(x - 0.8 * z, y + 1.6 * z, 0.8 * z, 1.9 * z, 0, L ? '#fff1b8' : C('#ff8a70'));   // Glanz
-    g.fillStyle = C('#1f1f28');
-    g.fillRect(x - 1.5 * z, y - 1.3 * z, 3 * z, 1 * z); g.fillRect(x - 1.5 * z, y + 4.9 * z, 3 * z, 1 * z);   // Deckel oben/unten
-    kLine({ z }, [x, y + 5.9 * z], [x, y + 7.6 * z], '#e0b44a', 0.6);                  // Quaste
-    if (L) kGlow(x, y + 2.2 * z, z, 16);
+  function paperLantern(x, y, z, L) {                                       // (x, y): Aufhängung unter der Traufe
+    kLine({ z }, [x, y], [x, y + 2 * z], '#6b4f3a', 0.8);
+    oval(x, y + 5 * z, 2.6 * z, 3.2 * z, 0, L ? '#ffb56b' : C(N_RED));
+    g.fillStyle = C('#6b4f3a'); g.fillRect(x - 1.6 * z, y + 1.6 * z, 3.2 * z, 1.2 * z);
+    if (L) kGlow(x, y + 5 * z, z, 16);
   }
   function miniBowl(x, y, z) {                                            // Mini-Nudelschale fürs Schild, (x, y): Mitte
     const by = y + 0.5 * z, W = 3.5 * z, D = 2.9 * z, R = 1.15 * z;
@@ -77,56 +72,50 @@
     g.beginPath(); g.ellipse(x, by, W, R, 0, 0, TAU); g.stroke();
     kLine({ z }, [x + 0.3 * z, by - 0.2 * z], [x + 2.1 * z, y - 3.4 * z], '#d9a066', 0.55);   // Stäbchen
     kLine({ z }, [x + 1.2 * z, by - 0.1 * z], [x + 3 * z, y - 2.7 * z], '#c98d5c', 0.55);
-    kLine({ z }, [x + 1.8 * z, y - 2.9 * z], [x + 2.1 * z, y - 3.4 * z], '#c0392b', 0.6);
-    kLine({ z }, [x + 2.7 * z, y - 2.2 * z], [x + 3 * z, y - 2.7 * z], '#c0392b', 0.6);
   }
   SHOP_ART.nudelbar = function (K, s, now, x, y, t) {
-    const z = K.z, L = lit(), H0 = 20, RH = 10;
-    const sign = hangSign(K, (cx, cy, zz) => { miniBowl(cx, cy, zz); if (L) kGlow(cx, cy, zz, 14); }, '#c0392b');
-    const fb = sign[0] > 0 && sign[1] < 0 ? 0.38 : -0.38;                   // Fahne an die andere vordere Ecke als das Schild
-    K.scene([[-0.08, 0, () => {
-      const B = shopHouse(K, { wall: '#c0392b', roof: '#2d2d38', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#2d2d38' });
+    const z = K.z, L = lit(), A0 = -0.06, HA = 0.27, HB = 0.29, H1 = 16, R1 = 6, O1 = 1.4;   // unten: Laden mit breiter Traufe
+    const HA2 = 0.17, HB2 = 0.19, LIFT2 = 19, H2 = 6, R2 = 9, O2 = 1.55;                       // oben: kleines Obergeschoss
+    const sign = hangSign(K, miniBowl, N_ROOF, { up: 9 });
+    K.scene([[A0, 0, () => {
+      kShadow(K, 0.3);
+      pagodaTips(K, A0, 0, HA, HB, H1, O1, N_ROOF, 4);
+      const B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H1, wall: N_WALL, roof: N_ROOF, roofH: R1, over: O1, entry: true });
+      for (const F of Object.values(B.faces)) if (F) for (const [t0, t1] of [[0, 0.07], [0.93, 1]]) faceQuad(F.P, F.Q, t0, t1, 0, F.H, K.wallCol(N_RED, F.n));   // rote Eckpfosten
       const F = B.faces.front;
       if (F) {
-        faceQuad(F.P, F.Q, 0.02, 0.98, F.H * 0.45, F.H * 0.53, C('#2d2d38'));            // Vordach über dem Laden
-        faceQuad(F.P, F.Q, 0.02, 0.98, F.H * 0.53, F.H * 0.55, C('#e0b44a'));
-        for (const tt of [0.25, 0.41]) faceQuad(F.P, F.Q, tt - 0.008, tt + 0.008, F.H * 0.08, F.H * 0.42, C('#2d2d38'));   // Sprossen
-        // Noren: drei helle Stoffbahnen mit Schalen-Zeichen
-        for (const [t0, t1] of [[0.645, 0.713], [0.717, 0.783], [0.787, 0.855]]) faceQuad(F.P, F.Q, t0, t1, F.H * 0.2, F.H * 0.44, C('#f7efdc'));
-        faceQuad(F.P, F.Q, 0.645, 0.855, F.H * 0.41, F.H * 0.44, C('#2d2d38'));
-        const m = faceAt(F, 0.75, F.H * 0.3);
-        g.beginPath(); g.ellipse(m[0], m[1], 1.5 * z, 1.1 * z, 0, 0, Math.PI); g.fillStyle = C('#c0392b'); g.fill();
+        windowOn(F.P, F.Q, 0.13, 0.54, F.H * 0.14, F.H * 0.68, z);                          // Schaufenster
+        faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.68, C(DOOR_COL));                           // Tür …
+        faceQuad(F.P, F.Q, 0.62, 0.88, F.H * 0.42, F.H * 0.7, C(N_RED));                      // … mit Noren-Vorhang
       }
-      // Pagodendach und Laternen an den beiden seitlichen Ecken (an der vorderen hängt das Schild)
-      const E = pagodaEaves(K, B).slice().sort((p, q) => p.d - q.d);
-      for (const c of E.slice(1, 3)) paperLantern(c.p[0], c.p[1] + 1.5 * z, z, L);
-    }], sign, [0.42, fb, () => {                                                             // Nobori-Fahne
-      const top = kPost(K, 0.42, fb, 21, '#2d2d38', 0.9);
-      kLine(K, top, [top[0] + 4.6 * z, top[1]], '#2d2d38', 0.7);
-      g.fillStyle = C('#f7efdc'); g.fillRect(top[0] + 0.5 * z, top[1] + 0.4 * z, 4 * z, 12 * z);
-      g.fillStyle = C('#c0392b'); g.fillRect(top[0] + 0.5 * z, top[1] + 0.4 * z, 4 * z, 2 * z); g.fillRect(top[0] + 0.5 * z, top[1] + 10.8 * z, 4 * z, 1.6 * z);
-      circle(top[0] + 2.5 * z, top[1] + 6.4 * z, 1.4 * z, C('#c0392b'));
-    }]]);
+      houseWins(K, B, [[0.3, 0.7]], 0.3, 0.7);
+      // zwei Laternen an den seitlichen Traufecken (an der vorderen hängt das Schild)
+      const E = [[1, -1], [1, 1], [-1, 1], [-1, -1]].map(([sa, sb]) => ({ p: K.P(A0 + sa * HA * O1 * 0.94, sb * HB * O1 * 0.94, H1), d: K.depth(A0 + sa * HA, sb * HB) }))
+        .sort((p, q) => p.d - q.d);
+      for (const c of E.slice(1, 3)) paperLantern(c.p[0], c.p[1], z, L);
+      pagodaTips(K, A0, 0, HA2, HB2, LIFT2 + H2, O2, N_ROOF, 5);
+      const U = K.block({ a: A0, b: 0, ha: HA2, hb: HB2, h: H2, lift: LIFT2, wall: N_WALL, roof: N_ROOF, roofH: R2, over: O2 });
+      for (const S of Object.values(U.faces)) if (S) windowOn(S.P, S.Q, 0.3, 0.7, S.H * 0.15, S.H * 0.75, z);
+    }], sign]);
   };
+  ART_SHADOW.nudelbar = [28, 0.22];
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Konditorei: zuckerwatte-rosa Haus, schokobraunes Dach mit Zuckerguss-Kante, Ausleger-Schild mit kleiner Torte
-  // (Erdbeere, Kerze) an der Ecke, Tortenvitrine im Schaufenster, Tischchen mit rosa Schirm.
+  // Konditorei: Zuckerbäckerhaus – rosa Satteldach mit dem Giebel zur Straße, weiße Zuckerguss-Kante an Giebel und
+  // Traufe, Rundfenster im Giebel, Rundbogen-Schaufenster, Schornstein mit Rauch; davor ein Tischchen mit Schirm.
   // ---------------------------------------------------------------------------------------------------------------
-  function icingEaves(K, B) {
-    const z = K.z, E = eaveCorners(K, B), col = C('#fffaf5');
-    for (let i = 0; i < 4; i++) {
-      const A = E[i].p, Q = E[(i + 1) % 4].p, front = K.facing(...EDGE_N[i]) > 0.01;
-      g.strokeStyle = col; g.lineCap = 'round'; g.lineWidth = (front ? 1.7 : 1.1) * z;
-      g.beginPath(); g.moveTo(...A); g.lineTo(...Q); g.stroke();
-      if (!front) continue;
-      const n = 8;
-      for (let j = 0; j < n; j++) {                                      // Bögen entlang der Traufe
-        const m = lerp(A, Q, (j + 0.5) / n);
-        g.beginPath(); g.ellipse(m[0], m[1] + 0.3 * z, 1.9 * z, 1.6 * z, 0, 0, Math.PI); g.fillStyle = col; g.fill();
-        if ((j + i) % 3 === 1) ellipse(m[0], m[1] + 2.4 * z, 0.75 * z, 1.4 * z, col);   // Tropfen
-      }
-    }
+  const K_WALL = '#fdeaff', K_ROOF = '#f28cb1', ICING = '#fffaf5';
+  // Zuckerguss: dicke weiße Kante mit Bögen darunter, am sichtbaren Giebel (sA) und an der sichtbaren Traufe (sB)
+  function icing(K, a, ha, hb, over, h, roofH, sA, sB) {
+    const z = K.z, ea = ha * over, eb = hb * over, col = C(ICING);
+    const G1 = K.P(a + sA * ea, -eb, h), G2 = K.P(a + sA * ea, eb, h), top = K.P(a + sA * ea, 0, h + roofH);
+    const Ef = K.P(a + sA * ea, sB * eb, h), Eb = K.P(a - sA * ea, sB * eb, h);
+    const bumps = (p, q, n) => { for (let j = 0; j < n; j++) { const m = lerp(p, q, (j + 0.5) / n); circle(m[0], m[1] + 1 * z, 1.6 * z, col); } };
+    bumps(Ef, Eb, 6); bumps(G1, top, 3); bumps(top, G2, 3);
+    g.strokeStyle = col; g.lineCap = 'round'; g.lineJoin = 'round';
+    g.lineWidth = 1.6 * z; g.beginPath(); g.moveTo(Ef[0], Ef[1]); g.lineTo(Eb[0], Eb[1]); g.stroke();
+    g.lineWidth = 2 * z; g.beginPath(); g.moveTo(G1[0], G1[1]); g.lineTo(top[0], top[1]); g.lineTo(G2[0], G2[1]); g.stroke();
+    for (const tt of [0.3, 0.7]) { const m = lerp(Ef, Eb, tt); oval(m[0], m[1] + 2.4 * z, 1 * z, 2 * z, 0, col); }   // zwei Tropfen
   }
   function cakeTier(x, base, rx, h, side, top, drip, z) {               // Stockwerk einer Torte (base: Boden, Mitte vorn)
     const ry = rx * 0.38;
@@ -139,67 +128,63 @@
       ellipse(px, py + 0.4 * z, rx / 7, (i & 1 ? 1.5 : 0.9) * z, C(drip));
     }
   }
-  function miniCake(x, y, z, now, L) {                                    // Mini-Torte fürs Schild, (x, y): Mitte
-    const d = z * 0.4;                                                     // Guss-Tropfen klein
+  function miniCake(x, y, z) {                                            // Mini-Torte fürs Schild, (x, y): Mitte
+    const d = z * 0.4;
     cakeTier(x, y + 2.6 * z, 3 * z, 2.2 * z, '#f7a8c4', '#fffaf5', '#fffaf5', d);
     for (const sx of [-1, 1]) circle(x + sx * 2.35 * z, y + 0.75 * z, 0.45 * z, C('#e8384f'));   // Beeren
     cakeTier(x, y + 0.4 * z, 2 * z, 1.8 * z, '#7b4a2e', '#f7a8c4', '#f7a8c4', d);
-    // Erdbeere
-    const ex = x - 0.6 * z, ey = y - 1.9 * z;
+    const ex = x - 0.6 * z, ey = y - 1.9 * z;                                // Erdbeere
     g.beginPath(); g.moveTo(ex - 0.8 * z, ey - 0.3 * z); g.quadraticCurveTo(ex, ey - 1 * z, ex + 0.8 * z, ey - 0.3 * z); g.quadraticCurveTo(ex + 0.7 * z, ey + 0.7 * z, ex, ey + 1 * z);
     g.quadraticCurveTo(ex - 0.7 * z, ey + 0.7 * z, ex - 0.8 * z, ey - 0.3 * z); g.fillStyle = C('#e8384f'); g.fill();
     poly([[ex - 0.6 * z, ey - 0.45 * z], [ex, ey - 1.05 * z], [ex + 0.6 * z, ey - 0.45 * z], [ex, ey - 0.65 * z]], C('#58b36a'));
-    // Kerze
-    const cx = x + 0.9 * z, cb = y - 1.3 * z;
+    const cx = x + 0.9 * z, cb = y - 1.3 * z;                                // Kerze
     g.fillStyle = C('#f28cb1'); g.fillRect(cx - 0.3 * z, cb - 1.7 * z, 0.6 * z, 1.7 * z);
-    const fl = Math.sin(now / 160) * 0.1 * z;
-    oval(cx + fl * 0.5, cb - 2.3 * z, 0.4 * z, 0.65 * z + fl, 0, L ? '#fff3b0' : C('#ffb13b'));
-    if (L) kGlow(cx, cb - 2.3 * z, z, 10);
+    oval(cx, cb - 2.3 * z, 0.4 * z, 0.65 * z, 0, lit() ? '#fff3b0' : C('#ffb13b'));
+  }
+  function parasolTable(K, a, b, col) {                                   // Tischchen mit Sonnenschirm
+    const z = K.z, [px, py] = K.P(a, b), top = py - 12 * z;
+    kLine(K, [px, py], [px, top], '#8a6a4a', 1);
+    ellipse(px, py - 4.5 * z, 3.8 * z, 1.6 * z, C('#fffaf5'));
+    poly([[px - 7 * z, top + 2.2 * z], [px, top - 3 * z], [px + 7 * z, top + 2.2 * z], [px, top + 5 * z]], C(col));
+    poly([[px, top - 3 * z], [px + 7 * z, top + 2.2 * z], [px, top + 5 * z]], C(shade(col, -0.12)));
   }
   SHOP_ART.konditorei = function (K, s, now, x, y, t) {
-    const z = K.z, L = lit(), H0 = 20, RH = 10;
-    const sign = hangSign(K, (cx, cy, zz) => miniCake(cx, cy, zz, now, L), '#f28cb1');
-    const tb = sign[0] > 0 && sign[1] < 0 ? 0.44 : -0.44;                   // Tischchen an die andere vordere Ecke als das Schild
-    K.scene([[-0.08, 0, () => {
-      const B = shopHouse(K, { wall: '#fde8ef', roof: '#7b4a2e', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#f28cb1' });
-      for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, 0, Math.min(2.4 * z, F.H * 0.12), C('#f6b3c8'));   // rosa Sockel
+    const z = K.z, L = lit(), A0 = -0.06, HA = 0.27, HB = 0.28, H = 16, RH = 14, OV = 1.2;
+    const sign = hangSign(K, miniCake, K_ROOF, { up: 9 });
+    const tb = sign[1] > 0 ? -0.3 : 0.3;                                    // Tischchen auf die andere Seite als das Schild
+    K.scene([[A0, 0, () => {
+      kShadow(K, 0.3);
+      const B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: K_WALL, roof: K_ROOF, roofH: RH, type: 'gable', ridge: 'a', over: OV, entry: true });
       const F = B.faces.front;
-      stripedAwning(K, B, ['#f28cb1', '#fffaf5'], 8);
       if (F) {
-        faceQuad(F.P, F.Q, 0.1, 0.56, F.H * 0.12, F.H * 0.15, C('#fffaf5'));             // Vitrine: Bord mit Törtchen
-        [[0.18, '#f7a8c4', '#fffaf5', 2], [0.33, '#7b4a2e', '#f7a8c4', 3], [0.48, '#fff4e6', '#e8384f', 2]].forEach(([tt, side, top, hh]) => {
-          const p = faceAt(F, tt, F.H * 0.15), w = 1.8 * z;
-          g.fillStyle = C(side); g.fillRect(p[0] - w, p[1] - hh * z, w * 2, hh * z);
-          ellipse(p[0], p[1], w, w * 0.4, C(side));
-          ellipse(p[0], p[1] - hh * z, w, w * 0.4, C(top));
-          circle(p[0], p[1] - (hh + 0.8) * z, 0.6 * z, C('#e8384f'));
-        });
+        archWin(F, 0.12, 0.52, F.H * 0.12, F.H * 0.76, z, ICING);                             // Rundbogen-Schaufenster
+        faceQuad(F.P, F.Q, 0.64, 0.86, 0, F.H * 0.68, C('#8b5a3c'));                         // Schoko-Tür
       }
-      icingEaves(K, B);
-    }], sign, [0.42, tb, () => {                                                                   // Tischchen mit rosa Schirm
-      const [px, py] = K.P(0.42, tb), top = py - 11 * z;
-      kLine(K, [px, py], [px, top], '#8a6a4a', 0.9);
-      ellipse(px, py - 4.2 * z, 3.6 * z, 1.5 * z, C('#fffaf5'));
-      poly([[px - 7 * z, top + 2.2 * z], [px, top - 3 * z], [px + 7 * z, top + 2.2 * z], [px, top + 5 * z]], C('#f28cb1'));
-      poly([[px, top - 3 * z], [px + 7 * z, top + 2.2 * z], [px, top + 5 * z]], C('#e27aa0'));
-      poly([[px - 2.6 * z, top - 1 * z], [px, top - 3 * z], [px + 2.6 * z, top - 1 * z], [px, top + 0.6 * z]], C('#fffaf5'));
-    }]]);
+      houseWins(K, B, [[0.3, 0.7]], 0.3, 0.72);
+      const sA = F ? 1 : -1, sB = K.facing(0, 1) > 0 ? 1 : -1;
+      // Rundfenster im Giebel
+      const [gx, gy] = K.P(A0 + sA * HA, 0, H + RH * 0.36);
+      circle(gx, gy, 3.4 * z, C(ICING));
+      circle(gx, gy, 2.4 * z, L ? '#ffd873' : C('#a8dcff'));
+      kGlow(gx, gy, z, 12);
+      icing(K, A0, HA, HB, OV, H, RH, sA, sB);
+      kitChimney(K, A0 - sA * 0.12, sB * 0.15, H + RH * 0.42, now, '#c0694a');
+    }], sign, [0.42, tb, () => parasolTable(K, 0.42, tb, K_ROOF)]]);
   };
+  ART_SHADOW.konditorei = [25, 0.22];
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Chocolaterie: zartbitterbraunes Haus mit Rosé-Mansarddach und Gold, Ausleger-Schild mit kleiner Schokoladentafel
-  // (angebissen, halb in Goldfolie), Pralinen-Schachteln im Schaufenster, Kundenstopper mit Goldherz, Kugelbäumchen im Goldtopf.
+  // Chocolaterie: kleines Stadtpalais – zweigeschossig, Flachdach mit brauner Attika (Brüstung), Rundbogenfenster,
+  // in der Mitte ein Vorbau mit rosa Rundbogentür und erhöhter Attika; davor ein Kugelbäumchen im Topf.
   // ---------------------------------------------------------------------------------------------------------------
-  const GOLD = '#d4af37';
+  const P_WALL = '#fff4dc', P_BROWN = '#8b5a3c', P_PINK = '#f28cb1';
   function chocolateBar(x, y, z) {                                         // (x, y): Fuß der Tafel, Mitte
-    const w = 6.5 * z, top = -19 * z, foil = -9.5 * z, dx = 2.4 * z, dy = -1.4 * z, bite = 4.6 * z;
+    const GOLD = '#d4af37', w = 6.5 * z, top = -19 * z, foil = -9.5 * z, dx = 2.4 * z, dy = -1.4 * z, bite = 4.6 * z;
     g.save(); g.translate(x, y); g.rotate(-0.14);
-    // Dicke: rechte Seite und Oberkante
     poly([[w, 0], [w + dx, dy], [w + dx, foil + dy], [w, foil]], C('#9e7d1f'));
     poly([[w, foil], [w + dx, foil + dy], [w + dx, top + dy], [w, top]], C('#3a1f10'));
     poly([[-w + bite, top], [w, top], [w + dx, top + dy], [-w + bite + dx, top + dy]], C('#8a5230'));
-    // Schokolade mit Biss oben links
-    const bp = (ang, r) => [-w + Math.cos(ang) * r, top + Math.sin(ang) * r];   // Biss: zwei Zahnbögen um die Ecke
+    const bp = (ang, r) => [-w + Math.cos(ang) * r, top + Math.sin(ang) * r];   // Biss oben links
     g.beginPath(); g.moveTo(-w, foil); g.lineTo(...bp(Math.PI / 2, bite));
     g.quadraticCurveTo(...bp(Math.PI * 3 / 8, bite * 1.35), ...bp(Math.PI / 4, bite));
     g.quadraticCurveTo(...bp(Math.PI / 8, bite * 1.35), ...bp(0, bite));
@@ -210,140 +195,115 @@
     for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
       const x0 = -w + c * cw + 0.7 * z, y0 = top + r * ch + 0.7 * z, pw = cw - 1.4 * z, ph = ch - 1.4 * z;
       g.fillStyle = C('#8a5230'); g.fillRect(x0, y0, pw, ph);
-      g.fillStyle = C('#a8683f'); g.fillRect(x0, y0, pw, 0.8 * z); g.fillRect(x0, y0, 0.8 * z, ph);   // Kante im Licht
+      g.fillStyle = C('#a8683f'); g.fillRect(x0, y0, pw, 0.8 * z); g.fillRect(x0, y0, 0.8 * z, ph);
     }
     g.restore();
-    // Goldfolie mit Knitterkante
-    g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w, foil + 0.4 * z);
+    g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w, foil + 0.4 * z);                          // Goldfolie mit Knitterkante
     for (let i = 1; i <= 6; i++) g.lineTo(-w + i * (2 * w / 6), foil + (i & 1 ? -1.1 : 0.5) * z);
     g.lineTo(w, 0); g.closePath(); g.fillStyle = C(GOLD); g.fill();
-    for (const [a, b] of [[-4.5, -1.5], [-1, -6], [2.5, -2.5]]) { g.fillStyle = C('#f5de8a'); g.fillRect(a * z, b * z, 1 * z, 3.2 * z); }   // Glanz
-    g.fillStyle = C('#f3a6c1'); g.fillRect(-w, -5.4 * z, 2 * w, 2.6 * z);                                            // Banderole in Rosé
+    g.fillStyle = C('#f3a6c1'); g.fillRect(-w, -5.4 * z, 2 * w, 2.6 * z);                  // Banderole in Rosé
     g.fillStyle = C('#e38aab'); g.fillRect(w, -5.4 * z, dx, 2.6 * z);
-    const hx = 0, hy = -4.1 * z;                                                                                       // Goldherz
-    circle(hx - 0.6 * z, hy - 0.3 * z, 0.75 * z, C(GOLD)); circle(hx + 0.6 * z, hy - 0.3 * z, 0.75 * z, C(GOLD));
-    poly([[hx - 1.3 * z, hy], [hx + 1.3 * z, hy], [hx, hy + 1.3 * z]], C(GOLD));
     g.restore();
   }
   function miniBar(x, y, z) {                                              // dieselbe Tafel verkleinert, (x, y): Mitte
     g.save(); g.translate(x + 0.06 * z, y + 3 * z); g.scale(0.3, 0.3); chocolateBar(0, 0, z); g.restore();
   }
   SHOP_ART.chocolaterie = function (K, s, now, x, y, t) {
-    const z = K.z, H0 = 20, RH = 11;
-    const sign = hangSign(K, (cx, cy, zz) => { miniBar(cx, cy, zz); kGlow(cx, cy, zz, 12); }, GOLD, { up: 18.5 });   // etwas höher: über Bäumchen/Kundenstopper
-    K.scene([[-0.08, 0, () => {
-      const B = shopHouse(K, { wall: '#5a3420', roof: '#f3a6c1', awning: null, roofType: 'mansard', h: H0, roofH: RH, trim: GOLD });
-      for (const F of Object.values(B.faces)) if (F) {
-        faceQuad(F.P, F.Q, 0, 1, F.H - 1.6 * z, F.H - 0.4 * z, C(GOLD));                       // Goldgesims
-        faceQuad(F.P, F.Q, 0, 0.03, 0, F.H, C(GOLD)); faceQuad(F.P, F.Q, 0.97, 1, 0, F.H, C(GOLD));   // Goldkanten
+    const z = K.z, A0 = -0.06, HA = 0.26, HB = 0.3, H = 21, AT = 4;
+    const RA = A0 + HA + 0.03, RHA = 0.05, RHB = 0.11;                     // Mittelvorbau
+    const sign = hangSign(K, miniBar, P_BROWN, { up: 13 });
+    const ob = sign[1] > 0 ? -0.24 : 0.24;                                  // Bäumchen auf die andere Seite als das Schild
+    const attika = (a, ha, hb, lift, h) => K.block({ a, b: 0, ha, hb, h, lift, wall: P_BROWN, type: 'flat', roof: shade(P_BROWN, 0.15) });
+    K.scene([[A0, 0, () => {
+      kShadow(K, 0.32);
+      const B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: P_WALL, type: 'flat', roof: P_WALL, entry: true });
+      for (const [side, F] of Object.entries(B.faces)) {
+        if (!F) continue;
+        const spots = side === 'front' ? [[0.08, 0.3], [0.7, 0.92]] : [[0.14, 0.4], [0.6, 0.86]];
+        for (const [t0, t1] of spots) {
+          archWin(F, t0, t1, F.H * 0.1, F.H * 0.46, z, P_PINK);                                  // unten Schaufenster
+          archWin(F, t0 + 0.03, t1 - 0.03, F.H * 0.6, F.H * 0.86, z);                            // oben
+        }
       }
-      stripedAwning(K, B, [GOLD, '#6b3a22'], 8);
-      const F = B.faces.front;
+      attika(A0, HA + 0.012, HB + 0.012, H, AT);
+      K.rect(A0 - HA + 0.035, -HB + 0.035, A0 + HA - 0.035, HB - 0.035, C('#d8c3a5'), H + AT);   // Dachfläche hinter der Brüstung
+    }], [RA, 0, () => {
+      const R = K.block({ a: RA, b: 0, ha: RHA, hb: RHB, h: H, wall: shade(P_WALL, 0.3), type: 'flat', roof: P_WALL });
+      const F = R.faces.front;
       if (F) {
-        // Pralinen-Schachteln: rosa mit Goldschleife, daneben eine offene Schachtel mit drei Pralinen
-        faceQuad(F.P, F.Q, 0.14, 0.29, F.H * 0.1, F.H * 0.26, C('#f3a6c1'));
-        faceQuad(F.P, F.Q, 0.205, 0.225, F.H * 0.1, F.H * 0.26, C(GOLD));
-        faceQuad(F.P, F.Q, 0.14, 0.29, F.H * 0.17, F.H * 0.19, C(GOLD));
-        const bow = faceAt(F, 0.215, F.H * 0.26);
-        circle(bow[0] - 0.9 * z, bow[1] - 0.5 * z, 0.8 * z, C(GOLD)); circle(bow[0] + 0.9 * z, bow[1] - 0.5 * z, 0.8 * z, C(GOLD));
-        faceQuad(F.P, F.Q, 0.34, 0.52, F.H * 0.1, F.H * 0.17, C(GOLD));
-        faceQuad(F.P, F.Q, 0.35, 0.51, F.H * 0.15, F.H * 0.17, C('#3b2417'));
-        [[0.38, '#3a1f10'], [0.43, '#a8683f'], [0.48, '#f3e3cc']].forEach(([tt, col]) => {
-          const p = faceAt(F, tt, F.H * 0.18);
-          circle(p[0], p[1] - 0.6 * z, 1.1 * z, C(col)); circle(p[0] - 0.3 * z, p[1] - 1 * z, 0.3 * z, C(GOLD));
-        });
-        const k = faceAt(F, 0.83, F.H * 0.22); circle(k[0], k[1], 0.6 * z, C(GOLD));   // Türknauf
+        poly(archPts(F, 0.2, 0.8, 0, F.H * 0.5), C(P_PINK));                                    // rosa Rundbogentür
+        archWin(F, 0.26, 0.74, F.H * 0.6, F.H * 0.86, z);
       }
-    }], sign, [0.42, -0.4, () => {                                                                 // Kundenstopper mit Goldherz
-      const B = K.block({ a: 0.42, b: -0.4, ha: 0.022, hb: 0.075, h: 8, wall: '#3b2417', type: 'flat', roof: GOLD });
-      const F = shownFace(B);
-      if (F) {
-        faceQuad(F.P, F.Q, 0.15, 0.85, F.H * 0.35, F.H * 0.9, C('#2a1a10'));
-        const m = faceAt(F, 0.5, F.H * 0.66);
-        circle(m[0] - 0.7 * z, m[1] - 0.3 * z, 0.85 * z, C(GOLD)); circle(m[0] + 0.7 * z, m[1] - 0.3 * z, 0.85 * z, C(GOLD));
-        poly([[m[0] - 1.5 * z, m[1]], [m[0] + 1.5 * z, m[1]], [m[0], m[1] + 1.6 * z]], C(GOLD));
-      }
-    }], [0.38, 0.44, () => {                                                                 // Kugelbäumchen im Goldtopf
-      const [px, py] = K.P(0.38, 0.44);
-      g.fillStyle = C('#b8912a'); g.fillRect(px - 2 * z, py - 3.5 * z, 4 * z, 3.5 * z);
-      ellipse(px, py - 3.5 * z, 2.2 * z, 0.9 * z, C(GOLD));
-      kLine(K, [px, py - 3.5 * z], [px, py - 8 * z], '#6b3a22', 0.8);
-      circle(px, py - 10.5 * z, 3.4 * z, C('#4f8f3a')); circle(px - 1 * z, py - 11.5 * z, 1.8 * z, C('#6aab4f'));
+      attika(RA, RHA + 0.012, RHB + 0.012, H, AT + 3);
+    }], sign, [0.38, ob, () => {                                                                 // Kugelbäumchen im Topf
+      const [px, py] = K.P(0.38, ob);
+      g.fillStyle = C(P_BROWN); g.fillRect(px - 2.2 * z, py - 4 * z, 4.4 * z, 4 * z);
+      ellipse(px, py - 4 * z, 2.2 * z, 0.9 * z, C(shade(P_BROWN, 0.2)));
+      kLine(K, [px, py - 4 * z], [px, py - 8 * z], '#6b4f3a', 1);
+      circle(px, py - 11 * z, 3.8 * z, C('#58b36a'));
+      circle(px - 1.2 * z, py - 12.2 * z, 2 * z, C(shade('#58b36a', 0.15)));
     }]]);
   };
+  ART_SHADOW.chocolaterie = [26, 0.22];
 
   // ---------------------------------------------------------------------------------------------------------------
-  // Spielzeugladen: sonnengelbes Haus, blaues Dach, Regenbogen-Markise, Ausleger-Schild mit kleinem Teddy an der Ecke;
-  // vorn Luftballons an einem Geschenk, Bauklötze.
+  // Spielzeugladen: Knusperhäuschen – niedrige gelbe Wände, steiles blaues Satteldach mit weitem Überstand, eine Gaube
+  // über der Tür, bunte Fensterläden; davor ein Stapel Bauklötze.
   // ---------------------------------------------------------------------------------------------------------------
-  function teddy(x, y, z) {                                                // (x, y): Sitzfläche, Mitte
+  const S_WALL = '#ffe066', S_ROOF = '#5f8fe8', S_DOOR = '#e8705f';
+  // Gaube auf der Dachseite sA (Satteldach mit First entlang b): Giebelwand mit Fenster, zwei Wangen, kleines Satteldach
+  function dormer(K, a, ea, h, roofH, sA, wall, roof) {
+    const z = K.z, w = 0.08, hd = 5, rd = 4, s0 = 0.56;
+    const at = frac => a + sA * ea * frac, hAt = frac => h + roofH * (1 - frac);   // frac: 0 = First, 1 = Traufe
+    const af = at(s0), h0 = hAt(s0), h1 = h0 + hd, back = at(1 - (h1 - h) / roofH), ridge = at(Math.max(0, 1 - (h1 + rd - h) / roofH));
+    const P = (aa, bb, up) => K.P(aa, bb, up), o = 0.02 * sA;
+    const cheeks = [-1, 1].map(sb => [[P(af, sb * w, h0), P(af, sb * w, h1), P(back, sb * w, h1)], [0, sb]]);
+    const slopes = [-1, 1].map(sb => [[P(af + o, sb * w * 1.3, h1 - 0.5), P(af + o, 0, h1 + rd), P(ridge, 0, h1 + rd), P(back, sb * w * 1.3, h1 - 0.5)], [0, sb]]);
+    for (const [pts, n] of cheeks) if (K.facing(...n) <= 0) poly(pts, K.wallCol(wall, n));
+    for (const [pts, n] of slopes) if (K.facing(...n) <= 0) poly(pts, K.roofCol(roof, n));
+    const Pl = P(af, -w, h0), Pr = P(af, w, h0);
+    poly([Pl, Pr, P(af, w, h1), P(af, 0, h1 + rd), P(af, -w, h1)], K.wallCol(wall, [sA, 0]));
+    windowOn(Pl, Pr, 0.25, 0.75, 0.8 * z, 4.2 * z, z);
+    for (const [pts, n] of cheeks) if (K.facing(...n) > 0) poly(pts, K.wallCol(wall, n));
+    for (const [pts, n] of slopes) if (K.facing(...n) > 0) poly(pts, K.roofCol(roof, n));
+  }
+  function miniTeddy(x, y, z) {                                            // Mini-Teddy fürs Schild, (x, y): Mitte
+    g.save(); g.translate(x, y + 3.6 * z); g.scale(0.31, 0.31);
     const fur = C('#b5793f'), light = C('#ecc99b'), dark = C('#3b2a20');
-    oval(x - 6.2 * z, y - 7.5 * z, 2.3 * z, 3.8 * z, 0.5, C('#a86d36'));      // Arme
-    oval(x + 6.2 * z, y - 7.5 * z, 2.3 * z, 3.8 * z, -0.5, C('#9c6230'));
-    oval(x, y - 6.5 * z, 6.3 * z, 7 * z, 0, fur);                              // Körper
-    oval(x + 3.2 * z, y - 5.5 * z, 2.6 * z, 5.5 * z, 0, C('#a86d36'));
-    oval(x, y - 5.5 * z, 3.9 * z, 4.5 * z, 0, light);                          // Bauch
-    for (const sx of [-1, 1]) {                                                // Beine mit Tatzen
-      oval(x + sx * 4 * z, y - 1.4 * z, 3.2 * z, 2.4 * z, 0, sx < 0 ? fur : C('#a86d36'));
-      oval(x + sx * 5.1 * z, y - 1.3 * z, 1.5 * z, 1.8 * z, 0, light);
-    }
-    for (const sx of [-1, 1]) { circle(x + sx * 4.3 * z, y - 21.3 * z, 2.3 * z, fur); circle(x + sx * 4.3 * z, y - 21.3 * z, 1.2 * z, light); }   // Ohren
-    circle(x, y - 17.3 * z, 5.6 * z, fur);                                     // Kopf
-    oval(x - 1.8 * z, y - 19.8 * z, 1.8 * z, 1.1 * z, -0.4, C('#c98d5c'));
-    oval(x, y - 15.6 * z, 2.7 * z, 2 * z, 0, light);                          // Schnauze
-    oval(x, y - 16.3 * z, 1.1 * z, 0.75 * z, 0, dark);
-    kLine({ z }, [x, y - 15.6 * z], [x, y - 14.6 * z], '#3b2a20', 0.45);
-    for (const sx of [-1, 1]) {
-      circle(x + sx * 2.1 * z, y - 18.8 * z, 0.8 * z, dark); circle(x + sx * 2.1 * z - 0.25 * z, y - 19.1 * z, 0.28 * z, C('#ffffff'));
-      circle(x + sx * 3.5 * z, y - 16 * z, 0.9 * z, C('#f4a7a0'));
-    }
-    poly([[x, y - 12.4 * z], [x - 3.2 * z, y - 14 * z], [x - 3.2 * z, y - 10.8 * z]], C('#e8604f'));   // Fliege
-    poly([[x, y - 12.4 * z], [x + 3.2 * z, y - 14 * z], [x + 3.2 * z, y - 10.8 * z]], C('#d24f40'));
-    circle(x, y - 12.4 * z, 0.9 * z, C('#ff8a70'));
-  }
-  function miniTeddy(x, y, z) {                                            // derselbe Teddy verkleinert, (x, y): Mitte
-    g.save(); g.translate(x, y + 3.6 * z); g.scale(0.31, 0.31); teddy(0, 0, z); g.restore();
-  }
-  function balloonBunch(K, a, b, now) {
-    const [x, y] = K.P(a, b), z = K.z;
-    const B = K.block({ a, b, ha: 0.045, hb: 0.045, h: 4, wall: '#e8604f', type: 'flat', roof: '#ff8a70' });   // Geschenk als Gewicht
-    for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0.42, 0.58, 0, F.H, C('#ffd23f'));
-    const knot = [x, y - 4 * z];
-    const cols = ['#e8604f', '#3e7fd0', '#ffd23f', '#58b36a', '#c77dff'];
-    const spots = [[-4.5, -19], [4, -20.5], [0, -25], [-6, -26], [5.5, -27.5]];
-    spots.forEach(([dx, dy], i) => {
-      const bx = x + dx * z + Math.sin(now / 900 + i * 1.7) * 0.8 * z, by = y + dy * z + Math.sin(now / 1300 + i) * 0.5 * z;
-      kLine(K, knot, [bx, by + 3 * z], '#8a8f99', 0.35);
-      oval(bx, by, 2.5 * z, 3.1 * z, 0, C(cols[i]));
-      oval(bx - 0.8 * z, by - 1.1 * z, 0.6 * z, 1 * z, -0.4, C(shade(cols[i], 0.5)));
-      poly([[bx, by + 2.9 * z], [bx - 0.6 * z, by + 3.7 * z], [bx + 0.6 * z, by + 3.7 * z]], C(cols[i]));
-    });
+    oval(-6.2 * z, -7.5 * z, 2.3 * z, 3.8 * z, 0.5, C('#a86d36'));          // Arme
+    oval(6.2 * z, -7.5 * z, 2.3 * z, 3.8 * z, -0.5, C('#9c6230'));
+    oval(0, -6.5 * z, 6.3 * z, 7 * z, 0, fur);                              // Körper
+    oval(0, -5.5 * z, 3.9 * z, 4.5 * z, 0, light);                          // Bauch
+    for (const sx of [-1, 1]) { oval(sx * 4 * z, -1.4 * z, 3.2 * z, 2.4 * z, 0, fur); oval(sx * 5.1 * z, -1.3 * z, 1.5 * z, 1.8 * z, 0, light); }   // Beine
+    for (const sx of [-1, 1]) { circle(sx * 4.3 * z, -21.3 * z, 2.3 * z, fur); circle(sx * 4.3 * z, -21.3 * z, 1.2 * z, light); }   // Ohren
+    circle(0, -17.3 * z, 5.6 * z, fur);                                     // Kopf
+    oval(0, -15.6 * z, 2.7 * z, 2 * z, 0, light);                           // Schnauze
+    oval(0, -16.3 * z, 1.1 * z, 0.75 * z, 0, dark);
+    for (const sx of [-1, 1]) circle(sx * 2.1 * z, -18.8 * z, 0.8 * z, dark);
+    poly([[0, -12.4 * z], [-3.2 * z, -14 * z], [-3.2 * z, -10.8 * z]], C('#e8604f'));   // Fliege
+    poly([[0, -12.4 * z], [3.2 * z, -14 * z], [3.2 * z, -10.8 * z]], C('#d24f40'));
+    g.restore();
   }
   SHOP_ART.spielzeug = function (K, s, now, x, y, t) {
-    const z = K.z, H0 = 20, RH = 10;
-    const sign = hangSign(K, (cx, cy, zz) => { miniTeddy(cx, cy, zz); kGlow(cx, cy, zz, 12); }, '#3e7fd0');
-    const m = sign[0] > 0 && sign[1] < 0 ? -1 : 1;                           // Ballons an die andere vordere Ecke als das Schild
-    K.scene([[-0.08, 0, () => {
-      const B = shopHouse(K, { wall: '#ffe08a', roof: '#3e7fd0', awning: null, roofType: 'hip', h: H0, roofH: RH, trim: '#3e7fd0' });
-      for (const F of Object.values(B.faces)) if (F) {                                     // bunte Punkte unterm Dach
-        for (let i = 0; i < 6; i++) { const p = faceAt(F, 0.1 + i * 0.16, F.H * 0.93); circle(p[0], p[1], 0.8 * z, C(['#e8604f', '#3e7fd0', '#58b36a'][i % 3])); }
-      }
-      stripedAwning(K, B, ['#e8604f', '#ff9f43', '#ffd23f', '#58b36a', '#3e7fd0', '#8e6bd8']);
+    const z = K.z, A0 = -0.06, HA = 0.25, HB = 0.29, H = 15, RH = 18, OV = 1.36;
+    const sign = hangSign(K, miniTeddy, S_ROOF, { up: 8 });
+    const ob = sign[1] > 0 ? -0.26 : 0.26;                                  // Bauklötze auf die andere Seite als das Schild
+    K.scene([[A0, 0, () => {
+      kShadow(K, 0.3);
+      const B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: S_WALL, roof: S_ROOF, roofH: RH, type: 'gable', ridge: 'b', over: OV, entry: true });
       const F = B.faces.front;
-      if (F) {                                                                               // Schaufenster: Ball und Bauklötze
-        const p = faceAt(F, 0.2, F.H * 0.19);
-        circle(p[0], p[1], 1.9 * z, C('#e8604f'));
-        g.fillStyle = C('#fffaf0'); g.fillRect(p[0] - 1.9 * z, p[1] - 0.4 * z, 3.8 * z, 0.8 * z);
-        faceQuad(F.P, F.Q, 0.3, 0.37, F.H * 0.09, F.H * 0.19, C('#3e7fd0'));
-        faceQuad(F.P, F.Q, 0.38, 0.45, F.H * 0.09, F.H * 0.19, C('#58b36a'));
-        faceQuad(F.P, F.Q, 0.34, 0.41, F.H * 0.19, F.H * 0.29, C('#ffd23f'));
-        faceQuad(F.P, F.Q, 0.47, 0.53, F.H * 0.09, F.H * 0.3, C('#c77dff'));
+      if (F) {
+        shutterWin(F, 0.2, 0.46, F.H * 0.26, F.H * 0.74, '#58b36a', z);
+        faceQuad(F.P, F.Q, 0.66, 0.86, 0, F.H * 0.66, C(S_DOOR));
       }
-    }], sign, [0.4, -0.3 * m, () => balloonBunch(K, 0.4, -0.3 * m, now)],
-    [0.34, 0.42 * m, () => {                                                                    // Bauklötze
-      K.block({ a: 0.32, b: 0.38 * m, ha: 0.05, hb: 0.05, h: 4.5, wall: '#3e7fd0', type: 'flat', roof: '#6fa3e8' });
-      K.block({ a: 0.36, b: 0.47 * m, ha: 0.05, hb: 0.05, h: 4.5, wall: '#e8604f', type: 'flat', roof: '#ff8a70' });
-      K.block({ a: 0.34, b: 0.425 * m, ha: 0.05, hb: 0.05, h: 4.5, lift: 4.5, wall: '#58b36a', type: 'flat', roof: '#8fd08a' });
+      const cols = { right: '#f28cb1', left: '#ff8a3d', back: '#e8705f' };
+      for (const side of ['right', 'left', 'back']) { const S = B.faces[side]; if (S) shutterWin(S, 0.37, 0.63, S.H * 0.3, S.H * 0.74, cols[side], z, 0.12); }
+      dormer(K, A0, HA * OV, H, RH, F ? 1 : -1, S_WALL, S_ROOF);
+    }], sign, [0.38, ob, () => {                                                                 // Bauklötze
+      K.block({ a: 0.35, b: ob - 0.05, ha: 0.055, hb: 0.055, h: 5, wall: '#5f8fe8', type: 'flat', roof: shade('#5f8fe8', 0.2) });
+      K.block({ a: 0.4, b: ob + 0.07, ha: 0.055, hb: 0.055, h: 5, wall: '#e8705f', type: 'flat', roof: shade('#e8705f', 0.2) });
+      K.block({ a: 0.37, b: ob + 0.01, ha: 0.055, hb: 0.055, h: 5, lift: 5, wall: '#58b36a', type: 'flat', roof: shade('#58b36a', 0.2) });
     }]]);
   };
+  ART_SHADOW.spielzeug = [26, 0.22];
 })();

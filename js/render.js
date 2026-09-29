@@ -75,7 +75,7 @@ const SHADOW_COL = 'rgba(30,42,62,0.3)';
 const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34];
 const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feldrand
   muehle: [[28, 34, 40], 0.3], saege: [22, 0.18], steinmetz: [17, 0.26], schmiede: [19, 0.26], baecker: [[22, 32, 32], 0.2],
-  fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [26, 0.2], uni: [30, 0.14], kunst: [[26, 26, 30], 0.2],
+  fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [[28, 29, 31], 0.3], uni: [[36, 38, 40], 0.45], kunst: [[28, 30, 32], 0.3],
   rathaus: [40, 0.4], leuchtturm: [50, 0.37], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
 };
 // Höhe des Namensschilds über der Mitte (passend zur Zeichnung)
@@ -85,7 +85,7 @@ function shadowOf(t, ax, ay) {
   let hgt, inset;
   if (t.b === 'haus') { const look = houseLook(t); hgt = HOUSE_SHADOW[look]; inset = look === 5 ? 0.16 : 0.24; }
   else if (t.b === 'lm') { const s = LM_SHADOW[t.lm]; if (!s) return null; [hgt, inset] = s; }
-  else { const s = SHADOW[t.b]; if (!s) return null; hgt = Array.isArray(s[0]) ? s[0][Math.min(t.lvl, 3) - 1] : s[0]; inset = s[1]; }
+  else { const s = ART_SHADOW[t.b] || SHADOW[t.b]; if (!s) return null; hgt = Array.isArray(s[0]) ? s[0][Math.min(t.lvl, 3) - 1] : s[0]; inset = s[1]; }
   const [w, h] = sizeOf(t.b, t.rot, t), dx = SUN.dx * hgt, dy = SUN.dy * hgt;
   const base = [[ax - 0.5 + inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay - 0.5 + inset], [ax + w - 0.5 - inset, ay + h - 0.5 - inset], [ax - 0.5 + inset, ay + h - 0.5 - inset]]
     .map(([x, y]) => { const p = iso(x, y); return [p.x, p.y]; });

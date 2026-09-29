@@ -369,3 +369,13 @@ Läden in einem Viertel, neue Hauswünsche (Laden, Café, Kultur). Kaffee, Tee, 
       (`hangSign`); Kiosk und Uhrmacher unverändert.
 - [x] Theater ohne Dach-Masken, Kino ohne Filmrolle, Museum ohne Schriftzug, Konzerthalle ohne Noten, Möbelhaus ohne
       Sofa/Lampe; Aquarium neu als eckiges Glasbecken mit Wasser und Fischen.
+
+## Block 35 – Neue Gebäude an die alten angleichen (30.09.)
+
+Vergleich alt/neu (drei Blickwinkel + Messung): neue ohne Schatten, dunkler, klobiger, alle gleiche Kiste, viel Kleinkram,
+Schrift, große neue höher als das Rathaus. Der Spieler wollte alles angleichen; Stadion, Konzerthalle, Grand Hotel dürfen
+groß bleiben, Museum, Hotel, Aquarium, Kino, Theater kleiner.
+- [x] Schatten für alle neuen (`ART_SHADOW`), Ladenschild als Holz-Ausleger mit farbiger Tafel (nicht mehr wie die Hinweis-Blasen).
+- [x] Farben aus der Palette der alten (helle Wände, klare Dächer), eigene Bauform je Laden, weniger Kleinkram, keine Schrift.
+- [x] Größen: kleine Läden wie Wohnhäuser; Kaufhaus 63, Hotel 56, Museum 52, Theater 58, Kino 42 px (Rathaus 71).
+- [x] Uni, Bibliothek, Kunstakademie etwas größer und stattlicher.

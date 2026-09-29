@@ -74,6 +74,11 @@ function kDome(K, a, b, up, r, col) {
   ellipse(x - r * 0.35 * z, y - r * 0.55 * z, r * 0.25 * z, r * 0.16 * z, C(shade(col, 0.35)));
   return [x, y - r * z];
 }
+// Kuppel auf einem runden Sockel (Tambour) der Höhe h; ohne Sockel wie kDome
+function kDrum(K, a, b, up, r, h, col, drumCol) {
+  if (h > 0) { const [x, y] = K.P(a, b, up); cyl(x, y, r * 0.88 * K.z, r * 0.44 * K.z, h * K.z, drumCol); }
+  return kDome(K, a, b, up + h, r, col);
+}
 function kSign(K, a, b, col, draw) {           // Schild auf einem Pfosten
   const [x, y] = K.P(a, b), z = K.z;
   g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.2 * z;
@@ -1046,83 +1051,87 @@ const BUILDING_ART = {
   },
   bibliothek(K, s, now, x, y, t) {
     const [SW, SR] = paint(t, '#efe6d8', '#7d6bb0');
-    const H = 16 + (s - 1) * 2;
+    const H = [20, 21, 23][s - 1], z = K.z;
     const main = () => {
-      kShadow(K, 0.5);
-      const B = K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.08), entry: s === 1 });   // Flachdach mit Brüstung
-      if (s === 1) { K.door(B, 'front', 0.44, 0.56, 0.6); K.wins(B, 'front', 4, 0.35, 0.72, 0.05, 0.95, [1, 2]); }
-      else K.wins(B, 'front', 4, 0.35, 0.75, 0.04, 0.96, [1, 2]);
-      K.sideWins(B, 2, 0.35, 0.75);
-      K.block({ a: -0.06, ha: 0.26, hb: 0.54, h: 3, lift: H, wall: shade(SW, 0.25), type: 'none' });
-      const top = kDome(K, -0.06, 0, H + (s === 3 ? 6 : 2), s === 3 ? 11 : 7, s === 3 ? '#8fb4f2' : SR);
-      kLine(K, top, [top[0], top[1] - 5 * K.z], '#e9a23b', 1.2);
+      kShadow(K, 0.55);
+      const B = K.block({ a: -0.1, ha: 0.28, hb: 0.58, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.08), entry: true });   // Flachdach mit Brüstung
+      K.wins(B, 'front', 4, 0.3, 0.78, 0.04, 0.96, [1, 2]);
+      K.sideWins(B, 2, 0.3, 0.78);
+      K.block({ a: -0.1, ha: 0.28, hb: 0.58, h: 3, lift: H, wall: shade(SW, 0.25), type: 'none' });
+      const top = kDrum(K, -0.1, 0, H + 2, [9, 10, 11][s - 1], [0, 2, 3][s - 1], s === 3 ? '#8fb4f2' : SR, shade(SW, 0.2));   // Stufe 2/3: Kuppel auf einem Sockel
+      kLine(K, top, [top[0], top[1] - 3 * z], '#e9a23b', 1.6);
     };
-    const portico = () => {                               // Säulenvorbau mit Giebel
-      const B = K.block({ a: 0.26, ha: 0.08, hb: 0.26, h: H, wall: shade(SW, 0.3), roof: SR, roofH: 8, entry: true });
+    const portico = () => {                               // Säulenvorbau mit Giebel (Stufe 2/3 auch mit Säulen an den Seiten)
+      const B = K.block({ a: 0.27, ha: 0.09, hb: 0.27, h: H - 2, wall: shade(SW, 0.3), roof: SR, roofH: 7, type: 'gable', ridge: 'a' });
       K.door(B, 'front', 0.4, 0.6, 0.55);
-      kColumns(B, 'front', 4, K.z);
-      kColumns(B, 'right', 2, K.z); kColumns(B, 'left', 2, K.z);
+      kColumns(B, 'front', 4, z);
+      if (s >= 2) { kColumns(B, 'right', 2, z); kColumns(B, 'left', 2, z); }
     };
-    const parts = [[0, 0, main]];
-    if (s >= 2) parts.push([0.26, 0, portico]);
-    if (s === 1) parts.push([0.4, 0.45, () => kSign(K, 0.4, 0.45, '#7d6bb0', (x, y, z) => { g.fillStyle = C('#fff6e4'); g.fillRect(x - 3 * z, y - 2 * z, 6 * z, 4 * z); kLine(K, [x, y - 2 * z], [x, y + 2 * z], '#7d6bb0', 0.6); })]);
-    if (s === 3) parts.push([0.38, -0.7, () => { drawObjectAt('bank', K, 0.38, -0.7, 0.45, 1); }], [0.34, 0.72, () => kitTree(K, 0.36, 0.74, 0.7)], [-0.36, 0.8, () => kitTree(K, -0.36, 0.8, 0.7, '#ffb13b')]);
+    const parts = [[0, 0, main], [0.27, 0, portico]];
+    if (s === 1) parts.push([0.4, 0.5, () => kSign(K, 0.4, 0.5, '#7d6bb0', (x, y, z) => { g.fillStyle = C('#fff6e4'); g.fillRect(x - 3 * z, y - 2 * z, 6 * z, 4 * z); kLine(K, [x, y - 2 * z], [x, y + 2 * z], '#7d6bb0', 0.6); })]);
+    if (s === 3) parts.push([0.38, -0.72, () => { drawObjectAt('bank', K, 0.38, -0.72, 0.45, 1); }], [0.34, 0.76, () => kitTree(K, 0.36, 0.78, 0.7)], [-0.36, 0.82, () => kitTree(K, -0.36, 0.84, 0.7, '#ffb13b')]);
     K.scene(parts);
   },
   uni(K, s, now, x, y, t) {
     const [SW, SR] = paint(t, '#f3ead9', '#5f8fe8');
     if (groundPart(() => K.rect(-0.96, -0.96, 0.96, 0.96, C('#9ad26f')))) return;
-    const H = 22;
+    const H = 26 + s * 2, z = K.z;                       // Hauptbau mit zwei Geschossen: Wand 28 / 30 / 32
     const main = () => {
-      kShadow(K, 0.6);
-      const B = K.block({ a: -0.1, ha: 0.42, hb: 0.5, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.06), entry: true });
-      kColumns(B, 'front', 6, K.z);
-      K.door(B, 'front', 0.44, 0.56, 0.6);
-      K.sideWins(B, 3, 0.35, 0.75);
-      const top = kDome(K, -0.1, 0, H, s === 1 ? 13 : 16, SR);
-      kLine(K, top, [top[0], top[1] - 6 * K.z], '#e9a23b', 1.6);
+      kShadow(K, 0.7);
+      const B = K.block({ a: -0.1, ha: 0.44, hb: 0.48, h: H, wall: SW, type: 'flat', roof: shade(SW, -0.06), entry: true });
+      const F = B.faces.front;                            // Obergeschoss: Fenster zwischen den Säulen
+      if (F) for (const c of [0.164, 0.332, 0.668, 0.836]) windowOn(F.P, F.Q, c - 0.042, c + 0.042, F.H * 0.58, F.H * 0.82, z);
+      kColumns(B, 'front', 6, z);
+      K.door(B, 'front', 0.44, 0.56, 0.42);
+      K.sideWins(B, 3, 0.14, 0.4); K.sideWins(B, 3, 0.58, 0.82);
+      const top = kDrum(K, -0.1, 0, H, [14, 15, 17][s - 1], [0, 3, 4][s - 1], SR, shade(SW, 0.2));   // Stufe 2/3: Kuppel auf einem Sockel
+      kLine(K, top, [top[0], top[1] - (s === 3 ? 7 : 6) * z], '#e9a23b', 1.6);
     };
+    const wh = [14, 17, 18][s - 1];                       // Seitenflügel: Stufe 1 niedrig, dann höher
     const wing = b => () => {
-      const B = K.block({ a: -0.15, b, ha: 0.32, hb: 0.2, h: H - 5, wall: shade(SW, -0.03), roof: SR, roofH: 8 });
+      const B = K.block({ a: -0.15, b, ha: 0.32, hb: 0.2, h: wh, wall: shade(SW, -0.03), roof: SR, roofH: s === 1 ? 7 : 8 });
       K.sideWins(B, 2, 0.35, 0.75); K.wins(B, 'front', 2, 0.35, 0.75);
     };
-    const parts = [[-0.1, 0, main]];
-    if (s >= 2) parts.push([-0.15, -0.72, wing(-0.72)], [-0.15, 0.72, wing(0.72)]);
+    const parts = [[-0.1, 0, main], [-0.15, -0.68, wing(-0.68)], [-0.15, 0.68, wing(0.68)]];
     if (s === 3) parts.push([0.6, 0.66, () => {           // Sternwarte mit Fernrohr
       K.block({ a: 0.6, b: 0.66, ha: 0.16, hb: 0.16, h: 12, wall: '#f3ead9', type: 'flat', roof: '#e8dcc6' });
       const top = kDome(K, 0.6, 0.66, 12, 9, '#c7cad2');
-      kLine(K, [top[0] - 1 * K.z, top[1] + 4 * K.z], [top[0] + 7 * K.z, top[1] - 4 * K.z], '#4a4a58', 2.2);
-    }], [0.7, -0.7, () => { const p = kPost(K, 0.7, -0.7, 26, '#c7cad2', 1); poly([[p[0], p[1]], [p[0] + 9 * K.z, p[1] + 2.5 * K.z + Math.sin(now / 400) * K.z], [p[0], p[1] + 6 * K.z]], C('#7d6bb0')); }]);
+      kLine(K, [top[0] - 1 * z, top[1] + 4 * z], [top[0] + 7 * z, top[1] - 4 * z], '#4a4a58', 2.2);
+    }], [0.7, -0.7, () => { const p = kPost(K, 0.7, -0.7, 26, '#c7cad2', 1); poly([[p[0], p[1]], [p[0] + 9 * z, p[1] + 2.5 * z + Math.sin(now / 400) * z], [p[0], p[1] + 6 * z]], C('#7d6bb0')); }]);
     K.scene(parts);
   },
   kunst(K, s, now, x, y, t) {
-    const H = s === 3 ? 22 : 17;
+    const H = 18 + s * 2, z = K.z;                        // Wand 20 / 22 / 24
     const main = () => {
-      kShadow(K, 0.5);
+      kShadow(K, 0.55);
       const [wall, roof] = paint(t, '#ffe3ef', s === 3 ? '#c3a8e6' : '#eaa6c0');
-      const B = K.block({ a: -0.04, ha: 0.28, hb: 0.54, h: H, wall, roof: shade(roof, 0.25), type: 'flat', entry: true });   // Dachterrasse
-      K.door(B, 'front', 0.44, 0.56, 0.6);
+      const B = K.block({ a: -0.06, ha: 0.28, hb: 0.56, h: H, wall, roof: shade(roof, 0.25), type: 'flat', entry: true });   // Dachterrasse
+      K.door(B, 'front', 0.44, 0.56, 0.55);
       K.wins(B, 'front', 4, 0.2, 0.85, 0.05, 0.95, [1, 2]);
       K.sideWins(B, 1, 0.2, 0.85);
-      if (s < 3) {                                        // gläsernes Atelier-Oberlicht (Tonne)
-        K.block({ a: -0.04, ha: 0.14, hb: 0.4, h: 2, lift: H, wall: roof, roof: night > 0.15 && isLive() ? '#ffe7a8' : '#cdeefa', roofH: 8, type: 'barrel', ridge: 'b', over: 1 });
+      if (s < 3) {                                        // Atelier-Oberlicht: kleines Glastürmchen mit Spitzdach
+        const glass = night > 0.15 && isLive() ? '#ffe7a8' : '#cdeefa';
+        K.block({ a: -0.06, ha: 0.11, hb: 0.11, h: s === 1 ? 9 : 10, lift: H, wall: glass, roof, roofH: s === 1 ? 7 : 8 });
       }
-      if (s === 3) {                                      // bunte Kuppeln
-        [[SOFT.green, -0.34], [SOFT.yellow, 0], [SOFT.blue, 0.34]].forEach(([c, b]) => { const top = kDome(K, -0.04, b, H, b ? 6 : 9, c); circle(top[0], top[1] - 1.5 * K.z, 1.2 * K.z, C('#f2c14e')); });
+      if (s === 3) {                                      // bunte Kuppeln, die mittlere auf einem Sockel
+        [[SOFT.green, -0.38], [SOFT.yellow, 0], [SOFT.blue, 0.38]].sort((p, q) => K.depth(-0.06, p[1]) - K.depth(-0.06, q[1])).forEach(([c, b]) => {
+          const top = b ? kDome(K, -0.06, b, H, 7, c) : kDrum(K, -0.06, b, H, 11, 6, c, shade(wall, 0.3));
+          circle(top[0], top[1] - 1.5 * z, 1.2 * z, C('#f2c14e'));
+        });
       }
     };
     const parts = [[0, 0, main]];
     parts.push([0.42, 0.52, () => {                       // Staffelei mit Bild
-      const [ex, ey] = K.P(0.42, 0.52), z = K.z;
+      const [ex, ey] = K.P(0.42, 0.52);
       kLine(K, [ex - 3 * z, ey], [ex, ey - 12 * z], '#8a5a3c', 1); kLine(K, [ex + 3 * z, ey], [ex, ey - 12 * z], '#8a5a3c', 1);
       g.fillStyle = C('#fffaf0'); g.fillRect(ex - 4 * z, ey - 12 * z, 8 * z, 6 * z);
       ['#e8705f', '#5f8fe8', '#58b36a', '#ffd23f'].forEach((c, i) => circle(ex - 2.4 * z + i * 1.6 * z, ey - 9.5 * z + (i & 1) * 1.6 * z, 1 * z, C(c)));
     }]);
-    if (s >= 2) parts.push([-0.1, 0.6, () => {           // Atelier mit Glasdach
-      const B = K.block({ a: -0.1, b: 0.62, ha: 0.16, hb: 0.14, h: 11, wall: '#fff6fa', roof: '#bfe6f5', type: 'flat' });
+    if (s >= 2) parts.push([-0.12, 0.7, () => {          // Atelier mit Glasdach
+      const B = K.block({ a: -0.12, b: 0.7, ha: 0.16, hb: 0.14, h: 13, wall: '#fff6fa', roof: '#bfe6f5', type: 'flat' });
       K.sideWins(B, 1, 0.2, 0.85);
-    }], [0.4, -0.5, () => kStatue(K, 0.4, -0.5, '#f7ecd4')]);
-    if (s === 3) parts.push([0.42, -0.2, () => kStatue(K, 0.44, -0.2, '#ffd8e6')], [0.35, 0.25, () => kitBush(K, 0.38, 0.25, 0.6, '#f28cb1')]);
+    }], [0.4, -0.52, () => kStatue(K, 0.4, -0.52, '#f7ecd4')]);
+    if (s === 3) parts.push([0.36, 0.26, () => kitBush(K, 0.38, 0.26, 0.6, '#f28cb1')]);
     K.scene(parts);
   },
 };

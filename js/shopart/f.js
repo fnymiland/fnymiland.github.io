@@ -1,38 +1,31 @@
 'use strict';
-// Ladenbilder, Gruppe f (Block 32) – trägt sich in SHOP_ART ein (siehe draw-shops.js: shopHouse, kText, faceAt)
-// Die großen Häuser: Museum (Tempel mit Dino-Skelett im Vorhof), Hotel (Leuchtschild H-O-T-E-L mit drei Sternen),
-// Grand Hotel (Palast mit Kuppeltürmen, Schriftzug und fünf Sternen), Markthalle (Glashalle mit Uhrtürmchen und Ständen).
-// Alles im Baukasten (vorn = +a); Wahrzeichen, die man von jeder Seite sehen soll, stehen hoch oder an der sichtbaren Ecke.
+// Ladenbilder, Gruppe f (Block 32, angeglichen in Block 35) – trägt sich in SHOP_ART ein (siehe draw-shops.js: faceAt).
+// Die großen Häuser in der Formensprache der alten Gebäude (helle warme Wände, klare Dachfarben, große ruhige Flächen,
+// keine Schrift): Museum (kleiner Tempel mit Säulenhalle und Giebel, Dino-Skelett im Vorhof), Hotel (Kurhotel mit
+// Mittelrisalit, Balkon und Sterne-Tafel), Grand Hotel (Palast mit zwei Kuppeltürmen und Säulen-Portikus),
+// Markthalle (lange Glashalle mit Eingangsportal und Uhr, zwei Stände davor).
+// Alles im Baukasten (vorn = +a); Schatten über ART_SHADOW (render.js).
 (function () {
   const lit = () => night > 0.15 && isLive();
-  // Lichtschein ohne Loch: macht Schilder nachts hell, ohne ihre Schrift zu überdecken
+  // Lichtschein ohne Loch (nachts)
   const halo = (x, y, r) => glowQuad([[x, y], [x, y], [x, y], [x, y]], r);
-  const bulb = (x, y, z) => glowQuad([[x - 0.8 * z, y - 0.8 * z], [x + 0.8 * z, y - 0.8 * z], [x + 0.8 * z, y + 0.8 * z], [x - 0.8 * z, y + 0.8 * z]], 5 * z);
-  // Leuchtschrift: nachts werden die Buchstaben ausgestanzt und vom Lichtschein dahinter (halo) hinterlegt, sie leuchten warm.
-  // Nicht beim Zeichnen eines Bildchens (GLOW_SINK): dort läge unter dem Loch später der Boden.
-  function glowText(x, y, text, size, col, z) {
-    kText(x, y, text, size, col, z);
-    if (!lit() || GLOW_SINK) return;
-    g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX); g.fillText(text, x, y); g.restore();
-  }
-  const GOLD = '#f2c14e', GOLD_D = '#c9a24a', FRUIT = ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a', '#c77dff'];
+  const WHITE = '#fffaf0', CREAM = '#fff4dc';
 
   // Goldener Stern mit dunklem Rand; r in Bildpunkten (schon × z)
   function star(x, y, r, z) {
     const pts = rr => { const out = []; for (let i = 0; i < 10; i++) { const w = -Math.PI / 2 + i * Math.PI / 5, k = i & 1 ? 0.46 : 1; out.push([x + Math.cos(w) * rr * k, y + Math.sin(w) * rr * k]); } return out; };
-    poly(pts(r + 0.9 * z), C('#a8741f'));
+    poly(pts(r + 0.8 * z), C('#b8862a'));
     poly(pts(r), C('#f6c945'));
-    circle(x - r * 0.15, y - r * 0.18, r * 0.2, C('#fff1b0'));
   }
   // Runde Säule (Fuß, Schaft mit Schattenseite, Kapitell) ab Höhe up0, h px hoch
-  function column(K, a, b, up0, h, col = '#fbf7ee', w = 2) {
+  function column(K, a, b, up0, h, col = WHITE, w = 2) {
     const [x, y] = K.P(a, b, up0), z = K.z, hw = w * z, top = y - h * z;
-    ellipse(x, y, hw * 1.45, hw * 0.65, C(shade(col, -0.2)));
+    ellipse(x, y, hw * 1.45, hw * 0.65, C(shade(col, -0.16)));
     g.fillStyle = C(col); g.fillRect(x - hw, top, hw * 2, h * z);
-    g.fillStyle = C(shade(col, -0.16)); g.fillRect(x + hw * 0.2, top, hw * 0.8, h * z);
-    g.fillStyle = C(shade(col, -0.04)); g.fillRect(x - hw * 1.5, top - 1.3 * z, hw * 3, 1.6 * z);
+    g.fillStyle = C(shade(col, -0.14)); g.fillRect(x + hw * 0.2, top, hw * 0.8, h * z);
+    g.fillStyle = C(shade(col, -0.04)); g.fillRect(x - hw * 1.5, top - 1.4 * z, hw * 3, 1.6 * z);
   }
-  // Bogenfenster auf einer Seite: Mitte tc und Breite tw (Anteil der Seite), Rechteck von h0 bis h1 (px), oben rund
+  // Bogen auf einer Seite: Mitte tc und Breite tw (Anteil der Seite), Rechteck von h0 bis h1 (px), oben rund
   function archPts(F, tc, tw, h0, h1, z, grow = 0) {
     const L = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]) || 1, gt = grow * z / L, t0 = tc - tw / 2 - gt, t1 = tc + tw / 2 + gt;
     const rise = (t1 - t0) * L * 0.55, pts = [faceAt(F, t0, (h0 - grow) * z)];
@@ -40,307 +33,253 @@
     pts.push(faceAt(F, t1, (h0 - grow) * z));
     return pts;
   }
-  function archWin(K, F, tc, tw, h0, h1, frame = '#efe0c8') {
-    const z = K.z, on = lit(), pts = archPts(F, tc, tw, h0, h1, z);
+  // Bogenfenster mit hellem Rahmen, ohne Sprossen
+  function archWin(K, F, tc, tw, h0, h1, frame = CREAM) {
+    const z = K.z, pts = archPts(F, tc, tw, h0, h1, z);
     poly(archPts(F, tc, tw, h0, h1, z, 1.1), K.wallCol(frame, F.n));
-    poly(pts, on ? '#ffd873' : C('#a8dcff'));
+    poly(pts, lit() ? '#ffd873' : C('#a8dcff'));
     glowQuad(pts, 16 * z);
-    g.strokeStyle = C('#6f8f88'); g.lineWidth = 0.5 * z; g.beginPath();
-    const m0 = faceAt(F, tc, h0 * z);                                                                        // Sprossen
-    g.moveTo(m0[0], m0[1]); g.lineTo(pts[5][0], pts[5][1]);
-    const l = faceAt(F, tc - tw / 2, h1 * z), r = faceAt(F, tc + tw / 2, h1 * z);
-    g.moveTo(l[0], l[1]); g.lineTo(r[0], r[1]); g.stroke();
   }
 
   // -------------------------------------------------------------------------
-  // Museum (3×3): Tempel mit Säulen rundherum, Giebel mit Relief, rot-blaue Banner; im Vorhof ein Langhals-Dino-Skelett
+  // Museum (3×3): kleiner Tempel mitten auf dem Platz – Cella mit Tür und zwei Bannern, davor sechs Säulen, darüber
+  // flaches Satteldach mit Giebelfeld. Im Vorhof (an der Seite, die man sieht) ein Langhals-Dino-Skelett auf dem Rasen.
   // -------------------------------------------------------------------------
-  const SAND = '#e9dcc0', SAND_D = '#d6c6a2', SLATE = '#a0a8b0', BONE = '#f7f1e2', BONE_D = '#d3c8ad';
-  function banner(K, p0, p1, col, n) {
-    const z = K.z, top = 34, bot = 17, m = [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2];
-    poly([K.P(p0[0], p0[1], top), K.P(p1[0], p1[1], top), K.P(p1[0], p1[1], bot), K.P(m[0], m[1], bot + 3.5), K.P(p0[0], p0[1], bot)], K.wallCol(col, n));
-    kLine(K, K.P(p0[0], p0[1], top + 0.5), K.P(p1[0], p1[1], top + 0.5), '#8a6a3a', 0.8);
-    const [ex, ey] = K.P(m[0], m[1], 27); circle(ex, ey, 1.9 * z, C(GOLD)); circle(ex, ey, 1 * z, K.wallCol(col, n));
+  const M_ROOF = '#6b7a8f', M_PLINTH = '#eadfc8';
+  // Banner, das vorn an einer Säule hängt (Stoffbahn quer zur Tür-Seite, unten mit Kerbe)
+  function banner(K, a, b, col) {
+    const top = 21, bot = 9, w = 0.075, n = [1, 0];
+    poly([K.P(a, b - w, top), K.P(a, b + w, top), K.P(a, b + w, bot), K.P(a, b, bot + 3), K.P(a, b - w, bot)], K.wallCol(col, n));
+    poly([K.P(a, b - w, top), K.P(a, b + w, top), K.P(a, b + w, top - 1.4), K.P(a, b - w, top - 1.4)], K.wallCol(shade(col, -0.18), n));
   }
   function museumTemple(K) {
-    const z = K.z, A0 = -0.45, HA = 0.9, HB = 1.32, aF = A0 + HA - 0.13, aB = A0 - HA + 0.13, bS = HB - 0.13;
-    K.block({ a: A0, b: 0, ha: HA, hb: HB, h: 6, wall: SAND_D, type: 'flat', roof: '#efe5cf' });                     // Sockel
-    const parts = [[A0 - 0.08, 0, () => {                                                                            // Innenraum
-      const B = K.block({ a: A0 - 0.08, b: 0, ha: HA - 0.38, hb: HB - 0.36, h: 30, lift: 6, wall: '#e0d0ac', type: 'none' });
+    const z = K.z, CA = -0.34, CHA = 0.44, CHB = 0.7;                   // Cella: a −0.78 … 0.1
+    const RA = -0.22, RHA = 0.56, RHB = 0.78, colA = RA + RHA - 0.07;   // Dach über Cella und Säulenhalle
+    K.block({ a: RA, b: 0, ha: RHA + 0.04, hb: RHB + 0.04, h: 3, wall: M_PLINTH, type: 'flat', roof: '#f4ecdc' });   // Sockel
+    const parts = [[CA, 0, () => {
+      const B = K.block({ a: CA, b: 0, ha: CHA, hb: CHB, h: 20, lift: 3, wall: CREAM, type: 'none' });
       const F = B.faces.front;
       if (F) {
-        faceQuad(F.P, F.Q, 0.4, 0.6, 0, 22 * z, K.wallCol(GOLD_D, F.n));
-        faceQuad(F.P, F.Q, 0.425, 0.575, 0, 16.5 * z, C('#7a4f2a'));
-        faceQuad(F.P, F.Q, 0.497, 0.503, 0, 16.5 * z, C('#5a3a20'));
-        windowOn(F.P, F.Q, 0.425, 0.575, 17.5 * z, 20.5 * z, z);
-        const [hx, hy] = faceAt(F, 0.5, 14 * z); halo(hx, hy, 40 * z);
+        faceQuad(F.P, F.Q, 0.4, 0.6, 0, 13.5 * z, K.wallCol('#eadcc0', F.n));                                // Türrahmen
+        faceQuad(F.P, F.Q, 0.43, 0.57, 0, 12 * z, C(DOOR_COL));
+        const [hx, hy] = faceAt(F, 0.5, 9 * z); halo(hx, hy, 32 * z);
       }
+      K.wins(B, 'back', 3, 0.3, 0.72, 0.15, 0.85);
+      for (const sd of ['right', 'left']) K.wins(B, sd, 2, 0.3, 0.72, 0.2, 0.8);
     }]];
-    const bs = i => -bS + i * (2 * bS / 7), as = j => aB + j * (aF - aB) / 4;
-    const addCol = (a, b) => parts.push([a, b, () => column(K, a, b, 6, 30)]);
-    for (let i = 0; i < 8; i++) { addCol(aF, bs(i)); addCol(aB, bs(i)); }
-    for (let j = 1; j < 4; j++) { addCol(as(j), bS); addCol(as(j), -bS); }
-    [[1, '#d8434a'], [3, '#3f6fc0'], [5, '#d8434a']].forEach(([i, col]) => {
-      const p0 = [aF, bs(i) + 0.07], p1 = [aF, bs(i + 1) - 0.07];
-      parts.push([aF, (p0[1] + p1[1]) / 2, () => banner(K, p0, p1, col, [1, 0])]);
-    });
-    for (const sb of [-1, 1]) [[1, '#3f6fc0'], [2, '#d8434a']].forEach(([j, col]) => {
-      const p0 = [as(j) + 0.07, sb * bS], p1 = [as(j + 1) - 0.07, sb * bS];
-      parts.push([(p0[0] + p1[0]) / 2, sb * bS, () => banner(K, p0, p1, col, [0, sb])]);
-    });
+    for (let i = 0; i < 6; i++) {
+      const b = -0.66 + i * 0.264, col = i === 1 ? '#e8705f' : i === 4 ? '#5f8fe8' : null;
+      parts.push([colA, b, () => { column(K, colA, b, 3, 20); if (col) banner(K, colA + 0.03, b, col); }]);   // zwei Banner an den Säulen
+    }
     K.scene(parts);
-    // Gebälk und flaches Satteldach; die Giebelseiten (vorn und hinten) bekommen Giebelfeld und Relief
-    const ea = HA - 0.05, eb = HB - 0.05, top = 43;
-    K.block({ a: A0, b: 0, ha: ea, hb: eb, h: 7, lift: 36, wall: '#f3eada', roof: SLATE, roofH: 18, type: 'gable', ridge: 'a', over: 1.05 });
+    // Gebälk und flaches Satteldach; die Giebelseiten (vorn und hinten) bekommen ein Giebelfeld mit runder Scheibe
+    const top = 26.5, rh = 11;
+    K.block({ a: RA, b: 0, ha: RHA, hb: RHB, h: 3.5, lift: 23, wall: WHITE, roof: M_ROOF, roofH: rh, type: 'gable', ridge: 'a', over: 1.06 });
     for (const sg of [1, -1]) {
       if (K.facing(sg, 0) <= 0.01) continue;
-      const a1 = A0 + sg * ea, n = [sg, 0];
-      poly([K.P(a1, -eb * 0.8, top + 1.8), K.P(a1, eb * 0.8, top + 1.8), K.P(a1, 0, top + 14)], K.wallCol('#d8c7a1', n));
-      const [mx, my] = K.P(a1, 0, top + 6.5); circle(mx, my, 3.2 * z, C(GOLD_D)); circle(mx, my, 2.1 * z, C('#f6dc8a'));
-      for (const [ab, up] of [[0, top + 18.6], [-eb * 1.02, top + 0.8], [eb * 1.02, top + 0.8]]) { const [tx, ty] = K.P(a1, ab, up); circle(tx, ty, 1.6 * z, C(GOLD)); }
+      const a1 = RA + sg * RHA, n = [sg, 0], k = 0.72, base = top + 1.2;
+      poly([K.P(a1, -RHB * k, base), K.P(a1, RHB * k, base), K.P(a1, 0, base + rh * k)], K.wallCol('#f1e5cc', n));
+      const [mx, my] = K.P(a1, 0, base + 3.2); circle(mx, my, 2.5 * z, K.wallCol('#e9a23b', n)); circle(mx, my, 1.4 * z, K.wallCol('#fff0b8', n));
     }
   }
   function museumStairs(K) {
-    for (let i = 0; i < 3; i++) {
-      const d = (3 - i) * 0.12;
-      K.block({ a: 0.45 + d / 2, b: 0, ha: d / 2, hb: 1.32, h: 2 * (i + 1), wall: i & 1 ? '#e2d4b6' : '#d6c6a2', type: 'flat', roof: '#f1e8d4' });
-    }
+    K.block({ a: 0.48, b: 0, ha: 0.1, hb: 0.46, h: 1.2, wall: '#e2d6bd', type: 'flat', roof: '#f1e8d4' });
+    K.block({ a: 0.43, b: 0, ha: 0.05, hb: 0.46, h: 2.2, wall: '#e8dcc4', type: 'flat', roof: '#f4ecdc' });
   }
   // Langhals-Skelett (Profil, zeigt zur Mitte des Grundstücks), auf einem Steinsockel
   function dino(K, a, b) {
-    K.block({ a, b, ha: 0.26, hb: 0.36, h: 4, wall: '#8e97a3', type: 'flat', roof: '#b5bdc7' });
-    const [cx0] = K.P(0, 0), [x0, y0] = K.P(a, b, 4), z = K.z * 1.2, d = x0 > cx0 + 1 ? -1 : 1;           // etwas größer als echt
+    K.block({ a, b, ha: 0.22, hb: 0.3, h: 4, wall: '#b8c0cc', type: 'flat', roof: '#d3d9e1' });
+    const [cx0] = K.P(0, 0), [x0, y0] = K.P(a, b, 4), z = K.z * 0.78, d = x0 > cx0 + 1 ? -1 : 1;
     const X = dx => x0 + dx * d * z, Y = up => y0 - up * z, pt = (dx, up) => [X(dx), Y(up)];
     const bez = (p0, p1, p2, t) => [(1 - t) * (1 - t) * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0], (1 - t) * (1 - t) * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1]];
-    kLine(K, pt(1, 0), pt(1, 16), '#6b7480', 0.8);                                                          // Stützen
-    kLine(K, pt(13, 0), pt(13, 30), '#6b7480', 0.8);
+    kLine(K, pt(1, 0), pt(1, 16), '#8a93a0', 0.9);                                                          // Stützen
+    kLine(K, pt(13, 0), pt(13, 30), '#8a93a0', 0.9);
+    const BONE = '#f7f1e2', BONE_D = '#ddd2b8';
     const hip = pt(-7, 19), tail = [pt(-21, 20), pt(-33, 5)], sh = pt(9, 21), sp = [hip, pt(1, 25), sh], neck = [sh, pt(22, 31), pt(19.5, 58)];
-    // erst alles als dunkle Umrisslinie, dann die Knochen darüber – so hebt sich das Skelett vom hellen Pflaster ab
+    // erst alles als Umrisslinie, dann die Knochen darüber – so hebt sich das Skelett vom hellen Pflaster ab
     for (const pass of [0, 1]) {
-      const o = pass ? 0 : 1, col = c => C(pass ? c : '#9a8d74');
+      const o = pass ? 0 : 1.1, col = c => C(pass ? c : '#a89b80');
       const curve = (p0, p1, p2, c, w) => { g.strokeStyle = col(c); g.lineWidth = (w + o) * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...p0); g.quadraticCurveTo(...p1, ...p2); g.stroke(); };
       const line = (p, q, c, w) => { g.strokeStyle = col(c); g.lineWidth = (w + o) * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...p); g.lineTo(...q); g.stroke(); };
-      const dot = (x, y, r, c) => circle(x, y, r + o * 0.5 * z, col(c));
       const oval = (x, y, rx, ry, c) => ellipse(x, y, rx + o * 0.5 * z, ry + o * 0.5 * z, col(c));
-      const leg = (hx, hy, kx, fx, c) => { line(pt(hx, hy), pt(kx, 8), c, 2.2); line(pt(kx, 8), pt(fx, 0.8), c, 1.8); oval(X(fx + 0.8), Y(0.6), 1.7 * z, 0.8 * z, c); };
+      const leg = (hx, hy, kx, fx, c) => { line(pt(hx, hy), pt(kx, 8), c, 2.4); line(pt(kx, 8), pt(fx, 0.8), c, 2); oval(X(fx + 0.8), Y(0.6), 2 * z, 1 * z, c); };
       leg(-5, 18, -6.5, -4.5, BONE_D); leg(10, 19, 11, 10, BONE_D);                                            // ferne Beine
-      curve(hip, tail[0], tail[1], BONE, 1.5);                                                                 // Schwanz
-      for (let i = 1; i <= 6; i++) { const [px, py] = bez(hip, tail[0], tail[1], i / 6); dot(px, py, (1.9 - i * 0.2) * z, BONE); }
-      for (let i = 0; i < 6; i++) {                                                                            // Rippen
-        const t = 0.14 + i * 0.145, [px, py] = bez(...sp, t), len = 11 - Math.abs(t - 0.5) * 9;
-        curve([px, py], [px + 2.8 * d * z, py + len * 0.55 * z], [px + 0.4 * d * z, py + len * z], i & 1 ? BONE : BONE_D, 1.3);
+      curve(hip, tail[0], tail[1], BONE, 2);                                                                   // Schwanz
+      for (let i = 0; i < 4; i++) {                                                                            // Rippen
+        const tt = 0.2 + i * 0.2, [px, py] = bez(...sp, tt), len = 11 - Math.abs(tt - 0.5) * 8;
+        curve([px, py], [px + 2.8 * d * z, py + len * 0.55 * z], [px + 0.4 * d * z, py + len * z], BONE, 1.6);
       }
-      curve(...sp, BONE, 2.5);                                                                                 // Rückgrat
-      oval(X(-7), Y(18), 3.5 * z, 2.5 * z, BONE);                                                              // Becken
-      oval(X(8), Y(18), 2.2 * z, 3.2 * z, BONE);                                                               // Schulter
-      curve(...neck, BONE, 2);                                                                                 // Hals
-      for (let i = 1; i <= 7; i++) { const [px, py] = bez(...neck, i / 7); dot(px, py, (2.4 - i * 0.14) * z, i & 1 ? BONE : '#efe8d6'); }
-      oval(X(21.5), Y(59.6), 4.2 * z, 2.6 * z, BONE);                                                          // Kopf
-      oval(X(25.2), Y(58.6), 2.8 * z, 1.7 * z, BONE);
+      curve(...sp, BONE, 3);                                                                                   // Rückgrat
+      oval(X(-7), Y(18), 3.6 * z, 2.6 * z, BONE);                                                              // Becken
+      oval(X(8), Y(18), 2.4 * z, 3.3 * z, BONE);                                                               // Schulter
+      curve(...neck, BONE, 2.6);                                                                               // Hals
+      oval(X(21.5), Y(59.4), 4.4 * z, 2.8 * z, BONE);                                                          // Kopf
+      oval(X(25), Y(58.6), 3 * z, 1.9 * z, BONE);
       leg(-9, 17, -7.8, -9.8, BONE); leg(7, 19, 8.3, 6.6, BONE);                                               // nahe Beine
     }
-    circle(X(20.8), Y(60.3), 1 * z, C('#6f6553'));
-    kLine(K, pt(19, 58), pt(26.8, 57.9), '#a89c82', 0.5);
-    halo(X(8), Y(30), 36 * z);
+    halo(X(8), Y(30), 30 * z);
   }
   SHOP_ART.museum = function (K, s, now, x, y, t) {
+    // Dino und Busch an die beiden vorderen Ecken; der Dino an die seitliche (nie hinter den Tempel, nie mitten davor)
+    const db = Math.abs(K.depth(0.95, 0.9)) < Math.abs(K.depth(0.95, -0.9)) ? 0.9 : -0.9;
     if (groundPart(() => {
-      K.rect(-1.47, -1.47, 1.47, 1.47, C('#e4d8bf'));                                                          // Pflaster
-      K.rect(0.8, -0.36, 1.47, 0.36, C('#d6c7a8'));                                                            // Weg zur Treppe
-      for (const a of [1.06, 1.3]) K.rect(a, -1.47, a + 0.014, 1.47, C('#d2c3a3'));
-      for (let i = -3; i <= 3; i++) K.rect(0.8, i * 0.4 - 0.007, 1.47, i * 0.4 + 0.007, C('#d2c3a3'));
-      K.rect(0.92, 0.5, 1.42, 1.42, C('#9fd07a'));                                                             // Rasen
-      K.rect(0.97, 0.55, 1.37, 1.37, C('#a8d983'));
+      K.rect(-1.47, -1.47, 1.47, 1.47, C('#ece3cf'));                                                          // Pflaster
+      K.rect(0.5, -0.32, 1.47, 0.32, C('#e2d6bc'));                                                            // Weg zur Treppe
+      for (const sb of [-1, 1]) { K.rect(0.6, sb * 0.55, 1.42, sb * 1.42, C('#9fd07a')); K.rect(0.65, sb * 0.6, 1.37, sb * 1.37, C('#a8d983')); }   // Rasen
     })) return;
-    const parts = [
-      [-0.45, 0, () => museumTemple(K)],
-      [0.63, 0, () => museumStairs(K)],
-      [1.02, -0.92, () => dino(K, 1.02, -0.92)],
-      [1.15, 0.8, () => kitBush(K, 1.15, 0.8, 0.85, '#58ad52')],
-      [1.2, 1.18, () => kitBush(K, 1.2, 1.18, 0.6, '#4f9e4a')],
-    ];
-    for (const sb of [-1, 1]) parts.push([1.25, sb * 0.42, () => { const [lx, ly] = K.P(1.25, sb * 0.42); lampPost(lx, ly, K.z, 15); }]);
-    K.scene(parts);
+    K.scene([
+      [-0.22, 0, () => museumTemple(K)],
+      [0.48, 0, () => museumStairs(K)],
+      [0.95, db, () => dino(K, 0.95, db)],
+      [1.02, -db, () => kitBush(K, 1.02, -db, 0.9, '#58ad52')],
+    ]);
   };
   GROUND_TYPES.add('museum');
+  ART_SHADOW.museum = [38, 0.55];
 
   // -------------------------------------------------------------------------
-  // Hotel (2×2): hohes cremefarbenes Haus, blaues Mansarddach, Balkone mit Blumen; senkrechtes Leuchtschild H-O-T-E-L
-  // an der sichtbaren vorderen Ecke, darüber drei goldene Sterne; Vordach, roter Teppich, Fahnen
+  // Hotel (2×2): breites Kurhotel, drei Obergeschosse unter einem blauen Mansarddach; in der Mitte ein Risalit mit
+  // Giebel (runde Scheibe), Balkon und blauer Tafel mit drei goldenen Sternen über dem Vordach; davor roter Teppich
+  // und zwei Kugelbäumchen im Topf.
   // -------------------------------------------------------------------------
-  const H_WALL = '#fff6e4', H_BLUE = '#3e6fb0', H_BASE = '#ecdcbf';
-  function balcony(F, t0, t1, up, z) {
-    faceQuad(F.P, F.Q, t0, t1, up - 1.3 * z, up, C('#d6c8ae'));
-    g.strokeStyle = C(H_BLUE); g.lineWidth = 0.55 * z; g.lineCap = 'round'; g.beginPath();
-    for (let k = 0; k <= 4; k++) { const p = faceAt(F, t0 + (t1 - t0) * k / 4, up); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] - 3.6 * z); }
-    const l = faceAt(F, t0, up + 3.6 * z), r = faceAt(F, t1, up + 3.6 * z); g.moveTo(l[0], l[1]); g.lineTo(r[0], r[1]); g.stroke();
-    for (let k = 0; k < 3; k++) {
-      const p = faceAt(F, t0 + (t1 - t0) * (0.2 + k * 0.3), up + 4.2 * z);
-      circle(p[0], p[1] + 0.6 * z, 1.3 * z, C('#5aa651'));
-      circle(p[0], p[1] - 0.2 * z, 1 * z, C(['#ff6b8a', '#ffffff', '#ff9fb8'][k]));
-    }
-  }
+  const H_ROOF = '#5f8fe8', H_BASE = '#f8e8c8';
   function topiary(K, a, b) {
     const [px, py] = K.P(a, b), z = K.z;
-    poly([[px - 2.4 * z, py - 4 * z], [px + 2.4 * z, py - 4 * z], [px + 1.7 * z, py], [px - 1.7 * z, py]], C('#c77b55'));
-    circle(px, py - 7.6 * z, 3.4 * z, C('#4f9e4a')); circle(px - 1 * z, py - 8.6 * z, 1.7 * z, C('#6fbf5f'));
+    poly([[px - 2.4 * z, py - 4 * z], [px + 2.4 * z, py - 4 * z], [px + 1.7 * z, py], [px - 1.7 * z, py]], C('#e8705f'));
+    circle(px, py - 7.6 * z, 3.4 * z, C('#58b36a')); circle(px - 1 * z, py - 8.6 * z, 1.8 * z, C('#7cc46a'));
   }
-  function hotelSign(K, ca, cb, sa, sb) {
-    const z = K.z, on = lit(), [x, yg] = K.P(sa, sb), y0 = yg - 22 * z, y1 = yg - 72 * z, w = 5.4 * z;
-    kLine(K, K.P(ca, cb, 25), [x, y0 - 3 * z], '#6b7280', 0.9);                                             // Halter
-    kLine(K, K.P(ca, cb, 67), [x, y1 + 3 * z], '#6b7280', 0.9);
-    g.fillStyle = C('#e2ae3a'); g.beginPath(); g.roundRect(x - w - 1.3 * z, y1 - 1.3 * z, 2 * w + 2.6 * z, y0 - y1 + 2.6 * z, 2.4 * z); g.fill();
-    g.fillStyle = C(on ? '#1f2f5c' : H_BLUE); g.beginPath(); g.roundRect(x - w, y1, 2 * w, y0 - y1, 1.8 * z); g.fill();
-    if (on) halo(x, (y0 + y1) / 2, 34 * z);
-    'HOTEL'.split('').forEach((ch, i) => glowText(x, y1 + (i + 0.56) * (y0 - y1) / 5, ch, 8.6, on ? '#fff3a8' : '#ffffff', z));
-    if (on) for (let k = 0; k < 6; k++) for (const sx of [-1, 1]) {                                            // nachts Glühbirnchen am Rahmen
-      const bx = x + sx * (w + 0.65 * z), by = y1 + (k + 0.5) * (y0 - y1) / 6;
-      circle(bx, by, 0.55 * z, '#fff6c8'); bulb(bx, by, z);
+  // Gauben im unteren Teil eines Mansarddachs (B aus K.block, over wie dort): je Seite [Normale, Stellen −1 … 1]
+  function dormers(K, B, over, sides, wall, roof) {
+    const z = K.z, top = B.lift + B.h, ea = B.ha * over * 0.84, eb = B.hb * over * 0.84, on = lit(), w = 0.08;
+    for (const [n, spots] of sides) {
+      if (K.facing(...n) <= 0.01) continue;
+      for (const u of spots) {
+        const pt = (off, up) => n[0] ? K.P(B.a + n[0] * ea, B.b + u * B.hb + off, up) : K.P(B.a + u * B.ha + off, B.b + n[1] * eb, up);
+        poly([pt(-w, top + 1), pt(w, top + 1), pt(w, top + 7), pt(-w, top + 7)], K.wallCol(wall, n));
+        const win = [pt(-w * 0.6, top + 2), pt(w * 0.6, top + 2), pt(w * 0.6, top + 6), pt(-w * 0.6, top + 6)];
+        poly(win, on ? '#ffd873' : C('#a8dcff')); glowQuad(win, 10 * z);
+        poly([pt(-w * 1.3, top + 6.6), pt(w * 1.3, top + 6.6), pt(0, top + 10.6)], K.wallCol(roof, n));
+      }
     }
-    [-1, 0, 1].forEach(k => star(x + k * 6.6 * z, y1 - (k ? 5.4 : 8.2) * z, 3.1 * z, z));
   }
   SHOP_ART.hotel = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(0.5, -0.97, 0.98, 0.97, C('#e7ddcb'));                                                          // Vorplatz
-      K.rect(0.5, -0.17, 0.98, 0.17, C('#e3c56b'));                                                          // Teppich mit Goldrand
-      K.rect(0.5, -0.14, 0.98, 0.14, C('#c8323c'));
+      K.rect(0.3, -0.97, 0.98, 0.97, C('#ece3cf'));                                                          // Vorplatz
+      K.rect(0.5, -0.13, 0.98, 0.13, C('#e0605a'));                                                          // roter Teppich
     })) return;
-    const A0 = -0.2, HA = 0.7, HB = 0.78, H = 64;
+    const A0 = -0.2, HA = 0.45, HB = 0.88, H = 30, FL = [10, 20];       // Unterkanten der Obergeschosse (das dritte ist im Dach)
+    const RA = 0.26, RHA = 0.12, RHB = 0.3;                              // Mittelrisalit (a 0.14 … 0.38)
+    const base = (K, B) => { for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, 1.6 * K.z, 10 * K.z, K.wallCol(H_BASE, F.n)); };
     const parts = [[A0, 0, () => {
-      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: H_WALL, roof: H_BLUE, roofH: 13, type: 'mansard', over: 1.05, entry: true });
-      for (const F of Object.values(B.faces)) if (F) {
-        faceQuad(F.P, F.Q, 0, 1, 1.6 * z, 15 * z, K.wallCol(H_BASE, F.n));                                   // Erdgeschoss
-        faceQuad(F.P, F.Q, 0, 1, 14.4 * z, 15.8 * z, K.wallCol(H_BLUE, F.n));                                // Gesims
-      }
+      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: CREAM, roof: H_ROOF, roofH: 14, type: 'mansard', over: 1.06, entry: true });
+      base(K, B);
       const F = B.faces.front;
       if (F) {
-        windowOn(F.P, F.Q, 0.07, 0.35, 3 * z, 12 * z, z); windowOn(F.P, F.Q, 0.65, 0.93, 3 * z, 12 * z, z);   // Lobby
-        faceQuad(F.P, F.Q, 0.41, 0.59, 0, 13 * z, K.wallCol(GOLD_D, F.n));
-        windowOn(F.P, F.Q, 0.435, 0.565, 0, 11.5 * z, z);
-        faceQuad(F.P, F.Q, 0.497, 0.503, 0, 11.5 * z, C('#8a6a3a'));
+        windowOn(F.P, F.Q, 0.07, 0.25, 2.5 * z, 8 * z, z); windowOn(F.P, F.Q, 0.75, 0.93, 2.5 * z, 8 * z, z);   // Lobby
+        FL.forEach((b0, f) => {
+          for (const [t0, t1] of [[0.07, 0.16], [0.2, 0.29], [0.71, 0.8], [0.84, 0.93]]) {
+            windowOn(F.P, F.Q, t0, t1, (b0 + 2.5) * z, (b0 + 7.5) * z, z);
+            if (!f) flowerBox(F.P, F.Q, t0, t1, (b0 + 2.5) * z, z);
+          }
+        });
       }
-      for (const sd of ['right', 'left', 'back']) K.wins(B, sd, 3, 3 / H, 12 / H);
-      for (let f = 0; f < 4; f++) {                                                                        // vier Obergeschosse
-        const base = 15.8 + f * 12;
-        if (F) for (let i = 0; i < 4; i++) {
-          const t0 = 0.08 + 0.21 * (i + 0.16), t1 = 0.08 + 0.21 * (i + 0.84);
-          windowOn(F.P, F.Q, t0, t1, (base + 3) * z, (base + 10) * z, z);
-          if (i === 1 || i === 2) balcony(F, t0 - 0.025, t1 + 0.025, (base + 2.6) * z, z);
-          else flowerBox(F.P, F.Q, t0, t1, (base + 3) * z, z);
-        }
-        K.sideWins(B, 3, (base + 3) / H, (base + 10) / H, f & 1);
-      }
+      const row = (h0, h1) => { K.wins(B, 'back', 5, h0, h1); for (const sd of ['right', 'left']) K.wins(B, sd, 2, h0, h1); };
+      row(2.5 / H, 8 / H);
+      for (const b0 of FL) row((b0 + 2.5) / H, (b0 + 7.5) / H);
+      dormers(K, B, 1.06, [[[1, 0], [-0.62, 0.62]], [[-1, 0], [-0.6, 0, 0.6]], [[0, 1], [0]], [[0, -1], [0]]], CREAM, H_ROOF);
     }]];
-    parts.push([0.66, 0, () => {                                                                           // Vordach
-      const z = K.z;
-      for (const sb of [-1, 1]) kPost(K, 0.82, sb * 0.21, 13, GOLD_D, 0.9);
-      K.block({ a: 0.66, b: 0, ha: 0.17, hb: 0.25, h: 2.6, lift: 13, wall: H_BLUE, type: 'flat', roof: '#5b8ad0', trim: GOLD });
-      const [lx, ly] = K.P(0.8, 0, 12.4); circle(lx, ly, 0.9 * z, lit() ? '#fff6c8' : C('#fff2c0')); kGlow(lx, ly, z, 22);
+    parts.push([RA, 0, () => {                                                                             // Mittelrisalit
+      const z = K.z, R = K.block({ a: RA, b: 0, ha: RHA, hb: RHB, h: H, wall: CREAM, roof: H_ROOF, roofH: 10, type: 'gable', ridge: 'a', over: 1.1 });
+      base(K, R);
+      const F = R.faces.front;
+      if (F) {
+        faceQuad(F.P, F.Q, 0.32, 0.68, 0, 8.6 * z, K.wallCol('#e9d6b0', F.n));
+        faceQuad(F.P, F.Q, 0.36, 0.64, 0, 7.8 * z, C(DOOR_COL));
+        windowOn(F.P, F.Q, 0.4, 0.6, 3.8 * z, 6.8 * z, z);                                                  // Glas in der Tür
+        faceQuad(F.P, F.Q, 0.12, 0.88, 11 * z, 17.4 * z, K.wallCol(H_ROOF, F.n));                          // Sterne-Tafel
+        for (const k of [-1, 0, 1]) { const [sx, sy] = faceAt(F, 0.5 + k * 0.24, (k ? 13.9 : 14.4) * z); star(sx, sy, 2.1 * z, z); }
+        for (const [t0, t1] of [[0.16, 0.42], [0.58, 0.84]]) windowOn(F.P, F.Q, t0, t1, 22.5 * z, 27.5 * z, z);
+        const [gx, gy] = K.P(RA + RHA, 0, H + 3.4);                                                         // runde Scheibe im Giebel
+        circle(gx, gy, 2.7 * z, K.wallCol('#ffffff', F.n)); circle(gx, gy, 1.9 * z, lit() ? '#ffd873' : C('#a8dcff'));
+        halo(gx, gy, 12 * z);
+      }
+      for (const sd of ['right', 'left']) for (const b0 of FL) K.wins(R, sd, 1, (b0 + 2.5) / H, (b0 + 7.5) / H, 0.25, 0.75);
+      if (F) K.block({ a: RA + RHA + 0.04, b: 0, ha: 0.04, hb: RHB * 0.84, h: 3, lift: FL[1], wall: H_ROOF, type: 'flat', roof: '#9dbcf2' });   // Balkon
     }]);
-    for (const sb of [-1, 1]) {
-      parts.push([0.68, sb * 0.38, () => topiary(K, 0.68, sb * 0.38)]);
-      parts.push([0.88, sb * 0.84, () => kFlag(K, 0.88, sb * 0.84, 22, sb < 0 ? H_BLUE : '#d8434a')]);
-    }
-    // Leuchtschild an der vorderen Ecke, die man am besten sieht (auch wenn die Tür nach hinten zeigt)
-    const [ca, cb] = [[A0 + HA, HB], [A0 + HA, -HB]].reduce((p, q) => K.depth(...q) > K.depth(...p) ? q : p);
-    const sa = ca + 0.1, sb2 = cb + Math.sign(cb) * 0.1;
-    parts.push([sa, sb2, () => hotelSign(K, ca, cb, sa, sb2)]);
+    parts.push([0.47, 0, () => {                                                                           // Vordach auf zwei Pfosten
+      const z = K.z;
+      for (const sb of [-1, 1]) kPost(K, 0.54, sb * 0.19, 8.6, '#6b7a8f', 1);
+      K.block({ a: 0.47, b: 0, ha: 0.09, hb: 0.22, h: 1.8, lift: 8.6, wall: H_ROOF, type: 'flat', roof: '#9dbcf2' });
+      const [lx, ly] = K.P(0.5, 0, 8.2); kGlow(lx, ly, z, 18);
+    }]);
+    for (const sb of [-1, 1]) parts.push([0.64, sb * 0.44, () => topiary(K, 0.64, sb * 0.44)]);
     K.scene(parts);
   };
   GROUND_TYPES.add('hotel');
+  ART_SHADOW.hotel = [46, 0.15];
 
   // -------------------------------------------------------------------------
-  // Grand Hotel (3×3): Palast in Creme mit grün-kupfernen Dächern, zwei Ecktürme mit Kuppeln, Säulen-Portikus,
-  // roter Teppich, zwei Springbrunnen; auf dem Dach der goldene Schriftzug GRAND HOTEL mit fünf Sternen
+  // Grand Hotel (3×3): Palast in hellem Gelb mit türkisen Kupferdächern – Hauptbau mit Mansarddach und Gauben,
+  // zwei Ecktürme mit Kuppel, weißer Säulen-Portikus mit Giebel; im Vorhof roter Teppich und zwei Springbrunnen.
   // -------------------------------------------------------------------------
-  const G_WALL = '#f5f0e6', G_ROOF = '#7fa39a', G_TRIM = '#e9c46a';
-  function fountain(K, a, b, now) {
+  const G_WALL = '#fff0b8', G_ROOF = '#2f9e9e', G_BAND = '#f4e2a6';
+  function fountain(K, a, b) {
     const [x, y] = K.P(a, b), z = K.z, rx = 0.2 * Math.SQRT2 * TW / 2 * z, ry = rx / 2, hh = 3.5 * z;
-    ellipse(x, y, rx, ry, C('#b9b0a0'));
-    g.fillStyle = C('#d9d1c1'); g.fillRect(x - rx, y - hh, 2 * rx, hh);
-    ellipse(x, y - hh, rx, ry, C('#efe8da'));
+    ellipse(x, y, rx, ry, C('#d9d1c1'));
+    g.fillStyle = C('#e8e1d3'); g.fillRect(x - rx, y - hh, 2 * rx, hh);
+    ellipse(x, y - hh, rx, ry, C('#f4efe4'));
     ellipse(x, y - hh, rx * 0.84, ry * 0.78, C('#7fc9e6'));
-    g.fillStyle = C('#e6dfd0'); g.fillRect(x - 1 * z, y - hh - 8 * z, 2 * z, 8 * z);
-    ellipse(x, y - hh - 8 * z, 4 * z, 1.6 * z, C('#efe8da')); ellipse(x, y - hh - 8.3 * z, 3.1 * z, 1.1 * z, C('#9ad6ee'));
-    const top = y - hh - 16 * z;
-    g.strokeStyle = 'rgba(235,250,255,0.9)'; g.lineWidth = 0.9 * z; g.lineCap = 'round'; g.beginPath();
-    g.moveTo(x, y - hh - 8 * z); g.lineTo(x, top);
-    for (const s of [-1, 1]) { g.moveTo(x, top); g.quadraticCurveTo(x + s * 5 * z, top - 1.5 * z, x + s * 7.5 * z, y - hh - 1 * z); }
+    g.fillStyle = C('#ece6d8'); g.fillRect(x - 1.2 * z, y - hh - 7 * z, 2.4 * z, 7 * z);
+    ellipse(x, y - hh - 7 * z, 4.2 * z, 1.8 * z, C('#f4efe4')); ellipse(x, y - hh - 7.3 * z, 3.2 * z, 1.2 * z, C('#9ad6ee'));
+    const top = y - hh - 13 * z;                                                                            // Fontäne (steht still)
+    g.strokeStyle = 'rgba(235,250,255,0.95)'; g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.beginPath();
+    g.moveTo(x, y - hh - 7 * z); g.lineTo(x, top);
+    for (const sd of [-1, 1]) { g.moveTo(x, top); g.quadraticCurveTo(x + sd * 4.5 * z, top - 1.2 * z, x + sd * 6.5 * z, y - hh - 1.2 * z); }
     g.stroke();
-    for (let i = 0; i < 4; i++) { const ph = (now / 700 + i / 4) % 1, s = i & 1 ? 1 : -1; circle(x + s * (1 + ph * 6) * z, top + ph * ph * 14 * z, 0.7 * z, 'rgba(235,250,255,0.9)'); }
-  }
-  function grandSign(K, a, b, up) {
-    const z = K.z, on = lit(), [x, yb] = K.P(a, b, up), w = 33 * z, h = 12.5 * z;
-    for (const sx of [-1, 1]) kLine(K, [x + sx * 22 * z, yb + 5 * z], [x + sx * 22 * z, yb], '#6b7280', 1);
-    g.fillStyle = C('#c9a24a'); g.beginPath(); g.roundRect(x - w - 1.3 * z, yb - h - 1.3 * z, 2 * w + 2.6 * z, h + 2.6 * z, 2.4 * z); g.fill();
-    g.fillStyle = C(on ? '#1f3f3a' : '#2d5a52'); g.beginPath(); g.roundRect(x - w, yb - h, 2 * w, h, 1.8 * z); g.fill();
-    if (on) halo(x, yb - h / 2, 46 * z);
-    glowText(x, yb - h / 2 + 0.4 * z, 'GRAND HOTEL', 7.4, on ? '#fff3a8' : '#f6c945', z);
-    if (on) for (let k = 0; k < 7; k++) { const bx = x - w + (k + 0.5) * (2 * w) / 7; for (const by of [yb - h - 0.65 * z, yb + 0.65 * z]) { circle(bx, by, 0.5 * z, '#fff6c8'); bulb(bx, by, z); } }
-    for (let k = 0; k < 5; k++) star(x + (k - 2) * 8.5 * z, yb - h - (6 + (2 - Math.abs(k - 2)) * 1.6) * z, 3.1 * z, z);
   }
   SHOP_ART.grandhotel = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(0.4, -1.47, 1.47, 1.47, C('#ebe2cf'));                                                          // Vorhof (Kies)
+      K.rect(0.4, -1.47, 1.47, 1.47, C('#efe6d2'));                                                          // Vorhof (Kies)
       for (const sb of [-1, 1]) { K.oval(1.02, sb * 0.86, 0.36, C('#9fd07a')); K.oval(1.02, sb * 0.86, 0.3, C('#a8d983')); }
-      K.rect(0.6, -0.17, 1.47, 0.17, C('#e3c56b'));                                                          // roter Teppich
-      K.rect(0.6, -0.14, 1.47, 0.14, C('#c8323c'));
+      K.rect(0.62, -0.14, 1.47, 0.14, C('#e0605a'));                                                         // roter Teppich
     })) return;
-    const A0 = -0.45, HA = 0.85, HB = 0.8, H = 48, parts = [];
+    const A0 = -0.45, HA = 0.8, HB = 0.8, H = 44, FL = [14, 24, 34], TB = 1.08, parts = [];
     parts.push([A0, 0, () => {                                                                             // Hauptbau
-      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: G_WALL, roof: G_ROOF, roofH: 14, type: 'mansard', over: 1.025, trim: G_TRIM });
-      for (let f = 0; f < 5; f++) {
-        const h0 = (f * 9.4 + 2.4) / H, h1 = (f * 9.4 + 7.6) / H;
-        K.wins(B, 'front', 6, h0, h1, 0.06, 0.94, f === 0 ? [2, 3] : []);
-        K.sideWins(B, 5, h0, h1);
-      }
-      for (const F of Object.values(B.faces)) if (F) {
-        faceQuad(F.P, F.Q, 0, 1, 9.4 * z, 10.8 * z, K.wallCol('#e2d6bf', F.n));                              // Gesims
-        faceQuad(F.P, F.Q, 0.03, 0.97, 20.9 * z, 22.6 * z, K.wallCol(G_TRIM, F.n));                           // durchgehender Balkon
-      }
-      K.door(B, 'front', 0.44, 0.56, 0.16, '#6b4a2e');
-      const ea = HA * 1.025 * 0.84, eb = HB * 1.025 * 0.84, on = lit();                               // Gauben im Mansarddach
-      for (const [n, cnt] of [[[1, 0], 4], [[-1, 0], 4], [[0, 1], 4], [[0, -1], 4]]) {
-        if (K.facing(...n) <= 0.01) continue;
-        for (let i = 0; i < cnt; i++) {
-          const u = (i - (cnt - 1) / 2) / ((cnt - 1) / 2) * 0.72, w = 0.075;
-          const pt = (off, up) => n[0] ? K.P(A0 + n[0] * ea, u * HB + off, up) : K.P(A0 + u * HA + off, n[1] * eb, up);
-          poly([pt(-w, 49), pt(w, 49), pt(w, 55), pt(-w, 55)], K.wallCol(G_WALL, n));
-          const win = [pt(-w * 0.6, 50), pt(w * 0.6, 50), pt(w * 0.6, 54), pt(-w * 0.6, 54)];
-          poly(win, on ? '#ffd873' : C('#a8dcff')); glowQuad(win, 10 * z);
-          poly([pt(-w * 1.25, 54.6), pt(w * 1.25, 54.6), pt(0, 58.4)], K.wallCol(G_ROOF, n));
-        }
-      }
+      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: G_WALL, roof: G_ROOF, roofH: 14, type: 'mansard', over: 1.03, entry: true });
+      for (const F of Object.values(B.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, 12.6 * z, 14 * z, K.wallCol(G_BAND, F.n));   // Gesims
+      K.wins(B, 'front', 5, 3 / H, 10.5 / H, 0.06, 0.94, [2]);
+      K.sideWins(B, 4, 3 / H, 10.5 / H);
+      for (const b0 of FL) { K.wins(B, 'front', 5, (b0 + 2.4) / H, (b0 + 8) / H, 0.06, 0.94); K.sideWins(B, 4, (b0 + 2.4) / H, (b0 + 8) / H); }
+      K.door(B, 'front', 0.45, 0.55, 0.2, DOOR_COL);
+      dormers(K, B, 1.03, [[1, 0], [-1, 0], [0, 1], [0, -1]].map(n => [n, [-0.62, 0, 0.62]]), WHITE, G_ROOF);
     }]);
-    parts.push([A0, 0, () => grandSign(K, -0.05, 0, 63)]);                                                 // Schriftzug auf dem Dach
-    for (const sb of [-1, 1]) parts.push([0.1, sb * 1.12, () => {                                           // Ecktürme mit Kuppel
-      const z = K.z, Bt = K.block({ a: 0.1, b: sb * 1.12, ha: 0.36, hb: 0.3, h: 60, wall: G_WALL, roof: '#ece5d6', type: 'flat', trim: G_TRIM });
-      for (let f = 0; f < 5; f++) { const h0 = (f * 11.4 + 3) / 60, h1 = (f * 11.4 + 9) / 60; K.wins(Bt, 'front', 2, h0, h1); K.sideWins(Bt, 2, h0, h1); }
-      K.block({ a: 0.1, b: sb * 1.12, ha: 0.25, hb: 0.21, h: 4, lift: 60, wall: '#e2d6bf', type: 'flat', roof: G_ROOF });
-      const [dx, dy] = kDome(K, 0.1, sb * 1.12, 64, 13, G_ROOF);
-      kLine(K, [dx, dy], [dx, dy - 7 * z], GOLD_D, 1); circle(dx, dy - 7.6 * z, 1.6 * z, C(GOLD));
+    for (const sb of [-1, 1]) parts.push([0.1, sb * TB, () => {                                             // Ecktürme mit Kuppel
+      const z = K.z, TH = 54, Bt = K.block({ a: 0.1, b: sb * TB, ha: 0.32, hb: 0.28, h: TH, wall: G_WALL, roof: WHITE, type: 'flat' });
+      for (const F of Object.values(Bt.faces)) if (F) faceQuad(F.P, F.Q, 0, 1, 12.6 * z, 14 * z, K.wallCol(G_BAND, F.n));
+      K.wins(Bt, 'front', 2, 3 / TH, 10.5 / TH); K.sideWins(Bt, 2, 3 / TH, 10.5 / TH);
+      for (const b0 of [...FL, 44]) { K.wins(Bt, 'front', 2, (b0 + 2.4) / TH, (b0 + 8) / TH); K.sideWins(Bt, 2, (b0 + 2.4) / TH, (b0 + 8) / TH); }
+      K.block({ a: 0.1, b: sb * TB, ha: 0.25, hb: 0.22, h: 3, lift: TH, wall: WHITE, type: 'flat', roof: G_ROOF });
+      const [dx, dy] = kDome(K, 0.1, sb * TB, TH + 3, 12, G_ROOF);
+      kLine(K, [dx, dy], [dx, dy - 5 * z], '#6b7a8f', 1); circle(dx, dy - 5.6 * z, 1.7 * z, C('#e9a23b'));
     }]);
     parts.push([0.56, 0, () => {                                                                           // Portikus
       const z = K.z;
-      K.block({ a: 0.57, b: 0, ha: 0.21, hb: 0.47, h: 2.5, wall: '#ddd3bf', type: 'flat', roof: '#f1ebdf' });
-      K.scene([-0.36, -0.12, 0.12, 0.36].map(cb => [0.69, cb, () => column(K, 0.69, cb, 2.5, 23.5, '#fffdf7', 1.7)]));
-      const R = K.block({ a: 0.56, b: 0, ha: 0.19, hb: 0.45, h: 4, lift: 26, wall: G_WALL, roof: G_ROOF, roofH: 10, type: 'gable', ridge: 'a', over: 1.06, trim: G_TRIM });
-      if (R.faces.front) { const [mx, my] = K.P(0.75, 0, 33.5); circle(mx, my, 2.4 * z, C(GOLD_D)); circle(mx, my, 1.5 * z, C('#f6dc8a')); }
+      K.block({ a: 0.57, b: 0, ha: 0.21, hb: 0.47, h: 2.5, wall: '#e6dcc8', type: 'flat', roof: '#f4efe4' });
+      K.scene([-0.36, -0.12, 0.12, 0.36].map(cb => [0.69, cb, () => column(K, 0.69, cb, 2.5, 23.5, WHITE, 1.8)]));
+      K.block({ a: 0.56, b: 0, ha: 0.19, hb: 0.45, h: 4, lift: 26, wall: WHITE, roof: G_ROOF, roofH: 10, type: 'gable', ridge: 'a', over: 1.06 });
       for (const cb of [-0.2, 0.2]) { const [lx, ly] = K.P(0.72, cb, 18); kGlow(lx, ly, z, 18); }
     }]);
-    for (const sb of [-1, 1]) {
-      parts.push([1.02, sb * 0.86, () => fountain(K, 1.02, sb * 0.86, now)]);
-      parts.push([1.2, sb * 0.3, () => { const [lx, ly] = K.P(1.2, sb * 0.3); lampPost(lx, ly, K.z, 16); }]);
-    }
+    for (const sb of [-1, 1]) parts.push([1.02, sb * 0.86, () => fountain(K, 1.02, sb * 0.86)]);
     K.scene(parts);
   };
   GROUND_TYPES.add('grandhotel');
+  ART_SHADOW.grandhotel = [52, 0.3];
 
   // -------------------------------------------------------------------------
-  // Markthalle (2×3): Backsteinsockel mit Bogenfenstern, großes Glas-Tonnendach mit grün-kupfernen Rippen, Dachlaterne;
-  // vorn ein Portal mit Eingangsbogen, Schriftzug MARKT und Uhrtürmchen (Uhr auf jeder Seite); davor zwei Marktstände
+  // Markthalle (2×3): lange, niedrige Halle aus hellem Backstein mit Bogenfenstern und großem Glas-Tonnendach
+  // (türkise Rippen); vorn ein höheres Portal mit Rundbogen-Tor und Uhr; davor zwei Marktstände.
   // -------------------------------------------------------------------------
-  const BRICK = '#b8664a', COPPER = '#7fa39a', GLASS = '#cfe8ea', STONE_L = '#efe0c8';
+  const MH_WALL = '#ffd1b3', MH_RIB = '#2f9e9e', GLASS = '#d4ecee', FRUIT = ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a', '#c77dff'];
   function glassBarrel(K, a, b, R, L, ha, hb, top, roofH, ribs) {
     const z = K.z, N = 10;
     const pt = (s, th, r = R) => K.P(a + Math.cos(th) * r, b + s, top + Math.sin(th) * roofH * r / R);
@@ -352,47 +291,41 @@
     strips.sort((p, q) => p[0] - q[0]);
     for (const [, t0, t1, amt] of strips) {
       poly([pt(-L, t0), pt(L, t0), pt(L, t1), pt(-L, t1)], C(shade(GLASS, amt)));
-      const mid = (t0 + t1) / 2;
-      if (mid > 0.9 && mid < 1.6) { const q0 = pt(-L * 0.7, mid), q1 = pt(-L * 0.35, mid); kLine(K, q0, q1, '#ffffff', 0.9); }   // Glanz
-      g.strokeStyle = C(shade(COPPER, amt * 0.6 - 0.05)); g.lineWidth = 1 * z; g.lineCap = 'round'; g.beginPath();
+      g.strokeStyle = C(shade(MH_RIB, amt * 0.5)); g.lineWidth = 1.1 * z; g.lineCap = 'round'; g.beginPath();
       for (let j = 0; j <= ribs; j++) { const s = -L + 2 * L * j / ribs, p0 = pt(s, t0), p1 = pt(s, t1); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
       g.stroke();
-      g.lineWidth = 0.5 * z; g.beginPath();
-      const e0 = pt(-L, t0), e1 = pt(L, t0); g.moveTo(e0[0], e0[1]); g.lineTo(e1[0], e1[1]); g.stroke();
     }
     for (const sg of [1, -1]) {                                                                           // Fächerfenster an den Enden
       if (K.facing(0, sg) <= 0.01) continue;
       const bs = b + sg * hb, rr = ha * 0.98, n = [0, sg];
       const Q = (th, r) => K.P(a + Math.cos(th) * r, bs, top + Math.sin(th) * roofH * r / R);
       const arc = r => { const out = []; for (let i = 0; i <= 12; i++) out.push(Q(Math.PI * i / 12, r)); return out; };
-      poly(arc(rr), K.wallCol(COPPER, n));
-      const gl = arc(rr * 0.88);
-      poly(gl, lit() ? '#ffd873' : K.wallCol(GLASS, n));
-      glowQuad([Q(0, rr * 0.88), Q(Math.PI / 3, rr * 0.88), Q(2 * Math.PI / 3, rr * 0.88), Q(Math.PI, rr * 0.88)], 20 * z);
-      g.strokeStyle = C(COPPER); g.lineWidth = 0.8 * z; g.beginPath();
+      poly(arc(rr), K.wallCol(MH_RIB, n));
+      poly(arc(rr * 0.86), lit() ? '#ffd873' : K.wallCol(GLASS, n));
+      glowQuad([Q(0, rr * 0.86), Q(Math.PI / 3, rr * 0.86), Q(2 * Math.PI / 3, rr * 0.86), Q(Math.PI, rr * 0.86)], 20 * z);
+      g.strokeStyle = C(MH_RIB); g.lineWidth = 1 * z; g.beginPath();
       const c0 = Q(0, 0);
-      for (let k = 1; k < 6; k++) { const p = Q(Math.PI * k / 6, rr * 0.88); g.moveTo(c0[0], c0[1]); g.lineTo(p[0], p[1]); }
-      arc(rr * 0.45).forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+      for (let k = 1; k < 4; k++) { const p = Q(Math.PI * k / 4, rr * 0.86); g.moveTo(c0[0], c0[1]); g.lineTo(p[0], p[1]); }
       g.stroke();
     }
   }
   // Uhr in einer Wandfläche (schräg wie die Wand), Zeiger auf zehn nach zehn
-  function clockOn(F, up, r, z) {
-    const L = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]) || 1, rt = r * 0.95 / L;
+  function clockOn(K, F, up, r) {
+    const z = K.z, L = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]) || 1, rt = r * 0.95 / L;
     const at = (w, k) => faceAt(F, 0.5 + Math.sin(w) * rt * k, up + Math.cos(w) * r * k);
     const ring = k => { const out = []; for (let i = 0; i < 16; i++) out.push(at(i / 16 * Math.PI * 2, k)); return out; };
-    poly(ring(1.22), C(GOLD_D)); poly(ring(1), lit() ? '#fff6d0' : C('#fffaf0'));
-    for (let k = 0; k < 4; k++) { const p = at(k * Math.PI / 2, 0.78); circle(p[0], p[1], 0.45 * z, C('#3e3e4a')); }
+    poly(ring(1.24), K.wallCol(MH_RIB, F.n)); poly(ring(1), lit() ? '#fff6d0' : C('#fffaf0'));
     const c = at(0, 0), hr = at(-Math.PI / 3, 0.5), mn = at(Math.PI / 3, 0.8);
-    g.strokeStyle = C('#3e3e4a'); g.lineCap = 'round'; g.lineWidth = 0.8 * z; g.beginPath();
+    g.strokeStyle = C('#4a4a58'); g.lineCap = 'round'; g.lineWidth = 1 * z; g.beginPath();
     g.moveTo(c[0], c[1]); g.lineTo(hr[0], hr[1]); g.moveTo(c[0], c[1]); g.lineTo(mn[0], mn[1]); g.stroke();
+    halo(c[0], c[1], 16 * z);
   }
   function marketStall(K, a, b, col, i) {
     const z = K.z, ha = 0.12, hb = 0.26, af = a + ha + 0.08, parts = [];
-    for (const [pa, pb, hh] of [[a - ha, b - hb, 17], [a - ha, b + hb, 17], [af, b - hb, 13], [af, b + hb, 13]]) parts.push([pa, pb, () => kPost(K, pa, pb, hh, '#8a5a3c', 0.9)]);
+    for (const [pa, pb, hh] of [[a - ha, b - hb, 17], [a - ha, b + hb, 17], [af, b - hb, 13], [af, b + hb, 13]]) parts.push([pa, pb, () => kPost(K, pa, pb, hh, '#8b5a3c', 1)]);
     parts.push([a, b, () => {
-      K.block({ a, b, ha, hb, h: 6, wall: '#c98d5c', type: 'flat', roof: '#e8c08a' });
-      for (let j = 0; j < 5; j++) { const [px, py] = K.P(a + 0.02, b - hb + 0.07 + j * 0.095, 6); circle(px, py - 1.1 * z, 1.6 * z, C(FRUIT[(i + j) % 5])); }
+      K.block({ a, b, ha, hb, h: 6, wall: '#d9a878', type: 'flat', roof: '#f0d2a4' });
+      for (let j = 0; j < 4; j++) { const [px, py] = K.P(a + 0.02, b - hb + 0.1 + j * 0.107, 6); circle(px, py - 1.2 * z, 1.9 * z, C(FRUIT[(i + j) % 5])); }
     }]);
     K.scene(parts);
     const n = 6, w = (2 * hb + 0.08) / n;
@@ -402,58 +335,35 @@
     }
     for (let k = 0; k < n; k++) { const [fx, fy] = K.P(af, b - hb - 0.04 + (k + 0.5) * w, 13); ellipse(fx, fy, 2.3 * z, 1.4 * z, C(k & 1 ? '#fffaf0' : col)); }
   }
-  function produceCrate(K, a, b, col, fruit) {
-    kCrate(K, a, b, col);
-    const [px, py] = K.P(a, b, 4.5), z = K.z;
-    for (const [dx, dy] of [[-1.6, 0], [1.6, 0], [0, -0.9], [0, 0.9]]) circle(px + dx * z, py + dy * z - 0.8 * z, 1.3 * z, C(fruit));
-  }
   SHOP_ART.markthalle = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(-0.98, -1.47, 0.98, 1.47, C('#ddd1b9'));                                                        // Marktplatz
-      for (const a of [0.56, 0.72, 0.88]) K.rect(a, -1.47, a + 0.012, 1.47, C('#cbbd9f'));
-      for (let i = -4; i <= 4; i++) K.rect(0.44, i * 0.32 - 0.006, 0.98, i * 0.32 + 0.006, C('#cbbd9f'));
+      K.rect(-0.98, -1.47, 0.98, 1.47, C('#e6dcc6'));                                                        // Marktplatz
+      K.rect(0.5, -0.3, 0.98, 0.3, C('#ddd0b6'));                                                            // Weg zum Tor
     })) return;
-    const A0 = -0.28, HA = 0.68, HB = 1.32, H = 20, parts = [];
+    const A0 = -0.2, HA = 0.55, HB = 1.08, H = 13, parts = [];
     parts.push([A0, 0, () => {                                                                             // Halle
-      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: BRICK, type: 'none', trim: STONE_L });
-      for (const F of Object.values(B.faces)) if (F) for (const up of [5.5, 10.5, 15.5]) faceQuad(F.P, F.Q, 0, 1, up * z, (up + 0.45) * z, K.wallCol('#a4573d', F.n));
-      if (B.faces.front) for (const tc of [0.07, 0.17, 0.27, 0.73, 0.83, 0.93]) archWin(K, B.faces.front, tc, 0.064, 3, 12);
-      if (B.faces.back) for (let i = 0; i < 8; i++) archWin(K, B.faces.back, 0.07 + i * 0.123, 0.064, 3, 12);
-      for (const sd of ['right', 'left']) if (B.faces[sd]) for (const tc of [0.22, 0.5, 0.78]) archWin(K, B.faces[sd], tc, 0.14, 3, 12);
-      glassBarrel(K, A0, 0, HA * 1.05, HB * 1.02, HA, HB, H, 24, 9);
-      K.block({ a: A0, b: 0, ha: 0.09, hb: HB * 0.75, h: 4, lift: H + 22.5, wall: '#d7eef0', roof: '#9cbdb4', roofH: 3.5, type: 'gable', ridge: 'b' });
-      const [hx, hy] = K.P(A0, 0, H + 12); halo(hx, hy, 60 * z);
+      const z = K.z, B = K.block({ a: A0, b: 0, ha: HA, hb: HB, h: H, wall: MH_WALL, type: 'none', trim: CREAM });
+      if (B.faces.front) for (const tc of [0.1, 0.23, 0.77, 0.9]) archWin(K, B.faces.front, tc, 0.08, 2.5, 7);
+      if (B.faces.back) for (let i = 0; i < 5; i++) archWin(K, B.faces.back, 0.14 + i * 0.18, 0.08, 2.5, 7);
+      for (const sd of ['right', 'left']) if (B.faces[sd]) for (const tc of [0.3, 0.7]) archWin(K, B.faces[sd], tc, 0.16, 2.5, 7);
+      glassBarrel(K, A0, 0, HA * 1.05, HB * 1.02, HA, HB, H, 13, 6);
+      const [hx, hy] = K.P(A0, 0, H + 8); halo(hx, hy, 52 * z);
     }]);
-    parts.push([0.5, 0, () => {                                                                            // Portal
-      const z = K.z, B = K.block({ a: 0.5, b: 0, ha: 0.16, hb: 0.42, h: 32, wall: BRICK, roof: COPPER, roofH: 12, type: 'barrel', ridge: 'a', trim: STONE_L });
+    parts.push([0.45, 0, () => {                                                                           // Portal mit Tor und Uhr
+      const z = K.z, B = K.block({ a: 0.45, b: 0, ha: 0.11, hb: 0.4, h: 25, wall: MH_WALL, roof: MH_RIB, roofH: 8, type: 'barrel', ridge: 'a', trim: CREAM });
       const F = B.faces.front;
       if (F) {
-        poly(archPts(F, 0.5, 0.5, 0, 13, z, 1.6), K.wallCol(STONE_L, F.n));
-        poly(archPts(F, 0.5, 0.5, 0, 13, z), C('#5b3a2a'));
-        const gl = archPts(F, 0.5, 0.36, 9.5, 13, z);
+        poly(archPts(F, 0.5, 0.42, 0, 8, z, 1.6), K.wallCol(CREAM, F.n));
+        poly(archPts(F, 0.5, 0.42, 0, 8, z), C(DOOR_COL));
+        const gl = archPts(F, 0.5, 0.3, 8.4, 9, z);
         poly(gl, lit() ? '#ffd873' : C('#a8dcff')); glowQuad(gl, 16 * z);
-        faceQuad(F.P, F.Q, 0.07, 0.93, 20 * z, 27.5 * z, K.wallCol(STONE_L, F.n));
-        const [mx, my] = faceAt(F, 0.5, 23.8 * z); halo(mx, my, 24 * z); glowText(mx, my, 'MARKT', 5.4, lit() ? '#fff3a8' : '#2f5d55', z);
-        const R = 0.42 * 1.12, Q = (th, r) => K.P(0.66, Math.cos(th) * r, 32 + Math.sin(th) * 12 * r / R), fan = [];
-        for (let i = 0; i <= 10; i++) fan.push(Q(Math.PI * i / 10, 0.3));
-        poly(fan, lit() ? '#ffd873' : K.wallCol(GLASS, F.n)); glowQuad([Q(0, 0.3), Q(1, 0.3), Q(2.1, 0.3), Q(Math.PI, 0.3)], 14 * z);
-        g.strokeStyle = C(COPPER); g.lineWidth = 0.7 * z; g.beginPath();
-        const c0 = Q(0, 0); for (let k = 1; k < 4; k++) { const p = Q(Math.PI * k / 4, 0.3); g.moveTo(c0[0], c0[1]); g.lineTo(p[0], p[1]); } g.stroke();
+        clockOn(K, F, 19.6 * z, 3.3 * z);
       }
-      for (const sd of ['right', 'left']) if (B.faces[sd]) archWin(K, B.faces[sd], 0.5, 0.36, 12, 22);
+      for (const sd of ['right', 'left']) if (B.faces[sd]) archWin(K, B.faces[sd], 0.5, 0.44, 10, 16);
     }]);
-    parts.push([0.5, 0, () => {                                                                            // Uhrtürmchen
-      const z = K.z, Bt = K.block({ a: 0.5, b: 0, ha: 0.15, hb: 0.15, h: 12, lift: 40, wall: STONE_L, roof: COPPER, roofH: 9, type: 'hip' });
-      for (const F of Object.values(Bt.faces)) if (F) clockOn(F, F.H * 0.5, 3.9 * z, z);
-      const [tx, ty] = Bt.peak; kLine(K, [tx, ty], [tx, ty - 4 * z], GOLD_D, 0.8); circle(tx, ty - 4.6 * z, 1.3 * z, C(GOLD));
-      halo(tx, ty + 12 * z, 22 * z);
-    }]);
-    [[-0.96, '#e8604f', 0], [0.96, '#f2b33d', 2]].forEach(([sb, col, i]) => {
-      parts.push([0.72, sb, () => marketStall(K, 0.72, sb, col, i)]);
-      parts.push([0.93, sb - 0.13, () => produceCrate(K, 0.93, sb - 0.13, '#c9955f', i ? '#7ccf5b' : '#ff9f5a')]);
-      parts.push([0.93, sb + 0.13, () => produceCrate(K, 0.93, sb + 0.13, '#d9b27a', i ? '#ffd23f' : '#ff6b5e')]);
-    });
+    [[-1, '#e8705f', 0], [1, '#e9a23b', 2]].forEach(([sb, col, i]) => parts.push([0.7, sb * 1.02, () => marketStall(K, 0.7, sb * 1.02, col, i)]));
     K.scene(parts);
   };
   GROUND_TYPES.add('markthalle');
+  ART_SHADOW.markthalle = [26, 0.2];
 })();

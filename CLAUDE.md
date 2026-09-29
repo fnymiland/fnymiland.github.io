@@ -289,6 +289,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Gruppe in js/shopart/a–g.js (je eine IIFE, trägt sich in `SHOP_ART` ein; Grundhaus `shopHouse`, Schrift `kText`).
     Eine Gruppe allein prüfen: `ART_FILE=js/shopart/b.js ART_IDS=cafe,… npx vitest run tests/shopart.test.js`.
     Symbole der kleinen Läden NICHT groß aufs Dach (Nutzer: „zu fett“), sondern klein im Ausleger `hangSign` an der Hausecke.
+    **Stil wie die alten Gebäude (Block 35, gilt für jedes neue Gebäude):** Schatten eintragen (`ART_SHADOW[id] = [Wandhöhe,
+    inset]`); Wand hell und warm (Helligkeit ≥ 80 %, aus `WALLS`), Dach klar-farbig und nicht dunkel (≥ 40 %, aus `ROOFS`),
+    Markenfarbe in Dach/Markise/Tür/Schild; kleine Läden nicht breiter als ein Wohnhaus (ha/hb ≈ 0.26–0.32, ≤ ~42 px hoch)
+    und jeder mit eigener Bauform (Silhouette); höchstens ein Gegenstand vor der Tür, keine Linien unter 0.8×z; KEINE
+    Schrift; nichts aufs Dach außer Architektur. Nichts höher als der Rathaus-Uhrturm (71 px) – Ausnahmen: Stadion,
+    Konzerthalle, Grand Hotel, Wunder. Messen: drawObject auf ein Test-Canvas, oberste deckende Pixelzeile.
     Vorrat (Block 33): Läden verkaufen nur `saleable(r)` = Bestand über `keepOf(r)` (state.keep, sonst `KEEP_DEFAULT`:
     Baumaterial 2.000); im 📦 Lager je Ware umschaltbar (`cycleKeep`, Stufen `KEEP_STEPS`, `KEEP_ALL` = alles behalten).
 59. **Tempo weit weg** (Block 31): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen

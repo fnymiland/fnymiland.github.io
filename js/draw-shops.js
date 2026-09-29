@@ -84,8 +84,9 @@ function smallShopArt(id) {
 // spec: wall, roof, awning (Markisenfarbe; null = keine), roofType ('hip' | 'gable' | 'flat' | 'mansard' | 'barrel'),
 // h (Wandhöhe in px), roofH, ridge ('a' | 'b' bei gable), shopWin (Farbe der Schaufenster-Rahmung, optional),
 // upperWins (Fenster oben: Anzahl, 0 = keine). Gibt den Block zurück (B.faces.front/right/left/back, je { P, Q, H }).
-function shopHouse(K, { wall, roof, awning = null, roofType = 'hip', h = 20, roofH = 9, ridge = null, ha = 0.34, hb = 0.37, a = -0.08, b = 0, upperWins = 2, trim = null }) {
-  const B = K.block({ a, b, ha, hb, h, wall, roof, roofH, type: roofType, ridge, entry: true });
+// (Block 35: schmaler und mit steilerem Dach, so wie die Wohnhäuser – ha/hb/roofH/over einzeln änderbar)
+function shopHouse(K, { wall, roof, awning = null, roofType = 'hip', h = 19, roofH = 13, ridge = null, ha = 0.29, hb = 0.31, a = -0.06, b = 0, upperWins = 2, trim = null, over = 1.18 }) {
+  const B = K.block({ a, b, ha, hb, h, wall, roof, roofH, type: roofType, ridge, entry: true, over });
   const F = B.faces.front;
   if (F) {
     if (trim) faceQuad(F.P, F.Q, 0.06, 0.6, F.H * 0.05, F.H * 0.45, C(trim));                  // Rahmen ums Schaufenster
@@ -100,17 +101,26 @@ function shopHouse(K, { wall, roof, awning = null, roofType = 'hip', h = 20, roo
 // Kleines Ausleger-Schild (Block 34): hängt an der Hausecke, die man sieht (in jeder Drehung), runde Tafel mit
 // Mini-Symbol. draw(cx, cy, z) zeichnet das Symbol mittig bei (cx, cy) – es soll in einen Kreis mit Radius ≈ 4 × z passen.
 // col: Rand/Halter in der Markenfarbe. Rückgabe: ein Teil für K.scene (nach dem Haus einsortieren).
-function hangSign(K, draw, col, { up = 16, a0 = 0.3, b0 = 0.42, back = -0.44 } = {}) {
+// Block 35: keine weiße Scheibe mehr (die sah aus wie die Hinweis-Blasen 💭 ✨), sondern ein Holz-Ausleger mit
+// hängender Tafel in der Markenfarbe (hell getönt, Rand in der Farbe). Die Mitte der Tafel ist (cx, cy).
+function hangSign(K, draw, col, { up = 15, a0 = 0.27, b0 = 0.36, back = -0.38 } = {}) {
   const [sa, sb] = [[a0, b0], [a0, -b0], [back, b0], [back, -b0]].reduce((p, q) => K.depth(...q) > K.depth(...p) ? q : p);
   return [sa, sb, () => {
-    const [x, y] = K.P(sa, sb, up), z = K.z;
-    kLine(K, [x, y - 5.4 * z], [x, y - 8 * z], '#6b4f3a', 0.8);
-    kLine(K, [x - 3 * z, y - 8 * z], [x + 3 * z, y - 8 * z], '#6b4f3a', 0.9);            // kleiner Querbalken
-    circle(x, y, 5.4 * z, C(col));
-    circle(x, y, 4.5 * z, C('#fffaf0'));
+    const [wx, wy] = K.P(sa, sb, up + 7), z = K.z, dir = K.P(sa, sb)[0] >= K.P(0, 0)[0] ? 1 : -1;   // Arm nach außen
+    const ax = wx + dir * 6 * z, x = wx + dir * 4.5 * z, y = wy + 8.5 * z;
+    kLine(K, [wx, wy], [ax, wy], '#6b4f3a', 1.3);                                       // Ausleger aus der Wand
+    kLine(K, [wx, wy + 2.6 * z], [wx + dir * 3 * z, wy], '#6b4f3a', 0.9);                // Strebe
+    for (const s of [-1, 1]) kLine(K, [x + s * 3.2 * z, wy], [x + s * 3.2 * z, y - 4.6 * z], '#8a8f99', 0.8);   // Ketten
+    g.beginPath(); g.roundRect(x - 5.4 * z, y - 4.8 * z, 10.8 * z, 9.6 * z, 1.8 * z);
+    g.fillStyle = C(col); g.fill();
+    g.beginPath(); g.roundRect(x - 4.5 * z, y - 3.9 * z, 9 * z, 7.8 * z, 1.3 * z);
+    g.fillStyle = C(shade(col, 0.72)); g.fill();
     draw(x, y, z);
   }];
 }
+// Schatten der neuen Gebäude: ART_SHADOW[id] = [Höhe der Wand in px, Abstand der Wand vom Feldrand in Feldern]
+// (render.js schaut hier zuerst nach – so kann jede Bild-Datei ihre Schatten selbst eintragen)
+const ART_SHADOW = {};
 // Aufrechter Text (Schriftzug, Buchstaben) mittig bei (x, y) – Größe in px × z
 function kText(x, y, text, size, col, z, weight = 900) {
   g.font = `${weight} ${Math.max(1, size * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
