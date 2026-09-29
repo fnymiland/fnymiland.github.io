@@ -477,7 +477,7 @@ function render(now) {
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
-  const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), cruiseShips());
+  const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
   for (const m of walkers.concat(cars, cars4, ships)) {
     const k = Math.round(m.px) + ',' + Math.round(m.py);
     if (!byTile.has(k)) byTile.set(k, []);
@@ -534,6 +534,7 @@ function render(now) {
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
         if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
         if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
+        if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
         if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
         if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
         if (s && s.wish && s.wish.next) {
@@ -587,7 +588,7 @@ function render(now) {
         const ar = m.fur && archAt(m.px, m.py);
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
         if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
-        else if (m.cargo) drawCargoMover(m, z, now); else if (m.cruise) drawCruiseMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
+        else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
       }
     }
     if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }

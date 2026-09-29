@@ -695,7 +695,7 @@ function openInfo(x, y) {
     } else wonder = `<p class="ok">✓ Fertig: ${W.text}.</p>`;
   }
   const line = t.b === 'station' ? lineOf(x + ',' + y) : null;
-  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + tradeHtml(t) + cruiseHtml(t, x, y) : '';
+  const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
     return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
@@ -819,27 +819,21 @@ function shipsHtml(k, t) {
     <div class="row"><button class="btn" data-shipbuy data-cost="${m.buy.money}" data-mat='${JSON.stringify({ ...m.buy, money: undefined })}'>${m.icon} ${m.name} kaufen · ${costText(m.buy)}</button></div>
     <p class="muted">${Math.round(m.seats * m.speed)} Fahrgäste/min, ohne Strom. Schiffe zum selben Ziel teilen sich die Fahrgäste.</p>`;
 }
-// Handel (ab Handelshafen): Lager, Preis mit Tendenz, je 10 verkaufen oder kaufen
-function tradeHtml(t) {
-  if ((t.lvl || 1) < 2) return '<div class="label">🚢 Handel</div><p class="muted">Ab Stufe 2 (Handelshafen) kaufen und verkaufen Frachter hier Rohstoffe – zu Preisen, die langsam schwanken.</p>';
-  const now = Date.now(), rows = Object.keys(RES).map(r => {
-    const p = tradePrice(r, now), up = p >= tradePrice(r, now - 60e3), sell = TRADE_LOT * p, buy = TRADE_LOT * p * TRADE_BUY;
-    return `<div class="trade-row"><span title="${RES[r].name}">${RES[r].icon} <small>${fmt(state.res[r])}</small></span><b class="${up ? 'up' : 'down'}">${up ? '↗' : '↘'} ${nf1.format(p)}</b>
-      <button class="btn ghost small" data-trade="${r}:${-TRADE_LOT}" aria-label="${TRADE_LOT} ${RES[r].name} verkaufen" ${state.res[r] >= TRADE_LOT ? '' : 'disabled'}>+${fmt(sell)}</button>
-      <button class="btn ghost small" data-trade="${r}:${TRADE_LOT}" aria-label="${TRADE_LOT} ${RES[r].name} kaufen" data-cost="${Math.ceil(buy)}">−${fmt(buy)}</button></div>`;
-  }).join('');
-  return `<div class="label">🚢 Handel</div><div class="trade">
-      <div class="trade-row head"><span>Ware · Lager</span><span>🪙 je Stück</span><span>${TRADE_LOT} verkaufen</span><span>${TRADE_LOT} kaufen</span></div>${rows}</div>
-    <p class="muted">Verkaufen, was sich staut; kaufen, was fehlt (kostet anderthalbmal so viel). ↗ Preis steigt gerade, ↘ fällt.</p>`;
-}
-// Kreuzfahrt (Großer Hafen): wann das nächste Schiff kommt und was die Gäste hier finden
-function cruiseHtml(t, x, y) {
-  if ((t.lvl || 1) < 3) return '<div class="label">🛳️ Kreuzfahrt</div><p class="muted">Ab Stufe 3 (Großer Hafen) legen Kreuzfahrtschiffe an – ihre Gäste besuchen Sehenswürdigkeiten und Wunderwerke in der Nähe.</p>';
-  const a = cruiseAttraction(x + 0.5, y + 0.5), pay = a * CRUISE_PAY * masteryMul('taler');
-  const docked = t.docked && Date.now() - t.docked < CRUISE_STAY, left = t.cruise ? Math.max(0, t.cruise - Date.now()) : CRUISE_EVERY / 2;
-  return `<div class="label">🛳️ Kreuzfahrt</div><div class="status">
-    <div class="${docked ? 'ok' : ''}">${docked ? '🛳️ Ein Schiff liegt gerade im Hafen' : `🛳️ Nächstes Schiff in ${fmtClock(left)}`}</div>
-    <div class="${a >= 1 ? 'ok' : 'bad'}">${a >= 1 ? `✨ Anziehung bis ${CRUISE_R} Felder: ${fmt(a)} → ${fmt(cruiseGuests(a))} Gäste, 🪙 +${fmt(pay)} je Schiff` : `✗ Bis ${CRUISE_R} Felder gibt es nichts zu sehen – Sehenswürdigkeiten, Wunderwerke und Schönes locken Gäste.`}</div></div>`;
+// Aufträge (ab Handelshafen): was die Frachter kaufen oder anbieten, wie lange noch
+function ordersHtml(t) {
+  if ((t.lvl || 1) < 2) return '<div class="label">🚢 Aufträge</div><p class="muted">Ab Stufe 2 (Handelshafen) legen Frachter mit Aufträgen an: Sie kaufen dir ab, was sich im Lager stapelt – oft für deutlich mehr, als es wert ist.</p>';
+  const now = Date.now(), slots = orderSlots(), next = Math.max(0, (state.orderNext || now) - now);
+  const card = o => {
+    const r = RES[o.res], left = fmtClock(o.until - now), have = state.res[o.res];
+    if (o.kind === 'sell') return `<div class="order${o.huge ? ' huge' : ''}"><b>${o.huge ? '⭐ Großauftrag' : '📥 Ankauf'}: ${fmt(o.amount)} ${r.icon} ${r.name}</b>
+      <span>zahlt 🪙 ${fmt(o.pay)} · ${Math.round(o.prem * 100)} % des Werts · noch ${left}</span>
+      <button class="btn" data-order="${o.id}" ${have >= o.amount ? '' : 'disabled'}>${have >= o.amount ? 'Liefern' : `Du hast ${fmt(have)}`}</button></div>`;
+    return `<div class="order"><b>📤 Angebot: ${fmt(o.amount)} ${r.icon} ${r.name}</b><span>für 🪙 ${fmt(o.pay)} · noch ${left}</span>
+      <button class="btn ghost" data-order="${o.id}" data-cost="${o.pay}">Kaufen · 🪙 ${fmt(o.pay)}</button></div>`;
+  };
+  return `<div class="label">🚢 Aufträge · ${state.orders.length} von ${slots}${state.orders.length < slots ? ` · nächster in ${fmtClock(next)}` : ''}</div>
+    ${state.orders.length ? `<div class="orders">${state.orders.map(card).join('')}</div>` : '<p class="muted">Gerade liegt kein Frachter da – der nächste kommt bald.</p>'}
+    ${(t.lvl || 1) < 3 ? '<p class="muted">Großer Hafen (Stufe 3): 4 Aufträge gleichzeitig und Großaufträge (fast das ganze Lager, bis 300 % des Werts).</p>' : ''}`;
 }
 // Seilbahn: mit welcher Station verbunden, was sie befördert
 function cableStatus(k) {

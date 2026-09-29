@@ -727,32 +727,32 @@ function shipLinks() {
 // Wohin Schiffe von diesem Hafen fahren können: Stege und Häfen auf anderen Inseln
 const shipTargets = k => [...state.tiles].filter(([o, u]) => o !== k && isLanding(u) && regionAt(...keyXY(o)) !== regionAt(...keyXY(k))).map(([o]) => o);
 const FISH_INC = 5;                                  // Fischkutter (18f): je Hafen-Stufe einer, jeder bringt so viele Taler/s
-// Handel (18d): ab dem Handelshafen (Stufe 2) kaufen und verkaufen Frachter je 10 Stück. Die Preise schwanken langsam
-// (jede Ware ihr eigener Takt, etwa 9–13 Minuten, zwischen 60 % und 140 %); Kaufen kostet anderthalbmal so viel.
-const TRADE_PRICE = { holz: 3, stein: 3, erz: 6, obst: 4, bretter: 10, quader: 10, metall: 30, kristall: 80 };
-const TRADE_LOT = 10, TRADE_BUY = 1.5;
-function tradePrice(r, now = Date.now()) {
-  const i = Object.keys(RES).indexOf(r), per = 540e3 + i * 37e3;
-  return TRADE_PRICE[r] * (1 + 0.4 * Math.sin(now / per * Math.PI * 2 + i * 1.7));
-}
-const canTrade = () => [...state.tiles.values()].some(t => t.b === 'hafen' && t.lvl >= 2);
-// Kreuzfahrt (18e): Am Großen Hafen (Stufe 3) legt alle 6 Minuten ein Schiff an. Die Gäste besuchen, was bis 15 Felder
-// um den Hafen anzieht (Sehenswürdigkeiten, Wunderwerke, Schönes), und geben dort Geld aus.
-const CRUISE_EVERY = 6 * 60e3, CRUISE_STAY = 60e3, CRUISE_R = 15, CRUISE_PAY = 40;
-function cruiseAttraction(x, y) {
-  let a = 0;
-  const near = (px, py) => Math.hypot(px - x, py - y) <= CRUISE_R;
-  for (const [k, t] of state.tiles) {
-    const [tx, ty] = keyXY(k), [w, h] = sizeOf(t.b, t.rot), cx = tx + (w - 1) / 2, cy = ty + (h - 1) / 2;
-    if (!near(cx, cy)) continue;
-    if (t.b === 'lm') a += ownedTile(tx, ty) ? LM_ATTRACT[lmStage(t.lm)] || 0 : 0;
-    else if (WONDER_ATTRACT[t.b]) a += wonderDone(t) ? WONDER_ATTRACT[t.b] : 0;
-    else if (ITEMS[t.b].cat === 'deko' && ITEMS[t.b].beauty) a += ITEMS[t.b].beauty / 10;
+// Aufträge (Block 24): Am Handelshafen (Stufe 2) legen Frachter mit Aufträgen an. Ankauf: Sie nehmen dir ab, was sich
+// stapelt – ein guter Teil des Lagers zu 120–180 % des Grundpreises; am Großen Hafen (Stufe 3) manchmal ein Großauftrag
+// (fast alles, 200–300 %). Angebot: Sie verkaufen dir eine Ware, deren Betrieb du schon bauen kannst (kein Kristall vor der
+// Kristallinsel). Jeder Auftrag gilt ORDER_TTL; alle ORDER_EVERY kommt ein neuer, solange Plätze frei sind.
+const TRADE_PRICE = { holz: 4, stein: 4, erz: 8, obst: 5, bretter: 15, quader: 15, metall: 40, kristall: 120 };
+const RES_SOURCE = { holz: 'holz', stein: 'stein', erz: 'mine', obst: 'obst', bretter: 'saege', quader: 'steinmetz', metall: 'schmiede', kristall: 'kristallmine' };
+const ORDER_TTL = 12 * 60e3, ORDER_EVERY = 3 * 60e3, ORDER_SLOTS = [0, 2, 4];         // Plätze je Hafen-Stufe 1/2/3
+const tradeLevel = () => Math.max(0, ...[...state.tiles.values()].filter(t => t.b === 'hafen').map(t => Math.min(3, t.lvl || 1)));
+const canTrade = () => tradeLevel() >= 2;
+const orderSlots = () => tradeLevel() ? ORDER_SLOTS[tradeLevel() - 1] : 0;
+function makeOrder(now, rnd = Math.random) {
+  const big = tradeLevel() >= 3, taken = r => state.orders.some(o => o.res === r);
+  const stock = Object.keys(TRADE_PRICE).filter(r => state.res[r] >= 50 && !taken(r));
+  if (stock.length && rnd() < 0.75) {                                       // Ankauf: was sich stapelt, nach Wert gewichtet
+    const w = stock.map(r => state.res[r] * TRADE_PRICE[r]);
+    let pick = rnd() * w.reduce((a, b) => a + b, 0), res = stock[stock.length - 1];
+    for (let i = 0; i < stock.length; i++) { pick -= w[i]; if (pick <= 0) { res = stock[i]; break; } }
+    const huge = big && rnd() < 0.3, share = huge ? 0.8 + rnd() * 0.2 : 0.3 + rnd() * 0.5, prem = huge ? 2 + rnd() : 1.2 + rnd() * 0.6;
+    const amount = Math.max(10, niceRound(Math.floor(state.res[res] * share)));
+    return { id: now + ':' + res, kind: 'sell', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * prem), prem, huge, until: now + ORDER_TTL };
   }
-  for (const [k, ds] of state.decos) { const [dx, dy] = keyXY(k); if (near(dx, dy)) for (const d of ds) if (d) a += ITEMS[d.b].beauty / 10; }
-  return a;
+  const can = Object.keys(TRADE_PRICE).filter(r => available(RES_SOURCE[r]) && !taken(r));
+  if (!can.length) return null;
+  const res = can[Math.floor(rnd() * can.length)], amount = niceRound((big ? 120 : 40) * (1 + rnd() * 3) * (TRADE_PRICE[res] < 10 ? 4 : 1));
+  return { id: now + ':' + res, kind: 'buy', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * (1.1 + rnd() * 0.3)), until: now + ORDER_TTL };
 }
-const cruiseGuests = a => Math.round(a * 1.5);
 const ferriesAt = k => T.ferries.filter(l => l.stations.includes(k));
 // Verkehr aller Verbindungen: Wer zwischen denselben Orten fährt (Zug, Seilbahn, Fähre), teilt sich die Fahrgäste –
 // nach Plätzen. Jede Verbindung bekommt ihren Anteil an Fahrkarten und Besuchern, die Auslastung gilt für alle zusammen.

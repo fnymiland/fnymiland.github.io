@@ -29,6 +29,7 @@ function newState() {
     tipsSeen: new Set(),       // gezeigte Tipps (GUIDE)
     mastery: {},               // Stufen-Forschung: id → Stufe
     inventions: new Set(),     // Erfindungen (für Ideen)
+    orders: [], orderNext: 0,  // Aufträge der Frachter am Handelshafen (Block 24), nächster ab orderNext
     vehicles: new Set(),       // erforschte Verkehrsmittel: 'zug:regio', 'schiff:dampfer' … (Forschung „Verkehr“)
     expedition: null,          // Boot unterwegs: { isle, from: Steg-Feld, t0, until } (echte Zeit, läuft auch geschlossen weiter)
     stats: { earned: 0 },      // für Erfolge: insgesamt verdiente Taler
@@ -61,7 +62,6 @@ function tileOut(t) {
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
   if (t.ships && t.ships.length) o.ships = t.ships.map(s => ({ model: s.model, to: s.to }));   // Schiffe am Hafen
-  if (t.cruise) o.cruise = t.cruise;                                // nächstes Kreuzfahrtschiff (Zeitpunkt)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }
@@ -83,7 +83,7 @@ function serialize() {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -196,6 +196,7 @@ function parseSave(d) {
     mastery: { ...(d.mastery || {}) }, inventions: new Set(d.inventions || []),
     expedition: d.expedition && ISLE_BY_ID[d.expedition.isle] && +d.expedition.until ? { ...d.expedition } : null,
     vehicles: new Set([...(d.vehicles || []), ...grandfathered.filter(v => v !== 'zug:tram')]),
+    orders: Array.isArray(d.orders) ? d.orders.filter(o => o && RES[o.res] && o.amount > 0) : [], orderNext: +d.orderNext || 0,
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie

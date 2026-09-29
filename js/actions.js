@@ -401,42 +401,42 @@ function invent(id) {
   return true;
 }
 
-// Handel am Hafen: n > 0 kaufen, n < 0 verkaufen (je TRADE_LOT). Danach fährt ein Frachter los.
-let lastTrade = null;                                // { at: Feld des Hafens, t } – nur fürs Bild
-function trade(r, n, from) {
-  if (!canTrade()) { fail('Handel gibt es ab dem Handelshafen (Hafen Stufe 2)'); return false; }
-  const p = tradePrice(r);
-  if (n < 0) {
-    if (state.res[r] < -n) { fail(`Zu wenig ${RES[r].name}`); return false; }
-    state.res[r] += n; state.money += -n * p;
-  } else {
-    const cost = n * p * TRADE_BUY;
-    if (state.money < cost) { fail('Zu wenig Taler'); return false; }
-    state.money -= cost; state.res[r] += n;
+// Aufträge (Handelshafen): im Takt alte streichen, neue hereinholen; erfüllen = liefern bzw. kaufen
+let lastTrade = null;                                // { at: Feld des Hafens, t } – der Frachter läuft aus (nur fürs Bild)
+function checkOrders(now = Date.now()) {
+  const before = state.orders.length;
+  state.orders = state.orders.filter(o => o.until > now);
+  const slots = orderSlots();
+  if (!slots) return false;
+  let added = 0;
+  const first = !state.orderNext;                    // der erste Handelshafen: gleich zwei Aufträge
+  while (state.orders.length < slots && (now >= (state.orderNext || 0)) && added < (first ? 2 : 1)) {
+    const o = makeOrder(now + added);
+    if (!o) break;
+    state.orders.push(o);
+    added++;
+    if (o.huge) toast(`🚢 Großauftrag am Hafen: ${fmt(o.amount)} ${RES[o.res].icon} für 🪙 ${fmt(o.pay)}!`);
   }
-  lastTrade = { at: from, t: Date.now() };
-  sfx('deco'); save();
-  return true;
+  if (added || !state.orderNext) state.orderNext = now + ORDER_EVERY;
+  return added > 0 || state.orders.length !== before;
 }
-// Kreuzfahrt: im Takt prüfen, ob an einem Großen Hafen ein Schiff anlegt
-function checkCruises(now = Date.now()) {
-  let n = 0;
-  for (const [k, t] of state.tiles) {
-    if (t.b !== 'hafen' || (t.lvl || 1) < 3) continue;
-    if (!t.cruise) { t.cruise = now + CRUISE_EVERY / 2; continue; }
-    if (now < t.cruise) continue;
-    const [x, y] = keyXY(k), a = cruiseAttraction(x + 0.5, y + 0.5), pay = a * CRUISE_PAY * masteryMul('taler');
-    t.cruise = now + CRUISE_EVERY;
-    t.docked = now;
-    if (pay >= 1) {
-      state.money += pay;
-      addFloat(x, y, '+' + fmt(pay), '#3f8f43');
-      toast(`🛳️ Ein Kreuzfahrtschiff legt an: ${fmt(cruiseGuests(a))} Gäste – 🪙 +${fmt(pay)}`);
-      sfx('star');
-    }
-    n++;
+function fulfillOrder(id, from) {
+  const o = state.orders.find(x => x.id === id);
+  if (!o) return false;
+  if (o.kind === 'sell') {
+    if (state.res[o.res] < o.amount) { fail(`Zu wenig ${RES[o.res].name} (${fmt(o.amount)} ${RES[o.res].icon} nötig)`); return false; }
+    state.res[o.res] -= o.amount; state.money += o.pay;
+    toast(`🚢 Der Frachter lädt ${fmt(o.amount)} ${RES[o.res].icon} – 🪙 +${fmt(o.pay)}`);
+  } else {
+    if (state.money < o.pay) { fail('Zu wenig Taler'); return false; }
+    state.money -= o.pay; state.res[o.res] += o.amount;
+    toast(`🚢 Geliefert: ${fmt(o.amount)} ${RES[o.res].icon}`);
   }
-  return n;
+  state.orders = state.orders.filter(x => x !== o);
+  lastTrade = { at: from, t: Date.now() };
+  if (from) { const [x, y] = keyXY(from); addFloat(x, y, (o.kind === 'sell' ? '+' : '−') + fmt(o.pay), o.kind === 'sell' ? '#3f8f43' : '#d9534a'); }
+  sfx('star'); save();
+  return true;
 }
 
 // Verkehrsmittel erforschen (Reiter „Verkehr“): kostet Ideen, braucht Grundforschung und Forschungsstufe
