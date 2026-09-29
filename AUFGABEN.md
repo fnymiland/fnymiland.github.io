@@ -238,7 +238,7 @@ Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Hand
 - [x] **18c** Fähren zwischen Häfen (Fahrgäste wie der Zug, ohne Schienen und Strom; 100/180/260 Plätze je Hafen-Stufe).
 - [ ] **18d** Handel: Frachter verkaufen Überschuss, kaufen Fehlendes (schwankende Preise).
 - [ ] **18e** Kreuzfahrt (spät): Touristen für Monumente/Wunderwerke nahe am Hafen.
-- [ ] **18f** Fischkutter.
+- [x] **18f** Fischkutter: je Hafen-Stufe einer (🪙 +5/s je Kutter), ziehen vor dem Hafen ihre Kreise.
 
 ## Block 19 – Seilbahn als Verkehrsmittel (geplant)
 - [x] Seilbahn befördert Fahrgäste wie eine kurze Linie (80 Plätze/min, ohne Strom, auch über Wasser), bindet an. Wer

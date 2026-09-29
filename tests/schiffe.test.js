@@ -135,3 +135,16 @@ describe('Fähre', () => {
     expect(document.getElementById('panel').textContent).toMatch(/zweiten Hafen auf einer anderen Insel/);
   });
 });
+
+describe('Fischkutter', () => {
+  it('je Hafen-Stufe ein Kutter, jeder bringt Taler', () => {
+    const [x, y] = game(`(() => { for (let yy = -20; yy < 40; yy++) for (let xx = -20; xx < 40; xx++) if (placeError('hafen', xx, yy, 0, { move: true }) === null && DIRS.some(([dx, dy]) => terrainAt(xx + 0.5 + dx * 4 | 0, yy + 0.5 + dy * 4 | 0) === 'water')) return [xx, yy]; })()`);
+    game(`state.tiles.set('${x},${y}', { b: 'hafen', lvl: 1, rot: 0 }); recalc()`);
+    const inc1 = game(`T.st.get('${x},${y}').inc`);
+    expect(inc1).toBeGreaterThan(0);
+    game(`state.tiles.get('${x},${y}').lvl = 3; recalc()`);
+    expect(game(`T.st.get('${x},${y}').inc`)).toBeCloseTo(inc1 * 3);
+    expect(game('fishBoats(1000).length')).toBe(3);
+    expect(() => game('for (const b of fishBoats(1000)) drawFishMover(b, 1.5, 1000)')).not.toThrow();
+  });
+});

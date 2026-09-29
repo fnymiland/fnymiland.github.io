@@ -138,6 +138,7 @@ function rawIncome(b, x, y) {
     case 'fabrik': return (25 + 5 * countNear(x, y, 3, b => b === 'mine')) * (hasTech('dampf') ? 1.5 : 1);
     case 'leuchtturm': return 10;
     case 'ferienhaus': return 6;                     // Feriengäste
+    case 'hafen': return FISH_INC;                   // je Fischkutter (so viele, wie der Hafen Stufen hat)
     default: return 0;
   }
 }
@@ -690,6 +691,7 @@ function cablePairs() {
 // Fähren (Block 18c): Hafen ↔ Hafen auf einer anderen Insel, ohne Schienen und Strom. Plätze nach der kleineren
 // Hafen-Stufe. Eingerichtet am Hafen (t.ferry = Feld des anderen Hafens), kostet einmal FERRY_COST.
 const FERRY_SEATS = [100, 180, 260], FERRY_COST = { money: 2000, bretter: 20 };
+const FISH_INC = 5;                                  // Fischkutter (18f): je Hafen-Stufe einer, jeder bringt so viele Taler/s
 function ferryPairs() {
   const out = [], seen = new Set();
   for (const [k, t] of state.tiles) {

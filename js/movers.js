@@ -405,3 +405,27 @@ function drawFerryMover(m, z, now) {
   g.beginPath(); g.moveTo(x + 4 * z, y - 8 * z + bob); g.lineTo(x + 4 * z, y - 15 * z + bob); g.stroke();   // Schornstein-Mast
   circle(x + 4 * z, y - 16 * z + bob, 1.4 * z, C('#ffd36e'));
 }
+
+// Fischkutter: je Hafen-Stufe einer; sie ziehen draußen vor dem Hafen ihre Kreise
+function fishBoats(now) {
+  const out = [];
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'hafen') continue;
+    const [x, y] = keyXY(k), cx = x + 0.5, cy = y + 0.5;
+    const dir = DIRS.find(([dx, dy]) => terrainAt(Math.round(cx + dx * 4), Math.round(cy + dy * 4)) === 'water');
+    if (!dir) continue;
+    const ox = cx + dir[0] * 5, oy = cy + dir[1] * 5;
+    for (let i = 0; i < Math.min(3, t.lvl || 1); i++) {
+      const a = now / 9000 * (i % 2 ? -1 : 1) + i * 2.1 + hash(x, y, 7) * 6, r = 1.6 + i * 0.9;
+      out.push({ boat: true, fish: true, px: ox + Math.cos(a) * r, py: oy + Math.sin(a) * r, du: -Math.sin(a), dv: Math.cos(a) });
+    }
+  }
+  return out;
+}
+function drawFishMover(m, z, now) {
+  const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 500 + m.px * 3) * 0.9 * z;
+  ellipse(x, y + 2 * z + bob, 8 * z, 3 * z, C('#e8604f'));
+  box(x - 1 * z, y - 1 * z + bob, 3 * z, 1.6 * z, 4 * z, '#ffffff', '#3e8ed0', 2.5 * z);
+  g.strokeStyle = C('#6b4f3a'); g.lineWidth = 0.9 * z;
+  g.beginPath(); g.moveTo(x + 3 * z, y + bob); g.lineTo(x + 8 * z, y - 9 * z + bob); g.stroke();       // Angelausleger
+}
