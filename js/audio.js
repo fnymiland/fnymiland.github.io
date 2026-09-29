@@ -36,4 +36,4 @@ const SFX = {
   research: () => [659, 784, 988, 1319].forEach((f, i) => tone(f, 0.16, 'sine', 0.14, i * 0.06)),
   star: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i === 4 ? 0.5 : 0.2, 'triangle', 0.15, i * 0.1)),
 };
-const sfx = k => { try { SFX[k](); } catch (e) { /* ohne Ton weiter */ } };
+const sfx = k => { if (BATCH) return; try { SFX[k](); } catch (e) { /* ohne Ton weiter */ } };

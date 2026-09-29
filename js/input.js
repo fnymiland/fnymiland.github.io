@@ -37,23 +37,13 @@ function zoomAt(px, py, nz) {
 }
 
 const pointers = new Map();
-let drag = null, pinch = null, moved = false, painting = false, lastPaint = null;
+let drag = null, pinch = null, moved = false;
 // Karte ziehen, egal welches Werkzeug man hält: rechte oder mittlere Maustaste, Leertaste oder Ctrl gedrückt
 // (Ctrl-Klick ist am Mac der Rechtsklick; mit dem Trackpad geht so das Ziehen am leichtesten)
 let spaceDown = false;
 const panButton = e => e.button === 1 || e.button === 2 || (e.buttons & 6) !== 0 || e.ctrlKey || spaceDown;
 
 let hoverSlot = 0;
-function paintAt(sx, sy) {
-  const t = toTile(sx, sy);
-  if (lastPaint && lastPaint.x === t.x && lastPaint.y === t.y) return;
-  // schnelles Ziehen: auch die übersprungenen Felder dazwischen (sonst reißen Wege und Brücken ab)
-  const steps = lastPaint ? tilesBetween(lastPaint, t) : [[t.x, t.y]];
-  lastPaint = t;
-  hover = t;
-  previewCache = null;
-  for (const [x, y] of steps) if (ownedTile(x, y) || (CLAIM_TOOLS.has(tool) && claimable(x, y))) build(tool, x, y, true);
-}
 
 canvas.addEventListener('pointerdown', e => {
   audio();
@@ -61,14 +51,13 @@ canvas.addEventListener('pointerdown', e => {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
     moved = false;
-    painting = false;
-    lastPaint = null;
     const pan = panButton(e);
     drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button, pan, right: e.button === 2 || (e.ctrlKey && e.button === 0) };
+    // Mit Weg, Schiene oder Gelände in der Hand zieht man eine Linie bzw. ein Rechteck auf (erst Vorschau)
     if (pan) canvas.style.cursor = 'grabbing';
-    else if (tool !== 'look' && ITEMS[tool].paint && e.button === 0) { painting = true; paintAt(e.clientX, e.clientY); }
+    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) drag.plan = toTile(e.clientX, e.clientY);
   } else if (pointers.size === 2) {
-    painting = false;
+    if (plan && plan.dragging) plan = null;              // zweiter Finger: doch lieber Karte bewegen
     const [a, b] = [...pointers.values()];
     pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), z: cam.z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cx: cam.x, cy: cam.y };
     moved = true;
@@ -87,10 +76,14 @@ canvas.addEventListener('pointermove', e => {
     clampCam();
     return;
   }
-  if (painting && pointers.size === 1) { paintAt(e.clientX, e.clientY); return; }
   if (drag && pointers.size === 1) {
     const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-    if (!moved && Math.hypot(dx, dy) > (drag.pan ? 3 : 6)) { moved = true; canvas.style.cursor = 'grabbing'; }
+    if (!moved && Math.hypot(dx, dy) > (drag.pan ? 3 : 6)) {
+      moved = true;
+      if (drag.plan && dragKind(tool)) { planTouch = e.pointerType !== 'mouse'; startPlan(dragKind(tool), drag.plan, drag.plan, false); plan.dragging = true; }
+      else canvas.style.cursor = 'grabbing';
+    }
+    if (moved && plan && plan.dragging) { const t = toTile(e.clientX, e.clientY); setPlanEnd(t); hover = t; return; }
     if (moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); }
     return;
   }
@@ -103,11 +96,10 @@ function endPointer(e) {
   if (pointers.size === 1) {
     const p = [...pointers.values()][0];
     drag = { x: p.x, y: p.y, cx: cam.x, cy: cam.y, button: 0 };
-    painting = false;
   } else if (pointers.size === 0) {
-    if (painting) painting = false;
+    if (plan && plan.dragging) { plan.dragging = false; plan.fixed = true; }   // Vorschau bleibt stehen
     else if (drag && !moved && e.type === 'pointerup') {
-      if (drag.right) setTool('look');                     // Rechtsklick (ohne Ziehen) legt das Werkzeug weg
+      if (drag.right) { if (plan) cancelPlan(); else setTool('look'); }   // Rechtsklick: erst die Planung, dann das Werkzeug weg
       else if (!drag.pan) tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
     }
     drag = null;
@@ -138,6 +130,7 @@ function setHover(sx, sy) {
   hoverSlot = slotAt(sx, sy).slot;
   const t = toTile(sx, sy);
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }
+  if (plan && !plan.fixed) setPlanEnd(t);                // Linie per Klick begonnen: das Ende folgt der Maus
   hoverChunk = null;
 }
 
@@ -148,7 +141,7 @@ window.addEventListener('keydown', e => {
     if (!spaceDown) { spaceDown = true; if (!drag) canvas.style.cursor = 'grab'; }
     return;
   }
-  if (e.key === 'Escape') { setTool('look'); closePanel(); closeModal(); return; }
+  if (e.key === 'Escape') { if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }
   if (!document.getElementById('modal').hidden) return;
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
   const quick = { a: 'look', w: 'weg', v: 'verschieben', e: 'abriss', Delete: 'abriss', Backspace: 'abriss' }[e.key.length === 1 ? e.key.toLowerCase() : e.key];

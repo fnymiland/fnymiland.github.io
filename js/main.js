@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 function startNew() {
   resetUnlockWatch();
+  plan = null;
   state = newState();
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();

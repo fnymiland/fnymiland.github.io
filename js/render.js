@@ -234,6 +234,32 @@ function tileSprite(kind, x, y, px, py, z) {
   const B = SPRITE_BOX;
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
 }
+// Vorschau einer Linie bzw. eines Rechtecks: grün = wird gebaut, rot = geht nicht, hell = ist schon so
+function planPreview(z) {
+  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line) => {      // etwas eingerückt: jedes Feld einzeln sichtbar
+    const c = [toScreen(x - ins, y - ins), toScreen(x + ins, y - ins), toScreen(x + ins, y + ins), toScreen(x - ins, y + ins)];
+    g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
+    g.fillStyle = fill; g.fill();
+    if (line) { g.strokeStyle = line; g.lineWidth = 1.6 * z; g.stroke(); }
+  };
+  g.save();
+  g.lineJoin = 'round';
+  for (const [x, y] of planTiles(plan)) {
+    const s = info.states.get(x + ',' + y);
+    if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55');
+    else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)');
+    else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d');
+  }
+  const [x0, y0, x1, y1] = planBox(plan);
+  if (plan.kind === 'rect') {                                   // Rahmen um die ganze Fläche
+    const c = [toScreen(x0 - 0.5, y0 - 0.5), toScreen(x1 + 0.5, y0 - 0.5), toScreen(x1 + 0.5, y1 + 0.5), toScreen(x0 - 0.5, y1 + 0.5)];
+    g.strokeStyle = info.err ? '#e5484d' : '#3fbf6f'; g.lineWidth = 2.5 * z; g.setLineDash([6 * z, 4 * z]);
+    g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath(); g.stroke();
+  }
+  g.restore();
+  const p = plan.kind === 'line' ? toScreen(plan.b.x, plan.b.y) : toScreen((x0 + x1) / 2, (y0 + y1) / 2);
+  return { ok: !info.err, text: planText(plan, info), p };
+}
 // Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
 // hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in
 // Streifen gezeichnet und tragen ihre Lichter mehrfach ein: jedes nur einmal hinterlegen.
@@ -347,7 +373,8 @@ function render(now) {
   };
   const ghostType = tool === 'verschieben' ? movingType() : tool;
   const smallMode = tool === 'verschieben' ? !!moving && moving.kind === 'deco' : !!(ITEMS[tool] && ITEMS[tool].small);
-  if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (CLAIM_TOOLS.has(tool) && isSea(hover.x, hover.y)))) {
+  if (plan) preview = planPreview(z);                       // Linie/Rechteck: alle Felder mit Preis
+  else if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (CLAIM_TOOLS.has(tool) && isSea(hover.x, hover.y)))) {
     const hx = hover.x, hy = hover.y;
     const hds = decosAt(hx + ',' + hy);
     const rotOf = b => placeRot(b, hx, hy);

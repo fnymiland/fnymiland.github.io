@@ -263,7 +263,7 @@ function totals() {
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, regions: new Set(), commuters: new Map(), comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } } };
-function recalc() { T = totals(); NET = T.net; previewCache = null; groundVersion++; }
+function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
 const lmStage = type => (state.restore && state.restore[type]) || 0;
@@ -507,13 +507,14 @@ function crossCandidate(b, x, y) {
   if (b === 'schiene' && t.b === 'weg') return t;
   return null;
 }
-function crossError(b, x, y) {
+function crossError(b, x, y, noCost) {
   const t = crossCandidate(b, x, y);
   if (!t) return 'Hier steht schon etwas';
   if (!available(b)) return `${ITEMS[b].name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (t.bridge) return 'Kein Übergang auf einer Brücke';
   const ra = railArms(x, y);
   if (ra.length > 2 || (ra.length === 2 && (ra[0][0] !== -ra[1][0] || ra[0][1] !== -ra[1][1]))) return 'Übergang nur über gerade Schienen';
+  if (noCost) return null;
   const c = costOf(b, x, y);
   if (state.money < c.cost) return 'Zu wenig Taler';
   return matError(c.mat);
@@ -734,7 +735,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (!opts.move && d.workers && T.jobs + d.workers > T.pop) return 'Zu wenig Einwohner – baue Häuser';
   }
   if (d.wonder && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${WONDERS[b].the} gibt es schon`;
-  if (opts.move) return null;
+  if (opts.move || opts.noCost) return null;            // noCost: Linie/Rechteck rechnen den Preis zusammen
   const c = costOf(b, x, y);
   if (state.money < c.cost + clearCost(b, x, y, r)) return 'Zu wenig Taler';
   return matError(c.mat);

@@ -24,10 +24,12 @@ function drag(button, opts = {}, steps = 10) {
 const ways = () => game("[...state.tiles.values()].filter(t => t.b === 'weg').length");
 
 describe('Karte ziehen mit Werkzeug in der Hand', () => {
-  it('mit der linken Maustaste baut Ziehen den Weg', () => {
-    const w = ways();
+  it('mit der linken Maustaste zieht man eine Weg-Fläche auf – erst als Vorschau, Karte bleibt stehen', () => {
+    const w = ways(), c = game('[cam.x, cam.y]');
     drag(0);
-    expect(ways()).toBeGreaterThan(w);
+    expect(ways()).toBe(w);
+    expect(game('plan && plan.kind')).toBe('rect');
+    expect(game('[cam.x, cam.y]')).toEqual(c);
   });
 
   it('rechte Maustaste gedrückt halten: Karte bewegt sich, kein Weg, Werkzeug bleibt', () => {

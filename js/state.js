@@ -82,8 +82,14 @@ function serialize() {
   };
 }
 
+// Viele Felder auf einmal (Linie, Rechteck): rechnen, speichern und Töne erst am Ende, einmal
+let BATCH = 0;
+function batch(fn) {
+  BATCH++;
+  try { return fn(); } finally { BATCH--; if (!BATCH) { recalc(); save(); } }
+}
 function save() {
-  if (!state || PROBE) return;
+  if (!state || PROBE || BATCH) return;
   if (!document.hidden) state.last = Date.now();   // im Hintergrund zählt die Abwesenheit weiter
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize()));
@@ -236,6 +242,7 @@ function adoptState(s) {
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
   migrateLandmarks();
+  plan = null;                                     // eine halbe Planung gehört zum alten Stand
   const moved = migrateIslands();
   ownIslandsFully();
   const grown = growWonders();

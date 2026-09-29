@@ -156,6 +156,7 @@ function buildToolbar() {
 
 function setTool(t) {
   if (t !== 'verschieben' && moving) cancelMove();
+  if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
   tool = t;
   rotManual = false;
   previewCache = null;
@@ -172,7 +173,9 @@ function setTool(t) {
   if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
   hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
-    + (d.paint ? ' · Karte ziehen: rechte Maustaste, Leertaste oder Ctrl gedrückt halten (iPad: zwei Finger)' : '')
+    + (LINE_TOOLS.has(t) ? ' · Linie: Anfang und Ende anklicken' : '')
+    + (dragKind(t) === 'rect' ? ' · Fläche: aufziehen, hineinklicken baut' : '')
+    + (d.paint ? ' · Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '')
     + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
   hint.hidden = false;
 }
