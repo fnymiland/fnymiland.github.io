@@ -13,7 +13,7 @@ const wind = n => { for (let i = 0; i < n; i++) game(`state.tiles.set('${2 + (i 
 // Gerade Strecke von x=4 bis x=16 (y=10), Bahnhöfe an beiden Enden; rechts von x=10 ist „die Waldinsel“
 function line(power = 10) {
   for (let x = 4; x <= 16; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
-  game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('17,10', { b: 'station', lvl: 1, rot: 0 })");
+  game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('17,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' })");
   game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
   wind(power); game('recalc()');
 }
@@ -161,5 +161,45 @@ describe('Seilbahn', () => {
     expect(rail.served).toBeCloseTo(cab.served);
     expect(rail.carried + cab.carried).toBeCloseTo(rail.demand * rail.served);
     expect(rail.carried / cab.carried).toBeCloseTo(120 / 80);
+  });
+});
+
+describe('Forschung „Verkehr“', () => {
+  it('mit der Eisenbahn ist die Straßenbahn frei, die anderen Modelle kosten Ideen und brauchen die Stufe', () => {
+    expect(game("vehicleOk('zug', 'tram')")).toBe(true);
+    expect(game("vehicleOk('zug', 'regio')")).toBe(false);
+    game('state.science = 1e6');
+    expect(game("researchVehicle('zug', 'regio')")).toBe(false);                 // noch keine Bibliothek
+    game("state.tiles.set('20,20', { b: 'bibliothek', lvl: 1, rot: 0 }); recalc()");
+    expect(game("researchVehicle('zug', 'regio')")).toBe(true);
+    expect(game("vehicleOk('zug', 'regio')")).toBe(true);
+    expect(game('state.science')).toBe(1e6 - game("TRAIN_BY_ID.regio.cost"));
+    game('save()');
+    expect(game("load().vehicles.has('zug:regio')")).toBe(true);
+  });
+
+  it('schnellere Modelle schaffen mehr: Fahrgäste/min = Wagen × Plätze × Tempo', () => {
+    expect(game("trainSeats({ model: 'tram' })")).toBe(45);
+    expect(game("trainSeats({ model: 'regio' })")).toBe(120);
+    expect(game("trainSeats({ model: 'schnell' })")).toBe(Math.round(4 * 80 * 1.7));
+    expect(game("trainSeats({ model: 'regio', plus: 2 })")).toBe(240);
+  });
+
+  it('alte Stände: was schon fährt, bleibt erforscht; Bahnhöfe ohne Modell fahren weiter Regionalbahn', () => {
+    game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('17,10', { b: 'station', lvl: 1, rot: 0, train: 'modern' })");
+    const raw = game('serialize()');
+    raw.v = 10;
+    delete raw.vehicles;
+    game(`localStorage.setItem(SAVE_KEY, ${JSON.stringify(JSON.stringify(raw))})`);
+    const s = game('load()');
+    expect(s.tiles.get('3,10').train).toBe('regio');
+    expect([...s.vehicles].sort()).toEqual(['zug:modern', 'zug:regio']);
+  });
+
+  it('Reiter „Verkehr“ zeigt Schiffe und Züge', () => {
+    game("state.techs.add('seehandel'); openResearch('verkehr')");
+    expect(document.querySelectorAll('#modal-card .tech').length).toBe(8);
+    expect(document.getElementById('modal-card').textContent).toContain('Katamaran');
+    game('closeModal()');
   });
 });

@@ -578,12 +578,25 @@ const EXTRA_TRAIN = { money: 1500, metall: 10 };
 // befördert Pendler (½ Fahrt/min je Einwohner außerhalb ihres größten Orts) und Besucher (so viele, wie ein Ort
 // anzieht – höchstens ½ je Einwohner der anderen Orte). Plätze: 60 je Wagen und Minute. Reichen sie nicht, kommt nur
 // ein Teil mit (served). Fahrkarten und Besucher bringen Taler; was nah am Bahnhof steht, ist ans Dorf angebunden.
-const COMMUTE_SHARE = 0.5, VISIT_SHARE = 0.5, SEATS_PER_CAR = 60, FARE = 2, VISIT_SPEND = 10;
-const TRAIN_CARS = { tram: 1, regio: 2, modern: 3 }, MAX_PLUS_CARS = 4;       // Wagen je Modell, dazu anhängbar
+const COMMUTE_SHARE = 0.5, VISIT_SHARE = 0.5, FARE = 2, VISIT_SPEND = 10;
+const MAX_PLUS_CARS = 4;                                                         // Wagen zum Anhängen (dazu die des Modells)
 const EXTRA_CAR = { money: 400, metall: 3 };
 const LM_ATTRACT = [0, 40, 80, 150];                                            // Sehenswürdigkeit je Stufe
 const WONDER_ATTRACT = { seebruecke: 150, sternwarte: 200, riesenrad: 300, botgarten: 350, schloss: 500 };
-const carsOf = look => (TRAIN_CARS[look.model] || TRAIN_CARS.regio) + Math.min(MAX_PLUS_CARS, look.plus || 0);
+const trainModel = look => TRAIN_BY_ID[look.model] || TRAIN_BY_ID.tram;
+const carsOf = look => trainModel(look).cars + Math.min(MAX_PLUS_CARS, look.plus || 0);
+const carSeats = look => trainModel(look).perCar * trainModel(look).speed;          // Fahrgäste/min je Wagen
+const trainSeats = look => Math.round(carsOf(look) * carSeats(look));
+// Verkehrsmittel erforscht? kind 'zug' | 'schiff'; das erste Modell ist mit der Grundforschung frei
+const VEHICLE_BASE = { zug: 'bahn', schiff: 'seehandel' };
+const vehicleModels = kind => kind === 'zug' ? TRAIN_MODELS : SHIP_MODELS;
+function vehicleOk(kind, id) {
+  const m = vehicleModels(kind).find(v => v.id === id);
+  return !!m && hasTech(VEHICLE_BASE[kind]) && (!m.cost || state.vehicles.has(kind + ':' + id));
+}
+const vehicleOpen = (kind, m) => hasTech(VEHICLE_BASE[kind]) && tierOpen(m.tier || 1);
+// bestes erforschtes Modell (für neue Linien bzw. Schiffe)
+const bestVehicle = kind => [...vehicleModels(kind)].reverse().find(m => vehicleOk(kind, m.id)) || vehicleModels(kind)[0];
 // Strom ⚡: Kraftwerke liefern, egal wo sie stehen (Windrad je Stufe mehr; Forschung „Leichte Rotorblätter“ +50 % Wind,
 // „Intelligentes Stromnetz“ +25 % auf alles). Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡), dann
 // die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
@@ -668,15 +681,15 @@ function computeRail() {
   }
   lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
   const power = computePower(lines, wind, plants);
-  for (const l of lines) l.seats = l.looks.slice(0, l.running).reduce((s, lk) => s + carsOf(lk) * SEATS_PER_CAR, 0);
+  for (const l of lines) l.seats = l.looks.slice(0, l.running).reduce((s, lk) => s + trainSeats(lk), 0);
   return { lines, stationNet, wind, trains: power.trains, comp, power };
 }
 // Aussehen der Züge einer Linie (am Bahnhof gespeichert): erster Zug train/trainCol/trainPlus, weitere in extra.
 // plus = angehängte Wagen (zusätzlich zu denen des Modells)
 function lineLooks(stations) {
   const t = stations.map(k => state.tiles.get(k)).find(t => t && t.train) || state.tiles.get(stations[0]) || {};
-  return [{ model: t.train || 'regio', col: t.trainCol || 0, plus: t.trainPlus || 0 }]
-    .concat((t.extra || []).map(e => ({ model: e.model || 'regio', col: e.col || 0, plus: e.plus || 0 })));
+  return [{ model: t.train || 'tram', col: t.trainCol || 0, plus: t.trainPlus || 0 }]
+    .concat((t.extra || []).map(e => ({ model: e.model || 'tram', col: e.col || 0, plus: e.plus || 0 })));
 }
 // Seilbahn: jede Station mit der nächsten freien (bis SEIL_MAX Felder), paarweise; die Gondeln befördern Fahrgäste
 const SEIL_MAX = 20, SEIL_SEATS = 80;

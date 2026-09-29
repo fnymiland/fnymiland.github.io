@@ -8,6 +8,7 @@ const nfc = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractio
 const nf1 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function fmt(n) { return Math.abs(n) < 100000 ? nf.format(Math.floor(n)) : nfc.format(n); }
 function fmtRate(n) { return Math.abs(n) < 100 ? nf1.format(n) : fmt(n); }
+const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
 // oben in der Leiste: glatte Zahlen (unter 1 aber nicht „0“)
 function fmtWhole(n) { return n > 0 && n < 0.5 ? '<1' : fmt(Math.round(n)); }
 // Geld oben: immer glatt, ab 10 Mio. in Millionen (ohne Komma)
@@ -869,22 +870,23 @@ function trafficStatus(line, tr) {
   return out;
 }
 // Züge der Linie: Modell und Farbe wählt der Spieler für jeden Zug; gespeichert an allen Bahnhöfen der Linie
-const TRAIN_MODELS = [['regio', 'Regionalbahn'], ['tram', 'Straßenbahn'], ['modern', 'Triebwagen']];
-const modelName = id => TRAIN_MODELS.find(m => m[0] === id)[1];
+const modelName = id => (TRAIN_BY_ID[id] || TRAIN_BY_ID.tram).name;
 const TRAIN_COLS = ['#d9534a', '#3e7fd0', '#58b36a', '#f2b53a', '#b07ad6', '#f28cb1', '#4a4a58'];
 const lineTrain = line => line.looks[0];
 function trainChooser(line) {
   const n = line.count, { money, ...mat } = EXTRA_TRAIN;
   const { money: cm, ...cmat } = EXTRA_CAR;
   const one = (lk, i) => `<div class="label">${n > 1 ? `Zug ${i + 1}` : 'Zug dieser Linie'}${i > 0 ? ` <button class="btn ghost small" data-tdel="${i}">Entfernen · +🪙 ${fmt(money + (lk.plus || 0) * cm)}</button>` : ''}</div>
-    <div class="looks">${TRAIN_MODELS.map(([id, name]) => `<button class="look${id === lk.model ? ' on' : ''}" data-train="${i}:${id}">${name} · ${TRAIN_CARS[id]} 🚃</button>`).join('')}</div>
+    <div class="looks">${TRAIN_MODELS.map(m => vehicleOk('zug', m.id) || m.id === lk.model
+      ? `<button class="look${m.id === lk.model ? ' on' : ''}" data-train="${i}:${m.id}">${m.icon} ${m.name}</button>`
+      : `<button class="look" disabled title="Forschung → 🚢 Verkehr">🔒 ${m.name}</button>`).join('')}</div>
     <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>
-    <div class="row cars"><span>🚃 ${carsOf(lk)} Wagen · ${carsOf(lk) * SEATS_PER_CAR} Plätze/min · ${fmtPow(carNeed(line.tiles, carsOf(lk)))} ⚡</span>
+    <div class="row cars"><span>🚃 ${carsOf(lk)} Wagen · ${trainSeats(lk)} Fahrgäste/min · ${fmtPow(carNeed(line.tiles, carsOf(lk)))} ⚡</span>
       ${(lk.plus || 0) < MAX_PLUS_CARS ? `<button class="btn small" data-carplus="${i}" data-cost="${cm}" data-mat='${JSON.stringify(cmat)}'>+ Wagen · 🪙 ${fmt(cm)} ${matText(cmat)}</button>` : ''}
       ${lk.plus ? `<button class="btn ghost small" data-carminus="${i}">− Wagen</button>` : ''}</div>`;
   const more = line.loop && n < line.max
     ? `<div class="row"><button class="btn" data-tadd data-cost="${money}" data-mat='${JSON.stringify(mat)}'>🚆 + Zug · 🪙 ${fmt(money)} ${matText(mat)}</button></div>
-       <p class="muted">Ein weiterer ${modelName(line.looks[0].model)}: +${carsOf({ model: line.looks[0].model }) * SEATS_PER_CAR} Plätze/min, braucht ${fmtPow(carNeed(line.tiles, carsOf({ model: line.looks[0].model })))} ⚡.</p>`
+       <p class="muted">Ein weiterer Zug (${modelName(bestVehicle('zug').id)}): +${trainSeats({ model: bestVehicle('zug').id })} Fahrgäste/min, braucht ${fmtPow(carNeed(line.tiles, carsOf({ model: bestVehicle('zug').id })))} ⚡.</p>`
     : line.loop ? `<p class="muted">Mehr Züge ab ${(n + 1) * KM_PER_TRAIN} km Rundkurs (1 Zug je ${KM_PER_TRAIN} km).</p>` : '';
   return line.looks.slice(0, n).map(one).join('') + more;
 }
@@ -912,7 +914,7 @@ function wireTrainChooser(el, line, reopen) {
     if (!canPay(EXTRA_CAR)) { fail(state.money < EXTRA_CAR.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
     addCost(EXTRA_CAR, -1);
     looks[+b.dataset.carplus].plus = (looks[+b.dataset.carplus].plus || 0) + 1;
-    toast('🚃 Ein Wagen mehr: +' + SEATS_PER_CAR + ' Plätze');
+    toast('🚃 Ein Wagen mehr: +' + Math.round(carSeats(looks[+b.dataset.carplus])) + ' Fahrgäste/min');
     store(looks);
   };
   for (const b of el.querySelectorAll('[data-carminus]')) b.onclick = () => {
@@ -926,7 +928,7 @@ function wireTrainChooser(el, line, reopen) {
   if (add) add.onclick = () => {
     if (!canPay(EXTRA_TRAIN)) { fail(state.money < EXTRA_TRAIN.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return; }
     addCost(EXTRA_TRAIN, -1);
-    looks.splice(line.count, 0, { model: looks[0].model, col: (looks[line.count - 1].col + 1) % TRAIN_COLS.length });
+    looks.splice(line.count, 0, { model: bestVehicle('zug').id, col: (looks[line.count - 1].col + 1) % TRAIN_COLS.length });
     toast('🚆 Ein neuer Zug fährt los!');
     store(looks);
   };
@@ -1062,6 +1064,19 @@ function openResearch(tab = researchTab) {
         <span>${lvl ? `Jetzt +${Math.round(MASTERY_STEP * 100 * lvl)} % ${m.text}` : `+${Math.round(MASTERY_STEP * 100)} % ${m.text} je Stufe`}</span>
         <button class="btn" data-mastery="${m.id}" data-sci="${cost}" ${state.science < cost ? 'disabled' : ''}>Stufe ${roman(lvl + 1)} · 💡 ${fmt(cost)}</button></div>`;
     }).join('')}</div>` : '<p class="muted">🔒 Baue eine Bibliothek – dann gibt es die Stufen-Forschung.</p>');
+  } else if (tab === 'verkehr') {
+    const card = (kind, m) => {
+      const have = vehicleOk(kind, m.id), open = vehicleOpen(kind, m), perMin = kind === 'zug' ? trainSeats({ model: m.id }) : Math.round(m.seats * m.speed);
+      const stats = kind === 'zug' ? `${m.cars} Wagen à ${m.perCar} Plätze · Tempo ${'★'.repeat(Math.round(m.speed * 2))}` : `${m.seats} Plätze · Tempo ${'★'.repeat(Math.round(m.speed * 2))}`;
+      const need = !hasTech(VEHICLE_BASE[kind]) ? `braucht Forschung „${TECH_BY_ID[VEHICLE_BASE[kind]].name}“` : !open ? `braucht eine ${TECH_TIERS[m.tier || 1].name}` : '';
+      return `<div class="tech${have ? ' done' : ''}${!have && !open ? ' locked' : ''}"><b>${have ? '✓ ' : ''}${m.icon} ${m.name}</b>
+        <span>${stats} → ${perMin} Fahrgäste/min${kind === 'schiff' ? ` · kaufen am Hafen: ${costText(m.buy)}` : ''}</span>
+        ${need && !have ? `<span class="muted">${need}</span>` : ''}
+        ${!have && open && m.cost ? `<button class="btn" data-vehicle="${kind}:${m.id}" data-sci="${m.cost}" ${state.science < m.cost ? 'disabled' : ''}>Erforschen · 💡 ${fmt(m.cost)}</button>` : ''}</div>`;
+    };
+    body = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen. Jedes Verkehrsmittel sieht anders aus, hat mehr Plätze und ist schneller – so schaffen Züge und Schiffe mehr Fahrgäste.</p>
+      <div class="label">🚢 Schiffe (Fähren am Hafen)</div><div class="mastery">${SHIP_MODELS.map(m => card('schiff', m)).join('')}</div>
+      <div class="label">🚆 Züge</div><div class="mastery">${TRAIN_MODELS.map(m => card('zug', m)).join('')}</div>`;
   } else if (tab === 'erfindung') {
     body = `<p>Du hast <span class="sci-have">💡 ${fmt(state.science)}</span> Ideen. Erfindungen gibt es nur für Ideen – besondere Dinge für deine Insel.</p>`
       + (inventionsOpen() ? `<div class="mastery">${INVENTIONS.map(inv => {
@@ -1088,6 +1103,7 @@ function openResearch(tab = researchTab) {
     <div class="looks hall-tabs">
       <button class="look${tab === 'wissen' ? ' on' : ''}" data-rtab="wissen">📚 Wissen</button>
       <button class="look${tab === 'stufen' ? ' on' : ''}" data-rtab="stufen">📈 Stufen</button>
+      <button class="look${tab === 'verkehr' ? ' on' : ''}" data-rtab="verkehr">🚢 Verkehr</button>
       <button class="look${tab === 'erfindung' ? ' on' : ''}" data-rtab="erfindung">💡 Erfindungen</button>
       <button class="look${tab === 'design' ? ' on' : ''}" data-rtab="design">🎨 Kunstakademie</button>
     </div>
@@ -1098,6 +1114,7 @@ function openResearch(tab = researchTab) {
   for (const b of document.querySelectorAll('[data-tech]')) b.onclick = () => research(b.dataset.tech);
   for (const b of document.querySelectorAll('[data-mastery]')) b.onclick = () => { if (studyMastery(b.dataset.mastery)) openResearch('stufen'); };
   for (const b of document.querySelectorAll('[data-invent]')) b.onclick = () => { if (invent(b.dataset.invent)) openResearch('erfindung'); };
+  for (const b of document.querySelectorAll('[data-vehicle]')) b.onclick = () => { const [k, id] = b.dataset.vehicle.split(':'); if (researchVehicle(k, id)) openResearch('verkehr'); };
   for (const b of document.querySelectorAll('[data-fire]')) b.onclick = () => { closeModal(); startFireworks(); };
   for (const b of document.querySelectorAll('[data-design]')) b.onclick = () => { if (buyDesign(b.dataset.design)) openResearch('design'); };
   $('m-close').onclick = closeModal;
@@ -1204,7 +1221,6 @@ function openTownHall(tab = hallTab) {
       <div class="hall-row${state.festival ? ' done' : ''}"><span>🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</span></div>`;
   } else if (tab === 'ready') {
     // Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
-    const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
     const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
     const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
     // Gruppen wie im Bau-Menü (Wohnen, Geld, Rohstoffe …), je mit „Alle ausbauen“; ganz oben „Alles ausbauen“

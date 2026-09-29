@@ -104,7 +104,7 @@ describe('Speichern', () => {
 describe('Alte Stände', () => {
   it('der neue Bahnhof bleibt beim Laden stehen (der alte, entfernte hieß „bahnhof“ und wird erstattet)', () => {
     unlock();
-    game("state.tiles.set('8,8', { b: 'station', lvl: 1 }); save()");
+    game("state.tiles.set('8,8', { b: 'station', lvl: 1, train: 'regio' }); save()");
     expect(game('load()').tiles.get('8,8').b).toBe('station');
   });
 });
@@ -114,7 +114,7 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
   const line = () => {
     unlock();
     const [wx, wy] = game('[Math.round(ISLE_BY_ID.wald.cx) + 4, Math.round(ISLE_BY_ID.wald.cy)]');
-    game(`state.tiles.set('8,8', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('${wx},${wy}', { b: 'station', lvl: 1, rot: 0 })`);
+    game(`state.tiles.set('8,8', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('${wx},${wy}', { b: 'station', lvl: 1, rot: 0, train: 'regio' })`);
     // Schiene: vor dem Heimatbahnhof (9,8) nach +x bis wx+1, dann in y bis wy – liegt dort direkt vor dem Waldbahnhof
     let x = 9, y = 8;
     const set = () => game(`if (!state.tiles.has('${x},${y}')) state.tiles.set('${x},${y}', { b: 'schiene', lvl: 1 })`);
@@ -163,7 +163,7 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
 
   it('zwei Bahnhöfe auf derselben Insel sind keine Linie', () => {
     unlock();
-    game("state.tiles.set('8,4', { b: 'station', lvl: 1 }); state.tiles.set('8,8', { b: 'station', lvl: 1 })");
+    game("state.tiles.set('8,4', { b: 'station', lvl: 1, train: 'regio' }); state.tiles.set('8,8', { b: 'station', lvl: 1, train: 'regio' })");
     for (let y = 4; y <= 9; y++) game(`state.tiles.set('10,${y}', { b: 'schiene', lvl: 1 })`);
     game("state.tiles.set('9,4', { b: 'schiene', lvl: 1 }); state.tiles.set('9,9', { b: 'schiene', lvl: 1 }); recalc()");
     expect(game('T.rail.lines.length')).toBe(0);
@@ -189,7 +189,7 @@ describe('Der Zug fährt', () => {
   // kleine Linie auf der Heimatinsel, mit einem „fremden“ Bahnhof: regionAt wird dafür umgebogen
   const setup = (wind = 2) => {
     unlock();
-    game("state.tiles.set('7,4', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('7,10', { b: 'station', lvl: 1, rot: 0 })");
+    game("state.tiles.set('7,4', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('7,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' })");
     for (let y = 4; y <= 11; y++) game(`state.tiles.set('8,${y}', { b: 'schiene', lvl: 1 })`);
     game("state.tiles.set('9,11', { b: 'schiene', lvl: 1 }); state.tiles.set('10,11', { b: 'schiene', lvl: 1 })");   // Kurve am Ende
     for (let i = 0; i < wind; i++) game(`state.tiles.set('12,${4 + i * 2}', { b: 'windrad', lvl: 1 })`);
@@ -226,10 +226,10 @@ describe('Der Zug fährt', () => {
     expect(game('trains[0].c')).toBe(s0);
   });
 
-  it('alle drei Modelle lassen sich zeichnen, tags und nachts', () => {
+  it('alle vier Modelle lassen sich zeichnen, tags und nachts', () => {
     setup();
-    for (const [model, n] of [['regio', 2], ['tram', 1], ['modern', 3]]) {
-      game(`state.tiles.get('7,4').train = '${model}'; syncMovers()`);
+    for (const [model, n] of [['regio', 2], ['tram', 1], ['modern', 3], ['schnell', 4]]) {
+      game(`for (const t of state.tiles.values()) if (t.b === 'station') t.train = '${model}'; syncMovers()`);
       expect(game('trainCars().length')).toBe(n);
       for (const night of [0, 0.8]) {
         expect(() => game(`night = ${night}; for (const c of trainCars()) drawTrainCar(c, 1.5, 1000)`)).not.toThrow();

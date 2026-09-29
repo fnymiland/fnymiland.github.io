@@ -438,3 +438,15 @@ function checkCruises(now = Date.now()) {
   }
   return n;
 }
+
+// Verkehrsmittel erforschen (Reiter „Verkehr“): kostet Ideen, braucht Grundforschung und Forschungsstufe
+function researchVehicle(kind, id) {
+  const m = vehicleModels(kind).find(v => v.id === id);
+  if (!m || vehicleOk(kind, id) || !vehicleOpen(kind, m)) return false;
+  if (state.science < m.cost) { fail('Zu wenig Ideen'); return false; }
+  state.science -= m.cost;
+  state.vehicles.add(kind + ':' + id);
+  sfx('research'); recalc(); save();
+  toast(`${m.icon} Erforscht: ${m.name}!`);
+  return true;
+}

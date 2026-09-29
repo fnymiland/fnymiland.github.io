@@ -15,7 +15,7 @@ function ring(a, b) {
   for (let x = a; x <= b; x++) for (const y of [a, b]) game(`state.tiles.set('${x},${y}', { b: 'schiene', lvl: 1 })`);
   for (let y = a + 1; y < b; y++) for (const x of [a, b]) game(`state.tiles.set('${x},${y}', { b: 'schiene', lvl: 1 })`);
   const m = Math.floor((a + b) / 2);
-  game(`state.tiles.set('${a - 1},${m}', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('${b + 1},${m}', { b: 'station', lvl: 1, rot: 0 })`);
+  game(`state.tiles.set('${a - 1},${m}', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('${b + 1},${m}', { b: 'station', lvl: 1, rot: 0, train: 'regio' })`);
   game(`globalThis.__ra = regionAt; regionAt = (x, y) => x > ${m} ? 'wald' : 'home'; recalc(); syncMovers()`);
   return m;
 }
@@ -92,7 +92,7 @@ describe('Mehrere Züge', () => {
     expect(game('T.rail.lines[0].seats')).toBe(2 * 60);                      // Regionalbahn: 2 Wagen
     game("for (const k of ['3,10', '17,10']) state.tiles.get(k).extra = [{ model: 'modern', col: 4 }]");
     wind(20); game('recalc(); syncMovers()');
-    expect(game('T.rail.lines[0].seats')).toBe(2 * 60 + 3 * 60);             // dazu ein Triebwagen mit 3 Wagen
+    expect(game('T.rail.lines[0].seats')).toBe(120 + game("trainSeats({ model: 'modern' })"));   // dazu ein Triebwagen (3 Wagen, schneller)
     expect(game('trains.map(t => t.model)')).toEqual(['regio', 'modern']);
     game('save()');
     expect(game("load().tiles.get('3,10').extra")).toEqual([{ model: 'modern', col: 4 }]);

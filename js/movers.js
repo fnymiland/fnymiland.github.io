@@ -114,7 +114,9 @@ const TRAIN_KIND = {
   regio:  { n: 2, len: 0.78, gap: 0.06, h: 12 },
   tram:   { n: 1, len: 1.0, gap: 0, h: 13 },
   modern: { n: 3, len: 0.6, gap: 0.04, h: 11 },
+  schnell: { n: 4, len: 0.62, gap: 0.03, h: 10 },
 };
+const trainSpeed = model => TRAIN_SPEED * (TRAIN_BY_ID[model] || TRAIN_BY_ID.tram).speed;   // schnellere Modelle fahren schneller
 // Schienenfeld direkt am Bahnhof (dort hält der Zug)
 function railStop(k) {
   const t = state.tiles.get(k), [x, y] = keyXY(k);
@@ -284,12 +286,12 @@ function syncTrains() {
 function stepTrains(dt) {
   for (const tr of trains) {
     if (tr.loop) {
-      if (tr.powered && tr.idx === 0) tr.ls.tau += dt;          // die Zeit des Rings läuft einmal pro Linie
+      if (tr.powered && tr.idx === 0) tr.ls.tau += dt * (TRAIN_BY_ID[tr.model] || TRAIN_BY_ID.tram).speed;   // die Zeit des Rings läuft einmal pro Linie
       continue;
     }
     if (!tr.powered) continue;
     if (tr.wait > 0) { tr.wait -= dt; continue; }
-    const target = tr.stops[tr.next], step = TRAIN_SPEED * dt;
+    const target = tr.stops[tr.next], step = trainSpeed(tr.model) * dt;
     if (Math.abs(target - tr.c) <= step) {
       tr.c = target; tr.wait = TRAIN_WAIT;
       if (tr.next + tr.dir < 0 || tr.next + tr.dir >= tr.stops.length) tr.dir = -tr.dir;
@@ -316,7 +318,7 @@ function drawTrainCar(car, z, now) {
   const tr = car.train, { du, dv } = car, col = TRAIN_COLS[tr.col] || TRAIN_COLS[0], H = tr.kind.h;
   const P = (a, b, up = 0) => { const p = toScreen(car.px + du * a - dv * b, car.py + dv * a + du * b); return [p.x, p.y - up * z]; };
   const la = car.len / 2, wb = tr.model === 'tram' ? 0.19 : 0.17, lit = night > 0.15 && isLive();
-  const body = tr.model === 'modern' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
+  const body = tr.model === 'modern' || tr.model === 'schnell' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
   const [cx, cy] = P(0, 0);
   ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)');
   const C4 = [[-la, -wb], [la, -wb], [la, wb], [-la, wb]];
@@ -330,10 +332,11 @@ function drawTrainCar(car, z, now) {
     poly([f.p, f.q, [f.q[0], f.q[1] - H * z], [f.p[0], f.p[1] - H * z]], C(wall));
     if (tr.model === 'regio') faceQuad(f.p, f.q, 0, 1, H * 0.42 * z, H * 0.92 * z, C(shade('#f6ecd6', f.nu > 0 ? LIGHT.side * f.nu : 0)));
     if (tr.model === 'modern') faceQuad(f.p, f.q, 0, 1, H * 0.1 * z, H * 0.3 * z, C(col));
-    const glass = lit ? '#ffd873' : C(tr.model === 'modern' ? '#3d4a5c' : '#bfe3ff');
+    if (tr.model === 'schnell') { faceQuad(f.p, f.q, 0, 1, H * 0.12 * z, H * 0.24 * z, C(col)); faceQuad(f.p, f.q, 0, 1, H * 0.86 * z, H * 0.94 * z, C(col)); }   // Zierstreifen unten und oben
+    const glass = lit ? '#ffd873' : C(tr.model === 'modern' || tr.model === 'schnell' ? '#3d4a5c' : '#bfe3ff');
     if (f.end) faceQuad(f.p, f.q, 0.18, 0.82, H * 0.48 * z, H * 0.82 * z, glass);
     else {
-      const w = tr.model === 'tram' ? 3 : tr.model === 'modern' ? 1 : 4;
+      const w = tr.model === 'tram' ? 3 : tr.model === 'modern' || tr.model === 'schnell' ? 1 : 4;
       for (let k = 0; k < w; k++) {
         const t0 = 0.08 + k * 0.84 / w, t1 = t0 + 0.84 / w - (w > 1 ? 0.05 : 0);
         faceQuad(f.p, f.q, t0, t1, H * 0.48 * z, H * 0.82 * z, glass);

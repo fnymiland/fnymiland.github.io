@@ -252,6 +252,23 @@ const BUILD_STAGES = {
 };
 const PLURAL = { feld: 'Felder', muehle: 'Mühlen', holz: 'Holzfäller', fischer: 'Fischerhütten', obst: 'Obstplantagen', stein: 'Steinbrüche',
   mine: 'Bergwerke', haus: 'Häuser', schmiede: 'Schmieden', saege: 'Sägewerke', steinmetz: 'Steinmetze', kristallmine: 'Kristallminen' };
+// Verkehrsmittel (Forschungs-Reiter „Verkehr“): jedes Modell sieht anders aus, hat mehr Plätze und ist schneller –
+// Fahrgäste/min = Plätze × Tempo. Das erste ist frei, sobald Seehandel bzw. Eisenbahn erforscht ist; die anderen kosten
+// Ideen (cost) und brauchen die Forschungsstufe tier (Bibliothek/Universität). Schiffe kauft man am Hafen (buy).
+const SHIP_MODELS = [
+  { id: 'holz',      name: 'Holzfähre',  icon: '⛵', seats: 60,  speed: 1,   cost: 0,      buy: { money: 800, bretter: 10 } },
+  { id: 'dampfer',   name: 'Raddampfer', icon: '🛳️', seats: 110, speed: 1.3, cost: 5000,   tier: 2, buy: { money: 3000, bretter: 12, metall: 6 } },
+  { id: 'motor',     name: 'Motorfähre', icon: '⛴️', seats: 180, speed: 1.7, cost: 30000,  tier: 3, buy: { money: 12000, metall: 16 } },
+  { id: 'katamaran', name: 'Katamaran',  icon: '🚤', seats: 280, speed: 2.3, cost: 150000, tier: 3, buy: { money: 50000, metall: 30, kristall: 8 } },
+];
+// Züge: Plätze je Wagen (perCar), Wagen des Modells (cars, anhängbar), Tempo
+const TRAIN_MODELS = [
+  { id: 'tram',    name: 'Straßenbahn',  icon: '🚋', cars: 1, perCar: 50, speed: 0.9, cost: 0 },
+  { id: 'regio',   name: 'Regionalbahn', icon: '🚆', cars: 2, perCar: 60, speed: 1,   cost: 4000,   tier: 2 },
+  { id: 'modern',  name: 'Triebwagen',   icon: '🚈', cars: 3, perCar: 70, speed: 1.3, cost: 25000,  tier: 3 },
+  { id: 'schnell', name: 'Schnellzug',   icon: '🚄', cars: 4, perCar: 80, speed: 1.7, cost: 150000, tier: 3 },
+];
+const SHIP_BY_ID = Object.fromEntries(SHIP_MODELS.map(m => [m.id, m])), TRAIN_BY_ID = Object.fromEntries(TRAIN_MODELS.map(m => [m.id, m]));
 // Sorten: Bedingungen fragen nach einer Sorte, nicht nach genau einem Gebäude – „ein Haus in der Nähe“ ist jedes
 // Wohnhaus, „ein Brunnen“ auch der Kristallbrunnen, „ein Park“ auch der Botanische Garten. In `near` (BUILD_STAGES) und
 // bei den Wünschen steht der Name der Sorte; ist er keine Sorte, gilt genau dieses Gebäude.
