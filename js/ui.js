@@ -223,7 +223,7 @@ function updateHud() {
   $('pop').textContent = fmt(T.pop);
   $('jobs').textContent = `💼 ${fmt(T.jobs)}`;                  // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
-  $('sci').textContent = fmt(state.science);
+  $('sci').textContent = fmtMoney(state.science);              // glatt wie das Geld (vorher „1,2 Mio.“)
   $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci) + '/s' : '';
   $('sci-dot').hidden = !canResearch();
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
