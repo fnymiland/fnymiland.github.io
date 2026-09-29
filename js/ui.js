@@ -90,6 +90,12 @@ function menuLabel(b, label) {
   b.innerHTML = `<span class="ic">${m[1]}</span> <span class="tx">${m[2]}</span>`;
   b.setAttribute('aria-label', m[2]); b.title = m[2];
 }
+// Handy: Katalog (Filter + Kacheln) ist eingeklappt, bis man einen Bereich antippt
+let sheetOpen = false;
+function setSheet(open) {
+  sheetOpen = !!open;
+  $('toolbar').classList.toggle('open', sheetOpen);
+}
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
@@ -99,7 +105,7 @@ function buildToolbar() {
     b.dataset.quick = id;
     b.textContent = icon;
     b.title = label; b.setAttribute('aria-label', label);
-    b.onclick = () => { audio(); setTool(tool === id && id !== 'look' ? 'look' : id); };
+    b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
     cats.append(b);
   }
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
@@ -110,7 +116,8 @@ function buildToolbar() {
     b.className = 'cat' + (m.id === menuTop ? ' active' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
-    b.onclick = () => { menuTop = m.id; keep(); buildToolbar(); };
+    // Handy: der Bereich klappt den Katalog auf (nochmal antippen: zu)
+    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id)); menuTop = m.id; keep(); buildToolbar(); };
     cats.append(b);
   }
   // bei „Bauen“: Filter nach Zweck
@@ -136,7 +143,7 @@ function buildToolbar() {
     const s = document.createElement('span'); s.className = 'cost'; s.textContent = sub;
     b.append(n, s);
     if (fx) { const f = document.createElement('span'); f.className = 'fx'; f.textContent = fx; b.append(f); }
-    b.onclick = () => { audio(); setTool(tool === id && id !== 'look' ? 'look' : id); };
+    b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
     box.append(b);
     return b;
   };
@@ -163,11 +170,22 @@ function setTool(t) {
   if (t !== 'look') closePanel();
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
   for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
-  const hint = $('hint');
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
+  updateHint();
+}
+// Hinweis über der Leiste: auf dem Handy nur Name, Preis und wie man baut (sonst verdeckt er die halbe Karte)
+function updateHint() {
+  const hint = $('hint'), t = tool;
   if (t === 'look') { hint.hidden = true; return; }
   const d = ITEMS[t], extra = [];
+  if (PHONE) {
+    const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
+      : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
+    hint.textContent = `${d.name}${d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
+    hint.hidden = false;
+    return;
+  }
   if (d.mat) extra.push('Material: ' + matText(d.mat));
   if (d.workers) extra.push(`👷 ${d.workers}`);
   if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);

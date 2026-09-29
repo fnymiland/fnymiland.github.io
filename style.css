@@ -521,3 +521,15 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
   background: #b8352c; color: #fff; font-weight: 800; font-size: 14px; border-radius: 14px; padding: 10px 16px; box-shadow: 0 6px 18px rgba(0,0,0,.25); cursor: pointer; }
 
 .mastery { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 8px 0; }
+
+/* ---------- Handy (body.phone: kürzere Bildschirmseite < 540 px, gesetzt in resize) ----------
+   iPad und Desktop sind nie .phone – hier nur, was aufs Handy gehört. */
+/* Leiste eingeklappt: nur Schnellwerkzeuge + Bereiche; ein Bereich klappt den Katalog auf (#toolbar.open) */
+body.phone #toolbar { padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); transition: background .15s; }
+body.phone #toolbar:not(.open) #subcats, body.phone #toolbar:not(.open) #tools { display: none; }
+body.phone #toolbar.open { background: rgba(255, 250, 240, .94); border-radius: 22px 22px 0 0; box-shadow: 0 -6px 22px rgba(60, 40, 20, .18); }
+body.phone .cats { margin-bottom: 0; }
+/* Hochformat: Kacheln als Raster (vier nebeneinander), höchstens halbe Höhe */
+body.phone:not(.phone-land) #toolbar.open .tools { flex-wrap: wrap; justify-content: center; width: auto; max-height: 46dvh;
+  overflow-x: hidden; overflow-y: auto; padding: 8px 0 6px; }
+body.phone #toolbar .tool[data-tool="look"] { display: none; }    /* „Ansehen“ ist schon vorn in der Zeile */

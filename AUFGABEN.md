@@ -192,3 +192,18 @@ beim Verschieben zieht alles im Rechteck mit (Gebäude, Deko, Wege, Schienen) �
       Weg aufziehen = Fläche; Deko = je Feld eine in derselben Ecke.
 - [x] **15d Mehrere Dinge verschieben:** Rechteck aufziehen, alles darin (ganz drin) wird angehoben und zieht zusammen
       um; Sehenswürdigkeiten und Rathaus bleiben.
+
+## Block 16 – Spielbar auf dem Handy (29.09. abends)
+
+Entschieden: Leiste einklappbar (eine schmale Zeile, „Bauen“ & Co. öffnen den Katalog von unten, nach der Wahl klappt
+er zu); Hoch- und Querformat; Infofenster in der unteren Hälfte (Querformat: rechts), die Karte rückt so, dass das
+angetippte Gebäude sichtbar bleibt. **iPad und Desktop bleiben unverändert** – alles hängt an `body.phone`
+(kürzere Bildschirmseite < 540 px).
+
+- [x] **16a** Handy erkennen (`body.phone`, `body.phone-land`), Tests dafür.
+- [x] **16b** Leiste einklappbar: unten nur Schnellwerkzeuge + Bereiche; Bereich antippen öffnet den Katalog (Filter +
+      Kacheln als Raster), Wahl oder Tippen auf die Karte klappt ihn zu.
+- [ ] **16c** Kopf und Hinweis kompakt: Zielkasten nur eine Zeile, Hinweis nur Name + Preis.
+- [ ] **16d** Infofenster als untere Hälfte mit Griff (antippen = ganz hoch); Karte rückt das Gebäude ins Bild.
+- [ ] **16e** Querformat: Leiste flach, Katalog halbhoch, Infofenster rechts.
+- [ ] **16f** Feinschliff: alle Fenster, Schilder, Drehknopf, Stil-Leiste, Lager bei 375×812 und 812×375 nachsehen.

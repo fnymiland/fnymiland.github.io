@@ -7,11 +7,20 @@ const ctx = canvas.getContext('2d');
 let g = ctx;
 let W = 0, H = 0, DPR = 1;
 let cam;
+// Handy: kürzere Bildschirmseite unter 540 px (hoch oder quer). iPad und Desktop sind nie „phone“ –
+// alles Handy-Eigene hängt an dieser einen Stelle (CSS: body.phone / body.phone-land)
+let PHONE = false;
 
 function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
+  const was = PHONE;
+  PHONE = Math.min(W, H) < 540;
+  document.body.classList.toggle('phone', PHONE);
+  document.body.classList.toggle('phone-land', PHONE && W > H);
+  if (!PHONE) setSheet(false);
+  if (was !== PHONE && typeof updateHint === 'function') updateHint();
 }
 function toScreen(x, y) {
   const p = iso(x, y);
@@ -47,6 +56,7 @@ let hoverSlot = 0;
 
 canvas.addEventListener('pointerdown', e => {
   audio();
+  if (sheetOpen) setSheet(false);                     // Handy: Tippen auf die Karte klappt den Katalog zu
   try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ohne Capture weiter */ }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
