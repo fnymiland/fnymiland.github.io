@@ -190,14 +190,14 @@ function openDiary(at) {
 // Einführung: die ersten Schritte, sanft geführt
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
-  { text: 'Bau dein erstes Haus.', hint: '🏠 Bauen → Haus', done: () => hasBuilt('haus') },
-  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Wege → Weg (ziehen)',
+  { text: 'Bau dein erstes Haus.', hint: '🏗️ Bauen → Haus', done: () => hasBuilt('haus') },
+  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Verbinden → Weg (ziehen) – oder 🛤️ ganz links',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
-  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏠 Bauen → Holzfäller', done: () => hasBuilt('holz') },
+  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
   { text: 'Erschließe die Waldinsel.', hint: 'Braucht 8 Einwohner (2 Häuser) und 🪙 150 – Insel im Meer antippen',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
-  { text: 'Bau ein Sägewerk.', hint: '🏠 Bauen → Sägewerk', done: () => hasBuilt('saege') },
+  { text: 'Bau ein Sägewerk.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Sägewerk', done: () => hasBuilt('saege') },
   { text: 'Bau dein erstes Haus aus.', hint: 'Wünsche erfüllen, dann Haus antippen → Ausbauen',
     done: () => [...state.tiles.values()].some(t => t.b === 'haus' && t.lvl >= 2) },
 ];

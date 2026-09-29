@@ -108,6 +108,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     +8 Pendler je Bahnhof, +10 % (`s.rail`) für alle Gebäude der Inseln. Schienen verbinden keine Viertel. Züge in
     movers.js (`syncTrains`/`stepTrains`/`trainCars`), Wagen als gedrehte Quader (`drawTrainCar`). Alles, was an einem
     Feld hängt und gespeichert werden muss (`bridge`, `train`), gehört auch in `tileOut` – der Zufallstest findet es sonst.
+25. **Baumenü** = `MENU` (data.js): Bauen (Filter Wohnen/Geld/Rohstoffe/Verstärker/Bildung) · Verschönern · Verbinden ·
+    Gelände. Jedes Ding steht in **genau einer** Gruppe (Test prüft das); neue Dinge dort eintragen, Wirkung in `FX`.
+    `ITEMS[].cat` ist die Spiel-Kategorie und bleibt unabhängig davon (Blumenbeet: Menü „Verstärker“, Spiel „deko“).
+26. **Natur räumt sich weg** (`willClear`, `clearCost`, `clearNature`): Bauen auf Wald/Obsthain/Fels/Erz/Kristallfels
+    rodet bzw. sprengt zum normalen Preis; Betriebe behalten ihr Gelände. Beim Verschieben wird nichts geräumt.
+27. **Canvas-Text nie mit `textAlign = 'center'`**, sondern `centerText()` – Safari zentriert Text mit Emojis falsch.
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

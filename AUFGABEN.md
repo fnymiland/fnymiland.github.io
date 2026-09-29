@@ -77,6 +77,6 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 - [x] **Natur räumt sich weg:** Bauen auf Wald/Obsthain/Fels/Erz/Kristallfels rodet bzw. sprengt automatisch (Kosten wie
       von Hand, in der Vorschau); Betriebe behalten ihr Gelände, Selbstgebautes wird nie weggeräumt.
 - [x] **Geldanzeige oben** ohne Kommazahlen.
-- [ ] **Baumenü Variante B:** Bauen (Filter: Alle, Wohnen, Geld, Rohstoffe, Verstärker, Bildung) · Verschönern ·
+- [x] **Baumenü Variante B:** Bauen (Filter: Alle, Wohnen, Geld, Rohstoffe, Verstärker, Bildung) · Verschönern ·
       Verbinden · Gelände; jedes Gebäude in genau einer Gruppe; Wirkung auf jeder Karte.
 - [ ] **Bahnübergänge** – Vorschlag besprechen (Schranke, Brücke oder beides).

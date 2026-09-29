@@ -56,6 +56,13 @@ function thumb(type) {
 
 // Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Verschieben (V)'], ['abriss', '🧹', 'Abreißen (E)']];
+// „🏗️ Bauen“ → Symbol und Wort getrennt, damit schmale Bildschirme nur das Symbol zeigen können
+function menuLabel(b, label) {
+  const m = label.match(/^(\S+)\s+(.+)$/);
+  if (!m || /^[A-Za-zÄÖÜäöü]/.test(label)) { b.textContent = label; return; }
+  b.innerHTML = `<span class="ic">${m[1]}</span> <span class="tx">${m[2]}</span>`;
+  b.setAttribute('aria-label', m[2]); b.title = m[2];
+}
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
@@ -69,16 +76,31 @@ function buildToolbar() {
     cats.append(b);
   }
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
-  for (const c of CATS) {
+  // Bereiche (Bauen · Verschönern · Verbinden · Gelände); ein Werkzeug aus einem anderen Bereich wird weggelegt
+  const keep = () => { if (tool !== 'look' && !menuItemsOf(menuTop, menuSub).includes(tool)) tool = 'look'; };
+  for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (c.id === cat ? ' active' : '');
-    b.textContent = c.label;
-    b.onclick = () => { cat = c.id; if (tool !== 'look' && ITEMS[tool].cat !== cat) tool = 'look'; buildToolbar(); };
+    b.className = 'cat' + (m.id === menuTop ? ' active' : '');
+    b.dataset.menu = m.id;
+    menuLabel(b, m.label);
+    b.onclick = () => { menuTop = m.id; keep(); buildToolbar(); };
     cats.append(b);
+  }
+  // bei „Bauen“: Filter nach Zweck
+  const subs = $('subcats'), top = MENU.find(m => m.id === menuTop) || MENU[0];
+  subs.innerHTML = '';
+  subs.hidden = !top.groups;
+  if (top.groups) for (const [id, label] of [['alle', 'Alle'], ...top.groups.map(g => [g.id, g.label])]) {
+    const b = document.createElement('button');
+    b.className = 'sub' + (id === menuSub ? ' active' : '');
+    b.dataset.sub = id;
+    menuLabel(b, label);
+    b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
+    subs.append(b);
   }
   const box = $('tools');
   box.innerHTML = '';
-  const mk = (id, label, sub, visual) => {
+  const mk = (id, label, sub, visual, fx) => {
     const b = document.createElement('button');
     b.className = 'tool';
     b.dataset.tool = id;
@@ -86,18 +108,18 @@ function buildToolbar() {
     const n = document.createElement('span'); n.className = 'name'; n.textContent = label;
     const s = document.createElement('span'); s.className = 'cost'; s.textContent = sub;
     b.append(n, s);
+    if (fx) { const f = document.createElement('span'); f.className = 'fx'; f.textContent = fx; b.append(f); }
     b.onclick = () => { audio(); setTool(tool === id && id !== 'look' ? 'look' : id); };
     box.append(b);
     return b;
   };
   const emoji = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
   mk('look', 'Ansehen', 'kaufen & mehr', emoji('👆'));
-  for (const id of Object.keys(ITEMS)) {
+  for (const id of menuItemsOf(menuTop, menuSub)) {
     const d = ITEMS[id];
-    if (d.cat !== cat) continue;
     const locked = !available(id);
     const sub = locked ? lockText(id, true) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
-    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : id === 'verschieben' ? emoji('✋') : thumb(id));
+    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : id === 'verschieben' ? emoji('✋') : thumb(id), effectText(id));
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
     if (locked) { b.classList.add('locked'); b.title = 'Freischalten: ' + unlockText(d); }

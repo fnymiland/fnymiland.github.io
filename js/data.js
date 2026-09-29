@@ -192,13 +192,37 @@ const ANIMALS = [
   { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
 ];
 
-const CATS = [
-  { id: 'bau', label: '🏠 Bauen' },
-  { id: 'netz', label: '🛤️ Wege' },
-  { id: 'bildung', label: '🎓 Bildung' },
-  { id: 'deko', label: '🌸 Deko' },
-  { id: 'land', label: '⛰️ Gelände' },
+// Baumenü (gemeinsam entschieden 30.09., Variante B): vier Bereiche, „Bauen“ mit Filtern nach Zweck.
+// Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie (das Blumenbeet zählt weiter als Deko).
+const MENU = [
+  { id: 'bauen', label: '🏗️ Bauen', groups: [
+    { id: 'wohnen', label: '🏠 Wohnen', items: ['haus'] },
+    { id: 'geld', label: '🪙 Geld', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
+    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede'] },
+    { id: 'boost', label: '⚡ Verstärker', items: ['markt', 'hafen', 'blumen'] },
+    { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
+  ] },
+  { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'bank', 'laterne', 'kristall', 'kristallaterne',
+    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'leuchtturm'] },
+  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'schiene', 'station', 'windrad'] },
+  { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'verschieben', 'abriss'] },
 ];
+const menuItemsOf = (top, sub = 'alle') => {
+  const m = MENU.find(e => e.id === top) || MENU[0];
+  if (!m.groups) return m.items;
+  return sub === 'alle' ? m.groups.flatMap(g => g.items) : (m.groups.find(g => g.id === sub) || m.groups[0]).items;
+};
+// Wirkung auf einen Blick (Karte in der Leiste unten)
+const FX = {
+  haus: '👥 +4', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
+  holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
+  saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
+  markt: '+1,5/s je Nachbar', hafen: '+8 % auf alles', blumen: '+15 % Nachbarn',
+  schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 +8 Pendler', windrad: '⚡ Strom für Züge',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', leuchtturm: '🏮 Laternenfest',
+};
+const effectText = id => FX[id] || (ITEMS[id] && ITEMS[id].beauty ? `🌸 +${ITEMS[id].beauty}` : '');
 
 const LANDMARKS = {
   baum:     { name: 'Uralter Baum', icon: '🌳', effect: 'Schönheit (🌸 20 / 40 / 80)' },

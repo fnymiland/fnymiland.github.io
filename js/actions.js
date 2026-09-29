@@ -3,7 +3,7 @@
 // Aktionen
 // ---------------------------------------------------------------------------
 let tool = 'look';
-let cat = 'bau';
+let menuTop = 'bauen', menuSub = 'alle';        // Baumenü: Bereich und Filter (nur bei „Bauen“)
 let hover = null;
 let hoverChunk = null;
 const floats = [];
