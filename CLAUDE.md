@@ -228,6 +228,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     **Verkehrsmittel** (Forschungs-Reiter „Verkehr“, `SHIP_MODELS`/`TRAIN_MODELS`, `state.vehicles`, `vehicleOk`,
     `researchVehicle`): Fahrgäste/min = Plätze × Tempo (`trainSeats`, `shipSeats`); das erste Modell ist mit der
     Grundforschung frei. Neue Linien fahren Straßenbahn; alte Stände behalten, was schon fuhr (Regionalbahn).
+51. **Seewege und Aufträge** (Block 24): Schiffe fahren nur übers Wasser – `seaPath`/`seaSearch` (Breitensuche, 8 Richtungen,
+    nie über eine Landecke) + `seaRoute` (geglättet), Bewegung mit `routeAt`; gemerkt in `seaCache`, **wer Wasser ändert,
+    ruft `waterChanged()`** (Teich graben, Aufschütten, neuer Stand). Kein Weg → Verbindung `noSea` (keine Fahrgäste,
+    Schiffe am Pier, Hinweis im Hafen); Expedition braucht einen Seeweg (`expeditionRoute`). Handel = Aufträge
+    (`state.orders`, `makeOrder`, `checkOrders` im Takt, `fulfillOrder`): Ankauf aus dem Lager zu 120–180 %, Großaufträge
+    am Großen Hafen 200–300 %, Angebote nur für Waren, deren Betrieb frei ist. Kreuzfahrt gibt es nicht mehr.
 49. **Sorten statt Einzelgebäude** (`KINDS` in data.js): Bedingungen (`near` in BUILD_STAGES, Wünsche, Laufweite,
     Viertel mit Häusern, Deko neben Häusern, Bewohner) fragen nach einer Sorte – `isKind(sorte, b)`, `isHome(b)` für alle
     fünf Wohnformen, Brunnen = auch Kristallbrunnen, Park = auch Botanischer Garten, Statue = auch Denkmal. Wer ein neues

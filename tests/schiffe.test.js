@@ -94,9 +94,10 @@ describe('Expedition', () => {
 });
 
 describe('Schiffe am Hafen', () => {
-  // Hafen links („Heimatinsel“), Steg rechts („Waldinsel“)
+  // Hafen links („Heimatinsel“), dazwischen Wasser, Steg rechts („Waldinsel“)
   const ports = () => {
     game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
+    game("for (let y = 8; y <= 18; y++) for (let x = 7; x <= 16; x++) state.terra.set(x + ',' + y, 'water'); sandCache.clear(); waterChanged()");
     game("state.techs.add('seehandel'); state.tiles.set('4,12', { b: 'hafen', lvl: 1, rot: 0 }); state.tiles.set('16,12', { b: 'bootssteg', lvl: 1 }); state.res.bretter = 99; state.res.metall = 99; recalc()");
   };
   afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
@@ -131,7 +132,7 @@ describe('Schiffe am Hafen', () => {
   it('befördert Fahrgäste, bindet an und lässt sich verkaufen (Geld zurück)', () => {
     ports();
     for (let i = 0; i < 12; i++) game(`state.tiles.set('${2 + (i % 4)},${2 + Math.floor(i / 4)}', { b: 'haus', lvl: 3 })`);
-    game("state.tiles.set('14,4', { b: 'riesenrad', lvl: 1, phase: 99 }); state.terra.set('18,14', 'forest'); state.tiles.set('18,14', { b: 'holz', lvl: 1 })");
+    game("state.tiles.set('14,2', { b: 'riesenrad', lvl: 1, phase: 99 }); state.terra.set('18,14', 'forest'); state.tiles.set('18,14', { b: 'holz', lvl: 1 })");
     game("buyShip('4,12', 'holz', '16,12')");
     expect(game('T.ferries[0].traffic.demand')).toBeGreaterThan(0);
     expect(game("T.st.get('18,14').how")).toBe('bahn');
@@ -280,5 +281,38 @@ describe('Hafen 4×3 (Spielstand v11)', () => {
     expect(game("[...state.tiles.values()].some(t => t.b === 'hafen')")).toBe(false);
     expect(game('state.money')).toBe(game('ITEMS.hafen.cost + SHIP_BY_ID.holz.buy.money'));
     expect(game("globalThis.__ports.refunded")).toBe(1);
+  });
+});
+
+describe('Seewege', () => {
+  // Wasserfläche 7–16 × 8–18 mit einer Landzunge in der Mitte (x 10–12, y 8–14): der gerade Weg ginge übers Land
+  const sea = () => {
+    game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'");
+    game("for (let y = 8; y <= 18; y++) for (let x = 7; x <= 16; x++) state.terra.set(x + ',' + y, x >= 10 && x <= 12 && y <= 14 ? 'grass' : 'water')");
+    game("state.res.bretter = 99; sandCache.clear(); waterChanged(); state.techs.add('seehandel'); state.tiles.set('4,9', { b: 'hafen', lvl: 1, rot: 0 }); state.tiles.set('15,10', { b: 'bootssteg', lvl: 1 }); recalc()");
+  };
+  afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
+
+  it('Schiffe fahren um Land herum, nie darüber', () => {
+    sea();
+    game("buyShip('4,9', 'holz', '15,10')");
+    const r = game('T.ferries[0].route');
+    expect(r).not.toBe(null);
+    for (let d = 0; d <= r.len; d += 0.2) {
+      const [x, y] = game(`routeAt(T.ferries[0].route, ${d})`);
+      expect(game(`isWater(${Math.round(x)}, ${Math.round(y)})`)).toBe(true);
+    }
+    expect(r.len).toBeGreaterThan(game('Math.hypot(15 - dockPoint("4,9")[0], 10 - dockPoint("4,9")[1])'));   // Umweg
+  });
+
+  it('wird das Wasser zugeschüttet, gibt es keinen Seeweg: keine Fahrgäste, die Schiffe liegen am Pier', () => {
+    sea();
+    game("buyShip('4,9', 'holz', '15,10')");
+    game("for (let x = 7; x <= 16; x++) state.terra.set(x + ',15', 'grass'); for (let x = 7; x <= 16; x++) state.terra.set(x + ',16', 'grass'); for (let y = 8; y <= 18; y++) state.terra.set('13,' + y, 'grass'); waterChanged(); recalc()");
+    expect(game('T.ferries[0].noSea')).toBe(true);
+    expect(game('T.traffic.links.some(l => l.kind === "faehre")')).toBe(false);
+    expect(game('shipMovers(1000).length')).toBe(0);
+    game('openInfo(4, 9)');
+    expect(document.getElementById('panel').textContent).toMatch(/Kein Seeweg/);
   });
 });

@@ -361,14 +361,15 @@ function drawTrainCar(car, z, now) {
 function expeditionBoat() {
   const e = state.expedition, i = e && ISLE_BY_ID[e.isle];
   if (!i) return null;
-  const [sx, sy] = keyXY(e.from), p = Math.min(1, (Date.now() - e.t0) / Math.max(1, e.until - e.t0));
-  const vx = i.cx - sx, vy = i.cy - sy, d = Math.hypot(vx, vy) || 1, stop = Math.max(0, d - ISLE_R - 2);
-  const tx = sx + vx / d * stop, ty = sy + vy / d * stop;                                  // vor der Küste der Insel
-  let px, py, du, dv;
-  if (p < 0.45) { const k = p / 0.45; px = sx + (tx - sx) * k; py = sy + (ty - sy) * k; du = vx / d; dv = vy / d; }
-  else if (p < 0.55) { const a = (p - 0.45) / 0.1 * Math.PI * 2; px = tx + Math.cos(a) * 2 - 2; py = ty + Math.sin(a) * 2; du = -Math.sin(a); dv = Math.cos(a); }
-  else { const k = (p - 0.55) / 0.45; px = tx + (sx - tx) * k; py = ty + (sy - ty) * k; du = -vx / d; dv = -vy / d; }
-  return { boat: true, px, py, du, dv };
+  const r = expeditionRoute(e.from, i);
+  if (!r) return null;
+  const p = Math.min(1, (Date.now() - e.t0) / Math.max(1, e.until - e.t0));
+  if (p < 0.45 || p >= 0.55) {                                  // hin und zurück auf dem Seeweg
+    const d = (p < 0.45 ? p / 0.45 : 1 - (p - 0.55) / 0.45) * r.len, [px, py, du, dv] = routeAt(r, d);
+    return { boat: true, px, py, du: p < 0.45 ? du : -du, dv: p < 0.45 ? dv : -dv };
+  }
+  const [ex, ey] = r.pts[r.pts.length - 1], a = (p - 0.45) / 0.1 * Math.PI * 2;   // vor der Küste suchen (kleiner Kreis)
+  return { boat: true, px: ex + Math.cos(a) * 0.8 - 0.8, py: ey + Math.sin(a) * 0.8, du: -Math.sin(a), dv: Math.cos(a) };
 }
 function drawBoatMover(m, z, now) {
   const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 600) * 1.2 * z;
@@ -384,25 +385,20 @@ function drawBoatMover(m, z, now) {
 // Schiffe (Block 23b): jedes pendelt zwischen dem Pier seines Hafens und seinem Ziel (Steg oder Hafen), wartet kurz
 // am Anleger; Schiffe auf derselben Strecke fahren zeitversetzt. Schnellere Modelle fahren schneller.
 const SHIP_SPEED = 1.4, SHIP_WAIT = 3;
-function dockPoint(k) {                                         // wo Schiffe anlegen: vor dem Pier bzw. am Steg
-  const t = state.tiles.get(k), [x, y] = keyXY(k);
-  if (!t || t.b !== 'hafen') return [x, y];
-  const [w, h] = sizeOf(t.b, t.rot), [dx, dy] = FRONT_DIR[(t.rot || 0) & 3], cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
-  return [cx + dx * ((dx ? w : h) / 2 + 1.3), cy + dy * ((dx ? w : h) / 2 + 1.3)];
-}
 function shipMovers(now) {
   const out = [];
   for (const f of T.ferries || []) {
-    const a = dockPoint(f.stations[0]), b = dockPoint(f.stations[1]);
-    const vx = b[0] - a[0], vy = b[1] - a[1], len = Math.max(0.1, Math.hypot(vx, vy)), ux = vx / len, uy = vy / len;
+    if (!f.route) continue;                                     // kein Seeweg: die Schiffe liegen am Pier
+    const r = f.route, len = Math.max(0.1, r.len);
     f.ships.forEach((s, i) => {
       const spd = SHIP_SPEED * shipModel(s).speed, leg = len / spd + SHIP_WAIT, lap = 2 * leg;
-      let t = ((now / 1000) + i * lap / f.ships.length + hash(a[0] | 0, a[1] | 0, 9) * lap) % lap, dir = 1;
+      let t = ((now / 1000) + i * lap / f.ships.length + hash(r.pts[0][0] | 0, r.pts[0][1] | 0, 9) * lap) % lap, dir = 1;
       if (t > leg) { t -= leg; dir = -1; }
       let k = Math.max(0, Math.min(1, (t - SHIP_WAIT) / (len / spd)));
       if (dir < 0) k = 1 - k;
-      const side = (i - (f.ships.length - 1) / 2) * 1.1;                // nebeneinander statt übereinander am Anleger
-      out.push({ boat: true, ship: s.model, px: a[0] + vx * k - uy * side, py: a[1] + vy * k + ux * side, du: ux * dir, dv: uy * dir });
+      const [px, py, ux, uy] = routeAt(r, k * len);
+      const waiting = k === 0 || k === 1, side = waiting ? (i - (f.ships.length - 1) / 2) * 1.1 : 0;   // am Anleger nebeneinander
+      out.push({ boat: true, ship: s.model, px: px - uy * side, py: py + ux * side, du: ux * dir, dv: uy * dir });
     });
   }
   return out;
@@ -455,13 +451,12 @@ function fishBoats(now) {
   const out = [];
   for (const [k, t] of state.tiles) {
     if (t.b !== 'hafen') continue;
-    const [x, y] = keyXY(k), cx = x + 0.5, cy = y + 0.5;
-    const dir = DIRS.find(([dx, dy]) => terrainAt(Math.round(cx + dx * 4), Math.round(cy + dy * 4)) === 'water');
-    if (!dir) continue;
-    const ox = cx + dir[0] * 5, oy = cy + dir[1] * 5;
+    const o = fishingGround(k);
+    if (!o) continue;
+    const [x, y] = keyXY(k);
     for (let i = 0; i < Math.min(3, t.lvl || 1); i++) {
-      const a = now / 9000 * (i % 2 ? -1 : 1) + i * 2.1 + hash(x, y, 7) * 6, r = 1.6 + i * 0.9;
-      out.push({ boat: true, fish: true, px: ox + Math.cos(a) * r, py: oy + Math.sin(a) * r, du: -Math.sin(a), dv: Math.cos(a) });
+      const a = now / 9000 * (i % 2 ? -1 : 1) + i * 2.1 + hash(x, y, 7) * 6, r = 1.1 + i * 0.7;
+      out.push({ boat: true, fish: true, px: o[0] + Math.cos(a) * r, py: o[1] + Math.sin(a) * r, du: -Math.sin(a), dv: Math.cos(a) });
     }
   }
   return out;
@@ -479,10 +474,10 @@ function seaDir(cx, cy) { return DIRS.find(([dx, dy]) => terrainAt(Math.round(cx
 // Frachter: fährt nach einem Handel eine Minute lang vom Hafen hinaus
 function cargoShip() {
   if (!lastTrade || Date.now() - lastTrade.t > 60e3 || !state.tiles.get(lastTrade.at)) return null;
-  const [x, y] = keyXY(lastTrade.at), cx = x + 0.5, cy = y + 0.5, dir = seaDir(cx, cy);
-  if (!dir) return null;
-  const k = (Date.now() - lastTrade.t) / 60e3, d = 2.5 + k * 18;
-  return { boat: true, cargo: true, px: cx + dir[0] * d, py: cy + dir[1] * d, du: dir[0], dv: dir[1] };
+  const r = openSeaRoute(lastTrade.at);
+  if (!r) return null;
+  const [px, py, du, dv] = routeAt(r, (Date.now() - lastTrade.t) / 60e3 * r.len);
+  return { boat: true, cargo: true, px, py, du, dv };
 }
 function drawCargoMover(m, z, now) {
   const p = toScreen(m.px, m.py), x = p.x, y = p.y, bob = Math.sin(now / 900) * 0.8 * z;

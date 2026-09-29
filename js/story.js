@@ -49,11 +49,13 @@ function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
   if (state.expedition) return 'Das Boot ist schon unterwegs';
   if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🛤️ Verbinden → Steg)';
+  if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet?';
   const miss = isleNeeds(i).filter(c => !c.ok);
   return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
 }
-function sendExpedition(from = stegs()[0]) {
+function sendExpedition(from) {
   const i = nextIsle(), err = expeditionError(i);
+  if (!err && (!from || !expeditionRoute(from, i))) from = stegs().find(k => expeditionRoute(k, i));
   if (err) { fail(err); return false; }
   state.money -= i.need.money || 0;
   state.science -= i.need.science || 0;

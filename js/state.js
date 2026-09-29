@@ -259,7 +259,7 @@ function adoptState(s) {
   resetUnlockWatch();
   state = s;
   cam = state.cam;
-  terrainCache.clear(); sandCache.clear(); landCache.clear();
+  terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged();
   walkers.length = 0; cars.length = 0;
   normalizeSmall();
   migrateLandmarks();

@@ -41,10 +41,10 @@ function build(b, x, y, quiet) {
   payMat(c.mat);
   if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot') && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
-  if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); sfx('dig'); }
+  if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); waterChanged(); sfx('dig'); }
   else if (TERRAFORM[b]) { state.terra.set(k, TERRAFORM[b]); sandCache.clear(); landCache.clear(); sfx('dig'); }
   else if (b === 'schuett') {
-    state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig');
+    state.terra.set(k, 'grass'); sandCache.clear(); waterChanged(); sfx('dig');
     const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück
     if (rt && rt.bridge) {
       delete rt.bridge;

@@ -4,6 +4,7 @@
 // ---------------------------------------------------------------------------
 function startNew() {
   resetUnlockWatch();
+  waterChanged();
   plan = null; moving = null;                      // Getragenes gehört zum alten Spiel (dort am alten Platz gespeichert)
   state = newState();
   cam = state.cam;

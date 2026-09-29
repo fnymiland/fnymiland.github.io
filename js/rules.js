@@ -168,7 +168,7 @@ function totals() {
     regions: [...new Set([a, b].map(k => regionAt(...keyXY(k))))].sort(byRegion) }));
   const ferries = shipLinks();
   for (const l of rail.lines) l.traffic = null;
-  const links = [...rail.lines.filter(l => l.powered), ...cables, ...ferries];
+  const links = [...rail.lines.filter(l => l.powered), ...cables, ...ferries.filter(f => !f.noSea)];
   transitTraffic(links, places);
   const railV = new Map(), railSt = [];
   for (const l of links) for (const s of l.stations) {
@@ -708,6 +708,109 @@ const berthsOf = t => BERTHS[Math.min(3, t.lvl || 1) - 1];
 const shipModel = s => SHIP_BY_ID[s.model] || SHIP_BY_ID.holz;
 const shipSeats = s => Math.round(shipModel(s).seats * shipModel(s).speed);
 const isLanding = t => !!t && (t.b === 'bootssteg' || t.b === 'hafen');
+// Seewege (Block 24b): Schiffe fahren nur übers Wasser – kürzester Weg über Wasserfelder (8 Richtungen, nie schräg an
+// einer Landecke vorbei), dann geglättet (gerade Stücke, solange die Sichtlinie übers Wasser geht). Gemerkt, bis sich
+// Wasser ändert (waterChanged: Teich graben, Aufschütten, neuer Stand).
+const seaCache = new Map();
+function waterChanged() { seaCache.clear(); }
+function nearestWater(x, y) {
+  const rx = Math.round(x), ry = Math.round(y);
+  for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy)) return [rx + dx, ry + dy];
+  }
+  return null;
+}
+// Breitensuche übers Wasser vom Feld s, bis goal(x, y) passt → Felder vom Start bis zum Ziel (oder null)
+function seaSearch(s, goal) {
+  const X0 = WORLD.cMin * CHUNK - 2, X1 = (WORLD.cMax + 1) * CHUNK + 1, N = X1 - X0 + 1, idx = (x, y) => (y - X0) * N + (x - X0);
+  const inside = (x, y) => x >= X0 && x <= X1 && y >= X0 && y <= X1;
+  const prev = new Int32Array(N * N).fill(-2), q = new Int32Array(N * N);
+  let head = 0, tail = 0;
+  prev[idx(s[0], s[1])] = -1; q[tail++] = idx(s[0], s[1]);
+  while (head < tail) {
+    const c = q[head++], x = c % N + X0, y = Math.floor(c / N) + X0;
+    if (goal(x, y)) {
+      const out = [];
+      for (let k = c; k !== -1; k = prev[k]) out.push([k % N + X0, Math.floor(k / N) + X0]);
+      return out.reverse();
+    }
+    for (const [dx, dy] of NEAR8) {
+      const nx = x + dx, ny = y + dy;
+      if (!inside(nx, ny) || prev[idx(nx, ny)] !== -2 || !isWater(nx, ny)) continue;
+      if (dx && dy && (!isWater(x + dx, y) || !isWater(x, y + dy))) continue;      // nicht über die Landecke
+      prev[idx(nx, ny)] = c; q[tail++] = idx(nx, ny);
+    }
+  }
+  return null;
+}
+const seaSight = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25);
+  for (let i = 0; i <= n; i++) { const t = i / Math.max(1, n); if (!isWater(Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t))) return false; } return true; };
+// Weg als Linienzug: Punkte, Länge, Stützstellen – geglättet per Sichtlinie
+function seaRoute(tiles, a, b) {
+  const pts = [a || tiles[0]];
+  let i = 0;
+  while (i < tiles.length - 1) {
+    let j = tiles.length - 1;
+    while (j > i + 1 && !seaSight(tiles[i], tiles[j])) j--;
+    pts.push(tiles[j]); i = j;
+  }
+  if (b) pts.push(b);
+  const cum = [0];
+  for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  return { pts, cum, len: cum[cum.length - 1] };
+}
+function routeAt(r, d) {                                   // Ort und Richtung nach Strecke d
+  d = Math.max(0, Math.min(r.len, d));
+  let k = 1;
+  while (k < r.cum.length - 1 && r.cum[k] < d) k++;
+  const a = r.pts[k - 1], b = r.pts[k] || a, seg = Math.max(1e-6, r.cum[k] - r.cum[k - 1]), t = (d - r.cum[k - 1]) / seg;
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, (b[0] - a[0]) / seg, (b[1] - a[1]) / seg];
+}
+function seaPath(a, b) {
+  const key = a.map(v => v.toFixed(1)).join() + '>' + b.map(v => v.toFixed(1)).join();
+  if (seaCache.has(key)) return seaCache.get(key);
+  const s = nearestWater(...a), t = nearestWater(...b);
+  const tiles = s && t && seaSearch(s, (x, y) => x === t[0] && y === t[1]);
+  const r = tiles ? seaRoute(tiles, a, b) : null;
+  seaCache.set(key, r);
+  return r;
+}
+// Expedition: vom Steg übers Wasser bis vor die Küste der Insel; Frachter: vom Hafen aufs offene Meer (14 Felder weit);
+// Fischgrund: freies Wasser vor dem Hafen (3 Felder rundum Wasser). Alles über den Seeweg.
+function expeditionRoute(from, isle) {
+  const key = 'exp:' + from + ':' + isle.id;
+  if (seaCache.has(key)) return seaCache.get(key);
+  const [x, y] = keyXY(from), s = nearestWater(x, y);
+  const tiles = s && seaSearch(s, (a, b) => Math.hypot(a - isle.cx, b - isle.cy) <= ISLE_R + 3);
+  const r = tiles ? seaRoute(tiles, [x, y]) : null;
+  seaCache.set(key, r);
+  return r;
+}
+function openSeaRoute(k) {
+  const key = 'out:' + k;
+  if (seaCache.has(key)) return seaCache.get(key);
+  const a = dockPoint(k), s = nearestWater(...a);
+  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 14);
+  const r = tiles ? seaRoute(tiles, a) : null;
+  seaCache.set(key, r);
+  return r;
+}
+function fishingGround(k) {
+  const key = 'fish:' + k;
+  if (seaCache.has(key)) return seaCache.get(key);
+  const a = dockPoint(k), s = nearestWater(...a), open = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (!isWater(x + dx, y + dy)) return false; return true; };
+  const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 2 && open(x, y));
+  const r = tiles ? tiles[tiles.length - 1] : null;
+  seaCache.set(key, r);
+  return r;
+}
+// wo Schiffe anlegen: vor dem Pier des Hafens bzw. am Steg
+function dockPoint(k) {
+  const t = state.tiles.get(k), [x, y] = keyXY(k);
+  if (!t || t.b !== 'hafen') return [x, y];
+  const [w, h] = sizeOf(t.b, t.rot), [dx, dy] = FRONT_DIR[(t.rot || 0) & 3], cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  return [cx + dx * ((dx ? w : h) / 2 + 1.3), cy + dy * ((dx ? w : h) / 2 + 1.3)];
+}
 function shipLinks() {
   const out = [];
   for (const [k, t] of state.tiles) {
@@ -718,8 +821,9 @@ function shipLinks() {
     for (const [to, ships] of by) {
       const regions = [...new Set([k, to].map(kk => regionAt(...keyXY(kk))))].sort(byRegion), [tx, ty] = keyXY(to);
       if (regions.length < 2) continue;
-      out.push({ kind: 'faehre', stations: [k, to], regions, ships, lvl: t.lvl || 1, km: Math.hypot(hx - tx, hy - ty) / KM,
-        seats: ships.reduce((a, s) => a + shipSeats(s), 0) });
+      const route = seaPath(dockPoint(k), dockPoint(to));                         // kein Seeweg: die Schiffe bleiben am Pier
+      out.push({ kind: 'faehre', stations: [k, to], regions, ships, lvl: t.lvl || 1, route, noSea: !route,
+        km: (route ? route.len : Math.hypot(hx - tx, hy - ty)) / KM, seats: route ? ships.reduce((a, s) => a + shipSeats(s), 0) : 0 });
     }
   }
   return out;

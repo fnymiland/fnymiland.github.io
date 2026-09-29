@@ -121,7 +121,8 @@ describe('Themen-Inseln', () => {
   it('Inseln werden der Reihe nach entdeckt – per Boot vom Steg, mit Einwohnern und Talern', () => {
     expect(game('nextIsle().id')).toBe('wald');
     game('state.money = 1000; recalc()');
-    game("state.tiles.set('0,0', { b: 'bootssteg', lvl: 1 }); recalc()");
+    const [sx, sy] = game(`(() => { for (let y = -20; y < 40; y++) for (let x = -20; x < 40; x++) if (placeError('bootssteg', x, y) === null) return [x, y]; })()`);
+    game(`state.tiles.set('${sx},${sy}', { b: 'bootssteg', lvl: 1 }); recalc()`);
     expect(game('sendExpedition()')).toBe(false);                    // noch zu wenig Einwohner
     build('haus', 4, 4); build('haus', 6, 4);
     expect(game('T.pop')).toBeGreaterThanOrEqual(8);
