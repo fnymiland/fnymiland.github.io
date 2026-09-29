@@ -28,8 +28,9 @@ function build(b, x, y, quiet) {
   const d = ITEMS[b], k = x + ',' + y;
   state.money -= d.cost;
   payMat(d.mat);
-  if (b === 'graben') { state.terra.set(k, 'water'); sfx('dig'); }
-  else if (b === 'schuett') { state.terra.set(k, 'grass'); sfx('dig'); }
+  if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) claimTile(x, y);
+  if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); sfx('dig'); }
+  else if (b === 'schuett') { state.terra.set(k, 'grass'); sandCache.clear(); sfx('dig'); }
   else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot: placeRot(b, x, y), ...(STYLES[b] ? { style: currentStyle(b) } : {}) });
     if (b === 'haus') {
@@ -233,7 +234,7 @@ function tap(sx, sy, isTouch) {
   const isle = isleOf(x, y);
   if (isle && !isleOpen(isle.id)) { openIsle(isle.id, sx, sy); return; }
   if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
-  if (!state.owned.has(ck)) { toast('Da ist nur Meer.'); return; }
+  if (!ownedTile(x, y) && !(CLAIM_TOOLS.has(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);

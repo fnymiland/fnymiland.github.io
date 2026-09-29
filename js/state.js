@@ -25,6 +25,7 @@ function newState() {
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(['0,0']),   // Grundstücke (6×6) der erschlossenen Inseln
     islands: new Set(['home']),
+    claimed: new Set(),        // einzelne Meerfelder, die man sich per Aufschütten oder Brücke genommen hat
     tiles: new Map(),
     terra: new Map(),
     techs: new Set(),
@@ -64,7 +65,7 @@ function serialize() {
     game: 'kachelhausen', v: 8, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -145,6 +146,7 @@ function parseSave(d) {
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
+    claimed: new Set(d.claimed || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     decos: new Map(d.decos || []),

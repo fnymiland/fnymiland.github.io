@@ -134,7 +134,7 @@ function chunkSea(cx, cy) {
     const waves = [];
     for (let j = 0; j < CHUNK; j++) for (let i = 0; i < CHUNK; i++) {
       const x = cx * CHUNK + i, y = cy * CHUNK + j;
-      if (terrainAt(x, y) !== 'water') sea = false;
+      if (terrainAt(x, y) !== 'water' || state.claimed.has(x + ',' + y)) sea = false;
       else if (hasWave(x, y)) waves.push([x, y]);
     }
     e = { v: groundVersion, sea, waves };
@@ -324,7 +324,7 @@ function render(now) {
   };
   const ghostType = tool === 'verschieben' ? movingType() : tool;
   const smallMode = tool === 'verschieben' ? !!moving && moving.kind === 'deco' : !!(ITEMS[tool] && ITEMS[tool].small);
-  if (hover && tool !== 'look' && ownedTile(hover.x, hover.y)) {
+  if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (CLAIM_TOOLS.has(tool) && isSea(hover.x, hover.y)))) {
     const hx = hover.x, hy = hover.y;
     const hds = decosAt(hx + ',' + hy);
     const rotOf = b => placeRot(b, hx, hy);

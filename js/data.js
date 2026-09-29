@@ -89,8 +89,8 @@ const ITEMS = {
   pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, design: 600, master: true, desc: 'Für Konzerte im Park.' },
   statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, design: 900, master: true, desc: 'Glänzt golden.' },
   // --- Gelände ---
-  graben:  { cat: 'land', name: 'Teich graben', cost: 30, desc: 'Macht aus Wiese Wasser (gut für Fischer).' },
-  schuett: { cat: 'land', name: 'Aufschütten', cost: 60, desc: 'Macht aus Wasser neues Land.' },
+  graben:  { cat: 'land', name: 'Teich graben', cost: 30, paint: true, desc: 'Macht aus Wiese Wasser (gut für Fischer).' },
+  schuett: { cat: 'land', name: 'Aufschütten', cost: 60, paint: true, desc: 'Macht aus Wasser neues Land – auch im Meer direkt neben deinem Land. Ziehen = mehrere.' },
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---

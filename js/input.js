@@ -42,12 +42,13 @@ let drag = null, pinch = null, moved = false, painting = false, lastPaint = null
 let hoverSlot = 0;
 function paintAt(sx, sy) {
   const t = toTile(sx, sy);
-  const k = t.x + ',' + t.y;
-  if (k === lastPaint) return;
-  lastPaint = k;
+  if (lastPaint && lastPaint.x === t.x && lastPaint.y === t.y) return;
+  // schnelles Ziehen: auch die übersprungenen Felder dazwischen (sonst reißen Wege und Brücken ab)
+  const steps = lastPaint ? tilesBetween(lastPaint, t) : [[t.x, t.y]];
+  lastPaint = t;
   hover = t;
   previewCache = null;
-  if (ownedTile(t.x, t.y)) build(tool, t.x, t.y, true);
+  for (const [x, y] of steps) if (ownedTile(x, y) || (CLAIM_TOOLS.has(tool) && claimable(x, y))) build(tool, x, y, true);
 }
 
 canvas.addEventListener('pointerdown', e => {

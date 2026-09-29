@@ -68,7 +68,8 @@ function isBeach(x, y) {
   const k = x + ',' + y;
   let v = sandCache.get(k);
   if (v === undefined) {
-    v = !isSea(x, y) && (isSea(x + 1, y) || isSea(x - 1, y) || isSea(x, y + 1) || isSea(x, y - 1));
+    const sea = (a, b) => isSea(a, b) && terrainAt(a, b) === 'water';     // aufgeschüttetes Meer ist kein Meer mehr
+    v = terrainAt(x, y) !== 'water' && (sea(x + 1, y) || sea(x - 1, y) || sea(x, y + 1) || sea(x, y - 1));
     sandCache.set(k, v);
   }
   return v;
@@ -142,4 +143,25 @@ function ownIsland(id) { for (const ck of isleChunks(id)) state.owned.add(ck); }
 const isleOf = (x, y) => { const id = islandAt(x, y); return id && id !== 'home' ? ISLE_BY_ID[id] : null; };
 
 const chunkOf = (x, y) => Math.floor(x / CHUNK) + ',' + Math.floor(y / CHUNK);
-const ownedTile = (x, y) => state.owned.has(chunkOf(x, y));
+const ownedTile = (x, y) => state.owned.has(chunkOf(x, y)) || state.claimed.has(x + ',' + y);
+// Offenes Meer, das man sich nehmen kann (Aufschütten, Brücke): keine Insel, noch nicht eigen, direkt neben eigenem
+// Land und innerhalb der Welt – so wächst das Land Schritt für Schritt, auf Wunsch bis zur Megainsel
+function claimable(x, y) {
+  if (ownedTile(x, y) || !isSea(x, y)) return false;
+  const cx = Math.floor(x / CHUNK), cy = Math.floor(y / CHUNK);
+  if (cx < WORLD.cMin || cx > WORLD.cMax || cy < WORLD.cMin || cy > WORLD.cMax) return false;
+  return DIRS.some(([dx, dy]) => ownedTile(x + dx, y + dy));
+}
+const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
+function claimTile(x, y) { if (!state.owned.has(chunkOf(x, y))) state.claimed.add(x + ',' + y); }
+// Felder von a nach b in Schritten zu direkten Nachbarn (fürs Ziehen: nichts überspringen)
+function tilesBetween(a, b) {
+  const out = [];
+  let x = a.x, y = a.y;
+  while (x !== b.x || y !== b.y) {
+    const dx = b.x - x, dy = b.y - y;
+    if (Math.abs(dx) >= Math.abs(dy)) x += Math.sign(dx); else y += Math.sign(dy);
+    out.push([x, y]);
+  }
+  return out;
+}

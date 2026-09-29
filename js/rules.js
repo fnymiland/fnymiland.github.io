@@ -410,7 +410,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const r = ROTATABLE.has(b) ? rot : 0;
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'graben' || b === 'schuett') {
-    if (!ownedTile(x, y)) return 'Das ist nicht dein Grundstück';
+    if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : 'Das ist nicht dein Grundstück';
     const ter = terrainAt(x, y);
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
