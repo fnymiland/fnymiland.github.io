@@ -255,7 +255,7 @@ function endPiece(b, look, pt, z, id) {
 // Torbogen über einem Durchgang: vom einen Pfeiler/Pfosten zum anderen, oben eine Laterne
 function drawGateArch(E, e, look, z, k) {
   const gt = gateT(e.b, look), A = lerp2(E.p, E.q, gt), B = lerp2(E.p, E.q, 1 - gt), hb = e.b === 'hecke' ? look.h : e.b === 'mauer' ? look.h + CAP_UP : look.h + 2.5, R = 11 + look.h * 0.2, n = 16;   // R: etwa halbe Torbreite → runder Bogen
-  const legs = e.b === 'hecke';                                   // an der Hecke steht der Bogen auf eigenen Beinen vom Boden
+  const legs = false;                                             // der Bogen beginnt oben auf Pfosten, Pfeiler bzw. rundem Heckenende
   const pts = [...(legs ? [[...A, 0]] : []), ...Array.from({ length: n + 1 }, (_, i) => { const t = i / n; return [...lerp2(A, B, t), hb + Math.sin(Math.PI * t) * R]; }), ...(legs ? [[...B, 0]] : [])];
   const stroke = (col, w, dy = 0) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([u, v, up], i) => { const p = edgeS(u, v, up + dy, z); i ? g.lineTo(...p) : g.moveTo(...p); }); g.stroke(); };
   const each = (step, fn) => pts.forEach(([u, v, up], i) => { if (i % step || up < 1) return; fn(...edgeS(u, v, up, z), i); });
@@ -280,9 +280,13 @@ function drawGateArch(E, e, look, z, k) {
     g.strokeStyle = C(look.joint || shade(look.col, -0.2)); g.lineWidth = 0.5 * z; g.beginPath();
     for (let i = 1; i < n; i += 2) { const t = ts[i]; g.moveTo(...at(t, inner(t), 1)); g.lineTo(...at(t, outer(t), 1)); }
     g.stroke();
-  } else if (e.b === 'hecke') {
-    stroke(shade(look.col, -0.12), 6.5); stroke(look.col, 5);
-    each(2, (x, y) => circle(x, y - 1.2 * z, 2.2 * z, C(shade(look.col, 0.12))));
+  } else if (e.b === 'hecke') {                                    // Rankbogen: dünner Bogen, dicht mit Blättern bewachsen (wie der Rosenbogen)
+    stroke('#3f7a37', 3.4); stroke('#4f9a45', 2.2);
+    const leaf = ['#3f8f43', '#5aa84f', '#6fbf5a', '#4a9a48'];
+    each(1, (x, y, i) => {
+      circle(x + (i % 2 ? 1.3 : -1.3) * z, y + 0.3 * z, 1.5 * z, C(leaf[i % 4]));
+      circle(x + (i % 2 ? -0.6 : 0.7) * z, y - 1 * z, 1.3 * z, C(leaf[(i + 2) % 4]));
+    });
   } else {                                                          // Zaun: zwei Bögen mit Sprossen dazwischen
     const d = shade(look.col, -0.25);
     stroke(d, 2); stroke(d, 1.6, -3);

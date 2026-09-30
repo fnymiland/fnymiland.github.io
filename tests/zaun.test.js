@@ -214,6 +214,7 @@ describe('Endstücke, Torbögen, Licht', () => {
     expect(game('edgeLamps()')).not.toContain('Aa6,5');
     expect(game("archLabel('mauer', 'bogen')")).toContain('Torpfeiler');
     expect(game("archLabel('zaun', 'bogen')")).toContain('Torbogen');
+    expect(game("archLabel('hecke', 'bogen')")).toContain('Rankbogen');
   });
 
   it('Lichterkette und Blüten stehen im Bogen so dicht wie auf dem geraden Stück', () => {
