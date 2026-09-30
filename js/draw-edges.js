@@ -110,7 +110,7 @@ function drawArc(rc, look, z) {
   if (rc.b === 'mauer') wallJoints(walls.slice().sort((A, B) => A[4] - B[4]).map(W => [W[1], W[2], W[4] * Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])]), look, h, z, P);
   if (rc.b === 'hecke') for (const [, a, b, , s] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length, s * Math.hypot(b[0] - a[0], b[1] - a[1]));
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
-  if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length, 'E' + rc.ka);
+  if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
 }
 // Mauerfugen auf sichtbaren Wandstücken ([a, b] in Feld-Koordinaten): Lagerfugen durchgehend, Stoßfugen je Länge versetzt
 function wallJoints(segs, look, h, z, P) {
@@ -158,16 +158,23 @@ function hedgeTop(pts, look, h, z, seed, id) {
     else circle(x, y + 0.4 * z, 2.1 * z, C(shade(look.col, 0.14)));
     if (look.flowers) circle(x + (i % 2 ? 1.2 : -1) * z, y - 0.6 * z, 0.9 * z, C(look.flowers[(i + (seed % 3)) % look.flowers.length]));
   }
-  if (look.lights) {                                              // Lampions oben auf der Hecke: in jeder Richtung und Kurve gleich
-    const lit = edgeLit(id);
-    alongLine(pts, 3, 0, m => {
-      const [x, y] = edgeS(m[0], m[1], h + 1.6, z), r = 1.5 * z;
-      if (!lit) circle(x, y + r * 0.9, r * 0.5, C(shade(look.col, -0.2)));        // tags: Schatten auf der Hecke
-      circle(x, y, r, C('#f3e6b8'));
-      circle(x - r * 0.35, y - r * 0.35, r * 0.35, C('#fffaf0'));
-      if (lit) { const d = r * 0.95; glowQuad([[x - d, y], [x, y - d], [x + d, y], [x, y + d]], 12 * z); }   // nachts: leuchtender Kern
-    });
-  }
+  if (look.lights && id) lampions(pts, look, h, z, id);
+}
+// Lampions oben auf der Hecke: in jeder Richtung und Kurve gleich
+function lampions(pts, look, h, z, id) {
+  const lit = edgeLit(id);
+  alongLine(pts, 3, 0, m => {
+    const [x, y] = edgeS(m[0], m[1], h + 1.6, z), r = 1.5 * z;
+    if (!lit) circle(x, y + r * 0.9, r * 0.5, C(shade(look.col, -0.2)));          // tags: Schatten auf der Hecke
+    circle(x, y, r, C('#f3e6b8'));
+    circle(x - r * 0.35, y - r * 0.35, r * 0.35, C('#fffaf0'));
+    if (lit) { const d = r * 0.95; glowQuad([[x - d, y], [x, y - d], [x + d, y], [x, y + d]], 12 * z); }   // nachts: leuchtender Kern
+  });
+}
+// Welche von zwei Kanten wird später gezeichnet? (render: Felder nach x+y, dann x)
+function lastDrawn(k1, k2) {
+  const o = k => { const { i, j } = edgeParse(k); return (i + j) * 1e6 + i; };
+  return o(k2) > o(k1) ? k2 : k1;
 }
 // Lichter (Block 41): brennen nachts, wenn genug Strom da ist (edgeLamps zählt sie wie Laternen)
 const edgeLit = id => night > 0.15 && isLive() && !T.rail.power.dark.has(id);
@@ -338,7 +345,11 @@ function drawEdge(k, e, z, now) {
   const ends = () => { if (endP && (!pilP || gateBefore)) endPiece(e.b, look, E.p, z, 'P' + vp.join()); if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join()); };
   const front = [[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]];
   if (look.lamps) { const m = lerp2(E.p, E.q, 0.5); pillarBox(m, w * 1.2, h, h + 1.2, shade(look.col, 0.28), z); lampAt(m, h + 1.2, z, 'E' + k); }
-  if (e.b === 'hecke') { hedgeSideFlowers(front, look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length, 'E' + k); ends(); return; }
+  if (e.b === 'hecke') {
+    hedgeSideFlowers(front, look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length, 'E' + k);
+    if (look.lights) for (const [rc, on] of [[rcP, onP], [rcQ, onQ]]) if (on && k === lastDrawn(rc.ka, rc.kb)) lampions(roundArc(rc, 10), look, h, z, 'E' + rc.ka);
+    ends(); return;
+  }
   if (look.lights) bulbsAlong(front, h - 0.6, z, 'E' + k);
   wallJoints([[[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]]], look, h, z, (pt, up) => edgeS(pt[0], pt[1], up, z));
   ends();
