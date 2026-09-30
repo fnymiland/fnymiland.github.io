@@ -355,7 +355,7 @@ function research(id) {
 function buyDesign(id) {
   const d = DESIGN_BY_ID[id], err = designError(d);
   if (err) { fail(err); return false; }
-  state.money -= d.price;
+  state.money -= designPrice(d);
   state.design.add(id);
   sfx('research');
   buildToolbar();

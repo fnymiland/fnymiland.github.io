@@ -515,7 +515,7 @@ function unlockText(def, short) {
     const [type, n] = def.lm.split(':');
     if (lmStage(type) < +n) return short ? `${LANDMARKS[type].icon} ${LANDMARKS[type].name}` : lmStepName(type, +n);
   }
-  if (def.design) return `🎨 Kunstakademie · 🪙 ${fmt(def.design)}`;
+  if (def.design) { const d = DESIGN.find(x => (x.item && ITEMS[x.item] === def) || (!x.item && x.price === def.design && x.name === def.name)); return `🎨 Kunstakademie · 🪙 ${fmt(d ? designPrice(d) : def.design)}`; }
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
@@ -544,11 +544,20 @@ const masteryOpen = () => tierOpen(2);
 const inventionsOpen = () => tierOpen(3);
 const hasInvention = id => !!state.inventions && state.inventions.has(id);
 const techCost = t => niceSci(t.cost * TIER_MUL[t.tier] * (1 + 0.1 * [...state.techs].filter(id => TECH_BY_ID[id]).length));
+// Kunstakademie-Preis (Block 50): nach dem besten Einkommen, damit es das ganze Spiel über etwas Begehrtes bleibt.
+// Normal etwa DESIGN_MIN Minuten (günstige Stücke weniger, aufwendige mehr: Wurzel aus Grundpreis/150), ✦ Meisterstücke
+// DESIGN_MASTER-mal so viel. Mindestens das 5-Fache des Grundpreises (Meisterstücke das 25-Fache).
+const DESIGN_MIN = 3, DESIGN_MASTER = 5, DESIGN_FLOOR = 5;
+function designPrice(d) {
+  if (!d || !d.price) return 0;
+  const m = d.master ? DESIGN_MASTER : 1, minutes = DESIGN_MIN * Math.sqrt(d.price / 150) * m;
+  return niceRound(Math.max(d.price * DESIGN_FLOOR * m, minutes * 60 * wonderRate()));
+}
 // Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
   if (!d || state.design.has(d.id) || !d.price) return 'Schon da';
   if (d.master && !hasBuilt('kunst')) return 'Braucht eine Kunstakademie';
-  if (state.money < d.price) return 'Zu wenig Taler';
+  if (state.money < designPrice(d)) return 'Zu wenig Taler';
   return null;
 }
 const styleLock = st => unlockText(st);

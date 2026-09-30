@@ -1446,7 +1446,7 @@ function openResearch(tab = researchTab) {
         const look = d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
         return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
           ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name}</span>
-          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(d.price)}`}</small></button>`;
+          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}`}</small></button>`;
       }).join('')}${gr === 'Wege' ? giftStyles() : ''}</div>`).join('')}`;
   }
   openModal(`

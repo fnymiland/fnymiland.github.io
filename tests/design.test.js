@@ -3,7 +3,7 @@ const { loadGame, game } = require('./helpers/load-game');
 beforeAll(() => loadGame());
 beforeEach(() => {
   game('startNew()'); game('closeModal()');
-  game("state.money = 5000; state.science = 5000; for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3");
+  game("state.money = 1e6; state.science = 5000; for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3");
   game("for (let y = 6; y <= 11; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass'); recalc()");
 });
 
@@ -17,8 +17,9 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
   });
 
   it('jedes Stück einzeln kaufen – Erde ja, Asphalt nicht', () => {
+    const price = game("designPrice(DESIGN_BY_ID['weg:mulch'])");
     expect(game("buyDesign('weg:mulch')")).toBe(true);
-    expect(game('state.money')).toBe(5000 - 40);
+    expect(game('state.money')).toBe(1e6 - price);
     expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(true);
     expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(false);
     expect(game("buyDesign('wall:5')")).toBe(true);
@@ -78,5 +79,22 @@ describe('Überall bauen nach Forschung', () => {
     expect(game("placeError('holz', 8, 8)")).toBe(null);
     expect(game("placeError('stein', 8, 8)")).toBe(null);
     expect(game("placeError('mine', 8, 8)")).toBe(null);
+  });
+});
+
+describe('Preise nach Einkommen (Block 50)', () => {
+  it('mindestens 5× so teuer wie früher, Meisterstücke 25×; mit viel Einkommen ein paar Minuten davon', () => {
+    game('state.incPeak = 0; T.inc = 0; T.salesInc = 0');
+    expect(game("designPrice(DESIGN_BY_ID['weg:mulch'])")).toBeGreaterThanOrEqual(200);   // 40 × 5
+    expect(game("designPrice(DESIGN_BY_ID['statue'])")).toBeGreaterThanOrEqual(22000);    // 900 × 25 (gerundet)
+    game('state.incPeak = 1000');                                                        // 1000 Taler/s
+    const normal = game("designPrice(DESIGN_BY_ID['laterne'])"), master = game("designPrice(DESIGN_BY_ID['statue'])");
+    expect(normal).toBeGreaterThanOrEqual(3 * 60 * 1000 * 0.95);                        // Laterne: etwa 3 Minuten
+    expect(master / game("designPrice(DESIGN_BY_ID['wall:5'])")).toBeGreaterThan(4);     // Meisterstück deutlich teurer
+  });
+
+  it('zu wenig Taler: nicht kaufbar', () => {
+    game('state.money = 100; state.incPeak = 0');
+    expect(game("designError(DESIGN_BY_ID['weg:mulch'])")).toBe('Zu wenig Taler');
   });
 });

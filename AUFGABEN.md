@@ -479,3 +479,8 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] Gesperrtes Ding im Info-Fenster: Knopf springt hin (`unlockGo`) – Forschung (Eintrag leuchtet, `spotlight`, bleibt beim
       Neuzeichnen), Kunstakademie, Sehenswürdigkeit (Kamera + Fenster), Album-Seite, Erfindungen. Sterne, Laternen, Laternenfest,
       Botanischer Garten: nur Text. Forschungs-Einträge nennen jetzt auch „braucht eine Universität“ usw.
+
+## Block 50 – Kunstakademie teurer (01.10.)
+
+- [x] Preise nach dem besten Einkommen (`designPrice`): normal etwa 3 Minuten (Wurzel aus Grundpreis/150 staffelt), ✦ Meisterstücke
+      5× so viel; mindestens 5× bzw. 25× der alten Preise. Schon Gekauftes bleibt.
