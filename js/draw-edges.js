@@ -183,6 +183,16 @@ function lampAt(pt, up, z, id) {                                  // kleine Late
   const lb = box(x, y, 1.5 * z, 0.8 * z, 3 * z, lit ? '#ffe58a' : '#fff7d6', '#4a4a58', 1.6 * z);
   if (lit) glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 3 * z], [lb.L[0], lb.L[1] - 3 * z]], 24 * z);
 }
+// Hängelaterne (unter Torbögen): dünne Kette, flache Kappe, runder Glaskörper; nachts leuchtet der Körper
+function hangLantern(x, y, z, lit) {
+  const cy = y + 4.2 * z, r = 1.25 * z, dark = C('#4a4a58');
+  g.strokeStyle = dark; g.lineWidth = 0.35 * z; g.beginPath(); g.moveTo(x, y); g.lineTo(x, cy - 2 * z); g.stroke();
+  poly([[x - 1.1 * z, cy - 1.3 * z], [x + 1.1 * z, cy - 1.3 * z], [x + 0.6 * z, cy - 2.1 * z], [x - 0.6 * z, cy - 2.1 * z]], dark);   // Kappe
+  circle(x, cy, r, C('#fff3c4'));
+  circle(x - r * 0.35, cy - r * 0.35, r * 0.35, C('#fffdf2'));
+  poly([[x - 0.5 * z, cy + r * 0.85], [x + 0.5 * z, cy + r * 0.85], [x, cy + r * 1.5]], dark);                                        // kleiner Boden
+  if (lit) { const d = r * 0.95; glowQuad([[x - d, cy], [x, cy - d], [x + d, cy], [x, cy + d]], 16 * z); }
+}
 function bulbsAlong(pts, up, z, id, per = 8) {                    // Lichterkette an einer Punktlinie (gleicher Abstand, auch im Bogen)
   const lit = edgeLit(id);
   alongLine(pts, per, 0, m => bulbAt(edgeS(m[0], m[1], up, z), z, lit));
@@ -293,9 +303,8 @@ function drawGateArch(E, e, look, z, k) {
     g.strokeStyle = C(d); g.lineWidth = 1 * z; g.beginPath(); each(2, (x, y) => { g.moveTo(x, y); g.lineTo(x, y - 3 * z); }); g.stroke();
   }
   if (!litLook(look)) return;
-  const top = lerp2(A, B, 0.5), [x, y] = edgeS(top[0], top[1], hb + R, z);   // Laterne hängt mittig unter dem Scheitel
-  g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 2.5 * z); g.stroke();
-  lampAt(top, hb + R - 2.5 - 4.6, z, 'A' + k);
+  const top = lerp2(A, B, 0.5), [x, y] = edgeS(top[0], top[1], hb + R - 0.8, z);   // Hängelaterne mittig unter dem Scheitel
+  hangLantern(x, y, z, edgeLit('A' + k));
 }
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
