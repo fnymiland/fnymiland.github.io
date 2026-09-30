@@ -352,6 +352,15 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+64. **Park zum Selberbauen** (Block 44): Parkrasen ist ein Boden (`state.terra` = 'park', Pinsel `parkrasen` in `TERRAFORM`,
+    zählt in `terrainAt` als Wiese, gezeichnet mit Streifen und Rand in `drawGround`). Darauf nur Deko, Wege und Linien (`parkOk`);
+    der Rasen darf unter Deko und Wege gemalt werden. `computeParks` (in `totals`, nach `computeMarkets`; auch nach `previewDelta`):
+    zusammenhängender Rasen, Deko darauf (kleine je Stück, große einmal), Sorten über `PARK_SORT` → Stufe nach `PARK_STEPS`
+    (Fläche, Deko, nötige Sorten) → `PARKS`. Wirkung: Park-Wunsch/Reihenhaus-Stufe über `parkReach` (bis `PARK_REACH` oder im
+    selben Viertel), Schönheit `PARK_BEAUTY` in der Summe und in `beautyAround` bis `PARK_NEAR`, Besucher `PARK_ATTR`, Parkfest
+    (`startParkFest`, `state.parkFest`, in `boostMul`), Spaziergänger (`strollers`, `parkWalk`, `sitDown`). Park-Fenster
+    `openParkInfo`/`parkStatus`. Der alte 3×3-Park (`ITEMS.park.old`) ist nicht mehr baubar; `parseSave` macht daraus 3×3
+    Rasen mit Brunnen, Bäumen, Bänken. Kleine Deko in Tests mit `buildSmall` setzen (`build` legt sie als ganzes Feld).
 63. **Größen** (Block 43): `DECO_SIZES` erzeugt je Größe einen eigenen Eintrag (`variantOf`, `vsize`, `vf`, `span`),
     `SIZE_ORDER[grundmodell]` für die Größen-Leiste (`renderStyleBar`, `sizeChoice`). Im Menü, Album, „Neu freigeschaltet“
     nur das Grundmodell; `baseOf(b)` überall, wo nach dem Namen gefragt wird (Beet-Bonus, Glashaus-Strom, KINDS bekommen die

@@ -855,7 +855,10 @@ function stageInfo(t, x, y, pop = T.pop, jobs = T.jobs, acc = T.access) {
     const pred = b => types.some(k => isKind(k, b));
     if (acc && acc.green && types.includes('park')) conds.push({ text: nearText(types, n, r, t.b), ok: true, how: 'garten' });
     else if (r < 2) conds.push({ text: nearText(types, n, r, t.b), ok: countNear(x, y, r, pred) >= n });   // direkt daneben: nur vor Ort
-    else { const got = reachKind(acc, x + ',' + y, x, y, r, pred, n); conds.push({ text: nearText(types, n, r, t.b), ok: !!got.how, how: got.how }); }
+    else {
+      const got = reachKind(acc, x + ',' + y, x, y, r, pred, n), how = got.how || (n === 1 && types.includes('park') ? parkReach(acc, x, y) : null);   // selbstgebauter Park
+      conds.push({ text: nearText(types, n, r, t.b), ok: !!how, how });
+    }
   }
   return { next: { name: S.names[t.lvl], cost: up.cost }, conds, ready: conds.every(c => c.ok) };
 }
@@ -1342,7 +1345,8 @@ const ANYWHERE = { forest: { tech: 'forst' }, obst: { tech: 'agrar' }, rock: { t
 function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
   const r = ROTATABLE.has(b) ? rot : 0;
-  if (d.edge) return 'Linien: Anfang und Ende antippen';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
+  if (d.edge) return 'Linien: Anfang und Ende antippen';
+  if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (TERRAFORM[b]) {                                   // Terraforming-Pinsel
     if (!ownedTile(x, y)) return notMine(x, y);

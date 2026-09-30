@@ -143,6 +143,26 @@ function parseSave(d) {
     });
     d.tiles.push(...add);
   }
+  // Block 44: Parks sind jetzt Parkrasen zum Selberbauen – ein alter Park (3×3) wird 9 Felder Rasen mit Brunnen in der Mitte,
+  // Bäumen, zwei Bänken und einem Blumentopf (so ist er gleich wieder ein „Park“)
+  if (d.tiles.some(([, t]) => t && t.b === 'park')) {
+    const terra = d.terra || (d.terra = []), decos = d.decos || (d.decos = []), add = [];
+    const slots = list => { const s = Array(SLOTS).fill(null); for (const [i, b, rot] of list) s[i] = { b, rot: rot || 0 }; return s; };
+    const LAYOUT = { '0,0': [[0, 'baum']], '2,0': [[1, 'baum']], '0,2': [[3, 'baum']], '2,2': [[2, 'baum']], '1,0': [[0, 'baum']],
+      '0,1': [[6, 'blumentopf']], '2,1': [[4, 'bank', midRot(4)]], '1,2': [[5, 'bank', midRot(5)]] };
+    d.tiles = d.tiles.filter(([k, t]) => {
+      if (!t || t.b !== 'park') return true;
+      const [ax, ay] = k.split(',').map(Number);
+      for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) {
+        const q = (ax + i) + ',' + (ay + j), l = LAYOUT[i + ',' + j];
+        terra.push([q, 'park']);
+        if (l) decos.push([q, slots(l)]);
+      }
+      add.push([(ax + 1) + ',' + (ay + 1), { b: 'brunnen', lvl: 1 }]);
+      return false;
+    });
+    d.tiles.push(...add);
+  }
   for (const [, t] of d.tiles) {
     // Block 37: Stände ohne incPeak – Baustellen merkten sich ihr Einkommen von vor der Personal-Grenze (oft viel zu hoch)
     if (!('incPeak' in d) && t.phase != null && WONDERS[t.b] && t.phase < WONDERS[t.b].phases.length) delete t.rate;

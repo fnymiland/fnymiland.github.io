@@ -15,13 +15,13 @@ beforeEach(() => {
 const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`);
 
 describe('Gebäude über mehrere Felder', () => {
-  it('ein Park belegt 3×3 Felder, dort kann nichts anderes hin', () => {
+  it('ein großer Brunnen belegt 3×3 Felder, dort kann nichts anderes hin', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    expect(build('park', 8, 8)).toBe(true);
+    expect(build('brunnen_xl', 8, 8)).toBe(true);
     game('recalc()');
     for (const k of ['8,8', '9,8', '8,9', '9,9', '10,10']) expect(game(`anchorAt(${k})`)).toBe('8,8');
     expect(game("placeError('feld', 9, 9)")).toBe('Hier steht schon etwas');
-    expect(game("placeError('park', 7, 7)")).toBe('Hier ist nicht genug Platz');
+    expect(game("placeError('brunnen_xl', 7, 7)")).toBe('Hier ist nicht genug Platz');
   });
 
   it('lange Gebäude: Tür an der Längsseite, gedreht liegen sie quer', () => {
@@ -49,7 +49,7 @@ describe('Gebäude über mehrere Felder', () => {
 
   it('Abreißen über irgendein Feld entfernt das ganze Gebäude', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('park', 8, 8);
+    build('brunnen_xl', 8, 8);
     game('recalc()');
     game('demolish(9, 9)');
     expect(game("state.tiles.has('8,8')")).toBe(false);
@@ -58,7 +58,7 @@ describe('Gebäude über mehrere Felder', () => {
 
   it('kleine Dekos gehen nicht auf große Gebäude', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('park', 8, 8);
+    build('brunnen_xl', 8, 8);
     game('recalc()');
     expect(game("smallError('blumentopf', 9, 9, 0)")).toBe('Hier ist kein Platz für Deko');
   });
@@ -79,12 +79,12 @@ describe('Verschieben', () => {
 
   it('abbrechen legt es zurück; beim Speichern mitten im Tragen geht nichts verloren', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('park', 8, 8);
+    build('brunnen_xl', 8, 8);
     game('pickUp(9, 9, 0)');
     const saved = game('serialize()');
-    expect(saved.tiles.some(([k, t]) => k === '8,8' && t.b === 'park')).toBe(true);
+    expect(saved.tiles.some(([k, t]) => k === '8,8' && t.b === 'brunnen_xl')).toBe(true);
     game('cancelMove()');
-    expect(game("state.tiles.get('8,8').b")).toBe('park');
+    expect(game("state.tiles.get('8,8').b")).toBe('brunnen_xl');
   });
 
   it('ablegen nur, wo Platz ist', () => {
@@ -117,22 +117,22 @@ describe('Umgestalten kostet nichts', () => {
 });
 
 describe('Alte Spielstände', () => {
-  it('ein zu klein gespeicherter Park bekommt seine Grundfläche oder wird erstattet', () => {
-    game("state.tiles.set('8,8', { b: 'park', lvl: 1 })");
+  it('ein zu klein gespeichertes 3×3-Ding bekommt seine Grundfläche oder wird erstattet', () => {
+    game("state.tiles.set('8,8', { b: 'brunnen_xl', lvl: 1 })");
     game("for (const k of ['9,8', '8,9', '9,9', '7,8', '8,7', '7,7', '7,9', '9,7']) state.tiles.set(k, { b: 'feld', lvl: 1 })");
     const money = game('state.money');
     const removed = game('fitFootprints()');
-    expect(removed).toEqual(['Park']);
-    expect(game('state.money')).toBe(money + game('ITEMS.park.cost'));
+    expect(removed).toEqual([game('ITEMS.brunnen_xl.name')]);
+    expect(game('state.money')).toBe(money + game('ITEMS.brunnen_xl.cost'));
     expect(game("state.tiles.has('8,8')")).toBe(false);
   });
 
   it('passt er daneben, rückt er einfach', () => {
-    game("state.tiles.set('8,8', { b: 'park', lvl: 1 })");
+    game("state.tiles.set('8,8', { b: 'brunnen_xl', lvl: 1 })");
     game("state.tiles.set('9,8', { b: 'feld', lvl: 1 })");
     expect(game('fitFootprints()')).toEqual([]);
     expect(game("state.tiles.get('9,8').b")).toBe('feld');
-    expect(game("[...state.tiles.values()].filter(t => t.b === 'park').length")).toBe(1);
+    expect(game("[...state.tiles.values()].filter(t => t.b === 'brunnen_xl').length")).toBe(1);
   });
 });
 

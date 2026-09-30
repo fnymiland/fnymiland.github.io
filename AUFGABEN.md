@@ -450,5 +450,8 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       nachts keine dunklen Buckel, Bögen wachsen mit der Linie und sind kräftiger (Mauer mit Keilsteinen), Hecken-Enden über
       die ganze Höhe rund, ein Pfosten statt zwei am Zauntor, gleichmäßige Pfosten an Ecken, keine Laternen-Häufung in
       Mauerecken, Kopfstein/Klinker unterscheidbar. Laternen (Ende, Tor, Bogen) nur noch bei beleuchteten Stilen.
-- [ ] **44** Park zum Selberbauen: Parkrasen malen + Deko → Grünanlage, Park, Stadtpark.
+- [x] **44** Park zum Selberbauen: Parkrasen malen (Gestalten → Grün, zählt als Wiese, nur Deko/Wege darauf) + Deko →
+      Grünanlage (4 Felder, 3 Deko), Park (9, 8, Bäume + Bank), Stadtpark (16, 15, + Wasser). Park-Wunsch (4 Felder oder
+      Viertel), Schönheit ringsum, Besucher, Parkfest per Knopf (×1,25/×1,5/×2, 3 Min., 20 Min. Pause), Spaziergänger auf
+      Bänken. Alte 3×3-Parks → Rasen mit Brunnen, Bäumen, Bänken. Nebenbei: Bewohner laufen nicht mehr durch Zäune.
 

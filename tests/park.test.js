@@ -115,3 +115,16 @@ describe('Spaziergänger', () => {
     for (let i = 0; i < 200; i++) { game('stepMover(walkers[0], 0.5, walkable, true)'); expect(game('walkers[0].tx === 11 && walkers[0].ty === 10')).toBe(false); }
   });
 });
+
+describe('Alte Parks', () => {
+  it('ein alter 3×3-Park wird beim Laden Parkrasen mit Brunnen, Bäumen und Bänken – und ist gleich ein „Park“', () => {
+    game("state.tiles.set('10,10', { b: 'park', lvl: 1 }); recalc()");
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.has('10,10')")).toBe(false);
+    expect(game("state.tiles.get('11,11').b")).toBe('brunnen');
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) expect(game(`terraLook(${10 + i}, ${11 + j - 1})`)).toBe('park');
+    expect(game('(recalc(), PARKS.map(p => p.stage))')).toEqual([2]);
+    expect(game("[...state.decos.values()].flat().filter(d => d && d.b === 'bank').length")).toBe(2);
+  });
+});

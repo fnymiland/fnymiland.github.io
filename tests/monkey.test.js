@@ -41,7 +41,7 @@ describe('Zufällige Spielzüge', () => {
       game("for (let x = -6; x <= 11; x++) if (!COVER.has(x + ',11')) { rebuildCover(); state.tiles.set(x + ',11', { b: 'haus', lvl: 5 }); } recalc()");
       game(`window.__r = (() => { let s = ${seed} * 9973; return () => (s = (s * 16807) % 2147483647) / 2147483647; })()`);
       const R = 'window.__r()';
-      const kinds = game("Object.keys(ITEMS).filter(b => ITEMS[b].cat && !['verschieben', 'abriss'].includes(b))");
+      const kinds = game("Object.keys(ITEMS).filter(b => ITEMS[b].cat && !ITEMS[b].old && !['verschieben', 'abriss'].includes(b))");
       for (let i = 0; i < 2500; i++) {
         const x = Math.floor(game(R) * 17) - 6, y = Math.floor(game(R) * 16) - 6, what = game(R);
         const b = kinds[Math.floor(game(R) * kinds.length)];

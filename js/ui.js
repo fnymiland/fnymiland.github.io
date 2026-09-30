@@ -1662,6 +1662,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
   '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor – antippen und einen Torbogen oder Rosenbogen draufsetzen. Enden bekommen Pfeiler mit Laternen, es gibt Stile mit Lichterketten. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
   '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
+  '🌳 <b>Park zum Selberbauen:</b> Zieh Parkrasen auf (🌸 Gestalten → Grün) und stell Bäume, Beete, Bänke und Brunnen drauf – daraus wird eine Grünanlage, ein Park oder ein Stadtpark. Er macht die Häuser ringsum schöner, lockt Besucher und Spaziergänger an, und im Park-Fenster kannst du ein <b>Parkfest</b> feiern. Dein alter Park ist jetzt Rasen mit Brunnen, Bäumen und Bänken.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Palmen, Büsche, Kristalle, Beete, Statuen, Pavillons und Glashäuser gibt es jetzt klein bis riesig – Größe über der Leiste wählen (zum Beispiel ein 3×3-Stadtbrunnen oder eine alte Eiche).',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
