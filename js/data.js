@@ -64,7 +64,7 @@ const ITEMS = {
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
-             desc: 'Belegt ein ganzes Feld. Viele Stile – vom Kiesweg bis zum Klinkerplatz. Verbindet Viertel.' },
+             desc: 'Verbindet Viertel. Weitere Stile gibt es in der Kunstakademie; als Block gelegt wird daraus ein Platz.' },
   schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
              desc: 'Für den elektrischen Zug. Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
@@ -390,26 +390,26 @@ const SHOP_GROUPS = {
   gross: ['markt', 'markthalle', 'moebelhaus', 'kaufhaus', 'passage', 'hotel', 'grandhotel'],
 };
 const MENU = [
-  { id: 'wohnen', label: '🏠 Wohnen', hint: 'Hier wohnen deine Leute', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-  { id: 'herstellen', label: '🏭 Herstellen', hint: 'Arbeitet ohne Kundschaft', groups: [
+  { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+  { id: 'herstellen', label: '🏭 Herstellen', groups: [
     { id: 'nahrung', label: '🌾 Essen', items: ['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'stein', 'mine', 'kristallmine'] },
     { id: 'werkstatt', label: '🔨 Werkstätten', items: ['saege', 'steinmetz', 'schmiede', 'fabrik'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
   ] },
-  { id: 'verkaufen', label: '🛍️ Verkaufen', hint: 'Braucht Kundschaft: Einwohner im Viertel und Besucher', groups: [
+  { id: 'verkaufen', label: '🛍️ Verkaufen', groups: [
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
     { id: 'gross', label: '🏬 Große Häuser', items: SHOP_GROUPS.gross },
   ] },
-  { id: 'freizeit', label: '🎡 Freizeit', hint: 'Zieht Besucher an oder bringt Ideen', groups: [
+  { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
-  { id: 'deko', label: '🌸 Deko', hint: 'Macht es schön', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'blumen', 'bank', 'laterne', 'kristall', 'kristallaterne',
+  { id: 'deko', label: '🌸 Deko', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'blumen', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
-  { id: 'wege', label: '🛤️ Wege & Land', hint: 'Verbinden und Gelände formen', groups: [
+  { id: 'wege', label: '🛤️ Wege & Land', groups: [
     { id: 'bahn', label: '🛤️ Wege & Bahn', items: ['weg', 'schiene', 'station', 'hbf', 'seilbahn'] },
     { id: 'schiff', label: '⛵ Schiff', items: ['bootssteg', 'hafen'] },
     { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },

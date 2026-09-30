@@ -105,13 +105,15 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
     expect(panel().querySelector('.stats span.bad')).toBe(null);
   });
 
-  it('der Hinweis ist dann kurz (nur wie man baut), ohne Infofenster ausführlich', () => {
+  it('der Hinweis zeigt nur, wie man baut – beim Weg gar keiner', () => {
     open('wohnen');
     card('haus').click();
     expect($('hint').textContent.startsWith('Haus · ')).toBe(true);
     expect($('hint').textContent).not.toContain(game('ITEMS.haus.desc'));
     game('closePanel()');
-    expect($('hint').textContent).toContain(game('ITEMS.haus.desc'));
+    expect($('hint').textContent.startsWith('Haus · ')).toBe(true);           // auch ohne Fenster nur „wie man baut“
+    game("setTool('weg')");
+    expect($('hint').hidden).toBe(true);                                       // Weg: kein Hinweis, die Stil-Leiste reicht
   });
 
   it('ein Gebäude-Infofenster ersetzt das Bau-Infofenster sauber', () => {
@@ -176,8 +178,8 @@ describe('Suche', () => {
     expect(game('menuTop')).toBe('deko');
   });
 
-  it('jeder Bereich zeigt seine Regel', () => {
+  it('keine Erklär-Zeile neben den Filtern', () => {
     open('herstellen', 'nahrung');
-    expect(document.querySelector('#subcats .area-hint').textContent).toBe('Herstellen: Arbeitet ohne Kundschaft');   // Name nur am Handy sichtbar
+    expect(document.querySelector('#subcats .area-hint')).toBe(null);
   });
 });

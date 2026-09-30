@@ -144,7 +144,7 @@ function buildToolbar() {
     subs.append(inp);
     requestAnimationFrame(() => { if (searchQ != null && (hadFocus || !PHONE || sheetOpen)) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } });
   } else {
-    subs.hidden = false;
+    subs.hidden = !top.groups;
     if (top.groups) for (const { id, label } of top.groups) {
       const b = document.createElement('button');
       b.className = 'sub' + (id === menuSub ? ' active' : '');
@@ -153,9 +153,6 @@ function buildToolbar() {
       b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
       subs.append(b);
     }
-    const h = document.createElement('span'); h.className = 'area-hint';
-    const nm = document.createElement('b'); nm.className = 'area-name'; nm.textContent = top.label.replace(/^\S+\s+/, '') + ': ';   // Handy: Name steht hier
-    h.append(nm, top.hint || ''); subs.append(h);
   }
   renderTools();
   setTool(tool);
@@ -221,7 +218,7 @@ function setTool(t) {
 function updateHint() {
   const hint = $('hint'), t = tool;
   if (t === 'look') { hint.hidden = true; return; }
-  const d = ITEMS[t], extra = [];
+  const d = ITEMS[t];
   if (PHONE) {
     const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
       : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
@@ -239,12 +236,9 @@ function updateHint() {
       : dragKind(t) === 'rect' ? 'Fläche: aufziehen, hineinklicken baut' : '',
     d.paint || dragKind(t) ? 'Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '',
     ROTATABLE.has(t) && !d.small ? 'Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? 'drehen: ⟳' : ''].filter(Boolean);
-  if (buildInfo === t) { hint.textContent = [d.name, ...(how.length ? how : ['Platz auf der Karte anklicken'])].join(' · '); hint.hidden = false; return; }
-  if (d.mat) extra.push('Material: ' + matText(d.mat));
-  if (d.workers) extra.push(`👷 ${d.workers}`);
-  if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);
-  if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
-  hint.textContent = `${d.name}: ${d.desc}` + [...extra, ...how].map(e => ' · ' + e).join('');
+  // Beschreibung und Werte stehen im Infofenster – hier nur, wie man baut; beim Weg gar nichts (Stil-Leiste reicht)
+  if (t === 'weg') { hint.hidden = true; return; }
+  hint.textContent = [d.name, ...(how.length ? how : ['Platz auf der Karte anklicken'])].join(' · ');
   hint.hidden = false;
 }
 

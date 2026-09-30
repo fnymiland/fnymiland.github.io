@@ -57,13 +57,13 @@ describe('Leiste auf dem Handy', () => {
     expect(document.getElementById('hint').textContent).toMatch(/^Weg · 🪙 5 · Anfang und Ende antippen ⓘ$/);
   });
 
-  it('Desktop/iPad: Bereiche klappen nichts, der Hinweis bleibt ausführlich', () => {
+  it('Desktop/iPad: Bereiche klappen nichts, der Hinweis ohne Beschreibung', () => {
     size(1024, 768);
     game('buildToolbar()');
     catBtn('wohnen').click();
     expect(bar().contains('open')).toBe(false);
     game("setTool('haus')");
-    expect(document.getElementById('hint').textContent.length).toBeGreaterThan(60);
+    expect(document.getElementById('hint').textContent).not.toContain(game('ITEMS.haus.desc'));   // Beschreibung steht im Infofenster
   });
 });
 

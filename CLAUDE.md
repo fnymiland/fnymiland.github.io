@@ -111,12 +111,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 25. **Baumenü** = `MENU` (data.js, Block 38) nach **einer Regel** – was braucht ein Ding, um zu wirken?
     🏠 Wohnen · 🏭 Herstellen (ohne Kundschaft: Essen/Rohstoffe/Werkstätten/Strom) · 🛍️ Verkaufen (braucht Kundschaft:
     Läden/Essen & Trinken/Große Häuser inkl. Markt und Hotels) · 🎡 Freizeit (zieht an/bringt Ideen: Bildung/Kultur/Wunder)
-    · 🌸 Deko (nur Schönheit, auch Blumenbeet) · 🛤️ Wege & Land (Wege & Bahn/Schiff inkl. Hafen/Gelände). Jeder Bereich hat
-    `hint` (steht neben den Filtern). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
+    · 🌸 Deko (nur Schönheit, auch Blumenbeet) · 🛤️ Wege & Land (Wege & Bahn/Schiff inkl. Hafen/Gelände). Keine Erklär-
+    Zeilen in der Leiste (Nutzer: selbsterklärend, stört). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
     Kein „Alle“; Bereiche ohne Filter haben `menuSub` 'alle', sonst gilt der erste (`firstSub`), jeder merkt sich seinen
     (`subOf`). Jedes Ding in **genau einer** Gruppe (Test), höchstens 10 je Filter; Wirkung in `FX`, Läden in `SHOP_GROUPS`.
     🔍 Suche (`searchQ`, `searchHits`, Umlaute egal) ersetzt Bereich und Filter durch ein Suchfeld. Handy: auch der gewählte
-    Bereich nur als Symbol (sonst passt die Zeile nicht), sein Name steht vor der Regel. Rathaus „Bereit“ über `buildGroups()`.
+    Bereich nur als Symbol (sonst passt die Zeile nicht). Hinweis über der Leiste nur „wie man baut“, nie die Beschreibung
+    (die steht im Bau-Infofenster); beim Weg kein Hinweis. Rathaus „Bereit“ über `buildGroups()`.
     **Kacheln** zeigen nur Bild + Preis (`cardPrice`, kurz über `shortMoney`), Name nur als `title`/`aria-label`;
     Reihenfolge `menuList()` (Freies zuerst, auch für die Zahlentasten). Kachel antippen = `pickCard`: am iPad/Mac
     rechts das **Bau-Infofenster** (`openBuildInfo`, `showPanel(…, live, id)` setzt `buildInfo`), das offen bleibt,
