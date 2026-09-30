@@ -644,7 +644,7 @@ function render(now) {
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
-  for (const m of walkers.concat(cars, cars4, ships)) {
+  for (const m of walkers.concat(strollers, cars, cars4, ships)) {
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = COVER.get(k) || k;     // Zug in der Halle: ganz hinten zeichnen, Dächer und Bahnsteige kommen darüber
     if (!byTile.has(k)) byTile.set(k, []);

@@ -1798,7 +1798,7 @@ function previewDelta(b, x, y) {
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
-  rebuildCover();
+  rebuildCover(); computeMarkets(); computeParks();              // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0 };

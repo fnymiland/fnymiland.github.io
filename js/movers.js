@@ -5,7 +5,7 @@
 const FUR = ['#f4c28f', '#c9a27e', '#fffaf2', '#b9b9c6', '#f7d9a8', '#e7a06c', '#9c7b64'];
 const SHIRTS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
-const walkers = [], cars = [];
+const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
 const walkable = (x, y) => {
   if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
   const t = objAt(x, y);
@@ -35,24 +35,54 @@ function syncMovers() {
       }
     }
   }
+  syncStrollers();
   cars.length = 0;             // keine Straßen mehr – dafür fahren Züge (syncTrains)
   syncTrains();
+}
+// Spaziergänger (Block 44): bis zu 2 je Park-Stufe (+1), nur auf dem Parkrasen, setzen sich gern auf eine Bank
+const parkWalk = (x, y) => terraLook(x, y) === 'park' && walkable(x, y);
+function syncStrollers() {
+  const want = T.pop ? Math.min(12, PARKS.reduce((n, p) => n + Math.min(p.stage * 2 + 1, Math.floor(p.tiles.length / 3)), 0)) : 0;
+  while (strollers.length > want) strollers.pop();
+  if (strollers.length >= want) return;
+  const p = PARKS[Math.floor(Math.random() * PARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => parkWalk(x, y));
+  if (!free.length) return;
+  const [sx, sy] = free[Math.floor(Math.random() * free.length)];
+  strollers.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 1, stroll: true,
+    kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)],
+    shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.35 + Math.random() * 0.25 });   // gemütlich
+}
+// Bank auf dem Feld? Dann dort Platz nehmen (Position der Bank, eine Weile sitzen)
+function sitDown(w) {
+  const ds = decosAt(w.fx + ',' + w.fy), i = ds ? ds.findIndex(d => d && d.b === 'bank') : -1;
+  if (i < 0 || Math.random() > 0.6 || strollers.some(o => o !== w && o.sit && o.fx === w.fx && o.fy === w.fy)) return false;
+  const [u, v] = slotPos(w.fx, w.fy, i);
+  w.sit = true; w.wait = 5 + Math.random() * 7; w.tx = w.fx; w.ty = w.fy; w.t = 0;
+  w.px = w.fx + u; w.py = w.fy + v;
+  return true;
 }
 function stepMover(w, dt, ok, preferWay) {
   if (!ok(w.tx, w.ty)) { w.tx = w.fx; w.ty = w.fy; w.t = 1; }
   if (!ok(w.fx, w.fy)) { w.gone = true; return; }
-  if (w.wait > 0) { w.wait -= dt; return; }
+  if (w.wait > 0) { w.wait -= dt; if (w.wait <= 0) w.sit = false; return; }
   w.t += dt * w.speed;
   if (w.t >= 1) {
     const px = w.fx, py = w.fy;
     w.fx = w.tx; w.fy = w.ty; w.t = 0;
-    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b));
+    if (w.stroll && (px !== w.fx || py !== w.fy) && sitDown(w)) return;
+    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b) && !(w.fur && edgeBlocks(w.fx, w.fy, a, b)));   // Bewohner nicht durch Zäune
     let pool = cands;
     if (preferWay) {
       const ways = cands.filter(([a, b]) => bAt(a, b) === 'weg');
       if (ways.length && Math.random() < (bAt(w.fx, w.fy) === 'weg' ? 0.95 : 0.6)) pool = ways;
     }
     if (pool.length > 1) pool = pool.filter(([a, b]) => a !== px || b !== py);
+    if (w.stroll && pool.length > 1 && Math.random() < 0.45) {        // Spaziergänger steuern gern die nächste Bank an
+      const benches = [];
+      for (const [k, ds] of state.decos) if (terraLook(...keyXY(k)) === 'park' && ds.some(d => d && d.b === 'bank')) benches.push(keyXY(k));
+      const dist = ([a, b]) => Math.min(...benches.map(([bx, by]) => Math.abs(bx - a) + Math.abs(by - b)));
+      if (benches.length) { const m = Math.min(...pool.map(dist)); pool = pool.filter(c => dist(c) === m); }
+    }
     if (!pool.length) { w.tx = w.fx; w.ty = w.fy; w.wait = 1; }
     else {
       [w.tx, w.ty] = pool[Math.floor(Math.random() * pool.length)];
@@ -66,15 +96,16 @@ function stepMover(w, dt, ok, preferWay) {
 function stepMovers(dt) {
   stepTrains(dt);
   for (const w of walkers) stepMover(w, dt, walkable, true);
+  for (const w of strollers) stepMover(w, dt, parkWalk, true);
   for (const c of cars) stepMover(c, dt, drivable, false);
-  for (const list of [walkers, cars]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
+  for (const list of [walkers, cars, strollers]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
 }
 function drawWalker(w, z, now) {
   const p = toScreen(w.px, w.py);
-  const bob = w.wait > 0 ? 0 : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;
+  const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
   // auf einer Bogenbrücke geht es hoch und wieder runter
   const arch = archAt(w.px, w.py), lift = arch ? archH(arch.b) * z : 0;
-  const x = p.x + 6 * z, y = p.y - bob - 2 * z - lift;
+  const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
   ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
   const hy = y - 11 * z;

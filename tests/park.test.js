@@ -89,3 +89,29 @@ describe('Besucher und Parkfest', () => {
     expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).parkFest.mul')).toBeCloseTo(1.25);
   });
 });
+
+describe('Spaziergänger', () => {
+  it('im Park laufen Spaziergänger, bleiben auf dem Rasen und setzen sich auf Bänke', () => {
+    lawn(10, 10, 3, 3);
+    for (const [x, y, s] of [[10, 10, 0], [11, 10, 1], [12, 10, 0], [10, 12, 3]]) game(`buildSmall('baum', ${x}, ${y}, ${s})`);
+    game("buildSmall('blumentopf', 12, 12, 2); buildSmall('blumentopf', 12, 11, 1); buildSmall('blumentopf', 10, 11, 0)");
+    game("buildSmall('bank', 11, 11, 4)");
+    game('recalc(); T.pop = 50; strollers.length = 0');
+    expect(game('(computeParks(), PARKS[0].stage)')).toBe(2);
+    for (let i = 0; i < 10; i++) game('syncStrollers()');
+    expect(game('strollers.length')).toBe(3);                                    // Park: bis 5, aber höchstens 1 je 3 Felder
+    for (let i = 0; i < 400; i++) game('for (const w of strollers) stepMover(w, 0.25, parkWalk, true)');
+    expect(game("strollers.every(w => terraLook(w.fx, w.fy) === 'park' && terraLook(w.tx, w.ty) === 'park')")).toBe(true);
+    game("strollers.length = 0; strollers.push({ fx: 11, fy: 11, tx: 11, ty: 11, px: 11, py: 11, t: 0, wait: 0, stroll: true, fur: '#fff', shirt: '#fff', speed: 0.5 })");
+    game('(() => { const r = Math.random; Math.random = () => 0.1; sitDown(strollers[0]); Math.random = r; })()');
+    expect(game('strollers[0].sit')).toBe(true);
+  });
+
+  it('Bewohner laufen nicht durch Hecken und Zäune (nur durchs Tor)', () => {
+    game("state.tiles.set('10,10', { b: 'weg', lvl: 1 }); state.tiles.set('11,10', { b: 'weg', lvl: 1 }); state.edges.set('b11,10', { b: 'zaun', style: 'latten' }); recalc()");
+    expect(game('isGate("b11,10")')).toBe(true);                                   // Weg auf beiden Seiten: Tor
+    game("state.tiles.delete('11,10'); recalc()");
+    game("walkers.length = 0; walkers.push({ fx: 10, fy: 10, tx: 10, ty: 10, px: 10, py: 10, t: 1, wait: 0, fur: '#fff', shirt: '#fff', speed: 1 })");
+    for (let i = 0; i < 200; i++) { game('stepMover(walkers[0], 0.5, walkable, true)'); expect(game('walkers[0].tx === 11 && walkers[0].ty === 10')).toBe(false); }
+  });
+});
