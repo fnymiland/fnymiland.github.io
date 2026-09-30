@@ -48,19 +48,30 @@ function edgePrism(p, q, E, w, h, col, z) {
   return { face: [P(li, 0), P(ri, 0), P(ri, h), P(li, h)] };
 }
 const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+// Trifft an einem Eckpunkt eine andere Linie derselben Art, läuft das Stück um seine halbe Breite weiter – so schließt
+// sich die Außenecke (sonst fehlte dort ein Viereck)
+function edgeJoins(k, b, vx, vy) {
+  return ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy]
+    .some(o => o !== k && (state.edges.get(o) || {}).b === b);
+}
+// Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
+const GATE_CUT = 0.5 - EDGE_W;
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
   if (e.b === 'zaun') { drawFence(E, look, e.style, gate, z); return; }
-  const w = look.w, h = look.h;
-  if (gate) {                                                   // Durchgang: nur kurze Enden bzw. Pfeiler
-    const cut = 0.18;
-    for (const [a, b] of [[E.p, lerp2(E.p, E.q, cut)], [lerp2(E.p, E.q, 1 - cut), E.q]]) {
-      if (e.b === 'mauer') edgePrism(a, b, E, w * 1.3, h + 2.5, look.col, z);
-      else edgePrism(a, b, E, w, h * 0.9, look.col, z);
+  const w = look.w, h = look.h, { i, j } = edgeParse(k), [au, av] = E.along;
+  const ext0 = edgeJoins(k, e.b, i, j) ? w : 0, ext1 = edgeJoins(k, e.b, i + au, j + av) ? w : 0;
+  const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
+  if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
+    for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
+    for (const t of [GATE_CUT, 1 - GATE_CUT]) {
+      const m = lerp2(E.p, E.q, t), d = w * 1.25;
+      if (e.b === 'mauer') edgePrism([m[0] - au * d, m[1] - av * d], [m[0] + au * d, m[1] + av * d], E, d, h + 2.5, look.col, z);
+      else { const [x, y] = edgeS(m[0], m[1], h * 0.6, z); circle(x, y, (w * TW * 0.55 + 1) * z, C(shade(look.col, 0.08))); }
     }
     return;
   }
-  const { face } = edgePrism(E.p, E.q, E, w, h, look.col, z);
+  const { face } = edgePrism(p, q, E, w, h, look.col, z);
   if (e.b === 'hecke') {
     // Blätter: ein paar runde Buckel oben, Buchs als Kugeln, Blüten als Punkte
     const n = 5;
@@ -92,8 +103,12 @@ function drawEdge(k, e, z, now) {
 function drawFence(E, look, style, gate, z) {
   const h = look.h, col = look.col, dark = shade(col, -0.25);
   const post = (pt, hh = h + 1) => { const [x, y] = edgeS(pt[0], pt[1], 0, z); g.strokeStyle = C(style === 'glas' ? '#9aa3ad' : dark); g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - hh * z); g.stroke(); };
+  if (gate) {                                                   // Tor: kurzes Stück bis an den Weg, dort Torpfosten
+    for (const [t0, t1] of [[0, GATE_CUT], [1 - GATE_CUT, 1]]) drawFence({ ...E, p: lerp2(E.p, E.q, t0), q: lerp2(E.p, E.q, t1) }, look, style, false, z);
+    for (const t of [GATE_CUT, 1 - GATE_CUT]) post(lerp2(E.p, E.q, t), h + 2.5);
+    return;
+  }
   post(E.p); post(E.q);
-  if (gate) return;                                             // Tor: offen, nur die Pfosten
   const at = (t, up) => { const m = lerp2(E.p, E.q, t); return edgeS(m[0], m[1], up, z); };
   const line = (a, b, c, w) => { g.strokeStyle = C(c); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); };
   if (style === 'weide') {

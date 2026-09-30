@@ -538,6 +538,22 @@ function drawRailWire(cx, cy, z, x, y, t) {
   g.stroke();
 }
 
+// Steht an einer Seite des Wegfelds eine Hecke, ein Zaun oder eine Mauer, läuft der Weg dort bis an die Feldkante
+// (eckig) – kein Grasstreifen zwischen Weg und Linie (Block 41)
+function lineFill(x, y, arms, w) {
+  if (x > 1e5 || !state.edges.size) return [];
+  const has = (dx, dy) => arms.some(([ax, ay]) => ax === dx && ay === dy);
+  const side = ([dx, dy]) => { const k = edgeBetween(x, y, x + dx, y + dy); return state.edges.has(k) && !isGate(k); };
+  const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out = [];
+  const lo = d => has(...d) ? 0.5 : w;
+  for (const [dx, dy] of DIRS) {
+    if (!side([dx, dy])) continue;
+    if (dx) out.push(rect(dx > 0 ? 0 : -0.5, dx > 0 ? 0.5 : 0, -lo([0, -1]), lo([0, 1])));
+    else out.push(rect(-lo([-1, 0]), lo([1, 0]), dy > 0 ? 0 : -0.5, dy > 0 ? 0.5 : 0));
+  }
+  for (const su of [1, -1]) for (const sv of [1, -1]) if (side([su, 0]) && side([0, sv])) out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5)));
+  return out;
+}
 function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
@@ -545,11 +561,12 @@ function drawPath(cx, cy, z, x, y, t) {
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
+  const shapes = w => roadShapes(arms, t, w, quads, flares).concat(lineFill(x, y, arms, w));
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
-    for (const sh of roadShapes(arms, t, w, quads, flares)) poly(sh.map(L), C(col));
+    for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }
   if (lk.pat) {
-    g.save(); clipTo(roadShapes(arms, t, ROAD_W, quads, flares), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    g.save(); clipTo(shapes(ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);

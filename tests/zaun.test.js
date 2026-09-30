@@ -78,6 +78,25 @@ describe('Tore, Bewohner, Schönheit', () => {
   });
 });
 
+describe('Ecken und Wege', () => {
+  it('Stücke derselben Art an einem Eckpunkt schließen die Ecke (laufen weiter), andere Arten nicht', () => {
+    game("state.edges.set('a5,5', { b: 'mauer', style: 'backstein' }); state.edges.set('b6,5', { b: 'mauer', style: 'backstein' }); state.edges.set('a7,5', { b: 'zaun', style: 'latten' })");
+    expect(game("edgeJoins('a5,5', 'mauer', 6, 5)")).toBe(true);                // Ecke rechts: senkrechtes Stück
+    expect(game("edgeJoins('a5,5', 'mauer', 5, 5)")).toBe(false);               // freies Ende
+    expect(game("edgeJoins('b6,5', 'mauer', 6, 5)")).toBe(true);
+    expect(game("edgeJoins('a7,5', 'zaun', 7, 5)")).toBe(false);                // Zaun zählt nicht als Mauer
+  });
+
+  it('neben einer Linie läuft der Weg bis an die Feldkante, ohne Linie nicht', () => {
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('7,6', { b: 'weg', lvl: 1, style: 'sand' })");
+    expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBe(0);
+    game("state.edges.set('a6,6', { b: 'hecke', style: 'niedrig' })");         // oben am Feld (6, 6)
+    const r = game("lineFill(6, 6, pathArms(6, 6), ROAD_W)");
+    expect(r.length).toBe(1);
+    expect(Math.min(...r[0].map(p => p[1]))).toBe(-0.5);                        // bis an die Kante
+  });
+});
+
 describe('Abreißen, Speichern, alte Stände', () => {
   it('Abriss im Rechteck nimmt Linien auf und um die Felder mit und erstattet sie', () => {
     line('zaun', { x: 5, y: 5 }, { x: 8, y: 5 });
