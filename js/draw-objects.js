@@ -573,6 +573,7 @@ function lineFill(x, y, arms, w) {
     if (['a' + (i - 1) + ',' + j, 'a' + i + ',' + j, 'b' + i + ',' + (j - 1), 'b' + i + ',' + j].some(k => state.edges.has(k)))
       out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5)));
   }
+  out.sides = DIRS.some(side);                                    // Linie an einer Seite: Weg gerade bis an sie (sonst bleibt die Kurve rund)
   return out;
 }
 function drawPath(cx, cy, z, x, y, t) {
@@ -582,7 +583,7 @@ function drawPath(cx, cy, z, x, y, t) {
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, lf.length > 0).concat(lf); };
+  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides).concat(lf); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }

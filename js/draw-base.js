@@ -104,7 +104,7 @@ function drawGround(x, y, p, z, now, noWaves) {
   poly([[p.x - hw, p.y], [p.x, p.y + hh], [p.x, p.y + hh + d], [p.x - hw, p.y + d]], C(beach ? '#e6cf97' : '#caa26c'));
   poly([[p.x, p.y + hh], [p.x + hw, p.y], [p.x + hw, p.y + d], [p.x, p.y + hh + d]], C(beach ? '#d4ba7f' : '#b0895a'));
   const alt = (x + y) & 1;
-  const top = park ? '#86d466'                                       // Parkrasen: ein helles, gleichmäßiges Grün
+  const top = park ? (alt ? '#88c863' : '#80c05c')                 // Parkrasen: gescheckt wie die Wiese, etwas dunkler
             : beach ? (alt ? '#f6e6b8' : '#f1dfae')
             : ter === 'grass' ? (alt ? '#96d56f' : '#8dcd67')
             : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')

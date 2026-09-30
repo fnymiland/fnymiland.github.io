@@ -360,7 +360,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Rückgängig-Schritt. Löschen im Fenster: `delButton`/`wireDel` (wie `demolishInfo`, ab `DEL_ASK` verlorenen Talern oder bei
     Wunderwerken zweites Tippen), Linien über `openGateInfo` (jetzt für jedes Stück), Parkrasen `removeLawn`. Neue Fenster mit
     Änderungen: Handler in `undoable` packen und einen Löschen-Knopf anbieten.
-64. **Park zum Selberbauen** (Block 44): Parkrasen ist ein Boden (`state.terra` = 'park', Pinsel `parkrasen` in `TERRAFORM`, einfarbig hell,
+64. **Park zum Selberbauen** (Block 44): Parkrasen ist ein Boden (`state.terra` = 'park', Pinsel `parkrasen` in `TERRAFORM`, gescheckt wie Wiese, dunkler,
     zählt in `terrainAt` als Wiese, gezeichnet mit Rand in `drawGround`). Darauf nur Deko, Wege und Linien (`parkOk`);
     der Rasen darf unter Deko und Wege gemalt werden. `computeParks` (in `totals`, nach `computeMarkets`; auch nach `previewDelta`):
     zusammenhängender Rasen, Deko darauf (kleine je Stück, große einmal), Sorten über `PARK_SORT` → Stufe nach `PARK_STEPS`
