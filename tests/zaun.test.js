@@ -208,6 +208,14 @@ describe('Endstücke, Torbögen, Licht', () => {
     expect(game('edgeLamps()')).toEqual([]);
   });
 
+  it('An der Mauer ist der Torbogen ein Paar hoher Torpfeiler (bei Laternen-Mauer je eine Laterne)', () => {
+    game("state.tiles.set('6,4', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,5', { b: 'mauer', style: 'laternen', arch: 'bogen' }); recalc()");
+    expect(game('edgeLamps()')).toEqual(expect.arrayContaining(['G0a6,5', 'G1a6,5']));
+    expect(game('edgeLamps()')).not.toContain('Aa6,5');
+    expect(game("archLabel('mauer', 'bogen')")).toContain('Torpfeiler');
+    expect(game("archLabel('zaun', 'bogen')")).toContain('Torbogen');
+  });
+
   it('Lichterkette und Blüten stehen im Bogen so dicht wie auf dem geraden Stück', () => {
     const arc = game('(() => { const out = []; const pts = Array.from({ length: 11 }, (_, i) => [Math.cos(i / 10 * Math.PI / 2), Math.sin(i / 10 * Math.PI / 2)]); alongLine(pts, 8, 0, m => out.push(m)); return out.length; })()');
     expect(arc).toBe(Math.round(Math.PI / 2 * 8));                                // ¼-Kreis mit Radius 1: Länge π/2

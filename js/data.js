@@ -817,6 +817,8 @@ const ARCHES = {
   bogen: { name: 'Torbogen', icon: '⛩️', cost: 80, beauty: 3 },
   rosen: { name: 'Rosenbogen', icon: '🌹', cost: 150, beauty: 6 },
 };
+// An der Mauer ist der „Torbogen“ ein Paar hoher Torpfeiler mit Steinkugeln (kein Bogen)
+const archLabel = (b, id) => b === 'mauer' && id === 'bogen' ? '🏛️ Torpfeiler' : `${ARCHES[id].icon} ${ARCHES[id].name}`;
 const EDGE_LIT = new Set(['hecke:lichter', 'zaun:lichter', 'mauer:laternen']);
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };

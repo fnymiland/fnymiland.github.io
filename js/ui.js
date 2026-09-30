@@ -982,10 +982,10 @@ const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaopla
 function openGateInfo(k) {
   const e = state.edges.get(k);
   if (!e || !isGate(k)) { closePanel(); return; }
-  const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, `${A.icon} ${A.name}`, A.cost])];
+  const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
   const el = showPanel(`
     <h3>Durchgang · ${ITEMS[e.b].name}</h3>
-    <p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit, nachts brennt oben eine Laterne (braucht Strom wie Laternen).</p>
+    <p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); };

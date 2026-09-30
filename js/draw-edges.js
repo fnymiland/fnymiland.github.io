@@ -204,8 +204,8 @@ function pillarBox(pt, r, h0, h1, col, z) {
 // Gibt die Höhe der Oberkante zurück.
 const PILLAR_UP = 2.8, CAP_UP = 3.6;
 const wallPillarR = look => look.w * 1.45;
-function wallPillar(pt, look, z, rMax = Infinity) {                // rMax: am Tor nicht über die Feldecke hinaus
-  const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
+function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher
+  const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
   if (look.joint) {                                               // Lagerfugen rundum, Stoßfugen versetzt
     g.strokeStyle = C(look.cobbles ? shade(look.col, -0.2) : look.joint); g.lineWidth = 0.5 * z; g.beginPath();
@@ -220,8 +220,8 @@ function wallPillar(pt, look, z, rMax = Infinity) {                // rMax: am T
     }
     g.stroke();
   }
-  pillarBox(pt, r * 1.18, top, h + CAP_UP, shade(look.col, 0.28), z);
-  return h + CAP_UP;
+  pillarBox(pt, r * 1.18, top, top + CAP_UP - PILLAR_UP, shade(look.col, 0.28), z);
+  return top + CAP_UP - PILLAR_UP;
 }
 // Endstück an einem freien Ende: Mauer Pfeiler mit Deckstein, Zaun dicker Pfosten mit Kappe, Hecke rundes Ende.
 // Laternen darauf nur bei beleuchteten Stilen.
@@ -312,10 +312,14 @@ function drawEdge(k, e, z, now) {
     for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
     for (const t of [GATE_CUT, 1 - GATE_CUT]) {
       const m = lerp2(E.p, E.q, t), d = w * 1.25;
-      if (e.b === 'mauer') { const top = wallPillar(m, look, z, GATE_CUT); if (!e.arch && litLook(look)) lampAt(m, top, z, 'G' + (t < 0.5 ? 0 : 1) + k); }
+      if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
+        const tall = e.arch === 'bogen', top = wallPillar(m, look, z, GATE_CUT, tall ? 6 : 0), id = 'G' + (t < 0.5 ? 0 : 1) + k;
+        if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);
+        else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
+      }
       else hedgeKnob(m, look, z);
     }
-    if (e.arch) drawGateArch(E, e, look, z, k);
+    if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
   if (pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());

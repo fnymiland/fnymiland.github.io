@@ -633,7 +633,7 @@ function edgeLamps() {
   for (const [k, e] of state.edges) {
     if (!EDGE_LIT.has(e.b + ':' + e.style)) continue;              // Laternen nur an beleuchteten Stilen
     out.push('E' + k);
-    if (isGate(k)) { if (e.arch) out.push('A' + k); else if (e.b !== 'hecke') out.push('G0' + k, 'G1' + k); continue; }   // Bogen oder Torpfeiler
+    if (isGate(k)) { if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) out.push('A' + k); else if (e.b !== 'hecke') out.push('G0' + k, 'G1' + k); continue; }   // Mauer-Torpfeiler: je eine Laterne   // Bogen oder Torpfeiler
     if (e.b !== 'hecke') for (const [vx, vy] of edgeEndPoints(k)) { const v = 'P' + vx + ',' + vy; if (!seen.has(v) && freeEnd(k, vx, vy)) { seen.add(v); out.push(v); } }
   }
   return out.sort();
