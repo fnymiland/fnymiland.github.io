@@ -71,7 +71,7 @@ describe('Fenster aktualisieren sich live', () => {
 
 describe('Leiste unten', () => {
   it('schaltet frei, sobald die Bedingung erfüllt ist – ohne neu zu öffnen', () => {
-    game("menuTop = 'herstellen'; menuSub = 'werkstatt'; buildToolbar(); updateHud()");
+    game("menuTop = 'herstellen'; menuSub = 'veredeln'; buildToolbar(); updateHud()");
     expect(document.querySelector('[data-tool="saege"]').classList.contains('locked')).toBe(true);
     game('state.restore.baum = 1; updateHud()');
     expect(document.querySelector('[data-tool="saege"]').classList.contains('locked')).toBe(false);

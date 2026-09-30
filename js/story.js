@@ -361,11 +361,11 @@ const TUTORIAL = [
   { text: 'Bau dein erstes Haus.', hint: '🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
   { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Wege & Land → Weg (ziehen) – oder 🛤️ ganz links',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
-  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
+  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 📦 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
   { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Wege & Land → ⛵ Schiff), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
-  { text: 'Bau ein Sägewerk.', hint: '🏭 Herstellen → 🔨 Werkstätten → Sägewerk', done: () => hasBuilt('saege') },
+  { text: 'Bau ein Sägewerk.', hint: '🏭 Herstellen → 🔨 Veredeln → Sägewerk', done: () => hasBuilt('saege') },
   { text: 'Bau dein erstes Haus aus.', hint: 'Wünsche erfüllen, dann Haus antippen → Ausbauen',
     done: () => [...state.tiles.values()].some(t => t.b === 'haus' && t.lvl >= 2) },
 ];

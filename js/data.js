@@ -382,19 +382,19 @@ const ANIMALS = [
 ];
 
 // Baumenü (Block 38, gemeinsam entschieden): eingeteilt nach einer festen Regel – was braucht ein Ding, um zu wirken?
-// Herstellen = arbeitet ohne Kundschaft · Verkaufen = braucht Kundschaft · Freizeit = zieht an oder bringt Ideen ·
-// Deko = nur Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
+// Herstellen = arbeitet ohne Kundschaft (sortiert nach dem, was herauskommt) · Verkaufen = braucht Kundschaft · Freizeit =
+// zieht Besucher an oder bringt Ideen (Vorrang vor Kundschaft: Kino, Hotels) · Deko = Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
 const SHOP_GROUPS = {
   laeden: ['kiosk', 'blumenladen', 'friseur', 'post', 'apotheke', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
   essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
-  gross: ['markt', 'markthalle', 'moebelhaus', 'kaufhaus', 'passage', 'hotel', 'grandhotel'],
+  gross: ['markthalle', 'moebelhaus', 'kaufhaus', 'passage'],
 };
 const MENU = [
   { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
   { id: 'herstellen', label: '🏭 Herstellen', groups: [
-    { id: 'nahrung', label: '🌾 Essen', items: ['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
-    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'stein', 'mine', 'kristallmine'] },
-    { id: 'werkstatt', label: '🔨 Werkstätten', items: ['saege', 'steinmetz', 'schmiede', 'fabrik'] },
+    { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'] },
+    { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
+    { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
   ] },
   { id: 'verkaufen', label: '🛍️ Verkaufen', groups: [
@@ -404,11 +404,11 @@ const MENU = [
   ] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
-    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
-    { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
+    { id: 'kultur', label: '🎭 Kultur', items: [...Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur'), 'hotel', 'grandhotel'] },
+    { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
   { id: 'deko', label: '🌸 Deko', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'blumen', 'bank', 'laterne', 'kristall', 'kristallaterne',
-    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
+    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell'] },
   { id: 'wege', label: '🛤️ Wege & Land', groups: [
     { id: 'bahn', label: '🛤️ Wege & Bahn', items: ['weg', 'schiene', 'station', 'hbf', 'seilbahn'] },
     { id: 'schiff', label: '⛵ Schiff', items: ['bootssteg', 'hafen'] },

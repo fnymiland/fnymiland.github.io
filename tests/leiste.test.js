@@ -185,7 +185,7 @@ describe('Suche', () => {
   });
 
   it('keine Erklär-Zeile neben den Filtern', () => {
-    open('herstellen', 'nahrung');
+    open('herstellen', 'taler');
     expect(document.querySelector('#subcats .area-hint')).toBe(null);
   });
 });

@@ -27,9 +27,9 @@ describe('Baumenü', () => {
   it('Filter ohne „Alle“, der erste ist gewählt', () => {
     game('buildToolbar()');
     area('herstellen').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['nahrung', 'rohstoffe', 'werkstatt', 'strom']);
-    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'].filter(id => game(`available('${id}')`))
-      .concat(['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'].filter(id => !game(`available('${id}')`))));
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['taler', 'rohstoffe', 'veredeln', 'strom']);
+    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'].filter(id => game(`available('${id}')`))
+      .concat(['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'].filter(id => !game(`available('${id}')`))));
     area('verkaufen').onclick();
     expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'gross']);
     area('freizeit').onclick();
@@ -42,9 +42,13 @@ describe('Baumenü', () => {
     const items = top => game(`MENU.find(m => m.id === '${top}').groups.flatMap(g => g.items)`);
     expect(items('herstellen').some(id => game(`!!ITEMS.${id}.shop`))).toBe(false);
     const shops = game("Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'laden')");
-    expect(shops.every(id => items('verkaufen').includes(id))).toBe(true);
+    expect(shops.every(id => items('verkaufen').includes(id) || game(`!!SHOPS.${id}.hotel`))).toBe(true);   // Hotels: zieht an → Freizeit
     expect(items('herstellen')).toContain('baecker');
-    expect(game("menuPlaceOf('baecker')")).toEqual({ top: 'herstellen', sub: 'nahrung' });
+    expect(game("menuPlaceOf('baecker')")).toEqual({ top: 'herstellen', sub: 'taler' });
+    expect(game("menuPlaceOf('markt')")).toEqual({ top: 'herstellen', sub: 'taler' });
+    expect(game("menuPlaceOf('hotel')")).toEqual({ top: 'freizeit', sub: 'kultur' });
+    expect(game("menuPlaceOf('leuchtturm')")).toEqual({ top: 'freizeit', sub: 'wunder' });
+    expect(game("menuPlaceOf('obst')")).toEqual({ top: 'herstellen', sub: 'rohstoffe' });
     expect(game("menuPlaceOf('hafen')")).toEqual({ top: 'wege', sub: 'schiff' });
     expect(game("menuPlaceOf('blumen')")).toEqual({ top: 'deko', sub: 'alle' });
   });
