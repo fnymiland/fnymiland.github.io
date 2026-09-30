@@ -111,9 +111,13 @@ function drawArc(rc, look, z) {
   if (rc.b === 'hecke') for (const [, a, b, , s] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length, s * Math.hypot(b[0] - a[0], b[1] - a[1]));
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
   if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
-  if (look.lights) {                                              // Lichterkette an der Seite, die zum Betrachter zeigt
-    const side = pts.map(p => { const d = [p[0] - c[0], p[1] - c[1]]; return off(p, d[0] + d[1] > 0 ? 1 : -1); });
-    bulbsAlong(side, h - 0.6, z, 'E' + rc.ka);
+  if (look.lights) {                                              // Lichterkette: an Anfang und Ende auf derselben Seite wie das
+    const sd = (p, v) => Math.sign((p[0] - c[0]) * v[0] + (p[1] - c[1]) * v[1]) || 1;   // anschließende gerade Stück ('a': +v, 'b': +u),
+    const s0 = sd(pts[0], [0, 1]), s1 = sd(pts[n], [1, 0]), total = ROUND_R * Math.PI / 2, lit = edgeLit('E' + rc.ka);   // dazwischen gleitet
+    alongLine(pts, 8, 0, (m, i) => {                                                    // sie hinüber (dabei über die Oberkante)
+      const f = s0 + (s1 - s0) * Math.min(1, (i + 0.5) / 8 / total), [x, y] = off(m, f);
+      bulbAt(edgeS(x, y, h - 0.6 * Math.abs(f) + 0.4 * (1 - Math.abs(f)), z), z, lit);
+    });
   }
 }
 // Mauerfugen auf sichtbaren Wandstücken ([a, b] in Feld-Koordinaten): Lagerfugen durchgehend, Stoßfugen je Länge versetzt
@@ -172,11 +176,11 @@ function lampAt(pt, up, z, id) {                                  // kleine Late
 }
 function bulbsAlong(pts, up, z, id, per = 8) {                    // Lichterkette an einer Punktlinie (gleicher Abstand, auch im Bogen)
   const lit = edgeLit(id);
-  alongLine(pts, per, 0, m => {
-    const [x, y] = edgeS(m[0], m[1], up, z);
-    circle(x, y, 0.8 * z, lit ? '#fff3b0' : C('#e8dcae'));
-    if (lit) glowQuad([[x - 1, y - 1], [x + 1, y - 1], [x + 1, y + 1], [x - 1, y + 1]], 8 * z);
-  });
+  alongLine(pts, per, 0, m => bulbAt(edgeS(m[0], m[1], up, z), z, lit));
+}
+function bulbAt([x, y], z, lit) {
+  circle(x, y, 0.8 * z, lit ? '#fff3b0' : C('#e8dcae'));
+  if (lit) glowQuad([[x - 1, y - 1], [x + 1, y - 1], [x + 1, y + 1], [x - 1, y + 1]], 8 * z);
 }
 // Beleuchteter Stil (Lichterkette, Laternen): nur dann Laternen an Enden, Toren und Bögen
 const litLook = look => !!(look.lights || look.lamps);
@@ -204,6 +208,8 @@ function pillarBox(pt, r, h0, h1, col, z) {
 // Gibt die Höhe der Oberkante zurück.
 const PILLAR_UP = 2.8, CAP_UP = 3.6;
 const wallPillarR = look => look.w * 1.45;
+// Wo die Torpfosten stehen (Anteil der Kante): Mauerpfeiler ganz neben dem Weg (auf der Feldecke), sonst am Wegrand
+const gateT = (b, look) => b === 'mauer' ? GATE_CUT - wallPillarR(look) : GATE_CUT;
 function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher
   const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
@@ -239,7 +245,7 @@ function endPiece(b, look, pt, z, id) {
 }
 // Torbogen über einem Durchgang: vom einen Pfeiler/Pfosten zum anderen, oben eine Laterne
 function drawGateArch(E, e, look, z, k) {
-  const A = lerp2(E.p, E.q, GATE_CUT), B = lerp2(E.p, E.q, 1 - GATE_CUT), hb = e.b === 'hecke' ? look.h : e.b === 'mauer' ? look.h + CAP_UP : look.h + 2.5, R = 11 + look.h * 0.2, n = 16;   // R: etwa halbe Torbreite → runder Bogen
+  const gt = gateT(e.b, look), A = lerp2(E.p, E.q, gt), B = lerp2(E.p, E.q, 1 - gt), hb = e.b === 'hecke' ? look.h : e.b === 'mauer' ? look.h + CAP_UP : look.h + 2.5, R = 11 + look.h * 0.2, n = 16;   // R: etwa halbe Torbreite → runder Bogen
   const legs = e.b === 'hecke';                                   // an der Hecke steht der Bogen auf eigenen Beinen vom Boden
   const pts = [...(legs ? [[...A, 0]] : []), ...Array.from({ length: n + 1 }, (_, i) => { const t = i / n; return [...lerp2(A, B, t), hb + Math.sin(Math.PI * t) * R]; }), ...(legs ? [[...B, 0]] : [])];
   const stroke = (col, w, dy = 0) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([u, v, up], i) => { const p = edgeS(u, v, up + dy, z); i ? g.lineTo(...p) : g.moveTo(...p); }); g.stroke(); };
@@ -304,16 +310,18 @@ function drawEdge(k, e, z, now) {
   // erst hinter ihm (sonst malt es seine Seitenwand über das andere Stück)
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
   // Mauer mit Pfeiler am hinteren Ende (P): erst der Pfeiler, die Mauer beginnt an seiner Seite (sonst ragt er über sie)
-  const pilP = !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
+  const gateBefore = e.b === 'mauer' && (o => { const n = state.edges.get(o); return !!(n && n.b === 'mauer' && isGate(o)); })(dir + (i - au) + ',' + (j - av));
+  const pilP = gateBefore ? wallPillarR(look) : !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
   const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
-    for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
-    for (const t of [GATE_CUT, 1 - GATE_CUT]) {
+    const gt = gateT(e.b, look);
+    if (e.b !== 'mauer') for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
+    for (const t of [gt, 1 - gt]) {
       const m = lerp2(E.p, E.q, t), d = w * 1.25;
       if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
-        const tall = e.arch === 'bogen', top = wallPillar(m, look, z, GATE_CUT, tall ? 6 : 0), id = 'G' + (t < 0.5 ? 0 : 1) + k;
+        const tall = e.arch === 'bogen', top = wallPillar(m, look, z, Infinity, tall ? 6 : 0), id = 'G' + (t < 0.5 ? 0 : 1) + k;
         if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);
         else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
       }
@@ -322,10 +330,10 @@ function drawEdge(k, e, z, now) {
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
-  if (pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
+  if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   edgePrism(p, q, E, w, h, look.col, z, !onQ);
   if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
-  const ends = () => { if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join()); if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join()); };
+  const ends = () => { if (endP && (!pilP || gateBefore)) endPiece(e.b, look, E.p, z, 'P' + vp.join()); if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join()); };
   const front = [[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]];
   if (look.lamps) { const m = lerp2(E.p, E.q, 0.5); pillarBox(m, w * 1.2, h, h + 1.2, shade(look.col, 0.28), z); lampAt(m, h + 1.2, z, 'E' + k); }
   if (e.b === 'hecke') { hedgeSideFlowers(front, look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length); if (look.lights) bulbsAlong(front, h - 0.6, z, 'E' + k); ends(); return; }
