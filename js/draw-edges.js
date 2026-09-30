@@ -50,9 +50,23 @@ function edgePrism(p, q, E, w, h, col, z, capQ = true) {
 const lerp2 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 // Trifft an einem Eckpunkt eine andere Linie derselben Art, läuft das Stück um seine halbe Breite weiter – so schließt
 // sich die Außenecke (sonst fehlte dort ein Viereck)
-function edgeJoins(k, b, vx, vy) {
-  return ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy]
-    .some(o => o !== k && (state.edges.get(o) || {}).b === b);
+function edgeJoins(k, b, vx, vy) {                              // nur quer anschließende Stücke (Ecke, T, Kreuz) –
+  const cross = k[0] === 'a' ? ['b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy] : ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy];   // in gerader Reihe
+  return cross.some(o => (state.edges.get(o) || {}).b === b);                 // nie (sonst ragt ein Stil in den nächsten)
+}
+// Blütenhecke: Blüten auch an der sichtbaren Seitenwand (Punktlinie am Boden, Höhe h)
+function hedgeSideFlowers(line, look, h, z, seed) {
+  if (!look.flowers) return;
+  let d0 = 0;
+  for (let s = 1; s < line.length; s++) {
+    const a = line[s - 1], b = line[s], L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.max(1, Math.round(L * 9));
+    for (let i = 0; i < n; i++) {
+      const f = (i + 0.5) / n, m = lerp2(a, b, f), r = hash(Math.round((d0 + f * L) * 97), seed, 7);
+      const [x, y] = edgeS(m[0], m[1], h * (0.25 + 0.6 * r), z);
+      circle(x, y, 0.85 * z, C(look.flowers[(i + s + seed) % look.flowers.length]));
+    }
+    d0 += L;
+  }
 }
 // Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
 const GATE_CUT = 0.5 - EDGE_W;
@@ -87,6 +101,7 @@ function drawArc(rc, look, z) {
   walls.sort((A, B) => A[0] - B[0]);
   for (const [, a, b, sh] of walls) poly([P(a, 0), P(b, 0), P(b, h), P(a, h)], C(shade(look.col, sh)));
   if (rc.b === 'mauer') wallJoints(walls.map(W => [W[1], W[2]]), look, h, z, P);
+  if (rc.b === 'hecke') for (const [, a, b] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length);
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
   if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
 }
@@ -153,7 +168,7 @@ function drawEdge(k, e, z, now) {
   }
   edgePrism(p, q, E, w, h, look.col, z, !onQ);
   if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
-  if (e.b === 'hecke') { hedgeTop([p, q], look, h, z, k.length); return; }
+  if (e.b === 'hecke') { hedgeSideFlowers([[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]], look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length); return; }
   wallJoints([[[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]]], look, h, z, (pt, up) => edgeS(pt[0], pt[1], up, z));
 }
 // Zaun: Pfosten an beiden Enden, dazwischen je nach Stil Latten, Staketen, Flechtwerk, Gitter, Stäbe oder Glas.
