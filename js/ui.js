@@ -210,11 +210,12 @@ const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function shortMoney(n) { return n < 1e4 ? nf.format(n) : n < 1e6 ? `${nfShort.format(Math.floor(n / 100) / 10)} Tsd.` : `${nfShort.format(Math.floor(n / 1e5) / 10)} Mio.`; }
 const cardPrice = id => id === 'abriss' || id === 'verschieben' ? '' : ITEMS[id].cost ? '🪙 ' + shortMoney(ITEMS[id].cost) : 'gratis';
 // Kachel antippen: auswählen (nochmal: weglegen); iPad/Mac zeigen dazu rechts das Infofenster, das Handy ein ⓘ im Hinweis
+const sizeChoice = {};                 // Grundmodell → zuletzt gewählte Größe (Block 43)
 function pickCard(id) {
   audio(); setSheet(false);
-  const next = tool === id ? 'look' : id;
+  const next = baseOf(tool) === id ? 'look' : sizeChoice[id] || id;
   setTool(next);
-  if (next !== 'look' && !PHONE) openBuildInfo(id);
+  if (next !== 'look' && !PHONE) openBuildInfo(next);
 }
 
 function setTool(t) {
@@ -224,7 +225,7 @@ function setTool(t) {
   rotManual = false;
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
-  for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
+  for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
   for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
@@ -265,7 +266,7 @@ let buildInfo = null;
 function openBuildInfo(id) {
   const d = ITEMS[id];
   if (!d) return;
-  const locked = !available(id), tip = ITEM_TIPS[id], fx = effectText(id);
+  const locked = !available(id), tip = ITEM_TIPS[id] || ITEM_TIPS[baseOf(id)], fx = effectText(id);
   const cost = [d.cost ? `<span${state.money < d.cost ? ' class="bad"' : ''}>🪙 ${fmt(d.cost)}</span>` : '<span>kostenlos</span>',
     ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];
   const [w, h] = d.small || id === 'abriss' || id === 'verschieben' ? [1, 1] : sizeOf(id, 0);
@@ -306,8 +307,16 @@ function styleSwatch(st) {
 }
 // Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
 function renderStyleBar(t) {
-  const bar = $('style-bar');
-  document.body.classList.toggle('has-styles', !!STYLES[t]);
+  const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
+  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes);
+  if (sizes) {                                                   // Größen (Block 43): Klein · Mittel · Groß · Riesig
+    const foot = id => ITEMS[id].small ? 'Ecke' : ITEMS[id].size ? ITEMS[id].size.join('×') : '1×1';
+    bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${SIZE_NAMES[k]}">
+      <i>${SIZE_NAMES[k][0]}</i><span>${SIZE_NAMES[k]} · ${foot(id)}</span></button>`).join('');
+    for (const b of bar.querySelectorAll('[data-size]')) b.onclick = () => { const open = !!buildInfo; sizeChoice[baseOf(t)] = b.dataset.size; sfx('deco'); setTool(b.dataset.size); if (open) openBuildInfo(b.dataset.size); };
+    bar.hidden = false;
+    return;
+  }
   if (!STYLES[t]) { bar.hidden = true; return; }
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
@@ -426,7 +435,7 @@ const pendingUnlocks = [];
 function resetUnlockWatch() { unlockSeen = null; pendingUnlocks.length = 0; }
 function unlockKeys() {
   const out = new Set();
-  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
+  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
   for (const st of STYLES.weg) if ((st.lm || st.album) && styleOk(st)) out.add('weg:' + st.id);
   for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
   return out;
@@ -1599,6 +1608,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
   '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
   '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
+  '📏 <b>Größen:</b> Brunnen, Bäume, Palmen, Büsche, Kristalle, Beete, Statuen, Pavillons und Glashäuser gibt es jetzt klein bis riesig – Größe über der Leiste wählen (zum Beispiel ein 3×3-Stadtbrunnen oder eine alte Eiche).',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

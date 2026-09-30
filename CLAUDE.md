@@ -352,6 +352,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+63. **Größen** (Block 43): `DECO_SIZES` erzeugt je Größe einen eigenen Eintrag (`variantOf`, `vsize`, `vf`, `span`),
+    `SIZE_ORDER[grundmodell]` für die Größen-Leiste (`renderStyleBar`, `sizeChoice`). Im Menü, Album, „Neu freigeschaltet“
+    nur das Grundmodell; `baseOf(b)` überall, wo nach dem Namen gefragt wird (Beet-Bonus, Glashaus-Strom, KINDS bekommen die
+    Varianten dazu), `available` wie das Grundmodell. Gezeichnet mit dem Bild des Grundmodells, skaliert über `decoScale`;
+    das Beet zeichnet mit `span` mehr Blumen statt größerer. Deko nie haushoch: Bank, Laterne & Co. haben keine Größen.
 62. **Kleinkram: 8 Plätze** (Block 42): `SLOTS` = 8 – Ecken 0–3 wie früher, Seitenmitten 4–7 (`MID_UV`, am Wegrand).
     Immer `newSlots()` statt `[null, null, null, null]`, gezeichnet in `SLOTS_BACK` (vor dem Ding) und `SLOTS_FRONT`.
     `slotAt` nimmt den nächsten der 8 Plätze; auf Gebäudefeldern nur Ecken (`smallError`); Bänke in Seitenmitten

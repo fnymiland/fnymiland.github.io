@@ -28,7 +28,7 @@ function rebuildCover() {
     BY_TYPE.get(t.b).push([k, x, y, x + w - 1, y + h - 1]);
     const mark = (set, r) => { for (let yy = y - r; yy < y + h + r; yy++) for (let xx = x - r; xx < x + w + r; xx++) set.add(xx + ',' + yy); };
     if (isHome(t.b)) mark(HOME_NEAR, 2);
-    else if (t.b === 'blumen') mark(BEET_NEAR, 1);
+    else if (baseOf(t.b) === 'blumen') mark(BEET_NEAR, 1);
     for (const [fx, fy] of footprint(t.b, x, y, t.rot, t)) COVER.set(fx + ',' + fy, k);
     if (t.b === 'hbf') for (let g = 0; g < hbfGleise(t); g++) {
       const G = gleisTiles(t, x, y, g);
@@ -229,7 +229,7 @@ function rawIncome(b, x, y) {
 // Blumenbeet daneben / Haus in der Nähe: erst im Nachschlage-Satz fragen (fast immer: nein), nur dann genau zählen
 const inSet = (set, x, y) => { const a = anchorAt(x, y), t = a && state.tiles.get(a); if (!t) return set.has(x + ',' + y);
   const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (set.has((ax + i) + ',' + (ay + j))) return true; return false; };
-const beetBonus = (x, y) => inSet(BEET_NEAR, x, y) ? countNear(x, y, 1, b => b === 'blumen') : 0;
+const beetBonus = (x, y) => inSet(BEET_NEAR, x, y) ? countNear(x, y, 1, b => baseOf(b) === 'blumen') : 0;
 // (für alles außer Häusern ist der Satz schon genau; ein Haus zählt sich selbst nicht)
 const nearHouse = (x, y) => { if (!inSet(HOME_NEAR, x, y)) return false; const t = objAt(x, y); return !(t && isHome(t.b)) || countNear(x, y, 2, isHome) > 0; };
 function beautyOf(t, x, y) {
@@ -373,7 +373,7 @@ function totals() {
   for (const [k, t] of state.tiles) {
     const d = ITEMS[t.b];
     const [x, y] = keyXY(k);
-    beauty += beautyOf(t, x, y) * (t.b === 'glashaus' || t.b === 'botgarten' ? off(k) : 1);
+    beauty += beautyOf(t, x, y) * (baseOf(t.b) === 'glashaus' || t.b === 'botgarten' ? off(k) : 1);
     if (t.b === 'lm') continue;
     const s = st.get(k);
     if (idle.has(k)) s.noPower = true;
@@ -578,7 +578,8 @@ function slotAt(sx, sy) {
   for (let i = 0; i < SLOTS; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
   return { x, y, slot };
 }
-const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS)]);
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS),
+  ...Object.keys(ITEMS).filter(id => ITEMS[id].variantOf && !ITEMS[id].small && !ITEMS[id].size)]);   // Größe „Mittel“ kleiner Deko belegt das Feld
 // Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
 // Kante 'a' i,j läuft von (i, j) nach (i + 1, j) – zwischen Feld (i, j − 1) und (i, j); 'b' i,j von (i, j) nach (i, j + 1) –
 // zwischen Feld (i − 1, j) und (i, j). Jedes Feld zeichnet seine beiden hinteren Kanten 'a' x,y und 'b' x,y vor sich selbst.
@@ -761,7 +762,7 @@ function normalizeSmall() {
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }
 }
-const available = id => unlockOk(ITEMS[id], id);
+const available = id => ITEMS[id].variantOf ? available(ITEMS[id].variantOf) : unlockOk(ITEMS[id], id);   // Größen: wie das Grundmodell
 const lockText = (id, short) => {
   const d = ITEMS[id];
   const txt = unlockText(d, short);
@@ -926,7 +927,7 @@ const bestVehicle = kind => [...vehicleModels(kind)].reverse().find(m => vehicle
 const POWER_OUT = { windrad: [1, 2, 3], wasserkraft: [4, 8, 12], solarfeld: [3, 6, 9], geothermie: [8, 16, 24], wellen: [5, 10, 15] };   // Stufe 1–3
 const LAMPS_PER_POWER = 10, NO_POWER = 0.5;
 // Monumente brauchen richtig viel (je 100 ⚡, das Schloss 300) – dafür baut man sich eine Energie-Insel
-const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, glashaus: 1, sternwarte: 100, botgarten: 100, riesenrad: 100, seebruecke: 100, schloss: 300 };   // Reihenfolge = Vorrang
+const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, glashaus: 1, glashaus_l: 3, sternwarte: 100, botgarten: 100, riesenrad: 100, seebruecke: 100, schloss: 300 };   // Reihenfolge = Vorrang
 const WORKSHOP_POWER = CONSUMERS.fabrik;
 function powerOf(t) {
   const o = POWER_OUT[t.b];

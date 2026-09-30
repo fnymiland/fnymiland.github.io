@@ -546,7 +546,7 @@ const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].won
 function albumKeys(p) {
   switch (p.id) {
     case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung', 'strom'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
-    case 'deko': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'deko' && !isRewardItem(id)).map(id => 'b:' + id);
+    case 'deko': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'deko' && !isRewardItem(id) && !ITEMS[id].variantOf).map(id => 'b:' + id);
     case 'haeuser': return HOUSE_STAGES.map((_, i) => 'hs:' + (i + 1));
     case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i));
     case 'wege': return STYLES.weg.filter(st => !st.album).map(st => 'weg:' + st.id);
@@ -560,14 +560,14 @@ function collectAlbum() {
   if (!state.album) state.album = new Set();
   const add = k => state.album.add(k);
   for (const t of state.tiles.values()) {
-    if (ITEMS[t.b] && ITEMS[t.b].cat) add('b:' + t.b);
+    if (ITEMS[t.b] && ITEMS[t.b].cat) add('b:' + baseOf(t.b));          // Größen zählen als ihr Grundmodell
     if (t.b === 'haus') { add('hs:' + t.lvl); if (t.animal) add('tier:' + t.animal); }
     if (t.wall != null) add('wall:' + t.wall);
     if (t.roof != null) add('roof:' + t.roof);
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
     if (t.weg != null) add('weg:' + t.weg);                        // Weg unter einem Marktstand
   }
-  for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + d.b);
+  for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + baseOf(d.b));
   for (const e of state.edges.values()) add('b:' + e.b);             // Hecken, Zäune, Mauern (Block 41)
   // Belohnungen bleiben, auch wenn später Neues ins Album kommt (LATE_ALBUM: erst nach dem Album dazugekommen)
   if (!state.legacy) state.legacy = new Set();

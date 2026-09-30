@@ -48,7 +48,7 @@ describe('Neu freigeschaltet', () => {
   });
 
   it('jedes freischaltbare Ding hat einen Tipp', () => {
-    const missing = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !['verschieben', 'abriss'].includes(id) && !ITEM_TIPS[id])");
+    const missing = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !['verschieben', 'abriss'].includes(id) && !ITEM_TIPS[id])");
     expect(missing).toEqual([]);
   });
 });

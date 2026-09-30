@@ -592,3 +592,8 @@ body.phone.phone-land #panel { left: auto; right: 8px; width: min(360px, 48vw); 
   max-height: calc(100dvh - var(--bar, 57px) - 64px); padding: 12px 16px 14px; }
 body.phone.phone-land #panel .grip { display: none; }          /* quer ist das Fenster schon so hoch wie möglich */
 body.phone #rot-btn { bottom: calc(var(--bar, 57px) + 10px); }    /* neben dem Hinweis, direkt über der Leiste */
+/* Größen-Leiste (Block 43): Buchstabe im Kreis und immer der Name */
+.size-chip i { display: flex; align-items: center; justify-content: center; font-style: normal; font-weight: 900; font-size: 13px;
+  background: var(--cream2); color: var(--brown); }
+.size-chip span { display: inline; font-size: 12px; font-weight: 800; }
+.size-chip.on span { font-size: 13px; }

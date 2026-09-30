@@ -383,6 +383,43 @@ const KINDS = {
 };
 const kindOf = k => KINDS[k] ? KINDS[k].of : [k];
 const isKind = (k, b) => kindOf(k).includes(b);
+// Größen (Block 43): manche Deko gibt es in mehreren Größen – je Größe ein eigener Eintrag (variantOf = Grundmodell),
+// im Menü und Album nur das Grundmodell; gewählt wird über die Größen-Leiste (SIZE_ORDER). 'base' = das Grundmodell.
+// f = wie viel größer gezeichnet als das Grundmodell, span = Beet: mehr Blumen statt größerer Blumen.
+const SIZE_NAMES = { s: 'Klein', m: 'Mittel', l: 'Groß', xl: 'Riesig' }, SIZE_MUL = { s: 0.4, m: 1, l: 3.5, xl: 8 };
+const DECO_SIZES = {
+  brunnen: { base: 'm', s: { small: true, f: 0.5 }, l: { size: [2, 2], f: 2 }, xl: { size: [3, 3], f: 3 } },
+  kristallbrunnen: { base: 'm', s: { small: true, f: 0.5 }, l: { size: [2, 2], f: 2 }, xl: { size: [3, 3], f: 3 } },
+  baum: { base: 's', m: { f: 1.6 }, l: { size: [2, 2], f: 2.8, name: 'Alte Eiche' } },
+  palme: { base: 's', m: { f: 1.6 }, l: { size: [2, 2], f: 2.6, name: 'Palmengruppe' } },
+  busch: { base: 's', m: { f: 1.7, name: 'Busch' }, l: { size: [2, 2], f: 2.8, name: 'Buschgruppe' } },
+  kristall: { base: 's', m: { f: 1.7 }, l: { size: [2, 2], f: 2.8 } },
+  blumen: { base: 'm', l: { size: [2, 2], span: 2 }, xl: { size: [3, 3], span: 3 } },
+  statue: { base: 'm', l: { size: [2, 2], f: 2 } },
+  pavillon: { base: 'm', l: { size: [2, 2], f: 2 } },
+  glashaus: { base: 'm', l: { size: [2, 3], f: 1.5 } },
+};
+const SIZE_ORDER = {};                 // Grundmodell → [[Größe, id], …] von klein nach groß
+for (const [b, sz] of Object.entries(DECO_SIZES)) {
+  const B = ITEMS[b], list = [];
+  for (const k of ['s', 'm', 'l', 'xl']) {
+    if (k === sz.base) { list.push([k, b]); continue; }
+    const v = sz[k];
+    if (!v) continue;
+    const id = b + '_' + k, mul = SIZE_MUL[k] / SIZE_MUL[sz.base];
+    const mat = B.mat ? Object.fromEntries(Object.entries(B.mat).map(([r, n]) => [r, Math.max(1, Math.round(n * mul))])) : undefined;
+    ITEMS[id] = { ...B, name: v.name || `${B.name} (${SIZE_NAMES[k].toLowerCase()})`, cost: Math.round(B.cost * mul), beauty: Math.round(B.beauty * mul * 10) / 10,
+      variantOf: b, vsize: k, vf: v.f || 1, span: v.span || 1, small: !!v.small, needs: v.small ? undefined : B.needs || 'grass' };
+    if (mat) ITEMS[id].mat = mat; else delete ITEMS[id].mat;
+    if (v.size) ITEMS[id].size = v.size; else delete ITEMS[id].size;
+    if (!ITEMS[id].needs) delete ITEMS[id].needs;
+    delete ITEMS[id].design;                                      // freigeschaltet wie das Grundmodell (available)
+    list.push([k, id]);
+  }
+  SIZE_ORDER[b] = list;
+  for (const K of Object.values(KINDS)) if (K.of.includes(b)) K.of.push(...list.map(([, id]) => id).filter(id => id !== b));
+}
+const baseOf = b => (ITEMS[b] && ITEMS[b].variantOf) || b;
 const isHome = b => KINDS.haus.of.includes(b);
 const kindName = k => KINDS[k] ? KINDS[k].name : ITEMS[k].name;
 const kindPlural = k => KINDS[k] ? KINDS[k].plural : PLURAL[k] || ITEMS[k].name;

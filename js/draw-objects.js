@@ -918,7 +918,13 @@ const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebru
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
-const decoScale = b => DECO_SCALE[b] || 1;
+// Größen (Block 43): das Grundmodell, um vf größer; kleine (Ecke) und Feld-Deko werden verschieden skaliert gezeichnet
+function decoScale(b) {
+  const d = ITEMS[b];
+  if (!d || !d.variantOf) return DECO_SCALE[b] || 1;
+  const B = ITEMS[d.variantOf];
+  return (DECO_SCALE[d.variantOf] || 1) * (B.small ? 0.9 : 1) * d.vf / (d.small ? 0.9 : 1);
+}
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
   const type = tool === 'verschieben' ? movingType() : tool;
@@ -969,17 +975,19 @@ function drawStand(type, cx, cy, z, now, x, y, t) {
 }
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
+  let span = 1;
+  if (ITEMS[type] && ITEMS[type].variantOf) { span = ITEMS[type].span; type = ITEMS[type].variantOf; }   // Größe: Bild des Grundmodells
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   if (STANDS[type]) { drawStand(type, cx, cy, z, now, x, y, t); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;
-    case 'blumen': {
-      diamond(cx, cy, hw * 0.72, hh * 0.72, C('#a8764c'));
+    case 'blumen': {                         // großes Beet (span): mehr Blumen, nicht größere
+      diamond(cx, cy, hw * (0.72 + span - 1), hh * (0.72 + span - 1), C('#a8764c'));
       const pts = [];
-      for (let i = 0; i < 14; i++) {
-        const u = (hash(x, y, 100 + i) - 0.5) * 0.62, v = (hash(x, y, 120 + i) - 0.5) * 0.62;
+      for (let i = 0; i < 14 * span * span; i++) {
+        const u = (hash(x, y, 100 + i) - 0.5) * (0.62 + span - 1), v = (hash(x, y, 120 + i) - 0.5) * (0.62 + span - 1);
         pts.push([cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z, i]);
       }
       pts.sort((a, b) => a[1] - b[1]);
