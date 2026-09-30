@@ -157,7 +157,8 @@ function frame(now) {
 }
 requestAnimationFrame(frame);
 
-window.addEventListener('resize', resize);
+// Größe ändern leert die Zeichenfläche – sofort neu zeichnen, sonst blitzt bis zum nächsten Bild der blaue Hintergrund durch
+window.addEventListener('resize', () => { resize(); try { render(performance.now()); } catch (e) { /* nächstes Bild holt es nach */ } });
 setInterval(save, 5000);
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { state.last = Date.now(); save(); }
