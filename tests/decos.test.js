@@ -61,7 +61,7 @@ describe('Kleinkram: 8 Plätze', () => {
 
   it('Seitenmitten liegen zwischen den Ecken am Rand, näher an der Kante', () => {
     expect(game('SLOTS')).toBe(8);
-    expect(game('[4, 5, 6, 7].map(slotUV)')).toEqual([[-0.38, 0], [0, -0.38], [0.38, 0], [0, 0.38]]);
+    expect(game('[4, 5, 6, 7].map(slotUV)')).toEqual([[-0.42, 0], [0, -0.42], [0.42, 0], [0, 0.42]]);
     expect(game('newSlots().length')).toBe(8);
   });
 
@@ -92,5 +92,26 @@ describe('Kleinkram: 8 Plätze', () => {
     expect(at(0.3, 0.3)).toBe(3);
     expect(at(0.4, 0)).toBe(6);
     expect(at(0, -0.4)).toBe(5);
+  });
+});
+
+describe('Kleinkram weit außen (Block 46)', () => {
+  it('eine Laterne steht weit in der Ecke (neben dem Weg), ein Baum etwas weiter drin', () => {
+    const [u, v] = game("slotPos(5, 5, 3, 'laterne')");
+    expect(u).toBeGreaterThan(0.39); expect(v).toBeGreaterThan(0.39);
+    expect(u).toBeGreaterThan(game('EDGE_W'));                                        // außerhalb des Wegbands
+    expect(game("slotPos(5, 5, 3, 'baum')")[0]).toBeLessThan(u);
+  });
+
+  it('an einem Zaun oder einer Hecke rückt es um deren Dicke nach innen; an einem Eckpunkt mit Linie hält es Abstand', () => {
+    const free = game("slotPos(5, 5, 3, 'laterne')")[0];
+    game("state.edges.set('b6,5', { b: 'hecke', style: 'niedrig' })");               // rechte Seite von Feld 5,5 (+u)
+    const [u, v] = game("slotPos(5, 5, 3, 'laterne')");
+    expect(u).toBeLessThan(free);
+    expect(0.5 - u).toBeGreaterThanOrEqual(0.14 + 0.08 - 1e-9);                        // Rand der Laterne vor der Hecke
+    expect(v).toBeLessThan(free);                                                       // Eckpunkt mit Hecke: Abstand zur Ecke
+    game("state.edges.clear(); state.edges.set('a6,6', { b: 'zaun', style: 'latten' })");   // nur außerhalb am Eckpunkt (6,6)
+    expect(game("slotPos(5, 5, 3, 'laterne')")[0]).toBeLessThan(free);
+    game('state.edges.clear()');
   });
 });

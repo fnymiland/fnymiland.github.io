@@ -559,16 +559,32 @@ function currentStyle(kind) {
 // Kleine Dekos (Block 42): 8 Plätze pro Feld – 4 Ecken (0 hinten, 1 rechts, 2 links, 3 vorn) und 4 Seitenmitten
 // (4 −u oben links, 5 −v oben rechts, 6 +u unten rechts, 7 +v unten links). Auf einem Weg liegen die Seitenmitten am
 // Wegrand – dort stehen Bänke und Laternen, zum Weg gedreht. Auf Gebäudefeldern nur die Ecken.
-const SLOTS = 8, SLOT_OFF = 0.3, MID_OFF = 0.38;
+const SLOTS = 8, SLOT_OFF = 0.42, MID_OFF = 0.42;   // weit außen (Block 46): neben dem Weg, nicht darauf
 const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
 const slotUV = i => i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
 const newSlots = () => Array(SLOTS).fill(null);
-// Seitenmitte mit Hecke/Zaun/Mauer an dieser Seite: etwas nach innen, damit die Bank nicht in der Hecke steht
-const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]], MID_IN = 0.28;
-function slotPos(x, y, i) {
-  if (i < 4 || !state.edges.size) return slotUV(i);
-  const [dx, dy] = MID_SIDE[i - 4];
-  return state.edges.has(edgeBetween(x, y, x + dx, y + dy)) ? [dx * MID_IN, dy * MID_IN] : slotUV(i);
+// Wo genau ein Ding auf seinem Platz steht (Block 46): so weit außen wie möglich, ohne anzustoßen – je nach Größe (DECO_R,
+// Abstand von der Mitte bis zum Rand des Dings), an einer Hecke/Zaun/Mauer um deren Dicke nach innen, an einem Eckpunkt mit
+// Linie (Pfeiler, Heckenende) mit Abstand zur Ecke
+const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]];
+const DECO_R = { baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbogen: 0.12, bank: 0.1, brunnen: 0.12, kristallbrunnen: 0.12 };
+const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
+const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // halbe Dicke samt Luft (Zaun dünn, Hecke/Mauer dick, Torbogen breit)
+function slotPos(x, y, i, b) {
+  const r = decoR(b), out = 0.5 - r - 0.02;
+  const lim = side => { const e = state.edges.get(edgeBetween(x, y, x + side[0], y + side[1])); return e ? 0.5 - lineW(e) - r : out; };
+  if (i >= 4) {                                                   // Seitenmitte: nur zur eigenen Seite hin begrenzt
+    const [dx, dy] = MID_SIDE[i - 4], m = Math.min(MID_OFF, lim([dx, dy]));
+    return [dx * m, dy * m];
+  }
+  const su = i & 1 ? 1 : -1, sv = i & 2 ? 1 : -1;
+  let u = Math.min(SLOT_OFF, lim([su, 0])), v = Math.min(SLOT_OFF, lim([0, sv]));
+  if (state.edges.size) {                                         // Linie am Eckpunkt (auch außerhalb des Felds): Abstand halten
+    const vx = x + (su + 1) / 2, vy = y + (sv + 1) / 2;
+    const at = ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].some(k => state.edges.has(k));
+    if (at) { const c = 0.5 - 0.17 - r * 0.7; u = Math.min(u, c); v = Math.min(v, c); }
+  }
+  return [su * u, sv * v];
 }
 const SLOTS_BACK = [0, 4, 5], SLOTS_FRONT = [1, 2, 3, 6, 7];      // hinter bzw. vor dem Ding auf dem Feld zeichnen
 const decosAt = k => state.decos.get(k);

@@ -56,7 +56,7 @@ function syncStrollers() {
 function sitDown(w) {
   const ds = decosAt(w.fx + ',' + w.fy), i = ds ? ds.findIndex(d => d && d.b === 'bank') : -1;
   if (i < 0 || Math.random() > 0.6 || strollers.some(o => o !== w && o.sit && o.fx === w.fx && o.fy === w.fy)) return false;
-  const [u, v] = slotPos(w.fx, w.fy, i);
+  const [u, v] = slotPos(w.fx, w.fy, i, 'bank');
   w.sit = true; w.wait = 5 + Math.random() * 7; w.tx = w.fx; w.ty = w.fy; w.t = 0;
   w.px = w.fx + u; w.py = w.fy + v;
   return true;

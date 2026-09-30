@@ -115,8 +115,8 @@ describe('Runde Ecken', () => {
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
     const fill = game("lineFill(6, 6, pathArms(6, 6), ROAD_W)");
     expect(fill.some(poly => poly.length > 4)).toBe(true);                          // Eckstück mit Bogen
-    expect(game("slotPos(6, 6, 5)")).toEqual([0, -0.28]);
-    expect(game("slotPos(6, 6, 7)")).toEqual([0, 0.38]);
+    expect(game("slotPos(6, 6, 5)")[1]).toBeCloseTo(-0.28);                        // an der Linie nach innen
+    expect(game("slotPos(6, 6, 7)")[1]).toBeCloseTo(0.4);                           // frei: weit außen
   });
 });
 

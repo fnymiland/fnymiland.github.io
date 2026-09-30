@@ -425,7 +425,7 @@ function groupPreview(z) {
   for (const it of moving.items) {
     const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
     if (it.kind === 'deco') {
-      const slot = it.from[1], [u, v] = slotUV(slot);
+      const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d.b);
       add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot); });
       continue;
     }
@@ -729,7 +729,7 @@ function render(now) {
       drawSmall(k, px, py, z, now, x, y, [...SLOTS_BACK, ...SLOTS_FRONT]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
-      const [u, v] = slotUV(preview.slot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+      const [u, v] = slotPos(x, y, preview.slot, ghostType), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
       drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1, preview.slot);
       g.globalAlpha = 1;

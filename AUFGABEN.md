@@ -461,3 +461,8 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       zurück, wenn die Stelle seitdem unverändert ist; Taler und Rohstoffe exakt zurück.
 - [x] Löschen-Knopf (🗑️ +Erstattung) in jedem Fenster: Gebäude, Wege, Deko, jedes Linienstück, Parkrasen. Teures fragt einmal nach.
 - [x] Nebenbei: Deko-Fenster zeigte „halbe Erstattung“, gab aber die volle – jetzt stimmt die Anzeige.
+
+## Block 46 – Kleinkram weiter in die Ecken (01.10.)
+
+- [x] Plätze bei 0,42 statt 0,3 (Laterne steht neben dem Weg statt darauf), je nach Größe (Bäume etwas weiter drin), an Hecke/
+      Zaun/Mauer um deren Dicke nach innen, am Torbogen noch weiter, an Eckpunkten mit Linie Abstand zur Ecke (`slotPos`).

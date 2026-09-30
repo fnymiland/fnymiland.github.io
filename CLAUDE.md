@@ -376,7 +376,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     das Beet zeichnet mit `span` mehr Blumen statt größerer. Deko nie haushoch: Bank, Laterne & Co. haben keine Größen.
 62. **Kleinkram: 8 Plätze** (Block 42): `SLOTS` = 8 – Ecken 0–3 wie früher, Seitenmitten 4–7 (`MID_UV`, am Wegrand).
     Immer `newSlots()` statt `[null, null, null, null]`, gezeichnet in `SLOTS_BACK` (vor dem Ding) und `SLOTS_FRONT`.
-    `slotAt` nimmt den nächsten der 8 Plätze; auf Gebäudefeldern nur Ecken (`smallError`); Bänke in Seitenmitten
+    Position immer über `slotPos(x, y, i, b)` (Block 46: weit außen bei 0,42, je nach Größe `DECO_R`, an Linien um `lineW` nach innen,
+    an Eckpunkten mit Linie Abstand), nie `slotUV` zum Zeichnen. `slotAt` nimmt den nächsten der 8 Plätze; auf Gebäudefeldern nur Ecken (`smallError`); Bänke in Seitenmitten
     automatisch längs zur Seite, Sitz zum Weg (`midRot`, `MID_FACE`; die Bank ist ein echter Kasten mit 4 Richtungen, nicht mehr gespiegelt). Alte Stände werden in `parseSave` auf 8 aufgefüllt.
 61. **Linien auf Feldkanten** (Block 41): Hecke, Zaun, Mauer (`EDGE_TOOLS`, `ITEMS[].edge`) liegen in `state.edges`
     ('a'i,j waagerecht von Eckpunkt (i,j) nach (i+1,j), 'b'i,j senkrecht; Eckpunkt = obere Ecke von Feld (i,j)).
