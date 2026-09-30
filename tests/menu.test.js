@@ -28,10 +28,10 @@ describe('Baumenü', () => {
     game('buildToolbar()');
     area('herstellen').onclick();
     expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['taler', 'rohstoffe', 'veredeln', 'strom']);
-    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'].filter(id => game(`available('${id}')`))
-      .concat(['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'].filter(id => !game(`available('${id}')`))));
+    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].filter(id => game(`available('${id}')`))
+      .concat(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].filter(id => !game(`available('${id}')`))));
     area('verkaufen').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'gross']);
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'markt', 'gross']);
     area('freizeit').onclick();
     expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bildung', 'kultur', 'wunder']);
     area('wege').onclick();
@@ -45,7 +45,7 @@ describe('Baumenü', () => {
     expect(shops.every(id => items('verkaufen').includes(id) || game(`!!SHOPS.${id}.hotel`))).toBe(true);   // Hotels: zieht an → Freizeit
     expect(items('herstellen')).toContain('baecker');
     expect(game("menuPlaceOf('baecker')")).toEqual({ top: 'herstellen', sub: 'taler' });
-    expect(game("menuPlaceOf('markt')")).toEqual({ top: 'herstellen', sub: 'taler' });
+    expect(game("menuPlaceOf('stand_obst')")).toEqual({ top: 'verkaufen', sub: 'markt' });
     expect(game("menuPlaceOf('hotel')")).toEqual({ top: 'freizeit', sub: 'kultur' });
     expect(game("menuPlaceOf('leuchtturm')")).toEqual({ top: 'freizeit', sub: 'wunder' });
     expect(game("menuPlaceOf('obst')")).toEqual({ top: 'herstellen', sub: 'rohstoffe' });

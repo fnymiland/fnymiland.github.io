@@ -5,7 +5,7 @@ beforeEach(() => {
   game('startNew()');
   game('closeModal()');
   // freie Wiese abseits vom Rathaus, viel Geld, alles freigeschaltet
-  game("state.owned.add('1,1'); state.money = 99999; state.stars = 5");
+  game("state.owned.add('1,1'); state.money = 99999; state.stars = 5; for (const r of Object.keys(RES)) state.res[r] = 999");
   game("for (const t of TECHS) state.techs.add(t.id)");
   game("for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3");
   game("for (let y = 6; y <= 11; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass')");
@@ -15,13 +15,13 @@ beforeEach(() => {
 const build = (b, x, y) => game(`build(${JSON.stringify(b)}, ${x}, ${y}, true)`);
 
 describe('Gebäude über mehrere Felder', () => {
-  it('ein Markt belegt 3×3 Felder, dort kann nichts anderes hin', () => {
+  it('ein Park belegt 3×3 Felder, dort kann nichts anderes hin', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    expect(build('markt', 8, 8)).toBe(true);
+    expect(build('park', 8, 8)).toBe(true);
     game('recalc()');
     for (const k of ['8,8', '9,8', '8,9', '9,9', '10,10']) expect(game(`anchorAt(${k})`)).toBe('8,8');
     expect(game("placeError('feld', 9, 9)")).toBe('Hier steht schon etwas');
-    expect(game("placeError('markt', 7, 7)")).toBe('Hier ist nicht genug Platz');
+    expect(game("placeError('park', 7, 7)")).toBe('Hier ist nicht genug Platz');
   });
 
   it('lange Gebäude: Tür an der Längsseite, gedreht liegen sie quer', () => {
@@ -49,7 +49,7 @@ describe('Gebäude über mehrere Felder', () => {
 
   it('Abreißen über irgendein Feld entfernt das ganze Gebäude', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('markt', 8, 8);
+    build('park', 8, 8);
     game('recalc()');
     game('demolish(9, 9)');
     expect(game("state.tiles.has('8,8')")).toBe(false);
@@ -58,7 +58,7 @@ describe('Gebäude über mehrere Felder', () => {
 
   it('kleine Dekos gehen nicht auf große Gebäude', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('markt', 8, 8);
+    build('park', 8, 8);
     game('recalc()');
     expect(game("smallError('blumentopf', 9, 9, 0)")).toBe('Hier ist kein Platz für Deko');
   });
@@ -79,12 +79,12 @@ describe('Verschieben', () => {
 
   it('abbrechen legt es zurück; beim Speichern mitten im Tragen geht nichts verloren', () => {
     build('haus', 6, 6); build('haus', 6, 7);
-    build('markt', 8, 8);
+    build('park', 8, 8);
     game('pickUp(9, 9, 0)');
     const saved = game('serialize()');
-    expect(saved.tiles.some(([k, t]) => k === '8,8' && t.b === 'markt')).toBe(true);
+    expect(saved.tiles.some(([k, t]) => k === '8,8' && t.b === 'park')).toBe(true);
     game('cancelMove()');
-    expect(game("state.tiles.get('8,8').b")).toBe('markt');
+    expect(game("state.tiles.get('8,8').b")).toBe('park');
   });
 
   it('ablegen nur, wo Platz ist', () => {
@@ -117,22 +117,22 @@ describe('Umgestalten kostet nichts', () => {
 });
 
 describe('Alte Spielstände', () => {
-  it('ein zu klein gespeicherter Markt bekommt seine Grundfläche oder wird erstattet', () => {
-    game("state.tiles.set('8,8', { b: 'markt', lvl: 1 })");
+  it('ein zu klein gespeicherter Park bekommt seine Grundfläche oder wird erstattet', () => {
+    game("state.tiles.set('8,8', { b: 'park', lvl: 1 })");
     game("for (const k of ['9,8', '8,9', '9,9', '7,8', '8,7', '7,7', '7,9', '9,7']) state.tiles.set(k, { b: 'feld', lvl: 1 })");
     const money = game('state.money');
     const removed = game('fitFootprints()');
-    expect(removed).toEqual(['Markt']);
-    expect(game('state.money')).toBe(money + 800);
+    expect(removed).toEqual(['Park']);
+    expect(game('state.money')).toBe(money + game('ITEMS.park.cost'));
     expect(game("state.tiles.has('8,8')")).toBe(false);
   });
 
   it('passt er daneben, rückt er einfach', () => {
-    game("state.tiles.set('8,8', { b: 'markt', lvl: 1 })");
+    game("state.tiles.set('8,8', { b: 'park', lvl: 1 })");
     game("state.tiles.set('9,8', { b: 'feld', lvl: 1 })");
     expect(game('fitFootprints()')).toEqual([]);
     expect(game("state.tiles.get('9,8').b")).toBe('feld');
-    expect(game("[...state.tiles.values()].filter(t => t.b === 'markt').length")).toBe(1);
+    expect(game("[...state.tiles.values()].filter(t => t.b === 'park').length")).toBe(1);
   });
 });
 

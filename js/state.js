@@ -70,15 +70,17 @@ function tileOut(t) {
   if (t.gleise) o.gleise = t.gleise;                                                     // Hauptbahnhof: Gleise und ihre Züge
   if (t.gleis) o.gleis = t.gleis.map(c => c ? { ...(c.train ? { train: c.train, trainCol: c.trainCol || 0 } : {}), ...(c.trainPlus ? { trainPlus: c.trainPlus } : {}),
     ...(c.extra ? { extra: c.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) })) } : {}) } : {});                                                         // Truhe: von welcher fernen Insel
+  if (t.weg != null) o.weg = t.weg;                                                      // Marktplatz: Weg darunter
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }
 function serialize() {
-  const tiles = [];
-  for (const [k, t] of state.tiles) tiles.push([k, tileOut(t)]);
-  // was man gerade trägt, wird an seinem alten Platz gespeichert
+  // was man gerade trägt, wird an seinem alten Platz gespeichert (ersetzt den Weg, der unter einem Marktstand liegen bleibt)
+  const tmap = new Map();
+  for (const [k, t] of state.tiles) tmap.set(k, tileOut(t));
   const held = typeof moving !== 'undefined' ? carried() : [];     // auch eine ganze Gruppe
-  for (const it of held) if (it.kind === 'tile') tiles.push([it.from, tileOut(it.t)]);
+  for (const it of held) if (it.kind === 'tile') tmap.set(it.from, tileOut(it.t));
+  const tiles = [...tmap];
   const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
   for (const it of held) {
     if (it.kind !== 'deco') continue;
@@ -119,6 +121,26 @@ function parseSave(d) {
   const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
   const WEG_TO = { mulch: 'mulch', kies: 'sand', tritt: 'tritt', steg: 'sand', holz: 'sand', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti', schach: 'platten' };
   const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'platten', fisch: 'fisch', mosaik: 'konfetti', alt: 'platten' };
+  // Block 39: Märkte sind jetzt Plätze zum Selberbauen – ein alter Markt (3×3) wird ein Kopfsteinplatz mit Ständen
+  // (Stufe 1: 3, 2: 6, 3: 9 – so bleibt es Marktplatz, Wochenmarkt, Großer Markt). Belegte Felder bleiben, wie sie sind.
+  if (d.tiles.some(([, t]) => t && t.b === 'markt')) {
+    const keys = new Set(d.tiles.map(([k]) => k)), add = [], ids = Object.keys(STANDS);
+    const spots = [[0, 0], [2, 0], [0, 2], [2, 2], [1, 0], [0, 1], [2, 1], [1, 2], [1, 1]];      // Ecken, Seiten, Mitte
+    d.tiles = d.tiles.filter(([k, t]) => {
+      if (!t || t.b !== 'markt') return true;
+      const [ax, ay] = k.split(',').map(Number), n = [3, 6, 9][Math.min(3, Math.max(1, t.lvl || 1)) - 1];
+      let placed = 0;
+      for (const [i, j] of spots) {
+        const q = (ax + i) + ',' + (ay + j);
+        if (q !== k && keys.has(q)) continue;
+        keys.add(q);
+        add.push([q, placed < n ? { b: ids[placed % ids.length], lvl: 1, weg: 'kopf' } : { b: 'weg', lvl: 1, style: 'kopf' }]);
+        placed++;
+      }
+      return false;
+    });
+    d.tiles.push(...add);
+  }
   for (const [, t] of d.tiles) {
     // Block 37: Stände ohne incPeak – Baustellen merkten sich ihr Einkommen von vor der Personal-Grenze (oft viel zu hoch)
     if (!('incPeak' in d) && t.phase != null && WONDERS[t.b] && t.phase < WONDERS[t.b].phases.length) delete t.rate;

@@ -419,3 +419,13 @@ Entschieden: Einteilung nach Aufgabe + Suche.
 - [x] **38b** 🔍 Suche nach Namen (Umlaute egal), Escape oder ein Bereich beendet sie.
 - [x] **38c** Handy: obere Zeile passt mit 🔍 in 375 px (gewählter Bereich nur als Symbol, Name in der Regel-Zeile).
 
+## Block 39 – Marktplatz zum Selberbauen (01.10.)
+
+Rückmeldung: Der Markt ist „schrott“, niemand will ihn; er soll das Zentrum sein, zu den Wegen passen, gestaltbar sein
+und nachts leuchten. Entschieden: Platz selbst bauen + Marktviertel, Besucher, Markttag.
+- [x] **39a** Stände und große Deko auf Wegfeldern (Weg bleibt darunter, bündig mit dem Platz), Abreißen/Tragen/Speichern.
+- [x] **39b** Sechs Marktstände (Obst, Blumen, Brot, Käse, Fisch, Gewürze) mit Markise und Lichterkette.
+- [x] **39c** Marktplatz ab 3 Ständen (6 Wochenmarkt, 9 Großer Markt): Läden bis 4 Felder +20 %, Besucher, Markttag.
+- [x] **39d** Alte Märkte werden Kopfsteinplätze mit ihren Ständen; Wunsch „Marktplatz erreichbar“ nur mit echtem Platz.
+- [x] Zufallstest fand: Stand auf Weg mit kleinen Dekos, doppeltes Feld beim Speichern während des Tragens – behoben.
+

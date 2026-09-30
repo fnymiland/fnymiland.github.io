@@ -342,6 +342,15 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
     Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).
+60. **Marktplatz** (Block 39): kein Gebäude mehr, sondern ein Platz aus Wegen mit Ständen (`STANDS`, `cat: 'markt'`,
+    `needs: 'platz'`). Stände und `PLAZA_OK`-Deko (Brunnen, Statue, Pavillon …) dürfen auf ein Wegfeld; der Weg bleibt
+    als `t.weg` (Stil) darunter – `wegUnder(t)` überall nehmen, wo „ist hier Weg?“ gefragt wird (`pathAt`, `pathArms`,
+    `drawFlat`, `cachedPath`, Boden-Schleife). Abreißen/Aufnehmen legt den Weg zurück, Ablegen auf Wiese löscht `t.weg`;
+    `serialize` schreibt Getragenes über den liegengebliebenen Weg (sonst doppeltes Feld, Zufallstest). `computeMarkets`
+    (in `totals`, zuerst): zusammenhängende Wegfelder mit Ständen, Stufe nach `MARKT_STEPS` (3/6/9) → `MARKETS`,
+    `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
+    `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
+    (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

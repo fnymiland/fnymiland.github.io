@@ -54,8 +54,6 @@ const ITEMS = {
              conv: { from: 'erz', to: 'metall', rate: 0.1 }, desc: 'Macht aus 2 Erz ⛏️ ein Stück Metall 🔩.' },
   baecker: { cat: 'bau', name: 'Bäckerei', lm: 'obsthain:2', size: [1, 2], cost: 400, needs: 'grass', workers: 2,
              desc: '+6 Taler/s für jede Mühle direkt daneben.' },
-  markt:   { cat: 'bau', name: 'Markt', size: [3, 3], cost: 800, needs: 'grass', workers: 2, tech: 'handel',
-             desc: '+1,5 Taler/s für jedes Gebäude im Umkreis von 2.' },
   fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3. Braucht 2 ⚡ Strom, sobald es Windräder gibt.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [3, 4], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
@@ -236,6 +234,19 @@ for (const [id, S] of Object.entries(SHOPS)) {
   for (const k of Object.keys(ITEMS[id])) if (ITEMS[id][k] === undefined) delete ITEMS[id][k];
   SHOPS[id].fx = fx;
 }
+// Marktstände (Block 39): kommen auf einen Weg oder Platz (der Weg bleibt darunter, t.weg). Ab MARKT_STEPS[0] Ständen
+// auf einem zusammenhängenden Platz ist er ein Marktplatz – mehr Stände: Wochenmarkt, Großer Markt (rules.js computeMarkets)
+const STANDS = {
+  stand_obst:    { name: 'Obststand', awn: '#e8604f', goods: ['#ff6b5e', '#ffd23f', '#7ccf5b', '#ff9f5a'] },
+  stand_blumen:  { name: 'Blumenstand', awn: '#f28cb1', goods: ['#f28cb1', '#ffd23f', '#c3a8e6', '#ffffff'] },
+  stand_brot:    { name: 'Brotstand', awn: '#e9a23b', goods: ['#d9a15c', '#c98a4a', '#e8c07a'] },
+  stand_kaese:   { name: 'Käsestand', awn: '#5f8fe8', goods: ['#ffd23f', '#f5c542', '#fbe38a'] },
+  stand_fisch:   { name: 'Fischstand', awn: '#3e7fd0', goods: ['#93c2e0', '#b8d6e8', '#e8f1f6'] },
+  stand_gewuerz: { name: 'Gewürzstand', awn: '#9c4f3a', goods: ['#e8604f', '#e9a23b', '#58b36a', '#8a5a3c'] },
+};
+const MARKT_STEPS = [[3, 'Marktplatz'], [6, 'Wochenmarkt'], [9, 'Großer Markt']];
+for (const [id, S] of Object.entries(STANDS)) ITEMS[id] = { cat: 'markt', name: S.name, cost: 250, mat: { bretter: 2 }, needs: 'platz', tech: 'handel', beauty: 3,
+  desc: 'Kommt auf einen Weg oder Platz. Ab 3 Ständen auf einem Platz wird daraus ein Marktplatz: Läden drumherum verdienen mehr, Besucher kommen, ab und zu ist Markttag.' };
 // Leuchtturm: fester Preis als Untergrenze, sonst 60 Minuten des besten Einkommens (leuchtCost, Block 37) – überall,
 // wo ITEMS.leuchtturm.cost gelesen wird (Kachel, Bauen, Planen, Erstatten)
 const LEUCHT_BASE = ITEMS.leuchtturm.cost;
@@ -266,7 +277,7 @@ const WISHES = {
   deko:    { text: 'Deko in der Nähe (2 Felder)' },
   baecker: { text: 'Bäckerei erreichbar (6 Felder, oder per Weg/Bahn)' },
   ruhe:    { text: 'Ruhe – kein lauter Betrieb direkt daneben' },
-  markt:   { text: 'Markt erreichbar (8 Felder, oder per Weg/Bahn)' },
+  markt:   { text: 'Marktplatz erreichbar (8 Felder, oder per Weg/Bahn)' },
   park:    { text: 'Park oder Brunnen erreichbar (4 Felder, oder per Weg/Bahn)' },
   schule:  { text: 'Schule erreichbar (10 Felder, oder per Weg/Bahn)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
@@ -303,8 +314,6 @@ const BUILD_STAGES = {
                up: [{ near: ['mine', 1, 8], cost: { money: 400, bretter: 6, quader: 6 } }, { near: ['mine', 2, 8], cost: { money: 900, quader: 10, metall: 6 } }] },
   baecker:   { names: ['Bäckerei', 'Backstube', 'Konditorei'],
                up: [{ near: ['muehle', 1, 3], cost: { money: 450, bretter: 8, quader: 4 } }, { near: ['obst', 1, 6], cost: { money: 1000, quader: 8, metall: 3 } }] },
-  markt:     { names: ['Markt', 'Wochenmarkt', 'Großer Markt'],
-               up: [{ near: ['haus', 5, 8], cost: { money: 900, bretter: 10, quader: 6 } }, { near: ['haus', 10, 8], cost: { money: 2000, quader: 12, metall: 6 } }] },
   // Kraftwerke: Stufe 2 liefert doppelt, Stufe 3 dreimal so viel (POWER_OUT) – jede Stufe erst nach der Forschung
   windrad:   { names: ['Windrad', 'Großes Windrad', 'Windturbine'],
                up: [{ tech: 'kraftwerk2', cost: { money: 800, bretter: 10, metall: 8 } }, { tech: 'kraftwerk3', cost: { money: 2500, metall: 20, quader: 12 } }] },
@@ -363,6 +372,7 @@ const KINDS = {
   haus:    { name: 'Wohnhaus', plural: 'Wohnhäuser', of: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
   brunnen: { name: 'Brunnen', plural: 'Brunnen', of: ['brunnen', 'kristallbrunnen'] },
   park:    { name: 'Park', plural: 'Parks', of: ['park', 'botgarten'] },
+  markt:   { name: 'Marktplatz', plural: 'Marktplätze', of: ['stand_obst', 'stand_blumen', 'stand_brot', 'stand_kaese', 'stand_fisch', 'stand_gewuerz'] },
   statue:  { name: 'Statue', plural: 'Statuen', of: ['statue', 'denkmal'] },
   laden:   { name: 'Laden', plural: 'Läden', of: Object.keys(SHOPS).filter(id => (SHOPS[id].cat || 'laden') === 'laden') },
   cafe:    { name: 'Café', plural: 'Cafés', of: ['cafe', 'teeladen', 'bubbletea', 'eisdiele', 'konditorei', 'chocolaterie'] },
@@ -392,7 +402,7 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
   { id: 'herstellen', label: '🏭 Herstellen', groups: [
-    { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik', 'markt'] },
+    { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
@@ -400,6 +410,7 @@ const MENU = [
   { id: 'verkaufen', label: '🛍️ Verkaufen', groups: [
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
+    { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
     { id: 'gross', label: '🏬 Große Häuser', items: SHOP_GROUPS.gross },
   ] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
@@ -439,7 +450,7 @@ const FX = {
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
   holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
-  markt: '+1,5/s je Nachbar', hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
+  hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
@@ -466,7 +477,6 @@ const ITEM_TIPS = {
   steinmetz: 'In die Nähe des Steinbruchs. Pflastersteine brauchen Stadthäuser und große Gebäude.',
   schmiede: 'In die Nähe des Bergwerks. Metall brauchen Laternen, Villen und die Bahn.',
   baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in der Nähe oder am Weg.',
-  markt: 'Mitten ins Dorf: Jedes Gebäude im Umkreis von 2 Feldern bringt +1,5 Taler/s.',
   fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
   hafen: 'Ans Wasser. +8 % auf die Einnahmen der Betriebe (bis zu 3 Häfen zählen), Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',
   leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
@@ -528,6 +538,10 @@ for (const [id, S] of Object.entries(SHOPS)) {
   ITEM_TIPS[id] = S.tip || (S.ware ? `Ins Dorf an den Weg – verdient an den Leuten im Viertel und verkauft ${RES[S.ware].name} aus dem Lager.`
     : S.attr ? 'Zieht Besucher auf die Insel – mit Bahn oder Schiff kommen sie. Viele verschiedene Läden im Viertel sind eine Innenstadt.'
     : 'Ins Dorf an den Weg – verdient an den Leuten im Viertel. Viele verschiedene Läden im Viertel sind eine Innenstadt.');
+}
+for (const id of Object.keys(STANDS)) {
+  FX[id] = '🧺 Marktplatz';
+  ITEM_TIPS[id] = 'Leg einen Platz aus Wegen (als Block ziehen) und stell Stände drauf: ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit auf den Platz.';
 }
 Object.assign(FX, { kaffeeplantage: '☕ Kaffee', teegarten: '🍵 Tee', kakaoplantage: '🍫 Kakao' });
 Object.assign(ITEM_TIPS, {
@@ -673,7 +687,7 @@ const TECHS = [
   { id: 'duenger', tier: 1, name: 'Dünger', cost: 20, desc: 'Felder bringen 50 % mehr.' },
   { id: 'axt', tier: 1, name: 'Scharfe Äxte', cost: 30, desc: 'Holzfäller liefern 30 % mehr Holz.' },
   { id: 'netze', tier: 1, name: 'Fischernetze', cost: 30, desc: 'Fischerhütten bringen 30 % mehr.' },
-  { id: 'handel', tier: 1, name: 'Handel', cost: 50, desc: 'Schaltet den Markt frei.' },
+  { id: 'handel', tier: 1, name: 'Handel', cost: 50, desc: 'Schaltet die Marktstände frei – für deinen Marktplatz.' },
   { id: 'bibliothek', tier: 1, name: 'Bibliotheken', cost: 40, desc: 'Bibliotheken bringen doppelt so viele Ideen.' },
   { id: 'forst', tier: 1, name: 'Forstwirtschaft', cost: 50, desc: 'Holzfäller pflanzen ihren Wald selbst – auch auf Wiesen.' },
   { id: 'agrar', tier: 1, name: 'Höhere Agrartechnik', cost: 60, desc: 'Obstplantagen auf jeder Wiese, nicht nur im Obsthain.' },

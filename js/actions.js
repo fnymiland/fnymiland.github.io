@@ -36,6 +36,7 @@ function build(b, x, y, quiet) {
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);
+  const under = plazaSpot(b, x, y) ? wegUnder(state.tiles.get(k)) : null;      // auf dem Platz: der Weg bleibt darunter
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
@@ -52,7 +53,7 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
     }
   } else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(under ? { weg: under } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
       assignResident(t, Math.random, Math.random);
@@ -76,7 +77,9 @@ function demolish(x, y) {
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
   if (info.refund != null) {
+    const gone = state.tiles.get(info.anchor);
     state.tiles.delete(info.anchor);
+    if (gone && gone.weg != null) state.tiles.set(info.anchor, { b: 'weg', lvl: 1, style: gone.weg });   // Platz bleibt
     state.money += info.refund;
     for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
     if (info.refund) addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
@@ -111,6 +114,7 @@ function pickUp(x, y, slot) {
     if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
     moving = { kind: 'tile', t, from: a };
     state.tiles.delete(a);
+    if (t.weg != null) state.tiles.set(a, { b: 'weg', lvl: 1, style: t.weg });   // Platz bleibt liegen (cancelMove legt es wieder drauf)
     buildRot = t.rot || 0;
     rotManual = false;
   }
@@ -204,7 +208,9 @@ function dropAt(x, y, slot) {
     if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
     state.decos.get(k)[slot] = { ...moving.d, rot, born: performance.now() };
   } else {
-    state.tiles.set(x + ',' + y, { ...moving.t, rot, born: performance.now() });
+    const k = x + ',' + y, under = plazaSpot(moving.t.b, x, y) ? wegUnder(state.tiles.get(k)) : null, t = { ...moving.t, rot, born: performance.now() };
+    if (under) t.weg = under; else delete t.weg;
+    state.tiles.set(k, t);
   }
   moving = null;
   $('rot-btn').hidden = true;

@@ -83,7 +83,7 @@ function arcPts(cu, cv, r, a0, a1, n = 12) {
 }
 const sweep = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return a0 + d; };
 function pathArms(x, y) {
-  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy); });
+  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || (state.tiles.get((x + dx) + ',' + (y + dy)) || {}).weg != null; });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
 function roadCurve(arms) {
@@ -254,7 +254,7 @@ const PATH_LOOK = {
   fisch:      { edge: '#d3ada1', fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
   goldpflaster: { edge: '#d9b152', fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
 };
-const pathAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return t && t.b === 'weg' ? styleDef('weg', t.style) : null; };
+const pathAt = (x, y) => { const w = wegUnder(state.tiles.get(x + ',' + y)); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
 function pathQuads(x, y) {
   const paved = (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
@@ -518,7 +518,7 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
     g.setLineDash([]);
   }
 }
-const drawFlat = (cx, cy, z, x, y, t) => t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t);
+const drawFlat = (cx, cy, z, x, y, t) => t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t.weg != null ? { style: t.weg, rot: 0 } : t);
 // Fahrdraht über der Schiene, auf jedem zweiten Feld ein Mast seitlich
 function drawRailWire(cx, cy, z, x, y, t) {
   const segs = railSegments(railArms(x, y), t);
@@ -875,8 +875,8 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
 const MIRROR = new Set(['bank']);
 const ROTATABLE = new Set([...MIRROR, 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
-  'rathaus', 'markt', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
-  'kaffeeplantage', 'teegarten', 'kakaoplantage', ...Object.keys(SHOPS)]);
+  'rathaus', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
+  'kaffeeplantage', 'teegarten', 'kakaoplantage', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
@@ -891,12 +891,49 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
-const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'markt', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
+const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
 const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
+// Marktstand (Block 39): Theke mit Waren, gestreifte Markise auf zwei Pfosten, Lichterkette (nachts an)
+function drawStand(type, cx, cy, z, now, x, y, t) {
+  const S = STANDS[type], K = kit(cx, cy, z, t && t.rot);
+  kShadow(K, 0.3);
+  const post = (a, b) => kPost(K, a, b, 17, '#8a5a3c', 1.3);
+  const back = [post(-0.28, -0.34), post(-0.28, 0.34)];
+  // Theke (vorn) mit Stoffbahn in der Markenfarbe
+  const T0 = K.block({ a: 0.12, ha: 0.14, hb: 0.36, h: 7, wall: '#e8d2a8', type: 'flat', roof: '#c98d5c' });
+  const F = T0.faces.front || T0.faces.right || T0.faces.left;
+  if (F) { for (let i = 0; i < 6; i++) faceQuad(F.P, F.Q, i / 6, (i + 1) / 6, F.H * 0.35, F.H * 0.95, C(i & 1 ? '#fbf2e2' : S.awn)); }
+  // Waren auf der Theke
+  for (let i = 0; i < 7; i++) {
+    const b = -0.3 + i * 0.1, a = 0.12 + ((i * 37) % 3 - 1) * 0.05, [gx, gy] = K.P(a, b, 7);
+    circle(gx, gy - 1.2 * z, 1.9 * z, C(S.goods[(i + hash(x, y, 3) * 4 | 0) % S.goods.length]));
+  }
+  kCrate(K, -0.14, 0.3, '#c9955f', 0.8);
+  // Markise: schräges Dach über Pfosten und Theke, gestreift
+  const front = [K.P(0.3, -0.42, 13), K.P(0.3, 0.42, 13)], rear = [K.P(-0.3, -0.42, 18), K.P(-0.3, 0.42, 18)];
+  for (let i = 0; i < 6; i++) {
+    const t0 = i / 6, t1 = (i + 1) / 6, L = (p, q, f) => [p[0] + (q[0] - p[0]) * f, p[1] + (q[1] - p[1]) * f];
+    poly([L(rear[0], rear[1], t0), L(rear[0], rear[1], t1), L(front[0], front[1], t1), L(front[0], front[1], t0)], C(i & 1 ? '#fbf2e2' : S.awn));
+  }
+  for (let i = 0; i < 6; i++) {                                  // Volant vorn
+    const f0 = i / 6, f1 = (i + 1) / 6, p0 = [front[0][0] + (front[1][0] - front[0][0]) * f0, front[0][1] + (front[1][1] - front[0][1]) * f0],
+      p1 = [front[0][0] + (front[1][0] - front[0][0]) * f1, front[0][1] + (front[1][1] - front[0][1]) * f1];
+    poly([p0, p1, [(p0[0] + p1[0]) / 2, (p0[1] + p1[1]) / 2 + 2.6 * z]], C(i & 1 ? '#fbf2e2' : S.awn));
+  }
+  kLine(K, back[0], rear[0], '#8a5a3c', 1.1); kLine(K, back[1], rear[1], '#8a5a3c', 1.1);
+  // Lichterkette unter der Markisenkante
+  const lit = night > 0.15 && isLive();
+  for (let i = 0; i < 5; i++) {
+    const f = (i + 0.5) / 5, p = [front[0][0] + (front[1][0] - front[0][0]) * f, front[0][1] + (front[1][1] - front[0][1]) * f + 3.6 * z + Math.sin(f * Math.PI) * 1.5 * z];
+    circle(p[0], p[1], 0.9 * z, lit ? '#fff3b0' : C('#f5e6b0'));
+    glowQuad([[p[0] - 1, p[1] - 1], [p[0] + 1, p[1] - 1], [p[0] + 1, p[1] + 1], [p[0] - 1, p[1] + 1]], 9 * z);
+  }
+}
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
+  if (STANDS[type]) { drawStand(type, cx, cy, z, now, x, y, t); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;

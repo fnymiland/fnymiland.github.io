@@ -525,7 +525,7 @@ function checkAchievements(silent = false) {
 }
 // verdiente Taler zählen (für den Erfolg „Taler verdient“)
 function earn(dt) {
-  const got = T.inc * boostMul('inc') * dt;
+  const got = (T.inc + (marktLeft() > 0 ? T.marktInc || 0 : 0)) * boostMul('inc') * dt;   // Markttag: Marktviertel doppelt
   state.money += got;
   state.stats.earned += got;
 }
@@ -661,6 +661,19 @@ function collectStarAt(x, y) {
   addFloat(s.x, s.y, `💡 +${fmt(got)}`, '#f2c14e');
   toast(`🌠 Sternschnuppe: +${fmt(got)} Ideen`);
   return true;
+}
+// 🧺 Markttag (Block 39): alle 20 Minuten (echte Uhr, versetzt zum Jahrmarkt) 3 Minuten lang – Läden im Marktviertel
+// verdienen doppelt (T.marktInc noch einmal dazu, in earn). Nur mit einem Marktplatz.
+const MARKTTAG_EVERY = 20 * 60e3, MARKTTAG_AT = 10 * 60e3, MARKTTAG_LEN = 3 * 60e3;
+const marktLeft = (now = Date.now()) => MARKETS.length ? Math.max(0, MARKTTAG_LEN - (((now - MARKTTAG_AT) % MARKTTAG_EVERY) + MARKTTAG_EVERY) % MARKTTAG_EVERY) : 0;
+const marktNext = (now = Date.now()) => MARKTTAG_EVERY - ((((now - MARKTTAG_AT) % MARKTTAG_EVERY) + MARKTTAG_EVERY) % MARKTTAG_EVERY);
+let marktWas = false;
+function marktTick(now = Date.now()) {
+  const on = marktLeft(now) > 0;
+  if (on && !marktWas) { toast('🧺 Markttag! Läden rund um den Marktplatz verdienen 3 Minuten lang doppelt'); sfx('star'); }
+  marktWas = on;
+  if (!on) return;
+  for (const m of MARKETS) { const [x, y] = m.tiles[Math.floor(Math.random() * m.tiles.length)]; sparkle(x, y); }
 }
 // Jahrmarkt: beim Beginn Bescheid sagen, solange er läuft funkelt es am Riesenrad
 let fairWas = false;

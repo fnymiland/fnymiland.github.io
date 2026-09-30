@@ -19,7 +19,7 @@ describe('Zeichnen', () => {
 
   it('die ganze Szene lässt sich zeichnen – auch mit Vorschau beim Bauen', () => {
     game("state.owned.add('1,1'); for (let y = 6; y <= 11; y++) for (let x = 6; x <= 11; x++) state.terra.set(x + ',' + y, 'grass')");
-    game("state.tiles.set('8,8', { b: 'saege', lvl: 2, rot: 3 }); state.tiles.set('6,6', { b: 'markt', lvl: 3, rot: 1 }); recalc()");
+    game("state.tiles.set('8,8', { b: 'saege', lvl: 2, rot: 3 }); state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'kopf' }); state.tiles.set('6,7', { b: 'stand_obst', lvl: 1, rot: 1, weg: 'kopf' }); recalc()");
     game("resize(); const c = iso(8, 8); cam.x = c.x; cam.y = c.y; cam.z = 1.5");
     game("setTool('schule'); hover = { x: 10, y: 10 }");
     expect(() => game('render(1000)')).not.toThrow();

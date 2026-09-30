@@ -710,6 +710,7 @@ function openInfo(x, y) {
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
+  if (STANDS[t.b]) status.push(...marktStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
@@ -723,7 +724,6 @@ function openInfo(x, y) {
   if (t.b === 'fischer') why.push(`${countAround(x, y, 1, isWater)} Wasserfelder daneben · Gewässer ${waterBody(x, y) >= 64 ? '64+' : waterBody(x, y)} Felder`);
   if (t.b === 'muehle') why.push(`${countNear(x, y, 1, b => b === 'feld')} Felder daneben`);
   if (t.b === 'baecker') why.push(`${countNear(x, y, 1, b => b === 'muehle')} Mühlen daneben`);
-  if (t.b === 'markt') why.push(`${countNear(x, y, 2, isProducerB)} Gebäude in der Nähe`);
   if (t.b === 'fabrik') why.push(`${countNear(x, y, 3, b => b === 'mine')} Bergwerke in der Nähe`);
   if (d.cat === 'bau' && beete) why.push(`${beete} Blumenbeet${beete > 1 ? 'e' : ''}: +${beete * 15} %`);
   const S = BUILD_STAGES[t.b];
@@ -965,12 +965,23 @@ function cableStatus(k) {
 }
 // Laden: Kundschaft, Innenstadt, was er aus dem Lager verkauft
 const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaoplantage' };
+// Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
+function marktStatus(k) {
+  const all = computeMarkets(), m = all.find(e => e.stands.includes(k)), n = m ? m.stands.length : 1;
+  if (!m || !m.stage) return [`<div class="bad">✗ Noch kein Marktplatz: ${n} von ${MARKT_STEPS[0][0]} Ständen auf diesem Platz. Stell weitere auf denselben Platz (Wege als Block ziehen).</div>`];
+  const next = MARKT_STEPS[m.stage], shops = [...T.st].filter(([, s]) => s.markt).length, left = marktLeft();
+  return [`<div class="ok">🧺 ${MARKT_STEPS[m.stage - 1][1]}: ${n} Stände${next ? ` <small class="muted">(ab ${next[0]}: ${next[1]})</small>` : ''}</div>`,
+    `<div class="ok">🛍️ Läden bis ${MARKT_REACH} Felder um den Platz verdienen +${Math.round(MARKT_BONUS * 100)} % (${shops} ${shops === 1 ? 'Laden' : 'Läden'})</div>`,
+    `<div class="ok">👥 Zieht ${MARKT_ATTR[m.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`,
+    `<div class="${left ? 'ok' : ''}">🧺 ${left ? `Markttag! Läden im Marktviertel doppelt · noch ${fmtClock(left)}` : `Nächster Markttag in ${fmtClock(marktNext())}`}</div>`];
+}
 const wares0 = S => S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : S.ware ? [S.ware] : [];
 function shopStatus(t, s, k) {
   const S = SHOPS[t.b], out = [], kd = s.kunden || 0, name = ITEMS[t.b].name, cap = shopCap(t.b), staff = S.workers || 1;
   const shared = [s.same > 1 ? `die Einwohner mit ${s.same - 1} weiteren im Viertel` : '', s.sameIsle > 1 ? `die Besucher mit ${s.sameIsle - 1} weiteren auf der Insel` : ''].filter(Boolean);
   out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)} von höchstens ${fmt(cap)}${shared.length ? ` – teilt sich ${shared.join(' und ')}` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
     : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) – oder Besucher per Bahn und Schiff</div>');
+  if (s.markt) out.push(`<div class="ok">🧺 Marktviertel: +${Math.round(MARKT_BONUS * 100)} %${marktLeft() ? ' · Markttag: doppelt!' : ''}</div>`);
   if (s.buy < 0.995) out.push(`<div>💰 Kaufkraft: Die Leute im Viertel kaufen schon in vielen Läden ein – dieser Laden verdient hier ${Math.round(s.buy * 100)} %. Weitere Läden bringen nur noch wenig dazu, mehr Einwohner und Besucher dagegen voll.</div>`);
   if (s.full) out.push(`<div class="bad">👷 Voll: ${staff === 1 ? 'Ein Mitarbeiter bedient' : `${staff} Mitarbeiter bedienen`} ${fmt(cap)} Kunden, ${fmt(s.want - kd)} gehen leer aus. Ein zweiter Laden dieser Art (${name}) hätte Kundschaft.</div>`);
   const next = [...INNER_STEPS].reverse().find(([min]) => (s.types || 0) < min);
@@ -1580,7 +1591,9 @@ function showIntro(first) {
 const NEWS = { id: '2026-10-01-ordnung', items: [
   '🧭 <b>Leiste neu sortiert – nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft (Feld, Bäckerei, Holzfäller, Sägewerk, Strom …), 🛍️ Verkaufen braucht Kundschaft (Läden, Cafés, Markt, Kaufhaus …), 🎡 Freizeit zieht Besucher an oder bringt Ideen (Schule, Kultur, Wunder). Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
   '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
-  '🌸 „Schön“ heißt jetzt <b>Deko</b> (mit Blumenbeet), der Hafen steht bei ⛵ Schiff, und neben den Filtern steht, wofür ein Bereich da ist.',
+  '🌸 „Schön“ heißt jetzt <b>Deko</b> (mit Blumenbeet), der Hafen steht bei ⛵ Schiff.',
+  '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Verkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
+  '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

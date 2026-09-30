@@ -135,6 +135,7 @@ function nearList(x, y, r, pred, stop = Infinity) {
     if (!pred(b)) continue;
     for (const e of list) {
       if (e[0] === a || Math.max(0, e[1] - x1, ax - e[3], e[2] - y1, ay - e[4]) > r) continue;
+      if (STANDS[b] && !MARKT_OK.has(e[0])) continue;                  // einzelne Stände sind noch kein Marktplatz
       out.push(e[0]);
       if (out.length >= stop) return out;
     }
@@ -153,7 +154,7 @@ function waterBody(x, y, limit = 64) {
   while (todo.length && seen.size < limit) { const [px, py] = todo.pop(); for (const [dx, dy] of DIRS) add(px + dx, py + dy); }
   return Math.min(seen.size, limit);
 }
-const isProducerB = b => ITEMS[b].cat === 'bau' && b !== 'markt';
+const isProducerB = b => ITEMS[b].cat === 'bau';
 const isHouse = (x, y) => isHome(bAt(x, y));               // jedes Wohnhaus (Sorte „haus“)
 // Regeln (gemeinsam festgelegt): Viertel über Nachbarschaft und Wege, Fußweg 4 Felder, sonst halbe Kraft
 const WALK_REACH = 4, FAR_EFF = 0.5;
@@ -218,7 +219,6 @@ function rawIncome(b, x, y) {
     case 'fischer': return (1 + 1.5 * countAround(x, y, 1, isWater)) * (hasTech('netze') ? 1.3 : 1);
     case 'muehle': return (0.5 + 2 * countNear(x, y, 1, b => b === 'feld')) * (hasTech('muehlrad') ? 1.3 : 1);
     case 'baecker': return (2 + 6 * countNear(x, y, 1, b => b === 'muehle')) * (hasTech('ofen') ? 1.3 : 1);
-    case 'markt': return 1.5 * countNear(x, y, 2, isProducerB);
     case 'fabrik': return (25 + 5 * countNear(x, y, 3, b => b === 'mine')) * (hasTech('dampf') ? 1.5 : 1);
     case 'leuchtturm': return 10;
     case 'ferienhaus': return 6;                     // Feriengäste
@@ -302,6 +302,7 @@ let NET = null;
 const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen geben ihren Bonus (vorher ohne Grenze)
 function totals() {
   rebuildCover();
+  computeMarkets();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -364,6 +365,7 @@ function totals() {
   for (const [k, t] of state.tiles) if (WONDERS[t.b] && wonderDone(t)) won[t.b] = Math.max(won[t.b] || 0, off(k));
   const green = won.botgarten ? 1 + won.botgarten : 1;                   // Botanischer Garten: Obst und Felder doppelt
   const SW = shopWorld(net, links), sales = [], shopTiles = [];
+  let marktInc = 0;
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
@@ -402,7 +404,8 @@ function totals() {
       s.same = v ? SW.count(v, t.b) : 1; s.sameIsle = Math.max(1, SW.isleCount(r, t.b));
       const want = ((v && SW.vPop.get(v)) || 0) / Math.max(1, s.same) + (SW.visitors.get(r) || 0) / s.sameIsle, kd = Math.min(want, shopCap(t.b));
       s.kunden = kd; s.want = want; s.full = want > kd + 0.5; s.inner = inner; s.types = SW.types(v);
-      s.base = S.rate / 100 * kd * f * mT * (1 + inner);                    // vor der Kaufkraft – die teilt unten je Viertel
+      s.markt = nearMarket(x, y, ...sizeOf(t.b, t.rot, t));                // Marktviertel (Block 39)
+      s.base = S.rate / 100 * kd * f * mT * (1 + inner) * (s.markt ? 1 + MARKT_BONUS : 1);   // vor der Kaufkraft – die teilt unten je Viertel
       shopTiles.push([v, t.b, s]);
       const wares = S.ware ? [S.ware] : S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : [];
       s.sales = wares.map(r => ({ k, res: r, rate: S.sell / 100 * kd * f, pay: TRADE_PRICE[r] * SALE_MUL * mT * (1 + inner) }));
@@ -428,6 +431,7 @@ function totals() {
   for (const [v, b, s] of shopTiles) {
     s.buy = shares.get(v) ? shares.get(v).get(b) : 1;
     s.inc = s.base * s.buy; inc += s.inc;
+    if (s.markt) marktInc += s.inc;
   }
   // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Weg: halb; Touristen nur per Weg)
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
@@ -470,7 +474,7 @@ function totals() {
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales, salesInc };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales, salesInc, marktInc: marktInc * (1 + wm('incMul')) * (1 + allMul), markets: MARKETS };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
@@ -559,7 +563,44 @@ function slotAt(sx, sy) {
   const x = Math.round(a), y = Math.round(b);
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
-const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm']);
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS)]);
+// Marktplatz (Block 39): Stände und große Deko dürfen auf einen Weg – der Weg bleibt darunter liegen (t.weg = sein Stil),
+// wird mitgezeichnet (pathAt, pathArms, drawFlat) und kommt beim Abreißen/Wegtragen zurück
+const PLAZA_OK = new Set([...Object.keys(STANDS), 'brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'denkmal', 'uhrturm', 'karussell']);
+const plazaSpot = (b, x, y) => PLAZA_OK.has(b) && (state.tiles.get(x + ',' + y) || {}).b === 'weg';
+const wegUnder = t => !t ? null : t.b === 'weg' ? t.style || 'sand' : t.weg != null ? t.weg : null;
+// Marktplätze: zusammenhängende Wegfelder (samt Dingen darauf) mit Ständen; ab MARKT_STEPS[0] Ständen zählt es
+let MARKETS = [], MARKT_OK = new Set();
+const MARKT_REACH = 4, MARKT_BONUS = 0.2, MARKT_ATTR = [0, 20, 40, 80];
+function computeMarkets() {
+  const seen = new Set(), out = [], ok = new Set();
+  for (const [k0, t0] of state.tiles) {
+    if (!STANDS[t0.b] || seen.has(k0)) continue;
+    const tiles = [], stands = [], todo = [k0];
+    seen.add(k0);
+    while (todo.length) {
+      const k = todo.pop(), [x, y] = keyXY(k), t = state.tiles.get(k);
+      tiles.push([x, y]);
+      if (STANDS[t.b]) stands.push(k);
+      for (const [dx, dy] of DIRS) {
+        const n = (x + dx) + ',' + (y + dy);
+        if (!seen.has(n) && wegUnder(state.tiles.get(n)) != null) { seen.add(n); todo.push(n); }
+      }
+    }
+    const stage = MARKT_STEPS.filter(([min]) => stands.length >= min).length;
+    const m = { tiles, stands, stage, kinds: new Set(stands.map(k => state.tiles.get(k).b)).size };
+    out.push(m);
+    if (stage) for (const k of stands) ok.add(k);
+  }
+  MARKETS = out.filter(m => m.stage); MARKT_OK = ok;
+  return out;
+}
+const marketOf = k => MARKETS.find(m => m.stands.includes(k)) || null;
+// Läden bis MARKT_REACH Felder um einen Marktplatz: Marktviertel
+function nearMarket(x, y, w = 1, h = 1) {
+  const x1 = x + w - 1, y1 = y + h - 1;
+  return MARKETS.some(m => m.tiles.some(([mx, my]) => Math.max(0, mx - x1, x - mx, my - y1, y - my) <= MARKT_REACH));
+}
 // Natur räumt das Bauen selbst weg – zum Preis von Roden bzw. Sprengen. Was ein Betrieb braucht, bleibt
 // (Holzfäller im Wald, Kristallmine auf Kristallfels; Steinbruch und Bergwerk graben im Fels).
 // Selbst Gebautes wird nie weggeräumt (das prüft COVER vorher), Wasser auch nicht (dafür gibt es Aufschütten).
@@ -1115,6 +1156,7 @@ function placeStats() {
   // Kultur zieht an, Hotels machen die ganze Insel anziehender (Übernachtungsgäste)
   const hotel = new Map();
   for (const [k, t] of state.tiles) { const S = SHOPS[t.b]; if (!S) continue; const r = regionAt(...keyXY(k)); if (S.attr) add(attr, r, S.attr); if (S.hotel) add(hotel, r, S.hotel); }
+  for (const m of MARKETS) add(attr, regionAt(...m.tiles[0]), MARKT_ATTR[m.stage]);             // Marktplatz zieht an
   for (const [r, h] of hotel) attr.set(r, (attr.get(r) || 0) * (1 + h));
   return { pop, attr };
 }
@@ -1192,6 +1234,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         if (d.needs === 'boot' && ter !== 'water') return 'Aufs Wasser, direkt ans Ufer';
         continue;
       }
+      if (tiles.length === 1 && plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
+      if (d.needs === 'platz') return 'Marktstände gehören auf einen Weg oder Platz';
       if (COVER.has(k)) {
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
         if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
@@ -1500,7 +1544,7 @@ function reachKind(acc, k, x, y, r, pred, n = 1) {
   const got = new Set(nearList(x, y, r, pred, n));
   if (got.size >= n) return { count: got.size, how: 'nah' };
   if (!acc) return { count: got.size, how: null };
-  const take = kinds => { for (const [b, ks] of kinds) if (pred(b)) for (const q of ks) { if (q !== k && state.tiles.has(q)) got.add(q); if (got.size >= n) return true; } return false; };
+  const take = kinds => { for (const [b, ks] of kinds) if (pred(b)) for (const q of ks) { if (q !== k && state.tiles.has(q) && (!STANDS[b] || MARKT_OK.has(q))) got.add(q); if (got.size >= n) return true; } return false; };
   const v = acc.net.vOf(k);
   if (v && acc.inV.has(v) && take(acc.inV.get(v))) return { count: got.size, how: 'viertel' };
   for (const L of acc.byLink) if (L.near.has(k) && take(L.kinds)) return { count: got.size, how: L.how };
@@ -1558,7 +1602,7 @@ function demolishInfo(x, y) {
       if (T.pop - lost < T.jobs) return { err: 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.' };
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
-    const full = d.cat === 'deko' || t.b === 'weg' || t.b === 'schiene';
+    const full = d.cat === 'deko' || d.cat === 'markt' || t.b === 'weg' || t.b === 'schiene';
     const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: d.cost, mat: d.mat };
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
       const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
@@ -1580,9 +1624,10 @@ function previewDelta(b, x, y) {
   const k = x + ',' + y;
   const rot = placeRot(b, x, y);
   if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === rot) return previewCache;
-  state.tiles.set(k, { b, lvl: 1, rot });
+  const old = state.tiles.get(k);                                  // Weg unter einem Marktstand bleibt liegen
+  state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });
   const t = totals();
-  state.tiles.delete(k);
+  if (old) state.tiles.set(k, old); else state.tiles.delete(k);
   rebuildCover();
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,

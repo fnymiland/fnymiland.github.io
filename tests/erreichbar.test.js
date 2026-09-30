@@ -12,12 +12,14 @@ beforeEach(() => {
 afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
 const put = (k, t) => game(`state.tiles.set('${k}', ${JSON.stringify(t)})`);
 const wish = (w, x, y) => game(`recalc(), wishCheck('${w}', ${x}, ${y}, T.access)`);
+// Marktplatz: drei Stände nebeneinander (auf Kopfstein)
+const market = (x, y) => { for (let i = 0; i < 3; i++) put(`${x + i},${y}`, { b: 'stand_obst', lvl: 1, weg: 'kopf' }); };
 const path = (x0, x1, y) => { for (let x = x0; x <= x1; x++) put(`${x},${y}`, { b: 'weg', lvl: 1, style: 'sand' }); };
 
 describe('per Weg (selbes Viertel)', () => {
   it('Markt 10 Felder weg: erst nicht erreichbar, mit Weg dorthin schon', () => {
     put('5,5', { b: 'haus', lvl: 3 });
-    put('15,7', { b: 'markt', lvl: 1 });
+    market(15, 7);
     expect(wish('markt', 5, 5).ok).toBe(false);
     path(5, 16, 6);
     expect(wish('markt', 5, 5)).toEqual({ ok: true, how: 'viertel' });
@@ -40,7 +42,7 @@ describe('per Weg (selbes Viertel)', () => {
 
   it('Gebäudestufe: „in der Nähe“ auch per Weg, „direkt daneben“ nicht', () => {
     put('5,5', { b: 'fischer', lvl: 2 });                        // Stufe 3 braucht einen Markt in 8 Feldern
-    put('15,7', { b: 'markt', lvl: 1 });
+    market(15, 7);
     const cond = () => game("recalc(), stageInfo(state.tiles.get('5,5'), 5, 5, 999, 0, T.access).conds.find(c => /Markt/.test(c.text))");
     expect(cond().ok).toBe(false);
     path(5, 16, 6);
@@ -51,12 +53,12 @@ describe('per Weg (selbes Viertel)', () => {
     expect(game("recalc(), stageInfo(state.tiles.get('5,5'), 5, 5, 999, 0, T.access).conds.find(c => /Feld/.test(c.text)).ok")).toBe(false);
   });
 
-  it('mehrere: 5 Wohnhäuser für den Wochenmarkt zählen auch per Weg', () => {
-    put('4,8', { b: 'markt', lvl: 1 });                          // 3×3: 4–6, 8–10
-    path(4, 22, 7);
-    for (const x of [16, 18, 19, 20, 21]) put(`${x},6`, { b: 'haus', lvl: 1 });
-    const c = game("recalc(), stageInfo(state.tiles.get('4,8'), 4, 8, 999, 0, T.access).conds.find(c => /Wohnh/.test(c.text))");
-    expect(c).toMatchObject({ ok: true, how: 'viertel' });
+  it('ein einzelner Stand ist noch kein Marktplatz', () => {
+    put('5,5', { b: 'haus', lvl: 3 });
+    put('7,6', { b: 'stand_obst', lvl: 1, weg: 'kopf' });
+    expect(wish('markt', 5, 5).ok).toBe(false);
+    put('8,6', { b: 'stand_brot', lvl: 1, weg: 'kopf' }); put('9,6', { b: 'stand_kaese', lvl: 1, weg: 'kopf' });
+    expect(wish('markt', 5, 5)).toEqual({ ok: true, how: 'nah' });
   });
 });
 
@@ -69,7 +71,7 @@ describe('per Bahn', () => {
   }
   it('Haus nah am Bahnhof, Markt nah am Bahnhof drüben: erreichbar, solange der Zug fährt', () => {
     put('3,14', { b: 'haus', lvl: 3 });
-    put('18,12', { b: 'markt', lvl: 1 });
+    market(18, 12);
     line();
     expect(game('recalc(), T.rail.lines[0].powered')).toBe(true);
     expect(wish('markt', 3, 14)).toEqual({ ok: true, how: 'bahn' });
@@ -80,9 +82,9 @@ describe('per Bahn', () => {
 
   it('Infofenster zeigt, wie es erreicht wird', () => {
     put('5,5', { b: 'haus', lvl: 3 });
-    put('15,7', { b: 'markt', lvl: 1 });
+    market(15, 7);
     path(5, 16, 6);
     game('recalc(); openInfo(5, 5)');
-    expect(document.getElementById('panel').textContent).toMatch(/Markt erreichbar.*im selben Viertel/);
+    expect(document.getElementById('panel').textContent).toMatch(/Marktplatz erreichbar.*im selben Viertel/);
   });
 });

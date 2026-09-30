@@ -22,16 +22,6 @@ describe('Namen: Ort und Stufe zusammen', () => {
   });
 });
 
-describe('Markt', () => {
-  it('belegt 3×3 Felder', () => {
-    game("for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3");
-    game("for (const t of TECHS) state.techs.add(t.id)");
-    game("for (let i = 0; i < 4; i++) state.tiles.set('6,' + (6 + i), { b: 'haus', lvl: 5 }); recalc()");
-    expect(game("build('markt', 8, 8, true)")).toBe(true);
-    for (const k of ['10,10', '8,10', '10,8']) expect(game(`anchorAt(${k})`)).toBe('8,8');
-  });
-});
-
 describe('Spieluhr', () => {
   it('ein Tag dauert 20 Minuten, davon etwa 3 Minuten richtig Nacht', () => {
     const min = 60e3;

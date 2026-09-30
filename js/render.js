@@ -66,7 +66,7 @@ function chunkBounds(cx, cy) {
   const top = (x0 + y0) * TH / 2 - TH / 2 - 2, bottom = (x1 + y1) * TH / 2 + TH / 2 + DEPTH + 4;
   return { left, top, w: right - left, h: bottom - top };
 }
-const cachedPath = t => t.b === 'schiene' || (t.b === 'weg' && !PATH_LOOK[styleDef('weg', t.style).id].glow);
+const cachedPath = t => t.b === 'schiene' || (wegUnder(t) != null && !PATH_LOOK[styleDef('weg', wegUnder(t)).id].glow);   // auch der Weg unter Marktständen
 
 // Schlagschatten: Die Sonne steht links, jedes Gebäude wirft einen weichen Schatten nach rechts
 // (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
@@ -524,7 +524,7 @@ function render(now) {
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
   for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1], t = state.tiles.get(x + ',' + y);
-    if (!t || (t.b !== 'weg' && t.b !== 'schiene') || (groundCached && cachedPath(t))) continue;
+    if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     FOG = !ownedTile(x, y);
     drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
   }

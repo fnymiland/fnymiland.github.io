@@ -40,7 +40,6 @@ function probeScene() {
   for (let x = 5; x <= 13; x++) weg(x, 2, 'asphalt');
   for (let x = 5; x <= 11; x++) put(x, 1, 'haus', { rot: 1, lvl: 1 + ((x - 5) % 5) });
   put(5, 3, 'haus', { rot: 2 });
-  put(6, 3, 'markt', { lvl: 2, rot: 3 });
   put(9, 3, 'baecker', { rot: 3, lvl: 3 });
   put(11, 3, 'schule', { rot: 3, lvl: 2 });
   put(13, 3, 'uni', { rot: 3 });
@@ -151,7 +150,7 @@ function frame(now) {
   produce(dt);
   peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

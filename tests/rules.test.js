@@ -132,13 +132,14 @@ describe('Viertel und Wege', () => {
     expect(game("currentStyle('weg')")).toBe('sand');
   });
 
-  it('kleine Dekos dürfen auf Wege, große nicht', () => {
+  it('kleine Dekos dürfen auf Wege, Brunnen auch (Marktplatz), Gebäude nicht', () => {
     field();
     build('weg', 8, 8);
     game('state.res.metall = 5');
     game("state.design.add('laterne'); state.restore.quelle = 2");
     expect(game("smallError('laterne', 8, 8, 0)")).toBe(null);
-    expect(game("placeError('brunnen', 8, 8)")).toBe('Hier steht schon etwas');
+    expect(game("placeError('brunnen', 8, 8, 0, { noCost: true })")).toBe(null);
+    expect(game("placeError('haus', 8, 8)")).toBe('Hier steht schon etwas');
   });
 });
 
