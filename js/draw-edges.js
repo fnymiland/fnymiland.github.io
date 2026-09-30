@@ -12,13 +12,13 @@ const EDGE_LOOK = {
     lichter: { h: 9, w: 0.1, col: '#3f8f43', lights: true },
   },
   mauer: {
-    backstein: { h: 7, w: 0.12, col: '#b5654a', joint: '#e6c9ae', bricks: true },
-    trocken: { h: 6, w: 0.14, col: '#c9bfa8', joint: '#a39880', stones: true },
-    naturstein: { h: 7, w: 0.13, col: '#a9a49a', joint: '#827d74', stones: true },
-    klinker: { h: 7, w: 0.12, col: '#84402f', joint: '#caa28c', bricks: true },
-    terrakotta: { h: 7, w: 0.12, col: '#d99a73', joint: '#f0cdb4', bricks: true },
-    kopf: { h: 6.5, w: 0.13, col: '#a89a86', joint: '#7d705f', cobbles: true },
-    laternen: { h: 7, w: 0.12, col: '#b5654a', joint: '#e6c9ae', bricks: true, lamps: true },
+    backstein: { h: 7, w: 0.1, col: '#b5654a', joint: '#e6c9ae', bricks: true },
+    trocken: { h: 6, w: 0.12, col: '#c9bfa8', joint: '#a39880', stones: true },
+    naturstein: { h: 7, w: 0.11, col: '#a9a49a', joint: '#827d74', stones: true },
+    klinker: { h: 7, w: 0.1, col: '#84402f', joint: '#caa28c', bricks: true },
+    terrakotta: { h: 7, w: 0.1, col: '#d99a73', joint: '#f0cdb4', bricks: true },
+    kopf: { h: 6.5, w: 0.11, col: '#a89a86', joint: '#7d705f', cobbles: true },
+    laternen: { h: 7, w: 0.1, col: '#b5654a', joint: '#e6c9ae', bricks: true, lamps: true },
   },
   zaun: {
     latten: { h: 8, col: '#c98d5c' },
@@ -199,9 +199,9 @@ function pillarBox(pt, r, h0, h1, col, z) {
 }
 // Gemauerter Pfeiler (Mauerende, Tor): deutlich breiter als die Mauer, vom Boden an mit Fugen, oben ein Deckstein.
 // Gibt die Höhe der Oberkante zurück.
-const PILLAR_UP = 2, CAP_UP = 2.8;
+const PILLAR_UP = 4, CAP_UP = 4.9;
 function wallPillar(pt, look, z, rMax = Infinity) {                // rMax: am Tor nicht über die Feldecke hinaus
-  const r = Math.min(look.w * 1.5, rMax), h = look.h, top = h + PILLAR_UP, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
+  const r = Math.min(look.w * 1.8, rMax), h = look.h, top = h + PILLAR_UP, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
   if (look.joint) {                                               // Lagerfugen rundum, Stoßfugen versetzt
     g.strokeStyle = C(look.cobbles ? shade(look.col, -0.2) : look.joint); g.lineWidth = 0.5 * z; g.beginPath();
