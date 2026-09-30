@@ -12,13 +12,13 @@ const EDGE_LOOK = {
     lichter: { h: 9, w: 0.1, col: '#3f8f43', lights: true },
   },
   mauer: {
-    backstein: { h: 7, w: 0.08, col: '#b5654a', joint: '#e6c9ae', bricks: true },
-    trocken: { h: 6, w: 0.1, col: '#c9bfa8', joint: '#a39880', stones: true },
-    naturstein: { h: 7, w: 0.09, col: '#a9a49a', joint: '#827d74', stones: true },
-    klinker: { h: 7, w: 0.08, col: '#84402f', joint: '#caa28c', bricks: true },
-    terrakotta: { h: 7, w: 0.08, col: '#d99a73', joint: '#f0cdb4', bricks: true },
-    kopf: { h: 6.5, w: 0.09, col: '#a89a86', joint: '#7d705f', cobbles: true },
-    laternen: { h: 7, w: 0.08, col: '#b5654a', joint: '#e6c9ae', bricks: true, lamps: true },
+    backstein: { h: 7, w: 0.12, col: '#b5654a', joint: '#e6c9ae', bricks: true },
+    trocken: { h: 6, w: 0.14, col: '#c9bfa8', joint: '#a39880', stones: true },
+    naturstein: { h: 7, w: 0.13, col: '#a9a49a', joint: '#827d74', stones: true },
+    klinker: { h: 7, w: 0.12, col: '#84402f', joint: '#caa28c', bricks: true },
+    terrakotta: { h: 7, w: 0.12, col: '#d99a73', joint: '#f0cdb4', bricks: true },
+    kopf: { h: 6.5, w: 0.13, col: '#a89a86', joint: '#7d705f', cobbles: true },
+    laternen: { h: 7, w: 0.12, col: '#b5654a', joint: '#e6c9ae', bricks: true, lamps: true },
   },
   zaun: {
     latten: { h: 8, col: '#c98d5c' },
@@ -107,7 +107,7 @@ function drawArc(rc, look, z) {
   }
   walls.sort((A, B) => A[0] - B[0]);
   for (const [, a, b, sh] of walls) { const col = C(shade(look.col, sh)); poly([P(a, 0), P(b, 0), P(b, h), P(a, h)], col); g.strokeStyle = col; g.lineWidth = 0.9; g.lineJoin = 'round'; g.stroke(); }
-  if (rc.b === 'mauer') wallJoints(walls.map(W => [W[1], W[2]]), look, h, z, P);
+  if (rc.b === 'mauer') wallJoints(walls.slice().sort((A, B) => A[4] - B[4]).map(W => [W[1], W[2], W[4] * Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])]), look, h, z, P);
   if (rc.b === 'hecke') for (const [, a, b, , s] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length, s * Math.hypot(b[0] - a[0], b[1] - a[1]));
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
   if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
@@ -117,8 +117,9 @@ function drawArc(rc, look, z) {
 function wallJoints(segs, look, h, z, P) {
   if (look.cobbles) {                                            // Kopfstein: runde Steine in drei Reihen, je Stein etwas heller/dunkler
     let d0 = 0;
-    for (const [a, b] of segs) {
+    for (const [a, b, s0] of segs) {
       const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (s0 != null) d0 = s0;
       for (let r = 0; r < 3; r++) alongLine([a, b], 6, d0 + (r % 2) * 0.08, (m, i) => {
         const [x, y] = P(m, h * (r + 0.5) / 3);
         circle(x, y, h / 6.4 * z, C(shade(look.col, (hash(i, r, 5) - 0.5) * 0.3)));
@@ -130,8 +131,9 @@ function wallJoints(segs, look, h, z, P) {
   g.strokeStyle = C(look.joint); g.lineWidth = 0.5 * z; g.beginPath();
   const rows = look.bricks ? [1 / 3, 2 / 3] : [0.45];
   let d0 = 0;
-  for (const [a, b] of segs) {
+  for (const [a, b, s0] of segs) {                               // s0: Abstand vom Anfang (Bogen), sonst fortlaufend
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (s0 != null) d0 = s0;
     for (const f of rows) { g.moveTo(...P(a, h * f)); g.lineTo(...P(b, h * f)); }
     const step = look.bricks ? 0.25 : 0.3, nrow = look.bricks ? 3 : 2;
     for (let r = 0; r < nrow; r++) {
@@ -199,7 +201,7 @@ function pillarBox(pt, r, h0, h1, col, z) {
 // Laternen darauf nur bei beleuchteten Stilen.
 function endPiece(b, look, pt, z, id) {
   const h = look.h, lit = litLook(look);
-  if (b === 'mauer') { pillarBox(pt, look.w * 1.4, 0, h + 2.5, look.col, z); pillarBox(pt, look.w * 1.65, h + 2.5, h + 3.4, shade(look.col, 0.28), z); if (lit) lampAt(pt, h + 3.4, z, id); return; }
+  if (b === 'mauer') { pillarBox(pt, look.w * 1.15, 0, h + 2.5, look.col, z); pillarBox(pt, look.w * 1.35, h + 2.5, h + 3.4, shade(look.col, 0.28), z); if (lit) lampAt(pt, h + 3.4, z, id); return; }
   if (b === 'zaun') {
     const [x, y] = edgeS(pt[0], pt[1], 0, z), top = y - (h + (lit ? 3 : 2)) * z;
     g.strokeStyle = C(shade(look.col, -0.25)); g.lineWidth = 2.4 * z; g.lineCap = 'round';
