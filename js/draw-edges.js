@@ -74,7 +74,7 @@ function drawArc(rc, look, z) {
     const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
-  if (rc.b === 'zaun') { const pts = roundArc(rc, 3); for (let s = 0; s < 3; s++) drawFence({ p: pts[s], q: pts[s + 1] }, look, rc.style, false, z); return; }
+  if (rc.b === 'zaun') { drawFence({ pts: roundArc(rc, 12) }, look, rc.style, false, z, false); return; }   // Pfosten haben die geraden Stücke
   const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
   const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
   const outer = pts.map(p => off(p, 1)), inner = pts.map(p => off(p, -1)), P = (pt, up) => edgeS(pt[0], pt[1], up, z), walls = [];
@@ -86,8 +86,42 @@ function drawArc(rc, look, z) {
   }
   walls.sort((A, B) => A[0] - B[0]);
   for (const [, a, b, sh] of walls) poly([P(a, 0), P(b, 0), P(b, h), P(a, h)], C(shade(look.col, sh)));
+  if (rc.b === 'mauer') wallJoints(walls.map(W => [W[1], W[2]]), look, h, z, P);
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
-  if (rc.b === 'hecke') for (let s = 1; s < n; s += 3) { const [sx, sy] = P(pts[s], h); circle(sx, sy + 0.4 * z, 2 * z, C(shade(look.col, look.balls ? 0.1 : 0.14))); }
+  if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
+}
+// Mauerfugen auf sichtbaren Wandstücken ([a, b] in Feld-Koordinaten): Lagerfugen durchgehend, Stoßfugen je Länge versetzt
+function wallJoints(segs, look, h, z, P) {
+  g.strokeStyle = C(look.joint); g.lineWidth = 0.5 * z; g.beginPath();
+  const rows = look.bricks ? [1 / 3, 2 / 3] : [0.45];
+  let d0 = 0;
+  for (const [a, b] of segs) {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    for (const f of rows) { g.moveTo(...P(a, h * f)); g.lineTo(...P(b, h * f)); }
+    const step = look.bricks ? 0.25 : 0.3, nrow = look.bricks ? 3 : 2;
+    for (let r = 0; r < nrow; r++) {
+      const off = (r % 2 ? 0.5 : 0) * step, f0 = look.bricks ? r / 3 : (r ? 0.45 : 0), f1 = look.bricks ? (r + 1) / 3 : (r ? 1 : 0.45);
+      for (let d = Math.ceil((d0 - off) / step) * step + off; d < d0 + L; d += step) {
+        const m = lerp2(a, b, (d - d0) / (L || 1));
+        g.moveTo(...P(m, h * f0)); g.lineTo(...P(m, h * f1));
+      }
+    }
+    d0 += L;
+  }
+  g.stroke();
+}
+// Hecke oben: runde Buckel im gleichen Abstand (Buchs: Kugeln, Blütenhecke: Blüten) entlang einer Punktlinie
+function hedgeTop(pts, look, h, z, seed) {
+  const cum = [0];
+  for (let s = 1; s < pts.length; s++) cum.push(cum[s - 1] + Math.hypot(pts[s][0] - pts[s - 1][0], pts[s][1] - pts[s - 1][1]));
+  const total = cum[cum.length - 1], n = Math.max(1, Math.round(total * 5));
+  for (let i = 0; i < n; i++) {
+    const d = (i + 0.5) / n * total; let s = 1; while (s < pts.length - 1 && cum[s] < d) s++;
+    const m = lerp2(pts[s - 1], pts[s], (d - cum[s - 1]) / (cum[s] - cum[s - 1] || 1)), [x, y] = edgeS(m[0], m[1], h, z);
+    if (look.balls) circle(x, y - 1.2 * z, 2.6 * z, C(shade(look.col, 0.1)));
+    else circle(x, y + 0.4 * z, 2.1 * z, C(shade(look.col, 0.14)));
+    if (look.flowers) circle(x + (i % 2 ? 1.2 : -1) * z, y - 0.6 * z, 0.9 * z, C(look.flowers[(i + (seed % 3)) % look.flowers.length]));
+  }
 }
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
@@ -117,74 +151,60 @@ function drawEdge(k, e, z, now) {
     }
     return;
   }
-  const { face } = edgePrism(p, q, E, w, h, look.col, z, !onQ);
+  edgePrism(p, q, E, w, h, look.col, z, !onQ);
   if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
-  if (e.b === 'hecke') {
-    // Blätter: ein paar runde Buckel oben, Buchs als Kugeln, Blüten als Punkte
-    const n = 5;
-    for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n, m = lerp2(p, q, t), [x, y] = edgeS(m[0], m[1], h, z);
-      if (look.balls) circle(x, y - 1.2 * z, 2.6 * z, C(shade(look.col, 0.1)));
-      else circle(x, y + 0.4 * z, 2.1 * z, C(shade(look.col, 0.14)));
-      if (look.flowers) circle(x + (i % 2 ? 1.2 : -1) * z, y - 0.6 * z, 0.9 * z, C(look.flowers[(i + (k.length % 3)) % look.flowers.length]));
-    }
-    return;
-  }
-  // Mauer: Fugen auf der sichtbaren langen Seite
-  const [a0, b0, b1, a1] = face, at = (t, f) => [a0[0] + (b0[0] - a0[0]) * t, a0[1] + (b0[1] - a0[1]) * t - (a0[1] - a1[1]) * f];
-  g.strokeStyle = C(look.joint); g.lineWidth = 0.5 * z;
-  g.beginPath();
-  if (look.bricks) {
-    for (const f of [1 / 3, 2 / 3]) { const s = at(0, f), t = at(1, f); g.moveTo(...s); g.lineTo(...t); }
-    for (let row = 0; row < 3; row++) for (let c = 0; c < 4; c++) {
-      const t = (c + (row % 2 ? 0.5 : 0.25)) / 4, s = at(t, row / 3), u = at(t, (row + 1) / 3);
-      g.moveTo(...s); g.lineTo(...u);
-    }
-  } else {
-    for (const f of [0.45]) { const s = at(0, f), t = at(1, f); g.moveTo(...s); g.lineTo(...t); }
-    for (const [t, f0, f1] of [[0.2, 0, 0.45], [0.55, 0, 0.45], [0.35, 0.45, 1], [0.78, 0.45, 1]]) { g.moveTo(...at(t, f0)); g.lineTo(...at(t, f1)); }
-  }
-  g.stroke();
+  if (e.b === 'hecke') { hedgeTop([p, q], look, h, z, k.length); return; }
+  wallJoints([[[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]]], look, h, z, (pt, up) => edgeS(pt[0], pt[1], up, z));
 }
-// Zaun: Pfosten an beiden Enden, dazwischen je nach Stil Latten, Staketen, Flechtwerk, Gitter, Stäbe oder Glas
-function drawFence(E, look, style, gate, z) {
-  const h = look.h, col = look.col, dark = shade(col, -0.25);
+// Zaun: Pfosten an beiden Enden, dazwischen je nach Stil Latten, Staketen, Flechtwerk, Gitter, Stäbe oder Glas.
+// Läuft an einer Punktlinie entlang (E.pts: auch der Bogen einer runden Ecke), Latten im gleichen Abstand je Länge.
+function drawFence(E, look, style, gate, z, posts = true) {
+  const h = look.h, col = look.col, dark = shade(col, -0.25), pts = E.pts || [E.p, E.q];
   const post = (pt, hh = h + 1) => { const [x, y] = edgeS(pt[0], pt[1], 0, z); g.strokeStyle = C(style === 'glas' ? '#9aa3ad' : dark); g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x, y - hh * z); g.stroke(); };
   if (gate) {                                                   // Tor: kurzes Stück bis an den Weg, dort Torpfosten
-    for (const [t0, t1] of [[0, GATE_CUT], [1 - GATE_CUT, 1]]) drawFence({ ...E, p: lerp2(E.p, E.q, t0), q: lerp2(E.p, E.q, t1) }, look, style, false, z);
+    for (const [t0, t1] of [[0, GATE_CUT], [1 - GATE_CUT, 1]]) drawFence({ p: lerp2(E.p, E.q, t0), q: lerp2(E.p, E.q, t1) }, look, style, false, z);
     for (const t of [GATE_CUT, 1 - GATE_CUT]) post(lerp2(E.p, E.q, t), h + 2.5);
     return;
   }
-  post(E.p); post(E.q);
-  const at = (t, up) => { const m = lerp2(E.p, E.q, t); return edgeS(m[0], m[1], up, z); };
+  const cum = [0];
+  for (let s = 1; s < pts.length; s++) cum.push(cum[s - 1] + Math.hypot(pts[s][0] - pts[s - 1][0], pts[s][1] - pts[s - 1][1]));
+  const total = cum[cum.length - 1] || 1;
+  const ptAt = t => { const d = t * total; let s = 1; while (s < pts.length - 1 && cum[s] < d) s++; const L = cum[s] - cum[s - 1] || 1; return lerp2(pts[s - 1], pts[s], (d - cum[s - 1]) / L); };
+  const at = (t, up) => { const m = ptAt(t); return edgeS(m[0], m[1], up, z); };
+  const S = (p, up) => edgeS(p[0], p[1], up, z);
   const line = (a, b, c, w) => { g.strokeStyle = C(c); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); };
+  const rail = (up, c, w) => { g.strokeStyle = C(c); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...S(p, up)) : g.moveTo(...S(p, up))); g.stroke(); };
+  const panel = (up0, up1) => poly([...pts.map(p => S(p, up0)), ...pts.slice().reverse().map(p => S(p, up1))], C(col));
+  if (posts) { post(pts[0]); post(pts[pts.length - 1]); }
+  const n = Math.max(2, Math.round(total * 7));                  // Latten/Stäbe je Länge wie beim geraden Stück
   if (style === 'weide') {
-    poly([at(0.04, 1), at(0.96, 1), at(0.96, h), at(0.04, h)], C(col));
-    for (let i = 0; i < 4; i++) line(at(0.04, 1.5 + i * (h - 2) / 3), at(0.96, 1.5 + i * (h - 2) / 3), shade(col, -0.2), 0.5);
+    panel(1, h);
+    for (let i = 0; i < 4; i++) rail(1.5 + i * (h - 2) / 3, shade(col, -0.2), 0.5);
     return;
   }
   if (style === 'glas') {
-    g.globalAlpha = 0.4; poly([at(0.03, 1), at(0.97, 1), at(0.97, h), at(0.03, h)], C(col)); g.globalAlpha = 1;
-    line(at(0.03, h), at(0.97, h), '#9aa3ad', 0.9);
+    g.globalAlpha = 0.4; panel(1, h); g.globalAlpha = 1;
+    rail(h, '#9aa3ad', 0.9);
     line(at(0.2, h * 0.3), at(0.35, h * 0.8), '#ffffff', 0.6);
     return;
   }
   if (style === 'gitter') {
-    line(at(0, h), at(1, h), col, 0.8); line(at(0, 1), at(1, 1), col, 0.8);
-    for (let i = 1; i < 10; i++) line(at(i / 10, 1), at(i / 10, h), col, 0.35);
-    for (const f of [h * 0.4, h * 0.7]) line(at(0, f), at(1, f), col, 0.35);
+    rail(h, col, 0.8); rail(1, col, 0.8);
+    for (let i = 1; i < Math.round(n * 1.4); i++) { const t = i / Math.round(n * 1.4); line(at(t, 1), at(t, h), col, 0.35); }
+    for (const f of [h * 0.4, h * 0.7]) rail(f, col, 0.35);
     return;
   }
   if (style === 'eisen') {
-    line(at(0, h - 1.5), at(1, h - 1.5), col, 0.7); line(at(0, 2), at(1, 2), col, 0.7);
-    for (let i = 1; i < 8; i++) { const t = i / 8; line(at(t, 0.5), at(t, h), col, 0.6); const [x, y] = at(t, h); poly([[x - 0.9 * z, y + 0.6 * z], [x + 0.9 * z, y + 0.6 * z], [x, y - 1.6 * z]], C(col)); }
+    rail(h - 1.5, col, 0.7); rail(2, col, 0.7);
+    const m = Math.round(n * 8 / 7);
+    for (let i = 1; i < m; i++) { const t = i / m; line(at(t, 0.5), at(t, h), col, 0.6); const [x, y] = at(t, h); poly([[x - 0.9 * z, y + 0.6 * z], [x + 0.9 * z, y + 0.6 * z], [x, y - 1.6 * z]], C(col)); }
     return;
   }
   // Holz: zwei Querlatten, davor die Latten (Staketen spitz und weiß)
-  line(at(0, h * 0.35), at(1, h * 0.35), shade(col, -0.12), 1);
-  line(at(0, h * 0.75), at(1, h * 0.75), shade(col, -0.12), 1);
-  for (let i = 1; i < 7; i++) {
-    const t = i / 7, [x0, y0] = at(t, 0.3), [x1, y1] = at(t, style === 'staketen' ? h - 1 : h - 0.5);
+  rail(h * 0.35, shade(col, -0.12), 1);
+  rail(h * 0.75, shade(col, -0.12), 1);
+  for (let i = 1; i < n; i++) {
+    const t = i / n, [x0, y0] = at(t, 0.3), [x1, y1] = at(t, style === 'staketen' ? h - 1 : h - 0.5);
     line([x0, y0], [x1, y1], col, 1.3);
     if (style === 'staketen') poly([[x1 - 0.65 * z, y1], [x1 + 0.65 * z, y1], [x1, y1 - 1.6 * z]], C(col));
   }
