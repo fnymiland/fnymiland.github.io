@@ -101,7 +101,7 @@ function roadCurve(arms) {
 const EDGE_W = ROAD_W + 0.04, FLARE_R = 0.1;
 // Arm-System (a entlang des Arms [dx, dy], b quer dazu) → Feld-Koordinaten
 const armUV = ([dx, dy], a, b) => [a * dx - b * dy, a * dy + b * dx];
-function roadShapes(arms, t, w, quads = [], flares = []) {
+function roadShapes(arms, t, w, quads = [], flares = [], straight = false) {
   const out = quads.map(([su, sv]) => [[0, 0], [0.5 * su, 0], [0.5 * su, 0.5 * sv], [0, 0.5 * sv]]);
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
   const arm = ([dx, dy], from = 0) => dx > 0 ? rect(from, 0.5, -w, w) : dx < 0 ? rect(-0.5, -from, -w, w)
@@ -118,7 +118,7 @@ function roadShapes(arms, t, w, quads = [], flares = []) {
     out.push((t && t.rot & 1) ? pts.map(([u, v]) => [v, u]) : pts);
     return out;
   }
-  const curve = roadCurve(arms);
+  const curve = straight ? null : roadCurve(arms);           // straight: Kurve an einer Hecke/Mauer eckig
   if (curve) {
     const { cu, cv, a0, a1 } = curve;
     out.push(arcPts(cu, cv, 0.5 + w, a0, a1).concat(arcPts(cu, cv, Math.max(0, 0.5 - w), a1, a0)));
@@ -561,7 +561,7 @@ function drawPath(cx, cy, z, x, y, t) {
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const shapes = w => roadShapes(arms, t, w, quads, flares).concat(lineFill(x, y, arms, w));
+  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, lf.length > 0).concat(lf); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }

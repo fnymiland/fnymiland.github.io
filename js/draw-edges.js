@@ -59,8 +59,11 @@ const GATE_CUT = 0.5 - EDGE_W;
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
   if (e.b === 'zaun') { drawFence(E, look, e.style, gate, z); return; }
-  const w = look.w, h = look.h, { i, j } = edgeParse(k), [au, av] = E.along;
-  const ext0 = edgeJoins(k, e.b, i, j) ? w : 0, ext1 = edgeJoins(k, e.b, i + au, j + av) ? w : 0;
+  const w = look.w, h = look.h, { dir, i, j } = edgeParse(k), [au, av] = E.along;
+  // Ecke „┌“: das waagerechte Stück 'a' i,j wird vor diesem senkrechten gezeichnet und übernimmt die Ecke – dieses beginnt
+  // erst hinter ihm (sonst malt es seine Seitenwand über das andere Stück)
+  const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
+  const ext0 = aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
     for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
