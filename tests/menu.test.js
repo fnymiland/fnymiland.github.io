@@ -35,7 +35,7 @@ describe('Baumenü', () => {
     area('freizeit').onclick();
     expect(subs()).toEqual(['kultur', 'wunder']);
     area('gestalten').onclick();
-    expect(subs()).toEqual(['gruen', 'platz', 'besonderes', 'land']);
+    expect(subs()).toEqual(['gruen', 'linien', 'platz', 'besonderes', 'land']);
   });
 
   it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Park, Leuchtturm', () => {

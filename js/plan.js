@@ -6,9 +6,9 @@
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'schiene']);
 const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels']);
-const dragKind = t => t === 'schiene' ? 'line'
+const dragKind = t => t === 'schiene' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) || (t === 'verschieben' && !moving) ? 'rect' : null;
-const PLAN_MAX = { line: 80, rect: 24 };        // Linie: Felder insgesamt, Rechteck: Seitenlänge
+const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
 
 // { kind: 'line'|'rect', tool, a: {x, y}, b: {x, y}, fixed, dragging, slot (kleine Deko: in welche Ecke) }
 //   fixed = false: Linie per Klick begonnen, das Ende folgt der Maus – der nächste Klick baut
@@ -27,7 +27,7 @@ function lineTiles(a, b) {
 }
 const planBox = p => [Math.min(p.a.x, p.b.x), Math.min(p.a.y, p.b.y), Math.max(p.a.x, p.b.x), Math.max(p.a.y, p.b.y)];
 function planTiles(p) {
-  if (p.kind === 'line') return lineTiles(p.a, p.b);
+  if (p.kind === 'line' || p.kind === 'edge') return lineTiles(p.a, p.b);      // Zaun: Eckpunkte statt Felder
   const [x0, y0, x1, y1] = planBox(p), out = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) out.push([x, y]);
   return out;
@@ -35,6 +35,12 @@ function planTiles(p) {
 function inPlan(p, x, y) {
   if (p.kind === 'rect') { const [x0, y0, x1, y1] = planBox(p); return x >= x0 && x <= x1 && y >= y0 && y <= y1; }
   return lineTiles(p.a, p.b).some(([px, py]) => px === x && py === y);
+}
+// Zaun, Hecke, Mauer: die Kanten zwischen den Eckpunkten der Linie
+function planEdges(p) {
+  const v = lineTiles(p.a, p.b), out = [];
+  for (let i = 1; i < v.length; i++) out.push(edgeKeyOf({ x: v[i - 1][0], y: v[i - 1][1] }, { x: v[i][0], y: v[i][1] }));
+  return out;
 }
 // Ende begrenzen, damit niemand aus Versehen die halbe Insel plant
 function planEnd(kind, a, b) {
@@ -69,6 +75,7 @@ function planCheck(b, x, y) {
 // Alle Felder prüfen. Schiene/Aufschütten ins Meer: jedes Feld macht das nächste erreichbar – also in Runden
 // prüfen und die neuen Felder dabei kurz als eigen zählen (danach wieder weg).
 function planScan(p) {
+  if (p.kind === 'edge') return scanEdges(p);
   if (p.tool === 'abriss') return scanDemolish(p);
   if (p.tool === 'verschieben') return scanSelect(p);
   if (ITEMS[p.tool].small) return scanSmall(p);
@@ -96,6 +103,23 @@ function planScan(p) {
   } finally { for (const k of tmp) state.claimed.delete(k); }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
+}
+// Linie auf den Feldkanten: neu, umfärben (anderer Stil/Art) oder schon so
+function scanEdges(p) {
+  const b = p.tool, d = ITEMS[b], style = currentStyle(b), states = new Map(), order = [], mat = {};
+  let cost = 0, firstErr = null;
+  for (const k of planEdges(p)) {
+    const old = state.edges.get(k), err = edgeError(b, k);
+    if (err) { states.set(k, 'bad'); firstErr = firstErr || err; continue; }
+    if (old && old.b === b && old.style === style) { states.set(k, 'same'); continue; }
+    states.set(k, 'ok');
+    const [x, y] = edgeTiles(k)[1];
+    order.push([x, y, () => buildEdge(b, k)]);
+    cost += d.cost - (old ? ITEMS[old.b].cost : 0);
+    for (const [r, n] of Object.entries(d.mat || {})) mat[r] = (mat[r] || 0) + n;
+  }
+  const bad = [...states.values()].filter(s => s === 'bad').length;
+  return { states, order, n: order.length, cost: Math.max(0, cost), gain: 0, mat, bad, firstErr };
 }
 // Kleine Deko: je Feld eine, in derselben Ecke wie am Anfang (ist sie belegt, die nächste freie)
 function scanSmall(p) {
@@ -162,6 +186,12 @@ function scanDemolish(p) {
     if (info.cost) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
     else if (!states.has(k)) states.set(k, 'same');
   }
+  for (let j = y0; j <= y1 + 1; j++) for (let i = x0; i <= x1 + 1; i++) for (const k of [i <= x1 ? 'a' + i + ',' + j : null, j <= y1 ? 'b' + i + ',' + j : null]) {
+    if (!k || !state.edges.has(k)) continue;                                 // Zäune, Hecken, Mauern auf und um die Felder
+    const [ex, ey] = edgeTiles(k)[1];
+    order.push([ex, ey, () => removeEdge(k)]);
+    gain += ITEMS[state.edges.get(k).b].cost; things++;
+  }
   if (lost && T.pop - lost < T.jobs - freed) firstErr = 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.';
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order: order.concat(clear), n: things + clear.length, things, cleared: clear.length, cost, gain, mat: {}, bad, firstErr,
@@ -185,14 +215,14 @@ function planText(p, info) {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
   } else {
-    parts.push(d.small ? `${d.name} ×${info.n}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
+    parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
     if (info.cost) parts.push('−' + fmt(info.cost));
   }
   if (matText(info.mat)) parts.push(matText(info.mat));
   if (info.bad) parts.push(`${info.bad} ${info.bad === 1 ? 'geht' : 'gehen'} nicht`);
   if (info.err) return info.n ? `${info.err} · ${parts.join(' · ')}` : info.err;
   const verb = p.tool === 'abriss' ? 'abreißen' : 'bauen';
-  parts.push(planTouch ? `${p.kind === 'line' ? 'nochmal tippen' : 'hineintippen'}: ${verb}` : `${p.fixed ? 'hineinklicken' : 'Klick'}: ${verb}`);
+  parts.push(planTouch ? `${p.kind !== 'rect' ? 'nochmal tippen' : 'hineintippen'}: ${verb}` : `${p.fixed ? 'hineinklicken' : 'Klick'}: ${verb}`);
   return parts.join(' · ');
 }
 
@@ -205,7 +235,7 @@ function runPlan() {
   let n = 0;
   batch(() => { for (const [, , run] of info.order) if (run()) n++; });
   if (!n) return false;
-  sfx(ITEMS[p.tool].small ? 'deco' : p.tool === 'weg' || p.tool === 'schiene' ? 'road' : 'dig');
+  sfx(ITEMS[p.tool].small || ITEMS[p.tool].edge ? 'deco' : p.tool === 'weg' || p.tool === 'schiene' ? 'road' : 'dig');
   const [ex, ey] = info.order[info.order.length - 1], diff = state.money - money0;
   if (Math.round(diff)) addFloat(ex, ey, (diff > 0 ? '+' : '−') + fmt(Math.abs(diff)), diff > 0 ? '#3f8f43' : '#d9534a');
   checkStars();
@@ -218,8 +248,12 @@ function planTap(x, y, isTouch) {
   if (plan) {
     if (!plan.fixed) { setPlanEnd({ x, y }); runPlan(); return true; }        // Maus: der zweite Klick baut
     if (inPlan(plan, x, y)) { runPlan(); return true; }
-    if (plan.kind === 'line' && isTouch) { setPlanEnd({ x, y }); hover = { x, y }; return true; }   // neues Ende
+    if (plan.kind !== 'rect' && isTouch) { setPlanEnd({ x, y }); hover = { x, y }; return true; }   // neues Ende
     plan = null;                                                                // daneben: abbrechen
+    return true;
+  }
+  if (tool !== 'look' && EDGE_TOOLS.has(tool)) {                              // Zaun & Co.: x, y ist hier ein Eckpunkt
+    startPlan('edge', { x, y }, { x, y }, isTouch);
     return true;
   }
   if (tool !== 'look' && LINE_TOOLS.has(tool) && (ownedTile(x, y) || (CLAIM_TOOLS.has(tool) && claimable(x, y)))) {

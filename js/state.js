@@ -44,6 +44,7 @@ function newState() {
     terra: new Map(),
     techs: new Set(),
     decos: new Map(),          // kleine Dekos: Feld → [4 Ecken] mit { b, rot } oder null
+    edges: new Map(),          // Linien auf Feldkanten (Block 41): 'a3,4' / 'b3,4' → { b: 'hecke'|'zaun'|'mauer', style }
     cam: { x: c.x, y: c.y, z: 1.4 },
     last: Date.now(),
     muted: false,
@@ -94,7 +95,7 @@ function serialize() {
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
-    decos, cam: state.cam, last: state.last, muted: state.muted,
+    decos, edges: [...state.edges].map(([k, e]) => [k, { b: e.b, style: e.style }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -236,7 +237,9 @@ function parseSave(d) {
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
-    decos: new Map(d.decos || []),
+    // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle
+    decos: new Map((d.decos || []).map(([k, ds]) => [k, (ds || []).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
+    edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style }])),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };
 }

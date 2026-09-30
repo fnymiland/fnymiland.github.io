@@ -352,6 +352,14 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+61. **Linien auf Feldkanten** (Block 41): Hecke, Zaun, Mauer (`EDGE_TOOLS`, `ITEMS[].edge`) liegen in `state.edges`
+    ('a'i,j waagerecht von Eckpunkt (i,j) nach (i+1,j), 'b'i,j senkrecht; Eckpunkt = obere Ecke von Feld (i,j)).
+    `edgeKeyOf`/`edgeTiles`/`edgeBetween`/`edgeError`/`buildEdge`/`removeEdge` (rules.js), Tor = Weg auf beiden Seiten
+    (`isGate`), Bewohner nur durchs Tor (`edgeBlocks` in movers). Planen als `plan.kind = 'edge'` über Eckpunkte
+    (`toVertex`, `planPoint`, `planEdges`, `scanEdges`); Abriss per Tippen nahe der Kante (`edgeNear`) oder im Rechteck.
+    Gezeichnet in js/draw-edges.js: jedes Feld zeichnet seine hinteren Kanten 'a'x,y und 'b'x,y vor sich (`drawEdgesAt`);
+    Stile in `STYLES.hecke/zaun/mauer` (`st.kind`, `styleOk` mit Präfix der Art), Aussehen in `EDGE_LOOK`. `placeError`
+    lehnt Linien-Werkzeuge ab (nie als Feld bauen). Album zählt Linien (`collectAlbum`).
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

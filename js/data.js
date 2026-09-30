@@ -84,7 +84,10 @@ const ITEMS = {
   baum:    { cat: 'deko', name: 'Baum', cost: 15, beauty: 2, small: true, desc: 'Ein Obstbaum. Klein – bis zu 4 pro Feld, auch neben Bank und Blumentopf.' },
   blumentopf: { cat: 'deko', name: 'Blumentopf', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
   busch:   { cat: 'deko', name: 'Kleiner Busch', cost: 10, beauty: 2, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
-  hecke:   { cat: 'deko', name: 'Hecke', cost: 10, beauty: 1, small: true, desc: 'Klein – bis zu 4 pro Feld. In die gewünschte Ecke tippen.' },
+  // Linien auf den Kanten zwischen Feldern (Block 41): Anfang und Ende antippen, Stil aus der Stil-Leiste; state.edges
+  hecke:   { cat: 'deko', name: 'Hecke', cost: 8, beauty: 1.5, edge: true, desc: 'Eine grüne Linie zwischen den Feldern – Anfang und Ende antippen. Wo ein Weg durchgeht, bleibt eine Lücke.' },
+  zaun:    { cat: 'deko', name: 'Zaun', cost: 12, beauty: 1, edge: true, desc: 'Ein Zaun zwischen den Feldern – Anfang und Ende antippen. Wo ein Weg durchgeht, gibt es ein Tor.' },
+  mauer:   { cat: 'deko', name: 'Mauer', cost: 20, mat: { quader: 1 }, beauty: 1.2, edge: true, desc: 'Eine Gartenmauer zwischen den Feldern – Anfang und Ende antippen. Wo ein Weg durchgeht, bleibt ein Durchgang.' },
   // exotisch – aus dem Botanischen Garten (garden)
   palme:   { cat: 'deko', name: 'Palme', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten. Klein – bis zu 4 pro Feld.' },
   riesenblume: { cat: 'deko', name: 'Riesenblume', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten: so groß wie ein Mensch. Bis zu 4 pro Feld.' },
@@ -423,7 +426,8 @@ const MENU = [
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'hecke', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'park', 'glashaus'] },
+    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'park', 'glashaus'] },
+    { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
@@ -450,6 +454,7 @@ const menuItemsOf = (top, sub) => {
 const buildGroups = () => MENU.filter(m => ['stadt', 'herstellen', 'einkaufen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
+  hecke: '🌸 Linie · Lücke am Weg', zaun: '🌸 Linie · Tor am Weg', mauer: '🌸 Linie · Durchgang am Weg',
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
   holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
@@ -495,7 +500,9 @@ const ITEM_TIPS = {
   baum: 'Kleine Deko für eine Ecke – bis zu 4 pro Feld, auch hinters Haus oder an den Weg (Allee!).',
   blumentopf: 'Kleine Deko für eine Ecke, auch vors Haus. Häuser wünschen sich Deko in der Nähe.',
   busch: 'Kleine Deko für eine Ecke – bis zu 4 pro Feld, gut zum Mischen mit Baum und Bank.',
-  hecke: 'Kleine Deko für eine Ecke – als Rand um Gärten und Plätze.',
+  hecke: 'Um Gärten, Parks und Plätze ziehen: Anfang und Ende antippen (oder ziehen). Niedrig, hoch, mit Blüten oder Buchs.',
+  zaun: 'Um Gärten und Weiden: Anfang und Ende antippen. Holz, weiße Staketen, Weide, Schmiedeeisen, Gitter oder Glas – wo ein Weg durchgeht, gibt es ein Tor.',
+  mauer: 'Gartenmauern passend zu deinen Wegen: Backstein, Klinker, Naturstein, Trockenmauer, Terrakotta, Kopfstein.',
   palme: 'Ein Gruß aus dem Botanischen Garten – schön am Strand und am Hafen.',
   riesenblume: 'Aus dem Palmenhaus: riesige Blüten in bunten Farben, bis zu 4 pro Feld.',
   bank: 'Kleine Deko für eine Ecke, gern an den Weg oder vors Haus.',
@@ -737,9 +744,34 @@ const STYLES = {
     { id: 'regenbogen', name: 'Regenbogenweg', col: '#f7c6d8', shape: 'band', album: 'farben' },
     { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'band', album: 'wege' },
   ],
+  // Linien (Block 41): der erste Stil ist frei, die anderen in der Kunstakademie (design) oder mit dem Ort (lm)
+  hecke: [
+    { id: 'niedrig', name: 'Niedrige Hecke', col: '#5aa84f' },
+    { id: 'hoch', name: 'Hohe Hecke', col: '#3f8f43', design: 60 },
+    { id: 'buchs', name: 'Buchs', col: '#2f7a3a', design: 90 },
+    { id: 'bluete', name: 'Blütenhecke', col: '#f28cb1', design: 140 },
+  ],
+  zaun: [
+    { id: 'latten', name: 'Lattenzaun', col: '#c98d5c' },
+    { id: 'staketen', name: 'Weißer Staketenzaun', col: '#fbf7ef', design: 60 },
+    { id: 'weide', name: 'Weidenflecht', col: '#a07850', design: 80 },
+    { id: 'gitter', name: 'Metallgitter', col: '#9aa3ad', design: 100 },
+    { id: 'eisen', name: 'Schmiedeeisen', col: '#3e3e4a', design: 160 },
+    { id: 'glas', name: 'Glas', col: '#bfe6f7', design: 250, master: true },
+  ],
+  mauer: [
+    { id: 'backstein', name: 'Backstein', col: '#b5654a' },
+    { id: 'trocken', name: 'Trockenmauer', col: '#c9bfa8', design: 80 },
+    { id: 'naturstein', name: 'Naturstein', col: '#a9a49a', design: 100 },
+    { id: 'klinker', name: 'Klinker', col: '#a95a43', design: 120 },
+    { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', design: 120 },
+    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', lm: 'quelle:2' },
+  ],
 };
+for (const [kind, list] of Object.entries(STYLES)) for (const st of list) st.kind = kind;
+const EDGE_TOOLS = new Set(['hecke', 'zaun', 'mauer']);
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
-const chosenStyle = { weg: 'sand' };
+const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
 
 
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',
@@ -753,6 +785,7 @@ const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
+  ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
   ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master })),
 ];
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));

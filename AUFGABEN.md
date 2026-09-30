@@ -436,3 +436,14 @@ Gemeinsam besprochen: 🏘️ Stadt (Wohnen, Einrichtungen inkl. Post/Apotheke/H
 · 🎡 Freizeit (Kultur, Wunder) · 🌸 Gestalten (Grün, Platz, Besonderes, Wege & Gelände).
 - [x] Menü umgebaut, Handy zeigt den Namen des Bereichs wieder (passt mit 5 Bereichen in 375 px).
 
+## Block 41–44 – Deko neu denken (01.10.)
+
+Entschieden: Linien auf Kanten · alle Stile · Kleinkram nicht auf Gebäudefelder, aber an die Ecken eines Hauses ·
+Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolge: Linien, Kleinkram, Größen, Park.
+- [x] **41** Hecke (niedrig, hoch, Buchs, Blüten), Zaun (Latten, Staketen, Weide, Gitter, Schmiedeeisen, Glas), Mauer
+      (Backstein, Trocken, Naturstein, Klinker, Terrakotta, Kopfstein) als Linien; Tor am Weg; Bewohner nur durchs Tor;
+      Kunstakademie; alte Hecken-Ecken → Büsche.
+- [ ] **42** Kleinkram: 8 Plätze je Feld (Ecken + Kantenmitten), Bank/Laterne mittig am Wegrand, an Hausecken erlaubt.
+- [ ] **43** Größen (S/M/L) für alle Deko: Brunnen, Busch, Baum, Beet, …
+- [ ] **44** Park zum Selberbauen: Parkrasen malen + Deko → Grünanlage, Park, Stadtpark.
+

@@ -26,10 +26,22 @@ function toScreen(x, y) {
   const p = iso(x, y);
   return { x: (p.x - cam.x) * cam.z + W / 2, y: (p.y - cam.y) * cam.z + H / 2 };
 }
-function toTile(sx, sy) {
+function tileFrac(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
-  const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
-  return { x: Math.round(a), y: Math.round(b) };
+  return [(px / (TW / 2) + py / (TH / 2)) / 2, (py / (TH / 2) - px / (TW / 2)) / 2];
+}
+function toTile(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a), y: Math.round(b) }; }
+// Zaun & Co. (Block 41): der nächste Eckpunkt zwischen den Feldern
+function toVertex(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a + 0.5), y: Math.round(b + 0.5) }; }
+const planPoint = (sx, sy) => (plan ? plan.kind === 'edge' : dragKind(tool) === 'edge') ? toVertex(sx, sy) : toTile(sx, sy);
+// Liegt der Zeiger auf einer Linie? (Abreißen, Ansehen) – die Kante, deren Mitte am nächsten ist
+function edgeNear(sx, sy) {
+  const [a, b] = tileFrac(sx, sy), gu = Math.round(a - 0.5) + 0.5, gv = Math.round(b - 0.5) + 0.5;
+  const cand = [];
+  if (Math.abs(a - gu) < 0.2) cand.push(['b' + (gu + 0.5) + ',' + Math.round(b), Math.abs(a - gu)]);
+  if (Math.abs(b - gv) < 0.2) cand.push(['a' + Math.round(a) + ',' + (gv + 0.5), Math.abs(b - gv)]);
+  const hit = cand.filter(([k]) => state.edges.has(k)).sort((p, q) => p[1] - q[1])[0];
+  return hit ? hit[0] : null;
 }
 function clampCam() {
   const c = iso(ISLAND.cx, ISLAND.cy), R = WORLD.R, rx = R * TW * 0.75, ry = R * TH * 0.75;   // wächst mit der Welt
@@ -52,7 +64,7 @@ let drag = null, pinch = null, moved = false;
 let spaceDown = false;
 const panButton = e => e.button === 1 || e.button === 2 || (e.buttons & 6) !== 0 || e.ctrlKey || spaceDown;
 
-let hoverSlot = 0;
+let hoverSlot = 0, hoverVertex = null, hoverEdge = null;
 
 canvas.addEventListener('pointerdown', e => {
   audio();
@@ -66,7 +78,7 @@ canvas.addEventListener('pointerdown', e => {
     drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button, pan, right: e.button === 2 || (e.ctrlKey && e.button === 0) };
     // Mit Weg, Schiene oder Gelände in der Hand zieht man eine Linie bzw. ein Rechteck auf (erst Vorschau)
     if (pan) canvas.style.cursor = 'grabbing';
-    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) { drag.plan = toTile(e.clientX, e.clientY); drag.slot = slotAt(e.clientX, e.clientY).slot; }
+    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) { drag.plan = dragKind(tool) === 'edge' ? toVertex(e.clientX, e.clientY) : toTile(e.clientX, e.clientY); drag.slot = slotAt(e.clientX, e.clientY).slot; }
   } else if (pointers.size === 2) {
     if (plan && plan.dragging) plan = null;              // zweiter Finger: doch lieber Karte bewegen
     const [a, b] = [...pointers.values()];
@@ -94,7 +106,7 @@ canvas.addEventListener('pointermove', e => {
       if (drag.plan && dragKind(tool)) { planTouch = e.pointerType !== 'mouse'; startPlan(dragKind(tool), drag.plan, drag.plan, false, drag.slot); plan.dragging = true; }
       else canvas.style.cursor = 'grabbing';
     }
-    if (moved && plan && plan.dragging) { const t = toTile(e.clientX, e.clientY); setPlanEnd(t); hover = t; return; }
+    if (moved && plan && plan.dragging) { setPlanEnd(planPoint(e.clientX, e.clientY)); hover = toTile(e.clientX, e.clientY); return; }
     if (moved) { cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z; clampCam(); }
     return;
   }
@@ -145,7 +157,8 @@ function setHover(sx, sy) {
   hoverSlot = slotAt(sx, sy).slot;
   const t = toTile(sx, sy);
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }
-  if (plan && !plan.fixed) setPlanEnd(t);                // Linie per Klick begonnen: das Ende folgt der Maus
+  hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
+  if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus
   hoverChunk = null;
 }
 

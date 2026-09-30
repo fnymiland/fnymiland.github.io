@@ -25,7 +25,7 @@ function syncMovers() {
     const houses = [...state.tiles].filter(([, t]) => isHome(t.b));        // Bewohner kommen aus jedem Wohnhaus
     if (houses.length) {
       const [x, y] = keyXY(houses[Math.floor(Math.random() * houses.length)][0]);
-      const free = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => walkable(a, b));
+      const free = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => walkable(a, b) && !edgeBlocks(x, y, a, b));   // nicht durch Zäune
       if (free.length) {
         const [sx, sy] = free[Math.floor(Math.random() * free.length)];
         const ht = state.tiles.get(houses[Math.floor(Math.random() * houses.length)][0]);

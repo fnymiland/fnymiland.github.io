@@ -73,6 +73,10 @@ function thumbRaw(type, lvl = 1, tile = null) {
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
+  } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
+    block(1, '#96d56f');
+    EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
+    try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, { b: type, style: currentStyle(type) }, z * 1.3, 0); } finally { EDGE_PROJ = null; }
   } else {
     const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
@@ -1593,6 +1597,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
   '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Einkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
+  '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

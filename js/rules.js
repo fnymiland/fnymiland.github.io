@@ -416,6 +416,7 @@ function totals() {
       s.sci = v; sci += v;
     }
   }
+  for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty;                   // Hecken, Zäune, Mauern
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
@@ -522,7 +523,7 @@ function unlockText(def, short) {
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
   return '';
 }
-const styleOk = st => unlockOk(st, 'weg:' + st.id);
+const styleOk = st => unlockOk(st, (st.kind || 'weg') + ':' + st.id);
 // Farben: die ersten FREE_COLORS gibt es von Anfang an, weitere in der Kunstakademie
 const colorOk = (kind, i) => i < FREE_COLORS || state.design.has(kind + ':' + i);
 const colorsOf = kind => (kind === 'wall' ? WALLS : ROOFS).map((c, i) => [c, i]).filter(([, i]) => colorOk(kind, i));
@@ -564,6 +565,45 @@ function slotAt(sx, sy) {
   return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
 }
 const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS)]);
+// Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
+// Kante 'a' i,j läuft von (i, j) nach (i + 1, j) – zwischen Feld (i, j − 1) und (i, j); 'b' i,j von (i, j) nach (i, j + 1) –
+// zwischen Feld (i − 1, j) und (i, j). Jedes Feld zeichnet seine beiden hinteren Kanten 'a' x,y und 'b' x,y vor sich selbst.
+function edgeKeyOf(p, q) {
+  if (p.y === q.y && Math.abs(p.x - q.x) === 1) return 'a' + Math.min(p.x, q.x) + ',' + p.y;
+  if (p.x === q.x && Math.abs(p.y - q.y) === 1) return 'b' + p.x + ',' + Math.min(p.y, q.y);
+  return null;
+}
+const edgeParse = k => { const [i, j] = k.slice(1).split(',').map(Number); return { dir: k[0], i, j }; };
+const edgeTiles = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j - 1], [i, j]] : [[i - 1, j], [i, j]]; };
+const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny) : 'b' + Math.max(x, nx) + ',' + y;
+// Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
+const isGate = k => edgeTiles(k).every(([x, y]) => wegUnder(state.tiles.get(x + ',' + y)) != null || crossingAt(x, y));
+const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return state.edges.has(k) && !isGate(k); };
+function edgeError(b, k) {
+  const tiles = edgeTiles(k);
+  if (!tiles.some(([x, y]) => ownedTile(x, y))) return 'Das ist nicht dein Grundstück';
+  if (tiles.every(([x, y]) => terrainAt(x, y) === 'water')) return 'Nicht mitten im Wasser';
+  const [p, q] = tiles.map(([x, y]) => COVER.get(x + ',' + y));
+  if (p && p === q) return 'Nicht mitten durch ein Gebäude';
+  return null;
+}
+function buildEdge(b, k) {
+  const style = currentStyle(b), old = state.edges.get(k);
+  if (old && old.b === b && old.style === style) return false;
+  const d = ITEMS[b];
+  state.money -= d.cost; payMat(d.mat || {});
+  state.edges.set(k, { b, style, born: performance.now() });
+  return true;
+}
+function removeEdge(k) {
+  const e = state.edges.get(k);
+  if (!e) return false;
+  const d = ITEMS[e.b];
+  state.money += d.cost;
+  for (const [r, n] of Object.entries(d.mat || {})) state.res[r] += n;
+  state.edges.delete(k);
+  return true;
+}
 // Marktplatz (Block 39): Stände und große Deko dürfen auf einen Weg – der Weg bleibt darunter liegen (t.weg = sein Stil),
 // wird mitgezeichnet (pathAt, pathArms, drawFlat) und kommt beim Abreißen/Wegtragen zurück
 const PLAZA_OK = new Set([...Object.keys(STANDS), 'brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'denkmal', 'uhrturm', 'karussell']);
@@ -1192,6 +1232,7 @@ const ANYWHERE = { forest: { tech: 'forst' }, obst: { tech: 'agrar' }, rock: { t
 function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
   const r = ROTATABLE.has(b) ? rot : 0;
+  if (d.edge) return 'Linien: Anfang und Ende antippen';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (TERRAFORM[b]) {                                   // Terraforming-Pinsel
     if (!ownedTile(x, y)) return notMine(x, y);
@@ -1516,6 +1557,7 @@ function beautyAround(x, y, r) {
     if (a && !seen.has(a)) { seen.add(a); const b = state.tiles.get(a).b; if (b !== 'haus') sum += ITEMS[b].beauty || 0; }
     const ds = state.decos.get(k);
     if (ds) for (const d of ds) if (d) sum += ITEMS[d.b].beauty || 0;
+    for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty; }   // Linien
   }
   return sum;
 }

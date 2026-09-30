@@ -565,13 +565,15 @@ function collectAlbum() {
     if (t.wall != null) add('wall:' + t.wall);
     if (t.roof != null) add('roof:' + t.roof);
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
+    if (t.weg != null) add('weg:' + t.weg);                        // Weg unter einem Marktstand
   }
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + d.b);
+  for (const e of state.edges.values()) add('b:' + e.b);             // Hecken, Zäune, Mauern (Block 41)
   // Belohnungen bleiben, auch wenn später Neues ins Album kommt (LATE_ALBUM: erst nach dem Album dazugekommen)
   if (!state.legacy) state.legacy = new Set();
   for (const p of ALBUM) if (albumKeys(p).every(k => state.album.has(k) || LATE_ALBUM.has(k))) state.legacy.add(p.reward);
 }
-const LATE_ALBUM = new Set(['b:reihenhaus', 'b:baumhaus', 'b:hausboot', 'b:ferienhaus', 'b:windrad', 'b:wasserkraft', 'b:solarfeld', 'b:geothermie', 'b:wellen', 'b:seilbahn']);
+const LATE_ALBUM = new Set(['b:zaun', 'b:mauer', 'b:reihenhaus', 'b:baumhaus', 'b:hausboot', 'b:ferienhaus', 'b:windrad', 'b:wasserkraft', 'b:solarfeld', 'b:geothermie', 'b:wellen', 'b:seilbahn']);
 
 // ---------------------------------------------------------------------------
 // Wunderwerke: Baustelle (phase 0), dann Abschnitt für Abschnitt; Wirkung (effect) erst, wenn alle fertig sind

@@ -386,6 +386,15 @@ function planPreview(z) {
   };
   g.save();
   g.lineJoin = 'round';
+  if (plan.kind === 'edge') {                                   // Zaun & Co.: die Kanten farbig am Boden
+    for (const k of planEdges(plan)) {
+      const s = info.states.get(k);
+      edgeMark(k, s === 'ok' ? (info.err ? '#e8913a' : '#2f9f55') : s === 'same' ? 'rgba(255,255,255,0.6)' : '#e5484d', z);
+    }
+    g.restore();
+    const e = toScreen(plan.b.x - 0.5, plan.b.y - 0.5);
+    return { ok: !info.err, text: planText(plan, info), p: e };
+  }
   for (const [x, y] of planTiles(plan)) {
     const s = info.states.get(x + ',' + y);
     if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55');
@@ -561,7 +570,16 @@ function render(now) {
     const hds = decosAt(hx + ',' + hy);
     const rotOf = b => placeRot(b, hx, hy);
     let box = [hx, hy, 1, 1];
-    if (tool === 'verschieben' && !moving) {
+    if (EDGE_TOOLS.has(tool) && hoverVertex) {
+      const q = toScreen(hoverVertex.x - 0.5, hoverVertex.y - 0.5);
+      g.fillStyle = '#2f9f55'; g.beginPath(); g.arc(q.x, q.y, 4 * z, 0, Math.PI * 2); g.fill();
+      preview = { ok: true, text: `${ITEMS[tool].name} · ${styleDef(tool, currentStyle(tool)).name}: Anfang antippen (oder ziehen)`, p: q };
+    } else if (tool === 'abriss' && hoverEdge && state.edges.has(hoverEdge)) {
+      const e = state.edges.get(hoverEdge);
+      edgeMark(hoverEdge, '#e5484d', z, 5);
+      const E = edgeEnds(hoverEdge), m = toScreen((E.p[0] + E.q[0]) / 2, (E.p[1] + E.q[1]) / 2);
+      preview = { ok: true, text: `${ITEMS[e.b].name} entfernen: +${fmt(ITEMS[e.b].cost)}`, p: m };
+    } else if (tool === 'verschieben' && !moving) {
       const has = (hds && hds[hoverSlot]) || anchorAt(hx, hy);
       if (!(hds && hds[hoverSlot])) box = objBox(hx, hy);
       preview = { ok: !!has, text: has ? 'Aufnehmen' : 'Hier ist nichts' };
@@ -616,7 +634,7 @@ function render(now) {
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
     }
-    preview.p = outline(box[0], box[1], box[2], box[3], preview.ok);
+    if (!preview.p) preview.p = outline(box[0], box[1], box[2], box[3], preview.ok);   // Zaun & Co. haben ihren Punkt schon
     preview.box = box;
   }
   const ghostFront = preview && preview.ghost ? [preview.box[0] + preview.box[2] - 1, preview.box[1] + preview.box[3] - 1] : null;
@@ -640,6 +658,7 @@ function render(now) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
     const owned = ownedTile(x, y);
     FOG = !owned;
+    drawEdgesAt(x, y, z, now);                                  // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41)
     const k = x + ',' + y;
     // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
     const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
