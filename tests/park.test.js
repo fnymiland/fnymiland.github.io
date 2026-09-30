@@ -128,3 +128,14 @@ describe('Alte Parks', () => {
     expect(game("[...state.decos.values()].flat().filter(d => d && d.b === 'bank').length")).toBe(2);
   });
 });
+
+describe('Parkrasen im Wald', () => {
+  it('Wald und Obsthain werden Rasen, die Bäume bleiben als Parkbäume; Fels nicht', () => {
+    game("state.terra.set('10,10', 'forest'); state.terra.set('11,10', 'obst'); state.terra.set('12,10', 'rock')");
+    expect(build('parkrasen', 10, 10)).toBe(true);
+    expect(build('parkrasen', 11, 10)).toBe(true);
+    expect(game("terraLook(10, 10)")).toBe('park');
+    expect(game("state.decos.get('10,10').filter(d => d && d.b === 'baum').length")).toBeGreaterThan(0);
+    expect(game("placeError('parkrasen', 12, 10)")).toMatch(/Fels/);
+  });
+});

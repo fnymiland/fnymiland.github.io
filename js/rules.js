@@ -748,7 +748,7 @@ const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'o
 // Auf dem Parkrasen stehen nur Deko und Wege (sonst wäre es kein Park)
 const parkOk = b => b === 'weg' || (ITEMS[b] || {}).cat === 'deko' || !!(ITEMS[b] || {}).edge;   // Pinsel → Gelände
 function willClear(b, ter) {
-  if (!(ter in CLEAR_COST)) return false;
+  if (!(ter in CLEAR_COST) || b === 'parkrasen') return false;     // Parkrasen im Wald: die Bäume bleiben (als Parkbäume)
   const need = ITEMS[b].needs;
   return ter !== need && !(ter === 'rock' && (need === 'rock' || need === 'erz'));
 }
@@ -1355,7 +1355,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (b === 'parkrasen') {                             // unter Deko und Wege darf der Rasen, nur auf Wiese
       const t = state.tiles.get(COVER.get(k) || k);
       if (t && !parkOk(t.b)) return 'Hier steht ein Gebäude – auf den Parkrasen gehören nur Deko und Wege';
-      if (ter !== 'grass') return 'Parkrasen nur auf Wiese – erst roden bzw. sprengen';
+      if (!['grass', 'forest', 'obst'].includes(ter)) return 'Parkrasen nur auf Wiese oder im Wald – Fels erst sprengen';
     } else {
       if (COVER.has(k)) return 'Hier steht etwas';
       if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';

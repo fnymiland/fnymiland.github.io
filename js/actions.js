@@ -43,7 +43,15 @@ function build(b, x, y, quiet) {
   if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot') && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); waterChanged(); sfx('dig'); }
-  else if (TERRAFORM[b]) { state.terra.set(k, TERRAFORM[b]); sandCache.clear(); landCache.clear(); sfx('dig'); }
+  else if (TERRAFORM[b]) {
+    const ter = terrainAt(x, y);
+    state.terra.set(k, TERRAFORM[b]); sandCache.clear(); landCache.clear(); sfx('dig');
+    if (b === 'parkrasen' && (ter === 'forest' || ter === 'obst') && !decosAt(k)) {   // Wald im Park: die Bäume bleiben als Parkbäume
+      const ds = newSlots(), n = 1 + Math.floor(hash(x, y, 91) * 2);
+      for (const i of [0, 3, 1, 2].slice(0, n)) ds[i] = { b: 'baum', rot: 0 };
+      state.decos.set(k, ds);
+    }
+  }
   else if (b === 'schuett') {
     state.terra.set(k, 'grass'); sandCache.clear(); waterChanged(); sfx('dig');
     const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück
