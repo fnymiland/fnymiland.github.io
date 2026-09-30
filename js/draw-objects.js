@@ -890,8 +890,8 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
   for (const f of winFaces) for (const [a, b] of wins) windowOn(f[0], f[1], a, b, h * 0.35, h * 0.72, z);
 }
 // Kleine unregelmäßige Dekos werden bei ungerader Drehung gespiegelt; Gebäude drehen im Baukasten selbst
-const MIRROR = new Set(['bank']);
-const ROTATABLE = new Set([...MIRROR, 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
+const MIRROR = new Set();                 // (die Bank dreht sich seit Block 42 selbst in 4 Richtungen)
+const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
   'kaffeeplantage', 'teegarten', 'kakaoplantage', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
@@ -1100,12 +1100,15 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
-    case 'bank': {
+    case 'bank': {                           // Parkbank genau an der Feldkante ausgerichtet, Sitz schaut nach vorn (rot)
+      const K = kit(cx, cy, z, (t && t.rot) || 0);
       shadow(cx, cy, hw * 0.35, hh * 0.25);
-      g.fillStyle = C('#6b4f3a');
-      for (const dx of [-8, 8]) g.fillRect(cx + dx * z - 0.8 * z, cy - 4 * z + dx * 0.25 * z, 1.6 * z, 5 * z);
-      poly([[cx - 11 * z, cy - 5 * z], [cx + 7 * z, cy - 1 * z], [cx + 11 * z, cy - 3 * z], [cx - 7 * z, cy - 7 * z]], C('#c68b59'));
-      poly([[cx - 7 * z, cy - 7 * z], [cx + 11 * z, cy - 3 * z], [cx + 11 * z, cy - 9 * z], [cx - 7 * z, cy - 13 * z]], C('#b57b4a'));
+      K.scene([
+        [-0.1, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, -0.1, b, 11, '#6b4f3a', 1.4);
+          K.block({ a: -0.1, ha: 0.035, hb: 0.47, h: 5, lift: 6.5, wall: '#b57b4a', roof: '#c68b59', type: 'flat' }); }],
+        [0.08, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, 0.16, b, 5, '#6b4f3a', 1.4);
+          K.block({ a: 0.06, ha: 0.14, hb: 0.47, h: 1.4, lift: 4.6, wall: '#b57b4a', roof: '#c68b59', type: 'flat' }); }],
+      ]);
       break;
     }
     case 'laterne': {

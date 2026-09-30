@@ -69,7 +69,7 @@ describe('Kleinkram: 8 Plätze', () => {
     game("state.tiles.set('5,5', { b: 'weg', lvl: 1, style: 'sand' }); recalc()");
     expect(game("buildSmall('bank', 5, 5, 5)")).toBe(true);
     expect(game("buildSmall('bank', 5, 5, 4)")).toBe(true);
-    expect(game("[state.decos.get('5,5')[5].rot, state.decos.get('5,5')[4].rot]")).toEqual([0, 1]);
+    expect(game("[state.decos.get('5,5')[5].rot, state.decos.get('5,5')[4].rot]")).toEqual([3, 0]);
     for (const s of [0, 1, 2, 3, 6, 7]) expect(game(`buildSmall('blumentopf', 5, 5, ${s})`)).toBe(true);
     expect(game("smallError('blumentopf', 5, 5, 6)")).toBe('Alle Plätze sind belegt');
   });

@@ -696,8 +696,9 @@ function freeSlot(x, y, slot) {
   const i = (slot < 4 ? [slot, slot ^ 1, slot ^ 2, slot ^ 3] : [slot, 4 + ((slot - 2) & 3), 4 + ((slot - 3) & 3), 4 + ((slot - 1) & 3)]).find(n => !ds[n]);
   return i == null ? slot : i;
 }
-// Bank in einer Seitenmitte: längs zur Feldseite (also zum Weg hin), egal wie gerade gedreht wird
-const midRot = slot => slot === 4 || slot === 6 ? 1 : 0;
+// Bank in einer Seitenmitte: längs zur Feldseite, der Sitz schaut zur Feldmitte (zum Weg), egal wie gerade gedreht wird
+const MID_FACE = { 4: 0, 5: 3, 6: 2, 7: 1 }, MID_TURN = new Set(['bank']);
+const midRot = slot => MID_FACE[slot];
 function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
@@ -706,7 +707,7 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: slot >= 4 && MIRROR.has(b) ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0, born: performance.now() };
+  state.decos.get(k)[slot] = { b, rot: slot >= 4 && MID_TURN.has(b) ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0, born: performance.now() };
   sfx('deco');
   recalc(); checkStars(); save();
   return true;
