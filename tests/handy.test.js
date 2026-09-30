@@ -29,20 +29,20 @@ describe('Leiste auf dem Handy', () => {
     size(375, 812);
     game('buildToolbar()');
     expect(bar().contains('open')).toBe(false);
-    catBtn('wohnen').click();
+    catBtn('stadt').click();
     expect(bar().contains('open')).toBe(true);
-    catBtn('wohnen').click();
+    catBtn('stadt').click();
     expect(bar().contains('open')).toBe(false);
   });
 
   it('Werkzeug wählen oder auf die Karte tippen klappt ihn zu', () => {
     size(375, 812);
     game('buildToolbar()');
-    catBtn('wohnen').click();
+    catBtn('stadt').click();
     document.querySelector('#tools [data-tool="haus"]').click();
     expect(game('tool')).toBe('haus');
     expect(bar().contains('open')).toBe(false);
-    catBtn('wohnen').click();
+    catBtn('stadt').click();
     const e = new window.MouseEvent('pointerdown', { clientX: 100, clientY: 100, button: 2, buttons: 2, bubbles: true });
     Object.defineProperty(e, 'pointerId', { value: 5 }); Object.defineProperty(e, 'pointerType', { value: 'touch' });
     document.getElementById('world').dispatchEvent(e);
@@ -60,7 +60,7 @@ describe('Leiste auf dem Handy', () => {
   it('Desktop/iPad: Bereiche klappen nichts, der Hinweis ohne Beschreibung', () => {
     size(1024, 768);
     game('buildToolbar()');
-    catBtn('wohnen').click();
+    catBtn('stadt').click();
     expect(bar().contains('open')).toBe(false);
     game("setTool('haus')");
     expect(document.getElementById('hint').textContent).not.toContain(game('ITEMS.haus.desc'));   // Beschreibung steht im Infofenster

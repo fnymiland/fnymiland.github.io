@@ -3,7 +3,7 @@
 // Aktionen
 // ---------------------------------------------------------------------------
 let tool = 'look';
-let menuTop = 'wohnen', menuSub = 'alle';       // Baumenü: Bereich und Filter (nur bei Arbeit und Stadt, sonst 'alle')
+let menuTop = 'stadt', menuSub = 'wohnen';      // Baumenü: Bereich und Filter
 let hover = null;
 let hoverChunk = null;
 const floats = [];

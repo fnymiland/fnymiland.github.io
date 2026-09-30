@@ -13,7 +13,7 @@ const t = k => game(`state.tiles.get('${k}')`);
 describe('Menü', () => {
   it('„⚡ Strom“ ist ein Filter unter Herstellen – das Windrad steht nicht mehr bei „Verbinden“', () => {
     expect(game("MENU.find(m => m.id === 'herstellen').groups.find(g => g.id === 'strom').items")).toEqual(['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen']);
-    expect(game("MENU.find(m => m.id === 'wege').groups.flatMap(g => g.items)")).not.toContain('windrad');
+    expect(game("MENU.find(m => m.id === 'stadt').groups.find(g => g.id === 'verkehr').items")).not.toContain('windrad');
   });
 });
 

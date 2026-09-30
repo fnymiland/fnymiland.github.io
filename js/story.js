@@ -54,7 +54,7 @@ const stegs = () => [...state.tiles].filter(([, t]) => t.b === 'bootssteg').map(
 function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
   if (state.expedition) return 'Das Boot ist schon unterwegs';
-  if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🛤️ Wege & Land → ⛵ Schiff → Steg)';
+  if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr → Steg)';
   if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet?';
   const miss = isleNeeds(i).filter(c => !c.ok);
   return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
@@ -358,11 +358,11 @@ function openDiary(at) {
 // Einführung: die ersten Schritte, sanft geführt
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
-  { text: 'Bau dein erstes Haus.', hint: '🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
-  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Wege & Land → Weg (ziehen) – oder 🛤️ ganz links',
+  { text: 'Bau dein erstes Haus.', hint: '🏘️ Stadt → 🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
+  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ ganz links (oder 🌸 Gestalten → Wege & Gelände) – ziehen',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
   { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 📦 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
-  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Wege & Land → ⛵ Schiff), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
+  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
   { text: 'Bau ein Sägewerk.', hint: '🏭 Herstellen → 🔨 Veredeln → Sägewerk', done: () => hasBuilt('saege') },
@@ -450,7 +450,7 @@ const GUIDE = [
   { id: 'laterne', icon: '🏮', title: 'Laternen', when: () => lanternCount() >= 1,
     text: 'Jede Sehenswürdigkeit hat drei Laternen. Jede Laterne schaltet Neues frei und bringt eine Seite im Tagebuch 📖. Oben links steht immer, welche Laternen als Nächstes gehen.' },
   { id: 'insel', icon: '🏝️', title: 'Neue Inseln', when: () => { const i = nextIsle(); return !!i && isleNeeds(i).every(c => c.ok); },
-    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🛤️ Wege & Land → ⛵ Schiff → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
+    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🏘️ Stadt → 🚆 Verkehr → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
   { id: 'deko', icon: '🌸', title: 'Kleine Deko', when: () => T.pop >= 12,
     text: 'Kleine Deko – Baum, Busch, Bank, Blumentopf – passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
   { id: 'rathaus', icon: '🏛️', title: 'Das Rathaus', when: () => T.pop >= 20,

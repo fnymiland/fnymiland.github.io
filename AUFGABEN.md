@@ -429,3 +429,10 @@ und nachts leuchten. Entschieden: Platz selbst bauen + Marktviertel, Besucher, M
 - [x] **39d** Alte Märkte werden Kopfsteinplätze mit ihren Ständen; Wunsch „Marktplatz erreichbar“ nur mit echtem Platz.
 - [x] Zufallstest fand: Stand auf Weg mit kleinen Dekos, doppeltes Feld beim Speichern während des Tragens – behoben.
 
+## Block 40 – Fünf Bereiche nach Absicht (01.10.)
+
+Rückmeldung: Schule ist keine Freizeit; zu viele Oberkategorien, Wohnen allein zu klein, Wege sind auch Gestaltung.
+Gemeinsam besprochen: 🏘️ Stadt (Wohnen, Einrichtungen inkl. Post/Apotheke/Hotels, Verkehr) · 🏭 Herstellen · 🛍️ Einkaufen
+· 🎡 Freizeit (Kultur, Wunder) · 🌸 Gestalten (Grün, Platz, Besonderes, Wege & Gelände).
+- [x] Menü umgebaut, Handy zeigt den Namen des Bereichs wieder (passt mit 5 Bereichen in 375 px).
+

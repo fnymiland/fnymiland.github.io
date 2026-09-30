@@ -16,7 +16,7 @@ const open = (top, sub = 'alle') => game(`menuTop = '${top}'; menuSub = '${sub}'
 
 describe('Kacheln', () => {
   it('zeigen nur Bild und Preis; der Name steht im Tooltip und für Vorleser', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     const b = card('haus');
     expect(b.querySelector('canvas')).not.toBe(null);
     expect(b.querySelector('.cost').textContent).toBe('🪙 40');
@@ -43,7 +43,7 @@ describe('Kacheln', () => {
   });
 
   it('Freigeschaltetes zuerst, Gesperrtes mit Schloss dahinter – in Menü-Reihenfolge', () => {
-    open('verkaufen', 'laeden');
+    open('einkaufen', 'laeden');
     const shown = [...document.querySelectorAll('#tools .tool')];
     const locked = shown.map(b => b.classList.contains('locked'));
     expect(locked.indexOf(true)).toBeGreaterThan(-1);
@@ -56,7 +56,7 @@ describe('Kacheln', () => {
   });
 
   it('Zahlentasten wählen wie die Leiste sortiert ist', () => {
-    open('verkaufen', 'laeden');
+    open('einkaufen', 'laeden');
     const first = game('menuList()[0]');
     window.dispatchEvent(new window.KeyboardEvent('keydown', { key: '1' }));
     expect(game('tool')).toBe(first);
@@ -65,7 +65,7 @@ describe('Kacheln', () => {
 
 describe('Bau-Infofenster (iPad/Mac)', () => {
   it('Kachel anklicken wählt aus und zeigt rechts alles Wichtige', () => {
-    open('verkaufen', 'essen');
+    open('einkaufen', 'essen');
     game('state.lanterns = 99; state.money = 1e6; state.res.bretter = 100; updateHud()');
     card('cafe').click();
     expect(game('tool')).toBe('cafe');
@@ -80,7 +80,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
   });
 
   it('bleibt offen, wenn die Leiste sich neu aufbaut; schließt beim Weglegen und bei einem anderen Werkzeug', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     card('haus').click();
     game('buildToolbar()');
     expect(panel().hidden).toBe(false);
@@ -103,7 +103,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
   });
 
   it('zu wenig Geld: Preis rot, und der Preis wird live grün', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     game('state.money = 0; updateHud()');
     card('haus').click();
     expect(panel().querySelector('.stats span.bad')).not.toBe(null);
@@ -112,7 +112,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
   });
 
   it('der Hinweis zeigt nur, wie man baut – beim Weg gar keiner', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     card('haus').click();
     expect($('hint').textContent.startsWith('Haus · ')).toBe(true);
     expect($('hint').textContent).not.toContain(game('ITEMS.haus.desc'));
@@ -123,7 +123,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
   });
 
   it('ein Gebäude-Infofenster ersetzt das Bau-Infofenster sauber', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     card('haus').click();
     game("showPanel('<h3>Anderes</h3>')");
     expect(game('buildInfo')).toBe(null);
@@ -134,7 +134,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
 describe('Handy', () => {
   it('Kachel antippen öffnet kein Fenster; ⓘ im Hinweis öffnet es, Tippen auf die Karte schließt es', () => {
     size(375, 812);
-    open('wohnen');
+    open('stadt', 'wohnen');
     card('haus').click();
     expect(game('tool')).toBe('haus');
     expect(panel().hidden).toBe(true);
@@ -154,7 +154,7 @@ describe('Handy', () => {
 
 describe('Suche', () => {
   it('🔍 öffnet ein Suchfeld; „back“ findet die Bäckerei, egal in welchem Bereich', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     document.querySelector('#cats .find').click();
     const inp = document.getElementById('search-in');
     expect(inp).not.toBe(null);
@@ -169,7 +169,7 @@ describe('Suche', () => {
   });
 
   it('Auswahl aus der Suche wählt das Werkzeug; ein Bereich oder Escape beendet die Suche', () => {
-    open('wohnen');
+    open('stadt', 'wohnen');
     document.querySelector('#cats .find').click();
     const inp = document.getElementById('search-in');
     inp.value = 'haus'; inp.oninput();
@@ -179,9 +179,9 @@ describe('Suche', () => {
     expect(game('searchQ')).toBe(null);
     expect(document.getElementById('search-in')).toBe(null);
     document.querySelector('#cats .find').click();
-    document.querySelector('#cats [data-menu="deko"]').click();
+    document.querySelector('#cats [data-menu="gestalten"]').click();
     expect(game('searchQ')).toBe(null);
-    expect(game('menuTop')).toBe('deko');
+    expect(game('menuTop')).toBe('gestalten');
   });
 
   it('keine Erklär-Zeile neben den Filtern', () => {

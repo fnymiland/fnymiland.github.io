@@ -16,50 +16,47 @@ describe('Baumenü', () => {
     expect(placed.every(id => ids.includes(id))).toBe(true);
   });
 
-  it('oben sieben Bereiche nach einer Regel; Wohnen ohne Filter und von Anfang an offen', () => {
+  it('oben fünf Bereiche nach dem, was man tun will; Stadt → Wohnen ist von Anfang an offen', () => {
     game('buildToolbar()');
-    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['wohnen', 'herstellen', 'verkaufen', 'bildung', 'freizeit', 'deko', 'wege']);
-    expect(game('menuTop')).toBe('wohnen');
-    expect(q('#subcats .sub').length).toBe(0);
+    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['stadt', 'herstellen', 'einkaufen', 'freizeit', 'gestalten']);
+    expect([game('menuTop'), game('menuSub')]).toEqual(['stadt', 'wohnen']);
     expect(tools()).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
   });
 
   it('Filter ohne „Alle“, der erste ist gewählt', () => {
     game('buildToolbar()');
+    const subs = () => q('#subcats .sub').map(b => b.dataset.sub);
+    expect(subs()).toEqual(['wohnen', 'einrichtungen', 'verkehr']);
     area('herstellen').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['taler', 'rohstoffe', 'veredeln', 'strom']);
-    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].filter(id => game(`available('${id}')`))
-      .concat(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].filter(id => !game(`available('${id}')`))));
-    area('verkaufen').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'markt', 'gross']);
+    expect(subs()).toEqual(['taler', 'rohstoffe', 'veredeln', 'strom']);
+    expect(tools().sort()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].sort());
+    area('einkaufen').onclick();
+    expect(subs()).toEqual(['laeden', 'essen', 'markt', 'gross']);
     area('freizeit').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['kultur', 'wunder']);
-    area('wege').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bahn', 'schiff', 'land']);
+    expect(subs()).toEqual(['kultur', 'wunder']);
+    area('gestalten').onclick();
+    expect(subs()).toEqual(['gruen', 'platz', 'besonderes', 'land']);
   });
 
-  it('die Regel: Herstellen ohne Kundschaft, Verkaufen nur mit (alle Läden), Freizeit Bildung/Kultur/Wunder', () => {
-    const items = top => game(`MENU.find(m => m.id === '${top}').groups.flatMap(g => g.items)`);
-    expect(items('herstellen').some(id => game(`!!ITEMS.${id}.shop`))).toBe(false);
-    const shops = game("Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'laden')");
-    expect(shops.every(id => items('verkaufen').includes(id) || game(`!!SHOPS.${id}.hotel`))).toBe(true);   // Hotels: zieht an → Freizeit
-    expect(items('herstellen')).toContain('baecker');
-    expect(game("menuPlaceOf('baecker')")).toEqual({ top: 'herstellen', sub: 'taler' });
-    expect(game("menuPlaceOf('stand_obst')")).toEqual({ top: 'verkaufen', sub: 'markt' });
-    expect(game("menuPlaceOf('hotel')")).toEqual({ top: 'freizeit', sub: 'kultur' });
-    expect(game("menuPlaceOf('leuchtturm')")).toEqual({ top: 'freizeit', sub: 'wunder' });
-    expect(game("menuPlaceOf('obst')")).toEqual({ top: 'herstellen', sub: 'rohstoffe' });
-    expect(game("menuPlaceOf('hafen')")).toEqual({ top: 'wege', sub: 'schiff' });
-    expect(game("menuPlaceOf('blumen')")).toEqual({ top: 'deko', sub: 'alle' });
+  it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Park, Leuchtturm', () => {
+    const at = id => game(`menuPlaceOf('${id}')`);
+    for (const id of ['schule', 'post', 'apotheke', 'hotel', 'grandhotel']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'einrichtungen' });
+    for (const id of ['schiene', 'station', 'hafen', 'bootssteg']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'verkehr' });
+    expect(at('baecker')).toEqual({ top: 'herstellen', sub: 'taler' });
+    expect(at('stand_obst')).toEqual({ top: 'einkaufen', sub: 'markt' });
+    expect(at('weg')).toEqual({ top: 'gestalten', sub: 'land' });
+    expect(at('park')).toEqual({ top: 'gestalten', sub: 'gruen' });
+    expect(at('leuchtturm')).toEqual({ top: 'freizeit', sub: 'wunder' });
+    expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });
 
   it('jeder Bereich merkt sich seinen Filter', () => {
     game('buildToolbar()');
     area('freizeit').onclick();
-    sub('kultur').onclick();
-    area('wohnen').onclick();
+    sub('wunder').onclick();
+    area('stadt').onclick();
     area('freizeit').onclick();
-    expect(game('menuSub')).toBe('kultur');
+    expect(game('menuSub')).toBe('wunder');
   });
 
   it('kein Filter hat mehr als 10 Dinge', () => {
@@ -67,16 +64,15 @@ describe('Baumenü', () => {
     expect(Math.max(...all)).toBeLessThanOrEqual(10);
   });
 
-  it('„Deko“ hat keine Filter; Wechsel legt ein fremdes Werkzeug weg', () => {
+  it('Wechsel des Bereichs legt ein fremdes Werkzeug weg', () => {
     game("buildToolbar(); setTool('haus')");
-    area('deko').onclick();
-    expect(q('#subcats .sub').length).toBe(0);
+    area('gestalten').onclick();
     expect(game('tool')).toBe('look');
     expect(tools()).toContain('baum');
   });
 
   it('das Blumenbeet steht bei Deko und zählt im Spiel als Deko', () => {
-    expect(game("MENU.find(m => m.id === 'deko').items")).toContain('blumen');
+    expect(game("menuPlaceOf('blumen')")).toEqual({ top: 'gestalten', sub: 'gruen' });
     expect(game("ITEMS.blumen.cat")).toBe('deko');
   });
 });

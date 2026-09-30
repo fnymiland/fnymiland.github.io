@@ -391,39 +391,42 @@ const ANIMALS = [
   { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
 ];
 
-// Baumenü (Block 38, gemeinsam entschieden): eingeteilt nach einer festen Regel – was braucht ein Ding, um zu wirken?
-// Herstellen = arbeitet ohne Kundschaft (sortiert nach dem, was herauskommt) · Verkaufen = braucht Kundschaft · Freizeit =
-// zieht Besucher an (Vorrang vor Kundschaft: Kino, Hotels) · Bildung = bringt Ideen · Deko = Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
+// Baumenü (Block 40, gemeinsam entschieden): fünf Bereiche nach dem, was man gerade tun will –
+// 🏘️ Stadt (was eine Stadt zwingend braucht: Wohnen, Einrichtungen, Verkehr) · 🏭 Herstellen (produziert) · 🛍️ Einkaufen
+// (verdient an Kundschaft) · 🎡 Freizeit (Kultur, Wunder) · 🌸 Gestalten (Deko, Wege, Gelände – formt die Welt).
+// Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
 const SHOP_GROUPS = {
-  laeden: ['kiosk', 'blumenladen', 'friseur', 'post', 'apotheke', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
+  laeden: ['kiosk', 'blumenladen', 'friseur', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
   essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
   gross: ['markthalle', 'moebelhaus', 'kaufhaus', 'passage'],
 };
 const MENU = [
-  { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+  { id: 'stadt', label: '🏘️ Stadt', groups: [
+    { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+    { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
+    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'station', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+  ] },
   { id: 'herstellen', label: '🏭 Herstellen', groups: [
     { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
   ] },
-  { id: 'verkaufen', label: '🛍️ Verkaufen', groups: [
+  { id: 'einkaufen', label: '🛍️ Einkaufen', groups: [
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
-    { id: 'gross', label: '🏬 Große Häuser', items: SHOP_GROUPS.gross },
+    { id: 'gross', label: '🏬 Kaufhäuser', items: SHOP_GROUPS.gross },
   ] },
-  { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
-    { id: 'kultur', label: '🎭 Kultur', items: [...Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur'), 'hotel', 'grandhotel'] },
+    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
-  { id: 'deko', label: '🌸 Deko', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'blumen', 'bank', 'laterne', 'kristall', 'kristallaterne',
-    'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell'] },
-  { id: 'wege', label: '🛤️ Wege & Land', groups: [
-    { id: 'bahn', label: '🛤️ Wege & Bahn', items: ['weg', 'schiene', 'station', 'hbf', 'seilbahn'] },
-    { id: 'schiff', label: '⛵ Schiff', items: ['bootssteg', 'hafen'] },
-    { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
+  { id: 'gestalten', label: '🌸 Gestalten', groups: [
+    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'hecke', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'park', 'glashaus'] },
+    { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
+    { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
+    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
   ] },
 ];
 // Suche (Block 38): Name ohne Groß/Klein und Umlaute („back“ findet die Bäckerei)
@@ -443,8 +446,8 @@ const menuItemsOf = (top, sub) => {
   const m = MENU.find(e => e.id === top) || MENU[0];
   return m.groups ? (m.groups.find(g => g.id === sub) || m.groups[0]).items : m.items;
 };
-// Gruppen mit Gebäuden (Wohnen, Herstellen, Verkaufen, Freizeit) – fürs Rathaus („Bereit“)
-const buildGroups = () => MENU.filter(m => ['wohnen', 'herstellen', 'verkaufen', 'bildung', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
+// Gruppen mit Gebäuden (Stadt, Herstellen, Einkaufen, Freizeit) – fürs Rathaus („Bereit“)
+const buildGroups = () => MENU.filter(m => ['stadt', 'herstellen', 'einkaufen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',

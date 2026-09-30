@@ -442,8 +442,6 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
   font-size: 14px; color: var(--brown); background: var(--cream); box-shadow: inset 0 0 0 2px #e0c060; }
 .search-in:focus { outline: none; box-shadow: inset 0 0 0 2px var(--brown); }
 .search-none { margin: 14px 8px; font-weight: 800; color: var(--brown2); }
-/* Handy: auch der gewählte Bereich nur als Symbol (sonst passt die Zeile mit 🔍 nicht in 375 px) */
-body.phone .cat.active .tx { display: none; }
 @media (max-width: 600px) {
   .cat:not(.active) .tx, .sub:not(.active) .tx { display: none; }
   .cats { gap: 2px; }                  /* sechs Bereiche + vier Schnellknöpfe passen in 375 px (auch mit „Verbinden“) */

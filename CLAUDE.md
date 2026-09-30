@@ -108,11 +108,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     +8 Pendler je Bahnhof, +10 % (`s.rail`) für alle Gebäude der Inseln. Schienen verbinden keine Viertel. Züge in
     movers.js (`syncTrains`/`stepTrains`/`trainCars`), Wagen als gedrehte Quader (`drawTrainCar`). Alles, was an einem
     Feld hängt und gespeichert werden muss (`bridge`, `train`), gehört auch in `tileOut` – der Zufallstest findet es sonst.
-25. **Baumenü** = `MENU` (data.js, Block 38) nach **einer Regel** – was braucht ein Ding, um zu wirken?
-    🏠 Wohnen · 🏭 Herstellen (ohne Kundschaft, nach dem, was herauskommt: 🪙 Taler inkl. Markt und Werkstatt / 📦 Rohstoffe
-    fürs Lager / 🔨 Veredeln / ⚡ Strom) · 🛍️ Verkaufen (braucht Kundschaft: Läden/Essen & Trinken/Große Häuser) · 🎓 Bildung (bringt Ideen) · 🎡 Freizeit
-    (zieht Besucher an: Kultur inkl. Hotels/Wunder inkl. Leuchtturm; **Vorrang: „zieht an“ schlägt
-    „braucht Kundschaft“**) · 🌸 Deko (Schönheit, auch Blumenbeet) · 🛤️ Wege & Land (Wege & Bahn/Schiff inkl. Hafen/Gelände). Keine Erklär-
+25. **Baumenü** = `MENU` (data.js, Block 40) – fünf Bereiche nach dem, **was man gerade tun will**: 🏘️ Stadt (was eine
+    Stadt zwingend braucht: Wohnen / Einrichtungen inkl. Schule, Post, Apotheke, Hotels / Verkehr inkl. Schiene, Bahnhöfe,
+    Hafen, Steg) · 🏭 Herstellen (produziert: Taler / Rohstoffe / Veredeln / Strom) · 🛍️ Einkaufen (verdient an Kundschaft:
+    Läden / Essen & Trinken / Markt / Kaufhäuser) · 🎡 Freizeit (Kultur, Wunder inkl. Leuchtturm) · 🌸 Gestalten (formt die
+    Welt: Grün inkl. Park / Platz / Besonderes / Wege & Gelände). Nach dem echten Ort einsortieren, nicht nach der
+    Spielwirkung (die steht im Infofenster). Keine Erklär-
     Zeilen in der Leiste (Nutzer: selbsterklärend, stört). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
     Kein „Alle“; Bereiche ohne Filter haben `menuSub` 'alle', sonst gilt der erste (`firstSub`), jeder merkt sich seinen
     (`subOf`). Jedes Ding in **genau einer** Gruppe (Test), höchstens 10 je Filter; Wirkung in `FX`, Läden in `SHOP_GROUPS`.

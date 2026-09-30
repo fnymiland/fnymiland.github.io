@@ -116,7 +116,7 @@ function buildToolbar() {
   find.textContent = '🔍'; find.title = 'Suchen'; find.setAttribute('aria-label', 'Suchen');
   find.onclick = () => { audio(); searchQ = searchQ == null ? '' : null; if (PHONE) setSheet(searchQ != null); buildToolbar(); };
   cats.append(find);
-  // Bereiche (Wohnen · Herstellen · Verkaufen · Freizeit · Deko · Wege & Land); ein Werkzeug aus einem anderen Bereich
+  // Bereiche (Stadt · Herstellen · Einkaufen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
@@ -1223,7 +1223,7 @@ function expeditionHtml(atIsle) {
   const need = isleNeeds(i), ok = need.every(c => c.ok), steg = stegs().length > 0;
   return `<div class="label">⛵ Nächste Insel entdecken: ${i.icon} ${i.name}</div>
     <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}
-      ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🛤️ Wege & Land → ⛵ Schiff → Steg)</div>'}</div>
+      ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🏘️ Stadt → 🚆 Verkehr → Steg)</div>'}</div>
     <p class="muted">Das Boot ist etwa ${expMinutes(i)} Min. unterwegs.${i.need.money || i.need.science ? ' Taler und Ideen werden beim Ablegen ausgegeben.' : ''}</p>
     <div class="row">${steg ? `<button class="btn" id="p-expo" ${ok ? '' : 'disabled'}>⛵ Boot losschicken</button>`
       : atIsle ? '<button class="btn" id="p-steg">🪵 Steg bauen</button>' : ''}</div>`;
@@ -1589,10 +1589,9 @@ function showIntro(first) {
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-10-01-ordnung', items: [
-  '🧭 <b>Leiste neu sortiert – nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft (Feld, Bäckerei, Holzfäller, Sägewerk, Strom …), 🛍️ Verkaufen braucht Kundschaft (Läden, Cafés, Markt, Kaufhaus …), 🎓 Bildung bringt Ideen (Schule, Uni …), 🎡 Freizeit zieht Besucher an (Kultur, Wunder). Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
+  '🧭 <b>Leiste neu sortiert – fünf Bereiche nach dem, was du tun willst:</b> 🏘️ Stadt (Wohnen, Einrichtungen wie Schule, Post, Hotel, Verkehr), 🏭 Herstellen, 🛍️ Einkaufen, 🎡 Freizeit (Kultur, Wunder) und 🌸 Gestalten (Deko, Wege, Gelände).',
   '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
-  '🌸 „Schön“ heißt jetzt <b>Deko</b> (mit Blumenbeet), der Hafen steht bei ⛵ Schiff.',
-  '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Verkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
+  '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Einkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
