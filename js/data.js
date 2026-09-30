@@ -393,7 +393,7 @@ const ANIMALS = [
 
 // Baumenü (Block 38, gemeinsam entschieden): eingeteilt nach einer festen Regel – was braucht ein Ding, um zu wirken?
 // Herstellen = arbeitet ohne Kundschaft (sortiert nach dem, was herauskommt) · Verkaufen = braucht Kundschaft · Freizeit =
-// zieht Besucher an oder bringt Ideen (Vorrang vor Kundschaft: Kino, Hotels) · Deko = Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
+// zieht Besucher an (Vorrang vor Kundschaft: Kino, Hotels) · Bildung = bringt Ideen · Deko = Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
 const SHOP_GROUPS = {
   laeden: ['kiosk', 'blumenladen', 'friseur', 'post', 'apotheke', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
   essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
@@ -413,8 +413,8 @@ const MENU = [
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
     { id: 'gross', label: '🏬 Große Häuser', items: SHOP_GROUPS.gross },
   ] },
+  { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
-    { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
     { id: 'kultur', label: '🎭 Kultur', items: [...Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur'), 'hotel', 'grandhotel'] },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
@@ -444,7 +444,7 @@ const menuItemsOf = (top, sub) => {
   return m.groups ? (m.groups.find(g => g.id === sub) || m.groups[0]).items : m.items;
 };
 // Gruppen mit Gebäuden (Wohnen, Herstellen, Verkaufen, Freizeit) – fürs Rathaus („Bereit“)
-const buildGroups = () => MENU.filter(m => ['wohnen', 'herstellen', 'verkaufen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
+const buildGroups = () => MENU.filter(m => ['wohnen', 'herstellen', 'verkaufen', 'bildung', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',

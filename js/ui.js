@@ -1589,7 +1589,7 @@ function showIntro(first) {
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-10-01-ordnung', items: [
-  '🧭 <b>Leiste neu sortiert – nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft (Feld, Bäckerei, Holzfäller, Sägewerk, Strom …), 🛍️ Verkaufen braucht Kundschaft (Läden, Cafés, Markt, Kaufhaus …), 🎡 Freizeit zieht Besucher an oder bringt Ideen (Schule, Kultur, Wunder). Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
+  '🧭 <b>Leiste neu sortiert – nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft (Feld, Bäckerei, Holzfäller, Sägewerk, Strom …), 🛍️ Verkaufen braucht Kundschaft (Läden, Cafés, Markt, Kaufhaus …), 🎓 Bildung bringt Ideen (Schule, Uni …), 🎡 Freizeit zieht Besucher an (Kultur, Wunder). Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
   '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
   '🌸 „Schön“ heißt jetzt <b>Deko</b> (mit Blumenbeet), der Hafen steht bei ⛵ Schiff.',
   '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Verkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',

@@ -16,9 +16,9 @@ describe('Baumenü', () => {
     expect(placed.every(id => ids.includes(id))).toBe(true);
   });
 
-  it('oben sechs Bereiche nach einer Regel; Wohnen ohne Filter und von Anfang an offen', () => {
+  it('oben sieben Bereiche nach einer Regel; Wohnen ohne Filter und von Anfang an offen', () => {
     game('buildToolbar()');
-    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['wohnen', 'herstellen', 'verkaufen', 'freizeit', 'deko', 'wege']);
+    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['wohnen', 'herstellen', 'verkaufen', 'bildung', 'freizeit', 'deko', 'wege']);
     expect(game('menuTop')).toBe('wohnen');
     expect(q('#subcats .sub').length).toBe(0);
     expect(tools()).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
@@ -33,7 +33,7 @@ describe('Baumenü', () => {
     area('verkaufen').onclick();
     expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'markt', 'gross']);
     area('freizeit').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bildung', 'kultur', 'wunder']);
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['kultur', 'wunder']);
     area('wege').onclick();
     expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bahn', 'schiff', 'land']);
   });

@@ -110,8 +110,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Feld hängt und gespeichert werden muss (`bridge`, `train`), gehört auch in `tileOut` – der Zufallstest findet es sonst.
 25. **Baumenü** = `MENU` (data.js, Block 38) nach **einer Regel** – was braucht ein Ding, um zu wirken?
     🏠 Wohnen · 🏭 Herstellen (ohne Kundschaft, nach dem, was herauskommt: 🪙 Taler inkl. Markt und Werkstatt / 📦 Rohstoffe
-    fürs Lager / 🔨 Veredeln / ⚡ Strom) · 🛍️ Verkaufen (braucht Kundschaft: Läden/Essen & Trinken/Große Häuser) · 🎡 Freizeit
-    (zieht Besucher an/bringt Ideen: Bildung/Kultur inkl. Hotels/Wunder inkl. Leuchtturm; **Vorrang: „zieht an“ schlägt
+    fürs Lager / 🔨 Veredeln / ⚡ Strom) · 🛍️ Verkaufen (braucht Kundschaft: Läden/Essen & Trinken/Große Häuser) · 🎓 Bildung (bringt Ideen) · 🎡 Freizeit
+    (zieht Besucher an: Kultur inkl. Hotels/Wunder inkl. Leuchtturm; **Vorrang: „zieht an“ schlägt
     „braucht Kundschaft“**) · 🌸 Deko (Schönheit, auch Blumenbeet) · 🛤️ Wege & Land (Wege & Bahn/Schiff inkl. Hafen/Gelände). Keine Erklär-
     Zeilen in der Leiste (Nutzer: selbsterklärend, stört). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
     Kein „Alle“; Bereiche ohne Filter haben `menuSub` 'alle', sonst gilt der erste (`firstSub`), jeder merkt sich seinen
