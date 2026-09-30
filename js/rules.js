@@ -708,7 +708,9 @@ function nearMarket(x, y, w = 1, h = 1) {
 // (Holzfäller im Wald, Kristallmine auf Kristallfels; Steinbruch und Bergwerk graben im Fels).
 // Selbst Gebautes wird nie weggeräumt (das prüft COVER vorher), Wasser auch nicht (dafür gibt es Aufschütten).
 const CLEAR_COST = { forest: 10, obst: 10, rock: 50, erz: 50, kristall: 50 };
-const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'obst', fels: 'rock' };   // Pinsel → Gelände
+const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'obst', fels: 'rock', parkrasen: 'park' };
+// Auf dem Parkrasen stehen nur Deko und Wege (sonst wäre es kein Park)
+const parkOk = b => b === 'weg' || (ITEMS[b] || {}).cat === 'deko' || !!(ITEMS[b] || {}).edge;   // Pinsel → Gelände
 function willClear(b, ter) {
   if (!(ter in CLEAR_COST)) return false;
   const need = ITEMS[b].needs;
@@ -1309,10 +1311,16 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (!ownedTile(x, y)) return notMine(x, y);
     const k = x + ',' + y, ter = terrainAt(x, y), look = terraLook(x, y);
     if (ter === 'water') return 'Nicht auf dem Wasser – erst aufschütten';
-    if (COVER.has(k)) return 'Hier steht etwas';
-    if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
+    if (b === 'parkrasen') {                             // unter Deko und Wege darf der Rasen, nur auf Wiese
+      const t = state.tiles.get(COVER.get(k) || k);
+      if (t && !parkOk(t.b)) return 'Hier steht ein Gebäude – auf den Parkrasen gehören nur Deko und Wege';
+      if (ter !== 'grass') return 'Parkrasen nur auf Wiese – erst roden bzw. sprengen';
+    } else {
+      if (COVER.has(k)) return 'Hier steht etwas';
+      if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
+    }
     const want = TERRAFORM[b], now = look || (ter === 'grass' && isBeach(x, y) ? 'sand' : ter);
-    if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels' }[want]}`;
+    if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels', park: 'Parkrasen' }[want]}`;
   } else if (b === 'graben' || b === 'schuett') {
     if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : isSea(x, y) ? 'Hier ist schon Wasser' : 'Das ist nicht dein Grundstück';
     const ter = terrainAt(x, y);
@@ -1346,6 +1354,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         if (d.needs === 'boot' && ter !== 'water') return 'Aufs Wasser, direkt ans Ufer';
         continue;
       }
+      if (terraLook(fx, fy) === 'park' && !parkOk(b)) return 'Auf den Parkrasen gehören nur Deko und Wege';
       if (tiles.length === 1 && plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
       if (d.needs === 'platz') return 'Marktstände gehören auf einen Weg oder Platz';
       if (COVER.has(k)) {

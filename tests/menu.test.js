@@ -10,7 +10,7 @@ const tools = () => q('#tools .tool').map(b => b.dataset.tool);
 
 describe('Baumenü', () => {
   it('jedes Ding steht in genau einer Gruppe', () => {
-    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf)");   // Größen stehen nicht einzeln im Menü
+    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old)");   // Größen stehen nicht einzeln im Menü
     const placed = game('MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items)');
     for (const id of ids) expect(placed.filter(p => p === id).length, id).toBe(1);
     expect(placed.every(id => ids.includes(id))).toBe(true);
@@ -38,14 +38,14 @@ describe('Baumenü', () => {
     expect(subs()).toEqual(['gruen', 'linien', 'platz', 'besonderes', 'land']);
   });
 
-  it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Park, Leuchtturm', () => {
+  it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Parkrasen, Leuchtturm', () => {
     const at = id => game(`menuPlaceOf('${id}')`);
     for (const id of ['schule', 'post', 'apotheke', 'hotel', 'grandhotel']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'einrichtungen' });
     for (const id of ['schiene', 'station', 'hafen', 'bootssteg']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'verkehr' });
     expect(at('baecker')).toEqual({ top: 'herstellen', sub: 'taler' });
     expect(at('stand_obst')).toEqual({ top: 'einkaufen', sub: 'markt' });
     expect(at('weg')).toEqual({ top: 'gestalten', sub: 'land' });
-    expect(at('park')).toEqual({ top: 'gestalten', sub: 'gruen' });
+    expect(at('parkrasen')).toEqual({ top: 'gestalten', sub: 'gruen' });
     expect(at('leuchtturm')).toEqual({ top: 'freizeit', sub: 'wunder' });
     expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });

@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'schiene']);
-const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels']);
+const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'parkrasen', 'strand', 'wald', 'obstwald', 'fels']);
 const dragKind = t => t === 'schiene' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge

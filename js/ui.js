@@ -62,7 +62,7 @@ function thumbRaw(type, lvl = 1, tile = null) {
     block(0.6, '#96d56f');
   } else if (TERRAFORM[type]) {                           // Terraforming: ein Feld im neuen Gelände
     const tf = TERRAFORM[type];
-    block(1, tf === 'sand' ? '#f1dfae' : tf === 'forest' ? '#7fc460' : tf === 'obst' ? '#86c35b' : tf === 'rock' ? '#aabb94' : '#96d56f');
+    block(1, tf === 'park' ? '#7fcc5e' : tf === 'sand' ? '#f1dfae' : tf === 'forest' ? '#7fc460' : tf === 'obst' ? '#86c35b' : tf === 'rock' ? '#aabb94' : '#96d56f');
     if (tf === 'forest' || tf === 'obst') { tree(cx - 9, cy + 2, z * 0.8, 0.3, tf === 'obst' ? '#ff6b5e' : null); tree(cx + 8, cy + 4, z * 0.9, 0.7, tf === 'obst' ? '#ffb13b' : null); }
     else if (tf === 'rock') drawRocks(cx, cy, z * 0.9, 5003, 5007, false);
     else if (tf === 'wiese') for (let i = 0; i < 6; i++) circle(cx - 14 + i * 6, cy + (i % 2 ? 3 : -2), 2.4, FLOWER_COLS[i % FLOWER_COLS.length]);

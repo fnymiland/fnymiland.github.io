@@ -96,7 +96,8 @@ const ITEMS = {
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
-  park:    { cat: 'deko', name: 'Park', lm: 'baum:2', size: [3, 3], cost: 300, needs: 'grass', beauty: 30, mat: { bretter: 2 },
+  // alt (vor Block 44): nicht mehr im Menü, wird beim Laden zu Parkrasen mit Deko
+  park:    { cat: 'deko', old: true, name: 'Park', lm: 'baum:2', size: [3, 3], cost: 300, needs: 'grass', beauty: 30, mat: { bretter: 2 },
              desc: 'Eine grüne Oase mit Teich, Bäumen und Bänken. Belegt 3×3 Felder.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:1', cost: 20, mat: { kristall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
   kristallaterne: { cat: 'deko', name: 'Kristall-Laterne', lm: 'kristall:2', cost: 60, mat: { kristall: 1, metall: 1 }, beauty: 6, small: true,
@@ -149,6 +150,8 @@ const ITEMS = {
   schuett: { cat: 'land', name: 'Aufschütten', cost: 60, paint: true, desc: 'Macht aus Wasser neues Land – auch im Meer direkt neben deinem Land.' },
   // Terraforming (Forschung): Gelände selbst gestalten – alles, was natürlich vorkommt (außer Erz und Kristall)
   wiese:   { cat: 'land', name: 'Wiese', tech: 'terraform', cost: 10, paint: true, desc: 'Macht Wald, Fels oder Strand wieder zu grüner Wiese – auch direkt am Wasser.' },
+  // Park zum Selberbauen (Block 44): gepflegter Rasen – zählt als Wiese, darauf nur Deko und Wege; zusammen mit Deko wird er ein Park
+  parkrasen: { cat: 'deko', name: 'Parkrasen', lm: 'baum:2', cost: 8, paint: true, desc: 'Gepflegter Rasen für einen Park: aufziehen, dann Bäume, Beete, Bänke und Brunnen daraufstellen.' },
   strand:  { cat: 'land', name: 'Strand', tech: 'terraform', cost: 15, paint: true, desc: 'Heller Sand – am Wasser oder wo du willst. Bauen kann man darauf trotzdem.' },
   wald:    { cat: 'land', name: 'Wald pflanzen', tech: 'terraform', cost: 20, paint: true, desc: 'Pflanzt Wald – Gelände für Holzfäller.' },
   obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen.' },
@@ -465,7 +468,7 @@ const MENU = [
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'park', 'glashaus'] },
+    { id: 'gruen', label: '🌳 Grün', items: ['parkrasen', 'baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
@@ -501,7 +504,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -576,6 +579,7 @@ const ITEM_TIPS = {
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Aufziehen = Fläche.',
   seilbahn: 'Stell zwei Stationen auf, bis zu 20 Felder auseinander – gern über Wasser oder quer übers Dorf. Das Seil spannt sich von selbst.',
   wiese: 'Terraforming: Zieh über Wald, Felsen oder Strand – alles wird grüne Wiese.',
+  parkrasen: 'Zieh eine Fläche auf und stell Deko darauf – ab 4 Feldern mit 3 Deko wird daraus eine Grünanlage, später Park und Stadtpark.',
   strand: 'Terraforming: Sandstrand, wo du willst. Häuser und Wege gehen darauf wie auf Wiese.',
   wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',

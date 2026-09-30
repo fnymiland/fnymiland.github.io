@@ -65,8 +65,8 @@ function baseTerrain(x, y) {
   terrainCache.set(k, t);
   return t;
 }
-// Terraforming: 'sand' (Strand) und 'wiese' (Wiese, die nie Strand wird) sehen anders aus, zählen aber als Wiese
-function terrainAt(x, y) { const v = state.terra.get(x + ',' + y); return v ? (v === 'sand' || v === 'wiese' ? 'grass' : v) : baseTerrain(x, y); }
+// Terraforming: 'sand' (Strand), 'wiese' (Wiese, die nie Strand wird) und 'park' (Parkrasen) sehen anders aus, zählen aber als Wiese
+function terrainAt(x, y) { const v = state.terra.get(x + ',' + y); return v ? (v === 'sand' || v === 'wiese' || v === 'park' ? 'grass' : v) : baseTerrain(x, y); }
 const terraLook = (x, y) => state.terra.get(x + ',' + y);
 function isBeach(x, y) {
   const k = x + ',' + y;

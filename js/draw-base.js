@@ -100,11 +100,12 @@ function drawGround(x, y, p, z, now, noWaves) {
     if (!noWaves && hasWave(x, y)) drawWave(x, y, p, z, now);
     return;
   }
-  const look = terraLook(x, y), beach = look === 'sand' || (ter === 'grass' && look !== 'wiese' && isBeach(x, y));
+  const look = terraLook(x, y), park = look === 'park', beach = look === 'sand' || (ter === 'grass' && look !== 'wiese' && !park && isBeach(x, y));
   poly([[p.x - hw, p.y], [p.x, p.y + hh], [p.x, p.y + hh + d], [p.x - hw, p.y + d]], C(beach ? '#e6cf97' : '#caa26c'));
   poly([[p.x, p.y + hh], [p.x + hw, p.y], [p.x + hw, p.y + d], [p.x, p.y + hh + d]], C(beach ? '#d4ba7f' : '#b0895a'));
   const alt = (x + y) & 1;
-  const top = beach ? (alt ? '#f6e6b8' : '#f1dfae')
+  const top = park ? ((x & 1) ? '#86d466' : '#6cbc4f')             // Parkrasen: gemähte Streifen
+            : beach ? (alt ? '#f6e6b8' : '#f1dfae')
             : ter === 'grass' ? (alt ? '#96d56f' : '#8dcd67')
             : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')
             : ter === 'obst' ? (alt ? '#8fcb62' : '#86c35b')
@@ -112,7 +113,17 @@ function drawGround(x, y, p, z, now, noWaves) {
             : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
             : (alt ? '#b3c29c' : '#aabb94');
   diamond(p.x, p.y, hw, hh, C(top));
-  if (ter === 'grass' && !beach && !COVER.has(x + ',' + y) && hash(x, y, 5) < 0.08) {
+  if (park) {                                                     // Rand der Parkfläche: feine dunklere Kante nach innen versetzt
+    const T = [p.x, p.y - hh], R = [p.x + hw, p.y], B = [p.x, p.y + hh], L = [p.x - hw, p.y], k = 0.12;
+    g.strokeStyle = C('#4f9a3c'); g.lineWidth = 1.1 * z; g.lineCap = 'butt'; g.beginPath();
+    for (const [dx, dy, a, b] of [[1, 0, R, B], [-1, 0, T, L], [0, 1, B, L], [0, -1, T, R]]) {
+      if (terraLook(x + dx, y + dy) === 'park') continue;
+      const ox = (p.x - (a[0] + b[0]) / 2) * k, oy = (p.y - (a[1] + b[1]) / 2) * k;   // parallel nach innen: gerade Ränder bleiben gerade
+      g.moveTo(a[0] + ox, a[1] + oy); g.lineTo(b[0] + ox, b[1] + oy);
+    }
+    g.stroke();
+  }
+  if (ter === 'grass' && !beach && !park && !COVER.has(x + ',' + y) && hash(x, y, 5) < 0.08) {
     for (let i = 0; i < 3; i++) {
       const u = (hash(x, y, 20 + i) - 0.5) * 0.7, v = (hash(x, y, 30 + i) - 0.5) * 0.7;
       circle(p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, 1.8 * z,
