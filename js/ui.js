@@ -275,6 +275,7 @@ function openBuildInfo(id) {
   const d = ITEMS[id];
   if (!d) return;
   const locked = !available(id), tip = ITEM_TIPS[id] || ITEM_TIPS[baseOf(id)], fx = effectText(id);
+  const ud = ITEMS[baseOf(id)] || d, go = locked ? unlockGo(ud) : null;                 // Größen: wie das Grundmodell
   const cost = [d.cost ? `<span${state.money < d.cost ? ' class="bad"' : ''}>🪙 ${fmt(d.cost)}</span>` : '<span>kostenlos</span>',
     ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];
   const [w, h] = d.small || id === 'abriss' || id === 'verschieben' ? [1, 1] : sizeOf(id, 0);
@@ -284,14 +285,48 @@ function openBuildInfo(id) {
     CONSUMERS[id] ? `⚡ braucht ${CONSUMERS[id]}` : '', built ? `🏗️ ${built} gebaut` : ''].filter(Boolean);
   showPanel(`
     <h3>${d.name}</h3>
-    ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(d)}</div></div>` : ''}
+    ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(ud)}</div></div>${go ? `<div class="row"><button class="btn" id="p-unlock">${go.label}</button></div>` : ''}` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
     <p class="muted">${d.desc}</p>
     ${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
     ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => tool === id ? openBuildInfo(id) : closePanel(), id);
+  if ($('p-unlock')) $('p-unlock').onclick = () => go.go();
   $('p-close').onclick = closePanel;
+}
+// Gesperrt (Block 49): Knopf, der dorthin springt, wo man es freischaltet – dieselbe Reihenfolge wie unlockText.
+// Laternen, Erfolgs-Sterne, Laternenfest und Botanischer Garten haben kein eigenes Fenster: dort nur der Text.
+function unlockGo(def) {
+  if (def.lm) {
+    const [type, n] = def.lm.split(':');
+    if (lmStage(type) < +n) {
+      const e = [...state.tiles].find(([, t]) => t.b === 'lm' && t.lm === type);
+      return e && { label: `${LANDMARKS[type].icon} Zur Sehenswürdigkeit`, go: () => {
+        const [x, y] = keyXY(e[0]), c = iso(x + 1, y + 1);
+        closePanel(); setTool('look'); cam.x = c.x; cam.y = c.y; openLandmark(x, y);
+      } };
+    }
+  }
+  if (def.design) return { label: '🎨 Zur Kunstakademie', go: () => showUnlock('design', `[data-design="${DESIGN.find(x => x.item && ITEMS[x.item] === def)?.id}"]`) };
+  if (def.lanterns && lanternCount() < def.lanterns) return null;
+  if (def.tech && !hasTech(def.tech)) return { label: '💡 Zur Forschung', go: () => showUnlock('wissen', `[data-techid="${def.tech}"]`) };
+  if ((def.rank && starCount() < def.rank) || (def.festival && !state.festival) || (def.garden && !wonderOn(def.garden))) return null;
+  if (def.album && !albumDone(def.album)) return { label: '📒 Zum Album', go: () => { closePanel(); openAlbum(); spotlight(`[data-apage="${def.album}"]`); } };
+  if (def.invention && !hasInvention(def.invention)) return { label: '💡 Zu den Erfindungen', go: () => showUnlock('erfindung', `[data-invent="${def.invention}"]`) };
+  return null;
+}
+function showUnlock(tab, sel) { closePanel(); openResearch(tab); spotlight(sel); }
+// Im offenen Fenster zu einem Eintrag scrollen und ihn leuchten lassen – auch nachdem sich das Fenster neu zeichnet
+// (Forschung aktualisiert sich laufend), bis zum nächsten anderen Fenster
+let spotSel = null;
+const spotBox = () => { const el = spotSel && document.querySelector('#modal ' + spotSel); return el && (el.closest('.tech, .design, .album-page') || el); };
+function spotlight(sel) {
+  spotSel = sel;
+  const box = spotBox();
+  if (!box) return;
+  if (box.scrollIntoView) box.scrollIntoView({ block: 'center' });
+  box.classList.add('spot', 'spot-in');                           // spot-in: nur beim ersten Mal aufblinken
 }
 
 // Stil-Leiste für Wege: nur, was man schon hat – alles Weitere gibt es in der Kunstakademie
@@ -544,7 +579,7 @@ function openAlbum() {
     <h2>📒 Sammelalbum · ${Math.floor(got / all.length * 100)} %</h2>
     ${ALBUM.map(p => {
       const ks = albumKeys(p), n = ks.filter(k => state.album.has(k)).length, done = n === ks.length;
-      return `<div class="album-page${done ? ' done' : ''}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
+      return `<div class="album-page${done ? ' done' : ''}" data-apage="${p.id}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
         <div class="al-grid">${ks.map(entry).join('')}</div>
         <p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ' – freigeschaltet!' : ''}</p></div>`;
     }).join('')}
@@ -1364,9 +1399,9 @@ function openResearch(tab = researchTab) {
           ${open ? '' : `<p class="muted">Baue eine ${TECH_TIERS[tier].name}, um hier zu forschen.</p>`}
           ${TECHS.filter(t => t.tier === tier).map(t => {
             const done = hasTech(t.id), ready = techReady(t), reqOk = (t.req || []).every(hasTech), lmOk = techLmOk(t);
-            const needs = [...(reqOk ? [] : t.req.map(r => TECH_BY_ID[r].name)), ...(lmOk ? [] : [unlockText({ lm: t.lm })])];
+            const needs = [...(open ? [] : [`eine ${TECH_TIERS[tier].name}`]), ...(reqOk ? [] : t.req.map(r => TECH_BY_ID[r].name)), ...(lmOk ? [] : [unlockText({ lm: t.lm })])];
             const need = needs.length && !done ? `<span class="muted">braucht ${needs.join(', ')}</span>` : '';
-            return `<div class="tech${done ? ' done' : ''}${!ready && !done ? ' locked' : ''}">
+            return `<div class="tech${done ? ' done' : ''}${!ready && !done ? ' locked' : ''}" data-techid="${t.id}">
               <b>${done ? '✓ ' : ''}${t.name}</b><span>${t.desc}</span>${need}
               ${ready ? `<button class="btn" data-tech="${t.id}" data-sci="${techCost(t)}" ${state.science < techCost(t) ? 'disabled' : ''}>Erforschen · 💡 ${fmt(techCost(t))}</button>` : ''}
             </div>`;
@@ -1666,7 +1701,12 @@ $('town-btn').onclick = () => { setTool('look'); openTownHall(); };
 $('rot-btn').onclick = () => rotateBuild();
 
 // Dialoge
-function openModal(html, live = null) { const c = $('modal-card'); c.className = 'card'; setHtml(c, html); $('modal').hidden = false; modalLive = live; }
+function openModal(html, live = null) {
+  const c = $('modal-card'), same = !$('modal').hidden && modalLive && live && modalLive.toString() === live.toString();
+  if (!same) spotSel = null;                                       // anderes Fenster: Markierung weg
+  c.className = 'card'; setHtml(c, html); $('modal').hidden = false; modalLive = live;
+  const box = spotBox(); if (box) box.classList.add('spot');
+}
 function closeModal() { $('modal').hidden = true; modalLive = null; }
 $('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
 

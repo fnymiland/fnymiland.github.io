@@ -600,3 +600,8 @@ body.phone #rot-btn { bottom: calc(var(--bar, 57px) + 10px); }    /* neben dem H
   background: var(--cream2); color: var(--brown); }
 .size-chip span { display: inline; font-size: 12px; font-weight: 800; }
 .size-chip.on span { font-size: 13px; }
+/* Block 49: „Zur Forschung“ & Co. – der gesuchte Eintrag leuchtet kurz auf */
+.spot { outline: 3px solid #f2c14e; outline-offset: 2px; border-radius: 14px; }
+.spot-in { animation: spot 0.9s ease 3; }
+.spot.locked { opacity: 1; }                                     /* auch eine noch gesperrte Forschung gut sichtbar */
+@keyframes spot { 50% { outline-color: rgba(242, 193, 78, 0.25); } }
