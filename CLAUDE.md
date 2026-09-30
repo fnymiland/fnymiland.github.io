@@ -364,7 +364,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Gezeichnet in js/draw-edges.js: jedes Feld zeichnet seine hinteren Kanten 'a'x,y und 'b'x,y vor sich (`drawEdgesAt`);
     Stile in `STYLES.hecke/zaun/mauer` (`st.kind`, `styleOk` mit Präfix der Art), Aussehen in `EDGE_LOOK`. `placeError`
     lehnt Linien-Werkzeuge ab (nie als Feld bauen). Album zählt Linien (`collectAlbum`). Neben einer Linie läuft der Weg
-    bis an die Kante (`lineFill`); L-Ecke derselben Art mit Weg innen wird rund – Linie (`drawArc`) und Weg (`lineFill`)
+    bis an die Kante (`lineFill`); jede L-Ecke derselben Art wird rund (auch ohne Weg) – Linie (`drawArc`, ein Stück mit einer Oberseite) und Weg (`lineFill`, bzw. Belag außen in `drawArc`)
     nutzen denselben Viertelkreis (`roundCorner`, `roundArc`, `ROUND_R`). Seitenmitten neben einer Linie rücken nach innen
     (`slotPos`).
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.

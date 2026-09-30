@@ -593,8 +593,9 @@ const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny)
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
 const isGate = k => edgeTiles(k).every(([x, y]) => wegUnder(state.tiles.get(x + ',' + y)) != null || crossingAt(x, y));
 const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return state.edges.has(k) && !isGate(k); };
-// Runde Ecke: am Eckpunkt (i, j) genau eine waagerechte und eine senkrechte Linie derselben Art (kein Tor), und innen
-// in der Ecke liegt ein Weg → Linie und Weg machen dort denselben Viertelkreis (Radius ROUND_R)
+// Runde Ecke: am Eckpunkt (i, j) genau eine waagerechte und eine senkrechte Linie derselben Art (kein Tor) → Viertelkreis
+// (Radius ROUND_R). Liegt innen ein Weg (inPath), folgt er dem Bogen (lineFill); liegt der Weg außen (Innenseite einer
+// Wegkurve, outWeg = sein Stil), füllt drawArc die kleine Fläche zwischen Bogen und Ecke im Wegbelag
 const ROUND_R = 0.35;
 function roundCorner(i, j) {
   const A = [['a' + (i - 1) + ',' + j, -1], ['a' + i + ',' + j, 1]].filter(([k]) => state.edges.has(k));
@@ -602,9 +603,9 @@ function roundCorner(i, j) {
   if (A.length !== 1 || B.length !== 1) return null;
   const [ka, du] = A[0], [kb, dv] = B[0], ea = state.edges.get(ka), eb = state.edges.get(kb);
   if (ea.b !== eb.b || isGate(ka) || isGate(kb)) return null;
-  const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1;
-  if (wegUnder(state.tiles.get(tx + ',' + ty)) == null) return null;
-  return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5] };
+  const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1, ox = du > 0 ? i - 1 : i, oy = dv > 0 ? j - 1 : j;
+  const inPath = wegUnder(state.tiles.get(tx + ',' + ty)) != null, outWeg = inPath ? null : wegUnder(state.tiles.get(ox + ',' + oy));
+  return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5], inPath, outWeg };
 }
 // Punkte des Viertelkreises (Feld-Koordinaten), vom waagerechten zum senkrechten Stück
 function roundArc(rc, n = 6) {

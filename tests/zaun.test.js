@@ -98,12 +98,15 @@ describe('Ecken und Wege', () => {
 });
 
 describe('Runde Ecken', () => {
-  it('L-Ecke derselben Art mit Weg innen: rund; ohne Weg innen oder mit anderer Art: eckig', () => {
+  it('jede L-Ecke derselben Art ist rund – mit Weg innen folgt der Weg, mit Weg außen füllt der Belag; andere Art: eckig', () => {
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
-    expect(game("roundCorner(6, 6)")).toMatchObject({ ka: 'a6,6', kb: 'b6,6', du: 1, dv: 1 });
+    expect(game("roundCorner(6, 6)")).toMatchObject({ ka: 'a6,6', kb: 'b6,6', du: 1, dv: 1, inPath: true });
     expect(game("roundArc(roundCorner(6, 6), 2)")[0]).toEqual([5.5 + 0.35, 5.5]);   // Anfang auf dem waagerechten Stück
     game("state.tiles.delete('6,6')");
-    expect(game("roundCorner(6, 6)")).toBe(null);
+    expect(game("roundCorner(6, 6)")).toMatchObject({ inPath: false, outWeg: null });   // ohne Weg: trotzdem rund
+    game("state.tiles.set('5,5', { b: 'weg', lvl: 1, style: 'kopf' })");             // Weg diagonal außen (Innenseite einer Kurve)
+    expect(game("roundCorner(6, 6).outWeg")).toBe('kopf');
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' })");
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('b6,6', { b: 'mauer', style: 'backstein' })");
     expect(game("roundCorner(6, 6)")).toBe(null);
   });

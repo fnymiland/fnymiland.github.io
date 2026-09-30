@@ -552,7 +552,7 @@ function lineFill(x, y, arms, w) {
   const side = ([dx, dy]) => { const k = edgeBetween(x, y, x + dx, y + dy); return state.edges.has(k) && !isGate(k); };
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out = [];
   // runde Ecken (roundCorner): dort hört das Rechteck vor dem Bogen auf, das Eckstück folgt dem Viertelkreis der Linie
-  const rounded = (su, sv) => side([su, 0]) && side([0, sv]) && !!roundCorner(x + (su + 1) / 2, y + (sv + 1) / 2);
+  const rounded = (su, sv) => side([su, 0]) && side([0, sv]) && !!(roundCorner(x + (su + 1) / 2, y + (sv + 1) / 2) || {}).inPath;
   const lo = (d, a, b) => Math.min(has(...d) ? 0.5 : w, rounded(a, b) ? 0.5 - ROUND_R : 0.5);
   for (const [dx, dy] of DIRS) {
     if (!side([dx, dy])) continue;
@@ -565,6 +565,13 @@ function lineFill(x, y, arms, w) {
     const c = [su * (0.5 - ROUND_R), sv * (0.5 - ROUND_R)], arc = [];
     for (let s = 0; s <= 8; s++) { const a = angStep(su, sv, s / 8); arc.push([c[0] + Math.cos(a) * ROUND_R, c[1] + Math.sin(a) * ROUND_R]); }
     out.push([[0, 0], [su * 0.5, 0], ...arc, [0, sv * 0.5]]);
+  }
+  // Innenseite einer Wegkurve an einer Linie: die Ecke zwischen den beiden Armen ganz füllen (bis an den Bogen der Linie)
+  for (const su of [1, -1]) for (const sv of [1, -1]) {
+    if (!has(su, 0) || !has(0, sv)) continue;
+    const i = x + (su + 1) / 2, j = y + (sv + 1) / 2;
+    if (['a' + (i - 1) + ',' + j, 'a' + i + ',' + j, 'b' + i + ',' + (j - 1), 'b' + i + ',' + j].some(k => state.edges.has(k)))
+      out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5)));
   }
   return out;
 }

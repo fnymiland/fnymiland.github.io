@@ -38,12 +38,12 @@ let EDGE_PROJ = null;                 // Vorschaubild: eigene Projektion statt d
 const edgeS = (u, v, up, z) => { const s = EDGE_PROJ ? EDGE_PROJ(u, v) : toScreen(u, v); return [s.x, s.y - up * z]; };
 // Quader entlang der Kante (Hecke, Mauer, Pfeiler): sichtbar sind die Seite zum Betrachter (+side), das vordere Ende
 // (+along) und die Oberseite
-function edgePrism(p, q, E, w, h, col, z) {
+function edgePrism(p, q, E, w, h, col, z, capQ = true) {
   const [su, sv] = E.side, lo = [p[0] - su * w, p[1] - sv * w], ro = [q[0] - su * w, q[1] - sv * w];
   const li = [p[0] + su * w, p[1] + sv * w], ri = [q[0] + su * w, q[1] + sv * w];
   const P = (pt, up) => edgeS(pt[0], pt[1], up, z);
   poly([P(li, 0), P(ri, 0), P(ri, h), P(li, h)], C(shade(col, E.along[0] ? 0 : -0.16)));        // lange Seite
-  poly([P(ri, 0), P(ro, 0), P(ro, h), P(ri, h)], C(shade(col, E.along[0] ? -0.16 : 0)));        // vorderes Ende
+  if (capQ) poly([P(ri, 0), P(ro, 0), P(ro, h), P(ri, h)], C(shade(col, E.along[0] ? -0.16 : 0)));   // vorderes Ende (nicht am Bogen)
   poly([P(lo, h), P(ro, h), P(ri, h), P(li, h)], C(shade(col, 0.14)));                         // oben
   return { face: [P(li, 0), P(ri, 0), P(ri, h), P(li, h)] };
 }
@@ -67,17 +67,27 @@ function segPrism(p, q, w, h, col, z) {
   poly([P(li, 0), P(ri, 0), P(ri, h), P(li, h)], C(shade(col, sh)));
   poly([P(lo, h), P(ro, h), P(ri, h), P(li, h)], C(shade(col, 0.14)));
 }
-// Viertelkreis einer runden Ecke, von hinten nach vorn
+// Viertelkreis einer runden Ecke: ein durchgehendes Stück – erst die sichtbaren Seitenwände (von hinten nach vorn), dann
+// eine einzige Oberseite (so gibt es keine Stufen und keine Fugen). Innenseite einer Wegkurve: Belag bis an den Bogen.
 function drawArc(rc, look, z) {
-  if (rc.b === 'zaun') { const pts = roundArc(rc, 3); for (let s = 0; s < 3; s++) drawFence({ p: pts[s], q: pts[s + 1] }, look, rc.style, false, z); return; }
-  const pts = roundArc(rc, 6), segs = [];
-  for (let s = 0; s < 6; s++) segs.push([pts[s], pts[s + 1]]);
-  segs.sort((A, B) => (A[0][0] + A[0][1] + A[1][0] + A[1][1]) - (B[0][0] + B[0][1] + B[1][0] + B[1][1]));
-  for (const [p, q] of segs) {
-    const d = [q[0] - p[0], q[1] - p[1]], L = Math.hypot(d[0], d[1]), x = look.w * 0.35 / L;       // leicht überlappen: keine Fugen
-    segPrism([p[0] - d[0] * x, p[1] - d[1] * x], [q[0] + d[0] * x, q[1] + d[1] * x], look.w, look.h, look.col, z);
-    if (rc.b === 'hecke') { const m = lerp2(p, q, 0.5), [sx, sy] = edgeS(m[0], m[1], look.h, z); circle(sx, sy + 0.4 * z, 2 * z, C(shade(look.col, look.balls ? 0.1 : 0.14))); }
+  if (rc.outWeg != null) {
+    const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
+    if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
+  if (rc.b === 'zaun') { const pts = roundArc(rc, 3); for (let s = 0; s < 3; s++) drawFence({ p: pts[s], q: pts[s + 1] }, look, rc.style, false, z); return; }
+  const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
+  const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
+  const outer = pts.map(p => off(p, 1)), inner = pts.map(p => off(p, -1)), P = (pt, up) => edgeS(pt[0], pt[1], up, z), walls = [];
+  for (let s = 0; s < n; s++) for (const [side, sg] of [[outer, 1], [inner, -1]]) {
+    const m = lerp2(pts[s], pts[s + 1], 0.5), d = [(m[0] - c[0]) * sg, (m[1] - c[1]) * sg];
+    if (d[0] + d[1] <= 0) continue;                                // Wand zeigt vom Betrachter weg
+    const L = Math.hypot(d[0], d[1]) || 1;
+    walls.push([m[0] + m[1], side[s], side[s + 1], -0.16 * Math.abs(d[0]) / (Math.abs(d[0]) + Math.abs(d[1]) || 1)]);
+  }
+  walls.sort((A, B) => A[0] - B[0]);
+  for (const [, a, b, sh] of walls) poly([P(a, 0), P(b, 0), P(b, h), P(a, h)], C(shade(look.col, sh)));
+  poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
+  if (rc.b === 'hecke') for (let s = 1; s < n; s += 3) { const [sx, sy] = P(pts[s], h); circle(sx, sy + 0.4 * z, 2 * z, C(shade(look.col, look.balls ? 0.1 : 0.14))); }
 }
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
@@ -107,7 +117,7 @@ function drawEdge(k, e, z, now) {
     }
     return;
   }
-  const { face } = edgePrism(p, q, E, w, h, look.col, z);
+  const { face } = edgePrism(p, q, E, w, h, look.col, z, !onQ);
   if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
   if (e.b === 'hecke') {
     // Blätter: ein paar runde Buckel oben, Buchs als Kugeln, Blüten als Punkte
