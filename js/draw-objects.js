@@ -918,7 +918,7 @@ const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebru
   'kaffeeplantage', 'teegarten', 'kakaoplantage', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9 };
+const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
 // Größen (Block 43): das Grundmodell, um vf größer; kleine (Ecke) und Feld-Deko werden verschieden skaliert gezeichnet
 function decoScale(b) {
   const d = ITEMS[b];
@@ -1025,6 +1025,32 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     // --- Verkehr & Strom ---
+    case 'offshore': {                       // Offshore-Windrad (Block 48): Pfahl im Wasser, gelbes Übergangsstück, hoher weißer Turm
+      const H = 64, L = 25 * z, w0 = 3.6 * z, w1 = 2 * z, ph = now / 900;
+      for (let i = 0; i < 2; i++) {                                                       // Wellenring am Pfahl
+        const r = ((now / 1400 + i / 2) % 1), a = 0.55 * (1 - r);
+        ellipse(cx, cy + 1 * z, (4 + r * 6) * z, (2 + r * 3) * z, `rgba(255,255,255,${a.toFixed(2)})`);
+      }
+      poly([[cx - 1.8 * z, cy + 1 * z], [cx + 1.8 * z, cy + 1 * z], [cx + 1.8 * z, cy - 5 * z], [cx - 1.8 * z, cy - 5 * z]], C('#4d5360'));   // Pfahl
+      poly([[cx, cy + 1 * z], [cx + 1.8 * z, cy + 1 * z], [cx + 1.8 * z, cy - 5 * z], [cx, cy - 5 * z]], C('#3d424d'));
+      box(cx, cy - 5 * z, 2.2 * z, 1.2 * z, 4.5 * z, '#f2c230', null, 0);                // Übergangsstück (gelb)
+      diamond(cx, cy - 9.5 * z, 5 * z, 2.5 * z, C('#9aa0a8'));                             // Plattform
+      g.strokeStyle = C('#f2c230'); g.lineWidth = 0.5 * z; g.beginPath();                 // Geländer
+      g.moveTo(cx - 5 * z, cy - 9.5 * z); g.lineTo(cx, cy - 7 * z); g.lineTo(cx + 5 * z, cy - 9.5 * z);
+      g.moveTo(cx - 5 * z, cy - 11 * z); g.lineTo(cx, cy - 8.5 * z); g.lineTo(cx + 5 * z, cy - 11 * z); g.stroke();
+      poly([[cx - w0 / 2, cy - 9.5 * z], [cx + w0 / 2, cy - 9.5 * z], [cx + w1 / 2, cy - H * z], [cx - w1 / 2, cy - H * z]], C('#f6f6f4'));   // Turm
+      poly([[cx, cy - 9.5 * z], [cx + w0 / 2, cy - 9.5 * z], [cx + w1 / 2, cy - H * z], [cx, cy - H * z]], C('#dedbd4'));
+      const hy = cy - (H + 1) * z;
+      ellipse(cx + 3.4 * z, hy, 6.6 * z, 2.6 * z, C('#f4f4f4')); ellipse(cx + 3.4 * z, hy + 0.9 * z, 6.2 * z, 1.5 * z, C('#dedbd4'));   // Gondel
+      blades(cx, hy, z, ph * 650, 3, L, '#ffffff');
+      const ang = ph;
+      for (let i = 0; i < 3; i++) { const a = ang + i * Math.PI * 2 / 3; circle(cx + Math.cos(a) * (L - 2 * z), hy + Math.sin(a) * (L - 2 * z), 1.3 * z, C('#e8604f')); }
+      circle(cx, hy, 2.3 * z, C('#f4f4f4'));
+      if (night > 0.15 && isLive() && Math.floor(now / 700) % 2 === 0) {                 // Warnlicht nachts
+        circle(cx + 5.5 * z, hy - 2.6 * z, 1.2 * z, '#ff4a3d'); glowQuad([[cx + 4.5 * z, hy - 4 * z], [cx + 6.5 * z, hy - 4 * z], [cx + 6.5 * z, hy - 1 * z], [cx + 4.5 * z, hy - 1 * z]], 12 * z);
+      }
+      break;
+    }
     case 'windrad': {                        // Stufe 1 Windrad, 2 Großes Windrad, 3 Windturbine – alle in gemütlicher Größe
       if (Math.min(lvl || 1, 3) === 3) { drawHelixTurbine(cx, cy, z, now); break; }
       const s = Math.max(1, Math.min(lvl || 1, 3)), H = [38, 46, 50][s - 1], L = [16, 20, 22][s - 1] * z;

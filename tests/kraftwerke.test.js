@@ -12,7 +12,7 @@ const t = k => game(`state.tiles.get('${k}')`);
 
 describe('Menü', () => {
   it('„⚡ Strom“ ist ein Filter unter Herstellen – das Windrad steht nicht mehr bei „Verbinden“', () => {
-    expect(game("MENU.find(m => m.id === 'herstellen').groups.find(g => g.id === 'strom').items")).toEqual(['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen']);
+    expect(game("MENU.find(m => m.id === 'herstellen').groups.find(g => g.id === 'strom').items")).toEqual(['windrad', 'offshore', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen']);
     expect(game("MENU.find(m => m.id === 'stadt').groups.find(g => g.id === 'verkehr').items")).not.toContain('windrad');
   });
 });
@@ -137,5 +137,27 @@ describe('Neue Verbraucher', () => {
     const txt = document.getElementById('panel').textContent;
     expect(txt).toContain('Liefert 4,5 Strom');
     expect(txt).toContain('erzeugt');
+  });
+});
+
+describe('Offshore-Windrad (Block 48)', () => {
+  it('erst mit Forschung; ins Meer vor die Küste oder bis 6 Felder weiter draußen; doppelt so viel Strom wie ein volles Windrad', () => {
+    game("state.techs.delete('offshore'); state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; recalc()");
+    const sea = game(`(() => { for (let y = -40; y < 60; y++) for (let x = -40; x < 60; x++) if (isSea(x, y) && nearOwnLand(x, y) && !COVER.has(x + ',' + y)) return [x, y]; })()`);
+    expect(sea).toBeTruthy();
+    const [sx, sy] = sea;
+    expect(game(`placeError('offshore', ${sx}, ${sy})`)).toMatch(/Offshore|erst/);
+    game("state.techs.add('offshore')");
+    expect(game(`placeError('offshore', ${sx}, ${sy})`)).toBe(null);
+    const far = game(`(() => { for (let y = -60; y < 80; y++) for (let x = -60; x < 80; x++) if (isSea(x, y) && !landWithin(x, y, 3) && landWithin(x, y, 6)) return [x, y]; })()`);
+    expect(game(`placeError('offshore', ${far[0]}, ${far[1]})`)).toBe(null);                        // weiter draußen
+    const tooFar = game(`(() => { for (let y = -80; y < 100; y++) for (let x = -80; x < 100; x++) if (isSea(x, y) && !landWithin(x, y, 7)) return [x, y]; })()`);
+    if (tooFar) expect(game(`placeError('offshore', ${tooFar[0]}, ${tooFar[1]})`)).toMatch(/Felder vor deiner Küste/);
+    expect(game(`placeError('offshore', 5, 5)`)).toMatch(/Meer/);                                    // an Land nicht
+    expect(game("powerOf({ b: 'offshore', lvl: 1 })")).toBe(2 * game("powerOf({ b: 'windrad', lvl: 3 })"));
+    game("state.techs.add('rotor')");
+    expect(game("powerOf({ b: 'offshore', lvl: 1 })")).toBe(2 * game("powerOf({ b: 'windrad', lvl: 3 })"));
+    expect(game(`build('offshore', ${far[0]}, ${far[1]}, true)`)).toBe(true);
+    expect(game(`ownedTile(${far[0]}, ${far[1]})`)).toBe(true);                                       // das Feld gehört jetzt dir
   });
 });

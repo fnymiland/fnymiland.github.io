@@ -203,6 +203,12 @@ const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
 // Wasserfeld am eigenen Ufer – auch schräg (Ecke an Ecke): an gezackten Küsten sieht das genauso nach „Ufer“ aus
 const NEAR8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const nearOwnLand = (x, y) => NEAR8.some(([dx, dy]) => ownedTile(x + dx, y + dy) && terrainAt(x + dx, y + dy) !== 'water');
+// Offshore (Block 48): bis r Felder vom eigenen Land (Ecke an Ecke gezählt)
+const OFFSHORE_REACH = 6;
+function landWithin(x, y, r) {
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) if ((dx || dy) && ownedTile(x + dx, y + dy) && terrainAt(x + dx, y + dy) !== 'water') return true;
+  return false;
+}
 // Zu welchem Ort gehört ein Feld? Insel-id bzw. 'home'; aufgeschüttetes Meer zählt zur nächsten Insel
 const regionCache = new Map();
 function regionAt(x, y) {

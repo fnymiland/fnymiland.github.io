@@ -40,7 +40,7 @@ function build(b, x, y, quiet) {
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
-  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot') && !ownedTile(x, y)) claimTile(x, y);
+  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore') && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); waterChanged(); sfx('dig'); }
   else if (TERRAFORM[b]) {

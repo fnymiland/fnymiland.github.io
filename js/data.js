@@ -143,6 +143,9 @@ const ITEMS = {
                desc: 'Nutzt die Wärme tief unter der Quelleninsel: 8 ⚡ Strom.' },
   wellen:  { cat: 'strom', name: 'Wellenkraftwerk', tech: 'wellen', cost: 1500, mat: { metall: 12, bretter: 6 }, needs: 'meer',
                desc: 'Bojen vor der Küste wippen in den Wellen: 5 ⚡ Strom.' },
+  // Offshore (Block 48): Windkraft im Meer – vor der Küste oder bis OFFSHORE_REACH Felder weiter draußen; eine Stufe, 6 ⚡
+  offshore: { cat: 'strom', name: 'Offshore-Windrad', tech: 'offshore', cost: 3000, mat: { metall: 16, quader: 8 }, needs: 'offshore',
+               desc: 'Ein großes Windrad im Meer – direkt vor der Küste oder weiter draußen: 6 ⚡ Strom, doppelt so viel wie ein voll ausgebautes Windrad.' },
   pavillon:{ cat: 'deko', name: 'Pavillon', cost: 400, mat: { bretter: 8 }, needs: 'grass', beauty: 20, design: 600, master: true, desc: 'Für Konzerte im Park.' },
   statue:  { cat: 'deko', name: 'Sternstatue', cost: 700, mat: { quader: 6, metall: 2 }, needs: 'grass', beauty: 30, design: 900, master: true, desc: 'Glänzt golden.' },
   // --- Gelände ---
@@ -465,7 +468,7 @@ const MENU = [
     { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
-    { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
+    { id: 'strom', label: '⚡ Strom', items: ['windrad', 'offshore', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
   ] },
   { id: 'einkaufen', label: '🛍️ Einkaufen', groups: [
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
@@ -513,7 +516,7 @@ const FX = {
   hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
-  windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
+  windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
@@ -571,6 +574,7 @@ const ITEM_TIPS = {
   solarfeld: 'Irgendwo auf eine Wiese (2×2). 3 ⚡ aus Kristallglas.',
   geothermie: 'Nur auf der Quelleninsel – dort ist der Boden warm. 8 ⚡, das stärkste Kraftwerk.',
   wellen: 'Ins Meer direkt vor die Küste setzen. 5 ⚡.',
+  offshore: 'Ins Meer setzen – direkt vor die Küste oder bis zu 6 Felder weiter draußen. 6 ⚡, mit Rotorblättern noch mehr.',
   pavillon: 'Große Deko mit viel Schönheit – schön im Park.',
   statue: 'Große Deko mit sehr viel Schönheit.',
   graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Aufziehen = Fläche.',
@@ -772,6 +776,7 @@ const TECHS = [
   { id: 'kraftwerk3', tier: 3, name: 'Hochleistungs-Kraftwerke', cost: 600, req: ['kraftwerk2'], desc: 'Alle Kraftwerke lassen sich auf Stufe 3 ausbauen (dreimal so viel Strom).' },
   { id: 'wasserkraft', tier: 2, name: 'Wasserkraft', cost: 180, desc: 'Schaltet das Wasserkraftwerk frei: Strom aus Teichen und Flüssen.' },
   { id: 'wellen', tier: 3, name: 'Wellenkraft', cost: 380, req: ['wasserkraft'], desc: 'Schaltet das Wellenkraftwerk frei: Strom aus dem Meer.' },
+  { id: 'offshore', tier: 3, name: 'Offshore-Windkraft', cost: 500, req: ['rotor'], desc: 'Schaltet das Offshore-Windrad frei: 6 ⚡ aus dem Wind über dem Meer.' },
   { id: 'stromnetz', tier: 3, name: 'Intelligentes Stromnetz', cost: 450, req: ['rotor'], desc: 'Alle Kraftwerke liefern 25 % mehr Strom.' },
 ];
 const TECH_BY_ID = Object.fromEntries(TECHS.map(t => [t.id, t]));

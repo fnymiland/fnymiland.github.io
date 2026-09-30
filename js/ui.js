@@ -47,7 +47,7 @@ function thumbRaw(type, lvl = 1, tile = null) {
   const c = document.createElement('canvas');
   c.width = 112; c.height = 88;
   const prev = g; g = c.getContext('2d'); FOG = false;
-  const tall = ['leuchtturm', 'windrad'].includes(type), big = isBig(type);
+  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
   const z = big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
@@ -78,7 +78,8 @@ function thumbRaw(type, lvl = 1, tile = null) {
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
     try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, { b: type, style: currentStyle(type) }, z * 1.3, 0); } finally { EDGE_PROJ = null; }
   } else {
-    const ground = { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
+    const wet = ['meer', 'offshore', 'boot'].includes((ITEMS[type] || {}).needs);        // steht im Wasser: Wasser als Untergrund
+    const ground = wet ? '#74d0e6' : { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
     drawObject(type, cx, cy, z, 0, 3, 7, lvl, tile);
   }

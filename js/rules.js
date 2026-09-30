@@ -1008,7 +1008,7 @@ const bestVehicle = kind => [...vehicleModels(kind)].reverse().find(m => vehicle
 // die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
 // nachts dunkel (halbe Schönheit), Gebäude schaffen die Hälfte (⚡ darüber), Züge stehen. Die Stadt braucht erst Strom,
 // wenn es Kraftwerke gibt (oder Windräder freigeschaltet sind) – vorher läuft alles ohne.
-const POWER_OUT = { windrad: [1, 2, 3], wasserkraft: [4, 8, 12], solarfeld: [3, 6, 9], geothermie: [8, 16, 24], wellen: [5, 10, 15] };   // Stufe 1–3
+const POWER_OUT = { windrad: [1, 2, 3], wasserkraft: [4, 8, 12], solarfeld: [3, 6, 9], geothermie: [8, 16, 24], wellen: [5, 10, 15], offshore: [6] };   // Stufe 1–3 (Offshore: eine)
 const LAMPS_PER_POWER = 10, NO_POWER = 0.5;
 // Monumente brauchen richtig viel (je 100 ⚡, das Schloss 300) – dafür baut man sich eine Energie-Insel
 const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, glashaus: 1, glashaus_l: 3, sternwarte: 100, botgarten: 100, riesenrad: 100, seebruecke: 100, schloss: 300 };   // Reihenfolge = Vorrang
@@ -1017,7 +1017,7 @@ function powerOf(t) {
   const o = POWER_OUT[t.b];
   if (!o) return 0;
   let v = o[Math.min(t.lvl || 1, o.length) - 1];
-  if (t.b === 'windrad' && hasTech('rotor')) v *= 1.5;
+  if ((t.b === 'windrad' || t.b === 'offshore') && hasTech('rotor')) v *= 1.5;   // Offshore bleibt doppelt so stark wie ein volles Windrad
   if (hasTech('stromnetz')) v *= 1.25;
   return v * masteryMul('strom');
 }
@@ -1402,12 +1402,12 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     for (const [fx, fy] of tiles) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
-      const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot';
-      const seaOk = sea && isSea(fx, fy) && nearOwnLand(fx, fy);   // auch schräg am Ufer (Ecke an Ecke)
-      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? 'Im Meer nur direkt neben deinem Land' : notMine(fx, fy);
+      const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore';
+      const seaOk = sea && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : nearOwnLand(fx, fy));   // auch schräg am Ufer (Ecke an Ecke)
+      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';
-        if (d.needs === 'meer' && (ter !== 'water' || !isSea(fx, fy))) return 'Ins Meer vor die Küste bauen';
+        if ((d.needs === 'meer' || d.needs === 'offshore') && (ter !== 'water' || !isSea(fx, fy))) return 'Ins Meer vor die Küste bauen';
         if (d.needs === 'boot' && ter !== 'water') return 'Aufs Wasser, direkt ans Ufer';
         continue;
       }

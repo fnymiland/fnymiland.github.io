@@ -466,3 +466,10 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 
 - [x] Plätze bei 0,42 statt 0,3 (Laterne steht neben dem Weg statt darauf), je nach Größe (Bäume etwas weiter drin), an Hecke/
       Zaun/Mauer um deren Dicke nach innen, am Torbogen noch weiter, an Eckpunkten mit Linie Abstand zur Ecke (`slotPos`).
+
+## Block 47–48 – Näher ran, Windturbine, Offshore (01.10.)
+
+- [x] Zoom bis 5 (Boden-Zwischenbilder bis Stufe 3). Windrad Stufe 3 als Windturbine mit senkrechter Achse und Holzflügeln.
+- [x] Offshore-Windrad (Forschung „Offshore-Windkraft“ nach „Leichte Rotorblätter“): ins Meer bis 6 Felder vor der Küste
+      (`needs: 'offshore'`, `landWithin`, Feld wird deins), eine Stufe, 6 ⚡ = doppelt so viel wie ein volles Windrad (Rotorblätter
+      wirken auf beide). Karten von Wasser-Bauten zeigen Wasser als Untergrund.
