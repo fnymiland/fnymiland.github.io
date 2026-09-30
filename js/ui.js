@@ -97,6 +97,7 @@ function menuLabel(b, label) {
 }
 // Handy: Katalog (Filter + Kacheln) ist eingeklappt, bis man einen Bereich antippt
 let sheetOpen = false;
+function updateUndoBtn() { const b = document.querySelector('.quick.undo'); if (b) b.disabled = !undoStack.length && !moving; }
 function setSheet(open) {
   sheetOpen = !!open;
   $('toolbar').classList.toggle('open', sheetOpen);
@@ -113,6 +114,12 @@ function buildToolbar() {
     b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
     cats.append(b);
   }
+  // ↶ Rückgängig (Block 45): grau, wenn es nichts zurückzunehmen gibt; Strg/⌘+Z
+  const un = document.createElement('button');
+  un.className = 'quick undo'; un.textContent = '↶';
+  un.title = 'Rückgängig (Strg/⌘+Z)'; un.setAttribute('aria-label', 'Rückgängig');
+  un.onclick = () => { audio(); undo(); };
+  cats.append(un); updateUndoBtn();
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
   // 🔍 Suche (Block 38): findet jedes Ding beim Namen, egal in welchem Bereich
   const find = document.createElement('button');
@@ -693,10 +700,29 @@ if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.sty
 function startMove(x, y, slot = 0) {
   closePanel();
   setTool('verschieben');
-  pickUp(x, y, slot);
+  undoable(() => pickUp(x, y, slot));                           // Aufheben … Ablegen = ein Schritt zum Zurücknehmen
   hover = { x, y }; hoverSlot = slot;
 }
 const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
+// Löschen im Fenster (Block 45): wie das Abriss-Werkzeug (Deko und Wege voll zurück, Gebäude zur Hälfte). Was viel kostet,
+// fragt einmal nach (zweites Tippen); alles lässt sich mit ↶ zurücknehmen.
+const DEL_ASK = 500;
+function delButton(x, y) {
+  const info = demolishInfo(x, y);
+  if (info.err || info.refund == null) return '';
+  return `<button class="btn danger" id="p-del" aria-label="${info.label}">🗑️${info.refund ? ` +${fmt(info.refund)}` : ''}</button>`;
+}
+function wireDel(x, y) {
+  const b = $('p-del');
+  if (!b) return;
+  b.onclick = () => {
+    const info = demolishInfo(x, y), t = info.anchor && state.tiles.get(info.anchor);
+    if (!b.dataset.sure && (info.lost >= DEL_ASK || (t && WONDERS[t.b]))) {
+      b.dataset.sure = '1'; b.textContent = `Wirklich? ${fmt(info.lost)} Taler sind weg`; return;
+    }
+    closePanel(); undoable(() => demolish(x, y));
+  };
+}
 
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
@@ -847,8 +873,10 @@ function openInfo(x, y) {
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
+      ${delButton(x, y)}
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
+  wireDel(x, y);
   $('p-move').onclick = () => startMove(x, y);
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
@@ -869,7 +897,7 @@ function openInfo(x, y) {
     inp.onkeydown = e => { if (e.key === 'Enter') done(); };
     inp.onblur = done;
   };
-  if ($('p-rot')) $('p-rot').onclick = () => {
+  if ($('p-rot')) $('p-rot').onclick = () => undoable(() => {
     // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
     const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4;
     state.tiles.delete(k); rebuildCover();
@@ -877,7 +905,7 @@ function openInfo(x, y) {
     state.tiles.set(k, t);
     if (err) { recalc(); fail('Zum Drehen ist hier nicht genug Platz'); return; }
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
-  };
+  });
   $('p-close').onclick = closePanel;
   if (el.querySelector('[data-openart]')) el.querySelector('[data-openart]').onclick = () => { closePanel(); openResearch('design'); };
   for (const b of el.querySelectorAll('[data-look]')) b.onclick = () => {
@@ -982,14 +1010,18 @@ const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaopla
 // Durchgang in Hecke/Zaun/Mauer: offen, Torbogen oder Rosenbogen (Block 41)
 function openGateInfo(k) {
   const e = state.edges.get(k);
-  if (!e || !isGate(k)) { closePanel(); return; }
+  if (!e) { closePanel(); return; }
+  const gate = isGate(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
   const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
   const el = showPanel(`
-    <h3>Durchgang · ${ITEMS[e.b].name}</h3>
-    <p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
-    <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>
-    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
-  for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); };
+    <h3>${gate ? 'Durchgang · ' : ''}${ITEMS[e.b].name}${gate ? '' : ` · ${styleDef(e.b, e.style).name}`}</h3>
+    ${gate ? `<p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
+    <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
+    : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang.</p>'}
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Entfernen">🗑️ +${fmt(refund)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
+  for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
+  $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
 }
 // Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
@@ -1028,9 +1060,10 @@ function openParkInfo(x, y) {
     <div class="status">${parkStatus(k).join('')}</div>
     <p class="muted">Stell Bäume, Beete, Bänke und Brunnen auf den Rasen. Wege dürfen hindurch.</p>
     ${parkFestLine()}
-    <div class="row">${parkBest() && !parkFestLeft() && !parkFestWait() ? '<button class="btn" id="p-fest">🎉 Parkfest feiern</button>' : ''}<button class="btn ghost" id="p-close">Schließen</button></div>`,
+    <div class="row">${parkBest() && !parkFestLeft() && !parkFestWait() ? '<button class="btn" id="p-fest">🎉 Parkfest feiern</button>' : ''}<button class="btn danger" id="p-del" aria-label="Rasen hier entfernen">🗑️ +${fmt(ITEMS.parkrasen.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => terraLook(x, y) === 'park' ? openParkInfo(x, y) : closePanel());
   if ($('p-fest')) $('p-fest').onclick = () => { if (startParkFest()) openParkInfo(x, y); };
+  $('p-del').onclick = () => { closePanel(); undoable(() => removeLawn(x, y)); };
   $('p-close').onclick = closePanel;
 }
 // Parkfest: läuft, wartet oder ist bereit (nach der besten Park-Stufe)
@@ -1212,11 +1245,11 @@ function openDecoInfo(x, y, slot) {
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
-      <button class="btn danger" id="p-del">Entfernen · +🪙 ${fmt(Math.floor(it.cost / 2))}</button>
+      <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${it.cost ? ` +${fmt(it.cost)}` : ''}</button>
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`);
-  if ($('p-rot')) $('p-rot').onclick = () => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); };
-  $('p-del').onclick = () => { removeSmall(x, y, slot); closePanel(); };
+  if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
+  $('p-del').onclick = () => { closePanel(); undoable(() => removeSmall(x, y, slot)); };
   $('p-move').onclick = () => startMove(x, y, slot);
   $('p-close').onclick = closePanel;
 }

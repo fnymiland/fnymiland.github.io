@@ -455,3 +455,9 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       Viertel), Schönheit ringsum, Besucher, Parkfest per Knopf (×1,25/×1,5/×2, 3 Min., 20 Min. Pause), Spaziergänger auf
       Bänken. Alte 3×3-Parks → Rasen mit Brunnen, Bäumen, Bänken. Nebenbei: Bewohner laufen nicht mehr durch Zäune.
 
+## Block 45 – Rückgängig und Löschen (01.10.)
+
+- [x] ↶ in der Werkzeugleiste (und Strg/⌘+Z): bis 20 Schritte, Bauen, Abreißen, Verschieben, Drehen, Malen, Linien. Nimmt nur
+      zurück, wenn die Stelle seitdem unverändert ist; Taler und Rohstoffe exakt zurück.
+- [x] Löschen-Knopf (🗑️ +Erstattung) in jedem Fenster: Gebäude, Wege, Deko, jedes Linienstück, Parkrasen. Teures fragt einmal nach.
+- [x] Nebenbei: Deko-Fenster zeigte „halbe Erstattung“, gab aber die volle – jetzt stimmt die Anzeige.

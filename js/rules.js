@@ -1785,7 +1785,8 @@ function demolishInfo(x, y) {
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
       : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
-    return { anchor: a, refund: full ? paid.cost : Math.floor((d.cost + staged) / 2), mat: full ? paid.mat : null, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
+    const refund = full ? paid.cost : Math.floor((d.cost + staged) / 2);
+    return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : d.cost + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };

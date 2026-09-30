@@ -94,6 +94,13 @@ function demolish(x, y) {
   save();
 }
 
+// Parkrasen an einem Feld entfernen (wird wieder Wiese), Preis zurück
+function removeLawn(x, y) {
+  if (terraLook(x, y) !== 'park') return false;
+  state.terra.set(x + ',' + y, 'grass'); state.money += ITEMS.parkrasen.cost;
+  sandCache.clear(); landCache.clear(); sfx('dig'); recalc(); save();
+  return true;
+}
 // Verschieben: aufnehmen, Ziel antippen, ablegen – kostenlos. Während des Tragens bleibt das Objekt
 // im Spielstand an seinem alten Platz (serialize), damit beim Schließen der App nichts verloren geht.
 let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] } | { kind: 'group', items, cx, cy }
@@ -358,7 +365,7 @@ function tap(sx, sy, isTouch) {
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
   if (ek) { if (removeEdge(ek)) { sfx('dig'); recalc(); save(); } return; }
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
-  if (gk && isGate(gk)) { openGateInfo(gk); return; }
+  if (gk) { openGateInfo(gk); return; }                       // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
   if (collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte)
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
@@ -484,5 +491,60 @@ function sellShip(k, i) {
   t.ships.splice(i, 1);
   if (!t.ships.length) delete t.ships;
   sfx('dig'); recalc(); save();
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+// Rückgängig (Block 45): vor einer Aktion merken, wie Felder, Kleinkram, Linien und Boden aussehen; danach nur die geänderten
+// Stellen festhalten (plus Taler/Rohstoffe). Zurücknehmen stellt genau diese Stellen wieder her und bucht exakt zurück –
+// was inzwischen woanders passiert ist, bleibt. Hat sich an einer Stelle seitdem etwas verändert: nicht zurücknehmen.
+// Verschieben (Aufheben … Ablegen) ist ein Schritt; ein aufgezogenes Rechteck/eine Linie auch.
+// ---------------------------------------------------------------------------
+const UNDO_MAX = 20, undoStack = [];
+let undoPending = null;
+const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra };
+const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
+function undoSnap() {
+  const maps = {};
+  for (const [n, get] of Object.entries(UNDO_MAPS)) { const m = new Map(); for (const [k, v] of get()) m.set(k, undoStr(v)); maps[n] = m; }
+  return { money: state.money, res: { ...state.res }, claimed: new Set(state.claimed), maps };
+}
+function undoCommit(s) {
+  const changes = [];
+  for (const [n, get] of Object.entries(UNDO_MAPS)) {
+    const before = s.maps[n], cur = get();
+    for (const [k, v] of cur) { const a = undoStr(v); if (before.get(k) !== a) changes.push([n, k, before.get(k), a]); }
+    for (const [k, b] of before) if (!cur.has(k)) changes.push([n, k, b, undefined]);
+  }
+  const claimed = [...state.claimed].filter(k => !s.claimed.has(k)), dres = {};
+  for (const r of Object.keys(state.res)) if (state.res[r] !== s.res[r]) dres[r] = state.res[r] - (s.res[r] || 0);
+  if (!changes.length && !claimed.length) return;
+  undoStack.push({ changes, claimed, dm: state.money - s.money, dres });
+  if (undoStack.length > UNDO_MAX) undoStack.shift();
+  if (typeof updateUndoBtn === 'function') updateUndoBtn();
+}
+// Eine Nutzer-Aktion: alles darin wird ein Schritt (beim Verschieben erst, wenn abgelegt ist)
+function undoable(fn) {
+  if (!undoPending) undoPending = undoSnap();
+  try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
+}
+function undo() {
+  if (moving) { cancelMove(); undoPending = null; return true; }
+  const step = undoStack.pop();
+  if (typeof updateUndoBtn === 'function') updateUndoBtn();
+  if (!step) { toast('Nichts zum Rückgängigmachen'); return false; }
+  for (const [n, k, , a] of step.changes) {                        // seitdem dort etwas verändert? Dann lieber nicht
+    const v = UNDO_MAPS[n]().get(k);
+    if ((v === undefined ? undefined : undoStr(v)) !== a) { fail('Geht nicht mehr – dort hat sich seitdem etwas verändert'); return false; }
+  }
+  const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
+  if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }
+  for (const [n, k, b] of step.changes) { const m = UNDO_MAPS[n](); if (b === undefined) m.delete(k); else m.set(k, JSON.parse(b)); }
+  for (const k of step.claimed) state.claimed.delete(k);
+  state.money -= step.dm;
+  for (const [r, d] of Object.entries(step.dres)) state.res[r] -= d;
+  sandCache.clear(); landCache.clear(); waterChanged(); previewCache = null;
+  sfx('dig'); recalc(); save();
+  toast('↶ Rückgängig');
   return true;
 }

@@ -352,6 +352,14 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+65. **Rückgängig und Löschen** (Block 45): Jede Nutzer-Aktion, die die Welt ändert, läuft über `undoable(fn)` (Tippen mit
+    Werkzeug in input.js, Fenster-Knöpfe Drehen/Verschieben/Löschen/Torbogen). `undoSnap` merkt Felder, Kleinkram, Linien und
+    Boden (`UNDO_MAPS`, ohne `born`/`rate`), `undoCommit` speichert nur geänderte Stellen + Taler/Rohstoffe (bis `UNDO_MAX` = 20).
+    `undo()` prüft, dass jede Stelle noch so ist wie nach der Aktion (sonst „geht nicht mehr“), bucht exakt zurück. Verschieben
+    wird erst beim Ablegen ein Schritt (`undoPending` bleibt, solange `moving`). Ausbau-Stufen, Forschung, Käufe sind **kein**
+    Rückgängig-Schritt. Löschen im Fenster: `delButton`/`wireDel` (wie `demolishInfo`, ab `DEL_ASK` verlorenen Talern oder bei
+    Wunderwerken zweites Tippen), Linien über `openGateInfo` (jetzt für jedes Stück), Parkrasen `removeLawn`. Neue Fenster mit
+    Änderungen: Handler in `undoable` packen und einen Löschen-Knopf anbieten.
 64. **Park zum Selberbauen** (Block 44): Parkrasen ist ein Boden (`state.terra` = 'park', Pinsel `parkrasen` in `TERRAFORM`, einfarbig hell,
     zählt in `terrainAt` als Wiese, gezeichnet mit Rand in `drawGround`). Darauf nur Deko, Wege und Linien (`parkOk`);
     der Rasen darf unter Deko und Wege gemalt werden. `computeParks` (in `totals`, nach `computeMarkets`; auch nach `previewDelta`):

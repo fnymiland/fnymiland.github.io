@@ -123,11 +123,11 @@ function endPointer(e) {
     if (plan && plan.dragging && plan.tool === 'verschieben') {         // Auswahl: alles darin anheben
       const [x0, y0, x1, y1] = planBox(plan);
       plan = null;
-      pickUpGroup(x0, y0, x1, y1);
+      undoable(() => pickUpGroup(x0, y0, x1, y1));
     } else if (plan && plan.dragging) { plan.dragging = false; plan.fixed = true; }   // Vorschau bleibt stehen
     else if (drag && !moved && e.type === 'pointerup') {
       if (drag.right) { if (plan) cancelPlan(); else setTool('look'); }   // Rechtsklick: erst die Planung, dann das Werkzeug weg
-      else if (!drag.pan) tap(e.clientX, e.clientY, e.pointerType !== 'mouse');
+      else if (!drag.pan) { const go = () => tap(e.clientX, e.clientY, e.pointerType !== 'mouse'); if (tool !== 'look' || moving) undoable(go); else go(); }   // Bauen & Co.: ein Schritt zum Zurücknehmen
     }
     drag = null;
     canvas.style.cursor = spaceDown ? 'grab' : '';
@@ -171,6 +171,7 @@ window.addEventListener('keydown', e => {
   }
   if (e.key === 'Escape') { if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }
   if (!document.getElementById('modal').hidden) return;
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }   // Rückgängig
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
   if (e.repeat) return;                              // gedrückt halten schaltet nicht hin und her
   const quick = { a: 'look', w: 'weg', v: 'verschieben', e: 'abriss', Delete: 'abriss', Backspace: 'abriss' }[e.key.length === 1 ? e.key.toLowerCase() : e.key];
