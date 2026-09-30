@@ -197,11 +197,33 @@ function pillarBox(pt, r, h0, h1, col, z) {
   poly([c(-1, 1, h0), c(1, 1, h0), c(1, 1, h1), c(-1, 1, h1)], C(shade(col, 0)));
   poly([c(-1, -1, h1), c(1, -1, h1), c(1, 1, h1), c(-1, 1, h1)], C(shade(col, 0.16)));
 }
+// Gemauerter Pfeiler (Mauerende, Tor): deutlich breiter als die Mauer, vom Boden an mit Fugen, oben ein Deckstein.
+// Gibt die Höhe der Oberkante zurück.
+const PILLAR_UP = 2, CAP_UP = 2.8;
+function wallPillar(pt, look, z, rMax = Infinity) {                // rMax: am Tor nicht über die Feldecke hinaus
+  const r = Math.min(look.w * 1.5, rMax), h = look.h, top = h + PILLAR_UP, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
+  pillarBox(pt, r, 0, top, look.col, z);
+  if (look.joint) {                                               // Lagerfugen rundum, Stoßfugen versetzt
+    g.strokeStyle = C(look.cobbles ? shade(look.col, -0.2) : look.joint); g.lineWidth = 0.5 * z; g.beginPath();
+    const rows = Math.round(top / 2.4);
+    for (let i = 1; i < rows; i++) { const up = top * i / rows; g.moveTo(...c(-1, 1, up)); g.lineTo(...c(1, 1, up)); g.lineTo(...c(1, -1, up)); }
+    for (let i = 0; i < rows; i++) {
+      const u0 = top * i / rows, u1 = top * (i + 1) / rows, f = i % 2 ? 0.5 : 0;
+      for (const [a, b] of [[c(-1, 1, 0), c(1, 1, 0)], [c(1, 1, 0), c(1, -1, 0)]]) {
+        const t = 0.25 + f * 0.5, x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
+        g.moveTo(x, y - u0 * z); g.lineTo(x, y - u1 * z);
+      }
+    }
+    g.stroke();
+  }
+  pillarBox(pt, r * 1.18, top, h + CAP_UP, shade(look.col, 0.28), z);
+  return h + CAP_UP;
+}
 // Endstück an einem freien Ende: Mauer Pfeiler mit Deckstein, Zaun dicker Pfosten mit Kappe, Hecke rundes Ende.
 // Laternen darauf nur bei beleuchteten Stilen.
 function endPiece(b, look, pt, z, id) {
   const h = look.h, lit = litLook(look);
-  if (b === 'mauer') { pillarBox(pt, look.w * 1.15, 0, h + 2.5, look.col, z); pillarBox(pt, look.w * 1.35, h + 2.5, h + 3.4, shade(look.col, 0.28), z); if (lit) lampAt(pt, h + 3.4, z, id); return; }
+  if (b === 'mauer') { const top = wallPillar(pt, look, z); if (lit) lampAt(pt, top, z, id); return; }
   if (b === 'zaun') {
     const [x, y] = edgeS(pt[0], pt[1], 0, z), top = y - (h + (lit ? 3 : 2)) * z;
     g.strokeStyle = C(shade(look.col, -0.25)); g.lineWidth = 2.4 * z; g.lineCap = 'round';
@@ -213,7 +235,7 @@ function endPiece(b, look, pt, z, id) {
 }
 // Torbogen über einem Durchgang: vom einen Pfeiler/Pfosten zum anderen, oben eine Laterne
 function drawGateArch(E, e, look, z, k) {
-  const A = lerp2(E.p, E.q, GATE_CUT), B = lerp2(E.p, E.q, 1 - GATE_CUT), hb = e.b === 'hecke' ? look.h : look.h + 2.5, R = 11 + look.h * 0.2, n = 16;   // R: etwa halbe Torbreite → runder Bogen
+  const A = lerp2(E.p, E.q, GATE_CUT), B = lerp2(E.p, E.q, 1 - GATE_CUT), hb = e.b === 'hecke' ? look.h : e.b === 'mauer' ? look.h + CAP_UP : look.h + 2.5, R = 11 + look.h * 0.2, n = 16;   // R: etwa halbe Torbreite → runder Bogen
   const legs = e.b === 'hecke';                                   // an der Hecke steht der Bogen auf eigenen Beinen vom Boden
   const pts = [...(legs ? [[...A, 0]] : []), ...Array.from({ length: n + 1 }, (_, i) => { const t = i / n; return [...lerp2(A, B, t), hb + Math.sin(Math.PI * t) * R]; }), ...(legs ? [[...B, 0]] : [])];
   const stroke = (col, w, dy = 0) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([u, v, up], i) => { const p = edgeS(u, v, up + dy, z); i ? g.lineTo(...p) : g.moveTo(...p); }); g.stroke(); };
@@ -222,16 +244,17 @@ function drawGateArch(E, e, look, z, k) {
     stroke('#3f8a3a', 3.4); stroke('#5aa84f', 2.2);
     each(1, (x, y, i) => circle(x + (i % 2 ? 1 : -1) * z, y - 0.4 * z, 1.7 * z, C(i % 3 ? '#e8604f' : '#f28cb1')));
   } else if (e.b === 'mauer') {                                    // gemauerter Bogen: Körper so tief wie die Torpfeiler
-    const d = look.w * 1.25, [su, sv] = E.side, th = 2.6;
+    const d = look.w * 0.2, [su, sv] = E.side, th = 3.6;            // ein Ziegelring: wenig Tiefe, von vorn gut sichtbar
     const at = (t, up, s) => { const m = lerp2(A, B, t); return edgeS(m[0] + su * d * s, m[1] + sv * d * s, up, z); };
-    const inner = t => hb + Math.sin(Math.PI * t) * (R - th), outer = t => hb + th * 0.4 + Math.sin(Math.PI * t) * R;
+    const inner = t => hb + Math.sin(Math.PI * t) * (R - th), outer = t => hb + th * 0.55 + Math.sin(Math.PI * t) * (R - th * 0.45);
     const ts = Array.from({ length: n + 1 }, (_, i) => i / n);
     for (let i = 0; i < n; i++) {                                   // Unterseite (Laibung) und Oberseite als Streifen
       const t0 = ts[i], t1 = ts[i + 1];
+      if (Math.min(inner(t0), inner(t1)) < hb + 0.6) continue;     // am Fuß liegt der Bogen auf dem Deckstein
       poly([at(t0, inner(t0), -1), at(t1, inner(t1), -1), at(t1, inner(t1), 1), at(t0, inner(t0), 1)], C(shade(look.col, -0.3)));
     }
     for (let i = 0; i < n; i++) {
-      const t0 = ts[i], t1 = ts[i + 1], col = C(shade(look.col, 0.14));
+      const t0 = ts[i], t1 = ts[i + 1], col = C(shade(look.col, -0.1));
       poly([at(t0, outer(t0), -1), at(t1, outer(t1), -1), at(t1, outer(t1), 1), at(t0, outer(t0), 1)], col); g.strokeStyle = col; g.lineWidth = 0.8; g.stroke();
     }
     poly([...ts.map(t => at(t, outer(t), 1)), ...ts.slice().reverse().map(t => at(t, inner(t), 1))], C(look.col));   // Vorderseite
@@ -283,7 +306,7 @@ function drawEdge(k, e, z, now) {
     for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
     for (const t of [GATE_CUT, 1 - GATE_CUT]) {
       const m = lerp2(E.p, E.q, t), d = w * 1.25;
-      if (e.b === 'mauer') { edgePrism([m[0] - au * d, m[1] - av * d], [m[0] + au * d, m[1] + av * d], E, d, h + 2.5, look.col, z); if (!e.arch && litLook(look)) lampAt(m, h + 2.5, z, 'G' + (t < 0.5 ? 0 : 1) + k); }
+      if (e.b === 'mauer') { const top = wallPillar(m, look, z, GATE_CUT); if (!e.arch && litLook(look)) lampAt(m, top, z, 'G' + (t < 0.5 ? 0 : 1) + k); }
       else hedgeKnob(m, look, z);
     }
     if (e.arch) drawGateArch(E, e, look, z, k);
