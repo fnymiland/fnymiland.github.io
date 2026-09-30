@@ -110,15 +110,7 @@ function drawArc(rc, look, z) {
   if (rc.b === 'mauer') wallJoints(walls.slice().sort((A, B) => A[4] - B[4]).map(W => [W[1], W[2], W[4] * Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1])]), look, h, z, P);
   if (rc.b === 'hecke') for (const [, a, b, , s] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length, s * Math.hypot(b[0] - a[0], b[1] - a[1]));
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
-  if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
-  if (look.lights) {                                              // Lichterkette: an Anfang und Ende auf derselben Seite wie das
-    const sd = (p, v) => Math.sign((p[0] - c[0]) * v[0] + (p[1] - c[1]) * v[1]) || 1;   // anschließende gerade Stück ('a': +v, 'b': +u),
-    const s0 = sd(pts[0], [0, 1]), s1 = sd(pts[n], [1, 0]), total = ROUND_R * Math.PI / 2, lit = edgeLit('E' + rc.ka);   // dazwischen gleitet
-    alongLine(pts, 8, 0, (m, i) => {                                                    // sie hinüber (dabei über die Oberkante)
-      const f = s0 + (s1 - s0) * Math.min(1, (i + 0.5) / 8 / total), [x, y] = off(m, f);
-      bulbAt(edgeS(x, y, h - 0.6 * Math.abs(f) + 0.4 * (1 - Math.abs(f)), z), z, lit);
-    });
-  }
+  if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length, 'E' + rc.ka);
 }
 // Mauerfugen auf sichtbaren Wandstücken ([a, b] in Feld-Koordinaten): Lagerfugen durchgehend, Stoßfugen je Länge versetzt
 function wallJoints(segs, look, h, z, P) {
@@ -155,7 +147,7 @@ function wallJoints(segs, look, h, z, P) {
   g.stroke();
 }
 // Hecke oben: runde Buckel im gleichen Abstand (Buchs: Kugeln, Blütenhecke: Blüten) entlang einer Punktlinie
-function hedgeTop(pts, look, h, z, seed) {
+function hedgeTop(pts, look, h, z, seed, id) {
   const cum = [0];
   for (let s = 1; s < pts.length; s++) cum.push(cum[s - 1] + Math.hypot(pts[s][0] - pts[s - 1][0], pts[s][1] - pts[s - 1][1]));
   const total = cum[cum.length - 1], n = Math.max(1, Math.round(total * 5));
@@ -165,6 +157,16 @@ function hedgeTop(pts, look, h, z, seed) {
     if (look.balls) circle(x, y - 1.2 * z, 2.6 * z, C(shade(look.col, 0.1)));
     else circle(x, y + 0.4 * z, 2.1 * z, C(shade(look.col, 0.14)));
     if (look.flowers) circle(x + (i % 2 ? 1.2 : -1) * z, y - 0.6 * z, 0.9 * z, C(look.flowers[(i + (seed % 3)) % look.flowers.length]));
+  }
+  if (look.lights) {                                              // Lampions oben auf der Hecke: in jeder Richtung und Kurve gleich
+    const lit = edgeLit(id);
+    alongLine(pts, 3, 0, m => {
+      const [x, y] = edgeS(m[0], m[1], h + 1.6, z), r = 1.5 * z;
+      if (!lit) circle(x, y + r * 0.9, r * 0.5, C(shade(look.col, -0.2)));        // tags: Schatten auf der Hecke
+      circle(x, y, r, C('#f3e6b8'));
+      circle(x - r * 0.35, y - r * 0.35, r * 0.35, C('#fffaf0'));
+      if (lit) { const d = r * 0.95; glowQuad([[x - d, y], [x, y - d], [x + d, y], [x, y + d]], 12 * z); }   // nachts: leuchtender Kern
+    });
   }
 }
 // Lichter (Block 41): brennen nachts, wenn genug Strom da ist (edgeLamps zählt sie wie Laternen)
@@ -336,7 +338,7 @@ function drawEdge(k, e, z, now) {
   const ends = () => { if (endP && (!pilP || gateBefore)) endPiece(e.b, look, E.p, z, 'P' + vp.join()); if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join()); };
   const front = [[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]];
   if (look.lamps) { const m = lerp2(E.p, E.q, 0.5); pillarBox(m, w * 1.2, h, h + 1.2, shade(look.col, 0.28), z); lampAt(m, h + 1.2, z, 'E' + k); }
-  if (e.b === 'hecke') { hedgeSideFlowers(front, look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length); if (look.lights) bulbsAlong(front, h - 0.6, z, 'E' + k); ends(); return; }
+  if (e.b === 'hecke') { hedgeSideFlowers(front, look, h, z, k.length); hedgeTop([p, q], look, h, z, k.length, 'E' + k); ends(); return; }
   if (look.lights) bulbsAlong(front, h - 0.6, z, 'E' + k);
   wallJoints([[[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]]], look, h, z, (pt, up) => edgeS(pt[0], pt[1], up, z));
   ends();
