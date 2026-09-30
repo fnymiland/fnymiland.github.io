@@ -108,9 +108,18 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     +8 Pendler je Bahnhof, +10 % (`s.rail`) für alle Gebäude der Inseln. Schienen verbinden keine Viertel. Züge in
     movers.js (`syncTrains`/`stepTrains`/`trainCars`), Wagen als gedrehte Quader (`drawTrainCar`). Alles, was an einem
     Feld hängt und gespeichert werden muss (`bridge`, `train`), gehört auch in `tileOut` – der Zufallstest findet es sonst.
-25. **Baumenü** = `MENU` (data.js): Bauen (Filter Wohnen/Geld/Rohstoffe/Verstärker/Bildung) · Verschönern · Verbinden ·
-    Gelände. Jedes Ding steht in **genau einer** Gruppe (Test prüft das); neue Dinge dort eintragen, Wirkung in `FX`.
-    `ITEMS[].cat` ist die Spiel-Kategorie und bleibt unabhängig davon (Blumenbeet: Menü „Verstärker“, Spiel „deko“).
+25. **Baumenü** = `MENU` (data.js, Block 36): Wohnen · Arbeit (Betriebe/Rohstoffe/Strom/Verstärker) · Stadt (Läden/Essen/
+    Großstadt/Kultur/Bildung/Wunder) · Schön · Verbinden · Gelände. Kein „Alle“; ein Bereich ohne Filter hat `menuSub`
+    'alle', sonst gilt der erste Filter (`firstSub`), jeder Bereich merkt sich seinen (`subOf`). Jedes Ding steht in
+    **genau einer** Gruppe (Test prüft das), kein Filter mit mehr als ~11 Dingen; neue Dinge dort eintragen, Wirkung in
+    `FX`. Läden-Gruppen stehen in `SHOP_GROUPS`. `ITEMS[].cat` ist die Spiel-Kategorie und bleibt unabhängig davon
+    (Blumenbeet: Menü „Verstärker“, Spiel „deko“). Rathaus „Bereit“ gruppiert über `buildGroups()`.
+    **Kacheln** zeigen nur Bild + Preis (`cardPrice`, kurz über `shortMoney`), Name nur als `title`/`aria-label`;
+    Reihenfolge `menuList()` (Freies zuerst, auch für die Zahlentasten). Kachel antippen = `pickCard`: am iPad/Mac
+    rechts das **Bau-Infofenster** (`openBuildInfo`, `showPanel(…, live, id)` setzt `buildInfo`), das offen bleibt,
+    solange das Ding gewählt ist (`setTool` schließt nur bei einem anderen Werkzeug); der Hinweis zeigt dann nur, wie
+    man baut. Handy: kein Fenster, sondern ein ⓘ im Hinweis (`.hint-info`), Tippen auf die Karte schließt es wieder.
+    Neue Infos zu einem Ding gehören ins Bau-Infofenster, nicht auf die Kachel.
 26. **Natur räumt sich weg** (`willClear`, `clearCost`, `clearNature`): Bauen auf Wald/Obsthain/Fels/Erz/Kristallfels
     rodet bzw. sprengt zum normalen Preis; Betriebe behalten ihr Gelände. Beim Verschieben wird nichts geräumt.
 27. **Canvas-Text nie mit `textAlign = 'center'`**, sondern `centerText()` – Safari zentriert Text mit Emojis falsch.
@@ -132,7 +141,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `phase` (0 = Baustelle … phases.length = fertig, `wonderDone`). Wirkung (`effect`) und Schönheit erst fertig.
     Abschnitt bauen: `wonderStep`. Baustelle zeichnet `drawWonder` (Gerüst, fertiges Bild von unten abgeschnitten).
     Seebrücke: `needs: 'pier'` (hinterstes Feld an Land, Rest Wasser). Schloss: `festival: true`, Titel.
-    Preise immer über `wonderCost(t)`: `min` Minuten Einkommen (`t.rate`, beim Aufstellen gemerkt), mindestens `money`
+    Preise immer über `wonderCost(t)`: `min` Minuten des besten Einkommens (`wonderBase(t)` = max(`t.rate`, `wonderRate()`),
+    Block 37: `state.incPeak` inkl. haltbarem Warenverkauf `T.salesInc` – Wegschieben/früh Aufstellen spart nichts), mindestens `money`
     (letzter Abschnitt immer mindestens 1 Mio.).
     Bezahltes steht in `t.paid` (`wonderPaid`, alte Stände nach `OLD_WONDER_PHASES`). Größen seit v9: Riesenrad 5×5,
     Sternwarte 3×3, Botanischer Garten 5×5, Schloss 7×7 – alte Bauwerke wachsen beim Laden (`growWonders`).
@@ -296,7 +306,25 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Schrift; nichts aufs Dach außer Architektur. Nichts höher als der Rathaus-Uhrturm (71 px) – Ausnahmen: Stadion,
     Konzerthalle, Grand Hotel, Wunder. Messen: drawObject auf ein Test-Canvas, oberste deckende Pixelzeile.
     Vorrat (Block 33): Läden verkaufen nur `saleable(r)` = Bestand über `keepOf(r)` (state.keep, sonst `KEEP_DEFAULT`:
-    Baumaterial 2.000); im 📦 Lager je Ware umschaltbar (`cycleKeep`, Stufen `KEEP_STEPS`, `KEEP_ALL` = alles behalten).
+    Baumaterial 2.000, seit Block 37 auch Holz/Stein/Erz 500 und Obst 2.000); im 📦 Lager je Ware umschaltbar (`cycleKeep`,
+    Stufen `KEEP_STEPS`, `KEEP_ALL` = alles behalten). `produce` verarbeitet erst (Sägewerk & Co.), dann verkauft es;
+    was wirklich verkauft wurde, steht geglättet in `soldRate` (je Ware und je Laden `k|res`) – Lager und Infofenster
+    zeigen das, nie die Wunschmenge `T.sales[].rate`. `resetSales()` bei neuem Spiel/Laden.
+    **Balance (Block 37, Wirtschaftsprüfung 30.09.):** Ein Laden bedient höchstens `shopCap(b)` = Mitarbeiter ×
+    `SHOP_SERVE` (150) Kunden (`s.want`, `s.kunden`, `s.full` → „Voll – ein zweiter Laden hätte Kundschaft“). Weil Bauen
+    freie Einwohner braucht (`placeError`), begrenzt die Einwohnerzahl das Ladeneinkommen – vorher kaufte jeder Einwohner in
+    jeder Ladenart voll ein und die Progression kippte ab ~10 Laternen. Weil man Läden nachbauen kann, dazu die **Kaufkraft**
+    je Viertel (`kaufShares`): Ladenarten nach Ertrag je Rate-Punkt sortiert, die besten `KAUF_BUDGET` (40) Punkte voll, der
+    Rest `KAUF_OVER` (¼); Kopien zählen nicht neu; `s.base` = Ertrag davor, `s.buy` je Art (Infofenster „💰 Kaufkraft“).
+    Nie einen Faktor fürs ganze Viertel nehmen – dann senkt ein neuer Laden das Einkommen. Einwohner teilen sich gleiche Läden im Viertel
+    (`s.same`), Besucher gleiche Läden der Insel (`s.sameIsle`, `isleCount`) – nie Besucher je Viertel neu zählen.
+    Preise nach dem besten Einkommen: `wonderRate()` = max(`T.inc` + haltbarer Warenverkauf `T.salesInc`, `state.incPeak`);
+    `incPeak` steigt in `recalc` und sinkt in `peakTick` langsam (Halbwertszeit `PEAK_HALF`), beides nie, solange etwas
+    getragen wird (`moving`). Wunder (`wonderBase`), ferne Inseln mindestens `FAR_MIN(n)` Minuten (`isleMoney`), die letzten
+    Schritte vor dem Fest `lmPrice` (`LM_MIN`: Kristallhöhle 25/60 min) und der Leuchtturm (`ITEMS.leuchtturm.cost` ist ein
+    Getter → `leuchtCost`, 60 min; Kachelpreis zieht in `updateHud` nach) – fester Preis immer als Untergrenze. Alte
+    Stände ohne `incPeak` vergessen `t.rate` unfertiger Baustellen (`parseSave`). Taler-Truhe 5 Minuten, Hafen-Bonus nur für
+    `HARBOR_CAP` (3) Häfen. Neue Einkommensquellen immer gegen „Minuten Einkommen“ des nächsten Ziels prüfen.
 59. **Tempo weit weg** (Block 31): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen
     (`objSprites`, `spriteTile`/`spriteSmall`); gleich aussehende teilen sich eins (Häuser außer Hausboot, kleine Läden,
     Dekos), alles andere hat ein eigenes (Schlüssel mit Platz und `groundVersion`). Was das Aussehen ändert, gehört in

@@ -110,22 +110,26 @@ function buildToolbar() {
     cats.append(b);
   }
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
-  // Bereiche (Bauen · Verschönern · Verbinden · Gelände); ein Werkzeug aus einem anderen Bereich wird weggelegt
-  const keep = () => { if (tool !== 'look' && !menuItemsOf(menuTop, menuSub).includes(tool)) tool = 'look'; };
+  // Bereiche (Wohnen · Arbeit · Stadt · Schön · Verbinden · Gelände); ein Werkzeug aus einem anderen Bereich wird weggelegt.
+  // Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
+  const top = MENU.find(m => m.id === menuTop) || MENU[0];
+  if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
+  subOf[top.id] = menuSub;
+  const keep = () => { if (tool !== 'look' && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
   for (const m of MENU) {
     const b = document.createElement('button');
     b.className = 'cat' + (m.id === menuTop ? ' active' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
     // Handy: der Bereich klappt den Katalog auf (nochmal antippen: zu)
-    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id)); menuTop = m.id; keep(); buildToolbar(); };
+    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id)); menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
     cats.append(b);
   }
-  // bei „Bauen“: Filter nach Zweck
-  const subs = $('subcats'), top = MENU.find(m => m.id === menuTop) || MENU[0];
+  // bei Arbeit und Stadt: Filter nach Zweck
+  const subs = $('subcats');
   subs.innerHTML = '';
   subs.hidden = !top.groups;
-  if (top.groups) for (const [id, label] of [['alle', 'Alle'], ...top.groups.map(g => [g.id, g.label])]) {
+  if (top.groups) for (const { id, label } of top.groups) {
     const b = document.createElement('button');
     b.className = 'sub' + (id === menuSub ? ' active' : '');
     b.dataset.sub = id;
@@ -133,33 +137,41 @@ function buildToolbar() {
     b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
     subs.append(b);
   }
+  // Kacheln: nur Bild und Preis (Name beim Zeigen und im Infofenster); Freies zuerst, Gesperrtes dahinter
   const box = $('tools');
   box.innerHTML = '';
-  const mk = (id, label, sub, visual, fx) => {
+  for (const id of menuList()) {
+    const d = ITEMS[id], locked = !available(id);
     const b = document.createElement('button');
-    b.className = 'tool';
+    b.className = 'tool' + (locked ? ' locked' : '');
     b.dataset.tool = id;
-    b.append(visual);
-    const n = document.createElement('span'); n.className = 'name'; n.textContent = label;
-    const s = document.createElement('span'); s.className = 'cost'; s.textContent = sub;
-    b.append(n, s);
-    if (fx) { const f = document.createElement('span'); f.className = 'fx'; f.textContent = fx; b.append(f); }
-    b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
-    box.append(b);
-    return b;
-  };
-  const emoji = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
-  mk('look', 'Ansehen', 'kaufen & mehr', emoji('👆'));
-  for (const id of menuItemsOf(menuTop, menuSub)) {
-    const d = ITEMS[id];
-    const locked = !available(id);
-    const sub = locked ? lockText(id, true) : id === 'abriss' ? 'roden & mehr' : !d.cost ? 'kostenlos' : `🪙 ${fmt(d.cost)}${d.mat ? ' ' + matText(d.mat) : ''}`;
-    const b = mk(id, d.name, sub, id === 'abriss' ? emoji('🧹') : id === 'verschieben' ? emoji('✋') : thumb(id), effectText(id));
+    b.title = d.name + (locked ? ' · 🔒 ' + unlockText(d) : '');
+    b.setAttribute('aria-label', d.name);
+    b.append(id === 'abriss' ? emojiPic('🧹') : id === 'verschieben' ? emojiPic('✋') : thumb(id));
+    const c = document.createElement('span'); c.className = 'cost'; c.textContent = cardPrice(id);
+    b.append(c);
+    if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; b.append(l); }
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
-    if (locked) { b.classList.add('locked'); b.title = 'Freischalten: ' + unlockText(d); }
+    b.onclick = () => pickCard(id);
+    box.append(b);
   }
   setTool(tool);
+}
+const subOf = {};
+// Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
+const menuList = () => { const all = menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };
+const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
+// Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
+const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
+function shortMoney(n) { return n < 1e4 ? nf.format(n) : n < 1e6 ? `${nfShort.format(Math.floor(n / 100) / 10)} Tsd.` : `${nfShort.format(Math.floor(n / 1e5) / 10)} Mio.`; }
+const cardPrice = id => id === 'abriss' || id === 'verschieben' ? '' : ITEMS[id].cost ? '🪙 ' + shortMoney(ITEMS[id].cost) : 'gratis';
+// Kachel antippen: auswählen (nochmal: weglegen); iPad/Mac zeigen dazu rechts das Infofenster, das Handy ein ⓘ im Hinweis
+function pickCard(id) {
+  audio(); setSheet(false);
+  const next = tool === id ? 'look' : id;
+  setTool(next);
+  if (next !== 'look' && !PHONE) openBuildInfo(id);
 }
 
 function setTool(t) {
@@ -168,14 +180,15 @@ function setTool(t) {
   tool = t;
   rotManual = false;
   previewCache = null;
-  if (t !== 'look') closePanel();
+  if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === t);
   for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
   updateHint();
 }
-// Hinweis über der Leiste: auf dem Handy nur Name, Preis und wie man baut (sonst verdeckt er die halbe Karte)
+// Hinweis über der Leiste: auf dem Handy nur Name, Preis und wie man baut (sonst verdeckt er die halbe Karte) und ein ⓘ
+// fürs Infofenster; am iPad/Mac ohne Infofenster ausführlich, mit Infofenster nur, wie man baut
 function updateHint() {
   const hint = $('hint'), t = tool;
   if (t === 'look') { hint.hidden = true; return; }
@@ -184,21 +197,52 @@ function updateHint() {
     const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
       : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
     hint.textContent = `${d.name}${d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
+    const i = document.createElement('button');
+    i.className = 'hint-info'; i.textContent = 'ⓘ'; i.setAttribute('aria-label', `Mehr über ${d.name}`);
+    i.onclick = () => { audio(); openBuildInfo(t); };
+    hint.append(' ', i);
     hint.hidden = false;
     return;
   }
+  const how = [LINE_TOOLS.has(t) ? 'Linie: Anfang und Ende anklicken' : '',
+    t === 'verschieben' ? 'Mehrere auf einmal: Rechteck aufziehen'
+      : t === 'abriss' ? 'Fläche: aufziehen, hineinklicken reißt ab'
+      : dragKind(t) === 'rect' ? 'Fläche: aufziehen, hineinklicken baut' : '',
+    d.paint || dragKind(t) ? 'Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '',
+    ROTATABLE.has(t) && !d.small ? 'Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? 'drehen: ⟳' : ''].filter(Boolean);
+  if (buildInfo === t) { hint.textContent = [d.name, ...(how.length ? how : ['Platz auf der Karte anklicken'])].join(' · '); hint.hidden = false; return; }
   if (d.mat) extra.push('Material: ' + matText(d.mat));
   if (d.workers) extra.push(`👷 ${d.workers}`);
   if (d.beauty && t !== 'weg') extra.push(`🌸 ${d.beauty}`);
   if (d.ugly) extra.push(`🌸 −${d.ugly} neben Häusern`);
-  hint.textContent = `${d.name}: ${d.desc}` + (extra.length ? ' · ' + extra.join(' · ') : '')
-    + (LINE_TOOLS.has(t) ? ' · Linie: Anfang und Ende anklicken' : '')
-    + (t === 'verschieben' ? ' · Mehrere auf einmal: Rechteck aufziehen'
-      : t === 'abriss' ? ' · Fläche: aufziehen, hineinklicken reißt ab'
-      : dragKind(t) === 'rect' ? ' · Fläche: aufziehen, hineinklicken baut' : '')
-    + (d.paint || dragKind(t) ? ' · Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '')
-    + (ROTATABLE.has(t) && !d.small ? ' · Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? ' · drehen: ⟳' : '');
+  hint.textContent = `${d.name}: ${d.desc}` + [...extra, ...how].map(e => ' · ' + e).join('');
   hint.hidden = false;
+}
+
+// Bau-Infofenster (Block 36): alles Wichtige zu einem Ding aus der Leiste – an derselben Stelle wie das Infofenster
+// gebauter Gebäude. Bleibt offen, solange das Ding gewählt ist (setTool), und aktualisiert sich live (Preis rot/grün).
+let buildInfo = null;
+function openBuildInfo(id) {
+  const d = ITEMS[id];
+  if (!d) return;
+  const locked = !available(id), tip = ITEM_TIPS[id], fx = effectText(id);
+  const cost = [d.cost ? `<span${state.money < d.cost ? ' class="bad"' : ''}>🪙 ${fmt(d.cost)}</span>` : '<span>kostenlos</span>',
+    ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];
+  const [w, h] = d.small || id === 'abriss' || id === 'verschieben' ? [1, 1] : sizeOf(id, 0);
+  const built = d.small ? 0 : [...state.tiles.values()].filter(t => t.b === id).length;
+  const facts = [w * h > 1 ? `📐 ${w}×${h} Felder` : '', d.workers ? `👷 ${d.workers} Mitarbeiter` : '', SHOPS[id] ? `🛒 bedient bis ${fmt(shopCap(id))} Kunden` : '',
+    d.beauty && id !== 'weg' ? `🌸 +${d.beauty}` : '', d.ugly ? `🌸 −${d.ugly} neben Häusern` : '',
+    CONSUMERS[id] ? `⚡ braucht ${CONSUMERS[id]}` : '', built ? `🏗️ ${built} gebaut` : ''].filter(Boolean);
+  showPanel(`
+    <h3>${d.name}</h3>
+    ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(d)}</div></div>` : ''}
+    ${fx ? `<p class="big">${fx}</p>` : ''}
+    <div class="stats">${cost.join('')}</div>
+    <p class="muted">${d.desc}</p>
+    ${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
+    ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
+    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => tool === id ? openBuildInfo(id) : closePanel(), id);
+  $('p-close').onclick = closePanel;
 }
 
 // Stil-Leiste für Wege: nur, was man schon hat – alles Weitere gibt es in der Kunstakademie
@@ -259,6 +303,10 @@ function updateHud() {
   fl.style.background = state.town.color;
   fl.textContent = state.town.symbol;
   for (const b of document.querySelectorAll('[data-cost]')) {
+    // Preise nach Einkommen (Leuchtturm, Block 37) ziehen auf der Kachel nach
+    if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && +b.dataset.cost !== ITEMS[b.dataset.tool].cost) {
+      b.dataset.cost = ITEMS[b.dataset.tool].cost; b.querySelector('.cost').textContent = cardPrice(b.dataset.tool);
+    }
     // !! wichtig: toggle(…, undefined) würde bei jedem Aufruf umschalten (der Preis blinkte)
     const poor = !!(state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat))));
     if (b.classList.contains('tool')) b.classList.toggle('poor', poor);
@@ -297,7 +345,7 @@ $('pop-btn').onclick = hudMore;
 function storeHtml() {
   const shown = Object.keys(RES).filter(r => state.res[r] >= 1 || T.prod[r] || T.conv.some(c => c.to === r || c.from === r));
   const made = r => (T.prod[r] || 0) + T.conv.filter(c => c.to === r).reduce((s, c) => s + c.rate, 0) - T.conv.filter(c => c.from === r).reduce((s, c) => s + c.rate * CONV_RATIO, 0)
-    - (saleable(r) > 0 ? (T.sales || []).filter(sl => sl.res === r).reduce((s, sl) => s + sl.rate, 0) : 0);          // Läden verkaufen
+    - (soldRate[r] || 0);                                                                                          // Läden verkaufen (wirklich)
   const sold = new Set((T.sales || []).map(sl => sl.res));
   const keepBtn = r => { const k = keepOf(r); return sold.has(r) ? `<button class="keep" data-keep="${r}" title="Läden verkaufen nur, was darüber liegt – antippen zum Ändern">🔒 ${k >= KEEP_ALL ? 'alles' : fmt(k)}</button>` : '<span></span>'; };
   const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small>${keepBtn(r)}</div>`; });
@@ -468,6 +516,7 @@ function tryUnlock(k) {
   menuTop = p.top; menuSub = p.sub;
   buildToolbar();
   setTool(id);
+  if (!PHONE && ITEMS[id]) openBuildInfo(id);
 }
 
 // Offene Fenster aktualisieren sich live: Jedes merkt sich, wie es geöffnet wurde (live), updateHud baut es
@@ -517,14 +566,17 @@ addEventListener('pointerdown', e => { pressIn = e.target.closest && e.target.cl
 for (const ev of ['pointerup', 'pointercancel']) addEventListener(ev, () => { pressIn = null; }, true);
 
 // Infofenster
-function closePanel() { $('panel').hidden = true; $('panel').classList.remove('tall'); panelLive = null; }
+function closePanel() { $('panel').hidden = true; $('panel').classList.remove('tall', 'build-info'); panelLive = null; if (buildInfo) { buildInfo = null; updateHint(); } }
 // Handy: das Fenster ist die untere Hälfte (quer: rechte Seite); oben ein Griff – antippen oder hochwischen = ganz groß
 const GRIP = '<button class="grip" aria-label="Fenster größer oder kleiner"></button>';
-function showPanel(html, live = null) {
+function showPanel(html, live = null, build = null) {
   const el = $('panel'), fresh = el.hidden;
   if (!liveNow) { el.classList.remove('float'); el.style.left = ''; }
+  const was = buildInfo; buildInfo = build;                        // Bau-Infofenster (openBuildInfo) oder ein anderes
+  el.classList.toggle('build-info', !!build);
   setHtml(el, (PHONE ? GRIP : '') + html); el.hidden = false;
   panelLive = live;
+  if (was !== build) updateHint();
   if (PHONE && !liveNow) { if (fresh) el.classList.remove('tall'); requestAnimationFrame(revealTap); }
   return el;
 }
@@ -621,13 +673,13 @@ function openInfo(x, y) {
   else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
-  if (d.shop) status.push(...shopStatus(t, s));
+  if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
-  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (⚡ Strom unter Bauen).</div>`);
+  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🔨 Arbeit → ⚡ Strom).</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -708,7 +760,7 @@ function openInfo(x, y) {
       wonder = `<div class="label">Abschnitt ${p + 1} von ${N}: ${W.names[p]}</div>
         <div class="wbar"><i style="width:${p / N * 100}%"></i></div>
         <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
-        <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem Einkommen beim Aufstellen (🪙 ${fmt(t.rate || 0)}/s).</p>
+        <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem besten Einkommen (🪙 ${fmt(wonderBase(t))}/s).</p>
         <div class="row"><button class="btn" id="p-wonder" ${canPay(wonderCost(t)) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
     } else {
       wonder = '<p class="ok">✓ Fertig – wirkt jetzt.</p>';
@@ -877,20 +929,27 @@ function cableStatus(k) {
 }
 // Laden: Kundschaft, Innenstadt, was er aus dem Lager verkauft
 const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaoplantage' };
-function shopStatus(t, s) {
-  const S = SHOPS[t.b], out = [], kd = s.kunden || 0;
-  out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)}${s.same > 1 ? ` – teilt sich die Leute mit ${s.same - 1} weiteren ${ITEMS[t.b].name} im Viertel` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
+const wares0 = S => S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : S.ware ? [S.ware] : [];
+function shopStatus(t, s, k) {
+  const S = SHOPS[t.b], out = [], kd = s.kunden || 0, name = ITEMS[t.b].name, cap = shopCap(t.b), staff = S.workers || 1;
+  const shared = [s.same > 1 ? `die Einwohner mit ${s.same - 1} weiteren im Viertel` : '', s.sameIsle > 1 ? `die Besucher mit ${s.sameIsle - 1} weiteren auf der Insel` : ''].filter(Boolean);
+  out.push(kd >= 1 ? `<div>🛒 Kundschaft: ${fmt(kd)} von höchstens ${fmt(cap)}${shared.length ? ` – teilt sich ${shared.join(' und ')}` : ' (Einwohner im Viertel + Besucher der Insel)'}</div>`
     : '<div class="bad">✗ Noch keine Kundschaft: Häuser ins selbe Viertel (über Wege verbunden) – oder Besucher per Bahn und Schiff</div>');
+  if (s.buy < 0.995) out.push(`<div>💰 Kaufkraft: Die Leute im Viertel kaufen schon in vielen Läden ein – dieser Laden verdient hier ${Math.round(s.buy * 100)} %. Weitere Läden bringen nur noch wenig dazu, mehr Einwohner und Besucher dagegen voll.</div>`);
+  if (s.full) out.push(`<div class="bad">👷 Voll: ${staff === 1 ? 'Ein Mitarbeiter bedient' : `${staff} Mitarbeiter bedienen`} ${fmt(cap)} Kunden, ${fmt(s.want - kd)} gehen leer aus. Ein zweiter Laden dieser Art (${name}) hätte Kundschaft.</div>`);
   const next = [...INNER_STEPS].reverse().find(([min]) => (s.types || 0) < min);
   out.push(`<div class="${s.inner ? 'ok' : ''}">🛍️ Innenstadt: ${s.types || 0} verschiedene Läden im Viertel${s.inner ? ` · +${Math.round(s.inner * 100)} %` : ''}${next ? ` <small class="muted">(ab ${next[0]}: +${Math.round(next[1] * 100)} %)</small>` : ''}</div>`);
-  const sales = (s.sales || []).filter(sl => saleable(sl.res) > 0);
-  if (S.all || S.raw) out.push(sales.length ? `<div class="ok">📦 Verkauft ${sales.map(sl => RES[sl.res].icon).join('')} aus dem Lager → +${fmtRate(sales.reduce((a, sl) => a + sl.rate * sl.pay, 0))}/s</div>`
+  // Verkauft wird, was wirklich über den Ladentisch geht (soldRate) – nicht, was die Kundschaft gern hätte
+  const sold = sl => soldRate[k + '|' + sl.res] ?? (saleable(sl.res) > 0 ? sl.rate : 0);     // noch nie gerechnet: was der Laden will
+  const sales = (s.sales || []).filter(sl => sold(sl) > 1e-3);
+  if (S.all || S.raw) out.push(sales.length ? `<div class="ok">📦 Verkauft ${sales.map(sl => RES[sl.res].icon).join('')} aus dem Lager → +${fmtRate(sales.reduce((a, sl) => a + sold(sl) * sl.pay, 0))}/s</div>`
+    : wares0(S).some(r => state.res[r] >= 1) ? `<div>📦 Im Lager liegt nur der Vorrat (🔒) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
     : '<div class="bad">📦 Das Lager ist leer – nichts zu verkaufen</div>');
   else if (S.ware) {
     const sl = (s.sales || [])[0], r = RES[S.ware];
     const kp = keepOf(S.ware), keepTxt = kp ? ` <small class="muted">(🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)} bleiben im Lager)</small>` : '';
-    out.push(saleable(S.ware) > 0 && sl ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sl.rate * 60)} ${r.name}/min → +${fmtRate(sl.rate * sl.pay)}/s${keepTxt}</div>`
-      : state.res[S.ware] > 0 ? `<div>${r.icon} ${r.name}: nur der Vorrat ist da (🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)}) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
+    out.push(sl && sold(sl) > 1e-3 ? `<div class="ok">${r.icon} Verkauft ${fmtRate(sold(sl) * 60)} ${r.name}/min → +${fmtRate(sold(sl) * sl.pay)}/s${keepTxt}</div>`
+      : saleable(S.ware) > 0 ? '' : state.res[S.ware] > 0 ? `<div>${r.icon} ${r.name}: nur der Vorrat ist da (🔒 ${kp >= KEEP_ALL ? 'alles' : fmt(kp)}) – den verkauft der Laden nicht. Im 📦 Lager einstellbar.</div>`
       : `<div class="bad">${r.icon} Kein ${r.name} im Lager${WARE_FROM[S.ware] ? ` – wächst auf fernen Inseln (${WARE_FROM[S.ware]})` : ''}. Mit ${r.name} verdient der Laden viel mehr.</div>`);
   }
   if (S.attr) out.push(`<div class="ok">👥 Zieht ${S.attr} Besucher auf die Insel (per Bahn und Schiff)</div>`);
@@ -1282,7 +1341,7 @@ function readyList() {
 }
 // Bereites nach Art ordnen – wie das Bau-Menü; Wunderwerke und Laternen am Ende und nur einzeln
 function readyGroups(ready) {
-  const menu = MENU.find(m => m.id === 'bauen').groups;
+  const menu = buildGroups();
   const groupOf = e => e.kind === 'lm' ? 'lm' : e.kind === 'wonder' ? 'wunder' : isHome(e.b) ? 'wohnen'
     : (menu.find(g => g.items.includes(e.b)) || { id: 'andere' }).id;
   const defs = [...menu.map(g => ({ id: g.id, label: g.label, bulk: g.id !== 'wunder' })), { id: 'andere', label: '🧩 Sonstiges', bulk: true }, { id: 'lm', label: '🏮 Sehenswürdigkeiten', bulk: false }];
@@ -1482,12 +1541,12 @@ function showIntro(first) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-09-30-laeden', items: [
-  '🛍️ <b>Läden!</b> Café, Teeladen, Bubble Tea, Eisdiele, Buchladen, Pizzeria, Juwelier … jeder mit eigener Farbe, Bauform und Schild. Sie verdienen an den Leuten im Viertel und an Besuchern und verkaufen Waren aus dem Lager zum Dreifachen – wie viel du behalten willst, stellst du im 📦 Lager ein (🔒 Vorrat).',
-  '🏙️ <b>Innenstadt:</b> Viele verschiedene Läden in einem Viertel bringen bis zu +100 %. Gleiche Läden teilen sich die Kundschaft.',
-  '🎭 <b>Kultur und Endgame:</b> Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion, Hotels, Kaufhaus und Passage ziehen Besucher an. ☕ Kaffee, Tee und Kakao wachsen auf den fernen Inseln.',
-  '🏠 Häuser wünschen sich jetzt auch einen Laden (Stadthaus), ein Café (Villa) und Kultur (Glasvilla).',
-  '🚀 <b>Flüssiger:</b> Rauszoomen und Bauen gehen mit großen Inseln deutlich schneller. Und die Hafen-Aufträge lassen sich wieder liefern.',
+const NEWS = { id: '2026-09-30-leiste', items: [
+  '🧭 <b>Neue Leiste:</b> sechs Bereiche – Wohnen, Arbeit, Stadt, Schön, Verbinden, Gelände. Die Kacheln zeigen nur Bild und Preis; antippen zeigt rechts alles Wichtige (am Handy über das ⓘ im Hinweis).',
+  '👷 <b>Läden haben Personal:</b> Ein Laden bedient bis zu 150 Kunden je Mitarbeiter. Steht „Voll“ in seinem Fenster, lohnt sich ein zweiter derselben Art.',
+  '💰 <b>Kaufkraft:</b> Die Leute eines Viertels geben nicht unbegrenzt aus – ab etwa 8–10 Läden bringt jeder weitere weniger dazu. Große Städte verdienen an Läden deshalb deutlich weniger als vorher (die Läden waren viel zu stark).',
+  '🏮 <b>Das große Finale dauert länger:</b> Die letzten Stufen der Kristallhöhle, der Leuchtturm und ferne Inseln kosten jetzt Minuten deines besten Einkommens. Wunder werden nicht mehr billiger, wenn man Läden kurz wegschiebt.',
+  '📦 <b>Lager:</b> Läden verkaufen Holz, Stein und Erz erst ab 500 und Obst ab 2.000 – so bleibt genug für Sägewerk, Schmiede und Wunder. Nur noch die 3 besten Häfen geben ihren Bonus.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
@@ -1574,22 +1633,35 @@ $('import-file').addEventListener('change', async e => {
 // Rohstoffe fließen ins Lager; Verarbeitung nimmt, was da ist
 // Läden verkaufen aus dem Lager (so viel da ist) – das Geld kommt sofort, die Rate zeigt oben die Leiste
 let saleRate = 0;
+const soldRate = {};                   // was Läden wirklich verkaufen (je Ware 'holz', je Laden 'x,y|holz'), geglättet – fürs Lager und Infofenster
+function resetSales() { saleRate = 0; for (const k of Object.keys(soldRate)) delete soldRate[k]; }     // neues Spiel / anderer Stand
 function produce(dt) {
   const before = { ...state.res }, m = boostMul('prod');                // Erlass „Doppelte Ernte“
   for (const [r, v] of Object.entries(T.prod)) state.res[r] += v * m * dt;
-  let got = 0;
-  for (const sl of T.sales || []) {
-    const n = Math.min(sl.rate * dt, saleable(sl.res));                   // nur, was über dem Vorrat liegt
-    if (n <= 0) continue;
-    state.res[sl.res] -= n; got += n * sl.pay;
-  }
-  if (got) { state.money += got; state.stats.earned += got; }
-  if (dt > 0) saleRate += (got / dt - saleRate) * Math.min(1, dt);
+  // Erst verarbeiten (Sägewerk & Co.), dann verkaufen – sonst verkauft die Markthalle das Holz, bevor es Bretter werden
   for (const c of T.conv) {
     const want = c.rate * m * dt, can = Math.min(want, state.res[c.from] / CONV_RATIO);
     if (can <= 0) continue;
     state.res[c.from] -= can * CONV_RATIO;
     state.res[c.to] += can;
+  }
+  let got = 0;
+  const now = {};
+  for (const sl of T.sales || []) {
+    const n = Math.min(sl.rate * dt, saleable(sl.res));                   // nur, was über dem Vorrat liegt
+    if (n <= 0) continue;
+    state.res[sl.res] -= n; got += n * sl.pay;
+    now[sl.res] = (now[sl.res] || 0) + n;
+    const key = sl.k + '|' + sl.res; now[key] = (now[key] || 0) + n;
+  }
+  if (got) { state.money += got; state.stats.earned += got; }
+  if (dt > 0) {
+    const a = Math.min(1, dt);
+    saleRate += (got / dt - saleRate) * a;
+    for (const key of new Set([...Object.keys(soldRate), ...Object.keys(now)])) {     // wirklich verkauft (je Ware und je Laden)
+      soldRate[key] = (soldRate[key] || 0) + ((now[key] || 0) / dt - (soldRate[key] || 0)) * a;
+      if (!now[key] && soldRate[key] < 1e-4) delete soldRate[key];
+    }
   }
   return before;
 }

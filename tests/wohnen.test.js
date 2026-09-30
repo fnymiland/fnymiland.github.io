@@ -11,7 +11,7 @@ beforeEach(() => {
 
 describe('Wohnen', () => {
   it('im Menü „Wohnen“ stehen jetzt fünf Wohnformen', () => {
-    expect(game("MENU[0].groups.find(g => g.id === 'wohnen').items")).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
+    expect(game("MENU.find(m => m.id === 'wohnen').items")).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
   });
 
   it('Reihenhäuser (2×1): 10 Einwohner je Stufe', () => {

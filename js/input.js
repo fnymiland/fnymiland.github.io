@@ -57,6 +57,7 @@ let hoverSlot = 0;
 canvas.addEventListener('pointerdown', e => {
   audio();
   if (sheetOpen) setSheet(false);                     // Handy: Tippen auf die Karte klappt den Katalog zu
+  if (PHONE && buildInfo) closePanel();               // … und das Bau-Infofenster (es verdeckt sonst den Bauplatz)
   try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* ohne Capture weiter */ }
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if (pointers.size === 1) {
@@ -158,11 +159,12 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }
   if (!document.getElementById('modal').hidden) return;
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
+  if (e.repeat) return;                              // gedrückt halten schaltet nicht hin und her
   const quick = { a: 'look', w: 'weg', v: 'verschieben', e: 'abriss', Delete: 'abriss', Backspace: 'abriss' }[e.key.length === 1 ? e.key.toLowerCase() : e.key];
   if (quick) { setTool(tool === quick && quick !== 'look' ? 'look' : quick); return; }
-  const list = menuItemsOf(menuTop, menuSub);
+  const list = menuList();                           // wie die Leiste: Freigeschaltetes zuerst
   const n = parseInt(e.key, 10);
-  if (n >= 1 && n <= list.length) setTool(list[n - 1]);
+  if (n >= 1 && n <= list.length) pickCard(list[n - 1]);
 });
 window.addEventListener('keyup', e => { if (e.key === ' ') { spaceDown = false; if (!drag) canvas.style.cursor = ''; } });
 window.addEventListener('blur', () => { spaceDown = false; });

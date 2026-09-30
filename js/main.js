@@ -3,7 +3,7 @@
 // Start & Spielschleife
 // ---------------------------------------------------------------------------
 function startNew() {
-  resetUnlockWatch();
+  resetUnlockWatch(); resetSales();
   waterChanged();
   plan = null; moving = null;                      // Getragenes gehört zum alten Spiel (dort am alten Platz gespeichert)
   state = newState();
@@ -149,6 +149,7 @@ function frame(now) {
   earn(dt);
   state.science += T.sci * boostMul('sci') * dt;
   produce(dt);
+  peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
   stepMovers(Math.min(dt, 0.1));
   if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); lastSlow = now; }
   render(now);

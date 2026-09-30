@@ -136,10 +136,10 @@ describe('Alles ausbauen', () => {
     fields();
     game("state.tiles.set('4,6', { b: 'haus', lvl: 1 }); recalc(); openTownHall('ready')");
     const labels = [...document.querySelectorAll('.hall-group')].map(l => l.textContent);
-    expect(labels.some(t => /🪙 Geld \(\d+\)/.test(t))).toBe(true);           // Felder und Mühle
-    expect(document.querySelector('[data-upall="geld"]')).not.toBe(null);
+    expect(labels.some(t => /🌾 Betriebe \(\d+\)/.test(t))).toBe(true);       // Felder und Mühle
+    expect(document.querySelector('[data-upall="betriebe"]')).not.toBe(null);
     expect(document.querySelector('[data-upall="all"]')).not.toBe(null);
-    document.querySelector('[data-upall="geld"]').onclick();
+    document.querySelector('[data-upall="betriebe"]').onclick();
     expect(game("['7,8', '9,8', '8,9'].every(k => state.tiles.get(k).lvl === 2)")).toBe(true);
     game('closeModal()');
   });

@@ -29,20 +29,20 @@ describe('Leiste auf dem Handy', () => {
     size(375, 812);
     game('buildToolbar()');
     expect(bar().contains('open')).toBe(false);
-    catBtn('bauen').click();
+    catBtn('wohnen').click();
     expect(bar().contains('open')).toBe(true);
-    catBtn('bauen').click();
+    catBtn('wohnen').click();
     expect(bar().contains('open')).toBe(false);
   });
 
   it('Werkzeug wählen oder auf die Karte tippen klappt ihn zu', () => {
     size(375, 812);
     game('buildToolbar()');
-    catBtn('bauen').click();
+    catBtn('wohnen').click();
     document.querySelector('#tools [data-tool="haus"]').click();
     expect(game('tool')).toBe('haus');
     expect(bar().contains('open')).toBe(false);
-    catBtn('bauen').click();
+    catBtn('wohnen').click();
     const e = new window.MouseEvent('pointerdown', { clientX: 100, clientY: 100, button: 2, buttons: 2, bubbles: true });
     Object.defineProperty(e, 'pointerId', { value: 5 }); Object.defineProperty(e, 'pointerType', { value: 'touch' });
     document.getElementById('world').dispatchEvent(e);
@@ -52,15 +52,15 @@ describe('Leiste auf dem Handy', () => {
   it('der Hinweis ist kurz: Name, Preis, wie man baut', () => {
     size(375, 812);
     game("setTool('haus')");
-    expect(document.getElementById('hint').textContent).toBe('Haus · 🪙 40 · Platz antippen, nochmal tippen baut');
+    expect(document.getElementById('hint').textContent).toBe('Haus · 🪙 40 · Platz antippen, nochmal tippen baut ⓘ');
     game("setTool('weg')");
-    expect(document.getElementById('hint').textContent).toMatch(/^Weg · 🪙 5 · Anfang und Ende antippen$/);
+    expect(document.getElementById('hint').textContent).toMatch(/^Weg · 🪙 5 · Anfang und Ende antippen ⓘ$/);
   });
 
   it('Desktop/iPad: Bereiche klappen nichts, der Hinweis bleibt ausführlich', () => {
     size(1024, 768);
     game('buildToolbar()');
-    catBtn('bauen').click();
+    catBtn('wohnen').click();
     expect(bar().contains('open')).toBe(false);
     game("setTool('haus')");
     expect(document.getElementById('hint').textContent.length).toBeGreaterThan(60);

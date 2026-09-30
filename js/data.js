@@ -59,7 +59,7 @@ const ITEMS = {
   fabrik:  { cat: 'bau', name: 'Werkstatt', size: [1, 2], cost: 1200, needs: 'grass', workers: 4, tech: 'industrie', ugly: 12,
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3. Braucht 2 ⚡ Strom, sobald es Windräder gibt.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [3, 4], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
-             desc: 'Handel mit der Welt: +8 % auf alle Einnahmen. Je Stufe fährt ein Fischkutter hinaus (🪙 +5/s). Liegeplätze für 2/4/6 Schiffe, die zu Stegen und Häfen auf anderen Inseln fahren. Ab Stufe 2 legen Frachter mit Aufträgen an und kaufen dir ab, was sich stapelt (Stufe 3: mehr und Großaufträge).' },
+             desc: 'Handel mit der Welt: +8 % auf die Einnahmen der Betriebe (zählt für bis zu 3 Häfen). Je Stufe fährt ein Fischkutter hinaus (🪙 +5/s). Liegeplätze für 2/4/6 Schiffe, die zu Stegen und Häfen auf anderen Inseln fahren. Ab Stufe 2 legen Frachter mit Aufträgen an und kaufen dir ab, was sich stapelt (Stufe 3: mehr und Großaufträge).' },
   leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 15000000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40,
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
@@ -236,6 +236,10 @@ for (const [id, S] of Object.entries(SHOPS)) {
   for (const k of Object.keys(ITEMS[id])) if (ITEMS[id][k] === undefined) delete ITEMS[id][k];
   SHOPS[id].fx = fx;
 }
+// Leuchtturm: fester Preis als Untergrenze, sonst 60 Minuten des besten Einkommens (leuchtCost, Block 37) – überall,
+// wo ITEMS.leuchtturm.cost gelesen wird (Kachel, Bauen, Planen, Erstatten)
+const LEUCHT_BASE = ITEMS.leuchtturm.cost;
+Object.defineProperty(ITEMS.leuchtturm, 'cost', { get: () => (typeof leuchtCost === 'function' ? leuchtCost() : LEUCHT_BASE), enumerable: true, configurable: true });
 // Plantagen für exotische Waren – nur auf fernen Inseln (far)
 Object.assign(ITEMS, {
   kaffeeplantage: { cat: 'bau', name: 'Kaffeeplantage', cost: 20000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { kaffee: 0.25 },
@@ -377,44 +381,56 @@ const ANIMALS = [
   { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
 ];
 
-// Baumenü (gemeinsam entschieden 30.09., Variante B): vier Bereiche, „Bauen“ mit Filtern nach Zweck.
+// Baumenü (Block 36, gemeinsam entschieden): sechs Bereiche; Arbeit und Stadt mit Filtern nach Zweck (kein „Alle“ mehr).
 // Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie (das Blumenbeet zählt weiter als Deko).
+const SHOP_GROUPS = {
+  laeden: ['kiosk', 'blumenladen', 'friseur', 'post', 'apotheke', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
+  essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
+  gross: ['moebelhaus', 'markthalle', 'hotel', 'kaufhaus', 'passage', 'grandhotel'],
+};
 const MENU = [
-  { id: 'bauen', label: '🏗️ Bauen', groups: [
-    { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'geld', label: '🪙 Geld', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
+  { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+  { id: 'arbeit', label: '🔨 Arbeit', groups: [
+    { id: 'betriebe', label: '🌾 Betriebe', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
-    { id: 'boost', label: '📈 Verstärker', items: ['markt', 'hafen', 'blumen'] },
-    { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
-    { id: 'laeden', label: '🛍️ Läden', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'laden') },
+    { id: 'boost', label: '📈 Verstärker', items: ['markt', 'hafen', 'blumen'] },
+  ] },
+  { id: 'stadt', label: '🛍️ Stadt', groups: [
+    { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
+    { id: 'essen', label: '☕ Essen', items: SHOP_GROUPS.essen },
+    { id: 'gross', label: '🏙️ Großstadt', items: SHOP_GROUPS.gross },
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
+    { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
-  { id: 'schoen', label: '🌸 Verschönern', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
+  { id: 'schoen', label: '🌸 Schön', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
   { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'hbf', 'seilbahn'] },
   { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
 ];
+// Bereiche ohne Filter haben den Filter 'alle'; mit Filtern ist der erste der Standard
+const firstSub = top => { const m = MENU.find(e => e.id === top) || MENU[0]; return m.groups ? m.groups[0].id : 'alle'; };
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
 function menuPlaceOf(id) {
   for (const m of MENU) {
     if (m.groups) { for (const g of m.groups) if (g.items.includes(id)) return { top: m.id, sub: g.id }; }
     else if (m.items.includes(id)) return { top: m.id, sub: 'alle' };
   }
-  return { top: 'bauen', sub: 'alle' };
+  return { top: MENU[0].id, sub: 'alle' };
 }
-const menuItemsOf = (top, sub = 'alle') => {
+const menuItemsOf = (top, sub) => {
   const m = MENU.find(e => e.id === top) || MENU[0];
-  if (!m.groups) return m.items;
-  return sub === 'alle' ? m.groups.flatMap(g => g.items) : (m.groups.find(g => g.id === sub) || m.groups[0]).items;
+  return m.groups ? (m.groups.find(g => g.id === sub) || m.groups[0]).items : m.items;
 };
+// Gruppen mit Gebäuden (Wohnen, Arbeit, Stadt) – fürs Rathaus („Bereit“)
+const buildGroups = () => MENU.flatMap(m => m.groups || (m.id === 'wohnen' ? [{ id: m.id, label: m.label, items: m.items }] : []));
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',
   holz: '🪵 Holz', obst: '🍎 Obst', stein: '🪨 Stein', mine: '⛏️ Erz', kristallmine: '💎 Kristall',
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
-  markt: '+1,5/s je Nachbar', hafen: '+8 % · 🎣 · ⛴️ Schiffe', blumen: '+15 % Nachbarn',
+  markt: '+1,5/s je Nachbar', hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)',
@@ -443,7 +459,7 @@ const ITEM_TIPS = {
   baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in der Nähe oder am Weg.',
   markt: 'Mitten ins Dorf: Jedes Gebäude im Umkreis von 2 Feldern bringt +1,5 Taler/s.',
   fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
-  hafen: 'Ans Wasser. +8 % auf alle Einnahmen, Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',
+  hafen: 'Ans Wasser. +8 % auf die Einnahmen der Betriebe (bis zu 3 Häfen zählen), Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',
   leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
@@ -661,7 +677,7 @@ const TECHS = [
   { id: 'uni', tier: 2, name: 'Universität', cost: 200, req: ['bibliothek'], desc: 'Schaltet die Universität frei.' },
   { id: 'bahn', tier: 2, name: 'Eisenbahn', cost: 250, lm: 'erzberg:1', desc: 'Schienen, Brücken und Bahnhöfe: elektrische Züge zwischen deinen Inseln. Strom kommt von Windrädern.' },
   { id: 'dampf', tier: 3, name: 'Dampfkraft', cost: 350, req: ['industrie'], desc: 'Werkstätten bringen 50 % mehr.' },
-  { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf alle Einnahmen.' },
+  { id: 'schiffbau', tier: 3, name: 'Schiffbau', cost: 300, req: ['seehandel'], desc: 'Jeder Hafen bringt 12 % statt 8 % auf die Einnahmen der Betriebe (bis zu 3 Häfen).' },
   { id: 'bohrung', tier: 3, name: 'Tiefbohrung', cost: 300, req: ['tiefbau'], desc: 'Bergwerke überall, nicht nur auf Erzadern.' },
   { id: 'sterne', tier: 3, name: 'Sternkunde', cost: 400, desc: 'Alle Ideen 20 % mehr.' },
   { id: 'terraform', tier: 2, name: 'Terraforming', cost: 200, desc: 'Gelände selbst gestalten: Wald und Obstbäume pflanzen, Felsen setzen, Wiese und Strand anlegen (unter Gelände).' },

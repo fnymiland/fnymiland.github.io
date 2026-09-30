@@ -247,7 +247,10 @@ function beautyOf(t, x, y) {
 const INNER_STEPS = [[15, 1], [10, 0.5], [6, 0.25], [3, 0.1]];
 // Vorrat (Block 33): Läden verkaufen nur, was über dem Vorrat liegt – Baumaterial bleibt standardmäßig 2.000 im Lager.
 // Einstellbar je Ware im 📦 Lager (state.keep; fehlt ein Eintrag, gilt KEEP_DEFAULT). KEEP_ALL = alles behalten.
-const KEEP_DEFAULT = { bretter: 2000, quader: 2000, metall: 2000, kristall: 2000 }, KEEP_ALL = 1e15;
+// Rohstoffe (Block 37): Holz, Stein, Erz bleiben 500 für Sägewerk, Steinmetz und Schmiede, Obst 2.000 für Laternen und
+// Wunder (Botanischer Garten 600, Schloss 1.000 auf einmal) –
+// sonst verkaufen Markthalle, Hofladen und Eisdiele alles, bevor es verarbeitet wird.
+const KEEP_DEFAULT = { holz: 500, stein: 500, erz: 500, obst: 2000, bretter: 2000, quader: 2000, metall: 2000, kristall: 2000 }, KEEP_ALL = 1e15;
 const KEEP_STEPS = [0, 500, 2000, 10000, 50000, 250000, KEEP_ALL];
 const keepOf = r => (state.keep && state.keep[r] != null ? state.keep[r] : KEEP_DEFAULT[r] || 0);
 const saleable = r => Math.max(0, state.res[r] - keepOf(r));
@@ -255,12 +258,34 @@ function cycleKeep(r) {
   const i = KEEP_STEPS.indexOf(keepOf(r)), next = KEEP_STEPS[(i + 1) % KEEP_STEPS.length];
   if (!state.keep) state.keep = {};
   state.keep[r] = next;
-  save();
+  recalc(); save();                                   // haltbarer Verkauf (T.salesInc) ändert sich mit
   return next;
 }
+// Personal (Block 37): Ein Laden bedient höchstens SHOP_SERVE Kunden je Mitarbeiter – große Viertel brauchen einen zweiten.
+// Besucher (Block 37): gleiche Läden einer Insel teilen sie sich (sonst zählten sie in jedem Viertel neu).
+const SHOP_SERVE = 150;
+const shopCap = b => (SHOPS[b].workers || 1) * SHOP_SERVE;
+// Kaufkraft (Block 37): Die Leute eines Viertels geben nur so viel aus – die Ladenarten mit dem besten Ertrag je
+// Rate-Punkt zählen bis zur Summe KAUF_BUDGET (etwa 8–10 kleine Läden) voll, alle weiteren Punkte nur KAUF_OVER.
+// Nachgebaute Läden (gleiche Art) zählen nicht neu. In Summe 0,75 × beste 40 Punkte + 0,25 × alle: ein Laden senkt so
+// nie das Einkommen – er bringt nur weniger dazu (ein Faktor für das ganze Viertel konnte es senken).
+const KAUF_BUDGET = 40, KAUF_OVER = 0.25;
+const kaufFactor = R => R <= KAUF_BUDGET ? 1 : (KAUF_BUDGET + KAUF_OVER * (R - KAUF_BUDGET)) / R;   // Durchschnitt (Anzeige)
+// kinds: [{ b, rate, value }] eines Viertels → Map(b → Faktor)
+function kaufShares(kinds) {
+  const out = new Map();
+  let left = KAUF_BUDGET;
+  for (const e of [...kinds].sort((a, b) => b.value / b.rate - a.value / a.rate || (a.b < b.b ? -1 : 1))) {
+    const full = Math.min(e.rate, Math.max(0, left));
+    left -= full;
+    out.set(e.b, (full + KAUF_OVER * (e.rate - full)) / e.rate);
+  }
+  return out;
+}
 function shopWorld(net, links) {
-  const vPop = new Map(), visitors = new Map(), kinds = new Map();
+  const vPop = new Map(), visitors = new Map(), kinds = new Map(), isleKinds = new Map();
   for (const [k, t] of state.tiles) {
+    if (SHOPS[t.b]) { const r = regionAt(...keyXY(k)); if (!isleKinds.has(r)) isleKinds.set(r, new Map()); const m = isleKinds.get(r); m.set(t.b, (m.get(t.b) || 0) + 1); }
     const v = net.vOf(k);
     if (!v) continue;
     if (isHome(t.b)) vPop.set(v, (vPop.get(v) || 0) + popOf(t));
@@ -269,10 +294,12 @@ function shopWorld(net, links) {
   for (const l of links) if (l.traffic) for (const [r, n] of l.traffic.visits) visitors.set(r, (visitors.get(r) || 0) + n * l.traffic.served);
   const types = v => { const m = v && kinds.get(v); return m ? [...m.keys()].reduce((a, b) => a + (SHOPS[b].types || 1), 0) : 0; };
   const inner = v => { const n = types(v); for (const [min, b] of INNER_STEPS) if (n >= min) return b; return 0; };
-  return { vPop, visitors, count: (v, b) => (kinds.get(v) && kinds.get(v).get(b)) || 0, types, inner };
+  const rateSum = v => { const m = v && kinds.get(v); return m ? [...m.keys()].reduce((a, b) => a + SHOPS[b].rate, 0) : 0; };
+  return { vPop, visitors, rateSum, count: (v, b) => (kinds.get(v) && kinds.get(v).get(b)) || 0, isleCount: (r, b) => (isleKinds.get(r) && isleKinds.get(r).get(b)) || 0, types, inner };
 }
 
 let NET = null;
+const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen geben ihren Bonus (vorher ohne Grenze)
 function totals() {
   rebuildCover();
   const net = computeNet();
@@ -330,13 +357,13 @@ function totals() {
   };
   const klippe = lmOn.get('klippe') || lmHalf.get('klippe');
   const idle = rail.power.idle, off = k => idle.has(k) ? NO_POWER : 1;      // ohne Strom: halbe Wirkung
-  const harbors = [...state.tiles].filter(([, t]) => t.b === 'hafen').reduce((n, [k]) => n + off(k), 0);
+  const harbors = [...state.tiles].filter(([, t]) => t.b === 'hafen').map(([k]) => off(k)).sort((a, b) => b - a).slice(0, HARBOR_CAP).reduce((n, f) => n + f, 0);
   const gmul = 1 + (hasTech('schiffbau') ? 0.12 : 0.08) * harbors;
   // Fertige Wunderwerke (Block 28): Wunder → 1, ohne Strom ½
   const won = {};
   for (const [k, t] of state.tiles) if (WONDERS[t.b] && wonderDone(t)) won[t.b] = Math.max(won[t.b] || 0, off(k));
   const green = won.botgarten ? 1 + won.botgarten : 1;                   // Botanischer Garten: Obst und Felder doppelt
-  const SW = shopWorld(net, links), sales = [];
+  const SW = shopWorld(net, links), sales = [], shopTiles = [];
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
   const prod = {}, conv = [];
@@ -371,10 +398,12 @@ function totals() {
       s.inc = v; inc += v;
     }
     if (d.shop) {                                                             // Läden und Kultur (Block 30)
-      const S = SHOPS[t.b], v = net.vOf(k), share = 1 / Math.max(1, v ? SW.count(v, t.b) : 1), inner = SW.inner(v);
-      const kd = (((v && SW.vPop.get(v)) || 0) + (SW.visitors.get(regionAt(x, y)) || 0)) * share, f = m * off(k);
-      s.kunden = kd; s.inner = inner; s.types = SW.types(v); s.same = v ? SW.count(v, t.b) : 1;
-      s.inc = S.rate / 100 * kd * f * mT * (1 + inner); inc += s.inc;
+      const S = SHOPS[t.b], v = net.vOf(k), r = regionAt(x, y), inner = SW.inner(v), f = m * off(k);
+      s.same = v ? SW.count(v, t.b) : 1; s.sameIsle = Math.max(1, SW.isleCount(r, t.b));
+      const want = ((v && SW.vPop.get(v)) || 0) / Math.max(1, s.same) + (SW.visitors.get(r) || 0) / s.sameIsle, kd = Math.min(want, shopCap(t.b));
+      s.kunden = kd; s.want = want; s.full = want > kd + 0.5; s.inner = inner; s.types = SW.types(v);
+      s.base = S.rate / 100 * kd * f * mT * (1 + inner);                    // vor der Kaufkraft – die teilt unten je Viertel
+      shopTiles.push([v, t.b, s]);
       const wares = S.ware ? [S.ware] : S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : [];
       s.sales = wares.map(r => ({ k, res: r, rate: S.sell / 100 * kd * f, pay: TRADE_PRICE[r] * SALE_MUL * mT * (1 + inner) }));
       sales.push(...s.sales);
@@ -387,6 +416,18 @@ function totals() {
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
+  }
+  // Kaufkraft je Viertel: Arten nach Ertrag je Rate-Punkt, die besten KAUF_BUDGET Punkte voll (kaufShares)
+  const byV = new Map();
+  for (const [v, b, s] of shopTiles) {
+    if (!byV.has(v)) byV.set(v, new Map());
+    const m = byV.get(v), e = m.get(b) || { b, rate: SHOPS[b].rate, value: 0 };
+    e.value += s.base; m.set(b, e);
+  }
+  const shares = new Map([...byV].map(([v, m]) => [v, v ? kaufShares(m.values()) : null]));
+  for (const [v, b, s] of shopTiles) {
+    s.buy = shares.get(v) ? shares.get(v).get(b) : 1;
+    s.inc = s.base * s.buy; inc += s.inc;
   }
   // Eigene Effekte der Sehenswürdigkeiten (weit weg ohne Weg: halb; Touristen nur per Weg)
   const quelle = [...state.tiles].find(([, t]) => t.lm === 'quelle');
@@ -409,6 +450,17 @@ function totals() {
   inc += (fare + spend) * mT;
   inc *= 1 + wm('incMul');
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
+  // Warenverkauf, der sich dauerhaft halten lässt (was nachkommt, nicht der Lagerbestand) – für Preise nach Einkommen.
+  // Umwandlungen nur, soweit ihr Rohstoff nachkommt; Waren mit „alles behalten“ werden nie verkauft.
+  const need = {};
+  for (const c of conv) need[c.from] = (need[c.from] || 0) + c.rate * CONV_RATIO;
+  const scale = r => need[r] > 0 ? Math.min(1, (prod[r] || 0) / need[r]) : 1;
+  const salesInc = Object.entries(sales.reduce((m, sl) => { const e = m[sl.res] || (m[sl.res] = { want: 0, pay: 0 }); e.want += sl.rate; e.pay += sl.rate * sl.pay; return m; }, {}))
+    .filter(([r]) => keepOf(r) < KEEP_ALL)
+    .reduce((a, [r, e]) => {
+      const made = (prod[r] || 0) + conv.filter(c => c.to === r).reduce((n, c) => n + c.rate * scale(c.from), 0) - (need[r] || 0) * scale(r);
+      return a + Math.min(e.want, Math.max(0, made)) * (e.want > 0 ? e.pay / e.want : 0);
+    }, 0);
   beauty += 15 * lmFactor('obsthain') + [0, 20, 40, 80][lmStage('baum')] * lmFactor('baum');
   // Wünsche der Häuser (für Sprechblasen und Infofenster)
   const access = buildAccess(net, links);
@@ -418,13 +470,21 @@ function totals() {
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
   pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
-    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales };
+    traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales, salesInc };
 }
 let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0, lmOn: new Map(), lmHalf: new Map(), st: new Map(),
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; }
+function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+// Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
+// zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
+const PEAK_HALF = 1200;
+function peakTick(dt) {
+  if (moving || !state.incPeak) return;
+  const now = T.inc + (T.salesInc || 0);
+  if (state.incPeak > now) state.incPeak = Math.round(now + (state.incPeak - now) * Math.pow(0.5, dt / PEAK_HALF));
+}
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
 const lmStage = type => (state.restore && state.restore[type]) || 0;

@@ -3,7 +3,7 @@
 // Aktionen
 // ---------------------------------------------------------------------------
 let tool = 'look';
-let menuTop = 'bauen', menuSub = 'alle';        // Baumenü: Bereich und Filter (nur bei „Bauen“)
+let menuTop = 'wohnen', menuSub = 'alle';       // Baumenü: Bereich und Filter (nur bei Arbeit und Stadt, sonst 'alle')
 let hover = null;
 let hoverChunk = null;
 const floats = [];
@@ -52,7 +52,7 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
     }
   } else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: Math.round(T.inc) } : {}) });
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
       assignResident(t, Math.random, Math.random);

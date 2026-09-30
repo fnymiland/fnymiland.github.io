@@ -20,6 +20,9 @@ const unlockName = u => u.startsWith('weg:') ? `Weg-Stil „${styleDef('weg', u.
 // Themen-Inseln erschließen (die „gläserne Decke“): Bedingungen, nächste Insel, Erschließen
 // ---------------------------------------------------------------------------
 const isleOpen = id => state.islands.has(id);
+// Ferne Inseln kosten mindestens (15 + 5 × Nummer) Minuten Einkommen (Block 37): sonst sind sie nach dem Fest in Sekunden bezahlt
+const FAR_MIN = n => 15 + 5 * n;
+const isleMoney = i => i.far ? niceRound(Math.max(i.need.money || 0, FAR_MIN(i.n) * 60 * wonderRate())) : i.need.money || 0;   // bestes Einkommen: Wegschieben hilft nicht
 function isleNeeds(i) {
   const n = i.need, out = [];
   if (n.lanterns) {
@@ -28,7 +31,8 @@ function isleNeeds(i) {
   }
   if (n.pop) out.push({ text: `👥 ${n.pop} Einwohner`, ok: T.pop >= n.pop, have: T.pop, want: n.pop });
   if (n.science) out.push({ text: `💡 ${fmt(n.science)} Ideen`, ok: state.science >= n.science, have: state.science, want: n.science, pay: true });
-  if (n.money) out.push({ text: `🪙 ${fmt(n.money)} Taler`, ok: state.money >= n.money, have: state.money, want: n.money, pay: true });
+  const money = isleMoney(i);
+  if (money) out.push({ text: `🪙 ${fmt(money)} Taler`, ok: state.money >= money, have: state.money, want: money, pay: true });
   return out;
 }
 const nextIsle = () => ISLES.find(i => !isleOpen(i.id)) || FAR.find(i => !isleOpen(i.id)) || null;
@@ -59,7 +63,7 @@ function sendExpedition(from) {
   const i = nextIsle(), err = expeditionError(i);
   if (!err && (!from || !expeditionRoute(from, i))) from = stegs().find(k => expeditionRoute(k, i));
   if (err) { fail(err); return false; }
-  state.money -= i.need.money || 0;
+  state.money -= isleMoney(i);
   state.science -= i.need.science || 0;
   const now = Date.now();
   state.expedition = { isle: i.id, from, t0: now, until: now + expMinutes(i) * 60e3 };
@@ -190,7 +194,7 @@ function discoverFar(i) {
 }
 // Was die Truhe bringt: jetzt gerechnet, damit es zum Stand passt (Einkommen, Ideen/s)
 function chestLoot(i) {
-  if (i.chest === 'taler') return { money: niceRound(Math.max(1e6 * i.n, T.inc * 60 * 20)) };
+  if (i.chest === 'taler') return { money: niceRound(Math.max(1e6 * i.n, (T.inc + (T.salesInc || 0)) * 60 * 5)) };      // 5 Minuten Einkommen (Block 37, vorher 20)
   if (i.chest === 'ideen') return { science: niceRound(Math.max(500 * i.n, T.sci * 60 * 30)) };
   const r = i.res, base = (r === 'kristall' ? 60 : 250) * Math.pow(1.35, i.n);    // Waren: auch nach Produktion und Lager
   return { [r]: niceRound(Math.max(base, ((T.prod && T.prod[r]) || 0) * 60 * 30, state.res[r] * 0.25)) };
@@ -219,11 +223,16 @@ function lmTile(type) {
   return null;
 }
 
+// Laternenpreis: fest (LM_PRICE), die letzten Schritte vor dem Fest mindestens LM_MIN Minuten des besten Einkommens
+// (Block 37 – sonst kam das Fest mit den Läden viel zu früh; langsame Städte zahlen weiter den festen Preis)
+const LM_MIN = { kristall: [0, 25, 60] }, LEUCHT_MIN = 60;
+const lmPrice = (type, stage) => niceRound(Math.max(LM_PRICE[type][stage], ((LM_MIN[type] || [])[stage] || 0) * 60 * wonderRate()));
+const leuchtCost = () => niceRound(Math.max(LEUCHT_BASE, LEUCHT_MIN * 60 * wonderRate()));
 // Was fehlt noch für die nächste Stufe?
 function restoreInfo(type) {
   const stage = lmStage(type), next = LM_STAGES[type][stage], pos = lmTile(type);
   if (!next) return { stage, next: null, pos };
-  const { money: _base, ...raw } = next.cost, money = LM_PRICE[type][stage], k = LM_MAT_MUL[type], mat = {};
+  const { money: _base, ...raw } = next.cost, money = lmPrice(type, stage), k = LM_MAT_MUL[type], mat = {};
   for (const [r, n] of Object.entries(raw)) mat[r] = Math.ceil(n * k);
   let err = null;
   const isle = ISLE_OF_LM[type];
@@ -349,14 +358,14 @@ function openDiary(at) {
 // Einführung: die ersten Schritte, sanft geführt
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
-  { text: 'Bau dein erstes Haus.', hint: '🏗️ Bauen → Haus', done: () => hasBuilt('haus') },
+  { text: 'Bau dein erstes Haus.', hint: '🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
   { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Verbinden → Weg (ziehen) – oder 🛤️ ganz links',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
-  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
+  { text: 'Stell einen Holzfäller in den Wald.', hint: '🔨 Arbeit → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
   { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Verbinden), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
-  { text: 'Bau ein Sägewerk.', hint: '🏗️ Bauen → 🪵 Rohstoffe → Sägewerk', done: () => hasBuilt('saege') },
+  { text: 'Bau ein Sägewerk.', hint: '🔨 Arbeit → 🪵 Rohstoffe → Sägewerk', done: () => hasBuilt('saege') },
   { text: 'Bau dein erstes Haus aus.', hint: 'Wünsche erfüllen, dann Haus antippen → Ausbauen',
     done: () => [...state.tiles.values()].some(t => t.b === 'haus' && t.lvl >= 2) },
 ];
@@ -391,7 +400,7 @@ function goalHtml() {
   const boosts = boostLines();
   if (state.festival) {                            // danach: das Schloss, Erfolge und Album
     const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
-    const line = !s ? '🏰 Bau das Schloss: 🏗️ Bauen → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
+    const line = !s ? '🏰 Bau das Schloss: 🛍️ Stadt → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
     const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}<div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
   }
@@ -459,7 +468,7 @@ const GUIDE = [
   { id: 'ziehen', icon: '🖐️', title: 'Linie und Fläche', when: () => tool !== 'look' && !!ITEMS[tool] && !!ITEMS[tool].paint,
     text: 'Weg und Schiene: Anfang anklicken, Ende anklicken – du siehst jedes Feld und den Preis, der zweite Klick baut (iPad: Ende zweimal antippen). Gelände und Weg-Flächen: gedrückt halten und ein Rechteck aufziehen, dann hineinklicken. Esc oder ein kurzer Rechtsklick bricht ab. Karte bewegen: rechte Maustaste gedrückt halten (oder Leertaste/Ctrl), auf dem iPad zwei Finger.' },
   { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
-    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter Bauen → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
+    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter 🔨 Arbeit → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
     text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
 ];
@@ -691,13 +700,17 @@ const OLD_WONDER_PHASES = {
   schloss: [{ money: 40000, quader: 150 }, { money: 60000, quader: 150, bretter: 100 }, { money: 80000, metall: 120 },
             { money: 100000, quader: 100, metall: 100 }, { money: 120000, kristall: 60, bretter: 100 }, { money: 150000, metall: 80, kristall: 80, obst: 300 }],
 };
+// Einkommen, nach dem sich Wunder-Preise richten: das beste bisher (state.incPeak, Block 37) – früh Aufstellen oder Läden
+// kurz Wegschieben macht sie nicht mehr billiger. Nach jedem bezahlten Abschnitt zieht der Preis nach (wonderStep).
+const wonderRate = () => Math.round(Math.max(T.inc + (T.salesInc || 0), state.incPeak || 0));
+const wonderBase = t => wonderRate();                                // Preisgrundlage einer Baustelle (t.rate nur noch zur Anzeige alter Stände)
 const niceRound = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.round(v / p) * p; };
 function wonderCost(t, p = t.phase || 0) {
   const ph = WONDERS[t.b].phases[p];
   if (!ph) return null;
-  if (t.rate == null && T.inc > 0) t.rate = Math.round(T.inc);      // alte Baustellen: Einkommen von jetzt festhalten
+  if (t.rate == null && T.inc > 0) t.rate = wonderRate();            // alte Baustellen: Einkommen von jetzt festhalten
   const { min, money, ...mat } = ph;
-  return { money: niceRound(Math.max(money, (t.rate || 0) * 60 * min)), ...mat };
+  return { money: niceRound(Math.max(money, wonderBase(t) * 60 * min)), ...mat };
 }
 // Was in die Baustelle schon geflossen ist (Abriss, Umzug); alte Stände ohne t.paid: nach den alten Preisen
 function wonderPaid(t) {

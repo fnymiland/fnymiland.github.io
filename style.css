@@ -78,7 +78,8 @@ html, body {
 .tool { flex: none; }
 .tool {
   flex: none;
-  width: 78px;
+  position: relative;
+  width: 62px;
   background: var(--cream);
   border: 0;
   border-radius: 18px;
@@ -93,14 +94,15 @@ html, body {
   cursor: pointer;
   transition: transform .12s, background .12s;
 }
-.tool canvas { width: 56px; height: 44px; }
-.tool .emoji { font-size: 28px; height: 44px; display: flex; align-items: center; }
-.tool .name { font-size: 12px; font-weight: 800; line-height: 1.15; max-width: 100%; text-align: center;
-  -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }   /* lange Namen (Wasserkraftwerk) umbrechen statt überstehen */
-.tool .cost { font-size: 11px; font-weight: 800; color: var(--brown2); }
+.tool canvas { width: 54px; height: 42px; }
+.tool .emoji { font-size: 28px; height: 42px; display: flex; align-items: center; }
+/* Kachel = Bild + Preis (Block 36); Name und Wirkung stehen im Bau-Infofenster */
+.tool .cost { font-size: 11px; font-weight: 800; color: var(--brown2); white-space: nowrap; min-height: 14px; }
+.tool .lock { position: absolute; top: 2px; right: 3px; font-size: 12px; }
 .tool.active { background: var(--yellow); box-shadow: 0 4px 0 #e0c060, 0 8px 16px rgba(60, 40, 20, .15); transform: translateY(-5px); }
 .tool.poor .cost { color: var(--red); }
-.tool.locked { opacity: .5; }
+.tool.locked { opacity: .55; }
+.tool.locked canvas { filter: grayscale(.6); }
 @media (hover: hover) {
   .tool:not(.active):hover { transform: translateY(-2px); }
 }
@@ -121,6 +123,9 @@ html, body {
   text-align: center;
   pointer-events: none;
 }
+/* Handy: ⓘ im Hinweis öffnet das Bau-Infofenster (der Hinweis selbst lässt Tippen durch) */
+.hint-info { pointer-events: auto; border: 0; background: var(--yellow); color: var(--brown); font: inherit; font-weight: 900;
+  border-radius: 99px; width: 26px; height: 26px; margin: -4px -8px -4px 4px; cursor: pointer; vertical-align: middle; }
 
 /* ---------- Infofenster ---------- */
 #panel {
@@ -427,13 +432,13 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
   box-shadow: inset 0 0 0 1.5px rgba(107, 79, 58, .18);
 }
 .sub.active { background: var(--yellow); box-shadow: inset 0 0 0 1.5px #e0c060; }
-.tool .fx { font-size: 10px; font-weight: 800; color: var(--green-d); line-height: 1.1; text-align: center; }
+#panel .stats span.bad { color: var(--red); }
 @media (max-width: 600px) {
   .cat:not(.active) .tx, .sub:not(.active) .tx { display: none; }
-  .cats { gap: 4px; }
-  .cat { padding: 5px 9px; }
-  .quick { width: 31px; }
-  .quick-sep { margin: 4px 2px; }
+  .cats { gap: 2px; }                  /* sechs Bereiche + vier Schnellknöpfe passen in 375 px (auch mit „Verbinden“) */
+  .cat { padding: 5px 6px; font-size: 12px; }
+  .quick { width: 29px; }
+  .quick-sep { margin: 4px 1px; }
 }
 
 /* ---------- Neu freigeschaltet ---------- */
@@ -563,7 +568,6 @@ body.phone .cats { margin-bottom: 0; }
 /* Hochformat: Kacheln als Raster (vier nebeneinander), höchstens halbe Höhe */
 body.phone:not(.phone-land) #toolbar.open .tools { flex-wrap: wrap; justify-content: center; width: auto; max-height: 46dvh;
   overflow-x: hidden; overflow-y: auto; padding: 8px 0 6px; }
-body.phone #toolbar .tool[data-tool="look"] { display: none; }    /* „Ansehen“ ist schon vorn in der Zeile */
 /* Zielkasten: von selbst nur eine Zeile (antippen klappt ihn auf) */
 body.phone #goal { width: auto; max-width: min(260px, 62vw); padding: 7px 12px 8px; border-radius: 14px; }
 body.phone #goal.small h4 { font-size: 12px; }

@@ -11,8 +11,8 @@ beforeEach(() => {
 const t = k => game(`state.tiles.get('${k}')`);
 
 describe('Menü', () => {
-  it('„⚡ Strom“ ist ein Filter unter Bauen – das Windrad steht nicht mehr bei „Verbinden“', () => {
-    expect(game("MENU[0].groups.find(g => g.id === 'strom').items")).toEqual(['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen']);
+  it('„⚡ Strom“ ist ein Filter unter Arbeit – das Windrad steht nicht mehr bei „Verbinden“', () => {
+    expect(game("MENU.find(m => m.id === 'arbeit').groups.find(g => g.id === 'strom').items")).toEqual(['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen']);
     expect(game("MENU.find(m => m.id === 'verbinden').items")).not.toContain('windrad');
   });
 });

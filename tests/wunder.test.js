@@ -84,10 +84,11 @@ describe('Wunderwerke', () => {
     game("state.restore = { baum: 3, obsthain: 3, klippe: 3, ruine: 1 }; T.inc = 2000; build('riesenrad', 8, 8, true)");
     const t = "state.tiles.get('8,8')";
     expect(game(`${t}.rate`)).toBe(2000);
+    game('T.inc = 2000; T.salesInc = 0; state.incPeak = 0');
     expect(game(`wonderCost(${t}, 0).money`)).toBe(game("niceRound(2000 * 60 * 12)"));   // 12 Minuten, gerundet
     game('T.inc = 99999');
-    expect(game(`wonderCost(${t}, 0).money`)).toBe(1400000);                   // bleibt beim Preis vom Aufstellen
-    game(`${t}.rate = 5`);
+    expect(game(`wonderCost(${t}, 0).money`)).toBe(game('niceRound(99999 * 60 * 12)'));   // folgt dem besten Einkommen (Block 37)
+    game(`T.inc = 5; state.incPeak = 0; ${t}.rate = 5`);
     expect(game(`wonderCost(${t}, 0).money`)).toBe(30000);                     // Sockel für kleine Einkommen
     expect(game(`wonderCost(${t}, 0).quader`)).toBeGreaterThanOrEqual(100);
     const total = game(`WONDERS.riesenrad.phases.reduce((s, p) => s + p.min, 0)`);

@@ -31,6 +31,7 @@ function newState() {
     inventions: new Set(),     // Erfindungen (für Ideen)
     orders: [], orderNext: 0,  // Aufträge der Frachter am Handelshafen (Block 24), nächster ab orderNext
     keep: {},                  // Vorrat je Ware, den Läden nicht verkaufen (Block 33; fehlt: KEEP_DEFAULT)
+    incPeak: 0,                // bestes Einkommen bisher (Taler/s) – danach richten sich die Wunder-Preise (Block 37)
     vehicles: new Set(),       // erforschte Verkehrsmittel: 'zug:regio', 'schiff:dampfer' … (Forschung „Verkehr“)
     expedition: null,          // Boot unterwegs: { isle, from: Steg-Feld, t0, until } (echte Zeit, läuft auch geschlossen weiter)
     decree: null, decreeNext: 0,   // Erlass im Schloss (Block 28): { id, until }; der nächste ab decreeNext (echte Zeit)
@@ -90,7 +91,7 @@ function serialize() {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, keep: state.keep, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -119,6 +120,8 @@ function parseSave(d) {
   const WEG_TO = { mulch: 'mulch', kies: 'sand', tritt: 'tritt', steg: 'sand', holz: 'sand', blueten: 'blueten', pastell: 'konfetti', mosaik: 'konfetti', schach: 'platten' };
   const PAVE_TO = { kopf: 'kopf', terrakotta: 'terrakotta', schach: 'platten', fisch: 'fisch', mosaik: 'konfetti', alt: 'platten' };
   for (const [, t] of d.tiles) {
+    // Block 37: Stände ohne incPeak – Baustellen merkten sich ihr Einkommen von vor der Personal-Grenze (oft viel zu hoch)
+    if (!('incPeak' in d) && t.phase != null && WONDERS[t.b] && t.phase < WONDERS[t.b].phases.length) delete t.rate;
     if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
     else if ((t.b === 'weg' || t.cross) && t.style && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'sand';
   }
@@ -207,6 +210,7 @@ function parseSave(d) {
     vehicles: new Set([...(d.vehicles || []), ...grandfathered.filter(v => v !== 'zug:tram')]),
     orders: Array.isArray(d.orders) ? d.orders.filter(o => o && RES[o.res] && o.amount > 0) : [], orderNext: +d.orderNext || 0,
     keep: Object.fromEntries(Object.entries(d.keep || {}).filter(([r, n]) => RES[r] && isFinite(n) && n >= 0)),
+    incPeak: isFinite(d.incPeak) && d.incPeak > 0 ? d.incPeak : 0,
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
@@ -266,7 +270,7 @@ function load() {
 
 // Einen anderen Stand übernehmen (Import): Zwischenspeicher leeren, alles neu zeichnen
 function adoptState(s) {
-  resetUnlockWatch();
+  resetUnlockWatch(); resetSales();
   state = s;
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged();

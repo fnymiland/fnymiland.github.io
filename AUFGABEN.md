@@ -379,3 +379,34 @@ groß bleiben, Museum, Hotel, Aquarium, Kino, Theater kleiner.
 - [x] Farben aus der Palette der alten (helle Wände, klare Dächer), eigene Bauform je Laden, weniger Kleinkram, keine Schrift.
 - [x] Größen: kleine Läden wie Wohnhäuser; Kaufhaus 63, Hotel 56, Museum 52, Theater 58, Kino 42 px (Rathaus 71).
 - [x] Uni, Bibliothek, Kunstakademie etwas größer und stattlicher.
+
+## Block 36 – Leiste unten neu (30.09.)
+
+Entschieden: sechs Bereiche (Wohnen · Arbeit · Stadt · Schön · Verbinden · Gelände), Läden aufgeteilt in Läden, Essen,
+Großstadt; Kacheln nur Bild + Preis, Infos rechts im Fenster; gesperrte Dinge hinten mit Schloss; Handy: ⓘ im Hinweis.
+- [x] **36a** Menü: sechs Bereiche, Filter bei Arbeit und Stadt ohne „Alle“, jeder Bereich merkt sich seinen Filter.
+- [x] **36b** Kacheln schmal (62 statt 78 px): Bild, Preis (kurz: „12 Tsd.“, „1,2 Mio.“), Schloss bei Gesperrtem; Freies zuerst.
+- [x] **36c** Bau-Infofenster rechts: Wirkung, Preis mit Material (rot, wenn es fehlt – live), Beschreibung, Tipp, Größe,
+      Mitarbeiter, Schönheit, Strom, wie viele schon stehen, wie man es freischaltet. Hinweis dann nur „wie man baut“.
+- [x] **36d** Handy: ⓘ im Hinweis öffnet das Fenster, Tippen auf die Karte schließt es; obere Zeile passt in 375 px.
+
+## Block 37 – Progression nach den Läden (30.09.)
+
+Wirtschaftsprüfung mit Musterstädten (23 Durchläufe, gegengeprüft): bis ~8 Laternen in Ordnung, ab ~10 Laternen
+kaufte jeder Einwohner in jeder Ladenart voll ein – Wartezeit bis zum Fest 3,8 h → 1,8 h (Wohnstadt 11,3 h → 2,2 h).
+Entschieden: Personal-Grenze, ferne Inseln und Truhe nach Einkommen, nur 3 Häfen zählen.
+- [x] **37a** Personal: ein Laden bedient höchstens 150 Kunden je Mitarbeiter; Infofenster „Voll – ein zweiter Laden …“.
+- [x] **37b** Besucher teilen sich gleiche Läden der ganzen Insel (vorher je Viertel neu: Lücke im Weg = doppelt).
+- [x] **37c** Materialfalle: Holz/Stein/Erz behalten 500, Obst 2.000; erst verarbeiten, dann verkaufen; Lager und
+      Infofenster zeigen, was wirklich verkauft wird.
+- [x] **37d** Wunder-Preis nach dem besten Einkommen bisher (früh aufstellen/Läden wegschieben spart nichts mehr).
+- [x] **37e** Ferne Inseln mindestens (15 + 5 × Nummer) Minuten Einkommen, Taler-Truhe 5 statt 20 Minuten.
+- [x] **37f** Häfen: nur die 3 besten geben +8 %/+12 % (auf Betriebe – Text korrigiert).
+- [x] **37g** Nachmessung: Personal allein bremst nicht (Nachbauen holt alles zurück) → dazu **Kaufkraft** je Viertel:
+      die besten 40 Rate-Punkte voll, der Rest ¼ (je Art sortiert, damit ein Laden nie das Einkommen senkt).
+- [x] **37h** Letzte Schritte nach Einkommen (Spieler: „teurer“, Variante mit Einkommen): Kristallhöhle Stufe 2/3 mindestens
+      25/60 Minuten, Leuchtturm 60 Minuten des besten Einkommens; feste Preise bleiben Untergrenze.
+- [x] **37i** Gefunden und behoben: Inseln/Wunder per ✋ billiger, alte Baustellen mit Preis von vor dem Update, Warenverkauf
+      überschätzt (Sägewerk ohne Holz), bestes Einkommen sank nie (jetzt Halbwertszeit 20 min), Obst-Vorrat blockierte Wunder.
+- [ ] Endmessung nach dem nächsten Spiel: Ziel gemischte Stadt mit Läden ≈ 3,5 h Warten auf Geld bis zum Fest (Messskripte: Scratchpad preise/).
+
