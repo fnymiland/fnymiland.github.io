@@ -10,7 +10,8 @@ const tools = () => q('#tools .tool').map(b => b.dataset.tool);
 
 describe('Baumenü', () => {
   it('jedes Ding steht in genau einer Gruppe', () => {
-    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old)");   // Größen stehen nicht einzeln im Menü
+    // Größen stehen nicht einzeln im Menü, ✋ Verschieben und 🧹 Abreißen nur in der Werkzeugleiste
+    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old && !['verschieben', 'abriss'].includes(id))");
     const placed = game('MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items)');
     for (const id of ids) expect(placed.filter(p => p === id).length, id).toBe(1);
     expect(placed.every(id => ids.includes(id))).toBe(true);
@@ -35,7 +36,7 @@ describe('Baumenü', () => {
     area('freizeit').onclick();
     expect(subs()).toEqual(['kultur', 'wunder']);
     area('gestalten').onclick();
-    expect(subs()).toEqual(['gruen', 'linien', 'platz', 'besonderes', 'land']);
+    expect(subs()).toEqual(['land', 'gruen', 'linien', 'platz', 'besonderes']);
   });
 
   it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Parkrasen, Leuchtturm', () => {
@@ -45,7 +46,7 @@ describe('Baumenü', () => {
     expect(at('baecker')).toEqual({ top: 'herstellen', sub: 'taler' });
     expect(at('stand_obst')).toEqual({ top: 'einkaufen', sub: 'markt' });
     expect(at('weg')).toEqual({ top: 'gestalten', sub: 'land' });
-    expect(at('parkrasen')).toEqual({ top: 'gestalten', sub: 'gruen' });
+    expect(at('parkrasen')).toEqual({ top: 'gestalten', sub: 'land' });
     expect(at('leuchtturm')).toEqual({ top: 'freizeit', sub: 'wunder' });
     expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });
@@ -68,7 +69,7 @@ describe('Baumenü', () => {
     game("buildToolbar(); setTool('haus')");
     area('gestalten').onclick();
     expect(game('tool')).toBe('look');
-    expect(tools()).toContain('baum');
+    expect(tools()).toContain('weg');                                           // Gestalten beginnt mit Wege & Gelände
   });
 
   it('das Blumenbeet steht bei Deko und zählt im Spiel als Deko', () => {

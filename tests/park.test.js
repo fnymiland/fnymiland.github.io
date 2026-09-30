@@ -12,11 +12,11 @@ const build = (b, x, y) => game(`build('${b}', ${x}, ${y}, true)`);
 const lawn = (x0, y0, w, h) => { for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) build('parkrasen', x, y); game('recalc()'); };
 
 describe('Parkrasen', () => {
-  it('ist ein Boden, der als Wiese zählt; steht im Menü unter Gestalten → Grün, der alte 3×3-Park nicht mehr', () => {
+  it('ist ein Boden, der als Wiese zählt; steht im Menü unter Gestalten → Wege & Gelände, der alte 3×3-Park nicht mehr', () => {
     expect(build('parkrasen', 10, 10)).toBe(true);
     expect(game("terraLook(10, 10)")).toBe('park');
     expect(game("terrainAt(10, 10)")).toBe('grass');
-    expect(game("menuPlaceOf('parkrasen')")).toEqual({ top: 'gestalten', sub: 'gruen' });
+    expect(game("menuPlaceOf('parkrasen')")).toEqual({ top: 'gestalten', sub: 'land' });
     expect(game("menuItemsOf('gestalten', 'gruen')")).not.toContain('park');
   });
 

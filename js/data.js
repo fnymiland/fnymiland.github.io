@@ -478,11 +478,11 @@ const MENU = [
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'gruen', label: '🌳 Grün', items: ['parkrasen', 'baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus'] },
+    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
+    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
-    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
   ] },
 ];
 // Suche (Block 38): Name ohne Groß/Klein und Umlaute („back“ findet die Bäckerei)

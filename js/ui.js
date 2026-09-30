@@ -132,7 +132,7 @@ function buildToolbar() {
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
   subOf[top.id] = menuSub;
-  const keep = () => { if (tool !== 'look' && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
+  const keep = () => { if (tool !== 'look' && !QUICK.some(([id]) => id === tool) && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
   for (const m of MENU) {
     const b = document.createElement('button');
     b.className = 'cat' + (m.id === menuTop && searchQ == null ? ' active' : '');
@@ -1695,7 +1695,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
   '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor – antippen und einen Torbogen oder Rosenbogen draufsetzen. Enden bekommen Pfeiler mit Laternen, es gibt Stile mit Lichterketten. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
   '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
-  '🌳 <b>Park zum Selberbauen:</b> Zieh Parkrasen auf (🌸 Gestalten → Grün) und stell Bäume, Beete, Bänke und Brunnen drauf – daraus wird eine Grünanlage, ein Park oder ein Stadtpark. Er macht die Häuser ringsum schöner, lockt Besucher und Spaziergänger an, und im Park-Fenster kannst du ein <b>Parkfest</b> feiern. Dein alter Park ist jetzt Rasen mit Brunnen, Bäumen und Bänken.',
+  '🌳 <b>Park zum Selberbauen:</b> Zieh Parkrasen auf (🌸 Gestalten → Wege & Gelände) und stell Bäume, Beete, Bänke und Brunnen drauf – daraus wird eine Grünanlage, ein Park oder ein Stadtpark. Er macht die Häuser ringsum schöner, lockt Besucher und Spaziergänger an, und im Park-Fenster kannst du ein <b>Parkfest</b> feiern. Dein alter Park ist jetzt Rasen mit Brunnen, Bäumen und Bänken.',
   '↶ <b>Rückgängig:</b> Verbaut? Der ↶-Knopf neben 👆 ✋ 🧹 (oder Strg/⌘+Z) nimmt die letzten 20 Schritte zurück – mit allen Talern. Und in jedem Fenster gibt es jetzt 🗑️ zum Löschen.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Palmen, Büsche, Kristalle, Beete, Statuen, Pavillons und Glashäuser gibt es jetzt klein bis riesig – Größe über der Leiste wählen (zum Beispiel ein 3×3-Stadtbrunnen oder eine alte Eiche).',
 ] };
