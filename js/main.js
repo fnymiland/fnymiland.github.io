@@ -165,3 +165,9 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', save);
 
 window.kachelhausen = { get state() { return state; }, recalc, save, checkStars, get T() { return T; }, walkers, cars, produce, updateHud };
+
+// Testwelt (?welt=name): fertigen Stand laden, nichts speichern
+if (TESTWELT) fetch(`testsave-${TESTWELT}.json?t=${Date.now()}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { adoptState(parseSave(d)); closeModal(); toast(`Testwelt „${state.town.name}“ – hier wird nichts gespeichert`); })
+  .catch(() => toast('Diese Testwelt gibt es hier nicht'));
+

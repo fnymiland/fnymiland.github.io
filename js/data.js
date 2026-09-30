@@ -16,6 +16,8 @@ const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const FRONT_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 // ?probe: Beispieldorf zum Anschauen, wird nie gespeichert
 const PROBE = new URLSearchParams(location.search).has('probe');
+// ?welt=zaeune: lädt testsave-zaeune.json zum Anschauen und Ausprobieren – wird nie gespeichert (eigener Stand bleibt)
+const TESTWELT = (new URLSearchParams(location.search).get('welt') || '').replace(/[^a-z0-9-]/g, '') || null;
 
 // cat: bau | netz | bildung | deko | land;  needs: Untergrund;  workers/science: Netzwerte
 const ITEMS = {
