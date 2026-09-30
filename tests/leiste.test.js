@@ -178,6 +178,6 @@ describe('Suche', () => {
 
   it('jeder Bereich zeigt seine Regel', () => {
     open('herstellen', 'nahrung');
-    expect(document.querySelector('#subcats .area-hint').textContent).toBe('Arbeitet ohne Kundschaft');
+    expect(document.querySelector('#subcats .area-hint').textContent).toBe('Herstellen: Arbeitet ohne Kundschaft');   // Name nur am Handy sichtbar
   });
 });
