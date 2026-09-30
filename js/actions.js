@@ -381,7 +381,7 @@ function tap(sx, sy, isTouch) {
   const isle = isleOf(x, y);
   if (isle && !isleOpen(isle.id)) { openIsle(isle.id, sx, sy); return; }
   if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
-  if (!ownedTile(x, y) && !(CLAIM_TOOLS.has(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
+  if (!ownedTile(x, y) && !(seaTool(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);

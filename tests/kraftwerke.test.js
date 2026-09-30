@@ -161,3 +161,14 @@ describe('Offshore-Windrad (Block 48)', () => {
     expect(game(`ownedTile(${far[0]}, ${far[1]})`)).toBe(true);                                       // das Feld gehört jetzt dir
   });
 });
+
+describe('Offshore weit draußen antippen', () => {
+  it('auch außerhalb des eigenen Gebiets: Tippen baut bis 6 Felder vor der Küste', () => {
+    game("state.techs.add('offshore'); state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; setTool('offshore'); recalc()");
+    const far = game(`(() => { for (let y = -60; y < 80; y++) for (let x = -60; x < 80; x++) if (isSea(x, y) && !ownedTile(x, y) && !landWithin(x, y, 4) && landWithin(x, y, 6)) return [x, y]; })()`);
+    expect(far).toBeTruthy();
+    const [sx, sy] = game(`(() => { const p = iso(${far[0]}, ${far[1]}); return [(p.x - cam.x) * cam.z + W / 2, (p.y - cam.y) * cam.z + H / 2]; })()`);
+    game(`undoable(() => tap(${sx}, ${sy}, false))`);
+    expect(game(`(state.tiles.get('${far[0]},${far[1]}') || {}).b`)).toBe('offshore');
+  });
+});

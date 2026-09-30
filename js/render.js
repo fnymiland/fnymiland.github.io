@@ -565,7 +565,7 @@ function render(now) {
   let groupGhost = null;                                   // mehrere Dinge verschieben: je vorderstem Feld, was dort als Geist steht
   if (plan) preview = planPreview(z);                       // Linie/Rechteck: alle Felder mit Preis
   else if (tool === 'verschieben' && moving && moving.kind === 'group') { if (hover) ({ preview, groupGhost } = groupPreview(z)); }
-  else if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (CLAIM_TOOLS.has(tool) && isSea(hover.x, hover.y)))) {
+  else if (hover && tool !== 'look' && (ownedTile(hover.x, hover.y) || (seaTool(tool) && isSea(hover.x, hover.y)))) {
     const hx = hover.x, hy = hover.y;
     const hds = decosAt(hx + ',' + hy);
     const rotOf = b => placeRot(b, hx, hy);

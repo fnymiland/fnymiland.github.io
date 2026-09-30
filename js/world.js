@@ -200,6 +200,8 @@ function depthAlpha(x, y) {
   return 0.42 * f * (2 - f);
 }
 const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
+// Werkzeuge, die man aufs Meer außerhalb des eigenen Gebiets setzen darf (wie weit, sagt placeError)
+const seaTool = t => CLAIM_TOOLS.has(t) || ['meer', 'boot', 'offshore'].includes((ITEMS[t] || {}).needs);
 // Wasserfeld am eigenen Ufer – auch schräg (Ecke an Ecke): an gezackten Küsten sieht das genauso nach „Ufer“ aus
 const NEAR8 = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const nearOwnLand = (x, y) => NEAR8.some(([dx, dy]) => ownedTile(x + dx, y + dy) && terrainAt(x + dx, y + dy) !== 'water');
