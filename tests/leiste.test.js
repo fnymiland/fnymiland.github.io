@@ -23,7 +23,13 @@ describe('Kacheln', () => {
     expect(b.querySelector('.name')).toBe(null);
     expect(b.querySelector('.fx')).toBe(null);
     expect(b.textContent).toBe('🪙 40');
-    expect(b.title).toBe('Haus');
+    expect(b.dataset.name).toBe('Haus');
+    const e = new window.MouseEvent('pointerenter'); Object.defineProperty(e, 'pointerType', { value: 'mouse' });
+    b.onpointerenter(e);
+    expect(document.getElementById('card-name').hidden).toBe(false);
+    expect(document.getElementById('card-name').textContent).toBe('Haus');
+    b.onpointerleave();
+    expect(document.getElementById('card-name').hidden).toBe(true);
     expect(b.getAttribute('aria-label')).toBe('Haus');
   });
 

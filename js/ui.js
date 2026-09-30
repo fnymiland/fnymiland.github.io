@@ -159,6 +159,7 @@ function buildToolbar() {
 }
 // Kacheln: nur Bild und Preis (Name beim Zeigen und im Infofenster); Freies zuerst, Gesperrtes dahinter
 function renderTools() {
+  hideCardName();
   const box = $('tools');
   box.innerHTML = '';
   const list = menuList();
@@ -171,8 +172,10 @@ function renderTools() {
     const b = document.createElement('button');
     b.className = 'tool' + (locked ? ' locked' : '') + (tool === id ? ' active' : '');
     b.dataset.tool = id;
-    b.title = d.name + (locked ? ' · 🔒 ' + unlockText(d) : '');
+    b.dataset.name = d.name + (locked ? ' · 🔒 ' + unlockText(d, true) : '');
     b.setAttribute('aria-label', d.name);
+    b.onpointerenter = e => { if (e.pointerType === 'mouse') showCardName(b); };
+    b.onpointerleave = hideCardName;
     b.append(id === 'abriss' ? emojiPic('🧹') : id === 'verschieben' ? emojiPic('✋') : thumb(id));
     const c = document.createElement('span'); c.className = 'cost'; c.textContent = cardPrice(id);
     b.append(c);
@@ -184,6 +187,16 @@ function renderTools() {
   }
 }
 let searchQ = null;                    // null = keine Suche, sonst der eingetippte Text
+// Maus über einer Kachel: Name sofort als Schild darüber (die Leiste scrollt – ein Schild in der Kachel würde abgeschnitten)
+function showCardName(b) {
+  const el = $('card-name');
+  el.textContent = b.dataset.name;
+  el.hidden = false;
+  const r = b.getBoundingClientRect(), w = el.offsetWidth;
+  el.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px';
+  el.style.top = (r.top - el.offsetHeight - 8) + 'px';
+}
+function hideCardName() { $('card-name').hidden = true; }
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
 const menuList = () => { const all = searchQ != null ? searchHits(searchQ) : menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };
