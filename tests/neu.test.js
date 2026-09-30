@@ -28,7 +28,7 @@ describe('Neu freigeschaltet', () => {
     document.querySelector('[data-try="saege"]').onclick();
     expect($('modal').hidden).toBe(true);
     expect(game('tool')).toBe('saege');
-    expect(game('[menuTop, menuSub]')).toEqual(['arbeit', 'rohstoffe']);
+    expect(game('[menuTop, menuSub]')).toEqual(['herstellen', 'werkstatt']);
   });
 
   it('ist gerade ein anderes Fenster offen, wartet es', () => {

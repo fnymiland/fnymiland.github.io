@@ -381,34 +381,43 @@ const ANIMALS = [
   { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
 ];
 
-// Baumenü (Block 36, gemeinsam entschieden): sechs Bereiche; Arbeit und Stadt mit Filtern nach Zweck (kein „Alle“ mehr).
-// Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie (das Blumenbeet zählt weiter als Deko).
+// Baumenü (Block 38, gemeinsam entschieden): eingeteilt nach einer festen Regel – was braucht ein Ding, um zu wirken?
+// Herstellen = arbeitet ohne Kundschaft · Verkaufen = braucht Kundschaft · Freizeit = zieht an oder bringt Ideen ·
+// Deko = nur Schönheit. Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
 const SHOP_GROUPS = {
   laeden: ['kiosk', 'blumenladen', 'friseur', 'post', 'apotheke', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
   essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
-  gross: ['moebelhaus', 'markthalle', 'hotel', 'kaufhaus', 'passage', 'grandhotel'],
+  gross: ['markt', 'markthalle', 'moebelhaus', 'kaufhaus', 'passage', 'hotel', 'grandhotel'],
 };
 const MENU = [
-  { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-  { id: 'arbeit', label: '🔨 Arbeit', groups: [
-    { id: 'betriebe', label: '🌾 Betriebe', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
-    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'saege', 'steinmetz', 'schmiede', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
+  { id: 'wohnen', label: '🏠 Wohnen', hint: 'Hier wohnen deine Leute', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+  { id: 'herstellen', label: '🏭 Herstellen', hint: 'Arbeitet ohne Kundschaft', groups: [
+    { id: 'nahrung', label: '🌾 Essen', items: ['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
+    { id: 'rohstoffe', label: '🪵 Rohstoffe', items: ['holz', 'stein', 'mine', 'kristallmine'] },
+    { id: 'werkstatt', label: '🔨 Werkstätten', items: ['saege', 'steinmetz', 'schmiede', 'fabrik'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
-    { id: 'boost', label: '📈 Verstärker', items: ['markt', 'hafen', 'blumen'] },
   ] },
-  { id: 'stadt', label: '🛍️ Stadt', groups: [
+  { id: 'verkaufen', label: '🛍️ Verkaufen', hint: 'Braucht Kundschaft: Einwohner im Viertel und Besucher', groups: [
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
-    { id: 'essen', label: '☕ Essen', items: SHOP_GROUPS.essen },
-    { id: 'gross', label: '🏙️ Großstadt', items: SHOP_GROUPS.gross },
-    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
+    { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
+    { id: 'gross', label: '🏬 Große Häuser', items: SHOP_GROUPS.gross },
+  ] },
+  { id: 'freizeit', label: '🎡 Freizeit', hint: 'Zieht Besucher an oder bringt Ideen', groups: [
     { id: 'bildung', label: '🎓 Bildung', items: ['schule', 'bibliothek', 'uni', 'kunst'] },
+    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss'] },
   ] },
-  { id: 'schoen', label: '🌸 Schön', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'bank', 'laterne', 'kristall', 'kristallaterne',
+  { id: 'deko', label: '🌸 Deko', hint: 'Macht es schön', items: ['baum', 'blumentopf', 'busch', 'hecke', 'palme', 'riesenblume', 'blumen', 'bank', 'laterne', 'kristall', 'kristallaterne',
     'glaskugel', 'brunnen', 'kristallbrunnen', 'park', 'glashaus', 'pavillon', 'statue', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'rosenbogen', 'denkmal', 'uhrturm', 'karussell', 'leuchtturm'] },
-  { id: 'verbinden', label: '🛤️ Verbinden', items: ['weg', 'bootssteg', 'schiene', 'station', 'hbf', 'seilbahn'] },
-  { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
+  { id: 'wege', label: '🛤️ Wege & Land', hint: 'Verbinden und Gelände formen', groups: [
+    { id: 'bahn', label: '🛤️ Wege & Bahn', items: ['weg', 'schiene', 'station', 'hbf', 'seilbahn'] },
+    { id: 'schiff', label: '⛵ Schiff', items: ['bootssteg', 'hafen'] },
+    { id: 'land', label: '⛰️ Gelände', items: ['graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'verschieben', 'abriss'] },
+  ] },
 ];
+// Suche (Block 38): Name ohne Groß/Klein und Umlaute („back“ findet die Bäckerei)
+const searchNorm = t => t.toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
+const searchHits = q => { const n = searchNorm(q.trim()); return n ? MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items).filter(id => searchNorm(ITEMS[id].name).includes(n)) : []; };
 // Bereiche ohne Filter haben den Filter 'alle'; mit Filtern ist der erste der Standard
 const firstSub = top => { const m = MENU.find(e => e.id === top) || MENU[0]; return m.groups ? m.groups[0].id : 'alle'; };
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
@@ -423,8 +432,8 @@ const menuItemsOf = (top, sub) => {
   const m = MENU.find(e => e.id === top) || MENU[0];
   return m.groups ? (m.groups.find(g => g.id === sub) || m.groups[0]).items : m.items;
 };
-// Gruppen mit Gebäuden (Wohnen, Arbeit, Stadt) – fürs Rathaus („Bereit“)
-const buildGroups = () => MENU.flatMap(m => m.groups || (m.id === 'wohnen' ? [{ id: m.id, label: m.label, items: m.items }] : []));
+// Gruppen mit Gebäuden (Wohnen, Herstellen, Verkaufen, Freizeit) – fürs Rathaus („Bereit“)
+const buildGroups = () => MENU.filter(m => ['wohnen', 'herstellen', 'verkaufen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
   haus: '👥 +4', reihenhaus: '👥 +10 (bis 30)', baumhaus: '👥 +5 · im Wald', hausboot: '👥 +4 · auf dem Wasser', bootssteg: '⛵ Inseln entdecken', ferienhaus: '🪙 +6/s · 👥 +2', feld: '🪙 +1/s', muehle: '+2/s je Feld', fischer: '+1,5/s je Wasser', baecker: '+6/s je Mühle', fabrik: '🪙 +25/s',

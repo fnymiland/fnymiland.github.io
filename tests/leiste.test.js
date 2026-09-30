@@ -2,7 +2,7 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Block 36: schmale Kacheln (Bild + Preis), Klick zeigt rechts das Bau-Infofenster; Handy: ⓘ im Hinweis
 beforeAll(() => loadGame());
-beforeEach(() => { size(1024, 768); game('startNew()'); game("closeModal(); closePanel(); setTool('look'); state.tutorial = -1; state.tipsOff = true"); });
+beforeEach(() => { size(1024, 768); game('startNew()'); game("closeModal(); closePanel(); searchQ = null; setTool('look'); state.tutorial = -1; state.tipsOff = true"); });
 afterAll(() => size(1024, 768));
 function size(w, h) {
   Object.defineProperty(window, 'innerWidth', { value: w, configurable: true });
@@ -37,7 +37,7 @@ describe('Kacheln', () => {
   });
 
   it('Freigeschaltetes zuerst, Gesperrtes mit Schloss dahinter – in Menü-Reihenfolge', () => {
-    open('stadt', 'laeden');
+    open('verkaufen', 'laeden');
     const shown = [...document.querySelectorAll('#tools .tool')];
     const locked = shown.map(b => b.classList.contains('locked'));
     expect(locked.indexOf(true)).toBeGreaterThan(-1);
@@ -50,7 +50,7 @@ describe('Kacheln', () => {
   });
 
   it('Zahlentasten wählen wie die Leiste sortiert ist', () => {
-    open('stadt', 'laeden');
+    open('verkaufen', 'laeden');
     const first = game('menuList()[0]');
     window.dispatchEvent(new window.KeyboardEvent('keydown', { key: '1' }));
     expect(game('tool')).toBe(first);
@@ -59,7 +59,7 @@ describe('Kacheln', () => {
 
 describe('Bau-Infofenster (iPad/Mac)', () => {
   it('Kachel anklicken wählt aus und zeigt rechts alles Wichtige', () => {
-    open('stadt', 'essen');
+    open('verkaufen', 'essen');
     game('state.lanterns = 99; state.money = 1e6; state.res.bretter = 100; updateHud()');
     card('cafe').click();
     expect(game('tool')).toBe('cafe');
@@ -90,7 +90,7 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
   });
 
   it('gesperrt: sagt, wie man es freischaltet', () => {
-    open('stadt', 'kultur');
+    open('freizeit', 'kultur');
     card('theater').click();
     expect(panel().textContent).toContain('🔒 Freischalten');
     expect(panel().textContent).toContain('Laternenfest');
@@ -141,5 +141,43 @@ describe('Handy', () => {
     document.getElementById('world').dispatchEvent(e);
     expect(panel().hidden).toBe(true);
     expect(game('tool')).toBe('haus');
+  });
+});
+
+describe('Suche', () => {
+  it('🔍 öffnet ein Suchfeld; „back“ findet die Bäckerei, egal in welchem Bereich', () => {
+    open('wohnen');
+    document.querySelector('#cats .find').click();
+    const inp = document.getElementById('search-in');
+    expect(inp).not.toBe(null);
+    expect([...document.querySelectorAll('#cats .cat.active')].length).toBe(0);
+    inp.value = 'back'; inp.oninput();
+    expect([...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool)).toEqual(['baecker']);
+    inp.value = 'LADEN'; inp.oninput();
+    const ids = [...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool);
+    expect(ids).toEqual(expect.arrayContaining(['blumenladen', 'teeladen', 'hofladen', 'spielzeug']));
+    inp.value = 'xyz'; inp.oninput();
+    expect(document.getElementById('tools').textContent).toContain('Nichts gefunden');
+  });
+
+  it('Auswahl aus der Suche wählt das Werkzeug; ein Bereich oder Escape beendet die Suche', () => {
+    open('wohnen');
+    document.querySelector('#cats .find').click();
+    const inp = document.getElementById('search-in');
+    inp.value = 'haus'; inp.oninput();
+    document.querySelector('#tools [data-tool="haus"]').click();
+    expect(game('tool')).toBe('haus');
+    document.getElementById('search-in').onkeydown({ key: 'Escape' });
+    expect(game('searchQ')).toBe(null);
+    expect(document.getElementById('search-in')).toBe(null);
+    document.querySelector('#cats .find').click();
+    document.querySelector('#cats [data-menu="deko"]').click();
+    expect(game('searchQ')).toBe(null);
+    expect(game('menuTop')).toBe('deko');
+  });
+
+  it('jeder Bereich zeigt seine Regel', () => {
+    open('herstellen', 'nahrung');
+    expect(document.querySelector('#subcats .area-hint').textContent).toBe('Arbeitet ohne Kundschaft');
   });
 });

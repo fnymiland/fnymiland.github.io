@@ -110,40 +110,69 @@ function buildToolbar() {
     cats.append(b);
   }
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
-  // Bereiche (Wohnen · Arbeit · Stadt · Schön · Verbinden · Gelände); ein Werkzeug aus einem anderen Bereich wird weggelegt.
-  // Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
+  // 🔍 Suche (Block 38): findet jedes Ding beim Namen, egal in welchem Bereich
+  const find = document.createElement('button');
+  find.className = 'quick find' + (searchQ != null ? ' active' : '');
+  find.textContent = '🔍'; find.title = 'Suchen'; find.setAttribute('aria-label', 'Suchen');
+  find.onclick = () => { audio(); searchQ = searchQ == null ? '' : null; if (PHONE) setSheet(searchQ != null); buildToolbar(); };
+  cats.append(find);
+  // Bereiche (Wohnen · Herstellen · Verkaufen · Freizeit · Deko · Wege & Land); ein Werkzeug aus einem anderen Bereich
+  // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
   subOf[top.id] = menuSub;
   const keep = () => { if (tool !== 'look' && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (m.id === menuTop ? ' active' : '');
+    b.className = 'cat' + (m.id === menuTop && searchQ == null ? ' active' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
     // Handy: der Bereich klappt den Katalog auf (nochmal antippen: zu)
-    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id)); menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
+    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id && searchQ == null)); searchQ = null; menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
     cats.append(b);
   }
-  // bei Arbeit und Stadt: Filter nach Zweck
-  const subs = $('subcats');
+  // Filter nach Zweck (oder das Suchfeld); darunter eine Zeile mit der Regel des Bereichs
+  const subs = $('subcats'), hadFocus = document.activeElement && document.activeElement.id === 'search-in';
   subs.innerHTML = '';
-  subs.hidden = !top.groups;
-  if (top.groups) for (const { id, label } of top.groups) {
-    const b = document.createElement('button');
-    b.className = 'sub' + (id === menuSub ? ' active' : '');
-    b.dataset.sub = id;
-    menuLabel(b, label);
-    b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
-    subs.append(b);
+  if (searchQ != null) {
+    subs.hidden = false;
+    const inp = document.createElement('input');
+    inp.id = 'search-in'; inp.className = 'search-in'; inp.type = 'search'; inp.placeholder = 'Suchen, z. B. Bäckerei';
+    inp.value = searchQ; inp.setAttribute('aria-label', 'Gebäude suchen'); inp.autocomplete = 'off';
+    inp.oninput = () => { searchQ = inp.value; renderTools(); };
+    inp.onkeydown = e => { if (e.key === 'Escape') { searchQ = null; buildToolbar(); } };
+    subs.append(inp);
+    requestAnimationFrame(() => { if (searchQ != null && (hadFocus || !PHONE || sheetOpen)) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } });
+  } else {
+    subs.hidden = false;
+    if (top.groups) for (const { id, label } of top.groups) {
+      const b = document.createElement('button');
+      b.className = 'sub' + (id === menuSub ? ' active' : '');
+      b.dataset.sub = id;
+      menuLabel(b, label);
+      b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
+      subs.append(b);
+    }
+    const h = document.createElement('span'); h.className = 'area-hint';
+    const nm = document.createElement('b'); nm.className = 'area-name'; nm.textContent = top.label.replace(/^\S+\s+/, '') + ': ';   // Handy: Name steht hier
+    h.append(nm, top.hint || ''); subs.append(h);
   }
-  // Kacheln: nur Bild und Preis (Name beim Zeigen und im Infofenster); Freies zuerst, Gesperrtes dahinter
+  renderTools();
+  setTool(tool);
+}
+// Kacheln: nur Bild und Preis (Name beim Zeigen und im Infofenster); Freies zuerst, Gesperrtes dahinter
+function renderTools() {
   const box = $('tools');
   box.innerHTML = '';
-  for (const id of menuList()) {
+  const list = menuList();
+  if (searchQ != null && !list.length) {
+    const p = document.createElement('p'); p.className = 'search-none';
+    p.textContent = searchQ.trim() ? 'Nichts gefunden' : 'Tippe einen Namen ein'; box.append(p);
+  }
+  for (const id of list) {
     const d = ITEMS[id], locked = !available(id);
     const b = document.createElement('button');
-    b.className = 'tool' + (locked ? ' locked' : '');
+    b.className = 'tool' + (locked ? ' locked' : '') + (tool === id ? ' active' : '');
     b.dataset.tool = id;
     b.title = d.name + (locked ? ' · 🔒 ' + unlockText(d) : '');
     b.setAttribute('aria-label', d.name);
@@ -156,11 +185,11 @@ function buildToolbar() {
     b.onclick = () => pickCard(id);
     box.append(b);
   }
-  setTool(tool);
 }
+let searchQ = null;                    // null = keine Suche, sonst der eingetippte Text
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
-const menuList = () => { const all = menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };
+const menuList = () => { const all = searchQ != null ? searchHits(searchQ) : menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
@@ -513,7 +542,7 @@ function tryUnlock(k) {
   let id = k;
   if (k.startsWith('weg:')) { chosenStyle.weg = k.slice(4); id = 'weg'; }
   const p = menuPlaceOf(id);
-  menuTop = p.top; menuSub = p.sub;
+  searchQ = null; menuTop = p.top; menuSub = p.sub;
   buildToolbar();
   setTool(id);
   if (!PHONE && ITEMS[id]) openBuildInfo(id);
@@ -679,7 +708,7 @@ function openInfo(x, y) {
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
-  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🔨 Arbeit → ⚡ Strom).</div>`);
+  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🏭 Herstellen → ⚡ Strom).</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -1161,7 +1190,7 @@ function openIsle(id, sx, sy) {
     ${isNext ? expeditionHtml(true) : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} entdecken</div></div>`}
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => isleOpen(id) ? closePanel() : openIsle(id));
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition()) openIsle(id); };
-  if ($('p-steg')) $('p-steg').onclick = () => { closePanel(); menuTop = 'verbinden'; menuSub = 'alle'; buildToolbar(); setTool('bootssteg'); };
+  if ($('p-steg')) $('p-steg').onclick = () => { closePanel(); searchQ = null; ({ top: menuTop, sub: menuSub } = menuPlaceOf('bootssteg')); buildToolbar(); setTool('bootssteg'); };
   $('p-close').onclick = closePanel;
   panelAt(sx, sy);
 }
@@ -1176,7 +1205,7 @@ function expeditionHtml(atIsle) {
   const need = isleNeeds(i), ok = need.every(c => c.ok), steg = stegs().length > 0;
   return `<div class="label">⛵ Nächste Insel entdecken: ${i.icon} ${i.name}</div>
     <div class="status">${need.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${c.have != null && !c.ok ? ` · du hast ${fmt(c.have)}` : ''}</div>`).join('')}
-      ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🛤️ Verbinden → Steg)</div>'}</div>
+      ${steg ? '' : '<div class="bad">✗ Ein Steg am Ufer (🛤️ Wege & Land → ⛵ Schiff → Steg)</div>'}</div>
     <p class="muted">Das Boot ist etwa ${expMinutes(i)} Min. unterwegs.${i.need.money || i.need.science ? ' Taler und Ideen werden beim Ablegen ausgegeben.' : ''}</p>
     <div class="row">${steg ? `<button class="btn" id="p-expo" ${ok ? '' : 'disabled'}>⛵ Boot losschicken</button>`
       : atIsle ? '<button class="btn" id="p-steg">🪵 Steg bauen</button>' : ''}</div>`;
@@ -1541,12 +1570,10 @@ function showIntro(first) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-09-30-leiste', items: [
-  '🧭 <b>Neue Leiste:</b> sechs Bereiche – Wohnen, Arbeit, Stadt, Schön, Verbinden, Gelände. Die Kacheln zeigen nur Bild und Preis; antippen zeigt rechts alles Wichtige (am Handy über das ⓘ im Hinweis).',
-  '👷 <b>Läden haben Personal:</b> Ein Laden bedient bis zu 150 Kunden je Mitarbeiter. Steht „Voll“ in seinem Fenster, lohnt sich ein zweiter derselben Art.',
-  '💰 <b>Kaufkraft:</b> Die Leute eines Viertels geben nicht unbegrenzt aus – ab etwa 8–10 Läden bringt jeder weitere weniger dazu. Große Städte verdienen an Läden deshalb deutlich weniger als vorher (die Läden waren viel zu stark).',
-  '🏮 <b>Das große Finale dauert länger:</b> Die letzten Stufen der Kristallhöhle, der Leuchtturm und ferne Inseln kosten jetzt Minuten deines besten Einkommens. Wunder werden nicht mehr billiger, wenn man Läden kurz wegschiebt.',
-  '📦 <b>Lager:</b> Läden verkaufen Holz, Stein und Erz erst ab 500 und Obst ab 2.000 – so bleibt genug für Sägewerk, Schmiede und Wunder. Nur noch die 3 besten Häfen geben ihren Bonus.',
+const NEWS = { id: '2026-10-01-ordnung', items: [
+  '🧭 <b>Leiste neu sortiert – nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft (Feld, Bäckerei, Holzfäller, Sägewerk, Strom …), 🛍️ Verkaufen braucht Kundschaft (Läden, Cafés, Markt, Kaufhaus …), 🎡 Freizeit zieht Besucher an oder bringt Ideen (Schule, Kultur, Wunder). Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
+  '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
+  '🌸 „Schön“ heißt jetzt <b>Deko</b> (mit Blumenbeet), der Hafen steht bei ⛵ Schiff, und neben den Filtern steht, wofür ein Bereich da ist.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

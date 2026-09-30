@@ -16,53 +16,63 @@ describe('Baumenü', () => {
     expect(placed.every(id => ids.includes(id))).toBe(true);
   });
 
-  it('oben sechs Bereiche; Wohnen ohne Filter und von Anfang an offen', () => {
+  it('oben sechs Bereiche nach einer Regel; Wohnen ohne Filter und von Anfang an offen', () => {
     game('buildToolbar()');
-    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['wohnen', 'arbeit', 'stadt', 'schoen', 'verbinden', 'land']);
+    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['wohnen', 'herstellen', 'verkaufen', 'freizeit', 'deko', 'wege']);
     expect(game('menuTop')).toBe('wohnen');
-    expect(document.getElementById('subcats').hidden).toBe(true);
+    expect(q('#subcats .sub').length).toBe(0);
     expect(tools()).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
   });
 
-  it('Arbeit und Stadt: Filter ohne „Alle“, der erste ist gewählt', () => {
+  it('Filter ohne „Alle“, der erste ist gewählt', () => {
     game('buildToolbar()');
-    area('arbeit').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['betriebe', 'rohstoffe', 'strom', 'boost']);
-    expect(game('menuSub')).toBe('betriebe');
-    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik']);
-    area('stadt').onclick();
-    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'gross', 'kultur', 'bildung', 'wunder']);
-    expect(game('menuSub')).toBe('laeden');
+    area('herstellen').onclick();
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['nahrung', 'rohstoffe', 'werkstatt', 'strom']);
+    expect(tools()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'].filter(id => game(`available('${id}')`))
+      .concat(['feld', 'muehle', 'fischer', 'baecker', 'obst', 'kaffeeplantage', 'teegarten', 'kakaoplantage'].filter(id => !game(`available('${id}')`))));
+    area('verkaufen').onclick();
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['laeden', 'essen', 'gross']);
+    area('freizeit').onclick();
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bildung', 'kultur', 'wunder']);
+    area('wege').onclick();
+    expect(q('#subcats .sub').map(b => b.dataset.sub)).toEqual(['bahn', 'schiff', 'land']);
+  });
+
+  it('die Regel: Herstellen ohne Kundschaft, Verkaufen nur mit (alle Läden), Freizeit Bildung/Kultur/Wunder', () => {
+    const items = top => game(`MENU.find(m => m.id === '${top}').groups.flatMap(g => g.items)`);
+    expect(items('herstellen').some(id => game(`!!ITEMS.${id}.shop`))).toBe(false);
+    const shops = game("Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'laden')");
+    expect(shops.every(id => items('verkaufen').includes(id))).toBe(true);
+    expect(items('herstellen')).toContain('baecker');
+    expect(game("menuPlaceOf('baecker')")).toEqual({ top: 'herstellen', sub: 'nahrung' });
+    expect(game("menuPlaceOf('hafen')")).toEqual({ top: 'wege', sub: 'schiff' });
+    expect(game("menuPlaceOf('blumen')")).toEqual({ top: 'deko', sub: 'alle' });
   });
 
   it('jeder Bereich merkt sich seinen Filter', () => {
     game('buildToolbar()');
-    area('stadt').onclick();
+    area('freizeit').onclick();
     sub('kultur').onclick();
     area('wohnen').onclick();
-    area('stadt').onclick();
+    area('freizeit').onclick();
     expect(game('menuSub')).toBe('kultur');
   });
 
-  it('Läden in drei Gruppen: Läden, Essen, Großstadt – kein Filter hat mehr als 11 Dinge', () => {
-    const groups = game("MENU.find(m => m.id === 'stadt').groups.map(g => [g.id, g.items.length])");
-    expect(Object.fromEntries(groups)).toMatchObject({ laeden: 10, essen: 9, gross: 6, kultur: 7 });
+  it('kein Filter hat mehr als 10 Dinge', () => {
     const all = game('MENU.flatMap(m => m.groups ? m.groups.map(g => g.items.length) : [])');
-    expect(Math.max(...all)).toBeLessThanOrEqual(11);
-    expect(game("menuPlaceOf('cafe')")).toEqual({ top: 'stadt', sub: 'essen' });
-    expect(game("menuPlaceOf('baum')")).toEqual({ top: 'schoen', sub: 'alle' });
+    expect(Math.max(...all)).toBeLessThanOrEqual(10);
   });
 
-  it('„Schön“ blendet die Filter aus; Wechsel legt ein fremdes Werkzeug weg', () => {
+  it('„Deko“ hat keine Filter; Wechsel legt ein fremdes Werkzeug weg', () => {
     game("buildToolbar(); setTool('haus')");
-    area('schoen').onclick();
-    expect(document.getElementById('subcats').hidden).toBe(true);
+    area('deko').onclick();
+    expect(q('#subcats .sub').length).toBe(0);
     expect(game('tool')).toBe('look');
     expect(tools()).toContain('baum');
   });
 
-  it('das Blumenbeet steht bei den Verstärkern, zählt aber weiter als Deko', () => {
-    expect(game("MENU.find(m => m.id === 'arbeit').groups.find(g => g.id === 'boost').items")).toContain('blumen');
+  it('das Blumenbeet steht bei Deko und zählt im Spiel als Deko', () => {
+    expect(game("MENU.find(m => m.id === 'deko').items")).toContain('blumen');
     expect(game("ITEMS.blumen.cat")).toBe('deko');
   });
 });

@@ -410,3 +410,12 @@ Entschieden: Personal-Grenze, ferne Inseln und Truhe nach Einkommen, nur 3 Häfe
       überschätzt (Sägewerk ohne Holz), bestes Einkommen sank nie (jetzt Halbwertszeit 20 min), Obst-Vorrat blockierte Wunder.
 - [ ] Endmessung nach dem nächsten Spiel: Ziel gemischte Stadt mit Läden ≈ 3,5 h Warten auf Geld bis zum Fest (Messskripte: Scratchpad preise/).
 
+## Block 38 – Leiste nach einer Regel (01.10.)
+
+Rückmeldung: noch unübersichtlich (Bäckerei: Essen? Laden? Betrieb?), „Arbeit“, „Stadt“, „Schön“ unklar.
+Entschieden: Einteilung nach Aufgabe + Suche.
+- [x] **38a** Herstellen (ohne Kundschaft) · Verkaufen (braucht Kundschaft) · Freizeit · Wohnen · Deko · Wege & Land; Regel
+      steht neben den Filtern; Verstärker/Stadt aufgelöst (Markt → Verkaufen, Hafen → Schiff, Blumenbeet → Deko).
+- [x] **38b** 🔍 Suche nach Namen (Umlaute egal), Escape oder ein Bereich beendet sie.
+- [x] **38c** Handy: obere Zeile passt mit 🔍 in 375 px (gewählter Bereich nur als Symbol, Name in der Regel-Zeile).
+

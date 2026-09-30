@@ -225,7 +225,7 @@ describe('Letzte Schritte vor dem Fest nach Einkommen', () => {
   });
 
   it('die Leuchtturm-Kachel zieht ihren Preis mit dem Einkommen nach', () => {
-    game("T.inc = 0; T.salesInc = 0; state.incPeak = 0; menuTop = 'schoen'; buildToolbar(); updateHud()");
+    game("T.inc = 0; T.salesInc = 0; state.incPeak = 0; menuTop = 'deko'; buildToolbar(); updateHud()");
     const card = () => document.querySelector('#tools [data-tool="leuchtturm"]');
     expect(card().querySelector('.cost').textContent).toBe('🪙 15 Mio.');
     game('state.incPeak = 20000; updateHud()');

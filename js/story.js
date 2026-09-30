@@ -54,7 +54,7 @@ const stegs = () => [...state.tiles].filter(([, t]) => t.b === 'bootssteg').map(
 function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
   if (state.expedition) return 'Das Boot ist schon unterwegs';
-  if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🛤️ Verbinden → Steg)';
+  if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🛤️ Wege & Land → ⛵ Schiff → Steg)';
   if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet?';
   const miss = isleNeeds(i).filter(c => !c.ok);
   return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
@@ -359,13 +359,13 @@ function openDiary(at) {
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
   { text: 'Bau dein erstes Haus.', hint: '🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
-  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Verbinden → Weg (ziehen) – oder 🛤️ ganz links',
+  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ Wege & Land → Weg (ziehen) – oder 🛤️ ganz links',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
-  { text: 'Stell einen Holzfäller in den Wald.', hint: '🔨 Arbeit → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
-  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Verbinden), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
+  { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 🪵 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
+  { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🛤️ Wege & Land → ⛵ Schiff), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',
     done: () => isleOpen('wald') },
   { text: 'Schneide den Uralten Baum frei.', hint: 'Baum antippen → Restaurieren (braucht 🪵 10)', done: () => lmStage('baum') >= 1 },
-  { text: 'Bau ein Sägewerk.', hint: '🔨 Arbeit → 🪵 Rohstoffe → Sägewerk', done: () => hasBuilt('saege') },
+  { text: 'Bau ein Sägewerk.', hint: '🏭 Herstellen → 🔨 Werkstätten → Sägewerk', done: () => hasBuilt('saege') },
   { text: 'Bau dein erstes Haus aus.', hint: 'Wünsche erfüllen, dann Haus antippen → Ausbauen',
     done: () => [...state.tiles.values()].some(t => t.b === 'haus' && t.lvl >= 2) },
 ];
@@ -400,7 +400,7 @@ function goalHtml() {
   const boosts = boostLines();
   if (state.festival) {                            // danach: das Schloss, Erfolge und Album
     const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
-    const line = !s ? '🏰 Bau das Schloss: 🛍️ Stadt → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
+    const line = !s ? '🏰 Bau das Schloss: 🎡 Freizeit → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
     const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}<div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
   }
@@ -450,7 +450,7 @@ const GUIDE = [
   { id: 'laterne', icon: '🏮', title: 'Laternen', when: () => lanternCount() >= 1,
     text: 'Jede Sehenswürdigkeit hat drei Laternen. Jede Laterne schaltet Neues frei und bringt eine Seite im Tagebuch 📖. Oben links steht immer, welche Laternen als Nächstes gehen.' },
   { id: 'insel', icon: '🏝️', title: 'Neue Inseln', when: () => { const i = nextIsle(); return !!i && isleNeeds(i).every(c => c.ok); },
-    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🛤️ Verbinden → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
+    text: 'Die nächste Insel wartet! Bau einen Steg ans Ufer (🛤️ Wege & Land → ⛵ Schiff → Steg), tipp ihn an und schick das Boot los. Wenn es zurückkommt, ist die Insel entdeckt – mit eigenen Rohstoffen und einer Sehenswürdigkeit.' },
   { id: 'deko', icon: '🌸', title: 'Kleine Deko', when: () => T.pop >= 12,
     text: 'Kleine Deko – Baum, Busch, Bank, Blumentopf – passt zu viert auf ein Feld, auch vors Haus und an Wege. Häuser wünschen sich Deko in der Nähe.' },
   { id: 'rathaus', icon: '🏛️', title: 'Das Rathaus', when: () => T.pop >= 20,
@@ -468,7 +468,7 @@ const GUIDE = [
   { id: 'ziehen', icon: '🖐️', title: 'Linie und Fläche', when: () => tool !== 'look' && !!ITEMS[tool] && !!ITEMS[tool].paint,
     text: 'Weg und Schiene: Anfang anklicken, Ende anklicken – du siehst jedes Feld und den Preis, der zweite Klick baut (iPad: Ende zweimal antippen). Gelände und Weg-Flächen: gedrückt halten und ein Rechteck aufziehen, dann hineinklicken. Esc oder ein kurzer Rechtsklick bricht ab. Karte bewegen: rechte Maustaste gedrückt halten (oder Leertaste/Ctrl), auf dem iPad zwei Finger.' },
   { id: 'strom', icon: '⚡', title: 'Strom', when: () => T.rail.power.city && T.rail.power.demand > T.rail.power.supply,
-    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter 🔨 Arbeit → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
+    text: 'Laternen, Werkstätten, Hafen, Sägewerk, Universität, Züge und die Wunderwerke brauchen Strom. Kraftwerke findest du unter 🏭 Herstellen → ⚡ Strom: Windrad (ausbaubar), Wasserkraft, Solarfeld, Geothermie, Wellenkraft – egal wo sie stehen. Ohne Strom laufen Gebäude nur halb (⚡ darüber), Laternen bleiben nachts dunkel und Züge stehen. Die Bilanz steht im 📦 Lager.' },
   { id: 'kristall', icon: '💎', title: 'Kristall', when: () => isleOpen('kristall'),
     text: 'Auf der Kristallinsel wächst Kristall im Fels. Eine Kristallmine holt ihn heraus – für Glas-Deko und die Glasvilla.' },
 ];
