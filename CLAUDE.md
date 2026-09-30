@@ -371,7 +371,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     lehnt Linien-Werkzeuge ab (nie als Feld bauen). Album zählt Linien (`collectAlbum`). Neben einer Linie läuft der Weg
     bis an die Kante (`lineFill`); jede L-Ecke derselben Art wird rund (auch ohne Weg) – Linie (`drawArc`, ein Stück mit einer Oberseite) und Weg (`lineFill`, bzw. Belag außen in `drawArc`)
     nutzen denselben Viertelkreis (`roundCorner`, `roundArc`, `ROUND_R`). Seitenmitten neben einer Linie rücken nach innen
-    (`slotPos`).
+    (`slotPos`). Freie Enden bekommen von selbst ein Endstück (`freeEnd`, `endPiece`: Pfeiler/Pfosten mit Laterne, Heckenkugel);
+    Durchgang antippen → `openGateInfo` → Torbogen/Rosenbogen (`ARCHES`, `e.arch`, `setArch`, gespeichert). Lichter an Linien
+    (beleuchtete Stile `EDGE_LIT`, Bögen, Endpfeiler) zählen in `computePower` wie Laternen (`edgeLamps`, Kennungen E/A/P).
 15. **Sehenswürdigkeiten sind 3×3** (Spielstand v6; alte Stände rücken einmalig per `fitFootprints`/`lmSpot`, nur wenn `state.fitLm`). Park ebenfalls 3×3. Große Gebäude werden in senkrechten Streifen gezeichnet (render.js), damit sie nichts davor Stehendes überdecken.
 
 ## Befehle

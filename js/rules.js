@@ -416,7 +416,7 @@ function totals() {
       s.sci = v; sci += v;
     }
   }
-  for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty;                   // Hecken, Zäune, Mauern
+  for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0);   // Hecken, Zäune, Mauern, Torbögen
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
@@ -623,19 +623,45 @@ function edgeError(b, k) {
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
   return null;
 }
+// Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
+const edgesAt = (vx, vy) => ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].filter(o => state.edges.has(o));
+const freeEnd = (k, vx, vy) => edgesAt(vx, vy).every(o => o === k);
+function edgeEndPoints(k) { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j], [i + 1, j]] : [[i, j], [i, j + 1]]; }
+// Lichter an Linien (je eines zählt wie eine Laterne): beleuchtete Stile, Torbögen, Endpfeiler von Mauer und Zaun
+function edgeLamps() {
+  const out = [], seen = new Set();
+  for (const [k, e] of state.edges) {
+    if (EDGE_LIT.has(e.b + ':' + e.style)) out.push('E' + k);
+    if (e.arch && isGate(k)) out.push('A' + k);
+    if (e.b !== 'hecke' && !isGate(k)) for (const [vx, vy] of edgeEndPoints(k)) { const v = 'P' + vx + ',' + vy; if (!seen.has(v) && freeEnd(k, vx, vy)) { seen.add(v); out.push(v); } }
+  }
+  return out.sort();
+}
+// Torbogen setzen/ändern/entfernen: Unterschied bezahlen bzw. erstatten
+function setArch(k, type) {
+  const e = state.edges.get(k);
+  if (!e || !isGate(k)) return false;
+  const now = e.arch ? ARCHES[e.arch].cost : 0, want = type ? ARCHES[type].cost : 0;
+  if ((e.arch || null) === (type || null)) return false;
+  if (state.money < want - now) { fail('Zu wenig Taler'); return false; }
+  state.money -= want - now;
+  if (type) e.arch = type; else delete e.arch;
+  sfx('deco'); recalc(); save();
+  return true;
+}
 function buildEdge(b, k) {
   const style = currentStyle(b), old = state.edges.get(k);
   if (old && old.b === b && old.style === style) return false;
   const d = ITEMS[b];
   state.money -= d.cost; payMat(d.mat || {});
-  state.edges.set(k, { b, style, born: performance.now() });
+  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), born: performance.now() });
   return true;
 }
 function removeEdge(k) {
   const e = state.edges.get(k);
   if (!e) return false;
   const d = ITEMS[e.b];
-  state.money += d.cost;
+  state.money += d.cost + (e.arch ? ARCHES[e.arch].cost : 0);
   for (const [r, n] of Object.entries(d.mat || {})) state.res[r] += n;
   state.edges.delete(k);
   return true;
@@ -1253,6 +1279,7 @@ function computePower(lines, supply, plants = 0) {
   if (city) {
     const lamps = [];
     for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); });
+    lamps.push(...edgeLamps());                                         // Lichter an Hecken, Zäunen, Mauern
     for (let i = 0; i < lamps.length; i += LAMPS_PER_POWER) if (!take(1, 'lamps')) lamps.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
     const keys = [...state.tiles.keys()].sort();
     for (const b of Object.keys(CONSUMERS)) for (const k of keys) {
@@ -1600,7 +1627,7 @@ function beautyAround(x, y, r) {
     if (a && !seen.has(a)) { seen.add(a); const b = state.tiles.get(a).b; if (b !== 'haus') sum += ITEMS[b].beauty || 0; }
     const ds = state.decos.get(k);
     if (ds) for (const d of ds) if (d) sum += ITEMS[d.b].beauty || 0;
-    for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty; }   // Linien
+    for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0); }   // Linien
   }
   return sum;
 }

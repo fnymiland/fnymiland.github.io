@@ -978,6 +978,19 @@ function cableStatus(k) {
 }
 // Laden: Kundschaft, Innenstadt, was er aus dem Lager verkauft
 const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaoplantage' };
+// Durchgang in Hecke/Zaun/Mauer: offen, Torbogen oder Rosenbogen (Block 41)
+function openGateInfo(k) {
+  const e = state.edges.get(k);
+  if (!e || !isGate(k)) { closePanel(); return; }
+  const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, `${A.icon} ${A.name}`, A.cost])];
+  const el = showPanel(`
+    <h3>Durchgang · ${ITEMS[e.b].name}</h3>
+    <p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit, nachts brennt oben eine Laterne (braucht Strom wie Laternen).</p>
+    <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>
+    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
+  for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); };
+  $('p-close').onclick = closePanel;
+}
 // Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
 function marktStatus(k) {
   const all = computeMarkets(), m = all.find(e => e.stands.includes(k)), n = m ? m.stands.length : 1;
@@ -1606,7 +1619,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
   '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Einkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
-  '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
+  '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor – antippen und einen Torbogen oder Rosenbogen draufsetzen. Enden bekommen Pfeiler mit Laternen, es gibt Stile mit Lichterketten. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
   '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Palmen, Büsche, Kristalle, Beete, Statuen, Pavillons und Glashäuser gibt es jetzt klein bis riesig – Größe über der Leiste wählen (zum Beispiel ein 3×3-Stadtbrunnen oder eine alte Eiche).',
 ] };

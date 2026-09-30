@@ -157,3 +157,52 @@ describe('Abreißen, Speichern, alte Stände', () => {
     }
   });
 });
+
+describe('Endstücke, Torbögen, Licht', () => {
+  beforeEach(() => game("state.money = 1e6; for (const d of DESIGN) state.design.add(d.id)"));
+
+  it('freie Enden erkennen (dort kommt das Endstück hin)', () => {
+    game("state.edges.set('a5,5', { b: 'mauer', style: 'backstein' }); state.edges.set('a6,5', { b: 'mauer', style: 'backstein' })");
+    expect(game("freeEnd('a5,5', 5, 5)")).toBe(true);
+    expect(game("freeEnd('a5,5', 6, 5)")).toBe(false);
+    expect(game("freeEnd('a6,5', 7, 5)")).toBe(true);
+  });
+
+  it('Torbogen nur über einem Durchgang; kostet, bringt Schönheit, wird gespeichert und erstattet', () => {
+    game("state.tiles.set('6,4', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,5', { b: 'hecke', style: 'hoch' }); state.edges.set('a8,5', { b: 'hecke', style: 'hoch' }); recalc()");
+    expect(game("setArch('a8,5', 'bogen')")).toBe(false);                        // kein Durchgang
+    const m = game('state.money'), b0 = game('T.beauty');
+    expect(game("setArch('a6,5', 'rosen')")).toBe(true);
+    expect(game('state.money')).toBe(m - game('ARCHES.rosen.cost'));
+    expect(game('T.beauty')).toBeGreaterThan(b0);
+    expect(new Map(game('parseSave(JSON.parse(JSON.stringify(serialize())))').edges).get('a6,5').arch).toBe('rosen');
+    game("setArch('a6,5', 'bogen')");
+    expect(game('state.money')).toBe(m - game('ARCHES.bogen.cost'));             // Unterschied zurück
+    game("removeEdge('a6,5')");
+    expect(game('state.money')).toBe(m + game('ITEMS.hecke.cost'));
+  });
+
+  it('Durchgang antippen öffnet das Fenster mit Offen / Torbogen / Rosenbogen', () => {
+    game("state.tiles.set('6,4', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,5', { b: 'zaun', style: 'latten' }); recalc(); openGateInfo('a6,5')");
+    const btns = [...document.querySelectorAll('#panel [data-arch]')].map(b => b.dataset.arch);
+    expect(btns).toEqual(['', 'bogen', 'rosen']);
+    document.querySelector('#panel [data-arch="bogen"]').click();
+    expect(game("state.edges.get('a6,5').arch")).toBe('bogen');
+  });
+
+  it('Lichter zählen wie Laternen: beleuchtete Stile, Torbögen, Endpfeiler von Mauer und Zaun (Hecke nicht)', () => {
+    game("state.edges.set('a5,5', { b: 'mauer', style: 'backstein' }); state.edges.set('a5,8', { b: 'hecke', style: 'lichter' }); state.edges.set('a5,10', { b: 'hecke', style: 'niedrig' })");
+    const lamps = game('edgeLamps()');
+    expect(lamps).toContain('Ea5,8');
+    expect(lamps).toEqual(expect.arrayContaining(['P5,5', 'P6,5']));
+    expect(lamps.some(l => l.includes(',10'))).toBe(false);
+  });
+
+  it('Endstücke, Bögen und Lichter lassen sich zeichnen (Tag und Nacht)', () => {
+    game("state.tiles.set('6,4', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' })");
+    for (const n of [0, 0.45]) for (const kind of ['hecke', 'zaun', 'mauer']) for (const arch of ['bogen', 'rosen', null]) for (const st of game(`STYLES.${kind}.map(s => s.id)`)) {
+      expect(() => game(`night = ${n}; state.edges.clear(); state.edges.set('a6,5', { b: '${kind}', style: '${st}', arch: ${JSON.stringify(arch)} }); state.edges.set('a9,9', { b: '${kind}', style: '${st}' }); recalc(); drawEdge('a6,5', state.edges.get('a6,5'), 1.5, 0); drawEdge('a9,9', state.edges.get('a9,9'), 1.5, 0)`), `${kind} ${st} ${arch}`).not.toThrow();
+    }
+    game('night = 0');
+  });
+});

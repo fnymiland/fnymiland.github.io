@@ -787,6 +787,7 @@ const STYLES = {
     { id: 'hoch', name: 'Hohe Hecke', col: '#3f8f43', design: 60 },
     { id: 'buchs', name: 'Buchs', col: '#2f7a3a', design: 90 },
     { id: 'bluete', name: 'Blütenhecke', col: '#f28cb1', design: 140 },
+    { id: 'lichter', name: 'Hecke mit Lichterkette', col: '#ffe58a', design: 200 },
   ],
   zaun: [
     { id: 'latten', name: 'Lattenzaun', col: '#c98d5c' },
@@ -795,6 +796,7 @@ const STYLES = {
     { id: 'gitter', name: 'Metallgitter', col: '#9aa3ad', design: 100 },
     { id: 'eisen', name: 'Schmiedeeisen', col: '#3e3e4a', design: 160 },
     { id: 'glas', name: 'Glas', col: '#bfe6f7', design: 250, master: true },
+    { id: 'lichter', name: 'Zaun mit Lichterkette', col: '#ffe58a', design: 180 },
   ],
   mauer: [
     { id: 'backstein', name: 'Backstein', col: '#b5654a' },
@@ -803,10 +805,17 @@ const STYLES = {
     { id: 'klinker', name: 'Klinker', col: '#a95a43', design: 120 },
     { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', design: 120 },
     { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', lm: 'quelle:2' },
+    { id: 'laternen', name: 'Mauer mit Laternen', col: '#ffe58a', design: 220 },
   ],
 };
 for (const [kind, list] of Object.entries(STYLES)) for (const st of list) st.kind = kind;
 const EDGE_TOOLS = new Set(['hecke', 'zaun', 'mauer']);
+// Torbögen über Durchgängen (Block 41): Durchgang antippen und wählen; beleuchtete Stile (Lichter brauchen Strom wie Laternen)
+const ARCHES = {
+  bogen: { name: 'Torbogen', icon: '⛩️', cost: 80, beauty: 3 },
+  rosen: { name: 'Rosenbogen', icon: '🌹', cost: 150, beauty: 6 },
+};
+const EDGE_LIT = new Set(['hecke:lichter', 'zaun:lichter', 'mauer:laternen']);
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
 

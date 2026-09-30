@@ -357,6 +357,8 @@ function tap(sx, sy, isTouch) {
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
   if (ek) { if (removeEdge(ek)) { sfx('dig'); recalc(); save(); } return; }
+  const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
+  if (gk && isGate(gk)) { openGateInfo(gk); return; }
   if (collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte)
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
