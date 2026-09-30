@@ -554,15 +554,22 @@ function currentStyle(kind) {
   if (!styleOk(styleDef(kind, chosenStyle[kind]))) chosenStyle[kind] = STYLES[kind][0].id;
   return chosenStyle[kind];
 }
-// Kleine Dekos: 4 Ecken pro Feld (0 hinten, 1 rechts, 2 links, 3 vorn)
-const SLOT_OFF = 0.3;
-const slotUV = i => [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF];
+// Kleine Dekos (Block 42): 8 Plätze pro Feld – 4 Ecken (0 hinten, 1 rechts, 2 links, 3 vorn) und 4 Seitenmitten
+// (4 −u oben links, 5 −v oben rechts, 6 +u unten rechts, 7 +v unten links). Auf einem Weg liegen die Seitenmitten am
+// Wegrand – dort stehen Bänke und Laternen, zum Weg gedreht. Auf Gebäudefeldern nur die Ecken.
+const SLOTS = 8, SLOT_OFF = 0.3, MID_OFF = 0.38;
+const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
+const slotUV = i => i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
+const newSlots = () => Array(SLOTS).fill(null);
+const SLOTS_BACK = [0, 4, 5], SLOTS_FRONT = [1, 2, 3, 6, 7];      // hinter bzw. vor dem Ding auf dem Feld zeichnen
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
   const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
-  const x = Math.round(a), y = Math.round(b);
-  return { x, y, slot: (a - x > 0 ? 1 : 0) + (b - y > 0 ? 2 : 0) };
+  const x = Math.round(a), y = Math.round(b), du = a - x, dv = b - y;
+  let slot = 0, best = Infinity;                                 // der nächste der 8 Plätze
+  for (let i = 0; i < SLOTS; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
+  return { x, y, slot };
 }
 const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS)]);
 // Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
@@ -672,7 +679,11 @@ function smallError(b, x, y, slot, opts = {}) {
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
-  if (decosAt(k) && decosAt(k)[slot]) return decosAt(k).every(Boolean) ? 'Alle 4 Ecken sind belegt' : 'Diese Ecke ist schon belegt';
+  if (slot >= 4 && t && wegUnder(t) == null && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
+  if (decosAt(k) && decosAt(k)[slot]) {
+    const ds = decosAt(k);
+    return ds.every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
+  }
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
   if (opts.noCost) return null;
   if (state.money < d.cost + clearCost(b, x, y)) return 'Zu wenig Taler';
@@ -682,9 +693,11 @@ function smallError(b, x, y, slot, opts = {}) {
 function freeSlot(x, y, slot) {
   const ds = decosAt(x + ',' + y);
   if (!ds) return slot;
-  const i = [slot, slot ^ 1, slot ^ 2, slot ^ 3].find(n => !ds[n]);
+  const i = (slot < 4 ? [slot, slot ^ 1, slot ^ 2, slot ^ 3] : [slot, 4 + ((slot - 2) & 3), 4 + ((slot - 3) & 3), 4 + ((slot - 1) & 3)]).find(n => !ds[n]);
   return i == null ? slot : i;
 }
+// Bank in einer Seitenmitte: längs zur Feldseite (also zum Weg hin), egal wie gerade gedreht wird
+const midRot = slot => slot === 4 || slot === 6 ? 1 : 0;
 function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
@@ -692,8 +705,8 @@ function buildSmall(b, x, y, slot) {
   clearNature(b, x, y);
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
-  if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
-  state.decos.get(k)[slot] = { b, rot: ROTATABLE.has(b) ? buildRot : 0, born: performance.now() };
+  if (!state.decos.has(k)) state.decos.set(k, newSlots());
+  state.decos.get(k)[slot] = { b, rot: slot >= 4 && MIRROR.has(b) ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0, born: performance.now() };
   sfx('deco');
   recalc(); checkStars(); save();
   return true;
@@ -714,7 +727,7 @@ function normalizeSmall() {
   for (const [k, t] of [...state.tiles]) {
     if (!ITEMS[t.b] || !ITEMS[t.b].small) continue;
     state.tiles.delete(k);
-    if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+    if (!state.decos.has(k)) state.decos.set(k, newSlots());
     const ds = state.decos.get(k), free = (t.b === 'baum' ? [0, 3, 1, 2] : [3, 0, 1, 2]).find(i => !ds[i]);
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }

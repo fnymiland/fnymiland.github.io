@@ -695,9 +695,9 @@ function render(now) {
       if (corner) {
         if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
         if (!big) {
-          drawSmall(k, px, py, z, now, x, y, [0]);
+          drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
           if (t.b !== 'weg') drawIt();
-          drawSmall(k, px, py, z, now, x, y, [1, 2, 3]);
+          drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
         }
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
@@ -726,7 +726,7 @@ function render(now) {
         tileSprite('kristall', x, y, px, py, z);
         glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
       }
-      drawSmall(k, px, py, z, now, x, y, [0, 1, 2, 3]);
+      drawSmall(k, px, py, z, now, x, y, [...SLOTS_BACK, ...SLOTS_FRONT]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
       const [u, v] = slotUV(preview.slot), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];

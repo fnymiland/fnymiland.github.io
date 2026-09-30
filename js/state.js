@@ -86,7 +86,7 @@ function serialize() {
   for (const it of held) {
     if (it.kind !== 'deco') continue;
     const [k, slot] = it.from;
-    if (!decoMap.has(k)) decoMap.set(k, [null, null, null, null]);
+    if (!decoMap.has(k)) decoMap.set(k, newSlots());
     decoMap.get(k)[slot] = it.d;
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
@@ -238,7 +238,7 @@ function parseSave(d) {
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle
-    decos: new Map((d.decos || []).map(([k, ds]) => [k, (ds || []).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
+    decos: new Map((d.decos || []).map(([k, ds]) => [k, [...(ds || []), ...newSlots()].slice(0, SLOTS).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
     edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style }])),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };

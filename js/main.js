@@ -80,7 +80,7 @@ if (PROBE) {
   nameHouses();
   state.tutorial = -1;
   // ein paar kleine Dekos vor den Häusern
-  const add = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[slot] = { b, rot }; };
+  const add = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[slot] = { b, rot }; };
   add(6, 2, 0, 'laterne'); add(9, 2, 0, 'laterne'); add(12, 2, 0, 'laterne');        // Laternen an der Straße
   add(1, 1, 0, 'blumentopf'); add(4, 4, 3, 'bank', 1); add(4, 1, 1, 'blumentopf'); add(1, 4, 2, 'laterne');  // am Rathausplatz
   add(5, 1, 3, 'blumentopf'); add(7, 1, 3, 'bank', 1); add(9, 1, 3, 'busch');       // vor den Häusern

@@ -1598,6 +1598,7 @@ const NEWS = { id: '2026-10-01-ordnung', items: [
   '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Einkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
   '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
   '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
+  '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

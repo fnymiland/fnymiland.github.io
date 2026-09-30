@@ -443,7 +443,7 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] **41** Hecke (niedrig, hoch, Buchs, Blüten), Zaun (Latten, Staketen, Weide, Gitter, Schmiedeeisen, Glas), Mauer
       (Backstein, Trocken, Naturstein, Klinker, Terrakotta, Kopfstein) als Linien; Tor am Weg; Bewohner nur durchs Tor;
       Kunstakademie; alte Hecken-Ecken → Büsche.
-- [ ] **42** Kleinkram: 8 Plätze je Feld (Ecken + Kantenmitten), Bank/Laterne mittig am Wegrand, an Hausecken erlaubt.
+- [x] **42** Kleinkram: 8 Plätze je Feld (Ecken + Seitenmitten), Bank mittig am Wegrand längs zum Weg, Häuser nur an den Ecken.
 - [ ] **43** Größen (S/M/L) für alle Deko: Brunnen, Busch, Baum, Beet, …
 - [ ] **44** Park zum Selberbauen: Parkrasen malen + Deko → Grünanlage, Park, Stadtpark.
 

@@ -186,7 +186,7 @@ function dropGroup(hx, hy) {
   for (const it of moving.items) {
     const k = (ox + it.dx) + ',' + (oy + it.dy);
     if (it.kind === 'tile') state.tiles.set(k, { ...it.t, born: now });
-    else { if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
+    else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
   }
   moving = null;
   sfx('build');
@@ -205,7 +205,7 @@ function dropAt(x, y, slot) {
   const rot = moving.kind === 'deco' ? (ROTATABLE.has(movingType()) ? buildRot : 0) : placeRot(movingType(), x, y);
   if (moving.kind === 'deco') {
     const k = x + ',' + y;
-    if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+    if (!state.decos.has(k)) state.decos.set(k, newSlots());
     state.decos.get(k)[slot] = { ...moving.d, rot, born: performance.now() };
   } else {
     const k = x + ',' + y, under = plazaSpot(moving.t.b, x, y) ? wegUnder(state.tiles.get(k)) : null, t = { ...moving.t, rot, born: performance.now() };
@@ -223,7 +223,7 @@ function cancelMove() {
   for (const it of carried()) {
     if (it.kind === 'deco') {
       const [k, slot] = it.from;
-      if (!state.decos.has(k)) state.decos.set(k, [null, null, null, null]);
+      if (!state.decos.has(k)) state.decos.set(k, newSlots());
       state.decos.get(k)[slot] = it.d;
     } else state.tiles.set(it.from, it.t);
   }
