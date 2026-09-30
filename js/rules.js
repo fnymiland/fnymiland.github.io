@@ -561,6 +561,13 @@ const SLOTS = 8, SLOT_OFF = 0.3, MID_OFF = 0.38;
 const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
 const slotUV = i => i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
 const newSlots = () => Array(SLOTS).fill(null);
+// Seitenmitte mit Hecke/Zaun/Mauer an dieser Seite: etwas nach innen, damit die Bank nicht in der Hecke steht
+const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]], MID_IN = 0.28;
+function slotPos(x, y, i) {
+  if (i < 4 || !state.edges.size) return slotUV(i);
+  const [dx, dy] = MID_SIDE[i - 4];
+  return state.edges.has(edgeBetween(x, y, x + dx, y + dy)) ? [dx * MID_IN, dy * MID_IN] : slotUV(i);
+}
 const SLOTS_BACK = [0, 4, 5], SLOTS_FRONT = [1, 2, 3, 6, 7];      // hinter bzw. vor dem Ding auf dem Feld zeichnen
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
@@ -586,6 +593,26 @@ const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny)
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
 const isGate = k => edgeTiles(k).every(([x, y]) => wegUnder(state.tiles.get(x + ',' + y)) != null || crossingAt(x, y));
 const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return state.edges.has(k) && !isGate(k); };
+// Runde Ecke: am Eckpunkt (i, j) genau eine waagerechte und eine senkrechte Linie derselben Art (kein Tor), und innen
+// in der Ecke liegt ein Weg → Linie und Weg machen dort denselben Viertelkreis (Radius ROUND_R)
+const ROUND_R = 0.35;
+function roundCorner(i, j) {
+  const A = [['a' + (i - 1) + ',' + j, -1], ['a' + i + ',' + j, 1]].filter(([k]) => state.edges.has(k));
+  const B = [['b' + i + ',' + (j - 1), -1], ['b' + i + ',' + j, 1]].filter(([k]) => state.edges.has(k));
+  if (A.length !== 1 || B.length !== 1) return null;
+  const [ka, du] = A[0], [kb, dv] = B[0], ea = state.edges.get(ka), eb = state.edges.get(kb);
+  if (ea.b !== eb.b || isGate(ka) || isGate(kb)) return null;
+  const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1;
+  if (wegUnder(state.tiles.get(tx + ',' + ty)) == null) return null;
+  return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5] };
+}
+// Punkte des Viertelkreises (Feld-Koordinaten), vom waagerechten zum senkrechten Stück
+function roundArc(rc, n = 6) {
+  const { du, dv, V } = rc, c = [V[0] + du * ROUND_R, V[1] + dv * ROUND_R];
+  const a0 = Math.atan2(-dv, 0), a1 = Math.atan2(0, -du);
+  let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  return Array.from({ length: n + 1 }, (_, s) => { const a = a0 + d * s / n; return [c[0] + Math.cos(a) * ROUND_R, c[1] + Math.sin(a) * ROUND_R]; });
+}
 function edgeError(b, k) {
   const tiles = edgeTiles(k);
   if (!tiles.some(([x, y]) => ownedTile(x, y))) return 'Das ist nicht dein Grundstück';

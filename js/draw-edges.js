@@ -56,15 +56,48 @@ function edgeJoins(k, b, vx, vy) {
 }
 // Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
 const GATE_CUT = 0.5 - EDGE_W;
+// Stück in beliebiger Richtung (für den Bogen runder Ecken): Seite zum Betrachter, vorderes Ende, Oberseite
+function segPrism(p, q, w, h, col, z) {
+  const d = [q[0] - p[0], q[1] - p[1]], L = Math.hypot(d[0], d[1]) || 1, a = [d[0] / L, d[1] / L];
+  let n = [-a[1], a[0]]; if (n[0] + n[1] < 0) n = [-n[0], -n[1]];
+  const off = (pt, s) => [pt[0] + n[0] * w * s, pt[1] + n[1] * w * s], P = (pt, up) => edgeS(pt[0], pt[1], up, z);
+  const li = off(p, 1), ri = off(q, 1), lo = off(p, -1), ro = off(q, -1), sh = -0.16 * Math.abs(n[0]) / (Math.abs(n[0]) + Math.abs(n[1]));
+  const [f0, f1] = a[0] + a[1] > 0 ? [ri, ro] : [li, lo];
+  poly([P(f0, 0), P(f1, 0), P(f1, h), P(f0, h)], C(shade(col, -0.16 - sh)));
+  poly([P(li, 0), P(ri, 0), P(ri, h), P(li, h)], C(shade(col, sh)));
+  poly([P(lo, h), P(ro, h), P(ri, h), P(li, h)], C(shade(col, 0.14)));
+}
+// Viertelkreis einer runden Ecke, von hinten nach vorn
+function drawArc(rc, look, z) {
+  if (rc.b === 'zaun') { const pts = roundArc(rc, 3); for (let s = 0; s < 3; s++) drawFence({ p: pts[s], q: pts[s + 1] }, look, rc.style, false, z); return; }
+  const pts = roundArc(rc, 6), segs = [];
+  for (let s = 0; s < 6; s++) segs.push([pts[s], pts[s + 1]]);
+  segs.sort((A, B) => (A[0][0] + A[0][1] + A[1][0] + A[1][1]) - (B[0][0] + B[0][1] + B[1][0] + B[1][1]));
+  for (const [p, q] of segs) {
+    const d = [q[0] - p[0], q[1] - p[1]], L = Math.hypot(d[0], d[1]), x = look.w * 0.35 / L;       // leicht überlappen: keine Fugen
+    segPrism([p[0] - d[0] * x, p[1] - d[1] * x], [q[0] + d[0] * x, q[1] + d[1] * x], look.w, look.h, look.col, z);
+    if (rc.b === 'hecke') { const m = lerp2(p, q, 0.5), [sx, sy] = edgeS(m[0], m[1], look.h, z); circle(sx, sy + 0.4 * z, 2 * z, C(shade(look.col, look.balls ? 0.1 : 0.14))); }
+  }
+}
 function drawEdge(k, e, z, now) {
   const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
-  if (e.b === 'zaun') { drawFence(E, look, e.style, gate, z); return; }
-  const w = look.w, h = look.h, { dir, i, j } = edgeParse(k), [au, av] = E.along;
+  const w = look.w || 0, h = look.h, { dir, i, j } = edgeParse(k), [au, av] = E.along;
+  // runde Ecke (Weg innen): das Stück hört vor dem Bogen auf, das waagerechte Stück zeichnet den Bogen mit
+  const rcP = !gate && roundCorner(i, j), rcQ = !gate && roundCorner(i + au, j + av);
+  const onP = rcP && (rcP.ka === k || rcP.kb === k), onQ = rcQ && (rcQ.ka === k || rcQ.kb === k);
+  if (e.b === 'zaun') {
+    const Ez = { ...E, p: onP ? [E.p[0] + au * ROUND_R, E.p[1] + av * ROUND_R] : E.p, q: onQ ? [E.q[0] - au * ROUND_R, E.q[1] - av * ROUND_R] : E.q };
+    if (onP && rcP.ka === k) drawArc(rcP, look, z);
+    drawFence(Ez, look, e.style, gate, z);
+    if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
+    return;
+  }
   // Ecke „┌“: das waagerechte Stück 'a' i,j wird vor diesem senkrechten gezeichnet und übernimmt die Ecke – dieses beginnt
   // erst hinter ihm (sonst malt es seine Seitenwand über das andere Stück)
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
-  const ext0 = aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = edgeJoins(k, e.b, i + au, j + av) ? w : 0;
+  const ext0 = onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
+  if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
     for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
     for (const t of [GATE_CUT, 1 - GATE_CUT]) {
@@ -75,11 +108,12 @@ function drawEdge(k, e, z, now) {
     return;
   }
   const { face } = edgePrism(p, q, E, w, h, look.col, z);
+  if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
   if (e.b === 'hecke') {
     // Blätter: ein paar runde Buckel oben, Buchs als Kugeln, Blüten als Punkte
     const n = 5;
     for (let i = 0; i < n; i++) {
-      const t = (i + 0.5) / n, m = lerp2(E.p, E.q, t), [x, y] = edgeS(m[0], m[1], h, z);
+      const t = (i + 0.5) / n, m = lerp2(p, q, t), [x, y] = edgeS(m[0], m[1], h, z);
       if (look.balls) circle(x, y - 1.2 * z, 2.6 * z, C(shade(look.col, 0.1)));
       else circle(x, y + 0.4 * z, 2.1 * z, C(shade(look.col, 0.14)));
       if (look.flowers) circle(x + (i % 2 ? 1.2 : -1) * z, y - 0.6 * z, 0.9 * z, C(look.flowers[(i + (k.length % 3)) % look.flowers.length]));

@@ -540,18 +540,32 @@ function drawRailWire(cx, cy, z, x, y, t) {
 
 // Steht an einer Seite des Wegfelds eine Hecke, ein Zaun oder eine Mauer, läuft der Weg dort bis an die Feldkante
 // (eckig) – kein Grasstreifen zwischen Weg und Linie (Block 41)
+// Winkel für das runde Eckstück: vom Punkt auf der u-Seite (Richtung su) zum Punkt auf der v-Seite (Richtung sv), kurzer Weg
+function angStep(su, sv, f) {
+  const a0 = Math.atan2(0, su), a1 = Math.atan2(sv, 0);
+  let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+  return a0 + d * f;
+}
 function lineFill(x, y, arms, w) {
   if (x > 1e5 || !state.edges.size) return [];
   const has = (dx, dy) => arms.some(([ax, ay]) => ax === dx && ay === dy);
   const side = ([dx, dy]) => { const k = edgeBetween(x, y, x + dx, y + dy); return state.edges.has(k) && !isGate(k); };
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out = [];
-  const lo = d => has(...d) ? 0.5 : w;
+  // runde Ecken (roundCorner): dort hört das Rechteck vor dem Bogen auf, das Eckstück folgt dem Viertelkreis der Linie
+  const rounded = (su, sv) => side([su, 0]) && side([0, sv]) && !!roundCorner(x + (su + 1) / 2, y + (sv + 1) / 2);
+  const lo = (d, a, b) => Math.min(has(...d) ? 0.5 : w, rounded(a, b) ? 0.5 - ROUND_R : 0.5);
   for (const [dx, dy] of DIRS) {
     if (!side([dx, dy])) continue;
-    if (dx) out.push(rect(dx > 0 ? 0 : -0.5, dx > 0 ? 0.5 : 0, -lo([0, -1]), lo([0, 1])));
-    else out.push(rect(-lo([-1, 0]), lo([1, 0]), dy > 0 ? 0 : -0.5, dy > 0 ? 0.5 : 0));
+    if (dx) out.push(rect(dx > 0 ? 0 : -0.5, dx > 0 ? 0.5 : 0, -lo([0, -1], dx, -1), lo([0, 1], dx, 1)));
+    else out.push(rect(-lo([-1, 0], -1, dy), lo([1, 0], 1, dy), dy > 0 ? 0 : -0.5, dy > 0 ? 0.5 : 0));
   }
-  for (const su of [1, -1]) for (const sv of [1, -1]) if (side([su, 0]) && side([0, sv])) out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5)));
+  for (const su of [1, -1]) for (const sv of [1, -1]) {
+    if (!side([su, 0]) || !side([0, sv])) continue;
+    if (!rounded(su, sv)) { out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5))); continue; }
+    const c = [su * (0.5 - ROUND_R), sv * (0.5 - ROUND_R)], arc = [];
+    for (let s = 0; s <= 8; s++) { const a = angStep(su, sv, s / 8); arc.push([c[0] + Math.cos(a) * ROUND_R, c[1] + Math.sin(a) * ROUND_R]); }
+    out.push([[0, 0], [su * 0.5, 0], ...arc, [0, sv * 0.5]]);
+  }
   return out;
 }
 function drawPath(cx, cy, z, x, y, t) {
@@ -1508,7 +1522,7 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   for (const i of which) {
     const d = ds[i];
     if (!d) continue;
-    const [u, v] = slotUV(i);
+    const [u, v] = slotPos(x, y, i);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
     drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i);

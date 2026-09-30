@@ -97,6 +97,26 @@ describe('Ecken und Wege', () => {
   });
 });
 
+describe('Runde Ecken', () => {
+  it('L-Ecke derselben Art mit Weg innen: rund; ohne Weg innen oder mit anderer Art: eckig', () => {
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
+    expect(game("roundCorner(6, 6)")).toMatchObject({ ka: 'a6,6', kb: 'b6,6', du: 1, dv: 1 });
+    expect(game("roundArc(roundCorner(6, 6), 2)")[0]).toEqual([5.5 + 0.35, 5.5]);   // Anfang auf dem waagerechten Stück
+    game("state.tiles.delete('6,6')");
+    expect(game("roundCorner(6, 6)")).toBe(null);
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('b6,6', { b: 'mauer', style: 'backstein' })");
+    expect(game("roundCorner(6, 6)")).toBe(null);
+  });
+
+  it('der Weg folgt dem Bogen; die Bank in der Seitenmitte rückt von der Linie weg', () => {
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
+    const fill = game("lineFill(6, 6, pathArms(6, 6), ROAD_W)");
+    expect(fill.some(poly => poly.length > 4)).toBe(true);                          // Eckstück mit Bogen
+    expect(game("slotPos(6, 6, 5)")).toEqual([0, -0.28]);
+    expect(game("slotPos(6, 6, 7)")).toEqual([0, 0.38]);
+  });
+});
+
 describe('Abreißen, Speichern, alte Stände', () => {
   it('Abriss im Rechteck nimmt Linien auf und um die Felder mit und erstattet sie', () => {
     line('zaun', { x: 5, y: 5 }, { x: 8, y: 5 });
