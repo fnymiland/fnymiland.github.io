@@ -349,6 +349,8 @@ npm run serve     # Server für WLAN/iPad auf Port 4173
 
 ## Zusammenarbeit (wichtig)
 
+- **Aufwand empfehlen:** Vor jeder Aufgabe zuerst sagen, auf welche Aufwand-Stufe der Nutzer stellen soll (Normal = kleine
+  Fehler/Aussehen/Texte, Hoch = neues System, Ultracode = große Prüfungen mit vielen Agenten) – er steuert so seine Nutzung.
 - **Erst besprechen, dann bauen.** Vor jedem größeren Schritt: kurz erklären, wie es technisch geht, Optionen
   mit Vor-/Nachteilen zeigen, auf die Antwort warten. Kleine Fehler direkt beheben.
 - In **kleinen Schritten** bauen, jeden Schritt zeigen (Probeansicht, Screenshot), dann `npm test`, `npm run bump`,
