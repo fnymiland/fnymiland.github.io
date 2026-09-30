@@ -1722,10 +1722,61 @@ function showIntro(first) {
       <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten – jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
-    <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen (beim Bauen dreht das Mausrad) · Wege: gedrückt halten und ziehen</p>
+    <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen · Mehr, auch alle Tasten: ☰ → Anleitung</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's!</button></div>`);
   if (first) wireTownEditor($('modal-card'), state.town, updateHud);
   $('m-ok').onclick = () => { closeModal(); save(); };
+}
+// Anleitung (Block 51): vier Reiter – Los geht's, Bauen & Gestalten, Wachsen, Steuerung. Tasten nur, wo es eine Maus gibt.
+let helpTab = 'start';
+const HELP_TABS = [['start', '🌱 Los geht\'s'], ['bauen', '🏗️ Bauen & Gestalten'], ['wachsen', '📈 Wachsen'], ['steuerung', '🎮 Steuerung']];
+function helpBody(tab) {
+  const li = items => `<ul class="help">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
+  if (tab === 'bauen') return li([
+    '🧭 <b>Die Leiste unten</b> hat fünf Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🛍️ Einkaufen, 🎡 Freizeit, 🌸 Gestalten. Darunter die Gruppen. Karte antippen = auswählen, dann auf die Karte tippen = bauen. 🔍 findet alles beim Namen.',
+    'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest – mit Knopf, der dich direkt hinbringt.',
+    '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
+    '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
+    '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
+    '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
+    '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
+    '✋ <b>Verschieben</b> kostet nichts. 🧹 <b>Abreißen:</b> Deko und Wege gibt es voll zurück, Gebäude zur Hälfte. In jedem Fenster gibt es 🗑️.',
+    '↶ <b>Verbaut?</b> Rückgängig nimmt die letzten 20 Schritte zurück – mit allen Talern.']);
+  if (tab === 'wachsen') return li([
+    '💡 <b>Forschung:</b> Schulen, Bibliotheken und die Universität bringen Ideen. Damit erforschst du neue Gebäude und Boni – oben auf 💡 tippen.',
+    '🎨 <b>Kunstakademie</b> (in der Forschung): Farben, Wege-Muster, Hecken- und Zaunstile, besondere Deko – ✦ Meisterstücke sind die begehrtesten.',
+    '⚡ <b>Strom</b> kommt aus Windrädern, Wasser-, Wellen-, Solar- und Offshore-Anlagen. Laternen, Werkstätten, Züge und Wunderwerke brauchen ihn.',
+    '🏮 <b>Sehenswürdigkeiten</b> restaurieren: jede Stufe schaltet Neues frei und entzündet eine Laterne. Brennen alle, gibt es das Laternenfest.',
+    '🏝️ <b>Inseln</b> entdeckst du per Boot vom 🛶 Steg aus. Brücken, Züge, Seilbahn und Schiffe verbinden sie; später warten ferne Inseln mit Truhen. Mit „Aufschütten“ wächst dein Land ins Meer.',
+    '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten – jedes hat eine besondere Kraft.',
+    '⭐ <b>Erfolge und Album</b> (☰): Sammeln lohnt sich, volle Album-Seiten schenken besondere Dinge.']);
+  if (tab === 'steuerung') {
+    const touch = typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;   // iPad/Handy: keine Tasten zeigen
+    const keys = [['A', 'Ansehen'], ['W', 'Weg'], ['V', 'Verschieben'], ['E · Entf · ⌫', 'Abreißen'], ['1 – 9', 'Karte aus der Leiste wählen'], ['R', 'Drehen beim Bauen'],
+      ['Strg/⌘ + Z', 'Rückgängig'], ['Esc', 'Abbrechen, Fenster schließen'], ['Leertaste halten + ziehen', 'Karte bewegen (auch rechte Maustaste)'],
+      ['Mausrad', 'Zoomen – beim Bauen: drehen'], ['Rechtsklick', 'Planung bzw. Werkzeug abbrechen']];
+    const gestures = [['Ziehen', 'Karte bewegen'], ['Zwei Finger', 'Zoomen und bewegen'], ['Einmal tippen', 'Vorschau zeigen'], ['Nochmal tippen', 'Bauen'],
+      ['Mit Weg/Rasen ziehen', 'Linie oder Rechteck planen, dann hineintippen'], ['⟳ unten', 'Drehen beim Bauen']];
+    const table = rows => `<table class="help-keys">${rows.map(([k, v]) => `<tr><td><kbd>${k}</kbd></td><td>${v}</td></tr>`).join('')}</table>`;
+    return (touch ? '' : `<div class="label">⌨️ Maus & Tastatur</div>${table(keys)}`) + `<div class="label">👆 Touch (iPad, Handy)</div>${table(gestures)}`;
+  }
+  return li([
+    '🏮 <b>Das Ziel:</b> Deine Insel war einmal berühmt für ihr Laternenfest. Restauriere die verfallenen Sehenswürdigkeiten, bis alle Laternen brennen – das 📖 Tagebuch erzählt, wie es früher war.',
+    '🏠 <b>Häuser</b> bringen Einwohner. Jedes Haus hat Wünsche (Weg vor der Tür, Deko, später Bäckerei, Park, Schule …). Tipp es an, um sie zu sehen.',
+    '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es – antippen und ausbauen.',
+    '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen – ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',
+    '🪙 <b>Taler</b> verdienen Felder, Betriebe und Läden. Betriebe brauchen Einwohner als Mitarbeiter – bau also Häuser dazu.',
+    '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen im 💡 Tipp-Buch (☰).']);
+}
+function openHelp(tab = helpTab) {
+  helpTab = tab;
+  openModal(`
+    <h2>📘 Anleitung</h2>
+    <div class="looks hall-tabs">${HELP_TABS.map(([id, name]) => `<button class="look${id === tab ? ' on' : ''}" data-htab="${id}">${name}</button>`).join('')}</div>
+    ${helpBody(tab)}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+  for (const b of document.querySelectorAll('[data-htab]')) b.onclick = () => openHelp(b.dataset.htab);
+  $('m-close').onclick = closeModal;
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
@@ -1772,7 +1823,7 @@ function showMenu() {
     </div>
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
-  $('m-help').onclick = () => showIntro(false);
+  $('m-help').onclick = () => openHelp();
   $('m-news').onclick = showNews;
   $('m-tips').onclick = openTipBook;
   $('m-diary').onclick = () => openDiary();
