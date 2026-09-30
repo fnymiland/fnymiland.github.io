@@ -637,6 +637,7 @@ function boostMul(kind, now = Date.now()) {
   if (kind === 'inc' && fairLeft(now) > 0) m *= FAIR_MUL;
   const d = decreeActive(now), D = d && DECREES[d.id];
   if (D && D.kind === kind) m *= D.mul;
+  if (kind === 'inc' && parkFestLeft(now) > 0) m *= state.parkFest.mul;
   return m;
 }
 // 🔭 Sternschnuppen: nachts fällt ab und zu eine neben ein Haus – antippen bringt Ideen (3 Minuten Ideen, mindestens 50)
@@ -676,6 +677,28 @@ function marktTick(now = Date.now()) {
   marktWas = on;
   if (!on) return;
   for (const m of MARKETS) { const [x, y] = m.tiles[Math.floor(Math.random() * m.tiles.length)]; sparkle(x, y); }
+}
+// 🎉 Parkfest (Block 44): im Park-Fenster selbst auslösen, wenn es einen Park gibt. 3 Minuten lang Einnahmen ×1,25 / ×1,5 / ×2
+// (nach der besten Park-Stufe), danach 20 Minuten Pause (echte Uhr, gespeichert in state.parkFest)
+const PARKFEST_LEN = 3 * 60e3, PARKFEST_EVERY = 20 * 60e3, PARKFEST_MUL = [1, 1.25, 1.5, 2];
+const parkFestLeft = (now = Date.now()) => state.parkFest ? Math.max(0, state.parkFest.until - now) : 0;
+const parkFestWait = (now = Date.now()) => state.parkFest ? Math.max(0, state.parkFest.next - now) : 0;
+const parkBest = () => PARKS.reduce((m, p) => Math.max(m, p.stage), 0);
+function startParkFest(now = Date.now()) {
+  const st = parkBest();
+  if (!st || parkFestWait(now) > 0) return false;
+  state.parkFest = { until: now + PARKFEST_LEN, next: now + PARKFEST_EVERY, mul: PARKFEST_MUL[st] };
+  sfx('star'); confettiBurst();
+  toast(`🎉 Parkfest! 3 Minuten lang Einnahmen ×${String(PARKFEST_MUL[st]).replace('.', ',')}`);
+  save();
+  return true;
+}
+let parkFestWas = false;
+function parkFestTick(now = Date.now()) {
+  const on = parkFestLeft(now) > 0;
+  if (!on && parkFestWas) toast('🎉 Das Parkfest ist vorbei');
+  parkFestWas = on;
+  if (on) for (const p of PARKS) { const [x, y] = keyXY(p.tiles[Math.floor(Math.random() * p.tiles.length)]); sparkle(x, y); }
 }
 // Jahrmarkt: beim Beginn Bescheid sagen, solange er läuft funkelt es am Riesenrad
 let fairWas = false;

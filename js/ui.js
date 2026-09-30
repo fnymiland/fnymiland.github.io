@@ -1017,7 +1017,8 @@ function parkStatus(k) {
     out.push(`<div class="muted">Für „${next.name}“ fehlt noch: ${miss.join(', ')}</div>`);
   }
   if (p.stage) out.push(`<div class="ok">🏡 Erfüllt den Park-Wunsch: Häuser bis ${PARK_REACH} Felder und im selben Viertel</div>`,
-    `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit – auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`);
+    `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit – auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`,
+    `<div class="ok">👥 Zieht ${PARK_ATTR[p.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   return out;
 }
 function openParkInfo(x, y) {
@@ -1026,8 +1027,19 @@ function openParkInfo(x, y) {
     <h3>🌳 Parkrasen</h3>
     <div class="status">${parkStatus(k).join('')}</div>
     <p class="muted">Stell Bäume, Beete, Bänke und Brunnen auf den Rasen. Wege dürfen hindurch.</p>
-    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => terraLook(x, y) === 'park' ? openParkInfo(x, y) : closePanel());
+    ${parkFestLine()}
+    <div class="row">${parkBest() && !parkFestLeft() && !parkFestWait() ? '<button class="btn" id="p-fest">🎉 Parkfest feiern</button>' : ''}<button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => terraLook(x, y) === 'park' ? openParkInfo(x, y) : closePanel());
+  if ($('p-fest')) $('p-fest').onclick = () => { if (startParkFest()) openParkInfo(x, y); };
   $('p-close').onclick = closePanel;
+}
+// Parkfest: läuft, wartet oder ist bereit (nach der besten Park-Stufe)
+function parkFestLine() {
+  const left = parkFestLeft(), wait = parkFestWait(), st = parkBest();
+  if (left) return `<div class="ok">🎉 Parkfest! Einnahmen ×${String(state.parkFest.mul).replace('.', ',')} · noch ${fmtClock(left)}</div>`;
+  if (!st) return '<div class="muted">🎉 Mit einem fertigen Park kannst du ein Parkfest feiern.</div>';
+  if (wait) return `<div class="muted">🎉 Nächstes Parkfest in ${fmtClock(wait)}</div>`;
+  return `<div class="ok">🎉 Parkfest bereit: 3 Minuten Einnahmen ×${String(PARKFEST_MUL[st]).replace('.', ',')}</div>`;
 }
 const wares0 = S => S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : S.ware ? [S.ware] : [];
 function shopStatus(t, s, k) {

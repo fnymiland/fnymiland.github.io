@@ -69,3 +69,23 @@ describe('Stufen, Park-Wunsch, Schönheit', () => {
     expect(game('beautyAround(16, 10, 0)')).toBe(0);
   });
 });
+
+describe('Besucher und Parkfest', () => {
+  const park = () => { lawn(10, 10, 2, 2); for (const [x, y] of [[10, 10], [11, 10], [10, 11]]) build('blumentopf', x, y); game('recalc()'); };
+  it('ein Park zieht Besucher an', () => {
+    const before = game('(recalc(), placeStats().attr.get(regionAt(10, 10)) || 0)');
+    park();
+    expect(game('placeStats().attr.get(regionAt(10, 10)) || 0')).toBeGreaterThan(before);
+  });
+
+  it('Parkfest nur mit Park, 3 Minuten Einnahmen ×1,25 (Grünanlage), danach Pause; wird gespeichert', () => {
+    expect(game('startParkFest()')).toBe(false);
+    park();
+    expect(game('startParkFest(1e12)')).toBe(true);
+    expect(game('boostMul("inc", 1e12 + 60e3)')).toBeCloseTo(1.25);
+    expect(game('boostMul("inc", 1e12 + 4 * 60e3)')).toBe(1);                    // vorbei
+    expect(game('startParkFest(1e12 + 5 * 60e3)')).toBe(false);                   // Pause
+    expect(game('startParkFest(1e12 + 21 * 60e3)')).toBe(true);
+    expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).parkFest.mul')).toBeCloseTo(1.25);
+  });
+});

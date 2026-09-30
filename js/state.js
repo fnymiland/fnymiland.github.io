@@ -35,6 +35,7 @@ function newState() {
     vehicles: new Set(),       // erforschte Verkehrsmittel: 'zug:regio', 'schiff:dampfer' … (Forschung „Verkehr“)
     expedition: null,          // Boot unterwegs: { isle, from: Steg-Feld, t0, until } (echte Zeit, läuft auch geschlossen weiter)
     decree: null, decreeNext: 0,   // Erlass im Schloss (Block 28): { id, until }; der nächste ab decreeNext (echte Zeit)
+    parkFest: null,            // Parkfest (Block 44): { until, next, mul } – selbst ausgelöst im Park-Fenster (echte Zeit)
     far: [],                   // ferne Inseln (nach dem Laternenfest, Block 27c): { id, n, name, icon, ter, cx, cy, r, need, chest, res }
     stats: { earned: 0 },      // für Erfolge: insgesamt verdiente Taler
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
@@ -94,7 +95,7 @@ function serialize() {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, edges: [...state.edges].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.arch ? { arch: e.arch } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -228,6 +229,7 @@ function parseSave(d) {
     tipsSeen: new Set(d.tipsSeen || []), tipsOff: !!d.tipsOff,
     mastery: { ...(d.mastery || {}) }, inventions: new Set(d.inventions || []),
     decree: d.decree && typeof d.decree.id === 'string' && +d.decree.until ? { id: d.decree.id, until: +d.decree.until } : null, decreeNext: +d.decreeNext || 0,
+    parkFest: d.parkFest && +d.parkFest.until ? { until: +d.parkFest.until, next: +d.parkFest.next || 0, mul: +d.parkFest.mul || 1.25 } : null,
     far: Array.isArray(d.far) ? d.far.filter(f => f && typeof f.id === 'string' && isFinite(f.cx) && isFinite(f.cy) && f.r > 0 && f.name) : [],
     expedition: d.expedition && (ISLE_BY_ID[d.expedition.isle] || (d.far || []).some(f => f && f.id === d.expedition.isle)) && +d.expedition.until ? { ...d.expedition } : null,
     vehicles: new Set([...(d.vehicles || []), ...grandfathered.filter(v => v !== 'zug:tram')]),

@@ -703,7 +703,7 @@ function computeMarkets() {
 const marketOf = k => MARKETS.find(m => m.stands.includes(k)) || null;
 // Parks (Block 44): zusammenhängender Parkrasen; Deko darauf (kleine je Stück, große einmal) → Stufe nach PARK_STEPS
 let PARKS = [];
-const PARK_REACH = 4, PARK_BEAUTY = [0, 15, 35, 70], PARK_NEAR = [0, 3, 4, 6];   // Schönheit ringsum: bis PARK_NEAR Felder
+const PARK_REACH = 4, PARK_ATTR = [0, 10, 25, 50], PARK_BEAUTY = [0, 15, 35, 70], PARK_NEAR = [0, 3, 4, 6];   // Schönheit ringsum: bis PARK_NEAR Felder
 function computeParks() {
   const seen = new Set(), out = [];
   for (const [k0, v] of state.terra) {
@@ -1305,6 +1305,7 @@ function placeStats() {
   const hotel = new Map();
   for (const [k, t] of state.tiles) { const S = SHOPS[t.b]; if (!S) continue; const r = regionAt(...keyXY(k)); if (S.attr) add(attr, r, S.attr); if (S.hotel) add(hotel, r, S.hotel); }
   for (const m of MARKETS) add(attr, regionAt(...m.tiles[0]), MARKT_ATTR[m.stage]);             // Marktplatz zieht an
+  for (const p of PARKS) add(attr, regionAt(...keyXY(p.tiles[0])), PARK_ATTR[p.stage]);           // Park auch
   for (const [r, h] of hotel) attr.set(r, (attr.get(r) || 0) * (1 + h));
   return { pop, attr };
 }
