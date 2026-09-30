@@ -377,23 +377,26 @@ let goalSmall = null, unlockSig = '';        // null: von selbst – auf dem Han
 // (hudMore, ein paar Sekunden), Rohstoffe, Schönheit und Strom im Lager (📦).
 let hudMoreUntil = 0;
 const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
+// Nur schreiben, was sich geändert hat (Block 52): Safari auf dem iPad schluckt sonst den ersten Tipp auf einen Knopf,
+// in dem sich gerade etwas tut (die Leiste frischt alle 0,2 s auf)
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
 function updateHud() {
-  $('money').textContent = fmtMoney(state.money);
+  setText($('money'), fmtMoney(state.money));
   const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
-  $('rate').textContent = '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${bi}` : '');
-  $('pop').textContent = fmt(T.pop);
-  $('jobs').textContent = `💼 ${fmt(T.jobs)}`;                  // Arbeitsplätze
+  setText($('rate'), '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${bi}` : ''));
+  setText($('pop'), fmt(T.pop));
+  setText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
-  $('sci').textContent = fmtMoney(state.science);              // glatt wie das Geld (vorher „1,2 Mio.“)
-  $('sci-rate').textContent = T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${bs}` : '') : '';
-  $('sci-dot').hidden = !canResearch();
+  setText($('sci'), fmtMoney(state.science));                    // glatt wie das Geld (vorher „1,2 Mio.“)
+  setText($('sci-rate'), T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${bs}` : '') : '');
+  if ($('sci-dot').hidden !== !canResearch()) $('sci-dot').hidden = !canResearch();
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
-  $('town-name').textContent = state.town.name;
-  $('diary-dot').hidden = state.diarySeen >= state.diary.length;
+  setText($('town-name'), state.town.name);
+  if ($('diary-dot').hidden !== (state.diarySeen >= state.diary.length)) $('diary-dot').hidden = state.diarySeen >= state.diary.length;
   const fl = $('hud-flag');
-  fl.style.background = state.town.color;
-  fl.textContent = state.town.symbol;
+  if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
+  setText(fl, state.town.symbol);
   for (const b of document.querySelectorAll('[data-cost]')) {
     // Preise nach Einkommen (Leuchtturm, Block 37) ziehen auf der Kachel nach
     if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && +b.dataset.cost !== ITEMS[b.dataset.tool].cost) {
@@ -1842,6 +1845,17 @@ function showMenu() {
   };
 }
 $('menu-btn').onclick = showMenu;
+// Knöpfe oben (Block 52): mit dem Finger schon beim Loslassen auslösen – ohne auf Safaris Klick zu warten, der den ersten
+// Tipp manchmal nur als „Finger drüber“ wertet. Der Klick danach wird dann ignoriert; Maus und Tastatur wie gehabt.
+function fastTap(el) {
+  let down = false, at = -1e9;
+  const own = el.onclick;
+  el.addEventListener('pointerdown', e => { down = e.pointerType !== 'mouse'; });
+  el.addEventListener('pointercancel', () => { down = false; });
+  el.addEventListener('pointerup', e => { if (!down) return; down = false; at = performance.now(); own.call(el, e); });
+  el.onclick = e => { if (performance.now() - at < 800) return; own.call(el, e); };
+}
+for (const el of [...document.querySelectorAll('#hud .pill'), $('goal')]) if (el.onclick) fastTap(el);
 
 // Datei als Text lesen (FileReader klappt auch in älteren Safari-Versionen)
 function readFileText(file) {

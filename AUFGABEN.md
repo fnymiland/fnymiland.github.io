@@ -489,3 +489,9 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 
 - [x] ☰ → Anleitung mit Reitern Los geht's / Bauen & Gestalten / Wachsen / Steuerung (`openHelp`); Tasten nur mit Maus,
       Touch-Gesten immer. Wer etwas Neues einbaut, ergänzt es dort (und neue Tasten in der Steuerung).
+
+## Block 52 – Knöpfe oben reagieren auf den ersten Tipp (01.10.)
+
+- [x] iPad: Safari wertete den ersten Tipp auf Forschung/Stadtname manchmal nur als „Finger drüber“, weil die Leiste alle 0,2 s
+      in die Knöpfe schrieb. Jetzt nur bei Änderung (`setText`), und Knöpfe oben lösen mit dem Finger schon beim Loslassen aus
+      (`fastTap`, der Klick danach wird ignoriert).
