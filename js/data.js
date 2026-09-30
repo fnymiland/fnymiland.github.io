@@ -804,9 +804,9 @@ const STYLES = {
     { id: 'backstein', name: 'Backstein', col: '#b5654a' },
     { id: 'trocken', name: 'Trockenmauer', col: '#c9bfa8', design: 80 },
     { id: 'naturstein', name: 'Naturstein', col: '#a9a49a', design: 100 },
-    { id: 'klinker', name: 'Klinker', col: '#a95a43', design: 120 },
+    { id: 'klinker', name: 'Klinker', col: '#84402f', design: 120 },
     { id: 'terrakotta', name: 'Terrakotta', col: '#d99a73', design: 120 },
-    { id: 'kopf', name: 'Kopfstein', col: '#cfc8bb', lm: 'quelle:2' },
+    { id: 'kopf', name: 'Kopfstein', col: '#a89a86', lm: 'quelle:2' },
     { id: 'laternen', name: 'Mauer mit Laternen', col: '#ffe58a', design: 220 },
   ],
 };

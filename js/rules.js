@@ -631,9 +631,10 @@ function edgeEndPoints(k) { const { dir, i, j } = edgeParse(k); return dir === '
 function edgeLamps() {
   const out = [], seen = new Set();
   for (const [k, e] of state.edges) {
-    if (EDGE_LIT.has(e.b + ':' + e.style)) out.push('E' + k);
-    if (e.arch && isGate(k)) out.push('A' + k);
-    if (e.b !== 'hecke' && !isGate(k)) for (const [vx, vy] of edgeEndPoints(k)) { const v = 'P' + vx + ',' + vy; if (!seen.has(v) && freeEnd(k, vx, vy)) { seen.add(v); out.push(v); } }
+    if (!EDGE_LIT.has(e.b + ':' + e.style)) continue;              // Laternen nur an beleuchteten Stilen
+    out.push('E' + k);
+    if (isGate(k)) { if (e.arch) out.push('A' + k); else if (e.b !== 'hecke') out.push('G0' + k, 'G1' + k); continue; }   // Bogen oder Torpfeiler
+    if (e.b !== 'hecke') for (const [vx, vy] of edgeEndPoints(k)) { const v = 'P' + vx + ',' + vy; if (!seen.has(v) && freeEnd(k, vx, vy)) { seen.add(v); out.push(v); } }
   }
   return out.sort();
 }

@@ -190,12 +190,28 @@ describe('Endstücke, Torbögen, Licht', () => {
     expect(game("state.edges.get('a6,5').arch")).toBe('bogen');
   });
 
-  it('Lichter zählen wie Laternen: beleuchtete Stile, Torbögen, Endpfeiler von Mauer und Zaun (Hecke nicht)', () => {
-    game("state.edges.set('a5,5', { b: 'mauer', style: 'backstein' }); state.edges.set('a5,8', { b: 'hecke', style: 'lichter' }); state.edges.set('a5,10', { b: 'hecke', style: 'niedrig' })");
+  it('Lichter zählen wie Laternen: nur beleuchtete Stile, mit ihren Endpfeilern (Hecke nicht), schlichte Stile gar nicht', () => {
+    game("state.edges.set('a5,5', { b: 'mauer', style: 'laternen' }); state.edges.set('a5,8', { b: 'hecke', style: 'lichter' }); state.edges.set('a5,10', { b: 'hecke', style: 'niedrig' }); state.edges.set('a5,12', { b: 'mauer', style: 'backstein' }); state.edges.set('a5,14', { b: 'zaun', style: 'latten' })");
     const lamps = game('edgeLamps()');
     expect(lamps).toContain('Ea5,8');
-    expect(lamps).toEqual(expect.arrayContaining(['P5,5', 'P6,5']));
-    expect(lamps.some(l => l.includes(',10'))).toBe(false);
+    expect(lamps).toEqual(expect.arrayContaining(['Ea5,5', 'P5,5', 'P6,5']));
+    expect(lamps.some(l => /,(10|12|14)$/.test(l))).toBe(false);
+  });
+
+  it('Torbogen und Torpfeiler haben nur bei beleuchteten Stilen eine Laterne', () => {
+    game("state.tiles.set('6,4', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('6,5', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,5', { b: 'mauer', style: 'laternen' }); recalc()");
+    expect(game('edgeLamps()')).toEqual(expect.arrayContaining(['G0a6,5', 'G1a6,5']));
+    game("state.edges.get('a6,5').arch = 'rosen'");
+    expect(game('edgeLamps()')).toContain('Aa6,5');
+    expect(game('edgeLamps()').some(l => l.startsWith('G'))).toBe(false);
+    game("state.edges.get('a6,5').style = 'backstein'");
+    expect(game('edgeLamps()')).toEqual([]);
+  });
+
+  it('Lichterkette und Blüten stehen im Bogen so dicht wie auf dem geraden Stück', () => {
+    const arc = game('(() => { const out = []; const pts = Array.from({ length: 11 }, (_, i) => [Math.cos(i / 10 * Math.PI / 2), Math.sin(i / 10 * Math.PI / 2)]); alongLine(pts, 8, 0, m => out.push(m)); return out.length; })()');
+    expect(arc).toBe(Math.round(Math.PI / 2 * 8));                                // ¼-Kreis mit Radius 1: Länge π/2
+    expect(game('(() => { let n = 0; alongLine([[0, 0], [1, 0]], 8, 0, () => n++); return n; })()')).toBe(8);
   });
 
   it('Endstücke, Bögen und Lichter lassen sich zeichnen (Tag und Nacht)', () => {
