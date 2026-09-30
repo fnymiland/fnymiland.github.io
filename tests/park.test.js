@@ -35,3 +35,37 @@ describe('Parkrasen', () => {
     expect(game("placeError('parkrasen', 12, 10)")).toMatch(/Gebäude/);
   });
 });
+
+describe('Stufen, Park-Wunsch, Schönheit', () => {
+  const stage = () => game('(computeParks(), PARKS.map(p => p.stage))');
+  it('Grünanlage ab 4 Feldern mit 3 Deko; Park braucht 9 Felder, 8 Deko, Bäume und eine Bank; Stadtpark auch Wasser', () => {
+    lawn(10, 10, 2, 2);
+    build('blumentopf', 10, 10); build('blumentopf', 11, 10);
+    expect(stage()).toEqual([]);                                                  // 2 Deko: noch nichts
+    build('busch', 10, 11);
+    expect(stage()).toEqual([1]);                                                 // Grünanlage
+    lawn(10, 10, 3, 3);
+    for (const [x, y] of [[12, 10], [12, 11], [11, 11], [10, 12]]) build('baum', x, y);
+    expect(game('(computeParks(), PARKS[0].deco)')).toBe(7);
+    build('blumen', 11, 12);
+    expect(stage()).toEqual([1]);                                                 // 8 Deko, aber keine Bank
+    build('bank', 12, 12);
+    expect(stage()).toEqual([2]);                                                 // Park
+    lawn(10, 10, 4, 4);
+    for (const [x, y] of [[13, 10], [13, 11], [13, 12], [10, 13], [11, 13], [12, 13]]) build('baum', x, y);
+    expect(stage()).toEqual([2]);                                                 // 15 Deko, aber kein Wasser
+    build('brunnen', 13, 13);
+    expect(stage()).toEqual([3]);                                                 // Stadtpark
+  });
+
+  it('der Park erfüllt den Park-Wunsch bis 4 Felder und bringt Schönheit, auch ringsum', () => {
+    lawn(10, 10, 2, 2);
+    for (const [x, y] of [[10, 10], [11, 10], [10, 11]]) build('blumentopf', x, y);
+    game('recalc()');
+    expect(game("wishCheck('park', 15, 10).ok")).toBe(true);                     // 4 Felder daneben
+    expect(game("parkReach(null, 18, 10)")).toBe(null);                           // zu weit (und ohne Viertel)
+    const near = game('beautyAround(13, 10, 0)');
+    expect(near).toBe(game('PARK_BEAUTY[1]'));                                     // nur der Park-Bonus (bis 3 Felder)
+    expect(game('beautyAround(16, 10, 0)')).toBe(0);
+  });
+});

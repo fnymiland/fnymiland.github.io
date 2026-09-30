@@ -724,6 +724,7 @@ function openInfo(x, y) {
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
   if (STANDS[t.b]) status.push(...marktStatus(x + ',' + y));
+  if (terraLook(x, y) === 'park') status.push(...parkStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
@@ -1001,6 +1002,33 @@ function marktStatus(k) {
     `<div class="ok">👥 Zieht ${MARKT_ATTR[m.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`,
     `<div class="${left ? 'ok' : ''}">🧺 ${left ? `Markttag! Läden im Marktviertel doppelt · noch ${fmtClock(left)}` : `Nächster Markttag in ${fmtClock(marktNext())}`}</div>`];
 }
+// Park (Block 44): Stufe, was zur nächsten fehlt, was er bringt
+function parkStatus(k) {
+  const p = computeParks().find(e => e.tiles.includes(k));
+  if (!p) return [];
+  const out = [], next = PARK_STEPS[p.stage];
+  out.push(p.stage ? `<div class="ok">🌳 ${PARK_STEPS[p.stage - 1].name}: ${p.tiles.length} Felder Rasen, ${p.deco} Deko</div>`
+    : `<div class="bad">✗ Noch kein Park: ${p.tiles.length} Felder Rasen, ${p.deco} Deko</div>`);
+  if (next) {
+    const miss = [];
+    if (p.tiles.length < next.tiles) miss.push(`${next.tiles - p.tiles.length} ${next.tiles - p.tiles.length === 1 ? 'Feld' : 'Felder'} Rasen`);
+    if (p.deco < next.deco) miss.push(`${next.deco - p.deco} Deko`);
+    for (const n of next.need) if (!p.sorts.has(n)) miss.push(PARK_SORT_NAMES[n]);
+    out.push(`<div class="muted">Für „${next.name}“ fehlt noch: ${miss.join(', ')}</div>`);
+  }
+  if (p.stage) out.push(`<div class="ok">🏡 Erfüllt den Park-Wunsch: Häuser bis ${PARK_REACH} Felder und im selben Viertel</div>`,
+    `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit – auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`);
+  return out;
+}
+function openParkInfo(x, y) {
+  const k = x + ',' + y;
+  showPanel(`
+    <h3>🌳 Parkrasen</h3>
+    <div class="status">${parkStatus(k).join('')}</div>
+    <p class="muted">Stell Bäume, Beete, Bänke und Brunnen auf den Rasen. Wege dürfen hindurch.</p>
+    <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => terraLook(x, y) === 'park' ? openParkInfo(x, y) : closePanel());
+  $('p-close').onclick = closePanel;
+}
 const wares0 = S => S.raw ? ['holz', 'stein', 'erz', 'obst'] : S.all ? Object.keys(RES) : S.ware ? [S.ware] : [];
 function shopStatus(t, s, k) {
   const S = SHOPS[t.b], out = [], kd = s.kunden || 0, name = ITEMS[t.b].name, cap = shopCap(t.b), staff = S.workers || 1;
@@ -1168,6 +1196,7 @@ function openDecoInfo(x, y, slot) {
   showPanel(`
     <h3>${it.name}</h3>
     <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
+    ${terraLook(x, y) === 'park' ? `<div class="status">${parkStatus(x + ',' + y).join('')}</div>` : ''}
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}

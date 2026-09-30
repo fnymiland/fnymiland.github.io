@@ -253,6 +253,16 @@ const STANDS = {
   stand_gewuerz: { name: 'Gewürzstand', awn: '#9c4f3a', goods: ['#e8604f', '#e9a23b', '#58b36a', '#8a5a3c'] },
 };
 const MARKT_STEPS = [[3, 'Marktplatz'], [6, 'Wochenmarkt'], [9, 'Großer Markt']];
+// Park zum Selberbauen (Block 44): zusammenhängender Parkrasen mit Deko darauf. Stufe nach Fläche, Deko-Anzahl und Vielfalt
+const PARK_STEPS = [
+  { name: 'Grünanlage', tiles: 4, deco: 3, need: [] },
+  { name: 'Park', tiles: 9, deco: 8, need: ['baum', 'bank'] },
+  { name: 'Stadtpark', tiles: 16, deco: 15, need: ['baum', 'bank', 'wasser'] },
+];
+// Welche Deko wofür zählt (Grundmodell → Sorte); alles andere zählt nur als Deko
+const PARK_SORT = { baum: 'baum', palme: 'baum', busch: 'baum', bank: 'bank', brunnen: 'wasser', kristallbrunnen: 'wasser',
+  blumen: 'blumen', blumentopf: 'blumen', riesenblume: 'blumen', rosenbogen: 'blumen' };
+const PARK_SORT_NAMES = { baum: 'Bäume', bank: 'eine Bank', wasser: 'Wasser (Brunnen)' };
 for (const [id, S] of Object.entries(STANDS)) ITEMS[id] = { cat: 'markt', name: S.name, cost: 250, mat: { bretter: 2 }, needs: 'platz', tech: 'handel', beauty: 3,
   desc: 'Kommt auf einen Weg oder Platz. Ab 3 Ständen auf einem Platz wird daraus ein Marktplatz: Läden drumherum verdienen mehr, Besucher kommen, ab und zu ist Markttag.' };
 // Leuchtturm: fester Preis als Untergrenze, sonst 60 Minuten des besten Einkommens (leuchtCost, Block 37) – überall,

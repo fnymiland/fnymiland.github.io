@@ -303,6 +303,7 @@ const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen g
 function totals() {
   rebuildCover();
   computeMarkets();
+  computeParks();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -417,6 +418,7 @@ function totals() {
     }
   }
   for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0);   // Hecken, Zäune, Mauern, Torbögen
+  for (const p of PARKS) beauty += PARK_BEAUTY[p.stage];                  // ein ganzer Park ist mehr als seine Deko
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
@@ -699,6 +701,40 @@ function computeMarkets() {
   return out;
 }
 const marketOf = k => MARKETS.find(m => m.stands.includes(k)) || null;
+// Parks (Block 44): zusammenhängender Parkrasen; Deko darauf (kleine je Stück, große einmal) → Stufe nach PARK_STEPS
+let PARKS = [];
+const PARK_REACH = 4, PARK_BEAUTY = [0, 15, 35, 70], PARK_NEAR = [0, 3, 4, 6];   // Schönheit ringsum: bis PARK_NEAR Felder
+function computeParks() {
+  const seen = new Set(), out = [];
+  for (const [k0, v] of state.terra) {
+    if (v !== 'park' || seen.has(k0)) continue;
+    const tiles = [], todo = [k0], sorts = new Set();
+    let deco = 0;
+    seen.add(k0);
+    while (todo.length) {
+      const k = todo.pop(), [x, y] = keyXY(k);
+      tiles.push(k);
+      const t = state.tiles.get(k);
+      if (t && t.b !== 'weg' && ITEMS[t.b] && ITEMS[t.b].cat === 'deko') { deco++; if (PARK_SORT[baseOf(t.b)]) sorts.add(PARK_SORT[baseOf(t.b)]); }
+      for (const d of state.decos.get(k) || []) if (d) { deco++; if (PARK_SORT[baseOf(d.b)]) sorts.add(PARK_SORT[baseOf(d.b)]); }
+      for (const [dx, dy] of DIRS) {
+        const n = (x + dx) + ',' + (y + dy);
+        if (!seen.has(n) && state.terra.get(n) === 'park') { seen.add(n); todo.push(n); }
+      }
+    }
+    const stage = PARK_STEPS.filter(s => tiles.length >= s.tiles && deco >= s.deco && s.need.every(n => sorts.has(n))).length;
+    out.push({ tiles, deco, sorts, stage });
+  }
+  PARKS = out.filter(p => p.stage);
+  return out;
+}
+const parkAt = k => PARKS.find(p => p.tiles.includes(k)) || null;
+// Abstand (Felder, wie Chebyshev) vom Rechteck x0..x1, y0..y1 zum nächsten Feld des Parks
+function parkDist(p, x0, y0, x1 = x0, y1 = y0) {
+  let best = Infinity;
+  for (const k of p.tiles) { const [px, py] = keyXY(k); best = Math.min(best, Math.max(0, px - x1, x0 - px, py - y1, y0 - py)); }
+  return best;
+}
 // Läden bis MARKT_REACH Felder um einen Marktplatz: Marktviertel
 function nearMarket(x, y, w = 1, h = 1) {
   const x1 = x + w - 1, y1 = y + h - 1;
@@ -1639,6 +1675,7 @@ function beautyAround(x, y, r) {
     if (ds) for (const d of ds) if (d) sum += ITEMS[d.b].beauty || 0;
     for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0); }   // Linien
   }
+  for (const p of PARKS) if (parkDist(p, x, y) <= PARK_NEAR[p.stage]) sum += PARK_BEAUTY[p.stage];   // Park in der Nähe (je größer, desto weiter)
   return sum;
 }
 // Erreichbar per Weg oder Bahn (Block 26): Versorgung zählt auch, wenn sie im selben Viertel steht (über Wege oder
@@ -1680,7 +1717,17 @@ function wishCheck(w, x, y, acc = T.access) {
   if (acc && acc.green && (w === 'park' || w === 'schoen')) return { ok: true, how: 'garten' };     // Botanischer Garten
   if (!WISH_REACH[w]) return { ok: wishMet(w, x, y), how: null };
   const [r, pred] = WISH_REACH[w], got = reachKind(acc, x + ',' + y, x, y, r, pred);
+  if (!got.how && w === 'park') { const how = parkReach(acc, x, y); if (how) return { ok: true, how }; }
   return { ok: !!got.how, how: got.how };
+}
+// Selbstgebauter Park (Block 44): bis PARK_REACH Felder vom Haus oder im selben Viertel (über Wege verbunden)
+function parkReach(acc, x, y) {
+  if (!PARKS.length) return null;
+  const a = anchorAt(x, y), t = a && state.tiles.get(a), [ax, ay] = t ? keyXY(a) : [x, y], [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
+  if (PARKS.some(p => parkDist(p, ax, ay, ax + w - 1, ay + h - 1) <= PARK_REACH)) return 'nah';
+  const v = acc && acc.net.vOf(a || x + ',' + y);
+  if (v && PARKS.some(p => p.tiles.some(k => acc.net.vOf(k) === v))) return 'viertel';
+  return null;
 }
 function wishMet(w, x, y) {
   if (WISH_REACH[w]) return wishCheck(w, x, y).ok;
