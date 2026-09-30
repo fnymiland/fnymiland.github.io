@@ -8,7 +8,7 @@
 const TW = 64, TH = 32, DEPTH = 9, CHUNK = 6;
 const SAVE_KEY = 'kachelhausen_v3';
 const MAX_LVL = 3;              // Gebäude-Stufen (Häuser: HOUSE_STAGES)
-const ZOOM_MIN = 0.45, ZOOM_MAX = 2.6;
+const ZOOM_MIN = 0.45, ZOOM_MAX = 5;   // nah ran (Block 47): vorher 2,6
 const ISLAND = { cMin: -4, cMax: 4, cx: 2.5, cy: 2.5, r: 26 };
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 // Drehung rot 0–3: in diese Richtung zeigt die Tür (0 = +x rechts vorn, 1 = +y links vorn, 2 = −x, 3 = −y hinten).

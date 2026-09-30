@@ -316,9 +316,9 @@ function drawDepth(minX, maxX, minY, maxY, z) {
 let hoverKey = '', hoverSince = 0;
 const HOVER_CALM = 120;                // ms Ruhe, bevor die Vorschau (+Taler, +Einwohner …) rechnet
 let groundDeadline = 0;
-const GROUND_MS = 8;
+const GROUND_MS = 8, GROUND_Z_MAX = 3;
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
-  const want = z * DPR, zooming = now - lastZoomChange < 250;
+  const want = Math.min(z, GROUND_Z_MAX) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert
   groundDeadline = performance.now() + GROUND_MS;
   const order = [];
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
