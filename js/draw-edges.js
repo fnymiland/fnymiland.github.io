@@ -111,7 +111,10 @@ function drawArc(rc, look, z) {
   if (rc.b === 'hecke') for (const [, a, b, , s] of walls) hedgeSideFlowers([a, b], look, h, z, rc.ka.length, s * Math.hypot(b[0] - a[0], b[1] - a[1]));
   poly([...outer.map(p => P(p, h)), ...inner.slice().reverse().map(p => P(p, h))], C(shade(look.col, 0.14)));
   if (rc.b === 'hecke') hedgeTop(pts, look, h, z, rc.ka.length);
-  if (look.lights) bulbsAlong(pts, h + 0.4, z, 'E' + rc.ka);
+  if (look.lights) {                                              // Lichterkette an der Seite, die zum Betrachter zeigt
+    const side = pts.map(p => { const d = [p[0] - c[0], p[1] - c[1]]; return off(p, d[0] + d[1] > 0 ? 1 : -1); });
+    bulbsAlong(side, h - 0.6, z, 'E' + rc.ka);
+  }
 }
 // Mauerfugen auf sichtbaren Wandstücken ([a, b] in Feld-Koordinaten): Lagerfugen durchgehend, Stoßfugen je Länge versetzt
 function wallJoints(segs, look, h, z, P) {
@@ -199,8 +202,8 @@ function pillarBox(pt, r, h0, h1, col, z) {
 }
 // Gemauerter Pfeiler (Mauerende, Tor): deutlich breiter als die Mauer, vom Boden an mit Fugen, oben ein Deckstein.
 // Gibt die Höhe der Oberkante zurück.
-const PILLAR_UP = 4, CAP_UP = 4.9;
-const wallPillarR = look => look.w * 1.8;
+const PILLAR_UP = 2.8, CAP_UP = 3.6;
+const wallPillarR = look => look.w * 1.45;
 function wallPillar(pt, look, z, rMax = Infinity) {                // rMax: am Tor nicht über die Feldecke hinaus
   const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
@@ -301,7 +304,7 @@ function drawEdge(k, e, z, now) {
   // erst hinter ihm (sonst malt es seine Seitenwand über das andere Stück)
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
   // Mauer mit Pfeiler am hinteren Ende (P): erst der Pfeiler, die Mauer beginnt an seiner Seite (sonst ragt er über sie)
-  const pilP = endP && e.b === 'mauer' ? wallPillarR(look) : 0;
+  const pilP = !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
   const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
