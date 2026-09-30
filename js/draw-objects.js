@@ -1026,6 +1026,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     }
     // --- Verkehr & Strom ---
     case 'windrad': {                        // Stufe 1 Windrad, 2 Großes Windrad, 3 Windturbine – alle in gemütlicher Größe
+      if (Math.min(lvl || 1, 3) === 3) { drawHelixTurbine(cx, cy, z, now); break; }
       const s = Math.max(1, Math.min(lvl || 1, 3)), H = [38, 46, 50][s - 1], L = [16, 20, 22][s - 1] * z;
       const w0 = [3, 4, 3.8][s - 1] * z, w1 = [3, 2.6, 1.8][s - 1] * z;
       ellipse(cx, cy + 1 * z, (4 + s * 2) * z, (2 + s) * z, 'rgba(40,60,20,0.15)');
@@ -1545,6 +1546,43 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   }
 }
 
+// Windturbine (Stufe 3 des Windrads): senkrechte Achse, drei gedrehte Holzflügel um einen dunklen Mast, Streben, Lagerring.
+// Hintere Flügelstücke vor dem Mast zeichnen, vordere danach.
+function drawHelixTurbine(cx, cy, z, now) {
+  const H = 54, h0 = 15, h1 = 47, R = 13, twist = Math.PI * 0.8, n = 16, ph = now / 1100, flat = 0.42, wide = 0.35, band = 6;   // band: Breite des Flügels in der Höhe
+  const P = (a, h, r) => [cx + Math.cos(a) * r * z, cy - h * z + Math.sin(a) * r * flat * z];
+  const rad = t => R * (0.72 + 0.28 * Math.sin(Math.PI * t));             // oben und unten etwas eingezogen
+  ellipse(cx, cy + 1 * z, 9 * z, 4 * z, 'rgba(40,60,20,0.15)');
+  box(cx, cy, 5 * z, 2.6 * z, 3 * z, '#d9d3c6', null, 0);                          // Sockel
+  const segs = [];
+  for (let i = 0; i < 3; i++) for (let k = 0; k < n; k++) {
+    const t0 = k / n, t1 = (k + 1) / n, a0 = ph + i * Math.PI * 2 / 3 + t0 * twist, a1 = ph + i * Math.PI * 2 / 3 + t1 * twist;
+    const hA = h0 + (h1 - h0) * t0, hB = h0 + (h1 - h0) * t1;
+    const q = [P(a0, hA, rad(t0)), P(a1, hB, rad(t1)), P(a1 - wide, hB + band, rad(t1)), P(a0 - wide, hA + band, rad(t0))];   // Band quer zur Schraube
+    const mid = (a0 + a1 - wide) / 2, front = Math.sin(mid) > 0;
+    segs.push({ q, front, depth: Math.sin(mid), shade: 0.12 * Math.cos(mid) - (front ? 0 : 0.14) });
+  }
+  const paint = list => list.sort((A, B) => A.depth - B.depth).forEach(S => { const col = C(shade('#e0bb7e', S.shade)); poly(S.q, col); g.strokeStyle = col; g.lineWidth = 0.6; g.stroke(); });
+  const arms = front => {                                                            // Streben vom Mast zu den Flügeln
+    g.strokeStyle = C('#3b404b'); g.lineWidth = 1.1 * z; g.lineCap = 'round'; g.beginPath();
+    for (let i = 0; i < 3; i++) for (const t of [0.12, 0.5, 0.88]) {
+      const a = ph + i * Math.PI * 2 / 3 + t * twist - wide / 2;
+      if ((Math.sin(a) > 0) !== front) continue;
+      const h = h0 + (h1 - h0) * t + band / 2; g.moveTo(cx, cy - h * z); g.lineTo(...P(a, h, rad(t) * 0.96));
+    }
+    g.stroke();
+  };
+  paint(segs.filter(S => !S.front)); arms(false);
+  poly([[cx - 1.8 * z, cy - 3 * z], [cx + 1.8 * z, cy - 3 * z], [cx + 1.5 * z, cy - H * z], [cx - 1.5 * z, cy - H * z]], C('#454b57'));   // Mast
+  poly([[cx, cy - 3 * z], [cx + 1.8 * z, cy - 3 * z], [cx + 1.5 * z, cy - H * z], [cx, cy - H * z]], C('#353a44'));
+  const my = cy - (h0 + (h1 - h0) * 0.5) * z;                                         // Lagerring
+  ellipse(cx, my, 3.2 * z, 1.4 * z, C('#b9bcc2')); ellipse(cx, my - 1.6 * z, 3.2 * z, 1.4 * z, C('#d5d8dd'));
+  arms(true); paint(segs.filter(S => S.front));
+  ellipse(cx, cy - H * z, 1.3 * z, 0.6 * z, C('#2e323b'));                             // Kappe
+  if (night > 0.15 && isLive() && Math.floor(now / 700) % 2 === 0) {                   // Warnlicht nachts
+    circle(cx, cy - (H + 1.2) * z, 1.1 * z, '#ff4a3d'); glowQuad([[cx - 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - H * z], [cx - 1 * z, cy - H * z]], 12 * z);
+  }
+}
 function drawStatusIcon(cx, cy, z, icon, now) {
   const bob = Math.sin(now / 300) * 1.5 * z, x = cx - 10 * z, y = cy - 34 * z + bob, r = 6.5 * z;
   circle(x, y + 1.5, r, 'rgba(107,79,58,0.3)');
