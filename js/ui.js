@@ -789,10 +789,21 @@ function openWalkerInfo(w) {
     <div class="status"><div>${walkerDoing(w)}</div>
       ${wish ? `<div>${wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥'} ${miss.length ? `💭 Wünscht sich: ${miss[0].text}` : 'Rundum glücklich'}</div>` : ''}</div>
     <div class="row"><button class="btn" id="p-home">🏠 Zum Haus</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
-    () => walkers.includes(w) || strollers.includes(w) ? openWalkerInfo(w) : closePanel());
+    () => walkers.includes(w) || strollers.includes(w) ? openWalkerInfo(w) : walkerGone(w, r));
   $('p-close').onclick = closePanel;
   $('p-home').onclick = () => { const [w0, h0] = sizeOf(t.b, t.rot, t); jumpTo(hx, hy, w0, h0); sparkle(hx + (w0 - 1) / 2, hy + (h0 - 1) / 2); openInfo(hx, hy); };
   void el;
+}
+// Die Figur ist zu Hause angekommen: Fenster bleibt, sagt das, und bietet das Haus an
+function walkerGone(w, r) {
+  const t = state.tiles.get(w.home);
+  if (!t) { closePanel(); return; }
+  const [hx, hy] = keyXY(w.home), a = animalOf(r);
+  showPanel(`<h3>${a.icon} ${escHtml(residentName(r))}</h3>
+    <div class="status"><div>🏠 Ist nach Hause gegangen.</div></div>
+    <div class="row"><button class="btn" id="p-home">🏠 Zum Haus</button><button class="btn ghost" id="p-close">Schließen</button></div>`);
+  $('p-close').onclick = closePanel;
+  $('p-home').onclick = () => { const [w0, h0] = sizeOf(t.b, t.rot, t); jumpTo(hx, hy, w0, h0); sparkle(hx + (w0 - 1) / 2, hy + (h0 - 1) / 2); openInfo(hx, hy); };
 }
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };

@@ -80,6 +80,25 @@ describe('Antippen, Sprechblasen, Rathaus', () => {
     expect(game("document.getElementById('panel').textContent")).toMatch(/Wünsche/);
   });
 
+  it('im Gebäude: „Macht Pause: …“; zu Hause angekommen: Fenster bleibt und sagt es', () => {
+    game("state.tiles.set('6,11', { b: 'haus', lvl: 1, animal: 'baer', name: 'Bruno' }); state.tiles.set('8,11', { b: 'baecker', lvl: 1, rot: 0 }); state.tiles.set('7,12', { b: 'weg', lvl: 1 }); recalc()");
+    game("walkers.push({ fx: 7, fy: 12, tx: 7, ty: 12, px: 7, py: 12, t: 0, wait: 0, ...residentLook('6,11', 0), shirt: '#fff', speed: 1, goal: { kind: 'essen', k: '8,11' }, inside: 5 })");
+    game('openWalkerInfo(walkers[0])');
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Macht Pause: Bäckerei/);
+    game('walkers.length = 0; refreshLive()');
+    expect(game("document.getElementById('panel').hidden")).toBe(false);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Bruno Bär.*nach Hause gegangen/s);
+  });
+
+  it('weit herausgezoomt trifft man Figuren nur genau (nicht das Haus daneben)', () => {
+    game("state.tiles.set('6,11', { b: 'haus', lvl: 1, animal: 'baer', name: 'Bruno' }); state.tiles.set('7,12', { b: 'weg', lvl: 1 }); recalc(); cam.z = 0.5");
+    game("walkers.push({ fx: 7, fy: 12, tx: 7, ty: 12, px: 7, py: 12, t: 0, wait: 5, ...residentLook('6,11', 0), shirt: '#fff', speed: 1, goal: { kind: 'bummel' } })");
+    const [hx, hy] = game('walkerHead(walkers[0], cam.z)');
+    expect(game(`walkerAt(${hx}, ${hy + 3})`)).not.toBe(null);
+    expect(game(`walkerAt(${hx + 12}, ${hy + 3})`)).toBe(null);
+    game('cam.z = 1');
+  });
+
   it('Sprechblasen erzählen von den Wünschen des Hauses', () => {
     game("state.tiles.set('6,11', { b: 'haus', lvl: 1, animal: 'baer', name: 'Bruno' }); recalc()");
     const w = "({ home: '6,11', who: 0, goal: { kind: 'bummel' } })";

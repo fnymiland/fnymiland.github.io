@@ -266,7 +266,7 @@ function drawBubble(z) {
 // Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
 function walkerAt(sx, sy) {
   const z = cam.z;
-  let best = null, bd = Math.max(14, 10 * z);
+  let best = null, bd = 4 + 8 * z;                                       // so groß wie die Figur – weit weg nicht aus Versehen
   for (const w of walkers.concat(strollers)) {
     if (w.inside > 0 || !w.home || !state.tiles.get(w.home)) continue;
     const [hx, hy] = walkerHead(w, z), d = Math.hypot(sx - hx, sy - (hy + 6 * z));
@@ -277,10 +277,12 @@ function walkerAt(sx, sy) {
 // Was macht die Figur gerade?
 const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem Weg zur Schule', essen: '☕ Geht etwas essen', laden: '🛍️ Geht einkaufen',
   markt: '🧺 Geht zum Markt', park: '🌳 Geht in den Park', home: '🏠 Auf dem Heimweg', bummel: '🚶 Bummelt ein bisschen herum' };
+const GOAL_IN = { arbeit: '💼 Arbeitet gerade', schule: '🎒 Lernt gerade', essen: '☕ Macht Pause', laden: '🛍️ Kauft gerade ein', markt: '🧺 Auf dem Markt' };
 function walkerDoing(w) {
   if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
   const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
   if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';
+  if (w.inside > 0 && t && GOAL_IN[g0.kind]) return `${GOAL_IN[g0.kind]}: ${stageName(t)}`;
   return GOAL_DO[g0.kind] + (t && g0.kind !== 'home' && g0.kind !== 'park' ? ` (${stageName(t)})` : '');
 }
 const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
