@@ -397,17 +397,6 @@ function updateHud() {
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
   setText(fl, state.town.symbol);
-  for (const b of document.querySelectorAll('[data-cost]')) {
-    // Preise nach Einkommen (Leuchtturm, Block 37) ziehen auf der Kachel nach
-    if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && +b.dataset.cost !== ITEMS[b.dataset.tool].cost) {
-      b.dataset.cost = ITEMS[b.dataset.tool].cost; b.querySelector('.cost').textContent = cardPrice(b.dataset.tool);
-    }
-    // !! wichtig: toggle(…, undefined) würde bei jedem Aufruf umschalten (der Preis blinkte)
-    const poor = !!(state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat))));
-    if (b.classList.contains('tool')) b.classList.toggle('poor', poor);
-    else b.disabled = poor;
-  }
-  for (const b of document.querySelectorAll('[data-sci]')) b.disabled = state.science < +b.dataset.sci;
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const goal = $('goal');
   goal.style.top = top + 'px';
@@ -420,6 +409,23 @@ function updateHud() {
   watchUnlocks();
   watchTips();
   refreshLive();
+  costMarks();                                   // erst nach refreshLive: das Auffrischen setzt „disabled“ auf den Stand des HTML zurück
+}
+// Zu teuer: Kacheln rot, Knöpfe gesperrt. Gesperrt wird nur, was das HTML nicht schon selbst sperrt (data-poor merkt sich,
+// dass die Sperre von hier kommt – wer genug hat, bekommt den Knopf wieder)
+function costMarks() {
+  for (const b of document.querySelectorAll('[data-cost]')) {
+    // Preise nach Einkommen (Leuchtturm, Block 37) ziehen auf der Kachel nach
+    if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && +b.dataset.cost !== ITEMS[b.dataset.tool].cost) {
+      b.dataset.cost = ITEMS[b.dataset.tool].cost; b.querySelector('.cost').textContent = cardPrice(b.dataset.tool);
+    }
+    // !! wichtig: toggle(…, undefined) würde bei jedem Aufruf umschalten (der Preis blinkte)
+    const poor = !!(state.money < +b.dataset.cost || (b.dataset.mat && !hasMat(JSON.parse(b.dataset.mat))));
+    if (b.classList.contains('tool')) b.classList.toggle('poor', poor);
+    else if (poor && !b.disabled) { b.disabled = true; b.dataset.poor = '1'; }
+    else if (!poor && b.dataset.poor) { b.disabled = false; delete b.dataset.poor; }
+  }
+  for (const b of document.querySelectorAll('[data-sci]')) b.disabled = state.science < +b.dataset.sci;
 }
 $('goal').onclick = e => {
   if (e.target.dataset.skip) { state.tutorial = -1; save(); toast('Einführung übersprungen – viel Spaß!'); updateHud(); return; }

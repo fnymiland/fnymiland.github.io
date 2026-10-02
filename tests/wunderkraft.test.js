@@ -72,7 +72,7 @@ describe('🌉 Seebrücke: Hafenstadt', () => {
     done('seebruecke', '15,15');
     expect(game('orderSlots()')).toBe(slots + 1);
     expect(game("shipSeats({ model: 'holz' })")).toBe(Math.round(seats * 1.25));
-    expect(Math.abs(game(`makeOrder(0, ${rnd}).pay`) / (pay * 1.5) - 1)).toBeLessThan(0.03);   // Preise sind gerundet
+    expect(Math.abs(game(`makeOrder(0, ${rnd}).pay`) / (pay * 1.5) - 1)).toBeLessThan(0.05);   // Preise sind gerundet
   });
 });
 

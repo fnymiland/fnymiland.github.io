@@ -743,6 +743,7 @@ const OLD_WONDER_PHASES = {
 const wonderRate = () => Math.round(Math.max(T.inc + (T.salesInc || 0), state.incPeak || 0));
 const wonderBase = t => wonderRate();                                // Preisgrundlage einer Baustelle (t.rate nur noch zur Anzeige alter Stände)
 const niceRound = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.round(v / p) * p; };
+const niceFloor = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.floor(v / p) * p; };
 function wonderCost(t, p = t.phase || 0) {
   const ph = WONDERS[t.b].phases[p];
   if (!ph) return null;

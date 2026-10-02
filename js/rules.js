@@ -1344,7 +1344,7 @@ function makeOrder(now, rnd = Math.random) {
     let pick = rnd() * w.reduce((a, b) => a + b, 0), res = stock[stock.length - 1];
     for (let i = 0; i < stock.length; i++) { pick -= w[i]; if (pick <= 0) { res = stock[i]; break; } }
     const huge = big && rnd() < 0.3, share = huge ? 0.8 + rnd() * 0.2 : 0.3 + rnd() * 0.5, prem = (huge ? 2 + rnd() : 1.2 + rnd() * 0.6) * (wonderOn('seebruecke') ? 1.5 : 1);
-    const amount = Math.max(10, niceRound(Math.floor(state.res[res] * share)));
+    const amount = Math.max(10, niceFloor(state.res[res] * share));          // abrunden: nie mehr, als im Lager liegt
     return { id: now + ':' + res, kind: 'sell', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * prem), prem, huge, until: now + ORDER_TTL };
   }
   const can = Object.keys(TRADE_PRICE).filter(r => available(RES_SOURCE[r]) && !taken(r));

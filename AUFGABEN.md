@@ -503,3 +503,12 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       Entfernung zum Land. Geothermie: Nähe zur heißen Quelle. Solar: Wiese +25 %, Sand bis +50 %, hohe Nachbarn Schatten.
       Wasserkraft: Wasser ringsum. Holzfäller/Steinbruch/Bergwerk/Kristallmine: Wald/Fels/Erz/Kristall im Umkreis 2.
       Obstplantage: Obsthain und Obstbäume. Vorschau beim Bauen (⚡ und Platz), Infofenster mit Tipp, Anleitung.
+
+## Block 54 – Hafen-Aufträge geprüft (02.10.)
+
+- [x] Großauftrag über (fast) das ganze Lager wurde aufgerundet (1.290 Holz → Auftrag über 1.300) und war nicht lieferbar:
+      jetzt abgerundet (`niceFloor`).
+- [x] Knöpfe mit Preis in Fenstern (z. B. „Kaufen“ beim Angebot) wurden nie gesperrt: Das Auffrischen des Fensters setzte
+      „disabled“ zurück. `costMarks()` läuft jetzt nach `refreshLive()` (gilt für alle Fenster).
+- Geprüft und in Ordnung: Plätze je Stufe (0/2/4, Seebrücke +1), Takt (erst 2, dann alle 3 min), Ablauf nach 12 min,
+  Speichern, Liefern/Kaufen, Angebote nur für baubare Betriebe, 🚢-Zeichen am Hafen.

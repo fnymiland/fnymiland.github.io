@@ -208,6 +208,26 @@ describe('Aufträge am Handelshafen', () => {
     expect(o.pay).toBeGreaterThanOrEqual(o.amount * game('TRADE_PRICE.obst') * 2 * 0.95);
   });
 
+  it('Großauftrag über (fast) das ganze Lager: nie mehr, als da ist (abgerundet)', () => {
+    harbor(3);
+    game('for (const r of Object.keys(RES)) state.res[r] = 0; state.res.holz = 1290; state.orders = []');
+    const seq = [0.1, 0.5, 0.1, 0.99, 0.5];
+    const o = game(`(() => { const s = ${JSON.stringify(seq)}; let i = 0; return makeOrder(1000, () => s[i++ % s.length]); })()`);
+    expect(o.huge).toBe(true);
+    expect(o.amount).toBeLessThanOrEqual(1290);
+  });
+
+  it('zu wenig Taler: „Kaufen“ ist gesperrt – auch wenn sich das Fenster auffrischt', () => {
+    const [x, y] = harbor(2);
+    game(`state.money = 100; state.orders = [{ id: 'b', kind: 'buy', res: 'holz', amount: 100, pay: 500, until: Date.now() + 60000 }]`);
+    game(`openInfo(${x}, ${y}); updateHud()`);
+    expect(document.querySelector('#panel [data-order="b"]').disabled).toBe(true);
+    game('state.money = 1000; updateHud()');
+    expect(document.querySelector('#panel [data-order="b"]').disabled).toBe(false);
+    game('state.money = 100; updateHud(); updateHud()');
+    expect(document.querySelector('#panel [data-order="b"]').disabled).toBe(true);
+  });
+
   it('liefern: Waren weg, Taler da – der Auftrag verschwindet', () => {
     const [x, y] = harbor(2);
     game(`state.res.erz = 1000; state.orders = [{ id: 'a', kind: 'sell', res: 'erz', amount: 800, pay: 9600, prem: 1.5, until: Date.now() + 60000 }]`);
