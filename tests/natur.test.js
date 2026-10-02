@@ -57,7 +57,9 @@ describe('Entdecken', () => {
     expect(game('!!critters[0].flee')).toBe(true);
     expect(game('albumCount("natur")')).toBe(1);
     game("spawnCritter('frosch', 12, 12, performance.now())");
+    game('floats.length = 0');
     expect(game('tapCritter(critters[1])')).toBe(false);
+    expect(game('floats.length')).toBe(0);                                         // bekannt: kein Name mehr
     expect(game('albumCount("natur")')).toBe(1);
   });
 

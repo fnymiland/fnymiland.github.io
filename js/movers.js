@@ -848,7 +848,7 @@ function tapCritter(c) {
   const now = performance.now(), n = NATURE_BY_ID[c.id], key = 'natur:' + c.id;
   if (!c.flee) { c.flee = now; c.until = now + 1800; }
   if (!state.album) state.album = new Set();
-  if (state.album.has(key)) { addFloat(c.px, c.py, `${n.icon} ${n.name}`, '#6b4f3a'); return false; }
+  if (state.album.has(key)) return false;                                // schon entdeckt: läuft nur weg, kein Name mehr
   state.album.add(key);
   sfx('star');
   toast(`🔍 Neu entdeckt: ${n.icon} ${n.name}! (${albumCount('natur')}/${NATURE.length} im Album)`);
@@ -979,6 +979,7 @@ function showcaseTick(now) {
 }
 function drawShowcaseLabels(z) {
   if (!SHOWCASE) return;
-  for (const c of critters) if (c.label && !c.flee) { const p = toScreen(c.px, c.py); pill(c.label, p.x, p.y - (c.h + 14) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
+  for (const c of critters) if (c.label && !c.flee && !(state.album && state.album.has('natur:' + c.id))) {   // nur, bis es entdeckt ist
+    const p = toScreen(c.px, c.py); pill(c.label, p.x, p.y - (c.h + 14) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
   for (const w of walkers) if (w.label) { const [hx, hy] = walkerHead(w, z); pill(w.label, hx, hy - 9 * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
 }
