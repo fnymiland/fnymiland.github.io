@@ -23,6 +23,14 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'weg' && decoOver(x, y)) {                // Weg unter einen Brunnen & Co. legen, ohne die Deko wegzunehmen (Block 58)
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    state.money -= ITEMS.weg.cost;
+    wegUnderDeco(x, y, currentStyle('weg'));
+    groundVersion++; sfx('road'); recalc(); save();
+    return true;
+  }
   if (ownedTile(x, y) && crossCandidate(b, x, y)) {    // Weg über Schiene / Schiene über Weg: Bahnübergang
     const err = crossError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
@@ -204,7 +212,12 @@ function dropGroup(hx, hy) {
   const now = performance.now();
   for (const it of moving.items) {
     const k = (ox + it.dx) + ',' + (oy + it.dy);
-    if (it.kind === 'tile') state.tiles.set(k, { ...it.t, born: now });
+    if (it.kind === 'tile') {
+      const [x, y] = keyXY(k), b = it.t.b, t = { ...it.t, born: now }, covered = b === 'weg' || b === 'schiene' ? [] : pathsUnder(b, x, y, t.rot || 0, t);
+      for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);   // Wege am Ziel: unter die Deko bzw. vom Gebäude ersetzt (Block 58)
+      if (covered.length) { if (plazaOk(b)) setUnder(t, x, y, [...covered, ...Object.entries(t.wegs || {}).map(([o, st]) => [x + keyXY(o)[0], y + keyXY(o)[1], st]), ...(t.weg != null ? [[x, y, t.weg]] : [])]); else if (replacesWeg(b)) state.money += covered.length * ITEMS.weg.cost; }
+      state.tiles.set(k, t);
+    }
     else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
   }
   moving = null;

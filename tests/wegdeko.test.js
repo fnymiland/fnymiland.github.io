@@ -64,3 +64,21 @@ describe('Gebäude ersetzen den Weg', () => {
     expect(game("placeError('haus', 12, 12)")).toBe('Erst die kleine Deko vom Weg nehmen');
   });
 });
+
+describe('Weg unter vorhandene Deko legen', () => {
+  it('Weg-Pinsel über einen Brunnen bzw. Teich: der Weg legt sich darunter, die Deko bleibt; anderes Muster färbt um', () => {
+    game("for (let y = 14; y <= 16; y++) for (let x = 14; x <= 16; x++) state.tiles.delete(x + ',' + y); recalc()");
+    game("build('brunnen', 14, 14, true); build('seerosenteich', 15, 15, true); chosenStyle.weg = 'kopf'");
+    const m = game('state.money');
+    expect(game("build('weg', 14, 14, true)")).toBe(true);
+    expect(tile('14,14')).toMatchObject({ b: 'brunnen', weg: 'kopf' });
+    expect(game('state.money')).toBe(m - game('ITEMS.weg.cost'));
+    expect(game("build('weg', 16, 16, true)")).toBe(true);                    // hinteres Feld des Teichs
+    expect(tile('15,15').wegs).toEqual({ '1,1': 'kopf' });
+    expect(game("placeError('weg', 14, 14)")).toBe('Hier liegt schon dieser Weg');
+    game("chosenStyle.weg = 'sand'");
+    expect(game("build('weg', 14, 14, true)")).toBe(true);                    // umfärben
+    expect(tile('14,14').weg).toBe('sand');
+    expect(game("placeError('weg', 18, 18)")).toBe(null);                     // normales Feld wie immer
+  });
+});

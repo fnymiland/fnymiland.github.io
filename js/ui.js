@@ -990,11 +990,20 @@ function openInfo(x, y) {
   };
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => {
     // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
-    const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4;
-    state.tiles.delete(k); rebuildCover();
-    const err = isBig(t.b) ? placeError(t.b, x, y, nr, { move: true, t }) : null;
+    const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4, big = isBig(t.b);
+    const before = big ? new Map(state.tiles) : null;
+    state.tiles.delete(k);
+    if (big) restoreUnder(t, x, y);                                     // Wege darunter erst freilegen (Block 58)
+    rebuildCover();
+    const err = big ? placeError(t.b, x, y, nr, { move: true, t }) : null;
+    if (err) { if (big) state.tiles = before; else state.tiles.set(k, t); recalc(); fail('Zum Drehen ist hier nicht genug Platz'); return; }
+    if (big) {                                                          // … und unter der gedrehten Grundfläche wieder zudecken
+      const covered = pathsUnder(t.b, x, y, nr, t);
+      for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
+      setUnder(t, x, y, plazaOk(t.b) ? covered : []);
+      if (replacesWeg(t.b)) state.money += covered.length * ITEMS.weg.cost;
+    }
     state.tiles.set(k, t);
-    if (err) { recalc(); fail('Zum Drehen ist hier nicht genug Platz'); return; }
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
   });
   $('p-close').onclick = closePanel;

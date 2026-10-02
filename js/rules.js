@@ -734,6 +734,13 @@ function restoreUnder(t, x, y) {
   for (const [o, st] of Object.entries(t.wegs || {})) { const [dx, dy] = keyXY(o); state.tiles.set((x + dx) + ',' + (y + dy), { b: 'weg', lvl: 1, style: st }); }
 }
 const wegUnder = t => !t ? null : t.b === 'weg' ? t.style || 'sand' : t.weg != null ? t.weg : null;
+// Deko (Platz-tauglich), die auf dem Feld (x, y) steht – darunter darf ein Weg gelegt werden: [Ding, Ankerfeld]
+const decoOver = (x, y) => { const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a); return t && plazaOk(t.b) ? [t, a] : null; };
+// Weg unter die Deko legen (oder umfärben)
+function wegUnderDeco(x, y, style) {
+  const [t, a] = decoOver(x, y), [ax, ay] = keyXY(a);
+  if (x === ax && y === ay) t.weg = style; else (t.wegs = t.wegs || {})[(x - ax) + ',' + (y - ay)] = style;
+}
 // Weg auf/unter dem Feld (x, y) – auch unter den übrigen Feldern großer Deko
 function wegAt(x, y) {
   const k = x + ',' + y, t = state.tiles.get(k);
@@ -1488,6 +1495,11 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.edge) return 'Linien: Anfang und Ende antippen';
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'weg' && !opts.move && decoOver(x, y)) {    // Weg unter vorhandene Deko legen bzw. dort umfärben (Block 58; nicht beim Tragen)
+    if (!ownedTile(x, y)) return notMine(x, y);
+    if (wegAt(x, y) === currentStyle('weg')) return 'Hier liegt schon dieser Weg';
+    return state.money < d.cost ? 'Zu wenig Taler' : null;
+  }
   if (TERRAFORM[b]) {                                   // Terraforming-Pinsel
     if (!ownedTile(x, y)) return notMine(x, y);
     const k = x + ',' + y, ter = terrainAt(x, y), look = terraLook(x, y);
