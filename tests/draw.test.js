@@ -48,3 +48,24 @@ describe('Dächer und Amphitheater', () => {
     game('night = 0');
   });
 });
+
+describe('Farbwahl (Block 57)', () => {
+  it('jedes Gebäude mit Farbauswahl übernimmt Wand- und Dachfarbe (sonst gibt es die Auswahl nicht)', () => {
+    const bad = game(`(() => {
+      const used = (b, wall, roof) => {                                  // alle Füllfarben beim Zeichnen mitschreiben
+        const seen = [], d = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(g), 'fillStyle') || {};
+        Object.defineProperty(g, 'fillStyle', { configurable: true, get: () => seen[seen.length - 1], set: v => seen.push(String(v)) });
+        try { drawObject(b, 100, 100, 1.3, 1000, 3, 4, 3, { b, lvl: 3, rot: 0, wall, roof }); } finally { delete g.fillStyle; }
+        return seen.join('|');
+      };
+      const out = [];
+      for (const b of ['haus', ...PAINTABLE]) {
+        const base = used(b, 0, 0);
+        if (used(b, 4, 0) === base) out.push(b + ': Wand');
+        if (used(b, 0, 4) === base) out.push(b + ': Dach');
+      }
+      return out;
+    })()`);
+    expect(bad).toEqual([]);
+  });
+});

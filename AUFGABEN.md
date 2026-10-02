@@ -550,3 +550,7 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] Reihenhäuser neu: drei schmale Giebelhäuser Wand an Wand (Satteldach quer zur Straße), je eigene Pastellfarbe (aus
       der Lage) und eigener Schmuckgiebel (Treppen-, Glocken-, Spitzgiebel) mit weißer Kante und rundem Giebelfenster auf der
       sichtbaren Giebelseite; Stufe = Stockwerke (2/3/4), ab Stufe 2 Blumenkästen, Stufe 3 Türlaterne. In allen 4 Drehungen geprüft.
+- [x] Farbwahl geprüft (Bild mit zwei Farben verglichen): Reihenhaus und Ferienhaus übernahmen die Farbe nicht → jetzt
+      ja (Reihenhaus: alle drei in Tönen der gewählten Farbe; ohne Wahl bunt gemischt). Glashaus, Bootssteg, Seilbahn,
+      Solarfeld, Wellenkraftwerk, Markt haben nichts zu färben → keine Farbauswahl mehr (`UNPAINTED`). Test in draw.test.js
+      prüft jedes Gebäude mit Farbauswahl.

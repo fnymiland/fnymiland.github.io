@@ -760,7 +760,7 @@ const BUILDING_ART = {
   // Pastellfarbe mit eigenem Schmuckgiebel (Treppen-, Glocken-, Spitzgiebel) zur Straße. Jede Stufe ein Stockwerk mehr,
   // ab Stufe 2 Blumenkästen, Stufe 3 Laterne an der Tür.
   reihenhaus(K, s, now, x, y, t) {
-    const z = K.z, PAL = ['#f6c9c0', '#bfe0f2', '#fbe6a2', '#cfe8c4', '#e6d3f2', '#f9d8b4'], ROOFS = ['#8a5048', '#5b6270', '#a0563f'];
+    const z = K.z, PAL = ['#f6c9c0', '#bfe0f2', '#fbe6a2', '#cfe8c4', '#e6d3f2', '#f9d8b4'], ROOFS3 = ['#8a5048', '#5b6270', '#a0563f'];
     const KINDS = ['step', 'bell', 'spitz'], k0 = Math.floor(hash(x, y, 71) * 6), g0 = Math.floor(hash(x, y, 72) * 3);
     const floors = s + 1, GF = 6.5, FH = 5.2;                              // Erdgeschoss, jedes weitere Stockwerk
     const parts = [];
@@ -787,8 +787,11 @@ const BUILDING_ART = {
       }
     };
     [-0.64, 0, 0.64].forEach((b, i) => parts.push([0, b, () => {
-      const wall = PAL[(k0 + i * 2) % PAL.length], kind = KINDS[(g0 + i) % 3], H = GF + (floors - 1) * FH + 1.5 + [0, 1.5, -0.8][i];
-      const B = K.block({ a: -0.04, b, ha: 0.36, hb: 0.31, h: H, wall, roof: ROOFS[i], roofH: 9, type: 'gable', ridge: 'a', entry: i === 1, trim: '#fffaf0' });
+      // gewählte Farbe (Fenster): alle drei in Tönen davon, damit die Reihe lebendig bleibt; sonst bunt gemischt
+      const wall = t && t.wall != null ? shade(WALLS[t.wall], [0, 0.1, -0.06][i]) : PAL[(k0 + i * 2) % PAL.length];
+      const roof = t && t.roof != null ? shade(ROOFS[t.roof], [0, -0.1, 0.08][i]) : ROOFS3[i];
+      const kind = KINDS[(g0 + i) % 3], H = GF + (floors - 1) * FH + 1.5 + [0, 1.5, -0.8][i];
+      const B = K.block({ a: -0.04, b, ha: 0.36, hb: 0.31, h: H, wall, roof, roofH: 9, type: 'gable', ridge: 'a', entry: i === 1, trim: '#fffaf0' });
       gable(B, kind, wall, 13);
       for (const side of ['front', 'back']) {
         if (!B.faces[side]) continue;
@@ -885,7 +888,7 @@ const BUILDING_ART = {
     const hut = (a, b, i) => () => {
       for (const [da, db] of [[-0.1, -0.1], [0.1, -0.1], [0.1, 0.1], [-0.1, 0.1]]) kPost(K, a + da, b + db, 4, '#8a5a3c', 1.1);
       K.block({ a, b, ha: 0.14, hb: 0.14, h: 1.2, lift: 4, wall: '#b58a5c', type: 'flat', roof: '#d9b98f' });
-      const [w, st] = cols[i], B = K.block({ a, b, ha: 0.11, hb: 0.11, h: 9, lift: 5.2, wall: w, roof: st, roofH: 6 });
+      const [w, st] = paint(t, ...cols[i]), B = K.block({ a, b, ha: 0.11, hb: 0.11, h: 9, lift: 5.2, wall: w, roof: st, roofH: 6 });   // Farbe wählbar
       for (const F of Object.values(B.faces)) if (F) for (let k = 0; k < 3; k++) faceQuad(F.P, F.Q, 0.12 + k * 0.3, 0.26 + k * 0.3, F.H * 0.05 + 5.2 * z, F.H + 5.2 * z, C(shade(st, 0.35)));
       K.door(B, 'front', 0.38, 0.62, 0.7, '#6b4f3a');
     };
@@ -1174,7 +1177,9 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
   g.save(); g.translate(x, y); g.scale(s, s); drawObject(b, 0, 0, K.z, 0, 0, 0, 1, { rot }); g.restore();
 }
 // Gebäude, deren Wand- und Dachfarbe man wählen kann (Häuser zusätzlich mit Aussehen)
-const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => b !== 'feld'), 'rathaus']);
+// Farbe wählbar: alles mit Wand und Dach (nicht: Feld, Glashaus, Steg, Seilbahn, Solar, Wellen – dort gäbe es nichts zu färben)
+const UNPAINTED = new Set(['feld', 'glashaus', 'markt', 'bootssteg', 'seilbahn', 'solarfeld', 'wellen']);
+const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => !UNPAINTED.has(b)), 'rathaus']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
   const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);
