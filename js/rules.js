@@ -387,6 +387,7 @@ function totals() {
         if (t.b === 'mine' && lmOn.has('erzberg')) v *= 1.25;
         if (t.b === 'holz' && hasTech('axt')) v *= 1.3;
         if (t.b === 'obst') v *= green;
+        if (SITE_TIP[t.b]) v *= 1 + siteOf(t.b, k, t.rot, t).f;              // Standortbonus (Block 53)
         s.prod[r] = v; prod[r] = (prod[r] || 0) + v;
       }
     }
@@ -1012,7 +1013,7 @@ function vehicleOk(kind, id) {
 const vehicleOpen = (kind, m) => hasTech(VEHICLE_BASE[kind]) && tierOpen(m.tier || 1);
 // bestes erforschtes Modell (für neue Linien bzw. Schiffe)
 const bestVehicle = kind => [...vehicleModels(kind)].reverse().find(m => vehicleOk(kind, m.id)) || vehicleModels(kind)[0];
-// Strom ⚡: Kraftwerke liefern, egal wo sie stehen (Windrad je Stufe mehr; Forschung „Leichte Rotorblätter“ +50 % Wind,
+// Strom ⚡: Kraftwerke liefern je nach Stufe und Standort (siteOf; Windrad je Stufe mehr; Forschung „Leichte Rotorblätter“ +50 % Wind,
 // „Intelligentes Stromnetz“ +25 % auf alles). Verbraucher der Reihe nach: Laternen (je angefangene 10 eine ⚡), dann
 // die Gebäude aus CONSUMERS, zuletzt die Züge (je 1 ⚡ + 1 ⚡ je km ihres Netzes). Wer leer ausgeht: Laternen bleiben
 // nachts dunkel (halbe Schönheit), Gebäude schaffen die Hälfte (⚡ darüber), Züge stehen. Die Stadt braucht erst Strom,
@@ -1022,14 +1023,83 @@ const LAMPS_PER_POWER = 10, NO_POWER = 0.5;
 // Monumente brauchen richtig viel (je 100 ⚡, das Schloss 300) – dafür baut man sich eine Energie-Insel
 const CONSUMERS = { fabrik: 2, saege: 1, hafen: 2, uni: 2, glashaus: 1, glashaus_l: 3, sternwarte: 100, botgarten: 100, riesenrad: 100, seebruecke: 100, schloss: 300 };   // Reihenfolge = Vorrang
 const WORKSHOP_POWER = CONSUMERS.fabrik;
-function powerOf(t) {
+function powerOf(t, k) {
   const o = POWER_OUT[t.b];
   if (!o) return 0;
   let v = o[Math.min(t.lvl || 1, o.length) - 1];
+  if (k) v *= 1 + siteOf(t.b, k, t.rot, t).f;                                    // Standortbonus (Block 53)
   if ((t.b === 'windrad' || t.b === 'offshore') && hasTech('rotor')) v *= 1.5;   // Offshore bleibt doppelt so stark wie ein volles Windrad
   if (hasTech('stromnetz')) v *= 1.25;
   return v * masteryMul('strom');
 }
+// Standortboni (Block 53): ein guter Platz bringt bis +50 %, ein schlechter nie weniger als normal. Was den Bonus
+// stört (Windschatten, Schatten), nimmt nur den Bonus weg – so wird nichts schlechter, was schon steht.
+const SITE_MAX = 0.5;
+const SITE_TIP = {
+  windrad: 'Am Wasser oder neben Fels weht mehr Wind; Wald und hohe Häuser direkt daneben nehmen ihn weg',
+  offshore: 'Je weiter draußen, desto mehr Wind (voll bei 6 Feldern vom Land)',
+  geothermie: 'Je näher an der heißen Quelle, desto wärmer der Boden',
+  solarfeld: 'Sandboden und freie Fläche ringsum bringen mehr Sonne; hohe Nachbarn werfen Schatten',
+  wasserkraft: 'Je mehr Wasser direkt ringsum, desto mehr Strom',
+  holz: 'Je mehr Wald im Umkreis von 2 Feldern, desto mehr Holz',
+  stein: 'Je mehr Fels im Umkreis von 2 Feldern, desto mehr Stein',
+  mine: 'Je mehr Erz im Umkreis von 2 Feldern, desto mehr Erz',
+  kristallmine: 'Je mehr Kristallfels im Umkreis von 2 Feldern, desto mehr Kristall',
+  obst: 'Je mehr Obsthain und Obstbäume in der Nähe, desto mehr Obst',
+};
+// Felder im Umkreis r um ein Rechteck (ohne das Rechteck selbst)
+function ringOf(ax, ay, w, h, r) {
+  const out = [];
+  for (let y = ay - r; y < ay + h + r; y++) for (let x = ax - r; x < ax + w + r; x++)
+    if (x < ax || x >= ax + w || y < ay || y >= ay + h) out.push([x, y]);
+  return out;
+}
+const isRough = (x, y) => ['water', 'rock', 'erz', 'kristall'].includes(terrainAt(x, y));
+// Was hoch ist und Wind oder Sonne abhält: Wald und Gebäude (nicht Deko, Wege, Felder, Kraftwerke, Sehenswürdigkeiten)
+function tallAt(x, y) {
+  const t = objAt(x, y);
+  if (t) return t.b !== 'lm' && t.b !== 'feld' && !['deko', 'netz', 'markt', 'strom', 'land'].includes(ITEMS[t.b].cat);
+  return terrainAt(x, y) === 'forest';
+}
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const pctTxt = f => Math.round(f * 100) + ' %';
+// { f: Bonus 0…0.5, good: was hilft, bad: was den Bonus schmälert } für Sorte b mit Anker k
+function siteOf(b, k, rot, t) {
+  if (!SITE_TIP[b]) return { f: 0 };
+  const [ax, ay] = keyXY(k), [w, h] = sizeOf(b, rot || 0, t);
+  const count = (r, fn) => ringOf(ax, ay, w, h, r).filter(([x, y]) => fn(x, y)).length;
+  const terr = (...ts) => (x, y) => ts.includes(terrainAt(x, y));
+  const share = (n, full) => SITE_MAX * clamp01(n / full);
+  let good = 0, bad = 0, gTxt = '', bTxt = '';
+  switch (b) {
+    case 'windrad': good = share(count(2, isRough), 8); bad = 0.125 * count(1, tallAt); gTxt = '🌬️ Windiger Platz'; bTxt = '🌲 Windschatten'; break;
+    case 'offshore': { let d = 1; while (d < OFFSHORE_REACH && !landWithin(ax, ay, d)) d++; good = share(d - 1, OFFSHORE_REACH - 1); gTxt = '🌊 Weit draußen'; break; }
+    case 'geothermie': {
+      const i = ISLE_BY_ID.quelle, [lx, ly] = isleAnchor(i);
+      const gap = Math.max(lx - (ax + w), ax - (lx + 3), ly - (ay + h), ay - (ly + 3), 0);
+      good = share(7 - gap, 6); gTxt = '♨️ Nah an der heißen Quelle'; break;
+    }
+    case 'solarfeld': {
+      const ring = ringOf(ax, ay, w, h, 1), feet = footprint(b, ax, ay, rot || 0);
+      good = SITE_MAX / 2 * feet.filter(([x, y]) => terraLook(x, y) === 'sand' || isBeach(x, y)).length / feet.length + SITE_MAX / 2;
+      bad = SITE_MAX * ring.filter(([x, y]) => tallAt(x, y)).length / ring.length * 2;
+      gTxt = '☀️ Sonniger Platz'; bTxt = '🏠 Schatten'; break;
+    }
+    case 'wasserkraft': good = share(count(1, isWater) - 1, 5); gTxt = '💧 Viel Wasser ringsum'; break;
+    case 'holz': good = share(count(2, terr('forest')), 12); gTxt = '🌲 Viel Wald ringsum'; break;
+    case 'stein': good = share(count(2, terr('rock', 'erz', 'kristall')), 12); gTxt = '🪨 Viel Fels ringsum'; break;
+    case 'mine': good = share(count(2, terr('erz')), 12); gTxt = '⛏️ Viel Erz ringsum'; break;
+    case 'kristallmine': good = share(count(2, terr('kristall')), 12); gTxt = '💎 Viel Kristall ringsum'; break;
+    case 'obst': {
+      const trees = ringOf(ax, ay, w, h, 1).filter(([x, y]) => (state.decos.get(x + ',' + y) || []).some(d => d && d.b === 'baum')).length;
+      good = share(count(2, terr('obst')) + trees, 12); gTxt = '🍎 Viele Obstbäume ringsum'; break;
+    }
+  }
+  const f = Math.max(0, good - bad);
+  return { f, good, bad: Math.min(bad, good), gTxt, bTxt, tip: SITE_TIP[b] };
+}
+// Text für Vorschau und Fenster, z. B. „🌬️ Windiger Platz +40 %“
+const siteLabel = s => s.f > 0.004 ? `${s.gTxt} +${pctTxt(s.f)}` : '';
 const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
 // Strom eines Zugs: die Regionalbahn (2 Wagen) wie oben, jeder Wagen mehr oder weniger ein halbes Mal
 const carNeed = (tiles, cars) => trainNeed(tiles) * cars / 2;
@@ -1055,7 +1125,7 @@ function computeRail() {
     if (t.b === 'schiene') rails.add(k);
     else if (t.b === 'station') stations.push(k);
     else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
-    else if (POWER_OUT[t.b]) { wind += powerOf(t); plants++; }
+    else if (POWER_OUT[t.b]) { wind += powerOf(t, k); plants++; }
   }
   const comp = new Map(), netTiles = [];
   let nid = 0;
@@ -1831,6 +1901,7 @@ function previewDelta(b, x, y) {
   rebuildCover(); computeMarkets(); computeParks();              // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
-                   pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0 };
+                   pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,
+                   site: siteOf(b, k, rot), pow: POWER_OUT[b] ? powerOf({ b, lvl: 1, rot }, k) : 0 };
   return previewCache;
 }

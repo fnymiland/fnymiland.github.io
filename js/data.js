@@ -133,7 +133,7 @@ const ITEMS = {
              desc: 'Ein Holzsteg ins Meer, direkt an der Küste. Von hier schickst du ein Boot hinaus, um neue Inseln zu entdecken.' },
   seilbahn: { cat: 'deko', name: 'Seilbahn-Station', invention: 'seilbahn', cost: 800, mat: { metall: 10, bretter: 6 }, needs: 'grass', beauty: 10,
              desc: 'Zwei Stationen verbinden sich mit einem Seil (bis 20 Felder weit). Die Gondeln befördern 80 Fahrgäste/min – auch übers Wasser zwischen Inseln – und binden die Gegend an beiden Stationen ans Dorf an.' },
-  // --- Strom: Kraftwerke liefern ⚡ (POWER_OUT in rules.js), egal wo sie stehen ---
+  // --- Strom: Kraftwerke liefern ⚡ (POWER_OUT in rules.js), ein guter Platz bis +50 % (siteOf) ---
   windrad: { cat: 'strom', name: 'Windrad', lm: 'klippe:3', cost: 200, needs: 'grass', beauty: 6, desc: 'Dreht sich gemütlich im Wind und liefert Strom: 1 ⚡, ausgebaut bis 3 ⚡.' },
   wasserkraft: { cat: 'strom', name: 'Wasserkraftwerk', tech: 'wasserkraft', cost: 900, mat: { quader: 10, metall: 4 }, needs: 'shore', beauty: 4,
                desc: 'Ein Wasserrad am Teich, See oder Fluss: 4 ⚡ Strom.' },

@@ -495,3 +495,11 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] iPad: Safari wertete den ersten Tipp auf Forschung/Stadtname manchmal nur als „Finger drüber“, weil die Leiste alle 0,2 s
       in die Knöpfe schrieb. Jetzt nur bei Änderung (`setText`), und Knöpfe oben lösen mit dem Finger schon beim Loslassen aus
       (`fastTap`, der Klick danach wird ignoriert).
+
+## Block 53 – Standortboni (02.10.)
+
+- [x] Ein guter Platz bringt bis +50 % (`siteOf`, `SITE_MAX`), ein schlechter nie weniger als normal: Was stört (Windschatten,
+      Schatten), nimmt nur den Bonus weg. Windrad: Wasser/Fels im Umkreis 2, Wald/Gebäude direkt daneben schmälern. Offshore:
+      Entfernung zum Land. Geothermie: Nähe zur heißen Quelle. Solar: Wiese +25 %, Sand bis +50 %, hohe Nachbarn Schatten.
+      Wasserkraft: Wasser ringsum. Holzfäller/Steinbruch/Bergwerk/Kristallmine: Wald/Fels/Erz/Kristall im Umkreis 2.
+      Obstplantage: Obsthain und Obstbäume. Vorschau beim Bauen (⚡ und Platz), Infofenster mit Tipp, Anleitung.

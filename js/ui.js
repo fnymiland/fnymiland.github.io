@@ -763,6 +763,12 @@ function wireDel(x, y) {
   };
 }
 
+// Standortbonus (Block 53): wie gut der Platz ist und was noch mehr brächte
+function siteStatus(si) {
+  const less = si.bad > 0.004 ? ` <small>(${si.bTxt} −${pctTxt(si.bad)})</small>` : '';
+  if (si.f >= SITE_MAX - 0.004) return `<div class="ok">${si.gTxt}: +${pctTxt(si.f)} – bester Platz</div>`;
+  return `<div${si.f > 0.004 ? ' class="ok"' : ''}>${si.f > 0.004 ? `${si.gTxt}: +${pctTxt(si.f)}` : '📍 Normaler Platz'}${less}<br><small class="muted">${si.tip} (bis +${pctTxt(SITE_MAX)}).</small></div>`;
+}
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
@@ -793,7 +799,8 @@ function openInfo(x, y) {
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
-  if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
+  if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
+  if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
   if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🏭 Herstellen → ⚡ Strom).</div>`);
   const why = [];
@@ -1741,7 +1748,8 @@ function helpBody(tab) {
     '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
     '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
-    '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
+    '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',
+  '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
     '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
     '✋ <b>Verschieben</b> kostet nichts. 🧹 <b>Abreißen:</b> Deko und Wege gibt es voll zurück, Gebäude zur Hälfte. In jedem Fenster gibt es 🗑️.',
     '↶ <b>Verbaut?</b> Rückgängig nimmt die letzten 20 Schritte zurück – mit allen Talern.']);
@@ -1749,6 +1757,7 @@ function helpBody(tab) {
     '💡 <b>Forschung:</b> Schulen, Bibliotheken und die Universität bringen Ideen. Damit erforschst du neue Gebäude und Boni – oben auf 💡 tippen.',
     '🎨 <b>Kunstakademie</b> (in der Forschung): Farben, Wege-Muster, Hecken- und Zaunstile, besondere Deko – ✦ Meisterstücke sind die begehrtesten.',
     '⚡ <b>Strom</b> kommt aus Windrädern, Wasser-, Wellen-, Solar- und Offshore-Anlagen. Laternen, Werkstätten, Züge und Wunderwerke brauchen ihn.',
+    '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels … bringen bis +50 %. Die Vorschau beim Bauen zeigt es. Schlechter als normal wird es nie.',
     '🏮 <b>Sehenswürdigkeiten</b> restaurieren: jede Stufe schaltet Neues frei und entzündet eine Laterne. Brennen alle, gibt es das Laternenfest.',
     '🏝️ <b>Inseln</b> entdeckst du per Boot vom 🛶 Steg aus. Brücken, Züge, Seilbahn und Schiffe verbinden sie; später warten ferne Inseln mit Truhen. Mit „Aufschütten“ wächst dein Land ins Meer.',
     '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten – jedes hat eine besondere Kraft.',

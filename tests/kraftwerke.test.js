@@ -60,10 +60,10 @@ describe('Kraftwerke', () => {
     expect(game('T.rail.power.supply')).toBe(4);
   });
 
-  it('Solarfeld (2×2) mit Kristall: 3 ⚡', () => {
+  it('Solarfeld (2×2) mit Kristall: 3 ⚡ (auf freier Wiese +25 % Sonne, Block 53)', () => {
     game('state.restore.kristall = 1');
     expect(game("build('solarfeld', 6, 6, true)")).toBe(true);
-    expect(game('T.rail.power.supply')).toBe(3);
+    expect(game('T.rail.power.supply')).toBe(3 * 1.25);
   });
 
   it('Geothermie nur auf der Quelleninsel: 8 ⚡', () => {
@@ -133,7 +133,7 @@ describe('Neue Verbraucher', () => {
   });
 
   it('das Infofenster eines Kraftwerks zeigt Leistung und Bilanz', () => {
-    game("state.tiles.set('6,6', { b: 'windrad', lvl: 3 }); state.techs.add('rotor'); recalc(); openInfo(6, 6)");
+    game("state.tiles.set('8,8', { b: 'windrad', lvl: 3 }); state.techs.add('rotor'); recalc(); openInfo(8, 8)");   // freie Wiese: kein Standortbonus
     const txt = document.getElementById('panel').textContent;
     expect(txt).toContain('Liefert 4,5 Strom');
     expect(txt).toContain('erzeugt');

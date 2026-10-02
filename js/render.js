@@ -623,6 +623,8 @@ function render(now) {
           if (Math.abs(pv.sci) >= 0.05) parts.push(`💡 +${fmtRate(pv.sci)}`);
           if (pv.prod) for (const [r, v] of Object.entries(pv.prod)) parts.push(`${RES[r].icon} +${fmtRate(v * 60)}/min`);
           if (pv.conv) parts.push(`${RES[d.conv.to].icon} bis ${fmtRate(pv.conv * 60)}/min`);
+          if (pv.pow) parts.push(`⚡ +${fmtPow(pv.pow)}`);
+          if (pv.site && siteLabel(pv.site)) parts.push(siteLabel(pv.site));                // Standortbonus (Block 53)
           if (pv.beauty) parts.push(`🌸 ${pv.beauty > 0 ? '+' : ''}${pv.beauty}`);
           if (pv.pop) parts.push(`👥 +${pv.pop}`);
           if (pv.bonus) parts.push(`🏘️ +${Math.round(pv.bonus * 100)} %`);
