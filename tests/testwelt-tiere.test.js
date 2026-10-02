@@ -1,7 +1,9 @@
+// Erzeugt testsave-tiere.json (Testwelt ?welt=tiere: alle Bewohner-Arten und Natur-Tiere mit Namensschild).
+// Nur auf Wunsch:  TESTWELT=1 npx vitest run tests/testwelt-tiere.test.js
 const { loadGame, game } = require('./helpers/load-game');
 const fs = require('fs');
 beforeAll(() => loadGame());
-it('erzeugt testsave-tiere.json', () => {
+it.skipIf(!process.env.TESTWELT)('erzeugt testsave-tiere.json', () => {
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true");
   game("state.town.name = 'Tierhausen'; state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 5000; for (const t of TECHS) state.techs.add(t.id); for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3; for (const i of ISLES) state.islands.add(i.id)");
   // 22×18 eigenes Land auf der Insel (kein Meer), möglichst nah an der Küste
