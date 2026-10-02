@@ -620,7 +620,7 @@ const edgeParse = k => { const [i, j] = k.slice(1).split(',').map(Number); retur
 const edgeTiles = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j - 1], [i, j]] : [[i - 1, j], [i, j]]; };
 const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny) : 'b' + Math.max(x, nx) + ',' + y;
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
-const isGate = k => edgeTiles(k).every(([x, y]) => wegUnder(state.tiles.get(x + ',' + y)) != null || crossingAt(x, y));
+const isGate = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
 // Weg bündig an der Linie (Block 57): e.flush an/aus; ohne Angabe nur am Park (Parkrasen auf einer der beiden Seiten)
 const edgeFlush = k => { const e = state.edges.get(k); return !!e && (e.flush != null ? e.flush : edgeTiles(k).some(([x, y]) => terraLook(x, y) === 'park')); };
 // Alle Stücke, die über gemeinsame Eckpunkte mit k zusammenhängen (eine „Linie“)
@@ -650,7 +650,7 @@ function roundCorner(i, j) {
   const [ka, du] = A[0], [kb, dv] = B[0], ea = state.edges.get(ka), eb = state.edges.get(kb);
   if (ea.b !== eb.b || isGate(ka) || isGate(kb)) return null;
   const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1, ox = du > 0 ? i - 1 : i, oy = dv > 0 ? j - 1 : j;
-  const inPath = wegUnder(state.tiles.get(tx + ',' + ty)) != null, outWeg = inPath ? null : wegUnder(state.tiles.get(ox + ',' + oy));
+  const inPath = wegAt(tx, ty) != null, outWeg = inPath ? null : wegAt(ox, oy);
   return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5], inPath, outWeg };
 }
 // Punkte des Viertelkreises (Feld-Koordinaten), vom waagerechten zum senkrechten Stück
@@ -714,9 +714,37 @@ function removeEdge(k) {
 }
 // Marktplatz (Block 39): Stände und große Deko dürfen auf einen Weg – der Weg bleibt darunter liegen (t.weg = sein Stil),
 // wird mitgezeichnet (pathAt, pathArms, drawFlat) und kommt beim Abreißen/Wegtragen zurück
-const PLAZA_OK = new Set([...Object.keys(STANDS), 'brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'denkmal', 'uhrturm', 'karussell']);
-const plazaSpot = (b, x, y) => PLAZA_OK.has(b) && (state.tiles.get(x + ',' + y) || {}).b === 'weg';
+// Block 58: jede (große) Deko darf auf Wege, auch über mehrere Felder – der Weg bleibt darunter (Ankerfeld t.weg, die
+// übrigen Felder t.wegs['dx,dy']). Gebäude dagegen ersetzen den Weg (Taler zurück, Rückgängig holt ihn wieder).
+const plazaOk = b => !!STANDS[b] || (ITEMS[b].cat === 'deko' && !ITEMS[b].small && !ITEMS[b].edge && !ITEMS[b].paint && !ITEMS[b].old);
+const PLAZA_OK = { has: plazaOk };                                     // (alter Name)
+const plainWeg = k => { const t = state.tiles.get(k); return !!t && t.b === 'weg' && !t.cross; };
+const plazaSpot = (b, x, y) => plazaOk(b) && plainWeg(x + ',' + y);
+// Wege, die ein Ding an (x, y) überdecken würde: [[fx, fy, Stil], …]
+const pathsUnder = (b, x, y, rot, t) => footprint(b, x, y, rot || 0, t).filter(([fx, fy]) => plainWeg(fx + ',' + fy)).map(([fx, fy]) => [fx, fy, state.tiles.get(fx + ',' + fy).style || 'sand']);
+// Gebäude, die einen Weg ersetzen dürfen (alles außer Deko, Wegen, Schienen und Gelände-Werkzeugen)
+const replacesWeg = b => { const d = ITEMS[b]; return !plazaOk(b) && !d.paint && !d.edge && !d.small && d.cat !== 'land' && b !== 'weg' && b !== 'schiene' && !TERRAFORM[b]; };
+function setUnder(t, x, y, list) {
+  delete t.weg; delete t.wegs;
+  for (const [fx, fy, st] of list) { if (fx === x && fy === y) t.weg = st; else (t.wegs = t.wegs || {})[(fx - x) + ',' + (fy - y)] = st; }
+}
+// Ding weg (abgerissen, aufgehoben): seine Wege liegen wieder da
+function restoreUnder(t, x, y) {
+  if (t.weg != null) state.tiles.set(x + ',' + y, { b: 'weg', lvl: 1, style: t.weg });
+  for (const [o, st] of Object.entries(t.wegs || {})) { const [dx, dy] = keyXY(o); state.tiles.set((x + dx) + ',' + (y + dy), { b: 'weg', lvl: 1, style: st }); }
+}
 const wegUnder = t => !t ? null : t.b === 'weg' ? t.style || 'sand' : t.weg != null ? t.weg : null;
+// Weg auf/unter dem Feld (x, y) – auch unter den übrigen Feldern großer Deko
+function wegAt(x, y) {
+  const k = x + ',' + y, t = state.tiles.get(k);
+  if (t) return wegUnder(t);
+  const a = COVER.get(k), o = a && state.tiles.get(a);
+  if (!o || !o.wegs) return null;
+  const [ax, ay] = keyXY(a), st = o.wegs[(x - ax) + ',' + (y - ay)];
+  return st == null ? null : st;
+}
+// Flaches zum Zeichnen: das Feld selbst oder der Weg unter großer Deko
+const flatAt = (x, y) => { const t = state.tiles.get(x + ',' + y); if (t) return t; const st = wegAt(x, y); return st != null ? { b: 'unter', weg: st } : null; };
 // Marktplätze: zusammenhängende Wegfelder (samt Dingen darauf) mit Ständen; ab MARKT_STEPS[0] Ständen zählt es
 let MARKETS = [], MARKT_OK = new Set();
 const MARKT_REACH = 4, MARKT_BONUS = 0.2, MARKT_ATTR = [0, 20, 40, 80];
@@ -729,10 +757,10 @@ function computeMarkets() {
     while (todo.length) {
       const k = todo.pop(), [x, y] = keyXY(k), t = state.tiles.get(k);
       tiles.push([x, y]);
-      if (STANDS[t.b]) stands.push(k);
+      if (t && STANDS[t.b]) stands.push(k);
       for (const [dx, dy] of DIRS) {
         const n = (x + dx) + ',' + (y + dy);
-        if (!seen.has(n) && wegUnder(state.tiles.get(n)) != null) { seen.add(n); todo.push(n); }
+        if (!seen.has(n) && wegAt(x + dx, y + dy) != null) { seen.add(n); todo.push(n); }
       }
     }
     const stage = MARKT_STEPS.filter(([min]) => stands.length >= min).length;
@@ -1508,7 +1536,12 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         continue;
       }
       if (terraLook(fx, fy) === 'park' && !parkOk(b)) return 'Auf den Parkrasen gehören nur Deko und Wege';
-      if (tiles.length === 1 && plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
+      if (plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
+      if (replacesWeg(b) && plainWeg(k)) {                                  // Gebäude: ersetzt den Weg
+        const ds = decosAt(k);
+        if (ds && (tiles.length > 1 || BIG_ON_TILE.has(b) || ds.slice(4).some(Boolean))) return 'Erst die kleine Deko vom Weg nehmen';
+        continue;
+      }
       if (d.needs === 'platz') return 'Marktstände gehören auf einen Weg oder Platz';
       if (COVER.has(k)) {
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
@@ -1912,7 +1945,7 @@ function previewDelta(b, x, y) {
   const rot = placeRot(b, x, y);
   if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === rot) return previewCache;
   const old = state.tiles.get(k);                                  // Weg unter einem Marktstand bleibt liegen
-  state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });
+  state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen)
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
   rebuildCover(); computeMarkets(); computeParks();              // Marktplätze und Parks wieder wie wirklich gebaut

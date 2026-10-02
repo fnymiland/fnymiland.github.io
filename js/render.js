@@ -174,7 +174,7 @@ function renderGroundChunk(cx, cy, scale) {
   for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
     const j = s - i;
     if (j < 0 || j >= CHUNK) continue;
-    const x = cx * CHUNK + i, y = cy * CHUNK + j, t = state.tiles.get(x + ',' + y);
+    const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
     if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
   }
   drawShadows(near);
@@ -532,7 +532,7 @@ function render(now) {
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
   for (let i = 0; i < visible.length; i += 4) {
-    const x = visible[i], y = visible[i + 1], t = state.tiles.get(x + ',' + y);
+    const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     FOG = !ownedTile(x, y);
     drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
@@ -632,8 +632,11 @@ function render(now) {
         }
         const cl = clearLabel(tool, hx, hy, rotOf(tool));      // Wald/Fels auf dem Bauplatz verschwinden
         if (cl) text += '  ' + cl;
+        const wn = replacesWeg(tool) ? pathsUnder(tool, hx, hy, rotOf(tool)).length : 0;   // Gebäude auf dem Weg (Block 58)
+        if (wn) text += `  🛤️ ersetzt den Weg +${fmt(wn * ITEMS.weg.cost)}`;
       }
-      const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => !COVER.has(fx + ',' + fy) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
+      const onWeg = k => plainWeg(k) && (plazaOk(tool) || replacesWeg(tool));   // Wege darf man über- bzw. ersetzen
+      const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => (!COVER.has(fx + ',' + fy) || onWeg(fx + ',' + fy)) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
     }
     if (!preview.p) preview.p = outline(box[0], box[1], box[2], box[3], preview.ok);   // Zaun & Co. haben ihren Punkt schon
@@ -688,7 +691,8 @@ function render(now) {
       if (big && t.b !== 'weg' && (x === ax + w - 1 || y === ay + h - 1)) {
         const d = x - y, dMin = ax - (ay + h - 1), dMax = ax + w - 1 - ay;
         const mid = (d * TW / 2 - cam.x) * z + W / 2, half = TW / 4 * z;
-        const left = d === dMin ? -1e5 : mid - half, right = d === dMax ? 1e5 : mid + half;
+        const snap = v => Math.round(v * DPR) / DPR;                       // Streifengrenzen auf ganze Bildpunkte – sonst eine haarfeine Fuge
+        const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
         if (t.b === 'lm') FOG = false;
         g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
         drawIt();

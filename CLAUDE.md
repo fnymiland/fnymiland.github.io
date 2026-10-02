@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+70. **Dinge auf Wegen** (Block 58): Ob etwas auf einen Weg darf, sagen `plazaOk(b)` (Deko/Stände: Weg bleibt darunter) und
+    `replacesWeg(b)` (Gebäude: Weg weg, Taler zurück). Wege unter einem Ding: `pathsUnder` beim Bauen/Ablegen, `setUnder`
+    speichert sie (`t.weg` + `t.wegs`), `restoreUnder` legt sie zurück. Weg auf einem Feld nie über `state.tiles.get(k).weg`
+    lesen, sondern `wegAt(x, y)` (auch unter großer Deko); Flaches zum Zeichnen über `flatAt`.
 69. **Weg bündig an Linien** (Block 57): Ob ein Weg bis an eine Hecke/Zaun/Mauer reicht, nur über `edgeFlush(k)` (Linie
     `e.flush` an/aus, sonst automatisch nur am Park). Umschalten mit `setFlush` (ganze Linie über `edgeRun`, `groundVersion++`).
 68. **Tiere in der Natur** (Block 56): nur Bild und Antippen, keine Spielwerte. Wo was vorkommt, steht allein in `natureAt`

@@ -556,3 +556,13 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       prüft jedes Gebäude mit Farbauswahl.
 - [x] Reihenhaus: „bunt“-Feld je für Fassaden und Dächer (`data-wall/roof="bunt"` löscht die Farbe) – so geht Fassade
       einfarbig + Dächer bunt und umgekehrt; „Originalfarben“ dort nicht mehr nötig.
+
+## Block 58 – Alles auf Wege (02.10.)
+
+- [x] Jede große Deko darf auf Wege, auch über mehrere Felder (Blumenbeet, Schmetterlingsgarten, Seerosenteich, große
+      Brunnen …); der Weg bleibt darunter (`t.weg` Ankerfeld, `t.wegs['dx,dy']` übrige Felder), kommt beim Abreißen/Aufheben
+      zurück (`restoreUnder`), wird gezeichnet (`flatAt`/`wegAt`) und gespeichert.
+- [x] Gebäude ersetzen den Weg (`replacesWeg`): Weg weg, Taler zurück, Vorschau „🛤️ ersetzt den Weg“, Rückgängig holt ihn.
+      Kleine Deko in der Wegmitte muss vorher weg.
+- [x] Nebenbei: haarfeine senkrechte Fugen in großen Objekten (Teich, große Brunnen …) – Streifengrenzen jetzt auf ganze
+      Bildpunkte gerundet.

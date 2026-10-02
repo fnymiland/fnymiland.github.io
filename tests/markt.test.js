@@ -23,11 +23,11 @@ describe('Stände und Deko auf dem Platz', () => {
     expect(game("pathAt(10, 10).id")).toBe('klinker');                          // der Platz läuft bündig darunter
   });
 
-  it('auch Brunnen, Statue & Co. dürfen auf den Platz; Häuser nicht', () => {
+  it('auch Brunnen, Statue & Co. dürfen auf den Platz; ein Haus ersetzt den Weg (Block 58)', () => {
     plaza(10, 10, 3, 3);
     expect(build('brunnen', 11, 11)).toBe(true);
     expect(tile('11,11')).toMatchObject({ b: 'brunnen', weg: 'kopf' });
-    expect(game("placeError('haus', 10, 10)")).toBe('Hier steht schon etwas');
+    expect(game("placeError('haus', 10, 10)")).toBe(null);
   });
 
   it('abreißen oder wegtragen: der Weg kommt zurück; ablegen auf Wiese: ohne Weg', () => {

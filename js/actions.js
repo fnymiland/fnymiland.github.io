@@ -36,7 +36,10 @@ function build(b, x, y, quiet) {
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);
-  const under = plazaSpot(b, x, y) ? wegUnder(state.tiles.get(k)) : null;      // auf dem Platz: der Weg bleibt darunter
+  const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
+  const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
+  for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
+  if (replaced.length) { state.money += replaced.length * ITEMS.weg.cost; if (!quiet) toast(`Weg ersetzt: +${fmt(replaced.length * ITEMS.weg.cost)}`); }
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
@@ -61,7 +64,8 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
     }
   } else {
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(under ? { weg: under } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
@@ -87,7 +91,7 @@ function demolish(x, y) {
   if (info.refund != null) {
     const gone = state.tiles.get(info.anchor);
     state.tiles.delete(info.anchor);
-    if (gone && gone.weg != null) state.tiles.set(info.anchor, { b: 'weg', lvl: 1, style: gone.weg });   // Platz bleibt
+    if (gone) restoreUnder(gone, ...keyXY(info.anchor));                  // Platz bleibt (auch unter großer Deko)
     state.money += info.refund;
     for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
     if (info.refund) addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
@@ -129,7 +133,7 @@ function pickUp(x, y, slot) {
     if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
     moving = { kind: 'tile', t, from: a };
     state.tiles.delete(a);
-    if (t.weg != null) state.tiles.set(a, { b: 'weg', lvl: 1, style: t.weg });   // Platz bleibt liegen (cancelMove legt es wieder drauf)
+    restoreUnder(t, ...keyXY(a));                     // Platz bleibt liegen (cancelMove legt es wieder drauf)
     buildRot = t.rot || 0;
     rotManual = false;
   }
@@ -223,8 +227,10 @@ function dropAt(x, y, slot) {
     if (!state.decos.has(k)) state.decos.set(k, newSlots());
     state.decos.get(k)[slot] = { ...moving.d, rot, born: performance.now() };
   } else {
-    const k = x + ',' + y, under = plazaSpot(moving.t.b, x, y) ? wegUnder(state.tiles.get(k)) : null, t = { ...moving.t, rot, born: performance.now() };
-    if (under) t.weg = under; else delete t.weg;
+    const k = x + ',' + y, b = moving.t.b, t = { ...moving.t, rot, born: performance.now() }, covered = pathsUnder(b, x, y, rot, t);
+    for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
+    if (replacesWeg(b) && covered.length) state.money += covered.length * ITEMS.weg.cost;   // Gebäude ersetzt den Weg
+    setUnder(t, x, y, plazaOk(b) ? covered : []);
     state.tiles.set(k, t);
   }
   moving = null;
@@ -240,7 +246,11 @@ function cancelMove() {
       const [k, slot] = it.from;
       if (!state.decos.has(k)) state.decos.set(k, newSlots());
       state.decos.get(k)[slot] = it.d;
-    } else state.tiles.set(it.from, it.t);
+    } else {
+      const [fx, fy] = keyXY(it.from);
+      for (const o of Object.keys(it.t.wegs || {})) { const [dx, dy] = keyXY(o); state.tiles.delete((fx + dx) + ',' + (fy + dy)); }   // die liegengelassenen Wege wieder zudecken
+      state.tiles.set(it.from, it.t);
+    }
   }
   moving = null;
   recalc();

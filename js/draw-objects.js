@@ -83,7 +83,7 @@ function arcPts(cu, cv, r, a0, a1, n = 12) {
 }
 const sweep = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return a0 + d; };
 function pathArms(x, y) {
-  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || (state.tiles.get((x + dx) + ',' + (y + dy)) || {}).weg != null; });
+  return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || wegAt(x + dx, y + dy) != null; });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
 function roadCurve(arms) {
@@ -254,7 +254,7 @@ const PATH_LOOK = {
   fisch:      { edge: '#d3ada1', fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
   goldpflaster: { edge: '#d9b152', fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
 };
-const pathAt = (x, y) => { const w = wegUnder(state.tiles.get(x + ',' + y)); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
+const pathAt = (x, y) => { const w = wegAt(x, y); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
 function pathQuads(x, y) {
   const paved = (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
