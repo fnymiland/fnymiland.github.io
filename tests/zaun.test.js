@@ -278,3 +278,17 @@ describe('Tor ohne Weg (Block 59)', () => {
     expect(() => game("for (const [k, e] of state.edges) drawEdge(k, e, 1.5, 1000)")).not.toThrow();
   });
 });
+
+describe('Gartentor geht auf (Block 59)', () => {
+  it('kommt jemand nah, schwingt das Türchen auf – danach wieder zu', () => {
+    game("state.edges.set('a6,6', { b: 'zaun', style: 'latten', gate: true }); walkers.length = 0; strollers.length = 0; GATE_OPEN.clear()");
+    const E = "edgeEnds('a6,6')";
+    expect(game(`gateSwing('a6,6', ${E})`)).toBe(0);
+    game("walkers.push({ px: 6, py: 5.6, fx: 6, fy: 6, tx: 6, ty: 6, t: 0, wait: 5, kind: 0, fur: '#fff', shirt: '#fff', speed: 1 })");
+    for (let i = 0; i < 40; i++) game(`gateSwing('a6,6', ${E})`);
+    expect(game(`gateSwing('a6,6', ${E})`)).toBeGreaterThan(0.9);
+    game('walkers.length = 0');
+    for (let i = 0; i < 80; i++) game(`gateSwing('a6,6', ${E})`);
+    expect(game(`gateSwing('a6,6', ${E})`)).toBe(0);
+  });
+});

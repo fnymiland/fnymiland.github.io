@@ -321,7 +321,7 @@ function drawEdge(k, e, z, now) {
     if (onP && rcP.ka === k) drawArc(rcP, look, z);
     if (endP) endPiece('zaun', look, E.p, z, 'P' + vp.join());
     drawFence(Ez, look, e.style, gate, z, gate ? [false, false] : posts);
-    if (gate && gardenGate(k)) gateDoor(E, e, look, z);
+    if (gate && gardenGate(k)) gateDoor(E, e, look, z, k);
     if (gate && !e.arch && litLook(look)) for (const t of [0, 1]) lampAt(lerp2(E.p, E.q, t ? 1 - GATE_CUT : GATE_CUT), look.h + 2.5, z, 'G' + t + k);
     if (look.lights && !gate) bulbsAlong([Ez.p, Ez.q], look.h + 0.6, z, 'E' + k);
     if (gate && e.arch) drawGateArch(E, e, look, z, k);
@@ -350,7 +350,7 @@ function drawEdge(k, e, z, now) {
       }
       else hedgeKnob(m, look, z);
     }
-    if (gardenGate(k)) gateDoor(E, e, look, z);
+    if (gardenGate(k)) gateDoor(E, e, look, z, k);
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
@@ -371,8 +371,18 @@ function drawEdge(k, e, z, now) {
 }
 // Gartentürchen (Block 59) in der Lücke eines Tors ohne Weg: beim Zaun im Stil des Zauns, sonst ein niedriges Holztürchen;
 // eine Querstrebe und ein Knauf zeigen, dass es eine Tür ist
-function gateDoor(E, e, look, z) {
-  const t0 = e.b === 'zaun' ? GATE_CUT : gateT(e.b, look) + (e.b === 'hecke' ? 0.05 : 0.03), A = lerp2(E.p, E.q, t0 + 0.02), B = lerp2(E.p, E.q, 1 - t0 - 0.02);
+// Kommt jemand nah, schwingt das Türchen auf (zur vorderen Seite, die danach gezeichnet wird) und danach wieder zu
+const GATE_OPEN = new Map();                                       // Kante → wie weit offen (0 … 1), weich nachgeführt
+function gateSwing(k, E) {
+  const m = lerp2(E.p, E.q, 0.5), near = walkers.concat(strollers).some(w => !(w.inside > 0) && Math.hypot(w.px - m[0], w.py - m[1]) < 0.9);
+  const cur = GATE_OPEN.get(k) || 0, v = cur + ((near ? 1 : 0) - cur) * 0.12;
+  if (v < 0.005 && !near) GATE_OPEN.delete(k); else GATE_OPEN.set(k, v);
+  return v < 0.005 ? 0 : v;
+}
+function gateDoor(E, e, look, z, k) {
+  const t0 = e.b === 'zaun' ? GATE_CUT : gateT(e.b, look) + (e.b === 'hecke' ? 0.05 : 0.03), A = lerp2(E.p, E.q, t0 + 0.02), B0 = lerp2(E.p, E.q, 1 - t0 - 0.02);
+  const open = EDGE_PROJ ? 0 : gateSwing(k, E), ang = open * 1.4, len = Math.hypot(B0[0] - A[0], B0[1] - A[1]);
+  const B = [A[0] + (E.along[0] * Math.cos(ang) + E.side[0] * Math.sin(ang)) * len, A[1] + (E.along[1] * Math.cos(ang) + E.side[1] * Math.sin(ang)) * len];
   const wood = { h: e.b === 'zaun' ? look.h - 0.5 : Math.min(7, look.h - 1), col: e.b === 'zaun' ? look.col : '#b5835a' };
   const style = e.b === 'zaun' ? e.style : 'latten';
   drawFence({ p: A, q: B }, wood, style === 'lichter' ? 'latten' : style, false, z, [false, false]);

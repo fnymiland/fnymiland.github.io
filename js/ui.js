@@ -1114,7 +1114,7 @@ function openGateInfo(k) {
   const e = state.edges.get(k);
   if (!e) { closePanel(); return; }
   const gate = isGate(k), byPath = pathGate(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
-  const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
+  const cur = e.arch || '', opts = [['', '✕ Ohne Bogen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
   const el = showPanel(`
     <h3>${gate ? (byPath ? 'Durchgang · ' : 'Gartentor · ') : ''}${ITEMS[e.b].name}${gate ? '' : ` · ${styleDef(e.b, e.style).name}`}</h3>
     ${byPath ? '' : `<div class="looks"><button class="look${e.gate ? '' : ' on'}" data-gate="0">${ITEMS[e.b].name} geschlossen</button><button class="look${e.gate ? ' on' : ''}" data-gate="1">🚪 Hier ein Tor</button></div>`}

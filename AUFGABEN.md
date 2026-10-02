@@ -576,3 +576,5 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       `isGate` = Weg auf beiden Seiten oder `e.gate`; ohne Weg (`gardenGate`) steht ein Gartentürchen in der Lücke
       (`gateDoor`: beim Zaun im Zaunstil, bei Hecke/Mauer Holz; geschwungener Abschluss, Strebe, Knauf). Bewohner gehen
       durch, Bögen gehen darüber; „geschlossen“ nimmt einen Bogen mit (Taler zurück).
+- [x] Gartentor schwingt auf, wenn jemand nah ist (`gateSwing`, weich, zur vorderen Seite), und wieder zu. Bogen-Auswahl
+      heißt jetzt „✕ Ohne Bogen“ statt „Offen“ (war neben einem Tor missverständlich).
