@@ -268,6 +268,19 @@ describe('Tor ohne Weg (Block 59)', () => {
     expect(game('state.money')).toBe(m);                                       // Bogen erstattet
   });
 
+  it('Durchgang ohne Türchen: offen, mit Bogen möglich, kein Türchen', () => {
+    game("state.money = 1e6; state.edges.set('a6,6', { b: 'hecke', style: 'niedrig' }); recalc(); openGateInfo('a6,6')");
+    game("document.querySelector('[data-gate=\"offen\"]').click()");
+    expect(game("state.edges.get('a6,6').gate")).toBe('offen');
+    expect(game("isGate('a6,6')")).toBe(true);
+    expect(game("gardenGate('a6,6')")).toBe(false);                            // kein Türchen
+    expect(game("setArch('a6,6', 'bogen')")).toBe(true);                       // Bogen ohne Tor
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Durchgang/);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.edges.get('a6,6')")).toMatchObject({ gate: 'offen', arch: 'bogen' });
+  });
+
   it('wird gespeichert, überlebt Umfärben, und lässt sich zeichnen', () => {
     game("state.edges.set('b6,6', { b: 'hecke', style: 'hoch', gate: true }); state.edges.set('a8,8', { b: 'mauer', style: 'backstein', gate: true, arch: 'bogen' })");
     const d = game('JSON.parse(JSON.stringify(serialize()))');

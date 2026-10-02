@@ -578,3 +578,5 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       durch, Bögen gehen darüber; „geschlossen“ nimmt einen Bogen mit (Taler zurück).
 - [x] Gartentor schwingt auf, wenn jemand nah ist (`gateSwing`, weich, zur vorderen Seite), und wieder zu. Bogen-Auswahl
       heißt jetzt „✕ Ohne Bogen“ statt „Offen“ (war neben einem Tor missverständlich).
+- [x] Drei Möglichkeiten je Linienstück ohne Weg: geschlossen / 🚪 Gartentor (Türchen) / ⬜ Durchgang (offen, `e.gate =
+      'offen'`) – Bogen bei beiden Toren möglich.

@@ -623,12 +623,13 @@ const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny)
 const pathGate = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
 // Block 59: ein Tor geht auch ohne Weg (e.gate, im Fenster der Linie) – dort steht ein Gartentürchen in der Lücke
 const isGate = k => { const e = state.edges.get(k); return !!(e && e.gate) || pathGate(k); };
-const gardenGate = k => { const e = state.edges.get(k); return !!(e && e.gate) && !pathGate(k); };
-function setGate(k, on) {
+// e.gate: true = Gartentor mit Türchen, 'offen' = Durchgang ohne Türchen (Bogen bei beiden möglich)
+const gardenGate = k => { const e = state.edges.get(k); return !!(e && e.gate === true) && !pathGate(k); };
+function setGate(k, kind) {                                      // kind: false (geschlossen), true (Türchen), 'offen'
   const e = state.edges.get(k);
-  if (!e || !!e.gate === on) return false;
-  if (!on && e.arch && !pathGate(k)) { state.money += ARCHES[e.arch].cost; delete e.arch; }   // ohne Tor kein Bogen: Taler zurück
-  if (on) e.gate = true; else delete e.gate;
+  if (!e || (e.gate || false) === kind) return false;
+  if (!kind && e.arch && !pathGate(k)) { state.money += ARCHES[e.arch].cost; delete e.arch; }   // ohne Tor kein Bogen: Taler zurück
+  if (kind) e.gate = kind; else delete e.gate;
   sfx('deco'); recalc(); save();
   return true;
 }
@@ -711,7 +712,7 @@ function buildEdge(b, k) {
   if (old && old.b === b && old.style === style) return false;
   const d = ITEMS[b];
   state.money -= d.cost; payMat(d.mat || {});
-  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: true } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
+  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }
 function removeEdge(k) {
