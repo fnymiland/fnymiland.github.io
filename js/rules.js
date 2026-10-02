@@ -621,6 +621,23 @@ const edgeTiles = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' 
 const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny) : 'b' + Math.max(x, nx) + ',' + y;
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
 const isGate = k => edgeTiles(k).every(([x, y]) => wegUnder(state.tiles.get(x + ',' + y)) != null || crossingAt(x, y));
+// Weg bündig an der Linie (Block 57): e.flush an/aus; ohne Angabe nur am Park (Parkrasen auf einer der beiden Seiten)
+const edgeFlush = k => { const e = state.edges.get(k); return !!e && (e.flush != null ? e.flush : edgeTiles(k).some(([x, y]) => terraLook(x, y) === 'park')); };
+// Alle Stücke, die über gemeinsame Eckpunkte mit k zusammenhängen (eine „Linie“)
+function edgeRun(k) {
+  const ends = q => { const { dir, i, j } = edgeParse(q); return [i + ',' + j, dir === 'a' ? (i + 1) + ',' + j : i + ',' + (j + 1)]; };
+  const at = new Map();
+  for (const q of state.edges.keys()) for (const v of ends(q)) { if (!at.has(v)) at.set(v, []); at.get(v).push(q); }
+  const seen = new Set([k]), todo = [k];
+  while (todo.length) for (const v of ends(todo.pop())) for (const q of at.get(v) || []) if (!seen.has(q)) { seen.add(q); todo.push(q); }
+  return [...seen];
+}
+function setFlush(k, on) {
+  if (!state.edges.has(k)) return false;
+  for (const q of edgeRun(k)) state.edges.get(q).flush = on;
+  groundVersion++; save();
+  return true;
+}
 const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return state.edges.has(k) && !isGate(k); };
 // Runde Ecke: am Eckpunkt (i, j) genau eine waagerechte und eine senkrechte Linie derselben Art (kein Tor) → Viertelkreis
 // (Radius ROUND_R). Liegt innen ein Weg (inPath), folgt er dem Bogen (lineFill); liegt der Weg außen (Innenseite einer

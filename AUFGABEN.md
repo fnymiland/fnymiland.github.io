@@ -539,3 +539,12 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] Antippen (`critterAt`, `tapCritter`): Tier flieht, neu entdeckt → Album-Seite „Naturbeobachtungen“ (`natur:<id>`),
       Fehlendes mit Hinweis. Stufen-Belohnungen über `albumN` (`albumDone(id, n)`): 4 Schmetterlingsgarten, 8 Vogelhäuschen-
       Baum, 12 Seerosenteich (2×2) – mit eigenen Tieren im Bild.
+
+## Block 57 – Bugfixes (02.10.)
+
+- [x] Schloss-Fenster: der lange Löschen-Knopf (🗑️ +280.000) schob „Schließen“ über den Rand → Knopfreihe im Fenster bricht
+      um. Alle 86 Gebäude-Fenster bei 768 und 375 px nachgemessen: kein Überhang.
+- [x] Weg an Zaun/Hecke/Mauer bündig nur noch, wenn gewollt: Schalter im Fenster der Linie („Bündig bis an die Linie“ /
+      „Mit Grasstreifen“, `setFlush` für die ganze zusammenhängende Linie, `edgeRun`), gespeichert als `e.flush`; ohne
+      Angabe bündig nur am Park (`edgeFlush`).
+- [ ] Reihenhäuser neu: bunte Giebelhäuser (Amsterdam/Bremen) – wartet auf „los“ (Hoch).

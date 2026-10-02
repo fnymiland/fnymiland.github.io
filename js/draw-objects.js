@@ -549,7 +549,7 @@ function angStep(su, sv, f) {
 function lineFill(x, y, arms, w) {
   if (x > 1e5 || !state.edges.size) return [];
   const has = (dx, dy) => arms.some(([ax, ay]) => ax === dx && ay === dy);
-  const side = ([dx, dy]) => { const k = edgeBetween(x, y, x + dx, y + dy); return state.edges.has(k) && !isGate(k); };
+  const side = ([dx, dy]) => { const k = edgeBetween(x, y, x + dx, y + dy); return state.edges.has(k) && !isGate(k) && edgeFlush(k); };   // nur, wo bündig gewollt (Block 57)
   const rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], out = [];
   // runde Ecken (roundCorner): dort hört das Rechteck vor dem Bogen auf, das Eckstück folgt dem Viertelkreis der Linie
   const rounded = (su, sv) => side([su, 0]) && side([0, sv]) && !!(roundCorner(x + (su + 1) / 2, y + (sv + 1) / 2) || {}).inPath;
@@ -570,7 +570,7 @@ function lineFill(x, y, arms, w) {
   for (const su of [1, -1]) for (const sv of [1, -1]) {
     if (!has(su, 0) || !has(0, sv)) continue;
     const i = x + (su + 1) / 2, j = y + (sv + 1) / 2;
-    if (['a' + (i - 1) + ',' + j, 'a' + i + ',' + j, 'b' + i + ',' + (j - 1), 'b' + i + ',' + j].some(k => state.edges.has(k)))
+    if (['a' + (i - 1) + ',' + j, 'a' + i + ',' + j, 'b' + i + ',' + (j - 1), 'b' + i + ',' + j].some(k => state.edges.has(k) && edgeFlush(k)))
       out.push(rect(Math.min(0, su * 0.5), Math.max(0, su * 0.5), Math.min(0, sv * 0.5), Math.max(0, sv * 0.5)));
   }
   out.sides = DIRS.some(side);                                    // Linie an einer Seite: Weg gerade bis an sie (sonst bleibt die Kurve rund)

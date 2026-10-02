@@ -87,13 +87,31 @@ describe('Ecken und Wege', () => {
     expect(game("edgeJoins('a7,5', 'zaun', 7, 5)")).toBe(false);                // Zaun zählt nicht als Mauer
   });
 
-  it('neben einer Linie läuft der Weg bis an die Feldkante, ohne Linie nicht', () => {
+  it('neben einer Linie läuft der Weg bis an die Feldkante – von selbst nur am Park, sonst per Schalter (Block 57)', () => {
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('7,6', { b: 'weg', lvl: 1, style: 'sand' })");
     expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBe(0);
-    game("state.edges.set('a6,6', { b: 'hecke', style: 'niedrig' })");         // oben am Feld (6, 6)
+    game("state.edges.set('a6,6', { b: 'hecke', style: 'niedrig' }); state.edges.set('a7,6', { b: 'hecke', style: 'niedrig' })");   // oben an (6, 6) und (7, 6)
+    expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBe(0);      // ohne Park: Grasstreifen bleibt
+    game("state.terra.set('6,5', 'park')");                                      // Park auf der anderen Seite
     const r = game("lineFill(6, 6, pathArms(6, 6), ROAD_W)");
     expect(r.length).toBe(1);
     expect(Math.min(...r[0].map(p => p[1]))).toBe(-0.5);                        // bis an die Kante
+    game("setFlush('a6,6', false)");                                             // Schalter: aus – für die ganze Linie
+    expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBe(0);
+    expect(game("state.edges.get('a7,6').flush")).toBe(false);
+    game("state.terra.delete('6,5'); setFlush('a7,6', true)");                    // an – auch ohne Park
+    expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBe(1);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.edges.get('a6,6').flush")).toBe(true);                     // wird gespeichert
+  });
+
+  it('im Fenster der Linie: „Bündig“ / „Mit Grasstreifen“ umschalten', () => {
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'zaun', style: 'latten' }); openGateInfo('a6,6')");
+    game("document.querySelector('[data-flush=\"1\"]').click()");
+    expect(game("state.edges.get('a6,6').flush")).toBe(true);
+    game("document.querySelector('[data-flush=\"0\"]').click()");
+    expect(game("state.edges.get('a6,6').flush")).toBe(false);
   });
 });
 
@@ -112,7 +130,7 @@ describe('Runde Ecken', () => {
   });
 
   it('der Weg folgt dem Bogen; die Bank in der Seitenmitte rückt von der Linie weg', () => {
-    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch', flush: true }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch', flush: true })");
     const fill = game("lineFill(6, 6, pathArms(6, 6), ROAD_W)");
     expect(fill.some(poly => poly.length > 4)).toBe(true);                          // Eckstück mit Bogen
     expect(game("slotPos(6, 6, 5)")[1]).toBeCloseTo(-0.28);                        // an der Linie nach innen

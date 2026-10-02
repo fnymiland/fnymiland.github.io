@@ -1107,9 +1107,13 @@ function openGateInfo(k) {
     ${gate ? `<p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
     : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang.</p>'}
+    <div class="label">Wege an dieser Linie</div>
+    <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
+    <p class="muted">Gilt für die ganze zusammenhängende Linie.${e.flush == null ? ' Von selbst: bündig nur am Park.' : ''}</p>
     <div class="row"><button class="btn danger" id="p-del" aria-label="Entfernen">🗑️ +${fmt(refund)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
+  for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
 }
