@@ -1852,16 +1852,12 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-01-ordnung', items: [
-  '🧭 <b>Leiste neu sortiert – fünf Bereiche nach dem, was du tun willst:</b> 🏘️ Stadt (Wohnen, Einrichtungen wie Schule, Post, Hotel, Verkehr), 🏭 Herstellen, 🛍️ Einkaufen, 🎡 Freizeit (Kultur, Wunder) und 🌸 Gestalten (Deko, Wege, Gelände).',
-  '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da, egal in welchem Bereich.',
-  '🧺 <b>Marktplatz zum Selberbauen:</b> Leg einen Platz aus Wegen (jedes Muster) und stell Marktstände drauf (🛍️ Einkaufen → 🧺 Markt) – ab 3 ist es ein Marktplatz, ab 6 ein Wochenmarkt, ab 9 ein Großer Markt. Brunnen, Statuen und Pavillons dürfen mit drauf, nachts leuchten Lichterketten.',
-  '🛍️ Läden rund um den Marktplatz verdienen +20 %, er zieht Besucher an, und alle 20 Minuten ist <b>Markttag</b> (3 Minuten doppelt). Dein alter Markt ist jetzt ein Kopfsteinplatz mit Ständen.',
-  '🧱 <b>Hecken, Zäune und Mauern</b> (🌸 Gestalten → Zäune & Hecken): als Linie zwischen den Feldern ziehen – Holz, Staketen, Weide, Schmiedeeisen, Gitter, Glas, Backstein, Klinker, Naturstein … Wo ein Weg durchgeht, gibt es ein Tor – antippen und einen Torbogen oder Rosenbogen draufsetzen. Enden bekommen Pfeiler mit Laternen, es gibt Stile mit Lichterketten. Deine alten Hecken-Ecken sind jetzt kleine Büsche.',
-  '🪑 <b>Mehr Platz für Kleinkram:</b> Jedes Feld hat jetzt 8 Plätze – dazu die Mitte jeder Seite. Bänke und Laternen stehen dort mittig am Wegrand, Bänke drehen sich von selbst zum Weg. An Häuser geht Kleinkram an die Ecken.',
-  '🌳 <b>Park zum Selberbauen:</b> Zieh Parkrasen auf (🌸 Gestalten → Wege & Gelände) und stell Bäume, Beete, Bänke und Brunnen drauf – daraus wird eine Grünanlage, ein Park oder ein Stadtpark. Er macht die Häuser ringsum schöner, lockt Besucher und Spaziergänger an, und im Park-Fenster kannst du ein <b>Parkfest</b> feiern. Dein alter Park ist jetzt Rasen mit Brunnen, Bäumen und Bänken.',
-  '↶ <b>Rückgängig:</b> Verbaut? Der ↶-Knopf neben 👆 ✋ 🧹 (oder Strg/⌘+Z) nimmt die letzten 20 Schritte zurück – mit allen Talern. Und in jedem Fenster gibt es jetzt 🗑️ zum Löschen.',
-  '📏 <b>Größen:</b> Brunnen, Bäume, Palmen, Büsche, Kristalle, Beete, Statuen, Pavillons und Glashäuser gibt es jetzt klein bis riesig – Größe über der Leiste wählen (zum Beispiel ein 3×3-Stadtbrunnen oder eine alte Eiche).',
+const NEWS = { id: '2026-10-02-bewohner', items: [
+  '🐾 <b>Neue Bewohner:</b> Mit jeder entdeckten Insel zieht eine neue Tierart ein – 🐿️ Eichhörnchen (Waldinsel), 🦔 Igel (Obstinsel), 🦊 Fuchs (Windinsel), 🦒 Giraffe (Ruineninsel), 🐘 Elefant (Erzinsel) und 🦆 Ente (Quelleninsel). Jetzt wohnt in jedem Wohnhaus jemand, im Reihenhaus sogar drei Familien.',
+  '🌅 <b>Ein Tag auf der Insel:</b> Morgens gehen die Bewohner von zu Hause zur Arbeit oder in die Schule, mittags ins Café, zur Bäckerei oder auf den Markt, abends in den Park – und nachts schlafen die meisten.',
+  '👆 <b>Tipp eine Figur an:</b> Du siehst, wer das ist, wo sie wohnt und wohin sie gerade geht. Ab und zu erzählt dir auch jemand in einer Sprechblase, was er sich wünscht.',
+  '🏛️ <b>Rathaus → Bewohner:</b> Alle Familien deiner Insel nach Tierart, mit Herzen – antippen bringt dich zum Haus.',
+  '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt es – schlechter als vorher wird nichts.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
