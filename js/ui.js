@@ -889,12 +889,14 @@ function openInfo(x, y) {
     // Häuser haben immer eine Farbe (sonst aus der Lage), andere Gebäude ihre eigene, bis man eine wählt
     const wall = t.wall != null ? t.wall : house ? Math.floor(hash(x, y, 3) * 7) : -1;
     const roof = t.roof != null ? t.roof : house ? Math.floor(hash(x, y, 4) * 7) : -1;
+    const mixed = t.b === 'reihenhaus';                                     // Reihenhaus: „bunt“ je für Fassade und Dach
+    const bunt = kind => mixed ? `<button class="sw bunt${kind === 'roof' ? ' roofs' : ''}${t[kind] == null ? ' on' : ''}" data-${kind}="bunt" aria-label="${kind === 'wall' ? 'Fassaden' : 'Dächer'} bunt gemischt" title="Bunt gemischt"></button>` : '';
     colors += `
-      ${!house && (t.wall != null || t.roof != null) ? '<div class="looks"><button class="look" data-orig="1">↺ Originalfarben</button></div>' : ''}
-      <div class="label">Wand</div>
-      <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
-      <div class="label">Dach</div>
-      <div class="swatches">${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+      ${!house && !mixed && (t.wall != null || t.roof != null) ? '<div class="looks"><button class="look" data-orig="1">↺ Originalfarben</button></div>' : ''}
+      <div class="label">${mixed ? 'Fassaden' : 'Wand'}</div>
+      <div class="swatches">${bunt('wall')}${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
+      <div class="label">${mixed ? 'Dächer' : 'Dach'}</div>
+      <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
@@ -1004,8 +1006,10 @@ function openInfo(x, y) {
     t.born = performance.now(); sfx('deco'); save(); openInfo(x, y);
   };
   if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; sfx('deco'); save(); openInfo(x, y); };
-  for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openInfo(x, y); };
-  for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openInfo(x, y); };
+  // „bunt“ (Reihenhaus): Farbe weg → jedes Haus wieder in seiner eigenen
+  const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; sfx('deco'); save(); openInfo(x, y); };
+  for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
+  for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
   for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);

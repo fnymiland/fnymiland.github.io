@@ -69,3 +69,17 @@ describe('Farbwahl (Block 57)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('Reihenhaus: „bunt“ für Fassaden und Dächer', () => {
+  it('Fassade einfarbig, Dächer bunt – und zurück', () => {
+    game("state.money = 1e6; state.tiles.set('8,8', { b: 'reihenhaus', lvl: 2, rot: 0, wall: 3, roof: 2 }); recalc(); openInfo(8, 8)");
+    expect(game("document.querySelectorAll('#panel .sw.bunt').length")).toBe(2);
+    expect(game("!!document.querySelector('#panel [data-orig]')")).toBe(false);             // braucht keinen Umweg mehr
+    game("document.querySelector('#panel [data-roof=\"bunt\"]').click()");
+    expect(game("state.tiles.get('8,8').roof")).toBe(undefined);
+    expect(game("state.tiles.get('8,8').wall")).toBe(3);
+    expect(game("document.querySelector('#panel [data-roof=\"bunt\"]').classList.contains('on')")).toBe(true);
+    game("document.querySelector('#panel [data-wall=\"bunt\"]').click()");
+    expect(game("state.tiles.get('8,8').wall")).toBe(undefined);
+  });
+});
