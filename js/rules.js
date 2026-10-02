@@ -620,7 +620,18 @@ const edgeParse = k => { const [i, j] = k.slice(1).split(',').map(Number); retur
 const edgeTiles = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j - 1], [i, j]] : [[i - 1, j], [i, j]]; };
 const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny) : 'b' + Math.max(x, nx) + ',' + y;
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
-const isGate = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
+const pathGate = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
+// Block 59: ein Tor geht auch ohne Weg (e.gate, im Fenster der Linie) – dort steht ein Gartentürchen in der Lücke
+const isGate = k => { const e = state.edges.get(k); return !!(e && e.gate) || pathGate(k); };
+const gardenGate = k => { const e = state.edges.get(k); return !!(e && e.gate) && !pathGate(k); };
+function setGate(k, on) {
+  const e = state.edges.get(k);
+  if (!e || !!e.gate === on) return false;
+  if (!on && e.arch && !pathGate(k)) { state.money += ARCHES[e.arch].cost; delete e.arch; }   // ohne Tor kein Bogen: Taler zurück
+  if (on) e.gate = true; else delete e.gate;
+  sfx('deco'); recalc(); save();
+  return true;
+}
 // Weg bündig an der Linie (Block 57): e.flush an/aus; ohne Angabe nur am Park (Parkrasen auf einer der beiden Seiten)
 const edgeFlush = k => { const e = state.edges.get(k); return !!e && (e.flush != null ? e.flush : edgeTiles(k).some(([x, y]) => terraLook(x, y) === 'park')); };
 // Alle Stücke, die über gemeinsame Eckpunkte mit k zusammenhängen (eine „Linie“)
@@ -700,7 +711,7 @@ function buildEdge(b, k) {
   if (old && old.b === b && old.style === style) return false;
   const d = ITEMS[b];
   state.money -= d.cost; payMat(d.mat || {});
-  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), born: performance.now() });
+  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: true } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }
 function removeEdge(k) {

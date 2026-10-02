@@ -321,6 +321,7 @@ function drawEdge(k, e, z, now) {
     if (onP && rcP.ka === k) drawArc(rcP, look, z);
     if (endP) endPiece('zaun', look, E.p, z, 'P' + vp.join());
     drawFence(Ez, look, e.style, gate, z, gate ? [false, false] : posts);
+    if (gate && gardenGate(k)) gateDoor(E, e, look, z);
     if (gate && !e.arch && litLook(look)) for (const t of [0, 1]) lampAt(lerp2(E.p, E.q, t ? 1 - GATE_CUT : GATE_CUT), look.h + 2.5, z, 'G' + t + k);
     if (look.lights && !gate) bulbsAlong([Ez.p, Ez.q], look.h + 0.6, z, 'E' + k);
     if (gate && e.arch) drawGateArch(E, e, look, z, k);
@@ -349,6 +350,7 @@ function drawEdge(k, e, z, now) {
       }
       else hedgeKnob(m, look, z);
     }
+    if (gardenGate(k)) gateDoor(E, e, look, z);
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
@@ -366,6 +368,25 @@ function drawEdge(k, e, z, now) {
   if (look.lights) bulbsAlong(front, h - 0.6, z, 'E' + k);
   wallJoints([[[p[0] + E.side[0] * w, p[1] + E.side[1] * w], [q[0] + E.side[0] * w, q[1] + E.side[1] * w]]], look, h, z, (pt, up) => edgeS(pt[0], pt[1], up, z));
   ends();
+}
+// Gartentürchen (Block 59) in der Lücke eines Tors ohne Weg: beim Zaun im Stil des Zauns, sonst ein niedriges Holztürchen;
+// eine Querstrebe und ein Knauf zeigen, dass es eine Tür ist
+function gateDoor(E, e, look, z) {
+  const t0 = e.b === 'zaun' ? GATE_CUT : gateT(e.b, look) + (e.b === 'hecke' ? 0.05 : 0.03), A = lerp2(E.p, E.q, t0 + 0.02), B = lerp2(E.p, E.q, 1 - t0 - 0.02);
+  const wood = { h: e.b === 'zaun' ? look.h - 0.5 : Math.min(7, look.h - 1), col: e.b === 'zaun' ? look.col : '#b5835a' };
+  const style = e.b === 'zaun' ? e.style : 'latten';
+  drawFence({ p: A, q: B }, wood, style === 'lichter' ? 'latten' : style, false, z, [false, false]);
+  const S = (pt, up) => edgeS(pt[0], pt[1], up, z), dark = shade(wood.col, -0.3);
+  if (style !== 'glas' && style !== 'gitter' && style !== 'eisen') {     // Z-Strebe (Holz)
+    g.strokeStyle = C(shade(wood.col, -0.12)); g.lineWidth = 1 * z; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(...S(A, wood.h * 0.35)); g.lineTo(...S(B, wood.h * 0.75)); g.stroke();
+  }
+  // geschwungener oberer Abschluss – so sieht man auch am Eisen- oder Glaszaun, wo die Tür ist
+  const top0 = S(A, wood.h), top1 = S(B, wood.h), mid = S(lerp2(A, B, 0.5), wood.h + 2.4);
+  g.strokeStyle = C(style === 'glas' ? '#9aa3ad' : e.b === 'zaun' && (style === 'eisen' || style === 'gitter') ? wood.col : dark); g.lineWidth = 1.2 * z; g.lineCap = 'round';
+  g.beginPath(); g.moveTo(...top0); g.quadraticCurveTo(mid[0] * 2 - (top0[0] + top1[0]) / 2, mid[1] * 2 - (top0[1] + top1[1]) / 2, ...top1); g.stroke();
+  const kn = lerp2(A, B, 0.85), [kx, ky] = S(kn, wood.h * 0.5);
+  circle(kx, ky, 0.7 * z, C(e.b === 'zaun' && style === 'eisen' ? '#c9a24a' : dark));   // Knauf
 }
 // Zaun: Pfosten an beiden Enden, dazwischen je nach Stil Latten, Staketen, Flechtwerk, Gitter, Stäbe oder Glas.
 // Läuft an einer Punktlinie entlang (E.pts: auch der Bogen einer runden Ecke), Latten im gleichen Abstand je Länge.

@@ -1113,19 +1113,21 @@ const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaopla
 function openGateInfo(k) {
   const e = state.edges.get(k);
   if (!e) { closePanel(); return; }
-  const gate = isGate(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
+  const gate = isGate(k), byPath = pathGate(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
   const cur = e.arch || '', opts = [['', '🚪 Offen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
   const el = showPanel(`
-    <h3>${gate ? 'Durchgang · ' : ''}${ITEMS[e.b].name}${gate ? '' : ` · ${styleDef(e.b, e.style).name}`}</h3>
-    ${gate ? `<p class="muted">Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang. Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
+    <h3>${gate ? (byPath ? 'Durchgang · ' : 'Gartentor · ') : ''}${ITEMS[e.b].name}${gate ? '' : ` · ${styleDef(e.b, e.style).name}`}</h3>
+    ${byPath ? '' : `<div class="looks"><button class="look${e.gate ? '' : ' on'}" data-gate="0">${ITEMS[e.b].name} geschlossen</button><button class="look${e.gate ? ' on' : ''}" data-gate="1">🚪 Hier ein Tor</button></div>`}
+    ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : 'Ein Gartentürchen – Bewohner gehen hindurch, auch ohne Weg.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
-    : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang.</p>'}
+    : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
     <p class="muted">Gilt für die ganze zusammenhängende Linie.${e.flush == null ? ' Von selbst: bündig nur am Park.' : ''}</p>
     <div class="row"><button class="btn danger" id="p-del" aria-label="Entfernen">🗑️ +${fmt(refund)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
+  for (const b of el.querySelectorAll('[data-gate]')) b.onclick = () => undoable(() => { if (setGate(k, b.dataset.gate === '1')) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;

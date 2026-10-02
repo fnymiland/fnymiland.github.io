@@ -569,3 +569,10 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] Weg unter vorhandene Deko legen: Weg-Pinsel (Tippen oder Ziehen) über Brunnen & Co. legt den Weg darunter
       (`decoOver`, `wegUnderDeco`), anderes Muster färbt um; beim Tragen eines Wegs nicht. Zufallstest fand dabei zwei
       Randfälle (Gruppe ablegen, großes Ding drehen auf Wegen) – beide behoben.
+
+## Block 59 – Tor ohne Weg (02.10.)
+
+- [x] Im Fenster einer Linie: „geschlossen“ / „🚪 Hier ein Tor“ (`setGate`, `e.gate`, gespeichert, bleibt beim Umfärben).
+      `isGate` = Weg auf beiden Seiten oder `e.gate`; ohne Weg (`gardenGate`) steht ein Gartentürchen in der Lücke
+      (`gateDoor`: beim Zaun im Zaunstil, bei Hecke/Mauer Holz; geschwungener Abschluss, Strebe, Knauf). Bewohner gehen
+      durch, Bögen gehen darüber; „geschlossen“ nimmt einen Bogen mit (Taler zurück).

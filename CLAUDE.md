@@ -352,6 +352,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+71. **Tore** (Block 59): Tor = `isGate(k)` (Weg auf beiden Seiten `pathGate` oder `e.gate`). Ein Tor ohne Weg (`gardenGate`)
+    bekommt ein Türchen (`gateDoor`). Wer Linien neu setzt/umfärbt (`buildEdge`), übernimmt `arch`, `gate`, `flush`.
 70. **Dinge auf Wegen** (Block 58): Ob etwas auf einen Weg darf, sagen `plazaOk(b)` (Deko/Stände: Weg bleibt darunter) und
     `replacesWeg(b)` (Gebäude: Weg weg, Taler zurück). Wege unter einem Ding: `pathsUnder` beim Bauen/Ablegen, `setUnder`
     speichert sie (`t.weg` + `t.wegs`), `restoreUnder` legt sie zurück. Weg auf einem Feld nie über `state.tiles.get(k).weg`

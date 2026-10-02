@@ -249,3 +249,32 @@ describe('Endstücke, Torbögen, Licht', () => {
     game('night = 0');
   });
 });
+
+describe('Tor ohne Weg (Block 59)', () => {
+  it('im Fenster „Hier ein Tor“: Gartentor, Bewohner gehen durch, Bogen möglich; „geschlossen“ nimmt Tor und Bogen (Taler zurück)', () => {
+    game("state.money = 1e6; state.edges.set('a6,6', { b: 'zaun', style: 'latten' }); recalc()");
+    expect(game("isGate('a6,6')")).toBe(false);
+    expect(game('edgeBlocks(6, 5, 6, 6)')).toBe(true);
+    game("openGateInfo('a6,6'); document.querySelector('[data-gate=\"1\"]').click()");
+    expect(game("state.edges.get('a6,6').gate")).toBe(true);
+    expect(game("isGate('a6,6') && gardenGate('a6,6')")).toBe(true);
+    expect(game('edgeBlocks(6, 5, 6, 6)')).toBe(false);                      // man kommt durch
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Gartentor/);
+    const m = game('state.money');
+    expect(game("setArch('a6,6', 'rosen')")).toBe(true);
+    game("document.querySelector('[data-gate=\"0\"]').click()");
+    expect(game("state.edges.get('a6,6').gate")).toBe(undefined);
+    expect(game("state.edges.get('a6,6').arch")).toBe(undefined);
+    expect(game('state.money')).toBe(m);                                       // Bogen erstattet
+  });
+
+  it('wird gespeichert, überlebt Umfärben, und lässt sich zeichnen', () => {
+    game("state.edges.set('b6,6', { b: 'hecke', style: 'hoch', gate: true }); state.edges.set('a8,8', { b: 'mauer', style: 'backstein', gate: true, arch: 'bogen' })");
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.edges.get('b6,6').gate")).toBe(true);
+    game("chosenStyle.hecke = 'niedrig'; buildEdge('hecke', 'b6,6')");
+    expect(game("state.edges.get('b6,6')")).toMatchObject({ style: 'niedrig', gate: true });
+    expect(() => game("for (const [k, e] of state.edges) drawEdge(k, e, 1.5, 1000)")).not.toThrow();
+  });
+});
