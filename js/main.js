@@ -151,7 +151,7 @@ function frame(now) {
   produce(dt);
   peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); bubbleTick(now); natureTick(now); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }
@@ -170,6 +170,6 @@ window.kachelhausen = { get state() { return state; }, recalc, save, checkStars,
 
 // Testwelt (?welt=name): fertigen Stand laden, nichts speichern
 if (TESTWELT) fetch(`testsave-${TESTWELT}.json?t=${Date.now()}`).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
-  .then(d => { adoptState(parseSave(d)); closeModal(); toast(`Testwelt „${state.town.name}“ – hier wird nichts gespeichert`); })
+  .then(d => { adoptState(parseSave(d)); closeModal(); toast(`Testwelt „${state.town.name}“ – hier wird nichts gespeichert`); if (d.showcase) { SHOWCASE = d.showcase; jumpTo(...d.showcase.look); cam.z = 2.2; } })
   .catch(() => toast('Diese Testwelt gibt es hier nicht'));
 

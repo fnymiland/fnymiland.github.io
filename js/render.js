@@ -783,6 +783,7 @@ function render(now) {
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const s of fallenStars) drawFallenStar(s, z, now);
   for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
+  drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
   for (const [x, y, type] of labels) {

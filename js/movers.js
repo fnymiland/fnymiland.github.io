@@ -130,10 +130,10 @@ let lastPart = null;
 function syncMovers() {
   const part = dayPart(), day = Math.min(24, Math.floor(T.pop / 4)), wantW = part === 'nacht' ? Math.ceil(day * 0.25) : day;
   if (part !== lastPart) {                                               // es wird Nacht: alle machen sich auf den Heimweg
-    if (part === 'nacht' && lastPart) for (const w of walkers) if (!w.inside && !(w.goal && w.goal.kind === 'home')) setGoal(w, 'home');
+    if (part === 'nacht' && lastPart) for (const w of walkers) if (!w.pin && !w.inside && !(w.goal && w.goal.kind === 'home')) setGoal(w, 'home');
     lastPart = part;
   }
-  const out = walkers.filter(w => !(w.goal && w.goal.kind === 'home'));
+  const out = walkers.filter(w => !w.pin && !(w.goal && w.goal.kind === 'home'));
   if (out.length > wantW) setGoal(out[out.length - 1], 'home');           // zu viele draußen: einer geht heim
   while (walkers.length > wantW + 12) walkers.pop();
   if (walkers.length < wantW) {
@@ -796,6 +796,10 @@ function spawnCritter(id, x, y, now) {
     eisvogel: 10, gluehwurm: 14, eule: 16, reh: 16 }[id];
   const c = { critter: true, id, x: x + (r() - 0.5) * 0.6, y: y + (r() - 0.5) * 0.6, t0: now, until: now + (life + r() * life * 0.4) * 1000, seed: r() * 100,
     col: FALTER[Math.floor(r() * FALTER.length)], dir: r() * Math.PI * 2 };
+  if ((id === 'frosch' || id === 'eisvogel') && terrainAt(x, y) === 'water') {   // ans Ufer, nicht mitten aufs Wasser
+    const land = DIRS.find(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
+    if (land) { c.x = x + land[0] * 0.42; c.y = y + land[1] * 0.42; }
+  }
   critterPos(c, now);
   critters.push(c);
   return c;
@@ -895,11 +899,11 @@ function drawCritter(c, z, now) {
       break;
     }
     case 'fisch': case 'goldfisch': {
-      const ph = (t % 1.5) / 1.5, col = c.id === 'goldfisch' ? '#f2a03a' : '#8fb3c9';
+      const ph = (t % 1.5) / 1.5, col = c.id === 'goldfisch' ? '#f28a1e' : '#4f6f8f';             // dunkel genug fürs helle Wasser
       if (ph < 0.6) {
         const a = (ph / 0.6 - 0.5) * 1.6 * (Math.cos(c.dir) > 0 ? 1 : -1), dx = Math.cos(c.dir) > 0 ? 1 : -1;
         g.save(); g.translate(x, y); g.rotate(a); g.scale(dx, 1);
-        ellipse(0, 0, 2.6 * z, 1.2 * z, col); poly([[-2.2 * z, 0], [-3.8 * z, -1.3 * z], [-3.8 * z, 1.3 * z]], col); circle(1.4 * z, -0.3 * z, 0.3 * z, '#2a2420');
+        ellipse(0, 0, 2.6 * z, 1.2 * z, col); poly([[-2.2 * z, 0], [-3.8 * z, -1.3 * z], [-3.8 * z, 1.3 * z]], col); ellipse(0.2 * z, 0.45 * z, 1.8 * z, 0.5 * z, 'rgba(255,255,255,0.45)'); circle(1.4 * z, -0.3 * z, 0.35 * z, '#ffffff'); circle(1.5 * z, -0.3 * z, 0.2 * z, '#2a2420');
         g.restore();
       }
       if (ph > 0.55 && ph < 0.95) { const r = (ph - 0.55) * 14; g.strokeStyle = `rgba(255,255,255,${0.9 - (ph - 0.55) * 2})`; g.lineWidth = 0.8 * z; g.beginPath(); g.ellipse(p.x + Math.cos(c.dir) * 4 * z, p.y, r * z, r * 0.45 * z, 0, 0, Math.PI * 2); g.stroke(); }
@@ -953,4 +957,28 @@ function drawCritter(c, z, now) {
     }
   }
   g.globalAlpha = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Schaukasten (?welt=tiere): jede Tierart fest an ihrem Platz, mit Namensschild – zum Anschauen und Antippen.
+// Weggeflogene/abgetauchte Tiere kommen nach ein paar Sekunden wieder; Bewohner stehen still in einer Reihe.
+// ---------------------------------------------------------------------------
+let SHOWCASE = null;
+function showcaseTick(now) {
+  if (!SHOWCASE) return;
+  for (const s of SHOWCASE.nature) {
+    const c = critters.find(q => q.pin === s.id);
+    if (!c) { const n = spawnCritter(s.id, s.x, s.y, now); Object.assign(n, { until: Infinity, pin: s.id, label: `${NATURE_BY_ID[s.id].icon} ${NATURE_BY_ID[s.id].name}` }); }
+    else if (!c.flee && now - c.t0 > 14000) c.t0 = now;                    // Vögel, Fische: von vorn
+  }
+  for (const s of SHOWCASE.people) if (!walkers.some(w => w.pin === s.home)) {
+    const r = residentsOf(state.tiles.get(s.home))[0];
+    if (r) walkers.unshift({ fx: s.x, fy: s.y, tx: s.x, ty: s.y, px: s.x, py: s.y, t: 0, wait: 1e9, ...residentLook(s.home, 0), shirt: SHIRTS[s.i % SHIRTS.length],
+      speed: 1, goal: { kind: 'bummel' }, steps: 1e9, pin: s.home, label: `${animalOf(r).icon} ${r.name}` });
+  }
+}
+function drawShowcaseLabels(z) {
+  if (!SHOWCASE) return;
+  for (const c of critters) if (c.label && !c.flee) { const p = toScreen(c.px, c.py); pill(c.label, p.x, p.y - (c.h + 14) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
+  for (const w of walkers) if (w.label) { const [hx, hy] = walkerHead(w, z); pill(w.label, hx, hy - 9 * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
 }
