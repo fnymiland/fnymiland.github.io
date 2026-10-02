@@ -211,6 +211,7 @@ function stepMover(w, dt, ok, preferWay) {
 }
 function stepMovers(dt) {
   stepTrains(dt);
+  stepCritters(performance.now());
   for (const w of walkers) stepWalker(w, dt);
   for (const w of strollers) stepMover(w, dt, parkWalk, true);
   for (const c of cars) stepMover(c, dt, drivable, false);
@@ -725,4 +726,231 @@ function drawCargoMover(m, z, now) {
   const cols = ['#3e7fd0', '#f2b53a', '#58b36a', '#e8604f'];
   for (let i = 0; i < 4; i++) box(x - 12 * z + i * 6 * z, y - 1 * z + bob, 5 * z, 3 * z, 5 * z, cols[i], null, 0);
   box(x + 13 * z, y - 1 * z + bob, 5 * z, 3 * z, 10 * z, '#fffaf0', '#4a4a58', 2 * z);          // Brücke
+}
+
+// ---------------------------------------------------------------------------
+// Tiere in der Natur (Block 56): tauchen dort auf, wo es passt – Schmetterlinge bei Blumen (je schöner, desto mehr),
+// Vögel über Wald und Park, Fische und Frösche im Teich, Möwen und Robben an der Küste; seltene nur unter besonderen
+// Bedingungen. Nur Bild und Antippen (Album „Naturbeobachtungen“), höchstens CRITTER_MAX gleichzeitig.
+// ---------------------------------------------------------------------------
+const critters = [], CRITTER_MAX = 20;
+const FLOWERY = new Set(['blumen', 'blumentopf', 'riesenblume', 'rosenbogen', 'schmetterlingsgarten']);
+function flowersNear(x, y, r) {
+  let n = 0;
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    const k = (x + dx) + ',' + (y + dy), ds = state.decos.get(k), t = state.tiles.get(k);
+    if (t && FLOWERY.has(baseOf(t.b))) n += 2;
+    if (ds) for (const d of ds) if (d && FLOWERY.has(baseOf(d.b))) n++;
+  }
+  return n;
+}
+const treeAt = (x, y) => { const ter = terrainAt(x, y), ds = state.decos.get(x + ',' + y); return ter === 'forest' || ter === 'obst' || bAt(x, y) === 'vogelbaum' || !!(ds && ds.some(d => d && baseOf(d.b) === 'baum')); };
+function quietAt(x, y, r) {
+  for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const b = bAt(x + dx, y + dy); if (b && NOISY.has(b)) return false; }
+  return true;
+}
+// Welche Tiere hier vorkommen können, mit Chance je Versuch
+function natureAt(x, y, part) {
+  const out = [], ter = terrainAt(x, y), night = part === 'nacht';
+  if (ter === 'water') {
+    const shore = DIRS.some(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
+    if (isSea(x, y)) {
+      if (!landWithin(x, y, 3)) return out;
+      if (!night) out.push(['moewe', 0.06]);
+      if (shore && !night) out.push(['robbe', 0.035]);
+      out.push(['fisch', 0.04]);
+      return out;
+    }
+    if (!ownedTile(x, y)) return out;
+    const fl = flowersNear(x, y, 2);
+    if (fl && shore && !night) out.push(['eisvogel', 0.02]);
+    if (beautyAround(x, y, 2) >= 60) out.push(['goldfisch', 0.015]);
+    out.push(['fisch', 0.1 + 0.03 * fl]);
+    if (shore) out.push(['frosch', 0.06 + 0.02 * fl]);
+    return out;
+  }
+  if (!ownedTile(x, y)) return out;
+  const b = bAt(x, y);
+  if (b === 'schmetterlingsgarten' && !night) out.push(['schmetterling', 0.6]);
+  if (b === 'vogelbaum' && !night) out.push(['vogel', 0.6]);
+  if (b === 'seerosenteich') out.push(['frosch', 0.4]);
+  const fl = flowersNear(x, y, 1), park = terraLook(x, y) === 'park';
+  if (fl || park) {
+    const beauty = beautyAround(x, y, 1);
+    if (night) out.push(['gluehwurm', 0.05]);
+    else {
+      if (beauty >= 60 && fl) out.push(['regenbogenfalter', 0.015]);
+      out.push(['schmetterling', Math.min(0.5, 0.06 + 0.04 * fl + beauty / 500)]);
+    }
+  }
+  if (treeAt(x, y)) {
+    if (night && ter === 'forest') out.push(['eule', 0.025]);
+    if (!night && ter === 'forest' && DIRS.some(([dx, dy]) => terrainAt(x + dx, y + dy) === 'grass') && quietAt(x, y, 4)) out.push(['reh', 0.025]);
+    if (!night) out.push(['vogel', ter === 'forest' ? 0.08 : 0.05]);
+  }
+  return out;
+}
+const FALTER = ['#f28cb1', '#ffd23f', '#9ad0f5', '#ffffff', '#f2a03a', '#b07ad6'];
+function spawnCritter(id, x, y, now) {
+  const r = Math.random, life = { schmetterling: 9, regenbogenfalter: 12, vogel: 12, moewe: 14, fisch: 4.5, goldfisch: 4.5, frosch: 12, robbe: 20,
+    eisvogel: 10, gluehwurm: 14, eule: 16, reh: 16 }[id];
+  const c = { critter: true, id, x: x + (r() - 0.5) * 0.6, y: y + (r() - 0.5) * 0.6, t0: now, until: now + (life + r() * life * 0.4) * 1000, seed: r() * 100,
+    col: FALTER[Math.floor(r() * FALTER.length)], dir: r() * Math.PI * 2 };
+  critterPos(c, now);
+  critters.push(c);
+  return c;
+}
+function natureTick(now) {
+  for (let i = critters.length - 1; i >= 0; i--) if (now > critters[i].until) critters.splice(i, 1);
+  const part = dayPart();
+  for (let n = 0; n < 24; n++) {
+    const { x, y } = slotAt(Math.random() * W, 60 + Math.random() * Math.max(1, H - 120));
+    for (const [id, p] of natureAt(x, y, part)) {
+      if (Math.random() >= p) continue;
+      if (critters.length >= CRITTER_MAX && !NATURE_BY_ID[id].rare) continue;           // seltene dürfen immer
+      if (critters.some(c => c.id === id && Math.abs(c.x - x) + Math.abs(c.y - y) < 2)) continue;
+      spawnCritter(id, x, y, now);
+      break;
+    }
+  }
+}
+// Wo ist das Tier gerade (Feld-Koordinaten px/py, Höhe h in Bildpunkten bei Zoom 1)?
+function critterPos(c, now) {
+  const t = (now - c.t0) / 1000, s = c.seed, fl = c.flee ? (now - c.flee) / 1000 : 0;
+  let ox = 0, oy = 0, h = 0;
+  switch (c.id) {
+    case 'schmetterling': case 'regenbogenfalter':
+      ox = Math.sin(t * 0.7 + s) * 0.45 + Math.sin(t * 1.9 + s) * 0.12; oy = Math.cos(t * 0.6 + s * 2) * 0.45;
+      h = 9 + Math.sin(t * 2.3 + s) * 3 + fl * 40; break;
+    case 'vogel': case 'eule': {
+      const sit = c.id === 'eule' ? 999 : 3 + (s % 4), fly = c.flee ? fl : Math.max(0, t - sit);
+      ox = Math.cos(c.dir) * fly * 1.6; oy = Math.sin(c.dir) * fly * 1.6;
+      h = 20 + fly * 14; c.flying = fly > 0; break;
+    }
+    case 'moewe': ox = Math.cos(t * 0.5 + s) * 1.4 + (c.flee ? fl * 3 : 0); oy = Math.sin(t * 0.5 + s) * 1.4; h = 30 + Math.sin(t * 1.3) * 3 + fl * 30; break;
+    case 'fisch': case 'goldfisch': { const ph = (t % 1.5) / 1.5; ox = Math.cos(c.dir) * (ph - 0.5) * 0.5; oy = Math.sin(c.dir) * (ph - 0.5) * 0.5; h = ph < 0.6 ? Math.sin(ph / 0.6 * Math.PI) * 9 : -1; break; }
+    case 'frosch': { const hop = (t + s) % 3.5 < 0.4 ? Math.sin(((t + s) % 3.5) / 0.4 * Math.PI) * 4 : 0; h = hop + (c.flee ? Math.sin(Math.min(1, fl * 2) * Math.PI) * 6 : 0);
+      if (c.flee) { ox = Math.cos(c.dir) * fl * 1.2; oy = Math.sin(c.dir) * fl * 1.2; } break; }
+    case 'robbe': h = Math.sin(t * 1.5 + s) * 0.8 - (c.flee ? fl * 8 : 0); break;
+    case 'eisvogel': { const d = (t + s) % 5; h = d > 4 ? 10 - Math.sin((d - 4) * Math.PI) * 14 : 10; if (c.flee) { h += fl * 25; ox = Math.cos(c.dir) * fl * 2; oy = Math.sin(c.dir) * fl * 2; } break; }
+    case 'gluehwurm': ox = Math.sin(t * 0.3 + s) * 0.3; oy = Math.cos(t * 0.25 + s) * 0.3; h = 6 + Math.sin(t * 0.8) * 2; break;
+    case 'reh': if (c.flee) { ox = Math.cos(c.dir) * fl * 2.5; oy = Math.sin(c.dir) * fl * 2.5; } break;
+  }
+  c.px = c.x + ox; c.py = c.y + oy; c.h = h;
+}
+function stepCritters(now) { for (const c of critters) critterPos(c, now); }
+// Wegfliegen, abtauchen, weglaufen – und fürs Album eintragen
+function tapCritter(c) {
+  const now = performance.now(), n = NATURE_BY_ID[c.id], key = 'natur:' + c.id;
+  if (!c.flee) { c.flee = now; c.until = now + 1800; }
+  if (!state.album) state.album = new Set();
+  if (state.album.has(key)) { addFloat(c.px, c.py, `${n.icon} ${n.name}`, '#6b4f3a'); return false; }
+  state.album.add(key);
+  sfx('star');
+  toast(`🔍 Neu entdeckt: ${n.icon} ${n.name}! (${albumCount('natur')}/${NATURE.length} im Album)`);
+  save();
+  return true;
+}
+function critterAt(sx, sy) {
+  const z = cam.z;
+  let best = null, bd = 6 + 7 * z;
+  for (const c of critters) {
+    if (c.flee || c.h < 0) continue;
+    const p = toScreen(c.px, c.py), d = Math.hypot(sx - p.x, sy - (p.y - c.h * z));
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+function drawCritter(c, z, now) {
+  const p = toScreen(c.px, c.py), t = (now - c.t0) / 1000, x = p.x, y = p.y - c.h * z;
+  const fade = c.flee ? Math.max(0, 1 - (now - c.flee) / 1800) : Math.min(1, t * 2, (c.until - now) / 600);
+  if (fade <= 0) return;
+  g.globalAlpha = fade;
+  const shadow = r => ellipse(p.x, p.y, r * z, r * 0.45 * z, 'rgba(40,60,20,0.15)');
+  switch (c.id) {
+    case 'schmetterling': case 'regenbogenfalter': {
+      const f = Math.abs(Math.sin(t * 18 + c.seed)), w = (1 + f * 1.4) * z;
+      const cols = c.id === 'regenbogenfalter' ? ['#e8604f', '#ffd23f', '#5f8fe8'] : [c.col];
+      cols.forEach((col, i) => { const k = 1 - i * 0.28; ellipse(x - w * 0.9 * k, y - 0.4 * z, w * k, 1.8 * z * k, col); ellipse(x + w * 0.9 * k, y - 0.4 * z, w * k, 1.8 * z * k, col); });
+      ellipse(x, y, 0.4 * z, 1.3 * z, '#4a3328'); break;
+    }
+    case 'vogel': {
+      if (c.flying) {
+        const f = Math.sin(t * 14 + c.seed) * 2.2 * z;
+        g.strokeStyle = '#5a4636'; g.lineWidth = 1.1 * z; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(x - 3.2 * z, y - f); g.quadraticCurveTo(x - 1.4 * z, y - 1.6 * z, x, y); g.quadraticCurveTo(x + 1.4 * z, y - 1.6 * z, x + 3.2 * z, y - f); g.stroke();
+      } else {
+        const hop = Math.abs(Math.sin(t * 3 + c.seed)) > 0.95 ? 1 * z : 0;
+        ellipse(x, y - hop, 2.1 * z, 1.7 * z, '#a86b3c'); ellipse(x + 0.5 * z, y + 0.4 * z - hop, 1.2 * z, 1 * z, '#f2a03a');
+        circle(x + 1.6 * z, y - 1.6 * z - hop, 1.2 * z, '#a86b3c'); circle(x + 2 * z, y - 1.8 * z - hop, 0.3 * z, '#2a2420');
+        poly([[x + 2.6 * z, y - 1.7 * z - hop], [x + 3.6 * z, y - 1.4 * z - hop], [x + 2.6 * z, y - 1.2 * z - hop]], '#f2c14e');
+      }
+      break;
+    }
+    case 'moewe': {
+      const f = Math.sin(t * 6 + c.seed) * 2 * z;
+      g.lineCap = 'round';
+      g.strokeStyle = '#7a8088'; g.lineWidth = 2 * z; g.beginPath(); g.moveTo(x - 4.6 * z, y - f); g.quadraticCurveTo(x - 2 * z, y - 2.4 * z, x, y); g.quadraticCurveTo(x + 2 * z, y - 2.4 * z, x + 4.6 * z, y - f); g.stroke();
+      g.strokeStyle = '#ffffff'; g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(x - 3.8 * z, y - f * 0.8); g.quadraticCurveTo(x - 2 * z, y - 2.4 * z, x, y); g.quadraticCurveTo(x + 2 * z, y - 2.4 * z, x + 3.8 * z, y - f * 0.8); g.stroke();
+      break;
+    }
+    case 'fisch': case 'goldfisch': {
+      const ph = (t % 1.5) / 1.5, col = c.id === 'goldfisch' ? '#f2a03a' : '#8fb3c9';
+      if (ph < 0.6) {
+        const a = (ph / 0.6 - 0.5) * 1.6 * (Math.cos(c.dir) > 0 ? 1 : -1), dx = Math.cos(c.dir) > 0 ? 1 : -1;
+        g.save(); g.translate(x, y); g.rotate(a); g.scale(dx, 1);
+        ellipse(0, 0, 2.6 * z, 1.2 * z, col); poly([[-2.2 * z, 0], [-3.8 * z, -1.3 * z], [-3.8 * z, 1.3 * z]], col); circle(1.4 * z, -0.3 * z, 0.3 * z, '#2a2420');
+        g.restore();
+      }
+      if (ph > 0.55 && ph < 0.95) { const r = (ph - 0.55) * 14; g.strokeStyle = `rgba(255,255,255,${0.9 - (ph - 0.55) * 2})`; g.lineWidth = 0.8 * z; g.beginPath(); g.ellipse(p.x + Math.cos(c.dir) * 4 * z, p.y, r * z, r * 0.45 * z, 0, 0, Math.PI * 2); g.stroke(); }
+      break;
+    }
+    case 'frosch': {
+      shadow(2.4);
+      ellipse(x, y - 1.2 * z, 2.6 * z, 1.8 * z, '#5aa84f'); ellipse(x, y - 0.8 * z, 1.8 * z, 1 * z, '#9ed46a');
+      for (const s of [-1, 1]) { circle(x + s * 1.2 * z, y - 2.8 * z, 0.9 * z, '#5aa84f'); circle(x + s * 1.2 * z, y - 2.9 * z, 0.5 * z, '#ffffff'); circle(x + s * 1.2 * z, y - 2.9 * z, 0.25 * z, '#2a2420'); }
+      break;
+    }
+    case 'robbe': {
+      ellipse(x, y + 0.6 * z, 4.6 * z, 1.6 * z, 'rgba(255,255,255,0.35)');
+      ellipse(x, y, 4 * z, 1.8 * z, '#8a8f98'); circle(x + 3 * z, y - 2 * z, 1.9 * z, '#9aa0aa');
+      circle(x + 3.6 * z, y - 2.4 * z, 0.35 * z, '#2a2420'); circle(x + 2.4 * z, y - 2.4 * z, 0.35 * z, '#2a2420'); circle(x + 3.1 * z, y - 1.4 * z, 0.4 * z, '#4a4a50');
+      break;
+    }
+    case 'eisvogel': {
+      ellipse(x, y, 1.8 * z, 1.5 * z, '#2f8fd8'); ellipse(x + 0.4 * z, y + 0.5 * z, 1.2 * z, 0.9 * z, '#f2a03a');
+      circle(x + 1.4 * z, y - 1.5 * z, 1.1 * z, '#2f8fd8'); circle(x + 1.7 * z, y - 1.7 * z, 0.3 * z, '#2a2420');
+      poly([[x + 2.3 * z, y - 1.8 * z], [x + 4.4 * z, y - 1.4 * z], [x + 2.3 * z, y - 1.1 * z]], '#2a2420');
+      poly([[x - 1.5 * z, y + 0.2 * z], [x - 3.2 * z, y + 1.4 * z], [x - 1.2 * z, y + 1.1 * z]], '#1f6fb0');
+      break;
+    }
+    case 'gluehwurm':
+      for (let i = 0; i < 6; i++) {
+        const a = t * (0.6 + i * 0.13) + i * 2.1 + c.seed, gx = x + Math.cos(a) * (2 + i % 3) * 2.2 * z, gy = y + Math.sin(a * 1.3) * 3 * z, on = 0.5 + 0.5 * Math.sin(t * 3 + i * 1.7);
+        circle(gx, gy, 2.6 * z, `rgba(230,255,120,${0.18 * on})`); circle(gx, gy, 0.8 * z, `rgba(246,255,170,${0.5 + 0.5 * on})`);
+      }
+      break;
+    case 'eule': {
+      if (c.flee) { const f = Math.sin(t * 10) * 2.6 * z; g.strokeStyle = '#7a5a3c'; g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 4 * z, y - f); g.quadraticCurveTo(x, y - 2 * z, x + 4 * z, y - f); g.stroke(); break; }
+      ellipse(x, y, 2.8 * z, 3.4 * z, '#8a6a4a'); ellipse(x, y + 0.8 * z, 1.8 * z, 2.2 * z, '#c9a27e');
+      poly([[x - 2.4 * z, y - 2.4 * z], [x - 1.8 * z, y - 4.6 * z], [x - 0.8 * z, y - 2.8 * z]], '#8a6a4a'); poly([[x + 2.4 * z, y - 2.4 * z], [x + 1.8 * z, y - 4.6 * z], [x + 0.8 * z, y - 2.8 * z]], '#8a6a4a');
+      const blink = (t + c.seed) % 4 < 0.15;
+      for (const s of [-1, 1]) { circle(x + s * 1.1 * z, y - 1.5 * z, 1 * z, '#fff6d8'); if (!blink) circle(x + s * 1.1 * z, y - 1.5 * z, 0.5 * z, '#2a2420'); }
+      poly([[x - 0.4 * z, y - 0.8 * z], [x + 0.4 * z, y - 0.8 * z], [x, y + 0.1 * z]], '#e8a03a');
+      break;
+    }
+    case 'reh': {
+      shadow(5);
+      const graze = !c.flee && Math.sin(t * 0.8 + c.seed) > 0.3, dx = c.flee ? (Math.cos(c.dir) - Math.sin(c.dir) > 0 ? 1 : -1) : 1, leg = c.flee ? Math.sin(t * 16) * 1.2 * z : 0;
+      g.strokeStyle = '#8a5a34'; g.lineWidth = 0.9 * z;
+      g.beginPath(); for (const lx of [-2.6, -1.6, 1.6, 2.6]) { g.moveTo(x + lx * dx * z, y - 3 * z); g.lineTo(x + lx * dx * z + (lx > 0 ? leg : -leg), y); } g.stroke();
+      ellipse(x, y - 4 * z, 3.6 * z, 1.8 * z, '#b5794a'); circle(x - 3.4 * dx * z, y - 4.4 * z, 0.7 * z, '#ffffff');
+      const hx = x + 3.4 * dx * z, hy = graze ? y - 2.4 * z : y - 7.2 * z;
+      g.strokeStyle = '#b5794a'; g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(x + 2.4 * dx * z, y - 4.6 * z); g.lineTo(hx, hy); g.stroke();
+      ellipse(hx + 0.6 * dx * z, hy, 1.5 * z, 1.1 * z, '#b5794a'); circle(hx + 1.7 * dx * z, hy + 0.2 * z, 0.35 * z, '#2a2420');
+      ellipse(hx - 0.5 * dx * z, hy - 1.2 * z, 0.5 * z, 1 * z, '#a86b3c'); circle(hx + 0.7 * dx * z, hy - 0.3 * z, 0.25 * z, '#2a2420');
+      break;
+    }
+  }
+  g.globalAlpha = 1;
 }

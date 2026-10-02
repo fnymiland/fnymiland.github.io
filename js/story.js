@@ -541,6 +541,7 @@ const ALBUM = [
   { id: 'farben', icon: '🎨', name: 'Farben', reward: 'weg:regenbogen' },
   { id: 'wege', icon: '🛤️', name: 'Wegstile', reward: 'weg:goldpflaster' },
   { id: 'bewohner', icon: '🐾', name: 'Bewohner', reward: 'karussell' },
+  { id: 'natur', icon: '🔍', name: 'Naturbeobachtungen', reward: 'seerosenteich', tiers: ['schmetterlingsgarten', 'vogelbaum', 'seerosenteich'] },
 ];
 const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder || ITEMS[id].garden);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
@@ -551,10 +552,13 @@ function albumKeys(p) {
     case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i));
     case 'wege': return STYLES.weg.filter(st => !st.album).map(st => 'weg:' + st.id);
     case 'bewohner': return ANIMALS.map(a => 'tier:' + a.id);
+    case 'natur': return NATURE.map(n => 'natur:' + n.id);
     default: return [];
   }
 }
-const albumDone = id => { const p = ALBUM.find(q => q.id === id); return !!p && !!state.album && albumKeys(p).every(k => state.album.has(k)); };
+// n: nur so viele der Seite (Stufen-Belohnungen, Block 56); sonst die ganze Seite
+const albumCount = id => { const p = ALBUM.find(q => q.id === id); return p && state.album ? albumKeys(p).filter(k => state.album.has(k)).length : 0; };
+const albumDone = (id, n) => { const p = ALBUM.find(q => q.id === id); return !!p && !!state.album && albumCount(id) >= (n || albumKeys(p).length); };
 const rewardName = r => r.startsWith('weg:') ? styleDef('weg', r.slice(4)).name : ITEMS[r].name;
 function collectAlbum() {
   if (!state.album) state.album = new Set();

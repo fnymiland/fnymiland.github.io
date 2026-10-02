@@ -1219,6 +1219,64 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       circle(px, py, 1.4 * z, C('#f2c14e'));
       break;
     }
+    case 'schmetterlingsgarten': {           // Blumenhügel, darüber tanzen immer Falter (Block 56)
+      ellipse(cx, cy + 1 * z, hw * 0.8, hh * 0.8, 'rgba(40,60,20,0.15)');
+      ellipse(cx, cy - 1 * z, hw * 0.72, hh * 0.72, C('#6fae4f'));
+      ellipse(cx, cy - 3 * z, hw * 0.55, hh * 0.5, C('#82c25c'));
+      ellipse(cx, cy - 5 * z, hw * 0.32, hh * 0.3, C('#94d06a'));
+      const cols = ['#f28cb1', '#ffd23f', '#ffffff', '#b07ad6', '#e8604f', '#9ad0f5'];
+      for (let i = 0; i < 26; i++) {
+        const a = hash(x, y, 300 + i) * Math.PI * 2, r = Math.sqrt(hash(x, y, 330 + i)), fx = cx + Math.cos(a) * r * hw * 0.62, fy = cy - 2 * z + Math.sin(a) * r * hh * 0.6 - (1 - r) * 3 * z;
+        g.strokeStyle = C('#4f8f3c'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 2 * z); g.stroke();
+        circle(fx, fy - 2.2 * z, 1.1 * z, C(cols[i % cols.length])); circle(fx, fy - 2.2 * z, 0.4 * z, C('#f2c14e'));
+      }
+      for (let i = 0; i < 3; i++) {                                         // die eigenen Falter
+        const t = now / 1000 + i * 2.1, bx = cx + Math.sin(t * 0.8 + i) * hw * 0.4, by = cy - 12 * z - Math.cos(t * 0.7 + i * 2) * 4 * z;
+        const f = Math.abs(Math.sin(t * 17 + i)), w = (1 + f * 1.3) * z, col = cols[(i * 2) % cols.length];
+        ellipse(bx - w * 0.9, by, w, 1.7 * z, col); ellipse(bx + w * 0.9, by, w, 1.7 * z, col); ellipse(bx, by + 0.3 * z, 0.4 * z, 1.2 * z, '#4a3328');
+      }
+      break;
+    }
+    case 'vogelbaum': {                      // alter Baum mit Vogelhäuschen, Vögel fliegen ein und aus (Block 56)
+      ellipse(cx, cy + 1 * z, 14 * z, 6 * z, 'rgba(40,60,20,0.18)');
+      poly([[cx - 2.4 * z, cy], [cx + 2.4 * z, cy], [cx + 1.6 * z, cy - 20 * z], [cx - 1.6 * z, cy - 20 * z]], C('#8a5a34'));
+      poly([[cx - 2.4 * z, cy], [cx - 4 * z, cy + 1 * z], [cx - 1 * z, cy - 2 * z]], C('#7a4e2c')); poly([[cx + 2.4 * z, cy], [cx + 4 * z, cy + 1 * z], [cx + 1 * z, cy - 2 * z]], C('#7a4e2c'));
+      for (const [ox, oy, r, col] of [[-7, -24, 7, '#4f9a45'], [7, -25, 7.5, '#4f9a45'], [0, -31, 9, '#5aa84f'], [-4, -27, 6, '#6fbf5f'], [5, -30, 5.5, '#6fbf5f']]) circle(cx + ox * z, cy + oy * z, r * z, C(col));
+      const house = (hx, hy, col) => {                                      // Häuschen mit Dach und Flugloch
+        poly([[hx - 2.4 * z, hy], [hx + 2.4 * z, hy], [hx + 2.4 * z, hy - 3.6 * z], [hx - 2.4 * z, hy - 3.6 * z]], C(col));
+        poly([[hx - 3.2 * z, hy - 3.4 * z], [hx, hy - 6.2 * z], [hx + 3.2 * z, hy - 3.4 * z]], C('#c0533f'));
+        circle(hx, hy - 1.9 * z, 0.9 * z, C('#3d2c22'));
+      };
+      house(cx - 2.6 * z, cy - 12 * z, '#f3e1c4'); house(cx + 4.4 * z, cy - 19 * z, '#bfe3ff');
+      for (let i = 0; i < 2; i++) {                                         // Vögel kreisen um die Krone
+        const t = now / 1000 + i * 3, a = t * 0.9 + i * Math.PI, bx = cx + Math.cos(a) * 12 * z, by = cy - 30 * z + Math.sin(a) * 4 * z, f = Math.sin(t * 13 + i) * 1.8 * z;
+        g.strokeStyle = '#5a4636'; g.lineWidth = 0.9 * z; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(bx - 2.6 * z, by - f); g.quadraticCurveTo(bx - 1.2 * z, by - 1.3 * z, bx, by); g.quadraticCurveTo(bx + 1.2 * z, by - 1.3 * z, bx + 2.6 * z, by - f); g.stroke();
+      }
+      break;
+    }
+    case 'seerosenteich': {                  // 2×2: Steinrand, Wasser, Seerosen, Schilf, eine Libelle (Block 56)
+      const rx = hw * 1.55, ry = hh * 1.55;
+      ellipse(cx, cy + 1.5 * z, rx * 1.04, ry * 1.04, 'rgba(40,60,20,0.15)');
+      ellipse(cx, cy, rx, ry, C('#bdb6a8'));
+      ellipse(cx, cy + 0.6 * z, rx * 0.88, ry * 0.86, C('#5fa9cc'));
+      ellipse(cx, cy, rx * 0.86, ry * 0.84, C('#7cc4e0'));
+      for (let i = 0; i < 5; i++) { const a = now / 2400 + i * 1.3; ellipse(cx + Math.cos(a) * rx * 0.4, cy + Math.sin(a * 1.2) * ry * 0.35, 4 * z, 1.2 * z, 'rgba(255,255,255,0.22)'); }
+      for (let i = 0; i < 7; i++) {
+        const a = hash(x, y, 400 + i) * Math.PI * 2, r = 0.25 + 0.5 * hash(x, y, 420 + i), px = cx + Math.cos(a) * rx * r * 0.85, py = cy + Math.sin(a) * ry * r * 0.85;
+        g.fillStyle = C('#5aa84f'); g.beginPath(); g.ellipse(px, py, 3.4 * z, 1.7 * z, 0, 0.35, Math.PI * 2 - 0.1); g.lineTo(px, py); g.fill();
+        if (i % 2 === 0) { circle(px + 0.4 * z, py - 0.9 * z, 1.4 * z, C('#f7c6d8')); circle(px + 0.4 * z, py - 1.1 * z, 0.6 * z, C('#f2c14e')); }
+      }
+      for (let i = 0; i < 6; i++) {                                         // Schilf an der linken Ecke
+        const sx = cx - rx * 0.8 + i * 1.4 * z, sy = cy - ry * 0.05 + (i % 2) * z, sway = Math.sin(now / 900 + i) * 0.8 * z;
+        g.strokeStyle = C('#6f9a3e'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(sx, sy); g.lineTo(sx + sway, sy - (7 + (i % 3) * 2) * z); g.stroke();
+        if (i % 2) ellipse(sx + sway, sy - (7 + (i % 3) * 2) * z, 0.7 * z, 1.6 * z, C('#8a5a34'));
+      }
+      const t = now / 1000, lx = cx + Math.sin(t * 0.6) * rx * 0.5, ly = cy - 10 * z + Math.sin(t * 1.7) * 2 * z, f = Math.abs(Math.sin(t * 25));
+      g.strokeStyle = '#2f8fd8'; g.lineWidth = 0.9 * z; g.beginPath(); g.moveTo(lx - 2.4 * z, ly); g.lineTo(lx + 2.4 * z, ly); g.stroke();
+      ellipse(lx - 0.6 * z, ly - 1 * z, 1.6 * z, (0.4 + f * 0.6) * z, 'rgba(220,240,255,0.8)'); ellipse(lx + 0.6 * z, ly - 1 * z, 1.6 * z, (0.4 + f * 0.6) * z, 'rgba(220,240,255,0.8)');
+      break;
+    }
     case 'karussell': {                      // runder Boden, Mittelstange, gestreiftes Zeltdach, Pferdchen drehen sich
       const rx = hw * 0.62, ry = hh * 0.62, H = 16 * z, rot = now / 1500;
       ellipse(cx, cy + 1 * z, rx + 2 * z, ry + 1 * z, 'rgba(40,40,40,0.15)');

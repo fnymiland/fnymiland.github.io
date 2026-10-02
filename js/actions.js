@@ -393,6 +393,8 @@ function tap(sx, sy, isTouch) {
   if (!ownedTile(x, y) && !(seaTool(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
+    const ct = critterAt(sx, sy);                             // Tier in der Natur angetippt (Block 56)
+    if (ct) { tapCritter(ct); return; }
     const wk = walkerAt(sx, sy);                              // Bewohner angetippt (Block 55)
     if (wk) { openWalkerInfo(wk); return; }
     if (ds && ds[slot]) openDecoInfo(x, y, slot);

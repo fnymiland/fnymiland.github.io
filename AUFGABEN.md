@@ -528,3 +528,14 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       bleibt ihr Fenster offen („Ist nach Hause gegangen“, Knopf zum Haus); Antipp-Radius wächst mit dem Zoom (weit
       herausgezoomt kein Fehlgriff aufs Haus daneben). Gemessen mit 2.300 Häusern: Planung ≤ 0,6 ms, Wegsuche ≤ 0,1 ms.
       Handy (375 px): Rathaus-Reiter passt, Arten aufklappbar. Nachts ¼ der Figuren draußen.
+
+## Block 56 – Tiere in der Natur (02.10.)
+
+- [x] Zwölf Tiere (`NATURE`), sechs häufige zeigen, wo es schön ist (Schmetterling bei Blumen/Park je nach Schönheit,
+      Singvogel bei Bäumen, Fisch und Frosch im Teich, Möwe und Robbe an der eigenen Küste), sechs seltene mit Bedingung
+      (Eisvogel: Blumen am Ufer; Glühwürmchen/Eule nachts; Reh am ruhigen Waldrand; Goldfisch/Regenbogenfalter nur sehr
+      schön). `natureAt` sagt, was wo vorkommt; `natureTick` probiert 24 zufällige Stellen im Bild, höchstens 20 Tiere
+      (seltene dürfen dazu). Bewegung `critterPos`, Bild `drawCritter` (in der Feld-Reihenfolge; Glühwürmchen über der Nacht).
+- [x] Antippen (`critterAt`, `tapCritter`): Tier flieht, neu entdeckt → Album-Seite „Naturbeobachtungen“ (`natur:<id>`),
+      Fehlendes mit Hinweis. Stufen-Belohnungen über `albumN` (`albumDone(id, n)`): 4 Schmetterlingsgarten, 8 Vogelhäuschen-
+      Baum, 12 Seerosenteich (2×2) – mit eigenen Tieren im Bild.

@@ -128,6 +128,10 @@ const ITEMS = {
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
   karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
+  // Naturbeobachtungen (Block 56): drei Stufen der Album-Seite (albumN = so viele Tiere entdeckt)
+  schmetterlingsgarten: { cat: 'deko', name: 'Schmetterlingsgarten', cost: 0, needs: 'grass', beauty: 20, album: 'natur', albumN: 4, desc: 'Ein Blumenhügel, über dem immer bunte Falter tanzen.' },
+  vogelbaum:  { cat: 'deko', name: 'Vogelhäuschen-Baum', cost: 0, needs: 'grass', beauty: 25, album: 'natur', albumN: 8, desc: 'Ein alter Baum mit Vogelhäuschen – Vögel fliegen ein und aus.' },
+  seerosenteich: { cat: 'deko', name: 'Seerosenteich', size: [2, 2], cost: 0, needs: 'grass', beauty: 45, album: 'natur', albumN: 12, desc: 'Ein kleiner Teich mit Seerosen, Fröschen und Libellen.' },
   // Steg: von Anfang an; hier startet das Boot, das neue Inseln entdeckt (Expedition, story.js)
   bootssteg: { cat: 'netz', name: 'Steg', cost: 60, needs: 'meer', beauty: 2,
              desc: 'Ein Holzsteg ins Meer, direkt an der Küste. Von hier schickst du ein Boot hinaus, um neue Inseln zu entdecken.' },
@@ -456,6 +460,24 @@ const ANIMALS = [
   { id: 'ente', icon: '🦆', family: 'Ente', isle: 'quelle', fur: '#fffdf4', names: ['Quentin', 'Erna', 'Paula', 'Kuno', 'Wilma', 'Gustav', 'Trude', 'Nils'] },
 ];
 
+// Tiere in der Natur (Block 56): zeigen, wo es schön ist, und lassen sich antippen und sammeln (Album „Naturbeobachtungen“).
+// rare: selten, mit besonderer Bedingung. hint: steht im Album, solange es noch fehlt.
+const NATURE = [
+  { id: 'schmetterling', icon: '🦋', name: 'Schmetterling', hint: 'an Blumenbeeten und im Park' },
+  { id: 'vogel', icon: '🐦', name: 'Singvogel', hint: 'im Wald und in großen Parks' },
+  { id: 'fisch', icon: '🐟', name: 'Fisch', hint: 'in Teichen, Seen und im Meer' },
+  { id: 'frosch', icon: '🐸', name: 'Frosch', hint: 'am Ufer von Teichen und Seen' },
+  { id: 'moewe', icon: '🕊️', name: 'Möwe', hint: 'an der Küste, bei Stegen und Häfen' },
+  { id: 'robbe', icon: '🦭', name: 'Robbe', hint: 'im Meer direkt an der Küste' },
+  { id: 'eisvogel', icon: '🪶', name: 'Eisvogel', rare: true, hint: 'am Wasser, wenn Blumen am Ufer blühen' },
+  { id: 'gluehwurm', icon: '✨', name: 'Glühwürmchen', rare: true, hint: 'nachts im Park oder bei Blumen' },
+  { id: 'eule', icon: '🦉', name: 'Eule', rare: true, hint: 'nachts im Wald' },
+  { id: 'reh', icon: '🦌', name: 'Reh', rare: true, hint: 'am Waldrand, wo es ruhig ist' },
+  { id: 'goldfisch', icon: '🐠', name: 'Goldfisch', rare: true, hint: 'in Teichen an sehr schönen Orten' },
+  { id: 'regenbogenfalter', icon: '🌈', name: 'Regenbogenfalter', rare: true, hint: 'bei Blumen, wo es besonders schön ist' },
+];
+const NATURE_BY_ID = Object.fromEntries(NATURE.map(n => [n.id, n]));
+
 // Baumenü (Block 40, gemeinsam entschieden): fünf Bereiche nach dem, was man gerade tun will –
 // 🏘️ Stadt (was eine Stadt zwingend braucht: Wohnen, Einrichtungen, Verkehr) · 🏭 Herstellen (produziert) · 🛍️ Einkaufen
 // (verdient an Kundschaft) · 🎡 Freizeit (Kultur, Wunder) · 🌸 Gestalten (Deko, Wege, Gelände – formt die Welt).
@@ -492,7 +514,7 @@ const MENU = [
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
-    { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
+    { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
 // Suche (Block 38): Name ohne Groß/Klein und Umlaute („back“ findet die Bäckerei)
@@ -595,6 +617,9 @@ const ITEM_TIPS = {
   rosenbogen: 'Alle Deko einmal aufgestellt! Der Rosenbogen passt über jeden Weg – kostet nichts.',
   uhrturm: 'Alle Hausformen erreicht! Der Uhrturm gehört auf den Marktplatz – kostet nichts.',
   karussell: 'Alle Bewohner-Arten wohnen bei dir! Das Karussell dreht sich – kostet nichts.',
+  schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
+  vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',
+  seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Aufziehen = Fläche.',

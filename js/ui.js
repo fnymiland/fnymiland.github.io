@@ -312,7 +312,7 @@ function unlockGo(def) {
   if (def.lanterns && lanternCount() < def.lanterns) return null;
   if (def.tech && !hasTech(def.tech)) return { label: '💡 Zur Forschung', go: () => showUnlock('wissen', `[data-techid="${def.tech}"]`) };
   if ((def.rank && starCount() < def.rank) || (def.festival && !state.festival) || (def.garden && !wonderOn(def.garden))) return null;
-  if (def.album && !albumDone(def.album)) return { label: '📒 Zum Album', go: () => { closePanel(); openAlbum(); spotlight(`[data-apage="${def.album}"]`); } };
+  if (def.album && !albumDone(def.album, def.albumN)) return { label: '📒 Zum Album', go: () => { closePanel(); openAlbum(); spotlight(`[data-apage="${def.album}"]`); } };
   if (def.invention && !hasInvention(def.invention)) return { label: '💡 Zu den Erfindungen', go: () => showUnlock('erfindung', `[data-invent="${def.invention}"]`) };
   return null;
 }
@@ -581,6 +581,10 @@ function openAlbum() {
     else if (kind === 'hs') { name = HOUSE_STAGES[+id - 1].name; pic = `<span data-hthumb="${id}"></span>`; }
     else if (kind === 'wall' || kind === 'roof') { name = kind === 'wall' ? 'Wand' : 'Dach'; pic = `<i class="al-sw" style="background:${(kind === 'wall' ? WALLS : ROOFS)[+id]}"></i>`; }
     else if (kind === 'weg') { const st = styleDef('weg', id); name = st.name; pic = `<i class="al-sw" style="background:${st.col}"></i>`; }
+    else if (kind === 'natur') {                                   // Naturbeobachtungen: Fehlendes mit Hinweis, wo man sucht
+      const n = NATURE_BY_ID[id], has = state.album.has(k);
+      return `<div class="al-e${has ? '' : ' miss'}" title="${has ? n.name : n.hint}"><span class="emoji">${has ? n.icon : '❔'}</span><small>${has ? n.name : n.hint}</small></div>`;
+    }
     else { const a = ANIMALS.find(q => q.id === id); name = a.family; pic = `<span class="emoji">${a.icon}</span>`; }
     return `<div class="al-e${state.album.has(k) ? '' : ' miss'}" title="${name}">${pic}<small>${name}</small></div>`;
   };
@@ -590,7 +594,9 @@ function openAlbum() {
       const ks = albumKeys(p), n = ks.filter(k => state.album.has(k)).length, done = n === ks.length;
       return `<div class="album-page${done ? ' done' : ''}" data-apage="${p.id}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
         <div class="al-grid">${ks.map(entry).join('')}</div>
-        <p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ' – freigeschaltet!' : ''}</p></div>`;
+        ${p.tiers ? `<p class="al-reward">🎁 ${p.tiers.map(b => `${n >= ITEMS[b].albumN ? '✓' : ITEMS[b].albumN + ':'} <b>${ITEMS[b].name}</b>`).join(' · ')}</p>`
+          : `<p class="al-reward">${done ? '✓' : '🎁'} Belohnung: <b>${rewardName(p.reward)}</b>${done ? ' – freigeschaltet!' : ''}</p>`}
+        ${p.id === 'natur' ? '<p class="muted">Tipp Tiere an, die du auf deiner Insel entdeckst.</p>' : ''}</div>`;
     }).join('')}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   $('modal-card').classList.add('album');
@@ -1819,6 +1825,7 @@ function helpBody(tab) {
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',
   '🐾 <b>Bewohner:</b> Tipp eine Figur an – sie erzählt, wer sie ist, wo sie wohnt und wohin sie gerade geht. Morgens geht es zur Arbeit, mittags ins Café, abends in den Park. Mit jeder Insel zieht eine neue Art ein: Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. Alle Familien stehen im Rathaus unter „Bewohner“.',
+  '🦋 <b>Tiere in der Natur</b> zeigen dir, wo es schön ist: Schmetterlinge bei Blumen, Vögel im Wald, Fische und Frösche im Teich, Möwen und Robben an der Küste. Antippen trägt sie ins Album „Naturbeobachtungen“ ein – dort steht auch, wo man die fehlenden findet. Für 4, 8 und alle 12 gibt es besondere Deko.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
     '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
     '✋ <b>Verschieben</b> kostet nichts. 🧹 <b>Abreißen:</b> Deko und Wege gibt es voll zurück, Gebäude zur Hälfte. In jedem Fenster gibt es 🗑️.',
@@ -1868,6 +1875,7 @@ const NEWS = { id: '2026-10-02-bewohner', items: [
   '🌅 <b>Ein Tag auf der Insel:</b> Morgens gehen die Bewohner von zu Hause zur Arbeit oder in die Schule, mittags ins Café, zur Bäckerei oder auf den Markt, abends in den Park – und nachts schlafen die meisten.',
   '👆 <b>Tipp eine Figur an:</b> Du siehst, wer das ist, wo sie wohnt und wohin sie gerade geht. Ab und zu erzählt dir auch jemand in einer Sprechblase, was er sich wünscht.',
   '🏛️ <b>Rathaus → Bewohner:</b> Alle Familien deiner Insel nach Tierart, mit Herzen – antippen bringt dich zum Haus.',
+  '🦋 <b>Tiere in der Natur:</b> Schmetterlinge an deinen Blumen, Vögel im Wald, Fische im Teich, Möwen und Robben an der Küste – je schöner ein Ort, desto mehr. Tipp sie an: Sie kommen ins Album „Naturbeobachtungen“. Seltene wie Eisvogel, Eule, Reh oder Goldfisch zeigen sich nur an besonderen Orten. Für 4, 8 und alle 12 gibt es Schmetterlingsgarten, Vogelhäuschen-Baum und Seerosenteich.',
   '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt es – schlechter als vorher wird nichts.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';

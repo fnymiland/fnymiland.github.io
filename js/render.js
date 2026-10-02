@@ -646,7 +646,7 @@ function render(now) {
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
-  for (const m of walkers.concat(strollers, cars, cars4, ships)) {
+  for (const m of walkers.concat(strollers, cars, cars4, ships, critters.filter(c => c.id !== 'gluehwurm'))) {   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = COVER.get(k) || k;     // Zug in der Halle: ganz hinten zeichnen, Dächer und Bahnsteige kommen darüber
     if (!byTile.has(k)) byTile.set(k, []);
@@ -761,7 +761,7 @@ function render(now) {
         // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
         const ar = m.fur && archAt(m.px, m.py);
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-        if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
+        if (m.critter) drawCritter(m, z, now); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
         else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
       }
     }
@@ -778,6 +778,7 @@ function render(now) {
   if (night > 0) drawNight();
 
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
+  for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht
 
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const s of fallenStars) drawFallenStar(s, z, now);

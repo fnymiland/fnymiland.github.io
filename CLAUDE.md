@@ -352,6 +352,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+68. **Tiere in der Natur** (Block 56): nur Bild und Antippen, keine Spielwerte. Wo was vorkommt, steht allein in `natureAt`
+    (Chance je Versuch); neue Art: `NATURE` (+ `hint`) und `critterPos`/`drawCritter`. Gezählt wird im Album (`natur:<id>`).
+    Album-Belohnung in Stufen: `ITEMS[].albumN` + `ALBUM[].tiers`; `albumDone(id, n)`, `albumCount(id)`.
 67. **Bewohner** (Block 55): Arten in `ANIMALS` (Reihenfolge = `w.kind` der Figuren, nur hinten anfügen), `isle` = Insel, mit der
     sie einziehen (`speciesOpen`). Bewohner eines Hauses über `residentsOf(t)` (Reihenhaus: `t.more`), nie direkt `t.animal`.
     Figuren haben `home`/`who` (`residentLook`) und ein Ziel (`setGoal`: arbeit, schule, essen, laden, markt, park, home,

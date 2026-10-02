@@ -505,7 +505,7 @@ function unlockOk(def, key) {
   if (def.rank && starCount() < def.rank) return false;                // Pokale: genug Erfolgs-Sterne
   if (def.festival && !state.festival) return false;                    // Schloss: nach dem Laternenfest
   if (def.garden && !wonderOn(def.garden)) return false;               // exotische Deko: erst mit dem Botanischen Garten
-  if (def.album && !albumDone(def.album)) return false;                // Album-Belohnung: volle Seite
+  if (def.album && !albumDone(def.album, def.albumN)) return false;    // Album-Belohnung: volle Seite (bzw. albumN Einträge)
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return false;   // Erfindung (für Ideen)
   return true;
 }
@@ -522,7 +522,7 @@ function unlockText(def, short) {
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
   if (def.festival && !state.festival) return '🎆 nach dem Laternenfest';
   if (def.garden && !wonderOn(def.garden)) return '🌿 Botanischer Garten';
-  if (def.album && !albumDone(def.album)) return `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
+  if (def.album && !albumDone(def.album, def.albumN)) return def.albumN ? `📒 ${def.albumN} Tiere in der Natur entdeckt (${albumCount(def.album)}/${def.albumN})` : `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
   return '';
 }
@@ -606,7 +606,7 @@ function slotAt(sx, sy) {
   for (let i = 0; i < SLOTS; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
   return { x, y, slot };
 }
-const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'lm', ...Object.keys(STANDS),
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'lm', ...Object.keys(STANDS),
   ...Object.keys(ITEMS).filter(id => ITEMS[id].variantOf && !ITEMS[id].small && !ITEMS[id].size)]);   // Größe „Mittel“ kleiner Deko belegt das Feld
 // Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
 // Kante 'a' i,j läuft von (i, j) nach (i + 1, j) – zwischen Feld (i, j − 1) und (i, j); 'b' i,j von (i, j) nach (i, j + 1) –
