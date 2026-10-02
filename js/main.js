@@ -151,7 +151,7 @@ function frame(now) {
   produce(dt);
   peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); bubbleTick(now); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

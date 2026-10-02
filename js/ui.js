@@ -775,6 +775,25 @@ function siteStatus(si) {
   if (si.f >= SITE_MAX - 0.004) return `<div class="ok">${si.gTxt}: +${pctTxt(si.f)} – bester Platz</div>`;
   return `<div${si.f > 0.004 ? ' class="ok"' : ''}>${si.f > 0.004 ? `${si.gTxt}: +${pctTxt(si.f)}` : '📍 Normaler Platz'}${less}<br><small class="muted">${si.tip} (bis +${pctTxt(SITE_MAX)}).</small></div>`;
 }
+// Bewohner angetippt (Block 55): wer, wo zu Hause, was gerade los ist; eine Sprechblase; Knopf zum Haus
+function openWalkerInfo(w) {
+  const t = state.tiles.get(w.home);
+  if (!t) { closePanel(); return; }
+  const r = residentsOf(t)[w.who] || residentsOf(t)[0], a = animalOf(r), [hx, hy] = keyXY(w.home), s = T.st.get(w.home);
+  const wish = t.b === 'haus' && s && s.wish;
+  const miss = wish && wish.next ? wish.list.filter(v => !v.ok) : [];
+  if (!w.saidAt || performance.now() - w.saidAt > 6000) { speak(w, bubbleText(w)); w.saidAt = performance.now(); }
+  const el = showPanel(`
+    <h3>${a.icon} ${escHtml(residentName(r))}</h3>
+    <p class="muted">🏠 Zuhause: ${t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : stageName(t)} · ${regionName(regionAt(hx, hy))}</p>
+    <div class="status"><div>${walkerDoing(w)}</div>
+      ${wish ? `<div>${wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥'} ${miss.length ? `💭 Wünscht sich: ${miss[0].text}` : 'Rundum glücklich'}</div>` : ''}</div>
+    <div class="row"><button class="btn" id="p-home">🏠 Zum Haus</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => walkers.includes(w) || strollers.includes(w) ? openWalkerInfo(w) : closePanel());
+  $('p-close').onclick = closePanel;
+  $('p-home').onclick = () => { const [w0, h0] = sizeOf(t.b, t.rot, t); jumpTo(hx, hy, w0, h0); sparkle(hx + (w0 - 1) / 2, hy + (h0 - 1) / 2); openInfo(hx, hy); };
+  void el;
+}
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
@@ -862,7 +881,8 @@ function openInfo(x, y) {
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
-  let house = '';
+  let house = isHome(t.b) && t.b !== 'haus' && t.animal
+    ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
   if (t.b === 'haus') {
     const w = houseWishes(t, x, y), a = animalOf(t);
     const hearts = w.next ? '♥'.repeat(w.met) + '♡'.repeat(w.total - w.met) : '♥♥♥♥♥';
@@ -1547,10 +1567,33 @@ function readyGroups(ready) {
   return defs.map(d => ({ ...d, items: ready.filter(e => groupOf(e) === d.id) })).filter(g => g.items.length);
 }
 const sumCost = list => { const c = {}; for (const e of list) for (const [r, n] of Object.entries(e.cost || {})) c[r] = (c[r] || 0) + n; return c; };
+// Rathaus → Bewohner (Block 55): alle Familien nach Tierart, mit Haus und Herzen; Arten, die noch kommen, ausgegraut
+const resOpen = new Map();                         // aufgeklappte Arten (nur für diese Sitzung)
+function residentsHtml() {
+  const by = new Map(ANIMALS.map(a => [a.id, []]));
+  for (const [k, t] of state.tiles) {
+    if (!isHome(t.b)) continue;
+    const s = T.st.get(k), wish = t.b === 'haus' && s && s.wish;
+    residentsOf(t).forEach(r => (by.get(r.animal) || by.get('katze')).push({ k, r, t, wish }));
+  }
+  const all = [...by.values()].flat().length, kinds = [...by.values()].filter(l => l.length).length;
+  return `<p class="muted">${all} ${all === 1 ? 'Familie' : 'Familien'} · ${kinds} von ${ANIMALS.length} Arten wohnen bei dir. Antippen bringt dich zum Haus.</p>
+    ${ANIMALS.map(a => {
+      const list = by.get(a.id);
+      if (!list.length) {
+        const open = !a.isle || state.islands.has(a.isle);
+        return `<div class="label">${a.icon} Familie ${a.family}</div><p class="muted">${open ? 'Zieht beim nächsten neuen Wohnhaus vielleicht ein.' : `Zieht ein, sobald du die ${ISLE_BY_ID[a.isle].icon} ${ISLE_BY_ID[a.isle].name} entdeckt hast.`}</p>`;
+      }
+      return `<details class="res-group" data-sp="${a.id}"${resOpen.get(a.id) ?? list.length <= 6 ? ' open' : ''}><summary class="label">${a.icon} Familie ${a.family} · ${list.length}</summary>
+        ${list.sort((p, q) => p.r.name.localeCompare(q.r.name)).map(({ k, r, t, wish }) => `<button class="hall-row link-row" data-home="${k}">
+          <span>${escHtml(r.name)} <small class="muted">· ${t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : stageName(t)} · ${regionName(regionAt(...keyXY(k)))}</small></span>
+          <b>${wish ? (wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥') : ''}</b></button>`).join('')}</details>`;
+    }).join('')}`;
+}
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['town', 'Ort']];
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['town', 'Ort']];
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -1649,6 +1692,8 @@ function openTownHall(tab = hallTab) {
       <div class="label">Das wünschen sich die Bewohner noch</div>
       ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
         : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
+  } else if (tab === 'bewohner') {
+    body = residentsHtml();
   } else {
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
     body = `
@@ -1689,6 +1734,13 @@ function openTownHall(tab = hallTab) {
     closeModal(); jumpTo(x, y, 3, 3); sparkle(x + 1, y + 1); openLandmark(x, y);
   };
   for (const b of card.querySelectorAll('[data-isle-go]')) b.onclick = () => goIsle(b.dataset.isleGo);
+  for (const d of card.querySelectorAll('details[data-sp]')) d.addEventListener('toggle', () => resOpen.set(d.dataset.sp, d.open));
+  for (const b of card.querySelectorAll('[data-home]')) b.onclick = () => {           // Bewohner: zum Haus
+    const [x, y] = keyXY(b.dataset.home), t = state.tiles.get(b.dataset.home);
+    if (!t) return;
+    const [w, h] = sizeOf(t.b, t.rot, t);
+    closeModal(); jumpTo(x, y, w, h); sparkle(x + (w - 1) / 2, y + (h - 1) / 2); openInfo(x, y);
+  };
   for (const b of card.querySelectorAll('[data-jump]')) b.onclick = () => {
     const e = all[+b.dataset.jump], et = state.tiles.get(e.x + ',' + e.y) || {}, [w, h] = sizeOf(e.b, et.rot, et);
     closeModal();
@@ -1755,6 +1807,7 @@ function helpBody(tab) {
     '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',
+  '🐾 <b>Bewohner:</b> Tipp eine Figur an – sie erzählt, wer sie ist, wo sie wohnt und wohin sie gerade geht. Morgens geht es zur Arbeit, mittags ins Café, abends in den Park. Mit jeder Insel zieht eine neue Art ein: Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. Alle Familien stehen im Rathaus unter „Bewohner“.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
     '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
     '✋ <b>Verschieben</b> kostet nichts. 🧹 <b>Abreißen:</b> Deko und Wege gibt es voll zurück, Gebäude zur Hälfte. In jedem Fenster gibt es 🗑️.',
@@ -1780,6 +1833,7 @@ function helpBody(tab) {
   }
   return li([
     '🏮 <b>Das Ziel:</b> Deine Insel war einmal berühmt für ihr Laternenfest. Restauriere die verfallenen Sehenswürdigkeiten, bis alle Laternen brennen – das 📖 Tagebuch erzählt, wie es früher war.',
+    '🐾 <b>Bewohner:</b> In jedem Wohnhaus lebt eine Tierfamilie. Tipp eine Figur an, um zu sehen, wer das ist und wohin sie gerade geht – morgens zur Arbeit, mittags ins Café, abends in den Park. Mit jeder entdeckten Insel zieht eine neue Art ein; alle stehen im Rathaus unter „Bewohner“.',
     '🏠 <b>Häuser</b> bringen Einwohner. Jedes Haus hat Wünsche (Weg vor der Tür, Deko, später Bäckerei, Park, Schule …). Tipp es an, um sie zu sehen.',
     '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es – antippen und ausbauen.',
     '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen – ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',

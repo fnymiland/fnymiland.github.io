@@ -314,6 +314,10 @@ html, body {
 .hall { width: min(520px, 100%); }
 .hall-tabs { margin-bottom: 8px; }
 .hall-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font-size: 14px; font-weight: 700; }
+button.hall-row.link-row { width: 100%; background: none; border: 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font: inherit; font-size: 14px; font-weight: 700; color: inherit; text-align: left; cursor: pointer; }
+.res-group summary { cursor: pointer; list-style: none; }
+.res-group summary::before { content: "▸ "; }
+.res-group[open] summary::before { content: "▾ "; }
 .btn.small { flex: none; padding: 5px 12px; font-size: 13px; }
 .tech-cats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 8px; }
 .tech-cat h4 { margin: 0 0 6px; font-size: 14px; font-weight: 900; }

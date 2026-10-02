@@ -442,11 +442,18 @@ const isHome = b => KINDS.haus.of.includes(b);
 const kindName = k => KINDS[k] ? KINDS[k].name : ITEMS[k].name;
 const kindPlural = k => KINDS[k] ? KINDS[k].plural : PLURAL[k] || ITEMS[k].name;
 const NOISY = new Set(['saege', 'steinmetz', 'schmiede', 'fabrik', 'stein', 'holz', 'mine', 'kristallmine']);
-// Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname
+// Bewohner: Tierart (so wie die Spaziergänger gezeichnet werden) und Vorname. Die ersten drei wohnen von Anfang an
+// hier, die anderen ziehen erst ein, wenn ihre Insel entdeckt ist (isle, Block 55). fur: feste Fellfarbe der Art.
 const ANIMALS = [
   { id: 'katze', icon: '🐱', family: 'Katz', names: ['Ottilie', 'Minka', 'Leo', 'Frida', 'Tom', 'Lotte', 'Pepe', 'Nala'] },
   { id: 'baer', icon: '🐻', family: 'Bär', names: ['Bruno', 'Hanna', 'Paul', 'Greta', 'Emil', 'Mila', 'Otto', 'Ida'] },
   { id: 'hase', icon: '🐰', family: 'Hase', names: ['Mika', 'Lilli', 'Fips', 'Rosa', 'Jonte', 'Klara', 'Hugo', 'Wanda'] },
+  { id: 'eichhorn', icon: '🐿️', family: 'Eichhorn', isle: 'wald', fur: '#c96a36', names: ['Flitz', 'Hazel', 'Rocco', 'Nele', 'Krümel', 'Jule', 'Benno', 'Pina'] },
+  { id: 'igel', icon: '🦔', family: 'Igel', isle: 'obst', fur: '#e8cfa8', names: ['Pieks', 'Mathilda', 'Theo', 'Susi', 'Kalle', 'Polly', 'Bodo', 'Lina'] },
+  { id: 'fuchs', icon: '🦊', family: 'Fuchs', isle: 'wind', fur: '#e8843c', names: ['Finn', 'Ronja', 'Rufus', 'Fiene', 'Jaro', 'Elli', 'Henri', 'Juna'] },
+  { id: 'giraffe', icon: '🦒', family: 'Giraffe', isle: 'ruine', fur: '#f2c35a', names: ['Gisela', 'Zuri', 'Hilde', 'Raffi', 'Lenja', 'Kasimir', 'Tilda', 'Jasper'] },
+  { id: 'elefant', icon: '🐘', family: 'Elefant', isle: 'erz', fur: '#aab0bc', names: ['Benjamin', 'Rosi', 'Tembo', 'Dora', 'Anton', 'Fanni', 'Magnus', 'Lotta'] },
+  { id: 'ente', icon: '🦆', family: 'Ente', isle: 'quelle', fur: '#fffdf4', names: ['Quentin', 'Erna', 'Paula', 'Kuno', 'Wilma', 'Gustav', 'Trude', 'Nils'] },
 ];
 
 // Baumenü (Block 40, gemeinsam entschieden): fünf Bereiche nach dem, was man gerade tun will –

@@ -512,3 +512,15 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       „disabled“ zurück. `costMarks()` läuft jetzt nach `refreshLive()` (gilt für alle Fenster).
 - Geprüft und in Ordnung: Plätze je Stufe (0/2/4, Seebrücke +1), Takt (erst 2, dann alle 3 min), Ablauf nach 12 min,
   Speichern, Liefern/Kaufen, Angebote nur für baubare Betriebe, 🚢-Zeichen am Hafen.
+
+## Block 55 – Bewohner lebendiger (02.10.)
+
+- [x] Sechs neue Arten (Eichhörnchen, Igel, Fuchs, Giraffe, Elefant, Ente), je eine kommt mit einer Insel (`ANIMALS[].isle`,
+      `speciesOpen`); eigenes Aussehen in `drawWalker`. Alle Wohnhäuser haben Bewohner, das Reihenhaus drei Familien (`t.more`,
+      `residentsOf`); Album zählt alle.
+- [x] Tagesablauf (`dayPart`: morgen/mittag/abend/nacht im 20-Minuten-Tag): Figuren gehen von ihrem Haus zu Arbeit/Schule,
+      Essen/Laden/Markt, Park (`findGoal`, `walkPath`, `stepWalker`), gehen hinein, kommen wieder raus und gehen heim; nachts
+      sind nur ein Viertel draußen. Ohne Ziel: bummeln.
+- [x] Figur antippen → Fenster (`openWalkerInfo`): wer, Zuhause, was sie gerade macht, Herzen/Wunsch, „Zum Haus“.
+- [x] Sprechblasen alle 20–30 s (`bubbleTick`, `bubbleText`): Wünsche des Hauses, Ziel, Tageszeit.
+- [x] Rathaus → Bewohner (`residentsHtml`): alle Familien nach Art, aufklappbar, fehlende Arten mit ihrer Insel.

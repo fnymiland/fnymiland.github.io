@@ -62,9 +62,9 @@ function build(b, x, y, quiet) {
     }
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(under ? { weg: under } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
-      assignResident(t, Math.random, Math.random);
       t.wall = walls[Math.floor(Math.random() * walls.length)][1];
       t.roof = roofs[Math.floor(Math.random() * roofs.length)][1];
     }
@@ -294,24 +294,33 @@ function upgradeMany(list) {
   return done;
 }
 
-// Bewohner: Tierart und Vorname (zufällig beim Bau, bei alten Häusern fest aus der Lage)
-function assignResident(t, r1, r2) {
-  if (t.animal && t.name) return;
-  const a = ANIMALS[Math.floor(r1() * ANIMALS.length)];
-  t.animal = a.id;
-  t.name = a.names[Math.floor(r2() * a.names.length)];
+// Bewohner: Tierart und Vorname (zufällig beim Bau, bei alten Häusern fest aus der Lage). Block 55: jedes Wohnhaus hat
+// eine Familie, im Reihenhaus wohnen drei (t.more); neue Arten erst, wenn ihre Insel entdeckt ist (speciesOpen).
+const speciesOpen = () => ANIMALS.filter(a => !a.isle || state.islands.has(a.isle));
+function pickResident(r1, r2) {
+  const open = speciesOpen(), a = open[Math.floor(r1() * open.length)] || ANIMALS[0];
+  return { animal: a.id, name: a.names[Math.floor(r2() * a.names.length)] };
 }
+function assignResident(t, r1, r2) {
+  if (!(t.animal && t.name)) Object.assign(t, pickResident(r1, r2));
+  if (t.b === 'reihenhaus' && !(t.more && t.more.length === 2)) t.more = [pickResident(r1, r2), pickResident(r1, r2)];
+}
+// Alle, die in einem Haus wohnen: [{ animal, name }]
+const residentsOf = t => t && t.animal ? [{ animal: t.animal, name: t.name }, ...(t.more || [])] : [];
 function nameHouses() {
   for (const [k, t] of state.tiles) {
-    if (t.b !== 'haus') continue;
+    if (!isHome(t.b)) continue;
     const [x, y] = keyXY(k);
-    assignResident(t, () => hash(x, y, 501), () => hash(x, y, 502));
+    let n1 = 0, n2 = 0;
+    assignResident(t, () => hash(x, y, 501 + 10 * n1++), () => hash(x, y, 502 + 10 * n2++));
+    if (t.b !== 'haus') continue;
     // Farbe fest eintragen (früher aus der Lage berechnet) – so bleibt das Haus, wie es war
     if (t.wall == null) t.wall = Math.floor(hash(x, y, 3) * 7);
     if (t.roof == null) t.roof = Math.floor(hash(x, y, 4) * 7);
   }
 }
 const animalOf = t => ANIMALS.find(a => a.id === t.animal) || ANIMALS[0];
+const residentName = r => `${r.name} ${animalOf(r).family}`;
 
 // Haus ausbauen: nur wenn alle Wünsche erfüllt sind; kostet Material
 function houseUpgrade(x, y, stay = false) {
@@ -384,6 +393,8 @@ function tap(sx, sy, isTouch) {
   if (!ownedTile(x, y) && !(seaTool(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
+    const wk = walkerAt(sx, sy);                              // Bewohner angetippt (Block 55)
+    if (wk) { openWalkerInfo(wk); return; }
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
     else if (t) openInfo(ax, ay);
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);

@@ -815,6 +815,8 @@ function render(now) {
 
   drawSparkles(now, z);
 
+  drawBubble(z);                                                          // Sprechblase (Block 55)
+
   // 7) Schwebende Zahlen
   for (let i = floats.length - 1; i >= 0; i--) {
     const f = floats[i], a = (now - f.t0) / 1500;

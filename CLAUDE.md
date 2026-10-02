@@ -352,6 +352,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+67. **Bewohner** (Block 55): Arten in `ANIMALS` (Reihenfolge = `w.kind` der Figuren, nur hinten anfügen), `isle` = Insel, mit der
+    sie einziehen (`speciesOpen`). Bewohner eines Hauses über `residentsOf(t)` (Reihenhaus: `t.more`), nie direkt `t.animal`.
+    Figuren haben `home`/`who` (`residentLook`) und ein Ziel (`setGoal`: arbeit, schule, essen, laden, markt, park, home,
+    bummel; `GOAL_OF`, `findGoal`, `walkPath`), Tagesteil über `dayPart`. `w.inside > 0` = gerade im Gebäude (nicht zeichnen,
+    nicht antippbar). Sprechblase: `speak`/`bubbleText` (`say` ist in actions.js schon vergeben).
 66. **Standortboni** (Block 53): `siteOf(b, k, rot, t)` → `{ f, good, bad, gTxt, bTxt, tip }`, nur für Sorten in `SITE_TIP`.
     Bonus höchstens `SITE_MAX` (+50 %), nie negativ: Störendes (`tallAt`: Wald, Gebäude) zieht nur vom Bonus ab. Wirkt auf
     Strom (`powerOf(t, k)` – ohne `k` kein Standort, für Tests/Vergleiche) und Rohstoffe (`d.prod` in `totals`). Anzeige: Vorschau

@@ -561,7 +561,8 @@ function collectAlbum() {
   const add = k => state.album.add(k);
   for (const t of state.tiles.values()) {
     if (ITEMS[t.b] && ITEMS[t.b].cat) add('b:' + baseOf(t.b));          // Größen zählen als ihr Grundmodell
-    if (t.b === 'haus') { add('hs:' + t.lvl); if (t.animal) add('tier:' + t.animal); }
+    if (t.b === 'haus') add('hs:' + t.lvl);
+    for (const r of residentsOf(t)) add('tier:' + r.animal);              // alle Wohnhäuser (Block 55)
     if (t.wall != null) add('wall:' + t.wall);
     if (t.roof != null) add('roof:' + t.roof);
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));

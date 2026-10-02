@@ -60,7 +60,7 @@ function tileOut(t) {
   if (t.lm) o.lm = t.lm;
   if (t.rot) o.rot = t.rot;
   if (t.style) o.style = t.style;
-  if (t.animal) { o.animal = t.animal; o.name = t.name; }
+  if (t.animal) { o.animal = t.animal; o.name = t.name; if (t.more) o.more = t.more.map(r => ({ animal: r.animal, name: r.name })); }
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;

@@ -18,20 +18,135 @@ function crossingClosed(x, y) {
 }
 const drivable = () => false;
 
+// Tagesablauf (Block 55): der 20-Minuten-Tag (DAY_MS) in vier Teile – morgens zur Arbeit oder Schule, mittags essen und
+// einkaufen, abends in den Park, nachts sind (fast) alle zu Hause. Mit ?stunde=N nach der echten Uhrzeit.
+const DAY_PARTS = [[0, 'morgen'], [4, 'mittag'], [9, 'abend'], [15, 'nacht']];          // ab Minute des Spieltags
+function dayPart(ms = performance.now()) {
+  if (forcedHour != null) { const h = clockNow().getHours(); return h >= 21 || h < 6 ? 'nacht' : h < 11 ? 'morgen' : h < 15 ? 'mittag' : 'abend'; }
+  const m = (((ms % DAY_MS) + DAY_MS) % DAY_MS) / 60e3;
+  let part = 'morgen';
+  for (const [from, id] of DAY_PARTS) if (m >= from) part = id;
+  return part;
+}
+const GOAL_PLAN = { morgen: ['arbeit', 'arbeit', 'arbeit', 'schule'], mittag: ['essen', 'essen', 'laden', 'laden', 'markt'], abend: ['park', 'park', 'park', 'bummel'], nacht: ['bummel'] };
+const GOAL_OF = {
+  arbeit: b => !!ITEMS[b].workers && !isHome(b) && !['schule', 'bibliothek', 'uni'].includes(b),
+  schule: b => ['schule', 'bibliothek', 'uni'].includes(b),
+  essen: b => SHOP_GROUPS.essen.includes(baseOf(b)) || b === 'baecker',
+  laden: b => SHOP_GROUPS.laeden.includes(baseOf(b)) || SHOP_GROUPS.gross.includes(baseOf(b)),
+  markt: b => !!STANDS[b],
+};
+// Felder direkt neben einem Gebäude, auf denen man stehen kann (die „Tür“)
+function doorsOf(k) {
+  const t = state.tiles.get(k);
+  if (!t) return [];
+  const [ax, ay] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t), out = [];
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) for (const [dx, dy] of DIRS) {
+    const x = ax + i + dx, y = ay + j + dy;
+    if ((x < ax || x >= ax + w || y < ay || y >= ay + h) && walkable(x, y)) out.push([x, y]);
+  }
+  return out;
+}
+// Kürzester Fußweg (nicht durch Zäune) zu einem der Zielfelder; Liste der Felder ohne den Start, null wenn keiner
+function walkPath(sx, sy, goals, limit = 2500) {
+  const want = new Set(goals.map(([x, y]) => x + ',' + y)), start = sx + ',' + sy;
+  if (want.has(start)) return [];
+  const prev = new Map([[start, null]]), q = [[sx, sy]];
+  for (let i = 0; i < q.length && prev.size < limit; i++) {
+    const [x, y] = q[i];
+    for (const [dx, dy] of DIRS) {
+      const nx = x + dx, ny = y + dy, nk = nx + ',' + ny;
+      if (prev.has(nk) || !walkable(nx, ny) || edgeBlocks(x, y, nx, ny)) continue;
+      prev.set(nk, x + ',' + y);
+      if (want.has(nk)) {
+        const out = [];
+        for (let k = nk; k !== start; k = prev.get(k)) out.push(keyXY(k));
+        return out.reverse();
+      }
+      q.push([nx, ny]);
+    }
+  }
+  return null;
+}
+// Ziel für einen Bewohner: ein passendes Gebäude in der Nähe (eins der fünf nächsten) bzw. ein Stück Parkrasen
+function findGoal(kind, x, y) {
+  const reg = regionAt(x, y), near = [];
+  if (kind === 'park') {
+    for (const p of PARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
+  } else if (GOAL_OF[kind]) {
+    for (const [k, t] of state.tiles) {
+      if (!GOAL_OF[kind](t.b)) continue;
+      const [gx, gy] = keyXY(k), d = Math.abs(gx - x) + Math.abs(gy - y);
+      if (d <= 30 && regionAt(gx, gy) === reg) near.push({ k, d });
+    }
+  }
+  near.sort((a, b) => a.d - b.d);
+  const pick = near.slice(0, 5);
+  return pick.length ? pick[Math.floor(Math.random() * pick.length)] : null;
+}
+// Unterwegs zu goal (kind, k); ohne Ziel oder Weg dorthin: ein Stück bummeln
+function setGoal(w, kind) {
+  const g = kind === 'home' ? { k: w.home } : findGoal(kind, w.fx, w.fy);
+  const path = g && walkPath(w.fx, w.fy, g.tiles || doorsOf(g.k));
+  if (path) { w.goal = { kind, k: g.k }; w.path = path; w.steps = null; return true; }
+  if (kind === 'home') { w.gone = true; return false; }                     // kein Weg nach Hause: geht einfach rein
+  w.goal = { kind: 'bummel' }; w.path = null; w.steps = 6 + Math.floor(Math.random() * 10);
+  return false;
+}
+// Angekommen: ins Gebäude (eine Weile unsichtbar), im Park bummeln, zu Hause verschwinden
+function arrive(w) {
+  const kind = w.goal && w.goal.kind;
+  if (kind === 'home') { w.gone = true; return; }
+  if (kind === 'park') { w.path = null; w.steps = 8 + Math.floor(Math.random() * 12); w.goal = { kind: 'park', k: w.goal.k, there: true }; return; }
+  if (GOAL_OF[kind]) { w.inside = 6 + Math.random() * 10; return; }
+  setGoal(w, 'home');
+}
+function stepWalker(w, dt) {
+  if (w.inside > 0) { w.inside -= dt; if (w.inside <= 0) { w.inside = 0; setGoal(w, 'home'); } return; }
+  if (!w.path) {                                                         // bummeln wie früher; danach heim
+    stepMover(w, dt, walkable, true);
+    if (w.t === 0 && w.steps != null && --w.steps <= 0) setGoal(w, 'home');
+    return;
+  }
+  if (!walkable(w.fx, w.fy)) { w.gone = true; return; }
+  if (w.wait > 0) { w.wait -= dt; return; }
+  w.t += dt * w.speed;
+  if (w.t >= 1) {
+    w.fx = w.tx; w.fy = w.ty; w.t = 0;
+    const nx = w.path.shift();
+    if (!nx) { w.path = null; arrive(w); }
+    else if (!walkable(nx[0], nx[1]) || edgeBlocks(w.fx, w.fy, nx[0], nx[1])) { w.path = null; w.steps = 4; }   // inzwischen verbaut
+    else [w.tx, w.ty] = nx;
+  }
+  w.px = w.fx + (w.tx - w.fx) * w.t;
+  w.py = w.fy + (w.ty - w.fy) * w.t;
+}
+// Wer in einem Haus wohnt (Haus-Feld, Index), mit Tierart und Fellfarbe
+function residentLook(home, who) {
+  const r = residentsOf(state.tiles.get(home))[who] || {}, a = animalOf(r);
+  return { home, who, kind: Math.max(0, ANIMALS.indexOf(a)), fur: a.fur || FUR[Math.floor(Math.random() * FUR.length)] };
+}
+let lastPart = null;
 function syncMovers() {
-  const wantW = Math.min(24, Math.floor(T.pop / 4));
-  while (walkers.length > wantW) walkers.pop();
+  const part = dayPart(), day = Math.min(24, Math.floor(T.pop / 4)), wantW = part === 'nacht' ? Math.ceil(day * 0.25) : day;
+  if (part !== lastPart) {                                               // es wird Nacht: alle machen sich auf den Heimweg
+    if (part === 'nacht' && lastPart) for (const w of walkers) if (!w.inside && !(w.goal && w.goal.kind === 'home')) setGoal(w, 'home');
+    lastPart = part;
+  }
+  const out = walkers.filter(w => !(w.goal && w.goal.kind === 'home'));
+  if (out.length > wantW) setGoal(out[out.length - 1], 'home');           // zu viele draußen: einer geht heim
+  while (walkers.length > wantW + 12) walkers.pop();
   if (walkers.length < wantW) {
-    const houses = [...state.tiles].filter(([, t]) => isHome(t.b));        // Bewohner kommen aus jedem Wohnhaus
-    if (houses.length) {
-      const [x, y] = keyXY(houses[Math.floor(Math.random() * houses.length)][0]);
-      const free = DIRS.map(([dx, dy]) => [x + dx, y + dy]).filter(([a, b]) => walkable(a, b) && !edgeBlocks(x, y, a, b));   // nicht durch Zäune
-      if (free.length) {
-        const [sx, sy] = free[Math.floor(Math.random() * free.length)];
-        const ht = state.tiles.get(houses[Math.floor(Math.random() * houses.length)][0]);
-        walkers.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5,
-          kind: Math.max(0, ANIMALS.findIndex(a => a.id === (ht && ht.animal))), fur: FUR[Math.floor(Math.random() * FUR.length)],
-          shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.7 + Math.random() * 0.4 });
+    const homes = [...state.tiles].filter(([, t]) => isHome(t.b) && t.animal);   // Bewohner kommen aus jedem Wohnhaus
+    if (homes.length) {
+      const [hk, ht] = homes[Math.floor(Math.random() * homes.length)], doors = doorsOf(hk);
+      if (doors.length) {
+        const [sx, sy] = doors[Math.floor(Math.random() * doors.length)];
+        const w = { fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5, ...residentLook(hk, Math.floor(Math.random() * residentsOf(ht).length)),
+          shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.7 + Math.random() * 0.4 };
+        const plan = GOAL_PLAN[part];
+        setGoal(w, plan[Math.floor(Math.random() * plan.length)]);
+        if (!w.gone) walkers.push(w);
       }
     }
   }
@@ -48,8 +163,9 @@ function syncStrollers() {
   const p = PARKS[Math.floor(Math.random() * PARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => parkWalk(x, y));
   if (!free.length) return;
   const [sx, sy] = free[Math.floor(Math.random() * free.length)];
+  const homes = [...state.tiles].filter(([, t]) => isHome(t.b) && t.animal), [hk, ht] = homes.length ? homes[Math.floor(Math.random() * homes.length)] : [null, null];
   strollers.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 1, stroll: true,
-    kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)],
+    ...(hk ? residentLook(hk, Math.floor(Math.random() * residentsOf(ht).length)) : { kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)] }),
     shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.35 + Math.random() * 0.25 });   // gemütlich
 }
 // Bank auf dem Feld? Dann dort Platz nehmen (Position der Bank, eine Weile sitzen)
@@ -95,32 +211,124 @@ function stepMover(w, dt, ok, preferWay) {
 }
 function stepMovers(dt) {
   stepTrains(dt);
-  for (const w of walkers) stepMover(w, dt, walkable, true);
+  for (const w of walkers) stepWalker(w, dt);
   for (const w of strollers) stepMover(w, dt, parkWalk, true);
   for (const c of cars) stepMover(c, dt, drivable, false);
   for (const list of [walkers, cars, strollers]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
 }
+// Sprechblasen (Block 55): selten (alle 20–30 s) sagt jemand im Bild etwas – zu seinen Wünschen, wohin er geht, zur Tageszeit
+const WISH_SAY = { weg: 'Ein Weg vor meiner Tür wäre schön …', deko: 'Ein paar Blumen vorm Haus – das wär’s!', baecker: 'Frische Brötchen! Gibt’s hier keine Bäckerei?',
+  ruhe: 'Puh, ist das laut hier …', markt: 'Ich vermisse einen Marktplatz.', park: 'Ein Park zum Spazieren, das wär schön.', laden: 'Wo kann man hier bloß einkaufen?',
+  schule: 'Die Kleinen bräuchten eine Schule.', schoen: 'Hier dürfte es noch etwas schöner sein.', cafe: 'Ein Café um die Ecke … hach.',
+  wasser: 'Ich träume vom Blick aufs Wasser.', kultur: 'Mal wieder ins Theater – oder ins Kino?' };
+const GOAL_SAY = { arbeit: ['Auf zur Arbeit!', 'Heute wird ein fleißiger Tag.'], schule: ['Ab in die Schule!', 'Heute lerne ich was Neues.'],
+  essen: ['Mittagspause! ☕', 'Ich hab so einen Hunger …'], laden: ['Nur kurz was einkaufen.', 'Mal sehen, was es Neues gibt.'], markt: ['Auf zum Markt!', 'Hoffentlich gibt’s frische Äpfel.'],
+  park: ['Herrlicher Abend für einen Spaziergang.', 'Gleich setz ich mich auf eine Bank.'], home: ['Feierabend!', 'Schön, gleich zu Hause zu sein.'],
+  bummel: ['Was für ein schöner Tag.', 'Einfach mal treiben lassen …'] };
+const PART_SAY = { morgen: ['Guten Morgen!', 'Die Sonne ist schon wach.'], mittag: ['Was für ein schöner Tag.'], abend: ['Der Himmel wird ganz rosa …'],
+  nacht: ['Gute Nacht!', 'Die Laternen leuchten so schön ✨'] };
+let bubble = null, bubbleNext = 0;
+function bubbleText(w) {
+  const pool = [], t = w.home && state.tiles.get(w.home), s = w.home && T.st.get(w.home);
+  if (t && t.b === 'haus' && s && s.wish) {
+    const miss = (s.wish.list || []).filter(v => !v.ok && WISH_SAY[v.id]);
+    if (miss.length) pool.push(...miss.map(v => WISH_SAY[v.id]), ...miss.map(v => WISH_SAY[v.id]));   // Wünsche doppelt so oft
+    else if (!s.wish.next) pool.push('Ich wohne hier so gern! ♥', 'Schönstes Haus der Insel! ♥');
+  }
+  pool.push(...(GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + 5000 }; }
+function bubbleTick(now) {
+  if (bubble && (now > bubble.until || bubble.w.gone || bubble.w.inside > 0)) bubble = null;
+  if (bubble || now < bubbleNext) return;
+  bubbleNext = now + 20e3 + Math.random() * 10e3;
+  const seen = walkers.concat(strollers).filter(w => { if (w.inside > 0 || !w.home) return false; const p = toScreen(w.px, w.py); return p.x > 40 && p.x < W - 40 && p.y > 80 && p.y < H - 80; });
+  if (seen.length) { const w = seen[Math.floor(Math.random() * seen.length)]; speak(w, bubbleText(w), now); }
+}
+// Kopf der Figur auf dem Bildschirm (wie drawWalker)
+function walkerHead(w, z) {
+  const p = toScreen(w.px, w.py);
+  return [p.x + (w.sit ? 0 : 6 * z), p.y - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z];
+}
+function drawBubble(z) {
+  if (!bubble || bubble.w.gone || bubble.w.inside > 0) return;
+  const [hx, hy] = walkerHead(bubble.w, z), size = Math.max(11, Math.min(15, 11 * z));
+  g.font = `800 ${size}px Nunito, system-ui, sans-serif`;
+  const tw = g.measureText(bubble.text).width, w = tw + size * 1.4, h = size * 2;
+  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - 8 * z - h;
+  g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, h / 2); g.fill();
+  g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, h / 2); g.fill();
+  g.beginPath(); g.moveTo(hx - 4, by + h - 1); g.lineTo(hx + 4, by + h - 1); g.lineTo(hx, by + h + 6); g.fill();
+  g.strokeStyle = 'rgba(107,79,58,0.35)'; g.lineWidth = 1; g.beginPath(); g.roundRect(bx, by, w, h, h / 2); g.stroke();
+  g.fillStyle = '#6b4f3a'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(bubble.text, bx + size * 0.7, by + h / 2);
+}
+// Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
+function walkerAt(sx, sy) {
+  const z = cam.z;
+  let best = null, bd = Math.max(14, 10 * z);
+  for (const w of walkers.concat(strollers)) {
+    if (w.inside > 0 || !w.home || !state.tiles.get(w.home)) continue;
+    const [hx, hy] = walkerHead(w, z), d = Math.hypot(sx - hx, sy - (hy + 6 * z));
+    if (d < bd) { bd = d; best = w; }
+  }
+  return best;
+}
+// Was macht die Figur gerade?
+const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem Weg zur Schule', essen: '☕ Geht etwas essen', laden: '🛍️ Geht einkaufen',
+  markt: '🧺 Geht zum Markt', park: '🌳 Geht in den Park', home: '🏠 Auf dem Heimweg', bummel: '🚶 Bummelt ein bisschen herum' };
+function walkerDoing(w) {
+  if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
+  const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
+  if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';
+  return GOAL_DO[g0.kind] + (t && g0.kind !== 'home' && g0.kind !== 'park' ? ` (${stageName(t)})` : '');
+}
+const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
 function drawWalker(w, z, now) {
+  if (w.inside > 0) return;                                              // gerade im Gebäude
   const p = toScreen(w.px, w.py);
   const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
   // auf einer Bogenbrücke geht es hoch und wieder runter
   const arch = archAt(w.px, w.py), lift = arch ? archH(arch.b) * z : 0;
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
+  const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25);
   ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
+  if (sp === 'eichhorn') { ellipse(x + 4.2 * z, y - 9 * z, 2.8 * z, 5.5 * z, f); ellipse(x + 4.6 * z, y - 12 * z, 1.6 * z, 2.6 * z, shade(f, 0.15)); }   // buschiger Schwanz
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
-  const hy = y - 11 * z;
-  if (w.kind === 0) {
-    poly([[x - 4.5 * z, hy - 2 * z], [x - 3.5 * z, hy - 7.5 * z], [x - 0.8 * z, hy - 4 * z]], w.fur);
-    poly([[x + 4.5 * z, hy - 2 * z], [x + 3.5 * z, hy - 7.5 * z], [x + 0.8 * z, hy - 4 * z]], w.fur);
-  } else if (w.kind === 1) {
-    circle(x - 3.8 * z, hy - 3.8 * z, 2 * z, w.fur); circle(x + 3.8 * z, hy - 3.8 * z, 2 * z, w.fur);
-  } else {
-    ellipse(x - 2 * z, hy - 7 * z, 1.4 * z, 4 * z, w.fur); ellipse(x + 2 * z, hy - 7 * z, 1.4 * z, 4 * z, w.fur);
-  }
-  circle(x, hy, 4.8 * z, w.fur);
+  let hy = y - 11 * z;
+  if (sp === 'giraffe') { bar(x - 1.6 * z, hy - 4 * z, 3.2 * z, 8 * z, f); circle(x - 0.4 * z, hy + 1 * z, 0.7 * z, '#b5763a'); circle(x + 0.7 * z, hy - 2 * z, 0.6 * z, '#b5763a'); hy -= 6 * z; }   // langer Hals
+  const ears = {
+    katze: () => { poly([[x - 4.5 * z, hy - 2 * z], [x - 3.5 * z, hy - 7.5 * z], [x - 0.8 * z, hy - 4 * z]], f); poly([[x + 4.5 * z, hy - 2 * z], [x + 3.5 * z, hy - 7.5 * z], [x + 0.8 * z, hy - 4 * z]], f); },
+    baer: () => { circle(x - 3.8 * z, hy - 3.8 * z, 2 * z, f); circle(x + 3.8 * z, hy - 3.8 * z, 2 * z, f); },
+    hase: () => { ellipse(x - 2 * z, hy - 7 * z, 1.4 * z, 4 * z, f); ellipse(x + 2 * z, hy - 7 * z, 1.4 * z, 4 * z, f); },
+    eichhorn: () => { poly([[x - 4 * z, hy - 2.5 * z], [x - 3.3 * z, hy - 8 * z], [x - 1.2 * z, hy - 4 * z]], f); poly([[x + 4 * z, hy - 2.5 * z], [x + 3.3 * z, hy - 8 * z], [x + 1.2 * z, hy - 4 * z]], f); },
+    fuchs: () => {
+      poly([[x - 4.8 * z, hy - 1.5 * z], [x - 4.2 * z, hy - 9 * z], [x - 0.6 * z, hy - 4 * z]], f); poly([[x + 4.8 * z, hy - 1.5 * z], [x + 4.2 * z, hy - 9 * z], [x + 0.6 * z, hy - 4 * z]], f);
+      poly([[x - 4.5 * z, hy - 6.5 * z], [x - 4.2 * z, hy - 9 * z], [x - 3 * z, hy - 6.8 * z]], '#4a3328'); poly([[x + 4.5 * z, hy - 6.5 * z], [x + 4.2 * z, hy - 9 * z], [x + 3 * z, hy - 6.8 * z]], '#4a3328');
+    },
+    igel: () => {                                                          // Stacheln rund um den Kopf
+      const pts = [];
+      for (let i = 0; i <= 14; i++) { const a = Math.PI * (0.95 + i / 14 * 1.1), r = (i % 2 ? 4.6 : 7.2) * z; pts.push([x + Math.cos(a) * r, hy + 0.8 * z + Math.sin(a) * r]); }
+      poly([[x - 5 * z, hy + 1.5 * z], ...pts, [x + 5 * z, hy + 1.5 * z]], '#7a5536');
+    },
+    giraffe: () => { for (const s of [-1, 1]) { bar(x + s * 1.8 * z - 0.4 * z, hy - 7 * z, 0.8 * z, 3.5 * z, dark); circle(x + s * 1.8 * z, hy - 7 * z, 0.9 * z, '#8a5a2e'); }
+      ellipse(x - 4.6 * z, hy - 1.5 * z, 1.8 * z, 0.9 * z, f); ellipse(x + 4.6 * z, hy - 1.5 * z, 1.8 * z, 0.9 * z, f); },
+    elefant: () => { ellipse(x - 4.8 * z, hy, 3.4 * z, 4.4 * z, dark); ellipse(x + 4.8 * z, hy, 3.4 * z, 4.4 * z, dark); ellipse(x - 4.5 * z, hy, 2.3 * z, 3.2 * z, shade(f, 0.12)); ellipse(x + 4.5 * z, hy, 2.3 * z, 3.2 * z, shade(f, 0.12)); },
+    ente: () => { ellipse(x + 0.6 * z, hy - 4.8 * z, 0.9 * z, 1.6 * z, f); },
+  };
+  (ears[sp] || ears.katze)();
+  circle(x, hy, 4.8 * z, f);
+  if (sp === 'igel') { poly([[x - 4.6 * z, hy - 0.5 * z], [x - 2 * z, hy - 4.2 * z], [x + 2 * z, hy - 4.2 * z], [x + 4.6 * z, hy - 0.5 * z], [x, hy - 2.4 * z]], '#7a5536'); }
+  if (sp === 'giraffe') { circle(x - 2.2 * z, hy - 2.8 * z, 0.8 * z, '#c98a3e'); circle(x + 2.6 * z, hy - 1.6 * z, 0.6 * z, '#c98a3e'); }
   circle(x - 1.7 * z, hy - 0.3 * z, 0.7 * z, '#3d2c22'); circle(x + 1.7 * z, hy - 0.3 * z, 0.7 * z, '#3d2c22');
-  ellipse(x - 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
-  ellipse(x + 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
+  if (sp === 'fuchs') { ellipse(x, hy + 2.4 * z, 2.6 * z, 1.8 * z, '#fff6ea'); circle(x, hy + 1.5 * z, 0.7 * z, '#3d2c22'); }
+  else if (sp === 'igel') circle(x, hy + 1.6 * z, 0.8 * z, '#3d2c22');
+  else if (sp === 'ente') ellipse(x, hy + 2 * z, 2.6 * z, 1.1 * z, '#f2a03a');
+  else if (sp === 'elefant') { ellipse(x, hy + 3.6 * z, 1.3 * z, 3 * z, f); circle(x, hy + 6.2 * z, 1 * z, dark); }
+  if (sp !== 'ente' && sp !== 'elefant') {
+    ellipse(x - 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
+    ellipse(x + 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
+  }
 }
 function drawCar(c, z) {
   const p = toScreen(c.px, c.py);
