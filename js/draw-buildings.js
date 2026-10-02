@@ -756,26 +756,53 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   // --- Wohnen ---
-  // Reihenhäuser (1×2): drei schmale Häuser in Pastell, Walmdächer in verschiedenen Farben; jede Stufe ein Stockwerk mehr
+  // Reihenhäuser (1×2, Block 57): drei schmale Giebelhäuser Wand an Wand wie an einer Gracht – jedes in eigener
+  // Pastellfarbe mit eigenem Schmuckgiebel (Treppen-, Glocken-, Spitzgiebel) zur Straße. Jede Stufe ein Stockwerk mehr,
+  // ab Stufe 2 Blumenkästen, Stufe 3 Laterne an der Tür.
   reihenhaus(K, s, now, x, y, t) {
-    const WALLS3 = ['#ffe3e0', '#e4f1ff', '#fff0b8'], ROOFS3 = ['#e8705f', '#5f8fe8', '#58b36a'];
+    const z = K.z, PAL = ['#f6c9c0', '#bfe0f2', '#fbe6a2', '#cfe8c4', '#e6d3f2', '#f9d8b4'], ROOFS = ['#8a5048', '#5b6270', '#a0563f'];
+    const KINDS = ['step', 'bell', 'spitz'], k0 = Math.floor(hash(x, y, 71) * 6), g0 = Math.floor(hash(x, y, 72) * 3);
+    const floors = s + 1, GF = 6.5, FH = 5.2;                              // Erdgeschoss, jedes weitere Stockwerk
     const parts = [];
     kShadow(K, 0.5);
-    // Fensterreihen je Stockwerk (Höhe über dem Boden): unten neben der Tür, darüber je Stockwerk eine Reihe
-    const row = r => r ? [12 + 5 * (r - 1), 15.4 + 5 * (r - 1)] : [4.5, 8.5];
-    [-0.64, 0, 0.64].forEach((b, i) => parts.push([0, b, () => {
-      const H = 12 + s * 5 + (i === 1 ? 3 : 0);
-      const B = K.block({ a: -0.04, b, ha: 0.3, hb: 0.3, h: H, wall: WALLS3[i], roof: ROOFS3[i], roofH: 9, entry: i === 1 });
-      K.door(B, 'front', 0.4, 0.6, 8.5 / H);
-      for (let r = 0; r <= s; r++) {
-        const h0 = row(r)[0] / H, h1 = row(r)[1] / H;
-        if (r) K.wins(B, 'front', 2, h0, h1);
-        else { K.wins(B, 'front', 1, h0, h1, 0.06, 0.36); K.wins(B, 'front', 1, h0, h1, 0.64, 0.94); }
-        K.sideWins(B, 2, h0, h1);
+    // Schmuckgiebel auf der sichtbaren Giebelseite (vorn oder hinten): Umriss über der Traufe, Wandfarbe, weiße Kante
+    const gable = (B, kind, wall, gu) => {
+      const gh = gu * z;                                                   // Höhe in Bildpunkten
+      for (const side of ['front', 'back']) {
+        const F = B.faces[side];
+        if (!F) continue;
+        const TL = [F.P[0], F.P[1] - F.H], TR = [F.Q[0], F.Q[1] - F.H];
+        const prof = {
+          step: [[0, 0], [0, 0.3], [0.14, 0.3], [0.14, 0.58], [0.27, 0.58], [0.27, 0.85], [0.38, 0.85], [0.38, 1], [0.62, 1], [0.62, 0.85], [0.73, 0.85], [0.73, 0.58], [0.86, 0.58], [0.86, 0.3], [1, 0.3], [1, 0]],
+          bell: [[0, 0], [0, 0.18], [0.08, 0.22], [0.2, 0.4], [0.27, 0.62], [0.28, 0.8], [0.34, 0.93], [0.42, 0.99], [0.5, 1], [0.58, 0.99], [0.66, 0.93], [0.72, 0.8], [0.73, 0.62], [0.8, 0.4], [0.92, 0.22], [1, 0.18], [1, 0]],
+          spitz: [[0, 0], [0, 0.08], [0.5, 1], [1, 0.08], [1, 0]],
+        }[kind];
+        const pts = prof.map(([u, v]) => { const p = lerp(TL, TR, u); return [p[0], p[1] - v * gh]; });
+        poly(pts, K.wallCol(wall, F.n));
+        g.strokeStyle = C('#fffaf0'); g.lineWidth = 1.3 * z; g.lineJoin = 'round';
+        g.beginPath(); pts.slice(1, -1).forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
+        const m = lerp(TL, TR, 0.5);                                         // rundes Giebelfenster
+        circle(m[0], m[1] - gh * 0.4, 2 * z, C('#fffaf0')); circle(m[0], m[1] - gh * 0.4, 1.4 * z, night > 0.15 && isLive() ? '#ffd873' : C('#a8dcff'));
+        if (kind === 'spitz') circle(m[0], m[1] - gh - 0.6 * z, 0.8 * z, C('#f2c14e'));   // Knauf auf der Spitze
       }
-      kitChimney(K, -0.12, b + 0.12, H + 7, now, '#c0694a');
+    };
+    [-0.64, 0, 0.64].forEach((b, i) => parts.push([0, b, () => {
+      const wall = PAL[(k0 + i * 2) % PAL.length], kind = KINDS[(g0 + i) % 3], H = GF + (floors - 1) * FH + 1.5 + [0, 1.5, -0.8][i];
+      const B = K.block({ a: -0.04, b, ha: 0.36, hb: 0.31, h: H, wall, roof: ROOFS[i], roofH: 9, type: 'gable', ridge: 'a', entry: i === 1, trim: '#fffaf0' });
+      gable(B, kind, wall, 13);
+      for (const side of ['front', 'back']) {
+        if (!B.faces[side]) continue;
+        if (side === 'front') { K.door(B, 'front', 0.38, 0.62, 5.6 / H); faceQuad(B.faces.front.P, B.faces.front.Q, 0.34, 0.66, 0, 0.6 * z, C('#d8cfc0')); }
+        else K.wins(B, 'back', 1, 1.6 / H, 5 / H, 0.35, 0.65);
+        for (let f = 1; f < floors; f++) { const h0 = (GF + (f - 1) * FH + 1) / H, h1 = h0 + 3.4 / H; K.wins(B, side, 2, h0, h1, 0.12, 0.88, [], s >= 2 && side === 'front'); }
+      }
+      for (const side of ['left', 'right']) for (let f = 0; f < floors; f++) { const h0 = (f ? GF + (f - 1) * FH + 1 : 1.8) / H; K.wins(B, side, 2, h0, h0 + 3.2 / H); }
+      if (s >= 3 && B.faces.front) {                                         // Laterne neben der Tür
+        const p = lerp(B.faces.front.P, B.faces.front.Q, 0.75);
+        circle(p[0], p[1] - 4.6 * z, 0.9 * z, night > 0.15 && isLive() ? '#ffd873' : C('#fff4c8'));
+      }
     }]));
-    parts.push([0.42, -0.64, () => kitBush(K, 0.42, -0.4, 0.5, '#62b85a')], [0.42, 0.64, () => kitBush(K, 0.42, 0.4, 0.5, '#f28cb1')]);
+    parts.push([0.44, -0.66, () => kitBush(K, 0.44, -0.66, 0.42, '#62b85a')], [0.44, 0.66, () => kitBush(K, 0.44, 0.66, 0.42, '#f28cb1')]);
     K.scene(parts);
   },
   // Baumhaus: ein großer Baum, das Häuschen auf einer Plattform, Leiter zum Boden. Stufe 2: Schaukel an einem Ast,

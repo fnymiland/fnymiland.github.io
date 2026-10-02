@@ -547,4 +547,6 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
 - [x] Weg an Zaun/Hecke/Mauer bündig nur noch, wenn gewollt: Schalter im Fenster der Linie („Bündig bis an die Linie“ /
       „Mit Grasstreifen“, `setFlush` für die ganze zusammenhängende Linie, `edgeRun`), gespeichert als `e.flush`; ohne
       Angabe bündig nur am Park (`edgeFlush`).
-- [ ] Reihenhäuser neu: bunte Giebelhäuser (Amsterdam/Bremen) – wartet auf „los“ (Hoch).
+- [x] Reihenhäuser neu: drei schmale Giebelhäuser Wand an Wand (Satteldach quer zur Straße), je eigene Pastellfarbe (aus
+      der Lage) und eigener Schmuckgiebel (Treppen-, Glocken-, Spitzgiebel) mit weißer Kante und rundem Giebelfenster auf der
+      sichtbaren Giebelseite; Stufe = Stockwerke (2/3/4), ab Stufe 2 Blumenkästen, Stufe 3 Türlaterne. In allen 4 Drehungen geprüft.
