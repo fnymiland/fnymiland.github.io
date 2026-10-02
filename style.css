@@ -267,6 +267,8 @@ html, body {
 .quick.active { background: var(--yellow); box-shadow: 0 3px 0 #e0c060; }
 .quick.undo { font-weight: 800; }
 #p-del { white-space: nowrap; flex: none; padding-left: 12px; padding-right: 12px; }   /* Löschen: kompakt in einer Zeile */
+#panel .row { flex-wrap: wrap; }                    /* lange Knöpfe (Löschen beim Schloss: +280.000) schieben „Schließen“ in die nächste Zeile statt über den Rand */
+#panel .row > #p-close { flex: 1 1 auto; }
 .quick.undo:disabled { opacity: .35; cursor: default; }
 .quick-sep { flex: none; width: 1px; margin: 4px 4px; background: rgba(107, 79, 58, .25); }
 
