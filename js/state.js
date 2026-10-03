@@ -79,7 +79,7 @@ function tileOut(t) {
   if (t.loop) { o.loop = true; if (t.loopPrice != null) o.loopPrice = t.loopPrice; }    // Achterbahn: Looping
   if (t.win != null) o.win = t.win;                                                     // Fensterfarbe (Block 60e)
   if (t.fl != null) o.fl = t.fl;                                                         // Torturm: Stockwerke (Block 60f)
-  if (t.cs) o.cs = { ...t.cs };                                                          // Märchenschloss: Gestalt (Block 60g)
+  if (t.cs) o.cs = JSON.parse(JSON.stringify(t.cs));                                                          // Märchenschloss: Gestalt (Block 60g)
   if (t.hgt != null) o.hgt = t.hgt;                                                     // Achterbahn: Höhenstufe (Block 60e)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;

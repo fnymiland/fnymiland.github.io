@@ -10,16 +10,37 @@ const hasTech = id => state.techs.has(id);
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
 const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : b === 'fz_schloss' ? csSize(t) : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
-// Märchenschloss (Block 60g): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
-// m: Mittelturm (0 keiner … 4 riesig), s: Paare Seitentürme, r: Dach (0 Spitz, 1 Kuppel, 2 Zinnen) }
-const CS_DEF = { w: 5, d: 2, m: 2, s: 1, r: 0 };
-const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], s: [0, 3], r: [0, 2] };
-const csOf = t => ({ ...CS_DEF, ...(t && t.cs) });
+// Märchenschloss (Block 60g/60h): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
+// m/mk/mr: Mittelturm Höhe (0 keiner … 4 riesig), Dicke, Dach; cb/cf/cr: Mittelbau Breite, Stockwerke, Dach; wf/wr: Flügel
+// Stockwerke, Dach; tw: Turmpaare von innen nach außen [{ h: Höhe, k: Dicke, p: Platz (vorn, Fassade, hinten), r: Dach }] }.
+// Dächer: 0 Spitz (Flügel: Satteldach), 1 Kuppel (Flügel: Walmdach), 2 Zinnen. Immer über csOf lesen (füllt Fehlendes auf).
+const CS_DEF = { w: 5, d: 2, m: 2, mk: 1, mr: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 2, k: 1, p: 0, r: 0 }] };
+const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], mk: [0, 2], mr: [0, 2], cb: [0, 2], cf: [1, 4], cr: [0, 2], wf: [1, 3], wr: [0, 2] };
+const CT_DEF = { h: 2, k: 1, p: 0, r: 0 }, CT_LIM = { h: [0, 4], k: [0, 2], p: [0, 2], r: [0, 2] }, CS_TOWERS = 4;
+const CORE_W = [1.2, 1.8, 2.6];
+function csOf(t) {
+  const c = (t && t.cs) || {}, o = { ...CS_DEF, ...c };
+  if (!Array.isArray(c.tw) && (c.s != null || c.r != null)) {  // Block 60g: s Paare, eine Dachform r für alles
+    const r = c.r || 0, s = c.s != null ? c.s : 1;
+    if (c.r != null) { o.mr = r; o.cr = r; o.wr = r; }
+    o.tw = Array.from({ length: s }, (_, i) => ({ ...CT_DEF, h: Math.max(0, 3 - i), r }));
+  }
+  o.tw = o.tw.slice(0, CS_TOWERS).map(x => ({ ...CT_DEF, ...x }));
+  delete o.s; delete o.r;
+  return o;
+}
 const csSize = t => { const c = csOf(t); return [c.d, c.w]; };
-const csCore = c => c.w >= 5 ? 1.8 : 1.4;                                   // Breite des Mittelbaus (Felder)
-const csMaxPairs = c => Math.min(CS_LIM.s[1], Math.max(1, Math.floor((c.w - csCore(c)) / 2 / 1.1)));
-// Wert: Grundpreis (Einkommen) für das Standard-Schloss, mehr Fläche/Türme kosten mehr
-const castlePrice = c => niceRound(ITEMS.fz_schloss.cost * (0.5 * c.w * c.d / 10 + 0.25 * (c.m + 1) / 3 + 0.25 * (Math.min(c.s, csMaxPairs(c)) + 1) / 2));
+const csCore = c => Math.min(CORE_W[c.cb], c.w - 0.8);                    // Breite des Mittelbaus (Felder)
+// Wert: Grundpreis (Einkommen) für das Standard-Schloss; Fläche, Türme und Stockwerke kosten mehr, Dächer/Platz nichts
+const castlePrice = c => niceRound(ITEMS.fz_schloss.cost * (0.4 * c.w * c.d / 10 + 0.2 * (c.m + 1) / 3 * (c.mk + 1) / 2
+  + 0.2 * c.tw.reduce((s, o) => s + (o.h + 1) / 3 * (o.k + 1) / 2, 0) + 0.1 * c.cf / 2 + 0.1 * c.wf / 2));
+// Vorlagen (Block 60h): setzen alles außer der Größe, dazu Farben (Index in WALLS/ROOFS/WIN_COLS, null = eigene)
+const CS_TPL = {
+  maerchen: { name: '🏰 Märchenschloss', cs: { m: 4, mk: 1, mr: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 3, k: 1, p: 0, r: 0 }, { h: 4, k: 0, p: 2, r: 0 }, { h: 1, k: 1, p: 0, r: 0 }] }, wall: null, roof: 1, win: 0 },
+  ritter: { name: '⚔️ Ritterburg', cs: { m: 2, mk: 2, mr: 2, cb: 1, cf: 2, cr: 2, wf: 2, wr: 2, tw: [{ h: 2, k: 2, p: 0, r: 2 }, { h: 1, k: 1, p: 1, r: 2 }] }, wall: 10, roof: 0, win: 6 },
+  eis: { name: '❄️ Eispalast', cs: { m: 4, mk: 0, mr: 0, cb: 0, cf: 3, cr: 0, wf: 1, wr: 1, tw: [{ h: 4, k: 0, p: 2, r: 0 }, { h: 3, k: 0, p: 0, r: 0 }, { h: 2, k: 0, p: 2, r: 0 }, { h: 1, k: 0, p: 0, r: 0 }] }, wall: 2, roof: 7, win: 5 },
+  orient: { name: '🕌 Orientpalast', cs: { m: 3, mk: 2, mr: 1, cb: 2, cf: 2, cr: 1, wf: 1, wr: 1, tw: [{ h: 3, k: 0, p: 1, r: 1 }, { h: 1, k: 1, p: 0, r: 1 }] }, wall: 0, roof: 3, win: 1 },
+};
 function footprint(b, ax, ay, rot, t) {
   const [w, h] = sizeOf(b, rot || 0, t), out = [];
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
@@ -96,9 +117,10 @@ function hbfResize(k, d) {
 function castleChange(x, y, patch) {
   const k = x + ',' + y, t = state.tiles.get(k);
   if (!t || t.b !== 'fz_schloss') return null;
-  const cs = csOf(t), nc = { ...cs, ...patch };
+  const cs = csOf(t), nc = csOf({ cs: { ...cs, ...patch } });
   for (const [key, [lo, hi]] of Object.entries(CS_LIM)) if (!(nc[key] >= lo && nc[key] <= hi)) { fail(nc[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
-  if (nc.s > csMaxPairs(nc)) { if ('s' in patch) { fail('Für mehr Türme ist das Schloss zu schmal'); return null; } nc.s = csMaxPairs(nc); }
+  if (patch.tw && patch.tw.length > CS_TOWERS) { fail(`Höchstens ${CS_TOWERS} Turmpaare`); return null; }
+  for (const o of nc.tw) for (const [key, [lo, hi]] of Object.entries(CT_LIM)) if (!(o[key] >= lo && o[key] <= hi)) { fail(o[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
   const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;
   if (diff > 0 && state.money < diff) { fail('Zu wenig Taler'); return null; }
   let nk = k;

@@ -290,7 +290,7 @@ Object.assign(ITEMS, {
   // Block 60b
   // Märchenschloss (Block 60g): EIN Gebäude, gestaltet im Fenster (t.cs: Breite, Tiefe, Mittelturm, Seitentürme, Dach)
   fz_schloss: { cat: 'fz', name: 'Märchenschloss', festival: true, size: [2, 5], cost: 600000, fzMin: 30, needs: 'fz', fzSort: 'schloss', beauty: 80,
-                desc: 'Dein eigenes Märchenschloss: im Fenster Breite, Tiefe, Mittelturm, Seitentürme, Dachform und Farben wählen.' },
+                desc: 'Dein eigenes Märchenschloss: im Fenster Form, Türme und Farben gestalten – oder mit einer Vorlage anfangen.' },
   // Eingang: zwei Tortürme in einer Reihe, dazwischen spannt sich der Bogen
   fz_torturm: { cat: 'fz', name: 'Torturm', festival: true, fl0: 2, cost: 50000, fzMin: 4, needs: 'fz', beauty: 15,
                 desc: 'Zwei Tortürme in einer Reihe (2 bis 7 Felder auseinander) – dazwischen spannt sich der Bogen mit Schild: dein Parkeingang.' },

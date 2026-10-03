@@ -282,7 +282,7 @@ describe('Märchenschloss (Block 60g)', () => {
     ground(5, 5, 12, 8);
     game("rotManual = true; buildRot = 0");
     expect(game("build('fz_schloss', 8, 6, true)")).toBe(true);
-    expect(cs()[1]).toEqual({ w: 5, d: 2, m: 2, s: 1, r: 0 });
+    expect(cs()[1]).toEqual(game('csOf(null)'));
     expect(game("sizeOf('fz_schloss', 0, state.tiles.get('8,6'))")).toEqual([2, 5]);
     expect(game("COVER.get('9,10')")).toBe('8,6');
     game('state.money = 1e9');
@@ -297,36 +297,55 @@ describe('Märchenschloss (Block 60g)', () => {
     expect(game('state.money')).toBe(m1 + Math.floor((p1 - cs()[2]) / 2));
   });
 
-  it('kein Platz: Hinweis, nichts verändert; Türme nur so viele, wie die Breite trägt', () => {
+  it('kein Platz: Hinweis, nichts verändert; bis 4 Turmpaare auch im schmalen Schloss, ohne Überlappen (Block 60h)', () => {
     ground(5, 5, 12, 8);
     game("rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); build('fz_eis', 8, 5, true); build('fz_eis', 8, 11, true); recalc(); state.money = 1e9");
     const before = cs();
     expect(game('castleChange(8, 6, { w: 6 })')).toBe(null);
     expect(cs()).toEqual(before);
     expect(game("COVER.get('8,6')")).toBe('8,6');
-    expect(game('csMaxPairs({ w: 5 })')).toBe(1);
-    expect(game('castleChange(8, 6, { s: 2 })')).toBe(null);
-    expect(game('castleChange(8, 6, { s: 0 })')).toBe('8,6');
+    const four = JSON.stringify([0, 1, 2, 3].map(h => ({ h, k: 2, p: h % 3, r: h % 3 })));
+    expect(game(`castleChange(8, 6, { tw: ${four} })`)).toBe('8,6');
+    expect(game(`castleChange(8, 6, { tw: [...${four}, { h: 1 }] })`)).toBe(null);
+    expect(game('castleChange(8, 6, { tw: [{ h: 9 }] })')).toBe(null);
+    for (const w of [3, 5, 9]) {                                                    // Türme einer Seite überlappen nie
+      const T = game(`castleTowers(csOf({ cs: { w: ${w}, cb: 2, tw: ${four} } }))`), core = game(`csCore(csOf({ cs: { w: ${w}, cb: 2 } }))`);
+      expect(T[0].pos - T[0].r).toBeGreaterThanOrEqual(core / 2);
+      for (let i = 1; i < T.length; i++) expect(T[i].pos - T[i].r).toBeGreaterThanOrEqual(T[i - 1].pos + T[i - 1].r - 1e-9);
+      expect(T[3].pos + T[3].r).toBeLessThanOrEqual(w / 2);
+    }
+    expect(game('csOf({ cs: { w: 7, d: 2, m: 4, s: 2, r: 1 } })')).toMatchObject({ mr: 1, cr: 1, wr: 1, tw: [{ h: 3, r: 1 }, { h: 2, r: 1 }] });   // alte Form (60g)
   });
 
   it('Knöpfe im Fenster, Rückgängig, gespeichert; zählt als Schloss; zeichnet in jeder Form', () => {
     ground(5, 5, 12, 8);
     game("rotManual = true; buildRot = 1; build('fz_schloss', 7, 7, true); recalc(); state.money = 1e9; openInfo(7, 7)");
     expect(game("sizeOf('fz_schloss', 1, state.tiles.get('7,7'))")).toEqual([5, 2]);
-    game("document.querySelector('#panel [data-cs=\"r:1\"]').click()");
+    game("castleTab = 'form'; openInfo(7, 7); document.querySelector('#panel [data-cs=\"cr:1\"]').click()");
     game("document.querySelector('#panel [data-cs=\"m:4\"]').click()");
-    expect(cs()[1]).toMatchObject({ r: 1, m: 4 });
+    expect(cs()[1]).toMatchObject({ cr: 1, m: 4 });
     game('undo()');
-    expect(cs()[1]).toMatchObject({ r: 1, m: 2 });
+    expect(cs()[1]).toMatchObject({ cr: 1, m: 2 });
     game("document.querySelector('#panel [data-cs=\"d:+1\"]').click()");
     expect(cs()[1].d).toBe(3);
+    game("document.querySelector('#panel [data-cstab=\"tuerme\"]').click()");
+    game("document.querySelector('#panel [data-ctadd]').click()");
+    game("document.querySelector('#panel [data-ct=\"1:p:n\"]').click()");
+    game("document.querySelector('#panel [data-ct=\"0:h:+1\"]').click()");
+    expect(cs()[1].tw).toEqual([{ h: 3, k: 1, p: 0, r: 0 }, { h: 1, k: 1, p: 1, r: 0 }]);
+    game("document.querySelector('#panel [data-ctdel=\"0\"]').click()");
+    expect(cs()[1].tw).toEqual([{ h: 1, k: 1, p: 1, r: 0 }]);
+    game("document.querySelector('#panel [data-cstab=\"form\"]').click(); document.querySelector('#panel [data-tpl=\"ritter\"]').click()");
+    expect(cs()[1]).toMatchObject({ d: 3, wr: 2, cr: 2, tw: [{ k: 2, r: 2 }, { r: 2 }] });
+    expect(game(`state.tiles.get('${cs()[0]}').win`)).toBe(6);
     const d = game('JSON.parse(JSON.stringify(serialize()))');
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
-    expect(cs()[1]).toMatchObject({ d: 3, r: 1 });
+    expect(cs()[1]).toMatchObject({ d: 3, cr: 2 });
     game('recalc()');
     expect(game("[...computeFz()[0].sorts]")).toContain('schloss');
     const k = cs()[0];
     for (let rot = 0; rot < 4; rot++) for (const r of [0, 1, 2]) for (const m of [0, 4]) for (const w of [3, 9]) for (const dd of [1, 3])
-      expect(() => game(`(t => { t.rot = ${rot}; t.cs = { w: ${w}, d: ${dd}, m: ${m}, s: 3, r: ${r} }; drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
+      expect(() => game(`(t => { t.rot = ${rot}; t.cs = { w: ${w}, d: ${dd}, m: ${m}, mk: ${m / 2}, mr: ${r}, cr: ${(r + 1) % 3}, wr: ${(r + 2) % 3}, cb: ${r}, cf: ${dd + 1}, wf: ${dd}, tw: [0, 1, 2, 3].map(h => ({ h, k: (h + ${r}) % 3, p: h % 3, r: (h + ${m}) % 3 })) }; drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
+    expect(() => game(`(t => { t.cs = { w: 5, d: 2, m: 3, s: 2, r: 1 }; drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
   });
 });

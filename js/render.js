@@ -231,7 +231,7 @@ function putSprite(e, cx, cy, z) {
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : Math.floor(hash(ax, ay, 4) * 7),
-    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.cs ? Object.values(t.cs).join('.') : '', FOG ? 1 : 0, lit].join('|');
+    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit].join('|');
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);

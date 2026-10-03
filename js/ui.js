@@ -759,6 +759,62 @@ const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">
 // fragt einmal nach (zweites Tippen); alles lässt sich mit ↶ zurücknehmen.
 const DEL_ASK = 500;
 // Rückfrage beim Löschen: außerhalb des Fensters merken – das Fenster frischt sich ständig auf und hätte sie sonst vergessen
+// Märchenschloss (Block 60h): Fenster-Inhalt und Knöpfe. Reiter in castleTab (nicht im DOM – das Fenster frischt sich auf)
+let castleTab = 'form';
+const CS_NAMES = { m: ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'], h: ['niedrig', 'mittel', 'hoch', 'höher', 'riesig'],
+  k: ['schlank', 'normal', 'dick'], mk: ['schlank', 'normal', 'dick'], p: ['vorn', 'in der Fassade', 'hinten'], cb: ['schmal', 'mittel', 'breit'],
+  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'] };
+CS_NAMES.cr = CS_NAMES.mr = CS_NAMES.r;
+const CT_LABEL = { k: 'Dicke', p: 'Platz', r: 'Dach' };
+function castleHtml(t) {
+  const c = csOf(t);
+  const stepRow = (label, val, minus, plus, noMinus, noPlus) => `<div class="row cs-row"><span class="cs-name">${label}</span>
+    <button class="btn ghost" ${minus} aria-label="${label} weniger" ${noMinus ? 'disabled' : ''}>−</button><b class="cs-n">${val}</b>
+    <button class="btn ghost" ${plus} aria-label="${label} mehr" ${noPlus ? 'disabled' : ''}>+</button></div>`;
+  const step = (key, label) => stepRow(label, c[key], `data-cs="${key}:-1"`, `data-cs="${key}:+1"`, c[key] <= CS_LIM[key][0], c[key] >= CS_LIM[key][1]);
+  const pick = (key, names = CS_NAMES[key]) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}">${n}</button>`).join('')}</div>`;
+  const tabs = `<div class="looks cs-tabs">${[['form', '🏰 Form'], ['tuerme', '🗼 Türme'], ['farben', '🎨 Farben']].map(([id, n]) => `<button class="look${castleTab === id ? ' on' : ''}" data-cstab="${id}">${n}</button>`).join('')}</div>`;
+  const worth = `<p class="muted">Wert ${fmt(t.price != null ? t.price : castlePrice(c))} Taler – mehr Größe, Türme und Stockwerke kosten den Unterschied, weniger gibt die Hälfte zurück.</p>`;
+  if (castleTab === 'farben') return tabs;
+  if (castleTab === 'tuerme') return `${tabs}
+      <div class="label">Turmpaare (von innen nach außen)</div>
+      ${c.tw.map((o, i) => `<div class="cs-tower">${stepRow(`Paar ${i + 1}`, CS_NAMES.h[o.h], `data-ct="${i}:h:-1"`, `data-ct="${i}:h:+1"`, o.h <= 0, o.h >= CT_LIM.h[1])
+        .replace('</div>', `<button class="btn ghost cs-del" data-ctdel="${i}" aria-label="Paar ${i + 1} entfernen">✕</button></div>`)}
+        <div class="looks">${['k', 'p', 'r'].map(f => `<button class="look cs-cycle" data-ct="${i}:${f}:n" aria-label="${CT_LABEL[f]} wechseln"><small>${CT_LABEL[f]}</small> ${CS_NAMES[f][o[f]]}</button>`).join('')}</div></div>`).join('')}
+      <div class="row"><button class="btn ghost" data-ctadd="1" ${c.tw.length >= CS_TOWERS ? 'disabled' : ''}>＋ Turmpaar</button></div>
+      <p class="muted">Tippe auf Dicke, Platz oder Dach zum Wechseln. Wird es eng, werden die Türme schlanker.</p>${worth}`;
+  return `${tabs}
+      <div class="label">Vorlagen</div>
+      <div class="looks">${Object.entries(CS_TPL).map(([id, v]) => `<button class="look" data-tpl="${id}">${v.name}</button>`).join('')}</div>
+      <div class="label">Größe (Felder)</div>${step('w', 'Breite')}${step('d', 'Tiefe')}
+      <div class="label">Mittelbau</div>${pick('cb')}${step('cf', 'Stockwerke')}${pick('cr')}
+      <div class="label">Mittelturm</div>${pick('m')}${c.m ? pick('mk') + pick('mr') : ''}
+      <div class="label">Flügel</div>${step('wf', 'Stockwerke')}${pick('wr')}
+      ${worth}`;
+}
+function wireCastle(el, t, x, y) {
+  const go = make => undoable(() => { const nk = castleChange(x, y, make(csOf(t))); if (nk) openInfo(...keyXY(nk)); return nk; });
+  for (const b of el.querySelectorAll('[data-cstab]')) b.onclick = () => { castleTab = b.dataset.cstab; openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-cs]')) b.onclick = () => go(c => { const [key, v] = b.dataset.cs.split(':'); return { [key]: /^[+-]/.test(v) ? c[key] + +v : +v }; });
+  for (const b of el.querySelectorAll('[data-ct]')) b.onclick = () => go(c => {
+    const [i, f, v] = b.dataset.ct.split(':'), tw = c.tw.map(o => ({ ...o })), o = tw[+i];
+    o[f] = v === 'n' ? (o[f] + 1) % (CT_LIM[f][1] + 1) : o[f] + +v;
+    return { tw };
+  });
+  for (const b of el.querySelectorAll('[data-ctadd]')) b.onclick = () => go(c => { const last = c.tw[c.tw.length - 1]; return { tw: [...c.tw, { ...CT_DEF, h: last ? Math.max(0, last.h - 1) : 2, r: last ? last.r : c.mr }] }; });
+  for (const b of el.querySelectorAll('[data-ctdel]')) b.onclick = () => go(c => ({ tw: c.tw.filter((_, i) => i !== +b.dataset.ctdel) }));
+  for (const b of el.querySelectorAll('[data-tpl]')) b.onclick = () => undoable(() => {   // Vorlage: Gestalt + Farben (nur freigeschaltete)
+    const tpl = CS_TPL[b.dataset.tpl], nk = castleChange(x, y, JSON.parse(JSON.stringify(tpl.cs)));
+    if (!nk) return;
+    const t2 = state.tiles.get(nk);
+    for (const kind of ['wall', 'roof', 'win']) {
+      const v = tpl[kind];
+      if (v == null) delete t2[kind];
+      else if (kind === 'win' || colorsOf(kind).some(([, i]) => i === v)) t2[kind] = v;
+    }
+    save(); openInfo(...keyXY(nk));
+  });
+}
 let delSure = null;                                                     // { at: Feld, until }
 const delAsked = (x, y) => !!delSure && delSure.at === x + ',' + y && performance.now() < delSure.until;
 function delButton(x, y) {
@@ -958,19 +1014,9 @@ function openInfo(x, y) {
     <div class="label">🌉 Fußgängerbrücke</div>
     <div class="looks">${Object.entries(FOOT_STYLES).map(footBtn).join('')}</div>
     ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
-  // Märchenschloss (Block 60g): Gestalt im Fenster – Größe wächst auf der Karte mit, Türme und Dach per Knopf
-  let castle = '';
-  if (t.b === 'fz_schloss') {
-    const c = csOf(t), maxP = csMaxPairs(c), step = (key, txt) => `<div class="row cs-row"><span class="cs-name">${txt}</span><button class="btn ghost" data-cs="${key}:-1" aria-label="${txt} kleiner" ${c[key] <= CS_LIM[key][0] ? 'disabled' : ''}>−</button><b class="cs-n">${c[key]}</b><button class="btn ghost" data-cs="${key}:+1" aria-label="${txt} größer" ${c[key] >= CS_LIM[key][1] ? 'disabled' : ''}>+</button></div>`;
-    const pick = (key, names, max = names.length - 1) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}" ${i > max ? 'disabled' : ''}>${n}</button>`).join('')}</div>`;
-    castle = `
-      <div class="label">Größe (Felder)</div>
-      ${step('w', 'Breite')}${step('d', 'Tiefe')}
-      <div class="label">Mittelturm</div>${pick('m', ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'])}
-      <div class="label">Seitentürme</div>${pick('s', ['keine', '1 Paar', '2 Paare', '3 Paare'], maxP)}
-      <div class="label">Dächer</div>${pick('r', ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'])}
-      <p class="muted">Wert ${fmt(t.price != null ? t.price : castlePrice(c))} Taler – mehr Größe und Türme kosten den Unterschied, weniger gibt die Hälfte zurück.${maxP < CS_LIM.s[1] ? ' Für mehr Seitentürme das Schloss breiter machen.' : ''}</p>`;
-  }
+  // Märchenschloss (Block 60g/60h): Gestalt im Fenster, in Reitern (Form · Türme · Farben)
+  const castle = t.b === 'fz_schloss' ? castleHtml(t) : '';
+  if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
@@ -1046,10 +1092,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
-  for (const b of el.querySelectorAll('[data-cs]')) b.onclick = () => undoable(() => {   // Märchenschloss (Block 60g)
-    const [key, v] = b.dataset.cs.split(':'), cur = csOf(t)[key], nk = castleChange(x, y, { [key]: /^[+-]/.test(v) ? cur + +v : +v });
-    if (nk) openInfo(...keyXY(nk));
-  });
+  if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen

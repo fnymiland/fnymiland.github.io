@@ -624,3 +624,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Fenster. Gezeichnet als ein Bau (`drawCastle`): Sockel mit Teppich, Mittelbau mit Portal und Rosette, Flügel zwischen
       den Türmen, Türme nach außen abgestuft, tiefes Schloss mit Garten. Wert `castlePrice`, mehr kostet den Unterschied,
       weniger gibt die Hälfte zurück. Torturm wandert in die Gruppe „🏰 Schloss“.
+- [x] 60h Mehr Gestaltung (Schritt 1): Turm-Liste statt Anzahl – bis 4 Paare unabhängig von der Breite, je Paar Höhe,
+      Dicke, Platz (vorn/Fassade/hinten), Dach; wird es eng, werden sie schlanker (`castleTowers`, nie Überlappen).
+      Mittelbau: Breite, Stockwerke, Dach; Mittelturm: Höhe, Dicke, Dach; Flügel: Stockwerke, Dach. Vorlagen Märchenschloss,
+      Ritterburg, Eispalast, Orientpalast (`CS_TPL`, setzen Gestalt + Farben). Fenster in Reitern Form · Türme · Farben
+      (`castleTab`, `castleHtml`, `wireCastle`). Alte Form (60g: s, r) liest `csOf` weiter.
+- [ ] 60i Schritt 2: Zierde (Fahnenfarbe, Gold an/aus, Balkone/Erker, Wappen, Lichterketten) und Umgebung (Wassergraben mit
+      Zugbrücke, Freitreppe, Garten mit Brunnen, Mauer mit Tor – Grundfläche wächst dafür um ein Feld rundum).

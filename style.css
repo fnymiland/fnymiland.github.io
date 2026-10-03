@@ -562,6 +562,14 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .row.cs-row { align-items: center; margin-top: 4px; font-weight: 800; }   /* Märchenschloss: Breite/Tiefe (Block 60g) */
 .cs-row .cs-name { min-width: 64px; }
 .cs-row .cs-n { min-width: 22px; text-align: center; }
+.cs-row { flex-wrap: nowrap; gap: 6px; }   /* Block 60h: Reiter, Turmpaare */
+.cs-row .btn { padding: 7px 13px; }
+.cs-row .cs-del { margin-left: auto; }
+.cs-tower .cs-n { min-width: 64px; font-size: 14px; }
+.cs-tabs { margin-bottom: 8px; }
+.cs-tabs .look { flex: 1; font-size: 14px; padding: 8px 6px; }
+.cs-tower { border-top: 1px solid rgba(0,0,0,0.08); padding-top: 4px; margin-top: 4px; }
+.cs-cycle small { opacity: 0.6; font-weight: 700; margin-right: 2px; }
 
 /* Hafen: Aufträge */
 .orders { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
