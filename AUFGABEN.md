@@ -694,3 +694,7 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 66d Belag der Stein-/Ziegelbrücke direkt im Fenster wählen (alle freigeschalteten Wegmuster, `setBridgeStyle`, für die
       ganze Brücke, kostet wie Umfärben; die Brücken-Art bleibt) – kein Umweg mehr über Weg ziehen, löschen, neu legen.
 
+## Block 67 – Linien zählen als Deko (03.10.2026)
+- [x] Wunsch „Deko in der Nähe“ der Häuser: auch eine Hecke, ein Zaun oder eine Mauer an einem Feld bis 2 Felder ums Haus
+      erfüllt ihn (`wishMet('deko')`), Wunschtext sagt es.
+

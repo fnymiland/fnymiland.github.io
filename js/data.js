@@ -348,7 +348,7 @@ const HOUSE_STAGES = [
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
-  deko:    { text: 'Deko in der Nähe (2 Felder)' },
+  deko:    { text: 'Deko in der Nähe (2 Felder) – auch Hecke, Zaun oder Mauer' },
   baecker: { text: 'Bäckerei erreichbar (6 Felder, oder per Weg/Bahn)' },
   ruhe:    { text: 'Ruhe – kein lauter Betrieb direkt daneben' },
   markt:   { text: 'Marktplatz erreichbar (8 Felder, oder per Weg/Bahn)' },

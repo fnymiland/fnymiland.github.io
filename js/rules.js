@@ -2233,6 +2233,10 @@ function wishMet(w, x, y) {
     case 'deko': {
       if (state.decos.has(x + ',' + y)) return true;
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;
+      if (state.edges.size) for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {   // Hecke, Zaun, Mauer an einem Feld ringsum (Block 67)
+        const tx = x + dx, ty = y + dy;
+        if (DIRS.some(([ex, ey]) => state.edges.has(edgeBetween(tx, ty, tx + ex, ty + ey)))) return true;
+      }
       return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg');
     }
     case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));

@@ -305,3 +305,15 @@ describe('Gartentor geht auf (Block 59)', () => {
     expect(game(`gateSwing('a6,6', ${E})`)).toBe(0);
   });
 });
+
+describe('Linien zählen als Deko (Block 67)', () => {
+  it('ein Zaun (oder Hecke, Mauer) bis 2 Felder ums Haus erfüllt den Wunsch „Deko“', () => {
+    game("for (let y = 3; y <= 12; y++) for (let x = 3; x <= 12; x++) { state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); state.terra.set(x + ',' + y, 'grass'); } state.edges.clear(); recalc()");
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 1 }); recalc()");
+    expect(game("wishMet('deko', 6, 6)")).toBe(false);
+    game("state.edges.set(edgeBetween(8, 7, 8, 8), { b: 'zaun', style: 'latten' }); recalc()");    // Kante 2 Felder entfernt
+    expect(game("wishMet('deko', 6, 6)")).toBe(true);
+    game("state.edges.clear(); state.edges.set(edgeBetween(10, 6, 11, 6), { b: 'hecke', style: 'niedrig' }); recalc()");   // zu weit
+    expect(game("wishMet('deko', 6, 6)")).toBe(false);
+  });
+});
