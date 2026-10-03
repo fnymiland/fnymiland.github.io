@@ -17,7 +17,7 @@ describe('Sammelalbum', () => {
 
   it('jede Seite hat eine Belohnung, die erst mit der vollen Seite kommt', () => {
     const pages = game('ALBUM.map(p => p.id)');
-    expect(pages.length).toBe(7);                                  // + Naturbeobachtungen (Block 56)
+    expect(pages.length).toBe(8);                                  // + Naturbeobachtungen (Block 56)
     const reward = game("ALBUM.find(p => p.id === 'bewohner').reward");
     expect(game(`available('${reward}')`)).toBe(false);
     game("for (const k of albumKeys(ALBUM.find(p => p.id === 'bewohner'))) state.album.add(k)");
@@ -32,7 +32,7 @@ describe('Sammelalbum', () => {
 
   it('das Album-Fenster zeigt alle Seiten mit Fortschritt', () => {
     game('openAlbum()');
-    expect(document.querySelectorAll('#modal-card .album-page').length).toBe(7);
+    expect(document.querySelectorAll('#modal-card .album-page').length).toBe(8);
     expect($('modal-card').textContent).toMatch(/%/);
   });
 

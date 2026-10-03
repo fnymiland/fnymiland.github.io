@@ -153,3 +153,40 @@ describe('Achterbahn (Block 60c)', () => {
     expect(info.refund).toBe(Math.floor((game("state.tiles.get('8,6').price") + game("state.tiles.get('8,6').loopPrice")) / 2));
   });
 });
+
+describe('Parade, Besuch, Album, Erfolg (Block 60d)', () => {
+  const rummel = () => { ground(10, 10, 3, 3); game("build('fz_zuckerwatte', 10, 10, true); build('fz_eis', 12, 12, true); recalc()"); };
+  it('Parade nur mit Freizeitpark: 3 Minuten Einnahmen ×1,3, Umzug, danach Pause; wird gespeichert', () => {
+    expect(game('startFzFest(1e12)')).toBe(false);
+    rummel();
+    expect(game('startFzFest(1e12)')).toBe(true);
+    expect(game('boostMul("inc", 1e12 + 60e3)')).toBeCloseTo(1.3);
+    expect(game('boostMul("inc", 1e12 + 4 * 60e3)')).toBe(1);
+    expect(game('startFzFest(1e12 + 5 * 60e3)')).toBe(false);                    // Pause
+    expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).fzFest.mul')).toBeCloseTo(1.3);
+    game('state.fzFest.until = Date.now() + 60e3; paraders.length = 0; for (let i = 0; i < 10; i++) syncParade()');
+    expect(game('paraders.length')).toBeGreaterThan(0);
+    expect(game("paraders.every(w => terraLook(w.fx, w.fy) === 'fz' && !!w.flag)")).toBe(true);
+    game('state.fzFest.until = 0; syncParade()');
+    expect(game('paraders.length')).toBe(0);
+  });
+
+  it('Bewohner gehen in den Freizeitpark', () => {
+    rummel();
+    game("for (let x = 6; x <= 10; x++) state.tiles.set(x + ',9', { b: 'weg', lvl: 1 }); state.tiles.set('6,8', { b: 'haus', lvl: 1 }); nameHouses(); recalc()");
+    game("walkers.length = 0; walkers.push({ fx: 6, fy: 9, tx: 6, ty: 9, px: 6, py: 9, t: 1, wait: 0, ...residentLook('6,8', 0), shirt: '#fff', speed: 1 }); setGoal(walkers[0], 'fzpark')");
+    expect(game('walkers[0].goal.kind')).toBe('fzpark');
+    expect(game('walkerDoing(walkers[0])')).toMatch(/Freizeitpark/);
+  });
+
+  it('Album-Seite „Freizeitpark“ mit Zauberbrunnen; Erfolg nach Parkstufe', () => {
+    const keys = game("albumKeys(ALBUM.find(p => p.id === 'fzpark'))");
+    expect(keys).toContain('b:fz_bahn');
+    expect(keys).toContain('b:fz_looping');
+    expect(game("available('zauberbrunnen')")).toBe(false);
+    game("for (const k of albumKeys(ALBUM.find(p => p.id === 'fzpark'))) state.album.add(k)");
+    expect(game("available('zauberbrunnen')")).toBe(true);
+    rummel();
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'fzpark').value()")).toBe(1);
+  });
+});

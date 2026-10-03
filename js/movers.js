@@ -28,7 +28,7 @@ function dayPart(ms = performance.now()) {
   for (const [from, id] of DAY_PARTS) if (m >= from) part = id;
   return part;
 }
-const GOAL_PLAN = { morgen: ['arbeit', 'arbeit', 'arbeit', 'schule'], mittag: ['essen', 'essen', 'laden', 'laden', 'markt'], abend: ['park', 'park', 'park', 'bummel'], nacht: ['bummel'] };
+const GOAL_PLAN = { morgen: ['arbeit', 'arbeit', 'arbeit', 'schule'], mittag: ['essen', 'essen', 'laden', 'laden', 'markt', 'fzpark'], abend: ['park', 'park', 'park', 'fzpark', 'fzpark', 'bummel'], nacht: ['bummel'] };
 const GOAL_OF = {
   arbeit: b => !!ITEMS[b].workers && !isHome(b) && !['schule', 'bibliothek', 'uni'].includes(b),
   schule: b => ['schule', 'bibliothek', 'uni'].includes(b),
@@ -71,8 +71,8 @@ function walkPath(sx, sy, goals, limit = 2500) {
 // Ziel für einen Bewohner: ein passendes Gebäude in der Nähe (eins der fünf nächsten) bzw. ein Stück Parkrasen
 function findGoal(kind, x, y) {
   const reg = regionAt(x, y), near = [];
-  if (kind === 'park') {
-    for (const p of PARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
+  if (kind === 'park' || kind === 'fzpark') {                          // Park bzw. Freizeitpark (Block 60d): ein begehbares Feld darin
+    for (const p of kind === 'park' ? PARKS : FZPARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
   } else if (GOAL_OF[kind]) {
     for (const [k, t] of state.tiles) {
       if (!GOAL_OF[kind](t.b)) continue;
@@ -97,7 +97,7 @@ function setGoal(w, kind) {
 function arrive(w) {
   const kind = w.goal && w.goal.kind;
   if (kind === 'home') { w.gone = true; return; }
-  if (kind === 'park') { w.path = null; w.steps = 8 + Math.floor(Math.random() * 12); w.goal = { kind: 'park', k: w.goal.k, there: true }; return; }
+  if (kind === 'park' || kind === 'fzpark') { w.path = null; w.steps = 8 + Math.floor(Math.random() * 12); w.goal = { kind, k: w.goal.k, there: true }; return; }
   if (GOAL_OF[kind]) { w.inside = 6 + Math.random() * 10; return; }
   setGoal(w, 'home');
 }
@@ -151,6 +151,7 @@ function syncMovers() {
     }
   }
   syncStrollers();
+  syncParade();
   cars.length = 0;             // keine Straßen mehr – dafür fahren Züge (syncTrains)
   syncTrains();
 }
@@ -215,8 +216,9 @@ function stepMovers(dt) {
   stepCritters(performance.now());
   for (const w of walkers) stepWalker(w, dt);
   for (const w of strollers) stepMover(w, dt, parkWalk, true);
+  for (const w of paraders) stepMover(w, dt, fzWalk, false);
   for (const c of cars) stepMover(c, dt, drivable, false);
-  for (const list of [walkers, cars, strollers]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
+  for (const list of [walkers, cars, strollers, paraders]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
 }
 // Sprechblasen (Block 55): selten (alle 20–30 s) sagt jemand im Bild etwas – zu seinen Wünschen, wohin er geht, zur Tageszeit
 const WISH_SAY = { weg: 'Ein Weg vor meiner Tür wäre schön …', deko: 'Ein paar Blumen vorm Haus – das wär’s!', baecker: 'Frische Brötchen! Gibt’s hier keine Bäckerei?',
@@ -225,7 +227,7 @@ const WISH_SAY = { weg: 'Ein Weg vor meiner Tür wäre schön …', deko: 'Ein p
   wasser: 'Ich träume vom Blick aufs Wasser.', kultur: 'Mal wieder ins Theater – oder ins Kino?' };
 const GOAL_SAY = { arbeit: ['Auf zur Arbeit!', 'Heute wird ein fleißiger Tag.'], schule: ['Ab in die Schule!', 'Heute lerne ich was Neues.'],
   essen: ['Mittagspause! ☕', 'Ich hab so einen Hunger …'], laden: ['Nur kurz was einkaufen.', 'Mal sehen, was es Neues gibt.'], markt: ['Auf zum Markt!', 'Hoffentlich gibt’s frische Äpfel.'],
-  park: ['Herrlicher Abend für einen Spaziergang.', 'Gleich setz ich mich auf eine Bank.'], home: ['Feierabend!', 'Schön, gleich zu Hause zu sein.'],
+  park: ['Herrlicher Abend für einen Spaziergang.', 'Gleich setz ich mich auf eine Bank.'], fzpark: ['Auf in den Freizeitpark!', 'Heute fahr ich Achterbahn!', 'Erst Zuckerwatte, dann Karussell.'], home: ['Feierabend!', 'Schön, gleich zu Hause zu sein.'],
   bummel: ['Was für ein schöner Tag.', 'Einfach mal treiben lassen …'] };
 const PART_SAY = { morgen: ['Guten Morgen!', 'Die Sonne ist schon wach.'], mittag: ['Was für ein schöner Tag.'], abend: ['Der Himmel wird ganz rosa …'],
   nacht: ['Gute Nacht!', 'Die Laternen leuchten so schön ✨'] };
@@ -278,14 +280,15 @@ function walkerAt(sx, sy) {
 }
 // Was macht die Figur gerade?
 const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem Weg zur Schule', essen: '☕ Geht etwas essen', laden: '🛍️ Geht einkaufen',
-  markt: '🧺 Geht zum Markt', park: '🌳 Geht in den Park', home: '🏠 Auf dem Heimweg', bummel: '🚶 Bummelt ein bisschen herum' };
+  markt: '🧺 Geht zum Markt', park: '🌳 Geht in den Park', fzpark: '🎢 Geht in den Freizeitpark', home: '🏠 Auf dem Heimweg', bummel: '🚶 Bummelt ein bisschen herum' };
 const GOAL_IN = { arbeit: '💼 Arbeitet gerade', schule: '🎒 Lernt gerade', essen: '☕ Macht Pause', laden: '🛍️ Kauft gerade ein', markt: '🧺 Auf dem Markt' };
 function walkerDoing(w) {
   if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
   const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
   if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';
+  if (g0.kind === 'fzpark' && g0.there) return '🎢 Hat Spaß im Freizeitpark';
   if (w.inside > 0 && t && GOAL_IN[g0.kind]) return `${GOAL_IN[g0.kind]}: ${stageName(t)}`;
-  return GOAL_DO[g0.kind] + (t && g0.kind !== 'home' && g0.kind !== 'park' ? ` (${stageName(t)})` : '');
+  return GOAL_DO[g0.kind] + (t && !['home', 'park', 'fzpark'].includes(g0.kind) ? ` (${stageName(t)})` : '');
 }
 const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
 function drawWalker(w, z, now) {
@@ -329,6 +332,11 @@ function drawWalker(w, z, now) {
   else if (sp === 'igel') circle(x, hy + 1.6 * z, 0.8 * z, '#3d2c22');
   else if (sp === 'ente') ellipse(x, hy + 2 * z, 2.6 * z, 1.1 * z, '#f2a03a');
   else if (sp === 'elefant') { ellipse(x, hy + 3.6 * z, 1.3 * z, 3 * z, f); circle(x, hy + 6.2 * z, 1 * z, dark); }
+  if (w.flag) {                                                          // Parade: Fähnchen über dem Kopf
+    const wave = Math.sin(now / 250 + w.speed * 20) * 1.2 * z;
+    g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(x + 4 * z, y - 2 * z); g.lineTo(x + 4 * z, hy - 12 * z); g.stroke();
+    poly([[x + 4 * z, hy - 12 * z], [x + 10 * z, hy - 10.5 * z + wave], [x + 4 * z, hy - 9 * z]], C(w.flag));
+  }
   if (sp !== 'ente' && sp !== 'elefant') {
     ellipse(x - 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
     ellipse(x + 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
@@ -1078,4 +1086,19 @@ function drawCoasterCar(m, z) {
   poly(base.map(([a, b]) => P(a, b, 1.5 * sg)), C(shade(col, -0.25)));
   poly(base.map(([a, b]) => P(a, b, 4.5 * sg)), C(col));
   if (!m.inv) for (const a of [-0.07, 0.07]) head(a);
+}
+
+// Parade (Block 60d): solange sie läuft, ziehen Figuren mit Fähnchen über den Freizeitpark (wie Spaziergänger, nur auf dem Boden)
+const paraders = [];
+const fzWalk = (x, y) => terraLook(x, y) === 'fz' && walkable(x, y);
+const PARADE_FLAGS = ['#e8604f', '#ffd23f', '#5f8fe8', '#58b36a', '#f28cb1', '#b07ad6'];
+function syncParade() {
+  const want = fzFestLeft() > 0 ? Math.min(10, FZPARKS.reduce((n, p) => n + 2 + p.stage * 2, 0)) : 0;
+  while (paraders.length > want) paraders.pop();
+  if (paraders.length >= want || !FZPARKS.length) return;
+  const p = FZPARKS[Math.floor(Math.random() * FZPARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => fzWalk(x, y));
+  if (!free.length) return;
+  const [sx, sy] = free[Math.floor(Math.random() * free.length)], a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+  paraders.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5, kind: ANIMALS.indexOf(a), fur: a.fur || FUR[Math.floor(Math.random() * FUR.length)],
+    shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.6, flag: PARADE_FLAGS[Math.floor(Math.random() * PARADE_FLAGS.length)] });
 }

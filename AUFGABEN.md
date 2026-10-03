@@ -601,4 +601,7 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       (Kurven als Viertelkreis, rote Schienen, Schwellen, weiße Stützen, Looping-Ring, Station mit Dach), Zug
       `stepCoasters`/`coasterCars`/`drawCoasterCar` (Lift langsam, bergab schneller, hält an der Station, im Looping
       kopfüber). Fertige Bahn = eine Attraktion (Sorten fahrt + achterbahn).
-- [ ] 60d Parade/Feuerwerk-Event, Bewohner gehen hin, Album-Seite, Erfolge, „Das ist neu“.
+- [x] 60d Parade (`startFzFest`, `state.fzFest`, 3 min Einnahmen ×1,3/1,6/2,2, 20 min Pause, Feuerwerk über der Parkmitte
+      `startFireworks(at)`, Umzug `paraders` mit Fähnchen auf dem Parkboden), Bewohner gehen mittags/abends hin (Ziel
+      'fzpark'), Album-Seite „Freizeitpark“ (alle Module samt Looping) → 🌈 Zauberbrunnen, Erfolg „Freizeitpark-Stufe“,
+      „Das ist neu“. Nebenbei: Speichern mitten im Tragen großer Deko auf Wegen legte die Wege doppelt ab – behoben.

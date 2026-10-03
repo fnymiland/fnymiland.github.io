@@ -1279,6 +1279,19 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
     }
     case 'fz_bahn': case 'fz_station': drawCoasterTile(cx, cy, z, x, y, t && t.b ? t : { b: type }); break;   // Achterbahn (Block 60c)
     case 'fz_looping': drawCoasterTile(cx, cy, z, x, y, { b: 'fz_bahn', loop: true }); break;
+    case 'zauberbrunnen': {                  // Album-Belohnung (Block 60d): Brunnen mit Regenbogen und Funkeln
+      ellipse(cx, cy + 1 * z, hw * 0.8, hh * 0.8, 'rgba(40,40,40,0.15)');
+      ellipse(cx, cy, hw * 0.7, hh * 0.7, C('#d8d2e8')); ellipse(cx, cy - 2.5 * z, hw * 0.7, hh * 0.7, C('#ece6f6'));
+      ellipse(cx, cy - 2.5 * z, hw * 0.55, hh * 0.55, C('#8fd8ef'));
+      const cols = ['#e8604f', '#f2a03a', '#ffd23f', '#58b36a', '#5f8fe8', '#b07ad6'];
+      g.lineCap = 'butt';
+      cols.forEach((col, i) => { g.strokeStyle = C(col); g.lineWidth = 1.3 * z; g.beginPath(); g.ellipse(cx, cy - 4 * z, (12 - i * 1.3) * z, (16 - i * 1.3) * z, 0, Math.PI, 0); g.stroke(); });
+      g.fillStyle = C('#ece6f6'); g.fillRect(cx - 1.5 * z, cy - 12 * z, 3 * z, 9 * z);
+      for (let i = 0; i < 6; i++) { const t = (now / 900 + i / 6) % 1, a = i / 6 * Math.PI * 2; circle(cx + Math.cos(a) * 5 * z * t, cy - 12 * z - Math.sin(t * Math.PI) * 6 * z + t * 6 * z, 1 * z, 'rgba(220,245,255,0.9)'); }
+      for (let i = 0; i < 5; i++) { const a = now / 1200 + i * 1.3, sx = cx + Math.cos(a) * 9 * z, sy = cy - 20 * z + Math.sin(a * 1.4) * 4 * z, tw = 0.6 + 0.4 * Math.sin(now / 200 + i);
+        poly([[sx, sy - 2 * z * tw], [sx + 0.6 * z, sy], [sx, sy + 2 * z * tw], [sx - 0.6 * z, sy]], C('#fff4a8')); }
+      break;
+    }
     // --- Freizeitpark (Block 60) ---
     case 'fz_tor': {                         // 1×2: zwei Türmchen mit Spitzdach und Fahne, dazwischen ein Bogen mit Schild
       const K = kit(cx, cy, z, t && t.rot), lit = night > 0.15 && isLive();

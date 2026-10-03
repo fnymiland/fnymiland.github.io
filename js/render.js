@@ -649,7 +649,7 @@ function render(now) {
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
-  for (const m of walkers.concat(strollers, cars, cars4, ships, coasterCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Glühwürmchen erst über der Nacht
+  for (const m of walkers.concat(strollers, paraders, cars, cars4, ships, coasterCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = COVER.get(k) || k;     // Zug in der Halle: ganz hinten zeichnen, Dächer und Bahnsteige kommen darüber
     if (!byTile.has(k)) byTile.set(k, []);
@@ -968,12 +968,13 @@ function drawSky(now, z) {
 // Feuerwerk: ein paar Dutzend Raketen über dem Rathaus, jede steigt auf und zerplatzt in bunten Funken
 let fireworksUntil = 0, lastFire = 0;
 const bursts = [];
-function startFireworks() { fireworksUntil = performance.now() + 22000; sfx('star'); toast('🎆 Feuerwerk!'); }
+let fireworksAt = null;                                               // Parade (Block 60d): über dem Freizeitpark statt über dem Rathaus
+function startFireworks(at = null, quiet = false) { fireworksAt = at; fireworksUntil = performance.now() + 22000; if (!quiet) { sfx('star'); toast('🎆 Feuerwerk!'); } }
 const FIRE_COLS = ['#ff6b8a', '#ffd36e', '#8fe3ff', '#b6ff9e', '#d9a8ff', '#ffffff', '#ff9f5a'];
 function drawFireworks(now, z) {
   if (now < fireworksUntil && now - lastFire > 350 + Math.random() * 500) {
     lastFire = now;
-    const [cx, cy] = skyInfo().center;
+    const [cx, cy] = fireworksAt || skyInfo().center;
     bursts.push({ x: cx + (Math.random() - 0.5) * 10, y: cy + (Math.random() - 0.5) * 10, h: 150 + Math.random() * 130, t0: now,
       col: FIRE_COLS[Math.floor(Math.random() * FIRE_COLS.length)], col2: FIRE_COLS[Math.floor(Math.random() * FIRE_COLS.length)], n: 28 + Math.floor(Math.random() * 16), R: 60 + Math.random() * 50 });
   }

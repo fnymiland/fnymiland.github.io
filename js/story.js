@@ -499,6 +499,7 @@ const ACHIEVEMENTS = [
     value: () => [...state.claimed].filter(k => terrainAt(...keyXY(k)) !== 'water').length },
   { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.length], value: () => state.design.size },
   { id: 'wunder', icon: '🏛️', name: 'Wunderwerke', tiers: [1, 3, 5], value: () => tileCount(t => wonderDone(t)) },
+  { id: 'fzpark', icon: '🎢', name: 'Freizeitpark-Stufe', tiers: [1, 2, 3], value: () => fzBest() },
 ];
 const RANKS = [
   { stars: 0, name: 'Noch ohne Ehrennadel' },
@@ -542,6 +543,7 @@ const ALBUM = [
   { id: 'wege', icon: '🛤️', name: 'Wegstile', reward: 'weg:goldpflaster' },
   { id: 'bewohner', icon: '🐾', name: 'Bewohner', reward: 'karussell' },
   { id: 'natur', icon: '🔍', name: 'Naturbeobachtungen', reward: 'seerosenteich', tiers: ['schmetterlingsgarten', 'vogelbaum', 'seerosenteich'] },
+  { id: 'fzpark', icon: '🎢', name: 'Freizeitpark', reward: 'zauberbrunnen' },
 ];
 const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder || ITEMS[id].garden);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
@@ -553,6 +555,7 @@ function albumKeys(p) {
     case 'wege': return STYLES.weg.filter(st => !st.album).map(st => 'weg:' + st.id);
     case 'bewohner': return ANIMALS.map(a => 'tier:' + a.id);
     case 'natur': return NATURE.map(n => 'natur:' + n.id);
+    case 'fzpark': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'fz').map(id => 'b:' + id);
     default: return [];
   }
 }
@@ -567,6 +570,7 @@ function collectAlbum() {
     if (ITEMS[t.b] && ITEMS[t.b].cat) add('b:' + baseOf(t.b));          // Größen zählen als ihr Grundmodell
     if (t.b === 'haus') add('hs:' + t.lvl);
     for (const r of residentsOf(t)) add('tier:' + r.animal);              // alle Wohnhäuser (Block 55)
+    if (t.loop) add('b:fz_looping');                                        // Achterbahn mit Looping (Block 60d)
     if (t.wall != null) add('wall:' + t.wall);
     if (t.roof != null) add('roof:' + t.roof);
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
@@ -643,6 +647,7 @@ function boostMul(kind, now = Date.now()) {
   const d = decreeActive(now), D = d && DECREES[d.id];
   if (D && D.kind === kind) m *= D.mul;
   if (kind === 'inc' && parkFestLeft(now) > 0) m *= state.parkFest.mul;
+  if (kind === 'inc' && fzFestLeft(now) > 0) m *= state.fzFest.mul;           // Parade (Block 60d)
   return m;
 }
 // 🔭 Sternschnuppen: nachts fällt ab und zu eine neben ein Haus – antippen bringt Ideen (3 Minuten Ideen, mindestens 50)
@@ -704,6 +709,29 @@ function parkFestTick(now = Date.now()) {
   if (!on && parkFestWas) toast('🎉 Das Parkfest ist vorbei');
   parkFestWas = on;
   if (on) for (const p of PARKS) { const [x, y] = keyXY(p.tiles[Math.floor(Math.random() * p.tiles.length)]); sparkle(x, y); }
+}
+// 🎆 Parade (Block 60d): im Freizeitpark-Fenster feiern, wenn es einen Freizeitpark gibt. 3 Minuten lang Einnahmen
+// ×1,3 / ×1,6 / ×2,2 (nach der besten Stufe), Feuerwerk über dem Park und ein Umzug; danach 20 Minuten Pause
+const FZFEST_LEN = 3 * 60e3, FZFEST_EVERY = 20 * 60e3, FZFEST_MUL = [1, 1.3, 1.6, 2.2];
+const fzFestLeft = (now = Date.now()) => state.fzFest ? Math.max(0, state.fzFest.until - now) : 0;
+const fzFestWait = (now = Date.now()) => state.fzFest ? Math.max(0, state.fzFest.next - now) : 0;
+function startFzFest(now = Date.now()) {
+  const st = fzBest();
+  if (!st || fzFestWait(now) > 0) return false;
+  state.fzFest = { until: now + FZFEST_LEN, next: now + FZFEST_EVERY, mul: FZFEST_MUL[st] };
+  const best = FZPARKS.reduce((a, p) => (!a || p.stage > a.stage ? p : a), null), pts = best.tiles.map(keyXY);
+  const mid = [pts.reduce((n, p) => n + p[0], 0) / pts.length, pts.reduce((n, p) => n + p[1], 0) / pts.length];   // Mitte des Parks
+  sfx('star'); confettiBurst(); startFireworks(mid, true);
+  toast(`🎆 Parade! 3 Minuten lang Einnahmen ×${String(FZFEST_MUL[st]).replace('.', ',')}`);
+  save();
+  return true;
+}
+let fzFestWas = false;
+function fzFestTick(now = Date.now()) {
+  const on = fzFestLeft(now) > 0;
+  if (!on && fzFestWas) toast('🎆 Die Parade ist vorbei');
+  fzFestWas = on;
+  if (on) for (const p of FZPARKS) { const [x, y] = keyXY(p.tiles[Math.floor(Math.random() * p.tiles.length)]); sparkle(x, y); }
 }
 // Jahrmarkt: beim Beginn Bescheid sagen, solange er läuft funkelt es am Riesenrad
 let fairWas = false;

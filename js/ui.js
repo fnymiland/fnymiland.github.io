@@ -1198,14 +1198,24 @@ function fzStatus(k) {
   if (p.stage) out.push(`<div class="ok">🎟️ Eintritt: alle Einnahmen +${Math.round(FZ_INC[p.stage] * 100)} % · 👥 ${FZ_ATTR[p.stage]} Besucher · 🌸 +${FZ_BEAUTY[p.stage]}, auch für Häuser bis ${FZ_NEAR[p.stage]} Felder</div>`);
   return out;
 }
+// Parade (Block 60d): läuft, wartet oder ist bereit
+function fzFestLine() {
+  const left = fzFestLeft(), wait = fzFestWait(), st = fzBest();
+  if (left) return `<div class="ok">🎆 Parade! Einnahmen ×${String(state.fzFest.mul).replace('.', ',')} · noch ${fmtClock(left)}</div>`;
+  if (!st) return '<div class="muted">🎆 Mit einem fertigen Freizeitpark kannst du eine Parade mit Feuerwerk feiern.</div>';
+  if (wait) return `<div class="muted">🎆 Nächste Parade in ${fmtClock(wait)}</div>`;
+  return `<div class="ok">🎆 Parade bereit: 3 Minuten Einnahmen ×${String(FZFEST_MUL[st]).replace('.', ',')}, mit Feuerwerk und Umzug</div>`;
+}
 function openFzInfo(x, y) {
   const k = x + ',' + y;
   showPanel(`
     <h3>🎢 Freizeitpark-Boden</h3>
     <div class="status">${fzStatus(k).join('')}</div>
     <p class="muted">Stell Fahrgeschäfte, Stände und Deko auf den Boden (🎡 Freizeit → 🎢 Freizeitpark). Je größer und bunter, desto höher die Stufe: 🎪 Rummelplatz, 🎠 Freizeitpark, 🏰 Wunderland.</p>
-    <div class="row"><button class="btn danger" id="p-del" aria-label="Boden entfernen">🗑️ +${fmt(ITEMS.fzboden.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    ${fzFestLine()}
+    <div class="row">${fzBest() && !fzFestLeft() && !fzFestWait() ? '<button class="btn" id="p-fest">🎆 Parade feiern</button>' : ''}<button class="btn danger" id="p-del" aria-label="Boden entfernen">🗑️ +${fmt(ITEMS.fzboden.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => terraLook(x, y) === 'fz' ? openFzInfo(x, y) : closePanel());
+  if ($('p-fest')) $('p-fest').onclick = () => { if (startFzFest()) openFzInfo(x, y); };
   $('p-del').onclick = () => { closePanel(); undoable(() => removeFzGround(x, y)); };
   $('p-close').onclick = closePanel;
 }
@@ -1925,13 +1935,11 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-02-bewohner', items: [
-  '🐾 <b>Neue Bewohner:</b> Mit jeder entdeckten Insel zieht eine neue Tierart ein – 🐿️ Eichhörnchen (Waldinsel), 🦔 Igel (Obstinsel), 🦊 Fuchs (Windinsel), 🦒 Giraffe (Ruineninsel), 🐘 Elefant (Erzinsel) und 🦆 Ente (Quelleninsel). Jetzt wohnt in jedem Wohnhaus jemand, im Reihenhaus sogar drei Familien.',
-  '🌅 <b>Ein Tag auf der Insel:</b> Morgens gehen die Bewohner von zu Hause zur Arbeit oder in die Schule, mittags ins Café, zur Bäckerei oder auf den Markt, abends in den Park – und nachts schlafen die meisten.',
-  '👆 <b>Tipp eine Figur an:</b> Du siehst, wer das ist, wo sie wohnt und wohin sie gerade geht. Ab und zu erzählt dir auch jemand in einer Sprechblase, was er sich wünscht.',
-  '🏛️ <b>Rathaus → Bewohner:</b> Alle Familien deiner Insel nach Tierart, mit Herzen – antippen bringt dich zum Haus.',
-  '🦋 <b>Tiere in der Natur:</b> Schmetterlinge an deinen Blumen, Vögel im Wald, Fische im Teich, Möwen und Robben an der Küste – je schöner ein Ort, desto mehr. Tipp sie an: Sie kommen ins Album „Naturbeobachtungen“. Seltene wie Eisvogel, Eule, Reh oder Goldfisch zeigen sich nur an besonderen Orten. Für 4, 8 und alle 12 gibt es Schmetterlingsgarten, Vogelhäuschen-Baum und Seerosenteich.',
-  '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt es – schlechter als vorher wird nichts.',
+const NEWS = { id: '2026-10-03-freizeitpark', items: [
+  '🎢 <b>Dein eigener Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf – Märchenschloss, Pferdekarussell, Teetassen, Kettenkarussell, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte, Eis und Luftballons. Aus dem Rummelplatz wird ein Freizeitpark und schließlich ein Wunderland.',
+  '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein – der Zug fährt den Lifthügel hinauf und saust hinunter. Mit Looping kopfüber!',
+  '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk und Umzug – 3 Minuten lang mehr Einnahmen. Und die Bewohner gehen gern selbst in den Park.',
+  '🛤️ <b>Mehr Freiheit beim Gestalten:</b> Deko darf auf Wege (auch große), Gebäude ersetzen Wege, und Zäune bekommen ein Gartentor oder einen offenen Durchgang – auch ohne Weg.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

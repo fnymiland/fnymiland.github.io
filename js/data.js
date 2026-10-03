@@ -128,6 +128,7 @@ const ITEMS = {
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
   karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
+  zauberbrunnen: { cat: 'deko', name: 'Zauberbrunnen', cost: 0, needs: 'grass', beauty: 70, album: 'fzpark', desc: 'Für die volle Album-Seite „Freizeitpark“: ein Brunnen mit Regenbogen und Funkeln.' },
   // Naturbeobachtungen (Block 56): drei Stufen der Album-Seite (albumN = so viele Tiere entdeckt)
   schmetterlingsgarten: { cat: 'deko', name: 'Schmetterlingsgarten', cost: 0, needs: 'grass', beauty: 20, album: 'natur', albumN: 4, desc: 'Ein Blumenhügel, über dem immer bunte Falter tanzen.' },
   vogelbaum:  { cat: 'deko', name: 'Vogelhäuschen-Baum', cost: 0, needs: 'grass', beauty: 25, album: 'natur', albumN: 8, desc: 'Ein alter Baum mit Vogelhäuschen – Vögel fliegen ein und aus.' },
@@ -556,7 +557,7 @@ const MENU = [
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
-    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon'] },
+    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon', 'zauberbrunnen'] },
     { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser', 'fz_bahn', 'fz_station', 'fz_looping'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
@@ -682,6 +683,7 @@ const ITEM_TIPS = {
   fz_bahn: 'Die Achterbahn! Zieh die Schiene als Rundkurs und setz eine Station hinein.',
   fz_station: 'Die Station für deine Achterbahn.',
   fz_looping: 'Ein Looping für deine Achterbahn – kopfüber!',
+  zauberbrunnen: 'Jedes Fahrgeschäft gebaut! Der Zauberbrunnen mit Regenbogen – kostet nichts.',
   schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
   vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',
