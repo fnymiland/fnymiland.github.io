@@ -907,7 +907,7 @@ function openInfo(x, y) {
       <div class="label">${mixed ? 'Dächer' : 'Dach'}</div>
       <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
       ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
-      ${ITEMS[t.b].fl0 ? `<div class="label">Fenster</div>
+      ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>
       <div class="swatches">${WIN_COLS.map((c, i) => `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
@@ -958,6 +958,19 @@ function openInfo(x, y) {
     <div class="label">🌉 Fußgängerbrücke</div>
     <div class="looks">${Object.entries(FOOT_STYLES).map(footBtn).join('')}</div>
     ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
+  // Märchenschloss (Block 60g): Gestalt im Fenster – Größe wächst auf der Karte mit, Türme und Dach per Knopf
+  let castle = '';
+  if (t.b === 'fz_schloss') {
+    const c = csOf(t), maxP = csMaxPairs(c), step = (key, txt) => `<div class="row cs-row"><span class="cs-name">${txt}</span><button class="btn ghost" data-cs="${key}:-1" aria-label="${txt} kleiner" ${c[key] <= CS_LIM[key][0] ? 'disabled' : ''}>−</button><b class="cs-n">${c[key]}</b><button class="btn ghost" data-cs="${key}:+1" aria-label="${txt} größer" ${c[key] >= CS_LIM[key][1] ? 'disabled' : ''}>+</button></div>`;
+    const pick = (key, names, max = names.length - 1) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}" ${i > max ? 'disabled' : ''}>${n}</button>`).join('')}</div>`;
+    castle = `
+      <div class="label">Größe (Felder)</div>
+      ${step('w', 'Breite')}${step('d', 'Tiefe')}
+      <div class="label">Mittelturm</div>${pick('m', ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'])}
+      <div class="label">Seitentürme</div>${pick('s', ['keine', '1 Paar', '2 Paare', '3 Paare'], maxP)}
+      <div class="label">Dächer</div>${pick('r', ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'])}
+      <p class="muted">Wert ${fmt(t.price != null ? t.price : castlePrice(c))} Taler – mehr Größe und Türme kosten den Unterschied, weniger gibt die Hälfte zurück.${maxP < CS_LIM.s[1] ? ' Für mehr Seitentürme das Schloss breiter machen.' : ''}</p>`;
+  }
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
@@ -972,6 +985,7 @@ function openInfo(x, y) {
     ${boat}
     ${hub}
     ${train}
+    ${castle}
     ${colors}
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
@@ -1032,6 +1046,10 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
+  for (const b of el.querySelectorAll('[data-cs]')) b.onclick = () => undoable(() => {   // Märchenschloss (Block 60g)
+    const [key, v] = b.dataset.cs.split(':'), cur = csOf(t)[key], nk = castleChange(x, y, { [key]: /^[+-]/.test(v) ? cur + +v : +v });
+    if (nk) openInfo(...keyXY(nk));
+  });
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen

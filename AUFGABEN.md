@@ -617,3 +617,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       (SIZED) ist wieder raus. Station ganz flach (auch die Kanten zu ihr), Bahnsteig-Seite per Drehen, ⟳-Knopf.
       Looping-Richtung korrigiert (erst vor, oben zurück). „Randlinien an/aus“ im ☰ Menü (`state.noBorders`).
       Löschen-Rückfrage ging beim Auffrischen verloren (`delSure`) – behoben.
+- [x] 60g Nach dem dritten Test: Looping größer und runder (`LOOP_R` 18, `LOOP_T` 0.48). Baukasten-Schloss war „komplett
+      Schrott“ (Teile wirkten nicht zusammengehörig) → EIN Märchenschloss (`fz_schloss`), gestaltet im Fenster: Breite 3–9,
+      Tiefe 1–3 (wächst auf der Karte mit, abwechselnd zu beiden Seiten, `castleChange`), Mittelturm keiner…riesig,
+      Seitentürme 0–3 Paare (so viele, wie die Breite trägt, `csMaxPairs`), Dach Spitz/Kuppel/Zinnen, Farben Fassade/Dach/
+      Fenster. Gezeichnet als ein Bau (`drawCastle`): Sockel mit Teppich, Mittelbau mit Portal und Rosette, Flügel zwischen
+      den Türmen, Türme nach außen abgestuft, tiefes Schloss mit Garten. Wert `castlePrice`, mehr kostet den Unterschied,
+      weniger gibt die Hälfte zurück. Torturm wandert in die Gruppe „🏰 Schloss“.

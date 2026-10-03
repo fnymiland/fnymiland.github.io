@@ -25,10 +25,10 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   for (let y = 11; y >= 3; y--) ring.push([2, y]);
   for (const [x, y] of ring) if (!(x === 5 && y === 12)) B('fz_bahn', x, y);
   B('fz_station', 5, 12); B('fz_looping', 9, 2);
-  // Schloss aus dem Baukasten: breite Front (Flügel, Portal in der Mitte), Ecktürme, große Türme, Hauptturm dahinter
-  const T = (b, x, y, fl, rot = 0) => { B(b, x, y, rot); const t = game(`state.tiles.get('${X + x},${Y + y}')`); if (t && fl) game(`state.tiles.get('${X + x},${Y + y}').fl = ${fl}`); };
-  T('fz_turm', 5, 8, 3); T('fz_fluegel', 6, 8, 2); T('fz_fluegel', 7, 8, 3); T('fz_portal', 8, 8, 3, 1); T('fz_fluegel', 9, 8, 3); T('fz_fluegel', 10, 8, 2); T('fz_turm', 11, 8, 3);
-  T('fz_turm2', 7, 7, 3); T('fz_hauptturm', 8, 7, 4); T('fz_turm2', 9, 7, 3);
+  // Märchenschloss (Block 60g): breit, flach, riesiger Mittelturm, zwei Paar Seitentürme – Portal zum Weg (Drehung 1)
+  B('fz_schloss', 5, 7, 1);
+  game(`(t => { t.cs = { w: 7, d: 2, m: 4, s: 2, r: 0 }; t.price = castlePrice(t.cs); })(state.tiles.get('${X + 5},${Y + 7}')); rebuildCover()`);
+  const T = (b, x, y, fl, rot = 0) => { B(b, x, y, rot); if (fl) game(`state.tiles.get('${X + x},${Y + y}').fl = ${fl}`); };
   // Eingang: zwei Tortürme
   T('fz_torturm', 16, 5, 2); T('fz_torturm', 16, 9, 2);
   for (const [b, x, y, r] of [['fz_karussell', 3, 3], ['fz_teetassen', 12, 3], ['fz_kette', 12, 10], ['fz_freifall', 4, 6], ['fz_geister', 3, 9], ['fz_wildwasser', 13, 4],

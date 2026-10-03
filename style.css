@@ -287,6 +287,7 @@ html, body {
   background: var(--cream2); border-radius: 99px; padding: 4px 10px; box-shadow: 0 2px 0 var(--shadow); cursor: pointer;
 }
 .look.on { background: var(--yellow); box-shadow: 0 2px 0 #e0c060; }
+.look:disabled { opacity: 0.4; cursor: default; }
 .label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--brown2); margin-top: 10px; }
 .text-in {
   width: 100%; font: inherit; font-weight: 800; font-size: 17px; color: var(--brown);
@@ -558,6 +559,9 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .status .load i { display: block; height: 100%; background: var(--green); border-radius: 99px; }
 .status .load i.full { background: var(--red); }
 .row.cars { align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 800; gap: 6px; }
+.row.cs-row { align-items: center; margin-top: 4px; font-weight: 800; }   /* Märchenschloss: Breite/Tiefe (Block 60g) */
+.cs-row .cs-name { min-width: 64px; }
+.cs-row .cs-n { min-width: 22px; text-align: center; }
 
 /* Hafen: Aufträge */
 .orders { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }

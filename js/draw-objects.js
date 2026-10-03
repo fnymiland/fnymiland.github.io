@@ -937,7 +937,7 @@ function drawTorArch(cx, cy, z, x, y, t, H, now) {
 const fzCol = (t, kind, def) => !t || t[kind] == null ? def : (kind === 'wall' ? WALLS : kind === 'roof' ? ROOFS : WIN_COLS)[t[kind]] || def;
 const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
-  'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_portal', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
+  'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_schloss', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
@@ -1363,56 +1363,22 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       void B;
       break;
     }
-    // Schloss-Baukasten (Block 60f): je Feld ein Teil, Höhe nach Stockwerken (t.fl), Farben aus dem Fenster
-    case 'fz_fluegel': case 'fz_portal': {   // Flügel: Mauerstück mit Zinnen und Fensterreihen; Portal: dazu Tor mit Balkon
-      const K = kit(cx, cy, z, t && t.rot), fl = (t && t.fl) || ITEMS[type].fl0, H = 6 + fl * 9, lit = night > 0.15 && isLive();
-      const wall = fzCol(t, 'wall', '#f8d6e0'), win = lit ? '#ffd873' : C(fzCol(t, 'win', '#a8dcff')), dark = C(shade(wall, -0.12));
-      const B = K.block({ a: 0, b: 0, ha: 0.5, hb: 0.5, h: H, wall, roof: fzCol(t, 'roof', shade(wall, -0.06)), type: 'flat', trim: fzCol(t, 'roof', shade(wall, -0.1)) });   // Oberseite und Band in Dachfarbe
-      for (const side of ['front', 'back', 'left', 'right']) {
-        const F = B.faces[side];
-        if (!F) continue;
-        for (let i = 0; i < 7; i += 2) faceQuad(F.P, F.Q, i / 7, (i + 1) / 7, F.H, F.H + 3.2 * z, dark);           // Zinnen
-        const door = type === 'fz_portal' && side === 'front';
-        for (let f = 0; f < fl; f++) {
-          const h0 = (4 + f * 9) * z, h1 = h0 + 5 * z;
-          if (door && f === 0) continue;
-          for (const [t0, t1] of [[0.18, 0.36], [0.64, 0.82]]) { faceQuad(F.P, F.Q, t0, t1, h0, h1, win); const m = lerp(lerp(F.P, F.Q, t0), lerp(F.P, F.Q, t1), 0.5); circle(m[0], m[1] - h1, Math.hypot(...[0, 1].map(i => (lerp(F.P, F.Q, t1)[i] - lerp(F.P, F.Q, t0)[i]))) / 2, win); }   // Rundbogenfenster
-        }
-        if (door) {                                                      // Tor mit goldenem Rahmen, Balkon darüber
-          faceQuad(F.P, F.Q, 0.3, 0.7, 0, Math.min(F.H - 3 * z, 12 * z), C('#c9962b'));
-          faceQuad(F.P, F.Q, 0.34, 0.66, 0, Math.min(F.H - 4 * z, 11 * z), C('#6b4630'));
-          if (fl > 1) faceQuad(F.P, F.Q, 0.22, 0.78, 13.5 * z, 15 * z, C('#f2c14e'));
-        }
-      }
-      if (type === 'fz_portal') for (const sb of [-0.4, 0.4]) { const [fx, fy] = K.P(0.45, sb, H + 3); g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 9 * z); g.stroke();
-        poly([[fx, fy - 9 * z], [fx + 6 * z, fy - 7.5 * z + Math.sin(now / 280 + sb) * z], [fx, fy - 6 * z]], C('#e8604f')); }
-      break;
-    }
-    case 'fz_turm': case 'fz_turm2': case 'fz_hauptturm': case 'fz_torturm': {   // Türme: schlank, groß, Hauptturm (mit Türmchen), Torturm
-      const K = kit(cx, cy, z, t && t.rot), fl = (t && t.fl) || ITEMS[type].fl0, lit = night > 0.15 && isLive(), gold = '#f2c14e';
-      const S = { fz_turm: [0.28, 22, 10, 18], fz_turm2: [0.4, 28, 10, 24], fz_hauptturm: [0.46, 36, 12, 34], fz_torturm: [0.3, 22, 8, 16] }[type];
-      const r = S[0], H = S[1] + fl * S[2], wall = fzCol(t, 'wall', type === 'fz_torturm' ? '#fff3e6' : '#f8d6e0'), roof = fzCol(t, 'roof', type === 'fz_torturm' ? '#e8604f' : '#5f8fe8');
+    case 'fz_torturm': {                      // Torturm (Block 60f): zwei in einer Reihe sind der Parkeingang, der spätere zeichnet den Bogen
+      const K = kit(cx, cy, z, t && t.rot), fl = (t && t.fl) || ITEMS[type].fl0, lit = night > 0.15 && isLive();
+      const r = 0.3, H = 22 + fl * 8, wall = fzCol(t, 'wall', '#fff3e6'), roof = fzCol(t, 'roof', '#e8604f');
       const win = lit ? '#ffd873' : C(fzCol(t, 'win', '#a8dcff'));
       kShadow(K, r + 0.1);
-      const T = K.block({ a: 0, b: 0, ha: r, hb: r, h: H, wall, roof, roofH: S[3], trim: roof });
+      const T = K.block({ a: 0, b: 0, ha: r, hb: r, h: H, wall, roof, roofH: 16, trim: roof });
       for (const side of ['front', 'back', 'left', 'right']) {
         const F = T.faces[side];
         if (!F) continue;
         faceQuad(F.P, F.Q, 0, 1, F.H - 7 * z, F.H - 5 * z, C(shade(roof, 0.25)));                      // Zierband
-        for (let f = 0; f < fl + 1; f++) { const h0 = (5 + f * S[2]) * z; if (h0 + 5 * z < F.H - 8 * z) faceQuad(F.P, F.Q, 0.36, 0.64, h0, h0 + 5 * z, win); }
+        for (let f = 0; f < fl + 1; f++) { const h0 = (5 + f * 8) * z; if (h0 + 5 * z < F.H - 8 * z) faceQuad(F.P, F.Q, 0.36, 0.64, h0, h0 + 5 * z, win); }
       }
-      if (type === 'fz_turm2' || type === 'fz_hauptturm') for (const side of ['front', 'back', 'left', 'right']) {   // goldenes Band unter dem Dach
-        const F = T.faces[side];
-        if (F) faceQuad(F.P, F.Q, 0, 1, F.H - 11 * z, F.H - 9.6 * z, C(gold));
-      }
-      if (type === 'fz_hauptturm') for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {   // Türmchen an den Ecken
-        const [px, py] = K.P(a * r * 0.85, b * r * 0.85, H); poly([[px - 3 * z, py], [px + 3 * z, py], [px, py - 12 * z]], C(shade(roof, -0.1))); circle(px, py - 12 * z, 0.9 * z, C(gold));
-      }
-      const [fx, fy] = K.P(0, 0, H + S[3]);                                // Spitze und Fahne
-      if (type === 'fz_hauptturm') { circle(fx, fy, 2 * z, C(gold)); if (lit) glowQuad([[fx - 2, fy - 2], [fx + 2, fy - 2], [fx + 2, fy + 2], [fx - 2, fy + 2]], 16 * z); }
+      const [fx, fy] = K.P(0, 0, H + 16);                                  // Spitze und Fahne
       g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 10 * z); g.stroke();
-      poly([[fx, fy - 10 * z], [fx + 7 * z, fy - 8.5 * z + Math.sin(now / 280 + x + y) * 1.2 * z], [fx, fy - 7 * z]], C(type === 'fz_torturm' ? '#5f8fe8' : '#e8604f'));
-      if (type === 'fz_torturm' && x < 1e5) drawTorArch(cx, cy, z, x, y, t, H, now);
+      poly([[fx, fy - 10 * z], [fx + 7 * z, fy - 8.5 * z + Math.sin(now / 280 + x + y) * 1.2 * z], [fx, fy - 7 * z]], C('#5f8fe8'));
+      if (x < 1e5) drawTorArch(cx, cy, z, x, y, t, H, now);
       break;
     }
     case 'fz_teetassen': {                   // 2×2: Teekanne in der Mitte, Tassen kreisen und drehen sich selbst
@@ -1952,3 +1918,134 @@ function drawStatusIcon(cx, cy, z, icon, now) {
   g.textBaseline = 'middle';
   centerText(icon, x, y + 0.5 * z);
 }
+
+// ---------------------------------------------------------------------------
+// Märchenschloss (Block 60g): EIN Gebäude aus Sockel, Mittelbau, Flügeln und Türmen – alles aus t.cs (csOf) berechnet.
+// Im eigenen Rahmen: a nach vorn (Portal), b quer. Die Teile liegen in b nebeneinander (getrennt durch Ebenen quer zu b),
+// darum genügt es, sie nach b zum Betrachter hin zu sortieren. Der Mittelturm steht AUF dem Mittelbau (flach mit Zinnen).
+// ---------------------------------------------------------------------------
+const CASTLE_FLAGS = ['#e8604f', '#f2c14e', '#e8604f', '#5f8fe8'];
+function drawCastle(cx, cy, z, now, x, y, t) {
+  const c = csOf(t), K = kit(cx, cy, z, t.rot), lit = night > 0.15 && isLive(), gold = '#f2c14e';
+  const wall = fzCol(t, 'wall', '#f8e3ea'), roof = fzCol(t, 'roof', '#5f8fe8'), win = lit ? '#ffd873' : C(fzCol(t, 'win', '#a8dcff'));
+  const HA = c.d / 2, HB = c.w / 2, core = csCore(c), pairs = Math.min(c.s, csMaxPairs(c)), R = c.r;
+  const hW = 22, hC = 34, HM = [0, 54, 70, 90, 116][c.m], front = HA - 0.26;
+  const wd = Math.min(0.62 + 0.45 * (Math.min(c.d, 2) - 1), front + HA - 0.08), aW = front - wd / 2, haC = Math.min(HA - 0.14, 0.86), aC = HA - 0.14 - haC;
+  const rS = 0.3, aT = front - rS * 0.6;
+  // Seitentürme: das äußerste Paar an den Enden, weitere gleichmäßig zur Mitte hin – innen höher (abgestuft wie im Märchen)
+  const inner = core / 2 + 0.38, outer = HB - 0.36, top = c.m ? HM : hC + 24;
+  const towers = [];
+  for (let i = 0; i < pairs; i++) {
+    const f = pairs === 1 ? 1 : i / (pairs - 1), pos = inner + (outer - inner) * f;
+    const H = Math.round((Math.max(hW + 24, top * 0.74)) * (1 - f) + (hW + 22) * f);
+    towers.push({ pos, H, i }, { pos: -pos, H, i });
+  }
+  const archWins = (F, n, h0, h1, skip) => {             // Rundbogenfenster in einer Reihe
+    if (!F) return;
+    const step = 0.84 / n;
+    for (let i = 0; i < n; i++) {
+      if (skip && skip(i, n)) continue;
+      const t0 = 0.08 + step * (i + 0.28), t1 = 0.08 + step * (i + 0.72), A = lerp(F.P, F.Q, t0), B = lerp(F.P, F.Q, t1);
+      faceQuad(F.P, F.Q, t0, t1, h0 * z, h1 * z, win);
+      circle((A[0] + B[0]) / 2, (A[1] + B[1]) / 2 - h1 * z, Math.hypot(B[0] - A[0], B[1] - A[1]) / 2, win);
+    }
+  };
+  const faceLen = (B, side) => (side === 'front' || side === 'back' ? 2 * B.hb : 2 * B.ha);
+  const merlons = (B, n0 = 5) => {                      // Zinnen über den sichtbaren Wänden
+    for (const side of ['front', 'back', 'left', 'right']) {
+      const F = B.faces[side];
+      if (!F) continue;
+      const n = Math.max(3, Math.round(faceLen(B, side) * n0) | 1), col = K.wallCol(shade(wall, -0.04), F.n);
+      for (let i = 0; i < n; i += 2) faceQuad(F.P, F.Q, i / n, (i + 1) / n, F.H, F.H + 3.2 * z, col);
+    }
+  };
+  const flag = (px, py, i) => {
+    g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 10 * z); g.stroke();
+    poly([[px, py - 10 * z], [px + 7 * z, py - 8.5 * z + Math.sin(now / 280 + i * 1.7 + x) * 1.2 * z], [px, py - 7 * z]], C(CASTLE_FLAGS[i % CASTLE_FLAGS.length]));
+  };
+  const onion = (a, b, r, up, i) => {                   // Zwiebelkuppel mit goldener Spitze
+    const [px, py] = K.P(a, b, up), w = r * Math.SQRT2 * TW / 2 * z, h = r * 80 * z;
+    const shape = (s, col) => { g.beginPath(); g.moveTo(px - w * s, py); g.bezierCurveTo(px - w * 1.4 * s, py - h * 0.5, px - w * 0.2 * s, py - h * 0.72, px, py - h); g.bezierCurveTo(px + w * 0.2 * s, py - h * 0.72, px + w * 1.4 * s, py - h * 0.5, px + w * s, py); g.closePath(); g.fillStyle = col; g.fill(); };
+    shape(1, C(shade(roof, -0.12))); shape(0.62, C(roof));
+    g.beginPath(); g.ellipse(px - w * 0.3, py - h * 0.45, w * 0.18, h * 0.16, 0, 0, Math.PI * 2); g.fillStyle = C(shade(roof, 0.28)); g.fill();
+    circle(px, py - h - 1.5 * z, 1.6 * z, C(gold));
+    flag(px, py - h - 2 * z, i);
+  };
+  // Turm: Spitzdach, Kuppel oder Zinnen; lift: steht auf etwas (Mittelturm auf dem Mittelbau)
+  const tower = (a, b, r, H, lift, i, big) => {
+    const T = K.block({ a, b, ha: r, hb: r, h: H, lift, wall, roof: R === 0 ? roof : shade(wall, -0.08), roofH: R === 0 ? 20 + r * 60 + H * 0.06 : 0, type: R === 0 ? 'hip' : 'flat', trim: R === 1 ? null : roof });
+    for (const side of ['front', 'back', 'left', 'right']) {
+      const F = T.faces[side];
+      if (!F) continue;
+      for (let h0 = (lift ? 6 : 8); h0 + 6 < H - 9; h0 += 13) archWins(F, 1, h0, h0 + 5);
+      if (R === 0) faceQuad(F.P, F.Q, 0, 1, F.H - 5.5 * z, F.H - 4 * z, C(gold));                   // goldenes Band
+    }
+    const peak = R === 0 ? T.peak : K.P(a, b, lift + H);
+    if (R === 2) { merlons(T, 6); flag(peak[0], peak[1] - 3 * z, i); }
+    if (R === 1) onion(a, b, r * 1.02, lift + H, i);
+    if (R === 0) {
+      if (big) for (const [sa, sb] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {      // Türmchen an den Ecken
+        const [px, py] = K.P(a + sa * r * 0.92, b + sb * r * 0.92, lift + H); poly([[px - 2.6 * z, py], [px + 2.6 * z, py], [px, py - 11 * z]], C(shade(roof, -0.1))); circle(px, py - 11 * z, 0.8 * z, C(gold));
+      }
+      circle(peak[0], peak[1], 1.3 * z, C(gold));
+      flag(peak[0], peak[1], i);
+    }
+  };
+  const wing = (b0, b1) => {
+    const B = K.block({ a: aW, b: (b0 + b1) / 2, ha: wd / 2, hb: (b1 - b0) / 2, h: hW, wall, roof: R === 2 ? shade(wall, -0.08) : roof, roofH: R === 0 ? 11 : R === 1 ? 8 : 0, type: R === 0 ? 'gable' : R === 1 ? 'hip' : 'flat', ridge: 'b', over: 1.06, trim: R === 2 ? roof : shade(roof, 0.15) });
+    for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (F) { const n = Math.max(1, Math.round(faceLen(B, side) * 2.4)); archWins(F, n, 5, 9.5); archWins(F, n, 13, 17.5); } }
+    if (R === 2) merlons(B);
+  };
+  const center = () => {
+    const flat = c.m > 0 || R !== 0;                   // Spitzdach nur ohne Mittelturm; Kuppel: große Zwiebel obendrauf
+    const B = K.block({ a: aC, b: 0, ha: haC, hb: core / 2, h: hC, wall, roof: flat ? shade(wall, -0.08) : roof, roofH: 16, type: flat ? 'flat' : 'hip', trim: R === 2 ? roof : flat ? null : shade(roof, 0.15) });
+    for (const side of ['front', 'back', 'left', 'right']) {
+      const F = B.faces[side];
+      if (!F) continue;
+      const n = Math.max(3, Math.round(faceLen(B, side) * 2.2)), mid = side === 'front';
+      archWins(F, n, 5, 11, (i, m) => mid && Math.abs(i - (m - 1) / 2) < 1);
+      archWins(F, n, 19, 25, (i, m) => mid && Math.abs(i - (m - 1) / 2) < 0.6);
+      if (mid) {                                         // Portal: goldener Rahmen, Tor, Balkon, Rosette
+        faceQuad(F.P, F.Q, 0.39, 0.61, 0, 13 * z, C('#c9962b'));
+        const A = lerp(F.P, F.Q, 0.39), Bq = lerp(F.P, F.Q, 0.61), rr = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) / 2;
+        circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - 13 * z, rr, C('#c9962b'));
+        faceQuad(F.P, F.Q, 0.42, 0.58, 0, 12 * z, C('#6b4630'));
+        circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - 12 * z, rr * 0.73, C('#6b4630'));
+        faceQuad(F.P, F.Q, 0.32, 0.68, 17 * z, 18.5 * z, C(gold));
+        const m = lerp(F.P, F.Q, 0.5);
+        circle(m[0], m[1] - 26 * z, 4.4 * z, C(gold)); circle(m[0], m[1] - 26 * z, 3.4 * z, win);
+      }
+    }
+    if (flat) merlons(B);
+    if (c.m) tower(aC, 0, Math.min(0.36, haC - 0.04, core / 2 - 0.1), HM - hC, hC, 0, true);
+    else if (R === 1) onion(aC, 0, Math.min(haC, core / 2) * 0.62, hC, 0);
+    else { const [px, py] = R === 0 ? B.peak : K.P(aC, 0, hC); flag(px, py, 0); }
+  };
+  // Sockel mit rotem Teppich zum Portal
+  K.block({ a: 0, b: 0, ha: HA - 0.03, hb: HB - 0.03, h: 3, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
+  K.rect(front - 0.02, -0.17, HA - 0.03, 0.17, C('#e8604f'), 3);
+  for (const sb of [-0.22, 0.22]) { const [px, py] = K.P(HA - 0.1, sb, 3); circle(px, py - 4 * z, 1.4 * z, C(gold)); g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 4 * z); g.stroke(); }
+  // Tiefes Schloss: hinten ein Schlossgarten mit Bäumen und Büschen (steht hinter allem, darum zuerst)
+  const back = aW - wd / 2, garden = back + HA;
+  if (garden > 0.9) for (let b = -HB + 0.45, i = 0; b < HB - 0.3; b += 0.7, i++) {
+    const a = -HA + garden / 2;
+    if (Math.abs(b) < core / 2 + 0.25 && a > aC - haC - 0.3) continue;
+    if (i % 2) kitBush(K, a, b, 1.1); else kitTree(K, a, b, 0.75);
+  }
+  // Teile in b-Abschnitten: Flügel zwischen Mittelbau, Türmen und Enden
+  const parts = [[0, center]];
+  for (const sg of [1, -1]) {
+    let from = core / 2;
+    for (const o of towers.filter(o => Math.sign(o.pos) === sg).sort((p, q) => Math.abs(p.pos) - Math.abs(q.pos))) {
+      const b0 = from, b1 = Math.abs(o.pos) - rS;
+      if (b1 - b0 > 0.05) parts.push([sg * (b0 + b1) / 2, () => wing(Math.min(sg * b0, sg * b1), Math.max(sg * b0, sg * b1))]);
+      parts.push([o.pos, () => tower(aT, o.pos, rS, o.H, 0, o.i + 1, false)]);
+      from = Math.abs(o.pos) + rS;
+    }
+    const b1 = HB - 0.06;
+    if (b1 - from > 0.05) parts.push([sg * (from + b1) / 2, () => wing(Math.min(sg * from, sg * b1), Math.max(sg * from, sg * b1))]);
+  }
+  const toViewer = K.facing(0, 1);
+  parts.sort((p, q) => p[0] * toViewer - q[0] * toViewer).forEach(p => p[1]());
+}
+BIG_ART.fz_schloss = (cx, cy, z, now, x, y, lvl, t) => drawCastle(cx, cy, z, now, x, y, t);

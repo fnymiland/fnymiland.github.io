@@ -197,6 +197,7 @@ const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].include
 function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 50;
   if (b === 'leuchtturm') return 220;
+  if (b === 'fz_schloss') return 260;
   return w * h >= 9 ? 150 : w * h >= 4 ? 120 : 100;
 }
 // Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
@@ -230,7 +231,7 @@ function putSprite(e, cx, cy, z) {
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : Math.floor(hash(ax, ay, 4) * 7),
-    t.look || '', t.style || '', FOG ? 1 : 0, lit].join('|');
+    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.cs ? Object.values(t.cs).join('.') : '', FOG ? 1 : 0, lit].join('|');
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);

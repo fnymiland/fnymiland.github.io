@@ -90,7 +90,8 @@ function build(b, x, y, quiet) {
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
-    if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Schloss-Baukasten: Stockwerke (Block 60f)
+    if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
+    if (b === 'fz_schloss') state.tiles.get(k).cs = { ...CS_DEF };     // Märchenschloss: Gestalt (Block 60g)
     if (d.fzMin) state.tiles.get(k).price = c.cost;               // Preis nach Einkommen: fürs Erstatten merken (Block 60)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {

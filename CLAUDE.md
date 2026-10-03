@@ -355,8 +355,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 72. **Freizeitpark** (Block 60): Boden 'fz' (`TERRAFORM.fzboden`), darauf nur `fzOk` (Module `cat: 'fz'`, Deko, Wege,
     Linien); Module brauchen `needs: 'fz'`. Preis-Getter über `fzMin` (wie Leuchtturm); wer ein Modul baut, merkt `t.price`,
     `demolishInfo` erstattet danach. Stufe/Wirkung nur aus `computeFz` (`FZPARKS`, `fzBest`, `FZ_*`). Neues Modul: ITEMS-
-    Eintrag mit `fzSort`, Bild in drawObject, Freischalt-Text, Menügruppe 'fzpark'. Schloss = Baukasten-Teile (`castle`,
-    `fl0` → `t.fl` Stockwerke), Eingang = Torturm-Paar (`TOR_PAIR`); beides zählt erst als Gruppe (computeFz).
+    Eintrag mit `fzSort`, Bild in drawObject, Freischalt-Text, Menügruppe 'fzpark'. Märchenschloss = EIN Gebäude mit
+    Gestalt `t.cs` (Größe nur über `csOf`/`sizeOf`, ändern nur über `castleChange`: prüft Platz, Preis, Wege darunter);
+    Eingang = Torturm-Paar (`TOR_PAIR`, zählt erst als Paar). Was ein Bild verändert, gehört in den Sprite-Schlüssel
+    (`spriteTile`: `t.cs`, `t.win`, `t.fl`), sonst sieht man es von weitem nicht.
     Fenster frischen sich ständig auf: Zustände wie eine Löschen-Rückfrage außerhalb des DOM merken (`delSure`).
 71. **Tore** (Block 59): Tor = `isGate(k)` (Weg auf beiden Seiten `pathGate` oder `e.gate`). Ein Tor ohne Weg (`gardenGate`)
     bekommt ein Türchen (`gateDoor`). Wer Linien neu setzt/umfärbt (`buildEdge`), übernimmt `arch`, `gate`, `flush`.

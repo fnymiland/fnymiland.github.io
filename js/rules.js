@@ -9,7 +9,17 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : b === 'fz_schloss' ? csSize(t) : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+// Märchenschloss (Block 60g): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
+// m: Mittelturm (0 keiner … 4 riesig), s: Paare Seitentürme, r: Dach (0 Spitz, 1 Kuppel, 2 Zinnen) }
+const CS_DEF = { w: 5, d: 2, m: 2, s: 1, r: 0 };
+const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], s: [0, 3], r: [0, 2] };
+const csOf = t => ({ ...CS_DEF, ...(t && t.cs) });
+const csSize = t => { const c = csOf(t); return [c.d, c.w]; };
+const csCore = c => c.w >= 5 ? 1.8 : 1.4;                                   // Breite des Mittelbaus (Felder)
+const csMaxPairs = c => Math.min(CS_LIM.s[1], Math.max(1, Math.floor((c.w - csCore(c)) / 2 / 1.1)));
+// Wert: Grundpreis (Einkommen) für das Standard-Schloss, mehr Fläche/Türme kosten mehr
+const castlePrice = c => niceRound(ITEMS.fz_schloss.cost * (0.5 * c.w * c.d / 10 + 0.25 * (c.m + 1) / 3 + 0.25 * (Math.min(c.s, csMaxPairs(c)) + 1) / 2));
 function footprint(b, ax, ay, rot, t) {
   const [w, h] = sizeOf(b, rot || 0, t), out = [];
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
@@ -78,6 +88,37 @@ function hbfResize(k, d) {
   t.gleise = m; t.born = performance.now();
   if (nk !== k) { state.tiles.delete(k); state.tiles.set(nk, t); }
   sfx('build'); recalc(); save();
+  return nk;
+}
+// Märchenschloss umgestalten (Block 60g): patch ändert t.cs. Mehr Wert kostet den Unterschied, weniger gibt die Hälfte zurück.
+// Breite/Tiefe: das Schloss wächst abwechselnd zu beiden Seiten (bleibt so mittig); geht es dort nicht, zur anderen.
+// Rückgabe: neues Ankerfeld (oder null mit Hinweis)
+function castleChange(x, y, patch) {
+  const k = x + ',' + y, t = state.tiles.get(k);
+  if (!t || t.b !== 'fz_schloss') return null;
+  const cs = csOf(t), nc = { ...cs, ...patch };
+  for (const [key, [lo, hi]] of Object.entries(CS_LIM)) if (!(nc[key] >= lo && nc[key] <= hi)) { fail(nc[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
+  if (nc.s > csMaxPairs(nc)) { if ('s' in patch) { fail('Für mehr Türme ist das Schloss zu schmal'); return null; } nc.s = csMaxPairs(nc); }
+  const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;
+  if (diff > 0 && state.money < diff) { fail('Zu wenig Taler'); return null; }
+  let nk = k;
+  if (nc.w !== cs.w || nc.d !== cs.d) {
+    const rot = t.rot || 0, nt = { ...t, cs: nc }, [ow, oh] = sizeOf('fz_schloss', rot, t), [nw, nh] = sizeOf('fz_schloss', rot, nt);
+    const shifted = [x - (nw - ow), y - (nh - oh)], cands = (nw + nh) % 2 ? [shifted, [x, y]] : [[x, y], shifted];
+    const before = new Map(state.tiles);
+    state.tiles.delete(k); restoreUnder(t, x, y); rebuildCover();
+    const spot = cands.find(([ax, ay]) => !placeError('fz_schloss', ax, ay, rot, { move: true, t: nt }));
+    if (!spot) { state.tiles = before; rebuildCover(); fail('Dafür ist neben dem Schloss kein Platz'); return null; }
+    const covered = pathsUnder('fz_schloss', spot[0], spot[1], rot, nt);
+    for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
+    setUnder(t, spot[0], spot[1], []);
+    state.money += covered.length * ITEMS.weg.cost;
+    nk = spot.join(',');
+    state.tiles.set(nk, t);
+  }
+  t.cs = nc; t.price = price; t.born = performance.now(); groundVersion++;
+  if (diff > 0) state.money -= diff; else state.money += Math.floor(-diff / 2);
+  sfx(diff > 0 ? 'build' : 'deco'); recalc(); save();
   return nk;
 }
 // Halte der Bahn: Felder, an denen er liegt (Bahnhof: Grundfläche; Gleis: seine Hallenfelder), und wo sein Zug steht
@@ -893,12 +934,11 @@ function computeFz() {
         if (!seen.has(n) && state.terra.get(n) === 'fz') { seen.add(n); todo.push(n); }
       }
     }
-    // Schloss-Baukasten (Block 60f): ab 5 Teilen mit Hauptturm ein Schloss (eine Attraktion); zwei Tortürme mit Bogen: Eingang
-    const set = new Set(tiles), pieces = [...set].map(k => state.tiles.get(k)).filter(t => t && ITEMS[t.b].castle);
-    if (pieces.length >= 5 && pieces.some(t => t.b === 'fz_hauptturm')) { rides.add('schloss'); sorts.add('schloss'); }
+    // zwei Tortürme mit Bogen: Eingang (Block 60f)
+    const set = new Set(tiles);
     for (const [k, o] of TOR_PAIR) if (set.has(k) && k < o) { rides.add('tor' + k); sorts.add('tor'); }
     const stage = FZ_STEPS.filter(s => tiles.length >= s.tiles && rides.size >= s.rides && s.need.every(n => sorts.has(n))).length;
-    out.push({ tiles, rides: rides.size, sorts, stage, castle: pieces.length });
+    out.push({ tiles, rides: rides.size, sorts, stage });
   }
   FZPARKS = out.filter(p => p.stage);
   return out;

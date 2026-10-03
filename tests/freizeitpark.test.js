@@ -17,8 +17,8 @@ describe('Freischalten und Boden', () => {
     expect(game("available('fzboden') || available('fz_karussell')")).toBe(false);
     game('state.festival = true');
     expect(game("menuPlaceOf('fz_karussell')")).toEqual({ top: 'freizeit', sub: 'fzfahrt' });
-    expect(game("menuPlaceOf('fz_torturm')")).toEqual({ top: 'freizeit', sub: 'fzpark' });
-    expect(game("menuPlaceOf('fz_hauptturm')")).toEqual({ top: 'freizeit', sub: 'fzschloss' });
+    expect(game("menuPlaceOf('fz_torturm')")).toEqual({ top: 'freizeit', sub: 'fzschloss' });
+    expect(game("menuPlaceOf('fz_schloss')")).toEqual({ top: 'freizeit', sub: 'fzschloss' });
     expect(game("build('fzboden', 10, 10, true)")).toBe(true);
     expect(game('terraLook(10, 10)')).toBe('fz');
     expect(game('terrainAt(10, 10)')).toBe('grass');
@@ -53,10 +53,7 @@ describe('Stufen und Wirkung', () => {
       expect(game(`build('${b}', ${x}, ${y}, true)`), b).toBe(true);
     game('recalc()');
     expect(stages()).toEqual([2]);                                                   // ohne Schloss: Freizeitpark
-    for (const [b, x, y] of [['fz_fluegel', 9, 9], ['fz_fluegel', 11, 9], ['fz_portal', 10, 9], ['fz_turm', 8, 9], ['fz_turm', 12, 9]]) game(`build('${b}', ${x}, ${y}, true)`);
-    game('recalc()');
-    expect(stages()).toEqual([2]);                                                   // 5 Teile, aber kein Hauptturm
-    expect(game("build('fz_hauptturm', 10, 10, true)")).toBe(true);
+    expect(game("build('fz_schloss', 8, 9, true)")).toBe(true);                       // 2×5 (Block 60g)
     game('recalc()');
     expect(stages()).toEqual([3]);
   });
@@ -231,9 +228,9 @@ describe('Überarbeitung (Block 60e)', () => {
     expect(() => game("drawCoasterTile(100, 100, 1.5, 11, 10, state.tiles.get('11,10'))")).not.toThrow();
   });
 
-  it('Schloss-Baukasten: Stockwerke und Fensterfarbe im Fenster, gespeichert; zwei Tortürme bilden den Eingang (Block 60f)', () => {
+  it('Torturm: Stockwerke und Fensterfarbe im Fenster, gespeichert; zwei Tortürme bilden den Eingang (Block 60f)', () => {
     ground(5, 5, 10, 6);
-    game("build('fz_fluegel', 6, 6, true); recalc(); openInfo(6, 6)");
+    game("build('fz_torturm', 6, 6, true); recalc(); openInfo(6, 6)");
     expect(game("state.tiles.get('6,6').fl")).toBe(2);
     game("document.querySelector('#panel [data-fl=\"1\"]').click()");
     expect(game("state.tiles.get('6,6').fl")).toBe(3);
@@ -276,5 +273,60 @@ describe('Station, Looping, Randlinien (Block 60f)', () => {
     expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).noBorders')).toBe(true);
     game("document.getElementById('m-borders').click(); closeModal()");
     expect(game('state.noBorders')).toBe(false);
+  });
+});
+
+describe('Märchenschloss (Block 60g)', () => {
+  const cs = () => game("(() => { for (const [k, t] of state.tiles) if (t.b === 'fz_schloss') return [k, { ...t.cs }, t.price]; })()");
+  it('ein Gebäude, Größe im Fenster: wächst abwechselnd zu beiden Seiten, kostet den Unterschied, kleiner gibt die Hälfte', () => {
+    ground(5, 5, 12, 8);
+    game("rotManual = true; buildRot = 0");
+    expect(game("build('fz_schloss', 8, 6, true)")).toBe(true);
+    expect(cs()[1]).toEqual({ w: 5, d: 2, m: 2, s: 1, r: 0 });
+    expect(game("sizeOf('fz_schloss', 0, state.tiles.get('8,6'))")).toEqual([2, 5]);
+    expect(game("COVER.get('9,10')")).toBe('8,6');
+    game('state.money = 1e9');
+    const m0 = game('state.money'), p0 = cs()[2];
+    expect(game('castleChange(8, 6, { w: 6 })')).toBe('8,6');                      // gerade Breite: nach +y
+    expect(game("COVER.get('9,11')")).toBe('8,6');
+    expect(game('state.money')).toBe(m0 - (cs()[2] - p0));
+    expect(game('castleChange(8, 6, { w: 7 })')).toBe('8,5');                      // ungerade: nach −y
+    expect(game("COVER.get('8,5')")).toBe('8,5');
+    const m1 = game('state.money'), p1 = cs()[2];
+    expect(game('castleChange(8, 5, { w: 6 })')).toBeTruthy();
+    expect(game('state.money')).toBe(m1 + Math.floor((p1 - cs()[2]) / 2));
+  });
+
+  it('kein Platz: Hinweis, nichts verändert; Türme nur so viele, wie die Breite trägt', () => {
+    ground(5, 5, 12, 8);
+    game("rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); build('fz_eis', 8, 5, true); build('fz_eis', 8, 11, true); recalc(); state.money = 1e9");
+    const before = cs();
+    expect(game('castleChange(8, 6, { w: 6 })')).toBe(null);
+    expect(cs()).toEqual(before);
+    expect(game("COVER.get('8,6')")).toBe('8,6');
+    expect(game('csMaxPairs({ w: 5 })')).toBe(1);
+    expect(game('castleChange(8, 6, { s: 2 })')).toBe(null);
+    expect(game('castleChange(8, 6, { s: 0 })')).toBe('8,6');
+  });
+
+  it('Knöpfe im Fenster, Rückgängig, gespeichert; zählt als Schloss; zeichnet in jeder Form', () => {
+    ground(5, 5, 12, 8);
+    game("rotManual = true; buildRot = 1; build('fz_schloss', 7, 7, true); recalc(); state.money = 1e9; openInfo(7, 7)");
+    expect(game("sizeOf('fz_schloss', 1, state.tiles.get('7,7'))")).toEqual([5, 2]);
+    game("document.querySelector('#panel [data-cs=\"r:1\"]').click()");
+    game("document.querySelector('#panel [data-cs=\"m:4\"]').click()");
+    expect(cs()[1]).toMatchObject({ r: 1, m: 4 });
+    game('undo()');
+    expect(cs()[1]).toMatchObject({ r: 1, m: 2 });
+    game("document.querySelector('#panel [data-cs=\"d:+1\"]').click()");
+    expect(cs()[1].d).toBe(3);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(cs()[1]).toMatchObject({ d: 3, r: 1 });
+    game('recalc()');
+    expect(game("[...computeFz()[0].sorts]")).toContain('schloss');
+    const k = cs()[0];
+    for (let rot = 0; rot < 4; rot++) for (const r of [0, 1, 2]) for (const m of [0, 4]) for (const w of [3, 9]) for (const dd of [1, 3])
+      expect(() => game(`(t => { t.rot = ${rot}; t.cs = { w: ${w}, d: ${dd}, m: ${m}, s: 3, r: ${r} }; drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
   });
 });
