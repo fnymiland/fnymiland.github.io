@@ -249,63 +249,133 @@ const WONDER_ART = {
       [1.9, 0.5, lamp(1.9, 0.5)], [1.9, -0.5, lamp(1.9, -0.5)], [2.3, 2.3, () => kitTree(K, 2.3, 2.3, 1, '#ffd36e')],
     ]);
   },
-  // Schloss (7×7): Wassergraben mit Zugbrücke, Mauern mit Zinnen, vier große Ecktürme, Torhaus mit zwei Türmchen;
-  // im Hof ein Garten mit Brunnen, hinten das Palais mit Walmdach, Seitentürmen und dem hohen Hauptturm
-  schloss(K, cx, cy, z, now, x, y) {
-    if (groundPart(() => {
-      K.rect(-3.48, -3.48, 3.48, 3.48, C('#8ccb67'));
-      g.save(); g.beginPath(); kRectPath(K, -3.3, -3.3, 3.3, 3.3); kRectPath(K, -2.78, -2.78, 2.78, 2.78); g.clip('evenodd');
-      K.rect(-3.3, -3.3, 3.3, 3.3, C('#5fb8d0')); K.rect(-3.22, -3.22, 3.22, 3.22, C('#74d0e6'));
-      g.restore();
-      kPave(K, () => kRectPath(K, -2.6, -2.6, 2.6, 2.6), PATH_LOOK.kopf, x, y, 3);
-      K.rect(2.7, -0.4, 3.48, 0.4, C('#8a6440')); kPave(K, () => kRectPath(K, 2.7, -0.36, 3.48, 0.36), PLANK_LOOK, x, y, 3);   // Zugbrücke
-      for (const s of [-1, 1]) {                                                   // Gartenbeete im Hof
-        K.rect(0.35, s * 0.55, 1.95, s * 1.95, C('#6cc062'));
-        K.rect(0.45, s * 0.65, 1.85, s * 1.85, C('#8ccb67'));
-        kBed(K, 1.15, s * 1.25, 0.28, s > 0 ? 1 : 3);
+  // Schloss (7×7, Block 60j): Königsschloss im Stil des Märchenschlosses, eine Klasse größer – Wassergraben mit Zugbrücke,
+  // Mauer mit Ecktürmen und Torhaus, Hof mit Brunnen, hinten das Palais mit gestaffelten Türmen und dem höchsten Turm
+  // samt Königskrone; Wachen am Tor. stage = fertige Bauabschnitte (0 … 6): beim Bauen wächst es Stück für Stück.
+  // Nach der Einweihung: Fassade/Dach (t.wall/t.roof) und Dachform (t.cs.r: 0 Spitz, 1 Kuppel, 2 Zinnen) im Fenster.
+  schloss(K, cx, cy, z, now, x, y, t, hu, hv, stage = 6) {
+    if (groundPart(() => schlossGround(K, x, y, stage))) return;
+    const done = stage >= 6, lit = night > 0.15 && isLive(), R = stage >= 4 ? royalRoof(t) : -1;
+    const wall = fzCol(t, 'wall', '#f6e7d0'), roof = fzCol(t, 'roof', '#6f8fd8'), win = lit ? '#ffd873' : C('#a8dcff');
+    const gold = done ? '#f2c14e' : shade(roof, 0.3);
+    const ck = castleKit(K, z, now, x, { wall, roof, win, gold, flags: CASTLE_FLAG_SETS[0], lit, bk: done ? 1 : 0, lc: done ? 1 : 0, wp: 1 });
+    if (stage >= 1) kShadow(K, 2.6);
+    const roofOf = (gab = 'gable') => R === 0 ? { roof, roofH: 12, type: gab } : R === 1 ? { roof, roofH: 9, type: 'hip' } : { roof: shade(wall, -0.08), roofH: 0, type: 'flat' };
+    // Palais: Mittelbau (Hauptturm obendrauf), Flügel, Turmpaare – in b nebeneinander, darum nach b sortiert
+    const aP = -1.25, haP = 0.95, core = 0.85, hC = stage >= 5 ? 66 : stage >= 2 ? 26 : 5, hWg = stage >= 5 ? 48 : stage >= 2 ? 22 : 5;
+    const wingAt = (b0, b1) => () => {
+      const B = K.block({ a: aP + 0.4, b: (b0 + b1) / 2, ha: 0.5, hb: (b1 - b0) / 2, h: hWg, wall, ridge: 'b', over: 1.06, trim: R === 2 ? roof : stage >= 4 ? shade(roof, 0.15) : null, ...(stage >= 4 ? roofOf('hip') : { roof: shade(wall, -0.08), type: 'flat' }) });
+      for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (F && stage >= 2) for (let f = 0; f * 11 + 10 < hWg; f++) ck.archWins(F, Math.max(1, Math.round(ck.faceLen(B, side) * 2.6)), 5 + f * 11, 10.5 + f * 11); }
+      if (R === 2) ck.merlons(B);
+      if (done) ck.bulbs(B, R === 2 ? 0 : 1.5);
+    };
+    const center = () => {
+      const B = K.block({ a: aP, b: 0, ha: haP, hb: core, h: hC, wall, roof: shade(wall, -0.08), type: 'flat', trim: done ? gold : null });
+      for (const side of ['front', 'back', 'left', 'right']) {
+        const F = B.faces[side];
+        if (!F || stage < 2) continue;
+        const n = Math.max(3, Math.round(ck.faceLen(B, side) * 2.4)), mid = side === 'front';
+        for (let f = 0; f * 11 + 11 < hC; f++) ck.archWins(F, n, 6 + f * 11, 12.5 + f * 11, i => mid && f < 3 && Math.abs(i - (n - 1) / 2) < (f ? 0.6 : 1));
+        if (mid) {                                         // großes Portal mit Balkon, darüber das Wappen mit Krone
+          const A = lerp(F.P, F.Q, 0.38), Bq = lerp(F.P, F.Q, 0.62), rr = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) / 2;
+          faceQuad(F.P, F.Q, 0.38, 0.62, 0, 15 * z, C(done ? '#c9962b' : shade(wall, -0.3)));
+          circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - 15 * z, rr, C(done ? '#c9962b' : shade(wall, -0.3)));
+          faceQuad(F.P, F.Q, 0.41, 0.59, 0, 14 * z, C('#6b4630'));
+          circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - 14 * z, rr * 0.75, C('#6b4630'));
+          if (stage >= 5) {
+            faceQuad(F.P, F.Q, 0.3, 0.7, 19 * z, 20.5 * z, C(gold));
+            const m = lerp(F.P, F.Q, 0.5);
+            if (done) ck.shield(m[0], m[1] - 27 * z); else { circle(m[0], m[1] - 27 * z, 5 * z, C(gold)); circle(m[0], m[1] - 27 * z, 4 * z, win); }
+          }
+        }
       }
-    })) return;
-    kShadow(K, 2.6);
-    const wall = '#f6e7d0', roof = '#6f8fd8', lit = night > 0.15 && isLive();
-    const tower = (a, b, rx, H, rh, flag) => () => { const [px, py] = K.P(a, b); roundTower(px, py, z, now, rx * z, H * z, rh * z, wall, roof, lit, flag); };
-    const wallSeg = (a, b, ha, hb) => () => {
-      const B = K.block({ a, b, ha, hb, h: 30, wall, type: 'flat', roof: shade(wall, -0.05) });
-      kMerlons(B, z, shade(wall, 0.03), Math.round(Math.max(ha, hb) / 0.18));
+      if (stage >= 2) ck.merlons(B, 6);
+      if (done) ck.bulbs(B, 0);
+      if (stage >= 3) {
+        const peak = ck.tower(aP, 0, 0.5, stage >= 5 ? 124 : 40, hC, 0, R, R >= 0, !done);   // der höchste Turm der Insel
+        if (done) royalCrown(peak[0], peak[1] - (R === 0 ? 0 : 1) * z, z, now, lit);
+      }
     };
-    const gate = () => {
-      const B = K.block({ a: 2.62, b: 0, ha: 0.24, hb: 0.5, h: 40, wall, type: 'flat', roof: shade(wall, -0.05) });
-      kMerlons(B, z, shade(wall, 0.03), 5);
-      K.door(B, 'front', 0.28, 0.72, 0.6, '#4a3a30');
-    };
+    // Reihenfolge: ferne Seite von außen nach innen, Mittelbau, nahe Seite von innen nach außen. Der hintere Turm steht ganz
+    // hinter seinem Flügel (vor ihm gezeichnet), der vordere schließt den Flügel außen ab.
     const palace = () => {
-      const B = K.block({ a: -1.25, ha: 0.8, hb: 1.6, h: 54, wall, roof, roofH: 34, entry: true });
-      K.wins(B, 'front', 7, 0.12, 0.34, 0.06, 0.94, [3]);
-      K.wins(B, 'front', 7, 0.5, 0.72);
-      K.sideWins(B, 3, 0.2, 0.42); K.sideWins(B, 3, 0.55, 0.77);
-      K.door(B, 'front', 0.43, 0.57, 0.36, '#6b4f3a');
+      if (stage >= 1) K.block({ a: aP, b: 0, ha: haP + 0.1, hb: 2.32, h: 3, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });   // Sockel
+      const near = K.facing(0, 1) > 0 ? 1 : -1, side = sg => {
+        const t1 = () => stage >= 3 && ck.tower(aP - 0.5, sg * 1.3, 0.24, stage >= 5 ? 112 : 56, 0, 1, R, false, !done);
+        const t2 = () => stage >= 3 && ck.tower(aP + 0.5, sg * 2.0, 0.26, stage >= 5 ? 92 : 48, 0, 2, R, false, !done);
+        const wg = wingAt(Math.min(sg * 0.85, sg * 1.74), Math.max(sg * 0.85, sg * 1.74));
+        return sg === near ? [t1, wg, t2] : [t2, t1, wg];
+      };
+      [...side(-near), center, ...side(near)].forEach(f => f());
+    };
+    const wallSeg = (a, b, ha, hb) => () => { const B = K.block({ a, b, ha, hb, h: 28, wall, type: 'flat', roof: shade(wall, -0.06) }); ck.merlons(B, 6); };
+    const gate = () => {
+      const B = K.block({ a: 2.62, b: 0, ha: 0.24, hb: 0.42, h: 40, wall, type: 'flat', roof: shade(wall, -0.06) });
+      ck.merlons(B, 6);
+      K.door(B, 'front', 0.28, 0.72, 0.6, '#4a3a30');
     };
     const fountain = () => {
       const [fx, fy] = K.P(1.15, 0);
       cyl(fx, fy, 16 * z, 8 * z, 5 * z, '#dcd6ca');
       ellipse(fx, fy - 5 * z, 13 * z, 6.5 * z, C('#74d0e6'));
       cyl(fx, fy - 5 * z, 3 * z, 1.5 * z, 10 * z, '#e6e0d3');
-      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 + now / 900; circle(fx + Math.cos(a) * 6 * z, fy - 15 * z + Math.abs(Math.sin(now / 300 + i)) * 4 * z, 1.3 * z, C('#dff5fb')); }
+      circle(fx, fy - 16 * z, 2 * z, C(gold));
+      for (let i = 0; i < 6; i++) { const an = i / 6 * Math.PI * 2 + now / 900; circle(fx + Math.cos(an) * 6 * z, fy - 15 * z + Math.abs(Math.sin(now / 300 + i)) * 4 * z, 1.3 * z, C('#dff5fb')); }
     };
-    K.scene([
-      [-2.62, -2.62, tower(-2.62, -2.62, 24, 66, 46, '#e8604f')],
-      [-2.62, 0, wallSeg(-2.62, 0, 0.12, 2.5)], [0, -2.62, wallSeg(0, -2.62, 2.5, 0.12)],
-      [-1.95, 0, tower(-1.95, 0, 19, 118, 60, '#f2c14e')],
-      [-1.25, -1.75, tower(-1.25, -1.75, 14, 80, 38, '#e8604f')], [-1.25, 1.75, tower(-1.25, 1.75, 14, 80, 38, '#e8604f')],
-      [-1.25, 0, palace],
-      [2.62, -2.62, tower(2.62, -2.62, 24, 66, 46, '#e8604f')], [-2.62, 2.62, tower(-2.62, 2.62, 24, 66, 46, '#e8604f')],
-      [1.15, 0, fountain],
-      [1.9, 1.9, () => kitTree(K, 1.9, 1.9, 0.9)], [1.9, -1.9, () => kitTree(K, 1.9, -1.9, 0.9)],
-      [0, 2.62, wallSeg(0, 2.62, 2.5, 0.12)], [2.62, -1.55, wallSeg(2.62, -1.55, 0.12, 0.95)], [2.62, 1.55, wallSeg(2.62, 1.55, 0.12, 0.95)],
-      [2.63, 0, gate], [2.62, -0.62, tower(2.62, -0.62, 15, 56, 32, '#f2c14e')], [2.62, 0.62, tower(2.62, 0.62, 15, 56, 32, '#f2c14e')],
-      [2.62, 2.62, tower(2.62, 2.62, 24, 66, 46, '#e8604f')],
-    ]);
+    const items = [];
+    if (stage >= 2) items.push([-2.62, 0, wallSeg(-2.62, 0, 0.12, 2.5)], [0, -2.62, wallSeg(0, -2.62, 2.5, 0.12)], [0, 2.62, wallSeg(0, 2.62, 2.5, 0.12)],
+      [2.62, -1.55, wallSeg(2.62, -1.55, 0.12, 0.95)], [2.62, 1.55, wallSeg(2.62, 1.55, 0.12, 0.95)], [2.63, 0, gate]);
+    if (stage >= 3) {
+      for (const [a, b] of [[-2.62, -2.62], [-2.62, 2.62], [2.62, -2.62], [2.62, 2.62]]) items.push([a, b, () => ck.tower(a, b, 0.34, stage >= 5 ? 76 : 50, 0, 3, R, false, !done)]);
+      for (const sb of [-0.62, 0.62]) items.push([2.62, sb, () => ck.tower(2.62, sb, 0.2, 58, 0, 1, R, false, !done)]);
+    }
+    items.push([aP, 0, palace]);
+    if (done) {
+      items.push([1.15, 0, fountain], [1.9, 1.9, () => kitTree(K, 1.9, 1.9, 0.9)], [1.9, -1.9, () => kitTree(K, 1.9, -1.9, 0.9)]);
+      for (const sg of [-1, 1]) { const b = sg * (0.42 + 0.14 * Math.sin(now / 1600)); items.push([2.2, b, () => royalGuard(K, 2.2, b, z, now, sg)]); }   // Wachen gehen auf und ab
+    }
+    K.scene(items);
   },
 };
+// Wunder-Schloss (Block 60j): Dachform, Boden, Krone, Wachen
+const royalRoof = t => (t.cs && t.cs.r != null ? t.cs.r : 0);
+function schlossGround(K, x, y, stage) {
+  if (stage >= 6) K.rect(-3.48, -3.48, 3.48, 3.48, C('#8ccb67'));
+  if (stage < 1) return;
+  g.save(); g.beginPath(); kRectPath(K, -3.3, -3.3, 3.3, 3.3); kRectPath(K, -2.78, -2.78, 2.78, 2.78); g.clip('evenodd');
+  K.rect(-3.3, -3.3, 3.3, 3.3, C('#5fb8d0')); K.rect(-3.22, -3.22, 3.22, 3.22, C('#74d0e6'));
+  g.restore();
+  if (stage < 2) return;
+  kPave(K, () => kRectPath(K, -2.6, -2.6, 2.6, 2.6), PATH_LOOK.kopf, x, y, 3);
+  K.rect(2.7, -0.4, 3.48, 0.4, C('#8a6440')); kPave(K, () => kRectPath(K, 2.7, -0.36, 3.48, 0.36), PLANK_LOOK, x, y, 3);   // Zugbrücke
+  if (stage < 6) return;
+  K.rect(0.4, -0.22, 2.55, 0.22, C('#e8604f'));                                   // roter Teppich vom Tor zum Palais
+  for (const s of [-1, 1]) {                                                      // Gartenbeete im Hof
+    K.rect(0.35, s * 0.55, 1.95, s * 1.95, C('#6cc062'));
+    K.rect(0.45, s * 0.65, 1.85, s * 1.85, C('#8ccb67'));
+    kBed(K, 1.15, s * 1.25, 0.28, s > 0 ? 1 : 3);
+  }
+}
+function royalCrown(px, py, z, now, lit) {                                      // Königskrone auf dem Hauptturm
+  const w = 6 * z, h = 7 * z, b0 = py - 1 * z, gold = C('#f2c14e');
+  if (lit) glowQuad([[px - w, b0 - h], [px + w, b0 - h], [px + w, b0], [px - w, b0]], 26 * z);
+  poly([[px - w, b0], [px + w, b0], [px + w * 1.1, b0 - h], [px + w * 0.5, b0 - h * 0.5], [px, b0 - h * 1.15], [px - w * 0.5, b0 - h * 0.5], [px - w * 1.1, b0 - h]], gold);
+  poly([[px - w, b0], [px + w, b0], [px + w, b0 - 2 * z], [px - w, b0 - 2 * z]], C('#d9a82e'));
+  for (const [dx, col] of [[-0.55, '#5f8fe8'], [0, '#e8604f'], [0.55, '#58b36a']]) circle(px + dx * w, b0 - 1 * z, 1 * z, C(col));
+  for (const [dx, dy] of [[-1.1, 1], [0, 1.15], [1.1, 1]]) circle(px + dx * w, b0 - h * dy, 1.1 * z, C('#fffaf0'));
+  if (lit) circle(px, b0 - h * 1.15, (1.6 + Math.sin(now / 400) * 0.4) * z, '#fff3b0');
+}
+function royalGuard(K, a, b, z, now, sg) {                                      // Wache: rote Jacke, hohe Bärenfellmütze
+  const [px, py] = K.P(a, b), step = Math.sin(now / 200) * 0.6 * z;
+  ellipse(px, py, 2.6 * z, 1.2 * z, 'rgba(40,60,20,0.2)');
+  g.fillStyle = C('#2b2b3a'); g.fillRect(px - 1.3 * z, py - 5 * z, 1.1 * z, 5 * z + step); g.fillRect(px + 0.2 * z, py - 5 * z, 1.1 * z, 5 * z - step);
+  g.fillStyle = C('#d4473b'); g.fillRect(px - 1.9 * z, py - 11.5 * z, 3.8 * z, 6.8 * z);
+  g.fillStyle = C('#fffaf0'); g.fillRect(px - 1.9 * z, py - 7.2 * z, 3.8 * z, 0.8 * z);
+  circle(px, py - 12.6 * z, 1.4 * z, C('#f2c9a0'));
+  g.fillStyle = C('#22222c'); g.fillRect(px - 1.6 * z, py - 18 * z, 3.2 * z, 5 * z); circle(px, py - 18 * z, 1.6 * z, C('#22222c'));
+  g.strokeStyle = C('#8a8a96'); g.lineWidth = 0.6 * z; g.beginPath(); g.moveTo(px + sg * 2.4 * z, py - 4 * z); g.lineTo(px + sg * 2.4 * z, py - 17 * z); g.stroke();   // Lanze
+  circle(px + sg * 2.4 * z, py - 17.5 * z, 0.7 * z, C('#f2c14e'));
+}
 // kleines Fenster auf einem Rundbau (in Bildschirm-Koordinaten)
 function faceQuadRect(x, y, w, h0, h1, lit) {
   poly([[x - w / 2, y - h0], [x + w / 2, y - h0], [x + w / 2, y - h1], [x - w / 2, y - h1]], lit ? '#ffd873' : C('#a8dcff'));
@@ -317,8 +387,9 @@ function drawWonder(id, cx, cy, z, now, x, y, t, hu, hv) {
   const K = kit(cx, cy, z, t.rot);
   if (p >= N) { WONDER_ART[id](K, cx, cy, z, now, x, y, t, hu, hv); return; }
   const [ha, hb] = (K.r & 1) ? [hv, hu] : [hu, hv], pier = id === 'seebruecke';
-  if (groundPart(() => { if (!pier) K.rect(-ha + 0.05, -hb + 0.05, ha - 0.05, hb - 0.05, C('#d9c7a0')); })) return;
-  if (p > 0) {
+  if (groundPart(() => { if (!pier) K.rect(-ha + 0.05, -hb + 0.05, ha - 0.05, hb - 0.05, C('#d9c7a0')); if (id === 'schloss') schlossGround(K, x, y, p); })) return;
+  if (id === 'schloss' && p > 0) WONDER_ART.schloss(K, cx, cy, z, now, x, y, t, hu, hv, p);   // wächst Abschnitt für Abschnitt (Block 60j)
+  else if (p > 0) {
     g.save();
     const cut = cy - (W.h * p / N) * z;
     g.beginPath(); g.rect(-1e5, cut, 2e5, 2e5); g.clip();

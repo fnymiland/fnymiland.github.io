@@ -388,3 +388,37 @@ describe('Märchenschloss: Zierde und Umgebung (Block 60i)', () => {
     game('night = 0');
   });
 });
+
+describe('Wunder-Schloss im neuen Stil (Block 60j)', () => {
+  it('zeichnet jeden Bauabschnitt, jede Drehung und Dachform, bei Tag und Nacht', () => {
+    game("state.tiles.set('5,5', { b: 'schloss', lvl: 1, phase: 0, rate: 1 }); rebuildCover()");
+    for (const n of [0, 0.6]) for (let phase = 0; phase <= 6; phase++) for (let rot = 0; rot < 4; rot++) for (const r of [0, 1, 2])
+      expect(() => game(`(t => { night = ${n}; t.phase = ${phase}; t.rot = ${rot}; t.cs = { r: ${r} }; for (const P of [null, 'ground', 'object']) { PASS = P; drawObject('schloss', 300, 300, 1, 1000, 5, 5, 1, t); } PASS = null; })(state.tiles.get('5,5'))`)).not.toThrow();
+    game('night = 0');
+  });
+
+  it('Farben und Dachform erst nach der Einweihung; Dachform wird gespeichert', () => {
+    game("state.tiles.set('5,5', { b: 'schloss', lvl: 1, phase: 3, rate: 1 }); rebuildCover(); recalc(); openInfo(5, 5)");
+    expect(game("!!document.querySelector('#panel [data-royal]')")).toBe(false);
+    expect(game("!!document.querySelector('#panel [data-wall]')")).toBe(false);
+    game("state.tiles.get('5,5').phase = 6; openInfo(5, 5)");
+    expect(game("!!document.querySelector('#panel [data-wall]')")).toBe(true);
+    game("document.querySelector('#panel [data-royal=\"2\"]').click()");
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("royalRoof(state.tiles.get('5,5'))")).toBe(2);
+  });
+
+  it('nachts ab und zu ein Feuerwerk über dem fertigen Schloss', () => {
+    game("state.tiles.set('5,5', { b: 'schloss', lvl: 1, phase: 6, rate: 1 }); rebuildCover(); royalFireNext = 0; fireworksUntil = 0");
+    game('night = 0');
+    expect(game('royalFireTick(1e6)')).toBe(false);
+    game('night = 0.6');
+    expect(game('royalFireTick(1e6)')).toBe(true);
+    expect(game('fireworksAt')).toEqual([8, 8]);
+    game('fireworksUntil = 0');
+    expect(game('royalFireTick(1e6 + 1000)')).toBe(false);                            // erst ein paar Minuten später wieder
+    expect(game('royalFireTick(1e6 + 160000)')).toBe(true);
+    game('night = 0; fireworksUntil = 0');
+  });
+});

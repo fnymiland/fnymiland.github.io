@@ -360,6 +360,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     darunter; neue Felder in `CS_DEF` + `CS_LIM`, alte Speicherstände liest `csOf`; Teile nie in b überlappen lassen);
     Eingang = Torturm-Paar (`TOR_PAIR`, zählt erst als Paar). Was ein Bild verändert, gehört in den Sprite-Schlüssel
     (`spriteTile`: `t.cs`, `t.win`, `t.fl`), sonst sieht man es von weitem nicht.
+    Schloss-Bausteine (Fenster, Zinnen, Türme, Kuppeln, Wappen) nur über `castleKit` – Märchenschloss und Wunder-Schloss
+    teilen sie. Das Wunder-Schloss muss immer prächtiger bleiben als jedes Märchenschloss (Block 60j).
     Fenster frischen sich ständig auf: Zustände wie eine Löschen-Rückfrage außerhalb des DOM merken (`delSure`).
 71. **Tore** (Block 59): Tor = `isGate(k)` (Weg auf beiden Seiten `pathGate` oder `e.gate`). Ein Tor ohne Weg (`gardenGate`)
     bekommt ein Türchen (`gateDoor`). Wer Linien neu setzt/umfärbt (`buildEdge`), übernimmt `arch`, `gate`, `flush`.

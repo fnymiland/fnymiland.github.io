@@ -954,7 +954,7 @@ function openInfo(x, y) {
     } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
   }
   let colors = '';
-  if (t.b === 'haus' || PAINTABLE.has(t.b)) {
+  if (t.b === 'haus' || (PAINTABLE.has(t.b) && !(t.b === 'schloss' && !wonderDone(t)))) {   // Wunder-Schloss: erst nach der Einweihung
     const house = t.b === 'haus';
     if (house && t.lvl > 1) colors += `
       <div class="label">Aussehen</div>
@@ -1023,7 +1023,8 @@ function openInfo(x, y) {
     <div class="looks">${Object.entries(FOOT_STYLES).map(footBtn).join('')}</div>
     ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
   // Märchenschloss (Block 60g/60h): Gestalt im Fenster, in Reitern (Form · Türme · Farben)
-  const castle = t.b === 'fz_schloss' ? castleHtml(t) : '';
+  const castle = t.b === 'fz_schloss' ? castleHtml(t)
+    : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>` : '';   // Wunder-Schloss (Block 60j)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
@@ -1101,6 +1102,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
+  for (const b of el.querySelectorAll('[data-royal]')) b.onclick = () => undoable(() => { t.cs = { r: +b.dataset.royal }; t.born = performance.now(); sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
@@ -2014,6 +2016,7 @@ function openHelp(tab = helpTab) {
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-10-03-freizeitpark', items: [
   '🎢 <b>Dein eigener Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf – Märchenschloss, Pferdekarussell, Teetassen, Kettenkarussell, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte, Eis und Luftballons. Aus dem Rummelplatz wird ein Freizeitpark und schließlich ein Wunderland.',
+  '🏰 <b>Märchenschloss nach deinen Wünschen:</b> Breite, Türme, Dächer, Fahnen, Wappen, Lichterketten, Wassergraben und Mauer – oder eine Vorlage wie Ritterburg und Eispalast. Und dein Wunder-Schloss ist jetzt ein prächtiges Königsschloss mit Krone, Wachen und Feuerwerk in der Nacht.',
   '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein – der Zug fährt den Lifthügel hinauf und saust hinunter. Mit Looping kopfüber!',
   '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk und Umzug – 3 Minuten lang mehr Einnahmen. Und die Bewohner gehen gern selbst in den Park.',
   '🛤️ <b>Mehr Freiheit beim Gestalten:</b> Deko darf auf Wege (auch große), Gebäude ersetzen Wege, und Zäune bekommen ein Gartentor oder einen offenen Durchgang – auch ohne Weg.',

@@ -634,3 +634,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Wassergraben mit Zugbrücke (`mo`), Mauer mit Torhaus (`mw`), Garten mit Beeten, Brunnen und Bäumen (`gn`) – ein Feld
       rundum (`csRing`), nur mittig (das Schloss bleibt stehen), sonst Hinweis. Mauer/Brunnen/Bäume vor oder hinter dem
       Schloss sortiert (pre/post).
+- [x] 60j Das Märchenschloss stellte das Wunder-Schloss in den Schatten → Wunder neu im selben Stil, eine Klasse größer
+      (`WONDER_ART.schloss`): Graben, Mauer mit Ecktürmen und Torhaus, Hof mit Brunnen, Palais mit gestaffelten Türmen und
+      dem höchsten Turm samt Königskrone (`royalCrown`), Wachen (`royalGuard`), nachts alle paar Minuten Feuerwerk
+      (`royalFireTick`). Bauabschnitte zeigen das Wachsen (Fundament → Mauern → Türme → Dächer → Säle → Einweihung).
+      Nach der Einweihung Farben und Dachform (`t.cs.r`, `royalRoof`). Schloss-Bausteine geteilt (`castleKit`).

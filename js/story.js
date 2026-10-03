@@ -605,7 +605,7 @@ const WONDERS = {
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
     phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
              { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 1e6, obst: 600, kristall: 80 }] },
-  schloss: { the: 'Das Schloss', h: 195, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
+  schloss: { the: 'Das Schloss', h: 270, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
     phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
              { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
@@ -727,6 +727,17 @@ function startFzFest(now = Date.now()) {
   return true;
 }
 let fzFestWas = false;
+// Wunder-Schloss (Block 60j): nachts alle paar Minuten ein kleines Feuerwerk über dem Schloss
+let royalFireNext = 0;
+function royalFireTick(now = performance.now()) {
+  if (night < 0.3 || !isLive() || now < royalFireNext || now < fireworksUntil) return false;
+  const s = [...state.tiles].find(([, t]) => t.b === 'schloss' && wonderDone(t));
+  if (!s) return false;
+  royalFireNext = now + 150000;
+  const [x, y] = keyXY(s[0]), [w, h] = sizeOf('schloss', s[1].rot, s[1]);
+  startFireworks([x + (w - 1) / 2, y + (h - 1) / 2], true);
+  return true;
+}
 function fzFestTick(now = Date.now()) {
   const on = fzFestLeft(now) > 0;
   if (!on && fzFestWas) toast('🎆 Die Parade ist vorbei');

@@ -41,6 +41,14 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   B('fz_schloss', 20, 3, 1);
   expect(game(`castleChange(${X + 20}, ${Y + 3}, { ...CS_TPL.ritter.cs, mo: 1, mw: 1, gn: 1, wp: 3 })`)).toBe(`${X + 19},${Y + 2}`);
   game(`Object.assign(state.tiles.get('${X + 19},${Y + 2}'), { wall: 10, roof: 0, win: 6 })`);
+  // Wunder-Schloss (Block 60j): eins fertig, eins als Baustelle (Abschnitt 3) – auf freiem Gras nahe beim Park
+  const spots = game(`(() => { const out = [], free = (x0, y0) => { for (let y = y0 - 1; y < y0 + 8; y++) for (let x = x0 - 1; x < x0 + 8; x++) { const k = x + ',' + y; if (!ownedTile(x, y) || isSea(x, y) || terrainAt(x, y) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz') return false; } return true; };
+    for (let r = 0; r < 60 && out.length < 2; r++) for (let y = ${Y} - r; y <= ${Y} + r && out.length < 2; y++) for (let x = ${X} - r; x <= ${X} + r && out.length < 2; x++)
+      if (Math.max(Math.abs(x - ${X}), Math.abs(y - ${Y})) === r && free(x, y) && !out.some(([a, b]) => Math.abs(a - x) < 9 && Math.abs(b - y) < 9)) out.push([x, y]);
+    return out; })()`);
+  for (const [sx, sy] of spots) game(`for (let y = ${sy}; y < ${sy} + 7; y++) for (let x = ${sx}; x < ${sx} + 7; x++) { state.terra.set(x + ',' + y, 'grass'); state.decos.delete(x + ',' + y); }`);
+  game(`state.tiles.set('${spots[0].join()}', { b: 'schloss', lvl: 1, phase: 6, rate: 1 }); state.tiles.set('${spots[1].join()}', { b: 'schloss', lvl: 1, phase: 3, rate: 1 })`);
+  console.log('Wunder-Schloss', JSON.stringify(spots));
   game('rebuildCover(); recalc()');
   const st = game('computeFz().map(p => [p.tiles.length, p.rides, p.stage])'), coasters = game('COASTERS.length');
   const d = game('JSON.parse(JSON.stringify(serialize()))');
