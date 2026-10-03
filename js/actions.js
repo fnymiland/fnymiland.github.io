@@ -74,6 +74,7 @@ function build(b, x, y, quiet) {
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
+    if (d.fzMin) state.tiles.get(k).price = c.cost;               // Preis nach Einkommen: fürs Erstatten merken (Block 60)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
@@ -115,6 +116,15 @@ function demolish(x, y) {
 }
 
 // Parkrasen an einem Feld entfernen (wird wieder Wiese), Preis zurück
+// Freizeitpark-Boden entfernen (Block 60): nur, wo kein Fahrgeschäft darauf steht
+function removeFzGround(x, y) {
+  if (terraLook(x, y) !== 'fz') return false;
+  const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
+  if (t && ITEMS[t.b].cat === 'fz') { fail('Hier steht ein Fahrgeschäft'); return false; }
+  state.terra.set(x + ',' + y, 'grass'); state.money += ITEMS.fzboden.cost;
+  sandCache.clear(); landCache.clear(); sfx('dig'); recalc(); save();
+  return true;
+}
 function removeLawn(x, y) {
   if (terraLook(x, y) !== 'park') return false;
   state.terra.set(x + ',' + y, 'grass'); state.money += ITEMS.parkrasen.cost;
@@ -423,6 +433,7 @@ function tap(sx, sy, isTouch) {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
     else if (t) openInfo(ax, ay);
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);
+    else if (terraLook(x, y) === 'fz') openFzInfo(x, y);
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }
     return;
   }

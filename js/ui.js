@@ -838,6 +838,7 @@ function openInfo(x, y) {
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
   if (STANDS[t.b]) status.push(...marktStatus(x + ',' + y));
   if (terraLook(x, y) === 'park') status.push(...parkStatus(x + ',' + y));
+  if (ITEMS[t.b].cat === 'fz') status.push(...fzStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
@@ -1173,6 +1174,34 @@ function openParkInfo(x, y) {
     () => terraLook(x, y) === 'park' ? openParkInfo(x, y) : closePanel());
   if ($('p-fest')) $('p-fest').onclick = () => { if (startParkFest()) openParkInfo(x, y); };
   $('p-del').onclick = () => { closePanel(); undoable(() => removeLawn(x, y)); };
+  $('p-close').onclick = closePanel;
+}
+// Freizeitpark (Block 60): Stufe, was zur nächsten fehlt, was er bringt
+function fzStatus(k) {
+  const p = computeFz().find(e => e.tiles.includes(k));
+  if (!p) return [];
+  const out = [], next = FZ_STEPS[p.stage];
+  out.push(p.stage ? `<div class="ok">${FZ_STEPS[p.stage - 1].icon} ${FZ_STEPS[p.stage - 1].name}: ${p.tiles.length} Felder, ${p.rides} ${p.rides === 1 ? 'Attraktion' : 'Attraktionen'}</div>`
+    : `<div class="bad">✗ Noch kein Freizeitpark: ${p.tiles.length} Felder, ${p.rides} ${p.rides === 1 ? 'Attraktion' : 'Attraktionen'}</div>`);
+  if (next) {
+    const miss = [];
+    if (p.tiles.length < next.tiles) miss.push(`${next.tiles - p.tiles.length} Felder Boden`);
+    if (p.rides < next.rides) miss.push(`${next.rides - p.rides} ${next.rides - p.rides === 1 ? 'Attraktion' : 'Attraktionen'}`);
+    for (const n of next.need) if (!p.sorts.has(n)) miss.push(FZ_SORT_NAMES[n]);
+    out.push(`<div class="muted">Für „${next.icon} ${next.name}“ fehlt noch: ${miss.join(', ')}</div>`);
+  }
+  if (p.stage) out.push(`<div class="ok">🎟️ Eintritt: alle Einnahmen +${Math.round(FZ_INC[p.stage] * 100)} % · 👥 ${FZ_ATTR[p.stage]} Besucher · 🌸 +${FZ_BEAUTY[p.stage]}, auch für Häuser bis ${FZ_NEAR[p.stage]} Felder</div>`);
+  return out;
+}
+function openFzInfo(x, y) {
+  const k = x + ',' + y;
+  showPanel(`
+    <h3>🎢 Freizeitpark-Boden</h3>
+    <div class="status">${fzStatus(k).join('')}</div>
+    <p class="muted">Stell Fahrgeschäfte, Stände und Deko auf den Boden (🎡 Freizeit → 🎢 Freizeitpark). Je größer und bunter, desto höher die Stufe: 🎪 Rummelplatz, 🎠 Freizeitpark, 🏰 Wunderland.</p>
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Boden entfernen">🗑️ +${fmt(ITEMS.fzboden.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => terraLook(x, y) === 'fz' ? openFzInfo(x, y) : closePanel());
+  $('p-del').onclick = () => { closePanel(); undoable(() => removeFzGround(x, y)); };
   $('p-close').onclick = closePanel;
 }
 // Parkfest: läuft, wartet oder ist bereit (nach der besten Park-Stufe)
@@ -1857,6 +1886,7 @@ function helpBody(tab) {
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder Fels, Offshore weit draußen, Geothermie nah an der Quelle, Solar auf Sand, Holzfäller im Wald, Steinbruch am Fels … bringen bis +50 %. Die Vorschau beim Bauen zeigt es. Schlechter als normal wird es nie.',
     '🏮 <b>Sehenswürdigkeiten</b> restaurieren: jede Stufe schaltet Neues frei und entzündet eine Laterne. Brennen alle, gibt es das Laternenfest.',
     '🏝️ <b>Inseln</b> entdeckst du per Boot vom 🛶 Steg aus. Brücken, Züge, Seilbahn und Schiffe verbinden sie; später warten ferne Inseln mit Truhen. Mit „Aufschütten“ wächst dein Land ins Meer.',
+    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Boden aufziehen, Fahrgeschäfte und Stände daraufstellen – vom Rummelplatz zum Wunderland. Bringt Eintritt, Besucher und Schönheit; die Fahrgeschäfte kosten nach deinem Einkommen.',
     '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten – jedes hat eine besondere Kraft.',
     '⭐ <b>Erfolge und Album</b> (☰): Sammeln lohnt sich, volle Album-Seiten schenken besondere Dinge.']);
   if (tab === 'steuerung') {

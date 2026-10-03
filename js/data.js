@@ -276,6 +276,30 @@ for (const [id, S] of Object.entries(STANDS)) ITEMS[id] = { cat: 'markt', name: 
 // wo ITEMS.leuchtturm.cost gelesen wird (Kachel, Bauen, Planen, Erstatten)
 const LEUCHT_BASE = ITEMS.leuchtturm.cost;
 Object.defineProperty(ITEMS.leuchtturm, 'cost', { get: () => (typeof leuchtCost === 'function' ? leuchtCost() : LEUCHT_BASE), enumerable: true, configurable: true });
+// Freizeitpark (Block 60, nach dem Laternenfest): Parkboden malen, Fahrgeschäfte und Stände darauf stellen → Rummelplatz,
+// Freizeitpark, Wunderland. Module (cat 'fz', needs 'fz') kosten nach dem besten Einkommen: mindestens base, sonst min
+// Minuten davon (wie der Leuchtturm). fzSort: Art für die Vielfalt der Stufen.
+Object.assign(ITEMS, {
+  fzboden: { cat: 'deko', name: 'Freizeitpark-Boden', festival: true, cost: 40, paint: true,
+             desc: 'Bunter Pflasterboden für deinen Freizeitpark: aufziehen, dann Fahrgeschäfte und Stände daraufstellen. Wege und Deko dürfen mit drauf.' },
+  fz_tor: { cat: 'fz', name: 'Parkeingang', festival: true, size: [1, 2], cost: 100000, fzMin: 8, needs: 'fz', fzSort: 'tor', beauty: 25,
+            desc: 'Das große Tor mit zwei Türmchen und Fahnen – jeder richtige Freizeitpark braucht einen Eingang.' },
+  fz_karussell: { cat: 'fz', name: 'Pferdekarussell', festival: true, size: [2, 2], cost: 150000, fzMin: 12, needs: 'fz', fzSort: 'fahrt', beauty: 40,
+                  desc: 'Ein prächtiges Karussell mit goldenen Stangen, Pferdchen und Lichtern.' },
+  fz_zuckerwatte: { cat: 'fz', name: 'Zuckerwatte-Stand', festival: true, cost: 20000, fzMin: 2, needs: 'fz', fzSort: 'stand', beauty: 8,
+                    desc: 'Rosa Wolken am Stiel – ein kleiner Stand mit gestreiftem Dach.' },
+});
+const FZ_STEPS = [
+  { name: 'Rummelplatz', icon: '🎪', tiles: 9, rides: 2, need: [] },
+  { name: 'Freizeitpark', icon: '🎠', tiles: 25, rides: 5, need: ['tor', 'fahrt', 'stand'] },
+  { name: 'Wunderland', icon: '🏰', tiles: 49, rides: 10, need: ['tor', 'fahrt', 'stand', 'schloss'] },
+];
+const FZ_SORT_NAMES = { tor: 'ein Eingang', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'das Märchenschloss' };
+const FZ_INC = [0, 0.08, 0.2, 0.4], FZ_ATTR = [0, 60, 150, 400], FZ_BEAUTY = [0, 60, 150, 300], FZ_NEAR = [0, 4, 6, 8];   // Einnahmen +%, Besucher, 🌸 (auch ringsum bis FZ_NEAR)
+for (const id of Object.keys(ITEMS)) if (ITEMS[id].fzMin) {
+  const base = ITEMS[id].cost;
+  Object.defineProperty(ITEMS[id], 'cost', { get: () => (typeof wonderRate === 'function' && typeof niceRound === 'function' ? niceRound(Math.max(base, ITEMS[id].fzMin * 60 * wonderRate())) : base), enumerable: true, configurable: true });
+}
 // Plantagen für exotische Waren – nur auf fernen Inseln (far)
 Object.assign(ITEMS, {
   kaffeeplantage: { cat: 'bau', name: 'Kaffeeplantage', cost: 20000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { kaffee: 0.25 },
@@ -508,6 +532,7 @@ const MENU = [
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
+    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_karussell', 'fz_zuckerwatte'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
@@ -617,6 +642,10 @@ const ITEM_TIPS = {
   rosenbogen: 'Alle Deko einmal aufgestellt! Der Rosenbogen passt über jeden Weg – kostet nichts.',
   uhrturm: 'Alle Hausformen erreicht! Der Uhrturm gehört auf den Marktplatz – kostet nichts.',
   karussell: 'Alle Bewohner-Arten wohnen bei dir! Das Karussell dreht sich – kostet nichts.',
+  fzboden: 'Nach dem Fest: bau dir deinen eigenen Freizeitpark! Boden aufziehen, dann Fahrgeschäfte und Stände daraufstellen.',
+  fz_tor: 'Der Eingang für deinen Freizeitpark – mit Türmchen und Fahnen.',
+  fz_karussell: 'Das erste Fahrgeschäft: ein prächtiges Pferdekarussell.',
+  fz_zuckerwatte: 'Rosa Zuckerwatte für die Besucher deines Freizeitparks.',
   schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
   vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',

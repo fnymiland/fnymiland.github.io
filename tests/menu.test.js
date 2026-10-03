@@ -34,7 +34,7 @@ describe('Baumenü', () => {
     area('einkaufen').onclick();
     expect(subs()).toEqual(['laeden', 'essen', 'markt', 'gross']);
     area('freizeit').onclick();
-    expect(subs()).toEqual(['kultur', 'wunder']);
+    expect(subs()).toEqual(['kultur', 'wunder', 'fzpark']);
     area('gestalten').onclick();
     expect(subs()).toEqual(['land', 'gruen', 'linien', 'platz', 'besonderes']);
   });

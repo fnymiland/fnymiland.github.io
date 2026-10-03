@@ -303,7 +303,7 @@ const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen g
 function totals() {
   rebuildCover();
   computeMarkets();
-  computeParks();
+  computeParks(); computeFz();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -420,6 +420,7 @@ function totals() {
   }
   for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0);   // Hecken, Zäune, Mauern, Torbögen
   for (const p of PARKS) beauty += PARK_BEAUTY[p.stage];                  // ein ganzer Park ist mehr als seine Deko
+  for (const p of FZPARKS) beauty += FZ_BEAUTY[p.stage];                 // Freizeitpark (Block 60)
   for (const [k, ds] of state.decos) {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
@@ -456,7 +457,7 @@ function totals() {
   let fare = 0, spend = 0;
   for (const l of links) { fare += l.traffic.fare; spend += l.traffic.spend; }
   inc += (fare + spend) * mT;
-  inc *= 1 + wm('incMul');
+  inc *= 1 + wm('incMul') + FZ_INC[fzBest()];                           // Freizeitpark: Eintritt (beste Stufe, Block 60)
   if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
   // Warenverkauf, der sich dauerhaft halten lässt (was nachkommt, nicht der Lagerbestand) – für Preise nach Einkommen.
   // Umwandlungen nur, soweit ihr Rohstoff nachkommt; Waren mit „alles behalten“ werden nie verkauft.
@@ -819,6 +820,31 @@ function computeParks() {
   return out;
 }
 const parkAt = k => PARKS.find(p => p.tiles.includes(k)) || null;
+// Freizeitparks (Block 60): zusammenhängender Freizeitpark-Boden; Fahrgeschäfte & Stände darauf (je eins) → Stufe nach FZ_STEPS
+let FZPARKS = [];
+function computeFz() {
+  const seen = new Set(), out = [];
+  for (const [k0, v] of state.terra) {
+    if (v !== 'fz' || seen.has(k0)) continue;
+    const tiles = [], todo = [k0], sorts = new Set(), rides = new Set();
+    seen.add(k0);
+    while (todo.length) {
+      const k = todo.pop(), [x, y] = keyXY(k);
+      tiles.push(k);
+      const a = COVER.get(k), t = a && state.tiles.get(a);
+      if (t && ITEMS[t.b].cat === 'fz') { rides.add(a); sorts.add(ITEMS[t.b].fzSort); }
+      for (const [dx, dy] of DIRS) {
+        const n = (x + dx) + ',' + (y + dy);
+        if (!seen.has(n) && state.terra.get(n) === 'fz') { seen.add(n); todo.push(n); }
+      }
+    }
+    const stage = FZ_STEPS.filter(s => tiles.length >= s.tiles && rides.size >= s.rides && s.need.every(n => sorts.has(n))).length;
+    out.push({ tiles, rides: rides.size, sorts, stage });
+  }
+  FZPARKS = out.filter(p => p.stage);
+  return out;
+}
+const fzBest = () => Math.max(0, ...FZPARKS.map(p => p.stage));
 // Abstand (Felder, wie Chebyshev) vom Rechteck x0..x1, y0..y1 zum nächsten Feld des Parks
 function parkDist(p, x0, y0, x1 = x0, y1 = y0) {
   let best = Infinity;
@@ -834,7 +860,9 @@ function nearMarket(x, y, w = 1, h = 1) {
 // (Holzfäller im Wald, Kristallmine auf Kristallfels; Steinbruch und Bergwerk graben im Fels).
 // Selbst Gebautes wird nie weggeräumt (das prüft COVER vorher), Wasser auch nicht (dafür gibt es Aufschütten).
 const CLEAR_COST = { forest: 10, obst: 10, rock: 50, erz: 50, kristall: 50 };
-const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'obst', fels: 'rock', parkrasen: 'park' };
+const TERRAFORM = { wiese: 'wiese', strand: 'sand', wald: 'forest', obstwald: 'obst', fels: 'rock', parkrasen: 'park', fzboden: 'fz' };
+// Auf dem Freizeitpark-Boden (Block 60): Fahrgeschäfte, Stände, Deko, Wege, Linien – keine Häuser
+const fzOk = b => parkOk(b) || ITEMS[b].cat === 'fz';
 // Auf dem Parkrasen stehen nur Deko und Wege (sonst wäre es kein Park)
 const parkOk = b => b === 'weg' || (ITEMS[b] || {}).cat === 'deko' || !!(ITEMS[b] || {}).edge;   // Pinsel → Gelände
 function willClear(b, ter) {
@@ -1468,6 +1496,7 @@ function placeStats() {
   for (const [k, t] of state.tiles) { const S = SHOPS[t.b]; if (!S) continue; const r = regionAt(...keyXY(k)); if (S.attr) add(attr, r, S.attr); if (S.hotel) add(hotel, r, S.hotel); }
   for (const m of MARKETS) add(attr, regionAt(...m.tiles[0]), MARKT_ATTR[m.stage]);             // Marktplatz zieht an
   for (const p of PARKS) add(attr, regionAt(...keyXY(p.tiles[0])), PARK_ATTR[p.stage]);           // Park auch
+  for (const p of FZPARKS) add(attr, regionAt(...keyXY(p.tiles[0])), FZ_ATTR[p.stage]);           // Freizeitpark
   for (const [r, h] of hotel) attr.set(r, (attr.get(r) || 0) * (1 + h));
   return { pop, attr };
 }
@@ -1516,16 +1545,17 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (!ownedTile(x, y)) return notMine(x, y);
     const k = x + ',' + y, ter = terrainAt(x, y), look = terraLook(x, y);
     if (ter === 'water') return 'Nicht auf dem Wasser – erst aufschütten';
-    if (b === 'parkrasen') {                             // unter Deko und Wege darf der Rasen, nur auf Wiese
-      const t = state.tiles.get(COVER.get(k) || k);
-      if (t && !parkOk(t.b)) return 'Hier steht ein Gebäude – auf den Parkrasen gehören nur Deko und Wege';
-      if (!['grass', 'forest', 'obst'].includes(ter)) return 'Parkrasen nur auf Wiese oder im Wald – Fels erst sprengen';
+    if (b === 'parkrasen' || b === 'fzboden') {          // unter Deko und Wege darf der Rasen/Boden, nur auf Wiese
+      const t = state.tiles.get(COVER.get(k) || k), fz = b === 'fzboden';
+      if (t && !(fz ? fzOk(t.b) : parkOk(t.b))) return fz ? 'Hier steht ein Gebäude – auf den Freizeitpark gehören Fahrgeschäfte, Stände, Deko und Wege' : 'Hier steht ein Gebäude – auf den Parkrasen gehören nur Deko und Wege';
+      if (!['grass', 'forest', 'obst'].includes(ter) && !fz) return 'Parkrasen nur auf Wiese oder im Wald – Fels erst sprengen';
+      if (fz && ter !== 'grass') return 'Freizeitpark-Boden nur auf Wiese – Wald erst roden, Fels sprengen';
     } else {
       if (COVER.has(k)) return 'Hier steht etwas';
       if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
     }
     const want = TERRAFORM[b], now = look || (ter === 'grass' && isBeach(x, y) ? 'sand' : ter);
-    if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels', park: 'Parkrasen' }[want]}`;
+    if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels', park: 'Parkrasen', fz: 'Freizeitpark-Boden' }[want]}`;
   } else if (b === 'graben' || b === 'schuett') {
     if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : isSea(x, y) ? 'Hier ist schon Wasser' : 'Das ist nicht dein Grundstück';
     const ter = terrainAt(x, y);
@@ -1560,6 +1590,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         continue;
       }
       if (terraLook(fx, fy) === 'park' && !parkOk(b)) return 'Auf den Parkrasen gehören nur Deko und Wege';
+      if (terraLook(fx, fy) === 'fz' && !fzOk(b)) return 'Auf den Freizeitpark gehören Fahrgeschäfte, Stände, Deko und Wege';
+      if (d.needs === 'fz' && terraLook(fx, fy) !== 'fz') return 'Fahrgeschäfte gehören auf Freizeitpark-Boden';
       if (plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
       if (replacesWeg(b) && plainWeg(k)) {                                  // Gebäude: ersetzt den Weg
         const ds = decosAt(k);
@@ -1850,6 +1882,7 @@ function beautyAround(x, y, r) {
     for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0); }   // Linien
   }
   for (const p of PARKS) if (parkDist(p, x, y) <= PARK_NEAR[p.stage]) sum += PARK_BEAUTY[p.stage];   // Park in der Nähe (je größer, desto weiter)
+  for (const p of FZPARKS) if (parkDist(p, x, y) <= FZ_NEAR[p.stage]) sum += FZ_BEAUTY[p.stage];   // Freizeitpark ringsum
   return sum;
 }
 // Erreichbar per Weg oder Bahn (Block 26): Versorgung zählt auch, wenn sie im selben Viertel steht (über Wege oder
@@ -1946,7 +1979,7 @@ function demolishInfo(x, y) {
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || d.cat === 'markt' || t.b === 'weg' || t.b === 'schiene';
-    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: d.cost, mat: d.mat };
+    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: t.price != null ? t.price : d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
       const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
@@ -1954,8 +1987,8 @@ function demolishInfo(x, y) {
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
       : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
-    const refund = full ? paid.cost : Math.floor((d.cost + staged) / 2);
-    return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : d.cost + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
+    const price = t.price != null ? t.price : d.cost, refund = full ? paid.cost : Math.floor((price + staged) / 2);
+    return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : price + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
@@ -1972,7 +2005,7 @@ function previewDelta(b, x, y) {
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen)
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
-  rebuildCover(); computeMarkets(); computeParks();              // Marktplätze und Parks wieder wie wirklich gebaut
+  rebuildCover(); computeMarkets(); computeParks(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,

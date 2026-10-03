@@ -580,3 +580,19 @@ Park zum Selberbauen (wie der Marktplatz) · Größen für alle Deko. Reihenfolg
       heißt jetzt „✕ Ohne Bogen“ statt „Offen“ (war neben einem Tor missverständlich).
 - [x] Drei Möglichkeiten je Linienstück ohne Weg: geschlossen / 🚪 Gartentor (Türchen) / ⬜ Durchgang (offen, `e.gate =
       'offen'`) – Bogen bei beiden Toren möglich.
+
+## Block 60 – Freizeitpark (Wunder zum Selberbauen, nach dem Laternenfest)
+
+Gemeinsam entschieden: Gelände + Module (wie Park/Marktplatz), Achterbahn frei verlegbar, nach dem Fest, Wirkung:
+Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
+
+- [x] 60a Grundgerüst: Freizeitpark-Boden (`fzboden` → `state.terra` 'fz', zählt als Wiese, bunte Rauten, rosa Rand),
+      Module `cat: 'fz'`, `needs: 'fz'`, Preis nach bestem Einkommen (`fzMin` Minuten, mindestens Grundpreis; bezahlter
+      Preis in `t.price` fürs Erstatten). `computeFz` → `FZPARKS`, Stufen `FZ_STEPS` (🎪 Rummelplatz 9 Felder/2
+      Attraktionen, 🎠 Freizeitpark 25/5 + Eingang, Fahrt, Stand, 🏰 Wunderland 49/10 + Schloss). Wirkung: alle Einnahmen
+      +8/20/40 % (beste Stufe), Besucher, 🌸 auch ringsum. Fenster `openFzInfo`/`fzStatus`. Erste Module: Parkeingang (1×2),
+      Pferdekarussell (2×2), Zuckerwatte-Stand.
+- [ ] 60b Module: Märchenschloss (3×3), Teetassen, Kettenkarussell, Freifallturm, Geisterbahn, Wildwasserbahn, Eis-Stand,
+      Ballonverkäufer.
+- [ ] 60c Achterbahn: Strecke ziehen (Hügel, Looping), Station, Zug.
+- [ ] 60d Parade/Feuerwerk-Event, Bewohner gehen hin, Album-Seite, Erfolge, „Das ist neu“.

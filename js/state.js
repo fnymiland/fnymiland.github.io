@@ -73,7 +73,8 @@ function tileOut(t) {
   if (t.gleis) o.gleis = t.gleis.map(c => c ? { ...(c.train ? { train: c.train, trainCol: c.trainCol || 0 } : {}), ...(c.trainPlus ? { trainPlus: c.trainPlus } : {}),
     ...(c.extra ? { extra: c.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) })) } : {}) } : {});                                                         // Truhe: von welcher fernen Insel
   if (t.weg != null) o.weg = t.weg;                                                      // Marktplatz: Weg darunter
-  if (t.wegs) o.wegs = { ...t.wegs };                                                   // … unter den übrigen Feldern großer Deko
+  if (t.wegs) o.wegs = { ...t.wegs };
+  if (t.price != null) o.price = t.price;                                               // Freizeitpark: bezahlter Preis (Block 60)                                                   // … unter den übrigen Feldern großer Deko
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }
