@@ -915,7 +915,7 @@ function doorWin(bx, h, z, rot, wins = [[0.32, 0.62]], doorH = 1) {
 const MIRROR = new Set();                 // (die Bank dreht sich seit Block 42 selbst in 4 Richtungen)
 const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
-  'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_tor', 'fz_zuckerwatte', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
+  'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_tor', 'fz_zuckerwatte', 'fz_schloss', 'fz_geister', 'fz_wildwasser', 'fz_eis', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
 const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
@@ -1356,6 +1356,168 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       for (const [a, b] of posts) { const p0 = K.P(a, b, 9), p1 = K.P(a, b, 19); g.strokeStyle = C('#fffaf0'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
       for (let i = 0; i < 6; i++) { const b0 = -0.27 + i * 0.09, b1 = b0 + 0.09; K.poly([[0.3, b0], [0.3, b1], [-0.3, b1], [-0.3, b0]], C(i % 2 ? '#e8604f' : '#fffaf0'), 19); }
       void B;
+      break;
+    }
+    case 'fz_schloss': {                     // 3×3: Märchenschloss – Hauptbau, vier Ecktürme, hoher Mittelturm, Tor nach vorn
+      const K = kit(cx, cy, z, t && t.rot), lit = night > 0.15 && isLive(), win = lit ? '#ffd873' : C('#a8dcff');
+      kShadow(K, 1.35);
+      const wall = '#f8d6e0', roof = '#5f8fe8', gold = '#f2c14e';
+      const deco = (B, rows) => { for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (!F) continue;
+        faceQuad(F.P, F.Q, 0, 1, F.H - 2.2 * z, F.H - 0.8 * z, C(shade(wall, -0.12)));   // Zinnenband
+        for (const [h0, h1] of rows) for (const [t0, t1] of [[0.18, 0.36], [0.64, 0.82]]) faceQuad(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, win); } };
+      const flag = (a, b, up, col) => { const [fx, fy] = K.P(a, b, up); g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(fx, fy); g.lineTo(fx, fy - 10 * z); g.stroke();
+        poly([[fx, fy - 10 * z], [fx + 7 * z, fy - 8.5 * z + Math.sin(now / 280 + a + b) * 1.2 * z], [fx, fy - 7 * z]], C(col)); };
+      const tower = (a, b, r, h, rh, col = roof) => () => { const T = K.block({ a, b, ha: r, hb: r, h, wall, roof: col, roofH: rh, trim: gold }); deco(T, [[0.35, 0.5], [0.62, 0.76]]); flag(a, b, h + rh, '#e8604f'); };
+      const keep = () => {                                                            // Hauptbau mit Tor nach vorn
+        const B = K.block({ a: 0, b: 0, ha: 0.85, hb: 0.85, h: 30, wall, roof, roofH: 14, type: 'mansard' });
+        deco(B, [[0.45, 0.62], [0.72, 0.86]]);
+        if (B.faces.front) { const F = B.faces.front; faceQuad(F.P, F.Q, 0.38, 0.62, 0, F.H * 0.42, C('#8a5a3c')); faceQuad(F.P, F.Q, 0.4, 0.6, F.H * 0.4, F.H * 0.46, C(gold)); }
+      };
+      K.scene([
+        [-1.1, -1.1, tower(-1.1, -1.1, 0.3, 40, 20)], [-1.1, 1.1, tower(-1.1, 1.1, 0.3, 40, 20)], [1.1, -1.1, tower(1.1, -1.1, 0.3, 36, 18)], [1.1, 1.1, tower(1.1, 1.1, 0.3, 36, 18)],
+        [0, 0, keep], [0.01, 0.01, tower(0, 0, 0.32, 62, 26, '#4f7fd8')],
+      ]);
+      const [sx, sy] = K.P(0, 0, 90); circle(sx, sy, 1.8 * z, C(gold));                // goldene Kugel auf dem Mittelturm
+      if (lit) glowQuad([[sx - 2, sy - 2], [sx + 2, sy - 2], [sx + 2, sy + 2], [sx - 2, sy + 2]], 16 * z);
+      break;
+    }
+    case 'fz_teetassen': {                   // 2×2: Teekanne in der Mitte, Tassen kreisen und drehen sich selbst
+      const R = hw * 1.2, r2 = hh * 1.2, rot = now / 3000;
+      ellipse(cx, cy + 2 * z, R + 3 * z, r2 + 1.5 * z, 'rgba(40,40,40,0.15)');
+      ellipse(cx, cy + 1 * z, R, r2, C('#e8a0b8')); ellipse(cx, cy - 0.5 * z, R, r2, C('#f7c6d8'));
+      for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; poly([[cx, cy - 0.5 * z], [cx + Math.cos(a) * R, cy - 0.5 * z + Math.sin(a) * r2], [cx + Math.cos(a + 0.39) * R, cy - 0.5 * z + Math.sin(a + 0.39) * r2]], C(i % 2 ? '#fbd6e3' : '#f7c6d8')); }
+      const cups = [];
+      for (let i = 0; i < 6; i++) { const a = rot + i / 6 * Math.PI * 2; cups.push([cx + Math.cos(a) * R * 0.66, cy - 1 * z + Math.sin(a) * r2 * 0.66, i]); }
+      const cup = ([px, py, i]) => {
+        const col = ['#5f8fe8', '#ffd23f', '#58b36a', '#e8604f', '#b07ad6', '#6fd3d8'][i], spin = now / 500 + i;
+        ellipse(px, py - 1 * z, 5.2 * z, 2.4 * z, C(shade(col, -0.2)));
+        poly([[px - 5.2 * z, py - 1 * z], [px - 4 * z, py - 6 * z], [px + 4 * z, py - 6 * z], [px + 5.2 * z, py - 1 * z]], C(col));
+        ellipse(px, py - 6 * z, 4 * z, 1.8 * z, C(shade(col, 0.3))); ellipse(px, py - 6 * z, 3.2 * z, 1.3 * z, C('#fffaf0'));
+        const hx = px + Math.cos(spin) * 5 * z; g.strokeStyle = C(col); g.lineWidth = 1.2 * z; g.beginPath(); g.ellipse(hx, py - 3.5 * z, 1.4 * z, 1.8 * z, 0, 0, Math.PI * 2); g.stroke();
+        circle(px - 1.5 * z, py - 7.2 * z, 1.2 * z, C(['#f4c28f', '#b9b9c6', '#fffaf2'][i % 3]));   // ein Gast
+      };
+      cups.filter(c => c[1] < cy - 1 * z).forEach(cup);
+      ellipse(cx, cy - 8 * z, 7 * z, 7 * z, C('#fffaf0')); ellipse(cx, cy - 9 * z, 6 * z, 5.5 * z, C('#f7f0e6'));   // Kanne
+      for (let i = 0; i < 6; i++) circle(cx - 4 * z + i * 1.6 * z, cy - 8 * z + Math.sin(i) * 1.5 * z, 0.8 * z, C('#f28cb1'));
+      ellipse(cx, cy - 15 * z, 3.5 * z, 1.4 * z, C('#e8604f')); circle(cx, cy - 16.5 * z, 1.2 * z, C('#f2c14e'));
+      poly([[cx + 6 * z, cy - 9 * z], [cx + 11 * z, cy - 14 * z], [cx + 12 * z, cy - 13 * z], [cx + 6.5 * z, cy - 6.5 * z]], C('#fffaf0'));   // Tülle
+      g.strokeStyle = C('#fffaf0'); g.lineWidth = 1.6 * z; g.beginPath(); g.ellipse(cx - 7.5 * z, cy - 9 * z, 2.2 * z, 3.4 * z, 0, Math.PI * 0.5, Math.PI * 1.5); g.stroke();
+      cups.filter(c => c[1] >= cy - 1 * z).forEach(cup);
+      break;
+    }
+    case 'fz_kette': {                       // 2×2: Turm, oben dreht sich das Dach, Sitze fliegen an Ketten hinaus
+      const H = 42 * z, rot = now / 1600, R = hw * 0.85, r2 = hh * 0.85, top = cy - H, lit = night > 0.15 && isLive();
+      ellipse(cx, cy + 2 * z, hw * 1.2, hh * 1.2, 'rgba(40,40,40,0.15)');
+      ellipse(cx, cy, hw * 0.55, hh * 0.55, C('#d9c7f2'));
+      const seats = [];
+      for (let i = 0; i < 12; i++) { const a = rot + i / 12 * Math.PI * 2; seats.push([a, i]); }
+      const seat = ([a, i]) => {
+        const ax = cx + Math.cos(a) * R * 0.7, ay = top + 4 * z + Math.sin(a) * r2 * 0.7, sx = cx + Math.cos(a) * R * 1.35, sy = top + 22 * z + Math.sin(a) * r2 * 1.35;
+        g.strokeStyle = C('#8a8f98'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(ax, ay); g.lineTo(sx, sy); g.stroke();
+        poly([[sx - 1.8 * z, sy], [sx + 1.8 * z, sy], [sx + 1.4 * z, sy + 2.4 * z], [sx - 1.4 * z, sy + 2.4 * z]], C(['#e8604f', '#ffd23f', '#5f8fe8', '#58b36a'][i % 4]));
+        circle(sx, sy - 1 * z, 1.1 * z, C(['#f4c28f', '#b9b9c6', '#fffaf2', '#c9a27e'][i % 4]));
+      };
+      seats.filter(([a]) => Math.sin(a) < 0).forEach(seat);
+      g.fillStyle = C('#b07ad6'); g.fillRect(cx - 2.4 * z, top, 4.8 * z, H);                       // Turm
+      g.fillStyle = C('#9a64c4'); g.fillRect(cx, top, 2.4 * z, H);
+      for (let i = 0; i < 16; i++) {                                                          // Dach
+        const a0 = rot + i / 16 * Math.PI * 2, a1 = rot + (i + 1) / 16 * Math.PI * 2;
+        poly([[cx, top - 10 * z], [cx + Math.cos(a0) * R, top + Math.sin(a0) * r2], [cx + Math.cos(a1) * R, top + Math.sin(a1) * r2]], C(i % 2 ? '#ffd23f' : '#fffaf0'));
+      }
+      for (let i = 0; i < 16; i++) { const a = rot + i / 16 * Math.PI * 2; circle(cx + Math.cos(a) * R, top + Math.sin(a) * r2, 1 * z, lit ? '#fff4a8' : C('#e8604f')); }
+      circle(cx, top - 11 * z, 1.6 * z, C('#e8604f'));
+      seats.filter(([a]) => Math.sin(a) >= 0).forEach(seat);
+      break;
+    }
+    case 'fz_freifall': {                    // 1×1: hoher Gitterturm, Sitzring fährt langsam hoch und fällt
+      const H = 70 * z, lit = night > 0.15 && isLive(), T = (now / 1000) % 10;
+      const f = T < 6 ? T / 6 : T < 7 ? 1 : T < 7.6 ? 1 - ((T - 7) / 0.6) ** 2 : 0;          // hinauf, warten, fallen, unten
+      ellipse(cx, cy + 1 * z, hw * 0.7, hh * 0.7, 'rgba(40,40,40,0.15)');
+      ellipse(cx, cy, hw * 0.45, hh * 0.45, C('#c9c3d6'));
+      g.strokeStyle = C('#e8604f'); g.lineWidth = 1.6 * z;
+      for (const dx of [-3, 3]) { g.beginPath(); g.moveTo(cx + dx * z, cy); g.lineTo(cx + dx * z, cy - H); g.stroke(); }
+      g.lineWidth = 0.6 * z; g.beginPath();
+      for (let y = 0; y < 70; y += 6) { g.moveTo(cx - 3 * z, cy - y * z); g.lineTo(cx + 3 * z, cy - (y + 6) * z); g.moveTo(cx + 3 * z, cy - y * z); g.lineTo(cx - 3 * z, cy - (y + 6) * z); }
+      g.stroke();
+      const ry = cy - (6 + f * 56) * z;                                                    // Sitzring
+      ellipse(cx, ry, 8 * z, 3.2 * z, C('#5f8fe8')); ellipse(cx, ry - 1.5 * z, 8 * z, 3.2 * z, C('#7aa6f0'));
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; if (Math.sin(a) < 0) continue; circle(cx + Math.cos(a) * 7 * z, ry - 2 * z + Math.sin(a) * 2.8 * z, 1.2 * z, C(['#f4c28f', '#b9b9c6', '#fffaf2'][i % 3])); }
+      for (let i = 0; i < 8; i++) {                                                         // Lichterkrone
+        const a = i / 8 * Math.PI * 2 + now / 800, px = cx + Math.cos(a) * 5 * z, py = cy - H - 2 * z + Math.sin(a) * 2 * z;
+        circle(px, py, 1.1 * z, lit || (i + Math.floor(now / 300)) % 2 ? '#fff4a8' : C('#ffd23f'));
+      }
+      circle(cx, cy - H - 5 * z, 1.8 * z, C('#e8604f'));
+      break;
+    }
+    case 'fz_geister': {                     // 2×2: schiefes Spukhaus, grüne Fenster, Gespenst kreist ums Dach
+      const K = kit(cx, cy, z, t && t.rot), lit = night > 0.15 && isLive(), glow = lit || Math.sin(now / 700) > 0.3 ? '#9cf29a' : '#6fbf6a';
+      kShadow(K, 0.9);
+      const B = K.block({ a: 0, b: 0, ha: 0.7, hb: 0.75, h: 26, wall: '#6a5a7e', roof: '#3e3448', roofH: 18, type: 'gable', ridge: 'b', trim: '#4a3e5c' });
+      for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (!F) continue;
+        for (const [t0, t1, h0, h1] of [[0.15, 0.3, 0.55, 0.78], [0.7, 0.85, 0.55, 0.78], [0.15, 0.3, 0.2, 0.42]]) faceQuad(F.P, F.Q, t0, t1, F.H * h0, F.H * h1, C(glow)); }
+      if (B.faces.front) { const F = B.faces.front; faceQuad(F.P, F.Q, 0.42, 0.58, 0, F.H * 0.5, C('#2a2032')); faceQuad(F.P, F.Q, 0.35, 0.65, F.H * 0.55, F.H * 0.68, C('#e8604f')); }
+      const T = K.block({ a: -0.35, b: 0.45, ha: 0.18, hb: 0.18, h: 40, wall: '#5a4a6e', roof: '#3e3448', roofH: 14, trim: '#4a3e5c' });   // schiefes Türmchen
+      void T;
+      const a = now / 2200, [gx, gy] = K.P(Math.cos(a) * 0.9, Math.sin(a) * 0.9, 40 + Math.sin(now / 400) * 3);   // Gespenst
+      g.globalAlpha = 0.9;
+      poly([[gx - 4 * z, gy], [gx - 4 * z, gy - 5 * z], [gx, gy - 9 * z], [gx + 4 * z, gy - 5 * z], [gx + 4 * z, gy], [gx + 2.7 * z, gy - 1.2 * z], [gx + 1.3 * z, gy], [gx, gy - 1.2 * z], [gx - 1.3 * z, gy], [gx - 2.7 * z, gy - 1.2 * z]], '#ffffff');
+      circle(gx - 1.4 * z, gy - 5 * z, 0.7 * z, '#2a2032'); circle(gx + 1.4 * z, gy - 5 * z, 0.7 * z, '#2a2032'); ellipse(gx, gy - 3 * z, 0.8 * z, 1 * z, '#2a2032');
+      g.globalAlpha = 1;
+      break;
+    }
+    case 'fz_wildwasser': {                  // 2×3: Kanal-Schleife, Felsen mit Wasserfall, Baumstamm-Boote
+      const K = kit(cx, cy, z, t && t.rot), T = now / 1000;
+      kShadow(K, 1);
+      const loop = [];                                                                       // Kanal als Rundkurs (Feld-Rahmen)
+      for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI * 2; loop.push([Math.cos(a) * 0.72, Math.sin(a) * 1.15]); }
+      K.poly(loop.map(([a, b]) => [a * 1.18, b * 1.1]), C('#a8916f'));
+      K.poly(loop, C('#5fb6dc'));
+      K.poly(loop.map(([a, b]) => [a * 0.62, b * 0.75]), C('#a8916f'));
+      for (let i = 0; i < 6; i++) { const a = T * 0.8 + i; K.oval(Math.cos(a) * 0.62, Math.sin(a) * 0.98, 0.04, 'rgba(255,255,255,0.6)'); }
+      const rock = () => {                                                                  // Felsen (runde Brocken) mit Wasserfall
+        const [rx, ry] = K.P(-0.05, -0.1);
+        for (const [dx, dy, r, h, col] of [[-6, 2, 13, 0, '#8a8078'], [7, 3, 11, 0, '#9a8f86'], [0, 0, 12, 10, '#a39a91'], [-4, -1, 9, 18, '#9a8f86'], [3, 0, 8, 22, '#b0a79e'], [0, 0, 6, 27, '#7f9a5a']]) {
+          ellipse(rx + dx * z, ry - h * z + dy * z, r * z, r * 0.62 * z, C(col));
+          ellipse(rx + dx * z - r * 0.25 * z, ry - h * z + dy * z - r * 0.2 * z, r * 0.45 * z, r * 0.25 * z, C(shade(col, 0.12)));
+        }
+        circle(rx + 2 * z, ry - 31 * z, 2.6 * z, C('#62b85a')); circle(rx - 2 * z, ry - 30 * z, 2.2 * z, C('#58ad52'));   // Büsche oben
+        const [w0x, w0y] = K.P(0.18, -0.1, 24), [w1x, w1y] = K.P(0.6, -0.1, 0);
+        g.strokeStyle = 'rgba(190,232,250,0.9)'; g.lineWidth = 4 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(w0x, w0y); g.lineTo(w1x, w1y); g.stroke();
+        for (let i = 0; i < 4; i++) { const f = ((T * 1.6 + i / 4) % 1); circle(w0x + (w1x - w0x) * f, w0y + (w1y - w0y) * f, 1.4 * z, '#ffffff'); }
+      };
+      const boat = (k) => () => {                                                           // Baumstamm-Boot
+        const a = T * 0.45 + k * Math.PI, [bx, by] = K.P(Math.cos(a) * 0.72, Math.sin(a) * 1.15, 1.5);
+        ellipse(bx, by, 5 * z, 2.2 * z, C('#8a5a34')); ellipse(bx, by - 1 * z, 4 * z, 1.4 * z, C('#a87448'));
+        circle(bx - 1.5 * z, by - 3 * z, 1.2 * z, C('#f4c28f')); circle(bx + 1.5 * z, by - 3 * z, 1.2 * z, C('#b9b9c6'));
+      };
+      const splash = Math.max(0, Math.sin(T * 2)), [sx, sy] = K.P(0.62, -0.1, 0);
+      const parts = [[0, -0.1, rock], [Math.cos(T * 0.45) * 0.72, Math.sin(T * 0.45) * 1.15, boat(0)], [Math.cos(T * 0.45 + Math.PI) * 0.72, Math.sin(T * 0.45 + Math.PI) * 1.15, boat(1)]];
+      K.scene(parts);
+      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI; circle(sx + Math.cos(a) * (3 + splash * 4) * z, sy - Math.sin(a) * (2 + splash * 5) * z, 1 * z, 'rgba(255,255,255,0.85)'); }
+      break;
+    }
+    case 'fz_eis': {                         // Wägelchen mit riesiger Eiswaffel auf dem Dach
+      const K = kit(cx, cy, z, t && t.rot);
+      kShadow(K, 0.25);
+      K.block({ a: 0, b: 0, ha: 0.24, hb: 0.18, h: 10, wall: '#bfe3ff', type: 'flat', roof: '#fffaf0', trim: '#5f8fe8' });
+      for (const [a, b] of [[-0.18, -0.28], [0.18, -0.28], [-0.18, 0.28], [0.18, 0.28]]) { const [px, py] = K.P(a, b, 0); circle(px, py, 1.4 * z, C('#4a4a58')); }   // Räder
+      const [ix, iy] = K.P(0, 0, 10);
+      poly([[ix - 3.5 * z, iy - 2 * z], [ix + 3.5 * z, iy - 2 * z], [ix, iy + 7 * z - 4 * z]], C('#e2b07a'));       // Waffel
+      g.strokeStyle = C('#c9955f'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(ix - 2 * z, iy - 1 * z); g.lineTo(ix + 1 * z, iy + 2 * z); g.moveTo(ix + 2 * z, iy - 1 * z); g.lineTo(ix - 1 * z, iy + 2 * z); g.stroke();
+      circle(ix - 1.6 * z, iy - 4 * z, 2.8 * z, C('#f7c6d8')); circle(ix + 1.6 * z, iy - 4 * z, 2.8 * z, C('#fff0b8')); circle(ix, iy - 7 * z, 2.8 * z, C('#8a5a3c'));
+      circle(ix + 0.5 * z, iy - 9.8 * z, 1 * z, C('#e8604f'));
+      break;
+    }
+    case 'fz_ballon': {                      // Bündel bunter Luftballons, die schaukeln
+      ellipse(cx, cy + 1 * z, 5 * z, 2 * z, 'rgba(40,60,20,0.15)');
+      g.fillStyle = C('#8a5a3c'); g.fillRect(cx - 1.2 * z, cy - 6 * z, 2.4 * z, 6 * z);
+      circle(cx, cy - 7 * z, 2.2 * z, C('#f4c28f'));
+      const cols = ['#e8604f', '#ffd23f', '#5f8fe8', '#58b36a', '#f28cb1', '#b07ad6', '#6fd3d8'];
+      for (let i = 0; i < 7; i++) {
+        const sw = Math.sin(now / 900 + i * 0.9) * 2.5 * z, bx = cx + (i - 3) * 2.6 * z + sw, by = cy - 22 * z - Math.abs(i - 3) * -1.5 * z - (i % 2) * 3 * z;
+        g.strokeStyle = 'rgba(80,80,80,0.6)'; g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(cx + 1 * z, cy - 7 * z); g.lineTo(bx, by + 3.4 * z); g.stroke();
+        ellipse(bx, by, 2.6 * z, 3.3 * z, C(cols[i])); circle(bx - 0.9 * z, by - 1.2 * z, 0.8 * z, 'rgba(255,255,255,0.5)');
+      }
       break;
     }
     case 'karussell': {                      // runder Boden, Mittelstange, gestreiftes Zeltdach, Pferdchen drehen sich

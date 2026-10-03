@@ -592,7 +592,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Attraktionen, 🎠 Freizeitpark 25/5 + Eingang, Fahrt, Stand, 🏰 Wunderland 49/10 + Schloss). Wirkung: alle Einnahmen
       +8/20/40 % (beste Stufe), Besucher, 🌸 auch ringsum. Fenster `openFzInfo`/`fzStatus`. Erste Module: Parkeingang (1×2),
       Pferdekarussell (2×2), Zuckerwatte-Stand.
-- [ ] 60b Module: Märchenschloss (3×3), Teetassen, Kettenkarussell, Freifallturm, Geisterbahn, Wildwasserbahn, Eis-Stand,
-      Ballonverkäufer.
+- [x] 60b Module: Märchenschloss (3×3, schaltet Wunderland frei), Teetassen (2×2), Kettenkarussell (2×2), Freifallturm,
+      Geisterbahn (2×2), Wildwasserbahn (2×3, Felsen mit Wasserfall, Boote), Eis-Stand, Ballonverkäufer. Menü: „🎢
+      Freizeitpark“ (Boden, Eingang, Schloss, Stände) und „🎠 Fahrgeschäfte“.
 - [ ] 60c Achterbahn: Strecke ziehen (Hügel, Looping), Station, Zug.
 - [ ] 60d Parade/Feuerwerk-Event, Bewohner gehen hin, Album-Seite, Erfolge, „Das ist neu“.

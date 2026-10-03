@@ -16,7 +16,8 @@ describe('Freischalten und Boden', () => {
     game('state.festival = false');
     expect(game("available('fzboden') || available('fz_karussell')")).toBe(false);
     game('state.festival = true');
-    expect(game("menuPlaceOf('fz_karussell')")).toEqual({ top: 'freizeit', sub: 'fzpark' });
+    expect(game("menuPlaceOf('fz_karussell')")).toEqual({ top: 'freizeit', sub: 'fzfahrt' });
+    expect(game("menuPlaceOf('fz_tor')")).toEqual({ top: 'freizeit', sub: 'fzpark' });
     expect(game("build('fzboden', 10, 10, true)")).toBe(true);
     expect(game('terraLook(10, 10)')).toBe('fz');
     expect(game('terrainAt(10, 10)')).toBe('grass');
@@ -42,6 +43,18 @@ describe('Stufen und Wirkung', () => {
     ground(10, 10, 5, 5);
     game("rotManual = true; buildRot = 0; build('fz_karussell', 11, 10, true); build('fz_tor', 14, 10, true); build('fz_zuckerwatte', 10, 14, true); recalc()");
     expect(stages()).toEqual([2]);
+  });
+
+  it('Wunderland: 49 Felder, 10 Attraktionen und das Märchenschloss (Block 60b)', () => {
+    ground(3, 3, 13, 11);
+    game("rotManual = true; buildRot = 0");
+    for (const [b, x, y] of [['fz_karussell', 3, 3], ['fz_teetassen', 5, 3], ['fz_kette', 7, 3], ['fz_geister', 9, 3], ['fz_freifall', 11, 3], ['fz_zuckerwatte', 12, 3], ['fz_eis', 13, 3], ['fz_ballon', 14, 3], ['fz_wildwasser', 3, 9], ['fz_tor', 15, 7]])
+      expect(game(`build('${b}', ${x}, ${y}, true)`), b).toBe(true);
+    game('recalc()');
+    expect(stages()).toEqual([2]);                                                   // ohne Schloss: Freizeitpark
+    expect(game("build('fz_schloss', 8, 7, true)")).toBe(true);
+    game('recalc()');
+    expect(stages()).toEqual([3]);
   });
 
   it('bringt Einnahmen (+%), Besucher und Schönheit – auch ringsum', () => {

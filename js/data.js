@@ -288,6 +288,23 @@ Object.assign(ITEMS, {
                   desc: 'Ein prächtiges Karussell mit goldenen Stangen, Pferdchen und Lichtern.' },
   fz_zuckerwatte: { cat: 'fz', name: 'Zuckerwatte-Stand', festival: true, cost: 20000, fzMin: 2, needs: 'fz', fzSort: 'stand', beauty: 8,
                     desc: 'Rosa Wolken am Stiel – ein kleiner Stand mit gestreiftem Dach.' },
+  // Block 60b
+  fz_schloss: { cat: 'fz', name: 'Märchenschloss', festival: true, size: [3, 3], cost: 1000000, fzMin: 40, needs: 'fz', fzSort: 'schloss', beauty: 150,
+                desc: 'Der Mittelpunkt jedes Wunderlands: rosa Mauern, blaue Spitztürme, goldene Fahnen – nachts leuchten die Fenster.' },
+  fz_teetassen: { cat: 'fz', name: 'Teetassen', festival: true, size: [2, 2], cost: 120000, fzMin: 10, needs: 'fz', fzSort: 'fahrt', beauty: 35,
+                  desc: 'Bunte Tassen drehen sich um die große Teekanne – und jede noch um sich selbst.' },
+  fz_kette: { cat: 'fz', name: 'Kettenkarussell', festival: true, size: [2, 2], cost: 160000, fzMin: 12, needs: 'fz', fzSort: 'fahrt', beauty: 40,
+              desc: 'Hoch oben dreht sich das Dach, die Sitze fliegen an Ketten weit hinaus.' },
+  fz_freifall: { cat: 'fz', name: 'Freifallturm', festival: true, cost: 200000, fzMin: 15, needs: 'fz', fzSort: 'fahrt', beauty: 35,
+                 desc: 'Langsam hinauf – und dann: freier Fall! Ganz oben blinkt eine Krone aus Lichtern.' },
+  fz_geister: { cat: 'fz', name: 'Geisterbahn', festival: true, size: [2, 2], cost: 180000, fzMin: 14, needs: 'fz', fzSort: 'fahrt', beauty: 30,
+                desc: 'Ein schiefes Spukhaus mit grün leuchtenden Fenstern – um das Dach schwebt ein freundliches Gespenst.' },
+  fz_wildwasser: { cat: 'fz', name: 'Wildwasserbahn', festival: true, size: [2, 3], cost: 300000, fzMin: 20, needs: 'fz', fzSort: 'fahrt', beauty: 50,
+                   desc: 'Baumstamm-Boote fahren durch den Kanal, den Felsen hinauf und platschen den Wasserfall hinunter.' },
+  fz_eis: { cat: 'fz', name: 'Eis-Stand', festival: true, cost: 20000, fzMin: 2, needs: 'fz', fzSort: 'stand', beauty: 8,
+            desc: 'Ein hellblaues Wägelchen mit einer riesigen Eiswaffel auf dem Dach.' },
+  fz_ballon: { cat: 'fz', name: 'Ballonverkäufer', festival: true, cost: 8000, fzMin: 1, needs: 'fz', fzSort: 'stand', beauty: 6,
+               desc: 'Ein Bündel bunter Luftballons, die im Wind schaukeln.' },
 });
 const FZ_STEPS = [
   { name: 'Rummelplatz', icon: '🎪', tiles: 9, rides: 2, need: [] },
@@ -532,7 +549,8 @@ const MENU = [
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
-    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_karussell', 'fz_zuckerwatte'] },
+    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon'] },
+    { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
@@ -646,6 +664,14 @@ const ITEM_TIPS = {
   fz_tor: 'Der Eingang für deinen Freizeitpark – mit Türmchen und Fahnen.',
   fz_karussell: 'Das erste Fahrgeschäft: ein prächtiges Pferdekarussell.',
   fz_zuckerwatte: 'Rosa Zuckerwatte für die Besucher deines Freizeitparks.',
+  fz_schloss: 'Das Märchenschloss – damit wird dein Freizeitpark zum Wunderland!',
+  fz_teetassen: 'Teetassen zum Drehen für deinen Freizeitpark.',
+  fz_kette: 'Ein Kettenkarussell – die Sitze fliegen hoch hinaus.',
+  fz_freifall: 'Ein Freifallturm für Mutige.',
+  fz_geister: 'Eine Geisterbahn – gruselig, aber freundlich.',
+  fz_wildwasser: 'Die Wildwasserbahn – Platsch!',
+  fz_eis: 'Ein Eis-Stand für heiße Tage im Park.',
+  fz_ballon: 'Ein Ballonverkäufer mit bunten Luftballons.',
   schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
   vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',
