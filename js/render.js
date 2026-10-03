@@ -43,6 +43,7 @@ function pill(text, x, y, bg, fg, size, fit) {
   g.beginPath(); g.roundRect(x - w / 2, y - h / 2, w, h, h / 2); g.fill();
   g.fillStyle = fg; g.textBaseline = 'middle';
   centerText(text, x, y + 1);
+  return { x0: x - w / 2, y0: y - h / 2, x1: x + w / 2, y1: y + h / 2 };
 }
 
 
@@ -264,6 +265,80 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot) {
 }
 function spriteHousekeeping() {
   if (frameNo % 120 === 0) for (const [k, e] of objSprites) if (frameNo - e.used > 600) objSprites.delete(k);
+}
+
+// Was liegt unter dem Finger? (Block 71) Gebäude und Dekos zählen dort, wo sie gezeichnet sind – Dach, Turm und Fahne,
+// nicht nur ihr Bodenfeld. Das Ding wird dafür in ein winziges Bild um den Punkt gemalt; hat es dort Farbe, ist es getroffen.
+// Dünnes (Baugerüst, Laternenmast, Zaunlatten) zählt nur, wenn dort sonst nichts Flächiges steht – man sieht hindurch.
+// Von vorn nach hinten wie beim Zeichnen: große Gebäude in der Spalte des Fingers an ihrem vordersten Feld,
+// Linien vor den Dingen ihres Feldes, hintere Dekos davor, vordere danach.
+const HIT_R = 4, HIT_SOLID = 0.3;                  // Spielraum rund um den Finger (Bildpunkte); ab diesem Anteil Farbe flächig
+const FLAT_HIT = new Set(['weg', 'schiene']);      // liegen auf dem Boden: das Bodenfeld genügt
+let hitCanvas = null;
+function inkAt(sx, sy, cx, cy, sc, draw) {
+  const n = HIT_R * 2 + 1;
+  if (!hitCanvas) { hitCanvas = document.createElement('canvas'); hitCanvas.width = hitCanvas.height = n; }
+  const prev = g, hc = hitCanvas.getContext('2d', { willReadFrequently: true });
+  let px = null;
+  g = hc; GLOW_SINK = []; SPRITE_PAINT = true;
+  try {
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, n, n);
+    g.setTransform(sc[0], 0, 0, sc[1], cx - sx + HIT_R, cy - sy + HIT_R);
+    draw();
+    const img = g.getImageData(0, 0, n, n);
+    px = img && img.data;
+  } catch (e) { px = null; } finally { GLOW_SINK = null; SPRITE_PAINT = false; PASS = null; g = prev; }
+  if (!px) return 0;
+  let n2 = 0;
+  for (let i = 3; i < px.length; i += 4) if (px[i] > 60) n2++;
+  return n2 / (n * n);                             // Anteil des Fleckens mit Farbe
+}
+// { x, y, slot, d } – Gebäude: Anker und slot −1, Deko: ihr Feld und Platz; d = Tiefe (größer = weiter vorn)
+function objectAt(sx, sy) {
+  const z = cam.z, now = performance.now(), [fa, fb] = tileFrac(sx, sy), col = Math.round(fa - fb), cand = [];
+  for (const [k, t] of state.tiles) {
+    if (FLAT_HIT.has(t.b)) continue;
+    const [ax, ay] = keyXY(k);
+    if (t.b !== 'lm' && !ownedTile(ax, ay)) continue;
+    const [w, h] = sizeOf(t.b, t.rot, t), c = toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2), ds = decoScale(t.b);
+    if (Math.abs(sx - c.x) > ((w + h) * TW / 4 + 30) * z * ds || sy > c.y + ((w + h) * TH / 4 + 14) * z * ds || sy < c.y - spriteTop(t.b, w, h) * 1.4 * z * ds) continue;
+    const d = Math.max(ax - (ay + h - 1), Math.min(ax + w - 1 - ay, col)), fx = Math.min(ax + w - 1, ay + h - 1 + d);   // Spalte des Fingers
+    const mir = (t.rot & 1) && MIRROR.has(t.b);
+    cand.push({ x: ax, y: ay, slot: -1, d: 2 * fx - d, ink: () => inkAt(sx, sy, c.x, c.y, [mir ? -ds : ds, ds], () => { PASS = 'object'; drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); }) });
+  }
+  for (const [k, slots] of state.decos) {
+    const [x, y] = keyXY(k);
+    if (!ownedTile(x, y)) continue;
+    const p = toScreen(x, y);
+    slots.forEach((dc, i) => {
+      if (!dc) return;
+      const [u, v] = slotPos(x, y, i, dc.b), s = decoScale(dc.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z;
+      if (Math.abs(sx - qx) > 30 * z * s || sy > qy + 14 * z * s || sy < qy - 100 * z * s) return;
+      const mir = ((dc.rot || 0) & 1) && MIRROR.has(dc.b), back = SLOTS_BACK.includes(i);
+      cand.push({ x, y, slot: i, d: x + y + (back ? -0.25 : 0.25) + (u + v) * 0.1, ink: () => inkAt(sx, sy, qx, qy, [mir ? -s : s, s], () => drawObject(dc.b, 0, 0, z, now, x, y, 1, { rot: dc.rot || 0, slot: i })) });
+    });
+  }
+  cand.sort((a, b) => b.d - a.d);
+  let thin = null;
+  for (const c of cand) {
+    const f = c.ink();
+    if (f >= HIT_SOLID) return { x: c.x, y: c.y, slot: c.slot, d: c.d };
+    if (f > 0 && !thin) thin = c;
+  }
+  const gt = toTile(sx, sy), ga = COVER.get(gt.x + ',' + gt.y), under = ga && state.tiles.get(ga);
+  if (!thin || (under && !FLAT_HIT.has(under.b))) return null;   // durchs Gerüst aufs Haus dahinter getippt: das Bodenfeld gilt
+  return { x: thin.x, y: thin.y, slot: thin.slot, d: thin.d };
+}
+// Linie (Hecke, Zaun): wird vor den Dingen ihres Feldes gezeichnet ('a'/'b' i,j gehören zu Feld i,j)
+const edgeDepth = k => { const { i, j } = edgeParse(k); return i + j - 0.5; };
+// Schilder (Sehenswürdigkeit, Insel) des letzten Bildes: auch sie lassen sich antippen
+const pillHits = [];                               // { x0, y0, x1, y1, look, open(sx, sy) }
+function pillAt(sx, sy) {
+  for (let i = pillHits.length - 1; i >= 0; i--) {
+    const p = pillHits[i];
+    if (sx >= p.x0 - 4 && sx <= p.x1 + 4 && sy >= p.y0 - 4 && sy <= p.y1 + 4) return p;
+  }
+  return null;
 }
 
 // Sternschnuppe (Sternwarte): fällt in der ersten Sekunde schräg vom Himmel, liegt dann funkelnd da und verblasst am Ende
@@ -792,13 +867,15 @@ function render(now) {
   for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);
   drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
 
-  // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“
+  // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“ (antippbar: pillHits)
+  pillHits.length = 0;
   for (const [x, y, type] of labels) {
     const [w, h] = sizeOf('lm', 0), p = toScreen(x + (w - 1) / 2, y + (h - 1) / 2), L = LANDMARKS[type], st = lmStage(type);
     const ready = ownedTile(x, y) && st < 3 && !restoreInfo(type).err;
     const lanterns = '🏮'.repeat(st) + '·'.repeat(3 - st);
-    pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - (LM_LABEL_H[type] || 80) * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
+    const r = pill(`${L.icon} ${L.name} ${lanterns}${ready ? ' ✨' : ''}`, p.x, p.y - (LM_LABEL_H[type] || 80) * z, st >= 3 ? '#eaffea' : ready ? '#fff3b0' : '#fffaf0',
       st >= 3 ? '#2f7f36' : '#6b4f3a', Math.max(11, 11 * z));
+    pillHits.push({ ...r, look: true, open: () => openLandmark(x, y) });
   }
   // Schilder der Themen-Inseln, die noch gesperrt sind (die nächste hervorgehoben)
   const nxt = nextIsle();
@@ -810,7 +887,8 @@ function render(now) {
     if (p.x < -150 || p.x > W + 150 || ly < -100 || ly > H + 150) continue;
     const isNext = i === nxt, sz = Math.max(11, 12 * z);
     const away = isNext && state.expedition && state.expedition.isle === i.id;
-    pill(`${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : isNext ? '· entdecken' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
+    const r = pill(`${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : isNext ? '· entdecken' : '🔒'}`, p.x, ly, isNext ? '#fff3b0' : '#fffaf0', isNext ? '#6b4f3a' : '#8a6a4f', sz);
+    pillHits.push({ ...r, open: (sx, sy) => openIsle(i.id, sx, sy) });
   }
 
   // Ferne Insel im Nebel (die nächste): Schild über der Mitte
@@ -819,7 +897,8 @@ function render(now) {
     const p = toScreen(i.cx, i.cy), ly = p.y - 40 * z;
     if (p.x < -150 || p.x > W + 150 || ly < -100 || ly > H + 150) continue;
     const away = state.expedition && state.expedition.isle === i.id;
-    pill(`🌫️ ${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : '· entdecken'}`, p.x, ly, '#fff3b0', '#6b4f3a', Math.max(11, 12 * z));
+    const r = pill(`🌫️ ${i.icon} ${i.name} ${away ? '· ⛵ ' + fmtClock(expeditionLeft()) : '· entdecken'}`, p.x, ly, '#fff3b0', '#6b4f3a', Math.max(11, 12 * z));
+    pillHits.push({ ...r, open: (sx, sy) => openIsle(i.id, sx, sy) });
   }
 
   drawSparkles(now, z);

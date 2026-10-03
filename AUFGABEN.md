@@ -714,3 +714,9 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       taghell. Jetzt zählt `punchGlow` je Bildschirm-Zelle (`glowCells`, jedes Bild neu): jeder weitere Schein ist schwächer und
       kleiner; die Fensterscheiben selbst bleiben hell.
 
+
+## Block 71 – Antippen trifft das ganze Gebäude (03.10.2026)
+- [x] Beim Ansehen öffnete nur das Bodenfeld ein Gebäude; Turm, Dach, Krone oder das Namensschild darüber trafen den Rasen
+      dahinter (oder ein anderes Haus). Jetzt zählt, was dort gezeichnet ist (`objectAt`, von vorn nach hinten wie beim
+      Zeichnen): vorderes Haus vor hinterem, Turmspitze, Baumkrone. Durch dünnes Zeug (Baugerüst) trifft man das Haus dahinter.
+      Schilder von Sehenswürdigkeiten (beim Ansehen) und gesperrten Inseln (immer) lassen sich antippen.

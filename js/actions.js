@@ -432,15 +432,20 @@ function buyDesign(id) {
 
 
 function tap(sx, sy, isTouch) {
-  const { x, y, slot } = slotAt(sx, sy);
+  let { x, y, slot } = slotAt(sx, sy);
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  const pl = pillAt(sx, sy);                                // Schild angetippt (Block 71): Sehenswürdigkeit nur beim Ansehen
+  if (pl && (tool === 'look' || !pl.look)) { pl.open(sx, sy); return; }
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
   if (ek) { if (removeEdge(ek)) { sfx('dig'); recalc(); save(); } return; }
+  // Ansehen: getroffen ist, was dort gezeichnet ist – auch Dach und Turm, nicht nur das Bodenfeld (Block 71)
+  const hit = tool === 'look' ? objectAt(sx, sy) : null;
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
-  if (gk) { openGateInfo(gk); return; }                       // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
-  if (collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte)
+  if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
+  if (collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
+  if (hit) ({ x, y, slot } = hit);
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   const [ax, ay] = a ? keyXY(a) : [x, y];

@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+76. **Antippen beim Ansehen** (Block 71): Was getroffen ist, entscheidet `objectAt` (malt jedes Ding in ein winziges Bild um
+    den Finger, `inkAt`; vorderstes Flächiges gewinnt, Dünnes nur über leerem Boden), Schilder über `pillHits` (`pill()` gibt
+    seinen Kasten zurück). Neue Gebäude brauchen dafür nichts, solange `spriteTop` ihre Höhe abdeckt (Vorfilter × 1,4).
+    Abreißen/Verschieben/Bauen bleiben beim Bodenfeld – dort zeigt die Vorschau das Feld.
 75. **Wegbrücken** (Block 66): Ob ein Weg eine Brücke ist, nur über `isWegBridge(t)`/`isBridgeAt`. Wer Wege neben Wasser
     setzt, geht über `placeError` (prüft `bridgeShapeError`: vom Ufer aus, nur gerade); Pläne setzen dafür `PLANNED`.
     Bezahlt wird `WEG_BRIDGE[bridgeKind(t)]` – wer die Art ändert, über `setBridgeKind` (sonst stimmt das Erstatten nicht).
