@@ -998,7 +998,7 @@ function drawShowcaseLabels(z) {
 // Höhe von der Eintrittskante über die Mitte zur Austrittskante; Looping auf geraden Stücken. Der Zug fährt den Ring ab:
 // den Lifthügel langsam hinauf, bergab umso schneller, je tiefer er kommt; an der Station hält er kurz.
 // ---------------------------------------------------------------------------
-const LOOP_R = 15, LOOP_T = 0.28;                                        // Looping: Höhe (px) und halbe Breite (Felder)
+const LOOP_R = 18, LOOP_T = 0.48;                                        // Looping: Höhe (px) und halbe Breite (Felder)
 // Punkt f (0 … 1) auf dem Weg durch das Feld: [u, v, Höhe, Richtung u, Richtung v] in Feld-Koordinaten
 function coasterGeo(x, y, info, f, loop) {
   const { din, dout } = info, h = f < 0.5 ? info.hIn + (info.h - info.hIn) * f * 2 : info.h + (info.hOut - info.h) * (f - 0.5) * 2;
