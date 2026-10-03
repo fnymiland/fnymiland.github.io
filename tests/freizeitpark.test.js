@@ -46,13 +46,13 @@ describe('Stufen und Wirkung', () => {
   });
 
   it('Wunderland: 49 Felder, 10 Attraktionen und das Märchenschloss (Block 60b)', () => {
-    ground(3, 3, 13, 11);
+    ground(5, 5, 13, 11);
     game("rotManual = true; buildRot = 0");
-    for (const [b, x, y] of [['fz_karussell', 3, 3], ['fz_teetassen', 5, 3], ['fz_kette', 7, 3], ['fz_geister', 9, 3], ['fz_freifall', 11, 3], ['fz_zuckerwatte', 12, 3], ['fz_eis', 13, 3], ['fz_ballon', 14, 3], ['fz_wildwasser', 3, 9], ['fz_tor', 15, 7]])
+    for (const [b, x, y] of [['fz_karussell', 5, 5], ['fz_teetassen', 7, 5], ['fz_kette', 9, 5], ['fz_geister', 11, 5], ['fz_freifall', 13, 5], ['fz_zuckerwatte', 14, 5], ['fz_eis', 15, 5], ['fz_ballon', 16, 5], ['fz_wildwasser', 5, 11], ['fz_tor', 17, 9]])
       expect(game(`build('${b}', ${x}, ${y}, true)`), b).toBe(true);
     game('recalc()');
     expect(stages()).toEqual([2]);                                                   // ohne Schloss: Freizeitpark
-    expect(game("build('fz_schloss', 8, 7, true)")).toBe(true);
+    expect(game("build('fz_schloss', 10, 9, true)")).toBe(true);
     game('recalc()');
     expect(stages()).toEqual([3]);
   });
