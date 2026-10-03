@@ -352,6 +352,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+73. **Preise nach Einkommen** (Block 61): `fzMin`/`incMin` (Minuten des besten Einkommens, `INC_MIN` am Ende von data.js) machen
+    `ITEMS[b].cost` zum Getter, der feste Preis bleibt Untergrenze (`baseCost`). Wer so etwas baut, merkt `t.price`; Erstatten
+    ohne `t.price` nur nach `baseCost` (sonst Geld-Trick mit alten Gebäuden). Wunder-Preise fürs Menü über `wonderTotal`.
 72. **Freizeitpark** (Block 60): Boden 'fz' (`TERRAFORM.fzboden`), darauf nur `fzOk` (Module `cat: 'fz'`, Deko, Wege,
     Linien); Module brauchen `needs: 'fz'`. Preis-Getter über `fzMin` (wie Leuchtturm); wer ein Modul baut, merkt `t.price`,
     `demolishInfo` erstattet danach. Stufe/Wirkung nur aus `computeFz` (`FZPARKS`, `fzBest`, `FZ_*`). Neues Modul: ITEMS-

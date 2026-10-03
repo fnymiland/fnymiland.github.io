@@ -2129,7 +2129,7 @@ function demolishInfo(x, y) {
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || d.cat === 'markt' || t.b === 'weg' || t.b === 'schiene';
-    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: t.price != null ? t.price : d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde
+    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: t.price != null ? t.price : d.baseCost || d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde (alte Stände: Grundpreis)
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
       const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
@@ -2137,7 +2137,7 @@ function demolishInfo(x, y) {
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
       : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
-    const price = (t.price != null ? t.price : d.cost) + (t.loopPrice || 0), refund = full ? paid.cost : Math.floor((price + staged) / 2);
+    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), refund = full ? paid.cost : Math.floor((price + staged) / 2);
     return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : price + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);

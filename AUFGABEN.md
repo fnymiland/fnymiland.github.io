@@ -639,3 +639,13 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       dem höchsten Turm samt Königskrone (`royalCrown`), Wachen (`royalGuard`), nachts alle paar Minuten Feuerwerk
       (`royalFireTick`). Bauabschnitte zeigen das Wachsen (Fundament → Mauern → Türme → Dächer → Säle → Einweihung).
       Nach der Einweihung Farben und Dachform (`t.cs.r`, `royalRoof`). Schloss-Bausteine geteilt (`castleKit`).
+
+## Block 61 – Preise überdacht (03.10.2026)
+- [x] Preisliste mit Kaufzeiten (Artifact „Kachelhausen Preisliste“): Laternen/Inseln je 20–40 min passen; feste Preise wachsen
+      nicht mit – nach dem Fest kosteten Stadion & Co. nur Sekunden bis Minuten; Wunder zeigten im Menü nur die Baustelle.
+- [x] Große Gebäude kosten Minuten des besten Einkommens, der alte Preis ist Untergrenze (`INC_MIN`, `incMinOf`): nach dem Fest
+      Plantagen 3, Chocolaterie 5, Passage 12, Kaufhaus/Theater/Museum 15, Konzerthalle 18, Aquarium/Zoo 20, Grand Hotel 25,
+      Stadion 30; in der Mitte Hauptbahnhof 2, Universität/Möbelhaus 3, Kino/Hotel 4, Markthalle 5. Kleines bleibt fest.
+      `t.price` fürs Erstatten; alte Gebäude ohne Preis erstatten nach dem Grundpreis (`baseCost`).
+- [x] Wunder zeigen im Baumenü den ganzen Preis (`wonderTotal`: Baustelle + alle Abschnitte), das Infofenster erklärt es.
+

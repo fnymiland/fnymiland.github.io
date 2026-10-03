@@ -216,7 +216,8 @@ const emojiPic = e => { const s = document.createElement('span'); s.className = 
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function shortMoney(n) { return n < 1e4 ? nf.format(n) : n < 1e6 ? `${nfShort.format(Math.floor(n / 100) / 10)} Tsd.` : `${nfShort.format(Math.floor(n / 1e5) / 10)} Mio.`; }
-const cardPrice = id => id === 'abriss' || id === 'verschieben' ? '' : ITEMS[id].cost ? '🪙 ' + shortMoney(ITEMS[id].cost) : 'gratis';
+// Wunder: der ganze Preis (Baustelle + Abschnitte), nicht nur die Baustelle (Block 61)
+const cardPrice = id => id === 'abriss' || id === 'verschieben' ? '' : WONDERS[id] ? '🪙 ' + shortMoney(wonderTotal(id)) : ITEMS[id].cost ? '🪙 ' + shortMoney(ITEMS[id].cost) : 'gratis';
 // Kachel antippen: auswählen (nochmal: weglegen); iPad/Mac zeigen dazu rechts das Infofenster, das Handy ein ⓘ im Hinweis
 const sizeChoice = {};                 // Grundmodell → zuletzt gewählte Größe (Block 43)
 function pickCard(id) {
@@ -248,7 +249,7 @@ function updateHint() {
   if (PHONE) {
     const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
       : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
-    hint.textContent = `${d.name}${d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
+    hint.textContent = `${d.name}${WONDERS[t] ? ' · 🪙 ' + fmt(wonderTotal(t)) + ' in ' + WONDERS[t].phases.length + ' Abschnitten' : d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
     const i = document.createElement('button');
     i.className = 'hint-info'; i.textContent = 'ⓘ'; i.setAttribute('aria-label', `Mehr über ${d.name}`);
     i.onclick = () => { audio(); openBuildInfo(t); };
@@ -288,6 +289,7 @@ function openBuildInfo(id) {
     ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(ud)}</div></div>${go ? `<div class="row"><button class="btn" id="p-unlock">${go.label}</button></div>` : ''}` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
+    ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann ${WONDERS[id].phases.length} Bauabschnitte – zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material (${WONDERS[id].phases.reduce((n, p) => n + p.min, 0)} Minuten deines besten Einkommens).</p>` : ''}
     <p class="muted">${d.desc}</p>
     ${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
     ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
@@ -416,7 +418,7 @@ function updateHud() {
 function costMarks() {
   for (const b of document.querySelectorAll('[data-cost]')) {
     // Preise nach Einkommen (Leuchtturm, Block 37) ziehen auf der Kachel nach
-    if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && +b.dataset.cost !== ITEMS[b.dataset.tool].cost) {
+    if (b.classList.contains('tool') && ITEMS[b.dataset.tool] && (+b.dataset.cost !== ITEMS[b.dataset.tool].cost || (WONDERS[b.dataset.tool] && b.querySelector('.cost').textContent !== cardPrice(b.dataset.tool)))) {
       b.dataset.cost = ITEMS[b.dataset.tool].cost; b.querySelector('.cost').textContent = cardPrice(b.dataset.tool);
     }
     // !! wichtig: toggle(…, undefined) würde bei jedem Aufruf umschalten (der Preis blinkte)

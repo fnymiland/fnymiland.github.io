@@ -92,7 +92,7 @@ function build(b, x, y, quiet) {
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
     if (b === 'fz_schloss') state.tiles.get(k).cs = csOf(null);     // Märchenschloss: Gestalt (Block 60g)
-    if (d.fzMin) state.tiles.get(k).price = c.cost;               // Preis nach Einkommen: fürs Erstatten merken (Block 60)
+    if (incMinOf(d)) state.tiles.get(k).price = c.cost;           // Preis nach Einkommen: fürs Erstatten merken (Block 60/61)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');

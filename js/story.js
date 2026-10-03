@@ -795,6 +795,8 @@ function wonderCost(t, p = t.phase || 0) {
   const { min, money, ...mat } = ph;
   return { money: niceRound(Math.max(money, wonderBase(t) * 60 * min)), ...mat };
 }
+// Gesamtpreis eines Wunders (Baustelle + alle Abschnitte) nach dem jetzigen besten Einkommen – fürs Baumenü (Block 61)
+const wonderTotal = b => ITEMS[b].cost + WONDERS[b].phases.reduce((n, p) => n + niceRound(Math.max(p.money, wonderRate() * 60 * p.min)), 0);
 // Was in die Baustelle schon geflossen ist (Abriss, Umzug); alte Stände ohne t.paid: nach den alten Preisen
 function wonderPaid(t) {
   if (t.paid) return { ...t.paid };

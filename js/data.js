@@ -328,10 +328,6 @@ const FZ_STEPS = [
 const WIN_COLS = ['#a8dcff', '#ffd873', '#c9b8f0', '#b7e3a1', '#f7b2c8', '#ffffff', '#3d4a5c'];   // Fensterfarben (Schloss, Eingang)
 const FZ_SORT_NAMES = { tor: 'ein Eingang (zwei Tortürme)', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'ein Märchenschloss', achterbahn: 'eine Achterbahn' };
 const FZ_INC = [0, 0.08, 0.2, 0.4], FZ_ATTR = [0, 60, 150, 400], FZ_BEAUTY = [0, 60, 150, 300], FZ_NEAR = [0, 4, 6, 8];   // Einnahmen +%, Besucher, 🌸 (auch ringsum bis FZ_NEAR)
-for (const id of Object.keys(ITEMS)) if (ITEMS[id].fzMin) {
-  const base = ITEMS[id].cost;
-  Object.defineProperty(ITEMS[id], 'cost', { get: () => (typeof wonderRate === 'function' && typeof niceRound === 'function' ? niceRound(Math.max(base, ITEMS[id].fzMin * 60 * wonderRate())) : base), enumerable: true, configurable: true });
-}
 // Plantagen für exotische Waren – nur auf fernen Inseln (far)
 Object.assign(ITEMS, {
   kaffeeplantage: { cat: 'bau', name: 'Kaffeeplantage', cost: 20000, mat: { bretter: 20 }, needs: 'grass', far: true, festival: true, workers: 2, prod: { kaffee: 0.25 },
@@ -971,3 +967,16 @@ const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
 const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain', kristall: 'Kristallfels' };
+
+// Preise nach Einkommen (Block 60, Block 61): fzMin / incMin = Minuten des besten Einkommens, der feste Preis bleibt als
+// Untergrenze. Große Gebäude nach dem Fest und ein paar große in der Mitte – sonst kosten sie später nur Sekunden.
+// Wer so ein Ding baut, merkt sich den Preis (t.price) fürs Erstatten. Steht am Ende, damit auch Größen-Varianten mitkommen.
+const INC_MIN = { hbf: 2, uni: 3, moebelhaus: 3, kino: 4, hotel: 4, markthalle: 5, kaffeeplantage: 3, teegarten: 3, kakaoplantage: 3,
+  chocolaterie: 5, passage: 12, kaufhaus: 15, theater: 15, museum: 15, konzerthalle: 18, aquarium: 20, zoo: 20, grandhotel: 25, stadion: 30 };
+for (const [id, m] of Object.entries(INC_MIN)) if (ITEMS[id]) ITEMS[id].incMin = m;
+const incMinOf = d => d.fzMin || d.incMin || 0;
+for (const id of Object.keys(ITEMS)) if (incMinOf(ITEMS[id])) {
+  const base = ITEMS[id].baseCost = ITEMS[id].cost;                  // baseCost: Erstatten bei Ständen ohne t.price
+  Object.defineProperty(ITEMS[id], 'cost', { get: () => (typeof wonderRate === 'function' && typeof niceRound === 'function' ? niceRound(Math.max(base, incMinOf(ITEMS[id]) * 60 * wonderRate())) : base), enumerable: true, configurable: true });
+}
+
