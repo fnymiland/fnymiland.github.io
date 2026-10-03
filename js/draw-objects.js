@@ -579,6 +579,8 @@ function lineFill(x, y, arms, w) {
 // Wegbrücke (Block 66): gerade über das Wasser, leicht angehoben, an Land-Enden eine kurze Rampe. Art nach Wegstil
 // (bridgeKind): Holzsteg (Pfähle, Planken, Geländer), Steinbogen und Ziegelbrücke (Seitenwand mit Bogen, Brüstung,
 // Belag wie der Weg), rote Bogenbrücke (höher, rote Pfosten und Geländer).
+const BRIDGE_COLS = ['#6f5238', '#b08a5e', '#fbf7ef', '#d9483b', '#3f6fb5', '#3f8f5a', '#d9d2c3', '#8c8a85', '#b5654a', '#f2c14e'];   // Bauwerk
+const PLANK_COLS = ['#b08a5e', '#8a6440', '#c9b79c', '#a9a9a3', '#f1e7d6'];                                                        // Holzplanken
 const BRIDGE_LOOK = {
   holz:   { lift: 3, side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238' },
   stein:  { lift: 7, side: '#d9d2c3', wall: true, rail: '#cfc6b4' },
@@ -588,7 +590,10 @@ const BRIDGE_LOOK = {
 function drawWegBridge(cx, cy, z, x, y, t) {
   const arms = pathArms(x, y), ax = arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);   // 0: längs u, 1: längs v
   const P = (a, b, h = 0) => { const [u, v] = ax ? [b, a] : [a, b]; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z]; };
-  const B = BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz, hw = EDGE_W, LIFT = B.lift;
+  const B0 = BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz, hw = EDGE_W, LIFT = B0.lift;
+  // Farben aus dem Fenster (Block 66b): Bauwerk (Wand/Geländer/Pfähle) und bei Holz die Planken
+  const bc = BRIDGE_COLS[t.brc], pc = PLANK_COLS[t.brw];
+  const B = { ...B0, ...(bc ? (B0.wall ? { side: bc, rail: shade(bc, 0.1) } : { side: shade(bc, -0.15), rail: bc }) : {}), ...(pc ? { deck: pc, plank: shade(pc, -0.22) } : {}) };
   const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
   const H = a => Math.max(0, Math.min(LIFT, land(1) && a > 0.2 ? LIFT * (0.5 - a) / 0.3 : LIFT, land(-1) && a < -0.2 ? LIFT * (a + 0.5) / 0.3 : LIFT));
   const AS = [-0.5, -0.2, 0.2, 0.5];
@@ -607,15 +612,26 @@ function drawWegBridge(cx, cy, z, x, y, t) {
   // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
   if (B.wall) {
     for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
+    const wallPts = [...AS.map(a => P(a, hw, -1)), ...[...AS].reverse().map(a => P(a, hw, H(a)))];   // Mauerwerk: Ziegel bzw. Quader
+    g.save(); g.beginPath(); wallPts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+    pattern(([sa, st]) => P(sa, hw, -1 + (st + 0.5) * 22), bridgeKind(t) === 'ziegel' ? 'bricks' : 'tiles', x, y, z, C(shade(B.side, -0.3)), null);
+    g.restore();
     const arch = []; for (let k = 0; k <= 12; k++) { const a = -0.3 + 0.6 * k / 12; arch.push(P(a, hw, -1 + (LIFT - 2.5) * Math.sqrt(Math.max(0, 1 - (a / 0.3) ** 2)))); }
     poly(arch, 'rgba(35,70,95,0.55)');
   }
   // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
   const deck = strip(-hw, hw);
-  if (B.wall) {
-    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id] || {};
-    for (const q of deck) poly(q, C(lk.fill || '#dcc69d'));
-    for (const q of strip(-hw, -hw + 0.05)) poly(q, C(lk.edge || shade(lk.fill || '#dcc69d', -0.18)));
+  if (B.wall) {                                                         // Belag wie der Weg – mit seinem Muster (Block 66b)
+    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id] || {}, fill = lk.fill || '#dcc69d';
+    const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, H(a)); };
+    const band = w => [...AS.map(a => ax ? [-w, a] : [a, -w]), ...[...AS].reverse().map(a => ax ? [w, a] : [a, w])];
+    poly(band(hw).map(Lh), C(lk.edge || shade(fill, -0.18)));
+    poly(band(ROAD_W).map(Lh), C(fill));
+    if (lk.pat || lk.checker) { g.save(); clipTo([band(ROAD_W)], Lh); pattern(Lh, lk.pat ? lk.pat[0] : 'tiles', x, y, z, lk.pat && lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
+    if (lk.dash) {                                                     // Asphalt: Mittelstreifen
+      g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.setLineDash([2.5 * z, 3 * z]); g.beginPath();
+      AS.forEach((a, i) => { const q = P(a, 0, H(a)); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
+    }
   } else {
     for (const q of deck) poly(q, C(B.deck));
     g.strokeStyle = C(B.plank); g.lineWidth = 0.7 * z; g.beginPath();

@@ -1028,7 +1028,11 @@ function openInfo(x, y) {
     ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
   // Märchenschloss (Block 60g/60h): Gestalt im Fenster, in Reitern (Form · Türme · Farben)
   const castle = isWegBridge(t) ? `<div class="label">Brücke</div><div class="looks">${Object.entries(WEG_BRIDGE).map(([id, B]) => `<button class="look${id === bridgeKind(t) ? ' on' : ''}" data-brk="${id}">${B.icon} ${B.name}</button>`).join('')}</div>
-      <p class="muted">Von selbst passend zum Wegstil – hier umstellen. Die alte Brücke gibt es voll zurück.</p>`   // Wegbrücke (Block 66)
+      <p class="muted">Von selbst passend zum Wegstil – hier umstellen. Die alte Brücke gibt es voll zurück.</p>
+      <div class="label">${BRIDGE_LOOK[bridgeKind(t)].wall ? 'Mauer und Brüstung' : 'Geländer und Pfähle'}</div>
+      <div class="swatches"><button class="sw bunt${t.brc == null ? ' on' : ''}" data-brc="" aria-label="Farbe wie die Brücke" title="Wie die Brücke"></button>${BRIDGE_COLS.map((c, i) => `<button class="sw${t.brc === i ? ' on' : ''}" data-brc="${i}" style="background:${c}" aria-label="Brückenfarbe ${i + 1}"></button>`).join('')}</div>
+      ${BRIDGE_LOOK[bridgeKind(t)].wall ? '<p class="muted">Der Belag ist der Weg – sein Muster wechselst du, indem du den Weg umfärbst.</p>' : `<div class="label">Planken</div>
+      <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>` : '';   // Wunder-Schloss (Block 60j)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
@@ -1040,7 +1044,7 @@ function openInfo(x, y) {
     ${outs.length ? `<p class="big">${outs.join(' · ')}</p>` : ''}
     ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
-    <p class="muted">${d.desc}</p>
+    <p class="muted">${isWegBridge(t) ? 'Eine Brücke übers Wasser – Bewohner laufen gern hinüber. Art und Farben wählst du hier.' : d.desc}</p>
     ${grow}
     ${wonder}
     ${boat}
@@ -1109,6 +1113,10 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
+  for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)
+    const v = b.dataset[attr]; if (v === '') delete t[key]; else t[key] = +v;
+    groundVersion++; sfx('deco'); save(); openInfo(x, y);
+  });
   for (const b of el.querySelectorAll('[data-royal]')) b.onclick = () => undoable(() => { t.cs = { r: +b.dataset.royal }; t.born = performance.now(); sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));

@@ -686,4 +686,7 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Fenster auch rote Bogenbrücke (`setBridgeKind`, alte voll zurück; Umfärben des Wegs behält die Art). Preis `WEG_BRIDGE`.
       Gezeichnet angehoben mit Rampen, Bögen, Brüstung/Geländer (`drawWegBridge`); Bewohner laufen drüber (`walkable`);
       keine Läden/Gebäude/Deko auf Brücken (`plainWeg`); Aufschütten macht wieder einen normalen Weg. Testwelt: Fluss.
+- [x] 66b Brücken: Farben im Fenster (Bauwerk `t.brc` aus `BRIDGE_COLS`, Holzplanken `t.brw` aus `PLANK_COLS`), Belag der Stein-/
+      Ziegelbrücken mit dem echten Wegmuster (Ziegel, Platten, Pflaster, Asphalt mit Mittelstreifen), Mauerwerk an den
+      Seitenwänden; Holzpfähle unter dem Belag statt davor.
 

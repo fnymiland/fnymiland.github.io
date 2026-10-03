@@ -57,4 +57,22 @@ describe('Wegbrücken (Block 66)', () => {
     game(`build('schuett', ${c[0] + 1}, ${c[1]}, true)`);
     expect(game(`state.tiles.get('${c[0] + 1},${c[1]}').bridge`)).toBeUndefined();
   });
+
+  it('Farben (Block 66b): Bauwerk und Planken wählbar, gespeichert; Belag zeigt das Wegmuster', () => {
+    line('sand', { x: 5, y: 5 }, { x: 11, y: 5 });
+    game("openInfo(8, 5)");
+    game("document.querySelector('#panel [data-brc=\"4\"]').click()");
+    game("document.querySelector('#panel [data-brw=\"1\"]').click()");
+    expect(game("state.tiles.get('8,5')")).toMatchObject({ brc: 4, brw: 1 });
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('8,5')")).toMatchObject({ brc: 4, brw: 1 });
+    game("openInfo(8, 5); document.querySelector('#panel [data-brc=\"\"]').click()");
+    expect(game("state.tiles.get('8,5').brc")).toBeUndefined();
+    line('klinker', { x: 5, y: 8 }, { x: 11, y: 8 });
+    for (const k of ['ziegel', 'stein', 'holz', 'rot']) {
+      game(`setBridgeKind(8, 8, '${k}')`);
+      expect(() => game("for (const P of ['ground', null]) { PASS = P; drawObject('weg', 200, 200, 1.4, 0, 8, 8, 1, state.tiles.get('8,8')); } PASS = null")).not.toThrow();
+    }
+  });
 });

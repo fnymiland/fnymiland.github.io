@@ -65,7 +65,9 @@ function tileOut(t) {
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
-  if (t.brk) o.brk = t.brk;                                                              // Wegbrücke: Art (Block 66)
+  if (t.brk) o.brk = t.brk;
+  if (t.brc != null) o.brc = t.brc;                                                      // Brückenfarben (Block 66b)
+  if (t.brw != null) o.brw = t.brw;                                                              // Wegbrücke: Art (Block 66)
   if (t.phase != null) { o.phase = t.phase; if (t.rate != null) o.rate = t.rate; if (t.paid) o.paid = t.paid; }
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
