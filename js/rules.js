@@ -9,7 +9,21 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+// Frei aufgezogene Größe (Block 60e: Märchenschloss, Parkeingang): t.dim = [Breite in x, Tiefe in y], unabhängig von der Drehung;
+// beim Planen/Bauen gilt BUILD_DIM für das neue Ding
+const SIZED = { fz_schloss: { min: [2, 2], max: [6, 6] }, fz_tor: { min: [1, 2], max: [2, 6] } };
+let BUILD_DIM = null;
+// Aufgezogenes Rechteck → erlaubte Größe (Eingang: die schmale Seite höchstens 2, die lange mindestens 2)
+function sizedDim(b, w, h) {
+  const S = SIZED[b], lo = Math.min(...S.min), hi = Math.max(...S.max), c = v => Math.max(lo, Math.min(hi, v));
+  if (b !== 'fz_tor') return [c(w), c(h)];
+  return w <= h ? [Math.min(2, Math.max(1, w)), Math.max(2, Math.min(6, h))] : [Math.max(2, Math.min(6, w)), Math.min(2, Math.max(1, h))];
+}
+const sizeOf = (b, rot, t) => {
+  if (t && t.dim) return t.dim;
+  if (!t && BUILD_DIM && BUILD_DIM.b === b) return BUILD_DIM.dim;
+  const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s;
+};
 function footprint(b, ax, ay, rot, t) {
   const [w, h] = sizeOf(b, rot || 0, t), out = [];
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
@@ -824,6 +838,7 @@ const parkAt = k => PARKS.find(p => p.tiles.includes(k)) || null;
 // kommen von selbst: Station unten, Lifthügel (ein Viertel der Strecke) hinauf, dann in Wellen wieder hinunter.
 // COASTER_AT: Feld → { c (Index in COASTERS oder -1), i (Platz im Ring), h (Höhe Mitte), hIn/hOut (an den Kanten), din/dout }
 const isTrack = b => b === 'fz_bahn' || b === 'fz_station';
+const COASTER_STEP = 8, COASTER_MAXSTEP = 10;                         // Höhen-Pinsel: Stufen à 8 px, bis 10 Stufen
 let COASTERS = [], COASTER_AT = new Map();
 function computeCoasters() {
   COASTERS = []; COASTER_AT = new Map();
@@ -837,17 +852,24 @@ function computeCoasters() {
     if (ring && st >= 0 && ring.length === comp.length) {
       ring = ring.slice(st).concat(ring.slice(0, st));                      // Station vorn
       const n = ring.length, L = Math.max(2, Math.round(n * 0.25)), Hmax = Math.min(70, 16 + n * 1.6), waves = Math.max(1, Math.round((n - L) / 6));
-      const h = ring.map((k, i) => i === 0 ? 0 : i <= L ? Hmax * i / L : Math.max(4, Hmax * (1 - (i - L) / (n - L)) * (0.55 + 0.45 * Math.cos((i - L) / (n - L) * Math.PI * 2 * waves))));
+      const auto = (i => i === 0 ? 0 : i <= L ? Hmax * i / L : Math.max(4, Hmax * (1 - (i - L) / (n - L)) * (0.55 + 0.45 * Math.cos((i - L) / (n - L) * Math.PI * 2 * waves))));
+      const h = ring.map((k, i) => { const t = state.tiles.get(k); return t.hgt != null ? t.hgt * COASTER_STEP : auto(i); });   // Höhen-Pinsel (Block 60e) vor Automatik
       const c = COASTERS.length;
-      COASTERS.push({ ring, h, n, L, Hmax, key: ring[0] });
+      COASTERS.push({ ring, h, n, L, Hmax: Math.max(...h), key: ring[0] });
       ring.forEach((k, i) => {
         const [x, y] = keyXY(k), [px, py] = keyXY(ring[(i - 1 + n) % n]), [nx, ny] = keyXY(ring[(i + 1) % n]);
         COASTER_AT.set(k, { c, i, h: h[i], hIn: (h[i] + h[(i - 1 + n) % n]) / 2, hOut: (h[i] + h[(i + 1) % n]) / 2, din: [x - px, y - py], dout: [nx - x, ny - y] });
       });
-    } else for (const k of comp) COASTER_AT.set(k, { c: -1, h: 3 });          // noch kein Rundkurs: flach am Boden
+    } else for (const k of comp) {                                       // noch kein Rundkurs: Stücke in ihrer Pinsel-Höhe (sonst flach)
+      const [x, y] = keyXY(k), t = state.tiles.get(k), h = t.hgt != null ? t.hgt * COASTER_STEP : 3, arms = coasterArms(x, y);
+      const straight = arms.length === 2 && arms[0][0] === -arms[1][0] && arms[0][1] === -arms[1][1];
+      COASTER_AT.set(k, { c: -1, h, hIn: h, hOut: h, ...(straight ? { din: arms[1], dout: arms[1] } : {}) });
+    }
   }
   return COASTERS;
 }
+// Höhenstufe eines Schienenstücks: vom Pinsel gesetzt, sonst die angezeigte Höhe (Automatik) gerundet
+const trackLevel = (x, y) => { const t = state.tiles.get(x + ',' + y), ca = COASTER_AT.get(x + ',' + y); return t && t.hgt != null ? t.hgt : Math.round(((ca && ca.h) || 0) / COASTER_STEP); };
 const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b); });
 // Freizeitparks (Block 60): zusammenhängender Freizeitpark-Boden; Fahrgeschäfte & Stände darauf (je eins) → Stufe nach FZ_STEPS
 let FZPARKS = [];
@@ -1052,6 +1074,7 @@ function placeRot(b, x, y) {
 // Schienen über Wasser sind Brücken und kosten mehr
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
+  : SIZED[b] && BUILD_DIM && BUILD_DIM.b === b ? { cost: niceRound(ITEMS[b].cost * BUILD_DIM.dim[0] * BUILD_DIM.dim[1] / (ITEMS[b].size[0] * ITEMS[b].size[1])), mat: ITEMS[b].mat }   // Preis nach Fläche
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
@@ -1567,6 +1590,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.edge) return 'Linien: Anfang und Ende antippen';
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'fz_hoch' || b === 'fz_tief') {             // Höhen-Pinsel (Block 60e): nur über Schienen
+    if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+    const t = state.tiles.get(x + ',' + y);
+    if (!t || !isTrack(t.b)) return 'Über Achterbahn-Schienen ziehen';
+    const now = trackLevel(x, y);
+    if (b === 'fz_hoch' && now >= COASTER_MAXSTEP) return 'Höher geht es nicht';
+    if (b === 'fz_tief' && now <= 0) return 'Tiefer geht es nicht';
+    return null;
+  }
   if (b === 'fz_looping') {                             // Looping (Block 60c): auf ein gerades Stück Achterbahn-Schiene
     if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
     const t = state.tiles.get(x + ',' + y);

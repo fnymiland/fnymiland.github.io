@@ -104,7 +104,7 @@ function drawGround(x, y, p, z, now, noWaves) {
   poly([[p.x - hw, p.y], [p.x, p.y + hh], [p.x, p.y + hh + d], [p.x - hw, p.y + d]], C(beach ? '#e6cf97' : '#caa26c'));
   poly([[p.x, p.y + hh], [p.x + hw, p.y], [p.x + hw, p.y + d], [p.x, p.y + hh + d]], C(beach ? '#d4ba7f' : '#b0895a'));
   const alt = (x + y) & 1;
-  const top = park ? (alt ? '#88c863' : '#80c05c')                 // Parkrasen: gescheckt wie die Wiese, etwas dunkler
+  const top = park && !fz ? (alt ? '#88c863' : '#80c05c')          // Parkrasen: gescheckt wie die Wiese, etwas dunkler (Freizeitpark: Wiese)
             : beach ? (alt ? '#f6e6b8' : '#f1dfae')
             : ter === 'grass' ? (alt ? '#96d56f' : '#8dcd67')
             : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')
@@ -113,15 +113,9 @@ function drawGround(x, y, p, z, now, noWaves) {
             : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
             : (alt ? '#b3c29c' : '#aabb94');
   diamond(p.x, p.y, hw, hh, C(top));
-  if (fz) {                                                       // Freizeitpark-Boden (Block 60): helles Pflaster, bunte Rauten-Mosaike
-    diamond(p.x, p.y, hw, hh, C(alt ? '#f3e7d6' : '#efe0cc'));
-    const M = ['#f7b2c8', '#9fd3f2', '#ffd66e', '#b7e3a1', '#d6b8f0'][Math.floor(hash(x, y, 61) * 5)];
-    diamond(p.x, p.y, hw * 0.42, hh * 0.42, C(M));
-    diamond(p.x, p.y, hw * 0.2, hh * 0.2, C('#fffaf0'));
-  }
   if (park) {                                                     // Rand der Parkfläche: feine dunklere Kante nach innen versetzt
     const T = [p.x, p.y - hh], R = [p.x + hw, p.y], B = [p.x, p.y + hh], L = [p.x - hw, p.y], k = 0.12;
-    g.strokeStyle = C(fz ? '#d98fa8' : '#4f9a3c'); g.lineWidth = 1.1 * z; g.lineCap = 'butt'; g.beginPath();
+    g.strokeStyle = C(fz ? '#e07fa6' : '#4f9a3c'); g.lineWidth = 1.1 * z; g.lineCap = 'butt'; g.beginPath();   // Freizeitpark (Block 60e): nur ein rosa Rand, sonst Wiese
     for (const [dx, dy, a, b] of [[1, 0, R, B], [-1, 0, T, L], [0, 1, B, L], [0, -1, T, R]]) {
       if (terraLook(x + dx, y + dy) === look) continue;
       const ox = (p.x - (a[0] + b[0]) / 2) * k, oy = (p.y - (a[1] + b[1]) / 2) * k;   // parallel nach innen: gerade Ränder bleiben gerade

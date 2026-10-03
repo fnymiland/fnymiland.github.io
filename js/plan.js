@@ -4,9 +4,9 @@
 // Erst die Vorschau mit Anzahl und Preis, dann bestätigen – so passiert nichts aus Versehen.
 // ---------------------------------------------------------------------------
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
-const LINE_TOOLS = new Set(['weg', 'schiene']);
-const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'parkrasen', 'strand', 'wald', 'obstwald', 'fels']);
-const dragKind = t => t === 'schiene' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
+const LINE_TOOLS = new Set(['weg', 'schiene', 'fz_bahn', 'fz_hoch', 'fz_tief']);   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
+const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels']);
+const dragKind = t => t === 'schiene' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' ? 'line' : SIZED[t] ? 'rect' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
 
@@ -79,6 +79,7 @@ function planScan(p) {
   if (p.tool === 'abriss') return scanDemolish(p);
   if (p.tool === 'verschieben') return scanSelect(p);
   if (ITEMS[p.tool].small) return scanSmall(p);
+  if (SIZED[p.tool]) return scanSized(p);
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [];
   let cost = 0, firstErr = null, rest = planTiles(p);
   try {
@@ -103,6 +104,17 @@ function planScan(p) {
   } finally { for (const k of tmp) state.claimed.delete(k); }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
+}
+// Schloss, Parkeingang (Block 60e): das Rechteck ist EIN Gebäude in dieser Größe (in den Grenzen von SIZED)
+function scanSized(p) {
+  const b = p.tool, [x0, y0, x1, y1] = planBox(p), dim = sizedDim(b, x1 - x0 + 1, y1 - y0 + 1), states = new Map();
+  BUILD_DIM = { b, dim };
+  try {
+    const err = placeError(b, x0, y0, undefined, { noCost: true }), c = costOf(b, x0, y0);
+    for (const [x, y] of footprint(b, x0, y0)) states.set(x + ',' + y, err ? 'bad' : 'ok');
+    const run = () => { BUILD_DIM = { b, dim }; try { return build(b, x0, y0, true); } finally { BUILD_DIM = null; } };
+    return { states, order: err ? [] : [[x0, y0, run]], n: err ? 0 : 1, cost: err ? 0 : c.cost, gain: 0, mat: c.mat || {}, bad: err ? 1 : 0, firstErr: err, dim };
+  } finally { BUILD_DIM = null; }
 }
 // Linie auf den Feldkanten: neu, umfärben (anderer Stil/Art) oder schon so
 function scanEdges(p) {
@@ -215,7 +227,7 @@ function planText(p, info) {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
   } else {
-    parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
+    parts.push(SIZED[p.tool] && info.dim ? `${d.name} ${info.dim[0]}×${info.dim[1]}` : d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
     if (info.cost) parts.push('−' + fmt(info.cost));
   }
   if (matText(info.mat)) parts.push(matText(info.mat));

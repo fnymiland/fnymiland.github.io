@@ -1004,9 +1004,9 @@ function coasterGeo(x, y, info, f, loop) {
   const { din, dout } = info, h = f < 0.5 ? info.hIn + (info.h - info.hIn) * f * 2 : info.h + (info.hOut - info.h) * (f - 0.5) * 2;
   if (din[0] === dout[0] && din[1] === dout[1]) {                      // gerade
     let u = x + din[0] * (f - 0.5), v = y + din[1] * (f - 0.5), up = h;
-    let inv = false;
-    if (loop && f > 0.2 && f < 0.8) { const th = (f - 0.2) / 0.6 * Math.PI * 2; u -= din[0] * Math.sin(th) * LOOP_T; v -= din[1] * Math.sin(th) * LOOP_T; up += LOOP_R * (1 - Math.cos(th)); inv = Math.cos(th) < -0.2; }
-    return [u, v, up, din[0], din[1], inv];
+    let inv = false, lc = null;
+    if (loop && f > 0.2 && f < 0.8) { const th = (f - 0.2) / 0.6 * Math.PI * 2; u -= din[0] * Math.sin(th) * LOOP_T; v -= din[1] * Math.sin(th) * LOOP_T; up += LOOP_R * (1 - Math.cos(th)); inv = Math.cos(th) < -0.2; lc = [x, y, h + LOOP_R]; }
+    return [u, v, up, din[0], din[1], inv, lc];
   }
   const ein = [-din[0] * 0.5, -din[1] * 0.5], eout = [dout[0] * 0.5, dout[1] * 0.5], c = [ein[0] + eout[0], ein[1] + eout[1]];
   const a0 = Math.atan2(ein[1] - c[1], ein[0] - c[0]), a1 = sweep(a0, Math.atan2(eout[1] - c[1], eout[0] - c[0])), a = a0 + (a1 - a0) * f;
@@ -1015,12 +1015,12 @@ function coasterGeo(x, y, info, f, loop) {
 }
 // Schiene, Stützen, Looping und Station auf einem Feld (cx, cy: Bildschirm-Mitte des Felds)
 function drawCoasterTile(cx, cy, z, x, y, t) {
-  const info = COASTER_AT.get(x + ',' + y), S = (u, v, up) => [cx + ((u - x) - (v - y)) * TW / 2 * z, cy + ((u - x) + (v - y)) * TH / 2 * z - up * z];
+  const info = COASTER_AT.get(x + ',' + y) || (t && t.loop ? { c: -1, h: 3, hIn: 3, hOut: 3, din: [1, 0], dout: [1, 0] } : null), S = (u, v, up) => [cx + ((u - x) - (v - y)) * TW / 2 * z, cy + ((u - x) + (v - y)) * TH / 2 * z - up * z];
   const lines = [];                                                    // je Teilstück: Punkte [u, v, h, du, dv]
-  if (info && info.c >= 0) { const L = []; for (let i = 0; i <= 12; i++) L.push(coasterGeo(x, y, info, i / 12, false)); lines.push(L); }
-  else {                                                              // noch kein Rundkurs: flache Stücke zu den Nachbarn
-    const arms = t && t.b ? coasterArms(x, y) : [];
-    for (const [dx, dy] of arms.length ? arms : [[1, 0], [-1, 0]]) { const L = []; for (let i = 0; i <= 4; i++) L.push([x + dx * i / 8, y + dy * i / 8, 3, dx, dy]); lines.push(L); }
+  if (info && info.din) { const L = []; for (let i = 0; i <= 12; i++) L.push(coasterGeo(x, y, info, i / 12, false)); lines.push(L); }
+  else {                                                              // noch kein Rundkurs, kein gerades Stück: zu jedem Nachbarn
+    const arms = t && t.b && COASTER_AT.size ? coasterArms(x, y) : [], h = info ? info.h : 3;
+    for (const [dx, dy] of arms.length ? arms : [[1, 0], [-1, 0]]) { const L = []; for (let i = 0; i <= 4; i++) L.push([x + dx * i / 8, y + dy * i / 8, h, dx, dy]); lines.push(L); }
   }
   if (t && t.b === 'fz_station') {                                    // Bahnsteig mit Dach
     const pl = [[-0.45, -0.45], [0.45, -0.45], [0.45, 0.45], [-0.45, 0.45]].map(([a, b]) => S(x + a, y + b, 1.5));
@@ -1039,7 +1039,7 @@ function drawCoasterTile(cx, cy, z, x, y, t) {
     L.forEach((P, i) => { if (i % 2) return; const a = side(P, 0.13), b = side(P, -0.13); g.moveTo(...a); g.lineTo(...b); }); g.stroke();
     for (const o of [0.1, -0.1]) { g.strokeStyle = C('#e8604f'); g.lineWidth = 1.4 * z; g.beginPath(); L.forEach((P, i) => { const p = side(P, o); i ? g.lineTo(...p) : g.moveTo(...p); }); g.stroke(); }
   }
-  if (t && t.loop && info && info.c >= 0) {                           // Looping: senkrechter Ring
+  if (t && t.loop && info && info.din) {                              // Looping: senkrechter Ring (auch auf offener Strecke)
     for (const o of [0.1, -0.1]) {
       g.strokeStyle = C('#e8604f'); g.lineWidth = 1.4 * z; g.beginPath();
       for (let i = 0; i <= 32; i++) { const P = coasterGeo(x, y, info, 0.2 + i / 32 * 0.6, true), [u, v, h, du, dv] = P, p = S(u - info.din[1] * o, v + info.din[0] * o, h); i ? g.lineTo(...p) : g.moveTo(...p); }
@@ -1057,8 +1057,8 @@ function stepCoasters(dt) {
   for (const c of COASTERS) {
     const r = coasterRuns.get(c.key) || { s: 0, wait: 2 };
     coasterRuns.set(c.key, r);
-    if (r.wait > 0) { r.wait -= dt; continue; }
-    const i = Math.floor(r.s) % c.n, h = c.h[i], v = i >= 1 && i <= c.L ? 0.9 : 1 + 0.12 * Math.sqrt(Math.max(0, c.Hmax - h));
+    if (r.wait > 0) { r.wait = Math.max(0, r.wait - dt); continue; }
+    const i = Math.floor(r.s) % c.n, h = c.h[i], up = c.h[(i + 1) % c.n] > h + 0.5, v = up ? 0.9 : 1 + 0.12 * Math.sqrt(Math.max(0, c.Hmax - h));   // bergauf gezogen, bergab schneller
     r.s += v * dt;
     if (r.s >= c.n) { r.s -= c.n; r.wait = 2.5; }                      // eine Runde: an der Station halten
   }
@@ -1071,21 +1071,29 @@ function coasterPoint(c, s) {
 }
 function coasterCars() {
   const out = [];
-  for (const c of COASTERS) {
+  COASTERS.forEach((c, ci) => {
     const r = coasterRuns.get(c.key) || { s: 0 };
-    for (let j = 0; j < 3; j++) { const [u, v, h, du, dv, inv] = coasterPoint(c, r.s - j * 0.42); out.push({ coaster: true, px: u, py: v, h, du, dv, j, inv }); }
-  }
+    for (let j = 0; j < 3; j++) { const s = r.s - j * 0.42, [u, v, h, du, dv, inv, lc] = coasterPoint(c, s); out.push({ coaster: true, ci, s, px: u, py: v, h, du, dv, j, inv, lc }); }
+  });
   return out;
 }
+// Wagen in Seitenansicht entlang der Schiene: Richtung aus zwei Punkten auf dem Bildschirm, die Gäste sitzen auf der
+// „oberen“ Seite – im Looping zur Mitte des Rings hin (oben also kopfüber)
 function drawCoasterCar(m, z) {
-  const P = (a, b, up) => { const p = toScreen(m.px + m.du * a - m.dv * b, m.py + m.dv * a + m.du * b); return [p.x, p.y - (m.h + up) * z]; };
-  const col = m.j === 0 ? '#ffd23f' : '#e8604f', base = [[-0.17, -0.11], [0.17, -0.11], [0.17, 0.11], [-0.17, 0.11]];
-  const head = a => { const [hx, hy] = P(a, 0, m.inv ? -7 : 7); circle(hx, hy, 1.3 * z, C(['#f4c28f', '#b9b9c6', '#fffaf2'][(m.j + (a > 0 ? 1 : 0)) % 3])); };
-  if (m.inv) for (const a of [-0.07, 0.07]) head(a);                   // kopfüber im Looping: Gäste hängen unter dem Wagen
-  const sg = m.inv ? -1 : 1;                                            // kopfüber: Wagen unter der Schiene
-  poly(base.map(([a, b]) => P(a, b, 1.5 * sg)), C(shade(col, -0.25)));
-  poly(base.map(([a, b]) => P(a, b, 4.5 * sg)), C(col));
-  if (!m.inv) for (const a of [-0.07, 0.07]) head(a);
+  const c = COASTERS[m.ci];
+  if (!c) return;
+  const scr = (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - h * z]; };
+  const [u1, v1, h1] = coasterPoint(c, m.s + 0.05), p0 = scr(m.px, m.py, m.h), p1 = scr(u1, v1, h1);
+  let tx = p1[0] - p0[0], ty = p1[1] - p0[1]; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+  let nx = ty, ny = -tx;                                                  // Senkrechte zur Fahrtrichtung
+  if (m.lc) { const q = scr(...m.lc); if (nx * (q[0] - p0[0]) + ny * (q[1] - p0[1]) < 0) { nx = -nx; ny = -ny; } }   // zur Ring-Mitte
+  else if (ny > 0) { nx = -nx; ny = -ny; }                                // sonst nach oben
+  const L = 5.5 * z, H = 3.6 * z, col = m.j === 0 ? '#ffd23f' : '#e8604f';
+  const P = (a, b) => [p0[0] + tx * a + nx * b, p0[1] + ty * a + ny * b];
+  poly([P(-L, 0.6 * z), P(L, 0.6 * z), P(L * 0.92, H), P(-L, H)], C(col));                 // Wagenkasten
+  poly([P(-L, 0.6 * z), P(L, 0.6 * z), P(L, 1.6 * z), P(-L, 1.6 * z)], C(shade(col, -0.25)));
+  for (const a of [-L * 0.45, L * 0.35]) { const [hx, hy] = P(a, H + 1.6 * z); circle(hx, hy, 1.4 * z, C(['#f4c28f', '#b9b9c6', '#fffaf2'][(m.j + (a > 0 ? 1 : 0)) % 3])); }
+  for (const a of [-L * 0.6, L * 0.6]) { const [wx, wy] = P(a, 0.4 * z); circle(wx, wy, 0.9 * z, C('#4a4a58')); }   // Räder
 }
 
 // Parade (Block 60d): solange sie läuft, ziehen Figuren mit Fähnchen über den Freizeitpark (wie Spaziergänger, nur auf dem Boden)

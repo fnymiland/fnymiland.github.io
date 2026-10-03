@@ -190,3 +190,62 @@ describe('Parade, Besuch, Album, Erfolg (Block 60d)', () => {
     expect(game("ACHIEVEMENTS.find(a => a.id === 'fzpark').value()")).toBe(1);
   });
 });
+
+describe('Überarbeitung (Block 60e)', () => {
+  it('Schiene, Höhen-Pinsel und Boden lassen sich ziehen', () => {
+    expect(game("dragKind('fz_bahn')")).toBe('line');
+    expect(game("dragKind('fz_hoch')")).toBe('line');
+    expect(game("dragKind('fzboden')")).toBe('rect');
+    ground(10, 10, 6, 1);
+    game("setTool('fz_bahn'); startPlan('line', { x: 10, y: 10 }, { x: 15, y: 10 }, true); runPlan(); setTool('look')");
+    expect(game("[10, 11, 12, 13, 14, 15].every(x => state.tiles.get(x + ',10') && state.tiles.get(x + ',10').b === 'fz_bahn')")).toBe(true);
+  });
+
+  it('Höhen-Pinsel: jede Fahrt eine Stufe höher/tiefer, Grenzen, gespeichert; nur über Schienen', () => {
+    ground(10, 10, 4, 1);
+    for (let x = 10; x <= 13; x++) game(`build('fz_bahn', ${x}, 10, true)`);
+    game('recalc()');
+    expect(game("placeError('fz_hoch', 10, 11)")).toMatch(/Achterbahn-Schienen/);
+    game("build('fz_hoch', 11, 10, true); build('fz_hoch', 11, 10, true)");
+    expect(game("state.tiles.get('11,10').hgt")).toBe(2);
+    expect(game("COASTER_AT.get('11,10').h")).toBe(2 * game('COASTER_STEP'));
+    game("build('fz_tief', 11, 10, true)");
+    expect(game("state.tiles.get('11,10').hgt")).toBe(1);
+    game("state.tiles.get('11,10').hgt = 10; recalc()");
+    expect(game("placeError('fz_hoch', 11, 10)")).toMatch(/Höher geht es nicht/);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('11,10').hgt")).toBe(10);
+  });
+
+  it('Looping auch auf offener Strecke sichtbar (gerades Stück)', () => {
+    ground(10, 10, 4, 1);
+    for (let x = 10; x <= 13; x++) game(`build('fz_bahn', ${x}, 10, true)`);
+    game('recalc()');
+    expect(game("build('fz_looping', 11, 10, true)")).toBe(true);
+    expect(game("!!COASTER_AT.get('11,10').din")).toBe(true);
+    expect(() => game("drawCoasterTile(100, 100, 1.5, 11, 10, state.tiles.get('11,10'))")).not.toThrow();
+  });
+
+  it('Schloss und Eingang frei aufziehen: Größe in Grenzen, Preis nach Fläche, gespeichert; Fensterfarbe', () => {
+    ground(5, 5, 12, 10);
+    expect(game("sizedDim('fz_schloss', 9, 1)")).toEqual([6, 2]);
+    expect(game("sizedDim('fz_tor', 5, 3)")).toEqual([5, 2]);
+    expect(game("sizedDim('fz_tor', 1, 1)")).toEqual([1, 2]);
+    game('state.incPeak = 0');
+    game("setTool('fz_schloss'); startPlan('rect', { x: 5, y: 5 }, { x: 10, y: 7 }, true)");
+    const info = game('planInfo(plan)');
+    expect(info.dim).toEqual([6, 3]);
+    expect(info.cost).toBe(game('niceRound(ITEMS.fz_schloss.cost * 18 / 9)'));
+    game("runPlan(); setTool('look')");
+    expect(game("state.tiles.get('5,5').dim")).toEqual([6, 3]);
+    expect(game("footprint('fz_schloss', 5, 5, 0, state.tiles.get('5,5')).length")).toBe(18);
+    game("recalc(); openInfo(5, 5)");
+    expect(game("document.querySelectorAll('#panel [data-win]').length")).toBe(game('WIN_COLS.length'));
+    game("document.querySelector('#panel [data-win=\"2\"]').click()");
+    expect(game("state.tiles.get('5,5').win")).toBe(2);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('5,5')")).toMatchObject({ dim: [6, 3], win: 2 });
+  });
+});

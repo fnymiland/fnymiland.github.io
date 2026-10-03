@@ -355,7 +355,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 72. **Freizeitpark** (Block 60): Boden 'fz' (`TERRAFORM.fzboden`), darauf nur `fzOk` (Module `cat: 'fz'`, Deko, Wege,
     Linien); Module brauchen `needs: 'fz'`. Preis-Getter über `fzMin` (wie Leuchtturm); wer ein Modul baut, merkt `t.price`,
     `demolishInfo` erstattet danach. Stufe/Wirkung nur aus `computeFz` (`FZPARKS`, `fzBest`, `FZ_*`). Neues Modul: ITEMS-
-    Eintrag mit `fzSort`, Bild in drawObject, Freischalt-Text, Menügruppe 'fzpark'.
+    Eintrag mit `fzSort`, Bild in drawObject, Freischalt-Text, Menügruppe 'fzpark'. Frei aufgezogene Größe: `SIZED` +
+    `t.dim` (Weltachsen, unabhängig von der Drehung; `sizeOf` liest sie), beim Planen/Bauen `BUILD_DIM` setzen und wieder
+    löschen. Zeichnungen mit freier Größe rechnen die Halbmaße im kit-Rahmen je nach Drehung (ungerade: Achsen tauschen).
 71. **Tore** (Block 59): Tor = `isGate(k)` (Weg auf beiden Seiten `pathGate` oder `e.gate`). Ein Tor ohne Weg (`gardenGate`)
     bekommt ein Türchen (`gateDoor`). Wer Linien neu setzt/umfärbt (`buildEdge`), übernimmt `arch`, `gate`, `flush`.
 70. **Dinge auf Wegen** (Block 58): Ob etwas auf einen Weg darf, sagen `plazaOk(b)` (Deko/Stände: Weg bleibt darunter) und

@@ -77,6 +77,9 @@ function tileOut(t) {
   if (t.wegs) o.wegs = { ...t.wegs };                                                   // … unter den übrigen Feldern großer Deko
   if (t.price != null) o.price = t.price;                                               // Freizeitpark: bezahlter Preis (Block 60)
   if (t.loop) { o.loop = true; if (t.loopPrice != null) o.loopPrice = t.loopPrice; }    // Achterbahn: Looping
+  if (t.win != null) o.win = t.win;                                                     // Fensterfarbe (Block 60e)
+  if (t.dim) o.dim = t.dim.slice();                                                     // frei aufgezogene Größe (Block 60e)
+  if (t.hgt != null) o.hgt = t.hgt;                                                     // Achterbahn: Höhenstufe (Block 60e)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
 }

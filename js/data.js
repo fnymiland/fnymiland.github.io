@@ -311,6 +311,10 @@ Object.assign(ITEMS, {
              desc: 'Zieh die Strecke wie einen Weg über den Freizeitpark-Boden – als geschlossenen Rundkurs mit einer Station. Hügel und Abfahrten kommen von selbst.' },
   fz_station: { cat: 'fz', name: 'Achterbahn-Station', festival: true, cost: 150000, fzMin: 12, needs: 'fz', beauty: 20,
                 desc: 'Hier steigen die Gäste ein. Gehört in den Rundkurs der Achterbahn – dann fährt der Zug.' },
+  fz_hoch: { cat: 'fz', name: 'Achterbahn höher', festival: true, cost: 0, paint: true, needs: 'fz',
+             desc: 'Über Achterbahn-Schienen ziehen: jedes Stück eine Stufe höher (bis 10). Ohne Pinsel baut sich die Strecke von selbst als Hügelbahn.' },
+  fz_tief: { cat: 'fz', name: 'Achterbahn tiefer', festival: true, cost: 0, paint: true, needs: 'fz',
+             desc: 'Über Achterbahn-Schienen ziehen: jedes Stück eine Stufe tiefer.' },
   fz_looping: { cat: 'fz', name: 'Looping', festival: true, cost: 50000, fzMin: 4, needs: 'fz', beauty: 15,
                 desc: 'Auf ein gerades Stück Achterbahn-Schiene setzen – der Zug fährt einmal kopfüber.' },
 });
@@ -319,6 +323,7 @@ const FZ_STEPS = [
   { name: 'Freizeitpark', icon: '🎠', tiles: 25, rides: 5, need: ['tor', 'fahrt', 'stand'] },
   { name: 'Wunderland', icon: '🏰', tiles: 49, rides: 10, need: ['tor', 'fahrt', 'stand', 'schloss'] },
 ];
+const WIN_COLS = ['#a8dcff', '#ffd873', '#c9b8f0', '#b7e3a1', '#f7b2c8', '#ffffff', '#3d4a5c'];   // Fensterfarben (Schloss, Eingang)
 const FZ_SORT_NAMES = { tor: 'ein Eingang', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'das Märchenschloss', achterbahn: 'eine Achterbahn' };
 const FZ_INC = [0, 0.08, 0.2, 0.4], FZ_ATTR = [0, 60, 150, 400], FZ_BEAUTY = [0, 60, 150, 300], FZ_NEAR = [0, 4, 6, 8];   // Einnahmen +%, Besucher, 🌸 (auch ringsum bis FZ_NEAR)
 for (const id of Object.keys(ITEMS)) if (ITEMS[id].fzMin) {
@@ -558,7 +563,8 @@ const MENU = [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
     { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon', 'zauberbrunnen'] },
-    { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser', 'fz_bahn', 'fz_station', 'fz_looping'] },
+    { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
+    { id: 'fzbahn', label: '🎢 Achterbahn', items: ['fz_bahn', 'fz_station', 'fz_looping', 'fz_hoch', 'fz_tief'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
@@ -683,6 +689,8 @@ const ITEM_TIPS = {
   fz_bahn: 'Die Achterbahn! Zieh die Schiene als Rundkurs und setz eine Station hinein.',
   fz_station: 'Die Station für deine Achterbahn.',
   fz_looping: 'Ein Looping für deine Achterbahn – kopfüber!',
+  fz_hoch: 'Mit dem Höhen-Pinsel ziehst du deine Achterbahn hoch hinaus – oder wieder tiefer.',
+  fz_tief: 'Mit dem Höhen-Pinsel ziehst du deine Achterbahn hoch hinaus – oder wieder tiefer.',
   zauberbrunnen: 'Jedes Fahrgeschäft gebaut! Der Zauberbrunnen mit Regenbogen – kostet nichts.',
   schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
   vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',

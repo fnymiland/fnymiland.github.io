@@ -23,6 +23,14 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'fz_hoch' || b === 'fz_tief') {          // Höhen-Pinsel (Block 60e): eine Stufe höher bzw. tiefer
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet) fail(err); return false; }
+    const t = state.tiles.get(x + ',' + y);
+    t.hgt = Math.max(0, Math.min(COASTER_MAXSTEP, trackLevel(x, y) + (b === 'fz_hoch' ? 1 : -1)));
+    recalc(); save();
+    return true;
+  }
   if (b === 'fz_looping') {                          // Looping auf die Schiene (Block 60c)
     const err = placeError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
@@ -81,6 +89,7 @@ function build(b, x, y, quiet) {
     }
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    if (SIZED[b]) state.tiles.get(k).dim = (BUILD_DIM && BUILD_DIM.b === b ? BUILD_DIM.dim : sizeOf(b, rot)).slice();   // frei aufgezogen (Block 60e)
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (d.fzMin) state.tiles.get(k).price = c.cost;               // Preis nach Einkommen: fürs Erstatten merken (Block 60)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);

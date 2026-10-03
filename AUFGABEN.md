@@ -605,3 +605,9 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       `startFireworks(at)`, Umzug `paraders` mit Fähnchen auf dem Parkboden), Bewohner gehen mittags/abends hin (Ziel
       'fzpark'), Album-Seite „Freizeitpark“ (alle Module samt Looping) → 🌈 Zauberbrunnen, Erfolg „Freizeitpark-Stufe“,
       „Das ist neu“. Nebenbei: Speichern mitten im Tragen großer Deko auf Wegen legte die Wege doppelt ab – behoben.
+- [x] 60e Überarbeitung nach dem ersten Test: Parkboden sieht aus wie Wiese (nur rosa Rand). Schiene und Höhen-Pinsel lassen
+      sich als Linie ziehen, Boden als Fläche (vorher nur Feld für Feld!). Höhen-Pinsel ▲/▼ (`fz_hoch`/`fz_tief`, `t.hgt`
+      Stufen à `COASTER_STEP`, bis `COASTER_MAXSTEP`; ohne Pinsel Automatik). Looping auch auf offener Strecke sichtbar.
+      Wagen in Seitenansicht entlang der Schiene, im Looping zur Ring-Mitte gedreht. Schloss (2×2 bis 6×6) und Eingang
+      (1–2 × 2–6) frei aufziehen (`SIZED`, `sizedDim`, `t.dim`, `BUILD_DIM`, Preis nach Fläche), Farben für Fassade, Dach und
+      Fenster (`WIN_COLS`, `t.win`). Menü: eigene Gruppe „🎢 Achterbahn“.
