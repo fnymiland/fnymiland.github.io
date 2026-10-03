@@ -27,7 +27,7 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   B('fz_station', 5, 12); B('fz_looping', 9, 2);
   // Märchenschloss (Block 60g/h): Vorlage „Märchenschloss“, 7 breit, 2 tief – Portal zum Weg (Drehung 1)
   B('fz_schloss', 5, 7, 1);
-  game(`(t => { t.cs = csOf({ cs: { w: 7, d: 2, ...CS_TPL.maerchen.cs } }); t.roof = 1; t.price = castlePrice(t.cs); })(state.tiles.get('${X + 5},${Y + 7}')); rebuildCover()`);
+  game(`(t => { t.cs = csOf({ cs: { w: 7, d: 2, ...CS_TPL.maerchen.cs, bk: 1, lc: 1, wp: 1, ex: 1 } }); t.roof = 1; t.price = castlePrice(t.cs); })(state.tiles.get('${X + 5},${Y + 7}')); rebuildCover()`);
   const T = (b, x, y, fl, rot = 0) => { B(b, x, y, rot); if (fl) game(`state.tiles.get('${X + x},${Y + y}').fl = ${fl}`); };
   // Eingang: zwei Tortürme
   T('fz_torturm', 16, 5, 2); T('fz_torturm', 16, 9, 2);
@@ -37,6 +37,10 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   for (let x = 9; x <= 15; x++) if (!game(`COVER.has('${X + x},${Y + 11}')`)) B('weg', x, 11);
   // Freie Fläche rechts zum Selberbauen (11×13)
   for (let y = 1; y <= 13; y++) for (let x = 18; x <= 28; x++) B('fzboden', x, y);
+  // Ritterburg mit Wassergraben, Mauer und Garten (Block 60i) oben in der freien Fläche
+  B('fz_schloss', 20, 3, 1);
+  expect(game(`castleChange(${X + 20}, ${Y + 3}, { ...CS_TPL.ritter.cs, mo: 1, mw: 1, gn: 1, wp: 3 })`)).toBe(`${X + 19},${Y + 2}`);
+  game(`Object.assign(state.tiles.get('${X + 19},${Y + 2}'), { wall: 10, roof: 0, win: 6 })`);
   game('rebuildCover(); recalc()');
   const st = game('computeFz().map(p => [p.tiles.length, p.rides, p.stage])'), coasters = game('COASTERS.length');
   const d = game('JSON.parse(JSON.stringify(serialize()))');

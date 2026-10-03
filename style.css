@@ -567,7 +567,7 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .cs-row .cs-del { margin-left: auto; }
 .cs-tower .cs-n { min-width: 64px; font-size: 14px; }
 .cs-tabs { margin-bottom: 8px; }
-.cs-tabs .look { flex: 1; font-size: 14px; padding: 8px 6px; }
+.cs-tabs .look { flex: 1; font-size: 13px; padding: 8px 4px; white-space: nowrap; }
 .cs-tower { border-top: 1px solid rgba(0,0,0,0.08); padding-top: 4px; margin-top: 4px; }
 .cs-cycle small { opacity: 0.6; font-weight: 700; margin-right: 2px; }
 

@@ -356,7 +356,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Linien); Module brauchen `needs: 'fz'`. Preis-Getter über `fzMin` (wie Leuchtturm); wer ein Modul baut, merkt `t.price`,
     `demolishInfo` erstattet danach. Stufe/Wirkung nur aus `computeFz` (`FZPARKS`, `fzBest`, `FZ_*`). Neues Modul: ITEMS-
     Eintrag mit `fzSort`, Bild in drawObject, Freischalt-Text, Menügruppe 'fzpark'. Märchenschloss = EIN Gebäude mit
-    Gestalt `t.cs` (Größe nur über `csOf`/`sizeOf`, ändern nur über `castleChange`: prüft Platz, Preis, Wege darunter);
+    Gestalt `t.cs` (Größe nur über `csOf`/`sizeOf`/`csRing`, ändern nur über `castleChange`: prüft Platz, Preis, Wege
+    darunter; neue Felder in `CS_DEF` + `CS_LIM`, alte Speicherstände liest `csOf`; Teile nie in b überlappen lassen);
     Eingang = Torturm-Paar (`TOR_PAIR`, zählt erst als Paar). Was ein Bild verändert, gehört in den Sprite-Schlüssel
     (`spriteTile`: `t.cs`, `t.win`, `t.fl`), sonst sieht man es von weitem nicht.
     Fenster frischen sich ständig auf: Zustände wie eine Löschen-Rückfrage außerhalb des DOM merken (`delSure`).

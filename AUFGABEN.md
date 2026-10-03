@@ -629,5 +629,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Mittelbau: Breite, Stockwerke, Dach; Mittelturm: Höhe, Dicke, Dach; Flügel: Stockwerke, Dach. Vorlagen Märchenschloss,
       Ritterburg, Eispalast, Orientpalast (`CS_TPL`, setzen Gestalt + Farben). Fenster in Reitern Form · Türme · Farben
       (`castleTab`, `castleHtml`, `wireCastle`). Alte Form (60g: s, r) liest `csOf` weiter.
-- [ ] 60i Schritt 2: Zierde (Fahnenfarbe, Gold an/aus, Balkone/Erker, Wappen, Lichterketten) und Umgebung (Wassergraben mit
-      Zugbrücke, Freitreppe, Garten mit Brunnen, Mauer mit Tor – Grundfläche wächst dafür um ein Feld rundum).
+- [x] 60i Schritt 2: Reiter „✨ Zierde“ – Fahnenfarbe (`fc`), Gold an/aus (`gd`), Balkone & Erker (`bk`), Wappen Krone/Herz/
+      Stern (`wp`), Lichterketten, nachts leuchtend (`lc`), Freitreppe (`ex`, der Bau rückt dafür nach hinten). Umgebung:
+      Wassergraben mit Zugbrücke (`mo`), Mauer mit Torhaus (`mw`), Garten mit Beeten, Brunnen und Bäumen (`gn`) – ein Feld
+      rundum (`csRing`), nur mittig (das Schloss bleibt stehen), sonst Hinweis. Mauer/Brunnen/Bäume vor oder hinter dem
+      Schloss sortiert (pre/post).

@@ -349,3 +349,42 @@ describe('Märchenschloss (Block 60g)', () => {
     expect(() => game(`(t => { t.cs = { w: 5, d: 2, m: 3, s: 2, r: 1 }; drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
   });
 });
+
+describe('Märchenschloss: Zierde und Umgebung (Block 60i)', () => {
+  const cs = () => game("(() => { for (const [k, t] of state.tiles) if (t.b === 'fz_schloss') return [k, { ...t.cs }, t.price]; })()");
+  it('Graben/Mauer/Garten: ein Feld rundum, mittig, kostet; wieder aus: schrumpft zurück', () => {
+    ground(4, 4, 12, 9);
+    game("rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); recalc(); state.money = 1e9");
+    const p0 = cs()[2];
+    expect(game('castleChange(8, 6, { mo: 1 })')).toBe('7,5');
+    expect(game("sizeOf('fz_schloss', 0, state.tiles.get('7,5'))")).toEqual([4, 7]);
+    expect(cs()[2]).toBeGreaterThan(p0);
+    expect(game('castleChange(7, 5, { mw: 1, gn: 1 })')).toBe('7,5');                  // schon Platz: bleibt gleich groß
+    expect(game("sizeOf('fz_schloss', 0, state.tiles.get('7,5'))")).toEqual([4, 7]);
+    expect(game('castleChange(7, 5, { mo: 0, mw: 0, gn: 0 })')).toBe('8,6');
+  });
+
+  it('kein Platz rundum: Hinweis, nichts verändert', () => {
+    ground(4, 4, 12, 9);
+    game("rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); build('fz_eis', 7, 8, true); recalc(); state.money = 1e9");
+    expect(game('castleChange(8, 6, { mw: 1 })')).toBe(null);
+    expect(cs()[1].mw).toBe(0);
+  });
+
+  it('Schalter im Fenster (Zierde), gespeichert, zeichnet bei Tag und Nacht in jeder Drehung', () => {
+    ground(4, 4, 12, 9);
+    game("rotManual = true; buildRot = 1; build('fz_schloss', 7, 7, true); recalc(); state.money = 1e9; castleTab = 'zierde'; openInfo(7, 7)");
+    game("document.querySelector('#panel [data-cs=\"lc:t\"]').click()");
+    game("document.querySelector('#panel [data-cs=\"wp:2\"]').click()");
+    game("document.querySelector('#panel [data-cs=\"fc:3\"]').click()");
+    game("document.querySelector('#panel [data-cs=\"gd:t\"]').click()");
+    expect(cs()[1]).toMatchObject({ lc: 1, wp: 2, fc: 3, gd: 0 });
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(cs()[1]).toMatchObject({ lc: 1, wp: 2, fc: 3, gd: 0 });
+    const k = cs()[0];
+    for (const n of [0, 0.6]) for (let rot = 0; rot < 4; rot++) for (const on of [0, 1]) for (const wp of [0, 1, 3]) for (const cf of [1, 3])
+      expect(() => game(`(t => { night = ${n}; t.rot = ${rot}; t.cs = csOf({ cs: { w: 5, d: ${1 + on}, cf: ${cf}, wp: ${wp}, bk: ${on}, lc: ${on}, ex: ${on}, mo: ${on}, mw: ${on}, gn: ${on}, gd: ${1 - on}, fc: ${wp + on} } }); drawObject('fz_schloss', 300, 300, 1.2, 1000, 7, 7, 1, t); })(state.tiles.get('${k}'))`)).not.toThrow();
+    game('night = 0');
+  });
+});

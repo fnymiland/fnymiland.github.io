@@ -763,7 +763,8 @@ const DEL_ASK = 500;
 let castleTab = 'form';
 const CS_NAMES = { m: ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'], h: ['niedrig', 'mittel', 'hoch', 'höher', 'riesig'],
   k: ['schlank', 'normal', 'dick'], mk: ['schlank', 'normal', 'dick'], p: ['vorn', 'in der Fassade', 'hinten'], cb: ['schmal', 'mittel', 'breit'],
-  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'] };
+  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'],
+  fc: ['🎏 bunt', '🟥 rot', '🟦 blau', '🟨 gold', '⬜ weiß', '🟩 grün'], wp: ['keins', '👑 Krone', '❤️ Herz', '⭐ Stern'] };
 CS_NAMES.cr = CS_NAMES.mr = CS_NAMES.r;
 const CT_LABEL = { k: 'Dicke', p: 'Platz', r: 'Dach' };
 function castleHtml(t) {
@@ -773,9 +774,16 @@ function castleHtml(t) {
     <button class="btn ghost" ${plus} aria-label="${label} mehr" ${noPlus ? 'disabled' : ''}>+</button></div>`;
   const step = (key, label) => stepRow(label, c[key], `data-cs="${key}:-1"`, `data-cs="${key}:+1"`, c[key] <= CS_LIM[key][0], c[key] >= CS_LIM[key][1]);
   const pick = (key, names = CS_NAMES[key]) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}">${n}</button>`).join('')}</div>`;
-  const tabs = `<div class="looks cs-tabs">${[['form', '🏰 Form'], ['tuerme', '🗼 Türme'], ['farben', '🎨 Farben']].map(([id, n]) => `<button class="look${castleTab === id ? ' on' : ''}" data-cstab="${id}">${n}</button>`).join('')}</div>`;
+  const tabs = `<div class="looks cs-tabs">${[['form', '🏰 Form'], ['tuerme', '🗼 Türme'], ['zierde', '✨ Zierde'], ['farben', '🎨 Farben']].map(([id, n]) => `<button class="look${castleTab === id ? ' on' : ''}" data-cstab="${id}">${n}</button>`).join('')}</div>`;
   const worth = `<p class="muted">Wert ${fmt(t.price != null ? t.price : castlePrice(c))} Taler – mehr Größe, Türme und Stockwerke kosten den Unterschied, weniger gibt die Hälfte zurück.</p>`;
   if (castleTab === 'farben') return tabs;
+  const toggle = (key, label) => `<button class="look${c[key] ? ' on' : ''}" data-cs="${key}:t" aria-pressed="${c[key] ? 'true' : 'false'}">${label}</button>`;
+  if (castleTab === 'zierde') return `${tabs}
+      <div class="label">Fahnen</div>${pick('fc')}
+      <div class="label">Schmuck</div><div class="looks">${toggle('gd', '✨ Gold')}${toggle('bk', '🏯 Balkone & Erker')}${toggle('lc', '💡 Lichterketten')}${toggle('ex', '🪜 Freitreppe')}</div>
+      <div class="label">Wappen über dem Tor</div>${pick('wp')}
+      <div class="label">Umgebung</div><div class="looks">${toggle('mo', '🌊 Wassergraben')}${toggle('mw', '🧱 Mauer mit Tor')}${toggle('gn', '🌷 Garten mit Brunnen')}</div>
+      <p class="muted">Graben, Mauer und Garten brauchen ein Feld rundum mehr Platz.</p>${worth}`;
   if (castleTab === 'tuerme') return `${tabs}
       <div class="label">Turmpaare (von innen nach außen)</div>
       ${c.tw.map((o, i) => `<div class="cs-tower">${stepRow(`Paar ${i + 1}`, CS_NAMES.h[o.h], `data-ct="${i}:h:-1"`, `data-ct="${i}:h:+1"`, o.h <= 0, o.h >= CT_LIM.h[1])
@@ -795,7 +803,7 @@ function castleHtml(t) {
 function wireCastle(el, t, x, y) {
   const go = make => undoable(() => { const nk = castleChange(x, y, make(csOf(t))); if (nk) openInfo(...keyXY(nk)); return nk; });
   for (const b of el.querySelectorAll('[data-cstab]')) b.onclick = () => { castleTab = b.dataset.cstab; openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-cs]')) b.onclick = () => go(c => { const [key, v] = b.dataset.cs.split(':'); return { [key]: /^[+-]/.test(v) ? c[key] + +v : +v }; });
+  for (const b of el.querySelectorAll('[data-cs]')) b.onclick = () => go(c => { const [key, v] = b.dataset.cs.split(':'); return { [key]: v === 't' ? 1 - c[key] : /^[+-]/.test(v) ? c[key] + +v : +v }; });
   for (const b of el.querySelectorAll('[data-ct]')) b.onclick = () => go(c => {
     const [i, f, v] = b.dataset.ct.split(':'), tw = c.tw.map(o => ({ ...o })), o = tw[+i];
     o[f] = v === 'n' ? (o[f] + 1) % (CT_LIM[f][1] + 1) : o[f] + +v;
