@@ -611,3 +611,9 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Wagen in Seitenansicht entlang der Schiene, im Looping zur Ring-Mitte gedreht. Schloss (2×2 bis 6×6) und Eingang
       (1–2 × 2–6) frei aufziehen (`SIZED`, `sizedDim`, `t.dim`, `BUILD_DIM`, Preis nach Fläche), Farben für Fassade, Dach und
       Fenster (`WIN_COLS`, `t.win`). Menü: eigene Gruppe „🎢 Achterbahn“.
+- [x] 60f Nach dem zweiten Test: Schloss als Baukasten (Schlossflügel mit Zinnen, Portal, Schlossturm, Großer Turm,
+      Hauptturm; je Teil Stockwerke im Fenster `t.fl` und Farben Fassade/Dach/Fenster; ab 5 Teilen mit Hauptturm ein Schloss),
+      Eingang aus zwei Tortürmen (`TOR_PAIR`, 2–7 Felder in einer Reihe, Bogen mit Schild `drawTorArch`). Das Aufziehen
+      (SIZED) ist wieder raus. Station ganz flach (auch die Kanten zu ihr), Bahnsteig-Seite per Drehen, ⟳-Knopf.
+      Looping-Richtung korrigiert (erst vor, oben zurück). „Randlinien an/aus“ im ☰ Menü (`state.noBorders`).
+      Löschen-Rückfrage ging beim Auffrischen verloren (`delSure`) – behoben.

@@ -9,21 +9,7 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-// Frei aufgezogene Größe (Block 60e: Märchenschloss, Parkeingang): t.dim = [Breite in x, Tiefe in y], unabhängig von der Drehung;
-// beim Planen/Bauen gilt BUILD_DIM für das neue Ding
-const SIZED = { fz_schloss: { min: [2, 2], max: [6, 6] }, fz_tor: { min: [1, 2], max: [2, 6] } };
-let BUILD_DIM = null;
-// Aufgezogenes Rechteck → erlaubte Größe (Eingang: die schmale Seite höchstens 2, die lange mindestens 2)
-function sizedDim(b, w, h) {
-  const S = SIZED[b], lo = Math.min(...S.min), hi = Math.max(...S.max), c = v => Math.max(lo, Math.min(hi, v));
-  if (b !== 'fz_tor') return [c(w), c(h)];
-  return w <= h ? [Math.min(2, Math.max(1, w)), Math.max(2, Math.min(6, h))] : [Math.max(2, Math.min(6, w)), Math.min(2, Math.max(1, h))];
-}
-const sizeOf = (b, rot, t) => {
-  if (t && t.dim) return t.dim;
-  if (!t && BUILD_DIM && BUILD_DIM.b === b) return BUILD_DIM.dim;
-  const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s;
-};
+const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
 function footprint(b, ax, ay, rot, t) {
   const [w, h] = sizeOf(b, rot || 0, t), out = [];
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) out.push([ax + i, ay + j]);
@@ -317,7 +303,7 @@ const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen g
 function totals() {
   rebuildCover();
   computeMarkets();
-  computeParks(); computeCoasters(); computeFz();
+  computeParks(); computeCoasters(); computeTorPairs(); computeFz();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -858,7 +844,10 @@ function computeCoasters() {
       COASTERS.push({ ring, h, n, L, Hmax: Math.max(...h), key: ring[0] });
       ring.forEach((k, i) => {
         const [x, y] = keyXY(k), [px, py] = keyXY(ring[(i - 1 + n) % n]), [nx, ny] = keyXY(ring[(i + 1) % n]);
-        COASTER_AT.set(k, { c, i, h: h[i], hIn: (h[i] + h[(i - 1 + n) % n]) / 2, hOut: (h[i] + h[(i + 1) % n]) / 2, din: [x - px, y - py], dout: [nx - x, ny - y] });
+        // an einer Station bleibt die Kante unten (die Station ist ganz flach, sonst fährt der Zug durchs Dach)
+        const st = j => state.tiles.get(ring[(j + n) % n]).b === 'fz_station';
+        const edge = (a, b) => st(a) || st(b) ? 0 : (h[(a + n) % n] + h[(b + n) % n]) / 2;
+        COASTER_AT.set(k, { c, i, h: st(i) ? 0 : h[i], hIn: edge(i, i - 1), hOut: edge(i, i + 1), din: [x - px, y - py], dout: [nx - x, ny - y] });
       });
     } else for (const k of comp) {                                       // noch kein Rundkurs: Stücke in ihrer Pinsel-Höhe (sonst flach)
       const [x, y] = keyXY(k), t = state.tiles.get(k), h = t.hgt != null ? t.hgt * COASTER_STEP : 3, arms = coasterArms(x, y);
@@ -871,6 +860,19 @@ function computeCoasters() {
 // Höhenstufe eines Schienenstücks: vom Pinsel gesetzt, sonst die angezeigte Höhe (Automatik) gerundet
 const trackLevel = (x, y) => { const t = state.tiles.get(x + ',' + y), ca = COASTER_AT.get(x + ',' + y); return t && t.hgt != null ? t.hgt : Math.round(((ca && ca.h) || 0) / COASTER_STEP); };
 const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b); });
+// Tortürme (Block 60f): je zwei in derselben Reihe oder Spalte, 2 bis 7 Felder auseinander, die einander am nächsten sind
+let TOR_PAIR = new Map();
+function computeTorPairs() {
+  TOR_PAIR = new Map();
+  const towers = [...state.tiles].filter(([, t]) => t.b === 'fz_torturm').map(([k]) => k), best = new Map();
+  for (const a of towers) {
+    const [ax, ay] = keyXY(a);
+    let pick = null, pd = 99;
+    for (const b of towers) { if (a === b) continue; const [bx, by] = keyXY(b), d = ax === bx ? Math.abs(ay - by) : ay === by ? Math.abs(ax - bx) : 99; if (d >= 2 && d <= 7 && d < pd) { pd = d; pick = b; } }
+    if (pick) best.set(a, pick);
+  }
+  for (const [a, b] of best) if (best.get(b) === a) TOR_PAIR.set(a, b);
+}
 // Freizeitparks (Block 60): zusammenhängender Freizeitpark-Boden; Fahrgeschäfte & Stände darauf (je eins) → Stufe nach FZ_STEPS
 let FZPARKS = [];
 function computeFz() {
@@ -891,8 +893,12 @@ function computeFz() {
         if (!seen.has(n) && state.terra.get(n) === 'fz') { seen.add(n); todo.push(n); }
       }
     }
+    // Schloss-Baukasten (Block 60f): ab 5 Teilen mit Hauptturm ein Schloss (eine Attraktion); zwei Tortürme mit Bogen: Eingang
+    const set = new Set(tiles), pieces = [...set].map(k => state.tiles.get(k)).filter(t => t && ITEMS[t.b].castle);
+    if (pieces.length >= 5 && pieces.some(t => t.b === 'fz_hauptturm')) { rides.add('schloss'); sorts.add('schloss'); }
+    for (const [k, o] of TOR_PAIR) if (set.has(k) && k < o) { rides.add('tor' + k); sorts.add('tor'); }
     const stage = FZ_STEPS.filter(s => tiles.length >= s.tiles && rides.size >= s.rides && s.need.every(n => sorts.has(n))).length;
-    out.push({ tiles, rides: rides.size, sorts, stage });
+    out.push({ tiles, rides: rides.size, sorts, stage, castle: pieces.length });
   }
   FZPARKS = out.filter(p => p.stage);
   return out;
@@ -1074,7 +1080,6 @@ function placeRot(b, x, y) {
 // Schienen über Wasser sind Brücken und kosten mehr
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
-  : SIZED[b] && BUILD_DIM && BUILD_DIM.b === b ? { cost: niceRound(ITEMS[b].cost * BUILD_DIM.dim[0] * BUILD_DIM.dim[1] / (ITEMS[b].size[0] * ITEMS[b].size[1])), mat: ITEMS[b].mat }   // Preis nach Fläche
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
@@ -2077,7 +2082,7 @@ function previewDelta(b, x, y) {
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen)
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
-  rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
+  rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeTorPairs(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,

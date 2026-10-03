@@ -94,6 +94,8 @@ describe('Löschen im Fenster', () => {
     game("document.getElementById('p-del').click()");
     expect(game("state.tiles.has('10,10')")).toBe(true);
     expect(game("document.getElementById('p-del').textContent")).toMatch(/Wirklich/);
+    game('refreshLive()');                                                       // das Fenster frischt sich auf: Rückfrage bleibt
+    expect(game("document.getElementById('p-del').textContent")).toMatch(/Wirklich/);
     game("document.getElementById('p-del').click()");
     expect(game("state.tiles.has('10,10')")).toBe(false);
   });

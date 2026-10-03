@@ -1179,7 +1179,7 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
 // Gebäude, deren Wand- und Dachfarbe man wählen kann (Häuser zusätzlich mit Aussehen)
 // Farbe wählbar: alles mit Wand und Dach (nicht: Feld, Glashaus, Steg, Seilbahn, Solar, Wellen – dort gäbe es nichts zu färben)
 const UNPAINTED = new Set(['feld', 'glashaus', 'markt', 'bootssteg', 'seilbahn', 'solarfeld', 'wellen']);
-const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => !UNPAINTED.has(b)), 'rathaus', 'fz_schloss', 'fz_tor']);
+const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => !UNPAINTED.has(b)), 'rathaus', 'fz_fluegel', 'fz_portal', 'fz_turm', 'fz_turm2', 'fz_hauptturm', 'fz_torturm']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
   const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);

@@ -113,7 +113,7 @@ function drawGround(x, y, p, z, now, noWaves) {
             : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
             : (alt ? '#b3c29c' : '#aabb94');
   diamond(p.x, p.y, hw, hh, C(top));
-  if (park) {                                                     // Rand der Parkfläche: feine dunklere Kante nach innen versetzt
+  if (park && !state.noBorders) {                                 // Rand der Parkfläche: feine dunklere Kante nach innen versetzt (☰ abschaltbar)
     const T = [p.x, p.y - hh], R = [p.x + hw, p.y], B = [p.x, p.y + hh], L = [p.x - hw, p.y], k = 0.12;
     g.strokeStyle = C(fz ? '#e07fa6' : '#4f9a3c'); g.lineWidth = 1.1 * z; g.lineCap = 'butt'; g.beginPath();   // Freizeitpark (Block 60e): nur ein rosa Rand, sonst Wiese
     for (const [dx, dy, a, b] of [[1, 0, R, B], [-1, 0, T, L], [0, 1, B, L], [0, -1, T, R]]) {

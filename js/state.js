@@ -78,7 +78,7 @@ function tileOut(t) {
   if (t.price != null) o.price = t.price;                                               // Freizeitpark: bezahlter Preis (Block 60)
   if (t.loop) { o.loop = true; if (t.loopPrice != null) o.loopPrice = t.loopPrice; }    // Achterbahn: Looping
   if (t.win != null) o.win = t.win;                                                     // Fensterfarbe (Block 60e)
-  if (t.dim) o.dim = t.dim.slice();                                                     // frei aufgezogene Größe (Block 60e)
+  if (t.fl != null) o.fl = t.fl;                                                         // Schloss-Baukasten: Stockwerke (Block 60f)
   if (t.hgt != null) o.hgt = t.hgt;                                                     // Achterbahn: Höhenstufe (Block 60e)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   return o;
@@ -106,7 +106,7 @@ function serialize() {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design],
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, edges: [...state.edges].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -261,6 +261,7 @@ function parseSave(d) {
     mastery: { ...(d.mastery || {}) }, inventions: new Set(d.inventions || []),
     decree: d.decree && typeof d.decree.id === 'string' && +d.decree.until ? { id: d.decree.id, until: +d.decree.until } : null, decreeNext: +d.decreeNext || 0,
     parkFest: d.parkFest && +d.parkFest.until ? { until: +d.parkFest.until, next: +d.parkFest.next || 0, mul: +d.parkFest.mul || 1.25 } : null,
+    noBorders: !!d.noBorders,                                            // Randlinien von Park/Freizeitpark aus (Block 60e)
     fzFest: d.fzFest && +d.fzFest.until ? { until: +d.fzFest.until, next: +d.fzFest.next || 0, mul: +d.fzFest.mul || 1.3 } : null,
     far: Array.isArray(d.far) ? d.far.filter(f => f && typeof f.id === 'string' && isFinite(f.cx) && isFinite(f.cy) && f.r > 0 && f.name) : [],
     expedition: d.expedition && (ISLE_BY_ID[d.expedition.isle] || (d.far || []).some(f => f && f.id === d.expedition.isle)) && +d.expedition.until ? { ...d.expedition } : null,

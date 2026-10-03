@@ -25,10 +25,16 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   for (let y = 11; y >= 3; y--) ring.push([2, y]);
   for (const [x, y] of ring) if (!(x === 5 && y === 12)) B('fz_bahn', x, y);
   B('fz_station', 5, 12); B('fz_looping', 9, 2);
-  B('fz_schloss', 7, 6); B('fz_tor', 16, 6, 0);
-  for (const [b, x, y, r] of [['fz_karussell', 3, 3], ['fz_teetassen', 12, 3], ['fz_kette', 12, 9], ['fz_freifall', 4, 6], ['fz_geister', 3, 8], ['fz_wildwasser', 11, 5],
-    ['fz_zuckerwatte', 6, 4], ['fz_eis', 10, 10], ['fz_ballon', 6, 10], ['fz_zuckerwatte', 13, 7]]) B(b, x, y, r || 0);
-  for (let y = 3; y <= 11; y++) if (!game(`COVER.has('${X + 7},${Y + y}')`)) B('weg', 7, y);
+  // Schloss aus dem Baukasten: breite Front (Flügel, Portal in der Mitte), Ecktürme, große Türme, Hauptturm dahinter
+  const T = (b, x, y, fl, rot = 0) => { B(b, x, y, rot); const t = game(`state.tiles.get('${X + x},${Y + y}')`); if (t && fl) game(`state.tiles.get('${X + x},${Y + y}').fl = ${fl}`); };
+  T('fz_turm', 5, 8, 3); T('fz_fluegel', 6, 8, 2); T('fz_fluegel', 7, 8, 3); T('fz_portal', 8, 8, 3, 1); T('fz_fluegel', 9, 8, 3); T('fz_fluegel', 10, 8, 2); T('fz_turm', 11, 8, 3);
+  T('fz_turm2', 7, 7, 3); T('fz_hauptturm', 8, 7, 4); T('fz_turm2', 9, 7, 3);
+  // Eingang: zwei Tortürme
+  T('fz_torturm', 16, 5, 2); T('fz_torturm', 16, 9, 2);
+  for (const [b, x, y, r] of [['fz_karussell', 3, 3], ['fz_teetassen', 12, 3], ['fz_kette', 12, 10], ['fz_freifall', 4, 6], ['fz_geister', 3, 9], ['fz_wildwasser', 13, 4],
+    ['fz_zuckerwatte', 6, 4], ['fz_eis', 10, 10], ['fz_ballon', 6, 10], ['fz_zuckerwatte', 14, 8]]) B(b, x, y, r || 0);
+  for (let y = 9; y <= 11; y++) if (!game(`COVER.has('${X + 8},${Y + y}')`)) B('weg', 8, y);
+  for (let x = 9; x <= 15; x++) if (!game(`COVER.has('${X + x},${Y + 11}')`)) B('weg', x, 11);
   // Freie Fläche rechts zum Selberbauen (11×13)
   for (let y = 1; y <= 13; y++) for (let x = 18; x <= 28; x++) B('fzboden', x, y);
   game('rebuildCover(); recalc()');

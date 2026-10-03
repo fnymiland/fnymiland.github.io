@@ -17,7 +17,8 @@ describe('Freischalten und Boden', () => {
     expect(game("available('fzboden') || available('fz_karussell')")).toBe(false);
     game('state.festival = true');
     expect(game("menuPlaceOf('fz_karussell')")).toEqual({ top: 'freizeit', sub: 'fzfahrt' });
-    expect(game("menuPlaceOf('fz_tor')")).toEqual({ top: 'freizeit', sub: 'fzpark' });
+    expect(game("menuPlaceOf('fz_torturm')")).toEqual({ top: 'freizeit', sub: 'fzpark' });
+    expect(game("menuPlaceOf('fz_hauptturm')")).toEqual({ top: 'freizeit', sub: 'fzschloss' });
     expect(game("build('fzboden', 10, 10, true)")).toBe(true);
     expect(game('terraLook(10, 10)')).toBe('fz');
     expect(game('terrainAt(10, 10)')).toBe('grass');
@@ -41,18 +42,21 @@ describe('Stufen und Wirkung', () => {
     game("build('fz_zuckerwatte', 12, 12, true); recalc()");
     expect(stages()).toEqual([1]);
     ground(10, 10, 5, 5);
-    game("rotManual = true; buildRot = 0; build('fz_karussell', 11, 10, true); build('fz_tor', 14, 10, true); build('fz_zuckerwatte', 10, 14, true); recalc()");
+    game("rotManual = true; buildRot = 0; build('fz_karussell', 11, 10, true); build('fz_torturm', 14, 10, true); build('fz_torturm', 14, 13, true); build('fz_zuckerwatte', 10, 14, true); recalc()");
     expect(stages()).toEqual([2]);
   });
 
   it('Wunderland: 49 Felder, 10 Attraktionen und das Märchenschloss (Block 60b)', () => {
     ground(5, 5, 13, 11);
     game("rotManual = true; buildRot = 0");
-    for (const [b, x, y] of [['fz_karussell', 5, 5], ['fz_teetassen', 7, 5], ['fz_kette', 9, 5], ['fz_geister', 11, 5], ['fz_freifall', 13, 5], ['fz_zuckerwatte', 14, 5], ['fz_eis', 15, 5], ['fz_ballon', 16, 5], ['fz_wildwasser', 5, 11], ['fz_tor', 17, 9]])
+    for (const [b, x, y] of [['fz_karussell', 5, 5], ['fz_teetassen', 7, 5], ['fz_kette', 9, 5], ['fz_geister', 11, 5], ['fz_freifall', 13, 5], ['fz_zuckerwatte', 14, 5], ['fz_eis', 15, 5], ['fz_ballon', 16, 5], ['fz_wildwasser', 5, 11], ['fz_torturm', 17, 9], ['fz_torturm', 17, 13]])
       expect(game(`build('${b}', ${x}, ${y}, true)`), b).toBe(true);
     game('recalc()');
     expect(stages()).toEqual([2]);                                                   // ohne Schloss: Freizeitpark
-    expect(game("build('fz_schloss', 10, 9, true)")).toBe(true);
+    for (const [b, x, y] of [['fz_fluegel', 9, 9], ['fz_fluegel', 11, 9], ['fz_portal', 10, 9], ['fz_turm', 8, 9], ['fz_turm', 12, 9]]) game(`build('${b}', ${x}, ${y}, true)`);
+    game('recalc()');
+    expect(stages()).toEqual([2]);                                                   // 5 Teile, aber kein Hauptturm
+    expect(game("build('fz_hauptturm', 10, 10, true)")).toBe(true);
     game('recalc()');
     expect(stages()).toEqual([3]);
   });
@@ -227,25 +231,50 @@ describe('Überarbeitung (Block 60e)', () => {
     expect(() => game("drawCoasterTile(100, 100, 1.5, 11, 10, state.tiles.get('11,10'))")).not.toThrow();
   });
 
-  it('Schloss und Eingang frei aufziehen: Größe in Grenzen, Preis nach Fläche, gespeichert; Fensterfarbe', () => {
-    ground(5, 5, 12, 10);
-    expect(game("sizedDim('fz_schloss', 9, 1)")).toEqual([6, 2]);
-    expect(game("sizedDim('fz_tor', 5, 3)")).toEqual([5, 2]);
-    expect(game("sizedDim('fz_tor', 1, 1)")).toEqual([1, 2]);
-    game('state.incPeak = 0');
-    game("setTool('fz_schloss'); startPlan('rect', { x: 5, y: 5 }, { x: 10, y: 7 }, true)");
-    const info = game('planInfo(plan)');
-    expect(info.dim).toEqual([6, 3]);
-    expect(info.cost).toBe(game('niceRound(ITEMS.fz_schloss.cost * 18 / 9)'));
-    game("runPlan(); setTool('look')");
-    expect(game("state.tiles.get('5,5').dim")).toEqual([6, 3]);
-    expect(game("footprint('fz_schloss', 5, 5, 0, state.tiles.get('5,5')).length")).toBe(18);
-    game("recalc(); openInfo(5, 5)");
-    expect(game("document.querySelectorAll('#panel [data-win]').length")).toBe(game('WIN_COLS.length'));
+  it('Schloss-Baukasten: Stockwerke und Fensterfarbe im Fenster, gespeichert; zwei Tortürme bilden den Eingang (Block 60f)', () => {
+    ground(5, 5, 10, 6);
+    game("build('fz_fluegel', 6, 6, true); recalc(); openInfo(6, 6)");
+    expect(game("state.tiles.get('6,6').fl")).toBe(2);
+    game("document.querySelector('#panel [data-fl=\"1\"]').click()");
+    expect(game("state.tiles.get('6,6').fl")).toBe(3);
     game("document.querySelector('#panel [data-win=\"2\"]').click()");
-    expect(game("state.tiles.get('5,5').win")).toBe(2);
+    expect(game("state.tiles.get('6,6').win")).toBe(2);
     const d = game('JSON.parse(JSON.stringify(serialize()))');
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
-    expect(game("state.tiles.get('5,5')")).toMatchObject({ dim: [6, 3], win: 2 });
+    expect(game("state.tiles.get('6,6')")).toMatchObject({ fl: 3, win: 2 });
+    game("build('fz_torturm', 8, 8, true); build('fz_torturm', 12, 8, true); recalc()");
+    expect(game("TOR_PAIR.get('8,8')")).toBe('12,8');
+    expect(game("[...computeFz()[0].sorts]")).toContain('tor');
+    game("build('fz_torturm', 8, 10, true); recalc()");                        // dritter Turm näher dran: neues Paar, der ferne steht allein
+    expect(game("TOR_PAIR.get('8,8')")).toBe('8,10');
+    expect(game("TOR_PAIR.has('12,8')")).toBe(false);
+    expect(() => game("drawObject('fz_torturm', 100, 100, 1.5, 1000, 8, 10, 1, state.tiles.get('8,10'))")).not.toThrow();
+  });
+});
+
+describe('Station, Looping, Randlinien (Block 60f)', () => {
+  it('Station bleibt flach, auch wenn die Nachbarn hoch liegen; Looping fährt erst vor, oben zurück', () => {
+    ground(5, 5, 8, 6);
+    const ring = [];
+    for (let x = 6; x <= 11; x++) ring.push([x, 6]);
+    for (let y = 7; y <= 9; y++) ring.push([11, y]);
+    for (let x = 10; x >= 6; x--) ring.push([x, 9]);
+    for (let y = 8; y >= 7; y--) ring.push([6, y]);
+    for (const [x, y] of ring) if (!(x === 7 && y === 9)) game(`build('fz_bahn', ${x}, ${y}, true)`);
+    game("build('fz_station', 7, 9, true); state.tiles.get('6,9').hgt = 8; state.tiles.get('8,9').hgt = 8; recalc()");
+    expect(game("[COASTER_AT.get('7,9').hIn, COASTER_AT.get('7,9').h, COASTER_AT.get('7,9').hOut]")).toEqual([0, 0, 0]);
+    for (const k of ['6,9', '8,9']) expect(game(`Math.min(COASTER_AT.get('${k}').hIn, COASTER_AT.get('${k}').hOut)`)).toBe(0);   // die Kante zur Station bleibt unten
+    const info = "({ din: [1, 0], dout: [1, 0], h: 10, hIn: 10, hOut: 10 })";
+    expect(game(`coasterGeo(5, 5, ${info}, 0.35, true)[0]`)).toBeGreaterThan(5);         // erst nach vorn
+    expect(game(`coasterGeo(5, 5, ${info}, 0.65, true)[0]`)).toBeLessThan(5);            // oben zurück
+  });
+
+  it('Randlinien von Park und Freizeitpark lassen sich im Menü ausblenden (gespeichert)', () => {
+    game('showMenu()');
+    game("document.getElementById('m-borders').click()");
+    expect(game('state.noBorders')).toBe(true);
+    expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).noBorders')).toBe(true);
+    game("document.getElementById('m-borders').click(); closeModal()");
+    expect(game('state.noBorders')).toBe(false);
   });
 });

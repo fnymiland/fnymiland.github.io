@@ -283,15 +283,25 @@ Object.defineProperty(ITEMS.leuchtturm, 'cost', { get: () => (typeof leuchtCost 
 Object.assign(ITEMS, {
   fzboden: { cat: 'deko', name: 'Freizeitpark-Boden', festival: true, cost: 40, paint: true,
              desc: 'Bunter Pflasterboden für deinen Freizeitpark: aufziehen, dann Fahrgeschäfte und Stände daraufstellen. Wege und Deko dürfen mit drauf.' },
-  fz_tor: { cat: 'fz', name: 'Parkeingang', festival: true, size: [1, 2], cost: 100000, fzMin: 8, needs: 'fz', fzSort: 'tor', beauty: 25,
-            desc: 'Das große Tor mit zwei Türmchen und Fahnen – jeder richtige Freizeitpark braucht einen Eingang.' },
   fz_karussell: { cat: 'fz', name: 'Pferdekarussell', festival: true, size: [2, 2], cost: 150000, fzMin: 12, needs: 'fz', fzSort: 'fahrt', beauty: 40,
                   desc: 'Ein prächtiges Karussell mit goldenen Stangen, Pferdchen und Lichtern.' },
   fz_zuckerwatte: { cat: 'fz', name: 'Zuckerwatte-Stand', festival: true, cost: 20000, fzMin: 2, needs: 'fz', fzSort: 'stand', beauty: 8,
                     desc: 'Rosa Wolken am Stiel – ein kleiner Stand mit gestreiftem Dach.' },
   // Block 60b
-  fz_schloss: { cat: 'fz', name: 'Märchenschloss', festival: true, size: [3, 3], cost: 1000000, fzMin: 40, needs: 'fz', fzSort: 'schloss', beauty: 150,
-                desc: 'Der Mittelpunkt jedes Wunderlands: rosa Mauern, blaue Spitztürme, goldene Fahnen – nachts leuchten die Fenster.' },
+  // Schloss-Baukasten (Block 60f): Teile frei auf Felder setzen, Stockwerke (t.fl) und Farben im Fenster. Ab 5 Teilen mit
+  // Hauptturm zählt es als Schloss (Wunderland). Eingang: zwei Tortürme in einer Reihe, dazwischen spannt sich der Bogen.
+  fz_fluegel: { cat: 'fz', name: 'Schlossflügel', festival: true, castle: true, fl0: 2, cost: 60000, fzMin: 4, needs: 'fz', beauty: 15,
+                desc: 'Ein Stück Schlossmauer mit Zinnen und Fenstern. Nebeneinander gesetzt werden daraus breite Fassaden – Stockwerke im Fenster.' },
+  fz_portal: { cat: 'fz', name: 'Schlossportal', festival: true, castle: true, fl0: 2, cost: 120000, fzMin: 8, needs: 'fz', beauty: 25,
+               desc: 'Der Eingang ins Schloss: großes Tor mit goldenem Rahmen und Balkon. Drehen wählt die Seite.' },
+  fz_turm: { cat: 'fz', name: 'Schlossturm', festival: true, castle: true, fl0: 2, cost: 80000, fzMin: 5, needs: 'fz', beauty: 18,
+             desc: 'Schlanker Turm mit Spitzdach und Fahne.' },
+  fz_turm2: { cat: 'fz', name: 'Großer Turm', festival: true, castle: true, fl0: 2, cost: 150000, fzMin: 9, needs: 'fz', beauty: 30,
+              desc: 'Ein dicker Turm mit Balkon unter dem Spitzdach.' },
+  fz_hauptturm: { cat: 'fz', name: 'Hauptturm', festival: true, castle: true, fl0: 3, cost: 300000, fzMin: 16, needs: 'fz', beauty: 50,
+                  desc: 'Der höchste Turm des Schlosses – mit Türmchen ringsum und goldener Spitze. Mit 5 Schloss-Teilen wird daraus ein Schloss.' },
+  fz_torturm: { cat: 'fz', name: 'Torturm', festival: true, fl0: 2, cost: 50000, fzMin: 4, needs: 'fz', beauty: 15,
+                desc: 'Zwei Tortürme in einer Reihe (2 bis 7 Felder auseinander) – dazwischen spannt sich der Bogen mit Schild: dein Parkeingang.' },
   fz_teetassen: { cat: 'fz', name: 'Teetassen', festival: true, size: [2, 2], cost: 120000, fzMin: 10, needs: 'fz', fzSort: 'fahrt', beauty: 35,
                   desc: 'Bunte Tassen drehen sich um die große Teekanne – und jede noch um sich selbst.' },
   fz_kette: { cat: 'fz', name: 'Kettenkarussell', festival: true, size: [2, 2], cost: 160000, fzMin: 12, needs: 'fz', fzSort: 'fahrt', beauty: 40,
@@ -324,7 +334,7 @@ const FZ_STEPS = [
   { name: 'Wunderland', icon: '🏰', tiles: 49, rides: 10, need: ['tor', 'fahrt', 'stand', 'schloss'] },
 ];
 const WIN_COLS = ['#a8dcff', '#ffd873', '#c9b8f0', '#b7e3a1', '#f7b2c8', '#ffffff', '#3d4a5c'];   // Fensterfarben (Schloss, Eingang)
-const FZ_SORT_NAMES = { tor: 'ein Eingang', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'das Märchenschloss', achterbahn: 'eine Achterbahn' };
+const FZ_SORT_NAMES = { tor: 'ein Eingang (zwei Tortürme)', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'ein Schloss (5 Teile mit Hauptturm)', achterbahn: 'eine Achterbahn' };
 const FZ_INC = [0, 0.08, 0.2, 0.4], FZ_ATTR = [0, 60, 150, 400], FZ_BEAUTY = [0, 60, 150, 300], FZ_NEAR = [0, 4, 6, 8];   // Einnahmen +%, Besucher, 🌸 (auch ringsum bis FZ_NEAR)
 for (const id of Object.keys(ITEMS)) if (ITEMS[id].fzMin) {
   const base = ITEMS[id].cost;
@@ -562,7 +572,8 @@ const MENU = [
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
-    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon', 'zauberbrunnen'] },
+    { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_torturm', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon', 'zauberbrunnen'] },
+    { id: 'fzschloss', label: '🏰 Schloss', items: ['fz_fluegel', 'fz_portal', 'fz_turm', 'fz_turm2', 'fz_hauptturm'] },
     { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
     { id: 'fzbahn', label: '🎢 Achterbahn', items: ['fz_bahn', 'fz_station', 'fz_looping', 'fz_hoch', 'fz_tief'] },
   ] },
@@ -675,10 +686,14 @@ const ITEM_TIPS = {
   uhrturm: 'Alle Hausformen erreicht! Der Uhrturm gehört auf den Marktplatz – kostet nichts.',
   karussell: 'Alle Bewohner-Arten wohnen bei dir! Das Karussell dreht sich – kostet nichts.',
   fzboden: 'Nach dem Fest: bau dir deinen eigenen Freizeitpark! Boden aufziehen, dann Fahrgeschäfte und Stände daraufstellen.',
-  fz_tor: 'Der Eingang für deinen Freizeitpark – mit Türmchen und Fahnen.',
   fz_karussell: 'Das erste Fahrgeschäft: ein prächtiges Pferdekarussell.',
   fz_zuckerwatte: 'Rosa Zuckerwatte für die Besucher deines Freizeitparks.',
-  fz_schloss: 'Das Märchenschloss – damit wird dein Freizeitpark zum Wunderland!',
+  fz_fluegel: 'Bau dir dein Märchenschloss aus Flügeln, Türmen und Portal – so breit und hoch, wie du willst!',
+  fz_portal: 'Das Portal für dein Schloss.',
+  fz_turm: 'Ein Schlossturm für dein Märchenschloss.',
+  fz_turm2: 'Ein großer Turm für dein Märchenschloss.',
+  fz_hauptturm: 'Der Hauptturm – mit ihm wird dein Schloss zum Wunderland!',
+  fz_torturm: 'Tortürme: zwei davon in einer Reihe sind dein Parkeingang.',
   fz_teetassen: 'Teetassen zum Drehen für deinen Freizeitpark.',
   fz_kette: 'Ein Kettenkarussell – die Sitze fliegen hoch hinaus.',
   fz_freifall: 'Ein Freifallturm für Mutige.',

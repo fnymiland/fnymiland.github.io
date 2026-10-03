@@ -1005,7 +1005,7 @@ function coasterGeo(x, y, info, f, loop) {
   if (din[0] === dout[0] && din[1] === dout[1]) {                      // gerade
     let u = x + din[0] * (f - 0.5), v = y + din[1] * (f - 0.5), up = h;
     let inv = false, lc = null;
-    if (loop && f > 0.2 && f < 0.8) { const th = (f - 0.2) / 0.6 * Math.PI * 2; u -= din[0] * Math.sin(th) * LOOP_T; v -= din[1] * Math.sin(th) * LOOP_T; up += LOOP_R * (1 - Math.cos(th)); inv = Math.cos(th) < -0.2; lc = [x, y, h + LOOP_R]; }
+    if (loop && f > 0.2 && f < 0.8) { const th = (f - 0.2) / 0.6 * Math.PI * 2; u += din[0] * Math.sin(th) * LOOP_T; v += din[1] * Math.sin(th) * LOOP_T; up += LOOP_R * (1 - Math.cos(th)); inv = Math.cos(th) < -0.2; lc = [x, y, h + LOOP_R]; }
     return [u, v, up, din[0], din[1], inv, lc];
   }
   const ein = [-din[0] * 0.5, -din[1] * 0.5], eout = [dout[0] * 0.5, dout[1] * 0.5], c = [ein[0] + eout[0], ein[1] + eout[1]];
@@ -1022,10 +1022,13 @@ function drawCoasterTile(cx, cy, z, x, y, t) {
     const arms = t && t.b && COASTER_AT.size ? coasterArms(x, y) : [], h = info ? info.h : 3;
     for (const [dx, dy] of arms.length ? arms : [[1, 0], [-1, 0]]) { const L = []; for (let i = 0; i <= 4; i++) L.push([x + dx * i / 8, y + dy * i / 8, h, dx, dy]); lines.push(L); }
   }
-  if (t && t.b === 'fz_station') {                                    // Bahnsteig mit Dach
-    const pl = [[-0.45, -0.45], [0.45, -0.45], [0.45, 0.45], [-0.45, 0.45]].map(([a, b]) => S(x + a, y + b, 1.5));
-    poly(pl, C('#e6d3b8'));
-    for (const [a, b] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) { const p0 = S(x + a, y + b, 1.5), p1 = S(x + a, y + b, 17); g.strokeStyle = C('#fffaf0'); g.lineWidth = 1 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
+  // Station (Block 60e): Bahnsteig auf einer Seite der Schiene (Drehen wählt die Seite), Dach über Bahnsteig und Gleis
+  const stD = info && info.din ? info.din : (t && (t.rot & 1) ? [0, 1] : [1, 0]), stN = [-stD[1], stD[0]], stS = t && (t.rot & 2) ? -1 : 1;
+  const stP = (al, ac, up) => S(x + stD[0] * al + stN[0] * ac * stS, y + stD[1] * al + stN[1] * ac * stS, up);
+  if (t && t.b === 'fz_station') {
+    poly([stP(-0.48, 0.2, 1.5), stP(0.48, 0.2, 1.5), stP(0.48, 0.5, 1.5), stP(-0.48, 0.5, 1.5)], C('#e6d3b8'));
+    poly([stP(-0.48, 0.2, 0), stP(0.48, 0.2, 0), stP(0.48, 0.2, 1.5), stP(-0.48, 0.2, 1.5)], C('#cbb89b'));
+    for (const [al, ac] of [[-0.42, 0.46], [0.42, 0.46], [-0.42, -0.24], [0.42, -0.24]]) { const p0 = stP(al, ac, ac > 0 ? 1.5 : 0), p1 = stP(al, ac, 17); g.strokeStyle = C('#fffaf0'); g.lineWidth = 1 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
   }
   for (const L of lines) {
     const mid = L[Math.floor(L.length / 2)];
@@ -1047,9 +1050,10 @@ function drawCoasterTile(cx, cy, z, x, y, t) {
     }
     const top = S(x, y, info.h + LOOP_R * 2), b0 = S(x, y, 0); g.strokeStyle = C('#f4f1ea'); g.lineWidth = 1.2 * z; g.beginPath(); g.moveTo(...b0); g.lineTo(...top); g.stroke();
   }
-  if (t && t.b === 'fz_station') {                                    // Dach über dem Bahnsteig
-    const rf = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(([a, b]) => S(x + a, y + b, 17));
-    poly(rf, C('#e8604f')); poly([rf[0], rf[1], S(x, y, 22)], C('#f07a6a')); poly([rf[1], rf[2], S(x, y, 22)], C('#c94d3f')); poly([rf[2], rf[3], S(x, y, 22)], C('#e8604f'));
+  if (t && t.b === 'fz_station') {                                    // Dach über Bahnsteig und Gleis
+    const rf = [[-0.5, -0.3], [0.5, -0.3], [0.5, 0.52], [-0.5, 0.52]].map(([al, ac]) => stP(al, ac, 17)), top = [stP(-0.5, 0.11, 22), stP(0.5, 0.11, 22)];
+    poly([rf[0], rf[1], top[1], top[0]], C('#f07a6a')); poly([rf[3], rf[2], top[1], top[0]], C('#e8604f'));
+    poly([rf[1], rf[2], top[1]], C('#c94d3f')); poly([rf[0], rf[3], top[0]], C('#c94d3f'));
   }
 }
 const coasterRuns = new Map();                                          // Station → { s (Felder entlang des Rings), wait }

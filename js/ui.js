@@ -758,20 +758,23 @@ const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">
 // Löschen im Fenster (Block 45): wie das Abriss-Werkzeug (Deko und Wege voll zurück, Gebäude zur Hälfte). Was viel kostet,
 // fragt einmal nach (zweites Tippen); alles lässt sich mit ↶ zurücknehmen.
 const DEL_ASK = 500;
+// Rückfrage beim Löschen: außerhalb des Fensters merken – das Fenster frischt sich ständig auf und hätte sie sonst vergessen
+let delSure = null;                                                     // { at: Feld, until }
+const delAsked = (x, y) => !!delSure && delSure.at === x + ',' + y && performance.now() < delSure.until;
 function delButton(x, y) {
   const info = demolishInfo(x, y);
   if (info.err || info.refund == null) return '';
-  return `<button class="btn danger" id="p-del" aria-label="${info.label}">🗑️${info.refund ? ` +${fmt(info.refund)}` : ''}</button>`;
+  return `<button class="btn danger" id="p-del" aria-label="${info.label}">${delAsked(x, y) ? `Wirklich? ${fmt(info.lost)} Taler sind weg` : `🗑️${info.refund ? ` +${fmt(info.refund)}` : ''}`}</button>`;
 }
 function wireDel(x, y) {
   const b = $('p-del');
   if (!b) return;
   b.onclick = () => {
     const info = demolishInfo(x, y), t = info.anchor && state.tiles.get(info.anchor);
-    if (!b.dataset.sure && (info.lost >= DEL_ASK || (t && WONDERS[t.b]))) {
-      b.dataset.sure = '1'; b.textContent = `Wirklich? ${fmt(info.lost)} Taler sind weg`; return;
+    if (!delAsked(x, y) && (info.lost >= DEL_ASK || (t && WONDERS[t.b]))) {
+      delSure = { at: x + ',' + y, until: performance.now() + 5000 }; b.textContent = `Wirklich? ${fmt(info.lost)} Taler sind weg`; return;
     }
-    closePanel(); undoable(() => demolish(x, y));
+    delSure = null; closePanel(); undoable(() => demolish(x, y));
   };
 }
 
@@ -903,7 +906,8 @@ function openInfo(x, y) {
       <div class="swatches">${bunt('wall')}${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
       <div class="label">${mixed ? 'Dächer' : 'Dach'}</div>
       <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
-      ${t.b === 'fz_schloss' || t.b === 'fz_tor' ? `<div class="label">Fenster</div>
+      ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
+      ${ITEMS[t.b].fl0 ? `<div class="label">Fenster</div>
       <div class="swatches">${WIN_COLS.map((c, i) => `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
@@ -1028,6 +1032,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
+  for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
   for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);
@@ -1966,7 +1971,7 @@ function showMenu() {
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button><button class="btn ghost" style="flex:1" id="m-borders">${state.noBorders ? '▢ Randlinien aus' : '▣ Randlinien an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
@@ -1983,6 +1988,7 @@ function showMenu() {
   $('m-achv').onclick = () => openTownHall('erfolge');
   $('m-album').onclick = openAlbum;
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
+  $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark
   $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
   $('m-close').onclick = closeModal;
   $('m-export').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
