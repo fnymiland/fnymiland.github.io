@@ -75,15 +75,15 @@ describe('Preise', () => {
   it('nach dem besten Einkommen (mindestens Grundpreis); Abriss erstattet die Hälfte dessen, was man bezahlt hat', () => {
     game('state.incPeak = 0');
     expect(game('ITEMS.fz_zuckerwatte.cost')).toBe(20000);
-    game('state.incPeak = 1000');                                                  // 2 Minuten von 1000/s
-    expect(game('ITEMS.fz_zuckerwatte.cost')).toBe(120000);
+    game('state.incPeak = 2300');                                                  // 2 Minuten beim Bezugseinkommen 2.300/s
+    expect(game('ITEMS.fz_zuckerwatte.cost')).toBe(280000);
     ground(10, 10, 1, 1);
     const m = game('state.money');
     game("build('fz_zuckerwatte', 10, 10, true)");
-    expect(game("state.tiles.get('10,10').price")).toBe(120000);
+    expect(game("state.tiles.get('10,10').price")).toBe(280000);
     game('state.incPeak = 1e6');                                                   // später reicher: Erstattung bleibt
     game('demolish(10, 10)');
-    expect(game('state.money')).toBe(m - 120000 + 60000);
+    expect(game('state.money')).toBe(m - 280000 + 140000);
   });
 
   it('Boden entfernen geht nicht unter einem Fahrgeschäft', () => {

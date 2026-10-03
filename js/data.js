@@ -968,15 +968,18 @@ const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f2
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
 const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain', kristall: 'Kristallfels' };
 
-// Preise nach Einkommen (Block 60, Block 61): fzMin / incMin = Minuten des besten Einkommens, der feste Preis bleibt als
-// Untergrenze. Große Gebäude nach dem Fest und ein paar große in der Mitte – sonst kosten sie später nur Sekunden.
+// Preise nach Einkommen (Block 60, 61, 63): fzMin / incMin Minuten Einkommen beim Bezugseinkommen (incRef, Einkommen des
+// normalen Bots aus Block 62, wenn das Ding frei wird). Darüber wächst der Preis nur mit der Wurzel (incScaled): wer mehr
+// verdient, wartet kürzer, das Ding wird aber nie Kleingeld. Der feste Preis bleibt Untergrenze (baseCost).
 // Wer so ein Ding baut, merkt sich den Preis (t.price) fürs Erstatten. Steht am Ende, damit auch Größen-Varianten mitkommen.
-const INC_MIN = { hbf: 2, uni: 3, moebelhaus: 3, kino: 4, hotel: 4, markthalle: 5, kaffeeplantage: 3, teegarten: 3, kakaoplantage: 3,
-  chocolaterie: 5, passage: 12, kaufhaus: 15, theater: 15, museum: 15, konzerthalle: 18, aquarium: 20, zoo: 20, grandhotel: 25, stadion: 30 };
-for (const [id, m] of Object.entries(INC_MIN)) if (ITEMS[id]) ITEMS[id].incMin = m;
+const INC_MIN = { hbf: [2, 1500], uni: [3, 2000], moebelhaus: [3, 1000], kino: [4, 1200], hotel: [4, 1200], markthalle: [5, 1250],
+  kaffeeplantage: [3, 2300], teegarten: [3, 2300], kakaoplantage: [3, 2300], chocolaterie: [5, 2300], passage: [12, 2300], kaufhaus: [15, 2300],
+  theater: [15, 2300], museum: [15, 2300], konzerthalle: [18, 2300], aquarium: [20, 2300], zoo: [20, 2300], grandhotel: [25, 2300], stadion: [30, 2300] };
+const FZ_REF = 2300;                                                    // Freizeitpark: nach dem Fest
+for (const [id, [m, ref]] of Object.entries(INC_MIN)) if (ITEMS[id]) Object.assign(ITEMS[id], { incMin: m, incRef: ref });
 const incMinOf = d => d.fzMin || d.incMin || 0;
 for (const id of Object.keys(ITEMS)) if (incMinOf(ITEMS[id])) {
-  const base = ITEMS[id].baseCost = ITEMS[id].cost;                  // baseCost: Erstatten bei Ständen ohne t.price
-  Object.defineProperty(ITEMS[id], 'cost', { get: () => (typeof wonderRate === 'function' && typeof niceRound === 'function' ? niceRound(Math.max(base, incMinOf(ITEMS[id]) * 60 * wonderRate())) : base), enumerable: true, configurable: true });
+  const d = ITEMS[id], base = d.baseCost = d.cost;                      // baseCost: Erstatten bei Ständen ohne t.price
+  if (!d.incRef) d.incRef = FZ_REF;
+  Object.defineProperty(d, 'cost', { get: () => (typeof incScaled === 'function' && typeof niceRound === 'function' ? niceRound(Math.max(base, incScaled(incMinOf(d), d.incRef))) : base), enumerable: true, configurable: true });
 }
-

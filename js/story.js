@@ -225,9 +225,10 @@ function lmTile(type) {
 
 // Laternenpreis: fest (LM_PRICE), die letzten Schritte vor dem Fest mindestens LM_MIN Minuten des besten Einkommens
 // (Block 37 – sonst kam das Fest mit den Läden viel zu früh; langsame Städte zahlen weiter den festen Preis)
-const LM_MIN = { kristall: [0, 25, 60] }, LEUCHT_MIN = 60;
-const lmPrice = (type, stage) => niceRound(Math.max(LM_PRICE[type][stage], ((LM_MIN[type] || [])[stage] || 0) * 60 * wonderRate()));
-const leuchtCost = () => niceRound(Math.max(LEUCHT_BASE, LEUCHT_MIN * 60 * wonderRate()));
+// Block 63: mitwachsen, aber gebremst (incScaled) – beim Bezugseinkommen genau so viele Minuten, darüber weniger
+const LM_MIN = { kristall: [0, 25, 60] }, LM_REF = { kristall: 2000 }, LEUCHT_MIN = 60, LEUCHT_REF = 2300;
+const lmPrice = (type, stage) => niceRound(Math.max(LM_PRICE[type][stage], incScaled((LM_MIN[type] || [])[stage] || 0, LM_REF[type] || 0)));
+const leuchtCost = () => niceRound(Math.max(LEUCHT_BASE, incScaled(LEUCHT_MIN, LEUCHT_REF)));
 // Was fehlt noch für die nächste Stufe?
 function restoreInfo(type) {
   const stage = lmStage(type), next = LM_STAGES[type][stage], pos = lmTile(type);
@@ -591,21 +592,21 @@ const LATE_ALBUM = new Set(['b:zaun', 'b:mauer', 'b:reihenhaus', 'b:baumhaus', '
 // mindestens money, dazu viel Material. So bleibt ein Wunderwerk ein Langzeitziel (etwa eine Stunde, das Schloss
 // mehrere Stunden), egal wie reich man schon ist.
 const WONDERS = {
-  riesenrad: { the: 'Das Riesenrad', h: 215, text: '+25 % Einnahmen – und alle 15 Minuten Jahrmarkt: 3 Minuten lang dreifache Einnahmen', effect: { incMul: 0.25 },
+  riesenrad: { ref: 1000, the: 'Das Riesenrad', h: 215, text: '+25 % Einnahmen – und alle 15 Minuten Jahrmarkt: 3 Minuten lang dreifache Einnahmen', effect: { incMul: 0.25 },
     names: ['Fundament', 'Stahlgerüst', 'Rad und Gondeln', 'Lichter'],
     phases: [{ min: 12, money: 30000, quader: 150 }, { min: 15, money: 40000, metall: 150 },
              { min: 15, money: 50000, metall: 200, bretter: 200 }, { min: 18, money: 1e6, bretter: 150, metall: 100 }] },
-  sternwarte: { the: 'Die Sternwarte', h: 95, text: '+50 % Ideen – nachts fallen Sternschnuppen (antippen: Ideen), und das Boot findet Inseln doppelt so schnell', effect: { sciMul: 0.5 },
+  sternwarte: { ref: 2000, the: 'Die Sternwarte', h: 95, text: '+50 % Ideen – nachts fallen Sternschnuppen (antippen: Ideen), und das Boot findet Inseln doppelt so schnell', effect: { sciMul: 0.5 },
     names: ['Fundament', 'Turm', 'Kuppel und Fernrohr'],
     phases: [{ min: 15, money: 30000, quader: 200 }, { min: 20, money: 45000, metall: 150, bretter: 150 }, { min: 25, money: 1e6, metall: 150, quader: 150 }] },
-  seebruecke: { the: 'Die Seebrücke', h: 40, text: '+20 % Einwohner (Kurgäste) – und die Hafenstadt: Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe fahren schneller', effect: { popMul: 0.2 },
+  seebruecke: { ref: 1250, the: 'Die Seebrücke', h: 40, text: '+20 % Einwohner (Kurgäste) – und die Hafenstadt: Aufträge zahlen +50 %, ein Auftragsplatz mehr, Schiffe fahren schneller', effect: { popMul: 0.2 },
     names: ['Pfähle', 'Steg', 'Pavillon und Laternen'],
     phases: [{ min: 10, money: 20000, bretter: 250 }, { min: 15, money: 30000, bretter: 200, metall: 80 }, { min: 20, money: 1e6, quader: 150, metall: 100 }] },
-  botgarten: { the: 'Der Botanische Garten', h: 80, text: '+50 % Schönheit – und der grüne Daumen: „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, exotische Deko', effect: { beautyMul: 0.5 },
+  botgarten: { ref: 2000, the: 'Der Botanische Garten', h: 80, text: '+50 % Schönheit – und der grüne Daumen: „Park“ und „schöne Umgebung“ überall erfüllt, Obst und Felder doppelt, exotische Deko', effect: { beautyMul: 0.5 },
     names: ['Gärten', 'Glasgerüst', 'Palmenhaus', 'Bepflanzung'],
     phases: [{ min: 12, money: 40000, quader: 200 }, { min: 15, money: 50000, metall: 150, kristall: 60 },
              { min: 18, money: 60000, kristall: 100, bretter: 200 }, { min: 20, money: 1e6, obst: 600, kristall: 80 }] },
-  schloss: { the: 'Das Schloss', h: 270, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
+  schloss: { ref: 2300, the: 'Das Schloss', h: 270, text: '+50 % auf alles, deine Insel ist jetzt eine Königliche Inselperle – und alle 10 Minuten ein königlicher Erlass nach Wahl', effect: { allMul: 0.5 },
     names: ['Fundament', 'Mauern', 'Türme', 'Dächer', 'Säle', 'Einweihung'],
     phases: [{ min: 20, money: 150000, quader: 500 }, { min: 25, money: 200000, quader: 500, bretter: 300 }, { min: 30, money: 250000, metall: 400 },
              { min: 35, money: 300000, quader: 300, metall: 300 }, { min: 40, money: 400000, kristall: 200, bretter: 300 },
@@ -785,6 +786,10 @@ const OLD_WONDER_PHASES = {
 // Einkommen, nach dem sich Wunder-Preise richten: das beste bisher (state.incPeak, Block 37) – früh Aufstellen oder Läden
 // kurz Wegschieben macht sie nicht mehr billiger. Nach jedem bezahlten Abschnitt zieht der Preis nach (wonderStep).
 const wonderRate = () => Math.round(Math.max(T.inc + (T.salesInc || 0), state.incPeak || 0));
+// Preis nach Einkommen, mitwachsend aber gebremst (Block 63): bis zum Bezugseinkommen ref genau min Minuten (wie Block 37–61),
+// darüber wächst der Preis nur mit der Wurzel – doppeltes Einkommen ~30 % weniger Wartezeit, zehnfaches ~70 %.
+// Wer weniger verdient, wartet also nie länger als geplant; wer mehr verdient, kürzer.
+const incScaled = (min, ref, rate = wonderRate()) => { const r = Math.max(0, rate); return min > 0 ? min * 60 * Math.min(r, Math.sqrt(r * ref)) : 0; };
 const wonderBase = t => wonderRate();                                // Preisgrundlage einer Baustelle (t.rate nur noch zur Anzeige alter Stände)
 const niceRound = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.round(v / p) * p; };
 const niceFloor = v => { const p = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.floor(v / p) * p; };
@@ -793,10 +798,10 @@ function wonderCost(t, p = t.phase || 0) {
   if (!ph) return null;
   if (t.rate == null && T.inc > 0) t.rate = wonderRate();            // alte Baustellen: Einkommen von jetzt festhalten
   const { min, money, ...mat } = ph;
-  return { money: niceRound(Math.max(money, wonderBase(t) * 60 * min)), ...mat };
+  return { money: niceRound(Math.max(money, incScaled(min, WONDERS[t.b].ref, wonderBase(t)))), ...mat };
 }
 // Gesamtpreis eines Wunders (Baustelle + alle Abschnitte) nach dem jetzigen besten Einkommen – fürs Baumenü (Block 61)
-const wonderTotal = b => ITEMS[b].cost + WONDERS[b].phases.reduce((n, p) => n + niceRound(Math.max(p.money, wonderRate() * 60 * p.min)), 0);
+const wonderTotal = b => ITEMS[b].cost + WONDERS[b].phases.reduce((n, p) => n + niceRound(Math.max(p.money, incScaled(p.min, WONDERS[b].ref))), 0);
 // Was in die Baustelle schon geflossen ist (Abriss, Umzug); alte Stände ohne t.paid: nach den alten Preisen
 function wonderPaid(t) {
   if (t.paid) return { ...t.paid };

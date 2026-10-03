@@ -649,3 +649,16 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       `t.price` fürs Erstatten; alte Gebäude ohne Preis erstatten nach dem Grundpreis (`baseCost`).
 - [x] Wunder zeigen im Baumenü den ganzen Preis (`wonderTotal`: Baustelle + alle Abschnitte), das Infofenster erklärt es.
 
+## Block 62 – Bot-Messung (03.10.2026)
+- [x] `tools/sim-bots.js` + `tests/sim-bots.test.js` (nur mit `SIM=normal,spammer`): zwei Bots spielen im echten Spielcode bis
+      zum Fest. Ergebnis (Preise Block 61): normal 9 h 22, Spammer 4 h 13 – gespammt wird das Feld (20 Taler, abbezahlt in
+      20–30 s), nicht die Werkstatt. Entscheidung: keine Spam-Bremse (gemütliches Spiel, Spam ist hässlich und mühsam).
+
+## Block 63 – Preise mitwachsend, aber gebremst (03.10.2026)
+- [x] Alle Preise nach Einkommen über `incScaled(min, ref)`: bis zum Bezugseinkommen `ref` genau `min` Minuten (wie bisher),
+      darüber wächst der Preis nur mit der Wurzel – wer mehr verdient, wartet kürzer (doppelt ~30 %, zehnfach ~70 %), wer
+      weniger verdient, nie länger als geplant. `ref` = Einkommen des normalen Bots, wenn das Ding frei wird: Riesenrad 1.000,
+      Seebrücke 1.250, Sternwarte/Bot. Garten/Kristallhöhle 2.000, Schloss/Leuchtturm/Freizeitpark/Großbauten nach dem Fest 2.300;
+      Mitte: Hauptbahnhof 1.500, Uni 2.000, Möbelhaus 1.000, Kino/Hotel 1.200, Markthalle 1.250 (`INC_MIN`, `WONDERS[].ref`,
+      `LM_REF`, `LEUCHT_REF`, `FZ_REF`). Wunder-Infofenster nennt die Wartezeit beim eigenen Einkommen.
+

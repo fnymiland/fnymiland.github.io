@@ -85,9 +85,9 @@ describe('Wunderwerke', () => {
     const t = "state.tiles.get('8,8')";
     expect(game(`${t}.rate`)).toBe(2000);
     game('T.inc = 2000; T.salesInc = 0; state.incPeak = 0');
-    expect(game(`wonderCost(${t}, 0).money`)).toBe(game("niceRound(2000 * 60 * 12)"));   // 12 Minuten, gerundet
+    expect(game(`wonderCost(${t}, 0).money`)).toBe(game("niceRound(Math.sqrt(2000 * 1000) * 60 * 12)"));   // über dem Bezugseinkommen: gebremst (Block 63)
     game('T.inc = 99999');
-    expect(game(`wonderCost(${t}, 0).money`)).toBe(game('niceRound(99999 * 60 * 12)'));   // folgt dem besten Einkommen (Block 37)
+    expect(game(`wonderCost(${t}, 0).money`)).toBe(game('niceRound(Math.sqrt(99999 * 1000) * 60 * 12)'));   // folgt dem besten Einkommen, gebremst
     game(`T.inc = 5; state.incPeak = 0; ${t}.rate = 5`);
     expect(game(`wonderCost(${t}, 0).money`)).toBe(30000);                     // Sockel für kleine Einkommen
     expect(game(`wonderCost(${t}, 0).quader`)).toBeGreaterThanOrEqual(100);

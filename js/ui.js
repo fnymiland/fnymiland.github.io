@@ -216,6 +216,8 @@ const emojiPic = e => { const s = document.createElement('span'); s.className = 
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function shortMoney(n) { return n < 1e4 ? nf.format(n) : n < 1e6 ? `${nfShort.format(Math.floor(n / 100) / 10)} Tsd.` : `${nfShort.format(Math.floor(n / 1e5) / 10)} Mio.`; }
+// Dauer in Sekunden → „45 Min.“ / „2 Std. 10 Min.“ (Block 63)
+const fmtDuration = sec => { const m = Math.max(1, Math.round(sec / 60)); return m < 60 ? `${m} Min.` : `${Math.floor(m / 60)} Std.${m % 60 ? ` ${m % 60} Min.` : ''}`; };
 // Wunder: der ganze Preis (Baustelle + Abschnitte), nicht nur die Baustelle (Block 61)
 const cardPrice = id => id === 'abriss' || id === 'verschieben' ? '' : WONDERS[id] ? '🪙 ' + shortMoney(wonderTotal(id)) : ITEMS[id].cost ? '🪙 ' + shortMoney(ITEMS[id].cost) : 'gratis';
 // Kachel antippen: auswählen (nochmal: weglegen); iPad/Mac zeigen dazu rechts das Infofenster, das Handy ein ⓘ im Hinweis
@@ -289,7 +291,7 @@ function openBuildInfo(id) {
     ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(ud)}</div></div>${go ? `<div class="row"><button class="btn" id="p-unlock">${go.label}</button></div>` : ''}` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
-    ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann ${WONDERS[id].phases.length} Bauabschnitte – zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material (${WONDERS[id].phases.reduce((n, p) => n + p.min, 0)} Minuten deines besten Einkommens).</p>` : ''}
+    ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann ${WONDERS[id].phases.length} Bauabschnitte – zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material – bei deinem Einkommen etwa ${fmtDuration(wonderTotal(id) / Math.max(1, wonderRate()))}. Mehr Einkommen macht es schneller.</p>` : ''}
     <p class="muted">${d.desc}</p>
     ${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
     ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}

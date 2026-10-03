@@ -177,8 +177,8 @@ describe('Wunder-Preis nach dem besten Einkommen', () => {
     expect(game("build('riesenrad', 8, 8, true)")).toBe(true);
     game('T.inc = 1000; T.salesInc = 0; state.incPeak = 1000');
     const c0 = game("wonderCost(state.tiles.get('8,8')).money");
-    game('state.incPeak = 4000');
-    expect(game("wonderCost(state.tiles.get('8,8')).money")).toBeGreaterThan(c0 * 3);
+    game('state.incPeak = 4000');                                                  // Block 63: wächst mit der Wurzel – 4× Einkommen, 2× Preis
+    expect(game("wonderCost(state.tiles.get('8,8')).money")).toBeGreaterThan(c0 * 1.9);
   });
 
   it('das beste Einkommen sinkt langsam zum jetzigen (Halbwertszeit 20 min) – nicht, solange etwas getragen wird', () => {
@@ -209,18 +209,18 @@ describe('Wunder: alte Baustellen und Warenverkauf', () => {
 });
 
 describe('Letzte Schritte vor dem Fest nach Einkommen', () => {
-  it('Kristallhöhle Stufe 2/3 mindestens 25/60 Minuten, Leuchtturm 60 Minuten des besten Einkommens – fest als Untergrenze', () => {
+  it('Kristallhöhle Stufe 2/3 und Leuchtturm wachsen mit dem besten Einkommen (Wurzel, Block 63) – fest als Untergrenze', () => {
     game('T.inc = 0; T.salesInc = 0; state.incPeak = 0');
     expect(game("[lmPrice('kristall', 0), lmPrice('kristall', 1), lmPrice('kristall', 2)]")).toEqual(game('LM_PRICE.kristall'));
     expect(game('ITEMS.leuchtturm.cost')).toBe(15000000);
     game('state.incPeak = 20000');
-    expect(game("lmPrice('kristall', 1)")).toBe(game('niceRound(25 * 60 * 20000)'));
-    expect(game("lmPrice('kristall', 2)")).toBe(game('niceRound(60 * 60 * 20000)'));
+    expect(game("lmPrice('kristall', 1)")).toBe(game('niceRound(25 * 60 * Math.sqrt(20000 * 2000))'));
+    expect(game("lmPrice('kristall', 2)")).toBe(game('Math.max(25000000, niceRound(60 * 60 * Math.sqrt(20000 * 2000)))'));
     expect(game("lmPrice('kristall', 0)")).toBe(2000000);
     expect(game("lmPrice('quelle', 2)")).toBe(6000000);                       // andere Inseln bleiben fest
-    expect(game('ITEMS.leuchtturm.cost')).toBe(game('niceRound(60 * 60 * 20000)'));
+    expect(game('ITEMS.leuchtturm.cost')).toBe(game('niceRound(60 * 60 * Math.sqrt(20000 * 2300))'));
     game('state.restore.kristall = 1');
-    expect(game("restoreInfo('kristall').money")).toBe(game('niceRound(25 * 60 * 20000)'));
+    expect(game("restoreInfo('kristall').money")).toBe(game('niceRound(25 * 60 * Math.sqrt(20000 * 2000))'));
     game('state.incPeak = 0');
   });
 
@@ -229,8 +229,8 @@ describe('Letzte Schritte vor dem Fest nach Einkommen', () => {
     const card = () => document.querySelector('#tools [data-tool="leuchtturm"]');
     expect(card().querySelector('.cost').textContent).toBe('🪙 15 Mio.');
     game('state.incPeak = 20000; updateHud()');
-    expect(+card().dataset.cost).toBe(game('niceRound(60 * 60 * 20000)'));
-    expect(card().querySelector('.cost').textContent).toBe('🪙 72 Mio.');
+    expect(+card().dataset.cost).toBe(game('niceRound(60 * 60 * Math.sqrt(20000 * 2300))'));
+    expect(card().querySelector('.cost').textContent).toBe('🪙 24 Mio.');
     game('state.incPeak = 0');
   });
 });
