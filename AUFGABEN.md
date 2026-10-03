@@ -661,4 +661,6 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Seebrücke 1.250, Sternwarte/Bot. Garten/Kristallhöhle 2.000, Schloss/Leuchtturm/Freizeitpark/Großbauten nach dem Fest 2.300;
       Mitte: Hauptbahnhof 1.500, Uni 2.000, Möbelhaus 1.000, Kino/Hotel 1.200, Markthalle 1.250 (`INC_MIN`, `WONDERS[].ref`,
       `LM_REF`, `LEUCHT_REF`, `FZ_REF`). Wunder-Infofenster nennt die Wartezeit beim eigenen Einkommen.
+- [x] Kontroll-Messung: normal 8 h 57 (vorher 9 h 22), Spammer 3 h 40 (vorher 4 h 13). Bot reißt jetzt Felder an der Küste ab,
+      wenn kein Platz für den Leuchtturm ist.
 

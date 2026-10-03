@@ -95,7 +95,17 @@ function simRun(strategy, opts = {}) {
     }
     // 2. Leuchtturm → Fest
     if (lanternCount() >= ITEMS.leuchtturm.lanterns && available('leuchtturm') && state.money >= ITEMS.leuchtturm.cost) {
-      const a = plan('leuchtturm', 4000);
+      let a = plan('leuchtturm', 4000);
+      if (!a) {                                                   // Küste zugebaut: ein paar Felder/Fischer am Ufer abreißen
+        let n = 0;
+        for (const [x, y] of land) {
+          if (n >= 12) break;
+          const t = state.tiles.get(x + ',' + y);
+          if (t && (t.b === 'feld' || t.b === 'fischer') && DIRS.some(([dx, dy]) => isSea(x + dx, y + dy))) { demolish(x, y); n++; }
+        }
+        rebuildCover(); recalc();
+        a = plan('leuchtturm', 4000);
+      }
       if (a && state.money >= priceOf(a) && doActs(a)) { closeModal(); ev('fest', 'Leuchtturm'); return; }
       if (!out.lhTry) { out.lhTry = true; ev('leuchtturm-versuch', a ? 'Platz da' : 'kein Platz'); }
     }
