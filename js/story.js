@@ -390,6 +390,10 @@ function storyTick() {
 const checkStars = storyTick;   // alter Name, wird an vielen Stellen nach Änderungen aufgerufen
 
 // Ziel-Karte oben links: Einführung oder die nächsten Laternen
+// Aufgabe als Karte (Block 68): Symbol, Titel, was fehlt (mit Balken), rechts › bzw. „Los!“ – die ganze Karte ist antippbar
+function taskCard({ icon, title, sub = '', pct = null, ready = false, attr = '' }) {
+  return `<div class="task${ready ? ' ready' : ''}" ${attr}><span class="t-ic">${icon}</span><span class="t-main"><b>${title}</b>${sub ? `<span class="t-sub">${sub}</span>` : ''}${pct != null && !ready ? `<span class="t-bar"><i style="width:${Math.round(Math.max(0, Math.min(1, pct)) * 100)}%"></i></span>` : ''}</span><span class="t-go">${ready ? 'Los!' : '›'}</span></div>`;
+}
 function goalHtml() {
   const n = lanternCount();
   if (state.tutorial >= 0) {
@@ -401,12 +405,14 @@ function goalHtml() {
   const boosts = boostLines();
   if (state.festival) {                            // danach: das Schloss, Erfolge und Album
     const s = [...state.tiles.values()].find(t => t.b === 'schloss'), N = WONDERS.schloss.phases.length;
-    const line = !s ? '🏰 Bau das Schloss: 🎡 Freizeit → 🏛️ Wunder' : wonderDone(s) ? '👑 Dein Schloss steht!' : `🏰 Schloss: Abschnitt ${s.phase + 1} von ${N} – ${WONDERS.schloss.names[s.phase]}`;
+    const card = !s ? taskCard({ icon: '🏰', title: 'Bau das Schloss', sub: '🎡 Freizeit → 🏛️ Wunder', attr: 'data-castle="1"' })
+      : wonderDone(s) ? taskCard({ icon: '👑', title: 'Dein Schloss steht!', sub: 'Antippen: hinfliegen', attr: 'data-castle="1"' })
+      : taskCard({ icon: '🏰', title: `Schloss: Abschnitt ${s.phase + 1} von ${N}`, sub: WONDERS.schloss.names[s.phase], pct: s.phase / N, attr: 'data-castle="1"' });
     const all = ALBUM.flatMap(albumKeys), pct = Math.floor(all.filter(k => state.album.has(k)).length / all.length * 100);
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}<div class="req">${line}</div>${isleReq(nextIsle())}<div class="req"><small>⭐ ${starCount()} Erfolge · 📒 ${pct} % Album</small></div>`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}${card}${isleReq(nextIsle())}<div class="task-chips"><span class="chip" data-hall="erfolge">⭐ ${starCount()} Erfolge</span><span class="chip" data-album="1">📒 ${pct} % Album</span></div>`;
   }
   if (n >= ITEMS.leuchtturm.lanterns) {
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}<div class="req">🗼 Bau den Leuchtturm am Wasser – dann beginnt das Laternenfest!</div>`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}${taskCard({ icon: '🗼', title: 'Bau den Leuchtturm', sub: 'am Wasser – dann beginnt das Laternenfest!', pct: Math.min(1, state.money / ITEMS.leuchtturm.cost), ready: state.money >= ITEMS.leuchtturm.cost, attr: 'data-try="leuchtturm"' })}`;
   }
   // Laternen auf den schon erschlossenen Inseln, dazu immer die nächste Insel
   const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) }))
@@ -415,8 +421,9 @@ function goalHtml() {
   let html = `<h4>🏮 ${n} / ${LANTERN_TOTAL} · Nächste Laternen</h4>` + boosts + opts.slice(0, 2).map(({ type, info }) => {
     const parts = Object.entries(info.mat).map(([r, need]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], need))}/${need}`);
     if (info.money) parts.unshift(`🪙 ${fmt(Math.min(state.money, info.money))}/${fmt(info.money)}`);
-    const detail = info.err ? parts.join(' ') : '✨ bereit – antippen!';
-    return `<div class="req${info.err ? '' : ' done'}" data-lm="${type}">${lmStepName(type, info.stage + 1)}<br><small>${detail}</small></div>`;
+    const fr = [...(info.money ? [state.money / info.money] : []), ...Object.entries(info.mat).map(([r, need]) => state.res[r] / need)];
+    return taskCard({ icon: LANDMARKS[type].icon, title: `${LANDMARKS[type].name} → ${LM_STAGES[type][info.stage].name}`,
+      sub: info.err ? parts.join(' ') : '✨ bereit – antippen!', pct: fr.length ? Math.min(...fr) : null, ready: !info.err, attr: `data-lm="${type}"` });
   }).join('');
   return html + isleReq(nextIsle());
 }
@@ -427,7 +434,8 @@ function isleReq(i) {
   const detail = away ? `⛵ Boot unterwegs · zurück in ${fmtClock(expeditionLeft())}`
     : ok ? (stegs().length ? '✨ bereit – Boot losschicken!' : '✨ bereit – erst einen Steg bauen')
     : need.map(c => c.have != null ? `${c.ok ? '✓' : ''}${c.text.split(' ')[0]} ${fmt(Math.min(c.have, c.want))}/${fmt(c.want)}` : `${c.ok ? '✓' : ''}${c.text}`).join(' ');
-  return `<div class="req${ok || away ? ' done' : ''}" data-isle="${i.id}">🏝️ ${i.far ? 'Ferne Insel' : 'Nächste Insel'}: ${i.icon} ${i.name}<br><small>${detail}</small></div>`;
+  const fr = need.filter(c => c.have != null).map(c => c.have / c.want).concat(need.filter(c => c.have == null).map(c => c.ok ? 1 : 0));
+  return taskCard({ icon: away ? '⛵' : '🏝️', title: `${i.far ? 'Ferne Insel' : 'Nächste Insel'}: ${i.icon} ${i.name}`, sub: detail, pct: away ? 1 - expeditionLeft() / (expMinutes(i) * 60e3) : fr.length ? Math.min(...fr) : null, ready: ok && !away, attr: `data-isle="${i.id}"` });
 }
 
 // ---------------------------------------------------------------------------
@@ -766,11 +774,11 @@ function decreeHtml(now = Date.now()) {
 // Zeile für die Ziel-Karte: Jahrmarkt, Erlass
 function boostLines(now = Date.now()) {
   const out = [];
-  if (wonderOn('riesenrad')) out.push(fairLeft(now) > 0 ? `<div class="req done">🎡 Jahrmarkt! Einnahmen ×${FAIR_MUL} · noch ${fmtClock(fairLeft(now))}</div>`
-    : `<div class="req"><small>🎡 Nächster Jahrmarkt in ${fmtClock(fairNext(now))}</small></div>`);
+  if (wonderOn('riesenrad')) out.push(fairLeft(now) > 0 ? `<div class="task-note on">🎡 Jahrmarkt! Einnahmen ×${FAIR_MUL} · noch ${fmtClock(fairLeft(now))}</div>`
+    : `<div class="task-note">🎡 Nächster Jahrmarkt in ${fmtClock(fairNext(now))}</div>`);
   const d = decreeActive(now);
-  if (d) out.push(`<div class="req done">👑 ${DECREES[d.id].icon} ${DECREES[d.id].name} · noch ${fmtClock(d.until - now)}</div>`);
-  else if (decreeReady(now)) out.push('<div class="req done" data-decree="1">👑 Ein Erlass wartet – im Schloss wählen</div>');
+  if (d) out.push(`<div class="task-note on">👑 ${DECREES[d.id].icon} ${DECREES[d.id].name} · noch ${fmtClock(d.until - now)}</div>`);
+  else if (decreeReady(now)) out.push(taskCard({ icon: '👑', title: 'Ein Erlass wartet', sub: 'im Schloss wählen', ready: true, attr: 'data-decree="1"' }));
   return out.join('');
 }
 

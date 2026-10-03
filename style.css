@@ -247,7 +247,25 @@ html, body {
 #goal .bar { height: 6px; background: var(--cream2); border-radius: 99px; margin-top: 2px; overflow: hidden; }
 #goal .bar i { display: block; height: 100%; background: #f2b53a; border-radius: 99px; }
 #goal .req.done .bar i { background: var(--green); }
-#goal.small .req { display: none; }
+#goal.small .req, #goal.small .task, #goal.small .task-chips, #goal.small .task-note { display: none; }
+/* Aufgaben als Karten (Block 68): jede Aufgabe ein antippbares Modul */
+#goal .task { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 8px; background: #fff; border-radius: 12px;
+  box-shadow: 0 2px 0 var(--shadow); transition: transform .08s; }
+#goal .task:active { transform: translateY(2px); box-shadow: 0 0 0 var(--shadow); }
+#goal .t-ic { flex: 0 0 auto; width: 28px; height: 28px; border-radius: 9px; background: var(--cream2); display: grid; place-items: center; font-size: 16px; }
+#goal .t-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+#goal .t-main b { font-size: 12px; font-weight: 900; line-height: 1.2; }
+#goal .t-sub { font-size: 11px; font-weight: 700; color: var(--brown2); line-height: 1.25; }
+#goal .t-bar { height: 5px; background: var(--cream2); border-radius: 99px; margin-top: 3px; overflow: hidden; }
+#goal .t-bar i { display: block; height: 100%; background: #f2b53a; border-radius: 99px; }
+#goal .t-go { flex: 0 0 auto; font-size: 18px; font-weight: 900; color: var(--brown2); }
+#goal .task.ready { background: #eaf7e3; }
+#goal .task.ready .t-ic { background: #cdeebf; }
+#goal .task.ready .t-go { font-size: 11px; color: #fff; background: var(--green); border-radius: 99px; padding: 3px 9px; box-shadow: 0 2px 0 var(--green-d); }
+#goal .task-chips { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+#goal .task-chips .chip { font-size: 11px; font-weight: 800; background: var(--cream2); border-radius: 99px; padding: 3px 9px; box-shadow: 0 2px 0 var(--shadow); }
+#goal .task-note { font-size: 11px; font-weight: 800; color: var(--brown2); margin-top: 4px; }
+#goal .task-note.on { color: var(--green-d); }
 #goal.small h4 { margin: 0; }
 
 .cats { display: flex; gap: 6px; width: max-content; max-width: 100%; margin: 0 auto 4px; overflow-x: auto; scrollbar-width: none; padding-bottom: 3px; }

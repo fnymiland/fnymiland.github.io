@@ -440,6 +440,15 @@ $('goal').onclick = e => {
     if (sl) { const [x, y] = keyXY(sl[0]); jumpTo(x, y, 7, 7); openInfo(x, y); }
     return;
   }
+  if (e.target.closest('[data-castle]')) {                       // Schloss: hinfliegen bzw. im Menü zeigen (Block 68)
+    const sl = [...state.tiles].find(([, t]) => t.b === 'schloss');
+    if (sl) { const [x, y] = keyXY(sl[0]); jumpTo(x, y, 7, 7); openInfo(x, y); } else tryUnlock('schloss');
+    return;
+  }
+  const tr = e.target.closest('[data-try]');
+  if (tr) { tryUnlock(tr.dataset.try); return; }
+  if (e.target.closest('[data-hall]')) { setTool('look'); openTownHall(e.target.closest('[data-hall]').dataset.hall); return; }
+  if (e.target.closest('[data-album]')) { openAlbum(); return; }
   const isl = e.target.closest('[data-isle]');
   if (isl) { const i = ISLE_BY_ID[isl.dataset.isle], [x, y] = isleAnchor(i); jumpTo(x, y, 3, 3); openIsle(i.id); return; }
   goalSmall = !(goalSmall ?? PHONE); updateHud();

@@ -58,3 +58,16 @@ describe('Alles verschieben', () => {
     expect(game("state.tiles.get('9,8').lm")).toBe('ruine');
   });
 });
+
+describe('Aufgaben als Karten (Block 68)', () => {
+  it('jede Aufgabe ist eine antippbare Karte mit Symbol, Balken bzw. „Los!“', () => {
+    game('startNew()'); game('closeModal(); state.tutorial = -1; recalc()');
+    const html = game('goalHtml()');
+    expect(html).toContain('class="task');
+    expect(html).toContain('data-isle="wald"');
+    expect(html).toContain('class="t-ic"');
+    game("state.money = 1e6; state.res.holz = 999; state.islands.add('wald'); ownIsland('wald'); recalc()");
+    expect(game('goalHtml()')).toContain('data-lm="baum"');
+    expect(game('goalHtml()')).toContain('Los!');
+  });
+});

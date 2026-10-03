@@ -700,3 +700,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 66e Beim Herauszoomen fehlte die halbe Eisenbahnbrücke: Wege/Schienen kamen aus der Bodenkachel, die an ihrem Rand
       abschneidet – Geländer und Anhebung ragten darüber. Brücken (Schiene wie Weg) jetzt immer live (`cachedPath`).
 
+## Block 68 – Aufgabenliste als Karten (03.10.2026)
+- [x] Die Ziel-Karte oben links war eine Textliste. Jetzt ist jede Aufgabe ein antippbares Modul (`taskCard`): Symbol, Titel,
+      was fehlt mit Fortschrittsbalken, rechts › bzw. grünes „Los!“, wenn sie bereit ist. Laternen, Insel, Erlass, Schloss,
+      Leuchtturm; Erfolge und Album als kleine Knöpfe (öffnen Rathaus bzw. Album). Jahrmarkt/aktiver Erlass als Hinweiszeile.
+
