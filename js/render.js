@@ -740,7 +740,7 @@ function render(now) {
     if (preview && preview.small && hover.x === x && hover.y === y) {
       const [u, v] = slotPos(x, y, preview.slot, ghostType), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
-      drawSmallOne(ghostType, buildRot, q[0], q[1], z, now, x, y, 1, preview.slot);
+      drawSmallOne(ghostType, tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot), q[0], q[1], z, now, x, y, 1, preview.slot);   // wie es gesetzt wird (Block 69)
       g.globalAlpha = 1;
     }
     if (groupGhost && groupGhost.has(k)) {

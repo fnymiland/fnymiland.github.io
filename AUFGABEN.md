@@ -705,3 +705,7 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       was fehlt mit Fortschrittsbalken, rechts › bzw. grünes „Los!“, wenn sie bereit ist. Laternen, Insel, Erlass, Schloss,
       Leuchtturm; Erfolge und Album als kleine Knöpfe (öffnen Rathaus bzw. Album). Jahrmarkt/aktiver Erlass als Hinweiszeile.
 
+## Block 69 – Bank dreht sich beim Setzen (03.10.2026)
+- [x] Die Vorschau zeigte die Bank in der gewählten Drehung, gesetzt wurde sie in einer Seitenmitte aber automatisch längs zur
+      Seite. Jetzt eine Regel für beide (`smallRot`): von selbst längs zur Seite, außer man hat selbst gedreht (⟳/R/Mausrad).
+

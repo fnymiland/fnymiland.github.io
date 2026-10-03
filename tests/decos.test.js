@@ -178,3 +178,19 @@ describe('Außenkurve (Block 65b)', () => {
   });
 });
 
+
+describe('Bank: Vorschau = Ergebnis (Block 69)', () => {
+  it('in der Seitenmitte von selbst längs zur Seite – selbst gedreht bleibt die eigene Drehung', () => {
+    game("setTool('bank'); state.money = 1e4; state.res.bretter = 99");
+    expect(game('smallRot("bank", 7)')).toBe(game('midRot(7)'));
+    expect(game("buildSmall('bank', 5, 5, 7)")).toBe(true);
+    expect(game("state.decos.get('5,5')[7].rot")).toBe(game('midRot(7)'));
+    game('rotateBuild(); rotateBuild()');                                              // selbst gedreht (⟳)
+    const want = game('buildRot');
+    expect(game('rotManual')).toBe(true);
+    expect(game('smallRot("bank", 6)')).toBe(want);
+    expect(game("buildSmall('bank', 6, 5, 6)")).toBe(true);
+    expect(game("state.decos.get('6,5')[6].rot")).toBe(want);
+    game("setTool('look')");
+  });
+});

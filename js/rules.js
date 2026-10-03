@@ -1095,6 +1095,9 @@ function freeSlot(x, y, slot) {
 // Bank in einer Seitenmitte: längs zur Feldseite, der Sitz schaut zur Feldmitte (zum Weg), egal wie gerade gedreht wird
 const MID_FACE = { 4: 0, 5: 3, 6: 2, 7: 1 }, MID_TURN = new Set(['bank']);
 const midRot = slot => MID_FACE[slot];
+// Drehung kleiner Deko beim Setzen – Vorschau und Bauen nutzen dieselbe (Block 69): Bank in einer Seitenmitte von selbst längs
+// zur Seite, außer man hat selbst gedreht (⟳/Mausrad/R) – dann bleibt die eigene Drehung
+const smallRot = (b, slot) => slot >= 4 && slot < 8 && MID_TURN.has(b) && !rotManual ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0;
 function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
@@ -1103,7 +1106,7 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: slot >= 4 && MID_TURN.has(b) ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0, born: performance.now() };
+  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now() };
   sfx('deco');
   recalc(); checkStars(); save();
   return true;
