@@ -101,4 +101,12 @@ describe('Wegbrücken (Block 66)', () => {
     expect(game('state.money')).toBe(m - 3 * game('ITEMS.weg.cost'));
     expect(game("state.tiles.get('6,5').style")).toBe('asphalt');                     // Weg an Land bleibt
   });
+
+  it('weit weg: Brücken (Weg und Schiene) kommen nie aus der Bodenkachel – sonst würden sie am Rand abgeschnitten (66e)', () => {
+    line('sand', { x: 5, y: 5 }, { x: 11, y: 5 });
+    expect(game("cachedPath(state.tiles.get('8,5'))")).toBe(false);
+    expect(game("cachedPath(state.tiles.get('6,5'))")).toBe(true);                    // normaler Weg schon
+    expect(game("cachedPath({ b: 'schiene', bridge: true })")).toBe(false);
+    expect(game("cachedPath({ b: 'schiene' })")).toBe(true);
+  });
 });

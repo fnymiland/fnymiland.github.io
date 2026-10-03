@@ -697,4 +697,6 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 ## Block 67 – Linien zählen als Deko (03.10.2026)
 - [x] Wunsch „Deko in der Nähe“ der Häuser: auch eine Hecke, ein Zaun oder eine Mauer an einem Feld bis 2 Felder ums Haus
       erfüllt ihn (`wishMet('deko')`), Wunschtext sagt es.
+- [x] 66e Beim Herauszoomen fehlte die halbe Eisenbahnbrücke: Wege/Schienen kamen aus der Bodenkachel, die an ihrem Rand
+      abschneidet – Geländer und Anhebung ragten darüber. Brücken (Schiene wie Weg) jetzt immer live (`cachedPath`).
 
