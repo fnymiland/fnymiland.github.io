@@ -709,3 +709,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Die Vorschau zeigte die Bank in der gewählten Drehung, gesetzt wurde sie in einer Seitenmitte aber automatisch längs zur
       Seite. Jetzt eine Regel für beide (`smallRot`): von selbst längs zur Seite, außer man hat selbst gedreht (⟳/R/Mausrad).
 
+## Block 70 – zu grelles Nachtlicht (03.10.2026)
+- [x] Viele Fenster dicht beieinander (Reihenhäuser) stanzten ihre Lichtflecken übereinander durch die Nacht und wurden
+      taghell. Jetzt zählt `punchGlow` je Bildschirm-Zelle (`glowCells`, jedes Bild neu): jeder weitere Schein ist schwächer und
+      kleiner; die Fensterscheiben selbst bleiben hell.
+

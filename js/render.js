@@ -492,7 +492,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = forcedHour != null ? nightLevel(clockNow()) : nightAt(performance.now());
-  glows.length = 0;
+  glows.length = 0; glowCells.clear();
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = z < SPRITE_FROM && isLive();

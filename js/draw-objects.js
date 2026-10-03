@@ -20,14 +20,20 @@ function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leu
   punchGlow(q, r, tint);
 }
 // Licht in Bildschirm-Punkten (q) ins Bild stanzen und für die Nacht merken
+// Viele Fenster dicht beieinander (Reihenhäuser, Schloss) stanzen sich gegenseitig durch und werden taghell (Block 70):
+// je Bildschirm-Zelle zählt der Schein mit; jeder weitere wird schwächer, die Fensterscheiben selbst bleiben hell
+const glowCells = new Map();
 function punchGlow(q, r, tint) {
   const strength = night / NIGHT_MAX, blue = tint === 'blue';
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+  const cell = Math.round(gx / 24) + ',' + Math.round(gy / 24), n = glowCells.get(cell) || 0;
+  glowCells.set(cell, n + 1);
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
-  g.globalAlpha = 0.45 * strength;
-  g.drawImage(glowImage(blue), gx - r, gy - r, r * 2, r * 2);
+  const rr = n ? r * 0.7 : r;
+  g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
+  g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
   if (!blue) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
   g.restore();
   glows.push({ q, r, tint });               // große Gebäude (Streifen) tragen es mehrfach ein – drawNight fasst zusammen
