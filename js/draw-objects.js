@@ -601,9 +601,9 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     g.stroke();
   };
   const parapet = b => { for (const q of strip(b - 0.03, b + 0.03, 0)) poly(q, C(shade(B.rail, -0.05))); for (const q of strip(b - 0.03, b + 0.03, 2.5)) poly(q, C(B.rail)); };
-  // hinten: Pfähle bzw. Brüstung der fernen Seite
-  if (!B.wall) posts(-hw + 0.04, B.side); else parapet(-hw);
-  if (!B.wall) railing(-hw + 0.03);
+  // hinten: Pfähle bzw. Brüstung der fernen Seite; Holz: auch die vorderen Pfähle schon jetzt – der Belag deckt ihr oberes
+  // Ende, sie stehen also unter der Brücke statt davor
+  if (!B.wall) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); posts(hw - 0.1, B.side); } else parapet(-hw);
   // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
   if (B.wall) {
     for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
@@ -621,7 +621,7 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     g.strokeStyle = C(B.plank); g.lineWidth = 0.7 * z; g.beginPath();
     for (let a = -0.45; a < 0.5; a += 0.12) { const p0 = P(a, -hw, H(a)), p1 = P(a, hw, H(a)); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
     g.stroke();
-    posts(hw - 0.04, B.side);
+    for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, H(a0) - 1.6), P(a1, hw, H(a1) - 1.6), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, 0.05))); }   // Randbalken vorn
   }
   // vorn: Brüstung bzw. Geländer
   if (B.wall) parapet(hw); else railing(hw - 0.03);
