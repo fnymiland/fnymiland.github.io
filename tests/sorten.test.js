@@ -29,7 +29,7 @@ describe('Wohnhäuser', () => {
 
 describe('Brunnen und Parks', () => {
   it('„Park oder Brunnen in der Nähe“: auch Kristallbrunnen und Botanischer Garten', () => {
-    for (const b of ['brunnen', 'kristallbrunnen', 'park', 'botgarten']) {
+    for (const b of ['brunnen', 'kristallbrunnen', 'botgarten']) {
       game("for (const k of ['12,12']) state.tiles.delete(k)");
       game(`state.tiles.set('12,12', { b: '${b}', lvl: 1, rot: 0, phase: 99 }); recalc()`);
       expect([b, game("wishMet('park', 10, 10)")]).toEqual([b, true]);

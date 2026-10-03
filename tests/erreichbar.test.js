@@ -34,9 +34,9 @@ describe('per Weg (selbes Viertel)', () => {
   it('Schönheit und Wasser zählen nur vor Ort', () => {
     put('5,5', { b: 'haus', lvl: 3 });
     path(5, 20, 6);
-    put('18,7', { b: 'park', lvl: 1 });
+    put('18,7', { b: 'brunnen', lvl: 1 });
     for (let i = 0; i < 6; i++) game(`state.decos.set('${14 + i},5', [{ b: 'blumentopf' }, null, null, null])`);
-    expect(wish('park', 5, 5).ok).toBe(true);                     // Park ist Versorgung
+    expect(wish('park', 5, 5).ok).toBe(true);                     // Brunnen (Park-Wunsch) ist Versorgung
     expect(wish('schoen', 5, 5).ok).toBe(false);                  // Schönheit nicht
   });
 

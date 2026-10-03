@@ -311,7 +311,7 @@ function legacyUnlocks(d) {
   if (techs.has('garten')) out.push('brunnen');
   if (techs.has('pflasterkunst')) out.push('weg:kopf');
   // Gebäude, die schon stehen, dürfen auch weiter gebaut werden
-  for (const [, t] of d.tiles || []) if (['saege', 'steinmetz', 'schmiede', 'obst', 'mine', 'park', 'windrad'].includes(t.b)) out.push(t.b);
+  for (const [, t] of d.tiles || []) if (['saege', 'steinmetz', 'schmiede', 'obst', 'mine', 'windrad'].includes(t.b)) out.push(t.b);
   return [...new Set(out)];
 }
 

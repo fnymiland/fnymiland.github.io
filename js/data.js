@@ -96,9 +96,6 @@ const ITEMS = {
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
-  // alt (vor Block 44): nicht mehr im Menü, wird beim Laden zu Parkrasen mit Deko
-  park:    { cat: 'deko', old: true, name: 'Park', lm: 'baum:2', size: [3, 3], cost: 300, needs: 'grass', beauty: 30, mat: { bretter: 2 },
-             desc: 'Eine grüne Oase mit Teich, Bäumen und Bänken. Belegt 3×3 Felder.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:1', cost: 20, mat: { kristall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
   kristallaterne: { cat: 'deko', name: 'Kristall-Laterne', lm: 'kristall:2', cost: 60, mat: { kristall: 1, metall: 1 }, beauty: 6, small: true,
              desc: 'Leuchtet nachts hellblau. Klein – bis zu 4 pro Feld.' },
@@ -448,7 +445,7 @@ const SHIP_BY_ID = Object.fromEntries(SHIP_MODELS.map(m => [m.id, m])), TRAIN_BY
 const KINDS = {
   haus:    { name: 'Wohnhaus', plural: 'Wohnhäuser', of: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
   brunnen: { name: 'Brunnen', plural: 'Brunnen', of: ['brunnen', 'kristallbrunnen'] },
-  park:    { name: 'Park', plural: 'Parks', of: ['park', 'botgarten'] },
+  park:    { name: 'Park', plural: 'Parks', of: ['botgarten'] },     // dazu Parkrasen (parkReach); der alte Park (3×3) ist seit Block 64 weg
   markt:   { name: 'Marktplatz', plural: 'Marktplätze', of: ['stand_obst', 'stand_blumen', 'stand_brot', 'stand_kaese', 'stand_fisch', 'stand_gewuerz'] },
   statue:  { name: 'Statue', plural: 'Statuen', of: ['statue', 'denkmal'] },
   laden:   { name: 'Laden', plural: 'Läden', of: Object.keys(SHOPS).filter(id => (SHOPS[id].cat || 'laden') === 'laden') },
@@ -648,7 +645,6 @@ const ITEM_TIPS = {
   bank: 'Kleine Deko für eine Ecke, gern an den Weg oder vors Haus.',
   laterne: 'Kleine Deko, leuchtet nachts – schön entlang der Wege.',
   brunnen: 'Stadthäuser wünschen sich einen Park oder Brunnen in der Nähe.',
-  park: 'Viel Schönheit auf 3×3 Feldern. Erfüllt den Park-Wunsch der Stadthäuser.',
   kristall: 'Kleine leuchtende Deko für eine Ecke.',
   kristallaterne: 'Kleine Deko, leuchtet nachts hellblau.',
   glaskugel: 'Kleine schillernde Deko für eine Ecke.',
@@ -745,7 +741,7 @@ const LM_STAGES = {
   baum: [
     { name: 'Freischneiden', cost: { money: 50, holz: 10 }, unlock: ['saege'],
       diary: 'Unter diesem Baum haben wir jeden Sommer getanzt. Schön, dass wieder jemand hier ist. Im Wald liegt bestimmt noch meine alte Säge …' },
-    { name: 'Bank-Ring', cost: { money: 150, bretter: 8 }, unlock: ['park', 'weg:platten'],
+    { name: 'Bank-Ring', cost: { money: 150, bretter: 8 }, unlock: ['parkrasen', 'weg:platten'],
       diary: 'Auf diesen Bänken wurde früher der neueste Klatsch verteilt. Und die besten Äpfel.' },
     { name: 'Lichterkette', cost: { money: 400, metall: 3 }, unlock: [],
       diary: 'Die Lichter im Baum waren das Erste, was man vom Meer aus sah – noch vor dem Leuchtturm.' },

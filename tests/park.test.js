@@ -118,8 +118,8 @@ describe('Spaziergänger', () => {
 
 describe('Alte Parks', () => {
   it('ein alter 3×3-Park wird beim Laden Parkrasen mit Brunnen, Bäumen und Bänken – und ist gleich ein „Park“', () => {
-    game("state.tiles.set('10,10', { b: 'park', lvl: 1 }); recalc()");
     const d = game('JSON.parse(JSON.stringify(serialize()))');
+    d.tiles.push(['10,10', { b: 'park', lvl: 1 }]);                               // alter Spielstand (den Park gibt es nicht mehr, Block 64)
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
     expect(game("state.tiles.has('10,10')")).toBe(false);
     expect(game("state.tiles.get('11,11').b")).toBe('brunnen');
@@ -137,5 +137,16 @@ describe('Parkrasen im Wald', () => {
     expect(game("terraLook(10, 10)")).toBe('park');
     expect(game("state.decos.get('10,10').filter(d => d && d.b === 'baum').length")).toBeGreaterThan(0);
     expect(game("placeError('parkrasen', 12, 10)")).toMatch(/Fels/);
+  });
+});
+
+describe('Nichts Unbaubares (Block 64)', () => {
+  it('alles, was „Neu freigeschaltet“ zeigen kann, steht auch im Baumenü – der alte Park ist ganz weg', () => {
+    const missing = game(`Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && id !== 'verschieben' && id !== 'abriss'
+      && !MENU.some(m => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id)))`);
+    expect(missing).toEqual([]);
+    expect(game("'park' in ITEMS")).toBe(false);
+    game("state.restore.baum = 2");
+    expect(game("[...unlockKeys()]")).toContain('parkrasen');
   });
 });

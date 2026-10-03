@@ -664,3 +664,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Kontroll-Messung: normal 8 h 57 (vorher 9 h 22), Spammer 3 h 40 (vorher 4 h 13). Bot reißt jetzt Felder an der Küste ab,
       wenn kein Platz für den Leuchtturm ist.
 
+## Block 64 – alter Park gelöscht (03.10.2026)
+- [x] Der alte 3×3-Park (`old: true`) tauchte nach „Bank-Ring“ im Fenster „Neu freigeschaltet“ auf und ließ sich wählen, aber
+      nicht bauen. Jetzt ganz weg (Eintrag, Zeichnung, Tipp); die Laterne schaltet Parkrasen frei. Alte Spielstände wandeln
+      ihn beim Laden weiter in Parkrasen mit Brunnen um. Test: alles, was freigeschaltet werden kann, steht im Baumenü.
+

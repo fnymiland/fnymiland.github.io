@@ -40,7 +40,7 @@ describe('Kanten', () => {
   });
 
   it('nicht mitten durch ein Gebäude, nicht fremdes Land', () => {
-    game("state.tiles.set('10,10', { b: 'park', lvl: 1 }); recalc()");            // 3×3: 10–12
+    game("state.tiles.set('10,10', { b: 'theater', lvl: 1 }); recalc()");         // 3×3: 10–12
     expect(game("edgeError('zaun', 'b11,10')")).toBe('Nicht mitten durch ein Gebäude');
     expect(game("edgeError('zaun', 'b10,10')")).toBe(null);                    // am Rand geht
     expect(game("edgeError('zaun', 'a500,500')")).toBe('Das ist nicht dein Grundstück');

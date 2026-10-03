@@ -688,33 +688,6 @@ const BIG_ART = {
     K.scene([[-0.45, 0, hall], [0.5, 0, steps], [0.95, -0.55, lamp(-0.55)], [0.95, 0.55, lamp(0.55)], [1.05, 0.95, fountain], [1.15, -1.1, flag],
       [-1.3, 1.3, () => kitBush(K, -1.3, 1.3, 0.9)], [-1.3, -1.3, () => kitBush(K, -1.3, -1.3, 0.8, '#62b85a')], [1.25, 1.35, () => kitBush(K, 1.3, 1.35, 0.7, '#f28cb1')]]);
   },
-  park(cx, cy, z, now, x, y, lvl, t, hu, hv) {
-    const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-    const F = (u, v) => L([u, v]);
-    const [px2, py2] = F(-hu * 0.45, hv * 0.45);
-    if (groundPart(() => {
-      groundRect(cx, cy, z, hu * 0.98, hv * 0.98, '#8fd16a');
-      poly([[-hu * 0.98, -0.12], [hu * 0.98, -0.12], [hu * 0.98, 0.12], [-hu * 0.98, 0.12]].map(L), C('#eadbb2'));
-      poly([[-0.12, -hv * 0.98], [0.12, -hv * 0.98], [0.12, hv * 0.98], [-0.12, hv * 0.98]].map(L), C('#eadbb2'));
-      ellipse(px2, py2, 24 * z, 11 * z, C('#5fb8cf'));
-      ellipse(px2, py2 - 1 * z, 22 * z, 9.6 * z, C('#74d0e6'));
-      ellipse(px2 - 6 * z, py2 - 2.5 * z, 7 * z, 2.6 * z, C('#b8ecf6'));
-      for (let i = 0; i < 18; i++) {
-        const u = (hash(x, y, 300 + i) - 0.5) * 1.7 * hu, v = (hash(x, y, 320 + i) - 0.5) * 1.7 * hv;
-        if (Math.abs(u) < 0.2 || Math.abs(v) < 0.2 || Math.hypot(u + hu * 0.45, v - hv * 0.45) < 0.7) continue;
-        const [fx, fy] = F(u, v);
-        circle(fx, fy, 1.8 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
-      }
-    })) return;
-    const dx = Math.sin(now / 1800) * 6 * z;                 // Ente auf dem Teich
-    ellipse(px2 + dx, py2 + 1 * z, 2.2 * z, 1.4 * z, C('#fffaf0')); circle(px2 + dx + 1.8 * z, py2 - 0.8 * z, 1.2 * z, C('#fffaf0'));
-    const pass = PASS; PASS = null;
-    const bench = (u, v, rot) => { const [bx2, by2] = F(u, v); g.save(); g.translate(bx2, by2); g.scale(0.6, 0.6); drawObject('bank', 0, 0, z, now, x, y, 1, { rot }); g.restore(); };
-    const parts = [[-1.05, -1.05], [0.35, -1.1], [1.05, -0.4], [1.1, 0.85], [-1.1, -0.15]].map(([u, v], i) => [u + v, () => { const [tx, ty] = F(u, v); tree(tx, ty + 2 * z, z * 0.95, hash(x, y, i * 7) + 0.3); }]);
-    parts.push([0.9, () => bench(0.5, 0.4, 1)], [-0.85, () => bench(-0.4, -0.45, 0)]);
-    parts.sort((p, q) => p[0] - q[0]).forEach(p => p[1]());
-    PASS = pass;
-  },
 
 };
 
@@ -936,7 +909,7 @@ function drawTorArch(cx, cy, z, x, y, t, H, now) {
 // Freizeitpark-Farben (Block 60e): Fassade/Dach aus WALLS/ROOFS, Fenster aus WIN_COLS – sonst die Grundfarbe
 const fzCol = (t, kind, def) => !t || t[kind] == null ? def : (kind === 'wall' ? WALLS : kind === 'roof' ? ROOFS : WIN_COLS)[t[kind]] || def;
 const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
-  'rathaus', 'hafen', 'schule', 'uni', 'park', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
+  'rathaus', 'hafen', 'schule', 'uni', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
   'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_schloss', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
@@ -958,7 +931,7 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
-const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'park', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
+const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
 const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 // Marktstand (Block 39): Theke mit Waren, gestreifte Markise auf zwei Pfosten, Lichterkette (nachts an)
 function drawStand(type, cx, cy, z, now, x, y, t) {
