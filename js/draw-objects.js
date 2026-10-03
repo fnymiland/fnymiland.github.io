@@ -576,7 +576,65 @@ function lineFill(x, y, arms, w) {
   out.sides = DIRS.some(side);                                    // Linie an einer Seite: Weg gerade bis an sie (sonst bleibt die Kurve rund)
   return out;
 }
+// Wegbrücke (Block 66): gerade über das Wasser, leicht angehoben, an Land-Enden eine kurze Rampe. Art nach Wegstil
+// (bridgeKind): Holzsteg (Pfähle, Planken, Geländer), Steinbogen und Ziegelbrücke (Seitenwand mit Bogen, Brüstung,
+// Belag wie der Weg), rote Bogenbrücke (höher, rote Pfosten und Geländer).
+const BRIDGE_LOOK = {
+  holz:   { lift: 3, side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238' },
+  stein:  { lift: 7, side: '#d9d2c3', wall: true, rail: '#cfc6b4' },
+  ziegel: { lift: 7, side: '#b5654a', wall: true, rail: '#c97a5e' },
+  rot:    { lift: 8, side: '#a8392f', deck: '#c79a6a', plank: '#9a7048', rail: '#d9483b' },
+};
+function drawWegBridge(cx, cy, z, x, y, t) {
+  const arms = pathArms(x, y), ax = arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);   // 0: längs u, 1: längs v
+  const P = (a, b, h = 0) => { const [u, v] = ax ? [b, a] : [a, b]; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z]; };
+  const B = BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz, hw = EDGE_W, LIFT = B.lift;
+  const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
+  const H = a => Math.max(0, Math.min(LIFT, land(1) && a > 0.2 ? LIFT * (0.5 - a) / 0.3 : LIFT, land(-1) && a < -0.2 ? LIFT * (a + 0.5) / 0.3 : LIFT));
+  const AS = [-0.5, -0.2, 0.2, 0.5];
+  const strip = (b0, b1, dh = 0) => AS.slice(0, -1).map((a, i) => [P(a, b0, H(a) + dh), P(AS[i + 1], b0, H(AS[i + 1]) + dh), P(AS[i + 1], b1, H(AS[i + 1]) + dh), P(a, b1, H(a) + dh)]);
+  const posts = (b, col) => { for (const a of [-0.3, 0.3]) { const p0 = P(a, b, -1), p1 = P(a, b, H(a)); g.fillStyle = C(col); g.fillRect(p0[0] - 1 * z, p1[1], 2 * z, p0[1] - p1[1] + 1 * z); } };
+  const railing = b => {                                                // Pfosten und Handlauf
+    g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath();
+    AS.forEach((a, i) => { const p = P(a, b, H(a) + 4.5); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+    for (const a of [-0.4, 0, 0.4]) { const p0 = P(a, b, H(a)), p1 = P(a, b, H(a) + 4.5); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
+    g.stroke();
+  };
+  const parapet = b => { for (const q of strip(b - 0.03, b + 0.03, 0)) poly(q, C(shade(B.rail, -0.05))); for (const q of strip(b - 0.03, b + 0.03, 2.5)) poly(q, C(B.rail)); };
+  // hinten: Pfähle bzw. Brüstung der fernen Seite
+  if (!B.wall) posts(-hw + 0.04, B.side); else parapet(-hw);
+  if (!B.wall) railing(-hw + 0.03);
+  // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
+  if (B.wall) {
+    for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
+    const arch = []; for (let k = 0; k <= 12; k++) { const a = -0.3 + 0.6 * k / 12; arch.push(P(a, hw, -1 + (LIFT - 2.5) * Math.sqrt(Math.max(0, 1 - (a / 0.3) ** 2)))); }
+    poly(arch, 'rgba(35,70,95,0.55)');
+  }
+  // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
+  const deck = strip(-hw, hw);
+  if (B.wall) {
+    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id] || {};
+    for (const q of deck) poly(q, C(lk.fill || '#dcc69d'));
+    for (const q of strip(-hw, -hw + 0.05)) poly(q, C(lk.edge || shade(lk.fill || '#dcc69d', -0.18)));
+  } else {
+    for (const q of deck) poly(q, C(B.deck));
+    g.strokeStyle = C(B.plank); g.lineWidth = 0.7 * z; g.beginPath();
+    for (let a = -0.45; a < 0.5; a += 0.12) { const p0 = P(a, -hw, H(a)), p1 = P(a, hw, H(a)); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
+    g.stroke();
+    posts(hw - 0.04, B.side);
+  }
+  // vorn: Brüstung bzw. Geländer
+  if (B.wall) parapet(hw); else railing(hw - 0.03);
+  // offenes Ende (z. B. ins Meer): sichtbare Stirnseite zu, Geländer quer
+  const [ex, ey] = ax ? [0, 1] : [1, 0];
+  if (!wegLike(x + ex, y + ey)) {
+    const h = H(0.5);
+    if (B.wall) { poly([P(0.5, -hw, -1), P(0.5, hw, -1), P(0.5, hw, h), P(0.5, -hw, h)], C(shade(B.side, -0.2))); poly([P(0.5, -hw, h), P(0.5, hw, h), P(0.5, hw, h + 2.5), P(0.5, -hw, h + 2.5)], C(B.rail)); }
+    else { g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath(); const p0 = P(0.47, -hw, h + 4.5), p1 = P(0.47, hw, h + 4.5); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
+  }
+}
 function drawPath(cx, cy, z, x, y, t) {
+  if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
   const arms = pathArms(x, y);

@@ -62,6 +62,19 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     rebuildCover(); recalc(); put(X + 5, Y + 1, curveSlot(X + 5, Y + 1).slot, 'laterne');   // mittig an der Außenkurve (Block 65b)
     recalc(); })()`);
   console.log('Laternen-Strecke', JSON.stringify(lp));
+  // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
+  const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;
+    for (let j = 0; j < 10 && ok; j++) for (let i = 0; i < 11 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || isSea(x + i, y + j) || terrainAt(x + i, y + j) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz' || state.decos.get(k)) ok = false; }
+    if (ok) return [x, y]; } })()`);
+  game(`(() => { const [X, Y] = ${JSON.stringify(rv)}; state.money = 1e12;
+    for (let y = Y; y < Y + 10; y++) for (let x = X; x < X + 11; x++) state.terra.set(x + ',' + y, x >= X + 4 && x <= X + 6 ? 'water' : 'grass');
+    waterChanged(); sandCache.clear(); landCache.clear(); rebuildCover(); recalc();
+    const line = (style, y, kind) => { chosenStyle.weg = style; setTool('weg'); startPlan('line', { x: X + 1, y }, { x: X + 9, y }, false); planScan(plan); runPlan(); if (kind) for (let x = X + 4; x <= X + 6; x++) setBridgeKind(x, y, kind); };
+    line('sand', Y + 1); line('asphalt', Y + 3); line('klinker', Y + 5); line('sand', Y + 7, 'rot');
+    const c = (() => { for (let y = -60; y < 60; y++) for (let x = -60; x < 60; x++) if (ownedTile(x, y) && terrainAt(x, y) === 'grass' && !COVER.has(x + ',' + y) && !state.terra.get(x + ',' + y) && [1, 2, 3].every(i => isSea(x + i, y) && !ownedTile(x + i, y))) return [x, y]; })();
+    if (c) { chosenStyle.weg = 'asphalt'; startPlan('line', { x: c[0], y: c[1] }, { x: c[0] + 3, y: c[1] }, false); planScan(plan); runPlan(); }
+    setTool('look'); rebuildCover(); recalc(); })()`);
+  console.log('Brücken', JSON.stringify(rv), game("[...state.tiles.values()].filter(t => t.bridge && t.b === 'weg').length"));
   game('rebuildCover(); recalc()');
   const st = game('computeFz().map(p => [p.tiles.length, p.rides, p.stage])'), coasters = game('COASTERS.length');
   const d = game('JSON.parse(JSON.stringify(serialize()))');

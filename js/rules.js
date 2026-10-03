@@ -840,7 +840,7 @@ function removeEdge(k) {
 // übrigen Felder t.wegs['dx,dy']). Gebäude dagegen ersetzen den Weg (Taler zurück, Rückgängig holt ihn wieder).
 const plazaOk = b => !!STANDS[b] || (ITEMS[b].cat === 'deko' && !ITEMS[b].small && !ITEMS[b].edge && !ITEMS[b].paint && !ITEMS[b].old);
 const PLAZA_OK = { has: plazaOk };                                     // (alter Name)
-const plainWeg = k => { const t = state.tiles.get(k); return !!t && t.b === 'weg' && !t.cross; };
+const plainWeg = k => { const t = state.tiles.get(k); return !!t && t.b === 'weg' && !t.cross && !t.bridge; };   // Brücke: kein Platz für Stände/Gebäude
 const plazaSpot = (b, x, y) => plazaOk(b) && plainWeg(x + ',' + y);
 // Wege, die ein Ding an (x, y) überdecken würde: [[fx, fy, Stil], …]
 const pathsUnder = (b, x, y, rot, t) => footprint(b, x, y, rot || 0, t).filter(([fx, fy]) => plainWeg(fx + ',' + fy)).map(([fx, fy]) => [fx, fy, state.tiles.get(fx + ',' + fy).style || 'sand']);
@@ -1204,7 +1204,49 @@ function placeRot(b, x, y) {
 
 // Schienen über Wasser sind Brücken und kosten mehr
 const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
-const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
+// Wegbrücken (Block 66): ein Weg übers Wasser wird von selbst zur Brücke – über eigene Teiche, Flüsse, Seen beliebig lang,
+// ins Meer höchstens BRIDGE_SEA Felder vor die Küste. Nur gerade (keine Kurven/Abzweige auf dem Wasser), und sie wächst
+// vom Ufer aus (ein Nachbar ist schon Weg oder Brücke). Aussehen nach Wegstil (bridgeKind), im Fenster umstellbar (t.brk).
+const BRIDGE_SEA = 3;
+const WEG_BRIDGE = {
+  holz:   { name: 'Holzsteg', icon: '🪵', cost: 30, mat: { bretter: 2 } },
+  stein:  { name: 'Steinbogen', icon: '🌉', cost: 60, mat: { quader: 2 } },
+  ziegel: { name: 'Ziegelbrücke', icon: '🧱', cost: 60, mat: { quader: 2 } },
+  rot:    { name: 'Rote Bogenbrücke', icon: '⛩️', cost: 80, mat: { bretter: 2, metall: 1 } },
+};
+const BRIDGE_OF_STYLE = { sand: 'holz', mulch: 'holz', tritt: 'holz', kopf: 'ziegel', klinker: 'ziegel', terrakotta: 'ziegel', fisch: 'ziegel', blueten: 'ziegel' };   // sonst Stein
+const bridgeKind = t => (t && t.brk) || BRIDGE_OF_STYLE[(t && t.style) || 'sand'] || 'stein';
+const isWegBridge = t => !!t && t.b === 'weg' && !!t.bridge;
+let PLANNED = null;                                          // beim Ziehen (planScan): Felder, die der Plan schon baut
+const isBridgeAt = (x, y) => isWegBridge(state.tiles.get(x + ',' + y)) || (!!PLANNED && PLANNED.has(x + ',' + y) && terrainAt(x, y) === 'water');
+const wegLike = (x, y) => { const t = state.tiles.get(x + ',' + y); return (!!t && (t.b === 'weg' || isCrossing(t) || t.b === 'rathaus')) || (!!PLANNED && PLANNED.has(x + ',' + y)); };
+const armsWith = (x, y, plus) => DIRS.filter(([dx, dy]) => (plus && plus[0] === x + dx && plus[1] === y + dy) || wegLike(x + dx, y + dy));
+const straightArms = arms => arms.length <= 1 || (arms.length === 2 && arms[0][0] === -arms[1][0] && arms[0][1] === -arms[1][1]);
+// Weg auf (x, y): bleibt jede Brücke gerade (das neue Feld übers Wasser und Brücken daneben)?
+function bridgeShapeError(x, y, water) {
+  if (water) {
+    const arms = armsWith(x, y);
+    if (!arms.length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
+    if (!straightArms(arms)) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
+  }
+  for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && !straightArms(armsWith(x + dx, y + dy, [x, y]))) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
+  return null;
+}
+// Brücken-Art umstellen (Fenster): alte voll zurück, neue bezahlen; Art wie der Wegstil sie wählt, wird nicht gemerkt
+function setBridgeKind(x, y, kind) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!isWegBridge(t) || !WEG_BRIDGE[kind] || bridgeKind(t) === kind) return false;
+  const old = WEG_BRIDGE[bridgeKind(t)], nw = WEG_BRIDGE[kind], c = B => ({ money: B.cost, ...B.mat });
+  addCost(c(old), 1);
+  if (!canPay(c(nw))) { addCost(c(old), -1); fail(state.money < nw.cost ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  addCost(c(nw), -1);
+  if (kind === (BRIDGE_OF_STYLE[t.style || 'sand'] || 'stein')) delete t.brk; else t.brk = kind;
+  groundVersion++; sfx('build'); recalc(); save();
+  return true;
+}
+const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE
+  : b === 'weg' && terrainAt(x, y) === 'water' ? WEG_BRIDGE[bridgeKind({ style: currentStyle('weg') })]
+  : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
@@ -1785,7 +1827,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
       const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore';
       const seaOk = sea && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : nearOwnLand(fx, fy));   // auch schräg am Ufer (Ecke an Ecke)
-      if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
+      if (b === 'weg' && isSea(fx, fy) && !ownedTile(fx, fy)) {                // Wegbrücke ins Meer (Block 66): kurz vor die Küste
+        if (!claimable(fx, fy)) return 'Im Meer nur direkt neben deinem Land';
+        if (!landWithin(fx, fy, BRIDGE_SEA)) return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste`;
+      } else if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';
         if ((d.needs === 'meer' || d.needs === 'offshore') && (ter !== 'water' || !isSea(fx, fy))) return 'Ins Meer vor die Küste bauen';
@@ -1807,7 +1852,11 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
         return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
       }
-      if (ter === 'water') { if (rail) continue; return 'Nicht auf dem Wasser'; }
+      if (ter === 'water') {
+        if (rail) continue;
+        if (b === 'weg') { const e = bridgeShapeError(fx, fy, true); if (e) return e; continue; }   // Wegbrücke (Block 66)
+        return 'Nicht auf dem Wasser';
+      }
       if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
       // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
       const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
@@ -1821,6 +1870,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
       }
     }
+    if (b === 'weg') { const e = bridgeShapeError(x, y, false); if (e) return e; }       // Weg an der Seite einer Brücke: kein Abzweig
     if (d.cat !== 'deko' && !plazaOk(b) && b !== 'weg' && b !== 'schiene' && !d.paint) {   // Eckpunkt-Deko (Block 65) an den Ecken der Grundfläche
       const [w, h] = sizeOf(b, r, opts.t);
       for (let vy = y; vy <= y + h; vy++) for (let vx = x; vx <= x + w; vx++) { const p = postAt(vx, vy); if (p) return `An der Ecke steht schon: ${ITEMS[p.b].name}`; }
@@ -2186,7 +2236,7 @@ function demolishInfo(x, y) {
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || d.cat === 'markt' || t.b === 'weg' || t.b === 'schiene';
-    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : { cost: t.price != null ? t.price : d.baseCost || d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde (alte Stände: Grundpreis)
+    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)] : { cost: t.price != null ? t.price : d.baseCost || d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde (alte Stände: Grundpreis)
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
       const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;

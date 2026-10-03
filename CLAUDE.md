@@ -352,6 +352,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+75. **Wegbrücken** (Block 66): Ob ein Weg eine Brücke ist, nur über `isWegBridge(t)`/`isBridgeAt`. Wer Wege neben Wasser
+    setzt, geht über `placeError` (prüft `bridgeShapeError`: vom Ufer aus, nur gerade); Pläne setzen dafür `PLANNED`.
+    Bezahlt wird `WEG_BRIDGE[bridgeKind(t)]` – wer die Art ändert, über `setBridgeKind` (sonst stimmt das Erstatten nicht).
 74. **Deko-Plätze** (Block 46/65): 9 je Feld – 0–3 Ecken, 4–7 Seitenmitten, 8 = Eckpunkt (obere Ecke des Felds, geteilt mit drei
     Nachbarn). Wer Plätze durchgeht, nimmt `SLOTS`, nie 8; wer Ecken-Plätze belegt, prüft `postAt(...cornerVertex(...))`; wer
     an Feldecken baut (Gebäude, Linien, Wasser), prüft `postAt` der Ecken. Lage nur über `slotPos`.

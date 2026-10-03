@@ -18,6 +18,7 @@ function build(b, x, y, quiet) {
     if ((old.style || 'sand') === style) return false;
     if (state.money < ITEMS[b].cost) { fail('Zu wenig Taler'); return false; }
     state.money -= ITEMS[b].cost;
+    if (isWegBridge(old)) { old.brk = bridgeKind(old); if (old.brk === (BRIDGE_OF_STYLE[style] || 'stein')) delete old.brk; }   // Brücke bleibt, wie sie bezahlt ist
     old.style = style;
     groundVersion++;
     sfx('road'); save();
@@ -59,7 +60,7 @@ function build(b, x, y, quiet) {
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
-  const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = b === 'schiene' && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);
+  const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
   for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
@@ -67,7 +68,7 @@ function build(b, x, y, quiet) {
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
-  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore') && !ownedTile(x, y)) claimTile(x, y);
+  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore' || (b === 'weg' && bridge)) && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); waterChanged(); sfx('dig'); }
   else if (TERRAFORM[b]) {
@@ -83,9 +84,10 @@ function build(b, x, y, quiet) {
     state.terra.set(k, 'grass'); sandCache.clear(); waterChanged(); sfx('dig');
     const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück
     if (rt && rt.bridge) {
-      delete rt.bridge;
-      state.money += BRIDGE.cost - ITEMS.schiene.cost;
-      for (const [r, n] of Object.entries(BRIDGE.mat)) state.res[r] += n - (ITEMS.schiene.mat[r] || 0);
+      const paid = rt.b === 'weg' ? WEG_BRIDGE[bridgeKind(rt)] : BRIDGE;          // Wegbrücke (Block 66) wie Schienenbrücke
+      delete rt.bridge; delete rt.brk;
+      state.money += paid.cost - ITEMS[rt.b].cost;
+      for (const [r, n] of Object.entries(paid.mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
     }
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
@@ -225,7 +227,7 @@ function groupErrors(hx, hy) {
         const water = terrainAt(x, y) === 'water';
         if (!ownedTile(x, y)) err = notMine(x, y);
         else if (it.t.bridge && !water) err = 'Brücken nur übers Wasser';
-        else if (b === 'schiene' && !it.t.bridge && water) err = 'Übers Wasser braucht die Schiene eine Brücke';
+        else if (!it.t.bridge && water) err = b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
       }
       err = err || placeError(b, x, y, it.t.rot || 0, { move: true, t: it.t });
     }

@@ -79,8 +79,9 @@ function planScan(p) {
   if (p.tool === 'abriss') return scanDemolish(p);
   if (p.tool === 'verschieben') return scanSelect(p);
   if (ITEMS[p.tool].small) return scanSmall(p);
-  const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [];
+  const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [], grow = CLAIM_TOOLS.has(b) || b === 'weg';   // Weg: Brücke wächst vom Ufer aus
   let cost = 0, firstErr = null, rest = planTiles(p);
+  if (b === 'weg') PLANNED = new Set();
   try {
     for (let round = 0; rest.length; round++) {
       const next = [];
@@ -92,15 +93,16 @@ function planScan(p) {
         order.push([x, y, () => build(b, x, y, true)]);
         cost += c.cost || 0;
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
-        if (CLAIM_TOOLS.has(b) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
+        if (PLANNED) PLANNED.add(k);
+        if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
-      if (!CLAIM_TOOLS.has(b) || next.length === rest.length) {
+      if (!grow || next.length === rest.length) {
         for (const [x, y, err] of next) { states.set(x + ',' + y, 'bad'); firstErr = firstErr || err; }
         break;
       }
       rest = next;
     }
-  } finally { for (const k of tmp) state.claimed.delete(k); }
+  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
 }

@@ -679,3 +679,11 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 65b Gemeint war die Außenkurve: Auf einem Kurvenfeld rückt der äußere Ecken-Platz an den Bogen, mittig auf die Außenkurve
       (`curveSlot`, `slotPos`); `slotAt` wählt nach den echten Platz-Lagen. Testwelt: Laterne mittig außen an der Kurve.
 
+## Block 66 – Wegbrücken (03.10.2026)
+- [x] Weg übers Wasser wird von selbst zur Brücke (`t.bridge` wie bei Schienen): über eigene Teiche/Flüsse/Seen beliebig lang,
+      ins Meer höchstens `BRIDGE_SEA` Felder vor die Küste. Wächst vom Ufer aus, nur gerade (`bridgeShapeError`; beim Ziehen
+      in Runden mit `PLANNED`). Art nach Wegstil (`bridgeKind`, `BRIDGE_OF_STYLE`): Holzsteg, Steinbogen, Ziegelbrücke, im
+      Fenster auch rote Bogenbrücke (`setBridgeKind`, alte voll zurück; Umfärben des Wegs behält die Art). Preis `WEG_BRIDGE`.
+      Gezeichnet angehoben mit Rampen, Bögen, Brüstung/Geländer (`drawWegBridge`); Bewohner laufen drüber (`walkable`);
+      keine Läden/Gebäude/Deko auf Brücken (`plainWeg`); Aufschütten macht wieder einen normalen Weg. Testwelt: Fluss.
+

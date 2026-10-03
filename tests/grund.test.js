@@ -20,7 +20,7 @@ describe('Inselrand', () => {
   it('auf dem Meer heißt es „Nicht auf dem Wasser“, nie „nicht dein Grundstück“', () => {
     const [x, y] = game(`(() => { for (let x = 2; x < 80; x++) if (isSea(x, 3) && !ownedTile(x, 3)) return [x, 3]; })()`);
     expect(game(`placeError('haus', ${x}, ${y})`)).toBe('Nicht auf dem Wasser');
-    expect(game(`placeError('weg', ${x}, ${y})`)).toBe('Nicht auf dem Wasser');
+    expect(game(`placeError('weg', ${x}, ${y})`)).toMatch(/Ufer/);                       // Weg: Brücke, nur vom Ufer aus (Block 66)
     expect(game(`smallError('bank', ${x}, ${y}, 0)`)).toBe('Nicht auf dem Wasser');
   });
 

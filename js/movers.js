@@ -7,8 +7,9 @@ const SHIRTS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'
 const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
 const walkable = (x, y) => {
-  if (!ownedTile(x, y) || terrainAt(x, y) === 'water') return false;
+  if (!ownedTile(x, y)) return false;
   const t = objAt(x, y);
+  if (terrainAt(x, y) === 'water') return isWegBridge(t);                          // übers Wasser nur auf einer Wegbrücke (Block 66)
   return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
 };
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
