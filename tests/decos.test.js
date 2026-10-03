@@ -163,3 +163,18 @@ describe('Eckpunkte (Block 65)', () => {
     expect(game('state.money')).toBe(m + game('ITEMS.laterne.cost'));
   });
 });
+
+describe('Außenkurve (Block 65b)', () => {
+  it('auf einem Kurvenfeld rückt der äußere Ecken-Platz an den Bogen, mittig auf die Außenkurve', () => {
+    game("for (const k of ['4,5', '5,5', '5,6']) state.tiles.set(k, { b: 'weg', lvl: 1, style: 'sand' }); recalc()");   // Kurve auf 5,5: von links nach unten
+    expect(game('curveSlot(5, 5)')).toEqual({ slot: 1, cu: -0.5, cv: 0.5 });
+    const [u, v] = game("slotPos(5, 5, 1, 'laterne')");
+    expect(u).toBeCloseTo(-v);                                                        // genau auf der Diagonale
+    expect(Math.hypot(u + 0.5, v - 0.5)).toBeGreaterThan(0.5 + game('EDGE_W'));      // außen vor dem Bogen …
+    expect(Math.hypot(u + 0.5, v - 0.5)).toBeLessThan(1.05);                         // … und nah dran (nicht in der Feldecke)
+    expect(game("slotPos(5, 5, 0, 'laterne')")).toEqual(game("slotPos(9, 9, 0, 'laterne')"));   // die anderen Ecken bleiben
+    expect(game("(() => { const q = toScreen(5 + " + "0.19, 5 - 0.19); setTool('look'); return slotAt(q.x, q.y).slot; })()")).toBe(1);   // Tippen auf den Bogen trifft ihn
+    expect(game('curveSlot(4, 5)')).toBe(null);                                       // gerade: nichts
+  });
+});
+

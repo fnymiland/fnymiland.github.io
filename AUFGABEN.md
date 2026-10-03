@@ -676,4 +676,6 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       (`slotAt`/`vertexWanted`, `VSLOT_NEAR`). Die vier Ecken-Plätze, die zum Punkt zeigen, bleiben dafür frei
       (`vertexCorners`, `cornerVertex`); nicht an Gebäude, nicht an Linien-Pfosten, keine Gebäude/Gräben/Linien an die Laterne.
       Speichern, Rückgängig, Strom, Album, Verschieben laufen über die normalen Deko-Plätze mit. Testwelt: Weg mit Kurve.
+- [x] 65b Gemeint war die Außenkurve: Auf einem Kurvenfeld rückt der äußere Ecken-Platz an den Bogen, mittig auf die Außenkurve
+      (`curveSlot`, `slotPos`); `slotAt` wählt nach den echten Platz-Lagen. Testwelt: Laterne mittig außen an der Kurve.
 

@@ -59,8 +59,8 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     const put = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[slot] = { b, rot }; };
     for (let x = X + 1; x <= X + 4; x++) put(x, Y + 1, 7, 'bank', midRot(7));
     for (let x = X + 1; x <= X + 5; x++) put(x, Y + 2, 8, 'laterne');
-    put(X + 6, Y + 1, 8, 'laterne'); put(X + 6, Y + 2, 8, 'laterne');   // außen um die Kurve
-    rebuildCover(); recalc(); })()`);
+    rebuildCover(); recalc(); put(X + 5, Y + 1, curveSlot(X + 5, Y + 1).slot, 'laterne');   // mittig an der Außenkurve (Block 65b)
+    recalc(); })()`);
   console.log('Laternen-Strecke', JSON.stringify(lp));
   game('rebuildCover(); recalc()');
   const st = game('computeFz().map(p => [p.tiles.length, p.rides, p.stage])'), coasters = game('COASTERS.length');

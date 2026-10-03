@@ -665,9 +665,22 @@ const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]];
 const DECO_R = { baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbogen: 0.12, bank: 0.1, brunnen: 0.12, kristallbrunnen: 0.12 };
 const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
 const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // halbe Dicke samt Luft (Zaun dünn, Hecke/Mauer dick, Torbogen breit)
+// Wegkurve (Block 65b): die Kurve ist ein Viertelring um die innere Ecke – ihr äußerer Ecken-Platz rückt deshalb an den
+// Bogen, mittig auf die Außenkurve (sonst stünde er weit draußen in der Feldecke). Rückgabe: welcher Platz, Mittelpunkt
+function curveSlot(x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!t || t.b !== 'weg' || t.cross || typeof roadCurve !== 'function') return null;
+  const c = roadCurve(pathArms(x, y));
+  if (!c) return null;
+  return { slot: (c.cu > 0 ? 0 : 1) + (c.cv > 0 ? 0 : 2), cu: c.cu, cv: c.cv };
+}
 function slotPos(x, y, i, b) {
   if (i === VSLOT) return [-0.5, -0.5];                          // Eckpunkt: genau auf der Ecke
   const r = decoR(b), out = 0.5 - r - 0.02;
+  if (i < 4) {
+    const cs = curveSlot(x, y);
+    if (cs && cs.slot === i) { const k = (0.5 + EDGE_W + r + 0.03) / Math.SQRT2; return [cs.cu - Math.sign(cs.cu) * k, cs.cv - Math.sign(cs.cv) * k]; }
+  }
   const lim = side => { const e = state.edges.get(edgeBetween(x, y, x + side[0], y + side[1])); return e ? 0.5 - lineW(e) - r : out; };
   if (i >= 4) {                                                   // Seitenmitte: nur zur eigenen Seite hin begrenzt
     const [dx, dy] = MID_SIDE[i - 4], m = Math.min(MID_OFF, lim([dx, dy]));
@@ -689,7 +702,7 @@ function slotAt(sx, sy) {
   const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
   const x = Math.round(a), y = Math.round(b), du = a - x, dv = b - y;
   let slot = 0, best = Infinity;                                 // der nächste der 8 Plätze
-  for (let i = 0; i < 8; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
+  for (let i = 0; i < 8; i++) { const [u, v] = slotPos(x, y, i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }   // wo die Plätze wirklich liegen (Kurve, Linien)
   // nah an einer Feldecke: der Eckpunkt (Block 65) – mit schmaler Deko in der Hand oder wenn dort schon etwas steht
   const vx = Math.round(a + 0.5), vy = Math.round(b + 0.5), ex = a - (vx - 0.5), ey = b - (vy - 0.5);
   if (ex * ex + ey * ey < VSLOT_NEAR * VSLOT_NEAR && vertexWanted(vx, vy)) return { x: vx, y: vy, slot: VSLOT };
