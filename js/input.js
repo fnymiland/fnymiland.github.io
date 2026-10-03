@@ -154,8 +154,9 @@ canvas.addEventListener('wheel', e => {
 canvas.addEventListener('contextmenu', e => e.preventDefault());
 
 function setHover(sx, sy) {
-  hoverSlot = slotAt(sx, sy).slot;
-  const t = toTile(sx, sy);
+  const sa = slotAt(sx, sy);
+  hoverSlot = sa.slot;
+  const t = sa.slot === VSLOT ? { x: sa.x, y: sa.y } : toTile(sx, sy);   // Eckpunkt (Block 65): gehört zum Feld unter der Ecke
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }
   hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
   if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus

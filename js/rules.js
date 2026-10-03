@@ -644,9 +644,19 @@ function currentStyle(kind) {
 // Kleine Dekos (Block 42): 8 Plätze pro Feld – 4 Ecken (0 hinten, 1 rechts, 2 links, 3 vorn) und 4 Seitenmitten
 // (4 −u oben links, 5 −v oben rechts, 6 +u unten rechts, 7 +v unten links). Auf einem Weg liegen die Seitenmitten am
 // Wegrand – dort stehen Bänke und Laternen, zum Weg gedreht. Auf Gebäudefeldern nur die Ecken.
-const SLOTS = 8, SLOT_OFF = 0.42, MID_OFF = 0.42;   // weit außen (Block 46): neben dem Weg, nicht darauf
+const SLOTS = 9, SLOT_OFF = 0.42, MID_OFF = 0.42;   // weit außen (Block 46): neben dem Weg, nicht darauf
 const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
-const slotUV = i => i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
+// Eckpunkte (Block 65): Platz 8 eines Felds liegt genau auf seiner oberen Ecke (x − ½, y − ½), die es mit drei Nachbarn
+// teilt – so steht eine Laterne exakt zwischen zwei Feldern bzw. genau im Bogen einer Wegkurve. Nur Schmales (POST_OK).
+// Dafür bleiben die vier Ecken-Plätze, die zu diesem Punkt zeigen, frei (und umgekehrt).
+const VSLOT = 8, VSLOT_NEAR = 0.2;                              // so nah (Felder) an einer Ecke rastet schmale Deko dort ein
+const POST_OK = new Set(['laterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall']);
+const slotUV = i => i === VSLOT ? [-0.5, -0.5] : i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
+// die vier Felder um den Eckpunkt von Feld (x, y), je mit ihrem Ecken-Platz, der zum Punkt zeigt
+const vertexCorners = (x, y) => [[x, y, 0], [x - 1, y, 1], [x, y - 1, 2], [x - 1, y - 1, 3]];
+// Eckpunkt (= Feld, dessen Platz 8 es ist), zu dem der Ecken-Platz slot (0–3) von Feld (x, y) zeigt
+const cornerVertex = (x, y, slot) => [x + (slot & 1), y + ((slot >> 1) & 1)];
+const postAt = (vx, vy) => { const ds = decosAt(vx + ',' + vy); return ds ? ds[VSLOT] || null : null; };
 const newSlots = () => Array(SLOTS).fill(null);
 // Wo genau ein Ding auf seinem Platz steht (Block 46): so weit außen wie möglich, ohne anzustoßen – je nach Größe (DECO_R,
 // Abstand von der Mitte bis zum Rand des Dings), an einer Hecke/Zaun/Mauer um deren Dicke nach innen, an einem Eckpunkt mit
@@ -656,6 +666,7 @@ const DECO_R = { baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbo
 const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
 const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // halbe Dicke samt Luft (Zaun dünn, Hecke/Mauer dick, Torbogen breit)
 function slotPos(x, y, i, b) {
+  if (i === VSLOT) return [-0.5, -0.5];                          // Eckpunkt: genau auf der Ecke
   const r = decoR(b), out = 0.5 - r - 0.02;
   const lim = side => { const e = state.edges.get(edgeBetween(x, y, x + side[0], y + side[1])); return e ? 0.5 - lineW(e) - r : out; };
   if (i >= 4) {                                                   // Seitenmitte: nur zur eigenen Seite hin begrenzt
@@ -671,15 +682,25 @@ function slotPos(x, y, i, b) {
   }
   return [su * u, sv * v];
 }
-const SLOTS_BACK = [0, 4, 5], SLOTS_FRONT = [1, 2, 3, 6, 7];      // hinter bzw. vor dem Ding auf dem Feld zeichnen
+const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, 3, 6, 7];      // hinter bzw. vor dem Ding auf dem Feld zeichnen
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
   const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
   const x = Math.round(a), y = Math.round(b), du = a - x, dv = b - y;
   let slot = 0, best = Infinity;                                 // der nächste der 8 Plätze
-  for (let i = 0; i < SLOTS; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
+  for (let i = 0; i < 8; i++) { const [u, v] = slotUV(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
+  // nah an einer Feldecke: der Eckpunkt (Block 65) – mit schmaler Deko in der Hand oder wenn dort schon etwas steht
+  const vx = Math.round(a + 0.5), vy = Math.round(b + 0.5), ex = a - (vx - 0.5), ey = b - (vy - 0.5);
+  if (ex * ex + ey * ey < VSLOT_NEAR * VSLOT_NEAR && vertexWanted(vx, vy)) return { x: vx, y: vy, slot: VSLOT };
   return { x, y, slot };
+}
+function vertexWanted(vx, vy) {
+  const has = !!postAt(vx, vy);
+  if (typeof tool === 'undefined') return has;
+  if (tool === 'verschieben') return moving ? moving.kind === 'deco' && POST_OK.has(baseOf(moving.d.b)) : has;
+  if (tool === 'look' || tool === 'abriss') return has;
+  return !!(ITEMS[tool] && ITEMS[tool].small && POST_OK.has(baseOf(tool)));
 }
 const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'zauberbrunnen', 'lm', ...Object.keys(STANDS),
   ...Object.keys(ITEMS).filter(id => ITEMS[id].variantOf && !ITEMS[id].small && !ITEMS[id].size)]);   // Größe „Mittel“ kleiner Deko belegt das Feld
@@ -753,6 +774,7 @@ function edgeError(b, k) {
   if (tiles.every(([x, y]) => terrainAt(x, y) === 'water')) return 'Nicht mitten im Wasser';
   const [p, q] = tiles.map(([x, y]) => COVER.get(x + ',' + y));
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
+  if (edgeEndPoints(k).some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';   // Eckpunkt-Deko (Block 65)
   return null;
 }
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
@@ -1020,13 +1042,30 @@ function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return notMine(x, y);
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (slot === VSLOT) {                                          // Eckpunkt (Block 65): alle vier Felder drumherum prüfen
+    if (!POST_OK.has(baseOf(b))) return 'Auf die Ecke passt nur Schmales (Laterne, Blumentopf …)';
+    if (postAt(x, y)) return 'Hier steht schon etwas';
+    if (edgesAt(x, y).length) return 'Hier steht der Pfosten einer Linie';
+    for (const [fx, fy, cs] of vertexCorners(x, y)) {
+      if (!ownedTile(fx, fy)) return notMine(fx, fy);
+      if (terrainAt(fx, fy) === 'water') return 'Nicht ans Wasser';
+      const ft = objAt(fx, fy);
+      if (ft && !(ft.b === 'weg' || wegUnder(ft) != null || isCrossing(ft) || (ITEMS[ft.b].cat === 'deko' && !isBig(ft.b)))) return 'Nicht an ein Gebäude';
+      const fds = decosAt(fx + ',' + fy);
+      if (fds && fds[cs]) return 'An dieser Ecke steht schon etwas';
+    }
+    if (opts.move || opts.noCost) return null;
+    if (state.money < d.cost) return 'Zu wenig Taler';
+    return matError(d.mat);
+  }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
+  if (slot < 4 && postAt(...cornerVertex(x, y, slot))) return 'An dieser Ecke steht schon etwas';
   if (slot >= 4 && t && wegUnder(t) == null && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
   if (decosAt(k) && decosAt(k)[slot]) {
     const ds = decosAt(k);
-    return ds.every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
+    return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
   }
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
   if (opts.noCost) return null;
@@ -1036,7 +1075,7 @@ function smallError(b, x, y, slot, opts = {}) {
 // Ist die angetippte Ecke belegt, die nächste freie nehmen: erst die beiden Nachbarecken, dann die gegenüber
 function freeSlot(x, y, slot) {
   const ds = decosAt(x + ',' + y);
-  if (!ds) return slot;
+  if (!ds || slot === VSLOT) return slot;
   const i = (slot < 4 ? [slot, slot ^ 1, slot ^ 2, slot ^ 3] : [slot, 4 + ((slot - 2) & 3), 4 + ((slot - 3) & 3), 4 + ((slot - 1) & 3)]).find(n => !ds[n]);
   return i == null ? slot : i;
 }
@@ -1047,7 +1086,7 @@ function buildSmall(b, x, y, slot) {
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
   const k = x + ',' + y;
-  clearNature(b, x, y);
+  if (slot !== VSLOT) clearNature(b, x, y);                       // Eckpunkt: nichts roden
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
@@ -1712,6 +1751,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
       if (ter === 'water') return 'Hier ist schon Wasser';
+      if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
     } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
   } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
@@ -1767,6 +1807,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if ((need === 'grass' || need === 'shore' || need === 'strand') && ter !== 'grass') {                  // nur noch beim Verschieben
         return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
       }
+    }
+    if (d.cat !== 'deko' && !plazaOk(b) && b !== 'weg' && b !== 'schiene' && !d.paint) {   // Eckpunkt-Deko (Block 65) an den Ecken der Grundfläche
+      const [w, h] = sizeOf(b, r, opts.t);
+      for (let vy = y; vy <= y + h; vy++) for (let vx = x; vx <= x + w; vx++) { const p = postAt(vx, vy); if (p) return `An der Ecke steht schon: ${ITEMS[p.b].name}`; }
     }
     if (d.needs === 'shore' && !tiles.some(([fx, fy]) => DIRS.some(([dx, dy]) => isWater(fx + dx, fy + dy)))) return 'Muss direkt am Wasser stehen';
     if ((d.needs === 'meer' || d.needs === 'boot') && !tiles.some(([fx, fy]) => nearOwnLand(fx, fy))) return d.needs === 'boot' ? 'Direkt ans Ufer legen' : 'Direkt vor die Küste bauen';

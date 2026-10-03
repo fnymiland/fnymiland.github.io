@@ -49,6 +49,19 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   for (const [sx, sy] of spots) game(`for (let y = ${sy}; y < ${sy} + 7; y++) for (let x = ${sx}; x < ${sx} + 7; x++) { state.terra.set(x + ',' + y, 'grass'); state.decos.delete(x + ',' + y); }`);
   game(`state.tiles.set('${spots[0].join()}', { b: 'schloss', lvl: 1, phase: 6, rate: 1 }); state.tiles.set('${spots[1].join()}', { b: 'schloss', lvl: 1, phase: 3, rate: 1 })`);
   console.log('Wunder-Schloss', JSON.stringify(spots));
+  // Eckpunkte (Block 65): Weg mit Kurve, Laterne – Bank – Laterne – Bank im Takt, Laterne genau im Bogen
+  const lp = game(`(() => { for (let y = ${Y} - 30; y < ${Y} + 40; y++) for (let x = ${X} - 30; x < ${X} + 40; x++) { let ok = true;
+    for (let j = 0; j < 6 && ok; j++) for (let i = 0; i < 8 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || terrainAt(x + i, y + j) !== 'grass' || COVER.has(k) || state.terra.get(k) || state.decos.get(k)) ok = false; }
+    if (ok) return [x, y]; } })()`);
+  game(`(() => { const [X, Y] = ${JSON.stringify(lp)}; state.design = new Set(DESIGN.map(d => d.id));
+    for (let x = X; x < X + 6; x++) state.tiles.set(x + ',' + (Y + 1), { b: 'weg', lvl: 1, style: 'platten' });
+    for (let y = Y + 2; y < Y + 6; y++) state.tiles.set((X + 5) + ',' + y, { b: 'weg', lvl: 1, style: 'platten' });
+    const put = (x, y, slot, b, rot = 0) => { const k = x + ',' + y; if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[slot] = { b, rot }; };
+    for (let x = X + 1; x <= X + 4; x++) put(x, Y + 1, 7, 'bank', midRot(7));
+    for (let x = X + 1; x <= X + 5; x++) put(x, Y + 2, 8, 'laterne');
+    put(X + 6, Y + 1, 8, 'laterne'); put(X + 6, Y + 2, 8, 'laterne');   // außen um die Kurve
+    rebuildCover(); recalc(); })()`);
+  console.log('Laternen-Strecke', JSON.stringify(lp));
   game('rebuildCover(); recalc()');
   const st = game('computeFz().map(p => [p.tiles.length, p.rides, p.stage])'), coasters = game('COASTERS.length');
   const d = game('JSON.parse(JSON.stringify(serialize()))');

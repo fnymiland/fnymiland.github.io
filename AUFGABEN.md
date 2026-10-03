@@ -669,3 +669,11 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       nicht bauen. Jetzt ganz weg (Eintrag, Zeichnung, Tipp); die Laterne schaltet Parkrasen frei. Alte Spielstände wandeln
       ihn beim Laden weiter in Parkrasen mit Brunnen um. Test: alles, was freigeschaltet werden kann, steht im Baumenü.
 
+## Block 65 – Eckpunkte für schmale Deko (03.10.2026)
+- [x] Laternen ließen sich nicht genau zwischen zwei Felder oder in den Bogen einer Wegkurve setzen (nur 8 Plätze je Feld,
+      0,42 vom Feldrand). Jetzt Platz 8 (`VSLOT`) je Feld = seine obere Ecke, genau auf der Grenze. Schmale Deko (`POST_OK`:
+      Laterne, Kristall-Laterne, Blumentopf, Glaskugel, Kristall) rastet ein, wenn man nah an eine Feldecke tippt
+      (`slotAt`/`vertexWanted`, `VSLOT_NEAR`). Die vier Ecken-Plätze, die zum Punkt zeigen, bleiben dafür frei
+      (`vertexCorners`, `cornerVertex`); nicht an Gebäude, nicht an Linien-Pfosten, keine Gebäude/Gräben/Linien an die Laterne.
+      Speichern, Rückgängig, Strom, Album, Verschieben laufen über die normalen Deko-Plätze mit. Testwelt: Weg mit Kurve.
+

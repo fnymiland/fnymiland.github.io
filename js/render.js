@@ -587,7 +587,7 @@ function render(now) {
     } else if (smallMode) {
       const slot = freeSlot(hx, hy, hoverSlot);
       const err = tool === 'verschieben' ? moveError(hx, hy, slot) : smallError(tool, hx, hy, slot);
-      const cl = tool === 'verschieben' ? '' : clearLabel(tool, hx, hy);
+      const cl = tool === 'verschieben' || slot === VSLOT ? '' : clearLabel(tool, hx, hy);
       preview = { ok: !err, small: !err || err === 'Zu wenig Taler', slot, text: err || (tool === 'verschieben' ? 'Hierhin' : `🌸 +${ITEMS[tool].beauty}${cl ? '  ' + cl : ''}`) };
     } else if (tool === 'verschieben') {
       const err = moveError(hx, hy, hoverSlot), [w, h] = sizeOf(ghostType, rotOf(ghostType), moving.t);

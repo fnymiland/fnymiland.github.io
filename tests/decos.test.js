@@ -60,9 +60,9 @@ describe('Kleinkram: 8 Plätze', () => {
   beforeEach(() => { game('startNew()'); game("closeModal(); state.money = 5000; for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3; for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 99; for (let y = 3; y <= 9; y++) for (let x = 3; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } recalc()"); });
 
   it('Seitenmitten liegen zwischen den Ecken am Rand, näher an der Kante', () => {
-    expect(game('SLOTS')).toBe(8);
+    expect(game('SLOTS')).toBe(9);                                       // 8 + Eckpunkt (Block 65)
     expect(game('[4, 5, 6, 7].map(slotUV)')).toEqual([[-0.42, 0], [0, -0.42], [0.42, 0], [0, 0.42]]);
-    expect(game('newSlots().length')).toBe(8);
+    expect(game('newSlots().length')).toBe(9);
   });
 
   it('Bank in der Seitenmitte eines Wegs: längs zum Weg gedreht; acht Dinge passen auf ein Feld', () => {
@@ -82,7 +82,7 @@ describe('Kleinkram: 8 Plätze', () => {
 
   it('alte Stände mit 4 Plätzen werden beim Laden auf 8 erweitert', () => {
     const d = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.decos = [['7,7', [{ b: 'busch', rot: 0 }, null, null, null]]]; return d; })()");
-    expect(new Map(game(`parseSave(${JSON.stringify(d)})`).decos).get('7,7').length).toBe(8);
+    expect(new Map(game(`parseSave(${JSON.stringify(d)})`).decos).get('7,7').length).toBe(9);
   });
 
   it('Tippen trifft den nächsten der 8 Plätze', () => {
@@ -113,5 +113,53 @@ describe('Kleinkram weit außen (Block 46)', () => {
     game("state.edges.clear(); state.edges.set('a6,6', { b: 'zaun', style: 'latten' })");   // nur außerhalb am Eckpunkt (6,6)
     expect(game("slotPos(5, 5, 3, 'laterne')")[0]).toBeLessThan(free);
     game('state.edges.clear()');
+  });
+});
+
+describe('Eckpunkte (Block 65)', () => {
+  const tapAt = (b, fx, fy) => game(`(() => { setTool('${b}'); const q = toScreen(${fx}, ${fy}); return slotAt(q.x, q.y); })()`);
+  it('schmale Deko rastet nah an einer Feldecke ein – genau auf der Ecke, zwischen zwei Feldern', () => {
+    game("for (let x = 3; x <= 8; x++) state.tiles.set(x + ',5', { b: 'weg', lvl: 1, style: 'sand' }); recalc(); state.design = new Set(DESIGN.map(d => d.id)); state.res.metall = 50");
+    expect(tapAt('laterne', 5.5, 5.5)).toEqual({ x: 6, y: 6, slot: 8 });
+    expect(tapAt('laterne', 5.25, 5.5).slot).not.toBe(8);                           // zu weit weg: wie bisher
+    expect(tapAt('bank', 5.5, 5.5).slot).not.toBe(8);                              // Bank bleibt auf ihren Plätzen
+    expect(game("slotPos(6, 6, 8, 'laterne')")).toEqual([-0.5, -0.5]);
+    expect(game("buildSmall('laterne', 6, 6, 8)")).toBe(true);
+    expect(game("buildSmall('bank', 6, 5, 7)")).toBe(true);                       // Bank in der Seitenmitte daneben geht
+    game("setTool('look')");
+    expect(tapAt('look', 5.5, 5.5)).toEqual({ x: 6, y: 6, slot: 8 });             // Ansehen/Abreißen finden sie wieder
+  });
+
+  it('Ecken teilen: kein Ding in den vier Ecken-Plätzen daneben, keine Bank auf der Ecke, nicht an Gebäude', () => {
+    game("state.design = new Set(DESIGN.map(d => d.id)); state.res.metall = 50");
+    expect(game("buildSmall('laterne', 6, 6, 8)")).toBe(true);
+    expect(game("smallError('blumentopf', 5, 5, 3)")).toMatch(/Ecke/);            // Ecke (+,+) von 5,5 zeigt auf den Punkt
+    expect(game("smallError('blumentopf', 6, 6, 0)")).toMatch(/Ecke/);
+    expect(game("smallError('blumentopf', 6, 6, 3)")).toBe(null);                 // andere Ecke frei
+    expect(game("smallError('bank', 7, 7, 8)")).toMatch(/Schmales/);
+    game("state.tiles.set('3,3', { b: 'haus', lvl: 1 }); recalc()");
+    expect(game("smallError('laterne', 4, 4, 8)")).toMatch(/Gebäude/);
+    expect(game("placeError('haus', 6, 6)")).toMatch(/Ecke/);                    // Haus an die Laterne: nein
+    expect(game("placeError('haus', 5, 5)")).toMatch(/Ecke/);                    // Grundfläche 5,5 hat die Ecke (6,6) unten
+    expect(game("placeError('haus', 7, 7)")).toBe(null);
+    expect(game("edgeError('zaun', 'a6,6')")).toMatch(/Ecke/);                   // Linie, die an dem Punkt endet
+  });
+
+  it('gespeichert, Rückgängig, Strom, Abreißen und Verschieben wie jede Deko', () => {
+    game("state.design = new Set(DESIGN.map(d => d.id)); state.res.metall = 50; state.money = 1e6");
+    expect(game("undoable(() => buildSmall('laterne', 6, 6, 8))")).toBe(true);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("postAt(6, 6).b")).toBe('laterne');
+    game("state.tiles.set('7,3', { b: 'windrad', lvl: 1 }); recalc()");
+    expect(game("T.rail.power.dark.has('6,6,8')")).toBe(false);
+    game("pickUp(6, 6, 8)");
+    expect(game("moving.kind")).toBe('deco');
+    game("dropAt(7, 7, 8)");
+    expect(game("[postAt(6, 6), postAt(7, 7) && postAt(7, 7).b]")).toEqual([null, 'laterne']);
+    const m = game('state.money');
+    game('removeSmall(7, 7, 8)');
+    expect(game('postAt(7, 7)')).toBe(null);
+    expect(game('state.money')).toBe(m + game('ITEMS.laterne.cost'));
   });
 });
