@@ -595,5 +595,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 60b Module: Märchenschloss (3×3, schaltet Wunderland frei), Teetassen (2×2), Kettenkarussell (2×2), Freifallturm,
       Geisterbahn (2×2), Wildwasserbahn (2×3, Felsen mit Wasserfall, Boote), Eis-Stand, Ballonverkäufer. Menü: „🎢
       Freizeitpark“ (Boden, Eingang, Schloss, Stände) und „🎠 Fahrgeschäfte“.
-- [ ] 60c Achterbahn: Strecke ziehen (Hügel, Looping), Station, Zug.
+- [x] 60c Achterbahn: Schiene `fz_bahn` ziehen (paint), `fz_station` in den Ring, `fz_looping` auf ein gerades Stück
+      (`t.loop`). `computeCoasters`: geschlossener Ring (`railLoop`) mit Station → `COASTERS` (Station vorn, Höhen:
+      Lifthügel ein Viertel, dann Wellen), `COASTER_AT` je Feld; offene Strecken liegen flach. Zeichnung `drawCoasterTile`
+      (Kurven als Viertelkreis, rote Schienen, Schwellen, weiße Stützen, Looping-Ring, Station mit Dach), Zug
+      `stepCoasters`/`coasterCars`/`drawCoasterCar` (Lift langsam, bergab schneller, hält an der Station, im Looping
+      kopfüber). Fertige Bahn = eine Attraktion (Sorten fahrt + achterbahn).
 - [ ] 60d Parade/Feuerwerk-Event, Bewohner gehen hin, Album-Seite, Erfolge, „Das ist neu“.

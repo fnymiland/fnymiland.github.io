@@ -838,6 +838,11 @@ function openInfo(x, y) {
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
   if (STANDS[t.b]) status.push(...marktStatus(x + ',' + y));
   if (terraLook(x, y) === 'park') status.push(...parkStatus(x + ',' + y));
+  if (isTrack(t.b)) {                                                     // Achterbahn (Block 60c)
+    const ca = COASTER_AT.get(x + ',' + y), c = ca && ca.c >= 0 && COASTERS[ca.c];
+    status.push(c ? `<div class="ok">🎢 Rundkurs fertig – der Zug fährt (${c.n} Stücke, bis ${Math.round(c.Hmax)} hoch)${t.loop ? ' · mit Looping' : ''}</div>`
+      : '<div class="bad">✗ Noch kein Rundkurs: Strecke ganz schließen (jedes Stück genau zwei Nachbarn) und eine Station hineinsetzen</div>');
+  }
   if (ITEMS[t.b].cat === 'fz') status.push(...fzStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station') status.push(...stationStatus(x + ',' + y));

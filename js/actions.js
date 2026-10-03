@@ -23,6 +23,14 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'fz_looping') {                          // Looping auf die Schiene (Block 60c)
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    const c = ITEMS.fz_looping.cost, t = state.tiles.get(x + ',' + y);
+    state.money -= c; t.loop = true; t.loopPrice = c;
+    sfx('build'); recalc(); save();
+    return true;
+  }
   if (b === 'weg' && decoOver(x, y)) {                // Weg unter einen Brunnen & Co. legen, ohne die Deko wegzunehmen (Block 58)
     const err = placeError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }

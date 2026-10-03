@@ -305,13 +305,20 @@ Object.assign(ITEMS, {
             desc: 'Ein hellblaues Wägelchen mit einer riesigen Eiswaffel auf dem Dach.' },
   fz_ballon: { cat: 'fz', name: 'Ballonverkäufer', festival: true, cost: 8000, fzMin: 1, needs: 'fz', fzSort: 'stand', beauty: 6,
                desc: 'Ein Bündel bunter Luftballons, die im Wind schaukeln.' },
+  // Block 60c: Achterbahn – Schiene ziehen wie einen Weg, Station hinein, ein geschlossener Rundkurs fährt (Höhen von selbst)
+  fz_bahn: { cat: 'fz', name: 'Achterbahn-Schiene', festival: true, cost: 2000, fzMin: 0.4, needs: 'fz', paint: true, beauty: 3,
+             desc: 'Zieh die Strecke wie einen Weg über den Freizeitpark-Boden – als geschlossenen Rundkurs mit einer Station. Hügel und Abfahrten kommen von selbst.' },
+  fz_station: { cat: 'fz', name: 'Achterbahn-Station', festival: true, cost: 150000, fzMin: 12, needs: 'fz', beauty: 20,
+                desc: 'Hier steigen die Gäste ein. Gehört in den Rundkurs der Achterbahn – dann fährt der Zug.' },
+  fz_looping: { cat: 'fz', name: 'Looping', festival: true, cost: 50000, fzMin: 4, needs: 'fz', beauty: 15,
+                desc: 'Auf ein gerades Stück Achterbahn-Schiene setzen – der Zug fährt einmal kopfüber.' },
 });
 const FZ_STEPS = [
   { name: 'Rummelplatz', icon: '🎪', tiles: 9, rides: 2, need: [] },
   { name: 'Freizeitpark', icon: '🎠', tiles: 25, rides: 5, need: ['tor', 'fahrt', 'stand'] },
   { name: 'Wunderland', icon: '🏰', tiles: 49, rides: 10, need: ['tor', 'fahrt', 'stand', 'schloss'] },
 ];
-const FZ_SORT_NAMES = { tor: 'ein Eingang', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'das Märchenschloss' };
+const FZ_SORT_NAMES = { tor: 'ein Eingang', fahrt: 'ein Fahrgeschäft', stand: 'ein Stand', schloss: 'das Märchenschloss', achterbahn: 'eine Achterbahn' };
 const FZ_INC = [0, 0.08, 0.2, 0.4], FZ_ATTR = [0, 60, 150, 400], FZ_BEAUTY = [0, 60, 150, 300], FZ_NEAR = [0, 4, 6, 8];   // Einnahmen +%, Besucher, 🌸 (auch ringsum bis FZ_NEAR)
 for (const id of Object.keys(ITEMS)) if (ITEMS[id].fzMin) {
   const base = ITEMS[id].cost;
@@ -550,7 +557,7 @@ const MENU = [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
     { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
     { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_tor', 'fz_schloss', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon'] },
-    { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
+    { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser', 'fz_bahn', 'fz_station', 'fz_looping'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
@@ -672,6 +679,9 @@ const ITEM_TIPS = {
   fz_wildwasser: 'Die Wildwasserbahn – Platsch!',
   fz_eis: 'Ein Eis-Stand für heiße Tage im Park.',
   fz_ballon: 'Ein Ballonverkäufer mit bunten Luftballons.',
+  fz_bahn: 'Die Achterbahn! Zieh die Schiene als Rundkurs und setz eine Station hinein.',
+  fz_station: 'Die Station für deine Achterbahn.',
+  fz_looping: 'Ein Looping für deine Achterbahn – kopfüber!',
   schmetterlingsgarten: '4 Tiere in der Natur entdeckt! Über dem Schmetterlingsgarten tanzen immer Falter – kostet nichts.',
   vogelbaum: '8 Tiere in der Natur entdeckt! Im Vogelhäuschen-Baum wohnen Singvögel – kostet nichts.',
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',

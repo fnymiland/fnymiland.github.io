@@ -100,3 +100,56 @@ describe('Preise', () => {
     expect(game("document.getElementById('panel').textContent")).toMatch(/Noch kein Freizeitpark.*fehlt noch: 1 Attraktion/s);
   });
 });
+
+describe('Achterbahn (Block 60c)', () => {
+  const loop = () => {                                   // Rechteck 6×4 als Rundkurs, Station unten links
+    ground(5, 5, 8, 6);
+    const ring = [];
+    for (let x = 6; x <= 11; x++) ring.push([x, 6]);
+    for (let y = 7; y <= 9; y++) ring.push([11, y]);
+    for (let x = 10; x >= 6; x--) ring.push([x, 9]);
+    for (let y = 8; y >= 7; y--) ring.push([6, y]);
+    for (const [x, y] of ring) if (!(x === 7 && y === 9)) game(`build('fz_bahn', ${x}, ${y}, true)`);
+    return ring;
+  };
+  it('ohne Station oder offen: kein Rundkurs; mit Station: fährt, zählt als Attraktion „Achterbahn“', () => {
+    loop();
+    game("build('fz_bahn', 7, 9, true); recalc()");
+    expect(game('COASTERS.length')).toBe(0);                                     // keine Station
+    game("demolish(7, 9); build('fz_station', 7, 9, true); recalc()");
+    expect(game('COASTERS.length')).toBe(1);
+    expect(game("state.tiles.get(COASTERS[0].key).b")).toBe('fz_station');      // Station vorn im Ring
+    expect(game('COASTERS[0].h[0]')).toBe(0);
+    expect(game('Math.max(...COASTERS[0].h)')).toBeCloseTo(game('COASTERS[0].Hmax'));
+    const p = game('computeFz()')[0];
+    expect(p.rides).toBe(1);
+    expect(game('[...computeFz()[0].sorts]')).toEqual(expect.arrayContaining(['fahrt', 'achterbahn']));
+    game('demolish(11, 7); recalc()');                                           // Lücke
+    expect(game('COASTERS.length')).toBe(0);
+  });
+
+  it('der Zug fährt den Ring ab und hält an der Station', () => {
+    loop(); game("build('fz_station', 7, 9, true); recalc(); coasterRuns.clear()");
+    game('stepCoasters(0.1)');
+    const key = game('COASTERS[0].key');
+    game(`coasterRuns.get('${key}').wait = 0`);
+    for (let i = 0; i < 20; i++) game('stepCoasters(0.1)');
+    expect(game(`coasterRuns.get('${key}').s`)).toBeGreaterThan(0.5);
+    expect(game('coasterCars().length')).toBe(3);
+    for (let i = 0; i < 400; i++) game('stepCoasters(0.1)');
+    expect(game(`coasterRuns.get('${key}').wait`)).toBeGreaterThanOrEqual(0);    // eine Runde geschafft (oder wartet)
+  });
+
+  it('Looping nur auf ein gerades Stück; wird gespeichert und beim Abreißen anteilig erstattet', () => {
+    loop(); game("build('fz_station', 7, 9, true); recalc()");
+    expect(game("placeError('fz_looping', 11, 6)")).toMatch(/gerades Stück/);   // Ecke
+    expect(game("placeError('fz_looping', 5, 5)")).toMatch(/Achterbahn-Schiene/);
+    expect(game("build('fz_looping', 8, 6, true)")).toBe(true);
+    expect(game("state.tiles.get('8,6').loop")).toBe(true);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('8,6').loop")).toBe(true);
+    const info = game('demolishInfo(8, 6)');
+    expect(info.refund).toBe(Math.floor((game("state.tiles.get('8,6').price") + game("state.tiles.get('8,6').loopPrice")) / 2));
+  });
+});

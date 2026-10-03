@@ -303,7 +303,7 @@ const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen g
 function totals() {
   rebuildCover();
   computeMarkets();
-  computeParks(); computeFz();
+  computeParks(); computeCoasters(); computeFz();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -820,6 +820,35 @@ function computeParks() {
   return out;
 }
 const parkAt = k => PARKS.find(p => p.tiles.includes(k)) || null;
+// Achterbahnen (Block 60c): zusammenhängende Schienen + Stationen. Ein geschlossener Rundkurs mit Station fährt; die Höhen
+// kommen von selbst: Station unten, Lifthügel (ein Viertel der Strecke) hinauf, dann in Wellen wieder hinunter.
+// COASTER_AT: Feld → { c (Index in COASTERS oder -1), i (Platz im Ring), h (Höhe Mitte), hIn/hOut (an den Kanten), din/dout }
+const isTrack = b => b === 'fz_bahn' || b === 'fz_station';
+let COASTERS = [], COASTER_AT = new Map();
+function computeCoasters() {
+  COASTERS = []; COASTER_AT = new Map();
+  const all = new Set([...state.tiles].filter(([, t]) => isTrack(t.b)).map(([k]) => k)), seen = new Set();
+  for (const k0 of all) {
+    if (seen.has(k0)) continue;
+    const comp = [], todo = [k0]; seen.add(k0);
+    while (todo.length) { const k = todo.pop(); comp.push(k); const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (all.has(n) && !seen.has(n)) { seen.add(n); todo.push(n); } } }
+    let ring = comp.length >= 4 && railLoop(comp);
+    const st = ring && ring.findIndex(k => state.tiles.get(k).b === 'fz_station');
+    if (ring && st >= 0 && ring.length === comp.length) {
+      ring = ring.slice(st).concat(ring.slice(0, st));                      // Station vorn
+      const n = ring.length, L = Math.max(2, Math.round(n * 0.25)), Hmax = Math.min(70, 16 + n * 1.6), waves = Math.max(1, Math.round((n - L) / 6));
+      const h = ring.map((k, i) => i === 0 ? 0 : i <= L ? Hmax * i / L : Math.max(4, Hmax * (1 - (i - L) / (n - L)) * (0.55 + 0.45 * Math.cos((i - L) / (n - L) * Math.PI * 2 * waves))));
+      const c = COASTERS.length;
+      COASTERS.push({ ring, h, n, L, Hmax, key: ring[0] });
+      ring.forEach((k, i) => {
+        const [x, y] = keyXY(k), [px, py] = keyXY(ring[(i - 1 + n) % n]), [nx, ny] = keyXY(ring[(i + 1) % n]);
+        COASTER_AT.set(k, { c, i, h: h[i], hIn: (h[i] + h[(i - 1 + n) % n]) / 2, hOut: (h[i] + h[(i + 1) % n]) / 2, din: [x - px, y - py], dout: [nx - x, ny - y] });
+      });
+    } else for (const k of comp) COASTER_AT.set(k, { c: -1, h: 3 });          // noch kein Rundkurs: flach am Boden
+  }
+  return COASTERS;
+}
+const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b); });
 // Freizeitparks (Block 60): zusammenhängender Freizeitpark-Boden; Fahrgeschäfte & Stände darauf (je eins) → Stufe nach FZ_STEPS
 let FZPARKS = [];
 function computeFz() {
@@ -832,7 +861,9 @@ function computeFz() {
       const k = todo.pop(), [x, y] = keyXY(k);
       tiles.push(k);
       const a = COVER.get(k), t = a && state.tiles.get(a);
-      if (t && ITEMS[t.b].cat === 'fz') { rides.add(a); sorts.add(ITEMS[t.b].fzSort); }
+      if (t && ITEMS[t.b].cat === 'fz' && ITEMS[t.b].fzSort) { rides.add(a); sorts.add(ITEMS[t.b].fzSort); }
+      const ca = COASTER_AT.get(k);                                         // fertige Achterbahn: eine Attraktion
+      if (ca && ca.c >= 0) { rides.add('bahn' + ca.c); sorts.add('fahrt'); sorts.add('achterbahn'); }
       for (const [dx, dy] of DIRS) {
         const n = (x + dx) + ',' + (y + dy);
         if (!seen.has(n) && state.terra.get(n) === 'fz') { seen.add(n); todo.push(n); }
@@ -1536,6 +1567,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.edge) return 'Linien: Anfang und Ende antippen';
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'fz_looping') {                             // Looping (Block 60c): auf ein gerades Stück Achterbahn-Schiene
+    if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+    const t = state.tiles.get(x + ',' + y);
+    if (!t || t.b !== 'fz_bahn') return 'Auf ein Stück Achterbahn-Schiene setzen';
+    if (t.loop) return 'Hier ist schon ein Looping';
+    const arms = coasterArms(x, y);
+    if (arms.length !== 2 || arms[0][0] !== -arms[1][0] || arms[0][1] !== -arms[1][1]) return 'Nur auf ein gerades Stück (keine Kurve)';
+    return state.money < d.cost ? 'Zu wenig Taler' : null;
+  }
   if (b === 'weg' && !opts.move && decoOver(x, y)) {    // Weg unter vorhandene Deko legen bzw. dort umfärben (Block 58; nicht beim Tragen)
     if (!ownedTile(x, y)) return notMine(x, y);
     if (wegAt(x, y) === currentStyle('weg')) return 'Hier liegt schon dieser Weg';
@@ -1987,7 +2027,7 @@ function demolishInfo(x, y) {
     }
     const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
       : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
-    const price = t.price != null ? t.price : d.cost, refund = full ? paid.cost : Math.floor((price + staged) / 2);
+    const price = (t.price != null ? t.price : d.cost) + (t.loopPrice || 0), refund = full ? paid.cost : Math.floor((price + staged) / 2);
     return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : price + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
@@ -2005,7 +2045,7 @@ function previewDelta(b, x, y) {
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen)
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
-  rebuildCover(); computeMarkets(); computeParks(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
+  rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,

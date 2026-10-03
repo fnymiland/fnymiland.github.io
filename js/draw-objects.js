@@ -1277,6 +1277,8 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
       ellipse(lx - 0.6 * z, ly - 1 * z, 1.6 * z, (0.4 + f * 0.6) * z, 'rgba(220,240,255,0.8)'); ellipse(lx + 0.6 * z, ly - 1 * z, 1.6 * z, (0.4 + f * 0.6) * z, 'rgba(220,240,255,0.8)');
       break;
     }
+    case 'fz_bahn': case 'fz_station': drawCoasterTile(cx, cy, z, x, y, t && t.b ? t : { b: type }); break;   // Achterbahn (Block 60c)
+    case 'fz_looping': drawCoasterTile(cx, cy, z, x, y, { b: 'fz_bahn', loop: true }); break;
     // --- Freizeitpark (Block 60) ---
     case 'fz_tor': {                         // 1×2: zwei Türmchen mit Spitzdach und Fahne, dazwischen ein Bogen mit Schild
       const K = kit(cx, cy, z, t && t.rot), lit = night > 0.15 && isLive();
