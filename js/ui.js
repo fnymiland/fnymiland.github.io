@@ -1031,7 +1031,8 @@ function openInfo(x, y) {
       <p class="muted">Von selbst passend zum Wegstil – hier für die ganze Brücke umstellen. Die alte gibt es voll zurück.</p>
       <div class="label">${BRIDGE_LOOK[bridgeKind(t)].wall ? 'Mauer und Brüstung' : 'Geländer und Pfähle'}</div>
       <div class="swatches"><button class="sw bunt${t.brc == null ? ' on' : ''}" data-brc="" aria-label="Farbe wie die Brücke" title="Wie die Brücke"></button>${BRIDGE_COLS.map((c, i) => `<button class="sw${t.brc === i ? ' on' : ''}" data-brc="${i}" style="background:${c}" aria-label="Brückenfarbe ${i + 1}"></button>`).join('')}</div>
-      ${BRIDGE_LOOK[bridgeKind(t)].wall ? '<p class="muted">Der Belag ist der Weg – sein Muster wechselst du, indem du den Weg umfärbst.</p>' : `<div class="label">Planken</div>
+      ${BRIDGE_LOOK[bridgeKind(t)].wall ? `<div class="label">Belag</div>
+      <div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !(PATH_LOOK[st.id] || {}).stones).map(st => `<button class="sw${(t.style || 'sand') === st.id ? ' on' : ''}" data-brs="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : `<div class="label">Planken</div>
       <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>` : '';   // Wunder-Schloss (Block 60j)
@@ -1113,6 +1114,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
+  for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)
     setBridgeColor(x, y, key, b.dataset[attr] === '' ? null : +b.dataset[attr]);   // für die ganze Brücke (66c)
     sfx('deco'); openInfo(x, y);

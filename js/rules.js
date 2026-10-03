@@ -1257,6 +1257,19 @@ function setBridgeKind(x, y, kind) {
   groundVersion++; sfx('build'); recalc(); save();
   return true;
 }
+// Belag (Wegmuster) der ganzen Brücke direkt wählen (66d) – die Brücken-Art bleibt, wie sie bezahlt ist; kostet wie Umfärben
+function setBridgeStyle(x, y, style) {
+  const st = STYLES.weg.find(o => o.id === style);
+  if (!st || !styleOk(st)) return false;
+  const tiles = bridgeSpan(x, y).map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => (t.style || 'sand') !== style);
+  if (!tiles.length) return false;
+  const cost = ITEMS.weg.cost * tiles.length;
+  if (state.money < cost) { fail('Zu wenig Taler'); return false; }
+  state.money -= cost;
+  for (const t of tiles) { const kind = bridgeKind(t); t.style = style; if (kind === (BRIDGE_OF_STYLE[style] || 'stein')) delete t.brk; else t.brk = kind; }
+  groundVersion++; sfx('road'); recalc(); save();
+  return true;
+}
 // Farbe der ganzen Brücke (key: 'brc' Bauwerk, 'brw' Planken; v null = wie die Brücke)
 function setBridgeColor(x, y, key, v) {
   for (const [px, py] of bridgeSpan(x, y)) { const t = state.tiles.get(px + ',' + py); if (v == null) delete t[key]; else t[key] = v; }

@@ -691,4 +691,6 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Seitenwänden; Holzpfähle unter dem Belag statt davor.
 - [x] 66c Art und Farben gelten für die ganze Brücke (`bridgeSpan`, `setBridgeKind`, `setBridgeColor`); neue Felder an einer
       Brücke übernehmen Art und Farben zum passenden Preis (`newBridgeKind`).
+- [x] 66d Belag der Stein-/Ziegelbrücke direkt im Fenster wählen (alle freigeschalteten Wegmuster, `setBridgeStyle`, für die
+      ganze Brücke, kostet wie Umfärben; die Brücken-Art bleibt) – kein Umweg mehr über Weg ziehen, löschen, neu legen.
 
