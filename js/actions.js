@@ -91,6 +91,10 @@ function build(b, x, y, quiet) {
     }
   } else {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}) });
+    if (bridge && b === 'weg') {                                      // Brücke verlängern: Art und Farben der alten übernehmen (66c)
+      const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge), nt = state.tiles.get(k);
+      if (nb) { for (const key of ['brc', 'brw']) if (nb[key] != null) nt[key] = nb[key]; if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
+    }
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
     if (b === 'fz_schloss') state.tiles.get(k).cs = csOf(null);     // Märchenschloss: Gestalt (Block 60g)

@@ -1232,20 +1232,40 @@ function bridgeShapeError(x, y, water) {
   for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && !straightArms(armsWith(x + dx, y + dy, [x, y]))) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
   return null;
 }
-// Brücken-Art umstellen (Fenster): alte voll zurück, neue bezahlen; Art wie der Wegstil sie wählt, wird nicht gemerkt
+// Eine Brücke = alle zusammenhängenden Brückenfelder (sie sind gerade): Art und Farben gelten für sie alle (Block 66c)
+function bridgeSpan(x, y) {
+  const out = [], seen = new Set(), todo = [[x, y]];
+  while (todo.length) {
+    const [px, py] = todo.pop(), k = px + ',' + py;
+    if (seen.has(k) || !isWegBridge(state.tiles.get(k))) continue;
+    seen.add(k); out.push([px, py]);
+    for (const [dx, dy] of DIRS) todo.push([px + dx, py + dy]);
+  }
+  return out;
+}
+// Brücken-Art umstellen (Fenster): für die ganze Brücke; alte voll zurück, neue bezahlen; Art wie der Wegstil sie wählt,
+// wird nicht gemerkt
 function setBridgeKind(x, y, kind) {
-  const t = state.tiles.get(x + ',' + y);
-  if (!isWegBridge(t) || !WEG_BRIDGE[kind] || bridgeKind(t) === kind) return false;
-  const old = WEG_BRIDGE[bridgeKind(t)], nw = WEG_BRIDGE[kind], c = B => ({ money: B.cost, ...B.mat });
-  addCost(c(old), 1);
-  if (!canPay(c(nw))) { addCost(c(old), -1); fail(state.money < nw.cost ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
-  addCost(c(nw), -1);
-  if (kind === (BRIDGE_OF_STYLE[t.style || 'sand'] || 'stein')) delete t.brk; else t.brk = kind;
+  if (!isWegBridge(state.tiles.get(x + ',' + y)) || !WEG_BRIDGE[kind]) return false;
+  const tiles = bridgeSpan(x, y).map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => bridgeKind(t) !== kind);
+  if (!tiles.length) return false;
+  const nw = WEG_BRIDGE[kind], c = (B, n = 1) => Object.fromEntries(Object.entries({ money: B.cost, ...B.mat }).map(([r, v]) => [r, v * n]));
+  for (const t of tiles) addCost(c(WEG_BRIDGE[bridgeKind(t)]), 1);
+  if (!canPay(c(nw, tiles.length))) { for (const t of tiles) addCost(c(WEG_BRIDGE[bridgeKind(t)]), -1); fail(state.money < nw.cost * tiles.length ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  addCost(c(nw, tiles.length), -1);
+  for (const t of tiles) { if (kind === (BRIDGE_OF_STYLE[t.style || 'sand'] || 'stein')) delete t.brk; else t.brk = kind; }
   groundVersion++; sfx('build'); recalc(); save();
   return true;
 }
+// Farbe der ganzen Brücke (key: 'brc' Bauwerk, 'brw' Planken; v null = wie die Brücke)
+function setBridgeColor(x, y, key, v) {
+  for (const [px, py] of bridgeSpan(x, y)) { const t = state.tiles.get(px + ',' + py); if (v == null) delete t[key]; else t[key] = v; }
+  groundVersion++; save();
+}
+// Art eines neuen Brückenfelds: wie die Brücke, an die es anschließt, sonst nach dem gewählten Wegstil (66c)
+const newBridgeKind = (x, y) => { const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge); return nb ? bridgeKind(nb) : bridgeKind({ style: currentStyle('weg') }); };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE
-  : b === 'weg' && terrainAt(x, y) === 'water' ? WEG_BRIDGE[bridgeKind({ style: currentStyle('weg') })]
+  : b === 'weg' && terrainAt(x, y) === 'water' ? WEG_BRIDGE[newBridgeKind(x, y)]
   : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)

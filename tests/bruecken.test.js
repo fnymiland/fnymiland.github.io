@@ -37,11 +37,11 @@ describe('Wegbrücken (Block 66)', () => {
     line('sand', { x: 5, y: 5 }, { x: 11, y: 5 });
     const m = game('state.money');
     expect(game("setBridgeKind(8, 5, 'rot')")).toBe(true);
-    expect(game('state.money')).toBe(m + game('WEG_BRIDGE.holz.cost') - game('WEG_BRIDGE.rot.cost'));
+    expect(game('state.money')).toBe(m + 3 * (game('WEG_BRIDGE.holz.cost') - game('WEG_BRIDGE.rot.cost')));   // ganze Brücke (66c)
     const d = game('JSON.parse(JSON.stringify(serialize()))');
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
     expect(game("bridgeKind(state.tiles.get('8,5'))")).toBe('rot');
-    expect(game("(chosenStyle.weg = 'platten', build('weg', 7, 5, true), bridgeKind(state.tiles.get('7,5')))")).toBe('holz');   // bleibt Holz
+    expect(game("(chosenStyle.weg = 'asphalt', build('weg', 7, 5, true), bridgeKind(state.tiles.get('7,5')))")).toBe('rot');   // Umfärben: bleibt, wie bezahlt
     const m2 = game('state.money');
     game('demolish(8, 5)');
     expect(game('state.money')).toBe(m2 + game('WEG_BRIDGE.rot.cost'));
@@ -74,5 +74,19 @@ describe('Wegbrücken (Block 66)', () => {
       game(`setBridgeKind(8, 8, '${k}')`);
       expect(() => game("for (const P of ['ground', null]) { PASS = P; drawObject('weg', 200, 200, 1.4, 0, 8, 8, 1, state.tiles.get('8,8')); } PASS = null")).not.toThrow();
     }
+  });
+
+  it('Art und Farben gelten für die ganze Brücke; Verlängern übernimmt sie zum passenden Preis (66c)', () => {
+    line('sand', { x: 5, y: 5 }, { x: 8, y: 5 });                                  // Brücke 7, 8 – noch nicht am anderen Ufer
+    const m = game('state.money');
+    expect(game("setBridgeKind(7, 5, 'rot')")).toBe(true);
+    expect(game("[7, 8].map(x => bridgeKind(state.tiles.get(x + ',5')))")).toEqual(['rot', 'rot']);
+    expect(game('state.money')).toBe(m + 2 * (game('WEG_BRIDGE.holz.cost') - game('WEG_BRIDGE.rot.cost')));
+    game("setBridgeColor(8, 5, 'brc', 3)");
+    expect(game("[7, 8].map(x => state.tiles.get(x + ',5').brc)")).toEqual([3, 3]);
+    const m2 = game('state.money');
+    line('sand', { x: 8, y: 5 }, { x: 11, y: 5 });                                 // weiter übers Wasser bis ans Ufer
+    expect(game("state.tiles.get('9,5')")).toMatchObject({ bridge: true, brk: 'rot', brc: 3 });
+    expect(m2 - game('state.money')).toBe(game('WEG_BRIDGE.rot.cost') + 2 * game('ITEMS.weg.cost'));
   });
 });

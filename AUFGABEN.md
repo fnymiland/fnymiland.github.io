@@ -689,4 +689,6 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 66b Brücken: Farben im Fenster (Bauwerk `t.brc` aus `BRIDGE_COLS`, Holzplanken `t.brw` aus `PLANK_COLS`), Belag der Stein-/
       Ziegelbrücken mit dem echten Wegmuster (Ziegel, Platten, Pflaster, Asphalt mit Mittelstreifen), Mauerwerk an den
       Seitenwänden; Holzpfähle unter dem Belag statt davor.
+- [x] 66c Art und Farben gelten für die ganze Brücke (`bridgeSpan`, `setBridgeKind`, `setBridgeColor`); neue Felder an einer
+      Brücke übernehmen Art und Farben zum passenden Preis (`newBridgeKind`).
 
