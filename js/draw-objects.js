@@ -2070,6 +2070,46 @@ function castleKit(K, z, now, x, o) {
     if (withFlag) flag(px, py - h - 2 * z, i);
     return [px, py - h - 2 * z];
   };
+  // Balkon bzw. Kranz rund um einen Turm (Block 75): Platte mit Unterkante bei up, steht w (Felder) vor, Stabgeländer und
+  // Handlauf. back: der Teil hinter dem Turm (vor dem Turm zeichnen – ragt seitlich vorbei), sonst der vordere mit Kante
+  // und Konsolen (brackets). Eckig wie rund; Balkone der Türme und die Kränze am Hauptturm nutzen ihn gleich.
+  const balconyRing = (a, b, r, up, back, round, w = 0.11, brackets = true) => {
+    const stone = '#e3d6c2', rodC = C(shade(gold, back ? -0.12 : 0));
+    if (round) {
+      const [cx0, cy0] = K.P(a, b, 0), rx = r * Math.SQRT2 * TW / 2 * z, ry = r * Math.SQRT2 * TH / 2 * z, s2 = (r + w) / r;
+      const top0 = cy0 - (up + 1.4) * z, bot0 = cy0 - up * z, [a0, a1] = back ? [Math.PI, 2 * Math.PI] : [0, Math.PI];
+      if (!back) {
+        if (brackets) for (let j = 1; j < 6; j++) {                                          // Konsolen unter der Platte
+          const ph = -Math.PI / 2 + j * Math.PI / 6, wx = cx0 + rx * Math.sin(ph), wy = cy0 + ry * Math.cos(ph) - (up - 3.2) * z, ox = cx0 + rx * s2 * Math.sin(ph), oy = bot0 + ry * s2 * Math.cos(ph);
+          poly([[wx - 0.6 * z, wy], [ox - 0.6 * z, oy], [ox + 0.6 * z, oy], [wx + 0.6 * z, wy]], C(shade(stone, -0.18)));
+        }
+        const gr = g.createLinearGradient(cx0 - rx * s2, 0, cx0 + rx * s2, 0); gr.addColorStop(0, C(shade(stone, 0.07))); gr.addColorStop(1, C(shade(stone, -0.15)));
+        g.beginPath(); g.ellipse(cx0, bot0, rx * s2, ry * s2, 0, 0, Math.PI); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, Math.PI, 0, true); g.closePath();
+        g.fillStyle = gr; g.fill();                                                          // Kante
+      }
+      g.beginPath(); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, a0, a1); g.ellipse(cx0, top0, rx, ry, 0, a1, a0, true); g.closePath();
+      g.fillStyle = C(shade(stone, back ? 0.02 : 0.08)); g.fill();                        // Oberseite
+      g.strokeStyle = rodC; g.lineWidth = 0.45 * z; g.beginPath();
+      const nr = Math.max(8, Math.round((r + w) * 40));
+      for (let j = 0; j <= nr; j++) { const ph = (back ? Math.PI / 2 : -Math.PI / 2) + j * Math.PI / nr, px = cx0 + rx * s2 * 0.97 * Math.sin(ph), py = top0 + ry * s2 * 0.97 * Math.cos(ph); g.moveTo(px, py); g.lineTo(px, py - 3.4 * z); }
+      g.stroke();
+      g.lineWidth = 0.9 * z; g.beginPath(); g.ellipse(cx0, top0 - 3.6 * z, rx * s2 * 0.97, ry * s2 * 0.97, 0, a0, a1); g.stroke();
+      return;
+    }
+    const e = r + w, sides = Object.keys(FACES).filter(sd => (K.facing(...FACES[sd].n) > 0.01) !== back);
+    for (const side of sides) {
+      const f = FACES[side], at = (s, k, h) => K.P(a + f.p[0] * s + (f.q[0] - f.p[0]) * s * k, b + f.p[1] * s + (f.q[1] - f.p[1]) * s * k, h);
+      if (!back && brackets) for (const k of [0.2, 0.5, 0.8]) poly([at(r, k, up - 3.2), at(e, k, up), at(e, k + 0.03, up), at(r, k + 0.03, up - 3.2)], C(shade(stone, -0.18)));   // Konsolen
+      poly([at(r, 0, up + 1.4), at(r, 1, up + 1.4), at(e, 1, up + 1.4), at(e, 0, up + 1.4)], C(shade(stone, back ? 0.02 : 0.08)));   // Oberseite
+    }
+    for (const side of sides) {
+      const f = FACES[side], P = K.P(a + f.p[0] * e, b + f.p[1] * e), Q = K.P(a + f.q[0] * e, b + f.q[1] * e), sh = back ? -0.12 : side === 'front' || side === 'back' ? 0 : -0.12;
+      if (!back) faceQuad(P, Q, 0, 1, up * z, (up + 1.4) * z, C(shade(stone, sh - 0.06)));   // Kante
+      const nr = Math.max(6, Math.round(e * 30));
+      for (let j = 0; j <= nr; j++) faceQuad(P, Q, j / nr - 0.01, j / nr + 0.01, (up + 1.4) * z, (up + 4.8) * z, rodC);   // Stäbe
+      faceQuad(P, Q, 0, 1, (up + 4.8) * z, (up + 5.6) * z, C(shade(gold, sh)));       // Handlauf
+    }
+  };
   // Runder Turm (Block 74): Zylinder, Licht von links; Bogenfenster nach vorn, Kegeldach, Kuppel oder Zinnenkranz.
   // Gleiche Maße wie der eckige (r = halbe Seite), damit beide gleich wirken. Rückgabe: Spitze
   const roundTower = (a, b, r, H, lift, i, R, big, noFlag) => {
@@ -2078,23 +2118,7 @@ function castleKit(K, z, now, x, o) {
     const at = (phi, up) => [cx0 + rx * Math.sin(phi), cy0 + ry * Math.cos(phi) - up * z];   // phi = 0: genau nach vorn
     // Balkon rundum (Block 75): hinten zuerst (ragt seitlich am Turm vorbei), vorn nach dem Turm – mit Konsolen und Kante
     const bh = o.bk && !lift && H >= 34 ? balconyAt(lift, H) : null;
-    const balcony = back => {
-      const s2 = (r + 0.11) / r, top0 = cy0 - (bh + 1.4) * z, bot0 = cy0 - bh * z, stone = '#e3d6c2', [a0, a1] = back ? [Math.PI, 2 * Math.PI] : [0, Math.PI];
-      if (!back) {
-        for (let j = 1; j < 6; j++) {                                                       // Konsolen unter der Platte
-          const ph = -Math.PI / 2 + j * Math.PI / 6, [wx, wy] = at(ph, bh - 3.2), ox = cx0 + rx * s2 * Math.sin(ph), oy = bot0 + ry * s2 * Math.cos(ph);
-          poly([[wx - 0.6 * z, wy], [ox - 0.6 * z, oy], [ox + 0.6 * z, oy], [wx + 0.6 * z, wy]], C(shade(stone, -0.18)));
-        }
-        g.beginPath(); g.ellipse(cx0, bot0, rx * s2, ry * s2, 0, 0, Math.PI); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, Math.PI, 0, true); g.closePath();
-        g.fillStyle = lightX(stone, cx0 - rx * s2, cx0 + rx * s2, -0.15); g.fill();        // Kante
-      }
-      g.beginPath(); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, a0, a1); g.ellipse(cx0, top0, rx, ry, 0, a1, a0, true); g.closePath();
-      g.fillStyle = C(shade(stone, back ? 0.02 : 0.08)); g.fill();                        // Oberseite
-      g.strokeStyle = C(back ? shade(gold, -0.12) : gold); g.lineWidth = 0.45 * z; g.beginPath();
-      for (let j = 0; j <= 14; j++) { const ph = (back ? Math.PI / 2 : -Math.PI / 2) + j * Math.PI / 14, px = cx0 + rx * s2 * 0.97 * Math.sin(ph), py = top0 + ry * s2 * 0.97 * Math.cos(ph); g.moveTo(px, py); g.lineTo(px, py - 3.4 * z); }
-      g.stroke();
-      g.lineWidth = 0.9 * z; g.beginPath(); g.ellipse(cx0, top0 - 3.6 * z, rx * s2 * 0.97, ry * s2 * 0.97, 0, a0, a1); g.stroke();
-    };
+    const balcony = back => balconyRing(a, b, r, bh, back, true);
     if (bh != null) balcony(true);
     g.beginPath(); g.moveTo(cx0 - rx, top); g.lineTo(cx0 - rx, cy0); g.ellipse(cx0, cy0, rx, ry, 0, Math.PI, 0, true); g.lineTo(cx0 + rx, top); g.closePath();
     g.fillStyle = lightX(wall, cx0 - rx, cx0 + rx); g.fill();
@@ -2139,20 +2163,7 @@ function castleKit(K, z, now, x, o) {
     if (round) return roundTower(a, b, r, H, lift, i, R, big, noFlag);
     // Balkon rundum (Block 60i/75): hinten zuerst (ragt seitlich vorbei), vorn nach dem Turm – Konsolen, Platte, Kante, Stäbe
     const bh = o.bk && !lift && H >= 34 ? balconyAt(lift, H) : null;
-    const balcony = back => {
-      const e = r + 0.11, stone = '#e3d6c2', sides = Object.keys(FACES).filter(sd => (K.facing(...FACES[sd].n) > 0.01) !== back);
-      for (const side of sides) {
-        const f = FACES[side], at = (s, k, up) => K.P(a + f.p[0] * s + (f.q[0] - f.p[0]) * s * k, b + f.p[1] * s + (f.q[1] - f.p[1]) * s * k, up);
-        if (!back) for (const k of [0.2, 0.5, 0.8]) poly([at(r, k, bh - 3.2), at(e, k, bh), at(e, k + 0.03, bh), at(r, k + 0.03, bh - 3.2)], C(shade(stone, -0.18)));   // Konsolen
-        poly([at(r, 0, bh + 1.4), at(r, 1, bh + 1.4), at(e, 1, bh + 1.4), at(e, 0, bh + 1.4)], C(shade(stone, back ? 0.02 : 0.08)));   // Oberseite
-      }
-      for (const side of sides) {
-        const f = FACES[side], P = K.P(a + f.p[0] * e, b + f.p[1] * e), Q = K.P(a + f.q[0] * e, b + f.q[1] * e), sh = back ? -0.12 : side === 'front' || side === 'back' ? 0 : -0.12;
-        if (!back) faceQuad(P, Q, 0, 1, bh * z, (bh + 1.4) * z, C(shade(stone, sh - 0.06)));   // Kante
-        for (let j = 0; j <= 8; j++) faceQuad(P, Q, j / 8 - 0.01, j / 8 + 0.01, (bh + 1.4) * z, (bh + 4.8) * z, C(shade(gold, back ? -0.12 : 0)));   // Stäbe
-        faceQuad(P, Q, 0, 1, (bh + 4.8) * z, (bh + 5.6) * z, C(shade(gold, sh)));       // Handlauf
-      }
-    };
+    const balcony = back => balconyRing(a, b, r, bh, back, false);
     if (bh != null) balcony(true);
     const T = K.block({ a, b, ha: r, hb: r, h: H, lift, wall, roof: R === 0 ? roof : shade(wall, -0.08), roofH: R === 0 ? 20 + r * 60 + H * 0.06 : 0, type: R === 0 ? 'hip' : 'flat', trim: R === 1 || R < 0 ? null : roof });
     for (const side of ['front', 'back', 'left', 'right']) {
@@ -2184,7 +2195,7 @@ function castleKit(K, z, now, x, o) {
     if (o.wp === 2) { circle(px - 0.9 * z, my - 0.5 * z, 1.1 * z, C(sym)); circle(px + 0.9 * z, my - 0.5 * z, 1.1 * z, C(sym)); poly([[px - 2 * z, my - 0.1 * z], [px + 2 * z, my - 0.1 * z], [px, my + 2.2 * z]], C(sym)); }
     if (o.wp === 3) { const pts = []; for (let k = 0; k < 10; k++) { const an = -Math.PI / 2 + k * Math.PI / 5, rr = (k % 2 ? 0.9 : 2.2) * z; pts.push([px + Math.cos(an) * rr, my + Math.sin(an) * rr]); } poly(pts, C(sym)); }
   };
-  return { archWins, faceLen, merlons, flag, bulbs, onion, tower, roundTower, shield };
+  return { archWins, faceLen, merlons, flag, bulbs, onion, tower, roundTower, shield, balconyRing };
 }
 function drawCastle(cx, cy, z, now, x, y, t) {
   const c = csOf(t), K = kit(cx, cy, z, t.rot), lit = night > 0.15 && isLive();
@@ -2194,7 +2205,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   const stairD = c.ex ? 0.3 : 0, hW = 8 + c.wf * 7, hC = 14 + c.cf * 10, front = HA - 0.26 - stairD;   // Freitreppe: Bau rückt nach hinten
   const wd = Math.min(0.62 + 0.45 * (Math.min(c.d, 2) - 1), front + HA - 0.08), aW = front - wd / 2;
   const haC = Math.min(HA - 0.14 - stairD / 2, 0.86), aC = HA - 0.14 - stairD - haC;
-  const { archWins, faceLen, merlons, flag, bulbs, onion, tower, shield } = castleKit(K, z, now, x, { wall, roof, win, gold, flags, lit, bk: c.bk, lc: c.lc, wp: c.wp, wn: c.wn });
+  const { archWins, faceLen, merlons, flag, bulbs, onion, tower, shield, balconyRing } = castleKit(K, z, now, x, { wall, roof, win, gold, flags, lit, bk: c.bk, lc: c.lc, wp: c.wp, wn: c.wn });
   const wing = (b0, b1) => {
     const R = c.wr, B = K.block({ a: aW, b: (b0 + b1) / 2, ha: wd / 2, hb: (b1 - b0) / 2, h: hW, wall, roof: R === 2 ? shade(wall, -0.08) : roof, roofH: R === 0 ? 11 : R === 1 ? 8 : 0, type: R === 0 ? 'gable' : R === 1 ? 'hip' : 'flat', ridge: 'b', over: 1.06, trim: R === 2 ? roof : shade(roof, 0.15) });
     for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (F) { const n = Math.max(1, Math.round(faceLen(B, side) * 2.4)); for (let f = 0; f < c.wf; f++) archWins(F, n, 4 + f * 7, 8.2 + f * 7); } }
@@ -2263,23 +2274,14 @@ function drawCastle(cx, cy, z, now, x, y, t) {
     const R = c.cr, m = Math.max(1, c.m), hT = 10 + c.cf * 6, dB = c.ex ? 7 : 0;
     const haT = Math.min(0.24, haC), aT = HA - 0.14 - stairD - haT, bT = Math.min(core / 2 - 0.06, 0.3 + c.cb * 0.1);
     const rM = Math.min(CM_R[c.mk], core / 2 - 0.12), Htot = hC + CM_H[m] + 26, aM = Math.max(-HA + rM + 0.04, aT - haT - rM * 0.45);
-    const ledge = (a, b, r, up) => {                                                       // Kranz am Absatz
-      if (round) {
-        const [px, py] = K.P(a, b, up), rx = r * 1.3 * Math.SQRT2 * TW / 2 * z, ry = r * 1.3 * Math.SQRT2 * TH / 2 * z;
-        g.beginPath(); g.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = C('#e3d6c2'); g.fill();
-        g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.ellipse(px, py - 2.4 * z, rx, ry, 0, 0, Math.PI); g.stroke();
-      } else {
-        const L = K.block({ a, b, ha: r * 1.3, hb: r * 1.3, h: 1.4, lift: up, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
-        for (const side of ['front', 'back', 'left', 'right']) { const F = L.faces[side]; if (F) faceQuad(F.P, F.Q, 0, 1, F.H + 2 * z, F.H + 2.7 * z, C(gold)); }
-      }
-    };
     const items = [[aM, 0, () => {
       const n = m >= 3 ? 3 : 2, fr = n === 3 ? [0.46, 0.3, 0.24] : [0.58, 0.42], rr = [1, 0.8, 0.64];
       let lift = 0;
-      for (let s = 0; s < n; s++) {
-        const H = Htot * fr[s], last = s === n - 1;
-        tower(aM, 0, rM * rr[s], H, lift, 0, last ? c.mr : -1, last, false, round);
-        if (!last) ledge(aM, 0, rM * rr[s], lift + H);
+      for (let s = 0; s < n; s++) {                                                     // Kranz am Absatz: wie ein Balkon (Block 75)
+        const H = Htot * fr[s], last = s === n - 1, r = rM * rr[s], w = s ? rM * rr[s - 1] + 0.07 - r : 0;
+        if (s) balconyRing(aM, 0, r, lift - 1, true, round, w, false);
+        tower(aM, 0, r, H, lift, 0, last ? c.mr : -1, last, false, round);
+        if (s) balconyRing(aM, 0, r, lift - 1, false, round, w, false);
         lift += H;
       }
     }]];

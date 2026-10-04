@@ -749,3 +749,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Neu unter „Zierde“: Fenster wenige · normal · viele · ganz viele (`cs.wn`) – mehr je Wand, in Türmen enger übereinander.
 - [x] Balkone hörten an den Turmkanten auf (nur die vordere Hälfte gezeichnet). Jetzt hinterer Teil vor dem Turm, vorderer
       danach – der Ring schließt sich sichtbar, eckig wie rund.
+- [x] Die Kränze an den Absätzen des Hauptturms (Turmgruppe) hatten noch die alte Scheibe mit halbem Geländer. Jetzt ein
+      Bauteil für alles (`balconyRing`): Balkone der Türme und Kränze gleich, hinten vor dem Turm, vorn danach.
