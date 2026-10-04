@@ -2073,6 +2073,14 @@ function castleKit(K, z, now, x, o) {
   // Balkon bzw. Kranz rund um einen Turm (Block 75): Platte mit Unterkante bei up, steht w (Felder) vor, Stabgeländer und
   // Handlauf. back: der Teil hinter dem Turm (vor dem Turm zeichnen – ragt seitlich vorbei), sonst der vordere mit Kante
   // und Konsolen (brackets). Eckig wie rund; Balkone der Türme und die Kränze am Hauptturm nutzen ihn gleich.
+  // Band um einen runden Turm (Block 75): Fläche zwischen zwei Ellipsenbögen, überall gleich hoch – ein Strich liefe an den
+  // Seiten spitz aus. back: die hintere Hälfte. Licht von links wie der Turm.
+  const arcBand = (cx, cy, rx, ry, h0, h1, col, back) => {
+    const [a0, a1] = back ? [Math.PI, 2 * Math.PI] : [0, Math.PI], gr = g.createLinearGradient(cx - rx, 0, cx + rx, 0);
+    gr.addColorStop(0, C(shade(col, back ? -0.05 : 0.1))); gr.addColorStop(1, C(shade(col, back ? -0.2 : -0.18)));
+    g.beginPath(); g.ellipse(cx, cy - h0 * z, rx, ry, 0, a0, a1); g.ellipse(cx, cy - h1 * z, rx, ry, 0, a1, a0, true); g.closePath();
+    g.fillStyle = gr; g.fill();
+  };
   const balconyRing = (a, b, r, up, back, round, w = 0.11, brackets = true) => {
     const stone = '#e3d6c2', rodC = C(shade(gold, back ? -0.12 : 0));
     if (round) {
@@ -2093,7 +2101,7 @@ function castleKit(K, z, now, x, o) {
       const nr = Math.max(8, Math.round((r + w) * 40));
       for (let j = 0; j <= nr; j++) { const ph = (back ? Math.PI / 2 : -Math.PI / 2) + j * Math.PI / nr, px = cx0 + rx * s2 * 0.97 * Math.sin(ph), py = top0 + ry * s2 * 0.97 * Math.cos(ph); g.moveTo(px, py); g.lineTo(px, py - 3.4 * z); }
       g.stroke();
-      g.lineWidth = 0.9 * z; g.beginPath(); g.ellipse(cx0, top0 - 3.6 * z, rx * s2 * 0.97, ry * s2 * 0.97, 0, a0, a1); g.stroke();
+      arcBand(cx0, cy0, rx * s2 * 0.97, ry * s2 * 0.97, up + 4.8, up + 5.6, gold, back);   // Handlauf
       return;
     }
     const e = r + w, sides = Object.keys(FACES).filter(sd => (K.facing(...FACES[sd].n) > 0.01) !== back);
@@ -2128,8 +2136,7 @@ function castleKit(K, z, now, x, o) {
       g.fillStyle = win; g.fillRect(px - hw, py - 5 * z, 2 * hw, 5 * z);
       g.beginPath(); g.ellipse(px, py - 5 * z, hw, hw, 0, Math.PI, 0); g.fill();
     }
-    const ring = (up, col, lw, scale = 1) => { g.strokeStyle = C(col); g.lineWidth = lw * z; g.beginPath(); g.ellipse(cx0, cy0 - up * z, rx * scale, ry * scale, 0, 0, Math.PI); g.stroke(); };
-    if (R === 0) ring(H - 4.75, gold, 1.5);                                               // goldenes Band
+    if (R === 0) arcBand(cx0, cy0, rx, ry, H - 5.5, H - 4, gold);                        // goldenes Band (wie beim eckigen)
     if (bh != null) balcony(false);
     const cap = () => { g.beginPath(); g.ellipse(cx0, top, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = C(shade(wall, -0.08)); g.fill(); };
     const merlon = th => { const w = Math.max(0.6 * z, rx * 0.5 * Math.abs(Math.cos(th)) * (Math.PI * 2 / n) + 0.4 * z), px = cx0 + rx * Math.sin(th), py = top + ry * Math.cos(th); g.fillStyle = C(shade(wall, -0.04 + 0.08 * Math.sin(-th) * 0.5)); g.fillRect(px - w / 2, py - 3.2 * z, w, 3.2 * z); };
@@ -2139,7 +2146,7 @@ function castleKit(K, z, now, x, o) {
     cap();
     if (R === 2) {
       for (let k = 0; k < n; k++) { const th = k * Math.PI * 2 / n; if (Math.cos(th) >= 0) merlon(th); }
-      ring(H, roof, 1);
+      arcBand(cx0, cy0, rx, ry, H - 1.4, H, roof);                                        // Rand in Dachfarbe
       if (!noFlag) flag(cx0, top - 3 * z, i);
     }
     if (R === 1) peak = onion(a, b, r * 1.02, lift + H, i, !noFlag);

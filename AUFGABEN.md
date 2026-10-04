@@ -751,3 +751,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       danach – der Ring schließt sich sichtbar, eckig wie rund.
 - [x] Die Kränze an den Absätzen des Hauptturms (Turmgruppe) hatten noch die alte Scheibe mit halbem Geländer. Jetzt ein
       Bauteil für alles (`balconyRing`): Balkone der Türme und Kränze gleich, hinten vor dem Turm, vorn danach.
+- [x] Goldband und Handläufe an runden Türmen liefen an den Seiten spitz aus (Strich auf einer Ellipse). Jetzt `arcBand`:
+      Fläche zwischen zwei Bögen, überall gleich hoch, mit Licht von links.
