@@ -747,3 +747,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Balkone schwebten als dünnes Brett quer über einer Fensterreihe. Jetzt auf Höhe einer Fensterreihe (die Fenster
       dort sind Balkontüren), mit Konsolen, sichtbarer Bodenplatte, Kante, Stabgeländer und Handlauf – eckig und rund.
 - [x] Neu unter „Zierde“: Fenster wenige · normal · viele · ganz viele (`cs.wn`) – mehr je Wand, in Türmen enger übereinander.
+- [x] Balkone hörten an den Turmkanten auf (nur die vordere Hälfte gezeichnet). Jetzt hinterer Teil vor dem Turm, vorderer
+      danach – der Ring schließt sich sichtbar, eckig wie rund.
