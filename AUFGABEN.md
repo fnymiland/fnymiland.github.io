@@ -727,3 +727,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Kultur: Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion.
 - [x] Deko-Bauten: Leuchtturm (Turm/Streifen), Uhrturm, Karussell (Boden/Zeltdach), Pavillon (Säulen/Dach), Brunnen (Becken).
       Umgesetzt ohne die Bilder umzubauen: `REPAINT` je Gebäude, `C()`/`shade()` tauschen beim Zeichnen die Töne.
+- [x] Testwelt `?welt=farben` (`TESTWELT=1 npx vitest run tests/testwelt-farben.test.js`): je umfärbbares Gebäude eine
+      Reihe – vier Drehungen in Originalfarben, dann alle 14 Farben; Namensschild vorn, ohne 🐌/✨ (`SHOWCASE.quiet`).

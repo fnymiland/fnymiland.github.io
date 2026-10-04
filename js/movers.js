@@ -976,12 +976,12 @@ function drawCritter(c, z, now) {
 let SHOWCASE = null;
 function showcaseTick(now) {
   if (!SHOWCASE) return;
-  for (const s of SHOWCASE.nature) {
+  for (const s of SHOWCASE.nature || []) {
     const c = critters.find(q => q.pin === s.id);
     if (!c) { const n = spawnCritter(s.id, s.x, s.y, now); Object.assign(n, { until: Infinity, pin: s.id, label: `${NATURE_BY_ID[s.id].icon} ${NATURE_BY_ID[s.id].name}` }); }
     else if (!c.flee && now - c.t0 > 14000) c.t0 = now;                    // Vögel, Fische: von vorn
   }
-  for (const s of SHOWCASE.people) if (!walkers.some(w => w.pin === s.home)) {
+  for (const s of SHOWCASE.people || []) if (!walkers.some(w => w.pin === s.home)) {
     const r = residentsOf(state.tiles.get(s.home))[0];
     if (r) walkers.unshift({ fx: s.x, fy: s.y, tx: s.x, ty: s.y, px: s.x, py: s.y, t: 0, wait: 1e9, ...residentLook(s.home, 0), shirt: SHIRTS[s.i % SHIRTS.length],
       speed: 1, goal: { kind: 'bummel' }, steps: 1e9, pin: s.home, label: `${animalOf(r).icon} ${r.name}` });
@@ -989,6 +989,10 @@ function showcaseTick(now) {
 }
 function drawShowcaseLabels(z) {
   if (!SHOWCASE) return;
+  for (const s of SHOWCASE.signs || []) {                                  // Testwelt „farben“: Name am Anfang jeder Reihe
+    const p = toScreen(s.x, s.y);
+    if (p.x > -200 && p.x < W + 200 && p.y > -50 && p.y < H + 50) pill(s.text, p.x, p.y - 10 * z, '#fffaf0', '#6b4f3a', Math.max(10, 5 * z));
+  }
   for (const c of critters) if (c.label && !c.flee && !(state.album && state.album.has('natur:' + c.id))) {   // nur, bis es entdeckt ist
     const p = toScreen(c.px, c.py); pill(c.label, p.x, p.y - (c.h + 14) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
   for (const w of walkers) if (w.label) { const [hx, hy] = walkerHead(w, z); pill(w.label, hx, hy - 9 * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
