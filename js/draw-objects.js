@@ -2363,10 +2363,21 @@ function drawCastle(cx, cy, z, now, x, y, t) {
       }
     }
   }
-  // Sockel mit rotem Teppich (oder Freitreppe) zum Portal
-  K.block({ a: 0, b: 0, ha: HA - 0.03, hb: HB - 0.03, h: 3, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
-  if (!c.ex) K.rect(front - 0.02, -0.17, HA - 0.03, 0.17, C('#e8604f'), 3);
-  for (const sb of [-0.22, 0.22]) { const [px, py] = K.P(HA - 0.1, sb * (c.ex ? 1.75 : 1), 3); circle(px, py - 4 * z, 1.4 * z, C(gold)); g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 4 * z); g.stroke(); }
+  // Boden (Block 76): 0 Sockel (erhöhte Platte), 1 Rasen (Weg aus Steinplatten zum Portal), 2 Platz (gepflasterter Hof) –
+  // darauf der rote Teppich (oder die Freitreppe) und zwei Laternen vor dem Portal
+  const up0 = c.gb ? 0 : 3, A0 = -HA + 0.03, A1 = HA - 0.03, B1 = HB - 0.03;
+  if (!c.gb) K.block({ a: 0, b: 0, ha: HA - 0.03, hb: HB - 0.03, h: 3, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
+  else if (c.gb === 1) {
+    K.rect(A0, -B1, A1, B1, C('#8fcf68'));                                                    // Rasen ums Schloss
+    K.rect(front - 0.06, -0.26, A1, 0.26, C('#e9dcc2'));                                     // Weg zum Portal
+    for (let k = 1; k < 4; k++) { const aa = front - 0.06 + (A1 - front + 0.06) * k / 4; K.rect(aa - 0.008, -0.26, aa + 0.008, 0.26, C('#d6c7a8')); }
+  } else {
+    K.rect(A0, -B1, A1, B1, C('#e6dccb'));                                                    // Platz aus Steinplatten
+    for (let k = 1; k < Math.round(c.d * 3); k++) { const aa = A0 + (A1 - A0) * k / Math.round(c.d * 3); K.rect(aa - 0.006, -B1, aa + 0.006, B1, C('#d3c6ae')); }
+    for (let k = 1; k < Math.round(c.w * 3); k++) { const bb = -B1 + 2 * B1 * k / Math.round(c.w * 3); K.rect(A0, bb - 0.006, A1, bb + 0.006, C('#d3c6ae')); }
+  }
+  if (!c.ex) K.rect(front - 0.02, -0.17, HA - 0.03, 0.17, C('#e8604f'), up0 + 0.2);
+  for (const sb of [-0.22, 0.22]) { const [px, py] = K.P(HA - 0.1, sb * (c.ex ? 1.75 : 1), up0); circle(px, py - 4 * z, 1.4 * z, C(gold)); g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 4 * z); g.stroke(); }
   // Tiefes Schloss: hinten ein Schlossgarten mit Bäumen und Büschen (steht hinter allem, darum zuerst)
   const garden = aW - wd / 2 + HA;
   if (garden > 0.9) for (let b = -HB + 0.45, i = 0; b < HB - 0.3; b += 0.7, i++) {

@@ -753,3 +753,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Bauteil für alles (`balconyRing`): Balkone der Türme und Kränze gleich, hinten vor dem Turm, vorn danach.
 - [x] Goldband und Handläufe an runden Türmen liefen an den Seiten spitz aus (Strich auf einer Ellipse). Jetzt `arcBand`:
       Fläche zwischen zwei Bögen, überall gleich hoch, mit Licht von links.
+
+## Block 76 – Boden unter dem Märchenschloss (04.10.2026)
+- [x] Das Schloss stand immer auf einer erhöhten Platte (wie ein Modell auf dem Tablett). Neu unter „Zierde“: Boden
+      Sockel · Rasen · Platz (`cs.gb`). Rasen: direkt im Gras mit Plattenweg zum Portal; Platz: gepflasterter Hof.
+      Neue Schlösser starten mit Rasen, bestehende behalten den Sockel.

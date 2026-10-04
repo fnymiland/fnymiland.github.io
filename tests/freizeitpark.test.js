@@ -458,6 +458,17 @@ describe('Märchenschloss: runde Türme und Turmgruppe (Block 74)', () => {
     game("document.querySelector('#panel [data-cs=\"wn:3\"]').click()");
     expect(game("state.tiles.get('8,6').cs.wn")).toBe(3);
   });
+  it('Boden (Block 76): Sockel · Rasen · Platz – alte Schlösser Sockel, neue Rasen; jede Wahl sieht anders aus', () => {
+    const base = game('csOf(null)');
+    expect(base.gb).toBe(0);
+    expect(game('csNew().gb')).toBe(1);
+    const outs = [0, 1, 2].map(gb => fills({ ...base, gb }));
+    expect(new Set(outs).size).toBe(3);
+    ground(5, 5, 12, 8);
+    game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'zierde'; openInfo(8, 6)");
+    game("document.querySelector('#panel [data-cs=\"gb:2\"]').click()");
+    expect(game("state.tiles.get('8,6').cs.gb")).toBe(2);
+  });
   it('Knöpfe: Mitte wählen, Form je Turmpaar umschalten; Hauptturm ohne „keiner“', () => {
     ground(5, 5, 12, 8);
     game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'form'; openInfo(8, 6)");

@@ -27,7 +27,7 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   B('fz_station', 5, 12); B('fz_looping', 9, 2);
   // Märchenschloss (Block 60g/h): Vorlage „Märchenschloss“, 7 breit, 2 tief – Portal zum Weg (Drehung 1)
   B('fz_schloss', 5, 7, 1);
-  game(`(t => { t.cs = csOf({ cs: { w: 7, d: 2, ...CS_TPL.maerchen.cs, bk: 1, lc: 1, wp: 1, ex: 1 } }); t.roof = 1; t.price = castlePrice(t.cs); })(state.tiles.get('${X + 5},${Y + 7}')); rebuildCover()`);
+  game(`(t => { t.cs = csOf({ cs: { w: 7, d: 2, ...CS_TPL.maerchen.cs, bk: 1, lc: 1, wp: 1, ex: 1, gb: 1 } }); t.roof = 1; t.price = castlePrice(t.cs); })(state.tiles.get('${X + 5},${Y + 7}')); rebuildCover()`);
   const T = (b, x, y, fl, rot = 0) => { B(b, x, y, rot); if (fl) game(`state.tiles.get('${X + x},${Y + y}').fl = ${fl}`); };
   // Eingang: zwei Tortürme
   T('fz_torturm', 16, 5, 2); T('fz_torturm', 16, 9, 2);
@@ -75,7 +75,7 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   variants.forEach((v, i) => {
     const x = sr[0] + 1 + Math.floor(i / 5) * 9, y = sr[1] + 1 + (i % 5) * 6;   // gedreht: 7 breit in x, Portal nach vorn
     game(`for (let yy = ${y}; yy < ${y} + 2; yy++) for (let xx = ${x}; xx < ${x} + 7; xx++) state.terra.set(xx + ',' + yy, 'fz')`);
-    game(`(() => { const cs = csOf({ cs: { w: 7, d: 2, gd: 1, ...${JSON.stringify(v)} } }); state.tiles.set('${x},${y}', { b: 'fz_schloss', lvl: 1, rot: 1, cs, price: castlePrice(cs), roof: 1, wall: ${v.mt ? 1 : 'undefined'} }); })()`);
+    game(`(() => { const cs = csOf({ cs: { w: 7, d: 2, gd: 1, gb: ${i % 3}, ...${JSON.stringify(v)} } }); state.tiles.set('${x},${y}', { b: 'fz_schloss', lvl: 1, rot: 1, cs, price: castlePrice(cs), roof: 1, wall: ${v.mt ? 1 : 'undefined'} }); })()`);
   });
   game('rebuildCover(); recalc()');
   console.log('Schlossreihe', JSON.stringify(sr));
