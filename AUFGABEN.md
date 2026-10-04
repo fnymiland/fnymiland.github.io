@@ -760,3 +760,12 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Neue Schlösser starten mit Rasen, bestehende behalten den Sockel.
 - [x] Belag für Weg zum Portal (Rasen) bzw. den Platz (`cs.gp`): alle freigeschalteten Wegmuster, dieselben Knöpfe wie beim
       Weg; auch der Weg vom Tor zum Portal (Graben/Mauer) bekommt ihn. Gezeichnet über `kPave` (wie die Wunder-Plätze).
+
+## Block 77 – Wegform: ganz breit, Anschluss an Gebäude, Kurven rund/eckig (04.10.2026)
+- [x] Musterleiste beim Weg: „▭ schmal / ▬ ganz breit“ und „⌒ Kurve rund / ⌐ eckig“ für alles, was man zieht; über einen alten
+      Weg gezogen stellt es die Form um (kostenlos). Ganz breit: Belag übers ganze Feld, Bordstein nur zu Nicht-Wegen, Lücke für
+      ankommende schmale Wege – Laternen und Bänke stehen auf dem Belag am Rand.
+- [x] Enden: automatisch läuft eine Sackgasse vor einem Gebäude bis an die Wand (einzelnes Feld: zum Gebäude daneben).
+      Im Wegfenster „Ende: automatisch · rund · bis an den Rand“, „Form“ und (in Kurven) „Kurve rund / eckig“ – mit Rückgängig.
+- [x] Eckige Kurven: Mittelstreifen (Asphalt) und Trittsteine folgen dem Knick; außen kein Deko-Platz auf dem Bogen.
+- [x] Testwelt freizeitpark: Abschnitt „Wegformen“ östlich der Insel (36, 24).

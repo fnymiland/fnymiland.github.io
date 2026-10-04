@@ -61,7 +61,8 @@ function cancelPlan() { plan = null; }
 function planCheck(b, x, y) {
   const old = state.tiles.get(x + ',' + y);
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {      // umfärben
-    return (old.style || 'sand') === currentStyle(b) ? { same: true } : { cost: ITEMS[b].cost, mat: {} };
+    const sameStyle = (old.style || 'sand') === currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;   // Wegform: kostenlos (Block 77)
+    return sameStyle ? (shape && !sameWegShape(old) ? { cost: 0, mat: {} } : { same: true }) : { cost: ITEMS[b].cost, mat: {} };
   }
   if (ownedTile(x, y) && crossCandidate(b, x, y)) {                                                    // Bahnübergang
     const err = crossError(b, x, y, true);

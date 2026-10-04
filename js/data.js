@@ -943,6 +943,7 @@ const archLabel = (b, id) => id !== 'bogen' ? `${ARCHES[id].icon} ${ARCHES[id].n
 const EDGE_LIT = new Set(['hecke:lichter', 'zaun:lichter', 'mauer:laternen']);
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
+const wegShape = { wide: false, sq: false };      // Form neuer Wege (Block 77): ganz breit, eckige Kurven – Schalter in der Musterleiste
 
 
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',

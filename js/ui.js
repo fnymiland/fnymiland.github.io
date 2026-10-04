@@ -368,8 +368,11 @@ function renderStyleBar(t) {
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
       <i style="background:${styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
-    + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '');
+    + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '')
+    + (t === 'weg' ? `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
+      `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar(t); };
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
   bar.hidden = false;
 }
@@ -900,6 +903,23 @@ function walkerGone(w, r) {
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
+// Wegform im Wegfenster (Block 77): Breite, Kurve (nur in Kurven), Ende (nur an Enden)
+function wegFormHtml(t, x, y) {
+  const arms = pathArms(x, y), curve = !t.wide && !!roadCurve(arms), end = arms.length <= 1;
+  const btn = (key, v, on, label) => `<button class="look${on ? ' on' : ''}" data-wegf="${key}:${v}">${label}</button>`;
+  return `<div class="label">Form</div>
+    <div class="looks">${btn('wide', 0, !t.wide, '▭ schmal')}${btn('wide', 1, !!t.wide, '▬ ganz breit')}</div>
+    ${curve ? `<div class="looks">${btn('sq', 0, !t.sq, '⌒ Kurve rund')}${btn('sq', 1, !!t.sq, '⌐ Kurve eckig')}</div>` : ''}
+    ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
+    <p class="muted">Automatisch: vor einem Gebäude läuft der Weg bis an die Wand, sonst endet er rund.</p>` : ''}`;
+}
+function wireWegForm(el, t, x, y) {
+  for (const b of el.querySelectorAll('[data-wegf]')) b.onclick = () => undoable(() => {
+    const [k, v] = b.dataset.wegf.split(':');
+    if (k === 'end') { if (v) t.end = v; else delete t.end; } else if (+v) t[k] = true; else delete t[k];
+    groundVersion++; sfx('road'); save(); openInfo(x, y);
+  });
+}
 // Farben für viele (Block 73): unter den Farbfeldern – auf alle gleichen übertragen, neue gleich so bauen
 function paintMoreHtml(t) {
   const n = paintLikeOthers(t).length, on = !!state.paintNew[t.b];
@@ -1064,6 +1084,7 @@ function openInfo(x, y) {
       ${BRIDGE_LOOK[bridgeKind(t)].wall ? `<div class="label">Belag</div>
       <div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !(PATH_LOOK[st.id] || {}).stones).map(st => `<button class="sw${(t.style || 'sand') === st.id ? ' on' : ''}" data-brs="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : `<div class="label">Planken</div>
       <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
+    : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>` : '';   // Wunder-Schloss (Block 60j)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
@@ -1144,6 +1165,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
+  if (t.b === 'weg') wireWegForm(el, t, x, y);
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)

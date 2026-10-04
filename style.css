@@ -638,6 +638,8 @@ body.phone #rot-btn { bottom: calc(var(--bar, 57px) + 10px); }    /* neben dem H
   background: var(--cream2); color: var(--brown); }
 .size-chip span { display: inline; font-size: 12px; font-weight: 800; }
 .size-chip.on span { font-size: 13px; }
+.style-sep { width: 1px; align-self: stretch; margin: 4px 2px; background: rgba(107, 79, 58, .2); }   /* Wegform (Block 77) */
+.shape-chip i { font-size: 16px; }
 /* Block 49: „Zur Forschung“ & Co. – der gesuchte Eintrag leuchtet kurz auf */
 .spot { outline: 3px solid #f2c14e; outline-offset: 2px; border-radius: 14px; }
 .spot-in { animation: spot 0.9s ease 3; }

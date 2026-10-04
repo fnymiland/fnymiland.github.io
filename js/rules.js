@@ -690,9 +690,24 @@ const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
 const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // halbe Dicke samt Luft (Zaun dünn, Hecke/Mauer dick, Torbogen breit)
 // Wegkurve (Block 65b): die Kurve ist ein Viertelring um die innere Ecke – ihr äußerer Ecken-Platz rückt deshalb an den
 // Bogen, mittig auf die Außenkurve (sonst stünde er weit draußen in der Feldecke). Rückgabe: welcher Platz, Mittelpunkt
+// Wegform (Block 77): t.wide ganz breit (füllt das Feld), t.sq eckige Kurve, t.end Ende: fehlt = automatisch (Sackgasse vor
+// einem Gebäude läuft bis an dessen Wand), 'rund' (rundes Endstück), 'rand' (gerade bis an die Feldkante)
+const wegShapeNew = () => ({ ...(wegShape.wide ? { wide: true } : {}), ...(wegShape.sq ? { sq: true } : {}) });
+const sameWegShape = t => !!t.wide === wegShape.wide && !!t.sq === wegShape.sq;
+function applyWegShape(t) { for (const k of ['wide', 'sq']) { if (wegShape[k]) t[k] = true; else delete t[k]; } }
+// Zusätzliche Arme bis an die Feldkante: zum Gebäude (automatisch) oder gerade weiter ('rand'); nur an Enden
+function pathEnds(x, y, t, arms) {
+  if (!t || t.end === 'rund' || arms.length > 1 || t.cross || t.bridge) return [];
+  const solid = ([dx, dy]) => { const o = objAt(x + dx, y + dy); return !!o && o.b !== 'weg' && o.b !== 'schiene'; };
+  if (arms.length === 1) { const d = [0 - arms[0][0] || 0, 0 - arms[0][1] || 0]; return t.end === 'rand' || solid(d) ? [d] : []; }
+  const axis = (t.rot & 1) ? [[0, 1], [0, -1]] : [[1, 0], [-1, 0]];
+  if (t.end === 'rand') return axis;
+  const hit = [...axis, ...DIRS.filter(d => !axis.some(a => a[0] === d[0] && a[1] === d[1]))].find(solid);
+  return hit ? [hit] : [];
+}
 function curveSlot(x, y) {
   const t = state.tiles.get(x + ',' + y);
-  if (!t || t.b !== 'weg' || t.cross || typeof roadCurve !== 'function') return null;
+  if (!t || t.b !== 'weg' || t.cross || t.sq || t.wide || typeof roadCurve !== 'function') return null;
   const c = roadCurve(pathArms(x, y));
   if (!c) return null;
   return { slot: (c.cu > 0 ? 0 : 1) + (c.cv > 0 ? 0 : 2), cu: c.cu, cv: c.cv };

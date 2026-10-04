@@ -66,6 +66,9 @@ function tileOut(t) {
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
+  if (t.wide) o.wide = true;                                                             // Wegform (Block 77)
+  if (t.sq) o.sq = true;
+  if (t.end) o.end = t.end;
   if (t.brk) o.brk = t.brk;
   if (t.brc != null) o.brc = t.brc;                                                      // Brückenfarben (Block 66b)
   if (t.brw != null) o.brw = t.brw;                                                              // Wegbrücke: Art (Block 66)

@@ -830,7 +830,7 @@ function render(now) {
       g.save(); g.translate(c.x, c.y);
       const gs = decoScale(ghostType);
       g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
-      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined };
+      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}) };
       drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;

@@ -233,8 +233,9 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   g.stroke();
 }
 function roadCenterline(arms, t) {
-  const curve = roadCurve(arms);
+  const curve = t && t.sq ? null : roadCurve(arms);
   if (curve) return arcPts(curve.cu, curve.cv, 0.5, curve.a0, curve.a1);
+  if (arms.length === 2 && roadCurve(arms)) return [[arms[0][0] * 0.5, arms[0][1] * 0.5], [0, 0], [arms[1][0] * 0.5, arms[1][1] * 0.5]];   // eckige Kurve
   if (arms.length === 2 || !arms.length) {
     const d = arms.length ? arms[0] : ((t && t.rot & 1) ? [0, 1] : [1, 0]), e = arms.length ? 0.5 : 0.5 - EDGE_W;
     return [[d[0] * e, d[1] * e], [-d[0] * e, -d[1] * e]];
@@ -291,7 +292,7 @@ function paintLook(L, lk, x, y, z, band, ext, box = null) {
 // Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
 // Kreuzungen bekommen einen großen Stein in der Mitte, Kurven drei Steine auf dem Bogen.
 function stonePoints(arms, t) {
-  const curve = roadCurve(arms);
+  const curve = t && t.sq ? null : roadCurve(arms);
   if (curve) return [1 / 6, 1 / 2, 5 / 6].map(f => {
     const a = curve.a0 + (curve.a1 - curve.a0) * f;
     return [curve.cu + Math.cos(a) * 0.5, curve.cv + Math.sin(a) * 0.5, 1];
@@ -655,15 +656,32 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     else { g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath(); const p0 = P(0.47, -hw, h + 4.5), p1 = P(0.47, hw, h + 4.5); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
   }
 }
+// Ganz breiter Weg (Block 77): Belag über das ganze Feld, Bordstein an den Seiten ohne breiten Nachbarweg – dort, wo ein
+// schmaler Weg ankommt, mit Lücke; an breiten Nachbarn geht der Belag nahtlos weiter
+const WIDE_CURB = 0.05;
+function drawWidePath(L, lk, x, y, z, arms) {
+  paintLook(L, lk, x, y, z, false, 0);
+  const near = (dx, dy) => state.tiles.get((x + dx) + ',' + (y + dy));
+  const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge; };
+  const rect = (u0, u1, v0, v1) => poly([[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L), C(lk.edge));
+  for (const [dx, dy] of DIRS) {
+    if (wideAt(dx, dy)) continue;
+    const gap = arms.some(a => a[0] === dx && a[1] === dy), e0 = 0.5 - WIDE_CURB;   // schmaler Weg kommt an: Lücke im Bordstein
+    const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
+    if (gap) { seg(-0.5, -ROAD_W); seg(ROAD_W, 0.5); } else seg(-0.5, 0.5);
+  }
+  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
+}
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
-  const arms = pathArms(x, y);
+  const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
+  if (t && t.wide && !t.cross) { drawWidePath(L, lk, x, y, z, arms0); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides).concat(lf); };
+  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }
