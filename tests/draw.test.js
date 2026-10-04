@@ -59,7 +59,7 @@ describe('Farbwahl (Block 57)', () => {
         return seen.join('|');
       };
       const out = [];
-      for (const b of ['haus', ...PAINTABLE]) {
+      for (const b of ['haus', ...PAINTABLE, ...Object.keys(REPAINT)]) {
         const base = used(b, 0, 0);
         if (used(b, 4, 0) === base) out.push(b + ': Wand');
         if (used(b, 0, 4) === base) out.push(b + ': Dach');

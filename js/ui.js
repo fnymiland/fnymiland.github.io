@@ -967,7 +967,7 @@ function openInfo(x, y) {
     } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
   }
   let colors = '';
-  if (t.b === 'haus' || (PAINTABLE.has(t.b) && !(t.b === 'schloss' && !wonderDone(t)))) {   // Wunder-Schloss: erst nach der Einweihung
+  if (t.b === 'haus' || repaintOf(t.b) || (PAINTABLE.has(t.b) && !(t.b === 'schloss' && !wonderDone(t)))) {   // Wunder-Schloss: erst nach der Einweihung
     const house = t.b === 'haus';
     if (house && t.lvl > 1) colors += `
       <div class="label">Aussehen</div>
@@ -976,12 +976,13 @@ function openInfo(x, y) {
     const wall = t.wall != null ? t.wall : house ? Math.floor(hash(x, y, 3) * 7) : -1;
     const roof = t.roof != null ? t.roof : house ? Math.floor(hash(x, y, 4) * 7) : -1;
     const mixed = t.b === 'reihenhaus';                                     // Reihenhaus: „bunt“ je für Fassade und Dach
+    const [wallName, roofName] = (repaintOf(t.b) || {}).names || [mixed ? 'Fassaden' : 'Wand', mixed ? 'Dächer' : 'Dach'];   // Windrad: Turm/Flügel
     const bunt = kind => mixed ? `<button class="sw bunt${kind === 'roof' ? ' roofs' : ''}${t[kind] == null ? ' on' : ''}" data-${kind}="bunt" aria-label="${kind === 'wall' ? 'Fassaden' : 'Dächer'} bunt gemischt" title="Bunt gemischt"></button>` : '';
     colors += `
       ${!house && !mixed && (t.wall != null || t.roof != null) ? '<div class="looks"><button class="look" data-orig="1">↺ Originalfarben</button></div>' : ''}
-      <div class="label">${mixed ? 'Fassaden' : 'Wand'}</div>
+      <div class="label">${wallName}</div>
       <div class="swatches">${bunt('wall')}${colorsOf('wall').map(([c, i]) => `<button class="sw${i === wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
-      <div class="label">${mixed ? 'Dächer' : 'Dach'}</div>
+      <div class="label">${roofName}</div>
       <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
       ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
       ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>

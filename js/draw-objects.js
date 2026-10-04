@@ -1050,6 +1050,13 @@ function drawStand(type, cx, cy, z, now, x, y, t) {
   }
 }
 function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
+  const rs = t && (t.wall != null || t.roof != null) && repaintOf(type);   // gewählte Farben (Block 72)
+  if (!rs) { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); return; }
+  const prev = REPAINT_MAP;
+  REPAINT_MAP = repaintMap(rs, t);
+  try { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); } finally { REPAINT_MAP = prev; }
+}
+function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   let span = 1;
   if (ITEMS[type] && ITEMS[type].variantOf) { span = ITEMS[type].span; type = ITEMS[type].variantOf; }   // Größe: Bild des Grundmodells
@@ -1926,6 +1933,14 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   }
 }
 
+// Farben wählbar (Block 72): „Turm“ = Mast, Gondel, Sockel; „Flügel“ = Flügel (Turbine: Holzschraube), Ring und Spitzen
+const WIND_PAINT = {
+  names: ['Turm', 'Flügel'],
+  wall: ['#f4f4f4', '#f6f6f4', ['#dedbd4', -0.1], ['#e9e6df', -0.05], ['#e3ddd1', -0.08],
+    ['#454b57', -0.22], ['#353a44', -0.34], ['#2e323b', -0.42], ['#3b404b', -0.3]],
+  roof: ['#ffffff', '#e0bb7e', ['#e8604f', -0.18]],
+};
+REPAINT.windrad = WIND_PAINT; REPAINT.offshore = WIND_PAINT;
 // Windturbine (Stufe 3 des Windrads): senkrechte Achse, drei gedrehte Holzflügel um einen dunklen Mast, Streben, Lagerring.
 // Hintere Flügelstücke vor dem Mast zeichnen, vordere danach.
 function drawHelixTurbine(cx, cy, z, now) {

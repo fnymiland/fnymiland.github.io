@@ -9,8 +9,24 @@ function mix(a, b, t) {
   const A = hexToRgb(a), B = hexToRgb(b);
   return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * t).toString(16).padStart(2, '0')).join('');
 }
+// Umfärben (Block 72): Gebäude ohne eigenes paint() nennen in REPAINT[id] ihre Hauptfarben – wall: […], roof: […],
+// je '#hex' oder ['#hex', Tönung]; names: Beschriftung der beiden Reihen. Beim Zeichnen mit gewählter Farbe (t.wall/t.roof)
+// ersetzen C() und shade() genau diese Töne durch die Wahl (getönt wie angegeben) – Schatten, Seiten und Dachflächen folgen.
+const REPAINT = {};
+let REPAINT_MAP = null;
+const repaintOf = b => REPAINT[ITEMS[b] && ITEMS[b].variantOf || b];
+function repaintMap(spec, t) {
+  const m = new Map();
+  for (const [kind, pal] of [['wall', WALLS], ['roof', ROOFS]]) {
+    if (t[kind] == null || !spec[kind] || !pal[t[kind]]) continue;
+    for (const e of spec[kind]) { const [hex, amt] = typeof e === 'string' ? [e, 0] : e; m.set(hex.toLowerCase(), amt ? shade(pal[t[kind]], amt) : pal[t[kind]]); }
+  }
+  return m.size ? m : null;
+}
+const repainted = h => (typeof h === 'string' && (REPAINT_MAP.get(h) || REPAINT_MAP.get(h.toLowerCase()))) || h;
 const shadeCache = new Map();
 function shade(h, t) {
+  if (REPAINT_MAP) h = repainted(h);
   const k = h + t;
   let v = shadeCache.get(k);
   if (!v) { v = t < 0 ? mix(h, '#000000', -t) : mix(h, '#ffffff', t); shadeCache.set(k, v); }
@@ -19,6 +35,7 @@ function shade(h, t) {
 let RUIN = false;                   // verfallene Sehenswürdigkeiten: grau-braun
 const ruinCache = new Map();
 function C(h) {
+  if (REPAINT_MAP) h = repainted(h);
   if (RUIN) {
     let r = ruinCache.get(h);
     if (!r) { r = mix(h, '#8f887c', 0.55); ruinCache.set(h, r); }
