@@ -798,3 +798,7 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Fehler 1: Aufs offene Meer getippt blieb das Seitenfenster offen (nur „Da ist nur Meer.“) – schließt jetzt.
 - [x] Fehler 2: Im großen Fenster drücken und daneben loslassen (oder umgekehrt) schloss es – jetzt nur, wenn Drücken und
       Loslassen beide daneben sind.
+
+## Block 82 – Rechtsklick ohne Kontextmenü (04.10.2026)
+- [x] Bisher nur auf der Karte unterdrückt; auf Leisten, Fenstern, Aufgabenliste, Knöpfen ging das Browser-Menü auf (auch beim
+      Loslassen eines Rechts-Ziehens über einem Fenster). Jetzt überall aus, außer in Texteingaben (Einfügen). Test: rechtsklick.test.js.

@@ -151,7 +151,11 @@ canvas.addEventListener('wheel', e => {
   }
   zoomAt(e.clientX, e.clientY, cam.z * Math.exp(-e.deltaY * 0.0015));
 }, { passive: false });
-canvas.addEventListener('contextmenu', e => e.preventDefault());
+// Rechtsklick (Block 82): nirgends im Spiel das Kontextmenü des Browsers – nicht auf der Karte, nicht auf Leisten, Fenstern,
+// Schildern; auch nicht, wenn man mit rechts die Karte zieht und über einem Fenster loslässt. Nur in Texteingaben (Name der
+// Stadt, Bewohner) bleibt es, zum Einfügen.
+const keepContextMenu = el => !!(el && el.closest && el.closest('input, textarea, [contenteditable="true"]'));
+document.addEventListener('contextmenu', e => { if (!keepContextMenu(e.target)) e.preventDefault(); }, true);
 
 function setHover(sx, sy) {
   const sa = slotAt(sx, sy);
