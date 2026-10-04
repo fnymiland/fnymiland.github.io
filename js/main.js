@@ -128,11 +128,18 @@ if (PROBE) {
 // Bildrate: Beim Bedienen flüssig (höchstens 60/s – 120-Hz-Bildschirme würden sonst doppelt so viel rechnen),
 // beim Zuschauen 30/s, im Hintergrund oder nach 2 Minuten ohne Eingabe 15/s. Spart Strom, Rechner und iPad bleiben
 // kühl. Geld und Produktion rechnen mit der echten Zeit (dt) und laufen genauso schnell weiter.
+// Block 79: Bildrate wählbar – „flüssig“ (immer 60/s, nur im Hintergrund 30/s) oder „sparsam“ (wie oben). Gilt je Gerät
+// (localStorage, nicht im Spielstand); ohne Wahl am PC flüssig, mit Touchscreen (iPad, Handy) sparsam.
+const FPS_KEY = 'kachelhausen-bildrate';
+const touchDevice = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+let fpsMode = (() => { try { return localStorage.getItem(FPS_KEY); } catch (e) { return null; } })() || (touchDevice() ? 'sparsam' : 'fluessig');
+function setFpsMode(m) { fpsMode = m; try { localStorage.setItem(FPS_KEY, m); } catch (e) { /* privates Fenster: gilt bis zum Neuladen */ } }
 let lastInput = performance.now(), lastFrame = -1e9;
 for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart']) {
   addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
 }
 function frameInterval(now) {
+  if (fpsMode === 'fluessig') return document.hasFocus() ? 1000 / 60 : 1000 / 30;
   const idle = now - lastInput;
   if (idle < 1500) return 1000 / 60;
   if (idle > 120000 || !document.hasFocus()) return 1000 / 15;

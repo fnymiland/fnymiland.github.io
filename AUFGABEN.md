@@ -779,3 +779,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] 78b: „Seiten bis an den Rand“ wieder entfernt (Wege sehen wieder normal aus); der Gartenweg zur Tür bleibt.
 - [x] 78c: Der Gartenweg lag mit eigener Kante und eigenem Muster auf der Straße. Jetzt zeichnet der Weg sein Stück selbst mit
       (ein Guss, Muster durchgehend, Lücke im Bordstein); das Haus nur den Teil auf seinem Feld. Trittsteine: zwei Steine zur Tür.
+
+## Block 79 – Bildrate wählbar (04.10.2026)
+- [x] Nah herangezoomt wirkte das Spiel am PC ruckelig: beim Zuschauen nur 30 Bilder/s (Bewohner springen nah dran weiter je
+      Bild), dazu ab Zoom 1 viel mehr Zeichenarbeit (gemessen M5: 2–4 ms weit weg, 8–10 ms nah, Spitzen bis 39 ms).
+      Neu im Menü „Bildrate: flüssig / sparsam“ (je Gerät in localStorage): flüssig = immer 60/s, nur im Hintergrund 30/s;
+      ohne Wahl am PC flüssig, mit Touchscreen sparsam wie bisher.
+- [ ] Offen: Zeichenlast nah dran senken (Bildchen auch beim Heranzoomen für unbewegte Gebäude, Spitzen finden).
