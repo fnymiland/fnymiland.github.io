@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+77. **Farbe wählbar** (Block 72): Gebäude mit eigenem `paint(t, …)` stehen in `PAINTABLE`; alle anderen nennen in
+    `REPAINT[id]` ihre Hauptfarben (`wall`/`roof`, je '#hex' oder ['#hex', Tönung], `names` für die Reihen, ohne `roof` nur
+    eine Reihe). `drawObject` setzt dafür `REPAINT_MAP`, `C()`/`shade()` tauschen genau diese Töne. Neues Gebäude: Eintrag
+    neben seinem Bild, `tests/draw.test.js` prüft, dass die Wahl wirkt. Markise, Schild, Glas, Wasser nie eintragen.
 76. **Antippen beim Ansehen** (Block 71): Was getroffen ist, entscheidet `objectAt` (malt jedes Ding in ein winziges Bild um
     den Finger, `inkAt`; vorderstes Flächiges gewinnt, Dünnes nur über leerem Boden), Schilder über `pillHits` (`pill()` gibt
     seinen Kasten zurück). Neue Gebäude brauchen dafür nichts, solange `spriteTop` ihre Höhe abdeckt (Vorfilter × 1,4).

@@ -19,10 +19,15 @@ function repaintMap(spec, t) {
   const m = new Map();
   for (const [kind, pal] of [['wall', WALLS], ['roof', ROOFS]]) {
     if (t[kind] == null || !spec[kind] || !pal[t[kind]]) continue;
-    for (const e of spec[kind]) { const [hex, amt] = typeof e === 'string' ? [e, 0] : e; m.set(hex.toLowerCase(), amt ? shade(pal[t[kind]], amt) : pal[t[kind]]); }
+    const list = spec[kind], first = typeof list[0] === 'string' ? list[0] : list[0][0];
+    for (const e of list) {                         // ohne Angabe: so viel heller/dunkler wie der Ton neben dem ersten
+      const [hex, amt] = typeof e === 'string' ? [e, Math.max(-0.5, Math.min(0.5, (luma(e) - luma(first)) / 255))] : e;
+      m.set(hex.toLowerCase(), Math.abs(amt) > 0.005 ? shade(pal[t[kind]], amt) : pal[t[kind]]);
+    }
   }
   return m.size ? m : null;
 }
+const luma = h => { const [r, gr, b] = hexToRgb(h); return 0.299 * r + 0.587 * gr + 0.114 * b; };
 const repainted = h => (typeof h === 'string' && (REPAINT_MAP.get(h) || REPAINT_MAP.get(h.toLowerCase()))) || h;
 const shadeCache = new Map();
 function shade(h, t) {

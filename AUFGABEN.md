@@ -720,3 +720,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       dahinter (oder ein anderes Haus). Jetzt zählt, was dort gezeichnet ist (`objectAt`, von vorn nach hinten wie beim
       Zeichnen): vorderes Haus vor hinterem, Turmspitze, Baumkrone. Durch dünnes Zeug (Baugerüst) trifft man das Haus dahinter.
       Schilder von Sehenswürdigkeiten (beim Ansehen) und gesperrten Inseln (immer) lassen sich antippen.
+
+## Block 72 – mehr Gebäude umfärbbar (04.10.2026)
+- [x] Windrad, Großes Windrad, Windturbine, Offshore: „Turm“ und „Flügel“ (Turbine: Holzschraube, Ring, Spitzen).
+- [x] Alle Läden, Hotel, Grand Hotel, Kaufhaus, Passage, Markthalle, Möbelhaus: Wand und Dach (Markise/Schild bleiben).
+- [x] Kultur: Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion.
+- [x] Deko-Bauten: Leuchtturm (Turm/Streifen), Uhrturm, Karussell (Boden/Zeltdach), Pavillon (Säulen/Dach), Brunnen (Becken).
+      Umgesetzt ohne die Bilder umzubauen: `REPAINT` je Gebäude, `C()`/`shade()` tauschen beim Zeichnen die Töne.

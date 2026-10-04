@@ -1941,6 +1941,13 @@ const WIND_PAINT = {
   roof: ['#ffffff', '#e0bb7e', ['#e8604f', -0.18]],
 };
 REPAINT.windrad = WIND_PAINT; REPAINT.offshore = WIND_PAINT;
+Object.assign(REPAINT, {                           // Deko-Bauten (Block 72)
+  leuchtturm: { names: ['Turm', 'Streifen'], wall: ['#ffffff'], roof: ['#e8604f'] },
+  uhrturm: { wall: ['#f3e1c4'], roof: ['#6f8fd8'] },
+  karussell: { names: ['Boden', 'Zeltdach'], wall: ['#f3e1c4', '#c9a26f'], roof: ['#e8604f'] },
+  pavillon: { names: ['Säulen', 'Dach'], wall: ['#ffffff', '#efe6d8'], roof: ['#8fd0c3', '#6fb8aa'] },
+  brunnen: { names: ['Becken'], wall: ['#d2d5de', '#aeb2bd', '#c9ccd6'] },
+});
 // Windturbine (Stufe 3 des Windrads): senkrechte Achse, drei gedrehte Holzflügel um einen dunklen Mast, Streben, Lagerring.
 // Hintere Flügelstücke vor dem Mast zeichnen, vordere danach.
 function drawHelixTurbine(cx, cy, z, now) {

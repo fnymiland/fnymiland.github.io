@@ -300,5 +300,40 @@ function plantRows(K, leaf, fruit, rows) {
 const SMALL_SHOP = {};
 for (const id of Object.keys(SHOPS)) BUILDING_ART[id] = (...args) => (SHOP_ART[id] || SMALL_SHOP[id] || (SMALL_SHOP[id] = smallShopArt(id)))(...args);
 for (const id of ['kaffeeplantage', 'teegarten', 'kakaoplantage']) BUILDING_ART[id] = SHOP_ART[id];
+// Farben wählbar (Block 72): Hauptwand und Dach jedes Ladens; Markise, Schild und Schriftzug behalten ihre Markenfarbe
+Object.assign(REPAINT, {
+  kiosk: { wall: ['#b8d8ff'], roof: ['#ffe066'] },
+  blumenladen: { wall: ['#ffe3e0'], roof: ['#58b36a'] },
+  friseur: { wall: ['#e4f1ff'], roof: ['#5f8fe8'] },
+  cafe: { wall: ['#fff4dc'], roof: ['#8b5a3c'] },
+  teeladen: { wall: ['#f0ffe0'], roof: ['#58b36a'] },
+  post: { wall: ['#fff0b8'], roof: ['#6b7a8f'] },
+  apotheke: { wall: ['#f5f5f5', '#fff4dc'], roof: ['#58b36a'] },
+  eisdiele: { wall: ['#fff4dc'], roof: ['#f28cb1'] },
+  hofladen: { wall: ['#d8c3a5'], roof: ['#e9c46a'] },
+  buchladen: { wall: ['#c9f0e4'], roof: ['#2f9e9e'] },
+  bubbletea: { wall: ['#ffc2d9'], roof: ['#b07ad6'] },
+  pizzeria: { wall: ['#ffd1b3'], roof: ['#e8705f'] },
+  nudelbar: { wall: ['#ffe3e0'], roof: ['#e8705f'] },
+  konditorei: { wall: ['#fdeaff'], roof: ['#f28cb1'] },
+  spielzeug: { wall: ['#ffe066'], roof: ['#5f8fe8'] },
+  boutique: { wall: ['#f5f5f5'], roof: ['#f28cb1'] },
+  uhrmacher: { wall: ['#e4f1ff'], roof: ['#6b7a8f'] },
+  juwelier: { wall: ['#e6e0ff', '#fdeaff'], roof: ['#b07ad6'] },
+  chocolaterie: { wall: ['#fff4dc', '#fff7e7'], roof: ['#8b5a3c'] },
+  moebelhaus: { wall: ['#fff4dc'], roof: ['#5f8fe8'] },
+  hotel: { wall: ['#fff4dc', '#f8e8c8'], roof: ['#5f8fe8'] },
+  markthalle: { wall: ['#ffd1b3'], roof: ['#2f9e9e'] },
+  kaufhaus: { wall: ['#fff4dc'], roof: ['#e8705f'] },
+  passage: { wall: ['#fff4dc'], roof: ['#2f9e9e'] },
+  grandhotel: { wall: ['#fff0b8', '#f4e2a6'], roof: ['#2f9e9e'] },
+  kino: { wall: ['#e6e0ff'], roof: ['#b07ad6'] },
+  theater: { wall: ['#ffe3e0', '#fff4dc'], roof: ['#d94f8a'] },
+  museum: { wall: ['#fff4dc', '#fffaf0', '#eadfc8'], roof: ['#6b7a8f'] },
+  konzerthalle: { wall: ['#fff4dc'], roof: ['#5f8fe8'] },
+  aquarium: { wall: ['#f5f5f5'], roof: ['#5f8fe8'] },
+  zoo: { wall: ['#e9d3a8'], roof: ['#58b36a'] },
+  stadion: { wall: ['#cfc9be', '#dcd6ca'], roof: ['#e8604f'] },
+});
 // Läden haben feste Markenfarben (man soll sie erkennen) – nicht umfärbbar
 for (const id of ['zoo', 'stadion', 'kaffeeplantage', 'teegarten', 'kakaoplantage']) GROUND_TYPES.add(id);   // haben flache Teile (groundPart)

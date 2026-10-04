@@ -62,11 +62,30 @@ describe('Farbwahl (Block 57)', () => {
       for (const b of ['haus', ...PAINTABLE, ...Object.keys(REPAINT)]) {
         const base = used(b, 0, 0);
         if (used(b, 4, 0) === base) out.push(b + ': Wand');
-        if (used(b, 0, 4) === base) out.push(b + ': Dach');
+        if ((!repaintOf(b) || repaintOf(b).roof) && used(b, 0, 4) === base) out.push(b + ': Dach');   // Brunnen: nur das Becken
       }
       return out;
     })()`);
     expect(bad).toEqual([]);
+  });
+});
+
+describe('Umfärben (Block 72)', () => {
+  it('Windrad: Reihen „Turm“ und „Flügel“; Brunnen nur „Becken“; ↺ Originalfarben setzt zurück', () => {
+    game("state.tiles.set('8,8', { b: 'windrad', lvl: 3, rot: 0 }); state.tiles.set('10,8', { b: 'brunnen', lvl: 1 }); recalc(); openInfo(8, 8)");
+    expect(game("[...document.querySelectorAll('#panel .label')].map(e => e.textContent).filter(t => t === 'Turm' || t === 'Flügel')")).toEqual(['Turm', 'Flügel']);
+    game("document.querySelector('#panel [data-roof=\"1\"]').click()");
+    expect(game("state.tiles.get('8,8').roof")).toBe(1);
+    game("document.querySelector('#panel [data-orig]').click()");
+    expect(game("state.tiles.get('8,8').roof")).toBe(undefined);
+    game('openInfo(10, 8)');
+    expect(game("document.querySelectorAll('#panel [data-roof]').length")).toBe(0);
+    expect(game("document.querySelectorAll('#panel [data-wall]').length")).toBeGreaterThan(0);
+  });
+  it('gewählte Farbe gilt nur beim Zeichnen dieses Gebäudes (danach wieder Originaltöne)', () => {
+    game("drawObject('kiosk', 100, 100, 1.3, 1000, 3, 4, 1, { b: 'kiosk', lvl: 1, rot: 0, wall: 3, roof: 3 })");
+    expect(game('REPAINT_MAP')).toBe(null);
+    expect(game("C('#b8d8ff')")).toBe('#b8d8ff');
   });
 });
 
