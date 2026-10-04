@@ -446,6 +446,18 @@ describe('Märchenschloss: runde Türme und Turmgruppe (Block 74)', () => {
     }
     expect(fills({ ...base, mf: 1, mt: 0, tw: base.tw.map(o => ({ ...o, f: 1 })) }).split('|')[1] > 0).toBe(true);   // rund: Ellipsen
   });
+  it('Fenster wenige … ganz viele (Block 75): mehr Fenster, alte Schlösser „normal“; Balkon in jeder Form', () => {
+    const base = game('csOf(null)');
+    expect(base.wn).toBe(1);
+    const n = wn => +fills({ ...base, wn, bk: 1 }).split('|')[0];
+    expect(n(0)).toBeLessThan(n(1));
+    expect(n(1)).toBeLessThan(n(3));
+    for (const f of [0, 1]) expect(() => fills({ ...base, bk: 1, mf: f, tw: [{ h: 4, k: 2, p: 0, r: 0, f }] })).not.toThrow();
+    ground(5, 5, 12, 8);
+    game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'zierde'; openInfo(8, 6)");
+    game("document.querySelector('#panel [data-cs=\"wn:3\"]').click()");
+    expect(game("state.tiles.get('8,6').cs.wn")).toBe(3);
+  });
   it('Knöpfe: Mitte wählen, Form je Turmpaar umschalten; Hauptturm ohne „keiner“', () => {
     ground(5, 5, 12, 8);
     game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'form'; openInfo(8, 6)");

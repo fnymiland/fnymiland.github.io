@@ -742,3 +742,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Mitte wählbar: Block oder Turmgruppe (Torbau mit Portal und Türmchen, Hauptturm vom Boden in Stufen mit Kranz,
       2–4 Nebentürme gestaffelt). Neue Schlösser: Turmgruppe, rund; alte bleiben. Vorlagen angepasst, neu „Kompakte Burg“.
 - [x] Testwelt freizeitpark: Schlossreihe mit allen Mischungen auf aufgeschüttetem Land östlich der Insel.
+
+## Block 75 – Balkone und Fenster am Märchenschloss (04.10.2026)
+- [x] Balkone schwebten als dünnes Brett quer über einer Fensterreihe. Jetzt auf Höhe einer Fensterreihe (die Fenster
+      dort sind Balkontüren), mit Konsolen, sichtbarer Bodenplatte, Kante, Stabgeländer und Handlauf – eckig und rund.
+- [x] Neu unter „Zierde“: Fenster wenige · normal · viele · ganz viele (`cs.wn`) – mehr je Wand, in Türmen enger übereinander.

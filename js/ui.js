@@ -776,7 +776,7 @@ const DEL_ASK = 500;
 let castleTab = 'form';
 const CS_NAMES = { m: ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'], h: ['niedrig', 'mittel', 'hoch', 'höher', 'riesig'],
   k: ['schlank', 'normal', 'dick'], mk: ['schlank', 'normal', 'dick'], p: ['vorn', 'in der Fassade', 'hinten'], cb: ['schmal', 'mittel', 'breit'],
-  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], f: ['▢ eckig', '◯ rund'], mt: ['▣ Block', '🏰 Turmgruppe'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'],
+  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], f: ['▢ eckig', '◯ rund'], wn: ['wenige', 'normal', 'viele', 'ganz viele'], mt: ['▣ Block', '🏰 Turmgruppe'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'],
   fc: ['🎏 bunt', '🟥 rot', '🟦 blau', '🟨 gold', '⬜ weiß', '🟩 grün'], wp: ['keins', '👑 Krone', '❤️ Herz', '⭐ Stern'] };
 CS_NAMES.cr = CS_NAMES.mr = CS_NAMES.r; CS_NAMES.mf = CS_NAMES.f;
 const CT_LABEL = { k: 'Dicke', p: 'Platz', r: 'Dach', f: 'Form' };
@@ -794,6 +794,7 @@ function castleHtml(t) {
   if (castleTab === 'zierde') return `${tabs}
       <div class="label">Fahnen</div>${pick('fc')}
       <div class="label">Schmuck</div><div class="looks">${toggle('gd', '✨ Gold')}${toggle('bk', '🏯 Balkone & Erker')}${toggle('lc', '💡 Lichterketten')}${toggle('ex', '🪜 Freitreppe')}</div>
+      <div class="label">Fenster</div>${pick('wn')}
       <div class="label">Wappen über dem Tor</div>${pick('wp')}
       <div class="label">Umgebung</div><div class="looks">${toggle('mo', '🌊 Wassergraben')}${toggle('mw', '🧱 Mauer mit Tor')}${toggle('gn', '🌷 Garten mit Brunnen')}</div>
       <p class="muted">Graben, Mauer und Garten brauchen ein Feld rundum mehr Platz.</p>${worth}`;

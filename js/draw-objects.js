@@ -2018,8 +2018,14 @@ function castleTowers(c) {
 // o: { wall, roof, win, gold, flags, lit, bk (Balkone), lc (Lichterketten), wp (Wappen) }
 function castleKit(K, z, now, x, o) {
   const { wall, roof, win, gold, flags, lit } = o;
+  // Fenster (Block 75): wenige … ganz viele – je Wand mehr oder weniger, in Türmen enger oder weiter übereinander
+  const WF = [0.6, 1, 1.5, 2][o.wn != null ? o.wn : 1], WS = [18, 13, 10, 8][o.wn != null ? o.wn : 1];
+  const winRows = (lift, H) => { const out = []; for (let h0 = (lift ? 6 : 8); h0 + 6 < H - 9; h0 += WS) out.push(h0); return out; };
+  // Balkon auf Höhe einer Fensterreihe (die Fenster dort werden zu Balkontüren): Platte knapp darunter
+  const balconyAt = (lift, H) => { const rows = winRows(lift, H); return rows.length > 1 ? rows[Math.min(rows.length - 1, Math.max(1, Math.round(rows.length * 0.5)))] - 1.6 : null; };
   const archWins = (F, n, h0, h1, skip, q = 0.22) => {   // Rundbogenfenster in einer Reihe (q: halbe Breite im Abschnitt)
     if (!F) return;
+    n = Math.max(1, Math.round(n * WF));
     const step = 0.84 / n;
     for (let i = 0; i < n; i++) {
       if (skip && skip(i, n)) continue;
@@ -2072,20 +2078,29 @@ function castleKit(K, z, now, x, o) {
     g.beginPath(); g.moveTo(cx0 - rx, top); g.lineTo(cx0 - rx, cy0); g.ellipse(cx0, cy0, rx, ry, 0, Math.PI, 0, true); g.lineTo(cx0 + rx, top); g.closePath();
     g.fillStyle = lightX(wall, cx0 - rx, cx0 + rx); g.fill();
     const at = (phi, up) => [cx0 + rx * Math.sin(phi), cy0 + ry * Math.cos(phi) - up * z];   // phi = 0: genau nach vorn
-    const nw = r < 0.17 ? 1 : r < 0.3 ? 2 : 3, ww = Math.min(1.6, 0.9 + r * 2) * z;
-    for (let h0 = (lift ? 6 : 8); h0 + 6 < H - 9; h0 += 13) for (let j = 0; j < nw; j++) {
-      const phi = (j - (nw - 1) / 2) * 0.8, k = Math.cos(phi), [px, py] = at(phi, h0), hw = ww * k;
+    const nw = Math.max(1, Math.round((r < 0.17 ? 1 : r < 0.3 ? 2 : 3) * WF)), ww = Math.min(1.6, 0.9 + r * 2) * z, spread = Math.min(0.8, 2.2 / nw);
+    for (const h0 of winRows(lift, H)) for (let j = 0; j < nw; j++) {
+      const phi = (j - (nw - 1) / 2) * spread, k = Math.cos(phi), [px, py] = at(phi, h0), hw = ww * k;
       g.fillStyle = win; g.fillRect(px - hw, py - 5 * z, 2 * hw, 5 * z);
       g.beginPath(); g.ellipse(px, py - 5 * z, hw, hw, 0, Math.PI, 0); g.fill();
     }
     const ring = (up, col, lw, scale = 1) => { g.strokeStyle = C(col); g.lineWidth = lw * z; g.beginPath(); g.ellipse(cx0, cy0 - up * z, rx * scale, ry * scale, 0, 0, Math.PI); g.stroke(); };
     if (R === 0) ring(H - 4.75, gold, 1.5);                                               // goldenes Band
-    if (o.bk && !lift && H >= 34) {                        // Balkon rundum: Platte, Pfosten, Geländer
-      const h0 = Math.round(H * 0.56), s2 = (r + 0.08) / r;
-      g.beginPath(); g.ellipse(cx0, cy0 - h0 * z, rx * s2, ry * s2, 0, 0, Math.PI); g.lineTo(cx0 - rx * s2, cy0 - (h0 + 1.4) * z); g.ellipse(cx0, cy0 - (h0 + 1.4) * z, rx * s2, ry * s2, 0, Math.PI, 0, true); g.closePath();
-      g.fillStyle = C('#e3d6c2'); g.fill();
-      for (let j = 1; j < 8; j++) { const ph = -Math.PI / 2 + j * Math.PI / 8, px = cx0 + rx * s2 * Math.sin(ph), py = cy0 - (h0 + 1.4) * z + ry * s2 * Math.cos(ph); g.strokeStyle = C(gold); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 2.6 * z); g.stroke(); }
-      ring(h0 + 4.4, gold, 0.7, s2);
+    const bh = o.bk && !lift && H >= 34 ? balconyAt(lift, H) : null;
+    if (bh != null) {                                      // Balkon rundum (Block 75): Konsolen, Platte mit Oberseite, Stabgeländer
+      const s2 = (r + 0.11) / r, top0 = cy0 - (bh + 1.4) * z, bot0 = cy0 - bh * z, stone = '#e3d6c2';
+      for (let j = 1; j < 6; j++) {                                                         // Konsolen unter der Platte
+        const ph = -Math.PI / 2 + j * Math.PI / 6, [wx, wy] = at(ph, bh - 3.2), ox = cx0 + rx * s2 * Math.sin(ph), oy = bot0 + ry * s2 * Math.cos(ph);
+        poly([[wx - 0.6 * z, wy], [ox - 0.6 * z, oy], [ox + 0.6 * z, oy], [wx + 0.6 * z, wy]], C(shade(stone, -0.18)));
+      }
+      g.beginPath(); g.ellipse(cx0, bot0, rx * s2, ry * s2, 0, 0, Math.PI); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, Math.PI, 0, true); g.closePath();
+      g.fillStyle = lightX(stone, cx0 - rx * s2, cx0 + rx * s2, -0.15); g.fill();          // Kante
+      g.beginPath(); g.ellipse(cx0, top0, rx * s2, ry * s2, 0, 0, Math.PI); g.ellipse(cx0, top0, rx, ry, 0, Math.PI, 0, true); g.closePath();
+      g.fillStyle = C(shade(stone, 0.08)); g.fill();                                     // Oberseite
+      g.strokeStyle = C(gold); g.lineWidth = 0.45 * z; g.beginPath();
+      for (let j = 0; j <= 14; j++) { const ph = -Math.PI / 2 + j * Math.PI / 14, px = cx0 + rx * s2 * 0.97 * Math.sin(ph), py = top0 + ry * s2 * 0.97 * Math.cos(ph); g.moveTo(px, py); g.lineTo(px, py - 3.4 * z); }
+      g.stroke();
+      g.strokeStyle = C(gold); g.lineWidth = 0.9 * z; g.beginPath(); g.ellipse(cx0, top0 - 3.6 * z, rx * s2 * 0.97, ry * s2 * 0.97, 0, 0, Math.PI); g.stroke();
     }
     const cap = () => { g.beginPath(); g.ellipse(cx0, top, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = C(shade(wall, -0.08)); g.fill(); };
     const merlon = th => { const w = Math.max(0.6 * z, rx * 0.5 * Math.abs(Math.cos(th)) * (Math.PI * 2 / n) + 0.4 * z), px = cx0 + rx * Math.sin(th), py = top + ry * Math.cos(th); g.fillStyle = C(shade(wall, -0.04 + 0.08 * Math.sin(-th) * 0.5)); g.fillRect(px - w / 2, py - 3.2 * z, w, 3.2 * z); };
@@ -2121,17 +2136,22 @@ function castleKit(K, z, now, x, o) {
     for (const side of ['front', 'back', 'left', 'right']) {
       const F = T.faces[side];
       if (!F) continue;
-      for (let h0 = (lift ? 6 : 8); h0 + 6 < H - 9; h0 += 13) archWins(F, 1, h0, h0 + 5, null, Math.min(0.22, 0.06 / r));   // dicke Türme: kleine Fenster
+      for (const h0 of winRows(lift, H)) archWins(F, 1, h0, h0 + 5, null, Math.min(0.22, 0.06 / r) / Math.sqrt(WF));   // dicke Türme: kleine Fenster
       if (R === 0) faceQuad(F.P, F.Q, 0, 1, F.H - 5.5 * z, F.H - 4 * z, C(gold));                   // goldenes Band
     }
-    if (o.bk && !lift && H >= 34) {                    // Balkon rundum (Block 60i): Platte und Geländer an den sichtbaren Seiten
-      const h0 = Math.round(H * 0.56), e = r + 0.08;
-      for (const side of ['front', 'back', 'left', 'right']) {
-        if (!T.faces[side]) continue;
-        const f = FACES[side], P = K.P(a + f.p[0] * e, b + f.p[1] * e), Q = K.P(a + f.q[0] * e, b + f.q[1] * e);
-        faceQuad(P, Q, 0, 1, h0 * z, (h0 + 1.4) * z, C(shade('#e3d6c2', side === 'front' || side === 'back' ? 0 : -0.1)));
-        faceQuad(P, Q, 0, 1, (h0 + 4) * z, (h0 + 4.7) * z, C(gold));
-        for (let j = 1; j < 6; j++) faceQuad(P, Q, j / 6 - 0.012, j / 6 + 0.012, (h0 + 1.4) * z, (h0 + 4) * z, C(gold));
+    const bh = o.bk && !lift && H >= 34 ? balconyAt(lift, H) : null;
+    if (bh != null) {                                  // Balkon rundum (Block 60i/75): Konsolen, Platte mit Oberseite, Stabgeländer
+      const e = r + 0.11, stone = '#e3d6c2', sides = ['front', 'back', 'left', 'right'].filter(sd => T.faces[sd]);
+      for (const side of sides) {
+        const f = FACES[side], at = (s, k, up) => K.P(a + f.p[0] * s + (f.q[0] - f.p[0]) * s * k, b + f.p[1] * s + (f.q[1] - f.p[1]) * s * k, up);
+        for (const k of [0.2, 0.5, 0.8]) poly([at(r, k, bh - 3.2), at(e, k, bh), at(e, k + 0.03, bh), at(r, k + 0.03, bh - 3.2)], C(shade(stone, -0.18)));   // Konsolen
+        poly([at(r, 0, bh + 1.4), at(r, 1, bh + 1.4), at(e, 1, bh + 1.4), at(e, 0, bh + 1.4)], C(shade(stone, 0.08)));   // Oberseite
+      }
+      for (const side of sides) {
+        const f = FACES[side], P = K.P(a + f.p[0] * e, b + f.p[1] * e), Q = K.P(a + f.q[0] * e, b + f.q[1] * e), sh = side === 'front' || side === 'back' ? 0 : -0.12;
+        faceQuad(P, Q, 0, 1, bh * z, (bh + 1.4) * z, C(shade(stone, sh - 0.06)));       // Kante
+        for (let j = 0; j <= 8; j++) faceQuad(P, Q, j / 8 - 0.01, j / 8 + 0.01, (bh + 1.4) * z, (bh + 4.8) * z, C(gold));   // Stäbe
+        faceQuad(P, Q, 0, 1, (bh + 4.8) * z, (bh + 5.6) * z, C(shade(gold, sh)));       // Handlauf
       }
     }
     let peak = R === 0 ? T.peak : K.P(a, b, lift + H);
@@ -2166,7 +2186,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   const stairD = c.ex ? 0.3 : 0, hW = 8 + c.wf * 7, hC = 14 + c.cf * 10, front = HA - 0.26 - stairD;   // Freitreppe: Bau rückt nach hinten
   const wd = Math.min(0.62 + 0.45 * (Math.min(c.d, 2) - 1), front + HA - 0.08), aW = front - wd / 2;
   const haC = Math.min(HA - 0.14 - stairD / 2, 0.86), aC = HA - 0.14 - stairD - haC;
-  const { archWins, faceLen, merlons, flag, bulbs, onion, tower, shield } = castleKit(K, z, now, x, { wall, roof, win, gold, flags, lit, bk: c.bk, lc: c.lc, wp: c.wp });
+  const { archWins, faceLen, merlons, flag, bulbs, onion, tower, shield } = castleKit(K, z, now, x, { wall, roof, win, gold, flags, lit, bk: c.bk, lc: c.lc, wp: c.wp, wn: c.wn });
   const wing = (b0, b1) => {
     const R = c.wr, B = K.block({ a: aW, b: (b0 + b1) / 2, ha: wd / 2, hb: (b1 - b0) / 2, h: hW, wall, roof: R === 2 ? shade(wall, -0.08) : roof, roofH: R === 0 ? 11 : R === 1 ? 8 : 0, type: R === 0 ? 'gable' : R === 1 ? 'hip' : 'flat', ridge: 'b', over: 1.06, trim: R === 2 ? roof : shade(roof, 0.15) });
     for (const side of ['front', 'back', 'left', 'right']) { const F = B.faces[side]; if (F) { const n = Math.max(1, Math.round(faceLen(B, side) * 2.4)); for (let f = 0; f < c.wf; f++) archWins(F, n, 4 + f * 7, 8.2 + f * 7); } }
@@ -2267,7 +2287,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
       for (const side of ['front', 'back', 'left', 'right']) {
         const F = B.faces[side];
         if (!F) continue;
-        if (side === 'front') { rose = portal(F, dB, hT); for (let f = 1; f < c.cf; f++) archWins(F, 4, 5 + f * 6, 9 + f * 6, i => i === 1 || i === 2); }
+        if (side === 'front') { rose = portal(F, dB, hT); for (let f = 1; f < c.cf; f++) archWins(F, 4, 5 + f * 6, 9 + f * 6, (i, m) => Math.abs(i - (m - 1) / 2) < m * 0.22); }
         else for (let f = 0; f < c.cf; f++) archWins(F, Math.max(1, Math.round(faceLen(B, side) * 2.2)), 4 + f * 6, 8 + f * 6);
       }
       if (R === 2) merlons(B, 5, 4.6);
