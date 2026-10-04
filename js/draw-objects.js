@@ -765,13 +765,8 @@ const BIG_ART = {
       K.wins(B, 'front', 6, 0.36, 0.7, 0.04, 0.96, [2, 3]);
       K.sideWins(B, 3, 0.36, 0.7);
       const T2 = K.block({ a: -0.45, ha: 0.2, hb: 0.2, h: 22, lift: 30, wall, roof: '#e8705f', roofH: 12 });
-      const F = T2.faces.front || T2.faces.right || T2.faces.left, m = lerp(F.P, F.Q, 0.5), cyc = m[1] - 22 * z * 0.6;
-      circle(m[0], cyc, 4.6 * z, C('#ffffff'));
-      g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1 * z;
-      g.beginPath(); g.arc(m[0], cyc, 4.6 * z, 0, Math.PI * 2); g.stroke();
       const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
-      g.beginPath(); g.moveTo(m[0], cyc); g.lineTo(m[0] + Math.sin(hr) * 2.4 * z, cyc - Math.cos(hr) * 2.4 * z);
-      g.moveTo(m[0], cyc); g.lineTo(m[0] + Math.sin(mi) * 3.4 * z, cyc - Math.cos(mi) * 3.4 * z); g.stroke();
+      for (const F of [T2.faces.front, T2.faces.right, T2.faces.left, T2.faces.back]) if (F) faceClock(F, 0.5, 22 * z * 0.6, 4.6 * z, z, { hands: [[hr, 0.52, 1], [mi, 0.74, 0.9]] });   // auf jeder Turmseite, die man sieht
     };
     const steps = () => K.block({ a: 0.5, ha: 0.1, hb: 0.3, h: 1.6, wall: '#d6ccb9', type: 'flat', roof: '#efe8da' });
     const lamp = b => () => { const [lx, ly] = K.P(0.95, b); lampPost(lx, ly, z, 15); };
@@ -1327,12 +1322,8 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       kShadow(K, 0.25);
       const B = K.block({ ha: 0.15, hb: 0.15, h: 40, wall: '#f3e1c4', roof: '#6f8fd8', roofH: 16, over: 1.2 });
       for (const F of Object.values(B.faces)) if (F) {
-        const m = lerp(F.P, F.Q, 0.5), yc = m[1] - F.H * 0.8;
-        circle(m[0], yc, 3.4 * z, C('#ffffff'));
-        g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.7 * z;
         const an = (now / 60000) * Math.PI * 2;
-        g.beginPath(); g.arc(m[0], yc, 3.4 * z, 0, Math.PI * 2); g.moveTo(m[0], yc); g.lineTo(m[0] + Math.sin(an) * 2.6 * z, yc - Math.cos(an) * 2.6 * z);
-        g.moveTo(m[0], yc); g.lineTo(m[0], yc - 1.8 * z); g.stroke();
+        faceClock(F, 0.5, F.H * 0.8, 3.4 * z, z, { ring: '#4a4a58', ringW: 0.7, hands: [[0, 0.53, 0.8], [an, 0.76, 0.7]] });   // flach auf der Wand (Block 80)
         faceQuad(F.P, F.Q, 0.35, 0.65, 0, F.H * 0.25, C('#8a5a3c'));
       }
       const [px, py] = K.P(0, 0, 40 + 16);

@@ -123,6 +123,18 @@ describe('Farben für viele (Block 73)', () => {
   });
 });
 
+describe('Uhren flach auf der Wand (Block 80)', () => {
+  it('Uhrturm, Rathaus, Bahnhof, Markthalle: Zifferblatt wird auf die Wand geschert (nicht als Kreis davor)', () => {
+    const shears = b => game(`(() => { const out = []; const tf = g.transform; g.transform = (a, bb) => out.push(+(bb / a).toFixed(2));
+      try { drawObject('${b}', 100, 100, 1.5, 1000, 3, 4, 3, { b: '${b}', lvl: 3, rot: 0 }); } finally { delete g.transform; } return out; })()`);
+    for (const b of ['uhrturm', 'rathaus', 'station', 'markthalle']) {
+      const k = shears(b);
+      expect(k.length, b).toBeGreaterThan(0);
+      expect(k.every(v => Math.abs(Math.abs(v) - 0.5) < 0.01), b + ': ' + k).toBe(true);   // Wände im Raster: Steigung ±½
+    }
+  });
+});
+
 describe('Reihenhaus: „bunt“ für Fassaden und Dächer', () => {
   it('Fassade einfarbig, Dächer bunt – und zurück', () => {
     game("state.money = 1e6; state.tiles.set('8,8', { b: 'reihenhaus', lvl: 2, rot: 0, wall: 3, roof: 2 }); recalc(); openInfo(8, 8)");

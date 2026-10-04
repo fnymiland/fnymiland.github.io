@@ -71,6 +71,20 @@ function centerText(text, x, y, stroke = false) {
 function circle(x, y, r, fill) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); }
 function ellipse(x, y, rx, ry, fill) { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = fill; g.fill(); }
 const lerp = (P, Q, t) => [P[0] + (Q[0] - P[0]) * t, P[1] + (Q[1] - P[1]) * t];
+// Uhr flach auf einer Wand (Block 80): Wand F (P → Q, wie K.block sie liefert), t entlang der Wand (0 … 1), up Höhe (px × z),
+// r Radius (px × z). Gezeichnet um (0, 0), dann so geschert und schmaler gemacht, dass sie auf der Wand liegt statt als Kreis
+// davor zu schweben. hands: [[Winkel, Länge (Anteil von r), Breite]], Winkel 0 = 12 Uhr.
+function faceClock(F, t, up, r, z, { ring = '#6b4f3a', face = '#ffffff', hand = '#4a4a58', hands = [[0, 0.5, 1], [Math.PI / 2, 0.8, 0.8]], ringW = 0.9, lit = false } = {}) {
+  const m = lerp(F.P, F.Q, t), dx = F.Q[0] - F.P[0], k = Math.abs(dx) > 1e-6 ? (F.Q[1] - F.P[1]) / dx : 0, sx = 0.86;
+  g.save(); g.translate(m[0], m[1] - up); g.transform(sx, sx * k, 0, 1, 0, 0);
+  try {
+    circle(0, 0, r + ringW * z, C(ring));
+    circle(0, 0, r, lit ? '#fff6c8' : C(face));
+    g.strokeStyle = C(hand); g.lineCap = 'round';
+    for (let i = 0; i < 12; i += 3) { const a = i / 12 * Math.PI * 2; g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(Math.sin(a) * r * 0.78, -Math.cos(a) * r * 0.78); g.lineTo(Math.sin(a) * r * 0.92, -Math.cos(a) * r * 0.92); g.stroke(); }
+    for (const [a, len, w] of hands) { g.lineWidth = w * z; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.sin(a) * len * r, -Math.cos(a) * len * r); g.stroke(); }
+  } finally { g.restore(); }
+}
 function faceQuad(P, Q, t0, t1, h0, h1, fill) {
   const a = lerp(P, Q, t0), b = lerp(P, Q, t1);
   poly([[a[0], a[1] - h0], [b[0], b[1] - h0], [b[0], b[1] - h1], [a[0], a[1] - h1]], fill);

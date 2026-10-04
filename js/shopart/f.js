@@ -311,13 +311,8 @@
   }
   // Uhr in einer Wandfläche (schräg wie die Wand), Zeiger auf zehn nach zehn
   function clockOn(K, F, up, r) {
-    const z = K.z, L = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]) || 1, rt = r * 0.95 / L;
-    const at = (w, k) => faceAt(F, 0.5 + Math.sin(w) * rt * k, up + Math.cos(w) * r * k);
-    const ring = k => { const out = []; for (let i = 0; i < 16; i++) out.push(at(i / 16 * Math.PI * 2, k)); return out; };
-    poly(ring(1.24), K.wallCol(MH_RIB, F.n)); poly(ring(1), lit() ? '#fff6d0' : C('#fffaf0'));
-    const c = at(0, 0), hr = at(-Math.PI / 3, 0.5), mn = at(Math.PI / 3, 0.8);
-    g.strokeStyle = C('#4a4a58'); g.lineCap = 'round'; g.lineWidth = 1 * z; g.beginPath();
-    g.moveTo(c[0], c[1]); g.lineTo(hr[0], hr[1]); g.moveTo(c[0], c[1]); g.lineTo(mn[0], mn[1]); g.stroke();
+    const z = K.z, c = faceAt(F, 0.5, up);
+    faceClock(F, 0.5, up, r, z, { ring: MH_RIB, face: '#fffaf0', ringW: r * 0.24 / z, lit: lit(), hands: [[-Math.PI / 3, 0.5, 1], [Math.PI / 3, 0.8, 1]] });   // gemeinsame Wanduhr (Block 80)
     halo(c[0], c[1], 16 * z);
   }
   function marketStall(K, a, b, col, i) {

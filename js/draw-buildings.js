@@ -324,10 +324,7 @@ const BUILDING_ART = {
       K.sideWins(B, 1, 0.35, 0.72);
       const F = B.faces.front;
       if (F) {                                             // Bahnhofsuhr über der Tür
-        const m = lerp(F.P, F.Q, 0.5), cx = m[0], cy = m[1] - F.H * 0.84;
-        circle(cx, cy, 2.8 * z, C('#ffffff'));
-        g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.7 * z;
-        g.beginPath(); g.arc(cx, cy, 2.8 * z, 0, Math.PI * 2); g.moveTo(cx, cy); g.lineTo(cx, cy - 2 * z); g.moveTo(cx, cy); g.lineTo(cx + 1.4 * z, cy); g.stroke();
+        faceClock(F, 0.5, F.H * 0.84, 2.8 * z, z, { ring: '#4a4a58', ringW: 0.7, hands: [[0, 0.72, 0.7], [Math.PI / 2, 0.5, 0.7]] });   // flach auf der Wand (Block 80)
       }
     };
     const canopy = () => {

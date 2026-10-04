@@ -786,3 +786,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Neu im Menü „Bildrate: flüssig / sparsam“ (je Gerät in localStorage): flüssig = immer 60/s, nur im Hintergrund 30/s;
       ohne Wahl am PC flüssig, mit Touchscreen sparsam wie bisher.
 - [ ] Offen: Zeichenlast nah dran senken (Bildchen auch beim Heranzoomen für unbewegte Gebäude, Spitzen finden).
+
+## Block 80 – Uhren flach auf der Wand (04.10.2026)
+- [x] Uhren an Uhrturm, Rathaus und Bahnhof waren Kreise vor der schrägen Wand. Jetzt `faceClock`: Zifferblatt mit Ring,
+      vier Strichen und Zeigern auf die Wand geschert (wie bei Markthalle und Uhrmacher, die es nun mitbenutzen).
+      Das Rathaus zeigt die Uhr auf jeder sichtbaren Turmseite.
