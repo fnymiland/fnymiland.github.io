@@ -797,6 +797,8 @@ function castleHtml(t) {
       <div class="label">Fenster</div>${pick('wn')}
       <div class="label">Wappen über dem Tor</div>${pick('wp')}
       <div class="label">Boden</div>${pick('gb')}
+      ${c.gb ? `<div class="label">Belag ${c.gb === 1 ? '(Weg zum Portal)' : '(Platz)'}</div><div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !PATH_LOOK[st.id].stones).map(st =>
+        `<button class="sw${st.id === (c.gp || 'platten') ? ' on' : ''}" data-csgp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${st.name}" title="${st.name}"></button>`).join('')}</div>` : ''}
       <div class="label">Umgebung</div><div class="looks">${toggle('mo', '🌊 Wassergraben')}${toggle('mw', '🧱 Mauer mit Tor')}${toggle('gn', '🌷 Garten mit Brunnen')}</div>
       <p class="muted">Graben, Mauer und Garten brauchen ein Feld rundum mehr Platz.</p>${worth}`;
   if (castleTab === 'tuerme') return `${tabs}
@@ -825,6 +827,7 @@ function wireCastle(el, t, x, y) {
     o[f] = v === 'n' ? (o[f] + 1) % (CT_LIM[f][1] + 1) : o[f] + +v;
     return { tw };
   });
+  for (const b of el.querySelectorAll('[data-csgp]')) b.onclick = () => go(() => ({ gp: b.dataset.csgp }));   // Boden-Belag (Block 76b)
   for (const b of el.querySelectorAll('[data-ctadd]')) b.onclick = () => go(c => { const last = c.tw[c.tw.length - 1]; return { tw: [...c.tw, { ...CT_DEF, h: last ? Math.max(0, last.h - 1) : 2, r: last ? last.r : c.mr, f: last ? last.f : c.mf }] }; });
   for (const b of el.querySelectorAll('[data-ctdel]')) b.onclick = () => go(c => ({ tw: c.tw.filter((_, i) => i !== +b.dataset.ctdel) }));
   for (const b of el.querySelectorAll('[data-tpl]')) b.onclick = () => undoable(() => {   // Vorlage: Gestalt + Farben (nur freigeschaltete)

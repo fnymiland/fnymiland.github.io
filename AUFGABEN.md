@@ -758,3 +758,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Das Schloss stand immer auf einer erhöhten Platte (wie ein Modell auf dem Tablett). Neu unter „Zierde“: Boden
       Sockel · Rasen · Platz (`cs.gb`). Rasen: direkt im Gras mit Plattenweg zum Portal; Platz: gepflasterter Hof.
       Neue Schlösser starten mit Rasen, bestehende behalten den Sockel.
+- [x] Belag für Weg zum Portal (Rasen) bzw. den Platz (`cs.gp`): alle freigeschalteten Wegmuster, dieselben Knöpfe wie beim
+      Weg; auch der Weg vom Tor zum Portal (Graben/Mauer) bekommt ihn. Gezeichnet über `kPave` (wie die Wunder-Plätze).

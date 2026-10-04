@@ -2320,11 +2320,13 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   };
   // Umgebung (Block 60i): ein Feld rundum – Weg zum Tor, Wassergraben mit Zugbrücke, Beete; Mauer und Brunnen stehen auf
   // ihrer Seite vor oder hinter dem Schloss (pre/post)
+  const groundLk = PATH_LOOK[c.gp] && !PATH_LOOK[c.gp].stones ? PATH_LOOK[c.gp] : PATH_LOOK.platten;   // Belag (Block 76b)
   const RG = csRing(c), OA = HA + RG, OB = HB + RG, pre = [], post = [], tvB = K.facing(0, 1);
   const place = (a, b, fn) => (a > HA ? post : a < -HA ? pre : b * tvB > 0 ? post : pre).push([a, b, fn]);
   if (RG) {
     const mo = 0.32, gIn = c.mo ? mo + 0.06 : 0.06;
-    K.rect(HA - 0.03, -0.16, OA - 0.02, 0.16, C('#e9d8b4'));                                    // Weg vom Tor zum Portal
+    if (c.gb) { K.rect(HA - 0.03, -0.18, OA - 0.02, 0.18, C(groundLk.edge)); kPave(K, () => kRectPath(K, HA - 0.03, -0.15, OA - 0.02, 0.15), groundLk, x, y, Math.max(OA, OB) + 1); }
+    else K.rect(HA - 0.03, -0.16, OA - 0.02, 0.16, C('#e9d8b4'));                               // Weg vom Tor zum Portal (Belag wie der Boden)
     if (c.mo) {
       const water = C(lit ? '#3d6f99' : '#7cc4e8'), edge = C('#b9e3f5');
       for (const [a0, b0, a1, b1] of [[HA, -HB - mo, HA + mo, HB + mo], [-HA - mo, -HB - mo, -HA, HB + mo], [-HA, -HB - mo, HA, -HB], [-HA, HB, HA, HB + mo]]) K.rect(a0, b0, a1, b1, water);
@@ -2367,14 +2369,11 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   // darauf der rote Teppich (oder die Freitreppe) und zwei Laternen vor dem Portal
   const up0 = c.gb ? 0 : 3, A0 = -HA + 0.03, A1 = HA - 0.03, B1 = HB - 0.03;
   if (!c.gb) K.block({ a: 0, b: 0, ha: HA - 0.03, hb: HB - 0.03, h: 3, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
-  else if (c.gb === 1) {
-    K.rect(A0, -B1, A1, B1, C('#8fcf68'));                                                    // Rasen ums Schloss
-    K.rect(front - 0.06, -0.26, A1, 0.26, C('#e9dcc2'));                                     // Weg zum Portal
-    for (let k = 1; k < 4; k++) { const aa = front - 0.06 + (A1 - front + 0.06) * k / 4; K.rect(aa - 0.008, -0.26, aa + 0.008, 0.26, C('#d6c7a8')); }
-  } else {
-    K.rect(A0, -B1, A1, B1, C('#e6dccb'));                                                    // Platz aus Steinplatten
-    for (let k = 1; k < Math.round(c.d * 3); k++) { const aa = A0 + (A1 - A0) * k / Math.round(c.d * 3); K.rect(aa - 0.006, -B1, aa + 0.006, B1, C('#d3c6ae')); }
-    for (let k = 1; k < Math.round(c.w * 3); k++) { const bb = -B1 + 2 * B1 * k / Math.round(c.w * 3); K.rect(A0, bb - 0.006, A1, bb + 0.006, C('#d3c6ae')); }
+  else {                                                                                     // Belag wie ein Weg (Block 76b, cs.gp)
+    const lk = groundLk, ext = Math.max(HA, HB) + 1;
+    const pave = (a0, b0, a1, b1) => { K.rect(a0, b0, a1, b1, C(lk.edge)); kPave(K, () => kRectPath(K, a0 + 0.04, b0 + 0.04, a1 - 0.04, b1 - 0.04), lk, x, y, ext); };
+    if (c.gb === 1) { K.rect(A0, -B1, A1, B1, C('#8fcf68')); pave(front - 0.08, -0.3, A1, 0.3); }   // Rasen, Weg zum Portal
+    else pave(A0, -B1, A1, B1);                                                              // Platz
   }
   if (!c.ex) K.rect(front - 0.02, -0.17, HA - 0.03, 0.17, C('#e8604f'), up0 + 0.2);
   for (const sb of [-0.22, 0.22]) { const [px, py] = K.P(HA - 0.1, sb * (c.ex ? 1.75 : 1), up0); circle(px, py - 4 * z, 1.4 * z, C(gold)); g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 4 * z); g.stroke(); }

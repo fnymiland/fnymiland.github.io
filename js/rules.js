@@ -17,7 +17,7 @@ const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : 
 // Zierde (Block 60i): fc Fahnenfarbe (0 bunt), gd Gold, bk Balkone & Erker, wp Wappen (0 keins, Krone, Herz, Stern), lc Lichterketten;
 // Umgebung: ex Freitreppe, mo Wassergraben, mw Mauer mit Tor, gn Garten mit Brunnen – mo/mw/gn brauchen ein Feld rundum (csRing)
 // Block 74: mt Mitte (0 Block, 1 Turmgruppe), mf Mittelturm rund; je Turmpaar f rund. Fehlen sie, bleibt alles eckig wie früher.
-// Block 75/76: wn Fenster (0 wenige … 3 ganz viele), gb Boden (0 Sockel, 1 Rasen, 2 Platz).
+// Block 75/76: wn Fenster (0 wenige … 3 ganz viele), gb Boden (0 Sockel, 1 Rasen, 2 Platz), gp Belag (Wegstil, sonst Platten).
 const CS_DEF = { w: 5, d: 2, m: 2, mk: 1, mr: 0, mt: 0, mf: 0, wn: 1, gb: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 2, k: 1, p: 0, r: 0 }],
   fc: 0, gd: 1, bk: 0, wp: 0, lc: 0, ex: 0, mo: 0, mw: 0, gn: 0 };
 const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], mk: [0, 2], mr: [0, 2], mt: [0, 1], mf: [0, 1], wn: [0, 3], gb: [0, 2], cb: [0, 2], cf: [1, 4], cr: [0, 2], wf: [1, 3], wr: [0, 2],
@@ -129,6 +129,7 @@ function castleChange(x, y, patch) {
   if (!t || t.b !== 'fz_schloss') return null;
   const cs = csOf(t), nc = csOf({ cs: { ...cs, ...patch } });
   for (const [key, [lo, hi]] of Object.entries(CS_LIM)) if (!(nc[key] >= lo && nc[key] <= hi)) { fail(nc[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
+  if (nc.gp != null && !STYLES.weg.some(st => st.id === nc.gp)) { fail('Diesen Belag gibt es nicht'); return null; }   // Boden-Belag (Block 76b)
   if (patch.tw && patch.tw.length > CS_TOWERS) { fail(`Höchstens ${CS_TOWERS} Turmpaare`); return null; }
   for (const o of nc.tw) for (const [key, [lo, hi]] of Object.entries(CT_LIM)) if (!(o[key] >= lo && o[key] <= hi)) { fail(o[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
   const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;
