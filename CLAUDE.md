@@ -356,6 +356,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `REPAINT[id]` ihre Hauptfarben (`wall`/`roof`, je '#hex' oder ['#hex', Tönung], `names` für die Reihen, ohne `roof` nur
     eine Reihe). `drawObject` setzt dafür `REPAINT_MAP`, `C()`/`shade()` tauschen genau diese Töne. Neues Gebäude: Eintrag
     neben seinem Bild, `tests/draw.test.js` prüft, dass die Wahl wirkt. Markise, Schild, Glas, Wasser nie eintragen.
+    Farben für viele (Block 73): Farbschlüssel nur über `PAINT_KEYS`/`paintOf`; wer Farben setzt, ruft `rememberPaint(t)`
+    (neu Gebautes bekommt `paintNewOf(b)`, `state.paintNew[b] === false` = abgeschaltet, Häuser nur nach eigenem Einschalten).
 76. **Antippen beim Ansehen** (Block 71): Was getroffen ist, entscheidet `objectAt` (malt jedes Ding in ein winziges Bild um
     den Finger, `inkAt`; vorderstes Flächiges gewinnt, Dünnes nur über leerem Boden), Schilder über `pillHits` (`pill()` gibt
     seinen Kasten zurück). Neue Gebäude brauchen dafür nichts, solange `spriteTop` ihre Höhe abdeckt (Vorfilter × 1,4).

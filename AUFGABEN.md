@@ -729,3 +729,8 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Umgesetzt ohne die Bilder umzubauen: `REPAINT` je Gebäude, `C()`/`shade()` tauschen beim Zeichnen die Töne.
 - [x] Testwelt `?welt=farben` (`TESTWELT=1 npx vitest run tests/testwelt-farben.test.js`): je umfärbbares Gebäude eine
       Reihe – vier Drehungen in Originalfarben, dann alle 14 Farben; Namensschild vorn, ohne 🐌/✨ (`SHOWCASE.quiet`).
+
+## Block 73 – viele Gebäude gleich färben (04.10.2026)
+- [x] Im Farbfenster „🎨 Für alle N anderen übernehmen“: alle Gebäude derselben Art bekommen Wand, Dach und Fenster (mit
+      Rückgängig). „Neu gebaute bekommen diese Farben“: wer umfärbt, baut die nächsten gleich so (`state.paintNew`, abschaltbar;
+      Häuser bleiben bunt, bis man es für sie einschaltet).

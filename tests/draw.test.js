@@ -89,6 +89,40 @@ describe('Umfärben (Block 72)', () => {
   });
 });
 
+describe('Farben für viele (Block 73)', () => {
+  const prep = () => { game("state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; for (const t of TECHS) state.techs.add(t.id); state.paintNew = {}; for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3"); game("for (let y = 4; y <= 14; y++) for (let x = 4; x <= 16; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }"); };
+  it('auf alle übertragen: alle Windräder bekommen die Farben (auch zurück auf Original), mit Rückgängig', () => {
+    prep();
+    for (const x of [8, 10, 12]) game(`state.tiles.set('${x},8', { b: 'windrad', lvl: ${x === 12 ? 3 : 1}, rot: 0 })`);
+    game("state.tiles.get('12,8').wall = 2; state.tiles.set('14,8', { b: 'offshore', lvl: 1, rot: 0 }); recalc(); openInfo(8, 8)");
+    game("document.querySelector('#panel [data-roof=\"1\"]').click()");
+    expect(game("document.querySelector('#panel [data-paintall]').textContent")).toMatch(/alle 2 anderen/);
+    game("document.querySelector('#panel [data-paintall]').click()");
+    expect(game("[10, 12].map(x => state.tiles.get(x + ',8').roof + '/' + state.tiles.get(x + ',8').wall)")).toEqual(['1/undefined', '1/undefined']);
+    expect(game("state.tiles.get('14,8').roof")).toBe(undefined);                     // andere Art bleibt
+    expect(game("!!document.querySelector('#panel [data-paintall]')")).toBe(false);    // alle gleich: kein Knopf mehr
+    game('undo()');
+    expect(game("state.tiles.get('12,8').wall")).toBe(2);
+  });
+  it('neue übernehmen die Farbe; abschaltbar; Häuser erst, wenn man es einschaltet; wird gespeichert', () => {
+    prep();
+    game("state.tiles.set('8,8', { b: 'windrad', lvl: 1, rot: 0 }); recalc(); openInfo(8, 8)");
+    game("document.querySelector('#panel [data-roof=\"2\"]').click()");
+    expect(game("state.paintNew.windrad")).toEqual({ roof: 2 });
+    game("build('windrad', 10, 10)");
+    expect(game("state.tiles.get('10,10').roof")).toBe(2);
+    game("document.querySelector('#panel [data-paintnew]').click()");                // aus
+    expect(game("state.paintNew.windrad")).toBe(false);
+    game("build('windrad', 12, 12)");
+    expect(game("state.tiles.get('12,12').roof")).toBe(undefined);
+    game("state.tiles.set('6,12', { b: 'haus', lvl: 1, rot: 0 }); recalc(); openInfo(6, 12); document.querySelector('#panel [data-wall=\"1\"]').click()");
+    expect(game("state.paintNew.haus")).toBe(undefined);                             // Häuser bleiben bunt gemischt
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.paintNew.windrad")).toBe(false);
+  });
+});
+
 describe('Reihenhaus: „bunt“ für Fassaden und Dächer', () => {
   it('Fassade einfarbig, Dächer bunt – und zurück', () => {
     game("state.money = 1e6; state.tiles.set('8,8', { b: 'reihenhaus', lvl: 2, rot: 0, wall: 3, roof: 2 }); recalc(); openInfo(8, 8)");

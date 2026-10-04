@@ -894,6 +894,19 @@ function walkerGone(w, r) {
 // Wie eine Bedingung erfüllt ist, wenn nicht einfach „in der Nähe“ (Block 26)
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
+// Farben für viele (Block 73): unter den Farbfeldern – auf alle gleichen übertragen, neue gleich so bauen
+function paintMoreHtml(t) {
+  const n = paintLikeOthers(t).length, on = !!state.paintNew[t.b];
+  return `<div class="looks paint-more">
+    ${n ? `<button class="look" data-paintall="1">🎨 Für ${n === 1 ? 'das andere' : `alle ${n} anderen`} übernehmen</button>` : ''}
+    <button class="look${on ? ' on' : ''}" data-paintnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen diese Farben</button>
+  </div>`;
+}
+function wirePaintMore(el, t, reopen) {
+  const all = el.querySelector('[data-paintall]'), nw = el.querySelector('[data-paintnew]');
+  if (all) all.onclick = () => undoable(() => { const n = paintAllLike(t); rememberPaint(t); sfx('deco'); save(); toast(`🎨 ${n} × ${ITEMS[t.b].name} umgefärbt`); reopen(); });
+  if (nw) nw.onclick = () => { state.paintNew[t.b] = state.paintNew[t.b] ? false : paintOf(t); sfx('deco'); save(); reopen(); };
+}
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -987,6 +1000,7 @@ function openInfo(x, y) {
       ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
       ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>
       <div class="swatches">${WIN_COLS.map((c, i) => `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
+      ${paintMoreHtml(t)}
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
@@ -1116,9 +1130,10 @@ function openInfo(x, y) {
     groundVersion++;                   // anderer Schatten
     t.born = performance.now(); sfx('deco'); save(); openInfo(x, y);
   };
-  if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; sfx('deco'); save(); openInfo(x, y); };
+  if (el.querySelector('[data-orig]')) el.querySelector('[data-orig]').onclick = () => { delete t.wall; delete t.roof; rememberPaint(t); sfx('deco'); save(); openInfo(x, y); };
   // „bunt“ (Reihenhaus): Farbe weg → jedes Haus wieder in seiner eigenen
-  const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; sfx('deco'); save(); openInfo(x, y); };
+  const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; rememberPaint(t); sfx('deco'); save(); openInfo(x, y); };
+  wirePaintMore(el, t, () => openInfo(x, y));
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)

@@ -21,6 +21,7 @@ function newState() {
     tutorial: 0,               // Schritt der Einführung, -1 = fertig/übersprungen
     legacy: new Set(),         // früher per Stern/Forschung Freigeschaltetes bleibt frei
     design: new Set(),         // in der Kunstakademie gekauft: 'wall:4', 'roof:7', 'weg:mulch', 'laterne' …
+    paintNew: {},              // Gebäudeart → Farben für neu Gebautes ({ wall, roof, win }; false = aus, Block 73)
     festival: false,
     town: { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(['0,0']),   // Grundstücke (6×6) der erschlossenen Inseln
@@ -109,7 +110,7 @@ function serialize() {
   return {
     game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
-    design: [...state.design],
+    design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
     decos, edges: [...state.edges].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
@@ -252,6 +253,8 @@ function parseSave(d) {
     tutorial: d.tutorial != null ? d.tutorial : -1,
     legacy: new Set(d.legacy || legacyUnlocks(d)),
     design: new Set(d.design || []),
+    paintNew: Object.fromEntries(Object.entries(d.paintNew || {}).filter(([b, p]) => ITEMS[b] && (p === false || (p && typeof p === 'object')))
+      .map(([b, p]) => [b, p && Object.fromEntries(Object.entries(p).filter(([k, v]) => PAINT_KEYS.includes(k) && Number.isInteger(v) && v >= 0))])),
     oldSave: !d.restore,
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
     growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)

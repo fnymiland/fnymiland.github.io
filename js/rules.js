@@ -603,6 +603,23 @@ function unlockText(def, short) {
 }
 const styleOk = st => unlockOk(st, (st.kind || 'weg') + ':' + st.id);
 // Farben: die ersten FREE_COLORS gibt es von Anfang an, weitere in der Kunstakademie
+// Farben für viele (Block 73): „auf alle übertragen“ und neu Gebautes gleich so (state.paintNew[b]; false = abgeschaltet).
+// Häuser bleiben bunt gemischt, bis man es für sie selbst einschaltet.
+const PAINT_KEYS = ['wall', 'roof', 'win'];
+const paintOf = t => Object.fromEntries(PAINT_KEYS.filter(k => t[k] != null).map(k => [k, t[k]]));
+const samePaint = (a, b) => PAINT_KEYS.every(k => (a[k] != null ? a[k] : null) === (b[k] != null ? b[k] : null));
+const paintNewOf = b => state.paintNew[b] ? { ...state.paintNew[b] } : {};
+const paintLikeOthers = t => [...state.tiles.values()].filter(o => o !== t && o.b === t.b && !samePaint(o, t));
+function rememberPaint(t) {
+  const p = state.paintNew[t.b];
+  if (p === false || (!p && isHome(t.b))) return;
+  state.paintNew[t.b] = paintOf(t);
+}
+function paintAllLike(t) {
+  const list = paintLikeOthers(t);
+  for (const o of list) for (const k of PAINT_KEYS) { if (t[k] != null) o[k] = t[k]; else delete o[k]; }
+  return list.length;
+}
 const colorOk = (kind, i) => i < FREE_COLORS || state.design.has(kind + ':' + i);
 const colorsOf = kind => (kind === 'wall' ? WALLS : ROOFS).map((c, i) => [c, i]).filter(([, i]) => colorOk(kind, i));
 // Forschung: Stufe n braucht das passende Gebäude (Schule, Bibliothek, Universität)
