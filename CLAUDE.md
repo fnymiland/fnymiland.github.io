@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+81. **Daneben tippen** (Block 81): Große Fenster (#modal) schließen nur, wenn man daneben drückt **und** daneben loslässt
+    (`modalPressOut`/`modalUpOut`) – wer im Fenster Text markiert oder einen Regler zieht, behält es. Seitenfenster (#panel)
+    schließen beim Ansehen, wenn man auf „nichts“ tippt (Rasen, Wald, Fels, Wasser, Meer); auf etwas anderes getippt wechselt
+    das Fenster dorthin. Neue „nichts hier“-Zweige in `tap` rufen deshalb `closePanel()`. Test: `tests/daneben.test.js`.
 80. **Dinge auf Wänden** (Block 80): Uhren über `faceClock(F, t, up, r, z, …)` – schert das Zifferblatt auf die Wand. Nie einen
     Kreis (`circle`/`arc`) direkt vor eine schräge Wand malen; für anderes Rundes auf Wänden dasselbe Scheren (`onFace` in shopart/e.js).
 79. **Wegform** (Block 77): `t.wide` ganz breit, `t.sq` eckige Kurve, `t.end` Ende ('rund' | 'rand', fehlt = automatisch).

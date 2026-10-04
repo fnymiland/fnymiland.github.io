@@ -456,7 +456,7 @@ function tap(sx, sy, isTouch) {
   const isle = isleOf(x, y);
   if (isle && !isleOpen(isle.id)) { openIsle(isle.id, sx, sy); return; }
   if (t && t.b === 'lm' && (tool === 'look' || !state.owned.has(ck))) { openLandmark(ax, ay); return; }
-  if (!ownedTile(x, y) && !(seaTool(tool) && isSea(x, y))) { toast('Da ist nur Meer.'); return; }
+  if (!ownedTile(x, y) && !(seaTool(tool) && isSea(x, y))) { if (tool === 'look') closePanel(); toast('Da ist nur Meer.'); return; }   // Ansehen: aufs Meer getippt schließt das Fenster wie Rasen (Block 81)
   const ds = decosAt(x + ',' + y);
   if (tool === 'look') {
     const ct = critterAt(sx, sy);                             // Tier in der Natur angetippt (Block 56)

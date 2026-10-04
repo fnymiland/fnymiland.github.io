@@ -2008,7 +2008,12 @@ function openModal(html, live = null) {
   const box = spotBox(); if (box) box.classList.add('spot');
 }
 function closeModal() { $('modal').hidden = true; modalLive = null; }
-$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+// Daneben tippen schließt (Block 81) – aber nur, wenn man daneben gedrückt und daneben losgelassen hat: Wer im Fenster drückt
+// (Text markieren, Regler ziehen) und erst daneben loslässt – oder umgekehrt –, behält sein Fenster
+let modalPressOut = false, modalUpOut = false;
+$('modal').addEventListener('pointerdown', e => { modalPressOut = e.target.id === 'modal'; });
+$('modal').addEventListener('pointerup', e => { modalUpOut = e.target.id === 'modal'; });     // … und auch daneben losgelassen
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal' && modalPressOut && modalUpOut) closeModal(); modalPressOut = modalUpOut = false; });
 
 function showIntro(first) {
   openModal(`

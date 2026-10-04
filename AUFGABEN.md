@@ -791,3 +791,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Uhren an Uhrturm, Rathaus und Bahnhof waren Kreise vor der schrägen Wand. Jetzt `faceClock`: Zifferblatt mit Ring,
       vier Strichen und Zeigern auf die Wand geschert (wie bei Markthalle und Uhrmacher, die es nun mitbenutzen).
       Das Rathaus zeigt die Uhr auf jeder sichtbaren Turmseite.
+
+## Block 81 – Daneben tippen schließt Fenster (04.10.2026)
+- [x] Getestet mit echten Klicks (PC 1024 px und Handy 375 px): Menü, Forschung, Rathaus, Album – daneben klicken schließt.
+      Seitenfenster: Rasen, Wald, Fels, Wasser schließen; anderes Gebäude/Weg wechselt (gewollt); Bedienleisten lassen es offen.
+- [x] Fehler 1: Aufs offene Meer getippt blieb das Seitenfenster offen (nur „Da ist nur Meer.“) – schließt jetzt.
+- [x] Fehler 2: Im großen Fenster drücken und daneben loslassen (oder umgekehrt) schloss es – jetzt nur, wenn Drücken und
+      Loslassen beide daneben sind.
