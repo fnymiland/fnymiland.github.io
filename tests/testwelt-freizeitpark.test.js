@@ -96,6 +96,7 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     [[2, 1], [4, 1], [6, 0], [8, 1]].forEach(([x, r], i) => state.tiles.set((X + x) + ',' + (Y + 10), { b: i === 3 ? 'baecker' : 'haus', lvl: 1 + i % 3, rot: r }));
     [[3, 3], [5, 3], [7, 3]].forEach(([x, r], i) => state.tiles.set((X + x) + ',' + (Y + 12), { b: 'haus', lvl: 1 + i, rot: r }));
     nameHouses();
+    state.tiles.set((X + 10) + ',' + (Y + 7), { b: 'leuchtturm', lvl: 1, rot: 0 });                       // Leuchtturm-Kap am Meer (Block 83)
     rebuildCover(); recalc(); })()`);
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;

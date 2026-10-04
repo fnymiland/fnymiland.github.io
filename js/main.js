@@ -99,6 +99,7 @@ if (PROBE) {
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();
+  const lights = growLighthouses();
   const refunded = fitFootprints();
   delete state.fitLm;
   if (moved) setTimeout(() => announceIslands(moved), 900);
@@ -106,6 +107,7 @@ if (PROBE) {
   if (grown.length) setTimeout(() => announceWonders(grown), 1200);
   if (hall) setTimeout(() => announceHall(hall), 1600);
   if (ports) setTimeout(() => announceHarbors(ports), 2000);
+  if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
   recalc();
@@ -158,7 +160,7 @@ function frame(now) {
   produce(dt);
   peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); fzFestTick(); royalFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now; }
+  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); fzFestTick(); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now; }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

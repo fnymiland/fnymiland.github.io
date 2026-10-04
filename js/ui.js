@@ -48,7 +48,7 @@ function thumbRaw(type, lvl = 1, tile = null) {
   c.width = 112; c.height = 88;
   const prev = g; g = c.getContext('2d'); FOG = false;
   const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
-  const z = big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
+  const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
     poly([[cx, cy + hh * s], [cx + hw * s, cy], [cx + hw * s, cy + d], [cx, cy + hh * s + d]], '#b0895a');
@@ -1087,6 +1087,8 @@ function openInfo(x, y) {
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
+    : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz – er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
+      <div class="row"><button class="btn" data-lgrow="1" ${lighthouseSpot(x + ',' + y, t) ? '' : 'disabled'}>🗼 Zum Kap ausbauen</button></div>`   // Block 83
     : gardenPath(t, x, y, true) ? `<div class="looks"><button class="look${t.zug === false ? '' : ' on'}" data-zug="1" aria-pressed="${t.zug !== false}">🌿 Gartenweg zur Tür</button></div>` : '';   // Block 78
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)].name : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
@@ -1167,6 +1169,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   if (t.b === 'weg') wireWegForm(el, t, x, y);
+  if (el.querySelector('[data-lgrow]')) el.querySelector('[data-lgrow]').onclick = () => undoable(() => { const nk = growLighthouse(x + ',' + y); if (!nk) return; sfx('build'); recalc(); save(); startFireworks(keyXY(nk).map(v => v + 1)); openInfo(...keyXY(nk)); });   // Kap (Block 83)
   if (el.querySelector('[data-zug]')) el.querySelector('[data-zug]').onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; groundVersion++; sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)

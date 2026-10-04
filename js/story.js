@@ -323,7 +323,7 @@ function diaryPicture(pic) {
   const z = 1.6, cx = 160, cy = 138, hw = TW / 2 * z * 1.6, hh = TH / 2 * z * 1.6;
   diamond(cx, cy, hw, hh, pic.lit ? '#3d6b3a' : '#96d56f');
   if (pic.lighthouse) {
-    drawObject('leuchtturm', cx, cy, z * 0.8, pic.lit ? 1400 : 0, 1, 1, 1, null);
+    drawObject('leuchtturm', cx, cy + 18, z * 0.42, pic.lit ? 1400 : 0, 1, 1, 1, null);   // Leuchtturm-Kap (Block 83): passt ins Bild
     if (pic.lit) for (let i = 0; i < 18; i++) circle(20 + (i * 67) % 290, 20 + (i * 37) % 90, 1.2, '#fff6c8');
   } else {
     drawLandmark(pic.type, cx, cy, z, 0, 1, 1, pic.stage);
@@ -744,6 +744,17 @@ function royalFireTick(now = performance.now()) {
   if (!s) return false;
   royalFireNext = now + 150000;
   const [x, y] = keyXY(s[0]), [w, h] = sizeOf('schloss', s[1].rot, s[1]);
+  startFireworks([x + (w - 1) / 2, y + (h - 1) / 2], true);
+  return true;
+}
+// Leuchtturm (Block 83): nach der Einweihung jede Nacht ab und zu ein kleines Feuerwerk über dem Kap
+let lightFireNext = 0;
+function lightFireTick(now = performance.now()) {
+  if (night < 0.3 || !isLive() || now < lightFireNext || now < fireworksUntil) return false;
+  const s = [...state.tiles].find(([, t]) => t.b === 'leuchtturm');
+  if (!s) return false;
+  lightFireNext = now + 170000;
+  const [x, y] = keyXY(s[0]), [w, h] = sizeOf('leuchtturm', s[1].rot, s[1]);
   startFireworks([x + (w - 1) / 2, y + (h - 1) / 2], true);
   return true;
 }

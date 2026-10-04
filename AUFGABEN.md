@@ -802,3 +802,11 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 ## Block 82 – Rechtsklick ohne Kontextmenü (04.10.2026)
 - [x] Bisher nur auf der Karte unterdrückt; auf Leisten, Fenstern, Aufgabenliste, Knöpfen ging das Browser-Menü auf (auch beim
       Loslassen eines Rechts-Ziehens über einem Fenster). Jetzt überall aus, außer in Texteingaben (Einfügen). Test: rechtsklick.test.js.
+
+## Block 83 – Leuchtturm-Kap als Finale (04.10.2026)
+- [x] Der Leuchtturm war ein schmaler 1×1-Turm, kaum größer als ein Haus. Jetzt ein 3×3-Kap an der Küste: hoher, verjüngter Turm
+      mit roten Streifen und Fenstern, Galerie, gläserne Laternenkammer mit Kuppel und Wetterfahne, Lichtstrahl (tags zart,
+      nachts weit übers Meer), Wärterhaus mit Garten, Felsen mit Brandung, Steg; 21 Laternen in drei Girlanden (nachts leuchtend).
+- [x] Einweihung mit Feuerwerk, danach nachts ab und zu Feuerwerk über dem Kap. Turm/Streifen weiter umfärbbar.
+- [x] Alte Leuchttürme wachsen beim Laden, wo Platz ist (Wege/Dekos zurück); sonst bleiben sie klein, im Fenster „Zum Kap ausbauen“.
+- [x] Bildchen im Baumenü und Tagebuch angepasst; Test zeichnet jetzt jedes Menübildchen. Testwelt freizeitpark: Kap bei (46, 31).

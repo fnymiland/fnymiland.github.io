@@ -115,7 +115,7 @@ function build(b, x, y, quiet) {
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
-  if (b === 'leuchtturm') festival();
+  if (b === 'leuchtturm') { festival(); startFireworks([x + 1, y + 1]); }   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
   return true;

@@ -1094,7 +1094,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);
   if (gp) drawGardenPath(cx, cy, z, x, y, gp);
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
-  if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
+  if (BIG_ART[type] && !(type === 'leuchtturm' && t && t.mini)) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   if (STANDS[type]) { drawStand(type, cx, cy, z, now, x, y, t); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
@@ -1113,7 +1113,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
-    case 'leuchtturm': {
+    case 'leuchtturm': {                     // alter 1×1-Leuchtturm (t.mini, Block 83) – das Kap zeichnet BIG_ART.leuchtturm
       const K = kit(cx, cy, z, t && t.rot);
       kShadow(K, 0.24);
       K.rect(-0.25, -0.25, 0.25, 0.25, C('#c9ccd6'));
@@ -2434,3 +2434,130 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   post.sort(byDepth).forEach(p => p[2]());
 }
 BIG_ART.fz_schloss = (cx, cy, z, now, x, y, lvl, t) => drawCastle(cx, cy, z, now, x, y, t);
+
+// ---------------------------------------------------------------------------
+// Leuchtturm-Kap (Block 83, 3×3): das Finale. Vorn (+a) das Meer: Felsen mit Brandung und ein Steg; hinten das Wärterhaus mit
+// Garten; vorn rechts der hohe Turm (verjüngt, rote Streifen, Fenster in der Wendel), oben Galerie, Glaskammer mit Kuppel und
+// Wetterfahne, Lichtstrahl (tags zart, nachts weit übers Meer). Von der Galerie hängen die 21 Laternen als drei Girlanden.
+// Turm weiß / Streifen rot – über REPAINT umfärbbar (Turm/Streifen); das Wärterhaus nimmt dieselben Farben.
+const LIGHT_LANTERNS = ['#ffd873', '#ff8fa3', '#8fd3ff', '#b6f09c', '#ffb36b', '#d6a6ff', '#fff2b8'];   // je Insel drei
+BIG_ART.leuchtturm = (cx, cy, z, now, x, y, lvl, t) => {
+  const K = kit(cx, cy, z, t.rot), lit = night > 0.15 && isLive(), wall = '#ffffff', roof = '#e8604f', gold = '#f2c14e', stone = '#d9d3c6';
+  const ck = castleKit(K, z, now, x, { wall, roof, win: lit ? '#ffd873' : C('#a8dcff'), gold, flags: CASTLE_FLAG_SETS[0], lit, bk: 0, lc: 0, wp: 0 });
+  const RX = r => r * Math.SQRT2 * TW / 2 * z, RY = r => r * Math.SQRT2 * TH / 2 * z;
+  const AT = 0.5, BT = -0.5, R0 = 0.38, R1 = 0.27, H0 = 6, HT = 130;                // Turm: Mitte, Radius unten/oben, Sockel, Höhe
+  const rAt = h => R0 + (R1 - R0) * Math.max(0, Math.min(1, (h - H0) / HT));
+  const lightX = (col, x0, x1, dark = LIGHT.side) => { const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, C(shade(col, 0.08))); gr.addColorStop(0.42, C(col)); gr.addColorStop(1, C(shade(col, dark))); return gr; };
+  // --- Boden: Weg zum Turm, Garten, Brandung, Felsen, Steg ---------------------------------------------------------
+  K.rect(-0.25, 0.5, AT + 0.1, 0.7, C('#ddd3bf'));                                   // Plattenweg vom Haus zum Turm
+  K.rect(AT - 0.1, BT + 0.3, AT + 0.1, 0.7, C('#ddd3bf'));
+  for (let i = 0; i < 6; i++) { const ph = (now / 1600 + i / 6) % 1, b0 = -1.5 + i * 0.5, al = (0.6 * (1 - ph)).toFixed(2);   // Brandung vor dem Kap
+    const p0 = K.P(1.55 + ph * 0.25, b0), p1 = K.P(1.55 + ph * 0.25, b0 + 0.42); g.strokeStyle = `rgba(255,255,255,${al})`; g.lineWidth = 1.2 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
+  const rock = (a, b, s, k) => {                                                      // runder Fels, Licht von links
+    const [px, py] = K.P(a, b), w = 9 * s * z, h = 6 * s * z, c = shade('#9b958a', (hash(x + k, y, 77) - 0.5) * 0.15);
+    ellipse(px, py + 1 * z, w, h * 0.55, 'rgba(40,40,40,0.18)');
+    g.beginPath(); g.ellipse(px, py - h * 0.3, w, h, 0, Math.PI, 0); g.lineTo(px + w, py); g.ellipse(px, py, w, h * 0.45, 0, 0, Math.PI); g.closePath();
+    g.fillStyle = lightX(c, px - w, px + w, -0.25); g.fill();
+    ellipse(px - w * 0.25, py - h * 0.85, w * 0.35, h * 0.22, C(shade(c, 0.18)));
+  };
+  const steg = () => {                                                                // Steg ins Meer (vorn links)
+    const b0 = -1.05, b1 = -0.8;
+    for (const a of [1.75, 2.15]) for (const b of [b0, b1]) { const [px, py] = K.P(a, b); g.strokeStyle = C('#6f5238'); g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(px, py + 3 * z); g.lineTo(px, py - 3 * z); g.stroke(); }
+    K.rect(1.3, b0, 2.25, b1, C('#b08a5e'), 2.5);
+    for (let a = 1.35; a < 2.25; a += 0.1) { const p0 = K.P(a, b0, 2.5), p1 = K.P(a, b1, 2.5); g.strokeStyle = C('#8a6440'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
+  };
+  // --- Wärterhaus mit Garten ----------------------------------------------------------------------------------
+  const house = () => {
+    K.rect(-1.4, -0.3, -0.2, 1.4, C('#8fcf68'));                                      // Garten
+    for (let i = 0; i < 9; i++) { const [px, py] = K.P(-1.3 + (i % 3) * 0.45, -0.15 + Math.floor(i / 3) * 0.12); circle(px, py - 1 * z, 1.1 * z, C(['#f7b2c8', '#ffd873', '#e8604f'][i % 3])); }
+    const B = K.block({ a: -0.7, b: 0.65, ha: 0.42, hb: 0.5, h: 15, wall, roof, roofH: 12, type: 'gable', ridge: 'b', entry: true });
+    K.door(B, 'front', 0.42, 0.58, 0.55);
+    K.wins(B, 'front', 2, 0.35, 0.75, 0.1, 0.9, [1]); K.sideWins(B, 2, 0.35, 0.75);
+    const [qx, qy] = K.P(-0.9, 0.45, 24); poly([[qx - 1.6 * z, qy], [qx + 1.6 * z, qy], [qx + 1.6 * z, qy - 6 * z], [qx - 1.6 * z, qy - 6 * z]], C('#b5654a'));   // Schornstein
+    kitBush(K, -0.15, 1.3, 1.1); kitTree(K, -1.25, -0.95, 0.75); kitBush(K, -0.6, -1.25, 0.9);
+  };
+  // --- Turm -------------------------------------------------------------------------------------------------
+  const [tx, ty] = K.P(AT, BT), Y = h => ty - h * z;
+  const band = (h0, h1, col, back) => {                                               // Band um den verjüngten Turm
+    const [a0, a1] = back ? [Math.PI, 2 * Math.PI] : [0, Math.PI], r0 = rAt(h0), r1 = rAt(h1), gr = g.createLinearGradient(tx - RX(r0), 0, tx + RX(r0), 0);
+    gr.addColorStop(0, C(shade(col, 0.08))); gr.addColorStop(0.42, C(col)); gr.addColorStop(1, C(shade(col, LIGHT.side)));
+    g.beginPath(); g.ellipse(tx, Y(h0), RX(r0), RY(r0), 0, a0, a1); g.ellipse(tx, Y(h1), RX(r1), RY(r1), 0, a1, a0, true); g.closePath(); g.fillStyle = gr; g.fill();
+  };
+  const tower = () => {
+    ellipse(tx + 6 * z, ty + 2 * z, RX(R0 + 0.12), RY(R0 + 0.12), 'rgba(40,40,40,0.18)');   // Schatten
+    const rs = R0 + 0.1;                                                               // Sockel aus Stein
+    g.beginPath(); g.moveTo(tx - RX(rs), Y(H0)); g.lineTo(tx - RX(rs), ty); g.ellipse(tx, ty, RX(rs), RY(rs), 0, Math.PI, 0, true); g.lineTo(tx + RX(rs), Y(H0)); g.closePath();
+    g.fillStyle = lightX(stone, tx - RX(rs), tx + RX(rs), -0.25); g.fill();
+    g.beginPath(); g.ellipse(tx, Y(H0), RX(rs), RY(rs), 0, 0, Math.PI * 2); g.fillStyle = C(shade(stone, 0.1)); g.fill();
+    const top = H0 + HT;                                                               // Turmschaft, nach oben schlanker
+    g.beginPath(); g.moveTo(tx - RX(R1), Y(top)); g.lineTo(tx - RX(R0), Y(H0)); g.ellipse(tx, Y(H0), RX(R0), RY(R0), 0, Math.PI, 0, true); g.lineTo(tx + RX(R1), Y(top)); g.closePath();
+    g.fillStyle = lightX(wall, tx - RX(R0), tx + RX(R0)); g.fill();
+    for (let i = 0; i < 4; i++) { const h0 = H0 + 14 + i * 30; band(h0, h0 + 14, roof); }   // rote Streifen
+    for (let i = 0; i < 6; i++) {                                                      // Fenster in der Wendel
+      const h = H0 + 22 + i * 18, phi = (i % 2 ? 0.55 : -0.55), r = rAt(h), px = tx + RX(r) * Math.sin(phi), py = Y(h) + RY(r) * Math.cos(phi), hw = 1.3 * z * Math.cos(phi);
+      g.fillStyle = lit ? '#ffd873' : C('#a8dcff'); g.fillRect(px - hw, py - 4.5 * z, 2 * hw, 4.5 * z); g.beginPath(); g.ellipse(px, py - 4.5 * z, hw, hw, 0, Math.PI, 0); g.fill();
+      if (lit) glowQuad([[px - hw, py - 5 * z], [px + hw, py - 5 * z], [px + hw, py], [px - hw, py]], 8 * z);
+    }
+    const [dx0, dy0] = [tx, Y(H0) + RY(R0)];                                           // Tür
+    g.fillStyle = C('#6b4630'); g.fillRect(dx0 - 2.2 * z, dy0 - 9 * z, 4.4 * z, 9 * z); g.beginPath(); g.ellipse(dx0, dy0 - 9 * z, 2.2 * z, 2.2 * z, 0, Math.PI, 0); g.fill();
+    band(top - 3, top, shade(wall, -0.08));                                            // Kranz unter der Galerie
+    // Galerie (hinten), Glaskammer, Kuppel, Galerie (vorn)
+    const gUp = top, rg = R1 * 0.9, hg = 21, gTop = gUp + 2 + hg;
+    ck.balconyRing(AT, BT, R1, gUp, true, true, 0.13, true);
+    const gx0 = tx - RX(rg), gx1 = tx + RX(rg);
+    g.beginPath(); g.moveTo(gx0, Y(gTop)); g.lineTo(gx0, Y(gUp + 2)); g.ellipse(tx, Y(gUp + 2), RX(rg), RY(rg), 0, Math.PI, 0, true); g.lineTo(gx1, Y(gTop)); g.closePath();
+    const glass = g.createLinearGradient(gx0, 0, gx1, 0); glass.addColorStop(0, lit ? '#fff6c8' : C('#d8f2fb')); glass.addColorStop(0.5, lit ? '#ffe28a' : C('#bfe6f5')); glass.addColorStop(1, lit ? '#f2c14e' : C('#93c8de'));
+    g.fillStyle = glass; g.fill();
+    const lampY = Y(gUp + 2 + hg * 0.5);
+    circle(tx, lampY, (lit ? 4.2 : 3) * z, lit ? '#fffbe6' : C('#fff3b0'));            // Lampe
+    g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.8 * z; g.beginPath();                // Sprossen
+    for (const ph of [-1.1, -0.4, 0.3, 1.0]) { const px = tx + RX(rg) * Math.sin(ph), py = RY(rg) * Math.cos(ph); g.moveTo(px, Y(gUp + 2) + py); g.lineTo(px, Y(gTop) + py); }
+    g.stroke();
+    const rd = rg * 1.18, dome = 15;                                                   // Kuppel mit Rand
+    g.beginPath(); g.ellipse(tx, Y(gTop), RX(rd), RY(rd), 0, 0, Math.PI * 2); g.fillStyle = C(shade(roof, -0.15)); g.fill();
+    g.beginPath(); g.moveTo(tx - RX(rd) * 0.95, Y(gTop)); g.bezierCurveTo(tx - RX(rd) * 0.95, Y(gTop + dome * 0.9), tx - RX(rd) * 0.3, Y(gTop + dome), tx, Y(gTop + dome)); g.bezierCurveTo(tx + RX(rd) * 0.3, Y(gTop + dome), tx + RX(rd) * 0.95, Y(gTop + dome * 0.9), tx + RX(rd) * 0.95, Y(gTop)); g.closePath();
+    g.fillStyle = lightX(roof, tx - RX(rd), tx + RX(rd)); g.fill();
+    circle(tx, Y(gTop + dome + 1.5), 1.6 * z, C(gold));                               // Knauf und Wetterfahne
+    g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(tx, Y(gTop + dome + 1.5)); g.lineTo(tx, Y(gTop + dome + 9)); g.stroke();
+    const vane = Math.sin(now / 3000) * 0.6;
+    poly([[tx, Y(gTop + dome + 7.5)], [tx + Math.cos(vane) * 6 * z, Y(gTop + dome + 8)], [tx, Y(gTop + dome + 9)]], C(gold));
+    ck.balconyRing(AT, BT, R1, gUp, false, true, 0.13, true);
+    if (lit) glowQuad([[gx0, Y(gTop)], [gx1, Y(gTop)], [gx1, Y(gUp)], [gx0, Y(gUp)]], 70 * z);
+    return [tx, lampY, Y(gUp + 4)];
+  };
+  // --- Zeichnen von hinten nach vorn ---------------------------------------------------------------------------
+  const parts = [[-0.7, 0.65, house], [AT, BT, () => { lamp = tower(); }], [1.6, -0.92, steg]];
+  let lamp = null;
+  for (const [a, b, s] of [[1.35, 1.25, 1.3], [1.25, 0.7, 1], [1.4, 0.15, 1.15], [1.3, -0.4, 0.9], [0.9, 1.4, 1.1], [0.3, 1.38, 0.9], [-0.5, 1.4, 0.8], [1.4, -1.4, 1]]) parts.push([a, b, () => rock(a, b, s, a * 7 + b)]);
+  parts.sort((p, q) => K.depth(p[0], p[1]) - K.depth(q[0], q[1])).forEach(p => p[2]());
+  if (!lamp) return;
+  // --- 21 Laternen in drei Girlanden: zum Haus, zum Steg, zur Ecke vorn rechts -------------------------------------------
+  const [lx, ly, gy] = lamp, ends = [K.P(-0.25, 0.25, 17), K.P(2.15, -0.92, 9), K.P(1.35, 1.35, 6)];
+  ends.forEach((e, gi) => {
+    const sx = lx + (e[0] - lx) * 0.06, sy = gy, sag = 22 * z;
+    const pt = f => [sx + (e[0] - sx) * f, sy + (e[1] - sy) * f + Math.sin(Math.PI * f) * sag];
+    g.strokeStyle = C('#5a4636'); g.lineWidth = 0.5 * z; g.beginPath();
+    for (let i = 0; i <= 16; i++) { const p = pt(i / 16); i ? g.lineTo(...p) : g.moveTo(...p); }
+    g.stroke();
+    for (let i = 0; i < 7; i++) {
+      const [px, py] = pt((i + 0.6) / 7.4), col = LIGHT_LANTERNS[(gi * 7 + i) % 7], sw = Math.sin(now / 700 + i + gi) * 0.6 * z;
+      g.strokeStyle = C('#5a4636'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px + sw, py + 1.5 * z); g.stroke();
+      ellipse(px + sw, py + 3.4 * z, 1.7 * z, 2.2 * z, lit ? col : C(shade(col, -0.1)));
+      g.fillStyle = C('#5a4636'); g.fillRect(px + sw - 1.1 * z, py + 1.1 * z, 2.2 * z, 0.6 * z);
+      if (lit) glowQuad([[px - 2 * z, py + 1 * z], [px + 2 * z, py + 1 * z], [px + 2 * z, py + 6 * z], [px - 2 * z, py + 6 * z]], 10 * z, null);
+    }
+  });
+  // --- Lichtstrahl: dreht sich; tags zart, nachts weit übers Meer -----------------------------------------------------
+  if (!isLive()) return;
+  const ang = now / 2200, len = (lit ? 360 : 110) * z, al = lit ? 0.42 : 0.12;
+  g.save(); g.globalCompositeOperation = 'lighter';
+  for (const off of [0, Math.PI]) {
+    const a = ang + off, grd = g.createRadialGradient(lx, ly, 0, lx, ly, len);
+    grd.addColorStop(0, `rgba(255,236,170,${al})`); grd.addColorStop(1, 'rgba(255,236,170,0)');
+    g.fillStyle = grd; g.beginPath(); g.moveTo(lx, ly);
+    g.lineTo(lx + Math.cos(a - 0.1) * len, ly + Math.sin(a - 0.1) * len * 0.5);
+    g.lineTo(lx + Math.cos(a + 0.1) * len, ly + Math.sin(a + 0.1) * len * 0.5);
+    g.closePath(); g.fill();
+  }
+  g.restore();
+};

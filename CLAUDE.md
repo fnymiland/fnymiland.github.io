@@ -352,6 +352,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+83. **Leuchtturm-Kap** (Block 83): Der Leuchtturm ist 3×3 (`ITEMS.leuchtturm.size`), Bild `BIG_ART.leuchtturm` (wird live gezeichnet:
+    Strahl). Alte 1×1-Leuchttürme tragen `t.mini` (sizeOf → 1×1, altes Bild); beim Laden (v12, `growLighthouses`) und im Fenster
+    (`growLighthouse`) wachsen sie, wo Platz ist. `fitFootprints` lässt `t.mini` in Ruhe. Feuerwerk: beim Bau und nachts (`lightFireTick`).
+    Beim Einfügen von Kommentaren per Skript nie mitten in eine Zeile mit mehreren Deklarationen (`const a = …, b = …`) – der
+    Rest der Zeile wird sonst Kommentar (zweimal passiert: Blöcke 77 und 83).
 82. **Rechtsklick** (Block 82): Das Kontextmenü des Browsers ist im ganzen Spiel aus (`contextmenu` am Dokument), nur Texteingaben
     behalten es (`keepContextMenu`). Neue Bedienelemente brauchen dafür nichts; keine eigenen `contextmenu`-Handler mehr anhängen.
 81. **Daneben tippen** (Block 81): Große Fenster (#modal) schließen nur, wenn man daneben drückt **und** daneben loslässt

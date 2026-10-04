@@ -60,7 +60,7 @@ const ITEMS = {
              desc: '25 Taler/s, +5 für jedes Bergwerk im Umkreis von 3. Braucht 2 ⚡ Strom, sobald es Windräder gibt.' },
   hafen:   { cat: 'bau', name: 'Hafen', size: [3, 4], cost: 1500, needs: 'shore', workers: 3, tech: 'seehandel',
              desc: 'Handel mit der Welt: +8 % auf die Einnahmen der Betriebe (zählt für bis zu 3 Häfen). Je Stufe fährt ein Fischkutter hinaus (🪙 +5/s). Liegeplätze für 2/4/6 Schiffe, die zu Stegen und Häfen auf anderen Inseln fahren. Ab Stufe 2 legen Frachter mit Aufträgen an und kaufen dir ab, was sich stapelt (Stufe 3: mehr und Großaufträge).' },
-  leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 15000000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40,
+  leuchtturm: { cat: 'bau', name: 'Leuchtturm', cost: 15000000, mat: { quader: 40, metall: 25, bretter: 30 }, needs: 'shore', workers: 1, lanterns: 21, beauty: 40, size: [3, 3],   // Block 83: Leuchtturm-Kap
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
@@ -624,7 +624,7 @@ const ITEM_TIPS = {
   baecker: 'Direkt neben Mühlen: Jede Mühle daneben bringt +6 Taler/s. Häuser wünschen sich eine Bäckerei in der Nähe oder am Weg.',
   fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
   hafen: 'Ans Wasser. +8 % auf die Einnahmen der Betriebe (bis zu 3 Häfen zählen), Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',
-  leuchtturm: 'Das Finale: Bau ihn am Wasser, dann beginnt das Laternenfest.',
+  leuchtturm: 'Das Finale: ein Leuchtturm-Kap (3×3) an der Küste – dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
   hbf: 'Der große Kopfbahnhof: Vor jedes Gleis eine eigene Strecke legen (mit einem Feld Abstand, sonst wird es eine Linie). Jede fährt mit eigenem Zug – und am Bahnhof steigen die Leute um. Mehr Gleise im Infofenster.',

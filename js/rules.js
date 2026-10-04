@@ -9,7 +9,7 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : b === 'fz_schloss' ? csSize(t) : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };
+const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : b === 'fz_schloss' ? csSize(t) : b === 'leuchtturm' && t && t.mini ? [1, 1] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };   // alter Leuchtturm (t.mini): 1×1 (Block 83)
 // Märchenschloss (Block 60g/60h): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
 // m/mk/mr: Mittelturm Höhe (0 keiner … 4 riesig), Dicke, Dach; cb/cf/cr: Mittelbau Breite, Stockwerke, Dach; wf/wr: Flügel
 // Stockwerke, Dach; tw: Turmpaare von innen nach außen [{ h: Höhe, k: Dicke, p: Platz (vorn, Fassade, hinten), r: Dach }] }.
@@ -2136,6 +2136,54 @@ function growHarbors() {
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   return out.grown || out.refunded ? out : null;
 }
+// Leuchtturm-Kap (Block 83): Der Leuchtturm ist 3×3. Alte (1×1) werden t.mini und wachsen, wo rundherum Platz ist – Gras,
+// eigenes Land, nur Wege/Dekos im Weg (die gibt es zurück), eine Seite zum Wasser. Sonst bleiben sie klein; im Fenster
+// lässt sich das später nachholen (growLighthouse).
+function lighthouseSpot(k, t) {
+  const [x, y] = keyXY(k), cands = [];
+  for (const r of [t.rot || 0, 0, 1, 2, 3]) for (let ay = y - 2; ay <= y; ay++) for (let ax = x - 2; ax <= x; ax++) {
+    let ok = true, score = 0;
+    for (const [fx, fy] of footprint('leuchtturm', ax, ay, r)) {
+      if (!ownedTile(fx, fy) || terrainAt(fx, fy) !== 'grass') { ok = false; break; }
+      const a = anchorAt(fx, fy), o = a && state.tiles.get(a);
+      if (o && a !== k && o.b !== 'weg') { ok = false; break; }
+      if (o && a !== k) score += 1;
+      const ds = decosAt(fx + ',' + fy);
+      if (ds && ds.some(Boolean)) score += 0.5;
+    }
+    if (!ok) continue;
+    const wet = frontTiles('leuchtturm', ax, ay, r).filter(([fx, fy]) => isWater(fx, fy)).length;
+    if (wet) cands.push({ ax, ay, r, score: score - wet * 0.1 });
+  }
+  return cands.sort((p, q) => p.score - q.score)[0] || null;
+}
+function growLighthouse(k) {
+  const t = state.tiles.get(k);
+  if (!t || t.b !== 'leuchtturm' || !t.mini) return null;
+  const c = lighthouseSpot(k, t);
+  if (!c) return null;
+  for (const [fx, fy] of footprint('leuchtturm', c.ax, c.ay, c.r)) {
+    const kk = fx + ',' + fy, a = anchorAt(fx, fy), o = a && a !== k && state.tiles.get(a);
+    if (o) { state.money += ITEMS.weg.cost; state.tiles.delete(a); }
+    const ds = state.decos.get(kk);
+    if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+  }
+  state.tiles.delete(k);
+  const nk = c.ax + ',' + c.ay, nt = { ...t, rot: c.r };
+  delete nt.mini;
+  state.tiles.set(nk, nt);
+  rebuildCover(); groundVersion++;
+  return nk;
+}
+function growLighthouses() {
+  if (!state.growLight) return 0;
+  delete state.growLight;
+  for (const t of state.tiles.values()) if (t.b === 'leuchtturm') t.mini = true;
+  rebuildCover();
+  let n = 0;
+  for (const [k, t] of [...state.tiles]) if (t.b === 'leuchtturm' && growLighthouse(k)) n++;
+  return n;
+}
 function announceHarbors(r) {
   if (!r) return;
   toast([r.grown ? `⚓ Neu: größere Häfen mit Kai und Pier${r.gone.length ? ` – Platz gemacht: ${r.gone.join(', ')} (erstattet)` : ''}` : '',
@@ -2163,7 +2211,7 @@ function fitFootprints() {
   };
   rebuildCover();
   for (const [k, t] of [...state.tiles]) {
-    if (!isBig(t.b)) continue;
+    if (!isBig(t.b) || (t.b === 'leuchtturm' && t.mini)) continue;   // alter kleiner Leuchtturm bleibt, wo er ist (Block 83)
     const [w, h] = sizeOf(t.b, t.rot, t);
     let [x, y] = keyXY(k);
     // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?

@@ -79,7 +79,7 @@ const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34];
 const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feldrand
   muehle: [[28, 34, 40], 0.3], saege: [22, 0.18], steinmetz: [17, 0.26], schmiede: [19, 0.26], baecker: [[22, 32, 32], 0.2],
   fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [[28, 29, 31], 0.3], uni: [[36, 38, 40], 0.45], kunst: [[28, 30, 32], 0.3],
-  rathaus: [40, 0.4], leuchtturm: [50, 0.37], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
+  rathaus: [40, 0.4], fischer: [16, 0.3], hafen: [[20, 22, 26], 0.5],
 };
 // Höhe des Namensschilds über der Mitte (passend zur Zeichnung)
 const LM_LABEL_H = { baum: 128, obsthain: 82, klippe: 172, ruine: 80, erzberg: 104, quelle: 70, kristall: 118 };
@@ -195,11 +195,11 @@ function renderGroundChunk(cx, cy, scale) {
 const SPRITE_FROM = 1.0, SPRITE_MS = 6;
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
 let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
-const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'muehle']);   // drehen sich auch von weitem sichtbar
+const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
 const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].includes(b);
 function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 50;
-  if (b === 'leuchtturm') return 220;
+  if (b === 'leuchtturm') return 280;                    // Leuchtturm-Kap (Block 83)
   if (b === 'fz_schloss') return 260;
   return w * h >= 9 ? 150 : w * h >= 4 ? 120 : 100;
 }

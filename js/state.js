@@ -66,6 +66,7 @@ function tileOut(t) {
   if (t.stage != null) o.stage = t.stage;
   if (t.look) o.look = t.look;
   if (t.bridge) o.bridge = true;
+  if (t.mini) o.mini = true;                                                             // alter 1×1-Leuchtturm (Block 83)
   if (t.wide) o.wide = true;                                                             // Wegform (Block 77)
   if (t.sq) o.sq = true;
   if (t.end) o.end = t.end;
@@ -112,7 +113,7 @@ function serialize() {
   }
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0 })]);
   return {
-    game: 'kachelhausen', v: 11, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 12, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], tiles, terra: [...state.terra], techs: [...state.techs],
@@ -264,6 +265,7 @@ function parseSave(d) {
     growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)
     growHall: (d.v || 3) < 10,       // v10 (29.09.): Das Rathaus ist 3×3 (growTownHall)
     growHarbors: (d.v || 3) < 11,    // v11 (29.09.): Häfen sind 3×4 mit Kai und Pier (growHarbors)
+    growLight: (d.v || 3) < 12,      // v12 (04.10.): Leuchtturm ist ein 3×3-Kap (growLighthouses)
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
@@ -356,6 +358,7 @@ function adoptState(s) {
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();
+  growLighthouses();
   fitFootprints();
   delete state.fitLm;
   nameHouses();
