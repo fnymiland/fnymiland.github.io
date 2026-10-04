@@ -910,29 +910,10 @@ function wegFormHtml(t, x, y) {
   return `<div class="label">Form</div>
     <div class="looks">${btn('wide', 0, !t.wide, '▭ schmal')}${btn('wide', 1, !!t.wide, '▬ ganz breit')}</div>
     ${curve ? `<div class="looks">${btn('sq', 0, !t.sq, '⌒ Kurve rund')}${btn('sq', 1, !!t.sq, '⌐ Kurve eckig')}</div>` : ''}
-    ${t.wide ? "" : sideRows(t, x, y, arms)}
     ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
     <p class="muted">Automatisch: vor einem Gebäude läuft der Weg bis an die Wand, sonst endet er rund.</p>` : ''}`;
 }
-// Seiten bis an den Rand (Block 78): je Seite ohne Anschluss automatisch → bis an den Rand → schmal, Pfeile wie auf dem Bildschirm
-const SIDE_ARROW = { '1,0': '↘', '0,1': '↙', '-1,0': '↖', '0,-1': '↗' };
-function sideRows(t, x, y, arms) {
-  const free = DIRS.filter(d => !arms.some(a => a[0] === d[0] && a[1] === d[1]) && !pathEnds(x, y, t, arms).some(a => a[0] === d[0] && a[1] === d[1]));
-  if (!free.length) return '';
-  const now = sideFill(x, y, t, arms).map(d => d.join());
-  return `<div class="label">Seiten</div><div class="looks">${free.map(d => {
-    const k = d.join(), o = t.fs && t.fs[k], txt = o == null ? `✨ ${now.includes(k) ? 'bis zum Gebäude' : 'automatisch'}` : o ? '▌ bis an den Rand' : '▭ schmal';
-    return `<button class="look${now.includes(k) ? ' on' : ''}" data-wegs="${k}">${SIDE_ARROW[k]} ${txt}</button>`;
-  }).join('')}</div><p class="muted">Tippen wechselt: automatisch (zu einem Gebäude hin bis an die Wand) · bis an den Rand · schmal.</p>`;
-}
 function wireWegForm(el, t, x, y) {
-  for (const b of el.querySelectorAll('[data-wegs]')) b.onclick = () => undoable(() => {
-    const k = b.dataset.wegs, o = t.fs && t.fs[k];
-    t.fs = { ...(t.fs || {}) };
-    if (o == null) t.fs[k] = true; else if (o) t.fs[k] = false; else delete t.fs[k];
-    if (!Object.keys(t.fs).length) delete t.fs;
-    groundVersion++; sfx('road'); save(); openInfo(x, y);
-  });
   for (const b of el.querySelectorAll('[data-wegf]')) b.onclick = () => undoable(() => {
     const [k, v] = b.dataset.wegf.split(':');
     if (k === 'end') { if (v) t.end = v; else delete t.end; } else if (+v) t[k] = true; else delete t[k];

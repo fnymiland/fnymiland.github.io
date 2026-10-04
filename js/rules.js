@@ -714,18 +714,6 @@ function gardenPath(t, x, y, any = false) {
   if (!n || n.b !== 'weg' || n.bridge) return null;
   return { d: [dx || 0, dy || 0], style: n.style || 'sand' };
 }
-// Seite bis an den Rand (Block 78): t.fs = { 'dx,dy': true | false } – fehlt eine Seite, gilt automatisch: zu einem Gebäude
-// hin geht der Weg bis an dessen Wand (wie ein Gehweg vor dem Haus). Nicht bei breiten Wegen, Brücken, Übergängen.
-const fillSolid = o => !!o && o.b !== 'weg' && o.b !== 'schiene' && !!ITEMS[o.b] && ITEMS[o.b].cat !== 'deko' && !ITEMS[o.b].edge;
-function sideFillAuto(x, y, d) { return fillSolid(objAt(x + d[0], y + d[1])); }
-function sideFill(x, y, t, arms) {
-  if (!t || t.wide || t.bridge || t.cross) return [];
-  return DIRS.filter(d => {
-    if (arms.some(a => a[0] === d[0] && a[1] === d[1])) return false;
-    const o = t.fs && t.fs[d.join()];
-    return o != null ? o : sideFillAuto(x, y, d);
-  });
-}
 function curveSlot(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t || t.b !== 'weg' || t.cross || t.sq || t.wide || typeof roadCurve !== 'function') return null;

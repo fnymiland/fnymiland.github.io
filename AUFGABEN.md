@@ -776,3 +776,4 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Seiten: zu einem Gebäude hin füllt ein schmaler Weg automatisch bis an die Wand, mit rundem Übergang zum Nachbarfeld
       (kleiner Vorplatz statt Zickzack). Im Wegfenster je Seite (↖ ↗ ↘ ↙): automatisch · bis an den Rand · schmal.
 - [x] Testwelt freizeitpark: Häuser beidseits eines Kieswegs im Abschnitt „Wegformen“.
+- [x] 78b: „Seiten bis an den Rand“ wieder entfernt (Wege sehen wieder normal aus); der Gartenweg zur Tür bleibt.
