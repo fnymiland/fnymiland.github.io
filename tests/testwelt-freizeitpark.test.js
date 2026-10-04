@@ -62,6 +62,23 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     rebuildCover(); recalc(); put(X + 5, Y + 1, curveSlot(X + 5, Y + 1).slot, 'laterne');   // mittig an der Außenkurve (Block 65b)
     recalc(); })()`);
   console.log('Laternen-Strecke', JSON.stringify(lp));
+  // Schlossreihe (Block 74): Mitte Block/Turmgruppe, eckig/rund, Mittelbau-Dach Spitz/Kuppel/Zinnen, dazu die Vorlagen
+  const sr = [34, -12];                                                                   // aufgeschüttetes Land östlich der Insel
+  game(`for (let y = ${sr[1] - 1}; y < ${sr[1] + 32}; y++) for (let x = ${sr[0] - 1}; x < ${sr[0] + 20}; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }`);
+  game('waterChanged(); sandCache.clear(); landCache.clear(); rebuildCover()');
+  const tw = f => [{ h: 3, k: 1, p: 0, r: 0, f }, { h: 4, k: 0, p: 2, r: 0, f }];
+  const variants = [
+    { mt: 0, mf: 0, m: 3, cr: 0, tw: tw(0) }, { mt: 0, mf: 0, m: 3, cr: 1, tw: tw(0) }, { mt: 0, mf: 0, m: 3, cr: 2, tw: tw(0) }, { mt: 0, mf: 1, m: 3, cr: 1, mr: 1, tw: tw(1) },
+    { ...CS_TPL_JS('maerchen'), bk: 1, wp: 1 }, { mt: 1, mf: 1, m: 4, cr: 1, mr: 1, cb: 2, tw: tw(1) }, { mt: 1, mf: 0, m: 3, cr: 2, mr: 2, cb: 1, tw: tw(0) },
+    CS_TPL_JS('eis'), CS_TPL_JS('orient'), CS_TPL_JS('burg')];
+  function CS_TPL_JS(id) { return game(`CS_TPL.${id}.cs`); }
+  variants.forEach((v, i) => {
+    const x = sr[0] + 1 + Math.floor(i / 5) * 9, y = sr[1] + 1 + (i % 5) * 6;   // gedreht: 7 breit in x, Portal nach vorn
+    game(`for (let yy = ${y}; yy < ${y} + 2; yy++) for (let xx = ${x}; xx < ${x} + 7; xx++) state.terra.set(xx + ',' + yy, 'fz')`);
+    game(`(() => { const cs = csOf({ cs: { w: 7, d: 2, gd: 1, ...${JSON.stringify(v)} } }); state.tiles.set('${x},${y}', { b: 'fz_schloss', lvl: 1, rot: 1, cs, price: castlePrice(cs), roof: 1, wall: ${v.mt ? 1 : 'undefined'} }); })()`);
+  });
+  game('rebuildCover(); recalc()');
+  console.log('Schlossreihe', JSON.stringify(sr));
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;
     for (let j = 0; j < 10 && ok; j++) for (let i = 0; i < 11 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || isSea(x + i, y + j) || terrainAt(x + i, y + j) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz' || state.decos.get(k)) ok = false; }

@@ -2029,12 +2029,12 @@ function castleKit(K, z, now, x, o) {
     }
   };
   const faceLen = (B, side) => (side === 'front' || side === 'back' ? 2 * B.hb : 2 * B.ha);
-  const merlons = (B, n0 = 5) => {                      // Zinnen über den sichtbaren Wänden
+  const merlons = (B, n0 = 5, mh = 3.2) => {            // Zinnen über den sichtbaren Wänden (mh: Höhe)
     for (const side of ['front', 'back', 'left', 'right']) {
       const F = B.faces[side];
       if (!F) continue;
       const n = Math.max(3, Math.round(faceLen(B, side) * n0) | 1), col = K.wallCol(shade(wall, -0.04), F.n);
-      for (let i = 0; i < n; i += 2) faceQuad(F.P, F.Q, i / n, (i + 1) / n, F.H, F.H + 3.2 * z, col);
+      for (let i = 0; i < n; i += 2) faceQuad(F.P, F.Q, i / n, (i + 1) / n, F.H, F.H + mh * z, col);
     }
   };
   const flag = (px, py, i) => {
@@ -2064,9 +2064,59 @@ function castleKit(K, z, now, x, o) {
     if (withFlag) flag(px, py - h - 2 * z, i);
     return [px, py - h - 2 * z];
   };
+  // Runder Turm (Block 74): Zylinder, Licht von links; Bogenfenster nach vorn, Kegeldach, Kuppel oder Zinnenkranz.
+  // Gleiche Maße wie der eckige (r = halbe Seite), damit beide gleich wirken. Rückgabe: Spitze
+  const roundTower = (a, b, r, H, lift, i, R, big, noFlag) => {
+    const [cx0, cy0] = K.P(a, b, lift), rx = r * Math.SQRT2 * TW / 2 * z, ry = r * Math.SQRT2 * TH / 2 * z, top = cy0 - H * z;
+    const lightX = (col, x0, x1, dark = LIGHT.side) => { const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, C(shade(col, 0.07))); gr.addColorStop(0.42, C(col)); gr.addColorStop(1, C(shade(col, dark))); return gr; };
+    g.beginPath(); g.moveTo(cx0 - rx, top); g.lineTo(cx0 - rx, cy0); g.ellipse(cx0, cy0, rx, ry, 0, Math.PI, 0, true); g.lineTo(cx0 + rx, top); g.closePath();
+    g.fillStyle = lightX(wall, cx0 - rx, cx0 + rx); g.fill();
+    const at = (phi, up) => [cx0 + rx * Math.sin(phi), cy0 + ry * Math.cos(phi) - up * z];   // phi = 0: genau nach vorn
+    const nw = r < 0.17 ? 1 : r < 0.3 ? 2 : 3, ww = Math.min(1.6, 0.9 + r * 2) * z;
+    for (let h0 = (lift ? 6 : 8); h0 + 6 < H - 9; h0 += 13) for (let j = 0; j < nw; j++) {
+      const phi = (j - (nw - 1) / 2) * 0.8, k = Math.cos(phi), [px, py] = at(phi, h0), hw = ww * k;
+      g.fillStyle = win; g.fillRect(px - hw, py - 5 * z, 2 * hw, 5 * z);
+      g.beginPath(); g.ellipse(px, py - 5 * z, hw, hw, 0, Math.PI, 0); g.fill();
+    }
+    const ring = (up, col, lw, scale = 1) => { g.strokeStyle = C(col); g.lineWidth = lw * z; g.beginPath(); g.ellipse(cx0, cy0 - up * z, rx * scale, ry * scale, 0, 0, Math.PI); g.stroke(); };
+    if (R === 0) ring(H - 4.75, gold, 1.5);                                               // goldenes Band
+    if (o.bk && !lift && H >= 34) {                        // Balkon rundum: Platte, Pfosten, Geländer
+      const h0 = Math.round(H * 0.56), s2 = (r + 0.08) / r;
+      g.beginPath(); g.ellipse(cx0, cy0 - h0 * z, rx * s2, ry * s2, 0, 0, Math.PI); g.lineTo(cx0 - rx * s2, cy0 - (h0 + 1.4) * z); g.ellipse(cx0, cy0 - (h0 + 1.4) * z, rx * s2, ry * s2, 0, Math.PI, 0, true); g.closePath();
+      g.fillStyle = C('#e3d6c2'); g.fill();
+      for (let j = 1; j < 8; j++) { const ph = -Math.PI / 2 + j * Math.PI / 8, px = cx0 + rx * s2 * Math.sin(ph), py = cy0 - (h0 + 1.4) * z + ry * s2 * Math.cos(ph); g.strokeStyle = C(gold); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(px, py); g.lineTo(px, py - 2.6 * z); g.stroke(); }
+      ring(h0 + 4.4, gold, 0.7, s2);
+    }
+    const cap = () => { g.beginPath(); g.ellipse(cx0, top, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = C(shade(wall, -0.08)); g.fill(); };
+    const merlon = th => { const w = Math.max(0.6 * z, rx * 0.5 * Math.abs(Math.cos(th)) * (Math.PI * 2 / n) + 0.4 * z), px = cx0 + rx * Math.sin(th), py = top + ry * Math.cos(th); g.fillStyle = C(shade(wall, -0.04 + 0.08 * Math.sin(-th) * 0.5)); g.fillRect(px - w / 2, py - 3.2 * z, w, 3.2 * z); };
+    const n = Math.max(6, Math.round(r * 32) & ~1);
+    let peak = [cx0, top];
+    if (R === 2) for (let k = 0; k < n; k++) { const th = k * Math.PI * 2 / n; if (Math.cos(th) < 0) merlon(th); }   // hintere Zinnen
+    cap();
+    if (R === 2) {
+      for (let k = 0; k < n; k++) { const th = k * Math.PI * 2 / n; if (Math.cos(th) >= 0) merlon(th); }
+      ring(H, roof, 1);
+      if (!noFlag) flag(cx0, top - 3 * z, i);
+    }
+    if (R === 1) peak = onion(a, b, r * 1.02, lift + H, i, !noFlag);
+    if (R === 0) {
+      const rX = rx * 1.14, rY = ry * 1.14, roofH = (20 + r * 60 + H * 0.06) * z;
+      if (big) for (const ph of [-Math.PI / 2, Math.PI / 2]) {                             // Türmchen an den Seiten
+        const px = cx0 + rx * 0.95 * Math.sin(ph); poly([[px - 2.6 * z, top], [px + 2.6 * z, top], [px, top - 11 * z]], C(shade(roof, -0.1))); circle(px, top - 11 * z, 0.8 * z, C(gold));
+      }
+      g.beginPath(); g.moveTo(cx0 - rX, top); g.lineTo(cx0, top - roofH); g.lineTo(cx0 + rX, top); g.ellipse(cx0, top, rX, rY, 0, 0, Math.PI); g.closePath();
+      g.fillStyle = lightX(roof, cx0 - rX, cx0 + rX, LIGHT.roofShade); g.fill();
+      peak = [cx0, top - roofH];
+      circle(peak[0], peak[1], 1.3 * z, C(gold));
+      if (!noFlag) flag(peak[0], peak[1], i);
+    }
+    return peak;
+  };
   // Turm mit eigener Dachform R: Spitzdach, Kuppel oder Zinnen; lift: steht auf etwas (Mittelturm auf dem Mittelbau)
-  // R < 0: Rohbau ohne Dach und Schmuck (Wunder-Baustelle); noFlag: oben kommt etwas anderes hin (Krone). Rückgabe: Spitze
-  const tower = (a, b, r, H, lift, i, R, big, noFlag) => {
+  // R < 0: Rohbau ohne Dach und Schmuck (Wunder-Baustelle); noFlag: oben kommt etwas anderes hin (Krone); round: rund
+  // (Block 74). Rückgabe: Spitze
+  const tower = (a, b, r, H, lift, i, R, big, noFlag, round) => {
+    if (round) return roundTower(a, b, r, H, lift, i, R, big, noFlag);
     const T = K.block({ a, b, ha: r, hb: r, h: H, lift, wall, roof: R === 0 ? roof : shade(wall, -0.08), roofH: R === 0 ? 20 + r * 60 + H * 0.06 : 0, type: R === 0 ? 'hip' : 'flat', trim: R === 1 || R < 0 ? null : roof });
     for (const side of ['front', 'back', 'left', 'right']) {
       const F = T.faces[side];
@@ -2106,7 +2156,7 @@ function castleKit(K, z, now, x, o) {
     if (o.wp === 2) { circle(px - 0.9 * z, my - 0.5 * z, 1.1 * z, C(sym)); circle(px + 0.9 * z, my - 0.5 * z, 1.1 * z, C(sym)); poly([[px - 2 * z, my - 0.1 * z], [px + 2 * z, my - 0.1 * z], [px, my + 2.2 * z]], C(sym)); }
     if (o.wp === 3) { const pts = []; for (let k = 0; k < 10; k++) { const an = -Math.PI / 2 + k * Math.PI / 5, rr = (k % 2 ? 0.9 : 2.2) * z; pts.push([px + Math.cos(an) * rr, my + Math.sin(an) * rr]); } poly(pts, C(sym)); }
   };
-  return { archWins, faceLen, merlons, flag, bulbs, onion, tower, shield };
+  return { archWins, faceLen, merlons, flag, bulbs, onion, tower, roundTower, shield };
 }
 function drawCastle(cx, cy, z, now, x, y, t) {
   const c = csOf(t), K = kit(cx, cy, z, t.rot), lit = night > 0.15 && isLive();
@@ -2127,38 +2177,109 @@ function drawCastle(cx, cy, z, now, x, y, t) {
       archWins(E.faces.front, 1, 1.5, 5);
     }
   };
+  // Portal auf der Vorderseite F (Rahmen, Tor, darüber Rosette oder Wappen); dB: Torschwelle, Höhe h der Wand
+  const portal = (F, dB, h) => {
+    const dT = dB + 12, emb = dT + 9, rose = emb + 4.6 <= h;
+    faceQuad(F.P, F.Q, 0.39, 0.61, dB * z, dT * z, C(frame));
+    const A = lerp(F.P, F.Q, 0.39), Bq = lerp(F.P, F.Q, 0.61), rr = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) / 2;
+    circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - dT * z, rr, C(frame));
+    faceQuad(F.P, F.Q, 0.42, 0.58, dB * z, (dT - 1) * z, C('#6b4630'));
+    circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - (dT - 1) * z, rr * 0.73, C('#6b4630'));
+    if (rose) {
+      faceQuad(F.P, F.Q, 0.32, 0.68, (dT + 2.5) * z, (dT + 4) * z, C(gold));
+      const m = lerp(F.P, F.Q, 0.5);
+      if (c.wp) shield(m[0], m[1] - emb * z);
+      else { circle(m[0], m[1] - emb * z, 4.4 * z, C(gold)); circle(m[0], m[1] - emb * z, 3.4 * z, win); }
+    }
+    return rose;
+  };
+  // Freitreppe vor dem Portal (Block 60i), von unten nach oben; f0: Vorderkante des Baus
+  const stairs = f0 => { if (c.ex) for (let k = 0; k < 3; k++) { const a1 = HA - 0.03 - k * 0.1; K.block({ a: (f0 + a1) / 2, b: 0, ha: (a1 - f0) / 2, hb: 0.34 - k * 0.04, h: 4 + k * 1.5, wall: '#efe6d8', roof: k === 2 ? '#e8604f' : '#f5eee2', type: 'flat' }); } };
+  // Teile nach Tiefe zeichnen (hinten zuerst): [a, b, fn, Zusatz]
+  const inOrder = items => items.sort((p, q) => K.depth(p[0], p[1]) + (p[3] || 0) - K.depth(q[0], q[1]) - (q[3] || 0)).forEach(p => p[2]());
+  const round = !!c.mf;
+  // Mittelbau als Block: Dachform deutlich (Block 74) – Spitz: Walmdach; Kuppel: Zwiebelkuppeln auf den Ecken;
+  // Zinnen: hohe Zinnen und Ecktürmchen. Der Mittelturm steht obenauf.
   const center = () => {
     const R = c.cr, hip = R === 0, roofH = 12 + core * 4, rM = Math.min(CM_R[c.mk], haC - 0.04, core / 2 - 0.08);
-    const dB = c.ex ? 7 : 0, dT = dB + 12, emb = dT + 9, rose = emb + 4.6 <= hC;   // Freitreppe: Tor liegt höher
-    const B = K.block({ a: aC, b: 0, ha: haC, hb: core / 2, h: hC, wall, roof: hip ? roof : shade(wall, -0.08), roofH, type: hip ? 'hip' : 'flat', trim: R === 2 ? roof : hip ? shade(roof, 0.15) : null });
-    for (const side of ['front', 'back', 'left', 'right']) {
-      const F = B.faces[side];
-      if (!F) continue;
-      const n = Math.max(3, Math.round(faceLen(B, side) * 2.2)), mid = side === 'front';
-      for (let f = 0; f < c.cf; f++) archWins(F, n, 5 + f * 10, 11 + f * 10, (i, m) => mid && (f === 0 || (f === 1 && (rose || c.ex)) || (f === 2 && c.ex && rose)) && Math.abs(i - (m - 1) / 2) < (f ? 0.6 : 1));
-      if (mid) {                                         // Portal: Rahmen, Tor, Balkon, Rosette oder Wappen
-        faceQuad(F.P, F.Q, 0.39, 0.61, dB * z, dT * z, C(frame));
-        const A = lerp(F.P, F.Q, 0.39), Bq = lerp(F.P, F.Q, 0.61), rr = Math.hypot(Bq[0] - A[0], Bq[1] - A[1]) / 2;
-        circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - dT * z, rr, C(frame));
-        faceQuad(F.P, F.Q, 0.42, 0.58, dB * z, (dT - 1) * z, C('#6b4630'));
-        circle((A[0] + Bq[0]) / 2, (A[1] + Bq[1]) / 2 - (dT - 1) * z, rr * 0.73, C('#6b4630'));
-        if (rose) {
-          faceQuad(F.P, F.Q, 0.32, 0.68, (dT + 2.5) * z, (dT + 4) * z, C(gold));
-          const m = lerp(F.P, F.Q, 0.5);
-          if (c.wp) shield(m[0], m[1] - emb * z);
-          else { circle(m[0], m[1] - emb * z, 4.4 * z, C(gold)); circle(m[0], m[1] - emb * z, 3.4 * z, win); }
-        }
+    const dB = c.ex ? 7 : 0;
+    const items = [[aC, 0, () => {
+      const B = K.block({ a: aC, b: 0, ha: haC, hb: core / 2, h: hC, wall, roof: hip ? roof : shade(wall, -0.08), roofH, type: hip ? 'hip' : 'flat', trim: R === 2 ? roof : hip ? shade(roof, 0.15) : null });
+      let rose = true;
+      for (const side of ['front', 'back', 'left', 'right']) {
+        const F = B.faces[side];
+        if (!F) continue;
+        const n = Math.max(3, Math.round(faceLen(B, side) * 2.2)), mid = side === 'front', ros = dB + 21 + 4.6 <= hC;
+        for (let f = 0; f < c.cf; f++) archWins(F, n, 5 + f * 10, 11 + f * 10, (i, m) => mid && (f === 0 || (f === 1 && (ros || c.ex)) || (f === 2 && c.ex && ros)) && Math.abs(i - (m - 1) / 2) < (f ? 0.6 : 1));
+        if (mid) rose = portal(F, dB, hC);
       }
+      if (R === 2) merlons(B, 5, 4.6);
+      bulbs(B, R === 2 ? 0 : 1.5);
+      stairs(aC + haC);
+      if (c.wp && !rose && B.faces.front) { const m = lerp(B.faces.front.P, B.faces.front.Q, 0.5); shield(m[0], m[1] - (hC + 7) * z); }   // zu niedrig: Wappen auf dem Dachrand
+      if (!c.m && R === 0) flag(...B.peak, 0);
+    }]];
+    const ea = haC - 0.15, eb = core / 2 - 0.15;
+    if (R !== 0) for (const sa of [-1, 1]) for (const sb of [-1, 1]) {                  // Ecken: Kuppeln bzw. Türmchen
+      const a = aC + sa * ea, b = sb * eb;
+      items.push([a, b, R === 1 ? () => onion(a, b, 0.23, hC, 0, false) : () => tower(a, b, 0.15, hC + 13, 0, 0, 2, false, true, round), 0.01]);
     }
-    if (R === 2) merlons(B);
-    bulbs(B, R === 2 ? 0 : 1.5);
-    const cf0 = aC + haC;                                 // Freitreppe vor dem Portal (Block 60i), von unten nach oben
-    if (c.ex) for (let k = 0; k < 3; k++) { const a1 = HA - 0.03 - k * 0.1; K.block({ a: (cf0 + a1) / 2, b: 0, ha: (a1 - cf0) / 2, hb: 0.34 - k * 0.04, h: 4 + k * 1.5, wall: '#efe6d8', roof: k === 2 ? '#e8604f' : '#f5eee2', type: 'flat' }); }
-    if (c.wp && !rose && B.faces.front) { const m = lerp(B.faces.front.P, B.faces.front.Q, 0.5); shield(m[0], m[1] - (hC + 7) * z); }   // zu niedrig: Wappen auf dem Dachrand
-    if (R === 1 && c.m) for (const sb of [-1, 1]) onion(aC + haC - 0.16, sb * (core / 2 - 0.16), 0.13, hC, 0, false);   // kleine Kuppeln vorn
-    if (c.m) tower(aC, 0, rM, CM_H[c.m], hip ? hC + roofH * Math.max(0, 1 - rM / Math.min(haC, core / 2)) : hC, 0, c.mr, true);
-    else if (R === 1) onion(aC, 0, Math.min(haC, core / 2) * 0.62, hC, 0);
-    else { const [px, py] = hip ? B.peak : K.P(aC, 0, hC); flag(px, py, 0); }
+    if (c.m) items.push([aC, 0, () => tower(aC, 0, rM, CM_H[c.m], hip ? hC + roofH * Math.max(0, 1 - rM / Math.min(haC, core / 2)) : hC, 0, c.mr, true, false, round), 0.005]);
+    else if (R === 1) items.push([aC, 0, () => onion(aC, 0, Math.min(haC, core / 2) * 0.62, hC, 0), 0.005]);
+    else if (R === 2) items.push([aC, 0, () => flag(...K.P(aC, 0, hC), 0), 0.005]);
+    inOrder(items);
+  };
+  // Mittelbau als Turmgruppe (Block 74, wie ein Märchenschloss): vorn ein niedriger Torbau mit Portal und zwei Türmchen,
+  // dahinter der Hauptturm vom Boden aus in Stufen (oben schlanker, Kranz an jedem Absatz), ringsum kleinere Türme
+  const group = () => {
+    const R = c.cr, m = Math.max(1, c.m), hT = 10 + c.cf * 6, dB = c.ex ? 7 : 0;
+    const haT = Math.min(0.24, haC), aT = HA - 0.14 - stairD - haT, bT = Math.min(core / 2 - 0.06, 0.3 + c.cb * 0.1);
+    const rM = Math.min(CM_R[c.mk], core / 2 - 0.12), Htot = hC + CM_H[m] + 26, aM = Math.max(-HA + rM + 0.04, aT - haT - rM * 0.45);
+    const ledge = (a, b, r, up) => {                                                       // Kranz am Absatz
+      if (round) {
+        const [px, py] = K.P(a, b, up), rx = r * 1.3 * Math.SQRT2 * TW / 2 * z, ry = r * 1.3 * Math.SQRT2 * TH / 2 * z;
+        g.beginPath(); g.ellipse(px, py, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = C('#e3d6c2'); g.fill();
+        g.strokeStyle = C(gold); g.lineWidth = 0.8 * z; g.beginPath(); g.ellipse(px, py - 2.4 * z, rx, ry, 0, 0, Math.PI); g.stroke();
+      } else {
+        const L = K.block({ a, b, ha: r * 1.3, hb: r * 1.3, h: 1.4, lift: up, wall: '#e3d6c2', roof: '#efe6d8', type: 'flat' });
+        for (const side of ['front', 'back', 'left', 'right']) { const F = L.faces[side]; if (F) faceQuad(F.P, F.Q, 0, 1, F.H + 2 * z, F.H + 2.7 * z, C(gold)); }
+      }
+    };
+    const items = [[aM, 0, () => {
+      const n = m >= 3 ? 3 : 2, fr = n === 3 ? [0.46, 0.3, 0.24] : [0.58, 0.42], rr = [1, 0.8, 0.64];
+      let lift = 0;
+      for (let s = 0; s < n; s++) {
+        const H = Htot * fr[s], last = s === n - 1;
+        tower(aM, 0, rM * rr[s], H, lift, 0, last ? c.mr : -1, last, false, round);
+        if (!last) ledge(aM, 0, rM * rr[s], lift + H);
+        lift += H;
+      }
+    }]];
+    const sats = c.cb === 0 ? 2 : 4;                                                      // Nebentürme, gestaffelt
+    for (let k = 0; k < sats; k++) {
+      const sg = k % 2 ? 1 : -1, far = k >= 2, rS = rM * (far ? 0.46 : 0.6), bS = sg * Math.min(core / 2 - rS - 0.02, rM * 0.75 + rS * (far ? 2.4 : 0.9));
+      const aS = aM + (far ? 0.14 : -0.06);
+      items.push([aS, bS, () => tower(aS, bS, rS, Htot * (far ? 0.42 : 0.62), 0, k + 1, c.mr, false, false, round)]);
+    }
+    items.push([aT, 0, () => {                                                            // Torbau
+      const hip = R === 0, B = K.block({ a: aT, b: 0, ha: haT, hb: bT, h: hT, wall, roof: hip ? roof : shade(wall, -0.08), roofH: 8, type: hip ? 'hip' : 'flat', trim: R === 2 ? roof : hip ? shade(roof, 0.15) : null });
+      let rose = true;
+      for (const side of ['front', 'back', 'left', 'right']) {
+        const F = B.faces[side];
+        if (!F) continue;
+        if (side === 'front') { rose = portal(F, dB, hT); for (let f = 1; f < c.cf; f++) archWins(F, 4, 5 + f * 6, 9 + f * 6, i => i === 1 || i === 2); }
+        else for (let f = 0; f < c.cf; f++) archWins(F, Math.max(1, Math.round(faceLen(B, side) * 2.2)), 4 + f * 6, 8 + f * 6);
+      }
+      if (R === 2) merlons(B, 5, 4.6);
+      bulbs(B, R === 2 ? 0 : 1.5);
+      stairs(aT + haT);
+      if (c.wp && !rose && B.faces.front) { const mm = lerp(B.faces.front.P, B.faces.front.Q, 0.5); shield(mm[0], mm[1] - (hT + 6) * z); }
+    }]);
+    for (const sg of [-1, 1]) {                                                           // zwei Türmchen am Torbau
+      const a = aT + haT - 0.1, b = sg * (bT - 0.02);
+      items.push([a, b, () => tower(a, b, 0.11, hT + 10, 0, 5 + sg, R, false, false, round), 0.02]);
+    }
+    inOrder(items);
   };
   // Umgebung (Block 60i): ein Feld rundum – Weg zum Tor, Wassergraben mit Zugbrücke, Beete; Mauer und Brunnen stehen auf
   // ihrer Seite vor oder hinter dem Schloss (pre/post)
@@ -2217,7 +2338,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
     if (i % 2) kitBush(K, a, b, 1.1); else kitTree(K, a, b, 0.75);
   }
   // Teile in b-Abschnitten: Flügel zwischen Mittelbau, Türmen und Enden; Türme vorn, in der Fassade oder hinten
-  const parts = [[0, center]], TW_ = castleTowers(c);
+  const parts = [[0, c.mt ? group : center]], TW_ = castleTowers(c);
   for (const sg of [1, -1]) {
     let from = core / 2;
     TW_.forEach(({ pos, r }, i) => {
@@ -2225,7 +2346,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
       if (b1 - from > 0.05) { const f0 = from; parts.push([sg * (f0 + b1) / 2, () => wing(Math.min(sg * f0, sg * b1), Math.max(sg * f0, sg * b1))]); }
       const want = o.p === 0 ? front - r * 0.4 : o.p === 1 ? aW : aW - wd / 2 + r * 0.4;
       const a = Math.max(-HA + 0.03 + r, Math.min(HA - 0.03 - r, want));
-      parts.push([sg * pos, () => tower(a, sg * pos, r, H, 0, i + 1, o.r, false)]);
+      parts.push([sg * pos, () => tower(a, sg * pos, r, H, 0, i + 1, o.r, false, false, o.f)]);
       from = pos + r;
     });
     const b1 = HB - 0.06;

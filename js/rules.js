@@ -16,11 +16,14 @@ const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t)] : 
 // Dächer: 0 Spitz (Flügel: Satteldach), 1 Kuppel (Flügel: Walmdach), 2 Zinnen. Immer über csOf lesen (füllt Fehlendes auf).
 // Zierde (Block 60i): fc Fahnenfarbe (0 bunt), gd Gold, bk Balkone & Erker, wp Wappen (0 keins, Krone, Herz, Stern), lc Lichterketten;
 // Umgebung: ex Freitreppe, mo Wassergraben, mw Mauer mit Tor, gn Garten mit Brunnen – mo/mw/gn brauchen ein Feld rundum (csRing)
-const CS_DEF = { w: 5, d: 2, m: 2, mk: 1, mr: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 2, k: 1, p: 0, r: 0 }],
+// Block 74: mt Mitte (0 Block, 1 Turmgruppe), mf Mittelturm rund; je Turmpaar f rund. Fehlen sie, bleibt alles eckig wie früher.
+const CS_DEF = { w: 5, d: 2, m: 2, mk: 1, mr: 0, mt: 0, mf: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 2, k: 1, p: 0, r: 0 }],
   fc: 0, gd: 1, bk: 0, wp: 0, lc: 0, ex: 0, mo: 0, mw: 0, gn: 0 };
-const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], mk: [0, 2], mr: [0, 2], cb: [0, 2], cf: [1, 4], cr: [0, 2], wf: [1, 3], wr: [0, 2],
+const CS_LIM = { w: [3, 9], d: [1, 3], m: [0, 4], mk: [0, 2], mr: [0, 2], mt: [0, 1], mf: [0, 1], cb: [0, 2], cf: [1, 4], cr: [0, 2], wf: [1, 3], wr: [0, 2],
   fc: [0, 5], gd: [0, 1], bk: [0, 1], wp: [0, 3], lc: [0, 1], ex: [0, 1], mo: [0, 1], mw: [0, 1], gn: [0, 1] };
-const CT_DEF = { h: 2, k: 1, p: 0, r: 0 }, CT_LIM = { h: [0, 4], k: [0, 2], p: [0, 2], r: [0, 2] }, CS_TOWERS = 4;
+const CT_DEF = { h: 2, k: 1, p: 0, r: 0, f: 0 }, CT_LIM = { h: [0, 4], k: [0, 2], p: [0, 2], r: [0, 2], f: [0, 1] }, CS_TOWERS = 4;
+// Neues Schloss (Block 74): Turmgruppe in der Mitte, alles rund – bestehende behalten ihre Gestalt (csOf füllt eckig auf)
+const csNew = () => { const c = csOf(null); c.mt = 1; c.mf = 1; c.tw = c.tw.map(o => ({ ...o, f: 1 })); return c; };
 const CORE_W = [1.2, 1.8, 2.6];
 function csOf(t) {
   const c = (t && t.cs) || {}, o = { ...CS_DEF, ...c };
@@ -41,10 +44,11 @@ const castlePrice = c => niceRound(ITEMS.fz_schloss.cost * (0.4 * c.w * c.d / 10
   + 0.2 * c.tw.reduce((s, o) => s + (o.h + 1) / 3 * (o.k + 1) / 2, 0) + 0.1 * c.cf / 2 + 0.1 * c.wf / 2 + 0.12 * (c.mo + c.mw + c.gn)));
 // Vorlagen (Block 60h): setzen alles außer der Größe, dazu Farben (Index in WALLS/ROOFS/WIN_COLS, null = eigene)
 const CS_TPL = {
-  maerchen: { name: '🏰 Märchenschloss', cs: { fc: 0, m: 4, mk: 1, mr: 0, cb: 1, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 3, k: 1, p: 0, r: 0 }, { h: 4, k: 0, p: 2, r: 0 }, { h: 1, k: 1, p: 0, r: 0 }] }, wall: null, roof: 1, win: 0 },
-  ritter: { name: '⚔️ Ritterburg', cs: { fc: 1, m: 2, mk: 2, mr: 2, cb: 1, cf: 2, cr: 2, wf: 2, wr: 2, tw: [{ h: 2, k: 2, p: 0, r: 2 }, { h: 1, k: 1, p: 1, r: 2 }] }, wall: 10, roof: 0, win: 6 },
-  eis: { name: '❄️ Eispalast', cs: { fc: 4, m: 4, mk: 0, mr: 0, cb: 0, cf: 3, cr: 0, wf: 1, wr: 1, tw: [{ h: 4, k: 0, p: 2, r: 0 }, { h: 3, k: 0, p: 0, r: 0 }, { h: 2, k: 0, p: 2, r: 0 }, { h: 1, k: 0, p: 0, r: 0 }] }, wall: 2, roof: 7, win: 5 },
-  orient: { name: '🕌 Orientpalast', cs: { fc: 5, m: 3, mk: 2, mr: 1, cb: 2, cf: 2, cr: 1, wf: 1, wr: 1, tw: [{ h: 3, k: 0, p: 1, r: 1 }, { h: 1, k: 1, p: 0, r: 1 }] }, wall: 0, roof: 3, win: 1 },
+  maerchen: { name: '🏰 Märchenschloss', cs: { fc: 0, m: 4, mk: 1, mr: 0, mt: 1, mf: 1, cb: 2, cf: 2, cr: 0, wf: 2, wr: 0, tw: [{ h: 3, k: 1, p: 0, r: 0, f: 1 }, { h: 4, k: 0, p: 2, r: 0, f: 1 }, { h: 1, k: 1, p: 0, r: 0, f: 1 }] }, wall: 1, roof: 1, win: 0 },
+  ritter: { name: '⚔️ Ritterburg', cs: { fc: 1, m: 2, mk: 2, mr: 2, mt: 0, mf: 0, cb: 1, cf: 2, cr: 2, wf: 2, wr: 2, tw: [{ h: 2, k: 2, p: 0, r: 2, f: 0 }, { h: 1, k: 1, p: 1, r: 2, f: 1 }] }, wall: 10, roof: 0, win: 6 },
+  eis: { name: '❄️ Eispalast', cs: { fc: 4, m: 4, mk: 0, mr: 0, mt: 1, mf: 1, cb: 0, cf: 3, cr: 0, wf: 1, wr: 1, tw: [{ h: 4, k: 0, p: 2, r: 0, f: 1 }, { h: 3, k: 0, p: 0, r: 0, f: 1 }, { h: 2, k: 0, p: 2, r: 0, f: 1 }, { h: 1, k: 0, p: 0, r: 0, f: 1 }] }, wall: 2, roof: 7, win: 5 },
+  orient: { name: '🕌 Orientpalast', cs: { fc: 5, m: 3, mk: 2, mr: 1, mt: 0, mf: 1, cb: 2, cf: 2, cr: 1, wf: 1, wr: 1, tw: [{ h: 3, k: 0, p: 1, r: 1, f: 1 }, { h: 1, k: 1, p: 0, r: 1, f: 1 }] }, wall: 0, roof: 3, win: 1 },
+  burg: { name: '🧱 Kompakte Burg', cs: { fc: 2, m: 2, mk: 2, mr: 0, mt: 0, mf: 0, cb: 1, cf: 3, cr: 2, wf: 2, wr: 1, tw: [{ h: 2, k: 2, p: 0, r: 0, f: 0 }] }, wall: 13, roof: 1, win: 0 },
 };
 function footprint(b, ax, ay, rot, t) {
   const [w, h] = sizeOf(b, rot || 0, t), out = [];

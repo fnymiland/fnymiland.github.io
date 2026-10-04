@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+78. **Märchenschloss-Formen** (Block 74): `mt` Mitte (0 Block, 1 Turmgruppe), `mf` Mittelturm rund, je Turmpaar `f` rund.
+    Fehlende Werte bedeuten Block/eckig (alte Schlösser bleiben, wie sie sind); neue Schlösser starten über `csNew()`.
+    Runde Türme über `castleKit(...).tower(…, round)` bzw. `roundTower` – gleiche Maße wie eckig. Im Mittelteil zeichnet
+    `inOrder` nach Tiefe (Ecken, Mittelturm, Torbau-Türmchen); neue Teile dort einreihen, nicht einfach hinterher malen.
 77. **Farbe wählbar** (Block 72): Gebäude mit eigenem `paint(t, …)` stehen in `PAINTABLE`; alle anderen nennen in
     `REPAINT[id]` ihre Hauptfarben (`wall`/`roof`, je '#hex' oder ['#hex', Tönung], `names` für die Reihen, ohne `roof` nur
     eine Reihe). `drawObject` setzt dafür `REPAINT_MAP`, `C()`/`shade()` tauschen genau diese Töne. Neues Gebäude: Eintrag

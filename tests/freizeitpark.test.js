@@ -282,7 +282,7 @@ describe('Märchenschloss (Block 60g)', () => {
     ground(5, 5, 12, 8);
     game("rotManual = true; buildRot = 0");
     expect(game("build('fz_schloss', 8, 6, true)")).toBe(true);
-    expect(cs()[1]).toEqual(game('csOf(null)'));
+    expect(cs()[1]).toEqual(game('csNew()'));                                       // neu: Turmgruppe, rund (Block 74)
     expect(game("sizeOf('fz_schloss', 0, state.tiles.get('8,6'))")).toEqual([2, 5]);
     expect(game("COVER.get('9,10')")).toBe('8,6');
     game('state.money = 1e9');
@@ -332,9 +332,9 @@ describe('Märchenschloss (Block 60g)', () => {
     game("document.querySelector('#panel [data-ctadd]').click()");
     game("document.querySelector('#panel [data-ct=\"1:p:n\"]').click()");
     game("document.querySelector('#panel [data-ct=\"0:h:+1\"]').click()");
-    expect(cs()[1].tw).toEqual([{ h: 3, k: 1, p: 0, r: 0 }, { h: 1, k: 1, p: 1, r: 0 }]);
+    expect(cs()[1].tw).toEqual([{ h: 3, k: 1, p: 0, r: 0, f: 1 }, { h: 1, k: 1, p: 1, r: 0, f: 1 }]);
     game("document.querySelector('#panel [data-ctdel=\"0\"]').click()");
-    expect(cs()[1].tw).toEqual([{ h: 1, k: 1, p: 1, r: 0 }]);
+    expect(cs()[1].tw).toEqual([{ h: 1, k: 1, p: 1, r: 0, f: 1 }]);
     game("document.querySelector('#panel [data-cstab=\"form\"]').click(); document.querySelector('#panel [data-tpl=\"ritter\"]').click()");
     expect(cs()[1]).toMatchObject({ d: 3, wr: 2, cr: 2, tw: [{ k: 2, r: 2 }, { r: 2 }] });
     expect(game(`state.tiles.get('${cs()[0]}').win`)).toBe(6);
@@ -420,5 +420,44 @@ describe('Wunder-Schloss im neuen Stil (Block 60j)', () => {
     expect(game('royalFireTick(1e6 + 1000)')).toBe(false);                            // erst ein paar Minuten später wieder
     expect(game('royalFireTick(1e6 + 160000)')).toBe(true);
     game('night = 0; fireworksUntil = 0');
+  });
+});
+
+describe('Märchenschloss: runde Türme und Turmgruppe (Block 74)', () => {
+  const fills = cs => game(`(() => {
+    const seen = [];
+    Object.defineProperty(g, 'fillStyle', { configurable: true, get: () => seen[seen.length - 1], set: v => seen.push(String(v)) });
+    const ell = g.ellipse; let n = 0; g.ellipse = (...a) => { n++; return ell && ell(...a); };
+    try { drawObject('fz_schloss', 200, 300, 1.2, 1000, 3, 4, 1, { b: 'fz_schloss', rot: 0, cs: ${JSON.stringify(cs)} }); } finally { delete g.fillStyle; delete g.ellipse; }
+    return seen.length + '|' + n + '|' + seen.join(',');
+  })()`);
+  it('alte Schlösser bleiben Block und eckig, neue starten als Turmgruppe, rund', () => {
+    expect(game("(({ mt, mf, tw }) => [mt, mf, tw[0].f])(csOf({ cs: { w: 5, d: 2, tw: [{ h: 2 }] } }))")).toEqual([0, 0, 0]);
+    expect(game("(({ mt, mf, tw }) => [mt, mf, tw[0].f])(csNew())")).toEqual([1, 1, 1]);
+  });
+  it('Form, Mitte und Dächer ändern das Bild – in jeder Mischung, jeder Drehung', () => {
+    const base = game('csOf(null)'), seen = new Set();
+    for (const mt of [0, 1]) for (const mf of [0, 1]) for (const cr of [0, 1, 2]) {
+      const cs = { ...base, m: 3, mt, mf, cr, tw: base.tw.map(o => ({ ...o, f: mf })) };
+      const out = fills(cs);
+      expect(seen.has(out)).toBe(false);                                           // jede Mischung sieht anders aus
+      seen.add(out);
+      for (const rot of [1, 2, 3]) game(`drawObject('fz_schloss', 200, 300, 1.2, 1000, 3, 4, 1, { b: 'fz_schloss', rot: ${rot}, cs: ${JSON.stringify(cs)} })`);
+    }
+    expect(fills({ ...base, mf: 1, mt: 0, tw: base.tw.map(o => ({ ...o, f: 1 })) }).split('|')[1] > 0).toBe(true);   // rund: Ellipsen
+  });
+  it('Knöpfe: Mitte wählen, Form je Turmpaar umschalten; Hauptturm ohne „keiner“', () => {
+    ground(5, 5, 12, 8);
+    game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'form'; openInfo(8, 6)");
+    expect(game("!!document.querySelector('#panel [data-cs=\"m:0\"]')")).toBe(false);   // Turmgruppe: immer ein Hauptturm
+    game("document.querySelector('#panel [data-cs=\"mt:0\"]').click()");
+    expect(game("state.tiles.get('8,6').cs.mt")).toBe(0);
+    expect(game("!!document.querySelector('#panel [data-cs=\"m:0\"]')")).toBe(true);
+    game("document.querySelector('#panel [data-cs=\"mf:0\"]').click()");
+    expect(game("state.tiles.get('8,6').cs.mf")).toBe(0);
+    game("document.querySelector('#panel [data-cstab=\"tuerme\"]').click(); document.querySelector('#panel [data-ct=\"0:f:n\"]').click()");
+    expect(game("state.tiles.get('8,6').cs.tw[0].f")).toBe(0);
+    game("document.querySelector('#panel [data-ctadd]').click()");
+    expect(game("state.tiles.get('8,6').cs.tw[1].f")).toBe(0);                     // neues Paar wie das letzte
   });
 });

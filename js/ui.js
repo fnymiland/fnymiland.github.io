@@ -776,10 +776,10 @@ const DEL_ASK = 500;
 let castleTab = 'form';
 const CS_NAMES = { m: ['keiner', 'niedrig', 'mittel', 'hoch', 'riesig'], h: ['niedrig', 'mittel', 'hoch', 'höher', 'riesig'],
   k: ['schlank', 'normal', 'dick'], mk: ['schlank', 'normal', 'dick'], p: ['vorn', 'in der Fassade', 'hinten'], cb: ['schmal', 'mittel', 'breit'],
-  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'],
+  r: ['▲ Spitz', '🧅 Kuppel', '▙ Zinnen'], f: ['▢ eckig', '◯ rund'], mt: ['▣ Block', '🏰 Turmgruppe'], wr: ['▲ Satteldach', '◆ Walmdach', '▙ Zinnen'],
   fc: ['🎏 bunt', '🟥 rot', '🟦 blau', '🟨 gold', '⬜ weiß', '🟩 grün'], wp: ['keins', '👑 Krone', '❤️ Herz', '⭐ Stern'] };
-CS_NAMES.cr = CS_NAMES.mr = CS_NAMES.r;
-const CT_LABEL = { k: 'Dicke', p: 'Platz', r: 'Dach' };
+CS_NAMES.cr = CS_NAMES.mr = CS_NAMES.r; CS_NAMES.mf = CS_NAMES.f;
+const CT_LABEL = { k: 'Dicke', p: 'Platz', r: 'Dach', f: 'Form' };
 function castleHtml(t) {
   const c = csOf(t);
   const stepRow = (label, val, minus, plus, noMinus, noPlus) => `<div class="row cs-row"><span class="cs-name">${label}</span>
@@ -801,15 +801,16 @@ function castleHtml(t) {
       <div class="label">Turmpaare (von innen nach außen)</div>
       ${c.tw.map((o, i) => `<div class="cs-tower">${stepRow(`Paar ${i + 1}`, CS_NAMES.h[o.h], `data-ct="${i}:h:-1"`, `data-ct="${i}:h:+1"`, o.h <= 0, o.h >= CT_LIM.h[1])
         .replace('</div>', `<button class="btn ghost cs-del" data-ctdel="${i}" aria-label="Paar ${i + 1} entfernen">✕</button></div>`)}
-        <div class="looks">${['k', 'p', 'r'].map(f => `<button class="look cs-cycle" data-ct="${i}:${f}:n" aria-label="${CT_LABEL[f]} wechseln"><small>${CT_LABEL[f]}</small> ${CS_NAMES[f][o[f]]}</button>`).join('')}</div></div>`).join('')}
+        <div class="looks">${['f', 'k', 'p', 'r'].map(f => `<button class="look cs-cycle" data-ct="${i}:${f}:n" aria-label="${CT_LABEL[f]} wechseln"><small>${CT_LABEL[f]}</small> ${CS_NAMES[f][o[f]]}</button>`).join('')}</div></div>`).join('')}
       <div class="row"><button class="btn ghost" data-ctadd="1" ${c.tw.length >= CS_TOWERS ? 'disabled' : ''}>＋ Turmpaar</button></div>
-      <p class="muted">Tippe auf Dicke, Platz oder Dach zum Wechseln. Wird es eng, werden die Türme schlanker.</p>${worth}`;
+      <p class="muted">Tippe auf Form, Dicke, Platz oder Dach zum Wechseln. Wird es eng, werden die Türme schlanker.</p>${worth}`;
   return `${tabs}
       <div class="label">Vorlagen</div>
       <div class="looks">${Object.entries(CS_TPL).map(([id, v]) => `<button class="look" data-tpl="${id}">${v.name}</button>`).join('')}</div>
       <div class="label">Größe (Felder)</div>${step('w', 'Breite')}${step('d', 'Tiefe')}
-      <div class="label">Mittelbau</div>${pick('cb')}${step('cf', 'Stockwerke')}${pick('cr')}
-      <div class="label">Mittelturm</div>${pick('m')}${c.m ? pick('mk') + pick('mr') : ''}
+      <div class="label">Mitte</div>${pick('mt')}
+      <div class="label">${c.mt ? 'Torbau' : 'Mittelbau'}</div>${pick('cb')}${step('cf', 'Stockwerke')}${pick('cr')}
+      <div class="label">${c.mt ? 'Hauptturm' : 'Mittelturm'}</div>${c.mt ? pick('m', CS_NAMES.m.map((n, i) => i ? n : '')).replace(/<button[^>]*data-cs="m:0"[^>]*><\/button>/, '') : pick('m')}${c.m || c.mt ? pick('mf') + pick('mk') + pick('mr') : ''}
       <div class="label">Flügel</div>${step('wf', 'Stockwerke')}${pick('wr')}
       ${worth}`;
 }
@@ -822,7 +823,7 @@ function wireCastle(el, t, x, y) {
     o[f] = v === 'n' ? (o[f] + 1) % (CT_LIM[f][1] + 1) : o[f] + +v;
     return { tw };
   });
-  for (const b of el.querySelectorAll('[data-ctadd]')) b.onclick = () => go(c => { const last = c.tw[c.tw.length - 1]; return { tw: [...c.tw, { ...CT_DEF, h: last ? Math.max(0, last.h - 1) : 2, r: last ? last.r : c.mr }] }; });
+  for (const b of el.querySelectorAll('[data-ctadd]')) b.onclick = () => go(c => { const last = c.tw[c.tw.length - 1]; return { tw: [...c.tw, { ...CT_DEF, h: last ? Math.max(0, last.h - 1) : 2, r: last ? last.r : c.mr, f: last ? last.f : c.mf }] }; });
   for (const b of el.querySelectorAll('[data-ctdel]')) b.onclick = () => go(c => ({ tw: c.tw.filter((_, i) => i !== +b.dataset.ctdel) }));
   for (const b of el.querySelectorAll('[data-tpl]')) b.onclick = () => undoable(() => {   // Vorlage: Gestalt + Farben (nur freigeschaltete)
     const tpl = CS_TPL[b.dataset.tpl], nk = castleChange(x, y, JSON.parse(JSON.stringify(tpl.cs)));

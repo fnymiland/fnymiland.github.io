@@ -734,3 +734,11 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Im Farbfenster „🎨 Für alle N anderen übernehmen“: alle Gebäude derselben Art bekommen Wand, Dach und Fenster (mit
       Rückgängig). „Neu gebaute bekommen diese Farben“: wer umfärbt, baut die nächsten gleich so (`state.paintNew`, abschaltbar;
       Häuser bleiben bunt, bis man es für sie einschaltet).
+
+## Block 74 – Märchenschloss: runde Türme, Turmgruppe, sichtbare Dächer (04.10.2026)
+- [x] Mittelbau-Dach „Kuppel“/„Zinnen“ war mit Mittelturm kaum zu sehen (Turm verdeckt das Dach). Jetzt Kuppel = große
+      Zwiebelkuppeln auf den Ecken, Zinnen = hohe Zinnen und Ecktürmchen.
+- [x] Türme rund oder eckig (je Turmpaar und Mittelturm): Zylinder mit Kegeldach, Kuppel oder Zinnenkranz, Balkon rundum.
+- [x] Mitte wählbar: Block oder Turmgruppe (Torbau mit Portal und Türmchen, Hauptturm vom Boden in Stufen mit Kranz,
+      2–4 Nebentürme gestaffelt). Neue Schlösser: Turmgruppe, rund; alte bleiben. Vorlagen angepasst, neu „Kompakte Burg“.
+- [x] Testwelt freizeitpark: Schlossreihe mit allen Mischungen auf aufgeschüttetem Land östlich der Insel.
