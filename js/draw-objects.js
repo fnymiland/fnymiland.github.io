@@ -681,7 +681,19 @@ function drawPath(cx, cy, z, x, y, t) {
   if (t && t.wide && !t.cross) { drawWidePath(L, lk, x, y, z, arms0); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf); };
+  // Seite bis an den Rand (Block 78): füllt der Nachbar entlang des Wegs dieselbe Seite nicht, geht es mit einem runden
+  // Übergang (wie ein Bordstein) – vor jedem Haus ein kleiner Vorplatz statt einer harten Stufe
+  const sides = sideFill(x, y, t, arms).map(n => {
+    const al = [Math.abs(n[1]), Math.abs(n[0])], P = (sv, tv) => [al[0] * sv + n[0] * tv, al[1] * sv + n[1] * tv], R = 0.5 - ROAD_W;
+    const cont = sg => { const nx = x + al[0] * sg, ny = y + al[1] * sg, nt = state.tiles.get(nx + ',' + ny);
+      return !!nt && nt.b === 'weg' && sideFill(nx, ny, nt, pathArms(nx, ny)).some(m => m[0] === n[0] && m[1] === n[1]); };
+    const pts = [P(-0.5, 0)];
+    if (cont(-1)) pts.push(P(-0.5, 0.5)); else for (let k = 0; k <= 6; k++) { const th = k / 6 * Math.PI / 2; pts.push(P(-0.5 + R * Math.sin(th), 0.5 - R * Math.cos(th))); }
+    if (cont(1)) pts.push(P(0.5, 0.5)); else for (let k = 0; k <= 6; k++) { const th = (1 - k / 6) * Math.PI / 2; pts.push(P(0.5 - R * Math.sin(th), 0.5 - R * Math.cos(th))); }
+    pts.push(P(0.5, 0));
+    return pts;
+  });
+  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf, sides); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }
@@ -1074,10 +1086,21 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   REPAINT_MAP = repaintMap(rs, t);
   try { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); } finally { REPAINT_MAP = prev; }
 }
+// Gartenweg (Block 78): vom Weg bis unter die Haustür, schmal, im Stil des Wegs – vor dem Haus gezeichnet (das Haus deckt ihn ab)
+function drawGardenPath(cx, cy, z, x, y, gp) {
+  const lk0 = PATH_LOOK[gp.style], lk = lk0 && !lk0.stones ? lk0 : PATH_LOOK.platten, [dx, dy] = gp.d;
+  const L = ([a, b]) => { const u = a * dx - b * dy, v = a * dy + b * dx; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z]; };
+  const band = w => [[0.18, -w], [0.72, -w], [0.72, w], [0.18, w]];                   // bis auf den Weg (auch wenn er schmal bleibt)
+  poly(band(0.125).map(L), C(lk.edge));
+  poly(band(0.095).map(L), C(lk.fill));
+  if (lk.pat) { g.save(); clipTo([band(0.095)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
+}
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   let span = 1;
   if (ITEMS[type] && ITEMS[type].variantOf) { span = ITEMS[type].span; type = ITEMS[type].variantOf; }   // Größe: Bild des Grundmodells
+  const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);
+  if (gp) drawGardenPath(cx, cy, z, x, y, gp);
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
   if (BIG_ART[type]) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   if (STANDS[type]) { drawStand(type, cx, cy, z, now, x, y, t); return; }

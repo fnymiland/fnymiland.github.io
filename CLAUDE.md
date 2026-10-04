@@ -356,6 +356,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Zusätzliche Arme bis ans Gebäude bzw. an den Rand nur über `pathEnds` – nie in `pathArms` (das nutzen Bewohner, Deko-Plätze
     und Kurven). Neue Wege bekommen `wegShapeNew()` (Schalter `wegShape` in der Musterleiste), Umstellen über einen alten Weg
     über `applyWegShape` und kostet nichts. Wer Kurven auswertet (Deko-Plätze, Mittellinie, Trittsteine), beachtet `t.sq`/`t.wide`.
+    Block 78: Seiten bis an den Rand nur über `sideFill` (`t.fs` überschreibt je Seite, sonst automatisch zu Gebäuden hin),
+    Gartenweg zur Tür über `gardenPath` (`t.zug === false` aus). Häuser/Läden teilen sich Bildchen: alles, was ein Haus je nach
+    Umgebung anders zeichnet, gehört in den Bild-Schlüssel (`spriteTile` in render.js).
 78. **Märchenschloss-Formen** (Block 74): `mt` Mitte (0 Block, 1 Turmgruppe), `mf` Mittelturm rund, je Turmpaar `f` rund.
     Fehlende Werte bedeuten Block/eckig (alte Schlösser bleiben, wie sie sind); neue Schlösser starten über `csNew()`.
     Runde Türme über `castleKit(...).tower(…, round)` bzw. `roundTower` – gleiche Maße wie eckig. Im Mittelteil zeichnet

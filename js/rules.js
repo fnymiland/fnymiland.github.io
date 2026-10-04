@@ -705,6 +705,27 @@ function pathEnds(x, y, t, arms) {
   const hit = [...axis, ...DIRS.filter(d => !axis.some(a => a[0] === d[0] && a[1] === d[1]))].find(solid);
   return hit ? [hit] : [];
 }
+// Gartenweg (Block 78): zeigt die Tür eines kleinen Hauses bzw. Ladens zu einem Weg, führt ein schmaler Weg im Stil des Wegs
+// bis zur Tür – auf dem Hausfeld, kostenlos. t.zug === false: abgeschaltet (Hausfenster)
+const zugOk = b => (isHome(b) || !!SHOPS[b]) && !(ITEMS[b] && ITEMS[b].size);
+function gardenPath(t, x, y, any = false) {
+  if (!t || (t.zug === false && !any) || !zugOk(t.b) || x > 1e5) return null;
+  const [dx, dy] = kitTurn(t.rot || 0, 1, 0), n = state.tiles.get((x + dx) + ',' + (y + dy));
+  if (!n || n.b !== 'weg' || n.bridge) return null;
+  return { d: [dx || 0, dy || 0], style: n.style || 'sand' };
+}
+// Seite bis an den Rand (Block 78): t.fs = { 'dx,dy': true | false } – fehlt eine Seite, gilt automatisch: zu einem Gebäude
+// hin geht der Weg bis an dessen Wand (wie ein Gehweg vor dem Haus). Nicht bei breiten Wegen, Brücken, Übergängen.
+const fillSolid = o => !!o && o.b !== 'weg' && o.b !== 'schiene' && !!ITEMS[o.b] && ITEMS[o.b].cat !== 'deko' && !ITEMS[o.b].edge;
+function sideFillAuto(x, y, d) { return fillSolid(objAt(x + d[0], y + d[1])); }
+function sideFill(x, y, t, arms) {
+  if (!t || t.wide || t.bridge || t.cross) return [];
+  return DIRS.filter(d => {
+    if (arms.some(a => a[0] === d[0] && a[1] === d[1])) return false;
+    const o = t.fs && t.fs[d.join()];
+    return o != null ? o : sideFillAuto(x, y, d);
+  });
+}
 function curveSlot(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t || t.b !== 'weg' || t.cross || t.sq || t.wide || typeof roadCurve !== 'function') return null;

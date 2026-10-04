@@ -81,7 +81,7 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
   console.log('Schlossreihe', JSON.stringify(sr));
   // Wegformen (Block 77): breite Allee mit Laternen am Rand, schmaler Weg trifft sie, Weg bis ans Haus, eckige/runde Kurven
   game(`(() => { const X = 36, Y = 24;
-    for (let y = Y - 1; y < Y + 10; y++) for (let x = X - 1; x < X + 13; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }
+    for (let y = Y - 1; y < Y + 14; y++) for (let x = X - 1; x < X + 13; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }
     waterChanged(); sandCache.clear(); landCache.clear();
     const W = (x, y, o = {}) => state.tiles.set((X + x) + ',' + (Y + y), { b: 'weg', lvl: 1, style: 'platten', ...o });
     const put = (x, y, slot, b) => { const k = (X + x) + ',' + (Y + y); if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[slot] = { b, rot: 0 }; };
@@ -91,6 +91,11 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     W(1, 4); W(1, 5); W(1, 6); state.tiles.set((X + 1) + ',' + (Y + 7), { b: 'haus', lvl: 2, rot: 0 });
     W(3, 4, { sq: true }); W(4, 4, { sq: true }); W(3, 5, { sq: true }); W(3, 6, { sq: true, end: 'rand' });
     for (const [x0, sq] of [[6, false], [9, true]]) for (const [x, y] of [[0, 0], [1, 0], [0, 1], [0, 2]]) W(x0 + x, 4 + y, { style: 'asphalt', ...(sq ? { sq: true } : {}) });
+    // Block 78: Häuser am Weg – oben mit der Tür zum Weg (Gartenweg), unten mit der Tür nach hinten; davor füllt der Weg bis an die Wand
+    for (let x = 1; x <= 10; x++) W(x, 11, { style: 'sand' });
+    [[2, 1], [4, 1], [6, 0], [8, 1]].forEach(([x, r], i) => state.tiles.set((X + x) + ',' + (Y + 10), { b: i === 3 ? 'baecker' : 'haus', lvl: 1 + i % 3, rot: r }));
+    [[3, 3], [5, 3], [7, 3]].forEach(([x, r], i) => state.tiles.set((X + x) + ',' + (Y + 12), { b: 'haus', lvl: 1 + i, rot: r }));
+    nameHouses();
     rebuildCover(); recalc(); })()`);
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;

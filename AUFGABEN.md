@@ -769,3 +769,10 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       Im Wegfenster „Ende: automatisch · rund · bis an den Rand“, „Form“ und (in Kurven) „Kurve rund / eckig“ – mit Rückgängig.
 - [x] Eckige Kurven: Mittelstreifen (Asphalt) und Trittsteine folgen dem Knick; außen kein Deko-Platz auf dem Bogen.
 - [x] Testwelt freizeitpark: Abschnitt „Wegformen“ östlich der Insel (36, 24).
+
+## Block 78 – Gartenweg zur Tür, Seiten bis an den Rand (04.10.2026)
+- [x] Zeigt die Tür eines kleinen Hauses oder Ladens zu einem Weg, führt ein schmaler Gartenweg im Stil des Wegs bis zur Tür
+      (kostenlos, im Hausfenster „🌿 Gartenweg zur Tür“ abschaltbar). Zeigt die Tür weg vom Weg: Haus drehen.
+- [x] Seiten: zu einem Gebäude hin füllt ein schmaler Weg automatisch bis an die Wand, mit rundem Übergang zum Nachbarfeld
+      (kleiner Vorplatz statt Zickzack). Im Wegfenster je Seite (↖ ↗ ↘ ↙): automatisch · bis an den Rand · schmal.
+- [x] Testwelt freizeitpark: Häuser beidseits eines Kieswegs im Abschnitt „Wegformen“.

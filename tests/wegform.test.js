@@ -79,3 +79,37 @@ describe('Wegform (Block 77)', () => {
     expect(game("!!document.querySelector('#panel [data-wegf=\"end:rund\"]')")).toBe(false);   // breit: kein Ende nötig
   });
 });
+
+describe('Gartenweg und Seiten bis an den Rand (Block 78)', () => {
+  it('Gartenweg nur, wenn die Tür zu einem Weg zeigt; im Hausfenster abschaltbar; gespeichert', () => {
+    W(10, 10); game("state.tiles.set('10,11', { b: 'haus', lvl: 1, rot: 3 }); state.tiles.set('11,11', { b: 'haus', lvl: 1, rot: 0 }); recalc()");
+    expect(game("gardenPath(state.tiles.get('10,11'), 10, 11)")).toEqual({ d: [0, -1], style: 'platten' });   // Tür nach −y, dort der Weg
+    expect(game("gardenPath(state.tiles.get('11,11'), 11, 11)")).toBe(null);                                // Tür zeigt nicht zum Weg
+    game('openInfo(10, 11)');
+    game("document.querySelector('#panel [data-zug]').click()");
+    expect(game("state.tiles.get('10,11').zug")).toBe(false);
+    expect(game("gardenPath(state.tiles.get('10,11'), 10, 11)")).toBe(null);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('10,11').zug")).toBe(false);
+    game('undo()');
+  });
+  it('Seite zu einem Gebäude füllt automatisch; je Seite umstellbar (automatisch → Rand → schmal); gespeichert', () => {
+    W(9, 10); W(10, 10); W(11, 10); game("state.tiles.set('10,11', { b: 'haus', lvl: 1, rot: 0 }); recalc()");
+    const fill = () => game("sideFill(10, 10, state.tiles.get('10,10'), pathArms(10, 10)).map(d => d.join())");
+    expect(fill()).toEqual(['0,1']);
+    expect(game("sideFill(9, 10, state.tiles.get('9,10'), pathArms(9, 10))")).toEqual([]);   // daneben kein Gebäude
+    game('openInfo(10, 10)');
+    expect(game("[...document.querySelectorAll('#panel [data-wegs]')].map(b => b.dataset.wegs).sort()")).toEqual(['0,-1', '0,1']);
+    game("document.querySelector('#panel [data-wegs=\"0,-1\"]').click()");               // automatisch → bis an den Rand
+    expect(fill().sort()).toEqual(['0,-1', '0,1']);
+    game("document.querySelector('#panel [data-wegs=\"0,1\"]').click()");                // zum Haus: automatisch → Rand (bleibt gefüllt)
+    game("document.querySelector('#panel [data-wegs=\"0,1\"]').click()");                // → schmal
+    expect(fill()).toEqual(['0,-1']);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('10,10').fs")).toEqual({ '0,-1': true, '0,1': false });
+    game("state.tiles.get('10,10').wide = true");
+    expect(fill()).toEqual([]);                                                              // breit: ohnehin bis an den Rand
+  });
+});

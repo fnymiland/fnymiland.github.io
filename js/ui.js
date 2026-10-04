@@ -910,10 +910,29 @@ function wegFormHtml(t, x, y) {
   return `<div class="label">Form</div>
     <div class="looks">${btn('wide', 0, !t.wide, '▭ schmal')}${btn('wide', 1, !!t.wide, '▬ ganz breit')}</div>
     ${curve ? `<div class="looks">${btn('sq', 0, !t.sq, '⌒ Kurve rund')}${btn('sq', 1, !!t.sq, '⌐ Kurve eckig')}</div>` : ''}
+    ${t.wide ? "" : sideRows(t, x, y, arms)}
     ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
     <p class="muted">Automatisch: vor einem Gebäude läuft der Weg bis an die Wand, sonst endet er rund.</p>` : ''}`;
 }
+// Seiten bis an den Rand (Block 78): je Seite ohne Anschluss automatisch → bis an den Rand → schmal, Pfeile wie auf dem Bildschirm
+const SIDE_ARROW = { '1,0': '↘', '0,1': '↙', '-1,0': '↖', '0,-1': '↗' };
+function sideRows(t, x, y, arms) {
+  const free = DIRS.filter(d => !arms.some(a => a[0] === d[0] && a[1] === d[1]) && !pathEnds(x, y, t, arms).some(a => a[0] === d[0] && a[1] === d[1]));
+  if (!free.length) return '';
+  const now = sideFill(x, y, t, arms).map(d => d.join());
+  return `<div class="label">Seiten</div><div class="looks">${free.map(d => {
+    const k = d.join(), o = t.fs && t.fs[k], txt = o == null ? `✨ ${now.includes(k) ? 'bis zum Gebäude' : 'automatisch'}` : o ? '▌ bis an den Rand' : '▭ schmal';
+    return `<button class="look${now.includes(k) ? ' on' : ''}" data-wegs="${k}">${SIDE_ARROW[k]} ${txt}</button>`;
+  }).join('')}</div><p class="muted">Tippen wechselt: automatisch (zu einem Gebäude hin bis an die Wand) · bis an den Rand · schmal.</p>`;
+}
 function wireWegForm(el, t, x, y) {
+  for (const b of el.querySelectorAll('[data-wegs]')) b.onclick = () => undoable(() => {
+    const k = b.dataset.wegs, o = t.fs && t.fs[k];
+    t.fs = { ...(t.fs || {}) };
+    if (o == null) t.fs[k] = true; else if (o) t.fs[k] = false; else delete t.fs[k];
+    if (!Object.keys(t.fs).length) delete t.fs;
+    groundVersion++; sfx('road'); save(); openInfo(x, y);
+  });
   for (const b of el.querySelectorAll('[data-wegf]')) b.onclick = () => undoable(() => {
     const [k, v] = b.dataset.wegf.split(':');
     if (k === 'end') { if (v) t.end = v; else delete t.end; } else if (+v) t[k] = true; else delete t[k];
@@ -1086,7 +1105,8 @@ function openInfo(x, y) {
       <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
-    : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>` : '';   // Wunder-Schloss (Block 60j)
+    : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
+    : gardenPath(t, x, y, true) ? `<div class="looks"><button class="look${t.zug === false ? '' : ' on'}" data-zug="1" aria-pressed="${t.zug !== false}">🌿 Gartenweg zur Tür</button></div>` : '';   // Block 78
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)].name : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
@@ -1166,6 +1186,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   if (t.b === 'weg') wireWegForm(el, t, x, y);
+  if (el.querySelector('[data-zug]')) el.querySelector('[data-zug]').onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)
