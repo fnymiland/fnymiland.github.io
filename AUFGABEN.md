@@ -777,3 +777,5 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
       (kleiner Vorplatz statt Zickzack). Im Wegfenster je Seite (↖ ↗ ↘ ↙): automatisch · bis an den Rand · schmal.
 - [x] Testwelt freizeitpark: Häuser beidseits eines Kieswegs im Abschnitt „Wegformen“.
 - [x] 78b: „Seiten bis an den Rand“ wieder entfernt (Wege sehen wieder normal aus); der Gartenweg zur Tür bleibt.
+- [x] 78c: Der Gartenweg lag mit eigener Kante und eigenem Muster auf der Straße. Jetzt zeichnet der Weg sein Stück selbst mit
+      (ein Guss, Muster durchgehend, Lücke im Bordstein); das Haus nur den Teil auf seinem Feld. Trittsteine: zwei Steine zur Tür.

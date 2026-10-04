@@ -1167,7 +1167,7 @@ function openInfo(x, y) {
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   if (t.b === 'weg') wireWegForm(el, t, x, y);
-  if (el.querySelector('[data-zug]')) el.querySelector('[data-zug]').onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; sfx('deco'); save(); openInfo(x, y); });
+  if (el.querySelector('[data-zug]')) el.querySelector('[data-zug]').onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; groundVersion++; sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)

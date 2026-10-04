@@ -85,8 +85,10 @@ describe('Gartenweg (Block 78)', () => {
     W(10, 10); game("state.tiles.set('10,11', { b: 'haus', lvl: 1, rot: 3 }); state.tiles.set('11,11', { b: 'haus', lvl: 1, rot: 0 }); recalc()");
     expect(game("gardenPath(state.tiles.get('10,11'), 10, 11)")).toEqual({ d: [0, -1], style: 'platten' });   // Tür nach −y, dort der Weg
     expect(game("gardenPath(state.tiles.get('11,11'), 11, 11)")).toBe(null);                                // Tür zeigt nicht zum Weg
+    const withStub = fills(10, 10);                                                         // der Weg zeichnet sein Stück des Gartenwegs mit
     game('openInfo(10, 11)');
     game("document.querySelector('#panel [data-zug]').click()");
+    expect(fills(10, 10)).not.toBe(withStub);
     expect(game("state.tiles.get('10,11').zug")).toBe(false);
     expect(game("gardenPath(state.tiles.get('10,11'), 10, 11)")).toBe(null);
     const d = game('JSON.parse(JSON.stringify(serialize()))');

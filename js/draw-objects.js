@@ -659,16 +659,16 @@ function drawWegBridge(cx, cy, z, x, y, t) {
 // Ganz breiter Weg (Block 77): Belag über das ganze Feld, Bordstein an den Seiten ohne breiten Nachbarweg – dort, wo ein
 // schmaler Weg ankommt, mit Lücke; an breiten Nachbarn geht der Belag nahtlos weiter
 const WIDE_CURB = 0.05;
-function drawWidePath(L, lk, x, y, z, arms) {
+function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   paintLook(L, lk, x, y, z, false, 0);
   const near = (dx, dy) => state.tiles.get((x + dx) + ',' + (y + dy));
   const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge; };
   const rect = (u0, u1, v0, v1) => poly([[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L), C(lk.edge));
   for (const [dx, dy] of DIRS) {
     if (wideAt(dx, dy)) continue;
-    const gap = arms.some(a => a[0] === dx && a[1] === dy), e0 = 0.5 - WIDE_CURB;   // schmaler Weg kommt an: Lücke im Bordstein
+    const gap = arms.some(a => a[0] === dx && a[1] === dy) ? ROAD_W : stubs.some(a => a[0] === dx && a[1] === dy) ? GP_FILL : 0, e0 = 0.5 - WIDE_CURB;   // Weg bzw. Gartenweg kommt an: Lücke im Bordstein
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
-    if (gap) { seg(-0.5, -ROAD_W); seg(ROAD_W, 0.5); } else seg(-0.5, 0.5);
+    if (gap) { seg(-0.5, -gap); seg(gap, 0.5); } else seg(-0.5, 0.5);
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
 }
@@ -678,10 +678,13 @@ function drawPath(cx, cy, z, x, y, t) {
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
   const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
-  if (t && t.wide && !t.cross) { drawWidePath(L, lk, x, y, z, arms0); return; }
+  // Gartenwege der Nachbarhäuser (Block 78c): ihr Stück auf diesem Feld gehört zum Weg – ein Guss, ohne Bordstein davor
+  const stubs = DIRS.filter(([dx, dy]) => { const gp = gardenPath(state.tiles.get((x + dx) + ',' + (y + dy)), x + dx, y + dy); return !!gp && gp.d[0] === -dx && gp.d[1] === -dy; });
+  if (t && t.wide && !t.cross) { drawWidePath(L, lk, x, y, z, arms0, stubs); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf); };
+  const stubPolys = w => stubs.map(d => { const sw = w > ROAD_W ? GP_EDGE : GP_FILL; return [[0, -sw], [0.5, -sw], [0.5, sw], [0, sw]].map(([a, bq]) => armUV(d, a, bq)); });
+  const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf, stubPolys(w)); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }
@@ -1074,14 +1077,20 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
   REPAINT_MAP = repaintMap(rs, t);
   try { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); } finally { REPAINT_MAP = prev; }
 }
-// Gartenweg (Block 78): vom Weg bis unter die Haustür, schmal, im Stil des Wegs – vor dem Haus gezeichnet (das Haus deckt ihn ab)
+// Gartenweg (Block 78): von der Feldkante bis unter die Haustür, schmal, im Stil des Wegs – vor dem Haus gezeichnet (das Haus
+// deckt ihn ab). Das Stück auf dem Wegfeld zeichnet der Weg selbst mit (drawPath, Block 78c), sonst läge es obendrauf.
+const GP_EDGE = 0.125, GP_FILL = 0.095;
 function drawGardenPath(cx, cy, z, x, y, gp) {
-  const lk0 = PATH_LOOK[gp.style], lk = lk0 && !lk0.stones ? lk0 : PATH_LOOK.platten, [dx, dy] = gp.d;
+  const lk = PATH_LOOK[gp.style] || PATH_LOOK.platten, [dx, dy] = gp.d;
   const L = ([a, b]) => { const u = a * dx - b * dy, v = a * dy + b * dx; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z]; };
-  const band = w => [[0.18, -w], [0.72, -w], [0.72, w], [0.18, w]];                   // bis auf den Weg (auch wenn er schmal bleibt)
-  poly(band(0.125).map(L), C(lk.edge));
-  poly(band(0.095).map(L), C(lk.fill));
-  if (lk.pat) { g.save(); clipTo([band(0.095)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
+  if (lk.stones) {                                                                      // Trittsteine: zwei Steine zur Tür
+    for (const [a, k] of [[0.47, 0.8], [0.33, 0.72]]) { const q = L([a, 0]); ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
+    return;
+  }
+  const band = w => [[0.18, -w], [0.5, -w], [0.5, w], [0.18, w]];
+  poly(band(GP_EDGE).map(L), C(lk.edge));
+  poly(band(GP_FILL).map(L), C(lk.fill));
+  if (lk.pat) { g.save(); clipTo([band(GP_FILL)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
 }
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
