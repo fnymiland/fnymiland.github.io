@@ -105,6 +105,19 @@ function drawBushes(at, look, z, seed, id = null) {
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);   // von hinten nach vorn
   for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i, id);
 }
+// Lichterkette über der Wilmerhecke (Block 86i): gleichmäßig gehängt – Aufhängepunkte alle ½ Feld, dazwischen ein leichter
+// Durchhang, Birnchen im festen Abstand; an festen Stellen der Kante, damit sie über aneinandergesetzte Stücke durchläuft
+function bushGarland(pt, look, z, id) {                          // pt(t) → Punkt auf der Linie, t von 0 bis 1
+  const lit = edgeLit(id), N = 8, hang = t => 8.2 - 1.8 * Math.sin(Math.PI * ((t * 2) % 1));
+  g.strokeStyle = C('#4b5b3e'); g.lineWidth = 0.45 * z; g.beginPath();
+  for (let s = 0; s <= 24; s++) { const t = s / 24, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t), z); s ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+  for (let n = 0; n < N; n++) {
+    const t = (n + 0.5) / N, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t) - 0.6, z), r = 0.95 * z;
+    circle(x, y, r, lit ? '#fff3b0' : C('#f6edc8'));
+    if (lit) glowQuad([[x - r, y], [x, y - r], [x + r, y], [x, y + r]], 8 * z);
+  }
+}
 function wilmerBush(m, look, z, r = 0.5, i = 0, id = null) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
   const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
@@ -114,14 +127,7 @@ function wilmerBush(m, look, z, r = 0.5, i = 0, id = null) {
     const a = hash(i, f, 17) * Math.PI * 2, d = 3 + hash(i, f, 19) * 3;
     circle(x + Math.cos(a) * d * k, y - 8 * k + Math.sin(a) * d * 0.7 * k, 1.3 * k, C(look.flowers[Math.floor(hash(i, f, 23) * look.flowers.length)]));
   }
-  if (look.lights) {                                               // Lichterkette in den Büschen (Block 86h) – wie die Blüten verteilt
-    const lit = id ? edgeLit(id) : night > 0.15 && isLive();
-    for (let f = 0; f < 4; f++) {
-      const a = hash(i, f, 29) * Math.PI * 2, d = 2.5 + hash(i, f, 31) * 3.5, bx = x + Math.cos(a) * d * k, by = y - 7.5 * k + Math.sin(a) * d * 0.7 * k;
-      circle(bx, by, 1.15 * k, lit ? '#fff3b0' : C('#f6edc8'));
-      if (lit) glowQuad([[bx - k, by], [bx, by - k], [bx + k, by], [bx, by + k]], 7 * z);
-    }
-  }
+
 }
 // Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
 const GATE_CUT = 0.5 - EDGE_W;
@@ -143,7 +149,7 @@ function drawArc(rc, look, z) {
     const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
-  if (rc.b === 'hecke' && look.bushes) { bushRow(roundArc(rc, 12), look, z, rc.ka.length, 0, 'E' + rc.ka); return; }   // Wilmerhecke im Bogen
+  if (rc.b === 'hecke' && look.bushes) { bushRow(roundArc(rc, 12), look, z, rc.ka.length, 0, 'E' + rc.ka); return; }   // (Wilmerhecke rundet nicht, 86e)   // Wilmerhecke im Bogen
   if (rc.b === 'zaun') { const ap = roundArc(rc, 12); drawFence({ pts: ap }, look, rc.style, false, z, [false, false]); fencePost(ap[6], look, rc.style, z); if (look.lights) bulbsAlong(ap, look.h + 0.6, z, 'E' + rc.ka); return; }   // ein Pfosten mitten im Bogen
   const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
   const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
@@ -410,6 +416,7 @@ function drawEdge(k, e, z, now) {
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
     bushSpan(k, E, onP ? ROUND_R : gateP, onQ ? 1 - ROUND_R : 1 - gateQ, look, z, k.length);
+    if (look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k);
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
     if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join());

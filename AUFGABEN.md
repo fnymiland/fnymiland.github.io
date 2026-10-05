@@ -955,6 +955,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       sonst zeichnet ihn jedes endende als Letztes. Test spielt die echte Reihenfolge für alle Eckarten nach.
 - [x] 86h: Lichterkette als Lampions obendrauf sah schlecht aus – jetzt kleine Lichter in jedem Busch verteilt wie die Blüten,
       nachts mit warmem Schein (brauchen wie alle Lichter Strom).
+- [x] 86i: Lichter zu zufällig – jetzt eine gleichmäßig gehängte Kette (`bushGarland`): Aufhängepunkte alle ½ Feld, leichter
+      Durchhang, Birnchen im festen Abstand, läuft über aneinandergesetzte Stücke und um Ecken durch.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
