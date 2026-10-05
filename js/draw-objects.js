@@ -776,7 +776,7 @@ const BIG_ART = {
       const slopes = [[[lo(1, -1), lo(1, 1), hi(1, 1), hi(1, -1)], [1, 0]], [[lo(1, 1), lo(-1, 1), hi(-1, 1), hi(1, 1)], [0, 1]],
         [[lo(-1, 1), lo(-1, -1), hi(-1, -1), hi(-1, 1)], [-1, 0]], [[lo(-1, -1), lo(1, -1), hi(1, -1), hi(-1, -1)], [0, -1]]];
       for (const back of [true, false]) for (const [pts, n] of slopes) if ((K.facing(...n) < 0) === back) poly(pts, K.roofCol(roof, n));
-      const T2 = K.block({ a: -0.45, ha: TW2, hb: TW2, h: 22, lift: up, wall, roof: '#e8705f', roofH: 12 });   // bündig auf dem Plateau, länger (88d)
+      const T2 = K.block({ a: -0.45, ha: TW2, hb: TW2, h: 26, lift: up, wall, roof: '#e8705f', roofH: 12 });   // bündig auf dem Plateau, länger (88d/e)
       const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
       for (const F of [T2.faces.front, T2.faces.right, T2.faces.left, T2.faces.back]) if (F) faceClock(F, 0.5, F.H * 0.66, 4.6 * z, z, { hands: [[hr, 0.52, 1], [mi, 0.74, 0.9]] });   // auf jeder Turmseite, die man sieht (oben)
     };
