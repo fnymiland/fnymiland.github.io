@@ -269,11 +269,10 @@ function pillarBox(pt, r, h0, h1, col, z) {
 // Gibt die Höhe der Oberkante zurück.
 const PILLAR_UP = 2.8, CAP_UP = 3.6;
 const wallPillarR = look => look.w * 1.45;
-const wallEndR = look => look.w * 1.12;                          // Mauerende: schlanker Abschlusspfeiler (Block 87)
 // Wo die Torpfosten stehen (Anteil der Kante): Mauerpfeiler ganz neben dem Weg (auf der Feldecke), sonst am Wegrand
 const gateT = (b, look) => b === 'mauer' ? GATE_CUT - wallPillarR(look) : GATE_CUT;
-function wallPillar(pt, look, z, rMax = Infinity, extra = 0, slim = false) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher; slim: Mauerende
-  const r = Math.min(slim ? wallEndR(look) : wallPillarR(look), rMax), h = look.h, top = h + (slim ? 1 : PILLAR_UP) + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
+function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher
+  const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
   if (look.joint) {                                               // Lagerfugen rundum, Stoßfugen versetzt
     g.strokeStyle = C(look.cobbles ? shade(look.col, -0.2) : look.joint); g.lineWidth = 0.5 * z; g.beginPath();
@@ -288,15 +287,14 @@ function wallPillar(pt, look, z, rMax = Infinity, extra = 0, slim = false) {    
     }
     g.stroke();
   }
-  const cap = slim ? 0.8 : CAP_UP - PILLAR_UP;                    // Deckstein (am Mauerende schmal)
-  pillarBox(pt, r * (slim ? 1.12 : 1.18), top, top + cap, shade(look.col, 0.28), z);
-  return top + cap;
+  pillarBox(pt, r * 1.18, top, top + CAP_UP - PILLAR_UP, shade(look.col, 0.28), z);
+  return top + CAP_UP - PILLAR_UP;
 }
 // Endstück an einem freien Ende: Mauer Pfeiler mit Deckstein, Zaun dicker Pfosten mit Kappe, Hecke rundes Ende.
 // Laternen darauf nur bei beleuchteten Stilen.
 function endPiece(b, look, pt, z, id) {
   const h = look.h, lit = litLook(look);
-  if (b === 'mauer') { const top = wallPillar(pt, look, z, Infinity, 0, true); if (lit) lampAt(pt, top, z, id); return; }
+  if (b === 'mauer') { if (lit) lampAt(pt, h, z, id); return; }   // Mauerende: gerade, ohne Pfeiler (Block 87b); Laterne oben drauf
   if (b === 'zaun') {
     const [x, y] = edgeS(pt[0], pt[1], 0, z), top = y - (h + (lit ? 3 : 2)) * z;
     g.strokeStyle = C(shade(look.col, -0.25)); g.lineWidth = 2.4 * z; g.lineCap = 'round';
@@ -378,7 +376,7 @@ function drawEdge(k, e, z, now) {
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
   // Mauer mit Pfeiler am hinteren Ende (P): erst der Pfeiler, die Mauer beginnt an seiner Seite (sonst ragt er über sie)
   const gateBefore = e.b === 'mauer' && (o => { const n = state.edges.get(o); return !!(n && n.b === 'mauer' && isGate(o)); })(dir + (i - au) + ',' + (j - av));
-  const pilP = gateBefore ? wallPillarR(look) : !endP ? 0 : e.b === 'mauer' ? wallEndR(look) : e.b === 'hecke' ? w : 0;
+  const pilP = gateBefore ? wallPillarR(look) : !endP ? 0 : e.b === 'hecke' ? w : 0;   // Mauerende ohne Pfeiler: Mauer bis an den Punkt
   const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen

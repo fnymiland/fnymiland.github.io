@@ -957,4 +957,5 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
 - [x] Freie Mauerenden hatten denselben dicken Pfeiler wie ein Tor (1,45 × Mauerbreite, hoch, breiter Deckstein) – wirkte klobig.
-      Jetzt ein schlanker Abschlusspfeiler (`wallEndR` = 1,12 × Mauerbreite, nur etwas höher, schmaler Deckstein); Torpfeiler bleiben.
+      87b: Der schlanke Pfeiler war kaum anders (Nutzer sah keinen Unterschied). Jetzt endet die Mauer gerade, ohne Pfeiler –
+      nur „Laternen“ hat oben am Ende eine Laterne. Torpfeiler an Durchgängen bleiben.
