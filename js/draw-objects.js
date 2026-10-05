@@ -750,7 +750,7 @@ function groundRect(cx, cy, z, hu, hv, fill, pat, x, y) {
   if (pat) { g.save(); clipTo([sq], L); pattern(L, pat[0], x, y, z, pat[1] && C(pat[1]), pat[2]); g.restore(); }
   return L;
 }
-const RH_ROOF = 11;                                     // Rathausdach (Block 88b: flacher, damit der Uhrturm aus ihm herausragt)
+const RH_ROOF = 15;                                     // Rathausdach bis zum Plateau unter dem Uhrturm (Block 88c)
 const BIG_ART = {
   // Rathaus (3×3): großes Haus mit Uhrturm hinten, davor ein kleiner Platz mit Treppe, Laternen, Brunnen und Fahne
   rathaus(cx, cy, z, now, x, y, lvl, t, hu, hv) {
@@ -765,23 +765,20 @@ const BIG_ART = {
     })) return;
     const [wall, roof] = paint(t, '#fff1d6', '#6f8fd8');
     const hall = () => {
-      const B = K.block({ a: -0.45, ha: 0.85, hb: 1.1, h: 26, wall, roof, roofH: RH_ROOF, over: 1.12, entry: true });
+      const B = K.block({ a: -0.45, ha: 0.85, hb: 1.1, h: 26, wall, type: 'none', entry: true });
       K.door(B, 'front', 0.44, 0.56, 0.5);
       K.wins(B, 'front', 6, 0.36, 0.7, 0.04, 0.96, [2, 3]);
       K.sideWins(B, 3, 0.36, 0.7);
-      // Uhrturm wächst aus dem Dach (Block 88): er beginnt an der Traufe, die vorderen Dachflächen verdecken seinen Fuß –
-      // vorher schwebte er ab halber Dachhöhe als Kasten vor dem Dach
-      const top = 26, ea = 0.85 * 1.12, eb = 1.1 * 1.12, E2 = (sa, sb) => K.P(-0.45 + sa * ea, sb * eb, top);
-      const R1 = K.P(-0.45, -(eb - ea), top + RH_ROOF), R2 = K.P(-0.45, eb - ea, top + RH_ROOF);
-      const slopes = [[[E2(1, -1), E2(1, 1), R2, R1], [1, 0]], [[E2(-1, 1), E2(-1, -1), R1, R2], [-1, 0]], [[E2(1, 1), E2(-1, 1), R2], [0, 1]], [[E2(-1, -1), E2(1, -1), R1], [0, -1]]];
-      g.save(); g.beginPath(); g.rect(-1e5, -1e5, 2e5, 2e5);
-      for (const [pts, n] of slopes) if (K.facing(...n) >= 0) { pts.forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); }
-      g.clip('evenodd');
-      try {
-        const T2 = K.block({ a: -0.45, ha: 0.2, hb: 0.2, h: 26, lift: top, wall, roof: '#e8705f', roofH: 12 });   // Größe und Spitze wie früher (Oberkante 52)
-        const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
-        for (const F of [T2.faces.front, T2.faces.right, T2.faces.left, T2.faces.back]) if (F) faceClock(F, 0.5, 17.2 * z, 4.6 * z, z, { hands: [[hr, 0.52, 1], [mi, 0.74, 0.9]] });   // auf jeder Turmseite, die man sieht
-      } finally { g.restore(); }
+      // Walmdach mit flacher Spitze (Block 88c): die Dachflächen laufen auf ein Plateau so groß wie der Uhrturm zu – der Turm
+      // steht bündig darauf, statt im spitzen Dach zu stecken
+      const top = 26, TW2 = 0.2, ea = 0.85 * 1.12, eb = 1.1 * 1.12, up = top + RH_ROOF;
+      const lo = (sa, sb) => K.P(-0.45 + sa * ea, sb * eb, top), hi = (sa, sb) => K.P(-0.45 + sa * TW2, sb * TW2, up);
+      const slopes = [[[lo(1, -1), lo(1, 1), hi(1, 1), hi(1, -1)], [1, 0]], [[lo(1, 1), lo(-1, 1), hi(-1, 1), hi(1, 1)], [0, 1]],
+        [[lo(-1, 1), lo(-1, -1), hi(-1, -1), hi(-1, 1)], [-1, 0]], [[lo(-1, -1), lo(1, -1), hi(1, -1), hi(-1, -1)], [0, -1]]];
+      for (const back of [true, false]) for (const [pts, n] of slopes) if ((K.facing(...n) < 0) === back) poly(pts, K.roofCol(roof, n));
+      const T2 = K.block({ a: -0.45, ha: TW2, hb: TW2, h: 14, lift: up, wall, roof: '#e8705f', roofH: 12 });   // bündig auf dem Plateau
+      const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
+      for (const F of [T2.faces.front, T2.faces.right, T2.faces.left, T2.faces.back]) if (F) faceClock(F, 0.5, F.H * 0.5, 4.6 * z, z, { hands: [[hr, 0.52, 1], [mi, 0.74, 0.9]] });   // auf jeder Turmseite, die man sieht
     };
     const steps = () => K.block({ a: 0.5, ha: 0.1, hb: 0.3, h: 1.6, wall: '#d6ccb9', type: 'flat', roof: '#efe8da' });
     const lamp = b => () => { const [lx, ly] = K.P(0.95, b); lampPost(lx, ly, z, 15); };

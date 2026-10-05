@@ -975,3 +975,5 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       First, Zierkante oben, Uhren auf allen sichtbaren Seiten. In allen vier Drehungen angesehen.
 - [x] 88b: Gefiel nicht (zu hoch, dünn, gestelzt). Gewählt: „wie früher, nur sauber“ – Turm wieder in alter Größe, Oberkante
       und Uhrenhöhe; das Rathausdach ist flacher (`RH_ROOF` 11 statt 18), so ragt der Turm von selbst heraus.
+- [x] 88c: Passte nicht (spitzes Dach + aufgesetzter Turm). Nutzer-Idee umgesetzt: Walmdach mit flacher Spitze – die Dachflächen
+      laufen auf ein Plateau so groß wie der Uhrturm zu, der Turm steht bündig darauf (kein Ausschneiden mehr).
