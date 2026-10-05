@@ -148,6 +148,77 @@ describe('Online-Speicher (Block 93)', () => {
     expect(game(`cloudDue(${t0} + CLOUD_EVERY + 500)`)).toBe(true);                       // baut ständig → trotzdem regelmäßig
     expect(game(`cloudDue(${t0} + 2000)`)).toBe(false);                                   // nie öfter als CLOUD_GAP
   });
+  // --- Prüfung vor dem Veröffentlichen (Block 93c): Lücken, die beim Durchgehen auffielen ---
+  it('zwei Uploads gleichzeitig: nacheinander, keine Rückfrage gegen das eigene Gerät', async () => {
+    play();
+    await login();
+    game("undoable(() => { state.tiles.set('15,15', { b: 'feld', lvl: 1 }); })");
+    const a = game('cloudUpload()'), b = game('cloudUpload(true)');
+    await a; await b; await settle();
+    expect(game('cloudState')).toBe('ok');
+    expect(remote().meta.rev).toBe(game('cloudMeta().rev'));
+  });
+  it('Änderungen ohne ↶ (Farbe, Forschung …) werden erkannt und hochgeladen', async () => {
+    play();
+    await login();
+    const rev = remote().meta.rev;
+    game("state.town.color = (state.town.color || 0) + 1; state.techs.add('testforschung')");
+    game('cloudWatchLocal(Date.now() + 60000)');
+    expect(game('cloudMeta().acts')).toBeGreaterThan(0);
+    expect(await game('cloudUpload()')).toBe(true);
+    expect(remote().meta.rev).toBe(rev + 1);
+  });
+  it('was während des Hochladens gebaut wird, bleibt zum nächsten Hochladen vorgemerkt', async () => {
+    play();
+    await login();
+    game("cloudTouched(); (o => { cloudApi.putSave = async (u, s) => { cloudTouched(); return o(u, s); }; })(cloudApi.putSave)");
+    await game('cloudUpload()');
+    expect(game('cloudMeta().acts')).toBe(1);
+  });
+  it('Upload unterbrochen (Version beansprucht, Stand nicht geschrieben): nach dem Neuladen still nachholen, keine Rückfrage', async () => {
+    play();
+    await login();
+    game("cloudTouched(); (o => { let n = 0; cloudApi.putSave = async (u, s) => { if (!n++) throw new Error('Netz weg'); return o(u, s); }; })(cloudApi.putSave)");
+    await game('cloudUpload()').catch(() => {});
+    expect(remote().meta.rev).toBe(remote().save.rev + 1);                                   // Version beansprucht, Stand fehlt
+    game("cloudKnown = null; cloudState = 'ok'");                                           // wie nach dem Neuladen
+    await game("cloudSync('Start')"); await settle();
+    expect(game('cloudState')).toBe('ok');
+    expect(remote().save.rev).toBe(remote().meta.rev);
+  });
+  it('anderes Gerät mittendrin weg (Version beansprucht, nie geschrieben): kein Endlos-Warten, der letzte ganze Stand gilt', async () => {
+    play(50000, 'Hier');
+    await login();
+    await game("cloudApi.claim('u1', cloudApi.db.u1.meta.rev, { by: 'tot', sum: cloudApi.db.u1.meta.sum })");
+    game('cloudTakeTries = 3');
+    await game("cloudSync('anderes Gerät')"); await settle();
+    expect(game('cloudMeta().rev')).toBe(remote().meta.rev);
+    expect(game('cloudState')).toBe('ok');
+  });
+  it('live übernehmen legt keine Sicherungen an (sonst verdrängen sie die echten)', async () => {
+    play(50000, 'Hier');
+    await login();
+    for (let i = 0; i < 3; i++) { await putRemote('Hier', 60000 + i); await new Promise(r => setTimeout(r, 5)); await settle(); }
+    expect(Object.keys(remote().idx).length).toBe(0);
+  });
+  it('Testwelt: kein Online-Speicher (die Testwelt darf nie die echte Insel ersetzen)', async () => {
+    await putRemote('Echt');
+    game('window._off = cloudOff; cloudOff = () => true');                                  // wie mit ?welt=…
+    try {
+      game("cloudOnUser({ uid: 'u1', email: 'a@b.de' })");
+      expect(game('cloudUser')).toBe(null);
+      game('cloudTouched()');
+      expect(JSON.parse(remote().save.data).town.name).toBe('Echt');
+    } finally { game('cloudOff = window._off'); }
+  });
+  it('zweites Fenster mit dem Spiel: dieses lädt nichts mehr hoch', async () => {
+    play();
+    await login();
+    game("window.dispatchEvent(new StorageEvent('storage', { key: SAVE_KEY }))");
+    expect(game('cloudState')).toBe('zweites');
+    game('cloudTouched()');
+    expect(game('cloudDue(Date.now() + 999999)')).toBe(false);
+  });
   it('höchstens 10 Sicherungen', async () => {
     play();
     await login();

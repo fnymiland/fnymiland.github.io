@@ -32,10 +32,16 @@ let cloudUser = null;                // { uid, name }
 let cloudState = 'aus';              // aus | laden | ok | offline | konflikt | fehler
 let cloudLastUp = 0, cloudBusy = false, cloudFreshOk = false, cloudKnown = null;   // cloudKnown: zuletzt gelesenes meta
 
-// Merkzettel dieses Geräts: mit welchem Konto, welche Version zuletzt abgeglichen, wie viele eigene Aktionen seitdem
+// Merkzettel dieses Geräts: mit welchem Konto (uid), welche Version zuletzt abgeglichen (rev), Fingerabdruck des Stands
+// danach (sig), eigene Aktionen seitdem (acts); login: hier war jemand angemeldet (Firebase beim Start laden)
 function cloudMeta() { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) || {}; } catch (e) { return {}; } }
 function setCloudMeta(m) { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(m)); } catch (e) { /* privates Fenster */ } }
-function cloudDevice() { const m = cloudMeta(); if (!m.dev) { m.dev = Math.random().toString(36).slice(2, 10); setCloudMeta(m); } return m.dev; }
+// Kennung dieses Fensters (je Tab eigene, übersteht Neuladen): woran ein Gerät seine eigenen Uploads erkennt
+function cloudDevice() {
+  try { let d = sessionStorage.getItem(CLOUD_KEY + '_dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); sessionStorage.setItem(CLOUD_KEY + '_dev', d); } return d; }
+  catch (e) { return cloudDevice.mem || (cloudDevice.mem = Math.random().toString(36).slice(2, 10)); }
+}
+function cloudOff() { return !!(PROBE || TESTWELT); }          // Testwelt/Probeansicht: nie in die Cloud (sonst ersetzt sie die echte Insel)
 // eigene Aktion (aus undoCommit): ab jetzt hat dieses Gerät etwas, das in die Cloud gehört
 function cloudTouched() { if (!cloudUser) return; const m = cloudMeta(); m.acts = (m.acts || 0) + 1; setCloudMeta(m); cloudActAt = Date.now(); }
 // Bewusst eine ganz andere Welt (Neue Insel, Datei geladen): darf auch leer hochgeladen werden – die alte wird dabei gesichert
@@ -48,12 +54,24 @@ function worldSum(d) {
 }
 // „leer“: neu angefangen, noch kaum etwas gebaut oder verdient – so eine Welt überschreibt nie eine bespielte
 const freshSum = s => !s || (s.earned < 2000 && s.tiles <= 12);
+// Fingerabdruck von allem, was nur der Spieler ändert (nicht Taler, Lager, Zeit – die laufen auf jedem Gerät von selbst weiter).
+// So zählt jede Änderung – auch Farben, Forschung, Erlasse, die nicht über ↶ laufen.
+const SIG_KEYS = ['tiles', 'decos', 'edges', 'terra', 'claimed', 'techs', 'design', 'restore', 'town', 'paintNew', 'inventions', 'vehicles', 'decree', 'festival', 'keep'];
+function worldSig(d) {
+  const s = JSON.stringify(SIG_KEYS.map(k => d[k] === undefined ? null : d[k]));
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36) + '.' + s.length;
+}
+const cloudDirty = (local, m = cloudMeta()) => (m.acts || 0) > 0 || worldSig(local) !== m.sig;
 
 // Entscheidung beim Abgleich (reine Funktion, siehe cloud.test.js): local = Kurzbeschreibung dieses Geräts,
-// cloud = meta aus der Cloud (oder null), mine = dieses Gerät hat zuletzt mit diesem Konto abgeglichen, acts = eigene Aktionen seitdem
-function cloudDecide({ local, cloud, mine, rev, acts }) {
+// cloud = meta aus der Cloud (oder null), mine = dieses Gerät hat zuletzt mit diesem Konto abgeglichen, rev = welche Version,
+// acts = hier seitdem etwas geändert, own = die neueste Cloud-Version hat dieses Fenster selbst beansprucht (Upload unterbrochen)
+function cloudDecide({ local, cloud, mine, rev, acts, own }) {
   if (!cloud) return freshSum(local) ? 'none' : 'upload';             // leere Cloud: Bespieltes hochladen
   if (mine && cloud.rev === rev) return acts ? 'upload' : 'none';      // niemand sonst hat inzwischen geschrieben
+  if (mine && own) return 'upload';                                    // eigener Upload kam nicht ganz an: hier ist der neueste Stand
   if (freshSum(local)) return 'take';                                  // leer hier → nie hochladen, Cloud holen
   if (freshSum(cloud.sum)) return 'upload';                            // leer dort, bespielt hier
   if (mine && !acts) return 'take';                                    // hier seit dem Abgleich nichts gemacht
@@ -61,55 +79,76 @@ function cloudDecide({ local, cloud, mine, rev, acts }) {
 }
 
 // ---------------------------------------------------------------------------
-// Abgleich
+// Abgleich – immer nur eins zur Zeit (Warteschlange), sonst stolpern zwei Uploads übereinander
 // ---------------------------------------------------------------------------
 const localSave = () => serialize();
-async function cloudSync(reason = '') {
-  if (!cloudUser || cloudBusy || cloudState === 'konflikt') return;
-  cloudBusy = true;
+let cloudQ = Promise.resolve(), cloudJobs = 0, cloudSyncWaiting = false, cloudTakeTries = 0;
+function cloudRun(fn) {
+  cloudJobs++; cloudBusy = true;
+  const p = cloudQ.then(fn);
+  cloudQ = p.catch(() => {}).then(() => { cloudJobs--; cloudBusy = cloudJobs > 0; });
+  return p;
+}
+function cloudSync(reason = '') {
+  if (!cloudUser || cloudOff() || cloudSyncWaiting) return cloudQ;     // schon einer in der Schlange: der sieht das Neueste mit
+  cloudSyncWaiting = true;
+  return cloudRun(async () => { cloudSyncWaiting = false; await cloudSyncNow(reason); });
+}
+const cloudUpload = (force = false, local = null, backedUp = false) => cloudRun(() => cloudUploadNow(force, local || localSave(), backedUp));
+async function cloudSyncNow(reason) {
+  if (!cloudUser || cloudState === 'konflikt') return;
   try {
     const uid = cloudUser.uid, m = cloudMeta(), cloud = await cloudApi.getMeta(uid);
     cloudKnown = cloud;
-    const local = localSave(), act = cloudDecide({ local: worldSum(local), cloud, mine: m.uid === uid, rev: m.rev, acts: m.acts || 0 });
-    if (act === 'upload') await cloudUpload(true, local);
-    else if (act === 'take') await cloudTake(cloud, local, reason);
-    else if (act === 'ask') { cloudState = 'konflikt'; cloudAsk(cloud, local); return; }
-    else { setCloudMeta({ ...cloudMeta(), uid, rev: cloud ? cloud.rev : m.rev }); cloudState = 'ok'; }
+    const local = localSave(), mine = m.uid === uid;
+    const act = cloudDecide({ local: worldSum(local), cloud, mine, rev: m.rev, acts: cloudDirty(local, m), own: !!cloud && cloud.by === cloudDevice() });
+    if (act === 'upload') await cloudUploadNow(true, local);
+    else if (act === 'take') await cloudTakeNow(cloud, local, reason, mine && !cloudDirty(local, m));
+    else if (act === 'ask') { cloudState = 'konflikt'; cloudAsk(cloud, local); }
+    else { setCloudMeta({ ...cloudMeta(), uid, rev: cloud ? cloud.rev : m.rev, sig: worldSig(local) }); cloudState = 'ok'; }
   } catch (e) { cloudState = navigator.onLine === false ? 'offline' : 'fehler'; console.warn('Cloud', e); }
-  finally { cloudBusy = false; }
 }
-// Hochladen: erst die nächste Version beanspruchen (nur, wenn die Cloud noch auf der bekannten steht), dann den Stand schreiben
+// Hochladen: erst die nächste Version beanspruchen (nur, wenn die Cloud noch auf der bekannten steht), dann den Stand schreiben.
 // Eine andere Welt (neue Insel, Datei geladen, früherer Stand) ersetzt die in der Cloud nie, ohne dass die vorher gesichert wird.
-async function cloudUpload(force = false, local = localSave(), backedUp = false) {
-  if (!cloudUser || cloudState === 'konflikt') return false;
+async function cloudUploadNow(force, local, backedUp = false) {
+  if (!cloudUser || cloudState === 'konflikt' || cloudOff()) return false;
   const m = cloudMeta(), uid = cloudUser.uid;
-  if (!force && !(m.acts > 0)) return false;
-  const sum = worldSum(local);
+  if (!force && !cloudDirty(local, m)) return false;
+  const sum = worldSum(local), acts0 = m.acts || 0;
   if (!cloudKnown) cloudKnown = await cloudApi.getMeta(uid);                   // ohne bekannten Cloud-Stand nichts blind überschreiben
   if (freshSum(sum) && cloudKnown && !freshSum(cloudKnown.sum) && !cloudFreshOk) return false;   // leer über bespielt: nur auf Wunsch
-  const expect = m.uid === uid ? (m.rev || 0) : (cloudKnown ? cloudKnown.rev : 0);
+  // gegen welche Version: die zuletzt abgeglichene – oder die eigene, wenn ein Upload dieses Fensters unterbrochen wurde
+  const own = cloudKnown && cloudKnown.by === cloudDevice() && m.uid === uid;
+  const expect = own ? cloudKnown.rev : m.uid === uid ? (m.rev || 0) : (cloudKnown ? cloudKnown.rev : 0);
   if (!backedUp && cloudKnown && cloudKnown.sum && cloudKnown.sum.seed !== sum.seed && !freshSum(cloudKnown.sum)) {
     const s = await cloudApi.getSave(uid);
     if (s && s.data) await cloudBackup(JSON.parse(s.data), 'Andere Insel, ersetzt durch eine neue');
   }
   const claim = await cloudApi.claim(uid, expect, { by: cloudDevice(), sum });
-  if (!claim.ok) { cloudKnown = claim.cur; cloudState = 'ok'; setTimeout(() => cloudSync('andere Version'), 0); return false; }
+  if (!claim.ok) { cloudKnown = claim.cur; setTimeout(() => cloudSync('andere Version'), 0); return false; }
+  cloudKnown = { rev: claim.rev, by: cloudDevice(), sum };
   await cloudApi.putSave(uid, { rev: claim.rev, data: JSON.stringify(local) });
-  setCloudMeta({ ...cloudMeta(), uid, rev: claim.rev, acts: 0 });
-  cloudKnown = { rev: claim.rev, sum }; cloudLastUp = Date.now(); cloudFreshOk = false; cloudState = 'ok';
+  const now = cloudMeta();                                                       // was während des Hochladens dazukam, zählt weiter
+  setCloudMeta({ ...now, uid, rev: claim.rev, acts: Math.max(0, (now.acts || 0) - acts0), sig: worldSig(local) });
+  cloudLastUp = Date.now(); cloudFreshOk = false; cloudState = 'ok';
   return true;
 }
-// Cloud-Stand übernehmen; der hiesige kommt vorher in die Sicherungen (außer er ist ganz neu)
-async function cloudTake(cloud, local, reason) {
+// Cloud-Stand übernehmen. Der hiesige kommt vorher in die Sicherungen – außer er ist genau der zuletzt abgeglichene (live)
+// oder ganz neu. Hat der Spieler inzwischen selbst etwas geändert, wird nicht übernommen, sondern neu entschieden.
+async function cloudTakeNow(cloud, local, reason, same = false) {
   const uid = cloudUser.uid, s = await cloudApi.getSave(uid);
-  if (!s || s.rev !== cloud.rev) { cloudState = 'ok'; setTimeout(() => cloudSync('nachladen'), 1500); return; }   // Stand ist noch unterwegs: gleich nochmal
-  const parsed = parseSave(JSON.parse(s.data));                                 // wirft bei Unsinn – dann bleibt alles, wie es ist
+  if (!s || !s.data) { cloudState = 'ok'; return; }
+  if (s.rev !== cloud.rev && cloudTakeTries++ < 3) { cloudState = 'ok'; setTimeout(() => cloudSync('nachladen'), 1500); return; }   // Stand ist noch unterwegs
+  cloudTakeTries = 0;                                       // kam er nie an (Gerät mittendrin weg): der letzte vollständige Stand gilt
+  const parsed = parseSave(JSON.parse(s.data));             // wirft bei Unsinn – dann bleibt alles, wie es ist
+  const m = cloudMeta();
+  if (same && cloudDirty(localSave(), m)) { cloudState = 'ok'; setTimeout(() => cloudSync('selbst geändert'), 0); return; }
   const ls = worldSum(local);
-  if (ls.earned >= 100 || ls.tiles > 5) await cloudBackup(local, 'Dieses Gerät, vor dem Laden aus der Cloud');
+  if (!same && (ls.earned >= 100 || ls.tiles > 5)) await cloudBackup(local, 'Dieses Gerät, vor dem Laden aus der Cloud');
   const keepCam = reason === 'anderes Gerät' && state.town.name === parsed.town.name ? { ...cam } : null;   // live: Blick bleibt, wo er ist
   adoptState(parsed);
   if (keepCam) { state.cam = keepCam; cam = state.cam; }
-  setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 0 });
+  setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 0, sig: worldSig(localSave()) });
   cloudState = 'ok';
   if (!keepCam) closePanel();
   if (!keepCam || Date.now() - cloudToastAt > 30000) { cloudToastAt = Date.now(); toast(keepCam ? '☁️ Neues von deinem anderen Gerät' : `☁️ ${state.town.name} aus der Cloud geladen`); }
@@ -136,22 +175,24 @@ function cloudAsk(cloud, local) {
   $('c-local').onclick = () => cloudResolve('local', cloud);
   $('c-cloud').onclick = () => cloudResolve('cloud', cloud);
 }
-async function cloudResolve(pick, cloud) {
+function cloudResolve(pick, cloud) {
   closeModal();
-  const uid = cloudUser.uid, local = localSave();
-  try {
-    if (pick === 'local') {
-      const s = await cloudApi.getSave(uid);
-      if (s && s.data) await cloudBackup(JSON.parse(s.data), 'Cloud-Stand, ersetzt durch ein anderes Gerät');
-      setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 1 });
-      cloudKnown = cloud; cloudState = 'ok'; cloudFreshOk = true;
-      await cloudUpload(true, local, true);
-      toast('☁️ Dieser Stand ist jetzt auch in der Cloud');
-    } else {
-      cloudState = 'ok';
-      await cloudTake(cloud, local, 'gewählt');
-    }
-  } catch (e) { cloudState = 'fehler'; toast('☁️ Das hat nicht geklappt – später nochmal'); console.warn('Cloud', e); }
+  return cloudRun(async () => {
+    const uid = cloudUser.uid, local = localSave();
+    try {
+      if (pick === 'local') {
+        const s = await cloudApi.getSave(uid);
+        if (s && s.data) await cloudBackup(JSON.parse(s.data), 'Cloud-Stand, ersetzt durch ein anderes Gerät');
+        setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 1 });
+        cloudKnown = cloud; cloudState = 'ok'; cloudFreshOk = true;
+        await cloudUploadNow(true, local, true);
+        toast('☁️ Dieser Stand ist jetzt auch in der Cloud');
+      } else {
+        cloudState = 'ok';
+        await cloudTakeNow(cloud, local, 'gewählt');
+      }
+    } catch (e) { cloudState = 'fehler'; toast('☁️ Das hat nicht geklappt – später nochmal'); console.warn('Cloud', e); }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -159,8 +200,10 @@ async function cloudResolve(pick, cloud) {
 // ---------------------------------------------------------------------------
 function cloudOnUser(u) {
   if (cloudWatchOff) { cloudWatchOff(); cloudWatchOff = null; }
+  if (cloudOff()) u = null;                                        // Testwelt: nie verbinden
   cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet' } : null;
   if (!u) { cloudState = 'aus'; return; }
+  setCloudMeta({ ...cloudMeta(), login: true });                  // beim nächsten Start gleich wieder verbinden
   cloudState = 'laden';
   cloudSync('Anmeldung');
   // live horchen: hat ein anderes Gerät eine neue Version hochgeladen, gleich abgleichen (ohne eigene Änderungen: übernehmen)
@@ -176,7 +219,8 @@ async function cloudReady() {
   return cloudApi;
 }
 const cloudStateText = () => ({ aus: 'Nicht angemeldet', laden: 'Gleicht ab …', ok: cloudLastUp ? `Gesichert um ${new Date(cloudLastUp).toLocaleTimeString('de-DE', { timeStyle: 'short' })}` : 'Verbunden',
-  offline: 'Offline – wird gesichert, sobald Netz da ist', konflikt: 'Wartet auf deine Wahl', fehler: 'Gerade nicht erreichbar' })[cloudState];
+  offline: 'Offline – wird gesichert, sobald Netz da ist', konflikt: 'Wartet auf deine Wahl', fehler: 'Gerade nicht erreichbar',
+  zweites: 'Das Spiel ist in einem anderen Fenster offen – bitte dieses hier schließen' })[cloudState];
 // Verständliche Meldungen, wenn die Anmeldung nicht klappt (iPhone: Pop-ups, privater Modus, App-Browser)
 function cloudLoginFail(e) {
   const code = (e && e.code) || '';
@@ -195,6 +239,7 @@ function cloudLoginFail(e) {
   $('m-ok').onclick = openCloud;
 }
 async function openCloud() {
+  if (cloudOff()) { openModal('<h2>☁️ Online-Speicher</h2><p>In der Testwelt gibt es keinen Online-Speicher – sie ist zum Ausprobieren da und wird nie gespeichert.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>'); $('m-ok').onclick = closeModal; return; }
   if (!cloudUser) {
     openModal(`
       <h2>☁️ Online-Speicher</h2>
@@ -242,21 +287,23 @@ async function openCloud() {
     openModal(`<h2>Abmelden?</h2><p>Deine Insel bleibt auf diesem Gerät und in der Cloud. Neues wird erst nach dem nächsten Anmelden wieder gesichert.</p>
       <div class="row"><button class="btn ghost" id="m-no">Lieber nicht</button><button class="btn" id="m-yes">Abmelden</button></div>`);
     $('m-no').onclick = openCloud;
-    $('m-yes').onclick = async () => { await cloudApi.signOut(); setCloudMeta({ dev: cloudDevice() }); cloudOnUser(null); closeModal(); toast('☁️ Abgemeldet'); };
+    $('m-yes').onclick = async () => { await cloudApi.signOut(); setCloudMeta({}); cloudOnUser(null); closeModal(); toast('☁️ Abgemeldet'); };
   };
   for (const b of document.querySelectorAll('[data-cback]')) b.onclick = () => cloudRestore(b.dataset.cback);
 }
 // Früheren Stand zurückholen: der jetzige wird vorher selbst gesichert
-async function cloudRestore(id) {
-  const uid = cloudUser.uid;
-  try {
-    const data = await cloudApi.getBackup(uid, id), parsed = parseSave(JSON.parse(data));
-    await cloudBackup(localSave(), 'Vor dem Zurückholen eines früheren Stands');
-    adoptState(parsed);
-    cloudFreshOk = true; cloudTouched();
-    await cloudUpload(true, localSave(), true);
-    closeModal(); toast(`☁️ ${state.town.name} ist zurück`);
-  } catch (e) { toast('☁️ Das hat nicht geklappt'); console.warn('Cloud', e); }
+function cloudRestore(id) {
+  return cloudRun(async () => {
+    const uid = cloudUser.uid;
+    try {
+      const data = await cloudApi.getBackup(uid, id), parsed = parseSave(JSON.parse(data));
+      await cloudBackup(localSave(), 'Vor dem Zurückholen eines früheren Stands');
+      adoptState(parsed);
+      cloudFreshOk = true; cloudTouched();
+      await cloudUploadNow(true, localSave(), true);
+      closeModal(); toast(`☁️ ${state.town.name} ist zurück`);
+    } catch (e) { toast('☁️ Das hat nicht geklappt'); console.warn('Cloud', e); }
+  });
 }
 
 // Anmelde-Link aus der E-Mail: beim Öffnen der Seite erkennen und abschließen
@@ -285,6 +332,7 @@ async function cloudFirebase() {
   for (const f of ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-database-compat.js']) await loadScript(base + f);
   const fb = window.firebase, app = fb.apps.length ? fb.app() : fb.initializeApp(FIREBASE_CONFIG), auth = app.auth(), db = app.database();
   const ref = (uid, p) => db.ref(`users/${uid}/${p}`);
+  const T = (p, ms = 20000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('Zeitüberschreitung')), ms))]);
   return {
     onUser: cb => auth.onAuthStateChanged(cb),
     signInGoogle: () => auth.signInWithPopup(new fb.auth.GoogleAuthProvider()),
@@ -293,31 +341,31 @@ async function cloudFirebase() {
     finishLink: (mail, href) => auth.signInWithEmailLink(mail, href),
     signOut: () => auth.signOut(),
     watchMeta: (uid, cb) => { const r = ref(uid, 'meta'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
-    getMeta: async uid => (await ref(uid, 'meta').get()).val(),
-    getSave: async uid => (await ref(uid, 'save').get()).val(),
+    getMeta: async uid => (await T(ref(uid, 'meta').get())).val(),
+    getSave: async uid => (await T(ref(uid, 'save').get(), 60000)).val(),
     // nächste Version beanspruchen, nur wenn die Cloud noch auf expect steht
     claim: async (uid, expect, info) => {
       let next = 0;
-      const r = await ref(uid, 'meta').transaction(cur => {
+      const r = await T(ref(uid, 'meta').transaction(cur => {
         if (cur && (cur.rev || 0) !== expect) return undefined;            // jemand anders war schneller: abbrechen
         next = ((cur && cur.rev) || 0) + 1;
         return { rev: next, at: fb.database.ServerValue.TIMESTAMP, by: info.by, sum: info.sum };
-      }, undefined, false);
+      }, undefined, false));
       return r.committed ? { ok: true, rev: next } : { ok: false, cur: r.snapshot.val() };
     },
-    putSave: (uid, s) => ref(uid, 'save').set(s),
+    putSave: (uid, s) => T(ref(uid, 'save').set(s), 60000),
     addBackup: async (uid, info, data) => { const id = ref(uid, 'bindex').push().key; await ref(uid, 'backups/' + id).set({ data }); await ref(uid, 'bindex/' + id).set(info); return id; },
-    listBackups: async uid => Object.entries((await ref(uid, 'bindex').get()).val() || {}).map(([id, b]) => ({ id, ...b })),
-    getBackup: async (uid, id) => ((await ref(uid, 'backups/' + id).get()).val() || {}).data,
+    listBackups: async uid => Object.entries((await T(ref(uid, 'bindex').get())).val() || {}).map(([id, b]) => ({ id, ...b })),
+    getBackup: async (uid, id) => ((await T(ref(uid, 'backups/' + id).get(), 60000)).val() || {}).data,
     dropBackup: async (uid, id) => { await ref(uid, 'backups/' + id).remove(); await ref(uid, 'bindex/' + id).remove(); },
   };
 }
 
 // Start: war man angemeldet oder kommt man über den Link aus der E-Mail, Firebase im Hintergrund laden
 function cloudBoot() {
-  if (PROBE || TESTWELT) return;
+  if (cloudOff()) return;
   const link = /[?&]oobCode=/.test(location.search) && /[?&]mode=signIn/.test(location.search);
-  if (!cloudMeta().uid && !link) return;
+  if (!cloudMeta().login && !cloudMeta().uid && !link) return;
   cloudReady().then(() => { if (link) cloudFinishLink(); }).catch(() => { cloudState = 'offline'; });
 }
 // Regelmäßig sichern (nur eigene Aktionen), beim Verlassen sofort, beim Zurückkommen nachsehen, ob ein anderes Gerät weiter ist
@@ -325,10 +373,25 @@ function cloudDue(now = Date.now()) {
   return !!cloudUser && cloudState === 'ok' && !cloudBusy && cloudMeta().acts > 0 && now - cloudLastUp > CLOUD_GAP
     && (now - cloudActAt > CLOUD_QUIET || now - cloudLastUp > CLOUD_EVERY);
 }
-setInterval(() => { if (cloudDue()) cloudUpload().catch(() => { cloudState = 'offline'; }); }, 2000);
+// Änderungen, die nicht über ↶ laufen (Farben, Forschung, Erlasse …): alle paar Sekunden am Fingerabdruck erkennen
+let cloudSigAt = 0;
+function cloudWatchLocal(now = Date.now()) {
+  if (!cloudUser || cloudState !== 'ok' || cloudBusy || now - cloudSigAt < 8000) return;
+  cloudSigAt = now;
+  const m = cloudMeta();
+  if (!(m.acts > 0) && m.sig && worldSig(localSave()) !== m.sig) cloudTouched();
+}
+setInterval(() => { cloudWatchLocal(); if (cloudDue()) cloudUpload().catch(() => { cloudState = 'offline'; }); }, 2000);
 document.addEventListener('visibilitychange', () => {
   if (!cloudUser) return;
-  if (document.hidden) { save(); cloudUpload().catch(() => {}); } else cloudSync('zurück');
+  if (document.hidden) { save(); cloudUpload().catch(() => {}); } else cloudSync('zurück');   // cloudUpload lädt nur Geändertes
 });
-window.addEventListener('online', () => { if (cloudUser && cloudState !== 'konflikt') { cloudState = 'ok'; cloudSync('online'); } });
+window.addEventListener('online', () => { if (cloudUser && cloudState === 'offline') { cloudState = 'ok'; cloudSync('online'); } });
+// Das Spiel ist in einem zweiten Fenster/Tab offen und speichert dort: beide teilen sich den Browser-Speicher – dieses hier lädt
+// dann nichts mehr hoch (sonst schickte es einen veralteten Stand in die Cloud)
+window.addEventListener('storage', e => {
+  if (e.key !== SAVE_KEY || !cloudUser || cloudState === 'zweites') return;
+  cloudState = 'zweites';
+  toast('☁️ Das Spiel ist noch in einem anderen Fenster offen – hier wird nichts mehr in die Cloud gesichert');
+});
 cloudBoot();

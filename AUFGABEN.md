@@ -1051,3 +1051,15 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 93b: Änderungen kamen auf dem anderen Gerät nicht an (hochgeladen erst nach 2 Minuten, das andere Gerät sah nur beim
       Zurückkehren nach). Jetzt: hochladen ~6 s nach der letzten Aktion (bei Dauerbauen spätestens alle 45 s, nie öfter als
       alle 10 s); andere Geräte horchen live auf `meta` und übernehmen sofort, wenn sie selbst nichts geändert haben (Blick bleibt).
+- [x] 93c: Prüfung vor dem Veröffentlichen – gefunden und behoben:
+      • Änderungen ohne ↶ (Farben, Forschung, Erlasse …) zählten nicht → Fingerabdruck des Stands (`worldSig`) erkennt jede.
+      • Zwei Uploads gleichzeitig (Takt + Seite verlassen) → Rückfrage gegen sich selbst → Warteschlange (`cloudRun`).
+      • Was während des Hochladens gebaut wurde, galt als hochgeladen → Aktionen zählen weiter.
+      • Upload unterbrochen (Version beansprucht, Stand nicht geschrieben) → Endlos-Warten bzw. Rückfrage → still nachholen;
+        stirbt ein anderes Gerät mittendrin, gilt nach 3 Versuchen der letzte ganze Stand.
+      • Jede Live-Übernahme legte eine Sicherung an (verdrängte die echten) → nur noch, wenn hier etwas Ungesichertes war.
+      • Testwelt konnte sich anmelden und die echte Insel ersetzen → in Testwelt/Probeansicht kein Online-Speicher.
+      • Spiel in zwei Tabs: einer hätte Veraltetes hochgeladen → der zweite lädt nichts mehr hoch und sagt es.
+      • Ohne Netz hing Firebase endlos → Zeitgrenze; angemeldet bleibt man auch, wenn der erste Abgleich scheiterte.
+      Datenbank von außen geprüft: ohne Anmeldung kein Lesen/Schreiben. cloud.test.js: 21 Fälle.
+

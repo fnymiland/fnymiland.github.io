@@ -2203,7 +2203,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-cloud">☁️ Online-Speicher${cloudUser ? ' · angemeldet' : ''}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-cloud">☁️ Online-Speicher${cloudState === 'konflikt' ? ' · ⚠️ bitte Stand wählen' : cloudUser ? ' · angemeldet' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
