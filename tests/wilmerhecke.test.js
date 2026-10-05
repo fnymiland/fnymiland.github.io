@@ -47,4 +47,16 @@ describe('Wilmerhecke (Block 86)', () => {
     const n = game("(() => { let k = 0; const o = wilmerBush; wilmerBush = () => { k++; }; try { for (const key of state.edges.keys()) drawEdge(key, state.edges.get(key), 1.4, 1000); } finally { wilmerBush = o; } return k; })()");
     expect(n).toBe(2 * game('BUSH_PER') + 1);                                          // je Kante die Reihe, je Eckpunkt genau ein Busch (2 Enden + Ecke)
   });
+  it('an jeder Eckart liegen die Büsche richtig übereinander (kein hinterer Busch über einem vorderen)', () => {
+    // alle vier Ecken eines Rechtecks + Zickzack; gezeichnet wird wie im Spiel: Feld für Feld von hinten nach vorn, je Feld erst a, dann b
+    game("state.edges.clear(); chosenStyle.hecke = 'wilmer'; for (let i = 0; i < 2; i++) { buildEdge('hecke', 'a' + (8 + i) + ',8'); buildEdge('hecke', 'a' + (8 + i) + ',11'); } for (let i = 0; i < 3; i++) { buildEdge('hecke', 'b8,' + (8 + i)); buildEdge('hecke', 'b10,' + (8 + i)); }");
+    game("['a3,3', 'a4,3', 'b5,3', 'b5,4', 'a5,5', 'a6,5'].forEach(k => buildEdge('hecke', k)); recalc()");
+    const seq = game(`(() => { const out = []; const o = wilmerBush; wilmerBush = m => { out.push([+m[0].toFixed(3), +m[1].toFixed(3)]); };
+      try { for (let s = 0; s <= 40; s++) for (let x = 0; x <= s; x++) drawEdgesAt(x, s - x, 1.4, 1000); } finally { wilmerBush = o; } return out; })()`);
+    const bad = [];
+    // ein hinterer Busch nach einem vorderen ist nur schlimm, wenn der vordere danach nicht noch einmal gezeichnet wird
+    const redrawn = (i, j) => seq.slice(j + 1).some(([u, v]) => u === seq[i][0] && v === seq[i][1]);
+    seq.forEach(([x, y], i) => { for (let j = i + 1; j < seq.length; j++) { const [u, v] = seq[j]; if (Math.hypot(u - x, v - y) < 0.3 && u + v < x + y - 1e-6 && !redrawn(i, j)) bad.push(seq[j] + ' nach ' + seq[i]); } });
+    expect(bad).toEqual([]);
+  });
 });

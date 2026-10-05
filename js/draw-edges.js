@@ -85,19 +85,18 @@ function bushRow(line, look, z, seed, d0 = 0) {
   alongLine(line, BUSH_PER, d0, (m, i) => at.push([m, i]));
   drawBushes(at, look, z, seed);
 }
-// Büsche auf einer geraden Kante k an festen Stellen (1, 2, 3 … / BUSH_PER), nur zwischen t0 und t1. Auf jedem Eckpunkt
-// genau ein Busch – ihn zeichnet das erste Wilmer-Stück am Punkt (wilmerOwner): Ecken werden ein sauberes „L“, Enden
-// schließen am Punkt ab, und aneinandergesetzte Stücke haben überall denselben Abstand (Block 86f)
+// Büsche auf einer geraden Kante k an festen Stellen (0, 1, 2 … / BUSH_PER), nur zwischen t0 und t1. Auf jedem Eckpunkt ein
+// Busch: Ecken werden ein sauberes „L“, Enden schließen am Punkt ab, überall derselbe Abstand (Block 86f). Wer ihn zeichnet,
+// hängt an der Reihenfolge (Block 86g): Stücke, die am Punkt beginnen (a/b am Punkt, Feld davor), kommen nach denen, die dort
+// enden – also zeichnet ihn das erste beginnende vor seinen Büschen; beginnt dort keins, zeichnet ihn jedes endende als Letztes
 const isWilmer = e => !!e && e.b === 'hecke' && (e.style || '').startsWith('wilmer');
-function wilmerOwner(vx, vy) {
-  return ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)].find(o => isWilmer(state.edges.get(o))) || null;
-}
+const wilmerStart = (vx, vy) => ['a' + vx + ',' + vy, 'b' + vx + ',' + vy].find(o => isWilmer(state.edges.get(o))) || null;   // drawEdgesAt: erst a, dann b
 function bushSpan(k, E, t0, t1, look, z, seed) {
   const at = [], [vp, vq] = edgeEndPoints(k);
   for (let m = 0; m <= BUSH_PER; m++) {
     const t = m / BUSH_PER;
     if (t < t0 - 1e-9 || t > t1 + 1e-9) continue;
-    if ((m === 0 && wilmerOwner(...vp) !== k) || (m === BUSH_PER && wilmerOwner(...vq) !== k)) continue;
+    if ((m === 0 && wilmerStart(...vp) !== k) || (m === BUSH_PER && wilmerStart(...vq))) continue;
     at.push([lerp2(E.p, E.q, t), m]);
   }
   drawBushes(at, look, z, seed);
