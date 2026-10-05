@@ -255,13 +255,13 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   return true;
 }
 // Kleine Deko in einer Ecke
-function spriteSmall(b, rot, sx, sy, z, now, x, y, slot) {
+function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
-  const key = `deco|${b}|${rot}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);
+  const key = `deco|${b}|${rot}|${col}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);   // col: Buschfarbe
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
   const e = getSprite(key, z, () => {
-    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot }); });
+    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col }); });
     sp.z = z;
     return sp;
   });
@@ -510,7 +510,7 @@ function groupPreview(z) {
     const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
     if (it.kind === 'deco') {
       const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d.b);
-      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot); });
+      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, it.d.col || 0); });
       continue;
     }
     const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0, t);
@@ -825,7 +825,8 @@ function render(now) {
     if (preview && preview.small && hover.x === x && hover.y === y) {
       const [u, v] = slotPos(x, y, preview.slot, ghostType), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
-      drawSmallOne(ghostType, tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot), q[0], q[1], z, now, x, y, 1, preview.slot);   // wie es gesetzt wird (Block 69)
+      drawSmallOne(ghostType, tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot), q[0], q[1], z, now, x, y, 1, preview.slot,
+        tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : 0);   // wie es gesetzt wird (Block 69)
       g.globalAlpha = 1;
     }
     if (groupGhost && groupGhost.has(k)) {

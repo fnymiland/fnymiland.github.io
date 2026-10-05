@@ -112,6 +112,16 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     state.tiles.set((ex + 4) + ',' + (ey + 2), { b: 'haus', lvl: 3, rot: 2 }); nameHouses();
     rebuildCover(); recalc(); })()`);
   console.log('Hauptbahnhöfe', JSON.stringify(hb));
+  // Buschfarben (Block 89): je Farbe vier Deko-Büsche, eine Wilmerhecke (abwechselnd mit Blüten/Lichtern), dazu Busch-Größen
+  game(`(() => { const X = 36, Y = 62;
+    for (let y = Y - 1; y < Y + 7; y++) for (let x = X - 1; x < X + 13; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }
+    waterChanged(); sandCache.clear(); landCache.clear();
+    BUSH_COLS.forEach((c, i) => {
+      const k = (X + i) + ',' + Y; state.decos.set(k, newSlots()); for (const sl of [0, 1, 2, 3]) state.decos.get(k)[sl] = { b: 'busch', rot: 0, ...(i ? { col: i } : {}) };
+      state.edges.set('a' + (X + i) + ',' + (Y + 3), { b: 'hecke', style: ['wilmer', 'wilmer_bluete', 'wilmer_licht'][i % 3], ...(i ? { col: i } : {}) });
+    });
+    state.tiles.set((X + 2) + ',' + (Y + 5), { b: 'busch_m', lvl: 1, col: 5 }); state.tiles.set((X + 5) + ',' + (Y + 4), { b: 'busch_l', lvl: 1, col: 9 });
+    rebuildCover(); recalc(); })()`);
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;
     for (let j = 0; j < 10 && ok; j++) for (let i = 0; i < 11 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || isSea(x + i, y + j) || terrainAt(x + i, y + j) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz' || state.decos.get(k)) ok = false; }

@@ -352,6 +352,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+90. **Buschfarben** (Block 89): Farbe eines Busches (Deko `d.col`, Busch-Feld `t.col`, Wilmer-Linie `e.col`) = Index in `BUSH_COLS`;
+    gezeichnet nur im Fall `'busch'` (auch die Wilmerhecke ruft ihn). Frei/gekauft über `bushColOk`, für Neues `bushColNew('busch'|'hecke')`.
+    Wer neue Deko-Eigenschaften einführt, nimmt sie in `serialize` (Deko-Felder werden einzeln übernommen!) und ggf. in den Bildchen-Schlüssel auf.
 89. **Hauptbahnhof** (Block 85): Jedes Gleis ist ein `K.scene`-Stück (Prellbock, Bahnsteig mit Ausstattung, zuletzt das Dach) –
     Dinge, die übereinander liegen, nie als getrennte Teile sortieren lassen. Empfangsgebäude: Portal mit Uhrturm bei b = 0
     (halbe Breite `PW`), Flügel je Gleis ohne den Portalbereich. Eingang nach außen (−a), davor `hbfEntrance(t, x, y)`.

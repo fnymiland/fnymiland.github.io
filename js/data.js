@@ -959,9 +959,25 @@ const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1',
 // Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern). Die ersten drei Wand- und Dachfarben
 // und der Kiesweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
 const FREE_COLORS = 3;
+// Buschfarben (Block 89): für den kleinen Busch, seine Größen und die Wilmerhecke. Grüntöne gleich frei, Herbst und Bunt in der
+// Kunstakademie. c: Grundton, Schattenseite, Krone, Glanzlicht (wie der Deko-Busch)
+const BUSH_COLS = [
+  { id: 'gruen', name: 'Grün', c: ['#5aae54', '#4a944a', '#62b85a', '#86d37c'] },
+  { id: 'hell', name: 'Hellgrün', c: ['#7cc463', '#66ad52', '#8bd170', '#b2e69c'] },
+  { id: 'dunkel', name: 'Dunkelgrün', c: ['#3f8a45', '#33743a', '#4a964e', '#6db070'] },
+  { id: 'blau', name: 'Blaugrün', c: ['#4f9e86', '#3f8673', '#5aab91', '#86cbb5'] },
+  { id: 'oliv', name: 'Olivgrün', c: ['#8a9a4a', '#74843c', '#98a855', '#bccb7c'] },
+  { id: 'rot', name: 'Ahornrot', c: ['#d0583f', '#b04532', '#dc6a4c', '#f29a7c'], design: 120 },
+  { id: 'orange', name: 'Herbstorange', c: ['#e8893a', '#c9712c', '#f09a4a', '#f8c07c'], design: 120 },
+  { id: 'gold', name: 'Goldgelb', c: ['#e2bd3a', '#c4a12c', '#ecc94e', '#f6e08c'], design: 120 },
+  { id: 'rosa', name: 'Rosa', c: ['#e88fb4', '#cf759b', '#f09fc1', '#f9cde0'], design: 160 },
+  { id: 'lila', name: 'Blutbuche', c: ['#8a4f7a', '#723f65', '#9a5c89', '#c08bb2'], design: 160 },
+  { id: 'weiss', name: 'Weiß bereift', c: ['#cfe0d6', '#aac2b5', '#dfece4', '#ffffff'], design: 160 },
+];
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
+  ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),
   ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
   ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
   ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master })),

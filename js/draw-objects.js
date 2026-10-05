@@ -1239,12 +1239,13 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       crystal(cx, cy + 2 * z, z, 11 * z, 2.8 * z, 0.05);
       break;
     }
-    case 'busch': {
+    case 'busch': {                                                  // Farbe: t.col (Block 89)
+      const [c0, c1, c2, c3] = (BUSH_COLS[(t && t.col) || 0] || BUSH_COLS[0]).c;
       ellipse(cx, cy + 1 * z, 9 * z, 3.5 * z, 'rgba(40,60,20,0.18)');
-      circle(cx - 4 * z, cy - 5 * z, 6 * z, C('#5aae54'));
-      circle(cx + 4 * z, cy - 5 * z, 6 * z, C('#4a944a'));
-      circle(cx, cy - 9 * z, 6.5 * z, C('#62b85a'));
-      circle(cx - 2 * z, cy - 11 * z, 2.6 * z, C('#86d37c'));
+      circle(cx - 4 * z, cy - 5 * z, 6 * z, C(c0));
+      circle(cx + 4 * z, cy - 5 * z, 6 * z, C(c1));
+      circle(cx, cy - 9 * z, 6.5 * z, C(c2));
+      circle(cx - 2 * z, cy - 11 * z, 2.6 * z, C(c3));
       break;
     }
     case 'palme': {                        // gebogener Stamm in Ringen, Wedel hängen rundum herab, Kokosnüsse
@@ -1954,11 +1955,11 @@ function drawTrophy(cx, cy, z, now, [base, light, dark]) {
     g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
   }
 }
-function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0) {
-  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot)) return;   // weit weg: Bildchen (render.js)
+function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0) {
+  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col)) return;   // weit weg: Bildchen (render.js)
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
-  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot });
+  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col });
   g.restore();
 }
 function drawSmall(k, px, py, z, now, x, y, which) {
@@ -1970,7 +1971,7 @@ function drawSmall(k, px, py, z, now, x, y, which) {
     const [u, v] = slotPos(x, y, i, d.b);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
-    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i);
+    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0);
   }
 }
 

@@ -872,11 +872,12 @@ function setArch(k, type) {
 }
 function buildEdge(b, k) {
   const style = currentStyle(b), old = state.edges.get(k);
-  if (old && old.b === b && old.style === style) return false;
+  if (old && old.b === b && old.style === style && (old.col || 0) === (b === 'hecke' && isWilmerStyle(style) ? bushColNew('hecke').col || 0 : old.col || 0)) return false;
   const d = ITEMS[b];
   if (old) { state.money += ITEMS[old.b].cost; for (const [r, n] of Object.entries(ITEMS[old.b].mat || {})) state.res[r] += n; }   // die alte Linie zurück (Block 84b)
   state.money -= d.cost; payMat(d.mat || {});
-  state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
+  const col = b === 'hecke' && isWilmerStyle(style) ? (bushColNew('hecke').col || (old && isWilmerStyle(old.style) ? old.col : undefined)) : undefined;   // Buschfarbe (Block 89)
+  state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }
 function removeEdge(k) {
@@ -1160,13 +1161,18 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now() };
+  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}) };
   sfx('deco');
   recalc(); checkStars(); save();
   return true;
 }
 // Kleine Deko zurückgeben: Preis und Material – geschenkte (Parkbäume aus dem Wald, Block 84b) bringen nichts
 const decoBack = d => d.free ? 0 : ITEMS[d.b].cost || 0;
+// Buschfarbe (Block 89): Index in BUSH_COLS; frei oder in der Kunstakademie gekauft. Für neu Gebautes: state.paintNew.busch
+// (Busch und seine Größen) bzw. state.paintNew.hecke (Wilmerhecke), je { col }
+const bushColOk = i => !!BUSH_COLS[i] && (!BUSH_COLS[i].design || state.design.has('busch:' + BUSH_COLS[i].id) || !!(state.legacy && state.legacy.has('busch:' + BUSH_COLS[i].id)));
+const bushColNew = key => { const p = state.paintNew[key]; return p && p.col && bushColOk(p.col) ? { col: p.col } : {}; };
+const isWilmerStyle = st => (st || '').startsWith('wilmer');
 function payBackDeco(d) {
   if (d.free) return;
   state.money += ITEMS[d.b].cost || 0;

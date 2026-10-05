@@ -99,17 +99,17 @@ function bushSpan(k, E, t0, t1, look, z, seed) {
     if ((m === 0 && wilmerStart(...vp) !== k) || (m === BUSH_PER && wilmerStart(...vq))) continue;
     at.push([lerp2(E.p, E.q, t), m]);
   }
-  drawBushes(at, look, z, seed, 'E' + k);
+  drawBushes(at, look, z, seed, 'E' + k, (state.edges.get(k) || {}).col || 0);
 }
-function drawBushes(at, look, z, seed, id = null) {
+function drawBushes(at, look, z, seed, id = null, col = 0) {
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);   // von hinten nach vorn
-  for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i, id);
+  for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i, id, col);
 }
-function wilmerBush(m, look, z, r = 0.5, i = 0, id = null) {
+function wilmerBush(m, look, z, r = 0.5, i = 0, id = null, col = 0) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
   const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
   g.save(); g.translate(x, y); g.scale(ds, ds);
-  try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, null); } finally { g.restore(); }
+  try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, { col }); } finally { g.restore(); }   // Buschfarbe (Block 89)
   if (look.lights) {                                               // Lichter (Block 86m): auf jedem Busch derselbe kleine Bogen vorn
     const lit = id ? edgeLit(id) : night > 0.15 && isLive();
     for (const [dx, dy] of [[-4.6, -6.2], [-1.6, -4.6], [1.6, -4.6], [4.6, -6.2]]) {

@@ -353,6 +353,15 @@ function styleSwatch(st) {
   return bg;
 }
 // Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
+// Farbchips in der Musterleiste (Block 89): gewählte Farbe gilt für neu Gebautes (state.paintNew[key])
+function bushChips(key) {
+  const cur = (state.paintNew[key] && state.paintNew[key].col) || 0;
+  return '<span class="style-sep"></span>' + BUSH_COLS.map((c, i) => [c, i]).filter(([, i]) => bushColOk(i)).map(([c, i]) =>
+    `<button class="style-chip${i === cur ? ' on' : ''}" data-bchip="${i}" title="${c.name}" aria-label="Farbe: ${c.name}"><i style="background:${c.c[0]}"></i><span>${c.name}</span></button>`).join('');
+}
+function wireBushChips(bar, key, t) {
+  for (const b of bar.querySelectorAll('[data-bchip]')) b.onclick = () => { state.paintNew[key] = { col: +b.dataset.bchip }; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
+}
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes);
@@ -360,6 +369,8 @@ function renderStyleBar(t) {
     const foot = id => ITEMS[id].small ? 'Ecke' : ITEMS[id].size ? ITEMS[id].size.join('×') : '1×1';
     bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${SIZE_NAMES[k]}">
       <i>${SIZE_NAMES[k][0]}</i><span>${SIZE_NAMES[k]} · ${foot(id)}</span></button>`).join('');
+    if (baseOf(t) === 'busch') bar.innerHTML += bushChips('busch');                     // Farbe gleich beim Bauen (Block 89)
+    wireBushChips(bar, 'busch', t);
     for (const b of bar.querySelectorAll('[data-size]')) b.onclick = () => { const open = !!buildInfo; sizeChoice[baseOf(t)] = b.dataset.size; sfx('deco'); setTool(b.dataset.size); if (open) openBuildInfo(b.dataset.size); };
     bar.hidden = false;
     return;
@@ -371,6 +382,7 @@ function renderStyleBar(t) {
     + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '')
     + (t === 'weg' ? `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
       `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
+  if (t === 'hecke' && isWilmerStyle(cur)) { bar.innerHTML += bushChips('hecke'); wireBushChips(bar, 'hecke', t); }   // Farbe der Wilmerhecke (Block 89)
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar(t); };
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
@@ -936,6 +948,35 @@ function wirePaintMore(el, t, reopen) {
   if (all) all.onclick = () => undoable(() => { const n = paintAllLike(t); rememberPaint(t); sfx('deco'); save(); toast(`🎨 ${n} × ${ITEMS[t.b].name} umgefärbt`); reopen(); });
   if (nw) nw.onclick = () => { state.paintNew[t.b] = state.paintNew[t.b] ? false : paintOf(t); sfx('deco'); save(); reopen(); };
 }
+// Buschfarbe (Block 89): Farbfelder, „für alle anderen übernehmen“ und „neu gebaute bekommen diese Farbe“ – für Busch-Deko und
+// Busch-Größen (paintNew.busch) und die Wilmerhecke (paintNew.hecke). o: { cur, key, others, set(i), all(i) → Anzahl, reopen }
+const bushAll = () => {                                           // alle Büsche: Deko-Ecken und Busch-Felder (Größen)
+  const out = [];
+  for (const ds of state.decos.values()) for (const d of ds) if (d && d.b === 'busch') out.push(d);
+  for (const t of state.tiles.values()) if (baseOf(t.b) === 'busch') out.push(t);
+  return out;
+};
+const wilmerAll = () => [...state.edges.values()].filter(e => e.b === 'hecke' && isWilmerStyle(e.style));
+function bushColHtml(cur, key, others) {
+  const have = BUSH_COLS.map((c, i) => [c, i]).filter(([, i]) => bushColOk(i)), more = BUSH_COLS.length - have.length;
+  const on = !!(state.paintNew[key] && state.paintNew[key].col != null);
+  return `<div class="label">Farbe</div>
+    <div class="swatches">${have.map(([c, i]) => `<button class="sw${i === cur ? ' on' : ''}" data-bcol="${i}" style="background:${c.c[0]}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}${more ? `<button class="sw" data-bmore="1" title="${more} weitere Farben in der Kunstakademie" aria-label="${more} weitere Farben in der Kunstakademie">🎨</button>` : ''}</div>
+    <div class="looks paint-more">${others ? `<button class="look" data-bcolall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
+      <button class="look${on ? ' on' : ''}" data-bcolnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen diese Farbe</button></div>`;
+}
+function wireBushCol(el, o) {
+  for (const b of el.querySelectorAll('[data-bcol]')) b.onclick = () => {
+    const i = +b.dataset.bcol;
+    undoable(() => { o.set(i); if (state.paintNew[o.key] && state.paintNew[o.key].col != null) state.paintNew[o.key] = { col: i }; sfx('deco'); save(); });
+    o.reopen();
+  };
+  const all = el.querySelector('[data-bcolall]'), nw = el.querySelector('[data-bcolnew]'), more = el.querySelector('[data-bmore]');
+  if (all) all.onclick = () => { undoable(() => { const n = o.all(o.cur); sfx('deco'); save(); toast(`🎨 ${n} umgefärbt`); }); o.reopen(); };
+  if (nw) nw.onclick = () => { const p = state.paintNew[o.key]; state.paintNew[o.key] = p && p.col != null ? false : { col: o.cur }; sfx('deco'); save(); o.reopen(); };
+  if (more) more.onclick = () => openResearch('design');
+}
+const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -1032,6 +1073,7 @@ function openInfo(x, y) {
       ${paintMoreHtml(t)}
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
+  if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
     ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
@@ -1167,6 +1209,7 @@ function openInfo(x, y) {
   // „bunt“ (Reihenhaus): Farbe weg → jedes Haus wieder in seiner eigenen
   const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; rememberPaint(t); sfx('deco'); save(); openInfo(x, y); };
   wirePaintMore(el, t, () => openInfo(x, y));
+  if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
@@ -1285,6 +1328,7 @@ function openGateInfo(k) {
     ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen – es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
     : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
+    ${e.b === 'hecke' && isWilmerStyle(e.style) ? bushColHtml(e.col || 0, 'hecke', wilmerAll().filter(o => o !== e && (o.col || 0) !== (e.col || 0)).length) : ''}
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
     <p class="muted">Gilt für die ganze zusammenhängende Linie.${e.flush == null ? ' Von selbst: bündig nur am Park.' : ''}</p>
@@ -1295,6 +1339,7 @@ function openGateInfo(k) {
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
+  if (e.b === 'hecke' && isWilmerStyle(e.style)) wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => setCol(e, i), all: i => { const l = wilmerAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openGateInfo(k) });
 }
 // Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
 function marktStatus(k) {
@@ -1555,6 +1600,7 @@ function openDecoInfo(x, y, slot) {
     <h3>${it.name}</h3>
     <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
     ${terraLook(x, y) === 'park' ? `<div class="status">${parkStatus(x + ',' + y).join('')}</div>` : ''}
+    ${d.b === 'busch' ? bushColHtml(d.col || 0, 'busch', bushAll().filter(o => o !== d && (o.col || 0) !== (d.col || 0)).length) : ''}
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
@@ -1565,6 +1611,7 @@ function openDecoInfo(x, y, slot) {
   $('p-del').onclick = () => { closePanel(); undoable(() => removeSmall(x, y, slot)); };
   $('p-move').onclick = () => startMove(x, y, slot);
   $('p-close').onclick = closePanel;
+  if (d.b === 'busch') wireBushCol($('panel'), { cur: d.col || 0, key: 'busch', set: i => setCol(d, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openDecoInfo(x, y, slot) });
 }
 
 function openLandmark(x, y) {

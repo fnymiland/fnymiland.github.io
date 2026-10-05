@@ -988,3 +988,13 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 88c: Passte nicht (spitzes Dach + aufgesetzter Turm). Nutzer-Idee umgesetzt: Walmdach mit flacher Spitze – die Dachflächen
       laufen auf ein Plateau so groß wie der Uhrturm zu, der Turm steht bündig darauf (kein Ausschneiden mehr).
 - [x] 88d: Dach flacher (`RH_ROOF` 10), Turm länger (Schaft 19, nach Wunsch minimal tiefer als 22), Uhren im oberen Drittel.
+
+## Block 89 – Buschfarben (05.10.2026)
+- [x] Büsche und Wilmerhecke farbig (`BUSH_COLS`): Grün, Hellgrün, Dunkelgrün, Blaugrün, Olivgrün gleich frei; Ahornrot, Herbstorange,
+      Goldgelb, Rosa, Blutbuche, Weiß bereift in der Kunstakademie (Gruppe „Büsche“). Gilt für den kleinen Busch, seine Größen
+      (Busch, Buschgruppe) und alle drei Wilmerhecken; Blüten und Lichter bleiben.
+- [x] Im Fenster (Busch, Busch-Feld, Wilmer-Heckenstück): Farbfelder, „für alle anderen übernehmen“, „neu gebaute bekommen diese
+      Farbe“ (`state.paintNew.busch` / `.hecke`), mit ↶. Beim Bauen: Farbchips in der Musterleiste. Bau-Vorschau in der Farbe.
+- [x] Gespeichert (Deko `col`, Linie `col`), Bildchen weit weg kennen die Farbe. Nebenbei: geschenkte Parkbäume (`free`, 84b)
+      gingen beim Speichern verloren – jetzt gespeichert. Testwelt freizeitpark: Abschnitt „Buschfarben“ bei (36, 62).
+      Test: buschfarben.test.js.

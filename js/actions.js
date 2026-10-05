@@ -102,6 +102,7 @@ function build(b, x, y, quiet) {
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
     if (b === 'fz_schloss') state.tiles.get(k).cs = csNew();     // Märchenschloss: Gestalt (Block 60g)
+    if (baseOf(b) === 'busch') Object.assign(state.tiles.get(k), bushColNew('busch'));   // Buschfarbe (Block 89)
     if (incMinOf(d) || d.baseCost) state.tiles.get(k).price = c.cost;   // Preis nach Einkommen (auch Leuchtturm): fürs Erstatten merken (Block 60/61)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {                                                  // bunt gemischt – außer „neu gebaute bekommen diese Farben“
