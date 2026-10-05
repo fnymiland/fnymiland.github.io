@@ -977,3 +977,4 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       und Uhrenhöhe; das Rathausdach ist flacher (`RH_ROOF` 11 statt 18), so ragt der Turm von selbst heraus.
 - [x] 88c: Passte nicht (spitzes Dach + aufgesetzter Turm). Nutzer-Idee umgesetzt: Walmdach mit flacher Spitze – die Dachflächen
       laufen auf ein Plateau so groß wie der Uhrturm zu, der Turm steht bündig darauf (kein Ausschneiden mehr).
+- [x] 88d: Dach flacher (`RH_ROOF` 10), Turm länger (Schaft 22), Uhren im oberen Drittel.
