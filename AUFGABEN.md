@@ -868,23 +868,25 @@ per `build` (nicht über die Leiste) bauen ließen – jetzt abgelehnt.
 - [x] iPad: Zaun/Hecke/Mauer beim Abreißen schon beim ersten Tippen weg (sonst zeigt das erste Tippen die Vorschau).
 - [x] Eine Freischaltung während des Bauens setzt die selbst gewählte Drehung zurück.
 
-### 84c – Fortschritt und Anzeigen
-- [ ] Album-Seiten „Deko“ und „Freizeitpark“ werden nie voll (Parkrasen, Fz-Boden und Höhen-Pinsel sind keine Gebäude) →
+### 84c – Fortschritt und Anzeigen – erledigt
+Tests: fehler84c.test.js. Jahrmarkt: Feuerwerk überm Riesenrad (Lichter gibt es schon am Riesenrad). „Das ist neu“: neue Kennung
+`2026-10-05-kap` mit Kap, Schloss, Wegen, Umfärben und den Reparaturen.
+- [x] Album-Seiten „Deko“ und „Freizeitpark“ werden nie voll (Parkrasen, Fz-Boden und Höhen-Pinsel sind keine Gebäude) →
       Rosenbogen und Zauberbrunnen bleiben für immer gesperrt.
-- [ ] Wunsch „Weg vor der Tür“: ein Marktstand/Brunnen auf dem Weg zählt nicht mehr als Weg (`bAt` statt `wegAt`).
-- [ ] Bestes Einkommen sinkt nie (die Rundung je Bild frisst die Abnahme) → Wunder, Inseln, Leuchtturm bleiben auf Höchstpreis.
-- [ ] Rathaus „Inseln“ zählt nur Häuser (Reihenhaus & Co. fehlen bei den Einwohnern).
-- [ ] Sehenswürdigkeit „Schaltet frei“/„Neu:“ nennt nur einen Teil (z. B. Quelle: Ferienhaus, Seebrücke fehlen).
-- [ ] „Stadtplanung“ zählt nicht für ✨ und „Bereit“ (das Fenster sagt bereit, das Funkeln fehlt).
-- [ ] Kunstakademie Stufe 3: der große Pavillon zählt nicht als Pavillon.
-- [ ] Erfolg „Kunstakademie-Stücke“: der 3. Stern ist nie erreichbar (zählt die 6 Gratis-Farben mit).
-- [ ] Schloss „+50 % auf alles“ wirkt nicht auf Veredelung und Warenverkauf.
-- [ ] Leuchtturm-Karte zeigt „Los!“, obwohl Material fehlt.
-- [ ] Einnahmen-Faktor zeigt „×3.9000000000000004“ (ungerundet, Punkt statt Komma).
-- [ ] Springt die Systemuhr zurück, zieht ein negatives dt Geld und Rohstoffe ab.
-- [ ] Jahrmarkt ohne Feuerwerk und Lichter (28a beschreibt sie).
-- [ ] Bahnübergang: Bewohner verschwinden oder kehren um, statt an der Schranke zu warten.
-- [ ] „Das ist neu“ seit 03.10. nicht erneuert (Farben, Wegform, Schloss, Bildrate, Leuchtturm-Kap fehlen).
+- [x] Wunsch „Weg vor der Tür“: ein Marktstand/Brunnen auf dem Weg zählt nicht mehr als Weg (`bAt` statt `wegAt`).
+- [x] Bestes Einkommen sinkt nie (die Rundung je Bild frisst die Abnahme) → Wunder, Inseln, Leuchtturm bleiben auf Höchstpreis.
+- [x] Rathaus „Inseln“ zählt nur Häuser (Reihenhaus & Co. fehlen bei den Einwohnern).
+- [x] Sehenswürdigkeit „Schaltet frei“/„Neu:“ nennt nur einen Teil (z. B. Quelle: Ferienhaus, Seebrücke fehlen).
+- [x] „Stadtplanung“ zählt nicht für ✨ und „Bereit“ (das Fenster sagt bereit, das Funkeln fehlt).
+- [x] Kunstakademie Stufe 3: der große Pavillon zählt nicht als Pavillon.
+- [x] Erfolg „Kunstakademie-Stücke“: der 3. Stern ist nie erreichbar (zählt die 6 Gratis-Farben mit).
+- [x] Schloss „+50 % auf alles“ wirkt nicht auf Veredelung und Warenverkauf.
+- [x] Leuchtturm-Karte zeigt „Los!“, obwohl Material fehlt.
+- [x] Einnahmen-Faktor zeigt „×3.9000000000000004“ (ungerundet, Punkt statt Komma).
+- [x] Springt die Systemuhr zurück, zieht ein negatives dt Geld und Rohstoffe ab.
+- [x] Jahrmarkt ohne Feuerwerk und Lichter (28a beschreibt sie).
+- [x] Bahnübergang: Bewohner verschwinden oder kehren um, statt an der Schranke zu warten.
+- [x] „Das ist neu“ seit 03.10. nicht erneuert (Farben, Wegform, Schloss, Bildrate, Leuchtturm-Kap fehlen).
 
 ### 84d – Zeichnen
 - [ ] Hohe große Gebäude (Riesenrad, Schloss, Kap …) verschwinden am unteren Bildrand streifenweise (aussortiert nach der

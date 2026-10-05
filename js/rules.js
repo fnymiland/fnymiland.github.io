@@ -538,7 +538,7 @@ function totals() {
   for (const l of links) { fare += l.traffic.fare; spend += l.traffic.spend; }
   inc += (fare + spend) * mT;
   inc *= 1 + wm('incMul') + FZ_INC[fzBest()];                           // Freizeitpark: Eintritt (beste Stufe, Block 60)
-  if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; }
+  if (allMul) { inc *= 1 + allMul; sci *= 1 + allMul; for (const r of Object.keys(prod)) prod[r] *= 1 + allMul; for (const c of conv) c.rate *= 1 + allMul; for (const sl of sales) sl.rate *= 1 + allMul; }   // auf alles: auch Veredelung und Verkauf
   // Warenverkauf, der sich dauerhaft halten lässt (was nachkommt, nicht der Lagerbestand) – für Preise nach Einkommen.
   // Umwandlungen nur, soweit ihr Rohstoff nachkommt; Waren mit „alles behalten“ werden nie verkauft.
   const need = {};
@@ -556,8 +556,8 @@ function totals() {
   access.green = !!won.botgarten;
   for (const [k, t] of state.tiles) if (t.b === 'haus') { const [x, y] = keyXY(k); st.get(k).wish = houseWishes(t, x, y, access); }
   // Gebäude-Stufen (für ✨ und Infofenster)
+  pop = Math.round(pop * masteryMul('einwohner'));                      // vor den Stufen: das Fenster rechnet mit T.pop (Block 84c)
   for (const [k, t] of state.tiles) if (BUILD_STAGES[t.b]) { const [x, y] = keyXY(k); st.get(k).grow = stageInfo(t, x, y, pop, jobs, access); }
-  pop = Math.round(pop * masteryMul('einwohner'));
   return { inc, pop, jobs, sci, prod, conv, beauty: Math.max(0, Math.round(beauty * masteryMul('schoen'))), lm: lmOn.size, lmOn, lmHalf, st, net, rail,
     traffic: { fare: fare * mT, spend: spend * mT, places, links }, cables, ferries, access, wonders: won, sales, salesInc, marktInc: marktInc * (1 + wm('incMul')) * (1 + allMul), markets: MARKETS };
 }
@@ -572,7 +572,7 @@ const PEAK_HALF = 1200;
 function peakTick(dt) {
   if (moving || !state.incPeak) return;
   const now = T.inc + (T.salesInc || 0);
-  if (state.incPeak > now) state.incPeak = Math.round(now + (state.incPeak - now) * Math.pow(0.5, dt / PEAK_HALF));
+  if (state.incPeak > now) state.incPeak = now + (state.incPeak - now) * Math.pow(0.5, dt / PEAK_HALF);   // nicht runden: sonst sinkt es bei 60 Bildern/s nie (Block 84c)
 }
 const statusOf = (x, y) => T.st.get(x + ',' + y);
 
@@ -2365,7 +2365,7 @@ function parkReach(acc, x, y) {
 function wishMet(w, x, y) {
   if (WISH_REACH[w]) return wishCheck(w, x, y).ok;
   switch (w) {
-    case 'weg': return DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'weg' || crossingAt(x + dx, y + dy));
+    case 'weg': return DIRS.some(([dx, dy]) => wegAt(x + dx, y + dy) != null || crossingAt(x + dx, y + dy));   // auch unter Marktstand/Brunnen (Regel 60)
     case 'deko': {
       if (state.decos.has(x + ',' + y)) return true;
       for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (state.decos.has((x + dx) + ',' + (y + dy))) return true;

@@ -6,11 +6,11 @@ const FUR = ['#f4c28f', '#c9a27e', '#fffaf2', '#b9b9c6', '#f7d9a8', '#e7a06c', '
 const SHIRTS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
-const walkable = (x, y) => {
+const walkable = (x, y, open = false) => {             // open: Schranke egal (wer schon drauf ist, geht weiter)
   if (!ownedTile(x, y)) return false;
   const t = objAt(x, y);
   if (terrainAt(x, y) === 'water') return isWegBridge(t);                          // übers Wasser nur auf einer Wegbrücke (Block 66)
-  return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
+  return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || open || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
 };
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
 function crossingClosed(x, y) {
@@ -109,15 +109,16 @@ function stepWalker(w, dt) {
     if (w.t === 0 && w.steps != null && --w.steps <= 0) setGoal(w, 'home');
     return;
   }
-  if (!walkable(w.fx, w.fy)) { w.gone = true; return; }
+  if (!walkable(w.fx, w.fy, true)) { w.gone = true; return; }
   if (w.wait > 0) { w.wait -= dt; return; }
   w.t += dt * w.speed;
   if (w.t >= 1) {
     w.fx = w.tx; w.fy = w.ty; w.t = 0;
-    const nx = w.path.shift();
+    const nx = w.path[0];
     if (!nx) { w.path = null; arrive(w); }
-    else if (!walkable(nx[0], nx[1]) || edgeBlocks(w.fx, w.fy, nx[0], nx[1])) { w.path = null; w.steps = 4; }   // inzwischen verbaut
-    else [w.tx, w.ty] = nx;
+    else if (!walkable(nx[0], nx[1], true) || edgeBlocks(w.fx, w.fy, nx[0], nx[1])) { w.path = null; w.steps = 4; }   // inzwischen verbaut
+    else if (!walkable(nx[0], nx[1])) { w.tx = w.fx; w.ty = w.fy; w.wait = 0.4; }    // Schranke zu: davor warten (Block 84c)
+    else { w.path.shift(); [w.tx, w.ty] = nx; }
   }
   w.px = w.fx + (w.tx - w.fx) * w.t;
   w.py = w.fy + (w.ty - w.fy) * w.t;

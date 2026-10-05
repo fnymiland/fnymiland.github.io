@@ -230,6 +230,18 @@ const LM_MIN = { kristall: [0, 25, 60] }, LM_REF = { kristall: 2000 }, LEUCHT_MI
 const lmPrice = (type, stage) => niceRound(Math.max(LM_PRICE[type][stage], incScaled((LM_MIN[type] || [])[stage] || 0, LM_REF[type] || 0)));
 const leuchtCost = () => niceRound(Math.max(LEUCHT_BASE, incScaled(LEUCHT_MIN, LEUCHT_REF)));
 // Was fehlt noch für die nächste Stufe?
+// Leuchtturm bereit: Taler und Material (Block 84c – vorher nur Taler, dann scheiterte das Bauen)
+const leuchtReady = () => state.money >= ITEMS.leuchtturm.cost && !matError(ITEMS.leuchtturm.mat || {});
+// Was eine Stufe freischaltet: die Liste in LM_STAGES und alles, was mit lm: 'typ:stufe' darauf wartet (Block 84c)
+function lmUnlockNames(type, i) {
+  const key = type + ':' + (i + 1), names = (LM_STAGES[type][i].unlock || []).map(unlockName);
+  const add = n => { if (n && !names.includes(n)) names.push(n); };
+  for (const [id, d] of Object.entries(ITEMS)) if (d.lm === key && !d.variantOf) add(d.name);
+  for (const st of STYLES.weg) if (st.lm === key) add(unlockName('weg:' + st.id));
+  for (const t of TECHS) if (t.lm === key) add(`Forschung „${t.name}“`);
+  for (const h of HOUSE_STAGES) if (h.lm === key) add(h.name);
+  return names;
+}
 function restoreInfo(type) {
   const stage = lmStage(type), next = LM_STAGES[type][stage], pos = lmTile(type);
   if (!next) return { stage, next: null, pos };
@@ -255,7 +267,7 @@ function restoreLandmark(type) {
   recalc();
   sparkle(info.pos[0], info.pos[1]);
   sfx('star');
-  const after = townTitle(), unl = info.next.unlock.map(unlockName);
+  const after = townTitle(), unl = lmUnlockNames(type, info.stage);
   openModal(`
     <h2>🏮 ${lmStepName(type, info.stage + 1)}</h2>
     <p>Die <b>${lanternCount()}. Laterne</b> brennt!</p>
@@ -412,7 +424,7 @@ function goalHtml() {
     return `<h4>🏮 ${n} / ${LANTERN_TOTAL} · ${townTitle(n)}</h4>${boosts}${card}${isleReq(nextIsle())}<div class="task-chips"><span class="chip" data-hall="erfolge">⭐ ${starCount()} Erfolge</span><span class="chip" data-album="1">📒 ${pct} % Album</span></div>`;
   }
   if (n >= ITEMS.leuchtturm.lanterns) {
-    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}${taskCard({ icon: '🗼', title: 'Bau den Leuchtturm', sub: 'am Wasser – dann beginnt das Laternenfest!', pct: Math.min(1, state.money / ITEMS.leuchtturm.cost), ready: state.money >= ITEMS.leuchtturm.cost, attr: 'data-try="leuchtturm"' })}`;
+    return `<h4>🏮 ${n} / ${LANTERN_TOTAL}</h4>${boosts}${taskCard({ icon: '🗼', title: 'Bau den Leuchtturm', sub: leuchtReady() || state.money < ITEMS.leuchtturm.cost ? 'am Wasser – dann beginnt das Laternenfest!' : 'Material fehlt noch: ' + matError(ITEMS.leuchtturm.mat).replace(/^Zu wenig /, ''), pct: Math.min(1, state.money / ITEMS.leuchtturm.cost), ready: leuchtReady(), attr: 'data-try="leuchtturm"' })}`;
   }
   // Laternen auf den schon erschlossenen Inseln, dazu immer die nächste Insel
   const opts = Object.keys(LM_STAGES).map(type => ({ type, info: restoreInfo(type) }))
@@ -506,7 +518,7 @@ const ACHIEVEMENTS = [
   { id: 'wege', icon: '🛤️', name: 'Wege', unit: 'km', tiers: [1, 5, 20], value: () => tileCount(t => t.b === 'weg') * 0.1 },
   { id: 'land', icon: '🌊', name: 'Land aus dem Meer', unit: 'Felder', tiers: [20, 100, 500],
     value: () => [...state.claimed].filter(k => terrainAt(...keyXY(k)) !== 'water').length },
-  { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.length], value: () => state.design.size },
+  { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.filter(d => d.price).length], value: () => state.design.size },   // Gratis-Farben kauft man nicht
   { id: 'wunder', icon: '🏛️', name: 'Wunderwerke', tiers: [1, 3, 5], value: () => tileCount(t => wonderDone(t)) },
   { id: 'fzpark', icon: '🎢', name: 'Freizeitpark-Stufe', tiers: [1, 2, 3], value: () => fzBest() },
 ];
@@ -586,6 +598,8 @@ function collectAlbum() {
     if (t.weg != null) add('weg:' + t.weg);                        // Weg unter einem Marktstand
   }
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + baseOf(d.b));
+  for (const v of state.terra.values()) { if (v === 'park') add('b:parkrasen'); else if (v === 'fz') add('b:fzboden'); }   // Boden zählt auch (Block 84c)
+  for (const t of state.tiles.values()) if (t.hgt > 0) add('b:fz_hoch');                                                  // ▼ zählt beim Benutzen (build)
   for (const e of state.edges.values()) add('b:' + e.b);             // Hecken, Zäune, Mauern (Block 41)
   // Belohnungen bleiben, auch wenn später Neues ins Album kommt (LATE_ALBUM: erst nach dem Album dazugekommen)
   if (!state.legacy) state.legacy = new Set();
@@ -768,10 +782,13 @@ function fzFestTick(now = Date.now()) {
 let fairWas = false;
 function fairTick(now = Date.now()) {
   const on = fairLeft(now) > 0;
-  if (on && !fairWas) { toast(`🎡 Jahrmarkt! ${FAIR_LEN / 60e3} Minuten lang ${FAIR_MUL}-fache Einnahmen`); sfx('star'); }
+  const w = [...state.tiles].find(([, t]) => t.b === 'riesenrad');
+  if (on && !fairWas) {
+    toast(`🎡 Jahrmarkt! ${FAIR_LEN / 60e3} Minuten lang ${FAIR_MUL}-fache Einnahmen`); sfx('star');
+    if (w) { const [x, y] = keyXY(w[0]); startFireworks([x + 2, y + 2]); }        // Feuerwerk überm Riesenrad (28a, Block 84c)
+  }
   fairWas = on;
   if (!on) return;
-  const w = [...state.tiles].find(([, t]) => t.b === 'riesenrad');
   if (w) { const [x, y] = keyXY(w[0]); sparkle(x + Math.random() * 5, y + Math.random() * 5); }
 }
 // Erlass im Schloss-Fenster: läuft, wartet (Auswahl) oder kommt bald

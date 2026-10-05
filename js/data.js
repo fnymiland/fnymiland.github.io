@@ -446,6 +446,7 @@ const SHIP_BY_ID = Object.fromEntries(SHIP_MODELS.map(m => [m.id, m])), TRAIN_BY
 const KINDS = {
   haus:    { name: 'Wohnhaus', plural: 'Wohnhäuser', of: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
   brunnen: { name: 'Brunnen', plural: 'Brunnen', of: ['brunnen', 'kristallbrunnen'] },
+  pavillon: { name: 'Pavillon', plural: 'Pavillons', of: ['pavillon'] },   // damit der große Pavillon mitzählt (Block 84c)
   park:    { name: 'Park', plural: 'Parks', of: ['botgarten'] },     // dazu Parkrasen (parkReach); der alte Park (3×3) ist seit Block 64 weg
   markt:   { name: 'Marktplatz', plural: 'Marktplätze', of: ['stand_obst', 'stand_blumen', 'stand_brot', 'stand_kaese', 'stand_fisch', 'stand_gewuerz'] },
   statue:  { name: 'Statue', plural: 'Statuen', of: ['statue', 'denkmal'] },

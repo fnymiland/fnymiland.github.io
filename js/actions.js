@@ -33,6 +33,7 @@ function build(b, x, y, quiet) {
     if (err) { if (!quiet) fail(err); return false; }
     const t = state.tiles.get(x + ',' + y);
     t.hgt = Math.max(0, Math.min(COASTER_MAXSTEP, trackLevel(x, y) + (b === 'fz_hoch' ? 1 : -1)));
+    if (state.album) state.album.add('b:' + b);                // Album: benutzt (Block 84c)
     recalc(); save();
     return true;
   }

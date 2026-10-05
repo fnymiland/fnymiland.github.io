@@ -352,6 +352,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+86. **Fortschritt und Anzeigen** (Block 84c): Was eine Laterne freischaltet, nur über `lmUnlockNames(type, i)` (Liste plus
+    alles mit `lm: 'typ:stufe'`). „Ist hier Weg?“ auch in Wünschen über `wegAt`. `incPeak` nicht runden (sonst sinkt es bei
+    60 Bildern/s nie). In `totals` steht `pop` vor den Stufen schon mit allen Faktoren. Wunder-„auf alles“ gilt für prod, conv
+    und Verkauf. Faktoren in der Leiste über `fmtMul` (Komma, gerundet). `dt` nie negativ. Neue Sorten, die Größen bekommen,
+    brauchen einen `KINDS`-Eintrag, sonst zählen die Größen nicht. Bewohner warten vor einer geschlossenen Schranke
+    (`walkable(x, y, open)`). Album: Boden (Park, Freizeitpark) zählt über `state.terra`, Pinsel beim Benutzen.
 85. **Bauen und Erstatten** (Block 84b): Geländebedingungen nur über `needError` (gilt auch für Betriebe auf einem Weg).
     `placeError` prüft Linien quer durch Mehrfeld-Gebäude, Seitenmitten-Deko (4–7) unter 1×1-Gebäuden, Dekos beim Teichgraben;
     Rathaus/Sehenswürdigkeit/Truhe (`fixed`) lassen sich nur verschieben. Beim Verschieben werden keine Übergänge gebaut

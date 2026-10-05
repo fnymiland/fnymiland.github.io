@@ -145,7 +145,7 @@ function frame(now) {
   if (now - lastFrame < frameInterval(now) - 2) return;   // dieses Bild auslassen
   lastFrame = now;
   const t = Date.now();
-  const dt = Math.min(2, (t - lastTick) / 1000);
+  const dt = Math.max(0, Math.min(2, (t - lastTick) / 1000));   // Uhr zurückgestellt: nichts abziehen (Block 84c)
   lastTick = t;
   earn(dt);
   state.science += T.sci * boostMul('sci') * dt;

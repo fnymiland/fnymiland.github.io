@@ -387,15 +387,16 @@ const hudMore = () => { hudMoreUntil = Date.now() + 5000; updateHud(); };
 // Nur schreiben, was sich geändert hat (Block 52): Safari auf dem iPad schluckt sonst den ersten Tipp auf einen Knopf,
 // in dem sich gerade etwas tut (die Leiste frischt alle 0,2 s auf)
 const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
+const fmtMul = m => String(Math.round(m * 100) / 100).replace('.', ',');   // ×3,9 statt ×3.9000000000000004 (Block 84c)
 function updateHud() {
   setText($('money'), fmtMoney(state.money));
   const bi = boostMul('inc'), bs = boostMul('sci');                        // Jahrmarkt, Erlass: gerade mehr
-  setText($('rate'), '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${bi}` : ''));
+  setText($('rate'), '+' + fmtWhole(T.inc * bi + saleRate) + '/s' + (bi > 1 ? ` ×${fmtMul(bi)}` : ''));
   setText($('pop'), fmt(T.pop));
   setText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
   setText($('sci'), fmtMoney(state.science));                    // glatt wie das Geld (vorher „1,2 Mio.“)
-  setText($('sci-rate'), T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${bs}` : '') : '');
+  setText($('sci-rate'), T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${fmtMul(bs)}` : '') : '');
   if ($('sci-dot').hidden !== !canResearch()) $('sci-dot').hidden = !canResearch();
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
@@ -1572,7 +1573,7 @@ function openLandmark(x, y) {
     const { money, mat } = info;
     const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
       ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
-    const unl = info.next.unlock.map(unlockName);
+    const unl = lmUnlockNames(type, info.stage);
     body = `
       <div class="label">Nächste Stufe: ${info.next.name}</div>
       <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
@@ -1890,7 +1891,7 @@ function openTownHall(tab = hallTab) {
       const e = per.get(regionAt(...keyXY(k)));
       if (!e) continue;
       e.n++;
-      if (t.b === 'haus') e.pop += HOUSE_STAGES[Math.min(t.lvl, HOUSE_STAGES.length) - 1].pop;
+      if (isHome(t.b)) e.pop += popOf(t);                       // alle Wohnhäuser (Regel 49)
     }
     const nx = nextIsle();
     const row = (id, icon, name, open, extra) => {
@@ -2095,12 +2096,12 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-03-freizeitpark', items: [
-  '🎢 <b>Dein eigener Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf – Märchenschloss, Pferdekarussell, Teetassen, Kettenkarussell, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte, Eis und Luftballons. Aus dem Rummelplatz wird ein Freizeitpark und schließlich ein Wunderland.',
-  '🏰 <b>Märchenschloss nach deinen Wünschen:</b> Breite, Türme, Dächer, Fahnen, Wappen, Lichterketten, Wassergraben und Mauer – oder eine Vorlage wie Ritterburg und Eispalast. Und dein Wunder-Schloss ist jetzt ein prächtiges Königsschloss mit Krone, Wachen und Feuerwerk in der Nacht.',
-  '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein – der Zug fährt den Lifthügel hinauf und saust hinunter. Mit Looping kopfüber!',
-  '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk und Umzug – 3 Minuten lang mehr Einnahmen. Und die Bewohner gehen gern selbst in den Park.',
-  '🌉 <b>Brücken und mehr Freiheit:</b> Zieh einen Weg übers Wasser – er wird von selbst zur Brücke (Holzsteg, Steinbogen, Ziegel oder rot). Laternen rasten auf Feldecken ein, Deko darf auf Wege, und Zäune bekommen Gartentore.',
+const NEWS = { id: '2026-10-05-kap', items: [
+  '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist jetzt ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk. Dein alter Leuchtturm wächst mit, wo Platz ist – sonst im Fenster „Zum Kap ausbauen“.',
+  '🏰 <b>Märchenschloss wie im Märchen:</b> runde Türme, eine Turmgruppe in der Mitte, Balkone und Goldbänder rundherum, Fenster nach Wunsch – und statt der Steinplatte Rasen oder ein Platz im Wegmuster deiner Wahl.',
+  '🛤️ <b>Wege nach Wunsch:</b> ganz breit oder schmal, Kurven rund oder eckig, Enden bis ans Gebäude. Und vor jedem kleinen Haus führt ein Gartenweg von selbst zur Tür.',
+  '🎨 <b>Umfärben:</b> Windräder, Läden, Hotels, Kultur- und Deko-Bauten bekommen deine Farben – auf Wunsch gleich alle gleichen auf einmal, und neu gebaute auch.',
+  '🧰 <b>Viele kleine Reparaturen:</b> Rückgängig, Verschieben und Abreißen rechnen jetzt genau, „Neue Insel“ fragt in einem eigenen Fenster, und im Menü gibt es „Bildrate: flüssig / sparsam“.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
