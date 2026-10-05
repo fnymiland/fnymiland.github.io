@@ -222,7 +222,7 @@
         ...[-1, 1].map(sb => [a - 0.01, b + sb * 0.155, () => K.block({ a: a - 0.01, b: b + sb * 0.155, ha: 0.07, hb: 0.03, h: 5, wall: shade(SOFA, -0.05), type: 'flat', roof: shade(SOFA, 0.15) })]),
       ]);
     };
-    K.scene([[A, 0, hall], [0.76, -0.48, sofa]]);
+    K.scene([[A, 0, hall]].concat(courtShown(t, x, y) ? [] : [[0.76, -0.48, sofa]]));   // mit Vorplatz ohne Sofa (Block 91d)
   };
   ART_SHADOW.moebelhaus = [18, 0.36];
   GROUND_TYPES.add('moebelhaus');                                                           // hat einen gepflasterten Hof

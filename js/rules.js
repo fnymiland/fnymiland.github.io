@@ -722,7 +722,7 @@ function gardenPath(t, x, y, any = false) {
 // Vorplatz bzw. Weg zur Tür (Block 91): Liegt vor der Tür eines größeren Gebäudes ein Weg, führt ein Belag im Stil dieses Wegs
 // (oder dem gewählten, t.vp) bis zur Tür – ein schmaler Weg (b: Mitte, w: halbe Breite) oder ein Platz (p: [b0, b1]), jeweils
 // von a bis an die Vorderkante; mehrere Stücke über parts. Im eigenen Rahmen des Gebäudes (a nach vorn, zur Tür). own: hatte
-// schon immer einen Platz und zeichnet ihn selbst (courtFloor) – ohne Weg so wie früher. t.zug === false: aus (nur Wiese).
+// schon immer einen Platz und zeichnet ihn selbst (courtFloor) – ohne Weg so wie früher (bare: dann gar keiner, Block 91d). t.zug === false: aus (nur Wiese).
 const COURTS = {
   muehle: { a: 0.14, b: 0 }, holz: { a: 0.22, b: 0.07 }, fischer: { a: 0.07, b: 0 }, stein: { a: 0.26, b: 0.22 },
   mine: { a: 0.1, b: 0, w: 0.11, s3: { a: 0.1, p: [-0.38, 0.11] } }, kristallmine: { a: 0.1, b: 0, w: 0.11, s3: { a: 0.1, p: [-0.38, 0.11] } }, steinmetz: { a: 0.11, b: -0.05 }, schmiede: { a: 0.16, b: -0.08 },   // Stollen: Lore fährt auf dem Weg heraus; Stufe 3 (s3): Hof bis zur Tür des Hauses davor
@@ -732,8 +732,8 @@ const COURTS = {
   kino: { a: 0.6, p: [-0.6, 0.6] }, passage: { a: 0.75, p: [-0.6, 0.6] }, theater: { a: 0.95, p: [-0.75, 0.75] },
   konzerthalle: { a: 1.15, p: [-0.85, 0.85] }, aquarium: { a: 1.05, p: [-0.42, 0.42] },
   zoo: { parts: [{ a: 1.8, b: 0, w: 0.12 }, { a: 0.95, b: 1, w: 0.16 }] },                // zur Kasse und durchs Tor
-  rathaus: { a: -1.47, p: [-1.47, 1.47], own: true }, museum: { a: 0.45, b: 0, w: 0.4, own: true },   // Museum: zur Treppe
-  kaufhaus: { a: 0.68, b: 0, w: 0.18, own: true }, markthalle: { a: -0.98, p: [-1.47, 1.47], own: true },
+  rathaus: { a: -1.47, p: [-1.47, 1.47], own: true }, museum: { a: 0.45, b: 0, w: 0.4, own: true, bare: true },   // Museum: zur Treppe
+  kaufhaus: { a: 0.68, b: 0, w: 0.18, own: true, bare: true }, markthalle: { a: -0.98, p: [-1.47, 1.47], own: true },
   moebelhaus: { a: 0.43, p: [-0.6, 0.6], own: true }, hotel: { a: 0.3, p: [-0.62, 0.62], own: true },
   grandhotel: { a: 0.4, p: [-1.15, 1.15], own: true },
 };
@@ -761,7 +761,7 @@ function courtStyle(t, x, y) {
   const C0 = t && COURTS[t.b];
   if (!C0 || t.zug === false) return null;
   const ct = courtOf(t, x, y);
-  return ct ? ct.style : C0.own ? courtVp(t) : null;
+  return ct ? ct.style : C0.own && !C0.bare ? courtVp(t) : null;
 }
 function curveSlot(x, y) {
   const t = state.tiles.get(x + ',' + y);

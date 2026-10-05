@@ -341,7 +341,7 @@ function courtHtml(t, x, y) {
   const C0 = COURTS[t.b], gp = !C0 && gardenPath(t, x, y, true), ct = C0 && courtOf(t, x, y, true);
   if (!C0 && !gp) return '';
   const name = gp ? 'Gartenweg zur Tür' : courtIsPlaza(C0) ? 'Vorplatz' : 'Weg zur Tür';
-  if (!gp && !ct && !C0.own) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
+  if (!gp && !ct && (!C0.own || C0.bare)) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
   const on = t.zug !== false, plaza = !!(C0 && courtIsPlaza(C0)), auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
   return `<div class="looks"><button class="look${on ? ' on' : ''}" data-zug="1" aria-pressed="${on}">${plaza ? '🧱' : '🌿'} ${name}</button></div>
     ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && PATH_LOOK[st.id].stones)).map(st =>

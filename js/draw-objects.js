@@ -1147,7 +1147,7 @@ const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
 function courtFloor(K, t, x, y, classic) {
   if (t.zug === false) return;
   const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
-  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
+  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) { if (!COURTS[t.b] || !COURTS[t.b].bare || x > 1e5) classic(); } else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
 }
 const courtShown = (t, x, y) => !!courtStyle(t, x, y);                                // für Bilder, die dann anders aussehen (Büsche, Rasen)
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {

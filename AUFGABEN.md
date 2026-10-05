@@ -1023,4 +1023,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       die Tür. Bergwerk/Kristallmine: Weg genau vor dem Stollen, Schienen und Lore fahren gerade darauf heraus; ab Stufe 3
       (Kristallschleiferei, großes Bergwerk) ein kleiner Hof bis zur Tür des Hauses davor (`s3`). Trittsteine zur Tür so groß
       und im selben Takt wie am Weg, ein Stein auch auf dem Wegfeld (auch beim Gartenweg der Häuser).
+- [x] 91d: Möbelhaus mit Vorplatz ohne Sofa davor. Museum und Kaufhaus haben ohne Weg vor der Tür keinen alten Platz mehr (auch
+      gedreht, `bare`) – nur Wiese; mit Weg der Weg zur Treppe bzw. Tür. Bildchen im Baumenü zeigen sie wie bisher.
 

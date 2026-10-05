@@ -96,10 +96,10 @@ describe('Vorplatz (Block 91)', () => {
     expect(withCourt).toBeLessThan(curb() - 1);
   });
   it('Gebäude mit eigenem Platz: ohne Weg wie früher, mit Weg im Belag des Wegs, aus: nur Wiese', () => {
-    put('10,10', { b: 'museum', lvl: 1, rot: 0 });
+    put('10,10', { b: 'hotel', lvl: 1, rot: 0 });
     const old = C('#ece3cf'), kopf = C(game('PATH_LOOK.kopf.fill'));
     expect(ground('10,10')).toContain(old);
-    const [x, y] = front('museum', 10, 10, 0, 0); weg(x, y, 'kopf');
+    const [x, y] = front('hotel', 10, 10, 0, 0.5); weg(x, y, 'kopf');
     expect(ground('10,10')).toContain(kopf);
     expect(ground('10,10')).not.toContain(old);
     game("state.tiles.get('10,10').zug = false");
@@ -109,6 +109,22 @@ describe('Vorplatz (Block 91)', () => {
     expect(ground('10,10')).toContain(kopf);                                              // gewählter Belag auch ohne Weg
     put('20,4', { b: 'rathaus', lvl: 1, rot: 0 });
     expect(ground('20,4')).toContain(C('#e6dfd0'));
+  });
+  it('91d: Museum und Kaufhaus ohne Weg davor ohne alten Platz (auch gedreht), Möbelhaus mit Vorplatz ohne Sofa', () => {
+    for (let rot = 0; rot < 4; rot++) {
+      game("for (let y = 2; y <= 30; y++) for (let x = 2; x <= 30; x++) state.tiles.delete(x + ',' + y)");
+      put('10,10', { b: 'museum', lvl: 1, rot });
+      expect(ground('10,10'), 'rot ' + rot).not.toContain(C('#ece3cf'));
+      const [x, y] = front('museum', 10, 10, rot, 0); weg(x, y, 'kopf');
+      expect(ground('10,10'), 'rot ' + rot).toContain(C(game('PATH_LOOK.kopf.fill')));
+    }
+    put('20,10', { b: 'kaufhaus', lvl: 1, rot: 0 });
+    expect(ground('20,10')).not.toContain(C('#e6dfd0'));
+    put('4,20', { b: 'moebelhaus', lvl: 1, rot: 0 });
+    const sofa = () => fills("(() => { const t = state.tiles.get('4,20'); drawObject('moebelhaus', 300, 300, 1, 0, 4, 20, 1, t); })()").includes(C('#e9a23b'));
+    expect(sofa()).toBe(true);
+    for (const c of [-0.5, 0.5]) { const [x, y] = front('moebelhaus', 4, 20, 0, c); weg(x, y, 'sand'); }
+    expect(sofa()).toBe(false);
   });
   it('Fenster: Schalter und Belag mit ↶, Hinweis ohne Weg; gespeichert', () => {
     put('10,10', { b: 'fabrik', lvl: 1, rot: 0 });
