@@ -193,11 +193,13 @@
       g.beginPath(); g.moveTo(...K.P(a - ha, b1, top + T)); g.lineTo(...K.P(a + ha, b1, top + T)); g.stroke();
     }
   }
-  SHOP_ART.moebelhaus = function (K, s, now) {
+  SHOP_ART.moebelhaus = function (K, s, now, x, y, t) {
     const WALL = '#fff4dc', BLUE = '#5f8fe8', SOFA = '#e9a23b', z = K.z, H = 13, A = -0.12, HA = 0.55, HB = 0.6;
     if (groundPart(() => {
-      K.rect(A + HA, -0.94, 0.96, 0.94, C('#e6dcc8'));                                      // kleiner Hof vor der Halle
-      K.rect(A + HA, -0.16, 0.96, 0.16, C('#f2ebdc'));                                      // Weg zur Tür
+      courtFloor(K, t, x, y, () => {                                                        // Block 91
+        K.rect(A + HA, -0.94, 0.96, 0.94, C('#e6dcc8'));                                    // kleiner Hof vor der Halle
+        K.rect(A + HA, -0.16, 0.96, 0.16, C('#f2ebdc'));                                    // Weg zur Tür
+      });
       for (const b of [-0.94, 0.66]) K.rect(0.7, b, 0.96, b + 0.28, C('#8cc96a'));        // zwei Rasenecken
     })) return;
     const hall = () => {

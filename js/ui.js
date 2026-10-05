@@ -336,6 +336,23 @@ function spotlight(sel) {
 // Stil-Leiste für Wege: nur, was man schon hat – alles Weitere gibt es in der Kunstakademie
 // Kreis mit dem echten Muster des Wegs (einmal gezeichnet, dann gemerkt); ohne Canvas nur die Farbe
 const swatchCache = new Map();
+// Gartenweg (Block 78) bzw. Vorplatz (Block 91): an/aus und Belag – wie der Weg vor der Tür oder ein eigener (t.vp)
+function courtHtml(t, x, y) {
+  const C0 = COURTS[t.b], gp = !C0 && gardenPath(t, x, y, true), ct = C0 && courtOf(t, x, y, true);
+  if (!C0 && !gp) return '';
+  const name = gp ? 'Gartenweg zur Tür' : C0.p ? 'Vorplatz' : 'Weg zur Tür';
+  if (!gp && !ct && !C0.own) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
+  const on = t.zug !== false, plaza = !!(C0 && C0.p), auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
+  return `<div class="looks"><button class="look${on ? ' on' : ''}" data-zug="1" aria-pressed="${on}">${plaza ? '🧱' : '🌿'} ${name}</button></div>
+    ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && PATH_LOOK[st.id].stones)).map(st =>
+      `<button class="sw${courtVp(t) === st.id ? ' on' : ''}" data-vp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : ''}`;
+}
+function wireCourt(el, t, reopen) {
+  const done = () => { groundVersion++; sfx('deco'); save(); reopen(); };
+  const zb = el.querySelector('[data-zug]');
+  if (zb) zb.onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; done(); });
+  for (const b of el.querySelectorAll('[data-vp]')) b.onclick = () => undoable(() => { if (b.dataset.vp) t.vp = b.dataset.vp; else delete t.vp; done(); });
+}
 function styleSwatch(st) {
   if (swatchCache.has(st.id)) return swatchCache.get(st.id);
   let bg = st.col;
@@ -1134,7 +1151,7 @@ function openInfo(x, y) {
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
     : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz – er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
       <div class="row"><button class="btn" data-lgrow="1" ${lighthouseSpot(x + ',' + y, t) ? '' : 'disabled'}>🗼 Zum Kap ausbauen</button></div>`   // Block 83
-    : gardenPath(t, x, y, true) ? `<div class="looks"><button class="look${t.zug === false ? '' : ' on'}" data-zug="1" aria-pressed="${t.zug !== false}">🌿 Gartenweg zur Tür</button></div>` : '';   // Block 78
+    : courtHtml(t, x, y);   // Gartenweg (Block 78), Vorplatz (Block 91)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)].name : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
@@ -1216,7 +1233,7 @@ function openInfo(x, y) {
   if (t.b === 'fz_schloss') wireCastle(el, t, x, y);
   if (t.b === 'weg') wireWegForm(el, t, x, y);
   if (el.querySelector('[data-lgrow]')) el.querySelector('[data-lgrow]').onclick = () => undoable(() => { const nk = growLighthouse(x + ',' + y); if (!nk) return; sfx('build'); recalc(); save(); startFireworks(keyXY(nk).map(v => v + 1)); openInfo(...keyXY(nk)); });   // Kap (Block 83)
-  if (el.querySelector('[data-zug]')) el.querySelector('[data-zug]').onclick = () => undoable(() => { if (t.zug === false) delete t.zug; else t.zug = false; groundVersion++; sfx('deco'); save(); openInfo(x, y); });
+  wireCourt(el, t, () => openInfo(x, y));
   for (const b of el.querySelectorAll('[data-brk]')) b.onclick = () => undoable(() => { if (setBridgeKind(x, y, b.dataset.brk)) openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const [attr, key] of [['brc', 'brc'], ['brw', 'brw']]) for (const b of el.querySelectorAll(`[data-${attr}]`)) b.onclick = () => undoable(() => {   // Brückenfarben (66b)
@@ -1991,6 +2008,7 @@ function openTownHall(tab = hallTab) {
         <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
         <div class="label">Rathaus: Dach</div>
         <div class="swatches">${colorsOf('roof').map(([c, i]) => `<button class="sw${i === t.roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="Dachfarbe ${i + 1}"></button>`).join('')}</div>
+        ${courtHtml(t, hall[0], hall[1])}
         <div class="row"><button class="btn ghost" id="h-move">✋ Rathaus verschieben</button></div>` : ''}`;
   }
   openModal(`
@@ -2042,6 +2060,7 @@ function openTownHall(tab = hallTab) {
     for (const sw of card.querySelectorAll('[data-wall]')) sw.onclick = () => { t.wall = +sw.dataset.wall; sfx('deco'); save(); openTownHall('town'); };
     for (const sw of card.querySelectorAll('[data-roof]')) sw.onclick = () => { t.roof = +sw.dataset.roof; sfx('deco'); save(); openTownHall('town'); };
     if ($('h-move')) $('h-move').onclick = () => { closeModal(); startMove(...hall); };
+    if (t) wireCourt(card, t, () => openTownHall('town'));                                // Platz (Block 91)
   }
   $('m-close').onclick = closeModal;
 }

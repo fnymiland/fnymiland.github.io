@@ -72,6 +72,7 @@ function tileOut(t) {
   if (t.sq) o.sq = true;
   if (t.end) o.end = t.end;
   if (t.zug === false) o.zug = false;                                                       // Gartenweg aus
+  if (t.vp) o.vp = t.vp;                                                                    // Belag des Vorplatzes (Block 91)
   if (t.brk) o.brk = t.brk;
   if (t.brc != null) o.brc = t.brc;                                                      // Brückenfarben (Block 66b)
   if (t.brw != null) o.brw = t.brw;                                                              // Wegbrücke: Art (Block 66)

@@ -123,8 +123,10 @@
     // Dino und Busch an die beiden vorderen Ecken; der Dino an die seitliche (nie hinter den Tempel, nie mitten davor)
     const db = Math.abs(K.depth(0.95, 0.9)) < Math.abs(K.depth(0.95, -0.9)) ? 0.9 : -0.9;
     if (groundPart(() => {
-      K.rect(-1.47, -1.47, 1.47, 1.47, C('#ece3cf'));                                                          // Pflaster
-      K.rect(0.5, -0.32, 1.47, 0.32, C('#e2d6bc'));                                                            // Weg zur Treppe
+      courtFloor(K, t, x, y, () => {                                                                           // Block 91
+        K.rect(-1.47, -1.47, 1.47, 1.47, C('#ece3cf'));                                                        // Pflaster
+        K.rect(0.5, -0.32, 1.47, 0.32, C('#e2d6bc'));                                                          // Weg zur Treppe
+      });
       for (const sb of [-1, 1]) { K.rect(0.6, sb * 0.55, 1.42, sb * 1.42, C('#9fd07a')); K.rect(0.65, sb * 0.6, 1.37, sb * 1.37, C('#a8d983')); }   // Rasen
     })) return;
     K.scene([
@@ -164,7 +166,7 @@
   }
   SHOP_ART.hotel = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(0.3, -0.97, 0.98, 0.97, C('#ece3cf'));                                                          // Vorplatz
+      courtFloor(K, t, x, y, () => K.rect(0.3, -0.97, 0.98, 0.97, C('#ece3cf')));                            // Vorplatz (Block 91)
       K.rect(0.5, -0.13, 0.98, 0.13, C('#e0605a'));                                                          // roter Teppich
     })) return;
     const A0 = -0.2, HA = 0.45, HB = 0.88, H = 30, FL = [10, 20];       // Unterkanten der Obergeschosse (das dritte ist im Dach)
@@ -239,7 +241,7 @@
   }
   SHOP_ART.grandhotel = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(0.4, -1.47, 1.47, 1.47, C('#efe6d2'));                                                          // Vorhof (Kies)
+      courtFloor(K, t, x, y, () => K.rect(0.4, -1.47, 1.47, 1.47, C('#efe6d2')));                            // Vorhof (Kies, Block 91)
       for (const sb of [-1, 1]) { K.oval(1.02, sb * 0.86, 0.36, C('#9fd07a')); K.oval(1.02, sb * 0.86, 0.3, C('#a8d983')); }
       K.rect(0.62, -0.14, 1.47, 0.14, C('#e0605a'));                                                         // roter Teppich
     })) return;
@@ -332,8 +334,10 @@
   }
   SHOP_ART.markthalle = function (K, s, now, x, y, t) {
     if (groundPart(() => {
-      K.rect(-0.98, -1.47, 0.98, 1.47, C('#e6dcc6'));                                                        // Marktplatz
-      K.rect(0.5, -0.3, 0.98, 0.3, C('#ddd0b6'));                                                            // Weg zum Tor
+      courtFloor(K, t, x, y, () => {                                                                         // Block 91
+        K.rect(-0.98, -1.47, 0.98, 1.47, C('#e6dcc6'));                                                      // Marktplatz
+        K.rect(0.5, -0.3, 0.98, 0.3, C('#ddd0b6'));                                                          // Weg zum Tor
+      });
     })) return;
     const A0 = -0.2, HA = 0.55, HB = 1.08, H = 13, parts = [];
     parts.push([A0, 0, () => {                                                                             // Halle

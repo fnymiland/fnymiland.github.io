@@ -1002,3 +1002,15 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 ## Block 90 – Universität Stufe 3 (05.10.2026)
 - [x] Stufe 3 hieß „Sternwarte“ und hatte eine kleine Sternwarte auf dem Gelände – doppelt zum Wunderwerk Sternwarte. Jetzt
       „Universitätscampus“, statt der Mini-Sternwarte eine Gelehrten-Statue (Bronze, mit Buch) im Brunnen mit kleinen Fontänen.
+
+## Block 91 – Vorplatz bzw. Weg zur Tür (05.10.2026)
+- [x] Liste aller Gebäude mit Tür: ohne Weg zur Tür waren Uni, Bibliothek, Kunstakademie, Kino, Passage, Theater, Konzerthalle,
+      Aquarium, Zoo, Reihenhäuser und alle Werkstätten (Mühle, Holzfäller, Fischerhütte, Steinbruch, Bergwerk, Kristallmine,
+      Steinmetz, Schmiede, Sägewerk, Bäckerei, Werkstatt, Wasserrad).
+- [x] Liegt ein Weg vor der Tür, führt jetzt ein Belag im Stil des Wegs bis zur Tür: schmaler Weg bei kleinen Werkstätten,
+      Platz bei den größeren (`COURTS`). Ohne Weg bleibt Wiese. Im Fenster „🧱 Vorplatz“ / „🌿 Weg zur Tür“ an/aus und „Belag“
+      (wie der Weg oder ein freigeschaltetes Wegmuster, `t.vp`), mit ↶, gespeichert. Gilt auch für den Gartenweg der Häuser.
+- [x] Gebäude mit festem Platz (Rathaus, Museum, Kaufhaus, Markthalle, Möbelhaus, Hotel, Grandhotel) folgen derselben Regel:
+      mit Weg davor im Belag des Wegs, wählbar, abschaltbar (Wiese); ohne Weg und ohne Wahl wie bisher. Rathaus: im Reiter „Ort“.
+- [x] Zoo: Eingangstor mit grünem „ZOO“-Schild neben dem Kassenhaus, Zaun auch vorn.
+- [x] Testwelt freizeitpark: Abschnitt „Vorplätze“ bei (36, 72). Test: vorplatz.test.js.

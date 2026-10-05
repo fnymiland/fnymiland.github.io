@@ -242,9 +242,11 @@
     const z = K.z, WALL = '#fff4dc', RED = '#e8705f', A = -0.25, HA = 0.88, HB = 1.08, H = 21, FR = A + HA, RA = FR - 0.1;
     if (groundPart(() => {                                                                       // Vorplatz: helles Pflaster
       const E = 1.47, a0 = FR - 0.03, na = 4, nb = 12, da = (E - a0) / na, db = 2 * E / nb;
-      K.rect(a0, -E, E, E, C('#e6dfd0'));
-      for (let i = 0; i < na; i++) for (let j = 0; j < nb; j++) if ((i + j) & 1) K.rect(a0 + i * da, -E + j * db, a0 + (i + 1) * da, -E + (j + 1) * db, C('#ddd3c1'));
-      K.rect(a0, -0.34, E, 0.34, C('#efe8da'));                                                  // heller Weg zur Tür
+      courtFloor(K, t, x, y, () => {                                                             // Block 91
+        K.rect(a0, -E, E, E, C('#e6dfd0'));
+        for (let i = 0; i < na; i++) for (let j = 0; j < nb; j++) if ((i + j) & 1) K.rect(a0 + i * da, -E + j * db, a0 + (i + 1) * da, -E + (j + 1) * db, C('#ddd3c1'));
+        K.rect(a0, -0.34, E, 0.34, C('#efe8da'));                                                // heller Weg zur Tür
+      });
     })) return;
     K.scene([[A, 0, () => {
       const B = K.block({ a: A, b: 0, ha: HA, hb: HB, h: H, wall: WALL, roof: RED, roofH: 27, type: 'mansard', over: 1.06, entry: true });

@@ -670,9 +670,13 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   const rect = (u0, u1, v0, v1) => poly([[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L), C(lk.edge));
   for (const [dx, dy] of DIRS) {
     if (wideAt(dx, dy)) continue;
-    const gap = arms.some(a => a[0] === dx && a[1] === dy) ? ROAD_W : stubs.some(a => a[0] === dx && a[1] === dy) ? GP_FILL : 0, e0 = 0.5 - WIDE_CURB;   // Weg bzw. Gartenweg kommt an: Lücke im Bordstein
+    // Weg bzw. Gartenweg/Vorplatz kommt an: Lücke im Bordstein (quer q wie armUV: auf der Seite v = q·dx bzw. u = −q·dy)
+    const gaps = (arms.some(a => a[0] === dx && a[1] === dy) ? [[-ROAD_W, ROAD_W]] : []).concat(stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
+      .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
-    if (gap) { seg(-0.5, -gap); seg(gap, 0.5); } else seg(-0.5, 0.5);
+    let at = -0.5;
+    for (const [g0, g1] of gaps) { if (g0 > at) seg(at, g0); at = Math.max(at, g1); }
+    if (at < 0.5) seg(at, 0.5);
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
 }
@@ -682,12 +686,14 @@ function drawPath(cx, cy, z, x, y, t) {
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
   const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
-  // Gartenwege der Nachbarhäuser (Block 78c): ihr Stück auf diesem Feld gehört zum Weg – ein Guss, ohne Bordstein davor
-  const stubs = DIRS.filter(([dx, dy]) => { const gp = gardenPath(state.tiles.get((x + dx) + ',' + (y + dy)), x + dx, y + dy); return !!gp && gp.d[0] === -dx && gp.d[1] === -dy; });
+  // Gartenwege der Nachbarhäuser (Block 78c) und Vorplätze (Block 91): ihr Stück auf diesem Feld gehört zum Weg – ein Guss,
+  // ohne Bordstein davor
+  const stubs = courtLinksAt(x, y);
   if (t && t.wide && !t.cross) { drawWidePath(L, lk, x, y, z, arms0, stubs); return; }
   const quads = pathQuads(x, y);
   const flares = pathFlares(x, y);
-  const stubPolys = w => stubs.map(d => { const sw = w > ROAD_W ? GP_EDGE : GP_FILL; return [[0, -sw], [0.5, -sw], [0.5, sw], [0, sw]].map(([a, bq]) => armUV(d, a, bq)); });
+  // Rand nur dort, wo das Stück nicht am Nachbarfeld weitergeht (sonst malt der Rand eine Linie über dessen Belag)
+  const stubPolys = w => stubs.map(s => { const e = w > ROAD_W ? COURT_CURB : 0, q0 = s.q0 > -0.49 ? s.q0 - e : s.q0, q1 = s.q1 < 0.49 ? s.q1 + e : s.q1; return [[0, q0], [0.5, q0], [0.5, q1], [0, q1]].map(([a, bq]) => armUV(s.d, a, bq)); });
   const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf, stubPolys(w)); };
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
@@ -756,11 +762,13 @@ const BIG_ART = {
   rathaus(cx, cy, z, now, x, y, lvl, t, hu, hv) {
     const K = kit(cx, cy, z, t.rot), E = 1.47;
     if (groundPart(() => {
-      K.rect(-E, -E, E, E, C('#e6dfd0'));
-      g.save(); clipTo([[[-E, -E], [E, -E], [E, E], [-E, E]]], p => K.P(p[0], p[1]));
-      pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
-      g.restore();
-      K.rect(0.35, -0.28, E, 0.28, C('#efe8da'));                                        // heller Weg zur Tür
+      courtFloor(K, t, x, y, () => {                                                      // Platz (Block 91: im Belag des Wegs davor)
+        K.rect(-E, -E, E, E, C('#e6dfd0'));
+        g.save(); clipTo([[[-E, -E], [E, -E], [E, E], [-E, E]]], p => K.P(p[0], p[1]));
+        pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
+        g.restore();
+        K.rect(0.35, -0.28, E, 0.28, C('#efe8da'));                                      // heller Weg zur Tür
+      });
       for (const [a, b] of [[-1.3, 1.3], [-1.3, -1.3]]) K.rect(a - 0.12, b - 0.12, a + 0.12, b + 0.12, C('#86c35b'));   // Beete hinten
     })) return;
     const [wall, roof] = paint(t, '#fff1d6', '#6f8fd8');
@@ -1040,7 +1048,7 @@ function rotateBuild(dir = 1) {
 }
 
 const GROUND_TYPES = new Set(['station', 'glashaus', 'glashaus_l', 'hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
-const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
+const hasGroundPart = t => GROUND_TYPES.has(t.b) || (COURTS[t.b] && !COURTS[t.b].own) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 // Marktstand (Block 39): Theke mit Waren, gestreifte Markise auf zwei Pfosten, Lichterkette (nachts an)
 function drawStand(type, cx, cy, z, now, x, y, t) {
   const S = STANDS[type], K = kit(cx, cy, z, t && t.rot);
@@ -1099,10 +1107,58 @@ function drawGardenPath(cx, cy, z, x, y, gp) {
   poly(band(GP_FILL).map(L), C(lk.fill));
   if (lk.pat) { g.save(); clipTo([band(GP_FILL)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
 }
+// Vorplatz bzw. Weg zur Tür (Block 91, Regeln: COURTS in rules.js): flach im Boden-Durchgang, Schatten fallen darauf
+const COURT_CURB = GP_EDGE - GP_FILL;
+// Wegfelder, in die ein Gartenweg oder Vorplatz der Nachbarn mündet: je { d (vom Wegfeld zum Gebäude), q0, q1 (quer, wie armUV) }
+function courtLinksAt(x, y) {
+  const out = [];
+  for (const [dx, dy] of DIRS) {
+    const k = anchorAt(x + dx, y + dy);
+    if (!k) continue;
+    const t = state.tiles.get(k), [ax, ay] = keyXY(k), gp = gardenPath(t, ax, ay);
+    if (gp) { if (gp.d[0] === -dx && gp.d[1] === -dy) out.push({ d: [dx, dy], q0: -GP_FILL, q1: GP_FILL }); continue; }
+    const ct = courtOf(t, ax, ay), l = ct && ct.d[0] === dx && ct.d[1] === dy && ct.links.find(o => o.x === x && o.y === y);
+    if (l) out.push({ d: [dx, dy], q0: l.q0, q1: l.q1 });
+  }
+  return out;
+}
+// Belag von a bis an die Vorderkante A, quer [s0, s1] (Platz) bzw. um die Tür (schmaler Weg); vorn ohne Bordstein
+function paveCourt(K, C0, A, lk, x, y) {
+  const [s0, s1] = C0.p || [C0.b - GP_FILL, C0.b + GP_FILL], a0 = C0.a, e = COURT_CURB, z = K.z;
+  if (lk.stones) {                                                                      // Trittsteine bis zur Tür
+    const m = (s0 + s1) / 2;
+    for (let i = 0, a = A - 0.03; i < 4 && a >= a0 + 0.02; i++, a -= 0.14) { const q = K.P(a, m), k = 0.8 - i * 0.06; ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
+    return;
+  }
+  K.rect(a0, s0 - e, A, s1 + e, C(lk.edge));
+  const L = p => K.P(p[0], p[1]);
+  g.save(); clipTo([[[a0, s0], [A, s0], [A, s1], [a0, s1]]], L);
+  paintLook(L, lk, x, y, z, false, Math.max(A, s1, -s0) + 0.5);
+  g.restore();
+}
+const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
+// Gebäude mit eigenem Platz (COURTS[b].own): im Belag des Wegs davor bzw. dem gewählten; sonst classic() wie früher, aus: Wiese
+function courtFloor(K, t, x, y, classic) {
+  if (t.zug === false) return;
+  const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
+  if (!lk || lk.stones) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y);
+}
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   let span = 1;
   if (ITEMS[type] && ITEMS[type].variantOf) { span = ITEMS[type].span; type = ITEMS[type].variantOf; }   // Größe: Bild des Grundmodells
+  const C0 = t && t.b === type && COURTS[type] && !COURTS[type].own ? COURTS[type] : null;   // Vorplatz (Block 91)
+  if (C0 && PASS === null) {                                                            // alles auf einmal: Boden, Vorplatz, Gebäude
+    PASS = 'ground'; try { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); } finally { PASS = 'object'; }
+    try { drawObjectAs(type, cx, cy, z, now, x, y, lvl, t); } finally { PASS = null; }
+    return;
+  }
+  if (C0 && PASS === 'ground') {
+    if (GROUND_TYPES.has(type)) drawBuilding(type, cx, cy, z, now, x, y, lvl, t);     // eigene flache Teile zuerst
+    const st = courtStyle(t, x, y), lk = st && (PATH_LOOK[st] || PATH_LOOK.sand);
+    if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), C0.p && lk.stones ? PATH_LOOK.platten : lk, x, y);
+    return;
+  }
   const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);
   if (gp) drawGardenPath(cx, cy, z, x, y, gp);
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }

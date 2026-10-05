@@ -352,6 +352,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+91. **Vorplatz / Weg zur Tür** (Block 91): Türen größerer Gebäude stehen in `COURTS` (rules.js, eigener Rahmen: `a` Beginn,
+    `b` Türmitte = schmaler Weg bzw. `p` = Platz quer, jeweils bis an die Vorderkante). Gezeigt nur mit Weg direkt vor der Tür
+    (`courtOf`: Wegfelder der vorderen Reihe, `links` mit dem Stück quer `q0…q1` wie `armUV`), Belag = `t.vp` oder Stil des Wegs
+    (`courtStyle`), aus mit `t.zug === false` (wie der Gartenweg). Gezeichnet im Boden-Durchgang (`paveCourt`, `hasGroundPart`);
+    das Stück auf dem Wegfeld zeichnet der Weg selbst (`courtLinksAt` → Stummel, beim breiten Weg Lücke im Bordstein).
+    `own`: Gebäude mit altem festem Platz zeichnen ihn über `courtFloor(K, t, x, y, classic)` – ohne Weg/Wahl wie früher.
+    Wer eine Tür verschiebt oder ein neues Gebäude mit Tür baut, trägt sie in `COURTS` ein (vorplatz.test.js prüft Drehungen).
 90. **Buschfarben** (Block 89): Farbe eines Busches (Deko `d.col`, Busch-Feld `t.col`, Wilmer-Linie `e.col`) = Index in `BUSH_COLS`;
     gezeichnet nur im Fall `'busch'` (auch die Wilmerhecke ruft ihn). Frei/gekauft über `bushColOk`, für Neues `bushColNew('busch'|'hecke')`.
     Wer neue Deko-Eigenschaften einführt, nimmt sie in `serialize` (Deko-Felder werden einzeln übernommen!) und ggf. in den Bildchen-Schlüssel auf.

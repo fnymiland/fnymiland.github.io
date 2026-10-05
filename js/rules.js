@@ -717,7 +717,47 @@ function gardenPath(t, x, y, any = false) {
   if (!t || (t.zug === false && !any) || !zugOk(t.b) || x > 1e5) return null;
   const [dx, dy] = kitTurn(t.rot || 0, 1, 0), n = state.tiles.get((x + dx) + ',' + (y + dy));
   if (!n || n.b !== 'weg' || n.bridge) return null;
-  return { d: [dx || 0, dy || 0], style: n.style || 'sand' };
+  return { d: [dx || 0, dy || 0], style: courtVp(t) || n.style || 'sand' };   // eigener Belag (Block 91)
+}
+// Vorplatz bzw. Weg zur Tür (Block 91): Liegt vor der Tür eines größeren Gebäudes ein Weg, führt ein Belag im Stil dieses Wegs
+// (oder dem gewählten, t.vp) bis zur Tür – ein schmaler Weg (b: Türmitte) oder ein Platz (p: [b0, b1]), jeweils von a bis an
+// die Vorderkante. Im eigenen Rahmen des Gebäudes (a nach vorn, zur Tür). own: hatte schon immer einen Platz und zeichnet ihn
+// selbst (courtFloor) – ohne Weg so wie früher. t.zug === false: abgeschaltet (nur Wiese).
+const COURTS = {
+  muehle: { a: 0.14, b: 0 }, holz: { a: 0.22, b: 0.07 }, fischer: { a: 0.07, b: 0 }, stein: { a: 0.26, b: 0.22 },
+  mine: { a: 0.14, b: -0.07 }, kristallmine: { a: 0.14, b: -0.07 }, steinmetz: { a: 0.11, b: -0.05 }, schmiede: { a: 0.16, b: -0.08 },
+  wasserkraft: { a: 0.1, b: 0.13 }, baecker: { a: 0.24, b: -0.32 },
+  saege: { a: 0.22, p: [-0.7, 0.6] }, fabrik: { a: 0.3, p: [-0.62, 0.62] }, reihenhaus: { a: 0.3, p: [-0.97, 0.97] },
+  bibliothek: { a: 0.3, p: [-0.56, 0.56] }, kunst: { a: 0.2, p: [-0.62, 0.62] }, uni: { a: 0.32, p: [-0.72, 0.72] },
+  kino: { a: 0.6, p: [-0.84, 0.84] }, passage: { a: 0.75, p: [-0.95, 0.95] }, theater: { a: 0.95, p: [-1.05, 1.05] },
+  konzerthalle: { a: 1.15, p: [-1.42, 1.42] }, aquarium: { a: 1.05, p: [-0.62, 0.62] }, zoo: { a: 1.8, p: [-1.4, 0.6] },
+  rathaus: { a: -1.47, p: [-1.47, 1.47], own: true }, museum: { a: -1.47, p: [-1.47, 1.47], own: true },
+  kaufhaus: { a: 0.6, p: [-1.47, 1.47], own: true }, markthalle: { a: -0.98, p: [-1.47, 1.47], own: true },
+  moebelhaus: { a: 0.43, p: [-0.94, 0.94], own: true }, hotel: { a: 0.3, p: [-0.97, 0.97], own: true },
+  grandhotel: { a: 0.4, p: [-1.47, 1.47], own: true },
+};
+const courtVp = t => t.vp && STYLES.weg.some(st => st.id === t.vp) ? t.vp : null;
+// Die Wegfelder vor dem Vorplatz: je Feld der vorderen Reihe, das er berührt, das Stück [q0, q1] quer auf dem Wegfeld (wie armUV)
+function courtOf(t, x, y, any = false) {
+  const C0 = t && COURTS[t.b];
+  if (!C0 || (t.zug === false && !any) || x > 1e5) return null;
+  const r = (t.rot || 0) & 3, [w, h] = sizeOf(t.b, r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  const [da, wb] = ITEMS[t.b].size || [1, 1], [s0, s1] = C0.p || [C0.b - GP_FILL, C0.b + GP_FILL], [fx, fy] = kitTurn(r, 1, 0), links = [];
+  for (let c = -wb / 2 + 0.5; c < wb / 2; c++) {
+    const l0 = Math.max(s0, c - 0.5), l1 = Math.min(s1, c + 0.5);
+    if (l1 - l0 < 0.05) continue;
+    const [u, v] = kitTurn(r, da / 2 + 0.5, c), nx = Math.round(cx + u), ny = Math.round(cy + v), n = state.tiles.get(nx + ',' + ny);
+    if (n && n.b === 'weg' && !n.bridge) links.push({ x: nx, y: ny, style: n.style || 'sand', q0: c - l1, q1: c - l0 });
+  }
+  if (!links.length) return null;
+  return { d: [-fx || 0, -fy || 0], links, style: courtVp(t) || links[0].style };
+}
+// Belag, der gezeichnet wird: null = keiner (aus, kein Weg davor) bzw. bei own ohne Weg und ohne Wahl der alte Platz
+function courtStyle(t, x, y) {
+  const C0 = t && COURTS[t.b];
+  if (!C0 || t.zug === false) return null;
+  const ct = courtOf(t, x, y);
+  return ct ? ct.style : C0.own ? courtVp(t) : null;
 }
 function curveSlot(x, y) {
   const t = state.tiles.get(x + ',' + y);

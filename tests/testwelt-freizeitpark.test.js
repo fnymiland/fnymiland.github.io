@@ -122,6 +122,23 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     });
     state.tiles.set((X + 2) + ',' + (Y + 5), { b: 'busch_m', lvl: 1, col: 5 }); state.tiles.set((X + 5) + ',' + (Y + 4), { b: 'busch_l', lvl: 1, col: 9 });
     rebuildCover(); recalc(); })()`);
+  // Vorplätze (Block 91): Werkstätten, schmale, große und ganz große Gebäude mit der Tür zum Weg (Drehung 1: Tür nach +y),
+  // die Wege in verschiedenen Belägen; ganz rechts je eins ohne Weg davor
+  game(`(() => { const X = 36, Y = 72;
+    for (let y = Y - 1; y < Y + 27; y++) for (let x = X - 1; x < X + 31; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }
+    waterChanged(); sandCache.clear(); landCache.clear();
+    const S = (b, x, y, rot = 1, lvl = 3) => state.tiles.set((X + x) + ',' + (Y + y), { b, lvl, rot });
+    const W = (x0, x1, y, style) => { for (let x = x0; x <= x1; x++) state.tiles.set((X + x) + ',' + (Y + y), { b: 'weg', lvl: 1, style }); };
+    ['muehle', 'holz', 'fischer', 'stein', 'mine', 'kristallmine', 'steinmetz', 'schmiede', 'wasserkraft'].forEach((b, i) => S(b, 1 + 2 * i, 1, 1, 1 + i % 3));
+    S('schmiede', 20, 1, 1, 2); S('muehle', 22, 1, 1, 2); S('holz', 26, 1);
+    W(0, 9, 2, 'sand'); W(10, 18, 2, 'klinker'); W(19, 23, 2, 'tritt');
+    ['saege', 'baecker', 'fabrik', 'reihenhaus', 'bibliothek', 'kunst', 'reihenhaus'].forEach((b, i) => S(b, 1 + 3 * i, 4));
+    S('kunst', 26, 4); W(0, 20, 5, 'platten');
+    ['uni', 'kino', 'moebelhaus', 'hotel', 'uni'].forEach((b, i) => S(b, 1 + 3 * i, 7)); S('kino', 26, 7);
+    W(0, 8, 9, 'asphalt'); W(9, 15, 9, 'kopf');
+    ['theater', 'konzerthalle', 'aquarium', 'museum', 'kaufhaus', 'grandhotel'].forEach((b, i) => S(b, 1 + 4 * i, 11)); W(0, 24, 14, 'klinker'); S('rathaus', 26, 11); W(25, 29, 14, 'goldpflaster');
+    S('markthalle', 1, 16); S('passage', 6, 16); W(0, 10, 18, 'fisch'); S('zoo', 12, 16); W(11, 17, 20, 'sand'); S('passage', 20, 16); S('museum', 25, 16, 0);
+    rebuildCover(); recalc(); })()`);
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;
     for (let j = 0; j < 10 && ok; j++) for (let i = 0; i < 11 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || isSea(x + i, y + j) || terrainAt(x + i, y + j) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz' || state.decos.get(k)) ok = false; }
