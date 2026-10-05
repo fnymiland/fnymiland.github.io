@@ -273,8 +273,9 @@ const wallPillarR = look => look.w * 1.25;
 const gateT = (b, look) => b === 'mauer' ? 0 : GATE_CUT;                     // Mauer: Torpfeiler auf den Feldecken (Block 87c)
 // Steht an diesem Eckpunkt ein Torpfeiler einer Mauer (ein Mauer-Durchgang beginnt oder endet hier)? Dann hört jede andere
 // Mauer dort am Pfeiler auf, statt in ihn hineinzulaufen (sonst malt sie sich über ihn, Block 87c)
+// Rückgabe: halbe Breite des Pfeilers (0 = keiner) – gilt für jede Linie, die dort ankommt (Mauer, Zaun, Hecke)
 const mauerGateAt = (vx, vy, k) => ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)]
-  .some(o => o !== k && (state.edges.get(o) || {}).b === 'mauer' && isGate(o));
+  .reduce((r, o) => { const n = state.edges.get(o); return o !== k && n && n.b === 'mauer' && isGate(o) ? Math.max(r, wallPillarR(EDGE_LOOK.mauer[n.style] || EDGE_LOOK.mauer.backstein)) : r; }, 0);
 function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher
   const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
@@ -359,11 +360,13 @@ function drawEdge(k, e, z, now) {
   const rcP = !gate && roundCorner(i, j), rcQ = !gate && roundCorner(i + au, j + av);
   const onP = rcP && (rcP.ka === k || rcP.kb === k), onQ = rcQ && (rcQ.ka === k || rcQ.kb === k);
   const [vp, vq] = edgeEndPoints(k), endP = !gate && freeEnd(k, ...vp), endQ = !gate && freeEnd(k, ...vq);
+  const [vp0, vq0] = edgeEndPoints(k), gateP = mauerGateAt(...vp0, k), gateQ = mauerGateAt(...vq0, k);   // Mauer-Torpfeiler am Ende (Block 87e)
   if (e.b === 'zaun') {
-    const Ez = { ...E, p: onP ? [E.p[0] + au * ROUND_R, E.p[1] + av * ROUND_R] : E.p, q: onQ ? [E.q[0] - au * ROUND_R, E.q[1] - av * ROUND_R] : E.q };
+    const sp = onP ? ROUND_R : gateP, sq = onQ ? ROUND_R : gateQ;       // am Torpfeiler einer Mauer: davor aufhören, kein eigener Pfosten
+    const Ez = { ...E, p: [E.p[0] + au * sp, E.p[1] + av * sp], q: [E.q[0] - au * sq, E.q[1] - av * sq] };
     // Pfosten: nicht am Bogenanfang (der Bogen hat seinen eigenen) und nicht dort, wo in gerader Reihe ein Tor anschließt
     const nextGate = (x, y) => { const o = dir + x + ',' + y, n = state.edges.get(o); return !!(n && n.b === 'zaun' && isGate(o)); };
-    const posts = [!onP && !nextGate(i - au, j - av), !onQ && !nextGate(i + au, j + av)];
+    const posts = [!onP && !gateP && !nextGate(i - au, j - av), !onQ && !gateQ && !nextGate(i + au, j + av)];
     if (onP && rcP.ka === k) drawArc(rcP, look, z);
     if (endP) endPiece('zaun', look, E.p, z, 'P' + vp.join());
     drawFence(Ez, look, e.style, gate, z, gate ? [false, false] : posts);
@@ -380,9 +383,8 @@ function drawEdge(k, e, z, now) {
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
   // Mauer mit Pfeiler am hinteren Ende (P): erst der Pfeiler, die Mauer beginnt an seiner Seite (sonst ragt er über sie)
   const gateBefore = e.b === 'mauer' && (o => { const n = state.edges.get(o); return !!(n && n.b === 'mauer' && isGate(o)); })(dir + (i - au) + ',' + (j - av));
-  const [vp0, vq0] = edgeEndPoints(k), gateP = e.b === 'mauer' && mauerGateAt(...vp0, k), gateQ = e.b === 'mauer' && mauerGateAt(...vq0, k);
-  const pilP = gateBefore || gateP ? wallPillarR(look) : !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
-  const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : gateQ ? -wallPillarR(look) : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
+  const pilP = gateP ? gateP : gateBefore ? wallPillarR(look) : !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
+  const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : gateQ ? -gateQ : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
@@ -407,7 +409,7 @@ function drawEdge(k, e, z, now) {
   }
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
-    bushSpan(k, E, onP ? ROUND_R : 0, onQ ? 1 - ROUND_R : 1, look, z, k.length);
+    bushSpan(k, E, onP ? ROUND_R : gateP, onQ ? 1 - ROUND_R : 1 - gateQ, look, z, k.length);
     if (look.lights) lampions([p, q], look, h, z, 'E' + k);
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());

@@ -962,5 +962,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 87c: Endpfeiler doch wieder, aber schlank: Enden und Tore gleich (`wallPillarR` 1,25 × Mauerbreite, niedriger, kleiner
       Deckstein). Torpfeiler auf den Feldecken (`gateT` = 0); jede Mauer, die dort ankommt – auch um die Ecke –, hört am Pfeiler
       auf (`mauerGateAt`), statt in ihn hineinzulaufen und sich darüberzumalen. Test: mauerpfeiler.test.js.
+- [x] 87e: Zaun/Hecke, die an einem Mauer-Torpfeiler enden, liefen in ihn hinein (Zaun mit Pfosten vorn auf dem Pfeiler). Jetzt
+      hören alle Linien am Pfeiler auf (`mauerGateAt` liefert dessen halbe Breite), der Zaun ohne eigenen Pfosten dort.
 - [x] 87d: Gartentür lag vor dem vorderen Pfeiler – Durchgang jetzt von hinten nach vorn gezeichnet (hinteres Stück/Pfosten,
       Tür, vorderes Stück/Pfosten, Bogen).

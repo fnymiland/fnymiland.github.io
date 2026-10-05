@@ -31,4 +31,13 @@ describe('Mauerpfeiler (Block 87c)', () => {
     const n = game("(() => { let n = 0; const o = wallPillar; wallPillar = (...a) => { n++; return o(...a); }; try { drawEdge('a6,6', state.edges.get('a6,6'), 1.4, 0); } finally { wallPillar = o; } return n; })()");
     expect(n).toBe(2);
   });
+  it('auch Zaun und Hecke hören am Torpfeiler einer Mauer auf – ohne eigenen Pfosten darauf', () => {
+    game("chosenStyle.mauer = 'backstein'; buildEdge('mauer', 'b6,6'); setGate('b6,6', true); chosenStyle.zaun = 'latten'; buildEdge('zaun', 'a5,7'); chosenStyle.hecke = 'niedrig'; buildEdge('hecke', 'b6,5'); recalc()");
+    const R = game("wallPillarR(EDGE_LOOK.mauer.backstein)");
+    const f = game(`(() => { let out = null; const o = drawFence; drawFence = (E, look, st, gate, z, posts) => { out = [E.q, posts]; }; try { drawEdge('a5,7', state.edges.get('a5,7'), 1.4, 0); } finally { drawFence = o; } return out; })()`);
+    expect(f[0][0]).toBeCloseTo(5.5 - R);                                               // Zaun endet vor dem Pfeiler (Eckpunkt 6,7)
+    expect(f[1][1]).toBe(false);                                                        // kein Pfosten auf dem Pfeiler
+    const [[, q]] = prisms('b6,5');
+    expect(q[1]).toBeCloseTo(5.5 - R);                                                  // Hecke ebenso
+  });
 });
