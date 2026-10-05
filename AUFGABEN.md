@@ -931,5 +931,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       aus der Mitte. Bahnsteigdächer (Backstein, Land) waren lange Zelte mit dunklen Dreiecken: jetzt flache Dächer mit Blende
       und Blechbahnen, beim Landbahnhof mit gezackter Holzborte. Flügel des Landbahnhofs mit durchgehendem Satteldach
       (Walmdach je Stück gab Kerben). Höchstens 16 Gleise (`HBF_MAX`).
+- [x] 85c: Der Turm begann am Boden und stand dadurch von außen wie ein Schornstein vor der Fassade (verdeckte die Tür). Jetzt
+      sitzt er auf dem Portaldach (`lift`), die Tür darunter ist frei.
 - [x] Testwelt freizeitpark: Abschnitt „Hauptbahnhöfe“ bei (36, 40) – alle Designs, verschiedene Drehungen und Gleiszahlen, einer
       mit Weg zum Portal. Tests: hauptbahnhof.test.js.

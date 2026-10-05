@@ -792,7 +792,8 @@ const BUILDING_ART = {
         if (lit) { const F = Pt.faces[side], m = lerp(F.P, F.Q, 0.5); kGlow(m[0], m[1] - F.H * 0.25, z, 26); }
       }
       const tall = H + (look === 'land' ? 21 : look === 'backstein' ? 26 : 31);           // deutlich über den Portalgiebel
-      const T = K.block({ a: -1.55, b: 0, ha: 0.3, hb: 0.3, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9, trim: '#fffaf0' });
+      // Turm steht auf dem Portaldach (beginnt dort, Block 85c) – vom Boden aus stand er vor der Fassade und verdeckte die Tür
+      const T = K.block({ a: -1.55, b: 0, ha: 0.28, hb: 0.28, h: tall - (H + 6), lift: H + 6, wall, roof, roofH: look === 'glas' ? 12 : 9, trim: '#fffaf0' });
       const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
       for (const F of Object.values(T.faces)) if (F) faceClock(F, 0.5, F.H - 5 * z, 2.6 * z, z, { ring: '#4a4a58', ringW: 0.7, lit, hands: [[hr, 0.55, 0.9], [mi, 0.8, 0.7]] });
     }]);
