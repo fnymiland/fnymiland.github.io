@@ -1167,10 +1167,22 @@ const BUILDING_ART = {
       K.sideWins(B, 2, 0.35, 0.75); K.wins(B, 'front', 2, 0.35, 0.75);
     };
     const parts = [[-0.1, 0, main], [-0.15, -0.68, wing(-0.68)], [-0.15, 0.68, wing(0.68)]];
-    if (s === 3) parts.push([0.6, 0.66, () => {           // Sternwarte mit Fernrohr
-      K.block({ a: 0.6, b: 0.66, ha: 0.16, hb: 0.16, h: 12, wall: '#f3ead9', type: 'flat', roof: '#e8dcc6' });
-      const top = kDome(K, 0.6, 0.66, 12, 9, '#c7cad2');
-      kLine(K, [top[0] - 1 * z, top[1] + 4 * z], [top[0] + 7 * z, top[1] - 4 * z], '#4a4a58', 2.2);
+    if (s === 3) parts.push([0.6, 0.66, () => {           // Universitätscampus (Block 90): Gelehrten-Statue im Brunnen
+      const A = 0.6, Bb = 0.66, lit = night > 0.15 && isLive();
+      K.oval(A, Bb, 0.22, C('#cfc8bb'));                                     // Beckenrand
+      K.oval(A, Bb, 0.18, C(lit ? '#5f9fb8' : '#74d0e6'), 1.4);             // Wasser
+      K.oval(A - 0.04, Bb - 0.05, 0.06, C('#b8ecf6'), 1.5);
+      K.block({ a: A, b: Bb, ha: 0.06, hb: 0.06, h: 9, wall: '#d6d0c4', type: 'flat', roof: '#e6e0d4' });   // Sockel
+      const bronze = '#6f9a8a';
+      K.block({ a: A, b: Bb, ha: 0.04, hb: 0.05, h: 8, lift: 9, wall: bronze, type: 'flat', roof: shade(bronze, 0.12) });   // Gewand
+      const [hx, hy] = K.P(A, Bb, 19.6);
+      circle(hx, hy, 1.9 * z, C(shade(bronze, 0.08)));                       // Kopf
+      const [bx, by] = K.P(A + 0.06, Bb + 0.02, 14);
+      g.fillStyle = C('#8a5a3c'); g.fillRect(bx - 1.6 * z, by - 1.2 * z, 3.2 * z, 2.4 * z);   // Buch in der Hand
+      for (const [da, db] of [[0.16, 0], [-0.16, 0], [0, 0.16], [0, -0.16]]) {                // kleine Fontänen zum Sockel
+        const p0 = K.P(A + da, Bb + db, 1.6), p1 = K.P(A + da * 0.45, Bb + db * 0.45, 5);
+        g.strokeStyle = C('#b8ecf6'); g.lineWidth = 0.9 * z; g.beginPath(); g.moveTo(...p0); g.quadraticCurveTo((p0[0] + p1[0]) / 2, p1[1] - 2 * z, p1[0], p1[1]); g.stroke();
+      }
     }], [0.7, -0.7, () => { const p = kPost(K, 0.7, -0.7, 26, '#c7cad2', 1); poly([[p[0], p[1]], [p[0] + 9 * z, p[1] + 2.5 * z + Math.sin(now / 400) * z], [p[0], p[1] + 6 * z]], C('#7d6bb0')); }]);
     K.scene(parts);
   },

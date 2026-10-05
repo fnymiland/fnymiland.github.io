@@ -998,3 +998,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Gespeichert (Deko `col`, Linie `col`), Bildchen weit weg kennen die Farbe. Nebenbei: geschenkte Parkbäume (`free`, 84b)
       gingen beim Speichern verloren – jetzt gespeichert. Testwelt freizeitpark: Abschnitt „Buschfarben“ bei (36, 62).
       Test: buschfarben.test.js. Nachtrag: Farbe der Busch-Felder in `tileOut` und im Bildchen-Schlüssel.
+
+## Block 90 – Universität Stufe 3 (05.10.2026)
+- [x] Stufe 3 hieß „Sternwarte“ und hatte eine kleine Sternwarte auf dem Gelände – doppelt zum Wunderwerk Sternwarte. Jetzt
+      „Universitätscampus“, statt der Mini-Sternwarte eine Gelehrten-Statue (Bronze, mit Buch) im Brunnen mit kleinen Fontänen.

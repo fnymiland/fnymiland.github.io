@@ -416,7 +416,7 @@ const BUILD_STAGES = {
                up: [{ pop: 25, cost: { money: 350, bretter: 8, quader: 4 } }, { pop: 60, near: ['bibliothek', 1, 10], cost: { money: 900, quader: 10, metall: 3 } }] },
   bibliothek:{ names: ['Bücherei', 'Bibliothek', 'Große Bibliothek'],
                up: [{ pop: 35, near: ['schule', 1, 10], cost: { money: 550, bretter: 8, quader: 6 } }, { pop: 70, near: [['park', 'brunnen'], 1, 4], cost: { money: 1200, quader: 12, metall: 4 } }] },
-  uni:       { names: ['Universität', 'Große Universität', 'Sternwarte'],
+  uni:       { names: ['Universität', 'Große Universität', 'Universitätscampus'],   // Stufe 3 hieß „Sternwarte“ (die ist ein Wunderwerk, Block 90)
                up: [{ pop: 80, near: ['bibliothek', 1, 10], cost: { money: 2200, quader: 16, metall: 6 } }, { pop: 120, near: ['kunst', 1, 10], cost: { money: 5000, quader: 24, metall: 12 } }] },
   kunst:     { names: ['Kunstakademie', 'Atelierhaus', 'Kunstpalast'],
                up: [{ pop: 40, beauty: [40, 3], cost: { money: 800, bretter: 8, quader: 6 } }, { pop: 80, near: [['pavillon', 'statue'], 1, 4], cost: { money: 1800, quader: 12, metall: 5 } }] },
