@@ -372,7 +372,7 @@ function openDiary(at) {
 // ---------------------------------------------------------------------------
 const TUTORIAL = [
   { text: 'Bau dein erstes Haus.', hint: '🏘️ Stadt → 🏠 Wohnen → Haus', done: () => hasBuilt('haus') },
-  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ ganz links (oder 🌸 Gestalten → Wege & Gelände) – ziehen',
+  { text: 'Leg einen Weg bis vor die Haustür.', hint: '🛤️ unten in der Leiste, zweiter Knopf (oder 🌸 Gestalten → Wege & Gelände) – ziehen',
     done: () => [...state.tiles].some(([k, t]) => t.b === 'haus' && wishMet('weg', ...keyXY(k))) },
   { text: 'Stell einen Holzfäller in den Wald.', hint: '🏭 Herstellen → 📦 Rohstoffe → Holzfäller', done: () => hasBuilt('holz') },
   { text: 'Entdecke die Waldinsel.', hint: 'Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr), antippen, Boot losschicken – braucht 8 Einwohner und 🪙 150',

@@ -352,6 +352,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+88. **Oberfläche** (Block 84e): `#modal` liegt über Lager und Erfolgs-Band (z-index 40). Inline-Werte, die nur in einer Breite
+    gelten (Panel-`top` über 600 px), auch wieder entfernen. Wisch-Erkennung immer mit `pointercancel` und Zurücksetzen beim
+    nächsten `pointerdown`; `fastTap` löst nur ohne Bewegung aus. „Zum Rathaus“ über `townHallAt()`.
 87. **Zeichnen robust** (Block 84d): Unter dem Bildrand bleiben die vordersten Felder großer Gebäude bis `mBig` (420·z) in
     `visible` (`bigFront`), sonst fehlen hohe Gebäude streifenweise. Filter für flache Teile prüfen die ganze Fläche
     (`want([ax, ay], w, h)`), Züge in der Halle hängen am ersten sichtbaren Hallenfeld (`hallFirst`). Was flache Teile hat,

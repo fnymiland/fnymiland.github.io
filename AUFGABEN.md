@@ -906,10 +906,12 @@ Tests: fehler84d.test.js. Dabei gefunden: ein Fehler beim Zeichnen eines Boden-G
 - [x] Bau-Vorschau zeigt Originalfarben bzw. das alte eckige Schloss statt dessen, was gebaut wird.
 - [x] Ein Zeichenfehler in einem Gebäude lässt den Streifen-Ausschnitt dauerhaft hängen (kein try/finally).
 
-### 84e – Oberfläche und Texte
-- [ ] Handy: Der Griff am Infofenster merkt sich ein abgebrochenes Wischen (der nächste Tipp schließt das Fenster).
-- [ ] Infofenster wird nach Verkleinern des Browsers unter 600 px riesig (Inline-`top` bleibt stehen).
-- [ ] Lager 📦 und Erfolgs-Band liegen über offenen Fenstern.
-- [ ] Menü „Zum Rathaus“ springt zur Inselmitte statt zum Rathaus.
-- [ ] Einführung Schritt 2: „🛤️ ganz links“ stimmt nicht (ganz links ist 👆).
-- Unklar, nur auf echtem Gerät prüfbar: Ziel-Karte und Knöpfe oben lösen eventuell nach einem Wisch aus (`fastTap`).
+### 84e – Oberfläche und Texte – erledigt
+Tests: fehler84e.test.js.
+- [x] Handy: Der Griff am Infofenster merkt sich ein abgebrochenes Wischen (der nächste Tipp schließt das Fenster).
+- [x] Infofenster wird nach Verkleinern des Browsers unter 600 px riesig (Inline-`top` bleibt stehen).
+- [x] Lager 📦 und Erfolgs-Band liegen über offenen Fenstern.
+- [x] Menü „Zum Rathaus“ springt zur Inselmitte statt zum Rathaus.
+- [x] Einführung Schritt 2: „🛤️ ganz links“ stimmt nicht (ganz links ist 👆).
+- [x] Ziel-Karte und Knöpfe oben: lösen nach einem Wisch nicht mehr aus (`fastTap` prüft die Bewegung) – vorsorglich, auf dem Gerät
+      war es nicht nachprüfbar.

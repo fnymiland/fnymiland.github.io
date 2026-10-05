@@ -408,7 +408,7 @@ function updateHud() {
   const top = $('hud').getBoundingClientRect().bottom + 8;
   const goal = $('goal');
   goal.style.top = top + 'px';
-  if (window.innerWidth > 600 && !$('panel').classList.contains('float')) $('panel').style.top = top + 'px';
+  if (!$('panel').classList.contains('float')) $('panel').style.top = window.innerWidth > 600 ? top + 'px' : '';   // schmal: CSS (unten) – sonst bliebe der alte Wert (Block 84e)
   goal.classList.toggle('small', goalSmall ?? PHONE);
   setHtml(goal, goalHtml(), true);
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
@@ -725,7 +725,8 @@ function revealTap() {
 }
 // Griff: antippen schaltet groß/klein, wischen: hoch = groß, runter = kleiner bzw. zu
 let gripY = null, gripSwiped = false;
-$('panel').addEventListener('pointerdown', e => { if (e.target.closest('.grip')) gripY = e.clientY; });
+$('panel').addEventListener('pointerdown', e => { gripY = e.target.closest('.grip') ? e.clientY : null; gripSwiped = false; });
+$('panel').addEventListener('pointercancel', () => { gripY = null; });   // Fenster scrollt: kein Wisch (Block 84e)
 $('panel').addEventListener('pointerup', e => {
   if (gripY == null) return;
   const dy = e.clientY - gripY, el = $('panel');
@@ -2145,7 +2146,7 @@ function showMenu() {
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
   $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark
-  $('m-home').onclick = () => { const c = iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };
+  $('m-home').onclick = () => { const h = townHallAt(), c = h ? iso(h[0] + 1, h[1] + 1) : iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };   // wo es wirklich steht
   $('m-close').onclick = closeModal;
   $('m-export').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
   $('m-import').onclick = () => $('import-file').click();
@@ -2163,11 +2164,16 @@ $('menu-btn').onclick = showMenu;
 // Knöpfe oben (Block 52): mit dem Finger schon beim Loslassen auslösen – ohne auf Safaris Klick zu warten, der den ersten
 // Tipp manchmal nur als „Finger drüber“ wertet. Der Klick danach wird dann ignoriert; Maus und Tastatur wie gehabt.
 function fastTap(el) {
-  let down = false, at = -1e9;
+  let down = false, at = -1e9, x0 = 0, y0 = 0;
   const own = el.onclick;
-  el.addEventListener('pointerdown', e => { down = e.pointerType !== 'mouse'; });
+  el.addEventListener('pointerdown', e => { down = e.pointerType !== 'mouse'; x0 = e.clientX; y0 = e.clientY; });
   el.addEventListener('pointercancel', () => { down = false; });
-  el.addEventListener('pointerup', e => { if (!down) return; down = false; at = performance.now(); own.call(el, e); });
+  el.addEventListener('pointerup', e => {
+    if (!down) return;
+    down = false;
+    if (Math.hypot(e.clientX - x0, e.clientY - y0) > 12) return;    // gewischt, nicht getippt (Block 84e)
+    at = performance.now(); own.call(el, e);
+  });
   el.onclick = e => { if (performance.now() - at < 800) return; own.call(el, e); };
 }
 for (const el of [...document.querySelectorAll('#hud .pill'), $('goal')]) if (el.onclick) fastTap(el);
