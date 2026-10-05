@@ -913,6 +913,10 @@ const STYLES = {
     { id: 'buchs', name: 'Buchs', col: '#2f7a3a', design: 90 },
     { id: 'bluete', name: 'Blütenhecke', col: '#f28cb1', design: 140 },
     { id: 'lichter', name: 'Hecke mit Lichterkette', col: '#ffe58a', design: 200 },
+    // Wilmerhecke (Block 86): kleine runde Büsche dicht an dicht – gleich frei, auch mit Blüten oder Lichterkette
+    { id: 'wilmer', name: 'Wilmerhecke', col: '#5aae54' },
+    { id: 'wilmer_bluete', name: 'Wilmerhecke mit Blüten', col: '#f28cb1' },
+    { id: 'wilmer_licht', name: 'Wilmerhecke mit Lichterkette', col: '#ffe58a' },
   ],
   zaun: [
     { id: 'latten', name: 'Lattenzaun', col: '#c98d5c' },
@@ -942,7 +946,7 @@ const ARCHES = {
 };
 // An der Mauer ist der „Torbogen“ ein Paar hoher Torpfeiler mit Steinkugeln (kein Bogen), an der Hecke ein grüner Rankbogen
 const archLabel = (b, id) => id !== 'bogen' ? `${ARCHES[id].icon} ${ARCHES[id].name}` : b === 'mauer' ? '🏛️ Torpfeiler' : b === 'hecke' ? '🌿 Rankbogen' : `${ARCHES[id].icon} ${ARCHES[id].name}`;
-const EDGE_LIT = new Set(['hecke:lichter', 'zaun:lichter', 'mauer:laternen']);
+const EDGE_LIT = new Set(['hecke:lichter', 'hecke:wilmer_licht', 'zaun:lichter', 'mauer:laternen']);
 const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
 const wegShape = { wide: false, sq: false };      // Form neuer Wege (Block 77): ganz breit, eckige Kurven – Schalter in der Musterleiste

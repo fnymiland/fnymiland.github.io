@@ -935,3 +935,9 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       sitzt er auf dem Portaldach (`lift`), die Tür darunter ist frei.
 - [x] Testwelt freizeitpark: Abschnitt „Hauptbahnhöfe“ bei (36, 40) – alle Designs, verschiedene Drehungen und Gleiszahlen, einer
       mit Weg zum Portal. Tests: hauptbahnhof.test.js.
+
+## Block 86 – Wilmerhecke (05.10.2026)
+- [x] Wunsch der Schwägerin: kleine Büsche als Hecke aneinanderreihen. Neu bei den Hecken: „Wilmerhecke“, „… mit Blüten“,
+      „… mit Lichterkette“ – gleich frei. Runde Büsche so groß wie der Deko-Busch, dicht an dicht (`bushRow`, `wilmerBush`),
+      auch im Bogen, am Durchgang und am freien Ende; die Lichterkette zählt als Licht (`EDGE_LIT`). Test: wilmerhecke.test.js.
+- [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).

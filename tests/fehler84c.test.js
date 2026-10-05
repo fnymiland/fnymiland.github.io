@@ -91,6 +91,6 @@ describe('Anzeigen und Zeit (84c)', () => {
     game("crossingClosed = window.__cc; walkers.length = 0");
   });
   it('„Das ist neu“ ist auf dem neuen Stand', () => {
-    expect(game('NEWS.id')).not.toBe('2026-10-03-freizeitpark');
+    expect(game('NEWS.id')).not.toBe('2026-10-03-freizeitpark');   // seitdem erneuert
   });
 });

@@ -2100,12 +2100,11 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-05-kap', items: [
-  '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist jetzt ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk. Dein alter Leuchtturm wächst mit, wo Platz ist – sonst im Fenster „Zum Kap ausbauen“.',
-  '🏰 <b>Märchenschloss wie im Märchen:</b> runde Türme, eine Turmgruppe in der Mitte, Balkone und Goldbänder rundherum, Fenster nach Wunsch – und statt der Steinplatte Rasen oder ein Platz im Wegmuster deiner Wahl.',
-  '🛤️ <b>Wege nach Wunsch:</b> ganz breit oder schmal, Kurven rund oder eckig, Enden bis ans Gebäude. Und vor jedem kleinen Haus führt ein Gartenweg von selbst zur Tür.',
-  '🎨 <b>Umfärben:</b> Windräder, Läden, Hotels, Kultur- und Deko-Bauten bekommen deine Farben – auf Wunsch gleich alle gleichen auf einmal, und neu gebaute auch.',
-  '🧰 <b>Viele kleine Reparaturen:</b> Rückgängig, Verschieben und Abreißen rechnen jetzt genau, „Neue Insel“ fragt in einem eigenen Fenster, und im Menü gibt es „Bildrate: flüssig / sparsam“.',
+const NEWS = { id: '2026-10-05-wilmer', items: [
+  '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es jetzt eine Hecke aus lauter kleinen runden Büschen – einfach ziehen wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
+  '🚉 <b>Hauptbahnhof neu:</b> Portal mit Uhrturm genau in der Mitte, ein Weg vor dem Portal führt bis an die Tür. Schönere Bahnsteigdächer, dazu Laternen, Bänke und Bahnsteiguhren.',
+  '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk.',
+  '🏰 <b>Märchenschloss und Wege:</b> runde Türme, Balkone und Goldbänder rundherum; Wege ganz breit oder schmal, Kurven rund oder eckig, Gartenwege bis zur Haustür.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

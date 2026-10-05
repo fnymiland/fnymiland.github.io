@@ -10,6 +10,9 @@ const EDGE_LOOK = {
     buchs: { h: 6.5, w: 0.1, col: '#2f7a3a', balls: true },
     bluete: { h: 8, w: 0.1, col: '#58ad52', flowers: ['#f28cb1', '#ffd23f', '#ffffff', '#c3a8e6'] },
     lichter: { h: 9, w: 0.1, col: '#3f8f43', lights: true },
+    wilmer: { h: 12, w: 0.14, col: '#5aae54', bushes: true },
+    wilmer_bluete: { h: 12, w: 0.14, col: '#5aae54', bushes: true, flowers: ['#f28cb1', '#ffd23f', '#ffffff', '#c3a8e6'] },
+    wilmer_licht: { h: 12, w: 0.14, col: '#5aae54', bushes: true, lights: true },
   },
   mauer: {
     backstein: { h: 7, w: 0.1, col: '#b5654a', joint: '#e6c9ae', bricks: true },
@@ -75,6 +78,25 @@ function hedgeSideFlowers(line, look, h, z, seed, d0 = 0) {
     circle(x, y, 0.85 * z, C(look.flowers[Math.floor(hash(i, seed, 11) * look.flowers.length)]));
   });
 }
+// Wilmerhecke (Block 86): kleine runde Büsche wie der Deko-Busch dicht an dicht entlang einer Punktlinie, von hinten nach vorn
+function bushRow(line, look, z, seed, d0 = 0) {
+  const at = [];
+  alongLine(line, 3.6, d0, (m, i) => at.push([m, i]));
+  at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);
+  for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i);
+}
+function wilmerBush(m, look, z, r = 0.5, i = 0, s = 0.8) {   // s = 0.8: so groß wie der Deko-Busch
+  const [x, y] = edgeS(m[0], m[1], 0, z), k = s * z, tone = (r - 0.5) * 0.12;
+  ellipse(x, y + 0.6 * k, 8 * k, 3.2 * k, 'rgba(40,60,20,0.18)');
+  circle(x - 4 * k, y - 5 * k, 6 * k, C(shade('#5aae54', tone)));
+  circle(x + 4 * k, y - 5 * k, 6 * k, C(shade('#4a944a', tone)));
+  circle(x, y - 9 * k, 6.5 * k, C(shade('#62b85a', tone)));
+  circle(x - 2 * k, y - 11 * k, 2.6 * k, C('#86d37c'));
+  if (look.flowers) for (let f = 0; f < 3; f++) {
+    const a = hash(i, f, 17) * Math.PI * 2, d = 3 + hash(i, f, 19) * 3;
+    circle(x + Math.cos(a) * d * k, y - 8 * k + Math.sin(a) * d * 0.7 * k, 1.3 * k, C(look.flowers[Math.floor(hash(i, f, 23) * look.flowers.length)]));
+  }
+}
 // Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
 const GATE_CUT = 0.5 - EDGE_W;
 // Stück in beliebiger Richtung (für den Bogen runder Ecken): Seite zum Betrachter, vorderes Ende, Oberseite
@@ -95,6 +117,7 @@ function drawArc(rc, look, z) {
     const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
+  if (rc.b === 'hecke' && look.bushes) { const ap = roundArc(rc, 12); bushRow(ap, look, z, rc.ka.length); if (look.lights) lampions(ap, look, look.h, z, 'E' + rc.ka); return; }   // Wilmerhecke im Bogen
   if (rc.b === 'zaun') { const ap = roundArc(rc, 12); drawFence({ pts: ap }, look, rc.style, false, z, [false, false]); fencePost(ap[6], look, rc.style, z); if (look.lights) bulbsAlong(ap, look.h + 0.6, z, 'E' + rc.ka); return; }   // ein Pfosten mitten im Bogen
   const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
   const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
@@ -205,6 +228,7 @@ function bulbAt([x, y], z, lit) {
 const litLook = look => !!(look.lights || look.lamps);
 // Heckenende (freies Ende und am Durchgang): rundes Ende über die ganze Höhe, auch bei der hohen Hecke
 function hedgeKnob(pt, look, z) {
+  if (look.bushes) { wilmerBush(pt, look, z, 0.6, 7, 0.88); return; }   // Wilmerhecke: ein etwas größerer Busch am Ende
   const [x, y] = edgeS(pt[0], pt[1], 0, z), R = (look.w * TW * 0.7 + 1) * z, top = y - look.h * z + R * 0.55, bot = y - R * 0.45, col = C(shade(look.col, -0.06));
   if (bot > top) poly([[x - R, bot], [x + R, bot], [x + R, top], [x - R, top]], col);
   circle(x, bot, R, col); circle(x, top, R, col);
@@ -340,7 +364,7 @@ function drawEdge(k, e, z, now) {
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
     const gt = gateT(e.b, look);
-    if (e.b !== 'mauer') for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) edgePrism(a, b, E, w, h, look.col, z);
+    if (e.b !== 'mauer') for (const [a, b] of [[p, lerp2(E.p, E.q, GATE_CUT)], [lerp2(E.p, E.q, 1 - GATE_CUT), q]]) { if (look.bushes) bushRow([a, b], look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); }
     for (const t of [gt, 1 - gt]) {
       const m = lerp2(E.p, E.q, t), d = w * 1.25;
       if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
@@ -355,6 +379,14 @@ function drawEdge(k, e, z, now) {
     return;
   }
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
+  if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
+    bushRow([p, q], look, z, k.length);
+    if (look.lights) lampions([p, q], look, h, z, 'E' + k);
+    if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
+    if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
+    if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join());
+    return;
+  }
   edgePrism(p, q, E, w, h, look.col, z, !onQ);
   if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);                 // Bogen vorn: nach dem Stück
   const ends = () => { if (endP && (!pilP || gateBefore)) endPiece(e.b, look, E.p, z, 'P' + vp.join()); if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join()); };
