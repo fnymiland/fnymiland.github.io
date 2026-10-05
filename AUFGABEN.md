@@ -954,3 +954,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       seinen hinteren Busch darüber. Jetzt: beginnt am Punkt ein Stück, zeichnet das erste davon den Eckbusch vor seinen Büschen;
       sonst zeichnet ihn jedes endende als Letztes. Test spielt die echte Reihenfolge für alle Eckarten nach.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
+
+## Block 87 – Mauerenden schlanker (05.10.2026)
+- [x] Freie Mauerenden hatten denselben dicken Pfeiler wie ein Tor (1,45 × Mauerbreite, hoch, breiter Deckstein) – wirkte klobig.
+      Jetzt ein schlanker Abschlusspfeiler (`wallEndR` = 1,12 × Mauerbreite, nur etwas höher, schmaler Deckstein); Torpfeiler bleiben.
