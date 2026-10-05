@@ -392,15 +392,7 @@ function drawEdge(k, e, z, now) {
     // von hinten nach vorn (Block 87d): hinteres Stück und Pfosten, dann die Gartentür, dann vorderes Stück und Pfosten –
     // sonst liegt die Tür vor dem vorderen Pfeiler
     const stub = (a, b, t0, t1) => { if (e.b === 'mauer') return; if (look.bushes) bushSpan(k, E, t0, t1, look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); };
-    const post = t => {
-      const m = lerp2(E.p, E.q, t);
-      if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
-        const tall = e.arch === 'bogen', top = wallPillar(m, look, z, Infinity, tall ? 6 : 0), id = 'G' + (t < 0.5 ? 0 : 1) + k;
-        if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);
-        else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
-      }
-      else hedgeKnob(m, look, z);
-    };
+    const post = t => { if (e.b !== 'mauer') hedgeKnob(lerp2(E.p, E.q, t), look, z); };   // Mauer-Torpfeiler: am Eckpunkt (gatePillarsAt)
     stub(p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT); post(gt);
     if (gardenGate(k)) gateDoor(E, e, look, z, k);
     stub(lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1); post(1 - gt);
@@ -514,8 +506,20 @@ function drawFence(E, look, style, gate, z, posts = [true, true]) {
   }
 }
 // Alle Linien an den hinteren Kanten eines Felds (vor dem Feld selbst zeichnen)
+// Torpfeiler einer Mauer am Eckpunkt (x, y): vor den Stücken, die hier beginnen (a/b x,y – in diesem Feld gezeichnet), und
+// nach denen, die hier enden (Felder davor) – so liegt er hinter der Mauer, die vor ihm weitergeht (Block 87f)
+function gatePillarsAt(vx, vy, z) {
+  const ks = ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)];
+  const k = ks.find(o => { const n = state.edges.get(o); return n && n.b === 'mauer' && isGate(o); });
+  if (!k) return;
+  const e = state.edges.get(k), look = EDGE_LOOK.mauer[e.style] || EDGE_LOOK.mauer.backstein, m = [vx - 0.5, vy - 0.5];
+  const tall = e.arch === 'bogen', top = wallPillar(m, look, z, Infinity, tall ? 6 : 0), id = 'G' + (ks.indexOf(k) < 2 ? 0 : 1) + k;
+  if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);          // „Torbogen“: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
+  else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
+}
 function drawEdgesAt(x, y, z, now) {
   if (!state.edges.size) return;
+  gatePillarsAt(x, y, z);
   for (const k of ['a' + x + ',' + y, 'b' + x + ',' + y]) { const e = state.edges.get(k); if (e) drawEdge(k, e, z, now); }
 }
 // Vorschau/Markierung einer Kante am Boden

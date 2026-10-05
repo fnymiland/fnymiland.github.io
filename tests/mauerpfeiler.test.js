@@ -40,4 +40,14 @@ describe('Mauerpfeiler (Block 87c)', () => {
     const [[, q]] = prisms('b6,5');
     expect(q[1]).toBeCloseTo(5.5 - R);                                                  // Hecke ebenso
   });
+  it('Torpfeiler liegt hinter der Mauer, die von ihm nach vorn weitergeht (Zeichenreihenfolge wie im Spiel)', () => {
+    game("chosenStyle.mauer = 'backstein'; buildEdge('mauer', 'a6,6'); buildEdge('mauer', 'b6,6'); buildEdge('mauer', 'a5,6'); setGate('b6,6', true); recalc()");
+    const seq = game(`(() => { const out = []; const wp = wallPillar, ep = edgePrism; wallPillar = (m, ...a) => { out.push('P' + m.join()); return wp(m, ...a); }; edgePrism = (p, q, E, ...a) => { out.push('M' + p.join() + '>' + q.join()); return ep(p, q, E, ...a); };
+      try { for (let s = 0; s <= 30; s++) for (let x = 0; x <= s; x++) drawEdgesAt(x, s - x, 1.4, 0); } finally { wallPillar = wp; edgePrism = ep; } return out; })()`);
+    const pil = seq.indexOf('P5.5,5.5'), after = seq.findIndex(x => x.startsWith('M5.6'));        // Mauer a6,6 beginnt am Pfeiler (5,5|5,5) und geht nach vorn
+    expect(pil).toBeGreaterThanOrEqual(0);
+    expect(after).toBeGreaterThan(pil);
+    const before = seq.findIndex(x => x.startsWith('M4.5'));                                        // Mauer a5,6 endet dort (dahinter)
+    expect(before).toBeLessThan(pil);
+  });
 });
