@@ -352,6 +352,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+93. **Online-Speicher** (Block 93, js/cloud.js): Nur über `cloudApi` (Adapter; im Test eine Attrappe) und die Regeln in
+    `cloudDecide` (reine Funktion, Tabellentest). Nie hochladen ohne `claim` gegen die bekannte `rev`; eine leere Welt
+    (`freshSum`) nie über eine bespielte; bevor eine andere Welt (`sum.seed`) die Cloud ersetzt, die alte in die Sicherungen.
+    Eigene Aktionen zählt `undoCommit` (`cloudTouched`) – wer Spielerisches ohne `undoable` ändert, ruft es selbst.
+    Wer den ganzen Stand ersetzt (Neue Insel, Datei laden), ruft `cloudNewWorld()`. Neue Felder im Spielstand müssen
+    `parseSave` auch für Cloud-Stände verkraften (dieselbe Datei wie im Browser).
 92. **Hilfe am Ort** (Block 92, js/help.js): Was Spieler nicht verstehen könnten, bekommt `data-help="res:…|wish:…|term:…|b:…"`
     (`helpAttr`) – ein Klick öffnet die Sprechblase, ohne eigene Verdrahtung (Listener am Dokument, übersteht das Neuzeichnen).
     Rohstoffe und Gebäude erklärt `helpEntry` aus den Spieldaten; neue Wünsche brauchen einen Text in `WISH_HELP`, neue Begriffe

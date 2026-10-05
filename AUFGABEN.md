@@ -1037,3 +1037,15 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Spieldaten: Beschreibung, Tipp, Kosten, was es liefert, wo im Menü, Freischaltung), mit „Bauen“.
 - [x] Anleitung und „Das ist neu“ erwähnen es. Test: hilfe.test.js.
 - [x] 92b: Antippbares nicht mehr unterstrichen – nur das kleine ? zeigt es an (Antippen weiter auf der ganzen Zeile).
+
+## Block 93 – Online-Speicher, Stufe 1 (06.10.2026)
+- [x] Freiwillig anmelden (☰ → ☁️ Online-Speicher): „Mit Google anmelden“ oder Anmelde-Link per E-Mail (ohne Passwort).
+      Firebase-Projekt `fnymiland` (Spark, kostenlos), Realtime Database europe-west1. Firebase lädt erst bei Bedarf (gstatic).
+- [x] Ablage `users/<uid>`: `meta` (rev, Kurzbeschreibung), `save` (ganzer Stand als Text), `bindex`/`backups` (frühere Stände, max. 10).
+      Hochgeladen wird nach eigenen Aktionen (höchstens alle 2 Minuten) und beim Verlassen der Seite – immer nur gegen die
+      Version, die das Gerät kennt (Transaktion auf `meta.rev`).
+- [x] Regeln: Eine leere Welt überschreibt nie eine bespielte (neues Gerät holt die Cloud). Zwei verschiedene Stände →
+      Rückfrage mit beiden (Insel, verdient, bebaut, zuletzt gespielt); der andere wird vorher gesichert. Eine andere Insel
+      (neu begonnen, Datei geladen) ersetzt die in der Cloud erst, nachdem die alte gesichert ist. Frühere Stände zurückholen.
+- [x] Test: cloud.test.js (mit Cloud-Attrappe). Offen: Stufe 2 (ein Gerät führt), Stufe 3 (Live-Spiegel, Besuchen).
+

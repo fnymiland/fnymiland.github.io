@@ -619,6 +619,7 @@ function undoSnap() {
   return { money: state.money, res: { ...state.res }, claimed: new Set(state.claimed), maps };
 }
 function undoCommit(s) {
+  if (typeof cloudTouched === 'function') cloudTouched();          // Online-Speicher (Block 93): eigene Aktion
   const changes = [];
   for (const [n, get] of Object.entries(UNDO_MAPS)) {
     const before = s.maps[n], cur = get();

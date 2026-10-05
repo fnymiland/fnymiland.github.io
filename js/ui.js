@@ -2203,6 +2203,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-cloud">☁️ Online-Speicher${cloudUser ? ' · angemeldet' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
@@ -2212,6 +2213,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => openHelp();
   $('m-lex').onclick = () => openLexikon();
+  $('m-cloud').onclick = () => openCloud();
   $('m-news').onclick = showNews;
   $('m-tips').onclick = openTipBook;
   $('m-diary').onclick = () => openDiary();
@@ -2227,11 +2229,11 @@ function showMenu() {
   $('m-reset').onclick = () => {                 // eigenes Fenster (Block 84a): zweimal schnell tippen löscht nichts
     openModal(`
       <h2>Neue Insel beginnen?</h2>
-      <p>Deine Insel <b>${escHtml(state.town.name)}</b> geht dabei verloren. Sichere sie vorher als Datei, wenn du sie behalten willst.</p>
+      <p>Deine Insel <b>${escHtml(state.town.name)}</b> geht dabei verloren. ${cloudUser ? 'Im ☁️ Online-Speicher bleibt sie unter „Frühere Stände“.' : 'Sichere sie vorher als Datei, wenn du sie behalten willst.'}</p>
       <div class="row"><button class="btn ghost" id="m-no">Lieber nicht</button><button class="btn" id="m-save">💾 Erst sichern</button><button class="btn danger" id="m-yes-new">Ja, neu beginnen</button></div>`);
     $('m-no').onclick = showMenu;
     $('m-save').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
-    $('m-yes-new').onclick = () => { setTool('look'); startNew(); closeModal(); closePanel(); showIntro(true); };
+    $('m-yes-new').onclick = () => { setTool('look'); startNew(); closeModal(); closePanel(); showIntro(true); cloudNewWorld(); };   // alte Insel bleibt in der Cloud gesichert
   };
 }
 $('menu-btn').onclick = showMenu;
@@ -2278,7 +2280,7 @@ $('import-file').addEventListener('change', async e => {
       <button class="btn" id="m-yes">Laden</button>
       <button class="btn ghost" id="m-no">Abbrechen</button>
     </div>`);
-  $('m-yes').onclick = () => { adoptState(s); closeModal(); closePanel(); toast(`Willkommen zurück in ${s.town.name}!`); };
+  $('m-yes').onclick = () => { adoptState(s); closeModal(); closePanel(); toast(`Willkommen zurück in ${s.town.name}!`); cloudNewWorld(); };
   $('m-no').onclick = closeModal;
 });
 

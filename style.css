@@ -677,3 +677,13 @@ kbd { display: inline-block; padding: 2px 7px; border-radius: 7px; background: #
 .lexikon .lx-e p, .lexikon .lx-e li { font-size: 14px; font-weight: 700; line-height: 1.35; }
 .lexikon .lx-e ul { margin: 4px 0; padding-left: 20px; }
 .lexikon .lx-e.spot { box-shadow: 0 0 0 3px var(--yellow); }
+
+/* ---------- Online-Speicher (Block 93) ---------- */
+.cloud-pick { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+.cloud-card { flex: 1 1 200px; background: var(--cream2); border-radius: 16px; padding: 10px 12px; }
+.cloud-card p { margin: 6px 0 10px; font-size: 14px; font-weight: 700; }
+.cloud-card .btn { width: 100%; }
+.cloud-old { display: flex; align-items: center; gap: 8px; background: var(--cream2); border-radius: 12px; padding: 6px 10px; margin: 5px 0; }
+.cloud-old p { flex: 1; margin: 0; font-size: 13px; font-weight: 700; }
+.cloud-mail { width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--brown); padding: 10px 14px; border-radius: 14px;
+  border: 2px solid var(--shadow); background: #fff; margin: 4px 0; -webkit-user-select: text; user-select: text; }
