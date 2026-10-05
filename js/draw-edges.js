@@ -105,23 +105,19 @@ function drawBushes(at, look, z, seed, id = null) {
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);   // von hinten nach vorn
   for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i, id);
 }
-// Lichter in der Wilmerhecke (Block 86l): nur kleine Leuchtpunkte, gleichmäßig an festen Stellen der Kante (je ⅛) in leichtem
-// Auf und Ab – kein Draht, also nichts, das an Ecken, Durchgängen oder Enden zusammenpassen muss
-function bushGarland(pt, look, z, id, { t0 = 0, t1 = 1 } = {}) {   // pt(t) → Punkt auf der Linie
-  const lit = edgeLit(id);
-  for (let n = 0; n < 8; n++) {
-    const t = (n + 0.5) / 8;
-    if (t < t0 || t > t1) continue;
-    const m = pt(t), [x, y] = edgeS(m[0], m[1], 7.6 - 1.6 * Math.sin(Math.PI * ((t * 2) % 1)), z), r = 0.95 * z;
-    circle(x, y, r, lit ? '#fff3b0' : C('#f6edc8'));
-    if (lit) glowQuad([[x - r, y], [x, y - r], [x + r, y], [x, y + r]], 8 * z);
-  }
-}
 function wilmerBush(m, look, z, r = 0.5, i = 0, id = null) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
   const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
   g.save(); g.translate(x, y); g.scale(ds, ds);
   try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, null); } finally { g.restore(); }
+  if (look.lights) {                                               // Lichter (Block 86m): auf jedem Busch derselbe kleine Bogen vorn
+    const lit = id ? edgeLit(id) : night > 0.15 && isLive();
+    for (const [dx, dy] of [[-4.6, -6.2], [-1.6, -4.6], [1.6, -4.6], [4.6, -6.2]]) {
+      const bx = x + dx * k, by = y + dy * k, r = 1.1 * k;
+      circle(bx, by, r, lit ? '#fff3b0' : C('#f6edc8'));
+      if (lit) glowQuad([[bx - r, by], [bx, by - r], [bx + r, by], [bx, by + r]], 7 * z);
+    }
+  }
   if (look.flowers) for (let f = 0; f < 3; f++) {
     const a = hash(i, f, 17) * Math.PI * 2, d = 3 + hash(i, f, 19) * 3;
     circle(x + Math.cos(a) * d * k, y - 8 * k + Math.sin(a) * d * 0.7 * k, 1.3 * k, C(look.flowers[Math.floor(hash(i, f, 23) * look.flowers.length)]));
@@ -409,15 +405,12 @@ function drawEdge(k, e, z, now) {
     stub(p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT); post(gt);
     if (gardenGate(k)) gateDoor(E, e, look, z, k);
     stub(lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1); post(1 - gt);
-    if (look.bushes && look.lights) for (const o of [{ t0: 0, t1: GATE_CUT }, { t0: 1 - GATE_CUT, t1: 1 }])   // Lichter nur in den Büschen neben dem Weg
-      bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k, o);
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
     bushSpan(k, E, onP ? ROUND_R : gateP, onQ ? 1 - ROUND_R : 1 - gateQ, look, z, k.length);
-    if (look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k);
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
     if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join());

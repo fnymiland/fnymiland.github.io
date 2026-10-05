@@ -961,6 +961,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Durchgangs) läuft sie in den letzten Busch hinunter. (86j spannte sie fälschlich über den Weg – zurückgenommen.)
 - [x] 86l: Nutzer-Idee: keine Kette, nur kleine Leuchtpunkte – gleichmäßig an festen Stellen (je ⅛ Kante) in leichtem Auf und Ab,
       nachts leuchtend. Kein Draht → keine Probleme an Ecken, Durchgängen und Enden.
+- [x] 86m: Punkte auf der Mittellinie wurden teils von den Büschen des nächsten Stücks verdeckt (ungleichmäßig). Jetzt trägt jeder
+      Busch vorn denselben kleinen Lichterbogen (4 Punkte) – gleichmäßig, keine gerade Linie, mit dem Busch gezeichnet.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
