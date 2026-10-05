@@ -868,6 +868,7 @@ function buildEdge(b, k) {
   const style = currentStyle(b), old = state.edges.get(k);
   if (old && old.b === b && old.style === style) return false;
   const d = ITEMS[b];
+  if (old) { state.money += ITEMS[old.b].cost; for (const [r, n] of Object.entries(ITEMS[old.b].mat || {})) state.res[r] += n; }   // die alte Linie zurück (Block 84b)
   state.money -= d.cost; payMat(d.mat || {});
   state.edges.set(k, { b, style, ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
@@ -1158,12 +1159,17 @@ function buildSmall(b, x, y, slot) {
   recalc(); checkStars(); save();
   return true;
 }
+// Kleine Deko zurückgeben: Preis und Material – geschenkte (Parkbäume aus dem Wald, Block 84b) bringen nichts
+const decoBack = d => d.free ? 0 : ITEMS[d.b].cost || 0;
+function payBackDeco(d) {
+  if (d.free) return;
+  state.money += ITEMS[d.b].cost || 0;
+  for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n;
+}
 function removeSmall(x, y, slot) {
   const k = x + ',' + y, ds = decosAt(k);
   if (!ds || !ds[slot]) return;
-  const it = ITEMS[ds[slot].b];
-  state.money += it.cost;
-  for (const [r, n] of Object.entries(it.mat || {})) state.res[r] += n;
+  payBackDeco(ds[slot]);
   ds[slot] = null;
   if (ds.every(v => !v)) state.decos.delete(k);
   sfx('dig'); recalc(); save();
@@ -1843,6 +1849,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const d = ITEMS[b];
   const r = ROTATABLE.has(b) ? rot : 0;
   if (d.edge) return 'Linien: Anfang und Ende antippen';
+  if (d.fixed && !opts.move) return 'Das lässt sich nicht bauen';                           // Rathaus, Sehenswürdigkeit, Truhe (nur verschieben)
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'fz_hoch' || b === 'fz_tief') {             // Höhen-Pinsel (Block 60e): nur über Schienen
@@ -1888,6 +1895,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     const ter = terrainAt(x, y);
     if (b === 'graben') {
       if (COVER.has(x + ',' + y)) return 'Hier steht etwas';
+      if (decosAt(x + ',' + y)) return 'Hier stehen kleine Dekos – erst wegnehmen';
       if (ter === 'water') return 'Hier ist schon Wasser';
       if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
@@ -1937,12 +1945,14 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (replacesWeg(b) && plainWeg(k)) {                                  // Gebäude: ersetzt den Weg
         const ds = decosAt(k);
         if (ds && (tiles.length > 1 || BIG_ON_TILE.has(b) || ds.slice(4).some(Boolean))) return 'Erst die kleine Deko vom Weg nehmen';
+        const ne = needError(d, ter, opts);                                  // das Gelände unter dem Weg zählt weiter (Block 84b)
+        if (ne) return ne;
         continue;
       }
       if (d.needs === 'platz') return 'Marktstände gehören auf einen Weg oder Platz';
       if (COVER.has(k)) {
-        if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy)) return null;             // Übergang umfärben
-        if (tiles.length === 1 && crossCandidate(b, fx, fy)) return crossError(b, fx, fy);    // wird ein Bahnübergang
+        if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy) && !opts.move) return null;             // Übergang umfärben
+        if (tiles.length === 1 && crossCandidate(b, fx, fy) && !opts.move) return crossError(b, fx, fy);    // wird ein Bahnübergang (verschoben: das Ziel ginge verloren)
         return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
       }
       if (ter === 'water') {
@@ -1951,16 +1961,15 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         return 'Nicht auf dem Wasser';
       }
       if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
-      // Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
-      const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
-      if (need === 'forest' && ter !== 'forest' && !anywhere) return 'Nur im Wald – überall mit „Forstwirtschaft“';
-      if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels – überall mit „Tiefbau“';
-      if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
-      if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
-      if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
-      if (opts.move && anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
-      if ((need === 'grass' || need === 'shore' || need === 'strand') && ter !== 'grass') {                  // nur noch beim Verschieben
-        return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
+      if (b !== 'weg' && b !== 'schiene' && (decosAt(k) || []).slice(4, 8).some(Boolean)) return 'Erst die kleine Deko von der Seite nehmen';   // auf Gebäudefeldern nur Ecken
+      const ne = needError(d, ter, opts);
+      if (ne) return ne;
+    }
+    if (tiles.length > 1 && b !== 'weg' && b !== 'schiene') {               // keine Linie quer durchs Gebäude (Block 84b)
+      const inside = new Set(tiles.map(p => p.join()));
+      for (const [fx, fy] of tiles) for (const [nx, ny] of [[fx + 1, fy], [fx, fy + 1]]) {
+        const e = inside.has(nx + ',' + ny) && state.edges.get(edgeBetween(fx, fy, nx, ny));
+        if (e) return `Quer durch läuft: ${ITEMS[e.b].name} – erst entfernen`;
       }
     }
     if (b === 'weg') { const e = bridgeShapeError(x, y, false); if (e) return e; }       // Weg an der Seite einer Brücke: kein Abzweig
@@ -1980,6 +1989,21 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const c = costOf(b, x, y);
   if (state.money < c.cost + clearCost(b, x, y, r)) return 'Zu wenig Taler';
   return matError(c.mat);
+}
+
+// Rohstoff-Betriebe brauchen ihr Gelände – nach der passenden Forschung auch auf Wiesen (grass)
+function needError(d, ter, opts) {
+  const need = d.needs, anywhere = ANYWHERE[need] && hasTech(ANYWHERE[need].tech) && (ter === 'grass' || ter === 'rock');
+  if (need === 'forest' && ter !== 'forest' && !anywhere) return 'Nur im Wald – überall mit „Forstwirtschaft“';
+  if (need === 'rock' && ter !== 'rock' && !anywhere) return 'Nur auf Fels – überall mit „Tiefbau“';
+  if (need === 'erz' && ter !== 'erz' && !anywhere) return 'Nur auf Erzadern – überall mit „Tiefbohrung“';
+  if (need === 'obst' && ter !== 'obst' && !anywhere) return 'Nur im Obsthain – überall mit „Höhere Agrartechnik“';
+  if (need === 'kristall' && ter !== 'kristall') return 'Nur auf Kristallfels (Kristallinsel)';
+  if (opts.move && anywhere && ter === 'rock' && need !== 'rock' && need !== 'erz') return 'Erst sprengen (Gelände → Abreißen)';
+  if ((need === 'grass' || need === 'shore' || need === 'strand') && ter !== 'grass') {                  // nur noch beim Verschieben
+    return ter === 'forest' || ter === 'obst' ? 'Erst roden (Gelände → Abreißen)' : 'Erst sprengen (Gelände → Abreißen)';
+  }
+  return null;
 }
 
 // Sehenswürdigkeiten (seit 29.09. 2×2): im selben Grundstück bleiben, am liebsten dort, wo nichts im Weg ist
@@ -2018,7 +2042,7 @@ function growWonders() {
         const kk = fx + ',' + fy, ds = state.decos.get(kk);
         if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
         if (ds) {
-          for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; }
+          for (const d of ds) if (d) payBackDeco(d);
           state.decos.delete(kk);
         }
       }
@@ -2078,7 +2102,7 @@ function growTownHall() {
       rebuildCover();
     }
     const ds = state.decos.get(kk);
-    if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+    if (ds) { for (const d of ds) if (d) payBackDeco(d); state.decos.delete(kk); }
     if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
   }
   state.tiles.set(ax + ',' + ay, t);
@@ -2133,7 +2157,7 @@ function growHarbors() {
         state.tiles.delete(a); rebuildCover();
       }
       const ds = state.decos.get(kk);
-      if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+      if (ds) { for (const d of ds) if (d) payBackDeco(d); state.decos.delete(kk); }
       if (terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
     }
     // Schiffe, die zu diesem Hafen fuhren, finden ihn am neuen Anker
@@ -2177,7 +2201,7 @@ function growLighthouse(k) {
     const kk = fx + ',' + fy, a = anchorAt(fx, fy), o = a && a !== k && state.tiles.get(a);
     if (o) { state.money += ITEMS.weg.cost; state.tiles.delete(a); }
     const ds = state.decos.get(kk);
-    if (ds) { for (const d of ds) if (d) { state.money += ITEMS[d.b].cost || 0; for (const [r, n] of Object.entries(ITEMS[d.b].mat || {})) state.res[r] += n; } state.decos.delete(kk); }
+    if (ds) { for (const d of ds) if (d) payBackDeco(d); state.decos.delete(kk); }
   }
   state.tiles.delete(k);
   const nk = c.ax + ',' + c.ay, nt = { ...t, rot: c.r };
@@ -2243,7 +2267,7 @@ function fitFootprints() {
         const kk = fx + ',' + fy, a = anchorAt(fx, fy);
         if (a && state.tiles.get(a).b !== 'lm') { const o = state.tiles.get(a); if (o.b !== 'weg') removed.push(ITEMS[o.b].name); refundObj(a, o); }
         const ds = state.decos.get(kk);
-        if (ds) { for (const d of ds) if (d) state.money += ITEMS[d.b].cost; state.decos.delete(kk); }
+        if (ds) { for (const d of ds) if (d) state.money += decoBack(d); state.decos.delete(kk); }
         if (t.b === 'lm' && terrainAt(fx, fy) !== 'grass') state.terra.set(kk, 'grass');
         rebuildCover();
       }
@@ -2380,7 +2404,8 @@ function demolishInfo(x, y) {
     if (t.b === 'truhe') return { err: 'Die Truhe erst öffnen (antippen)' };
     if (d.fixed) return { err: 'Das Rathaus bleibt stehen' };
     if (d.pop) {
-      const lost = d.pop * t.lvl;
+      const popMul = Object.entries(T.wonders || {}).reduce((m, [w, f]) => m + (WONDERS[w].effect.popMul || 0) * f, 0);   // Seebrücke
+      const lost = Math.round(popOf(t) * (1 + popMul) * masteryMul('einwohner'));   // wie im Spiel gezählt (Block 84b)
       if (T.pop - lost < T.jobs) return { err: 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.' };
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
@@ -2391,10 +2416,13 @@ function demolishInfo(x, y) {
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }
-    const staged = BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
+    const staged = t.b === 'haus' ? HOUSE_STAGES.slice(1, t.lvl).reduce((s, st) => s + (houseCost(st).money || 0), 0)   // Hausausbau (Block 84b)
+      : BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
       : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
-    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), refund = full ? paid.cost : Math.floor((price + staged) / 2);
-    return { anchor: a, refund, mat: full ? paid.mat : null, lost: full ? 0 : price + staged - refund, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
+    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost : Math.floor((price + staged) / 2);
+    const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
+    for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;
+    return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };

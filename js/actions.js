@@ -72,15 +72,14 @@ function build(b, x, y, quiet) {
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
   state.money -= c.cost;
   payMat(c.mat);
-  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore' || (b === 'weg' && bridge)) && !ownedTile(x, y)) claimTile(x, y);
-  if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
+  claimSea(b, x, y, rot, null, bridge);
   if (b === 'graben') { state.terra.set(k, 'water'); sandCache.clear(); waterChanged(); sfx('dig'); }
   else if (TERRAFORM[b]) {
     const ter = terrainAt(x, y);
     state.terra.set(k, TERRAFORM[b]); sandCache.clear(); landCache.clear(); sfx('dig');
     if (b === 'parkrasen' && (ter === 'forest' || ter === 'obst') && !decosAt(k)) {   // Wald im Park: die Bäume bleiben als Parkbäume
       const ds = newSlots(), n = 1 + Math.floor(hash(x, y, 91) * 2);
-      for (const i of [0, 3, 1, 2].slice(0, n)) ds[i] = { b: 'baum', rot: 0 };
+      for (const i of [0, 3, 1, 2].slice(0, n)) ds[i] = { b: 'baum', rot: 0, free: true };   // geschenkt: bringt beim Entfernen nichts
       state.decos.set(k, ds);
     }
   }
@@ -104,10 +103,10 @@ function build(b, x, y, quiet) {
     if (b === 'fz_schloss') state.tiles.get(k).cs = csNew();     // Märchenschloss: Gestalt (Block 60g)
     if (incMinOf(d) || d.baseCost) state.tiles.get(k).price = c.cost;   // Preis nach Einkommen (auch Leuchtturm): fürs Erstatten merken (Block 60/61)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
-    if (b === 'haus') {
+    if (b === 'haus') {                                                  // bunt gemischt – außer „neu gebaute bekommen diese Farben“
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
-      t.wall = walls[Math.floor(Math.random() * walls.length)][1];
-      t.roof = roofs[Math.floor(Math.random() * roofs.length)][1];
+      if (t.wall == null) t.wall = walls[Math.floor(Math.random() * walls.length)][1];
+      if (t.roof == null) t.roof = roofs[Math.floor(Math.random() * roofs.length)][1];
     }
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }
@@ -121,6 +120,12 @@ function build(b, x, y, quiet) {
   return true;
 }
 
+// Ins Meer gebaut oder verschoben: das Feld gehört dann zur Insel (sonst ließe es sich nicht mehr antippen, Block 84b)
+function claimSea(b, x, y, rot, t, bridge) {
+  const d = ITEMS[b];
+  if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore' || (b === 'weg' && bridge)) && !ownedTile(x, y)) claimTile(x, y);
+  if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot, t)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
+}
 function demolish(x, y) {
   const info = demolishInfo(x, y);
   if (info.err) { fail(info.err); return; }
@@ -257,6 +262,7 @@ function dropGroup(hx, hy) {
       for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);   // Wege am Ziel: unter die Deko bzw. vom Gebäude ersetzt (Block 58)
       if (covered.length) { if (plazaOk(b)) setUnder(t, x, y, [...covered, ...Object.entries(t.wegs || {}).map(([o, st]) => [x + keyXY(o)[0], y + keyXY(o)[1], st]), ...(t.weg != null ? [[x, y, t.weg]] : [])]); else if (replacesWeg(b)) state.money += covered.length * ITEMS.weg.cost; }
       state.tiles.set(k, t);
+      claimSea(b, x, y, t.rot || 0, t, t.bridge);
     }
     else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
   }
@@ -268,6 +274,12 @@ function dropGroup(hx, hy) {
 }
 function moveError(x, y, slot) {
   if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
+  const b = moving.t.b;
+  if (b === 'schiene' || b === 'weg') {                       // Brücken wie beim Verschieben einer Gruppe (Block 84b)
+    const water = terrainAt(x, y) === 'water';
+    if (moving.t.bridge && !water) return 'Brücken nur übers Wasser';
+    if (!moving.t.bridge && water) return b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
+  }
   return placeError(moving.t.b, x, y, placeRot(moving.t.b, x, y), { move: true, t: moving.t });
 }
 function dropAt(x, y, slot) {
@@ -285,6 +297,7 @@ function dropAt(x, y, slot) {
     if (replacesWeg(b) && covered.length) state.money += covered.length * ITEMS.weg.cost;   // Gebäude ersetzt den Weg
     setUnder(t, x, y, plazaOk(b) ? covered : []);
     state.tiles.set(k, t);
+    claimSea(b, x, y, rot, t, t.bridge);
   }
   moving = null;
   $('rot-btn').hidden = true;
@@ -446,7 +459,8 @@ function tap(sx, sy, isTouch) {
   const pl = pillAt(sx, sy);                                // Schild angetippt (Block 71): Sehenswürdigkeit nur beim Ansehen
   if (pl && (tool === 'look' || !pl.look)) { pl.open(sx, sy); return; }
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
-  if (ek) { if (removeEdge(ek)) { sfx('dig'); recalc(); save(); } return; }
+  if (ek && isTouch && hoverEdge !== ek) { hoverEdge = ek; hover = null; return; }   // Touch: erst zeigen, dann entfernen (Block 84b)
+  if (ek) { if (removeEdge(ek)) { hoverEdge = null; sfx('dig'); recalc(); save(); } return; }
   // Ansehen: getroffen ist, was dort gezeichnet ist – auch Dach und Turm, nicht nur das Bodenfeld (Block 71)
   const hit = tool === 'look' ? objectAt(sx, sy) : null;
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
@@ -646,6 +660,7 @@ function undo() {
   for (const [r, d] of Object.entries(step.dres)) state.res[r] -= d;
   sandCache.clear(); landCache.clear(); waterChanged(); previewCache = null;
   sfx('dig'); recalc(); save();
+  if (panelLive && !$('panel').hidden) panelLive();             // offenes Fenster: Ding noch da? (sonst zu)
   toast('↶ Rückgängig');
   return true;
 }

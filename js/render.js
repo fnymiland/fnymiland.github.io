@@ -672,7 +672,7 @@ function render(now) {
       preview = { ok: !err, ghost: !err || true, text: err || 'Hierhin' };
     } else if (tool === 'abriss' && hds && hds[hoverSlot]) {
       const it = ITEMS[hds[hoverSlot].b];
-      preview = { ok: true, text: `${it.name} entfernen: +${fmt(it.cost)}` };
+      preview = { ok: true, text: `${it.name} entfernen: +${fmt(decoBack(hds[hoverSlot]))}` };
     } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };

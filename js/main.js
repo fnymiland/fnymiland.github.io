@@ -6,6 +6,7 @@ function startNew() {
   resetUnlockWatch(); resetSales();
   waterChanged();
   plan = null; moving = null;                      // Getragenes gehört zum alten Spiel (dort am alten Platz gespeichert)
+  rotManual = false;
   state = newState();
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();

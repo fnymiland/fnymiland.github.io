@@ -232,8 +232,8 @@ function pickCard(id) {
 function setTool(t) {
   if (t !== 'verschieben' && moving) cancelMove();
   if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
+  if (t !== tool || t === 'look') rotManual = false;   // selbst gedreht: gilt bis zum Werkzeugwechsel (Block 84b)
   tool = t;
-  rotManual = false;
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
@@ -769,7 +769,7 @@ function startMove(x, y, slot = 0) {
   if (moving) cancelMove();                                     // was man schon trägt, erst zurücklegen (Block 84a)
   setTool('verschieben');
   undoable(() => pickUp(x, y, slot));                           // Aufheben … Ablegen = ein Schritt zum Zurücknehmen
-  hover = { x, y }; hoverSlot = slot;
+  hover = { x, y }; hoverSlot = Math.max(0, slot);
 }
 const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
 // Löschen im Fenster (Block 45): wie das Abriss-Werkzeug (Deko und Wege voll zurück, Gebäude zur Hälfte). Was viel kostet,
@@ -1115,7 +1115,7 @@ function openInfo(x, y) {
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
   wireDel(x, y);
-  $('p-move').onclick = () => startMove(x, y);
+  $('p-move').onclick = () => startMove(x, y, -1);              // das Gebäude, nicht die Deko in seiner Ecke
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
   // Schiffe: Modell und Ziel wählen, kaufen, verkaufen
@@ -1553,9 +1553,9 @@ function openDecoInfo(x, y, slot) {
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
-      <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${it.cost ? ` +${fmt(it.cost)}` : ''}</button>
+      <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${decoBack(d) ? ` +${fmt(decoBack(d))}` : ''}</button>
       <button class="btn ghost" id="p-close">Schließen</button>
-    </div>`);
+    </div>`, () => (decosAt(x + ',' + y) || [])[slot] === d ? openDecoInfo(x, y, slot) : closePanel());   // weg (↶, Verschieben): Fenster zu
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
   $('p-del').onclick = () => { closePanel(); undoable(() => removeSmall(x, y, slot)); };
   $('p-move').onclick = () => startMove(x, y, slot);
@@ -1590,7 +1590,7 @@ function openLandmark(x, y) {
     <div class="row">${info.stage && owned ? moveBtn : ''}<button class="btn ghost" id="p-close" style="flex:1">Schließen</button></div>`,
     () => state.tiles.get(x + ',' + y) === t ? openLandmark(x, y) : closePanel());
   if ($('p-restore')) $('p-restore').onclick = () => { if (restoreLandmark(type)) closePanel(); };
-  if ($('p-move')) $('p-move').onclick = () => startMove(x, y);
+  if ($('p-move')) $('p-move').onclick = () => startMove(x, y, -1);
   $('p-close').onclick = closePanel;
 }
 

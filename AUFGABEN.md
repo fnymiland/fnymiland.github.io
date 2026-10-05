@@ -843,28 +843,30 @@ Rückgängig-Stapel; der Leuchtturm merkt sich seinen Preis.
 - [x] „Neue Insel beginnen“: zweimal schnell tippen löscht alles (die Rückfrage ist derselbe Knopf ohne Wartezeit).
 - [x] Beim normalen Start werden Erfolge nicht still gezählt (Bänder-Flut nach Updates; der Import macht es richtig).
 
-### 84b – Bauen, Verschieben, Abreißen
-- [ ] Betrieb auf einem Wegfeld: die Geländebedingung fällt weg (Kristallmine, Holzfäller, Bergwerk überall; `placeError`
+### 84b – Bauen, Verschieben, Abreißen – erledigt
+Tests: fehler84b.test.js. Browser-Zufallstest (3.000 Aktionen) danach ohne Fehler; dabei fiel auf, dass sich Rathaus/Sehenswürdigkeit
+per `build` (nicht über die Leiste) bauen ließen – jetzt abgelehnt.
+- [x] Betrieb auf einem Wegfeld: die Geländebedingung fällt weg (Kristallmine, Holzfäller, Bergwerk überall; `placeError`
       springt mit `continue` über die needs-Prüfung).
-- [ ] Haus abreißen: Ausbau-Taler (Glasvilla bis 123.700) werden nicht erstattet, keine Rückfrage (`demolishInfo` kennt
+- [x] Haus abreißen: Ausbau-Taler (Glasvilla bis 123.700) werden nicht erstattet, keine Rückfrage (`demolishInfo` kennt
       HOUSE_STAGES nicht).
-- [ ] Hafen abreißen: gekaufte Schiffe verschwinden ohne Erstattung und ohne Erwähnung in der Rückfrage.
-- [ ] Weg auf Schiene (oder umgekehrt, oder auf einen Bahnübergang) verschieben löscht das Ziel samt Brücke.
-- [ ] Einzelnes Verschieben ignoriert Brücken (Brücke auf der Wiese, Weg/Schiene ohne Brücke im Wasser); Gruppen prüfen es.
-- [ ] Steg/Hausboot/Offshore ins fremde Meer verschoben: das Feld gehört niemandem, nicht mehr antippbar oder abreißbar
+- [x] Hafen abreißen: gekaufte Schiffe verschwinden ohne Erstattung und ohne Erwähnung in der Rückfrage.
+- [x] Weg auf Schiene (oder umgekehrt, oder auf einen Bahnübergang) verschieben löscht das Ziel samt Brücke.
+- [x] Einzelnes Verschieben ignoriert Brücken (Brücke auf der Wiese, Weg/Schiene ohne Brücke im Wasser); Gruppen prüfen es.
+- [x] Steg/Hausboot/Offshore ins fremde Meer verschoben: das Feld gehört niemandem, nicht mehr antippbar oder abreißbar
       (kein `claimTile` beim Ablegen).
-- [ ] Mehrfeld-Gebäude lassen sich quer über Zaun/Hecke/Mauer bauen, verschieben und drehen.
-- [ ] Haus: „Neu gebaute bekommen diese Farben“ wirkt nicht (die Zufallsfarbe überschreibt).
-- [ ] ✋ im Gebäudefenster hebt die Deko in Ecke 0 auf statt das Gebäude.
-- [ ] Deko-Fenster bleibt nach ↶ offen; ✋ hebt dann den Weg darunter auf (keine live-Prüfung).
-- [ ] Großes Glashaus (2×3) lässt sich nicht drehen (fehlt in ROTATABLE).
-- [ ] Parkrasen im Wald schenkt Bäume, die beim Entfernen voll erstattet werden (Geld-Trick, Roden gratis).
-- [ ] Kleine Deko bleibt an verbotener Stelle: Bank in der Seitenmitte unter einem neuen Haus, Baum/Bank im gegrabenen Teich.
-- [ ] Leuchtturm wird nach dem heutigen statt dem bezahlten Preis erstattet (kein `t.price`/`baseCost`, Regel 73).
-- [ ] Linie über andere Linie ziehen: Vorschau 0 Taler, kostet aber voll, die alte Linie wird nicht erstattet.
-- [ ] Ausgebautes Haus: die Abriss-Prüfung rechnet Einwohner als pop × Stufe statt `popOf` → „Hier wohnen Leute …“ zu früh.
-- [ ] iPad: Zaun/Hecke/Mauer beim Abreißen schon beim ersten Tippen weg (sonst zeigt das erste Tippen die Vorschau).
-- [ ] Eine Freischaltung während des Bauens setzt die selbst gewählte Drehung zurück.
+- [x] Mehrfeld-Gebäude lassen sich quer über Zaun/Hecke/Mauer bauen, verschieben und drehen.
+- [x] Haus: „Neu gebaute bekommen diese Farben“ wirkt nicht (die Zufallsfarbe überschreibt).
+- [x] ✋ im Gebäudefenster hebt die Deko in Ecke 0 auf statt das Gebäude.
+- [x] Deko-Fenster bleibt nach ↶ offen; ✋ hebt dann den Weg darunter auf (keine live-Prüfung).
+- [x] Großes Glashaus (2×3) lässt sich nicht drehen (fehlt in ROTATABLE).
+- [x] Parkrasen im Wald schenkt Bäume, die beim Entfernen voll erstattet werden (Geld-Trick, Roden gratis).
+- [x] Kleine Deko bleibt an verbotener Stelle: Bank in der Seitenmitte unter einem neuen Haus, Baum/Bank im gegrabenen Teich.
+- [x] Leuchtturm wird nach dem heutigen statt dem bezahlten Preis erstattet (kein `t.price`/`baseCost`, Regel 73).
+- [x] Linie über andere Linie ziehen: Vorschau 0 Taler, kostet aber voll, die alte Linie wird nicht erstattet.
+- [x] Ausgebautes Haus: die Abriss-Prüfung rechnet Einwohner als pop × Stufe statt `popOf` → „Hier wohnen Leute …“ zu früh.
+- [x] iPad: Zaun/Hecke/Mauer beim Abreißen schon beim ersten Tippen weg (sonst zeigt das erste Tippen die Vorschau).
+- [x] Eine Freischaltung während des Bauens setzt die selbst gewählte Drehung zurück.
 
 ### 84c – Fortschritt und Anzeigen
 - [ ] Album-Seiten „Deko“ und „Freizeitpark“ werden nie voll (Parkrasen, Fz-Boden und Höhen-Pinsel sind keine Gebäude) →

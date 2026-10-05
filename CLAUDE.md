@@ -352,6 +352,15 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+85. **Bauen und Erstatten** (Block 84b): Geländebedingungen nur über `needError` (gilt auch für Betriebe auf einem Weg).
+    `placeError` prüft Linien quer durch Mehrfeld-Gebäude, Seitenmitten-Deko (4–7) unter 1×1-Gebäuden, Dekos beim Teichgraben;
+    Rathaus/Sehenswürdigkeit/Truhe (`fixed`) lassen sich nur verschieben. Beim Verschieben werden keine Übergänge gebaut
+    (`opts.move` → „Hier steht schon etwas“), Brücken prüft auch `moveError`, Meer-Felder holt `claimSea` (Bauen und Ablegen).
+    `demolishInfo` zählt Hausausbau (`HOUSE_STAGES`), Schiffe (voll zurück) und Einwohner wie `totals` (`popOf` × Faktoren).
+    Kleine Deko zurückgeben nur über `payBackDeco`/`decoBack` (`d.free`: geschenkte Parkbäume bringen nichts). `buildEdge`
+    erstattet die überzogene Linie. `setTool` setzt die eigene Drehung nur beim Werkzeugwechsel zurück (und bei `look`).
+    ✋ in Gebäudefenstern: `startMove(x, y, -1)` (das Gebäude, nicht die Eck-Deko). Jedes Fenster bekommt eine `live`-Funktion;
+    `undo` ruft sie sofort auf.
 84. **Laden, Tragen, Rückgängig** (Block 84a): Start und Import laufen beide über `afterLoad()` (Umstellungen, still zählen,
     `resetUndo()`); `startNew` ruft `resetUndo()`. `fitFootprints` läuft nur mit `state.fitBig` (parseSave, alte Versionen) –
     wer Größen ändert, erhöht die Spielstand-Version. Erstattet wird über `fullValue(t)` (bezahlter Preis `t.price`/`baseCost`,
