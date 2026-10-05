@@ -927,5 +927,9 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       „🛤️ Weg am Eingang – mit dem Dorf verbunden“ bzw. wo der Weg hingehört.
 - [x] Verschönert: Dächer enden vor dem Bahnsteigende, dort Bank, Laterne (nachts an) und Bahnsteiguhr; gelbe Bahnsteigkante;
       Landbahnhof mit Blumenkästen; Stufen vor dem Portal.
+- [x] 85b: Von der Gleisseite steckte der Turm im Giebeldach des Portals – jetzt flaches Portal mit Zierkante, der Turm wächst
+      aus der Mitte. Bahnsteigdächer (Backstein, Land) waren lange Zelte mit dunklen Dreiecken: jetzt flache Dächer mit Blende
+      und Blechbahnen, beim Landbahnhof mit gezackter Holzborte. Flügel des Landbahnhofs mit durchgehendem Satteldach
+      (Walmdach je Stück gab Kerben). Höchstens 16 Gleise (`HBF_MAX`).
 - [x] Testwelt freizeitpark: Abschnitt „Hauptbahnhöfe“ bei (36, 40) – alle Designs, verschiedene Drehungen und Gleiszahlen, einer
       mit Weg zum Portal. Tests: hauptbahnhof.test.js.

@@ -18,7 +18,7 @@ describe('Hauptbahnhof (Block 85)', () => {
     expect(bad).toEqual([]);
   });
   it('das Bahnsteigdach kommt in jeder Drehung nach seinem Bahnsteig (sonst malt der Bahnsteig darüber)', () => {
-    for (const [look, roofCol] of [['backstein', '#9c4f3a'], ['land', '#8a5a3c'], ['glas', '#cfeaf2']]) for (let rot = 0; rot < 4; rot++) {
+    for (const [look, roofCol] of [['backstein', '#8a4a38'], ['land', '#9a6a48'], ['glas', '#cfeaf2']]) for (let rot = 0; rot < 4; rot++) {
       const seen = fills({ rot, look, gleise: 3 }), plat = '#efe9dc';
       const order = seen.filter(c => c === plat || c.startsWith('#') && game(`shade('${roofCol}', 0) === '${c}' || '${c}' === '${roofCol}'`)).map(c => c === plat ? 'P' : 'R');
       // jedes Dach folgt einem Bahnsteig: in der Folge steht nie „R“ vor dem ersten „P“ des nächsten Gleises

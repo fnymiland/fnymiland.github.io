@@ -745,14 +745,25 @@ const BUILDING_ART = {
           g.save(); g.globalAlpha *= 0.62;
           K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });   // vorn ragt der Bahnsteig hinaus
           g.restore();
-        } else {                                                      // Bahnsteigdach auf Pfosten
+        } else {                                                      // flaches Bahnsteigdach mit Blende auf einer Pfostenreihe (Block 85b)
           for (const a of [-0.6, 0.3, 1.2]) kPost(K, a, bp, lift, iron, 1.3);
-          K.block({ a: 0.3, b: bp, ha: 1.15, hb: 0.5, h: 0.6, lift, wall: iron, roof: look === 'backstein' ? '#9c4f3a' : '#8a5a3c', roofH: 4, type: 'gable', ridge: 'a' });
+          const fascia = look === 'backstein' ? '#3f5a4a' : '#f4ead2';
+          const rc = look === 'backstein' ? '#8a4a38' : '#9a6a48';
+          const D = K.block({ a: 0.3, b: bp, ha: 1.15, hb: 0.62, h: 1.6, lift, wall: fascia, roof: rc, type: 'flat' });
+          g.strokeStyle = C(shade(rc, -0.12)); g.lineWidth = 0.6 * z; g.beginPath();            // Blechbahnen
+          for (const db of [-0.36, -0.12, 0.12, 0.36]) { const p0 = K.P(-0.85, bp + db, lift + 1.6), p1 = K.P(1.45, bp + db, lift + 1.6); g.moveTo(...p0); g.lineTo(...p1); }
+          g.stroke();
+          if (look === 'land') for (const F of Object.values(D.faces)) if (F) {               // gezackte Holzborte unten an der Blende
+            const len = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]), m = Math.max(3, Math.round(len / (4 * z)));
+            const pts = [F.P];
+            for (let i = 0; i < m; i++) { const u = (i + 0.5) / m, q = lerp(F.P, F.Q, u); pts.push([q[0], q[1] + 1.4 * z]); pts.push(lerp(F.P, F.Q, (i + 1) / m)); }
+            poly(pts, C('#f4ead2'));
+          }
         }
       }]);
     }
     // Empfangsgebäude: Flügel links und rechts vom Portal, je Gleis ein Stück (damit es richtig vor und hinter den Hallen liegt)
-    const wingType = look === 'glas' ? 'mansard' : look === 'backstein' ? 'gable' : 'hip';
+    const wingType = look === 'glas' ? 'mansard' : 'gable';      // Satteldach läuft über alle Stücke durch (Walm gab Kerben, Block 85b)
     for (let i = 0; i < n; i++) {
       const lo = gb(i) - 0.5, hi = gb(i) + 1.5;
       const segs = hi <= -PW || lo >= PW ? [[lo, hi]] : [lo < -PW ? [lo, -PW] : null, hi > PW ? [PW, hi] : null].filter(Boolean);
@@ -770,7 +781,8 @@ const BUILDING_ART = {
     }
     // Portal in der Mitte: Giebel nach außen, große Tür mit Fenster darüber, darauf der Uhrturm (Uhren flach auf den Seiten)
     parts.push([-1.5, 0, () => {
-      const Pt = K.block({ a: -1.58, b: 0, ha: 0.4, hb: PW, h: H + 5, wall: shade(wall, 0.06), roof, roofH: 10, type: 'gable', ridge: 'a', trim: '#fffaf0' });
+      // flaches Dach mit heller Zierkante: der Turm wächst aus der Mitte heraus, statt auf einem Giebel zu stecken (Block 85b)
+      const Pt = K.block({ a: -1.55, b: 0, ha: 0.43, hb: PW, h: H + 6, wall: shade(wall, 0.06), roof: shade(roof, 0.12), type: 'flat', trim: '#fffaf0' });
       for (const side of ['back', 'front']) {
         if (!Pt.faces[side]) continue;
         const F = Pt.faces[side], dh = side === 'back' ? 0.5 : 0.42;
@@ -780,7 +792,7 @@ const BUILDING_ART = {
         if (lit) { const F = Pt.faces[side], m = lerp(F.P, F.Q, 0.5); kGlow(m[0], m[1] - F.H * 0.25, z, 26); }
       }
       const tall = H + (look === 'land' ? 21 : look === 'backstein' ? 26 : 31);           // deutlich über den Portalgiebel
-      const T = K.block({ a: -1.5, b: 0, ha: 0.27, hb: 0.27, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9 });
+      const T = K.block({ a: -1.55, b: 0, ha: 0.3, hb: 0.3, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9, trim: '#fffaf0' });
       const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
       for (const F of Object.values(T.faces)) if (F) faceClock(F, 0.5, F.H - 5 * z, 2.6 * z, z, { ring: '#4a4a58', ringW: 0.7, lit, hands: [[hr, 0.55, 0.9], [mi, 0.8, 0.7]] });
     }]);
