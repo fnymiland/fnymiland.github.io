@@ -915,3 +915,17 @@ Tests: fehler84e.test.js.
 - [x] Einführung Schritt 2: „🛤️ ganz links“ stimmt nicht (ganz links ist 👆).
 - [x] Ziel-Karte und Knöpfe oben: lösen nach einem Wisch nicht mehr aus (`fastTap` prüft die Bewegung) – vorsorglich, auf dem Gerät
       war es nicht nachprüfbar.
+
+## Block 85 – Hauptbahnhof überarbeitet (05.10.2026)
+Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Designs reparieren und verschönern.
+- [x] Dächer: Bei Drehung 2 und 3 malte der Bahnsteig über sein eigenes Dach (Backstein, Landbahnhof – sah aus wie ein heller
+      Keil). Jetzt ist jedes Gleis ein Stück: Prellbock und Bahnsteig, dann das Dach darüber.
+- [x] Gleise beim Erweitern: auf weiter entfernten Grundstücken fehlte der Boden (behoben in 84d, hier mit Test für alle Drehungen).
+- [x] Eingang: Bei gerader Gleiszahl saß die Tür neben dem Uhrturm. Neu: Portal genau in der Mitte mit Giebel, großer Tür im
+      hellen Steinrahmen, Fenster darüber, darauf der Uhrturm (Uhren flach auf allen Seiten), links und rechts gleich lange Flügel.
+- [x] Weg anschließen: Vor dem Portal zwei Eingangsfelder (`hbfEntrance`), dort läuft ein Weg bis an die Tür; das Fenster zeigt
+      „🛤️ Weg am Eingang – mit dem Dorf verbunden“ bzw. wo der Weg hingehört.
+- [x] Verschönert: Dächer enden vor dem Bahnsteigende, dort Bank, Laterne (nachts an) und Bahnsteiguhr; gelbe Bahnsteigkante;
+      Landbahnhof mit Blumenkästen; Stufen vor dem Portal.
+- [x] Testwelt freizeitpark: Abschnitt „Hauptbahnhöfe“ bei (36, 40) – alle Designs, verschiedene Drehungen und Gleiszahlen, einer
+      mit Weg zum Portal. Tests: hauptbahnhof.test.js.

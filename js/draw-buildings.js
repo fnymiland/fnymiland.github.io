@@ -696,14 +696,16 @@ const BUILDING_ART = {
     }]);
     K.scene(parts);
   },
-  // Hauptbahnhof (Block 29): 4 tief, je Gleis 2 Felder breit. Vorn (+a) die Gleise mit Bahnsteigen und Prellböcken, hinten
-  // (a < −1) das Empfangsgebäude über die ganze Breite mit Uhrturm. Drei Designs (t.look): Glashalle (Sandstein, gewölbte
-  // Glasdächer wie in Leipzig), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz).
+  // Hauptbahnhof (Block 29, neu in Block 85): 4 tief, je Gleis 2 Felder breit. Vorn (+a) die Gleise mit Bahnsteigen, Laternen,
+  // Bänken und Bahnsteiguhren; hinten (a < −1) das Empfangsgebäude: genau in der Mitte ein Portal mit Giebel, großer Tür und
+  // Uhrturm (Eingang nach außen, dort schließt der Weg an), links und rechts gleich lange Flügel. Drei Designs (t.look):
+  // Glashalle (Sandstein, gewölbte Glasdächer), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz, Blumenkästen).
   hbf(K, s, now, x, y, t, ha, hb) {
-    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g;
+    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g, PW = 0.8;   // PW: halbe Breite des Portals
     if (groundPart(() => {
       K.rect(-1, -hb, 2, hb, C('#cdc6b8'));
       K.rect(-2, -hb, -1, hb, C('#dad2c2'));
+      K.rect(-2, -PW - 0.15, -1.86, PW + 0.15, C('#efe8da'));                                  // Stufen vor dem Portal
       for (let i = 0; i < n; i++) {
         const b = gb(i);
         K.rect(-0.95, b - 0.32, 2, b + 0.32, C('#a89f92'));                                   // Schotter
@@ -712,43 +714,75 @@ const BUILDING_ART = {
       }
     })) return;
     const [wall, roof] = paint(t, look === 'glas' ? '#e8dcc4' : look === 'backstein' ? '#b8664a' : '#efd9b0', look === 'glas' ? '#7fa39a' : look === 'backstein' ? '#6b4f3a' : '#c0694a');
+    const lit = night > 0.15 && isLive(), H = look === 'land' ? 13 : look === 'backstein' ? 19 : 23;
+    const lift = look === 'glas' ? 17 : 11, iron = look === 'backstein' ? '#4a4a58' : look === 'land' ? '#6b4f3a' : '#7d8794';
     const parts = [];
     for (let i = 0; i < n; i++) {
       const b = gb(i), bp = b + 1;
-      parts.push([-0.85, b, () => K.block({ a: -0.85, b, ha: 0.06, hb: 0.22, h: 4, wall: '#e8604f', type: 'flat', roof: '#fff6e4' })]);   // Prellbock
-      parts.push([0.45, bp, () => K.block({ a: 0.45, b: bp, ha: 1.45, hb: 0.38, h: 2.6, wall: '#e2dccf', type: 'flat', roof: '#efe9dc' })]);   // Bahnsteig
-      if (look === 'glas') {                                        // Stahlstützen und gewölbtes Glasdach über Gleis und Bahnsteig
-        parts.push([0.5, b + 0.5, () => {
-          for (const a of [-0.9, 0.5, 1.9]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, 17, '#7d8794', 1.4);
+      // Ein Gleis als ein Stück: erst Prellbock und Bahnsteig samt Ausstattung, zuletzt das Dach darüber – so malt bei keiner
+      // Drehung der Bahnsteig über sein Dach (Block 85)
+      parts.push([0.5, b + 0.5, () => {
+        const plat = () => {
+          K.block({ a: 0.45, b: bp, ha: 1.45, hb: 0.38, h: 2.6, wall: '#e2dccf', type: 'flat', roof: '#efe9dc' });
+          K.rect(-0.95, bp - 0.36, 1.9, bp - 0.3, C('#f2c14e'), 2.6);                           // gelbe Kante zum Gleis
+          K.scene([                                                       // vorn am offenen Bahnsteigende: Bank, Laterne, Uhr
+            [1.45, bp, () => K.block({ a: 1.45, b: bp + 0.2, ha: 0.15, hb: 0.05, h: 2, lift: 2.6, wall: '#8a5a3c', type: 'flat', roof: '#a8744e' })],   // Bank
+            [1.6, bp - 0.15, () => { const [lx, ly] = K.P(1.6, bp - 0.18, 2.6); lampPost(lx, ly, z, 12); }],
+            [1.8, bp, () => {                                                                 // Bahnsteiguhr auf einem Mast
+              const [cx, cy] = K.P(1.8, bp + 0.15, 2.6), top = cy - 9 * z;
+              g.strokeStyle = C(iron); g.lineWidth = 1.1 * z; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, top); g.stroke();
+              circle(cx, top - 1.6 * z, 2.2 * z, C(iron)); circle(cx, top - 1.6 * z, 1.6 * z, lit ? '#fff6c8' : C('#fffaf0'));
+              const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
+              g.strokeStyle = C('#3c3c46'); g.lineWidth = 0.5 * z; g.beginPath();
+              g.moveTo(cx, top - 1.6 * z); g.lineTo(cx + Math.sin(hr) * 0.8 * z, top - 1.6 * z - Math.cos(hr) * 0.8 * z);
+              g.moveTo(cx, top - 1.6 * z); g.lineTo(cx + Math.sin(mi) * 1.2 * z, top - 1.6 * z - Math.cos(mi) * 1.2 * z); g.stroke();
+            }],
+          ]);
+        };
+        K.scene([[-0.85, b, () => K.block({ a: -0.85, b, ha: 0.06, hb: 0.22, h: 4, wall: '#e8604f', type: 'flat', roof: '#fff6e4' })], [0.45, bp, plat]]);   // Prellbock
+        if (look === 'glas') {                                        // Stahlstützen und gewölbtes Glasdach über Gleis und Bahnsteig
+          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, lift, iron, 1.4);
           g.save(); g.globalAlpha *= 0.62;
-          K.block({ a: 0.5, b: b + 0.5, ha: 1.5, hb: 0.98, h: 1, lift: 17, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });
+          K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });   // vorn ragt der Bahnsteig hinaus
           g.restore();
-        }]);
-      } else {                                                      // Bahnsteigdach auf Pfosten
-        const col = look === 'backstein' ? '#9c4f3a' : '#8a5a3c', post = look === 'backstein' ? '#4a4a58' : '#6b4f3a';
-        parts.push([0.5, bp, () => {
-          for (const a of [-0.6, 0.5, 1.6]) kPost(K, a, bp, 11, post, 1.3);
-          K.block({ a: 0.5, b: bp, ha: 1.45, hb: 0.5, h: 0.6, lift: 11, wall: post, roof: col, roofH: 4, type: 'gable', ridge: 'a' });
-        }]);
-      }
-      // Empfangsgebäude in Stücken (je Gleis eins), damit es richtig vor und hinter den Hallen liegt
-      parts.push([-1.5, b + 0.5, () => {
-        const H = look === 'land' ? 13 : look === 'backstein' ? 19 : 23;
-        const B = K.block({ a: -1.5, b: b + 0.5, ha: 0.48, hb: 1, h: H, wall, roof, roofH: look === 'land' ? 7 : 8,
-          type: look === 'glas' ? 'mansard' : look === 'backstein' ? 'gable' : 'hip', ridge: 'b' });
-        K.wins(B, 'front', 2, 0.3, 0.72); K.wins(B, 'back', 2, 0.3, 0.72);
-        if (i === Math.floor((n - 1) / 2)) K.door(B, 'back', 0.35, 0.65, 0.6);
+        } else {                                                      // Bahnsteigdach auf Pfosten
+          for (const a of [-0.6, 0.3, 1.2]) kPost(K, a, bp, lift, iron, 1.3);
+          K.block({ a: 0.3, b: bp, ha: 1.15, hb: 0.5, h: 0.6, lift, wall: iron, roof: look === 'backstein' ? '#9c4f3a' : '#8a5a3c', roofH: 4, type: 'gable', ridge: 'a' });
+        }
       }]);
     }
-    // Uhrturm in der Mitte (Landbahnhof: kleines Türmchen)
-    parts.push([-1.5, 0.01, () => {
-      const tall = look === 'land' ? 20 : look === 'backstein' ? 30 : 38;
-      K.block({ a: -1.5, b: 0, ha: 0.3, hb: 0.3, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9 });
-      const [cx, cy] = K.P(-1.2, 0, tall - 6);
-      circle(cx, cy, 3.2 * z, C('#fffaf0')); g.strokeStyle = C('#3c3c46'); g.lineWidth = 0.7 * z;
-      const m = new Date(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 12 * Math.PI * 2, mi = m.getMinutes() / 60 * Math.PI * 2;
-      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.sin(hr) * 1.6 * z, cy - Math.cos(hr) * 1.6 * z);
-      g.moveTo(cx, cy); g.lineTo(cx + Math.sin(mi) * 2.5 * z, cy - Math.cos(mi) * 2.5 * z); g.stroke();
+    // Empfangsgebäude: Flügel links und rechts vom Portal, je Gleis ein Stück (damit es richtig vor und hinter den Hallen liegt)
+    const wingType = look === 'glas' ? 'mansard' : look === 'backstein' ? 'gable' : 'hip';
+    for (let i = 0; i < n; i++) {
+      const lo = gb(i) - 0.5, hi = gb(i) + 1.5;
+      const segs = hi <= -PW || lo >= PW ? [[lo, hi]] : [lo < -PW ? [lo, -PW] : null, hi > PW ? [PW, hi] : null].filter(Boolean);
+      for (const [s0, s1] of segs) {
+        const mid = (s0 + s1) / 2, half = (s1 - s0) / 2;
+        parts.push([-1.45, mid, () => {
+          const B = K.block({ a: -1.45, b: mid, ha: 0.42, hb: half, h: H, wall, roof, roofH: look === 'land' ? 7 : 8, type: wingType, ridge: 'b' });
+          const cnt = Math.max(1, Math.round(half * 2 / 0.75));
+          K.wins(B, 'back', cnt, 0.3, 0.72, 0.1, 0.9, [], look === 'land');
+          K.wins(B, 'front', cnt, 0.3, 0.72, 0.1, 0.9, [], false);
+          if (s0 <= -n + 1e-6) K.wins(B, 'left', 1, 0.3, 0.72, 0.3, 0.7);      // Stirnseiten außen
+          if (s1 >= n - 1e-6) K.wins(B, 'right', 1, 0.3, 0.72, 0.3, 0.7);
+        }]);
+      }
+    }
+    // Portal in der Mitte: Giebel nach außen, große Tür mit Fenster darüber, darauf der Uhrturm (Uhren flach auf den Seiten)
+    parts.push([-1.5, 0, () => {
+      const Pt = K.block({ a: -1.58, b: 0, ha: 0.4, hb: PW, h: H + 5, wall: shade(wall, 0.06), roof, roofH: 10, type: 'gable', ridge: 'a', trim: '#fffaf0' });
+      for (const side of ['back', 'front']) {
+        if (!Pt.faces[side]) continue;
+        const F = Pt.faces[side], dh = side === 'back' ? 0.5 : 0.42;
+        faceQuad(F.P, F.Q, 0.31, 0.69, 0, F.H * (dh + 0.06), C('#f2ead8'));                 // heller Steinrahmen
+        K.door(Pt, side, 0.36, 0.64, dh, '#5e3b28');
+        K.wins(Pt, side, 1, 0.6, 0.84, 0.36, 0.64);
+        if (lit) { const F = Pt.faces[side], m = lerp(F.P, F.Q, 0.5); kGlow(m[0], m[1] - F.H * 0.25, z, 26); }
+      }
+      const tall = H + (look === 'land' ? 21 : look === 'backstein' ? 26 : 31);           // deutlich über den Portalgiebel
+      const T = K.block({ a: -1.5, b: 0, ha: 0.27, hb: 0.27, h: tall, wall, roof, roofH: look === 'glas' ? 12 : 9 });
+      const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
+      for (const F of Object.values(T.faces)) if (F) faceClock(F, 0.5, F.H - 5 * z, 2.6 * z, z, { ring: '#4a4a58', ringW: 0.7, lit, hands: [[hr, 0.55, 0.9], [mi, 0.8, 0.7]] });
     }]);
     K.scene(parts);
   },

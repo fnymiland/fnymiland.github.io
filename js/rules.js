@@ -89,6 +89,11 @@ function gleisTiles(t, x, y, g) {
   const at = a => { const [u, v] = kitTurn(r, a, b); return [Math.round(cx + u), Math.round(cy + v)]; };
   return { hall: [1.5, 0.5, -0.5].map(at), exit: at(2.5) };
 }
+// Eingang (Block 85): das Portal mitten im Empfangsgebäude zeigt nach außen (−a); davor die beiden Felder, an die ein Weg anschließt
+function hbfEntrance(t, x, y) {
+  const r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  return [-0.5, 0.5].map(b => { const [u, v] = kitTurn(r, -2.5, b); return [Math.round(cx + u), Math.round(cy + v)]; });
+}
 // Gleise dazu/weg: Der Bahnhof wächst zur Seite +b (im eigenen Rahmen) – bei Drehung 1 und 2 rückt dafür der Anker, damit die
 // alten Gleise bleiben, wo sie sind. Ein Gleis kostet GLEIS_COST, zurück gibt es die Hälfte der Taler.
 const GLEIS_COST = { money: 2000, quader: 6, metall: 4 };

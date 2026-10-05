@@ -1426,7 +1426,10 @@ function hbfHtml(x, y, t) {
   }
   hubRegions.delete(home);
   const addErr = hbfResizeError(x + ',' + y, 1), { money: gm, ...gmat } = GLEIS_COST;
-  return `<div class="label">🚉 ${n} Gleise</div>
+  const atDoor = hbfEntrance(t, x, y).some(([ex, ey]) => wegAt(ex, ey) != null), v = NET && NET.vOf(x + ',' + y), village = v && NET.vHome.has(v);
+  const door = atDoor ? `<div class="status"><div class="ok">🛤️ Weg am Eingang${village ? ' – mit dem Dorf verbunden' : ''}</div></div>`   // Block 85
+    : '<p class="muted">🛤️ Leg einen Weg vor das Portal (die Seite gegenüber den Gleisen) – dann führt er bis an die Tür und verbindet den Bahnhof mit dem Dorf.</p>';
+  return `${door}<div class="label">🚉 ${n} Gleise</div>
     <div class="ships">${rows.join('')}</div>
     ${hubRegions.size > 1 ? `<div class="status"><div class="ok">🔀 Umsteigen: ${[...hubRegions].map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')} sind hier miteinander verbunden</div></div>` : ''}
     <div class="row"><button class="btn" id="p-gplus" data-cost="${gm}" data-mat='${JSON.stringify(gmat)}' ${addErr && !/Taler|Material/.test(addErr) ? 'disabled' : ''}>+ Gleis · ${costText(GLEIS_COST)}</button>

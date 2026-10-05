@@ -352,6 +352,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+89. **Hauptbahnhof** (Block 85): Jedes Gleis ist ein `K.scene`-Stück (Prellbock, Bahnsteig mit Ausstattung, zuletzt das Dach) –
+    Dinge, die übereinander liegen, nie als getrennte Teile sortieren lassen. Empfangsgebäude: Portal mit Uhrturm bei b = 0
+    (halbe Breite `PW`), Flügel je Gleis ohne den Portalbereich. Eingang nach außen (−a), davor `hbfEntrance(t, x, y)`.
+    Zum Nachsehen im Browser nach `npm run bump` die Seite mit neuer Adresse laden (z. B. `&n=…`), sonst kommt die alte
+    index.html aus dem Zwischenspeicher.
 88. **Oberfläche** (Block 84e): `#modal` liegt über Lager und Erfolgs-Band (z-index 40). Inline-Werte, die nur in einer Breite
     gelten (Panel-`top` über 600 px), auch wieder entfernen. Wisch-Erkennung immer mit `pointercancel` und Zurücksetzen beim
     nächsten `pointerdown`; `fastTap` löst nur ohne Bewegung aus. „Zum Rathaus“ über `townHallAt()`.

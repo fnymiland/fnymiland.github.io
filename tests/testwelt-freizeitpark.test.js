@@ -98,6 +98,20 @@ it.skipIf(!process.env.TESTWELT)('erzeugt testsave-freizeitpark.json', () => {
     nameHouses();
     state.tiles.set((X + 10) + ',' + (Y + 7), { b: 'leuchtturm', lvl: 1, rot: 0 });                       // Leuchtturm-Kap am Meer (Block 83)
     rebuildCover(); recalc(); })()`);
+  // Hauptbahnhöfe (Block 85): alle drei Designs in verschiedenen Drehungen und Gleiszahlen, einer mit Weg zum Portal
+  const hb = [36, 40];                                                           // südöstlich vor der Insel (wie die Wegformen)
+  game(`(() => { const [X, Y] = ${JSON.stringify(hb)};
+    for (let y = Y - 1; y < Y + 19; y++) for (let x = X - 1; x < X + 26; x++) { claimTile(x, y); state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }
+    waterChanged(); sandCache.clear(); landCache.clear();
+    const H = (x, y, rot, look, gleise) => state.tiles.set((X + x) + ',' + (Y + y), { b: 'hbf', lvl: 1, rot, look, gleise });
+    H(1, 1, 2, 'glas', 3); H(14, 1, 3, 'backstein', 4); H(1, 12, 0, 'land', 2); H(14, 12, 1, 'glas', 5);
+    rebuildCover();
+    const t = state.tiles.get((X + 1) + ',' + (Y + 1)), [ex, ey] = hbfEntrance(t, X + 1, Y + 1)[0];
+    for (let i = 0; i < 4; i++) state.tiles.set((ex + i) + ',' + ey, { b: 'weg', lvl: 1, style: 'platten' });
+    for (let j = 1; j <= 3; j++) state.tiles.set((ex + 3) + ',' + (ey + j), { b: 'weg', lvl: 1, style: 'platten' });
+    state.tiles.set((ex + 4) + ',' + (ey + 2), { b: 'haus', lvl: 3, rot: 2 }); nameHouses();
+    rebuildCover(); recalc(); })()`);
+  console.log('Hauptbahnhöfe', JSON.stringify(hb));
   // Wegbrücken (Block 66): Fluss mit Holzsteg, Steinbogen, Ziegelbrücke und roter Bogenbrücke; kurze Brücke ins Meer
   const rv = game(`(() => { for (let y = ${Y} - 70; y < ${Y} + 70; y++) for (let x = ${X} - 70; x < ${X} + 70; x++) { let ok = true;
     for (let j = 0; j < 10 && ok; j++) for (let i = 0; i < 11 && ok; i++) { const k = (x + i) + ',' + (y + j); if (!ownedTile(x + i, y + j) || isSea(x + i, y + j) || terrainAt(x + i, y + j) === 'water' || COVER.has(k) || state.terra.get(k) === 'fz' || state.decos.get(k)) ok = false; }
