@@ -81,13 +81,13 @@ function hedgeSideFlowers(line, look, h, z, seed, d0 = 0) {
 // Wilmerhecke (Block 86): kleine runde Büsche wie der Deko-Busch dicht an dicht entlang einer Punktlinie, von hinten nach vorn
 function bushRow(line, look, z, seed, d0 = 0) {
   const at = [];
-  alongLine(line, 2.8, d0, (m, i) => at.push([m, i]));        // Abstand wie selbst aneinandergereihte Büsche
+  alongLine(line, 3.5, d0, (m, i) => at.push([m, i]));        // Abstand wie selbst aneinandergereihte Büsche
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);
   for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i);
 }
 function wilmerBush(m, look, z, r = 0.5, i = 0) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
-  const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch'), k = ds * z;
+  const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
   g.save(); g.translate(x, y); g.scale(ds, ds);
   try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, null); } finally { g.restore(); }
   if (look.flowers) for (let f = 0; f < 3; f++) {

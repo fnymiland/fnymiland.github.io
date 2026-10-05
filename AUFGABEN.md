@@ -942,4 +942,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       auch im Bogen, am Durchgang und am freien Ende; die Lichterkette zählt als Licht (`EDGE_LIT`). Test: wilmerhecke.test.js.
 - [x] 86b: Sah nicht aus wie echte Büsche (zu dicht, eigene Farben, größere Endbüsche). Jetzt zeichnet jeder Busch der Hecke
       genau den Deko-Busch (`drawObject('busch')` mit `decoScale`), Abstand wie von Hand aneinandergereiht (2,8 je Feld).
+- [x] 86c: Hecken-Büsche waren noch 10 % größer – aufgestellte Deko wird zusätzlich × 0,9 gezeichnet (`drawSmallOne`). Jetzt
+      gleiche Größe, Abstand 3,5 je Feld (wie im Bild der Nutzerin von Hand gereiht).
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
