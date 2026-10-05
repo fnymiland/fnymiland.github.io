@@ -81,17 +81,15 @@ function hedgeSideFlowers(line, look, h, z, seed, d0 = 0) {
 // Wilmerhecke (Block 86): kleine runde Büsche wie der Deko-Busch dicht an dicht entlang einer Punktlinie, von hinten nach vorn
 function bushRow(line, look, z, seed, d0 = 0) {
   const at = [];
-  alongLine(line, 3.6, d0, (m, i) => at.push([m, i]));
+  alongLine(line, 2.8, d0, (m, i) => at.push([m, i]));        // Abstand wie selbst aneinandergereihte Büsche
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);
   for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i);
 }
-function wilmerBush(m, look, z, r = 0.5, i = 0, s = 0.8) {   // s = 0.8: so groß wie der Deko-Busch
-  const [x, y] = edgeS(m[0], m[1], 0, z), k = s * z, tone = (r - 0.5) * 0.12;
-  ellipse(x, y + 0.6 * k, 8 * k, 3.2 * k, 'rgba(40,60,20,0.18)');
-  circle(x - 4 * k, y - 5 * k, 6 * k, C(shade('#5aae54', tone)));
-  circle(x + 4 * k, y - 5 * k, 6 * k, C(shade('#4a944a', tone)));
-  circle(x, y - 9 * k, 6.5 * k, C(shade('#62b85a', tone)));
-  circle(x - 2 * k, y - 11 * k, 2.6 * k, C('#86d37c'));
+function wilmerBush(m, look, z, r = 0.5, i = 0) {
+  // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
+  const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch'), k = ds * z;
+  g.save(); g.translate(x, y); g.scale(ds, ds);
+  try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, null); } finally { g.restore(); }
   if (look.flowers) for (let f = 0; f < 3; f++) {
     const a = hash(i, f, 17) * Math.PI * 2, d = 3 + hash(i, f, 19) * 3;
     circle(x + Math.cos(a) * d * k, y - 8 * k + Math.sin(a) * d * 0.7 * k, 1.3 * k, C(look.flowers[Math.floor(hash(i, f, 23) * look.flowers.length)]));
@@ -228,7 +226,7 @@ function bulbAt([x, y], z, lit) {
 const litLook = look => !!(look.lights || look.lamps);
 // Heckenende (freies Ende und am Durchgang): rundes Ende über die ganze Höhe, auch bei der hohen Hecke
 function hedgeKnob(pt, look, z) {
-  if (look.bushes) { wilmerBush(pt, look, z, 0.6, 7, 0.88); return; }   // Wilmerhecke: ein etwas größerer Busch am Ende
+  if (look.bushes) { wilmerBush(pt, look, z, 0.6, 7); return; }   // Wilmerhecke: ein etwas größerer Busch am Ende
   const [x, y] = edgeS(pt[0], pt[1], 0, z), R = (look.w * TW * 0.7 + 1) * z, top = y - look.h * z + R * 0.55, bot = y - R * 0.45, col = C(shade(look.col, -0.06));
   if (bot > top) poly([[x - R, bot], [x + R, bot], [x + R, top], [x - R, top]], col);
   circle(x, bot, R, col); circle(x, top, R, col);

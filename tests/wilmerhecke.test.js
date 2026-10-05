@@ -26,8 +26,9 @@ describe('Wilmerhecke (Block 86)', () => {
       }
     }
   });
-  it('so groß wie der Deko-Busch', () => {
-    const r = game("(() => { const rs = []; const o = circle; circle = (x, y, r, c) => { rs.push(r); }; try { wilmerBush([5, 5], EDGE_LOOK.hecke.wilmer, 1); } finally { circle = o; } return Math.max(...rs); })()");
-    expect(r).toBeCloseTo(6.5 * game("decoScale('busch')"), 1);
+  it('jeder Busch ist genau der Deko-Busch (gleiche Zeichnung, gleiche Größe)', () => {
+    const r = game("(() => { const seen = []; const o = drawObject; drawObject = (b, ...a) => { seen.push(b); }; const sc = g.scale; let f = null; g.scale = (x) => { f = x; }; try { wilmerBush([5, 5], EDGE_LOOK.hecke.wilmer, 1); } finally { drawObject = o; delete g.scale; } return [seen, f]; })()");
+    expect(r[0]).toEqual(['busch']);
+    expect(r[1]).toBe(game("decoScale('busch')"));
   });
 });
