@@ -1891,7 +1891,17 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (ter === 'water') return 'Hier ist schon Wasser';
       if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';
       if (ter !== 'grass' && !willClear(b, ter)) return 'Erst roden bzw. sprengen';
-    } else if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
+    } else {
+      if (ter !== 'water') return 'Aufschütten geht nur auf Wasser';
+      const c = COVER.get(x + ',' + y), ct = c && state.tiles.get(c);   // Block 84a: nicht unter Hausboot, Steg, Seebrücke …
+      if (ct && !(ct.bridge && c === x + ',' + y)) return 'Hier steht etwas – erst wegräumen';
+      for (const [dx, dy] of DIRS) {                                    // … und nicht das letzte Wasser vor Hafen, Fischer, Leuchtturm
+        const a = anchorAt(x + dx, y + dy), t = a && state.tiles.get(a);
+        if (!t || ITEMS[t.b].needs !== 'shore') continue;
+        const wet = footprint(t.b, ...keyXY(a), t.rot || 0, t).some(([fx, fy]) => DIRS.some(([ex, ey]) => (fx + ex !== x || fy + ey !== y) && isWater(fx + ex, fy + ey)));
+        if (!wet) return `Davor muss Wasser bleiben (${ITEMS[t.b].name})`;
+      }
+    }
   } else if (d.needs === 'pier') {                  // Seebrücke: hinterstes Feld an Land, der Rest im Wasser
     const tiles = footprint(b, x, y, r, opts.t), [dx, dy] = FRONT_DIR[r];
     for (const [tx, ty] of tiles) {
@@ -2029,7 +2039,7 @@ function growWonders() {
 // liebsten nach hinten (die Wege liegen meist vorn). Nie ins Wasser, nie über Sehenswürdigkeiten oder Wunderwerke.
 // Was weichen muss, gibt es voll zurück – samt Ausbau.
 function fullValue(t) {
-  const d = ITEMS[t.b], c = { money: d.cost || 0, ...(d.mat || {}) }, add = o => { for (const [r, n] of Object.entries(o || {})) c[r] = (c[r] || 0) + n; };
+  const d = ITEMS[t.b], c = { money: (t.price != null ? t.price : d.baseCost || d.cost) || 0, ...(d.mat || {}) }, add = o => { for (const [r, n] of Object.entries(o || {})) c[r] = (c[r] || 0) + n; };
   if (t.b === 'haus') for (let l = 1; l < t.lvl; l++) add(houseCost(HOUSE_STAGES[l]));
   else if (BUILD_STAGES[t.b]) BUILD_STAGES[t.b].up.slice(0, (t.lvl || 1) - 1).forEach(u => add(u.cost));
   if (t.b === 'schiene' && t.bridge) { c.money = BRIDGE.cost; }
@@ -2144,13 +2154,14 @@ function lighthouseSpot(k, t) {
   for (const r of [t.rot || 0, 0, 1, 2, 3]) for (let ay = y - 2; ay <= y; ay++) for (let ax = x - 2; ax <= x; ax++) {
     let ok = true, score = 0;
     for (const [fx, fy] of footprint('leuchtturm', ax, ay, r)) {
-      if (!ownedTile(fx, fy) || terrainAt(fx, fy) !== 'grass') { ok = false; break; }
+      if (!ownedTile(fx, fy) || terrainAt(fx, fy) !== 'grass' || ['park', 'fz'].includes(terraLook(fx, fy))) { ok = false; break; }   // Parkrasen zählt als Wiese (Block 84a)
       const a = anchorAt(fx, fy), o = a && state.tiles.get(a);
       if (o && a !== k && o.b !== 'weg') { ok = false; break; }
       if (o && a !== k) score += 1;
       const ds = decosAt(fx + ',' + fy);
       if (ds && ds.some(Boolean)) score += 0.5;
     }
+    for (let vy = ay; ok && vy <= ay + 3; vy++) for (let vx = ax; ok && vx <= ax + 3; vx++) if (postAt(vx, vy)) ok = false;   // Laterne/Pfosten an einer Ecke
     if (!ok) continue;
     const wet = frontTiles('leuchtturm', ax, ay, r).filter(([fx, fy]) => isWater(fx, fy)).length;
     if (wet) cands.push({ ax, ay, r, score: score - wet * 0.1 });
@@ -2203,6 +2214,8 @@ function announceWonders(list) {
 // Passt es nirgends, werden Kosten und Material erstattet. Das Rathaus bleibt immer: was im Weg liegt, weicht.
 function fitFootprints() {
   const removed = [];
+  if (!state.fitBig) return removed;                 // nur alte Stände (Block 84a): sonst räumte jedes Laden nach heutigen Regeln um
+  delete state.fitBig;
   const refundObj = (k, t) => {
     const d = ITEMS[t.b];
     state.money += d.cost || 0;
@@ -2216,7 +2229,7 @@ function fitFootprints() {
     let [x, y] = keyXY(k);
     // Steht es schon korrekt (keine Überlappung mit anderen Objekten)?
     state.tiles.delete(k); rebuildCover();
-    const ok = (ax, ay) => placeError(t.b, ax, ay, t.rot || 0, { move: true }) === null;
+    const ok = (ax, ay) => placeError(t.b, ax, ay, t.rot || 0, { move: true, t }) === null;   // mit Gestalt (Märchenschloss)
     // gewachsene Grundfläche: nach hinten ausweichen, am liebsten so wenig wie möglich
     const tries = [];
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) tries.push([x - dx, y - dy]);
@@ -2240,8 +2253,9 @@ function fitFootprints() {
       for (const [fx, fy] of footprint(t.b, spot[0], spot[1], t.rot, t)) state.decos.delete(fx + ',' + fy);
     } else {
       removed.push(ITEMS[t.b].name);
-      state.money += ITEMS[t.b].cost || 0;
-      for (const [r, n] of Object.entries(ITEMS[t.b].mat || {})) state.res[r] += n;
+      const back = fullValue(t);                       // bezahlter Preis samt Ausbau und Schiffen
+      for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) back[r] = (back[r] || 0) + n;
+      for (const [r, n] of Object.entries(back)) if (r === 'money') state.money += n; else state.res[r] += n;
     }
     rebuildCover();
   }

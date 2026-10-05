@@ -128,7 +128,7 @@ function batch(fn) {
   try { return fn(); } finally { BATCH--; if (!BATCH) { recalc(); save(); } }
 }
 function save() {
-  if (!state || PROBE || BATCH || TESTWELT) return;
+  if (!state || PROBE || BATCH || TESTWELT || saveBlocked) return;
   if (!document.hidden) state.last = Date.now();   // im Hintergrund zählt die Abwesenheit weiter
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize()));
@@ -266,6 +266,7 @@ function parseSave(d) {
     growHall: (d.v || 3) < 10,       // v10 (29.09.): Das Rathaus ist 3×3 (growTownHall)
     growHarbors: (d.v || 3) < 11,    // v11 (29.09.): Häfen sind 3×4 mit Kai und Pier (growHarbors)
     growLight: (d.v || 3) < 12,      // v12 (04.10.): Leuchtturm ist ein 3×3-Kap (growLighthouses)
+    fitBig: (d.v || 3) < 12,         // Grundflächen nach heutigen Größen prüfen (fitFootprints) – nur, wenn sich Größen geändert haben
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
     islands: new Set(d.islands || ['home']),
@@ -328,7 +329,7 @@ function legacyUnlocks(d) {
 }
 
 // Unlesbare Stände nie überschreiben: Kopie aufbewahren und beim Start Bescheid sagen
-let loadFailure = null;
+let loadFailure = null, saveBlocked = false;     // Kopie nicht möglich: nichts speichern, bis der Stand als Datei gesichert ist
 function load() {
   const raw = localStorage.getItem(SAVE_KEY);
   if (!raw) return null;
@@ -336,7 +337,7 @@ function load() {
     return parseSave(JSON.parse(raw));
   } catch (e) {
     const backup = SAVE_KEY + '_defekt_' + Date.now();
-    try { localStorage.setItem(backup, raw); loadFailure = backup; } catch (err) { loadFailure = 'nicht gesichert'; }
+    try { localStorage.setItem(backup, raw); loadFailure = backup; } catch (err) { loadFailure = 'nicht gesichert'; saveBlocked = raw; }
     return null;
   }
 }
@@ -348,29 +349,37 @@ function adoptState(s) {
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged();
   walkers.length = 0; cars.length = 0;
-  normalizeSmall();
-  migrateLandmarks();
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
-  registerFar();
-  const moved = migrateIslands();
+  afterLoad();
+  buildToolbar();
+  save();
+}
+// Nach dem Laden (Start und Import gleich, Block 84a): alte Stände umstellen, still zählen, Neues ansagen
+function afterLoad() {
+  resetUndo();                                     // ↶ gehört zum vorigen Stand
+  registerFar();                                   // ferne Inseln zuerst: sie sind Land
+  normalizeSmall();
+  migrateLandmarks();                              // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
+  const moved = migrateIslands();                  // … und ziehen dann auf ihre Insel um
   ownIslandsFully();
   ensureFar();
+  if (state.growLight) for (const t of state.tiles.values()) if (t.b === 'leuchtturm') t.mini = true;   // alter Leuchtturm ist 1×1 – auch fürs Wachsen von Hafen/Rathaus
   const grown = growWonders();
   const hall = growTownHall();
   const ports = growHarbors();
-  growLighthouses();
-  fitFootprints();
+  const lights = growLighthouses();
+  const refunded = fitFootprints();
   delete state.fitLm;
   nameHouses();
   recalc();
   collectAlbum();
-  checkAchievements(true);                         // schon Erreichtes still zählen
-  if (moved) setTimeout(() => announceIslands(moved), 300);
-  if (grown.length) setTimeout(() => announceWonders(grown), 600);
-  if (hall) setTimeout(() => announceHall(hall), 900);
-  if (ports) setTimeout(() => announceHarbors(ports), 1300);
-  buildToolbar();
-  save();
+  checkAchievements(true);                         // schon Erreichtes still zählen (Regel 30)
+  if (moved) setTimeout(() => announceIslands(moved), 900);
+  if (grown.length) setTimeout(() => announceWonders(grown), 1200);
+  if (hall) setTimeout(() => announceHall(hall), 1600);
+  if (ports) setTimeout(() => announceHarbors(ports), 2000);
+  if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
+  if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
 }
 
 // Export als Datei (landet auf dem iPad in „Dateien“)

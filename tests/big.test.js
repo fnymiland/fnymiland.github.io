@@ -121,7 +121,7 @@ describe('Alte Spielstände', () => {
     game("state.tiles.set('8,8', { b: 'brunnen_xl', lvl: 1 })");
     game("for (const k of ['9,8', '8,9', '9,9', '7,8', '8,7', '7,7', '7,9', '9,7']) state.tiles.set(k, { b: 'feld', lvl: 1 })");
     const money = game('state.money');
-    const removed = game('fitFootprints()');
+    const removed = game('state.fitBig = true; fitFootprints()');
     expect(removed).toEqual([game('ITEMS.brunnen_xl.name')]);
     expect(game('state.money')).toBe(money + game('ITEMS.brunnen_xl.cost'));
     expect(game("state.tiles.has('8,8')")).toBe(false);
@@ -130,7 +130,7 @@ describe('Alte Spielstände', () => {
   it('passt er daneben, rückt er einfach', () => {
     game("state.tiles.set('8,8', { b: 'brunnen_xl', lvl: 1 })");
     game("state.tiles.set('9,8', { b: 'feld', lvl: 1 })");
-    expect(game('fitFootprints()')).toEqual([]);
+    expect(game('state.fitBig = true; fitFootprints()')).toEqual([]);
     expect(game("state.tiles.get('9,8').b")).toBe('feld');
     expect(game("[...state.tiles.values()].filter(t => t.b === 'brunnen_xl').length")).toBe(1);
   });

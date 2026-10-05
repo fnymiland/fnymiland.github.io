@@ -352,6 +352,14 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+84. **Laden, Tragen, Rückgängig** (Block 84a): Start und Import laufen beide über `afterLoad()` (Umstellungen, still zählen,
+    `resetUndo()`); `startNew` ruft `resetUndo()`. `fitFootprints` läuft nur mit `state.fitBig` (parseSave, alte Versionen) –
+    wer Größen ändert, erhöht die Spielstand-Version. Erstattet wird über `fullValue(t)` (bezahlter Preis `t.price`/`baseCost`,
+    Ausbau). `pickUp`/`pickUpGroup` heben nichts auf, solange etwas getragen wird; wer aus einem Fenster verschiebt, ruft vorher
+    `cancelMove()` (setzt auch `undoPending` zurück). Beim Ablegen zählen Taler/Lager erst ab dem Ablegen (`undoable`).
+    Was sich nicht zurücknehmen soll (Laternenfest), setzt `undoCut` – der Schritt leert den Stapel. `undo` prüft die Grundfläche
+    wiederhergestellter Gebäude gegen `COVER`. Aufschütten nie unter Gebäuden und nie vor dem letzten Wasser eines Ufer-Gebäudes.
+    Kann ein unlesbarer Stand nicht kopiert werden, speichert `save()` nichts (`saveBlocked`), bis er als Datei gesichert ist.
 83. **Leuchtturm-Kap** (Block 83): Der Leuchtturm ist 3×3 (`ITEMS.leuchtturm.size`), Bild `BIG_ART.leuchtturm` (wird live gezeichnet:
     Strahl). Alte 1×1-Leuchttürme tragen `t.mini` (sizeOf → 1×1, altes Bild); beim Laden (v12, `growLighthouses`) und im Fenster
     (`growLighthouse`) wachsen sie, wo Platz ist. `fitFootprints` lässt `t.mini` in Ruhe. Feuerwerk: beim Bau und nachts (`lightFireTick`).

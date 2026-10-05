@@ -102,7 +102,7 @@ function build(b, x, y, quiet) {
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
     if (b === 'fz_schloss') state.tiles.get(k).cs = csNew();     // Märchenschloss: Gestalt (Block 60g)
-    if (incMinOf(d)) state.tiles.get(k).price = c.cost;           // Preis nach Einkommen: fürs Erstatten merken (Block 60/61)
+    if (incMinOf(d) || d.baseCost) state.tiles.get(k).price = c.cost;   // Preis nach Einkommen (auch Leuchtturm): fürs Erstatten merken (Block 60/61)
     if (isHome(b)) assignResident(state.tiles.get(k), Math.random, Math.random);
     if (b === 'haus') {
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
@@ -115,7 +115,7 @@ function build(b, x, y, quiet) {
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
-  if (b === 'leuchtturm') { festival(); startFireworks([x + 1, y + 1]); }   // Einweihung mit Feuerwerk (Block 83)
+  if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
   return true;
@@ -166,6 +166,7 @@ const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving
 // Was man trägt, als Liste (eine Gruppe oder ein einzelnes Ding) – fürs Speichern und Zurücklegen
 const carried = () => !moving ? [] : moving.kind === 'group' ? moving.items : [moving];
 function pickUp(x, y, slot) {
+  if (moving) return;                                 // erst ablegen (sonst ginge das Getragene verloren, Block 84a)
   const k = x + ',' + y, ds = decosAt(k);
   if (ds && ds[slot]) {
     moving = { kind: 'deco', d: ds[slot], from: [k, slot] };
@@ -191,6 +192,7 @@ function pickUp(x, y, slot) {
 // Mehrere Dinge auf einmal: alles, was ganz im Rechteck steht (samt Deko, Wegen, Schienen), wird angehoben und
 // zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus und Sehenswürdigkeiten bleiben stehen.
 function pickUpGroup(x0, y0, x1, y1) {
+  if (moving) return false;
   const items = [], seen = new Set();
   let stays = 0;
   const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
@@ -304,6 +306,7 @@ function cancelMove() {
     }
   }
   moving = null;
+  undoPending = null;                                 // abgebrochen: kein Schritt (sonst rechnet der nächste ab dem Aufheben)
   recalc();
 }
 
@@ -589,7 +592,9 @@ function sellShip(k, i) {
 // Verschieben (Aufheben … Ablegen) ist ein Schritt; ein aufgezogenes Rechteck/eine Linie auch.
 // ---------------------------------------------------------------------------
 const UNDO_MAX = 20, undoStack = [];
-let undoPending = null;
+let undoPending = null, undoCut = false;
+// Neues Spiel, Import: die Schritte gehören zum alten Stand (Block 84a)
+function resetUndo() { undoStack.length = 0; undoPending = null; undoCut = false; if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
 const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra };
 const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
 function undoSnap() {
@@ -606,6 +611,7 @@ function undoCommit(s) {
   }
   const claimed = [...state.claimed].filter(k => !s.claimed.has(k)), dres = {};
   for (const r of Object.keys(state.res)) if (state.res[r] !== s.res[r]) dres[r] = state.res[r] - (s.res[r] || 0);
+  if (undoCut) { undoCut = false; undoStack.length = 0; if (typeof updateUndoBtn === 'function') updateUndoBtn(); return; }   // z. B. Laternenfest: nicht zurückzukaufen
   if (!changes.length && !claimed.length) return;
   undoStack.push({ changes, claimed, dm: state.money - s.money, dres });
   if (undoStack.length > UNDO_MAX) undoStack.shift();
@@ -613,7 +619,8 @@ function undoCommit(s) {
 }
 // Eine Nutzer-Aktion: alles darin wird ein Schritt (beim Verschieben erst, wenn abgelegt ist)
 function undoable(fn) {
-  if (!undoPending) undoPending = undoSnap();
+  if (!undoPending) { undoPending = undoSnap(); undoCut = false; }
+  else { undoPending.money = state.money; undoPending.res = { ...state.res }; }   // Ablegen: Taler/Lager erst ab jetzt (verdient und gekauft wird inzwischen weiter)
   try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
 }
 function undo() {
@@ -624,6 +631,12 @@ function undo() {
   for (const [n, k, , a] of step.changes) {                        // seitdem dort etwas verändert? Dann lieber nicht
     const v = UNDO_MAPS[n]().get(k);
     if ((v === undefined ? undefined : undoStr(v)) !== a) { fail('Geht nicht mehr – dort hat sich seitdem etwas verändert'); return false; }
+  }
+  const mine = new Set(step.changes.filter(c => c[0] === 'tiles').map(c => c[1]));    // große Gebäude: ist ihre Fläche noch frei?
+  for (const [n, k, b] of step.changes) {
+    if (n !== 'tiles' || b === undefined) continue;
+    const t = JSON.parse(b), [x, y] = keyXY(k);
+    if (footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

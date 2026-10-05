@@ -273,6 +273,7 @@ for (const [id, S] of Object.entries(STANDS)) ITEMS[id] = { cat: 'markt', name: 
 // Leuchtturm: fester Preis als Untergrenze, sonst 60 Minuten des besten Einkommens (leuchtCost, Block 37) – überall,
 // wo ITEMS.leuchtturm.cost gelesen wird (Kachel, Bauen, Planen, Erstatten)
 const LEUCHT_BASE = ITEMS.leuchtturm.cost;
+ITEMS.leuchtturm.baseCost = LEUCHT_BASE;                                     // Erstatten ohne t.price (Regel 73)
 Object.defineProperty(ITEMS.leuchtturm, 'cost', { get: () => (typeof leuchtCost === 'function' ? leuchtCost() : LEUCHT_BASE), enumerable: true, configurable: true });
 // Freizeitpark (Block 60, nach dem Laternenfest): Parkboden malen, Fahrgeschäfte und Stände darauf stellen → Rummelplatz,
 // Freizeitpark, Wunderland. Module (cat 'fz', needs 'fz') kosten nach dem besten Einkommen: mindestens base, sonst min

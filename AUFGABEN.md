@@ -816,30 +816,32 @@ Gefunden von 6 Such-Agenten (je ein Bereich) und 3 Prüfern, die jeden Fund nach
 zusammengefasst). Dazu ein eigener Spieltest im Browser: Einführung, Handy hoch und quer, die ganze Freizeitpark-Welt in vier
 Zoomstufen gezeichnet, 3.000 Zufallsaktionen mit echter Spielschleife – dabei kein Absturz und kein Konsolenfehler.
 
-### 84a – Spielstand und Rückgängig (wichtig)
-- [ ] Getragenes verschwindet: mit ✋ etwas tragen, dann über ☰ → Erfolge → Ort → „Rathaus verschieben“ (oder ✋ im Fenster
+### 84a – Spielstand und Rückgängig (wichtig) – erledigt
+Tests: fehler84a.test.js. „Neue Insel“ fragt jetzt in einem eigenen Fenster (mit „Erst sichern“); das Laternenfest leert den
+Rückgängig-Stapel; der Leuchtturm merkt sich seinen Preis.
+- [x] Getragenes verschwindet: mit ✋ etwas tragen, dann über ☰ → Erfolge → Ort → „Rathaus verschieben“ (oder ✋ im Fenster
       eines anderen Gebäudes, Schloss-/Erlass-Karte) etwas anderes aufheben → das Erste ist weg, auch im Spielstand
       (`startMove`/`pickUp` überschreiben `moving`).
-- [ ] ↶ nach „Neue Insel“ und „Spielstand laden“ wirkt aufs alte Spiel: alte Häuser erscheinen, mit einem getragenen Ding
+- [x] ↶ nach „Neue Insel“ und „Spielstand laden“ wirkt aufs alte Spiel: alte Häuser erscheinen, mit einem getragenen Ding
       sogar das alte Geld (`startNew`/`adoptState` leeren `undoStack`/`undoPending` nicht).
-- [ ] ↶ nach dem Verschieben bucht alles seit dem Aufheben zurück (Einnahmen, Produktion; Käufe in der Kunstakademie kommen
+- [x] ↶ nach dem Verschieben bucht alles seit dem Aufheben zurück (Einnahmen, Produktion; Käufe in der Kunstakademie kommen
       zurück, die Farbe bleibt = Geld-Trick). Abbrechen per Esc/Werkzeugwechsel lässt `undoPending` stehen → das nächste ↶
       spult die ganze Wirtschaft zurück (`cancelMove`).
-- [ ] Leuchtturm bauen und ↶: 15 Mio. und Material zurück, das Laternenfest bleibt (`festival()` außerhalb der Rückgängig-Daten).
-- [ ] ↶ stellt ein großes Gebäude über inzwischen Gebautes (keine Grundflächen-Prüfung in `undo`).
-- [ ] Aufschütten unter Seebrücke, Hafen, Leuchtturm, Hausboot, Steg, Offshore erlaubt → Hausboot steht auf der Wiese; beim
+- [x] Leuchtturm bauen und ↶: 15 Mio. und Material zurück, das Laternenfest bleibt (`festival()` außerhalb der Rückgängig-Daten).
+- [x] ↶ stellt ein großes Gebäude über inzwischen Gebautes (keine Grundflächen-Prüfung in `undo`).
+- [x] Aufschütten unter Seebrücke, Hafen, Leuchtturm, Hausboot, Steg, Offshore erlaubt → Hausboot steht auf der Wiese; beim
       nächsten Laden löscht/verschiebt `fitFootprints` Seebrücke/Hafen und erstattet nur den Grundpreis (Wunder-Abschnitte,
       Ausbau, Schiffe weg). `fitFootprints` läuft bei jedem Laden statt nur einmal.
-- [ ] Märchenschloss mit geänderter Größe rückt oder verschwindet beim Laden (`fitFootprints` ruft `placeError` ohne `t` und
+- [x] Märchenschloss mit geänderter Größe rückt oder verschwindet beim Laden (`fitFootprints` ruft `placeError` ohne `t` und
       prüft 2×5; erstattet den Getter-Preis statt `t.price`).
-- [ ] „Zum Kap ausbauen“ (und die v12-Umstellung) setzt das Kap auf Parkrasen/Freizeitpark-Boden → beim Laden gelöscht,
+- [x] „Zum Kap ausbauen“ (und die v12-Umstellung) setzt das Kap auf Parkrasen/Freizeitpark-Boden → beim Laden gelöscht,
       +15 Mio. (`lighthouseSpot` prüft nur `terrainAt === 'grass'`).
-- [ ] Alte Stände (vor 29.09.): ein wachsender Hafen/Rathaus reißt den alten 1×1-Leuchtturm ab (`growLighthouses` läuft nach
+- [x] Alte Stände (vor 29.09.): ein wachsender Hafen/Rathaus reißt den alten 1×1-Leuchtturm ab (`growLighthouses` läuft nach
       `growHarbors`/`growTownHall`).
-- [ ] Unlesbarer Spielstand wird überschrieben, wenn die Sicherheitskopie nicht gespeichert werden kann (Speicher voll):
+- [x] Unlesbarer Spielstand wird überschrieben, wenn die Sicherheitskopie nicht gespeichert werden kann (Speicher voll):
       `startNew` → `save()`.
-- [ ] „Neue Insel beginnen“: zweimal schnell tippen löscht alles (die Rückfrage ist derselbe Knopf ohne Wartezeit).
-- [ ] Beim normalen Start werden Erfolge nicht still gezählt (Bänder-Flut nach Updates; der Import macht es richtig).
+- [x] „Neue Insel beginnen“: zweimal schnell tippen löscht alles (die Rückfrage ist derselbe Knopf ohne Wartezeit).
+- [x] Beim normalen Start werden Erfolge nicht still gezählt (Bänder-Flut nach Updates; der Import macht es richtig).
 
 ### 84b – Bauen, Verschieben, Abreißen
 - [ ] Betrieb auf einem Wegfeld: die Geländebedingung fällt weg (Kristallmine, Holzfäller, Bergwerk überall; `placeError`

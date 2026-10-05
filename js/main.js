@@ -10,6 +10,7 @@ function startNew() {
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();
   walkers.length = 0; cars.length = 0;
+  resetUndo();                                     // ↶ gehört zur alten Insel (Block 84a)
   state.tiles.set('1,1', { b: 'rathaus', lvl: 1 });           // 3×3 (1–3): die Wege unten führen an seine Seiten
   // ein kleiner Sandweg vom Rathaus aus
   for (let x = 4; x <= 5; x++) state.tiles.set(x + ',2', { b: 'weg', lvl: 1, style: 'sand' });
@@ -90,27 +91,8 @@ if (PROBE) {
   toast('Probeansicht – hier wird nichts gespeichert');
 } else if (saved) {
   state = saved;
-  registerFar();                       // ferne Inseln zuerst: sie sind Land
-  normalizeSmall();
-  migrateLandmarks();                  // uralte Stände: gekaufte Sehenswürdigkeiten zählen als Stufe 1 …
-  const moved = migrateIslands();      // … und ziehen dann auf ihre Insel um
-  ownIslandsFully();
-  ensureFar();
-  const grown = growWonders();
-  const hall = growTownHall();
-  const ports = growHarbors();
-  const lights = growLighthouses();
-  const refunded = fitFootprints();
-  delete state.fitLm;
-  if (moved) setTimeout(() => announceIslands(moved), 900);
-  nameHouses();
-  if (grown.length) setTimeout(() => announceWonders(grown), 1200);
-  if (hall) setTimeout(() => announceHall(hall), 1600);
-  if (ports) setTimeout(() => announceHarbors(ports), 2000);
-  if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
-  if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
   cam = state.cam;
-  recalc();
+  afterLoad();
   buildToolbar();
   newsAfterLoad(true);
 } else {
@@ -120,10 +102,19 @@ if (PROBE) {
   if (loadFailure) {
     openModal(`
       <h2>Spielstand nicht lesbar</h2>
-      <p>Dein gespeicherter Spielstand konnte nicht gelesen werden. Er wurde <b>nicht gelöscht</b>, sondern als Kopie aufbewahrt (${escHtml(loadFailure)}).</p>
+      ${saveBlocked ? `<p>Dein gespeicherter Spielstand konnte nicht gelesen werden, und für eine Kopie ist kein Platz. Er ist noch da –
+      <b>sichere ihn als Datei</b>, bevor du neu anfängst. Bis dahin wird nichts gespeichert.</p>` : `<p>Dein gespeicherter Spielstand konnte nicht gelesen werden. Er wurde <b>nicht gelöscht</b>, sondern als Kopie aufbewahrt (${escHtml(loadFailure)}).</p>`}
       <p class="muted">Hast du eine gesicherte Datei, kannst du sie im Menü über „Spielstand laden“ zurückholen.</p>
-      <div class="row"><button class="btn" id="m-ok">Verstanden</button></div>`);
+      <div class="row">${saveBlocked ? '<button class="btn" id="m-raw">💾 Als Datei sichern</button>' : ''}<button class="btn${saveBlocked ? ' ghost' : ''}" id="m-ok">${saveBlocked ? 'Später' : 'Verstanden'}</button></div>`);
     $('m-ok').onclick = () => { closeModal(); showIntro(true); };
+    if (saveBlocked) $('m-raw').onclick = () => {    // den unlesbaren Text unverändert herunterladen, danach darf neu gespeichert werden
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([saveBlocked], { type: 'application/json' }));
+      a.download = 'kachelhausen-unlesbar.json';
+      document.body.append(a); a.click(); a.remove();
+      saveBlocked = false; save();
+      closeModal(); showIntro(true);
+    };
   }
 }
 

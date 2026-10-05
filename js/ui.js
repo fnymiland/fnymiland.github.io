@@ -766,6 +766,7 @@ if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.sty
 // Aus einem Infofenster heraus verschieben: aufnehmen und dem Finger bzw. der Maus folgen lassen
 function startMove(x, y, slot = 0) {
   closePanel();
+  if (moving) cancelMove();                                     // was man schon trägt, erst zurücklegen (Block 84a)
   setTool('verschieben');
   undoable(() => pickUp(x, y, slot));                           // Aufheben … Ablegen = ein Schritt zum Zurücknehmen
   hover = { x, y }; hoverSlot = slot;
@@ -2147,11 +2148,14 @@ function showMenu() {
   $('m-close').onclick = closeModal;
   $('m-export').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
   $('m-import').onclick = () => $('import-file').click();
-  $('m-reset').onclick = () => {
-    const b = $('m-reset');
-    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = 'Wirklich? Alles geht verloren!'; return; }
-    startNew();
-    closeModal(); closePanel(); showIntro(true);
+  $('m-reset').onclick = () => {                 // eigenes Fenster (Block 84a): zweimal schnell tippen löscht nichts
+    openModal(`
+      <h2>Neue Insel beginnen?</h2>
+      <p>Deine Insel <b>${escHtml(state.town.name)}</b> geht dabei verloren. Sichere sie vorher als Datei, wenn du sie behalten willst.</p>
+      <div class="row"><button class="btn ghost" id="m-no">Lieber nicht</button><button class="btn" id="m-save">💾 Erst sichern</button><button class="btn danger" id="m-yes-new">Ja, neu beginnen</button></div>`);
+    $('m-no').onclick = showMenu;
+    $('m-save').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
+    $('m-yes-new').onclick = () => { setTool('look'); startNew(); closeModal(); closePanel(); showIntro(true); };
   };
 }
 $('menu-btn').onclick = showMenu;
