@@ -107,8 +107,12 @@ function drawBushes(at, look, z, seed, id = null) {
 }
 // Lichterkette über der Wilmerhecke (Block 86i): gleichmäßig gehängt – Aufhängepunkte alle ½ Feld, dazwischen ein leichter
 // Durchhang, Birnchen im festen Abstand; an festen Stellen der Kante, damit sie über aneinandergesetzte Stücke durchläuft
-function bushGarland(pt, look, z, id) {                          // pt(t) → Punkt auf der Linie, t von 0 bis 1
-  const lit = edgeLit(id), N = 8, hang = t => 8.2 - 1.8 * Math.sin(Math.PI * ((t * 2) % 1));
+// Block 86j: über einen Durchgang spannt sie sich in einem Bogen hinüber (verbindet die Heckenteile); an einem freien Ende
+// läuft sie im letzten halben Feld in den Endbusch hinunter und hört dort auf
+function bushGarland(pt, look, z, id, { endP = false, endQ = false, gate = false } = {}) {   // pt(t) → Punkt auf der Linie, t von 0 bis 1
+  const lit = edgeLit(id), N = 8;
+  const hang = t => gate ? 8.2 - 2.6 * Math.sin(Math.PI * t)            // gleiche Höhe an den Enden: schließt an die Nachbarn an
+    : 8.2 - 1.8 * Math.sin(Math.PI * ((t * 2) % 1)) - (endP && t < 0.5 ? (0.5 - t) * 9 : 0) - (endQ && t > 0.5 ? (t - 0.5) * 9 : 0);
   g.strokeStyle = C('#4b5b3e'); g.lineWidth = 0.45 * z; g.beginPath();
   for (let s = 0; s <= 24; s++) { const t = s / 24, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t), z); s ? g.lineTo(x, y) : g.moveTo(x, y); }
   g.stroke();
@@ -410,13 +414,14 @@ function drawEdge(k, e, z, now) {
     stub(p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT); post(gt);
     if (gardenGate(k)) gateDoor(E, e, look, z, k);
     stub(lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1); post(1 - gt);
+    if (look.bushes && look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k, { gate: true });   // Lichterkette über den Durchgang
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
     bushSpan(k, E, onP ? ROUND_R : gateP, onQ ? 1 - ROUND_R : 1 - gateQ, look, z, k.length);
-    if (look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k);
+    if (look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k, { endP, endQ });
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
     if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join());

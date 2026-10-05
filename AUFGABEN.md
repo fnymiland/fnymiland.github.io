@@ -957,6 +957,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       nachts mit warmem Schein (brauchen wie alle Lichter Strom).
 - [x] 86i: Lichter zu zufällig – jetzt eine gleichmäßig gehängte Kette (`bushGarland`): Aufhängepunkte alle ½ Feld, leichter
       Durchhang, Birnchen im festen Abstand, läuft über aneinandergesetzte Stücke und um Ecken durch.
+- [x] 86j: Lichterkette spannt sich über Durchgänge (verbindet die Heckenteile, gleiche Höhe an den Anschlüssen) und läuft an
+      freien Enden im letzten halben Feld in den Endbusch hinunter.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
