@@ -968,3 +968,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       zeichnet `gatePillarsAt` die Torpfeiler am Eckpunkt: nach den Stücken, die dort enden, vor denen, die dort beginnen.
 - [x] 87d: Gartentür lag vor dem vorderen Pfeiler – Durchgang jetzt von hinten nach vorn gezeichnet (hinteres Stück/Pfosten,
       Tür, vorderes Stück/Pfosten, Bogen).
+
+## Block 88 – Rathaus-Uhrturm (05.10.2026)
+- [x] Der Uhrturm begann auf halber Dachhöhe und wurde vor das Dach gemalt – er schwebte wie ein Kasten auf der Dachfläche.
+      Jetzt beginnt er an der Traufe, die vorderen Dachflächen verdecken seinen Fuß (Ausschnitt), er ragt deutlich über den
+      First, Zierkante oben, Uhren auf allen sichtbaren Seiten. In allen vier Drehungen angesehen.
