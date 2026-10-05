@@ -810,3 +810,98 @@ Besucher & Einnahmen, Schönheit ringsum, Parade/Feuerwerk, Album & Erfolge.
 - [x] Einweihung mit Feuerwerk, danach nachts ab und zu Feuerwerk über dem Kap. Turm/Streifen weiter umfärbbar.
 - [x] Alte Leuchttürme wachsen beim Laden, wo Platz ist (Wege/Dekos zurück); sonst bleiben sie klein, im Fenster „Zum Kap ausbauen“.
 - [x] Bildchen im Baumenü und Tagebuch angepasst; Test zeichnet jetzt jedes Menübildchen. Testwelt freizeitpark: Kap bei (46, 31).
+
+## Block 84 – Große Fehlersuche (05.10.2026)
+Gefunden von 6 Such-Agenten (je ein Bereich) und 3 Prüfern, die jeden Fund nachgestellt haben (75 von 76 bestätigt, Doppelte
+zusammengefasst). Dazu ein eigener Spieltest im Browser: Einführung, Handy hoch und quer, die ganze Freizeitpark-Welt in vier
+Zoomstufen gezeichnet, 3.000 Zufallsaktionen mit echter Spielschleife – dabei kein Absturz und kein Konsolenfehler.
+
+### 84a – Spielstand und Rückgängig (wichtig)
+- [ ] Getragenes verschwindet: mit ✋ etwas tragen, dann über ☰ → Erfolge → Ort → „Rathaus verschieben“ (oder ✋ im Fenster
+      eines anderen Gebäudes, Schloss-/Erlass-Karte) etwas anderes aufheben → das Erste ist weg, auch im Spielstand
+      (`startMove`/`pickUp` überschreiben `moving`).
+- [ ] ↶ nach „Neue Insel“ und „Spielstand laden“ wirkt aufs alte Spiel: alte Häuser erscheinen, mit einem getragenen Ding
+      sogar das alte Geld (`startNew`/`adoptState` leeren `undoStack`/`undoPending` nicht).
+- [ ] ↶ nach dem Verschieben bucht alles seit dem Aufheben zurück (Einnahmen, Produktion; Käufe in der Kunstakademie kommen
+      zurück, die Farbe bleibt = Geld-Trick). Abbrechen per Esc/Werkzeugwechsel lässt `undoPending` stehen → das nächste ↶
+      spult die ganze Wirtschaft zurück (`cancelMove`).
+- [ ] Leuchtturm bauen und ↶: 15 Mio. und Material zurück, das Laternenfest bleibt (`festival()` außerhalb der Rückgängig-Daten).
+- [ ] ↶ stellt ein großes Gebäude über inzwischen Gebautes (keine Grundflächen-Prüfung in `undo`).
+- [ ] Aufschütten unter Seebrücke, Hafen, Leuchtturm, Hausboot, Steg, Offshore erlaubt → Hausboot steht auf der Wiese; beim
+      nächsten Laden löscht/verschiebt `fitFootprints` Seebrücke/Hafen und erstattet nur den Grundpreis (Wunder-Abschnitte,
+      Ausbau, Schiffe weg). `fitFootprints` läuft bei jedem Laden statt nur einmal.
+- [ ] Märchenschloss mit geänderter Größe rückt oder verschwindet beim Laden (`fitFootprints` ruft `placeError` ohne `t` und
+      prüft 2×5; erstattet den Getter-Preis statt `t.price`).
+- [ ] „Zum Kap ausbauen“ (und die v12-Umstellung) setzt das Kap auf Parkrasen/Freizeitpark-Boden → beim Laden gelöscht,
+      +15 Mio. (`lighthouseSpot` prüft nur `terrainAt === 'grass'`).
+- [ ] Alte Stände (vor 29.09.): ein wachsender Hafen/Rathaus reißt den alten 1×1-Leuchtturm ab (`growLighthouses` läuft nach
+      `growHarbors`/`growTownHall`).
+- [ ] Unlesbarer Spielstand wird überschrieben, wenn die Sicherheitskopie nicht gespeichert werden kann (Speicher voll):
+      `startNew` → `save()`.
+- [ ] „Neue Insel beginnen“: zweimal schnell tippen löscht alles (die Rückfrage ist derselbe Knopf ohne Wartezeit).
+- [ ] Beim normalen Start werden Erfolge nicht still gezählt (Bänder-Flut nach Updates; der Import macht es richtig).
+
+### 84b – Bauen, Verschieben, Abreißen
+- [ ] Betrieb auf einem Wegfeld: die Geländebedingung fällt weg (Kristallmine, Holzfäller, Bergwerk überall; `placeError`
+      springt mit `continue` über die needs-Prüfung).
+- [ ] Haus abreißen: Ausbau-Taler (Glasvilla bis 123.700) werden nicht erstattet, keine Rückfrage (`demolishInfo` kennt
+      HOUSE_STAGES nicht).
+- [ ] Hafen abreißen: gekaufte Schiffe verschwinden ohne Erstattung und ohne Erwähnung in der Rückfrage.
+- [ ] Weg auf Schiene (oder umgekehrt, oder auf einen Bahnübergang) verschieben löscht das Ziel samt Brücke.
+- [ ] Einzelnes Verschieben ignoriert Brücken (Brücke auf der Wiese, Weg/Schiene ohne Brücke im Wasser); Gruppen prüfen es.
+- [ ] Steg/Hausboot/Offshore ins fremde Meer verschoben: das Feld gehört niemandem, nicht mehr antippbar oder abreißbar
+      (kein `claimTile` beim Ablegen).
+- [ ] Mehrfeld-Gebäude lassen sich quer über Zaun/Hecke/Mauer bauen, verschieben und drehen.
+- [ ] Haus: „Neu gebaute bekommen diese Farben“ wirkt nicht (die Zufallsfarbe überschreibt).
+- [ ] ✋ im Gebäudefenster hebt die Deko in Ecke 0 auf statt das Gebäude.
+- [ ] Deko-Fenster bleibt nach ↶ offen; ✋ hebt dann den Weg darunter auf (keine live-Prüfung).
+- [ ] Großes Glashaus (2×3) lässt sich nicht drehen (fehlt in ROTATABLE).
+- [ ] Parkrasen im Wald schenkt Bäume, die beim Entfernen voll erstattet werden (Geld-Trick, Roden gratis).
+- [ ] Kleine Deko bleibt an verbotener Stelle: Bank in der Seitenmitte unter einem neuen Haus, Baum/Bank im gegrabenen Teich.
+- [ ] Leuchtturm wird nach dem heutigen statt dem bezahlten Preis erstattet (kein `t.price`/`baseCost`, Regel 73).
+- [ ] Linie über andere Linie ziehen: Vorschau 0 Taler, kostet aber voll, die alte Linie wird nicht erstattet.
+- [ ] Ausgebautes Haus: die Abriss-Prüfung rechnet Einwohner als pop × Stufe statt `popOf` → „Hier wohnen Leute …“ zu früh.
+- [ ] iPad: Zaun/Hecke/Mauer beim Abreißen schon beim ersten Tippen weg (sonst zeigt das erste Tippen die Vorschau).
+- [ ] Eine Freischaltung während des Bauens setzt die selbst gewählte Drehung zurück.
+
+### 84c – Fortschritt und Anzeigen
+- [ ] Album-Seiten „Deko“ und „Freizeitpark“ werden nie voll (Parkrasen, Fz-Boden und Höhen-Pinsel sind keine Gebäude) →
+      Rosenbogen und Zauberbrunnen bleiben für immer gesperrt.
+- [ ] Wunsch „Weg vor der Tür“: ein Marktstand/Brunnen auf dem Weg zählt nicht mehr als Weg (`bAt` statt `wegAt`).
+- [ ] Bestes Einkommen sinkt nie (die Rundung je Bild frisst die Abnahme) → Wunder, Inseln, Leuchtturm bleiben auf Höchstpreis.
+- [ ] Rathaus „Inseln“ zählt nur Häuser (Reihenhaus & Co. fehlen bei den Einwohnern).
+- [ ] Sehenswürdigkeit „Schaltet frei“/„Neu:“ nennt nur einen Teil (z. B. Quelle: Ferienhaus, Seebrücke fehlen).
+- [ ] „Stadtplanung“ zählt nicht für ✨ und „Bereit“ (das Fenster sagt bereit, das Funkeln fehlt).
+- [ ] Kunstakademie Stufe 3: der große Pavillon zählt nicht als Pavillon.
+- [ ] Erfolg „Kunstakademie-Stücke“: der 3. Stern ist nie erreichbar (zählt die 6 Gratis-Farben mit).
+- [ ] Schloss „+50 % auf alles“ wirkt nicht auf Veredelung und Warenverkauf.
+- [ ] Leuchtturm-Karte zeigt „Los!“, obwohl Material fehlt.
+- [ ] Einnahmen-Faktor zeigt „×3.9000000000000004“ (ungerundet, Punkt statt Komma).
+- [ ] Springt die Systemuhr zurück, zieht ein negatives dt Geld und Rohstoffe ab.
+- [ ] Jahrmarkt ohne Feuerwerk und Lichter (28a beschreibt sie).
+- [ ] Bahnübergang: Bewohner verschwinden oder kehren um, statt an der Schranke zu warten.
+- [ ] „Das ist neu“ seit 03.10. nicht erneuert (Farben, Wegform, Schloss, Bildrate, Leuchtturm-Kap fehlen).
+
+### 84d – Zeichnen
+- [ ] Hohe große Gebäude (Riesenrad, Schloss, Kap …) verschwinden am unteren Bildrand streifenweise (aussortiert nach der
+      Feldmitte).
+- [ ] Züge in der Halle eines langen Hauptbahnhofs fehlen, wenn sein Anker außerhalb des Bildes liegt.
+- [ ] Bahnsteig des Bahnhofs und Boden des Glashauses fehlen auf der Karte (nicht in GROUND_TYPES, Regel 16).
+- [ ] Gleise/Boden langer Hauptbahnhöfe fehlen auf weiter entfernten Grundstücken.
+- [ ] Von weitem abgeschnitten: Hbf ab etwa 6 Gleisen, gedrehter Hafen-Pier, Baumhaus-Krone, Wunder-Gerüst.
+- [ ] Geteilte Bildchen: ein umgefärbter Laden sieht von weitem aus wie ein anderer; Reihenhäuser von weitem alle gleich.
+- [ ] Neue Rathaus-Flaggenfarbe erscheint von weitem erst später.
+- [ ] Glasvilla wirft keinen Schatten (HOUSE_SHADOW[6] fehlt).
+- [ ] Offshore-Windrad steht von weitem still (fehlt in SPRITE_LIVE; Fahrgeschäfte bewusst nicht – Zeichenlast).
+- [ ] Nachtlicht großer Gebäude: der Schein wird je Streifen schwächer, mit senkrechten Kanten.
+- [ ] Deko in der vorderen Ecke wird von Deko in der Seitenmitte überdeckt (Reihenfolge SLOTS_FRONT).
+- [ ] Bau-Vorschau zeigt Originalfarben bzw. das alte eckige Schloss statt dessen, was gebaut wird.
+- [ ] Ein Zeichenfehler in einem Gebäude lässt den Streifen-Ausschnitt dauerhaft hängen (kein try/finally).
+
+### 84e – Oberfläche und Texte
+- [ ] Handy: Der Griff am Infofenster merkt sich ein abgebrochenes Wischen (der nächste Tipp schließt das Fenster).
+- [ ] Infofenster wird nach Verkleinern des Browsers unter 600 px riesig (Inline-`top` bleibt stehen).
+- [ ] Lager 📦 und Erfolgs-Band liegen über offenen Fenstern.
+- [ ] Menü „Zum Rathaus“ springt zur Inselmitte statt zum Rathaus.
+- [ ] Einführung Schritt 2: „🛤️ ganz links“ stimmt nicht (ganz links ist 👆).
+- Unklar, nur auf echtem Gerät prüfbar: Ziel-Karte und Knöpfe oben lösen eventuell nach einem Wisch aus (`fastTap`).
