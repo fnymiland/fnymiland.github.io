@@ -944,4 +944,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       genau den Deko-Busch (`drawObject('busch')` mit `decoScale`), Abstand wie von Hand aneinandergereiht (2,8 je Feld).
 - [x] 86c: Hecken-Büsche waren noch 10 % größer – aufgestellte Deko wird zusätzlich × 0,9 gezeichnet (`drawSmallOne`). Jetzt
       gleiche Größe, Abstand 3,5 je Feld (wie im Bild der Nutzerin von Hand gereiht).
+- [x] 86d: Lücke zwischen aneinandergesetzten Stücken – jedes Stück verteilte 3,5 Büsche für sich (am Ende mehr Abstand). Jetzt
+      feste Stellen je Kante (`bushSpan`, `BUSH_PER` = 4), gleich weit auseinander über alle Stücke.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).

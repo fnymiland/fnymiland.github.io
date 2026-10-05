@@ -31,4 +31,14 @@ describe('Wilmerhecke (Block 86)', () => {
     expect(r[0]).toEqual(['busch']);
     expect(r[1]).toBeCloseTo(game("decoScale('busch') * 0.9"));                     // genau wie eine aufgestellte Deko (drawSmallOne)
   });
+  it('drei Stücke hintereinander: keine Lücke am Übergang, alle Büsche im gleichen Abstand', () => {
+    for (const id of IDS) {
+      const xs = game(`(() => { state.edges.clear(); chosenStyle.hecke = '${id}'; for (let i = 0; i < 3; i++) buildEdge('hecke', 'a' + (6 + i) + ',6'); recalc();
+        const pts = []; const o = wilmerBush; wilmerBush = (m) => { pts.push(+m[0].toFixed(3)); };
+        try { for (const key of state.edges.keys()) drawEdge(key, state.edges.get(key), 1.4, 1000); } finally { wilmerBush = o; } return pts.sort((a, b) => a - b); })()`);
+      const inner = xs.filter((x, i) => i > 0 && i < xs.length - 1);                   // ohne die Endbüsche
+      const gaps = inner.slice(1).map((x, i) => +(x - inner[i]).toFixed(3));
+      expect(new Set(gaps).size, `${id}: ${xs.join(' ')}`).toBe(1);
+    }
+  });
 });
