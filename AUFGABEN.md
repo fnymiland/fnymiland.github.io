@@ -959,3 +959,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Freie Mauerenden hatten denselben dicken Pfeiler wie ein Tor (1,45 × Mauerbreite, hoch, breiter Deckstein) – wirkte klobig.
       87b: Der schlanke Pfeiler war kaum anders (Nutzer sah keinen Unterschied). Jetzt endet die Mauer gerade, ohne Pfeiler –
       nur „Laternen“ hat oben am Ende eine Laterne. Torpfeiler an Durchgängen bleiben.
+- [x] 87c: Endpfeiler doch wieder, aber schlank: Enden und Tore gleich (`wallPillarR` 1,25 × Mauerbreite, niedriger, kleiner
+      Deckstein). Torpfeiler auf den Feldecken (`gateT` = 0); jede Mauer, die dort ankommt – auch um die Ecke –, hört am Pfeiler
+      auf (`mauerGateAt`), statt in ihn hineinzulaufen und sich darüberzumalen. Test: mauerpfeiler.test.js.
+- [x] 87d: Gartentür lag vor dem vorderen Pfeiler – Durchgang jetzt von hinten nach vorn gezeichnet (hinteres Stück/Pfosten,
+      Tür, vorderes Stück/Pfosten, Bogen).

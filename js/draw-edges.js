@@ -267,10 +267,14 @@ function pillarBox(pt, r, h0, h1, col, z) {
 }
 // Gemauerter Pfeiler (Mauerende, Tor): deutlich breiter als die Mauer, vom Boden an mit Fugen, oben ein Deckstein.
 // Gibt die Höhe der Oberkante zurück.
-const PILLAR_UP = 2.8, CAP_UP = 3.6;
-const wallPillarR = look => look.w * 1.45;
+const PILLAR_UP = 1.6, CAP_UP = 2.4;                             // Block 87c: Enden und Tore gleich, nicht mehr so massiv
+const wallPillarR = look => look.w * 1.25;
 // Wo die Torpfosten stehen (Anteil der Kante): Mauerpfeiler ganz neben dem Weg (auf der Feldecke), sonst am Wegrand
-const gateT = (b, look) => b === 'mauer' ? GATE_CUT - wallPillarR(look) : GATE_CUT;
+const gateT = (b, look) => b === 'mauer' ? 0 : GATE_CUT;                     // Mauer: Torpfeiler auf den Feldecken (Block 87c)
+// Steht an diesem Eckpunkt ein Torpfeiler einer Mauer (ein Mauer-Durchgang beginnt oder endet hier)? Dann hört jede andere
+// Mauer dort am Pfeiler auf, statt in ihn hineinzulaufen (sonst malt sie sich über ihn, Block 87c)
+const mauerGateAt = (vx, vy, k) => ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)]
+  .some(o => o !== k && (state.edges.get(o) || {}).b === 'mauer' && isGate(o));
 function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am Tor nicht über die Feldecke hinaus; extra: höher
   const r = Math.min(wallPillarR(look), rMax), h = look.h, top = h + PILLAR_UP + extra, c = (du, dv, up) => edgeS(pt[0] + du * r, pt[1] + dv * r, up, z);
   pillarBox(pt, r, 0, top, look.col, z);
@@ -287,14 +291,14 @@ function wallPillar(pt, look, z, rMax = Infinity, extra = 0) {     // rMax: am T
     }
     g.stroke();
   }
-  pillarBox(pt, r * 1.18, top, top + CAP_UP - PILLAR_UP, shade(look.col, 0.28), z);
+  pillarBox(pt, r * 1.12, top, top + CAP_UP - PILLAR_UP, shade(look.col, 0.2), z);
   return top + CAP_UP - PILLAR_UP;
 }
 // Endstück an einem freien Ende: Mauer Pfeiler mit Deckstein, Zaun dicker Pfosten mit Kappe, Hecke rundes Ende.
 // Laternen darauf nur bei beleuchteten Stilen.
 function endPiece(b, look, pt, z, id) {
   const h = look.h, lit = litLook(look);
-  if (b === 'mauer') { if (lit) lampAt(pt, h, z, id); return; }   // Mauerende: gerade, ohne Pfeiler (Block 87b); Laterne oben drauf
+  if (b === 'mauer') { const top = wallPillar(pt, look, z); if (lit) lampAt(pt, top, z, id); return; }
   if (b === 'zaun') {
     const [x, y] = edgeS(pt[0], pt[1], 0, z), top = y - (h + (lit ? 3 : 2)) * z;
     g.strokeStyle = C(shade(look.col, -0.25)); g.lineWidth = 2.4 * z; g.lineCap = 'round';
@@ -376,23 +380,28 @@ function drawEdge(k, e, z, now) {
   const ao = dir === 'b' && state.edges.get('a' + i + ',' + j), aw = ao && ao.b !== 'zaun' ? ((EDGE_LOOK[ao.b] || {})[ao.style] || Object.values(EDGE_LOOK[ao.b])[0]).w : 0;
   // Mauer mit Pfeiler am hinteren Ende (P): erst der Pfeiler, die Mauer beginnt an seiner Seite (sonst ragt er über sie)
   const gateBefore = e.b === 'mauer' && (o => { const n = state.edges.get(o); return !!(n && n.b === 'mauer' && isGate(o)); })(dir + (i - au) + ',' + (j - av));
-  const pilP = gateBefore ? wallPillarR(look) : !endP ? 0 : e.b === 'hecke' ? w : 0;   // Mauerende ohne Pfeiler: Mauer bis an den Punkt
-  const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
+  const [vp0, vq0] = edgeEndPoints(k), gateP = e.b === 'mauer' && mauerGateAt(...vp0, k), gateQ = e.b === 'mauer' && mauerGateAt(...vq0, k);
+  const pilP = gateBefore || gateP ? wallPillarR(look) : !endP ? 0 : e.b === 'mauer' ? wallPillarR(look) : e.b === 'hecke' ? w : 0;
+  const ext0 = pilP ? -pilP : onP ? -ROUND_R : aw ? -aw : edgeJoins(k, e.b, i, j) ? w : 0, ext1 = onQ ? -ROUND_R : gateQ ? -wallPillarR(look) : edgeJoins(k, e.b, i + au, j + av) ? w : 0;
   const p = [E.p[0] - au * ext0, E.p[1] - av * ext0], q = [E.q[0] + au * ext1, E.q[1] + av * ext1];
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
     const gt = gateT(e.b, look);
-    if (e.b !== 'mauer') for (const [a, b, t0, t1] of [[p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT], [lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1]]) { if (look.bushes) bushSpan(k, E, t0, t1, look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); }
-    for (const t of [gt, 1 - gt]) {
-      const m = lerp2(E.p, E.q, t), d = w * 1.25;
+    // von hinten nach vorn (Block 87d): hinteres Stück und Pfosten, dann die Gartentür, dann vorderes Stück und Pfosten –
+    // sonst liegt die Tür vor dem vorderen Pfeiler
+    const stub = (a, b, t0, t1) => { if (e.b === 'mauer') return; if (look.bushes) bushSpan(k, E, t0, t1, look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); };
+    const post = t => {
+      const m = lerp2(E.p, E.q, t);
       if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
         const tall = e.arch === 'bogen', top = wallPillar(m, look, z, Infinity, tall ? 6 : 0), id = 'G' + (t < 0.5 ? 0 : 1) + k;
         if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);
         else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
       }
       else hedgeKnob(m, look, z);
-    }
+    };
+    stub(p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT); post(gt);
     if (gardenGate(k)) gateDoor(E, e, look, z, k);
+    stub(lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1); post(1 - gt);
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
@@ -430,7 +439,7 @@ function gateSwing(k, E) {
   return v < 0.005 ? 0 : v;
 }
 function gateDoor(E, e, look, z, k) {
-  const t0 = e.b === 'zaun' ? GATE_CUT : gateT(e.b, look) + (e.b === 'hecke' ? 0.05 : 0.03), A = lerp2(E.p, E.q, t0 + 0.02), B0 = lerp2(E.p, E.q, 1 - t0 - 0.02);
+  const t0 = e.b === 'zaun' ? GATE_CUT : e.b === 'mauer' ? wallPillarR(look) + 0.03 : gateT(e.b, look) + 0.05, A = lerp2(E.p, E.q, t0 + 0.02), B0 = lerp2(E.p, E.q, 1 - t0 - 0.02);
   const open = EDGE_PROJ ? 0 : gateSwing(k, E), ang = open * 1.4, len = Math.hypot(B0[0] - A[0], B0[1] - A[1]);
   const B = [A[0] + (E.along[0] * Math.cos(ang) + E.side[0] * Math.sin(ang)) * len, A[1] + (E.along[1] * Math.cos(ang) + E.side[1] * Math.sin(ang)) * len];
   const wood = { h: e.b === 'zaun' ? look.h - 0.5 : Math.min(7, look.h - 1), col: e.b === 'zaun' ? look.col : '#b5835a' };
