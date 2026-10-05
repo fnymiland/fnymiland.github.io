@@ -1026,3 +1026,14 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 91d: Möbelhaus mit Vorplatz ohne Sofa davor. Museum und Kaufhaus haben ohne Weg vor der Tür keinen alten Platz mehr (auch
       gedreht, `bare`) – nur Wiese; mit Weg der Weg zur Treppe bzw. Tür. Bildchen im Baumenü zeigen sie wie bisher.
 
+## Block 92 – Hilfe am Ort (06.10.2026)
+- [x] Problem: Viele fragen „Wo kriege ich Metall her?“, „Was ist ein Marktplatz?“ – die Erklärungen standen nur im Menü.
+- [x] Alles mit einem kleinen ? ist antippbar und öffnet eine Sprechblase direkt daneben (js/help.js, `data-help`):
+      Material im Bau-Infofenster, in den Ausbaukosten (Betriebe, Wunderwerke, Laternen), „Fehlt noch“ beim Hausausbau,
+      Rohstoffe im 📦 Lager („Woher“: ganze Kette, z. B. Metall ← Schmiede ← Erz ← Bergwerk am Erzberg), jeder Wunsch im
+      Hausfenster (was ist das, wie erfüllt man es), Viertel/🐌/Strom in den Statuszeilen. Knöpfe: „Zeig mir“/„Bauen“ wählt
+      das Gebäude zum Bauen (gesperrt: dorthin, wo man es freischaltet), „📚 Mehr“ öffnet den Eintrag im Nachschlagen.
+- [x] ☰ → 📚 Nachschlagen: Suche über Begriffe (`TERMS`), Wünsche (`WISH_HELP`), Rohstoffe und alle Gebäude (aus den
+      Spieldaten: Beschreibung, Tipp, Kosten, was es liefert, wo im Menü, Freischaltung), mit „Bauen“.
+- [x] Anleitung und „Das ist neu“ erwähnen es. Test: hilfe.test.js.
+

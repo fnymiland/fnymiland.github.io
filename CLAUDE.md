@@ -352,6 +352,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+92. **Hilfe am Ort** (Block 92, js/help.js): Was Spieler nicht verstehen könnten, bekommt `data-help="res:…|wish:…|term:…|b:…"`
+    (`helpAttr`) – ein Klick öffnet die Sprechblase, ohne eigene Verdrahtung (Listener am Dokument, übersteht das Neuzeichnen).
+    Rohstoffe und Gebäude erklärt `helpEntry` aus den Spieldaten; neue Wünsche brauchen einen Text in `WISH_HELP`, neue Begriffe
+    in `TERMS` (hilfe.test.js prüft Vollständigkeit und Verweise). Kosten mit Material über `costSpans`/`missMatHtml`.
 91. **Vorplatz / Weg zur Tür** (Block 91): Türen größerer Gebäude stehen in `COURTS` (rules.js, eigener Rahmen: `a` Beginn,
     `b` Türmitte und `w` halbe Breite = schmaler Weg bzw. `p` = Platz quer, jeweils bis an die Vorderkante; mehrere Stücke über `parts`,
     gelesen nur über `courtParts`). Sieht ein Bild mit Vorplatz anders aus (Büsche, Rasen), fragt es `courtShown` – und der Bildchen-Schlüssel kennt das. Gezeigt nur mit Weg direkt vor der Tür

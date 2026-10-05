@@ -8,6 +8,10 @@ const nfc = new Intl.NumberFormat('de-DE', { notation: 'compact', maximumFractio
 const nf1 = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
 function fmt(n) { return Math.abs(n) < 100000 ? nf.format(Math.floor(n)) : nfc.format(n); }
 function fmtRate(n) { return Math.abs(n) < 100 ? nf1.format(n) : fmt(n); }
+// Kosten als Kärtchen: Material antippbar (Block 92: „Woher?“); fehlendes Material als eigene Zeile
+const costSpans = (money, mat) => [money ? `<span${state.money < money ? ' class="bad"' : ''}>🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}</span>` : '',
+  ...Object.entries(mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''} ${helpAttr('res:' + r)}>${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}</span>`)].join('');
+const missMatHtml = mat => { const m = Object.entries(mat || {}).filter(([r, n]) => state.res[r] < n); return m.length ? `<p class="muted miss-mat">Fehlt noch: ${m.map(([r, n]) => `<span class="bad" ${helpAttr('res:' + r)}>${RES[r].icon} ${fmt(Math.ceil(n - state.res[r]))} ${RES[r].name}</span>`).join(' ')}</p>` : ''; };
 const costText = c => { const { money = 0, ...mat } = c || {}; return [money ? `🪙 ${fmt(money)}` : '', matText(mat)].filter(Boolean).join(' '); };
 // oben in der Leiste: glatte Zahlen (unter 1 aber nicht „0“)
 function fmtWhole(n) { return n > 0 && n < 0.5 ? '<1' : fmt(Math.round(n)); }
@@ -280,7 +284,7 @@ function openBuildInfo(id) {
   const locked = !available(id), tip = ITEM_TIPS[id] || ITEM_TIPS[baseOf(id)], fx = effectText(id);
   const ud = ITEMS[baseOf(id)] || d, go = locked ? unlockGo(ud) : null;                 // Größen: wie das Grundmodell
   const cost = [d.cost ? `<span${state.money < d.cost ? ' class="bad"' : ''}>🪙 ${fmt(d.cost)}</span>` : '<span>kostenlos</span>',
-    ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];
+    ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''} ${helpAttr('res:' + r)}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];   // antippen: woher (Block 92)
   const [w, h] = d.small || id === 'abriss' || id === 'verschieben' ? [1, 1] : sizeOf(id, 0);
   const built = d.small ? 0 : [...state.tiles.values()].filter(t => t.b === id).length;
   const facts = [w * h > 1 ? `📐 ${w}×${h} Felder` : '', d.workers ? `👷 ${d.workers} Mitarbeiter` : '', SHOPS[id] ? `🛒 bedient bis ${fmt(shopCap(id))} Kunden` : '',
@@ -495,7 +499,7 @@ function storeHtml() {
     - (soldRate[r] || 0);                                                                                          // Läden verkaufen (wirklich)
   const sold = new Set((T.sales || []).map(sl => sl.res));
   const keepBtn = r => { const k = keepOf(r); return sold.has(r) ? `<button class="keep" data-keep="${r}" title="Läden verkaufen nur, was darüber liegt – antippen zum Ändern">🔒 ${k >= KEEP_ALL ? 'alles' : fmt(k)}</button>` : '<span></span>'; };
-  const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small>${keepBtn(r)}</div>`; });
+  const rows = shown.map(r => { const m = made(r) * 60; return `<div class="store-row"><span ${helpAttr('res:' + r)}>${RES[r].icon} ${RES[r].name}</span><b>${fmt(state.res[r])}</b><small${m < 0 ? ' class="minus"' : ''}>${Math.abs(m) >= 0.5 ? (m > 0 ? '+' : '−') + fmtWhole(Math.abs(m)) + '/min' : ''}</small>${keepBtn(r)}</div>`; });
   const P = T.rail.power, power = P.city || P.supply
     ? `<div class="store-row${P.demand > P.supply + 1e-9 ? ' bad' : ''}"><span>⚡ Strom</span><b>${fmtPow(P.supply)}</b><small${P.demand > P.supply + 1e-9 ? ' class="minus"' : ''}>${P.demand} gebraucht</small></div>` : '';
   // Verkehr: alle fahrenden Linien zusammen
@@ -1006,13 +1010,13 @@ function openInfo(x, y) {
     status.push({
       viertel: '<div class="ok">✓ Liegt im Wohnviertel</div>',
       nah: `<div class="ok">✓ Häuser in Laufweite (bis ${WALK_REACH} Felder)</div>`,
-      weit: '<div class="bad">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf oder ein Bahnhof in der Nähe bringt 100 %.</div>',
+      weit: '<div class="bad" data-help="term:schnecke">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf oder ein Bahnhof in der Nähe bringt 100 %.</div>',
       bahn: s.served >= 1 ? '<div class="ok">🚆 Mit dem Zug ans Dorf angebunden</div>'
         : `<div class="bad">🚆 Mit dem Zug angebunden, aber die Linie ist überfüllt: ${Math.round(s.eff * 100)} %</div>`,
     }[s.how]);
   }
-  if (s.bonus) status.push(`<div class="ok">🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
-  else if (s.n > 1) status.push(`<div>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
+  if (s.bonus) status.push(`<div class="ok" ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
+  else if (s.n > 1) status.push(`<div ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
   if (s.lmb > 1.001) status.push(`<div class="ok">✨ Sehenswürdigkeit in der Nähe: +${Math.round((s.lmb - 1) * 100)} %</div>`);
   if (d.shop) status.push(...shopStatus(t, s, x + ',' + y));
@@ -1030,7 +1034,7 @@ function openInfo(x, y) {
   if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
-  if (s.noPower) status.push(`<div class="bad">⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🏭 Herstellen → ⚡ Strom).</div>`);
+  if (s.noPower) status.push(`<div class="bad" ${helpAttr('term:strom')}>⚡ Kein Strom: nur ${Math.round(NO_POWER * 100)} %. ${ITEMS[t.b].name} braucht ${CONSUMERS[t.b]} ⚡ – mehr Kraftwerke bauen (🏭 Herstellen → ⚡ Strom).</div>`);
   const why = [];
   const beete = beetBonus(x, y);
   if (t.b === 'haus') why.push(`👥 ${HOUSE_STAGES[t.lvl - 1].pop} Einwohner`);
@@ -1056,12 +1060,11 @@ function openInfo(x, y) {
     const info = stageInfo(t, x, y);
     if (info.next) {
       const { money = 0, ...mat } = info.next.cost, missing = info.conds.filter(c => !c.ok).length;
-      const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
-        ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${n}`)].filter(Boolean);
+      const costs = costSpans(money, mat);
       grow = `
         <div class="label">Nächste Stufe: ${info.next.name} · ×${t.lvl + 1}</div>
         <div class="status">${info.conds.map(c => `<div class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'} ${c.text}${reachHow(c)}</div>`).join('')}</div>
-        <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+        <div class="stats">${costs}</div>
         <div class="row"><button class="btn" id="p-stage" ${info.ready && canPay(info.next.cost) ? '' : 'disabled'}>
           ${info.ready ? (canPay(info.next.cost) ? '✨ Ausbauen' : 'Material fehlt noch') : `Noch ${missing} ${missing > 1 ? 'Bedingungen' : 'Bedingung'}`}</button></div>`;
     } else grow = '<p class="ok">Höchste Stufe – prächtiger geht es nicht!</p>';
@@ -1101,12 +1104,13 @@ function openInfo(x, y) {
       <p class="resident">${a.icon} <b id="p-name">${escHtml(t.name)} ${a.family}</b> <button class="link" id="p-rename" aria-label="Namen ändern">✎</button></p>
       <p class="hearts">${hearts}</p>
       ${w.next ? `<div class="label">Wünsche für: ${w.next.name}</div>
-        <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}">${v.ok ? '✓' : '✗'} ${v.text}${reachHow(v)}</div>`).join('')}</div>`
+        <div class="status">${w.list.map(v => `<div class="${v.ok ? 'ok' : 'bad'}" ${helpAttr('wish:' + v.id)}>${v.ok ? '✓' : '✗'} ${v.text}${reachHow(v)}</div>`).join('')}</div>`
         : w.later ? `<p class="muted">✨ Mit Kristall 💎 von der Kristallinsel kann daraus eine ${w.later.name} werden.</p>`
         : '<p class="ok">Alle Wünsche erfüllt – das schönste Haus der Insel!</p>'}`;
     const hc = w.next && houseCost(w.next), hcText = hc ? [hc.money ? `🪙 ${fmt(hc.money)}` : '', matText(w.next.mat)].filter(Boolean).join(' ') : '';
     house += w.next ? `<div class="row"><button class="btn" id="p-grow" ${w.ready && canPay(hc) ? '' : 'disabled'}>
-      ${w.ready ? `Ausbauen · ${hcText}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>` : '';
+      ${w.ready ? `Ausbauen · ${hcText}` : `Noch ${w.total - w.met} ${w.total - w.met > 1 ? 'Wünsche' : 'Wunsch'}`}</button></div>
+      ${missMatHtml(w.next.mat)}` : '';
   }
   // Wunderwerk: Fortschritt, Kosten des nächsten Abschnitts, Knopf
   let wonder = '';
@@ -1114,11 +1118,10 @@ function openInfo(x, y) {
     const W = WONDERS[t.b], p = t.phase || 0, N = W.phases.length;
     if (p < N) {
       const { money = 0, ...mat } = wonderCost(t);
-      const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
-        ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
+      const costs = costSpans(money, mat);
       wonder = `<div class="label">Abschnitt ${p + 1} von ${N}: ${W.names[p]}</div>
         <div class="wbar"><i style="width:${p / N * 100}%"></i></div>
-        <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+        <div class="stats">${costs}</div>
         <p class="muted">Wenn fertig: ${W.text}. Preise nach deinem besten Einkommen (🪙 ${fmt(wonderBase(t))}/s).</p>
         <div class="row"><button class="btn" id="p-wonder" ${canPay(wonderCost(t)) ? '' : 'disabled'}>🏗️ Abschnitt bauen</button></div>`;
     } else {
@@ -1639,12 +1642,11 @@ function openLandmark(x, y) {
   let body = '';
   if (info.next) {
     const { money, mat } = info;
-    const costs = [money ? `🪙 ${fmt(Math.min(state.money, money))}/${fmt(money)}` : '',
-      ...Object.entries(mat).map(([r, n]) => `${RES[r].icon} ${fmt(Math.min(state.res[r], n))}/${fmt(n)}`)].filter(Boolean);
+    const costs = costSpans(money, mat);
     const unl = lmUnlockNames(type, info.stage);
     body = `
       <div class="label">Nächste Stufe: ${info.next.name}</div>
-      <div class="stats">${costs.map(c => `<span>${c}</span>`).join('')}</div>
+      <div class="stats">${costs}</div>
       ${unl.length ? `<p class="muted">Schaltet frei: ${unl.join(', ')}</p>` : ''}
       ${info.err ? `<div class="status"><div class="bad">${info.err}</div></div>` : ''}
       <div class="row"><button class="btn" id="p-restore" ${info.err ? 'disabled' : ''}>🏮 Restaurieren</button></div>`;
@@ -2152,7 +2154,8 @@ function helpBody(tab) {
     '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es – antippen und ausbauen.',
     '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen – ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',
     '🪙 <b>Taler</b> verdienen Felder, Betriebe und Läden. Betriebe brauchen Einwohner als Mitarbeiter – bau also Häuser dazu.',
-    '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen im 💡 Tipp-Buch (☰).']);
+    '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen im 💡 Tipp-Buch (☰).',
+    '❓ <b>Nicht verstanden?</b> Alles mit einem kleinen ? lässt sich antippen – Material, Wünsche, Begriffe. Unter ☰ → 📚 Nachschlagen findest du alles mit Suche.']);
 }
 function openHelp(tab = helpTab) {
   helpTab = tab;
@@ -2166,11 +2169,12 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-05-wilmer', items: [
+const NEWS = { id: '2026-10-06-hilfe', items: [
+  '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
+  '📚 <b>Nachschlagen:</b> Unter ☰ ein Buch mit Suche – alle Gebäude, Rohstoffe, Wünsche und Begriffe.',
+  '🧱 <b>Vorplätze:</b> Liegt ein Weg vor der Tür, führt jetzt bei allen Gebäuden ein Weg oder Platz im selben Muster bis zur Tür.',
   '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es jetzt eine Hecke aus lauter kleinen runden Büschen – einfach ziehen wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
   '🚉 <b>Hauptbahnhof neu:</b> Portal mit Uhrturm genau in der Mitte, ein Weg vor dem Portal führt bis an die Tür. Schönere Bahnsteigdächer, dazu Laternen, Bänke und Bahnsteiguhren.',
-  '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk.',
-  '🏰 <b>Märchenschloss und Wege:</b> runde Türme, Balkone und Goldbänder rundherum; Wege ganz breit oder schmal, Kurven rund oder eckig, Gartenwege bis zur Haustür.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
@@ -2193,6 +2197,7 @@ function showMenu() {
   openModal(`
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
+    <div class="row"><button class="btn ghost" id="m-lex" style="flex:1">📚 Nachschlagen: Was ist …?</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button><button class="btn ghost" style="flex:1" id="m-borders">${state.noBorders ? '▢ Randlinien aus' : '▣ Randlinien an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
@@ -2206,6 +2211,7 @@ function showMenu() {
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => openHelp();
+  $('m-lex').onclick = () => openLexikon();
   $('m-news').onclick = showNews;
   $('m-tips').onclick = openTipBook;
   $('m-diary').onclick = () => openDiary();
