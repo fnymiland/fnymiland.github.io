@@ -80,10 +80,10 @@ function hedgeSideFlowers(line, look, h, z, seed, d0 = 0) {
 }
 // Wilmerhecke (Block 86): kleine runde Büsche wie der Deko-Busch dicht an dicht entlang einer Punktlinie, von hinten nach vorn
 const BUSH_PER = 4;                                          // Büsche je Feldkante – ganzzahlig, sonst Lücke am Übergang (Block 86d)
-function bushRow(line, look, z, seed, d0 = 0) {
+function bushRow(line, look, z, seed, d0 = 0, id = null) {
   const at = [];
   alongLine(line, BUSH_PER, d0, (m, i) => at.push([m, i]));
-  drawBushes(at, look, z, seed);
+  drawBushes(at, look, z, seed, id);
 }
 // Büsche auf einer geraden Kante k an festen Stellen (0, 1, 2 … / BUSH_PER), nur zwischen t0 und t1. Auf jedem Eckpunkt ein
 // Busch: Ecken werden ein sauberes „L“, Enden schließen am Punkt ab, überall derselbe Abstand (Block 86f). Wer ihn zeichnet,
@@ -99,13 +99,13 @@ function bushSpan(k, E, t0, t1, look, z, seed) {
     if ((m === 0 && wilmerStart(...vp) !== k) || (m === BUSH_PER && wilmerStart(...vq))) continue;
     at.push([lerp2(E.p, E.q, t), m]);
   }
-  drawBushes(at, look, z, seed);
+  drawBushes(at, look, z, seed, 'E' + k);
 }
-function drawBushes(at, look, z, seed) {
+function drawBushes(at, look, z, seed, id = null) {
   at.sort((A, B) => A[0][0] + A[0][1] - B[0][0] - B[0][1]);   // von hinten nach vorn
-  for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i);
+  for (const [m, i] of at) wilmerBush(m, look, z, hash(i, seed, 13), i, id);
 }
-function wilmerBush(m, look, z, r = 0.5, i = 0) {
+function wilmerBush(m, look, z, r = 0.5, i = 0, id = null) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
   const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
   g.save(); g.translate(x, y); g.scale(ds, ds);
@@ -113,6 +113,14 @@ function wilmerBush(m, look, z, r = 0.5, i = 0) {
   if (look.flowers) for (let f = 0; f < 3; f++) {
     const a = hash(i, f, 17) * Math.PI * 2, d = 3 + hash(i, f, 19) * 3;
     circle(x + Math.cos(a) * d * k, y - 8 * k + Math.sin(a) * d * 0.7 * k, 1.3 * k, C(look.flowers[Math.floor(hash(i, f, 23) * look.flowers.length)]));
+  }
+  if (look.lights) {                                               // Lichterkette in den Büschen (Block 86h) – wie die Blüten verteilt
+    const lit = id ? edgeLit(id) : night > 0.15 && isLive();
+    for (let f = 0; f < 4; f++) {
+      const a = hash(i, f, 29) * Math.PI * 2, d = 2.5 + hash(i, f, 31) * 3.5, bx = x + Math.cos(a) * d * k, by = y - 7.5 * k + Math.sin(a) * d * 0.7 * k;
+      circle(bx, by, 1.15 * k, lit ? '#fff3b0' : C('#f6edc8'));
+      if (lit) glowQuad([[bx - k, by], [bx, by - k], [bx + k, by], [bx, by + k]], 7 * z);
+    }
   }
 }
 // Durchgang: die Linie hört genau am Rand des Wegs auf (Weg-Band EDGE_W), nicht mitten im Gras
@@ -135,7 +143,7 @@ function drawArc(rc, look, z) {
     const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
-  if (rc.b === 'hecke' && look.bushes) { const ap = roundArc(rc, 12); bushRow(ap, look, z, rc.ka.length); if (look.lights) lampions(ap, look, look.h, z, 'E' + rc.ka); return; }   // Wilmerhecke im Bogen
+  if (rc.b === 'hecke' && look.bushes) { bushRow(roundArc(rc, 12), look, z, rc.ka.length, 0, 'E' + rc.ka); return; }   // Wilmerhecke im Bogen
   if (rc.b === 'zaun') { const ap = roundArc(rc, 12); drawFence({ pts: ap }, look, rc.style, false, z, [false, false]); fencePost(ap[6], look, rc.style, z); if (look.lights) bulbsAlong(ap, look.h + 0.6, z, 'E' + rc.ka); return; }   // ein Pfosten mitten im Bogen
   const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
   const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
@@ -402,7 +410,6 @@ function drawEdge(k, e, z, now) {
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
     bushSpan(k, E, onP ? ROUND_R : gateP, onQ ? 1 - ROUND_R : 1 - gateQ, look, z, k.length);
-    if (look.lights) lampions([p, q], look, h, z, 'E' + k);
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
     if (endQ) endPiece(e.b, look, E.q, z, 'P' + vq.join());

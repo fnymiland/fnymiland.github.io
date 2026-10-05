@@ -953,6 +953,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 86g: Ecke vorn (beide Stücke enden am Punkt): der Eckbusch wurde vom zuerst gezeichneten Stück gemalt, das andere malte
       seinen hinteren Busch darüber. Jetzt: beginnt am Punkt ein Stück, zeichnet das erste davon den Eckbusch vor seinen Büschen;
       sonst zeichnet ihn jedes endende als Letztes. Test spielt die echte Reihenfolge für alle Eckarten nach.
+- [x] 86h: Lichterkette als Lampions obendrauf sah schlecht aus – jetzt kleine Lichter in jedem Busch verteilt wie die Blüten,
+      nachts mit warmem Schein (brauchen wie alle Lichter Strom).
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
