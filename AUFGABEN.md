@@ -1048,4 +1048,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Rückfrage mit beiden (Insel, verdient, bebaut, zuletzt gespielt); der andere wird vorher gesichert. Eine andere Insel
       (neu begonnen, Datei geladen) ersetzt die in der Cloud erst, nachdem die alte gesichert ist. Frühere Stände zurückholen.
 - [x] Test: cloud.test.js (mit Cloud-Attrappe). Offen: Stufe 2 (ein Gerät führt), Stufe 3 (Live-Spiegel, Besuchen).
-
+- [x] 93b: Änderungen kamen auf dem anderen Gerät nicht an (hochgeladen erst nach 2 Minuten, das andere Gerät sah nur beim
+      Zurückkehren nach). Jetzt: hochladen ~6 s nach der letzten Aktion (bei Dauerbauen spätestens alle 45 s, nie öfter als
+      alle 10 s); andere Geräte horchen live auf `meta` und übernehmen sofort, wenn sie selbst nichts geändert haben (Blick bleibt).

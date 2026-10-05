@@ -7,11 +7,13 @@ beforeAll(() => {
     const db = {};
     const u = uid => db[uid] || (db[uid] = { meta: null, save: null, idx: {}, bak: {}, n: 0 });
     return { db,
+      watchers: [], watchMeta(uid, cb) { this.watchers.push([uid, cb]); return () => {}; },
       onUser: () => {}, signInGoogle: async () => {}, sendLink: async () => {}, isLink: () => false, finishLink: async () => {}, signOut: async () => {},
       getMeta: async uid => u(uid).meta && JSON.parse(JSON.stringify(u(uid).meta)),
       getSave: async uid => u(uid).save && { ...u(uid).save },
       claim: async (uid, expect, info) => { const c = u(uid).meta; if (c && (c.rev || 0) !== expect) return { ok: false, cur: JSON.parse(JSON.stringify(c)) };
-        const rev = ((c && c.rev) || 0) + 1; u(uid).meta = { rev, at: Date.now(), by: info.by, sum: info.sum }; return { ok: true, rev }; },
+        const rev = ((c && c.rev) || 0) + 1; u(uid).meta = { rev, at: Date.now(), by: info.by, sum: info.sum };
+        setTimeout(() => { for (const [w, cb] of (cloudApi && cloudApi.watchers) || []) if (w === uid) cb(JSON.parse(JSON.stringify(u(uid).meta))); }, 0); return { ok: true, rev }; },
       putSave: async (uid, s) => { u(uid).save = { ...s }; },
       addBackup: async (uid, info, data) => { const id = 'b' + (++u(uid).n); u(uid).idx[id] = { ...info, at: info.at + u(uid).n }; u(uid).bak[id] = data; return id; },
       listBackups: async uid => Object.entries(u(uid).idx).map(([id, b]) => ({ id, ...b })),
@@ -127,6 +129,24 @@ describe('Online-Speicher (Block 93)', () => {
     expect(game('state.town.name')).toBe('Hier');
     expect(Object.values(remote().idx).map(x => x.sum.town)).toContain('Dort');
     expect(JSON.parse(remote().save.data).town.name).toBe('Hier');
+  });
+  it('live: lädt ein anderes Gerät hoch, übernimmt dieses Gerät sofort (wenn es selbst nichts geändert hat)', async () => {
+    play(50000, 'Hier');
+    await login();
+    await putRemote('Neu von drüben', 150000);
+    for (let i = 0; i < 20 && game('state.town.name') !== 'Neu von drüben'; i++) await new Promise(r => setTimeout(r, 5));
+    expect(game('state.town.name')).toBe('Neu von drüben');
+  });
+  it('hochladen: ein paar Sekunden nach der letzten Aktion, bei Dauerbauen spätestens nach CLOUD_EVERY', async () => {
+    play();
+    await login();
+    const t0 = game('Date.now()');
+    game(`cloudLastUp = ${t0} - CLOUD_GAP - 1; cloudTouched(); cloudActAt = ${t0}`);
+    expect(game(`cloudDue(${t0} + 1000)`)).toBe(false);                                   // gerade noch gebaut
+    expect(game(`cloudDue(${t0} + CLOUD_QUIET + 100)`)).toBe(true);                       // Pause → hoch
+    game(`cloudLastUp = ${t0}; cloudActAt = ${t0} + CLOUD_EVERY`);
+    expect(game(`cloudDue(${t0} + CLOUD_EVERY + 500)`)).toBe(true);                       // baut ständig → trotzdem regelmäßig
+    expect(game(`cloudDue(${t0} + 2000)`)).toBe(false);                                   // nie öfter als CLOUD_GAP
   });
   it('höchstens 10 Sicherungen', async () => {
     play();

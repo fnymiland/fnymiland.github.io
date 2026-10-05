@@ -10,7 +10,8 @@
 // Regeln (Spielstände sind heilig):
 //   • Eine leere/neue Welt überschreibt nie eine bespielte – ein neues Gerät holt immer den Cloud-Stand.
 //   • Haben zwei Geräte unterschiedlich weitergespielt, fragt das Spiel; der andere Stand wird vorher gesichert.
-//   • Hochgeladen wird nur, was man selbst gemacht hat (cloudTouched aus undoCommit), höchstens alle CLOUD_EVERY ms,
+//   • Hochgeladen wird nur, was man selbst gemacht hat (cloudTouched aus undoCommit): CLOUD_QUIET ms nach der letzten
+//     Aktion, bei Dauerbauen spätestens nach CLOUD_EVERY ms, nie öfter als alle CLOUD_GAP ms –
 //     und nur gegen die Version, die dieses Gerät kennt (rev, Transaktion) – sonst wird neu entschieden.
 // Firebase wird erst geladen, wenn man sich anmeldet (oder angemeldet war): wer offline spielt, merkt nichts davon.
 // ---------------------------------------------------------------------------
@@ -24,7 +25,8 @@ const FIREBASE_CONFIG = {
   appId: '1:663890593085:web:55eeb23d0e402fa8fa3154',
 };
 const FB_VER = '10.14.1', CLOUD_KEY = 'kachelhausen_cloud', CLOUD_MAIL = 'kachelhausen_cloud_mail';
-const CLOUD_EVERY = 120000, CLOUD_BACKUPS = 10;
+const CLOUD_QUIET = 6000, CLOUD_EVERY = 45000, CLOUD_GAP = 10000, CLOUD_BACKUPS = 10;
+let cloudActAt = 0, cloudWatchOff = null, cloudToastAt = 0;   // letzte eigene Aktion; Abmelden vom Live-Horchen
 let cloudApi = null;                 // Adapter: Firebase (cloudFirebase) oder im Test eine Attrappe
 let cloudUser = null;                // { uid, name }
 let cloudState = 'aus';              // aus | laden | ok | offline | konflikt | fehler
@@ -35,7 +37,7 @@ function cloudMeta() { try { return JSON.parse(localStorage.getItem(CLOUD_KEY)) 
 function setCloudMeta(m) { try { localStorage.setItem(CLOUD_KEY, JSON.stringify(m)); } catch (e) { /* privates Fenster */ } }
 function cloudDevice() { const m = cloudMeta(); if (!m.dev) { m.dev = Math.random().toString(36).slice(2, 10); setCloudMeta(m); } return m.dev; }
 // eigene Aktion (aus undoCommit): ab jetzt hat dieses Gerät etwas, das in die Cloud gehört
-function cloudTouched() { if (!cloudUser) return; const m = cloudMeta(); m.acts = (m.acts || 0) + 1; setCloudMeta(m); }
+function cloudTouched() { if (!cloudUser) return; const m = cloudMeta(); m.acts = (m.acts || 0) + 1; setCloudMeta(m); cloudActAt = Date.now(); }
 // Bewusst eine ganz andere Welt (Neue Insel, Datei geladen): darf auch leer hochgeladen werden – die alte wird dabei gesichert
 function cloudNewWorld() { if (!cloudUser) return; cloudFreshOk = true; cloudTouched(); cloudUpload(true).catch(() => { cloudState = 'offline'; }); }
 
@@ -100,15 +102,17 @@ async function cloudUpload(force = false, local = localSave(), backedUp = false)
 // Cloud-Stand übernehmen; der hiesige kommt vorher in die Sicherungen (außer er ist ganz neu)
 async function cloudTake(cloud, local, reason) {
   const uid = cloudUser.uid, s = await cloudApi.getSave(uid);
-  if (!s || s.rev !== cloud.rev) { cloudState = 'ok'; return; }                 // Stand ist noch unterwegs: später nochmal
+  if (!s || s.rev !== cloud.rev) { cloudState = 'ok'; setTimeout(() => cloudSync('nachladen'), 1500); return; }   // Stand ist noch unterwegs: gleich nochmal
   const parsed = parseSave(JSON.parse(s.data));                                 // wirft bei Unsinn – dann bleibt alles, wie es ist
   const ls = worldSum(local);
   if (ls.earned >= 100 || ls.tiles > 5) await cloudBackup(local, 'Dieses Gerät, vor dem Laden aus der Cloud');
+  const keepCam = reason === 'anderes Gerät' && state.town.name === parsed.town.name ? { ...cam } : null;   // live: Blick bleibt, wo er ist
   adoptState(parsed);
+  if (keepCam) { state.cam = keepCam; cam = state.cam; }
   setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 0 });
   cloudState = 'ok';
-  closePanel();
-  toast(`☁️ ${state.town.name} aus der Cloud geladen${reason ? '' : ''}`);
+  if (!keepCam) closePanel();
+  if (!keepCam || Date.now() - cloudToastAt > 30000) { cloudToastAt = Date.now(); toast(keepCam ? '☁️ Neues von deinem anderen Gerät' : `☁️ ${state.town.name} aus der Cloud geladen`); }
 }
 async function cloudBackup(d, why) {
   const uid = cloudUser.uid;
@@ -154,10 +158,16 @@ async function cloudResolve(pick, cloud) {
 // Anmelden, Abmelden, Fenster im Menü
 // ---------------------------------------------------------------------------
 function cloudOnUser(u) {
+  if (cloudWatchOff) { cloudWatchOff(); cloudWatchOff = null; }
   cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet' } : null;
   if (!u) { cloudState = 'aus'; return; }
   cloudState = 'laden';
   cloudSync('Anmeldung');
+  // live horchen: hat ein anderes Gerät eine neue Version hochgeladen, gleich abgleichen (ohne eigene Änderungen: übernehmen)
+  if (cloudApi.watchMeta) cloudWatchOff = cloudApi.watchMeta(u.uid, meta => {
+    if (!meta || !cloudUser || meta.by === cloudDevice() || meta.rev === cloudMeta().rev) return;
+    cloudSync('anderes Gerät');
+  });
 }
 async function cloudReady() {
   if (cloudApi) return cloudApi;
@@ -282,6 +292,7 @@ async function cloudFirebase() {
     isLink: href => auth.isSignInWithEmailLink(href),
     finishLink: (mail, href) => auth.signInWithEmailLink(mail, href),
     signOut: () => auth.signOut(),
+    watchMeta: (uid, cb) => { const r = ref(uid, 'meta'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
     getMeta: async uid => (await ref(uid, 'meta').get()).val(),
     getSave: async uid => (await ref(uid, 'save').get()).val(),
     // nächste Version beanspruchen, nur wenn die Cloud noch auf expect steht
@@ -310,7 +321,11 @@ function cloudBoot() {
   cloudReady().then(() => { if (link) cloudFinishLink(); }).catch(() => { cloudState = 'offline'; });
 }
 // Regelmäßig sichern (nur eigene Aktionen), beim Verlassen sofort, beim Zurückkommen nachsehen, ob ein anderes Gerät weiter ist
-setInterval(() => { if (cloudUser && cloudState === 'ok' && Date.now() - cloudLastUp > CLOUD_EVERY) cloudUpload().catch(() => { cloudState = 'offline'; }); }, 20000);
+function cloudDue(now = Date.now()) {
+  return !!cloudUser && cloudState === 'ok' && !cloudBusy && cloudMeta().acts > 0 && now - cloudLastUp > CLOUD_GAP
+    && (now - cloudActAt > CLOUD_QUIET || now - cloudLastUp > CLOUD_EVERY);
+}
+setInterval(() => { if (cloudDue()) cloudUpload().catch(() => { cloudState = 'offline'; }); }, 2000);
 document.addEventListener('visibilitychange', () => {
   if (!cloudUser) return;
   if (document.hidden) { save(); cloudUpload().catch(() => {}); } else cloudSync('zurück');
