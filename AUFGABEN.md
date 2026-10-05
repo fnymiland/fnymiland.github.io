@@ -959,6 +959,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Durchhang, Birnchen im festen Abstand, läuft über aneinandergesetzte Stücke und um Ecken durch.
 - [x] 86j/k: Lichterkette läuft durch aneinandergesetzte Stücke und Ecken; wo die Hecke aufhört (freies Ende, beide Ränder eines
       Durchgangs) läuft sie in den letzten Busch hinunter. (86j spannte sie fälschlich über den Weg – zurückgenommen.)
+- [x] 86l: Nutzer-Idee: keine Kette, nur kleine Leuchtpunkte – gleichmäßig an festen Stellen (je ⅛ Kante) in leichtem Auf und Ab,
+      nachts leuchtend. Kein Draht → keine Probleme an Ecken, Durchgängen und Enden.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).
 
 ## Block 87 – Mauerenden schlanker (05.10.2026)
