@@ -85,11 +85,21 @@ function bushRow(line, look, z, seed, d0 = 0) {
   alongLine(line, BUSH_PER, d0, (m, i) => at.push([m, i]));
   drawBushes(at, look, z, seed);
 }
-// Büsche auf einer geraden Kante E an festen Stellen (½, 1½ … / BUSH_PER), nur zwischen t0 und t1 – so schließen
-// aneinandergesetzte Stücke lückenlos aneinander, egal wie weit ein Stück an der Ecke übersteht
-function bushSpan(E, t0, t1, look, z, seed) {
-  const at = [];
-  for (let m = 0; m < BUSH_PER; m++) { const t = (m + 0.5) / BUSH_PER; if (t >= t0 && t <= t1) at.push([lerp2(E.p, E.q, t), m]); }
+// Büsche auf einer geraden Kante k an festen Stellen (1, 2, 3 … / BUSH_PER), nur zwischen t0 und t1. Auf jedem Eckpunkt
+// genau ein Busch – ihn zeichnet das erste Wilmer-Stück am Punkt (wilmerOwner): Ecken werden ein sauberes „L“, Enden
+// schließen am Punkt ab, und aneinandergesetzte Stücke haben überall denselben Abstand (Block 86f)
+const isWilmer = e => !!e && e.b === 'hecke' && (e.style || '').startsWith('wilmer');
+function wilmerOwner(vx, vy) {
+  return ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)].find(o => isWilmer(state.edges.get(o))) || null;
+}
+function bushSpan(k, E, t0, t1, look, z, seed) {
+  const at = [], [vp, vq] = edgeEndPoints(k);
+  for (let m = 0; m <= BUSH_PER; m++) {
+    const t = m / BUSH_PER;
+    if (t < t0 - 1e-9 || t > t1 + 1e-9) continue;
+    if ((m === 0 && wilmerOwner(...vp) !== k) || (m === BUSH_PER && wilmerOwner(...vq) !== k)) continue;
+    at.push([lerp2(E.p, E.q, t), m]);
+  }
   drawBushes(at, look, z, seed);
 }
 function drawBushes(at, look, z, seed) {
@@ -373,7 +383,7 @@ function drawEdge(k, e, z, now) {
   if (onP && rcP.ka === k) drawArc(rcP, look, z);                 // Bogen hinten: vor dem Stück zeichnen
   if (gate) {                                                   // Durchgang: bis an den Weg, innen ein Pfeiler bzw. rundes Ende
     const gt = gateT(e.b, look);
-    if (e.b !== 'mauer') for (const [a, b, t0, t1] of [[p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT], [lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1]]) { if (look.bushes) bushSpan(E, t0, t1, look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); }
+    if (e.b !== 'mauer') for (const [a, b, t0, t1] of [[p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT], [lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1]]) { if (look.bushes) bushSpan(k, E, t0, t1, look, z, k.length); else edgePrism(a, b, E, w, h, look.col, z); }
     for (const t of [gt, 1 - gt]) {
       const m = lerp2(E.p, E.q, t), d = w * 1.25;
       if (e.b === 'mauer') {                                       // „Torbogen“ an der Mauer: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
@@ -389,7 +399,7 @@ function drawEdge(k, e, z, now) {
   }
   if (pilP && endP) endPiece(e.b, look, E.p, z, 'P' + vp.join());
   if (look.bushes) {                                               // Wilmerhecke: Büsche statt Block
-    bushSpan(E, onP ? ROUND_R : 0, onQ ? 1 - ROUND_R : 1, look, z, k.length);
+    bushSpan(k, E, onP ? ROUND_R : 0, onQ ? 1 - ROUND_R : 1, look, z, k.length);
     if (look.lights) lampions([p, q], look, h, z, 'E' + k);
     if (onQ && rcQ.ka === k) drawArc(rcQ, look, z);
     if (endP && !pilP) endPiece(e.b, look, E.p, z, 'P' + vp.join());

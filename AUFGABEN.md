@@ -948,4 +948,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       feste Stellen je Kante (`bushSpan`, `BUSH_PER` = 4), gleich weit auseinander über alle Stücke.
 - [x] 86e: In der Kurve schien der helle Belag der Wegrundung zwischen den Büschen durch, und am Übergang Gerade/Bogen sowie
       an freien Enden saßen zwei Büsche aufeinander. Wilmerhecke rundet Ecken nicht mehr (`roundCorner` → null), kein Endbusch.
+- [x] 86f: Ecken sahen klumpig aus (zwei Büsche kurz vor dem Eckpunkt). Jetzt genau ein Busch auf jedem Eckpunkt (gezeichnet vom
+      ersten Wilmer-Stück dort, `wilmerOwner`), dazwischen alle ¼ Feld einer – Ecken werden ein sauberes „L“, Enden schließen am Punkt ab.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).

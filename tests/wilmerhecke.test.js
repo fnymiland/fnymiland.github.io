@@ -36,7 +36,7 @@ describe('Wilmerhecke (Block 86)', () => {
       const xs = game(`(() => { state.edges.clear(); chosenStyle.hecke = '${id}'; for (let i = 0; i < 3; i++) buildEdge('hecke', 'a' + (6 + i) + ',6'); recalc();
         const pts = []; const o = wilmerBush; wilmerBush = (m) => { pts.push(+m[0].toFixed(3)); };
         try { for (const key of state.edges.keys()) drawEdge(key, state.edges.get(key), 1.4, 1000); } finally { wilmerBush = o; } return pts.sort((a, b) => a - b); })()`);
-      const inner = xs.filter((x, i) => i > 0 && i < xs.length - 1);                   // ohne die Endbüsche
+      const inner = xs;                                                                 // auch die Endbüsche: alles im gleichen Abstand
       const gaps = inner.slice(1).map((x, i) => +(x - inner[i]).toFixed(3));
       expect(new Set(gaps).size, `${id}: ${xs.join(' ')}`).toBe(1);
     }
@@ -45,6 +45,6 @@ describe('Wilmerhecke (Block 86)', () => {
     game("state.edges.clear(); chosenStyle.hecke = 'wilmer'; buildEdge('hecke', 'a6,6'); buildEdge('hecke', 'b6,6'); recalc()");
     expect(game('roundCorner(6, 6)')).toBe(null);
     const n = game("(() => { let k = 0; const o = wilmerBush; wilmerBush = () => { k++; }; try { for (const key of state.edges.keys()) drawEdge(key, state.edges.get(key), 1.4, 1000); } finally { wilmerBush = o; } return k; })()");
-    expect(n).toBe(2 * game('BUSH_PER'));                                              // genau die Reihe, nichts obendrauf
+    expect(n).toBe(2 * game('BUSH_PER') + 1);                                          // je Kante die Reihe, je Eckpunkt genau ein Busch (2 Enden + Ecke)
   });
 });
