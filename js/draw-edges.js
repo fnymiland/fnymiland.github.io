@@ -107,17 +107,18 @@ function drawBushes(at, look, z, seed, id = null) {
 }
 // Lichterkette über der Wilmerhecke (Block 86i): gleichmäßig gehängt – Aufhängepunkte alle ½ Feld, dazwischen ein leichter
 // Durchhang, Birnchen im festen Abstand; an festen Stellen der Kante, damit sie über aneinandergesetzte Stücke durchläuft
-// Block 86j: über einen Durchgang spannt sie sich in einem Bogen hinüber (verbindet die Heckenteile); an einem freien Ende
-// läuft sie im letzten halben Feld in den Endbusch hinunter und hört dort auf
-function bushGarland(pt, look, z, id, { endP = false, endQ = false, gate = false } = {}) {   // pt(t) → Punkt auf der Linie, t von 0 bis 1
-  const lit = edgeLit(id), N = 8;
-  const hang = t => gate ? 8.2 - 2.6 * Math.sin(Math.PI * t)            // gleiche Höhe an den Enden: schließt an die Nachbarn an
-    : 8.2 - 1.8 * Math.sin(Math.PI * ((t * 2) % 1)) - (endP && t < 0.5 ? (0.5 - t) * 9 : 0) - (endQ && t > 0.5 ? (t - 0.5) * 9 : 0);
+// Block 86j/k: läuft durch aneinandergesetzte Stücke und Ecken durch; wo die Hecke aufhört (freies Ende, Rand eines
+// Durchgangs), läuft sie im letzten halben Feld in den letzten Busch hinunter. Über einen Durchgang spannt sie sich nicht.
+function bushGarland(pt, look, z, id, { t0 = 0, t1 = 1, endP = false, endQ = false } = {}) {   // pt(t) → Punkt auf der Linie
+  const lit = edgeLit(id), L = Math.min(0.5, t1 - t0);
+  const hang = t => 8.2 - 1.8 * Math.sin(Math.PI * ((t * 2) % 1)) - (endP ? Math.max(0, t0 + L - t) / L * 4.5 : 0) - (endQ ? Math.max(0, t - (t1 - L)) / L * 4.5 : 0);
   g.strokeStyle = C('#4b5b3e'); g.lineWidth = 0.45 * z; g.beginPath();
-  for (let s = 0; s <= 24; s++) { const t = s / 24, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t), z); s ? g.lineTo(x, y) : g.moveTo(x, y); }
+  for (let s = 0; s <= 24; s++) { const t = t0 + (t1 - t0) * s / 24, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t), z); s ? g.lineTo(x, y) : g.moveTo(x, y); }
   g.stroke();
-  for (let n = 0; n < N; n++) {
-    const t = (n + 0.5) / N, m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t) - 0.6, z), r = 0.95 * z;
+  for (let n = 0; n < 8; n++) {                                     // Birnchen an festen Stellen der Kante (je ⅛)
+    const t = (n + 0.5) / 8;
+    if (t < t0 || t > t1) continue;
+    const m = pt(t), [x, y] = edgeS(m[0], m[1], hang(t) - 0.6, z), r = 0.95 * z;
     circle(x, y, r, lit ? '#fff3b0' : C('#f6edc8'));
     if (lit) glowQuad([[x - r, y], [x, y - r], [x + r, y], [x, y + r]], 8 * z);
   }
@@ -414,7 +415,8 @@ function drawEdge(k, e, z, now) {
     stub(p, lerp2(E.p, E.q, GATE_CUT), 0, GATE_CUT); post(gt);
     if (gardenGate(k)) gateDoor(E, e, look, z, k);
     stub(lerp2(E.p, E.q, 1 - GATE_CUT), q, 1 - GATE_CUT, 1); post(1 - gt);
-    if (look.bushes && look.lights) bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k, { gate: true });   // Lichterkette über den Durchgang
+    if (look.bushes && look.lights) for (const o of [{ t0: 0, t1: GATE_CUT, endQ: true }, { t0: 1 - GATE_CUT, t1: 1, endP: true }])   // Lichterkette endet am Durchgang
+      bushGarland(t => lerp2(E.p, E.q, t), look, z, 'E' + k, o);
     if (e.arch && !(e.b === 'mauer' && e.arch === 'bogen')) drawGateArch(E, e, look, z, k);
     return;
   }
