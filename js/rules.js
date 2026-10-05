@@ -725,11 +725,11 @@ function gardenPath(t, x, y, any = false) {
 // schon immer einen Platz und zeichnet ihn selbst (courtFloor) – ohne Weg so wie früher. t.zug === false: aus (nur Wiese).
 const COURTS = {
   muehle: { a: 0.14, b: 0 }, holz: { a: 0.22, b: 0.07 }, fischer: { a: 0.07, b: 0 }, stein: { a: 0.26, b: 0.22 },
-  mine: { a: 0.14, b: -0.07 }, kristallmine: { a: 0.14, b: -0.07 }, steinmetz: { a: 0.11, b: -0.05 }, schmiede: { a: 0.16, b: -0.08 },
-  wasserkraft: { a: 0.1, b: 0.13 }, baecker: { a: 0.24, b: -0.32 }, saege: { a: 0.22, b: -0.05 }, fabrik: { a: 0.3, b: 0 },
+  mine: { a: 0.1, b: 0, w: 0.11, s3: { a: 0.1, p: [-0.38, 0.11] } }, kristallmine: { a: 0.1, b: 0, w: 0.11, s3: { a: 0.1, p: [-0.38, 0.11] } }, steinmetz: { a: 0.11, b: -0.05 }, schmiede: { a: 0.16, b: -0.08 },   // Stollen: Lore fährt auf dem Weg heraus; Stufe 3 (s3): Hof bis zur Tür des Hauses davor
+  wasserkraft: { a: 0.1, b: 0.13 }, baecker: { a: 0.24, b: -0.32 }, saege: { a: 0.22, b: -0.05, w: 0.14 }, fabrik: { a: 0.3, b: 0 },
   reihenhaus: { parts: [-0.64, 0, 0.64].map(b => ({ a: 0.3, b })) },                    // je Haus ein Weg zur Tür
   bibliothek: { a: 0.3, b: 0, w: 0.12 }, kunst: { a: 0.2, b: 0, w: 0.11 }, uni: { a: 0.32, p: [-0.72, 0.72] },
-  kino: { a: 0.6, p: [-0.6, 0.6] }, passage: { a: 0.75, p: [-0.95, 0.95] }, theater: { a: 0.95, p: [-0.75, 0.75] },
+  kino: { a: 0.6, p: [-0.6, 0.6] }, passage: { a: 0.75, p: [-0.6, 0.6] }, theater: { a: 0.95, p: [-0.75, 0.75] },
   konzerthalle: { a: 1.15, p: [-0.85, 0.85] }, aquarium: { a: 1.05, p: [-0.42, 0.42] },
   zoo: { parts: [{ a: 1.8, b: 0, w: 0.12 }, { a: 0.95, b: 1, w: 0.16 }] },                // zur Kasse und durchs Tor
   rathaus: { a: -1.47, p: [-1.47, 1.47], own: true }, museum: { a: 0.45, b: 0, w: 0.4, own: true },   // Museum: zur Treppe
@@ -737,8 +737,8 @@ const COURTS = {
   moebelhaus: { a: 0.43, p: [-0.6, 0.6], own: true }, hotel: { a: 0.3, p: [-0.62, 0.62], own: true },
   grandhotel: { a: 0.4, p: [-1.15, 1.15], own: true },
 };
-// Stücke eines Vorplatzes: { a, s: [quer von, bis], band: schmaler Weg }
-const courtParts = C0 => (C0.parts || [C0]).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
+// Stücke eines Vorplatzes: { a, s: [quer von, bis], band: schmaler Weg }; s3: anders ab Stufe 3
+const courtParts = (C0, t) => [].concat((t && t.lvl >= 3 && C0.s3) || C0.parts || C0).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
 const courtIsPlaza = C0 => courtParts(C0).some(c => !c.band);
 const courtVp = t => t.vp && STYLES.weg.some(st => st.id === t.vp) ? t.vp : null;
 // Die Wegfelder vor dem Vorplatz: je Stück und Feld der vorderen Reihe, das es berührt, das Stück [q0, q1] quer auf dem Wegfeld (wie armUV)
@@ -747,7 +747,7 @@ function courtOf(t, x, y, any = false) {
   if (!C0 || (t.zug === false && !any) || x > 1e5) return null;
   const r = (t.rot || 0) & 3, [w, h] = sizeOf(t.b, r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
   const [da, wb] = ITEMS[t.b].size || [1, 1], [fx, fy] = kitTurn(r, 1, 0), links = [];
-  for (const { s: [s0, s1] } of courtParts(C0)) for (let c = -wb / 2 + 0.5; c < wb / 2; c++) {
+  for (const { s: [s0, s1] } of courtParts(C0, t)) for (let c = -wb / 2 + 0.5; c < wb / 2; c++) {
     const l0 = Math.max(s0, c - 0.5), l1 = Math.min(s1, c + 0.5);
     if (l1 - l0 < 0.05) continue;
     const [u, v] = kitTurn(r, da / 2 + 0.5, c), nx = Math.round(cx + u), ny = Math.round(cy + v), n = state.tiles.get(nx + ',' + ny);

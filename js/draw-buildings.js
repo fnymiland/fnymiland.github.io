@@ -421,10 +421,11 @@ const BUILDING_ART = {
         crystal(lx, ly + 1 * z, z, 3.5 * z, 1.3 * z);
       }
     }]);
-    parts.push([0.34, 0.12, () => {                      // Schienen und Lore voller Kristalle
-      kLine(K, K.P(0.14, 0.02), K.P(0.44, 0.26), '#6b6f78', 0.8);
-      K.block({ a: 0.34, b: 0.16, ha: 0.06, hb: 0.08, h: 4, lift: 1, wall: '#7a8494', type: 'flat', roof: '#a3adbb' });
-      const [ox, oy] = K.P(0.34, 0.16, 5);
+    const [lb, rb] = courtShown(t, x, y) ? [0, 0] : [0.16, 0.24];   // mit Weg davor (Block 91): Schienen gerade auf dem Weg hinaus
+    parts.push([0.34, lb, () => {                        // Schienen und Lore voller Kristalle
+      kLine(K, K.P(0.14, lb ? 0.02 : 0), K.P(0.44, rb + (lb ? 0.02 : 0)), '#6b6f78', 0.8);
+      K.block({ a: 0.34, b: lb, ha: 0.06, hb: 0.08, h: 4, lift: 1, wall: '#7a8494', type: 'flat', roof: '#a3adbb' });
+      const [ox, oy] = K.P(0.34, lb, 5);
       crystal(ox - 1.8 * z, oy + 1 * z, z, 3 * z, 1.1 * z, -0.2);
       crystal(ox + 1.6 * z, oy + 1.2 * z, z, 2.6 * z, 1 * z, 0.25);
     }]);
@@ -459,11 +460,11 @@ const BUILDING_ART = {
       if (s >= 2) { const lx = p[0] + 7 * z, ly = p[1] - 9 * z; circle(lx, ly, 1.3 * z, night > 0.15 && isLive() ? '#ffd873' : C('#fff3b0')); kGlow(lx, ly, z, 14); }
     };
     parts.push([-0.12, 0, mound], [0.12, 0, entrance]);
-    parts.push([0.34, 0.1, () => {                       // Schienen und Lore
-      kLine(K, K.P(0.14, 0.02), K.P(0.44, 0.24), '#6b6f78', 0.8);
-      const cart = K.block({ a: 0.34, b: 0.14, ha: 0.06, hb: 0.08, h: 4, lift: 1, wall: '#6b7a8f', type: 'flat', roof: '#9a9ea8' });
-      void cart;
-      const [ox, oy] = K.P(0.34, 0.14, 5.5);
+    const [lb, rb] = courtShown(t, x, y) ? [0, 0] : [0.14, 0.22];   // mit Weg davor (Block 91): Schienen gerade auf dem Weg hinaus
+    parts.push([0.34, lb, () => {                        // Schienen und Lore
+      kLine(K, K.P(0.14, lb ? 0.02 : 0), K.P(0.44, rb + (lb ? 0.02 : 0)), '#6b6f78', 0.8);
+      K.block({ a: 0.34, b: lb, ha: 0.06, hb: 0.08, h: 4, lift: 1, wall: '#6b7a8f', type: 'flat', roof: '#9a9ea8' });
+      const [ox, oy] = K.P(0.34, lb, 5.5);
       circle(ox - 1.5 * K.z, oy, 1.4 * K.z, C('#f2c14e')); circle(ox + 1.5 * K.z, oy + 0.4 * K.z, 1.3 * K.z, C('#8a8f99'));
     }]);
     if (s >= 2) parts.push([-0.3, -0.3, () => {         // Förderturm

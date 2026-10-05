@@ -1019,4 +1019,8 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Grandhotel (dort auch unter den Brunnen Belag statt Rasen). Reihenhäuser: je Tür ein Weg, die Büsche stehen dazwischen.
       Universitätscampus: Brunnen weiter herein (ganz auf dem Platz). Zoo: Weg zur Kasse und ein eigener Weg durchs Tor
       (Tor auf die Wiesenseite, Schild der Kasse auf die andere). Vorplätze können aus mehreren Stücken bestehen (`parts`).
+- [x] 91c: Zoo-Schild gerade (Tafel zum Betrachter, Pfosten bis darunter). Passage: Platz schmaler. Holzhof: Weg so breit wie
+      die Tür. Bergwerk/Kristallmine: Weg genau vor dem Stollen, Schienen und Lore fahren gerade darauf heraus; ab Stufe 3
+      (Kristallschleiferei, großes Bergwerk) ein kleiner Hof bis zur Tür des Hauses davor (`s3`). Trittsteine zur Tür so groß
+      und im selben Takt wie am Weg, ein Stein auch auf dem Wegfeld (auch beim Gartenweg der Häuser).
 

@@ -246,10 +246,11 @@ const SHOP_ART = {
     for (let i = 0; i < 16; i++) { const a = -1.9 + (i % 8) * 0.54, b = i < 8 ? -1.9 : 1.9; parts.push([a, b, () => kPost(K, a, b, 5, '#8a5a3c', 1)]); }
     for (const b of [-1.63, -1.36, -1.09, -0.82, 1.63]) parts.push([1.9, b, () => kPost(K, 1.9, b, 5, '#8a5a3c', 1)]);   // Zaun vorn
     parts.push([1.92, 1, () => {                                                              // Eingangstor mit Schild (Block 91), Weg hinein
-      const z = K.z, p0 = kPost(K, 1.92, 0.7, 17, '#8a5a3c', 1.8), p1 = kPost(K, 1.92, 1.3, 17, '#8a5a3c', 1.8), [mx, my] = K.P(1.92, 1, 19);
-      poly([[p0[0], p0[1] + 2 * z], [p1[0], p1[1] + 2 * z], [p1[0], p1[1] - 3 * z], [mx, my - 4.5 * z], [p0[0], p0[1] - 3 * z]], C('#58b36a'));
-      for (const p of [p0, p1]) circle(p[0], p[1] - 3.4 * z, 1.4 * z, C('#e9b44c'));
-      kText(mx, my - 0.6 * z, 'ZOO', 4.2, '#fffaf0', z);
+      const z = K.z, f0 = K.P(1.92, 0.7), f1 = K.P(1.92, 1.3), [mx, my] = K.P(1.92, 1, 18), hw = Math.abs(f1[0] - f0[0]) / 2 + 2 * z;
+      for (const f of [f0, f1]) kLine(K, f, [f[0], my + 2 * z], '#8a5a3c', 1.8);          // Pfosten bis unter die Tafel
+      g.beginPath(); g.roundRect(mx - hw, my - 4 * z, 2 * hw, 7 * z, 2 * z); g.fillStyle = C('#58b36a'); g.fill();   // Tafel gerade
+      for (const f of [f0, f1]) circle(f[0], my - 4.4 * z, 1.4 * z, C('#e9b44c'));
+      kText(mx, my - 0.4 * z, 'ZOO', 4.2, '#fffaf0', z);
     }]);
     parts.push([-0.9, -1, () => kitBush(K, -0.9, -1, 1.4, '#4f9e4a')], [0.62, 1.45, () => kitBush(K, 0.62, 1.45, 1.5, '#5aae54')]);
     parts.push([0.9, -0.9, () => {                                                            // Giraffe

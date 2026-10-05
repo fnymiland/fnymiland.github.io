@@ -685,7 +685,11 @@ function drawPath(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
   const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
-  if (lk.stones) { drawStones(L, arms, t, x, y, z); return; }
+  if (lk.stones) {                                                                       // Trittsteine; zu Vorplätzen ein Stein mehr (Block 91)
+    drawStones(L, arms, t, x, y, z);
+    for (const s of courtLinksAt(x, y)) { const q = L(armUV(s.d, 0.375, (s.q0 + s.q1) / 2)); ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498')); ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d9d4c9')); }
+    return;
+  }
   // Gartenwege der Nachbarhäuser (Block 78c) und Vorplätze (Block 91): ihr Stück auf diesem Feld gehört zum Weg – ein Guss,
   // ohne Bordstein davor
   const stubs = courtLinksAt(x, y);
@@ -1098,8 +1102,8 @@ const GP_EDGE = 0.125, GP_FILL = 0.095;
 function drawGardenPath(cx, cy, z, x, y, gp) {
   const lk = PATH_LOOK[gp.style] || PATH_LOOK.platten, [dx, dy] = gp.d;
   const L = ([a, b]) => { const u = a * dx - b * dy, v = a * dy + b * dx; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z]; };
-  if (lk.stones) {                                                                      // Trittsteine: zwei Steine zur Tür
-    for (const [a, k] of [[0.47, 0.8], [0.33, 0.72]]) { const q = L([a, 0]); ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
+  if (lk.stones) {                                                                      // Trittstein zur Tür, im Takt des Wegs (Block 91)
+    const q = L([0.375, 0]); ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498')); ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d9d4c9'));
     return;
   }
   const band = w => [[0.18, -w], [0.5, -w], [0.5, w], [0.18, w]];
@@ -1124,12 +1128,12 @@ function courtLinksAt(x, y) {
 }
 // Belag jedes Stücks von a bis an die Vorderkante A, quer s (Platz bzw. schmaler Weg); vorn ohne Bordstein. Trittsteine nur
 // auf schmalen Wegen, Plätze dann in Schachbrett
-function paveCourt(K, C0, A, lk, x, y) { for (const c of courtParts(C0)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y); }
+function paveCourt(K, C0, A, lk, x, y, t) { for (const c of courtParts(C0, t)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y); }
 function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y) {
   const e = COURT_CURB, z = K.z;
   if (lk.stones) {                                                                      // Trittsteine bis zur Tür
-    const m = (s0 + s1) / 2;
-    for (let i = 0, a = A - 0.03; i < 4 && a >= a0 + 0.02; i++, a -= 0.14) { const q = K.P(a, m), k = 0.8 - i * 0.06; ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
+    const m = (s0 + s1) / 2;                                                             // wie am Weg: alle ¼ Feld, gleich groß
+    for (let i = 0, a = A - 0.125; i < 4 && a >= a0 - 0.05; i++, a -= 0.25) { const q = K.P(a, m), k = 0.94 + hash(x + i, y, 93) * 0.1; ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
     return;
   }
   K.rect(a0, s0 - e, A, s1 + e, C(lk.edge));
@@ -1143,7 +1147,7 @@ const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
 function courtFloor(K, t, x, y, classic) {
   if (t.zug === false) return;
   const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
-  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y);
+  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
 }
 const courtShown = (t, x, y) => !!courtStyle(t, x, y);                                // für Bilder, die dann anders aussehen (Büsche, Rasen)
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
@@ -1159,7 +1163,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (C0 && PASS === 'ground') {
     if (GROUND_TYPES.has(type)) drawBuilding(type, cx, cy, z, now, x, y, lvl, t);     // eigene flache Teile zuerst
     const st = courtStyle(t, x, y), lk = st && (PATH_LOOK[st] || PATH_LOOK.sand);
-    if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), lk, x, y);
+    if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), lk, x, y, t);
     return;
   }
   const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);
