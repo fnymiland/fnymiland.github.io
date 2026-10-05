@@ -237,7 +237,7 @@ function bulbAt([x, y], z, lit) {
 const litLook = look => !!(look.lights || look.lamps);
 // Heckenende (freies Ende und am Durchgang): rundes Ende über die ganze Höhe, auch bei der hohen Hecke
 function hedgeKnob(pt, look, z) {
-  if (look.bushes) { wilmerBush(pt, look, z, 0.6, 7); return; }   // Wilmerhecke: ein etwas größerer Busch am Ende
+  if (look.bushes) return;                                          // Wilmerhecke: die Reihe reicht bis ans Ende – kein Busch obendrauf (Block 86e)
   const [x, y] = edgeS(pt[0], pt[1], 0, z), R = (look.w * TW * 0.7 + 1) * z, top = y - look.h * z + R * 0.55, bot = y - R * 0.45, col = C(shade(look.col, -0.06));
   if (bot > top) poly([[x - R, bot], [x + R, bot], [x + R, top], [x - R, top]], col);
   circle(x, bot, R, col); circle(x, top, R, col);

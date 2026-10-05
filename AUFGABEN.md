@@ -946,4 +946,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       gleiche Größe, Abstand 3,5 je Feld (wie im Bild der Nutzerin von Hand gereiht).
 - [x] 86d: Lücke zwischen aneinandergesetzten Stücken – jedes Stück verteilte 3,5 Büsche für sich (am Ende mehr Abstand). Jetzt
       feste Stellen je Kante (`bushSpan`, `BUSH_PER` = 4), gleich weit auseinander über alle Stücke.
+- [x] 86e: In der Kurve schien der helle Belag der Wegrundung zwischen den Büschen durch, und am Übergang Gerade/Bogen sowie
+      an freien Enden saßen zwei Büsche aufeinander. Wilmerhecke rundet Ecken nicht mehr (`roundCorner` → null), kein Endbusch.
 - [x] „Das ist neu“: neue Kennung `2026-10-05-wilmer` (Wilmerhecke, Hauptbahnhof, Kap, Schloss und Wege).

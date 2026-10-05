@@ -41,4 +41,10 @@ describe('Wilmerhecke (Block 86)', () => {
       expect(new Set(gaps).size, `${id}: ${xs.join(' ')}`).toBe(1);
     }
   });
+  it('Ecke bleibt eckig (kein heller Bogen darunter), am freien Ende kein zusätzlicher Busch', () => {
+    game("state.edges.clear(); chosenStyle.hecke = 'wilmer'; buildEdge('hecke', 'a6,6'); buildEdge('hecke', 'b6,6'); recalc()");
+    expect(game('roundCorner(6, 6)')).toBe(null);
+    const n = game("(() => { let k = 0; const o = wilmerBush; wilmerBush = () => { k++; }; try { for (const key of state.edges.keys()) drawEdge(key, state.edges.get(key), 1.4, 1000); } finally { wilmerBush = o; } return k; })()");
+    expect(n).toBe(2 * game('BUSH_PER'));                                              // genau die Reihe, nichts obendrauf
+  });
 });
