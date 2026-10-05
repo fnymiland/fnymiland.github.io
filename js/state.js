@@ -59,6 +59,7 @@ function tileOut(t) {
   const o = { b: t.b, lvl: t.lvl };
   if (t.wall != null) o.wall = t.wall;
   if (t.roof != null) o.roof = t.roof;
+  if (t.col) o.col = t.col;                                     // Buschfarbe (Block 89)
   if (t.lm) o.lm = t.lm;
   if (t.rot) o.rot = t.rot;
   if (t.style) o.style = t.style;

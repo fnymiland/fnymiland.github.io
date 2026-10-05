@@ -67,4 +67,10 @@ describe('Buschfarben (Block 89)', () => {
     const keys = game(`(() => { const ks = []; const o = getSprite; getSprite = k => { ks.push(k); return null; }; try { spriteSmall('busch', 0, 0, 0, 0.6, 0, 3, 3, 0, 0); spriteSmall('busch', 0, 0, 0, 0.6, 0, 3, 3, 0, 5); } finally { getSprite = o; } return ks; })()`);
     expect(keys[0]).not.toBe(keys[1]);
   });
+  it('Busch-Größen: Farbe gespeichert', () => {
+    game("state.tiles.set('8,8', { b: 'busch_m', lvl: 1, col: 3 }); recalc()");
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.tiles.get('8,8').col")).toBe(3);
+  });
 });

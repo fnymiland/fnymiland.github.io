@@ -997,4 +997,4 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Farbe“ (`state.paintNew.busch` / `.hecke`), mit ↶. Beim Bauen: Farbchips in der Musterleiste. Bau-Vorschau in der Farbe.
 - [x] Gespeichert (Deko `col`, Linie `col`), Bildchen weit weg kennen die Farbe. Nebenbei: geschenkte Parkbäume (`free`, 84b)
       gingen beim Speichern verloren – jetzt gespeichert. Testwelt freizeitpark: Abschnitt „Buschfarben“ bei (36, 62).
-      Test: buschfarben.test.js.
+      Test: buschfarben.test.js. Nachtrag: Farbe der Busch-Felder in `tileOut` und im Bildchen-Schlüssel.
