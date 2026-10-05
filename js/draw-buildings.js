@@ -849,7 +849,8 @@ const BUILDING_ART = {
         circle(p[0], p[1] - 4.6 * z, 0.9 * z, night > 0.15 && isLive() ? '#ffd873' : C('#fff4c8'));
       }
     }]));
-    parts.push([0.44, -0.66, () => kitBush(K, 0.44, -0.66, 0.42, '#62b85a')], [0.44, 0.66, () => kitBush(K, 0.44, 0.66, 0.42, '#f28cb1')]);
+    const bb = courtShown(t, x, y) ? 0.32 : 0.66;                          // mit Wegen zu den Türen (Block 91): Büsche dazwischen
+    parts.push([0.44, -bb, () => kitBush(K, 0.44, -bb, 0.42, '#62b85a')], [0.44, bb, () => kitBush(K, 0.44, bb, 0.42, '#f28cb1')]);
     K.scene(parts);
   },
   // Baumhaus: ein großer Baum, das Häuschen auf einer Plattform, Leiter zum Boden. Stufe 2: Schaukel an einem Ast,
@@ -1167,8 +1168,8 @@ const BUILDING_ART = {
       K.sideWins(B, 2, 0.35, 0.75); K.wins(B, 'front', 2, 0.35, 0.75);
     };
     const parts = [[-0.1, 0, main], [-0.15, -0.68, wing(-0.68)], [-0.15, 0.68, wing(0.68)]];
-    if (s === 3) parts.push([0.6, 0.66, () => {           // Universitätscampus (Block 90): Gelehrten-Statue im Brunnen
-      const A = 0.6, Bb = 0.66, lit = night > 0.15 && isLive();
+    if (s === 3) parts.push([0.6, 0.46, () => {           // Universitätscampus (Block 90): Gelehrten-Statue im Brunnen (auf dem Vorplatz)
+      const A = 0.6, Bb = 0.46, lit = night > 0.15 && isLive();
       K.oval(A, Bb, 0.22, C('#cfc8bb'));                                     // Beckenrand
       K.oval(A, Bb, 0.18, C(lit ? '#5f9fb8' : '#74d0e6'), 1.4);             // Wasser
       K.oval(A - 0.04, Bb - 0.05, 0.06, C('#b8ecf6'), 1.5);

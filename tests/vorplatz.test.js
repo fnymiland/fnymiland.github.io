@@ -23,8 +23,8 @@ describe('Vorplatz (Block 91)', () => {
     for (const b of want) expect(game(`!!COURTS.${b} && !COURTS.${b}.own`), b).toBe(true);
     for (const b of ['rathaus', 'museum', 'kaufhaus', 'markthalle', 'moebelhaus', 'hotel', 'grandhotel']) expect(game(`!!(COURTS.${b} && COURTS.${b}.own)`), b).toBe(true);
     // jeder Vorplatz liegt im eigenen Feld und reicht bis an die Vorderkante
-    const bad = game(`Object.entries(COURTS).filter(([b, c]) => { const [da, wb] = ITEMS[b].size || [1, 1], [s0, s1] = c.p || [c.b - GP_FILL, c.b + GP_FILL];
-      return c.a >= da / 2 || c.a < -da / 2 || s0 < -wb / 2 || s1 > wb / 2 || s0 >= s1; }).map(([b]) => b)`);
+    const bad = game(`Object.entries(COURTS).filter(([b, C0]) => { const [da, wb] = ITEMS[b].size || [1, 1];
+      return courtParts(C0).some(({ a, s: [s0, s1] }) => a >= da / 2 || a < -da / 2 || s0 < -wb / 2 || s1 > wb / 2 || s0 >= s1); }).map(([b]) => b)`);
     expect(bad).toEqual([]);
   });
   it('nur mit Weg vor der Tür, im Stil des Wegs; eigener Belag, abschaltbar, nicht auf Brücken', () => {
@@ -53,20 +53,20 @@ describe('Vorplatz (Block 91)', () => {
       for (let i = 0; i < wb; i++) { const [x, y] = front(b, 12, 12, rot, -wb / 2 + 0.5 + i); weg(x, y); }
       // Mitte jedes Stücks an der Feldkante, einmal vom Gebäude aus (Rahmen des Gebäudes), einmal vom Wegfeld aus (armUV)
       const r = game(`(() => { const t = state.tiles.get('12,12'), ct = courtOf(t, 12, 12), [w, h] = sizeOf(t.b, ${rot}, t), C0 = COURTS[t.b], [da] = ITEMS[t.b].size || [1, 1];
-        const [s0, s1] = C0.p || [C0.b - GP_FILL, C0.b + GP_FILL];
+        const P = courtParts(C0);
         return ct.links.map(l => { const c = (l.q0 + l.q1) / 2, [u, v] = armUV(ct.d, 0.5, c);
           const fromWeg = [l.x + u, l.y + v];
           const lb = (l.q0 + l.q1) / 2, col = [...Array(ITEMS[t.b].size ? ITEMS[t.b].size[1] : 1).keys()].map(i => -(ITEMS[t.b].size ? ITEMS[t.b].size[1] : 1) / 2 + 0.5 + i)
             .find(cc => { const [uu, vv] = kitTurn(${rot}, da / 2 + 0.5, cc); return Math.round(12 + (w - 1) / 2 + uu) === l.x && Math.round(12 + (h - 1) / 2 + vv) === l.y; });
           const bLocal = col - lb, [U, V] = kitTurn(${rot}, da / 2, bLocal);
-          return { fromWeg, fromBau: [12 + (w - 1) / 2 + U, 12 + (h - 1) / 2 + V], inside: bLocal >= s0 - 1e-9 && bLocal <= s1 + 1e-9, links: ct.links.length }; }); })()`);
+          return { fromWeg, fromBau: [12 + (w - 1) / 2 + U, 12 + (h - 1) / 2 + V], inside: P.some(({ s: [s0, s1] }) => bLocal >= s0 - 1e-9 && bLocal <= s1 + 1e-9), links: ct.links.length }; }); })()`);
       expect(r.length, `${b} ${rot}`).toBeGreaterThan(0);
       for (const o of r) {
         expect(o.fromWeg[0], `${b} ${rot}`).toBeCloseTo(o.fromBau[0]);
         expect(o.fromWeg[1], `${b} ${rot}`).toBeCloseTo(o.fromBau[1]);
         expect(o.inside, `${b} ${rot}`).toBe(true);
       }
-      for (const l of game("courtOf(state.tiles.get('12,12'), 12, 12).links")) expect(game(`courtLinksAt(${l.x}, ${l.y}).length`), `${b} ${rot}`).toBe(1);
+      for (const l of game("courtOf(state.tiles.get('12,12'), 12, 12).links")) expect(game(`courtLinksAt(${l.x}, ${l.y}).length`), `${b} ${rot}`).toBeGreaterThan(0);
     }
   });
   it('gezeichnet: im Boden-Durchgang im Belag des Wegs, ohne Weg nichts – auch im Vorschaubild (alles auf einmal)', () => {
@@ -138,6 +138,23 @@ describe('Vorplatz (Block 91)', () => {
     const id = game("document.querySelector('#panel [data-vp]:not([data-vp=\"\"]):not([data-vp=\"sand\"])').dataset.vp");
     game(`document.querySelector('#panel [data-vp="${id}"]').click()`);
     expect(game("gardenPath(state.tiles.get('10,10'), 10, 10).style")).toBe(id);
+  });
+  it('91b: Weg statt Platz, schmalere Plätze, Zoo mit Weg durchs Tor, Büsche und Rasen nicht auf dem Belag', () => {
+    for (const b of ['saege', 'fabrik', 'bibliothek', 'kunst', 'kaufhaus', 'museum', 'reihenhaus', 'zoo']) expect(game(`courtIsPlaza(COURTS.${b})`), b).toBe(false);
+    for (const b of ['hotel', 'kino', 'theater', 'konzerthalle', 'aquarium', 'moebelhaus', 'grandhotel'])
+      expect(game(`COURTS.${b}.p[1] <= (ITEMS.${b}.size[1] / 2) * 0.8`), b).toBe(true);
+    expect(game('courtParts(COURTS.zoo).some(c => c.s[0] < 1 && c.s[1] > 1)')).toBe(true);    // durchs Tor
+    // Reihenhaus: mit Wegen zu den Türen stehen die Büsche dazwischen
+    put('10,10', { b: 'reihenhaus', lvl: 3, rot: 0 });
+    for (const c of [-0.5, 0.5]) { const [x, y] = front('reihenhaus', 10, 10, 0, c); weg(x, y, 'sand'); }
+    const bushes = game("(() => { const out = []; const o = kitBush; kitBush = (K, a, b) => out.push(b); try { drawObject('reihenhaus', 300, 300, 1, 0, 10, 10, 3, state.tiles.get('10,10')); } finally { kitBush = o; } return out; })()");
+    const bands = game('courtParts(COURTS.reihenhaus).map(c => c.s)');
+    for (const b of bushes) expect(bands.every(([s0, s1]) => b < s0 - 0.1 || b > s1 + 0.1), String(b)).toBe(true);
+    // Grandhotel: mit Vorplatz kein Rasen unter den Brunnen
+    put('20,10', { b: 'grandhotel', lvl: 1, rot: 0 });
+    expect(ground('20,10')).toContain(C('#9fd07a'));
+    const [gx, gy] = front('grandhotel', 20, 10, 0, 0); weg(gx, gy, 'sand');
+    expect(ground('20,10')).not.toContain(C('#9fd07a'));
   });
   it('der Zoo hat ein Eingangstor mit Schild', () => {
     const texts = game("(() => { const out = []; const o = g.fillText; g.fillText = (s) => out.push(s); try { drawObject('zoo', 300, 300, 1, 0, 10, 10, 1, { b: 'zoo', lvl: 1, rot: 0 }); } finally { g.fillText = o; } return out; })()");

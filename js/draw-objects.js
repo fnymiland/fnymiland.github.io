@@ -1117,14 +1117,16 @@ function courtLinksAt(x, y) {
     if (!k) continue;
     const t = state.tiles.get(k), [ax, ay] = keyXY(k), gp = gardenPath(t, ax, ay);
     if (gp) { if (gp.d[0] === -dx && gp.d[1] === -dy) out.push({ d: [dx, dy], q0: -GP_FILL, q1: GP_FILL }); continue; }
-    const ct = courtOf(t, ax, ay), l = ct && ct.d[0] === dx && ct.d[1] === dy && ct.links.find(o => o.x === x && o.y === y);
-    if (l) out.push({ d: [dx, dy], q0: l.q0, q1: l.q1 });
+    const ct = courtOf(t, ax, ay);
+    if (ct && ct.d[0] === dx && ct.d[1] === dy) for (const l of ct.links) if (l.x === x && l.y === y) out.push({ d: [dx, dy], q0: l.q0, q1: l.q1 });
   }
   return out;
 }
-// Belag von a bis an die Vorderkante A, quer [s0, s1] (Platz) bzw. um die Tür (schmaler Weg); vorn ohne Bordstein
-function paveCourt(K, C0, A, lk, x, y) {
-  const [s0, s1] = C0.p || [C0.b - GP_FILL, C0.b + GP_FILL], a0 = C0.a, e = COURT_CURB, z = K.z;
+// Belag jedes Stücks von a bis an die Vorderkante A, quer s (Platz bzw. schmaler Weg); vorn ohne Bordstein. Trittsteine nur
+// auf schmalen Wegen, Plätze dann in Schachbrett
+function paveCourt(K, C0, A, lk, x, y) { for (const c of courtParts(C0)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y); }
+function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y) {
+  const e = COURT_CURB, z = K.z;
   if (lk.stones) {                                                                      // Trittsteine bis zur Tür
     const m = (s0 + s1) / 2;
     for (let i = 0, a = A - 0.03; i < 4 && a >= a0 + 0.02; i++, a -= 0.14) { const q = K.P(a, m), k = 0.8 - i * 0.06; ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
@@ -1141,8 +1143,9 @@ const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
 function courtFloor(K, t, x, y, classic) {
   if (t.zug === false) return;
   const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
-  if (!lk || lk.stones) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y);
+  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) classic(); else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y);
 }
+const courtShown = (t, x, y) => !!courtStyle(t, x, y);                                // für Bilder, die dann anders aussehen (Büsche, Rasen)
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (PASS === 'ground' && !hasGroundPart(t || { b: type, lvl })) return;
   let span = 1;
@@ -1156,7 +1159,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   if (C0 && PASS === 'ground') {
     if (GROUND_TYPES.has(type)) drawBuilding(type, cx, cy, z, now, x, y, lvl, t);     // eigene flache Teile zuerst
     const st = courtStyle(t, x, y), lk = st && (PATH_LOOK[st] || PATH_LOOK.sand);
-    if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), C0.p && lk.stones ? PATH_LOOK.platten : lk, x, y);
+    if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), lk, x, y);
     return;
   }
   const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);

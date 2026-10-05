@@ -353,7 +353,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
 91. **Vorplatz / Weg zur Tür** (Block 91): Türen größerer Gebäude stehen in `COURTS` (rules.js, eigener Rahmen: `a` Beginn,
-    `b` Türmitte = schmaler Weg bzw. `p` = Platz quer, jeweils bis an die Vorderkante). Gezeigt nur mit Weg direkt vor der Tür
+    `b` Türmitte und `w` halbe Breite = schmaler Weg bzw. `p` = Platz quer, jeweils bis an die Vorderkante; mehrere Stücke über `parts`,
+    gelesen nur über `courtParts`). Sieht ein Bild mit Vorplatz anders aus (Büsche, Rasen), fragt es `courtShown` – und der Bildchen-Schlüssel kennt das. Gezeigt nur mit Weg direkt vor der Tür
     (`courtOf`: Wegfelder der vorderen Reihe, `links` mit dem Stück quer `q0…q1` wie `armUV`), Belag = `t.vp` oder Stil des Wegs
     (`courtStyle`), aus mit `t.zug === false` (wie der Gartenweg). Gezeichnet im Boden-Durchgang (`paveCourt`, `hasGroundPart`);
     das Stück auf dem Wegfeld zeichnet der Weg selbst (`courtLinksAt` → Stummel, beim breiten Weg Lücke im Bordstein).

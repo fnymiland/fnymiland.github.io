@@ -242,7 +242,7 @@
   SHOP_ART.grandhotel = function (K, s, now, x, y, t) {
     if (groundPart(() => {
       courtFloor(K, t, x, y, () => K.rect(0.4, -1.47, 1.47, 1.47, C('#efe6d2')));                            // Vorhof (Kies, Block 91)
-      for (const sb of [-1, 1]) { K.oval(1.02, sb * 0.86, 0.36, C('#9fd07a')); K.oval(1.02, sb * 0.86, 0.3, C('#a8d983')); }
+      if (!courtShown(t, x, y)) for (const sb of [-1, 1]) { K.oval(1.02, sb * 0.86, 0.36, C('#9fd07a')); K.oval(1.02, sb * 0.86, 0.3, C('#a8d983')); }   // mit Vorplatz: Brunnen darauf
       K.rect(0.62, -0.14, 1.47, 0.14, C('#e0605a'));                                                         // roter Teppich
     })) return;
     const A0 = -0.45, HA = 0.8, HB = 0.8, H = 44, FL = [14, 24, 34], TB = 1.08, parts = [];

@@ -1014,3 +1014,9 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       mit Weg davor im Belag des Wegs, wählbar, abschaltbar (Wiese); ohne Weg und ohne Wahl wie bisher. Rathaus: im Reiter „Ort“.
 - [x] Zoo: Eingangstor mit grünem „ZOO“-Schild neben dem Kassenhaus, Zaun auch vorn.
 - [x] Testwelt freizeitpark: Abschnitt „Vorplätze“ bei (36, 72). Test: vorplatz.test.js.
+- [x] 91b: Holzhof (Sägewerk), Werkstatt, Bibliothek, Kunstakademie und Kaufhaus nur ein Weg zur Tür statt Platz; Museum nur ein
+      Weg in Treppenbreite (Seiten Wiese). Plätze schmaler bei Hotel, Kino, Theater, Konzerthalle, Aquarium, Möbelhaus,
+      Grandhotel (dort auch unter den Brunnen Belag statt Rasen). Reihenhäuser: je Tür ein Weg, die Büsche stehen dazwischen.
+      Universitätscampus: Brunnen weiter herein (ganz auf dem Platz). Zoo: Weg zur Kasse und ein eigener Weg durchs Tor
+      (Tor auf die Wiesenseite, Schild der Kasse auf die andere). Vorplätze können aus mehreren Stücken bestehen (`parts`).
+

@@ -244,14 +244,14 @@ const SHOP_ART = {
     const parts = [];
     if (groundPart(() => { K.rect(-1.9, -1.9, 1.9, 1.9, C('#b8d98a')); K.rect(-1.6, 0.2, -0.2, 1.6, C('#7fc4e6')); K.rect(0.3, -1.6, 1.6, -0.3, C('#e0c48f')); })) return;
     for (let i = 0; i < 16; i++) { const a = -1.9 + (i % 8) * 0.54, b = i < 8 ? -1.9 : 1.9; parts.push([a, b, () => kPost(K, a, b, 5, '#8a5a3c', 1)]); }
-    for (const b of [-1.63, 0.82, 1.09, 1.36, 1.63]) parts.push([1.9, b, () => kPost(K, 1.9, b, 5, '#8a5a3c', 1)]);   // Zaun vorn
-    parts.push([1.92, -1, () => {                                                             // Eingangstor mit Schild (Block 91)
-      const z = K.z, p0 = kPost(K, 1.92, -1.3, 17, '#8a5a3c', 1.8), p1 = kPost(K, 1.92, -0.7, 17, '#8a5a3c', 1.8), [mx, my] = K.P(1.92, -1, 19);
+    for (const b of [-1.63, -1.36, -1.09, -0.82, 1.63]) parts.push([1.9, b, () => kPost(K, 1.9, b, 5, '#8a5a3c', 1)]);   // Zaun vorn
+    parts.push([1.92, 1, () => {                                                              // Eingangstor mit Schild (Block 91), Weg hinein
+      const z = K.z, p0 = kPost(K, 1.92, 0.7, 17, '#8a5a3c', 1.8), p1 = kPost(K, 1.92, 1.3, 17, '#8a5a3c', 1.8), [mx, my] = K.P(1.92, 1, 19);
       poly([[p0[0], p0[1] + 2 * z], [p1[0], p1[1] + 2 * z], [p1[0], p1[1] - 3 * z], [mx, my - 4.5 * z], [p0[0], p0[1] - 3 * z]], C('#58b36a'));
       for (const p of [p0, p1]) circle(p[0], p[1] - 3.4 * z, 1.4 * z, C('#e9b44c'));
       kText(mx, my - 0.6 * z, 'ZOO', 4.2, '#fffaf0', z);
     }]);
-    parts.push([-0.9, -1, () => kitBush(K, -0.9, -1, 1.4, '#4f9e4a')], [1, 1, () => kitBush(K, 1, 1, 1.5, '#5aae54')]);
+    parts.push([-0.9, -1, () => kitBush(K, -0.9, -1, 1.4, '#4f9e4a')], [0.62, 1.45, () => kitBush(K, 0.62, 1.45, 1.5, '#5aae54')]);
     parts.push([0.9, -0.9, () => {                                                            // Giraffe
       const [gx, gy] = K.P(0.9, -0.9), z = K.z, nod = Math.sin(now / 1100) * 1.5 * z;
       for (const d of [-2, 2]) kLine(K, [gx + d * z, gy], [gx + d * z, gy - 9 * z], '#d9a441', 1.2);
@@ -261,7 +261,7 @@ const SHOP_ART = {
       for (const [dx, dy] of [[-1, -11], [1.5, -10.5], [4.3, -17]]) circle(gx + dx * z, gy + dy * z, 0.8 * z, C('#a0714d'));
     }]);
     parts.push([-0.9, 0.9, () => { const [ex, ey] = K.P(-0.2, 0.9), z = K.z; ellipse(ex, ey - 6 * z, 6 * z, 4.5 * z, C('#9aa3ad')); circle(ex + 5 * z, ey - 7 * z, 3 * z, C('#9aa3ad')); kLine(K, [ex + 7 * z, ey - 6 * z], [ex + 8 * z, ey - 1 * z], '#9aa3ad', 1.4); }]);   // Elefant am Teich
-    parts.push([1.8, 0, () => { const B = K.block({ a: 1.6, b: 0, ha: 0.25, hb: 0.5, h: 12, wall: '#e9d3a8', roof: '#58b36a', roofH: 7, entry: true }); K.door(B, 'front', 0.35, 0.65, 0.6); kShopSign(K, 1.85, 0.6, 16, '🦒', '#58b36a'); }]);
+    parts.push([1.8, 0, () => { const B = K.block({ a: 1.6, b: 0, ha: 0.25, hb: 0.5, h: 12, wall: '#e9d3a8', roof: '#58b36a', roofH: 7, entry: true }); K.door(B, 'front', 0.35, 0.65, 0.6); kShopSign(K, 1.85, -0.6, 16, '🦒', '#58b36a'); }]);
     K.scene(parts);
   },
   stadion(K, s, now, x, y, t) {
