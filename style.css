@@ -654,8 +654,8 @@ table.help-keys td { padding: 5px 6px; border-bottom: 1px solid rgba(107, 79, 58
 table.help-keys td:first-child { white-space: nowrap; width: 1%; }
 kbd { display: inline-block; padding: 2px 7px; border-radius: 7px; background: #fff; box-shadow: 0 2px 0 rgba(107, 79, 58, .25); font: inherit; font-weight: 700; font-size: 13px; }
 
-/* ---------- Hilfe am Ort (Block 92): antippbar, Sprechblase, Nachschlagen ---------- */
-[data-help] { cursor: pointer; text-decoration: underline dotted; text-decoration-thickness: 1.5px; text-underline-offset: 3px; }
+/* ---------- Hilfe am Ort (Block 92): antippbar (kleines ?), Sprechblase, Nachschlagen ---------- */
+[data-help] { cursor: pointer; }                    /* nur das kleine ? zeigt es an, keine Unterstreichung */
 [data-help]::after { content: '?'; display: inline-block; margin-left: 4px; width: 14px; height: 14px; line-height: 14px; border-radius: 50%;
   background: var(--brown2); color: var(--cream); font-size: 10px; font-weight: 900; text-align: center; vertical-align: 1px; text-decoration: none; }
 .status [data-help].ok::after { background: var(--green-d); }

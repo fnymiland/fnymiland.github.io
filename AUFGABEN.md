@@ -1036,4 +1036,4 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] ☰ → 📚 Nachschlagen: Suche über Begriffe (`TERMS`), Wünsche (`WISH_HELP`), Rohstoffe und alle Gebäude (aus den
       Spieldaten: Beschreibung, Tipp, Kosten, was es liefert, wo im Menü, Freischaltung), mit „Bauen“.
 - [x] Anleitung und „Das ist neu“ erwähnen es. Test: hilfe.test.js.
-
+- [x] 92b: Antippbares nicht mehr unterstrichen – nur das kleine ? zeigt es an (Antippen weiter auf der ganzen Zeile).
