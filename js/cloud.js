@@ -167,6 +167,23 @@ async function cloudReady() {
 }
 const cloudStateText = () => ({ aus: 'Nicht angemeldet', laden: 'Gleicht ab …', ok: cloudLastUp ? `Gesichert um ${new Date(cloudLastUp).toLocaleTimeString('de-DE', { timeStyle: 'short' })}` : 'Verbunden',
   offline: 'Offline – wird gesichert, sobald Netz da ist', konflikt: 'Wartet auf deine Wahl', fehler: 'Gerade nicht erreichbar' })[cloudState];
+// Verständliche Meldungen, wenn die Anmeldung nicht klappt (iPhone: Pop-ups, privater Modus, App-Browser)
+function cloudLoginFail(e) {
+  const code = (e && e.code) || '';
+  const why = {
+    'auth/popup-blocked': 'Das Anmeldefenster wurde blockiert. Erlaube Pop-ups für diese Seite (iPhone: Einstellungen → Safari → „Pop-ups blockieren“ aus) und tippe nochmal.',
+    'auth/popup-closed-by-user': 'Das Anmeldefenster wurde geschlossen, bevor die Anmeldung fertig war.',
+    'auth/cancelled-popup-request': 'Das Anmeldefenster wurde geschlossen, bevor die Anmeldung fertig war.',
+    'auth/unauthorized-domain': `Diese Adresse (${location.hostname}) ist in Firebase noch nicht erlaubt – unter Authentication → Einstellungen → Autorisierte Domains eintragen.`,
+    'auth/web-storage-unsupported': 'Im privaten Modus geht die Anmeldung nicht – bitte ein normales Fenster nehmen.',
+    'auth/operation-not-supported-in-this-environment': 'In diesem Browser geht die Anmeldung nicht. Öffne die Seite direkt in Safari oder Chrome (nicht in WhatsApp & Co.).',
+    'auth/network-request-failed': 'Keine Verbindung zum Internet.',
+  }[code];
+  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') { toast(why); return; }
+  openModal(`<h2>☁️ Anmeldung hat nicht geklappt</h2><p>${why || 'Etwas ist schiefgegangen.'}</p>${code ? `<p class="muted">${escHtml(code)}</p>` : ''}
+    <div class="row"><button class="btn" id="m-ok">OK</button></div>`);
+  $('m-ok').onclick = openCloud;
+}
 async function openCloud() {
   if (!cloudUser) {
     openModal(`
@@ -183,7 +200,7 @@ async function openCloud() {
     if (!$('c-google')) return;
     $('c-google').disabled = false; $('c-send').disabled = false;
     $('c-google').textContent = 'Mit Google anmelden';
-    $('c-google').onclick = () => cloudApi.signInGoogle().then(() => { closeModal(); toast('☁️ Angemeldet'); }).catch(e => toast('Anmeldung abgebrochen' + (e && e.code ? ` (${e.code})` : '')));
+    $('c-google').onclick = () => cloudApi.signInGoogle().then(() => { closeModal(); toast('☁️ Angemeldet'); }).catch(e => cloudLoginFail(e));
     $('c-send').onclick = () => {
       const mail = $('c-mail').value.trim();
       if (!/^\S+@\S+\.\S+$/.test(mail)) { toast('Bitte eine E-Mail-Adresse eintippen'); return; }
