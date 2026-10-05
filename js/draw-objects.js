@@ -26,8 +26,12 @@ const glowCells = new Map();
 function punchGlow(q, r, tint) {
   const strength = night / NIGHT_MAX, blue = tint === 'blue';
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
-  const cell = Math.round(gx / 24) + ',' + Math.round(gy / 24), n = glowCells.get(cell) || 0;
-  glowCells.set(cell, n + 1);
+  // dasselbe Licht (große Gebäude stanzen es je Streifen) zählt nur einmal (Block 84d)
+  const cell = Math.round(gx / 24) + ',' + Math.round(gy / 24), id = Math.round(gx * 2) + ',' + Math.round(gy * 2);
+  let seen = glowCells.get(cell);
+  if (!seen) glowCells.set(cell, seen = new Map());
+  if (!seen.has(id)) seen.set(id, seen.size);
+  const n = seen.get(id);
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
@@ -1027,7 +1031,7 @@ function rotateBuild(dir = 1) {
   sfx('deco');
 }
 
-const GROUND_TYPES = new Set(['hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
+const GROUND_TYPES = new Set(['station', 'glashaus', 'glashaus_l', 'hbf', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'rathaus', 'feld', 'obst', 'stein', 'mine', 'kristallmine', 'hafen', 'schule', 'uni', 'lm', 'solarfeld', 'geothermie']);
 const hasGroundPart = t => GROUND_TYPES.has(t.b) || (t.b === 'haus' && [3, 5, 6].includes(houseLook(t)));
 // Marktstand (Block 39): Theke mit Waren, gestreifte Markise auf zwei Pfosten, Lichterkette (nachts an)
 function drawStand(type, cx, cy, z, now, x, y, t) {

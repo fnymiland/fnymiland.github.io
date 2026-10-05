@@ -888,21 +888,23 @@ Tests: fehler84c.test.js. Jahrmarkt: Feuerwerk überm Riesenrad (Lichter gibt es
 - [x] Bahnübergang: Bewohner verschwinden oder kehren um, statt an der Schranke zu warten.
 - [x] „Das ist neu“ seit 03.10. nicht erneuert (Farben, Wegform, Schloss, Bildrate, Leuchtturm-Kap fehlen).
 
-### 84d – Zeichnen
-- [ ] Hohe große Gebäude (Riesenrad, Schloss, Kap …) verschwinden am unteren Bildrand streifenweise (aussortiert nach der
+### 84d – Zeichnen – erledigt
+Tests: fehler84d.test.js. Dabei gefunden: ein Fehler beim Zeichnen eines Boden-Grundstücks ließ `g` auf dessen Leinwand stehen
+(das ganze Bild wäre danach unsichtbar gewesen) – jetzt mit try/finally. Bildzeit unverändert (1,5–3 ms).
+- [x] Hohe große Gebäude (Riesenrad, Schloss, Kap …) verschwinden am unteren Bildrand streifenweise (aussortiert nach der
       Feldmitte).
-- [ ] Züge in der Halle eines langen Hauptbahnhofs fehlen, wenn sein Anker außerhalb des Bildes liegt.
-- [ ] Bahnsteig des Bahnhofs und Boden des Glashauses fehlen auf der Karte (nicht in GROUND_TYPES, Regel 16).
-- [ ] Gleise/Boden langer Hauptbahnhöfe fehlen auf weiter entfernten Grundstücken.
-- [ ] Von weitem abgeschnitten: Hbf ab etwa 6 Gleisen, gedrehter Hafen-Pier, Baumhaus-Krone, Wunder-Gerüst.
-- [ ] Geteilte Bildchen: ein umgefärbter Laden sieht von weitem aus wie ein anderer; Reihenhäuser von weitem alle gleich.
-- [ ] Neue Rathaus-Flaggenfarbe erscheint von weitem erst später.
-- [ ] Glasvilla wirft keinen Schatten (HOUSE_SHADOW[6] fehlt).
-- [ ] Offshore-Windrad steht von weitem still (fehlt in SPRITE_LIVE; Fahrgeschäfte bewusst nicht – Zeichenlast).
-- [ ] Nachtlicht großer Gebäude: der Schein wird je Streifen schwächer, mit senkrechten Kanten.
-- [ ] Deko in der vorderen Ecke wird von Deko in der Seitenmitte überdeckt (Reihenfolge SLOTS_FRONT).
-- [ ] Bau-Vorschau zeigt Originalfarben bzw. das alte eckige Schloss statt dessen, was gebaut wird.
-- [ ] Ein Zeichenfehler in einem Gebäude lässt den Streifen-Ausschnitt dauerhaft hängen (kein try/finally).
+- [x] Züge in der Halle eines langen Hauptbahnhofs fehlen, wenn sein Anker außerhalb des Bildes liegt.
+- [x] Bahnsteig des Bahnhofs und Boden des Glashauses fehlen auf der Karte (nicht in GROUND_TYPES, Regel 16).
+- [x] Gleise/Boden langer Hauptbahnhöfe fehlen auf weiter entfernten Grundstücken.
+- [x] Von weitem abgeschnitten: Hbf ab etwa 6 Gleisen, gedrehter Hafen-Pier, Baumhaus-Krone, Wunder-Gerüst.
+- [x] Geteilte Bildchen: ein umgefärbter Laden sieht von weitem aus wie ein anderer; Reihenhäuser von weitem alle gleich.
+- [x] Neue Rathaus-Flaggenfarbe erscheint von weitem erst später.
+- [x] Glasvilla wirft keinen Schatten (HOUSE_SHADOW[6] fehlt).
+- [x] Offshore-Windrad steht von weitem still (fehlt in SPRITE_LIVE; Fahrgeschäfte bewusst nicht – Zeichenlast).
+- [x] Nachtlicht großer Gebäude: der Schein wird je Streifen schwächer, mit senkrechten Kanten.
+- [x] Deko in der vorderen Ecke wird von Deko in der Seitenmitte überdeckt (Reihenfolge SLOTS_FRONT).
+- [x] Bau-Vorschau zeigt Originalfarben bzw. das alte eckige Schloss statt dessen, was gebaut wird.
+- [x] Ein Zeichenfehler in einem Gebäude lässt den Streifen-Ausschnitt dauerhaft hängen (kein try/finally).
 
 ### 84e – Oberfläche und Texte
 - [ ] Handy: Der Griff am Infofenster merkt sich ein abgebrochenes Wischen (der nächste Tipp schließt das Fenster).

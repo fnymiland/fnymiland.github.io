@@ -75,7 +75,7 @@ const cachedPath = t => !t.bridge && (t.b === 'schiene' || (wegUnder(t) != null 
 // (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
 const SUN = { dx: 0.55, dy: 0.12 };
 const SHADOW_COL = 'rgba(30,42,62,0.3)';
-const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34];
+const HOUSE_SHADOW = [0, 24, 30, 32, 35, 34, 36];             // je Hausform (6: Glasvilla, Block 84d)
 const SHADOW = {           // Höhe (je Stufe) und Abstand der Hauswand vom Feldrand
   muehle: [[28, 34, 40], 0.3], saege: [22, 0.18], steinmetz: [17, 0.26], schmiede: [19, 0.26], baecker: [[22, 32, 32], 0.2],
   fabrik: [[22, 22, 26], 0.16], schule: [[26, 28, 34], 0.2], bibliothek: [[28, 29, 31], 0.3], uni: [[36, 38, 40], 0.45], kunst: [[28, 30, 32], 0.3],
@@ -107,9 +107,9 @@ function drawGroundParts(want, at, z) {
   PASS = 'ground';
   for (const [k, t] of state.tiles) {
     if (!hasGroundPart(t)) continue;
-    const [ax, ay] = keyXY(k);
-    if (!want([ax, ay])) continue;
-    const [w, h] = sizeOf(t.b, t.rot, t), c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
+    const [ax, ay] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t);
+    if (!want([ax, ay], w, h)) continue;
+    const c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
     FOG = t.b !== 'lm' && !ownedTile(ax, ay);
     drawObject(t.b, c.x, c.y, z, 0, ax, ay, t.lvl, t);
   }
@@ -154,36 +154,38 @@ function renderGroundChunk(cx, cy, scale) {
   c.width = Math.max(1, Math.ceil(b.w * scale)); c.height = Math.max(1, Math.ceil(b.h * scale));
   const prev = g;
   g = c.getContext('2d');
-  g.setTransform(scale, 0, 0, scale, -b.left * scale, -b.top * scale);
-  const waves = [];
-  for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
-    const j = s - i;
-    if (j < 0 || j >= CHUNK) continue;
-    const x = cx * CHUNK + i, y = cy * CHUNK + j;
-    FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
-    drawGround(x, y, iso(x, y), 1, 0, true);
-    if (terrainAt(x, y) === 'water' && hasWave(x, y)) waves.push([x, y]);
-  }
-  FOG = false;
-  // Flache Gebäudeteile, Wege und Schlagschatten – auch von Nachbar-Grundstücken, aber nur auf dieses gezeichnet,
-  // damit sich nichts doppelt
-  const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
-  const near = ([ax, ay]) => Math.abs(Math.floor(ax / CHUNK) - cx) <= 1 && Math.abs(Math.floor(ay / CHUNK) - cy) <= 1;
-  g.save();
-  g.beginPath();
-  [iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y));
-  g.closePath(); g.clip();
-  drawGroundParts(near, iso, 1);
-  for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
-    const j = s - i;
-    if (j < 0 || j >= CHUNK) continue;
-    const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
-    if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
-  }
-  drawShadows(near);
-  g.restore();
-  g = prev;
-  return { c, b, scale, v: groundVersion, waves, used: frameNo };
+  try {                                              // ein Fehler darf g nicht auf dieser Leinwand lassen (Block 84d)
+    g.setTransform(scale, 0, 0, scale, -b.left * scale, -b.top * scale);
+    const waves = [];
+    for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
+      const j = s - i;
+      if (j < 0 || j >= CHUNK) continue;
+      const x = cx * CHUNK + i, y = cy * CHUNK + j;
+      FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
+      drawGround(x, y, iso(x, y), 1, 0, true);
+      if (terrainAt(x, y) === 'water' && hasWave(x, y)) waves.push([x, y]);
+    }
+    FOG = false;
+    // Flache Gebäudeteile, Wege und Schlagschatten – auch von Nachbar-Grundstücken, aber nur auf dieses gezeichnet,
+    // damit sich nichts doppelt
+    const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
+    const near = ([ax, ay], w = 1, h = 1) => Math.floor((ax + w - 1) / CHUNK) >= cx - 1 && Math.floor(ax / CHUNK) <= cx + 1 && Math.floor((ay + h - 1) / CHUNK) >= cy - 1 && Math.floor(ay / CHUNK) <= cy + 1;   // ganze Fläche
+    g.save();
+    g.beginPath();
+    [iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y));
+    g.closePath(); g.clip();
+    try {
+      drawGroundParts(near, iso, 1);
+      for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
+        const j = s - i;
+        if (j < 0 || j >= CHUNK) continue;
+        const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
+        if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
+      }
+      drawShadows(near);
+    } finally { g.restore(); }
+    return { c, b, scale, v: groundVersion, waves, used: frameNo };
+  } finally { g = prev; FOG = false; PASS = null; }
 }
 // ---------------------------------------------------------------------------
 // Weit weg (Block 31): Gebäude und kleine Dekos als fertige Bildchen, statt sie jedes Bild neu zu zeichnen. Gleich
@@ -195,14 +197,15 @@ function renderGroundChunk(cx, cy, scale) {
 const SPRITE_FROM = 1.0, SPRITE_MS = 6;
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
 let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
-const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
+const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
 const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].includes(b);
 function spriteTop(b, w, h) {
-  if (WONDERS[b]) return WONDERS[b].h + 50;
+  if (WONDERS[b]) return WONDERS[b].h + 70;              // Baugerüste ragen etwas höher (Block 84d)
   if (b === 'leuchtturm') return 280;                    // Leuchtturm-Kap (Block 83)
   if (b === 'fz_schloss') return 260;
-  return w * h >= 9 ? 150 : w * h >= 4 ? 120 : 100;
+  return Math.max(w * h >= 9 ? 150 : w * h >= 4 ? 120 : 112, (w + h) * TH / 4 + 70);   // lange Gebäude (Hbf): die Fläche selbst reicht weit hoch
 }
+const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite bzw. nach vorn (Breite, unten)
 // Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
 function getSprite(key, z, make) {
   let e = objSprites.get(key);
@@ -233,13 +236,16 @@ function putSprite(e, cx, cy, z) {
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
-  const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : Math.floor(hash(ax, ay, 4) * 7),
+  // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
+  const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
+    t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || ''].join('|');   // Gartenweg (Block 78)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
   const e = getSprite(key, z, () => {
-    const halfW = ((w + h) * TW / 4 + 26) * z * ds, up = spriteTop(t.b, w, h) * z * ds, down = ((w + h) * TH / 4 + 12) * z * ds;
+    const pad = SPRITE_PAD[t.b] || [0, 0];
+    const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds, up = spriteTop(t.b, w, h) * z * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * z * ds;
     const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
     sp.z = z;
     return sp;
@@ -587,12 +593,17 @@ function render(now) {
     minX = Math.max(minX, WORLD.cMin * CHUNK - 1); maxX = Math.min(maxX, (WORLD.cMax + 1) * CHUNK);
     minY = Math.max(minY, WORLD.cMin * CHUNK - 1); maxY = Math.min(maxY, (WORLD.cMax + 1) * CHUNK);
   }
-  const mX = TW * z, mTop = 110 * z, mBot = TH * z;
+  const mX = TW * z, mTop = 110 * z, mBot = TH * z, mBig = 420 * z;
+  // Unter dem Bildrand: hohe große Gebäude werden an ihren vordersten Feldern gezeichnet (Streifen) – die dürfen weiter
+  // unten liegen, sonst fehlt das Gebäude streifenweise (Block 84d)
+  const bigFront = (x, y) => { const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a); if (!t) return false;
+    const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); return (w > 1 || h > 1) && (x === ax + w - 1 || y === ay + h - 1); };
   const visible = [];
-  for (let s = minX + minY; s <= maxX + maxY; s++) {
-    for (let x = Math.max(minX, s - maxY); x <= Math.min(maxX, s - minY); x++) {
+  for (let s = minX + minY; s <= maxX + maxY + 30; s++) {
+    for (let x = Math.max(minX, s - maxY - 30); x <= Math.min(maxX + 30, s - minY); x++) {
       const y = s - x, p = toScreen(x, y);
-      if (p.x < -mX || p.x > W + mX || p.y < -mBot || p.y > H + mTop) continue;
+      if (p.x < -mX || p.x > W + mX || p.y < -mBot) continue;
+      if (p.y > H + mTop && (p.y > H + mBig || !bigFront(x, y))) continue;
       visible.push(x, y, p.x, p.y);
     }
   }
@@ -606,7 +617,7 @@ function render(now) {
   }
   FOG = false;
   drawDepth(...seen, z);
-  const visRange = ([ax, ay]) => ax >= minX - 3 && ax <= maxX + 1 && ay >= minY - 3 && ay <= maxY + 1;
+  const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
   for (let i = 0; i < visible.length; i += 4) {
@@ -727,9 +738,11 @@ function render(now) {
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
+  const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
+  if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
   for (const m of walkers.concat(strollers, paraders, cars, cars4, ships, coasterCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
-    if (m.train && HALL.has(k)) k = COVER.get(k) || k;     // Zug in der Halle: ganz hinten zeichnen, Dächer und Bahnsteige kommen darüber
+    if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }
@@ -760,9 +773,7 @@ function render(now) {
         const ds = sc * decoScale(t.b);
         g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
         PASS = 'object';
-        drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t);
-        PASS = null;
-        g.restore();
+        try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
       };
       // Große Gebäude in senkrechten Streifen: jede Diagonale (x − y) der Grundfläche wird an ihrem vordersten
       // Feld gezeichnet – so überdecken sie nichts, was seitlich vor ihnen steht (Bäume, Häuser, Bewohner)
@@ -773,8 +784,7 @@ function render(now) {
         const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
         if (t.b === 'lm') FOG = false;
         g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
-        drawIt();
-        g.restore();
+        try { drawIt(); } finally { g.restore(); }                         // sonst bliebe der Streifen-Ausschnitt für immer
       }
       if (corner) {
         if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
@@ -830,7 +840,8 @@ function render(now) {
       g.save(); g.translate(c.x, c.y);
       const gs = decoScale(ghostType);
       g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
-      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}) };
+      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
+        ...paintNewOf(ghostType), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}) };   // wie gebaut wird (Block 84d)
       drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;

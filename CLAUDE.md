@@ -352,6 +352,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+87. **Zeichnen robust** (Block 84d): Unter dem Bildrand bleiben die vordersten Felder großer Gebäude bis `mBig` (420·z) in
+    `visible` (`bigFront`), sonst fehlen hohe Gebäude streifenweise. Filter für flache Teile prüfen die ganze Fläche
+    (`want([ax, ay], w, h)`), Züge in der Halle hängen am ersten sichtbaren Hallenfeld (`hallFirst`). Was flache Teile hat,
+    steht in `GROUND_TYPES` (auch Bahnhof, Glashaus). Bildchen-Schlüssel: Würfelfarbe mit „r“, Reihenhaus-Hashes, Rathaus-Flagge;
+    `spriteTop` wächst mit der Fläche, `SPRITE_PAD` für seitlich Überstehendes. Zeichnen eines Gebäudes, Streifen-Ausschnitt
+    und Boden-Grundstück immer mit `try/finally` (sonst bleibt ein Ausschnitt oder `g` auf einer fremden Leinwand hängen).
+    Dasselbe Licht zählt in `glowCells` nur einmal. Die Bau-Vorschau bekommt dieselben Eigenschaften wie `build` (Farben, `cs`, `fl`).
 86. **Fortschritt und Anzeigen** (Block 84c): Was eine Laterne freischaltet, nur über `lmUnlockNames(type, i)` (Liste plus
     alles mit `lm: 'typ:stufe'`). „Ist hier Weg?“ auch in Wünschen über `wegAt`. `incPeak` nicht runden (sonst sinkt es bei
     60 Bildern/s nie). In `totals` steht `pop` vor den Stufen schon mit allen Faktoren. Wunder-„auf alles“ gilt für prod, conv
