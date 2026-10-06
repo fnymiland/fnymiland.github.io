@@ -29,7 +29,7 @@ const FIREBASE_CONFIG = {
   appId: '1:663890593085:web:55eeb23d0e402fa8fa3154',
 };
 const FB_VER = '10.14.1', CLOUD_KEY = 'kachelhausen_cloud';
-const CLOUD_QUIET = 6000, CLOUD_EVERY = 45000, CLOUD_GAP = 10000, CLOUD_BACKUPS = 10;
+const CLOUD_QUIET = 6000, CLOUD_EVERY = 45000, CLOUD_GAP = 10000, CLOUD_BACKUPS = 3;   // frühere Stände: die 3 neuesten (Block 104, Platz in der Cloud)
 let cloudActAt = 0, cloudWatchOff = null, cloudToastAt = 0;   // letzte eigene Aktion; Abmelden vom Live-Horchen
 let cloudApi = null;                 // Adapter: Firebase (cloudFirebase) oder im Test eine Attrappe
 let cloudUser = null;                // { uid, name }
@@ -285,6 +285,8 @@ async function openCloud() {
   if ($('modal').hidden || !$('c-now')) openModal(`${youHead('online')}<h3>☁️ Online-Speicher</h3><p class="muted" id="c-wait">Lädt …</p>`);
   const tok = $('modal-card').firstElementChild;
   try { list = (await cloudApi.listBackups(cloudUser.uid)).sort((p, q) => q.at - p.at); } catch (e) { /* offline: Liste leer */ }
+  for (const b of list.slice(CLOUD_BACKUPS)) cloudApi.dropBackup(cloudUser.uid, b.id).catch(() => {});   // von früher (bis Block 104 waren es 10)
+  list = list.slice(0, CLOUD_BACKUPS);
   if (youTab !== 'online' || $('modal').hidden || $('modal-card').firstElementChild !== tok) return;   // inzwischen geschlossen/gewechselt (Block 98)
   openModal(`
     ${youHead('online')}

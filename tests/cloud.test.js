@@ -227,11 +227,19 @@ describe('Online-Speicher (Block 93)', () => {
     game('cloudTouched()');
     expect(game('cloudDue(Date.now() + 999999)')).toBe(false);
   });
-  it('höchstens 10 Sicherungen', async () => {
+  it('höchstens 3 Sicherungen – die neuesten bleiben (Block 104)', async () => {
     play();
     await login();
-    for (let i = 0; i < 13; i++) await game(`cloudBackup(serialize(), 'Test ${i}')`);
-    expect(Object.keys(remote().idx).length).toBe(10);
+    for (let i = 0; i < 6; i++) { await game(`cloudBackup(serialize(), 'Test ${i}')`); await new Promise(r => setTimeout(r, 2)); }
+    expect(Object.keys(remote().idx).length).toBe(3);
+    expect(Object.values(remote().idx).map(b => b.why).sort()).toEqual(['Test 3', 'Test 4', 'Test 5']);
+  });
+  it('alte Sicherungen von früher (mehr als 3): das Online-Fenster räumt die ältesten weg', async () => {
+    play();
+    await login();
+    for (let i = 0; i < 5; i++) await game(`cloudApi.addBackup(cloudUser.uid, { at: ${1000 + i}, sum: {}, why: 'alt ${i}' }, '{}')`);
+    await game('openCloud()'); await new Promise(r => setTimeout(r, 10));
+    expect(Object.values(remote().idx).map(b => b.why).sort()).toEqual(['alt 2', 'alt 3', 'alt 4']);
   });
   it('ohne Anmeldung ändert sich nichts: keine Aktion zählt, nichts wird geladen', () => {
     game("undoable(() => { state.tiles.set('15,15', { b: 'feld', lvl: 1 }); })");

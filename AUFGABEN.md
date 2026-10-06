@@ -1228,3 +1228,8 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
 - [x] 103b: Schnelles Wischen (iPad) ließ die klebenden Reiter beim Nachfedern kurz verschwinden. Jetzt stecken Überschrift
       und Reiter fest im Fenster, nur der Bereich darunter scrollt (`frameHtml` packt ihn in `.tab-scroll`, beim
       Live-Auffrischen bleibt er dasselbe Element samt Scrollstand). Märchenschloss-Seitenfenster: Reiter scrollen normal mit.
+
+## Block 104: Nur noch 3 frühere Stände (06.10.2026)
+- [x] Frühere Stände (Sicherungen vor dem Ersetzen) von 10 auf 3 – jede ist ein ganzer Spielstand (bis 500 KB), der
+      kostenlose Firebase-Tarif hat 1 GB für alle. Ältere von früher räumt das Online-Fenster beim Öffnen weg.
+      Test: cloud.test.js.
