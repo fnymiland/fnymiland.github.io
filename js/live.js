@@ -132,6 +132,8 @@ function liveOnWorld(world) {
     if (first && VISIT) visitArrived();
   } else liveApplyMaps(world);
   if (f.own) liveSettle(world.rev);
+  if (typeof setGuests === 'function') setGuests(world.guests, VISIT && visitUser ? visitUser.uid : null);   // Besucher als Figur (Block 96)
+  if (VISIT && world.owner && visitOwner !== world.owner) { visitOwner = world.owner; visitFriendCheck(); }
   if (VISIT) visitUi();
 }
 function liveOnPriv(live) {
@@ -205,10 +207,14 @@ function visitUi() {
   let el = document.getElementById('visit-band');
   if (!el) {
     const w = document.createElement('div');
-    w.innerHTML = '<div id="visit-band" role="status"><span class="vb-text">🏝️ Zu Besuch …</span><button class="btn small" id="visit-home">🏠 Meine Insel</button></div>';
+    w.innerHTML = '<div id="visit-band" role="status"><span class="vb-text">🏝️ Zu Besuch …</span><button class="btn small" id="visit-heart" hidden>❤️</button><button class="btn small" id="visit-book" hidden>📖</button><button class="btn small" id="visit-home">🏠 Meine Insel</button></div>';
     el = w.firstChild; document.body.appendChild(el);
     el.querySelector('#visit-home').onclick = visitLeave;
+    el.querySelector('#visit-heart').onclick = () => visitHeart();
+    el.querySelector('#visit-book').onclick = () => visitBook();
   }
+  const fr = typeof visitFriend !== 'undefined' && visitFriend;                 // Freunde: Herz und Gästebuch (Block 96)
+  el.querySelector('#visit-heart').hidden = !fr; el.querySelector('#visit-book').hidden = !fr;
   if (liveFollowing()) el.querySelector('.vb-text').textContent = `🏝️ Zu Besuch in ${state.town.name} · 👥 ${fmt(T.pop)}`;
 }
 
@@ -280,18 +286,20 @@ async function openFriends() {
   }
   frWatch();
   let code = '…', wid = null;
-  try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
+  try { code = frCodeText(await frCode()); wid = await liveWorldId(); await friendAnimal(cloudUser.uid); } catch (e) { code = 'gerade nicht erreichbar'; }
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   openModal(`
     <div id="fr-box"><h2>👥 Freunde & Besuch</h2>
     <div class="label">Dein Freundescode</div>
     <div class="fr-code"><b>${escHtml(code)}</b><button class="btn ghost small" id="fr-copy">Kopieren</button></div>
+    <div class="label">Deine Figur (so sehen dich Freunde, wenn du zu Besuch bist)</div>
+    <div class="book-st">${ANIMALS.map((a, i) => `<button class="look${i === myAnimal ? ' on' : ''}" data-fani="${i}" aria-label="${a.family}">${a.icon}</button>`).join('')}</div>
     <div class="label">Code eines Freundes</div>
     <div class="fr-add"><input id="fr-in" class="cloud-mail" placeholder="FNYMI-…" autocomplete="off" autocapitalize="characters" aria-label="Freundescode"><button class="btn small" id="fr-send">Anfrage schicken</button></div>
     ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
     <div class="label">Freunde</div>
-    ${by('freund').length ? by('freund').map(r => row(r, (id, e) => `${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button>`)).join('')
+    ${by('freund').length ? by('freund').map(r => row(r, (id, e) => `${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button>`)).join('')
       : '<p class="muted">Noch keine – schick deinen Code an jemanden oder gib einen ein.</p>'}
     ${by('gesendet').length ? `<div class="label">Gesendet</div>${by('gesendet').map(r => row(r, id => `<span class="muted">wartet …</span><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Anfrage zurückziehen">✕</button>`)).join('')}` : ''}
     <div class="label">🔗 Besuchs-Link (nur ansehen, ohne Anmeldung)</div>
@@ -305,6 +313,8 @@ async function openFriends() {
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
+  for (const b of document.querySelectorAll('[data-fani]')) b.onclick = async () => { try { await setFriendAnimal(+b.dataset.fani); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
+  for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
   if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), `Besuch in ${state.town.name}`);

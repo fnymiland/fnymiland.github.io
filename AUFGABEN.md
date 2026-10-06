@@ -1111,3 +1111,17 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Beim Ansehen (Besuch, zuschauendes Gerät) sind Farbfelder, Aussehen und Ausbau-Knöpfe ausgeblendet, alle anderen
       ändernden Knöpfe im Fenster gesperrt (Hinweis); Schließen und ? gehen weiter.
 
+## Block 96 – Freunde auf der Insel (06.10.2026)
+- [x] Spielfigur: jeder Angemeldete wählt unter 👥 sein Tier (users/<uid>/profile/animal, sonst zufällig).
+- [x] Besucher als Figur: Freunde, die zu Besuch sind, stehen als ihr Tier mit Namensschild dort, wo sie gerade hinschauen
+      (worlds/<wid>/guests/<uid>, alle 2 s bei Bewegung, verschwindet beim Gehen – onDisconnect). Besitzer, zuschauende
+      Geräte und andere Besucher sehen sie live; der Besitzer bekommt „🐰 Ben ist zu Besuch!“.
+- [x] Herzchen & Gästebuch (nur Freunde): Band beim Besuch „❤️“ (einmal je Insel und Tag) und „📖“ (20 feste Sätze, 12 Sticker,
+      höchstens 3 am Tag). Besuche werden einmal am Tag eingetragen. Besitzer: Rathaus → Reiter „Besuch“ (Herzen, Gästebuch mit
+      ✕ zum Entfernen, wer da war), Punkt am Rathaus-Knopf bei Neuem, Hinweise beim Eintreffen.
+- [x] Päckchen & Briefkasten (nur Freunde): 👥 → 🎁 beim Freund, Rohstoffe wählen, gehen sofort aus dem Lager ab (klappt das
+      Schicken nicht: zurück), höchstens 5 am Tag je Freund. Briefkasten am Rathaus (rotes Fähnchen hoch bei Post), Antippen
+      des Rathauses führt dann zum Reiter „Besuch“; Abholen per Transaktion – genau einmal, dann ins Lager. Nur auf dem
+      führenden Gerät.
+- [x] Datenbank-Regeln erweitert (firebase-rules.json: guests, book, mail mit Prüfungen). Test: friends.test.js (8 Fälle).
+

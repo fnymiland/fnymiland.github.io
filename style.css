@@ -713,3 +713,9 @@ body.visiting #toolbar, body.visiting #hint, body.visiting #style-bar, body.visi
 /* Ansehen (Besuch, zuschauendes Gerät, Block 95c): nichts zum Umfärben/Umbauen anbieten */
 body.viewonly #panel .swatches, body.viewonly #panel .looks, body.viewonly #panel .row:has(#p-grow), body.viewonly #panel .row:has(#p-stage),
 body.viewonly #panel .row:has(#p-wonder), body.viewonly #panel [data-openart] { display: none !important; }
+/* Freunde auf der Insel (Block 96) */
+.book-lines { display: flex; flex-wrap: wrap; gap: 6px; }
+.book-lines .look { font-size: 13px; }
+.book-st { display: flex; flex-wrap: wrap; gap: 6px; }
+.book-st .look { font-size: 20px; padding: 4px 8px; }
+#visit-band .btn[hidden] { display: none; }

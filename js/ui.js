@@ -1002,7 +1002,7 @@ const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
-  if (t.b === 'rathaus') { openTownHall(); return; }
+  if (t.b === 'rathaus') { openTownHall(typeof mailWaiting === 'function' && mailWaiting() ? 'besuch' : undefined); return; }   // Päckchen: gleich zum Briefkasten
   if (t.b === 'lm') { openLandmark(x, y); return; }
   if (t.b === 'truhe') { openChestInfo(x, y, t); return; }
   const d = ITEMS[t.b], s = statusOf(x, y) || {};
@@ -1901,7 +1901,7 @@ function residentsHtml() {
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['town', 'Ort']];
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['besuch', `Besuch${typeof mailWaiting === 'function' && (mailWaiting() || bookNew()) ? ' 📬' : ''}`], ['town', 'Ort']];
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -2002,6 +2002,8 @@ function openTownHall(tab = hallTab) {
         : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
   } else if (tab === 'bewohner') {
     body = residentsHtml();
+  } else if (tab === 'besuch') {
+    body = friendsHallHtml();                                              // Freunde (Block 96): Briefkasten, Herzen, Gästebuch
   } else {
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
     body = `
@@ -2057,6 +2059,7 @@ function openTownHall(tab = hallTab) {
     sparkle(e.x + (w - 1) / 2, e.y + (h - 1) / 2);
     if (e.b === 'lm') openLandmark(e.x, e.y); else openInfo(e.x, e.y);
   };
+  if (tab === 'besuch') wireFriendsHall(card);
   if (tab === 'town') {
     wireTownEditor(card, state.town, () => { updateHud(); save(); });
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));

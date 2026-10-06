@@ -9,7 +9,13 @@
     "worlds": {
       "$wid": {
         ".read": "data.child('open').val() === true || (auth != null && (data.child('owner').val() === auth.uid || root.child('fr').child(data.child('owner').val()).child(auth.uid).child('st').val() === 'freund'))",
-        ".write": "auth != null && (data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))"
+        ".write": "auth != null && (data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))",
+        "guests": {
+          "$g": {
+            ".write": "auth != null && auth.uid === $g && root.child('fr').child(root.child('worlds').child($wid).child('owner').val()).child(auth.uid).child('st').val() === 'freund'",
+            ".validate": "!newData.exists() || (newData.child('x').isNumber() && newData.child('y').isNumber() && newData.child('n').isString() && newData.child('n').val().length <= 30)"
+          }
+        }
       }
     },
     "codes": {
@@ -23,6 +29,26 @@
         ".read": "auth != null && auth.uid === $uid",
         "$other": {
           ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && (!newData.exists() || (!data.exists() && newData.child('st').val() === 'anfrage') || (data.child('st').val() === 'gesendet' && newData.child('st').val() === 'freund') || (data.child('st').val() === 'freund' && newData.child('st').val() === 'freund'))))"
+        }
+      }
+    },
+    "book": {
+      "$owner": {
+        ".read": "auth != null && auth.uid === $owner",
+        "$id": {
+          ".write": "auth != null && ((auth.uid === $owner && !newData.exists()) || (!data.exists() && newData.child('from').val() === auth.uid && root.child('fr').child($owner).child(auth.uid).child('st').val() === 'freund'))",
+          ".validate": "!newData.exists() || (newData.child('n').isString() && newData.child('n').val().length <= 30 && (newData.child('k').val() === 'v' || newData.child('k').val() === 'h' || newData.child('k').val() === 'g'))"
+        }
+      }
+    },
+    "mail": {
+      "$to": {
+        ".read": "auth != null && auth.uid === $to",
+        "$id": {
+          ".write": "auth != null && ((auth.uid === $to && !newData.exists()) || (!data.exists() && newData.child('from').val() === auth.uid && root.child('fr').child($to).child(auth.uid).child('st').val() === 'freund'))",
+          "items": {
+            "$r": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 100000" }
+          }
         }
       }
     }

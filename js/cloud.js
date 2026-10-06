@@ -216,6 +216,7 @@ function cloudResolve(pick, cloud) {
 // Anmelden, Abmelden, Fenster im Menü
 // ---------------------------------------------------------------------------
 function cloudOnUser(u) {
+  if (VISIT) { if (typeof visitOnUser === 'function') visitOnUser(u); return; }   // zu Besuch (Block 96): nur wer man ist
   if (cloudWatchOff) { cloudWatchOff(); cloudWatchOff = null; }
   if (cloudOff()) u = null;                                        // Testwelt: nie verbinden
   cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet', display: u.displayName || '' } : null;
@@ -352,6 +353,7 @@ async function cloudFirebase() {
     tx: async (p, fn) => { const r = await T(db.ref(p).transaction(fn, undefined, false)); return { ok: r.committed, val: r.snapshot.val() }; },
     watch: (p, cb, err) => { const r = db.ref(p), f = s => cb(s.val()); r.on('value', f, e => { if (err) err(e); }); return () => r.off('value', f); },
     TS: () => fb.database.ServerValue.TIMESTAMP,
+    leave: p => { db.ref(p).onDisconnect().remove().catch(() => {}); },          // beim Gehen löschen (Besucher-Figur)
     armLead: (uid, on) => { if (!uid) return; const d = ref(uid, 'lead').onDisconnect(); (on ? d.remove() : d.cancel()).catch(() => {}); },
     getMeta: async uid => (await T(ref(uid, 'meta').get())).val(),
     getSave: async uid => (await T(ref(uid, 'save').get(), 60000)).val(),

@@ -805,7 +805,16 @@ const BIG_ART = {
       circle(fx, fy - jet * z, 1.4 * z, C('#e6f8fc'));
     };
     const flag = () => { const [fx, fy] = K.P(1.15, -1.1); drawFlag(fx, fy, z * 1.35, now, state.town); };
-    K.scene([[-0.45, 0, hall], [0.5, 0, steps], [0.95, -0.55, lamp(-0.55)], [0.95, 0.55, lamp(0.55)], [1.05, 0.95, fountain], [1.15, -1.1, flag],
+    // Briefkasten (Block 96): Päckchen von Freunden – das rote Fähnchen steht hoch, wenn etwas drin ist
+    const post = typeof mailWaiting === 'function' && mailWaiting() && x < 1e5;
+    const mailbox = () => {
+      kPost(K, 1.3, -0.72, 7, '#8a5a3c', 1.3);
+      K.block({ a: 1.3, b: -0.72, ha: 0.05, hb: 0.08, h: 4.5, lift: 7, wall: '#5f8fe8', type: 'barrel', roof: '#7aa6f0', roofH: 2.5, ridge: 'b' });
+      const [px, py] = K.P(1.3, -0.62, 9), zz = K.z;
+      kLine(K, [px, py], post ? [px, py - 6 * zz] : [px + 5 * zz, py], '#8a5a3c', 0.8);
+      poly(post ? [[px, py - 6 * zz], [px + 3.5 * zz, py - 5 * zz], [px, py - 4 * zz]] : [[px + 5 * zz, py], [px + 4 * zz, py - 3 * zz], [px + 3 * zz, py]], C('#e8604f'));
+    };
+    K.scene([[-0.45, 0, hall], [0.5, 0, steps], [0.95, -0.55, lamp(-0.55)], [0.95, 0.55, lamp(0.55)], [1.05, 0.95, fountain], [1.15, -1.1, flag], [1.3, -0.72, mailbox],
       [-1.3, 1.3, () => kitBush(K, -1.3, 1.3, 0.9)], [-1.3, -1.3, () => kitBush(K, -1.3, -1.3, 0.8, '#62b85a')], [1.25, 1.35, () => kitBush(K, 1.3, 1.35, 0.7, '#f28cb1')]]);
   },
 
