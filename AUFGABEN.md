@@ -1329,3 +1329,11 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
 - [x] Neues präsenter: Zahl am 🌐-Knopf statt Punkt (Päckchen + neue Einträge, hüpft sanft; „!“ bei Speicher-Konflikt) und
       die Karte „💌 Während du weg warst“ beim Öffnen (einmal, `welcomeBack`, wartet, bis kein anderes Fenster offen ist).
       Test: freunde-neues.test.js.
+
+
+## Block 112: Reihenhäuser nachts von weitem (06.10.2026)
+- [x] Weiter herausgezoomt (Bildchen, z < 1) sahen Reihenhäuser nachts zackig aus: Das Bildchen stanzte Schein und
+      Fensterscheiben erst nach dem ganzen Haus – durch Blumenkästen, Rahmen und die eigenen Wände (live wird jedes Licht gleich
+      gestanzt, und was danach kommt, deckt es wieder zu). Jetzt wie live: Schein vor dem Bildchen (`punchGlow(…, 'halo')`),
+      dann das Bildchen, dann nur die Pixel, die darin wirklich noch Fensterlicht sind (`lightMask`, `litPx`); ohne Maske die
+      ganze Scheibe wie bisher. Kristall-Schein (blau) unverändert darüber. Test: nachtlicht-bildchen.test.js.

@@ -235,13 +235,40 @@ function paintSprite(halfW, up, down, drawFn) {
   g = c.getContext('2d');
   g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR);
   GLOW_SINK = sink; SPRITE_PAINT = true;
-  try { drawFn(); } finally { GLOW_SINK = null; SPRITE_PAINT = false; g = prev; }
-  return { c, ox: halfW, oy: up, glows: sink };
+  let mask = null;
+  try { drawFn(); mask = lightMask(c, sink); } finally { GLOW_SINK = null; SPRITE_PAINT = false; g = prev; }
+  return { c, ox: halfW, oy: up, glows: sink, mask };
 }
+// Lichtmaske eines Bildchens (Block 112): innerhalb der Fensterscheiben nur die Pixel, die am Ende noch nach Licht aussehen
+// (warmes Gelb). Was später davor gemalt wurde – Blumenkasten, Rahmen, das Nachbarhaus der Reihe –, bleibt so dunkel wie live.
+const litPx = (r, gr, b) => (r > 235 && gr > 185 && r - b > 100 && gr - b > 60) || (r > 252 && gr > 228 && gr < 234 && b > 165 && b < 171);   // Fenstergelb, Lampen; Glashaus #ffe7a8 genau
+function lightMask(c, sink) {
+  const warm = sink.filter(gl => gl.tint !== 'blue');
+  if (!warm.length) return null;
+  try {
+    const m = document.createElement('canvas'); m.width = c.width; m.height = c.height;
+    const mx = m.getContext('2d', { willReadFrequently: true });
+    mx.setTransform(DPR, 0, 0, DPR, 0, 0); mx.fillStyle = '#000';
+    for (const { q } of warm) { mx.beginPath(); q.forEach(([x, y], i) => i ? mx.lineTo(x, y) : mx.moveTo(x, y)); mx.closePath(); mx.fill(); }
+    const pane = mx.getImageData(0, 0, m.width, m.height), src = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, d = pane.data;
+    for (let i = 0; i < d.length; i += 4) if (d[i + 3] && !(src[i + 3] > 200 && litPx(src[i], src[i + 1], src[i + 2]))) d[i + 3] = 0;
+    mx.putImageData(pane, 0, 0);
+    return m;
+  } catch (e) { return null; }
+}
+// Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
+// die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, w = e.c.width / DPR * r, h = e.c.height / DPR * r, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
+  const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
+  for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
   g.drawImage(e.c, x0, y0, w, h);
-  for (const gl of e.glows) punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint);
+  for (const [q, rr, tint] of lights) punchGlow(q, rr, tint, tint === 'blue' ? null : e.mask ? 'mark' : 'pane');   // Kristall: Schein darüber wie bisher
+  if (e.mask && night > 0.15) {                                         // nur, was im Bildchen wirklich noch Fensterlicht ist
+    g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX);
+    g.drawImage(e.mask, x0, y0, w, h);
+    g.restore();
+  }
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)

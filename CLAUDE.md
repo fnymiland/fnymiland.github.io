@@ -356,6 +356,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+112. **Nachtlicht in Bildchen** (Block 112): Bildchen (weit weg) setzen Licht wie live ein: Schein vor dem Bildchen, Scheiben
+    über die Lichtmaske (`lightMask`) danach. Wer neues Leuchten baut, nimmt eine Fensterfarbe, die `litPx` erkennt
+    (warmes Gelb wie `#ffd873`), sonst bleibt es von weitem dunkel.
 111. **Name für Freunde** (Block 111): Was Freunde von dir sehen (Freundesliste, Päckchen, Gästebuch, Danke), immer über
     `myNick()` (Name auf dem Schild, sonst Vorname aus dem Konto) bzw. beim Besuch `visitName()` (Profil `users/<uid>/profile/name`)
     – nie `cloudUser.display` direkt. Neues von Freunden: `netCount()` (Zahl am 🌐, `netDotShow`), Karte `welcomeBack` einmal

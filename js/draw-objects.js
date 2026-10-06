@@ -23,7 +23,9 @@ function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leu
 // Viele Fenster dicht beieinander (Reihenhäuser, Schloss) stanzen sich gegenseitig durch und werden taghell (Block 70):
 // je Bildschirm-Zelle zählt der Schein mit; jeder weitere wird schwächer, die Fensterscheiben selbst bleiben hell
 const glowCells = new Map();
-function punchGlow(q, r, tint) {
+// part (Block 112): 'halo' nur der weiche Schein, 'pane' nur die Scheibe, 'mark' nichts stanzen, nur fürs Nachtbild merken – Bildchen stanzen den
+// Schein vor dem Einsetzen (trifft, was dahinter liegt, wie live) und die Scheiben über ihre Lichtmaske (render.js)
+function punchGlow(q, r, tint, part = null) {
   const strength = night / NIGHT_MAX, blue = tint === 'blue';
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
   // dasselbe Licht (große Gebäude stanzen es je Streifen) zählt nur einmal (Block 84d)
@@ -37,8 +39,8 @@ function punchGlow(q, r, tint) {
   g.globalCompositeOperation = 'destination-out';
   const rr = n ? r * 0.7 : r;
   g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
-  g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
-  if (!blue) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
+  if (!part || part === 'halo') g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
+  if (!blue && (!part || part === 'pane')) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
   g.restore();
   glows.push({ q, r, tint });               // große Gebäude (Streifen) tragen es mehrfach ein – drawNight fasst zusammen
 }
