@@ -60,6 +60,7 @@ function cancelPlan() { plan = null; }
 // Ein Feld prüfen, ohne auf das Geld zu schauen (das zählt die Summe): ok, schon so (same) oder geht nicht
 function planCheck(b, x, y) {
   const old = state.tiles.get(x + ',' + y);
+  if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') return (old.form || 0) === (decoLookNew('schiene').form || 0) ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil (Block 109)
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {      // umfärben
     const sameStyle = (old.style || 'sand') === currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;   // Wegform: kostenlos (Block 77)
     return sameStyle ? (shape && !sameWegShape(old) ? { cost: 0, mat: {} } : { same: true }) : { cost: ITEMS[b].cost, mat: {} };

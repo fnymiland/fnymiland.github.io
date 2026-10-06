@@ -1297,3 +1297,15 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       auf demselben Reiter neu gezeichnet wird (Reiterwechsel weiter nach oben).
 - [x] Stadtschmuck in der Kunstakademie günstiger: die Laterne und alle Formen/Farben von Laterne, Bank und Brunnen kosten
       etwa 1 Minute Einkommen statt 3 (`schmuck: true` in DESIGN, `DESIGN_SCHMUCK`). Alles andere bleibt wie in Block 50.
+
+
+## Block 109: Die Bahn wird gemütlich (06.10.2026)
+- [x] Oberleitung entfernt: keine Masten, kein Fahrdraht, kein Stromabnehmer (`drawRailWire`, `WIRE_H` weg).
+- [x] Gleis-Stile als Form der Schiene (`DECO_LOOKS.schiene`, `RAIL_LOOK`, `railLookOf`, `railTrim`): Schotter, Rasengleis
+      (frei), Waldbahn, Pflastergleis, Blumengleis (Kunstakademie, Gruppe „Gleise“). Wählen in der Stilleiste, im
+      Infofenster („Gleisbett“, auf alle übertragen); über bestehende Gleise ziehen stellt kostenlos um (`build`, `planCheck`).
+      Brücken bleiben Holzbrücken.
+- [x] Bahnhof: Blumenkästen, Kübel neben dem Eingang, Blumenampel und zwei Hängelampen (leuchten nachts) unterm Bahnsteigdach
+      (`kPlanter`, `hangBasket`, `hangLamp`). Hauptbahnhof: Kübel an den Bahnsteigenden und am Portal, Blumenkästen zur Straße.
+- [x] Fehler gefunden: `paintNewOf` gab alles aus `paintNew` an neu Gebautes weiter – auch eine nicht gekaufte Brunnenform.
+      Jetzt nur Wand/Dach/Fenster; Formen/Farben laufen über `decoLookNew`. Test: bahn-gemuetlich.test.js.

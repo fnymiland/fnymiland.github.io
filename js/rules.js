@@ -621,7 +621,8 @@ const styleOk = st => unlockOk(st, (st.kind || 'weg') + ':' + st.id);
 const PAINT_KEYS = ['wall', 'roof', 'win'];
 const paintOf = t => Object.fromEntries(PAINT_KEYS.filter(k => t[k] != null).map(k => [k, t[k]]));
 const samePaint = (a, b) => PAINT_KEYS.every(k => (a[k] != null ? a[k] : null) === (b[k] != null ? b[k] : null));
-const paintNewOf = b => state.paintNew[b] ? { ...state.paintNew[b] } : {};
+// nur Wand/Dach/Fenster – Form und Farbe von Stadtschmuck/Gleisen prüft decoLookNew (sonst käme Ungekauftes mit, Block 109)
+const paintNewOf = b => state.paintNew[b] ? Object.fromEntries(Object.entries(state.paintNew[b]).filter(([k]) => PAINT_KEYS.includes(k))) : {};
 const paintLikeOthers = t => [...state.tiles.values()].filter(o => o !== t && o.b === t.b && !samePaint(o, t));
 function rememberPaint(t) {
   const p = state.paintNew[t.b];

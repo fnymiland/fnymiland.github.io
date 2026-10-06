@@ -1032,9 +1032,9 @@ function lookThumb(b, form, col) {
   if (lookThumbs.has(key)) return lookThumbs.get(key);
   let url = '';
   try {
-    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : 1.9;
+    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : 1.9, rail = b === 'schiene';
     c.width = 64; c.height = 64; g = c.getContext('2d');
-    try { drawObject(b, 32, 50, s, 0, 3, 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }
+    try { drawObject(b, 32, rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
     url = c.toDataURL();
     if (!url || !url.startsWith('data:image')) url = '';
   } catch (e) { url = ''; }
@@ -1060,7 +1060,7 @@ function decoLookHtml(b, o) {
   const L = DECO_LOOKS[b], form = o.form || 0, col = o.col || 0, more = lookMore(b);
   const others = lookAll(b).filter(x => x !== o && ((x.form || 0) !== form || (x.col || 0) !== col)).length;
   const p = state.paintNew[b], on = !!(p && (p.form != null || p.col != null));
-  return `<div class="label">Form</div>
+  return `<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
     <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${L.cols ? `<div class="label">Farbe</div>
     <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
@@ -1070,10 +1070,10 @@ function decoLookHtml(b, o) {
 }
 function wireDecoLook(el, b, o, reopen) {
   const remember = () => { if (state.paintNew[b] && (state.paintNew[b].form != null || state.paintNew[b].col != null)) state.paintNew[b] = { form: o.form || 0, col: o.col || 0 }; };
-  for (const x of el.querySelectorAll('[data-dform]')) x.onclick = () => { undoable(() => { setLook(o, 'form', +x.dataset.dform); remember(); o.born = performance.now(); sfx('deco'); save(); }); reopen(); };
+  for (const x of el.querySelectorAll('[data-dform]')) x.onclick = () => { undoable(() => { setLook(o, 'form', +x.dataset.dform); remember(); o.born = performance.now(); groundVersion++; sfx('deco'); save(); }); reopen(); };   // Gleis liegt im Boden (Block 109)
   for (const x of el.querySelectorAll('[data-dcol]')) x.onclick = () => { undoable(() => { setLook(o, 'col', +x.dataset.dcol); remember(); sfx('deco'); save(); }); reopen(); };
   const all = el.querySelector('[data-dall]'), nw = el.querySelector('[data-dnew]'), more = el.querySelector('[data-dmore]');
-  if (all) all.onclick = () => { undoable(() => { const l = lookAll(b).filter(x => x !== o && ((x.form || 0) !== (o.form || 0) || (x.col || 0) !== (o.col || 0))); l.forEach(x => { setLook(x, 'form', o.form || 0); setLook(x, 'col', o.col || 0); }); sfx('deco'); save(); toast(`🎨 ${l.length} angepasst`); }); reopen(); };
+  if (all) all.onclick = () => { undoable(() => { const l = lookAll(b).filter(x => x !== o && ((x.form || 0) !== (o.form || 0) || (x.col || 0) !== (o.col || 0))); l.forEach(x => { setLook(x, 'form', o.form || 0); setLook(x, 'col', o.col || 0); }); groundVersion++; sfx('deco'); save(); toast(`🎨 ${l.length} angepasst`); }); reopen(); };
   if (nw) nw.onclick = () => { const p = state.paintNew[b]; state.paintNew[b] = p && (p.form != null || p.col != null) ? {} : { form: o.form || 0, col: o.col || 0 }; save(); reopen(); };
   if (more) more.onclick = () => { closePanel(); openResearch('design'); };
 }
@@ -2321,6 +2321,12 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-bahn', date: '6. Oktober', title: 'Die Bahn wird gemütlich', items: [
+    '🌿 <b>Gleis-Stile:</b> Schotter, Rasengleis, Waldbahn, Pflastergleis und Blumengleis. Beim Bauen in der Leiste wählen, über alte Gleise drüberziehen oder ein Gleis antippen und auf alle übertragen – umstellen kostet nichts.',
+    '🌸 <b>Bahnhöfe mit Blumen:</b> Blumenkästen, Kübel, eine Blumenampel und warme Lampen unterm Bahnsteigdach.',
+    '☁️ <b>Ohne Oberleitung:</b> keine grauen Masten und Drähte mehr – die Züge fahren einfach so.',
+    '🎨 Stadtschmuck in der Kunstakademie ist günstiger, und Bänke stecken nicht mehr ineinander.',
+  ] },
   { id: '2026-10-06-schmuck', date: '6. Oktober', title: 'Stadtschmuck in Formen und Farben & ein Knopf für Online', items: [
     '⛲ <b>Neue Brunnen:</b> Etagenbrunnen, Fontäne, Fischbrunnen und Blumenbrunnen – und der Kristallbrunnen funkelt prächtiger.',
     '🏮 <b>Laternen und Bänke nach Wunsch:</b> je 5 Formen (Kandelaber, Lampion, Pilzlaterne … Gartenbank, Picknicktisch, Rundbank …) und 8 Farben. Wählen beim Bauen in der Leiste oder antippen und umstellen. Die Gruppe heißt jetzt „Stadtschmuck“.',

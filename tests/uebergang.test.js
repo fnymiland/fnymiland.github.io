@@ -103,7 +103,7 @@ describe('Bahnübergang', () => {
     game("trains.push({ fake: true }); globalThis.__tc = trainCars; trainCars = () => [{ px: 10.2, py: 8, train: {} }]");
     expect(game('walkable(9, 8)')).toBe(true);
     game('trainCars = globalThis.__tc; trains.length = 0');
-    expect(game('archH(0)')).toBeGreaterThan(game('WIRE_H'));          // über dem Fahrdraht
+    expect(game('archH(0)')).toBeGreaterThan(17);                        // hoch über dem Zug
     expect(game('archH(0.2)')).toBeGreaterThan(17);                      // auch über der Wagenkante noch hoch genug
     expect(game('archH(1)')).toBeCloseTo(0);                             // Rampe endet auf dem Nachbarfeld ebenerdig
     expect(game('archAt(9, 7.4).b')).toBeCloseTo(-0.6);                  // Bewohner auf der Rampe davor steht schon darauf

@@ -13,6 +13,13 @@ function fail(msg) { toast(msg); sfx('error'); }
 function build(b, x, y, quiet) {
   // Umfärben: bestehenden Weg im anderen Stil übermalen
   const k0 = x + ',' + y, old = state.tiles.get(k0);
+  if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') {   // Gleis-Stil (Block 109): übermalen kostet nichts
+    const f = decoLookNew('schiene').form || 0;
+    if ((old.form || 0) === f) return false;
+    if (f) old.form = f; else delete old.form;
+    groundVersion++; sfx('road'); save();
+    return true;
+  }
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {
     const style = currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;            // Wegform (Block 77): umstellen kostet nichts
     const sameStyle = (old.style || 'sand') === style;

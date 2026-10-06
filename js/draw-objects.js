@@ -322,10 +322,10 @@ function drawStones(L, arms, t, x, y, z) {
 }
 
 // ---------------------------------------------------------------------------
-// Schienen: Schotterbett, Schwellen, zwei Stahlschienen; über Wasser eine Holzbrücke. Fahrdraht und Masten
-// (elektrischer Zug) kommen als Objekt dazu (drawObject 'schiene').
+// Schienen: Gleisbett je nach Stil (Block 109), Schwellen, zwei Schienen; über Wasser eine Holzbrücke. Keine Oberleitung
+// mehr (Block 109: ruhigeres Bild) – Bahnübergänge kommen als Objekt dazu (drawObject 'schiene').
 // ---------------------------------------------------------------------------
-const RAIL_W = 0.2, RAIL_GAUGE = 0.075, WIRE_H = 17;
+const RAIL_W = 0.2, RAIL_GAUGE = 0.075;
 // Mittellinien einer Schiene als Punktfolgen im Feld (Kurve als Bogen, sonst gerade Stücke von der Mitte)
 function railSegments(arms, t) {
   const curve = roadCurve(arms);
@@ -353,8 +353,18 @@ function offsetPath(pts, off) {
     return [p[0] - (b[1] - a[1]) / len * off, p[1] + (b[0] - a[0]) / len * off];
   });
 }
+// Gleisbett je Stil (Block 109): Rand und Fläche, Schwellen, Schienen; pave: Pflaster bis an die Schienen (Straßenbahn),
+// tufts: Grasbüschel, flowers: Blumenbänder an beiden Seiten (edgeFlowers: nur hier und da eine Blüte)
+const RAIL_LOOK = {
+  schotter: { edge: '#a79d8c', bed: '#c3b9a8', tie: '#8a6440', rail: '#6f7682', rw: 1.3 },
+  rasen:    { edge: '#7fbd5e', bed: '#9fd979', tie: '#d6b585', rail: '#7d818b', rw: 1.1, tufts: '#78b957' },
+  wald:     { edge: '#cbb17d', bed: '#e6d3a5', tie: '#b98a58', rail: '#7d7568', rw: 1.1, tufts: '#6fae55', edgeFlowers: 0.3 },
+  pflaster: { pave: 'kopf', rail: '#7b766c', rw: 0.9 },
+  blumen:   { edge: '#7fbd5e', bed: '#9fd979', tie: '#d6b585', rail: '#7d818b', rw: 1.1, flowers: true },
+};
+const railLookOf = t => (t && t.bridge ? null : RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id]) || RAIL_LOOK.schotter;
 function drawRailBed(cx, cy, z, x, y, t) {
-  const arms = railArms(x, y), segs = railSegments(arms, t);
+  const arms = railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const stroke = (paths, col, w) => {
     g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round';
@@ -373,16 +383,24 @@ function drawRailBed(cx, cy, z, x, y, t) {
     for (const sh of roadShapes(arms, t, 0.3)) poly(sh.map(L), C('#8a6440'));
     for (const sh of roadShapes(arms, t, 0.27)) poly(sh.map(L), C('#b08a5e'));
   }
-  for (const sh of roadShapes(arms, t, RAIL_W + 0.03)) poly(sh.map(L), C(t && t.bridge ? '#9a8f80' : '#a79d8c'));
-  for (const sh of roadShapes(arms, t, RAIL_W)) poly(sh.map(L), C('#c3b9a8'));
-  // Schwellen
-  g.strokeStyle = C('#8a6440'); g.lineWidth = 1.7 * z; g.lineCap = 'butt';
-  g.beginPath();
-  for (const seg of segs) alongPath(seg, 0.125, (p, dir) => {
-    const n = [-dir[1] * 0.15, dir[0] * 0.15], a = L([p[0] + n[0], p[1] + n[1]]), b = L([p[0] - n[0], p[1] - n[1]]);
-    g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
-  });
-  g.stroke();
+  if (lk.pave) {                                     // Pflastergleis: Belag des Wegs bis an die Schienen
+    const pl = PATH_LOOK[lk.pave];
+    for (const sh of roadShapes(arms, t, RAIL_W + 0.05)) poly(sh.map(L), C(pl.edge));
+    for (const sh of roadShapes(arms, t, RAIL_W + 0.02)) poly(sh.map(L), C(pl.fill));
+    g.save(); clipTo(roadShapes(arms, t, RAIL_W + 0.02), L); pattern(L, pl.pat[0], x, y, z, pl.pat[1] && C(pl.pat[1]), pl.cols); g.restore();
+  } else {
+    for (const sh of roadShapes(arms, t, RAIL_W + 0.03)) poly(sh.map(L), C(t && t.bridge ? '#9a8f80' : lk.edge));
+    for (const sh of roadShapes(arms, t, RAIL_W)) poly(sh.map(L), C(lk.bed));
+    // Schwellen
+    g.strokeStyle = C(lk.tie); g.lineWidth = 1.7 * z; g.lineCap = 'butt';
+    g.beginPath();
+    for (const seg of segs) alongPath(seg, 0.125, (p, dir) => {
+      const n = [-dir[1] * 0.15, dir[0] * 0.15], a = L([p[0] + n[0], p[1] + n[1]]), b = L([p[0] - n[0], p[1] - n[1]]);
+      g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+    });
+    g.stroke();
+    railTrim(L, segs, lk, x, y, z);
+  }
   if (t && t.cross && !t.foot) {                     // Bahnübergang: Wegbelag quer über die Gleise (nicht unter der Brücke)
     const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id], pa = pathArms(x, y);
     const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
@@ -397,8 +415,8 @@ function drawRailBed(cx, cy, z, x, y, t) {
   }
   // Schienen: dunkel, darauf ein heller Glanz
   const rails = segs.flatMap(seg => [offsetPath(seg, RAIL_GAUGE), offsetPath(seg, -RAIL_GAUGE)]);
-  stroke(rails, '#6f7682', 1.3);
-  g.save(); g.translate(0, -0.45 * z); stroke(rails, '#d6dbe2', 0.5); g.restore();
+  stroke(rails, lk.rail, lk.rw);
+  g.save(); g.translate(0, -0.4 * z); stroke(rails, '#dfe3e8', 0.45); g.restore();
   if (arms.length === 1) {                           // Prellbock am Ende
     const [dx, dy] = arms[0], n = [-dy * 0.17, dx * 0.17], a = L([-dx * 0.02 + n[0], -dy * 0.02 + n[1]]), b = L([-dx * 0.02 - n[0], -dy * 0.02 - n[1]]);
     g.strokeStyle = C('#d9534a'); g.lineWidth = 2.6 * z; g.lineCap = 'round';
@@ -416,6 +434,25 @@ function drawRailBed(cx, cy, z, x, y, t) {
     g.stroke();
   }
 }
+// Grasbüschel und Blumen am Gleis (Block 109): fest nach Feld und Stelle, damit nichts flackert
+function railTrim(L, segs, lk, x, y, z) {
+  if (!lk.tufts && !lk.flowers) return;
+  let i = 0;
+  for (const seg of segs) for (const s of [1, -1]) alongPath(offsetPath(seg, s * (RAIL_W + 0.01)), lk.flowers ? 0.07 : 0.1, p => {
+    const h = hash(x * 31 + i, y * 17 + s, 109), q = L(p); i++;
+    if (lk.flowers) {
+      circle(q[0], q[1] - 0.6 * z, 1.25 * z, C(h < 0.5 ? '#6fb553' : '#7cc463'));
+      circle(q[0] + (h - 0.5) * 1.4 * z, q[1] - 1.5 * z, 0.95 * z, C(FLOWER_COLS[Math.floor(h * 97) % FLOWER_COLS.length]));
+      return;
+    }
+    if (h > 0.55) return;                                          // Büschel hier und da
+    g.strokeStyle = C(lk.tufts); g.lineWidth = 0.6 * z; g.lineCap = 'round';
+    g.beginPath();
+    for (const d of [-0.9, 0, 0.9]) { g.moveTo(q[0] + d * z, q[1]); g.lineTo(q[0] + d * 1.6 * z, q[1] - (1.6 + h * 1.4) * z); }
+    g.stroke();
+    if (lk.edgeFlowers && h < lk.edgeFlowers * 0.55) circle(q[0], q[1] - 2.6 * z, 0.85 * z, C(FLOWER_COLS[Math.floor(h * 131) % FLOWER_COLS.length]));
+  });
+}
 const afterMovers = [], archWalkers = new Map();  // Zeichnungen über den Fahrzeugen ihres Felds (Bogenbrücke), Bewohner darauf
 // Bahnübergang: Schranken (senken sich, wenn ein Zug kommt; nachts blinkt es rot) oder eine Fußgängerbrücke
 const crossAnim = new Map();
@@ -426,7 +463,7 @@ function crossingAxes(x, y) {
   return { d, n: [d[1], d[0]] };
 }
 // Bogenbrücke: flacher Bogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
-// und rechts), in der Mitte über dem Fahrdraht. b = Abstand zur Mitte entlang des Wegs in Feldern.
+// und rechts), in der Mitte hoch über dem Zug. b = Abstand zur Mitte entlang des Wegs in Feldern.
 // So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
 const ARCH_H = 22, ARCH_W = 0.3, ARCH_SPAN = 1;
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
@@ -536,24 +573,6 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
   }
 }
 const drawFlat = (cx, cy, z, x, y, t) => t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t.weg != null ? { style: t.weg, rot: 0 } : t);
-// Fahrdraht über der Schiene, auf jedem zweiten Feld ein Mast seitlich
-function drawRailWire(cx, cy, z, x, y, t) {
-  const segs = railSegments(railArms(x, y), t);
-  const L = ([u, v], up = 0) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
-  if ((x + y) % 2 === 0) {
-    const seg = segs[0], m = seg[Math.floor(seg.length / 2)], a = seg[Math.max(0, Math.floor(seg.length / 2) - 1)], b = seg[Math.min(seg.length - 1, Math.floor(seg.length / 2) + 1)];
-    const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, n = [-(b[1] - a[1]) / len, (b[0] - a[0]) / len];
-    const side = n[0] + n[1] > 0 ? -1 : 1;             // Mast auf die hintere Seite, damit er den Zug nicht verdeckt
-    const foot = L([m[0] + n[0] * 0.3 * side, m[1] + n[1] * 0.3 * side]), top = [foot[0], foot[1] - (WIRE_H + 3) * z], hook = L(m, WIRE_H + 1);
-    ellipse(foot[0], foot[1] + 0.4 * z, 1.8 * z, 0.9 * z, 'rgba(40,60,20,0.18)');
-    g.strokeStyle = C('#8d939e'); g.lineWidth = 1.3 * z; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(foot[0], foot[1]); g.lineTo(top[0], top[1]); g.lineTo(hook[0], hook[1]); g.stroke();
-  }
-  g.strokeStyle = C('#4f545e'); g.lineWidth = 0.6 * z;
-  g.beginPath();
-  for (const seg of segs) seg.forEach((p, i) => { const q = L(p, WIRE_H); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); });
-  g.stroke();
-}
 
 // Steht an einer Seite des Wegfelds eine Hecke, ein Zaun oder eine Mauer, läuft der Weg dort bis an die Feldkante
 // (eckig) – kein Grasstreifen zwischen Weg und Linie (Block 41)
@@ -1320,7 +1339,6 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
     case 'schiene':
       if (PASS !== 'object') drawRailBed(cx, cy, z, x, y, t);
-      drawRailWire(cx, cy, z, x, y, t);
       if (t && t.cross) drawCrossing(cx, cy, z, x, y, t, now);
       break;
     case 'baum': {                        // Obstbaum; je Ecke eine andere Frucht, damit vier Bäume nicht gleich aussehen

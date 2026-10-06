@@ -68,7 +68,7 @@ const ITEMS = {
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
              desc: 'Verbindet Viertel. Weitere Stile gibt es in der Kunstakademie; als Block gelegt wird daraus ein Platz.' },
   schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
-             desc: 'Für den elektrischen Zug. Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
+             desc: 'Für den Zug – das Gleisbett kannst du wählen (Schotter, Rasen …). Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
   station: { cat: 'netz', name: 'Bahnhof', size: [1, 2], cost: 800, mat: { bretter: 10, quader: 6, metall: 4 }, needs: 'grass', tech: 'bahn',
              desc: 'Braucht Schienen direkt am Bahnsteig. Zwei verbundene Bahnhöfe auf verschiedenen Inseln: Der Zug bringt Pendler und Besucher (Fahrkarten + Ausgaben am Ziel) und bindet alles in der Nähe ans Dorf an.' },
@@ -995,6 +995,9 @@ const DECO_LOOKS = {
     { id: 'stein', name: 'Steinbank', design: 120 }, { id: 'picknick', name: 'Picknicktisch', design: 150 }, { id: 'rund', name: 'Rundbank', design: 200 }] },
   brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
     { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
+  // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
+  schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
+    { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },
 };
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),

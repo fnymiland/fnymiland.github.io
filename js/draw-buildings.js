@@ -8,6 +8,33 @@ const WOOD = '#c98d5c', WOOD_D = '#7a4f2a', STONE = '#dcd6ca', STONE_D = '#8a8f9
 // sanfte Akzentfarben (Stände, Schirme, Markisen, Kuppeln) – nicht grell
 const SOFT = { red: '#e39a8c', blue: '#93c2e0', yellow: '#efcf8a', green: '#9fcf8f', purple: '#c3a8e6', pink: '#eeb3c6' };
 
+// Gemütliche Bahnhöfe (Block 109): Blumenkübel (auf Höhe lift), Blumenampel und Lampe, die unter einem Dach hängen
+function kPlanter(K, a, b, lift = 0, s = 1) {
+  const z = K.z;
+  K.block({ a, b, ha: 0.055 * s, hb: 0.055 * s, h: 2.4 * s, lift, wall: '#c0704f', type: 'flat', roof: '#6b4a32' });
+  const [px, py] = K.P(a, b, lift + 2.4 * s), k = Math.abs(Math.round(a * 7 + b * 5));
+  circle(px, py - 1.5 * s * z, 2.3 * s * z, C('#5aa84f'));
+  circle(px - 1 * s * z, py - 2.5 * s * z, 1.6 * s * z, C('#6fbd5e'));
+  for (let i = 0; i < 3; i++) circle(px + (i - 1) * 1.3 * s * z, py - (2.4 + (i % 2) * 0.9) * s * z, 0.8 * s * z, C(FLOWER_COLS[(i * 2 + k) % FLOWER_COLS.length]));
+}
+function hangBasket(K, a, b, up) {
+  const z = K.z, [x, y] = K.P(a, b, up), by = y + 4 * z;
+  g.strokeStyle = C('#6b6f78'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(x, y); g.lineTo(x, by - 1 * z); g.stroke();
+  g.strokeStyle = C('#4f9a45'); g.lineWidth = 0.6 * z; g.lineCap = 'round'; g.beginPath();      // Ranken
+  for (const dx of [-1.5, -0.3, 1.3]) { g.moveTo(x + dx * z, by); g.lineTo(x + dx * 1.15 * z, by + (2 + Math.abs(dx)) * z); }
+  g.stroke();
+  g.fillStyle = C('#8a5a3c'); g.beginPath(); g.ellipse(x, by, 2.1 * z, 1.5 * z, 0, 0, Math.PI); g.fill();
+  circle(x, by - 0.5 * z, 2 * z, C('#5aa84f'));
+  for (const [dx, dy, c] of [[-1.2, -1, '#ff8fb1'], [0.3, -1.6, '#fff27a'], [1.3, -0.8, '#c49bff'], [-0.2, -0.3, '#ffffff']]) circle(x + dx * z, by + dy * z, 0.75 * z, C(c));
+}
+function hangLamp(K, a, b, up) {
+  const z = K.z, [x, y] = K.P(a, b, up), lit = night > 0.15 && isLive(), ly = y + 3.6 * z;
+  g.strokeStyle = C('#4a4a58'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(x, y); g.lineTo(x, ly - 1 * z); g.stroke();
+  poly([[x - 1 * z, ly - 1 * z], [x + 1 * z, ly - 1 * z], [x + 2 * z, ly + 0.4 * z], [x - 2 * z, ly + 0.4 * z]], C('#3f5a4a'));   // grüner Schirm
+  circle(x, ly + 0.9 * z, 1 * z, lit ? '#ffe58a' : C('#fff7d6'));
+  if (lit) glowQuad([[x - 1, ly], [x + 1, ly], [x + 1, ly + 2 * z], [x - 1, ly + 2 * z]], 20 * z);
+}
+
 // Wand- und Dachfarbe: selbst gewählt (t.wall/t.roof aus WALLS/ROOFS, wie bei Häusern) oder die des Gebäudes
 function paint(t, wall, roof) { return [t && t.wall != null ? WALLS[t.wall] : wall, t && t.roof != null ? ROOFS[t.roof] : roof]; }
 
@@ -320,8 +347,8 @@ const BUILDING_ART = {
       kShadow(K, 0.5);
       const B = K.block({ a: -0.2, ha: 0.24, hb: 0.54, h: 17, wall, roof, roofH: 11 });
       K.door(B, 'front', 0.44, 0.56, 0.62);
-      K.wins(B, 'front', 4, 0.35, 0.72, 0.06, 0.94, [1, 2]);
-      K.sideWins(B, 1, 0.35, 0.72);
+      K.wins(B, 'front', 4, 0.35, 0.72, 0.06, 0.94, [1, 2], true);      // Blumenkästen (Block 109)
+      K.sideWins(B, 1, 0.35, 0.72, true);
       const F = B.faces.front;
       if (F) {                                             // Bahnhofsuhr über der Tür
         faceClock(F, 0.5, F.H * 0.84, 2.8 * z, z, { ring: '#4a4a58', ringW: 0.7, hands: [[0, 0.72, 0.7], [Math.PI / 2, 0.5, 0.7]] });   // flach auf der Wand (Block 80)
@@ -330,11 +357,13 @@ const BUILDING_ART = {
     const canopy = () => {
       for (const b of [-0.72, -0.24, 0.24, 0.72]) kPost(K, 0.3, b, 13, '#6b6f78', 1.2);
       K.block({ a: 0.28, ha: 0.13, hb: 0.88, h: 1.4, lift: 13, wall: shade(roof, -0.12), type: 'flat', roof: shade(roof, 0.06) });
+      for (const b of [-0.48, 0.48]) hangLamp(K, 0.37, b, 13);           // Lampen und Blumenampel unterm Dach (Block 109)
+      hangBasket(K, 0.37, 0, 13);
       const [sx, sy] = K.P(0.3, -0.5, 9);                 // blaues Schild
       poly([[sx - 4 * z, sy - 2 * z], [sx + 4 * z, sy - 2 * z], [sx + 4 * z, sy + 1.5 * z], [sx - 4 * z, sy + 1.5 * z]], C('#3e7fd0'));
       g.strokeStyle = C('#ffffff'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(sx - 2.5 * z, sy - 0.2 * z); g.lineTo(sx + 2.5 * z, sy - 0.2 * z); g.stroke();
     };
-    K.scene([[-0.2, 0, hall], [0.3, 0, canopy], [0.22, 0.45, () => {
+    K.scene([[-0.2, 0, hall], [0.1, -0.42, () => kPlanter(K, 0.1, -0.42)], [0.1, 0.42, () => kPlanter(K, 0.1, 0.42)], [0.3, 0, canopy], [0.22, 0.45, () => {
       const [bx, by] = K.P(0.2, 0.45); g.save(); g.translate(bx, by); g.scale(0.45, 0.45); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: K.r }); g.restore();
     }]]);
   },
@@ -729,6 +758,7 @@ const BUILDING_ART = {
           K.scene([                                                       // vorn am offenen Bahnsteigende: Bank, Laterne, Uhr
             [1.45, bp, () => K.block({ a: 1.45, b: bp + 0.2, ha: 0.15, hb: 0.05, h: 2, lift: 2.6, wall: '#8a5a3c', type: 'flat', roof: '#a8744e' })],   // Bank
             [1.6, bp - 0.15, () => { const [lx, ly] = K.P(1.6, bp - 0.18, 2.6); lampPost(lx, ly, z, 12); }],
+            [1.84, bp - 0.2, () => kPlanter(K, 1.84, bp - 0.2, 2.6, 0.9)],   // Blumenkübel am Bahnsteigende (Block 109)
             [1.8, bp, () => {                                                                 // Bahnsteiguhr auf einem Mast
               const [cx, cy] = K.P(1.8, bp + 0.15, 2.6), top = cy - 9 * z;
               g.strokeStyle = C(iron); g.lineWidth = 1.1 * z; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, top); g.stroke();
@@ -773,7 +803,7 @@ const BUILDING_ART = {
         parts.push([-1.45, mid, () => {
           const B = K.block({ a: -1.45, b: mid, ha: 0.42, hb: half, h: H, wall, roof, roofH: look === 'land' ? 7 : 8, type: wingType, ridge: 'b' });
           const cnt = Math.max(1, Math.round(half * 2 / 0.75));
-          K.wins(B, 'back', cnt, 0.3, 0.72, 0.1, 0.9, [], look === 'land');
+          K.wins(B, 'back', cnt, 0.3, 0.72, 0.1, 0.9, [], true);             // zur Straße: Blumenkästen (Block 109)
           K.wins(B, 'front', cnt, 0.3, 0.72, 0.1, 0.9, [], false);
           if (s0 <= -n + 1e-6) K.wins(B, 'left', 1, 0.3, 0.72, 0.3, 0.7);      // Stirnseiten außen
           if (s1 >= n - 1e-6) K.wins(B, 'right', 1, 0.3, 0.72, 0.3, 0.7);
@@ -798,6 +828,7 @@ const BUILDING_ART = {
       const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
       for (const F of Object.values(T.faces)) if (F) faceClock(F, 0.5, F.H - 5 * z, 2.6 * z, z, { ring: '#4a4a58', ringW: 0.7, lit, hands: [[hr, 0.55, 0.9], [mi, 0.8, 0.7]] });
     }]);
+    for (const sb of [-1, 1]) parts.push([-1.94, sb * (PW + 0.12), () => kPlanter(K, -1.94, sb * (PW + 0.12), 0, 1.2)]);   // Kübel neben dem Portal (Block 109)
     K.scene(parts);
   },
   // --- Wohnen ---

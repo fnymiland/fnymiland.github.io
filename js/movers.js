@@ -705,11 +705,6 @@ function drawTrainCar(car, z, now) {
   const roof = C4.map(([a, b]) => P(a * 0.97, b * 0.9, H));
   poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
   poly(C4.map(([a, b]) => P(a * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
-  if (car.i === 0 || tr.model === 'tram') {             // Stromabnehmer bis zum Fahrdraht
-    const [bx, by] = P(0, 0, H + 1), [tx, ty] = P(0, 0, WIRE_H), [kx, ky] = P(-0.12, 0, (H + WIRE_H) / 2 + 1);
-    g.strokeStyle = C('#4f545e'); g.lineWidth = 0.8 * z; g.lineCap = 'round';
-    g.beginPath(); g.moveTo(bx, by); g.lineTo(kx, ky); g.lineTo(tx, ty); g.moveTo(tx - 2.5 * z, ty); g.lineTo(tx + 2.5 * z, ty); g.stroke();
-  }
 }
 
 // Expedition: das Boot fährt vom Steg zur nächsten Insel, sucht dort eine Weile und kommt zurück (echte Zeit)
