@@ -1000,11 +1000,11 @@ const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),
-  ...Object.entries(DECO_LOOKS).flatMap(([b, L]) => [...L.forms.map((f, i) => [f, i]).filter(([f]) => f.design).map(([f, i]) => ({ id: `${b}:form:${f.id}`, group: L.group, look: [b, i], name: f.name, price: f.design })),
-    ...(L.cols || []).filter(c => c.design).map(c => ({ id: `${b}:col:${c.id}`, group: L.group, col: c.c, name: `Farbe ${c.name}`, price: c.design }))]),
+  ...Object.entries(DECO_LOOKS).flatMap(([b, L]) => [...L.forms.map((f, i) => [f, i]).filter(([f]) => f.design).map(([f, i]) => ({ id: `${b}:form:${f.id}`, group: L.group, look: [b, i], name: f.name, price: f.design, schmuck: true })),
+    ...(L.cols || []).filter(c => c.design).map(c => ({ id: `${b}:col:${c.id}`, group: L.group, col: c.c, name: `Farbe ${c.name}`, price: c.design, schmuck: true }))]),
   ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
   ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
-  ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master })),
+  ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master, ...(b === 'laterne' ? { schmuck: true } : {}) })),
 ];
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];

@@ -1295,3 +1295,5 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Deko selbst (auch die Bau-Vorschau mit Drehung und Form). Test: schmuck.test.js.
 - [x] Kunstakademie: nach dem Kauf sprang die Liste nach oben. `openModal` behält den Scrollstand, wenn dasselbe Fenster
       auf demselben Reiter neu gezeichnet wird (Reiterwechsel weiter nach oben).
+- [x] Stadtschmuck in der Kunstakademie günstiger: die Laterne und alle Formen/Farben von Laterne, Bank und Brunnen kosten
+      etwa 1 Minute Einkommen statt 3 (`schmuck: true` in DESIGN, `DESIGN_SCHMUCK`). Alles andere bleibt wie in Block 50.

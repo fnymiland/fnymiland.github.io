@@ -653,10 +653,11 @@ const techCost = t => niceSci(t.cost * TIER_MUL[t.tier] * (1 + 0.1 * [...state.t
 // Kunstakademie-Preis (Block 50): nach dem besten Einkommen, damit es das ganze Spiel über etwas Begehrtes bleibt.
 // Normal etwa DESIGN_MIN Minuten (günstige Stücke weniger, aufwendige mehr: Wurzel aus Grundpreis/150), ✦ Meisterstücke
 // DESIGN_MASTER-mal so viel. Mindestens das 5-Fache des Grundpreises (Meisterstücke das 25-Fache).
-const DESIGN_MIN = 3, DESIGN_MASTER = 5, DESIGN_FLOOR = 5;
+// Stadtschmuck (Formen/Farben von Laterne, Bank, Brunnen, Block 108): nur DESIGN_SCHMUCK Minuten – ist ja nur kleine Deko
+const DESIGN_MIN = 3, DESIGN_SCHMUCK = 1, DESIGN_MASTER = 5, DESIGN_FLOOR = 5;
 function designPrice(d) {
   if (!d || !d.price) return 0;
-  const m = d.master ? DESIGN_MASTER : 1, minutes = DESIGN_MIN * Math.sqrt(d.price / 150) * m;
+  const m = d.master ? DESIGN_MASTER : 1, minutes = (d.schmuck ? DESIGN_SCHMUCK : DESIGN_MIN) * Math.sqrt(d.price / 150) * m;
   return niceRound(Math.max(d.price * DESIGN_FLOOR * m, minutes * 60 * wonderRate()));
 }
 // Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie

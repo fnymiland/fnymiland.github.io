@@ -89,7 +89,10 @@ describe('Preise nach Einkommen (Block 50)', () => {
     expect(game("designPrice(DESIGN_BY_ID['statue'])")).toBeGreaterThanOrEqual(22000);    // 900 × 25 (gerundet)
     game('state.incPeak = 1000');                                                        // 1000 Taler/s
     const normal = game("designPrice(DESIGN_BY_ID['laterne'])"), master = game("designPrice(DESIGN_BY_ID['statue'])");
-    expect(normal).toBeGreaterThanOrEqual(3 * 60 * 1000 * 0.95);                        // Laterne: etwa 3 Minuten
+    expect(normal).toBeGreaterThanOrEqual(60 * 1000 * 0.95);                             // Laterne (Stadtschmuck, Block 108): etwa 1 Minute
+    expect(normal).toBeLessThanOrEqual(60 * 1000 * 1.05);
+    expect(game("designPrice(DESIGN_BY_ID['bank:form:stein'])")).toBeLessThanOrEqual(60 * 1000 * 1.05);
+    expect(game("designPrice(DESIGN_BY_ID['pavillon'])")).toBeGreaterThanOrEqual(3 * 60 * 1000 * 0.95);   // andere Deko: weiter etwa 3 Minuten
     expect(master / game("designPrice(DESIGN_BY_ID['wall:5'])")).toBeGreaterThan(4);     // Meisterstück deutlich teurer
   });
 
