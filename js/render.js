@@ -326,7 +326,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
-  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
+  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.wing ? 'w' + t.wing : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
   const e = getSprite(key, z, () => {
     const pad = SPRITE_PAD[t.b] || [0, 0];

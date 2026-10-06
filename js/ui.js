@@ -1335,6 +1335,7 @@ function openInfo(x, y) {
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
   for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);
   for (const [id, d] of [['p-gplus', 1], ['p-gminus', -1]]) if ($(id)) $(id).onclick = () => { const nk = hbfResize(x + ',' + y, d); if (nk) openInfo(...keyXY(nk)); };
+  for (const b of el.querySelectorAll('[data-hwing]')) b.onclick = () => { const nk = undoable(() => hbfWingSet(x + ',' + y, +b.dataset.hwing)); if (nk) openInfo(...keyXY(nk)); };   // Block 118
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
@@ -1587,6 +1588,9 @@ function hbfHtml(x, y, t) {
       ${n > HBF_MIN ? '<button class="btn ghost" id="p-gminus">− Gleis</button>' : ''}</div>
     ${addErr && !/Taler|Material/.test(addErr) ? `<p class="muted">+ Gleis: ${addErr}.</p>` : ''}
     <p class="muted">Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
+    <div class="label">Seitenflügel</div>
+    <div class="looks">${[[0, 'ohne'], [-1, '◧ links'], [1, 'rechts ◨']].map(([v, nm]) => `<button class="look${hbfWing(t) === v ? ' on' : ''}" data-hwing="${v}">${nm}</button>`).join('')}</div>
+    <p class="muted">Mit Gepäckhalle ist der Bahnhof ein Feld breiter (ungerade) – Portal und Eingang liegen dann mittig auf genau einem Feld.${hbfWing(t) ? ' Abbauen gibt die Hälfte zurück.' : ` Anbauen: ${costText(HBF_WING_COST)}.`}</p>
     <div class="label">Aussehen</div>
     <div class="looks">${Object.entries(HBF_LOOKS).map(([id, nm]) => `<button class="look${(t.look || 'glas') === id ? ' on' : ''}" data-hlook="${id}">${nm}</button>`).join('')}</div>`;
 }
@@ -2326,6 +2330,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-fluegel', date: '6. Oktober', title: 'Hauptbahnhof mit Seitenflügel', items: [
+    '🧳 <b>Gepäckhalle:</b> Im Fenster des Hauptbahnhofs kannst du links oder rechts einen Seitenflügel anbauen. Dann ist der Bahnhof ein Feld breiter (ungerade) – Portal und Eingang liegen mittig auf genau einem Feld, passend zu einem 1er-Weg.',
+  ] },
   { id: '2026-10-06-drehen', date: '6. Oktober', title: 'Ganze Anlagen drehen', items: [
     '⟳ <b>Mehrere Dinge drehen:</b> Mit ✋ ein Rechteck aufziehen, dann mit ⟳ (oder R, Mausrad) die ganze Anlage in Vierteldrehungen drehen – jedes Ding dreht mit, alles bleibt zueinander gleich.',
     '🌳 <b>Parks ziehen komplett um:</b> Parkrasen, Freizeitpark-Boden und Hecken, Zäune, Mauern samt Toren kommen jetzt mit.',

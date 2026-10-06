@@ -1400,3 +1400,12 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Zäune, Mauern samt Tor/Bogen (`edge`, im Rechteck und auf seinem Rand) mit. Ziel: Rasen nur auf Wiese, keine doppelte
       Linie. Abbrechen legt alles zurück, Speichern beim Tragen sichert Rasen/Linien am alten Platz. Vorschau zeigt Rasen und
       Linien. Test: gruppe-drehen.test.js (4 Drehungen = Original, 1 Drehung exakt, Abbrechen, Speichern, Fehler).
+
+
+## Block 118: Hauptbahnhof mit Seitenflügel (06.10.2026)
+- [x] Der Hauptbahnhof war immer gerade breit (2 je Gleis), das Portal lag zwischen zwei Feldern – in einer Stadt mit 1er-Wegen
+      zu den Türen nur schief zu setzen. Jetzt im Infofenster „Seitenflügel: ohne · links · rechts“ (`hbfWingSet`, Kosten
+      `HBF_WING_COST`, abbauen ½ zurück, umsetzen kostenlos): eine Gepäckhalle neben dem äußersten Gleis (Tor, Uhr, Fenster,
+      Kübel), das Empfangsgebäude läuft darüber; der Bahnhof ist ein Feld breiter, Portal und Eingang (`hbfEntrance`) mittig auf
+      einem Feld. Die Gleise bleiben dabei, wo sie sind (Anker rückt), auch mit „+ Gleis“. Gespeichert als `wing`.
+      Test: hbf-fluegel.test.js (alle Drehungen, beide Seiten, Kosten, Platz, Speichern, Zeichnen).

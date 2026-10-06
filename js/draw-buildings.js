@@ -760,7 +760,8 @@ const BUILDING_ART = {
   // Uhrturm (Eingang nach außen, dort schließt der Weg an), links und rechts gleich lange Flügel. Drei Designs (t.look):
   // Glashalle (Sandstein, gewölbte Glasdächer), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz, Blumenkästen).
   hbf(K, s, now, x, y, t, ha, hb) {
-    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g, PW = 0.8;   // PW: halbe Breite des Portals
+    const wingS = hbfWing(t), bOff = hbfBOff(t);                                     // Seitenflügel (Block 118): Gleise rücken ½ zur Seite
+    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g + bOff, PW = 0.8;   // PW: halbe Breite des Portals
     if (groundPart(() => {
       K.rect(-1, -hb, 2, hb, C('#cdc6b8'));
       K.rect(-2, -hb, -1, hb, C('#dad2c2'));
@@ -822,8 +823,9 @@ const BUILDING_ART = {
     }
     // Empfangsgebäude: Flügel links und rechts vom Portal, je Gleis ein Stück (damit es richtig vor und hinter den Hallen liegt)
     const wingType = look === 'glas' ? 'mansard' : 'gable';      // Satteldach läuft über alle Stücke durch (Walm gab Kerben, Block 85b)
-    for (let i = 0; i < n; i++) {
-      const lo = gb(i) - 0.5, hi = gb(i) + 1.5;
+    const spans = [...Array(n)].map((_, i) => [gb(i) - 0.5, gb(i) + 1.5]);
+    if (wingS) spans.push(wingS > 0 ? [n + bOff, hb] : [-hb, -n + bOff]);   // auch über dem Flügel
+    for (const [lo, hi] of spans) {
       const segs = hi <= -PW || lo >= PW ? [[lo, hi]] : [lo < -PW ? [lo, -PW] : null, hi > PW ? [PW, hi] : null].filter(Boolean);
       for (const [s0, s1] of segs) {
         const mid = (s0 + s1) / 2, half = (s1 - s0) / 2;
@@ -832,10 +834,21 @@ const BUILDING_ART = {
           const cnt = Math.max(1, Math.round(half * 2 / 0.75));
           K.wins(B, 'back', cnt, 0.3, 0.72, 0.1, 0.9, [], true);             // zur Straße: Blumenkästen (Block 109)
           K.wins(B, 'front', cnt, 0.3, 0.72, 0.1, 0.9, [], false);
-          if (s0 <= -n + 1e-6) K.wins(B, 'left', 1, 0.3, 0.72, 0.3, 0.7);      // Stirnseiten außen
-          if (s1 >= n - 1e-6) K.wins(B, 'right', 1, 0.3, 0.72, 0.3, 0.7);
+          if (s0 <= -hb + 1e-6) K.wins(B, 'left', 1, 0.3, 0.72, 0.3, 0.7);     // Stirnseiten außen
+          if (s1 >= hb - 1e-6) K.wins(B, 'right', 1, 0.3, 0.72, 0.3, 0.7);
         }]);
       }
+    }
+    if (wingS) {                                                   // Seitenflügel: Gepäckhalle neben dem äußersten Gleis (Block 118)
+      const wbm = wingS * (hb - 0.5), wh = Math.round(H * 0.6);
+      parts.push([0.45, wbm, () => {
+        const G = K.block({ a: 0.45, b: wbm, ha: 1.38, hb: 0.4, h: wh, wall, roof, roofH: 6, type: 'gable', ridge: 'a', trim: '#fffaf0' });
+        K.door(G, 'front', 0.3, 0.7, 0.62, look === 'backstein' ? '#3f5a4a' : '#8a5a3c');           // großes Holztor
+        for (const side of ['left', 'right']) K.wins(G, side, 3, 0.4, 0.75, 0.1, 0.9, [], look === 'land');
+        const F = G.faces.front;
+        if (F) faceClock(F, 0.5, F.H * 0.86, 1.8 * z, z, { ring: '#4a4a58', ringW: 0.6, lit, hands: [[0, 0.7, 0.7], [Math.PI / 2, 0.5, 0.7]] });
+      }]);
+      for (const db of [-0.32, 0.32]) parts.push([1.95, wbm + db, () => kPlanter(K, 1.95, wbm + db, 0, 0.9)]);   // Kübel vor dem Tor
     }
     // Portal in der Mitte: Giebel nach außen, große Tür mit Fenster darüber, darauf der Uhrturm (Uhren flach auf den Seiten)
     parts.push([-1.5, 0, () => {
@@ -1297,6 +1310,6 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
 const UNPAINTED = new Set(['feld', 'glashaus', 'markt', 'bootssteg', 'seilbahn', 'solarfeld', 'wellen']);
 const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => !UNPAINTED.has(b)), 'rathaus', 'fz_schloss', 'fz_torturm', 'schloss']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
-  const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t)] : ITEMS[type].size || [1, 1];
+  const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);
 }
