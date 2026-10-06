@@ -22,4 +22,12 @@ describe('Kein Seiten-Zoom (Block 110)', () => {
     expect(game("(() => { const e = new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: true }); document.getElementById('modal').dispatchEvent(e); return e.defaultPrevented; })()")).toBe(true);
     expect(game("(() => { const e = new WheelEvent('wheel', { bubbles: true, cancelable: true, ctrlKey: false }); document.getElementById('modal').dispatchEvent(e); return e.defaultPrevented; })()")).toBe(false);   // normales Scrollen im Fenster
   });
+  it('Block 113: Hinweise (Toast) und Konfetti liegen über Fenstern, das antippbare Erfolgs-Band darunter', () => {
+    const css = fs.readFileSync(path.join(root, 'style.css'), 'utf8');
+    const z = sel => { const m = css.match(new RegExp(sel.replace(/[#.]/g, c => '\\' + c) + '\\s*\\{[^}]*?z-index:\\s*(\\d+)')); return m ? +m[1] : 0; };
+    expect(z('#toast')).toBeGreaterThan(z('#modal'));
+    expect(z('#confetti')).toBeGreaterThan(z('#modal'));
+    expect(z('#achv')).toBeLessThan(z('#modal'));
+    expect(z('#modal')).toBe(40);
+  });
 });

@@ -1352,3 +1352,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
         Serverzeit; Zahl verdeckte das „!“ bei Konflikt; Besuchs-/Stufen-Zähler je Gerät statt je Konto; Insel-Kennung bei
         zwei Geräten gleichzeitig (jetzt per Transaktion); lange Kontonamen > 30 Zeichen.
       - Kleinigkeiten: Zahl am 🌐 auf dem Handy kleiner, Maus über der Karte vor dem Laden (Konsolenfehler), „Neu“-Text Strom.
+
+
+## Block 113: Nichts mehr hinter Fenstern (06.10.2026)
+- [x] Kurze Hinweise (Toast) hatten keine Ebene und lagen unter jedem Fenster – z. B. „… ist jetzt deine Partnerstadt“,
+      „Anfrage geschickt“, „Freigeschaltet“ in der Kunstakademie. Jetzt `#toast` z-index 50 (über `#modal` 40), ebenso das
+      Konfetti beim Erfinden. Beide lassen Tippen durch. Das antippbare Erfolgs-Band bleibt unter Fenstern (Block 84e).
+      Test: kein-zoom.test.js.
