@@ -1359,3 +1359,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       „Anfrage geschickt“, „Freigeschaltet“ in der Kunstakademie. Jetzt `#toast` z-index 50 (über `#modal` 40), ebenso das
       Konfetti beim Erfinden. Beide lassen Tippen durch. Das antippbare Erfolgs-Band bleibt unter Fenstern (Block 84e).
       Test: kein-zoom.test.js.
+
+
+## Block 114: „Weitere Formen freischalten“ sieht nach Knopf aus (06.10.2026)
+- [x] Im Fenster von Laterne, Bank, Brunnen, Gleis stand „6 weitere Formen und Farben in der Kunstakademie“ als blasser Text –
+      anklickbar, aber nicht so aussehend. Jetzt ein gelblicher Knopf „🎨 6 weitere Formen und Farben freischalten ›“ (`.look.art-more`),
+      ebenso „🎨 Mehr Farben freischalten ›“ bei Gebäuden. Die Kunstakademie öffnet gleich an der passenden Gruppe (`artJump`),
+      auch vom 🎨-Knopf in der Bauleiste und bei den Buschfarben. Test: schmuck.test.js.

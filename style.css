@@ -308,6 +308,7 @@ html, body {
   background: var(--cream2); border-radius: 99px; padding: 4px 10px; box-shadow: 0 2px 0 var(--shadow); cursor: pointer;
 }
 .look.on { background: var(--yellow); box-shadow: 0 2px 0 #e0c060; }
+.look.art-more { background: #fff3c4; box-shadow: 0 2px 0 #e0c060; }   /* zur Kunstakademie (Block 114): sieht nach Knopf aus */
 .look:disabled { opacity: 0.4; cursor: default; }
 .label { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: var(--brown2); margin-top: 10px; }
 .text-in {

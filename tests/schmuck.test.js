@@ -75,4 +75,11 @@ describe('Stadtschmuck (Block 106)', () => {
     expect(game("slotPos(8, 8, 1, decosAt('8,8')[1])[0]")).toBeLessThan(game("slotPos(8, 8, 1, 'bank')[0]"));
     game("buildRot = 0");
   });
+  it('Block 114: „weitere Formen freischalten“ ist ein Knopf und öffnet die Kunstakademie', () => {
+    game("buildSmall('bank', 8, 8, 1); setTool('look'); openDecoInfo(8, 8, 1)");
+    expect(game("(() => { const b = document.querySelector('#panel button.art-more[data-dmore]'); return b ? b.textContent : null; })()")).toMatch(/weitere Formen und Farben freischalten/);
+    game("document.querySelector('#panel [data-dmore]').click()");
+    expect(game("!$('modal').hidden && !!document.querySelector('[data-rtab=\"design\"].on')")).toBe(true);
+    game("closeModal()");
+  });
 });

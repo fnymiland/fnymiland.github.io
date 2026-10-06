@@ -1014,7 +1014,7 @@ function wireBushCol(el, o) {
   const all = el.querySelector('[data-bcolall]'), nw = el.querySelector('[data-bcolnew]'), more = el.querySelector('[data-bmore]');
   if (all) all.onclick = () => { undoable(() => { const n = o.all(o.cur); sfx('deco'); save(); toast(`🎨 ${n} umgefärbt`); }); o.reopen(); };
   if (nw) nw.onclick = () => { const p = state.paintNew[o.key]; state.paintNew[o.key] = p && p.col != null ? false : { col: o.cur }; sfx('deco'); save(); o.reopen(); };
-  if (more) more.onclick = () => openResearch('design');
+  if (more) more.onclick = () => { openResearch('design'); artJump('Büsche'); };
 }
 const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 // --- Stadtschmuck: Form und Farbe (Block 106) – in der Leiste beim Bauen und im Fenster beim Antippen ---------------
@@ -1053,7 +1053,7 @@ function wireLookChips(bar, b, t) {
   const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
   for (const x of bar.querySelectorAll('[data-lform]')) x.onclick = () => set('form', +x.dataset.lform);
   for (const x of bar.querySelectorAll('[data-lcol]')) x.onclick = () => set('col', +x.dataset.lcol);
-  if (bar.querySelector('[data-lmore]')) bar.querySelector('[data-lmore]').onclick = () => openResearch('design');
+  if (bar.querySelector('[data-lmore]')) bar.querySelector('[data-lmore]').onclick = () => { openResearch('design'); artJump(DECO_LOOKS[b].group); };
 }
 // Im Fenster: Form, Farbe, auf alle gleichen übertragen, für neu Gebautes merken
 function decoLookHtml(b, o) {
@@ -1064,7 +1064,7 @@ function decoLookHtml(b, o) {
     <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${L.cols ? `<div class="label">Farbe</div>
     <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
-    ${more ? `<p class="muted"><span class="link" data-dmore="1">${more} weitere Formen und Farben in der Kunstakademie 🎨</span></p>` : ''}
+    ${more ? `<div class="looks"><button class="look art-more" data-dmore="1">🎨 ${more} weitere ${L.cols ? 'Formen und Farben' : 'Formen'} freischalten ›</button></div>` : ''}
     <div class="looks paint-more">${others ? `<button class="look" data-dall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
       <button class="look${on ? ' on' : ''}" data-dnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen das</button></div>`;
 }
@@ -1075,7 +1075,12 @@ function wireDecoLook(el, b, o, reopen) {
   const all = el.querySelector('[data-dall]'), nw = el.querySelector('[data-dnew]'), more = el.querySelector('[data-dmore]');
   if (all) all.onclick = () => { undoable(() => { const l = lookAll(b).filter(x => x !== o && ((x.form || 0) !== (o.form || 0) || (x.col || 0) !== (o.col || 0))); l.forEach(x => { setLook(x, 'form', o.form || 0); setLook(x, 'col', o.col || 0); }); groundVersion++; sfx('deco'); save(); toast(`🎨 ${l.length} angepasst`); }); reopen(); };
   if (nw) nw.onclick = () => { const p = state.paintNew[b]; state.paintNew[b] = p && (p.form != null || p.col != null) ? {} : { form: o.form || 0, col: o.col || 0 }; save(); reopen(); };
-  if (more) more.onclick = () => { closePanel(); openResearch('design'); };
+  if (more) more.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS[b].group); };
+}
+// Kunstakademie gleich an der passenden Gruppe öffnen (Block 114)
+function artJump(group) {
+  const lab = [...document.querySelectorAll('#modal-card .label')].find(l => l.textContent.trim() === group), sc = document.querySelector('#modal-card > .tab-scroll');
+  if (lab && sc) sc.scrollTop = Math.max(0, lab.offsetTop - sc.offsetTop - 8);
 }
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
@@ -1170,7 +1175,7 @@ function openInfo(x, y) {
       ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>
       <div class="swatches">${WIN_COLS.map((c, i) => `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
       ${paintMoreHtml(t)}
-      ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
+      ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<div class="looks"><button class="look art-more" data-openart="1">🎨 Mehr Farben freischalten ›</button></div>' : ''}`;
   }
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
   if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t);   // Form/Farbe (Block 106)
@@ -1298,7 +1303,7 @@ function openInfo(x, y) {
     t.rot = nr; t.born = performance.now(); sfx('deco'); recalc(); save();
   });
   $('p-close').onclick = closePanel;
-  if (el.querySelector('[data-openart]')) el.querySelector('[data-openart]').onclick = () => { closePanel(); openResearch('design'); };
+  if (el.querySelector('[data-openart]')) el.querySelector('[data-openart]').onclick = () => { closePanel(); openResearch('design'); artJump('Wandfarben'); };
   for (const b of el.querySelectorAll('[data-look]')) b.onclick = () => {
     const n = +b.dataset.look;
     if (n === t.lvl) delete t.look; else t.look = n;
