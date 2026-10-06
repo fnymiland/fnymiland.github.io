@@ -252,10 +252,16 @@ function bubbleTick(now) {
   const seen = walkers.concat(strollers).filter(w => { if (w.inside > 0 || !w.home) return false; const p = toScreen(w.px, w.py); return p.x > 40 && p.x < W - 40 && p.y > 80 && p.y < H - 80; });
   if (seen.length) { const w = seen[Math.floor(Math.random() * seen.length)]; speak(w, bubbleText(w), now); }
 }
+// Größe der Figuren auf der Insel (Block 115): 70 % – die Häuser wirken größer, die Wege luftiger. Gezeichnet wird um den
+// Fußpunkt verkleinert; Platz auf dem Weg, Höhe auf der Bogenbrücke und das Namensschild bleiben gleich groß.
+// Vorschau im Fenster „Du“ (figPreview, w.full) zeigt die Figur in voller Größe.
+const FIG_SCALE = 0.7;
+const figScale = w => (w && w.full ? 1 : FIG_SCALE);
+const labelOff = w => (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12);   // Namensschild über Hut und Ballon
 // Kopf der Figur auf dem Bildschirm (wie drawWalker)
 function walkerHead(w, z) {
   const p = toScreen(w.px, w.py);
-  return [p.x + (w.sit ? 0 : 6 * z), p.y - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z];
+  return [p.x + (w.sit ? 0 : 6 * z), p.y - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z * figScale(w)];
 }
 function drawBubble(z) {
   if (!bubble || bubble.w.gone || bubble.w.inside > 0) return;
@@ -268,7 +274,7 @@ function drawBubble(z) {
     if (last != null && g.measureText(last + ' ' + word).width <= maxW) lines[lines.length - 1] = last + ' ' + word; else lines.push(word);
   }
   const tw = Math.max(...lines.map(l => g.measureText(l).width)), lh = size * 1.25, w = tw + size * 1.4, h = size * 0.75 + lines.length * lh;
-  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? (bubble.w.hand === 'ballon' || bubble.w.hand === 'herzballon' ? 21 : bubble.w.hat ? 18 : 14) : 8) * z - h;   // über dem Namensschild
+  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? labelOff(bubble.w) * FIG_SCALE + 6 : 8 * FIG_SCALE) * z - h;   // über dem Namensschild
   g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, Math.min(h / 2, size)); g.fill();
   g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.fill();
   g.beginPath(); g.moveTo(hx - 4, by + h - 1); g.lineTo(hx + 4, by + h - 1); g.lineTo(hx, by + h + 6); g.fill();
@@ -279,10 +285,10 @@ function drawBubble(z) {
 // Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
 function walkerAt(sx, sy) {
   const z = cam.z;
-  let best = null, bd = 4 + 8 * z;                                       // so groß wie die Figur – weit weg nicht aus Versehen
+  let best = null, bd = 4 + 7 * z;                                       // etwas größer als die Figur – weit weg nicht aus Versehen
   for (const w of walkers.concat(strollers)) {
     if (w.inside > 0 || !w.home || !state.tiles.get(w.home)) continue;
-    const [hx, hy] = walkerHead(w, z), d = Math.hypot(sx - hx, sy - (hy + 6 * z));
+    const [hx, hy] = walkerHead(w, z), d = Math.hypot(sx - hx, sy - (hy + 6 * z * FIG_SCALE));
     if (d < bd) { bd = d; best = w; }
   }
   return best;
@@ -307,12 +313,14 @@ function drawWalker(w, z, now) {
   // auf einer Bogenbrücke geht es hoch und wieder runter
   const arch = archAt(w.px, w.py), lift = arch ? archH(arch.b) * z : 0;
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
-  const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25);
+  const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25), S = figScale(w), footY = p.y - lift;
+  let hy = y - 11 * z;
+  g.save(); g.translate(x, footY); g.scale(S, S); g.translate(-x, -footY);   // um den Fußpunkt verkleinert (Block 115)
+  try {
   ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
   if (sp === 'eichhorn') { ellipse(x + 4.2 * z, y - 9 * z, 2.8 * z, 5.5 * z, f); ellipse(x + 4.6 * z, y - 12 * z, 1.6 * z, 2.6 * z, shade(f, 0.15)); }   // buschiger Schwanz
   if (w.body === 'umhang' || w.body === 'rucksack') drawWearBack(x, y, z, w);   // hinter dem Körper (Block 97)
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
-  let hy = y - 11 * z;
   if (sp === 'giraffe') { bar(x - 1.6 * z, hy - 4 * z, 3.2 * z, 8 * z, f); circle(x - 0.4 * z, hy + 1 * z, 0.7 * z, '#b5763a'); circle(x + 0.7 * z, hy - 2 * z, 0.6 * z, '#b5763a'); hy -= 6 * z; }   // langer Hals
   const ears = {
     katze: () => { poly([[x - 4.5 * z, hy - 2 * z], [x - 3.5 * z, hy - 7.5 * z], [x - 0.8 * z, hy - 4 * z]], f); poly([[x + 4.5 * z, hy - 2 * z], [x + 3.5 * z, hy - 7.5 * z], [x + 0.8 * z, hy - 4 * z]], f); },
@@ -352,9 +360,10 @@ function drawWalker(w, z, now) {
     ellipse(x - 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
     ellipse(x + 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
   }
-  if (w.label) {                                                         // Besucher (Block 96): Namensschild über dem Kopf
+  } finally { g.restore(); }
+  if (w.label) {                                                         // Besucher (Block 96): Namensschild über dem Kopf – in voller Größe
     g.font = `800 ${Math.max(9, 5 * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const tw = g.measureText(w.label).width + 8 * z, ly = hy - (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12) * z;   // über Hut und Ballon
+    const tw = g.measureText(w.label).width + 8 * z, ly = footY + (hy - footY) * S - labelOff(w) * z * S;   // über Hut und Ballon
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();
     g.fillStyle = C('#6b4f3a'); g.fillText(w.label, x, ly + 0.3 * z);
   }
@@ -1102,7 +1111,7 @@ function drawShowcaseLabels(z) {
   }
   for (const c of critters) if (c.label && !c.flee && !(state.album && state.album.has('natur:' + c.id))) {   // nur, bis es entdeckt ist
     const p = toScreen(c.px, c.py); pill(c.label, p.x, p.y - (c.h + 14) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
-  for (const w of walkers) if (w.label) { const [hx, hy] = walkerHead(w, z); pill(w.label, hx, hy - 9 * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
+  for (const w of walkers) if (w.label) { const [hx, hy] = walkerHead(w, z); pill(w.label, hx, hy - (9 * FIG_SCALE + 2) * z, '#fffaf0', '#6b4f3a', Math.max(10, 4 * z)); }
 }
 
 // ---------------------------------------------------------------------------

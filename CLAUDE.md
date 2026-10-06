@@ -356,6 +356,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+115. **Figurengröße** (Block 115): Figuren werden in `drawWalker` um den Fußpunkt auf `FIG_SCALE` verkleinert. Wer etwas über
+    oder an der Figur platziert (Schild, Blase, Antippen), rechnet mit `walkerHead`/`figScale`, nie mit festen z-Abständen.
 113. **Ebenen** (Block 113): Fenster `#modal` z 40. Was aus einem Fenster heraus Rückmeldung gibt und nicht antippbar ist
     (Toast, Konfetti), liegt darüber (z 50, `pointer-events: none`). Neue feste Einblendungen bekommen immer einen z-index.
 112. **Nachtlicht in Bildchen** (Block 112): Bildchen (weit weg) setzen Licht wie live ein: Schein vor dem Bildchen, Scheiben

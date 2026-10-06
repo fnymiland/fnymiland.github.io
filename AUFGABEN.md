@@ -1366,3 +1366,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       anklickbar, aber nicht so aussehend. Jetzt ein gelblicher Knopf „🎨 6 weitere Formen und Farben freischalten ›“ (`.look.art-more`),
       ebenso „🎨 Mehr Farben freischalten ›“ bei Gebäuden. Die Kunstakademie öffnet gleich an der passenden Gruppe (`artJump`),
       auch vom 🎨-Knopf in der Bauleiste und bei den Buschfarben. Test: schmuck.test.js.
+
+
+## Block 115: Einwohner kleiner (06.10.2026)
+- [x] Figuren auf der Insel (Bewohner, Spaziergänger, Parade, Besucher, eigene Figur) in 70 % (`FIG_SCALE`): um den Fußpunkt
+      verkleinert, Platz auf dem Weg und Höhe auf der Bogenbrücke bleiben. Namensschild in voller Größe direkt über Kopf/Hut/
+      Ballon (`labelOff`), Sprechblase darüber, Antippen auf die kleinere Figur (`walkerHead`, `walkerAt`, `meAt`). Vorschau im
+      Fenster „Du“ bleibt groß (`full`). Vorher per Vorschau verglichen (100/85/72 %). Test: bewohner.test.js.

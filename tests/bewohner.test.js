@@ -118,4 +118,11 @@ describe('Antippen, Sprechblasen, Rathaus', () => {
     expect(game("document.getElementById('modal').hidden")).toBe(true);
     expect(game("document.getElementById('panel').textContent")).toMatch(/Bruno/);
   });
+  it('Block 115: Figuren auf der Insel in 70 % – Kopf, Antippen und Sprechblase passen dazu; Vorschau im Fenster voll', () => {
+    expect(game('FIG_SCALE')).toBe(0.7);
+    expect(game('[figScale({}), figScale({ full: true })]')).toEqual([0.7, 1]);
+    const d = game("(() => { const w = { px: 5, py: 5, kind: 0 }, p = toScreen(5, 5), [hx, hy] = walkerHead(w, 2); return p.y - hy; })()");
+    expect(d).toBeCloseTo(13 * 2 * 0.7);
+    expect(() => game("(() => { const w = { px: 5, py: 5, kind: 0, fur: '#c98d5c', shirt: '#3e7fd0', label: 'Mia', hat: 'strohhut', hand: 'herzballon', wait: 1, speed: 0.5 }; drawWalker(w, 2, 0); drawWalker({ ...w, full: true }, 2, 0); })()")).not.toThrow();
+  });
 });

@@ -167,7 +167,7 @@ function stepMe(dt, now = performance.now()) {
 function meAt(sx, sy) {
   if (!meFigs.length) return false;
   const z = cam.z, [hx, hy] = walkerHead(meFig, z);
-  return Math.hypot(sx - hx, sy - (hy + 6 * z)) < 4 + 8 * z;
+  return Math.hypot(sx - hx, sy - (hy + 6 * z * FIG_SCALE)) < 4 + 7 * z;
 }
 
 // --- Helfer: was gerade dran ist ------------------------------------------------------------------

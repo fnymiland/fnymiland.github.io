@@ -50,7 +50,7 @@ function figPreview(cv, fig, z = 3.2) {
   if (!c) return;
   const og = g, ots = toScreen;
   g = c; toScreen = () => ({ x: cv.width / 2 - 6 * z, y: cv.height - 4 * z });
-  try { c.clearRect(0, 0, cv.width, cv.height); drawWalker({ ...fig, label: null, px: 1e6, py: 1e6, wait: 1, speed: 0.5 }, z, 0); }
+  try { c.clearRect(0, 0, cv.width, cv.height); drawWalker({ ...fig, label: null, px: 1e6, py: 1e6, wait: 1, speed: 0.5, full: true }, z, 0); }   // Vorschau in voller Größe (Block 115)
   finally { g = og; toScreen = ots; }
 }
 
