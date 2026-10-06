@@ -756,6 +756,10 @@ function drawPath(cx, cy, z, x, y, t) {
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
     for (const sh of shapes(w)) poly(sh.map(L), C(col));
   }
+  // Fuge zwischen zwei Wegfeldern (Block 116): beide Kanten sind nur halb deckend, das Gras darunter schimmerte als grüner Saum
+  // durch – die Fläche hauchdünn in Belagfarbe nachziehen, damit sich Nachbarfelder überlappen
+  g.strokeStyle = C(lk.fill); g.lineWidth = 0.6; g.lineJoin = 'round';
+  g.beginPath(); for (const sh of shapes(ROAD_W)) { sh.map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); } g.stroke();
   if (lk.pat) {
     g.save(); clipTo(shapes(ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }

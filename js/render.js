@@ -181,14 +181,15 @@ function renderGroundChunk(cx, cy, scale) {
     const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
     const near = ([ax, ay], w = 1, h = 1) => Math.floor((ax + w - 1) / CHUNK) >= cx - 1 && Math.floor(ax / CHUNK) <= cx + 1 && Math.floor((ay + h - 1) / CHUNK) >= cy - 1 && Math.floor(ay / CHUNK) <= cy + 1;   // ganze Fläche
     const clipTo = d => { g.beginPath(); [iso(x0 - d, y0 - d), iso(x1 + d, y0 - d), iso(x1 + d, y1 + d), iso(x0 - d, y1 + d)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.closePath(); g.clip(); };
-    // Wege und Bodenteile etwa 1,5 Bildpunkte über die Kante (Block 116): an der Schnittkante waren beide Nachbarstücke nur
-    // halb deckend, das Gras darunter schien als grüne Linie über Plätze. Schatten (halb durchsichtig) exakt, sonst doppelt.
-    g.save(); clipTo(0.052 / scale);
+    // Wege und Bodenteile über die Kante (Block 116): Grasfelder sind ½ Punkt größer gezeichnet (drawGround, gegen Fugen) und
+    // ragten ins Nachbarstück – das Gras schien als grüne Linie über Plätze. Überlapp = dieser halbe Punkt + 1,5 Bildpunkte.
+    // Schatten (halb durchsichtig) exakt, sonst doppelt dunkel.
+    g.save(); clipTo(0.03 + 0.052 / scale);
     try {
       drawGroundParts(near, iso, 1);
-      for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
-        const j = s - i;
-        if (j < 0 || j >= CHUNK) continue;
+      for (let s = -2; s <= 2 * CHUNK; s++) for (let i = -1; i <= CHUNK; i++) {   // samt Ring der Nachbarfelder: deckt das eigene
+        const j = s - i;                                                      // Gras zu, das über die Kante ragt (Block 116b)
+        if (j < -1 || j > CHUNK) continue;
         const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
         if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
       }

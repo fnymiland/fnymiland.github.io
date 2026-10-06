@@ -1381,3 +1381,8 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Gras des Nachbarstücks schien durch die halb deckenden Kantenpixel. Jetzt reichen Wege und Bodenteile ~1,5 Bildpunkte
       über die Kante (Schatten bleiben exakt, sonst doppelt dunkel). Gemessen: vorher bis über 1000 grünliche Pixel an der
       Grenze je nach Zoom, jetzt 0.
+- [x] 116b: Weit herausgezoomt blieben Linien – Wege enden an ihrer Feldkante, das um ½ Punkt größere Gras (drawGround, gegen
+      Fugen) ragte trotzdem ins Nachbarstück. Jetzt zeichnet jedes Stück auch die Wege des Rings der Nachbarfelder in den
+      Überlapp (`0.03 + 0.052/scale` Felder). Dazu live: auch zwischen zwei gewöhnlichen Wegfeldern schimmerte ein Hauch Grün
+      durch (beide Kanten halb deckend) → `drawPath` zieht die Fläche 0,6 Punkte in Belagfarbe nach. Gemessen bei Zoom 0,35–3,5
+      an Stückgrenzen und Feldkanten: vorher bis ~500 grünliche Pixel je Linie, jetzt 0. Test: fugen.test.js.
