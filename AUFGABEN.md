@@ -1096,4 +1096,15 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       (alter geht nicht mehr, Freunde bekommen den neuen). Freunde dürfen immer besuchen, der Link nur bei „Besuche erlaubt“.
 - [x] Datenbank-Regeln: firebase-rules.json (in der Firebase-Konsole unter Realtime Database → Regeln einfügen).
 - [x] Tests: live.test.js (11 Fälle). Offen (eigener Block): was Freunde zusätzlich dürfen (Herzchen, Gästebuch, Geschenke).
+- [x] 95b: Prüfung von Stufe 3 – gefunden und behoben:
+      • „Neuen Link machen“ auf einem Gerät, das nicht führt: Das führende schrieb weiter an die gelöschte alte Kennung,
+        die Datenbank lehnte jedes Schreiben still ab → Spiegel tot. Jetzt: Schreiben schlägt fehl → Kennung neu lesen,
+        alles neu schreiben; zuschauende Geräte verbinden sich unter der neuen Kennung neu.
+      • „Besuche an/aus“ wurde beim kompletten Neuschreiben vom Wissensstand des schreibenden Geräts überschrieben.
+      • Ein neu führendes Gerät konnte vor seinem Abgleich alte Taler in den Spiegel schreiben → erst nach dem Abgleich.
+      • Zuschauend und den ganzen gesicherten (älteren) Stand bekommen → Spiegel und Insel liefen auseinander → danach
+        gilt wieder der Spiegel; Basteleien beim Zuschauen werden auf den Spiegel zurückgesetzt (ohne 250-KB-Download).
+      • Neuer Link: eine kaputte Freundschaft ließ das Löschen des alten Links scheitern → alter Link zuerst, Freunde einzeln.
+      • Zweite Anfrage an dieselbe Person scheiterte mit Fehler → freundlicher Hinweis.
+      live.test.js: 17 Fälle.
 

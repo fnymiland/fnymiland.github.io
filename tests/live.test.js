@@ -149,3 +149,59 @@ describe('Freunde und Besuchs-Link (Block 95)', () => {
     expect(game("document.getElementById('modal-card').textContent")).toMatch(/Melde dich/);
   });
 });
+
+describe('Prüfung von Stufe 3 (Block 95b)', () => {
+  it('„Besuche an/aus“ wird beim Schreiben nie zurückgesetzt (anderes Gerät hat es umgestellt)', async () => {
+    lead();
+    await game('livePush(true)');
+    const wid = game('liveWid');
+    await game(`cloudApi.update({ 'worlds/${wid}/open': true, 'users/u1/pub/open': true })`);   // auf dem anderen Gerät eingeschaltet
+    game('liveOpen = false; liveSent = null');                                               // dieses Gerät weiß es noch nicht
+    await game('livePush(true)');
+    expect(tree().worlds[wid].open).toBe(true);
+  });
+  it('Schreiben schlägt fehl (z. B. neuer Link von einem anderen Gerät): Kennung neu lesen, beim nächsten Mal alles neu', async () => {
+    lead();
+    await game('livePush(true)');
+    game("cloudApi.update = (o => async u => { cloudApi.update = o; throw new Error('Permission denied'); })(cloudApi.update)");
+    game("state.tiles.set('13,13', { b: 'feld', lvl: 1 }); recalc()");
+    expect(await game('livePush(false, Date.now() + 10000)')).toBe(false);
+    expect(game('[liveWid, liveSent]')).toEqual([null, null]);
+    await game("cloudApi.set('users/u1/pub', { wid: 'neu1', open: false })");
+    expect(await game('livePush()')).toBe(true);
+    expect(tree().worlds.neu1.tiles['13,13']).toBeTruthy();
+  });
+  it('zuschauend: bekommt das Gerät den ganzen gesicherten Stand, gilt danach wieder der (neuere) Spiegel', async () => {
+    game("state.town.name = 'Spiegel'; (sp => { cloudApi.tree = { users: { u1: { pub: { wid: 'w1' }, live: { eco: sp.eco, priv: sp.priv } } }, worlds: { w1: { ...sp.maps, rest: sp.rest, owner: 'u1' } } }; })(liveSplit(serialize()))");
+    game('startNew(); state.tutorial = -1');
+    lead('ipad');
+    await game('liveTick()'); await tick(); await tick();
+    expect(game('state.town.name')).toBe('Spiegel');
+    game("state.town.name = 'Alter Stand'; liveRebase()");                                   // wie nach dem Laden eines älteren gesicherten Stands
+    expect(game('state.town.name')).toBe('Spiegel');
+  });
+  it('eigenes zuschauendes Gerät: Insel unter der alten Kennung weg (neuer Link) → verbindet sich neu', async () => {
+    game("(sp => { cloudApi.tree = { users: { u1: { pub: { wid: 'w1' }, live: { eco: sp.eco, priv: sp.priv } } }, worlds: { w1: { ...sp.maps, rest: sp.rest, owner: 'u1' } } }; })(liveSplit(serialize()))");
+    lead('ipad');
+    await game('liveTick()'); await tick(); await tick();
+    expect(game('liveFollow.wid')).toBe('w1');
+    await game("(async () => { const w = cloudApi.tree.worlds.w1; await cloudApi.update({ 'worlds/w2': w, 'users/u1/pub/wid': 'w2', 'worlds/w1': null }); })()"); await tick();
+    expect(game('liveFollow')).toBe(null);
+    await game('liveTick()'); await tick();
+    expect(game('liveFollow.wid')).toBe('w2');
+  });
+  it('Freunde: zweite Anfrage an dieselbe Person wird freundlich abgefangen', async () => {
+    game("cloudApi.tree = { codes: { ABCDE: 'X' } }; frList = { X: { st: 'gesendet' } }");
+    expect(await game("frAdd('FNYMI-ABCDE')")).toMatch(/schon unterwegs/);
+  });
+  it('neuer Link auf einem nicht führenden Gerät: alter Link sofort weg, Hinweis, das führende Gerät schreibt dann unter dem neuen', async () => {
+    lead();
+    await game('livePush(true)');
+    const old = game('liveWid');
+    lead('ipad');                                                                             // jetzt führt ein anderes Gerät
+    await game('liveNewLink()');
+    expect(tree().worlds[old]).toBe(undefined);
+    expect(tree().users.u1.pub.wid).not.toBe(old);
+  });
+});
+

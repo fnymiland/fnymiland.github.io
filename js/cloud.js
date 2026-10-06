@@ -160,6 +160,7 @@ async function cloudTakeNow(cloud, local, reason, same = false, follow = false) 
   const keepCam = reason === 'anderes Gerät' && state.town.name === parsed.town.name ? { ...cam } : null;   // live: Blick bleibt, wo er ist
   adoptState(parsed);
   if (keepCam) { state.cam = keepCam; cam = state.cam; }
+  if (typeof liveRebase === 'function') liveRebase();                           // läuft der Live-Spiegel, gilt der (er ist neuer)
   setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 0, sig: worldSig(localSave()) });
   cloudState = 'ok';
   if (!keepCam) closePanel();
@@ -506,7 +507,10 @@ function cloudWatchLocal(now = Date.now()) {
   cloudSigAt = now;
   const m = cloudMeta();
   if (!(m.acts > 0) && m.sig && worldSig(localSave()) !== m.sig) {
-    if (cloudWatching()) { cloudBlocked(); cloudSync('zuschauen'); }        // zuschauen: zurück auf den Stand des führenden Geräts
+    if (cloudWatching()) {                                                  // zuschauen: zurück auf den Stand des führenden Geräts
+      cloudBlocked();
+      if (typeof liveFollowing === 'function' && liveFollowing()) liveRebase(); else cloudSync('zuschauen');
+    }
     else cloudTouched();
   }
 }

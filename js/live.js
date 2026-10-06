@@ -48,10 +48,10 @@ async function liveWorldId() {
   liveOpen = false;
   return (liveWid = wid);
 }
-const liveCanPush = () => !!cloudUser && !!cloudApi && !!cloudApi.update && !cloudOff() && cloudIsLeader() && cloudState === 'ok';
+const liveCanPush = (inQueue = false) => !!cloudUser && !!cloudApi && !!cloudApi.update && !cloudOff() && cloudIsLeader() && cloudState === 'ok' && (inQueue || !cloudBusy);
 // Änderungen seit dem letzten Mal schreiben (full: alles neu – beim Übernehmen der Führung, neuer Link)
-async function livePush(full = false, now = Date.now()) {
-  if (!liveCanPush() || livePushing) return false;
+async function livePush(full = false, now = Date.now(), inQueue = false) {
+  if (!liveCanPush(inQueue) || livePushing) return false;
   const structural = full || !liveSent || groundVersion !== liveGV || now - liveRestAt > LIVE_REST_EVERY, eco = full || !liveSent || now - liveEcoAt > LIVE_ECO_EVERY;
   if (!structural && !eco) return false;
   livePushing = true;
@@ -59,7 +59,7 @@ async function livePush(full = false, now = Date.now()) {
     const uid = cloudUser.uid, wid = await liveWorldId(), w = `worlds/${wid}`, cur = liveSplit(serialize()), upd = {};
     if (full || !liveSent) {
       for (const m of LIVE_MAPS) upd[`${w}/${m}`] = cur.maps[m];
-      Object.assign(upd, { [`${w}/rest`]: cur.rest, [`${w}/owner`]: uid, [`${w}/open`]: liveOpen, [`${w}/at`]: cloudApi.TS(),
+      Object.assign(upd, { [`${w}/rest`]: cur.rest, [`${w}/owner`]: uid, [`${w}/at`]: cloudApi.TS(),   // open nicht: das stellt nur liveSetOpen (sonst setzte ein anderes Gerät es zurück)
         [`users/${uid}/live`]: { eco: cur.eco, priv: cur.priv } });
     } else {
       let changed = false;
@@ -81,18 +81,18 @@ async function livePush(full = false, now = Date.now()) {
     liveSent = cur; liveGV = groundVersion;
     if (full) { liveRestAt = now; liveEcoAt = now; }
     return true;
-  } catch (e) { console.warn('Live', e); return false; }
+  } catch (e) { console.warn('Live', e); liveWid = null; liveSent = null; return false; }   // beim nächsten Mal Kennung neu lesen, alles neu
   finally { livePushing = false; }
 }
 // vor dem Sichern/Übergeben: Spiegel auf den neuesten Stand
-async function liveFlush() { if (liveCanPush()) await livePush(false, Date.now() + LIVE_REST_EVERY + LIVE_ECO_EVERY); }
+async function liveFlush() { if (liveCanPush(true)) await livePush(false, Date.now() + LIVE_REST_EVERY + LIVE_ECO_EVERY, true); }
 // nach einem gesicherten Stand: Spiegel kennt diese Version (zuschauende Geräte müssen sie dann nicht herunterladen)
-function liveAfterUpload(rev) { if (liveCanPush() && liveWid) cloudApi.update({ [`worlds/${liveWid}/rev`]: rev }).catch(() => {}); }
+function liveAfterUpload(rev) { if (liveCanPush(true) && liveWid && liveSent) cloudApi.update({ [`worlds/${liveWid}/rev`]: rev }).catch(() => {}); }
 
 // ---------------------------------------------------------------------------
 // Lesen (zuschauendes Gerät, Besuch)
 // ---------------------------------------------------------------------------
-let liveFollow = null;             // { wid, offs, applied: { maps, rest }, live: { eco, priv }, own }
+let liveFollow = null, liveWasLeader = false;             // { wid, offs, applied: { maps, rest }, live: { eco, priv }, own }
 const liveFollowing = () => !!(liveFollow && liveFollow.applied);
 // ganzen Stand übernehmen, Blick bleibt (selten: erster Empfang, Rest/Privates geändert)
 function liveAdopt(d) {
@@ -122,7 +122,7 @@ function liveApplyMaps(world) {
 }
 function liveOnWorld(world) {
   if (!liveFollow) return;
-  if (!world) { if (VISIT) visitGone(); return; }
+  if (!world) { if (VISIT) visitGone(); else liveFollowStop(); return; }   // eigenes Gerät: neuer Link → liveTick verbindet neu
   const f = liveFollow, first = !f.applied;
   f.world = world;
   if (f.own && !f.live) return;                    // eigenes Gerät: erst mit Talern & Co. übernehmen (sonst stünden kurz 0 Taler da)
@@ -143,6 +143,13 @@ function liveOnPriv(live) {
   if (live.eco !== old.eco) { const e = JSON.parse(live.eco || '{}'); for (const k of LIVE_ECO) if (e[k] !== undefined) state[k] = e[k]; }
   liveSettle();
 }
+// Ein zuschauendes Gerät hat den ganzen Stand anders bekommen (gesicherter Stand, Bastelei): beim Spiegel neu ansetzen
+function liveRebase() {
+  const f = liveFollow;
+  if (!f || !f.applied) return;
+  f.applied.rest = null;                           // nächste Nachricht übernimmt wieder alles aus dem Spiegel
+  if (f.world && (!f.own || f.live)) liveOnWorld(f.world);
+}
 // Nach jeder Übernahme: der Online-Speicher weiß, dass dieses Gerät auf dem Stand ist (sonst hielte es das für eigene Änderungen)
 function liveSettle(rev) {
   const m = cloudMeta();
@@ -160,11 +167,13 @@ function liveFollowStop() { if (!liveFollow) return; for (const off of liveFollo
 async function liveTick() {
   if (VISIT || !cloudUser || !cloudApi || !cloudApi.watch || cloudOff()) return;
   if (cloudWatching()) {
+    liveWasLeader = false;
     if (!liveFollow) { try { liveFollowStart(await cloudApi.get(`users/${cloudUser.uid}/pub/wid`) || '-', true); } catch (e) { /* später nochmal */ } }
     liveSent = null;                                           // wer wieder führt, schreibt einmal alles
   } else {
     if (liveFollow) liveFollowStop();
-    if (cloudIsLeader()) livePush();
+    if (cloudIsLeader()) { if (!liveWasLeader) liveSent = null; livePush(); }
+    liveWasLeader = cloudIsLeader();
   }
 }
 setInterval(() => { liveTick().catch(() => {}); }, LIVE_STEP);
@@ -234,6 +243,7 @@ async function frAdd(input) {
   if (other === uid) return 'Das ist dein eigener Code 🙂';
   const e = frList[other];
   if (e && e.st === 'freund') return 'Ihr seid schon befreundet';
+  if (e && e.st === 'gesendet') return 'Deine Anfrage ist schon unterwegs';
   if (e && e.st === 'anfrage') { await frAccept(other); return null; }
   const myCode = await frCode(), wid = await liveWorldId();
   await cloudApi.update({ [`fr/${uid}/${other}`]: { st: 'gesendet', name: frCodeText(code), at: cloudApi.TS() },
@@ -251,10 +261,9 @@ async function liveNewLink() {
   const uid = cloudUser.uid, old = await liveWorldId(), wid = liveRand(20);
   await cloudApi.set(`users/${uid}/pub`, { wid, open: liveOpen });
   liveWid = wid; liveSent = null;
-  await livePush(true);
-  const upd = { [`worlds/${old}`]: null };
-  for (const [f, e] of Object.entries(frList)) if (e.st === 'freund') upd[`fr/${f}/${uid}/wid`] = wid;
-  await cloudApi.update(upd);
+  await cloudApi.update({ [`worlds/${old}`]: null });                         // alter Link geht ab sofort nicht mehr
+  if (!(await livePush(true))) toast('🔗 Die Insel erscheint unter dem neuen Link, sobald ein Gerät von dir spielt');
+  for (const [f, e] of Object.entries(frList)) if (e.st === 'freund') await cloudApi.update({ [`fr/${f}/${uid}/wid`]: wid }).catch(() => {});
 }
 async function liveSetOpen(on) {
   const uid = cloudUser.uid, wid = await liveWorldId();
