@@ -776,8 +776,8 @@ const BUILDING_ART = {
   // Uhrturm (Eingang nach außen, dort schließt der Weg an), links und rechts gleich lange Flügel. Drei Designs (t.look):
   // Glashalle (Sandstein, gewölbte Glasdächer), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz, Blumenkästen).
   hbf(K, s, now, x, y, t, ha, hb) {
-    const wingS = hbfWing(t), hallB = hbfHallB(t), pb = hbfPortalB(t);           // Flügel/Mittelhalle (Block 118/121), Portal bei b = pb
-    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => hbfTrackB(t, g), PW = 0.8;   // gb: Mitte von Gleis g (Bahnsteig bei gb + 1); PW: halbe Breite des Portals
+    const wingS = hbfWing(t), hallB = hbfHallB(t), pb = hbfPortalB(t);           // Halle in der Mitte (Block 121/123; 0: alter Bahnhof ohne Halle), Portal bei b = pb
+    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => hbfTrackB(t, g), PW = 0.8;   // gb: Mitte von Gleis g (Bahnsteig bei gb + hbfPlatS, rechts der Halle gespiegelt); PW: halbe Breite des Portals
     if (groundPart(() => {
       K.rect(-1, -hb, 2, hb, C('#cdc6b8'));
       K.rect(-2, -hb, -1, hb, C('#dad2c2'));
@@ -792,19 +792,19 @@ const BUILDING_ART = {
     const lift = look === 'glas' ? 17 : 11, iron = look === 'backstein' ? '#4a4a58' : look === 'land' ? '#6b4f3a' : '#7d8794';
     const parts = [];
     for (let i = 0; i < n; i++) {
-      const b = gb(i), bp = b + 1;
+      const b = gb(i), ps = hbfPlatS(t, i), bp = b + ps;            // ps: Bahnsteig rechts (+1) oder links (−1) vom Gleis (Block 123)
       // Ein Gleis als ein Stück: erst Prellbock und Bahnsteig samt Ausstattung, zuletzt das Dach darüber – so malt bei keiner
       // Drehung der Bahnsteig über sein Dach (Block 85)
-      parts.push([0.5, b + 0.5, () => {
+      parts.push([0.5, b + ps * 0.5, () => {
         const plat = () => {
           K.block({ a: 0.45, b: bp, ha: 1.45, hb: 0.38, h: 2.6, wall: '#e2dccf', type: 'flat', roof: '#efe9dc' });
-          K.rect(-0.95, bp - 0.36, 1.9, bp - 0.3, C('#f2c14e'), 2.6);                           // gelbe Kante zum Gleis
+          K.rect(-0.95, Math.min(bp - ps * 0.36, bp - ps * 0.3), 1.9, Math.max(bp - ps * 0.36, bp - ps * 0.3), C('#f2c14e'), 2.6);   // gelbe Kante zum Gleis
           K.scene([                                                       // vorn am offenen Bahnsteigende: Bank, Laterne, Uhr
-            [1.45, bp, () => K.block({ a: 1.45, b: bp + 0.2, ha: 0.15, hb: 0.05, h: 2, lift: 2.6, wall: '#8a5a3c', type: 'flat', roof: '#a8744e' })],   // Bank
-            [1.6, bp - 0.15, () => { const [lx, ly] = K.P(1.6, bp - 0.18, 2.6); lampPost(lx, ly, z, 12); }],
-            [1.84, bp - 0.2, () => kPlanter(K, 1.84, bp - 0.2, 2.6, 0.9)],   // Blumenkübel am Bahnsteigende (Block 109)
+            [1.45, bp, () => K.block({ a: 1.45, b: bp + ps * 0.2, ha: 0.15, hb: 0.05, h: 2, lift: 2.6, wall: '#8a5a3c', type: 'flat', roof: '#a8744e' })],   // Bank
+            [1.6, bp - ps * 0.15, () => { const [lx, ly] = K.P(1.6, bp - ps * 0.18, 2.6); lampPost(lx, ly, z, 12); }],
+            [1.84, bp - ps * 0.2, () => kPlanter(K, 1.84, bp - ps * 0.2, 2.6, 0.9)],   // Blumenkübel am Bahnsteigende (Block 109)
             [1.8, bp, () => {                                                                 // Bahnsteiguhr auf einem Mast
-              const [cx, cy] = K.P(1.8, bp + 0.15, 2.6), top = cy - 9 * z;
+              const [cx, cy] = K.P(1.8, bp + ps * 0.15, 2.6), top = cy - 9 * z;
               g.strokeStyle = C(iron); g.lineWidth = 1.1 * z; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, top); g.stroke();
               circle(cx, top - 1.6 * z, 2.2 * z, C(iron)); circle(cx, top - 1.6 * z, 1.6 * z, lit ? '#fff6c8' : C('#fffaf0'));
               const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
@@ -816,20 +816,20 @@ const BUILDING_ART = {
         };
         K.scene([[-0.85, b, () => K.block({ a: -0.85, b, ha: 0.06, hb: 0.22, h: 4, wall: '#e8604f', type: 'flat', roof: '#fff6e4' })], [0.45, bp, plat]]);   // Prellbock
         if (look === 'glas') {                                        // Stahlstützen und gewölbtes Glasdach über Gleis und Bahnsteig
-          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, lift, iron, 1.4);
+          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + ps * db, lift, iron, 1.4);
           g.save(); g.globalAlpha *= 0.62;
-          K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });   // vorn ragt der Bahnsteig hinaus
+          K.block({ a: 0.25, b: b + ps * 0.5, ha: 1.2, hb: 0.98, h: 1, lift, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });   // vorn ragt der Bahnsteig hinaus
           g.restore();
         } else {                                                      // Gewölbe wie beim Glasdach – aus Ziegeln bzw. Holz (Block 122)
-          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, lift, iron, 1.4);
+          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + ps * db, lift, iron, 1.4);
           const brick = look === 'backstein';                     // Farbe wie das Dach des Bahnhofs (auch selbst gewählt), Stirnseiten wie die Wand
-          K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, roofH: 11, wall, roof, type: 'barrel', strip: vaultDetail(K, roof, brick, lit) });
+          K.block({ a: 0.25, b: b + ps * 0.5, ha: 1.2, hb: 0.98, h: 1, lift, roofH: 11, wall, roof, type: 'barrel', strip: vaultDetail(K, roof, brick, lit) });
         }
       }]);
     }
     // Empfangsgebäude: Flügel links und rechts vom Portal, je Gleis ein Stück (damit es richtig vor und hinter den Hallen liegt)
     const wingType = look === 'glas' ? 'mansard' : 'gable';      // Satteldach läuft über alle Stücke durch (Walm gab Kerben, Block 85b)
-    const spans = [...Array(n)].map((_, i) => [gb(i) - 0.5, gb(i) + 1.5]);
+    const spans = [...Array(n)].map((_, i) => [Math.min(gb(i), gb(i) + hbfPlatS(t, i)) - 0.5, Math.max(gb(i), gb(i) + hbfPlatS(t, i)) + 0.5]);
     if (wingS) spans.push([hallB - 0.5, hallB + 0.5]);                  // auch über Flügel/Halle
     for (const [lo, hi] of spans) {
       const segs = hi <= pb - PW || lo >= pb + PW ? [[lo, hi]] : [lo < pb - PW ? [lo, pb - PW] : null, hi > pb + PW ? [pb + PW, hi] : null].filter(Boolean);
@@ -845,22 +845,15 @@ const BUILDING_ART = {
         }]);
       }
     }
-    if (wingS) {                                                   // Seitenflügel: Gepäckhalle (Block 118) · Mitte: Eingangshalle (Block 121)
-      const wbm = hallB, mid = wingS === 2, wh = Math.round(H * (mid ? 0.85 : 0.6));
+    if (wingS) {                                                   // Eingangshalle in der Mitte (Block 121/123): hohe Bogenfenster, Glasfirst, Tür zu den Bahnsteigen
+      const wbm = hallB, wh = Math.round(H * 0.85);
       parts.push([0.45, wbm, () => {
-        const G = K.block({ a: 0.45, b: wbm, ha: 1.38, hb: 0.4, h: wh, wall: mid ? shade(wall, 0.05) : wall, roof, roofH: mid ? 8 : 6, type: 'gable', ridge: 'a', trim: '#fffaf0' });
-        if (mid) {                                                 // Halle: hohe Bogenfenster, Glasfirst, Tür zu den Bahnsteigen
-          for (const side of ['left', 'right']) K.wins(G, side, 4, 0.3, 0.85, 0.08, 0.92);
-          const [r0, r1] = [K.P(-0.85, wbm, wh + 7.2), K.P(1.75, wbm, wh + 7.2)];
-          g.strokeStyle = lit ? '#ffe7a8' : C('#cfeaf2'); g.lineWidth = 2.2 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...r0); g.lineTo(...r1); g.stroke();
-          K.door(G, 'front', 0.32, 0.68, 0.55, '#5e3b28');
-          K.wins(G, 'front', 1, 0.62, 0.82, 0.38, 0.62);
-        } else {
-          K.door(G, 'front', 0.3, 0.7, 0.62, look === 'backstein' ? '#3f5a4a' : '#8a5a3c');         // großes Holztor
-          for (const side of ['left', 'right']) K.wins(G, side, 3, 0.4, 0.75, 0.1, 0.9, [], look === 'land');
-          const F = G.faces.front;
-          if (F) faceClock(F, 0.5, F.H * 0.86, 1.8 * z, z, { ring: '#4a4a58', ringW: 0.6, lit, hands: [[0, 0.7, 0.7], [Math.PI / 2, 0.5, 0.7]] });
-        }
+        const G = K.block({ a: 0.45, b: wbm, ha: 1.38, hb: 0.4, h: wh, wall: shade(wall, 0.05), roof, roofH: 8, type: 'gable', ridge: 'a', trim: '#fffaf0' });
+        for (const side of ['left', 'right']) K.wins(G, side, 4, 0.3, 0.85, 0.08, 0.92);
+        const [r0, r1] = [K.P(-0.85, wbm, wh + 7.2), K.P(1.75, wbm, wh + 7.2)];
+        g.strokeStyle = lit ? '#ffe7a8' : C('#cfeaf2'); g.lineWidth = 2.2 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...r0); g.lineTo(...r1); g.stroke();
+        K.door(G, 'front', 0.32, 0.68, 0.55, '#5e3b28');
+        K.wins(G, 'front', 1, 0.62, 0.82, 0.38, 0.62);
       }]);
       for (const db of [-0.32, 0.32]) parts.push([1.95, wbm + db, () => kPlanter(K, 1.95, wbm + db, 0, 0.9)]);   // Kübel vor dem Tor
     }
@@ -1317,7 +1310,7 @@ function haystack(K, a, b) {
 // Kleines Objekt (z. B. Bank) an einer Stelle im Rahmen zeichnen
 function drawObjectAt(b, K, a, bb, s, rot = 0) {
   const [x, y] = K.P(a, bb);
-  g.save(); g.translate(x, y); g.scale(s, s); drawObject(b, 0, 0, K.z, 0, 0, 0, 1, { rot }); g.restore();
+  g.save(); g.translate(x, y); g.scale(s, s); drawObject(b, 0, 0, K.z, 0, 0, 0, 1, { rot, ...(b === 'hbf' ? HBF_NEW : {}) }); g.restore();
 }
 // Gebäude, deren Wand- und Dachfarbe man wählen kann (Häuser zusätzlich mit Aussehen)
 // Farbe wählbar: alles mit Wand und Dach (nicht: Feld, Glashaus, Steg, Seilbahn, Solar, Wellen – dort gäbe es nichts zu färben)

@@ -1357,8 +1357,8 @@ function openInfo(x, y) {
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
   for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);
-  for (const [id, d] of [['p-gplus', 1], ['p-gminus', -1]]) if ($(id)) $(id).onclick = () => { const nk = hbfResize(x + ',' + y, d); if (nk) openInfo(...keyXY(nk)); };
-  for (const b of el.querySelectorAll('[data-hwing]')) b.onclick = () => { const nk = undoable(() => hbfWingSet(x + ',' + y, +b.dataset.hwing)); if (nk) openInfo(...keyXY(nk)); };   // Block 118
+  for (const b of el.querySelectorAll('[data-gres]')) b.onclick = () => { const [d, side] = b.dataset.gres.split(',').map(Number), nk = hbfResize(x + ',' + y, d, side); if (nk) openInfo(...keyXY(nk)); };   // Block 123: Seite wählen
+  if ($('p-hup')) $('p-hup').onclick = () => { const nk = undoable(() => { const k = hbfUpgrade(x + ',' + y); if (k) { sfx('build'); recalc(); save(); } return k; }); if (nk) openInfo(...keyXY(nk)); else fail(hbfUpgradePlan(x + ',' + y)); };
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
@@ -1600,21 +1600,26 @@ function hbfHtml(x, y, t) {
     rows.push(`<div class="hall-row"><span><b>Gleis ${g + 1}</b> <small>${where}</small></span><button class="btn ghost small" data-gleis="${gk}">🚆 Zug</button></div>`);
   }
   hubRegions.delete(home);
-  const addErr = hbfResizeError(x + ',' + y, 1), { money: gm, ...gmat } = GLEIS_COST;
+  const k = x + ',' + y, wing = hbfWing(t), L = hbfLeft(t), { money: gm, ...gmat } = GLEIS_COST;
   const atDoor = hbfEntrance(t, x, y).some(([ex, ey]) => wegAt(ex, ey) != null), v = NET && NET.vOf(x + ',' + y), village = v && NET.vHome.has(v);
   const door = atDoor ? `<div class="status"><div class="ok">🛤️ Weg am Eingang${village ? ' – mit dem Dorf verbunden' : ''}</div></div>`   // Block 85
     : '<p class="muted">🛤️ Leg einen Weg vor das Portal (die Seite gegenüber den Gleisen) – dann führt er bis an die Tür und verbindet den Bahnhof mit dem Dorf.</p>';
-  return `${door}<div class="label">🚉 ${n} Gleise</div>
+  // + / − Gleis je Seite der Halle (Block 123); alter Bahnhof ohne Halle: nur rechts, dazu „Halle bauen“
+  const hard = e => e && !/Taler|Material/.test(e), sides = wing ? [[-1, 'links', L], [1, 'rechts', n - L]] : [[1, '', n]];
+  const errs = sides.map(([sd, nm]) => [nm, hbfResizeError(k, 1, sd)]).filter(([, e]) => hard(e)).map(([nm, e]) => `${nm ? '+ ' + nm + ': ' : ''}${e}.`);
+  const resize = sides.map(([sd, nm, cnt]) => {
+    const add = hbfResizeError(k, 1, sd), minus = wing ? cnt > 1 : n > HBF_MIN;
+    return `<button class="btn" data-gres="1,${sd}" data-cost="${gm}" data-mat='${JSON.stringify(gmat)}' ${hard(add) ? 'disabled' : ''}>+ Gleis${nm ? ' ' + nm : ''}</button>${minus ? `<button class="btn ghost" data-gres="-1,${sd}">− ${nm || 'Gleis'}</button>` : ''}`;
+  });
+  const up = wing ? null : hbfUpgradePlan(k);
+  return `${door}<div class="label">🚉 ${n} Gleise${wing ? ` · ${L} links, ${n - L} rechts der Halle` : ''}</div>
     <div class="ships">${rows.join('')}</div>
     ${hubRegions.size > 1 ? `<div class="status"><div class="ok">🔀 Umsteigen: ${[...hubRegions].map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')} sind hier miteinander verbunden</div></div>` : ''}
-    <div class="row"><button class="btn" id="p-gplus" data-cost="${gm}" data-mat='${JSON.stringify(gmat)}' ${addErr && !/Taler|Material/.test(addErr) ? 'disabled' : ''}>+ Gleis · ${costText(GLEIS_COST)}</button>
-      ${n > HBF_MIN ? '<button class="btn ghost" id="p-gminus">− Gleis</button>' : ''}</div>
-    ${addErr && !/Taler|Material/.test(addErr) ? `<p class="muted">+ Gleis: ${addErr}.</p>` : ''}
-    <p class="muted">Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
-    <div class="label">Halle</div>
-    <div class="looks">${[[0, 'ohne'], [-1, '◧ links'], [2, '▣ Mitte'], [1, 'rechts ◨']].map(([v, nm]) => `<button class="look${hbfWing(t) === v ? ' on' : ''}" data-hwing="${v}">${nm}</button>`).join('')}</div>
-    <p class="muted">${hbfWing(t) === 2 ? 'Die Eingangshalle steht zwischen den Gleisen, das Portal davor.' : 'Mit Halle ist der Bahnhof ein Feld breiter (ungerade): <b>Mitte</b> = Eingangshalle zwischen den Gleisen, Portal davor – bei gerader Gleiszahl genau symmetrisch; links/rechts = Gepäckhalle.'}
-      ${hbfWing(t) ? ' Abbauen gibt die Hälfte zurück.' : ` Anbauen: ${costText(HBF_WING_COST)}.`}${(() => { const p = hbfWing(t) === 2 ? null : hbfWingPlan(x + ',' + y, 2); return p && typeof p === 'object' && p.moved ? ` <b>Mitte:</b> ${p.moved === 1 ? 'ein Gleis rückt' : p.moved + ' Gleise rücken'} ein Feld zur Seite – die Strecke davor dann anpassen.` : ''; })()}</p>
+    <div class="row">${resize.join('')}</div>
+    <p class="muted">Ein Gleis: ${costText(GLEIS_COST)}. ${errs.length ? errs.join(' ') + ' ' : ''}Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
+    ${wing ? '' : `<div class="label">Halle</div>
+    <p class="muted">Neue Hauptbahnhöfe haben die Eingangshalle in der Mitte: Gleis – Steig – Halle – Steig – Gleis. ${typeof up === 'string' ? up + '.' : 'Gleise können dabei ein Feld rücken – die Strecken davor dann anpassen.'}</p>
+    <div class="row"><button class="btn" id="p-hup" ${typeof up === 'string' ? 'disabled' : ''}>▣ Halle in die Mitte bauen</button></div>`}
     <div class="label">Aussehen</div>
     <div class="looks">${Object.entries(HBF_LOOKS).map(([id, nm]) => `<button class="look${(t.look || 'glas') === id ? ' on' : ''}" data-hlook="${id}">${nm}</button>`).join('')}</div>`;
 }
@@ -2354,6 +2359,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-symmetrie', date: '6. Oktober', title: 'Hauptbahnhof symmetrisch', items: [
+    '🚉 <b>Halle immer in der Mitte:</b> Gleis – Steig – Halle – Steig – Gleis. Rechts der Halle ist alles gespiegelt, bei gerader Gleiszahl ist der Bahnhof genau symmetrisch.',
+    '➕ <b>Seite wählen:</b> „+ Gleis links“ oder „+ Gleis rechts“ (und „−“ genauso) – alle anderen Gleise bleiben, wo sie sind.',
+    '🛤️ Deine Hauptbahnhöfe wurden umgestellt. Dabei kann ein Gleis ein Feld gerückt sein – die Strecken davor kurz prüfen.',
+  ] },
   { id: '2026-10-06-mittelhalle', date: '6. Oktober', title: 'Hauptbahnhof mit Eingangshalle', items: [
     '▣ <b>Mittelhalle:</b> Im Fenster des Hauptbahnhofs unter „Halle“ die Mitte wählen – eine Eingangshalle zwischen den Gleisen, das Portal davor, die Gleise gehen links und rechts ab. Bei gerader Gleiszahl genau symmetrisch.',
   ] },

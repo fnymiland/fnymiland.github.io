@@ -950,7 +950,7 @@ function render(now) {
       const gs = decoScale(ghostType);
       g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
       const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
-        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}) };   // wie gebaut wird (Block 84d)
+        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}) };   // wie gebaut wird (Block 84d)
       drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;

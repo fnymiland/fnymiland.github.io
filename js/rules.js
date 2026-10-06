@@ -9,20 +9,23 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-// Flügel (Block 118/121): 1 = rechts (+b), −1 = links (−b), 2 = Mittelhalle zwischen den Gleisen (t.mid Gleise links davon) –
-// macht den Bahnhof ein Feld breiter (ungerade). Die Gleise liegen von −b aus nebeneinander, an der Halle/dem Flügel eine Lücke.
-const hbfWing = t => (t && (t.wing === 1 || t.wing === -1 || t.wing === 2) ? t.wing : 0);
-function hbfLeft(t) {                                             // so viele Gleise liegen vor (links von) der Lücke
-  const n = hbfGleise(t), w = hbfWing(t);
-  if (w === -1) return 0;
-  if (w !== 2) return n;
-  const m = Number.isInteger(t.mid) ? t.mid : Math.floor(n / 2);
+// Halle (Block 118/121, seit Block 123 immer in der Mitte): Gleis – Steig – Halle – Steig – Gleis, rechts der Halle gespiegelt
+// (erst der Bahnsteig, dann das Gleis). t.wing = 2, t.mid = Gleise links der Halle; der Bahnhof ist 2 × Gleise + 1 breit.
+// Ohne t: so, wie man ihn neu baut. Alte Bahnhöfe ohne Halle (t.wing fehlt) gibt es nur noch, wo beim Umstellen kein Platz
+// war (hbfUpgrade); alte Seitenflügel (±1) gelten als Mittelhalle.
+const HBF_NEW = { wing: 2, mid: 1 };                              // so wird er neu gebaut
+const hbfWing = t => (!t || t.wing === 1 || t.wing === -1 || t.wing === 2 ? 2 : 0);
+function hbfLeft(t) {                                             // so viele Gleise liegen links von der Halle
+  const n = hbfGleise(t);
+  if (!hbfWing(t)) return n;
+  const m = t && Number.isInteger(t.mid) ? t.mid : Math.floor(n / 2);
   return Math.max(1, Math.min(n - 1, m));
 }
 const hbfHalfW = t => (2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)) / 2;
-const hbfTrackB = (t, g) => -hbfHalfW(t) + 0.5 + 2 * g + (hbfWing(t) && g >= hbfLeft(t) ? 1 : 0);   // Mitte von Gleis g (b im eigenen Rahmen)
-const hbfHallB = t => -hbfHalfW(t) + 2 * hbfLeft(t) + 0.5;                                            // Mitte von Halle/Flügel
-const hbfPortalB = t => (hbfWing(t) === 2 ? hbfHallB(t) : 0);                                          // Mittelhalle: Portal davor
+const hbfTrackB = (t, g) => -hbfHalfW(t) + 0.5 + 2 * g + (hbfWing(t) && g >= hbfLeft(t) ? 2 : 0);   // Mitte von Gleis g (b im eigenen Rahmen)
+const hbfPlatS = (t, g) => (hbfWing(t) && g >= hbfLeft(t) ? -1 : 1);                                   // Bahnsteig bei b + hbfPlatS (rechts: gespiegelt)
+const hbfHallB = t => -hbfHalfW(t) + 2 * hbfLeft(t) + 0.5;                                            // Mitte der Halle
+const hbfPortalB = t => (hbfWing(t) ? hbfHallB(t) : 0);                                                // Portal vor der Halle
 const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : b === 'fz_schloss' ? csSize(t) : b === 'leuchtturm' && t && t.mini ? [1, 1] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };   // alter Leuchtturm (t.mini): 1×1 (Block 83)
 // Märchenschloss (Block 60g/60h): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
 // m/mk/mr: Mittelturm Höhe (0 keiner … 4 riesig), Dicke, Dach; cb/cf/cr: Mittelbau Breite, Stockwerke, Dach; wf/wr: Flügel
@@ -108,74 +111,94 @@ function hbfEntrance(t, x, y) {
   const r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
   return (hbfWing(t) ? [hbfPortalB(t)] : [-0.5, 0.5]).map(b => { const [u, v] = kitTurn(r, -2.5, b); return [Math.round(cx + u), Math.round(cy + v)]; });   // mit Flügel/Halle: genau ein Feld
 }
-// Seitenflügel an/ab/umsetzen (Block 118): side 0 (aus), 1 (rechts), −1 (links). Die Gleise bleiben, wo sie sind – dafür rückt der
-// Anker so, dass das Feld vor Gleis 1 gleich bleibt. Anbauen kostet HBF_WING_COST, abbauen gibt die Hälfte der Taler zurück.
-const HBF_WING_COST = { money: 1500, bretter: 10, quader: 6 };
-function hbfWingPlan(k, side) {
+// Alte Bahnhöfe umstellen (Block 123): ohne Halle wird der Bahnhof ein Feld breiter – zu der Seite, wo Platz ist –, die Halle
+// kommt dorthin, wo der Eingang war. Alte Seitenflügel (±1) haben schon die Breite: nur noch t.wing = 2 und t.mid setzen.
+// Rückgabe { nk, mid } oder ein Hinweis, warum es nicht geht. Gleise können dabei ein Feld rücken.
+function hbfUpgradePlan(k) {
   const t = state.tiles.get(k);
   if (!t || t.b !== 'hbf') return 'Kein Hauptbahnhof';
-  if (hbfWing(t) === side) return 'Ist schon so';
-  const [x, y] = keyXY(k), r = (t.rot || 0) & 3, t2 = { ...t };
-  if (side) t2.wing = side; else delete t2.wing;
-  if (side === 2) t2.mid = Math.floor(hbfGleise(t) / 2); else delete t2.mid;   // Mittelhalle: halb und halb (ungerade: rechts eins mehr)
-  const e0 = gleisTiles(t, x, y, 0).exit, e1 = gleisTiles(t2, x, y, 0).exit, nx = x + e0[0] - e1[0], ny = y + e0[1] - e1[1];
-  const old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
-  for (const [fx, fy] of footprint('hbf', nx, ny, r, t2)) {
-    if (old.has(fx + ',' + fy)) continue;
-    if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
-    if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für den Flügel';
-    if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
-    if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
+  const [x, y] = keyXY(k), r = (t.rot || 0) & 3, n = hbfGleise(t);
+  if (t.wing === 2) return 'Ist schon so';
+  if (t.wing === 1 || t.wing === -1) return { nk: k, mid: Math.floor(n / 2) };
+  const old = new Set(footprint('hbf', x, y, r, t).map(p => p.join())), door = hbfEntrance(t, x, y).map(p => p.join());
+  let why = null;
+  for (const [nx, ny] of [[x, y], r & 1 ? [x - 1, y] : [x, y - 1]]) for (const mid of [Math.floor(n / 2), Math.ceil(n / 2)]) {
+    const t2 = { ...t, wing: 2, mid }, foot = footprint('hbf', nx, ny, r, t2);
+    if (!door.includes(hbfEntrance(t2, nx, ny)[0].join()) || old.size !== foot.filter(p => old.has(p.join())).length) continue;
+    const bad = foot.filter(p => !old.has(p.join())).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos'
+      : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
+    if (!bad) return { nk: nx + ',' + ny, mid };
+    why = why || bad;
   }
-  if (side && !hbfWing(t) && !canPay(HBF_WING_COST)) return state.money < HBF_WING_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
-  const moved = [...Array(hbfGleise(t))].filter((_, g) => gleisTiles(t, x, y, g).exit.join() !== gleisTiles(t2, nx, ny, g).exit.join()).length;   // Gleise, die rücken
-  return { nk: nx + ',' + ny, moved };
+  return (why || 'Kein Platz') + ' – für die Halle muss neben dem Bahnhof ein Feld frei sein';
 }
-function hbfWingSet(k, side) {
-  const p = hbfWingPlan(k, side);
-  if (typeof p === 'string') { fail(p); return null; }
-  const t = state.tiles.get(k), had = hbfWing(t);
-  if (side && !had) addCost(HBF_WING_COST, -1);
-  else if (!side && had) state.money += Math.floor(HBF_WING_COST.money / 2);
-  if (side) t.wing = side; else delete t.wing;
-  if (side === 2) t.mid = Math.floor(hbfGleise(t) / 2); else delete t.mid;
-  t.born = performance.now();
+function hbfUpgrade(k) {
+  const p = hbfUpgradePlan(k);
+  if (typeof p === 'string') return null;
+  const t = state.tiles.get(k);
+  t.wing = 2; t.mid = p.mid;
   if (p.nk !== k) { state.tiles.delete(k); state.tiles.set(p.nk, t); }
-  sfx('build'); recalc(); save();
   return p.nk;
 }
-// Gleise dazu/weg: Der Bahnhof wächst zur Seite +b (im eigenen Rahmen) – bei Drehung 1 und 2 rückt dafür der Anker, damit die
-// alten Gleise bleiben, wo sie sind. Ein Gleis kostet GLEIS_COST, zurück gibt es die Hälfte der Taler.
+function hbfUpgradeAll() {                                        // beim Laden alter Stände (v < 13): { done, stuck }
+  if (!state.symHbf) return null;
+  delete state.symHbf;
+  rebuildCover();
+  const out = { done: 0, stuck: 0 };
+  for (const [k, t] of [...state.tiles]) {
+    if (t.b !== 'hbf') continue;
+    if (t.wing === 2) { out.done++; continue; }                 // Mittelhalle von Block 121: rechts gespiegelt
+    if (hbfUpgrade(k)) { out.done++; rebuildCover(); } else out.stuck++;
+  }
+  return out.done || out.stuck ? out : null;
+}
+// Gleise dazu/weg (Block 123: auf der gewählten Seite der Halle, side −1 links/+1 rechts): Alle anderen Gleise bleiben, wo sie
+// sind – dafür rückt der Anker (gleiche Ausfahrt vor einem bleibenden Gleis). Ohne Halle (alt): immer rechts.
+// Ein Gleis kostet GLEIS_COST, zurück gibt es die Hälfte der Taler.
 const GLEIS_COST = { money: 2000, quader: 6, metall: 4 };
-function hbfResizeError(k, d) {
+function hbfResizePlan(k, d, side = 1) {
   const t = state.tiles.get(k);
   if (!t || t.b !== 'hbf') return 'Kein Hauptbahnhof';
-  const n = hbfGleise(t), m = n + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k);
+  const n = hbfGleise(t), m = n + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k), wing = hbfWing(t), L = hbfLeft(t);
   if (m < HBF_MIN) return `Mindestens ${HBF_MIN} Gleise`;
   if (m > HBF_MAX) return `Höchstens ${HBF_MAX} Gleise`;
-  if (d < 0 && hbfWing(t) === 2 && m <= hbfLeft(t)) return 'Rechts der Halle muss ein Gleis bleiben';   // Mittelhalle (Block 121)
-  if (d < 0) return null;
-  const nx = r === 1 ? x - 2 * d : x, ny = r === 2 ? y - 2 * d : y, old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
-  for (const [fx, fy] of footprint('hbf', nx, ny, r, { ...t, gleise: m })) {
+  const left = wing && side < 0;
+  if (wing && d < 0 && (left ? L : n - L) <= 1) return `${left ? 'Links' : 'Rechts'} der Halle muss ein Gleis bleiben`;
+  const t2 = { ...t, gleise: m };
+  if (wing) t2.mid = left ? L + d : L;
+  // ein Gleis, das bleibt, und wo es danach liegt: links dazu/weg verschiebt die Nummern
+  const keep = left ? (d > 0 ? 0 : 1) : 0, keep2 = left ? keep + d : keep;
+  const e0 = gleisTiles(t, x, y, keep).exit, e1 = gleisTiles(t2, x, y, keep2).exit, nx = x + e0[0] - e1[0], ny = y + e0[1] - e1[1];
+  const plan = { nk: nx + ',' + ny, m, mid: t2.mid, at: left ? (d > 0 ? 0 : -1) : null };
+  if (d < 0) return plan;
+  const old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
+  for (const [fx, fy] of footprint('hbf', nx, ny, r, t2)) {
     if (old.has(fx + ',' + fy)) continue;
     if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
     if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für ein Gleis';
     if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
-  return canPay(GLEIS_COST) ? null : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
+  return canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
 }
-function hbfResize(k, d) {
-  const err = hbfResizeError(k, d);
-  if (err) { fail(err); return null; }
-  const t = state.tiles.get(k), m = hbfGleise(t) + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k);
-  const nk = (r === 1 ? x - 2 * d : x) + ',' + (r === 2 ? y - 2 * d : y);
+function hbfResizeError(k, d, side = 1) { const p = hbfResizePlan(k, d, side); return typeof p === 'string' ? p : null; }
+function hbfResize(k, d, side = 1) {
+  const p = hbfResizePlan(k, d, side);
+  if (typeof p === 'string') { fail(p); return null; }
+  const t = state.tiles.get(k);
   if (d > 0) addCost(GLEIS_COST, -1);
-  else { state.money += Math.floor(GLEIS_COST.money / 2); if (t.gleis) t.gleis.length = Math.min(t.gleis.length, m); }
-  t.gleise = m; t.born = performance.now();
-  if (nk !== k) { state.tiles.delete(k); state.tiles.set(nk, t); }
+  else state.money += Math.floor(GLEIS_COST.money / 2);
+  if (t.gleis) {                                                  // Züge je Gleis: mit ihrem Gleis mitwandern
+    if (p.at === 0) t.gleis.unshift(null);
+    else if (p.at === -1) t.gleis.shift();
+    else t.gleis.length = Math.min(t.gleis.length, p.m);
+  }
+  t.gleise = p.m; t.born = performance.now();
+  if (p.mid != null) t.mid = p.mid;
+  if (p.nk !== k) { state.tiles.delete(k); state.tiles.set(p.nk, t); }
   sfx('build'); recalc(); save();
-  return nk;
+  return p.nk;
 }
 // Märchenschloss umgestalten (Block 60g): patch ändert t.cs. Mehr Wert kostet den Unterschied, weniger gibt die Hälfte zurück.
 // Breite/Tiefe: das Schloss wächst abwechselnd zu beiden Seiten (bleibt so mittig); geht es dort nicht, zur anderen.
@@ -2583,7 +2606,7 @@ function demolishInfo(x, y) {
     }
     const staged = t.b === 'haus' ? HOUSE_STAGES.slice(1, t.lvl).reduce((s, st) => s + (houseCost(st).money || 0), 0)   // Hausausbau (Block 84b)
       : BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money + (hbfWing(t) ? HBF_WING_COST.money : 0) : 0;
+      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
     const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost : Math.floor((price + staged) / 2);
     const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;

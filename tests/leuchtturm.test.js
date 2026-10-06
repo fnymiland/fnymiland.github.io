@@ -40,7 +40,7 @@ describe('Leuchtturm-Kap (Block 83)', () => {
     game("document.querySelector('#panel [data-lgrow]').click()");
     expect(game("[...state.tiles.values()].filter(t => t.b === 'leuchtturm' && !t.mini).length")).toBe(2);
     const d2 = game('JSON.parse(JSON.stringify(serialize()))');
-    expect(d2.v).toBe(12);
+    expect(d2.v).toBe(13);
     game(`adoptState(parseSave(${JSON.stringify(d2)}))`);
     expect(game("[...state.tiles.values()].filter(t => t.b === 'leuchtturm').length")).toBe(2);
   });

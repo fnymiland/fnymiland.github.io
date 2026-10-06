@@ -122,7 +122,7 @@ function serialize() {
   const terraMap = new Map(state.terra), edgeMap = new Map(state.edges);    // getragener Rasen und Linien: am alten Platz (Block 117)
   for (const it of held) { if (it.kind === 'ground') terraMap.set(it.from, it.look); else if (it.kind === 'edge') edgeMap.set(it.from, it.e); }
   return {
-    game: 'kachelhausen', v: 12, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'kachelhausen', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, tiles, terra: [...terraMap], techs: [...state.techs],
@@ -275,6 +275,7 @@ function parseSave(d) {
     growHall: (d.v || 3) < 10,       // v10 (29.09.): Das Rathaus ist 3×3 (growTownHall)
     growHarbors: (d.v || 3) < 11,    // v11 (29.09.): Häfen sind 3×4 mit Kai und Pier (growHarbors)
     growLight: (d.v || 3) < 12,      // v12 (04.10.): Leuchtturm ist ein 3×3-Kap (growLighthouses)
+    symHbf: (d.v || 3) < 13,         // v13 (06.10.): Hauptbahnhof immer mit Halle in der Mitte, rechts gespiegelt (hbfUpgradeAll)
     fitBig: (d.v || 3) < 12,         // Grundflächen nach heutigen Größen prüfen (fitFootprints) – nur, wenn sich Größen geändert haben
     moveLm: (d.v || 3) < 7,         // v7: Sehenswürdigkeiten ziehen auf ihre Themen-Inseln (migrateIslands)
     boughtPlots: (d.v || 3) < 7 ? Math.max(0, d.owned.length - 1) : 0,
@@ -381,6 +382,7 @@ function afterLoad() {
   const ports = growHarbors();
   const lights = growLighthouses();
   const refunded = fitFootprints();
+  const hbfs = hbfUpgradeAll();
   delete state.fitLm;
   nameHouses();
   recalc();
@@ -391,6 +393,7 @@ function afterLoad() {
   if (hall) setTimeout(() => announceHall(hall), 1600);
   if (ports) setTimeout(() => announceHarbors(ports), 2000);
   if (lights) setTimeout(() => toast('🗼 Neu: Dein Leuchtturm ist jetzt ein ganzes Kap mit Wärterhaus und großem Leuchtfeuer!'), 2400);
+  if (hbfs) setTimeout(() => toast(`🚉 Neu: Der Hauptbahnhof hat die Eingangshalle in der Mitte – Gleis, Steig, Halle, Steig, Gleis. Gleise können ein Feld gerückt sein: Strecken davor prüfen${hbfs.stuck ? ` · ${hbfs.stuck === 1 ? 'Einer hatte' : hbfs.stuck + ' hatten'} keinen Platz – im Fenster umbauen` : ''}`), 2800);
   if (refunded.length) setTimeout(() => toast(`Neu: große Gebäude! Kein Platz für ${refunded.join(', ')} – Kosten erstattet.`), 800);
 }
 

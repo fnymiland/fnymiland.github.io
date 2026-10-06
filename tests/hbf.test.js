@@ -11,11 +11,11 @@ beforeEach(() => {
 afterEach(() => game('if (globalThis.__ra) { regionAt = globalThis.__ra; delete globalThis.__ra } recalc()'));
 const put = (k, t) => game(`state.tiles.set('${k}', ${JSON.stringify(t)})`);
 const gleisKeys = k => game(`[...GLEIS].filter(([, G]) => G.hub === '${k}').map(([gk]) => gk)`);
-// Hbf bei (4,6), Drehung 0: Gleise zeigen nach +x, Ausfahrt Gleis 0 bei (8,6), Gleis 1 bei (8,8)
+// Hbf bei (4,6), Drehung 0: Gleise zeigen nach +x, Ausfahrt Gleis 0 bei (8,6), Gleis 1 bei (8,10) – dazwischen Steig, Halle, Steig (Block 123)
 function hub() { expect(game("build('hbf', 4, 6, true)")).toBe(true); game("state.tiles.get('4,6').rot = 0; recalc()"); }
 function lines() {
-  for (let x = 8; x <= 16; x++) { put(`${x},6`, { b: 'schiene', lvl: 1 }); put(`${x},8`, { b: 'schiene', lvl: 1 }); }
-  put('17,5', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); put('17,8', { b: 'station', lvl: 1, rot: 0, train: 'regio' });
+  for (let x = 8; x <= 16; x++) { put(`${x},6`, { b: 'schiene', lvl: 1 }); put(`${x},10`, { b: 'schiene', lvl: 1 }); }
+  put('17,5', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); put('17,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' });
   game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? (y < 7 ? 'wald' : 'obst') : 'home'");
   for (let i = 0; i < 12; i++) put(`${2 + i},23`, { b: 'windrad', lvl: 3 });
   game('recalc()');
@@ -24,8 +24,8 @@ function lines() {
 describe('Hauptbahnhof bauen', () => {
   it('4 tief, 2 Gleise breit – jedes Gleis ist ein Halt', () => {
     hub();
-    expect(game("sizeOf('hbf', 0, state.tiles.get('4,6'))")).toEqual([4, 4]);
-    expect(gleisKeys('4,6')).toEqual(['7,6', '7,8']);                         // vorderstes Hallenfeld je Gleis
+    expect(game("sizeOf('hbf', 0, state.tiles.get('4,6'))")).toEqual([4, 5]);
+    expect(gleisKeys('4,6')).toEqual(['7,6', '7,10']);                         // vorderstes Hallenfeld je Gleis
   });
 
   it('+ Gleis: 2 Felder breiter, kostet; − Gleis gibt die Hälfte zurück', () => {
@@ -33,7 +33,7 @@ describe('Hauptbahnhof bauen', () => {
     const m0 = game('state.money');
     expect(game("hbfResize('4,6', 1)")).toBe('4,6');
     expect(game("state.tiles.get('4,6').gleise")).toBe(3);
-    expect(game("sizeOf('hbf', 0, state.tiles.get('4,6'))")).toEqual([4, 6]);
+    expect(game("sizeOf('hbf', 0, state.tiles.get('4,6'))")).toEqual([4, 7]);
     expect(game('state.money')).toBe(m0 - game('GLEIS_COST.money'));
     expect(game("anchorAt(4, 11)")).toBe('4,6');
     game("hbfResize('4,6', -1)");
@@ -43,7 +43,7 @@ describe('Hauptbahnhof bauen', () => {
 
   it('kein Platz daneben: kein Gleis', () => {
     hub();
-    put('5,10', { b: 'haus', lvl: 1 }); game('recalc()');
+    put('5,11', { b: 'haus', lvl: 1 }); game('recalc()');
     expect(game("hbfResizeError('4,6', 1)")).toMatch(/Platz/);
   });
 
@@ -67,7 +67,7 @@ describe('Linien am Hauptbahnhof', () => {
     const ls = game('T.rail.lines.map(l => ({ st: l.stations, regions: l.regions, powered: l.powered, transfer: l.traffic.transfer }))');
     expect(ls.length).toBe(2);
     expect(ls.every(l => l.powered)).toBe(true);
-    expect(ls.map(l => l.st.find(s => ['7,6', '7,8'].includes(s))).sort()).toEqual(['7,6', '7,8']);
+    expect(ls.map(l => l.st.find(s => ['7,6', '7,10'].includes(s))).sort()).toEqual(['7,10', '7,6']);
     const wald = ls.find(l => l.regions.includes('wald'));
     expect(wald.transfer).toEqual(['obst']);                                  // per Umsteigen erreichbar
     // Besucher der Waldinsel: ohne Umsteigen nur ½ × Heimat-Einwohner, mit auch die der Obstinsel
@@ -91,7 +91,7 @@ describe('Linien am Hauptbahnhof', () => {
     expect(document.getElementById('panel').textContent).toMatch(/Gleis 1/);
     document.querySelector('[data-train="0:schnell"]').onclick();
     expect(game("stopConf('7,6').train")).toBe('schnell');
-    expect(game("stopConf('7,8').train")).not.toBe('schnell');
+    expect(game("stopConf('7,10').train")).not.toBe('schnell');
     game('save()');
     const t = game("load().tiles.get('4,6')");
     expect(t.gleis[0].train).toBe('schnell');
@@ -99,8 +99,8 @@ describe('Linien am Hauptbahnhof', () => {
 
   it('Gleise, deren Strecken sich berühren, sind eine Linie – das Fenster sagt es', () => {
     hub();
-    for (let x = 8; x <= 12; x++) { put(`${x},6`, { b: 'schiene', lvl: 1 }); put(`${x},8`, { b: 'schiene', lvl: 1 }); }
-    put('12,7', { b: 'schiene', lvl: 1 });
+    for (let x = 8; x <= 12; x++) { put(`${x},6`, { b: 'schiene', lvl: 1 }); put(`${x},10`, { b: 'schiene', lvl: 1 }); }
+    for (const y of [7, 8, 9]) put(`12,${y}`, { b: 'schiene', lvl: 1 });
     put('13,6', { b: 'station', lvl: 1, rot: 0 });
     game("globalThis.__ra = regionAt; regionAt = (x, y) => x > 10 ? 'wald' : 'home'; recalc(); openInfo(4, 6)");
     expect(game('T.rail.lines.length')).toBe(1);

@@ -1443,3 +1443,14 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Dachstreifen gleich mit (`strip`), von hinten nach vorn, Vorderes deckt Hinteres: Bögen laufen über die ganze sichtbare
       Wölbung. Das Gewölbe hat die Dachfarbe des Bahnhofs (auch selbst gewählt), Fugen/Bögen daraus abgetönt, Stirnseiten in
       Wandfarbe – nichts beißt sich mehr mit dem Empfangsgebäude.
+
+## Block 123: Hauptbahnhof symmetrisch (06.10.2026)
+- [x] Mit der Mittelhalle von Block 121 lag rechts der Halle wieder Gleis, Steig – also doch schief. Jetzt immer
+      Gleis – Steig – Halle – Steig – Gleis (rechts gespiegelt, `hbfPlatS`), die Halle ist fest in der Mitte, Seitenflügel und
+      „ohne Halle“ gibt es nicht mehr. Neu gebaut 5 breit.
+- [x] + / − Gleis je Seite („+ Gleis links“, „− rechts“ …): alle anderen Gleise behalten ihre Ausfahrt, Züge je Gleis wandern mit.
+      Kein Platz auf einer Seite: Hinweis nur für diese Seite.
+- [x] Alte Stände (Spielstand v13): beim Laden umgestellt – ohne Halle ein Feld breiter zur freien Seite, Halle dort, wo der
+      Eingang war; Seitenflügel und alte Mittelhalle bleiben gleich breit. Ohne Platz bleibt er alt, im Fenster „▣ Halle in die
+      Mitte bauen“ (sagt, warum es gerade nicht geht). Toast und „Das ist neu“. Tests: hbf-fluegel.test.js, hbf.test.js.
+
