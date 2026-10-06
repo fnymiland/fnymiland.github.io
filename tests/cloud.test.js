@@ -216,9 +216,12 @@ describe('Online-Speicher (Block 93)', () => {
       expect(JSON.parse(remote().save.data).town.name).toBe('Echt');
     } finally { game('cloudOff = window._off'); }
   });
-  it('zweites Fenster mit dem Spiel: dieses lädt nichts mehr hoch', async () => {
+  it('zweites Fenster mit dem Spiel: ein nicht führendes lädt nichts mehr hoch, das führende lässt sich nicht aufhalten', async () => {
     play();
-    await login();
+    await login(); await new Promise(r => setTimeout(r, 5)); await settle();
+    game("window.dispatchEvent(new StorageEvent('storage', { key: SAVE_KEY }))");
+    expect(game('cloudState')).toBe('ok');                                                   // führt: weiter wie bisher
+    game('cloudLeadInfo = null');
     game("window.dispatchEvent(new StorageEvent('storage', { key: SAVE_KEY }))");
     expect(game('cloudState')).toBe('zweites');
     game('cloudTouched()');
@@ -321,6 +324,34 @@ describe('Ein Gerät führt (Block 94)', () => {
     await game("cloudResolve('local', cloudKnown)"); await settle();
     expect(remote().lead.dev).toBe(game('cloudDevice()'));
     expect(JSON.parse(remote().save.data).town.name).toBe('Hier');
+  });
+  // --- Prüfung von Stufe 2 (Block 94b) ---
+  it('„führen wenn frei“ des führenden Geräts löscht keine offene Bitte eines anderen', async () => {
+    play();
+    await login(); await tick(); await settle();
+    game('cloudApi.leadW = []');                                                             // Übergabe hier nicht auslösen
+    game("cloudApi.db.u1.lead.req = { dev: 'ipad', name: 'iPad' }");
+    await game('cloudClaimLead()');
+    expect(remote().lead.dev).toBe(game('cloudDevice()'));
+    expect(remote().lead.req).toEqual({ dev: 'ipad', name: 'iPad' });
+  });
+  it('frei gewordene Führung: ein unbeachtet daneben stehendes Gerät übernimmt nicht von selbst, erst beim Anfassen', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad');
+    await login(); await tick(); await settle();
+    game('window._li = lastInput; lastInput = performance.now() - 120000');                // seit 2 Minuten nicht angefasst
+    try {
+      await game("cloudApi.leadTx('u1', () => null)"); await tick(); await settle();
+      expect(remote().lead).toBe(null);
+      game("document.dispatchEvent(new window.Event('pointerdown', { bubbles: true }))"); await tick(); await settle();
+      expect(remote().lead.dev).toBe(game('cloudDevice()'));
+    } finally { game('lastInput = window._li'); }
+  });
+  it('zuschauen: auch ↶ ist gesperrt', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad');
+    await login(); await tick(); await settle();
+    expect(game('undo()')).toBe(false);
   });
 });
 

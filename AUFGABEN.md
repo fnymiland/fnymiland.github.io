@@ -1072,4 +1072,13 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       15 s; meldet sich die Führung 45 s nicht (Serverzeit), gilt sie als verwaist und wird übernommen.
 - [x] War ein Gerät offline führend und wurde abgelöst: Rückfrage statt Überschreiben; „Dieses Gerät“ übernimmt die Führung.
 - [x] Gerätename aus dem Browser (iPhone, iPad, Mac, …). Online-Speicher-Fenster zeigt, wo gespielt wird. cloud.test.js: 29 Fälle.
+- [x] 94b: Prüfung von Stufe 2 – gefunden und behoben:
+      • „Führen, wenn frei“ des führenden Geräts (z. B. beim Zurückkommen) löschte eine offene Bitte „Hier weiterspielen“ →
+        das andere Gerät bekam die Führung nie. Jetzt bleibt die Bitte stehen.
+      • Gab das führende Gerät kurz ab (Mitteilung angeschaut, App gewechselt), schnappte sich ein unbeachtet daneben
+        stehendes Gerät die Führung. Jetzt übernimmt nur, wer in der letzten Minute angefasst wurde oder gerade geöffnet wird.
+      • Abmelden ließ die Führung 45 s blockiert → wird freigegeben. Tab zu / Netz weg: Firebase gibt die Führung sofort frei
+        (onDisconnect), nicht erst nach 45 s.
+      • ↶ war beim Zuschauen nicht gesperrt. Die Zweites-Fenster-Sperre hätte auch das führende Fenster angehalten.
+      cloud.test.js: 32 Fälle.
 

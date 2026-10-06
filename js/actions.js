@@ -642,6 +642,7 @@ function undoable(fn) {
   try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
 }
 function undo() {
+  if (typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); return false; }   // zuschauen (Block 94)
   if (moving) { cancelMove(); undoPending = null; return true; }
   const step = undoStack.pop();
   if (typeof updateUndoBtn === 'function') updateUndoBtn();
