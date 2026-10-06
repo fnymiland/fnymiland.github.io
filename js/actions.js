@@ -176,7 +176,7 @@ function removeLawn(x, y) {
 }
 // Verschieben: aufnehmen, Ziel antippen, ablegen – kostenlos. Während des Tragens bleibt das Objekt
 // im Spielstand an seinem alten Platz (serialize), damit beim Schließen der App nichts verloren geht.
-let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] } | { kind: 'group', items, cx, cy }
+let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] } | { kind: 'group', items, cx, cy, W, H, r }
 const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving.kind === 'deco' ? moving.d.b : null);
 // Was man trägt, als Liste (eine Gruppe oder ein einzelnes Ding) – fürs Speichern und Zurücklegen
 const carried = () => !moving ? [] : moving.kind === 'group' ? moving.items : [moving];
@@ -220,41 +220,100 @@ function pickUpGroup(x0, y0, x1, y1) {
       else items.push({ kind: 'tile', t, from: a, dx: ax - x0, dy: ay - y0 });
     }
     (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
+    const look = terraLook(x, y);                                       // Parkrasen, Freizeitpark-Boden ziehen mit (Block 117)
+    if (look === 'park' || look === 'fz') items.push({ kind: 'ground', look, from: k, dx: x - x0, dy: y - y0 });
+  }
+  for (const [k, e] of state.edges) {                                    // Hecken, Zäune, Mauern im Rechteck und auf seinem Rand
+    const [mx, my] = edgeMid(k);
+    if (mx >= x0 - 0.5 && mx <= x1 + 0.5 && my >= y0 - 0.5 && my <= y1 + 0.5) items.push({ kind: 'edge', e, from: k, mx: mx - x0, my: my - y0 });
   }
   if (!items.length) { toast(stays ? 'Das bleibt stehen (Rathaus, Sehenswürdigkeit oder ragt hinaus)' : 'Hier ist nichts zum Verschieben'); return false; }
-  if (items.length === 1) {                          // ein einzelnes Ding: wie gewohnt (mit Drehen)
+  if (items.length === 1 && (items[0].kind === 'tile' || items[0].kind === 'deco')) {   // ein einzelnes Ding: wie gewohnt (mit Drehen)
     const it = items[0], [x, y] = it.kind === 'tile' ? keyXY(it.from) : keyXY(it.from[0]);
     pickUp(x, y, it.kind === 'deco' ? it.from[1] : 0);
     return true;
   }
   for (const it of items) {
     if (it.kind === 'tile') state.tiles.delete(it.from);
+    else if (it.kind === 'ground') state.terra.set(it.from, 'grass');
+    else if (it.kind === 'edge') state.edges.delete(it.from);
     else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
   }
-  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2) };
-  $('rot-btn').hidden = true;
+  if (items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
+  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };
+  $('rot-btn').hidden = false;                                           // die ganze Gruppe dreht sich (Block 117)
   recalc();
   sfx('deco');
-  toast(`${items.length} Dinge angehoben – tippe, wohin sie sollen` + (stays ? ' (manches bleibt stehen)' : ''));
+  toast(`${items.length} Dinge angehoben – tippe, wohin sie sollen · drehen mit ⟳` + (stays ? ' (manches bleibt stehen)' : ''));
   return true;
+}
+// Mitte einer Linie in Feldkoordinaten: a i,j liegt zwischen (i, j−1) und (i, j), b i,j zwischen (i−1, j) und (i, j)
+const edgeMid = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [i, j - 0.5] : [i - 0.5, j]; };
+const edgeAtMid = (mx, my) => Math.abs(my - Math.round(my)) > 0.25 ? 'a' + Math.round(mx) + ',' + Math.round(my + 0.5) : 'b' + Math.round(mx + 0.5) + ',' + Math.round(my);
+// Gruppe drehen (Block 117): ein Punkt im Rahmen der Gruppe (0…W−1, 0…H−1) nach moving.r Vierteldrehungen – dieselbe Drehung
+// wie kitTurn, damit jedes Ding mit rot + r genau so zu seinen Nachbarn steht wie vorher
+function grot(px, py) {
+  let W = moving.W, H = moving.H, x = px, y = py;
+  for (let i = 0; i < (moving.r || 0); i++) { [x, y] = [H - 1 - y, x]; [W, H] = [H, W]; }
+  return [x, y];
+}
+function rotateGroup(dir) {
+  if (!moving || moving.kind !== 'group') return false;
+  moving.r = ((moving.r || 0) + dir + 4) % 4;
+  const [W, H] = moving.r & 1 ? [moving.H, moving.W] : [moving.W, moving.H];
+  moving.cx = Math.round((W - 1) / 2); moving.cy = Math.round((H - 1) / 2);
+  return true;
+}
+const SLOT_UV = i => i < 4 ? [i & 1 ? 1 : -1, i & 2 ? 1 : -1] : MID_SIDE[i - 4];
+// Wo und wie ein Ding der Gruppe nach der Drehung liegt: { dx, dy } im Rahmen, dazu t (Feld), d + slot (Deko), key (Linie)
+function groupPlaced(it) {
+  const r = moving.r || 0;
+  if (!r) return it.kind === 'edge' ? { mx: it.mx, my: it.my, e: it.e } : it.kind === 'deco' ? { dx: it.dx, dy: it.dy, d: it.d, slot: it.from[1] } : it;
+  if (it.kind === 'ground') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy }; }
+  if (it.kind === 'edge') { const [mx, my] = grot(it.mx, it.my); return { mx, my, e: it.e }; }
+  if (it.kind === 'deco') {
+    const d = it.d, slot = it.from[1];
+    if (slot === VSLOT) { const [px, py] = grot(it.dx - 0.5, it.dy - 0.5); return { dx: Math.round(px + 0.5), dy: Math.round(py + 0.5), slot, d }; }
+    const [dx, dy] = grot(it.dx, it.dy), [u0, v0] = SLOT_UV(slot), [u, v] = kitTurn(r, u0, v0);
+    const ns = slot < 4 ? (u > 0 ? 1 : 0) | (v > 0 ? 2 : 0) : 4 + MID_SIDE.findIndex(([a, b]) => a === Math.sign(u) && b === Math.sign(v));
+    const auto = slot >= 4 && MID_TURN.has(d.b) && (d.rot || 0) === midRot(slot);   // Bank am Wegrand: wie das Spiel sie selbst stellt
+    const rot = auto ? midRot(ns) : ROTATABLE.has(d.b) ? ((d.rot || 0) + r) & 3 : d.rot || 0;
+    return { dx, dy, slot: ns, d: { ...d, rot } };
+  }
+  const t = it.t, rot0 = t.rot || 0, cells = footprint(t.b, it.dx, it.dy, rot0, t).map(([x, y]) => grot(x, y));
+  const ax = Math.min(...cells.map(c => c[0])), ay = Math.min(...cells.map(c => c[1]));
+  const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene', rot = turns ? (rot0 + r) & 3 : rot0;
+  const nt = { ...t, rot };
+  if (t.wegs) { nt.wegs = {}; for (const [o, st] of Object.entries(t.wegs)) { const [ox, oy] = keyXY(o), [px, py] = grot(it.dx + ox, it.dy + oy); nt.wegs[(px - ax) + ',' + (py - ay)] = st; } }
+  const fit = footprint(t.b, ax, ay, rot, nt).map(c => c.join()).sort().join(';') === cells.map(c => c.join()).sort().join(';');
+  return { dx: ax, dy: ay, t: nt, bad: fit ? null : `${ITEMS[t.b].name} lässt sich nicht drehen` };
 }
 // Passt die Gruppe mit ihrer Mitte auf (hx, hy)? Fehler je Ding (Map) und der erste
 function groupErrors(hx, hy) {
   const ox = hx - moving.cx, oy = hy - moving.cy, errs = new Map();
   let first = null;
   for (const it of moving.items) {
-    const x = ox + it.dx, y = oy + it.dy;
+    const P = groupPlaced(it);
     let err = null;
-    if (it.kind === 'deco') err = smallError(it.d.b, x, y, it.from[1], { move: true });
+    if (it.kind === 'edge') {
+      const k = edgeAtMid(ox + P.mx, oy + P.my);
+      err = state.edges.has(k) ? 'Hier steht schon eine Linie' : edgeError(P.e.b, k);
+    } else if (it.kind === 'ground') {
+      const x = ox + P.dx, y = oy + P.dy, k = x + ',' + y, ot = state.tiles.get(COVER.get(k) || k);
+      if (!ownedTile(x, y)) err = notMine(x, y);
+      else if (terrainAt(x, y) !== 'grass') err = it.look === 'fz' ? 'Freizeitpark-Boden nur auf Wiese' : 'Parkrasen nur auf Wiese';
+      else if (ot && !(it.look === 'fz' ? fzOk(ot.b) : parkOk(ot.b))) err = 'Hier steht ein Gebäude';
+    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: true });
     else {
-      const b = it.t.b;
-      if (b === 'schiene' || b === 'weg') {
+      const x = ox + P.dx, y = oy + P.dy, b = P.t.b;
+      err = P.bad;
+      if (!err && (b === 'schiene' || b === 'weg')) {
         const water = terrainAt(x, y) === 'water';
         if (!ownedTile(x, y)) err = notMine(x, y);
-        else if (it.t.bridge && !water) err = 'Brücken nur übers Wasser';
-        else if (!it.t.bridge && water) err = b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
+        else if (P.t.bridge && !water) err = 'Brücken nur übers Wasser';
+        else if (!P.t.bridge && water) err = b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
       }
-      err = err || placeError(b, x, y, it.t.rot || 0, { move: true, t: it.t });
+      err = err || placeError(b, x, y, P.t.rot || 0, { move: true, t: P.t });
     }
     errs.set(it, err);
     first = first || err;
@@ -265,18 +324,23 @@ function dropGroup(hx, hy) {
   const { ox, oy, first } = groupErrors(hx, hy);
   if (first) { fail(first); return false; }
   const now = performance.now();
-  for (const it of moving.items) {
-    const k = (ox + it.dx) + ',' + (oy + it.dy);
+  for (const it of [...moving.items].sort((p, q) => (p.kind === 'ground' ? 0 : 1) - (q.kind === 'ground' ? 0 : 1))) {   // erst der Rasen, dann was darauf steht
+    const P = groupPlaced(it);
+    if (it.kind === 'ground') { state.terra.set((ox + P.dx) + ',' + (oy + P.dy), it.look); continue; }
+    if (it.kind === 'edge') { state.edges.set(edgeAtMid(ox + P.mx, oy + P.my), { ...P.e, born: now }); continue; }
+    const k = (ox + P.dx) + ',' + (oy + P.dy);
     if (it.kind === 'tile') {
-      const [x, y] = keyXY(k), b = it.t.b, t = { ...it.t, born: now }, covered = b === 'weg' || b === 'schiene' ? [] : pathsUnder(b, x, y, t.rot || 0, t);
+      const [x, y] = keyXY(k), b = P.t.b, t = { ...P.t, born: now }, covered = b === 'weg' || b === 'schiene' ? [] : pathsUnder(b, x, y, t.rot || 0, t);
       for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);   // Wege am Ziel: unter die Deko bzw. vom Gebäude ersetzt (Block 58)
       if (covered.length) { if (plazaOk(b)) setUnder(t, x, y, [...covered, ...Object.entries(t.wegs || {}).map(([o, st]) => [x + keyXY(o)[0], y + keyXY(o)[1], st]), ...(t.weg != null ? [[x, y, t.weg]] : [])]); else if (replacesWeg(b)) state.money += covered.length * ITEMS.weg.cost; }
       state.tiles.set(k, t);
       claimSea(b, x, y, t.rot || 0, t, t.bridge);
     }
-    else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[it.from[1]] = { ...it.d, born: now }; }
+    else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[P.slot] = { ...P.d, born: now }; }
   }
+  if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
   moving = null;
+  $('rot-btn').hidden = true;
   sfx('build');
   recalc();
   save();
@@ -318,7 +382,9 @@ function dropAt(x, y, slot) {
 function cancelMove() {
   if (!moving) return;
   for (const it of carried()) {
-    if (it.kind === 'deco') {
+    if (it.kind === 'ground') state.terra.set(it.from, it.look);
+    else if (it.kind === 'edge') state.edges.set(it.from, it.e);
+    else if (it.kind === 'deco') {
       const [k, slot] = it.from;
       if (!state.decos.has(k)) state.decos.set(k, newSlots());
       state.decos.get(k)[slot] = it.d;
@@ -328,7 +394,9 @@ function cancelMove() {
       state.tiles.set(it.from, it.t);
     }
   }
+  if (moving.kind === 'group' && moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
   moving = null;
+  $('rot-btn').hidden = true;
   undoPending = null;                                 // abgebrochen: kein Schritt (sonst rechnet der nächste ab dem Aufheben)
   recalc();
 }

@@ -138,7 +138,7 @@ canvas.addEventListener('pointercancel', endPointer);
 canvas.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse' && !drag) { hover = null; hoverChunk = null; } });
 // Mausrad: beim Bauen/Verschieben drehbarer Dinge dreht es, sonst zoomt es (Zwei-Finger-Zoom = ctrlKey zoomt immer)
 let wheelAcc = 0, wheelLast = 0;
-const wheelRotates = () => tool === 'verschieben' ? !!moving && ROTATABLE.has(movingType()) : tool !== 'look' && ROTATABLE.has(tool);
+const wheelRotates = () => tool === 'verschieben' ? !!moving && (moving.kind === 'group' || ROTATABLE.has(movingType())) : tool !== 'look' && ROTATABLE.has(tool);
 canvas.addEventListener('wheel', e => {
   e.preventDefault();
   if (!e.ctrlKey && wheelRotates()) {

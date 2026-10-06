@@ -592,13 +592,28 @@ function groupPreview(z) {
   };
   g.save(); g.lineJoin = 'round';
   for (const it of moving.items) {
-    const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
-    if (it.kind === 'deco') {
-      const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d);
-      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, it.d.col || 0, it.d.form || 0); });
+    const P = groupPlaced(it), bad = !!errs.get(it);                  // nach der Drehung (Block 117)
+    if (it.kind === 'edge') {                                          // Linie: ein Strich auf der Feldkante
+      const k = edgeAtMid(ox + P.mx, oy + P.my), [[ax, ay], [bx, by]] = edgeEndPoints(k).map(([vx, vy]) => [vx - 0.5, vy - 0.5]), p0 = toScreen(ax, ay), p1 = toScreen(bx, by);
+      g.lineCap = 'round';
+      for (const [col, w] of [['rgba(255,255,255,0.9)', 5.5], [bad ? '#e5484d' : C(shade((STYLES[P.e.b] && styleDef(P.e.b, P.e.style).col) || '#7a5236', -0.25)), 3]]) {   // heller Rand: auch auf Rasen sichtbar
+        g.strokeStyle = col; g.lineWidth = w * z; g.beginPath(); g.moveTo(p0.x, p0.y - 3 * z); g.lineTo(p1.x, p1.y - 3 * z); g.stroke();
+      }
       continue;
     }
-    const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0, t);
+    const x = ox + P.dx, y = oy + P.dy;
+    if (it.kind === 'ground') {                                        // Rasen: grüne Raute
+      const c = [toScreen(x - 0.5, y - 0.5), toScreen(x + 0.5, y - 0.5), toScreen(x + 0.5, y + 0.5), toScreen(x - 0.5, y + 0.5)];
+      g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
+      g.fillStyle = bad ? 'rgba(229,72,77,0.4)' : it.look === 'fz' ? 'rgba(242,140,177,0.45)' : 'rgba(110,190,80,0.55)'; g.fill();
+      continue;
+    }
+    if (it.kind === 'deco') {
+      const slot = P.slot, d = P.d, [u, v] = slotPos(x, y, slot, d);
+      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(d.b, d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, d.col || 0, d.form || 0); });
+      continue;
+    }
+    const t = P.t, [w, h] = sizeOf(t.b, t.rot || 0, t);
     for (const [fx, fy] of footprint(t.b, x, y, t.rot || 0, t)) dia(fx, fy, bad);
     if (t.b === 'weg' || t.b === 'schiene') continue;                // Wege: die Fläche genügt
     add((x + w - 1) + ',' + (y + h - 1), () => {

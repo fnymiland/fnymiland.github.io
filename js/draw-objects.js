@@ -1115,6 +1115,7 @@ function decoScale(b) {
 }
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
+  if (tool === 'verschieben' && rotateGroup(dir)) { previewCache = null; sfx('deco'); return; }   // ganze Gruppe (Block 117)
   const type = tool === 'verschieben' ? movingType() : tool;
   const cur = hover && type && ITEMS[type] && ROTATABLE.has(type) ? placeRot(type, hover.x, hover.y) : buildRot;
   buildRot = (cur + dir + 4) % 4;

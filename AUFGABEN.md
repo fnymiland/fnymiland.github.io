@@ -1389,3 +1389,14 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
 - [x] 116c: Alle Beläge geprüft (14 Stile, schmal und breit, Zoom 0,6–3): breite Wege (`drawWidePath`) hatten noch Fugen
       (Kopfstein, Kristall) → ziehen ihr Feld ebenfalls nach. Jetzt überall 0 (Regenbogen: Grün nur im Muster, Trittsteine:
       Gras gewollt). Gleisbetten geprüft: keine Fugen.
+
+
+## Block 117: Ganze Anlagen gedreht verschieben (06.10.2026)
+- [x] Mehrere Dinge in der Hand drehen: ⟳, R und Mausrad drehen die Gruppe in Vierteldrehungen um ihre Mitte
+      (`rotateGroup`, `grot`, `groupPlaced`). Gebäude (auch mehrfeldrig, Wege darunter `wegs`), Wege, Schienen drehen rot + r;
+      Deko wandert in die passende Ecke/Seitenmitte, Eckpunkt-Laternen mit; Bänke am Wegrand stehen wie das Spiel sie stellt.
+      Was sich nicht drehen lässt (nicht drehbar und nicht quadratisch), meldet sich in der Vorschau.
+- [x] Beim Gruppenverschieben ziehen jetzt Parkrasen und Freizeitpark-Boden (`ground`, alter Platz wird Wiese) sowie Hecken,
+      Zäune, Mauern samt Tor/Bogen (`edge`, im Rechteck und auf seinem Rand) mit. Ziel: Rasen nur auf Wiese, keine doppelte
+      Linie. Abbrechen legt alles zurück, Speichern beim Tragen sichert Rasen/Linien am alten Platz. Vorschau zeigt Rasen und
+      Linien. Test: gruppe-drehen.test.js (4 Drehungen = Original, 1 Drehung exakt, Abbrechen, Speichern, Fehler).

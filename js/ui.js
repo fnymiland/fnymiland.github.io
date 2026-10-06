@@ -2326,6 +2326,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-drehen', date: '6. Oktober', title: 'Ganze Anlagen drehen', items: [
+    '⟳ <b>Mehrere Dinge drehen:</b> Mit ✋ ein Rechteck aufziehen, dann mit ⟳ (oder R, Mausrad) die ganze Anlage in Vierteldrehungen drehen – jedes Ding dreht mit, alles bleibt zueinander gleich.',
+    '🌳 <b>Parks ziehen komplett um:</b> Parkrasen, Freizeitpark-Boden und Hecken, Zäune, Mauern samt Toren kommen jetzt mit.',
+    '🧹 Keine grünen Linien mehr über Plätzen, Einwohner etwas kleiner.',
+  ] },
   { id: '2026-10-06-freunde', date: '6. Oktober', title: 'Freunde: dein Name & was du verpasst hast', items: [
     '🏷️ <b>Dein Name:</b> Freunde sehen jetzt den Namen auf deinem Schild (Du → Figur), nicht mehr den aus dem Google-Konto.',
     '💌 <b>Während du weg warst:</b> Beim Öffnen zeigt eine Karte, wer da war, ein Herz dagelassen, ins Gästebuch geschrieben oder dir ein Päckchen geschickt hat. Am 🌐-Knopf steht, wie viel Neues wartet.',

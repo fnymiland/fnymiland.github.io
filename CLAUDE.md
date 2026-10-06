@@ -356,6 +356,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+117. **Gruppe tragen und drehen** (Block 117): Eine Gruppe (`moving.kind === 'group'`) hat Rahmen W×H und Drehung r; wo ein Ding
+    landet, sagt nur `groupPlaced(it)` (Punkt drehen: `grot`, gleiche Richtung wie `kitTurn`, Dinge rot + r; Bank am Wegrand
+    `midRot`). Neue Arten in der Gruppe (Rasen `ground`, Linien `edge`) brauchen: aufnehmen, `groupErrors`, `dropGroup`,
+    `cancelMove`, `serialize` (am alten Platz speichern) und die Vorschau.
 115. **Figurengröße** (Block 115): Figuren werden in `drawWalker` um den Fußpunkt auf `FIG_SCALE` verkleinert. Wer etwas über
     oder an der Figur platziert (Schild, Blase, Antippen), rechnet mit `walkerHead`/`figScale`, nie mit festen z-Abständen.
 113. **Ebenen** (Block 113): Fenster `#modal` z 40. Was aus einem Fenster heraus Rückmeldung gibt und nicht antippbar ist
