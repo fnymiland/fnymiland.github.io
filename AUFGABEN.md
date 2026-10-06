@@ -1173,3 +1173,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Wer mehrere Updates verpasst hat: „Seit du zuletzt hier warst, gab es 7 Updates“ – das neueste aufgeklappt, die
       älteren als Überschrift zum Antippen. Unbekannter/sehr alter Stand: alle. ☰ → Das ist neu: ganze Geschichte,
       Verpasstes als „neu für dich“ markiert. Test: news.test.js (+4 Fälle).
+- [x] 99a: „youNews is not defined“ beim Start im WLAN: main.js startete die Spielschleife, bevor die Skripte danach
+      (cloud, live, friends, me) geladen waren – auf schnellem localhost nie zu sehen. Schleife startet jetzt erst bei
+      DOMContentLoaded (structure.test prüft das).

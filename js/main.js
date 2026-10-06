@@ -165,7 +165,10 @@ function frame(now) {
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }
-requestAnimationFrame(frame);
+// Erst loslegen, wenn ALLE Skripte da sind: cloud.js, live.js, friends.js und me.js kommen nach main.js. Im langsamen
+// WLAN zeichnete das erste Bild sonst schon, bevor me.js geladen war („youNews is not defined“, Block 99a).
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(frame));
+else requestAnimationFrame(frame);
 
 // Größe ändern leert die Zeichenfläche – sofort neu zeichnen, sonst blitzt bis zum nächsten Bild der blaue Hintergrund durch
 window.addEventListener('resize', () => { resize(); try { render(performance.now()); } catch (e) { /* nächstes Bild holt es nach */ } });

@@ -21,6 +21,14 @@ describe('Aufbau', () => {
     expect(versions.length).toBeGreaterThan(scripts.length);
   });
 
+  it('die Spielschleife startet erst, wenn alle Skripte geladen sind (sonst fehlt im langsamen WLAN, was danach kommt)', () => {
+    const main = fs.readFileSync(path.join(ROOT, 'js/main.js'), 'utf8');
+    const starts = [...main.matchAll(/requestAnimationFrame\(frame\)/g)].length;
+    expect(starts).toBe(3);                                                    // im Bild selbst + die zwei Startwege unten
+    expect(main).toMatch(/document\.readyState === 'loading'\) document\.addEventListener\('DOMContentLoaded', \(\) => requestAnimationFrame\(frame\)\)/);
+    expect(scripts.indexOf('js/main.js')).toBeLessThan(scripts.indexOf('js/me.js'));   // darum nötig
+  });
+
   it('jede angesprochene Element-ID gibt es in index.html oder in einer Vorlage im Code', () => {
     const used = new Set([...code.matchAll(/\$\('([\w-]+)'\)|getElementById\('([\w-]+)'\)/g)].map(m => m[1] || m[2]));
     const known = new Set([...html.matchAll(/id="([\w-]+)"/g), ...code.matchAll(/id="([\w-]+)"/g)].map(m => m[1]));

@@ -356,6 +356,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+99. **Ladereihenfolge**: Die Spielschleife (`frame`) startet erst bei `DOMContentLoaded` – nach main.js kommen noch
+    cloud.js, live.js, friends.js, me.js. Wer aus Bild/HUD etwas aus diesen Dateien aufruft, verlässt sich darauf;
+    Code, der beim Laden selbst läuft, darf nichts aus späteren Dateien aufrufen (im langsamen WLAN fehlt es dann).
 98. **Drei feste Orte** (Block 98): 🏛️ Rathaus = die Stadt (`HALL_TABS`: Übersicht, Zu tun, Bewohner, Inseln, Ort).
     Knopf „Du“ = der Spieler (`openYou`, `YOU_TABS`: Figur, Erfolge, Album, Tagebuch, Freunde, Online) – Album,
     Tagebuch, Freunde und Online sind eigene Fenster und setzen `youHead(tab)` oben ein. ☰ = Hilfe-Buch (`openHelp`,
