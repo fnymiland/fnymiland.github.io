@@ -108,8 +108,12 @@ describe('Hauptbahnhof mit Seitenflügel (Block 118)', () => {
     expect(bad).toEqual([]);
   });
   it('Block 122: Backstein und Land bekommen das Gewölbe wie Glas (aus Ziegeln/Holz), Glas bleibt Glas', () => {
-    const calls = game(`(() => { const out = {}, orig = vaultDetail; vaultDetail = (K, V, brick) => { out[brick ? 'ziegel' : 'holz'] = (out[brick ? 'ziegel' : 'holz'] || 0) + 1; };
+    const calls = game(`(() => { const out = {}, orig = vaultDetail; vaultDetail = (K, roof, brick, lit) => { out[brick ? 'ziegel' : 'holz'] = (out[brick ? 'ziegel' : 'holz'] || 0) + 1; return orig(K, roof, brick, lit); };
       try { for (const look of ['glas', 'backstein', 'land']) drawObject('hbf', 300, 300, 1.2, 1000, 10, 10, 1, { b: 'hbf', lvl: 1, rot: 0, look, gleise: 3 }); } finally { vaultDetail = orig; } return out; })()`);
     expect(calls).toEqual({ ziegel: 3, holz: 3 });                                                // je Gleis ein Gewölbe
+    // Gewölbe in der Dachfarbe: eine gewählte Dachfarbe färbt auch die Halle (keine feste Ziegel-/Holzfarbe)
+    const fills = game(`(() => { const seen = []; Object.defineProperty(g, 'fillStyle', { configurable: true, get: () => seen[seen.length - 1], set: v => seen.push(String(v)) });
+      try { PASS = 'object'; drawObject('hbf', 300, 300, 1.2, 1000, 10, 10, 1, { b: 'hbf', lvl: 1, rot: 0, look: 'backstein', gleise: 2, roof: 2 }); } finally { PASS = null; delete g.fillStyle; } return seen; })()`);
+    expect(fills).not.toContain(String(game("C('#a65a44')")));
   });
 });

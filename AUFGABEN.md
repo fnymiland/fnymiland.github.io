@@ -1439,3 +1439,7 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       das schöne Tonnengewölbe. Jetzt alle drei in derselben Form: Backstein als Ziegelgewölbe (Ziegelreihen, Gurtbögen über
       den Stützen, Glas-Oberlicht im First, nachts warm), Land als Holzgewölbe (Bretter, kräftige Holzbögen). `vaultDetail`
       zeichnet Fugen und Bögen nur auf der sichtbaren Seite. Test: hbf-fluegel.test.js.
+- [x] 122b: Die Gurtbögen brachen mitten auf der Wölbung ab (Sichtbarkeit nur geschätzt) – jetzt malt `K.block` den Schmuck je
+      Dachstreifen gleich mit (`strip`), von hinten nach vorn, Vorderes deckt Hinteres: Bögen laufen über die ganze sichtbare
+      Wölbung. Das Gewölbe hat die Dachfarbe des Bahnhofs (auch selbst gewählt), Fugen/Bögen daraus abgetönt, Stirnseiten in
+      Wandfarbe – nichts beißt sich mehr mit dem Empfangsgebäude.

@@ -43,7 +43,7 @@ function kit(cx, cy, z, rot) {
 
   // Quader mit Dach. type: 'hip' (Walm), 'gable' (Sattel, ridge 'a' oder 'b'), 'mansard' (Mansard: steil, dann flach),
   // 'barrel' (Tonnendach: halbrund über der langen Seite), 'flat', 'none'
-  K.block = ({ a = 0, b = 0, ha, hb, h, lift = 0, wall, roof = null, roofH = 0, type = 'hip', ridge = null, over = 1.12, entry = false, trim = null }) => {
+  K.block = ({ a = 0, b = 0, ha, hb, h, lift = 0, wall, roof = null, roofH = 0, type = 'hip', ridge = null, over = 1.12, entry = false, trim = null, strip = null }) => {
     const W = (sa, sb, up = 0) => P(a + sa * ha, b + sb * hb, lift + up);
     const faces = {};
     for (const [name, f] of Object.entries(FACES)) {
@@ -89,9 +89,10 @@ function kit(cx, cy, z, rot) {
         const t0 = Math.PI * i / N, t1 = Math.PI * (i + 1) / N, c = Math.cos((t0 + t1) / 2);
         const n = alongA ? [0, c] : [c, 0], [u, v] = turn(...n);
         const amt = (u < 0 ? -u * LIGHT.roofSun : u * LIGHT.roofShade) + (v < 0 ? -v * LIGHT.roofBack : 0);
-        strips.push([facing(...n), [pt(-L, t0), pt(L, t0), pt(L, t1), pt(-L, t1)], shade(roof, amt)]);
+        strips.push([facing(...n), [pt(-L, t0), pt(L, t0), pt(L, t1), pt(-L, t1)], shade(roof, amt), t0, t1]);
       }
-      strips.sort((p, q) => p[0] - q[0]).forEach(([, pts, col]) => poly(pts, C(col)));
+      // strip (Block 122): Schmuck je Streifen gleich danach – was weiter vorn liegt, deckt ihn wieder zu
+      strips.sort((p, q) => p[0] - q[0]).forEach(([, pts, col, t0, t1]) => { poly(pts, C(col)); if (strip) strip(t0, t1, pt, L); });
       for (const sgn of [1, -1]) {                        // runde Giebel an den Enden (in der Wandflucht)
         const n = alongA ? [sgn, 0] : [0, sgn];
         if (facing(...n) <= 0.01) continue;

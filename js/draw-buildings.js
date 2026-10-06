@@ -65,24 +65,19 @@ function hbfTrack(K, b, lk, hx, hy) {
 }
 
 // Gewölbe aus Ziegeln (Oberlicht im First) bzw. Holz (Bretter) mit Gurtbögen über den Stützen (Block 122) – dieselbe Form wie das
-// Glasdach (K.block 'barrel', V wie dort): Längsfugen, Bögen quer, nur auf der sichtbaren Seite
-function vaultDetail(K, V, brick, lit) {
-  const z = K.z, L = V.ha * 1.12, R = V.hb * 1.12, top = V.lift + V.h;
-  const pt = (s, th, k = 1.01) => K.P(V.a + s, V.b + Math.cos(th) * R * k, top + Math.sin(th) * V.roofH * k);
-  const vis = th => K.facing(0, Math.cos(th)) > -0.05;
-  const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
-  const rows = brick ? 10 : 14;                                            // Ziegelreihen bzw. Bretter längs
-  for (let i = 1; i < rows; i++) { const th = Math.PI * i / rows; if (vis(th)) line([pt(-L, th), pt(L, th)], brick ? '#8f4a37' : '#93663f', brick ? 0.55 : 0.45); }
-  if (brick) {                                                             // Oberlicht: Glasband im First
-    const t0 = Math.PI * 0.42, t1 = Math.PI * 0.58;
-    poly([pt(-L * 0.86, t0, 1.02), pt(L * 0.86, t0, 1.02), pt(L * 0.86, t1, 1.02), pt(-L * 0.86, t1, 1.02)], lit ? 'rgba(255,224,150,0.9)' : 'rgba(207,234,242,0.95)');
-    for (const s of [-0.43, 0, 0.43].map(f => f * L * 2)) line([pt(s, t0, 1.03), pt(s, t1, 1.03)], '#7d8794', 0.7);
-  }
-  for (const a of [-0.9, 0.3, 1.4]) {                                      // Gurtbögen über den Stützen
-    const s = a - V.a, pts = [];
-    for (let i = 0; i <= 20; i++) { const th = Math.PI * i / 20; if (vis(th)) pts.push(pt(s, th, 1.025)); else if (pts.length) break; }
-    if (pts.length > 1) line(pts, brick ? '#7a3c2c' : '#6e4a2e', brick ? 1.5 : 1.8);
-  }
+// Glasdach. Gibt den Schmuck je Dachstreifen zurück (K.block strip): Fugen längs, Bögen quer, Oberlicht – in der Dachfarbe abgetönt
+function vaultDetail(K, roof, brick, lit) {
+  const z = K.z, rows = brick ? 10 : 14, joint = shade(roof, brick ? -0.16 : -0.12), rib = shade(roof, -0.3);
+  const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'butt'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
+  const sky0 = Math.PI * 0.42, sky1 = Math.PI * 0.58;
+  return (t0, t1, pt, L) => {
+    for (let i = 1; i < rows; i++) { const th = Math.PI * i / rows; if (th > t0 + 1e-6 && th <= t1 + 1e-6) line([pt(-L, th), pt(L, th)], joint, brick ? 0.55 : 0.45); }
+    if (brick && t1 > sky0 && t0 < sky1) {                                 // Oberlicht: Glasband im First
+      const a0 = Math.max(t0, sky0), a1 = Math.min(t1, sky1);
+      poly([pt(-L * 0.86, a0), pt(L * 0.86, a0), pt(L * 0.86, a1), pt(-L * 0.86, a1)], lit ? 'rgba(255,224,150,0.9)' : 'rgba(207,234,242,0.95)');
+    }
+    for (const s of [-1.15, 0.05, 1.15]) line([pt(s, t0), pt(s, (t0 + t1) / 2), pt(s, t1)], rib, brick ? 1.5 : 1.8);   // Gurtbögen über den Stützen
+  };
 }
 
 // Wand- und Dachfarbe: selbst gewählt (t.wall/t.roof aus WALLS/ROOFS, wie bei Häusern) oder die des Gebäudes
@@ -827,9 +822,8 @@ const BUILDING_ART = {
           g.restore();
         } else {                                                      // Gewölbe wie beim Glasdach – aus Ziegeln bzw. Holz (Block 122)
           for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, lift, iron, 1.4);
-          const brick = look === 'backstein', V = { a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, roofH: 11 };
-          K.block({ ...V, wall: brick ? '#b8664a' : '#e9d3ad', roof: brick ? '#a65a44' : '#b07f52', type: 'barrel' });
-          vaultDetail(K, V, brick, lit);
+          const brick = look === 'backstein';                     // Farbe wie das Dach des Bahnhofs (auch selbst gewählt), Stirnseiten wie die Wand
+          K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, roofH: 11, wall, roof, type: 'barrel', strip: vaultDetail(K, roof, brick, lit) });
         }
       }]);
     }
