@@ -3,7 +3,9 @@
 // Freunde auf der Insel (Block 96): Spielfigur, Besucher als Figur, Herzchen, Gästebuch, Päckchen mit Briefkasten
 // Datenbank (Regeln: firebase-rules.json):
 //   users/<uid>/profile/animal          eigene Figur (Index in ANIMALS)
-//   worlds/<wid>/guests/<uid>           wer gerade zu Besuch ist: { a, n, x, y } – nur Freunde, verschwindet beim Gehen
+//   users/<uid>/profile/look            Aussehen der Figur { fur, shirt, hat, face } (Block 96c)
+//   worlds/<wid>/guests/<uid>           wer gerade zu Besuch ist: { a, n, x, y, look } – einmal beim Kommen geschrieben, die
+//                                       Figur spaziert dann auf jedem Gerät selbst über die Wege; verschwindet beim Gehen
 //   book/<besitzer>/<id>                Besuch (v_…), Herz (h_… je Freund und Tag) und Gästebuch (g…): { k, from, n, a, t, s, at }
 //   mail/<empfänger>/<id>               Päckchen { from, n, a, items: { holz: 50 }, at } – Abholen löscht es (genau einmal)
 // ---------------------------------------------------------------------------
@@ -29,34 +31,61 @@ async function friendAnimal(uid) {
   return myAnimal;
 }
 async function setFriendAnimal(i) { myAnimal = i; await cloudApi.set(`users/${cloudUser.uid}/profile/animal`, i); }
+let myLook = null;
+const lookClean = l => ({ fur: Number.isInteger(l && l.fur) && FUR[l.fur] ? l.fur : null, shirt: Number.isInteger(l && l.shirt) && SHIRTS[l.shirt] ? l.shirt : 0,
+  hat: l && WEAR_HATS[l.hat] ? l.hat : null, face: l && WEAR_FACES[l.face] ? l.face : null });
+async function friendLook(uid) {
+  if (myLook) return myLook;
+  return (myLook = lookClean(await cloudApi.get(`users/${uid}/profile/look`).catch(() => null)));
+}
+async function setFriendLook(patch) { myLook = lookClean({ ...(myLook || {}), ...patch }); await cloudApi.set(`users/${cloudUser.uid}/profile/look`, myLook); }
+// Figur aus Tier + Aussehen (wie ein Bewohner gezeichnet, mit Namensschild)
+function figFrom(a, look, label) {
+  const an = ANIMALS[a] || ANIMALS[0], L = lookClean(look);
+  return { kind: Math.max(0, ANIMALS.indexOf(an)), fur: L.fur != null ? FUR[L.fur] : an.fur || FUR[0], shirt: SHIRTS[L.shirt] || SHIRTS[0], hat: L.hat, face: L.face, label: String(label || 'Besuch').slice(0, 30) };
+}
+// kleines Vorschaubild der eigenen Figur (Freunde-Fenster)
+function figPreview(cv, fig) {
+  const c = cv.getContext && cv.getContext('2d');
+  if (!c) return;
+  const og = g, ots = toScreen;
+  g = c; toScreen = () => ({ x: cv.width / 2 - 18, y: cv.height - 12 });
+  try { c.clearRect(0, 0, cv.width, cv.height); drawWalker({ ...fig, label: null, px: 1e6, py: 1e6, wait: 1, speed: 0.5 }, 3.2, 0); }
+  finally { g = og; toScreen = ots; }
+}
 
 // --- Figuren der Besucher (gezeichnet wie Bewohner, mit Namensschild) -------------------------
 const visitorFigs = [];
-const figShirt = n => ['#e8604f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'][[...String(n)].reduce((s, c) => s + c.charCodeAt(0), 0) % 6];
 // guests: { uid: { a, n, x, y } } aus der Insel; skip: eigene Kennung (sich selbst nicht doppelt zeigen)
+// Startfeld: begehbar, nah am Rathaus (sonst am angegebenen Feld)
+function guestSpawn(x, y) {
+  const h = townHallAt(), cx = h ? h[0] + 1 : x, cy = h ? h[1] + 1 : y;
+  for (let r = 0; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    if (walkable(cx + dx, cy + dy)) return [cx + dx, cy + dy];
+  }
+  return [Math.round(x) || 0, Math.round(y) || 0];
+}
 function setGuests(guests, skip = null) {
-  const g = guests || {}, before = new Set(visitorFigs.map(f => f.uid));
-  for (let i = visitorFigs.length - 1; i >= 0; i--) if (!g[visitorFigs[i].uid] || visitorFigs[i].uid === skip) visitorFigs.splice(i, 1);
-  for (const [uid, v] of Object.entries(g)) {
-    if (uid === skip || !v || !isFinite(v.x) || !isFinite(v.y)) continue;
+  const gs = guests || {}, before = new Set(visitorFigs.map(f => f.uid));
+  for (let i = visitorFigs.length - 1; i >= 0; i--) if (!gs[visitorFigs[i].uid] || visitorFigs[i].uid === skip) visitorFigs.splice(i, 1);
+  for (const [uid, v] of Object.entries(gs)) {
+    if (uid === skip || !v) continue;
     let f = visitorFigs.find(o => o.uid === uid);
-    const a = ANIMALS[v.a] || ANIMALS[0];
     if (!f) {
-      f = { uid, px: v.x, py: v.y, kind: Math.max(0, ANIMALS.indexOf(a)), fur: a.fur || FUR[uid.length % FUR.length], shirt: figShirt(uid), speed: 0.4, wait: 0, label: String(v.n || 'Besuch').slice(0, 30) };
+      const [sx, sy] = guestSpawn(v.x, v.y);
+      f = { uid, fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 1, speed: 0.45 };
       visitorFigs.push(f);
-      if (!before.has(uid) && !VISIT && cloudUser) toast(`${a.icon} ${f.label} ist zu Besuch!`);
+      if (!before.has(uid) && !VISIT && cloudUser) toast(`${(ANIMALS[v.a] || ANIMALS[0]).icon} ${String(v.n || 'Besuch')} ist zu Besuch!`);
     }
-    f.tx = v.x; f.ty = v.y; f.label = String(v.n || 'Besuch').slice(0, 30);
+    Object.assign(f, figFrom(v.a, v.look, v.n));                     // Aussehen kann sich ändern
   }
 }
-// sanft zum Ziel laufen (zeichnet render.js mit den Bewohnern)
+// spazieren wie die Bewohner: Feld für Feld, gern auf Wegen (nichts wird übertragen – jedes Gerät lässt sie selbst laufen)
 setInterval(() => {
   for (const f of visitorFigs) {
-    const dx = f.tx - f.px, dy = f.ty - f.py, d = Math.hypot(dx, dy);
-    if (d < 0.02) { f.wait = 1; continue; }
-    f.wait = 0;
-    const s = Math.min(d, d > 6 ? d : 0.12);                 // weit weg: hinspringen, sonst gemütlich gehen
-    f.px += dx / d * s; f.py += dy / d * s;
+    stepMover(f, 0.05, (x, y) => walkable(x, y), true);
+    if (f.gone) { const [sx, sy] = guestSpawn(f.fx, f.fy); Object.assign(f, { gone: false, fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 1 }); }
   }
 }, 50);
 // Besitzer (führendes Gerät): eigene Besucher sehen – zuschauende Geräte und Besucher bekommen sie mit der Insel
@@ -81,22 +110,23 @@ async function visitFriendCheck() {
   const a = await friendAnimal(visitUser.uid).catch(() => 0);
   const me = { from: visitUser.uid, n: visitName(), a };
   cloudApi.set(`book/${visitOwner}/v_${visitUser.uid}_${dayKey()}`, { k: 'v', ...me, at: cloudApi.TS() }).catch(() => {});   // einmal am Tag
+  const look = await friendLook(visitUser.uid);
+  const [x, y] = guestSpawn(0, 0);
+  cloudApi.set(`worlds/${VISIT}/guests/${visitUser.uid}`, { a, n: visitName(), x, y, look }).catch(() => {});   // einmal: ich bin da
   if (cloudApi.leave) cloudApi.leave(`worlds/${VISIT}/guests/${visitUser.uid}`);   // Seite zu → Figur weg
 }
 const visitName = () => (visitUser.display || 'Besuch').split(' ')[0];
-// wo der Besucher hinschaut, da steht seine Figur (alle 2 s, nur wenn sich etwas tut)
-setInterval(() => {
-  if (!VISIT || !visitFriend || !visitUser) return;
-  const [a, b] = tileFrac(W / 2, H / 2), x = Math.round(a * 2) / 2, y = Math.round(b * 2) / 2, key = x + ',' + y;
-  if (key === visitLast && Date.now() - visitPosAt < 30000) return;
-  visitLast = key; visitPosAt = Date.now();
-  cloudApi.set(`worlds/${VISIT}/guests/${visitUser.uid}`, { a: myAnimal || 0, n: visitName(), x, y }).catch(() => {});
-}, 2000);
 async function visitHeart() {
+  const key = `h_${visitUser.uid}_${dayKey()}`;
+  if (frLS('heart_' + visitOwner) === dayKey()) { toast('❤️ Heute hast du hier schon ein Herz dagelassen'); return; }
   try {
-    await cloudApi.set(`book/${visitOwner}/h_${visitUser.uid}_${dayKey()}`, { k: 'h', from: visitUser.uid, n: visitName(), a: myAnimal || 0, at: cloudApi.TS() });
+    await cloudApi.set(`book/${visitOwner}/${key}`, { k: 'h', from: visitUser.uid, n: visitName(), a: myAnimal || 0, at: cloudApi.TS() });
+    frLS('heart_' + visitOwner, dayKey());
     toast('❤️ Herz dagelassen!');
-  } catch (e) { toast('❤️ Heute hast du hier schon ein Herz dagelassen'); }
+  } catch (e) {
+    const err = String((e && (e.code || e.message)) || '');
+    toast(/permission/i.test(err) ? '❤️ Ging nicht – heute schon eins dagelassen (oder die Datenbank-Regeln sind noch alt)' : '❤️ Ging nicht – keine Verbindung?');
+  }
 }
 function visitBook() {
   let line = 0, sticker = 0;

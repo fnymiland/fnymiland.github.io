@@ -1128,3 +1128,9 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       verschluckt. Jetzt: Teilen-Menü → Zwischenablage → altes Kopieren → Fenster mit dem Link zum Selbst-Kopieren. Beim
       Besuchs-Link nur die Adresse, ohne Text davor.
 
+- [x] 96c: Besucher-Figur folgt nicht mehr der Kamera (unnötig viel Datenverkehr), sondern spaziert wie ein Bewohner selbst
+      über die Insel, Start am Rathaus. Übertragen wird nur einmal beim Kommen { a, n, x, y, look }; jedes Gerät lässt die
+      Figur selbst laufen. Figur gestalten (👥 → „Deine Figur“, mit Vorschau): Tier, Fell, Shirt, Kopf (Strohhut, Mütze,
+      Krone, Blume, Schleife, Zylinder), Brille/Sonnenbrille – users/<uid>/profile/look, Unsinn wird beim Lesen verworfen.
+      „Herz geben“ tat scheinbar nichts: der Hinweis lag unter dem Besuchs-Band (jetzt tiefer); dazu klare Meldungen
+      („heute schon“ wird gemerkt, Fehler sagt jetzt „Regeln alt?“/„keine Verbindung?“). Regeln unverändert.

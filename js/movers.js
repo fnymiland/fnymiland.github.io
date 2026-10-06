@@ -334,6 +334,7 @@ function drawWalker(w, z, now) {
   else if (sp === 'igel') circle(x, hy + 1.6 * z, 0.8 * z, '#3d2c22');
   else if (sp === 'ente') ellipse(x, hy + 2 * z, 2.6 * z, 1.1 * z, '#f2a03a');
   else if (sp === 'elefant') { ellipse(x, hy + 3.6 * z, 1.3 * z, 3 * z, f); circle(x, hy + 6.2 * z, 1 * z, dark); }
+  if (w.face || w.hat) drawWear(x, hy, z, w);                            // eigene Figur (Block 96c): Brille, Hut & Co.
   if (w.flag) {                                                          // Parade: Fähnchen über dem Kopf
     const wave = Math.sin(now / 250 + w.speed * 20) * 1.2 * z;
     g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(x + 4 * z, y - 2 * z); g.lineTo(x + 4 * z, hy - 12 * z); g.stroke();
@@ -349,6 +350,23 @@ function drawWalker(w, z, now) {
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();
     g.fillStyle = C('#6b4f3a'); g.fillText(w.label, x, ly + 0.3 * z);
   }
+}
+// Accessoires der Spielfigur (Block 96c): Kopf (w.hat) und Gesicht (w.face), Kopfmitte (x, hy), Radius ≈ 4,8·z
+const WEAR_HATS = { strohhut: 'Strohhut', muetze: 'Mütze', krone: 'Krone', blume: 'Blume', schleife: 'Schleife', zylinder: 'Zylinder' };
+const WEAR_FACES = { brille: 'Brille', sonne: 'Sonnenbrille' };
+function drawWear(x, hy, z, w) {
+  if (w.face === 'brille' || w.face === 'sonne') {
+    const dark = w.face === 'sonne';
+    for (const s of [-1, 1]) { if (dark) ellipse(x + s * 1.9 * z, hy - 0.2 * z, 1.5 * z, 1.1 * z, '#2e2e38'); else { g.strokeStyle = C('#3d2c22'); g.lineWidth = 0.6 * z; g.beginPath(); g.arc(x + s * 1.9 * z, hy - 0.2 * z, 1.4 * z, 0, Math.PI * 2); g.stroke(); } }
+    g.strokeStyle = C(dark ? '#2e2e38' : '#3d2c22'); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(x - 0.5 * z, hy - 0.4 * z); g.lineTo(x + 0.5 * z, hy - 0.4 * z); g.stroke();
+  }
+  const top = hy - 4.4 * z;
+  if (w.hat === 'strohhut') { ellipse(x, top + 0.6 * z, 6.6 * z, 1.8 * z, C('#e9c46a')); ellipse(x, top - 1.2 * z, 3.4 * z, 2.4 * z, C('#f0d27e')); bar(x - 3.3 * z, top - 0.4 * z, 6.6 * z, 0.9 * z, C('#e8604f')); }
+  else if (w.hat === 'muetze') { poly([[x - 4.6 * z, top + 1.2 * z], [x - 3.2 * z, top - 3.4 * z], [x + 3.2 * z, top - 3.4 * z], [x + 4.6 * z, top + 1.2 * z]], C(w.shirt || '#e8604f')); bar(x - 4.8 * z, top + 0.4 * z, 9.6 * z, 1.6 * z, C('#fffaf0')); circle(x, top - 4.2 * z, 1.5 * z, C('#fffaf0')); }
+  else if (w.hat === 'krone') { poly([[x - 3.6 * z, top + 0.8 * z], [x - 3.6 * z, top - 2.6 * z], [x - 1.8 * z, top - 0.8 * z], [x, top - 3.4 * z], [x + 1.8 * z, top - 0.8 * z], [x + 3.6 * z, top - 2.6 * z], [x + 3.6 * z, top + 0.8 * z]], C('#f2c14e')); circle(x, top - 0.4 * z, 0.7 * z, C('#e8604f')); }
+  else if (w.hat === 'blume') { for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; circle(x + 3.2 * z + Math.cos(a) * 1.3 * z, top + 0.6 * z + Math.sin(a) * 1.3 * z, 1 * z, C('#f28cb1')); } circle(x + 3.2 * z, top + 0.6 * z, 0.8 * z, C('#ffd23f')); }
+  else if (w.hat === 'schleife') { poly([[x + 2.6 * z, top + 0.8 * z], [x + 0.4 * z, top - 1.2 * z], [x + 0.4 * z, top + 2.4 * z]], C('#f28cb1')); poly([[x + 2.6 * z, top + 0.8 * z], [x + 4.8 * z, top - 1.2 * z], [x + 4.8 * z, top + 2.4 * z]], C('#f28cb1')); circle(x + 2.6 * z, top + 0.8 * z, 0.8 * z, C('#e86a9a')); }
+  else if (w.hat === 'zylinder') { ellipse(x, top + 0.8 * z, 5.6 * z, 1.4 * z, C('#2e2e38')); bar(x - 3 * z, top - 5 * z, 6 * z, 5.8 * z, C('#2e2e38')); bar(x - 3 * z, top - 0.8 * z, 6 * z, 1 * z, C('#e8604f')); }
 }
 function drawCar(c, z) {
   const p = toScreen(c.px, c.py);

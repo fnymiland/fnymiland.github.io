@@ -29,18 +29,34 @@ beforeEach(() => {
 const tree = () => game('cloudApi.tree');
 
 describe('Freunde auf der Insel (Block 96)', () => {
-  it('Besucher erscheinen als Figur mit Namensschild und laufen dorthin, wo sie schauen; gehen sie, ist die Figur weg', async () => {
-    game("setGuests({ f1: { a: 2, n: 'Ben', x: 5, y: 6 } })");
+  it('Besucher erscheinen als Figur mit Namensschild und Aussehen, spazieren selbst herum; gehen sie, ist die Figur weg', async () => {
+    game("setGuests({ f1: { a: 2, n: 'Ben', x: 5, y: 6, look: { shirt: 3, hat: 'krone', face: 'brille' } } })");
     expect(game('visitorFigs.length')).toBe(1);
     expect(game('visitorFigs[0].label')).toBe('Ben');
     expect(game('ANIMALS[visitorFigs[0].kind].id')).toBe('hase');
-    game("setGuests({ f1: { a: 2, n: 'Ben', x: 6, y: 6 } })");
-    for (let i = 0; i < 20 && game('visitorFigs[0].px') < 5.99; i++) await tick(30);
-    expect(game('visitorFigs[0].px')).toBeCloseTo(6, 1);
+    expect(game('visitorFigs[0].hat')).toBe('krone');
+    expect(game('visitorFigs[0].face')).toBe('brille');
+    expect(game('visitorFigs[0].shirt')).toBe(game('SHIRTS[3]'));
+    const f0 = game('[visitorFigs[0].px, visitorFigs[0].py]');
+    game("setGuests({ f1: { a: 2, n: 'Ben', x: 40, y: 40, look: { hat: 'zylinder' } } })");  // neue Werte: Figur springt nicht
+    expect(game('[visitorFigs[0].px, visitorFigs[0].py]')).toEqual(f0);
+    expect(game('visitorFigs[0].hat')).toBe('zylinder');
+    game("setGuests({ f1: { a: 2, n: 'Ben', look: { hat: 'quatsch', shirt: 999 } } })");     // Unsinn wird ignoriert
+    expect(game('visitorFigs[0].hat')).toBe(null);
+    expect(game('visitorFigs[0].shirt')).toBe(game('SHIRTS[0]'));
     game('setGuests({})');
     expect(game('visitorFigs.length')).toBe(0);
     game("setGuests({ me: { a: 1, n: 'Ich', x: 1, y: 1 } }, 'me')");                          // sich selbst nicht doppelt
     expect(game('visitorFigs.length')).toBe(0);
+  });
+  it('Figur gestalten: Aussehen wird gemerkt, Freunde-Fenster zeigt die Auswahl', async () => {
+    await game("setFriendLook({ fur: 2, shirt: 4, hat: 'blume' })");
+    expect(tree().users.u1.profile.look).toEqual({ fur: 2, shirt: 4, hat: 'blume', face: null });
+    await game("setFriendLook({ face: 'sonne' })");
+    expect(tree().users.u1.profile.look.face).toBe('sonne');
+    expect(tree().users.u1.profile.look.hat).toBe('blume');
+    expect(game("figFrom(0, { fur: 2 }, 'X').fur")).toBe(game('FUR[2]'));
+    expect(() => game("figPreview(document.createElement('canvas'), figFrom(0, null, ''))")).not.toThrow();
   });
   it('eigene Figur: wird gemerkt, wählbar', async () => {
     const a = await game("friendAnimal('u1')");
@@ -97,6 +113,9 @@ describe('Freunde auf der Insel (Block 96)', () => {
     expect(tree().book.own1[`v_v1_${day}`].k).toBe('v');
     await game('visitHeart()');
     expect(tree().book.own1[`h_v1_${day}`].n).toBe('Vera');
+    expect(game("document.getElementById('toast').textContent")).toMatch(/Herz dagelassen/);
+    await game('visitHeart()');                                                               // zweites Mal: klare Meldung
+    expect(game("document.getElementById('toast').textContent")).toMatch(/schon/);
     game('visitBook()'); game("document.querySelector('[data-bl=\"4\"]').click()"); game("document.getElementById('bk-send').click()"); await tick();
     const g = Object.values(tree().book.own1).find(e => e.k === 'g');
     expect(g.t).toBe(4);

@@ -719,3 +719,10 @@ body.viewonly #panel .row:has(#p-wonder), body.viewonly #panel [data-openart] { 
 .book-st { display: flex; flex-wrap: wrap; gap: 6px; }
 .book-st .look { font-size: 20px; padding: 4px 8px; }
 #visit-band .btn[hidden] { display: none; }
+.fig-edit { display: flex; gap: 10px; align-items: flex-start; }
+.fig-edit canvas { flex: none; width: 90px; height: 90px; background: var(--cream2); border-radius: 14px; }
+.fig-edit > div { flex: 1; min-width: 0; }
+.fig-sw { align-items: center; gap: 4px; margin: 4px 0; }
+.fig-sw .muted { font-size: 12px; margin-right: 4px; }
+/* Hinweise nicht unter dem Besuchs-/Zuschau-Band verstecken (Block 96c) */
+body.visiting #toast, body.viewonly #toast { top: 116px; }
