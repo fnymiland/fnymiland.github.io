@@ -249,7 +249,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
-    t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') : '',
+    t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
@@ -748,7 +748,7 @@ function render(now) {
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map();
   const cars4 = trainCars(), boat = expeditionBoat();
-  const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now));
+  const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
   for (const m of walkers.concat(strollers, paraders, typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht

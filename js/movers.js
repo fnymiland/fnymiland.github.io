@@ -268,7 +268,7 @@ function drawBubble(z) {
     if (last != null && g.measureText(last + ' ' + word).width <= maxW) lines[lines.length - 1] = last + ' ' + word; else lines.push(word);
   }
   const tw = Math.max(...lines.map(l => g.measureText(l).width)), lh = size * 1.25, w = tw + size * 1.4, h = size * 0.75 + lines.length * lh;
-  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? (bubble.w.hand === 'ballon' ? 21 : bubble.w.hat ? 18 : 14) : 8) * z - h;   // über dem Namensschild
+  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? (bubble.w.hand === 'ballon' || bubble.w.hand === 'herzballon' ? 21 : bubble.w.hat ? 18 : 14) : 8) * z - h;   // über dem Namensschild
   g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, Math.min(h / 2, size)); g.fill();
   g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.fill();
   g.beginPath(); g.moveTo(hx - 4, by + h - 1); g.lineTo(hx + 4, by + h - 1); g.lineTo(hx, by + h + 6); g.fill();
@@ -354,7 +354,7 @@ function drawWalker(w, z, now) {
   }
   if (w.label) {                                                         // Besucher (Block 96): Namensschild über dem Kopf
     g.font = `800 ${Math.max(9, 5 * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const tw = g.measureText(w.label).width + 8 * z, ly = hy - (w.hand === 'ballon' ? 19 : w.hat ? 16 : 12) * z;   // über Hut und Ballon
+    const tw = g.measureText(w.label).width + 8 * z, ly = hy - (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12) * z;   // über Hut und Ballon
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();
     g.fillStyle = C('#6b4f3a'); g.fillText(w.label, x, ly + 0.3 * z);
   }
@@ -365,8 +365,8 @@ const WEAR = {
   hat: { strohhut: 'Strohhut', muetze: 'Mütze', blume: 'Blume', schleife: 'Schleife', blumenkranz: 'Blumenkranz', kochmuetze: 'Kochmütze',
     bauhelm: 'Bauhelm', piratenhut: 'Piratenhut', wikingerhelm: 'Wikingerhelm', zylinder: 'Zylinder', krone: 'Krone' },
   face: { brille: 'Brille', sonne: 'Sonnenbrille' },
-  body: { schal: 'Schal', fliege: 'Fliege', rucksack: 'Rucksack', umhang: 'Umhang' },
-  hand: { ballon: 'Ballon', eis: 'Eistüte', strauss: 'Blumenstrauß', laterne: 'Laterne' },
+  body: { schal: 'Schal', fliege: 'Fliege', rucksack: 'Rucksack', umhang: 'Umhang', band: 'Freundschaftsband' },
+  hand: { ballon: 'Ballon', eis: 'Eistüte', strauss: 'Blumenstrauß', laterne: 'Laterne', herzballon: 'Herzballon' },
 };
 const WEAR_HATS = WEAR.hat, WEAR_FACES = WEAR.face;
 // Kuppel (Helme): obere Hälfte einer Ellipse
@@ -383,10 +383,23 @@ function drawWear(x, hy, z, w, y = hy + 11 * z, now = 0) {
   else if (w.body === 'fliege') { const c = w.shirt === SHIRTS[0] ? '#2e2e38' : '#e8604f'; poly([[x, y - 5.4 * z], [x - 2.2 * z, y - 6.5 * z], [x - 2.2 * z, y - 4.3 * z]], C(c)); poly([[x, y - 5.4 * z], [x + 2.2 * z, y - 6.5 * z], [x + 2.2 * z, y - 4.3 * z]], C(c)); circle(x, y - 5.4 * z, 0.6 * z, C(shade(c, -0.2))); }
   else if (w.body === 'rucksack') { bar(x - 2.6 * z, y - 6.2 * z, 0.9 * z, 5 * z, C('#8a5a2e')); bar(x + 1.7 * z, y - 6.2 * z, 0.9 * z, 5 * z, C('#8a5a2e')); }
   else if (w.body === 'umhang') circle(x, y - 5.8 * z, 0.9 * z, C('#f2c14e'));
+  else if (w.body === 'band') {                                          // Freundschaftsband: bunte Schärpe mit Herz (Block 105)
+    poly([[x - 3.2 * z, y - 6.4 * z], [x - 2 * z, y - 7 * z], [x + 3.4 * z, y - 1.2 * z], [x + 2.2 * z, y - 0.6 * z]], C('#f28cb1'));
+    for (const [k, c] of [[0.25, '#ffd23f'], [0.55, '#5f8fe8'], [0.85, '#58b36a']]) circle(x - 2.6 * z + k * 5.6 * z, y - 6.7 * z + k * 5.8 * z, 0.45 * z, C(c));
+    const hx0 = x + 0.3 * z, hy0 = y - 3.8 * z;
+    circle(hx0 - 0.5 * z, hy0 - 0.3 * z, 0.7 * z, C('#e8604f')); circle(hx0 + 0.5 * z, hy0 - 0.3 * z, 0.7 * z, C('#e8604f'));
+    poly([[hx0 - 1.15 * z, hy0 - 0.1 * z], [hx0 + 1.15 * z, hy0 - 0.1 * z], [hx0, hy0 + 1.1 * z]], C('#e8604f'));
+  }
   // Hand (rechts)
   if (w.hand) {
     const hx = x + 3.9 * z, hy2 = y - 3.6 * z;
-    if (w.hand === 'ballon') {
+    if (w.hand === 'herzballon') {                                     // Herzballon (Block 105)
+      const sway = Math.sin(now / 700 + (w.speed || 0) * 10) * 0.8 * z, bx = x + 6.6 * z + sway, by = hy - 10 * z;
+      g.strokeStyle = C('#8a7a6a'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(hx, hy2); g.quadraticCurveTo(x + 6 * z, hy - 2 * z, bx, by + 3.2 * z); g.stroke();
+      circle(bx - 1.3 * z, by - 0.8 * z, 1.8 * z, C('#e8604f')); circle(bx + 1.3 * z, by - 0.8 * z, 1.8 * z, C('#e8604f'));
+      poly([[bx - 3 * z, by - 0.3 * z], [bx + 3 * z, by - 0.3 * z], [bx, by + 3.4 * z]], C('#e8604f'));
+      ellipse(bx - 1.6 * z, by - 1.4 * z, 0.5 * z, 0.7 * z, 'rgba(255,255,255,0.55)');
+    } else if (w.hand === 'ballon') {
       const sway = Math.sin(now / 700 + (w.speed || 0) * 10) * 0.8 * z, bx = x + 6.6 * z + sway, by = hy - 10 * z;
       g.strokeStyle = C('#8a7a6a'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(hx, hy2); g.quadraticCurveTo(x + 6 * z, hy - 2 * z, bx, by + 3.2 * z); g.stroke();
       ellipse(bx, by, 2.6 * z, 3.2 * z, C(wearAccent(w))); ellipse(bx - 0.9 * z, by - 1.1 * z, 0.6 * z, 0.9 * z, 'rgba(255,255,255,0.55)');
@@ -721,6 +734,12 @@ function drawBoatMover(m, z, now) {
   g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.3 * z;
   g.beginPath(); g.moveTo(x, y + bob); g.lineTo(x, y - 26 * z + bob); g.stroke();
   poly([[x + flip * 1 * z, y - 24 * z + bob], [x + flip * 12 * z, y - 5 * z + bob], [x + flip * 1 * z, y - 3 * z + bob]], C('#fffaf0'));
+  if (m.flag) {                                                                           // Freundesschiff (Block 105): seine Flagge am Mast
+    const fw = 9 * z, fh = 6 * z, fx = flip > 0 ? x - fw : x, fy = y - 31 * z + bob;
+    poly([[fx, fy], [fx + fw, fy], [fx + fw, fy + fh], [fx, fy + fh]], C(m.flag.c));
+    g.font = `${4.4 * z}px system-ui, sans-serif`; g.textBaseline = 'middle'; centerText(m.flag.s || '', fx + fw / 2, fy + fh / 2 + 0.3 * z);
+    return;
+  }
   poly([[x, y - 27 * z + bob], [x - flip * 5 * z, y - 25 * z + bob], [x, y - 23 * z + bob]], C('#e8604f'));  // Wimpel
 }
 

@@ -593,6 +593,7 @@ function unlockOk(def, key) {
   if (def.garden && !wonderOn(def.garden)) return false;               // exotische Deko: erst mit dem Botanischen Garten
   if (def.album && !albumDone(def.album, def.albumN)) return false;    // Album-Belohnung: volle Seite (bzw. albumN Einträge)
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return false;   // Erfindung (für Ideen)
+  if (def.bond && (state.bond || 0) < def.bond) return false;           // Freundschaft (Block 105): so viele Herzen bei einem Freund
   return true;
 }
 // Ort und Stufe zusammen („🌬️ Windige Klippe → Aussichtspunkt“), kurz nur der Ort (Leiste unten)
@@ -610,6 +611,7 @@ function unlockText(def, short) {
   if (def.garden && !wonderOn(def.garden)) return '🌿 Botanischer Garten';
   if (def.album && !albumDone(def.album, def.albumN)) return def.albumN ? `📒 ${def.albumN} Tiere in der Natur entdeckt (${albumCount(def.album)}/${def.albumN})` : `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
+  if (def.bond && (state.bond || 0) < def.bond) return `💛 Freundschaft mit ${def.bond} Herzen`;
   return '';
 }
 const styleOk = st => unlockOk(st, (st.kind || 'weg') + ':' + st.id);

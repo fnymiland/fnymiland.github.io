@@ -765,3 +765,13 @@ body.visiting #you-btn { display: none !important; }
 /* Seitenfenster mit Reitern (Märchenschloss): gleich hoch für alle Reiter – die Obergrenze oben (max-height) gilt weiter */
 #panel:has(.cs-tabs) { height: 640px; }
 
+/* Füreinander (Block 105) */
+.fr-friend { background: var(--cream2); border-radius: 12px; margin: 5px 0; }
+.fr-friend .fr-row { margin: 0; background: none; }
+.fr-wish { font-size: 13px; font-weight: 700; padding: 0 10px 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.bond { color: #e8604f; letter-spacing: 1px; font-size: 12px; }
+.fr-btns .btn.on { background: var(--yellow, #ffd23f); }
+.fr-hint { font-size: 12px; }
+.wish-bar { height: 7px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 2px 0 8px; }
+.wish-bar i { display: block; height: 100%; background: var(--green, #6cc04a); border-radius: 99px; }
+.pflag { display: inline-flex; width: 26px; height: 18px; border-radius: 4px; align-items: center; justify-content: center; font-size: 12px; }

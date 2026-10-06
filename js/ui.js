@@ -1969,6 +1969,7 @@ function openTownHall(tab = hallTab) {
       ${typeof mailWaiting === 'function' && mailWaiting() ? '<div class="row"><button class="btn" data-mailgo="1" style="flex:1">📬 Post im Briefkasten – abholen</button></div>' : ''}
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
       ${todHtml()}
+      ${typeof wishHtml === 'function' ? wishHtml() : ''}
       ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
       <div class="stats">
         <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
@@ -2028,8 +2029,13 @@ function openTownHall(tab = hallTab) {
     body = residentsHtml();
   } else {
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
+    const P = state.partner;
     body = `
       ${townEditor(state.town)}
+      <div class="label">🚩 Partnerstadt</div>
+      ${P ? `<div class="hall-row"><span><span class="pflag" style="background:${escHtml(P.c)}">${escHtml(P.s)}</span> ${escHtml(P.name)}</span><span class="hall-btns"><button class="btn ghost small" data-partnergo="1">👥 Freunde</button><button class="btn ghost small" data-partneroff="1" aria-label="Partnerstadt entfernen">✕</button></span></div>
+        <p class="muted">Ihre Flagge weht neben deinem Rathaus.</p>`
+        : '<p class="muted">Wähle unter 👥 Freunde bei einem Freund 🚩 – dann weht seine Flagge neben deinem Rathaus, und seine Schiffe legen an deinem Hafen an.</p>'}
       ${t ? `
         <div class="label">Rathaus: Wand</div>
         <div class="swatches">${colorsOf('wall').map(([c, i]) => `<button class="sw${i === t.wall ? ' on' : ''}" data-wall="${i}" style="background:${c}" aria-label="Wandfarbe ${i + 1}"></button>`).join('')}</div>
@@ -2061,6 +2067,9 @@ function openTownHall(tab = hallTab) {
     if (b.dataset.quickGo === 'fire') { closeModal(); startFireworks(); }
   };
   for (const b of card.querySelectorAll('[data-mailgo]')) b.onclick = () => openYou('freunde');
+  for (const b of card.querySelectorAll('[data-wishset]')) b.onclick = () => openWishPicker();   // Wunschzettel (Block 105)
+  for (const b of card.querySelectorAll('[data-partnergo]')) b.onclick = () => openYou('freunde');
+  for (const b of card.querySelectorAll('[data-partneroff]')) b.onclick = () => { if (viewOnly()) { cloudBlocked(); return; } state.partner = null; cloudTouched(); save(); openTownHall('town'); };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);
     closeModal(); jumpTo(x, y, 3, 3); sparkle(x + 1, y + 1); openLandmark(x, y);
@@ -2235,6 +2244,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-fuereinander', date: '6. Oktober', title: 'Füreinander: Wunschzettel, Freundschaft & Partnerstadt', items: [
+    '📌 <b>Wunschzettel:</b> Im Rathaus hängst du einen Wunsch aus (z. B. 200 Bretter). Deine Freunde sehen ihn unter 👥 und helfen mit einem Klick – du sagst automatisch Danke.',
+    '💛 <b>Freundschaft wächst:</b> Besuche, Herzen, Gästebuch und Päckchen lassen bei jedem Freund Herzen wachsen (bis 5). Dafür gibt es Freundschaftsband, Herzballon, Freundesbank und Freundschaftsbaum.',
+    '🚩 <b>Partnerstadt:</b> Wähl unter 👥 einen Freund als Partnerstadt – seine Flagge weht neben deinem Rathaus, und ab und zu legt sein Boot an deinem Hafen an.',
+  ] },
   { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde, Tag & Nacht – und alles aufgeräumt', items: [
     '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
     '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',

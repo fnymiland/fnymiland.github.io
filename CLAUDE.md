@@ -356,6 +356,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+105. **Füreinander** (Block 105, friends.js unten): Freundschaftspunkte nur über `bondAdd` (eigene Aktion) bzw.
+    `bondFromBook` (Empfangenes, Transaktion mit `seen`) – nie Punkte im Spielstand führen; dort nur die höchste Stufe
+    `state.bond` (nie kleiner, `bondSync`). Belohnungen mit `bond: n` (ITEMS, WEAR_NEED). Wunschzettel nur der Besitzer
+    (`worlds/<wid>/wish`, owner mitschreiben), Päckchen dafür mit `wish: true`. Wer neue Felder in book/mail/worlds schreibt,
+    ergänzt firebase-rules.json (feste Felder, `$other: false`) und gibt dem Nutzer die Regeln zum Einfügen.
 103. **Fenster mit Reitern** sind immer gleich groß: Reiter als `<div class="looks hall-tabs">` **direkt im Fenster** (nicht in
     einer Hülle) – dann packt `frameHtml` alles danach in `.tab-scroll` (nur das scrollt), `modalFrame` setzt die feste Höhe.
     Nie `position: sticky` für Reiter (federt auf dem iPad weg). Neue Fenster mit Reitern genauso bauen, keine eigene Breite je

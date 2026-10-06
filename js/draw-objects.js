@@ -826,8 +826,11 @@ const BIG_ART = {
       kLine(K, [px, py], post ? [px, py - 6 * zz] : [px + 5 * zz, py], '#8a5a3c', 0.8);
       poly(post ? [[px, py - 6 * zz], [px + 3.5 * zz, py - 5 * zz], [px, py - 4 * zz]] : [[px + 5 * zz, py], [px + 4 * zz, py - 3 * zz], [px + 3 * zz, py]], C('#e8604f'));
     };
+    const P = state.partner;                                              // Partnerstadt (Block 105): zweite, kleinere Fahne
+    const pflag = () => { const [fx, fy] = K.P(1.38, -1.38); drawFlag(fx, fy, z * 1.05, now + 700, { color: P.c, symbol: P.s }); };   // neben der eigenen Fahne
     K.scene([[-0.45, 0, hall], [0.5, 0, steps], [0.95, -0.55, lamp(-0.55)], [0.95, 0.55, lamp(0.55)], [1.05, 0.95, fountain], [1.15, -1.1, flag], [1.3, -0.72, mailbox],
-      [-1.3, 1.3, () => kitBush(K, -1.3, 1.3, 0.9)], [-1.3, -1.3, () => kitBush(K, -1.3, -1.3, 0.8, '#62b85a')], [1.25, 1.35, () => kitBush(K, 1.3, 1.35, 0.7, '#f28cb1')]]);
+      [-1.3, 1.3, () => kitBush(K, -1.3, 1.3, 0.9)], [-1.3, -1.3, () => kitBush(K, -1.3, -1.3, 0.8, '#62b85a')], [1.25, 1.35, () => kitBush(K, 1.3, 1.35, 0.7, '#f28cb1')],
+      ...(P ? [[1.38, -1.38, pflag]] : [])]);
   },
 
 };
@@ -1398,6 +1401,31 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
         [0.08, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, 0.16, b, 5, '#6b4f3a', 1.4);
           K.block({ a: 0.06, ha: 0.14, hb: 0.47, h: 1.4, lift: 4.6, wall: '#b57b4a', roof: '#c68b59', type: 'flat' }); }],
       ]);
+      break;
+    }
+    case 'freundesbank': {                   // Bank mit Herzlehne (Block 105)
+      const K = kit(cx, cy, z, (t && t.rot) || 0);
+      shadow(cx, cy, hw * 0.35, hh * 0.25);
+      K.scene([
+        [-0.1, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, -0.1, b, 9, '#6b4f3a', 1.4);
+          const [hx, hy] = K.P(-0.1, 0, 12), r = 2.6 * z;                                  // Herz als Lehne
+          circle(hx - r * 0.55, hy - r * 0.3, r * 0.7, C('#e8604f')); circle(hx + r * 0.55, hy - r * 0.3, r * 0.7, C('#e8604f'));
+          poly([[hx - r * 1.2, hy - 0.05 * r], [hx + r * 1.2, hy - 0.05 * r], [hx, hy + r * 1.3]], C('#e8604f'));
+          K.block({ a: -0.1, ha: 0.035, hb: 0.47, h: 2.2, lift: 6.5, wall: '#f28cb1', roof: '#f6a5c0', type: 'flat' }); }],
+        [0.08, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, 0.16, b, 5, '#6b4f3a', 1.4);
+          K.block({ a: 0.06, ha: 0.14, hb: 0.47, h: 1.4, lift: 4.6, wall: '#f28cb1', roof: '#f6a5c0', type: 'flat' }); }],
+      ]);
+      break;
+    }
+    case 'freundschaftsbaum': {              // runder Baum, an dem Herzen wachsen (Block 105)
+      shadow(cx, cy, hw * 0.55, hh * 0.45);
+      g.fillStyle = C('#8a5a3c'); g.fillRect(cx - 2.2 * z, cy - 16 * z, 4.4 * z, 16 * z);
+      for (const [dx, dy, r, c] of [[-7, -22, 9, '#58ad52'], [7, -22, 9, '#4f9e4a'], [0, -30, 11, '#62b85a'], [-4, -26, 7, '#6cc164'], [5, -27, 6, '#58ad52']]) circle(cx + dx * z, cy + dy * z, r * z, C(c));
+      for (let i = 0; i < 7; i++) {
+        const a = i / 7 * Math.PI * 2 + 0.4, hx = cx + Math.cos(a) * 9 * z, hy = cy - 26 * z + Math.sin(a) * 6 * z + Math.sin(now / 900 + i) * 0.6 * z, r = 1.5 * z;
+        circle(hx - r * 0.55, hy - r * 0.3, r * 0.7, C(i % 2 ? '#f28cb1' : '#e8604f')); circle(hx + r * 0.55, hy - r * 0.3, r * 0.7, C(i % 2 ? '#f28cb1' : '#e8604f'));
+        poly([[hx - r * 1.2, hy - 0.05 * r], [hx + r * 1.2, hy - 0.05 * r], [hx, hy + r * 1.3]], C(i % 2 ? '#f28cb1' : '#e8604f'));
+      }
       break;
     }
     case 'laterne': {

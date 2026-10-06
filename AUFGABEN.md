@@ -1233,3 +1233,26 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
 - [x] Frühere Stände (Sicherungen vor dem Ersetzen) von 10 auf 3 – jede ist ein ganzer Spielstand (bis 500 KB), der
       kostenlose Firebase-Tarif hat 1 GB für alle. Ältere von früher räumt das Online-Fenster beim Öffnen weg.
       Test: cloud.test.js.
+
+## Block 105: Füreinander – Wunschzettel, Freundschaft, Partnerstadt (06.10.2026)
+- [x] 📌 Wunschzettel (Rathaus → Übersicht): ein Wunsch (Material + Menge, Vorschlag aus den nächsten Laternen) unter
+      `worlds/<wid>/wish`. Freunde sehen ihn in ihrer Freundesliste, „🎁 Helfen“ füllt die fehlende Menge vor, das Päckchen
+      trägt `wish: true`. Abholen füllt den Wunsch (Balken, „erfüllt!“) und schickt automatisch ein „💛 Danke“ ins
+      Gästebuch des Helfers (`book/<helfer>/d_…`).
+- [x] 💛 Freundschaftsstufen: Punkte je Freund unter `users/<uid>/bonds/<freund>` (eigene Sicht). Besuch +1, Herz +1,
+      Gästebuch +2, Päckchen +2, Wunsch-Hilfe +3; Empfangenes aus dem Gästebuch per Transaktion mit „seen“ (zählt einmal).
+      5 Herzen bei 3/10/25/50/100 Punkten. Höchste Stufe in `state.bond` (wird nie kleiner) schaltet frei:
+      2 ♥ Freundschaftsband, 3 ♥ Herzballon (Figur), 4 ♥ Freundesbank, 5 ♥ Freundschaftsbaum (Deko).
+- [x] 🚩 Partnerstadt (`state.partner`): Flagge des Freundes neben der eigenen am Rathaus, im Rathaus unter „Ort“.
+      Flaggen kommen über `fr/<freund>/<ich>/flag` (wird beim Öffnen von „Freunde“ aufgefrischt) bzw. aus seiner Insel.
+      Freundesschiffe: alle 5 Minuten legt für 2 Minuten ein Boot mit der Flagge eines Freundes am Hafen an (nur Bild).
+- [x] Gefunden beim Testen: „Freunde“ zweimal kurz hintereinander geöffnet – der ältere Aufruf überschrieb den neueren
+      (jetzt Aufruf-Nummer); geschlossen und wieder geöffnet – Fenster blieb unsichtbar (alter Inhalt lag noch im DOM).
+- [x] Regeln: worlds/<wid>/wish, Gästebuch-Art 'd', Päckchen-Feld wish. Test: fuereinander.test.js (5), friends.test.js.
+- [x] Fehlerprüfung Block 105: Freunde-Fenster sprang nach dem Schließen bei jeder Änderung der Freundesliste wieder auf (mit
+      dem Flaggen-Auffrischen bei allen Freunden – wanderte durch den Freundeskreis); Partnerstadt verriet Name/Kennung des
+      Freundes an Besucher (jetzt öffentlich nur die Flagge); Flaggen fremder Spieler streng geprüft (#rrggbb + festes
+      Symbol, sonst CSS-Injektion); Freundschaftsstufe nach Laden/Übernehmen wiederhergestellt; Wunsch beim Abholen per
+      Transaktion in der Cloud gefüllt; Wunsch per Abruf statt Beobachtung, zieht beim neuen Link mit; Danke-Einträge nach
+      60 Tagen weg; Besuchspunkt nur bei geklapptem Eintrag; Regeln: Flagge geprüft, Gästebuch-Zeit nicht in der Zukunft.
+

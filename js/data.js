@@ -125,6 +125,8 @@ const ITEMS = {
   // Belohnungen fürs Sammelalbum (album = Seite, die voll sein muss)
   denkmal:    { cat: 'deko', name: 'Baumeister-Denkmal', cost: 0, needs: 'grass', beauty: 40, album: 'gebaeude', desc: 'Für die volle Album-Seite „Gebäude“.' },
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
+  freundesbank: { cat: 'deko', name: 'Freundesbank', cost: 0, beauty: 6, small: true, bond: 4, desc: 'Für eine Freundschaft mit 4 Herzen. Eine Bank mit Herzlehne – für zwei.' },   // Block 105
+  freundschaftsbaum: { cat: 'deko', name: 'Freundschaftsbaum', cost: 0, needs: 'grass', beauty: 30, bond: 5, desc: 'Für eine Freundschaft mit 5 Herzen. Statt Äpfeln wachsen Herzen.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
   karussell:  { cat: 'deko', name: 'Karussell', cost: 0, needs: 'grass', beauty: 45, album: 'bewohner', desc: 'Für die volle Album-Seite „Bewohner“. Dreht sich.' },
   zauberbrunnen: { cat: 'deko', name: 'Zauberbrunnen', cost: 0, needs: 'grass', beauty: 70, album: 'fzpark', desc: 'Für die volle Album-Seite „Freizeitpark“: ein Brunnen mit Regenbogen und Funkeln.' },
@@ -568,9 +570,9 @@ const MENU = [
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
-    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus'] },
+    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
-    { id: 'platz', label: '🪑 Platz', items: ['bank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
+    { id: 'platz', label: '🪑 Platz', items: ['bank', 'freundesbank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
@@ -696,6 +698,8 @@ const ITEM_TIPS = {
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
+  freundesbank: 'Vier Herzen Freundschaft! Die Freundesbank mit Herzlehne passt in jede Ecke – kostet nichts.',
+  freundschaftsbaum: 'Fünf Herzen Freundschaft! Am Freundschaftsbaum wachsen Herzen – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Aufziehen = Fläche.',
   seilbahn: 'Stell zwei Stationen auf, bis zu 20 Felder auseinander – gern über Wasser oder quer übers Dorf. Das Seil spannt sich von selbst.',
   wiese: 'Terraforming: Zieh über Wald, Felsen oder Strand – alles wird grüne Wiese.',

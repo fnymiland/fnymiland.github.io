@@ -14,17 +14,20 @@ const WEAR_NEED = {
   piratenhut: { a: 'inseln', n: 1 }, wikingerhelm: { a: 'land', n: 1 }, zylinder: { a: 'taler', n: 2 }, krone: { a: 'wunder', n: 1 },
   rucksack: { a: 'forschung', n: 1 }, umhang: { stars: 15 },
   eis: { a: 'fzpark', n: 1 }, strauss: { a: 'deko', n: 1 }, laterne: { a: 'laternen', n: 1 },
+  band: { bond: 2 }, herzballon: { bond: 3 },                          // Freundschaft (Block 105): Herzen bei einem Freund
 };
 const WEAR_SLOTS = [['hat', 'Kopf'], ['face', 'Gesicht'], ['body', 'Körper'], ['hand', 'In der Hand']];
 function wearOk(id) {
   const n = WEAR_NEED[id];
   if (!n) return true;
+  if (n.bond) return (state.bond || 0) >= n.bond;
   return n.stars ? starCount() >= n.stars : ((state.achieved || {})[n.a] || 0) >= n.n;
 }
 function wearNeedText(id) {
   const n = WEAR_NEED[id];
   if (!n) return '';
   if (n.stars) return `⭐ ${n.stars} Erfolgs-Sterne`;
+  if (n.bond) return `💛 Freundschaft mit ${n.bond} Herzen`;
   const A = ACHIEVEMENTS.find(a => a.id === n.a);
   return `${A.icon} ${A.name}: ${tierText(A, A.tiers[n.n - 1])}`;
 }
@@ -34,6 +37,7 @@ function wearProgress(id) {
   const n = WEAR_NEED[id];
   if (!n) return null;
   if (n.stars) return { have: starCount(), need: n.stars, text: `${starCount()} / ${n.stars} ⭐` };
+  if (n.bond) return { have: state.bond || 0, need: n.bond, text: `${'♥'.repeat(state.bond || 0)}${'♡'.repeat(Math.max(0, n.bond - (state.bond || 0)))} (beste Freundschaft)` };
   const A = ACHIEVEMENTS.find(a => a.id === n.a), goal = A.tiers[n.n - 1], v = A.value();
   return { have: v, need: goal, text: `${tierText(A, Math.min(v, goal))} / ${tierText(A, goal)}` };
 }
@@ -269,9 +273,9 @@ function meHallHtml() {
     const id = meLockOpen;
     if (!id || !WEAR[slot][id] || wearOk(id)) return '';
     const p = wearProgress(id);
-    return `<div class="wear-lock"><b>🔒 ${WEAR[slot][id]}</b> gibt es für den Erfolg <b>${wearNeedText(id)}</b>.
+    return `<div class="wear-lock"><b>🔒 ${WEAR[slot][id]}</b> gibt es für ${WEAR_NEED[id].bond ? '' : 'den Erfolg '}<b>${wearNeedText(id)}</b>.
       <div class="bar"><i style="width:${Math.min(100, p.have / p.need * 100)}%"></i></div><small>Du hast: ${p.text}</small>
-      <div class="row"><button class="btn ghost small" data-mego="erfolge">⭐ Zu den Erfolgen</button></div></div>`;
+      <div class="row"><button class="btn ghost small" data-mego="${WEAR_NEED[id].bond ? 'freunde' : 'erfolge'}">${WEAR_NEED[id].bond ? '👥 Zu den Freunden' : '⭐ Zu den Erfolgen'}</button></div></div>`;
   };
   const wearBtns = (slot, none) => `<div class="looks"><button class="look${on(!L[slot])}" data-mew="${slot}:">${none}</button>${Object.entries(WEAR[slot]).map(([id, n]) => wearOk(id)
     ? `<button class="look${on(L[slot] === id)}" data-mew="${slot}:${id}">${n}</button>`

@@ -12,7 +12,8 @@
 // ---------------------------------------------------------------------------
 const LIVE_MAPS = ['tiles', 'decos', 'edges', 'terra'];
 const LIVE_ECO = ['money', 'res', 'science', 'stats', 'incPeak'];                       // ändert sich laufend
-const LIVE_PRIV = ['diary', 'diarySeen', 'tutorial', 'tipsSeen', 'tipsOff', 'paintNew', 'keep', 'orders', 'orderNext', 'expedition', 'decree', 'decreeNext', 'achieved'];
+const LIVE_PRIV = ['diary', 'diarySeen', 'tutorial', 'tipsSeen', 'tipsOff', 'paintNew', 'keep', 'orders', 'orderNext', 'expedition', 'decree', 'decreeNext', 'achieved', 'bond'];
+const LIVE_PRIV_ALSO = ['partner'];                                           // öffentlich nur gekürzt (liveSplit), privat ganz
 const LIVE_LOCAL = ['cam', 'last', 'muted'];                                             // gehört zum Gerät, nie gespiegelt
 const LIVE_STEP = 1000, LIVE_ECO_EVERY = 2000, LIVE_REST_EVERY = 5000;
 const pick = (o, ks) => Object.fromEntries(ks.filter(k => o[k] !== undefined).map(k => [k, o[k]]));
@@ -23,8 +24,10 @@ function liveSplit(S) {
   const maps = {};
   for (const m of LIVE_MAPS) { const o = {}; for (const [k, v] of S[m] || []) o[k] = m === 'terra' ? String(v) : JSON.stringify(v); maps[m] = o; }
   const skip = new Set([...LIVE_MAPS, ...LIVE_ECO, ...LIVE_PRIV, ...LIVE_LOCAL]);
-  return { maps, rest: JSON.stringify(Object.fromEntries(Object.entries(S).filter(([k]) => !skip.has(k)))),
-    eco: JSON.stringify(pick(S, LIVE_ECO)), priv: JSON.stringify(pick(S, LIVE_PRIV)) };
+  const pub = Object.fromEntries(Object.entries(S).filter(([k]) => !skip.has(k)));
+  if (pub.partner) pub.partner = { uid: '', name: '', c: pub.partner.c, s: pub.partner.s };   // Besucher sehen die Flagge, nicht wer es ist
+  return { maps, rest: JSON.stringify(pub),
+    eco: JSON.stringify(pick(S, LIVE_ECO)), priv: JSON.stringify(pick(S, [...LIVE_PRIV, ...LIVE_PRIV_ALSO])) };
 }
 // Spiegel → Spielstand für parseSave. Ohne Privates (Besuch): keine Taler, keine Einführung, kein Tagebuch
 function liveJoin(world, live) {
@@ -226,7 +229,7 @@ function visitUi() {
 const FR_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';                 // ohne 0/O, 1/I/L
 const frCodeText = c => `FNYMI-${c}`;
 const frCodeNorm = s => String(s || '').toUpperCase().replace(/^\s*FNYMI\s*-?\s*/, '').replace(/[^A-Z0-9]/g, '');
-let frMine = null, frList = {}, frOff = null;
+let frMine = null, frList = {}, frOff = null, frRenderTok = 0;
 async function frCode() {
   if (frMine) return frMine;
   const uid = cloudUser.uid, prof = await cloudApi.get(`users/${uid}/profile`);
@@ -241,7 +244,7 @@ async function frCode() {
 const frMyName = () => `${(cloudUser.display || 'Spieler').split(' ')[0]} · ${state.town.name}`;
 function frWatch() {
   if (frOff || !cloudUser || !cloudApi.watch) return;
-  frOff = cloudApi.watch(`fr/${cloudUser.uid}`, v => { frList = v || {}; if (document.getElementById('fr-box')) openFriends(); });
+  frOff = cloudApi.watch(`fr/${cloudUser.uid}`, v => { frList = v || {}; if (document.getElementById('fr-box') && !$('modal').hidden) openFriends(); });   // nur, wenn es offen ist
 }
 async function frAdd(input) {
   const code = frCodeNorm(input), uid = cloudUser.uid;
@@ -255,22 +258,24 @@ async function frAdd(input) {
   if (e && e.st === 'anfrage') { await frAccept(other); return null; }
   const myCode = await frCode(), wid = await liveWorldId();
   await cloudApi.update({ [`fr/${uid}/${other}`]: { st: 'gesendet', name: frCodeText(code), at: cloudApi.TS() },
-    [`fr/${other}/${uid}`]: { st: 'anfrage', name: frMyName(), code: myCode, wid, at: cloudApi.TS() } });
+    [`fr/${other}/${uid}`]: { st: 'anfrage', name: frMyName(), code: myCode, wid, flag: myFlag(), at: cloudApi.TS() } });
   return null;
 }
 async function frAccept(other) {
   const uid = cloudUser.uid, e = frList[other] || {}, wid = await liveWorldId();
   await cloudApi.update({ [`fr/${uid}/${other}`]: { st: 'freund', name: e.name || 'Freund', wid: e.wid || '', at: cloudApi.TS() },
-    [`fr/${other}/${uid}`]: { st: 'freund', name: frMyName(), wid, at: cloudApi.TS() } });
+    [`fr/${other}/${uid}`]: { st: 'freund', name: frMyName(), wid, flag: myFlag(), at: cloudApi.TS() } });
 }
 const frRemove = other => cloudApi.update({ [`fr/${cloudUser.uid}/${other}`]: null, [`fr/${other}/${cloudUser.uid}`]: null });
 // neuer Besuchs-Link: neue wid, alles neu schreiben, alte weg, Freunde bekommen die neue
 async function liveNewLink() {
   const uid = cloudUser.uid, old = await liveWorldId(), wid = liveRand(20);
+  const wish = await cloudApi.get(`worlds/${old}/wish`).catch(() => null);   // Wunschzettel zieht mit (Block 105)
   await cloudApi.set(`users/${uid}/pub`, { wid, open: liveOpen });
   liveWid = wid; liveSent = null;
   await cloudApi.update({ [`worlds/${old}`]: null });                         // alter Link geht ab sofort nicht mehr
   if (!(await livePush(true))) toast('🔗 Die Insel erscheint unter dem neuen Link, sobald ein Gerät von dir spielt');
+  if (wish) await cloudApi.update({ [`worlds/${wid}/wish`]: wish, [`worlds/${wid}/owner`]: uid }).catch(() => {});
   for (const [f, e] of Object.entries(frList)) if (e.st === 'freund') await cloudApi.update({ [`fr/${f}/${uid}/wid`]: wid }).catch(() => {});
 }
 async function liveSetOpen(on) {
@@ -312,18 +317,28 @@ async function openFriends() {
   }
   frWatch();
   youTab = 'freunde';
+  const tok = ++frRenderTok;                                             // nur der neueste Aufruf zeichnet (zwei kurz hintereinander)
   const typed = $('fr-in') ? $('fr-in').value : '';                      // halb getippter Code bleibt beim Neuzeichnen
-  if (!$('fr-box')) openModal(`${youHead('freunde')}<div id="fr-box"><p class="muted" id="fr-wait">Lädt …</p></div>`);
+  if (!$('fr-box') || $('modal').hidden) openModal(`${youHead('freunde')}<div id="fr-box"><p class="muted" id="fr-wait">Lädt …</p></div>`);   // auch nach dem Schließen (Inhalt bleibt unsichtbar stehen)
   let code = '…', wid = null;
   try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
-  if (youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen oder anderen Reiter gewählt
+  if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen, anderer Reiter oder neuer Aufruf
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
+  const wishes = {};                                                     // Wunschzettel der Freunde (Block 105)
+  await Promise.all(by('freund').filter(([, e]) => e.wid).map(async ([id, e]) => { wishes[id] = wishClean(await cloudApi.get(`worlds/${e.wid}/wish`).catch(() => null)); }));
+  if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return;
+  frPushFlag();
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
+  const friendRow = ([id, e]) => {
+    const w = wishes[id], p = (myBonds[id] || {}).p, partner = state.partner && state.partner.uid === id;
+    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small></span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
+      ${w && w.got < w.n ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da)</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>` : ''}</div>`;
+  };
   openModal(`
     ${youHead('freunde')}<div id="fr-box">
     ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
-    ${by('freund').length ? by('freund').map(r => row(r, (id, e) => `${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button>`)).join('')
+    ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch und Päckchen – am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'
       : '<p class="muted">Noch keine – schick deinen Code an jemanden oder gib einen ein.</p>'}
     ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
     ${by('gesendet').length ? `<div class="label">Gesendet</div>${by('gesendet').map(r => row(r, id => `<span class="muted">wartet …</span><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Anfrage zurückziehen">✕</button>`)).join('')}` : ''}
@@ -346,6 +361,8 @@ async function openFriends() {
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
   wireFriendsHall($('modal-card'));
   for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
+  for (const b of document.querySelectorAll('[data-frhelp]')) b.onclick = () => mailCompose(b.dataset.frhelp, (b.dataset.frname || 'Freund').split(' · ')[0], wishes[b.dataset.frhelp]);
+  for (const b of document.querySelectorAll('[data-frpartner]')) b.onclick = async () => { await togglePartner(b.dataset.frpartner, frList[b.dataset.frpartner] || {}); openFriends(); };
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
   if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), true);

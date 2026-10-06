@@ -567,7 +567,7 @@ const ALBUM = [
   { id: 'natur', icon: '🔍', name: 'Naturbeobachtungen', reward: 'seerosenteich', tiers: ['schmetterlingsgarten', 'vogelbaum', 'seerosenteich'] },
   { id: 'fzpark', icon: '🎢', name: 'Freizeitpark', reward: 'zauberbrunnen' },
 ];
-const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder || ITEMS[id].garden);   // Wunderwerke haben ihren eigenen Fortschritt
+const isRewardItem = id => !!(ITEMS[id].album || ITEMS[id].rank || ITEMS[id].wonder || ITEMS[id].garden || ITEMS[id].bond);   // Wunderwerke haben ihren eigenen Fortschritt
 function albumKeys(p) {
   switch (p.id) {
     case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung', 'strom'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);

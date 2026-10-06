@@ -133,4 +133,11 @@ describe('Freunde auf der Insel (Block 96)', () => {
     game("document.querySelector('[data-mailgo]').click()"); await tick(20);
     expect(game('youTab')).toBe('freunde');
   });
+  it('„Freunde“ schließen und wieder öffnen: das Fenster erscheint (Prüfung Block 105)', async () => {
+    await game("openYou('freunde')"); await tick(10);
+    game('closeModal()');
+    await game("openYou('freunde')"); await tick(10);
+    expect(game("document.getElementById('modal').hidden")).toBe(false);
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/Freundescode/);
+  });
 });

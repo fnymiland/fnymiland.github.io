@@ -43,6 +43,8 @@ function newState() {
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
     album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
     me: null,                  // eigene Figur (Block 97): { a, fur, shirt, hat, face, body, hand, name, off } – null = noch nie eingestellt
+    bond: 0,                   // höchste Freundschaftsstufe bei einem Freund (Block 105, schaltet Belohnungen frei, wird nie kleiner)
+    partner: null,             // Partnerstadt (Block 105): { uid, name, c, s } – Flagge neben dem Rathaus
     tipsOff: false,
     tiles: new Map(),
     terra: new Map(),
@@ -119,7 +121,7 @@ function serialize() {
     game: 'kachelhausen', v: 12, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, tiles, terra: [...state.terra], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, tiles, terra: [...state.terra], techs: [...state.techs],
     decos, edges: [...state.edges].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -288,6 +290,8 @@ function parseSave(d) {
     incPeak: isFinite(d.incPeak) && d.incPeak > 0 ? d.incPeak : 0,
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     me: d.me && typeof d.me === 'object' && !Array.isArray(d.me) ? { ...d.me } : null,   // geprüft wird beim Lesen (meLook)
+    bond: Number.isInteger(d.bond) ? Math.max(0, Math.min(5, d.bond)) : 0,
+    partner: d.partner && typeof d.partner.uid === 'string' && /^#[0-9a-f]{6}$/i.test(d.partner.c) && FLAG_SYMBOLS.includes(d.partner.s) ? { uid: d.partner.uid, name: String(d.partner.name || 'Freund').slice(0, 40), c: d.partner.c, s: d.partner.s } : null,   // Farbe/Symbol streng: stammt von einem anderen Spieler
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle

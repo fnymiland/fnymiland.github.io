@@ -14,20 +14,62 @@
           "$g": {
             ".write": "auth != null && auth.uid === $g && root.child('fr').child(root.child('worlds').child($wid).child('owner').val()).child(auth.uid).child('st').val() === 'freund'",
             ".validate": "!newData.exists() || (newData.hasChildren(['x', 'y', 'n']) && newData.child('x').isNumber() && newData.child('y').isNumber() && newData.child('n').isString() && newData.child('n').val().length <= 30)",
-            "a": { ".validate": "newData.isNumber()" },
-            "n": { ".validate": "newData.isString() && newData.val().length <= 30" },
-            "x": { ".validate": "newData.isNumber()" },
-            "y": { ".validate": "newData.isNumber()" },
-            "look": {
-              "fur": { ".validate": "newData.isNumber()" },
-              "shirt": { ".validate": "newData.isNumber()" },
-              "hat": { ".validate": "newData.isString() && newData.val().length <= 20" },
-              "face": { ".validate": "newData.isString() && newData.val().length <= 20" },
-              "body": { ".validate": "newData.isString() && newData.val().length <= 20" },
-              "hand": { ".validate": "newData.isString() && newData.val().length <= 20" },
-              "$other": { ".validate": false }
+            "a": {
+              ".validate": "newData.isNumber()"
             },
-            "$other": { ".validate": false }
+            "n": {
+              ".validate": "newData.isString() && newData.val().length <= 30"
+            },
+            "x": {
+              ".validate": "newData.isNumber()"
+            },
+            "y": {
+              ".validate": "newData.isNumber()"
+            },
+            "look": {
+              "fur": {
+                ".validate": "newData.isNumber()"
+              },
+              "shirt": {
+                ".validate": "newData.isNumber()"
+              },
+              "hat": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "face": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "body": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "hand": {
+                ".validate": "newData.isString() && newData.val().length <= 20"
+              },
+              "$other": {
+                ".validate": false
+              }
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "wish": {
+          ".validate": "!newData.exists() || (newData.child('r').isString() && newData.child('r').val().length <= 20 && newData.child('n').isNumber() && newData.child('n').val() > 0 && newData.child('n').val() <= 100000)",
+          "r": {
+            ".validate": "newData.isString()"
+          },
+          "n": {
+            ".validate": "newData.isNumber()"
+          },
+          "got": {
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          },
+          "at": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
           }
         }
       }
@@ -42,7 +84,19 @@
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
         "$other": {
-          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && (!newData.exists() || (!data.exists() && newData.child('st').val() === 'anfrage') || (data.child('st').val() === 'gesendet' && newData.child('st').val() === 'freund') || (data.child('st').val() === 'freund' && newData.child('st').val() === 'freund'))))"
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && (!newData.exists() || (!data.exists() && newData.child('st').val() === 'anfrage') || (data.child('st').val() === 'gesendet' && newData.child('st').val() === 'freund') || (data.child('st').val() === 'freund' && newData.child('st').val() === 'freund'))))",
+          "flag": {
+            ".validate": "newData.child('c').isString() && newData.child('c').val().matches(/^#[0-9a-fA-F]{6}$/) && newData.child('s').isString() && newData.child('s').val().length <= 8",
+            "c": {
+              ".validate": "newData.isString()"
+            },
+            "s": {
+              ".validate": "newData.isString()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       }
     },
@@ -51,15 +105,31 @@
         ".read": "auth != null && auth.uid === $owner",
         "$id": {
           ".write": "auth != null && ((auth.uid === $owner && !newData.exists()) || (!data.exists() && newData.child('from').val() === auth.uid && root.child('fr').child($owner).child(auth.uid).child('st').val() === 'freund'))",
-          ".validate": "!newData.exists() || (newData.child('n').isString() && newData.child('n').val().length <= 30 && (newData.child('k').val() === 'v' || newData.child('k').val() === 'h' || newData.child('k').val() === 'g'))",
-          "k": { ".validate": "newData.isString()" },
-          "from": { ".validate": "newData.isString()" },
-          "n": { ".validate": "newData.isString() && newData.val().length <= 30" },
-          "a": { ".validate": "newData.isNumber()" },
-          "t": { ".validate": "newData.isNumber()" },
-          "s": { ".validate": "newData.isNumber()" },
-          "at": { ".validate": "newData.isNumber()" },
-          "$other": { ".validate": false }
+          ".validate": "!newData.exists() || (newData.child('n').isString() && newData.child('n').val().length <= 30 && (newData.child('k').val() === 'v' || newData.child('k').val() === 'h' || newData.child('k').val() === 'g' || newData.child('k').val() === 'd'))",
+          "k": {
+            ".validate": "newData.isString()"
+          },
+          "from": {
+            ".validate": "newData.isString()"
+          },
+          "n": {
+            ".validate": "newData.isString() && newData.val().length <= 30"
+          },
+          "a": {
+            ".validate": "newData.isNumber()"
+          },
+          "t": {
+            ".validate": "newData.isNumber()"
+          },
+          "s": {
+            ".validate": "newData.isNumber()"
+          },
+          "at": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
@@ -68,14 +138,29 @@
         ".read": "auth != null && auth.uid === $to",
         "$id": {
           ".write": "auth != null && ((auth.uid === $to && !newData.exists()) || (!data.exists() && newData.child('from').val() === auth.uid && root.child('fr').child($to).child(auth.uid).child('st').val() === 'freund'))",
-          "from": { ".validate": "newData.isString()" },
-          "n": { ".validate": "newData.isString() && newData.val().length <= 30" },
-          "a": { ".validate": "newData.isNumber()" },
-          "at": { ".validate": "newData.isNumber()" },
-          "items": {
-            "$r": { ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 100000 && $r.length <= 20" }
+          "from": {
+            ".validate": "newData.isString()"
           },
-          "$other": { ".validate": false }
+          "n": {
+            ".validate": "newData.isString() && newData.val().length <= 30"
+          },
+          "a": {
+            ".validate": "newData.isNumber()"
+          },
+          "at": {
+            ".validate": "newData.isNumber()"
+          },
+          "items": {
+            "$r": {
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 100000 && $r.length <= 20"
+            }
+          },
+          "wish": {
+            ".validate": "newData.isBoolean()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     }
