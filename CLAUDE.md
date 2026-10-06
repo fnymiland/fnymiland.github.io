@@ -356,9 +356,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
-118. **Hauptbahnhof-Flügel** (Block 118): Breite = 2·Gleise + Flügel (`hbfWing`, ±1). Gleise liegen bei b = −n + ½ + 2g +
-    `hbfBOff(t)`; wer Gleis-Lagen berechnet, geht über `gleisTiles`, Eingang über `hbfEntrance` (mit Flügel genau ein Feld).
-    Flügel an/ab/umsetzen nur über `hbfWingSet` (Anker so, dass die Gleise bleiben).
+118. **Hauptbahnhof-Flügel/Halle** (Block 118/121): Breite = 2·Gleise + 1 mit Flügel (`hbfWing`: ±1 Seite, 2 Mittelhalle mit
+    `t.mid` Gleisen links). Lage nur über `hbfTrackB(t, g)` (Gleismitte), `hbfHallB` (Halle/Flügel), `hbfPortalB` (Portal);
+    im Spiel über `gleisTiles`/`hbfEntrance`. Umstellen nur über `hbfWingSet` (Anker so, dass Gleis 1 bleibt; was rückt,
+    sagt `hbfWingPlan().moved`). „+ Gleis“ wächst immer rechts (+b).
 117. **Gruppe tragen und drehen** (Block 117): Eine Gruppe (`moving.kind === 'group'`) hat Rahmen W×H und Drehung r; wo ein Ding
     landet, sagt nur `groupPlaced(it)` (Punkt drehen: `grot`, gleiche Richtung wie `kitTurn`, Dinge rot + r; Bank am Wegrand
     `midRot`). Neue Arten in der Gruppe (Rasen `ground`, Linien `edge`) brauchen: aufnehmen, `groupErrors`, `dropGroup`,

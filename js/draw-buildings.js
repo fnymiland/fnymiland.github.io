@@ -760,12 +760,12 @@ const BUILDING_ART = {
   // Uhrturm (Eingang nach außen, dort schließt der Weg an), links und rechts gleich lange Flügel. Drei Designs (t.look):
   // Glashalle (Sandstein, gewölbte Glasdächer), Backstein (Satteldächer über den Bahnsteigen), Landbahnhof (Holz, Blumenkästen).
   hbf(K, s, now, x, y, t, ha, hb) {
-    const wingS = hbfWing(t), bOff = hbfBOff(t);                                     // Seitenflügel (Block 118): Gleise rücken ½ zur Seite
-    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => -n + 0.5 + 2 * g + bOff, PW = 0.8;   // PW: halbe Breite des Portals
+    const wingS = hbfWing(t), hallB = hbfHallB(t), pb = hbfPortalB(t);           // Flügel/Mittelhalle (Block 118/121), Portal bei b = pb
+    const n = hbfGleise(t), look = t.look || 'glas', z = K.z, gb = g => hbfTrackB(t, g), PW = 0.8;   // gb: Mitte von Gleis g (Bahnsteig bei gb + 1); PW: halbe Breite des Portals
     if (groundPart(() => {
       K.rect(-1, -hb, 2, hb, C('#cdc6b8'));
       K.rect(-2, -hb, -1, hb, C('#dad2c2'));
-      K.rect(-2, -PW - 0.15, -1.86, PW + 0.15, C('#efe8da'));                                  // Stufen vor dem Portal
+      K.rect(-2, pb - PW - 0.15, -1.86, pb + PW + 0.15, C('#efe8da'));                        // Stufen vor dem Portal
       for (let i = 0; i < n; i++) {
         const b = gb(i), [ex, ey] = gleisTiles(t, x, y, i).exit, et = state.tiles.get(ex + ',' + ey);
         hbfTrack(K, b, railLookOf(et && et.b === 'schiene' ? et : null), x * 7 + i, y);   // im Stil der Strecke davor (Block 109b)
@@ -824,9 +824,9 @@ const BUILDING_ART = {
     // Empfangsgebäude: Flügel links und rechts vom Portal, je Gleis ein Stück (damit es richtig vor und hinter den Hallen liegt)
     const wingType = look === 'glas' ? 'mansard' : 'gable';      // Satteldach läuft über alle Stücke durch (Walm gab Kerben, Block 85b)
     const spans = [...Array(n)].map((_, i) => [gb(i) - 0.5, gb(i) + 1.5]);
-    if (wingS) spans.push(wingS > 0 ? [n + bOff, hb] : [-hb, -n + bOff]);   // auch über dem Flügel
+    if (wingS) spans.push([hallB - 0.5, hallB + 0.5]);                  // auch über Flügel/Halle
     for (const [lo, hi] of spans) {
-      const segs = hi <= -PW || lo >= PW ? [[lo, hi]] : [lo < -PW ? [lo, -PW] : null, hi > PW ? [PW, hi] : null].filter(Boolean);
+      const segs = hi <= pb - PW || lo >= pb + PW ? [[lo, hi]] : [lo < pb - PW ? [lo, pb - PW] : null, hi > pb + PW ? [pb + PW, hi] : null].filter(Boolean);
       for (const [s0, s1] of segs) {
         const mid = (s0 + s1) / 2, half = (s1 - s0) / 2;
         parts.push([-1.45, mid, () => {
@@ -839,21 +839,29 @@ const BUILDING_ART = {
         }]);
       }
     }
-    if (wingS) {                                                   // Seitenflügel: Gepäckhalle neben dem äußersten Gleis (Block 118)
-      const wbm = wingS * (hb - 0.5), wh = Math.round(H * 0.6);
+    if (wingS) {                                                   // Seitenflügel: Gepäckhalle (Block 118) · Mitte: Eingangshalle (Block 121)
+      const wbm = hallB, mid = wingS === 2, wh = Math.round(H * (mid ? 0.85 : 0.6));
       parts.push([0.45, wbm, () => {
-        const G = K.block({ a: 0.45, b: wbm, ha: 1.38, hb: 0.4, h: wh, wall, roof, roofH: 6, type: 'gable', ridge: 'a', trim: '#fffaf0' });
-        K.door(G, 'front', 0.3, 0.7, 0.62, look === 'backstein' ? '#3f5a4a' : '#8a5a3c');           // großes Holztor
-        for (const side of ['left', 'right']) K.wins(G, side, 3, 0.4, 0.75, 0.1, 0.9, [], look === 'land');
-        const F = G.faces.front;
-        if (F) faceClock(F, 0.5, F.H * 0.86, 1.8 * z, z, { ring: '#4a4a58', ringW: 0.6, lit, hands: [[0, 0.7, 0.7], [Math.PI / 2, 0.5, 0.7]] });
+        const G = K.block({ a: 0.45, b: wbm, ha: 1.38, hb: 0.4, h: wh, wall: mid ? shade(wall, 0.05) : wall, roof, roofH: mid ? 8 : 6, type: 'gable', ridge: 'a', trim: '#fffaf0' });
+        if (mid) {                                                 // Halle: hohe Bogenfenster, Glasfirst, Tür zu den Bahnsteigen
+          for (const side of ['left', 'right']) K.wins(G, side, 4, 0.3, 0.85, 0.08, 0.92);
+          const [r0, r1] = [K.P(-0.85, wbm, wh + 7.2), K.P(1.75, wbm, wh + 7.2)];
+          g.strokeStyle = lit ? '#ffe7a8' : C('#cfeaf2'); g.lineWidth = 2.2 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(...r0); g.lineTo(...r1); g.stroke();
+          K.door(G, 'front', 0.32, 0.68, 0.55, '#5e3b28');
+          K.wins(G, 'front', 1, 0.62, 0.82, 0.38, 0.62);
+        } else {
+          K.door(G, 'front', 0.3, 0.7, 0.62, look === 'backstein' ? '#3f5a4a' : '#8a5a3c');         // großes Holztor
+          for (const side of ['left', 'right']) K.wins(G, side, 3, 0.4, 0.75, 0.1, 0.9, [], look === 'land');
+          const F = G.faces.front;
+          if (F) faceClock(F, 0.5, F.H * 0.86, 1.8 * z, z, { ring: '#4a4a58', ringW: 0.6, lit, hands: [[0, 0.7, 0.7], [Math.PI / 2, 0.5, 0.7]] });
+        }
       }]);
       for (const db of [-0.32, 0.32]) parts.push([1.95, wbm + db, () => kPlanter(K, 1.95, wbm + db, 0, 0.9)]);   // Kübel vor dem Tor
     }
     // Portal in der Mitte: Giebel nach außen, große Tür mit Fenster darüber, darauf der Uhrturm (Uhren flach auf den Seiten)
-    parts.push([-1.5, 0, () => {
+    parts.push([-1.5, pb, () => {
       // flaches Dach mit heller Zierkante: der Turm wächst aus der Mitte heraus, statt auf einem Giebel zu stecken (Block 85b)
-      const Pt = K.block({ a: -1.55, b: 0, ha: 0.43, hb: PW, h: H + 6, wall: shade(wall, 0.06), roof: shade(roof, 0.12), type: 'flat', trim: '#fffaf0' });
+      const Pt = K.block({ a: -1.55, b: pb, ha: 0.43, hb: PW, h: H + 6, wall: shade(wall, 0.06), roof: shade(roof, 0.12), type: 'flat', trim: '#fffaf0' });
       for (const side of ['back', 'front']) {
         if (!Pt.faces[side]) continue;
         const F = Pt.faces[side], dh = side === 'back' ? 0.5 : 0.42;
@@ -864,11 +872,11 @@ const BUILDING_ART = {
       }
       const tall = H + (look === 'land' ? 21 : look === 'backstein' ? 26 : 31);           // deutlich über den Portalgiebel
       // Turm steht auf dem Portaldach (beginnt dort, Block 85c) – vom Boden aus stand er vor der Fassade und verdeckte die Tür
-      const T = K.block({ a: -1.55, b: 0, ha: 0.28, hb: 0.28, h: tall - (H + 6), lift: H + 6, wall, roof, roofH: look === 'glas' ? 12 : 9, trim: '#fffaf0' });
+      const T = K.block({ a: -1.55, b: pb, ha: 0.28, hb: 0.28, h: tall - (H + 6), lift: H + 6, wall, roof, roofH: look === 'glas' ? 12 : 9, trim: '#fffaf0' });
       const m = clockNow(), hr = (m.getHours() % 12 + m.getMinutes() / 60) / 6 * Math.PI, mi = m.getMinutes() / 30 * Math.PI;
       for (const F of Object.values(T.faces)) if (F) faceClock(F, 0.5, F.H - 5 * z, 2.6 * z, z, { ring: '#4a4a58', ringW: 0.7, lit, hands: [[hr, 0.55, 0.9], [mi, 0.8, 0.7]] });
     }]);
-    for (const sb of [-1, 1]) parts.push([-1.94, sb * (PW + 0.12), () => kPlanter(K, -1.94, sb * (PW + 0.12), 0, 1.2)]);   // Kübel neben dem Portal (Block 109)
+    for (const sb of [-1, 1]) parts.push([-1.94, pb + sb * (PW + 0.12), () => kPlanter(K, -1.94, pb + sb * (PW + 0.12), 0, 1.2)]);   // Kübel neben dem Portal (Block 109)
     K.scene(parts);
   },
   // --- Wohnen ---

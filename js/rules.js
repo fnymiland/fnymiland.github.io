@@ -9,9 +9,20 @@ const hasTech = id => state.techs.has(id);
 // Gebäude selbst mitgeben (t); ohne t: so, wie man ihn neu baut
 const HBF_MIN = 2, HBF_MAX = 16;
 const hbfGleise = t => Math.max(HBF_MIN, Math.min(HBF_MAX, (t && t.gleise) || HBF_MIN));
-// Seitenflügel (Block 118): 1 = rechts (+b), −1 = links (−b) – macht den Bahnhof ein Feld breiter (ungerade), Portal mittig auf einem Feld
-const hbfWing = t => (t && (t.wing === 1 || t.wing === -1) ? t.wing : 0);
-const hbfBOff = t => -hbfWing(t) * 0.5;                          // so weit rücken die Gleise im eigenen Rahmen vom Flügel weg
+// Flügel (Block 118/121): 1 = rechts (+b), −1 = links (−b), 2 = Mittelhalle zwischen den Gleisen (t.mid Gleise links davon) –
+// macht den Bahnhof ein Feld breiter (ungerade). Die Gleise liegen von −b aus nebeneinander, an der Halle/dem Flügel eine Lücke.
+const hbfWing = t => (t && (t.wing === 1 || t.wing === -1 || t.wing === 2) ? t.wing : 0);
+function hbfLeft(t) {                                             // so viele Gleise liegen vor (links von) der Lücke
+  const n = hbfGleise(t), w = hbfWing(t);
+  if (w === -1) return 0;
+  if (w !== 2) return n;
+  const m = Number.isInteger(t.mid) ? t.mid : Math.floor(n / 2);
+  return Math.max(1, Math.min(n - 1, m));
+}
+const hbfHalfW = t => (2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)) / 2;
+const hbfTrackB = (t, g) => -hbfHalfW(t) + 0.5 + 2 * g + (hbfWing(t) && g >= hbfLeft(t) ? 1 : 0);   // Mitte von Gleis g (b im eigenen Rahmen)
+const hbfHallB = t => -hbfHalfW(t) + 2 * hbfLeft(t) + 0.5;                                            // Mitte von Halle/Flügel
+const hbfPortalB = t => (hbfWing(t) === 2 ? hbfHallB(t) : 0);                                          // Mittelhalle: Portal davor
 const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : b === 'fz_schloss' ? csSize(t) : b === 'leuchtturm' && t && t.mini ? [1, 1] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };   // alter Leuchtturm (t.mini): 1×1 (Block 83)
 // Märchenschloss (Block 60g/60h): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
 // m/mk/mr: Mittelturm Höhe (0 keiner … 4 riesig), Dicke, Dach; cb/cf/cr: Mittelbau Breite, Stockwerke, Dach; wf/wr: Flügel
@@ -88,14 +99,14 @@ function rebuildCover() {
 const GLEIS = new Map(), HALL = new Set(), GEXIT = new Map();   // GEXIT: Feld vor dem Gleis → Richtung in die Halle
 const kitTurn = (r, a, b) => r === 0 ? [a, b] : r === 1 ? [-b, a] : r === 2 ? [-a, -b] : [b, -a];
 function gleisTiles(t, x, y, g) {
-  const n = hbfGleise(t), r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2, b = -n + 0.5 + 2 * g + hbfBOff(t);
+  const r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2, b = hbfTrackB(t, g);
   const at = a => { const [u, v] = kitTurn(r, a, b); return [Math.round(cx + u), Math.round(cy + v)]; };
   return { hall: [1.5, 0.5, -0.5].map(at), exit: at(2.5) };
 }
 // Eingang (Block 85): das Portal mitten im Empfangsgebäude zeigt nach außen (−a); davor die beiden Felder, an die ein Weg anschließt
 function hbfEntrance(t, x, y) {
   const r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
-  return (hbfWing(t) ? [0] : [-0.5, 0.5]).map(b => { const [u, v] = kitTurn(r, -2.5, b); return [Math.round(cx + u), Math.round(cy + v)]; });   // mit Flügel: genau ein Feld
+  return (hbfWing(t) ? [hbfPortalB(t)] : [-0.5, 0.5]).map(b => { const [u, v] = kitTurn(r, -2.5, b); return [Math.round(cx + u), Math.round(cy + v)]; });   // mit Flügel/Halle: genau ein Feld
 }
 // Seitenflügel an/ab/umsetzen (Block 118): side 0 (aus), 1 (rechts), −1 (links). Die Gleise bleiben, wo sie sind – dafür rückt der
 // Anker so, dass das Feld vor Gleis 1 gleich bleibt. Anbauen kostet HBF_WING_COST, abbauen gibt die Hälfte der Taler zurück.
@@ -106,6 +117,7 @@ function hbfWingPlan(k, side) {
   if (hbfWing(t) === side) return 'Ist schon so';
   const [x, y] = keyXY(k), r = (t.rot || 0) & 3, t2 = { ...t };
   if (side) t2.wing = side; else delete t2.wing;
+  if (side === 2) t2.mid = Math.floor(hbfGleise(t) / 2); else delete t2.mid;   // Mittelhalle: halb und halb (ungerade: rechts eins mehr)
   const e0 = gleisTiles(t, x, y, 0).exit, e1 = gleisTiles(t2, x, y, 0).exit, nx = x + e0[0] - e1[0], ny = y + e0[1] - e1[1];
   const old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
   for (const [fx, fy] of footprint('hbf', nx, ny, r, t2)) {
@@ -116,7 +128,8 @@ function hbfWingPlan(k, side) {
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
   if (side && !hbfWing(t) && !canPay(HBF_WING_COST)) return state.money < HBF_WING_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
-  return { nk: nx + ',' + ny };
+  const moved = [...Array(hbfGleise(t))].filter((_, g) => gleisTiles(t, x, y, g).exit.join() !== gleisTiles(t2, nx, ny, g).exit.join()).length;   // Gleise, die rücken
+  return { nk: nx + ',' + ny, moved };
 }
 function hbfWingSet(k, side) {
   const p = hbfWingPlan(k, side);
@@ -125,6 +138,7 @@ function hbfWingSet(k, side) {
   if (side && !had) addCost(HBF_WING_COST, -1);
   else if (!side && had) state.money += Math.floor(HBF_WING_COST.money / 2);
   if (side) t.wing = side; else delete t.wing;
+  if (side === 2) t.mid = Math.floor(hbfGleise(t) / 2); else delete t.mid;
   t.born = performance.now();
   if (p.nk !== k) { state.tiles.delete(k); state.tiles.set(p.nk, t); }
   sfx('build'); recalc(); save();
@@ -139,6 +153,7 @@ function hbfResizeError(k, d) {
   const n = hbfGleise(t), m = n + d, r = (t.rot || 0) & 3, [x, y] = keyXY(k);
   if (m < HBF_MIN) return `Mindestens ${HBF_MIN} Gleise`;
   if (m > HBF_MAX) return `Höchstens ${HBF_MAX} Gleise`;
+  if (d < 0 && hbfWing(t) === 2 && m <= hbfLeft(t)) return 'Rechts der Halle muss ein Gleis bleiben';   // Mittelhalle (Block 121)
   if (d < 0) return null;
   const nx = r === 1 ? x - 2 * d : x, ny = r === 2 ? y - 2 * d : y, old = new Set(footprint('hbf', x, y, r, t).map(p => p.join()));
   for (const [fx, fy] of footprint('hbf', nx, ny, r, { ...t, gleise: m })) {

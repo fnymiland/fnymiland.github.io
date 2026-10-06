@@ -1611,9 +1611,10 @@ function hbfHtml(x, y, t) {
       ${n > HBF_MIN ? '<button class="btn ghost" id="p-gminus">− Gleis</button>' : ''}</div>
     ${addErr && !/Taler|Material/.test(addErr) ? `<p class="muted">+ Gleis: ${addErr}.</p>` : ''}
     <p class="muted">Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
-    <div class="label">Seitenflügel</div>
-    <div class="looks">${[[0, 'ohne'], [-1, '◧ links'], [1, 'rechts ◨']].map(([v, nm]) => `<button class="look${hbfWing(t) === v ? ' on' : ''}" data-hwing="${v}">${nm}</button>`).join('')}</div>
-    <p class="muted">Mit Gepäckhalle ist der Bahnhof ein Feld breiter (ungerade) – Portal und Eingang liegen dann mittig auf genau einem Feld.${hbfWing(t) ? ' Abbauen gibt die Hälfte zurück.' : ` Anbauen: ${costText(HBF_WING_COST)}.`}</p>
+    <div class="label">Halle</div>
+    <div class="looks">${[[0, 'ohne'], [-1, '◧ links'], [2, '▣ Mitte'], [1, 'rechts ◨']].map(([v, nm]) => `<button class="look${hbfWing(t) === v ? ' on' : ''}" data-hwing="${v}">${nm}</button>`).join('')}</div>
+    <p class="muted">${hbfWing(t) === 2 ? 'Die Eingangshalle steht zwischen den Gleisen, das Portal davor.' : 'Mit Halle ist der Bahnhof ein Feld breiter (ungerade): <b>Mitte</b> = Eingangshalle zwischen den Gleisen, Portal davor – bei gerader Gleiszahl genau symmetrisch; links/rechts = Gepäckhalle.'}
+      ${hbfWing(t) ? ' Abbauen gibt die Hälfte zurück.' : ` Anbauen: ${costText(HBF_WING_COST)}.`}${(() => { const p = hbfWing(t) === 2 ? null : hbfWingPlan(x + ',' + y, 2); return p && typeof p === 'object' && p.moved ? ` <b>Mitte:</b> ${p.moved === 1 ? 'ein Gleis rückt' : p.moved + ' Gleise rücken'} ein Feld zur Seite – die Strecke davor dann anpassen.` : ''; })()}</p>
     <div class="label">Aussehen</div>
     <div class="looks">${Object.entries(HBF_LOOKS).map(([id, nm]) => `<button class="look${(t.look || 'glas') === id ? ' on' : ''}" data-hlook="${id}">${nm}</button>`).join('')}</div>`;
 }
@@ -2353,6 +2354,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-mittelhalle', date: '6. Oktober', title: 'Hauptbahnhof mit Eingangshalle', items: [
+    '▣ <b>Mittelhalle:</b> Im Fenster des Hauptbahnhofs unter „Halle“ die Mitte wählen – eine Eingangshalle zwischen den Gleisen, das Portal davor, die Gleise gehen links und rechts ab. Bei gerader Gleiszahl genau symmetrisch.',
+  ] },
   { id: '2026-10-06-zuletzt', date: '6. Oktober', title: 'Zuletzt gebaut', items: [
     '🕘 <b>Schnell wieder bauen:</b> Der Knopf 🕘 neben der Suche zeigt deine letzten 8 gebauten Dinge – ein Tipp, und du baust weiter.',
   ] },

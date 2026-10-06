@@ -1423,3 +1423,12 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       zuletzt gewählt). Gezählt wird nur wirklich Gebautes (Antippen, Linie/Fläche: `noteRecent` in `tap` und `runPlan`), je
       Gerät in localStorage (`kachelhausen_recent`); was einen eigenen Schnellknopf hat (Weg), zählt nicht. Bereich oder Suche
       schließen die Liste. Test: zuletzt.test.js.
+
+
+## Block 121: Mittelhalle am Hauptbahnhof (06.10.2026)
+- [x] Unter „Halle“ jetzt auch **Mitte**: eine Eingangshalle zwischen den Gleisen (hoch, Bogenfenster, Glasfirst, Tür zu den
+      Bahnsteigen), Portal und Uhrturm direkt davor, Eingang ein Feld genau vor der Halle; bei gerader Gleiszahl symmetrisch.
+      Allgemeine Gleislage `hbfTrackB` (Lücke nach `hbfLeft` Gleisen) ersetzt die Verschiebung aus Block 118 – Seitenflügel
+      unverändert. Umstellen auf Mitte: Gleise rechts der Halle rücken ein Feld (das Fenster sagt vorher, wie viele);
+      „+ Gleis“ rechts, „− Gleis“ nur, solange rechts eins bleibt. Gespeichert als `wing: 2`, `mid`.
+      Test: hbf-fluegel.test.js (alle Drehungen, symmetrisch bei 4 Gleisen, ± Gleis, Speichern, Zeichnen).

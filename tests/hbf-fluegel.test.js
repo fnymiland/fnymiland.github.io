@@ -71,4 +71,40 @@ describe('Hauptbahnhof mit Seitenflügel (Block 118)', () => {
     expect(game('moving && moving.kind')).toBe('tile');                                          // ein Ding: wie gewohnt
     game('cancelMove()');
   });
+  it('Block 121 Mittelhalle: in jeder Drehung Eingang genau mittig; Gleis 1 bleibt, Gleis 2 rückt (vorher angesagt)', () => {
+    for (let rot = 0; rot < 4; rot++) {
+      const k0 = put(rot), before = exits(k0);
+      expect(game(`hbfWingPlan('${k0}', 2).moved`)).toBe(1);
+      const k = game(`hbfWingSet('${k0}', 2)`);
+      const t = game(`state.tiles.get('${k}')`), [w, h] = game(`sizeOf('hbf', ${rot}, state.tiles.get('${k}'))`);
+      expect([t.wing, t.mid]).toEqual([2, 1]);
+      const after = exits(k);
+      expect(after[0]).toBe(before[0]);
+      expect(after[1]).not.toBe(before[1]);
+      const [ax, ay] = k.split(',').map(Number), cx = ax + (w - 1) / 2, cy = ay + (h - 1) / 2, ent = game(`hbfEntrance(state.tiles.get('${k}'), ${ax}, ${ay})`);
+      expect(ent.length).toBe(1);
+      expect(rot & 1 ? ent[0][0] : ent[0][1], `rot ${rot}`).toBe(rot & 1 ? cx : cy);
+      game(`state.tiles.delete('${k}'); recalc()`);
+    }
+  });
+  it('Mittelhalle: 4 Gleise symmetrisch (2 | Halle | 2); + Gleis rechts, alte bleiben; − Gleis nur bis eins rechts bleibt', () => {
+    put(0, 4);
+    let k = game("hbfWingSet('14,14', 2)");
+    expect(game(`hbfLeft(state.tiles.get('${k}'))`)).toBe(2);
+    expect(game(`hbfHallB(state.tiles.get('${k}'))`)).toBe(0);                                 // genau in der Mitte
+    const before = exits(k);
+    k = game(`hbfResize('${k}', 1)`);
+    expect(exits(k).slice(0, 4)).toEqual(before);
+    k = game(`hbfResize('${k}', -1)`); k = game(`hbfResize('${k}', -1)`);
+    expect(game(`hbfGleise(state.tiles.get('${k}'))`)).toBe(3);
+    expect(game(`hbfResizeError('${k}', -1)`)).toMatch(/Rechts der Halle/);
+    const s = game('JSON.parse(JSON.stringify(serialize()))');
+    const p = game(`parseSave(${JSON.stringify(s)})`);
+    expect([p.tiles.get(k).wing, p.tiles.get(k).mid]).toEqual([2, 2]);
+  });
+  it('Mittelhalle zeichnet in jedem Aussehen und jeder Drehung ohne Fehler', () => {
+    const bad = game(`(() => { const out = []; for (const look of Object.keys(HBF_LOOKS)) for (let rot = 0; rot < 4; rot++) for (const gleise of [2, 3, 4]) for (const n of [0, 0.8]) {
+      try { night = n; drawObject('hbf', 300, 300, 1.2, 1000, 10, 10, 1, { b: 'hbf', lvl: 1, rot, look, gleise, wing: 2, mid: Math.floor(gleise / 2) }); } catch (e) { out.push(look + rot + ': ' + e.message); } } night = 0; return out; })()`);
+    expect(bad).toEqual([]);
+  });
 });
