@@ -709,6 +709,15 @@ body.visiting #toolbar, body.visiting #hint, body.visiting #style-bar, body.visi
 .fr-code small { flex: 1; overflow-wrap: anywhere; font-weight: 700; }
 .fr-add { background: none; padding: 0; }
 .fr-add input { flex: 1; margin: 0; }
+/* Zahl am 🌐-Knopf (Block 111): rot, hüpft sanft, bis man nachsieht */
+#net-dot { width: auto; min-width: 18px; height: 18px; padding: 0 5px; top: -7px; right: -7px; border-radius: 9px; color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 18px; text-align: center; animation: net-hop 2.6s ease-in-out infinite; }
+@keyframes net-hop { 0%, 70%, 100% { transform: translateY(0); } 78% { transform: translateY(-4px); } 86% { transform: translateY(0); } 92% { transform: translateY(-2px); } }
+@media (prefers-reduced-motion: reduce) { #net-dot { animation: none; } }
+.wb-list p { margin: 6px 0; padding: 8px 12px; background: var(--cream2); border-radius: 12px; }
+.fr-pre { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; background: #fff; border: 2px solid var(--shadow); border-radius: 14px; padding-left: 12px; }   /* FNYMI- steht fest davor (Block 111) */
+.fr-pre span { font-weight: 800; color: var(--brown); opacity: .55; }
+.fr-pre input { border: 0; padding-left: 2px; min-width: 0; text-transform: uppercase; letter-spacing: .08em; }
 .fr-row span:first-child { flex: 1; font-weight: 800; }
 .fr-btns { display: flex; gap: 6px; align-items: center; }
 /* Ansehen (Besuch, zuschauendes Gerät, Block 95c): nichts zum Umfärben/Umbauen anbieten */

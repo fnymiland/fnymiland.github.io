@@ -1319,3 +1319,13 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       übergeht `user-scalable=no`. Jetzt: `touch-action: pan-x pan-y` auf html/body (Wischen in Fenstern und Leisten geht),
       `maximum-scale=1`, Safari-Gesten (`gesturestart/-change/-end`) und Trackpad-Zoom (Strg + Mausrad) über Fenstern
       abgefangen. Die Karte zoomt weiter selbst (#world: `touch-action: none`, Zeiger-Ereignisse). Test: kein-zoom.test.js.
+
+
+## Block 111: Freunde – Name, Code, Neues präsenter (06.10.2026)
+- [x] Freunde sahen den Google-Vornamen statt des gewählten Namens: Freundesliste (`frMyName`), Päckchen, Danke nutzen
+      `myNick()` (Name auf dem Schild); umbenennen frischt den Namen bei allen Freunden auf (`frPushFlag`). Beim Besuch
+      kommt der Name aus dem Profil (`users/<uid>/profile/name`, von `mePushProfile` geschrieben).
+- [x] Freundescode: „FNYMI-“ steht fest vor dem Feld, man tippt nur die 5 Zeichen; ein eingefügter ganzer Code wird gekürzt.
+- [x] Neues präsenter: Zahl am 🌐-Knopf statt Punkt (Päckchen + neue Einträge, hüpft sanft; „!“ bei Speicher-Konflikt) und
+      die Karte „💌 Während du weg warst“ beim Öffnen (einmal, `welcomeBack`, wartet, bis kein anderes Fenster offen ist).
+      Test: freunde-neues.test.js.

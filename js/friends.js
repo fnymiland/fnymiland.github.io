@@ -116,7 +116,7 @@ function socialReset() {
   if (guestsOff) { guestsOff(); guestsOff = null; }
   guestsWid = null; visitorFigs.length = 0;
   if (bookOff) bookOff(); if (mailOff) mailOff();
-  bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = false;
+  bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false;
   if (bondsOff) bondsOff(); if (wishOff) wishOff();
   bondsOff = wishOff = null; myBonds = {}; myWish = null; wishWid = null; wishAt = 0;
   if (typeof meProfileUid !== 'undefined') { meProfileUid = null; meProfileLook = null; }
@@ -133,6 +133,7 @@ async function visitFriendCheck() {
   try { visitFriend = ((await cloudApi.get(`fr/${visitUser.uid}/${visitOwner}`)) || {}).st === 'freund'; } catch (e) { visitFriend = false; }
   visitUi();
   if (!visitFriend) return;
+  if (visitUser.nick == null) visitUser.nick = String((await cloudApi.get(`users/${visitUser.uid}/profile/name`).catch(() => '')) || '').trim().slice(0, 20);
   const a = await friendAnimal(visitUser.uid).catch(() => 0);
   const me = { from: visitUser.uid, n: visitName(), a };
   cloudApi.set(`book/${visitOwner}/v_${visitUser.uid}_${dayKey()}`, { k: 'v', ...me, at: cloudApi.TS() })   // einmal am Tag
@@ -149,7 +150,7 @@ async function visitFriendCheck() {
   if (!visitHereTimer) visitHereTimer = setInterval(() => { if (visitFriend && !document.hidden) here(); }, 45000);
 }
 let visitHereTimer = null;
-const visitName = () => (visitUser.display || 'Besuch').split(' ')[0];
+const visitName = () => visitUser.nick || (visitUser.display || 'Besuch').split(' ')[0];   // Name auf dem Schild (Profil, Block 111)
 async function visitHeart() {
   const key = `h_${visitUser.uid}_${dayKey()}`;
   if (frLS('heart_' + visitOwner) === dayKey()) { toast('❤️ Heute hast du hier schon ein Herz dagelassen'); return; }
@@ -188,7 +189,7 @@ function visitBook() {
 }
 
 // --- Besitzer: Gästebuch, Herzen, Besuche, Briefkasten (Fenster „Du“ → Freunde, Block 98) -------------
-let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null, bookLoaded = false;
+let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null, bookLoaded = false, mailLoaded = false;
 const mailWaiting = () => Object.keys(mailAll).length > 0;
 function friendsInboxWatch() {
   if (!cloudUser || VISIT || !cloudApi.watch) return;
@@ -199,16 +200,17 @@ function friendsInboxWatch() {
     bondFromBook(uid);
     if (!bookLoaded) bookTidy(uid);
     bookLoaded = true;                                                  // erst ab dem zweiten Mal melden (das erste ist der Bestand)
-    friendsDot();
+    friendsDot(); welcomeBack();
   });
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
     for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – oben unter 🌐 Online → Freunde`);
     groundVersion++;                                                    // Briefkasten-Fähnchen am Rathaus neu zeichnen
-    friendsDot();
+    mailLoaded = true;
+    friendsDot(); welcomeBack();
   });
 }
-setInterval(() => { if (cloudUser && !VISIT) friendsInboxWatch(); else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; } }, 3000);
+setInterval(() => { if (cloudUser && !VISIT) { friendsInboxWatch(); welcomeBack(); } else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false; } }, 3000);
 // alte Besuche und Herzen (älter als 60 Tage) räumt der Besitzer weg, sonst wächst das Buch ewig; Gästebuch bleibt
 function bookTidy(uid) {
   if (viewOnly()) return;
@@ -218,10 +220,36 @@ function bookTidy(uid) {
 }
 const bookSeen = () => (cloudUser && frLS('seen_' + cloudUser.uid)) || 0;
 const bookNew = () => Object.values(bookAll).filter(e => e && (e.at || 0) > bookSeen()).length;
-// Punkt am Knopf „Du“ (Block 98) – und das offene Freunde-Fenster zeigt Neues gleich
-function friendsDot() {
-  const d = document.getElementById('net-dot');
-  if (d) d.hidden = !netNews();
+const netCount = () => (cloudUser && !VISIT ? Object.values(mailAll).filter(Boolean).length + bookNew() : 0);
+// Zahl am Knopf 🌐 (Block 98/111)
+function friendsDot() { netDotShow(); }
+// „Während du weg warst“ (Block 111): beim Öffnen einmal zeigen, was seit dem letzten Reinschauen kam – sobald Gästebuch und
+// Briefkasten geladen sind und kein anderes Fenster offen ist. Gemerkt pro Konto (wb_), damit es nach dem Neuladen nicht
+// wiederkommt; 🌐 behält die Zahl, bis man unter Freunde nachsieht.
+let welcomeDone = false;
+function welcomeBackLines() {
+  const uid = cloudUser.uid, since = Math.max(bookSeen(), +frLS('wb_' + uid) || 0), icon = e => (ANIMALS[e.a] || ANIMALS[0]).icon;
+  const book = Object.values(bookAll).filter(e => e && (e.at || 0) > since).sort((p, q) => (q.at || 0) - (p.at || 0));
+  const mails = Object.values(mailAll).filter(m => m && (m.at || 0) > (+frLS('wb_' + uid) || 0));
+  return [...mails.map(m => `${icon(m)} 📬 <b>${escHtml(m.n)}</b> hat dir ein Päckchen geschickt`),
+    ...book.map(e => `${icon(e)} ${e.k === 'g' ? `📖 <b>${escHtml(e.n)}</b> hat ins Gästebuch geschrieben: „${escHtml(BOOK_LINES[e.t] || '')}“`
+      : e.k === 'h' ? `❤️ <b>${escHtml(e.n)}</b> hat dir ein Herz dagelassen` : e.k === 'd' ? `💛 <b>${escHtml(e.n)}</b> sagt Danke für dein Päckchen`
+      : `👋 <b>${escHtml(e.n)}</b> war zu Besuch`}`)];
+}
+function welcomeBack() {
+  if (welcomeDone || !cloudUser || VISIT || !bookLoaded || !mailLoaded) return;
+  if (!$('modal').hidden || document.hidden || state.tutorial >= 0) return;          // später nochmal (Intervall unten)
+  welcomeDone = true;
+  const lines = welcomeBackLines();
+  if (!lines.length) return;
+  frLS('wb_' + cloudUser.uid, Date.now() + 5000);
+  const more = lines.length - 6;
+  openModal(`<h2>💌 Während du weg warst</h2>
+    <div class="wb-list">${lines.slice(0, 6).map(l => `<p>${l}</p>`).join('')}${more > 0 ? `<p class="muted">… und ${more} weitere</p>` : ''}</div>
+    <div class="row"><button class="btn" id="wb-go" style="flex:1">Ansehen</button><button class="btn ghost" id="wb-later">Später</button></div>`);
+  $('wb-go').onclick = () => openNet('freunde');
+  $('wb-later').onclick = closeModal;
+  sfx('deco');
 }
 // part 'post': Briefkasten (nur wenn etwas drin ist) · 'book': Herzen, Gästebuch, wer da war (Block 98: im Fenster „Du → Freunde“)
 function friendsHallHtml(part) {
@@ -307,7 +335,7 @@ async function mailSend(friendUid, name, pick, wish = null) {
   try {
     const a = await friendAnimal(cloudUser.uid).catch(() => 0);
     const forWish = !!(wish && items[wish.r] > 0);
-    await cloudApi.set(`mail/${friendUid}/m${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`, { from: cloudUser.uid, n: (cloudUser.display || 'Freund').split(' ')[0], a, items, at: cloudApi.TS(), ...(forWish ? { wish: true } : {}) });
+    await cloudApi.set(`mail/${friendUid}/m${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`, { from: cloudUser.uid, n: myNick(), a, items, at: cloudApi.TS(), ...(forWish ? { wish: true } : {}) });
     bondAdd(cloudUser.uid, friendUid, forWish ? BOND_PTS.wish : BOND_PTS.mail);
     const log = frLS('mail_' + dayKey()) || {}; log[friendUid] = (log[friendUid] || 0) + 1; frLS('mail_' + dayKey(), log);
     cloudTouched(); save(); closeModal(); toast(`🎁 Päckchen an ${name} ist unterwegs`);
@@ -430,7 +458,7 @@ async function mailThanks(uid, id, got, add) {
       if (w) { myWish = w; wishWid = wid; if (w.got >= w.n) toast(`📌 Wunsch erfüllt: ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} – danke, ${got.n}!`); }
     } catch (e) { /* Wunsch inzwischen weg */ }
   }
-  try { cloudApi.set(`book/${got.from}/d_${uid}_${id}`, { k: 'd', from: uid, n: (cloudUser.display || 'Freund').split(' ')[0], a: await friendAnimal(uid).catch(() => 0), at: cloudApi.TS() }).catch(() => {}); } catch (e) { /* egal */ }
+  try { cloudApi.set(`book/${got.from}/d_${uid}_${id}`, { k: 'd', from: uid, n: myNick(), a: await friendAnimal(uid).catch(() => 0), at: cloudApi.TS() }).catch(() => {}); } catch (e) { /* egal */ }
 }
 // --- Flaggen der Freunde, Partnerstadt ---
 const myFlag = () => ({ c: String(state.town.color), s: String(state.town.symbol) });

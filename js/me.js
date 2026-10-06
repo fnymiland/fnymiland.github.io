@@ -54,19 +54,23 @@ function meLook() {
     name: typeof m.name === 'string' ? m.name.trim().slice(0, 20) : '', off: !!m.off };
 }
 const meFigLook = () => { const L = meLook(); return figFrom(L.a, L, L.name || ME_NAME); };
+// Name für Freunde (Block 111): der Name auf dem Schild – ohne ihn der Vorname aus dem Konto (beim Besuch: visitName)
+const myNick = () => (!VISIT && meLook().name) || ((typeof cloudUser !== 'undefined' && cloudUser && cloudUser.display) || '').split(' ')[0] || 'Freund';
 function setMe(patch) {
   if (VISIT) return;
   if (viewOnly()) { cloudBlocked(); return; }                           // zuschauendes Gerät: sagen, warum nichts passiert
+  const renamed = 'name' in patch && patch.name !== meLook().name;
   state.me = { ...meLook(), ...patch };
   meSig = null;
   cloudTouched(); save();                                                // Online-Speicher: eigene Änderung (Regel 93)
   mePushProfile();
+  if (renamed && typeof frPushFlag === 'function') frPushFlag();         // Freunde sehen den neuen Namen gleich (Block 111)
 }
 // angemeldet: Kopie ins Profil (für Besuche bei Freunden)
 async function mePushProfile() {
   if (VISIT || !cloudUser || !cloudApi) return;
   const L = meLook(), uid = cloudUser.uid;
-  try { await cloudApi.set(`users/${uid}/profile/animal`, L.a); await cloudApi.set(`users/${uid}/profile/look`, lookClean(L)); } catch (e) { /* nächstes Mal */ }
+  try { await cloudApi.set(`users/${uid}/profile/animal`, L.a); await cloudApi.set(`users/${uid}/profile/look`, lookClean(L)); await cloudApi.set(`users/${uid}/profile/name`, L.name); } catch (e) { /* nächstes Mal */ }   // Name: für Besuche (Block 111)
 }
 // nach der Anmeldung einmal: noch nie eingestellt → Figur aus dem Profil zeigen (Block 96c) – nur zum Anzeigen, nicht in den
 // Spielstand: eine Änderung am Stand zählte als eigene Aktion und machte aus „anderes Gerät übernehmen“ einen Konflikt.
@@ -248,6 +252,14 @@ function netMark(id) {
 // etwas Neues? (Punkt am Knopf oben)
 const youNews = () => state.diarySeen < state.diary.length;
 const netNews = () => (!!cloudUser && (mailWaiting() || bookNew())) || cloudState === 'konflikt';
+// Zahl am 🌐-Knopf (Block 111): Päckchen und neue Einträge – bei einem Speicher-Konflikt „!“
+function netDotShow() {
+  const d = document.getElementById('net-dot');
+  if (!d) return;
+  const n = typeof netCount === 'function' ? netCount() : 0, txt = n ? (n > 9 ? '9+' : String(n)) : cloudState === 'konflikt' ? '!' : '';
+  if (d.textContent !== txt) d.textContent = txt;
+  if (d.hidden !== !txt) d.hidden = !txt;
+}
 function youHead(tab) {
   youTab = tab;
   const L = meLook();

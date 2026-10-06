@@ -241,7 +241,7 @@ async function frCode() {
   }
   throw new Error('Kein freier Code');
 }
-const frMyName = () => `${(cloudUser.display || 'Spieler').split(' ')[0]} · ${state.town.name}`;
+const frMyName = () => `${myNick()} · ${state.town.name}`;                // gewählter Name, nicht der aus dem Google-Konto (Block 111)
 function frWatch() {
   if (frOff || !cloudUser || !cloudApi.watch) return;
   frOff = cloudApi.watch(`fr/${cloudUser.uid}`, v => { frList = v || {}; if (document.getElementById('fr-box') && !$('modal').hidden) openFriends(); });   // nur, wenn es offen ist
@@ -345,7 +345,7 @@ async function openFriends() {
     <div class="label">Dein Freundescode</div>
     <div class="fr-code"><b>${escHtml(code)}</b><button class="btn ghost small" id="fr-copy">Kopieren</button></div>
     <div class="label">Code eines Freundes</div>
-    <div class="fr-add"><input id="fr-in" class="cloud-mail" placeholder="FNYMI-…" autocomplete="off" autocapitalize="characters" aria-label="Freundescode"><button class="btn small" id="fr-send">Anfrage schicken</button></div>
+    <div class="fr-add"><label class="fr-pre"><span aria-hidden="true">FNYMI-</span><input id="fr-in" class="cloud-mail" placeholder="7F3QK" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Freundescode (die 5 Zeichen nach FNYMI-)"></label><button class="btn small" id="fr-send">Anfrage schicken</button></div>
     ${friendsHallHtml('book')}
     <div class="label">🔗 Besuchs-Link (nur ansehen, ohne Anmeldung)</div>
     <div class="looks"><button class="look${liveOpen ? ' on' : ''}" id="fr-open" aria-pressed="${liveOpen}">${liveOpen ? '✓ Besuche erlaubt' : 'Besuche aus'}</button></div>
@@ -354,6 +354,8 @@ async function openFriends() {
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div></div>`);
   $('m-close').onclick = closeModal;
   if (typed) $('fr-in').value = typed;
+  // nur die 5 Zeichen nach FNYMI- (Block 111); ein ganzer eingefügter Code wird gekürzt
+  $('fr-in').oninput = () => { const el = $('fr-in'), v = el.value; el.value = (v.length > 5 ? frCodeNorm(v) : v.toUpperCase().replace(/[^A-Z0-9]/g, '')).slice(0, 5); };
   const share = (text, link) => shareText(text, link);
   $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`);
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };

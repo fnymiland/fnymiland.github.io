@@ -445,7 +445,7 @@ function updateHud() {
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
   setText($('town-name'), state.town.name);
   if ($('diary-dot').hidden !== !youNews()) $('diary-dot').hidden = !youNews();          // Knopf „Du“ (Block 98): neue Tagebuchseite
-  if ($('net-dot').hidden !== !netNews()) $('net-dot').hidden = !netNews();              // Knopf „Online“ (Block 106): Post, Gästebuch, Konflikt
+  netDotShow();                                                                          // Knopf „Online“: wie viel Neues (Block 106/111)
   setText($('you-face'), ANIMALS[meLook().a].icon);
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
   setText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
@@ -2321,6 +2321,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-freunde', date: '6. Oktober', title: 'Freunde: dein Name & was du verpasst hast', items: [
+    '🏷️ <b>Dein Name:</b> Freunde sehen jetzt den Namen auf deinem Schild (Du → Figur), nicht mehr den aus dem Google-Konto.',
+    '💌 <b>Während du weg warst:</b> Beim Öffnen zeigt eine Karte, wer da war, ein Herz dagelassen, ins Gästebuch geschrieben oder dir ein Päckchen geschickt hat. Am 🌐-Knopf steht, wie viel Neues wartet.',
+    '🔑 <b>Freundescode:</b> FNYMI- steht schon da – nur noch die 5 Zeichen eintippen.',
+  ] },
   { id: '2026-10-06-bahn', date: '6. Oktober', title: 'Die Bahn wird gemütlich', items: [
     '🌿 <b>Gleis-Stile:</b> Schotter, Rasengleis, Waldbahn, Pflastergleis und Blumengleis. Beim Bauen in der Leiste wählen, über alte Gleise drüberziehen oder ein Gleis antippen und auf alle übertragen – umstellen kostet nichts.',
     '🌸 <b>Bahnhöfe mit Blumen:</b> Blumenkästen, Kübel, eine Blumenampel und warme Lampen unterm Bahnsteigdach.',
