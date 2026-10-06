@@ -739,3 +739,7 @@ body.visiting #toast, body.viewonly #toast { top: 116px; }
 body.visiting #you-btn { display: none !important; }
 .you-tabs .tdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e8604f; vertical-align: middle; }
 .diary-nav .btn { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; }
+/* Versionsübersicht (Block 99) */
+.news-v { background: var(--cream2); border-radius: 12px; padding: 6px 12px; margin: 6px 0; }
+.news-v summary { cursor: pointer; }
+.news-v .news { margin: 6px 0 2px; }

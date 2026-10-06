@@ -2193,22 +2193,87 @@ function openHelp(tab = helpTab) {
 }
 $('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-hb]'); if (b) openHelp(b.dataset.hb); });
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
-// nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-06-figur', items: [
-  '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
-  '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
-  '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
-  '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
-] };
+// nicht). Bei jedem Push mit etwas Sichtbarem: neuen Eintrag OBEN in NEWS_HISTORY (neue id, Datum, Titel, 2–5 Punkte).
+// Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
+// aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
+const NEWS_HISTORY = [
+  { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde & alles aufgeräumt', items: [
+    '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
+    '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
+    '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
+    '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
+  ] },
+  { id: '2026-10-06-hilfe', date: '6. Oktober', title: 'Hilfe am Ort & Vorplätze', items: [
+    '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
+    '📚 <b>Nachschlagen:</b> Ein Buch mit Suche – alle Gebäude, Rohstoffe, Wünsche und Begriffe (☰ → ❓ Hilfe).',
+    '🧱 <b>Vorplätze:</b> Liegt ein Weg vor der Tür, führt jetzt bei allen Gebäuden ein Weg oder Platz im selben Muster bis zur Tür.',
+  ] },
+  { id: '2026-10-05-wilmer', date: '5. Oktober', title: 'Wilmerhecke & neuer Hauptbahnhof', items: [
+    '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es eine Hecke aus lauter kleinen runden Büschen – einfach ziehen wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
+    '🚉 <b>Hauptbahnhof neu:</b> Portal mit Uhrturm genau in der Mitte, ein Weg vor dem Portal führt bis an die Tür. Schönere Bahnsteigdächer, dazu Laternen, Bänke und Bahnsteiguhren.',
+  ] },
+  { id: '2026-10-05-kap', date: '5. Oktober', title: 'Leuchtturm-Kap, Märchenschloss & Wege nach Wunsch', items: [
+    '🗼 <b>Leuchtturm-Kap:</b> Das Finale ist ein großes Kap mit Leuchtfeuer, Wärterhaus, Laternen-Girlanden und Feuerwerk. Dein alter Leuchtturm wächst mit, wo Platz ist – sonst im Fenster „Zum Kap ausbauen“.',
+    '🏰 <b>Märchenschloss wie im Märchen:</b> runde Türme, Balkone und Goldbänder rundherum, Fenster nach Wunsch – und statt der Steinplatte Rasen oder ein Platz im Wegmuster deiner Wahl.',
+    '🛤️ <b>Wege nach Wunsch:</b> ganz breit oder schmal, Kurven rund oder eckig, Enden bis ans Gebäude. Vor jedem kleinen Haus führt ein Gartenweg von selbst zur Tür.',
+    '🎨 <b>Umfärben:</b> Windräder, Läden, Hotels, Kultur- und Deko-Bauten bekommen deine Farben – auf Wunsch gleich alle gleichen auf einmal.',
+    '🧰 <b>Viele kleine Reparaturen:</b> Rückgängig, Verschieben und Abreißen rechnen genau, „Neue Insel“ fragt in einem eigenen Fenster, und im Menü gibt es „Bildrate: flüssig / sparsam“.',
+  ] },
+  { id: '2026-10-03-freizeitpark', date: '3. Oktober', title: 'Dein eigener Freizeitpark', items: [
+    '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Zieh bunten Parkboden auf und stell Fahrgeschäfte darauf – Märchenschloss, Karussells, Teetassen, Freifallturm, Geisterbahn, Wildwasserbahn, Zuckerwatte und mehr. Aus dem Rummelplatz wird ein Wunderland.',
+    '🎢 <b>Achterbahn:</b> Zieh die Schiene wie einen Weg als Rundkurs, setz eine Station hinein – mit Lifthügel und Looping.',
+    '🎆 <b>Parade:</b> Im Fenster des Parkbodens feierst du eine Parade mit Feuerwerk – 3 Minuten lang mehr Einnahmen.',
+    '🛤️ <b>Mehr Freiheit:</b> Deko darf auf Wege, Gebäude ersetzen Wege, und Zäune bekommen ein Gartentor oder einen offenen Durchgang.',
+  ] },
+  { id: '2026-10-02-bewohner', date: '2. Oktober', title: 'Bewohner mit Tagesablauf', items: [
+    '🐾 <b>Neue Bewohner:</b> Mit jeder entdeckten Insel zieht eine neue Tierart ein – Eichhörnchen, Igel, Fuchs, Giraffe, Elefant und Ente. In jedem Wohnhaus wohnt jemand.',
+    '🌅 <b>Ein Tag auf der Insel:</b> Morgens zur Arbeit oder Schule, mittags ins Café oder auf den Markt, abends in den Park – nachts schlafen die meisten.',
+    '👆 <b>Tipp eine Figur an:</b> Du siehst, wer das ist, wo sie wohnt und wohin sie gerade geht. Alle Familien stehen im Rathaus unter „Bewohner“.',
+    '📍 <b>Der Platz zählt:</b> Windräder am Wasser, Solar auf Sand, Holzfäller im Wald … bringen bis +50 %. Die Vorschau beim Bauen zeigt es.',
+  ] },
+  { id: '2026-10-01-ordnung', date: '1. Oktober', title: 'Bau-Leiste neu sortiert & Suche', items: [
+    '🧭 <b>Leiste nach einer einfachen Regel:</b> 🏭 Herstellen arbeitet ohne Kundschaft, 🛍️ Verkaufen braucht Kundschaft, 🎡 Freizeit zieht Besucher an oder bringt Ideen. Dazu 🏠 Wohnen, 🌸 Deko und 🛤️ Wege & Land.',
+    '🔍 <b>Suche:</b> Lupe antippen, „bäck“ tippen – schon steht die Bäckerei da.',
+  ] },
+  { id: '2026-09-30-leiste', date: '30. September', title: 'Personal, Kaufkraft & ein längeres Finale', items: [
+    '👷 <b>Läden haben Personal:</b> Ein Laden bedient bis zu 150 Kunden je Mitarbeiter. Steht „Voll“ in seinem Fenster, lohnt sich ein zweiter.',
+    '💰 <b>Kaufkraft:</b> Ab etwa 8–10 Läden je Viertel bringt jeder weitere weniger dazu.',
+    '🏮 <b>Das große Finale dauert länger:</b> Die letzten Stufen, der Leuchtturm und ferne Inseln kosten Minuten deines besten Einkommens.',
+    '📦 <b>Lager:</b> Läden verkaufen Holz, Stein und Erz erst ab 500 und Obst ab 2.000.',
+  ] },
+  { id: '2026-09-30-laeden', also: ['2026-10-01'], date: '30. September', title: 'Läden, Innenstadt & Kultur', items: [
+    '🛍️ <b>Läden!</b> Café, Teeladen, Eisdiele, Buchladen, Pizzeria, Juwelier, Möbelhaus … Sie verdienen an den Leuten im Viertel und an Besuchern und verkaufen Waren aus dem Lager.',
+    '🏙️ <b>Innenstadt:</b> Viele verschiedene Läden in einem Viertel bringen bis zu +100 %.',
+    '🎭 <b>Kultur:</b> Kino, Theater, Museum, Konzerthalle, Aquarium, Zoo, Stadion, Hotels und Kaufhaus ziehen Besucher an. ☕ Kaffee, Tee und Kakao wachsen auf den fernen Inseln.',
+  ] },
+  { id: '2026-09-30', date: '29. September', title: 'Aufträge am Hafen', items: [
+    '🚢 <b>Aufträge statt Börse:</b> Am Handelshafen legen Frachter an und kaufen dir ab, was sich stapelt. Am Großen Hafen gibt es Großaufträge – die Finanzspritze fürs Schloss.',
+    '🌊 <b>Schiffe fahren übers Wasser</b> und suchen sich den Weg um die Inseln herum.',
+  ] },
+];
+const NEWS = NEWS_HISTORY[0];
 const NEWS_KEY = 'kachelhausen_news';
-const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
+const newsSeenId = () => { try { return localStorage.getItem(NEWS_KEY); } catch (e) { return NEWS.id; } };
+const newsSeen = () => newsSeenId() === NEWS.id;
 function markNewsSeen() { try { localStorage.setItem(NEWS_KEY, NEWS.id); } catch (e) { /* privates Fenster: dann eben nicht */ } }
-function showNews() {
+// Wie viele Updates hat dieses Gerät verpasst? (unbekannter oder fehlender Stand: alle)
+function newsUnseen(seen = newsSeenId()) {
+  const i = NEWS_HISTORY.findIndex(n => n.id === seen || (n.also || []).includes(seen));
+  return i < 0 ? NEWS_HISTORY.length : i;
+}
+// all: aus dem Menü – die ganze Geschichte; sonst nur das Verpasste
+function showNews(all = false) {
+  const miss = newsUnseen(), list = all ? NEWS_HISTORY : NEWS_HISTORY.slice(0, Math.max(1, miss));
   markNewsSeen();
+  const entry = (n, i) => `<details class="news-v"${i === 0 ? ' open' : ''}><summary><b>${n.title}</b> <small class="muted">${n.date}${all && i < miss ? ' · neu für dich' : ''}</small></summary>
+    <ul class="news">${n.items.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
   openModal(`
     <h2>✨ Das ist neu</h2>
-    <ul class="news">${NEWS.items.map(i => `<li>${i}</li>`).join('')}</ul>
+    ${!all && miss > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es <b>${miss} Updates</b>. Das neueste ist aufgeklappt – die älteren kannst du antippen, wenn du magst.</p>` : ''}
+    ${list.map(entry).join('')}
+    ${!all ? '<p class="muted">Alle Updates: ☰ → ✨ Das ist neu.</p>' : ''}
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Los geht's!</button></div>`);
+  $('modal-card').classList.add('news-card');
   $('m-ok').onclick = closeModal;
 }
 // Beim Start: mit Spielstand zeigen, sobald kein anderes Fenster (Hinweise zu Umbauten, Expedition …) offen ist
@@ -2234,7 +2299,7 @@ function showMenu() {
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => openHelp();
-  $('m-news').onclick = showNews;
+  $('m-news').onclick = () => showNews(true);
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
   $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark

@@ -1166,3 +1166,10 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Nebenbei: Tagebuch-Knöpfe ragten auf dem Handy über den Rand; „Bildchen weit weg“-Test wärmt jetzt mehrere
       Bilder vor (je Bild nur 6 ms Bildchen-Zeit – unter Last schlug er sonst fehl).
       Test: ordnung.test.js (5 Fälle), alte Tests auf die neuen Orte umgestellt.
+
+## Block 99: „Das ist neu“ als Versionsübersicht (06.10.2026)
+- [x] `NEWS_HISTORY`: alle Updates seit dem 29.09. (aus der Git-Geschichte, Doppeltes zusammengelegt, Texte an die neuen
+      Orte angepasst) – 10 Einträge mit Datum und Titel.
+- [x] Wer mehrere Updates verpasst hat: „Seit du zuletzt hier warst, gab es 7 Updates“ – das neueste aufgeklappt, die
+      älteren als Überschrift zum Antippen. Unbekannter/sehr alter Stand: alle. ☰ → Das ist neu: ganze Geschichte,
+      Verpasstes als „neu für dich“ markiert. Test: news.test.js (+4 Fälle).

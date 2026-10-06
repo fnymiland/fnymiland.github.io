@@ -36,4 +36,32 @@ describe('Das ist neu', () => {
     document.getElementById('m-news').click();
     expect(shown()).toBe(true);
   });
+
+  it('Versionsübersicht (Block 99): wer mehrere Updates verpasst hat, sieht alle – das neueste offen, ältere zum Aufklappen', () => {
+    game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[3].id); showNews()`);
+    expect(game('newsUnseen(NEWS_HISTORY[3].id)')).toBe(3);
+    const det = [...document.querySelectorAll('#modal-card details.news-v')];
+    expect(det.length).toBe(3);
+    expect(det.map(d => d.open)).toEqual([true, false, false]);
+    expect(document.getElementById('modal-card').textContent).toMatch(/3 Updates/);
+    expect(game('localStorage.getItem(NEWS_KEY)')).toBe(game('NEWS.id'));
+  });
+  it('nur das letzte verpasst: ein Eintrag, kein Zähler; ganz alter/unbekannter Stand: alle', () => {
+    game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[1].id); showNews()`);
+    expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(1);
+    expect(document.getElementById('modal-card').textContent).not.toMatch(/Updates\./);
+    expect(game("newsUnseen('2025-uralt')")).toBe(game('NEWS_HISTORY.length'));
+    expect(game("newsUnseen('2026-10-01')")).toBe(game("NEWS_HISTORY.findIndex(n => n.id === '2026-09-30-laeden')"));   // alte id gehört zu einem Stand
+  });
+  it('aus dem Menü: die ganze Geschichte, Verpasstes als „neu für dich“ markiert', () => {
+    game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[2].id); showMenu()`);
+    document.getElementById('m-news').click();
+    expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(game('NEWS_HISTORY.length'));
+    expect(document.getElementById('modal-card').textContent.match(/neu für dich/g).length).toBe(2);
+  });
+  it('jeder Eintrag hat id, Datum, Titel und Punkte; ids einmalig', () => {
+    const h = game('NEWS_HISTORY.map(n => ({ id: n.id, ok: !!(n.date && n.title && n.items.length) }))');
+    expect(h.every(n => n.ok)).toBe(true);
+    expect(new Set(h.map(n => n.id)).size).toBe(h.length);
+  });
 });

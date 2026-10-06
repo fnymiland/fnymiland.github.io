@@ -343,7 +343,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Bauen rechnet erst nach `HOVER_CALM` ms Ruhe auf einem Feld (sie rechnet die ganze Insel).
 52. **„Das ist neu“** (`NEWS` in ui.js, Block 25): erscheint einmal pro Gerät (localStorage `kachelhausen_news`), nur
     mit Spielstand und erst, wenn kein anderes Fenster offen ist (`newsAfterLoad`); neue Spieler sehen es nie. **Vor jedem
-    Push mit etwas Sichtbarem `NEWS.id` ändern und die 3–5 Punkte ersetzen** (nur das Neue seit dem letzten Push).
+    Push mit etwas Sichtbarem einen neuen Eintrag OBEN in `NEWS_HISTORY` setzen** (neue id, Datum, Titel, 2–5 Punkte; nur
+    das Neue seit dem letzten Push; alte Einträge bleiben). Wer mehrere Updates verpasst hat, sieht alle (Block 99,
+    `newsUnseen`): das neueste offen, ältere zum Aufklappen; ☰ → Das ist neu zeigt die ganze Geschichte. Ändert sich eine
+    id noch vor dem Push, die alte unter `also` eintragen. Alte Einträge an neue Orte anpassen, wenn Dinge umziehen.
 60. **Marktplatz** (Block 39): kein Gebäude mehr, sondern ein Platz aus Wegen mit Ständen (`STANDS`, `cat: 'markt'`,
     `needs: 'platz'`). Stände und `PLAZA_OK`-Deko (Brunnen, Statue, Pavillon …) dürfen auf ein Wegfeld; der Weg bleibt
     als `t.weg` (Stil) darunter – `wegUnder(t)` überall nehmen, wo „ist hier Weg?“ gefragt wird (`pathAt`, `pathArms`,
