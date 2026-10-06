@@ -359,7 +359,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 110. **Kein Seiten-Zoom** (Block 110): html/body haben `touch-action: pan-x pan-y`, Gesten/Strg-Mausrad fängt input.js ab.
     Wer etwas Eigenes mit Gesten baut (wie die Karte), gibt dem Element `touch-action: none` und behandelt Zeiger selbst.
 109. **Gleis-Stile** (Block 109): Das Gleisbett ist eine Form in `DECO_LOOKS.schiene` (`t.form`, Zeichnung `RAIL_LOOK` über
-    `railLookOf`; Brücken immer Schotter/Holz). Gleise liegen im Boden-Bild: wer `t.form` an Gleisen ändert, zählt
+    `railLookOf`, auch auf Brücken; Gleise im Hauptbahnhof im Stil der Strecke vor dem Gleis, `hbfTrack`). Gleise liegen im Boden-Bild: wer `t.form` an Gleisen ändert, zählt
     `groundVersion` hoch. Neu Gebautes bekommt Form/Farbe nur über `decoLookNew` – `paintNewOf` liefert nur Wand/Dach/Fenster.
     Keine Oberleitung mehr (kein Draht, keine Masten, kein Stromabnehmer).
 106. **Stadtschmuck** (Block 106): Formen/Farben nur über `DECO_LOOKS` (Index = gespeicherter Wert, nie umsortieren – neue

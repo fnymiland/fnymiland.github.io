@@ -362,7 +362,7 @@ const RAIL_LOOK = {
   pflaster: { pave: 'kopf', rail: '#7b766c', rw: 0.9 },
   blumen:   { edge: '#7fbd5e', bed: '#9fd979', tie: '#d6b585', rail: '#7d818b', rw: 1.1, flowers: true },
 };
-const railLookOf = t => (t && t.bridge ? null : RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id]) || RAIL_LOOK.schotter;
+const railLookOf = t => RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id] || RAIL_LOOK.schotter;   // auch auf Brücken (Block 109b)
 function drawRailBed(cx, cy, z, x, y, t) {
   const arms = railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -389,7 +389,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     for (const sh of roadShapes(arms, t, RAIL_W + 0.02)) poly(sh.map(L), C(pl.fill));
     g.save(); clipTo(roadShapes(arms, t, RAIL_W + 0.02), L); pattern(L, pl.pat[0], x, y, z, pl.pat[1] && C(pl.pat[1]), pl.cols); g.restore();
   } else {
-    for (const sh of roadShapes(arms, t, RAIL_W + 0.03)) poly(sh.map(L), C(t && t.bridge ? '#9a8f80' : lk.edge));
+    for (const sh of roadShapes(arms, t, RAIL_W + 0.03)) poly(sh.map(L), C(t && t.bridge && lk === RAIL_LOOK.schotter ? '#9a8f80' : lk.edge));
     for (const sh of roadShapes(arms, t, RAIL_W)) poly(sh.map(L), C(lk.bed));
     // Schwellen
     g.strokeStyle = C(lk.tie); g.lineWidth = 1.7 * z; g.lineCap = 'butt';

@@ -35,6 +35,31 @@ function hangLamp(K, a, b, up) {
   if (lit) glowQuad([[x - 1, ly], [x + 1, ly], [x + 1, ly + 2 * z], [x - 1, ly + 2 * z]], 20 * z);
 }
 
+// Gleis im Hauptbahnhof (Block 109b): Gleisbett wie die Strecke, die davor anschließt (RAIL_LOOK) – a von −0.95 bis 2
+function hbfTrack(K, b, lk, hx, hy) {
+  const z = K.z;
+  if (lk.pave) {
+    const pl = PATH_LOOK[lk.pave];
+    K.rect(-0.95, b - 0.34, 2, b + 0.34, C(pl.edge)); K.rect(-0.95, b - 0.3, 2, b + 0.3, C(pl.fill));
+    for (let a = -0.85, i = 0; a < 1.95; a += 0.12, i++) for (const d of [-0.22, 0, 0.22]) { const [px, py] = K.P(a + (i % 2) * 0.06, b + d); ellipse(px, py, 1.4 * z, 0.7 * z, C(pl.pat[1] || shade(pl.fill, 0.08))); }
+  } else {
+    K.rect(-0.95, b - 0.34, 2, b + 0.34, C(lk.edge)); K.rect(-0.95, b - 0.3, 2, b + 0.3, C(lk.bed));
+    for (let a = -0.85; a < 1.95; a += 0.22) K.rect(a, b - 0.26, a + 0.09, b + 0.26, C(lk.tie));               // Schwellen
+  }
+  for (const d of [-0.15, 0.15]) K.rect(-0.9, b + d - 0.025, 2, b + d + 0.025, C(lk.rail));                     // Schienen
+  if (!lk.tufts && !lk.flowers) return;
+  let i = 0;
+  for (const s of [-1, 1]) for (let a = -0.8; a < 1.95; a += lk.flowers ? 0.14 : 0.2, i++) {
+    const h = hash(hx + i, hy + s, 109), [px, py] = K.P(a, b + s * 0.3);
+    if (lk.flowers) { circle(px, py - 0.6 * z, 1.25 * z, C(h < 0.5 ? '#6fb553' : '#7cc463')); circle(px, py - 1.5 * z, 0.95 * z, C(FLOWER_COLS[Math.floor(h * 97) % FLOWER_COLS.length])); continue; }
+    if (h > 0.55) continue;
+    g.strokeStyle = C(lk.tufts); g.lineWidth = 0.6 * z; g.lineCap = 'round'; g.beginPath();
+    for (const dd of [-0.9, 0, 0.9]) { g.moveTo(px + dd * z, py); g.lineTo(px + dd * 1.6 * z, py - (1.6 + h * 1.4) * z); }
+    g.stroke();
+    if (lk.edgeFlowers && h < lk.edgeFlowers * 0.55) circle(px, py - 2.6 * z, 0.85 * z, C(FLOWER_COLS[Math.floor(h * 131) % FLOWER_COLS.length]));
+  }
+}
+
 // Wand- und Dachfarbe: selbst gewählt (t.wall/t.roof aus WALLS/ROOFS, wie bei Häusern) oder die des Gebäudes
 function paint(t, wall, roof) { return [t && t.wall != null ? WALLS[t.wall] : wall, t && t.roof != null ? ROOFS[t.roof] : roof]; }
 
@@ -737,10 +762,8 @@ const BUILDING_ART = {
       K.rect(-2, -hb, -1, hb, C('#dad2c2'));
       K.rect(-2, -PW - 0.15, -1.86, PW + 0.15, C('#efe8da'));                                  // Stufen vor dem Portal
       for (let i = 0; i < n; i++) {
-        const b = gb(i);
-        K.rect(-0.95, b - 0.32, 2, b + 0.32, C('#a89f92'));                                   // Schotter
-        for (let a = -0.85; a < 1.95; a += 0.22) K.rect(a, b - 0.26, a + 0.09, b + 0.26, C('#7a5a3c'));   // Schwellen
-        for (const d of [-0.15, 0.15]) K.rect(-0.9, b + d - 0.025, 2, b + d + 0.025, C('#6b6f78'));       // Schienen
+        const b = gb(i), [ex, ey] = gleisTiles(t, x, y, i).exit, et = state.tiles.get(ex + ',' + ey);
+        hbfTrack(K, b, railLookOf(et && et.b === 'schiene' ? et : null), x * 7 + i, y);   // im Stil der Strecke davor (Block 109b)
       }
     })) return;
     const [wall, roof] = paint(t, look === 'glas' ? '#e8dcc4' : look === 'backstein' ? '#b8664a' : '#efd9b0', look === 'glas' ? '#7fa39a' : look === 'backstein' ? '#6b4f3a' : '#c0694a');

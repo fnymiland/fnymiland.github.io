@@ -1305,6 +1305,8 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       (frei), Waldbahn, Pflastergleis, Blumengleis (Kunstakademie, Gruppe „Gleise“). Wählen in der Stilleiste, im
       Infofenster („Gleisbett“, auf alle übertragen); über bestehende Gleise ziehen stellt kostenlos um (`build`, `planCheck`).
       Brücken bleiben Holzbrücken.
+- [x] 109b: Der Stil gilt jetzt auch auf Brücken (Gleisbett auf dem Holzdeck), und die Gleise im Hauptbahnhof nehmen je
+      Gleis den Stil der Strecke davor an (`hbfTrack`, `gleisTiles(...).exit`); ohne Strecke Schotter.
 - [x] Bahnhof: Blumenkästen, Kübel neben dem Eingang, Blumenampel und zwei Hängelampen (leuchten nachts) unterm Bahnsteigdach
       (`kPlanter`, `hangBasket`, `hangLamp`). Hauptbahnhof: Kübel an den Bahnsteigenden und am Portal, Blumenkästen zur Straße.
 - [x] Fehler gefunden: `paintNewOf` gab alles aus `paintNew` an neu Gebautes weiter – auch eine nicht gekaufte Brunnenform.

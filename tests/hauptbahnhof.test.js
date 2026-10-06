@@ -32,7 +32,7 @@ describe('Hauptbahnhof (Block 85)', () => {
       expect(k, 'rot ' + rot).toBeTruthy();
       const t = game(`state.tiles.get('${k}')`);
       expect(t.gleise).toBe(3);
-      expect(fills(t, 'ground').filter(c => c === '#6b6f78').length).toBe(2 * 3);
+      expect(fills(t, 'ground').filter(c => c === game('RAIL_LOOK.schotter.rail')).length).toBe(2 * 3);   // Schienen im Stil der Strecke (Block 109b)
     }
   });
   it('Portal genau in der Mitte: die zwei Eingangsfelder liegen mittig vor der Rückseite', () => {

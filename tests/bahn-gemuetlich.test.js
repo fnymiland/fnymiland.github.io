@@ -42,7 +42,7 @@ describe('Gleis-Stile (Block 109)', () => {
     game("state.paintNew.schiene = { form: 0 }; build('schiene', 8, 8, true)");          // zurück zum Schotter: Feld ohne form
     expect(rail(8, 8).form).toBe(undefined);
   });
-  it('Infofenster: Gleisbett wählen und auf alle Gleise übertragen; Brücken bleiben Holzbrücken', () => {
+  it('Infofenster: Gleisbett wählen und auf alle Gleise übertragen; auch auf Brücken', () => {
     game("for (let x = 7; x <= 10; x++) build('schiene', x, 8); openInfo(8, 8)");
     expect(game("[...document.querySelectorAll('#panel .label')].some(l => l.textContent === 'Gleisbett')")).toBe(true);
     expect(game("document.querySelectorAll('#panel [data-dform]').length")).toBe(2);
@@ -51,7 +51,7 @@ describe('Gleis-Stile (Block 109)', () => {
     game("document.querySelector('#panel [data-dall]').click()");
     expect([7, 9, 10].map(x => rail(x, 8).form)).toEqual([1, 1, 1]);
     expect(game("railLookOf({ b: 'schiene', form: 1 }) === RAIL_LOOK.rasen")).toBe(true);
-    expect(game("railLookOf({ b: 'schiene', form: 1, bridge: true }) === RAIL_LOOK.schotter")).toBe(true);
+    expect(game("railLookOf({ b: 'schiene', form: 1, bridge: true }) === RAIL_LOOK.rasen")).toBe(true);     // auch auf Brücken (109b)
     expect(game("railLookOf({ b: 'schiene', form: 99 }) === RAIL_LOOK.schotter")).toBe(true);
   });
   it('keine Oberleitung mehr: weder Masten noch Draht noch Stromabnehmer', () => {
@@ -65,5 +65,16 @@ describe('Gleis-Stile (Block 109)', () => {
       game(`for (const [k, t] of state.tiles) if (t.b === 'schiene') t.form = ${i}`);
       expect(() => game("for (const [k, t] of state.tiles) if (t.b === 'schiene') { const [x, y] = keyXY(k); drawRailBed(100, 100, 2, x, y, t); }")).not.toThrow();
     }
+  });
+  it('109b: Hauptbahnhof-Gleise im Stil der Strecke davor (je Gleis), ohne Strecke Schotter', () => {
+    const fills = t => game(`(() => { const seen = []; Object.defineProperty(g, 'fillStyle', { configurable: true, get: () => seen[seen.length - 1], set: v => seen.push(String(v)) });
+      try { PASS = 'ground'; drawObject('hbf', 300, 300, 1.2, 1000, 20, 20, 1, ${JSON.stringify({ b: 'hbf', lvl: 1, rot: 0, gleise: 2 })}); } finally { PASS = null; delete g.fillStyle; } return seen; })()`);
+    game("for (let y = 15; y <= 30; y++) for (let x = 15; x <= 30; x++) state.tiles.delete(x + ',' + y)");
+    expect(fills().filter(c => c === game('RAIL_LOOK.rasen.bed')).length).toBe(0);
+    const [ex, ey] = game("gleisTiles({ b: 'hbf', rot: 0, gleise: 2 }, 20, 20, 1).exit");
+    game(`state.tiles.set('${ex},${ey}', { b: 'schiene', lvl: 1, form: 1 })`);
+    const f = fills();
+    expect(f.filter(c => c === game('RAIL_LOOK.rasen.bed')).length).toBe(1);             // nur das Gleis mit Rasen davor
+    expect(f.filter(c => c === game('RAIL_LOOK.schotter.bed')).length).toBe(1);
   });
 });
