@@ -1274,3 +1274,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       kleinere Schrift); Bau-Vorschau großer Brunnen zeigt die gewählte Form; Spaziergänger setzen sich nicht in
       Rundbank/Picknicktisch; Vorschaubild ohne Canvas bleibt leer statt „url(undefined)“.
 
+
+## Block 107: Schiffe fahren nicht mehr auf Schienen (06.10.2026)
+- [x] Schiffe hielten jedes Wasserfeld für befahrbar – auch unter Schienen- und Wegbrücken – und fuhren bei langen Brücken
+      sichtbar auf den Schienen entlang. Jetzt: unter einer Brücke nur quer durch (nie längs, nie schräg), Kurven und
+      Kreuzungen über dem Wasser gesperrt (`seaCross`/`seaStep` in seaSearch, `seaSight` kürzt nie über Brücken ab).
+      Seewege werden neu berechnet, sobald sich Brücken über dem Wasser ändern (`seaBridgesCheck` in recalc).
+      Test: schiffe-bruecken.test.js.

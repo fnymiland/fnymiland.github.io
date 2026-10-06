@@ -570,7 +570,7 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { if (BATCH) return; T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+function recalc() { if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
 // Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
 // zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
 const PEAK_HALF = 1200;
@@ -1689,6 +1689,30 @@ function nearestWater(x, y) {
 // Suchkasten um Punkte, mit Rand (Umwege um Inseln herum)
 const seaBox = (pts, pad) => [Math.floor(Math.min(...pts.map(p => p[0]))) - pad, Math.floor(Math.min(...pts.map(p => p[1]))) - pad,
   Math.ceil(Math.max(...pts.map(p => p[0]))) + pad, Math.ceil(Math.max(...pts.map(p => p[1]))) + pad];
+// Brücken über dem Wasser (Block 107): Schienen und Wegbrücken. Schiffe fahren nur quer darunter durch – nie längs und nie
+// schräg (sonst fuhren sie bei langen Brücken sichtbar „auf den Schienen“). 'x'/'y': die Brücke läuft entlang x bzw. y;
+// 'block': Kurve, Kreuzung – da passt kein Schiff durch; null: keine Brücke
+function seaCross(x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
+  const same = (a, b) => { const n = state.tiles.get(a + ',' + b); return !!n && (t.b === 'schiene' ? n.b === 'schiene' : n.b === 'weg'); };
+  const ax = same(x - 1, y) || same(x + 1, y), ay = same(x, y - 1) || same(x, y + 1);
+  return ax && ay ? 'block' : ay ? 'y' : 'x';
+}
+function seaStep(x, y, nx, ny) {
+  const a = seaCross(x, y), b = seaCross(nx, ny), dx = nx - x, dy = ny - y;
+  if (!a && !b) return true;
+  if (a === 'block' || b === 'block' || (dx && dy)) return false;         // nicht schräg unter einer Brücke
+  const along = d => (d === 'x' && dx) || (d === 'y' && dy);
+  return !along(a) && !along(b);
+}
+// Brücken über dem Wasser haben sich geändert → Seewege neu (aus recalc)
+let seaBridgeSig = '';
+function seaBridgesCheck() {
+  let sig = '';
+  for (const [k, t] of state.tiles) if ((t.b === 'schiene' || isWegBridge(t)) && isWater(...keyXY(k))) sig += k + ';';
+  if (sig !== seaBridgeSig) { if (seaBridgeSig || sig) seaCache.clear(); seaBridgeSig = sig; }
+}
 // Breitensuche übers Wasser vom Feld s, bis goal(x, y) passt → Felder vom Start bis zum Ziel (oder null)
 // box = [x0, y0, x1, y1]: nur darin suchen (die Welt kann riesig sein); ohne: die ganze Welt
 function seaSearch(s, goal, box) {
@@ -1710,13 +1734,14 @@ function seaSearch(s, goal, box) {
       const nx = x + dx, ny = y + dy;
       if (!inside(nx, ny) || prev[idx(nx, ny)] !== -2 || !isWater(nx, ny)) continue;
       if (dx && dy && (!isWater(x + dx, y) || !isWater(x, y + dy))) continue;      // nicht über die Landecke
+      if (!seaStep(x, y, nx, ny)) continue;                                       // Brücken nur quer (Block 107)
       prev[idx(nx, ny)] = c; q[tail++] = idx(nx, ny);
     }
   }
   return null;
 }
 const seaSight = (a, b) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25);
-  for (let i = 0; i <= n; i++) { const t = i / Math.max(1, n); if (!isWater(Math.round(a[0] + (b[0] - a[0]) * t), Math.round(a[1] + (b[1] - a[1]) * t))) return false; } return true; };
+  for (let i = 0; i <= n; i++) { const t = i / Math.max(1, n), x = Math.round(a[0] + (b[0] - a[0]) * t), y = Math.round(a[1] + (b[1] - a[1]) * t); if (!isWater(x, y) || seaCross(x, y)) return false; } return true; };   // abkürzen nie über Brücken – da bleibt der Weg quer
 // Weg als Linienzug: Punkte, Länge, Stützstellen – geglättet per Sichtlinie
 function seaRoute(tiles, a, b) {
   const pts = [a || tiles[0]];
