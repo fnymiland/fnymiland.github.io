@@ -195,7 +195,7 @@ function openLexikon(key = null, focus = false) {
         ${e.show.length && k.startsWith('b:') ? `<div class="row"><button class="btn small" data-hbuild="${e.show[0]}">${available(e.show[0]) ? 'Bauen' : '🔒 Freischalten'}</button></div>` : ''}</details>` : ''; }).join('')}</div>`).join('')}</div>
     <p class="muted lx-none" hidden>Nichts gefunden – versuch ein anderes Wort.</p>
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`;
-  if (focus && !$('modal').hidden && $('lx-q')) { setHtml($('modal-card'), html, true); $('modal-card').className = 'card'; }   // aus der Suche: Feld bleibt (iPad-Tastatur)
+  if (focus && !$('modal').hidden && $('lx-q')) { setHtml($('modal-card'), html, true); $('modal-card').className = 'card'; modalFrame($('modal-card')); }   // aus der Suche: Feld bleibt (iPad-Tastatur)
   else openModal(html);
 
   $('modal-card').classList.add('lexikon');

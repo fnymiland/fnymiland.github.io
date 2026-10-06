@@ -356,6 +356,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+103. **Fenster mit Reitern** sind immer gleich groß: Reiter als `<div class="looks hall-tabs">` – dann setzt `modalFrame`
+    (in `openModal`) feste Höhe, innen scrollen, stehende Reiter. Neue Fenster mit Reitern genauso bauen, keine eigene Breite je
+    Reiter (Fensterbreite über `you-win`/`help-win`/`hall`/`research`).
 101. **Spieluhr** (Block 101, render.js): Tageszeit nur über `gameHour()` / `nightAt()` / `dayPart()` / `timeOfDay()` /
     `clockNow()` – alle aus `Date.now()` (1 Minute = 1 Spielstunde), nie aus `performance.now()` (das wäre wieder je Gerät
     und ab dem Öffnen). Etwas nur nachts: `nightAt() >= NIGHT_MAX - 1e-9`, nie eine feste Zahl über `NIGHT_MAX`.

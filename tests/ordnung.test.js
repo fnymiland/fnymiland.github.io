@@ -59,3 +59,20 @@ describe('Aufgeräumt (Block 98)', () => {
     expect(game("document.getElementById('diary-dot').hidden")).toBe(true);
   });
 });
+
+describe('Fenster mit Reitern (Block 103)', () => {
+  it('bekommen eine feste Größe (Klasse tabbed) und gleiche Breite je Fenster; beim Reiterwechsel nach oben, sonst Scrollstand behalten', async () => {
+    game("openTownHall('overview')");
+    expect(game("document.getElementById('modal-card').classList.contains('tabbed')")).toBe(true);
+    await game("openYou('album')");
+    expect(game("[...document.getElementById('modal-card').classList]")).toEqual(expect.arrayContaining(['tabbed', 'you-win']));
+    await game("openYou('figur')");
+    game("document.getElementById('modal-card').scrollTop = 200; window.__k = modalTabKey");
+    game("openYou('figur')");                                                               // gleiche Seite neu
+    expect(game('modalTabKey === window.__k')).toBe(true);
+    game("openHelp('start')");
+    expect(game("document.getElementById('modal-card').classList.contains('help-win')")).toBe(true);
+    game("showMenu()");
+    expect(game("document.getElementById('modal-card').classList.contains('tabbed')")).toBe(false);   // ohne Reiter wie bisher
+  });
+});

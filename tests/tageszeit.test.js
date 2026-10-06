@@ -29,7 +29,7 @@ describe('Spieluhr (Block 101)', () => {
     game('updateHud()');
     expect(game("document.getElementById('town-time').textContent")).toMatch(/^(☀️|🌅|🌙|🌄) \d\d:\d0$/);
     game("openTownHall('overview')");
-    expect(game("document.querySelector('#modal-card .tod-box').textContent")).toMatch(/Uhr ·.*in \d+ Minuten? (wird es hell|ist es Nacht)/s);
+    expect(game("document.querySelector('#modal-card .tod-box').textContent")).toMatch(/Uhr ·.*in \d+ Minuten? (wird es hell|ist es Nacht|ist es Tag)/s);
   });
   it('die Rathausuhr zeigt die Spielzeit; Uhren an Gebäuden auch', () => {
     const d = game(`(() => { const c = clockNow(${at(15.5)}); return [c.getHours(), c.getMinutes()]; })()`);

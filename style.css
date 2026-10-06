@@ -755,3 +755,11 @@ body.visiting #you-btn { display: none !important; }
   #hud .pill { padding: 5px 6px; }
 }
 @media (max-width: 400px) { #hud .pill { font-size: 12px; padding: 5px 5px; } #hud { gap: 3px; } }
+/* Fenster mit Reitern (Block 103): immer gleich groß – Höhe fest, innen scrollen, Reiter bleiben oben stehen */
+.card.tabbed { height: min(680px, calc(100vh - 32px)); height: min(680px, calc(100dvh - 32px)); overflow-y: auto; overscroll-behavior: contain; }
+.card.tabbed .hall-tabs { position: sticky; top: -22px; z-index: 3; background: var(--cream); margin: 0 -6px 8px; padding: 6px 6px 8px; }
+.card.you-win { width: min(520px, 100%); }
+.card.help-win { width: min(480px, 100%); }
+/* Seitenfenster mit Reitern (Märchenschloss): gleich hoch für alle Reiter – die Obergrenze oben (max-height) gilt weiter */
+#panel:has(.cs-tabs) { height: 640px; }
+#panel .cs-tabs { position: sticky; top: -16px; z-index: 3; background: var(--cream); margin: 0 -4px 8px; padding: 6px 4px 8px; }

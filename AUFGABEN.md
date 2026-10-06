@@ -1218,3 +1218,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Rathausplatzes im Insel-Raster (auch gedreht); Uhren (Rathaus, Hauptbahnhof, Uhrturm) zeigen Spielzeit auch von weitem;
       Morgengrauen sagt „in N Minuten ist es Tag“.
 - [ ] Hinweis an den Nutzer: firebase-rules.json neu in die Konsole einfügen.
+
+## Block 103: Fenster mit Reitern bleiben gleich groß (06.10.2026)
+- [x] Beim Klicken durch die Reiter änderte sich die Fenstergröße (Höhe nach Inhalt, Breite 420/520/560 je Reiter) – unruhig.
+      Jetzt: Fenster mit Reitern (Rathaus, Du, Hilfe, Forschung) haben eine feste Höhe (680 px bzw. Bildschirm) und je Fenster
+      eine feste Breite; gescrollt wird innen, die Reiterleiste bleibt oben stehen (`modalFrame`, Klasse `tabbed`).
+      Neuer Reiter → nach oben, dieselbe Seite neu (Hut gewählt) → Scrollstand bleibt. Märchenschloss-Seitenfenster
+      ebenso gleich hoch. Test: ordnung.test.js.

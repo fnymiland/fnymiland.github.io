@@ -2105,9 +2105,22 @@ function openModal(html, live = null) {
   const c = $('modal-card'), same = !$('modal').hidden && modalLive && live && modalLive.toString() === live.toString();
   if (!same) spotSel = null;                                       // anderes Fenster: Markierung weg
   c.className = 'card'; setHtml(c, html); $('modal').hidden = false; modalLive = live;
+  modalFrame(c);
   const box = spotBox(); if (box) box.classList.add('spot');
 }
-function closeModal() { $('modal').hidden = true; modalLive = null; }
+// Fenster mit Reitern (Block 103): feste Größe, gescrollt wird innen, die Reiter bleiben oben stehen. Neuer Reiter → nach
+// oben; dieselbe Seite neu gezeichnet (Hut gewählt, Live-Auffrischen) → Scrollstand bleibt
+let modalTabKey = null;
+function modalFrame(c) {
+  const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on');
+  c.classList.toggle('tabbed', !!tabs);
+  c.classList.toggle('you-win', !!c.querySelector('.you-tabs'));                       // Figur … Online: alle gleich breit
+  c.classList.toggle('help-win', !!c.querySelector('[data-hb]'));
+  const key = on ? [...on.attributes].filter(a => a.name.startsWith('data-')).map(a => a.name + '=' + a.value).join() : null;
+  if (key !== modalTabKey && !liveNow) c.scrollTop = 0;
+  modalTabKey = key;
+}
+function closeModal() { $('modal').hidden = true; modalLive = null; modalTabKey = null; }
 // Daneben tippen schließt (Block 81) – aber nur, wenn man daneben gedrückt und daneben losgelassen hat: Wer im Fenster drückt
 // (Text markieren, Regler ziehen) und erst daneben loslässt – oder umgekehrt –, behält sein Fenster
 let modalPressOut = false, modalUpOut = false;
