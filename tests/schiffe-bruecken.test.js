@@ -36,4 +36,15 @@ describe('Schiffe und Brücken (Block 107)', () => {
     expect(fg).not.toBe(null);
     if (fg) for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) expect(game(`seaCross(${fg[0] + dx}, ${fg[1] + dy})`)).toBe(null);
   });
+  it('Block 112: breite Brücke (Doppelgleis) über das ganze Wasser: quer darunter durch – Kreuzung bleibt gesperrt', () => {
+    game("for (let y = 30; y <= 50; y++) { state.tiles.set('45,' + y, { b: 'schiene', lvl: 1 }); state.tiles.set('46,' + y, { b: 'schiene', lvl: 1 }); } recalc()");
+    expect(game("seaCross(45, 40)")).toBe('y');
+    const p = route([40, 40], [52, 40]);
+    expect(p).not.toBe(null);
+    expect(p.filter(([x, y]) => game(`seaCross(${x}, ${y})`)).length).toBe(2);              // genau quer über beide Gleise
+    game("state.tiles.set('44,40', { b: 'schiene', lvl: 1 }); state.tiles.set('47,40', { b: 'schiene', lvl: 1 }); state.tiles.set('43,40', { b: 'schiene', lvl: 1 }); state.tiles.set('48,40', { b: 'schiene', lvl: 1 })");
+    expect(game("[seaStep(43, 40, 44, 40), seaStep(44, 40, 45, 40)]")).toEqual([false, false]);   // Querschiene: nicht längs darauf entlang
+    const q = route([40, 40], [52, 40]);
+    expect(q.some(([x, y]) => y === 40 && x >= 43 && x <= 48)).toBe(false);                  // um die Kreuzung herum
+  });
 });

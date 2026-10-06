@@ -105,6 +105,10 @@ function planScan(p) {
       rest = next;
     }
   } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; }
+  if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das
+    const old = ([x, y]) => bAt(x, y) === 'schiene';                    // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird
+    if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
+  }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr };
 }
@@ -204,7 +208,7 @@ function scanDemolish(p) {
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch
 let planMemo = null;
 function planInfo(p) {
-  const key = [p.kind, p.tool, p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', groundVersion].join();
+  const key = [p.kind, p.tool, p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')

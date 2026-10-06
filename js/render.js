@@ -231,30 +231,61 @@ function getSprite(key, z, make) {
 function paintSprite(halfW, up, down, drawFn) {
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(2 * halfW * DPR)); c.height = Math.max(1, Math.ceil((up + down) * DPR));
-  const prev = g, sink = [];
+  const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 };
   g = c.getContext('2d');
   g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR);
-  GLOW_SINK = sink; SPRITE_PAINT = true;
-  let mask = null;
-  try { drawFn(); mask = lightMask(c, sink); } finally { GLOW_SINK = null; SPRITE_PAINT = false; g = prev; }
+  GLOW_SINK = sink; GLOW_ATLAS = atlas; SPRITE_PAINT = true;
+  let mask;
+  try { drawFn(); mask = lightMask(c, sink, atlas); } finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; }
   return { c, ox: halfW, oy: up, glows: sink, mask };
 }
-// Lichtmaske eines Bildchens (Block 112): innerhalb der Fensterscheiben nur die Pixel, die am Ende noch nach Licht aussehen
-// (warmes Gelb). Was später davor gemalt wurde – Blumenkasten, Rahmen, das Nachbarhaus der Reihe –, bleibt so dunkel wie live.
-const litPx = (r, gr, b) => (r > 235 && gr > 185 && r - b > 100 && gr - b > 60) || (r > 252 && gr > 228 && gr < 234 && b > 165 && b < 171);   // Fenstergelb, Lampen; Glashaus #ffe7a8 genau
-function lightMask(c, sink) {
+// Lichtmaske eines Bildchens (Block 112): innerhalb der Fensterscheiben nur die Pixel, die seit dem Einschalten ihres Lichts
+// unverändert sind (glowSnap) – was danach davor gemalt wurde (Blumenkasten, Rahmen, das Nachbarhaus der Reihe), bleibt dunkel
+// wie live. Zugeschnitten auf die Scheiben: { c, x, y } (x, y in Punkten des Bildchens). null: keine Maske (ganze Scheiben
+// stanzen wie früher), false: nichts mehr sichtbar. Zwei Lesevorgänge je Bildchen (Bereich, Ablage).
+function lightMask(c, sink, A) {
   const warm = sink.filter(gl => gl.tint !== 'blue');
   if (!warm.length) return null;
   try {
-    const m = document.createElement('canvas'); m.width = c.width; m.height = c.height;
-    const mx = m.getContext('2d', { willReadFrequently: true });
-    mx.setTransform(DPR, 0, 0, DPR, 0, 0); mx.fillStyle = '#000';
+    let bx0 = Infinity, by0 = Infinity, bx1 = -Infinity, by1 = -Infinity;
+    for (const { q } of warm) for (const [x, y] of q) { bx0 = Math.min(bx0, x * DPR); by0 = Math.min(by0, y * DPR); bx1 = Math.max(bx1, x * DPR); by1 = Math.max(by1, y * DPR); }
+    bx0 = Math.max(0, Math.floor(bx0)); by0 = Math.max(0, Math.floor(by0)); bx1 = Math.min(c.width, Math.ceil(bx1)); by1 = Math.min(c.height, Math.ceil(by1));
+    const bw = bx1 - bx0, bh = by1 - by0;
+    if (bw <= 0 || bh <= 0) return false;
+    const m = document.createElement('canvas'); m.width = bw; m.height = bh;
+    const mx = m.getContext('2d');
+    mx.setTransform(DPR, 0, 0, DPR, -bx0, -by0); mx.fillStyle = '#000';
     for (const { q } of warm) { mx.beginPath(); q.forEach(([x, y], i) => i ? mx.lineTo(x, y) : mx.moveTo(x, y)); mx.closePath(); mx.fill(); }
-    const pane = mx.getImageData(0, 0, m.width, m.height), src = c.getContext('2d').getImageData(0, 0, c.width, c.height).data, d = pane.data;
-    for (let i = 0; i < d.length; i += 4) if (d[i + 3] && !(src[i + 3] > 200 && litPx(src[i], src[i + 1], src[i + 2]))) d[i + 3] = 0;
+    const pane = mx.getImageData(0, 0, bw, bh), d = pane.data, fin = c.getContext('2d').getImageData(bx0, by0, bw, bh).data;
+    const shot = A && A.c && A.used ? A.ctx.getImageData(0, 0, A.c.width, A.used).data : null, AW = A && A.c ? A.c.width : 0;
+    const keep = new Uint8Array(bw * bh);
+    for (const { snap: sn } of warm) {
+      if (!sn || !shot) continue;
+      for (let yy = 0; yy < sn.h; yy++) for (let xx = 0; xx < sn.w; xx++) {
+        const X = sn.x0 + xx - bx0, Y = sn.y0 + yy - by0;
+        if (X < 0 || Y < 0 || X >= bw || Y >= bh) continue;
+        const i = (Y * bw + X) * 4, j = ((sn.ay + yy) * AW + sn.ax + xx) * 4;
+        if (Math.abs(fin[i] - shot[j]) < 3 && Math.abs(fin[i + 1] - shot[j + 1]) < 3 && Math.abs(fin[i + 2] - shot[j + 2]) < 3 && Math.abs(fin[i + 3] - shot[j + 3]) < 3) keep[Y * bw + X] = 1;
+      }
+    }
+    for (const { q, snap: sn } of warm) if (!sn || !shot) {                // ohne Kopie: dieses Fenster ganz (wie früher)
+      for (let p = 0; p < bw * bh; p++) if (d[p * 4 + 3] && !keep[p]) { const X = p % bw + bx0, Y = (p / bw | 0) + by0; if (inQuad(q, (X + 0.5) / DPR, (Y + 0.5) / DPR)) keep[p] = 1; }
+    }
+    let any = false;
+    for (let p = 0; p < bw * bh; p++) { if (!keep[p]) d[p * 4 + 3] = 0; else if (d[p * 4 + 3]) any = true; }
+    if (!any) return false;
     mx.putImageData(pane, 0, 0);
-    return m;
+    return { c: m, x: bx0 / DPR, y: by0 / DPR };
   } catch (e) { return null; }
+}
+// liegt der Punkt im (konvexen) Viereck?
+function inQuad(q, x, y) {
+  let sgn = 0;
+  for (let i = 0; i < q.length; i++) {
+    const [ax, ay] = q[i], [bx, by] = q[(i + 1) % q.length], cr = (bx - ax) * (y - ay) - (by - ay) * (x - ax);
+    if (cr) { if (sgn && Math.sign(cr) !== sgn) return false; sgn = Math.sign(cr); }
+  }
+  return true;
 }
 // Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
@@ -263,15 +294,20 @@ function putSprite(e, cx, cy, z) {
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
   g.drawImage(e.c, x0, y0, w, h);
-  for (const [q, rr, tint] of lights) punchGlow(q, rr, tint, tint === 'blue' ? null : e.mask ? 'mark' : 'pane');   // Kristall: Schein darüber wie bisher
+  for (const [q, rr, tint] of lights) punchGlow(q, rr, tint, tint === 'blue' ? null : e.mask == null ? 'pane' : 'mark');   // Kristall: Schein darüber wie bisher
   if (e.mask && night > 0.15) {                                         // nur, was im Bildchen wirklich noch Fensterlicht ist
+    const M = e.mask;
     g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX);
-    g.drawImage(e.mask, x0, y0, w, h);
+    g.drawImage(M.c, x0 + M.x * r, y0 + M.y * r, M.c.width / DPR * r, M.c.height / DPR * r);
     g.restore();
   }
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
+function drawMover(m, z, now) {
+  if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
+  else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
+}
 // Brückenstück (Schiene, Wegbrücke) über einem Schiff noch einmal zeichnen (Block 107): Brücken gehören zum Boden und lägen
 // sonst unter allem, was darauf fährt
 function drawBridgeOver(k, z, now) {
@@ -368,7 +404,7 @@ function objectAt(sx, sy) {
       const [u, v] = slotPos(x, y, i, dc), s = decoScale(dc.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z;
       if (Math.abs(sx - qx) > 30 * z * s || sy > qy + 14 * z * s || sy < qy - 100 * z * s) return;
       const mir = ((dc.rot || 0) & 1) && MIRROR.has(dc.b), back = SLOTS_BACK.includes(i);
-      cand.push({ x, y, slot: i, d: x + y + (back ? -0.25 : 0.25) + (u + v) * 0.1, ink: () => inkAt(sx, sy, qx, qy, [mir ? -s : s, s], () => drawObject(dc.b, 0, 0, z, now, x, y, 1, { rot: dc.rot || 0, slot: i })) });
+      cand.push({ x, y, slot: i, d: x + y + (back ? -0.25 : 0.25) + (u + v) * 0.1, ink: () => inkAt(sx, sy, qx, qy, [mir ? -s : s, s], () => drawObject(dc.b, 0, 0, z, now, x, y, 1, { rot: dc.rot || 0, slot: i, col: dc.col || 0, form: dc.form || 0 })) });   // Treffer wie gezeichnet (Form, Block 106)
     });
   }
   cand.sort((a, b) => b.d - a.d);
@@ -782,7 +818,7 @@ function render(now) {
   const inGhost = (x, y) => preview && preview.ghost && x >= preview.box[0] && x < preview.box[0] + preview.box[2] && y >= preview.box[1] && y < preview.box[1] + preview.box[3];
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
-  const byTile = new Map();
+  const byTile = new Map(), drawnMovers = new Set();
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
@@ -793,7 +829,7 @@ function render(now) {
     if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
       const under = [];
       for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
-        if (Math.abs(bx - m.px) < 1 && Math.abs(by - m.py) < 1 && seaCross(bx, by)) under.push(bx + ',' + by);   // alles, was der Rumpf berührt
+        if (Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by)) under.push(bx + ',' + by);   // was der Rumpf berührt – nicht, was schon hinter ihm liegt
       m.under = under.length ? under : null;
     }   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (!byTile.has(k)) byTile.set(k, []);
@@ -876,7 +912,7 @@ function render(now) {
       drawSmall(k, px, py, z, now, x, y, [...SLOTS_BACK, ...SLOTS_FRONT]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
-      const gRot = tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot);
+      const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
       const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
       const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
       const [u, v] = slotPos(x, y, preview.slot, { b: ghostType, rot: gRot, form: gForm }), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
@@ -910,9 +946,13 @@ function render(now) {
         // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
         const ar = m.fur && archAt(m.px, m.py);
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-        if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
-        else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
-        if (m.under) for (const bk of m.under) drawBridgeOver(bk, z, now);   // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
+        drawMover(m, z, now); drawnMovers.add(m);
+        if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
+          drawBridgeOver(bk, z, now);
+          const [bx, by] = keyXY(bk);                                       // was schon auf der Brücke fuhr (Zug, Bewohner), wieder obenauf (Block 112)
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
+            if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) drawMover(o, z, now);
+        }
       }
     }
     if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }

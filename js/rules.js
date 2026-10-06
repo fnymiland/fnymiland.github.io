@@ -1694,7 +1694,7 @@ function waterChanged() { seaCache.clear(); waterVersion++; }
 function nearestWater(x, y) {
   const rx = Math.round(x), ry = Math.round(y);
   for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy)) return [rx + dx, ry + dy];
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy) && seaCross(rx + dx, ry + dy) !== 'block') return [rx + dx, ry + dy];   // nicht in einer Brückenkurve starten (Block 112)
   }
   return null;
 }
@@ -1709,11 +1709,16 @@ function seaCross(x, y) {
   if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
   const same = (a, b) => { const n = state.tiles.get(a + ',' + b); return !!n && (t.b === 'schiene' ? n.b === 'schiene' : n.b === 'weg'); };
   const ax = same(x - 1, y) || same(x + 1, y), ay = same(x, y - 1) || same(x, y + 1);
-  return ax && ay ? 'block' : ay ? 'y' : 'x';
+  if (!(ax && ay)) return ay ? 'y' : 'x';
+  // Nachbarn in beiden Richtungen: Kurve/Kreuzung – oder eine breite Brücke (Doppelgleis, 2 Felder breiter Weg, Block 112):
+  // läuft sie in einer Richtung deutlich weiter, fahren Schiffe quer darunter durch
+  const run = (dx, dy) => { let n = 1; for (const s of [1, -1]) for (let i = 1; i < 12 && same(x + dx * i * s, y + dy * i * s); i++) n++; return n; };
+  const rx = run(1, 0), ry = run(0, 1);
+  return rx >= ry + 2 ? 'x' : ry >= rx + 2 ? 'y' : 'block';
 }
 function seaStep(x, y, nx, ny) {
   const a = seaCross(x, y), b = seaCross(nx, ny), dx = nx - x, dy = ny - y;
-  if (!a && !b) return true;
+  if (!a && !b) return !(dx && dy) || (!seaCross(x + dx, y) && !seaCross(x, y + dy));   // schräg nicht an einer Brückenecke vorbei
   if (a === 'block' || b === 'block' || (dx && dy)) return false;         // nicht schräg unter einer Brücke
   const along = d => (d === 'x' && dx) || (d === 'y' && dy);
   return !along(a) && !along(b);
@@ -1722,7 +1727,7 @@ function seaStep(x, y, nx, ny) {
 let seaBridgeSig = '';
 function seaBridgesCheck() {
   let sig = '';
-  for (const [k, t] of state.tiles) if ((t.b === 'schiene' || isWegBridge(t)) && isWater(...keyXY(k))) sig += k + ';';
+  for (const [k, t] of state.tiles) if ((t.b === 'schiene' || isWegBridge(t)) && isWater(...keyXY(k))) sig += k + seaCross(...keyXY(k)) + ';';   // auch die Richtung (hängt an Gleisen an Land)
   if (sig !== seaBridgeSig) { if (seaBridgeSig || sig) seaCache.clear(); seaBridgeSig = sig; }
 }
 // Breitensuche übers Wasser vom Feld s, bis goal(x, y) passt → Felder vom Start bis zum Ziel (oder null)

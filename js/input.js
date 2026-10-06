@@ -162,6 +162,7 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEv
 document.addEventListener('wheel', e => { if (e.ctrlKey && e.target !== canvas) e.preventDefault(); }, { passive: false });   // Trackpad-Zoom über Fenstern
 
 function setHover(sx, sy) {
+  if (!cam) return;                                               // Maus über der Karte, bevor das Spiel geladen ist
   const sa = slotAt(sx, sy);
   hoverSlot = sa.slot;
   const t = sa.slot === VSLOT ? { x: sa.x, y: sa.y } : toTile(sx, sy);   // Eckpunkt (Block 65): gehört zum Feld unter der Ecke

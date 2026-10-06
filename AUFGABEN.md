@@ -1337,3 +1337,18 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       gestanzt, und was danach kommt, deckt es wieder zu). Jetzt wie live: Schein vor dem Bildchen (`punchGlow(…, 'halo')`),
       dann das Bildchen, dann nur die Pixel, die darin wirklich noch Fensterlicht sind (`lightMask`, `litPx`); ohne Maske die
       ganze Scheibe wie bisher. Kristall-Schein (blau) unverändert darüber. Test: nachtlicht-bildchen.test.js.
+- [x] Fehlerprüfung vor dem Push (4 Prüfer: Freunde, Stadtschmuck, Bahn/Schiffe, Darstellung) – behoben:
+      - Nachtlicht von weitem: Lichtmaske erkannte Licht an der Farbe → abgeschattete Seiten (Glashaus, Botanischer Garten),
+        Lichterketten, Fackeln blieben dunkel. Jetzt: Pixel, die sich seit dem Einschalten nicht verändert haben (`glowSnap`
+        in eine Ablage, `lightMask` zugeschnitten, 2 Lesevorgänge je Bildchen).
+      - Freundesbank war 2,2× so groß wie eine Bank (fehlte in `DECO_SCALE`) und ragte ins Nachbarfeld.
+      - Antippen von Laternen/Bänken traf die Grundform statt der gewählten Form; Verschieben-Vorschau drehte nicht Drehbares.
+      - Schiff unter Brücke: Deck übermalte Züge/Bewohner auf der Brücke und Schiffe, die schon durch waren.
+      - Doppelgleis/breite Wegbrücke sperrte das Wasser ganz (Häfen in Buchten ohne Seeweg) → quer darunter durch; Seewege
+        starten nicht in Brückenkurven; schräg nicht an Brückenecken vorbei; Seewege neu, wenn sich die Brückenrichtung ändert.
+      - Strecke im neuen Stil verlängern stellte das Startgleis mit um; Planungstext nach Stilwechsel veraltet.
+      - Freunde: eingefügte Teilen-Nachricht → falscher Code; Umbenennen erreichte Freunde erst nach Öffnen der Freundesliste;
+        Karte zeigte beim ersten Mal die ganze Vergangenheit, erschien während des Abgleichs, merkte sich Geräte- statt
+        Serverzeit; Zahl verdeckte das „!“ bei Konflikt; Besuchs-/Stufen-Zähler je Gerät statt je Konto; Insel-Kennung bei
+        zwei Geräten gleichzeitig (jetzt per Transaktion); lange Kontonamen > 30 Zeichen.
+      - Kleinigkeiten: Zahl am 🌐 auf dem Handy kleiner, Maus über der Karte vor dem Laden (Konsolenfehler), „Neu“-Text Strom.

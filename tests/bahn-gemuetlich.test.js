@@ -77,4 +77,12 @@ describe('Gleis-Stile (Block 109)', () => {
     expect(f.filter(c => c === game('RAIL_LOOK.rasen.bed')).length).toBe(1);             // nur das Gleis mit Rasen davor
     expect(f.filter(c => c === game('RAIL_LOOK.schotter.bed')).length).toBe(1);
   });
+  it('Block 112: Strecke im neuen Stil verlängern stellt das Startgleis nicht um; nur über Altes ziehen stellt um', () => {
+    game("for (let x = 7; x <= 9; x++) build('schiene', x, 8); state.paintNew.schiene = { form: 1 }; setTool('schiene')");
+    game("startPlan('line', { x: 9, y: 8 }, { x: 12, y: 8 }, false); runPlan()");
+    expect([9, 10, 11, 12].map(x => rail(x, 8).form)).toEqual([undefined, 1, 1, 1]);
+    game("startPlan('line', { x: 7, y: 8 }, { x: 9, y: 8 }, false); runPlan()");
+    expect([7, 8, 9].map(x => rail(x, 8).form)).toEqual([1, 1, 1]);
+    game("setTool('look')");
+  });
 });

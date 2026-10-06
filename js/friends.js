@@ -137,7 +137,7 @@ async function visitFriendCheck() {
   const a = await friendAnimal(visitUser.uid).catch(() => 0);
   const me = { from: visitUser.uid, n: visitName(), a };
   cloudApi.set(`book/${visitOwner}/v_${visitUser.uid}_${dayKey()}`, { k: 'v', ...me, at: cloudApi.TS() })   // einmal am Tag
-    .then(() => { if (frLS('bv_' + visitOwner) !== dayKey()) { frLS('bv_' + visitOwner, dayKey()); bondAdd(visitUser.uid, visitOwner, BOND_PTS.visit); } })   // Freundschaft (Block 105)
+    .then(() => { const bk = 'bv_' + visitUser.uid + '_' + visitOwner; if (frLS(bk) !== dayKey()) { frLS(bk, dayKey()); bondAdd(visitUser.uid, visitOwner, BOND_PTS.visit); } })   // je Konto (Geschwister am selben iPad)   // Freundschaft (Block 105)
     .catch(() => {});
   const look = await friendLook(visitUser.uid);
   const [x, y] = guestSpawn(0, 0);
@@ -150,7 +150,7 @@ async function visitFriendCheck() {
   if (!visitHereTimer) visitHereTimer = setInterval(() => { if (visitFriend && !document.hidden) here(); }, 45000);
 }
 let visitHereTimer = null;
-const visitName = () => visitUser.nick || (visitUser.display || 'Besuch').split(' ')[0];   // Name auf dem Schild (Profil, Block 111)
+const visitName = () => (visitUser.nick || (visitUser.display || 'Besuch').split(' ')[0]).slice(0, 20);   // Name auf dem Schild (Profil, Block 111)
 async function visitHeart() {
   const key = `h_${visitUser.uid}_${dayKey()}`;
   if (frLS('heart_' + visitOwner) === dayKey()) { toast('❤️ Heute hast du hier schon ein Herz dagelassen'); return; }
@@ -210,7 +210,7 @@ function friendsInboxWatch() {
     friendsDot(); welcomeBack();
   });
 }
-setInterval(() => { if (cloudUser && !VISIT) { friendsInboxWatch(); welcomeBack(); } else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false; } }, 3000);
+setInterval(() => { if (cloudUser && !VISIT) { friendsInboxWatch(); if (typeof frWatch === 'function') frWatch(); welcomeBack(); } else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false; } }, 3000);   // Freundesliste immer beobachten (Namen auffrischen, Freundesschiffe, Block 112)
 // alte Besuche und Herzen (älter als 60 Tage) räumt der Besitzer weg, sonst wächst das Buch ewig; Gästebuch bleibt
 function bookTidy(uid) {
   if (viewOnly()) return;
@@ -226,11 +226,13 @@ function friendsDot() { netDotShow(); }
 // „Während du weg warst“ (Block 111): beim Öffnen einmal zeigen, was seit dem letzten Reinschauen kam – sobald Gästebuch und
 // Briefkasten geladen sind und kein anderes Fenster offen ist. Gemerkt pro Konto (wb_), damit es nach dem Neuladen nicht
 // wiederkommt; 🌐 behält die Zahl, bis man unter Freunde nachsieht.
-let welcomeDone = false;
+let welcomeDone = false, welcomeAt = 0;
 function welcomeBackLines() {
-  const uid = cloudUser.uid, since = Math.max(bookSeen(), +frLS('wb_' + uid) || 0), icon = e => (ANIMALS[e.a] || ANIMALS[0]).icon;
+  const uid = cloudUser.uid, wb = +frLS('wb_' + uid) || 0, icon = e => (ANIMALS[e.a] || ANIMALS[0]).icon;
+  const since = Math.max(bookSeen(), wb) || Date.now() - 3 * 864e5;      // erstes Mal auf diesem Gerät: nur die letzten 3 Tage
   const book = Object.values(bookAll).filter(e => e && (e.at || 0) > since).sort((p, q) => (q.at || 0) - (p.at || 0));
-  const mails = Object.values(mailAll).filter(m => m && (m.at || 0) > (+frLS('wb_' + uid) || 0));
+  const mails = Object.values(mailAll).filter(m => m && (m.at || 0) > wb);
+  welcomeAt = Math.max(0, ...book.map(e => e.at || 0), ...mails.map(m => m.at || 0));   // Serverzeit, nicht die Uhr des Geräts
   return [...mails.map(m => `${icon(m)} 📬 <b>${escHtml(m.n)}</b> hat dir ein Päckchen geschickt`),
     ...book.map(e => `${icon(e)} ${e.k === 'g' ? `📖 <b>${escHtml(e.n)}</b> hat ins Gästebuch geschrieben: „${escHtml(BOOK_LINES[e.t] || '')}“`
       : e.k === 'h' ? `❤️ <b>${escHtml(e.n)}</b> hat dir ein Herz dagelassen` : e.k === 'd' ? `💛 <b>${escHtml(e.n)}</b> sagt Danke für dein Päckchen`
@@ -238,11 +240,11 @@ function welcomeBackLines() {
 }
 function welcomeBack() {
   if (welcomeDone || !cloudUser || VISIT || !bookLoaded || !mailLoaded) return;
-  if (!$('modal').hidden || document.hidden || state.tutorial >= 0) return;          // später nochmal (Intervall unten)
+  if (!$('modal').hidden || document.hidden || state.tutorial >= 0 || cloudState !== 'ok') return;   // später nochmal (Intervall unten); nicht während des Abgleichs
   welcomeDone = true;
   const lines = welcomeBackLines();
   if (!lines.length) return;
-  frLS('wb_' + cloudUser.uid, Date.now() + 5000);
+  frLS('wb_' + cloudUser.uid, welcomeAt);
   const more = lines.length - 6;
   openModal(`<h2>💌 Während du weg warst</h2>
     <div class="wb-list">${lines.slice(0, 6).map(l => `<p>${l}</p>`).join('')}${more > 0 ? `<p class="muted">… und ${more} weitere</p>` : ''}</div>
@@ -273,7 +275,7 @@ function friendsHallHtml(part) {
     <p>${list.filter(([, e]) => e.k === 'v').slice(0, 30).map(([, e]) => `${icon(e)} ${escHtml(e.n)}${e.at && dayKey(new Date(e.at)) === today ? ' (heute)' : ` (${when(e)})`}`).join(' · ') || '<span class="muted">Noch niemand – teile deinen Freundescode.</span>'}</p>`;
 }
 function wireFriendsHall(card) {
-  if (cloudUser) frLS('seen_' + cloudUser.uid, Date.now() + 5000);     // gelesen
+  if (cloudUser) frLS('seen_' + cloudUser.uid, Math.max(+frLS('seen_' + cloudUser.uid) || 0, ...Object.values(bookAll).map(e => (e && e.at) || 0)));   // gelesen – nach Serverzeit (Block 112)
   friendsDot();
   for (const b of card.querySelectorAll('[data-mget]')) b.onclick = () => mailClaim(b.dataset.mget);
   for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openNet('freunde'); } catch (e) { toast('Hat nicht geklappt'); } };
@@ -359,7 +361,7 @@ const BOND_STEPS = [3, 10, 25, 50, 100];                                 // Punk
 const BOND_PTS = { visit: 1, heart: 1, book: 2, mail: 2, wish: 3, gotVisit: 1, gotHeart: 1, gotBook: 2 };
 const bondLevel = p => BOND_STEPS.filter(s => (p || 0) >= s).length;
 const bondHearts = p => { const n = bondLevel(p); return '♥'.repeat(n) + '♡'.repeat(5 - n); };
-let myBonds = {}, bondsOff = null, bondSeenMax = +(frLS('bondmax') || 0);
+let myBonds = {}, bondsOff = null, bondSeenMax = 0, bondSeenUid = null;   // höchste schon gemeldete Stufe – je Konto (Block 112)
 async function bondAdd(me, other, n) {
   if (!me || !other || me === other || !cloudApi || !cloudApi.tx) return;
   try { await cloudApi.tx(`users/${me}/bonds/${other}/p`, cur => (+cur || 0) + n); } catch (e) { /* nächstes Mal */ }
@@ -383,11 +385,12 @@ function bondSync() {
   if (VISIT || viewOnly()) return;
   const best = Math.max(0, ...Object.values(myBonds).map(b => bondLevel(b && b.p)));
   if (best <= (state.bond || 0)) return;
+  if (cloudUser && bondSeenUid !== cloudUser.uid) { bondSeenUid = cloudUser.uid; bondSeenMax = +(frLS('bondmax_' + cloudUser.uid) || 0); }
   const fresh = best > bondSeenMax;                                       // wirklich neu – oder nur nach dem Laden wiederhergestellt?
   bondSeenMax = Math.max(bondSeenMax, best);
   state.bond = best; save(); buildToolbar();
   if (!fresh) return;
-  frLS('bondmax', best);
+  if (cloudUser) frLS('bondmax_' + cloudUser.uid, best);
   const gift = { 2: 'das Freundschaftsband für deine Figur', 3: 'den Herzballon für deine Figur', 4: 'die Freundesbank', 5: 'den Freundschaftsbaum' }[best];
   toast(`💛 Freundschaft mit ${best} ${best === 1 ? 'Herz' : 'Herzen'}!${gift ? ` Neu: ${gift}` : ''}`);
 }

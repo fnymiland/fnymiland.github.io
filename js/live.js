@@ -46,8 +46,9 @@ async function liveWorldId() {
   if (liveWid) return liveWid;
   const uid = cloudUser.uid, pub = await cloudApi.get(`users/${uid}/pub`);
   if (pub && pub.wid) { liveOpen = !!pub.open; return (liveWid = pub.wid); }
-  const wid = liveRand(20);
-  await cloudApi.set(`users/${uid}/pub`, { wid, open: false });
+  const wid = liveRand(20);                                              // zwei Geräte gleichzeitig: nur eine Kennung gewinnt (Block 112)
+  const r = cloudApi.tx ? await cloudApi.tx(`users/${uid}/pub`, cur => (cur && cur.wid ? undefined : { wid, open: false })) : (await cloudApi.set(`users/${uid}/pub`, { wid, open: false }), { ok: true });
+  if (!r.ok && r.val && r.val.wid) { liveOpen = !!r.val.open; return (liveWid = r.val.wid); }
   liveOpen = false;
   return (liveWid = wid);
 }
@@ -228,7 +229,8 @@ function visitUi() {
 // ---------------------------------------------------------------------------
 const FR_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';                 // ohne 0/O, 1/I/L
 const frCodeText = c => `FNYMI-${c}`;
-const frCodeNorm = s => String(s || '').toUpperCase().replace(/^\s*FNYMI\s*-?\s*/, '').replace(/[^A-Z0-9]/g, '');
+// auch aus einer eingefügten Nachricht („Mein Kachelhausen-Freundescode: FNYMI-7F3QK“, Block 112)
+const frCodeNorm = s => { const t = String(s || '').toUpperCase(), m = t.match(/FNYMI\s*-?\s*([A-Z0-9]{5})(?![A-Z0-9])/); return m ? m[1] : t.replace(/^\s*FNYMI\s*-?\s*/, '').replace(/[^A-Z0-9]/g, ''); };
 let frMine = null, frList = {}, frOff = null, frRenderTok = 0;
 async function frCode() {
   if (frMine) return frMine;

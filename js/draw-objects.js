@@ -16,8 +16,29 @@ function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leu
   if (!(night > 0.15 && isLive())) return;
   const m = g.getTransform(), k = 1 / DPR;
   const q = pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]);
-  if (GLOW_SINK) { GLOW_SINK.push({ q, r, tint }); return; }
+  if (GLOW_SINK) { GLOW_SINK.push({ q, r, tint, snap: tint === 'blue' ? null : glowSnap(q) }); return; }
   punchGlow(q, r, tint);
+}
+// Bildchen (Block 112): wie die Scheibe aussah, als ihr Licht anging – als Kopie in eine Ablage (kein Rücklesen, schnell).
+// Am Ende zählt nur, was sich seitdem nicht verändert hat (render.js, lightMask) – genau wie live, wo später Gemaltes das
+// gestanzte Loch wieder zudeckt. GLOW_ATLAS setzt paintSprite; die Leinwand entsteht erst beim ersten Licht.
+let GLOW_ATLAS = null;
+function glowSnap(q) {
+  const A = GLOW_ATLAS, src = g.canvas;
+  if (!A || !src) return null;
+  const xs = q.map(p => p[0] * DPR), ys = q.map(p => p[1] * DPR);
+  const x0 = Math.max(0, Math.floor(Math.min(...xs))), y0 = Math.max(0, Math.floor(Math.min(...ys)));
+  const w = Math.min(src.width, Math.ceil(Math.max(...xs))) - x0, h = Math.min(src.height, Math.ceil(Math.max(...ys))) - y0;
+  if (w <= 0 || h <= 0) return null;
+  try {
+    if (!A.c) { A.c = document.createElement('canvas'); A.c.width = 512; A.c.height = 512; A.ctx = A.c.getContext('2d'); }
+    if (A.x + w > A.c.width) { A.x = 0; A.y += A.row; A.row = 0; }
+    if (w > A.c.width || A.y + h > A.c.height) return null;              // Ablage voll: dieses Fenster ganz (wie früher)
+    A.ctx.drawImage(src, x0, y0, w, h, A.x, A.y, w, h);
+    const sn = { x0, y0, w, h, ax: A.x, ay: A.y };
+    A.x += w; A.row = Math.max(A.row, h); A.used = Math.max(A.used, A.y + h);
+    return sn;
+  } catch (e) { return null; }
 }
 // Licht in Bildschirm-Punkten (q) ins Bild stanzen und für die Nacht merken
 // Viele Fenster dicht beieinander (Reihenhäuser, Schloss) stanzen sich gegenseitig durch und werden taghell (Block 70):
@@ -1078,7 +1099,7 @@ const ROTATABLE = new Set([...MIRROR, 'bank', 'riesenrad', 'sternwarte', 'seebru
   'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_schloss', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
+const DECO_SCALE = { freundesbank: 0.5, rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
 // Größen (Block 43): das Grundmodell, um vf größer; kleine (Ecke) und Feld-Deko werden verschieden skaliert gezeichnet
 function decoScale(b) {
   const d = ITEMS[b];

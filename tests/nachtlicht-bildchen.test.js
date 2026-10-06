@@ -23,15 +23,16 @@ describe('Nachtlicht der Bildchen (Block 112)', () => {
   it('putSprite: Schein vor dem Bildchen, Fensterlicht danach über die Maske – ohne Maske die ganze Scheibe', () => {
     game('night = 0.4; glows.length = 0; glowCells.clear()');
     const e = `{ c: { width: 20, height: 20, tag: 'bild' }, ox: 0, oy: 0, z: 1, glows: [{ q: ${Q}, r: 18, tint: null }]`;
-    expect(record(`putSprite(${e}, mask: { tag: 'maske' } }, 100, 100, 1)`)).toEqual(['schein', 'bild', 'maske']);
-    expect(record(`putSprite(${e}, mask: null }, 100, 100, 1)`)).toEqual(['schein', 'bild', 'scheibe']);
+    expect(record(`putSprite(${e}, mask: { c: { width: 4, height: 4, tag: 'maske' }, x: 10, y: 10 } }, 100, 100, 1)`)).toEqual(['schein', 'bild', 'maske']);
+    expect(record(`putSprite(${e}, mask: null }, 100, 100, 1)`)).toEqual(['schein', 'bild', 'scheibe']);   // keine Maske: ganze Scheibe wie früher
+    expect(record(`putSprite(${e}, mask: false }, 100, 100, 1)`)).toEqual(['schein', 'bild']);            // alles verdeckt: keine Scheibe
     expect(record(`putSprite({ c: { width: 20, height: 20, tag: 'bild' }, ox: 0, oy: 0, z: 1, glows: [{ q: ${Q}, r: 18, tint: 'blue' }], mask: null }, 100, 100, 1)`))
       .toEqual(['bild', 'schein']);                                          // Kristall: Schein darüber wie bisher
     game('night = 0');
   });
-  it('Lichtmaske: nur warmes Fenstergelb zählt – nicht Wand, Blüten, Weiß', () => {
-    const hex = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-    for (const c of ['#ffd873', '#ffe58a', '#ffe7a8']) expect(game(`litPx(${hex(c)})`), c).toBe(true);
-    for (const c of ['#ffffff', '#ff8fb1', '#c49bff', '#f6c9c0', '#fbe6a2', '#cfe8c4', '#bfe0f2', '#a8dcff', '#8a5a3c']) expect(game(`litPx(${hex(c)})`), c).toBe(false);
+  it('Lichtmaske: Viereck-Prüfung für Fenster ohne Kopie; ohne Licht keine Maske', () => {
+    expect(game(`[inQuad(${Q}, 12, 12), inQuad(${Q}, 9, 12), inQuad(${Q}, 12, 17), inQuad([[0, 0], [4, 2], [4, 6], [0, 4]], 2, 3), inQuad([[0, 0], [4, 2], [4, 6], [0, 4]], 2, 0)]`)).toEqual([true, false, false, true, false]);
+    expect(game("lightMask({ width: 10, height: 10 }, [], null)")).toBe(null);
+    expect(game("lightMask({ width: 10, height: 10 }, [{ q: [[1, 1], [2, 1], [2, 2], [1, 2]], r: 4, tint: 'blue' }], null)")).toBe(null);
   });
 });

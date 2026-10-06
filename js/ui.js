@@ -2329,7 +2329,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-06-bahn', date: '6. Oktober', title: 'Die Bahn wird gemütlich', items: [
     '🌿 <b>Gleis-Stile:</b> Schotter, Rasengleis, Waldbahn, Pflastergleis und Blumengleis. Beim Bauen in der Leiste wählen, über alte Gleise drüberziehen oder ein Gleis antippen und auf alle übertragen – umstellen kostet nichts.',
     '🌸 <b>Bahnhöfe mit Blumen:</b> Blumenkästen, Kübel, eine Blumenampel und warme Lampen unterm Bahnsteigdach.',
-    '☁️ <b>Ohne Oberleitung:</b> keine grauen Masten und Drähte mehr – die Züge fahren einfach so.',
+    '☁️ <b>Ohne Oberleitung:</b> keine grauen Masten und Drähte mehr über den Gleisen (Strom brauchen die Züge weiterhin).',
     '🎨 Stadtschmuck in der Kunstakademie ist günstiger, und Bänke stecken nicht mehr ineinander.',
   ] },
   { id: '2026-10-06-schmuck', date: '6. Oktober', title: 'Stadtschmuck in Formen und Farben & ein Knopf für Online', items: [

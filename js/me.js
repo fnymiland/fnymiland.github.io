@@ -55,7 +55,7 @@ function meLook() {
 }
 const meFigLook = () => { const L = meLook(); return figFrom(L.a, L, L.name || ME_NAME); };
 // Name für Freunde (Block 111): der Name auf dem Schild – ohne ihn der Vorname aus dem Konto (beim Besuch: visitName)
-const myNick = () => (!VISIT && meLook().name) || ((typeof cloudUser !== 'undefined' && cloudUser && cloudUser.display) || '').split(' ')[0] || 'Freund';
+const myNick = () => ((!VISIT && meLook().name) || ((typeof cloudUser !== 'undefined' && cloudUser && cloudUser.display) || '').split(' ')[0] || 'Freund').slice(0, 20);
 function setMe(patch) {
   if (VISIT) return;
   if (viewOnly()) { cloudBlocked(); return; }                           // zuschauendes Gerät: sagen, warum nichts passiert
@@ -256,7 +256,7 @@ const netNews = () => (!!cloudUser && (mailWaiting() || bookNew())) || cloudStat
 function netDotShow() {
   const d = document.getElementById('net-dot');
   if (!d) return;
-  const n = typeof netCount === 'function' ? netCount() : 0, txt = n ? (n > 9 ? '9+' : String(n)) : cloudState === 'konflikt' ? '!' : '';
+  const n = typeof netCount === 'function' ? netCount() : 0, txt = cloudState === 'konflikt' ? '!' : n ? (n > 9 ? '9+' : String(n)) : '';   // Konflikt zuerst: 🌐 öffnet dann den Speicher
   if (d.textContent !== txt) d.textContent = txt;
   if (d.hidden !== !txt) d.hidden = !txt;
 }

@@ -765,7 +765,8 @@ body.visiting #you-btn { display: none !important; }
   #hud .pill { padding: 5px 6px; }
 }
 @media (max-width: 400px) { #hud .pill { font-size: 12px; padding: 5px 4px; } #hud { gap: 2px; }
-  #hud .pill.store, #hud .pill.you, #hud .pill.net, #hud #menu-btn { font-size: 14px; padding: 4px 3px; } }   /* mit 🌐 (Block 106): bei 360/375 px auch mit Millionen in einer Zeile */
+  #hud .pill.store, #hud .pill.you, #hud .pill.net, #hud #menu-btn { font-size: 14px; padding: 4px 3px; }   /* mit 🌐 (Block 106): bei 360/375 px auch mit Millionen in einer Zeile */
+  #net-dot { min-width: 15px; height: 15px; line-height: 15px; padding: 0 3px; font-size: 9.5px; top: -8px; right: -9px; } }   /* Zahl verdeckt das 🌐 nicht ganz */
 /* Fenster mit Reitern (Block 103): immer gleich groß – Höhe fest, innen scrollen, Reiter bleiben oben stehen */
 .card.tabbed { height: min(680px, calc(100vh - 32px)); height: min(680px, calc(100dvh - 32px)); display: flex; flex-direction: column; overflow: hidden; }
 .card.tabbed > * { flex: none; }

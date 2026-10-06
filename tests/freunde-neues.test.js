@@ -86,4 +86,21 @@ describe('Freunde: Name, Code, Neues (Block 111)', () => {
     expect(game("$('modal-card').textContent")).toContain('anderes');
     expect(game('welcomeDone')).toBe(false);
   });
+  it('Block 112: Prüfung – eingefügte Nachricht, „!“ zuerst, erstes Mal nur die letzten Tage, Serverzeit, lange Namen', () => {
+    expect(game("frCodeNorm('Mein Kachelhausen-Freundescode: FNYMI-7F3QK')")).toBe('7F3QK');
+    expect(game("(() => { const el = $('fr-in') || document.createElement('input'); return frCodeNorm('7F' + 'FNYMI-7F3QK'); })()")).toBe('7F3QK');
+    game("bookAll = { a: { k: 'h', from: 'f1', n: 'Ben', at: Date.now() - 1000 } }; mailAll = {}; cloudState = 'konflikt'; netDotShow()");
+    expect(game("$('net-dot').textContent")).toBe('!');                                      // Konflikt geht vor der Zahl
+    game("cloudState = 'ok'");
+    const old = Date.now() - 10 * 864e5, recent = Date.now() - 864e5;
+    game(`frLS('wb_u1', 0); frLS('seen_u1', 0); bookAll = { a: { k: 'v', from: 'f1', n: 'Alt', at: ${old} }, b: { k: 'v', from: 'f2', n: 'Neu', at: ${recent} } }; mailAll = {}`);
+    const lines = game('welcomeBackLines()').join(' ');
+    expect(lines).toContain('Neu'); expect(lines).not.toContain('Alt');                        // erstes Mal: nicht die ganze Vergangenheit
+    game("closeModal(); welcomeDone = false; bookLoaded = mailLoaded = true; welcomeBack()");
+    expect(game("frLS('wb_u1')")).toBe(recent);                                              // gemerkt nach Serverzeit
+    game("closeModal(); welcomeDone = false; cloudState = 'laden'; welcomeBack()");
+    expect(game('welcomeDone')).toBe(false);                                                 // während des Abgleichs: später
+    game("cloudState = 'ok'; cloudUser.display = 'Maximilian-Alexander-Friedrich von Irgendwo'");
+    expect(game('myNick().length')).toBeLessThanOrEqual(20);
+  });
 });
