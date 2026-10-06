@@ -709,10 +709,11 @@ function patch(from, to) {
   }
 }
 function setHtml(el, html, keep = liveNow) {
-  if (!keep) { el.innerHTML = html; return; }
-  const tpl = document.createElement('template');
-  tpl.innerHTML = html;
-  patch(el, tpl.content);
+  const tpl = html instanceof HTMLTemplateElement ? html : null;
+  if (!keep) { if (tpl) el.replaceChildren(tpl.content); else el.innerHTML = html; return; }
+  const t = tpl || document.createElement('template');
+  if (!tpl) t.innerHTML = html;
+  patch(el, t.content);
 }
 // Nicht auffrischen, während jemand tippt oder gerade einen Knopf drückt
 const busy = el => pressIn === el || (el.contains(document.activeElement) && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName));
@@ -2104,20 +2105,33 @@ $('rot-btn').onclick = () => rotateBuild();
 function openModal(html, live = null) {
   const c = $('modal-card'), same = !$('modal').hidden && modalLive && live && modalLive.toString() === live.toString();
   if (!same) spotSel = null;                                       // anderes Fenster: Markierung weg
-  c.className = 'card'; setHtml(c, html); $('modal').hidden = false; modalLive = live;
+  c.className = 'card'; setHtml(c, frameHtml(html)); $('modal').hidden = false; modalLive = live;
   modalFrame(c);
   const box = spotBox(); if (box) box.classList.add('spot');
 }
 // Fenster mit Reitern (Block 103): feste Größe, gescrollt wird innen, die Reiter bleiben oben stehen. Neuer Reiter → nach
-// oben; dieselbe Seite neu gezeichnet (Hut gewählt, Live-Auffrischen) → Scrollstand bleibt
+// oben; dieselbe Seite neu gezeichnet (Hut gewählt, Live-Auffrischen) → Scrollstand bleibt.
+// Block 103b: Was nach den Reitern kommt, steckt in einem eigenen Scrollbereich (.tab-scroll) – Überschrift und Reiter
+// scrollen gar nicht mit, so federt beim schnellen Wischen (iPad) nur der Inhalt nach, nie die Reiter
+function frameHtml(html) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = html;
+  const tabs = tpl.content.querySelector('.hall-tabs');
+  if (tabs && tabs.parentNode === tpl.content) {
+    const box = document.createElement('div'); box.className = 'tab-scroll';
+    while (tabs.nextSibling) box.appendChild(tabs.nextSibling);
+    tpl.content.appendChild(box);
+  }
+  return tpl;
+}
 let modalTabKey = null;
 function modalFrame(c) {
-  const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on');
+  const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on'), sc = c.querySelector(':scope > .tab-scroll') || c;
   c.classList.toggle('tabbed', !!tabs);
   c.classList.toggle('you-win', !!c.querySelector('.you-tabs'));                       // Figur … Online: alle gleich breit
   c.classList.toggle('help-win', !!c.querySelector('[data-hb]'));
   const key = on ? [...on.attributes].filter(a => a.name.startsWith('data-')).map(a => a.name + '=' + a.value).join() : null;
-  if (key !== modalTabKey && !liveNow) c.scrollTop = 0;
+  if (key !== modalTabKey && !liveNow) sc.scrollTop = 0;
   modalTabKey = key;
 }
 function closeModal() { $('modal').hidden = true; modalLive = null; modalTabKey = null; }

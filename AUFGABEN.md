@@ -1225,3 +1225,6 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       eine feste Breite; gescrollt wird innen, die Reiterleiste bleibt oben stehen (`modalFrame`, Klasse `tabbed`).
       Neuer Reiter → nach oben, dieselbe Seite neu (Hut gewählt) → Scrollstand bleibt. Märchenschloss-Seitenfenster
       ebenso gleich hoch. Test: ordnung.test.js.
+- [x] 103b: Schnelles Wischen (iPad) ließ die klebenden Reiter beim Nachfedern kurz verschwinden. Jetzt stecken Überschrift
+      und Reiter fest im Fenster, nur der Bereich darunter scrollt (`frameHtml` packt ihn in `.tab-scroll`, beim
+      Live-Auffrischen bleibt er dasselbe Element samt Scrollstand). Märchenschloss-Seitenfenster: Reiter scrollen normal mit.

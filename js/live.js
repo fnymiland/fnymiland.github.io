@@ -313,14 +313,14 @@ async function openFriends() {
   frWatch();
   youTab = 'freunde';
   const typed = $('fr-in') ? $('fr-in').value : '';                      // halb getippter Code bleibt beim Neuzeichnen
-  if (!$('fr-box')) openModal(`<div id="fr-box">${youHead('freunde')}<p class="muted" id="fr-wait">Lädt …</p></div>`);
+  if (!$('fr-box')) openModal(`${youHead('freunde')}<div id="fr-box"><p class="muted" id="fr-wait">Lädt …</p></div>`);
   let code = '…', wid = null;
   try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
   if (youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen oder anderen Reiter gewählt
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   openModal(`
-    <div id="fr-box">${youHead('freunde')}
+    ${youHead('freunde')}<div id="fr-box">
     ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
     ${by('freund').length ? by('freund').map(r => row(r, (id, e) => `${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button>`)).join('')
