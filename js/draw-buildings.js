@@ -35,23 +35,27 @@ function hangLamp(K, a, b, up) {
   if (lit) glowQuad([[x - 1, ly], [x + 1, ly], [x + 1, ly + 2 * z], [x - 1, ly + 2 * z]], 20 * z);
 }
 
-// Gleis im Hauptbahnhof (Block 109b): Gleisbett wie die Strecke, die davor anschließt (RAIL_LOOK) – a von −0.95 bis 2
+// Gleis im Hauptbahnhof (Block 109b): Gleisbett wie die Strecke, die davor anschließt (RAIL_LOOK) – a von −0.95 bis 2.
+// Gleiche Maße wie draußen (RAIL_W, RAIL_GAUGE, Schwellen alle 0.125), sonst wäre das Gleis in der Halle doppelt so breit
 function hbfTrack(K, b, lk, hx, hy) {
-  const z = K.z;
+  const z = K.z, W = RAIL_W, rw = 0.013 * lk.rw;
   if (lk.pave) {
     const pl = PATH_LOOK[lk.pave];
-    K.rect(-0.95, b - 0.34, 2, b + 0.34, C(pl.edge)); K.rect(-0.95, b - 0.3, 2, b + 0.3, C(pl.fill));
-    for (let a = -0.85, i = 0; a < 1.95; a += 0.12, i++) for (const d of [-0.22, 0, 0.22]) { const [px, py] = K.P(a + (i % 2) * 0.06, b + d); ellipse(px, py, 1.4 * z, 0.7 * z, C(pl.pat[1] || shade(pl.fill, 0.08))); }
+    K.rect(-0.95, b - W - 0.05, 2, b + W + 0.05, C(pl.edge)); K.rect(-0.95, b - W - 0.02, 2, b + W + 0.02, C(pl.fill));
+    for (let a = -0.88, i = 0; a < 1.95; a += 0.07, i++) for (const d of [-0.15, 0, 0.15]) { const [px, py] = K.P(a + (i % 2) * 0.035, b + d); ellipse(px, py, 0.9 * z, 0.45 * z, C(pl.pat[1] || shade(pl.fill, 0.08))); }
   } else {
-    K.rect(-0.95, b - 0.34, 2, b + 0.34, C(lk.edge)); K.rect(-0.95, b - 0.3, 2, b + 0.3, C(lk.bed));
-    for (let a = -0.85; a < 1.95; a += 0.22) K.rect(a, b - 0.26, a + 0.09, b + 0.26, C(lk.tie));               // Schwellen
+    K.rect(-0.95, b - W - 0.03, 2, b + W + 0.03, C(lk.edge)); K.rect(-0.95, b - W, 2, b + W, C(lk.bed));
+    for (let a = -0.9; a < 1.96; a += 0.125) K.rect(a, b - 0.15, a + 0.04, b + 0.15, C(lk.tie));              // Schwellen
   }
-  for (const d of [-0.15, 0.15]) K.rect(-0.9, b + d - 0.025, 2, b + d + 0.025, C(lk.rail));                     // Schienen
+  for (const d of [-RAIL_GAUGE, RAIL_GAUGE]) {                                                                 // Schienen mit Glanz
+    K.rect(-0.9, b + d - rw, 2, b + d + rw, C(lk.rail));
+    K.rect(-0.9, b + d - 0.004, 2, b + d + 0.004, C('#dfe3e8'), 0.4);
+  }
   if (!lk.tufts && !lk.flowers) return;
   let i = 0;
-  for (const s of [-1, 1]) for (let a = -0.8; a < 1.95; a += lk.flowers ? 0.14 : 0.2, i++) {
-    const h = hash(hx + i, hy + s, 109), [px, py] = K.P(a, b + s * 0.3);
-    if (lk.flowers) { circle(px, py - 0.6 * z, 1.25 * z, C(h < 0.5 ? '#6fb553' : '#7cc463')); circle(px, py - 1.5 * z, 0.95 * z, C(FLOWER_COLS[Math.floor(h * 97) % FLOWER_COLS.length])); continue; }
+  for (const s of [-1, 1]) for (let a = -0.85; a < 1.95; a += lk.flowers ? 0.07 : 0.1, i++) {
+    const h = hash(hx + i, hy + s, 109), [px, py] = K.P(a, b + s * (W + 0.01));
+    if (lk.flowers) { circle(px, py - 0.6 * z, 1.25 * z, C(h < 0.5 ? '#6fb553' : '#7cc463')); circle(px + (h - 0.5) * 1.4 * z, py - 1.5 * z, 0.95 * z, C(FLOWER_COLS[Math.floor(h * 97) % FLOWER_COLS.length])); continue; }
     if (h > 0.55) continue;
     g.strokeStyle = C(lk.tufts); g.lineWidth = 0.6 * z; g.lineCap = 'round'; g.beginPath();
     for (const dd of [-0.9, 0, 0.9]) { g.moveTo(px + dd * z, py); g.lineTo(px + dd * 1.6 * z, py - (1.6 + h * 1.4) * z); }
