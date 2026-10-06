@@ -93,6 +93,19 @@ function thumbRaw(type, lvl = 1, tile = null) {
 
 // Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Verschieben (V)'], ['abriss', '🧹', 'Abreißen (E)']];
+// Zuletzt gebaut (Block 120): die letzten RECENT_MAX Dinge, je Gerät gemerkt; 🕘 neben der Suche zeigt sie in der Leiste
+// (Form, Farbe, Stil gelten wie zuletzt gewählt). Was ohnehin einen Schnellknopf hat, zählt nicht.
+const RECENT_MAX = 8, RECENT_KEY = 'kachelhausen_recent';
+let recentOpen = false;
+function recentList() {
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !QUICK.some(([q]) => q === id)).slice(0, RECENT_MAX) : []; }
+  catch (e) { return []; }
+}
+function noteRecent(id) {
+  if (!ITEMS[id] || QUICK.some(([q]) => q === id)) return;
+  const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
+}
 // „🏗️ Bauen“ → Symbol und Wort getrennt, damit schmale Bildschirme nur das Symbol zeigen können
 function menuLabel(b, label) {
   const m = label.match(/^(\S+)\s+(.+)$/);
@@ -130,8 +143,13 @@ function buildToolbar() {
   const find = document.createElement('button');
   find.className = 'quick find' + (searchQ != null ? ' active' : '');
   find.textContent = '🔍'; find.title = 'Suchen'; find.setAttribute('aria-label', 'Suchen');
-  find.onclick = () => { audio(); searchQ = searchQ == null ? '' : null; if (PHONE) setSheet(searchQ != null); buildToolbar(); };
+  find.onclick = () => { audio(); recentOpen = false; searchQ = searchQ == null ? '' : null; if (PHONE) setSheet(searchQ != null); buildToolbar(); };
   cats.append(find);
+  const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
+  rec.className = 'quick recent' + (recentOpen ? ' active' : '');
+  rec.textContent = '🕘'; rec.title = 'Zuletzt gebaut'; rec.setAttribute('aria-label', 'Zuletzt gebaut');
+  rec.onclick = () => { audio(); recentOpen = !recentOpen; if (recentOpen) searchQ = null; if (PHONE) setSheet(recentOpen); buildToolbar(); };
+  cats.append(rec);
   // Bereiche (Stadt · Herstellen · Einkaufen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
@@ -140,17 +158,22 @@ function buildToolbar() {
   const keep = () => { if (tool !== 'look' && !QUICK.some(([id]) => id === tool) && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (m.id === menuTop && searchQ == null ? ' active' : '');
+    b.className = 'cat' + (m.id === menuTop && searchQ == null && !recentOpen ? ' active' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
     // Handy: der Bereich klappt den Katalog auf (nochmal antippen: zu)
-    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id && searchQ == null)); searchQ = null; menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
+    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id && searchQ == null && !recentOpen)); searchQ = null; recentOpen = false; menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
     cats.append(b);
   }
   // Filter nach Zweck (oder das Suchfeld); darunter eine Zeile mit der Regel des Bereichs
   const subs = $('subcats'), hadFocus = document.activeElement && document.activeElement.id === 'search-in';
   subs.innerHTML = '';
-  if (searchQ != null) {
+  if (recentOpen) {                                                       // Zuletzt gebaut: nur ein Schild statt Filter
+    subs.hidden = false;
+    const l = document.createElement('span'); l.className = 'sub active recent-label';
+    l.textContent = recentList().length ? '🕘 Zuletzt gebaut' : '🕘 Noch nichts – was du baust, steht dann hier';
+    subs.append(l);
+  } else if (searchQ != null) {
     subs.hidden = false;
     const inp = document.createElement('input');
     inp.id = 'search-in'; inp.className = 'search-in'; inp.type = 'search'; inp.placeholder = 'Suchen, z. B. Bäckerei';
@@ -215,7 +238,7 @@ function showCardName(b) {
 function hideCardName() { $('card-name').hidden = true; }
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
-const menuList = () => { const all = searchQ != null ? searchHits(searchQ) : menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };
+const menuList = () => { if (recentOpen) return recentList(); const all = searchQ != null ? searchHits(searchQ) : menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
@@ -2330,6 +2353,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-zuletzt', date: '6. Oktober', title: 'Zuletzt gebaut', items: [
+    '🕘 <b>Schnell wieder bauen:</b> Der Knopf 🕘 neben der Suche zeigt deine letzten 8 gebauten Dinge – ein Tipp, und du baust weiter.',
+  ] },
   { id: '2026-10-06-fluegel', date: '6. Oktober', title: 'Hauptbahnhof mit Seitenflügel', items: [
     '🧳 <b>Gepäckhalle:</b> Im Fenster des Hauptbahnhofs kannst du links oder rechts einen Seitenflügel anbauen. Dann ist der Bahnhof ein Feld breiter (ungerade) – Portal und Eingang liegen mittig auf genau einem Feld, passend zu einem 1er-Weg.',
   ] },

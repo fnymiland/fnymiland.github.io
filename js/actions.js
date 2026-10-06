@@ -578,8 +578,8 @@ function tap(sx, sy, isTouch) {
   }
   if (tool === 'verschieben') dropAt(x, y, moving.kind === 'deco' ? freeSlot(x, y, slot) : slot);
   else if (tool === 'abriss') { if (ds && ds[slot]) removeSmall(x, y, slot); else demolish(x, y); }
-  else if (ITEMS[tool].small) buildSmall(tool, x, y, freeSlot(x, y, slot));
-  else build(tool, x, y);
+  else if (ITEMS[tool].small) { if (buildSmall(tool, x, y, freeSlot(x, y, slot))) noteRecent(tool); }
+  else if (build(tool, x, y)) noteRecent(tool);                             // zuletzt gebaut (Block 120)
 }
 
 // Stufen-Forschung: nächste Stufe kaufen (Ideen)

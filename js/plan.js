@@ -243,6 +243,7 @@ function runPlan() {
   let n = 0;
   batch(() => { for (const [, , run] of info.order) if (run()) n++; });
   if (!n) return false;
+  noteRecent(p.tool);                                                     // zuletzt gebaut (Block 120)
   sfx(ITEMS[p.tool].small || ITEMS[p.tool].edge ? 'deco' : p.tool === 'weg' || p.tool === 'schiene' ? 'road' : 'dig');
   const [ex, ey] = info.order[info.order.length - 1], diff = state.money - money0;
   if (Math.round(diff)) addFloat(ex, ey, (diff > 0 ? '+' : '−') + fmt(Math.abs(diff)), diff > 0 ? '#3f8f43' : '#d9534a');

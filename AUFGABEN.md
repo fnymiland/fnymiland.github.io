@@ -1416,3 +1416,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Felder tragen gespeichert `grass` (ganze Startinsel, nach Rasen/Boden entfernen, Roden, Verschieben einer Anlage); am Meer
       werden sie als Strand gezeichnet, der Pinsel sah aber nur den gespeicherten Wert. Jetzt zählt `grass` wie unberührt (was
       man sieht). Testwelt: alle 153 Sandfelder am Meer nehmen Wiese an. Test: terraform.test.js.
+
+
+## Block 120: Zuletzt gebaut (06.10.2026)
+- [x] Knopf 🕘 neben der Suche: zeigt in der Leiste die letzten 8 gebauten Dinge, neuestes zuerst (Form, Farbe, Stil wie
+      zuletzt gewählt). Gezählt wird nur wirklich Gebautes (Antippen, Linie/Fläche: `noteRecent` in `tap` und `runPlan`), je
+      Gerät in localStorage (`kachelhausen_recent`); was einen eigenen Schnellknopf hat (Weg), zählt nicht. Bereich oder Suche
+      schließen die Liste. Test: zuletzt.test.js.
