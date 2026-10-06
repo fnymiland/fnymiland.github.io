@@ -8,6 +8,11 @@ beforeAll(() => {
     const u = uid => db[uid] || (db[uid] = { meta: null, save: null, idx: {}, bak: {}, n: 0 });
     return { db,
       watchers: [], watchMeta(uid, cb) { this.watchers.push([uid, cb]); return () => {}; },
+      leadW: [], watchLead(uid, cb) { this.leadW.push([uid, cb]); setTimeout(() => cb(u(uid).lead || null), 0); return () => { this.leadW = this.leadW.filter(w => w[1] !== cb); }; },
+      async leadTx(uid, fn) { const cur = u(uid).lead || null, n = fn(cur && JSON.parse(JSON.stringify(cur))); if (n === undefined) return { ok: false, cur };
+        u(uid).lead = n && n.at === true ? { ...n, at: this.now() } : n; const v = u(uid).lead;
+        setTimeout(() => { for (const [w, cb] of this.leadW) if (w === uid) cb(v && JSON.parse(JSON.stringify(v))); }, 0); return { ok: true, cur: v }; },
+      clock: 0, now() { return Date.now() + this.clock; },
       onUser: () => {}, signInGoogle: async () => {}, sendLink: async () => {}, isLink: () => false, finishLink: async () => {}, signOut: async () => {},
       getMeta: async uid => u(uid).meta && JSON.parse(JSON.stringify(u(uid).meta)),
       getSave: async uid => u(uid).save && { ...u(uid).save },
@@ -24,7 +29,7 @@ beforeAll(() => {
 });
 beforeEach(() => {
   game("localStorage.clear(); startNew(); closeModal(); closePanel(); setTool('look'); state.tutorial = -1; state.tipsOff = true");
-  game("cloudApi = makeFakeCloud(); cloudUser = null; cloudState = 'aus'; cloudKnown = null; cloudBusy = false; cloudFreshOk = false; cloudLastUp = 0");
+  game("if (cloudWatchOff) cloudWatchOff(); cloudWatchOff = null; cloudApi = makeFakeCloud(); cloudUser = null; cloudState = 'aus'; cloudKnown = null; cloudBusy = false; cloudFreshOk = false; cloudLastUp = 0; cloudLeadInfo = null; cloudLeadWant = 0; LEAD_WAIT = 20; cloudLeadUi()");
 });
 // eine bespielte Welt: verdient und gebaut
 const play = (earned = 50000, name = 'Bespielt') => game(`state.stats.earned = ${earned}; state.town.name = '${name}'; for (let i = 0; i < 20; i++) state.tiles.set((10 + i) + ',12', { b: 'feld', lvl: 1 }); rebuildCover(); recalc(); save()`);
@@ -231,3 +236,91 @@ describe('Online-Speicher (Block 93)', () => {
     expect(game("document.querySelectorAll('script[src*=\"gstatic\"]').length")).toBe(0);
   });
 });
+
+const tick = (ms = 5) => new Promise(r => setTimeout(r, ms));
+const otherLeads = (name = 'iPad', ago = 0) => game(`cloudApi.db.u1 = cloudApi.db.u1 || { meta: null, save: null, idx: {}, bak: {}, n: 0 }; cloudApi.db.u1.lead = { dev: 'ipad', name: '${name}', at: Date.now() - ${ago} }`);
+describe('Ein Gerät führt (Block 94)', () => {
+  it('frei: wer sich anmeldet, führt', async () => {
+    play();
+    await login(); await tick(); await settle();
+    expect(remote().lead.dev).toBe(game('cloudDevice()'));
+    expect(game('cloudIsLeader()')).toBe(true);
+    expect(game('cloudWatching()')).toBe(false);
+  });
+  it('ein anderes Gerät führt: hier nur zuschauen – Band mit Gerätename, Bauen gesperrt, nichts hochladen', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad');
+    await login(); await tick(); await settle();
+    expect(game('cloudWatching()')).toBe(true);
+    expect(game("document.getElementById('lead-band').textContent")).toMatch(/iPad/);
+    game("setTool('feld')");
+    expect(game('tool')).toBe('look');
+    const n = game('state.tiles.size');
+    game("undoable(() => { state.tiles.set('15,15', { b: 'feld', lvl: 1 }); })");
+    expect(game('state.tiles.size')).toBe(n);
+    expect(await game('cloudUpload(true)')).toBe(false);
+  });
+  it('zuschauen: Änderungen des führenden Geräts kommen immer an, eigene (ohne ↶) werden zurückgesetzt', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad');
+    await login(); await tick(); await settle();
+    game("state.town.name = 'Verbastelt'");
+    await game("cloudSync('zuschauen')"); await settle();
+    expect(game('state.town.name')).toBe('Dort');
+    await putRemote('Dort neu', 200000);
+    for (let i = 0; i < 20 && game('state.town.name') !== 'Dort neu'; i++) { await tick(); await settle(); }
+    expect(game('state.town.name')).toBe('Dort neu');
+  });
+  it('„Hier weiterspielen“: antwortet das führende Gerät nicht, übernimmt dieses nach der Wartezeit', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad');
+    await login(); await tick(); await settle();
+    await game('cloudTakeLead()'); await tick(); await settle();
+    expect(remote().lead.dev).toBe(game('cloudDevice()'));
+    expect(game('cloudWatching()')).toBe(false);
+    expect(game("!!document.getElementById('lead-band')")).toBe(false);
+  });
+  it('führend und ein anderes Gerät bittet: erst sichern, dann übergeben – danach zuschauen', async () => {
+    play(50000, 'Hier');
+    await login(); await tick(); await settle();
+    game("undoable(() => { state.tiles.set('15,15', { b: 'feld', lvl: 1 }); })");     // noch nicht hochgeladen
+    await game("cloudApi.leadTx('u1', cur => ({ ...cur, req: { dev: 'ipad', name: 'iPad' } }))");
+    for (let i = 0; i < 20 && remote().lead.dev !== 'ipad'; i++) { await tick(); await settle(); }
+    expect(remote().lead.dev).toBe('ipad');
+    expect(JSON.parse(remote().save.data).tiles.some(([k]) => k === '15,15')).toBe(true);   // Letztes kam noch mit
+    await tick(); await settle();
+    expect(game('cloudWatching()')).toBe(true);
+  });
+  it('Hintergrund: sichert und gibt frei', async () => {
+    play(50000, 'Hier');
+    await login(); await tick(); await settle();
+    game("undoable(() => { state.tiles.set('15,16', { b: 'feld', lvl: 1 }); })");
+    game("Object.defineProperty(document, 'hidden', { value: true, configurable: true })");   // wie gesperrt
+    try {
+      game('cloudLeaveLead()'); await tick(); await settle(); await tick();
+      expect(remote().lead).toBe(null);
+    } finally { game("delete document.hidden"); }
+    expect(JSON.parse(remote().save.data).tiles.some(([k]) => k === '15,16')).toBe(true);
+  });
+  it('verwaiste Führung (meldet sich über 45 s nicht): wird übernommen, kein Zuschauen', async () => {
+    await putRemote('Dort');
+    otherLeads('iPad', 120000);
+    await login(); await tick(); await settle();
+    expect(game('cloudWatching()')).toBe(false);
+    expect(remote().lead.dev).toBe(game('cloudDevice()'));
+  });
+  it('war offline führend und wurde abgelöst: Rückfrage statt überschreiben; „dieses Gerät“ übernimmt auch die Führung', async () => {
+    play(50000, 'Hier');
+    await login(); await tick(); await settle();
+    game("undoable(() => { state.tiles.set('15,17', { b: 'feld', lvl: 1 }); })");       // offline gebaut, nicht hochgeladen
+    await putRemote('Dort', 200000);
+    otherLeads('iPad');
+    game("cloudLeadInfo = { ...cloudApi.db.u1.lead }");
+    await game("cloudSync('zurück')"); await settle();
+    expect(game('cloudState')).toBe('konflikt');
+    await game("cloudResolve('local', cloudKnown)"); await settle();
+    expect(remote().lead.dev).toBe(game('cloudDevice()'));
+    expect(JSON.parse(remote().save.data).town.name).toBe('Hier');
+  });
+});
+

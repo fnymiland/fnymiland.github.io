@@ -234,6 +234,7 @@ function pickCard(id) {
 }
 
 function setTool(t) {
+  if (t !== 'look' && typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); t = 'look'; }   // zuschauen: nichts bauen (Block 94)
   if (t !== 'verschieben' && moving) cancelMove();
   if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
   if (t !== tool || t === 'look') rotManual = false;   // selbst gedreht: gilt bis zum Werkzeugwechsel (Block 84b)

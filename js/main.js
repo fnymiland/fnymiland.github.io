@@ -147,12 +147,19 @@ function frame(now) {
   const t = Date.now();
   const dt = Math.max(0, Math.min(2, (t - lastTick) / 1000));   // Uhr zurückgestellt: nichts abziehen (Block 84c)
   lastTick = t;
-  earn(dt);
-  state.science += T.sci * boostMul('sci') * dt;
-  produce(dt);
-  peakTick(dt);                                           // bestes Einkommen sinkt langsam (Preise nach Umbau)
+  const live = !(typeof cloudWatching === 'function' && cloudWatching());   // zuschauendes Gerät (Block 94): gerechnet wird nur dort, wo gespielt wird
+  if (live) {
+    earn(dt);
+    state.science += T.sci * boostMul('sci') * dt;
+    produce(dt);
+    peakTick(dt);                                         // bestes Einkommen sinkt langsam (Preise nach Umbau)
+  }
   stepMovers(Math.min(dt, 0.1));
-  if (now - lastSlow > 700) { syncMovers(); checkStars(); collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); starTick(now); fairTick(); marktTick(); parkFestTick(); fzFestTick(); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now; }
+  if (now - lastSlow > 700) {
+    syncMovers(); checkStars();
+    if (live) { collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); fairTick(); marktTick(); parkFestTick(); fzFestTick(); }
+    starTick(now); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now;
+  }
   render(now);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
 }

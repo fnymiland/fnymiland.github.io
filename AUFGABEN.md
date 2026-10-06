@@ -1063,3 +1063,13 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       • Ohne Netz hing Firebase endlos → Zeitgrenze; angemeldet bleibt man auch, wenn der erste Abgleich scheiterte.
       Datenbank von außen geprüft: ohne Anmeldung kein Lesen/Schreiben. cloud.test.js: 21 Fälle.
 
+## Block 94 – Online-Speicher, Stufe 2: ein Gerät führt (06.10.2026)
+- [x] `users/<uid>/lead { dev, name, at, req }`: Nur das führende Gerät rechnet (Taler, Forschung, Ereignisse), baut und lädt
+      hoch. Andere Geräte schauen live zu (`cloudWatching`): Band „👀 Gerade wird auf dem iPhone gespielt · Hier weiterspielen“,
+      Bauen/↶ gesperrt (Hinweis), Basteleien ohne ↶ werden auf den Stand des führenden Geräts zurückgesetzt.
+- [x] „Hier weiterspielen“: Bitte an das führende Gerät (`req`) → es sichert und übergibt; antwortet es nicht (6 s), übernimmt
+      das neue selbst. Hintergrund/gesperrt: sichern und freigeben – das nächste offene Gerät führt von selbst. Herzschlag alle
+      15 s; meldet sich die Führung 45 s nicht (Serverzeit), gilt sie als verwaist und wird übernommen.
+- [x] War ein Gerät offline führend und wurde abgelöst: Rückfrage statt Überschreiben; „Dieses Gerät“ übernimmt die Führung.
+- [x] Gerätename aus dem Browser (iPhone, iPad, Mac, …). Online-Speicher-Fenster zeigt, wo gespielt wird. cloud.test.js: 29 Fälle.
+

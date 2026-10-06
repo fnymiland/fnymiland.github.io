@@ -687,3 +687,10 @@ kbd { display: inline-block; padding: 2px 7px; border-radius: 7px; background: #
 .cloud-old p { flex: 1; margin: 0; font-size: 13px; font-weight: 700; }
 .cloud-mail { width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--brown); padding: 10px 14px; border-radius: 14px;
   border: 2px solid var(--shadow); background: #fff; margin: 4px 0; -webkit-user-select: text; user-select: text; }
+
+/* ---------- Ein Gerät führt (Block 94): Band auf zuschauenden Geräten ---------- */
+#lead-band { position: fixed; z-index: 35; top: 64px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  max-width: calc(100% - 24px); background: var(--brown); color: var(--cream); padding: 8px 10px 8px 16px; border-radius: 99px;
+  box-shadow: 0 4px 0 rgba(60, 40, 20, .35); font-weight: 800; font-size: 14px; }
+#lead-band .lb-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 600px) { #lead-band { top: auto; bottom: calc(var(--bar, 160px) + 10px); } }

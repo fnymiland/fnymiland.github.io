@@ -636,6 +636,7 @@ function undoCommit(s) {
 }
 // Eine Nutzer-Aktion: alles darin wird ein Schritt (beim Verschieben erst, wenn abgelegt ist)
 function undoable(fn) {
+  if (typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); return undefined; }   // zuschauendes Gerät (Block 94)
   if (!undoPending) { undoPending = undoSnap(); undoCut = false; }
   else { undoPending.money = state.money; undoPending.res = { ...state.res }; }   // Ablegen: Taler/Lager erst ab jetzt (verdient und gekauft wird inzwischen weiter)
   try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }

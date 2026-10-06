@@ -13,6 +13,9 @@
 //   • Hochgeladen wird nur, was man selbst gemacht hat (cloudTouched aus undoCommit): CLOUD_QUIET ms nach der letzten
 //     Aktion, bei Dauerbauen spätestens nach CLOUD_EVERY ms, nie öfter als alle CLOUD_GAP ms –
 //     und nur gegen die Version, die dieses Gerät kennt (rev, Transaktion) – sonst wird neu entschieden.
+// Stufe 2 (Block 94): Immer nur ein Gerät führt (users/<uid>/lead { dev, name, at, req }). Nur dort wird gerechnet, gebaut und
+// hochgeladen; andere Geräte schauen live zu (cloudWatching) und können per „Hier weiterspielen“ übernehmen – das führende
+// sichert dann noch und übergibt. Geht das führende in den Hintergrund, sichert es und gibt frei; das nächste übernimmt von selbst.
 // Firebase wird erst geladen, wenn man sich anmeldet (oder angemeldet war): wer offline spielt, merkt nichts davon.
 // ---------------------------------------------------------------------------
 const FIREBASE_CONFIG = {
@@ -101,6 +104,13 @@ async function cloudSyncNow(reason) {
     const uid = cloudUser.uid, m = cloudMeta(), cloud = await cloudApi.getMeta(uid);
     cloudKnown = cloud;
     const local = localSave(), mine = m.uid === uid;
+    // zuschauen: immer den Stand des führenden Geräts. Nur wenn hier noch Ungesichertes aus der eigenen Führungszeit liegt
+    // (acts, z. B. offline weitergespielt), entscheidet der normale Weg – dann wird gefragt statt überschrieben.
+    if (cloudWatching() && !(m.acts > 0)) {
+      if (cloud && (cloud.rev !== m.rev || cloudDirty(local, m))) await cloudTakeNow(cloud, local, 'anderes Gerät', true, true);
+      else cloudState = 'ok';
+      return;
+    }
     const act = cloudDecide({ local: worldSum(local), cloud, mine, rev: m.rev, acts: cloudDirty(local, m), own: !!cloud && cloud.by === cloudDevice() });
     if (act === 'upload') await cloudUploadNow(true, local);
     else if (act === 'take') await cloudTakeNow(cloud, local, reason, mine && !cloudDirty(local, m));
@@ -111,7 +121,7 @@ async function cloudSyncNow(reason) {
 // Hochladen: erst die nächste Version beanspruchen (nur, wenn die Cloud noch auf der bekannten steht), dann den Stand schreiben.
 // Eine andere Welt (neue Insel, Datei geladen, früherer Stand) ersetzt die in der Cloud nie, ohne dass die vorher gesichert wird.
 async function cloudUploadNow(force, local, backedUp = false) {
-  if (!cloudUser || cloudState === 'konflikt' || cloudOff()) return false;
+  if (!cloudUser || cloudState === 'konflikt' || cloudOff() || cloudWatching()) return false;   // nur das führende Gerät lädt hoch
   const m = cloudMeta(), uid = cloudUser.uid;
   if (!force && !cloudDirty(local, m)) return false;
   const sum = worldSum(local), acts0 = m.acts || 0;
@@ -135,14 +145,14 @@ async function cloudUploadNow(force, local, backedUp = false) {
 }
 // Cloud-Stand übernehmen. Der hiesige kommt vorher in die Sicherungen – außer er ist genau der zuletzt abgeglichene (live)
 // oder ganz neu. Hat der Spieler inzwischen selbst etwas geändert, wird nicht übernommen, sondern neu entschieden.
-async function cloudTakeNow(cloud, local, reason, same = false) {
+async function cloudTakeNow(cloud, local, reason, same = false, follow = false) {
   const uid = cloudUser.uid, s = await cloudApi.getSave(uid);
   if (!s || !s.data) { cloudState = 'ok'; return; }
   if (s.rev !== cloud.rev && cloudTakeTries++ < 3) { cloudState = 'ok'; setTimeout(() => cloudSync('nachladen'), 1500); return; }   // Stand ist noch unterwegs
   cloudTakeTries = 0;                                       // kam er nie an (Gerät mittendrin weg): der letzte vollständige Stand gilt
   const parsed = parseSave(JSON.parse(s.data));             // wirft bei Unsinn – dann bleibt alles, wie es ist
   const m = cloudMeta();
-  if (same && cloudDirty(localSave(), m)) { cloudState = 'ok'; setTimeout(() => cloudSync('selbst geändert'), 0); return; }
+  if (same && !follow && cloudDirty(localSave(), m)) { cloudState = 'ok'; setTimeout(() => cloudSync('selbst geändert'), 0); return; }
   const ls = worldSum(local);
   if (!same && (ls.earned >= 100 || ls.tiles > 5)) await cloudBackup(local, 'Dieses Gerät, vor dem Laden aus der Cloud');
   const keepCam = reason === 'anderes Gerät' && state.town.name === parsed.town.name ? { ...cam } : null;   // live: Blick bleibt, wo er ist
@@ -181,6 +191,10 @@ function cloudResolve(pick, cloud) {
     const uid = cloudUser.uid, local = localSave();
     try {
       if (pick === 'local') {
+        if (cloudApi.leadTx) {                                                   // wer diesen Stand wählt, spielt hier weiter
+          await cloudApi.leadTx(uid, () => leadMe()).catch(() => {});
+          cloudLeadInfo = { dev: cloudDevice(), name: deviceName(), at: cloudNow() };
+        }
         const s = await cloudApi.getSave(uid);
         if (s && s.data) await cloudBackup(JSON.parse(s.data), 'Cloud-Stand, ersetzt durch ein anderes Gerät');
         setCloudMeta({ ...cloudMeta(), uid, rev: cloud.rev, acts: 1 });
@@ -207,10 +221,13 @@ function cloudOnUser(u) {
   cloudState = 'laden';
   cloudSync('Anmeldung');
   // live horchen: hat ein anderes Gerät eine neue Version hochgeladen, gleich abgleichen (ohne eigene Änderungen: übernehmen)
-  if (cloudApi.watchMeta) cloudWatchOff = cloudApi.watchMeta(u.uid, meta => {
+  const offMeta = cloudApi.watchMeta ? cloudApi.watchMeta(u.uid, meta => {
     if (!meta || !cloudUser || meta.by === cloudDevice() || meta.rev === cloudMeta().rev) return;
     cloudSync('anderes Gerät');
-  });
+  }) : () => {};
+  const offLead = cloudApi.watchLead ? cloudApi.watchLead(u.uid, lead => cloudOnLead(lead)) : () => {};
+  cloudWatchOff = () => { offMeta(); offLead(); cloudLeadInfo = null; cloudLeadUi(); };
+  if (!document.hidden) cloudQ.then(() => cloudClaimLead());                      // nach dem ersten Abgleich: führen, wenn frei
 }
 async function cloudReady() {
   if (cloudApi) return cloudApi;
@@ -273,7 +290,9 @@ async function openCloud() {
   openModal(`
     <h2>☁️ Online-Speicher</h2>
     <p>Angemeldet als <b>${escHtml(cloudUser.name)}</b></p>
-    <div class="status"><div class="${cloudState === 'ok' ? 'ok' : cloudState === 'konflikt' || cloudState === 'fehler' ? 'bad' : ''}">${cloudStateText()}</div></div>
+    <div class="status"><div class="${cloudState === 'ok' ? 'ok' : cloudState === 'konflikt' || cloudState === 'fehler' ? 'bad' : ''}">${cloudStateText()}</div>
+      <div>${cloudWatching() ? `👀 Gerade wird auf dem ${escHtml(cloudLeadInfo.name || 'anderen Gerät')} gespielt – hier nur zuschauen` : cloudIsLeader() ? `🎮 Gespielt wird hier (${deviceName()})` : ''}</div></div>
+    ${cloudWatching() ? '<div class="row"><button class="btn" id="c-lead" style="flex:1">🎮 Hier weiterspielen</button></div>' : ''}
     <div class="row"><button class="btn" id="c-now" style="flex:1">☁️ Jetzt sichern</button></div>
     ${cloudState === 'konflikt' ? '<div class="row"><button class="btn" id="c-ask" style="flex:1">Stand wählen</button></div>' : ''}
     <div class="label">🕘 Frühere Stände</div>
@@ -281,6 +300,7 @@ async function openCloud() {
       <button class="btn ghost small" data-cback="${escHtml(b.id)}">Zurückholen</button></div>`).join('') : '<p class="muted">Noch keine – hier landet jeder Stand, der ersetzt wurde.</p>'}
     <div class="row"><button class="btn ghost" id="c-out">Abmelden</button><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   $('m-close').onclick = closeModal;
+  if ($('c-lead')) $('c-lead').onclick = () => { closeModal(); cloudTakeLead(); };
   $('c-now').onclick = async () => { await cloudSync('Knopf'); if (cloudState === 'ok') { await cloudUpload(true); toast('☁️ Gesichert'); } openCloud(); };
   if ($('c-ask')) $('c-ask').onclick = () => { cloudState = 'ok'; cloudSync('Knopf'); };
   $('c-out').onclick = () => {
@@ -332,6 +352,8 @@ async function cloudFirebase() {
   for (const f of ['firebase-app-compat.js', 'firebase-auth-compat.js', 'firebase-database-compat.js']) await loadScript(base + f);
   const fb = window.firebase, app = fb.apps.length ? fb.app() : fb.initializeApp(FIREBASE_CONFIG), auth = app.auth(), db = app.database();
   const ref = (uid, p) => db.ref(`users/${uid}/${p}`);
+  let serverOffset = 0;                                                            // Uhr des Geräts gegen die des Servers (für „wie alt ist die Führung“)
+  db.ref('.info/serverTimeOffset').on('value', s => { serverOffset = s.val() || 0; });
   const T = (p, ms = 20000) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('Zeitüberschreitung')), ms))]);
   return {
     onUser: cb => auth.onAuthStateChanged(cb),
@@ -341,6 +363,13 @@ async function cloudFirebase() {
     finishLink: (mail, href) => auth.signInWithEmailLink(mail, href),
     signOut: () => auth.signOut(),
     watchMeta: (uid, cb) => { const r = ref(uid, 'meta'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
+    watchLead: (uid, cb) => { const r = ref(uid, 'lead'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
+    // Führung ändern: fn(aktuell) → neuer Eintrag | null (frei) | undefined (nichts tun); at wird zur Serverzeit
+    leadTx: async (uid, fn) => {
+      const r = await T(ref(uid, 'lead').transaction(cur => { const n = fn(cur); return n && n.at === true ? { ...n, at: fb.database.ServerValue.TIMESTAMP } : n; }, undefined, false));
+      return { ok: r.committed, cur: r.snapshot.val() };
+    },
+    now: () => Date.now() + serverOffset,
     getMeta: async uid => (await T(ref(uid, 'meta').get())).val(),
     getSave: async uid => (await T(ref(uid, 'save').get(), 60000)).val(),
     // nächste Version beanspruchen, nur wenn die Cloud noch auf expect steht
@@ -361,6 +390,112 @@ async function cloudFirebase() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Stufe 2: ein Gerät führt (Block 94)
+// ---------------------------------------------------------------------------
+let LEAD_BEAT = 15000, LEAD_STALE = 45000, LEAD_WAIT = 6000;   // let: im Test kürzer
+let cloudLeadInfo = null, cloudLeadWant = 0, cloudBlockedAt = 0;
+// Gerätename für „Gerade wird auf dem … gespielt“
+function deviceName() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android-Handy' : 'Android-Tablet';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows-PC';
+  return 'anderen Gerät';
+}
+const cloudNow = () => (cloudApi && cloudApi.now ? cloudApi.now() : Date.now());
+const leadStale = l => !l || typeof l.at !== 'number' || cloudNow() - l.at > LEAD_STALE;
+const cloudIsLeader = () => !!cloudUser && !!cloudLeadInfo && cloudLeadInfo.dev === cloudDevice();
+// zuschauen: angemeldet, verbunden, und ein anderes Gerät führt gerade (und meldet sich)
+function cloudWatching() {
+  return !!cloudUser && !!cloudLeadInfo && cloudLeadInfo.dev !== cloudDevice() && !leadStale(cloudLeadInfo)
+    && cloudState !== 'offline' && cloudState !== 'konflikt';
+}
+function cloudBlocked() {
+  if (Date.now() - cloudBlockedAt < 2500) return;
+  cloudBlockedAt = Date.now();
+  toast(`👀 Gerade wird auf dem ${(cloudLeadInfo && cloudLeadInfo.name) || 'anderen Gerät'} gespielt – zum Bauen oben „Hier weiterspielen“`);
+}
+const leadMe = () => ({ dev: cloudDevice(), name: deviceName(), at: true });   // at: true = Serverzeit
+// Führen, wenn frei (oder die Führung schon lange nichts von sich hören ließ)
+function cloudClaimLead() {
+  if (!cloudUser || cloudOff() || document.hidden || !cloudApi.leadTx) return Promise.resolve(false);
+  const me = cloudDevice();
+  return cloudApi.leadTx(cloudUser.uid, cur => (!cur || cur.dev === me || leadStale(cur)) ? leadMe() : undefined)
+    .then(r => r.ok).catch(() => false);
+}
+// „Hier weiterspielen“: das führende Gerät bitten zu übergeben; antwortet es nicht, nach LEAD_WAIT selbst übernehmen
+async function cloudTakeLead() {
+  if (!cloudUser) return;
+  const me = cloudDevice(), want = cloudLeadWant = Date.now();
+  cloudLeadUi();
+  try {
+    await cloudApi.leadTx(cloudUser.uid, cur => (!cur || leadStale(cur) || cur.dev === me) ? leadMe() : { ...cur, req: { dev: me, name: deviceName() } });
+    await new Promise(r => setTimeout(r, LEAD_WAIT));
+    if (cloudLeadWant !== want || cloudIsLeader()) return;
+    await cloudApi.leadTx(cloudUser.uid, cur => (!cur || cur.dev === me || (cur.req && cur.req.dev === me) || leadStale(cur)) ? leadMe() : undefined);
+  } catch (e) { toast('☁️ Übernehmen hat nicht geklappt – später nochmal'); }
+  finally { if (cloudLeadWant === want) { cloudLeadWant = 0; cloudLeadUi(); } }
+}
+// Hintergrund: sichern, dann freigeben
+function cloudLeaveLead() {
+  if (!cloudUser || !cloudApi.leadTx) return;
+  const me = cloudDevice(), uid = cloudUser.uid;
+  cloudRun(async () => {
+    try { await cloudUploadNow(false, localSave()); } catch (e) { /* Stand bleibt hier und geht beim nächsten Mal hoch */ }
+    await cloudApi.leadTx(uid, cur => cur && cur.dev === me ? null : undefined).catch(() => {});
+  });
+}
+// Neuer Stand der Führung aus der Cloud
+function cloudOnLead(lead) {
+  const was = cloudIsLeader();
+  cloudLeadInfo = lead;
+  const me = cloudDevice();
+  if (lead && lead.dev === me && lead.req && lead.req.dev !== me) {            // ein anderes Gerät möchte: sichern und übergeben
+    const req = lead.req;
+    cloudRun(async () => {
+      try { await cloudUploadNow(false, localSave()); } catch (e) { /* übergeben trotzdem – die Rückfrage fängt es auf */ }
+      await cloudApi.leadTx(cloudUser.uid, cur => cur && cur.dev === me && cur.req && cur.req.dev === req.dev ? { dev: req.dev, name: req.name, at: true } : undefined).catch(() => {});
+    });
+    toast(`📱 Jetzt wird auf dem ${req.name} weitergespielt`);
+  }
+  if (!was && cloudIsLeader()) {                                                 // jetzt führt dieses Gerät: Neuestes holen, dann spielen
+    if (tool !== 'look') setTool('look');
+    cloudSync('Führung');
+    if (cloudLeadWant) toast('🎮 Du spielst jetzt hier');
+    cloudLeadWant = 0;
+  }
+  if (was && !cloudIsLeader() && tool !== 'look') setTool('look');
+  if (!lead && cloudUser && !document.hidden) cloudClaimLead();                 // frei geworden: übernehmen
+  cloudLeadUi();
+}
+// Band oben: wer gerade spielt, und der Knopf zum Übernehmen
+function cloudLeadUi() {
+  let el = document.getElementById('lead-band');
+  const show = cloudWatching();
+  if (!show) { if (el) el.remove(); return; }
+  if (!el) {
+    const w = document.createElement('div');
+    w.innerHTML = '<div id="lead-band" role="status"><span class="lb-text"></span><button class="btn small" id="lead-take">Hier weiterspielen</button></div>';
+    el = w.firstChild; document.body.appendChild(el);
+    el.querySelector('#lead-take').onclick = () => cloudTakeLead();
+  }
+  el.querySelector('.lb-text').textContent = `👀 Gerade wird auf dem ${cloudLeadInfo.name || 'anderen Gerät'} gespielt`;
+  const b = el.querySelector('#lead-take');
+  b.disabled = !!cloudLeadWant; b.textContent = cloudLeadWant ? 'Wird übergeben …' : 'Hier weiterspielen';
+}
+// Herzschlag: das führende Gerät meldet sich; ist die Führung verwaist, übernimmt ein offenes Gerät
+setInterval(() => {
+  if (!cloudUser || document.hidden || cloudOff()) return;
+  const me = cloudDevice();
+  if (!cloudApi || !cloudApi.leadTx) return;
+  if (cloudIsLeader()) cloudApi.leadTx(cloudUser.uid, cur => cur && cur.dev === me ? { ...cur, at: true } : undefined).catch(() => {});
+  else if (cloudLeadInfo === null || leadStale(cloudLeadInfo)) cloudClaimLead();
+  cloudLeadUi();
+}, LEAD_BEAT);
+
 // Start: war man angemeldet oder kommt man über den Link aus der E-Mail, Firebase im Hintergrund laden
 function cloudBoot() {
   if (cloudOff()) return;
@@ -376,15 +511,19 @@ function cloudDue(now = Date.now()) {
 // Änderungen, die nicht über ↶ laufen (Farben, Forschung, Erlasse …): alle paar Sekunden am Fingerabdruck erkennen
 let cloudSigAt = 0;
 function cloudWatchLocal(now = Date.now()) {
-  if (!cloudUser || cloudState !== 'ok' || cloudBusy || now - cloudSigAt < 8000) return;
+  if (!cloudUser || cloudState !== 'ok' || cloudBusy || now - cloudSigAt < 8000) return;   // (auch beim Zuschauen)
   cloudSigAt = now;
   const m = cloudMeta();
-  if (!(m.acts > 0) && m.sig && worldSig(localSave()) !== m.sig) cloudTouched();
+  if (!(m.acts > 0) && m.sig && worldSig(localSave()) !== m.sig) {
+    if (cloudWatching()) { cloudBlocked(); cloudSync('zuschauen'); }        // zuschauen: zurück auf den Stand des führenden Geräts
+    else cloudTouched();
+  }
 }
 setInterval(() => { cloudWatchLocal(); if (cloudDue()) cloudUpload().catch(() => { cloudState = 'offline'; }); }, 2000);
 document.addEventListener('visibilitychange', () => {
   if (!cloudUser) return;
-  if (document.hidden) { save(); cloudUpload().catch(() => {}); } else cloudSync('zurück');   // cloudUpload lädt nur Geändertes
+  if (document.hidden) { save(); cloudLeaveLead(); }                         // sichern und Führung freigeben (Block 94)
+  else { cloudSync('zurück'); cloudQ.then(() => cloudClaimLead()); }
 });
 window.addEventListener('online', () => { if (cloudUser && cloudState === 'offline') { cloudState = 'ok'; cloudSync('online'); } });
 // Das Spiel ist in einem zweiten Fenster/Tab offen und speichert dort: beide teilen sich den Browser-Speicher – dieses hier lädt

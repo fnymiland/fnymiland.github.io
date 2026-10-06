@@ -358,6 +358,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Eigene Aktionen zählt `undoCommit` (`cloudTouched`) – wer Spielerisches ohne `undoable` ändert, ruft es selbst.
     Wer den ganzen Stand ersetzt (Neue Insel, Datei laden), ruft `cloudNewWorld()`. Neue Felder im Spielstand müssen
     `parseSave` auch für Cloud-Stände verkraften (dieselbe Datei wie im Browser).
+    Stufe 2 (Block 94): Wer etwas am Spielstand ändert, prüft vorher `cloudWatching()` (zuschauendes Gerät) – `undoable` und
+    `setTool` tun das schon; die Spielschleife rechnet nur, wenn nicht zugeschaut wird.
 92. **Hilfe am Ort** (Block 92, js/help.js): Was Spieler nicht verstehen könnten, bekommt `data-help="res:…|wish:…|term:…|b:…"`
     (`helpAttr`) – ein Klick öffnet die Sprechblase, ohne eigene Verdrahtung (Listener am Dokument, übersteht das Neuzeichnen).
     Rohstoffe und Gebäude erklärt `helpEntry` aus den Spieldaten; neue Wünsche brauchen einen Text in `WISH_HELP`, neue Begriffe
