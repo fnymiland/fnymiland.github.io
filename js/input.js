@@ -156,6 +156,10 @@ canvas.addEventListener('wheel', e => {
 // Stadt, Bewohner) bleibt es, zum Einfügen.
 const keepContextMenu = el => !!(el && el.closest && el.closest('input, textarea, [contenteditable="true"]'));
 document.addEventListener('contextmenu', e => { if (!keepContextMenu(e.target)) e.preventDefault(); }, true);
+// Kein Seiten-Zoom (Block 110): Safari auf dem iPad übergeht user-scalable=no – ein aus Versehen doppelt getippter Knopf oder
+// zwei Finger auf einem Fenster zoomten die ganze Seite heran. Die Karte zoomt weiter selbst (Zeiger, Mausrad am canvas).
+for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, e => e.preventDefault(), { passive: false });
+document.addEventListener('wheel', e => { if (e.ctrlKey && e.target !== canvas) e.preventDefault(); }, { passive: false });   // Trackpad-Zoom über Fenstern
 
 function setHover(sx, sy) {
   const sa = slotAt(sx, sy);

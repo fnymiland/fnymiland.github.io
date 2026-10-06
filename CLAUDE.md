@@ -356,6 +356,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+110. **Kein Seiten-Zoom** (Block 110): html/body haben `touch-action: pan-x pan-y`, Gesten/Strg-Mausrad fängt input.js ab.
+    Wer etwas Eigenes mit Gesten baut (wie die Karte), gibt dem Element `touch-action: none` und behandelt Zeiger selbst.
 109. **Gleis-Stile** (Block 109): Das Gleisbett ist eine Form in `DECO_LOOKS.schiene` (`t.form`, Zeichnung `RAIL_LOOK` über
     `railLookOf`; Brücken immer Schotter/Holz). Gleise liegen im Boden-Bild: wer `t.form` an Gleisen ändert, zählt
     `groundVersion` hoch. Neu Gebautes bekommt Form/Farbe nur über `decoLookNew` – `paintNewOf` liefert nur Wand/Dach/Fenster.

@@ -16,6 +16,7 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
+  touch-action: pan-x pan-y;          /* kein Seiten-Zoom per Doppeltippen/zwei Fingern (iPad, Block 110) – Wischen in Fenstern geht */
   background: #6cc6e0;
   font-family: 'Nunito', ui-rounded, 'SF Pro Rounded', system-ui, sans-serif;
   color: var(--brown);

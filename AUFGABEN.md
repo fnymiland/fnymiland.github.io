@@ -1309,3 +1309,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       (`kPlanter`, `hangBasket`, `hangLamp`). Hauptbahnhof: Kübel an den Bahnsteigenden und am Portal, Blumenkästen zur Straße.
 - [x] Fehler gefunden: `paintNewOf` gab alles aus `paintNew` an neu Gebautes weiter – auch eine nicht gekaufte Brunnenform.
       Jetzt nur Wand/Dach/Fenster; Formen/Farben laufen über `decoLookNew`. Test: bahn-gemuetlich.test.js.
+
+
+## Block 110: Kein Seiten-Zoom auf dem iPad (06.10.2026)
+- [x] Ein aus Versehen doppelt getippter Knopf (oder zwei Finger auf einem Fenster) zoomte die ganze Seite heran – Safari
+      übergeht `user-scalable=no`. Jetzt: `touch-action: pan-x pan-y` auf html/body (Wischen in Fenstern und Leisten geht),
+      `maximum-scale=1`, Safari-Gesten (`gesturestart/-change/-end`) und Trackpad-Zoom (Strg + Mausrad) über Fenstern
+      abgefangen. Die Karte zoomt weiter selbst (#world: `touch-action: none`, Zeiger-Ereignisse). Test: kein-zoom.test.js.
