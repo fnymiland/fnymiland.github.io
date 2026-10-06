@@ -234,7 +234,7 @@ function pickCard(id) {
 }
 
 function setTool(t) {
-  if (t !== 'look' && typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); t = 'look'; }   // zuschauen: nichts bauen (Block 94)
+  if (t !== 'look' && typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); t = 'look'; }   // zuschauen/Besuch: nichts bauen (Block 94/95)
   if (t !== 'verschieben' && moving) cancelMove();
   if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
   if (t !== tool || t === 'look') rotManual = false;   // selbst gedreht: gilt bis zum Werkzeugwechsel (Block 84b)
@@ -2204,6 +2204,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-friends">👥 Freunde & Besuch</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-cloud">☁️ Online-Speicher${cloudState === 'konflikt' ? ' · ⚠️ bitte Stand wählen' : cloudUser ? ' · angemeldet' : ''}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
     <div class="row">
@@ -2215,6 +2216,7 @@ function showMenu() {
   $('m-help').onclick = () => openHelp();
   $('m-lex').onclick = () => openLexikon();
   $('m-cloud').onclick = () => openCloud();
+  $('m-friends').onclick = () => openFriends();
   $('m-news').onclick = showNews;
   $('m-tips').onclick = openTipBook;
   $('m-diary').onclick = () => openDiary();

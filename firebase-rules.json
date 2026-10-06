@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "worlds": {
+      "$wid": {
+        ".read": "data.child('open').val() === true || (auth != null && (data.child('owner').val() === auth.uid || root.child('fr').child(data.child('owner').val()).child(auth.uid).child('st').val() === 'freund'))",
+        ".write": "auth != null && (data.child('owner').val() === auth.uid || (!data.exists() && newData.child('owner').val() === auth.uid))"
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))"
+      }
+    },
+    "fr": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$other": {
+          ".write": "auth != null && (auth.uid === $uid || (auth.uid === $other && (!newData.exists() || (!data.exists() && newData.child('st').val() === 'anfrage') || (data.child('st').val() === 'gesendet' && newData.child('st').val() === 'freund') || (data.child('st').val() === 'freund' && newData.child('st').val() === 'freund'))))"
+        }
+      }
+    }
+  }
+}

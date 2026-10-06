@@ -75,7 +75,7 @@ function probeScene() {
   buildToolbar();
 }
 
-const saved = PROBE ? null : load();
+const saved = PROBE || VISIT ? null : load();
 resize();
 if (PROBE) {
   probeScene();
@@ -96,6 +96,8 @@ if (PROBE) {
   afterLoad();
   buildToolbar();
   newsAfterLoad(true);
+} else if (VISIT) {
+  startNew();                                      // Platzhalter, bis die besuchte Insel da ist (live.js: visitBoot)
 } else {
   startNew();
   showIntro(true);
@@ -147,7 +149,7 @@ function frame(now) {
   const t = Date.now();
   const dt = Math.max(0, Math.min(2, (t - lastTick) / 1000));   // Uhr zurückgestellt: nichts abziehen (Block 84c)
   lastTick = t;
-  const live = !(typeof cloudWatching === 'function' && cloudWatching());   // zuschauendes Gerät (Block 94): gerechnet wird nur dort, wo gespielt wird
+  const live = !(typeof viewOnly === 'function' && viewOnly());   // zuschauen/Besuch (Block 94/95): gerechnet wird nur dort, wo gespielt wird
   if (live) {
     earn(dt);
     state.science += T.sci * boostMul('sci') * dt;

@@ -694,3 +694,19 @@ kbd { display: inline-block; padding: 2px 7px; border-radius: 7px; background: #
   box-shadow: 0 4px 0 rgba(60, 40, 20, .35); font-weight: 800; font-size: 14px; }
 #lead-band .lb-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 600px) { #lead-band { top: auto; bottom: calc(var(--bar, 160px) + 10px); } }
+
+/* ---------- Stufe 3 (Block 95): Besuch, Freunde ---------- */
+body.visiting #money-btn, body.visiting #sci-btn, body.visiting #store-btn, body.visiting #menu-btn, body.visiting #goal,
+body.visiting #toolbar, body.visiting #hint, body.visiting #style-bar, body.visiting #rot-btn { display: none !important; }
+#visit-band { position: fixed; z-index: 35; top: 64px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px;
+  max-width: calc(100% - 24px); background: var(--green-d); color: var(--cream); padding: 8px 10px 8px 16px; border-radius: 99px;
+  box-shadow: 0 4px 0 rgba(30, 70, 30, .35); font-weight: 800; font-size: 14px; }
+#visit-band .vb-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#visit-band .btn { background: var(--cream); color: var(--brown); box-shadow: 0 3px 0 var(--shadow); }
+.fr-code, .fr-add, .fr-row { display: flex; align-items: center; gap: 8px; background: var(--cream2); border-radius: 12px; padding: 6px 10px; margin: 5px 0; }
+.fr-code b { font-size: 18px; letter-spacing: 1px; flex: 1; }
+.fr-code small { flex: 1; overflow-wrap: anywhere; font-weight: 700; }
+.fr-add { background: none; padding: 0; }
+.fr-add input { flex: 1; margin: 0; }
+.fr-row span:first-child { flex: 1; font-weight: 800; }
+.fr-btns { display: flex; gap: 6px; align-items: center; }

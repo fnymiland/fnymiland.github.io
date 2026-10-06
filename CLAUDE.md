@@ -352,6 +352,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+95. **Live-Spiegel, Besuch, Freunde** (Block 95, js/live.js): Was im Spielstand neu dazukommt, ordnet `liveSplit` zu – große
+    Karten in `LIVE_MAPS`, Laufendes in `LIVE_ECO`, Privates (nicht für Besucher) in `LIVE_PRIV`, Gerätekram in `LIVE_LOCAL`,
+    alles andere landet im öffentlichen „Rest“. Besucher sehen nur `worlds/<wid>` – Privates nie dort hineinschreiben.
+    Besuchsmodus (`VISIT`) speichert nie (wie die Testwelt); Sperren über `viewOnly()`. Regeln: firebase-rules.json – bei
+    neuen Pfaden dort ergänzen und dem Nutzer zum Einfügen geben.
 93. **Online-Speicher** (Block 93, js/cloud.js): Nur über `cloudApi` (Adapter; im Test eine Attrappe) und die Regeln in
     `cloudDecide` (reine Funktion, Tabellentest). Nie hochladen ohne `claim` gegen die bekannte `rev`; eine leere Welt
     (`freshSum`) nie über eine bespielte; bevor eine andere Welt (`sum.seed`) die Cloud ersetzt, die alte in die Sicherungen.

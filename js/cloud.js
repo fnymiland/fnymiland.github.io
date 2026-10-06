@@ -45,7 +45,7 @@ function cloudDevice() {
   try { let d = sessionStorage.getItem(CLOUD_KEY + '_dev'); if (!d) { d = Math.random().toString(36).slice(2, 10); sessionStorage.setItem(CLOUD_KEY + '_dev', d); } return d; }
   catch (e) { return cloudDevice.mem || (cloudDevice.mem = Math.random().toString(36).slice(2, 10)); }
 }
-function cloudOff() { return !!(PROBE || TESTWELT); }          // Testwelt/Probeansicht: nie in die Cloud (sonst ersetzt sie die echte Insel)
+function cloudOff() { return !!(PROBE || TESTWELT || VISIT); }          // Testwelt/Probeansicht: nie in die Cloud (sonst ersetzt sie die echte Insel)
 // eigene Aktion (aus undoCommit): ab jetzt hat dieses Gerät etwas, das in die Cloud gehört
 function cloudTouched() { if (!cloudUser) return; const m = cloudMeta(); m.acts = (m.acts || 0) + 1; setCloudMeta(m); cloudActAt = Date.now(); }
 // Bewusst eine ganz andere Welt (Neue Insel, Datei geladen): darf auch leer hochgeladen werden – die alte wird dabei gesichert
@@ -139,6 +139,7 @@ async function cloudUploadNow(force, local, backedUp = false) {
   if (!claim.ok) { cloudKnown = claim.cur; setTimeout(() => cloudSync('andere Version'), 0); return false; }
   cloudKnown = { rev: claim.rev, by: cloudDevice(), sum };
   await cloudApi.putSave(uid, { rev: claim.rev, data: JSON.stringify(local) });
+  if (typeof liveAfterUpload === 'function') liveAfterUpload(claim.rev);       // Spiegel kennt jetzt diese Version (Block 95)
   const now = cloudMeta();                                                       // was während des Hochladens dazukam, zählt weiter
   setCloudMeta({ ...now, uid, rev: claim.rev, acts: Math.max(0, (now.acts || 0) - acts0), sig: worldSig(local) });
   cloudLastUp = Date.now(); cloudFreshOk = false; cloudState = 'ok';
@@ -216,7 +217,7 @@ function cloudResolve(pick, cloud) {
 function cloudOnUser(u) {
   if (cloudWatchOff) { cloudWatchOff(); cloudWatchOff = null; }
   if (cloudOff()) u = null;                                        // Testwelt: nie verbinden
-  cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet' } : null;
+  cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet', display: u.displayName || '' } : null;
   if (!u) { cloudState = 'aus'; return; }
   setCloudMeta({ ...cloudMeta(), login: true });                  // beim nächsten Start gleich wieder verbinden
   cloudState = 'laden';
@@ -224,6 +225,8 @@ function cloudOnUser(u) {
   // live horchen: hat ein anderes Gerät eine neue Version hochgeladen, gleich abgleichen (ohne eigene Änderungen: übernehmen)
   const offMeta = cloudApi.watchMeta ? cloudApi.watchMeta(u.uid, meta => {
     if (!meta || !cloudUser || meta.by === cloudDevice() || meta.rev === cloudMeta().rev) return;
+    // Live-Spiegel läuft (Block 95): der bringt die Version gleich mit – nur wenn nicht, den ganzen Stand holen
+    if (typeof liveFollowing === 'function' && liveFollowing()) { setTimeout(() => { if (meta.rev > (cloudMeta().rev || 0)) cloudSync('anderes Gerät'); }, 4000); return; }
     cloudSync('anderes Gerät');
   }) : () => {};
   const offLead = cloudApi.watchLead ? cloudApi.watchLead(u.uid, lead => cloudOnLead(lead)) : () => {};
@@ -341,6 +344,13 @@ async function cloudFirebase() {
       return { ok: r.committed, cur: r.snapshot.val() };
     },
     now: () => Date.now() + serverOffset,
+    // allgemein (Block 95): Pfade relativ zur Wurzel
+    get: async p => (await T(db.ref(p).get())).val(),
+    set: (p, v) => T(db.ref(p).set(v)),
+    update: o => T(db.ref().update(o)),
+    tx: async (p, fn) => { const r = await T(db.ref(p).transaction(fn, undefined, false)); return { ok: r.committed, val: r.snapshot.val() }; },
+    watch: (p, cb, err) => { const r = db.ref(p), f = s => cb(s.val()); r.on('value', f, e => { if (err) err(e); }); return () => r.off('value', f); },
+    TS: () => fb.database.ServerValue.TIMESTAMP,
     armLead: (uid, on) => { if (!uid) return; const d = ref(uid, 'lead').onDisconnect(); (on ? d.remove() : d.cancel()).catch(() => {}); },
     getMeta: async uid => (await T(ref(uid, 'meta').get())).val(),
     getSave: async uid => (await T(ref(uid, 'save').get(), 60000)).val(),
@@ -385,9 +395,12 @@ function cloudWatching() {
   return !!cloudUser && !!cloudLeadInfo && cloudLeadInfo.dev !== cloudDevice() && !leadStale(cloudLeadInfo)
     && cloudState !== 'offline' && cloudState !== 'konflikt';
 }
+// nur ansehen: auf einem zuschauenden Gerät oder zu Besuch (Block 95)
+function viewOnly() { return !!VISIT || cloudWatching(); }
 function cloudBlocked() {
   if (Date.now() - cloudBlockedAt < 2500) return;
   cloudBlockedAt = Date.now();
+  if (VISIT) { toast('🏝️ Du bist zu Besuch – hier kannst du nur schauen'); return; }
   toast(`👀 Gerade wird auf dem ${(cloudLeadInfo && cloudLeadInfo.name) || 'anderen Gerät'} gespielt – zum Bauen oben „Hier weiterspielen“`);
 }
 const leadMe = () => ({ dev: cloudDevice(), name: deviceName(), at: true });   // at: true = Serverzeit
@@ -418,7 +431,7 @@ function cloudLeaveLead() {
   if (!cloudUser || !cloudApi.leadTx) return;
   const me = cloudDevice(), uid = cloudUser.uid;
   cloudRun(async () => {
-    try { await cloudUploadNow(false, localSave()); } catch (e) { /* Stand bleibt hier und geht beim nächsten Mal hoch */ }
+    try { if (typeof liveFlush === 'function') await liveFlush(); await cloudUploadNow(false, localSave()); } catch (e) { /* Stand bleibt hier und geht beim nächsten Mal hoch */ }
     await cloudApi.leadTx(uid, cur => cur && cur.dev === me ? null : undefined).catch(() => {});
   });
 }
@@ -430,7 +443,7 @@ function cloudOnLead(lead) {
   if (lead && lead.dev === me && lead.req && lead.req.dev !== me) {            // ein anderes Gerät möchte: sichern und übergeben
     const req = lead.req;
     cloudRun(async () => {
-      try { await cloudUploadNow(false, localSave()); } catch (e) { /* übergeben trotzdem – die Rückfrage fängt es auf */ }
+      try { if (typeof liveFlush === 'function') await liveFlush(); await cloudUploadNow(false, localSave()); } catch (e) { /* übergeben trotzdem – die Rückfrage fängt es auf */ }
       await cloudApi.leadTx(cloudUser.uid, cur => cur && cur.dev === me && cur.req && cur.req.dev === req.dev ? { dev: req.dev, name: req.name, at: true } : undefined).catch(() => {});
     });
     toast(`📱 Jetzt wird auf dem ${req.name} weitergespielt`);

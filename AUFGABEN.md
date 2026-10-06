@@ -1084,3 +1084,16 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 94c: Anmeldung per E-Mail-Link entfernt – im kostenlosen Firebase-Tarif gehen nur 5 solche Mails am Tag raus (für das
       ganze Spiel). Nur noch Google. Grenzen notiert: 100 gleichzeitige Verbindungen, 1 GB Speicher, 10 GB Download/Monat.
 
+## Block 95 – Online, Stufe 3: Live-Spiegel, Besuchen, Freundescodes (06.10.2026)
+- [x] Live-Spiegel (js/live.js): Das führende Gerät schreibt seine Insel Feld für Feld nach `worlds/<wid>` (Felder, Deko,
+      Linien, Gelände je Schlüssel, Rest als Text) und `users/<uid>/live` (Taler/Lager/Ideen alle 2 s, Privates). Gesendet
+      wird nur Geändertes (ein Feld ≈ 200–500 Byte). Zuschauende Geräte horchen darauf und übernehmen Feld für Feld (ohne
+      alles neu aufzubauen, Bewohner laufen weiter); der ganze Stand wird nur noch beim ersten Öffnen geladen.
+- [x] Besuchen: `?besuch=<wid>` zeigt eine Insel live, nur ansehen (kein Bauen, keine Taler/Lager/Forschung, keine Leiste),
+      speichert nichts – die eigene Insel im Browser bleibt unberührt. „🏠 Meine Insel“ führt zurück.
+- [x] ☰ → 👥 Freunde & Besuch: eigener Freundescode `FNYMI-XXXXX` (codes/<code>, ohne 0/O/1/I/L), Code eingeben → Anfrage,
+      annehmen/ablehnen, Freunde besuchen/entfernen, Anfragen zurückziehen. Besuchs-Link an/aus, teilen, „Neuen Link machen“
+      (alter geht nicht mehr, Freunde bekommen den neuen). Freunde dürfen immer besuchen, der Link nur bei „Besuche erlaubt“.
+- [x] Datenbank-Regeln: firebase-rules.json (in der Firebase-Konsole unter Realtime Database → Regeln einfügen).
+- [x] Tests: live.test.js (11 Fälle). Offen (eigener Block): was Freunde zusätzlich dürfen (Herzchen, Gästebuch, Geschenke).
+

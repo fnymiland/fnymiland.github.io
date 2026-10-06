@@ -18,6 +18,8 @@ const FRONT_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 const PROBE = new URLSearchParams(location.search).has('probe');
 // ?welt=zaeune: lädt testsave-zaeune.json zum Anschauen und Ausprobieren – wird nie gespeichert (eigener Stand bleibt)
 const TESTWELT = (new URLSearchParams(location.search).get('welt') || '').replace(/[^a-z0-9-]/g, '') || null;
+// Zu Besuch (Block 95): ?besuch=<Spiegel-Kennung> – fremde Insel live ansehen, nichts speichern, nichts bauen
+const VISIT = (new URLSearchParams(location.search).get('besuch') || '').replace(/[^a-z0-9]/g, '') || null;
 
 // cat: bau | netz | bildung | deko | land;  needs: Untergrund;  workers/science: Netzwerte
 const ITEMS = {

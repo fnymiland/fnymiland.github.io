@@ -636,13 +636,13 @@ function undoCommit(s) {
 }
 // Eine Nutzer-Aktion: alles darin wird ein Schritt (beim Verschieben erst, wenn abgelegt ist)
 function undoable(fn) {
-  if (typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); return undefined; }   // zuschauendes Gerät (Block 94)
+  if (typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); return undefined; }   // zuschauendes Gerät (Block 94), Besuch (95)
   if (!undoPending) { undoPending = undoSnap(); undoCut = false; }
   else { undoPending.money = state.money; undoPending.res = { ...state.res }; }   // Ablegen: Taler/Lager erst ab jetzt (verdient und gekauft wird inzwischen weiter)
   try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
 }
 function undo() {
-  if (typeof cloudWatching === 'function' && cloudWatching()) { cloudBlocked(); return false; }   // zuschauen (Block 94)
+  if (typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); return false; }   // zuschauen (Block 94), Besuch (95)
   if (moving) { cancelMove(); undoPending = null; return true; }
   const step = undoStack.pop();
   if (typeof updateUndoBtn === 'function') updateUndoBtn();

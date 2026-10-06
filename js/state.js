@@ -130,7 +130,7 @@ function batch(fn) {
   try { return fn(); } finally { BATCH--; if (!BATCH) { recalc(); save(); } }
 }
 function save() {
-  if (!state || PROBE || BATCH || TESTWELT || saveBlocked) return;
+  if (!state || PROBE || BATCH || TESTWELT || VISIT || saveBlocked) return;
   if (!document.hidden) state.last = Date.now();   // im Hintergrund zählt die Abwesenheit weiter
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(serialize()));
