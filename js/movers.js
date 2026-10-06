@@ -217,6 +217,7 @@ function stepMovers(dt) {
   stepCoasters(dt);
   stepCritters(performance.now());
   for (const w of walkers) stepWalker(w, dt);
+  if (typeof stepMe === 'function') stepMe(dt);                         // eigene Figur (Block 97)
   for (const w of strollers) stepMover(w, dt, parkWalk, true);
   for (const w of paraders) stepMover(w, dt, fzWalk, false);
   for (const c of cars) stepMover(c, dt, drivable, false);
@@ -244,7 +245,7 @@ function bubbleText(w) {
   pool.push(...(GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
   return pool[Math.floor(Math.random() * pool.length)];
 }
-function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + 5000 }; }
+function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + Math.max(5000, String(text).length * 90) }; }
 function bubbleTick(now) {
   if (bubble && (now > bubble.until || bubble.w.gone || bubble.w.inside > 0)) bubble = null;
   if (bubble || now < bubbleNext) return;
@@ -261,13 +262,20 @@ function drawBubble(z) {
   if (!bubble || bubble.w.gone || bubble.w.inside > 0) return;
   const [hx, hy] = walkerHead(bubble.w, z), size = Math.max(11, Math.min(15, 11 * z));
   g.font = `800 ${size}px Nunito, system-ui, sans-serif`;
-  const tw = g.measureText(bubble.text).width, w = tw + size * 1.4, h = size * 2;
-  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - 8 * z - h;
-  g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, h / 2); g.fill();
-  g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, h / 2); g.fill();
+  // lange Sätze umbrechen (Tipps der eigenen Figur, Block 97)
+  const maxW = Math.min(W - 40, 280), lines = [];
+  for (const word of String(bubble.text).split(' ')) {
+    const last = lines[lines.length - 1];
+    if (last != null && g.measureText(last + ' ' + word).width <= maxW) lines[lines.length - 1] = last + ' ' + word; else lines.push(word);
+  }
+  const tw = Math.max(...lines.map(l => g.measureText(l).width)), lh = size * 1.25, w = tw + size * 1.4, h = size * 0.75 + lines.length * lh;
+  const bx = Math.max(8, Math.min(W - w - 8, hx - w / 2)), by = hy - (bubble.w.label ? (bubble.w.hand === 'ballon' ? 21 : bubble.w.hat ? 18 : 14) : 8) * z - h;   // über dem Namensschild
+  g.fillStyle = 'rgba(107,79,58,0.18)'; g.beginPath(); g.roundRect(bx, by + 2, w, h, Math.min(h / 2, size)); g.fill();
+  g.fillStyle = '#fffdf6'; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.fill();
   g.beginPath(); g.moveTo(hx - 4, by + h - 1); g.lineTo(hx + 4, by + h - 1); g.lineTo(hx, by + h + 6); g.fill();
-  g.strokeStyle = 'rgba(107,79,58,0.35)'; g.lineWidth = 1; g.beginPath(); g.roundRect(bx, by, w, h, h / 2); g.stroke();
-  g.fillStyle = '#6b4f3a'; g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillText(bubble.text, bx + size * 0.7, by + h / 2);
+  g.strokeStyle = 'rgba(107,79,58,0.35)'; g.lineWidth = 1; g.beginPath(); g.roundRect(bx, by, w, h, Math.min(h / 2, size)); g.stroke();
+  g.fillStyle = '#6b4f3a'; g.textBaseline = 'middle'; g.textAlign = 'left';
+  lines.forEach((l, i) => g.fillText(l, bx + size * 0.7, by + size * 0.375 + lh * (i + 0.5)));
 }
 // Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
 function walkerAt(sx, sy) {
@@ -303,6 +311,7 @@ function drawWalker(w, z, now) {
   const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25);
   ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
   if (sp === 'eichhorn') { ellipse(x + 4.2 * z, y - 9 * z, 2.8 * z, 5.5 * z, f); ellipse(x + 4.6 * z, y - 12 * z, 1.6 * z, 2.6 * z, shade(f, 0.15)); }   // buschiger Schwanz
+  if (w.body === 'umhang' || w.body === 'rucksack') drawWearBack(x, y, z, w);   // hinter dem Körper (Block 97)
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
   let hy = y - 11 * z;
   if (sp === 'giraffe') { bar(x - 1.6 * z, hy - 4 * z, 3.2 * z, 8 * z, f); circle(x - 0.4 * z, hy + 1 * z, 0.7 * z, '#b5763a'); circle(x + 0.7 * z, hy - 2 * z, 0.6 * z, '#b5763a'); hy -= 6 * z; }   // langer Hals
@@ -334,7 +343,7 @@ function drawWalker(w, z, now) {
   else if (sp === 'igel') circle(x, hy + 1.6 * z, 0.8 * z, '#3d2c22');
   else if (sp === 'ente') ellipse(x, hy + 2 * z, 2.6 * z, 1.1 * z, '#f2a03a');
   else if (sp === 'elefant') { ellipse(x, hy + 3.6 * z, 1.3 * z, 3 * z, f); circle(x, hy + 6.2 * z, 1 * z, dark); }
-  if (w.face || w.hat) drawWear(x, hy, z, w);                            // eigene Figur (Block 96c): Brille, Hut & Co.
+  if (w.face || w.hat || w.body || w.hand) drawWear(x, hy, z, w, y, now);   // eigene Figur (Block 96c/97): Brille, Hut, Schal, Ballon …
   if (w.flag) {                                                          // Parade: Fähnchen über dem Kopf
     const wave = Math.sin(now / 250 + w.speed * 20) * 1.2 * z;
     g.strokeStyle = C('#8a5a3c'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(x + 4 * z, y - 2 * z); g.lineTo(x + 4 * z, hy - 12 * z); g.stroke();
@@ -346,15 +355,57 @@ function drawWalker(w, z, now) {
   }
   if (w.label) {                                                         // Besucher (Block 96): Namensschild über dem Kopf
     g.font = `800 ${Math.max(9, 5 * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    const tw = g.measureText(w.label).width + 8 * z, ly = hy - 12 * z;
+    const tw = g.measureText(w.label).width + 8 * z, ly = hy - (w.hand === 'ballon' ? 19 : w.hat ? 16 : 12) * z;   // über Hut und Ballon
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();
     g.fillStyle = C('#6b4f3a'); g.fillText(w.label, x, ly + 0.3 * z);
   }
 }
-// Accessoires der Spielfigur (Block 96c): Kopf (w.hat) und Gesicht (w.face), Kopfmitte (x, hy), Radius ≈ 4,8·z
-const WEAR_HATS = { strohhut: 'Strohhut', muetze: 'Mütze', krone: 'Krone', blume: 'Blume', schleife: 'Schleife', zylinder: 'Zylinder' };
-const WEAR_FACES = { brille: 'Brille', sonne: 'Sonnenbrille' };
-function drawWear(x, hy, z, w) {
+// Kleiderschrank der Spielfigur (Block 96c/97): Kopf (hat), Gesicht (face), Körper (body), Hand (hand).
+// Kopfmitte (x, hy), Radius ≈ 4,8·z; Körper-Ellipse um (x, y − 4·z). Was man freischalten muss, steht in me.js (WEAR_NEED).
+const WEAR = {
+  hat: { strohhut: 'Strohhut', muetze: 'Mütze', blume: 'Blume', schleife: 'Schleife', blumenkranz: 'Blumenkranz', kochmuetze: 'Kochmütze',
+    bauhelm: 'Bauhelm', piratenhut: 'Piratenhut', wikingerhelm: 'Wikingerhelm', zylinder: 'Zylinder', krone: 'Krone' },
+  face: { brille: 'Brille', sonne: 'Sonnenbrille' },
+  body: { schal: 'Schal', fliege: 'Fliege', rucksack: 'Rucksack', umhang: 'Umhang' },
+  hand: { ballon: 'Ballon', eis: 'Eistüte', strauss: 'Blumenstrauß', laterne: 'Laterne' },
+};
+const WEAR_HATS = WEAR.hat, WEAR_FACES = WEAR.face;
+// Kuppel (Helme): obere Hälfte einer Ellipse
+const wearDome = (cx, cy, rx, ry, col) => poly(Array.from({ length: 13 }, (_, i) => { const a = Math.PI + i / 12 * Math.PI; return [cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]; }), col);
+// zweite Farbe, die sich vom Shirt abhebt
+const wearAccent = w => SHIRTS[(Math.max(0, SHIRTS.indexOf(w.shirt)) + 2) % SHIRTS.length];
+function drawWearBack(x, y, z, w) {
+  if (w.body === 'umhang') poly([[x - 3.2 * z, y - 7.6 * z], [x + 3.2 * z, y - 7.6 * z], [x + 5.6 * z, y + 0.6 * z], [x - 5.6 * z, y + 0.6 * z]], C('#c8414f'));
+  if (w.body === 'rucksack') { const r = 1.4 * z; g.fillStyle = C('#b5763a'); g.beginPath(); g.roundRect(x - 4.6 * z, y - 9 * z, 9.2 * z, 7 * z, r); g.fill(); bar(x - 4.6 * z, y - 7.2 * z, 9.2 * z, 0.8 * z, C('#8a5a2e')); }
+}
+function drawWear(x, hy, z, w, y = hy + 11 * z, now = 0) {
+  // Körper vorn (unterm Kinn, nach dem Kopf gezeichnet)
+  if (w.body === 'schal') { const c = wearAccent(w); ellipse(x, y - 5.6 * z, 4 * z, 1.3 * z, C(c)); bar(x + 1 * z, y - 5.6 * z, 1.5 * z, 3.8 * z, C(c)); bar(x + 1 * z, y - 2.8 * z, 1.5 * z, 0.5 * z, C('#fffaf0')); }
+  else if (w.body === 'fliege') { const c = w.shirt === SHIRTS[0] ? '#2e2e38' : '#e8604f'; poly([[x, y - 5.4 * z], [x - 2.2 * z, y - 6.5 * z], [x - 2.2 * z, y - 4.3 * z]], C(c)); poly([[x, y - 5.4 * z], [x + 2.2 * z, y - 6.5 * z], [x + 2.2 * z, y - 4.3 * z]], C(c)); circle(x, y - 5.4 * z, 0.6 * z, C(shade(c, -0.2))); }
+  else if (w.body === 'rucksack') { bar(x - 2.6 * z, y - 6.2 * z, 0.9 * z, 5 * z, C('#8a5a2e')); bar(x + 1.7 * z, y - 6.2 * z, 0.9 * z, 5 * z, C('#8a5a2e')); }
+  else if (w.body === 'umhang') circle(x, y - 5.8 * z, 0.9 * z, C('#f2c14e'));
+  // Hand (rechts)
+  if (w.hand) {
+    const hx = x + 3.9 * z, hy2 = y - 3.6 * z;
+    if (w.hand === 'ballon') {
+      const sway = Math.sin(now / 700 + (w.speed || 0) * 10) * 0.8 * z, bx = x + 6.6 * z + sway, by = hy - 10 * z;
+      g.strokeStyle = C('#8a7a6a'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(hx, hy2); g.quadraticCurveTo(x + 6 * z, hy - 2 * z, bx, by + 3.2 * z); g.stroke();
+      ellipse(bx, by, 2.6 * z, 3.2 * z, C(wearAccent(w))); ellipse(bx - 0.9 * z, by - 1.1 * z, 0.6 * z, 0.9 * z, 'rgba(255,255,255,0.55)');
+      poly([[bx - 0.5 * z, by + 3.5 * z], [bx + 0.5 * z, by + 3.5 * z], [bx, by + 2.9 * z]], C(wearAccent(w)));
+    } else if (w.hand === 'eis') {
+      poly([[hx - 1.1 * z, hy2 - 1.6 * z], [hx + 1.1 * z, hy2 - 1.6 * z], [hx, hy2 + 1.8 * z]], C('#e0a35a'));
+      circle(hx, hy2 - 2.4 * z, 1.4 * z, C('#f6a5c0')); circle(hx - 0.4 * z, hy2 - 2.9 * z, 0.4 * z, 'rgba(255,255,255,0.6)');
+    } else if (w.hand === 'strauss') {
+      g.strokeStyle = C('#58a35a'); g.lineWidth = 0.5 * z; g.beginPath();
+      for (const dx of [-1, 0, 1]) { g.moveTo(hx, hy2 + 0.6 * z); g.lineTo(hx + dx * 1.1 * z, hy2 - 2.6 * z); } g.stroke();
+      [['#f28cb1', -1.1], ['#ffd23f', 0], ['#b07ad6', 1.1]].forEach(([c, dx], i) => circle(hx + dx * z, hy2 - (2.8 + (i % 2) * 0.6) * z, 0.9 * z, C(c)));
+    } else if (w.hand === 'laterne') {
+      g.strokeStyle = C('#5a4636'); g.lineWidth = 0.4 * z; g.beginPath(); g.moveTo(hx, hy2); g.lineTo(hx, hy2 + 1 * z); g.stroke();
+      ellipse(hx, hy2 + 2.4 * z, 3 * z, 3 * z, 'rgba(255,214,110,0.22)');                 // Schein
+      bar(hx - 0.9 * z, hy2 + 1 * z, 1.8 * z, 2.6 * z, C('#ffd66e')); bar(hx - 1.1 * z, hy2 + 0.8 * z, 2.2 * z, 0.5 * z, C('#5a4636')); bar(hx - 1.1 * z, hy2 + 3.5 * z, 2.2 * z, 0.5 * z, C('#5a4636'));
+    }
+    circle(hx, hy2, 1 * z, w.fur);                                                       // Pfote hält es
+  }
   if (w.face === 'brille' || w.face === 'sonne') {
     const dark = w.face === 'sonne';
     for (const s of [-1, 1]) { if (dark) ellipse(x + s * 1.9 * z, hy - 0.2 * z, 1.5 * z, 1.1 * z, '#2e2e38'); else { g.strokeStyle = C('#3d2c22'); g.lineWidth = 0.6 * z; g.beginPath(); g.arc(x + s * 1.9 * z, hy - 0.2 * z, 1.4 * z, 0, Math.PI * 2); g.stroke(); } }
@@ -367,6 +418,24 @@ function drawWear(x, hy, z, w) {
   else if (w.hat === 'blume') { for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; circle(x + 3.2 * z + Math.cos(a) * 1.3 * z, top + 0.6 * z + Math.sin(a) * 1.3 * z, 1 * z, C('#f28cb1')); } circle(x + 3.2 * z, top + 0.6 * z, 0.8 * z, C('#ffd23f')); }
   else if (w.hat === 'schleife') { poly([[x + 2.6 * z, top + 0.8 * z], [x + 0.4 * z, top - 1.2 * z], [x + 0.4 * z, top + 2.4 * z]], C('#f28cb1')); poly([[x + 2.6 * z, top + 0.8 * z], [x + 4.8 * z, top - 1.2 * z], [x + 4.8 * z, top + 2.4 * z]], C('#f28cb1')); circle(x + 2.6 * z, top + 0.8 * z, 0.8 * z, C('#e86a9a')); }
   else if (w.hat === 'zylinder') { ellipse(x, top + 0.8 * z, 5.6 * z, 1.4 * z, C('#2e2e38')); bar(x - 3 * z, top - 5 * z, 6 * z, 5.8 * z, C('#2e2e38')); bar(x - 3 * z, top - 0.8 * z, 6 * z, 1 * z, C('#e8604f')); }
+  else if (w.hat === 'blumenkranz') {
+    g.strokeStyle = C('#58a35a'); g.lineWidth = 0.9 * z; g.beginPath(); g.ellipse(x, top + 1.4 * z, 4.6 * z, 1.5 * z, 0, 0, Math.PI * 2); g.stroke();
+    const cols = ['#f28cb1', '#ffd23f', '#fffaf0', '#b07ad6'];
+    for (let i = 0; i < 7; i++) { const a = 0.08 * Math.PI + i / 6 * 0.84 * Math.PI; circle(x + Math.cos(a) * 4.6 * z, top + 1.4 * z + Math.sin(a) * 1.5 * z, 0.95 * z, C(cols[i % 4])); }
+  }
+  else if (w.hat === 'kochmuetze') {
+    for (const [dx, dy, r] of [[-2.1, -3.2, 2.2], [2.1, -3.2, 2.2], [0, -4.4, 2.6]]) circle(x + dx * z, top + dy * z, r * z, C('#fffaf0'));
+    bar(x - 3.3 * z, top - 2.4 * z, 6.6 * z, 3.4 * z, C('#fffaf0')); bar(x - 3.3 * z, top + 0.2 * z, 6.6 * z, 0.8 * z, C('#e6dccb'));
+  }
+  else if (w.hat === 'bauhelm') { wearDome(x, top + 1.6 * z, 4.6 * z, 4.4 * z, C('#f2c14e')); ellipse(x, top + 1.6 * z, 5.8 * z, 1.1 * z, C('#e0a92e')); bar(x - 0.5 * z, top - 2.7 * z, 1 * z, 4.2 * z, C('#f8d872')); }
+  else if (w.hat === 'piratenhut') {
+    poly([[x - 6.2 * z, top + 1.2 * z], [x - 3.4 * z, top - 3.4 * z], [x, top - 1.8 * z], [x + 3.4 * z, top - 3.4 * z], [x + 6.2 * z, top + 1.2 * z], [x, top + 0.4 * z]], C('#2e2e38'));
+    circle(x, top - 0.6 * z, 0.9 * z, C('#fffaf0')); bar(x - 0.5 * z, top + 0.1 * z, 1 * z, 0.4 * z, C('#fffaf0'));
+  }
+  else if (w.hat === 'wikingerhelm') {
+    for (const s of [-1, 1]) poly([[x + s * 3.8 * z, top + 0.4 * z], [x + s * 6.6 * z, top - 1.6 * z], [x + s * 7 * z, top - 4.4 * z], [x + s * 5.4 * z, top - 1.2 * z], [x + s * 3.4 * z, top - 1.2 * z]], C('#fffaf0'));
+    wearDome(x, top + 1.6 * z, 4.6 * z, 4.4 * z, C('#b9b9c6')); bar(x - 4.6 * z, top + 0.6 * z, 9.2 * z, 1.1 * z, C('#8f8f9e'));
+  }
 }
 function drawCar(c, z) {
   const p = toScreen(c.px, c.py);

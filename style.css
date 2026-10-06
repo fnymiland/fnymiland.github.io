@@ -726,3 +726,7 @@ body.viewonly #panel .row:has(#p-wonder), body.viewonly #panel [data-openart] { 
 .fig-sw .muted { font-size: 12px; margin-right: 4px; }
 /* Hinweise nicht unter dem Besuchs-/Zuschau-Band verstecken (Block 96c) */
 body.visiting #toast, body.viewonly #toast { top: 116px; }
+/* Deine Figur (Block 97) */
+.me-edit canvas { width: 120px; height: 150px; }
+.me-edit input { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+.look.locked { opacity: 0.55; }

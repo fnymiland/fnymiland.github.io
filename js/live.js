@@ -310,7 +310,7 @@ async function openFriends() {
   }
   frWatch();
   let code = '…', wid = null;
-  try { code = frCodeText(await frCode()); wid = await liveWorldId(); await friendAnimal(cloudUser.uid); await friendLook(cloudUser.uid); } catch (e) { code = 'gerade nicht erreichbar'; }
+  try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   openModal(`
@@ -318,12 +318,9 @@ async function openFriends() {
     <div class="label">Dein Freundescode</div>
     <div class="fr-code"><b>${escHtml(code)}</b><button class="btn ghost small" id="fr-copy">Kopieren</button></div>
     <div class="label">Deine Figur (so spazierst du bei Freunden herum)</div>
-    <div class="fig-edit"><canvas id="fig-prev" width="90" height="90" aria-hidden="true"></canvas><div>
-      <div class="book-st">${ANIMALS.map((a, i) => `<button class="look${i === myAnimal ? ' on' : ''}" data-fani="${i}" aria-label="${a.family}">${a.icon}</button>`).join('')}</div>
-      <div class="swatches fig-sw"><span class="muted">Fell</span><button class="sw bunt${myLook && myLook.fur != null ? '' : ' on'}" data-ffur="" aria-label="Fell wie das Tier"></button>${FUR.map((c, i) => `<button class="sw${myLook && myLook.fur === i ? ' on' : ''}" data-ffur="${i}" style="background:${c}" aria-label="Fell ${i + 1}"></button>`).join('')}</div>
-      <div class="swatches fig-sw"><span class="muted">Shirt</span>${SHIRTS.map((c, i) => `<button class="sw${(myLook ? myLook.shirt : 0) === i ? ' on' : ''}" data-fshirt="${i}" style="background:${c}" aria-label="Shirt ${i + 1}"></button>`).join('')}</div>
-      <div class="looks"><button class="look${myLook && myLook.hat ? '' : ' on'}" data-fhat="">ohne</button>${Object.entries(WEAR_HATS).map(([id, n]) => `<button class="look${myLook && myLook.hat === id ? ' on' : ''}" data-fhat="${id}">${n}</button>`).join('')}</div>
-      <div class="looks"><button class="look${myLook && myLook.face ? '' : ' on'}" data-fface="">ohne Brille</button>${Object.entries(WEAR_FACES).map(([id, n]) => `<button class="look${myLook && myLook.face === id ? ' on' : ''}" data-fface="${id}">${n}</button>`).join('')}</div>
+    <div class="fig-edit"><canvas id="fig-prev" width="90" height="110" aria-hidden="true"></canvas><div>
+      <p class="muted">Dieselbe Figur, die auf deiner Insel herumläuft. Tier, Farben und Kleidung stellst du im Rathaus ein.</p>
+      <button class="btn small" id="fr-look">✏️ Figur gestalten</button>
     </div></div>
     <div class="label">Code eines Freundes</div>
     <div class="fr-add"><input id="fr-in" class="cloud-mail" placeholder="FNYMI-…" autocomplete="off" autocapitalize="characters" aria-label="Freundescode"><button class="btn small" id="fr-send">Anfrage schicken</button></div>
@@ -343,10 +340,8 @@ async function openFriends() {
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
-  for (const b of document.querySelectorAll('[data-fani]')) b.onclick = async () => { try { await setFriendAnimal(+b.dataset.fani); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
-  const lookBtn = (attr, key, num) => { for (const b of document.querySelectorAll(`[data-${attr}]`)) b.onclick = async () => { const v = b.dataset[attr.replace('-', '')]; try { await setFriendLook({ [key]: v === '' ? null : num ? +v : v }); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } }; };
-  lookBtn('ffur', 'fur', true); lookBtn('fshirt', 'shirt', true); lookBtn('fhat', 'hat', false); lookBtn('fface', 'face', false);
-  if ($('fig-prev')) figPreview($('fig-prev'), figFrom(myAnimal || 0, myLook, ''));
+  if ($('fr-look')) $('fr-look').onclick = () => { closeModal(); openTownHall('figur'); };
+  if ($('fig-prev')) figPreview($('fig-prev'), meFigLook(), 2.6);
   for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };

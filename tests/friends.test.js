@@ -49,20 +49,12 @@ describe('Freunde auf der Insel (Block 96)', () => {
     game("setGuests({ me: { a: 1, n: 'Ich', x: 1, y: 1 } }, 'me')");                          // sich selbst nicht doppelt
     expect(game('visitorFigs.length')).toBe(0);
   });
-  it('Figur gestalten: Aussehen wird gemerkt, Freunde-Fenster zeigt die Auswahl', async () => {
-    await game("setFriendLook({ fur: 2, shirt: 4, hat: 'blume' })");
-    expect(tree().users.u1.profile.look).toEqual({ fur: 2, shirt: 4, hat: 'blume', face: null });
-    await game("setFriendLook({ face: 'sonne' })");
-    expect(tree().users.u1.profile.look.face).toBe('sonne');
-    expect(tree().users.u1.profile.look.hat).toBe('blume');
+  it('eigene Figur: kommt auf dem eigenen Gerät aus dem Spielstand (Block 97)', async () => {
+    game("state.me = { a: 5, shirt: 4, hat: 'blume', fur: 2 }");
+    expect(await game("friendAnimal('u1')")).toBe(5);
+    expect(await game("friendLook('u1')")).toEqual({ fur: 2, shirt: 4, hat: 'blume', face: null, body: null, hand: null });
     expect(game("figFrom(0, { fur: 2 }, 'X').fur")).toBe(game('FUR[2]'));
     expect(() => game("figPreview(document.createElement('canvas'), figFrom(0, null, ''))")).not.toThrow();
-  });
-  it('eigene Figur: wird gemerkt, wählbar', async () => {
-    const a = await game("friendAnimal('u1')");
-    expect(game(`!!ANIMALS[${a}]`)).toBe(true);
-    await game('setFriendAnimal(5)');
-    expect(tree().users.u1.profile.animal).toBe(5);
   });
   it('Rathaus „Besuch“: Briefkasten, Herzen, Gästebuch, Besuche', () => {
     game(`bookAll = { h_f1_20261006: { k: 'h', n: 'Ben', a: 2, at: Date.now() }, gx1: { k: 'g', n: 'Ben', a: 2, t: 1, s: 3, at: Date.now() }, v_f1_20261006: { k: 'v', n: 'Ben', a: 2, at: Date.now() } };

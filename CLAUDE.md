@@ -352,6 +352,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+97. **Deine Figur** (Block 97, js/me.js): Aussehen nur über `meLook()` lesen (prüft alles, lässt nicht Verdientes weg) und
+    `setMe(patch)` schreiben (speichert, `cloudTouched`, kopiert ins Profil `users/<uid>/profile/{animal,look}`). Neue
+    Kleidung: zeichnen in `drawWear`/`drawWearBack` (movers.js) und in `WEAR` eintragen; Besonderes in `WEAR_NEED` (Erfolg +
+    Stufe oder Sterne). `state.me` liegt im öffentlichen Rest des Live-Spiegels (Besucher sehen die Figur des Gastgebers);
+    beim Besuch (`VISIT`) gehört `state` dem Gastgeber – die eigene Figur kommt dann aus dem Profil (`friendLook`).
+    Tipps der Figur (`meTip`) nehmen dieselben Quellen wie Ziel, Rathaus und Nachschlagen – keine eigenen Regeln erfinden.
 95. **Live-Spiegel, Besuch, Freunde** (Block 95, js/live.js): Was im Spielstand neu dazukommt, ordnet `liveSplit` zu – große
     Karten in `LIVE_MAPS`, Laufendes in `LIVE_ECO`, Privates (nicht für Besucher) in `LIVE_PRIV`, Gerätekram in `LIVE_LOCAL`,
     alles andere landet im öffentlichen „Rest“. Besucher sehen nur `worlds/<wid>` – Privates nie dort hineinschreiben.

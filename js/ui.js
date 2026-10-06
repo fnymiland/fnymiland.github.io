@@ -1901,7 +1901,7 @@ function residentsHtml() {
 function openTownHall(tab = hallTab) {
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['besuch', `Besuch${typeof mailWaiting === 'function' && (mailWaiting() || bookNew()) ? ' 📬' : ''}`], ['town', 'Ort']];
+  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['besuch', `Besuch${typeof mailWaiting === 'function' && (mailWaiting() || bookNew()) ? ' 📬' : ''}`], ['figur', 'Deine Figur'], ['town', 'Ort']];
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -2004,6 +2004,8 @@ function openTownHall(tab = hallTab) {
     body = residentsHtml();
   } else if (tab === 'besuch') {
     body = friendsHallHtml();                                              // Freunde (Block 96): Briefkasten, Herzen, Gästebuch
+  } else if (tab === 'figur') {
+    body = meHallHtml();                                                   // eigene Figur (Block 97)
   } else {
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
     body = `
@@ -2060,6 +2062,7 @@ function openTownHall(tab = hallTab) {
     if (e.b === 'lm') openLandmark(e.x, e.y); else openInfo(e.x, e.y);
   };
   if (tab === 'besuch') wireFriendsHall(card);
+  if (tab === 'figur') wireMeHall(card);
   if (tab === 'town') {
     wireTownEditor(card, state.town, () => { updateHud(); save(); });
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
@@ -2173,12 +2176,11 @@ function openHelp(tab = helpTab) {
 }
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
-const NEWS = { id: '2026-10-06-hilfe', items: [
-  '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
-  '📚 <b>Nachschlagen:</b> Unter ☰ ein Buch mit Suche – alle Gebäude, Rohstoffe, Wünsche und Begriffe.',
-  '🧱 <b>Vorplätze:</b> Liegt ein Weg vor der Tür, führt jetzt bei allen Gebäuden ein Weg oder Platz im selben Muster bis zur Tür.',
-  '🌳 <b>Wilmerhecke:</b> Bei den Hecken gibt es jetzt eine Hecke aus lauter kleinen runden Büschen – einfach ziehen wie einen Zaun. Gleich frei, auch mit Blüten oder Lichterkette.',
-  '🚉 <b>Hauptbahnhof neu:</b> Portal mit Uhrturm genau in der Mitte, ein Weg vor dem Portal führt bis an die Tür. Schönere Bahnsteigdächer, dazu Laternen, Bänke und Bahnsteiguhren.',
+const NEWS = { id: '2026-10-06-figur', items: [
+  '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Aussehen im Rathaus → „Deine Figur“: Tier, Farben, Hüte, Brillen, Schal, Ballon …',
+  '🔒 <b>Besondere Kleidung</b> wie Krone, Zylinder oder Wikingerhelm gibt es für Erfolge.',
+  '☁️ <b>Online-Speicher:</b> Unter ☰ mit Google anmelden – deine Insel ist dann auf allen Geräten gleich.',
+  '👥 <b>Freunde & Besuch:</b> Freundescode tauschen, Freunde besuchen und als deine Figur herumlaufen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };

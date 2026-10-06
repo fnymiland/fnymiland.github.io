@@ -3,7 +3,7 @@
 // Freunde auf der Insel (Block 96): Spielfigur, Besucher als Figur, Herzchen, Gästebuch, Päckchen mit Briefkasten
 // Datenbank (Regeln: firebase-rules.json):
 //   users/<uid>/profile/animal          eigene Figur (Index in ANIMALS)
-//   users/<uid>/profile/look            Aussehen der Figur { fur, shirt, hat, face } (Block 96c)
+//   users/<uid>/profile/look            Aussehen der Figur { fur, shirt, hat, face, body, hand } (Block 96c/97, Kopie von state.me)
 //   worlds/<wid>/guests/<uid>           wer gerade zu Besuch ist: { a, n, x, y, look } – einmal beim Kommen geschrieben, die
 //                                       Figur spaziert dann auf jedem Gerät selbst über die Wege; verschwindet beim Gehen
 //   book/<besitzer>/<id>                Besuch (v_…), Herz (h_… je Freund und Tag) und Gästebuch (g…): { k, from, n, a, t, s, at }
@@ -21,36 +21,36 @@ const dayKey = (d = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1)
 const frLS = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem('kachelhausen_fr_' + k)); localStorage.setItem('kachelhausen_fr_' + k, JSON.stringify(v)); } catch (e) { return null; } };
 
 // --- eigene Figur --------------------------------------------------------------------------
-let myAnimal = null;
+// Auf dem eigenen Gerät kommt sie aus dem Spielstand (state.me, Block 97 – me.js). Beim Besuch (VISIT) gehört der
+// Spielstand dem Gastgeber; dann kommt sie aus dem Profil in der Cloud (me.js schreibt es bei jeder Änderung).
+let myAnimal = null, myLook = null;
 async function friendAnimal(uid) {
+  if (!VISIT) return (myAnimal = meLook().a);
   if (myAnimal != null) return myAnimal;
   const a = await cloudApi.get(`users/${uid}/profile/animal`);
-  if (Number.isInteger(a) && ANIMALS[a]) return (myAnimal = a);
-  myAnimal = Math.floor(Math.random() * ANIMALS.length);
-  await cloudApi.set(`users/${uid}/profile/animal`, myAnimal).catch(() => {});
-  return myAnimal;
+  return (myAnimal = Number.isInteger(a) && ANIMALS[a] ? a : 0);
 }
-async function setFriendAnimal(i) { myAnimal = i; await cloudApi.set(`users/${cloudUser.uid}/profile/animal`, i); }
-let myLook = null;
-const lookClean = l => ({ fur: Number.isInteger(l && l.fur) && FUR[l.fur] ? l.fur : null, shirt: Number.isInteger(l && l.shirt) && SHIRTS[l.shirt] ? l.shirt : 0,
-  hat: l && WEAR_HATS[l.hat] ? l.hat : null, face: l && WEAR_FACES[l.face] ? l.face : null });
 async function friendLook(uid) {
+  if (!VISIT) return (myLook = lookClean(meLook()));
   if (myLook) return myLook;
   return (myLook = lookClean(await cloudApi.get(`users/${uid}/profile/look`).catch(() => null)));
 }
-async function setFriendLook(patch) { myLook = lookClean({ ...(myLook || {}), ...patch }); await cloudApi.set(`users/${cloudUser.uid}/profile/look`, myLook); }
+const wearPick = (slot, v) => typeof v === 'string' && WEAR[slot][v] ? v : null;
+const lookClean = l => ({ fur: Number.isInteger(l && l.fur) && FUR[l.fur] ? l.fur : null, shirt: Number.isInteger(l && l.shirt) && SHIRTS[l.shirt] ? l.shirt : 0,
+  hat: wearPick('hat', l && l.hat), face: wearPick('face', l && l.face), body: wearPick('body', l && l.body), hand: wearPick('hand', l && l.hand) });
 // Figur aus Tier + Aussehen (wie ein Bewohner gezeichnet, mit Namensschild)
 function figFrom(a, look, label) {
   const an = ANIMALS[a] || ANIMALS[0], L = lookClean(look);
-  return { kind: Math.max(0, ANIMALS.indexOf(an)), fur: L.fur != null ? FUR[L.fur] : an.fur || FUR[0], shirt: SHIRTS[L.shirt] || SHIRTS[0], hat: L.hat, face: L.face, label: String(label || 'Besuch').slice(0, 30) };
+  return { kind: Math.max(0, ANIMALS.indexOf(an)), fur: L.fur != null ? FUR[L.fur] : an.fur || FUR[0], shirt: SHIRTS[L.shirt] || SHIRTS[0],
+    hat: L.hat, face: L.face, body: L.body, hand: L.hand, label: String(label || 'Besuch').slice(0, 30) };
 }
-// kleines Vorschaubild der eigenen Figur (Freunde-Fenster)
-function figPreview(cv, fig) {
+// Vorschaubild einer Figur (Rathaus, Freunde-Fenster); z = Größe
+function figPreview(cv, fig, z = 3.2) {
   const c = cv.getContext && cv.getContext('2d');
   if (!c) return;
   const og = g, ots = toScreen;
-  g = c; toScreen = () => ({ x: cv.width / 2 - 18, y: cv.height - 12 });
-  try { c.clearRect(0, 0, cv.width, cv.height); drawWalker({ ...fig, label: null, px: 1e6, py: 1e6, wait: 1, speed: 0.5 }, 3.2, 0); }
+  g = c; toScreen = () => ({ x: cv.width / 2 - 6 * z, y: cv.height - 4 * z });
+  try { c.clearRect(0, 0, cv.width, cv.height); drawWalker({ ...fig, label: null, px: 1e6, py: 1e6, wait: 1, speed: 0.5 }, z, 0); }
   finally { g = og; toScreen = ots; }
 }
 
@@ -60,6 +60,11 @@ const visitorFigs = [];
 // Startfeld: begehbar, nah am Rathaus (sonst am angegebenen Feld)
 function guestSpawn(x, y) {
   const h = townHallAt(), cx = h ? h[0] + 1 : x, cy = h ? h[1] + 1 : y;
+  // am liebsten vorn vor dem Rathaus (Bildschirm-unten = großes x+y), dort gern auf dem Weg (Block 97)
+  const ds = h ? doorsOf(h.join(',')) : [], best = Math.max(...ds.map(([a, b]) => a + b));
+  const front = ds.filter(([a, b]) => a + b >= best - 1), wegs = front.filter(([a, b]) => bAt(a, b) === 'weg');
+  const pool = wegs.length ? wegs : front;
+  if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
   for (let r = 0; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
     if (walkable(cx + dx, cy + dy)) return [cx + dx, cy + dy];

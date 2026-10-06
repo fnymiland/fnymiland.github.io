@@ -1134,3 +1134,19 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Krone, Blume, Schleife, Zylinder), Brille/Sonnenbrille – users/<uid>/profile/look, Unsinn wird beim Lesen verworfen.
       „Herz geben“ tat scheinbar nichts: der Hinweis lag unter dem Besuchs-Band (jetzt tiefer); dazu klare Meldungen
       („heute schon“ wird gemerkt, Fehler sagt jetzt „Regeln alt?“/„keine Verbindung?“). Regeln unverändert.
+
+## Block 97: Deine Figur auf der eigenen Insel (06.10.2026)
+- [x] Du läufst als Bürgermeister·in über die eigene Insel (js/me.js): Start vorn am Rathaus, bummelt gern über Wege,
+      geht öfter zum Rathaus zurück und schaut sich neu Gebautes an („Oh, was Neues! ✨“). Mit Namensschild; ausblendbar.
+- [x] Helfer: Antippen → Sprechblase + Fenster mit dem, was gerade dran ist (Schritt der Einführung, Material für die
+      nächsten Laternen, das niemand herstellt – mit „Woher?“, was ausgebaut werden kann, häufigster Wunsch). Alle 3–5
+      Minuten meldet sie sich von selbst, wenn sie zu sehen ist und es etwas Wichtiges gibt (nicht bei „Tipps aus“).
+      Sprechblasen brechen jetzt um und bleiben bei langen Sätzen länger.
+- [x] Rathaus → „Deine Figur“ (ohne Anmeldung, im Spielstand `state.me`): Name, Tier, Fell, Shirt, Kopf, Gesicht, Körper,
+      Hand, mit großer Vorschau. Neu: Blumenkranz, Kochmütze, Bauhelm, Piratenhut, Wikingerhelm; Schal, Fliege, Rucksack,
+      Umhang; Ballon, Eistüte, Blumenstrauß, Laterne. Besonderes gibt es für Erfolge (🔒, Antippen sagt wofür).
+- [x] Angemeldet wird die Figur ins Profil kopiert – bei Freunden sieht man genauso aus; die Figur aus Block 96c wird beim
+      ersten Anmelden übernommen. Das Freunde-Fenster zeigt nur noch die Vorschau und führt ins Rathaus.
+- [x] Besucher-Figuren starten ebenfalls vorn am Rathaus. „Das ist neu“ für das große Update (Figur, Online, Freunde).
+- [x] strom.test „Windrad-Fenster“ hing vom Zufall ab (windiger Platz am Rand) – Gelände dort jetzt fest.
+      Test: me.test.js (9 Fälle).

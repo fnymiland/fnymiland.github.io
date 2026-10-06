@@ -140,6 +140,7 @@ describe('Strom für die Stadt', () => {
   });
 
   it('Windrad-Fenster zeigt die Bilanz', () => {
+    game("for (let y = 20; y <= 24; y++) for (let x = 0; x <= 4; x++) state.terra.set(x + ',' + y, 'grass')");   // kein zufälliger „windiger Platz“ am Rand
     game("state.restore.klippe = 3; state.tiles.set('10,10', { b: 'fabrik', lvl: 1 })"); wind(1); game('recalc(); openInfo(2, 22)');
     const txt = document.getElementById('panel').textContent;
     expect(txt).toContain('1 erzeugt, 2 gebraucht');

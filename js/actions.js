@@ -480,6 +480,7 @@ function tap(sx, sy, isTouch) {
   if (tool === 'look') {
     const ct = critterAt(sx, sy);                             // Tier in der Natur angetippt (Block 56)
     if (ct) { tapCritter(ct); return; }
+    if (typeof meAt === 'function' && meAt(sx, sy)) { openMeInfo(); return; }   // eigene Figur (Block 97)
     const wk = walkerAt(sx, sy);                              // Bewohner angetippt (Block 55)
     if (wk) { openWalkerInfo(wk); return; }
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
