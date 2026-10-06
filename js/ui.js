@@ -2189,8 +2189,9 @@ $('rot-btn').onclick = () => rotateBuild();
 function openModal(html, live = null) {
   const c = $('modal-card'), same = !$('modal').hidden && modalLive && live && modalLive.toString() === live.toString();
   if (!same) spotSel = null;                                       // anderes Fenster: Markierung weg
+  const was = $('modal').hidden ? null : (c.querySelector(':scope > .tab-scroll') || c).scrollTop;   // dieselbe Seite neu (gekauft): Scrollstand behalten
   c.className = 'card'; setHtml(c, frameHtml(html)); $('modal').hidden = false; modalLive = live;
-  modalFrame(c);
+  modalFrame(c, same ? was : null);
   const box = spotBox(); if (box) box.classList.add('spot');
 }
 // Fenster mit Reitern (Block 103): feste Größe, gescrollt wird innen, die Reiter bleiben oben stehen. Neuer Reiter → nach
@@ -2209,13 +2210,14 @@ function frameHtml(html) {
   return tpl;
 }
 let modalTabKey = null;
-function modalFrame(c) {
+function modalFrame(c, keepTop = null) {
   const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on'), sc = c.querySelector(':scope > .tab-scroll') || c;
   c.classList.toggle('tabbed', !!tabs);
   c.classList.toggle('you-win', !!c.querySelector('.you-tabs, .net-tabs'));            // Du und Online: alle Reiter gleich breit
   c.classList.toggle('help-win', !!c.querySelector('[data-hb]'));
   const key = on ? [...on.attributes].filter(a => a.name.startsWith('data-')).map(a => a.name + '=' + a.value).join() : null;
   if (key !== modalTabKey && !liveNow) sc.scrollTop = 0;
+  else if (keepTop != null && !liveNow) { sc.scrollTop = keepTop; queueMicrotask(() => { sc.scrollTop = keepTop; }); }   // nochmal, wenn der Aufrufer die Fenstergröße gesetzt hat
   modalTabKey = key;
 }
 function closeModal() { $('modal').hidden = true; modalLive = null; modalTabKey = null; }

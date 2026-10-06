@@ -174,7 +174,7 @@ function syncStrollers() {
 function sitDown(w) {
   const ds = decosAt(w.fx + ',' + w.fy), i = ds ? ds.findIndex(d => d && d.b === 'bank' && !['rund', 'picknick'].includes(lookForm('bank', d))) : -1;   // Rundbank/Picknicktisch: kein Platz in der Mitte (Block 106)
   if (i < 0 || Math.random() > 0.6 || strollers.some(o => o !== w && o.sit && o.fx === w.fx && o.fy === w.fy)) return false;
-  const [u, v] = slotPos(w.fx, w.fy, i, 'bank');
+  const [u, v] = slotPos(w.fx, w.fy, i, ds[i]);
   w.sit = true; w.wait = 5 + Math.random() * 7; w.tx = w.fx; w.ty = w.fy; w.t = 0;
   w.px = w.fx + u; w.py = w.fy + v;
   return true;

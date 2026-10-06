@@ -1286,3 +1286,12 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       (`drawBridgeOver`): die Fahrbahn liegt über dem Rumpf, Aufbau und Mast schauen darüber. Fischkutter kreisen nur, wo
       ringsum keine Brücke ist.
 
+
+
+## Block 108: Bänke und Kunstakademie (06.10.2026)
+- [x] Zwei Bänke an derselben Feldkante (z. B. Ecke rechts auf einem Feld, Ecke links auf dem Nachbarfeld) steckten
+      ineinander, wenn sie längs zur Kante standen. Bänke haben jetzt je Form eine Tiefe und Länge (`BENCH_EXT`,
+      `decoExt`); `slotPos` rückt sie je nach Drehung so weit nach innen, dass Lücke bleibt. `slotPos` bekommt dafür die
+      Deko selbst (auch die Bau-Vorschau mit Drehung und Form). Test: schmuck.test.js.
+- [x] Kunstakademie: nach dem Kauf sprang die Liste nach oben. `openModal` behält den Scrollstand, wenn dasselbe Fenster
+      auf demselben Reiter neu gezeichnet wird (Reiterwechsel weiter nach oben).

@@ -694,6 +694,16 @@ const newSlots = () => Array(SLOTS).fill(null);
 const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]];
 const DECO_R = { baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbogen: 0.12, bank: 0.1, brunnen: 0.12, kristallbrunnen: 0.12 };
 const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
+// Bänke (Block 108): lang und schmal – halbe Tiefe (a) und halbe Länge (b) in Feldern, je nach Form. Steht eine Bank längs zum
+// Feldrand, rückt sie um ihre halbe Länge nach innen, sonst steckt sie in der Bank auf dem Nachbarfeld
+const BENCH_EXT = { park: [0.1, 0.23], garten: [0.1, 0.23], stein: [0.1, 0.23], picknick: [0.11, 0.2], rund: [0.12, 0.12] };
+function decoExt(d) {
+  const b = typeof d === 'string' ? d : d && d.b, r = decoR(b), base = b && baseOf(b);
+  const L = DECO_LOOKS.bank, e = base === 'freundesbank' ? BENCH_EXT.park : base === 'bank' ? BENCH_EXT[(L.forms[(d && d.form) || 0] || L.forms[0]).id] : null;
+  if (!e) return [r, r];
+  const [u, v] = kitTurn(((d && d.rot) || 0) & 3, e[0], e[1]);
+  return [Math.max(r, Math.abs(u)), Math.max(r, Math.abs(v))];
+}
 const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // halbe Dicke samt Luft (Zaun dünn, Hecke/Mauer dick, Torbogen breit)
 // Wegkurve (Block 65b): die Kurve ist ein Viertelring um die innere Ecke – ihr äußerer Ecken-Platz rückt deshalb an den
 // Bogen, mittig auf die Außenkurve (sonst stünde er weit draußen in der Feldecke). Rückgabe: welcher Platz, Mittelpunkt
@@ -772,24 +782,24 @@ function curveSlot(x, y) {
   if (!c) return null;
   return { slot: (c.cu > 0 ? 0 : 1) + (c.cv > 0 ? 0 : 2), cu: c.cu, cv: c.cv };
 }
-function slotPos(x, y, i, b) {
+function slotPos(x, y, i, d) {                                  // d: die Deko (oder nur ihr Typ)
   if (i === VSLOT) return [-0.5, -0.5];                          // Eckpunkt: genau auf der Ecke
-  const r = decoR(b), out = 0.5 - r - 0.02;
+  const [ru, rv] = decoExt(d), r = Math.max(ru, rv);
   if (i < 4) {
     const cs = curveSlot(x, y);
     if (cs && cs.slot === i) { const k = (0.5 + EDGE_W + r + 0.03) / Math.SQRT2; return [cs.cu - Math.sign(cs.cu) * k, cs.cv - Math.sign(cs.cv) * k]; }
   }
-  const lim = side => { const e = state.edges.get(edgeBetween(x, y, x + side[0], y + side[1])); return e ? 0.5 - lineW(e) - r : out; };
+  const lim = (side, rr) => { const e = state.edges.get(edgeBetween(x, y, x + side[0], y + side[1])); return e ? 0.5 - lineW(e) - rr : 0.5 - rr - 0.02; };
   if (i >= 4) {                                                   // Seitenmitte: nur zur eigenen Seite hin begrenzt
-    const [dx, dy] = MID_SIDE[i - 4], m = Math.min(MID_OFF, lim([dx, dy]));
+    const [dx, dy] = MID_SIDE[i - 4], m = Math.min(MID_OFF, lim([dx, dy], dx ? ru : rv));
     return [dx * m, dy * m];
   }
   const su = i & 1 ? 1 : -1, sv = i & 2 ? 1 : -1;
-  let u = Math.min(SLOT_OFF, lim([su, 0])), v = Math.min(SLOT_OFF, lim([0, sv]));
+  let u = Math.min(SLOT_OFF, lim([su, 0], ru)), v = Math.min(SLOT_OFF, lim([0, sv], rv));
   if (state.edges.size) {                                         // Linie am Eckpunkt (auch außerhalb des Felds): Abstand halten
     const vx = x + (su + 1) / 2, vy = y + (sv + 1) / 2;
     const at = ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].some(k => state.edges.has(k));
-    if (at) { const c = 0.5 - 0.17 - r * 0.7; u = Math.min(u, c); v = Math.min(v, c); }
+    if (at) { u = Math.min(u, 0.5 - 0.17 - ru * 0.7); v = Math.min(v, 0.5 - 0.17 - rv * 0.7); }
   }
   return [su * u, sv * v];
 }

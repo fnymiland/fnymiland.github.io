@@ -60,4 +60,19 @@ describe('Stadtschmuck (Block 106)', () => {
     game("decosAt('8,8')[0].form = 0");
     expect(game("(() => { const w = { fx: 8, fy: 8, tx: 8, ty: 8, px: 8, py: 8 }; const r = Math.random; Math.random = () => 0; try { return sitDown(w); } finally { Math.random = r; } })()")).toBe(true);
   });
+  it('Block 108: zwei Bänke an derselben Feldkante stecken nie ineinander, egal wie gedreht', () => {
+    // Ende einer Bank auf Feld (8,8) Ecke rechts (1) und Anfang der Bank auf (9,8) Ecke links (0): Lücke dazwischen
+    const gap = game(`[0, 1, 2, 3].flatMap(rot => [0, 1, 2, 3, 4].map(form => {
+      state.decos.delete('8,8'); state.decos.delete('9,8');
+      buildRot = rot; state.design.add('bank:form:' + DECO_LOOKS.bank.forms[form].id); state.paintNew.bank = { form };
+      buildSmall('bank', 8, 8, 1); buildSmall('bank', 9, 8, 0);
+      const a = decosAt('8,8')[1], b = decosAt('9,8')[0];
+      const ua = 8 + slotPos(8, 8, 1, a)[0] + decoExt(a)[0], ub = 9 + slotPos(9, 8, 0, b)[0] - decoExt(b)[0];
+      return ub - ua;
+    }))`);
+    expect(Math.min(...gap)).toBeGreaterThan(0);
+    game("buildRot = 1; state.decos.delete('8,8'); state.paintNew.bank = { form: 0 }; buildSmall('bank', 8, 8, 1)");   // längs: rückt nach innen
+    expect(game("slotPos(8, 8, 1, decosAt('8,8')[1])[0]")).toBeLessThan(game("slotPos(8, 8, 1, 'bank')[0]"));
+    game("buildRot = 0");
+  });
 });

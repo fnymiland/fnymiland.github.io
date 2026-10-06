@@ -338,7 +338,7 @@ function objectAt(sx, sy) {
     const p = toScreen(x, y);
     slots.forEach((dc, i) => {
       if (!dc) return;
-      const [u, v] = slotPos(x, y, i, dc.b), s = decoScale(dc.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z;
+      const [u, v] = slotPos(x, y, i, dc), s = decoScale(dc.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z;
       if (Math.abs(sx - qx) > 30 * z * s || sy > qy + 14 * z * s || sy < qy - 100 * z * s) return;
       const mir = ((dc.rot || 0) & 1) && MIRROR.has(dc.b), back = SLOTS_BACK.includes(i);
       cand.push({ x, y, slot: i, d: x + y + (back ? -0.25 : 0.25) + (u + v) * 0.1, ink: () => inkAt(sx, sy, qx, qy, [mir ? -s : s, s], () => drawObject(dc.b, 0, 0, z, now, x, y, 1, { rot: dc.rot || 0, slot: i })) });
@@ -529,7 +529,7 @@ function groupPreview(z) {
   for (const it of moving.items) {
     const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
     if (it.kind === 'deco') {
-      const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d.b);
+      const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d);
       add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, it.d.col || 0, it.d.form || 0); });
       continue;
     }
@@ -849,11 +849,12 @@ function render(now) {
       drawSmall(k, px, py, z, now, x, y, [...SLOTS_BACK, ...SLOTS_FRONT]);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
-      const [u, v] = slotPos(x, y, preview.slot, ghostType), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+      const gRot = tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot);
+      const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
+      const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
+      const [u, v] = slotPos(x, y, preview.slot, { b: ghostType, rot: gRot, form: gForm }), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
-      drawSmallOne(ghostType, tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot), q[0], q[1], z, now, x, y, 1, preview.slot,
-        tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0,   // wie es gesetzt wird (Block 69)
-        tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0);
+      drawSmallOne(ghostType, gRot, q[0], q[1], z, now, x, y, 1, preview.slot, gCol, gForm);
       g.globalAlpha = 1;
     }
     if (groupGhost && groupGhost.has(k)) {
