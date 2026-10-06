@@ -398,6 +398,16 @@ function cloudWatching() {
 }
 // nur ansehen: auf einem zuschauenden Gerät oder zu Besuch (Block 95)
 function viewOnly() { return !!VISIT || cloudWatching(); }
+// Fenster beim Ansehen (Block 95c): Farbfelder & Co. ausblenden, alle anderen Knöpfe, die etwas ändern, sperren –
+// Schließen, ? (Hilfe) und Weiterblättern bleiben
+const VIEW_OK = '#p-close, #m-close, [data-help], [data-lx], [data-hmore], [data-tab], [data-htab], .grip, .link';
+document.addEventListener('click', e => {
+  if (!viewOnly()) return;
+  const el = e.target.closest && e.target.closest('#panel button, #panel .sw, #panel [role="button"]');
+  if (!el || el.closest(VIEW_OK) || el.matches(VIEW_OK)) return;
+  e.stopPropagation(); e.preventDefault(); cloudBlocked();
+}, true);
+setInterval(() => { if (document.body) document.body.classList.toggle('viewonly', viewOnly()); }, 500);
 function cloudBlocked() {
   if (Date.now() - cloudBlockedAt < 2500) return;
   cloudBlockedAt = Date.now();

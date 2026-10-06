@@ -1107,4 +1107,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       • Neuer Link: eine kaputte Freundschaft ließ das Löschen des alten Links scheitern → alter Link zuerst, Freunde einzeln.
       • Zweite Anfrage an dieselbe Person scheiterte mit Fehler → freundlicher Hinweis.
       live.test.js: 17 Fälle.
+- [x] 95c: Als Besucher ließ sich die Hausfarbe ändern (nur in der eigenen Ansicht, nichts gespeichert – aber verwirrend).
+      Beim Ansehen (Besuch, zuschauendes Gerät) sind Farbfelder, Aussehen und Ausbau-Knöpfe ausgeblendet, alle anderen
+      ändernden Knöpfe im Fenster gesperrt (Hinweis); Schließen und ? gehen weiter.
 

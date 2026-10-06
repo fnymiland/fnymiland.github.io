@@ -203,5 +203,17 @@ describe('Prüfung von Stufe 3 (Block 95b)', () => {
     expect(tree().worlds[old]).toBe(undefined);
     expect(tree().users.u1.pub.wid).not.toBe(old);
   });
+  it('beim Ansehen: Farbfelder im Hausfenster ändern nichts (auch nicht in der eigenen Ansicht), Schließen geht', async () => {
+    game("state.tiles.set('10,10', { b: 'haus', lvl: 2, rot: 0, name: 'Test', animal: 'hase', wall: 1 }); rebuildCover(); recalc()");
+    lead('ipad');
+    game('openInfo(10, 10)');
+    const v = game("document.querySelector('#panel [data-wall]:not(.on)').dataset.wall");
+    game(`document.querySelector('#panel [data-wall="${v}"]').click()`);
+    expect(game("state.tiles.get('10,10').wall")).toBe(1);
+    lead();                                                                                   // führt wieder: geht
+    game('openInfo(10, 10)');
+    game(`document.querySelector('#panel [data-wall="${v}"]').click()`);
+    expect(game("state.tiles.get('10,10').wall")).toBe(+v);
+  });
 });
 

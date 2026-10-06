@@ -710,3 +710,6 @@ body.visiting #toolbar, body.visiting #hint, body.visiting #style-bar, body.visi
 .fr-add input { flex: 1; margin: 0; }
 .fr-row span:first-child { flex: 1; font-weight: 800; }
 .fr-btns { display: flex; gap: 6px; align-items: center; }
+/* Ansehen (Besuch, zuschauendes Gerät, Block 95c): nichts zum Umfärben/Umbauen anbieten */
+body.viewonly #panel .swatches, body.viewonly #panel .looks, body.viewonly #panel .row:has(#p-grow), body.viewonly #panel .row:has(#p-stage),
+body.viewonly #panel .row:has(#p-wonder), body.viewonly #panel [data-openart] { display: none !important; }
