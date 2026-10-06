@@ -232,28 +232,42 @@ function openMeInfo() {
 
 // --- Fenster „Du“ (Block 98): Figur, Erfolge, Album, Tagebuch, Freunde, Online – Knopf oben mit deinem Gesicht ---------
 // Album, Tagebuch, Freunde und Online sind eigene Fenster; sie setzen youHead(tab) oben ein, damit alle Reiter gleich aussehen.
-const YOU_TABS = [['figur', '🐾 Figur'], ['erfolge', '⭐ Erfolge'], ['album', '📒 Album'], ['tagebuch', '📖 Tagebuch'], ['freunde', '👥 Freunde'], ['online', '☁️ Online']];
-let youTab = 'figur';
+const YOU_TABS = [['figur', '🐾 Figur'], ['erfolge', '⭐ Erfolge'], ['album', '📒 Album'], ['tagebuch', '📖 Tagebuch']];
+// 🌐 Online (Block 106): eigener Knopf oben – Freunde und Online-Speicher
+const NET_TABS = [['freunde', '👥 Freunde'], ['online', '☁️ Speicher']];
+let youTab = 'figur', netTab = 'freunde';
 function youMark(id) {
   if (id === 'tagebuch' && state.diarySeen < state.diary.length) return ' <span class="tdot" aria-label="neue Seite"></span>';
+  return '';
+}
+function netMark(id) {
   if (id === 'freunde' && cloudUser && (mailWaiting() || bookNew())) return ' 📬';
   if (id === 'online' && cloudState === 'konflikt') return ' ⚠️';
   return '';
 }
-// etwas Neues für dich? (Punkt am Knopf oben)
-const youNews = () => state.diarySeen < state.diary.length || (!!cloudUser && (mailWaiting() || bookNew())) || cloudState === 'konflikt';
+// etwas Neues? (Punkt am Knopf oben)
+const youNews = () => state.diarySeen < state.diary.length;
+const netNews = () => (!!cloudUser && (mailWaiting() || bookNew())) || cloudState === 'konflikt';
 function youHead(tab) {
   youTab = tab;
   const L = meLook();
   return `<h2>${ANIMALS[L.a].icon} ${escHtml(L.name || 'Du')}</h2>
     <div class="looks hall-tabs you-tabs">${YOU_TABS.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-you="${id}">${label}${youMark(id)}</button>`).join('')}</div>`;
 }
+function netHead(tab) {
+  youTab = netTab = tab;                                                 // youTab: welcher Reiter gerade gezeichnet wird (für das Warten)
+  return `<h2>🌐 Online</h2>
+    <div class="looks hall-tabs net-tabs">${NET_TABS.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-net="${id}">${label}${netMark(id)}</button>`).join('')}</div>`;
+}
+function openNet(tab = netTab) {
+  netTab = tab === 'online' ? 'online' : 'freunde';
+  return netTab === 'online' ? openCloud() : openFriends();             // (async: warten auf die Cloud)
+}
 function openYou(tab = youTab) {
+  if (tab === 'freunde' || tab === 'online') return openNet(tab);       // früher hier (Block 98) – jetzt unter 🌐
   youTab = tab;
   if (tab === 'album') return openAlbum();
   if (tab === 'tagebuch') return openDiary();
-  if (tab === 'freunde') return openFriends();                          // (async: wartet auf Freundescode)
-  if (tab === 'online') return openCloud();
   if (tab !== 'erfolge') tab = youTab = 'figur';
   openModal(`${youHead(tab)}${tab === 'erfolge' ? erfolgeHtml() : meHallHtml()}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`, tab === 'erfolge' ? () => openYou('erfolge') : null);
@@ -263,8 +277,11 @@ function openYou(tab = youTab) {
 }
 // Reiter: ein Griff für alle Unterfenster
 $('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-you]'); if (b) { sfx('deco'); openYou(b.dataset.you); } });
-$('you-btn').onclick = () => { setTool('look'); openYou(state.diarySeen < state.diary.length ? 'tagebuch' : youTab); };
+$('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-net]'); if (b) { sfx('deco'); openNet(b.dataset.net); } });
+$('you-btn').onclick = () => { setTool('look'); openYou(state.diarySeen < state.diary.length ? 'tagebuch' : (youTab === 'freunde' || youTab === 'online' ? 'figur' : youTab)); };
 fastTap($('you-btn'));                                                    // iPad: beim Loslassen auslösen wie die anderen Knöpfe oben
+$('net-btn').onclick = () => { setTool('look'); openNet(cloudState === 'konflikt' ? 'online' : netTab); };
+fastTap($('net-btn'));
 
 // --- „Du“ → Figur ----------------------------------------------------------------------------------
 function meHallHtml() {

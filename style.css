@@ -754,7 +754,8 @@ body.visiting #you-btn { display: none !important; }
   #hud { gap: 4px; }
   #hud .pill { padding: 5px 6px; }
 }
-@media (max-width: 400px) { #hud .pill { font-size: 12px; padding: 5px 5px; } #hud { gap: 3px; } }
+@media (max-width: 400px) { #hud .pill { font-size: 12px; padding: 5px 4px; } #hud { gap: 2px; }
+  #hud .pill.store, #hud .pill.you, #hud .pill.net, #hud #menu-btn { font-size: 14px; padding: 4px 3px; } }   /* mit 🌐 (Block 106): bei 360/375 px auch mit Millionen in einer Zeile */
 /* Fenster mit Reitern (Block 103): immer gleich groß – Höhe fest, innen scrollen, Reiter bleiben oben stehen */
 .card.tabbed { height: min(680px, calc(100vh - 32px)); height: min(680px, calc(100dvh - 32px)); display: flex; flex-direction: column; overflow: hidden; }
 .card.tabbed > * { flex: none; }
@@ -775,3 +776,13 @@ body.visiting #you-btn { display: none !important; }
 .wish-bar { height: 7px; background: var(--cream2); border-radius: 99px; overflow: hidden; margin: 2px 0 8px; }
 .wish-bar i { display: block; height: 100%; background: var(--green, #6cc04a); border-radius: 99px; }
 .pflag { display: inline-flex; width: 26px; height: 18px; border-radius: 4px; align-items: center; justify-content: center; font-size: 12px; }
+/* Knopf „Online“ (Block 106) */
+.pill.net { position: relative; font-size: 17px; padding-top: 3px; padding-bottom: 3px; }
+body.visiting #net-btn { display: none !important; }
+/* Stadtschmuck: Formen (Block 106) */
+.look-forms { flex-wrap: wrap; }
+.look.look-form { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 6px; min-width: 64px; }
+.look.look-form img { width: 44px; height: 44px; object-fit: contain; }
+.look.look-form span { font-size: 11px; }
+.style-chip.look-chip i { background-size: contain; }
+@media (max-width: 370px) { #hud .pill { font-size: 11px; } }    /* sehr schmale Handys (360 px): auch Extremwerte einzeilig */

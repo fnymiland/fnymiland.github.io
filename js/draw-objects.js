@@ -1392,17 +1392,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
-    case 'bank': {                           // Parkbank genau an der Feldkante ausgerichtet, Sitz schaut nach vorn (rot)
-      const K = kit(cx, cy, z, (t && t.rot) || 0);
-      shadow(cx, cy, hw * 0.35, hh * 0.25);
-      K.scene([
-        [-0.1, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, -0.1, b, 11, '#6b4f3a', 1.4);
-          K.block({ a: -0.1, ha: 0.035, hb: 0.47, h: 5, lift: 6.5, wall: '#b57b4a', roof: '#c68b59', type: 'flat' }); }],
-        [0.08, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, 0.16, b, 5, '#6b4f3a', 1.4);
-          K.block({ a: 0.06, ha: 0.14, hb: 0.47, h: 1.4, lift: 4.6, wall: '#b57b4a', roof: '#c68b59', type: 'flat' }); }],
-      ]);
-      break;
-    }
+    case 'bank': drawBench(cx, cy, z, t, hw, hh); break;             // Formen und Farben (Block 106)
     case 'freundesbank': {                   // Bank mit Herzlehne (Block 105)
       const K = kit(cx, cy, z, (t && t.rot) || 0);
       shadow(cx, cy, hw * 0.35, hh * 0.25);
@@ -1428,16 +1418,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       }
       break;
     }
-    case 'laterne': {
-      ellipse(cx, cy + 1 * z, 4 * z, 2 * z, 'rgba(40,60,20,0.15)');
-      g.strokeStyle = C('#4a4a58'); g.lineWidth = 1.8 * z;
-      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - 22 * z); g.stroke();
-      const dark = t && T.rail.power.dark.has(x + ',' + y + ',' + (t.slot || 0));     // ohne Strom bleibt sie aus
-      const lit = night > 0.15 && isLive() && !dark;
-      const lb = box(cx, cy - 22 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : dark && night > 0.15 ? '#9a978c' : '#fff7d6', '#4a4a58', 3 * z);
-      if (!dark) glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 34 * z);
-      break;
-    }
+    case 'laterne': drawLantern(cx, cy, z, now, x, y, t); break;      // Formen und Farben (Block 106, draw-schmuck.js)
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel
       ellipse(cx, cy + 1 * z, 16 * z, 7 * z, 'rgba(40,40,40,0.15)');
       box(cx, cy, hw * 0.42, hh * 0.42, 6 * z, '#d8d2c4', '#c2baa8', 0);
@@ -1811,39 +1792,8 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       glowQuad([[cx - 3 * z, ky - 3 * z], [cx + 3 * z, ky - 3 * z], [cx + 3 * z, ky + 3 * z], [cx - 3 * z, ky + 3 * z]], 20 * z, 'blue');
       break;
     }
-    case 'kristallbrunnen': {             // Becken mit hellem Wasser, in der Mitte wachsen Kristalle; Funkeln
-      ellipse(cx, cy, hw * 0.72, hh * 0.72, C('#b9c3cf'));
-      ellipse(cx, cy - 3 * z, hw * 0.72, hh * 0.72, C('#e3e8ef'));
-      ellipse(cx, cy - 3 * z, hw * 0.57, hh * 0.57, C('#9fdcf7'));
-      ellipse(cx - 5 * z, cy - 4.5 * z, hw * 0.2, hh * 0.12, 'rgba(255,255,255,0.45)');
-      crystal(cx - 5 * z, cy - 2 * z, z, 9 * z, 2.4 * z, -0.28);
-      crystal(cx + 5.5 * z, cy - 1.5 * z, z, 8 * z, 2.3 * z, 0.3);
-      crystal(cx, cy - 1 * z, z, 17 * z, 3.4 * z, 0.04);
-      for (let i = 0; i < 5; i++) {                      // kleine Sterne, die nacheinander aufblitzen
-        const ph = (now / 1300 + i / 5) % 1, a = ph < 0.5 ? Math.sin(ph * 2 * Math.PI) : 0;
-        if (a <= 0.05) continue;
-        const sx = cx + (hash(x, y, 150 + i) - 0.5) * hw * 0.9, sy = cy - 3 * z + (hash(x, y, 160 + i) - 0.5) * hh * 0.7 - hash(x, y, 170 + i) * 16 * z;
-        const s = 2.2 * z * a;
-        g.fillStyle = `rgba(255,255,255,${a})`;
-        g.beginPath(); g.moveTo(sx, sy - s); g.lineTo(sx + s * 0.3, sy); g.lineTo(sx, sy + s); g.lineTo(sx - s * 0.3, sy); g.closePath(); g.fill();
-        g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
-      }
-      glowQuad([[cx - 4 * z, cy - 18 * z], [cx + 4 * z, cy - 18 * z], [cx + 4 * z, cy - 2 * z], [cx - 4 * z, cy - 2 * z]], 46 * z, 'blue');
-      break;
-    }
-    case 'brunnen': {
-      ellipse(cx, cy, hw * 0.7, hh * 0.7, C('#aeb2bd'));
-      ellipse(cx, cy - 3 * z, hw * 0.7, hh * 0.7, C('#d2d5de'));
-      ellipse(cx, cy - 3 * z, hw * 0.55, hh * 0.55, C('#74d0e6'));
-      g.fillStyle = C('#c9ccd6');
-      g.fillRect(cx - 1.8 * z, cy - 14 * z, 3.6 * z, 11 * z);
-      for (let i = 0; i < 6; i++) {
-        const ph = (now / 900 + i / 6) % 1, a = i / 6 * Math.PI * 2;
-        circle(cx + Math.cos(a) * ph * 10 * z, cy - 15 * z + Math.sin(a) * ph * 5 * z - Math.sin(ph * Math.PI) * 6 * z,
-          1.3 * z, `rgba(200,240,255,${1 - ph})`);
-      }
-      break;
-    }
+    case 'kristallbrunnen': drawCrystalFountain(cx, cy, z, now, x, y, hw, hh); break;   // prächtiger (Block 106)
+    case 'brunnen': drawFountain(cx, cy, z, now, x, y, t, hw, hh); break;   // vier Formen (Block 106)
     case 'pavillon': {
       shadow(cx, cy, hw * 0.6, hh * 0.6);
       diamond(cx, cy, hw * 0.62, hh * 0.62, C('#efe6d8'));
@@ -2087,11 +2037,11 @@ function drawTrophy(cx, cy, z, now, [base, light, dark]) {
     g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
   }
 }
-function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0) {
-  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col)) return;   // weit weg: Bildchen (render.js)
+function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
+  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js)
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
-  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col });
+  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form });
   g.restore();
 }
 function drawSmall(k, px, py, z, now, x, y, which) {
@@ -2103,7 +2053,7 @@ function drawSmall(k, px, py, z, now, x, y, which) {
     const [u, v] = slotPos(x, y, i, d.b);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
-    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0);
+    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0, d.form || 0);
   }
 }
 

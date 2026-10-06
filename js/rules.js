@@ -1207,7 +1207,7 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}) };
+  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}) };
   sfx('deco');
   recalc(); checkStars(); save();
   return true;
@@ -1218,6 +1218,19 @@ const decoBack = d => d.free ? 0 : ITEMS[d.b].cost || 0;
 // (Busch und seine Größen) bzw. state.paintNew.hecke (Wilmerhecke), je { col }
 const bushColOk = i => !!BUSH_COLS[i] && (!BUSH_COLS[i].design || state.design.has('busch:' + BUSH_COLS[i].id) || !!(state.legacy && state.legacy.has('busch:' + BUSH_COLS[i].id)));
 const bushColNew = key => { const p = state.paintNew[key]; return p && p.col && bushColOk(p.col) ? { col: p.col } : {}; };
+// Form und Farbe von Stadtschmuck (Block 106): frei oder in der Kunstakademie gekauft; für neu Gebautes state.paintNew[b] = { form, col }
+function lookOk(b, kind, i) {
+  const L = DECO_LOOKS[b], e = L && (kind === 'form' ? L.forms : L.cols || [])[i];
+  if (!e) return false;
+  const key = `${b}:${kind}:${e.id}`;
+  return !e.design || state.design.has(key) || !!(state.legacy && state.legacy.has(key));
+}
+function decoLookNew(b) {
+  const p = state.paintNew[b] || {}, out = {};
+  if (Number.isInteger(p.form) && p.form > 0 && lookOk(b, 'form', p.form)) out.form = p.form;
+  if (Number.isInteger(p.col) && p.col > 0 && lookOk(b, 'col', p.col)) out.col = p.col;
+  return out;
+}
 const isWilmerStyle = st => (st || '').startsWith('wilmer');
 function payBackDeco(d) {
   if (d.free) return;

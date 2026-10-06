@@ -62,7 +62,8 @@ function tileOut(t) {
   const o = { b: t.b, lvl: t.lvl };
   if (t.wall != null) o.wall = t.wall;
   if (t.roof != null) o.roof = t.roof;
-  if (t.col) o.col = t.col;                                     // Buschfarbe (Block 89)
+  if (t.col) o.col = t.col;                                     // Buschfarbe (Block 89), Farbe von Stadtschmuck (Block 106)
+  if (t.form) o.form = t.form;                                  // Form von Stadtschmuck (Block 106)
   if (t.lm) o.lm = t.lm;
   if (t.rot) o.rot = t.rot;
   if (t.style) o.style = t.style;
@@ -116,7 +117,7 @@ function serialize() {
     if (!decoMap.has(k)) decoMap.set(k, newSlots());
     decoMap.get(k)[slot] = it.d;
   }
-  const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0, ...(d.col ? { col: d.col } : {}), ...(d.free ? { free: true } : {}) })]);   // Buschfarbe (Block 89), geschenkt (84b)
+  const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0, ...(d.col ? { col: d.col } : {}), ...(d.form ? { form: d.form } : {}), ...(d.free ? { free: true } : {}) })]);   // Buschfarbe (Block 89), geschenkt (84b), Form (106)
   return {
     game: 'kachelhausen', v: 12, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
@@ -264,7 +265,7 @@ function parseSave(d) {
     legacy: new Set(d.legacy || legacyUnlocks(d)),
     design: new Set(d.design || []),
     paintNew: Object.fromEntries(Object.entries(d.paintNew || {}).filter(([b, p]) => ITEMS[b] && (p === false || (p && typeof p === 'object')))
-      .map(([b, p]) => [b, p && Object.fromEntries(Object.entries(p).filter(([k, v]) => PAINT_KEYS.includes(k) && Number.isInteger(v) && v >= 0))])),
+      .map(([b, p]) => [b, p && Object.fromEntries(Object.entries(p).filter(([k, v]) => [...PAINT_KEYS, 'col', 'form'].includes(k) && Number.isInteger(v) && v >= 0))])),   // col/form: Busch & Stadtschmuck
     oldSave: !d.restore,
     fitLm: false,                   // (v5/v6: Sehenswürdigkeiten rückten auf der Heimatinsel; seit v7 ziehen sie um)
     growWonders: (d.v || 3) < 9,     // v9 (30.09.): Wunderwerke sind größer geworden (growWonders)

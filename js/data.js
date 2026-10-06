@@ -572,7 +572,7 @@ const MENU = [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
-    { id: 'platz', label: '🪑 Platz', items: ['bank', 'freundesbank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
+    { id: 'platz', label: '🏮 Stadtschmuck', items: ['bank', 'freundesbank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
@@ -980,10 +980,28 @@ const BUSH_COLS = [
   { id: 'lila', name: 'Blutbuche', c: ['#8a4f7a', '#723f65', '#9a5c89', '#c08bb2'], design: 160 },
   { id: 'weiss', name: 'Weiß bereift', c: ['#cfe0d6', '#aac2b5', '#dfece4', '#ffffff'], design: 160 },
 ];
+// Stadtschmuck mit Formen und Farben (Block 106): Laterne, Bank, Brunnen (samt Größen). Index = gespeicherter Wert (form/col an
+// der Deko bzw. am Feld). Die ersten Formen und Farben sind frei, die mit design gibt es in der Kunstakademie.
+const LANTERN_COLS = [
+  { id: 'anthrazit', name: 'Anthrazit', c: '#4a4a58' }, { id: 'tanne', name: 'Tannengrün', c: '#2f6b4a' }, { id: 'weiss', name: 'Weiß', c: '#eeeae0' }, { id: 'bronze', name: 'Bronze', c: '#9a6a3c' },
+  { id: 'rot', name: 'Laternenrot', c: '#c8414f', design: 80 }, { id: 'blau', name: 'Königsblau', c: '#3e6fb0', design: 80 }, { id: 'gold', name: 'Gold', c: '#d4a93c', design: 120 }, { id: 'rosa', name: 'Rosa', c: '#e88fb4', design: 120 }];
+const BENCH_COLS = [
+  { id: 'holz', name: 'Holz', c: '#b57b4a' }, { id: 'weiss', name: 'Weiß', c: '#f4efe4' }, { id: 'gruen', name: 'Parkgrün', c: '#4f9a5a' }, { id: 'blau', name: 'Hellblau', c: '#7fb3e0' },
+  { id: 'rot', name: 'Rot', c: '#d0574a', design: 80 }, { id: 'gelb', name: 'Sonnengelb', c: '#e9b93b', design: 80 }, { id: 'rosa', name: 'Rosa', c: '#ee9fbe', design: 120 }, { id: 'nuss', name: 'Nussbaum', c: '#6e4a32', design: 120 }];
+const DECO_LOOKS = {
+  laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
+    { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
+  bank: { group: 'Bänke', icon: '#b57b4a', cols: BENCH_COLS, forms: [{ id: 'park', name: 'Parkbank' }, { id: 'garten', name: 'Gartenbank' },
+    { id: 'stein', name: 'Steinbank', design: 120 }, { id: 'picknick', name: 'Picknicktisch', design: 150 }, { id: 'rund', name: 'Rundbank', design: 200 }] },
+  brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
+    { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
+};
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),
+  ...Object.entries(DECO_LOOKS).flatMap(([b, L]) => [...L.forms.map((f, i) => [f, i]).filter(([f]) => f.design).map(([f, i]) => ({ id: `${b}:form:${f.id}`, group: L.group, look: [b, i], name: f.name, price: f.design })),
+    ...(L.cols || []).filter(c => c.design).map(c => ({ id: `${b}:col:${c.id}`, group: L.group, col: c.c, name: `Farbe ${c.name}`, price: c.design }))]),
   ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
   ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
   ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master })),

@@ -72,7 +72,7 @@ describe('Leiste oben', () => {
 
   it('schlank: Raten und Arbeitsplätze erst beim Antippen, Lager und Schönheit hinter 📦', () => {
     const hud = document.getElementById('hud');
-    expect(hud.querySelectorAll('.pill').length).toBe(7);                     // mit „Du“ (Block 98)
+    expect(hud.querySelectorAll('.pill').length).toBe(8);                     // mit „Du“ (Block 98) und „Online“ (Block 106)
     game('updateHud()');
     expect(hud.classList.contains('more')).toBe(false);
     document.getElementById('money-btn').onclick();

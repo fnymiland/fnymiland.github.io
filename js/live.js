@@ -310,16 +310,16 @@ async function shareText(text, link = false) {
 }
 async function openFriends() {
   if (!cloudUser) {
-    openModal(`${youHead('freunde')}<h3>👥 Freunde & Besuch</h3><p>Melde dich unter ☁️ Online an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen. Freunde können dir Herzen, Gästebuch-Einträge und Päckchen dalassen.</p>
+    openModal(`${netHead('freunde')}<h3>👥 Freunde & Besuch</h3><p>Melde dich unter ☁️ Online an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen. Freunde können dir Herzen, Gästebuch-Einträge und Päckchen dalassen.</p>
       <div class="row"><button class="btn" id="m-cl">☁️ Zum Anmelden</button><button class="btn ghost" id="m-close">Schließen</button></div>`);
-    $('m-cl').onclick = () => openYou('online'); $('m-close').onclick = closeModal;
+    $('m-cl').onclick = () => openNet('online'); $('m-close').onclick = closeModal;
     return;
   }
   frWatch();
   youTab = 'freunde';
   const tok = ++frRenderTok;                                             // nur der neueste Aufruf zeichnet (zwei kurz hintereinander)
   const typed = $('fr-in') ? $('fr-in').value : '';                      // halb getippter Code bleibt beim Neuzeichnen
-  if (!$('fr-box') || $('modal').hidden) openModal(`${youHead('freunde')}<div id="fr-box"><p class="muted" id="fr-wait">Lädt …</p></div>`);   // auch nach dem Schließen (Inhalt bleibt unsichtbar stehen)
+  if (!$('fr-box') || $('modal').hidden) openModal(`${netHead('freunde')}<div id="fr-box"><p class="muted" id="fr-wait">Lädt …</p></div>`);   // auch nach dem Schließen (Inhalt bleibt unsichtbar stehen)
   let code = '…', wid = null;
   try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
   if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen, anderer Reiter oder neuer Aufruf
@@ -335,7 +335,7 @@ async function openFriends() {
       ${w && w.got < w.n ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da)</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>` : ''}</div>`;
   };
   openModal(`
-    ${youHead('freunde')}<div id="fr-box">
+    ${netHead('freunde')}<div id="fr-box">
     ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
     ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch und Päckchen – am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'

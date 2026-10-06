@@ -386,14 +386,23 @@ function wireBushChips(bar, key, t) {
 }
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
-  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes);
+  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)]);
   if (sizes) {                                                   // Größen (Block 43): Klein · Mittel · Groß · Riesig
     const foot = id => ITEMS[id].small ? 'Ecke' : ITEMS[id].size ? ITEMS[id].size.join('×') : '1×1';
     bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${SIZE_NAMES[k]}">
       <i>${SIZE_NAMES[k][0]}</i><span>${SIZE_NAMES[k]} · ${foot(id)}</span></button>`).join('');
     if (baseOf(t) === 'busch') bar.innerHTML += bushChips('busch');                     // Farbe gleich beim Bauen (Block 89)
+    if (DECO_LOOKS[baseOf(t)]) bar.innerHTML += lookChips(baseOf(t));                     // Form/Farbe (Block 106)
     wireBushChips(bar, 'busch', t);
+    if (DECO_LOOKS[baseOf(t)]) wireLookChips(bar, baseOf(t), t);
     for (const b of bar.querySelectorAll('[data-size]')) b.onclick = () => { const open = !!buildInfo; sizeChoice[baseOf(t)] = b.dataset.size; sfx('deco'); setTool(b.dataset.size); if (open) openBuildInfo(b.dataset.size); };
+    bar.hidden = false;
+    return;
+  }
+  if (!STYLES[t] && DECO_LOOKS[baseOf(t)]) {                               // Laterne, Bank: Form und Farbe (Block 106)
+    document.body.classList.add('has-styles');
+    bar.innerHTML = lookChips(baseOf(t)).replace('<span class="style-sep"></span>', '');
+    wireLookChips(bar, baseOf(t), t);
     bar.hidden = false;
     return;
   }
@@ -435,7 +444,8 @@ function updateHud() {
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
   setText($('town-name'), state.town.name);
-  if ($('diary-dot').hidden !== !youNews()) $('diary-dot').hidden = !youNews();          // Knopf „Du“ (Block 98): neue Tagebuchseite, Post, Konflikt
+  if ($('diary-dot').hidden !== !youNews()) $('diary-dot').hidden = !youNews();          // Knopf „Du“ (Block 98): neue Tagebuchseite
+  if ($('net-dot').hidden !== !netNews()) $('net-dot').hidden = !netNews();              // Knopf „Online“ (Block 106): Post, Gästebuch, Konflikt
   setText($('you-face'), ANIMALS[meLook().a].icon);
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
   setText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
@@ -1007,6 +1017,66 @@ function wireBushCol(el, o) {
   if (more) more.onclick = () => openResearch('design');
 }
 const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
+// --- Stadtschmuck: Form und Farbe (Block 106) – in der Leiste beim Bauen und im Fenster beim Antippen ---------------
+const setLook = (obj, kind, i) => { if (i) obj[kind] = i; else delete obj[kind]; };
+const lookAll = b => {
+  const out = [];
+  for (const ds of state.decos.values()) for (const d of ds) if (d && baseOf(d.b) === b) out.push(d);
+  for (const t of state.tiles.values()) if (baseOf(t.b) === b) out.push(t);
+  return out;
+};
+const lookThumbs = new Map();
+// kleines Vorschaubild einer Form in einer Farbe (im Test ohne Canvas: leer)
+function lookThumb(b, form, col) {
+  const key = `${b}|${form}|${col}`;
+  if (lookThumbs.has(key)) return lookThumbs.get(key);
+  let url = '';
+  try {
+    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : 1.9;
+    c.width = 64; c.height = 64; g = c.getContext('2d');
+    try { drawObject(b, 32, 50, s, 0, 3, 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }
+    url = c.toDataURL();
+    if (!url || !url.startsWith('data:image')) url = '';
+  } catch (e) { url = ''; }
+  lookThumbs.set(key, url);
+  return url;
+}
+const lookFree = (b, kind) => (kind === 'form' ? DECO_LOOKS[b].forms : DECO_LOOKS[b].cols || []).map((e, i) => [e, i]).filter(([, i]) => lookOk(b, kind, i));
+const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !lookOk(b, 'form', i)).length + (DECO_LOOKS[b].cols || []).filter((e, i) => !lookOk(b, 'col', i)).length;
+function lookChips(b) {
+  const p = state.paintNew[b] || {}, form = lookOk(b, 'form', p.form | 0) ? p.form | 0 : 0, col = lookOk(b, 'col', p.col | 0) ? p.col | 0 : 0, more = lookMore(b);
+  return '<span class="style-sep"></span>' + lookFree(b, 'form').map(([f, i]) => `<button class="style-chip look-chip${i === form ? ' on' : ''}" data-lform="${i}" title="${f.name}" aria-label="Form: ${f.name}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><span>${f.name}</span></button>`).join('')
+    + (DECO_LOOKS[b].cols ? '<span class="style-sep"></span>' + lookFree(b, 'col').map(([c, i]) => `<button class="style-chip${i === col ? ' on' : ''}" data-lcol="${i}" title="${c.name}" aria-label="Farbe: ${c.name}"><i style="background:${c.c}"></i><span>${c.name}</span></button>`).join('') : '')
+    + (more ? `<button class="style-chip more" data-lmore="1" title="${more} weitere Formen und Farben in der Kunstakademie" aria-label="${more} weitere in der Kunstakademie">🎨<span>+${more}</span></button>` : '');
+}
+function wireLookChips(bar, b, t) {
+  const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
+  for (const x of bar.querySelectorAll('[data-lform]')) x.onclick = () => set('form', +x.dataset.lform);
+  for (const x of bar.querySelectorAll('[data-lcol]')) x.onclick = () => set('col', +x.dataset.lcol);
+  if (bar.querySelector('[data-lmore]')) bar.querySelector('[data-lmore]').onclick = () => openResearch('design');
+}
+// Im Fenster: Form, Farbe, auf alle gleichen übertragen, für neu Gebautes merken
+function decoLookHtml(b, o) {
+  const L = DECO_LOOKS[b], form = o.form || 0, col = o.col || 0, more = lookMore(b);
+  const others = lookAll(b).filter(x => x !== o && ((x.form || 0) !== form || (x.col || 0) !== col)).length;
+  const p = state.paintNew[b], on = !!(p && (p.form != null || p.col != null));
+  return `<div class="label">Form</div>
+    <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
+    ${L.cols ? `<div class="label">Farbe</div>
+    <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
+    ${more ? `<p class="muted"><span class="link" data-dmore="1">${more} weitere Formen und Farben in der Kunstakademie 🎨</span></p>` : ''}
+    <div class="looks paint-more">${others ? `<button class="look" data-dall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
+      <button class="look${on ? ' on' : ''}" data-dnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen das</button></div>`;
+}
+function wireDecoLook(el, b, o, reopen) {
+  const remember = () => { if (state.paintNew[b] && (state.paintNew[b].form != null || state.paintNew[b].col != null)) state.paintNew[b] = { form: o.form || 0, col: o.col || 0 }; };
+  for (const x of el.querySelectorAll('[data-dform]')) x.onclick = () => { undoable(() => { setLook(o, 'form', +x.dataset.dform); remember(); o.born = performance.now(); sfx('deco'); save(); }); reopen(); };
+  for (const x of el.querySelectorAll('[data-dcol]')) x.onclick = () => { undoable(() => { setLook(o, 'col', +x.dataset.dcol); remember(); sfx('deco'); save(); }); reopen(); };
+  const all = el.querySelector('[data-dall]'), nw = el.querySelector('[data-dnew]'), more = el.querySelector('[data-dmore]');
+  if (all) all.onclick = () => { undoable(() => { const l = lookAll(b).filter(x => x !== o && ((x.form || 0) !== (o.form || 0) || (x.col || 0) !== (o.col || 0))); l.forEach(x => { setLook(x, 'form', o.form || 0); setLook(x, 'col', o.col || 0); }); sfx('deco'); save(); toast(`🎨 ${l.length} angepasst`); }); reopen(); };
+  if (nw) nw.onclick = () => { const p = state.paintNew[b]; state.paintNew[b] = p && (p.form != null || p.col != null) ? {} : { form: o.form || 0, col: o.col || 0 }; save(); reopen(); };
+  if (more) more.onclick = () => { closePanel(); openResearch('design'); };
+}
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -1103,6 +1173,7 @@ function openInfo(x, y) {
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<p class="muted"><span class="link" data-openart="1">Mehr Farben in der Kunstakademie 🎨</span></p>' : ''}`;
   }
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
+  if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t);   // Form/Farbe (Block 106)
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
     ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
@@ -1239,6 +1310,7 @@ function openInfo(x, y) {
   const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; rememberPaint(t); sfx('deco'); save(); openInfo(x, y); };
   wirePaintMore(el, t, () => openInfo(x, y));
   if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
+  if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y));
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
@@ -1630,6 +1702,7 @@ function openDecoInfo(x, y, slot) {
     <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
     ${terraLook(x, y) === 'park' ? `<div class="status">${parkStatus(x + ',' + y).join('')}</div>` : ''}
     ${d.b === 'busch' ? bushColHtml(d.col || 0, 'busch', bushAll().filter(o => o !== d && (o.col || 0) !== (d.col || 0)).length) : ''}
+    ${DECO_LOOKS[baseOf(d.b)] ? decoLookHtml(baseOf(d.b), d) : ''}
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
@@ -1641,6 +1714,7 @@ function openDecoInfo(x, y, slot) {
   $('p-move').onclick = () => startMove(x, y, slot);
   $('p-close').onclick = closePanel;
   if (d.b === 'busch') wireBushCol($('panel'), { cur: d.col || 0, key: 'busch', set: i => setCol(d, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openDecoInfo(x, y, slot) });
+  if (DECO_LOOKS[baseOf(d.b)]) wireDecoLook($('panel'), baseOf(d.b), d, () => openDecoInfo(x, y, slot));
 }
 
 function openLandmark(x, y) {
@@ -1795,9 +1869,10 @@ function openResearch(tab = researchTab) {
         ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
       ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
         const have = !d.price || state.design.has(d.id), err = have ? null : designError(d);
-        const look = d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
+        const look = d.look ? `<i class="dlook" style="background:#f6efe2 url(${lookThumb(d.look[0], d.look[1], 0)}) center / contain no-repeat"></i>`   // Form von Stadtschmuck (Block 106)
+          : d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
         return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
-          ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name}</span>
+          ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name.replace(/^Farbe /, '')}</span>
           <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}`}</small></button>`;
       }).join('')}${gr === 'Wege' ? giftStyles() : ''}</div>`).join('')}`;
   }
@@ -2066,9 +2141,9 @@ function openTownHall(tab = hallTab) {
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
     if (b.dataset.quickGo === 'fire') { closeModal(); startFireworks(); }
   };
-  for (const b of card.querySelectorAll('[data-mailgo]')) b.onclick = () => openYou('freunde');
+  for (const b of card.querySelectorAll('[data-mailgo]')) b.onclick = () => openNet('freunde');
   for (const b of card.querySelectorAll('[data-wishset]')) b.onclick = () => openWishPicker();   // Wunschzettel (Block 105)
-  for (const b of card.querySelectorAll('[data-partnergo]')) b.onclick = () => openYou('freunde');
+  for (const b of card.querySelectorAll('[data-partnergo]')) b.onclick = () => openNet('freunde');
   for (const b of card.querySelectorAll('[data-partneroff]')) b.onclick = () => { if (viewOnly()) { cloudBlocked(); return; } state.partner = null; cloudTouched(); save(); openTownHall('town'); };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);
@@ -2137,7 +2212,7 @@ let modalTabKey = null;
 function modalFrame(c) {
   const tabs = c.querySelector('.hall-tabs'), on = tabs && tabs.querySelector('.look.on'), sc = c.querySelector(':scope > .tab-scroll') || c;
   c.classList.toggle('tabbed', !!tabs);
-  c.classList.toggle('you-win', !!c.querySelector('.you-tabs'));                       // Figur … Online: alle gleich breit
+  c.classList.toggle('you-win', !!c.querySelector('.you-tabs, .net-tabs'));            // Du und Online: alle Reiter gleich breit
   c.classList.toggle('help-win', !!c.querySelector('[data-hb]'));
   const key = on ? [...on.attributes].filter(a => a.name.startsWith('data-')).map(a => a.name + '=' + a.value).join() : null;
   if (key !== modalTabKey && !liveNow) sc.scrollTop = 0;
@@ -2244,6 +2319,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-06-schmuck', date: '6. Oktober', title: 'Stadtschmuck in Formen und Farben & ein Knopf für Online', items: [
+    '⛲ <b>Neue Brunnen:</b> Etagenbrunnen, Fontäne, Fischbrunnen und Blumenbrunnen – und der Kristallbrunnen funkelt prächtiger.',
+    '🏮 <b>Laternen und Bänke nach Wunsch:</b> je 5 Formen (Kandelaber, Lampion, Pilzlaterne … Gartenbank, Picknicktisch, Rundbank …) und 8 Farben. Wählen beim Bauen in der Leiste oder antippen und umstellen. Die Gruppe heißt jetzt „Stadtschmuck“.',
+    '🌐 <b>Eigener Knopf für Online:</b> Freunde und Online-Speicher findest du jetzt oben unter 🌐.',
+  ] },
   { id: '2026-10-06-fuereinander', date: '6. Oktober', title: 'Füreinander: Wunschzettel, Freundschaft & Partnerstadt', items: [
     '📌 <b>Wunschzettel:</b> Im Rathaus hängst du einen Wunsch aus (z. B. 200 Bretter). Deine Freunde sehen ihn unter 👥 und helfen mit einem Klick – du sagst automatisch Danke.',
     '💛 <b>Freundschaft wächst:</b> Besuche, Herzen, Gästebuch und Päckchen lassen bei jedem Freund Herzen wachsen (bis 5). Dafür gibt es Freundschaftsband, Herzballon, Freundesbank und Freundschaftsbaum.',
@@ -2251,7 +2331,7 @@ const NEWS_HISTORY = [
   ] },
   { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde, Tag & Nacht – und alles aufgeräumt', items: [
     '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
-    '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
+    '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch). 🌐 = Freunde und Online-Speicher. ☰ = Hilfe und Einstellungen.',
     '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
     '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
     '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist – oben am Ortsnamen zeigen Sonne und Mond die Tageszeit, im Rathaus steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
@@ -2340,7 +2420,7 @@ function showMenu() {
     <h2>Menü</h2>
     <div class="row"><button class="btn" id="m-help" style="flex:1">❓ Hilfe: Anleitung, Tipps, Nachschlagen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button><button class="btn ghost" style="flex:1" id="m-home">🏛️ Zum Rathaus</button></div>
-    <p class="muted">Figur, Erfolge, Album, Tagebuch, Freunde und Online-Speicher findest du oben bei dir (${ANIMALS[meLook().a].icon}).</p>
+    <p class="muted">Figur, Erfolge, Album und Tagebuch findest du oben bei dir (${ANIMALS[meLook().a].icon}), Freunde und Online-Speicher unter 🌐.</p>
     <div class="label">⚙️ Einstellungen</div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button><button class="btn ghost" style="flex:1" id="m-borders">${state.noBorders ? '▢ Randlinien aus' : '▣ Randlinien an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>

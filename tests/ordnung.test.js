@@ -23,16 +23,21 @@ describe('Aufgeräumt (Block 98)', () => {
     game("hallTab = 'wishes'; openTownHall()");                                            // gemerkter alter Reiter
     expect(game('hallTab')).toBe('todo');
   });
-  it('Knopf „Du“: Figur, Erfolge, Album, Tagebuch, Freunde, Online – überall dieselben Reiter', async () => {
+  it('Knopf „Du“: Figur, Erfolge, Album, Tagebuch – Knopf „🌐 Online“: Freunde, Speicher (Block 106)', async () => {
     document.getElementById('you-btn').click();
-    for (const t of ['figur', 'erfolge', 'album', 'tagebuch', 'freunde', 'online']) {
+    for (const t of ['figur', 'erfolge', 'album', 'tagebuch']) {
       game(`document.querySelector('[data-you="${t}"]').click()`); await new Promise(r => setTimeout(r, 5));
-      expect(ids('[data-you]')).toEqual(['figur', 'erfolge', 'album', 'tagebuch', 'freunde', 'online']);
+      expect(ids('[data-you]')).toEqual(['figur', 'erfolge', 'album', 'tagebuch']);
       expect(game(`document.querySelector('[data-you="${t}"]').classList.contains('on')`)).toBe(true);
     }
-    expect(txt()).toMatch(/Melde dich an/);                                               // Online ohne Anmeldung
     game('updateHud()');
     expect(game("document.getElementById('you-face').textContent")).toBe(game('ANIMALS[meLook().a].icon'));
+    document.getElementById('net-btn').click(); await new Promise(r => setTimeout(r, 5));
+    expect(ids('[data-net]')).toEqual(['freunde', 'online']);
+    game(`document.querySelector('[data-net="online"]').click()`); await new Promise(r => setTimeout(r, 5));
+    expect(txt()).toMatch(/Melde dich an/);                                               // Speicher ohne Anmeldung
+    await game("openYou('freunde')");                                                     // alter Weg leitet weiter
+    expect(ids('[data-net]')).toEqual(['freunde', 'online']);
   });
   it('☰ nur noch Hilfe, Neues, Einstellungen und Spielstand', () => {
     game('showMenu()');

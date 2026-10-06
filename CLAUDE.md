@@ -356,6 +356,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+106. **Stadtschmuck** (Block 106): Formen/Farben nur über `DECO_LOOKS` (Index = gespeicherter Wert, nie umsortieren – neue
+    hinten anhängen), freigeschaltet über `lookOk` (frei oder `b:form:id`/`b:col:id` in `state.design`), neu Gebautes über
+    `decoLookNew`. Wer Deko zeichnet, die Form/Farbe hat, nimmt `form` in den Bildchen-Schlüssel (spriteSmall/spriteTile).
+    Online-Dinge gehören unter 🌐 (`openNet`), nicht mehr unter „Du“.
 105. **Füreinander** (Block 105, friends.js unten): Freundschaftspunkte nur über `bondAdd` (eigene Aktion) bzw.
     `bondFromBook` (Empfangenes, Transaktion mit `seen`) – nie Punkte im Spielstand führen; dort nur die höchste Stufe
     `state.bond` (nie kleiner, `bondSync`). Belohnungen mit `bond: n` (ITEMS, WEAR_NEED). Wunschzettel nur der Besitzer

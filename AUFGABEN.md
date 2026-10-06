@@ -1256,3 +1256,21 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Transaktion in der Cloud gefüllt; Wunsch per Abruf statt Beobachtung, zieht beim neuen Link mit; Danke-Einträge nach
       60 Tagen weg; Besuchspunkt nur bei geklapptem Eintrag; Regeln: Flagge geprüft, Gästebuch-Zeit nicht in der Zukunft.
 
+
+## Block 106: Stadtschmuck in Formen und Farben, Online-Knopf (06.10.2026)
+- [x] ⛲ Brunnen (alle Größen): Etagenbrunnen (Standard, auch für bestehende), Fontäne, Fischbrunnen, Blumenbrunnen.
+      Kristallbrunnen neu: achteckiges Becken, Kristallkrone, leuchtende Kaskade, mehr Funkeln.
+- [x] 🏮 Laternen: Gaslaterne, Kandelaber, Lampion, Pilzlaterne, Stablaterne × 8 Farben (Mast/Gestell). 🪑 Bänke: Parkbank,
+      Gartenbank, Steinbank, Picknicktisch, Rundbank × 8 Farben. Je 2 Formen und 4 Farben frei, der Rest in der
+      Kunstakademie (mit Vorschaubild). `DECO_LOOKS` (data.js), `t.form`/`t.col` an Deko und Feld, Wahl für neu Gebautes in
+      `state.paintNew[b]` (parseSave lässt col/form jetzt durch – vorher ging dabei auch die Buschfarbe beim Laden verloren).
+      Zeichnen in js/draw-schmuck.js. Leiste beim Bauen: Formen mit Vorschaubild + Farben; Fenster: umstellen, auf alle
+      gleichen übertragen, „Neu gebaute bekommen das“.
+- [x] Gruppe „🪑 Platz“ heißt „🏮 Stadtschmuck“.
+- [x] 🌐 Eigener Knopf oben: Freunde · ☁️ Speicher (`openNet`, `NET_TABS`, Punkt bei Post/Gästebuch, Konflikt öffnet gleich
+      den Speicher). „Du“ behält Figur, Erfolge, Album, Tagebuch; alte Wege (openYou('freunde'|'online')) leiten weiter.
+      Leiste bei 375/390/430 px gemessen, bis 999 Mio. einzeilig. Test: schmuck.test.js (6), ordnung.test.js.
+- [x] Fehlerprüfung Block 106: Leiste auf 360/375 px mit Millionen wieder einzeilig (Symbol-Knöpfe schmaler, ≤ 370 px
+      kleinere Schrift); Bau-Vorschau großer Brunnen zeigt die gewählte Form; Spaziergänger setzen sich nicht in
+      Rundbank/Picknicktisch; Vorschaubild ohne Canvas bleibt leer statt „url(undefined)“.
+

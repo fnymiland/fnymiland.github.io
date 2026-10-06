@@ -250,7 +250,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
-    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
+    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
@@ -266,13 +266,13 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   return true;
 }
 // Kleine Deko in einer Ecke
-function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0) {
+function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
-  const key = `deco|${b}|${rot}|${col}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);   // col: Buschfarbe
+  const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);   // col: Busch-/Schmuckfarbe, form: Form (Block 106)
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
   const e = getSprite(key, z, () => {
-    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col }); });
+    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form }); });
     sp.z = z;
     return sp;
   });
@@ -521,7 +521,7 @@ function groupPreview(z) {
     const x = ox + it.dx, y = oy + it.dy, bad = !!errs.get(it);
     if (it.kind === 'deco') {
       const slot = it.from[1], [u, v] = slotPos(x, y, slot, it.d.b);
-      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, it.d.col || 0); });
+      add(x + ',' + y, () => { const p = toScreen(x, y); drawSmallOne(it.d.b, it.d.rot || 0, p.x + (u - v) * TW / 2 * z, p.y + (u + v) * TH / 2 * z, z, now, x, y, 1, slot, it.d.col || 0, it.d.form || 0); });
       continue;
     }
     const t = it.t, [w, h] = sizeOf(t.b, t.rot || 0, t);
@@ -837,7 +837,8 @@ function render(now) {
       const [u, v] = slotPos(x, y, preview.slot, ghostType), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
       g.globalAlpha = 0.65;
       drawSmallOne(ghostType, tool === 'verschieben' ? buildRot : smallRot(ghostType, preview.slot), q[0], q[1], z, now, x, y, 1, preview.slot,
-        tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : 0);   // wie es gesetzt wird (Block 69)
+        tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0,   // wie es gesetzt wird (Block 69)
+        tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0);
       g.globalAlpha = 1;
     }
     if (groupGhost && groupGhost.has(k)) {
@@ -853,7 +854,7 @@ function render(now) {
       const gs = decoScale(ghostType);
       g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
       const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
-        ...paintNewOf(ghostType), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}) };   // wie gebaut wird (Block 84d)
+        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}) };   // wie gebaut wird (Block 84d)
       drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;

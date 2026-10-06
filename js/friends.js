@@ -203,7 +203,7 @@ function friendsInboxWatch() {
   });
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
-    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – oben bei dir unter 👥 Freunde`);
+    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – oben unter 🌐 Online → Freunde`);
     groundVersion++;                                                    // Briefkasten-Fähnchen am Rathaus neu zeichnen
     friendsDot();
   });
@@ -220,8 +220,8 @@ const bookSeen = () => (cloudUser && frLS('seen_' + cloudUser.uid)) || 0;
 const bookNew = () => Object.values(bookAll).filter(e => e && (e.at || 0) > bookSeen()).length;
 // Punkt am Knopf „Du“ (Block 98) – und das offene Freunde-Fenster zeigt Neues gleich
 function friendsDot() {
-  const d = document.getElementById('diary-dot');
-  if (d) d.hidden = !youNews();
+  const d = document.getElementById('net-dot');
+  if (d) d.hidden = !netNews();
 }
 // part 'post': Briefkasten (nur wenn etwas drin ist) · 'book': Herzen, Gästebuch, wer da war (Block 98: im Fenster „Du → Freunde“)
 function friendsHallHtml(part) {
@@ -248,7 +248,7 @@ function wireFriendsHall(card) {
   if (cloudUser) frLS('seen_' + cloudUser.uid, Date.now() + 5000);     // gelesen
   friendsDot();
   for (const b of card.querySelectorAll('[data-mget]')) b.onclick = () => mailClaim(b.dataset.mget);
-  for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openYou('freunde'); } catch (e) { toast('Hat nicht geklappt'); } };
+  for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openNet('freunde'); } catch (e) { toast('Hat nicht geklappt'); } };
 }
 // Abholen: genau einmal (Transaktion löscht das Päckchen), dann ins Lager
 async function mailClaim(id) {
@@ -257,14 +257,14 @@ async function mailClaim(id) {
   let got = null;
   try {
     const r = await cloudApi.tx(`mail/${uid}/${id}`, cur => { if (!cur) return undefined; got = cur; return null; });
-    if (!r.ok || !got) { toast('📬 Das Päckchen wurde schon abgeholt'); openYou('freunde'); return; }
+    if (!r.ok || !got) { toast('📬 Das Päckchen wurde schon abgeholt'); openNet('freunde'); return; }
   } catch (e) { toast('Hat nicht geklappt – später nochmal'); return; }
   const add = {};
   for (const [r, n] of Object.entries(got.items || {})) if (RES[r] && isFinite(n) && n > 0) { const v = Math.min(n, MAIL_MAX); state.res[r] = (state.res[r] || 0) + v; add[r] = v; }
   cloudTouched(); save();
   toast(`📬 ${Object.entries(add).map(([r, n]) => `+${fmt(n)} ${RES[r].icon}`).join(' ')} von ${got.n}`);
   mailThanks(uid, id, got, add);                                        // Freundschaft, Wunschzettel, Danke (Block 105)
-  openYou('freunde');
+  openNet('freunde');
 }
 
 // --- Päckchen schicken (aus „Freunde & Besuch“) -------------------------------------------------
