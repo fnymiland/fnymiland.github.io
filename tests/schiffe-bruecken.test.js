@@ -30,4 +30,10 @@ describe('Schiffe und Brücken (Block 107)', () => {
     game("state.tiles.set('45,40', { b: 'schiene', lvl: 1 }); recalc()");
     expect(game("seaCache.has('test')")).toBe(false);
   });
+  it('Fischkutter kreisen nicht über einer Brücke (ihr Fanggebiet hat ringsum keine)', () => {
+    game("state.tiles.set('40,40', { b: 'hafen', lvl: 1, rot: 0 }); for (let x = 30; x <= 60; x++) state.tiles.set(x + ',44', { b: 'schiene', lvl: 1 }); recalc()");
+    const fg = game("fishingGround('40,40')");
+    expect(fg).not.toBe(null);
+    if (fg) for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) expect(game(`seaCross(${fg[0] + dx}, ${fg[1] + dy})`)).toBe(null);
+  });
 });

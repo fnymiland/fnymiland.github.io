@@ -1795,7 +1795,7 @@ function openSeaRoute(k) {
 function fishingGround(k) {
   const key = 'fish:' + k;
   if (seaCache.has(key)) return seaCache.get(key);
-  const a = dockPoint(k), s = nearestWater(...a), open = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (!isWater(x + dx, y + dy)) return false; return true; };
+  const a = dockPoint(k), s = nearestWater(...a), open = (x, y) => { for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (!isWater(x + dx, y + dy) || seaCross(x + dx, y + dy)) return false; return true; };   // keine Brücke im Fanggebiet (Block 107)
   const tiles = s && seaSearch(s, (x, y) => Math.hypot(x - a[0], y - a[1]) >= 2 && open(x, y), seaBox([a], 20));
   const r = tiles ? tiles[tiles.length - 1] : null;
   seaCache.set(key, r);

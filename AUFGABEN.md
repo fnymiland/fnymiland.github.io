@@ -1281,3 +1281,8 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Kreuzungen über dem Wasser gesperrt (`seaCross`/`seaStep` in seaSearch, `seaSight` kürzt nie über Brücken ab).
       Seewege werden neu berechnet, sobald sich Brücken über dem Wasser ändern (`seaBridgesCheck` in recalc).
       Test: schiffe-bruecken.test.js.
+- [x] 107b: Beim Durchfahren lag das Schiff trotzdem oben auf der Brücke – Schienen und Wegbrücken gehören zum Boden und
+      werden vor allem anderen gezeichnet. Jetzt wird das Brückenstück über einem Schiff danach noch einmal gezeichnet
+      (`drawBridgeOver`): die Fahrbahn liegt über dem Rumpf, Aufbau und Mast schauen darüber. Fischkutter kreisen nur, wo
+      ringsum keine Brücke ist.
+

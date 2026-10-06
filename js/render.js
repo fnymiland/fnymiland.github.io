@@ -245,6 +245,15 @@ function putSprite(e, cx, cy, z) {
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
+// Brückenstück (Schiene, Wegbrücke) über einem Schiff noch einmal zeichnen (Block 107): Brücken gehören zum Boden und lägen
+// sonst unter allem, was darauf fährt
+function drawBridgeOver(k, z, now) {
+  const t = state.tiles.get(k);
+  if (!t) return;
+  const [x, y] = keyXY(k), p = toScreen(x, y);
+  if (t.b === 'schiene') drawRailBed(p.x, p.y, z, x, y, t);
+  else if (isWegBridge(t)) drawPath(p.x, p.y, z, x, y, t);
+}
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
@@ -753,7 +762,13 @@ function render(now) {
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
   for (const m of walkers.concat(strollers, paraders, typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
-    if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
+    if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
+    if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
+      const under = [];
+      for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
+        if (Math.abs(bx - m.px) < 1 && Math.abs(by - m.py) < 1 && seaCross(bx, by)) under.push(bx + ',' + by);   // alles, was der Rumpf berührt
+      m.under = under.length ? under : null;
+    }   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }
@@ -869,6 +884,7 @@ function render(now) {
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
         if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
         else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
+        if (m.under) for (const bk of m.under) drawBridgeOver(bk, z, now);   // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
       }
     }
     if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }
