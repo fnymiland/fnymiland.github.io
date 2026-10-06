@@ -439,7 +439,8 @@ function updateHud() {
   setText($('you-face'), ANIMALS[meLook().a].icon);
   const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
   setText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
-  $('town-btn').setAttribute('aria-label', `Rathaus – ${tod.text} Uhr, ${tod.name}`);
+  const todLabel = `Rathaus – ${tod.text} Uhr, ${tod.name}`;
+  if ($('town-btn').getAttribute('aria-label') !== todLabel) $('town-btn').setAttribute('aria-label', todLabel);   // nur bei Änderung (Safari, hudtap.test)
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
   setText(fl, state.town.symbol);
