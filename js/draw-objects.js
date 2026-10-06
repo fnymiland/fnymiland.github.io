@@ -171,13 +171,16 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const out = (u, v) => box && (u < box[0] || u > box[1] || v < box[2] || v > box[3]);
   const span = step => [-Math.ceil(ext / step - 1e-9), Math.floor((2 * R + ext) / step + 1e-9)];   // Indizes im festen Raster
   if (kind === 'stones' || kind === 'dots') {
-    const step = kind === 'stones' ? 0.11 : 0.09, [i0, i1] = span(step);
-    for (let i = i0; i <= i1; i++) for (let j = i0; j <= i1; j++) {
-      const u = -R + i * step, v = -R + j * step;
+    // Raster über die ganze Insel (Block 100): Steine auf der Feldkante zeichnen beide Felder gleich – sonst bleiben an
+    // jeder Kante angeschnittene halbe Steine stehen, die auf breiten Wegen wie Striche aussehen
+    const step = kind === 'stones' ? 0.11 : 0.09, M = R + ext;
+    const gi0 = Math.ceil((x - M) / step), gi1 = Math.floor((x + M) / step), gj0 = Math.ceil((y - M) / step), gj1 = Math.floor((y + M) / step);
+    for (let i = gi0; i <= gi1; i++) for (let j = gj0; j <= gj1; j++) {
+      const u = i * step - x, v = j * step - y;
       if (out(u, v)) continue;
-      const h = hash(x * 16 + i, y * 16 + j, 333);
+      const h = hash(i, j, 333);
       if (kind === 'dots' && h > 0.45) continue;
-      const q = L([u + (h - 0.5) * 0.04, v + (hash(x * 16 + i, y * 16 + j, 334) - 0.5) * 0.04]);
+      const q = L([u + (h - 0.5) * 0.04, v + (hash(i, j, 334) - 0.5) * 0.04]);
       g.fillStyle = cols ? cols[Math.floor(h * 97) % cols.length] : col;
       g.beginPath(); g.ellipse(q[0], q[1], (kind === 'stones' ? 2.6 : 1.3) * z, (kind === 'stones' ? 1.6 : 0.9) * z, 0, 0, Math.PI * 2); g.fill();
     }
@@ -267,8 +270,11 @@ const PATH_LOOK = {
 };
 const pathAt = (x, y) => { const w = wegAt(x, y); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
+// gepflastert für volle Ecken: Weg (außer Trittsteinen) – und das Rathaus-Grundstück (es ist selbst ein Arm der Wege), sonst
+// bleibt an jeder Feldgrenze davor ein Zwickel Wiese stehen (Block 100)
+const quadPaved = (px, py) => { const n = pathAt(px, py); return n ? n.id !== 'tritt' : bAt(px, py) === 'rathaus'; };
 function pathQuads(x, y) {
-  const paved = (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
+  const paved = quadPaved;
   const out = [];
   for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
   return out;
@@ -671,7 +677,12 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   for (const [dx, dy] of DIRS) {
     if (wideAt(dx, dy)) continue;
     // Weg bzw. Gartenweg/Vorplatz kommt an: Lücke im Bordstein (quer q wie armUV: auf der Seite v = q·dx bzw. u = −q·dy)
-    const gaps = (arms.some(a => a[0] === dx && a[1] === dy) ? [[-ROAD_W, ROAD_W]] : []).concat(stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
+    const arm = arms.some(a => a[0] === dx && a[1] === dy);
+    // schmaler Weg (oder Rathaus) daneben, und auf einer Hälfte der Kante ist auch quer daneben Weg: dort füllt der Nachbar
+    // seine Ecke ganz (pathQuads) – kein Bordstein-Stück mitten in die Fläche (Block 100)
+    const halves = arm ? [-1, 1].filter(s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0)))
+      .map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
+    const gaps = (arm ? [[-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
       .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
     let at = -0.5;
@@ -1137,15 +1148,31 @@ function courtLinksAt(x, y) {
 }
 // Belag jedes Stücks von a bis an die Vorderkante A, quer s (Platz bzw. schmaler Weg); vorn ohne Bordstein. Trittsteine nur
 // auf schmalen Wegen, Plätze dann in Schachbrett
-function paveCourt(K, C0, A, lk, x, y, t) { for (const c of courtParts(C0, t)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y); }
-function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y) {
-  const e = COURT_CURB, z = K.z;
+function paveCourt(K, C0, A, lk, x, y, t) { const open = courtOpenSides(K, t, x, y); for (const c of courtParts(C0, t)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y, open); }
+// Welche Seiten des Grundstücks sind ganz von Weg umgeben (Block 100)? Dort läuft der Platz bis an die Grenze, ohne
+// Bordstein – sonst bliebe zwischen Platz und Wegfläche eine Linie stehen. Rahmen wie kit: a nach vorn, s quer.
+function courtOpenSides(K, t, x, y) {
+  if (!t || !ITEMS[t.b] || x > 1e5) return null;
+  const [w, h] = sizeOf(t.b, t.rot, t), [sa, sb] = ITEMS[t.b].size || [1, 1], HA = sa / 2, HB = sb / 2;
+  const mx = x + (w - 1) / 2, my = y + (h - 1) / 2;
+  const paved = (a, b) => { const [u, v] = K.turn(a, b); return quadPaved(Math.round(mx + u), Math.round(my + v)); };
+  const along = n => Array.from({ length: n }, (_, i) => -n / 2 + 0.5 + i);
+  return { HA, HB, back: along(sb).every(b => paved(-HA - 0.5, b)), lo: along(sa).every(a => paved(a, -HB - 0.5)), hi: along(sa).every(a => paved(a, HB + 0.5)) };
+}
+function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y, open = null) {
+  let e0 = COURT_CURB, e1 = COURT_CURB;
+  const z = K.z;
+  if (open && !lk.stones) {                                             // bis an die Grenze, wo ringsum Weg ist
+    if (open.lo && s0 <= -open.HB + 0.05) { s0 = -open.HB; e0 = 0; }
+    if (open.hi && s1 >= open.HB - 0.05) { s1 = open.HB; e1 = 0; }
+    if (open.back && a0 <= -open.HA + 0.05) a0 = -open.HA;
+  }
   if (lk.stones) {                                                                      // Trittsteine bis zur Tür
     const m = (s0 + s1) / 2;                                                             // wie am Weg: alle ¼ Feld, gleich groß
     for (let i = 0, a = A - 0.125; i < 4 && a >= a0 - 0.05; i++, a -= 0.25) { const q = K.P(a, m), k = 0.94 + hash(x + i, y, 93) * 0.1; ellipse(q[0], q[1] + 0.8 * z, 6 * k * z, 3.1 * k * z, C('#aaa498')); ellipse(q[0], q[1], 6 * k * z, 3.1 * k * z, C('#d9d4c9')); }
     return;
   }
-  K.rect(a0, s0 - e, A, s1 + e, C(lk.edge));
+  K.rect(a0, s0 - e0, A, s1 + e1, C(lk.edge));
   const L = p => K.P(p[0], p[1]);
   g.save(); clipTo([[[a0, s0], [A, s0], [A, s1], [a0, s1]]], L);
   paintLook(L, lk, x, y, z, false, Math.max(A, s1, -s0) + 0.5);

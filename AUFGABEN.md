@@ -1176,3 +1176,13 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] 99a: „youNews is not defined“ beim Start im WLAN: main.js startete die Spielschleife, bevor die Skripte danach
       (cloud, live, friends, me) geladen waren – auf schnellem localhost nie zu sehen. Schleife startet jetzt erst bei
       DOMContentLoaded (structure.test prüft das).
+
+## Block 100: Wegflächen ohne Lücken und Striche (06.10.2026)
+- [x] Grüne Zwickel vor dem Rathaus: Wege füllen die Ecke zwischen zwei Feldern nur, wenn das 2×2-Quadrat ganz Weg ist –
+      am Rathaus-Grundstück nie. Das Rathaus zählt jetzt mit (`quadPaved`, es ist ja selbst ein Arm der Wege).
+- [x] „Ganz breit“-Striche: (1) Punkt- und Steinmuster lagen je Feld in eigenem Raster – an jeder Kante blieben halbe
+      Steine stehen. Jetzt ein Raster über die ganze Insel, Steine auf der Kante zeichnen beide Felder gleich.
+      (2) Breites Feld neben schmalem zog Bordstein-Stücke mitten in die Fläche: auf Kanten-Hälften, wo der schmale
+      Nachbar seine Ecke ohnehin voll füllt, kein Bordstein mehr.
+- [x] Rathausplatz: Seiten, die ganz von Weg umgeben sind, laufen bis an die Grundstücksgrenze (ohne Bordstein-Linie,
+      `courtOpenSides`). Test: wegflaeche.test.js (4 Fälle).

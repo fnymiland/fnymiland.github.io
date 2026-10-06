@@ -356,6 +356,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+100. **Wegflächen nahtlos** (Block 100): Volle Ecken über `quadPaved` (Weg außer Trittsteinen, dazu das Rathaus). Muster mit
+    Einzelpunkten (`dots`, `stones`) liegen in einem Raster über die ganze Insel (globale Indizes, `hash(i, j)`) – nie
+    wieder ein Raster je Feld, sonst halbe Steine an jeder Kante. Bordstein am breiten Weg nur, wo wirklich Wiese anschließt.
 99. **Ladereihenfolge**: Die Spielschleife (`frame`) startet erst bei `DOMContentLoaded` – nach main.js kommen noch
     cloud.js, live.js, friends.js, me.js. Wer aus Bild/HUD etwas aus diesen Dateien aufruft, verlässt sich darauf;
     Code, der beim Laden selbst läuft, darf nichts aus späteren Dateien aufrufen (im langsamen WLAN fehlt es dann).
