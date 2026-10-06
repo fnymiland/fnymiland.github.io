@@ -277,6 +277,30 @@ async function liveSetOpen(on) {
   await cloudApi.update({ [`users/${uid}/pub/open`]: liveOpen, [`worlds/${wid}/open`]: liveOpen });
 }
 const visitLink = wid => `${location.origin}${location.pathname}?besuch=${wid}`;
+// Teilen (Block 96b): Teilen-Menü → Zwischenablage → altes Kopieren → Fenster zum Selbst-Kopieren. Auf http:// (WLAN) gibt es
+// weder Teilen-Menü noch Zwischenablage – dann greifen die letzten beiden. Beim Link nur die Adresse, ohne Text davor.
+async function shareText(text, link = false) {
+  if (navigator.share) {
+    try { await navigator.share(link ? { url: text } : { text }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }               // selbst abgebrochen: nichts weiter
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try { await navigator.clipboard.writeText(text); toast('📋 Kopiert'); return; } catch (e) { /* weiter */ }
+  }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, text.length);
+    const ok = document.execCommand && document.execCommand('copy');
+    ta.remove();
+    if (ok) { toast('📋 Kopiert'); return; }
+  } catch (e) { /* weiter */ }
+  const back = document.getElementById('fr-box') ? openFriends : closeModal;
+  openModal(`<h2>📋 Zum Kopieren</h2><p class="muted">Lange auf das Feld tippen und „Kopieren“ wählen.</p>
+    <input id="sh-text" class="cloud-mail" readonly value="${escHtml(text)}" aria-label="Zum Kopieren"><div class="row"><button class="btn" id="m-ok">Fertig</button></div>`);
+  const inp = $('sh-text'); inp.focus(); inp.select();
+  $('m-ok').onclick = back;
+}
 async function openFriends() {
   if (!cloudUser) {
     openModal(`<h2>👥 Freunde & Besuch</h2><p>Melde dich im ☁️ Online-Speicher an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen.</p>
@@ -308,8 +332,7 @@ async function openFriends() {
       <div class="row"><button class="btn ghost small" id="fr-new">Neuen Link machen (der alte geht dann nicht mehr)</button></div>` : '<p class="muted">Freunde können dich immer besuchen – der Link ist für alle anderen.</p>'}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div></div>`);
   $('m-close').onclick = closeModal;
-  // Teilen: beim Link nur die Adresse (ohne Text davor), beim Code ein kurzer Satz; ohne Teilen-Menü in die Zwischenablage
-  const share = async (text, link = false) => { try { if (navigator.share) { await navigator.share(link ? { url: text } : { text }); return; } await navigator.clipboard.writeText(text); toast('Kopiert'); } catch (e) { /* abgebrochen */ } };
+  const share = (text, link) => shareText(text, link);
   $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`);
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };

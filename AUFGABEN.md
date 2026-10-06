@@ -1124,4 +1124,7 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       des Rathauses führt dann zum Reiter „Besuch“; Abholen per Transaktion – genau einmal, dann ins Lager. Nur auf dem
       führenden Gerät.
 - [x] Datenbank-Regeln erweitert (firebase-rules.json: guests, book, mail mit Prüfungen). Test: friends.test.js (8 Fälle).
+- [x] 96b: Teilen tat im WLAN (http://) nichts – dort gibt es kein Teilen-Menü und keine Zwischenablage, der Fehler wurde still
+      verschluckt. Jetzt: Teilen-Menü → Zwischenablage → altes Kopieren → Fenster mit dem Link zum Selbst-Kopieren. Beim
+      Besuchs-Link nur die Adresse, ohne Text davor.
 

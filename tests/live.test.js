@@ -215,5 +215,13 @@ describe('Prüfung von Stufe 3 (Block 95b)', () => {
     game(`document.querySelector('#panel [data-wall="${v}"]').click()`);
     expect(game("state.tiles.get('10,10').wall")).toBe(+v);
   });
+  it('Teilen ohne Teilen-Menü und ohne Zwischenablage (http:// im WLAN): Fenster zum Selbst-Kopieren mit nur dem Link', async () => {
+    game('window._sh = navigator.share; window._cb = navigator.clipboard; window._ex = document.execCommand');
+    game("Object.defineProperty(navigator, 'share', { value: undefined, configurable: true }); Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true }); document.execCommand = () => false");
+    try {
+      await game("shareText('http://x/?besuch=abc', true)");
+      expect(game("document.getElementById('sh-text').value")).toBe('http://x/?besuch=abc');
+    } finally { game("document.execCommand = window._ex; delete navigator.share; delete navigator.clipboard"); }
+  });
 });
 
