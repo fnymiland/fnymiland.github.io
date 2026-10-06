@@ -64,6 +64,27 @@ function hbfTrack(K, b, lk, hx, hy) {
   }
 }
 
+// Gewölbe aus Ziegeln (Oberlicht im First) bzw. Holz (Bretter) mit Gurtbögen über den Stützen (Block 122) – dieselbe Form wie das
+// Glasdach (K.block 'barrel', V wie dort): Längsfugen, Bögen quer, nur auf der sichtbaren Seite
+function vaultDetail(K, V, brick, lit) {
+  const z = K.z, L = V.ha * 1.12, R = V.hb * 1.12, top = V.lift + V.h;
+  const pt = (s, th, k = 1.01) => K.P(V.a + s, V.b + Math.cos(th) * R * k, top + Math.sin(th) * V.roofH * k);
+  const vis = th => K.facing(0, Math.cos(th)) > -0.05;
+  const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
+  const rows = brick ? 10 : 14;                                            // Ziegelreihen bzw. Bretter längs
+  for (let i = 1; i < rows; i++) { const th = Math.PI * i / rows; if (vis(th)) line([pt(-L, th), pt(L, th)], brick ? '#8f4a37' : '#93663f', brick ? 0.55 : 0.45); }
+  if (brick) {                                                             // Oberlicht: Glasband im First
+    const t0 = Math.PI * 0.42, t1 = Math.PI * 0.58;
+    poly([pt(-L * 0.86, t0, 1.02), pt(L * 0.86, t0, 1.02), pt(L * 0.86, t1, 1.02), pt(-L * 0.86, t1, 1.02)], lit ? 'rgba(255,224,150,0.9)' : 'rgba(207,234,242,0.95)');
+    for (const s of [-0.43, 0, 0.43].map(f => f * L * 2)) line([pt(s, t0, 1.03), pt(s, t1, 1.03)], '#7d8794', 0.7);
+  }
+  for (const a of [-0.9, 0.3, 1.4]) {                                      // Gurtbögen über den Stützen
+    const s = a - V.a, pts = [];
+    for (let i = 0; i <= 20; i++) { const th = Math.PI * i / 20; if (vis(th)) pts.push(pt(s, th, 1.025)); else if (pts.length) break; }
+    if (pts.length > 1) line(pts, brick ? '#7a3c2c' : '#6e4a2e', brick ? 1.5 : 1.8);
+  }
+}
+
 // Wand- und Dachfarbe: selbst gewählt (t.wall/t.roof aus WALLS/ROOFS, wie bei Häusern) oder die des Gebäudes
 function paint(t, wall, roof) { return [t && t.wall != null ? WALLS[t.wall] : wall, t && t.roof != null ? ROOFS[t.roof] : roof]; }
 
@@ -804,20 +825,11 @@ const BUILDING_ART = {
           g.save(); g.globalAlpha *= 0.62;
           K.block({ a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, wall: '#8a96a3', roof: '#cfeaf2', roofH: 11, type: 'barrel' });   // vorn ragt der Bahnsteig hinaus
           g.restore();
-        } else {                                                      // flaches Bahnsteigdach mit Blende auf einer Pfostenreihe (Block 85b)
-          for (const a of [-0.6, 0.3, 1.2]) kPost(K, a, bp, lift, iron, 1.3);
-          const fascia = look === 'backstein' ? '#3f5a4a' : '#f4ead2';
-          const rc = look === 'backstein' ? '#8a4a38' : '#9a6a48';
-          const D = K.block({ a: 0.3, b: bp, ha: 1.15, hb: 0.62, h: 1.6, lift, wall: fascia, roof: rc, type: 'flat' });
-          g.strokeStyle = C(shade(rc, -0.12)); g.lineWidth = 0.6 * z; g.beginPath();            // Blechbahnen
-          for (const db of [-0.36, -0.12, 0.12, 0.36]) { const p0 = K.P(-0.85, bp + db, lift + 1.6), p1 = K.P(1.45, bp + db, lift + 1.6); g.moveTo(...p0); g.lineTo(...p1); }
-          g.stroke();
-          if (look === 'land') for (const F of Object.values(D.faces)) if (F) {               // gezackte Holzborte unten an der Blende
-            const len = Math.hypot(F.Q[0] - F.P[0], F.Q[1] - F.P[1]), m = Math.max(3, Math.round(len / (4 * z)));
-            const pts = [F.P];
-            for (let i = 0; i < m; i++) { const u = (i + 0.5) / m, q = lerp(F.P, F.Q, u); pts.push([q[0], q[1] + 1.4 * z]); pts.push(lerp(F.P, F.Q, (i + 1) / m)); }
-            poly(pts, C('#f4ead2'));
-          }
+        } else {                                                      // Gewölbe wie beim Glasdach – aus Ziegeln bzw. Holz (Block 122)
+          for (const a of [-0.9, 0.3, 1.4]) for (const db of [-0.47, 1.47]) kPost(K, a, b + db, lift, iron, 1.4);
+          const brick = look === 'backstein', V = { a: 0.25, b: b + 0.5, ha: 1.2, hb: 0.98, h: 1, lift, roofH: 11 };
+          K.block({ ...V, wall: brick ? '#b8664a' : '#e9d3ad', roof: brick ? '#a65a44' : '#b07f52', type: 'barrel' });
+          vaultDetail(K, V, brick, lit);
         }
       }]);
     }

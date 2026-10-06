@@ -1432,3 +1432,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       unverändert. Umstellen auf Mitte: Gleise rechts der Halle rücken ein Feld (das Fenster sagt vorher, wie viele);
       „+ Gleis“ rechts, „− Gleis“ nur, solange rechts eins bleibt. Gespeichert als `wing: 2`, `mid`.
       Test: hbf-fluegel.test.js (alle Drehungen, symmetrisch bei 4 Gleisen, ± Gleis, Speichern, Zeichnen).
+
+
+## Block 122: Gewölbe für Backstein- und Land-Bahnhof (06.10.2026)
+- [x] Die Bahnsteigdächer von Backstein und Land waren flache Blechdächer auf einer Pfostenreihe – nur das Glasdach hatte
+      das schöne Tonnengewölbe. Jetzt alle drei in derselben Form: Backstein als Ziegelgewölbe (Ziegelreihen, Gurtbögen über
+      den Stützen, Glas-Oberlicht im First, nachts warm), Land als Holzgewölbe (Bretter, kräftige Holzbögen). `vaultDetail`
+      zeichnet Fugen und Bögen nur auf der sichtbaren Seite. Test: hbf-fluegel.test.js.
