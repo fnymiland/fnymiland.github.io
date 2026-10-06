@@ -2037,7 +2037,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (COVER.has(k)) return 'Hier steht etwas';
       if (decosAt(k) && !['wiese', 'strand'].includes(b)) return 'Hier stehen schon kleine Dekos';
     }
-    const want = TERRAFORM[b], now = look || (ter === 'grass' && isBeach(x, y) ? 'sand' : ter);
+    // gespeichertes 'grass' (Rasen/Boden entfernt, Anlage verschoben) zählt wie unberührt: am Meer sieht es nach Strand aus (Block 119)
+    const want = TERRAFORM[b], now = look && look !== 'grass' ? look : (ter === 'grass' && isBeach(x, y) ? 'sand' : ter);
     if (now === want || (want === 'wiese' && now === 'grass')) return `Hier ist schon ${{ wiese: 'Wiese', sand: 'Strand', forest: 'Wald', obst: 'ein Obsthain', rock: 'Fels', park: 'Parkrasen', fz: 'Freizeitpark-Boden' }[want]}`;
   } else if (b === 'graben' || b === 'schuett') {
     if (!ownedTile(x, y)) return b === 'schuett' && isSea(x, y) ? (claimable(x, y) ? null : 'Im Meer nur direkt neben deinem Land') : isSea(x, y) ? 'Hier ist schon Wasser' : 'Das ist nicht dein Grundstück';

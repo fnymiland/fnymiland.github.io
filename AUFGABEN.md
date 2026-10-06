@@ -1409,3 +1409,10 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Kübel), das Empfangsgebäude läuft darüber; der Bahnhof ist ein Feld breiter, Portal und Eingang (`hbfEntrance`) mittig auf
       einem Feld. Die Gleise bleiben dabei, wo sie sind (Anker rückt), auch mit „+ Gleis“. Gespeichert als `wing`.
       Test: hbf-fluegel.test.js (alle Drehungen, beide Seiten, Kosten, Platz, Speichern, Zeichnen).
+
+
+## Block 119: Wiese auf Sand (06.10.2026)
+- [x] Am Meer ließ sich Sand oft nicht in Wiese verwandeln („Hier ist schon Wiese“) – nur über den Umweg Parkrasen. Grund: viele
+      Felder tragen gespeichert `grass` (ganze Startinsel, nach Rasen/Boden entfernen, Roden, Verschieben einer Anlage); am Meer
+      werden sie als Strand gezeichnet, der Pinsel sah aber nur den gespeicherten Wert. Jetzt zählt `grass` wie unberührt (was
+      man sieht). Testwelt: alle 153 Sandfelder am Meer nehmen Wiese an. Test: terraform.test.js.

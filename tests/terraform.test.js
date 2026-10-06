@@ -61,4 +61,15 @@ describe('Terraforming', () => {
     for (const b of ['wiese', 'strand', 'wald', 'obstwald', 'fels']) expect(() => game(`thumbRaw('${b}')`), b).not.toThrow();
     expect(() => game("drawGround(7, 8, { x: 100, y: 100 }, 1, 0, true)")).not.toThrow();
   });
+  it('Block 119: Wiese auf Sand am Meer geht auch dort, wo der Boden gespeichert „grass“ heißt (Startinsel, Rasen entfernt)', () => {
+    game("state.techs.add('terraform')");
+    const k = game(`(() => { for (let y = -30; y <= 40; y++) for (let x = -30; x <= 40; x++) { const k = x + ',' + y; if (ownedTile(x, y) && terrainAt(x, y) === 'grass' && isBeach(x, y) && !COVER.has(k) && !decosAt(k)) { state.terra.set(k, 'grass'); sandCache.clear(); return k; } } return null; })()`);
+    expect(k).not.toBe(null);
+    const [x, y] = k.split(',').map(Number);
+    expect(game(`placeError('wiese', ${x}, ${y})`)).toBe(null);                                   // vorher: „Hier ist schon Wiese“
+    expect(game(`placeError('strand', ${x}, ${y})`)).toMatch(/schon Strand/);
+    game(`build('wiese', ${x}, ${y})`);
+    expect(game(`terraLook(${x}, ${y})`)).toBe('wiese');
+    expect(game(`placeError('wiese', ${x}, ${y})`)).toMatch(/schon Wiese/);
+  });
 });
