@@ -3,7 +3,7 @@
 // Deine Figur (Block 97): Du spazierst als Bürgermeister·in über die eigene Insel – gern ums Rathaus, und Neues
 // schaust du dir an. Antippen: Sprechblase mit dem, was gerade dran ist (Einführung, fehlendes Material, Ausbauen,
 // Wünsche) und ein Knopf dorthin. Ab und zu meldet sie sich von selbst (nicht bei „Tipps aus“).
-// Aussehen im Rathaus → „Deine Figur“: Tier, Fell, Shirt, Kopf, Gesicht, Körper, Hand. Besondere Sachen gibt es für
+// Aussehen im Fenster „Du“ (Knopf oben mit deinem Gesicht) → Figur: Tier, Fell, Shirt, Kopf, Gesicht, Körper, Hand. Besondere Sachen gibt es für
 // Erfolge (WEAR_NEED). Gespeichert in state.me (Spielstand, geht ohne Anmeldung); angemeldet wird es zusätzlich ins
 // Profil kopiert, damit man bei Freunden genauso aussieht (friends.js liest es beim Besuch von dort).
 // ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ function meTip() {
   const lack = meLack();
   if (lack) return lack;
   const n = readyList().ready.length;
-  if (n) return { say: `✨ ${n === 1 ? 'Eins kann' : n + ' können'} ausgebaut werden!`, text: 'Im Rathaus unter „Bereit“ siehst du alles, was du jetzt ausbauen kannst.', real: true,
+  if (n) return { say: `✨ ${n === 1 ? 'Eins kann' : n + ' können'} ausgebaut werden!`, text: 'Im Rathaus unter „Zu tun“ siehst du alles, was du jetzt ausbauen kannst.', real: true,
     go: () => openTownHall('ready'), goLabel: '🏛️ Zeig mir' };
   return meWish() || { say: pickOne(ME_CHAT()), text: 'Alles läuft prima. Tipp mich an, wenn du nicht weiterweißt – ich sag dir, was gerade dran ist.' };
 }
@@ -218,11 +218,46 @@ function openMeInfo() {
     <div class="status"><div>${tip.text}</div></div>
     <div class="row">${tip.go ? `<button class="btn" id="p-tip">${tip.goLabel}</button>` : ''}<button class="btn ghost" id="p-look">✏️ Aussehen</button><button class="btn ghost" id="p-close">Schließen</button></div>`);
   if ($('p-tip')) $('p-tip').onclick = () => { closePanel(); tip.go(); };
-  $('p-look').onclick = () => { closePanel(); openTownHall('figur'); };
+  $('p-look').onclick = () => { closePanel(); openYou('figur'); };
   $('p-close').onclick = closePanel;
 }
 
-// --- Rathaus → „Deine Figur“ ---------------------------------------------------------------------
+// --- Fenster „Du“ (Block 98): Figur, Erfolge, Album, Tagebuch, Freunde, Online – Knopf oben mit deinem Gesicht ---------
+// Album, Tagebuch, Freunde und Online sind eigene Fenster; sie setzen youHead(tab) oben ein, damit alle Reiter gleich aussehen.
+const YOU_TABS = [['figur', '🐾 Figur'], ['erfolge', '⭐ Erfolge'], ['album', '📒 Album'], ['tagebuch', '📖 Tagebuch'], ['freunde', '👥 Freunde'], ['online', '☁️ Online']];
+let youTab = 'figur';
+function youMark(id) {
+  if (id === 'tagebuch' && state.diarySeen < state.diary.length) return ' <span class="tdot" aria-label="neue Seite"></span>';
+  if (id === 'freunde' && cloudUser && (mailWaiting() || bookNew())) return ' 📬';
+  if (id === 'online' && cloudState === 'konflikt') return ' ⚠️';
+  return '';
+}
+// etwas Neues für dich? (Punkt am Knopf oben)
+const youNews = () => state.diarySeen < state.diary.length || (!!cloudUser && (mailWaiting() || bookNew())) || cloudState === 'konflikt';
+function youHead(tab) {
+  youTab = tab;
+  const L = meLook();
+  return `<h2>${ANIMALS[L.a].icon} ${escHtml(L.name || 'Du')}</h2>
+    <div class="looks hall-tabs you-tabs">${YOU_TABS.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-you="${id}">${label}${youMark(id)}</button>`).join('')}</div>`;
+}
+function openYou(tab = youTab) {
+  youTab = tab;
+  if (tab === 'album') return openAlbum();
+  if (tab === 'tagebuch') return openDiary();
+  if (tab === 'freunde') return openFriends();                          // (async: wartet auf Freundescode)
+  if (tab === 'online') return openCloud();
+  if (tab !== 'erfolge') tab = youTab = 'figur';
+  openModal(`${youHead(tab)}${tab === 'erfolge' ? erfolgeHtml() : meHallHtml()}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`, tab === 'erfolge' ? () => openYou('erfolge') : null);
+  $('modal-card').classList.add('hall');
+  if (tab === 'figur') wireMeHall($('modal-card'));
+  $('m-close').onclick = closeModal;
+}
+// Reiter: ein Griff für alle Unterfenster
+$('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-you]'); if (b) { sfx('deco'); openYou(b.dataset.you); } });
+$('you-btn').onclick = () => { setTool('look'); openYou(state.diarySeen < state.diary.length ? 'tagebuch' : youTab); };
+
+// --- „Du“ → Figur ----------------------------------------------------------------------------------
 function meHallHtml() {
   const L = meLook(), on = (cond) => cond ? ' on' : '';
   const lockInfo = slot => {                                               // unter der Reihe: wofür es das angetippte Teil gibt
@@ -253,7 +288,7 @@ function meHallHtml() {
     <p class="muted">🔒 Gesperrtes gibt es für Erfolge – antippen zeigt, wofür und wie weit du bist.</p>`;
 }
 function wireMeHall(card) {
-  const redo = () => openTownHall('figur');
+  const redo = () => openYou('figur');
   const cv = card.querySelector('#me-prev');
   if (cv) figPreview(cv, meFigLook(), 4.2);
   for (const b of card.querySelectorAll('[data-mea]')) b.onclick = () => { setMe({ a: +b.dataset.mea }); sfx('deco'); redo(); };
@@ -265,7 +300,7 @@ function wireMeHall(card) {
     setMe({ [slot]: id || null }); sfx('deco'); redo();
   };
   for (const b of card.querySelectorAll('[data-mewlock]')) b.onclick = () => { meLockOpen = meLockOpen === b.dataset.mewlock ? null : b.dataset.mewlock; redo(); };
-  for (const b of card.querySelectorAll('[data-mego]')) b.onclick = () => { meLockOpen = null; openTownHall(b.dataset.mego); };
+  for (const b of card.querySelectorAll('[data-mego]')) b.onclick = () => { meLockOpen = null; openYou(b.dataset.mego); };
   const on = card.querySelector('#me-on');
   if (on) on.onclick = () => { setMe({ off: !meLook().off }); redo(); };
   const nm = card.querySelector('#me-name');

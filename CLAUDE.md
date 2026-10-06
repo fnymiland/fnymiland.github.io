@@ -167,9 +167,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Rundkurs: `railLoop` (Äste abschneiden, genau ein Ring, alle Bahnhöfe daran) → `line.loop`; Züge darauf sind
     zeitversetzte Kopien (`loopPos(route, tau)`, gemeinsames `ls.tau`) und stoßen so nie zusammen. Weitere Züge
     (`t.extra` an allen Bahnhöfen, `EXTRA_TRAIN`) nur auf Rundkursen, 1 je 2 km (`line.max`).
-34. **Leiste oben** ist bewusst schlank: Rathaus, Geld (`fmtMoney`, immer glatt), Einwohner, Ideen, 📦, ☰. Raten und
+34. **Leiste oben** ist bewusst schlank: Rathaus, Geld (`fmtMoney`, immer glatt), Einwohner, Ideen, 📦, Du (Gesicht der
+    Figur, Block 98), ☰. Raten und
     Arbeitsplätze nur nach Antippen (`hudMore`, Klasse `more`), Rohstoffe/Schönheit/Strom im Lager (`storeHtml`,
-    `toggleStore`), bezahltes Material blitzt am 📦 (`flashStore` aus `payMat`). Tagebuch steht im Menü. Keine neuen
+    `toggleStore`), bezahltes Material blitzt am 📦 (`flashStore` aus `payMat`). Tagebuch steht bei „Du“. Keine neuen
     Anzeigen oben ergänzen – lieber ins Lager oder ins Rathaus. Bei ≤ 480 px muss alles in eine Zeile passen.
 35. **Meer gehört niemandem**: Auf Wasser außerhalb eigener Grundstücke nie „nicht dein Grundstück“ (`notMine`), sondern
     „Nicht auf dem Wasser“; Schienen/Aufschütten über `claimable`, die Seebrücke darf ins offene Meer (`inWorld`,
@@ -352,6 +353,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+98. **Drei feste Orte** (Block 98): 🏛️ Rathaus = die Stadt (`HALL_TABS`: Übersicht, Zu tun, Bewohner, Inseln, Ort).
+    Knopf „Du“ = der Spieler (`openYou`, `YOU_TABS`: Figur, Erfolge, Album, Tagebuch, Freunde, Online) – Album,
+    Tagebuch, Freunde und Online sind eigene Fenster und setzen `youHead(tab)` oben ein. ☰ = Hilfe-Buch (`openHelp`,
+    `HELP_BOOK`: Anleitung, Tipps, Nachschlagen, oben `helpTop` mit Suche) und Einstellungen/Spielstand. **Jedes
+    Fenster gibt es an genau einer Stelle** – Neues dort einhängen, wo es hingehört, nicht als zusätzlichen Knopf
+    irgendwo. Alte Sprungziele (`openTownHall('erfolge'|'besuch'|'figur'|'ready'|'wishes')`) leiten über `HALL_MOVED`
+    weiter. Neues für den Spieler zeigt der Punkt am Knopf „Du“ (`youNews`) und am Reiter (`youMark`).
 97. **Deine Figur** (Block 97, js/me.js): Aussehen nur über `meLook()` lesen (prüft alles, lässt nicht Verdientes weg) und
     `setMe(patch)` schreiben (speichert, `cloudTouched`, kopiert ins Profil `users/<uid>/profile/{animal,look}`). Neue
     Kleidung: zeichnen in `drawWear`/`drawWearBack` (movers.js) und in `WEAR` eintragen; Besonderes in `WEAR_NEED` (Erfolg +

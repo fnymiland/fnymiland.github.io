@@ -72,7 +72,7 @@ describe('Leiste oben', () => {
 
   it('schlank: Raten und Arbeitsplätze erst beim Antippen, Lager und Schönheit hinter 📦', () => {
     const hud = document.getElementById('hud');
-    expect(hud.querySelectorAll('.pill').length).toBe(6);
+    expect(hud.querySelectorAll('.pill').length).toBe(7);                     // mit „Du“ (Block 98)
     game('updateHud()');
     expect(hud.classList.contains('more')).toBe(false);
     document.getElementById('money-btn').onclick();
@@ -93,9 +93,12 @@ describe('Leiste oben', () => {
     expect(f.textContent).toContain('4');
   });
 
-  it('das Tagebuch steht im Menü (mit Punkt, wenn es Neues gibt)', () => {
-    game("state.diarySeen = 0; state.diary = ['start', 'x']; showMenu()");
-    expect(document.getElementById('m-diary').querySelector('.dot')).not.toBe(null);
+  it('das Tagebuch steht bei „Du“ (Punkt am Knopf und am Reiter, wenn es Neues gibt)', () => {
+    game("state.diarySeen = 0; state.diary = ['start', 'x']; updateHud()");
+    expect(document.getElementById('diary-dot').hidden).toBe(false);
+    document.getElementById('you-btn').click();                               // Neues: gleich das Tagebuch
+    expect(document.getElementById('modal-card').textContent).toMatch(/Tagebuch.*Seite 1 von 2/s);
+    expect(document.querySelector('[data-you="tagebuch"] .tdot')).not.toBe(null);
     game('closeModal()');
   });
 });

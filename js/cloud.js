@@ -184,7 +184,7 @@ function cloudAsk(cloud, local) {
       <div class="cloud-card"><div class="label">📱 Dieses Gerät</div><p>${sumHtml(worldSum(local))}</p><button class="btn" id="c-local">Diesen weiterspielen</button></div>
       <div class="cloud-card"><div class="label">☁️ Cloud</div><p>${sumHtml(cloud.sum || {})}</p><button class="btn" id="c-cloud">Diesen weiterspielen</button></div>
     </div>
-    <p class="muted">Der andere Stand geht nicht verloren: Er liegt danach unter ☰ → ☁️ Online-Speicher → „Frühere Stände“.</p>`);
+    <p class="muted">Der andere Stand geht nicht verloren: Er liegt danach oben bei dir (Knopf mit deiner Figur) → ☁️ Online → „Frühere Stände“.</p>`);
   $('c-local').onclick = () => cloudResolve('local', cloud);
   $('c-cloud').onclick = () => cloudResolve('cloud', cloud);
 }
@@ -262,10 +262,11 @@ function cloudLoginFail(e) {
   $('m-ok').onclick = openCloud;
 }
 async function openCloud() {
-  if (cloudOff()) { openModal('<h2>☁️ Online-Speicher</h2><p>In der Testwelt gibt es keinen Online-Speicher – sie ist zum Ausprobieren da und wird nie gespeichert.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>'); $('m-ok').onclick = closeModal; return; }
+  if (cloudOff()) { openModal(youHead('online') + '<h3>☁️ Online-Speicher</h3><p>In der Testwelt gibt es keinen Online-Speicher – sie ist zum Ausprobieren da und wird nie gespeichert.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>'); $('m-ok').onclick = closeModal; return; }
   if (!cloudUser) {
     openModal(`
-      <h2>☁️ Online-Speicher</h2>
+      ${youHead('online')}
+      <h3>☁️ Online-Speicher</h3>
       <p>Melde dich an, dann liegt deine Insel sicher in der Cloud und ist auf jedem Gerät da – iPad, Handy, Computer.</p>
       <p class="muted">Freiwillig: Ohne Anmeldung spielst du weiter wie bisher, nur in diesem Browser.</p>
       <div class="row"><button class="btn" id="c-google" disabled>Lädt …</button></div>
@@ -279,9 +280,12 @@ async function openCloud() {
     return;
   }
   let list = [];
+  youTab = 'online';
   try { list = (await cloudApi.listBackups(cloudUser.uid)).sort((p, q) => q.at - p.at); } catch (e) { /* offline: Liste leer */ }
+  if (youTab !== 'online') return;                                       // inzwischen anderen Reiter gewählt (Block 98)
   openModal(`
-    <h2>☁️ Online-Speicher</h2>
+    ${youHead('online')}
+    <h3>☁️ Online-Speicher</h3>
     <p>Angemeldet als <b>${escHtml(cloudUser.name)}</b></p>
     <div class="status"><div class="${cloudState === 'ok' ? 'ok' : cloudState === 'konflikt' || cloudState === 'fehler' ? 'bad' : ''}">${cloudStateText()}</div>
       <div>${cloudWatching() ? `👀 Gerade wird auf dem ${escHtml(cloudLeadInfo.name || 'anderen Gerät')} gespielt – hier nur zuschauen` : cloudIsLeader() ? `🎮 Gespielt wird hier (${deviceName()})` : ''}</div></div>

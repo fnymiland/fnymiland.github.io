@@ -669,7 +669,7 @@ kbd { display: inline-block; padding: 2px 7px; border-radius: 7px; background: #
 #bubble p { margin: 4px 0 10px; line-height: 1.35; }
 #bubble .bubble-row { display: flex; flex-wrap: wrap; gap: 6px; }
 #bubble .link, .lexikon .link.lx { padding: 0; text-decoration: underline; color: var(--green-d); font-weight: 800; }
-.lexikon .lx-q { width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--brown); padding: 10px 14px; border-radius: 14px;
+#modal-card .lx-q { width: 100%; font: inherit; font-size: 16px; font-weight: 700; color: var(--brown); padding: 10px 14px; border-radius: 14px;
   border: 2px solid var(--shadow); background: #fff; margin: 4px 0 8px; -webkit-user-select: text; user-select: text; }
 .lexikon .lx-sec { margin-top: 10px; }
 .lexikon .lx-e { background: var(--cream2); border-radius: 12px; padding: 6px 12px; margin: 5px 0; }
@@ -734,3 +734,8 @@ body.visiting #toast, body.viewonly #toast { top: 116px; }
 .wear-lock .bar { height: 7px; background: rgba(107, 79, 58, .12); border-radius: 99px; overflow: hidden; margin: 6px 0 2px; }
 .wear-lock .bar i { display: block; height: 100%; background: var(--green, #6cc04a); border-radius: 99px; }
 .wear-lock .row { margin-top: 6px; }
+/* Knopf „Du“ (Block 98) */
+.pill.you { position: relative; font-size: 18px; padding-top: 3px; padding-bottom: 3px; }
+body.visiting #you-btn { display: none !important; }
+.you-tabs .tdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e8604f; vertical-align: middle; }
+.diary-nav .btn { flex: 1; min-width: 0; padding-left: 8px; padding-right: 8px; }

@@ -56,10 +56,11 @@ describe('Freunde auf der Insel (Block 96)', () => {
     expect(game("figFrom(0, { fur: 2 }, 'X').fur")).toBe(game('FUR[2]'));
     expect(() => game("figPreview(document.createElement('canvas'), figFrom(0, null, ''))")).not.toThrow();
   });
-  it('Rathaus „Besuch“: Briefkasten, Herzen, Gästebuch, Besuche', () => {
+  it('„Du → Freunde“: Briefkasten, Herzen, Gästebuch, Besuche (früher Rathaus „Besuch“ – leitet weiter)', async () => {
     game(`bookAll = { h_f1_20261006: { k: 'h', n: 'Ben', a: 2, at: Date.now() }, gx1: { k: 'g', n: 'Ben', a: 2, t: 1, s: 3, at: Date.now() }, v_f1_20261006: { k: 'v', n: 'Ben', a: 2, at: Date.now() } };
       mailAll = { m1: { from: 'f1', n: 'Ben', a: 2, items: { holz: 50 } } }`);
-    game("openTownHall('besuch')");
+    await game("openTownHall('besuch')");
+    expect(game('youTab')).toBe('freunde');
     const txt = game("document.getElementById('modal-card').textContent");
     expect(txt).toMatch(/Herzen · 1/);
     expect(txt).toMatch(/Dein Schloss ist der Hammer/);

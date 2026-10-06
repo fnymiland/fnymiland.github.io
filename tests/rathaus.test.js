@@ -72,11 +72,10 @@ describe('Rathaus', () => {
     expect($('panel').textContent).toContain('Waldinsel');                // Erschließen-Fenster der nächsten Insel
   });
 
-  it('Übersicht: Schnellknöpfe zu Forschung, Kunstakademie, Tagebuch und Laternen', () => {
+  it('Übersicht: Laternen mit „Hin“; nur noch Stadt-Reiter (Block 98)', () => {
     game("openTownHall('overview')");
-    expect(document.querySelectorAll('[data-quick-go]').length).toBeGreaterThanOrEqual(3);
-    document.querySelector('[data-quick-go="design"]').onclick();
-    expect(game('researchTab')).toBe('design');
+    expect(game("[...document.querySelectorAll('#modal-card [data-tab]')].map(b => b.dataset.tab)")).toEqual(['overview', 'todo', 'bewohner', 'isles', 'town']);
+    expect(document.querySelector('[data-quick-go="design"]')).toBe(null);           // Forschung & Co. haben eigene Knöpfe
     game("state.islands.add('wald'); ownIsland('wald'); recalc(); openTownHall('overview')");
     document.querySelector('[data-lm-go="baum"]').onclick();
     expect($('panel').textContent).toContain('Uralter Baum');

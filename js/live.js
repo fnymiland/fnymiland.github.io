@@ -303,32 +303,31 @@ async function shareText(text, link = false) {
 }
 async function openFriends() {
   if (!cloudUser) {
-    openModal(`<h2>👥 Freunde & Besuch</h2><p>Melde dich im ☁️ Online-Speicher an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen.</p>
-      <div class="row"><button class="btn" id="m-cl">☁️ Zum Online-Speicher</button><button class="btn ghost" id="m-close">Schließen</button></div>`);
-    $('m-cl').onclick = openCloud; $('m-close').onclick = closeModal;
+    openModal(`${youHead('freunde')}<h3>👥 Freunde & Besuch</h3><p>Melde dich unter ☁️ Online an – dann bekommst du einen Freundescode, kannst Freunde besuchen und deine Insel zeigen. Freunde können dir Herzen, Gästebuch-Einträge und Päckchen dalassen.</p>
+      <div class="row"><button class="btn" id="m-cl">☁️ Zum Anmelden</button><button class="btn ghost" id="m-close">Schließen</button></div>`);
+    $('m-cl').onclick = () => openYou('online'); $('m-close').onclick = closeModal;
     return;
   }
   frWatch();
+  youTab = 'freunde';
   let code = '…', wid = null;
   try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
+  if (youTab !== 'freunde') return;                                      // inzwischen anderen Reiter gewählt
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   openModal(`
-    <div id="fr-box"><h2>👥 Freunde & Besuch</h2>
-    <div class="label">Dein Freundescode</div>
-    <div class="fr-code"><b>${escHtml(code)}</b><button class="btn ghost small" id="fr-copy">Kopieren</button></div>
-    <div class="label">Deine Figur (so spazierst du bei Freunden herum)</div>
-    <div class="fig-edit"><canvas id="fig-prev" width="90" height="110" aria-hidden="true"></canvas><div>
-      <p class="muted">Dieselbe Figur, die auf deiner Insel herumläuft. Tier, Farben und Kleidung stellst du im Rathaus ein.</p>
-      <button class="btn small" id="fr-look">✏️ Figur gestalten</button>
-    </div></div>
-    <div class="label">Code eines Freundes</div>
-    <div class="fr-add"><input id="fr-in" class="cloud-mail" placeholder="FNYMI-…" autocomplete="off" autocapitalize="characters" aria-label="Freundescode"><button class="btn small" id="fr-send">Anfrage schicken</button></div>
-    ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
+    <div id="fr-box">${youHead('freunde')}
+    ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
     ${by('freund').length ? by('freund').map(r => row(r, (id, e) => `${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button>`)).join('')
       : '<p class="muted">Noch keine – schick deinen Code an jemanden oder gib einen ein.</p>'}
+    ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
     ${by('gesendet').length ? `<div class="label">Gesendet</div>${by('gesendet').map(r => row(r, id => `<span class="muted">wartet …</span><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Anfrage zurückziehen">✕</button>`)).join('')}` : ''}
+    <div class="label">Dein Freundescode</div>
+    <div class="fr-code"><b>${escHtml(code)}</b><button class="btn ghost small" id="fr-copy">Kopieren</button></div>
+    <div class="label">Code eines Freundes</div>
+    <div class="fr-add"><input id="fr-in" class="cloud-mail" placeholder="FNYMI-…" autocomplete="off" autocapitalize="characters" aria-label="Freundescode"><button class="btn small" id="fr-send">Anfrage schicken</button></div>
+    ${friendsHallHtml('book')}
     <div class="label">🔗 Besuchs-Link (nur ansehen, ohne Anmeldung)</div>
     <div class="looks"><button class="look${liveOpen ? ' on' : ''}" id="fr-open" aria-pressed="${liveOpen}">${liveOpen ? '✓ Besuche erlaubt' : 'Besuche aus'}</button></div>
     ${liveOpen && wid ? `<div class="fr-code"><small>${escHtml(visitLink(wid))}</small><button class="btn ghost small" id="fr-link">Teilen</button></div>
@@ -340,8 +339,7 @@ async function openFriends() {
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
-  if ($('fr-look')) $('fr-look').onclick = () => { closeModal(); openTownHall('figur'); };
-  if ($('fig-prev')) figPreview($('fig-prev'), meFigLook(), 2.6);
+  wireFriendsHall($('modal-card'));
   for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };

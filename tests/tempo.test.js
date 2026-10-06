@@ -14,7 +14,7 @@ const frame = z => game(`cam.z = ${z}; lastZoom = ${z}; lastZoomChange = -1e9; f
 
 describe('Bildchen weit weg', () => {
   it('weit weg: Gebäude und Dekos kommen aus Bildchen – gleiche Häuser teilen sich eins', () => {
-    frame(0.5);
+    for (let i = 0; i < 6; i++) frame(0.5);                                 // je Bild nur SPRITE_MS Zeit: unter Last braucht es mehrere
     const keys = game('[...objSprites.keys()]');
     expect(keys.filter(k => k.startsWith('haus|')).length).toBe(1);        // sechs gleiche Häuser, ein Bild
     expect(keys.some(k => k.includes('|schule|'))).toBe(true);              // eigenes Bild (vom Platz abhängig)

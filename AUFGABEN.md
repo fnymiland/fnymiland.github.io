@@ -1152,3 +1152,17 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Test: me.test.js (9 Fälle).
 - [x] 97b: Gesperrtes antippen zeigt direkt unter der Reihe, wofür es das gibt (Erfolg und Stufe), wie weit man ist
       (Balken, „Du hast: 7.615 / 100.000“) und einen Knopf „⭐ Zu den Erfolgen“ – statt eines Hinweises, der hinterm Fenster unterging.
+
+## Block 98: Aufgeräumt – drei feste Orte (06.10.2026)
+- [x] Neuer Knopf oben mit dem Gesicht deiner Figur → Fenster „Du“: Figur · Erfolge · Album · Tagebuch · Freunde · ☁️ Online
+      (gleiche Reiter in allen sechs; Punkt am Knopf bei neuer Tagebuchseite, Post oder Konflikt; Neues → gleich dorthin).
+- [x] 🏛️ Rathaus nur noch Stadt: Übersicht · Zu tun (Bereit + Wünsche) · Bewohner · Inseln · Ort. Schnellknöpfe weg
+      (außer Feuerwerk und Nächste Insel). Alte Ziele (Erfolge, Besuch, Figur, Bereit, Wünsche) leiten weiter.
+- [x] Freunde an einem Ort: Briefkasten (wenn Post da ist) oben, dann Freunde, Anfragen, Code, Herzen, Gästebuch, Besuche,
+      Besuchs-Link. Das Briefkasten-Fähnchen am Rathaus führt dorthin.
+- [x] ☰ nur noch: ❓ Hilfe (ein Buch: Los geht's, Bauen, Wachsen, Steuerung, Tipps, Nachschlagen – oben eine Suche, die
+      nach „Nachschlagen“ springt), Das ist neu, Zum Rathaus, Einstellungen, Spielstand.
+- [x] Texte, die auf alte Orte zeigten, angepasst; „Das ist neu“ erklärt die neue Ordnung.
+- [x] Nebenbei: Tagebuch-Knöpfe ragten auf dem Handy über den Rand; „Bildchen weit weg“-Test wärmt jetzt mehrere
+      Bilder vor (je Bild nur 6 ms Bildchen-Zeit – unter Last schlug er sonst fehl).
+      Test: ordnung.test.js (5 Fälle), alte Tests auf die neuen Orte umgestellt.

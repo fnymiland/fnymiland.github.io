@@ -56,9 +56,12 @@ describe('Hilfe am Ort (Block 92)', () => {
     game('closeBubble(); state.res.metall = 0; state.res.quader = 0; openInfo(10, 10)');
     expect(game("!!document.querySelector('#panel .miss-mat [data-help=\"res:metall\"]')")).toBe(true);
   });
-  it('Nachschlagen: im Menü, Suche filtert, „Mehr“ öffnet den Eintrag', () => {
-    game('showMenu()'); click('#m-lex');
+  it('Nachschlagen: im Hilfe-Buch (☰ → Hilfe), Suche filtert, „Mehr“ öffnet den Eintrag', () => {
+    game('showMenu()'); click('#m-help');
+    game("(q => { q.value = 'Markt'; q.oninput(); })(document.getElementById('hb-q'))");    // Suche oben springt nach „Nachschlagen“
     expect(game("!!document.getElementById('lx-q')")).toBe(true);
+    expect(game("document.getElementById('lx-q').value")).toBe('Markt');
+    expect(game("document.querySelector('[data-hb=\"lex\"]').classList.contains('on')")).toBe(true);
     game("(q => { q.value = 'Marktplatz'; q.oninput(); })(document.getElementById('lx-q'))");
     const vis = game("[...document.querySelectorAll('.lx-e')].filter(e => !e.hidden).map(e => e.dataset.lxe)");
     expect(vis).toContain('term:marktplatz');

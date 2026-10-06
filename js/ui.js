@@ -435,7 +435,8 @@ function updateHud() {
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
   if (!$('store').hidden) setHtml($('store'), storeHtml(), true);
   setText($('town-name'), state.town.name);
-  if ($('diary-dot').hidden !== (state.diarySeen >= state.diary.length)) $('diary-dot').hidden = state.diarySeen >= state.diary.length;
+  if ($('diary-dot').hidden !== !youNews()) $('diary-dot').hidden = !youNews();          // Knopf „Du“ (Block 98): neue Tagebuchseite, Post, Konflikt
+  setText($('you-face'), ANIMALS[meLook().a].icon);
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
   setText(fl, state.town.symbol);
@@ -578,7 +579,7 @@ function openUnlocks() {
   for (const b of document.querySelectorAll('#modal-card [data-try]')) b.onclick = () => tryUnlock(b.dataset.try);
   $('m-close').onclick = closeModal;
 }
-// Erfolg erreicht: kurzes Band oben (kein Fenster zum Wegtippen); antippen öffnet die Erfolge im Rathaus
+// Erfolg erreicht: kurzes Band oben (kein Fenster zum Wegtippen); antippen öffnet die Erfolge (Fenster „Du“)
 const achvQueue = [];
 let achvTimer = 0;
 const fmtBig = v => v >= 1e6 ? `${nf1.format(v / 1e6)} Mio.` : fmt(v);
@@ -615,11 +616,11 @@ function watchTips() {
     <h2>💡 Tipp: ${tip.icon} ${tip.title}</h2>
     <p>${tip.text}</p>
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Verstanden</button></div>
-    <p class="muted tip-links"><span class="link" id="m-tipbook">Alle Tipps im Tipp-Buch</span> · <span class="link" id="m-notips">Keine Tipps mehr</span></p>`);
+    <p class="muted tip-links"><span class="link" id="m-tipbook">Alle Tipps in der Hilfe</span> · <span class="link" id="m-notips">Keine Tipps mehr</span></p>`);
   $('modal-card').classList.add('tipcard');
   $('m-ok').onclick = closeModal;
   $('m-tipbook').onclick = openTipBook;
-  $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr – im Tipp-Buch wieder einschaltbar'); };
+  $('m-notips').onclick = () => { state.tipsOff = true; save(); closeModal(); toast('Keine Tipps mehr – unter ☰ → Hilfe → Tipps wieder einschaltbar'); };
 }
 // Sammelalbum: Seiten mit Fortschritt; Fehlendes grau, damit man sieht, was noch fehlt
 function openAlbum() {
@@ -640,7 +641,8 @@ function openAlbum() {
     return `<div class="al-e${state.album.has(k) ? '' : ' miss'}" title="${name}">${pic}<small>${name}</small></div>`;
   };
   openModal(`
-    <h2>📒 Sammelalbum · ${Math.floor(got / all.length * 100)} %</h2>
+    ${youHead('album')}
+    <h3>📒 Sammelalbum · ${Math.floor(got / all.length * 100)} %</h3>
     ${ALBUM.map(p => {
       const ks = albumKeys(p), n = ks.filter(k => state.album.has(k)).length, done = n === ks.length;
       return `<div class="album-page${done ? ' done' : ''}" data-apage="${p.id}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
@@ -657,11 +659,12 @@ function openAlbum() {
 }
 function openTipBook() {
   openModal(`
-    <h2>💡 Tipp-Buch</h2>
+    ${helpTop('tipps')}
     ${GUIDE.map(g => `<details><summary>${g.icon} ${g.title}</summary><p>${g.text}</p></details>`).join('')}
     <div class="row"><button class="btn ghost" id="m-tipsonoff" style="flex:1">Tipps beim ersten Mal: ${state.tipsOff ? 'aus' : 'an'}</button></div>
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   $('modal-card').classList.add('tipbook');
+  wireHelpTop();
   $('m-tipsonoff').onclick = () => { state.tipsOff = !state.tipsOff; save(); openTipBook(); };
   $('m-close').onclick = closeModal;
 }
@@ -1898,10 +1901,45 @@ function residentsHtml() {
           <b>${wish ? (wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥') : ''}</b></button>`).join('')}</details>`;
     }).join('')}`;
 }
+// Erfolge (Block 98: im Fenster „Du“)
+function erfolgeHtml() {
+  const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
+  return `
+    <p class="big" style="font-size:18px">⭐ ${stars} · ${rank.name}</p>
+    ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? ` – schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
+    ${ACHIEVEMENTS.map(a => {
+      const n = state.achieved[a.id] || 0, v = a.value(), done = n >= a.tiers.length, goal = a.tiers[Math.min(n, a.tiers.length - 1)];
+      return `<div class="achv-row${done ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at">
+        <div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div>
+        <div class="bar"><i style="width:${done ? 100 : Math.min(100, v / goal * 100)}%"></i></div>
+        <small>${done ? '✓ alle Stufen geschafft' : `${tierText(a, v)} / ${tierText(a, goal)}`}</small></div></div>`;
+    }).join('')}`;
+}
+// Wünsche der Bewohner (Rathaus → Zu tun)
+function wishesHtml() {
+  const miss = new Map();
+  for (const [k, t] of state.tiles) {
+    const s = T.st.get(k);
+    if (t.b !== 'haus' || !s || !s.wish || !s.wish.next) continue;
+    for (const w of s.wish.list) if (!w.ok) miss.set(w.text, (miss.get(w.text) || 0) + 1);
+  }
+  const list = [...miss].sort((a, b) => b[1] - a[1]);
+  return `
+    <div class="label">Das wünschen sich die Bewohner noch</div>
+    ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
+      : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
+}
+// Rathaus = deine Stadt (Block 98). Was zu dir gehört (Figur, Erfolge, Freunde …), steht im Fenster „Du“ (openYou) –
+// alte Sprungziele leiten dorthin weiter.
+const HALL_TABS = [['overview', 'Übersicht'], ['todo', 'Zu tun'], ['bewohner', 'Bewohner'], ['isles', 'Inseln'], ['town', 'Ort']];
+const HALL_MOVED = { erfolge: 'erfolge', besuch: 'freunde', figur: 'figur' };
 function openTownHall(tab = hallTab) {
+  if (HALL_MOVED[tab]) return openYou(HALL_MOVED[tab]);
+  if (tab === 'ready' || tab === 'wishes') tab = 'todo';
+  if (!HALL_TABS.some(([id]) => id === tab)) tab = 'overview';
   hallTab = tab;
   const n = lanternCount(), title = townTitle(n), nextTitle = TITLES.find(([min]) => min > n);
-  const tabs = [['overview', 'Übersicht'], ['ready', 'Bereit'], ['isles', 'Inseln'], ['erfolge', 'Erfolge'], ['wishes', 'Wünsche'], ['bewohner', 'Bewohner'], ['besuch', `Besuch${typeof mailWaiting === 'function' && (mailWaiting() || bookNew()) ? ' 📬' : ''}`], ['figur', 'Deine Figur'], ['town', 'Ort']];
+  const tabs = HALL_TABS;
   const { ready, almost } = readyList();
   let body = '';
   if (tab === 'overview') {
@@ -1912,15 +1950,10 @@ function openTownHall(tab = hallTab) {
     const count = [...state.tiles.values()].filter(t => t.b !== 'weg' && t.b !== 'lm' && ITEMS[t.b].cat).length;
     const nx = nextIsle();
     body = `
-      <div class="hall-quick">
-        <button class="btn ghost small" data-quick-go="wissen">🔬 Forschung</button>
-        <button class="btn ghost small" data-quick-go="design">🎨 Kunstakademie</button>
-        <button class="btn ghost small" data-quick-go="diary">📖 Tagebuch</button>
-        <button class="btn ghost small" data-quick-go="album">📒 Album</button>
-        <button class="btn ghost small" data-quick-go="tips">💡 Tipps</button>
+      ${hasInvention('feuerwerk') || nx ? `<div class="hall-quick">
         ${hasInvention('feuerwerk') ? '<button class="btn ghost small" data-quick-go="fire">🎆 Feuerwerk</button>' : ''}
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
-      </div>
+      </div>` : ''}
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
       ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
       <div class="stats">
@@ -1937,8 +1970,8 @@ function openTownHall(tab = hallTab) {
           ${open ? `<button class="btn ghost small" data-lm-go="${type}">Hin</button>` : '<span class="muted">🔒</span>'}</div>`;
       }).join('')}
       <div class="hall-row${state.festival ? ' done' : ''}"><span>🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</span></div>`;
-  } else if (tab === 'ready') {
-    // Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
+  } else if (tab === 'todo') {
+    // Zu tun (Block 98: „Bereit“ + „Wünsche“): Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
     const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
     const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
     // Gruppen wie im Bau-Menü (Wohnen, Geld, Rohstoffe …), je mit „Alle ausbauen“; ganz oben „Alles ausbauen“
@@ -1952,8 +1985,9 @@ function openTownHall(tab = hallTab) {
       ${ready.length ? groups.map(g => `<div class="label hall-group"><span>${g.label} (${g.items.length})</span>
           ${g.bulk && g.items.length > 1 ? allBtn(g.items, g.id, 'Alle ausbauen') : ''}</div>
           ${g.items.map(e => row(e, ready.indexOf(e), '✨', true)).join('')}`).join('')
-        : '<div class="label">Bereit zum Ausbauen</div><p class="muted">Gerade nichts – schau bei den Wünschen, was fehlt.</p>'}
-      ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}`;
+        : '<div class="label">Bereit zum Ausbauen</div><p class="muted">Gerade nichts – unten steht, was sich die Bewohner noch wünschen.</p>'}
+      ${almost.length ? `<div class="label">Fast geschafft</div>${almost.map((e, i) => row(e, ready.length + i, '💭', false)).join('')}` : ''}
+      ${wishesHtml()}`;
   } else if (tab === 'isles') {
     // Alle Inseln auf einen Blick: Stand, was dort steht, Bahnanschluss – und per Knopf hin
     const per = new Map([['home', { n: 0, pop: 0 }], ...ISLES.concat(FAR).map(i => [i.id, { n: 0, pop: 0 }])]);
@@ -1976,36 +2010,8 @@ function openTownHall(tab = hallTab) {
       ${row('home', '🏠', 'Heimatinsel', true, '')}
       ${ISLES.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), ` · ${LANDMARKS[i.lm].icon} ${'🏮'.repeat(lmStage(i.lm))}`)).join('')}
       ${FAR.length ? `<div class="label">Ferne Inseln</div>${FAR.map(i => row(i.id, i.icon, i.name, isleOpen(i.id), '')).join('')}` : ''}`;
-  } else if (tab === 'erfolge') {
-    const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
-    body = `
-      <p class="big" style="font-size:18px">⭐ ${stars} · ${rank.name}</p>
-      ${next ? `<p class="muted">Nächste: ${next.name} ab ${next.stars} ⭐${next.item ? ` – schaltet den ${ITEMS[next.item].name} frei` : ''}</p>` : ''}
-      ${ACHIEVEMENTS.map(a => {
-        const n = state.achieved[a.id] || 0, v = a.value(), done = n >= a.tiers.length, goal = a.tiers[Math.min(n, a.tiers.length - 1)];
-        return `<div class="achv-row${done ? ' done' : ''}"><span class="ai">${a.icon}</span><div class="at">
-          <div><b>${a.name}</b> <span class="stars">${'⭐'.repeat(n)}${'<span class="off">⭐</span>'.repeat(a.tiers.length - n)}</span></div>
-          <div class="bar"><i style="width:${done ? 100 : Math.min(100, v / goal * 100)}%"></i></div>
-          <small>${done ? '✓ alle Stufen geschafft' : `${tierText(a, v)} / ${tierText(a, goal)}`}</small></div></div>`;
-      }).join('')}`;
-  } else if (tab === 'wishes') {
-    const miss = new Map();
-    for (const [k, t] of state.tiles) {
-      const s = T.st.get(k);
-      if (t.b !== 'haus' || !s || !s.wish || !s.wish.next) continue;
-      for (const w of s.wish.list) if (!w.ok) miss.set(w.text, (miss.get(w.text) || 0) + 1);
-    }
-    const list = [...miss].sort((a, b) => b[1] - a[1]);
-    body = `
-      <div class="label">Das wünschen sich die Bewohner noch</div>
-      ${list.length ? list.map(([text, cnt]) => `<div class="hall-row"><span>${text}</span><b>${cnt} ${cnt > 1 ? 'Häuser' : 'Haus'}</b></div>`).join('')
-        : '<p class="ok">Alle Wünsche erfüllt – alle Häuser können wachsen oder sind schon Villen!</p>'}`;
   } else if (tab === 'bewohner') {
     body = residentsHtml();
-  } else if (tab === 'besuch') {
-    body = friendsHallHtml();                                              // Freunde (Block 96): Briefkasten, Herzen, Gästebuch
-  } else if (tab === 'figur') {
-    body = meHallHtml();                                                   // eigene Figur (Block 97)
   } else {
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
     body = `
@@ -2020,7 +2026,7 @@ function openTownHall(tab = hallTab) {
   }
   openModal(`
     <h2>🏛️ Rathaus von ${escHtml(state.town.name)}</h2>
-    <div class="looks hall-tabs">${tabs.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-tab="${id}">${label}${id === 'ready' && ready.length ? ` ✨${ready.length}` : ''}</button>`).join('')}</div>
+    <div class="looks hall-tabs">${tabs.map(([id, label]) => `<button class="look${id === tab ? ' on' : ''}" data-tab="${id}">${label}${id === 'todo' && ready.length ? ` ✨${ready.length}` : ''}</button>`).join('')}</div>
     ${body}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Fertig</button></div>`, () => openTownHall(tab));
   const card = $('modal-card');
@@ -2029,13 +2035,13 @@ function openTownHall(tab = hallTab) {
   const all = ready.concat(almost);
   for (const b of card.querySelectorAll('[data-upall]')) b.onclick = () => {
     const key = b.dataset.upall, list = key === 'all' ? ready : (readyGroups(ready).find(g => g.id === key) || { items: [] }).items;
-    if (upgradeMany(list)) openTownHall('ready');
+    if (upgradeMany(list)) openTownHall('todo');
   };
   for (const b of card.querySelectorAll('[data-up]')) b.onclick = () => {
     const e = all[+b.dataset.up];
     if (e.kind === 'lm') { restoreLandmark(e.type); return; }            // öffnet das Laternen-Fenster
-    if (e.kind === 'wonder') { const t = state.tiles.get(e.x + ',' + e.y); if (wonderStep(e.x, e.y, true) && !wonderDone(t)) openTownHall('ready'); return; }
-    if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('ready');
+    if (e.kind === 'wonder') { const t = state.tiles.get(e.x + ',' + e.y); if (wonderStep(e.x, e.y, true) && !wonderDone(t)) openTownHall('todo'); return; }
+    if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('todo');
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
     const q = b.dataset.quickGo;
@@ -2061,8 +2067,6 @@ function openTownHall(tab = hallTab) {
     sparkle(e.x + (w - 1) / 2, e.y + (h - 1) / 2);
     if (e.b === 'lm') openLandmark(e.x, e.y); else openInfo(e.x, e.y);
   };
-  if (tab === 'besuch') wireFriendsHall(card);
-  if (tab === 'figur') wireMeHall(card);
   if (tab === 'town') {
     wireTownEditor(card, state.town, () => { updateHud(); save(); });
     const hall = townHallAt(), t = hall && state.tiles.get(hall.join(','));
@@ -2111,7 +2115,7 @@ function showIntro(first) {
       <li>🏮 <b>Das Ziel:</b> Restauriere die verfallenen Sehenswürdigkeiten – jede Stufe entzündet eine Laterne. Brennen alle, bringt der Leuchtturm das Laternenfest zurück. Das 📖 Tagebuch erzählt, wie es früher war.</li>
     </ul>
     ${first ? townEditor(state.town) : ''}
-    <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen · Mehr, auch alle Tasten: ☰ → Anleitung</p>
+    <p class="muted" style="font-size:13px">Ziehen = Karte bewegen · Mausrad / zwei Finger = zoomen · Mehr, auch alle Tasten: ☰ → Hilfe</p>
     <div class="row"><button class="btn" id="m-ok">Los geht's!</button></div>`);
   if (first) wireTownEditor($('modal-card'), state.town, updateHud);
   $('m-ok').onclick = () => { closeModal(); save(); };
@@ -2143,7 +2147,7 @@ function helpBody(tab) {
     '🏝️ <b>Inseln</b> entdeckst du per Boot vom 🛶 Steg aus. Brücken, Züge, Seilbahn und Schiffe verbinden sie; später warten ferne Inseln mit Truhen. Mit „Aufschütten“ wächst dein Land ins Meer.',
     '🎢 <b>Freizeitpark</b> (nach dem Laternenfest, 🎡 Freizeit): Boden aufziehen, Fahrgeschäfte und Stände daraufstellen – vom Rummelplatz zum Wunderland. Bringt Eintritt, Besucher und Schönheit; die Fahrgeschäfte kosten nach deinem Einkommen.',
     '🏛️ <b>Wunderwerke</b> wie Riesenrad, Botanischer Garten oder Schloss baust du in Abschnitten – jedes hat eine besondere Kraft.',
-    '⭐ <b>Erfolge und Album</b> (☰): Sammeln lohnt sich, volle Album-Seiten schenken besondere Dinge.']);
+    '⭐ <b>Erfolge und Album</b> (oben der Knopf mit deiner Figur): Sammeln lohnt sich, volle Album-Seiten schenken besondere Dinge und Erfolge neue Kleidung.']);
   if (tab === 'steuerung') {
     const touch = typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;   // iPad/Handy: keine Tasten zeigen
     const keys = [['A', 'Ansehen'], ['W', 'Weg'], ['V', 'Verschieben'], ['E · Entf · ⌫', 'Abreißen'], ['1 – 9', 'Karte aus der Leiste wählen'], ['R', 'Drehen beim Bauen'],
@@ -2161,26 +2165,40 @@ function helpBody(tab) {
     '✨ <b>Alles wächst selbst ausgelöst:</b> Sind die Wünsche erfüllt, funkelt es – antippen und ausbauen.',
     '🏘️ <b>Viertel:</b> Was aneinandergrenzt oder über Wege verbunden ist, gehört zusammen – ab 3, 8 und 15 Gebäuden gibt es +10/20/30 %.',
     '🪙 <b>Taler</b> verdienen Felder, Betriebe und Läden. Betriebe brauchen Einwohner als Mitarbeiter – bau also Häuser dazu.',
-    '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen im 💡 Tipp-Buch (☰).',
-    '❓ <b>Nicht verstanden?</b> Alles mit einem kleinen ? lässt sich antippen – Material, Wünsche, Begriffe. Unter ☰ → 📚 Nachschlagen findest du alles mit Suche.']);
+    '💡 <b>Tipps</b> tauchen unterwegs auf; alle stehen unter ☰ → ❓ Hilfe → Tipps.',
+    '❓ <b>Nicht verstanden?</b> Alles mit einem kleinen ? lässt sich antippen – Material, Wünsche, Begriffe. Unter ☰ → ❓ Hilfe findest du alles mit Suche. Und tipp deine eigene Figur an – sie sagt dir, was gerade dran ist.']);
 }
-function openHelp(tab = helpTab) {
+// Hilfe-Buch (Block 98): Anleitung, Tipps und Nachschlagen in einem Fenster; oben immer die Suche („Was ist …?“)
+const HELP_Q = 'Suchen: Was ist …? z. B. Metall, Marktplatz, Strom';
+const HELP_BOOK = [...HELP_TABS, ['tipps', '💡 Tipps'], ['lex', '📚 Nachschlagen']];
+function helpTop(tab) {
   helpTab = tab;
+  return `<h2>❓ Hilfe</h2>
+    ${tab === 'lex' ? `<input id="lx-q" class="lx-q" type="search" placeholder="${HELP_Q}" value="${escHtml(lexQ)}" aria-label="In der Hilfe suchen">`
+      : `<input id="hb-q" class="lx-q" type="search" placeholder="${HELP_Q}" aria-label="In der Hilfe suchen">`}
+    <div class="looks hall-tabs">${HELP_BOOK.map(([id, name]) => `<button class="look${id === tab ? ' on' : ''}" data-hb="${id}">${name}</button>`).join('')}</div>`;
+}
+// Tippen in die Suche (außerhalb von Nachschlagen) springt dorthin und sucht weiter
+function wireHelpTop() { const q = $('hb-q'); if (q) q.oninput = () => { lexQ = q.value; openLexikon(null, true); }; }
+function openHelp(tab = helpTab) {
+  if (tab === 'tipps') { openTipBook(); return; }
+  if (tab === 'lex') { openLexikon(); return; }
+  if (!HELP_TABS.some(([id]) => id === tab)) tab = 'start';
   openModal(`
-    <h2>📘 Anleitung</h2>
-    <div class="looks hall-tabs">${HELP_TABS.map(([id, name]) => `<button class="look${id === tab ? ' on' : ''}" data-htab="${id}">${name}</button>`).join('')}</div>
+    ${helpTop(tab)}
     ${helpBody(tab)}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
-  for (const b of document.querySelectorAll('[data-htab]')) b.onclick = () => openHelp(b.dataset.htab);
+  wireHelpTop();
   $('m-close').onclick = closeModal;
 }
+$('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-hb]'); if (b) openHelp(b.dataset.hb); });
 // „Das ist neu“ (Block 25): nach einem Update einmal pro Gerät. Neue Spieler bekommen es nicht (sie kennen das Alte
 // nicht). Bei jedem Push mit etwas Sichtbarem: id ändern und die 3–5 Punkte ersetzen.
 const NEWS = { id: '2026-10-06-figur', items: [
-  '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Aussehen im Rathaus → „Deine Figur“: Tier, Farben, Hüte, Brillen, Schal, Ballon …',
-  '🔒 <b>Besondere Kleidung</b> wie Krone, Zylinder oder Wikingerhelm gibt es für Erfolge.',
-  '☁️ <b>Online-Speicher:</b> Unter ☰ mit Google anmelden – deine Insel ist dann auf allen Geräten gleich.',
-  '👥 <b>Freunde & Besuch:</b> Freundescode tauschen, Freunde besuchen und als deine Figur herumlaufen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
+  '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
+  '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
+  '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
+  '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
 ] };
 const NEWS_KEY = 'kachelhausen_news';
 const newsSeen = () => { try { return localStorage.getItem(NEWS_KEY) === NEWS.id; } catch (e) { return true; } };
@@ -2202,16 +2220,13 @@ function newsAfterLoad(hadSave) {
 function showMenu() {
   openModal(`
     <h2>Menü</h2>
-    <div class="row"><button class="btn" id="m-help" style="flex:1">Anleitung</button><button class="btn ghost" id="m-tips" style="flex:1">💡 Tipp-Buch</button></div>
-    <div class="row"><button class="btn ghost" id="m-lex" style="flex:1">📚 Nachschlagen: Was ist …?</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button></div>
+    <div class="row"><button class="btn" id="m-help" style="flex:1">❓ Hilfe: Anleitung, Tipps, Nachschlagen</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-news">✨ Das ist neu</button><button class="btn ghost" style="flex:1" id="m-home">🏛️ Zum Rathaus</button></div>
+    <p class="muted">Figur, Erfolge, Album, Tagebuch, Freunde und Online-Speicher findest du oben bei dir (${ANIMALS[meLook().a].icon}).</p>
+    <div class="label">⚙️ Einstellungen</div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button><button class="btn ghost" style="flex:1" id="m-borders">${state.noBorders ? '▢ Randlinien aus' : '▣ Randlinien an'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1; position:relative" id="m-diary">📖 Tagebuch${state.diarySeen < state.diary.length ? '<span class="dot"></span>' : ''}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-achv">🏆 Erfolge</button><button class="btn ghost" style="flex:1" id="m-album">📒 Album</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-friends">👥 Freunde & Besuch</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-cloud">☁️ Online-Speicher${cloudState === 'konflikt' ? ' · ⚠️ bitte Stand wählen' : cloudUser ? ' · angemeldet' : ''}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-home">Zum Rathaus</button></div>
+    <div class="label">💾 Spielstand</div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
       <button class="btn ghost" style="flex:1" id="m-import">📂 Spielstand laden</button>
@@ -2219,14 +2234,7 @@ function showMenu() {
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   $('m-help').onclick = () => openHelp();
-  $('m-lex').onclick = () => openLexikon();
-  $('m-cloud').onclick = () => openCloud();
-  $('m-friends').onclick = () => openFriends();
   $('m-news').onclick = showNews;
-  $('m-tips').onclick = openTipBook;
-  $('m-diary').onclick = () => openDiary();
-  $('m-achv').onclick = () => openTownHall('erfolge');
-  $('m-album').onclick = openAlbum;
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
   $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark

@@ -84,7 +84,7 @@ const TERMS = {
   schoenheit: { icon: '🌸', name: 'Schönheit', also: 'schön deko hübsch',
     text: 'Deko, Beete, Bäume und Brunnen bringen Schönheit 🌸 (neben Häusern sogar mehr), laute Betriebe nehmen sie weg. Häuser und manche Ausbauten wünschen sich eine schöne Umgebung.' },
   ausbauen: { icon: '✨', name: 'Ausbauen', also: 'stufe wachsen funkeln upgrade',
-    text: 'Häuser und Betriebe wachsen in Stufen. Tipp sie an: Dort steht, was für die nächste Stufe fehlt. Sind alle Bedingungen erfüllt, funkelt es ✨ – dann „Ausbauen“. Im Rathaus unter „Bereit“ siehst du alles auf einmal.' },
+    text: 'Häuser und Betriebe wachsen in Stufen. Tipp sie an: Dort steht, was für die nächste Stufe fehlt. Sind alle Bedingungen erfüllt, funkelt es ✨ – dann „Ausbauen“. Im Rathaus unter „Zu tun“ siehst du alles auf einmal.' },
   park: { icon: '🌳', name: 'Park', also: 'parkrasen grünanlage stadtpark',
     text: 'Zieh Parkrasen auf und stell Deko darauf: ab 4 Feldern mit 3 Deko eine Grünanlage, ab 9 Feldern mit 8 Deko (Baum und Bank) ein Park, ab 16 Feldern mit 15 Deko (dazu Wasser) ein Stadtpark. Parks machen die Umgebung schön und erfüllen den Wunsch „Park erreichbar“.' },
   forschung: { icon: '💡', name: 'Ideen und Forschung', also: 'ideen schule bibliothek universität erfindung',
@@ -185,12 +185,11 @@ document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && bubbleKe
 
 // --- Nachschlagen ----------------------------------------------------------------------------
 let lexQ = '';
-function openLexikon(key = null) {
+function openLexikon(key = null, focus = false) {
   if (key) lexQ = '';
   const sec = helpSections();
   openModal(`
-    <h2>📚 Nachschlagen</h2>
-    <input id="lx-q" class="lx-q" type="search" placeholder="Was ist …? z. B. Metall, Marktplatz, Strom" value="${escHtml(lexQ)}" aria-label="Suchen">
+    ${helpTop('lex')}
     <div id="lx-list">${sec.map(([name, keys]) => `<div class="lx-sec"><div class="label">${name}</div>
       ${keys.map(k => { const e = helpEntry(k); return e ? `<details class="lx-e" data-lxe="${k}"><summary>${e.title}</summary>${e.text}
         ${e.show.length && k.startsWith('b:') ? `<div class="row"><button class="btn small" data-hbuild="${e.show[0]}">${available(e.show[0]) ? 'Bauen' : '🔒 Freischalten'}</button></div>` : ''}</details>` : ''; }).join('')}</div>`).join('')}</div>
@@ -210,6 +209,7 @@ function openLexikon(key = null) {
   };
   $('lx-q').oninput = filter;
   filter();
+  if (focus) { const q = $('lx-q'); q.focus(); try { q.setSelectionRange(q.value.length, q.value.length); } catch (e) { /* type=search */ } }
   for (const b of document.querySelectorAll('#modal-card [data-hbuild]')) b.onclick = () => { closeModal(); showBuild(b.dataset.hbuild); };
   $('m-close').onclick = closeModal;
   const el = key && document.querySelector(`#modal-card [data-lxe="${key}"]`);

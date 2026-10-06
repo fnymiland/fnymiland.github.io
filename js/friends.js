@@ -157,7 +157,7 @@ function visitBook() {
   draw();
 }
 
-// --- Besitzer: Gästebuch, Herzen, Besuche, Briefkasten (im Rathaus, Reiter „Besuch“) -------------
+// --- Besitzer: Gästebuch, Herzen, Besuche, Briefkasten (Fenster „Du“ → Freunde, Block 98) -------------
 let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null;
 const mailWaiting = () => Object.keys(mailAll).length > 0;
 function friendsInboxWatch() {
@@ -170,7 +170,7 @@ function friendsInboxWatch() {
   });
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
-    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – im Briefkasten am Rathaus`);
+    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – oben bei dir unter 👥 Freunde`);
     groundVersion++;                                                    // Briefkasten-Fähnchen am Rathaus neu zeichnen
     friendsDot();
   });
@@ -178,37 +178,36 @@ function friendsInboxWatch() {
 setInterval(() => { if (cloudUser && !VISIT) friendsInboxWatch(); else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; } }, 3000);
 const bookSeen = () => (cloudUser && frLS('seen_' + cloudUser.uid)) || 0;
 const bookNew = () => Object.values(bookAll).filter(e => e && (e.at || 0) > bookSeen()).length;
+// Punkt am Knopf „Du“ (Block 98) – und das offene Freunde-Fenster zeigt Neues gleich
 function friendsDot() {
-  const btn = document.getElementById('town-btn');
-  if (!btn) return;
-  let d = btn.querySelector('.dot');
-  const on = mailWaiting() || bookNew() > 0;
-  if (on && !d) { d = document.createElement('span'); d.className = 'dot'; btn.append(d); }
-  if (!on && d) d.remove();
+  const d = document.getElementById('diary-dot');
+  if (d) d.hidden = !youNews();
 }
-function friendsHallHtml() {
-  if (!cloudUser) return '<p class="muted">Melde dich im ☁️ Online-Speicher an – dann können Freunde dich besuchen, Herzen dalassen, ins Gästebuch schreiben und Päckchen schicken.</p>';
+// part 'post': Briefkasten (nur wenn etwas drin ist) · 'book': Herzen, Gästebuch, wer da war (Block 98: im Fenster „Du → Freunde“)
+function friendsHallHtml(part) {
+  if (!cloudUser) return '';
   const list = Object.entries(bookAll).filter(([, e]) => e).sort((p, q) => (q[1].at || 0) - (p[1].at || 0));
   const hearts = list.filter(([, e]) => e.k === 'h'), today = dayKey();
   const icon = e => (ANIMALS[e.a] || ANIMALS[0]).icon, when = e => e.at ? new Date(e.at).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }) : '';
   const mails = Object.entries(mailAll).filter(([, m]) => m);
-  return `
+  if (part === 'post') return mails.length ? `
     <div class="label">📬 Briefkasten</div>
-    ${mails.length ? mails.map(([id, m]) => `<div class="fr-row"><span>${icon(m)} Von ${escHtml(m.n)}: ${Object.entries(m.items || {}).filter(([r]) => RES[r]).map(([r, n]) => `${RES[r].icon} ${fmt(n)}`).join(' ')}</span>
-      <span class="fr-btns"><button class="btn small" data-mget="${escHtml(id)}">Abholen</button></span></div>`).join('') : '<p class="muted">Leer – Freunde können dir unter 👥 Päckchen schicken.</p>'}
+    ${mails.map(([id, m]) => `<div class="fr-row"><span>${icon(m)} Von ${escHtml(m.n)}: ${Object.entries(m.items || {}).filter(([r]) => RES[r]).map(([r, n]) => `${RES[r].icon} ${fmt(n)}`).join(' ')}</span>
+      <span class="fr-btns"><button class="btn small" data-mget="${escHtml(id)}">Abholen</button></span></div>`).join('')}` : '';
+  return `
     <div class="label">❤️ Herzen · ${hearts.length}</div>
     <p>${hearts.slice(0, 30).map(([, e]) => `<span title="${escHtml(e.n)} · ${when(e)}">${icon(e)}❤️</span>`).join(' ') || '<span class="muted">Noch keine</span>'}</p>
     <div class="label">📖 Gästebuch</div>
     ${list.filter(([, e]) => e.k === 'g').slice(0, 50).map(([id, e]) => `<div class="fr-row"><span>${BOOK_STICKERS[e.s] || ''} <b>${escHtml(e.n)}</b> ${icon(e)}: ${escHtml(BOOK_LINES[e.t] || '')} <small class="muted">${when(e)}</small></span>
       <span class="fr-btns"><button class="btn ghost small" data-bdel="${escHtml(id)}" aria-label="Eintrag entfernen">✕</button></span></div>`).join('') || '<p class="muted">Noch leer.</p>'}
     <div class="label">👋 Zu Besuch waren</div>
-    <p>${list.filter(([, e]) => e.k === 'v').slice(0, 30).map(([, e]) => `${icon(e)} ${escHtml(e.n)}${e.at && dayKey(new Date(e.at)) === today ? ' (heute)' : ` (${when(e)})`}`).join(' · ') || '<span class="muted">Noch niemand – teile deinen Freundescode unter 👥.</span>'}</p>`;
+    <p>${list.filter(([, e]) => e.k === 'v').slice(0, 30).map(([, e]) => `${icon(e)} ${escHtml(e.n)}${e.at && dayKey(new Date(e.at)) === today ? ' (heute)' : ` (${when(e)})`}`).join(' · ') || '<span class="muted">Noch niemand – teile deinen Freundescode.</span>'}</p>`;
 }
 function wireFriendsHall(card) {
   if (cloudUser) frLS('seen_' + cloudUser.uid, Date.now() + 5000);     // gelesen
   friendsDot();
   for (const b of card.querySelectorAll('[data-mget]')) b.onclick = () => mailClaim(b.dataset.mget);
-  for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openTownHall('besuch'); } catch (e) { toast('Hat nicht geklappt'); } };
+  for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openYou('freunde'); } catch (e) { toast('Hat nicht geklappt'); } };
 }
 // Abholen: genau einmal (Transaktion löscht das Päckchen), dann ins Lager
 async function mailClaim(id) {
@@ -217,13 +216,13 @@ async function mailClaim(id) {
   let got = null;
   try {
     const r = await cloudApi.tx(`mail/${uid}/${id}`, cur => { if (!cur) return undefined; got = cur; return null; });
-    if (!r.ok || !got) { toast('📬 Das Päckchen wurde schon abgeholt'); openTownHall('besuch'); return; }
+    if (!r.ok || !got) { toast('📬 Das Päckchen wurde schon abgeholt'); openYou('freunde'); return; }
   } catch (e) { toast('Hat nicht geklappt – später nochmal'); return; }
   const add = {};
   for (const [r, n] of Object.entries(got.items || {})) if (RES[r] && isFinite(n) && n > 0) { const v = Math.min(n, MAIL_MAX); state.res[r] = (state.res[r] || 0) + v; add[r] = v; }
   cloudTouched(); save();
   toast(`📬 ${Object.entries(add).map(([r, n]) => `+${fmt(n)} ${RES[r].icon}`).join(' ')} von ${got.n}`);
-  openTownHall('besuch');
+  openYou('freunde');
 }
 
 // --- Päckchen schicken (aus „Freunde & Besuch“) -------------------------------------------------

@@ -57,9 +57,9 @@ describe('Tipps beim ersten Mal', () => {
 });
 
 describe('Tipp-Buch', () => {
-  it('im Menü: alle Tipps zum Nachlesen', () => {
+  it('im Hilfe-Buch (☰ → Hilfe → Tipps): alle Tipps zum Nachlesen', () => {
     game('showMenu()');
-    $('m-tips').onclick();
+    $('m-help').click(); document.querySelector('[data-hb="tipps"]').click();
     expect(document.querySelectorAll('#modal-card details').length).toBe(game('GUIDE.length'));
     expect(game('GUIDE.length')).toBeGreaterThanOrEqual(12);
   });

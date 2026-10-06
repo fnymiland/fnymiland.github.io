@@ -348,18 +348,19 @@ function openDiary(at) {
   let i = at == null ? Math.min(state.diarySeen, pages.length - 1) : at;
   const show = () => {
     const p = diaryPage(pages[i]);
+    state.diarySeen = Math.max(state.diarySeen, i + 1);                  // vor dem Zeichnen: Punkt am Reiter „Tagebuch“ weg
     openModal(`
-      <h2>📖 Tagebuch <span class="muted" style="font-size:14px">Seite ${i + 1} von ${pages.length}</span></h2>
+      ${youHead('tagebuch')}
+      <h3>📖 Tagebuch <span class="muted" style="font-size:14px">Seite ${i + 1} von ${pages.length}</span></h3>
       <div class="diary-pic" id="d-pic"></div>
       <h3 style="margin:10px 0 4px">${p.title}</h3>
       <p class="diary-text">${p.text}</p>
-      <div class="row">
+      <div class="row diary-nav">
         <button class="btn ghost" id="d-prev" ${i === 0 ? 'disabled' : ''}>← Zurück</button>
         <button class="btn ghost" id="d-next" ${i === pages.length - 1 ? 'disabled' : ''}>Weiter →</button>
         <button class="btn" id="d-close">Schließen</button>
       </div>`);
     $('d-pic').append(diaryPicture(p.pic));
-    state.diarySeen = Math.max(state.diarySeen, i + 1);
     $('d-prev').onclick = () => { i--; show(); };
     $('d-next').onclick = () => { i++; show(); };
     $('d-close').onclick = () => { closeModal(); save(); };
@@ -458,7 +459,7 @@ const GUIDE = [
   { id: 'wunsch', icon: '🏠', title: 'Häuser wachsen', when: () => hasBuilt('haus'),
     text: 'Jedes Haus hat Wünsche: einen Weg vor der Tür, Deko in der Nähe, später Bäckerei, Markt, Schule … Tipp ein Haus an, um sie zu sehen. Sind alle erfüllt, wird es größer und bringt mehr Einwohner.' },
   { id: 'ausbau', icon: '✨', title: 'Bereit zum Ausbauen', when: () => anyStatus(s => (s.wish && s.wish.ready) || (s.grow && s.grow.ready)),
-    text: 'Wo es über einem Haus oder Betrieb funkelt, sind alle Bedingungen erfüllt: antippen und „Ausbauen“. Im Rathaus unter „Bereit“ siehst du alles auf einmal und kannst direkt ausbauen.' },
+    text: 'Wo es über einem Haus oder Betrieb funkelt, sind alle Bedingungen erfüllt: antippen und „Ausbauen“. Im Rathaus unter „Zu tun“ siehst du alles auf einmal und kannst direkt ausbauen.' },
   { id: 'lager', icon: '📦', title: 'Rohstoffe und Lager', when: () => Object.values(state.res).some(v => v >= 1),
     text: 'Rohstoffe wie Holz und Stein sammeln sich im Lager (oben). Sägewerk, Steinmetz und Schmiede machen daraus Bretter, Pflastersteine und Metall – die brauchst du für Ausbauten und Laternen.' },
   { id: 'weit', icon: '🐌', title: 'Weit weg vom Dorf',
