@@ -1150,3 +1150,5 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Besucher-Figuren starten ebenfalls vorn am Rathaus. „Das ist neu“ für das große Update (Figur, Online, Freunde).
 - [x] strom.test „Windrad-Fenster“ hing vom Zufall ab (windiger Platz am Rand) – Gelände dort jetzt fest.
       Test: me.test.js (9 Fälle).
+- [x] 97b: Gesperrtes antippen zeigt direkt unter der Reihe, wofür es das gibt (Erfolg und Stufe), wie weit man ist
+      (Balken, „Du hast: 7.615 / 100.000“) und einen Knopf „⭐ Zu den Erfolgen“ – statt eines Hinweises, der hinterm Fenster unterging.

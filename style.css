@@ -730,3 +730,7 @@ body.visiting #toast, body.viewonly #toast { top: 116px; }
 .me-edit canvas { width: 120px; height: 150px; }
 .me-edit input { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
 .look.locked { opacity: 0.55; }
+.wear-lock { background: var(--cream2); border-radius: 12px; padding: 8px 10px; margin: 4px 0 8px; font-size: 13px; }
+.wear-lock .bar { height: 7px; background: rgba(107, 79, 58, .12); border-radius: 99px; overflow: hidden; margin: 6px 0 2px; }
+.wear-lock .bar i { display: block; height: 100%; background: var(--green, #6cc04a); border-radius: 99px; }
+.wear-lock .row { margin-top: 6px; }

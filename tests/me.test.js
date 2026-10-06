@@ -61,7 +61,11 @@ describe('Deine Figur (Block 97)', () => {
     game("openTownHall('figur')");
     expect(txt()).toMatch(/🔒 Krone/);
     game(`document.querySelector('[data-mewlock="krone"]').click()`);
-    expect(game("document.getElementById('toast').textContent")).toMatch(/Wunderwerke/);
+    expect(game("document.querySelector('#modal-card .wear-lock').textContent")).toMatch(/Krone.*Wunderwerke: 1.*Du hast: 0 \/ 1/s);
+    game(`document.querySelector('[data-mego="erfolge"]').click()`);
+    expect(txt()).toMatch(/Ehrennadel/);                                                  // Erfolge-Reiter
+    game("openTownHall('figur')");
+    expect(game("!!document.querySelector('#modal-card .wear-lock')")).toBe(false);       // beim Wechseln zu
     game('state.achieved = { wunder: 1 }');
     expect(game('meLook().hat')).toBe('krone');                                         // jetzt verdient
     game("openTownHall('figur')");

@@ -29,6 +29,16 @@ function wearNeedText(id) {
   return `${A.icon} ${A.name}: ${tierText(A, A.tiers[n.n - 1])}`;
 }
 
+// Wie weit ist man? { have, need, text } – für die Anzeige beim gesperrten Teil
+function wearProgress(id) {
+  const n = WEAR_NEED[id];
+  if (!n) return null;
+  if (n.stars) return { have: starCount(), need: n.stars, text: `${starCount()} / ${n.stars} ⭐` };
+  const A = ACHIEVEMENTS.find(a => a.id === n.a), goal = A.tiers[n.n - 1], v = A.value();
+  return { have: v, need: goal, text: `${tierText(A, Math.min(v, goal))} / ${tierText(A, goal)}` };
+}
+let meLockOpen = null;                                                   // angetipptes gesperrtes Teil (nur Anzeige)
+
 // --- Aussehen ------------------------------------------------------------------------------------
 // immer gültig (state.me kann fehlen oder aus einer anderen Version stammen)
 function meLook() {
@@ -215,9 +225,17 @@ function openMeInfo() {
 // --- Rathaus → „Deine Figur“ ---------------------------------------------------------------------
 function meHallHtml() {
   const L = meLook(), on = (cond) => cond ? ' on' : '';
+  const lockInfo = slot => {                                               // unter der Reihe: wofür es das angetippte Teil gibt
+    const id = meLockOpen;
+    if (!id || !WEAR[slot][id] || wearOk(id)) return '';
+    const p = wearProgress(id);
+    return `<div class="wear-lock"><b>🔒 ${WEAR[slot][id]}</b> gibt es für den Erfolg <b>${wearNeedText(id)}</b>.
+      <div class="bar"><i style="width:${Math.min(100, p.have / p.need * 100)}%"></i></div><small>Du hast: ${p.text}</small>
+      <div class="row"><button class="btn ghost small" data-mego="erfolge">⭐ Zu den Erfolgen</button></div></div>`;
+  };
   const wearBtns = (slot, none) => `<div class="looks"><button class="look${on(!L[slot])}" data-mew="${slot}:">${none}</button>${Object.entries(WEAR[slot]).map(([id, n]) => wearOk(id)
     ? `<button class="look${on(L[slot] === id)}" data-mew="${slot}:${id}">${n}</button>`
-    : `<button class="look locked" data-mewlock="${id}" aria-label="${n} – gesperrt">🔒 ${n}</button>`).join('')}</div>`;
+    : `<button class="look locked${on(meLockOpen === id)}" data-mewlock="${id}" aria-label="${n} – gesperrt, antippen: wofür es das gibt">🔒 ${n}</button>`).join('')}</div>${lockInfo(slot)}`;
   return `
     <div class="fig-edit me-edit"><canvas id="me-prev" width="120" height="150" aria-hidden="true"></canvas><div>
       <label class="label" for="me-name">Name auf dem Schild</label>
@@ -232,7 +250,7 @@ function meHallHtml() {
     <div class="label">Shirt</div>
     <div class="swatches fig-sw">${SHIRTS.map((c, i) => `<button class="sw${on(L.shirt === i)}" data-meshirt="${i}" style="background:${c}" aria-label="Shirt ${i + 1}"></button>`).join('')}</div>
     ${WEAR_SLOTS.map(([slot, label]) => `<div class="label">${label}</div>${wearBtns(slot, 'ohne')}`).join('')}
-    <p class="muted">🔒 Gesperrtes gibt es für Erfolge – antippen zeigt, wofür.</p>`;
+    <p class="muted">🔒 Gesperrtes gibt es für Erfolge – antippen zeigt, wofür und wie weit du bist.</p>`;
 }
 function wireMeHall(card) {
   const redo = () => openTownHall('figur');
@@ -246,7 +264,8 @@ function wireMeHall(card) {
     if (id && !wearOk(id)) return;
     setMe({ [slot]: id || null }); sfx('deco'); redo();
   };
-  for (const b of card.querySelectorAll('[data-mewlock]')) b.onclick = () => toast(`🔒 ${Object.values(WEAR).find(s => s[b.dataset.mewlock])[b.dataset.mewlock]} – gibt es für ${wearNeedText(b.dataset.mewlock)}`);
+  for (const b of card.querySelectorAll('[data-mewlock]')) b.onclick = () => { meLockOpen = meLockOpen === b.dataset.mewlock ? null : b.dataset.mewlock; redo(); };
+  for (const b of card.querySelectorAll('[data-mego]')) b.onclick = () => { meLockOpen = null; openTownHall(b.dataset.mego); };
   const on = card.querySelector('#me-on');
   if (on) on.onclick = () => { setMe({ off: !meLook().off }); redo(); };
   const nm = card.querySelector('#me-name');
