@@ -38,11 +38,12 @@ describe('Tagesablauf', () => {
     game("for (let x = 6; x <= 20; x++) state.tiles.set(x + ',12', { b: 'weg', lvl: 1 })");
     game("state.tiles.set('6,11', { b: 'haus', lvl: 1 }); state.tiles.set('19,11', { b: 'baecker', lvl: 1, rot: 0 }); nameHouses(); recalc()");
   };
-  it('der Tag hat vier Teile', () => {
-    expect(game('dayPart(0)')).toBe('morgen');
-    expect(game('dayPart(5 * 60e3)')).toBe('mittag');
-    expect(game('dayPart(10 * 60e3)')).toBe('abend');
-    expect(game('dayPart(16 * 60e3)')).toBe('nacht');
+  it('der Tag hat vier Teile (Spielstunden, 1 Minute = 1 Stunde)', () => {
+    expect(game('dayPart(7 * 60e3)')).toBe('morgen');
+    expect(game('dayPart(12 * 60e3)')).toBe('mittag');
+    expect(game('dayPart(18 * 60e3)')).toBe('abend');
+    expect(game('dayPart(23 * 60e3)')).toBe('nacht');
+    expect(game('dayPart(2 * 60e3)')).toBe('nacht');
   });
 
   it('mittags geht ein Bewohner zum Essen: findet den Weg, geht hinein, kommt wieder raus und geht heim', () => {

@@ -437,6 +437,9 @@ function updateHud() {
   setText($('town-name'), state.town.name);
   if ($('diary-dot').hidden !== !youNews()) $('diary-dot').hidden = !youNews();          // Knopf „Du“ (Block 98): neue Tagebuchseite, Post, Konflikt
   setText($('you-face'), ANIMALS[meLook().a].icon);
+  const tod = timeOfDay();                                              // Spieluhr (Block 101): Sonne/Mond und Uhrzeit
+  setText($('tod-i'), tod.icon); setText($('tod-t'), ' ' + tod.text);   // Handy: nur Sonne/Mond (CSS)
+  $('town-btn').setAttribute('aria-label', `Rathaus – ${tod.text} Uhr, ${tod.name}`);
   const fl = $('hud-flag');
   if (fl.dataset.col !== state.town.color) { fl.dataset.col = state.town.color; fl.style.background = state.town.color; }
   setText(fl, state.town.symbol);
@@ -1901,6 +1904,13 @@ function residentsHtml() {
           <b>${wish ? (wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥') : ''}</b></button>`).join('')}</details>`;
     }).join('')}`;
 }
+// Tageszeit im Rathaus (Block 101): wie spät, wann es umschlägt, was es nachts zu sehen gibt
+function todHtml() {
+  const t = timeOfDay(), mins = n => `${n} ${n === 1 ? 'Minute' : 'Minuten'}`;
+  const night = ['🏮 Laternen und Fenster leuchten', '✨ Glühwürmchen in Parks und an Blumen', ...(wonderOn('sternwarte') ? ['🌠 Sternschnuppen über der Sternwarte – antippen!'] : [])];
+  return `<div class="tod-box"><b>${t.icon} ${t.text} Uhr · ${t.name}</b> <small class="muted">${t.dark ? `in ${mins(t.left)} wird es hell` : `in ${mins(t.left)} ist es Nacht`}</small>
+    <div class="muted">${t.dark ? 'Jetzt' : 'Nachts'}: ${night.join(' · ')}. Ein Tag dauert 24 Minuten, auf allen Geräten gleich.</div></div>`;
+}
 // Erfolge (Block 98: im Fenster „Du“)
 function erfolgeHtml() {
   const stars = starCount(), rank = rankOf(stars), next = RANKS.find(r => r.stars > stars);
@@ -1955,6 +1965,7 @@ function openTownHall(tab = hallTab) {
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>` : ''}
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
+      ${todHtml()}
       ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
       <div class="stats">
         <span>👥 ${T.pop} Einwohner</span><span>👷 ${T.jobs} arbeiten</span><span>🏠 ${count} Gebäude</span>
@@ -2197,11 +2208,12 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
-  { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde & alles aufgeräumt', items: [
+  { id: '2026-10-06-figur', date: '6. Oktober', title: 'Deine Figur, Freunde, Tag & Nacht – und alles aufgeräumt', items: [
     '🐾 <b>Deine Figur:</b> Du läufst jetzt selbst über deine Insel! Tipp dich an – du sagst dir, was gerade dran ist (fehlendes Material, Ausbauen, Wünsche). Tier, Farben, Hüte, Brillen, Schal, Ballon …: oben der neue Knopf mit deinem Gesicht.',
     '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
     '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
     '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
+    '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist – oben am Ortsnamen steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
   ] },
   { id: '2026-10-06-hilfe', date: '6. Oktober', title: 'Hilfe am Ort & Vorplätze', items: [
     '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',

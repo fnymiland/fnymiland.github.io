@@ -356,6 +356,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+101. **Spieluhr** (Block 101, render.js): Tageszeit nur über `gameHour()` / `nightAt()` / `dayPart()` / `timeOfDay()` /
+    `clockNow()` – alle aus `Date.now()` (1 Minute = 1 Spielstunde), nie aus `performance.now()` (das wäre wieder je Gerät
+    und ab dem Öffnen). Etwas nur nachts: `nightAt() >= NIGHT_MAX - 1e-9`, nie eine feste Zahl über `NIGHT_MAX`.
+    `?stunde=N` stellt die Uhr zum Ausprobieren fest.
 100. **Wegflächen nahtlos** (Block 100): Volle Ecken über `quadPaved` (Weg außer Trittsteinen, dazu das Rathaus). Muster mit
     Einzelpunkten (`dots`, `stones`) liegen in einem Raster über die ganze Insel (globale Indizes, `hash(i, j)`) – nie
     wieder ein Raster je Feld, sonst halbe Steine an jeder Kante. Bordstein am breiten Weg nur, wo wirklich Wiese anschließt.

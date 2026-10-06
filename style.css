@@ -743,3 +743,8 @@ body.visiting #you-btn { display: none !important; }
 .news-v { background: var(--cream2); border-radius: 12px; padding: 6px 12px; margin: 6px 0; }
 .news-v summary { cursor: pointer; }
 .news-v .news { margin: 6px 0 2px; }
+/* Spieluhr (Block 101) */
+#town-btn .tod { margin-left: 6px; font-weight: 800; color: var(--brown); opacity: 0.8; white-space: nowrap; }
+.tod-box { background: var(--cream2); border-radius: 12px; padding: 8px 12px; margin: 6px 0 10px; font-size: 14px; }
+.tod-box .muted { font-size: 13px; margin-top: 2px; }
+@media (max-width: 480px) { #town-btn .tod-t { display: none; } #town-btn .tod { margin-left: 4px; } }

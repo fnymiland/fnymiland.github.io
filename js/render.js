@@ -2,32 +2,42 @@
 // ---------------------------------------------------------------------------
 // Zeichnen – Szene
 // ---------------------------------------------------------------------------
-// Eigene Spieluhr: ein Tag dauert 20 Minuten, beginnt beim Öffnen morgens.
-// 15 Min Tag, 1 Min Dämmerung, 3 Min Nacht (die Laternen leuchten), 1 Min Morgengrauen.
-const DAY_MS = 20 * 60e3, NIGHT_MAX = 0.45;
-function nightAt(ms) {
-  const m = (((ms % DAY_MS) + DAY_MS) % DAY_MS) / 60e3;
-  if (m < 15) return 0;
-  if (m < 16) return (m - 15) * NIGHT_MAX;
-  if (m < 19) return NIGHT_MAX;
-  return (20 - m) * NIGHT_MAX;
-}
+// Spieluhr (Block 101): ein Spieltag dauert 24 echte Minuten (1 Minute = 1 Spielstunde) und wird aus der echten Zeit
+// berechnet – sie läuft weiter, wenn die App zu ist, und alle Geräte und Besucher sehen dieselbe Tageszeit.
+// Tag 6–19 Uhr, Abenddämmerung 19–21, Nacht 21–5 (die Laternen leuchten), Morgengrauen 5–6.
+const GAME_HOUR_MS = 60e3, DAY_MS = 24 * GAME_HOUR_MS, NIGHT_MAX = 0.45;
 // ?stunde=N erzwingt eine Uhrzeit (Probeansicht)
-function nightLevel(d) {
-  const h = d.getHours() + d.getMinutes() / 60;
-  if (h >= 7 && h < 18) return 0;
-  if (h >= 18 && h < 21) return (h - 18) / 3 * 0.45;
-  if (h >= 5 && h < 7) return (7 - h) / 2 * 0.45;
-  return 0.45;
-}
 const forcedHour = (() => {
   const s = new URLSearchParams(location.search).get('stunde');
   return s == null ? null : +s;
 })();
-function clockNow() {
-  const d = new Date();
-  if (forcedHour != null) d.setHours(forcedHour, 0);
+// Spielstunde 0 … 24 (mit Nachkommastellen)
+function gameHour(ms = Date.now()) {
+  if (forcedHour != null) return ((forcedHour % 24) + 24) % 24;
+  return (((ms % DAY_MS) + DAY_MS) % DAY_MS) / GAME_HOUR_MS;
+}
+function nightLevel(h) {
+  if (h instanceof Date) h = h.getHours() + h.getMinutes() / 60;
+  if (h >= 6 && h < 19) return 0;
+  if (h >= 19 && h < 21) return (h - 19) / 2 * NIGHT_MAX;
+  if (h >= 5 && h < 6) return (6 - h) * NIGHT_MAX;
+  return NIGHT_MAX;
+}
+function nightAt(ms = Date.now()) { return nightLevel(gameHour(ms)); }   // Funktion: Tests ersetzen sie
+// Spielzeit als Datum (für Zeiger an Uhren)
+function clockNow(ms = Date.now()) {
+  const h = gameHour(ms), d = new Date(2000, 0, 1);
+  d.setHours(Math.floor(h), Math.floor((h % 1) * 60));
   return d;
+}
+// Tageszeit zum Anzeigen: Symbol, „22:10“ (auf 10 Minuten), Name und wann es umschlägt
+const TOD = [[5, '🌄', 'Morgengrauen'], [6, '☀️', 'Tag'], [19, '🌅', 'Abend'], [21, '🌙', 'Nacht']];
+function timeOfDay(ms = Date.now()) {
+  const h = gameHour(ms), cur = [...TOD].reverse().find(([from]) => h >= from) || TOD[3];
+  const m = Math.floor(h * 6) * 10, text = `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+  const dark = nightLevel(h) >= NIGHT_MAX - 1e-9, to = dark ? 5 : 21;                     // nächster Umschwung: hell bzw. dunkel
+  const left = Math.ceil(((to - h + 24) % 24) * GAME_HOUR_MS / 60e3);                     // echte Minuten
+  return { icon: cur[1], name: cur[2], text, dark, left };
 }
 
 // fit: im Bild halten (Vorschau-Schild) – notfalls kleiner, dann seitlich hineinrücken
@@ -572,7 +582,7 @@ function render(now) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
-  night = forcedHour != null ? nightLevel(clockNow()) : nightAt(performance.now());
+  night = nightAt();                                                     // Spieluhr (Block 101)
   glows.length = 0; glowCells.clear();
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }

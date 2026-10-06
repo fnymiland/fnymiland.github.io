@@ -687,7 +687,7 @@ function spawnStar(rnd = Math.random, now = performance.now()) {
 }
 function starTick(now = performance.now()) {
   for (let i = fallenStars.length - 1; i >= 0; i--) if (now - fallenStars[i].t0 > STAR_LIFE) fallenStars.splice(i, 1);
-  if (wonderOn('sternwarte') && nightAt(now) > 0.5 && Math.random() < STAR_CHANCE) spawnStar();
+  if (wonderOn('sternwarte') && nightAt() >= NIGHT_MAX - 1e-9 && Math.random() < STAR_CHANCE) spawnStar();   // nur in der dunklen Nacht (vorher > 0,5: nie, Block 101)
 }
 function collectStarAt(x, y) {
   const i = fallenStars.findIndex(s => Math.abs(s.x - x) <= 1 && Math.abs(s.y - y) <= 1);

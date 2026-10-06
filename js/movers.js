@@ -19,12 +19,11 @@ function crossingClosed(x, y) {
 }
 const drivable = () => false;
 
-// Tagesablauf (Block 55): der 20-Minuten-Tag (DAY_MS) in vier Teile – morgens zur Arbeit oder Schule, mittags essen und
+// Tagesablauf (Block 55, Spieluhr seit Block 101: 1 Minute = 1 Spielstunde) in vier Teile – morgens zur Arbeit oder Schule, mittags essen und
 // einkaufen, abends in den Park, nachts sind (fast) alle zu Hause. Mit ?stunde=N nach der echten Uhrzeit.
-const DAY_PARTS = [[0, 'morgen'], [4, 'mittag'], [9, 'abend'], [15, 'nacht']];          // ab Minute des Spieltags
-function dayPart(ms = performance.now()) {
-  if (forcedHour != null) { const h = clockNow().getHours(); return h >= 21 || h < 6 ? 'nacht' : h < 11 ? 'morgen' : h < 15 ? 'mittag' : 'abend'; }
-  const m = (((ms % DAY_MS) + DAY_MS) % DAY_MS) / 60e3;
+const DAY_PARTS = [[0, 'nacht'], [5, 'morgen'], [11, 'mittag'], [15, 'abend'], [21, 'nacht']];   // ab Spielstunde
+function dayPart(ms = Date.now()) {
+  const m = gameHour(ms);
   let part = 'morgen';
   for (const [from, id] of DAY_PARTS) if (m >= from) part = id;
   return part;

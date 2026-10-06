@@ -1186,3 +1186,13 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
       Nachbar seine Ecke ohnehin voll füllt, kein Bordstein mehr.
 - [x] Rathausplatz: Seiten, die ganz von Weg umgeben sind, laufen bis an die Grundstücksgrenze (ohne Bordstein-Linie,
       `courtOpenSides`). Test: wegflaeche.test.js (4 Fälle).
+
+## Block 101: Tageszeit – gemeinsame Spieluhr (06.10.2026)
+- [x] Vorher: 20-Minuten-Tag ab dem Öffnen (immer morgens), nur 3 Minuten Nacht – wer kürzer als 15 Minuten spielte, sah
+      nie eine Nacht; jedes Gerät hatte seine eigene Zeit; die Rathausuhr drehte sich einfach.
+- [x] Jetzt: 1 Minute = 1 Spielstunde, aus der echten Zeit (`gameHour`) – läuft weiter, wenn die App zu ist, auf allen
+      Geräten und bei Besuchern gleich. Tag 6–19, Dämmerung 19–21, Nacht 21–5, Morgengrauen 5–6 (ein Drittel Nacht).
+      Bewohner: morgens 5–11, mittags 11–15, abends 15–21, nachts 21–5.
+- [x] Anzeige: oben am Ortsnamen ☀️/🌅/🌙/🌄 mit Uhrzeit (Handy: nur das Symbol), Rathausuhr und Gebäude-Uhren zeigen die
+      Spielzeit, Rathaus → Übersicht: „22:10 Uhr · Nacht – in 7 Minuten wird es hell“ und was es nachts zu sehen gibt.
+- [x] Fehler: Sternschnuppen der Sternwarte kamen nie (Schwelle 0,5 über der dunkelsten Nacht 0,45). Test: tageszeit.test.js.

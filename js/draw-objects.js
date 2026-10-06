@@ -800,7 +800,7 @@ const BIG_ART = {
         [[lo(-1, 1), lo(-1, -1), hi(-1, -1), hi(-1, 1)], [-1, 0]], [[lo(-1, -1), lo(1, -1), hi(1, -1), hi(-1, -1)], [0, -1]]];
       for (const back of [true, false]) for (const [pts, n] of slopes) if ((K.facing(...n) < 0) === back) poly(pts, K.roofCol(roof, n));
       const T2 = K.block({ a: -0.45, ha: TW2, hb: TW2, h: 19, lift: up, wall, roof: '#e8705f', roofH: 12 });   // bündig auf dem Plateau (88d–f)
-      const hr = now / 60000 * Math.PI * 2 / 12, mi = now / 60000 * Math.PI * 2;                 // Zeiger laufen langsam mit
+      const ck = clockNow(), hr = (ck.getHours() % 12 + ck.getMinutes() / 60) / 6 * Math.PI, mi = ck.getMinutes() / 30 * Math.PI;   // Spielzeit (Block 101)
       for (const F of [T2.faces.front, T2.faces.right, T2.faces.left, T2.faces.back]) if (F) faceClock(F, 0.5, F.H * 0.66, 4.6 * z, z, { hands: [[hr, 0.52, 1], [mi, 0.74, 0.9]] });   // auf jeder Turmseite, die man sieht (oben)
     };
     const steps = () => K.block({ a: 0.5, ha: 0.1, hb: 0.3, h: 1.6, wall: '#d6ccb9', type: 'flat', roof: '#efe8da' });

@@ -23,18 +23,19 @@ describe('Namen: Ort und Stufe zusammen', () => {
 });
 
 describe('Spieluhr', () => {
-  it('ein Tag dauert 20 Minuten, davon etwa 3 Minuten richtig Nacht', () => {
+  it('ein Tag dauert 24 Minuten (Block 101): 13 hell, 8 richtig Nacht, dazwischen Dämmerung', () => {
     const min = 60e3;
     let dark = 0, day = 0;
-    for (let m = 0; m < 20; m += 0.25) {
+    for (let m = 0; m < 24; m += 0.25) {
       const n = game(`nightAt(${m * min})`);
       if (n >= 0.45) dark += 0.25;
       if (n === 0) day += 0.25;
     }
-    expect(dark).toBeGreaterThanOrEqual(3);
-    expect(dark).toBeLessThanOrEqual(3.25);
-    expect(day).toBeGreaterThanOrEqual(15);
-    expect(game(`nightAt(${20 * min})`)).toBe(0);     // nächster Morgen
+    expect(dark).toBeGreaterThanOrEqual(8);
+    expect(dark).toBeLessThanOrEqual(8.25);
+    expect(day).toBeGreaterThanOrEqual(13);
+    expect(day).toBeLessThanOrEqual(13.25);
+    expect(game(`nightAt(${(24 + 12) * min})`)).toBe(0);     // nächster Mittag
   });
 });
 

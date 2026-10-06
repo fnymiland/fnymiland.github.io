@@ -1,0 +1,47 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+// Block 101: gemeinsame Spieluhr – 24 Minuten je Tag aus der echten Zeit, Anzeige oben und im Rathaus, Sternschnuppen nachts
+beforeAll(() => loadGame());
+beforeEach(() => game("startNew(); closeModal(); state.tutorial = -1"));
+const at = h => `(${h} * 60e3)`;                                                // echte ms, die Spielstunde h ergeben
+
+describe('Spieluhr (Block 101)', () => {
+  it('aus der echten Zeit: alle Geräte gleich, läuft weiter, wenn die App zu ist', () => {
+    const t = 1791273000000;
+    expect(game(`gameHour(${t})`)).toBe(game(`gameHour(${t})`));
+    expect(game(`gameHour(${t} + 60e3)`) - game(`gameHour(${t})`)).toBeCloseTo(1, 5);   // eine Minute später = eine Stunde
+    expect(game(`gameHour(${t} + 24 * 60e3)`)).toBeCloseTo(game(`gameHour(${t})`), 5);   // nach 24 Minuten wieder dieselbe Zeit
+  });
+  it('Tag 6–19, Dämmerung 19–21, Nacht 21–5, Morgengrauen 5–6', () => {
+    expect(game(`nightAt(${at(12)})`)).toBe(0);
+    expect(game(`nightAt(${at(20)})`)).toBeGreaterThan(0);
+    expect(game(`nightAt(${at(20)})`)).toBeLessThan(0.45);
+    expect(game(`nightAt(${at(23)})`)).toBe(0.45);
+    expect(game(`nightAt(${at(3)})`)).toBe(0.45);
+    expect(game(`nightAt(${at(5.5)})`)).toBeGreaterThan(0);
+  });
+  it('Anzeige: Symbol, Uhrzeit in 10-Minuten-Schritten, wann es umschlägt', () => {
+    expect(game(`timeOfDay(${at(22.25)})`)).toMatchObject({ icon: '🌙', text: '22:10', name: 'Nacht', dark: true, left: 7 });
+    expect(game(`timeOfDay(${at(13)})`)).toMatchObject({ icon: '☀️', text: '13:00', dark: false, left: 8 });
+    expect(game(`timeOfDay(${at(19.5)}).icon`)).toBe('🌅');
+  });
+  it('oben am Ortsnamen und im Rathaus steht die Zeit', () => {
+    game('updateHud()');
+    expect(game("document.getElementById('town-time').textContent")).toMatch(/^(☀️|🌅|🌙|🌄) \d\d:\d0$/);
+    game("openTownHall('overview')");
+    expect(game("document.querySelector('#modal-card .tod-box').textContent")).toMatch(/Uhr ·.*in \d+ Minuten? (wird es hell|ist es Nacht)/s);
+  });
+  it('die Rathausuhr zeigt die Spielzeit; Uhren an Gebäuden auch', () => {
+    const d = game(`(() => { const c = clockNow(${at(15.5)}); return [c.getHours(), c.getMinutes()]; })()`);
+    expect(d).toEqual([15, 30]);
+  });
+  it('Sternschnuppen kommen nachts wirklich (vorher nie: Schwelle 0,5 über der dunkelsten Nacht)', () => {
+    game(`state.tiles.set('6,6', { b: 'haus', lvl: 1 }); T.wonders = { ...(T.wonders || {}), sternwarte: true }; fallenStars.length = 0;
+      globalThis.__n = nightAt; nightAt = () => NIGHT_MAX; globalThis.__r = Math.random; Math.random = () => 0;
+      try { starTick(performance.now()) } finally { nightAt = globalThis.__n; Math.random = globalThis.__r; }`);
+    expect(game('fallenStars.length')).toBeGreaterThan(0);
+    game(`fallenStars.length = 0; globalThis.__n = nightAt; nightAt = () => 0.3; globalThis.__r = Math.random; Math.random = () => 0;
+      try { starTick(performance.now()) } finally { nightAt = globalThis.__n; Math.random = globalThis.__r; }`);
+    expect(game('fallenStars.length')).toBe(0);                                          // Dämmerung: noch nicht
+  });
+});
