@@ -1,6 +1,6 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Online-Speicher (Block 93, Stufe 1): freiwillig anmelden (Google oder E-Mail-Link), dann liegt der Spielstand auch in
+// Online-Speicher (Block 93, Stufe 1): freiwillig mit Google anmelden, dann liegt der Spielstand auch in
 // der Cloud (Firebase Realtime Database, Projekt „fnymiland“) und ist auf jedem Gerät da. Ohne Anmeldung ändert sich nichts.
 // Ablage je Spieler unter users/<uid>:
 //   meta    { rev, at, by, sum }      klein – wird bei jedem Abgleich gelesen; rev zählt jede Version hoch
@@ -17,6 +17,7 @@
 // hochgeladen; andere Geräte schauen live zu (cloudWatching) und können per „Hier weiterspielen“ übernehmen – das führende
 // sichert dann noch und übergibt. Geht das führende in den Hintergrund, sichert es und gibt frei; das nächste übernimmt von selbst.
 // Firebase wird erst geladen, wenn man sich anmeldet (oder angemeldet war): wer offline spielt, merkt nichts davon.
+// Kein E-Mail-Link (Block 94c): Firebase verschickt im kostenlosen Tarif nur 5 solche Mails am Tag – für alle Spieler zusammen.
 // ---------------------------------------------------------------------------
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyBLYqFNDszVkNIoh1naaF-wdEQmqbcSNEo',            // öffentlich – geschützt wird über die Datenbank-Regeln
@@ -27,7 +28,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: '663890593085',
   appId: '1:663890593085:web:55eeb23d0e402fa8fa3154',
 };
-const FB_VER = '10.14.1', CLOUD_KEY = 'kachelhausen_cloud', CLOUD_MAIL = 'kachelhausen_cloud_mail';
+const FB_VER = '10.14.1', CLOUD_KEY = 'kachelhausen_cloud';
 const CLOUD_QUIET = 6000, CLOUD_EVERY = 45000, CLOUD_GAP = 10000, CLOUD_BACKUPS = 10;
 let cloudActAt = 0, cloudWatchOff = null, cloudToastAt = 0;   // letzte eigene Aktion; Abmelden vom Live-Horchen
 let cloudApi = null;                 // Adapter: Firebase (cloudFirebase) oder im Test eine Attrappe
@@ -263,26 +264,13 @@ async function openCloud() {
       <p>Melde dich an, dann liegt deine Insel sicher in der Cloud und ist auf jedem Gerät da – iPad, Handy, Computer.</p>
       <p class="muted">Freiwillig: Ohne Anmeldung spielst du weiter wie bisher, nur in diesem Browser.</p>
       <div class="row"><button class="btn" id="c-google" disabled>Lädt …</button></div>
-      <div class="label">Oder per E-Mail (ohne Passwort)</div>
-      <input id="c-mail" class="cloud-mail" type="email" placeholder="deine@email.de" autocomplete="email" aria-label="E-Mail-Adresse">
-      <div class="row"><button class="btn ghost" id="c-send" style="flex:1" disabled>Anmelde-Link schicken</button></div>
       <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
     $('m-close').onclick = closeModal;
     try { await cloudReady(); } catch (e) { if ($('c-google')) $('c-google').textContent = 'Gerade keine Verbindung'; return; }
     if (!$('c-google')) return;
-    $('c-google').disabled = false; $('c-send').disabled = false;
+    $('c-google').disabled = false;
     $('c-google').textContent = 'Mit Google anmelden';
     $('c-google').onclick = () => cloudApi.signInGoogle().then(() => { closeModal(); toast('☁️ Angemeldet'); }).catch(e => cloudLoginFail(e));
-    $('c-send').onclick = () => {
-      const mail = $('c-mail').value.trim();
-      if (!/^\S+@\S+\.\S+$/.test(mail)) { toast('Bitte eine E-Mail-Adresse eintippen'); return; }
-      try { localStorage.setItem(CLOUD_MAIL, mail); } catch (e) { /* dann fragt das Spiel beim Öffnen des Links nach */ }
-      cloudApi.sendLink(mail, location.origin + location.pathname).then(() => {
-        openModal(`<h2>📧 Link ist unterwegs</h2><p>Öffne die E-Mail an <b>${escHtml(mail)}</b> auf diesem Gerät und tippe auf den Link – dann bist du angemeldet.</p>
-          <p class="muted">Keine Mail da? Schau im Spam-Ordner nach.</p><div class="row"><button class="btn" id="m-ok">OK</button></div>`);
-        $('m-ok').onclick = closeModal;
-      }).catch(e => toast('Link ging nicht raus' + (e && e.code ? ` (${e.code})` : '')));
-    };
     return;
   }
   let list = [];
@@ -329,23 +317,6 @@ function cloudRestore(id) {
   });
 }
 
-// Anmelde-Link aus der E-Mail: beim Öffnen der Seite erkennen und abschließen
-async function cloudFinishLink() {
-  const api = await cloudReady();
-  if (!api.isLink(location.href)) return;
-  let mail = null;
-  try { mail = localStorage.getItem(CLOUD_MAIL); } catch (e) { /* fragen */ }
-  const finish = async m => {
-    try { await api.finishLink(m, location.href); toast('☁️ Angemeldet'); }
-    catch (e) { toast('Der Link ist abgelaufen oder schon benutzt – bitte neu anfordern'); }
-    history.replaceState(null, '', location.pathname);
-  };
-  if (mail) { finish(mail); return; }
-  openModal(`<h2>☁️ Anmeldung abschließen</h2><p>Mit welcher E-Mail-Adresse hast du den Link angefordert?</p>
-    <input id="c-mail2" class="cloud-mail" type="email" autocomplete="email" aria-label="E-Mail-Adresse"><div class="row"><button class="btn" id="m-ok">Anmelden</button></div>`);
-  $('m-ok').onclick = () => { closeModal(); finish($('c-mail2').value.trim()); };
-}
-
 // Firebase (compat-Bibliotheken von Google) erst bei Bedarf laden
 function loadScript(src) {
   return new Promise((ok, fail) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => fail(new Error('laden: ' + src)); document.head.append(s); });
@@ -361,9 +332,6 @@ async function cloudFirebase() {
   return {
     onUser: cb => auth.onAuthStateChanged(cb),
     signInGoogle: () => auth.signInWithPopup(new fb.auth.GoogleAuthProvider()),
-    sendLink: (mail, url) => auth.sendSignInLinkToEmail(mail, { url, handleCodeInApp: true }),
-    isLink: href => auth.isSignInWithEmailLink(href),
-    finishLink: (mail, href) => auth.signInWithEmailLink(mail, href),
     signOut: () => auth.signOut(),
     watchMeta: (uid, cb) => { const r = ref(uid, 'meta'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
     watchLead: (uid, cb) => { const r = ref(uid, 'lead'), f = s => cb(s.val()); r.on('value', f); return () => r.off('value', f); },
@@ -507,12 +475,11 @@ addEventListener('pointerdown', () => {
   if (cloudUser && cloudApi && cloudApi.leadTx && !cloudIsLeader() && (cloudLeadInfo === null || leadStale(cloudLeadInfo))) cloudClaimLead();
 }, { capture: true, passive: true });
 
-// Start: war man angemeldet oder kommt man über den Link aus der E-Mail, Firebase im Hintergrund laden
+// Start: war man angemeldet, Firebase im Hintergrund laden
 function cloudBoot() {
   if (cloudOff()) return;
-  const link = /[?&]oobCode=/.test(location.search) && /[?&]mode=signIn/.test(location.search);
-  if (!cloudMeta().login && !cloudMeta().uid && !link) return;
-  cloudReady().then(() => { if (link) cloudFinishLink(); }).catch(() => { cloudState = 'offline'; });
+  if (!cloudMeta().login && !cloudMeta().uid) return;
+  cloudReady().catch(() => { cloudState = 'offline'; });
 }
 // Regelmäßig sichern (nur eigene Aktionen), beim Verlassen sofort, beim Zurückkommen nachsehen, ob ein anderes Gerät weiter ist
 function cloudDue(now = Date.now()) {

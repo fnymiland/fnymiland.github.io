@@ -1081,4 +1081,6 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
         (onDisconnect), nicht erst nach 45 s.
       • ↶ war beim Zuschauen nicht gesperrt. Die Zweites-Fenster-Sperre hätte auch das führende Fenster angehalten.
       cloud.test.js: 32 Fälle.
+- [x] 94c: Anmeldung per E-Mail-Link entfernt – im kostenlosen Firebase-Tarif gehen nur 5 solche Mails am Tag raus (für das
+      ganze Spiel). Nur noch Google. Grenzen notiert: 100 gleichzeitige Verbindungen, 1 GB Speicher, 10 GB Download/Monat.
 

@@ -13,7 +13,7 @@ beforeAll(() => {
         u(uid).lead = n && n.at === true ? { ...n, at: this.now() } : n; const v = u(uid).lead;
         setTimeout(() => { for (const [w, cb] of this.leadW) if (w === uid) cb(v && JSON.parse(JSON.stringify(v))); }, 0); return { ok: true, cur: v }; },
       clock: 0, now() { return Date.now() + this.clock; },
-      onUser: () => {}, signInGoogle: async () => {}, sendLink: async () => {}, isLink: () => false, finishLink: async () => {}, signOut: async () => {},
+      onUser: () => {}, signInGoogle: async () => {}, signOut: async () => {},
       getMeta: async uid => u(uid).meta && JSON.parse(JSON.stringify(u(uid).meta)),
       getSave: async uid => u(uid).save && { ...u(uid).save },
       claim: async (uid, expect, info) => { const c = u(uid).meta; if (c && (c.rev || 0) !== expect) return { ok: false, cur: JSON.parse(JSON.stringify(c)) };
