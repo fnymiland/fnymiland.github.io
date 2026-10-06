@@ -308,8 +308,9 @@ async function openFriends() {
       <div class="row"><button class="btn ghost small" id="fr-new">Neuen Link machen (der alte geht dann nicht mehr)</button></div>` : '<p class="muted">Freunde können dich immer besuchen – der Link ist für alle anderen.</p>'}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div></div>`);
   $('m-close').onclick = closeModal;
-  const share = async (text, title) => { try { if (navigator.share) { await navigator.share({ title, text }); return; } await navigator.clipboard.writeText(text); toast('Kopiert'); } catch (e) { /* abgebrochen */ } };
-  $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`, 'Freundescode');
+  // Teilen: beim Link nur die Adresse (ohne Text davor), beim Code ein kurzer Satz; ohne Teilen-Menü in die Zwischenablage
+  const share = async (text, link = false) => { try { if (navigator.share) { await navigator.share(link ? { url: text } : { text }); return; } await navigator.clipboard.writeText(text); toast('Kopiert'); } catch (e) { /* abgebrochen */ } };
+  $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`);
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
@@ -317,7 +318,7 @@ async function openFriends() {
   for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };
   $('fr-open').onclick = async () => { try { await liveSetOpen(!liveOpen); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
-  if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), `Besuch in ${state.town.name}`);
+  if ($('fr-link')) $('fr-link').onclick = () => share(visitLink(wid), true);
   if ($('fr-new')) $('fr-new').onclick = async () => { try { await liveNewLink(); toast('🔗 Neuer Link – der alte geht nicht mehr'); openFriends(); } catch (e) { toast('Hat nicht geklappt'); } };
 }
 
