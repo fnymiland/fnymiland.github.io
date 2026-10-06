@@ -133,6 +133,29 @@ describe('Freunde und Besuchs-Link (Block 95)', () => {
     expect(tree().worlds[neu].owner).toBe('u1');
     expect(tree().fr.F1.u1.wid).toBe(neu);
   });
+  it('neuer Link bei „Besuche erlaubt“: die neue Insel ist gleich offen (Prüfung vor dem Push)', async () => {
+    lead();
+    await game('livePush(true)'); await game('liveSetOpen(true)');
+    await game('liveNewLink()');
+    expect(tree().worlds[game('liveWid')].open).toBe(true);
+  });
+  it('Besuche an, bevor die Insel geschrieben ist: owner wird mitgeschrieben (sonst lehnt die Regel ab)', async () => {
+    await game('liveSetOpen(true)');
+    expect(tree().worlds[game('liveWid')].owner).toBe('u1');
+  });
+  it('Freundescode löscht die Figur im Profil nicht', async () => {
+    game("cloudApi.tree.users = { u1: { profile: { animal: 2, look: { shirt: 3 } } } }");
+    await game('frCode()');
+    expect(tree().users.u1.profile.animal).toBe(2);
+    expect(tree().users.u1.profile.look.shirt).toBe(3);
+    expect(tree().users.u1.profile.code).toBe(game('frMine'));
+  });
+  it('anderes Konto am selben Gerät: Code, Freunde und Link vom alten Konto sind weg', async () => {
+    await game('frCode()'); await game('liveWorldId()');
+    game("frList = { F1: { st: 'freund' } }; socialUid = 'u1'");
+    game("cloudUser = { uid: 'u2', name: 'b@c.de', display: 'Ben' }; socialReset()");
+    expect(game('[frMine, liveWid, Object.keys(frList).length]')).toEqual([null, null, 0]);
+  });
   it('Besuche an/aus steht in der Insel (die Datenbank-Regel liest es dort)', async () => {
     lead();
     await game('livePush(true)');

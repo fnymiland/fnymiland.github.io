@@ -41,8 +41,9 @@ let meLockOpen = null;                                                   // ange
 
 // --- Aussehen ------------------------------------------------------------------------------------
 // immer gültig (state.me kann fehlen oder aus einer anderen Version stammen)
+let meProfileLook = null;                                               // aus dem Profil (angemeldet, noch nie hier eingestellt)
 function meLook() {
-  const m = (state && state.me) || {};
+  const m = (state && state.me) || (!VISIT && meProfileLook) || {};
   const L = lookClean(m);
   for (const [slot] of WEAR_SLOTS) if (L[slot] && !wearOk(L[slot])) L[slot] = null;      // (noch) nicht verdient: weglassen
   return { a: Number.isInteger(m.a) && ANIMALS[m.a] ? m.a : Math.abs(state.seed || 0) % ANIMALS.length, ...L,
@@ -50,7 +51,8 @@ function meLook() {
 }
 const meFigLook = () => { const L = meLook(); return figFrom(L.a, L, L.name || ME_NAME); };
 function setMe(patch) {
-  if (VISIT || viewOnly()) return;
+  if (VISIT) return;
+  if (viewOnly()) { cloudBlocked(); return; }                           // zuschauendes Gerät: sagen, warum nichts passiert
   state.me = { ...meLook(), ...patch };
   meSig = null;
   cloudTouched(); save();                                                // Online-Speicher: eigene Änderung (Regel 93)
@@ -62,18 +64,20 @@ async function mePushProfile() {
   const L = meLook(), uid = cloudUser.uid;
   try { await cloudApi.set(`users/${uid}/profile/animal`, L.a); await cloudApi.set(`users/${uid}/profile/look`, lookClean(L)); } catch (e) { /* nächstes Mal */ }
 }
-// nach der Anmeldung einmal: noch nie eingestellt → Figur aus dem Profil übernehmen (Block 96c), sonst Profil auffrischen
+// nach der Anmeldung einmal: noch nie eingestellt → Figur aus dem Profil zeigen (Block 96c) – nur zum Anzeigen, nicht in den
+// Spielstand: eine Änderung am Stand zählte als eigene Aktion und machte aus „anderes Gerät übernehmen“ einen Konflikt.
+// In state.me landet sie erst, wenn man selbst etwas einstellt (setMe). Sonst Profil auffrischen.
 let meProfileUid = null;
 async function meProfileSync() {
   if (VISIT || !cloudUser || !cloudApi || meProfileUid === cloudUser.uid) return;
-  const uid = meProfileUid = cloudUser.uid, st = state;
-  if (st.me) { await mePushProfile(); return; }
+  const uid = meProfileUid = cloudUser.uid;
+  if (state.me) { await mePushProfile(); return; }
   try {
     const [a, look] = await Promise.all([cloudApi.get(`users/${uid}/profile/animal`), cloudApi.get(`users/${uid}/profile/look`)]);
-    if (state !== st || st.me || viewOnly() || (!(Number.isInteger(a) && ANIMALS[a]) && !look)) return;
-    st.me = { ...lookClean(look), a: Number.isInteger(a) && ANIMALS[a] ? a : meLook().a };
+    if (!cloudUser || cloudUser.uid !== uid) return;
+    if (!(Number.isInteger(a) && ANIMALS[a]) && !look) { if (!state.me) mePushProfile(); return; }   // nie eingestellt: Freunde sehen trotzdem dein Tier
+    meProfileLook = { ...lookClean(look), a: Number.isInteger(a) && ANIMALS[a] ? a : meLook().a };
     meSig = null;
-    cloudTouched(); save();
   } catch (e) { meProfileUid = null; }
 }
 
@@ -124,7 +128,7 @@ function stepMe(dt, now = performance.now()) {
   meFigs.length = 0;
   meProfileSync();
   if (meState !== state) { meState = state; meKnown = null; meNew = []; meFig.placed = false; meSig = null; meHelpAt = now + 60e3; }
-  if (!meShown()) { meFig.placed = false; return; }
+  if (!meShown()) { meFig.placed = false; if (bubble && bubble.w === meFig) bubble = null; return; }
   const sig = JSON.stringify(state.me);
   if (sig !== meSig) { meSig = sig; Object.assign(meFig, meFigLook()); }
   if (!meFig.placed || meFig.gone || !walkable(meFig.fx, meFig.fy, true)) mePlace();
@@ -256,6 +260,7 @@ function openYou(tab = youTab) {
 // Reiter: ein Griff für alle Unterfenster
 $('modal-card').addEventListener('click', e => { const b = e.target.closest('[data-you]'); if (b) { sfx('deco'); openYou(b.dataset.you); } });
 $('you-btn').onclick = () => { setTool('look'); openYou(state.diarySeen < state.diary.length ? 'tagebuch' : youTab); };
+fastTap($('you-btn'));                                                    // iPad: beim Loslassen auslösen wie die anderen Knöpfe oben
 
 // --- „Du“ → Figur ----------------------------------------------------------------------------------
 function meHallHtml() {

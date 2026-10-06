@@ -220,6 +220,7 @@ function cloudOnUser(u) {
   if (cloudWatchOff) { cloudWatchOff(); cloudWatchOff = null; }
   if (cloudOff()) u = null;                                        // Testwelt: nie verbinden
   cloudUser = u ? { uid: u.uid, name: u.email || u.displayName || 'angemeldet', display: u.displayName || '' } : null;
+  if (typeof socialReset === 'function') socialReset();                 // anderes Konto: Freunde, Code, Link … neu (Block 96)
   if (!u) { cloudState = 'aus'; return; }
   setCloudMeta({ ...cloudMeta(), login: true });                  // beim nächsten Start gleich wieder verbinden
   cloudState = 'laden';
@@ -281,8 +282,10 @@ async function openCloud() {
   }
   let list = [];
   youTab = 'online';
+  if ($('modal').hidden || !$('c-now')) openModal(`${youHead('online')}<h3>☁️ Online-Speicher</h3><p class="muted" id="c-wait">Lädt …</p>`);
+  const tok = $('modal-card').firstElementChild;
   try { list = (await cloudApi.listBackups(cloudUser.uid)).sort((p, q) => q.at - p.at); } catch (e) { /* offline: Liste leer */ }
-  if (youTab !== 'online') return;                                       // inzwischen anderen Reiter gewählt (Block 98)
+  if (youTab !== 'online' || $('modal').hidden || $('modal-card').firstElementChild !== tok) return;   // inzwischen geschlossen/gewechselt (Block 98)
   openModal(`
     ${youHead('online')}
     <h3>☁️ Online-Speicher</h3>

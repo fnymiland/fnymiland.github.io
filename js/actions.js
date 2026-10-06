@@ -467,7 +467,7 @@ function tap(sx, sy, isTouch) {
   const hit = tool === 'look' ? objectAt(sx, sy) : null;
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
-  if (collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
+  if (!viewOnly() && collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
   if (hit) ({ x, y, slot } = hit);
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);

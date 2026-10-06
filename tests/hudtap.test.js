@@ -14,6 +14,11 @@ describe('Knöpfe oben', () => {
     expect(game("document.getElementById('modal').hidden")).toBe(true);
   });
 
+  it('auch der Knopf „Du“ (sein Handler kommt erst aus me.js) reagiert auf den ersten Finger-Tipp', () => {
+    touch('you-btn', 'pointerdown'); touch('you-btn', 'pointerup');
+    expect(game("document.getElementById('modal').hidden")).toBe(false);
+    expect(game("!!document.querySelector('#modal-card [data-you]')")).toBe(true);
+  });
   it('mit der Maus/Tastatur weiter per Klick; auch der Stadtname', () => {
     game("document.getElementById('town-btn').click()");
     expect(game("document.querySelector('#modal-card h2').textContent")).toContain('Rathaus');

@@ -59,7 +59,7 @@ const visitorFigs = [];
 // guests: { uid: { a, n, x, y } } aus der Insel; skip: eigene Kennung (sich selbst nicht doppelt zeigen)
 // Startfeld: begehbar, nah am Rathaus (sonst am angegebenen Feld)
 function guestSpawn(x, y) {
-  const h = townHallAt(), cx = h ? h[0] + 1 : x, cy = h ? h[1] + 1 : y;
+  const h = townHallAt(), cx = Math.round(h ? h[0] + 1 : x), cy = Math.round(h ? h[1] + 1 : y);   // ganze Felder (ISLAND.cx ist 2,5)
   // am liebsten vorn vor dem Rathaus (Bildschirm-unten = großes x+y), dort gern auf dem Weg (Block 97)
   const ds = h ? doorsOf(h.join(',')) : [], best = Math.max(...ds.map(([a, b]) => a + b));
   const front = ds.filter(([a, b]) => a + b >= best - 1), wegs = front.filter(([a, b]) => bAt(a, b) === 'weg');
@@ -94,12 +94,31 @@ setInterval(() => {
   }
 }, 50);
 // Besitzer (führendes Gerät): eigene Besucher sehen – zuschauende Geräte und Besucher bekommen sie mit der Insel
-let guestsOff = null;
+let guestsOff = null, guestsWid = null;
 function guestsWatch() {
+  if (guestsOff && guestsWid !== liveWid) { guestsOff(); guestsOff = null; visitorFigs.length = 0; }   // neuer Besuchs-Link: neue Welt
   if (guestsOff || !cloudUser || !cloudApi.watch || !liveWid) return;
+  guestsWid = liveWid;
   guestsOff = cloudApi.watch(`worlds/${liveWid}/guests`, g => setGuests(g));
 }
 setInterval(() => { if (cloudUser && !VISIT && cloudIsLeader()) guestsWatch(); else if (guestsOff && !cloudUser) { guestsOff(); guestsOff = null; } }, 3000);
+// Konto gewechselt (Geschwister am selben iPad) oder abgemeldet: nichts vom alten Konto behalten – Code, Freunde, Link,
+// Figur, Post. Aufgerufen aus cloudOnUser.
+let socialUid;
+function socialReset() {
+  const uid = cloudUser ? cloudUser.uid : null;
+  if (uid === socialUid) return;
+  socialUid = uid;
+  if (frOff) { frOff(); frOff = null; }
+  frMine = null; frList = {};
+  liveWid = null; liveOpen = false; liveSent = null;
+  myAnimal = null; myLook = null;
+  if (guestsOff) { guestsOff(); guestsOff = null; }
+  guestsWid = null; visitorFigs.length = 0;
+  if (bookOff) bookOff(); if (mailOff) mailOff();
+  bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = false;
+  if (typeof meProfileUid !== 'undefined') { meProfileUid = null; meProfileLook = null; }
+}
 
 // --- Besuch bei Freunden: Figur, Besuch eintragen, Herz, Gästebuch ---------------------------------
 let visitUser = null, visitOwner = null, visitFriend = false, visitPosAt = 0, visitLast = '';
@@ -117,9 +136,15 @@ async function visitFriendCheck() {
   cloudApi.set(`book/${visitOwner}/v_${visitUser.uid}_${dayKey()}`, { k: 'v', ...me, at: cloudApi.TS() }).catch(() => {});   // einmal am Tag
   const look = await friendLook(visitUser.uid);
   const [x, y] = guestSpawn(0, 0);
-  cloudApi.set(`worlds/${VISIT}/guests/${visitUser.uid}`, { a, n: visitName(), x, y, look }).catch(() => {});   // einmal: ich bin da
-  if (cloudApi.leave) cloudApi.leave(`worlds/${VISIT}/guests/${visitUser.uid}`);   // Seite zu → Figur weg
+  const here = () => {
+    cloudApi.set(`worlds/${VISIT}/guests/${visitUser.uid}`, { a, n: visitName(), x, y, look }).catch(() => {});   // ich bin da
+    if (cloudApi.leave) cloudApi.leave(`worlds/${VISIT}/guests/${visitUser.uid}`);   // Seite zu → Figur weg
+  };
+  here();
+  // nach einem kurzen Verbindungsabbruch (iPad gesperrt, WLAN) hat onDisconnect die Figur gelöscht – alle 45 s neu melden
+  if (!visitHereTimer) visitHereTimer = setInterval(() => { if (visitFriend && !document.hidden) here(); }, 45000);
 }
+let visitHereTimer = null;
 const visitName = () => (visitUser.display || 'Besuch').split(' ')[0];
 async function visitHeart() {
   const key = `h_${visitUser.uid}_${dayKey()}`;
@@ -158,14 +183,16 @@ function visitBook() {
 }
 
 // --- Besitzer: Gästebuch, Herzen, Besuche, Briefkasten (Fenster „Du“ → Freunde, Block 98) -------------
-let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null;
+let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null, bookLoaded = false;
 const mailWaiting = () => Object.keys(mailAll).length > 0;
 function friendsInboxWatch() {
   if (!cloudUser || VISIT || !cloudApi.watch) return;
   const uid = cloudUser.uid;
   if (!bookOff) bookOff = cloudApi.watch(`book/${uid}`, v => {
     const old = bookAll; bookAll = v || {};
-    if (Object.keys(old).length) for (const [id, e] of Object.entries(bookAll)) if (!old[id] && e) toast(e.k === 'h' ? `❤️ ${e.n} hat dir ein Herz dagelassen` : e.k === 'g' ? `📖 ${e.n} hat ins Gästebuch geschrieben` : `👋 ${e.n} war zu Besuch`);
+    if (bookLoaded) for (const [id, e] of Object.entries(bookAll)) if (!old[id] && e) toast(e.k === 'h' ? `❤️ ${e.n} hat dir ein Herz dagelassen` : e.k === 'g' ? `📖 ${e.n} hat ins Gästebuch geschrieben` : `👋 ${e.n} war zu Besuch`);
+    if (!bookLoaded) bookTidy(uid);
+    bookLoaded = true;                                                  // erst ab dem zweiten Mal melden (das erste ist der Bestand)
     friendsDot();
   });
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
@@ -176,6 +203,13 @@ function friendsInboxWatch() {
   });
 }
 setInterval(() => { if (cloudUser && !VISIT) friendsInboxWatch(); else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; } }, 3000);
+// alte Besuche und Herzen (älter als 60 Tage) räumt der Besitzer weg, sonst wächst das Buch ewig; Gästebuch bleibt
+function bookTidy(uid) {
+  if (viewOnly()) return;
+  const old = Date.now() - 60 * 864e5, upd = {};
+  for (const [id, e] of Object.entries(bookAll)) if (e && (e.k === 'v' || e.k === 'h') && e.at && e.at < old) upd[`book/${uid}/${id}`] = null;
+  if (Object.keys(upd).length && cloudApi.update) cloudApi.update(upd).catch(() => {});
+}
 const bookSeen = () => (cloudUser && frLS('seen_' + cloudUser.uid)) || 0;
 const bookNew = () => Object.values(bookAll).filter(e => e && (e.at || 0) > bookSeen()).length;
 // Punkt am Knopf „Du“ (Block 98) – und das offene Freunde-Fenster zeigt Neues gleich
@@ -248,11 +282,17 @@ function mailCompose(friendUid, name) {
   };
   draw();
 }
+let mailBusy = false;
 async function mailSend(friendUid, name, pick) {
+  if (mailBusy) return;
+  if (viewOnly()) { cloudBlocked(); return; }
+  if (((frLS('mail_' + dayKey()) || {})[friendUid] || 0) >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name} – morgen wieder`); return; }
   const items = {};
   for (const [r, n] of Object.entries(pick)) if (RES[r] && n > 0 && state.res[r] >= n) items[r] = Math.floor(n);
   if (!Object.keys(items).length) return;
   for (const [r, n] of Object.entries(items)) state.res[r] -= n;     // erst abziehen, dann schicken; klappt es nicht: zurück
+  mailBusy = true;
+  if ($('mm-send')) $('mm-send').disabled = true;
   try {
     const a = await friendAnimal(cloudUser.uid).catch(() => 0);
     await cloudApi.set(`mail/${friendUid}/m${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`, { from: cloudUser.uid, n: (cloudUser.display || 'Freund').split(' ')[0], a, items, at: cloudApi.TS() });
@@ -261,5 +301,6 @@ async function mailSend(friendUid, name, pick) {
   } catch (e) {
     for (const [r, n] of Object.entries(items)) state.res[r] += n;
     toast('🎁 Ging nicht – seid ihr noch befreundet?');
-  }
+    if ($('mm-send')) $('mm-send').disabled = false;
+  } finally { mailBusy = false; }
 }

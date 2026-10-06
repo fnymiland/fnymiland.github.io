@@ -1196,3 +1196,25 @@ Gewählt: Weg-Anschluss sichtbar und spielerisch, Mittelportal mit Uhrturm, Desi
 - [x] Anzeige: oben am Ortsnamen ☀️/🌅/🌙/🌄 mit Uhrzeit (Handy: nur das Symbol), Rathausuhr und Gebäude-Uhren zeigen die
       Spielzeit, Rathaus → Übersicht: „22:10 Uhr · Nacht – in 7 Minuten wird es hell“ und was es nachts zu sehen gibt.
 - [x] Fehler: Sternschnuppen der Sternwarte kamen nie (Schwelle 0,5 über der dunkelsten Nacht 0,45). Test: tageszeit.test.js.
+
+## Block 102: Fehlerprüfung vor dem großen Push (06.10.2026)
+Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), jeder Fund selbst nachgeprüft:
+- [x] Neuer Besuchs-Link: die neue Welt war für Nicht-Freunde zu (open fehlte); „Besuche an“ vor dem ersten Schreiben
+      scheiterte an den Regeln (owner fehlte).
+- [x] Freundescode überschrieb das ganze Profil (Figur weg); Kontowechsel am selben Gerät behielt Code, Freunde, Link
+      (`socialReset`); Besucher-Figur verschwand nach kurzem Verbindungsabbruch (jetzt alle 45 s neu gemeldet); nach
+      neuem Link sah man die Besucher nicht mehr; Doppeltipp schickte zwei Päckchen; Freunde/Online-Fenster sprangen nach
+      dem Laden wieder auf und verloren Eingaben; erster Gästebuch-Eintrag ohne Hinweis; alte Besuche/Herzen werden nach
+      60 Tagen aufgeräumt; Datenbank-Regeln mit festen Feldern und Längen.
+- [x] Figur aus dem Profil machte aus „anderes Gerät übernehmen“ einen Konflikt (zählte als eigene Änderung) – jetzt nur
+      angezeigt (`meProfileLook`), gespeichert erst beim eigenen Einstellen. „Neue Insel“ behält die Figur. Rathaus mit
+      Post öffnet wieder das Rathaus (Hinweis mit Knopf). Sprechblase verschwindet mit der Figur. Startfeld ganzzahlig.
+      Zuschauendes Gerät: Figur ändern meldet sich.
+- [x] Knopf „Du“ brauchte auf dem iPad zwei Tipps (fastTap fehlte). Leiste brach auf Handys um – jetzt Sonne/Mond statt
+      Flagge, Knöpfe enger, bei ≤ 400 px kleinere Schrift (gemessen 375/390/430 px, auch mit Millionen). Hilfe-Suche baut
+      das Feld nicht mehr neu (iPad-Tastatur bleibt), alte Suche wird nicht wieder vorgesetzt.
+- [x] Sternschnuppen: beim Besuch/Zuschauen nicht einsammelbar; Chance so, dass es etwa 5 je Nacht sind (sonst +170 %
+      Ideen). Bordstein neben Trittsteinen/Brücken wieder da; Asphalt-Mittelstreifen am Rathaus wieder da; Pflaster des
+      Rathausplatzes im Insel-Raster (auch gedreht); Uhren (Rathaus, Hauptbahnhof, Uhrturm) zeigen Spielzeit auch von weitem;
+      Morgengrauen sagt „in N Minuten ist es Tag“.
+- [ ] Hinweis an den Nutzer: firebase-rules.json neu in die Konsole einfügen.

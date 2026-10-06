@@ -676,7 +676,7 @@ function boostMul(kind, now = Date.now()) {
 }
 // 🔭 Sternschnuppen: nachts fällt ab und zu eine neben ein Haus – antippen bringt Ideen (3 Minuten Ideen, mindestens 50)
 const fallenStars = [];
-const STAR_LIFE = 45e3, STAR_CHANCE = 0.02;                // je Takt (0,7 s) → etwa alle 35 s eine
+const STAR_LIFE = 45e3, STAR_CHANCE = 0.0075;              // je Takt (0,7 s) in der dunklen Nacht (8 Minuten) → etwa 5 je Nacht (Block 101)
 function spawnStar(rnd = Math.random, now = performance.now()) {
   const homes = [...state.tiles].filter(([, t]) => isHome(t.b));
   if (!homes.length || fallenStars.length >= 3) return null;
@@ -687,7 +687,7 @@ function spawnStar(rnd = Math.random, now = performance.now()) {
 }
 function starTick(now = performance.now()) {
   for (let i = fallenStars.length - 1; i >= 0; i--) if (now - fallenStars[i].t0 > STAR_LIFE) fallenStars.splice(i, 1);
-  if (wonderOn('sternwarte') && nightAt() >= NIGHT_MAX - 1e-9 && Math.random() < STAR_CHANCE) spawnStar();   // nur in der dunklen Nacht (vorher > 0,5: nie, Block 101)
+  if (!viewOnly() && wonderOn('sternwarte') && nightAt() >= NIGHT_MAX - 1e-9 && Math.random() < STAR_CHANCE) spawnStar();   // nur wer spielt (nicht zuschauen/Besuch)   // nur in der dunklen Nacht (vorher > 0,5: nie, Block 101)
 }
 function collectStarAt(x, y) {
   const i = fallenStars.findIndex(s => Math.abs(s.x - x) <= 1 && Math.abs(s.y - y) <= 1);

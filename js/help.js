@@ -188,13 +188,16 @@ let lexQ = '';
 function openLexikon(key = null, focus = false) {
   if (key) lexQ = '';
   const sec = helpSections();
-  openModal(`
+  const html = `
     ${helpTop('lex')}
     <div id="lx-list">${sec.map(([name, keys]) => `<div class="lx-sec"><div class="label">${name}</div>
       ${keys.map(k => { const e = helpEntry(k); return e ? `<details class="lx-e" data-lxe="${k}"><summary>${e.title}</summary>${e.text}
         ${e.show.length && k.startsWith('b:') ? `<div class="row"><button class="btn small" data-hbuild="${e.show[0]}">${available(e.show[0]) ? 'Bauen' : '🔒 Freischalten'}</button></div>` : ''}</details>` : ''; }).join('')}</div>`).join('')}</div>
     <p class="muted lx-none" hidden>Nichts gefunden – versuch ein anderes Wort.</p>
-    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`;
+  if (focus && !$('modal').hidden && $('lx-q')) { setHtml($('modal-card'), html, true); $('modal-card').className = 'card'; }   // aus der Suche: Feld bleibt (iPad-Tastatur)
+  else openModal(html);
+
   $('modal-card').classList.add('lexikon');
   const filter = () => {
     lexQ = $('lx-q').value;

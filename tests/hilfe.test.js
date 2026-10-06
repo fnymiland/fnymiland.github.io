@@ -58,7 +58,7 @@ describe('Hilfe am Ort (Block 92)', () => {
   });
   it('Nachschlagen: im Hilfe-Buch (☰ → Hilfe), Suche filtert, „Mehr“ öffnet den Eintrag', () => {
     game('showMenu()'); click('#m-help');
-    game("(q => { q.value = 'Markt'; q.oninput(); })(document.getElementById('hb-q'))");    // Suche oben springt nach „Nachschlagen“
+    game("(q => { q.value = 'Markt'; q.oninput(); })(document.getElementById('lx-q'))");    // Suche oben springt nach „Nachschlagen“
     expect(game("!!document.getElementById('lx-q')")).toBe(true);
     expect(game("document.getElementById('lx-q').value")).toBe('Markt');
     expect(game("document.querySelector('[data-hb=\"lex\"]').classList.contains('on')")).toBe(true);

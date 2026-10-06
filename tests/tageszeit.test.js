@@ -44,4 +44,17 @@ describe('Spieluhr (Block 101)', () => {
       try { starTick(performance.now()) } finally { nightAt = globalThis.__n; Math.random = globalThis.__r; }`);
     expect(game('fallenStars.length')).toBe(0);                                          // Dämmerung: noch nicht
   });
+  it('Grenzen: Morgengrauen sagt „ist es Tag“, nie „in 0 Minuten“ (Prüfung vor dem Push)', () => {
+    expect(game(`timeOfDay(${at(5.5)})`)).toMatchObject({ icon: '🌄', dawn: true, dark: false, left: 1 });
+    expect(game(`timeOfDay(${at(5)})`)).toMatchObject({ dawn: true, left: 1 });
+    expect(game(`timeOfDay(${at(4.99)}).left`)).toBe(1);
+  });
+  it('Sternschnuppen: beim Zuschauen oder Besuch weder neue noch einsammeln', () => {
+    game(`state.tiles.set('6,6', { b: 'haus', lvl: 1 }); T.wonders = { ...(T.wonders || {}), sternwarte: true }; fallenStars.length = 0;
+      cloudLeadInfo = { dev: 'ipad', name: 'iPad', at: Date.now() }; cloudUser = { uid: 'u1' };
+      globalThis.__n = nightAt; nightAt = () => NIGHT_MAX; globalThis.__r = Math.random; Math.random = () => 0;
+      try { starTick(performance.now()) } finally { nightAt = globalThis.__n; Math.random = globalThis.__r; }`);
+    expect(game('fallenStars.length')).toBe(0);
+    game('cloudLeadInfo = null; cloudUser = null');
+  });
 });

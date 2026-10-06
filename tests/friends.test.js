@@ -119,4 +119,18 @@ describe('Freunde auf der Insel (Block 96)', () => {
     expect(game('visitFriend')).toBe(false);
     expect(tree().book).toBe(undefined);
   });
+  it('Päckchen: Doppeltipp schickt nur eins', async () => {
+    game("cloudApi.tree = { fr: { f1: { u1: { st: 'freund' } } } }; state.res.holz = 100");
+    await Promise.all([game("mailSend('f1', 'Ben', { holz: 10 })"), game("mailSend('f1', 'Ben', { holz: 10 })")]);
+    expect(Object.keys(tree().mail.f1).length).toBe(1);
+    expect(game('state.res.holz')).toBe(90);
+  });
+  it('Rathaus mit Post antippen: öffnet das Rathaus (nicht umleiten), mit Knopf zum Briefkasten', async () => {
+    game("mailAll = { m1: { from: 'f1', n: 'Ben', items: { holz: 5 } } }");
+    const [x, y] = game('townHallAt()');
+    game(`openInfo(${x}, ${y})`);
+    expect(game("document.querySelector('#modal-card h2').textContent")).toMatch(/Rathaus/);
+    game("document.querySelector('[data-mailgo]').click()"); await tick(20);
+    expect(game('youTab')).toBe('freunde');
+  });
 });

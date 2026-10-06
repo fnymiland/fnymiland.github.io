@@ -58,6 +58,8 @@ async function livePush(full = false, now = Date.now(), inQueue = false) {
   try {
     const uid = cloudUser.uid, wid = await liveWorldId(), w = `worlds/${wid}`, cur = liveSplit(serialize()), upd = {};
     if (full || !liveSent) {
+      const pub = await cloudApi.get(`users/${uid}/pub`).catch(() => null);         // „Besuche erlaubt“ gilt auch für eine neue Welt (neuer Link)
+      if (pub && pub.wid === wid) { liveOpen = !!pub.open; upd[`${w}/open`] = liveOpen; }
       for (const m of LIVE_MAPS) upd[`${w}/${m}`] = cur.maps[m];
       Object.assign(upd, { [`${w}/rest`]: cur.rest, [`${w}/owner`]: uid, [`${w}/at`]: cloudApi.TS(),   // open nicht: das stellt nur liveSetOpen (sonst setzte ein anderes Gerät es zurück)
         [`users/${uid}/live`]: { eco: cur.eco, priv: cur.priv } });
@@ -232,7 +234,7 @@ async function frCode() {
   for (let i = 0; i < 20; i++) {
     let c = ''; for (let j = 0; j < 5; j++) c += FR_ALPHA[Math.floor(Math.random() * FR_ALPHA.length)];
     const r = await cloudApi.tx(`codes/${c}`, cur => cur ? undefined : uid);
-    if (r.ok) { await cloudApi.set(`users/${uid}/profile`, { code: c }); return (frMine = c); }
+    if (r.ok) { await cloudApi.set(`users/${uid}/profile/code`, c); return (frMine = c); }   // nur den Code – Figur bleibt im Profil
   }
   throw new Error('Kein freier Code');
 }
@@ -274,7 +276,7 @@ async function liveNewLink() {
 async function liveSetOpen(on) {
   const uid = cloudUser.uid, wid = await liveWorldId();
   liveOpen = !!on;
-  await cloudApi.update({ [`users/${uid}/pub/open`]: liveOpen, [`worlds/${wid}/open`]: liveOpen });
+  await cloudApi.update({ [`users/${uid}/pub/open`]: liveOpen, [`worlds/${wid}/open`]: liveOpen, [`worlds/${wid}/owner`]: uid });   // owner: falls die Welt noch nicht existiert (Regeln)
 }
 const visitLink = wid => `${location.origin}${location.pathname}?besuch=${wid}`;
 // Teilen (Block 96b): Teilen-Menü → Zwischenablage → altes Kopieren → Fenster zum Selbst-Kopieren. Auf http:// (WLAN) gibt es
@@ -310,9 +312,11 @@ async function openFriends() {
   }
   frWatch();
   youTab = 'freunde';
+  const typed = $('fr-in') ? $('fr-in').value : '';                      // halb getippter Code bleibt beim Neuzeichnen
+  if (!$('fr-box')) openModal(`<div id="fr-box">${youHead('freunde')}<p class="muted" id="fr-wait">Lädt …</p></div>`);
   let code = '…', wid = null;
   try { code = frCodeText(await frCode()); wid = await liveWorldId(); } catch (e) { code = 'gerade nicht erreichbar'; }
-  if (youTab !== 'freunde') return;                                      // inzwischen anderen Reiter gewählt
+  if (youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen oder anderen Reiter gewählt
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   openModal(`
@@ -334,6 +338,7 @@ async function openFriends() {
       <div class="row"><button class="btn ghost small" id="fr-new">Neuen Link machen (der alte geht dann nicht mehr)</button></div>` : '<p class="muted">Freunde können dich immer besuchen – der Link ist für alle anderen.</p>'}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div></div>`);
   $('m-close').onclick = closeModal;
+  if (typed) $('fr-in').value = typed;
   const share = (text, link) => shareText(text, link);
   $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`);
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };

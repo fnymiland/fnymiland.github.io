@@ -273,8 +273,8 @@ const pathAt = (x, y) => { const w = wegAt(x, y); return w != null ? styleDef('w
 // gepflastert für volle Ecken: Weg (außer Trittsteinen) – und das Rathaus-Grundstück (es ist selbst ein Arm der Wege), sonst
 // bleibt an jeder Feldgrenze davor ein Zwickel Wiese stehen (Block 100)
 const quadPaved = (px, py) => { const n = pathAt(px, py); return n ? n.id !== 'tritt' : bAt(px, py) === 'rathaus'; };
-function pathQuads(x, y) {
-  const paved = quadPaved;
+function pathQuads(x, y, hall = true) {
+  const paved = hall ? quadPaved : (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
   const out = [];
   for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
   return out;
@@ -680,7 +680,8 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
     const arm = arms.some(a => a[0] === dx && a[1] === dy);
     // schmaler Weg (oder Rathaus) daneben, und auf einer Hälfte der Kante ist auch quer daneben Weg: dort füllt der Nachbar
     // seine Ecke ganz (pathQuads) – kein Bordstein-Stück mitten in die Fläche (Block 100)
-    const halves = arm ? [-1, 1].filter(s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0)))
+    const nb = near(dx, dy), nbFills = arm && quadPaved(x + dx, y + dy) && !(nb && nb.bridge);   // Trittsteine/Brücke füllen keine Ecken
+    const halves = nbFills ? [-1, 1].filter(s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0)))
       .map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
     const gaps = (arm ? [[-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
       .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
@@ -718,7 +719,7 @@ function drawPath(cx, cy, z, x, y, t) {
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
-  if (lk.dash && cl && !quads.length) {
+  if (lk.dash && cl && !pathQuads(x, y, false).length) {              // Ecken am Rathaus sind keine breite Straße
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
     g.setLineDash([2.5 * z, 3 * z]);
     g.beginPath();
@@ -1157,7 +1158,7 @@ function courtOpenSides(K, t, x, y) {
   const mx = x + (w - 1) / 2, my = y + (h - 1) / 2;
   const paved = (a, b) => { const [u, v] = K.turn(a, b); return quadPaved(Math.round(mx + u), Math.round(my + v)); };
   const along = n => Array.from({ length: n }, (_, i) => -n / 2 + 0.5 + i);
-  return { HA, HB, back: along(sb).every(b => paved(-HA - 0.5, b)), lo: along(sa).every(a => paved(a, -HB - 0.5)), hi: along(sa).every(a => paved(a, HB + 0.5)) };
+  return { HA, HB, mx, my, back: along(sb).every(b => paved(-HA - 0.5, b)), lo: along(sa).every(a => paved(a, -HB - 0.5)), hi: along(sa).every(a => paved(a, HB + 0.5)) };
 }
 function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y, open = null) {
   let e0 = COURT_CURB, e1 = COURT_CURB;
@@ -1175,7 +1176,11 @@ function pavePart(K, { a: a0, s: [s0, s1] }, A, lk, x, y, open = null) {
   K.rect(a0, s0 - e0, A, s1 + e1, C(lk.edge));
   const L = p => K.P(p[0], p[1]);
   g.save(); clipTo([[[a0, s0], [A, s0], [A, s1], [a0, s1]]], L);
-  paintLook(L, lk, x, y, z, false, Math.max(A, s1, -s0) + 0.5);
+  // Muster im Raster der Insel (Block 100): von der Gebäudemitte aus, achsengleich mit der Welt (Drehung zurückrechnen) – sonst
+  // liegen die Steine gegen die Wegfläche daneben versetzt
+  const r = K.r, Lw = ([u, v]) => K.P(...(r === 0 ? [u, v] : r === 1 ? [v, -u] : r === 2 ? [-u, -v] : [-v, u]));
+  if (open) paintLook(Lw, lk, open.mx, open.my, z, false, Math.max(A, s1, -s0) + 0.5);
+  else paintLook(L, lk, x, y, z, false, Math.max(A, s1, -s0) + 0.5);
   g.restore();
 }
 const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
@@ -1434,8 +1439,8 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       kShadow(K, 0.25);
       const B = K.block({ ha: 0.15, hb: 0.15, h: 40, wall: '#f3e1c4', roof: '#6f8fd8', roofH: 16, over: 1.2 });
       for (const F of Object.values(B.faces)) if (F) {
-        const an = (now / 60000) * Math.PI * 2;
-        faceClock(F, 0.5, F.H * 0.8, 3.4 * z, z, { ring: '#4a4a58', ringW: 0.7, hands: [[0, 0.53, 0.8], [an, 0.76, 0.7]] });   // flach auf der Wand (Block 80)
+        const ck = clockNow(), hr = (ck.getHours() % 12 + ck.getMinutes() / 60) / 6 * Math.PI, mi = ck.getMinutes() / 30 * Math.PI;   // Spielzeit (Block 101)
+        faceClock(F, 0.5, F.H * 0.8, 3.4 * z, z, { ring: '#4a4a58', ringW: 0.7, hands: [[hr, 0.53, 0.8], [mi, 0.76, 0.7]] });   // flach auf der Wand (Block 80)
         faceQuad(F.P, F.Q, 0.35, 0.65, 0, F.H * 0.25, C('#8a5a3c'));
       }
       const [px, py] = K.P(0, 0, 40 + 16);

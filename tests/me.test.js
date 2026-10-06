@@ -136,9 +136,14 @@ describe('Deine Figur (Block 97)', () => {
   });
   it('angemeldet, noch nie eingestellt: Figur aus dem Profil übernehmen (Block 96c)', async () => {
     game("state.me = null; meProfileUid = null; cloudApi.tree = { users: { u1: { profile: { animal: 6, look: { shirt: 5, hat: 'muetze' } } } } }");
+    game("setCloudMeta({ ...cloudMeta(), acts: 0 })");
     await game('meProfileSync()');
-    expect(game('state.me.a')).toBe(6);
+    expect(game('meLook().a')).toBe(6);
     expect(game('meLook().hat')).toBe('muetze');
+    expect(game('state.me')).toBe(null);                                                  // nur anzeigen – der Spielstand bleibt unberührt …
+    expect(game('cloudMeta().acts || 0')).toBe(0);                                        // … und zählt nicht als eigene Änderung (sonst Konflikt)
+    game("setMe({ shirt: 1 })");                                                          // erst selbst einstellen schreibt sie in den Stand
+    expect(game('state.me.a')).toBe(6);
   });
   it('wer zuschaut (anderes Gerät führt), kann nichts ändern; Antippen zeigt nur eine Sprechblase', () => {
     game("state.me = { a: 1 }; cloudLeadInfo = { dev: 'ipad', name: 'iPad', at: Date.now() }");

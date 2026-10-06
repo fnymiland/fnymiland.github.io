@@ -1009,7 +1009,7 @@ const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
-  if (t.b === 'rathaus') { openTownHall(typeof mailWaiting === 'function' && mailWaiting() ? 'besuch' : undefined); return; }   // Päckchen: gleich zum Briefkasten
+  if (t.b === 'rathaus') { openTownHall('overview'); return; }       // Päckchen: Hinweis in der Übersicht (nicht umleiten – sonst ist das Rathaus nie erreichbar)
   if (t.b === 'lm') { openLandmark(x, y); return; }
   if (t.b === 'truhe') { openChestInfo(x, y, t); return; }
   const d = ITEMS[t.b], s = statusOf(x, y) || {};
@@ -1909,7 +1909,7 @@ function residentsHtml() {
 function todHtml() {
   const t = timeOfDay(), mins = n => `${n} ${n === 1 ? 'Minute' : 'Minuten'}`;
   const night = ['🏮 Laternen und Fenster leuchten', '✨ Glühwürmchen in Parks und an Blumen', ...(wonderOn('sternwarte') ? ['🌠 Sternschnuppen über der Sternwarte – antippen!'] : [])];
-  return `<div class="tod-box"><b>${t.icon} ${t.text} Uhr · ${t.name}</b> <small class="muted">${t.dark ? `in ${mins(t.left)} wird es hell` : `in ${mins(t.left)} ist es Nacht`}</small>
+  return `<div class="tod-box"><b>${t.icon} ${t.text} Uhr · ${t.name}</b> <small class="muted">${t.dark ? `in ${mins(t.left)} wird es hell` : t.dawn ? `in ${mins(t.left)} ist es Tag` : `in ${mins(t.left)} ist es Nacht`}</small>
     <div class="muted">${t.dark ? 'Jetzt' : 'Nachts'}: ${night.join(' · ')}. Ein Tag dauert 24 Minuten, auf allen Geräten gleich.</div></div>`;
 }
 // Erfolge (Block 98: im Fenster „Du“)
@@ -1965,6 +1965,7 @@ function openTownHall(tab = hallTab) {
         ${hasInvention('feuerwerk') ? '<button class="btn ghost small" data-quick-go="fire">🎆 Feuerwerk</button>' : ''}
         ${nx ? `<button class="btn ghost small" data-isle-go="${nx.id}">${nx.icon} Nächste Insel</button>` : ''}
       </div>` : ''}
+      ${typeof mailWaiting === 'function' && mailWaiting() ? '<div class="row"><button class="btn" data-mailgo="1" style="flex:1">📬 Post im Briefkasten – abholen</button></div>' : ''}
       <p class="big" style="font-size:18px">${title} · 🏮 ${n} / ${LANTERN_TOTAL}</p>
       ${todHtml()}
       ${nextTitle ? `<p class="muted">Ab ${nextTitle[0]} Laternen: ${nextTitle[1]}</p>` : ''}
@@ -2056,10 +2057,9 @@ function openTownHall(tab = hallTab) {
     if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('todo');
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
-    const q = b.dataset.quickGo;
-    if (q === 'diary') openDiary(); else if (q === 'tips') openTipBook(); else if (q === 'album') openAlbum();
-    else if (q === 'fire') { closeModal(); startFireworks(); } else openResearch(q);
+    if (b.dataset.quickGo === 'fire') { closeModal(); startFireworks(); }
   };
+  for (const b of card.querySelectorAll('[data-mailgo]')) b.onclick = () => openYou('freunde');
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {
     const [x, y] = lmTile(b.dataset.lmGo);
     closeModal(); jumpTo(x, y, 3, 3); sparkle(x + 1, y + 1); openLandmark(x, y);
@@ -2186,12 +2186,11 @@ const HELP_BOOK = [...HELP_TABS, ['tipps', '💡 Tipps'], ['lex', '📚 Nachschl
 function helpTop(tab) {
   helpTab = tab;
   return `<h2>❓ Hilfe</h2>
-    ${tab === 'lex' ? `<input id="lx-q" class="lx-q" type="search" placeholder="${HELP_Q}" value="${escHtml(lexQ)}" aria-label="In der Hilfe suchen">`
-      : `<input id="hb-q" class="lx-q" type="search" placeholder="${HELP_Q}" aria-label="In der Hilfe suchen">`}
+    <input id="lx-q" class="lx-q" type="search" placeholder="${HELP_Q}" value="${tab === 'lex' ? escHtml(lexQ) : ''}" aria-label="In der Hilfe suchen">
     <div class="looks hall-tabs">${HELP_BOOK.map(([id, name]) => `<button class="look${id === tab ? ' on' : ''}" data-hb="${id}">${name}</button>`).join('')}</div>`;
 }
 // Tippen in die Suche (außerhalb von Nachschlagen) springt dorthin und sucht weiter
-function wireHelpTop() { const q = $('hb-q'); if (q) q.oninput = () => { lexQ = q.value; openLexikon(null, true); }; }
+function wireHelpTop() { const q = $('lx-q'); if (q && helpTab !== 'lex') q.oninput = () => { lexQ = q.value; openLexikon(null, true); }; }
 function openHelp(tab = helpTab) {
   if (tab === 'tipps') { openTipBook(); return; }
   if (tab === 'lex') { openLexikon(); return; }
@@ -2214,7 +2213,7 @@ const NEWS_HISTORY = [
     '🧭 <b>Aufgeräumt:</b> 🏛️ Rathaus = deine Stadt (Zu tun, Bewohner, Inseln, Ort). Knopf mit deinem Gesicht = du (Figur, Erfolge, Album, Tagebuch, Freunde, Online). ☰ = Hilfe und Einstellungen.',
     '❓ <b>Hilfe in einem Buch:</b> Anleitung, Tipps und Nachschlagen zusammen, oben eine Suche.',
     '☁️ <b>Online-Speicher & Freunde:</b> Mit Google anmelden – die Insel ist auf allen Geräten gleich. Freunde besuchen, Herzen und Gästebuch-Einträge dalassen, Päckchen schicken.',
-    '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist – oben am Ortsnamen steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
+    '🌙 <b>Tag und Nacht:</b> Ein Tag dauert jetzt 24 Minuten und läuft weiter, auch wenn das Spiel zu ist – oben am Ortsnamen zeigen Sonne und Mond die Tageszeit, im Rathaus steht die Uhrzeit. Ein Drittel ist Nacht: Laternen, Glühwürmchen und endlich auch Sternschnuppen über der Sternwarte.',
   ] },
   { id: '2026-10-06-hilfe', date: '6. Oktober', title: 'Hilfe am Ort & Vorplätze', items: [
     '❓ <b>Hilfe am Ort:</b> Alles mit einem kleinen ? lässt sich antippen – fehlendes Material („Wo kriege ich Metall her?“), die Wünsche der Häuser, Begriffe wie Viertel oder Strom. „Zeig mir“ wählt gleich das richtige Gebäude.',
@@ -2311,7 +2310,7 @@ function showMenu() {
     </div>
     <div class="row"><button class="btn danger" id="m-reset">Neue Insel beginnen</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-close">Weiterspielen</button></div>`);
-  $('m-help').onclick = () => openHelp();
+  $('m-help').onclick = () => { lexQ = ''; openHelp(helpTab === 'lex' ? 'start' : helpTab); };   // alte Suche nicht wieder vorsetzen
   $('m-news').onclick = () => showNews(true);
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
@@ -2327,7 +2326,7 @@ function showMenu() {
       <div class="row"><button class="btn ghost" id="m-no">Lieber nicht</button><button class="btn" id="m-save">💾 Erst sichern</button><button class="btn danger" id="m-yes-new">Ja, neu beginnen</button></div>`);
     $('m-no').onclick = showMenu;
     $('m-save').onclick = () => { exportSave(); toast('Spielstand als Datei gesichert'); };
-    $('m-yes-new').onclick = () => { setTool('look'); startNew(); closeModal(); closePanel(); showIntro(true); cloudNewWorld(); };   // alte Insel bleibt in der Cloud gesichert
+    $('m-yes-new').onclick = () => { setTool('look'); const me = state.me; startNew(); state.me = me; closeModal(); closePanel(); showIntro(true); cloudNewWorld(); };   // deine Figur ziehst du mit um   // alte Insel bleibt in der Cloud gesichert
   };
 }
 $('menu-btn').onclick = showMenu;

@@ -35,9 +35,9 @@ const TOD = [[5, '🌄', 'Morgengrauen'], [6, '☀️', 'Tag'], [19, '🌅', 'Ab
 function timeOfDay(ms = Date.now()) {
   const h = gameHour(ms), cur = [...TOD].reverse().find(([from]) => h >= from) || TOD[3];
   const m = Math.floor(h * 6) * 10, text = `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-  const dark = nightLevel(h) >= NIGHT_MAX - 1e-9, to = dark ? 5 : 21;                     // nächster Umschwung: hell bzw. dunkel
-  const left = Math.ceil(((to - h + 24) % 24) * GAME_HOUR_MS / 60e3);                     // echte Minuten
-  return { icon: cur[1], name: cur[2], text, dark, left };
+  const dark = h >= 21 || h < 5, dawn = h >= 5 && h < 6, to = dark ? 5 : dawn ? 6 : 21;   // nächster Umschwung: hell, Tag bzw. Nacht
+  const left = Math.max(1, Math.ceil(((to - h + 24) % 24) * GAME_HOUR_MS / 60e3));         // echte Minuten
+  return { icon: cur[1], name: cur[2], text, dark, dawn, left };
 }
 
 // fit: im Bild halten (Vorschau-Schild) – notfalls kleiner, dann seitlich hineinrücken
@@ -244,12 +244,13 @@ function putSprite(e, cx, cy, z) {
   for (const gl of e.glows) punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint);
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
+const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') : '',
-    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
+    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);

@@ -42,8 +42,9 @@ describe('Aufgeräumt (Block 98)', () => {
   it('Hilfe-Buch: Anleitung, Tipps, Nachschlagen; Suche oben springt nach „Nachschlagen“', () => {
     game("openHelp('tipps')");
     expect(ids('[data-hb]')).toEqual(['start', 'bauen', 'wachsen', 'steuerung', 'tipps', 'lex']);
-    game("(q => { q.value = 'Holz'; q.oninput(); })(document.getElementById('hb-q'))");
+    game("window.__q = document.getElementById('lx-q'); (q => { q.value = 'Holz'; q.oninput(); })(window.__q)");
     expect(game('helpTab')).toBe('lex');
+    expect(game("document.getElementById('lx-q') === window.__q")).toBe(true);              // dasselbe Feld – iPad-Tastatur bleibt offen
     expect(game("[...document.querySelectorAll('.lx-e')].some(e => !e.hidden && e.dataset.lxe === 'res:holz')")).toBe(true);
     game("document.querySelector('[data-hb=\"start\"]').click()");
     expect(game("document.querySelectorAll('#modal-card ul.help li').length")).toBeGreaterThan(4);

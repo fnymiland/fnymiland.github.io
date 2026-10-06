@@ -44,4 +44,11 @@ describe('Wegflächen (Block 100)', () => {
     game('recalc()');
     expect(open()).toMatchObject({ back: true, lo: true, hi: true });
   });
+  it('neben Trittsteinen bleibt der Bordstein (sie füllen keine Ecken)', () => {
+    for (let x = 7; x <= 9; x++) for (let y = 9; y <= 11; y++) W(x, y, x === 8 && y === 10 ? { wide: true } : {});
+    game('recalc()');
+    const before = curbArea(8, 10);
+    game("state.tiles.get('9,10').style = 'tritt'; recalc()");
+    expect(curbArea(8, 10)).toBeGreaterThan(before);
+  });
 });
