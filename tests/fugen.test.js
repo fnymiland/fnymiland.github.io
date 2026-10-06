@@ -13,6 +13,15 @@ describe('Fugen (Block 116)', () => {
     const fill = game("C(PATH_LOOK[styleDef('weg', state.tiles.get('10,10').style).id].fill)");
     expect(strokes.some(([c, w]) => c === String(fill) && w === 0.6)).toBe(true);
   });
+  it('auch breite Wege (▬) und jeder Belag ziehen ihre Fläche nach', () => {
+    for (const st of game('STYLES.weg.map(s => s.id)')) {
+      if (game(`!!PATH_LOOK['${st}'].stones`)) continue;                                 // Trittsteine: Gras dazwischen ist gewollt
+      for (const wide of [false, true]) {
+        const ok = game(`(() => { const out = []; g.stroke = () => out.push([String(g.strokeStyle), g.lineWidth]); try { const t = { ...state.tiles.get('10,10'), style: '${st}', ${wide ? 'wide: true' : ''} }; drawPath(100, 100, 1, 10, 10, t); } finally { delete g.stroke; } const f = String(C(PATH_LOOK['${st}'].fill)); return out.some(([c, w]) => c === f && w === 0.6); })()`);
+        expect(ok, st + (wide ? ' breit' : '')).toBe(true);
+      }
+    }
+  });
   it('Bodenstücke: Wege samt Ring der Nachbarfelder, Schatten exakt an der Kante', () => {
     const src = game('renderGroundChunk.toString()');
     expect(src).toMatch(/for \(let i = -1; i <= CHUNK; i\+\+\)/);

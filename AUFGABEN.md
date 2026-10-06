@@ -1386,3 +1386,6 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Überlapp (`0.03 + 0.052/scale` Felder). Dazu live: auch zwischen zwei gewöhnlichen Wegfeldern schimmerte ein Hauch Grün
       durch (beide Kanten halb deckend) → `drawPath` zieht die Fläche 0,6 Punkte in Belagfarbe nach. Gemessen bei Zoom 0,35–3,5
       an Stückgrenzen und Feldkanten: vorher bis ~500 grünliche Pixel je Linie, jetzt 0. Test: fugen.test.js.
+- [x] 116c: Alle Beläge geprüft (14 Stile, schmal und breit, Zoom 0,6–3): breite Wege (`drawWidePath`) hatten noch Fugen
+      (Kopfstein, Kristall) → ziehen ihr Feld ebenfalls nach. Jetzt überall 0 (Regenbogen: Grün nur im Muster, Trittsteine:
+      Gras gewollt). Gleisbetten geprüft: keine Fugen.

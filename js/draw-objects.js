@@ -712,6 +712,8 @@ function drawWegBridge(cx, cy, z, x, y, t) {
 // schmaler Weg ankommt, mit Lücke; an breiten Nachbarn geht der Belag nahtlos weiter
 const WIDE_CURB = 0.05;
 function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
+  g.strokeStyle = C(lk.fill); g.lineWidth = 0.6; g.lineJoin = 'round';     // Fuge zum Nachbarfeld schließen (Block 116, wie drawPath)
+  g.beginPath(); [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
   paintLook(L, lk, x, y, z, false, 0);
   const near = (dx, dy) => state.tiles.get((x + dx) + ',' + (y + dy));
   const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge; };
