@@ -1373,3 +1373,11 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       verkleinert, Platz auf dem Weg und Höhe auf der Bogenbrücke bleiben. Namensschild in voller Größe direkt über Kopf/Hut/
       Ballon (`labelOff`), Sprechblase darüber, Antippen auf die kleinere Figur (`walkerHead`, `walkerAt`, `meAt`). Vorschau im
       Fenster „Du“ bleibt groß (`full`). Vorher per Vorschau verglichen (100/85/72 %). Test: bewohner.test.js.
+
+
+## Block 116: Grüne Linie über Plätzen (06.10.2026)
+- [x] Weiter herausgezoomt zog sich eine feine grüne Linie entlang einer Feldkante über Wege und Plätze. Der Boden wird dort
+      in Stücken zu 6×6 Feldern vorgezeichnet (`renderGroundChunk`); Wege waren genau an der Stückkante abgeschnitten, das
+      Gras des Nachbarstücks schien durch die halb deckenden Kantenpixel. Jetzt reichen Wege und Bodenteile ~1,5 Bildpunkte
+      über die Kante (Schatten bleiben exakt, sonst doppelt dunkel). Gemessen: vorher bis über 1000 grünliche Pixel an der
+      Grenze je nach Zoom, jetzt 0.

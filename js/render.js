@@ -180,10 +180,10 @@ function renderGroundChunk(cx, cy, scale) {
     // damit sich nichts doppelt
     const x0 = cx * CHUNK - 0.5, y0 = cy * CHUNK - 0.5, x1 = x0 + CHUNK, y1 = y0 + CHUNK;
     const near = ([ax, ay], w = 1, h = 1) => Math.floor((ax + w - 1) / CHUNK) >= cx - 1 && Math.floor(ax / CHUNK) <= cx + 1 && Math.floor((ay + h - 1) / CHUNK) >= cy - 1 && Math.floor(ay / CHUNK) <= cy + 1;   // ganze Fläche
-    g.save();
-    g.beginPath();
-    [iso(x0, y0), iso(x1, y0), iso(x1, y1), iso(x0, y1)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y));
-    g.closePath(); g.clip();
+    const clipTo = d => { g.beginPath(); [iso(x0 - d, y0 - d), iso(x1 + d, y0 - d), iso(x1 + d, y1 + d), iso(x0 - d, y1 + d)].forEach((p, i) => i ? g.lineTo(p.x, p.y) : g.moveTo(p.x, p.y)); g.closePath(); g.clip(); };
+    // Wege und Bodenteile etwa 1,5 Bildpunkte über die Kante (Block 116): an der Schnittkante waren beide Nachbarstücke nur
+    // halb deckend, das Gras darunter schien als grüne Linie über Plätze. Schatten (halb durchsichtig) exakt, sonst doppelt.
+    g.save(); clipTo(0.052 / scale);
     try {
       drawGroundParts(near, iso, 1);
       for (let s = 0; s <= 2 * (CHUNK - 1); s++) for (let i = 0; i < CHUNK; i++) {
@@ -192,8 +192,9 @@ function renderGroundChunk(cx, cy, scale) {
         const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
         if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
       }
-      drawShadows(near);
     } finally { g.restore(); }
+    g.save(); clipTo(0);
+    try { drawShadows(near); } finally { g.restore(); }
     return { c, b, scale, v: groundVersion, waves, used: frameNo };
   } finally { g = prev; FOG = false; PASS = null; }
 }
