@@ -5,7 +5,8 @@ const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.join(__dirname, '..');
 beforeAll(() => {
   loadGame();
-  global.GROSS_BASE = fs.readFileSync(path.join(ROOT, 'testsave-alles.json'), 'utf8');
+  const base = path.join(ROOT, 'testsave-alles.json');                     // liegt nur lokal (.gitignore) – nur fürs Erzeugen nötig
+  if (fs.existsSync(base)) global.GROSS_BASE = fs.readFileSync(base, 'utf8');
   vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'tools', 'grossstadt.js'), 'utf8'));
 });
 it('Generator lädt', () => { expect(typeof game('makeGrossstadt')).toBe('function'); });

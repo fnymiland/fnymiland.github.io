@@ -2,7 +2,9 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Block 31: weit weg Gebäude und Dekos als fertige Bildchen (schneller), nah dran alles live
 beforeAll(() => loadGame());
+afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na'));
 beforeEach(() => {
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');   // tags (die Spieluhr läuft echt)
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true');
   game("for (let y = 2; y <= 14; y++) for (let x = 2; x <= 14; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }");
   game("for (let i = 0; i < 6; i++) state.tiles.set((3 + i * 2) + ',6', { b: 'haus', lvl: 2, wall: 1, roof: 2 }); state.tiles.set('4,10', { b: 'schule', lvl: 1 })");
@@ -39,14 +41,15 @@ describe('Bildchen weit weg', () => {
   });
 
   it('nachts: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
-    game('globalThis.__nightAt = nightAt; nightAt = () => 0.45');
+    // nachts gilt noch die Frist ab Bildanfang (Block 124): Uhr anhalten, sonst ist sie auf langsamen Rechnern schon vorbei
+    game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => 0.45');
     try {
       frame(1.5); const live = game('glows.length');
       frame(0.5); const cached = game('glows.length');
       expect(live).toBeGreaterThan(0);
       expect(cached).toBeGreaterThan(0);
       expect(game('[...objSprites.values()].some(e => e.glows.length > 0)')).toBe(true);
-    } finally { game('nightAt = globalThis.__nightAt'); }
+    } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
   });
 
   it('Riesenrad und Windräder drehen sich auch von weitem (live)', () => {

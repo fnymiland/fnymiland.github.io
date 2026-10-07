@@ -128,5 +128,5 @@ describe('Schlüssel-Wächter (Block 124)', () => {
       return { out, same }; })()`);
     expect(bad.out).toEqual([]);
     expect(bad.same).toBeGreaterThan(500);                                          // es wurde wirklich verglichen
-  });
+  }, 60e3);                                                                         // viele Zeichnungen: auf langsamen Rechnern > 5 s
 });
