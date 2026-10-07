@@ -43,7 +43,7 @@ function glowSnap(q) {
 // Licht in Bildschirm-Punkten (q) ins Bild stanzen und für die Nacht merken
 // Viele Fenster dicht beieinander (Reihenhäuser, Schloss) stanzen sich gegenseitig durch und werden taghell (Block 70):
 // je Bildschirm-Zelle zählt der Schein mit; jeder weitere wird schwächer, die Fensterscheiben selbst bleiben hell
-const glowCells = new Map();
+let glowCells = new Map();                  // let: Nachtbilder (render.js, Block 124) zählen in einer eigenen
 // part (Block 112): 'halo' nur der weiche Schein, 'pane' nur die Scheibe, 'mark' nichts stanzen, nur fürs Nachtbild merken – Bildchen stanzen den
 // Schein vor dem Einsetzen (trifft, was dahinter liegt, wie live) und die Scheiben über ihre Lichtmaske (render.js)
 // Block 124 (schneller, gleiches Bild): Zellen und Lichter als Zahlen statt Text; 'pane'/'mark' folgen immer auf das 'halo' desselben

@@ -40,15 +40,31 @@ describe('Bildchen weit weg', () => {
     expect(game('[...objSprites.keys()].filter(k => k.startsWith("haus|")).length')).toBe(2);
   });
 
-  it('nachts: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
-    // nachts gilt noch die Frist ab Bildanfang (Block 124): Uhr anhalten, sonst ist sie auf langsamen Rechnern schon vorbei
-    game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => 0.45');
+  it('Dämmerung: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
+    game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => 0.3');   // Uhr steht: Malzeit kostet nichts
     try {
       frame(1.5); const live = game('glows.length');
       frame(0.5); const cached = game('glows.length');
       expect(live).toBeGreaterThan(0);
       expect(cached).toBeGreaterThan(0);
       expect(game('[...objSprites.values()].some(e => e.glows.length > 0)')).toBe(true);
+      expect(game('nightPics.length')).toBe(0);                                  // keine Nachtbilder in der Dämmerung
+    } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
+  });
+
+  it('volle Nacht (Schritt 4): Bildchen mit Licht kommen als Nachtbild – kein Licht mehr einzeln, Lichtbilder für drawNight', () => {
+    game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => NIGHT_MAX');
+    try {
+      frame(1.5); const live = game('glows.length');
+      frame(0.5);
+      expect(live).toBeGreaterThan(0);
+      expect(game('glows.length')).toBe(0);                                      // alles aus Nachtbildern
+      expect(game('nightPics.length')).toBeGreaterThan(0);
+      const n = game('(() => { const e = [...objSprites.values()].find(e => e.night); return e && { lights: e.night.lights, erase: !!e.night.erase.c, light: !!e.night.light.c, z: e.night.z === e.z }; })()');
+      expect(n).toMatchObject({ erase: true, light: true, z: true });
+      expect(n.lights).toBeGreaterThan(0);
+      game('nightAt = () => 0; frameNo = Math.ceil(frameNo / 120) * 120 - 1'); frame(0.5);   // tags: Nachtbilder werden freigegeben
+      expect(game('[...objSprites.values()].some(e => e.night)')).toBe(false);
     } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
   });
 

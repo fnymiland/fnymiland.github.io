@@ -213,10 +213,9 @@ let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
 // Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,
 // mindestens ein Bildchen, höchstens SPRITE_MAX (die Uhr in Safari ist grob). Vorher galt eine Frist ab Bildanfang: In großen
 // Welten war sie verbraucht, bevor das erste Gebäude drankam – dann entstand nie ein Bildchen, und alles wurde live gezeichnet.
-// Nachts vorerst noch die alte Frist (Nachtbildchen sind teuer, Schritt 4)
+// Seit Schritt 4 auch nachts (vorher dort noch die alte Frist)
 let spriteSpent = 0, spriteMade = 0, groundSpent = 0;
-const spriteOver = () => night > 0.15 ? performance.now() > spriteDeadline
-  : spriteMade > 0 && (spriteMade >= SPRITE_MAX || spriteSpent + groundSpent >= PAINT_MS);
+const spriteOver = () => spriteMade > 0 && (spriteMade >= SPRITE_MAX || spriteSpent + groundSpent >= PAINT_MS);
 // Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
 // fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
 const SPRITE_STATS = { miss: 0, made: 0 };
@@ -242,7 +241,7 @@ function getSprite(key, z, make) {
     const old = e, t0 = performance.now();
     e = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
     if (!e) { SPRITE_STATS.miss++; return near ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
-    if (old && old.used !== frameNo) { freeCanvas(old.c); if (old.mask) freeCanvas(old.mask.c); }   // ersetzt (neuer Zoom)
+    if (old && old.used !== frameNo) freeSprite(old);                     // ersetzt (neuer Zoom)
     objSprites.set(key, e);
   }
   e.used = frameNo;
@@ -265,7 +264,7 @@ function paintSprite(halfW, up, down, drawFn) {
   let mask;
   try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); mask = lightMask(c, sink, atlas); }
   finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; afterMovers.length = am; }   // im Bildchen nichts über die Fahrzeuge legen
-  const e = { c, ox: halfW, oy: up, glows: sink, mask };
+  const e = { c, ox: halfW, oy: up, glows: sink, mask, paint: sink.length ? { halfW, up, down, drawFn } : null, night: null };   // paint: fürs Nachtbild (Schritt 4)
   spriteCrops.push(e);
   return e;
 }
@@ -349,11 +348,77 @@ function inQuad(q, x, y) {
   }
   return true;
 }
+// Volle Nacht weit weg (Block 124 Schritt 4): Ein Bildchen mit Licht bekommt drei fertige Bilder statt jedes Licht einzeln zu stanzen
+// (große Welt, Zoom 0.45: über 12.000 Lichter je Bild). Das Nachtbild ist noch einmal gemalt wie live – die Lichter stanzen an Ort
+// und Stelle, also auch den Schein in die eigenen Wände (Wandschein, Variante A); das Löschbild nimmt vorher heraus, was darunter
+// liegt (Umriss des Bildchens und der Schein auf Boden und Nachbarn dahinter); das Lichtbild kommt in drawNight hinter die Löcher.
+// Nur bei voller Nacht (die Stärke ändert sich sonst) – in der Dämmerung wie bisher. Kostet Malzeit wie ein Bildchen (Budget)
+const nightFull = () => night >= NIGHT_MAX - 1e-9;
+const nightPics = [], nightSeen = new Set();       // Lichtbilder dieses Bilds für drawNight (große Gebäude: je Streifen nur einmal)
+function nightOf(e) {
+  if (!e.paint || SPRITE_PAINT) return null;
+  if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }   // diesmal noch Licht für Licht
+  const t0 = performance.now();
+  e.night = paintNight(e);
+  spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+  return e.night;
+}
+function paintNight(e) {
+  const P = e.paint;
+  let R = 0;
+  for (const gl of e.glows) R = Math.max(R, gl.r);
+  const pad = Math.ceil(R) + 2, hw = P.halfW + pad, up = P.up + pad, down = P.down + pad;
+  const nw = Math.max(1, Math.ceil(2 * hw * DPR)), nh = Math.max(1, Math.ceil((up + down) * DPR));
+  const make = () => { const c = document.createElement('canvas'); c.width = nw; c.height = nh; const cx = c.getContext('2d'); if (!cx) { freeCanvas(c); return null; } return [c, cx]; };
+  const A = make(), B = make(), E = make();
+  if (!A || !B || !E) { for (const x of [A, B, E]) if (x) freeCanvas(x[0]); return null; }   // kein Speicher: Licht für Licht
+  const prev = g, cells = glowCells, n0 = glows.length, am = afterMovers.length;
+  let lights = [];
+  try {
+    // 1) Nachtbild: wie live gemalt, die Lichter stanzen sofort (GLOW_SINK ist hier leer)
+    g = A[1]; glowCells = new Map(); SPRITE_PAINT = true;
+    g.setTransform(DPR, 0, 0, DPR, hw * DPR, up * DPR);
+    P.drawFn();
+    lights = glows.slice(n0);
+    // 2) Löschbild: dieselben Lichter in eine volle Fläche stanzen, umkehren (Alpha = wie stark gestanzt), Umriss dazu
+    g = B[1]; glowCells = new Map(); glows.length = n0;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
+    for (const { q, r, tint } of lights) punchGlow(q, r, tint);
+    g = E[1];
+    g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(B[0], 0, 0);
+    g.globalCompositeOperation = 'source-over';
+    if (e.c) g.drawImage(e.c, Math.round((hw - e.ox) * DPR), Math.round((up - e.oy) * DPR));
+    // 3) Lichtbild: wie drawNight – Schein als Fläche, die Scheiben darüber
+    g = B[1];
+    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, nw, nh); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    for (const { q, r, tint } of lights) {
+      const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+      g.fillStyle = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
+      g.fillRect(gx - r, gy - r, r * 2, r * 2);
+    }
+    for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
+  } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; afterMovers.length = am; }
+  const part = c => { const p = { c, ox: hw, oy: up, glows: [] }; spriteCrops.push(p); return p; };
+  const n = part(A[0]);
+  n.z = e.z; n.erase = part(E[0]); n.light = part(B[0]); n.lights = lights.length;
+  return n;
+}
+function putNight(n, cx, cy, z) {
+  const r = z / n.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
+  if (n.erase.c) { g.save(); g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.restore(); }
+  if (n.c) g.drawImage(n.c, ...at(n));
+  if (n.light.c) {
+    const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + n.light.c.width;   // Streifen großer Gebäude: einmal
+    if (!nightSeen.has(k)) { nightSeen.add(k); nightPics.push([n.light.c, ...at(n.light)]); }
+  }
+}
 // Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
   if (!e.glows.length) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
+  if (nightFull()) { const n = e.night || nightOf(e); if (n) { putNight(n, cx, cy, z); return; } }   // volle Nacht: fertiges Nachtbild (Schritt 4)
   const w = e.c ? e.c.width / DPR * r : 0, h = e.c ? e.c.height / DPR * r : 0;
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
@@ -417,12 +482,14 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   return true;
 }
 function spriteHousekeeping() {
-  if (frameNo % 120 === 0) for (const [k, e] of objSprites) if (frameNo - e.used > 600) dropSprite(k);
+  if (frameNo % 120 === 0) for (const [k, e] of objSprites) { if (frameNo - e.used > 600) dropSprite(k); else if (e.night && !nightFull()) freeNight(e); }   // Nachtbilder nur nachts
 }
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
 function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
-function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); }
+function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); freeNight(e); }
+function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.c); freeCanvas(n.erase.c); freeCanvas(n.light.c); } }
+function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); freeSprite(e); }
 // Andere Welt (Laden, Besuch, Testwelt): Bildchen und Boden der alten nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
   for (const k of [...objSprites.keys()]) dropSprite(k);
@@ -731,6 +798,7 @@ function drawNight() {
     if (f !== fill) g.fillStyle = fill = f;
     g.fillRect(gx - r, gy - r, r * 2, r * 2);
   }
+  for (const [c, x, y, w, h] of nightPics) g.drawImage(c, x, y, w, h);            // Lichtbilder der Bildchen (volle Nacht, Block 124)
   g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
   g.fillRect(0, 0, W, H);
   g.globalCompositeOperation = 'source-over';
@@ -763,7 +831,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = nightAt();                                                     // Spieluhr (Block 101)
-  glows.length = 0; glowCells.clear();
+  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightSeen.clear();
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < SPRITE_FROM && isLive();

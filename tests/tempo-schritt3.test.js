@@ -58,15 +58,14 @@ describe('Malzeit-Budget (Block 124 Schritt 3)', () => {
     expect(r[1].ground).toBeGreaterThan(P);                                         // fehlender Boden wird immer gemalt …
     expect(r[1].made).toBe(1);                                                      // … und trotzdem ein Bildchen
   });
-  it('nachts vorerst die alte Frist ab Bildanfang (Nachtbildchen sind teuer, Schritt 4)', () => {
+  it('nachts gilt seit Schritt 4 dasselbe Malzeit-Budget (vorher die Frist ab Bildanfang)', () => {
     game("state.tiles.set('6,6', { b: 'schule', lvl: 1 }); recalc(); nightAt = () => 0.45");
     view(0.5, 6, 6);
     try {
       const r = withClock("globalThis.__dg = drawGroundCached; drawGroundCached = (...a) => { __t += 20; return __dg(...a); }", () => {
         try { return frame(); } finally { game('drawGroundCached = globalThis.__dg'); }
       });
-      expect(r.made).toBe(0);
-      expect(r.miss).toBeGreaterThan(0);
+      expect(r.made).toBeGreaterThan(0);                                          // 20 ms bis zu den Gebäuden – trotzdem Bildchen
     } finally { game('nightAt = () => 0'); }
   });
   it('im Bildchen landet nichts in afterMovers (Bahnübergang legt seine Vorderseite über die Züge); nie verschachtelt', () => {
@@ -128,5 +127,5 @@ describe('Schlüssel-Wächter (Block 124)', () => {
       return { out, same }; })()`);
     expect(bad.out).toEqual([]);
     expect(bad.same).toBeGreaterThan(500);                                          // es wurde wirklich verglichen
-  }, 60e3);                                                                         // viele Zeichnungen: auf langsamen Rechnern > 5 s
+  }, 180e3);                                                                        // viele Zeichnungen: auf langsamen Rechnern (und unter Last) lange
 });
