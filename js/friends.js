@@ -6,7 +6,8 @@
 //   users/<uid>/profile/look            Aussehen der Figur { fur, shirt, hat, face, body, hand } (Block 96c/97, Kopie von state.me)
 //   worlds/<wid>/guests/<uid>           wer gerade zu Besuch ist: { a, n, x, y, look } – einmal beim Kommen geschrieben, die
 //                                       Figur spaziert dann auf jedem Gerät selbst über die Wege; verschwindet beim Gehen
-//   book/<besitzer>/<id>                Besuch (v_…), Herz (h_… je Freund und Tag) und Gästebuch (g…): { k, from, n, a, t, s, at }
+//   book/<besitzer>/<id>                Besuch (v_…), Herz (h_… je Freund und Tag) und Gästebuch (g_<uid>_<Tag>_<0–2>, alt g…): { k, from, n, a, t, s, at }
+//   users/<uid>/bookStats/<freund>      Zähler für Aufgeräumtes (Block 141): { h, v, g, d, u: { h, v, g, d } bis wann gezählt, n, a, last }
 //   mail/<empfänger>/<id>               Päckchen { from, n, a, items: { holz: 50 }, at } – Abholen löscht es (genau einmal)
 //   on/<uid>                            Online-Status (Block 130): { at: Serverzeit, play } – lesen nur Freunde
 // ---------------------------------------------------------------------------
@@ -17,6 +18,7 @@ const BOOK_LINES = [
   'Deine Bewohner sind so süß 🐾', 'Danke fürs Päckchen! 🎁', 'Was baust du als Nächstes? 🤔', 'Gute Nacht, kleine Insel 🌙',
   'Das Riesenrad ist toll 🎡', 'Schöne Farben! 🎨', 'Dein Rathaus sieht toll aus 🏛️', 'Bis morgen! 👋'];
 const BOOK_STICKERS = ['🌷', '🌳', '🏰', '❤️', '⭐', '🐾', '🎉', '🌈', '☀️', '🌙', '🍰', '🎁'];
+const BOOK_PER_DAY = 3;                                                    // Gästebuch: je Besucher und Tag (Regel: Schlüssel g_<uid>_<Tag>_<0–2>)
 const MAIL_PER_DAY = 5, MAIL_MAX = 1e9;                                // keine 100.000er-Grenze mehr (Block 129)
 const dayKey = (d = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 const frLS = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem('kachelhausen_fr_' + k)); localStorage.setItem('kachelhausen_fr_' + k, JSON.stringify(v)); } catch (e) { return null; } };
@@ -116,8 +118,8 @@ function socialReset() {
   myAnimal = null; myLook = null;
   if (guestsOff) { guestsOff(); guestsOff = null; }
   guestsWid = null; visitorFigs.length = 0;
-  if (bookOff) bookOff(); if (mailOff) mailOff();
-  bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false;
+  if (bookOff) bookOff(); if (mailOff) mailOff(); if (statsOff) statsOff();
+  bookOff = mailOff = statsOff = null; bookAll = {}; mailAll = {}; statsAll = {}; bookLoaded = mailLoaded = welcomeDone = false; fbShown = null;
   if (bondsOff) bondsOff(); if (wishOff) wishOff();
   bondsOff = wishOff = null; myBonds = {}; myWish = null; wishWid = null; wishAt = 0;
   if (typeof meProfileUid !== 'undefined') { meProfileUid = null; meProfileLook = null; }
@@ -179,18 +181,23 @@ function visitBook() {
     $('m-close').onclick = closeModal;
     $('bk-send').onclick = async () => {
       const n = frLS('book_' + dayKey()) || 0;
-      if (n >= 3) { toast('📖 Heute hast du schon 3 Einträge geschrieben – morgen wieder'); return; }
-      try {
-        await cloudApi.set(`book/${visitOwner}/g${Date.now().toString(36)}${visitUser.uid.slice(0, 6)}`, { k: 'g', from: visitUser.uid, n: visitName(), a: myAnimal || 0, t: line, s: sticker, at: cloudApi.TS() });
-        frLS('book_' + dayKey(), n + 1); bondAdd(visitUser.uid, visitOwner, BOND_PTS.book); closeModal(); toast('📖 Eingetragen!');
-      } catch (e) { toast('Hat nicht geklappt'); }
+      if (n >= BOOK_PER_DAY) { toast(`📖 Heute hast du schon ${BOOK_PER_DAY} Einträge geschrieben – morgen wieder`); return; }
+      // Block 141: g_<ich>_<Tag>_<0–2> – die Regeln lassen je Tag nur diese drei zu (nie überschreiben); belegt (anderes Gerät): nächster
+      let ok = false, err = null;
+      for (let i = n; i < BOOK_PER_DAY && !ok; i++) {
+        try { await cloudApi.set(`book/${visitOwner}/g_${visitUser.uid}_${dayKey()}_${i}`, { k: 'g', from: visitUser.uid, n: visitName(), a: myAnimal || 0, t: line, s: sticker, at: cloudApi.TS() }); ok = true; frLS('book_' + dayKey(), i + 1); }
+        catch (e) { err = e; if (!/permission/i.test(String((e && (e.code || e.message)) || ''))) break; }
+      }
+      if (ok) { bondAdd(visitUser.uid, visitOwner, BOND_PTS.book); closeModal(); toast('📖 Eingetragen!'); }
+      else if (err && /permission/i.test(String(err.code || err.message || ''))) { frLS('book_' + dayKey(), BOOK_PER_DAY); toast(`📖 Heute hast du hier schon ${BOOK_PER_DAY} Einträge geschrieben – morgen wieder`); }
+      else toast('📖 Ging nicht – keine Verbindung?');
     };
   };
   draw();
 }
 
 // --- Besitzer: Gästebuch, Herzen, Besuche, Briefkasten (Fenster „Du“ → Freunde, Block 98) -------------
-let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null, bookLoaded = false, mailLoaded = false;
+let bookAll = {}, mailAll = {}, bookOff = null, mailOff = null, bookLoaded = false, mailLoaded = false, statsAll = {}, statsOff = null;
 const mailWaiting = () => Object.keys(mailAll).length > 0;
 function friendsInboxWatch() {
   if (!cloudUser || VISIT || !cloudApi.watch) return;
@@ -199,10 +206,11 @@ function friendsInboxWatch() {
     const old = bookAll; bookAll = v || {};
     if (bookLoaded) for (const [id, e] of Object.entries(bookAll)) if (!old[id] && e) toast(e.k === 'h' ? `❤️ ${e.n} hat dir ein Herz dagelassen` : e.k === 'g' ? `📖 ${e.n} hat ins Gästebuch geschrieben` : e.k === 'd' ? `💛 ${e.n} sagt Danke für dein Päckchen` : `👋 ${e.n} war zu Besuch`);
     bondFromBook(uid);
-    if (!bookLoaded) bookTidy(uid);
+    if (!bookLoaded) bookFold(uid).catch(() => {});
     bookLoaded = true;                                                  // erst ab dem zweiten Mal melden (das erste ist der Bestand)
     friendsDot(); welcomeBack();
   });
+  if (!statsOff) statsOff = cloudApi.watch(`users/${uid}/bookStats`, v => { statsAll = v || {}; });   // Zähler (Block 141)
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
     for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`${m.sv ? '🎁 Souvenir' : '📬 Päckchen'} von ${m.n} – oben unter 🌐 Online → Freunde`);
@@ -211,13 +219,56 @@ function friendsInboxWatch() {
     friendsDot(); welcomeBack();
   });
 }
-setInterval(() => { if (cloudUser && !VISIT) { friendsInboxWatch(); if (typeof frWatch === 'function') frWatch(); welcomeBack(); } else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); bookOff = mailOff = null; bookAll = {}; mailAll = {}; bookLoaded = mailLoaded = welcomeDone = false; } }, 3000);   // Freundesliste immer beobachten (Namen auffrischen, Freundesschiffe, Block 112)
-// alte Besuche und Herzen (älter als 60 Tage) räumt der Besitzer weg, sonst wächst das Buch ewig; Gästebuch bleibt
-function bookTidy(uid) {
-  if (viewOnly()) return;
-  const old = Date.now() - 60 * 864e5, upd = {};
-  for (const [id, e] of Object.entries(bookAll)) if (e && (e.k === 'v' || e.k === 'h' || e.k === 'd') && e.at && e.at < old) upd[`book/${uid}/${id}`] = null;
-  if (Object.keys(upd).length && cloudApi.update) cloudApi.update(upd).catch(() => {});
+setInterval(() => { if (cloudUser && !VISIT) { friendsInboxWatch(); if (typeof frWatch === 'function') frWatch(); welcomeBack(); } else if (!cloudUser && (bookOff || mailOff)) { if (bookOff) bookOff(); if (mailOff) mailOff(); if (statsOff) statsOff(); bookOff = mailOff = statsOff = null; bookAll = {}; mailAll = {}; statsAll = {}; bookLoaded = mailLoaded = welcomeDone = false; } }, 3000);   // Freundesliste immer beobachten (Namen auffrischen, Freundesschiffe, Block 112)
+// Freundesbuch klein halten (Block 141): Besuche, Herzen und Danke älter als BOOK_DAYS und Gästebuch-Einträge hinter den neuesten
+// BOOK_KEEP_G wandern in Zähler je Freund (users/<uid>/bookStats) und werden gelöscht – so bleiben die Zahlen für immer, aber jedes
+// Gerät lädt beim Start nur ein kleines Buch. Transaktion mit „u“ (bis wann je Art gezählt): zwei Geräte zählen nichts doppelt;
+// ein Eintrag, der gezählt, aber noch nicht gelöscht ist, zählt in der Anzeige nicht noch einmal (bookPeople)
+const BOOK_DAYS = 30, BOOK_KEEP_G = 200, BOOK_KINDS = ['h', 'v', 'g', 'd'];
+async function bookFold(uid) {
+  if (viewOnly() || !cloudApi.tx || !cloudApi.update) return;
+  const cut = Date.now() - BOOK_DAYS * 864e5, list = Object.entries(bookAll).filter(([, e]) => e && BOOK_KINDS.includes(e.k) && e.from);
+  const gOld = new Set(list.filter(([, e]) => e.k === 'g').sort((p, q) => (q[1].at || 0) - (p[1].at || 0)).slice(BOOK_KEEP_G).map(([id]) => id));
+  const go = list.filter(([id, e]) => e.k === 'g' ? gOld.has(id) : (e.at || 0) < cut);
+  if (!go.length) return;
+  const by = {};
+  for (const [id, e] of go) (by[e.from] = by[e.from] || []).push([id, e]);
+  const del = {};
+  for (const [f, items] of Object.entries(by)) {
+    try {
+      await cloudApi.tx(`users/${uid}/bookStats/${f}`, cur => {
+        const c = { h: 0, v: 0, g: 0, d: 0, n: '', a: 0, last: 0, ...(cur || {}) }, u0 = { ...(c.u || {}) }, u = { ...u0 };
+        for (const [, e] of items) {
+          const at = e.at || 0;
+          if (at <= (u0[e.k] || 0)) continue;                             // schon gezählt (anderes Gerät)
+          c[e.k] = (+c[e.k] || 0) + 1; u[e.k] = Math.max(u[e.k] || 0, at);
+          if (at >= (+c.last || 0)) { c.last = at; c.n = String(e.n || c.n || '').slice(0, 30); c.a = Number.isInteger(e.a) ? e.a : c.a; }
+        }
+        return { ...c, u };
+      });
+      for (const [id] of items) del[`book/${uid}/${id}`] = null;
+    } catch (e) { /* nächstes Mal */ }
+  }
+  if (Object.keys(del).length) await cloudApi.update(del);
+}
+// Wer war da (Block 141): je Freund Zähler + noch nicht gezählte Einträge, zuletzt Dagewesene zuerst
+function bookPeople() {
+  const P = {}, get = f => P[f] || (P[f] = { from: f, n: 'Freund', a: 0, h: 0, v: 0, g: 0, d: 0, last: 0 });
+  for (const [f, s] of Object.entries(statsAll)) {
+    if (!s || typeof s !== 'object') continue;
+    const p = get(f);
+    for (const k of BOOK_KINDS) p[k] += Math.max(0, +s[k] || 0);
+    if (s.n) p.n = String(s.n); if (Number.isInteger(s.a)) p.a = s.a; p.last = Math.max(p.last, +s.last || 0);
+  }
+  for (const e of Object.values(bookAll)) {
+    if (!e || !BOOK_KINDS.includes(e.k) || !e.from) continue;
+    const u = (statsAll[e.from] && statsAll[e.from].u) || {}, at = e.at || 0;
+    if (at <= (u[e.k] || 0)) continue;                                    // steckt schon im Zähler
+    const p = get(e.from);
+    p[e.k]++;
+    if (at >= p.last) { p.last = at; p.n = e.n || p.n; p.a = Number.isInteger(e.a) ? e.a : p.a; }
+  }
+  return Object.values(P).filter(p => p.h + p.v + p.g + p.d > 0).sort((p, q) => q.last - p.last);
 }
 const bookSeen = () => (cloudUser && frLS('seen_' + cloudUser.uid)) || 0;
 const bookNew = () => Object.values(bookAll).filter(e => e && (e.at || 0) > bookSeen()).length;
@@ -265,20 +316,39 @@ function friendsHallHtml(part) {
     <div class="label">📬 Briefkasten</div>
     ${mails.map(([id, m]) => `<div class="fr-row"><span>${icon(m)} Von ${escHtml(m.n)}: ${m.sv ? `🎁 ${escHtml(svKind(m.sv.k).name)}` : ''}${Object.entries(m.items || {}).filter(([r]) => RES[r]).map(([r, n]) => `${RES[r].icon} ${fmt(n)}`).join(' ')}</span>
       <span class="fr-btns"><button class="btn small" data-mget="${escHtml(id)}">Abholen</button></span></div>`).join('')}` : '';
+  // Freundesbuch (Block 141): oben die Zahlen, dann je Freund eine Zeile, Gästebuch die neuesten 10 („Ältere anzeigen“)
+  const people = bookPeople(), tot = k => people.reduce((n, p) => n + p[k], 0), seen = fbShown && Date.now() - fbShown.at < 60000 ? fbShown.seen : bookSeen();   // neu aufgebaut: Hinweis bleibt
+  const fresh = list.filter(([, e]) => (e.at || 0) > seen), nk = k => fresh.filter(([, e]) => e.k === k).length;
+  const newText = [[nk('h'), 'Herz', 'Herzen'], [nk('v'), 'Besuch', 'Besuche'], [nk('g'), 'Gästebuch-Eintrag', 'Gästebuch-Einträge'], [nk('d'), 'Danke', 'Danke']]
+    .filter(([n]) => n).map(([n, one, more]) => `${n} ${n === 1 ? one : more}`).join(', ');
+  const ago = at => !at ? '' : dayKey(new Date(at)) === today ? 'heute' : dayKey(new Date(at - 0)) === dayKey(new Date(Date.now() - 864e5)) ? 'gestern' : new Date(at).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  const counts = p => [[p.h, '❤️'], [p.v, '👋'], [p.g, '📖'], [p.d, '💛']].filter(([n]) => n).map(([n, i]) => `${i} ${fmt(n)}`).join(' · ');
+  const gs = list.filter(([, e]) => e.k === 'g');
   return `
-    ${list.some(([, e]) => e.k === 'd') ? `<div class="label">💛 Danke</div><p>${list.filter(([, e]) => e.k === 'd').slice(0, 20).map(([, e]) => `${icon(e)} ${escHtml(e.n)} sagt Danke für dein Päckchen <small class="muted">${when(e)}</small>`).join('<br>')}</p>` : ''}
-    <div class="label">❤️ Herzen · ${hearts.length}</div>
-    <p>${hearts.slice(0, 30).map(([, e]) => `<span title="${escHtml(e.n)} · ${when(e)}">${icon(e)}❤️</span>`).join(' ') || '<span class="muted">Noch keine</span>'}</p>
-    <div class="label">📖 Gästebuch</div>
-    ${list.filter(([, e]) => e.k === 'g').slice(0, 50).map(([id, e]) => `<div class="fr-row"><span>${BOOK_STICKERS[e.s] || ''} <b>${escHtml(e.n)}</b> ${icon(e)}: ${escHtml(BOOK_LINES[e.t] || '')} <small class="muted">${when(e)}</small></span>
+    <div class="label">💌 Freundesbuch</div>
+    <div class="fb-sum">${[['h', '❤️', 'Herz', 'Herzen'], ['v', '👋', 'Besuch', 'Besuche'], ['g', '📖', 'Eintrag', 'Einträge'], ['d', '💛', 'Danke', 'Danke']]
+      .filter(([k]) => k !== 'd' || tot('d')).map(([k, i, one, more]) => `<span>${i} <b>${fmt(tot(k))}</b> ${tot(k) === 1 ? one : more}</span>`).join('')}</div>
+    ${newText ? `<p class="ok">✨ Neu seit deinem letzten Blick: ${newText}</p>` : ''}
+    <div class="label">👋 Wer war da</div>
+    ${people.length ? people.map((p, i) => `<div class="fr-row fb-p"${i >= 8 ? ' hidden' : ''}><span>${(ANIMALS[p.a] || ANIMALS[0]).icon} ${escHtml(p.n)} <small class="fb-c">${counts(p)}</small></span><small class="muted">${ago(p.last)}</small></div>`).join('')
+      + (people.length > 8 ? `<div class="row"><button class="btn ghost small" data-fbmore="p">Alle ${people.length} anzeigen</button></div>` : '')
+      : '<p class="muted">Noch niemand – teile deinen Freundescode.</p>'}
+    <div class="label">📖 Gästebuch${tot('g') ? ` · ${fmt(tot('g'))}` : ''}</div>
+    ${gs.map(([id, e], i) => `<div class="fr-row fb-g"${i >= 10 ? ' hidden' : ''}><span>${BOOK_STICKERS[e.s] || ''} <b>${escHtml(e.n)}</b> ${icon(e)}: ${escHtml(BOOK_LINES[e.t] || '')} <small class="muted">${when(e)}</small></span>
       <span class="fr-btns"><button class="btn ghost small" data-bdel="${escHtml(id)}" aria-label="Eintrag entfernen">✕</button></span></div>`).join('') || '<p class="muted">Noch leer.</p>'}
-    <div class="label">👋 Zu Besuch waren</div>
-    <p>${list.filter(([, e]) => e.k === 'v').slice(0, 30).map(([, e]) => `${icon(e)} ${escHtml(e.n)}${e.at && dayKey(new Date(e.at)) === today ? ' (heute)' : ` (${when(e)})`}`).join(' · ') || '<span class="muted">Noch niemand – teile deinen Freundescode.</span>'}</p>`;
+    ${gs.length > 10 ? '<div class="row"><button class="btn ghost small" data-fbmore="g">Ältere anzeigen</button></div>' : ''}`;
 }
+let fbShown = null;                                                      // { seen, at }: was beim Öffnen „neu“ war (Block 141)
 function wireFriendsHall(card) {
+  if (!fbShown || Date.now() - fbShown.at >= 60000) fbShown = { seen: bookSeen(), at: Date.now() };
   if (cloudUser) frLS('seen_' + cloudUser.uid, Math.max(+frLS('seen_' + cloudUser.uid) || 0, ...Object.values(bookAll).map(e => (e && e.at) || 0)));   // gelesen – nach Serverzeit (Block 112)
   friendsDot();
   for (const b of card.querySelectorAll('[data-mget]')) b.onclick = () => mailClaim(b.dataset.mget);
+  for (const b of card.querySelectorAll('[data-fbmore]')) b.onclick = () => {        // mehr zeigen, ohne neu zu zeichnen (Block 141)
+    const rows = [...card.querySelectorAll(b.dataset.fbmore === 'p' ? '.fb-p[hidden]' : '.fb-g[hidden]')];
+    rows.slice(0, b.dataset.fbmore === 'p' ? rows.length : 20).forEach(r => { r.hidden = false; });
+    if (rows.length <= (b.dataset.fbmore === 'p' ? rows.length : 20)) b.parentElement.remove();
+  };
   for (const b of card.querySelectorAll('[data-bdel]')) b.onclick = async () => { try { await cloudApi.set(`book/${cloudUser.uid}/${b.dataset.bdel}`, null); openNet('freunde'); } catch (e) { toast('Hat nicht geklappt'); } };
 }
 // Abholen: genau einmal (Transaktion löscht das Päckchen), dann ins Lager

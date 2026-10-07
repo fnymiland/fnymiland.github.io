@@ -813,3 +813,7 @@ body.visiting #net-btn { display: none !important; }
 .sv-e small { font-size: 11px; color: var(--brown2); }
 .sv-e small.ok { color: var(--green-d); font-weight: 800; }
 .fr-btns .btn.done { opacity: 0.5; }
+/* Freundesbuch (Block 141) */
+.fb-sum { display: flex; flex-wrap: wrap; gap: 6px; }
+.fb-sum span { background: var(--cream2); border-radius: 10px; padding: 5px 9px; font-weight: 700; font-size: 13px; }
+.fb-c { display: block; font-weight: 700; color: var(--brown2); }

@@ -382,6 +382,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+141. **Freundesbuch** (Block 141, friends.js): Anzeigen nur über `bookPeople()` (Zähler `statsAll` + noch nicht gezählte Einträge,
+    `at > u[k]`), nie Einträge direkt zählen – sonst fehlt alles Aufgeräumte oder zählt doppelt. Aufräumen nur über `bookFold`
+    (erst zählen per Transaktion, dann löschen). Lange Listen: wenige zeigen, Rest mit `hidden` und „mehr anzeigen“ – das ganze
+    Buch lädt jedes Gerät beim Start, also nie unbegrenzt wachsen lassen. Neue Arten im Buch: in `BOOK_KINDS` und in die Regeln.
 137. **Umbauen: bezahlt bleibt bezahlt** (Block 137): Wer ein Gebäude größer/kleiner/anders macht, merkt sich das Höchste, was je
     bezahlt wurde (Schloss `t.price`, Bahnhof `stationLenPaid`/`t.lenPaid`, Hbf `gleisePaid`/`t.gleisePaid`), kassiert nur darüber
     und gibt beim Verkleinern nichts zurück. Abriss erstattet die Hälfte des Bezahlten. Neue Umbau-Möglichkeiten genauso, nie

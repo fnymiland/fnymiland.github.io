@@ -1538,3 +1538,12 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 ## Block 140: Relief – erst im Hinterkopf
 - [ ] Nur Natur-Deko (Hügel/Berge 2×2–5×5), kein Höhenmodell. Zuerst einen Entwurf des **Tunnelportals für die Bahn** zeigen – erst
       wenn das dem Nutzer gefällt, weiterbauen
+
+## Block 141: Freundesbuch übersichtlich
+- [x] Oben die Zahlen (❤️ Herzen · 👋 Besuche · 📖 Einträge · 💛 Danke), „Neu seit deinem letzten Blick: …“ (bleibt beim Neuaufbau stehen)
+- [x] „Wer war da“: je Freund eine Zeile mit allen Zahlen und „zuletzt …“, die ersten 8, „Alle anzeigen“; Gästebuch die neuesten 10,
+      „Ältere anzeigen“ (je 20) – ohne neu zu zeichnen
+- [x] Aufräumen (`bookFold`): Besuche/Herzen/Danke älter als 30 Tage und Gästebuch hinter den neuesten 200 wandern in Zähler je
+      Freund (`users/<uid>/bookStats`, Transaktion mit „u“ – zwei Geräte zählen nichts doppelt) und werden gelöscht
+- [x] Gästebuch höchstens 3 je Besucher und Tag auch in der Datenbank: Schlüssel `g_<uid>_<Tag>_<0–2>` (Regel); alte Schlüssel nur
+      noch bis 14.10.2026 erlaubt (alte App-Versionen). Test: freundesbuch.test.js

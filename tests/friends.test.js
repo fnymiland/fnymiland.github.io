@@ -57,15 +57,15 @@ describe('Freunde auf der Insel (Block 96)', () => {
     expect(() => game("figPreview(document.createElement('canvas'), figFrom(0, null, ''))")).not.toThrow();
   });
   it('„Du → Freunde“: Briefkasten, Herzen, Gästebuch, Besuche (früher Rathaus „Besuch“ – leitet weiter)', async () => {
-    game(`bookAll = { h_f1_20261006: { k: 'h', n: 'Ben', a: 2, at: Date.now() }, gx1: { k: 'g', n: 'Ben', a: 2, t: 1, s: 3, at: Date.now() }, v_f1_20261006: { k: 'v', n: 'Ben', a: 2, at: Date.now() } };
+    game(`bookAll = { h_f1_20261006: { k: 'h', from: 'f1', n: 'Ben', a: 2, at: Date.now() }, gx1: { k: 'g', from: 'f1', n: 'Ben', a: 2, t: 1, s: 3, at: Date.now() }, v_f1_20261006: { k: 'v', from: 'f1', n: 'Ben', a: 2, at: Date.now() } };
       mailAll = { m1: { from: 'f1', n: 'Ben', a: 2, items: { holz: 50 } } }`);
     await game("openTownHall('besuch')");
     expect(game('youTab')).toBe('freunde');
     const txt = game("document.getElementById('modal-card').textContent");
-    expect(txt).toMatch(/Herzen · 1/);
+    expect(txt).toMatch(/❤️ 1 Herz/);                                                       // Freundesbuch (Block 141)
     expect(txt).toMatch(/Dein Schloss ist der Hammer/);
     expect(txt).toMatch(/Von Ben/);
-    expect(txt).toMatch(/Ben \(heute\)/);
+    expect(txt).toMatch(/Ben ❤️ 1 · 👋 1 · 📖 1\s*heute/);
     expect(game('mailWaiting()')).toBe(true);
   });
   it('Päckchen abholen: genau einmal ins Lager', async () => {

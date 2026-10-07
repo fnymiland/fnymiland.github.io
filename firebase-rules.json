@@ -105,7 +105,7 @@
         ".read": "auth != null && auth.uid === $owner",
         "$id": {
           ".write": "auth != null && ((auth.uid === $owner && !newData.exists()) || (!data.exists() && newData.child('from').val() === auth.uid && root.child('fr').child($owner).child(auth.uid).child('st').val() === 'freund'))",
-          ".validate": "!newData.exists() || (newData.child('n').isString() && newData.child('n').val().length <= 30 && (newData.child('k').val() === 'v' || newData.child('k').val() === 'h' || newData.child('k').val() === 'g' || newData.child('k').val() === 'd'))",
+          ".validate": "!newData.exists() || ((newData.child('k').val() !== 'g' || ($id.matches(/^g_[A-Za-z0-9]+_[0-9]{8}_[0-2]$/) && $id.beginsWith('g_' + auth.uid + '_')) || (now < 1792000000000 && $id.matches(/^g[0-9A-Za-z]+$/))) && (newData.child('n').isString() && newData.child('n').val().length <= 30 && (newData.child('k').val() === 'v' || newData.child('k').val() === 'h' || newData.child('k').val() === 'g' || newData.child('k').val() === 'd')))",
           "k": {
             ".validate": "newData.isString()"
           },
