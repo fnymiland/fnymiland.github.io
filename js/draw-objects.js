@@ -68,7 +68,7 @@ function punchGlow(q, r, tint, part = null) {
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
-  const rr = (n ? r * 0.7 : r) * (blue && SPRITES_ON && nightFull() ? BLUE_SPOT : 1);   // weit weg bei voller Nacht: blaues Loch so groß wie sein Fleck (render.js)
+  const rr = (n ? r * 0.7 : r) * (blue && SPRITES_ON && nightPicOn() ? BLUE_SPOT : 1);   // weit weg mit Nachtbildern (auch Dämmerung, Block 143): blaues Loch so groß wie sein Fleck (render.js)
   g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
   g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
   if (!blue && !part) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }

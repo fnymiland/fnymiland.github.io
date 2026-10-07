@@ -393,6 +393,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt` und `gameHour`), sonst hängen sie an der echten Uhrzeit.
+143. **Nachtbilder auch in der Dämmerung** (Block 143): `nightPicOn()` (Licht an, weit weg) statt `nightFull()` für alles, was
+    Nachtbilder nutzt; das Löschbild wird mit night/NIGHT_MAX eingesetzt, gemalt wird es immer mit voller Nacht (`paintNight`
+    setzt `night`). Vor dem Einschalten wärmt `prewarm` die beleuchteten Bildchen vor – wer einen neuen Bildchen-Schlüssel mit
+    `lit` baut, gibt `keyOf(lit)` und `make` an `prewarm` weiter. Ruckeln immer mit `tools/ruckeln.js` bei Full HD messen
+    (das Fenster der App ist viel kleiner und täuscht), und auf die längsten Bilder schauen, nicht nur den Mittelwert.
 142. **Ladeanzeigen als HTML, nicht ins Bild gemalt** (Block 142): `#loading` + `loadingUpdate()` (render.js) – Gründe zum Zeigen
     als Merker (`loadingStart`, `loadingVisit`, `prepShown`), nie selbst `hidden` setzen. Ins Bild Gemaltes bleibt stehen, solange
     ein Bild rechnet – genau dann, wenn man Rückmeldung braucht. Jede neue Warte-Situation (z. B. Cloud-Übernahme) bekommt einen

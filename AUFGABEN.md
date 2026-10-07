@@ -1558,3 +1558,15 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
       die Insel einmal fertig gezeichnet ist; beim Besuch „Die Insel wird geladen …“ (bis sie da ist, abgelehnt wird oder 25 s);
       beim Vorbereiten (Zoom weit raus, Sprung) kleines Schild „Insel wird gezeichnet …“ statt des ins Bild gemalten. Drehung per
       CSS (eigene Ebene) – läuft weiter, während ein langes Bild rechnet. Test: ladekreisel.test.js
+
+## Block 143: Ruckeln – schnelle Hilfen (vor WebGL)
+- [x] Messwerkzeug `tools/ruckeln.js` (`ruckelMess()`, Full HD, wartet je Bild auf die Grafikkarte; Tag/Nacht still, verschieben,
+      zoomen, Dämmerung → Nacht; längstes Bild und Zahl > 33 ms)
+- [x] Dämmerung mit Nachtbildern (`nightPicOn`): Löschbild mit Stärke night/NIGHT_MAX eingesetzt (wie live), Nachtbild immer mit
+      voller Nacht gemalt; Vorwärmen kurz vor dem Einschalten (`preLit`, `prewarm`). Full HD, große Welt: Dämmerung 95 → 41 ms
+      (Mitte), Bild gegen live in der Dämmerung so nah wie am Tag
+- [x] Scheiben/Schein neben Kristalllicht als ein vorbereitetes Bild je Nachtbild (`warmPre`) statt ~9.000 Flächen je Bild,
+      Nähe über ein Raster. Nacht still 46 → 41 ms, längstes 61 → 45
+- [x] Boden: ein Grundstück knapp außerhalb des Bildes vorab malen, wenn Zeit übrig ist
+- [ ] Offen (→ Block 144 WebGL): Grundlast ~37–41 ms bei Full HD (3.200 Bildchen kleben je Bild), Zoomen nachts 60–140 ms
+      (jedes neu sichtbare Ding braucht Bildchen + Nachtbild), Verschieben nachts bis ~90 ms

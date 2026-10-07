@@ -198,15 +198,26 @@ describe('Nachbesserung nach der Prüfung (Block 124)', () => {
     expect(game('objSprites.size')).toBe(n0);                                     // ersetzt, nicht dazugelegt
     expect(game('[...objSprites.values()].filter(e => e.used === frameNo).every(e => e.ver === 0 || e.ver === "" || String(e.ver).startsWith(String(groundVersion)) || e.ver === groundVersion)')).toBe(true);
   });
-  it('bei voller Nacht gemalt (ohne Lichtmaske): zur Dämmerung neu gemalt, nicht mit ganzen Scheiben weiter benutzt', () => {
+  it('bei voller Nacht gemalt: in der Morgendämmerung weiter mit Nachtbild, nicht neu gemalt (Block 143)', () => {
     game("state.tiles.set('6,6', { b: 'haus', lvl: 2 }); recalc(); nightAt = () => NIGHT_MAX");
     view(0.5, 6, 6);
     game('spriteNoBudget = true; render(1e6); render(1e6); spriteNoBudget = false');
     const k = game("[...objSprites.keys()].find(k => k.startsWith('haus|'))");
-    expect(game(`objSprites.get(${JSON.stringify(k)}).noMask`)).toBe(true);
+    game(`globalThis.__e = objSprites.get(${JSON.stringify(k)})`);
     game('nightAt = () => 0.3');                                                  // Morgendämmerung
     game('render(1e6); render(1e6); render(1e6)');
-    expect(game(`objSprites.get(${JSON.stringify(k)}).noMask`)).toBe(false);
+    expect(game(`objSprites.get(${JSON.stringify(k)}) === globalThis.__e && !!globalThis.__e.night`)).toBe(true);
+    game('nightAt = () => 0');
+  });
+  it('Vorwärmen (Block 143): kurz vor dem Einschalten entstehen die beleuchteten Bildchen samt Nachtbild schon', () => {
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 2 }); state.tiles.set('8,6', { b: 'schule', lvl: 1 }); recalc(); nightAt = () => 0.1");
+    view(0.5, 6, 6);
+    game('for (let i = 0; i < 6; i++) render(1e6 + i * 16)');
+    const lit = game("[...objSprites.entries()].filter(([k]) => k.startsWith('haus|') && k.split('|').includes('1')).map(([, e]) => !!e.night)");
+    expect(lit.length).toBeGreaterThan(0);
+    expect(lit.every(Boolean)).toBe(true);
+    game('nightAt = () => 0.2; render(2e6)');                                    // jetzt an: nichts fehlt
+    expect(game('SPRITE_STATS.miss')).toBe(0);
     game('nightAt = () => 0');
   });
   it('kein Speicher (getContext null): Pause fürs Neumalen, kein Aufholen/Vorbereiten, kein Hinweis', () => {

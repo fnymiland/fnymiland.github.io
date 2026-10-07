@@ -290,7 +290,7 @@ function getSprite(key, z, make, ver = 0) {
   // Stufengrenze alles und es gab eine Pause. Danach entsteht das scharfe im Hintergrund (e.next); getauscht wird erst, wenn alle
   // sichtbaren fertig sind, alle auf einmal (spriteSwapAll) – einzeln lief eine sichtbare „Welle“ durchs Bild
   const ratio = e ? z / e.z : 0, near = !!e && ratio > 0.2 && ratio < 5, zoomOk = !!e && Math.abs(ratio - 1) < 0.02;
-  const verOk = !e || (e.ver === ver && !(e.noMask && !nightFull()));   // bei voller Nacht ohne Lichtmaske gemalt: zur Dämmerung neu
+  const verOk = !e || e.ver === ver;                                    // Dämmerung nutzt auch Nachtbilder (Block 143): Lichtmaske nur noch Notbehelf
   if (e && verOk && (zoomOk || (spriteZooming && near))) { e.used = frameNo; return e; }
   if (near && !spriteNoBudget) {
     if (!zoomOk) {
@@ -301,7 +301,7 @@ function getSprite(key, z, make, ver = 0) {
           n = makeSprite(make, ver);
           if (n) { e.next = n; if (!spriteSwap.size) spriteSwapSince = frameNo; spriteSwap.set(key, e); }
         }
-        if (n && nightFull() && n.paint && !n.night) nightOf(n);           // auch das Nachtbild vorher, sonst wechselt nachts das Licht
+        if (n && nightPicOn() && n.paint && !n.night) nightOf(n);          // auch das Nachtbild vorher, sonst wechselt nachts das Licht
         if (!spriteReady(n)) SPRITE_STATS.stale++;
       }
       e.used = frameNo;
@@ -337,7 +337,7 @@ function spriteFail() {
 // SWAP_WAIT Bildern, falls eins nie fertig wird), dann werden alle zugleich getauscht – nur solche der jetzigen Zoomstufe
 const spriteSwap = new Map(), SWAP_WAIT = 120, spriteTrash = [];
 let spriteSwapSince = 0;
-const spriteReady = n => !!n && !n.crop && (!nightFull() || !n.paint || !!n.night);
+const spriteReady = n => !!n && !n.crop && (!nightPicOn() || !n.paint || !!n.night);
 function spriteSwapAll(staleLast, zs) {
   if (!spriteSwap.size || spriteZooming || spriteZoomedLast || (staleLast > 0 && frameNo - spriteSwapSince < SWAP_WAIT)) return;
   for (const [k, e] of spriteSwap) {
@@ -361,7 +361,7 @@ function paintSprite(halfW, up, down, drawFn) {
   const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 }, am = afterMovers.length;
   g = cx;
   // volle Nacht: Licht kommt aus dem Nachtbild – keine Kopien, keine Maske (spart Lesen); zur Dämmerung wird es neu gemalt (noMask)
-  const full = nightFull();
+  const full = nightPicOn();
   GLOW_SINK = sink; GLOW_ATLAS = full ? null : atlas; SPRITE_PAINT = true;
   try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); }
   finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; afterMovers.length = am; }   // im Bildchen nichts über die Fahrzeuge legen
@@ -467,6 +467,21 @@ function inQuad(q, x, y) {
 // Fensterscheiben in der Nähe von Blau werden vorher gelb hinterlegt (nightPanes), sonst würden sie blau.
 // Nur bei voller Nacht (die Stärke ändert sich sonst) – in der Dämmerung Licht für Licht. Kostet Malzeit wie ein Bildchen (Budget)
 const nightFull = () => night >= NIGHT_MAX - 1e-9;
+// Block 143: Nachtbilder schon in der Dämmerung (sobald Licht an ist) – das Löschbild wird mit der Stärke der Nacht eingesetzt, genau
+// wie live jedes Loch (punchGlow: Deckkraft ∝ night). Vorher dort Licht für Licht: große Welt, Full HD ~95 ms je Bild, 80 s lang
+const nightPicOn = () => night > 0.15 && isLive();
+// Vorwärmen (Block 143): kurz vor dem Einschalten (DUSK_PRE < night ≤ 0.15) entstehen die beleuchteten Bildchen samt Nachtbild im
+// freien Budget – sonst müssen an der Schwelle alle auf einmal neu. Gemalt mit voller Nacht (withNight), wie sie später gebraucht werden
+const DUSK_PRE = 0.03;
+const preLit = () => night > DUSK_PRE && night <= 0.15 && isLive() && SPRITES_ON && !SPRITE_PAINT;
+function withNight(fn) { const nv = night; night = NIGHT_MAX; try { return fn(); } finally { night = nv; } }
+function prewarm(key, zs, make, ver = 0) {
+  if (spriteOver()) return;
+  const e = objSprites.get(key);
+  if (!e) { const n = withNight(() => makeSprite(make, ver)); if (n) { n.used = frameNo; objSprites.set(key, n); } return; }
+  e.used = frameNo;                                                      // bald gebraucht: nicht wegräumen
+  if (e.paint && !e.night && !e.crop) withNight(() => nightOf(e));      // Nachtbild erst nach dem Zuschneiden (nächstes Bild)
+}
 const nightPics = [], nightPanes = [], nightSeen = new Set();   // Lichtbilder (Blau) und Scheiben je Bild für drawNight (große Gebäude: je Streifen einmal)
 let nightWarm = false;                                         // Löcher aus Nachtbildern: drawNight legt EINE warme Fläche dahinter
 const BLUE_SPOT = 0.5;                                         // blaues Licht (Kristall, Brunnen) bei voller Nacht nur halb so groß
@@ -490,9 +505,10 @@ function paintNight(e) {
   const make = () => { const c = document.createElement('canvas'); c.width = nw; c.height = nh; const cx = c.getContext('2d'); if (!cx) { freeCanvas(c); return null; } return [c, cx]; };
   const K = make(), E = make(), B = blue ? make() : null;
   if (!K || !E || (blue && !B)) { for (const x of [K, E, B]) if (x) freeCanvas(x[0]); return null; }   // kein Speicher: Licht für Licht
-  const prev = g, cells = glowCells, n0 = glows.length, am = afterMovers.length, sink = GLOW_SINK, atlas = GLOW_ATLAS;
+  const prev = g, cells = glowCells, n0 = glows.length, am = afterMovers.length, sink = GLOW_SINK, atlas = GLOW_ATLAS, nv = night;
   let lights = [];
   try {
+    night = NIGHT_MAX;                                                   // immer voll gemalt, in der Dämmerung schwächer eingesetzt (Block 143)
     // 1) auf volle schwarze Fläche wie live gemalt, die Lichter stanzen sofort – übrig bleibt Alpha = 1 − Loch
     g = K[1]; g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
     glowCells = new Map(); SPRITE_PAINT = true; GLOW_SINK = null; GLOW_ATLAS = null;
@@ -511,17 +527,36 @@ function paintNight(e) {
       for (const { q, r, tint } of lights) if (tint !== 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; g.fillRect(gx - r, gy - r, r * 2, r * 2); }
       for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
     }
-  } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; GLOW_SINK = sink; GLOW_ATLAS = atlas; afterMovers.length = am; }
+  } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; GLOW_SINK = sink; GLOW_ATLAS = atlas; afterMovers.length = am; night = nv; }
   freeCanvas(K[0]);
   const o = { ox: ax / DPR, oy: ay / DPR };
   const warmL = lights.filter(l => l.tint !== 'blue');
   return { z: e.z, erase: { c: E[0], ...o }, light: { c: B ? B[0] : null, ...o }, panes: warmL.map(l => l.q),
     halos: warmL.map(({ q, r }) => [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, r]), lights: lights.length };
 }
+// Scheiben und warmer Schein eines Nachtbilds als ein Bild (Block 143), erst wenn es neben Blau gebraucht wird; im Rahmen des
+// Löschbilds. drawNight zeichnet hinter das Bild (destination-over): dort lagen die Scheiben über dem Schein – hier also umgekehrt malen
+function warmPre(n) {
+  if (n.pre !== undefined) return n.pre;
+  const E = n.erase.c, c = E && document.createElement('canvas');
+  if (!c) return (n.pre = null);
+  c.width = E.width; c.height = E.height;
+  const cx = c.getContext('2d');
+  if (!cx) { freeCanvas(c); return null; }                               // kein Speicher: nächstes Mal wieder versuchen
+  const prev = g;
+  g = cx;
+  try {
+    g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    g.fillStyle = 'rgb(255,205,100)';
+    for (const [u, v, rr] of n.halos) g.fillRect(u - rr, v - rr, 2 * rr, 2 * rr);
+    for (const q of n.panes) poly(q, '#ffd873');
+  } finally { g = prev; }
+  return (n.pre = c);
+}
 function putNight(e, n, cx, cy, z) {
   const r = z / e.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
   if (e.c) g.drawImage(e.c, ...at(e));                                   // das Bildchen wie tagsüber …
-  if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.globalCompositeOperation = 'source-over'; }   // … dann die Löcher (ohne save/restore: teuer je Bildchen)
+  if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; if (night < NIGHT_MAX) g.globalAlpha = night / NIGHT_MAX; g.drawImage(n.erase.c, ...at(n.erase)); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }   // … dann die Löcher, in der Dämmerung schwächer (ohne save/restore: teuer je Bildchen)
   const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + (n.erase.c ? n.erase.c.width : 0);   // Streifen großer Gebäude: einmal
   if (!nightSeen.has(k)) {
     nightSeen.add(k);
@@ -537,7 +572,7 @@ function putSprite(e, cx, cy, z) {
   if (!e.glows.length) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
   // volle Nacht: Bildchen + Löschbild (Schritt 4); nicht für halb durchsichtige Vorschau-Geister (das Löschbild würde Löcher stanzen)
   // und nicht für ein Bildchen, dessen scharfer Ersatz schon wartet (dessen Nachtbild entsteht ohnehin)
-  if (nightFull() && g.globalAlpha === 1) { const n = e.night || (e.next ? null : nightOf(e)); if (n) { putNight(e, n, cx, cy, z); return; } }
+  if (nightPicOn() && g.globalAlpha === 1) { const n = e.night || (e.next ? null : nightOf(e)); if (n) { putNight(e, n, cx, cy, z); return; } }
   const w = e.c ? e.c.width / DPR * r : 0, h = e.c ? e.c.height / DPR * r : 0;
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
@@ -566,42 +601,49 @@ function drawBridgeOver(k, z, now) {
   else if (isWegBridge(t)) drawPath(p.x, p.y, z, x, y, t);
 }
 function spriteTile(t, ax, ay, c, z, now, w, h) {
-  const lit = night > 0.15 && isLive() ? 1 : 0;
+  const keyOf = lit => {
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
-  const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
-  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}`;
+  return shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}`;
+  };
+  const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size), key = keyOf(night > 0.15 && isLive() ? 1 : 0);
   // Fassung statt Schlüssel (Block 124): Bildchen mit Platz werden mit dem Boden (groundVersion) erneuert, Uhren alle 10 Spielminuten –
   // dazwischen zeigt getSprite das alte weiter und ersetzt es im Budget (dasselbe Bildchen, nichts bleibt liegen)
   const ver = (shared ? '' : groundVersion) + (CLOCK_SPRITES.has(t.b) ? '|' + Math.floor(gameHour() * 6) : '');
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
   const zs = spriteStep(z);                                              // gemalt in der Zoomstufe darüber
-  const e = getSprite(key, zs, () => {
+  const make = () => {
     const tt = Object.assign({}, t);                                     // Stand beim Malen: das Nachtbild malt später noch einmal (Schritt 4)
     const pad = SPRITE_PAD[t.b] || [0, 0];
     const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * zs * ds, up = spriteTop(t.b, w, h) * zs * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * zs * ds;
     const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, now, ax, ay, tt.lvl, tt); } finally { PASS = null; } });
     if (sp) sp.z = zs;
     return sp;
-  }, ver);
+  };
+  const e = getSprite(key, zs, make, ver);
+  if (preLit()) prewarm(keyOf(1), zs, make, ver);                        // gleich wird es hell: beleuchtet schon vorbereiten (Block 143)
   if (!e) return false;
   putSprite(e, c.x, c.y, z);
   return true;
 }
 // Kleine Deko in einer Ecke
 function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
-  const lit = night > 0.15 && isLive() ? 1 : 0;
-  const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
-  const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}|${decoVariant(b, x, y, slot)}`;   // col: Busch-/Schmuckfarbe, form: Form (Block 106); Variante statt Platz (Block 124)
+  const keyOf = lit => {
+    const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;               // Laterne ohne Strom
+    return `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}|${decoVariant(b, x, y, slot)}`;   // col: Busch-/Schmuckfarbe, form: Form (Block 106); Variante statt Platz (Block 124)
+  };
+  const key = keyOf(night > 0.15 && isLive() ? 1 : 0);
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
   const zs = spriteStep(z);
-  const e = getSprite(key, zs, () => {
+  const make = () => {
     const sp = paintSprite(26 * zs * s, 90 * zs * s, 12 * zs * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, zs, now, x, y, 1, { rot, slot, col, form }); });
     if (sp) sp.z = zs;
     return sp;
-  });
+  };
+  const e = getSprite(key, zs, make);
+  if (preLit()) prewarm(keyOf(1), zs, make);                             // Block 143
   if (!e) return false;
   putSprite(e, sx, sy, z);
   return true;
@@ -612,10 +654,10 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
 function spriteEdges(x, y, px, py, z, now) {
   if (!state.edges.size || !edgeFieldsHas(x, y)) return true;            // nichts zu zeichnen
   if (SPRITES_NEAR && ['a' + x + ',' + y, 'b' + x + ',' + y].some(k => state.edges.has(k) && isGate(k))) return false;   // Türchen schwingt: nah live
-  const lit = night > 0.15 && isLive() ? 1 : 0, zs = spriteStep(z);
-  const key = `edges|${x},${y}|${FOG ? 1 : 0}|${lit}`;
+  const zs = spriteStep(z), keyOf = lit => `edges|${x},${y}|${FOG ? 1 : 0}|${lit}`;
+  const key = keyOf(night > 0.15 && isLive() ? 1 : 0);
   const fog = FOG;
-  const e = getSprite(key, zs, () => {
+  const make = () => {
     const proj = (u, v) => ({ x: ((u - x) - (v - y)) * TW / 2 * zs, y: ((u - x) + (v - y)) * TH / 2 * zs });
     const sp = paintSprite((TW * 0.75 + 24) * zs, (TH + 120) * zs, (TH * 0.5 + 24) * zs, () => {
       const prev = EDGE_PROJ, pf = FOG; EDGE_PROJ = proj; FOG = fog;
@@ -623,7 +665,9 @@ function spriteEdges(x, y, px, py, z, now) {
     });
     if (sp) sp.z = zs;
     return sp;
-  }, groundVersion);
+  };
+  const e = getSprite(key, zs, make, groundVersion);
+  if (preLit()) prewarm(keyOf(1), zs, make, groundVersion);              // Block 143
   if (!e) return false;
   putSprite(e, px, py, z);
   return true;
@@ -634,14 +678,14 @@ function spriteHousekeeping() {
   if (frameNo % 120 !== 0) return;
   for (const [k, e] of objSprites) {
     if (frameNo - e.used > 3600) dropSprite(k);                          // ~2 Minuten behalten (beim nächsten Rauszoomen noch da)
-    else if (e.night && (!nightFull() || frameNo - e.used > 300)) freeNight(e);   // Nachtbilder nur nachts und nur für Gesehenes
+    else if (e.night && ((!nightPicOn() && !(night > DUSK_PRE)) || frameNo - e.used > 300)) freeNight(e);   // Nachtbilder nur nachts (und kurz davor) und nur für Gesehenes
   }
 }
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
 function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
 function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); if (e.maskTodo) freeCanvas(e.maskTodo.c); freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } }
-function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.erase.c); freeCanvas(n.light.c); } }
+function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.erase.c); freeCanvas(n.light.c); freeCanvas(n.pre); } }
 function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); spriteSwap.delete(k); freeSprite(e); }
 // Andere Welt (Laden, Besuch, Testwelt, neue Insel) oder andere Pixeldichte: Bildchen und Boden nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
@@ -791,11 +835,11 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
   const stale = e => { const ratio = want / e.scale; return (!zooming && Math.abs(ratio - 1) > 0.02) || ratio < 0.6 || ratio > 1.6; };
-  const waveList = [];
+  const waveList = [], ahead = [];
   for (const [cx, cy] of order) {
     const b = chunkBounds(cx, cy);
     const sx = (b.left - cam.x) * z + W / 2, sy = (b.top - cam.y) * z + H / 2;
-    if (sx > W || sy > H || sx + b.w * z < 0 || sy + b.h * z < 0) continue;
+    if (sx > W || sy > H || sx + b.w * z < 0 || sy + b.h * z < 0) { ahead.push([cx, cy]); continue; }
     const info = chunkSea(cx, cy);
     let img;
     if (info.sea) {
@@ -820,6 +864,19 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     for (const [x, y] of info.waves) waveList.push(x, y);
   }
   drawWaves(waveList, z, now);                                           // alle auf einmal, über den Grundstücken (wie vorher je Grundstück danach)
+  // Vorab (Block 143): ein Grundstück knapp außerhalb des Bildes malen, wenn in diesem Bild noch nichts gemalt wurde und nichts
+  // aufzuholen ist – beim Verschieben sind sie dann schon da (vorher: am Rand fehlend → sofort und ohne Budget gemalt, Spitzen ~100 ms)
+  if (!zooming && groundSpent === 0 && !spriteCatch && !spritePrep) {
+    for (const [cx, cy] of ahead) {
+      const ck = cx + ',' + cy, e = groundCache.get(ck);
+      if (e) { e.used = frameNo; if (e.v === groundVersion && !stale(e)) continue; }
+      if (chunkSea(cx, cy).sea) continue;
+      const t0 = performance.now(), n = renderGroundChunk(cx, cy, want);
+      groundSpent += performance.now() - t0;
+      if (n) { if (e) freeCanvas(e.c); n.used = frameNo; groundCache.set(ck, n); }
+      break;                                                             // eins je Bild
+    }
+  }
   if (frameNo % 60 === 0) {
     for (const [ck, e] of groundCache) if (frameNo - e.used > 900) { groundCache.delete(ck); freeCanvas(e.c); }   // länger behalten: beim Zurückschieben schon da
     if (groundCache.size > GROUND_KEEP) {                                // aber nicht unbegrenzt (Speicher iPad): die am längsten nicht gesehenen weg
@@ -959,10 +1016,12 @@ function drawNight() {
     const blue = nightPics.map(([, x, y, w, h]) => [x, y, x + w, y + h]);
     for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, h = r * BLUE_SPOT; blue.push([gx - h, gy - h, gx + h, gy + h]); }
     if (blue.length) {
-      const near = nightPanes.filter(([, x, y, w, h]) => blue.some(([a, b, c, d]) => a < x + w && c > x && b < y + h && d > y));
-      for (const [n, x, y, , , r] of near) for (const q of n.panes) poly(q.map(([u, v]) => [x + u * r, y + v * r]), '#ffd873');   // erst die Scheiben …
-      g.fillStyle = 'rgb(255,205,100)';
-      for (const [n, x, y, , , r] of near) for (const [u, v, rr] of n.halos) g.fillRect(x + (u - rr) * r, y + (v - rr) * r, 2 * rr * r, 2 * rr * r);   // … dann der warme Schein (wie live)
+      // Block 143: Nähe über ein Raster statt jedes gegen jedes (große Welt: 2.700 × 400 Vergleiche je Bild), und Scheiben samt Schein
+      // je Bildchen als EIN vorbereitetes Bild (warmPre) statt Fläche für Fläche (große Welt nachts: 9.000 Befehle je Bild)
+      const CELL = 256, grid = new Map(), cells = (a, b, c, d, f) => { for (let i = Math.floor(a / CELL); i <= Math.floor(c / CELL); i++) for (let j = Math.floor(b / CELL); j <= Math.floor(d / CELL); j++) f(i + ',' + j); };
+      for (const r of blue) cells(r[0], r[1], r[2], r[3], k => { const l = grid.get(k); if (l) l.push(r); else grid.set(k, [r]); });
+      const hit = (x, y, w, h) => { let yes = false; cells(x, y, x + w, y + h, k => { if (!yes) for (const [a, b, c, d] of grid.get(k) || []) if (a < x + w && c > x && b < y + h && d > y) { yes = true; break; } }); return yes; };
+      for (const [n, x, y, w, h] of nightPanes) if (hit(x, y, w, h)) { const pre = warmPre(n); if (pre) g.drawImage(pre, x, y, w, h); }   // erst Scheiben, dann Schein (wie live)
     }
   }
   let fill = null;

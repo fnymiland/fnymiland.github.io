@@ -22,7 +22,7 @@ describe('Bildchen weit weg', () => {
     expect(keys.some(k => k.includes('|schule|'))).toBe(true);              // eigenes Bild (vom Platz abhängig)
     expect(keys.some(k => k.startsWith('deco|laterne'))).toBe(true);
     let drawn = 0;
-    game('globalThis.__do = drawObject; drawObject = (...a) => { globalThis.__n = (globalThis.__n || 0) + 1; return globalThis.__do(...a); }; globalThis.__n = 0');
+    game('globalThis.__do = drawObject; drawObject = (...a) => { if (PASS !== "ground") globalThis.__n = (globalThis.__n || 0) + 1; return globalThis.__do(...a); }; globalThis.__n = 0');
     frame(0.5);
     drawn = game('globalThis.__n'); game('drawObject = globalThis.__do');
     expect(drawn).toBe(0);                                                    // nichts mehr neu gezeichnet
@@ -40,15 +40,18 @@ describe('Bildchen weit weg', () => {
     expect(game('[...objSprites.keys()].filter(k => k.startsWith("haus|")).length')).toBe(2);
   });
 
-  it('Dämmerung: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
+  it('Dämmerung (Block 143): auch schon Nachtbilder, das Löschbild schwächer eingesetzt (Stärke der Nacht) – nicht mehr Licht für Licht', () => {
     game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => 0.3');   // Uhr steht: Malzeit kostet nichts
     try {
       frame(2.2); const live = game('glows.length');                              // ab Zoom ~2 alles live (Vergleich)
       frame(0.5); const cached = game('glows.length');
       expect(live).toBeGreaterThan(0);
-      expect(cached).toBeGreaterThan(0);
-      expect(game('[...objSprites.values()].some(e => e.glows.length > 0)')).toBe(true);
-      expect(game('nightPics.length')).toBe(0);                                  // keine Nachtbilder in der Dämmerung
+      expect(cached).toBeLessThan(live);
+      expect(game('[...objSprites.values()].some(e => e.night)')).toBe(true);
+      expect(game('nightWarm')).toBe(true);
+      // Löschbild mit Deckkraft night / NIGHT_MAX
+      const a = game(`(() => { const e = [...objSprites.values()].find(e => e.night && e.night.erase.c); let al = null; const og = g, P = new Proxy({}, { get: (t, p) => p === 'drawImage' ? (img) => { if (img === e.night.erase.c) al = P.globalAlpha; } : (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } }); P.globalAlpha = 1; g = P; try { putNight(e, e.night, 100, 100, e.z); } finally { g = og; } return al; })()`);
+      expect(a).toBeCloseTo(0.3 / game('NIGHT_MAX'));
     } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
   });
 
