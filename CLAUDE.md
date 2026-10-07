@@ -356,6 +356,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+124. **Bildchen-Budget** (Block 124): Neumalen weit weg zählt nur die Malzeit (`spriteSpent` + `groundSpent` ≤ `PAINT_MS`, immer
+    mindestens ein Bildchen, höchstens `SPRITE_MAX`) – nie eine Frist ab Bildanfang (in großen Welten entstand damit nie ein Bildchen;
+    nur nachts gilt sie bis Schritt 4 noch). Neue Bildchen werden am Anfang des nächsten Bilds gesammelt zugeschnitten (`cropSprites`).
+    Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
+    (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
+    `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
 131. **Bahnhofslänge** (Block 131): `sizeOf('station', rot, t)` immer mit dem Feld t (ohne t gilt die Wahl für neu Gebautes,
     `stationNewLen`). Neue Felder mit variabler Größe brauchen: `sizeOf`, `drawBuilding` (da/wb), Bildchen-Schlüssel, `tileOut`.
 127. **Vorplätze nur über `courtPartsAt(t, x, y)`** (Block 127), nicht `courtParts(C0)`: Vor schmalem Weg wird der Platz zum Weg

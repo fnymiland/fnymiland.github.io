@@ -1467,7 +1467,7 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [x] Schritt 0: messen – SPRITE_STATS (miss/made), spriteForce/spriteNoBudget fürs Werkzeug, `?messen`-Zeile
 - [x] Schritt 1: Kleinigkeiten ohne Bildänderung (leere Felder überspringen, Linien-Felder-Set, putSprite ohne Licht, punchGlow/drawNight billiger). Wellen als ein Pfad verworfen: änderte ~3000 Bildpunkte (Live-Ansicht)
 - [x] Schritt 2: Deko-Bildchen nach Variante (decoVariant), Bildchen auf den Inhalt zugeschnitten (frische Leinwand je Bildchen, einmal lesen – eine wiederverwendete bzw. willReadFrequently-Leinwand glättet in Chrome anders), getContext null abgefangen, Leinwände freigegeben (freeCanvas/dropSprite), resetDrawCaches bei adoptState. Speicher Bildchen 0.45: 39 → 7 MB, 0.95: 95 → 17 MB
-- [ ] Schritt 3: Budget = Malzeit (nicht Frist), Fahrgeschäfte/Übergänge live
+- [x] Schritt 3: Budget = Malzeit (nicht Frist: `spriteSpent` + `groundSpent` ≤ `PAINT_MS`, mindestens 1, höchstens `SPRITE_MAX`), Zuschnitt gesammelt am Bildanfang (`cropSprites`), Fahrgeschäfte/Wasserrad/Schienen live (`SPRITE_LIVE`). Mac, große Welt, Tag: Zoom 0.45 62–75 → 13 ms; nach dem Zoomen nach ~20 statt ~400 Bildern scharf. Bildvergleich (beide ganz aus Bildchen): Tag 0.3 % Bildpunkte = Rauch und Fontänen stehen still, Nacht unverändert. Offen: Zuschneiden kostet im echten Takt noch ~25–35 ms für 40 Bildchen; Messung iPad (`?messen`)
 - [ ] Schritt 4: Nacht weit weg als Bild + Löschbild (nur volle Nacht)
 - [ ] Schritt 5: Feinschliff (Deko-Plan, Linien-Bauplan, Streifen)
 - [ ] Schritt 6: Boden nach dem Bauen nur geänderte Grundstücke neu
