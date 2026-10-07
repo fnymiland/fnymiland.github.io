@@ -370,7 +370,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht kommen als Nachtbild (`paintNight`: noch einmal gemalt wie live, Lichter
     stanzen sofort = Wandschein), davor ein Löschbild (Umriss + Schein auf Dahinterliegendes), das Lichtbild legt drawNight hinter die
     Löcher (`nightPics`). Dafür merkt `paintSprite` das Malen (`e.paint`); bei voller Nacht ohne Lichtmaske/Kopien, das Nachtbild nimmt
-    den Rahmen des zugeschnittenen Bildchens (kein eigenes Lesen). In der Dämmerung bleibt es Licht für Licht (Block 112).
+    den Rahmen des zugeschnittenen Bildchens (kein eigenes Lesen). Warmes Licht hinter den Löchern legt drawNight als **eine** Fläche
+    (`nightWarm`), nur blaues Licht (Kristall, Brunnen, Apotheke) hat ein Lichtbild – als kleiner Fleck (`BLUE_SPOT`), sonst färbt
+    es die Fensterlöcher der Nachbarn blau. In der Dämmerung bleibt es Licht für Licht (Block 112).
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.

@@ -372,6 +372,8 @@ function inQuad(q, x, y) {
 // Nur bei voller Nacht (die Stärke ändert sich sonst) – in der Dämmerung wie bisher. Kostet Malzeit wie ein Bildchen (Budget)
 const nightFull = () => night >= NIGHT_MAX - 1e-9;
 const nightPics = [], nightSeen = new Set();       // Lichtbilder dieses Bilds für drawNight (große Gebäude: je Streifen nur einmal)
+let nightWarm = false;
+const BLUE_SPOT = 0.5;                             // blauer Fleck (Kristall, Brunnen) nur halb so groß wie sein Schein: träfe sonst die Fenster der Nachbarn                             // Bildchen mit warmem Licht: drawNight legt EINE Lichtfläche hinter alle Löcher (statt je Bildchen ein Bild)
 function nightOf(e) {
   if (!e.paint || SPRITE_PAINT) return null;
   if (spriteCrops.includes(e)) return null;                              // noch nicht zugeschnitten: nächstes Bild (Zuschneiden am Bildanfang)
@@ -408,18 +410,21 @@ function paintNight(e) {
     g.globalCompositeOperation = 'destination-out'; g.drawImage(B[0], 0, 0);
     g.globalCompositeOperation = 'source-over';
     g.drawImage(e.c, pad, pad);
-    // 3) Lichtbild: wie drawNight – Schein als Fläche, die Scheiben darüber
+    // 3) Lichtbild nur für blaues Licht (Kristall, Apotheke): weicher Fleck – warmes Licht legt drawNight als eine Fläche dahinter
     g = B[1];
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, nw, nh); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    for (const { q, r, tint } of lights) {
-      const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
-      g.fillStyle = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
-      g.fillRect(gx - r, gy - r, r * 2, r * 2);
+    // (Gebäude mit blauem UND warmem Licht wie die Apotheke: die eigenen warmen Scheine und Scheiben darüber, sonst würden sie blass)
+    for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, h = r * BLUE_SPOT; g.drawImage(glowImage(true), gx - h, gy - h, h * 2, h * 2); }
+    if (lights.some(l => l.tint === 'blue')) {
+      g.fillStyle = 'rgb(255,205,100)';
+      for (const { q, r, tint } of lights) if (tint !== 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; g.fillRect(gx - r, gy - r, r * 2, r * 2); }
+      for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
     }
-    for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
   } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; GLOW_SINK = sink; GLOW_ATLAS = atlas; afterMovers.length = am; }
   const o = { ox: ax / DPR, oy: ay / DPR, glows: [] };
-  return { c: A[0], ...o, z: e.z, erase: { c: E[0], ...o }, light: { c: B[0], ...o }, lights: lights.length };
+  const blue = lights.some(l => l.tint === 'blue');
+  if (!blue) freeCanvas(B[0]);                                           // nur warmes Licht: kein eigenes Lichtbild
+  return { c: A[0], ...o, z: e.z, erase: { c: E[0], ...o }, light: { c: blue ? B[0] : null, ...o }, lights: lights.length };
 }
 function putNight(n, cx, cy, z) {
   const r = z / n.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
@@ -429,6 +434,7 @@ function putNight(n, cx, cy, z) {
     const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + n.light.c.width;   // Streifen großer Gebäude: einmal
     if (!nightSeen.has(k)) { nightSeen.add(k); nightPics.push([n.light.c, ...at(n.light)]); }
   }
+  nightWarm = true;                                                       // warmes Licht: eine Fläche in drawNight für alle
 }
 // Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
@@ -837,10 +843,14 @@ function drawNight() {
   let fill = null;
   for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
     const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, f = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
+    // mit warmer Fläche (Nachtbilder): Kristall-Licht als weicher Fleck – ein blaues Quadrat träfe die Fensterlöcher der Nachbarn,
+    // deren Scheiben hier nicht vorher gefüllt sind
+    if (nightWarm && tint === 'blue') { const h = r * BLUE_SPOT; g.drawImage(glowImage(true), gx - h, gy - h, h * 2, h * 2); continue; }
     if (f !== fill) g.fillStyle = fill = f;
     g.fillRect(gx - r, gy - r, r * 2, r * 2);
   }
   for (const [c, x, y, w, h] of nightPics) g.drawImage(c, x, y, w, h);            // Lichtbilder der Bildchen (volle Nacht, Block 124)
+  if (nightWarm) { g.fillStyle = 'rgb(255,205,100)'; g.fillRect(0, 0, W, H); }   // übrige Löcher kommen nur noch aus warmen Nachtbildern
   g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
   g.fillRect(0, 0, W, H);
   g.globalCompositeOperation = 'source-over';
@@ -873,7 +883,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = nightAt();                                                     // Spieluhr (Block 101)
-  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightSeen.clear();
+  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightSeen.clear(); nightWarm = false;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < SPRITE_FROM && isLive();

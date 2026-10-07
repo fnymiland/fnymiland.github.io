@@ -52,16 +52,17 @@ describe('Bildchen weit weg', () => {
     } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
   });
 
-  it('volle Nacht (Schritt 4): Bildchen mit Licht kommen als Nachtbild – kein Licht mehr einzeln, Lichtbilder für drawNight', () => {
+  it('volle Nacht (Schritt 4): Bildchen mit Licht kommen als Nachtbild – kein Licht mehr einzeln, warmes Licht als eine Fläche', () => {
     game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => NIGHT_MAX');
     try {
       frame(1.5); const live = game('glows.length');
       frame(0.5);
       expect(live).toBeGreaterThan(0);
       expect(game('glows.length')).toBe(0);                                      // alles aus Nachtbildern
-      expect(game('nightPics.length')).toBeGreaterThan(0);
+      expect(game('nightWarm')).toBe(true);                                      // eine Lichtfläche statt Lichtbilder je Bildchen
+      expect(game('nightPics.length')).toBe(0);                                  // (nur Kristall-Licht hat eigene)
       const n = game('(() => { const e = [...objSprites.values()].find(e => e.night); return e && { lights: e.night.lights, erase: !!e.night.erase.c, light: !!e.night.light.c, z: e.night.z === e.z }; })()');
-      expect(n).toMatchObject({ erase: true, light: true, z: true });
+      expect(n).toMatchObject({ erase: true, light: false, z: true });
       expect(n.lights).toBeGreaterThan(0);
       game('nightAt = () => 0; frameNo = Math.ceil(frameNo / 120) * 120 - 1'); frame(0.5);   // tags: Nachtbilder werden freigegeben
       expect(game('[...objSprites.values()].some(e => e.night)')).toBe(false);
