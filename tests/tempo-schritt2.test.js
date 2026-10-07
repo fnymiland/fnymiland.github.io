@@ -3,7 +3,9 @@ const { loadGame, game } = require('./helpers/load-game');
 // Block 124 Schritt 2: Deko-Bildchen nach Variante geteilt, Bildchen auf den Inhalt zugeschnitten, ohne Speicher kein Absturz,
 // Leinwände freigegeben, Zwischenspeicher beim Wechsel der Welt geleert
 beforeAll(() => loadGame());
+afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na'));
 beforeEach(() => {
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');   // tags (die Spieluhr läuft echt)
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; night = 0');
   game("for (let y = 2; y <= 16; y++) for (let x = 2; x <= 16; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } state.edges.clear(); recalc(); resize(); objSprites.clear()");
 });

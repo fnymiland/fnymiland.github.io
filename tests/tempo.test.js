@@ -68,6 +68,22 @@ describe('Bildchen weit weg', () => {
     } finally { game('performance.now = globalThis.__pn; nightAt = () => 0'); }
   });
 
+  it('nie mitten im Bild zurücklesen (wartet auf die Grafikkarte): nur beim Zuschneiden am Bildanfang – Tag, Dämmerung, Nacht', () => {
+    const n = game(`(() => {
+      const P = Object.getPrototypeOf(document.createElement('canvas').getContext('2d')), gi = P.getImageData, oc = cropSprites;
+      let inCrop = false, bad = 0, ok = 0;
+      P.getImageData = function (...a) { if (inCrop) ok++; else bad++; return gi.apply(this, a); };
+      cropSprites = () => { inCrop = true; try { oc(); } finally { inCrop = false; } };
+      try {
+        for (const nt of [0, 0.3, NIGHT_MAX]) { nightAt = () => nt; objSprites.clear(); cam.z = 0.5; lastZoom = 0.5; lastZoomChange = -1e9; spriteNoBudget = true; for (let i = 0; i < 4; i++) render(performance.now() + 1e6); spriteNoBudget = false; }
+      } finally { P.getImageData = gi; cropSprites = oc; nightAt = () => 0; }
+      return { bad, ok, night: [...objSprites.values()].some(e => e.night) };
+    })()`);
+    expect(n.bad).toBe(0);
+    expect(n.ok).toBeGreaterThan(0);
+    expect(n.night).toBe(true);                                                  // Nachtbilder entstehen trotzdem (ein Bild später)
+  });
+
   it('Riesenrad und Windräder drehen sich auch von weitem (live)', () => {
     game("state.tiles.set('10,10', { b: 'windrad', lvl: 1 }); recalc()");
     frame(0.5);

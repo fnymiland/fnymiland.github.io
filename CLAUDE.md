@@ -359,7 +359,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 124. **Bildchen-Budget** (Block 124): Neumalen weit weg zählt nur die Malzeit (`spriteSpent` + `groundSpent` ≤ `PAINT_MS`, immer
     mindestens ein Bildchen, höchstens `SPRITE_MAX`) – nie eine Frist ab Bildanfang (in großen Welten entstand damit nie ein Bildchen;
     gilt auch nachts). Fehlten im letzten Bild ≥ `CATCH_MISS` Bildchen, gilt `PAINT_CATCH` (Aufholen – live zeichnen kostet dann
-    ohnehin fast dasselbe). Neue Bildchen werden am Anfang des nächsten Bilds gesammelt zugeschnitten (`cropSprites`).
+    ohnehin fast dasselbe). Neue Bildchen werden am Anfang des nächsten Bilds gesammelt zugeschnitten (`cropSprites`), dort entsteht
+    auch die Lichtmaske (`maskTodo`). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC
+    5–10 ms je Lesen, in der Cloud ohne Grafikkarte unsichtbar); Test in tests/tempo.test.js.
     Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht kommen als Nachtbild (`paintNight`: noch einmal gemalt wie live, Lichter
     stanzen sofort = Wandschein), davor ein Löschbild (Umriss + Schein auf Dahinterliegendes), das Lichtbild legt drawNight hinter die
     Löcher (`nightPics`). Dafür merkt `paintSprite` das Malen (`e.paint`); bei voller Nacht ohne Lichtmaske/Kopien, das Nachtbild nimmt

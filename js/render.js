@@ -268,9 +268,9 @@ function paintSprite(halfW, up, down, drawFn) {
   const full = nightFull();                                              // volle Nacht: Licht kommt aus dem Nachtbild – keine Kopien, keine Maske
   GLOW_SINK = sink; GLOW_ATLAS = full ? null : atlas; SPRITE_PAINT = true;
   let mask = null;
-  try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); if (!full) mask = lightMask(c, sink, atlas); }
+  try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); }
   finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; afterMovers.length = am; }   // im Bildchen nichts über die Fahrzeuge legen
-  const e = { c, ox: halfW, oy: up, glows: sink, mask, paint: sink.length ? { halfW, up, down, drawFn } : null, night: null };   // paint: fürs Nachtbild (Schritt 4)
+  const e = { c, ox: halfW, oy: up, glows: sink, mask, maskTodo: !full && sink.length ? atlas : null, paint: sink.length ? { halfW, up, down, drawFn } : null, night: null };   // paint: fürs Nachtbild (Schritt 4)
   spriteCrops.push(e);
   return e;
 }
@@ -285,6 +285,10 @@ function cropSprites() {
 function cropSprite(e) {
   const c = e.c;
   if (!c || !c.width || !c.height) return;                               // inzwischen freigegeben
+  if (e.maskTodo) {                                                       // Lichtmaske (Dämmerung) auch erst hier: Lesen mitten im Bild wartet auf die Grafikkarte
+    e.mask = lightMask(c, e.glows, e.maskTodo);
+    freeCanvas(e.maskTodo.c); e.maskTodo = null;
+  }
   const nw = c.width, nh = c.height;
   let img = null;
   try { img = c.getContext('2d').getImageData(0, 0, nw, nh); } catch (err) { img = null; }
@@ -363,6 +367,7 @@ const nightFull = () => night >= NIGHT_MAX - 1e-9;
 const nightPics = [], nightSeen = new Set();       // Lichtbilder dieses Bilds für drawNight (große Gebäude: je Streifen nur einmal)
 function nightOf(e) {
   if (!e.paint || SPRITE_PAINT) return null;
+  if (spriteCrops.includes(e)) return null;                              // noch nicht zugeschnitten: nächstes Bild (Zuschneiden am Bildanfang)
   if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }   // diesmal noch Licht für Licht
   const t0 = performance.now();
   e.night = paintNight(e);
@@ -370,9 +375,7 @@ function nightOf(e) {
   return e.night;
 }
 function paintNight(e) {
-  const P = e.paint;
-  const q = spriteCrops.indexOf(e);
-  if (q >= 0) { spriteCrops.splice(q, 1); cropSprite(e); }               // erst zuschneiden: das Nachtbild nimmt denselben Rahmen (kein eigenes Lesen)
+  const P = e.paint;                                                     // e ist schon zugeschnitten: das Nachtbild nimmt denselben Rahmen (kein eigenes Lesen)
   if (!e.c || !e.c.width) return null;
   let R = 0;
   for (const gl of e.glows) R = Math.max(R, gl.r);
