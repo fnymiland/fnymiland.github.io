@@ -602,7 +602,7 @@ function unlockCard(k) {
   }
   if (k.startsWith('stufe:')) {
     return `<div class="unlock-card"><div class="uc-pic"><span class="emoji">🏡</span></div>
-      <div class="uc-txt"><b>Neue Hausstufe: ${k.slice(6)}</b><p>Villen können jetzt weiterwachsen – mit Kristall 💎 und Blick aufs Wasser.</p>
+      <div class="uc-txt"><b>Neue Hausstufe: ${k.slice(6)}</b><p>Villen können jetzt weiterwachsen – mit Kristall 💎.</p>
       <p class="tip">💡 Tipp eine Villa an, dort stehen ihre neuen Wünsche.</p></div></div>`;
   }
   const d = ITEMS[k];

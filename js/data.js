@@ -352,7 +352,8 @@ const HOUSE_STAGES = [
   { name: 'Stadthaus', pop: 12, wishes: ['markt', 'park', 'laden'], money: 3000, mat: { quader: 4 } },
   { name: 'Villa', pop: 16, wishes: ['schule', 'schoen', 'cafe'], money: 20000, mat: { quader: 4, metall: 2 } },
   // erst mit Kristall von der Kristallinsel: moderne Villa mit viel Glas
-  { name: 'Glasvilla', pop: 22, wishes: ['wasser', 'kultur'], money: 100000, mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
+  { name: 'Glasvilla', pop: 22, wishes: ['kultur'],   // „Blick aufs Wasser“ gestrichen (Nutzerwunsch, 07.10.2026)
+    money: 100000, mat: { kristall: 8, quader: 6, metall: 4 }, lm: 'kristall:1' },
 ];
 const WISHES = {
   weg:     { text: 'Weg vor der Tür' },
@@ -363,7 +364,6 @@ const WISHES = {
   park:    { text: 'Park oder Brunnen erreichbar (4 Felder, oder per Weg/Bahn)' },
   schule:  { text: 'Schule erreichbar (10 Felder, oder per Weg/Bahn)' },
   schoen:  { text: 'Schöne Umgebung (🌸 30 in 3 Feldern)' },
-  wasser:  { text: 'Blick aufs Wasser (Teich, See oder Meer in 3 Feldern)' },
   laden:   { text: 'Ein Laden erreichbar (8 Felder, oder per Weg/Bahn)' },
   cafe:    { text: 'Café, Teeladen oder Eisdiele erreichbar (8 Felder, oder per Weg/Bahn)' },
   kultur:  { text: 'Kino, Theater, Museum … erreichbar (12 Felder, oder per Weg/Bahn)' },
@@ -667,7 +667,7 @@ const ITEM_TIPS = {
   offshore: 'Ins Meer setzen – direkt vor die Küste oder bis zu 6 Felder weiter draußen. 6 ⚡, mit Rotorblättern noch mehr.',
   pavillon: 'Große Deko mit viel Schönheit – schön im Park.',
   statue: 'Große Deko mit sehr viel Schönheit.',
-  graben: 'Teiche für Fischerhütten oder den Wasserblick der Glasvilla. Aufziehen = Fläche.',
+  graben: 'Teiche für Fischerhütten – oder einfach, weil Wasser schön ist. Aufziehen = Fläche.',
   riesenrad: 'Ein großes Bauprojekt (5×5): Stell die Baustelle hin und bau im Infofenster Abschnitt für Abschnitt. Jeder kostet etwa 15 Minuten deines Einkommens und viel Material.',
   sternwarte: 'Ein großes Bauprojekt (3×3): Baustelle hinstellen, dann Abschnitt für Abschnitt bauen – je etwa 20 Minuten Einkommen.',
   seebruecke: 'Vom Ufer aus ins Wasser stellen (das hinterste Feld an Land). Dann Abschnitt für Abschnitt bauen.',

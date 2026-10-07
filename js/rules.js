@@ -2634,7 +2634,6 @@ function wishMet(w, x, y) {
     }
     case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));
     case 'schoen': return beautyAround(x, y, 3) >= 30;
-    case 'wasser': return countAround(x, y, 3, isWater) > 0;
     default: return false;
   }
 }

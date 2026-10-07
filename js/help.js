@@ -57,7 +57,6 @@ const WISH_HELP = {
   park:    { name: 'Park oder Brunnen erreichbar', text: 'Ein Brunnen oder ein Park höchstens 4 Felder entfernt, oder über Wege verbunden. Einen Park legst du aus Parkrasen an und stellst Deko darauf (ab 4 Feldern mit 3 Deko).', build: ['brunnen', 'parkrasen'], term: 'park' },
   schule:  { name: 'Schule erreichbar', text: 'Eine Schule höchstens 10 Felder entfernt – oder über Wege/Bahn erreichbar.', build: ['schule'] },
   schoen:  { name: 'Schöne Umgebung', text: 'Rund ums Haus (3 Felder) müssen zusammen 🌸 30 Schönheit stehen. Blumenbeete, Bäume, Brunnen und andere Deko bringen Schönheit, laute Betriebe nehmen sie weg.', build: ['blumen', 'brunnen', 'baum'], term: 'schoenheit' },
-  wasser:  { name: 'Blick aufs Wasser', text: 'Ein Teich, See, Fluss oder das Meer höchstens 3 Felder entfernt. Einen Teich kannst du selbst graben.', build: ['graben'] },
   laden:   { name: 'Laden erreichbar', text: 'Irgendein Laden (Kiosk, Blumenladen, Friseur, Post …) höchstens 8 Felder entfernt – oder über Wege/Bahn erreichbar.', build: ['kiosk', 'blumenladen'] },
   cafe:    { name: 'Café erreichbar', text: 'Ein Café, Teeladen, Bubble Tea, Eisdiele, Konditorei oder Chocolaterie höchstens 8 Felder entfernt – oder über Wege/Bahn erreichbar.', build: ['cafe', 'eisdiele', 'teeladen'] },
   kultur:  { name: 'Kultur erreichbar', text: 'Ein Kino, Theater, Museum, eine Konzerthalle, ein Aquarium, Zoo oder Stadion höchstens 12 Felder entfernt – oder über Wege/Bahn erreichbar.', build: ['kino', 'theater', 'museum'] },

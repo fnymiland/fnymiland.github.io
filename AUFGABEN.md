@@ -1547,3 +1547,7 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
       Freund (`users/<uid>/bookStats`, Transaktion mit „u“ – zwei Geräte zählen nichts doppelt) und werden gelöscht
 - [x] Gästebuch höchstens 3 je Besucher und Tag auch in der Datenbank: Schlüssel `g_<uid>_<Tag>_<0–2>` (Regel); alte Schlüssel nur
       noch bis 14.10.2026 erlaubt (alte App-Versionen). Test: freundesbuch.test.js
+
+## Kleinigkeit: Glasvilla ohne „Blick aufs Wasser“
+- [x] Wunsch „wasser“ ganz gestrichen (HOUSE_STAGES, WISHES, Hilfe, Sprechblasen, Hinweise); Glasvilla wünscht sich nur noch Kultur
+      (dazu alle Wünsche der Stufen davor). Test: kristall.test.js

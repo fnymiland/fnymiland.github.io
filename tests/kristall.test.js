@@ -122,13 +122,11 @@ describe('Glasvilla', () => {
     expect(game("houseWishes(state.tiles.get('8,6'), 8, 6).next.name")).toBe('Glasvilla');
   });
 
-  it('wünscht sich Blick aufs Wasser – ein Teich reicht', () => {
+  it('braucht keinen Blick aufs Wasser mehr (gestrichen)', () => {
     villa();
     game('state.restore.kristall = 1');
-    expect(game("houseWishes(state.tiles.get('8,6'), 8, 6).list.map(w => w.id)")).toContain('wasser');
-    expect(game("wishMet('wasser', 8, 6)")).toBe(false);
-    game("state.terra.set('10,7', 'water'); recalc()");
-    expect(game("wishMet('wasser', 8, 6)")).toBe(true);
+    expect(game("houseWishes(state.tiles.get('8,6'), 8, 6).list.map(w => w.id)")).not.toContain('wasser');
+    expect(game("'wasser' in WISHES")).toBe(false);
   });
 
   it('Ausbau kostet Kristall, danach zeigt das Haus die Glasvilla', () => {
