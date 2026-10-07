@@ -115,8 +115,10 @@ function drawBushes(at, look, z, seed, id = null, col = 0) {
 function wilmerBush(m, look, z, r = 0.5, i = 0, id = null, col = 0) {
   // genau der Deko-Busch (gleiche Zeichnung, gleiche Größe decoScale) – so sieht die Hecke aus wie aneinandergereihte Büsche
   const [x, y] = edgeS(m[0], m[1], 0, z), ds = decoScale('busch') * 0.9, k = ds * z;   // wie drawSmallOne (kleine Deko: × 0,9)
-  g.save(); g.translate(x, y); g.scale(ds, ds);
-  try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, { col }); } finally { g.restore(); }   // Buschfarbe (Block 89)
+  if (!(SPRITES_ON && !SPRITE_PAINT && spriteSmall('busch', 0, x, y, z, 0, 0, 0, 0, col))) {   // weit weg: dasselbe Bildchen wie der Deko-Busch (Block 124)
+    g.save(); g.translate(x, y); g.scale(ds, ds);
+    try { drawObject('busch', 0, 0, z, 0, 0, 0, 1, { col }); } finally { g.restore(); }   // Buschfarbe (Block 89)
+  }
   if (look.lights) {                                               // Lichter (Block 86m): auf jedem Busch derselbe kleine Bogen vorn
     const lit = id ? edgeLit(id) : night > 0.15 && isLive();
     for (const [dx, dy] of [[-4.6, -6.2], [-1.6, -4.6], [1.6, -4.6], [4.6, -6.2]]) {

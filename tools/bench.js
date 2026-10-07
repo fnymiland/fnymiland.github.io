@@ -54,6 +54,7 @@ function benchFrame(z, x, y, night, mode = 'heute') {
   benchView(z, x, y, night);
   spriteForce = mode === 'live' ? false : null; spriteNoBudget = mode === 'bildchen';
   benchWarm(() => BENCH_NOW, mode === 'heute' ? 300 : 3);
+  if (typeof prepShown !== 'undefined') prepShown = -1e9;          // „Insel wird gezeichnet“ nicht im Vergleichsbild
   R(BENCH_NOW);
   spriteForce = null; spriteNoBudget = false;
   return ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);

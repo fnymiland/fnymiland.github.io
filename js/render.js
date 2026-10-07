@@ -218,9 +218,16 @@ let spriteSpent = 0, spriteMade = 0, groundSpent = 0;
 // Aufholen (Block 124): Fehlten im letzten Bild viele Bildchen, wird ohnehin fast alles live gezeichnet – ein Bildchen zu malen kostet
 // kaum mehr als dasselbe live. Dann darf mehr gemalt werden (PAINT_CATCH), sonst ruckelt es nachts nach Laden/Zoomen viele Sekunden
 const CATCH_MISS = 30, PAINT_CATCH = 40, SPRITE_CATCH_MAX = 160;
-let spriteCatch = false;
-const paintBudget = () => spriteCatch ? PAINT_CATCH : PAINT_MS;
-const spriteOver = () => spriteMade > 0 && (spriteMade >= (spriteCatch ? SPRITE_CATCH_MAX : SPRITE_MAX) || spriteSpent + groundSpent >= paintBudget());
+// Vorbereiten (Block 124): Fehlt fast alles (Start, Sprung, weit rausgezoomt), ruckelt es ohnehin – dann richtig Gas geben und
+// oben „Insel wird gezeichnet …“ zeigen, bis es wieder geht (prepShown)
+const PREP_MISS = 250, PAINT_PREP = 150, SPRITE_PREP_MAX = 1000;
+let spriteCatch = false, spritePrep = false, prepShown = 0;
+const paintBudget = () => spritePrep ? PAINT_PREP : spriteCatch ? PAINT_CATCH : PAINT_MS;
+const spriteOver = () => spriteMade > 0 && (spriteMade >= (spritePrep ? SPRITE_PREP_MAX : spriteCatch ? SPRITE_CATCH_MAX : SPRITE_MAX) || spriteSpent + groundSpent >= paintBudget());
+// Feste Zoomstufen (Block 124): Bildchen und Boden entstehen nur in Stufen je 20 % (… 0.64, 0.8, 1, 1.25 …), immer in der
+// nächstgrößeren und beim Einsetzen leicht verkleinert – Zoomen innerhalb einer Stufe malt nichts neu (vorher jede Zwischenstufe alles)
+const ZOOM_STEP = 0.8;
+const zoomStep = z => Math.pow(ZOOM_STEP, Math.floor(Math.log(z) / Math.log(ZOOM_STEP) + 1e-9));
 // Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
 // fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
 const SPRITE_STATS = { miss: 0, made: 0 };
@@ -416,7 +423,7 @@ function paintNight(e) {
 }
 function putNight(n, cx, cy, z) {
   const r = z / n.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
-  if (n.erase.c) { g.save(); g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.restore(); }
+  if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.globalCompositeOperation = 'source-over'; }   // ohne save/restore (teuer, je Bildchen)
   if (n.c) g.drawImage(n.c, ...at(n));
   if (n.light.c) {
     const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + n.light.c.width;   // Streifen großer Gebäude: einmal
@@ -465,11 +472,12 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
   const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
-  const e = getSprite(key, z, () => {
+  const zs = zoomStep(z);                                                 // gemalt in der Zoomstufe darüber
+  const e = getSprite(key, zs, () => {
     const pad = SPRITE_PAD[t.b] || [0, 0];
-    const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds, up = spriteTop(t.b, w, h) * z * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * z * ds;
-    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
-    if (sp) sp.z = z;
+    const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * zs * ds, up = spriteTop(t.b, w, h) * zs * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * zs * ds;
+    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, zs, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
+    if (sp) sp.z = zs;
     return sp;
   });
   if (!e) return false;
@@ -482,9 +490,10 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
   const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}|${decoVariant(b, x, y, slot)}`;   // col: Busch-/Schmuckfarbe, form: Form (Block 106); Variante statt Platz (Block 124)
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
-  const e = getSprite(key, z, () => {
-    const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form }); });
-    if (sp) sp.z = z;
+  const zs = zoomStep(z);
+  const e = getSprite(key, zs, () => {
+    const sp = paintSprite(26 * zs * s, 90 * zs * s, 12 * zs * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, zs, now, x, y, 1, { rot, slot, col, form }); });
+    if (sp) sp.z = zs;
     return sp;
   });
   if (!e) return false;
@@ -641,7 +650,7 @@ let hoverKey = '', hoverSince = 0;
 const HOVER_CALM = 120;                // ms Ruhe, bevor die Vorschau (+Taler, +Einwohner …) rechnet
 const GROUND_MS = 8, GROUND_Z_MAX = 3;            // Malzeit je Bild für veraltete Boden-Bilder (groundSpent, zusammen mit den Bildchen PAINT_MS)
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
-  const want = Math.min(z, GROUND_Z_MAX) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert
+  const want = zoomStep(Math.min(z, GROUND_Z_MAX)) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert; feste Zoomstufen (Block 124)
   const order = [];
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
@@ -661,7 +670,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       let e = groundCache.get(ck);
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
-      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < (spriteCatch ? PAINT_CATCH - 10 : GROUND_MS)))) {
+      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < (spritePrep ? PAINT_PREP - 30 : spriteCatch ? PAINT_CATCH - 10 : GROUND_MS)))) {
         const t0 = performance.now(), n = renderGroundChunk(cx, cy, want);
         groundSpent += performance.now() - t0;
         if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
@@ -846,6 +855,8 @@ function render(now) {
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < SPRITE_FROM && isLive();
   spriteCatch = SPRITE_STATS.miss >= CATCH_MISS;                         // viel fehlte im letzten Bild: aufholen
+  spritePrep = SPRITE_STATS.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten
+  if (spritePrep) prepShown = performance.now();
   SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0;
   spriteZooming = now - lastZoomChange < 250;
   spriteDeadline = performance.now() + SPRITE_MS;
@@ -1166,6 +1177,7 @@ function render(now) {
   for (const s of fallenStars) drawFallenStar(s, z, now);
   if (!(SHOWCASE && SHOWCASE.quiet)) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨
   drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
+  if (performance.now() - prepShown < 500) pill('✨ Insel wird gezeichnet …', W / 2, 92, 'rgba(255,250,240,0.92)', '#6b4f3a', 14, true);   // Vorbereiten (Block 124)
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“ (antippbar: pillHits)
   pillHits.length = 0;

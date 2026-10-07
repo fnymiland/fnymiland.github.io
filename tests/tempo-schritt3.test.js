@@ -36,7 +36,7 @@ describe('Malzeit-Budget (Block 124 Schritt 3)', () => {
     });
     expect(runs[0].made).toBeGreaterThan(0);                                        // vorher: Frist längst vorbei, nichts gemalt
     expect(runs[runs.length - 1]).toMatchObject({ miss: 0, made: 0 });
-    expect(game(`[...objSprites.values()].filter(e => e.used === frameNo).every(e => Math.abs(cam.z / e.z - 1) < 0.02)`)).toBe(true);
+    expect(game(`[...objSprites.values()].filter(e => e.used === frameNo).every(e => Math.abs(zoomStep(cam.z) / e.z - 1) < 0.02)`)).toBe(true);
   });
   it('höchstens SPRITE_MAX neue Bildchen je Bild (grobe Uhr: Malen kostet scheinbar nichts)', () => {
     game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
@@ -108,6 +108,37 @@ describe('Was weit weg still steht (Block 124, Entscheidung E1)', () => {
     game('spriteNoBudget = true; render(1e6); spriteNoBudget = false');
     const keys = game('[...objSprites.keys()]');
     for (const b of ['fz_karussell', 'wasserkraft', 'schiene']) expect(keys.some(k => k.includes(`|${b}|`))).toBe(false);
+  });
+});
+
+describe('Zoomstufen und Vorbereiten (Block 124)', () => {
+  it('zoomStep: nächstgrößere Stufe je 20 % – nie kleiner als der Zoom, höchstens 25 % größer', () => {
+    for (const z of [0.2, 0.33, 0.45, 0.5, 0.64, 0.7, 0.8, 0.95, 1, 1.3, 2.6]) {
+      const s = game(`zoomStep(${z})`);
+      expect(s).toBeGreaterThanOrEqual(z - 1e-9);
+      expect(s / z).toBeLessThan(1.25 + 1e-9);
+    }
+    expect(game('zoomStep(0.8)')).toBeCloseTo(0.8);
+    expect(game('zoomStep(1)')).toBeCloseTo(1);
+  });
+  it('Zoomen innerhalb einer Stufe malt kein Bildchen und keinen Boden neu', () => {
+    game("for (let i = 0; i < 6; i++) state.tiles.set((3 + i * 2) + ',6', { b: 'schule', lvl: 1 }); recalc()");
+    view(0.7);
+    game('spriteNoBudget = true; render(1e6); render(1e6); spriteNoBudget = false');
+    const n0 = game('objSprites.size');
+    expect(n0).toBeGreaterThan(0);
+    const r = [0.68, 0.66, 0.65].map(z => { view(z); game('render(1e6)'); return game('SPRITE_STATS.made'); });
+    expect(r).toEqual([0, 0, 0]);
+    expect(game('objSprites.size')).toBe(n0);
+  });
+  it('Vorbereiten: fehlte fast alles, viel größeres Budget und der Hinweis oben', () => {
+    game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
+    view(0.5);
+    const r = withClock("globalThis.__ps = paintSprite; paintSprite = (...a) => { __t += 3; return __ps(...a); }", () => {
+      try { game('SPRITE_STATS.miss = 1000'); return [frame(), game('spritePrep')]; } finally { game('paintSprite = globalThis.__ps'); }
+    });
+    expect(r[1]).toBe(true);
+    expect(r[0].made).toBeGreaterThan(game('Math.floor(PAINT_CATCH / 3) + 1'));
   });
 });
 
