@@ -2173,8 +2173,24 @@ function drawHelixTurbine(cx, cy, z, now) {
     circle(cx, cy - (H + 1.2) * z, 1.1 * z, '#ff4a3d'); glowQuad([[cx - 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - (H + 2) * z], [cx + 1 * z, cy - H * z], [cx - 1 * z, cy - H * z]], 12 * z);
   }
 }
+const ICON_SPRITES = new Map();               // weit weg (Block 124): ✨/🐌/💭 als fertiges Bildchen je Zoomstufe statt Kreise + Emoji-Schrift
+let iconPaint = false;
 function drawStatusIcon(cx, cy, z, icon, now) {
   const bob = Math.sin(now / 300) * 1.5 * z, x = cx - 10 * z, y = cy - 34 * z + bob, r = 6.5 * z;
+  if (SPRITES_ON && g === ctx && !iconPaint) {
+    const zs = zoomStep(z), key = icon + '|' + zs + '|' + DPR;
+    let c = ICON_SPRITES.get(key);
+    if (!c) {
+      const R = Math.ceil(8 * zs + 2), cv = document.createElement('canvas'), cx2 = cv.getContext('2d');
+      cv.width = cv.height = Math.ceil(2 * R * DPR);
+      if (cx2) {
+        const prev = g; g = cx2; iconPaint = true;
+        try { g.setTransform(DPR, 0, 0, DPR, R * DPR, R * DPR); drawStatusIcon(10 * zs, 34 * zs, zs, icon, 0); } finally { g = prev; iconPaint = false; }
+        c = { c: cv, R, zs }; ICON_SPRITES.set(key, c);
+      }
+    }
+    if (c) { const k = z / c.zs; g.drawImage(c.c, x - c.R * k, y - c.R * k, 2 * c.R * k, 2 * c.R * k); return; }
+  }
   circle(x, y + 1.5, r, 'rgba(107,79,58,0.3)');
   circle(x, y, r, '#fffaf0');
   g.font = `${8 * z}px system-ui, sans-serif`;

@@ -500,6 +500,27 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   putSprite(e, sx, sy, z);
   return true;
 }
+// Linien weit weg (Block 124): je Feld die hinteren Kanten samt Torpfeilern als ein Bildchen – live waren es bei großen Welten
+// über 5.000 Striche/Flächen je Bild (Heckenkugeln, Zaunlatten, Pfosten). Gemalt über EDGE_PROJ um die Feldmitte (Türchen stehen
+// dann still). Eigenes Bildchen je Feld, neu mit groundVersion (Linien ändern sich nur über recalc)
+function spriteEdges(x, y, px, py, z, now) {
+  if (!state.edges.size || !edgeFieldsHas(x, y)) return true;            // nichts zu zeichnen
+  const lit = night > 0.15 && isLive() ? 1 : 0, zs = zoomStep(z);
+  const key = `edges|${x},${y}|${FOG ? 1 : 0}|${lit}|${groundVersion}`;
+  const fog = FOG;
+  const e = getSprite(key, zs, () => {
+    const proj = (u, v) => ({ x: ((u - x) - (v - y)) * TW / 2 * zs, y: ((u - x) + (v - y)) * TH / 2 * zs });
+    const sp = paintSprite((TW * 0.75 + 24) * zs, (TH + 120) * zs, (TH * 0.5 + 24) * zs, () => {
+      const prev = EDGE_PROJ, pf = FOG; EDGE_PROJ = proj; FOG = fog;
+      try { drawEdgesAt(x, y, zs, now); } finally { EDGE_PROJ = prev; FOG = pf; }
+    });
+    if (sp) sp.z = zs;
+    return sp;
+  });
+  if (!e) return false;
+  putSprite(e, px, py, z);
+  return true;
+}
 function spriteHousekeeping() {
   if (frameNo % 120 === 0) for (const [k, e] of objSprites) { if (frameNo - e.used > 600) dropSprite(k); else if (e.night && !nightFull()) freeNight(e); }   // Nachtbilder nur nachts
 }
@@ -655,6 +676,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
   const stale = e => { const ratio = want / e.scale; return (!zooming && Math.abs(ratio - 1) > 0.02) || ratio < 0.6 || ratio > 1.6; };
+  const waveList = [];
   for (const [cx, cy] of order) {
     const b = chunkBounds(cx, cy);
     const sx = (b.left - cam.x) * z + W / 2, sy = (b.top - cam.y) * z + H / 2;
@@ -680,10 +702,11 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       img = e.c;
     }
     g.drawImage(img, sx, sy, b.w * z, b.h * z);
-    for (const [x, y] of info.waves) drawWave(x, y, toScreen(x, y), z, now);
+    for (const [x, y] of info.waves) waveList.push(x, y);
   }
+  drawWaves(waveList, z, now);                                           // alle auf einmal, über den Grundstücken (wie vorher je Grundstück danach)
   if (frameNo % 60 === 0) {
-    for (const [ck, e] of groundCache) if (frameNo - e.used > 120) { groundCache.delete(ck); freeCanvas(e.c); }
+    for (const [ck, e] of groundCache) if (frameNo - e.used > 900) { groundCache.delete(ck); freeCanvas(e.c); }   // länger behalten: beim Zurückschieben schon da
     if (seaInfo.size > 400) seaInfo.clear();
   }
 }
@@ -1043,7 +1066,7 @@ function render(now) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
     const owned = ownedTile(x, y);
     FOG = !owned;
-    drawEdgesAt(x, y, z, now);                                  // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41)
+    if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) drawEdgesAt(x, y, z, now);   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
     const k = x + ',' + y;
     // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
     const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;

@@ -116,14 +116,18 @@ function box(cx, cy, a, b, h, wall, roof, roofH) {
 const FLOWER_COLS = ['#ff8fb1', '#fff27a', '#ffffff', '#c49bff', '#ff9f5a'];
 
 const hasWave = (x, y) => hash(x, y, 9) < 0.25;
-function drawWave(x, y, p, z, now) {
+function drawWave(x, y, p, z, now, batch) {
   const off = DEPTH * z * 0.7, ph = now / 900 + hash(x, y, 10) * 20;
-  g.strokeStyle = C('#c4f0f8');
-  g.lineWidth = 1.6 * z;
-  g.lineCap = 'round';
-  g.beginPath();
+  if (!batch) { g.strokeStyle = C('#c4f0f8'); g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath(); }
   const wx = p.x + Math.sin(ph) * 5 * z, wy = p.y + off + (hash(x, y, 11) - 0.5) * 10 * z;
   g.moveTo(wx - 5 * z, wy); g.quadraticCurveTo(wx, wy - 2.5 * z, wx + 5 * z, wy);
+  if (!batch) g.stroke();
+}
+// alle Wellen eines Bilds als ein Strich (Block 124): vorher je Welle ein eigener (weit weg über 1.600 je Bild); gleiche Farbe, deckend
+function drawWaves(list, z, now) {
+  if (!list.length) return;
+  g.strokeStyle = C('#c4f0f8'); g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath();
+  for (let i = 0; i < list.length; i += 2) { const x = list[i], y = list[i + 1]; drawWave(x, y, toScreen(x, y), z, now, true); }
   g.stroke();
 }
 // noWaves: für den Boden-Zwischenspeicher (Wellen bewegen sich und werden jedes Bild extra gezeichnet)

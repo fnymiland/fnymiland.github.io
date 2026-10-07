@@ -363,7 +363,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     auch die Lichtmaske (`maskTodo`). Fehlen ≥ `PREP_MISS`, gilt `PAINT_PREP` und oben steht „Insel wird gezeichnet …“ (`prepShown`).
     **Feste Zoomstufen** (`zoomStep`, je 20 %): Bildchen und Boden immer in der nächstgrößeren Stufe malen (`sp.z = zs`), beim Einsetzen
     mit z / e.z verkleinern – nie wieder mit dem genauen Zoom malen (sonst malt jede Zwischenstufe alles neu). Heckenbüsche weit weg
-    über das Deko-Bildchen des Buschs (`wilmerBush`). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC
+    über das Deko-Bildchen des Buschs (`wilmerBush`). **Weit weg zählt die Zahl der Zeichenbefehle** (am PC je Befehl einige µs): Linien je Feld als
+    Bildchen (`spriteEdges`, über `EDGE_PROJ` um die Feldmitte, Schlüssel mit `groundVersion`), alle Wellen ein Strich (`drawWaves`),
+    ✨/🐌 als Bildchen (`ICON_SPRITES`). Neues, das weit weg in Mengen vorkommt, nie Strich für Strich live zeichnen (Zähler: count.js-Muster). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC
     5–10 ms je Lesen, in der Cloud ohne Grafikkarte unsichtbar); Test in tests/tempo.test.js.
     Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht kommen als Nachtbild (`paintNight`: noch einmal gemalt wie live, Lichter
     stanzen sofort = Wandschein), davor ein Löschbild (Umriss + Schein auf Dahinterliegendes), das Lichtbild legt drawNight hinter die
