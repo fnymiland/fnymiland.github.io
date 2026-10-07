@@ -1570,3 +1570,22 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [x] Boden: ein Grundstück knapp außerhalb des Bildes vorab malen, wenn Zeit übrig ist
 - [ ] Offen (→ Block 144 WebGL): Grundlast ~37–41 ms bei Full HD (3.200 Bildchen kleben je Bild), Zoomen nachts 60–140 ms
       (jedes neu sichtbare Ding braucht Bildchen + Nachtbild), Verschieben nachts bis ~90 ms
+
+## Block 144: WebGL weit weg (begonnen 07.10.2026, weiter am nächsten Tag)
+Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwelt, Zoom 0.6), nachts beim Zoomen 60–140 ms.
+- [x] Schnelltest im Browser: dieselben 4.464 drawImage per WebGL2 (jedes Bildchen eigene Textur, kein Atlas) 6,7 ms statt 28,5 ms
+      Canvas2D; Bild max. 15/255 Abweichung, keine „deutliche“ (ohne Streifen-Clip). Hochladen aller 1.209 Bildchen einmalig ~200 ms.
+      Grenzen (Mac/Chrome-Fenster): MAX_TEXTURE_SIZE 16384, 16 Textur-Einheiten; alle Bildchen < 512 px
+- [x] Kartierung (3 von 5 Prüfern, tools/webgl-kartierung.txt): Reihenfolge, Nachtlicht (Blendfunktionen), Plattform
+- [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
+      wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
+      drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als
+      Atlas-Rechtecke (LINEAR ohne Mipmaps, highp, UNPACK_PREMULTIPLY_ALPHA), Streifen großer Gebäude als clipX je Instanz,
+      Live-Teile (Figuren, Züge, Schiffe, Fahrgeschäfte, Wellen, Himmel, Geister) je Bild in eine 2D-Ablage malen, einmal
+      hochladen, als Rechteck an ihrer Stelle; punchGlow als Radier-Instanz. Nacht: source-over (ONE, 1−SRC_A), destination-out
+      (ZERO, 1−SRC_A), source-atop (DST_A, 1−SRC_A | ZERO, ONE), destination-over (1−DST_A, ONE); Bildchen + Löschbild in einem
+      Shader (S über D, dann E radieren) statt Mischart-Wechsel. Nach drawNight bleibt alles 2D-Overlay (Feuerwerk 'lighter' klären)
+- [ ] Offen zu klären: Hochladen in Safari (evtl. Rücklesen – nur am Bildanfang, aus cropSprite-Pixeln), iPad-Speicher (Leinwände
+      nach Upload freigeben?), Zoom 1–2 (SPRITES_NEAR: viel live) evtl. 2D lassen, Tests (jsdom ohne WebGL → Rückfall immer)
+- [ ] Gefundene Fehler (unabhängig von WebGL): Sternschnuppe stanzt nachts NACH drawNight ein Loch (render.js drawFallenStar →
+      glowQuad); drawNight: circle() setzt fillStyle ohne `fill` nachzuführen → warmer Schein nach blauem Licht wird blau
