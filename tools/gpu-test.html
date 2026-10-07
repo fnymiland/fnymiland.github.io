@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grafik-Test</title>
+<style>
+  body { margin: 0; font: 15px system-ui, sans-serif; background: #f6efe3; color: #4a3828; }
+  #out { position: fixed; left: 12px; top: 12px; right: 12px; background: rgba(255,250,240,0.95); padding: 12px 16px; border-radius: 12px; white-space: pre-wrap; z-index: 2; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="out">Grafik-Test läuft … bitte nichts anfassen (ca. 20 Sekunden)</div>
+<canvas id="c"></canvas>
+<script>
+// Block 124: misst, was am PC (Windows/Chrome) teuer ist – eigene Leinwand je Bildchen oder ein Sammelbild, neue Leinwände anlegen
+const out = document.getElementById('out'), cv = document.getElementById('c');
+const DPR = window.devicePixelRatio || 1, W = innerWidth, H = innerHeight;
+cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+const g = cv.getContext('2d');
+const N = 1500, S = 48, log = [];
+const say = t => { log.push(t); out.textContent = log.join('\n'); };
+function art(x, i) {                       // kleines Häuschen
+  x.fillStyle = `hsl(${(i * 37) % 360},60%,75%)`; x.fillRect(10, 20, 28, 22);
+  x.fillStyle = `hsl(${(i * 53) % 360},55%,45%)`; x.beginPath(); x.moveTo(6, 22); x.lineTo(24, 6); x.lineTo(42, 22); x.fill();
+  x.fillStyle = '#ffd873'; x.fillRect(16, 28, 6, 6); x.fillRect(27, 28, 6, 6);
+}
+const frames = (n, draw) => new Promise(ok => {      // Zeit von Bild zu Bild (inkl. Grafikkarte), Mittel über n Bilder
+  let i = 0, t0 = 0, js = 0;
+  const f = () => {
+    const a = performance.now(); draw(); js += performance.now() - a;
+    if (i === 3) t0 = performance.now();
+    if (++i < n + 3) requestAnimationFrame(f); else ok({ frame: (performance.now() - t0) / n, js: js / (n + 3) });
+  };
+  requestAnimationFrame(f);
+});
+const pos = [];
+for (let i = 0; i < N; i++) pos.push([Math.random() * (W - S), Math.random() * (H - S)]);
+(async () => {
+  await new Promise(r => setTimeout(r, 300));
+  say(`Bildschirm ${W}×${H}, DPR ${DPR}, ${navigator.userAgent.match(/(Chrome|Firefox|Safari)\/[\d.]+/g)?.join(' ') || ''}`);
+  // 1) viele eigene Leinwände anlegen
+  let t = performance.now();
+  const own = [];
+  for (let i = 0; i < N; i++) { const c = document.createElement('canvas'); c.width = S * DPR; c.height = S * DPR; const x = c.getContext('2d'); x.scale(DPR, DPR); art(x, i); own.push(c); }
+  const tMake = performance.now() - t;
+  // 2) Sammelbild: alle auf einer Leinwand
+  const per = Math.floor(4096 / (S * DPR)), atlas = document.createElement('canvas');
+  atlas.width = Math.min(4096, per * S * DPR); atlas.height = Math.ceil(N / per) * S * DPR;
+  const ax = atlas.getContext('2d');
+  t = performance.now();
+  for (let i = 0; i < N; i++) { ax.setTransform(DPR, 0, 0, DPR, (i % per) * S * DPR, Math.floor(i / per) * S * DPR); art(ax, i); }
+  const tAtlas = performance.now() - t;
+  say(`Anlegen: ${N} eigene Leinwände ${tMake.toFixed(0)} ms · ein Sammelbild ${tAtlas.toFixed(0)} ms`);
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const bg = () => { g.fillStyle = '#6fcbe2'; g.fillRect(0, 0, W, H); };
+  // erst einmal alles zeigen (erstes Hochladen zur Grafikkarte)
+  await frames(5, () => { bg(); for (let i = 0; i < N; i++) g.drawImage(own[i], pos[i][0], pos[i][1], S, S); });
+  const r0 = await frames(1, () => bg());
+  const rEmpty = await frames(30, () => bg());
+  const rOwn = await frames(30, () => { bg(); for (let i = 0; i < N; i++) g.drawImage(own[i], pos[i][0], pos[i][1], S, S); });
+  const rAtlas = await frames(30, () => { bg(); for (let i = 0; i < N; i++) g.drawImage(atlas, (i % per) * S * DPR, Math.floor(i / per) * S * DPR, S * DPR, S * DPR, pos[i][0], pos[i][1], S, S); });
+  const rNight = await frames(30, () => { bg(); for (let i = 0; i < N; i++) { g.globalCompositeOperation = 'destination-out'; g.drawImage(own[i], pos[i][0], pos[i][1], S, S); g.globalCompositeOperation = 'source-over'; g.drawImage(own[i], pos[i][0], pos[i][1], S, S); } });
+  say(`Je Bild (ms, mit Grafikkarte · davon Rechnen):\n  leer                 ${rEmpty.frame.toFixed(1)} · ${rEmpty.js.toFixed(1)}\n  ${N} eigene Leinwände  ${rOwn.frame.toFixed(1)} · ${rOwn.js.toFixed(1)}\n  ${N} aus Sammelbild    ${rAtlas.frame.toFixed(1)} · ${rAtlas.js.toFixed(1)}\n  Nacht (Löschen+Bild) ${rNight.frame.toFixed(1)} · ${rNight.js.toFixed(1)}`);
+  // 3) Bodenbilder: neue mittelgroße Leinwand anlegen, bemalen, einsetzen (wie beim Verschieben)
+  const B = 20, BW = 400, BH = 200;
+  const rNew = await frames(10, () => { bg(); for (let k = 0; k < B; k++) { const c = document.createElement('canvas'); c.width = BW * DPR; c.height = BH * DPR; const x = c.getContext('2d'); x.scale(DPR, DPR);
+    for (let j = 0; j < 60; j++) { x.fillStyle = `hsl(${(j * 29 + k) % 360},50%,60%)`; x.beginPath(); x.moveTo(j * 7, 0); x.lineTo(j * 7 + 30, 100); x.lineTo(j * 7, 200); x.fill(); }
+    g.drawImage(c, (k % 5) * 300, Math.floor(k / 5) * 160, BW, BH); c.width = 0; } });
+  const reuse = document.createElement('canvas'); reuse.width = BW * DPR; reuse.height = BH * DPR; const rx = reuse.getContext('2d');
+  const rReuse = await frames(10, () => { bg(); for (let k = 0; k < B; k++) { rx.setTransform(1, 0, 0, 1, 0, 0); rx.clearRect(0, 0, reuse.width, reuse.height); rx.scale(DPR, DPR);
+    for (let j = 0; j < 60; j++) { rx.fillStyle = `hsl(${(j * 29 + k) % 360},50%,60%)`; rx.beginPath(); rx.moveTo(j * 7, 0); rx.lineTo(j * 7 + 30, 100); rx.lineTo(j * 7, 200); rx.fill(); }
+    g.drawImage(reuse, (k % 5) * 300, Math.floor(k / 5) * 160, BW, BH); } });
+  // 4) Zurücklesen mitten im Bild
+  const rRead = await frames(10, () => { bg(); for (let k = 0; k < 10; k++) { g.fillRect(k, k, 2, 2); g.getImageData(k, k, 4, 4); } });
+  say(`${B} Bodenbilder je Bild: neue Leinwände ${rNew.frame.toFixed(1)} ms · dieselbe Leinwand ${rReuse.frame.toFixed(1)} ms\n10× Zurücklesen je Bild: ${rRead.frame.toFixed(1)} ms\n\nFertig – bitte ein Foto/Screenshot davon schicken.`);
+})().catch(e => say('Fehler: ' + e.message));
+</script>
+</body>
+</html>
