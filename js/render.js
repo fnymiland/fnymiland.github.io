@@ -207,14 +207,24 @@ function renderGroundChunk(cx, cy, scale) {
 // Einsetzen gestanzt. Neu gezeichnet wird nur so viel, wie ins Zeitbudget je Bild passt – der Rest wie bisher.
 // Nah dran (z ≥ SPRITE_FROM) zeichnet alles live, mit allen Bewegungen.
 // ---------------------------------------------------------------------------
-const SPRITE_FROM = 1.0, SPRITE_MS = 6;
+const SPRITE_FROM = 1.0, SPRITE_MS = 6, PAINT_MS = 10, SPRITE_MAX = 40;
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
 let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
+// Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,
+// mindestens ein Bildchen, höchstens SPRITE_MAX (die Uhr in Safari ist grob). Vorher galt eine Frist ab Bildanfang: In großen
+// Welten war sie verbraucht, bevor das erste Gebäude drankam – dann entstand nie ein Bildchen, und alles wurde live gezeichnet.
+// Nachts vorerst noch die alte Frist (Nachtbildchen sind teuer, Schritt 4)
+let spriteSpent = 0, spriteMade = 0, groundSpent = 0;
+const spriteOver = () => night > 0.15 ? performance.now() > spriteDeadline
+  : spriteMade > 0 && (spriteMade >= SPRITE_MAX || spriteSpent + groundSpent >= PAINT_MS);
 // Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
 // fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
 const SPRITE_STATS = { miss: 0, made: 0 };
 let spriteForce = null, spriteNoBudget = false;
-const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
+// immer live: was sich auch von weitem sichtbar dreht (Leuchtturm: Strahl, Block 83; Fahrgeschäfte, Block 124) und Schienen
+// (zeichnen hier nichts außer dem Bahnübergang, und der legt seine Vorderseite über die Züge, afterMovers)
+const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'wasserkraft', 'leuchtturm', 'karussell',
+  'fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser', 'schiene']);
 function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 70;              // Baugerüste ragen etwas höher (Block 84d)
   if (b === 'leuchtturm') return 280;                    // Leuchtturm-Kap (Block 83)
@@ -225,57 +235,71 @@ const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite 
 // Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
 function getSprite(key, z, make) {
   let e = objSprites.get(key);
-  const ratio = e ? z / e.z : 0;
-  const fresh = e && (spriteZooming ? ratio > 0.6 && ratio < 1.6 : Math.abs(ratio - 1) < 0.02);
+  const ratio = e ? z / e.z : 0, near = e && ratio > 0.6 && ratio < 1.6;
+  const fresh = e && (spriteZooming ? near : Math.abs(ratio - 1) < 0.02);
   if (!fresh) {
-    if (!spriteNoBudget && performance.now() > spriteDeadline) { if (e && ratio > 0.6 && ratio < 1.6) return (e.used = frameNo, e); SPRITE_STATS.miss++; return null; }
-    const old = e;
-    e = make(); SPRITE_STATS.made++;
-    if (!e) { SPRITE_STATS.miss++; return old && ratio > 0.6 && ratio < 1.6 ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
+    if (!spriteNoBudget && spriteOver()) { if (near) return (e.used = frameNo, e); SPRITE_STATS.miss++; return null; }   // ähnlicher Zoom: das alte noch
+    const old = e, t0 = performance.now();
+    e = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+    if (!e) { SPRITE_STATS.miss++; return near ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
     if (old && old.used !== frameNo) { freeCanvas(old.c); if (old.mask) freeCanvas(old.mask.c); }   // ersetzt (neuer Zoom)
     objSprites.set(key, e);
   }
   e.used = frameNo;
   return e;
 }
-// Bildchen malen (Block 124: danach auf den Inhalt zugeschnitten – sie bestanden zu über 80 % aus leerem Rand, Speicher auf dem
-// iPad). Jedes Bildchen auf einer frischen Leinwand, die nur einmal gelesen und sofort freigegeben wird: Eine wiederverwendete
+// Bildchen malen. Block 124: danach auf den Inhalt zugeschnitten – sie bestanden zu über 80 % aus leerem Rand (Speicher auf dem
+// iPad). Jedes Bildchen auf einer frischen Leinwand, die nur einmal gelesen und dann freigegeben wird: Eine wiederverwendete
 // Leinwand, aus der oft gelesen wird, stellt Chrome auf den Prozessor um (oder willReadFrequently) – dann sind Kanten anders
-// geglättet und das Bild nicht mehr gleich. Leer: c = null. Kein Speicher (getContext null): null, dann wird live gezeichnet
+// geglättet und das Bild nicht mehr gleich. Kein Speicher (getContext null): null, dann wird live gezeichnet
 function paintSprite(halfW, up, down, drawFn) {
+  if (SPRITE_PAINT) return null;                                         // nie verschachtelt (das innere würde live ins äußere gezeichnet)
   const nw = Math.max(1, Math.ceil(2 * halfW * DPR)), nh = Math.max(1, Math.ceil((up + down) * DPR));
   const c = document.createElement('canvas');
   c.width = nw; c.height = nh;
   const cx = c.getContext('2d');
   if (!cx) return null;
-  const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 };
+  const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 }, am = afterMovers.length;
   g = cx;
-  g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR);
   GLOW_SINK = sink; GLOW_ATLAS = atlas; SPRITE_PAINT = true;
   let mask;
-  try { drawFn(); mask = lightMask(c, sink, atlas); } finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; }
-  // knapp zuschneiden (Alpha > 0, 1 Punkt Rand)
+  try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); mask = lightMask(c, sink, atlas); }
+  finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; afterMovers.length = am; }   // im Bildchen nichts über die Fahrzeuge legen
+  const e = { c, ox: halfW, oy: up, glows: sink, mask };
+  spriteCrops.push(e);
+  return e;
+}
+// Zuschneiden gesammelt am Anfang des nächsten Bilds (Block 124): Lesen aus einer Leinwand wartet, bis die Grafikkarte alles
+// fertig hat, was vorher bestellt wurde – mitten im Bild rund 10 ms, am Bildanfang kaum etwas, und jedes weitere Lesen danach ist
+// billig. Bis dahin wird das Bildchen ungeschnitten benutzt (gleiches Bild). Knapp: Alpha > 0, 1 Punkt Rand. Leer: c = null
+const spriteCrops = [];
+function cropSprites() {
+  for (const e of spriteCrops) cropSprite(e);
+  spriteCrops.length = 0;
+}
+function cropSprite(e) {
+  const c = e.c;
+  if (!c || !c.width || !c.height) return;                               // inzwischen freigegeben
+  const nw = c.width, nh = c.height;
   let img = null;
-  try { img = cx.getImageData(0, 0, nw, nh); } catch (e) { img = null; }
+  try { img = c.getContext('2d').getImageData(0, 0, nw, nh); } catch (err) { img = null; }
   const d = img && img.data;
+  if (!d) return;                                                         // ohne Pixel (Test): ungeschnitten
   let x0 = nw, y0 = nh, x1 = -1, y1 = -1;
-  if (!d) { x0 = 0; y0 = 0; x1 = nw - 1; y1 = nh - 1; }                     // ohne Pixel (Test): ganze Fläche
-  else for (let y = 0; y < nh; y++) { const row = y * nw * 4; for (let x = 0; x < nw; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
+  for (let y = 0; y < nh; y++) { const row = y * nw * 4; for (let x = 0; x < nw; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
   let out = null;
   if (x1 >= 0) {
     x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(nw - 1, x1 + 1); y1 = Math.min(nh - 1, y1 + 1);
-    if (x0 === 0 && y0 === 0 && x1 === nw - 1 && y1 === nh - 1) out = c;
-    else {
-      out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
-      const ox = out.getContext('2d');
-      if (!ox) return null;
-      ox.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
-    }
+    if (x0 === 0 && y0 === 0 && x1 === nw - 1 && y1 === nh - 1) return;   // füllt die ganze Fläche
+    out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+    const ox = out.getContext('2d');
+    if (!ox) return;                                                      // kein Speicher: ungeschnitten weiter
+    ox.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
   } else { x0 = 0; y0 = 0; }
-  if (out !== c) c.width = c.height = 0;                                   // große Leinwand gleich freigeben
+  freeCanvas(c);                                                          // große Leinwand gleich freigeben
   const sx = x0 / DPR, sy = y0 / DPR;
-  if (sx || sy) { for (const gl of sink) gl.q = gl.q.map(([x, y]) => [x - sx, y - sy]); if (mask) { mask.x -= sx; mask.y -= sy; } }
-  return { c: out, ox: halfW - sx, oy: up - sy, glows: sink, mask };
+  e.c = out; e.ox -= sx; e.oy -= sy;
+  if (sx || sy) { for (const gl of e.glows) gl.q = gl.q.map(([x, y]) => [x - sx, y - sy]); if (e.mask) { e.mask.x -= sx; e.mask.y -= sy; } }
 }
 // Lichtmaske eines Bildchens (Block 112): innerhalb der Fensterscheiben nur die Pixel, die seit dem Einschalten ihres Lichts
 // unverändert sind (glowSnap) – was danach davor gemalt wurde (Blumenkasten, Rahmen, das Nachbarhaus der Reihe), bleibt dunkel
@@ -402,6 +426,7 @@ function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites
 // Andere Welt (Laden, Besuch, Testwelt): Bildchen und Boden der alten nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
   for (const k of [...objSprites.keys()]) dropSprite(k);
+  spriteCrops.length = 0;
   for (const e of groundCache.values()) freeCanvas(e.c);
   groundCache.clear(); seaInfo.clear();
   if (seaImage) { freeCanvas(seaImage.c); seaImage = null; }
@@ -537,11 +562,9 @@ function drawDepth(minX, maxX, minY, maxY, z) {
 }
 let hoverKey = '', hoverSince = 0;
 const HOVER_CALM = 120;                // ms Ruhe, bevor die Vorschau (+Taler, +Einwohner …) rechnet
-let groundDeadline = 0;
-const GROUND_MS = 8, GROUND_Z_MAX = 3;
+const GROUND_MS = 8, GROUND_Z_MAX = 3;            // Malzeit je Bild für veraltete Boden-Bilder (groundSpent, zusammen mit den Bildchen PAINT_MS)
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   const want = Math.min(z, GROUND_Z_MAX) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert
-  groundDeadline = performance.now() + GROUND_MS;
   const order = [];
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
@@ -553,7 +576,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     const info = chunkSea(cx, cy);
     let img;
     if (info.sea) {
-      if (!seaImage || stale(seaImage)) { const n = renderGroundChunk(WORLD.cMax + 50, 0, want); if (n) { freeCanvas(seaImage && seaImage.c); seaImage = n; } }
+      if (!seaImage || stale(seaImage)) { const t0 = performance.now(), n = renderGroundChunk(WORLD.cMax + 50, 0, want); groundSpent += performance.now() - t0; if (n) { freeCanvas(seaImage && seaImage.c); seaImage = n; } }
       if (!seaImage) continue;
       img = seaImage.c;
     } else {
@@ -561,8 +584,9 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       let e = groundCache.get(ck);
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
-      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || performance.now() < groundDeadline))) {
-        const n = renderGroundChunk(cx, cy, want);
+      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < GROUND_MS))) {
+        const t0 = performance.now(), n = renderGroundChunk(cx, cy, want);
+        groundSpent += performance.now() - t0;
         if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
       }
       if (!e) continue;
@@ -730,6 +754,7 @@ function glowImage(blue) {
 function render(now) {
   const mt0 = MESS ? performance.now() : 0;
   g = ctx;
+  if (spriteCrops.length) cropSprites();                                 // Bildchen vom letzten Bild zuschneiden, bevor hier etwas gemalt wird
   cam = state.cam;
   const z = cam.z;
   const dt = Math.min(0.1, (now - (lastRender || now)) / 1000);
@@ -745,6 +770,7 @@ function render(now) {
   SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0;
   spriteZooming = now - lastZoomChange < 250;
   spriteDeadline = performance.now() + SPRITE_MS;
+  spriteSpent = 0; spriteMade = 0; groundSpent = 0;
   spriteHousekeeping();
 
   const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];

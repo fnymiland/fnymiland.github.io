@@ -26,9 +26,9 @@ describe('Block 124 Schritt 2', () => {
     const keys = game("[...objSprites.keys()].filter(k => k.startsWith('deco|baum'))");
     expect(keys.length).toBe(new Set([...Array(8).keys()].map(i => v('baum', 3 + i, 5, 0))).size);
   });
-  it('Bildchen werden auf den Inhalt zugeschnitten; Ursprung und Lichter verschoben', () => {
+  it('Bildchen werden auf den Inhalt zugeschnitten (am Anfang des nächsten Bilds); Ursprung und Lichter verschoben', () => {
     game(`globalThis.__gi = ctx.getImageData; ctx.getImageData = (x, y, w, h) => { const d = new Uint8ClampedArray(w * h * 4); for (let yy = 20; yy <= 22; yy++) for (let xx = 10; xx <= 12; xx++) d[(yy * w + xx) * 4 + 3] = 255; return { data: d, width: w, height: h }; }`);
-    const e = game(`(() => { const r = paintSprite(40, 60, 20, () => { glows; }); return { w: r.c.width, h: r.c.height, ox: r.ox, oy: r.oy }; })()`);
+    const e = game(`(() => { const r = paintSprite(40, 60, 20, () => { glows; }); const w0 = r.c.width; cropSprites(); if (w0 !== Math.ceil(80 * DPR)) throw new Error('vorher ungeschnitten'); return { w: r.c.width, h: r.c.height, ox: r.ox, oy: r.oy }; })()`);
     game('ctx.getImageData = globalThis.__gi');
     const dpr = game('DPR');
     expect([e.w, e.h]).toEqual([5, 5]);                                           // 3 × 3 Inhalt + 1 Rand
