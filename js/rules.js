@@ -158,8 +158,11 @@ function hbfUpgradeAll() {                                        // beim Laden 
   return out.done || out.stuck ? out : null;
 }
 // Bahnhof länger/kürzer (Block 131): wächst zur Seite, wo Platz ist (erst +b, sonst −b), kürzer: das hintere Ende fällt weg.
-// Ein Feld mehr kostet STATION_LEN_COST, zurück die Hälfte der Taler. Rückgabe { nk } oder ein Hinweis.
+// Ein Feld mehr kostet STATION_LEN_COST – einmal (Block 137: bezahlt bleibt bezahlt, kürzer gibt nichts zurück). Rückgabe { nk } oder ein Hinweis.
 const STATION_LEN_COST = { money: 400, bretter: 5, quader: 3 };
+// Umbauen (Block 137): Das Höchste, was schon bezahlt ist, bleibt im Gebäude – zurück dorthin kostet nichts mehr
+const stationLenPaid = t => Math.max(stationLen(t), +t.lenPaid || 0);
+const gleisePaid = t => Math.max(hbfGleise(t), +t.gleisePaid || 0);
 function stationLenPlan(k, n) {
   const t = state.tiles.get(k);
   if (!t || t.b !== 'station') return 'Kein Bahnhof';
@@ -172,7 +175,7 @@ function stationLenPlan(k, n) {
     const bad = footprint('station', nx, ny, r, t2).filter(([fx, fy]) => !old.has(fx + ',' + fy)).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
       : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos'
       : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
-    if (!bad) return canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
+    if (!bad) return n <= stationLenPaid(t) || canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
     why = why || bad;
   }
   return why + ' – für ein Feld mehr muss links oder rechts eins frei sein';
@@ -181,7 +184,8 @@ function stationLenSet(k, n) {
   const p = stationLenPlan(k, n);
   if (typeof p === 'string') { fail(p); return null; }
   const t = state.tiles.get(k);
-  if (n > stationLen(t)) addCost(STATION_LEN_COST, -1); else state.money += Math.floor(STATION_LEN_COST.money / 2);
+  if (n > stationLenPaid(t)) addCost(STATION_LEN_COST, -1);                 // schon bezahlt: kostenlos; kürzer: nichts zurück
+  t.lenPaid = Math.max(stationLenPaid(t), n);
   if (n === 3) t.len = 3; else delete t.len;
   t.born = performance.now();
   if (p.nk !== k) { state.tiles.delete(k); state.tiles.set(p.nk, t); }
@@ -190,7 +194,7 @@ function stationLenSet(k, n) {
 }
 // Gleise dazu/weg (Block 123: auf der gewählten Seite der Halle, side −1 links/+1 rechts): Alle anderen Gleise bleiben, wo sie
 // sind – dafür rückt der Anker (gleiche Ausfahrt vor einem bleibenden Gleis). Ohne Halle (alt): immer rechts.
-// Ein Gleis kostet GLEIS_COST, zurück gibt es die Hälfte der Taler.
+// Ein Gleis kostet GLEIS_COST – einmal (Block 137: weg und wieder dazu bis zur bezahlten Zahl kostenlos, weg gibt nichts zurück).
 const GLEIS_COST = { money: 2000, quader: 6, metall: 4 };
 function hbfResizePlan(k, d, side = 1) {
   const t = state.tiles.get(k);
@@ -215,15 +219,16 @@ function hbfResizePlan(k, d, side = 1) {
     if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
-  return canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
+  return m <= gleisePaid(t) || canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
 }
 function hbfResizeError(k, d, side = 1) { const p = hbfResizePlan(k, d, side); return typeof p === 'string' ? p : null; }
 function hbfResize(k, d, side = 1) {
   const p = hbfResizePlan(k, d, side);
   if (typeof p === 'string') { fail(p); return null; }
   const t = state.tiles.get(k);
-  if (d > 0) addCost(GLEIS_COST, -1);
-  else state.money += Math.floor(GLEIS_COST.money / 2);
+  const paid = gleisePaid(t);
+  if (p.m > paid) addCost(GLEIS_COST, -1);
+  t.gleisePaid = Math.max(paid, p.m);
   if (t.gleis) {                                                  // Züge je Gleis: mit ihrem Gleis mitwandern
     if (p.at === 0) t.gleis.unshift(null);
     else if (p.at === -1) t.gleis.shift();
@@ -235,7 +240,7 @@ function hbfResize(k, d, side = 1) {
   sfx('build'); recalc(); save();
   return p.nk;
 }
-// Märchenschloss umgestalten (Block 60g): patch ändert t.cs. Mehr Wert kostet den Unterschied, weniger gibt die Hälfte zurück.
+// Märchenschloss umgestalten (Block 60g): patch ändert t.cs. Mehr Wert als bezahlt kostet den Unterschied, weniger gibt nichts zurück (Block 137: t.price bleibt das Höchste, Guthaben).
 // Breite/Tiefe: das Schloss wächst abwechselnd zu beiden Seiten (bleibt so mittig); geht es dort nicht, zur anderen.
 // Rückgabe: neues Ankerfeld (oder null mit Hinweis)
 function castleChange(x, y, patch) {
@@ -246,7 +251,7 @@ function castleChange(x, y, patch) {
   if (nc.gp != null && !STYLES.weg.some(st => st.id === nc.gp)) { fail('Diesen Belag gibt es nicht'); return null; }   // Boden-Belag (Block 76b)
   if (patch.tw && patch.tw.length > CS_TOWERS) { fail(`Höchstens ${CS_TOWERS} Turmpaare`); return null; }
   for (const o of nc.tw) for (const [key, [lo, hi]] of Object.entries(CT_LIM)) if (!(o[key] >= lo && o[key] <= hi)) { fail(o[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
-  const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;
+  const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;   // t.price: das Höchste, was bezahlt ist (Block 137)
   if (diff > 0 && state.money < diff) { fail('Zu wenig Taler'); return null; }
   let nk = k;
   const rot = t.rot || 0, nt = { ...t, cs: nc }, [ow, oh] = sizeOf('fz_schloss', rot, t), [nw, nh] = sizeOf('fz_schloss', rot, nt);
@@ -269,8 +274,8 @@ function castleChange(x, y, patch) {
     nk = spot.join(',');
     state.tiles.set(nk, t);
   }
-  t.cs = nc; t.price = price; t.born = performance.now(); groundVersion++;
-  if (diff > 0) state.money -= diff; else state.money += Math.floor(-diff / 2);
+  t.cs = nc; t.price = Math.max(paid, price); t.born = performance.now(); groundVersion++;
+  if (diff > 0) state.money -= diff;                                       // kleiner: nichts zurück, das Guthaben bleibt im Schloss
   sfx(diff > 0 ? 'build' : 'deco'); recalc(); save();
   return nk;
 }
@@ -2670,7 +2675,8 @@ function demolishInfo(x, y) {
     }
     const staged = t.b === 'haus' ? HOUSE_STAGES.slice(1, t.lvl).reduce((s, st) => s + (houseCost(st).money || 0), 0)   // Hausausbau (Block 84b)
       : BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (hbfGleise(t) - HBF_MIN) * GLEIS_COST.money : 0;
+      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (gleisePaid(t) - HBF_MIN) * GLEIS_COST.money   // bezahlte Gleise (Block 137)
+      : t.b === 'station' && stationLenPaid(t) === 3 ? STATION_LEN_COST.money : 0;
     const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost : Math.floor((price + staged) / 2);
     const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;

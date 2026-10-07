@@ -28,7 +28,7 @@ describe('Hauptbahnhof bauen', () => {
     expect(gleisKeys('4,6')).toEqual(['7,6', '7,10']);                         // vorderstes Hallenfeld je Gleis
   });
 
-  it('+ Gleis: 2 Felder breiter, kostet; − Gleis gibt die Hälfte zurück', () => {
+  it('+ Gleis: 2 Felder breiter, kostet; − Gleis gibt nichts zurück, wieder + kostet nichts (Block 137)', () => {
     hub();
     const m0 = game('state.money');
     expect(game("hbfResize('4,6', 1)")).toBe('4,6');
@@ -38,7 +38,11 @@ describe('Hauptbahnhof bauen', () => {
     expect(game("anchorAt(4, 11)")).toBe('4,6');
     game("hbfResize('4,6', -1)");
     expect(game("state.tiles.get('4,6').gleise")).toBe(2);
-    expect(game('state.money')).toBe(m0 - game('GLEIS_COST.money') / 2);
+    expect(game('state.money')).toBe(m0 - game('GLEIS_COST.money'));            // bezahlt bleibt bezahlt
+    expect(game("hbfResize('4,6', 1)")).toBe('4,6');
+    expect(game('state.money')).toBe(m0 - game('GLEIS_COST.money'));            // das bezahlte Gleis wieder dazu: kostenlos
+    expect(game("hbfResize('4,6', 1)")).toBe('4,6');
+    expect(game('state.money')).toBe(m0 - 2 * game('GLEIS_COST.money'));        // darüber hinaus: kostet
   });
 
   it('kein Platz daneben: kein Gleis', () => {

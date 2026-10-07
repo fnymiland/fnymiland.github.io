@@ -25,7 +25,7 @@ describe('Bahnhof 2 oder 3 Felder (Block 131)', () => {
       game(`state.tiles.delete('${k}'); recalc()`);
     }
   });
-  it('im Fenster umstellen: wächst zur freien Seite, kostet; kürzer gibt die Hälfte zurück; ↶ geht', () => {
+  it('im Fenster umstellen: wächst zur freien Seite, kostet; kürzer gibt nichts zurück, wieder lang kostenlos (Block 137); ↶ geht', () => {
     game("state.tiles.set('14,14', { b: 'station', lvl: 1, rot: 0 }); recalc()");                // 1 × 2: y 14…15
     const m0 = game('state.money');
     game("openInfo(14, 14)");
@@ -43,6 +43,13 @@ describe('Bahnhof 2 oder 3 Felder (Block 131)', () => {
     expect(k).toBe('14,13');
     k = game(`stationLenSet('${k}', 2)`);
     expect(game(`state.tiles.get('${k}').len`)).toBe(undefined);
+    // Block 137: kürzer gab nichts zurück, wieder lang kostet nichts – auch nach Speichern und Laden
+    const m1 = game('state.money');
+    k = game(`stationLenSet('${k}', 3)`);
+    expect(game('state.money')).toBe(m1);
+    k = game(`stationLenSet('${k}', 2)`);
+    expect(game('state.money')).toBe(m1);
+    expect(game(`parseSave(JSON.parse(JSON.stringify(serialize()))).tiles.get('${k}').lenPaid`)).toBe(3);
     // beidseitig belegt: Hinweis
     game(`state.tiles.delete('${k}'); state.tiles.set('14,14', { b: 'station', lvl: 1, rot: 0 }); state.tiles.set('14,13', { b: 'haus', lvl: 1 }); recalc()`);
     expect(game("stationLenPlan('14,14', 3)")).toMatch(/Daneben steht etwas/);

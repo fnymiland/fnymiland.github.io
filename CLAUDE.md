@@ -382,6 +382,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+137. **Umbauen: bezahlt bleibt bezahlt** (Block 137): Wer ein Gebäude größer/kleiner/anders macht, merkt sich das Höchste, was je
+    bezahlt wurde (Schloss `t.price`, Bahnhof `stationLenPaid`/`t.lenPaid`, Hbf `gleisePaid`/`t.gleisePaid`), kassiert nur darüber
+    und gibt beim Verkleinern nichts zurück. Abriss erstattet die Hälfte des Bezahlten. Neue Umbau-Möglichkeiten genauso, nie
+    „halb zurück und beim Zurückbauen wieder voll“ (das kostete beim Schloss jedes Mal Millionen).
 129. **Souvenirs** (Block 129, js/souvenir.js): Gibt es nur geschenkt (`mail/<to>/<id>.sv`, einmal am Tag je Freund, kostenlos).
     Abholen legt sie über `svReceive` ins Regal (`state.souvenirs`, Fremddaten immer durch `svClean`). Aufgestellt sind sie
     Deko `{ b: 'souvenir', sv: id }`; ob eins steht, nur über `svPlaced()`/`svFree()` aus den Dekos ableiten, nie merken

@@ -1516,3 +1516,25 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 
 ## Block 136: U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)
+
+## Block 137: Umbauen – „bezahlt bleibt bezahlt“
+- [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
+      Umbauen bis dahin kostenlos, darüber nur der Unterschied; Verkleinern gibt nichts zurück, das Guthaben bleibt im Gebäude
+      (Anzeige „Bezahlt … davon … als Guthaben“, „schon bezahlt – kostenlos wieder dazu“). Abriss: halber Wert des Bezahlten.
+      Tests: hbf, bahnhof-lang, freizeitpark
+- [ ] Beobachten: Schlüssel-Wächter (tempo-schritt3) schlug einmal im vollen Lauf fehl (2 Abweichungen), danach in 6 Läufen und 40
+      Inseln nicht mehr – beim nächsten Mal die Ausgabe sichern
+
+## Block 138: Überdachungen (wie der Gang vom Parkplatz ins Disneyland Paris)
+- [ ] Als Linie über vorhandene Wege gezogen (wie ein Zaun), Figuren laufen darunter durch (Dach über den Figuren des Felds, wie
+      die Bogenbrücke `afterMovers`). Arten: Glas-Gang (Stahlbögen, nachts beleuchtet), Holz-Pergola (Ranken, Blüten), Bunte Markise
+      (Farbe wählbar), Steinarkaden. Stützen in Abständen, durchgehendes Dach, Enden sauber. Ein bisschen 🌸
+
+## Block 139: Brücken breit und lang
+- [ ] So breit wie der Weg (1–3 Felder, breiter Weg auf der Brücke, Geländer nur außen) – zwei Brückenfelder nebeneinander sind dann
+      kein „Abzweig auf dem Wasser“
+- [ ] Übers Meer bis zur nächsten Insel (bis etwa 30 Felder, wie die Schienen), Schiffe weiter quer darunter durch
+
+## Block 140: Relief – erst im Hinterkopf
+- [ ] Nur Natur-Deko (Hügel/Berge 2×2–5×5), kein Höhenmodell. Zuerst einen Entwurf des **Tunnelportals für die Bahn** zeigen – erst
+      wenn das dem Nutzer gefällt, weiterbauen

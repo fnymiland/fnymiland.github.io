@@ -278,7 +278,7 @@ describe('Station, Looping, Randlinien (Block 60f)', () => {
 
 describe('Märchenschloss (Block 60g)', () => {
   const cs = () => game("(() => { for (const [k, t] of state.tiles) if (t.b === 'fz_schloss') return [k, { ...t.cs }, t.price]; })()");
-  it('ein Gebäude, Größe im Fenster: wächst abwechselnd zu beiden Seiten, kostet den Unterschied, kleiner gibt die Hälfte', () => {
+  it('ein Gebäude, Größe im Fenster: wächst abwechselnd zu beiden Seiten, kostet den Unterschied; kleiner gibt nichts, zurück kostet nichts (Block 137)', () => {
     ground(5, 5, 12, 8);
     game("rotManual = true; buildRot = 0");
     expect(game("build('fz_schloss', 8, 6, true)")).toBe(true);
@@ -293,8 +293,12 @@ describe('Märchenschloss (Block 60g)', () => {
     expect(game('castleChange(8, 6, { w: 7 })')).toBe('8,5');                      // ungerade: nach −y
     expect(game("COVER.get('8,5')")).toBe('8,5');
     const m1 = game('state.money'), p1 = cs()[2];
-    expect(game('castleChange(8, 5, { w: 6 })')).toBeTruthy();
-    expect(game('state.money')).toBe(m1 + Math.floor((p1 - cs()[2]) / 2));
+    const k1 = game('castleChange(8, 5, { w: 6 })');
+    expect(k1).toBeTruthy();
+    expect(game('state.money')).toBe(m1);                                            // kleiner: nichts zurück …
+    expect(cs()[2]).toBe(p1);                                                        // … das Guthaben bleibt im Schloss
+    expect(game(`castleChange(${k1}, { w: 7 })`)).toBeTruthy();
+    expect(game('state.money')).toBe(m1);                                            // wieder groß: kostenlos
   });
 
   it('kein Platz: Hinweis, nichts verändert; bis 4 Turmpaare auch im schmalen Schloss, ohne Überlappen (Block 60h)', () => {

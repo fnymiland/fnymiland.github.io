@@ -87,6 +87,8 @@ function tileOut(t) {
   if (t.ships && t.ships.length) o.ships = t.ships.map(s => ({ model: s.model, to: s.to }));   // Schiffe am Hafen
   if (t.isle) o.isle = t.isle;
   if (t.len === 3) o.len = 3;                                                            // kleiner Bahnhof: 3 Felder (Block 131)
+  if (t.lenPaid === 3) o.lenPaid = 3;                                                    // schon bezahlt (Block 137)
+  if (Number.isInteger(t.gleisePaid) && t.gleisePaid > (t.gleise || 0)) o.gleisePaid = t.gleisePaid;
   if (t.gleise) o.gleise = t.gleise;                                                     // Hauptbahnhof: Gleise und ihre Züge
   if (t.wing === 1 || t.wing === -1 || t.wing === 2) { o.wing = t.wing; if (t.wing === 2 && Number.isInteger(t.mid)) o.mid = t.mid; }   // Hauptbahnhof: Flügel/Mittelhalle (Block 118/121)
   if (t.gleis) o.gleis = t.gleis.map(c => c ? { ...(c.train ? { train: c.train, trainCol: c.trainCol || 0 } : {}), ...(c.trainPlus ? { trainPlus: c.trainPlus } : {}),

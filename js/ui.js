@@ -877,7 +877,8 @@ function castleHtml(t) {
   const step = (key, label) => stepRow(label, c[key], `data-cs="${key}:-1"`, `data-cs="${key}:+1"`, c[key] <= CS_LIM[key][0], c[key] >= CS_LIM[key][1]);
   const pick = (key, names = CS_NAMES[key]) => `<div class="looks">${names.map((n, i) => `<button class="look${i === c[key] ? ' on' : ''}" data-cs="${key}:${i}">${n}</button>`).join('')}</div>`;
   const tabs = `<div class="looks cs-tabs">${[['form', '🏰 Form'], ['tuerme', '🗼 Türme'], ['zierde', '✨ Zierde'], ['farben', '🎨 Farben']].map(([id, n]) => `<button class="look${castleTab === id ? ' on' : ''}" data-cstab="${id}">${n}</button>`).join('')}</div>`;
-  const worth = `<p class="muted">Wert ${fmt(t.price != null ? t.price : castlePrice(c))} Taler – mehr Größe, Türme und Stockwerke kosten den Unterschied, weniger gibt die Hälfte zurück.</p>`;
+  const paid = t.price != null ? t.price : castlePrice(c), now = castlePrice(c);
+  const worth = `<p class="muted">Bezahlt: ${fmt(paid)} Taler${paid > now ? ` – davon ${fmt(paid - now)} als Guthaben` : ''}. Umbauen bis zu diesem Wert kostet nichts, nur was darüber geht, kostet den Unterschied. Kleiner gibt kein Geld zurück – das Guthaben bleibt im Schloss.</p>`;
   if (castleTab === 'farben') return tabs;
   const toggle = (key, label) => `<button class="look${c[key] ? ' on' : ''}" data-cs="${key}:t" aria-pressed="${c[key] ? 'true' : 'false'}">${label}</button>`;
   if (castleTab === 'zierde') return `${tabs}
@@ -1600,7 +1601,7 @@ function shopStatus(t, s, k) {
 function stationLenHtml(x, y, t) {
   const n = stationLen(t), other = n === 3 ? 2 : 3, p = stationLenPlan(x + ',' + y, other), { money, ...mat } = STATION_LEN_COST;
   return `<div class="label">Länge</div>
-    <div class="looks">${[2, 3].map(v => `<button class="look${v === n ? ' on' : ''}" data-slen="${v}" ${v !== n && typeof p === 'string' && !/Taler|Material/.test(p) ? 'disabled' : ''}>${v} Felder${v === 3 ? ' · Tür mittig' : ''}${v === 3 && n === 2 ? ` · 🪙 ${fmt(money)} ${matText(mat)}` : ''}</button>`).join('')}</div>
+    <div class="looks">${[2, 3].map(v => `<button class="look${v === n ? ' on' : ''}" data-slen="${v}" ${v !== n && typeof p === 'string' && !/Taler|Material/.test(p) ? 'disabled' : ''}>${v} Felder${v === 3 ? ' · Tür mittig' : ''}${v === 3 && n === 2 && stationLenPaid(t) < 3 ? ` · 🪙 ${fmt(money)} ${matText(mat)}` : v === 3 && n === 2 ? ' · bezahlt' : ''}</button>`).join('')}</div>
     ${typeof p === 'string' && n === 2 && !/Taler|Material/.test(p) ? `<p class="muted">${p}.</p>` : '<p class="muted">Mit 3 Feldern steht die Tür genau auf einem Feld – passend zu einem 1er-Weg.</p>'}`;
 }
 // Hauptbahnhof: Gleise mit ihrem Ziel, Umsteigen, + Gleis / − Gleis, Aussehen
@@ -1632,7 +1633,7 @@ function hbfHtml(x, y, t) {
     <div class="ships">${rows.join('')}</div>
     ${hubRegions.size > 1 ? `<div class="status"><div class="ok">🔀 Umsteigen: ${[...hubRegions].map(r => `${regionIcon(r)} ${regionName(r)}`).join(', ')} sind hier miteinander verbunden</div></div>` : ''}
     <div class="row">${resize.join('')}</div>
-    <p class="muted">Ein Gleis: ${costText(GLEIS_COST)}. ${errs.length ? errs.join(' ') + ' ' : ''}Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
+    <p class="muted">Ein Gleis: ${costText(GLEIS_COST)}${gleisePaid(t) > n ? ` (${gleisePaid(t) - n} schon bezahlt – kostenlos wieder dazu)` : ''}. ${errs.length ? errs.join(' ') + ' ' : ''}Vor jedes Gleis eine eigene Strecke legen – mit einem Feld Abstand, sonst hängen sie zusammen und sind eine Linie.</p>
     ${wing ? '' : `<div class="label">Halle</div>
     <p class="muted">Neue Hauptbahnhöfe haben die Eingangshalle in der Mitte: Gleis – Steig – Halle – Steig – Gleis. ${typeof up === 'string' ? up + '.' : 'Gleise können dabei ein Feld rücken – die Strecken davor dann anpassen.'}</p>
     <div class="row"><button class="btn" id="p-hup" ${typeof up === 'string' ? 'disabled' : ''}>▣ Halle in die Mitte bauen</button></div>`}
