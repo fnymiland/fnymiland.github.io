@@ -221,8 +221,9 @@ const CATCH_MISS = 30, PAINT_CATCH = 40, SPRITE_CATCH_MAX = 160;
 // Vorbereiten (Block 124): Fehlt fast alles (Start, Sprung, weit rausgezoomt), ruckelt es ohnehin – dann richtig Gas geben und
 // oben „Insel wird gezeichnet …“ zeigen, bis es wieder geht (prepShown)
 const PREP_MISS = 250, PAINT_PREP = 150, SPRITE_PREP_MAX = 1000;
-let spriteCatch = false, spritePrep = false, prepShown = 0;
-const paintBudget = () => spritePrep ? PAINT_PREP : spriteCatch ? PAINT_CATCH : PAINT_MS;
+const STALE_MS = 20;                               // Erneuern nach dem Zoomen: etwas mehr als sonst, aber ohne Pause
+let spriteCatch = false, spritePrep = false, spriteStale = false, prepShown = 0;
+const paintBudget = () => spritePrep ? PAINT_PREP : spriteCatch ? PAINT_CATCH : spriteStale ? STALE_MS : PAINT_MS;
 const spriteOver = () => spriteMade > 0 && (spriteMade >= (spritePrep ? SPRITE_PREP_MAX : spriteCatch ? SPRITE_CATCH_MAX : SPRITE_MAX) || spriteSpent + groundSpent >= paintBudget());
 // Feste Zoomstufen (Block 124): Bildchen und Boden entstehen nur in Stufen je 20 % (… 0.64, 0.8, 1, 1.25 …), immer in der
 // nächstgrößeren und beim Einsetzen leicht verkleinert – Zoomen innerhalb einer Stufe malt nichts neu (vorher jede Zwischenstufe alles)
@@ -230,7 +231,7 @@ const ZOOM_STEP = 0.8;
 const zoomStep = z => Math.pow(ZOOM_STEP, Math.floor(Math.log(z) / Math.log(ZOOM_STEP) + 1e-9));
 // Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
 // fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
-const SPRITE_STATS = { miss: 0, made: 0 };
+const SPRITE_STATS = { miss: 0, made: 0, stale: 0 };
 let spriteForce = null, spriteNoBudget = false;
 // immer live: was sich auch von weitem sichtbar dreht (Leuchtturm: Strahl, Block 83; Fahrgeschäfte, Block 124) und Schienen
 // (zeichnen hier nichts außer dem Bahnübergang, und der legt seine Vorderseite über die Züge, afterMovers)
@@ -246,10 +247,12 @@ const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite 
 // Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
 function getSprite(key, z, make) {
   let e = objSprites.get(key);
-  const ratio = e ? z / e.z : 0, near = e && ratio > 0.6 && ratio < 1.6;
+  // Beim Zoomen jedes vorhandene Bildchen weiterbenutzen, auch aus einer fernen Stufe (kurz unscharf) – sonst fehlte nach jeder
+  // Stufengrenze alles und es gab eine Pause (Block 124). Danach wird Stück für Stück neu gemalt (SPRITE_STATS.stale → STALE_MS)
+  const ratio = e ? z / e.z : 0, near = !!e && ratio > 0.2 && ratio < 5;
   const fresh = e && (spriteZooming ? near : Math.abs(ratio - 1) < 0.02);
   if (!fresh) {
-    if (!spriteNoBudget && spriteOver()) { if (near) return (e.used = frameNo, e); SPRITE_STATS.miss++; return null; }   // ähnlicher Zoom: das alte noch
+    if (!spriteNoBudget && spriteOver()) { if (near) { SPRITE_STATS.stale++; return (e.used = frameNo, e); } SPRITE_STATS.miss++; return null; }   // anderer Zoom: das alte noch
     const old = e, t0 = performance.now();
     e = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
     if (!e) { SPRITE_STATS.miss++; return near ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
@@ -528,7 +531,7 @@ function spriteEdges(x, y, px, py, z, now) {
   return true;
 }
 function spriteHousekeeping() {
-  if (frameNo % 120 === 0) for (const [k, e] of objSprites) { if (frameNo - e.used > 600) dropSprite(k); else if (e.night && !nightFull()) freeNight(e); }   // Nachtbilder nur nachts
+  if (frameNo % 120 === 0) for (const [k, e] of objSprites) { if (frameNo - e.used > 3600) dropSprite(k); else if (e.night && !nightFull()) freeNight(e); }   // Nachtbilder nur nachts; ~2 Minuten behalten (beim nächsten Rauszoomen noch da)
 }
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
@@ -890,7 +893,8 @@ function render(now) {
   spriteCatch = SPRITE_STATS.miss >= CATCH_MISS;                         // viel fehlte im letzten Bild: aufholen
   spritePrep = SPRITE_STATS.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten
   if (spritePrep) prepShown = performance.now();
-  SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0;
+  spriteStale = SPRITE_STATS.stale >= CATCH_MISS && !spriteZooming;    // viele alte Bildchen aus einer anderen Stufe: zügig erneuern
+  SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0; SPRITE_STATS.stale = 0;
   spriteZooming = now - lastZoomChange < 250;
   spriteDeadline = performance.now() + SPRITE_MS;
   spriteSpent = 0; spriteMade = 0; groundSpent = 0;
