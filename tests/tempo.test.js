@@ -2,9 +2,9 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Block 31: weit weg Gebäude und Dekos als fertige Bildchen (schneller), nah dran alles live
 beforeAll(() => loadGame());
-afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na'));
+afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na; if (globalThis.__gh) gameHour = globalThis.__gh'));
 beforeEach(() => {
-  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');   // tags (die Spieluhr läuft echt)
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0; if (!globalThis.__gh) globalThis.__gh = gameHour; gameHour = () => 12');   // tags (die Spieluhr läuft echt) – Uhr fest (Uhren-Gebäude, Rathaus-Fassung)
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true');
   game("for (let y = 2; y <= 14; y++) for (let x = 2; x <= 14; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); }");
   game("for (let i = 0; i < 6; i++) state.tiles.set((3 + i * 2) + ',6', { b: 'haus', lvl: 2, wall: 1, roof: 2 }); state.tiles.set('4,10', { b: 'schule', lvl: 1 })");
@@ -16,7 +16,7 @@ const frame = z => game(`cam.z = ${z}; lastZoom = ${z}; lastZoomChange = -1e9; f
 
 describe('Bildchen weit weg', () => {
   it('weit weg: Gebäude und Dekos kommen aus Bildchen – gleiche Häuser teilen sich eins', () => {
-    for (let i = 0; i < 6; i++) frame(0.5);                                 // je Bild nur SPRITE_MS Zeit: unter Last braucht es mehrere
+    for (let i = 0; i < 6; i++) frame(0.5);                                 // je Bild nur PAINT_MS Malzeit: unter Last braucht es mehrere
     const keys = game('[...objSprites.keys()]');
     expect(keys.filter(k => k.startsWith('haus|')).length).toBe(1);        // sechs gleiche Häuser, ein Bild
     expect(keys.some(k => k.includes('|schule|'))).toBe(true);              // eigenes Bild (vom Platz abhängig)
@@ -43,7 +43,7 @@ describe('Bildchen weit weg', () => {
   it('Dämmerung: Lichter aus den Bildchen werden gestanzt wie sonst', () => {
     game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => 0.3');   // Uhr steht: Malzeit kostet nichts
     try {
-      frame(1.5); const live = game('glows.length');
+      frame(2.2); const live = game('glows.length');                              // ab Zoom ~2 alles live (Vergleich)
       frame(0.5); const cached = game('glows.length');
       expect(live).toBeGreaterThan(0);
       expect(cached).toBeGreaterThan(0);
@@ -55,7 +55,7 @@ describe('Bildchen weit weg', () => {
   it('volle Nacht (Schritt 4): Bildchen mit Licht kommen als Nachtbild – kein Licht mehr einzeln, warmes Licht als eine Fläche', () => {
     game('globalThis.__pn = performance.now; performance.now = () => 0; nightAt = () => NIGHT_MAX');
     try {
-      frame(1.5); const live = game('glows.length');
+      frame(2.2); const live = game('glows.length');                              // ab Zoom ~2 alles live (Vergleich)
       frame(0.5);
       expect(live).toBeGreaterThan(0);
       expect(game('glows.length')).toBe(0);                                      // alles aus Nachtbildern
@@ -71,13 +71,13 @@ describe('Bildchen weit weg', () => {
 
   it('nie mitten im Bild zurücklesen (wartet auf die Grafikkarte): nur beim Zuschneiden am Bildanfang – Tag, Dämmerung, Nacht', () => {
     const n = game(`(() => {
-      const P = Object.getPrototypeOf(document.createElement('canvas').getContext('2d')), gi = P.getImageData, oc = cropSprites;
+      const X = document.createElement('canvas').getContext('2d'), oc = cropSprites;   // im Test teilen sich alle Leinwände einen Kontext
       let inCrop = false, bad = 0, ok = 0;
-      P.getImageData = function (...a) { if (inCrop) ok++; else bad++; return gi.apply(this, a); };
-      cropSprites = () => { inCrop = true; try { oc(); } finally { inCrop = false; } };
+      X.getImageData = function () { if (inCrop) ok++; else bad++; return undefined; };   // ohne Pixel wie sonst im Test
+      cropSprites = (...a) => { inCrop = true; try { oc(...a); } finally { inCrop = false; } };
       try {
         for (const nt of [0, 0.3, NIGHT_MAX]) { nightAt = () => nt; objSprites.clear(); cam.z = 0.5; lastZoom = 0.5; lastZoomChange = -1e9; spriteNoBudget = true; for (let i = 0; i < 4; i++) render(performance.now() + 1e6); spriteNoBudget = false; }
-      } finally { P.getImageData = gi; cropSprites = oc; nightAt = () => 0; }
+      } finally { delete X.getImageData; cropSprites = oc; nightAt = () => 0; }
       return { bad, ok, night: [...objSprites.values()].some(e => e.night) };
     })()`);
     expect(n.bad).toBe(0);

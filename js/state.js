@@ -363,10 +363,11 @@ function load() {
 // Einen anderen Stand übernehmen (Import): Zwischenspeicher leeren, alles neu zeichnen
 function adoptState(s) {
   resetUnlockWatch(); resetSales();
+  const other = !state || state.seed !== s.seed;   // dieselbe Welt (Live-Spiegel, anderes Gerät): Bildchen behalten, sie erneuern sich selbst
   state = s;
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged();
-  if (typeof resetDrawCaches === 'function') resetDrawCaches();   // Bildchen und Boden der alten Welt weg (Block 124)
+  if (other && typeof resetDrawCaches === 'function') resetDrawCaches();   // Bildchen und Boden der alten Welt weg (Block 124)
   walkers.length = 0; cars.length = 0;
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
   afterLoad();

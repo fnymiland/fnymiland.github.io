@@ -15,10 +15,10 @@ beforeAll(() => {
 });
 beforeEach(() => {
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; night = 0');
-  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');                  // tags (die Spieluhr läuft echt)
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0; if (!globalThis.__gh) globalThis.__gh = gameHour; gameHour = () => 12');                  // tags (die Spieluhr läuft echt) – Uhr fest (Uhren-Gebäude, Rathaus-Fassung)
   game("for (let y = 2; y <= 16; y++) for (let x = 2; x <= 16; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } state.edges.clear(); recalc(); resize(); objSprites.clear()");
 });
-afterAll(() => game('nightAt = globalThis.__na'));
+afterAll(() => game('nightAt = globalThis.__na; if (globalThis.__gh) gameHour = globalThis.__gh'));
 // Uhr im Test: steht still, außer wo der Test sie vorstellt (Malen kostet so viel, wie er sagt)
 const withClock = (setup, fn) => {
   game(`globalThis.__pn = performance.now; globalThis.__t = 0; performance.now = () => __t; ${setup}`);
@@ -181,4 +181,92 @@ describe('Schlüssel-Wächter (Block 124)', () => {
     expect(bad.out).toEqual([]);
     expect(bad.same).toBeGreaterThan(500);                                          // es wurde wirklich verglichen
   }, 180e3);                                                                        // viele Zeichnungen: auf langsamen Rechnern (und unter Last) lange
+});
+
+describe('Nachbesserung nach der Prüfung (Block 124)', () => {
+  it('nach dem Bauen (recalc): Bildchen mit Platz und Linien fehlen nicht, sondern werden weiter gezeigt und einzeln erneuert – nichts bleibt liegen', () => {
+    game("for (let i = 0; i < 6; i++) state.tiles.set((3 + i * 2) + ',6', { b: 'schule', lvl: 1 }); for (let x = 3; x <= 13; x++) buildEdge && state.edges.set('a' + x + ',9', { b: 'zaun', style: Object.keys(STYLES.zaun)[0] }); recalc()");
+    view(0.5);
+    game('spriteNoBudget = true; render(1e6); render(1e6); spriteNoBudget = false');
+    const n0 = game('objSprites.size');
+    expect(game("[...objSprites.keys()].some(k => k.startsWith('edges|'))")).toBe(true);
+    game('recalc()');                                                              // wie nach jedem Bauen
+    const r = withClock("globalThis.__ps = paintSprite; paintSprite = (...a) => { __t += 3; return __ps(...a); }", () => {
+      try { const out = []; for (let i = 0; i < 12; i++) out.push(frame()); return out; } finally { game('paintSprite = globalThis.__ps'); }
+    });
+    expect(r.every(f => f.miss === 0)).toBe(true);                                // nie live, nie „Insel wird gezeichnet“
+    expect(game('objSprites.size')).toBe(n0);                                     // ersetzt, nicht dazugelegt
+    expect(game('[...objSprites.values()].filter(e => e.used === frameNo).every(e => e.ver === 0 || e.ver === "" || String(e.ver).startsWith(String(groundVersion)) || e.ver === groundVersion)')).toBe(true);
+  });
+  it('bei voller Nacht gemalt (ohne Lichtmaske): zur Dämmerung neu gemalt, nicht mit ganzen Scheiben weiter benutzt', () => {
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 2 }); recalc(); nightAt = () => NIGHT_MAX");
+    view(0.5, 6, 6);
+    game('spriteNoBudget = true; render(1e6); render(1e6); spriteNoBudget = false');
+    const k = game("[...objSprites.keys()].find(k => k.startsWith('haus|'))");
+    expect(game(`objSprites.get(${JSON.stringify(k)}).noMask`)).toBe(true);
+    game('nightAt = () => 0.3');                                                  // Morgendämmerung
+    game('render(1e6); render(1e6); render(1e6)');
+    expect(game(`objSprites.get(${JSON.stringify(k)}).noMask`)).toBe(false);
+    game('nightAt = () => 0');
+  });
+  it('kein Speicher (getContext null): Pause fürs Neumalen, kein Aufholen/Vorbereiten, kein Hinweis', () => {
+    game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
+    view(0.5);
+    game('globalThis.__gc = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function () { return this === canvas ? globalThis.__gc.call(this) : null; }; prepShown = 0');
+    try {
+      const r = [0, 1, 2, 3].map(() => frame());
+      expect(r.slice(1).every(f => f.made === 0)).toBe(true);                     // nach dem ersten Fehlschlag Pause
+      expect(game('[spritePrep, spriteCatch, frameNo < spritePause]')).toEqual([false, false, true]);
+      expect(game('prepShown')).toBe(0);
+    } finally { game('HTMLCanvasElement.prototype.getContext = globalThis.__gc; spritePause = 0'); }
+  });
+  it('Zuschneiden höchstens CROP_MS je Bild, der Rest im nächsten', () => {
+    const r = withClock('', () => game(`(() => { spriteCrops.length = 0; const es = []; for (let i = 0; i < 5; i++) { const e = paintSprite(10, 10, 10, () => {}); es.push(e); }
+      const oc = cropSprite; cropSprite = e => { __t += 5; oc(e); };
+      try { cropSprites(8); return [spriteCrops.length, es.filter(e => !e.crop).length]; } finally { cropSprite = oc; spriteCrops.length = 0; } })()`));
+    expect(r).toEqual([3, 2]);                                                    // 0 → 5 → 10 ms: zwei geschnitten, drei warten
+  });
+  it('andere Pixeldichte (Browser-Zoom, anderer Bildschirm): Bildchen werden verworfen', () => {
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 1 }); recalc()");
+    view(0.5, 6, 6);
+    game('spriteNoBudget = true; render(1e6); spriteNoBudget = false');
+    expect(game('objSprites.size')).toBeGreaterThan(0);
+    game("globalThis.__dpr = Object.getOwnPropertyDescriptor(window, 'devicePixelRatio'); Object.defineProperty(window, 'devicePixelRatio', { value: 1.5, configurable: true }); resize()");
+    try { expect(game('objSprites.size')).toBe(0); }
+    finally { game("if (globalThis.__dpr) Object.defineProperty(window, 'devicePixelRatio', globalThis.__dpr); else delete window.devicePixelRatio; resize()"); }
+  });
+  it('Bewegtes in allen Stufen, Aussehen und nachts: animLive deckt alles ab, was sich bewegt (zwischen Zoom 1 und 2 live)', () => {
+    const missing = game(`(() => { const out = [];
+      const moves = (b, t, nt) => { const small = !!ITEMS[b].small, was = night, sp = SPRITE_PAINT, gs = GLOW_SINK;
+        const draw = now => { night = nt ? NIGHT_MAX : 0; SPRITE_PAINT = !!nt; GLOW_SINK = []; try { return __rec(() => { PASS = small ? null : 'object'; try { drawObject(b, 0, 0, 0.5, now, 7, 7, t.lvl || 1, small ? { rot: 0, slot: 0, col: 0, form: 0 } : t); } finally { PASS = null; } }); } finally { night = was; SPRITE_PAINT = sp; GLOW_SINK = gs; } };
+        const a = draw(0); return [700, 1900, 60000].some(n => draw(n) !== a); };
+      const live = (t, nt) => { const was = night; night = nt ? NIGHT_MAX : 0; try { return animLive(t); } finally { night = was; } };
+      for (const b of Object.keys(ITEMS)) { if (b === 'weg' || b === 'lm' || SPRITE_LIVE.has(b) || ITEMS[b].small) continue;
+        const stages = Math.max(b === 'haus' ? HOUSE_STAGES.length : 0, BUILD_STAGES[b] ? (BUILD_STAGES[b].names || []).length : 0, 3);
+        for (let lvl = 1; lvl <= stages; lvl++) for (const look of b === 'haus' ? [undefined, 1, 2, 3, 4, 5, 6] : [undefined]) for (const nt of [0, 1]) {
+          const t = { b, lvl, rot: 0, look };
+          if (moves(b, t, nt) && !live(t, nt)) out.push(b + ' ' + lvl + ' ' + look + ' ' + nt);
+        } }
+      for (const lm of Object.keys(LANDMARKS)) for (const stage of [0, 1, 2, 3]) for (const nt of [0, 1]) {
+        const was = state.restore[lm]; state.restore[lm] = stage; const t = { b: 'lm', lm, lvl: 1, rot: 0 };
+        try { if (moves('lm', t, nt) && !live(t, nt)) out.push('lm ' + lm + ' ' + stage + ' ' + nt); } finally { state.restore[lm] = was; }
+      }
+      return out; })()`);
+    expect(missing).toEqual([]);
+  }, 180e3);
+  it('volle Nacht: Nachtbild = Bildchen + Löschbild (kein zweites Bild), Scheiben für die Nähe von Blau gemerkt; Geister ohne Löschbild', () => {
+    game("state.tiles.set('6,6', { b: 'haus', lvl: 2 }); recalc(); nightAt = () => NIGHT_MAX");
+    view(0.5, 6, 6);
+    try {
+      game('spriteNoBudget = true; render(1e6); render(1e6); render(1e6); spriteNoBudget = false');
+      const n = game("(() => { const e = [...objSprites.values()].find(e => e.night); return e && { c: 'c' in e.night, erase: !!e.night.erase.c, panes: e.night.panes.length }; })()");
+      expect(n).toMatchObject({ c: false, erase: true });
+      expect(n.panes).toBeGreaterThan(0);
+      // halb durchsichtig (Vorschau-Geist): kein Löschbild – sonst stanzt es Löcher in alles dahinter
+      const used = game(`(() => { const e = [...objSprites.values()].find(e => e.night); let erased = 0;
+        const was = g.globalAlpha; g.globalAlpha = 0.5; g.drawImage = (c) => { if (c === e.night.erase.c) erased++; };
+        try { putSprite(e, 100, 100, 0.5); } finally { g.globalAlpha = was; delete g.drawImage; } return erased; })()`);
+      expect(used).toBe(0);
+    } finally { game('nightAt = () => 0'); }
+  });
 });

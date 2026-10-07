@@ -201,33 +201,37 @@ function renderGroundChunk(cx, cy, scale) {
   } finally { g = prev; FOG = false; PASS = null; }
 }
 // ---------------------------------------------------------------------------
-// Weit weg (Block 31): Gebäude und kleine Dekos als fertige Bildchen, statt sie jedes Bild neu zu zeichnen. Gleich
-// aussehende teilen sich eins (Häuser, kleine Läden, Dekos); große Gebäude und alles, was vom Platz abhängt, haben ihr
-// eigenes (neu, wenn sich Boden oder Gebäude ändern). Nachtlicht wird beim Zeichnen gemerkt (GLOW_SINK) und beim
-// Einsetzen gestanzt. Neu gezeichnet wird nur so viel, wie ins Zeitbudget je Bild passt – der Rest wie bisher.
-// Nah dran (z ≥ SPRITE_FROM) zeichnet alles live, mit allen Bewegungen.
+// Weit weg (Block 31/124): Gebäude, kleine Dekos und Linien als fertige Bildchen, statt sie jedes Bild neu zu zeichnen. Gleich
+// aussehende teilen sich eins (Häuser, kleine Läden, Dekos); große Gebäude und Linien haben ihr eigenes (Schlüssel mit Platz).
+// Bis SPRITE_FROM (Zoom 1) alles, bis SPRITE_UNTIL (~2) alles Ruhende (Bewegtes live, animLive). Neu gemalt wird im Zeitbudget je
+// Bild (PAINT_MS); was fehlt, wird so lange live gezeichnet, was nur veraltet ist (andere Zoomstufe, andere Fassung), weiter gezeigt.
 // ---------------------------------------------------------------------------
-const SPRITE_FROM = 1.0, SPRITE_MS = 6, PAINT_MS = 10, SPRITE_MAX = 40;
+const SPRITE_FROM = 1.0, PAINT_MS = 10, SPRITE_MAX = 40;
 // Bis Zoom ~2 Bildchen auch für das Ruhende (Block 124): zwischen SPRITE_FROM und SPRITE_UNTIL bleibt nur, was sich bewegt, live
-// (ANIM_ITEMS – Rauch, Fontänen, Fahnen …, Liste prüft tests/tempo-schritt3.test.js). Auf Geräten mit doppelter Pixeldichte nur bis
-// z × DPR ≤ 2.6 (wie der Boden), sonst würden die Bildchen auf dem iPad zu groß
+// (animLive – Rauch, Fontänen, Fahnen …; der Bestands-Test in tests/tempo-schritt3.test.js prüft alle Stufen, Aussehen, Nacht).
+// Auf Geräten mit doppelter Pixeldichte nur bis z × DPR ≤ 2.6 (wie der Boden), sonst würden die Bildchen auf dem iPad zu groß
 const SPRITE_UNTIL = 1 / (0.8 * 0.8 * 0.8) - 1e-6;                  // = Zoomstufe 1.953 (zoomStep)
 const ANIM_ITEMS = new Set(['hausboot', 'fischer', 'saege', 'schmiede', 'baecker', 'fabrik', 'hafen', 'schule', 'palme', 'riesenblume', 'brunnen', 'glaskugel',
   'kristallbrunnen', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'schloss', 'freundschaftsbaum', 'zauberbrunnen', 'schmetterlingsgarten', 'vogelbaum',
   'seerosenteich', 'bootssteg', 'seilbahn', 'solarfeld', 'geothermie', 'wellen', 'statue', 'rathaus', 'truhe', 'friseur', 'cafe', 'pizzeria', 'konditorei',
   'kino', 'aquarium', 'zoo', 'fz_schloss', 'fz_torturm', 'fz_ballon', 'brunnen_s', 'brunnen_l', 'brunnen_xl', 'kristallbrunnen_s', 'kristallbrunnen_l',
   'kristallbrunnen_xl', 'palme_m', 'palme_l', 'statue_l']);
+// bewegt sich erst in bestimmten Stufen / mit bestimmtem Aussehen / nachts (Schornsteinrauch der Häuser mit Aussehen 3 und 5, Schaukel,
+// Ähren, Förderrad, Fahne, Sterne, restaurierte Sehenswürdigkeiten)
+const animLive = t => ANIM_ITEMS.has(t.b) || (t.b === 'haus' && (houseLook(t) === 3 || houseLook(t) === 5))
+  || ((t.b === 'baumhaus' || t.b === 'feld') && (t.lvl || 1) >= 2) || ((t.b === 'mine' || t.b === 'uni') && (t.lvl || 1) >= 3)
+  || (t.b === 'sternwarte' && night > 0.15) || (t.b === 'lm' && lmStage(t.lm) > 0);
 let SPRITES_NEAR = false;                                            // Zoom zwischen SPRITE_FROM und SPRITE_UNTIL: Bewegtes live
-const spriteOk = b => !SPRITE_LIVE.has(b) && !(SPRITES_NEAR && ANIM_ITEMS.has(b));
-const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
-let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
+const spriteOk = b => !SPRITE_LIVE.has(b) && !(SPRITES_NEAR && ANIM_ITEMS.has(b));          // kleine Deko (nur die Art)
+const spriteTileOk = t => !SPRITE_LIVE.has(t.b) && !(SPRITES_NEAR && animLive(t));         // Gebäude (Stufe, Aussehen, Nacht)
+const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, ver, glows, mask, night, next, used }
+let SPRITES_ON = false, spriteZooming = false, spriteZoomedLast = false;
 // Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,
 // mindestens ein Bildchen, höchstens SPRITE_MAX (die Uhr in Safari ist grob). Vorher galt eine Frist ab Bildanfang: In großen
 // Welten war sie verbraucht, bevor das erste Gebäude drankam – dann entstand nie ein Bildchen, und alles wurde live gezeichnet.
-// Seit Schritt 4 auch nachts (vorher dort noch die alte Frist)
 let spriteSpent = 0, spriteMade = 0, groundSpent = 0;
 // Aufholen (Block 124): Fehlten im letzten Bild viele Bildchen, wird ohnehin fast alles live gezeichnet – ein Bildchen zu malen kostet
-// kaum mehr als dasselbe live. Dann darf mehr gemalt werden (PAINT_CATCH), sonst ruckelt es nachts nach Laden/Zoomen viele Sekunden
+// kaum mehr als dasselbe live. Dann darf mehr gemalt werden (PAINT_CATCH). Fehlende Nachtbilder zählen nur bis CATCH (der Ersatz ist fertig)
 const CATCH_MISS = 30, PAINT_CATCH = 40, SPRITE_CATCH_MAX = 160;
 // Vorbereiten (Block 124): Fehlt fast alles (Start, Sprung, weit rausgezoomt), ruckelt es ohnehin – dann richtig Gas geben und
 // oben „Insel wird gezeichnet …“ zeigen, bis es wieder geht (prepShown)
@@ -248,17 +252,23 @@ function loadingUpdate() {
   const t = el.querySelector('.ld-text');
   if (t && want) t.textContent = want === 'start' ? 'Kachelhausen lädt …' : want === 'visit' ? 'Die Insel wird geladen …' : 'Insel wird gezeichnet …';
 }
-const STALE_MS = 20;                               // Erneuern nach dem Zoomen: etwas mehr als sonst, aber ohne Pause
-let spriteCatch = false, spritePrep = false, spriteStale = false, prepShown = 0;
+const STALE_MS = 20;                               // Erneuern (andere Zoomstufe, andere Fassung): etwas mehr als sonst, aber ohne Pause
+// Kein Speicher mehr (getContext null, iPad): eine Weile gar nichts Neues malen, Entbehrliches freigeben – nie deswegen aufholen/vorbereiten
+const FAIL_PAUSE = 90;
+let spriteCatch = false, spritePrep = false, spriteStale = false, prepShown = 0, spriteMissLast = 0, spritePause = 0;
 const paintBudget = () => spritePrep ? PAINT_PREP : spriteCatch ? PAINT_CATCH : spriteStale ? STALE_MS : PAINT_MS;
-const spriteOver = () => spriteMade > 0 && (spriteMade >= (spritePrep ? SPRITE_PREP_MAX : spriteCatch ? SPRITE_CATCH_MAX : SPRITE_MAX) || spriteSpent + groundSpent >= paintBudget());
+const spriteOver = () => frameNo < spritePause || (spriteMade > 0 && (spriteMade >= (spritePrep ? SPRITE_PREP_MAX : spriteCatch ? SPRITE_CATCH_MAX : SPRITE_MAX) || spriteSpent + groundSpent >= paintBudget()));
 // Feste Zoomstufen (Block 124): Bildchen und Boden entstehen nur in Stufen je 20 % (… 0.64, 0.8, 1, 1.25 …), immer in der
-// nächstgrößeren und beim Einsetzen leicht verkleinert – Zoomen innerhalb einer Stufe malt nichts neu (vorher jede Zwischenstufe alles)
+// nächstgrößeren und beim Einsetzen leicht verkleinert – Zoomen innerhalb einer Stufe malt nichts neu (vorher jede Zwischenstufe alles).
+// spriteStep begrenzt auf z × DPR ≤ 2.6 (iPad: über 1.25 wird minimal vergrößert statt riesig gemalt)
 const ZOOM_STEP = 0.8;
 const zoomStep = z => Math.pow(ZOOM_STEP, Math.floor(Math.log(z) / Math.log(ZOOM_STEP) + 1e-9));
-// Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
-// fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
-const SPRITE_STATS = { miss: 0, made: 0, stale: 0 };
+const stepBelow = x => { const s = zoomStep(x); return s > x * (1 + 1e-9) ? s * ZOOM_STEP : s; };
+const spriteStep = z => Math.min(zoomStep(z), stepBelow(2.6 / DPR));
+// Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet), neu gemalt wurde (made), alt weiter gezeigt
+// wurde (stale: andere Zoomstufe, old: andere Fassung), ein Nachtbild fehlte (nmiss) oder kein Speicher da war (fail).
+// Zwei Schalter nur fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
+const SPRITE_STATS = { miss: 0, made: 0, stale: 0, old: 0, nmiss: 0, fail: 0 };
 let spriteForce = null, spriteNoBudget = false;
 // immer live: was sich auch von weitem sichtbar dreht (Leuchtturm: Strahl, Block 83; Fahrgeschäfte, Block 124) und Schienen
 // (zeichnen hier nichts außer dem Bahnübergang, und der legt seine Vorderseite über die Züge, afterMovers)
@@ -271,22 +281,24 @@ function spriteTop(b, w, h) {
   return Math.max(w * h >= 9 ? 150 : w * h >= 4 ? 120 : 112, (w + h) * TH / 4 + 70);   // lange Gebäude (Hbf): die Fläche selbst reicht weit hoch
 }
 const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite bzw. nach vorn (Breite, unten)
-// Bildchen holen (oder zeichnen, wenn das Budget reicht); null = wie bisher zeichnen
-function getSprite(key, z, make) {
-  let e = objSprites.get(key);
+// Bildchen holen (oder malen, wenn das Budget reicht); null = live zeichnen. ver = Fassung (groundVersion bei Bildchen mit Platz,
+// Uhrzeit-Takt bei Uhren): Eine veraltete Fassung wird weiter gezeigt und im Budget einzeln ersetzt – vorher steckte groundVersion im
+// Schlüssel, nach jedem Bauen fehlten Hunderte Bildchen auf einmal (Ruckler + „Insel wird gezeichnet“) und die alten blieben liegen
+function getSprite(key, z, make, ver = 0) {
+  const e = objSprites.get(key);
   // Beim Zoomen jedes vorhandene Bildchen weiterbenutzen, auch aus einer fernen Stufe (kurz unscharf) – sonst fehlte nach jeder
-  // Stufengrenze alles und es gab eine Pause (Block 124). Danach entsteht das scharfe im Hintergrund (e.next); getauscht wird erst,
-  // wenn alle sichtbaren fertig sind, alle auf einmal (spriteSwapAll) – vorher lief eine sichtbare „Welle“ durchs Bild
-  const ratio = e ? z / e.z : 0, near = !!e && ratio > 0.2 && ratio < 5;
-  const fresh = e && (spriteZooming ? near : Math.abs(ratio - 1) < 0.02);
-  if (!fresh) {
-    if (near && !spriteNoBudget) {
+  // Stufengrenze alles und es gab eine Pause. Danach entsteht das scharfe im Hintergrund (e.next); getauscht wird erst, wenn alle
+  // sichtbaren fertig sind, alle auf einmal (spriteSwapAll) – einzeln lief eine sichtbare „Welle“ durchs Bild
+  const ratio = e ? z / e.z : 0, near = !!e && ratio > 0.2 && ratio < 5, zoomOk = !!e && Math.abs(ratio - 1) < 0.02;
+  const verOk = !e || (e.ver === ver && !(e.noMask && !nightFull()));   // bei voller Nacht ohne Lichtmaske gemalt: zur Dämmerung neu
+  if (e && verOk && (zoomOk || (spriteZooming && near))) { e.used = frameNo; return e; }
+  if (near && !spriteNoBudget) {
+    if (!zoomOk) {
       if (!spriteZooming) {
         let n = e.next;
-        if (n && Math.abs(z / n.z - 1) >= 0.02) { freeSprite(n); n = e.next = null; }   // inzwischen andere Stufe
-        if (!n && !spriteOver()) {
-          const t0 = performance.now();
-          n = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+        if (n && (Math.abs(z / n.z - 1) >= 0.02 || n.ver !== ver)) { freeSprite(n); n = e.next = null; }   // inzwischen andere Stufe/Fassung
+        if (!n && !spriteMissLast && !spriteOver()) {                    // Fehlendes (live gezeichnet) geht vor dem Scharfmachen
+          n = makeSprite(make, ver);
           if (n) { e.next = n; if (!spriteSwap.size) spriteSwapSince = frameNo; spriteSwap.set(key, e); }
         }
         if (n && nightFull() && n.paint && !n.night) nightOf(n);           // auch das Nachtbild vorher, sonst wechselt nachts das Licht
@@ -295,27 +307,43 @@ function getSprite(key, z, make) {
       e.used = frameNo;
       return e;
     }
-    if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }
-    const old = e, t0 = performance.now();
-    e = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
-    if (!e) { SPRITE_STATS.miss++; return near ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
-    if (old && old.used !== frameNo) freeSprite(old);                     // ersetzt (neuer Zoom)
-    objSprites.set(key, e);
+    if (spriteZooming || spriteOver()) { SPRITE_STATS.old++; e.used = frameNo; return e; }   // nur alte Fassung: weiter zeigen, bald neu
   }
-  e.used = frameNo;
-  return e;
+  if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }
+  const n = makeSprite(make, ver);
+  if (!n) return near ? (e.used = frameNo, e) : null;                  // kein Speicher: altes Bildchen oder live
+  if (e) { spriteSwap.delete(key); spriteTrash.push(e); }               // ersetzt: erst am nächsten Bildanfang freigeben (kann diesmal noch im Bild stehen)
+  objSprites.set(key, n);
+  n.used = frameNo;
+  return n;
+}
+function makeSprite(make, ver) {
+  const t0 = performance.now();
+  const n = make();
+  spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+  if (n) n.ver = ver; else spriteFail();
+  return n;
+}
+// Kein Speicher (getContext null): Pause fürs Neumalen und Entbehrliches freigeben (Nachtbilder, wartende scharfe, lange nicht Benutztes)
+function spriteFail() {
+  SPRITE_STATS.fail++;
+  if (frameNo < spritePause) return;
+  spritePause = frameNo + FAIL_PAUSE;
+  for (const [k, e] of objSprites) { if (frameNo - e.used > 30) dropSprite(k); else { freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } } }
+  spriteSwap.clear();
+  for (const [ck, e] of groundCache) if (frameNo - e.used > 30) { groundCache.delete(ck); freeCanvas(e.c); }
 }
 // Austausch auf einen Schlag (Block 124): scharfe Bildchen warten in e.next, bis keins der sichtbaren mehr fehlt (oder nach
-// SWAP_WAIT Bildern, falls eins nie fertig wird), dann werden alle zugleich getauscht
-const spriteSwap = new Map(), SWAP_WAIT = 120;
+// SWAP_WAIT Bildern, falls eins nie fertig wird), dann werden alle zugleich getauscht – nur solche der jetzigen Zoomstufe
+const spriteSwap = new Map(), SWAP_WAIT = 120, spriteTrash = [];
 let spriteSwapSince = 0;
-const spriteReady = n => !!n && !spriteCrops.includes(n) && (!nightFull() || !n.paint || !!n.night);
-function spriteSwapAll(staleLast) {
-  if (!spriteSwap.size || spriteZooming || (staleLast > 0 && frameNo - spriteSwapSince < SWAP_WAIT)) return;
+const spriteReady = n => !!n && !n.crop && (!nightFull() || !n.paint || !!n.night);
+function spriteSwapAll(staleLast, zs) {
+  if (!spriteSwap.size || spriteZooming || spriteZoomedLast || (staleLast > 0 && frameNo - spriteSwapSince < SWAP_WAIT)) return;
   for (const [k, e] of spriteSwap) {
     const n = e.next; e.next = null;
     if (!n) continue;
-    if (objSprites.get(k) === e) { objSprites.set(k, n); n.used = e.used; freeSprite(e); } else freeSprite(n);
+    if (objSprites.get(k) === e && Math.abs(zs / n.z - 1) < 0.02) { objSprites.set(k, n); n.used = e.used; freeSprite(e); } else freeSprite(n);
   }
   spriteSwap.clear();
 }
@@ -329,27 +357,33 @@ function paintSprite(halfW, up, down, drawFn) {
   const c = document.createElement('canvas');
   c.width = nw; c.height = nh;
   const cx = c.getContext('2d');
-  if (!cx) return null;
+  if (!cx) { freeCanvas(c); return null; }
   const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 }, am = afterMovers.length;
   g = cx;
-  const full = nightFull();                                              // volle Nacht: Licht kommt aus dem Nachtbild – keine Kopien, keine Maske
+  // volle Nacht: Licht kommt aus dem Nachtbild – keine Kopien, keine Maske (spart Lesen); zur Dämmerung wird es neu gemalt (noMask)
+  const full = nightFull();
   GLOW_SINK = sink; GLOW_ATLAS = full ? null : atlas; SPRITE_PAINT = true;
-  let mask = null;
   try { g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR); drawFn(); }
   finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; afterMovers.length = am; }   // im Bildchen nichts über die Fahrzeuge legen
-  const e = { c, ox: halfW, oy: up, glows: sink, mask, maskTodo: !full && sink.length ? atlas : null, paint: sink.length ? { halfW, up, down, drawFn } : null, night: null };   // paint: fürs Nachtbild (Schritt 4)
+  const warm = sink.some(gl => gl.tint !== 'blue');
+  const e = { c, ox: halfW, oy: up, glows: sink, mask: null, maskTodo: !full && warm ? atlas : null, noMask: full && warm,
+    paint: sink.length ? { halfW, up, down, drawFn } : null, night: null, next: null, crop: true };   // paint: fürs Nachtbild (Schritt 4)
   spriteCrops.push(e);
   return e;
 }
 // Zuschneiden gesammelt am Anfang des nächsten Bilds (Block 124): Lesen aus einer Leinwand wartet, bis die Grafikkarte alles
-// fertig hat, was vorher bestellt wurde – mitten im Bild rund 10 ms, am Bildanfang kaum etwas, und jedes weitere Lesen danach ist
-// billig. Bis dahin wird das Bildchen ungeschnitten benutzt (gleiches Bild). Knapp: Alpha > 0, 1 Punkt Rand. Leer: c = null
-const spriteCrops = [];
-function cropSprites() {
-  for (const e of spriteCrops) cropSprite(e);
-  spriteCrops.length = 0;
+// fertig hat, was vorher bestellt wurde – mitten im Bild rund 10 ms, am Bildanfang kaum etwas. Höchstens CROP_MS je Bild (nach
+// einem Vorbereiten mit Hunderten Bildchen sonst ein langes Bild), der Rest im nächsten. Bis dahin wird das Bildchen ungeschnitten
+// benutzt (gleiches Bild). Knapp: Alpha > 0, 1 Punkt Rand. Leer: c = null
+const spriteCrops = [], CROP_MS = 8;
+function cropSprites(limit = CROP_MS) {
+  const t0 = performance.now();
+  let i = 0;
+  for (; i < spriteCrops.length; i++) { if (i > 0 && performance.now() - t0 > limit) break; cropSprite(spriteCrops[i]); }
+  spriteCrops.splice(0, i);
 }
 function cropSprite(e) {
+  e.crop = false;
   const c = e.c;
   if (!c || !c.width || !c.height) return;                               // inzwischen freigegeben
   if (e.maskTodo) {                                                       // Lichtmaske (Dämmerung) auch erst hier: Lesen mitten im Bild wartet auf die Grafikkarte
@@ -369,7 +403,7 @@ function cropSprite(e) {
     if (x0 === 0 && y0 === 0 && x1 === nw - 1 && y1 === nh - 1) return;   // füllt die ganze Fläche
     out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
     const ox = out.getContext('2d');
-    if (!ox) return;                                                      // kein Speicher: ungeschnitten weiter
+    if (!ox) { freeCanvas(out); return; }                                 // kein Speicher: ungeschnitten weiter
     ox.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
   } else { x0 = 0; y0 = 0; }
   freeCanvas(c);                                                          // große Leinwand gleich freigeben
@@ -425,83 +459,85 @@ function inQuad(q, x, y) {
   }
   return true;
 }
-// Volle Nacht weit weg (Block 124 Schritt 4): Ein Bildchen mit Licht bekommt drei fertige Bilder statt jedes Licht einzeln zu stanzen
-// (große Welt, Zoom 0.45: über 12.000 Lichter je Bild). Das Nachtbild ist noch einmal gemalt wie live – die Lichter stanzen an Ort
-// und Stelle, also auch den Schein in die eigenen Wände (Wandschein, Variante A); das Löschbild nimmt vorher heraus, was darunter
-// liegt (Umriss des Bildchens und der Schein auf Boden und Nachbarn dahinter); das Lichtbild kommt in drawNight hinter die Löcher.
-// Nur bei voller Nacht (die Stärke ändert sich sonst) – in der Dämmerung wie bisher. Kostet Malzeit wie ein Bildchen (Budget)
+// Volle Nacht weit weg (Block 124 Schritt 4): Statt jedes Licht einzeln zu stanzen (große Welt, Zoom 0.45: über 12.000 Lichter je Bild)
+// bekommt ein Bildchen mit Licht ein Löschbild: Das Bildchen wird noch einmal auf eine schwarze, volle Fläche gemalt, wobei die Lichter
+// wie live sofort stanzen (also auch den Schein in die eigenen Wände = Wandschein, Variante A); umgekehrt ist das genau, was live an Loch
+// bleibt – auf dem Bildchen und auf allem dahinter. Einsetzen: Bildchen wie tagsüber, dann das Löschbild (destination-out). Die Löcher
+// füllt drawNight mit EINER warmen Fläche (nightWarm); blaues Licht bekommt ein eigenes Lichtbild (kleiner Fleck, BLUE_SPOT), und
+// Fensterscheiben in der Nähe von Blau werden vorher gelb hinterlegt (nightPanes), sonst würden sie blau.
+// Nur bei voller Nacht (die Stärke ändert sich sonst) – in der Dämmerung Licht für Licht. Kostet Malzeit wie ein Bildchen (Budget)
 const nightFull = () => night >= NIGHT_MAX - 1e-9;
-const nightPics = [], nightSeen = new Set();       // Lichtbilder dieses Bilds für drawNight (große Gebäude: je Streifen nur einmal)
-let nightWarm = false;
-const BLUE_SPOT = 0.5;                             // blauer Fleck (Kristall, Brunnen) nur halb so groß wie sein Schein: träfe sonst die Fenster der Nachbarn                             // Bildchen mit warmem Licht: drawNight legt EINE Lichtfläche hinter alle Löcher (statt je Bildchen ein Bild)
+const nightPics = [], nightPanes = [], nightSeen = new Set();   // Lichtbilder (Blau) und Scheiben je Bild für drawNight (große Gebäude: je Streifen einmal)
+let nightWarm = false;                                         // Löcher aus Nachtbildern: drawNight legt EINE warme Fläche dahinter
+const BLUE_SPOT = 0.5;                                         // blaues Licht (Kristall, Brunnen) bei voller Nacht nur halb so groß
 function nightOf(e) {
-  if (!e.paint || SPRITE_PAINT) return null;
-  if (spriteCrops.includes(e)) return null;                              // noch nicht zugeschnitten: nächstes Bild (Zuschneiden am Bildanfang)
-  if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }   // diesmal noch Licht für Licht
+  if (!e.paint || SPRITE_PAINT || e.crop) return null;                  // noch nicht zugeschnitten: nächstes Bild (Zuschneiden am Bildanfang)
+  if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.nmiss++; return null; }   // diesmal noch Licht für Licht
   const t0 = performance.now();
   e.night = paintNight(e);
   spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+  if (!e.night) spriteFail();
   return e.night;
 }
 function paintNight(e) {
-  const P = e.paint;                                                     // e ist schon zugeschnitten: das Nachtbild nimmt denselben Rahmen (kein eigenes Lesen)
+  const P = e.paint;                                                     // e ist schon zugeschnitten: das Löschbild nimmt denselben Rahmen (kein eigenes Lesen)
   if (!e.c || !e.c.width) return null;
   let R = 0;
   for (const gl of e.glows) R = Math.max(R, gl.r);
   const pad = Math.ceil(R * DPR) + 2;                                     // Bildpunkte rundum für den Schein
   const nw = e.c.width + 2 * pad, nh = e.c.height + 2 * pad, ax = e.ox * DPR + pad, ay = e.oy * DPR + pad;   // Ursprung wie im Bildchen (gleiche Kanten)
+  const blue = e.glows.some(gl => gl.tint === 'blue');
   const make = () => { const c = document.createElement('canvas'); c.width = nw; c.height = nh; const cx = c.getContext('2d'); if (!cx) { freeCanvas(c); return null; } return [c, cx]; };
-  const A = make(), B = make(), E = make();
-  if (!A || !B || !E) { for (const x of [A, B, E]) if (x) freeCanvas(x[0]); return null; }   // kein Speicher: Licht für Licht
+  const K = make(), E = make(), B = blue ? make() : null;
+  if (!K || !E || (blue && !B)) { for (const x of [K, E, B]) if (x) freeCanvas(x[0]); return null; }   // kein Speicher: Licht für Licht
   const prev = g, cells = glowCells, n0 = glows.length, am = afterMovers.length, sink = GLOW_SINK, atlas = GLOW_ATLAS;
   let lights = [];
   try {
-    // 1) Nachtbild: wie live gemalt, die Lichter stanzen sofort
-    g = A[1]; glowCells = new Map(); SPRITE_PAINT = true; GLOW_SINK = null; GLOW_ATLAS = null;
+    // 1) auf volle schwarze Fläche wie live gemalt, die Lichter stanzen sofort – übrig bleibt Alpha = 1 − Loch
+    g = K[1]; g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
+    glowCells = new Map(); SPRITE_PAINT = true; GLOW_SINK = null; GLOW_ATLAS = null;
     g.setTransform(DPR, 0, 0, DPR, ax, ay);
     P.drawFn();
     lights = glows.slice(n0);
-    // 2) Löschbild: dieselben Lichter in eine volle Fläche stanzen, umkehren (Alpha = wie stark gestanzt), Umriss dazu
-    g = B[1]; glowCells = new Map(); glows.length = n0;
-    g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
-    for (const { q, r, tint } of lights) punchGlow(q, r, tint);
-    g = E[1];
-    g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
-    g.globalCompositeOperation = 'destination-out'; g.drawImage(B[0], 0, 0);
-    g.globalCompositeOperation = 'source-over';
-    g.drawImage(e.c, pad, pad);
-    // 3) Lichtbild nur für blaues Licht (Kristall, Apotheke): weicher Fleck – warmes Licht legt drawNight als eine Fläche dahinter
-    g = B[1];
-    g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, nw, nh); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // (Gebäude mit blauem UND warmem Licht wie die Apotheke: die eigenen warmen Scheine und Scheiben darüber, sonst würden sie blass)
-    for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, h = r * BLUE_SPOT; g.drawImage(glowImage(true), gx - h, gy - h, h * 2, h * 2); }
-    if (lights.some(l => l.tint === 'blue')) {
+    // 2) Löschbild = Umkehrung: Alpha = Loch (Fenster, Schein auf Wänden und auf allem dahinter)
+    g = E[1]; g.fillStyle = '#000'; g.fillRect(0, 0, nw, nh);
+    g.globalCompositeOperation = 'destination-out'; g.drawImage(K[0], 0, 0); g.globalCompositeOperation = 'source-over';
+    // 3) Lichtbild nur für blaues Licht (Kristall, Brunnen, Apotheke): fester kleiner Fleck; eigene warme Scheine und Scheiben darüber
+    if (B) {
+      g = B[1]; g.setTransform(DPR, 0, 0, DPR, 0, 0);
+      g.fillStyle = 'rgb(140,215,255)';
+      for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; circle(gx, gy, r * BLUE_SPOT, 'rgb(140,215,255)'); }
       g.fillStyle = 'rgb(255,205,100)';
       for (const { q, r, tint } of lights) if (tint !== 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2; g.fillRect(gx - r, gy - r, r * 2, r * 2); }
       for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');
     }
   } finally { g = prev; glowCells = cells; glows.length = n0; SPRITE_PAINT = false; GLOW_SINK = sink; GLOW_ATLAS = atlas; afterMovers.length = am; }
-  const o = { ox: ax / DPR, oy: ay / DPR, glows: [] };
-  const blue = lights.some(l => l.tint === 'blue');
-  if (!blue) freeCanvas(B[0]);                                           // nur warmes Licht: kein eigenes Lichtbild
-  return { c: A[0], ...o, z: e.z, erase: { c: E[0], ...o }, light: { c: blue ? B[0] : null, ...o }, lights: lights.length };
+  freeCanvas(K[0]);
+  const o = { ox: ax / DPR, oy: ay / DPR };
+  const warmL = lights.filter(l => l.tint !== 'blue');
+  return { z: e.z, erase: { c: E[0], ...o }, light: { c: B ? B[0] : null, ...o }, panes: warmL.map(l => l.q),
+    halos: warmL.map(({ q, r }) => [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, r]), lights: lights.length };
 }
-function putNight(n, cx, cy, z) {
-  const r = z / n.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
-  if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.globalCompositeOperation = 'source-over'; }   // ohne save/restore (teuer, je Bildchen)
-  if (n.c) g.drawImage(n.c, ...at(n));
-  if (n.light.c) {
-    const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + n.light.c.width;   // Streifen großer Gebäude: einmal
-    if (!nightSeen.has(k)) { nightSeen.add(k); nightPics.push([n.light.c, ...at(n.light)]); }
+function putNight(e, n, cx, cy, z) {
+  const r = z / e.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
+  if (e.c) g.drawImage(e.c, ...at(e));                                   // das Bildchen wie tagsüber …
+  if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; g.drawImage(n.erase.c, ...at(n.erase)); g.globalCompositeOperation = 'source-over'; }   // … dann die Löcher (ohne save/restore: teuer je Bildchen)
+  const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + (n.erase.c ? n.erase.c.width : 0);   // Streifen großer Gebäude: einmal
+  if (!nightSeen.has(k)) {
+    nightSeen.add(k);
+    if (n.light.c) nightPics.push([n.light.c, ...at(n.light)]);
+    if (n.panes.length && n.erase.c) nightPanes.push([n, ...at(n.erase), r]);
   }
-  nightWarm = true;                                                       // warmes Licht: eine Fläche in drawNight für alle
+  nightWarm = true;
 }
 // Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
   if (!e.glows.length) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
-  if (nightFull()) { const n = e.night || nightOf(e); if (n) { putNight(n, cx, cy, z); return; } }   // volle Nacht: fertiges Nachtbild (Schritt 4)
+  // volle Nacht: Bildchen + Löschbild (Schritt 4); nicht für halb durchsichtige Vorschau-Geister (das Löschbild würde Löcher stanzen)
+  // und nicht für ein Bildchen, dessen scharfer Ersatz schon wartet (dessen Nachtbild entsteht ohnehin)
+  if (nightFull() && g.globalAlpha === 1) { const n = e.night || (e.next ? null : nightOf(e)); if (n) { putNight(e, n, cx, cy, z); return; } }
   const w = e.c ? e.c.width / DPR * r : 0, h = e.c ? e.c.height / DPR * r : 0;
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
@@ -534,18 +570,22 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
-    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
+    t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
-  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
+  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}`;
+  // Fassung statt Schlüssel (Block 124): Bildchen mit Platz werden mit dem Boden (groundVersion) erneuert, Uhren alle 10 Spielminuten –
+  // dazwischen zeigt getSprite das alte weiter und ersetzt es im Budget (dasselbe Bildchen, nichts bleibt liegen)
+  const ver = (shared ? '' : groundVersion) + (CLOCK_SPRITES.has(t.b) ? '|' + Math.floor(gameHour() * 6) : '');
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
-  const zs = zoomStep(z);                                                 // gemalt in der Zoomstufe darüber
+  const zs = spriteStep(z);                                              // gemalt in der Zoomstufe darüber
   const e = getSprite(key, zs, () => {
+    const tt = Object.assign({}, t);                                     // Stand beim Malen: das Nachtbild malt später noch einmal (Schritt 4)
     const pad = SPRITE_PAD[t.b] || [0, 0];
     const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * zs * ds, up = spriteTop(t.b, w, h) * zs * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * zs * ds;
-    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, zs, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
+    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, now, ax, ay, tt.lvl, tt); } finally { PASS = null; } });
     if (sp) sp.z = zs;
     return sp;
-  });
+  }, ver);
   if (!e) return false;
   putSprite(e, c.x, c.y, z);
   return true;
@@ -556,7 +596,7 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
   const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}|${decoVariant(b, x, y, slot)}`;   // col: Busch-/Schmuckfarbe, form: Form (Block 106); Variante statt Platz (Block 124)
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
-  const zs = zoomStep(z);
+  const zs = spriteStep(z);
   const e = getSprite(key, zs, () => {
     const sp = paintSprite(26 * zs * s, 90 * zs * s, 12 * zs * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, zs, now, x, y, 1, { rot, slot, col, form }); });
     if (sp) sp.z = zs;
@@ -568,12 +608,12 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
 }
 // Linien weit weg (Block 124): je Feld die hinteren Kanten samt Torpfeilern als ein Bildchen – live waren es bei großen Welten
 // über 5.000 Striche/Flächen je Bild (Heckenkugeln, Zaunlatten, Pfosten). Gemalt über EDGE_PROJ um die Feldmitte (Türchen stehen
-// dann still). Eigenes Bildchen je Feld, neu mit groundVersion (Linien ändern sich nur über recalc)
+// dann still; zwischen Zoom 1 und 2 sind Felder mit Tor live). Fassung = groundVersion (Linien ändern sich nur über recalc)
 function spriteEdges(x, y, px, py, z, now) {
   if (!state.edges.size || !edgeFieldsHas(x, y)) return true;            // nichts zu zeichnen
   if (SPRITES_NEAR && ['a' + x + ',' + y, 'b' + x + ',' + y].some(k => state.edges.has(k) && isGate(k))) return false;   // Türchen schwingt: nah live
-  const lit = night > 0.15 && isLive() ? 1 : 0, zs = zoomStep(z);
-  const key = `edges|${x},${y}|${FOG ? 1 : 0}|${lit}|${groundVersion}`;
+  const lit = night > 0.15 && isLive() ? 1 : 0, zs = spriteStep(z);
+  const key = `edges|${x},${y}|${FOG ? 1 : 0}|${lit}`;
   const fog = FOG;
   const e = getSprite(key, zs, () => {
     const proj = (u, v) => ({ x: ((u - x) - (v - y)) * TW / 2 * zs, y: ((u - x) + (v - y)) * TH / 2 * zs });
@@ -583,28 +623,36 @@ function spriteEdges(x, y, px, py, z, now) {
     });
     if (sp) sp.z = zs;
     return sp;
-  });
+  }, groundVersion);
   if (!e) return false;
   putSprite(e, px, py, z);
   return true;
 }
 function spriteHousekeeping() {
-  if (frameNo % 120 === 0) for (const [k, e] of objSprites) { if (frameNo - e.used > 3600) dropSprite(k); else if (e.night && !nightFull()) freeNight(e); }   // Nachtbilder nur nachts; ~2 Minuten behalten (beim nächsten Rauszoomen noch da)
+  for (const e of spriteTrash) freeSprite(e);                          // ersetzte Bildchen vom letzten Bild
+  spriteTrash.length = 0;
+  if (frameNo % 120 !== 0) return;
+  for (const [k, e] of objSprites) {
+    if (frameNo - e.used > 3600) dropSprite(k);                          // ~2 Minuten behalten (beim nächsten Rauszoomen noch da)
+    else if (e.night && (!nightFull() || frameNo - e.used > 300)) freeNight(e);   // Nachtbilder nur nachts und nur für Gesehenes
+  }
 }
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
 function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
-function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } }
-function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.c); freeCanvas(n.erase.c); freeCanvas(n.light.c); } }
-function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); freeSprite(e); }
-// Andere Welt (Laden, Besuch, Testwelt): Bildchen und Boden der alten nicht weiter benutzen (Block 124)
+function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); if (e.maskTodo) freeCanvas(e.maskTodo.c); freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } }
+function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.erase.c); freeCanvas(n.light.c); } }
+function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); spriteSwap.delete(k); freeSprite(e); }
+// Andere Welt (Laden, Besuch, Testwelt, neue Insel) oder andere Pixeldichte: Bildchen und Boden nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
   for (const k of [...objSprites.keys()]) dropSprite(k);
-  spriteCrops.length = 0; spriteSwap.clear();
+  for (const e of spriteTrash) freeSprite(e);
+  spriteTrash.length = 0; spriteCrops.length = 0; spriteSwap.clear();
   for (const e of groundCache.values()) freeCanvas(e.c);
   groundCache.clear(); seaInfo.clear();
   if (seaImage) { freeCanvas(seaImage.c); seaImage = null; }
   depthImg = null;
+  if (typeof ICON_SPRITES !== 'undefined') ICON_SPRITES.clear();
 }
 
 // Was liegt unter dem Finger? (Block 71) Gebäude und Dekos zählen dort, wo sie gezeichnet sind – Dach, Turm und Fahne,
@@ -736,9 +784,9 @@ function drawDepth(minX, maxX, minY, maxY, z) {
 }
 let hoverKey = '', hoverSince = 0;
 const HOVER_CALM = 120;                // ms Ruhe, bevor die Vorschau (+Taler, +Einwohner …) rechnet
-const GROUND_MS = 8, GROUND_Z_MAX = 3;            // Malzeit je Bild für veraltete Boden-Bilder (groundSpent, zusammen mit den Bildchen PAINT_MS)
+const GROUND_MS = 8, GROUND_Z_MAX = 3, GROUND_KEEP = 160;   // GROUND_KEEP: höchstens so viele Grundstücks-Bilder im Speicher            // Malzeit je Bild für veraltete Boden-Bilder (groundSpent, zusammen mit den Bildchen PAINT_MS)
 function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
-  const want = zoomStep(Math.min(z, GROUND_Z_MAX)) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert; feste Zoomstufen (Block 124)
+  const want = Math.min(zoomStep(Math.min(z, GROUND_Z_MAX)), stepBelow(GROUND_MAX_SCALE / DPR)) * DPR, zooming = now - lastZoomChange < 250;   // Boden-Bilder nicht riesig: ganz nah leicht hochskaliert; feste Zoomstufen, nie über GROUND_MAX_SCALE (Block 124)
   const order = [];
   for (let cy = cMinY; cy <= cMaxY; cy++) for (let cx = cMinX; cx <= cMaxX; cx++) order.push([cx, cy]);
   order.sort((a, b) => (a[0] + a[1]) - (b[0] + b[1]));
@@ -759,7 +807,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       let e = groundCache.get(ck);
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
-      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < (spritePrep ? PAINT_PREP - 30 : spriteCatch ? PAINT_CATCH - 10 : GROUND_MS)))) {
+      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < GROUND_MS))) {   // Veraltetes, das noch zu sehen ist: immer nur GROUND_MS (das Aufholen gehört den fehlenden Bildchen)
         const t0 = performance.now(), n = renderGroundChunk(cx, cy, want);
         groundSpent += performance.now() - t0;
         if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
@@ -774,6 +822,10 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   drawWaves(waveList, z, now);                                           // alle auf einmal, über den Grundstücken (wie vorher je Grundstück danach)
   if (frameNo % 60 === 0) {
     for (const [ck, e] of groundCache) if (frameNo - e.used > 900) { groundCache.delete(ck); freeCanvas(e.c); }   // länger behalten: beim Zurückschieben schon da
+    if (groundCache.size > GROUND_KEEP) {                                // aber nicht unbegrenzt (Speicher iPad): die am längsten nicht gesehenen weg
+      const old = [...groundCache].sort((a, b) => a[1].used - b[1].used).slice(0, groundCache.size - GROUND_KEEP);
+      for (const [ck, e] of old) if (e.used !== frameNo) { groundCache.delete(ck); freeCanvas(e.c); }
+    }
     if (seaInfo.size > 400) seaInfo.clear();
   }
 }
@@ -901,12 +953,24 @@ function drawNight() {
     return !seen.has(k) && seen.add(k);
   });
   for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');      // Fenster zuerst, ganz hell
+  // Nachtbilder (Block 124): ihre Löcher füllt sonst erst die warme Fläche ganz am Ende – liegt blaues Licht in der Nähe, käme das
+  // zuerst und Fenster samt Schein würden blau. Darum dort Scheiben und warmen Schein vorher wie live (nur Bildchen, die Blau berühren)
+  if (nightWarm) {
+    const blue = nightPics.map(([, x, y, w, h]) => [x, y, x + w, y + h]);
+    for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, h = r * BLUE_SPOT; blue.push([gx - h, gy - h, gx + h, gy + h]); }
+    if (blue.length) {
+      const near = nightPanes.filter(([, x, y, w, h]) => blue.some(([a, b, c, d]) => a < x + w && c > x && b < y + h && d > y));
+      for (const [n, x, y, , , r] of near) for (const q of n.panes) poly(q.map(([u, v]) => [x + u * r, y + v * r]), '#ffd873');   // erst die Scheiben …
+      g.fillStyle = 'rgb(255,205,100)';
+      for (const [n, x, y, , , r] of near) for (const [u, v, rr] of n.halos) g.fillRect(x + (u - rr) * r, y + (v - rr) * r, 2 * rr * r, 2 * rr * r);   // … dann der warme Schein (wie live)
+    }
+  }
   let fill = null;
   for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
     const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, f = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
-    // mit warmer Fläche (Nachtbilder): Kristall-Licht als weicher Fleck – ein blaues Quadrat träfe die Fensterlöcher der Nachbarn,
-    // deren Scheiben hier nicht vorher gefüllt sind
-    if (nightWarm && tint === 'blue') { const h = r * BLUE_SPOT; g.drawImage(glowImage(true), gx - h, gy - h, h * 2, h * 2); continue; }
+    // mit Nachtbildern: blaues Licht als kleiner fester Fleck (gestanzt wird dann auch nur so groß, punchGlow) – ein blaues Quadrat
+    // träfe die Fensterlöcher der Nachbarn
+    if (nightWarm && tint === 'blue') { circle(gx, gy, r * BLUE_SPOT, f); continue; }
     if (f !== fill) g.fillStyle = fill = f;
     g.fillRect(gx - r, gy - r, r * 2, r * 2);
   }
@@ -935,7 +999,7 @@ function glowImage(blue) {
 function render(now) {
   const mt0 = MESS ? performance.now() : 0;
   g = ctx;
-  if (spriteCrops.length) cropSprites();                                 // Bildchen vom letzten Bild zuschneiden, bevor hier etwas gemalt wird
+  if (spriteCrops.length) cropSprites(spritePrep ? 4 * CROP_MS : CROP_MS);   // Bildchen vom letzten Bild zuschneiden, bevor hier etwas gemalt wird (mit Zeitgrenze)
   cam = state.cam;
   const z = cam.z;
   const dt = Math.min(0.1, (now - (lastRender || now)) / 1000);
@@ -944,20 +1008,22 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = nightAt();                                                     // Spieluhr (Block 101)
-  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightSeen.clear(); nightWarm = false;
+  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
   SPRITES_NEAR = SPRITES_ON && z >= SPRITE_FROM;
-  spriteCatch = SPRITE_STATS.miss >= CATCH_MISS;                         // viel fehlte im letzten Bild: aufholen
-  spritePrep = SPRITE_STATS.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten
+  const paused = frameNo < spritePause, st = SPRITE_STATS;                 // kein Speicher: nie aufholen/vorbereiten (das malte nur Fehlschläge)
+  spriteCatch = !paused && st.miss + st.nmiss >= CATCH_MISS;              // viel fehlte im letzten Bild: aufholen (auch Nachtbilder)
+  spritePrep = !paused && st.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten (nur echte Lücken, mit Hinweis)
   if (spritePrep) prepShown = performance.now();
-  spriteStale = SPRITE_STATS.stale >= CATCH_MISS && !spriteZooming;    // viele alte Bildchen aus einer anderen Stufe: zügig erneuern
-  const staleLast = SPRITE_STATS.stale;
-  SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0; SPRITE_STATS.stale = 0;
+  spriteStale = st.stale + st.old >= CATCH_MISS && !spriteZooming;       // viele alte Bildchen (andere Stufe/Fassung): zügig erneuern
+  const staleLast = st.stale;
+  spriteMissLast = st.miss;
+  st.miss = 0; st.made = 0; st.stale = 0; st.old = 0; st.nmiss = 0; st.fail = 0;
+  spriteZoomedLast = spriteZooming;
   spriteZooming = now - lastZoomChange < 250;
-  spriteSwapAll(staleLast);                                              // scharfe Bildchen alle zugleich einsetzen
-  spriteDeadline = performance.now() + SPRITE_MS;
+  spriteSwapAll(staleLast, spriteStep(z));                               // scharfe Bildchen alle zugleich einsetzen
   spriteSpent = 0; spriteMade = 0; groundSpent = 0;
   spriteHousekeeping();
 
@@ -1156,7 +1222,7 @@ function render(now) {
           const an = (now - t.born) / 380;
           if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
         }
-        if (SPRITES_ON && sc === 1 && spriteOk(t.b) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen
+        if (SPRITES_ON && sc === 1 && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
         const ds = sc * decoScale(t.b);
         g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
         PASS = 'object';

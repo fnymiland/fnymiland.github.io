@@ -3,9 +3,9 @@ const { loadGame, game } = require('./helpers/load-game');
 // Block 124 Schritt 0/1: Messzähler, und schneller ohne Bildänderung – Felder ohne Linien und ohne Dekos werden übersprungen,
 // Bildchen ohne Licht nur eingesetzt, Licht-Einträge nur einmal
 beforeAll(() => loadGame());
-afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na'));
+afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na; if (globalThis.__gh) gameHour = globalThis.__gh'));
 beforeEach(() => {
-  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');   // tags (die Spieluhr läuft echt)
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0; if (!globalThis.__gh) globalThis.__gh = gameHour; gameHour = () => 12');   // tags (die Spieluhr läuft echt) – Uhr fest (Uhren-Gebäude, Rathaus-Fassung)
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; night = 0');
   game("for (let y = 2; y <= 16; y++) for (let x = 2; x <= 16; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } state.edges.clear(); recalc()");
 });

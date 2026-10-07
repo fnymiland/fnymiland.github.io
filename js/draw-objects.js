@@ -31,7 +31,7 @@ function glowSnap(q) {
   const w = Math.min(src.width, Math.ceil(Math.max(...xs))) - x0, h = Math.min(src.height, Math.ceil(Math.max(...ys))) - y0;
   if (w <= 0 || h <= 0) return null;
   try {
-    if (!A.c) { A.c = document.createElement('canvas'); A.c.width = 512; A.c.height = 512; A.ctx = A.c.getContext('2d'); }
+    if (!A.c) { A.c = document.createElement('canvas'); A.c.width = Math.min(512, src.width); A.c.height = Math.min(512, src.height); A.ctx = A.c.getContext('2d'); if (!A.ctx) { A.c = null; return null; } }   // nie größer als das Bildchen (Block 124: lag sonst je Bildchen 1 MB bis zum Zuschneiden)
     if (A.x + w > A.c.width) { A.x = 0; A.y += A.row; A.row = 0; }
     if (w > A.c.width || A.y + h > A.c.height) return null;              // Ablage voll: dieses Fenster ganz (wie früher)
     A.ctx.drawImage(src, x0, y0, w, h, A.x, A.y, w, h);
@@ -68,7 +68,7 @@ function punchGlow(q, r, tint, part = null) {
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
-  const rr = n ? r * 0.7 : r;
+  const rr = (n ? r * 0.7 : r) * (blue && SPRITES_ON && nightFull() ? BLUE_SPOT : 1);   // weit weg bei voller Nacht: blaues Loch so groß wie sein Fleck (render.js)
   g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
   g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
   if (!blue && !part) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
@@ -2103,7 +2103,7 @@ const treeFruitOf = (x, y, s) => { const h = hash(x, y, 40 + s); return h < 0.4 
 const potOf = (x, y, s) => Math.floor(hash(x, y, 7 + s) * 5);
 const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : b === 'souvenir' ? 'sv' + svVariant(x, y, s) : ''; };   // Souvenir: Art, Farbe, Flagge, Tier (Block 129)
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
-  if (SPRITES_ON && sc === 1 && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
+  if (SPRITES_ON && sc === 1 && g === ctx && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
   drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form });

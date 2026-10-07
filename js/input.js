@@ -12,7 +12,10 @@ let cam;
 let PHONE = false;
 
 function resize() {
+  const dprWas = DPR;
   DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // andere Pixeldichte (Browser-Zoom, anderer Bildschirm): Bildchen und Boden passen nicht mehr (Block 124)
+  if (dprWas && DPR !== dprWas && typeof resetDrawCaches === 'function') resetDrawCaches();
   W = window.innerWidth; H = window.innerHeight;
   canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
   const was = PHONE;

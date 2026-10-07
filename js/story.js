@@ -327,8 +327,10 @@ function diaryPage(id) {
 function diaryPicture(pic) {
   const c = document.createElement('canvas');
   c.width = 320; c.height = 200;
+  const cx0 = c.getContext('2d');
+  if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild (Block 124)
   const prev = g, prevNight = night;
-  g = c.getContext('2d'); FOG = false;
+  g = cx0; FOG = false;
   night = pic.lit ? 0.45 : 0;
   g.fillStyle = pic.lighthouse ? (pic.lit ? '#27325e' : '#9fd6e8') : '#bfe5f0';
   g.fillRect(0, 0, 320, 200);

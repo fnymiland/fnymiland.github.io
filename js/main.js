@@ -10,6 +10,7 @@ function startNew() {
   state = newState();
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear();
+  if (typeof resetDrawCaches === 'function') resetDrawCaches();   // Bildchen und Boden der alten Insel weg (Block 124)
   walkers.length = 0; cars.length = 0;
   resetUndo();                                     // ↶ gehört zur alten Insel (Block 84a)
   state.tiles.set('1,1', { b: 'rathaus', lvl: 1 });           // 3×3 (1–3): die Wege unten führen an seine Seiten
