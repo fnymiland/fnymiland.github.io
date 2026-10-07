@@ -356,6 +356,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `MARKT_OK` (nur diese Stände zählen für den Wunsch „Marktplatz erreichbar“, `nearList`/`reachKind`). Wirkung: Läden bis
     `MARKT_REACH` Felder +`MARKT_BONUS` (`s.markt`, vor der Kaufkraft), Besucher `MARKT_ATTR` (`placeStats`), Markttag
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
+131. **Bahnhofslänge** (Block 131): `sizeOf('station', rot, t)` immer mit dem Feld t (ohne t gilt die Wahl für neu Gebautes,
+    `stationNewLen`). Neue Felder mit variabler Größe brauchen: `sizeOf`, `drawBuilding` (da/wb), Bildchen-Schlüssel, `tileOut`.
+127. **Vorplätze nur über `courtPartsAt(t, x, y)`** (Block 127), nicht `courtParts(C0)`: Vor schmalem Weg wird der Platz zum Weg
+    zur Tür in Wegbreite. Zeichnen, Wegfeld-Stücke (`courtOf`) und Fenster müssen dieselben Stücke nehmen.
+126. **Linien-Aussehen nur über `edgeLook(e)`** (Block 126): färbt Hecken in Buschfarbe (`e.col`, BUSH_COLS). Wer eine Linie
+    zeichnet, nimmt nie `EDGE_LOOK[b][style]` direkt, sonst fehlt die Farbe.
 118. **Hauptbahnhof-Halle** (Block 118/121/123): Die Halle steht immer in der Mitte: Gleis – Steig – Halle – Steig – Gleis,
     rechts der Halle gespiegelt (`hbfPlatS(t, g)`: Bahnsteig bei +1 oder −1 vom Gleis). `t.wing = 2`, `t.mid` = Gleise links,
     neu gebaut mit `HBF_NEW` (auch Vorschau und Symbol). Lage nur über `hbfTrackB(t, g)`, `hbfPlatS`, `hbfHallB`, `hbfPortalB`;
@@ -627,7 +633,9 @@ npm run serve     # Server für WLAN/iPad auf Port 4173
 
 **Schon ausprobiert und verworfen – nicht wieder einbauen:**
 unendliches Land ohne Ziel (seit Block 27 endlos, aber mit Zielen: ferne Inseln, teures tiefes Wasser) · Inselhüpfen (eine Insel bleibt) · Straßenpflicht zum Rathaus · Strom/Kraftwerke als
-allgemeines Netz (Strom gibt es nur für Züge, von Windrädern) · Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse.
+allgemeines Netz (Strom gibt es nur für Züge, von Windrädern) · Gehwege auf Feldkanten · Straßen neben Wegen · Autos/Busse · schräge Wege/Schienen
+(06.10.2026: Treppen zu einem schrägen Band geglättet, mit Bögen und angepasster Breite – wirkt in der Schrägansicht
+fremd, weil Diagonalen auf dem Bildschirm senkrecht/waagerecht stehen; echte Diagonalen sähen genauso aus).
 
 ## Online (GitHub Pages)
 

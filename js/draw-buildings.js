@@ -381,18 +381,20 @@ const BUILDING_ART = {
     K.scene(parts);
   },
   // Bahnhof: Empfangsgebäude mit Uhr, vorn (zur Schiene) ein Bahnsteig mit gelber Linie und Dach, Bank und Schild
-  station(K, s, now, x, y, t) {
-    const z = K.z;
+  // 2 oder 3 Felder lang (Block 131, hb: halbe Länge): bei 3 ein breiteres Empfangshaus, Dach und Bahnsteig länger, Tür in der Mitte
+  station(K, s, now, x, y, t, ha, hb = 1) {
+    const z = K.z, long = hb > 1.2, PE = hb - 0.06;
     if (groundPart(() => {
-      K.rect(0.1, -0.94, 0.48, 0.94, C('#e6dfd0'));
-      K.rect(0.4, -0.94, 0.44, 0.94, C('#f2c14e'));
+      K.rect(0.1, -PE, 0.48, PE, C('#e6dfd0'));
+      K.rect(0.4, -PE, 0.44, PE, C('#f2c14e'));
     })) return;
     const [wall, roof] = paint(t, '#f3e1c4', '#b8574a');
     const hall = () => {
       kShadow(K, 0.5);
-      const B = K.block({ a: -0.2, ha: 0.24, hb: 0.54, h: 17, wall, roof, roofH: 11 });
-      K.door(B, 'front', 0.44, 0.56, 0.62);
-      K.wins(B, 'front', 4, 0.35, 0.72, 0.06, 0.94, [1, 2], true);      // Blumenkästen (Block 109)
+      const B = K.block({ a: -0.2, ha: 0.24, hb: long ? 0.86 : 0.54, h: long ? 19 : 17, wall, roof, roofH: long ? 12 : 11 });
+      K.door(B, 'front', long ? 0.46 : 0.44, long ? 0.54 : 0.56, 0.62);
+      if (long) K.wins(B, 'front', 6, 0.35, 0.72, 0.04, 0.96, [2, 3], true);
+      else K.wins(B, 'front', 4, 0.35, 0.72, 0.06, 0.94, [1, 2], true);      // Blumenkästen (Block 109)
       K.sideWins(B, 1, 0.35, 0.72, true);
       const F = B.faces.front;
       if (F) {                                             // Bahnhofsuhr über der Tür
@@ -400,17 +402,17 @@ const BUILDING_ART = {
       }
     };
     const canopy = () => {
-      for (const b of [-0.72, -0.24, 0.24, 0.72]) kPost(K, 0.3, b, 13, '#6b6f78', 1.2);
-      K.block({ a: 0.28, ha: 0.13, hb: 0.88, h: 1.4, lift: 13, wall: shade(roof, -0.12), type: 'flat', roof: shade(roof, 0.06) });
-      for (const b of [-0.48, 0.48]) hangLamp(K, 0.37, b, 13);           // Lampen und Blumenampel unterm Dach (Block 109)
+      for (const b of long ? [-1.22, -0.73, -0.24, 0.24, 0.73, 1.22] : [-0.72, -0.24, 0.24, 0.72]) kPost(K, 0.3, b, 13, '#6b6f78', 1.2);
+      K.block({ a: 0.28, ha: 0.13, hb: hb - 0.12, h: 1.4, lift: 13, wall: shade(roof, -0.12), type: 'flat', roof: shade(roof, 0.06) });
+      for (const b of long ? [-0.98, -0.48, 0.48, 0.98] : [-0.48, 0.48]) hangLamp(K, 0.37, b, 13);   // Lampen und Blumenampel unterm Dach (Block 109)
       hangBasket(K, 0.37, 0, 13);
-      const [sx, sy] = K.P(0.3, -0.5, 9);                 // blaues Schild
+      const [sx, sy] = K.P(0.3, long ? -0.98 : -0.5, 9);                 // blaues Schild
       poly([[sx - 4 * z, sy - 2 * z], [sx + 4 * z, sy - 2 * z], [sx + 4 * z, sy + 1.5 * z], [sx - 4 * z, sy + 1.5 * z]], C('#3e7fd0'));
       g.strokeStyle = C('#ffffff'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(sx - 2.5 * z, sy - 0.2 * z); g.lineTo(sx + 2.5 * z, sy - 0.2 * z); g.stroke();
     };
-    K.scene([[-0.2, 0, hall], [0.1, -0.42, () => kPlanter(K, 0.1, -0.42)], [0.1, 0.42, () => kPlanter(K, 0.1, 0.42)], [0.3, 0, canopy], [0.22, 0.45, () => {
-      const [bx, by] = K.P(0.2, 0.45); g.save(); g.translate(bx, by); g.scale(0.45, 0.45); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: K.r }); g.restore();
-    }]]);
+    const bench = b => [0.22, b, () => { const [bx, by] = K.P(0.2, b); g.save(); g.translate(bx, by); g.scale(0.45, 0.45); drawObject('bank', 0, 0, z, now, x, y, 1, { rot: K.r }); g.restore(); }];
+    K.scene([[-0.2, 0, hall], [0.1, -0.42, () => kPlanter(K, 0.1, -0.42)], [0.1, 0.42, () => kPlanter(K, 0.1, 0.42)], [0.3, 0, canopy],
+      ...(long ? [bench(-0.95), bench(0.95)] : [bench(0.45)])]);   // 3 lang: zwei Bänke, gleich weit von der Mitte
   },
   // Glashaus: weißes Gerippe, Glaswände mit Pflanzen dahinter, Satteldach aus Glas; abends warmes Licht innen
   glashaus(K, s, now, x, y, t) {
@@ -1317,6 +1319,6 @@ function drawObjectAt(b, K, a, bb, s, rot = 0) {
 const UNPAINTED = new Set(['feld', 'glashaus', 'markt', 'bootssteg', 'seilbahn', 'solarfeld', 'wellen']);
 const PAINTABLE = new Set([...Object.keys(BUILDING_ART).filter(b => !UNPAINTED.has(b)), 'rathaus', 'fz_schloss', 'fz_torturm', 'schloss']);
 function drawBuilding(type, cx, cy, z, now, x, y, lvl, t) {
-  const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : ITEMS[type].size || [1, 1];
+  const [da, wb] = type === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : type === 'station' ? [1, stationLen(t)] : ITEMS[type].size || [1, 1];
   BUILDING_ART[type](kit(cx, cy, z, t && t.rot), Math.max(1, Math.min(lvl || 1, 3)), now, x, y, t || {}, da / 2, wb / 2);
 }

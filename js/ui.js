@@ -368,9 +368,9 @@ const swatchCache = new Map();
 function courtHtml(t, x, y) {
   const C0 = COURTS[t.b], gp = !C0 && gardenPath(t, x, y, true), ct = C0 && courtOf(t, x, y, true);
   if (!C0 && !gp) return '';
-  const name = gp ? 'Gartenweg zur Tür' : courtIsPlaza(C0) ? 'Vorplatz' : 'Weg zur Tür';
+  const plaza = !!(C0 && courtPartsAt(t, x, y).some(c => !c.band)), name = gp ? 'Gartenweg zur Tür' : plaza ? 'Vorplatz' : 'Weg zur Tür';   // vor schmalem Weg: Weg (Block 127)
   if (!gp && !ct && (!C0.own || C0.bare)) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
-  const on = t.zug !== false, plaza = !!(C0 && courtIsPlaza(C0)), auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
+  const on = t.zug !== false, auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
   return `<div class="looks"><button class="look${on ? ' on' : ''}" data-zug="1" aria-pressed="${on}">${plaza ? '🧱' : '🌿'} ${name}</button></div>
     ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && PATH_LOOK[st.id].stones)).map(st =>
       `<button class="sw${courtVp(t) === st.id ? ' on' : ''}" data-vp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : ''}`;
@@ -409,7 +409,13 @@ function wireBushChips(bar, key, t) {
 }
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
-  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)]);
+  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station');
+  if (t === 'station') {                                         // kleiner Bahnhof: 2 oder 3 Felder lang (Block 131)
+    bar.innerHTML = [2, 3].map(n => `<button class="style-chip size-chip${stationNewLen === n ? ' on' : ''}" data-slen="${n}" title="${n} Felder lang" aria-label="${n} Felder lang"><i>${n}</i><span>${n} Felder${n === 3 ? ' · Tür mittig' : ''}</span></button>`).join('');
+    for (const b of bar.querySelectorAll('[data-slen]')) b.onclick = () => { stationNewLen = +b.dataset.slen; previewCache = null; sfx('deco'); renderStyleBar(t); };
+    bar.hidden = false;
+    return;
+  }
   if (sizes) {                                                   // Größen (Block 43): Klein · Mittel · Groß · Riesig
     const foot = id => ITEMS[id].small ? 'Ecke' : ITEMS[id].size ? ITEMS[id].size.join('×') : '1×1';
     bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${SIZE_NAMES[k]}">
@@ -436,7 +442,7 @@ function renderStyleBar(t) {
     + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '')
     + (t === 'weg' ? `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
       `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
-  if (t === 'hecke' && isWilmerStyle(cur)) { bar.innerHTML += bushChips('hecke'); wireBushChips(bar, 'hecke', t); }   // Farbe der Wilmerhecke (Block 89)
+  if (t === 'hecke') { bar.innerHTML += bushChips('hecke'); wireBushChips(bar, 'hecke', t); }   // Farbe der Hecke (Block 89, alle Formen: Block 126)
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar(t); };
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
@@ -1019,7 +1025,7 @@ const bushAll = () => {                                           // alle Büsch
   for (const t of state.tiles.values()) if (baseOf(t.b) === 'busch') out.push(t);
   return out;
 };
-const wilmerAll = () => [...state.edges.values()].filter(e => e.b === 'hecke' && isWilmerStyle(e.style));
+const hedgeAll = () => [...state.edges.values()].filter(e => e.b === 'hecke');                // alle Hecken (Block 126)
 function bushColHtml(cur, key, others) {
   const have = BUSH_COLS.map((c, i) => [c, i]).filter(([, i]) => bushColOk(i)), more = BUSH_COLS.length - have.length;
   const on = !!(state.paintNew[key] && state.paintNew[key].col != null);
@@ -1238,7 +1244,7 @@ function openInfo(x, y) {
       if (t.b === 'schloss') wonder += decreeHtml();
     }
   }
-  const line = t.b === 'station' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : '';
+  const line = t.b === 'station' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
@@ -1357,6 +1363,7 @@ function openInfo(x, y) {
   if (line) wireTrainChooser(el, line, () => openInfo(x, y));
   // Hauptbahnhof: Gleis öffnen, Gleise dazu/weg, Aussehen
   for (const b of el.querySelectorAll('[data-gleis]')) b.onclick = () => openGleis(b.dataset.gleis);
+  for (const b of el.querySelectorAll('[data-slen]')) b.onclick = () => { if (+b.dataset.slen === stationLen(t)) return; const nk = undoable(() => stationLenSet(x + ',' + y, +b.dataset.slen)); if (nk) openInfo(...keyXY(nk)); };   // Block 131
   for (const b of el.querySelectorAll('[data-gres]')) b.onclick = () => { const [d, side] = b.dataset.gres.split(',').map(Number), nk = hbfResize(x + ',' + y, d, side); if (nk) openInfo(...keyXY(nk)); };   // Block 123: Seite wählen
   if ($('p-hup')) $('p-hup').onclick = () => { const nk = undoable(() => { const k = hbfUpgrade(x + ',' + y); if (k) { sfx('build'); recalc(); save(); } return k; }); if (nk) openInfo(...keyXY(nk)); else fail(hbfUpgradePlan(x + ',' + y)); };
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
@@ -1458,7 +1465,7 @@ function openGateInfo(k) {
     ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen – es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
     : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
-    ${e.b === 'hecke' && isWilmerStyle(e.style) ? bushColHtml(e.col || 0, 'hecke', wilmerAll().filter(o => o !== e && (o.col || 0) !== (e.col || 0)).length) : ''}
+    ${e.b === 'hecke' ? bushColHtml(e.col || 0, 'hecke', hedgeAll().filter(o => o !== e && (o.col || 0) !== (e.col || 0)).length) : ''}
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
     <p class="muted">Gilt für die ganze zusammenhängende Linie.${e.flush == null ? ' Von selbst: bündig nur am Park.' : ''}</p>
@@ -1469,7 +1476,7 @@ function openGateInfo(k) {
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
-  if (e.b === 'hecke' && isWilmerStyle(e.style)) wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => setCol(e, i), all: i => { const l = wilmerAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openGateInfo(k) });
+  if (e.b === 'hecke') wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => setCol(e, i), all: i => { const l = hedgeAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openGateInfo(k) });
 }
 // Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
 function marktStatus(k) {
@@ -1586,6 +1593,13 @@ function shopStatus(t, s, k) {
   if (S.attr) out.push(`<div class="ok">👥 Zieht ${S.attr} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   if (S.hotel) out.push(`<div class="ok">🏨 Die Insel zieht ${Math.round(S.hotel * 100)} % mehr Besucher an</div>`);
   return out;
+}
+// Kleiner Bahnhof: Länge 2 oder 3 Felder (Block 131)
+function stationLenHtml(x, y, t) {
+  const n = stationLen(t), other = n === 3 ? 2 : 3, p = stationLenPlan(x + ',' + y, other), { money, ...mat } = STATION_LEN_COST;
+  return `<div class="label">Länge</div>
+    <div class="looks">${[2, 3].map(v => `<button class="look${v === n ? ' on' : ''}" data-slen="${v}" ${v !== n && typeof p === 'string' && !/Taler|Material/.test(p) ? 'disabled' : ''}>${v} Felder${v === 3 ? ' · Tür mittig' : ''}${v === 3 && n === 2 ? ` · 🪙 ${fmt(money)} ${matText(mat)}` : ''}</button>`).join('')}</div>
+    ${typeof p === 'string' && n === 2 && !/Taler|Material/.test(p) ? `<p class="muted">${p}.</p>` : '<p class="muted">Mit 3 Feldern steht die Tür genau auf einem Feld – passend zu einem 1er-Weg.</p>'}`;
 }
 // Hauptbahnhof: Gleise mit ihrem Ziel, Umsteigen, + Gleis / − Gleis, Aussehen
 const HBF_LOOKS = { glas: '🏛️ Glashalle', backstein: '🧱 Backstein', land: '🌾 Landbahnhof' };
@@ -2359,6 +2373,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-07-hecken', date: '7. Oktober', title: 'Bunte Hecken, passende Eingänge, längerer Bahnhof', items: [
+    '🚉 <b>Bahnhof 3 Felder lang:</b> Beim Bauen in der Leiste „3 Felder“ wählen oder im Fenster umstellen – dann steht die Tür genau auf einem Feld, passend zu einem 1er-Weg.',
+    '🚪 <b>Eingänge passen zum Weg:</b> Vor einem schmalen Weg führt ein Weg genauso breit bis zur Tür – statt eines breiten Platzes. Vor einem ganz breiten Weg bleibt der Vorplatz.',
+    '🌳 <b>Jede Hecke in deiner Farbe:</b> Niedrige, hohe, Buchs-, Blüten- und Lichterhecke lassen sich jetzt färben wie die Wilmerhecke – in der Leiste beim Bauen oder im Fenster der Hecke, auch für alle auf einmal.',
+  ] },
   { id: '2026-10-06-symmetrie', date: '6. Oktober', title: 'Hauptbahnhof symmetrisch', items: [
     '🚉 <b>Halle immer in der Mitte:</b> Gleis – Steig – Halle – Steig – Gleis. Rechts der Halle ist alles gespiegelt, bei gerader Gleiszahl ist der Bahnhof genau symmetrisch.',
     '➕ <b>Seite wählen:</b> „+ Gleis links“ oder „+ Gleis rechts“ (und „−“ genauso) – alle anderen Gleise bleiben, wo sie sind.',

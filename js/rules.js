@@ -26,7 +26,11 @@ const hbfTrackB = (t, g) => -hbfHalfW(t) + 0.5 + 2 * g + (hbfWing(t) && g >= hbf
 const hbfPlatS = (t, g) => (hbfWing(t) && g >= hbfLeft(t) ? -1 : 1);                                   // Bahnsteig bei b + hbfPlatS (rechts: gespiegelt)
 const hbfHallB = t => -hbfHalfW(t) + 2 * hbfLeft(t) + 0.5;                                            // Mitte der Halle
 const hbfPortalB = t => (hbfWing(t) ? hbfHallB(t) : 0);                                                // Portal vor der Halle
-const sizeOf = (b, rot, t) => { const s = b === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : b === 'fz_schloss' ? csSize(t) : b === 'leuchtturm' && t && t.mini ? [1, 1] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };   // alter Leuchtturm (t.mini): 1×1 (Block 83)
+// Kleiner Bahnhof 2 oder 3 Felder lang (Block 131): t.len = 3 (3: Tür genau mittig auf einem Feld). Ohne t: so, wie man ihn neu
+// baut (Wahl in der Leiste, stationNewLen)
+let stationNewLen = 2;
+const stationLen = t => (t ? (t.len === 3 ? 3 : 2) : stationNewLen);
+const sizeOf = (b, rot, t) => { const s = b === 'station' ? [1, stationLen(t)] : b === 'hbf' ? [4, 2 * hbfGleise(t) + (hbfWing(t) ? 1 : 0)] : b === 'fz_schloss' ? csSize(t) : b === 'leuchtturm' && t && t.mini ? [1, 1] : ITEMS[b].size || [1, 1]; return (rot & 1) ? [s[1], s[0]] : s; };   // alter Leuchtturm (t.mini): 1×1 (Block 83)
 // Märchenschloss (Block 60g/60h): ein Gebäude, gestaltet im Fenster. t.cs = { w: Breite (Felder, quer zur Front), d: Tiefe,
 // m/mk/mr: Mittelturm Höhe (0 keiner … 4 riesig), Dicke, Dach; cb/cf/cr: Mittelbau Breite, Stockwerke, Dach; wf/wr: Flügel
 // Stockwerke, Dach; tw: Turmpaare von innen nach außen [{ h: Höhe, k: Dicke, p: Platz (vorn, Fassade, hinten), r: Dach }] }.
@@ -152,6 +156,37 @@ function hbfUpgradeAll() {                                        // beim Laden 
     if (hbfUpgrade(k)) { out.done++; rebuildCover(); } else out.stuck++;
   }
   return out.done || out.stuck ? out : null;
+}
+// Bahnhof länger/kürzer (Block 131): wächst zur Seite, wo Platz ist (erst +b, sonst −b), kürzer: das hintere Ende fällt weg.
+// Ein Feld mehr kostet STATION_LEN_COST, zurück die Hälfte der Taler. Rückgabe { nk } oder ein Hinweis.
+const STATION_LEN_COST = { money: 400, bretter: 5, quader: 3 };
+function stationLenPlan(k, n) {
+  const t = state.tiles.get(k);
+  if (!t || t.b !== 'station') return 'Kein Bahnhof';
+  if (stationLen(t) === n) return 'Ist schon so';
+  const [x, y] = keyXY(k), r = (t.rot || 0) & 3, t2 = { ...t, len: n };
+  if (n < stationLen(t)) return { nk: k };
+  const old = new Set(footprint('station', x, y, r, t).map(p => p.join()));
+  let why = null;
+  for (const [nx, ny] of [[x, y], r & 1 ? [x - 1, y] : [x, y - 1]]) {
+    const bad = footprint('station', nx, ny, r, t2).filter(([fx, fy]) => !old.has(fx + ',' + fy)).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos'
+      : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
+    if (!bad) return canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
+    why = why || bad;
+  }
+  return why + ' – für ein Feld mehr muss links oder rechts eins frei sein';
+}
+function stationLenSet(k, n) {
+  const p = stationLenPlan(k, n);
+  if (typeof p === 'string') { fail(p); return null; }
+  const t = state.tiles.get(k);
+  if (n > stationLen(t)) addCost(STATION_LEN_COST, -1); else state.money += Math.floor(STATION_LEN_COST.money / 2);
+  if (n === 3) t.len = 3; else delete t.len;
+  t.born = performance.now();
+  if (p.nk !== k) { state.tiles.delete(k); state.tiles.set(p.nk, t); }
+  sfx('build'); recalc(); save();
+  return p.nk;
 }
 // Gleise dazu/weg (Block 123: auf der gewählten Seite der Halle, side −1 links/+1 rechts): Alle anderen Gleise bleiben, wo sie
 // sind – dafür rückt der Anker (gleiche Ausfahrt vor einem bleibenden Gleis). Ohne Halle (alt): immer rechts.
@@ -829,17 +864,44 @@ const COURTS = {
 const courtParts = (C0, t) => [].concat((t && t.lvl >= 3 && C0.s3) || C0.parts || C0).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
 const courtIsPlaza = C0 => courtParts(C0).some(c => !c.band);
 const courtVp = t => t.vp && STYLES.weg.some(st => st.id === t.vp) ? t.vp : null;
+// Felder vor der Front: je Spalte c (quer, Mitte des Felds) das Feld davor
+function courtFrontTiles(t, x, y) {
+  const r = (t.rot || 0) & 3, [w, h] = sizeOf(t.b, r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
+  const [da, wb] = ITEMS[t.b].size || [1, 1], out = [];
+  for (let c = -wb / 2 + 0.5; c < wb / 2; c++) {
+    const [u, v] = kitTurn(r, da / 2 + 0.5, c), nx = Math.round(cx + u), ny = Math.round(cy + v), n = state.tiles.get(nx + ',' + ny);
+    out.push({ c, x: nx, y: ny, weg: !!(n && n.b === 'weg' && !n.bridge), wide: !!(n && n.b === 'weg' && (n.wide || pathQuads(nx, ny).length)) });
+  }
+  return out;
+}
+// Eingang passt sich dem Weg an (Block 127): vor einem schmalen Weg wird ein Vorplatz zu einem Weg zur Tür, genau so breit wie der
+// Weg davor (je schmalem Wegfeld, das er berührt); auch ein breiter Weg zur Tür (Museum) wird nicht breiter als der Weg. Vor
+// einem ganz breiten Weg oder einer Wegfläche bleibt der Platz. Höfe über das ganze Grundstück (a < 0: Rathaus …) bleiben, wie sie sind.
+function courtPartsAt(t, x, y) {
+  const C0 = t && COURTS[t.b], parts = courtParts(C0, t);
+  if (!C0 || x > 1e5) return parts;
+  const front = courtFrontTiles(t, x, y);
+  return parts.flatMap(p => {
+    if (p.a < 0) return [p];
+    const under = front.filter(f => Math.min(p.s[1], f.c + 0.5) - Math.max(p.s[0], f.c - 0.5) >= 0.05), hit = under.filter(f => f.weg);
+    if (!hit.length || hit.some(f => f.wide)) return [p];
+    const m = (p.s[0] + p.s[1]) / 2, band = c => ({ a: p.a, s: [c - ROAD_W, c + ROAD_W], band: true });
+    if (p.band) { const hw = Math.min((p.s[1] - p.s[0]) / 2, ROAD_W); return [{ ...p, s: [m - hw, m + hw] }]; }
+    if (hit.length === under.length) return [band(m)];                       // Weg an der ganzen Front entlang: ein Weg zur Tür
+    const mid = hit.filter(f => f.c >= p.s[0] && f.c <= p.s[1]);             // sonst je Wegfeld vor dem Platz (nicht daneben)
+    return mid.length ? mid.map(f => band(f.c)) : [p];
+  });
+}
 // Die Wegfelder vor dem Vorplatz: je Stück und Feld der vorderen Reihe, das es berührt, das Stück [q0, q1] quer auf dem Wegfeld (wie armUV)
 function courtOf(t, x, y, any = false) {
   const C0 = t && COURTS[t.b];
   if (!C0 || (t.zug === false && !any) || x > 1e5) return null;
-  const r = (t.rot || 0) & 3, [w, h] = sizeOf(t.b, r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
-  const [da, wb] = ITEMS[t.b].size || [1, 1], [fx, fy] = kitTurn(r, 1, 0), links = [];
-  for (const { s: [s0, s1] } of courtParts(C0, t)) for (let c = -wb / 2 + 0.5; c < wb / 2; c++) {
-    const l0 = Math.max(s0, c - 0.5), l1 = Math.min(s1, c + 0.5);
-    if (l1 - l0 < 0.05) continue;
-    const [u, v] = kitTurn(r, da / 2 + 0.5, c), nx = Math.round(cx + u), ny = Math.round(cy + v), n = state.tiles.get(nx + ',' + ny);
-    if (n && n.b === 'weg' && !n.bridge) links.push({ x: nx, y: ny, style: n.style || 'sand', q0: c - l1, q1: c - l0 });
+  const r = (t.rot || 0) & 3, [fx, fy] = kitTurn(r, 1, 0), links = [], front = courtFrontTiles(t, x, y);
+  for (const { s: [s0, s1] } of courtPartsAt(t, x, y)) for (const f of front) {
+    const c = f.c, l0 = Math.max(s0, c - 0.5), l1 = Math.min(s1, c + 0.5);
+    if (l1 - l0 < 0.05 || !f.weg) continue;
+    const n = state.tiles.get(f.x + ',' + f.y);
+    links.push({ x: f.x, y: f.y, style: n.style || 'sand', q0: c - l1, q1: c - l0 });
   }
   if (!links.length) return null;
   return { d: [-fx || 0, -fy || 0], links, style: courtVp(t) || links[0].style };
@@ -1004,11 +1066,11 @@ function setArch(k, type) {
 }
 function buildEdge(b, k) {
   const style = currentStyle(b), old = state.edges.get(k);
-  if (old && old.b === b && old.style === style && (old.col || 0) === (b === 'hecke' && isWilmerStyle(style) ? bushColNew('hecke').col || 0 : old.col || 0)) return false;
+  if (old && old.b === b && old.style === style && (old.col || 0) === (b === 'hecke' ? bushColNew('hecke').col || 0 : old.col || 0)) return false;
   const d = ITEMS[b];
   if (old) { state.money += ITEMS[old.b].cost; for (const [r, n] of Object.entries(ITEMS[old.b].mat || {})) state.res[r] += n; }   // die alte Linie zurück (Block 84b)
   state.money -= d.cost; payMat(d.mat || {});
-  const col = b === 'hecke' && isWilmerStyle(style) ? (bushColNew('hecke').col || (old && isWilmerStyle(old.style) ? old.col : undefined)) : undefined;   // Buschfarbe (Block 89)
+  const col = b === 'hecke' ? (bushColNew('hecke').col || (old && old.b === 'hecke' ? old.col : undefined)) : undefined;   // Buschfarbe (Block 89; alle Hecken: Block 126)
   state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }

@@ -33,6 +33,13 @@ const EDGE_LOOK = {
     lichter: { h: 8, col: '#c98d5c', lights: true },
   },
 };
+// Aussehen einer Linie. Hecken in Buschfarbe (Block 126): e.col (BUSH_COLS) färbt jede Heckenform; die Wilmerhecke färbt ihre
+// Büsche selbst. Ohne Farbe (Grün) bleibt das Grün der Form; dunkle Formen bleiben in jeder Farbe etwas dunkler (HEDGE_TONE)
+const HEDGE_TONE = { hoch: -0.12, buchs: -0.2, lichter: -0.12 };
+function edgeLook(e) {
+  const look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0];
+  return e.b === 'hecke' && e.col && !look.bushes && BUSH_COLS[e.col] ? { ...look, col: shade(BUSH_COLS[e.col].c[0], HEDGE_TONE[e.style] || 0) } : look;
+}
 // Endpunkte einer Kante in Feld-Koordinaten und ihre Richtung
 function edgeEnds(k) {
   const { dir, i, j } = edgeParse(k);
@@ -363,7 +370,7 @@ function drawGateArch(E, e, look, z, k) {
   hangLantern(x, y, z, edgeLit('A' + k));
 }
 function drawEdge(k, e, z, now) {
-  const E = edgeEnds(k), look = (EDGE_LOOK[e.b] || {})[e.style] || Object.values(EDGE_LOOK[e.b])[0], gate = isGate(k);
+  const E = edgeEnds(k), look = edgeLook(e), gate = isGate(k);
   const w = look.w || 0, h = look.h, { dir, i, j } = edgeParse(k), [au, av] = E.along;
   // runde Ecke (Weg innen): das Stück hört vor dem Bogen auf, das waagerechte Stück zeichnet den Bogen mit
   const rcP = !gate && roundCorner(i, j), rcQ = !gate && roundCorner(i + au, j + av);

@@ -190,3 +190,49 @@ describe('Vorplatz (Block 91)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('Eingang passt sich dem Weg an (Block 127)', () => {
+  const parts = k => game(`courtPartsAt(state.tiles.get('${k}'), ...keyXY('${k}')).map(c => [+c.s[0].toFixed(3), +c.s[1].toFixed(3), c.band])`);
+  const RW = () => game('ROAD_W');
+  it('Weg an der ganzen Front entlang: ein Weg zur Tür, so breit wie der Weg – in jeder Drehung', () => {
+    for (const b of ['theater', 'kino', 'passage', 'konzerthalle']) for (let rot = 0; rot < 4; rot++) {
+      game("for (let y = 2; y <= 30; y++) for (let x = 2; x <= 30; x++) state.tiles.delete(x + ',' + y)");
+      put('12,12', { b, lvl: 1, rot });
+      const wb = game(`(ITEMS.${b}.size || [1, 1])[1]`);
+      for (let i = 0; i < wb; i++) { const [x, y] = front(b, 12, 12, rot, -wb / 2 + 0.5 + i); weg(x, y); }
+      const P = parts('12,12'), base = game(`courtParts(COURTS.${b})[0].s`), m = (base[0] + base[1]) / 2;
+      expect(P, `${b} ${rot}`).toEqual([[+(m - RW()).toFixed(3), +(m + RW()).toFixed(3), true]]);
+      const links = game("courtOf(state.tiles.get('12,12'), 12, 12).links");
+      expect(links.reduce((n, l) => n + l.q1 - l.q0, 0), `${b} ${rot}`).toBeCloseTo(2 * RW());   // auf dem Weg genau Wegbreite
+    }
+  });
+  it('ein Wegfeld vor der Tür: Weg zur Tür; daneben bleibt der Platz', () => {
+    put('12,12', { b: 'theater', lvl: 1, rot: 0 });
+    const [x, y] = front('theater', 12, 12, 0, 0); weg(x, y);
+    expect(parts('12,12')).toEqual([[-+RW().toFixed(3), +RW().toFixed(3), true]]);
+    game(`state.tiles.delete('${x},${y}')`);
+    const [x1, y1] = front('theater', 12, 12, 0, -1); weg(x1, y1);                                // nur am Rand
+    expect(parts('12,12').some(([, , band]) => !band)).toBe(true);
+  });
+  it('ganz breiter Weg oder Wegfläche davor: der Platz bleibt; breiter Weg zur Tür (Museum) nicht breiter als der Weg', () => {
+    put('12,12', { b: 'theater', lvl: 1, rot: 0 });
+    for (const c of [-1, 0, 1]) { const [x, y] = front('theater', 12, 12, 0, c); weg(x, y, 'klinker', { wide: true }); }
+    expect(parts('12,12').some(([, , band]) => !band)).toBe(true);
+    game("for (let y = 2; y <= 30; y++) for (let x = 2; x <= 30; x++) state.tiles.delete(x + ',' + y)");
+    put('12,12', { b: 'museum', lvl: 1, rot: 0 });
+    const [x, y] = front('museum', 12, 12, 0, 0); weg(x, y);
+    const [[s0, s1]] = parts('12,12');
+    expect(s1 - s0).toBeCloseTo(2 * RW());
+  });
+  it('Höfe über das ganze Grundstück (Rathaus) bleiben; Fenster sagt „Weg zur Tür“', () => {
+    game("for (const [k, t] of [...state.tiles]) if (t.b === 'rathaus') state.tiles.delete(k)");
+    put('12,12', { b: 'rathaus', lvl: 1, rot: 0 });
+    for (const c of [-1, 0, 1]) { const [x, y] = front('rathaus', 12, 12, 0, c); weg(x, y); }
+    expect(parts('12,12').some(([, , band]) => !band)).toBe(true);
+    game("for (let y = 2; y <= 30; y++) for (let x = 2; x <= 30; x++) state.tiles.delete(x + ',' + y)");
+    put('12,12', { b: 'kino', lvl: 1, rot: 0 });
+    for (const c of [-0.5, 0.5]) { const [x, y] = front('kino', 12, 12, 0, c); weg(x, y); }
+    expect(game('courtHtml(state.tiles.get("12,12"), 12, 12)')).toMatch(/Weg zur Tür/);
+    expect(() => ground('12,12')).not.toThrow();
+  });
+});

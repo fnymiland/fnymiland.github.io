@@ -326,7 +326,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : '', CLOCK_SPRITES.has(t.b) ? Math.floor(gameHour() * 6) : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
   const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size);
-  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
+  const key = shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}|${groundVersion}`;
   const ds = decoScale(t.b), mir = (t.rot & 1) && MIRROR.has(t.b);
   const e = getSprite(key, z, () => {
     const pad = SPRITE_PAD[t.b] || [0, 0];
@@ -950,7 +950,7 @@ function render(now) {
       const gs = decoScale(ghostType);
       g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
       const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
-        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}) };   // wie gebaut wird (Block 84d)
+        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}), ...(ghostType === 'station' && stationNewLen === 3 ? { len: 3 } : {}) };   // wie gebaut wird (Block 84d)
       drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
       g.restore();
       g.globalAlpha = 1;

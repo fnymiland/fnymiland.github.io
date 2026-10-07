@@ -1454,3 +1454,49 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
       Eingang war; Seitenflügel und alte Mittelhalle bleiben gleich breit. Ohne Platz bleibt er alt, im Fenster „▣ Halle in die
       Mitte bauen“ (sagt, warum es gerade nicht geht). Toast und „Das ist neu“. Tests: hbf-fluegel.test.js, hbf.test.js.
 
+
+## Konzept nach dem Spieleabend (07.10.2026) – Blöcke 124–136
+Reihenfolge nach Absprache, jeder Block einzeln: bauen, testen, zeigen, auf Zuruf pushen.
+
+## Block 124: Leistung bei großer Welt und weit rausgezoomt
+- [ ] Erst messen (große Testwelt, weit rausgezoomt): Bildzeit je Teil (Boden, Bildchen, Dekos, Figuren, Licht)
+- [ ] Gezielt sparen, z. B. weit weg Kleinkram weglassen, gröbere Bodenstücke, mehr Bildchen wiederverwenden
+
+## Block 125: Wege
+- [ ] 125a: Linien beim Rauszoomen (wie bei Kies) bei allen Belägen finden und beseitigen
+- [ ] 125b: neue ruhige Stadtbeläge (z. B. Granit grau, Betonplatten, Sandstein, Asphalt ohne Mittelstreifen, Pflaster anthrazit)
+
+## Block 126: Alle Hecken einfärbbar
+- [x] Farbauswahl wie Wilmerhecke/Busch (BUSH_COLS) für alle Heckenformen: Leiste beim Bauen, Fenster, „für alle übernehmen“
+      (alle Hecken). `edgeLook(e)` färbt; Grün = Grün der Form, dunkle Formen bleiben dunkler (HEDGE_TONE). Test: buschfarben.test.js
+
+## Block 127: Gebäudeeingänge passen sich dem Weg an
+- [x] Vor schmalem Weg schmaler Eingang (so breit wie der Weg), vor ganz breitem Weg/Wegfläche bleibt der Vorplatz – `courtPartsAt`.
+      Weg an der ganzen Front: ein Weg zur Tür in der Mitte; sonst je Wegfeld vor dem Platz. Breiter Weg zur Tür (Museum) höchstens
+      Wegbreite. Höfe übers ganze Grundstück (Rathaus, Markthalle) bleiben. Test: vorplatz.test.js
+
+## Block 128: Beleuchtung ausgiebig testen
+- [ ] Sternwarte und alle Lichtquellen einzeln; Laternen, Kristalllampen, Gebäude dicht nebeneinander; nah und weit weg
+
+## Block 129: Geschenke → Souvenirs
+- [ ] Souvenirs: nur geschenkt erhältlich, mit Name und Farbe des Absenders (Mini-Statue seines Tiers, Wegweiser mit Flagge,
+      Blume seiner Insel, Mini-Wahrzeichen, Freundschaftsbaum); kostenlos, 1× am Tag pro Freund; Sammelregal im Album
+- [ ] Rohstoffe nur noch für den Wunschzettel, ohne 100.000er-Grenze (Firebase-Regel!), ehrliche Fehlermeldung
+
+## Block 130: Online-Status der Freunde
+- [ ] Grüner Punkt „spielt gerade“, sonst „zuletzt vor …“ (Firebase-Regel für den Nutzer zum Einfügen)
+
+## Block 131: Kleiner Bahnhof auch 3 breit (Eingang mittig)
+- [x] t.len = 3 (`stationLen`, `sizeOf`); Leiste beim Bauen (2/3 Felder, `stationNewLen`), Fenster „Länge“ (`stationLenSet`: wächst zur
+      freien Seite, 🪙 400 + Material, kürzer: halbe Taler zurück, ↶). Breiteres Empfangshaus, langes Dach, zwei Bänke. Test: bahnhof-lang.test.js
+
+## Block 132: Große Straßenlaternen (Mast, großer Lichtkegel, Formen/Farben in der Kunstakademie)
+
+## Block 133: Monumente (wie in Alexandria)
+- [ ] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen
+
+## Block 134: Kopieren (✋-Rechteck → „⧉ Kopieren“, Kopie am Finger, drehbar, kostet wie neu)
+
+## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
+
+## Block 136: U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)

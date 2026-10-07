@@ -1201,7 +1201,7 @@ function courtLinksAt(x, y) {
 }
 // Belag jedes Stücks von a bis an die Vorderkante A, quer s (Platz bzw. schmaler Weg); vorn ohne Bordstein. Trittsteine nur
 // auf schmalen Wegen, Plätze dann in Schachbrett
-function paveCourt(K, C0, A, lk, x, y, t) { const open = courtOpenSides(K, t, x, y); for (const c of courtParts(C0, t)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y, open); }
+function paveCourt(K, C0, A, lk, x, y, t) { const open = courtOpenSides(K, t, x, y); for (const c of courtPartsAt(t, x, y)) pavePart(K, c, A, c.band || !lk.stones ? lk : PATH_LOOK.platten, x, y, open); }
 // Welche Seiten des Grundstücks sind ganz von Weg umgeben (Block 100)? Dort läuft der Platz bis an die Grenze, ohne
 // Bordstein – sonst bliebe zwischen Platz und Wegfläche eine Linie stehen. Rahmen wie kit: a nach vorn, s quer.
 function courtOpenSides(K, t, x, y) {
@@ -1240,7 +1240,7 @@ const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
 function courtFloor(K, t, x, y, classic) {
   if (t.zug === false) return;
   const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
-  if (!lk || (lk.stones && courtIsPlaza(COURTS[t.b]))) { if (!COURTS[t.b] || !COURTS[t.b].bare || x > 1e5) classic(); } else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
+  if (!lk || (lk.stones && courtPartsAt(t, x, y).some(c => !c.band))) { if (!COURTS[t.b] || !COURTS[t.b].bare || x > 1e5) classic(); } else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
 }
 const courtShown = (t, x, y) => !!courtStyle(t, x, y);                                // für Bilder, die dann anders aussehen (Büsche, Rasen)
 function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {

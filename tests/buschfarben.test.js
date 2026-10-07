@@ -56,6 +56,32 @@ describe('Buschfarben (Block 89)', () => {
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
     expect(game("state.edges.get('a7,6').col")).toBe(3);
   });
+  it('Block 126: jede Heckenform lässt sich färben – Leiste, Fenster, für alle übernehmen; Grün bleibt das Grün der Form', () => {
+    const forms = game("STYLES.hecke.map(st => st.id).filter(id => !id.startsWith('wilmer'))");
+    expect(forms.length).toBeGreaterThan(3);
+    game('for (const d of DESIGN) state.design.add(d.id)');                                    // alle Heckenformen frei
+    for (const st of forms) {
+      game(`state.edges.clear(); state.paintNew = {}; chosenStyle.hecke = '${st}'; setTool('hecke')`);
+      expect(game("!!document.querySelector('#style-bar [data-bchip=\"2\"]')"), st).toBe(true);
+      game("document.querySelector('#style-bar [data-bchip=\"2\"]').click()");
+      game("buildEdge('hecke', 'a6,6'); buildEdge('hecke', 'a7,6'); setTool('look')");
+      expect(game("state.edges.get('a6,6').col"), st).toBe(2);
+      const c = game("BUSH_COLS[2].c[0]"), tone = game(`HEDGE_TONE['${st}'] || 0`), want = game(`C(shade('${c}', ${tone}))`);
+      expect(game("state.edges.get('a6,6').style")).toBe(st);
+      expect(game("edgeLook(state.edges.get('a6,6')).col"), st).toBe(game(`shade('${c}', ${tone})`));
+      expect(fills("drawEdge('a6,6', state.edges.get('a6,6'), 1.4, 1000)").some(f => f === want || f.includes(want.slice(1, 5))), st).toBe(true);
+      expect(game(`edgeLook({ b: 'hecke', style: '${st}' }).col`)).toBe(game(`EDGE_LOOK.hecke['${st}'].col`));   // ohne Farbe: wie immer
+    }
+    game("state.edges.clear(); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('a7,6', { b: 'hecke', style: 'wilmer' }); state.edges.set('a8,6', { b: 'zaun', style: 'latten' }); recalc()");
+    game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"4\"]').click()");
+    expect(game("state.edges.get('a6,6').col")).toBe(4);
+    game('undo()');
+    expect(game("state.edges.get('a6,6').col")).toBe(undefined);
+    game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"4\"]').click(); openGateInfo('a6,6'); document.querySelector('#panel [data-bcolall]').click()");
+    expect(game("[state.edges.get('a7,6').col, state.edges.get('a8,6').col]")).toEqual([4, undefined]);   // alle Hecken, kein Zaun
+    game("openGateInfo('a8,6')");
+    expect(game("!!document.querySelector('#panel [data-bcol]')")).toBe(false);                        // Zaun: keine Buschfarbe
+  });
   it('geschenkte Parkbäume bleiben auch nach dem Laden geschenkt (84b)', () => {
     game("for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3; state.terra.set('8,8', 'forest'); recalc(); build('parkrasen', 8, 8, true)");
     expect(game("state.decos.get('8,8').filter(Boolean).every(x => x.free)")).toBe(true);
