@@ -364,7 +364,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     **Feste Zoomstufen** (`zoomStep`, je 20 %): Bildchen und Boden immer in der nächstgrößeren Stufe malen (`sp.z = zs`), beim Einsetzen
     mit z / e.z verkleinern – nie wieder mit dem genauen Zoom malen (sonst malt jede Zwischenstufe alles neu). Beim Zoomen jedes
     vorhandene Bildchen weiterbenutzen (auch aus fernen Stufen, `near` 0.2–5), danach Stück für Stück erneuern (`spriteStale`, `STALE_MS`);
-    Bildchen bleiben ~2 Minuten (3600 Bilder) im Speicher. Heckenbüsche weit weg
+    Bildchen bleiben ~2 Minuten (3600 Bilder) im Speicher. **Bis Zoom ~2** (`SPRITE_UNTIL`, bei DPR 2 bis z × DPR ≤ 2.6) kommt alles
+    Ruhende aus Bildchen; zwischen 1 und 2 (`SPRITES_NEAR`) bleibt Bewegtes live (`ANIM_ITEMS`, `spriteOk`; Linien mit Tor live).
+    Wer etwas Neues mit Bewegung zeichnet, trägt es in `ANIM_ITEMS` ein (der Bestands-Test in tempo-schritt3 schlägt sonst an). Heckenbüsche weit weg
     über das Deko-Bildchen des Buschs (`wilmerBush`). **Weit weg zählt die Zahl der Zeichenbefehle** (am PC je Befehl einige µs): Linien je Feld als
     Bildchen (`spriteEdges`, über `EDGE_PROJ` um die Feldmitte, Schlüssel mit `groundVersion`), alle Wellen ein Strich (`drawWaves`),
     ✨/🐌 als Bildchen (`ICON_SPRITES`). Neues, das weit weg in Mengen vorkommt, nie Strich für Strich live zeichnen (Zähler: count.js-Muster). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC

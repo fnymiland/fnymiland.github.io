@@ -208,6 +208,17 @@ function renderGroundChunk(cx, cy, scale) {
 // Nah dran (z ≥ SPRITE_FROM) zeichnet alles live, mit allen Bewegungen.
 // ---------------------------------------------------------------------------
 const SPRITE_FROM = 1.0, SPRITE_MS = 6, PAINT_MS = 10, SPRITE_MAX = 40;
+// Bis Zoom ~2 Bildchen auch für das Ruhende (Block 124): zwischen SPRITE_FROM und SPRITE_UNTIL bleibt nur, was sich bewegt, live
+// (ANIM_ITEMS – Rauch, Fontänen, Fahnen …, Liste prüft tests/tempo-schritt3.test.js). Auf Geräten mit doppelter Pixeldichte nur bis
+// z × DPR ≤ 2.6 (wie der Boden), sonst würden die Bildchen auf dem iPad zu groß
+const SPRITE_UNTIL = 1 / (0.8 * 0.8 * 0.8) - 1e-6;                  // = Zoomstufe 1.953 (zoomStep)
+const ANIM_ITEMS = new Set(['hausboot', 'fischer', 'saege', 'schmiede', 'baecker', 'fabrik', 'hafen', 'schule', 'palme', 'riesenblume', 'brunnen', 'glaskugel',
+  'kristallbrunnen', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'schloss', 'freundschaftsbaum', 'zauberbrunnen', 'schmetterlingsgarten', 'vogelbaum',
+  'seerosenteich', 'bootssteg', 'seilbahn', 'solarfeld', 'geothermie', 'wellen', 'statue', 'rathaus', 'truhe', 'friseur', 'cafe', 'pizzeria', 'konditorei',
+  'kino', 'aquarium', 'zoo', 'fz_schloss', 'fz_torturm', 'fz_ballon', 'brunnen_s', 'brunnen_l', 'brunnen_xl', 'kristallbrunnen_s', 'kristallbrunnen_l',
+  'kristallbrunnen_xl', 'palme_m', 'palme_l', 'statue_l']);
+let SPRITES_NEAR = false;                                            // Zoom zwischen SPRITE_FROM und SPRITE_UNTIL: Bewegtes live
+const spriteOk = b => !SPRITE_LIVE.has(b) && !(SPRITES_NEAR && ANIM_ITEMS.has(b));
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
 let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
 // Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,
@@ -514,6 +525,7 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
 // dann still). Eigenes Bildchen je Feld, neu mit groundVersion (Linien ändern sich nur über recalc)
 function spriteEdges(x, y, px, py, z, now) {
   if (!state.edges.size || !edgeFieldsHas(x, y)) return true;            // nichts zu zeichnen
+  if (SPRITES_NEAR && ['a' + x + ',' + y, 'b' + x + ',' + y].some(k => state.edges.has(k) && isGate(k))) return false;   // Türchen schwingt: nah live
   const lit = night > 0.15 && isLive() ? 1 : 0, zs = zoomStep(z);
   const key = `edges|${x},${y}|${FOG ? 1 : 0}|${lit}|${groundVersion}`;
   const fog = FOG;
@@ -889,7 +901,8 @@ function render(now) {
   glows.length = 0; glowCells.clear(); nightPics.length = 0; nightSeen.clear(); nightWarm = false;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
-  SPRITES_ON = spriteForce != null ? spriteForce : z < SPRITE_FROM && isLive();
+  SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
+  SPRITES_NEAR = SPRITES_ON && z >= SPRITE_FROM;
   spriteCatch = SPRITE_STATS.miss >= CATCH_MISS;                         // viel fehlte im letzten Bild: aufholen
   spritePrep = SPRITE_STATS.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten
   if (spritePrep) prepShown = performance.now();
@@ -1095,7 +1108,7 @@ function render(now) {
           const an = (now - t.born) / 380;
           if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
         }
-        if (SPRITES_ON && sc === 1 && !SPRITE_LIVE.has(t.b) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen
+        if (SPRITES_ON && sc === 1 && spriteOk(t.b) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen
         const ds = sc * decoScale(t.b);
         g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
         PASS = 'object';

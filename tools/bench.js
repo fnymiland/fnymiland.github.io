@@ -21,7 +21,7 @@ function benchFreeze() {
   if (typeof visitorFigs !== 'undefined') visitorFigs.length = 0;
   closeModal(); state.tipsOff = true;
 }
-function benchView(z, x, y, night) { cam.z = z; cam.x = x; cam.y = y; window.nightAt = () => night || 0; }
+function benchView(z, x, y, night) { cam.z = z; cam.x = x; cam.y = y; window.nightAt = () => night || 0; lastZoom = z; lastZoomChange = -1e9; }   // nicht „gerade gezoomt“ (die Uhr steht beim Messen)
 // opts.mode: 'heute' (wie im Spiel), 'bildchen' (alle Bildchen fertig: ohne Zeitgrenze aufwärmen), 'live' (nie Bildchen)
 function benchMs(z, x, y, { night = 0, frames = 20, warm = 10, mode = 'heute' } = {}) {
   benchView(z, x, y, night);

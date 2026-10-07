@@ -2102,7 +2102,7 @@ const treeFruitOf = (x, y, s) => { const h = hash(x, y, 40 + s); return h < 0.4 
 const potOf = (x, y, s) => Math.floor(hash(x, y, 7 + s) * 5);
 const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : ''; };
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
-  if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js)
+  if (SPRITES_ON && sc === 1 && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
   const s = decoScale(b) * 0.9 * sc;
   g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
   drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form });

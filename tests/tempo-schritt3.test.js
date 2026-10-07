@@ -96,11 +96,7 @@ describe('Was weit weg still steht (Block 124, Entscheidung E1)', () => {
         const draw = now => __rec(() => { PASS = small ? null : 'object'; try { drawObject(b, 0, 0, 0.5, now, 7, 7, 1, small ? { rot: 0, slot: 0, col: 0, form: 0 } : { b, lvl: 1, rot: 0 }); } finally { PASS = null; } });
         const a = draw(0); if ([700, 1900, 60000].some(n => draw(n) !== a)) out.push(b); }
       return out; })()`);
-    expect(still).toEqual(['hausboot', 'fischer', 'saege', 'schmiede', 'baecker', 'fabrik', 'hafen', 'schule', 'palme', 'riesenblume', 'brunnen', 'glaskugel',
-      'kristallbrunnen', 'pokal_bronze', 'pokal_silber', 'pokal_gold', 'schloss', 'freundschaftsbaum', 'zauberbrunnen', 'schmetterlingsgarten', 'vogelbaum',
-      'seerosenteich', 'bootssteg', 'seilbahn', 'solarfeld', 'geothermie', 'wellen', 'statue', 'rathaus', 'truhe', 'friseur', 'cafe', 'pizzeria', 'konditorei',
-      'kino', 'aquarium', 'zoo', 'fz_schloss', 'fz_torturm', 'fz_ballon', 'brunnen_s', 'brunnen_l', 'brunnen_xl', 'kristallbrunnen_s', 'kristallbrunnen_l',
-      'kristallbrunnen_xl', 'palme_m', 'palme_l', 'statue_l']);
+    expect(still).toEqual(game('[...ANIM_ITEMS]'));                                    // nah (Zoom 1–2) zeichnet render.js genau diese live (ANIM_ITEMS)
   });
   it('Fahrgeschäfte, Wasserrad und Bahnübergang bleiben weit weg live', () => {
     game("state.tiles.set('4,4', { b: 'fz_karussell', lvl: 1 }); state.tiles.set('8,4', { b: 'wasserkraft', lvl: 1 }); state.tiles.set('6,9', { b: 'schiene', lvl: 1, cross: true }); state.tiles.set('7,9', { b: 'schiene', lvl: 1 }); recalc()");

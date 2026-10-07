@@ -28,8 +28,8 @@ describe('Bildchen weit weg', () => {
     expect(drawn).toBe(0);                                                    // nichts mehr neu gezeichnet
   });
 
-  it('nah dran wird alles live gezeichnet', () => {
-    frame(1.5);
+  it('nah dran (ab Zoom ~2) wird alles live gezeichnet', () => {
+    frame(2.2);
     expect(game('objSprites.size')).toBe(0);
   });
 
