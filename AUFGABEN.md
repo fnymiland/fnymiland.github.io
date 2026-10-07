@@ -1494,7 +1494,9 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [ ] Rohstoffe nur noch für den Wunschzettel, ohne 100.000er-Grenze (Firebase-Regel!), ehrliche Fehlermeldung
 
 ## Block 130: Online-Status der Freunde
-- [ ] Grüner Punkt „spielt gerade“, sonst „zuletzt vor …“ (Firebase-Regel für den Nutzer zum Einfügen)
+- [x] Grüner Punkt „spielt gerade“, sonst „zuletzt vor …“ in der Freundesliste (`on/<uid>`, `onlineBeat` jede Minute, play false
+      beim Wegklicken/Abmelden/onDisconnect, grün nur bei frischer Meldung; Liste frischt sich alle 30 s auf). Firebase-Regel `on`
+      (nur Freunde lesen) – vom Nutzer in der Konsole einzufügen. Test: online.test.js
 
 ## Block 131: Kleiner Bahnhof auch 3 breit (Eingang mittig)
 - [x] t.len = 3 (`stationLen`, `sizeOf`); Leiste beim Bauen (2/3 Felder, `stationNewLen`), Fenster „Länge“ (`stationLenSet`: wächst zur

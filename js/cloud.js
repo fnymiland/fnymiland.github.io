@@ -311,6 +311,7 @@ async function openCloud() {
     $('m-no').onclick = openCloud;
     $('m-yes').onclick = async () => {
       if (cloudIsLeader() && cloudApi.leadTx) { const me = cloudDevice(); await cloudApi.leadTx(cloudUser.uid, cur => cur && cur.dev === me ? null : undefined).catch(() => {}); }
+      if (typeof onlineBeat === 'function') await onlineBeat(false);           // Freunde sehen „zuletzt vor …“ statt grün (Block 130)
       await cloudApi.signOut(); setCloudMeta({}); cloudOnUser(null); closeModal(); toast('☁️ Abgemeldet');
     };
   };
@@ -363,6 +364,7 @@ async function cloudFirebase() {
     watch: (p, cb, err) => { const r = db.ref(p), f = s => cb(s.val()); r.on('value', f, e => { if (err) err(e); }); return () => r.off('value', f); },
     TS: () => fb.database.ServerValue.TIMESTAMP,
     leave: p => { db.ref(p).onDisconnect().remove().catch(() => {}); },          // beim Gehen löschen (Besucher-Figur)
+    onLeave: (p, v) => { db.ref(p).onDisconnect().set(v).catch(() => {}); },     // beim Gehen setzen (Online-Status, Block 130)
     armLead: (uid, on) => { if (!uid) return; const d = ref(uid, 'lead').onDisconnect(); (on ? d.remove() : d.cancel()).catch(() => {}); },
     getMeta: async uid => (await T(ref(uid, 'meta').get())).val(),
     getSave: async uid => (await T(ref(uid, 'save').get(), 60000)).val(),

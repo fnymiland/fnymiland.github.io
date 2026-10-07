@@ -8,6 +8,7 @@
 //                                       Figur spaziert dann auf jedem Gerät selbst über die Wege; verschwindet beim Gehen
 //   book/<besitzer>/<id>                Besuch (v_…), Herz (h_… je Freund und Tag) und Gästebuch (g…): { k, from, n, a, t, s, at }
 //   mail/<empfänger>/<id>               Päckchen { from, n, a, items: { holz: 50 }, at } – Abholen löscht es (genau einmal)
+//   on/<uid>                            Online-Status (Block 130): { at: Serverzeit, play } – lesen nur Freunde
 // ---------------------------------------------------------------------------
 const BOOK_LINES = [
   'Was für eine schöne Insel! 🏝️', 'Dein Schloss ist der Hammer! 🏰', 'Dein Park ist so gemütlich 🌳', 'So viele Blumen! 🌷',
@@ -519,3 +520,47 @@ setInterval(() => {
   wishWatch();
   bondSync();                                                            // nach Laden/Übernehmen/Neuer Insel wieder herstellen
 }, 3000);
+
+// ---------------------------------------------------------------------------
+// Online-Status (Block 130): Solange das Spiel sichtbar offen ist, meldet es sich jede Minute (on/<uid> = { at, play: true },
+// at = Serverzeit). Weggeklickt, gesperrt oder abgemeldet: play false; ist die Seite einfach weg, setzt der Server es
+// (onDisconnect). Grün zeigen Freunde nur bei frischer Meldung – ein schlafendes iPad meldet sich nicht immer ab.
+// Lesen dürfen nur Freunde (firebase-rules.json). Alte App-Versionen schreiben nichts: dann steht beim Freund gar nichts
+// ---------------------------------------------------------------------------
+const ON_BEAT = 60e3, ON_FRESH = 3 * 60e3;
+let onUid = null, onLast = 0;
+function onlineBeat(play = !document.hidden) {
+  if (!cloudUser || !cloudApi || !cloudApi.set) return Promise.resolve();
+  const uid = cloudUser.uid, p = `on/${uid}`;
+  onUid = uid; onLast = Date.now();
+  if (play && cloudApi.onLeave) cloudApi.onLeave(p, { at: cloudApi.TS(), play: false });   // nach jedem Verbindungsabbruch neu nötig
+  return cloudApi.set(p, { at: cloudApi.TS(), play: !!play }).catch(() => {});
+}
+// Text zum Status eines Freundes (now: Serverzeit); null = unbekannt (alte App-Version, nie gemeldet)
+function onlineText(o, now) {
+  if (!o || typeof o.at !== 'number') return null;
+  const ago = Math.max(0, now - o.at), min = Math.floor(ago / 60e3), h = Math.floor(ago / 3600e3), d = Math.floor(ago / 86400e3);
+  if (o.play === true && ago < ON_FRESH) return { on: true, text: 'spielt gerade' };
+  const when = min < 2 ? 'gerade eben' : min < 60 ? `vor ${min} Min.` : h < 24 ? `vor ${h} Std.` : d < 2 ? 'gestern' : d < 31 ? `vor ${d} Tagen` : 'vor über einem Monat';
+  return { on: false, text: 'zuletzt ' + when };
+}
+const onlineHtml = (id, o) => { const s = onlineText(o, cloudApi && cloudApi.now ? cloudApi.now() : Date.now());
+  return `<span class="fr-on${s && s.on ? ' on' : ''}" data-fron="${escHtml(id)}">${s ? (s.on ? '<i aria-hidden="true"></i>' : '') + escHtml(s.text) : ''}</span>`; };
+const frOnline = {};                                                     // zuletzt gelesener Status je Freund
+async function onlineRead(ids) {
+  await Promise.all(ids.map(async id => { frOnline[id] = await cloudApi.get(`on/${id}`).catch(() => frOnline[id] || null); }));
+}
+// offene Freundesliste: Status alle 30 s auffrischen, nur die Anzeige (Eingaben bleiben stehen)
+async function onlineRefresh() {
+  const els = [...document.querySelectorAll('[data-fron]')];
+  if (!els.length || !cloudUser || $('modal').hidden) return;
+  await onlineRead(els.map(el => el.dataset.fron));
+  for (const el of document.querySelectorAll('[data-fron]')) el.outerHTML = onlineHtml(el.dataset.fron, frOnline[el.dataset.fron]);
+}
+setInterval(() => {
+  if (!cloudUser) { onUid = null; return; }
+  if (!document.hidden && (onUid !== cloudUser.uid || Date.now() - onLast >= ON_BEAT)) onlineBeat(true);
+}, 5000);
+setInterval(() => { onlineRefresh().catch(() => {}); }, 30000);
+document.addEventListener('visibilitychange', () => { if (cloudUser) onlineBeat(!document.hidden); });
+window.addEventListener('pagehide', () => { if (cloudUser) onlineBeat(false); });

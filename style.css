@@ -782,6 +782,10 @@ body.visiting #you-btn { display: none !important; }
 /* Füreinander (Block 105) */
 .fr-friend { background: var(--cream2); border-radius: 12px; margin: 5px 0; }
 .fr-friend .fr-row { margin: 0; background: none; }
+.fr-on { display: block; font-size: 12px; font-weight: 700; color: var(--brown2); }
+.fr-on:empty { display: none; }
+.fr-on.on { color: var(--green-d); }
+.fr-on i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 5px; vertical-align: 1px; }
 .fr-wish { font-size: 13px; font-weight: 700; padding: 0 10px 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .bond { color: #e8604f; letter-spacing: 1px; font-size: 12px; }
 .fr-btns .btn.on { background: var(--yellow, #ffd23f); }

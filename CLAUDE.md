@@ -382,6 +382,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+130. **Online-Status** (Block 130, friends.js unten): `on/<uid>` = { at (Serverzeit), play } – nur über `onlineBeat(play)`
+    schreiben (meldet sich jede Minute, setzt per `onLeave`/onDisconnect play false für den Fall, dass die Seite einfach weg
+    ist; nach jedem Verbindungsabbruch neu scharf). Anzeige nur über `onlineText(o, serverNow)`/`onlineHtml`: grün nur bei
+    `play` **und** frischer Meldung (`ON_FRESH`) – ein schlafendes iPad meldet sich nicht zuverlässig ab. Fehlt die Meldung
+    (alte App-Version), nichts anzeigen, nie „offline“ raten. Lesen dürfen nur Freunde (firebase-rules.json).
 131. **Bahnhofslänge** (Block 131): `sizeOf('station', rot, t)` immer mit dem Feld t (ohne t gilt die Wahl für neu Gebautes,
     `stationNewLen`). Neue Felder mit variabler Größe brauchen: `sizeOf`, `drawBuilding` (da/wb), Bildchen-Schlüssel, `tileOut`.
 127. **Vorplätze nur über `courtPartsAt(t, x, y)`** (Block 127), nicht `courtParts(C0)`: Vor schmalem Weg wird der Platz zum Weg

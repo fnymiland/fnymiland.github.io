@@ -327,13 +327,14 @@ async function openFriends() {
   if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return; // inzwischen geschlossen, anderer Reiter oder neuer Aufruf
   const entries = Object.entries(frList), by = st => entries.filter(([, e]) => e.st === st);
   const wishes = {};                                                     // Wunschzettel der Freunde (Block 105)
-  await Promise.all(by('freund').filter(([, e]) => e.wid).map(async ([id, e]) => { wishes[id] = wishClean(await cloudApi.get(`worlds/${e.wid}/wish`).catch(() => null)); }));
+  await Promise.all([...by('freund').filter(([, e]) => e.wid).map(async ([id, e]) => { wishes[id] = wishClean(await cloudApi.get(`worlds/${e.wid}/wish`).catch(() => null)); }),
+    onlineRead(by('freund').map(([id]) => id))]);                       // spielt gerade / zuletzt vor … (Block 130)
   if (tok !== frRenderTok || youTab !== 'freunde' || !$('fr-box') || $('modal').hidden) return;
   frPushFlag();
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   const friendRow = ([id, e]) => {
     const w = wishes[id], p = (myBonds[id] || {}).p, partner = state.partner && state.partner.uid === id;
-    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small></span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
+    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
       ${w && w.got < w.n ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da)</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>` : ''}</div>`;
   };
   openModal(`
