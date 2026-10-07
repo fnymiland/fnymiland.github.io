@@ -358,10 +358,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     (`marktLeft`, `T.marktInc` in `earn`). Alte `markt`-Kacheln werden in `parseSave` zu Kopfsteinplätzen mit 3/6/9 Ständen.
 124. **Bildchen-Budget** (Block 124): Neumalen weit weg zählt nur die Malzeit (`spriteSpent` + `groundSpent` ≤ `PAINT_MS`, immer
     mindestens ein Bildchen, höchstens `SPRITE_MAX`) – nie eine Frist ab Bildanfang (in großen Welten entstand damit nie ein Bildchen;
-    gilt auch nachts). Neue Bildchen werden am Anfang des nächsten Bilds gesammelt zugeschnitten (`cropSprites`).
+    gilt auch nachts). Fehlten im letzten Bild ≥ `CATCH_MISS` Bildchen, gilt `PAINT_CATCH` (Aufholen – live zeichnen kostet dann
+    ohnehin fast dasselbe). Neue Bildchen werden am Anfang des nächsten Bilds gesammelt zugeschnitten (`cropSprites`).
     Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht kommen als Nachtbild (`paintNight`: noch einmal gemalt wie live, Lichter
     stanzen sofort = Wandschein), davor ein Löschbild (Umriss + Schein auf Dahinterliegendes), das Lichtbild legt drawNight hinter die
-    Löcher (`nightPics`). Dafür merkt `paintSprite` das Malen (`e.paint`); in der Dämmerung bleibt es Licht für Licht (Block 112).
+    Löcher (`nightPics`). Dafür merkt `paintSprite` das Malen (`e.paint`); bei voller Nacht ohne Lichtmaske/Kopien, das Nachtbild nimmt
+    den Rahmen des zugeschnittenen Bildchens (kein eigenes Lesen). In der Dämmerung bleibt es Licht für Licht (Block 112).
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.

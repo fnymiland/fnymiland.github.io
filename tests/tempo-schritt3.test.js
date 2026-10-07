@@ -58,6 +58,17 @@ describe('Malzeit-Budget (Block 124 Schritt 3)', () => {
     expect(r[1].ground).toBeGreaterThan(P);                                         // fehlender Boden wird immer gemalt …
     expect(r[1].made).toBe(1);                                                      // … und trotzdem ein Bildchen
   });
+  it('Aufholen: fehlten im letzten Bild viele Bildchen, darf mehr gemalt werden (PAINT_CATCH)', () => {
+    game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
+    view(0.5);
+    const r = withClock("globalThis.__ps = paintSprite; paintSprite = (...a) => { __t += 3; return __ps(...a); }", () => {
+      try { game('SPRITE_STATS.miss = 0'); return [frame(), frame(), game('spriteCatch')]; } finally { game('paintSprite = globalThis.__ps'); }
+    });
+    const [P, C, M] = game('[PAINT_MS, PAINT_CATCH, CATCH_MISS]');
+    expect(r[0].made).toBe(Math.floor(P / 3) + 1);                                 // erst normal …
+    expect(r[0].miss).toBeGreaterThanOrEqual(M);
+    expect(r[1].made).toBe(Math.floor(C / 3) + 1);                                 // … dann aufholen
+  });
   it('nachts gilt seit Schritt 4 dasselbe Malzeit-Budget (vorher die Frist ab Bildanfang)', () => {
     game("state.tiles.set('6,6', { b: 'schule', lvl: 1 }); recalc(); nightAt = () => 0.45");
     view(0.5, 6, 6);
