@@ -50,7 +50,9 @@ function thumb(type, lvl = 1, tile = null) {
 function thumbRaw(type, lvl = 1, tile = null) {
   const c = document.createElement('canvas');
   c.width = 112; c.height = 88;
-  const prev = g; g = c.getContext('2d'); FOG = false;
+  const cx0 = c.getContext('2d');
+  if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
+  const prev = g; g = cx0; FOG = false;
   const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
   const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {

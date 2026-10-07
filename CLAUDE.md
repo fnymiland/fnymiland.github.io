@@ -332,12 +332,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Getter → `leuchtCost`, 60 min; Kachelpreis zieht in `updateHud` nach) – fester Preis immer als Untergrenze. Alte
     Stände ohne `incPeak` vergessen `t.rate` unfertiger Baustellen (`parseSave`). Taler-Truhe 5 Minuten, Hafen-Bonus nur für
     `HARBOR_CAP` (3) Häfen. Neue Einkommensquellen immer gegen „Minuten Einkommen“ des nächsten Ziels prüfen.
-59. **Tempo weit weg** (Block 31): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen
+59. **Tempo weit weg** (Block 31, seit Block 124 siehe Regel 124: bis Zoom ~2, Budget `PAINT_MS`): unter `SPRITE_FROM` (Zoom 1) kommen Gebäude und kleine Dekos aus fertigen Bildchen
     (`objSprites`, `spriteTile`/`spriteSmall`); gleich aussehende teilen sich eins (Häuser außer Hausboot, kleine Läden,
     Dekos), alles andere hat ein eigenes (Schlüssel mit Platz und `groundVersion`). Was das Aussehen ändert, gehört in
     den Schlüssel (`look` in `spriteTile`)! Nachtlicht beim Bildchen-Malen nur merken (`GLOW_SINK`), beim Einsetzen
     stanzen (`punchGlow`); `SPRITE_PAINT` zählt als live. Was sich sichtbar dreht, bleibt live (`SPRITE_LIVE`).
-    Neumalen (Bildchen und Boden-Grundstücke) nur im Zeitbudget je Bild (`SPRITE_MS`, `GROUND_MS`) – sonst das alte Bild.
+    Neumalen (Bildchen und Boden-Grundstücke) nur im Zeitbudget je Bild (`PAINT_MS`, `GROUND_MS`) – sonst das alte Bild.
     Rechnen: `rebuildCover` legt Nachschlage-Listen an (`BY_TYPE` je Sorte, `HOME_NEAR`, `BEET_NEAR`); Umkreis-Suchen ab
     3 Feldern über `nearList`, nicht Feld für Feld. Viertel (`computeNet`) mit Zahlen-Schlüsseln. Die Vorschau beim
     Bauen rechnet erst nach `HOVER_CALM` ms Ruhe auf einem Feld (sie rechnet die ganze Insel).
@@ -366,22 +366,33 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     vorhandene Bildchen weiterbenutzen (auch aus fernen Stufen, `near` 0.2–5), danach entstehen die scharfen im Hintergrund (`e.next`) und werden **alle zugleich** getauscht
     (`spriteSwapAll`, wenn keins der sichtbaren mehr fehlt, spätestens nach `SWAP_WAIT` Bildern; nachts erst mit Nachtbild) – einzeln
     getauscht lief eine sichtbare „Welle“ durchs Bild (`spriteStale`, `STALE_MS`);
-    Bildchen bleiben ~2 Minuten (3600 Bilder) im Speicher. **Bis Zoom ~2** (`SPRITE_UNTIL`, bei DPR 2 bis z × DPR ≤ 2.6) kommt alles
-    Ruhende aus Bildchen; zwischen 1 und 2 (`SPRITES_NEAR`) bleibt Bewegtes live (`ANIM_ITEMS`, `spriteOk`; Linien mit Tor live).
-    Wer etwas Neues mit Bewegung zeichnet, trägt es in `ANIM_ITEMS` ein (der Bestands-Test in tempo-schritt3 schlägt sonst an). Heckenbüsche weit weg
+    Bildchen bleiben ~2 Minuten (3600 Bilder) im Speicher. **Bis Zoom ~2** (`SPRITE_UNTIL`, bei DPR 2 bis z × DPR ≤ 2.6, gemalt in
+    `spriteStep`) kommt alles Ruhende aus Bildchen; zwischen 1 und 2 (`SPRITES_NEAR`) bleibt Bewegtes live (`animLive(t)`: `ANIM_ITEMS`
+    plus Stufe/Aussehen/Nacht, z. B. Häuser mit Aussehen 3/5; Linien mit Tor live). Wer etwas Neues mit Bewegung zeichnet, ergänzt
+    `ANIM_ITEMS`/`animLive` (der Bestands-Test in tempo-schritt3 prüft alle Stufen, Aussehen, Sehenswürdigkeiten, Nacht).
+    **Fassung statt Schlüssel**: Was sich mit dem Boden oder der Uhr ändert, steht nie im Bildchen-Schlüssel, sondern als `ver` an
+    `getSprite` (`groundVersion` bei Bildchen mit Platz und Linien, Uhr-Takt bei `CLOCK_SPRITES`) – veraltete Fassungen werden weiter
+    gezeigt und im Budget einzeln ersetzt (`SPRITE_STATS.old`), sonst fehlten nach jedem Bauen Hunderte auf einmal und blieben liegen.
+    Bei voller Nacht gemalte Bildchen haben keine Lichtmaske (`noMask`) und werden zur Dämmerung neu gemalt. Kein Speicher
+    (`getContext` null): `spriteFail` → `spritePause` (nichts Neues, Entbehrliches frei, nie Aufholen/Hinweis). Zuschneiden höchstens
+    `CROP_MS` je Bild. Ersetzte Bildchen erst am nächsten Bildanfang freigeben (`spriteTrash`). Andere Pixeldichte (resize) und andere
+    Welt (`adoptState` mit anderem `seed`, `startNew`) → `resetDrawCaches`; dieselbe Welt (Live-Spiegel) behält die Bildchen. Heckenbüsche weit weg
     über das Deko-Bildchen des Buschs (`wilmerBush`). **Weit weg zählt die Zahl der Zeichenbefehle** (am PC je Befehl einige µs): Linien je Feld als
     Bildchen (`spriteEdges`, über `EDGE_PROJ` um die Feldmitte, Schlüssel mit `groundVersion`), alle Wellen ein Strich (`drawWaves`),
-    ✨/🐌 als Bildchen (`ICON_SPRITES`). Neues, das weit weg in Mengen vorkommt, nie Strich für Strich live zeichnen (Zähler: count.js-Muster). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC
+    ✨/🐌 als Bildchen (`ICON_SPRITES`). Neues, das weit weg in Mengen vorkommt, nie Strich für Strich live zeichnen (zählen: Zeichenbefehle
+    am Kontext je Bild mitzählen, z. B. drawImage/fill/stroke in einer Messseite). **Nie mitten im Bild aus einer Leinwand lesen** (`getImageData` wartet auf die Grafikkarte – am PC
     5–10 ms je Lesen, in der Cloud ohne Grafikkarte unsichtbar); Test in tests/tempo.test.js.
-    Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht kommen als Nachtbild (`paintNight`: noch einmal gemalt wie live, Lichter
-    stanzen sofort = Wandschein), davor ein Löschbild (Umriss + Schein auf Dahinterliegendes), das Lichtbild legt drawNight hinter die
-    Löcher (`nightPics`). Dafür merkt `paintSprite` das Malen (`e.paint`); bei voller Nacht ohne Lichtmaske/Kopien, das Nachtbild nimmt
-    den Rahmen des zugeschnittenen Bildchens (kein eigenes Lesen). Warmes Licht hinter den Löchern legt drawNight als **eine** Fläche
-    (`nightWarm`), nur blaues Licht (Kristall, Brunnen, Apotheke) hat ein Lichtbild – als kleiner Fleck (`BLUE_SPOT`), sonst färbt
-    es die Fensterlöcher der Nachbarn blau. In der Dämmerung bleibt es Licht für Licht (Block 112).
+    Volle Nacht (`nightFull`, Schritt 4): Bildchen mit Licht bekommen ein **Löschbild** (`paintNight`: noch einmal auf eine volle schwarze
+    Fläche gemalt, die Lichter stanzen sofort wie live = Wandschein; umgekehrt = genau das Loch, auch auf Dahinterliegendem). Einsetzen
+    (`putNight`): Bildchen wie tagsüber, dann Löschbild (destination-out) – so stimmen auch halb durchsichtige Kanten (kein goldener
+    Rand). Dafür merkt `paintSprite` das Malen (`e.paint`, Kachel als Kopie); der Rahmen ist der des zugeschnittenen Bildchens (kein
+    eigenes Lesen). Die Löcher füllt drawNight mit **einer** warmen Fläche (`nightWarm`); blaues Licht (Kristall, Brunnen, Apotheke) hat ein
+    Lichtbild als kleiner fester Fleck (`BLUE_SPOT`, gestanzt wird dann auch nur so groß, `punchGlow`); Bildchen nahe Blau bekommen ihre
+    Scheiben und ihren warmen Schein vorher wie live (`nightPanes`), sonst würden sie blau. Halb durchsichtige Geister nie mit Löschbild.
+    In der Dämmerung bleibt es Licht für Licht (Block 112).
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
-    `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+    `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt` und `gameHour`), sonst hängen sie an der echten Uhrzeit.
 131. **Bahnhofslänge** (Block 131): `sizeOf('station', rot, t)` immer mit dem Feld t (ohne t gilt die Wahl für neu Gebautes,
     `stationNewLen`). Neue Felder mit variabler Größe brauchen: `sizeOf`, `drawBuilding` (da/wb), Bildchen-Schlüssel, `tileOut`.
 127. **Vorplätze nur über `courtPartsAt(t, x, y)`** (Block 127), nicht `courtParts(C0)`: Vor schmalem Weg wird der Platz zum Weg

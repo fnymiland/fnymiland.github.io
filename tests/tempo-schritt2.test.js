@@ -3,9 +3,9 @@ const { loadGame, game } = require('./helpers/load-game');
 // Block 124 Schritt 2: Deko-Bildchen nach Variante geteilt, Bildchen auf den Inhalt zugeschnitten, ohne Speicher kein Absturz,
 // Leinwände freigegeben, Zwischenspeicher beim Wechsel der Welt geleert
 beforeAll(() => loadGame());
-afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na'));
+afterAll(() => game('if (globalThis.__na) nightAt = globalThis.__na; if (globalThis.__gh) gameHour = globalThis.__gh'));
 beforeEach(() => {
-  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0');   // tags (die Spieluhr läuft echt)
+  game('if (!globalThis.__na) globalThis.__na = nightAt; nightAt = () => 0; if (!globalThis.__gh) globalThis.__gh = gameHour; gameHour = () => 12');   // tags (die Spieluhr läuft echt) – Uhr fest (Uhren-Gebäude, Rathaus-Fassung)
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; night = 0');
   game("for (let y = 2; y <= 16; y++) for (let x = 2; x <= 16; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } state.edges.clear(); recalc(); resize(); objSprites.clear()");
 });
@@ -47,12 +47,16 @@ describe('Block 124 Schritt 2', () => {
     expect(game('g === ctx')).toBe(true);
     expect(game('objSprites.size')).toBe(0);
   });
-  it('andere Welt laden: Bildchen und Boden der alten sind weg; ersetzte Bildchen werden freigegeben', () => {
+  it('andere Welt laden: Bildchen und Boden der alten sind weg (dieselbe Welt behält sie); Leinwände werden freigegeben', () => {
     game("state.tiles.set('6,6', { b: 'haus', lvl: 1 }); recalc(); cam.x = iso(6, 6).x; cam.y = iso(6, 6).y; cam.z = 0.6; spriteNoBudget = true; render(performance.now()); spriteNoBudget = false");
     expect(game('objSprites.size')).toBeGreaterThan(0);
     const c = game('(() => { const e = [...objSprites.values()][0]; globalThis.__c = e.c; return !!e.c; })()');
     expect(c).toBe(true);
     const s = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(s)}))`);                            // dieselbe Welt (Live-Spiegel): Bildchen bleiben
+    expect(game('objSprites.size')).toBeGreaterThan(0);
+    expect(game('globalThis.__c.width')).toBeGreaterThan(0);
+    s.seed = s.seed + 1;                                                            // andere Welt: alles weg
     game(`adoptState(parseSave(${JSON.stringify(s)}))`);
     expect(game('[objSprites.size, groundCache.size]')).toEqual([0, 0]);
     expect(game('globalThis.__c.width')).toBe(0);                                  // Leinwand freigegeben

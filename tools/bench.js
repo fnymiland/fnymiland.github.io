@@ -106,5 +106,8 @@ async function benchReset() {
 // Speicher der Zwischenspeicher (MB, Breite × Höhe × 4): Bildchen, Boden, Wald/Fels
 function benchMem() {
   const mb = list => +(list.reduce((n, c) => n + (c ? c.width * c.height * 4 : 0), 0) / 1048576).toFixed(1);
-  return { bildchen: mb([...objSprites.values()].flatMap(e => [e.c, e.mask && e.mask.c])), anzahl: objSprites.size, boden: mb([...groundCache.values()].map(e => e.c).concat(seaImage ? [seaImage.c] : [])), wald: mb([...spriteCache.values()].map(e => e.c)) };
+  const parts = e => e ? [e.c, e.mask && e.mask.c, e.maskTodo && e.maskTodo.c, e.night && e.night.erase.c, e.night && e.night.light.c] : [];
+  return { bildchen: mb([...objSprites.values()].flatMap(e => parts(e).concat(parts(e.next)))), nacht: mb([...objSprites.values()].flatMap(e => e.night ? [e.night.erase.c, e.night.light.c] : [])),
+    anzahl: objSprites.size, boden: mb([...groundCache.values()].map(e => e.c).concat(seaImage ? [seaImage.c] : [])), wald: mb([...spriteCache.values()].map(e => e.c)),
+    symbole: mb([...ICON_SPRITES.values()].map(e => e.c)) };   // Bildchen samt Nachtbild, Maske und wartendem scharfen (Block 124)
 }
