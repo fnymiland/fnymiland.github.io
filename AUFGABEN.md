@@ -1459,8 +1459,18 @@ Vier Prüfer (Freunde/Online, Figur/„Du“, Ordnung/Hilfe/Leiste, Wege/Uhr), j
 Reihenfolge nach Absprache, jeder Block einzeln: bauen, testen, zeigen, auf Zuruf pushen.
 
 ## Block 124: Leistung bei großer Welt und weit rausgezoomt
-- [ ] Erst messen (große Testwelt, weit rausgezoomt): Bildzeit je Teil (Boden, Bildchen, Dekos, Figuren, Licht)
-- [ ] Gezielt sparen, z. B. weit weg Kleinkram weglassen, gröbere Bodenstücke, mehr Bildchen wiederverwenden
+Testwelt `?welt=gross` (GEN=1 npx vitest run tests/grossstadt.test.js), Messwerkzeug tools/bench.js (Zeit, Pixelvergleich), `?messen` (iPad).
+Hauptursache (Analyse mit 15 Agenten): Das Bildchen-Budget ist eine Frist ab Bildanfang – in großen Welten ist sie vor den Gebäuden
+vorbei, 1623 Dinge je Bild bleiben dauerhaft live (Zoom 0.45: 56 ms; alle Bildchen fertig: 22 ms; nachts > 100 ms).
+Entscheidungen (07.10.): weit weg bleiben Fahrgeschäfte und Bahnübergänge live (Rauch/Fahnen stehen still) · Nacht weit weg mit
+Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
+- [x] Schritt 0: messen – SPRITE_STATS (miss/made), spriteForce/spriteNoBudget fürs Werkzeug, `?messen`-Zeile
+- [ ] Schritt 1: Kleinigkeiten ohne Bildänderung (leere Felder überspringen, Linien-Felder-Set, putSprite ohne Licht, punchGlow/drawNight billiger, Wellen als ein Pfad)
+- [ ] Schritt 2: Fundament – Deko-Bildchen nach Variante teilen, getContext null abfangen, Bildchen freigeben/Speicher, Caches bei adoptState leeren, Bildchen auf Inhalt zuschneiden
+- [ ] Schritt 3: Budget = Malzeit (nicht Frist), Fahrgeschäfte/Übergänge live
+- [ ] Schritt 4: Nacht weit weg als Bild + Löschbild (nur volle Nacht)
+- [ ] Schritt 5: Feinschliff (Deko-Plan, Linien-Bauplan, Streifen)
+- [ ] Schritt 6: Boden nach dem Bauen nur geänderte Grundstücke neu
 
 ## Block 125: Wege
 - [ ] 125a: Linien beim Rauszoomen (wie bei Kies) bei allen Belägen finden und beseitigen

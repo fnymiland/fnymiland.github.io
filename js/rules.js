@@ -941,7 +941,7 @@ function slotPos(x, y, i, d) {                                  // d: die Deko (
   }
   return [su * u, sv * v];
 }
-const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, 6, 7, 3];      // hinter bzw. vor dem Ding auf dem Feld zeichnen (von hinten nach vorn: Ecke 3 zuletzt)
+const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, 6, 7, 3], SLOTS_ALL = [...SLOTS_BACK, ...SLOTS_FRONT];      // hinter bzw. vor dem Ding auf dem Feld zeichnen (von hinten nach vorn: Ecke 3 zuletzt)
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;

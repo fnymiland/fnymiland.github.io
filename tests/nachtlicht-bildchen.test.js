@@ -17,7 +17,9 @@ describe('Nachtlicht der Bildchen (Block 112)', () => {
     expect(record(`punchGlow(${Q}, 18, null, 'halo')`)).toEqual(['schein']);
     expect(record(`punchGlow(${Q}, 18, null, 'pane')`)).toEqual(['scheibe']);
     expect(record(`punchGlow(${Q}, 18, null, 'mark')`)).toEqual([]);
-    expect(game('glows.length')).toBe(4);                                   // alle fürs Nachtbild gemerkt (drawNight fasst zusammen)
+    expect(game('glows.length')).toBe(2);                                   // fürs Nachtbild gemerkt: ganz und halo – pane/mark folgen dem halo, das hat es schon (Block 124)
+    expect(record(`punchGlow(${Q}, 18, null, 'mark')`)).toEqual([]);
+    expect(game("(() => { let n = 0; const o = g.save; g.save = () => { n++; }; try { punchGlow(" + Q + ", 18, null, 'mark'); } finally { g.save = o; } return n; })()")).toBe(0);   // mark: kein save/restore
     game('night = 0');
   });
   it('putSprite: Schein vor dem Bildchen, Fensterlicht danach über die Maske – ohne Maske die ganze Scheibe', () => {

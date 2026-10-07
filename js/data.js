@@ -17,6 +17,8 @@ const FRONT_DIR = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 // ?probe: Beispieldorf zum Anschauen, wird nie gespeichert
 const PROBE = new URLSearchParams(location.search).has('probe');
 // ?welt=zaeune: lädt testsave-zaeune.json zum Anschauen und Ausprobieren – wird nie gespeichert (eigener Stand bleibt)
+// ?messen (Block 124): oben links eine Zeile mit der Zeit je Bild und ihren Teilen – zum Messen auf dem iPad
+const MESS = new URLSearchParams(location.search).has('messen') ? { ms: 0, boden: 0, obj: 0, nacht: 0, n: 0 } : null;
 const TESTWELT = (new URLSearchParams(location.search).get('welt') || '').replace(/[^a-z0-9-]/g, '') || null;
 // Zu Besuch (Block 95): ?besuch=<Spiegel-Kennung> – fremde Insel live ansehen, nichts speichern, nichts bauen
 const VISIT = (new URLSearchParams(location.search).get('besuch') || '').replace(/[^a-z0-9]/g, '') || null;

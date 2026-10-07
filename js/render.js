@@ -209,6 +209,10 @@ function renderGroundChunk(cx, cy, scale) {
 const SPRITE_FROM = 1.0, SPRITE_MS = 6;
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, glows, used }
 let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
+// Messen (Block 124): je Bild, wie oft ein Bildchen fehlte (miss → live gezeichnet) bzw. neu gemalt wurde (made). Zwei Schalter nur
+// fürs Messwerkzeug (tools/bench.js): spriteForce true/false erzwingt Bildchen bzw. live, spriteNoBudget malt ohne Zeitgrenze
+const SPRITE_STATS = { miss: 0, made: 0 };
+let spriteForce = null, spriteNoBudget = false;
 const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
 const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].includes(b);
 function spriteTop(b, w, h) {
@@ -224,8 +228,8 @@ function getSprite(key, z, make) {
   const ratio = e ? z / e.z : 0;
   const fresh = e && (spriteZooming ? ratio > 0.6 && ratio < 1.6 : Math.abs(ratio - 1) < 0.02);
   if (!fresh) {
-    if (performance.now() > spriteDeadline) return e && ratio > 0.6 && ratio < 1.6 ? (e.used = frameNo, e) : null;
-    e = make(); objSprites.set(key, e);
+    if (!spriteNoBudget && performance.now() > spriteDeadline) { if (e && ratio > 0.6 && ratio < 1.6) return (e.used = frameNo, e); SPRITE_STATS.miss++; return null; }
+    e = make(); objSprites.set(key, e); SPRITE_STATS.made++;
   }
   e.used = frameNo;
   return e;
@@ -293,6 +297,7 @@ function inQuad(q, x, y) {
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, w = e.c.width / DPR * r, h = e.c.height / DPR * r, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
+  if (!e.glows.length) { g.drawImage(e.c, x0, y0, w, h); return; }      // ohne Licht (tags alle): nur das Bild (Block 124)
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
   g.drawImage(e.c, x0, y0, w, h);
@@ -635,14 +640,15 @@ function drawNight() {
   g.fillStyle = `rgba(25,35,85,${night})`;
   g.fillRect(0, 0, W, H);
   g.globalCompositeOperation = 'destination-over';
-  const seen = new Set(), lights = glows.filter(({ q, r }) => {
-    const k = [q[0][0], q[0][1], q[2][0], q[2][1], r].map(v => Math.round(v * 4)).join();
+  const seen = new Set(), lights = glows.filter(({ q, r }) => {                  // derselbe Text wie früher, ohne map/join (Block 124)
+    const k = Math.round(q[0][0] * 4) + ',' + Math.round(q[0][1] * 4) + ',' + Math.round(q[2][0] * 4) + ',' + Math.round(q[2][1] * 4) + ',' + Math.round(r * 4);
     return !seen.has(k) && seen.add(k);
   });
   for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');      // Fenster zuerst, ganz hell
+  let fill = null;
   for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
-    const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
-    g.fillStyle = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
+    const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, f = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
+    if (f !== fill) g.fillStyle = fill = f;
     g.fillRect(gx - r, gy - r, r * 2, r * 2);
   }
   g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
@@ -664,6 +670,7 @@ function glowImage(blue) {
 }
 
 function render(now) {
+  const mt0 = MESS ? performance.now() : 0;
   g = ctx;
   cam = state.cam;
   const z = cam.z;
@@ -676,7 +683,8 @@ function render(now) {
   glows.length = 0; glowCells.clear();
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
-  SPRITES_ON = z < SPRITE_FROM && isLive();
+  SPRITES_ON = spriteForce != null ? spriteForce : z < SPRITE_FROM && isLive();
+  SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0;
   spriteZooming = now - lastZoomChange < 250;
   spriteDeadline = performance.now() + SPRITE_MS;
   spriteHousekeeping();
@@ -734,6 +742,7 @@ function render(now) {
     g.restore();
   }
 
+  const mt1 = MESS ? performance.now() : 0;
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
@@ -895,9 +904,10 @@ function render(now) {
       if (corner) {
         if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
         if (!big) {
-          drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
+          const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
+          if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
           if (t.b !== 'weg') drawIt();
-          drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
+          if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
         }
         const s = T.st.get(a);
         if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
@@ -926,7 +936,7 @@ function render(now) {
         tileSprite('kristall', x, y, px, py, z);
         glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
       }
-      drawSmall(k, px, py, z, now, x, y, [...SLOTS_BACK, ...SLOTS_FRONT]);
+      if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
     }
     if (preview && preview.small && hover.x === x && hover.y === y) {
       const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
@@ -980,9 +990,11 @@ function render(now) {
   if (staleCover) recalc();
 
   drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
+  const mt2 = MESS ? performance.now() : 0;
 
   // 5) Nacht
   if (night > 0) drawNight();
+  if (MESS) { const mt3 = performance.now(), a = 0.1; MESS.boden += a * (mt1 - mt0 - MESS.boden); MESS.obj += a * (mt2 - mt1 - MESS.obj); MESS.nacht += a * (mt3 - mt2 - MESS.nacht); MESS.lights = glows.length; MESS.miss = SPRITE_STATS.miss; MESS.made = SPRITE_STATS.made; }
 
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
   for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht

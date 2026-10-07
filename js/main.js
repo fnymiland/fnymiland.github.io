@@ -162,8 +162,18 @@ function frame(now) {
     if (live) { collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); fairTick(); marktTick(); parkFestTick(); fzFestTick(); }
     starTick(now); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now;
   }
+  const rt = MESS ? performance.now() : 0;
   render(now);
+  if (MESS) messLine(performance.now() - rt);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
+}
+// ?messen (Block 124): Zeit je Bild (gleitend), Boden / Objekte / Nacht, Lichter, Bildchen fehlend/neu, Zoom
+function messLine(ms) {
+  MESS.ms += 0.1 * (ms - MESS.ms);
+  const t = `${MESS.ms.toFixed(1)} ms · Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)} · Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss} neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`;
+  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '12px system-ui, sans-serif';
+  const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(8, H - 30, w, 20);
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(t, 14, H - 20); ctx.restore();
 }
 // Erst loslegen, wenn ALLE Skripte da sind: cloud.js, live.js, friends.js und me.js kommen nach main.js. Im langsamen
 // WLAN zeichnete das erste Bild sonst schon, bevor me.js geladen war („youNews is not defined“, Block 99a).

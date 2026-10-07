@@ -46,22 +46,32 @@ function glowSnap(q) {
 const glowCells = new Map();
 // part (Block 112): 'halo' nur der weiche Schein, 'pane' nur die Scheibe, 'mark' nichts stanzen, nur fürs Nachtbild merken – Bildchen stanzen den
 // Schein vor dem Einsetzen (trifft, was dahinter liegt, wie live) und die Scheiben über ihre Lichtmaske (render.js)
+// Block 124 (schneller, gleiches Bild): Zellen und Lichter als Zahlen statt Text; 'pane'/'mark' folgen immer auf das 'halo' desselben
+// Lichts – das hat es schon gezählt und in glows eingetragen (die Scheibe braucht n nicht); 'mark' zeichnet nichts, also kein save/restore
 function punchGlow(q, r, tint, part = null) {
-  const strength = night / NIGHT_MAX, blue = tint === 'blue';
+  const blue = tint === 'blue';
+  if (part === 'mark' || (part === 'pane' && blue)) return;
+  const strength = night / NIGHT_MAX;
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
+  if (part === 'pane') {
+    g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.globalCompositeOperation = 'destination-out';
+    g.globalAlpha = Math.min(1, strength); poly(q, '#000');
+    g.restore();
+    return;
+  }
   // dasselbe Licht (große Gebäude stanzen es je Streifen) zählt nur einmal (Block 84d)
-  const cell = Math.round(gx / 24) + ',' + Math.round(gy / 24), id = Math.round(gx * 2) + ',' + Math.round(gy * 2);
+  const cell = (Math.round(gx / 24) + 4096) * 8192 + Math.round(gy / 24) + 4096, id = (Math.round(gx * 2) + 100000) * 400000 + Math.round(gy * 2) + 100000;
   let seen = glowCells.get(cell);
   if (!seen) glowCells.set(cell, seen = new Map());
-  if (!seen.has(id)) seen.set(id, seen.size);
-  const n = seen.get(id);
+  let n = seen.get(id);
+  if (n === undefined) { n = seen.size; seen.set(id, n); }
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
   const rr = n ? r * 0.7 : r;
   g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
-  if (!part || part === 'halo') g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
-  if (!blue && (!part || part === 'pane')) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
+  g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
+  if (!blue && !part) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }
   g.restore();
   glows.push({ q, r, tint });               // große Gebäude (Streifen) tragen es mehrfach ein – drawNight fasst zusammen
 }

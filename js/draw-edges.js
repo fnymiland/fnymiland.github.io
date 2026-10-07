@@ -532,8 +532,24 @@ function gatePillarsAt(vx, vy, z) {
   if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);          // „Torbogen“: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
   else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
 }
+// Felder, auf denen drawEdgesAt überhaupt etwas zeichnet (Block 124): je Linie ihr Feld i,j, bei Mauern auch ihre beiden Eckpunkte
+// (Torpfeiler, gatePillarsAt). Als Zahlen, neu bei anderem groundVersion, anderer Map oder anderer Anzahl Linien
+let EDGE_FIELDS = null, EDGE_FIELDS_KEY = null;
+const edgeFieldNo = (x, y) => (x + 32768) * 65536 + (y + 32768);
+function edgeFieldsHas(x, y) {
+  if (!EDGE_FIELDS || EDGE_FIELDS_KEY.v !== groundVersion || EDGE_FIELDS_KEY.m !== state.edges || EDGE_FIELDS_KEY.n !== state.edges.size) {
+    EDGE_FIELDS = new Set();
+    for (const [k, e] of state.edges) {
+      const { i, j } = edgeParse(k);
+      EDGE_FIELDS.add(edgeFieldNo(i, j));
+      if (e.b === 'mauer') for (const [vx, vy] of edgeEndPoints(k)) EDGE_FIELDS.add(edgeFieldNo(vx, vy));
+    }
+    EDGE_FIELDS_KEY = { v: groundVersion, m: state.edges, n: state.edges.size };
+  }
+  return EDGE_FIELDS.has(edgeFieldNo(x, y));
+}
 function drawEdgesAt(x, y, z, now) {
-  if (!state.edges.size) return;
+  if (!state.edges.size || !edgeFieldsHas(x, y)) return;
   gatePillarsAt(x, y, z);
   for (const k of ['a' + x + ',' + y, 'b' + x + ',' + y]) { const e = state.edges.get(k); if (e) drawEdge(k, e, z, now); }
 }
