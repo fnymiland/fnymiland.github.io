@@ -102,7 +102,7 @@ function recentList() {
   catch (e) { return []; }
 }
 function noteRecent(id) {
-  if (!ITEMS[id] || QUICK.some(([q]) => q === id)) return;
+  if (!ITEMS[id] || ITEMS[id].gift || QUICK.some(([q]) => q === id)) return;
   const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
 }
@@ -582,7 +582,7 @@ const pendingUnlocks = [];
 function resetUnlockWatch() { unlockSeen = null; pendingUnlocks.length = 0; }
 function unlockKeys() {
   const out = new Set();
-  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
+  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].gift && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
   for (const st of STYLES.weg) if ((st.lm || st.album) && styleOk(st)) out.add('weg:' + st.id);
   for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
   return out;
@@ -686,6 +686,7 @@ function openAlbum() {
   openModal(`
     ${youHead('album')}
     <h3>📒 Sammelalbum · ${Math.floor(got / all.length * 100)} %</h3>
+    ${typeof svShelfHtml === 'function' ? svShelfHtml() : ''}
     ${ALBUM.map(p => {
       const ks = albumKeys(p), n = ks.filter(k => state.album.has(k)).length, done = n === ks.length;
       return `<div class="album-page${done ? ' done' : ''}" data-apage="${p.id}"><div class="label">${p.icon} ${p.name} · ${n}/${ks.length}</div>
@@ -698,6 +699,7 @@ function openAlbum() {
   $('modal-card').classList.add('album');
   for (const el of document.querySelectorAll('#modal-card [data-thumb]')) el.append(thumb(el.dataset.thumb));
   for (const el of document.querySelectorAll('#modal-card [data-hthumb]')) el.append(thumb('haus', +el.dataset.hthumb, { lvl: +el.dataset.hthumb, wall: 1, roof: 0 }));
+  if (typeof wireSvShelf === 'function') wireSvShelf($('modal-card'));   // Souvenirs (Block 129)
   $('m-close').onclick = closeModal;
 }
 function openTipBook() {
@@ -1748,9 +1750,10 @@ function wireTrainChooser(el, line, reopen) {
 }
 
 function openDecoInfo(x, y, slot) {
-  const d = decosAt(x + ',' + y)[slot], it = ITEMS[d.b];
+  const d = decosAt(x + ',' + y)[slot], it = ITEMS[d.b], sv = d.b === 'souvenir' && svById(d.sv);
   showPanel(`
-    <h3>${it.name}</h3>
+    <h3>${sv ? escHtml(svName(sv)) : it.name}</h3>
+    ${sv ? `<p class="muted">🎁 Souvenir${sv.t ? ` aus ${escHtml(sv.t)}` : ''}${sv.at ? `, geschenkt am ${new Date(sv.at).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' })}` : ''}. Entfernen legt es zurück ins Sammelregal.</p>` : ''}
     <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
     ${terraLook(x, y) === 'park' ? `<div class="status">${parkStatus(x + ',' + y).join('')}</div>` : ''}
     ${d.b === 'busch' ? bushColHtml(d.col || 0, 'busch', bushAll().filter(o => o !== d && (o.col || 0) !== (d.col || 0)).length) : ''}
@@ -2195,6 +2198,7 @@ function openTownHall(tab = hallTab) {
   };
   for (const b of card.querySelectorAll('[data-mailgo]')) b.onclick = () => openNet('freunde');
   for (const b of card.querySelectorAll('[data-wishset]')) b.onclick = () => openWishPicker();   // Wunschzettel (Block 105)
+  for (const b of card.querySelectorAll('[data-wishoff]')) b.onclick = async () => { if (viewOnly()) { cloudBlocked(); return; } try { if (await wishSet(null)) { toast('📌 Wunsch abgenommen'); openTownHall('overview'); } } catch (e) { toast('Hat nicht geklappt'); } };   // direkt abnehmen (Block 129)
   for (const b of card.querySelectorAll('[data-partnergo]')) b.onclick = () => openNet('freunde');
   for (const b of card.querySelectorAll('[data-partneroff]')) b.onclick = () => { if (viewOnly()) { cloudBlocked(); return; } state.partner = null; cloudTouched(); save(); openTownHall('town'); };
   for (const b of card.querySelectorAll('[data-lm-go]')) b.onclick = () => {

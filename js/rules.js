@@ -1303,6 +1303,7 @@ const clearLabel = (b, x, y, rot) => {
 function smallError(b, x, y, slot, opts = {}) {
   const d = ITEMS[b], k = x + ',' + y;
   if (!ownedTile(x, y)) return notMine(x, y);
+  if (d.gift && !opts.move && !available(b)) return 'Souvenirs stellst du aus dem Sammelregal im Album auf';   // Block 129
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (slot === VSLOT) {                                          // Eckpunkt (Block 65): alle vier Felder drumherum prüfen
     if (!POST_OK.has(baseOf(b))) return 'Auf die Ecke passt nur Schmales (Laterne, Blumentopf …)';
@@ -1355,9 +1356,10 @@ function buildSmall(b, x, y, slot) {
   state.money -= ITEMS[b].cost;
   payMat(ITEMS[b].mat);
   if (!state.decos.has(k)) state.decos.set(k, newSlots());
-  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}) };
+  state.decos.get(k)[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}), ...(ITEMS[b].gift ? { sv: svPick } : {}) };
   sfx('deco');
   recalc(); checkStars(); save();
+  if (ITEMS[b].gift) svPutDone();                                // jedes Souvenir steht nur einmal (Block 129)
   return true;
 }
 // Kleine Deko zurückgeben: Preis und Material – geschenkte (Parkbäume aus dem Wald, Block 84b) bringen nichts
@@ -1404,7 +1406,7 @@ function normalizeSmall() {
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }
 }
-const available = id => ITEMS[id].variantOf ? available(ITEMS[id].variantOf) : unlockOk(ITEMS[id], id);   // Größen: wie das Grundmodell
+const available = id => ITEMS[id].variantOf ? available(ITEMS[id].variantOf) : ITEMS[id].gift ? !!svPick && svFree(svPick) : unlockOk(ITEMS[id], id);   // Größen: wie das Grundmodell; Souvenir: aus dem Regal gewählt (Block 129)
 const lockText = (id, short) => {
   const d = ITEMS[id];
   const txt = unlockText(d, short);

@@ -1489,9 +1489,13 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [ ] Sternwarte und alle Lichtquellen einzeln; Laternen, Kristalllampen, Gebäude dicht nebeneinander; nah und weit weg
 
 ## Block 129: Geschenke → Souvenirs
-- [ ] Souvenirs: nur geschenkt erhältlich, mit Name und Farbe des Absenders (Mini-Statue seines Tiers, Wegweiser mit Flagge,
-      Blume seiner Insel, Mini-Wahrzeichen, Freundschaftsbaum); kostenlos, 1× am Tag pro Freund; Sammelregal im Album
-- [ ] Rohstoffe nur noch für den Wunschzettel, ohne 100.000er-Grenze (Firebase-Regel!), ehrliche Fehlermeldung
+- [x] Souvenirs (js/souvenir.js): Mini-Statue seines Tiers, Wegweiser mit Flagge, Inselblume, Mini-Rathaus, Freundschaftsbäumchen –
+      in Farbe/Flagge des Absenders; kostenlos, 1× am Tag pro Freund (🎁 in der Freundesliste); Briefkasten → Sammelregal im Album →
+      „Aufstellen“ (einmal; Abreißen legt es zurück); Infofenster „… von Ben, geschenkt am …“. Test: souvenir.test.js
+- [x] Rohstoffe nur noch über „Helfen“ beim Wunschzettel, höchstens was fehlt; Regel ohne 100.000er-Grenze (1 Mrd.), ehrliche
+      Fehlermeldung (keine Verbindung ↔ nicht mehr befreundet)
+- [x] Wunschzettel: „von dir unterwegs“ bzw. „du hast genug geschickt – muss nur noch abgeholt werden“ statt „Helfen“; Besitzer:
+      „Abnehmen“ direkt, Hinweis auf Abzuholendes im Briefkasten; Päckchen ohne Wunsch-Merker zählen auch; Mengen bis 50.000
 
 ## Block 130: Online-Status der Freunde
 - [x] Grüner Punkt „spielt gerade“, sonst „zuletzt vor …“ in der Freundesliste (`on/<uid>`, `onlineBeat` jede Minute, play false

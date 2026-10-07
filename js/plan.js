@@ -7,7 +7,7 @@
 const LINE_TOOLS = new Set(['weg', 'schiene', 'fz_bahn', 'fz_hoch', 'fz_tief']);   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
 const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels']);
 const dragKind = t => t === 'schiene' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
-  : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small) || (t === 'verschieben' && !moving) ? 'rect' : null;
+  : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small && !ITEMS[t].gift) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
 
 // { kind: 'line'|'rect', tool, a: {x, y}, b: {x, y}, fixed, dragging, slot (kleine Deko: in welche Ecke) }

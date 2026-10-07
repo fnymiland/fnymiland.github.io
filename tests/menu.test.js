@@ -11,7 +11,7 @@ const tools = () => q('#tools .tool').map(b => b.dataset.tool);
 describe('Baumenü', () => {
   it('jedes Ding steht in genau einer Gruppe', () => {
     // Größen stehen nicht einzeln im Menü, ✋ Verschieben und 🧹 Abreißen nur in der Werkzeugleiste
-    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old && !['verschieben', 'abriss'].includes(id))");
+    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old && !ITEMS[id].gift && !['verschieben', 'abriss'].includes(id))");
     const placed = game('MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items)');
     for (const id of ids) expect(placed.filter(p => p === id).length, id).toBe(1);
     expect(placed.every(id => ids.includes(id))).toBe(true);

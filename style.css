@@ -803,3 +803,13 @@ body.visiting #net-btn { display: none !important; }
 .look.look-form span { font-size: 11px; }
 .style-chip.look-chip i { background-size: contain; }
 @media (max-width: 370px) { #hud .pill { font-size: 11px; } }    /* sehr schmale Handys (360 px): auch Extremwerte einzeilig */
+/* Souvenirs (Block 129): Auswahl beim Schicken, Sammelregal im Album */
+.sv-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.sv-opt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 6px; min-width: 76px; }
+.sv-opt small { font-size: 11px; font-weight: 800; }
+.sv-pic { display: block; }
+.sv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.sv-e { display: flex; flex-direction: column; align-items: center; gap: 3px; text-align: center; background: var(--cream2); border-radius: 12px; padding: 6px; }
+.sv-e small { font-size: 11px; color: var(--brown2); }
+.sv-e small.ok { color: var(--green-d); font-weight: 800; }
+.fr-btns .btn.done { opacity: 0.5; }

@@ -44,6 +44,7 @@ function newState() {
     album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
     me: null,                  // eigene Figur (Block 97): { a, fur, shirt, hat, face, body, hand, name, off } – null = noch nie eingestellt
     bond: 0,                   // höchste Freundschaftsstufe bei einem Freund (Block 105, schaltet Belohnungen frei, wird nie kleiner)
+    souvenirs: [],             // Geschenke von Freunden (Block 129, souvenir.js): [{ id, k, from, n, t, a, c, s, at }]
     partner: null,             // Partnerstadt (Block 105): { uid, name, c, s } – Flagge neben dem Rathaus
     tipsOff: false,
     tiles: new Map(),
@@ -119,14 +120,14 @@ function serialize() {
     if (!decoMap.has(k)) decoMap.set(k, newSlots());
     decoMap.get(k)[slot] = it.d;
   }
-  const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0, ...(d.col ? { col: d.col } : {}), ...(d.form ? { form: d.form } : {}), ...(d.free ? { free: true } : {}) })]);   // Buschfarbe (Block 89), geschenkt (84b), Form (106)
+  const decos = [...decoMap].map(([k, ds]) => [k, ds.map(d => d && { b: d.b, rot: d.rot || 0, ...(d.col ? { col: d.col } : {}), ...(d.form ? { form: d.form } : {}), ...(d.free ? { free: true } : {}), ...(d.sv ? { sv: d.sv } : {}) })]);   // Buschfarbe (Block 89), geschenkt (84b), Form (106), Souvenir (129)
   const terraMap = new Map(state.terra), edgeMap = new Map(state.edges);    // getragener Rasen und Linien: am alten Platz (Block 117)
   for (const it of held) { if (it.kind === 'ground') terraMap.set(it.from, it.look); else if (it.kind === 'edge') edgeMap.set(it.from, it.e); }
   return {
     game: 'kachelhausen', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, tiles, terra: [...terraMap], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -297,6 +298,7 @@ function parseSave(d) {
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
     me: d.me && typeof d.me === 'object' && !Array.isArray(d.me) ? { ...d.me } : null,   // geprüft wird beim Lesen (meLook)
     bond: Number.isInteger(d.bond) ? Math.max(0, Math.min(5, d.bond)) : 0,
+    souvenirs: svClean(d.souvenirs),
     partner: d.partner && typeof d.partner.uid === 'string' && /^#[0-9a-f]{6}$/i.test(d.partner.c) && FLAG_SYMBOLS.includes(d.partner.s) ? { uid: d.partner.uid, name: String(d.partner.name || 'Freund').slice(0, 40), c: d.partner.c, s: d.partner.s } : null,   // Farbe/Symbol streng: stammt von einem anderen Spieler
     town: d.town || { name: 'Sonnenbucht', color: FLAG_COLORS[1], symbol: '🐟' },
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie

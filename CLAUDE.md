@@ -382,6 +382,15 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+129. **Souvenirs** (Block 129, js/souvenir.js): Gibt es nur geschenkt (`mail/<to>/<id>.sv`, einmal am Tag je Freund, kostenlos).
+    Abholen legt sie über `svReceive` ins Regal (`state.souvenirs`, Fremddaten immer durch `svClean`). Aufgestellt sind sie
+    Deko `{ b: 'souvenir', sv: id }`; ob eins steht, nur über `svPlaced()`/`svFree()` aus den Dekos ableiten, nie merken
+    (Abreißen, ↶, Verschieben stimmen so von selbst). `ITEMS.souvenir.gift`: nicht in Leiste, Suche, „zuletzt gebaut“,
+    „Neu freigeschaltet“, kein Rechteck-Bauen; `available` nur mit gewähltem freiem `svPick`. Wer kopiert (Block 134), darf
+    Souvenirs nicht verdoppeln. Zeichnung hängt an Art/Farbe/Flagge/Tier – steht in `decoVariant` (Bildchen-Schlüssel).
+    Rohstoffe schickt man nur noch für einen Wunsch (`mailCompose` mit wish, höchstens was fehlt); was ich geschickt habe,
+    merkt `wishSent` (zählt mit, bis der Freund abholt). Päckchen mit dem gewünschten Rohstoff füllen den Wunsch auch ohne
+    `wish`-Merker (alte Versionen).
 130. **Online-Status** (Block 130, friends.js unten): `on/<uid>` = { at (Serverzeit), play } – nur über `onlineBeat(play)`
     schreiben (meldet sich jede Minute, setzt per `onLeave`/onDisconnect play false für den Fall, dass die Seite einfach weg
     ist; nach jedem Verbindungsabbruch neu scharf). Anzeige nur über `onlineText(o, serverNow)`/`onlineHtml`: grün nur bei

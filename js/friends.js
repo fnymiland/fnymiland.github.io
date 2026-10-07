@@ -17,7 +17,7 @@ const BOOK_LINES = [
   'Deine Bewohner sind so süß 🐾', 'Danke fürs Päckchen! 🎁', 'Was baust du als Nächstes? 🤔', 'Gute Nacht, kleine Insel 🌙',
   'Das Riesenrad ist toll 🎡', 'Schöne Farben! 🎨', 'Dein Rathaus sieht toll aus 🏛️', 'Bis morgen! 👋'];
 const BOOK_STICKERS = ['🌷', '🌳', '🏰', '❤️', '⭐', '🐾', '🎉', '🌈', '☀️', '🌙', '🍰', '🎁'];
-const MAIL_PER_DAY = 5, MAIL_MAX = 100000;
+const MAIL_PER_DAY = 5, MAIL_MAX = 1e9;                                // keine 100.000er-Grenze mehr (Block 129)
 const dayKey = (d = new Date()) => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
 const frLS = (k, v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem('kachelhausen_fr_' + k)); localStorage.setItem('kachelhausen_fr_' + k, JSON.stringify(v)); } catch (e) { return null; } };
 
@@ -205,7 +205,7 @@ function friendsInboxWatch() {
   });
   if (!mailOff) mailOff = cloudApi.watch(`mail/${uid}`, v => {
     const old = mailAll; mailAll = v || {};
-    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`📬 Päckchen von ${m.n} – oben unter 🌐 Online → Freunde`);
+    for (const [id, m] of Object.entries(mailAll)) if (!old[id] && m) toast(`${m.sv ? '🎁 Souvenir' : '📬 Päckchen'} von ${m.n} – oben unter 🌐 Online → Freunde`);
     groundVersion++;                                                    // Briefkasten-Fähnchen am Rathaus neu zeichnen
     mailLoaded = true;
     friendsDot(); welcomeBack();
@@ -234,7 +234,7 @@ function welcomeBackLines() {
   const book = Object.values(bookAll).filter(e => e && (e.at || 0) > since).sort((p, q) => (q.at || 0) - (p.at || 0));
   const mails = Object.values(mailAll).filter(m => m && (m.at || 0) > wb);
   welcomeAt = Math.max(0, ...book.map(e => e.at || 0), ...mails.map(m => m.at || 0));   // Serverzeit, nicht die Uhr des Geräts
-  return [...mails.map(m => `${icon(m)} 📬 <b>${escHtml(m.n)}</b> hat dir ein Päckchen geschickt`),
+  return [...mails.map(m => `${icon(m)} ${m.sv ? '🎁' : '📬'} <b>${escHtml(m.n)}</b> hat dir ${m.sv ? 'ein Souvenir' : 'ein Päckchen'} geschickt`),
     ...book.map(e => `${icon(e)} ${e.k === 'g' ? `📖 <b>${escHtml(e.n)}</b> hat ins Gästebuch geschrieben: „${escHtml(BOOK_LINES[e.t] || '')}“`
       : e.k === 'h' ? `❤️ <b>${escHtml(e.n)}</b> hat dir ein Herz dagelassen` : e.k === 'd' ? `💛 <b>${escHtml(e.n)}</b> sagt Danke für dein Päckchen`
       : `👋 <b>${escHtml(e.n)}</b> war zu Besuch`}`)];
@@ -263,7 +263,7 @@ function friendsHallHtml(part) {
   const mails = Object.entries(mailAll).filter(([, m]) => m);
   if (part === 'post') return mails.length ? `
     <div class="label">📬 Briefkasten</div>
-    ${mails.map(([id, m]) => `<div class="fr-row"><span>${icon(m)} Von ${escHtml(m.n)}: ${Object.entries(m.items || {}).filter(([r]) => RES[r]).map(([r, n]) => `${RES[r].icon} ${fmt(n)}`).join(' ')}</span>
+    ${mails.map(([id, m]) => `<div class="fr-row"><span>${icon(m)} Von ${escHtml(m.n)}: ${m.sv ? `🎁 ${escHtml(svKind(m.sv.k).name)}` : ''}${Object.entries(m.items || {}).filter(([r]) => RES[r]).map(([r, n]) => `${RES[r].icon} ${fmt(n)}`).join(' ')}</span>
       <span class="fr-btns"><button class="btn small" data-mget="${escHtml(id)}">Abholen</button></span></div>`).join('')}` : '';
   return `
     ${list.some(([, e]) => e.k === 'd') ? `<div class="label">💛 Danke</div><p>${list.filter(([, e]) => e.k === 'd').slice(0, 20).map(([, e]) => `${icon(e)} ${escHtml(e.n)} sagt Danke für dein Päckchen <small class="muted">${when(e)}</small>`).join('<br>')}</p>` : ''}
@@ -292,34 +292,43 @@ async function mailClaim(id) {
   } catch (e) { toast('Hat nicht geklappt – später nochmal'); return; }
   const add = {};
   for (const [r, n] of Object.entries(got.items || {})) if (RES[r] && isFinite(n) && n > 0) { const v = Math.min(n, MAIL_MAX); state.res[r] = (state.res[r] || 0) + v; add[r] = v; }
+  const sv = got.sv && typeof svReceive === 'function' ? svReceive(id, got) : null;   // Souvenir: ins Sammelregal (Block 129)
   cloudTouched(); save();
-  toast(`📬 ${Object.entries(add).map(([r, n]) => `+${fmt(n)} ${RES[r].icon}`).join(' ')} von ${got.n}`);
+  const parts = Object.entries(add).map(([r, n]) => `+${fmt(n)} ${RES[r].icon}`);
+  if (sv) parts.push(`🎁 ${svKind(sv.k).name} (steht im Album im Sammelregal)`);
+  toast(`📬 ${parts.join(' ') || 'leer'} von ${got.n}`);
   mailThanks(uid, id, got, add);                                        // Freundschaft, Wunschzettel, Danke (Block 105)
   openNet('freunde');
 }
 
-// --- Päckchen schicken (aus „Freunde & Besuch“) -------------------------------------------------
+// --- Päckchen schicken: Rohstoffe nur noch für den Wunschzettel (Block 129; Geschenke sind Souvenirs, souvenir.js) -----------
+// Was ich für den aktuellen Wunsch eines Freundes schon geschickt habe – auch, was er noch nicht abgeholt hat. base: wie weit
+// der Wunsch beim ersten Schicken war; so zählt Abgeholtes nicht doppelt
+const wishSentKey = uid => 'wsent_' + (cloudUser ? cloudUser.uid : '') + '_' + uid;
+function wishSent(uid, w) { const v = frLS(wishSentKey(uid)); return v && w && v.at === w.at && v.r === w.r ? { n: +v.n || 0, base: +v.base || 0 } : { n: 0, base: w ? w.got : 0 }; }
+function wishSentAdd(uid, w, n) { const v = wishSent(uid, w); frLS(wishSentKey(uid), { at: w.at, r: w.r, n: v.n + n, base: v.n ? v.base : w.got }); }
+const wishCovered = (uid, w) => { const v = wishSent(uid, w); return Math.max(w.got, v.n ? v.base + v.n : 0); };   // abgeholt oder von mir unterwegs
+const mailFailText = uid => frList[uid] && frList[uid].st === 'freund' ? '🎁 Ging gerade nicht – keine Verbindung? Gleich nochmal versuchen' : '🎁 Ging nicht – ihr seid nicht mehr befreundet';
 function mailCompose(friendUid, name, wish = null) {
   if (viewOnly()) { cloudBlocked(); return; }
+  if (!wish) return;
   const sent = (frLS('mail_' + dayKey()) || {})[friendUid] || 0;
   if (sent >= MAIL_PER_DAY) { toast(`🎁 Heute schon ${MAIL_PER_DAY} Päckchen an ${name} – morgen wieder`); return; }
-  const pick = {};
-  const have = Object.keys(RES).filter(r => state.res[r] >= 1);
-  const need = wish ? Math.max(0, wish.n - wish.got) : 0;                 // Wunschzettel (Block 105): gleich die fehlende Menge
-  if (wish && state.res[wish.r] >= 1) pick[wish.r] = Math.min(need, Math.floor(state.res[wish.r]));
+  const r = wish.r, need = Math.max(0, wish.n - wishCovered(friendUid, wish)), have = Math.floor(state.res[r] || 0), max = Math.min(need, have);
+  const pick = { [r]: max };
   const draw = () => {
-    openModal(`<h2>🎁 Päckchen an ${escHtml(name)}</h2>
-      ${have.length ? have.map(r => `<div class="fr-row"><span>${RES[r].icon} ${RES[r].name} <small class="muted">(${fmt(state.res[r])} da)</small></span>
-        <span class="fr-btns"><button class="btn ghost small" data-mm="${r}:-10" aria-label="weniger">−</button><b>${fmt(pick[r] || 0)}</b><button class="btn ghost small" data-mm="${r}:10" aria-label="mehr">+</button></span></div>`).join('')
-        : '<p class="muted">Dein Lager ist leer.</p>'}
-      ${wish ? `<p class="ok">📌 ${escHtml(name)} wünscht sich ${RES[wish.r].icon} ${fmt(wish.n)} ${RES[wish.r].name} – es fehlen noch ${fmt(need)}.${state.res[wish.r] >= 1 ? '' : ' Du hast leider keins.'}</p>` : ''}
-      <p class="muted">Geht sofort aus deinem Lager ab. ${name} holt es am Briefkasten ab. Noch ${MAIL_PER_DAY - sent} Päckchen heute.</p>
-      <div class="row"><button class="btn ghost" id="m-close">Abbrechen</button><button class="btn" id="mm-send" style="flex:1" ${Object.values(pick).some(n => n > 0) ? '' : 'disabled'}>🎁 Schicken</button></div>`);
+    openModal(`<h2>🎁 ${escHtml(name)} helfen</h2>
+      <p class="ok">📌 ${escHtml(name)} wünscht sich ${RES[r].icon} ${fmt(wish.n)} ${RES[r].name} – es fehlen noch ${fmt(need)}.</p>
+      ${have ? `<div class="fr-row"><span>${RES[r].icon} ${RES[r].name} <small class="muted">(${fmt(have)} da)</small></span>
+        <span class="fr-btns"><button class="btn ghost small" data-mm="-1" aria-label="weniger">−</button><b>${fmt(pick[r])}</b><button class="btn ghost small" data-mm="1" aria-label="mehr">+</button></span></div>`
+        : '<p class="muted">Du hast gerade nichts davon.</p>'}
+      <p class="muted">Geht sofort aus deinem Lager ab. ${escHtml(name)} holt es am Briefkasten ab. Noch ${MAIL_PER_DAY - sent} Päckchen heute.</p>
+      <div class="row"><button class="btn ghost" id="m-close">Abbrechen</button><button class="btn" id="mm-send" style="flex:1" ${pick[r] > 0 ? '' : 'disabled'}>🎁 Schicken</button></div>`);
     for (const b of document.querySelectorAll('[data-mm]')) b.onclick = () => {
-      const [r, d] = b.dataset.mm.split(':'), step = Math.max(1, Math.round(Math.max(10, state.res[r] / 10) / 10) * 10) * Math.sign(+d);
-      pick[r] = Math.max(0, Math.min(Math.floor(state.res[r]), (pick[r] || 0) + step)); draw();
+      const step = Math.max(1, Math.round(Math.max(10, max / 10) / 10) * 10) * Math.sign(+b.dataset.mm);
+      pick[r] = Math.max(0, Math.min(max, pick[r] + step)); draw();
     };
-    $('m-close').onclick = closeModal;
+    $('m-close').onclick = () => openFriends();
     $('mm-send').onclick = () => mailSend(friendUid, name, pick, wish);
   };
   draw();
@@ -340,11 +349,12 @@ async function mailSend(friendUid, name, pick, wish = null) {
     const forWish = !!(wish && items[wish.r] > 0);
     await cloudApi.set(`mail/${friendUid}/m${Date.now().toString(36)}${cloudUser.uid.slice(0, 6)}`, { from: cloudUser.uid, n: myNick(), a, items, at: cloudApi.TS(), ...(forWish ? { wish: true } : {}) });
     bondAdd(cloudUser.uid, friendUid, forWish ? BOND_PTS.wish : BOND_PTS.mail);
+    if (forWish) wishSentAdd(friendUid, wish, items[wish.r]);            // „unterwegs“ beim Wunsch (Block 129)
     const log = frLS('mail_' + dayKey()) || {}; log[friendUid] = (log[friendUid] || 0) + 1; frLS('mail_' + dayKey(), log);
     cloudTouched(); save(); closeModal(); toast(`🎁 Päckchen an ${name} ist unterwegs`);
   } catch (e) {
     for (const [r, n] of Object.entries(items)) state.res[r] += n;
-    toast('🎁 Ging nicht – seid ihr noch befreundet?');
+    toast(mailFailText(friendUid));
     if ($('mm-send')) $('mm-send').disabled = false;
   } finally { mailBusy = false; }
 }
@@ -422,12 +432,14 @@ function wishSuggest() {
   }
   return { r: RES.bretter ? 'bretter' : Object.keys(RES)[0], n: 100 };
 }
-const WISH_AMOUNTS = [50, 100, 200, 500, 1000, 2000];
+const WISH_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 50000];
 function wishHtml() {
   if (!cloudUser) return `<div class="label">📌 Wunschzettel</div><p class="muted">Mit ☁️ Online und Freunden kannst du hier einen Wunsch aushängen – Freunde helfen dir mit Päckchen.</p>`;
   const w = myWish;
+  const inBox = w ? Object.values(mailAll).reduce((s, m) => s + ((m && m.items && +m.items[w.r]) || 0), 0) : 0;   // geschickt, noch nicht abgeholt
   return `<div class="label">📌 Wunschzettel</div>${w ? `<div class="hall-row"><span>${RES[w.r].icon} ${fmt(Math.min(w.got, w.n))} / ${fmt(w.n)} ${RES[w.r].name}${w.got >= w.n ? ' · <b class="ok">✓ erfüllt!</b>' : ''}</span>
-      <button class="btn ghost small" data-wishset="1">Ändern</button></div><div class="wish-bar"><i style="width:${Math.min(100, w.got / w.n * 100)}%"></i></div>`
+      <span><button class="btn ghost small" data-wishset="1">${w.got >= w.n ? 'Neuer Wunsch' : 'Ändern'}</button> <button class="btn ghost small" data-wishoff="1">Abnehmen</button></span></div><div class="wish-bar"><i style="width:${Math.min(100, w.got / w.n * 100)}%"></i></div>
+      ${inBox > 0 ? `<p class="ok">📬 ${RES[w.r].icon} ${fmt(inBox)} liegen schon in deinem Briefkasten – unter 🌐 → Freunde abholen, dann zählt es.</p>` : ''}`
     : `<p class="muted">Häng einen Wunsch aus – deine Freunde sehen ihn und können mit Päckchen helfen.</p><div class="row"><button class="btn small" data-wishset="1">📌 Wunsch aushängen</button></div>`}`;
 }
 function openWishPicker() {
@@ -454,7 +466,7 @@ function openWishPicker() {
 // Päckchen abgeholt: Freundschaft, Wunsch füllen, Danke an den Absender
 async function mailThanks(uid, id, got, add) {
   bondAdd(uid, got.from, got.wish ? BOND_PTS.wish : BOND_PTS.mail);
-  if (got.wish) {
+  if (got.wish || (myWish && add[myWish.r])) {                         // auch Päckchen ohne Merker zählen (Block 129)
     try {
       const wid = await liveWorldId();
       const r = await cloudApi.tx(`worlds/${wid}/wish`, cur => { const w = wishClean(cur); if (!w || !add[w.r] || w.got >= w.n) return undefined; return { ...cur, got: Math.min(w.n, w.got + add[w.r]) }; });

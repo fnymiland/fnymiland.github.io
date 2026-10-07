@@ -142,7 +142,7 @@ describe('Parkrasen im Wald', () => {
 
 describe('Nichts Unbaubares (Block 64)', () => {
   it('alles, was „Neu freigeschaltet“ zeigen kann, steht auch im Baumenü – der alte Park ist ganz weg', () => {
-    const missing = game(`Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && id !== 'verschieben' && id !== 'abriss'
+    const missing = game(`Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].gift && id !== 'verschieben' && id !== 'abriss'
       && !MENU.some(m => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id)))`);
     expect(missing).toEqual([]);
     expect(game("'park' in ITEMS")).toBe(false);

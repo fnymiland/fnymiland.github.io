@@ -334,14 +334,16 @@ async function openFriends() {
   const row = ([id, e], btns) => `<div class="fr-row"><span>${escHtml(e.name || 'Freund')}</span><span class="fr-btns">${btns(id, e)}</span></div>`;
   const friendRow = ([id, e]) => {
     const w = wishes[id], p = (myBonds[id] || {}).p, partner = state.partner && state.partner.uid === id;
-    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Päckchen schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
-      ${w && w.got < w.n ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da)</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>` : ''}</div>`;
+    return `<div class="fr-friend"><div class="fr-row"><span>${escHtml(e.name || 'Freund')} <small class="bond" title="Freundschaft">${bondHearts(p)}</small>${onlineHtml(id, frOnline[id])}</span><span class="fr-btns">${e.wid ? `<button class="btn small" data-frvisit="${escHtml(e.wid)}">🏝️ Besuchen</button>` : ''}<button class="btn ghost small${svSentToday(id) ? ' done' : ''}" data-frmail="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}" aria-label="Souvenir schicken">🎁</button><button class="btn ghost small${partner ? ' on' : ''}" data-frpartner="${escHtml(id)}" aria-label="${partner ? 'Partnerstadt entfernen' : 'Als Partnerstadt wählen'}" aria-pressed="${partner}">🚩</button><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Freund entfernen">✕</button></span></div>
+      ${w && w.got < w.n ? (wishCovered(id, w) >= w.n
+        ? `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="ok">✓ du hast genug geschickt – es muss nur noch abgeholt werden</small></div>`
+        : `<div class="fr-wish">📌 wünscht sich ${RES[w.r].icon} ${fmt(w.n)} ${RES[w.r].name} <small class="muted">(${fmt(w.got)} da${wishSent(id, w).n ? `, ${fmt(wishSent(id, w).n)} von dir unterwegs` : ''})</small> <button class="btn small" data-frhelp="${escHtml(id)}" data-frname="${escHtml(e.name || 'Freund')}">🎁 Helfen</button></div>`) : ''}</div>`;
   };
   openModal(`
     ${netHead('freunde')}<div id="fr-box">
     ${friendsHallHtml('post')}
     <div class="label">Freunde</div>
-    ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch und Päckchen – am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'
+    ${by('freund').length ? by('freund').map(friendRow).join('') + '<p class="muted fr-hint">♥ Freundschaft wächst mit Besuchen, Herzen, Gästebuch, Souvenirs (🎁, eins am Tag) und Päckchen – am meisten, wenn du bei einem Wunsch hilfst. 🚩 = Partnerstadt.</p>'
       : '<p class="muted">Noch keine – schick deinen Code an jemanden oder gib einen ein.</p>'}
     ${by('anfrage').length ? `<div class="label">📩 Anfragen</div>${by('anfrage').map(r => row(r, id => `<button class="btn small" data-fracc="${escHtml(id)}">Annehmen</button><button class="btn ghost small" data-frdel="${escHtml(id)}">Ablehnen</button>`)).join('')}` : ''}
     ${by('gesendet').length ? `<div class="label">Gesendet</div>${by('gesendet').map(r => row(r, id => `<span class="muted">wartet …</span><button class="btn ghost small" data-frdel="${escHtml(id)}" aria-label="Anfrage zurückziehen">✕</button>`)).join('')}` : ''}
@@ -365,7 +367,7 @@ async function openFriends() {
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };
   wireFriendsHall($('modal-card'));
-  for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => mailCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);
+  for (const b of document.querySelectorAll('[data-frmail]')) b.onclick = () => svCompose(b.dataset.frmail, (b.dataset.frname || 'Freund').split(' · ')[0]);   // Souvenir (Block 129)
   for (const b of document.querySelectorAll('[data-frhelp]')) b.onclick = () => mailCompose(b.dataset.frhelp, (b.dataset.frname || 'Freund').split(' · ')[0], wishes[b.dataset.frhelp]);
   for (const b of document.querySelectorAll('[data-frpartner]')) b.onclick = async () => { await togglePartner(b.dataset.frpartner, frList[b.dataset.frpartner] || {}); openFriends(); };
   for (const b of document.querySelectorAll('[data-frvisit]')) b.onclick = () => { save(); location.href = visitLink(b.dataset.frvisit); };

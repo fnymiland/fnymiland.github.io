@@ -1450,6 +1450,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     case 'bank': drawBench(cx, cy, z, t, hw, hh); break;             // Formen und Farben (Block 106)
+    case 'souvenir': drawSouvenir(cx, cy, z, svAt(x, y, (t && t.slot) || 0)); break;   // Geschenk eines Freundes (Block 129, souvenir.js)
     case 'freundesbank': {                   // Bank mit Herzlehne (Block 105)
       const K = kit(cx, cy, z, (t && t.rot) || 0);
       shadow(cx, cy, hw * 0.35, hh * 0.25);
@@ -2100,7 +2101,7 @@ function drawTrophy(cx, cy, z, now, [base, light, dark]) {
 const TREE_FRUIT = ['#ff6b5e', '#ffb13b', '#b07ad6', '#ff8fb1'];
 const treeFruitOf = (x, y, s) => { const h = hash(x, y, 40 + s); return h < 0.4 ? 0 : h < 0.7 ? 1 : h < 0.85 ? 2 : 3; };
 const potOf = (x, y, s) => Math.floor(hash(x, y, 7 + s) * 5);
-const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : ''; };
+const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : b === 'souvenir' ? 'sv' + svVariant(x, y, s) : ''; };   // Souvenir: Art, Farbe, Flagge, Tier (Block 129)
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
   if (SPRITES_ON && sc === 1 && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
   const s = decoScale(b) * 0.9 * sc;

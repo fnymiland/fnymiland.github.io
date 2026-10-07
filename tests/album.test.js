@@ -32,7 +32,8 @@ describe('Sammelalbum', () => {
 
   it('das Album-Fenster zeigt alle Seiten mit Fortschritt', () => {
     game('openAlbum()');
-    expect(document.querySelectorAll('#modal-card .album-page').length).toBe(8);
+    expect(document.querySelectorAll('#modal-card .album-page:not(.sv-shelf)').length).toBe(8);
+    expect(document.querySelectorAll('#modal-card .sv-shelf').length).toBe(1);                 // Souvenirs (Block 129)
     expect($('modal-card').textContent).toMatch(/%/);
   });
 

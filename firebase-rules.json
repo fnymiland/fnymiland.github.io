@@ -152,11 +152,29 @@
           },
           "items": {
             "$r": {
-              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 100000 && $r.length <= 20"
+              ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= 1000000000 && $r.length <= 20"
             }
           },
           "wish": {
             ".validate": "newData.isBoolean()"
+          },
+          "sv": {
+            ".validate": "newData.hasChildren(['k', 'c', 's'])",
+            "k": {
+              ".validate": "newData.isString() && newData.val().length <= 12"
+            },
+            "c": {
+              ".validate": "newData.isString() && newData.val().matches(/^#[0-9a-fA-F]{6}$/)"
+            },
+            "s": {
+              ".validate": "newData.isString() && newData.val().length <= 8"
+            },
+            "t": {
+              ".validate": "newData.isString() && newData.val().length <= 30"
+            },
+            "$other": {
+              ".validate": false
+            }
           },
           "$other": {
             ".validate": false

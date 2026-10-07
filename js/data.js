@@ -127,6 +127,7 @@ const ITEMS = {
   // Belohnungen fürs Sammelalbum (album = Seite, die voll sein muss)
   denkmal:    { cat: 'deko', name: 'Baumeister-Denkmal', cost: 0, needs: 'grass', beauty: 40, album: 'gebaeude', desc: 'Für die volle Album-Seite „Gebäude“.' },
   rosenbogen: { cat: 'deko', name: 'Rosenbogen', cost: 0, beauty: 8, small: true, album: 'deko', desc: 'Für die volle Album-Seite „Deko“.' },
+  souvenir: { cat: 'deko', name: 'Souvenir', cost: 0, beauty: 6, small: true, gift: true, desc: 'Geschenk eines Freundes – aufstellen aus dem Sammelregal im Album.' },   // Block 129: nur geschenkt
   freundesbank: { cat: 'deko', name: 'Freundesbank', cost: 0, beauty: 6, small: true, bond: 4, desc: 'Für eine Freundschaft mit 4 Herzen. Eine Bank mit Herzlehne – für zwei.' },   // Block 105
   freundschaftsbaum: { cat: 'deko', name: 'Freundschaftsbaum', cost: 0, needs: 'grass', beauty: 30, bond: 5, desc: 'Für eine Freundschaft mit 5 Herzen. Statt Äpfeln wachsen Herzen.' },
   uhrturm:    { cat: 'deko', name: 'Uhrturm', cost: 0, needs: 'grass', beauty: 35, album: 'haeuser', desc: 'Für die volle Album-Seite „Hausformen“.' },
@@ -700,6 +701,7 @@ const ITEM_TIPS = {
   seerosenteich: 'Alle Tiere in der Natur entdeckt! Der Seerosenteich mit Fröschen und Libellen – kostet nichts.',
   pokal_silber: 'Ehrennadel in Silber! Der Pokal passt in jede Ecke – kostet nichts.',
   pokal_gold: 'Ehrennadel in Gold! Der Gold-Pokal funkelt – kostet nichts.',
+  souvenir: 'Ein Geschenk von einem Freund – in den Farben seiner Insel. Aufstellen aus dem Sammelregal im Album.',
   freundesbank: 'Vier Herzen Freundschaft! Die Freundesbank mit Herzlehne passt in jede Ecke – kostet nichts.',
   freundschaftsbaum: 'Fünf Herzen Freundschaft! Am Freundschaftsbaum wachsen Herzen – kostet nichts.',
   schuett: 'Macht Wasser zu Land – auch im Meer direkt neben deinem Land. Aufziehen = Fläche.',
@@ -1014,6 +1016,28 @@ const DESIGN = [
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
+// Souvenirs (Block 129, js/souvenir.js): Arten und strenge Prüfung – die Daten stammen von anderen Spielern (Farbe landet im
+// Bild, Name im Fenster)
+const SV_KINDS = [
+  { id: 'statue', name: 'Mini-Statue', desc: 'dein Tier aus Stein auf einem Sockel' },
+  { id: 'schild', name: 'Wegweiser', desc: 'mit deiner Flagge obendrauf' },
+  { id: 'blume', name: 'Inselblume', desc: 'blüht in der Farbe deiner Flagge' },
+  { id: 'turm', name: 'Mini-Rathaus', desc: 'ein kleines Modell deines Rathauses' },
+  { id: 'baum', name: 'Freundschaftsbäumchen', desc: 'mit Herzen in deiner Farbe' }];
+const SV_MAX = 500;
+function svClean(list) {
+  if (!Array.isArray(list)) return [];
+  const out = [], ids = new Set();
+  for (const s of list) {
+    if (!s || typeof s.id !== 'string' || !s.id || s.id.length > 60 || ids.has(s.id) || !SV_KINDS.some(q => q.id === s.k)) continue;
+    if (typeof s.c !== 'string' || !/^#[0-9a-f]{6}$/i.test(s.c)) continue;
+    ids.add(s.id);
+    out.push({ id: s.id, k: s.k, c: s.c, s: FLAG_SYMBOLS.includes(s.s) ? s.s : FLAG_SYMBOLS[0], from: typeof s.from === 'string' ? s.from.slice(0, 128) : '',
+      n: String(s.n || 'Freund').slice(0, 20), t: String(s.t || '').slice(0, 30), a: Number.isInteger(s.a) && s.a >= 0 ? s.a : 0, at: isFinite(s.at) ? +s.at : 0 });
+    if (out.length >= SV_MAX) break;
+  }
+  return out;
+}
 const TERRAIN_NAMES = { grass: 'Wiese', forest: 'Wald', rock: 'Fels', water: 'Wasser', erz: 'Erzader', obst: 'Wilder Obsthain', kristall: 'Kristallfels' };
 
 // Preise nach Einkommen (Block 60, 61, 63): fzMin / incMin Minuten Einkommen beim Bezugseinkommen (incRef, Einkommen des
