@@ -654,6 +654,8 @@ npm run serve     # Server für WLAN/iPad auf Port 4173
   mit Vor-/Nachteilen zeigen, auf die Antwort warten. Kleine Fehler direkt beheben.
 - In **kleinen Schritten** bauen, jeden Schritt zeigen (Probeansicht, Screenshot), dann `npm test`, `npm run bump`,
   Commit (lokal, Nutzer hat git gewünscht). Stand der Schritte: Bau-Reihenfolge in KONZEPT.md (✓ = fertig).
+- **Erst Flüssigkeit, dann Grafik** (Nutzer, 07.10.): Kurz unscharf/vereinfacht gezeichnet ist in Ordnung, Ruckeln nie. Wer Zeichnen
+  umbaut, zeigt lieber kurz ein altes/unscharfes Bild und tauscht später auf einen Schlag, als ein Bild lang zu rechnen.
 - Der Nutzer mag: **cozy und süß**, klares Ziel, Belohnungen selbst auslösen (Ausbauen per Knopf statt automatisch),
   viel Gestaltungsfreiheit, keine unnötige Verwaltung. Größenverhältnisse müssen stimmen (Deko nicht so groß wie Häuser).
 
