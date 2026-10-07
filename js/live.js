@@ -191,17 +191,20 @@ setInterval(() => { liveTick().catch(() => {}); }, LIVE_STEP);
 // ---------------------------------------------------------------------------
 async function visitBoot() {
   document.body.classList.add('visiting');
+  loadingVisit = Date.now();                                              // Ladekreisel, bis die Insel da ist (Block 142)
   visitUi();
   try { await cloudReady(); } catch (e) { visitDenied('Gerade keine Verbindung.'); return; }
   liveFollowStart(VISIT, false);
 }
 function visitArrived() {
+  loadingVisit = 0;
   const h = townHallAt();
   if (h) jumpTo(h[0] + 1, h[1] + 1);
   closeModal(); closePanel(); setTool('look');
   toast(`🏝️ Willkommen in ${state.town.name}!`);
 }
 function visitDenied(why) {
+  loadingVisit = 0;
   liveFollowStop();
   openModal(`<h2>🏝️ Besuch nicht möglich</h2><p>${why || 'Diese Insel kann man gerade nicht besuchen – vielleicht sind Besuche ausgeschaltet oder es gibt einen neuen Link.'}</p>
     <div class="row"><button class="btn" id="m-home2">🏠 Zu meiner Insel</button></div>`);

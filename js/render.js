@@ -232,6 +232,22 @@ const CATCH_MISS = 30, PAINT_CATCH = 40, SPRITE_CATCH_MAX = 160;
 // Vorbereiten (Block 124): Fehlt fast alles (Start, Sprung, weit rausgezoomt), ruckelt es ohnehin – dann richtig Gas geben und
 // oben „Insel wird gezeichnet …“ zeigen, bis es wieder geht (prepShown)
 const PREP_MISS = 250, PAINT_PREP = 150, SPRITE_PREP_MAX = 1000;
+// Ladekreisel (Block 142, #loading in index.html): beim Start, bis die Insel einmal fertig gezeichnet ist (ganzer Bildschirm);
+// beim Besuch, bis die fremde Insel da ist (loadingVisit, live.js); beim Vorbereiten „Insel wird gezeichnet …“. HTML statt ins Bild
+// gemalt, damit er sich auch dreht, während ein langes Bild rechnet. Ins DOM nur, wenn sich etwas ändert
+let loadingStart = true, loadingVisit = 0, loadingShown = '';            // loadingVisit: seit wann (nach 25 s nicht mehr, falls nie etwas kommt)
+function loadingUpdate() {
+  if (loadingStart && frameNo > 2 && !spritePrep && SPRITE_STATS.miss < PREP_MISS) loadingStart = false;   // Insel steht
+  const want = loadingVisit && Date.now() - loadingVisit < 25000 ? 'visit' : loadingStart ? 'start' : performance.now() - prepShown < 500 ? 'draw' : '';
+  if (want === loadingShown) return;
+  loadingShown = want;
+  const el = document.getElementById('loading');
+  if (!el) return;
+  el.hidden = !want;
+  el.classList.toggle('big', want === 'start' || want === 'visit');
+  const t = el.querySelector('.ld-text');
+  if (t && want) t.textContent = want === 'start' ? 'Kachelhausen lädt …' : want === 'visit' ? 'Die Insel wird geladen …' : 'Insel wird gezeichnet …';
+}
 const STALE_MS = 20;                               // Erneuern nach dem Zoomen: etwas mehr als sonst, aber ohne Pause
 let spriteCatch = false, spritePrep = false, spriteStale = false, prepShown = 0;
 const paintBudget = () => spritePrep ? PAINT_PREP : spriteCatch ? PAINT_CATCH : spriteStale ? STALE_MS : PAINT_MS;
@@ -1259,7 +1275,7 @@ function render(now) {
   for (const s of fallenStars) drawFallenStar(s, z, now);
   if (!(SHOWCASE && SHOWCASE.quiet)) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨
   drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
-  if (performance.now() - prepShown < 500) pill('✨ Insel wird gezeichnet …', W / 2, 92, 'rgba(255,250,240,0.92)', '#6b4f3a', 14, true);   // Vorbereiten (Block 124)
+  loadingUpdate();                                                       // Ladekreisel: Start, Besuch, „Insel wird gezeichnet …“ (Block 142)
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“ (antippbar: pillHits)
   pillHits.length = 0;

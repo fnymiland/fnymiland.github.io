@@ -1551,3 +1551,9 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 ## Kleinigkeit: Glasvilla ohne „Blick aufs Wasser“
 - [x] Wunsch „wasser“ ganz gestrichen (HOUSE_STAGES, WISHES, Hilfe, Sprechblasen, Hinweise); Glasvilla wünscht sich nur noch Kultur
       (dazu alle Wünsche der Stufen davor). Test: kristall.test.js
+
+## Block 142: Ladekreisel
+- [x] `#loading` in index.html (steht schon, bevor die Skripte geladen sind): beim Start ganzer Bildschirm „Kachelhausen lädt …“, bis
+      die Insel einmal fertig gezeichnet ist; beim Besuch „Die Insel wird geladen …“ (bis sie da ist, abgelehnt wird oder 25 s);
+      beim Vorbereiten (Zoom weit raus, Sprung) kleines Schild „Insel wird gezeichnet …“ statt des ins Bild gemalten. Drehung per
+      CSS (eigene Ebene) – läuft weiter, während ein langes Bild rechnet. Test: ladekreisel.test.js

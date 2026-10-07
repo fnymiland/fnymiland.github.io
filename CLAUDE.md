@@ -382,6 +382,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt`), sonst hängen sie an der echten Uhrzeit.
+142. **Ladeanzeigen als HTML, nicht ins Bild gemalt** (Block 142): `#loading` + `loadingUpdate()` (render.js) – Gründe zum Zeigen
+    als Merker (`loadingStart`, `loadingVisit`, `prepShown`), nie selbst `hidden` setzen. Ins Bild Gemaltes bleibt stehen, solange
+    ein Bild rechnet – genau dann, wenn man Rückmeldung braucht. Jede neue Warte-Situation (z. B. Cloud-Übernahme) bekommt einen
+    Merker mit Höchstdauer, damit der Kreisel nie für immer stehen bleibt.
 141. **Freundesbuch** (Block 141, friends.js): Anzeigen nur über `bookPeople()` (Zähler `statsAll` + noch nicht gezählte Einträge,
     `at > u[k]`), nie Einträge direkt zählen – sonst fehlt alles Aufgeräumte oder zählt doppelt. Aufräumen nur über `bookFold`
     (erst zählen per Transaktion, dann löschen). Lange Listen: wenige zeigen, Rest mit `hidden` und „mehr anzeigen“ – das ganze
