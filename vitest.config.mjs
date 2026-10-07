@@ -5,5 +5,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./tests/setup.js'],
+    exclude: ['**/node_modules/**', 'bench-base/**'],   // Kopie des alten Stands zum Bildvergleich (Block 124)
   },
 });
