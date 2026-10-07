@@ -127,6 +127,21 @@ describe('Zoomstufen und Vorbereiten (Block 124)', () => {
     expect(r).toEqual([0, 0, 0]);
     expect(game('objSprites.size')).toBe(n0);
   });
+  it('nach dem Zoomen: scharfe Bildchen im Hintergrund, alle zugleich getauscht (keine Welle)', () => {
+    game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
+    view(0.5);
+    game('spriteNoBudget = true; render(1e6); render(1e6); spriteNoBudget = false');
+    const zOf = () => game('[...new Set([...objSprites.values()].filter(e => e.used === frameNo).map(e => +e.z.toFixed(3)))]');
+    expect(zOf()).toEqual([game('+zoomStep(0.5).toFixed(3)')]);
+    view(0.7);
+    const seen = withClock("globalThis.__ps = paintSprite; paintSprite = (...a) => { __t += 3; return __ps(...a); }", () => {
+      try { const out = []; for (let i = 0; i < 60; i++) { frame(); out.push(zOf()); } return out; } finally { game('paintSprite = globalThis.__ps'); }
+    });
+    const zs = game('+zoomStep(0.7).toFixed(3)');
+    expect(seen.every(l => l.length === 1)).toBe(true);                             // nie gemischt: alle alt oder alle neu
+    expect(seen[0]).toEqual([game('+zoomStep(0.5).toFixed(3)')]);                   // erst noch die alten …
+    expect(seen[seen.length - 1]).toEqual([zs]);                                    // … dann alle neuen
+  });
   it('Vorbereiten: fehlte fast alles, viel größeres Budget und der Hinweis oben', () => {
     game("for (let y = 3; y <= 15; y++) for (let x = 3; x <= 15; x += 2) state.tiles.set(x + ',' + y, { b: 'schule', lvl: 1 }); recalc()");
     view(0.5);

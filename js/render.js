@@ -259,11 +259,27 @@ const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite 
 function getSprite(key, z, make) {
   let e = objSprites.get(key);
   // Beim Zoomen jedes vorhandene Bildchen weiterbenutzen, auch aus einer fernen Stufe (kurz unscharf) – sonst fehlte nach jeder
-  // Stufengrenze alles und es gab eine Pause (Block 124). Danach wird Stück für Stück neu gemalt (SPRITE_STATS.stale → STALE_MS)
+  // Stufengrenze alles und es gab eine Pause (Block 124). Danach entsteht das scharfe im Hintergrund (e.next); getauscht wird erst,
+  // wenn alle sichtbaren fertig sind, alle auf einmal (spriteSwapAll) – vorher lief eine sichtbare „Welle“ durchs Bild
   const ratio = e ? z / e.z : 0, near = !!e && ratio > 0.2 && ratio < 5;
   const fresh = e && (spriteZooming ? near : Math.abs(ratio - 1) < 0.02);
   if (!fresh) {
-    if (!spriteNoBudget && spriteOver()) { if (near) { SPRITE_STATS.stale++; return (e.used = frameNo, e); } SPRITE_STATS.miss++; return null; }   // anderer Zoom: das alte noch
+    if (near && !spriteNoBudget) {
+      if (!spriteZooming) {
+        let n = e.next;
+        if (n && Math.abs(z / n.z - 1) >= 0.02) { freeSprite(n); n = e.next = null; }   // inzwischen andere Stufe
+        if (!n && !spriteOver()) {
+          const t0 = performance.now();
+          n = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
+          if (n) { e.next = n; if (!spriteSwap.size) spriteSwapSince = frameNo; spriteSwap.set(key, e); }
+        }
+        if (n && nightFull() && n.paint && !n.night) nightOf(n);           // auch das Nachtbild vorher, sonst wechselt nachts das Licht
+        if (!spriteReady(n)) SPRITE_STATS.stale++;
+      }
+      e.used = frameNo;
+      return e;
+    }
+    if (!spriteNoBudget && spriteOver()) { SPRITE_STATS.miss++; return null; }
     const old = e, t0 = performance.now();
     e = make(); spriteSpent += performance.now() - t0; spriteMade++; SPRITE_STATS.made++;
     if (!e) { SPRITE_STATS.miss++; return near ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
@@ -272,6 +288,20 @@ function getSprite(key, z, make) {
   }
   e.used = frameNo;
   return e;
+}
+// Austausch auf einen Schlag (Block 124): scharfe Bildchen warten in e.next, bis keins der sichtbaren mehr fehlt (oder nach
+// SWAP_WAIT Bildern, falls eins nie fertig wird), dann werden alle zugleich getauscht
+const spriteSwap = new Map(), SWAP_WAIT = 120;
+let spriteSwapSince = 0;
+const spriteReady = n => !!n && !spriteCrops.includes(n) && (!nightFull() || !n.paint || !!n.night);
+function spriteSwapAll(staleLast) {
+  if (!spriteSwap.size || spriteZooming || (staleLast > 0 && frameNo - spriteSwapSince < SWAP_WAIT)) return;
+  for (const [k, e] of spriteSwap) {
+    const n = e.next; e.next = null;
+    if (!n) continue;
+    if (objSprites.get(k) === e) { objSprites.set(k, n); n.used = e.used; freeSprite(e); } else freeSprite(n);
+  }
+  spriteSwap.clear();
 }
 // Bildchen malen. Block 124: danach auf den Inhalt zugeschnitten – sie bestanden zu über 80 % aus leerem Rand (Speicher auf dem
 // iPad). Jedes Bildchen auf einer frischen Leinwand, die nur einmal gelesen und dann freigegeben wird: Eine wiederverwendete
@@ -548,13 +578,13 @@ function spriteHousekeeping() {
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
 function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
-function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); freeNight(e); }
+function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } }
 function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.c); freeCanvas(n.erase.c); freeCanvas(n.light.c); } }
 function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); freeSprite(e); }
 // Andere Welt (Laden, Besuch, Testwelt): Bildchen und Boden der alten nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
   for (const k of [...objSprites.keys()]) dropSprite(k);
-  spriteCrops.length = 0;
+  spriteCrops.length = 0; spriteSwap.clear();
   for (const e of groundCache.values()) freeCanvas(e.c);
   groundCache.clear(); seaInfo.clear();
   if (seaImage) { freeCanvas(seaImage.c); seaImage = null; }
@@ -907,8 +937,10 @@ function render(now) {
   spritePrep = SPRITE_STATS.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten
   if (spritePrep) prepShown = performance.now();
   spriteStale = SPRITE_STATS.stale >= CATCH_MISS && !spriteZooming;    // viele alte Bildchen aus einer anderen Stufe: zügig erneuern
+  const staleLast = SPRITE_STATS.stale;
   SPRITE_STATS.miss = 0; SPRITE_STATS.made = 0; SPRITE_STATS.stale = 0;
   spriteZooming = now - lastZoomChange < 250;
+  spriteSwapAll(staleLast);                                              // scharfe Bildchen alle zugleich einsetzen
   spriteDeadline = performance.now() + SPRITE_MS;
   spriteSpent = 0; spriteMade = 0; groundSpent = 0;
   spriteHousekeeping();

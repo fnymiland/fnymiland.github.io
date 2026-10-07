@@ -363,7 +363,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     auch die Lichtmaske (`maskTodo`). Fehlen ≥ `PREP_MISS`, gilt `PAINT_PREP` und oben steht „Insel wird gezeichnet …“ (`prepShown`).
     **Feste Zoomstufen** (`zoomStep`, je 20 %): Bildchen und Boden immer in der nächstgrößeren Stufe malen (`sp.z = zs`), beim Einsetzen
     mit z / e.z verkleinern – nie wieder mit dem genauen Zoom malen (sonst malt jede Zwischenstufe alles neu). Beim Zoomen jedes
-    vorhandene Bildchen weiterbenutzen (auch aus fernen Stufen, `near` 0.2–5), danach Stück für Stück erneuern (`spriteStale`, `STALE_MS`);
+    vorhandene Bildchen weiterbenutzen (auch aus fernen Stufen, `near` 0.2–5), danach entstehen die scharfen im Hintergrund (`e.next`) und werden **alle zugleich** getauscht
+    (`spriteSwapAll`, wenn keins der sichtbaren mehr fehlt, spätestens nach `SWAP_WAIT` Bildern; nachts erst mit Nachtbild) – einzeln
+    getauscht lief eine sichtbare „Welle“ durchs Bild (`spriteStale`, `STALE_MS`);
     Bildchen bleiben ~2 Minuten (3600 Bilder) im Speicher. **Bis Zoom ~2** (`SPRITE_UNTIL`, bei DPR 2 bis z × DPR ≤ 2.6) kommt alles
     Ruhende aus Bildchen; zwischen 1 und 2 (`SPRITES_NEAR`) bleibt Bewegtes live (`ANIM_ITEMS`, `spriteOk`; Linien mit Tor live).
     Wer etwas Neues mit Bewegung zeichnet, trägt es in `ANIM_ITEMS` ein (der Bestands-Test in tempo-schritt3 schlägt sonst an). Heckenbüsche weit weg
