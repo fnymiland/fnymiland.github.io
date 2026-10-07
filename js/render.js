@@ -162,8 +162,9 @@ function chunkSea(cx, cy) {
 function renderGroundChunk(cx, cy, scale) {
   const b = chunkBounds(cx, cy), c = document.createElement('canvas');
   c.width = Math.max(1, Math.ceil(b.w * scale)); c.height = Math.max(1, Math.ceil(b.h * scale));
-  const prev = g;
-  g = c.getContext('2d');
+  const prev = g, cg = c.getContext('2d');
+  if (!cg) return null;                              // kein Speicher mehr (iPad): Aufrufer behält das alte Bild (Block 124)
+  g = cg;
   try {                                              // ein Fehler darf g nicht auf dieser Leinwand lassen (Block 84d)
     g.setTransform(scale, 0, 0, scale, -b.left * scale, -b.top * scale);
     const waves = [];
@@ -214,7 +215,6 @@ let SPRITES_ON = false, spriteDeadline = 0, spriteZooming = false;
 const SPRITE_STATS = { miss: 0, made: 0 };
 let spriteForce = null, spriteNoBudget = false;
 const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'leuchtturm']);   // Leuchtturm: Strahl dreht sich (Block 83)   // drehen sich auch von weitem sichtbar
-const SHARED_DECO = b => !['baum', 'busch', 'riesenblume', 'blumentopf'].includes(b);
 function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 70;              // Baugerüste ragen etwas höher (Block 84d)
   if (b === 'leuchtturm') return 280;                    // Leuchtturm-Kap (Block 83)
@@ -229,21 +229,53 @@ function getSprite(key, z, make) {
   const fresh = e && (spriteZooming ? ratio > 0.6 && ratio < 1.6 : Math.abs(ratio - 1) < 0.02);
   if (!fresh) {
     if (!spriteNoBudget && performance.now() > spriteDeadline) { if (e && ratio > 0.6 && ratio < 1.6) return (e.used = frameNo, e); SPRITE_STATS.miss++; return null; }
-    e = make(); objSprites.set(key, e); SPRITE_STATS.made++;
+    const old = e;
+    e = make(); SPRITE_STATS.made++;
+    if (!e) { SPRITE_STATS.miss++; return old && ratio > 0.6 && ratio < 1.6 ? (old.used = frameNo, old) : null; }   // kein Speicher: altes Bildchen oder live
+    if (old && old.used !== frameNo) { freeCanvas(old.c); if (old.mask) freeCanvas(old.mask.c); }   // ersetzt (neuer Zoom)
+    objSprites.set(key, e);
   }
   e.used = frameNo;
   return e;
 }
+// Bildchen malen (Block 124: danach auf den Inhalt zugeschnitten – sie bestanden zu über 80 % aus leerem Rand, Speicher auf dem
+// iPad). Jedes Bildchen auf einer frischen Leinwand, die nur einmal gelesen und sofort freigegeben wird: Eine wiederverwendete
+// Leinwand, aus der oft gelesen wird, stellt Chrome auf den Prozessor um (oder willReadFrequently) – dann sind Kanten anders
+// geglättet und das Bild nicht mehr gleich. Leer: c = null. Kein Speicher (getContext null): null, dann wird live gezeichnet
 function paintSprite(halfW, up, down, drawFn) {
+  const nw = Math.max(1, Math.ceil(2 * halfW * DPR)), nh = Math.max(1, Math.ceil((up + down) * DPR));
   const c = document.createElement('canvas');
-  c.width = Math.max(1, Math.ceil(2 * halfW * DPR)); c.height = Math.max(1, Math.ceil((up + down) * DPR));
+  c.width = nw; c.height = nh;
+  const cx = c.getContext('2d');
+  if (!cx) return null;
   const prev = g, sink = [], atlas = { c: null, ctx: null, x: 0, y: 0, row: 0, used: 0 };
-  g = c.getContext('2d');
+  g = cx;
   g.setTransform(DPR, 0, 0, DPR, halfW * DPR, up * DPR);
   GLOW_SINK = sink; GLOW_ATLAS = atlas; SPRITE_PAINT = true;
   let mask;
   try { drawFn(); mask = lightMask(c, sink, atlas); } finally { GLOW_SINK = null; GLOW_ATLAS = null; SPRITE_PAINT = false; g = prev; }
-  return { c, ox: halfW, oy: up, glows: sink, mask };
+  // knapp zuschneiden (Alpha > 0, 1 Punkt Rand)
+  let img = null;
+  try { img = cx.getImageData(0, 0, nw, nh); } catch (e) { img = null; }
+  const d = img && img.data;
+  let x0 = nw, y0 = nh, x1 = -1, y1 = -1;
+  if (!d) { x0 = 0; y0 = 0; x1 = nw - 1; y1 = nh - 1; }                     // ohne Pixel (Test): ganze Fläche
+  else for (let y = 0; y < nh; y++) { const row = y * nw * 4; for (let x = 0; x < nw; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
+  let out = null;
+  if (x1 >= 0) {
+    x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(nw - 1, x1 + 1); y1 = Math.min(nh - 1, y1 + 1);
+    if (x0 === 0 && y0 === 0 && x1 === nw - 1 && y1 === nh - 1) out = c;
+    else {
+      out = document.createElement('canvas'); out.width = x1 - x0 + 1; out.height = y1 - y0 + 1;
+      const ox = out.getContext('2d');
+      if (!ox) return null;
+      ox.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+    }
+  } else { x0 = 0; y0 = 0; }
+  if (out !== c) c.width = c.height = 0;                                   // große Leinwand gleich freigeben
+  const sx = x0 / DPR, sy = y0 / DPR;
+  if (sx || sy) { for (const gl of sink) gl.q = gl.q.map(([x, y]) => [x - sx, y - sy]); if (mask) { mask.x -= sx; mask.y -= sy; } }
+  return { c: out, ox: halfW - sx, oy: up - sy, glows: sink, mask };
 }
 // Lichtmaske eines Bildchens (Block 112): innerhalb der Fensterscheiben nur die Pixel, die seit dem Einschalten ihres Lichts
 // unverändert sind (glowSnap) – was danach davor gemalt wurde (Blumenkasten, Rahmen, das Nachbarhaus der Reihe), bleibt dunkel
@@ -296,11 +328,12 @@ function inQuad(q, x, y) {
 // Nachtlicht wie live (Block 112): erst der Schein (trifft Boden und Nachbarn dahinter), dann das Bildchen darüber, zuletzt
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
-  const r = z / e.z, w = e.c.width / DPR * r, h = e.c.height / DPR * r, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
-  if (!e.glows.length) { g.drawImage(e.c, x0, y0, w, h); return; }      // ohne Licht (tags alle): nur das Bild (Block 124)
+  const r = z / e.z, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
+  if (!e.glows.length) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
+  const w = e.c ? e.c.width / DPR * r : 0, h = e.c ? e.c.height / DPR * r : 0;
   const lights = e.glows.map(gl => [gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint]);
   for (const [q, rr, tint] of lights) if (tint !== 'blue') punchGlow(q, rr, tint, 'halo');
-  g.drawImage(e.c, x0, y0, w, h);
+  if (e.c) g.drawImage(e.c, x0, y0, w, h);
   for (const [q, rr, tint] of lights) punchGlow(q, rr, tint, tint === 'blue' ? null : e.mask == null ? 'pane' : 'mark');   // Kristall: Schein darüber wie bisher
   if (e.mask && night > 0.15) {                                         // nur, was im Bildchen wirklich noch Fensterlicht ist
     const M = e.mask;
@@ -337,7 +370,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
     const pad = SPRITE_PAD[t.b] || [0, 0];
     const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds, up = spriteTop(t.b, w, h) * z * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * z * ds;
     const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; } });
-    sp.z = z;
+    if (sp) sp.z = z;
     return sp;
   });
   if (!e) return false;
@@ -348,11 +381,11 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
 function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   const lit = night > 0.15 && isLive() ? 1 : 0;
   const dark = lit && T.rail.power.dark.has(x + ',' + y + ',' + slot) ? 1 : 0;                 // Laterne ohne Strom
-  const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}` + (SHARED_DECO(b) ? '' : `|${x},${y},${slot}`);   // col: Busch-/Schmuckfarbe, form: Form (Block 106)
+  const key = `deco|${b}|${rot}|${col}|${form}|${FOG ? 1 : 0}|${lit}|${dark}|${decoVariant(b, x, y, slot)}`;   // col: Busch-/Schmuckfarbe, form: Form (Block 106); Variante statt Platz (Block 124)
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
   const e = getSprite(key, z, () => {
     const sp = paintSprite(26 * z * s, 90 * z * s, 12 * z * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form }); });
-    sp.z = z;
+    if (sp) sp.z = z;
     return sp;
   });
   if (!e) return false;
@@ -360,7 +393,19 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   return true;
 }
 function spriteHousekeeping() {
-  if (frameNo % 120 === 0) for (const [k, e] of objSprites) if (frameNo - e.used > 600) objSprites.delete(k);
+  if (frameNo % 120 === 0) for (const [k, e] of objSprites) if (frameNo - e.used > 600) dropSprite(k);
+}
+// Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
+// feste Grenze, bis die Speicherbereinigung irgendwann kommt
+function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
+function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); }
+// Andere Welt (Laden, Besuch, Testwelt): Bildchen und Boden der alten nicht weiter benutzen (Block 124)
+function resetDrawCaches() {
+  for (const k of [...objSprites.keys()]) dropSprite(k);
+  for (const e of groundCache.values()) freeCanvas(e.c);
+  groundCache.clear(); seaInfo.clear();
+  if (seaImage) { freeCanvas(seaImage.c); seaImage = null; }
+  depthImg = null;
 }
 
 // Was liegt unter dem Finger? (Block 71) Gebäude und Dekos zählen dort, wo sie gezeichnet sind – Dach, Turm und Fahne,
@@ -375,6 +420,7 @@ function inkAt(sx, sy, cx, cy, sc, draw) {
   const n = HIT_R * 2 + 1;
   if (!hitCanvas) { hitCanvas = document.createElement('canvas'); hitCanvas.width = hitCanvas.height = n; }
   const prev = g, hc = hitCanvas.getContext('2d', { willReadFrequently: true });
+  if (!hc) return false;                                       // kein Speicher: hier nichts getroffen (Block 124)
   let px = null;
   g = hc; GLOW_SINK = []; SPRITE_PAINT = true;
   try {
@@ -468,7 +514,9 @@ function drawDepth(minX, maxX, minY, maxY, z) {
     const pad = Math.min(60, Math.max(20, (maxX - minX) >> 1)), x0 = minX - pad, y0 = minY - pad, w = maxX - minX + 2 * pad + 1, h = maxY - minY + 2 * pad + 1;
     const c = document.createElement('canvas');
     c.width = w; c.height = h;
-    const cx = c.getContext('2d'), img = cx.createImageData(w, h), px = img.data;
+    const cx = c.getContext('2d');
+    if (!cx) return;                                           // kein Speicher (iPad): diesmal ohne Tiefe (Block 124)
+    const img = cx.createImageData(w, h), px = img.data;
     let any = false;
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
       const a = depthAlpha(x0 + i, y0 + j);
@@ -505,14 +553,19 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     const info = chunkSea(cx, cy);
     let img;
     if (info.sea) {
-      if (!seaImage || stale(seaImage)) { seaImage = renderGroundChunk(WORLD.cMax + 50, 0, want); }
+      if (!seaImage || stale(seaImage)) { const n = renderGroundChunk(WORLD.cMax + 50, 0, want); if (n) { freeCanvas(seaImage && seaImage.c); seaImage = n; } }
+      if (!seaImage) continue;
       img = seaImage.c;
     } else {
       const ck = cx + ',' + cy;
       let e = groundCache.get(ck);
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
-      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || performance.now() < groundDeadline))) { e = renderGroundChunk(cx, cy, want); groundCache.set(ck, e); }
+      if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || performance.now() < groundDeadline))) {
+        const n = renderGroundChunk(cx, cy, want);
+        if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
+      }
+      if (!e) continue;
       e.used = frameNo;
       img = e.c;
     }
@@ -520,7 +573,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     for (const [x, y] of info.waves) drawWave(x, y, toScreen(x, y), z, now);
   }
   if (frameNo % 60 === 0) {
-    for (const [ck, e] of groundCache) if (frameNo - e.used > 120) groundCache.delete(ck);
+    for (const [ck, e] of groundCache) if (frameNo - e.used > 120) { groundCache.delete(ck); freeCanvas(e.c); }
     if (seaInfo.size > 400) seaInfo.clear();
   }
 }
@@ -535,8 +588,9 @@ function tileSprite(kind, x, y, px, py, z) {
   if (!e || want / e.scale > 1.25 || want / e.scale < 0.8) {
     const c = document.createElement('canvas'), B = SPRITE_BOX;
     c.width = Math.ceil(B.w * want); c.height = Math.ceil(B.h * want);
-    const prev = g;
-    g = c.getContext('2d');
+    const prev = g, cg = c.getContext('2d');
+    if (!cg) { if (!e) return; } else {                       // kein Speicher (iPad): altes Bild weiter bzw. diesmal keins (Block 124)
+    g = cg;
     g.setTransform(want, 0, 0, want, -B.left * want, -B.top * want);
     const vx = 5000 + v * 7, vy = 5000 + v * 13;
     if (kind === 'forest') drawForest(0, 0, 1, vx, vy, 3);
@@ -544,8 +598,10 @@ function tileSprite(kind, x, y, px, py, z) {
     else if (kind === 'kristall') drawCrystalRocks(0, 0, 1, vx, vy);
     else drawRocks(0, 0, 1, vx, vy, kind === 'erz');
     g = prev;
+    if (e) freeCanvas(e.c);
     e = { c, scale: want };
     spriteCache.set(key, e);
+    }
   }
   const B = SPRITE_BOX;
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
@@ -663,7 +719,9 @@ function glowImage(blue) {
   if (glowSprites[key]) return glowSprites[key];
   const c = document.createElement('canvas'), rgb = blue ? '140,215,255' : '255,205,100';
   c.width = c.height = 64;
-  const x = c.getContext('2d'), grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  const x = c.getContext('2d');
+  if (!x) return c;                                            // kein Speicher: leer, nächstes Mal neu versuchen (Block 124)
+  const grd = x.createRadialGradient(32, 32, 0, 32, 32, 32);
   grd.addColorStop(0, `rgba(${rgb},1)`); grd.addColorStop(1, `rgba(${rgb},0)`);
   x.fillStyle = grd; x.fillRect(0, 0, 64, 64);
   return (glowSprites[key] = c);

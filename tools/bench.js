@@ -14,6 +14,7 @@ function benchFreeze() {
   window.stepMovers = () => {}; window.syncMovers = () => {};
   walkers.length = 0; strollers.length = 0; paraders.length = 0; cars.length = 0; critters.length = 0;
   window.drawFireworks = () => {}; window.startFireworks = () => {}; window.drawSparkles = () => {};   // Zufall (Erfolge lösen Feuerwerk aus)
+  window.drawBubble = () => {};                                     // Sprechblasen kommen zufällig
   if (typeof fallenStars !== 'undefined') fallenStars.length = 0;
   if (typeof meFigs !== 'undefined') meFigs.length = 0;
   if (typeof trains !== 'undefined') trains.length = 0;
@@ -100,4 +101,9 @@ async function benchSeries(what, from = 0, to = BENCH_VIEWS.length) {
 async function benchReset() {
   for (const r of await navigator.serviceWorker.getRegistrations()) await r.unregister();
   for (const k of await caches.keys()) await caches.delete(k);
+}
+// Speicher der Zwischenspeicher (MB, Breite × Höhe × 4): Bildchen, Boden, Wald/Fels
+function benchMem() {
+  const mb = list => +(list.reduce((n, c) => n + (c ? c.width * c.height * 4 : 0), 0) / 1048576).toFixed(1);
+  return { bildchen: mb([...objSprites.values()].flatMap(e => [e.c, e.mask && e.mask.c])), anzahl: objSprites.size, boden: mb([...groundCache.values()].map(e => e.c).concat(seaImage ? [seaImage.c] : [])), wald: mb([...spriteCache.values()].map(e => e.c)) };
 }

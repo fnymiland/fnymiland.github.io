@@ -362,6 +362,7 @@ function adoptState(s) {
   state = s;
   cam = state.cam;
   terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged();
+  if (typeof resetDrawCaches === 'function') resetDrawCaches();   // Bildchen und Boden der alten Welt weg (Block 124)
   walkers.length = 0; cars.length = 0;
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
   afterLoad();

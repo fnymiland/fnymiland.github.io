@@ -1382,8 +1382,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       if (t && t.cross) drawCrossing(cx, cy, z, x, y, t, now);
       break;
     case 'baum': {                        // Obstbaum; je Ecke eine andere Frucht, damit vier Bäume nicht gleich aussehen
-      const h = hash(x, y, 40 + (t && t.slot || 0));
-      tree(cx, cy + 2 * z, z * 1.05, 0.9, h < 0.4 ? '#ff6b5e' : h < 0.7 ? '#ffb13b' : h < 0.85 ? '#b07ad6' : '#ff8fb1');
+      tree(cx, cy + 2 * z, z * 1.05, 0.9, TREE_FRUIT[treeFruitOf(x, y, t && t.slot || 0)]);
       break;
     }
     case 'blumentopf': {
@@ -1393,7 +1392,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       for (let i = 0; i < 6; i++) {
         const a = i / 6 * Math.PI * 2, fx = cx + Math.cos(a) * 4 * z, fy = cy - 12 * z + Math.sin(a) * 2 * z;
         circle(fx, fy + 2 * z, 2.6 * z, C('#5aa84f'));
-        circle(fx, fy - 1 * z, 2.4 * z, C(FLOWER_COLS[(i + Math.floor(hash(x, y, 7 + (t && t.slot || 0)) * 5)) % FLOWER_COLS.length]));
+        circle(fx, fy - 1 * z, 2.4 * z, C(FLOWER_COLS[(i + potOf(x, y, t && t.slot || 0)) % FLOWER_COLS.length]));
       }
       break;
     }
@@ -2095,6 +2094,13 @@ function drawTrophy(cx, cy, z, now, [base, light, dark]) {
     g.beginPath(); g.moveTo(sx - s, sy); g.lineTo(sx, sy + s * 0.3); g.lineTo(sx + s, sy); g.lineTo(sx, sy - s * 0.3); g.closePath(); g.fill();
   }
 }
+// Was kleine Deko abhängig vom Platz zeichnet (Block 124): Bildchen weit weg teilen sich alle mit gleicher Variante – Bäume nach
+// Fruchtfarbe, Blumentöpfe nach Blütenfolge, Busch nur nach Farbe (steht schon im Schlüssel). Wer etwas Neues vom Platz abhängig
+// zeichnet, nimmt es hier auf (sonst sähen alle gleich aus). Riesenblume: je Platz (Farbe hängt am Seed der Welt)
+const TREE_FRUIT = ['#ff6b5e', '#ffb13b', '#b07ad6', '#ff8fb1'];
+const treeFruitOf = (x, y, s) => { const h = hash(x, y, 40 + s); return h < 0.4 ? 0 : h < 0.7 ? 1 : h < 0.85 ? 2 : 3; };
+const potOf = (x, y, s) => Math.floor(hash(x, y, 7 + s) * 5);
+const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : ''; };
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
   if (SPRITES_ON && sc === 1 && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js)
   const s = decoScale(b) * 0.9 * sc;

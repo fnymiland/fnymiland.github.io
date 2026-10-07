@@ -1465,8 +1465,8 @@ vorbei, 1623 Dinge je Bild bleiben dauerhaft live (Zoom 0.45: 56 ms; alle Bildch
 Entscheidungen (07.10.): weit weg bleiben Fahrgeschäfte und Bahnübergänge live (Rauch/Fahnen stehen still) · Nacht weit weg mit
 Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [x] Schritt 0: messen – SPRITE_STATS (miss/made), spriteForce/spriteNoBudget fürs Werkzeug, `?messen`-Zeile
-- [ ] Schritt 1: Kleinigkeiten ohne Bildänderung (leere Felder überspringen, Linien-Felder-Set, putSprite ohne Licht, punchGlow/drawNight billiger, Wellen als ein Pfad)
-- [ ] Schritt 2: Fundament – Deko-Bildchen nach Variante teilen, getContext null abfangen, Bildchen freigeben/Speicher, Caches bei adoptState leeren, Bildchen auf Inhalt zuschneiden
+- [x] Schritt 1: Kleinigkeiten ohne Bildänderung (leere Felder überspringen, Linien-Felder-Set, putSprite ohne Licht, punchGlow/drawNight billiger). Wellen als ein Pfad verworfen: änderte ~3000 Bildpunkte (Live-Ansicht)
+- [x] Schritt 2: Deko-Bildchen nach Variante (decoVariant), Bildchen auf den Inhalt zugeschnitten (frische Leinwand je Bildchen, einmal lesen – eine wiederverwendete bzw. willReadFrequently-Leinwand glättet in Chrome anders), getContext null abgefangen, Leinwände freigegeben (freeCanvas/dropSprite), resetDrawCaches bei adoptState. Speicher Bildchen 0.45: 39 → 7 MB, 0.95: 95 → 17 MB
 - [ ] Schritt 3: Budget = Malzeit (nicht Frist), Fahrgeschäfte/Übergänge live
 - [ ] Schritt 4: Nacht weit weg als Bild + Löschbild (nur volle Nacht)
 - [ ] Schritt 5: Feinschliff (Deko-Plan, Linien-Bauplan, Streifen)
