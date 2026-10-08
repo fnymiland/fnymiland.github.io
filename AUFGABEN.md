@@ -1624,6 +1624,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       (GL.sky): stanzen Welt und 2D. Bild gegen 2D (Testwelt „alles“, Full HD): 23 Uhr 0,23 % > 8/255, 0,006 % > 40; 19:30, 20:30,
       5:30, 2 Uhr ähnlich. Nachts 3,7 ms je Bild (99 % < 5,1 ms) statt 11 ms in 2D; Neuaufnahme 35 ms
 - [x] PC des Nutzers nachts (23 Uhr, Zoom weit, Grafikkarte an): Bild 18 ms, Rechnen 3 ms – „nachts flüssig“ (vorher bis 180 ms)
+- [x] iPad (Safari): Tag und Nacht richtig, Standbild spielt, Felder 0,3 ms – aber „Hochladen 13,9 ms (68 Zeilen)“: Safari liest
+      die ganze Sammelfläche zurück, egal wie viel benutzt ist. Sammelfläche jetzt 256 … 2048 Zeilen hoch nach Bedarf (wächst sofort,
+      schrumpft nach 120 ruhigen Bildern)
 - [x] Nebenbei behoben: drawNight – warmer Schein nach blauem Fleck wurde blau (circle setzte fillStyle ungemerkt)
 - [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und

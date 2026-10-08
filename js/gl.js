@@ -198,7 +198,9 @@ const GL_HOOKS = { drawImage: glDrawImage, save: glSave, restore: glRestore, beg
 function glHook(on) { for (const [k, f] of Object.entries(GL_HOOKS)) { if (on) ctx[k] = f; else delete ctx[k]; } }
 
 // --- Sammelfläche für Live-Gezeichnetes (je Bild neu) ---
-const LA = { c: null, x: null, w: 2048, h: 2048, cx: 0, cy: 0, row: 0, used: 0, off: [0, 0] };
+// Höhe wächst/schrumpft mit dem Bedarf (256 … 2048): Safari liest beim Hochladen die GANZE Leinwand zurück, egal wie viel
+// benutzt ist – bei 2048² waren das auf dem iPad 14 ms je Bild für 70 benutzte Zeilen
+const LA = { c: null, x: null, w: 2048, h: 256, cx: 0, cy: 0, row: 0, used: 0, off: [0, 0], need: 0, peak: 0, calm: 0 };
 function laInit() {
   if (LA.c) return !!LA.x;
   LA.c = document.createElement('canvas'); LA.c.width = LA.w; LA.c.height = LA.h;
@@ -216,14 +218,22 @@ function laInit() {
   return true;
 }
 function laReset() {
+  if (LA.c) {                                                           // Größe nach Bedarf: zu klein → sofort größer, lange viel Luft → kleiner
+    let h = LA.h;
+    if (LA.need > h) while (h < LA.need && h < 2048) h *= 2;
+    else { LA.peak = Math.max(LA.peak, LA.used); if (++LA.calm > 120) { if (LA.peak < h / 4 && h > 256) h /= 2; LA.peak = 0; LA.calm = 0; } }
+    if (h !== LA.h) { LA.h = h; LA.c.height = h; LA.used = 0; LA.peak = 0; LA.calm = 0; }   // neue Höhe: Leinwand leer, Textur neu (glTex)
+    LA.need = 0;
+  }
   if (LA.used && LA.x) { C2D.setTransform.call(LA.x, 1, 0, 0, 1, 0, 0); LA.x.clearRect(0, 0, LA.w, Math.min(LA.h, LA.used)); }
   LA.cx = 0; LA.cy = 0; LA.row = 0; LA.used = 0;
 }
 function laAlloc(w, h) {
   w = Math.ceil(w) + 2; h = Math.ceil(h) + 2;
-  if (w > LA.w || h > LA.h) return null;
+  if (w > LA.w || h > 2048) return null;
+  if (h > LA.h) { LA.need = Math.max(LA.need, LA.cy + LA.row + h); return null; }
   if (LA.cx + w > LA.w) { LA.cx = 0; LA.cy += LA.row; LA.row = 0; }
-  if (LA.cy + h > LA.h) return null;
+  if (LA.cy + h > LA.h) { LA.need = Math.max(LA.need, LA.cy + h); return null; }   // nächstes Bild größer (diesmal obendrauf in 2D)
   const r = { x: LA.cx + 1, y: LA.cy + 1 };
   LA.cx += w; LA.row = Math.max(LA.row, h); LA.used = Math.max(LA.used, LA.cy + h);
   return r;
