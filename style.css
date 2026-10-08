@@ -940,7 +940,7 @@ body.visiting #net-btn { display: none !important; }
 #cats .cat { padding-top: 0; padding-bottom: 0; }
 #cats .cat .ic { font-size: 17px; line-height: 1; }
 #cats .quick.active { background: var(--brown); color: var(--cream); box-shadow: 0 3px 0 #4a3526; }   /* ohne Ring (Nutzer: „weißer Rand dahinter“) */
-#cats .quick.drop { font-weight: 900; font-size: 18px; color: var(--brown); }   /* 👆 wird ✕, solange etwas in der Hand ist */
+#cats .quick.drop { font-weight: 900; font-size: 18px; color: #fff; background: var(--red); box-shadow: 0 3px 0 #a8443a; }   /* 👆 wird rotes ✕, solange etwas in der Hand ist (Nutzer: „rot, damit man erkennt, dass man abwählt“) */
 #sheet .tool.active { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }   /* gewählte Kachel: Rahmen rundum gleich dick */
 /* Stil-Leiste (Wege, Beete, Hecken …): Knöpfe so hoch wie die Bereiche unten (Nutzer: „dieselben Maße“) – gewählt nur farbig, nicht größer */
 #style-bar > .style-chip { height: 34px; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }

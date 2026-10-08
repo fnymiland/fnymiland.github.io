@@ -1965,5 +1965,5 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Nutzer: „weißer Rand hinter dem dunklen Knopf; bei Kacheln unten mehr Rand; Pillen der Stil-Leiste (Wege, Beete) größer als
       Stadt/Herstellen; aufm Handy keine Option, etwas loszulassen“ – Ring entfernt; Kachelrahmen nur innen (rundum 3 px); alle
       Knöpfe der Stil-Leiste 34 px (gewählt nur farbig, nicht größer). 👆 wird ✕ „Weglegen“, solange etwas in der Hand ist
-      (`syncDropBtn`, auch Kopier-Stempel). Test: handy.
+      (`syncDropBtn`, auch Kopier-Stempel), rot mit weißem ✕ (Nutzer: „damit man erkennt, dass man abwählt“). Test: handy.
 
