@@ -75,4 +75,21 @@ describe('Wegbeläge (Block 125)', () => {
     game("document.querySelector('#panel [aria-label=\"Farbe Anthrazit\"]').click()");
     expect(game("[...state.tiles].filter(([k, t]) => t.b === 'weg' && t.style !== 'sand').map(([k]) => k)")).toEqual(['6,5']);
   });
+  it('„Alle verbundenen“ färbt auch den Weg unter Ständen und Deko mit – und läuft dort weiter (Nutzer, 09.10.2026)', () => {
+    // Weg 5…14 in Reihe 5; auf 7,5 ein Obststand, auf 9–10,5–6 ein großer Brunnen (2×2), dahinter geht der Weg weiter
+    game(`const big = SIZE_ORDER.brunnen.find(([k]) => k === 'l')[1];
+      for (let x = 5; x <= 14; x++) state.tiles.set(x + ',5', { b: 'weg', lvl: 1, style: 'sand' });
+      state.tiles.set('7,5', { b: 'stand_obst', lvl: 1, weg: 'sand' });
+      state.tiles.delete('10,5'); state.tiles.set('9,5', { b: big, lvl: 1, weg: 'sand', wegs: { '1,0': 'sand', '0,1': 'sand', '1,1': 'sand' } });
+      state.money = 1e6; state.design.add('wegmuster:verband'); recalc(); resetUndo()`);
+    expect(game('wegNetwork(5, 5).length')).toBe(12);                                  // 10 in der Reihe + 2 Brunnenfelder darunter
+    game('wegScope = "all"; openInfo(5, 5)');
+    game("document.querySelector('#panel [aria-label=\"Muster Plattenverband\"]').click()");
+    expect(game("state.tiles.get('7,5').weg")).toBe('m:verband:sand');               // unter dem Stand
+    expect(game("[state.tiles.get('9,5').weg, ...Object.values(state.tiles.get('9,5').wegs)]")).toEqual(Array(4).fill('m:verband:sand'));
+    expect(game("state.tiles.get('14,5').style")).toBe('m:verband:sand');            // hinter dem Brunnen weiter
+    expect(game("state.tiles.get('7,5').b + ':' + state.tiles.get('9,5').b")).toMatch(/^stand_obst:brunnen/);   // Dinge bleiben stehen
+    game('undo()');
+    expect(game("[state.tiles.get('7,5').weg, state.tiles.get('9,5').weg, state.tiles.get('9,5').wegs['1,1'], state.tiles.get('14,5').style]")).toEqual(['sand', 'sand', 'sand', 'sand']);
+  });
 });

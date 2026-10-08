@@ -1795,9 +1795,19 @@ function setBridgeKind(x, y, kind) {
 // Verbundene Wege (Block 125b, Wunsch Nutzer: „alle verbundenen Wege umfärben, statt alles neu zu ziehen“): alle Wegfelder, die
 // über Nachbarfelder mit (x, y) verbunden sind – auch Brücken und Bahnübergänge (sie tragen den Weg-Belag)
 const wegCarrier = t => !!t && (t.b === 'weg' || (t.cross && isCrossing(t)));
+// Weg auf dem Feld – auch unter einem Stand oder Deko (t.weg, bei großer Deko t.wegs; Nutzer, 09.10.2026: „Alle verbundenen“
+// ließ den Weg unter Ständen aus und riss dort ab). Liefert den Belag oder null
+const wegCellStyle = (x, y) => { const t = state.tiles.get(x + ',' + y); return wegCarrier(t) ? t.style || 'sand' : wegAt(x, y); };
+function setWegCell(x, y, style) {
+  const t = state.tiles.get(x + ',' + y);
+  if (wegCarrier(t)) {
+    if (isWegBridge(t)) { const kind = bridgeKind(t); t.style = style; if (kind === (BRIDGE_OF_STYLE[style] || 'stein')) delete t.brk; else t.brk = kind; }
+    else t.style = style;
+  } else if (t) t.weg = style;                                         // Ding steht mit seinem Ankerfeld hier
+  else { const a = COVER.get(x + ',' + y), o = state.tiles.get(a), [ax, ay] = keyXY(a); o.wegs[(x - ax) + ',' + (y - ay)] = style; }
+}
 function wegNetwork(x, y, max = 20000) {
-  const start = state.tiles.get(x + ',' + y);
-  if (!wegCarrier(start)) return [];
+  if (wegCellStyle(x, y) == null) return [];
   const seen = new Set([x + ',' + y]), out = [[x, y]];
   for (let i = 0; i < out.length && out.length < max; i++) {
     const [cx, cy] = out[i];
@@ -1805,7 +1815,7 @@ function wegNetwork(x, y, max = 20000) {
       const k = (cx + dx) + ',' + (cy + dy);
       if (seen.has(k)) continue;
       seen.add(k);
-      if (wegCarrier(state.tiles.get(k))) out.push([cx + dx, cy + dy]);
+      if (wegCellStyle(cx + dx, cy + dy) != null) out.push([cx + dx, cy + dy]);
     }
   }
   return out;
@@ -1815,15 +1825,12 @@ function wegNetwork(x, y, max = 20000) {
 function restyleWeg(list, style) {
   const st = isWegStyle(style) && styleDef('weg', style);
   if (!st || !styleOk(st)) return false;
-  const tiles = list.map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => wegCarrier(t) && (t.style || 'sand') !== style);
-  if (!tiles.length) return false;
-  const cost = ITEMS.weg.cost * tiles.length;
+  const cells = list.filter(([px, py]) => { const c = wegCellStyle(px, py); return c != null && c !== style; });
+  if (!cells.length) return false;
+  const cost = ITEMS.weg.cost * cells.length;
   if (state.money < cost) { fail('Zu wenig Taler'); return false; }
   state.money -= cost;
-  for (const t of tiles) {
-    if (isWegBridge(t)) { const kind = bridgeKind(t); t.style = style; if (kind === (BRIDGE_OF_STYLE[style] || 'stein')) delete t.brk; else t.brk = kind; }
-    else t.style = style;
-  }
+  for (const [px, py] of cells) setWegCell(px, py, style);
   groundVersion++; sfx('road'); recalc(); save();
   return true;
 }
