@@ -1597,6 +1597,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       (freigegebene Texturen), drawEpoch (save ohne periodic, resetDrawCaches), außerhalb des Rands, nach 8 s; nur in ruhigen
       Bildern (calm ≥ 6). Schilder nur für wirklich sichtbare Felder. Mac Full HD: Rechnen 8,1 → 3,1 ms; Bild gegen 2D wie
       vorher (nur Wellen; am Bildrand jetzt auch Wellen von Nachbar-Grundstücken, die vorher fehlten)
+- [x] Brücken und leuchtende Wege weit weg als Bildchen (spriteFlat, je Feld, Fassung groundVersion) – beim Nutzer 107 solche Felder
+      hielten das Standbild aus („live Wege 107“) und kosteten Rechenzeit; Wellen im Standbild wieder unter Tiefe/Brücken (GLS.wAt)
 - [ ] Nächste Schritte: Sammelbilder (Atlas)
       statt 4.000 Texturwechsel, JS der Feldschleife (Deko-/Linien-Plan), Nacht/Dämmerung in GL, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und

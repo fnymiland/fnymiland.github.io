@@ -306,7 +306,7 @@ function glCacheStart(z, now) {
   if (GLS.ok && GLS.key === key && GLS.tex === GL.texEpoch && GLS.draw === GL.drawEpoch && now - GLS.at < GLS_AGE
     && Math.abs(dx) < GLS.M * 0.9 && Math.abs(dy) < GLS.M * 0.9) return (GL.cacheMode = 'play');
   GLS.ok = false;
-  GLS.why = GLS.calm < GLS_CALM ? 'unruhig' : GL.lastMiss ? `2D-Reste ${GL.lastMiss}` : liveFlatSet().size ? `live Wege ${liveFlatSet().size}` : '';
+  GLS.why = GLS.calm < GLS_CALM ? 'unruhig' : GL.lastMiss ? `2D-Reste ${GL.lastMiss}` : '';
   if (GLS.why) return (GL.cacheMode = null);                             // unruhig oder etwas fiele aufs Overlay
   GLS.M = Math.round(Math.max(W, H) * 0.25); GLS.W0 = W; GLS.H0 = H; GLS.cam = { x: cam.x, y: cam.y }; GLS.key = key; GLS.at = now;
   W += 2 * GLS.M; H += 2 * GLS.M;                                        // mit Rand aufzeichnen (toScreen verschiebt alles um M)
@@ -326,8 +326,9 @@ function glRecTile(i, x, y, nIcons, nLabels, start) {
 function glRecFinish() {
   const recs = GL.recs, st = [];
   const w0 = GLS.w0 < 0 ? GLS.gEnd : GLS.w0, w1 = GLS.w1 < 0 ? GLS.gEnd : GLS.w1;
-  for (let i = 0; i < GLS.gEnd; i++) if (i < w0 || i >= w1) st.push(recs[i]);   // Boden und Tiefe, ohne Wellen
+  for (let i = 0; i < GLS.gEnd; i++) if (i < w0 || i >= w1) st.push(recs[i]);   // Boden, Tiefe, Wege-Bildchen – ohne Wellen
   const groundEnd = st.length;
+  GLS.wAt = w0;                                                          // hier kommen beim Abspielen die Wellen hinein
   GLS.order.clear(); GLS.sA0 = []; GLS.sA1 = []; GLS.dyn = [];
   GLS.tiles.forEach((c, j) => {
     GLS.order.set(c.x + ',' + c.y, j);
@@ -354,10 +355,11 @@ function glRecOverlay(icons, labels) {
 function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
   const ops = GLS.ops; ops.length = 0;
   for (const e of GLS.ents) e.used = frameNo;
-  ops.push(['s', 0, GLS.groundEnd]);
+  ops.push(['s', 0, GLS.wAt]);                                         // Boden bis zu den Wellen
   let d0 = GL.recs.length;
   if (GLS.waves.length) glWaves(GLS.waves, z, now);
   ops.push(['d', d0, GL.recs.length]);
+  ops.push(['s', GLS.wAt, GLS.groundEnd]);                              // Tiefe, Brücken, leuchtende Wege über den Wellen
   const ev = new Set(GLS.dyn);
   for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
   const list = [...ev].sort((p, q) => p - q);

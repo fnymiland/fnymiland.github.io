@@ -742,6 +742,27 @@ function spriteEdges(x, y, px, py, z, now) {
   putSprite(e, px, py, z);
   return true;
 }
+// Brücken und leuchtende Wege weit weg (Block 144): stecken nicht im Boden-Bild (Schiffe fahren unter Brücken, Kristallwege leuchten
+// nachts) und wurden jedes Bild live gezeichnet – in einer Welt mit 107 solchen Feldern ein Gutteil der Rechenzeit, und das
+// GL-Standbild blieb aus. Jetzt je Feld ein Bildchen (Fassung groundVersion; Form hängt an den Nachbarn); das Brückenstück über
+// einem Schiff zeichnet drawBridgeOver weiter live
+function spriteFlat(x, y, px, py, z, t) {
+  const zs = spriteStep(z), keyOf = lit => `flat|${x},${y}|${FOG ? 1 : 0}|${lit}`;
+  const key = keyOf(night > 0.15 && isLive() ? 1 : 0), fog = FOG;
+  const make = () => {
+    const sp = paintSprite((TW * 0.75 + 24) * zs, (TH + 60) * zs, (TH + 70) * zs, () => {
+      const pf = FOG; FOG = fog;
+      try { drawFlat(0, 0, zs, x, y, t); } finally { FOG = pf; }
+    });
+    if (sp) sp.z = zs;
+    return sp;
+  };
+  const e = getSprite(key, zs, make, groundVersion);
+  if (preLit()) prewarm(keyOf(1), zs, make, groundVersion);
+  if (!e) return false;
+  putSprite(e, px, py, z);
+  return true;
+}
 function spriteHousekeeping() {
   for (const e of spriteTrash) freeSprite(e);                          // ersetzte Bildchen vom letzten Bild
   spriteTrash.length = 0;
@@ -1207,7 +1228,6 @@ function render(now) {
   }
   FOG = false;
   if (!glPlay) drawDepth(...seen, z);
-  if (GL.frame && GL.cacheMode === 'rec') GLS.gEnd = GL.recs.length;
   const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
@@ -1217,8 +1237,12 @@ function render(now) {
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     FOG = !ownedTile(x, y);
-    drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
+    if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
+      if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
+      else drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
+    }
   }
+  if (GL.frame && GL.cacheMode === 'rec') GLS.gEnd = GL.recs.length;     // Boden, Wellen, Tiefe, Brücken/leuchtende Wege: Ende (Block 144)
   FOG = false;
   if (!groundCached) {
     g.save();
