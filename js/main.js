@@ -174,7 +174,8 @@ function messLine(ms) {
   const now = performance.now(), gap = MESS.at ? now - MESS.at : 16; MESS.at = now;   // echter Bildabstand (mit Grafikkarte)
   MESS.gap = (MESS.gap || 16) + 0.1 * (Math.min(gap, 500) - (MESS.gap || 16));
   // als Kasten rechts in der Mitte (unten liegt die Bauleiste darüber), eine Sache je Zeile
-  const sb = GL.cacheMode === 'play' ? 'spielt ✓' : GL.cacheMode === 'rec' ? 'nimmt gerade auf' : 'aus – ' + (GLS.why || '?');
+  const bg = typeof GLB !== 'undefined' && GLB.st === 'run' && GLB.V ? ` · nächstes ${Math.round(100 * GLB.i / GLB.V.visible.length)} %` : '';
+  const sb = GL.cacheMode === 'play' ? 'spielt ✓' + bg : GL.cacheMode === 'rec' ? 'nimmt gerade auf' : 'aus – ' + (GLS.why || '?');
   const lines = [
     `Bild: ${MESS.gap.toFixed(0)} ms  (${(1000 / MESS.gap).toFixed(0)} Bilder/s)`,
     `Rechnen: ${MESS.ms.toFixed(1)} ms`,

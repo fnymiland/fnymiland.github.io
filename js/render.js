@@ -958,9 +958,12 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
       if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < GROUND_MS))) {   // Veraltetes, das noch zu sehen ist: immer nur GROUND_MS (das Aufholen gehört den fehlenden Bildchen)
-        const t0 = performance.now(), n = renderGroundChunk(cx, cy, want);
-        groundSpent += performance.now() - t0;
-        if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
+        if (GL.bg && GLB.gpaint > GLB_MS) { if (!e) { GLB.retry = true; continue; } }   // Standbild im Hintergrund: Rest im nächsten Bild (Block 144)
+        else {
+          const t0 = performance.now(), n = renderGroundChunk(cx, cy, want), dt = performance.now() - t0;
+          groundSpent += dt; if (GL.bg) GLB.gpaint += dt;
+          if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
+        }
       }
       if (!e) continue;
       e.used = frameNo;
@@ -972,7 +975,7 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
   drawWaves(waveList, z, now);                                           // alle auf einmal, über den Grundstücken (wie vorher je Grundstück danach)
   // Vorab (Block 143): ein Grundstück knapp außerhalb des Bildes malen, wenn in diesem Bild noch nichts gemalt wurde und nichts
   // aufzuholen ist – beim Verschieben sind sie dann schon da (vorher: am Rand fehlend → sofort und ohne Budget gemalt, Spitzen ~100 ms)
-  if (!zooming && groundSpent === 0 && !spriteCatch && !spritePrep) {
+  if (!zooming && groundSpent === 0 && !spriteCatch && !spritePrep && !GL.bg) {
     for (const [cx, cy] of ahead) {
       const ck = cx + ',' + cy, e = groundCache.get(ck);
       if (e) { e.used = frameNo; if (e.v === groundVersion && !stale(e)) continue; }
@@ -1200,6 +1203,51 @@ function visibleTiles(minX, maxX, minY, maxY, z) {
   }
   return visible;
 }
+// Ausschnitt: sichtbare Felder und Boden-Kacheln für cam, W, H – auch für das Standbild im Hintergrund (Block 144, glBgStep)
+function worldView(z) {
+  const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];
+  groundCached = z * DPR <= GROUND_MAX_SCALE && isLive();
+  let minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
+  let minY = Math.min(...cs.map(c => c.y)) - 2, maxY = Math.max(...cs.map(c => c.y)) + 6;
+  // Außerhalb der Insel steht nichts: dort nur den Boden aus dem Zwischenspeicher, keine Felder durchgehen
+  const seen = [minX, maxX, minY, maxY];                // ganz, auch jenseits der Welt (tiefes Meer)
+  const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
+  const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
+  if (groundCached) {
+    minX = Math.max(minX, WORLD.cMin * CHUNK - 1); maxX = Math.min(maxX, (WORLD.cMax + 1) * CHUNK);
+    minY = Math.max(minY, WORLD.cMin * CHUNK - 1); maxY = Math.min(maxY, (WORLD.cMax + 1) * CHUNK);
+  }
+  const visible = visibleTiles(minX, maxX, minY, maxY, z);
+  return { visible, seen, cMinX, cMaxX, cMinY, cMaxY, minX, maxX, minY, maxY };
+}
+// Boden, Tiefe, Teile am Boden, leuchtende Wege (glPlay: Boden und Tiefe kommen aus dem Standbild)
+function worldGround(V, z, now, glPlay) {
+  const { visible, seen, cMinX, cMaxX, cMinY, cMaxY, minX, maxX, minY, maxY } = V;
+  if (glPlay) { /* Boden gemerkt */ }
+  else if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
+  else for (let i = 0; i < visible.length; i += 4) {
+    const x = visible[i], y = visible[i + 1];
+    FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
+    drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
+  }
+  FOG = false;
+  if (!glPlay) drawDepth(...seen, z);
+  const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
+  if (!groundCached) drawGroundParts(visRange, toScreen, z);
+  // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
+  const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen (Standbild nur, wenn leer)
+  if (!liveFlat || liveFlat.size) for (let i = 0; i < visible.length; i += 4) {
+    if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
+    const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
+    if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
+    FOG = !ownedTile(x, y);
+    if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
+      if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
+      else drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
+    }
+  }
+  return visRange;
+}
 function render(now) {
   const mt0 = MESS ? performance.now() : 0;
   if (GLPASS) { glHook(false); GLPASS = false; GL.frame = false; }         // letztes Bild brach ab (Fehler): Aufzeichnen aus
@@ -1234,45 +1282,11 @@ function render(now) {
   spriteHousekeeping();
 
   if (GL.frame) glCacheStart(z, now);                                     // Standbild abspielen/aufzeichnen (Block 144); 'rec' vergrößert W/H um den Rand
-  const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];
-  groundCached = z * DPR <= GROUND_MAX_SCALE && isLive();
-  let minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
-  let minY = Math.min(...cs.map(c => c.y)) - 2, maxY = Math.max(...cs.map(c => c.y)) + 6;
-  // Außerhalb der Insel steht nichts: dort nur den Boden aus dem Zwischenspeicher, keine Felder durchgehen
-  const seen = [minX, maxX, minY, maxY];                // ganz, auch jenseits der Welt (tiefes Meer)
-  const cMinX = Math.floor(minX / CHUNK) - 1, cMaxX = Math.floor(maxX / CHUNK) + 1;
-  const cMinY = Math.floor(minY / CHUNK) - 1, cMaxY = Math.floor(maxY / CHUNK) + 1;
-  if (groundCached) {
-    minX = Math.max(minX, WORLD.cMin * CHUNK - 1); maxX = Math.min(maxX, (WORLD.cMax + 1) * CHUNK);
-    minY = Math.max(minY, WORLD.cMin * CHUNK - 1); maxY = Math.min(maxY, (WORLD.cMax + 1) * CHUNK);
-  }
-  const visible = visibleTiles(minX, maxX, minY, maxY, z);
+  const V = worldView(z), { visible, minX, maxX, minY, maxY } = V;
 
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   const glPlay = GL.frame && GL.cacheMode === 'play';                     // Standbild: Boden, Tiefe kommen gemerkt (Block 144)
-  if (glPlay) { /* Boden gemerkt */ }
-  else if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
-  else for (let i = 0; i < visible.length; i += 4) {
-    const x = visible[i], y = visible[i + 1];
-    FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
-    drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
-  }
-  FOG = false;
-  if (!glPlay) drawDepth(...seen, z);
-  const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
-  if (!groundCached) drawGroundParts(visRange, toScreen, z);
-  // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
-  const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen (Standbild nur, wenn leer)
-  if (!liveFlat || liveFlat.size) for (let i = 0; i < visible.length; i += 4) {
-    if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
-    const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
-    if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
-    FOG = !ownedTile(x, y);
-    if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
-      if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
-      else drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
-    }
-  }
+  const visRange = worldGround(V, z, now, glPlay);
   if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, Brücken/leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern
   FOG = false;
   if (!groundCached) {
@@ -1649,6 +1663,8 @@ function render(now) {
     g.fillStyle = c.col; g.fillRect(-4, -2.5, 8, 5);
     g.restore();
   }
+  // 10) Nächstes Standbild im Hintergrund weiter vorbereiten (Block 144): ein paar ms Felder, danach wird nur umgeschaltet
+  if (glc === 'play' && GLB.st === 'run') glBgStep(z, now, tileA, icons, labels);
 }
 
 // Glitzern, wenn ein Haus wächst

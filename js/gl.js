@@ -10,7 +10,7 @@
 // Rückfall: ohne WebGL2, mit ?gl=0, nach einem Fehler oder Kontextverlust zeichnet render wie bisher alles in 2D (deckend).
 // Vorerst nur bei Tag, weit weg (nicht SPRITES_NEAR) und ohne Bau-Vorschau; sonst 2D.
 // ---------------------------------------------------------------------------
-const GL = { sky: false, nightDone: false, now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
+const GL = { bg: false, sky: false, nightDone: false, now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
   frame: false, shown: false, stats: { quads: 0, draws: 0, live: 0, over: 0, up: 0, miss: 0 } };
 let GLPASS = false;                                             // gerade läuft der aufgezeichnete Welt-Durchgang
 const GL_Q = new URLSearchParams(location.search).get('gl');
@@ -146,6 +146,7 @@ function glDrawImage(img, ...a) {
   const out = ctx.globalCompositeOperation === 'destination-out';      // Nacht: Loch stanzen (Löschbild, Lichtmaske)
   if (!GLPASS || !(img instanceof HTMLCanvasElement) || !img.width || !img.height || glClip === 'x' || (ctx.globalCompositeOperation !== 'source-over' && !out)) {
     if (GLPASS) { GL.stats.miss++; GLS.dirty = true; GLS.dirtyWhy = 'kein Bildchen'; }
+    if (GL.bg) return;                                                    // Hintergrund: nicht ins Bild
     return C2D.drawImage.call(ctx, img, ...a);
   }
   let sx = 0, sy = 0, sw = img.width, sh = img.height, dx, dy, dw, dh;
@@ -195,7 +196,13 @@ function glClipFn(...a) {
   return C2D.clip.apply(ctx, a);
 }
 const GL_HOOKS = { drawImage: glDrawImage, save: glSave, restore: glRestore, beginPath: glBeginPath, rect: glRect, clip: glClipFn };
-function glHook(on) { for (const [k, f] of Object.entries(GL_HOOKS)) { if (on) ctx[k] = f; else delete ctx[k]; } }
+// Standbild im Hintergrund: was direkt auf die Leinwand malen würde, malt nichts (sonst stünde es im Bild) – das Feld bleibt lebendig
+function glBgFill() { GLS.dirty = true; if (MESS && !GLS.dirtyWhy) GLS.dirtyWhy = '2D'; }
+const GL_BG_HOOKS = { fill: glBgFill, stroke: glBgFill, fillRect: glBgFill, strokeRect: glBgFill, fillText: glBgFill, strokeText: glBgFill, putImageData: glBgFill, clearRect: glBgFill };
+function glHook(on, bg = false) {
+  for (const [k, f] of Object.entries(GL_HOOKS)) { if (on) ctx[k] = f; else delete ctx[k]; }
+  for (const [k, f] of Object.entries(GL_BG_HOOKS)) { if (on && bg) ctx[k] = f; else delete ctx[k]; }
+}
 
 // --- Sammelfläche für Live-Gezeichnetes (je Bild neu) ---
 // Höhe wächst/schrumpft mit dem Bedarf (256 … 4096, 1024 breit): Safari liest beim Hochladen die GANZE Leinwand zurück, egal wie viel
@@ -249,6 +256,7 @@ function glLive(x, y, l, u, r, d, fn) {
   if (bx0 > W * DPR || by0 > H * DPR || bx0 + bw < 0 || by0 + bh < 0) return;   // ganz außerhalb (W/H: beim Aufzeichnen mit Rand)
   GLS.dirty = true;                                                     // dieses Feld ist „lebendig“ (Standbild: jedes Bild neu)
   if (MESS && !GLS.dirtyWhy) GLS.dirtyWhy = 'bewegt sich';
+  if (GL.bg) return;                                                    // Hintergrund: gemalt wird es beim Abspielen
   const cell = laInit() && laAlloc(bw, bh);
   if (!cell) { GL.stats.over++; return fn(); }                    // voll: diesmal obendrauf (2D)
   const prev = g, X = LA.x;
@@ -546,9 +554,18 @@ function glCacheStart(z, now) {
     night > 0 ? 1 : 0, night > 0.15 ? 1 : 0, nightPicOn() ? 1 : 0].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
   GLS.calm = sig === GLS.last && !spriteZooming && !spriteCatch && !spritePrep ? GLS.calm + 1 : 0;
   GLS.last = sig;
+  // im Hintergrund vorbereitetes Standbild übernehmen – nur, wenn sich seitdem nichts geändert hat
+  if (GLB.st === 'done') { if (!GLB.bad && GLB.key === key && GLB.tex === GL.texEpoch && GLB.draw === GL.drawEpoch && glBgAlive()) glBgSwapIn(); GLB.st = 'idle'; }
   const dx = GLS.cam ? (GLS.cam.x - cam.x) * z : 1e9, dy = GLS.cam ? (GLS.cam.y - cam.y) * z : 1e9;
   if (GLS.ok && GLS.key === key && GLS.tex === GL.texEpoch && GLS.draw === GL.drawEpoch && now - GLS.at < GLS_AGE
-    && Math.abs(dx) < GLS.M * 0.9 && Math.abs(dy) < GLS.M * 0.9) return (GL.cacheMode = 'play');
+    && Math.abs(dx) < GLS.M * 0.9 && Math.abs(dy) < GLS.M * 0.9) {
+    // das nächste schon vorbereiten, bevor der Rand erreicht ist (oder das Standbild zu alt wird) – dann gibt es keinen teuren Aufnahme-Haken
+    if (GLB.st === 'run' && (GLB.key !== key || GLB.tex !== GL.texEpoch || GLB.draw !== GL.drawEpoch)) GLB.st = 'idle';
+    if (GLB.st === 'idle' && GLS.calm >= GLS_CALM && !GL.lastMiss && (Math.abs(dx) > GLS.M * GLB_FROM || Math.abs(dy) > GLS.M * GLB_FROM || now - GLS.at > GLS_AGE * 0.6))
+      glBgStart(key, z, now, dx, dy);
+    return (GL.cacheMode = 'play');
+  }
+  GLB.st = 'idle';                                                       // zu spät: jetzt doch auf einmal aufnehmen
   GLS.ok = false;
   GLS.why = GLS.calm < GLS_CALM ? 'unruhig' : GL.lastMiss ? `2D-Reste ${GL.lastMiss}` : '';
   if (GLS.why) return (GL.cacheMode = null);                             // unruhig oder etwas fiele aufs Overlay
@@ -576,34 +593,45 @@ function glRecTile(i, x, y, nIcons, nLabels, start) {
   GLS.tiles.push(c);
 }
 // Ende des Aufzeichnens: ruhende Rechtecke als Standbild auf die Grafikkarte; Symbole des Aufzeichnens auf echte Größe
-function glRecFinish() {
-  const recs = GL.recs, st = [];
-  for (let i = 0; i < GLS.gEnd; i++) st.push(recs[i]);                 // Boden, Wellen (schaukeln im Shader), Tiefe, Wege-Bildchen
-  const groundEnd = st.length;
-  GLS.order.clear(); GLS.sA0 = []; GLS.sA1 = []; GLS.dyn = [];
-  GLS.tiles.forEach((c, j) => {
-    GLS.order.set(c.x + ',' + c.y, j);
-    GLS.sA0[j] = st.length;
-    if (!c.dyn) for (let i = c.a0; i < c.a1; i++) st.push(recs[i]); else GLS.dyn.push(j);
-    GLS.sA1[j] = st.length;
-  });
+function glRecFinish(pre = null) {                                     // pre: im Hintergrund schon gebaut (glBgStep, gleiche Reihenfolge)
+  const recs = GL.recs;
+  let st, groundEnd;
+  if (pre) { st = pre.slist; groundEnd = pre.groundEnd; GLS.order = pre.order; GLS.sA0 = pre.sA0; GLS.sA1 = pre.sA1; GLS.dyn = pre.dyn; }
+  else {
+    st = [];
+    for (let i = 0; i < GLS.gEnd; i++) st.push(recs[i]);               // Boden, Wellen (schaukeln im Shader), Tiefe, Wege-Bildchen
+    groundEnd = st.length;
+    GLS.order = new Map(); GLS.sA0 = []; GLS.sA1 = []; GLS.dyn = [];
+    GLS.tiles.forEach((c, j) => {
+      GLS.order.set(c.x + ',' + c.y, j);
+      GLS.sA0[j] = st.length;
+      if (!c.dyn) for (let i = c.a0; i < c.a1; i++) st.push(recs[i]); else GLS.dyn.push(j);
+      GLS.sA1[j] = st.length;
+    });
+  }
   GLS.recs = st; GLS.groundEnd = groundEnd;
   const gl = GL.gl;
-  gl.bindBuffer(gl.ARRAY_BUFFER, GL.sbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(st), gl.STATIC_DRAW);
+  gl.bindBuffer(gl.ARRAY_BUFFER, GL.sbuf); gl.bufferData(gl.ARRAY_BUFFER, pre ? pre.verts : glVerts(st), gl.STATIC_DRAW);
   // Nacht: Lichter der ruhenden Felder (und des Bodens) einmal als Lichtschicht – die lebendigen kommen jedes Bild neu dazu
-  const G = GLS.gl0, lg = glows.slice(0, G[0]), lp = nightPics.slice(0, G[1]), ln = nightPanes.slice(0, G[2]);
+  const L = pre ? pre.light : glStaticLights(GLS.tiles, GLS.gl0);
+  GLS.light = L;
+  gl.bindBuffer(gl.ARRAY_BUFFER, GL.lbuf); gl.bufferData(gl.ARRAY_BUFFER, pre ? pre.lverts : glVerts(L.recs), gl.STATIC_DRAW);
+  // was gemerkt ist, gilt als benutzt (sonst räumt die Hauspflege es nach einer Weile weg)
+  const used = GLS.srcs = pre ? pre.srcs : new Set(st.map(r => r.src));
+  for (const r of L.recs) used.add(r.src);
+  GLS.ents = [...objSprites.values()].filter(e => used.has(e.c)).concat([...groundCache.values()].filter(e => used.has(e.c)));
+  GLS.tex = GL.texEpoch; GLS.draw = GL.drawEpoch; GLS.ok = true;
+}
+// Lichtschicht der ruhenden Felder (aus glows/nightPics/nightPanes dieser Aufnahme)
+function glStaticLights(tiles, G) {
+  if (!(night > 0)) return { recs: [], ph: [0, 0, 0, 0, 0], warm: false, n: 0 };
+  const lg = glows.slice(0, G[0]), lp = nightPics.slice(0, G[1]), ln = nightPanes.slice(0, G[2]);
   let warm = G[3];
-  for (const c of GLS.tiles) if (!c.dyn) {
+  for (const c of tiles) if (!c.dyn) {
     for (let i = c.g0; i < c.g1; i++) lg.push(glows[i]); for (let i = c.p0; i < c.p1; i++) lp.push(nightPics[i]); for (let i = c.n0; i < c.n1; i++) ln.push(nightPanes[i]);
     warm = warm || c.warm;
   }
-  const L = night > 0 ? glNightRecs(nightDedup(lg), lp, ln, warm) : { recs: [], ph: [0, 0, 0, 0, 0], warm: false };
-  GLS.light = L;
-  gl.bindBuffer(gl.ARRAY_BUFFER, GL.lbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(L.recs), gl.STATIC_DRAW);
-  // was gemerkt ist, gilt als benutzt (sonst räumt die Hauspflege es nach einer Weile weg)
-  const used = GLS.srcs = new Set(st.map(r => r.src).concat(L.recs.map(r => r.src)));
-  GLS.ents = [...objSprites.values()].filter(e => used.has(e.c)).concat([...groundCache.values()].filter(e => used.has(e.c)));
-  GLS.tex = GL.texEpoch; GLS.draw = GL.drawEpoch; GLS.ok = true;
+  return glNightRecs(nightDedup(lg), lp, ln, warm);
 }
 // render (rec): Symbole/Schilder der ruhenden Felder merken, alle Symbole auf echte Bildschirmpunkte
 function glRecOverlay(icons, labels) {
@@ -640,4 +668,90 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
     const p = toScreen(x, y), a = COVER.get(x + ',' + y), t = a && state.tiles.get(a), [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
     if (p.x >= -mX && p.x <= W + mX && p.y >= -mBot && p.y <= H + (w > 1 || h > 1 ? mBig : mTop)) labels.push(l);   // Schild steht am Eckfeld: große Gebäude dürfen tiefer
   }
+}
+
+// --- Standbild im Hintergrund (Block 144): Während das alte spielt, wird das nächste in kleinen Stücken aufgenommen (glBgStep am
+// Ende von render, GLB_MS je Bild), dann nur umgeschaltet (glCacheStart → glBgSwapIn). Vorher kostete jedes neue Standbild ein
+// ganzes teures Bild (Mac ~35 ms, PC mehr) – beim Verschieben alle paar Bildschirmbreiten, sonst alle 8 s
+const GLB = { st: 'idle', bad: false, gpaint: 0, retry: false };                                  // st: idle | run | done
+const GLB_MS = 4, GLB_FROM = 0.3;                                         // ms je Bild; Start ab 30 % des Rands
+function glBgStart(key, z, now, dx, dy) {
+  // etwas in Bewegungsrichtung vorausgreifen (dx/dy: wie weit das Bild schon vom alten Standbild weg ist)
+  const lead = 0.6, cx = cam.x - dx / z * lead, cy = cam.y - dy / z * lead;
+  Object.assign(GLB, { st: 'run', bad: false, key, tex: GL.texEpoch, draw: GL.drawEpoch, at: now, cam: { x: cx, y: cy, z }, M: Math.round(Math.max(W, H) * 0.25), W0: W, H0: H,
+    V: null, i: -1, recs: [], tiles: [], vparts: [], pend: [], slist: [], srcs: new Set(), order: new Map(), sA0: [], sA1: [], dyn: [], groundEnd: 0, verts: null, light: null, lverts: null, icons: [], labels: [], glows: [], pics: [], panes: [], seen: new Set(), warm: false, cells: new Map(), dynWhy: new Map(), gEnd: 0, gl0: null });
+}
+// ein Stück aufnehmen: Zustand des Bilds beiseite (Liste, Kamera, Größe, Lichter, Symbole), Hintergrund-Zustand einsetzen, Felder bis GLB_MS
+function glBgStep(z, now, tileA, icons, labels) {
+  const B = GLB, t0 = performance.now();
+  const keep = { recs: GL.recs, cam, W, H, FOG, g, gc: groundCached, tiles: GLS.tiles, dynWhy: GLS.dynWhy, warm: nightWarm, cells: glowCells, stats: { ...GL.stats },
+    glows: glows.splice(0), pics: nightPics.splice(0), panes: nightPanes.splice(0), seen: [...nightSeen], icons: icons.splice(0), labels: labels.splice(0), am: afterMovers.splice(0) };
+  GL.recs = B.recs; cam = B.cam; W = B.W0 + 2 * B.M; H = B.H0 + 2 * B.M; GLS.tiles = B.tiles; GLS.dynWhy = B.dynWhy;
+  for (const x of B.glows) glows.push(x); for (const x of B.pics) nightPics.push(x); for (const x of B.panes) nightPanes.push(x);
+  nightSeen.clear(); for (const k of B.seen) nightSeen.add(k);
+  nightWarm = B.warm; glowCells = B.cells; for (const x of B.icons) icons.push(x); for (const x of B.labels) labels.push(x);
+  g = ctx; glHook(true, true); GLPASS = true; GL.bg = true;
+  try {
+    if (!B.V) B.V = worldView(z);
+    const ground = B.i < 0;
+    if (B.i < 0) {                                                         // zuerst Boden, Wellen, Tiefe, leuchtende Wege
+      GLS.dirty = false; B.gpaint = 0; B.retry = false;
+      worldGround(B.V, z, now, false);
+      if (GLS.dirty) B.bad = true;                                          // Boden mit Lebendigem: so nicht merkbar
+    }
+    if (B.i < 0 && B.retry) {                                              // fehlende Boden-Stücke: je Bild nur ein paar malen, dann noch einmal
+      GL.recs.length = 0; glows.length = 0; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false; glowCells = new Map();
+    } else if (B.i < 0) {
+      B.gEnd = GL.recs.length; B.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; B.i = 0;
+      // Standbild-Liste, Reihenfolge, Bildchen und Eckpunkte schon jetzt (sonst beim Umschalten 6–15 ms am Stück)
+      B.slist = GL.recs.slice(0, B.gEnd); B.groundEnd = B.gEnd; for (const r of B.slist) { B.srcs.add(r.src); B.pend.push(r); }
+    }
+    const vis = B.V.visible;
+    while (!ground && B.i >= 0 && B.i < vis.length && performance.now() - t0 < GLB_MS) {   // Boden allein in seinem Bild
+      const i = B.i, x = vis[i], y = vis[i + 1];
+      glRecTile(i >> 2, x, y, icons.length, labels.length, true);
+      tileA(x, y, vis[i + 2], vis[i + 3]);
+      glRecTile(i >> 2, x, y, icons.length, labels.length, false);
+      const j = B.tiles.length - 1, c = B.tiles[j];
+      B.order.set(c.x + ',' + c.y, j); B.sA0[j] = B.slist.length;
+      if (!c.dyn) for (let k = c.a0; k < c.a1; k++) { const r = GL.recs[k]; B.slist.push(r); B.pend.push(r); B.srcs.add(r.src); } else B.dyn.push(j);
+      B.sA1[j] = B.slist.length;
+      B.i += 4;
+    }
+    if (B.pend.length && !ground) { B.vparts.push(glVerts(B.pend)); B.pend = []; }   // Eckpunkte des Bodens im nächsten Bild
+    if (B.i >= 0 && B.i >= vis.length) {                                    // fertig: Lichtschicht und Eckpunkte am Stück
+      if (B.pend.length) { B.vparts.push(glVerts(B.pend)); B.pend = []; }
+      B.light = glStaticLights(B.tiles, B.gl0); B.lverts = glVerts(B.light.recs);
+      let n = 0; for (const v of B.vparts) n += v.length;
+      B.verts = new Float32Array(n); n = 0; for (const v of B.vparts) { B.verts.set(v, n); n += v.length; }
+      B.vparts = [];
+    }
+  } catch (e) { B.bad = true; console.warn('Standbild im Hintergrund', e); }
+  finally {
+    GL.bg = false; GLPASS = false; glHook(false);
+    afterMovers.length = 0;                                                 // gehört zu Bewegtem – das läuft beim Abspielen
+    B.glows = glows.splice(0); B.pics = nightPics.splice(0); B.panes = nightPanes.splice(0); B.seen = new Set(nightSeen); B.warm = nightWarm; B.cells = glowCells;
+    B.icons = icons.splice(0); B.labels = labels.splice(0);
+    GL.recs = keep.recs; cam = keep.cam; W = keep.W; H = keep.H; FOG = keep.FOG; g = keep.g; groundCached = keep.gc; GLS.tiles = keep.tiles; GLS.dynWhy = keep.dynWhy;
+    nightWarm = keep.warm; glowCells = keep.cells; Object.assign(GL.stats, keep.stats);
+    for (const x of keep.glows) glows.push(x); for (const x of keep.pics) nightPics.push(x); for (const x of keep.panes) nightPanes.push(x);
+    nightSeen.clear(); for (const k of keep.seen) nightSeen.add(k);
+    for (const x of keep.icons) icons.push(x); for (const x of keep.labels) labels.push(x); for (const x of keep.am) afterMovers.push(x);
+  }
+  if (B.bad) B.st = 'idle';
+  else if (B.V && B.i >= B.V.visible.length) B.st = 'done';
+}
+// sind alle Bildchen des Hintergrund-Standbilds noch da? (inzwischen ersetzte werden freigegeben: Breite 0)
+function glBgAlive() {
+  const B = GLB;
+  return B.recs.every(r => r.src.width > 0) && B.pics.every(p => p[0].width > 0) && B.panes.every(p => p[0].erase.c && p[0].erase.c.width > 0);
+}
+// fertiges Hintergrund-Standbild als Standbild übernehmen (wie glRecFinish nach einer Aufnahme)
+function glBgSwapIn() {
+  const B = GLB, keep = GL.recs;
+  GL.recs = B.recs; GLS.tiles = B.tiles; GLS.dynWhy = B.dynWhy; GLS.gEnd = B.gEnd; GLS.gl0 = B.gl0;
+  GLS.M = B.M; GLS.W0 = B.W0; GLS.H0 = B.H0; GLS.cam = { x: B.cam.x, y: B.cam.y }; GLS.key = B.key; GLS.at = B.at;
+  try { glRecFinish(B); glRecOverlay(B.icons, B.labels); GL.bgSwaps = (GL.bgSwaps || 0) + 1; }
+  catch (e) { GLS.ok = false; console.warn('Standbild im Hintergrund', e); }
+  finally { GL.recs = keep; B.recs = null; B.V = null; B.vparts = []; B.slist = null; B.verts = null; B.lverts = null; }
 }

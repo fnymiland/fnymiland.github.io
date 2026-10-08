@@ -403,7 +403,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Nacht im GL-Bild: Löcher nur über `glOut`/`glOutQuad` bzw. drawImage mit destination-out (Deckkraft relativ zur Nachtstärke,
     `nightK()`), nur wenn `glOnWorld()` (nie beim Malen eines Bildchens). Die Lichtschicht steht einmal in `nightLights` (render.js)
     – 2D und GL nutzen sie; wer Licht ändert, ändert es dort. Was nach der Welt noch Lichter stanzt (Himmel), läuft nachts vor
-    `glEnd` mit `GL.sky`.
+    `glEnd` mit `GL.sky`. Das nächste Standbild entsteht im Hintergrund (`GLB`, `glBgStep`): Wer neuen Zustand einführt, den die
+    Feldschleife je Bild füllt (wie `glows`, `icons`, `afterMovers`), muss ihn in `glBgStep` beiseitelegen und zurückholen.
 143. **Nachtbilder auch in der Dämmerung** (Block 143): `nightPicOn()` (Licht an, weit weg) statt `nightFull()` für alles, was
     Nachtbilder nutzt; das Löschbild wird mit night/NIGHT_MAX eingesetzt, gemalt wird es immer mit voller Nacht (`paintNight`
     setzt `night`). Vor dem Einschalten wärmt `prewarm` die beleuchteten Bildchen vor – wer einen neuen Bildchen-Schlüssel mit

@@ -1633,7 +1633,12 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       bleibt cpu; gpu nur Chrome & Co.)
 - [x] Nebenbei behoben: drawNight – warmer Schein nach blauem Fleck wurde blau (circle setzte fillStyle ungemerkt)
 - [x] Entscheidung Nutzer: Grafikkarte für alle standardmäßig an (☰ → Grafik schaltet aus), „Das ist neu“ 2026-10-08-grafik
-- [ ] Nächste Schritte: kleiner Haken beim Neuaufnehmen (~35 ms, spätestens alle 8 s), Zoom ≥ 1 und Werkzeuge noch 2D
+- [x] Standbild im Hintergrund (GLB in gl.js): ab 30 % des Rands (bzw. nach ~5 s) wird das nächste Standbild in Stücken aufgenommen
+      (glBgStep am Ende von render, 4 ms je Bild: erst Boden, dann Felder; Eckpunkte, Reihenfolge, Lichtschicht gleich mit), dann nur
+      umgeschaltet (glBgSwapIn < 1 ms). Dabei malt nichts ins Bild (Füll-Befehle sind Leerlauf und machen das Feld lebendig, glLive
+      malt nicht), fehlende Boden-Stücke je Schritt nur bis 4 ms. Testwelt Full HD, 600 Bilder Verschieben: keine Neuaufnahme mehr
+      (vorher je Rand ~35–60 ms), Schritte 90 % < 8 ms, Bild gegen 2D unverändert (Tag, Nacht, Dämmerung). Neu: worldView/worldGround
+- [ ] Nächste Schritte: Zoom ≥ 1 und Werkzeuge noch 2D
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
       drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als
