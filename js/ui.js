@@ -430,7 +430,8 @@ function wegStyleBar(bar) {
   for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar('weg'); };
   for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; chosenStyle.weg = wegStyleOf(m.id, colFor(m)); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
   for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { chosenStyle.weg = wegStyleOf(cm, b.dataset.wf); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
-  for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar('weg'); };
+  // Wegform: offene Auswahl dabei zuklappen – sonst baute sich das Raster neu auf und sprang (Rückmeldung Nutzer)
+  for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; wegPop = null; previewCache = null; sfx('deco'); renderStyleBar('weg'); };
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => { wegPop = null; openResearch('design'); };
   bar.hidden = false;
 }
