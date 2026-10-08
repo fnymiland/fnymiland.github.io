@@ -1727,8 +1727,14 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       glowQuad) – nur im 2D-Weg sichtbar
 
 ## Block 145: Hecken wie Wege – überbauen und umfärben (Wunsch Nutzer, 08.10.2026)
-- [ ] Neue Hecke auf eine alte ziehen ersetzt sie (wie Wege), statt „Hier steht schon was“ – kostet wie neu, ↶ macht es rückgängig
-- [ ] Hecke antippen → Farbe/Form: „Nur dieses Stück“ / „Alle verbundenen (N Stücke)“ / „Alle Hecken“ (wie `wegNetwork`/`restyleWeg`)
+- [x] Über eine Linie ziehen ersetzt sie (gab es schon für andere Art/Form – kostet netto nichts, die alte wird gutgeschrieben).
+      Fehler war die Farbe: gleiche Form in anderer Farbe galt als „schon so“ → „Hier ist schon alles fertig“. Jetzt zählt die Farbe
+      (`edgeSame`), und gebaut wird immer die in der Leiste markierte Farbe (`edgeWantCol`, ohne Wahl Grün) – vorher behielt eine
+      überbaute Hecke ihre alte Farbe, Grün ließ sich so nie überbauen. ↶ wie gehabt
+- [x] Fenster jeder Linie (Hecke, Zaun, Mauer): „Ändern: Nur dieses Stück / Alle verbundenen (N) / Alle Hecken (M)“ (`edgeScope`,
+      `edgesScope`: verbunden = gleiche Art an der Linie, ein Zaun daran zählt nicht), dann Form (Bild wie in der Kunstakademie,
+      `edgeStyleBg` – auch in der Bauleiste) oder Farbe (Hecke) antippen – kostenlos, ↶ (`restyleEdges`, `recolorEdges`). Ersetzt den
+      Knopf „Für alle anderen übernehmen“. In Fnymiland OG: 41 verbundene, 292 Hecken. Tests: zaun.test.js, buschfarben.test.js
 
 ## Block 146: Schienen – nur verbundene umstellen (Wunsch Nutzer, 08.10.2026)
 - [ ] Gleis-Stil heute nur „alle Schienen“ → wie bei Wegen: „Nur dieses Feld“ / „Alle verbundenen (N Felder)“ / „Alle“

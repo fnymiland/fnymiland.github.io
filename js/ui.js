@@ -487,7 +487,7 @@ function renderStyleBar(t) {
   if (t === 'weg') { wegStyleBar(bar); return; }
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
-      <i style="background:${styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
+      <i style="background:${EDGE_TOOLS.has(t) ? edgeStyleBg(t, st) : styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
     + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Wege in der Kunstakademie" aria-label="${more} weitere Wege freischalten">🎨<span>+${more}</span></button>` : '')
     + (t === 'weg' ? `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
       `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}` : '');
@@ -1530,7 +1530,7 @@ function openGateInfo(k) {
     ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen – es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
     : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
-    ${e.b === 'hecke' ? bushColHtml(e.col || 0, 'hecke', hedgeAll().filter(o => o !== e && (o.col || 0) !== (e.col || 0)).length) : ''}
+    ${edgeLookHtml(k, e)}
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
     ${(() => { const on = edgeFlush(k), n = [...state.edges.keys()].filter(q => edgeFlush(q) !== on).length;
@@ -1544,7 +1544,35 @@ function openGateInfo(k) {
   for (const b of el.querySelectorAll('[data-flushall]')) b.onclick = () => undoable(() => { const n = setFlushAll(edgeFlush(k)); sfx('deco'); toast(`${n} ${n === 1 ? 'Stück' : 'Stücke'} jetzt ${edgeFlush(k) ? 'bündig' : 'mit Grasstreifen'}`); openGateInfo(k); });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
-  if (e.b === 'hecke') wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => setCol(e, i), all: i => { const l = hedgeAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openGateInfo(k) });
+  wireEdgeLook(el, k, e);
+}
+// Form und Farbe einer Linie (Block 145, wie Wege): erst wählen, wofür – nur dieses Stück, alle verbundenen, alle dieser Art –,
+// dann Form bzw. Farbe antippen. Kostenlos, ↶ macht es rückgängig
+let edgeScope = 'one';
+// Vorschau einer Linienform: kleines Bild wie in der Kunstakademie (Ecke der Hecke/des Zauns), sonst nur die Farbe
+function edgeStyleBg(kind, st) {
+  const u = designThumb({ id: kind + ':' + st.id }, 0.6);
+  return u ? `#f4efe4 url(${u}) center / contain no-repeat` : styleSwatch(st);
+}
+const EDGE_PLURAL = { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' };            // wie die Gruppen der Kunstakademie
+function edgeLookHtml(k, e) {
+  const nRun = edgesScope(k, 'run').length, nAll = edgesScope(k, 'all').length;
+  if (edgeScope === 'run' && nRun < 2 || edgeScope === 'all' && nAll < 2) edgeScope = 'one';
+  const sc = (v, label) => `<button class="look${edgeScope === v ? ' on' : ''}" data-escope="${v}">${label}</button>`;
+  const have = STYLES[e.b].filter(styleOk), more = STYLES[e.b].length - have.length;
+  return `<div class="label">Ändern</div>
+    <div class="looks">${sc('one', 'Nur dieses Stück')}${nRun > 1 ? sc('run', `Alle verbundenen (${nRun})`) : ''}${nAll > nRun ? sc('all', `Alle ${EDGE_PLURAL[e.b]} (${nAll})`) : ''}</div>
+    <div class="label">Form: ${escHtml(styleDef(e.b, e.style).name)}</div>
+    <div class="swatches">${have.map(st => `<button class="sw esw${st.id === e.style ? ' on' : ''}" data-estyle="${st.id}" style="background:${edgeStyleBg(e.b, st)}" title="${escHtml(st.name)}" aria-label="Form: ${escHtml(st.name)}"></button>`).join('')}${more ? `<button class="sw" data-emore="1" title="${more} weitere Formen in der Kunstakademie" aria-label="${more} weitere Formen in der Kunstakademie">🎨</button>` : ''}</div>
+    ${e.b === 'hecke' ? bushColHtml(e.col || 0, 'hecke', 0) : ''}`;
+}
+function wireEdgeLook(el, k, e) {
+  const reopen = () => state.edges.get(k) ? openGateInfo(k) : closePanel();
+  for (const b of el.querySelectorAll('[data-escope]')) b.onclick = () => { edgeScope = b.dataset.escope; reopen(); };
+  for (const b of el.querySelectorAll('[data-estyle]')) b.onclick = () => undoable(() => { if (restyleEdges(edgesScope(k, edgeScope), b.dataset.estyle)) { sfx('deco'); reopen(); } });
+  const more = el.querySelector('[data-emore]');
+  if (more) more.onclick = () => { closePanel(); openResearch('design'); artJump(EDGE_PLURAL[e.b]); };
+  if (e.b === 'hecke') wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => recolorEdges(edgesScope(k, edgeScope), i), all: () => 0, reopen });
 }
 // Marktstand: gehört er zu einem Marktplatz, was bringt der, wann ist Markttag
 function marktStatus(k) {
@@ -2498,6 +2526,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-hecken', date: '8. Oktober', title: 'Hecken wie Wege', items: [
+    '✂️ <b>Hecke antippen → Ändern:</b> nur dieses Stück, alle verbundenen oder alle Hecken – dann Form oder Farbe wählen. Gilt auch für Zäune und Mauern.',
+    '🔁 <b>Überbauen:</b> Einfach eine neue Hecke über die alte ziehen – auch nur in anderer Farbe.',
+  ] },
   { id: '2026-10-08-buendig', date: '8. Oktober', title: 'Wege bis an die Hecke', items: [
     '🧱 <b>Neue Hecken, Zäune und Mauern sind bündig:</b> Der Weg läuft bis an die Linie – auch um Ecken bleibt kein Graszwickel mehr.',
     '✨ <b>Alte Linien auf einmal umstellen:</b> Hecke antippen → „Bündig bis an die Linie“ → „Für alle anderen Linien übernehmen“.',

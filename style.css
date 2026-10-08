@@ -894,3 +894,6 @@ body.visiting #net-btn { display: none !important; }
   padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; pointer-events: none; max-width: calc(100vw - 32px); }
 .bench-out { white-space: pre-wrap; font-size: 11px; line-height: 1.45; background: rgba(0, 0, 0, .05); border-radius: 10px; padding: 10px;
   max-height: 50vh; overflow: auto; user-select: text; -webkit-user-select: text; }
+
+/* Linienformen im Fenster (Block 145): Bild statt Farbfläche, etwas größer */
+.swatches .sw.esw { width: 44px; height: 44px; }

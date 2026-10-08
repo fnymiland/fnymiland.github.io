@@ -140,6 +140,41 @@ describe('Bündig als Standard (Block 57b, Wunsch Nutzerin)', () => {
   });
 });
 
+describe('Hecken wie Wege (Block 145)', () => {
+  it('über eine Hecke ziehen ersetzt sie – auch nur andere Farbe (vorher „Hier ist schon alles fertig“), ↶ zurück', () => {
+    game("for (const d of DESIGN) state.design.add(d.id); state.paintNew = {}; chosenStyle.hecke = 'hoch'");
+    line('hecke', { x: 5, y: 5 }, { x: 9, y: 5 });
+    game("resetUndo(); state.paintNew.hecke = { col: 2 }");
+    expect(game("planScan({ kind: 'edge', tool: 'hecke', a: { x: 5, y: 5 }, b: { x: 9, y: 5 } }).n")).toBe(4);
+    game("setTool('hecke'); startPlan('edge', { x: 5, y: 5 }, { x: 9, y: 5 }, true); undoable(() => runPlan())");
+    expect(game("[...state.edges.values()].map(e => e.col)")).toEqual([2, 2, 2, 2]);
+    game("state.paintNew.hecke = { col: 0 }; chosenStyle.hecke = 'bluete'");                   // Grün in anderer Form: überbaut ebenfalls
+    game("startPlan('edge', { x: 5, y: 5 }, { x: 7, y: 5 }, true); undoable(() => runPlan())");
+    expect(game("['a5,5', 'a6,5', 'a7,5'].map(k => [state.edges.get(k).style, state.edges.get(k).col || 0])")).toEqual([['bluete', 0], ['bluete', 0], ['hoch', 2]]);
+    game('undo(); undo()');
+    expect(game("state.edges.get('a5,5').style + (state.edges.get('a5,5').col || 0)")).toBe('hoch0');
+  });
+  it('Fenster: Form und Farbe für dieses Stück, alle verbundenen oder alle Hecken – Zäune bleiben, ↶ zurück', () => {
+    game("for (const d of DESIGN) state.design.add(d.id); state.paintNew = {}; chosenStyle.hecke = 'niedrig'; edgeScope = 'one'");
+    line('hecke', { x: 5, y: 5 }, { x: 8, y: 5 });                                           // 3 verbunden
+    line('hecke', { x: 12, y: 5 }, { x: 14, y: 5 });                                         // 2 woanders
+    game("chosenStyle.zaun = 'latten'"); line('zaun', { x: 8, y: 5 }, { x: 10, y: 5 });       // Zaun hängt an der ersten Hecke
+    game("resetUndo(); openGateInfo('a6,5')");
+    expect(game("[...document.querySelectorAll('#panel [data-escope]')].map(b => b.textContent)")).toEqual(['Nur dieses Stück', 'Alle verbundenen (3)', 'Alle Hecken (5)']);
+    game("document.querySelector('#panel [data-estyle=\"buchs\"]').click()");
+    expect(game("['a5,5', 'a6,5', 'a7,5'].map(k => state.edges.get(k).style)")).toEqual(['niedrig', 'buchs', 'niedrig']);
+    game("document.querySelector('#panel [data-escope=\"run\"]').click(); document.querySelector('#panel [data-estyle=\"bluete\"]').click()");
+    expect(game("['a5,5', 'a6,5', 'a7,5', 'a12,5'].map(k => state.edges.get(k).style)")).toEqual(['bluete', 'bluete', 'bluete', 'niedrig']);
+    expect(game("state.edges.get('a8,5').style")).toBe('latten');                              // Zaun nicht
+    game("document.querySelector('#panel [data-escope=\"all\"]').click(); document.querySelector('#panel [data-bcol=\"3\"]').click()");
+    expect(game("[...state.edges.values()].filter(e => e.b === 'hecke').every(e => e.col === 3)")).toBe(true);
+    expect(game("state.edges.get('a8,5').col")).toBe(undefined);
+    game('undo()');
+    expect(game("[...state.edges.values()].filter(e => e.b === 'hecke').some(e => e.col)")).toBe(false);
+    game("edgeScope = 'one'");
+  });
+});
+
 describe('Runde Ecken', () => {
   it('jede L-Ecke derselben Art ist rund – mit Weg innen folgt der Weg, mit Weg außen füllt der Belag; andere Art: eckig', () => {
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");

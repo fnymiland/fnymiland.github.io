@@ -50,7 +50,7 @@ describe('Buschfarben (Block 89)', () => {
     expect(game("state.edges.get('a6,6').col")).toBe(1);
     game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"3\"]').click()");
     expect(game("state.edges.get('a6,6').col")).toBe(3);
-    game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcolall]').click()");
+    game("openGateInfo('a6,6'); document.querySelector('#panel [data-escope=\"run\"]').click(); document.querySelector('#panel [data-bcol=\"3\"]').click(); edgeScope = 'one'");   // Block 145: erst „Alle verbundenen“ (hier alle Hecken), dann Farbe
     expect(game("state.edges.get('a7,6').col")).toBe(3);
     const d = game('JSON.parse(JSON.stringify(serialize()))');
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
@@ -73,11 +73,11 @@ describe('Buschfarben (Block 89)', () => {
       expect(game(`edgeLook({ b: 'hecke', style: '${st}' }).col`)).toBe(game(`EDGE_LOOK.hecke['${st}'].col`));   // ohne Farbe: wie immer
     }
     game("state.edges.clear(); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('a7,6', { b: 'hecke', style: 'wilmer' }); state.edges.set('a8,6', { b: 'zaun', style: 'latten' }); recalc()");
-    game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"4\"]').click()");
+    game("edgeScope = 'one'; openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"4\"]').click()");
     expect(game("state.edges.get('a6,6').col")).toBe(4);
     game('undo()');
     expect(game("state.edges.get('a6,6').col")).toBe(undefined);
-    game("openGateInfo('a6,6'); document.querySelector('#panel [data-bcol=\"4\"]').click(); openGateInfo('a6,6'); document.querySelector('#panel [data-bcolall]').click()");
+    game("edgeScope = 'one'; openGateInfo('a6,6'); document.querySelector('#panel [data-escope=\"run\"]').click(); document.querySelector('#panel [data-bcol=\"4\"]').click(); edgeScope = 'one'");
     expect(game("[state.edges.get('a7,6').col, state.edges.get('a8,6').col]")).toEqual([4, undefined]);   // alle Hecken, kein Zaun
     game("openGateInfo('a8,6')");
     expect(game("!!document.querySelector('#panel [data-bcol]')")).toBe(false);                        // Zaun: keine Buschfarbe

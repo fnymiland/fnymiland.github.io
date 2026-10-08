@@ -119,7 +119,7 @@ function scanEdges(p) {
   for (const k of planEdges(p)) {
     const old = state.edges.get(k), err = edgeError(b, k);
     if (err) { states.set(k, 'bad'); firstErr = firstErr || err; continue; }
-    if (old && old.b === b && old.style === style) { states.set(k, 'same'); continue; }
+    if (edgeSame(b, style, old)) { states.set(k, 'same'); continue; }    // auch die Farbe zählt (Block 145: sonst „schon alles fertig“)
     states.set(k, 'ok');
     const [x, y] = edgeTiles(k)[1];
     order.push([x, y, () => buildEdge(b, k)]);
