@@ -122,10 +122,13 @@ describe('Stil-Leiste', () => {
     expect(game('currentStyle("weg")')).toBe('m:kies:anthrazit');
     expect(document.querySelectorAll('#style-bar [data-wf]').length).toBe(0);                     // zugeklappt
     document.querySelector('#style-bar [data-wpop="muster"]').onclick();
-    document.querySelector('#style-bar [data-wegopt="wide"]').onclick();                           // Wegform: Auswahl klappt zu (sprang sonst)
-    expect(document.querySelectorAll('#style-bar .wpop').length).toBe(0);
-    game('wegShape.wide = false');
-    document.querySelector('#style-bar [data-wpop="muster"]').onclick();
+    const pop = document.querySelector('#style-bar .wpop');
+    document.querySelector('#style-bar [data-wegopt="wide"]').onclick();                           // Wegform: Auswahl bleibt offen, dieselbe (sprang sonst)
+    expect(document.querySelector('#style-bar .wpop')).toBe(pop);
+    expect(game('wegShape.wide')).toBe(true);
+    expect(document.querySelector('#style-bar [data-wegopt="wide"]').getAttribute('aria-pressed')).toBe('true');
+    document.querySelector('#style-bar [data-wegopt="wide"]').onclick();
+    expect(game('wegShape.wide')).toBe(false);
     const more = document.querySelector('#style-bar [data-more]');
     expect(more).not.toBe(null);
     more.onclick();

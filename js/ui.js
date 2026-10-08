@@ -412,6 +412,8 @@ function styleSwatch(st) {
 // Wege (Block 125, Wunsch Nutzer: nicht drei Zeilen): eine Zeile mit zwei Knöpfen – Muster und Farbe – und der Wegform; Antippen
 // öffnet darüber ein kleines Raster (wegPop), eine Wahl klappt es wieder zu. Die Wahl ergibt einen Belag-Namen (wegStyleOf)
 let wegPop = null;
+const WEG_SHAPES = [['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']];   // Wegform (Block 77)
+const shapeChip = ([k, i0, i1, n0, n1]) => `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`;
 function wegStyleBar(bar) {
   const [cm, cf] = wegParts(currentStyle('weg')), M = WEG_MUSTER_BY[cm], F = WEG_FARBEN_BY[cf];
   const colFor = m => m.fixed ? null : (cf && wegFarbeOk(cf) ? cf : m.farbe);
@@ -425,13 +427,14 @@ function wegStyleBar(bar) {
   bar.innerHTML = pop
     + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''} – ändern"><i style="background:${sw(currentStyle('weg'))}"></i><span>${M ? M.name : ''} ▾</span></button>`
     + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''} – ändern"><i style="background:${M && M.fixed ? sw(currentStyle('weg')) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
-    + `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
-      `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}`;
+    + `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`;
   for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar('weg'); };
   for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; chosenStyle.weg = wegStyleOf(m.id, colFor(m)); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
   for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { chosenStyle.weg = wegStyleOf(cm, b.dataset.wf); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
-  // Wegform: offene Auswahl dabei zuklappen – sonst baute sich das Raster neu auf und sprang (Rückmeldung Nutzer)
-  for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; wegPop = null; previewCache = null; sfx('deco'); renderStyleBar('weg'); };
+  // Wegform: nur diesen Knopf ändern – die offene Auswahl bleibt offen und unverändert (vorher baute sich alles neu auf und sprang)
+  const wireShape = b => { b.onclick = () => { const k = b.dataset.wegopt; wegShape[k] = !wegShape[k]; previewCache = null; sfx('deco');
+    const tmp = document.createElement('div'); tmp.innerHTML = shapeChip(WEG_SHAPES.find(x => x[0] === k)); const nb = tmp.firstElementChild; b.replaceWith(nb); wireShape(nb); }; };
+  for (const b of bar.querySelectorAll('[data-wegopt]')) wireShape(b);
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => { wegPop = null; openResearch('design'); };
   bar.hidden = false;
 }
