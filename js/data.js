@@ -1069,6 +1069,9 @@ const LANTERN_COLS = [
 const BENCH_COLS = [
   { id: 'holz', name: 'Holz', c: '#b57b4a' }, { id: 'weiss', name: 'Weiß', c: '#f4efe4' }, { id: 'gruen', name: 'Parkgrün', c: '#4f9a5a' }, { id: 'blau', name: 'Hellblau', c: '#7fb3e0' },
   { id: 'rot', name: 'Rot', c: '#d0574a', design: 80 }, { id: 'gelb', name: 'Sonnengelb', c: '#e9b93b', design: 80 }, { id: 'rosa', name: 'Rosa', c: '#ee9fbe', design: 120 }, { id: 'nuss', name: 'Nussbaum', c: '#6e4a32', design: 120 }];
+const STATION_COLS = [                                                  // Dach der Parkbahn-Station (Block 136d)
+  { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
+  { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }, { id: 'lila', name: 'Lila', c: '#9a72c8', design: 120 }, { id: 'braun', name: 'Holzbraun', c: '#8a5a3c', design: 120 }];
 const DECO_LOOKS = {
   laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
     { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
@@ -1078,7 +1081,7 @@ const DECO_LOOKS = {
   brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
     { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
   // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
-  pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: null, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', design: 300 },
+  pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: STATION_COLS, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', design: 300 },
     { id: 'mini', name: 'Mini-Zug', design: 250 }] },   // Block 136: die Form ist der Zug
   schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
     { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },

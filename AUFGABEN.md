@@ -1588,6 +1588,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] 136c (Nutzer): Straßenbahn ohne Stromabnehmer (keine Oberleitung); offene Wagen/Tierwagen/Straßenbahn: hintere Wände fehlten je
       nach Fahrtrichtung (nur zugewandte Seiten gezeichnet) – jetzt zuerst die Innenseite der abgewandten Wände (`pbBox` 'back'),
       dann Fahrgäste, dann vorn. Geprüft in allen 4 Richtungen
+- [x] 136d (Nutzer): Dachfarbe der Station wählbar (`STATION_COLS` in data.js: rot/blau/grün/gelb frei, rosa/türkis/lila/braun über
+      Kunstakademie), wie bei Bänken über das Stationsfenster und die Bauleiste.
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
