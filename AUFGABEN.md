@@ -1685,6 +1685,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Fenster „Ecken“ für die ganze Linie, `setEdgeSq`); Standard rund, alte Linien ohne Angabe bleiben rund. Tests: buschfarben, zaun
 - [x] Nutzer: „obere/untere Ecke okay, linke und rechte überhaupt nicht“ – dort filterte der Doppelte-Latten-Schutz den ganzen Bogen
       leer. Zwei Bilder gezeigt (A: seitlich spitz, B: Bogen bleibt mit Latten), Nutzer wählte B: nur noch genau Deckendes fällt weg.
+- [x] Nutzer: „es fehlt eine weitere Latte“ – der Schutz verglich nur die x-Lage; links/rechts läuft der Bogen senkrecht um den
+      Pfosten, obere und untere Latte stehen übereinander und galten als doppelt. Jetzt echter Abstand (`Math.hypot`). Oben/unten
+      unverändert. Bilder tools/vorschau/latte-links2.png, latte-rechts2.png
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

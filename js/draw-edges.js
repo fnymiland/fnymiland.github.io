@@ -494,11 +494,13 @@ function drawFence(E, look, style, gate, z, posts = [true, true]) {
   // eine doppelte Lücke. Was auf dem Bildschirm genau über einer anderen Latte oder dem Bogenpfosten stünde (seitliche Ecke, man
   // sieht den Bogen von der Seite), fällt weg (Nutzer: „um die Kurve sieht es weird aus“)
   const spots = cnt => {
-    const out = [], xs = E.arc ? [S(E.arc, 0)[0]] : [];
+    const out = [], xs = E.arc ? [S(E.arc, 0)] : [];
     for (let i = E.arc ? 0 : 1; i <= (E.arc ? cnt : cnt - 1); i++) {
-      const t = i / cnt, x = at(t, 0)[0];
-      if (E.arc && xs.some(o => Math.abs(o - x) < 0.45 * z)) continue;   // nur, was genau deckt (Nutzer wählte B: Bogen bleibt, Latten auch im Bogen)
-      xs.push(x); out.push(t);
+      const t = i / cnt, p = at(t, 0);
+      // nur, was wirklich deckt (Nutzer wählte B: Bogen bleibt, Latten auch im Bogen). Echter Abstand, nicht nur x:
+      // links/rechts läuft der Bogen senkrecht um den Pfosten, obere und untere Latte stehen dort übereinander.
+      if (E.arc && xs.some(o => Math.hypot(o[0] - p[0], o[1] - p[1]) < 0.45 * z)) continue;
+      xs.push(p); out.push(t);
     }
     return out;
   };
