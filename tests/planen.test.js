@@ -227,13 +227,15 @@ describe('Rechteck: Abriss und kleine Deko', () => {
 });
 
 describe('Mehrere Dinge verschieben', () => {
+  // seit Block 134: Rechteck aufziehen markiert nur (Leiste Verschieben/Kopieren) – hineintippen hebt an wie früher das Loslassen
+  const lift = (a, b, o = {}) => { dragFromTo(a, b, o); if (game("!!(plan && plan.tool === 'verschieben' && plan.fixed)")) click(a[0], a[1], o); };
   const town = () => {
     game("state.tiles.set('4,4', { b: 'haus', lvl: 2 }); state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'mulch' }); state.tiles.set('4,5', { b: 'brunnen', lvl: 1 })");
     game("state.decos.set('5,5', [null, { b: 'blumentopf', rot: 0 }, null, null]); recalc(); setTool('verschieben')");
   };
   it('Rechteck aufziehen hebt alles darin an, ein Klick setzt es mit gleichen Abständen ab', () => {
     town();
-    dragFromTo([4, 4], [5, 5]);
+    lift([4, 4], [5, 5]);
     expect(game('moving.kind')).toBe('group');
     expect(game('moving.items.length')).toBe(4);
     expect(at(4, 4)).toBe(undefined);                                    // angehoben: der alte Platz ist frei
@@ -252,7 +254,7 @@ describe('Mehrere Dinge verschieben', () => {
   it('besetztes Ziel: nichts passiert, die Gruppe bleibt in der Hand', () => {
     town();
     game("state.tiles.set('9,9', { b: 'haus', lvl: 1 }); recalc()");        // genau dort, wo das Haus hin soll
-    dragFromTo([4, 4], [5, 5]);
+    lift([4, 4], [5, 5]);
     click(10, 10);
     expect(game('moving && moving.kind')).toBe('group');
     expect(game('groupErrors(10, 10).first')).toMatch(/steht/);
@@ -261,7 +263,7 @@ describe('Mehrere Dinge verschieben', () => {
 
   it('Esc bzw. anderes Werkzeug legt alles an den alten Platz zurück', () => {
     town();
-    dragFromTo([4, 4], [5, 5]);
+    lift([4, 4], [5, 5]);
     window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
     expect(game('moving')).toBe(null);
     expect(at(4, 4)).toBe('haus'); expect(at(5, 4)).toBe('weg'); expect(at(4, 5)).toBe('brunnen');
@@ -270,7 +272,7 @@ describe('Mehrere Dinge verschieben', () => {
 
   it('während des Tragens bleibt im Spielstand alles am alten Platz', () => {
     town();
-    dragFromTo([4, 4], [5, 5]);
+    lift([4, 4], [5, 5]);
     game('save()');
     const s = game('load()');
     expect(s.tiles.get('4,4').b).toBe('haus');
@@ -280,21 +282,21 @@ describe('Mehrere Dinge verschieben', () => {
 
   it('was hinausragt und das Rathaus bleiben stehen; ein einzelnes Ding wird wie gewohnt getragen', () => {
     game("state.tiles.set('5,5', { b: 'schule', lvl: 1, rot: 0 }); state.tiles.set('8,8', { b: 'haus', lvl: 1 }); recalc(); setTool('verschieben')");
-    dragFromTo([4, 4], [5, 5]);
+    lift([4, 4], [5, 5]);
     expect(game('moving')).toBe(null);
     expect(at(5, 5)).toBe('schule');
-    dragFromTo([7, 7], [9, 9]);
+    lift([7, 7], [9, 9]);
     expect(game('moving.kind')).toBe('tile');                             // nur das Haus
     game("setTool('look')");
-    dragFromTo([1, 1], [3, 3]);                                            // Rathaus (Werkzeug „Ansehen“: Karte ziehen)
+    lift([1, 1], [3, 3]);                                            // Rathaus (Werkzeug „Ansehen“: Karte ziehen)
     game("setTool('verschieben')");
-    dragFromTo([1, 1], [3, 3]);
+    lift([1, 1], [3, 3]);
     expect(game("state.tiles.get(anchorAt(2, 2)).b")).toBe('rathaus');
   });
 
   it('iPad: Ziel antippen zeigt die Vorschau, nochmal antippen setzt ab', () => {
     town();
-    dragFromTo([4, 4], [5, 5], { touch: true });
+    lift([4, 4], [5, 5], { touch: true });
     click(11, 11, { touch: true });
     expect(game('moving && moving.kind')).toBe('group');
     click(11, 11, { touch: true });

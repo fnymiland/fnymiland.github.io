@@ -189,7 +189,7 @@ function removeLawn(x, y) {
 let moving = null;       // { kind: 'tile', t, from } | { kind: 'deco', d, from: [feld, ecke] } | { kind: 'group', items, cx, cy, W, H, r }
 const movingType = () => moving && (moving.kind === 'tile' ? moving.t.b : moving.kind === 'deco' ? moving.d.b : null);
 // Was man trägt, als Liste (eine Gruppe oder ein einzelnes Ding) – fürs Speichern und Zurücklegen
-const carried = () => !moving ? [] : moving.kind === 'group' ? moving.items : [moving];
+const carried = () => !moving || moving.copy ? [] : moving.kind === 'group' ? moving.items : [moving];   // Kopie (Block 134): das Original steht ja noch
 function pickUp(x, y, slot) {
   if (moving) return;                                 // erst ablegen (sonst ginge das Getragene verloren, Block 84a)
   const k = x + ',' + y, ds = decosAt(k);
@@ -313,7 +313,7 @@ function groupErrors(hx, hy) {
       if (!ownedTile(x, y)) err = notMine(x, y);
       else if (terrainAt(x, y) !== 'grass') err = it.look === 'fz' ? 'Freizeitpark-Boden nur auf Wiese' : 'Parkrasen nur auf Wiese';
       else if (ot && !(it.look === 'fz' ? fzOk(ot.b) : parkOk(ot.b))) err = 'Hier steht ein Gebäude';
-    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: true });
+    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true });
     else {
       const x = ox + P.dx, y = oy + P.dy, b = P.t.b;
       err = P.bad;
@@ -323,7 +323,7 @@ function groupErrors(hx, hy) {
         else if (P.t.bridge && !water) err = 'Brücken nur übers Wasser';
         else if (!P.t.bridge && water) err = b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
       }
-      err = err || placeError(b, x, y, P.t.rot || 0, { move: true, t: P.t });
+      err = err || placeError(b, x, y, P.t.rot || 0, { move: !moving.copy, noCost: true, t: P.t });   // Kopie (Block 134): wie ein Neubau
     }
     errs.set(it, err);
     first = first || err;
@@ -333,6 +333,10 @@ function groupErrors(hx, hy) {
 function dropGroup(hx, hy) {
   const { ox, oy, first } = groupErrors(hx, hy);
   if (first) { fail(first); return false; }
+  if (moving.copy) {                                                     // Kopie (Block 134): erst bezahlen, sonst gar nichts
+    if (!canPay(moving.cost)) { fail(state.money < (moving.cost.money || 0) ? `Zu wenig Taler (${fmt(moving.cost.money)} nötig)` : 'Material fehlt noch'); return false; }
+    addCost(moving.cost, -1);
+  }
   const now = performance.now();
   for (const it of [...moving.items].sort((p, q) => (p.kind === 'ground' ? 0 : 1) - (q.kind === 'ground' ? 0 : 1))) {   // erst der Rasen, dann was darauf steht
     const P = groupPlaced(it);
@@ -344,16 +348,111 @@ function dropGroup(hx, hy) {
       for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);   // Wege am Ziel: unter die Deko bzw. vom Gebäude ersetzt (Block 58)
       if (covered.length) { if (plazaOk(b)) setUnder(t, x, y, [...covered, ...Object.entries(t.wegs || {}).map(([o, st]) => [x + keyXY(o)[0], y + keyXY(o)[1], st]), ...(t.weg != null ? [[x, y, t.weg]] : [])]); else if (replacesWeg(b)) state.money += covered.length * ITEMS.weg.cost; }
       state.tiles.set(k, t);
+      if (moving.copy && isHome(b)) assignResident(t, Math.random, Math.random);   // neue Bewohner in die Kopie
       claimSea(b, x, y, t.rot || 0, t, t.bridge);
     }
     else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[P.slot] = { ...P.d, born: now }; }
   }
   if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
-  moving = null;
-  $('rot-btn').hidden = true;
+  if (moving.copy) {                                                     // Stempel: dieselbe Kopie gleich noch einmal (frische Dinge)
+    moving.items = moving.items.map(copyClone);
+    addFloat(hx, hy, '−' + fmt(moving.cost.money || 0), '#d9534a');
+  } else {
+    moving = null;
+    $('rot-btn').hidden = true;
+  }
   sfx('build');
   recalc();
   save();
+  return true;
+}
+// --- Kopieren (Block 134, Wunsch Nutzer): mit ✋ markieren → „⧉ Kopieren“. Gleiche Stufe zum vollen Preis (was ein Neubau samt
+// Ausbauten kostet), die Kopie bleibt als Stempel am Finger, neue Bewohner ziehen ein. Einzelstücke bleiben draußen. Nur eine Art
+// Linie in einem Stil (Weg, Gleis, Hecke/Zaun/Mauer): Pipette – das Werkzeug mit genau diesem Stil in die Hand
+const noCopy = b => b === 'lm' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift;
+function copyClone(it) {
+  const c = { ...it };
+  if (it.kind === 'tile') {
+    const t = JSON.parse(JSON.stringify(it.t));
+    for (const f of ['animal', 'name', 'more', 'born', 'ships', 'pbz', 'train', 'trainCol', 'trainPlus', 'extra', 'gleis']) delete t[f];   // Bewohner, Fahrzeuge: nicht mit
+    c.t = t;
+  } else if (it.kind === 'deco') { const { born, sv, ...d } = it.d; c.d = d; }
+  else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }
+  return c;
+}
+function copyCollect(x0, y0, x1, y1) {
+  const items = [], seen = new Set();
+  let stays = 0;
+  const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const k = x + ',' + y, a = anchorAt(x, y), t = a && state.tiles.get(a);
+    if (t && !seen.has(a)) {
+      seen.add(a);
+      const [ax, ay] = keyXY(a);
+      if (noCopy(t.b) || !footprint(t.b, ax, ay, t.rot || 0, t).every(([fx, fy]) => inside(fx, fy))) stays++;
+      else items.push({ kind: 'tile', t, from: a, dx: ax - x0, dy: ay - y0 });
+    }
+    (decosAt(k) || []).forEach((d, slot) => { if (d) { if (ITEMS[d.b].gift) stays++; else items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); } });
+    const look = terraLook(x, y);
+    if (look === 'park' || look === 'fz') items.push({ kind: 'ground', look, from: k, dx: x - x0, dy: y - y0 });
+  }
+  for (const [k, e] of state.edges) {
+    const [mx, my] = edgeMid(k);
+    if (mx >= x0 - 0.5 && mx <= x1 + 0.5 && my >= y0 - 0.5 && my <= y1 + 0.5) items.push({ kind: 'edge', e, from: k, mx: mx - x0, my: my - y0 });
+  }
+  return { items: items.map(copyClone), stays };
+}
+// Was die Kopie kostet: wie ein Neubau (Gebäude samt Ausbauten, Brücken, Dekos, Linien, Rasen)
+function copyCost(items) {
+  const c = { money: 0 }, add = (m, mat, n = 1) => { c.money += (m || 0) * n; for (const [r, v] of Object.entries(mat || {})) c[r] = (c[r] || 0) + v * n; };
+  for (const it of items) {
+    if (it.kind === 'tile') {
+      const t = it.t;
+      if (t.b === 'weg' && t.bridge) { const B = WEG_BRIDGE[bridgeKind(t)]; add(B.cost, B.mat); }
+      else { const { money, ...mat } = fullValue(t); add(money, mat); }
+    } else if (it.kind === 'deco') add(ITEMS[it.d.b].cost, ITEMS[it.d.b].mat);
+    else if (it.kind === 'edge') add(ITEMS[it.e.b].cost, ITEMS[it.e.b].mat);
+    else add((it.look === 'fz' ? ITEMS.fzboden : ITEMS.parkrasen).cost, null);
+  }
+  return c;
+}
+// Pipette: nur Wege, nur Gleise oder nur eine Linienart – jeweils ein Stil. Gibt das Werkzeug zurück (oder null)
+function copyPipette(items) {
+  if (!items.length) return null;
+  const tiles = items.filter(it => it.kind === 'tile'), edges = items.filter(it => it.kind === 'edge');
+  if (tiles.length && !edges.length && items.length === tiles.length) {
+    const b = tiles[0].t.b;
+    if ((b !== 'weg' && b !== 'schiene') || !tiles.every(it => it.t.b === b && !it.t.cross)) return null;
+    const key = t => b === 'weg' ? (t.style || 'sand') : (t.form || 0);
+    if (!tiles.every(it => key(it.t) === key(tiles[0].t))) return null;
+    return { tool: b, style: key(tiles[0].t) };
+  }
+  if (edges.length && items.length === edges.length) {
+    const e0 = edges[0].e;
+    if (!edges.every(it => it.e.b === e0.b && it.e.style === e0.style && (it.e.col || 0) === (e0.col || 0))) return null;
+    return { tool: e0.b, style: e0.style, col: e0.col };
+  }
+  return null;
+}
+function startCopy(x0, y0, x1, y1) {
+  if (moving) return false;
+  const { items, stays } = copyCollect(x0, y0, x1, y1);
+  if (!items.length) { toast(stays ? 'Das lässt sich nicht kopieren (Rathaus, Sehenswürdigkeit, Wunderwerk – oder ragt hinaus)' : 'Hier ist nichts zum Kopieren'); return false; }
+  const pip = copyPipette(items);
+  if (pip) {                                                             // Pipette: Werkzeug mit diesem Stil in die Hand
+    setTool(pip.tool);
+    if (pip.tool === 'weg' || EDGE_TOOLS.has(pip.tool)) chosenStyle[pip.tool] = pip.style;
+    if (pip.tool === 'schiene') state.paintNew.schiene = { ...(state.paintNew.schiene || {}), form: pip.style };
+    if (pip.tool === 'hecke') state.paintNew.hecke = pip.col ? { col: pip.col } : {};
+    renderStyleBar(pip.tool); updateHint();
+    toast(`🖌️ ${ITEMS[pip.tool].name} in der Hand – zieh die Linie wie gewohnt`);
+    return true;
+  }
+  moving = { kind: 'group', copy: true, items, cost: copyCost(items), cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };
+  if (tool !== 'verschieben') setTool('verschieben');
+  $('rot-btn').hidden = false;
+  sfx('deco');
+  toast(`⧉ Kopie am Finger · 🪙 ${fmt(moving.cost.money)} je Stück – tippe, wohin · drehen mit ⟳ · fertig mit Esc` + (stays ? ' (manches bleibt draußen)' : ''));
   return true;
 }
 function moveError(x, y, slot) {
@@ -391,6 +490,7 @@ function dropAt(x, y, slot) {
 }
 function cancelMove() {
   if (!moving) return;
+  if (moving.copy) { moving = null; $('rot-btn').hidden = true; undoPending = null; return; }   // Kopie (Block 134): nichts zurückzulegen
   for (const it of carried()) {
     if (it.kind === 'ground') state.terra.set(it.from, it.look);
     else if (it.kind === 'edge') state.edges.set(it.from, it.e);

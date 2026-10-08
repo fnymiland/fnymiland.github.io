@@ -901,3 +901,14 @@ body.visiting #net-btn { display: none !important; }
 .pb-zug { align-items: center; flex-wrap: nowrap; gap: 4px; }
 .pb-zug .look { padding: 5px 8px; white-space: nowrap; }
 .pb-nr { font-weight: 700; min-width: 1.4em; text-align: center; opacity: .7; }
+
+/* Auswahl mit ✋: Verschieben oder Kopieren (Block 134) */
+#sel-bar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--bar, 160px) + 54px);
+  display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+  max-width: calc(100vw - 32px);
+}
+#sel-bar[hidden] { display: none; }
+#sel-bar .btn { flex: none; box-shadow: 0 3px 0 var(--shadow), 0 6px 14px rgba(60, 40, 20, .15); }
+

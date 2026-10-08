@@ -123,10 +123,8 @@ function endPointer(e) {
     const p = [...pointers.values()][0];
     drag = { x: p.x, y: p.y, cx: cam.x, cy: cam.y, button: 0 };
   } else if (pointers.size === 0) {
-    if (plan && plan.dragging && plan.tool === 'verschieben') {         // Auswahl: alles darin anheben
-      const [x0, y0, x1, y1] = planBox(plan);
-      plan = null;
-      undoable(() => pickUpGroup(x0, y0, x1, y1));
+    if (plan && plan.dragging && plan.tool === 'verschieben') {         // Auswahl bleibt stehen: Verschieben oder Kopieren (Block 134, Leiste)
+      plan.dragging = false; plan.fixed = true;
     } else if (plan && plan.dragging) { plan.dragging = false; plan.fixed = true; }   // Vorschau bleibt stehen
     else if (drag && !moved && e.type === 'pointerup') {
       if (drag.right) { if (plan) cancelPlan(); else setTool('look'); }   // Rechtsklick: erst die Planung, dann das Werkzeug weg

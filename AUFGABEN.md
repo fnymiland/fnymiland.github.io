@@ -1576,6 +1576,14 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [ ] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen
 
 ## Block 134: Kopieren (✋-Rechteck → „⧉ Kopieren“, Kopie am Finger, drehbar, kostet wie neu)
+- [x] Mit ✋ markieren: Auswahl bleibt stehen, Leiste „↔ Verschieben“ / „⧉ Kopieren · Preis“ / „✕“ (`syncSelBar`, je Bild aus render);
+      hineintippen = verschieben wie früher. Kopie (Nutzer entschied): gleiche Stufe zum vollen Preis (`copyCost`: `fullValue` samt
+      Ausbauten, Wegbrücken, Dekos, Linien, Rasen), bleibt als Stempel am Finger (frische Objekte je Absetzen, `copyClone`), neue
+      Bewohner (`assignResident`), ohne Fahrzeuge/Schiffe/Züge. Geprüft wie ein Neubau (Freischaltung, Platz; `move: false`),
+      bezahlt vor dem Bauen – zu wenig: nichts. Einzelstücke bleiben draußen (`noCopy`: Rathaus, Sehenswürdigkeit, Wunderwerk,
+      Souvenir). Gespeichert wird beim Tragen nichts Doppeltes (`carried()` ohne Kopie). Esc beendet.
+- [x] Pipette (Nutzer): nur Wege / nur Gleise / nur eine Linienart, jeweils ein Stil → Werkzeug mit genau diesem Stil (Hecke auch
+      Farbe) in die Hand, Linie wie gewohnt ziehen (`copyPipette`). Test: kopieren; planen (Verschieben: markieren → hineintippen)
 
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 

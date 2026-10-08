@@ -276,6 +276,25 @@ function setTool(t) {
 }
 // Hinweis über der Leiste: auf dem Handy nur Name, Preis und wie man baut (sonst verdeckt er die halbe Karte) und ein ⓘ
 // fürs Infofenster; am iPad/Mac ohne Infofenster ausführlich, mit Infofenster nur, wie man baut
+// Auswahl mit ✋ (Block 134): Leiste „↔ Verschieben“ / „⧉ Kopieren · Preis“ (bzw. Pipette) / „✕“ – erscheint von selbst, solange
+// eine Auswahl feststeht; render ruft das je Bild (nur bei Änderung neu)
+let selBarKey = null;
+function syncSelBar() {
+  const bar = $('sel-bar');
+  if (!bar) return;
+  const on = !!(plan && plan.tool === 'verschieben' && plan.fixed && !moving);
+  if (!on) { if (!bar.hidden) { bar.hidden = true; selBarKey = null; } return; }
+  const box = planBox(plan), key = box.join() + '|' + groundVersion;
+  if (key === selBarKey && !bar.hidden) return;
+  selBarKey = key;
+  const { items, stays } = copyCollect(...box), pip = copyPipette(items), cost = copyCost(items);
+  const copyLabel = !items.length ? '⧉ Kopieren' : pip ? `🖌️ Pipette: ${ITEMS[pip.tool].name}` : `⧉ Kopieren · 🪙 ${fmt(cost.money)}${matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) ? ' ' + matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) : ''}`;
+  bar.innerHTML = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button><button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>`;
+  bar.hidden = false;
+  $('sel-move').onclick = () => { const b = planBox(plan); plan = null; undoable(() => pickUpGroup(...b)); syncSelBar(); };
+  $('sel-copy').onclick = () => { const b = planBox(plan); plan = null; startCopy(...b); syncSelBar(); };
+  $('sel-x').onclick = () => { plan = null; syncSelBar(); };
+}
 function updateHint() {
   const hint = $('hint'), t = tool;
   if (t === 'look') { hint.hidden = true; return; }
@@ -2561,6 +2580,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-kopieren', date: '8. Oktober', title: 'Kopieren', items: [
+    '⧉ <b>Kopieren:</b> Mit ✋ ein Rechteck aufziehen – unten erscheinen „Verschieben“ und „Kopieren“ mit Preis. Die Kopie hängt am Finger, lässt sich drehen und so oft absetzen, wie du magst (fertig mit Esc). Sie kostet wie neu gebaut, in Häuser ziehen neue Bewohner.',
+    '🖌️ <b>Pipette:</b> Markierst du nur Weg, nur Gleis oder nur eine Hecke/Zaun/Mauer, hast du danach genau diesen Stil in der Hand und ziehst ihn wie gewohnt weiter.',
+    '🌉 <b>Breite Brücken in Nord-Süd-Richtung</b> bekommen keine Löcher mehr.',
+  ] },
   { id: '2026-10-08-himmel', date: '8. Oktober', title: 'Ballons ausblenden', items: [
     '🎈 <b>Himmel ruhig:</b> Heißluftballons und Zeppelin lassen sich jetzt im Menü unter Grafik ausblenden (gilt nur auf diesem Gerät).',
   ] },

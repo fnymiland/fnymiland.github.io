@@ -219,7 +219,7 @@ function planInfo(p) {
 }
 function planText(p, info) {
   const d = ITEMS[p.tool], parts = [];
-  if (p.tool === 'verschieben') return `Verschieben: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · loslassen: anheben`;
+  if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · ${p.fixed ? 'unten wählen: verschieben oder kopieren' : 'loslassen: auswählen'}`;
   if (p.tool === 'abriss') {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
@@ -255,6 +255,12 @@ function runPlan() {
 // Tippen/Klicken, solange geplant wird (oder mit Weg/Schiene in der Hand). true = erledigt
 function planTap(x, y, isTouch) {
   planTouch = isTouch;
+  if (plan && plan.tool === 'verschieben' && plan.fixed) {                    // markierte Auswahl (Block 134): hinein = verschieben, daneben = weg
+    const [x0, y0, x1, y1] = planBox(plan);
+    plan = null;
+    if (x >= x0 && x <= x1 && y >= y0 && y <= y1) pickUpGroup(x0, y0, x1, y1);
+    return true;
+  }
   if (plan) {
     if (!plan.fixed) { setPlanEnd({ x, y }); runPlan(); return true; }        // Maus: der zweite Klick baut
     if (inPlan(plan, x, y)) { runPlan(); return true; }

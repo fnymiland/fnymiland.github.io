@@ -1136,7 +1136,7 @@ function groupPreview(z) {
   }
   g.restore();
   const n = moving.items.length;
-  return { groupGhost: ghosts, preview: { ok: !first, text: first || `${n} Dinge · hierhin`, p: toScreen(hover.x, hover.y) } };
+  return { groupGhost: ghosts, preview: { ok: !first, text: first || (moving.copy ? `⧉ Kopie · 🪙 ${fmt(moving.cost.money || 0)}${state.money < (moving.cost.money || 0) ? ' – zu wenig Taler' : ''} · hierhin` : `${n} Dinge · hierhin`), p: toScreen(hover.x, hover.y) } };
 }
 // Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
 // hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in
@@ -1618,6 +1618,7 @@ function render(now) {
   if (GL.frame) glEnd();                  // Welt fertig aufgezeichnet: die Grafikkarte zeichnet, alles Weitere obendrauf in 2D (Block 144)
   const ml2 = MESS ? performance.now() : 0;
   if (!skyIn) drawSky(now, z);            // Erfindungen: Ballons, Zeppelin, Seilbahn
+  if (typeof syncSelBar === 'function') syncSelBar();                      // Auswahl-Leiste (Block 134)
   const mt2 = MESS ? performance.now() : 0;
 
   // 5) Nacht – im GL-Bild hat die Grafikkarte Löcher, Nachtblau und Lichtschicht schon gezeichnet (Block 144); hier nur noch das
