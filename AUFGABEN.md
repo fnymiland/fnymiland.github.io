@@ -1677,9 +1677,6 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       und Tippen gleich). „Einfahrt von unten links nach oben rechts, Bahn fährt raus und bleibt stehen – glitcht“ (Schnellzug mit
       allen Wagen): kein Flackern (Bilder verglichen), aber die Rinne war mit 22 zu flach – die Wagen ragten heraus und schienen
       zu schweben. Jetzt 32 tief, Tunnelmund mit Bogen unten an der Wand. Bildstreifen tools/vorschau/ein-halt4.png. Test: ubahn
-- [x] Nutzer: „Zäune um die Kurve sehen echt weird aus“ – die runden Ecken (ROUND_R) ließen die Latten durchhängen bzw. ineinander
-      laufen, Latten standen doppelt. Zaun hat jetzt eine scharfe Ecke mit Eckpfosten (`roundCorner` → null wie die Wilmerhecke);
-      Hecke und Mauer bleiben rund. Alle 7 Zaunstile im Vergleich angesehen (tools/vorschau/zaun-ecken*.png). Test: zaun
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
