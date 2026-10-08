@@ -1797,3 +1797,18 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       lässt in der Ecke einen großen Zwickel, bündig nicht. Entscheidung Nutzer: neue Linien bündig (`newFlush`: wie eine schon
       eingestellte Linie, an der sie hängt, sonst bündig), Knopf „Für alle anderen Linien übernehmen (N Stücke)“ (`setFlushAll`,
       ↶), bestehende bleiben. In ihrer Welt: 280 Stücke mit einem Klick. „Das ist neu“: `2026-10-08-buendig`. Tests: zaun.test.js
+
+## Block 150: Bogenbrücken übers Wasser (Wunsch Nutzer, 08.10.2026)
+- [x] Problem: alle Wegbrücken flach (3–8 hoch), Boote fuhren „in“ die Brücke. Nach vielen Vorschauen mit dem Nutzer entschieden:
+      1 Feld bleibt flach; ab 2 Feldern (an beiden Enden Land) ein Bogen über die ganze Länge (Mondbrücke), Höhe 20,4·(N/2)^0,6
+      (ab 16 Feldern nicht mehr höher). Steg ins Meer (offenes Ende): flach wie bisher. Abgelehnt: hochgestellte Brücken mit
+      Rampen („sieht scheiße aus“), Klappbrücke (fehleranfällig), Sperren flacher Brücken („auf gar keinen Fall“)
+- [x] Holz/Rot: Pfähle, ab 5 Feldern nur an jedem zweiten Feld. Stein/Ziegel: echte Öffnungen (Wasser im Schatten, Gewölbe,
+      Rückwand), Mauerwerk in fester Steingröße versetzt (vorher übers Feld gestreckt: Gitter). Bögen (`archOpenings`): ≤ 6 Felder je
+      Pfeilerabstand einer; 7–11 Hauptbogen so groß wie bei 6 + je ein Nebenbogen; 12–13 zwei Hauptbögen + je ein kleiner; ab 14 zwei
+      große in der Mitte (Nutzer: „3, 6, 16 perfekt, nicht mehr anrühren“)
+- [x] Zeichnen in der Objekt-Reihenfolge (`drawArchBridge`, sonst läge alles dahinter darüber), weit weg als Bildchen
+      (`spriteArchBridge`), über einem Boot nur das Vordere (`BRIDGE_FRONT`). Bewohner gehen über den Bogen (`wegBridgeLift`, auch
+      Schatten an den Füßen, GL-Rahmen höher). Boote nur unter hohen Stellen/durch Öffnungen (`archBoatOk`, `seaCross` → 'block');
+      ist nirgends hoch genug (2er-Steinbrücke), überall durch wie bisher – nie absperren
+- [x] Gemessen: 16er-Steinbrücke nah +0,3 ms je Bild; Leistungs-Wächter grün (weit weg Bildchen). Test: bogenbruecken.test.js

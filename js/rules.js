@@ -684,7 +684,7 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+function recalc() { bridgeArchCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
 // Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
 // zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
 const PEAK_HALF = 1200;
@@ -1568,6 +1568,64 @@ const WEG_BRIDGE = {
 const BRIDGE_OF_STYLE = { sand: 'holz', mulch: 'holz', tritt: 'holz', kopf: 'ziegel', klinker: 'ziegel', terrakotta: 'ziegel', fisch: 'ziegel', blueten: 'ziegel' };   // sonst Stein
 const bridgeKind = t => (t && t.brk) || BRIDGE_OF_STYLE[(t && t.style) || 'sand'] || 'stein';
 const isWegBridge = t => !!t && t.b === 'weg' && !!t.bridge;
+// Bogenbrücken (Block 150, nach Vorschauen mit dem Nutzer entschieden): eine Wegbrücke ab 2 Feldern, die an beiden Enden an Land
+// stößt, wird ein Bogen über die ganze Länge (Mondbrücke) – vorher lagen alle flach, und Boote fuhren „in“ die Brücke. Höhe wächst
+// mit der Länge (ab 16 Feldern nicht mehr). Stein/Ziegel: echte Bogenöffnungen (`archOpenings`), Holz/Rot: Pfähle (ab 5 Feldern nur
+// jedes zweite Feld). Ein Feld oder offenes Ende (Steg ins Meer): flach wie bisher. Gemerkt je groundVersion (recalc leert).
+const bridgeArchCache = { v: -1, tiles: null, map: new Map() };
+function bridgeArch(x, y) {
+  const C = bridgeArchCache, k = x + ',' + y;
+  if (C.v !== groundVersion || C.tiles !== state.tiles) { C.v = groundVersion; C.tiles = state.tiles; C.map.clear(); }
+  if (!C.map.has(k)) C.map.set(k, bridgeArchCalc(x, y));
+  return C.map.get(k);
+}
+const bridgeAxis = (x, y, t) => { const arms = pathArms(x, y); return arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1); };   // 0: längs u (x), 1: längs v (y)
+function bridgeArchCalc(x, y) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!isWegBridge(t)) return null;
+  const ax = bridgeAxis(x, y, t), dx = ax ? 0 : 1, dy = ax ? 1 : 0, at = i => state.tiles.get((x + dx * i) + ',' + (y + dy * i));
+  let i0 = 0, i1 = 0;
+  while (i0 < 60 && isWegBridge(at(-i0 - 1))) i0++;
+  while (i1 < 60 && isWegBridge(at(i1 + 1))) i1++;
+  const N = i0 + 1 + i1, landAt = i => { const n = at(i); return !!n && !isWegBridge(n) && terrainAt(x + dx * i, y + dy * i) !== 'water'; };
+  if (N < 2 || !landAt(-i0 - 1) || !landAt(i1 + 1)) return null;
+  const A = { ax, i0, N, peak: 20.4 * Math.pow(Math.min(N, 16) / 2, 0.6), wall: bridgeKind(t) === 'stein' || bridgeKind(t) === 'ziegel' };
+  A.open = archOpenings(A);
+  A.pass = Array.from({ length: N }, (_, j) => archBoatOk(A, j + 0.5));
+  if (!A.pass.some(Boolean)) A.pass = A.pass.map(() => true);           // nirgends hoch genug (kurz, Stein): wie bisher überall durch – nie absperren
+  return A;
+}
+// Höhe des Belags an der Stelle s (0 … N, in Feldern vom Anfang der Brücke)
+const archDeck = (A, s) => A.peak * Math.sin(Math.PI * Math.max(0, Math.min(A.N, s)) / A.N);
+const archSpan = N => N >= 5 ? 2 : 1;
+function archCenters(N) {
+  const S = archSpan(N), off = (N - S * Math.floor(N / S)) / 2, out = [];
+  for (let c = off + S / 2; c < N; c += S) out.push(c);
+  return out;
+}
+// Bogenöffnungen von Stein/Ziegel (c, r in Feldern ab Brückenanfang, h Höhe): bis 6 Felder je Pfeilerabstand eine; 7–11 ein Hauptbogen
+// (so groß wie bei 6) mit je einem Nebenbogen; 12–13 zwei Hauptbögen und je ein Nebenbogen; ab 14 zwei große Bögen in der Mitte
+function archOpenings(A) {
+  const N = A.N, Hs = s => archDeck(A, s), MR = 1.6, mainH = c => Math.min(A.peak * 0.6, Math.min(Hs(c - MR), Hs(c + MR)) - 4);
+  const R6 = 0.72, H6 = 20.4 * Math.pow(3, 0.6) * Math.sin(Math.PI * (3 - R6) / 6) - 4, sr = 0.62, gap = 0.35;
+  const side = c => ({ c, r: sr, h: Math.min(mainH(N / 2) * 0.55, Math.min(Hs(c - sr), Hs(c + sr)) - 4) });
+  let list;
+  if (N <= 6) { const S = archSpan(N), r = 0.3 * S + (S > 1 ? 0.12 : 0); list = archCenters(N).map(c => ({ c, r, h: Math.min(Hs(c - r), Hs(c + r)) - 4 })); }
+  else if (N <= 11) list = [{ c: N / 2, r: R6, h: H6 }, side(N / 2 - (R6 + gap + sr)), side(N / 2 + (R6 + gap + sr))];
+  else if (N <= 13) { const c0 = N / 2 - R6 - 0.2, c1 = N / 2 + R6 + 0.2; list = [{ c: c0, r: R6, h: H6 }, { c: c1, r: R6, h: H6 }, side(c0 - (R6 + gap + sr)), side(c1 + (R6 + gap + sr))]; }
+  else { const cs = [N / 2 - MR - 0.225, N / 2 + MR + 0.225], h = Math.min(...cs.map(mainH)); list = cs.map(c => ({ c, r: MR, h })); }
+  return list.filter(o => o.h > 2);
+}
+// Passt ein Boot an der Stelle s darunter durch? Stein/Ziegel: in einer Öffnung, die hoch genug ist; Holz/Rot: Belag hoch genug
+function archBoatOk(A, s) {
+  if (A.wall) return A.open.some(o => o.h >= 9 && Math.abs(s - o.c) <= o.r * 0.85);
+  return archDeck(A, s) >= 12;
+}
+// Höhe eines Bewohners auf einer Bogenbrücke (Weltpunkt px, py) – 0 daneben
+function wegBridgeLift(px, py) {
+  const rx = Math.round(px), ry = Math.round(py), A = bridgeArch(rx, ry);
+  return A ? archDeck(A, A.i0 + (A.ax ? py - ry : px - rx) + 0.5) : 0;
+}
 let PLANNED = null;                                          // beim Ziehen (planScan): Felder, die der Plan schon baut
 const isBridgeAt = (x, y) => isWegBridge(state.tiles.get(x + ',' + y)) || (!!PLANNED && PLANNED.has(x + ',' + y) && terrainAt(x, y) === 'water');
 const wegLike = (x, y) => { const t = state.tiles.get(x + ',' + y); return (!!t && (t.b === 'weg' || isCrossing(t) || t.b === 'rathaus')) || (!!PLANNED && PLANNED.has(x + ',' + y)); };
@@ -1985,6 +2043,8 @@ const seaBox = (pts, pad) => [Math.floor(Math.min(...pts.map(p => p[0]))) - pad,
 function seaCross(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
+  const A = t.b === 'weg' ? bridgeArch(x, y) : null;                    // Bogenbrücke (Block 150): nur unter hohen Stellen durch
+  if (A && !A.pass[A.i0]) return 'block';
   const same = (a, b) => { const n = state.tiles.get(a + ',' + b); return !!n && (t.b === 'schiene' ? n.b === 'schiene' : n.b === 'weg'); };
   const ax = same(x - 1, y) || same(x + 1, y), ay = same(x, y - 1) || same(x, y + 1);
   if (!(ax && ay)) return ay ? 'y' : 'x';

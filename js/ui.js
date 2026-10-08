@@ -2539,6 +2539,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
+    '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein und Ziegel mit echten Bogenöffnungen, Holz und Rot auf Pfählen.',
+    '⛵ <b>Boote fahren darunter durch</b> – unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',
+  ] },
   { id: '2026-10-08-baenke', date: '8. Oktober', title: 'Neue Bänke, schönere Fußgängerbrücke', items: [
     '🌳 <b>Rundbank</b> jetzt richtig groß – mit einem echten kleinen Baum in der Mitte.',
     '🪑 <b>Gartenbank neu</b> und zwei neue Bänke in der Kunstakademie: <b>Bank mit Blumenkästen</b> und <b>Laubenbank</b> unter einem Rosenbogen.',

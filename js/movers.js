@@ -311,13 +311,13 @@ function drawWalker(w, z, now) {
   const p = toScreen(w.px, w.py);
   const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
   // auf einer Bogenbrücke geht es hoch und wieder runter
-  const arch = archAt(w.px, w.py), lift = arch ? archH(arch.b) * z : 0;
+  const arch = archAt(w.px, w.py), lift = (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150)
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
   const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25), S = figScale(w), footY = p.y - lift;
   let hy = y - 11 * z;
   g.save(); g.translate(x, footY); g.scale(S, S); g.translate(-x, -footY);   // um den Fußpunkt verkleinert (Block 115)
   try {
-  ellipse(x, p.y - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');
+  ellipse(x, footY - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');                  // Schatten unter den Füßen (auch oben auf einer Brücke)
   if (sp === 'eichhorn') { ellipse(x + 4.2 * z, y - 9 * z, 2.8 * z, 5.5 * z, f); ellipse(x + 4.6 * z, y - 12 * z, 1.6 * z, 2.6 * z, shade(f, 0.15)); }   // buschiger Schwanz
   if (w.body === 'umhang' || w.body === 'rucksack') drawWearBack(x, y, z, w);   // hinter dem Körper (Block 97)
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);

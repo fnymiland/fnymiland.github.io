@@ -854,18 +854,23 @@ const BRIDGE_LOOK = {
   ziegel: { lift: 7, side: '#b5654a', wall: true, rail: '#c97a5e' },
   rot:    { lift: 8, side: '#a8392f', deck: '#c79a6a', plank: '#9a7048', rail: '#d9483b' },
 };
+let BRIDGE_FRONT = false;                                                // nur das Vordere zeichnen (über einem Boot, Block 150)
 function drawWegBridge(cx, cy, z, x, y, t) {
-  const arms = pathArms(x, y), ax = arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);   // 0: längs u, 1: längs v
+  const A = bridgeArch(x, y), front = BRIDGE_FRONT;                    // Bogenbrücke (Block 150) oder flach wie bisher
+  const ax = A ? A.ax : bridgeAxis(x, y, t);
   const P = (a, b, h = 0) => { const [u, v] = ax ? [b, a] : [a, b]; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z]; };
   const B0 = BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz, hw = EDGE_W, LIFT = B0.lift;
   // Farben aus dem Fenster (Block 66b): Bauwerk (Wand/Geländer/Pfähle) und bei Holz die Planken
   const bc = BRIDGE_COLS[t.brc], pc = PLANK_COLS[t.brw];
   const B = { ...B0, ...(bc ? (B0.wall ? { side: bc, rail: shade(bc, 0.1) } : { side: shade(bc, -0.15), rail: bc }) : {}), ...(pc ? { deck: pc, plank: shade(pc, -0.22) } : {}) };
   const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
-  const H = a => Math.max(0, Math.min(LIFT, land(1) && a > 0.2 ? LIFT * (0.5 - a) / 0.3 : LIFT, land(-1) && a < -0.2 ? LIFT * (a + 0.5) / 0.3 : LIFT));
-  const AS = [-0.5, -0.2, 0.2, 0.5];
+  const H = A ? a => archDeck(A, A.i0 + a + 0.5)
+    : a => Math.max(0, Math.min(LIFT, land(1) && a > 0.2 ? LIFT * (0.5 - a) / 0.3 : LIFT, land(-1) && a < -0.2 ? LIFT * (a + 0.5) / 0.3 : LIFT));
+  const AS = A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];   // Bogen: feiner unterteilt
   const strip = (b0, b1, dh = 0) => AS.slice(0, -1).map((a, i) => [P(a, b0, H(a) + dh), P(AS[i + 1], b0, H(AS[i + 1]) + dh), P(AS[i + 1], b1, H(AS[i + 1]) + dh), P(a, b1, H(a) + dh)]);
-  const posts = (b, col) => { for (const a of [-0.3, 0.3]) { const p0 = P(a, b, -1), p1 = P(a, b, H(a)); g.fillStyle = C(col); g.fillRect(p0[0] - 1 * z, p1[1], 2 * z, p0[1] - p1[1] + 1 * z); } };
+  // Pfähle: flach je Feld zwei; Bogen ab 5 Feldern nur an jedem zweiten Feld (archCenters), wo der Belag hoch genug ist
+  const postAs = A && archSpan(A.N) > 1 ? archCenters(A.N).map(c => c - A.i0 - 0.5).filter(a => a >= -0.5 && a < 0.5) : [-0.3, 0.3];
+  const posts = (b, col) => { for (const a of postAs) { if (A && H(a) < 2) continue; const pw = A ? 1.2 : 1, p0 = P(a, b, -1), p1 = P(a, b, H(a)); g.fillStyle = C(col); g.fillRect(p0[0] - pw * z, p1[1], 2 * pw * z, p0[1] - p1[1] + 1 * z); } };
   const railing = b => {                                                // Pfosten und Handlauf
     g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath();
     AS.forEach((a, i) => { const p = P(a, b, H(a) + 4.5); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
@@ -874,10 +879,11 @@ function drawWegBridge(cx, cy, z, x, y, t) {
   };
   const parapet = b => { for (const q of strip(b - 0.03, b + 0.03, 0)) poly(q, C(shade(B.rail, -0.05))); for (const q of strip(b - 0.03, b + 0.03, 2.5)) poly(q, C(B.rail)); };
   // hinten: Pfähle bzw. Brüstung der fernen Seite; Holz: auch die vorderen Pfähle schon jetzt – der Belag deckt ihr oberes
-  // Ende, sie stehen also unter der Brücke statt davor
-  if (!B.wall) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); posts(hw - 0.1, B.side); } else parapet(-hw);
+  // Ende, sie stehen also unter der Brücke statt davor. Über einem Boot (front) nur das Vordere
+  if (!B.wall) { if (!front) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); } posts(hw - 0.1, B.side); } else if (!front) parapet(-hw);
   // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
-  if (B.wall) {
+  if (B.wall && A) archWall(A, P, H, AS, B, hw, z, t, front);
+  else if (B.wall) {
     for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
     const wallPts = [...AS.map(a => P(a, hw, -1)), ...[...AS].reverse().map(a => P(a, hw, H(a)))];   // Mauerwerk: Ziegel bzw. Quader
     g.save(); g.beginPath(); wallPts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
@@ -904,7 +910,7 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     g.strokeStyle = C(B.plank); g.lineWidth = 0.7 * z; g.beginPath();
     for (let a = -0.45; a < 0.5; a += 0.12) { const p0 = P(a, -hw, H(a)), p1 = P(a, hw, H(a)); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
     g.stroke();
-    for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, H(a0) - 1.6), P(a1, hw, H(a1) - 1.6), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, 0.05))); }   // Randbalken vorn
+    for (let i = 0; i < AS.length - 1; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, H(a0) - 1.6), P(a1, hw, H(a1) - 1.6), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, 0.05))); }   // Randbalken vorn
   }
   // vorn: Brüstung bzw. Geländer
   if (B.wall) parapet(hw); else railing(hw - 0.03);
@@ -915,6 +921,47 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     if (B.wall) { poly([P(0.5, -hw, -1), P(0.5, hw, -1), P(0.5, hw, h), P(0.5, -hw, h)], C(shade(B.side, -0.2))); poly([P(0.5, -hw, h), P(0.5, hw, h), P(0.5, hw, h + 2.5), P(0.5, -hw, h + 2.5)], C(B.rail)); }
     else { g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath(); const p0 = P(0.47, -hw, h + 4.5), p1 = P(0.47, hw, h + 4.5); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
   }
+}
+// Seitenwand einer Bogenbrücke aus Stein/Ziegel (Block 150): echte Öffnungen – dahinter Wasser im Schatten, Gewölbe, die Rückwand
+// mit ihrer Öffnung –, Mauerwerk in fester Steingröße, versetzt (vorher übers Feld gestreckt: Gitter), heller Bogenrand
+function archWall(A, P, H, AS, B, hw, z, t, front) {
+  const opens = A.open.map(o => ({ c: o.c - A.i0 - 0.5, r: o.r, h: o.h })).filter(o => o.c + o.r > -0.5 && o.c - o.r < 0.5);
+  const archPts = (o, b) => { const out = []; for (let k = 0; k <= 20; k++) { const da = -o.r + 2 * o.r * k / 20; out.push(P(o.c + da, b, -1 + o.h * Math.sqrt(Math.max(0, 1 - (da / o.r) ** 2)))); } return out; };
+  const E = 0.012, wallPoly = b => {                                     // ein Hauch über die Feldkante: keine Naht zum Nachbarfeld
+    const as = AS.map((a, i) => i === 0 ? a - E : i === AS.length - 1 ? a + E : a);
+    return [...as.map(a => P(a, b, -1)), ...[...as].reverse().map(a => P(a, b, H(a)))];
+  };
+  const trace = pts => pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]));
+  const inner = shade(B.side, -0.38), vault = shade(B.side, -0.24), pier = shade(B.side, -0.12);
+  if (!front) for (const o of opens) {                                   // durch die Öffnung: Schatten aufs Wasser, Rückwand, Gewölbe
+    const F = archPts(o, hw), Bk = archPts(o, -hw);
+    g.save(); g.beginPath(); trace(wallPoly(hw)); g.closePath(); g.clip(); g.beginPath(); trace(F); g.closePath(); g.clip();
+    poly([P(o.c - o.r, hw, -1), P(o.c + o.r, hw, -1), P(o.c + o.r, -hw, -1), P(o.c - o.r, -hw, -1)], 'rgba(20,45,70,0.3)');
+    const qs = []; for (let q = -2.5; q <= 2.501; q += 0.125) qs.push(q);   // Rückwand über mehrere Felder (sonst Streifen an den Feldkanten)
+    g.beginPath(); trace([...qs.map(q => P(q, -hw, -1)), ...qs.slice().reverse().map(q => P(q, -hw, Math.max(-1, H(q))))]); g.closePath(); trace(Bk); g.closePath();
+    g.fillStyle = C(inner); g.fill('evenodd');
+    for (let k = 0; k < F.length - 1; k++) {                             // Gewölbe: nur die Flächen, die zum Betrachter zeigen
+      const q = [F[k], F[k + 1], Bk[k + 1], Bk[k]], ar = (q[1][0] - q[0][0]) * (q[3][1] - q[0][1]) - (q[1][1] - q[0][1]) * (q[3][0] - q[0][0]);
+      if (ar > 0) poly(q, C(k < 3 || k > F.length - 5 ? pier : vault));
+    }
+    g.restore();
+  }
+  g.save(); g.beginPath(); trace(wallPoly(hw)); g.closePath(); g.clip();
+  g.beginPath(); g.moveTo(-1e5, -1e5); g.lineTo(1e5, -1e5); g.lineTo(1e5, 1e5); g.lineTo(-1e5, 1e5); g.closePath();
+  for (const o of opens) { trace(archPts(o, hw)); g.closePath(); }
+  g.clip('evenodd');                                                     // die Wand ohne die Öffnungen
+  poly(wallPoly(hw), C(shade(B.side, -0.12)));
+  const brick = bridgeKind(t) === 'ziegel', RH = brick ? 2.2 : 4.2, BL = brick ? 0.14 : 0.3, top = Math.max(...AS.map(H)) + 1;
+  g.strokeStyle = C(shade(B.side, brick ? -0.28 : -0.2)); g.lineWidth = (brick ? 0.45 : 0.6) * z; g.beginPath();
+  for (let k = 0, h = -1; h < top; k++, h += RH) {                       // Lagerfugen und versetzte Stoßfugen (in Weltkoordinaten)
+    const p0 = P(-0.5, hw, h), p1 = P(0.5, hw, h); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+    const sh = (k & 1) * BL / 2;
+    for (let s = Math.ceil((A.i0 - sh) / BL) * BL + sh; s < A.i0 + 1; s += BL) { const a = s - A.i0 - 0.5, q0 = P(a, hw, h), q1 = P(a, hw, h + RH); g.moveTo(q0[0], q0[1]); g.lineTo(q1[0], q1[1]); }
+  }
+  g.stroke();
+  g.restore();
+  g.strokeStyle = C(shade(B.side, 0.12)); g.lineWidth = 0.8 * z;         // heller Bogenrand
+  for (const o of opens) { g.save(); g.beginPath(); trace(wallPoly(hw)); g.closePath(); g.clip(); g.beginPath(); trace(archPts(o, hw)); g.stroke(); g.restore(); }
 }
 // Ganz breiter Weg (Block 77): Belag über das ganze Feld, Bordstein an den Seiten ohne breiten Nachbarweg – dort, wo ein
 // schmaler Weg ankommt, mit Lücke; an breiten Nachbarn geht der Belag nahtlos weiter

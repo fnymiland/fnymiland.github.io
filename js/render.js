@@ -686,7 +686,33 @@ function drawBridgeOver(k, z, now) {
   if (!t) return;
   const [x, y] = keyXY(k), p = toScreen(x, y);
   if (t.b === 'schiene') drawRailBed(p.x, p.y, z, x, y, t);
-  else if (isWegBridge(t)) drawPath(p.x, p.y, z, x, y, t);
+  else if (isWegBridge(t)) {                                              // Bogen: nur das Vordere – durch die Öffnung sieht man das Boot
+    BRIDGE_FRONT = !!bridgeArch(x, y);
+    try { drawPath(p.x, p.y, z, x, y, t); } finally { BRIDGE_FRONT = false; }
+  }
+}
+// Bogenbrücke an ihrem Feld in der Objekt-Reihenfolge (Block 150): flach zuerst gezeichnet läge alles dahinter darüber
+function drawArchBridge(x, y, px, py, z, t) {
+  const A = bridgeArch(x, y), f = () => drawPath(px, py, z, x, y, t);
+  if (SPRITES_ON && spriteArchBridge(x, y, px, py, z, t, A)) return;      // weit weg als Bildchen (wie die flachen Brücken)
+  if (GLPASS) glLive(px, py, TW * z, (A.peak + 30) * z, TW * z, (TH + 12) * z, f); else f();
+}
+function spriteArchBridge(x, y, px, py, z, t, A) {
+  const zs = spriteStep(z), keyOf = lit => `arch|${x},${y}|${FOG ? 1 : 0}|${lit}`;
+  const key = keyOf(night > 0.15 && isLive() ? 1 : 0), fog = FOG;
+  const make = () => {
+    const sp = paintSprite(TW * zs, (A.peak + 30) * zs, (TH + 12) * zs, () => {
+      const pf = FOG; FOG = fog;
+      try { drawPath(0, 0, zs, x, y, t); } finally { FOG = pf; }
+    });
+    if (sp) sp.z = zs;
+    return sp;
+  };
+  const e = getSprite(key, zs, make, groundVersion);
+  if (preLit()) prewarm(keyOf(1), zs, make, groundVersion);
+  if (!e) return false;
+  putSprite(e, px, py, z);
+  return true;
 }
 function spriteTile(t, ax, ay, c, z, now, w, h) {
   const keyOf = lit => {
@@ -1245,6 +1271,7 @@ function worldGround(V, z, now, glPlay) {
     if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
+    if (isWegBridge(t) && bridgeArch(x, y)) continue;                   // Bogenbrücken (Block 150): mit den Gebäuden, in Maler-Reihenfolge
     FOG = !ownedTile(x, y);
     if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
       if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
@@ -1476,6 +1503,7 @@ function render(now) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();
+            else if (t.bridge && bridgeArch(x, y)) drawArchBridge(x, y, px, py, z, t);   // hoher Bogen: wie ein Gebäude (Block 150)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
           }
           const s = T.st.get(a);

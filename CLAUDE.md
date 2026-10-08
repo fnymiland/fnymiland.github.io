@@ -413,6 +413,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `npm run leistung:neu` aufgenommen ist (in AUFGABEN.md begründen). Grenzen nie „einfach hochsetzen“, um grün zu werden – erst
     fragen, ob es billiger geht (Bildchen, `ANIM_ITEMS` nur für das Bewegte, Musterkachel). Vor Pushes mit Grafik-Änderungen den
     Messlauf (☰ → Grafik) im Browser ansehen.
+    **Bogenbrücken (Block 150):** Höhe/Bögen/Durchfahrt nur über `bridgeArch(x, y)` (gemerkt je groundVersion, recalc leert;
+    null = flach). Bogenbrücken zeichnet die Objekt-Schleife (`drawArchBridge`), nicht der flache Durchgang.
     Messen ohne `getImageData` auf der Hauptleinwand: Chrome schaltet sie danach auf Zeichnen ohne Grafikkarte um (falsche Zahlen).
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
     Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird
