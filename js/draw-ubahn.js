@@ -161,9 +161,12 @@ function rampClip(P, z) {
 }
 
 // U-Bahn-Eingang (1×1): Treppe mit Mast (frei), Pavillon mit Glasdach, Häuschen (Kunstakademie). Vorn = Drehrichtung.
+// Umfärbbar (Nutzer: „Stationen farbig einfärben“): Wand = Mauern/Wände, Dach = Dach, Mast und Eisen; das U-Schild bleibt blau
+REPAINT.ubahn = { names: ['Wand', 'Dach & Mast'], wall: ['#e9e1d2', '#d8cfbf', '#cfc6b4', '#e3dccd'],
+  roof: ['#2f62b8', '#3f74c8', ['#2f7a56', -0.05], ['#3f9068', 0.05], ['#5b6470', -0.15], ['#6c7682', -0.08]] };
 function uSign(p, size, z) {
   const a = size * z;
-  g.fillStyle = C('#2f62b8'); g.fillRect(p[0] - a / 2, p[1] - a / 2, a, a);
+  g.fillStyle = '#2d5fb3'; g.fillRect(p[0] - a / 2, p[1] - a / 2, a, a);   // Schild bleibt immer U-Bahn-blau (nicht umfärbbar)
   g.strokeStyle = '#ffffff'; g.lineWidth = 0.9 * z; g.strokeRect(p[0] - a / 2 + 0.8 * z, p[1] - a / 2 + 0.8 * z, a - 1.6 * z, a - 1.6 * z);
   g.fillStyle = '#ffffff'; g.font = `800 ${a * 0.72}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('U', p[0], p[1] + a * 0.04); g.textAlign = 'left';

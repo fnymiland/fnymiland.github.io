@@ -255,3 +255,15 @@ describe('Zugarten (Nutzer: „wieso kann man keinen Schnellzug auswählen?“)'
   });
 });
 
+describe('U-Bahn-Station einfärben (Nutzer: „Stationen farbig einfärben“)', () => {
+  it('Wand und Dach wählbar wie beim Bahnhof; das U-Schild bleibt blau', () => {
+    game("state.tunnels.set('8,8', {}); state.tiles.set('8,8', { b: 'ubahn', lvl: 1 }); recalc(); openInfo(8, 8)");
+    const labels = [...document.querySelectorAll('#panel .label')].map(l => l.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['Wand', 'Dach & Mast']));
+    const m = game("[...repaintMap(REPAINT.ubahn, { wall: 3, roof: 5 })].map(([k]) => k)");
+    expect(m).toContain('#2f62b8');                                         // Dachkante folgt der Wahl
+    expect(m).not.toContain('#2d5fb3');                                     // Schild nicht
+    game('closePanel()');
+  });
+});
+

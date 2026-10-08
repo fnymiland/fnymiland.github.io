@@ -1640,6 +1640,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „wieso kann man keinen Schnellzug auswählen?“ – gesperrte Zug-/Schiffsmodelle waren nur graue Knöpfe mit
       Maus-Tooltip (auf dem iPad unsichtbar). Jetzt antippbar → Forschung „🚢 Verkehr“, dazu eine sichtbare Zeile unter der Zugwahl.
       (Triebwagen/Schnellzug: Universität bauen, dann dort kaufen.) Test: ubahn
+- [x] Nutzer: „Stationen farbig einfärben“ – Bahnhof/Hbf hatten Wand/Dach schon (BUILDING_ART), Parkbahn-Station ihre Dachfarben;
+      neu die U-Bahn-Station über `REPAINT.ubahn` (Wand · Dach & Mast, alle drei Formen); das U-Schild bleibt blau. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
