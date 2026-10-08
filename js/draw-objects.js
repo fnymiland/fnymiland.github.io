@@ -244,10 +244,11 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
     return;
   }
   if (kind === 'rainbow') {                // schräge Streifen in Regenbogenfarben (pastell)
-    const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1, n = Math.ceil(2 * E / w) + 1;
+    // Streifen in Weltkoordinaten (Block 125): Farbe nach dem Streifen der Welt, nicht des Felds – sonst sah man jede Feldgrenze
+    const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1, n = Math.ceil(2 * E / w) + 1, k0 = Math.round((x + y) / w);   // Streifen u + v = c0, in der Welt x + y + c0
     for (let i = -n; i <= n; i++) {
       const c0 = i * w;
-      poly([[c0 + E, -E], [c0 + w * 0.8 + E, -E], [c0 + w * 0.8 - E, E], [c0 - E, E]].map(L), C(RB[(i + 600) % RB.length]));
+      poly([[c0 + E, -E], [c0 + w * 0.8 + E, -E], [c0 + w * 0.8 - E, E], [c0 - E, E]].map(L), C(RB[(((i + k0) % RB.length) + RB.length) % RB.length]));
     }
     return;
   }
@@ -287,6 +288,46 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   } else if (kind === 'tiles') {
     const n = 2 + Math.ceil(ext / 0.25);
     for (let k = -n; k <= n; k++) { line([-E, k * 0.25], [E, k * 0.25]); line([k * 0.25, -E], [k * 0.25, E]); }
+  } else if (kind === 'checker') {                                     // Schachbrett: Felder abwechselnd in der Fugenfarbe (Weltraster)
+    g.fillStyle = col;
+    const s = 0.25;
+    for (let i = Math.floor((x - E) / s); i <= Math.ceil((x + E) / s); i++) for (let j = Math.floor((y - E) / s); j <= Math.ceil((y + E) / s); j++) {
+      if ((i + j) & 1) continue;
+      const u0 = i * s - x - 0.5, v0 = j * s - y - 0.5;
+      if (u0 > E || v0 > E || u0 + s < -E || v0 + s < -E) continue;
+      g.beginPath(); [[u0, v0], [u0 + s, v0], [u0 + s, v0 + s], [u0, v0 + s]].map(L).forEach((q, k) => k ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.fill();
+    }
+    return;
+  } else if (kind === 'herring2' || kind === 'herring3') {               // echtes Fischgrät: Steine 2:1 im Treppenverband (Weltraster)
+    const s = kind === 'herring2' ? 0.125 : 1 / 6;
+    for (let a = Math.floor((x - E) / s) - 2; a <= Math.ceil((x + E) / s) + 1; a++) for (let b = Math.floor((y - E) / s) - 2; b <= Math.ceil((y + E) / s) + 1; b++) {
+      const d = (((a - b) % 4) + 4) % 4, u = a * s - x, v = b * s - y;
+      if (d === 0) { line([u, v], [u + 2 * s, v]); line([u, v + s], [u + 2 * s, v + s]); line([u, v], [u, v + s]); line([u + 2 * s, v], [u + 2 * s, v + s]); }
+      else if (d === 3) { line([u, v], [u + s, v]); line([u, v + 2 * s], [u + s, v + 2 * s]); line([u, v], [u, v + 2 * s]); line([u + s, v], [u + s, v + 2 * s]); }
+    }
+  } else if (kind === 'basket') {                                       // Korbgeflecht: je Quadrat zwei Steine, abwechselnd gedreht
+    const s = 0.25;
+    for (let i = Math.floor((x - E) / s); i <= Math.ceil((x + E) / s); i++) for (let j = Math.floor((y - E) / s); j <= Math.ceil((y + E) / s); j++) {
+      const u0 = i * s - x - 0.5, v0 = j * s - y - 0.5;
+      if (u0 > E || v0 > E || u0 + s < -E || v0 + s < -E) continue;
+      line([u0, v0], [u0 + s, v0]); line([u0, v0], [u0, v0 + s]);
+      if ((i + j) & 1) line([u0 + s / 2, v0], [u0 + s / 2, v0 + s]); else line([u0, v0 + s / 2], [u0 + s, v0 + s / 2]);
+    }
+  } else if (kind === 'diag') {                                         // Rauten: Platten schräg verlegt
+    const s = 0.25, n = Math.ceil(2 * E / s) + 2;
+    for (let k = -n; k <= n; k++) { const c = k * s - ((x + y) % s); line([c + E, -E], [c - E, E]); const d = k * s - ((x - y) % s); line([-E, d - E], [E, d + E]); }
+  } else if (kind === 'stack') {                                        // Platten 2:1 im Kreuzfugenverband
+    for (let k = -3; k <= 3; k++) { const v = -0.5 + k * 0.25; if (Math.abs(v) <= E) line([-E, v], [E, v]); const u = -0.5 + k * 0.5; if (Math.abs(u) <= E) line([u, -E], [u, E]); }
+  } else if (kind === 'modular') {                                      // Platten verschiedener Größe (je halbes Feld: ganz, halbiert oder geviertelt)
+    const s = 0.5;
+    for (let i = Math.floor((x - E) / s); i <= Math.ceil((x + E) / s); i++) for (let j = Math.floor((y - E) / s); j <= Math.ceil((y + E) / s); j++) {
+      const u0 = i * s - x - 0.5, v0 = j * s - y - 0.5, h = hash(i, j, 343);
+      if (u0 > E || v0 > E || u0 + s < -E || v0 + s < -E) continue;
+      line([u0, v0], [u0 + s, v0]); line([u0, v0], [u0, v0 + s]);
+      if (h < 0.35) line([u0 + s / 2, v0], [u0 + s / 2, v0 + s]);
+      else if (h < 0.6) line([u0, v0 + s / 2], [u0 + s, v0 + s / 2]);
+      else if (h < 0.8) { line([u0 + s / 2, v0], [u0 + s / 2, v0 + s]); line([u0, v0 + s / 2], [u0 + s, v0 + s / 2]); }
+    }
   } else if (kind === 'big' || kind === 'setts' || kind === 'thirds') {   // Raster ab der Feldkante (Kanten liegen auf Fugen)
     const step = kind === 'big' ? 0.5 : kind === 'setts' ? 0.125 : 1 / 3, n = Math.ceil((E + 0.5) / step);
     for (let k = -n; k <= n; k++) { const c = -0.5 + k * step; if (Math.abs(c) > E) continue; line([-E, c], [E, c]); line([c, -E], [c, E]); }
