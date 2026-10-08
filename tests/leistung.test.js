@@ -63,7 +63,7 @@ describe('Leistungs-Wächter (Block 149)', () => {
       }
       if (better.length) console.log(`Leistungs-Wächter: deutlich weniger Arbeit – Grenzen nachziehen (npm run leistung:neu):\n  ${better.join('\n  ')}`);
       expect(bad, 'Langsamer als erlaubt. Gewollt? → npm run leistung:neu und in AUFGABEN.md begründen').toEqual([]);
-    });
+    }, 60000);                                                            // große Welt × 10 Szenen: im vollen Lauf über 5 s
   }
   afterAll(() => {
     if (!NEU) return;

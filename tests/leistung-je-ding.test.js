@@ -46,5 +46,5 @@ describe('Leistungs-Wächter je Ding (Block 149)', () => {
       if (v > max) bad.push(`${k}: ${v} statt höchstens ${max} (bisher ${old[k]})`);
     }
     expect(bad, 'Teurer als erlaubt oder neu ohne Wert. Gewollt? → npm run leistung:neu und in AUFGABEN.md begründen').toEqual([]);
-  });
+  }, 60000);
 });
