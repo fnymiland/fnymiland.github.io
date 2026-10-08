@@ -188,7 +188,7 @@ function messLine(ms) {
       ...[...GLS.dynWhy].sort((p, q) => q[1] - p[1]).slice(0, 5).map(([n, k]) => `  ${k}× ${(ITEMS[n.split(' ')[0]] && ITEMS[n.split(' ')[0]].name) || n}${n.includes(' ') ? ' ' + n.slice(n.indexOf(' ') + 1) : ''}`)]),
     `Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss}, neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`].filter(Boolean);
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '600 14px system-ui, sans-serif';
-  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, lh = 20, h = lines.length * lh + 12, x = W - w - 12, y = Math.round(H * 0.3);
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, lh = 20, h = lines.length * lh + 12, x = Math.max(4, W - w - 12), y = Math.round(H * 0.3);
   ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
   lines.forEach((l, i) => ctx.fillText(l, x + 10, y + 6 + lh * (i + 0.5)));

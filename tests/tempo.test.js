@@ -96,6 +96,25 @@ describe('Bildchen weit weg', () => {
     // dieselbe Stellung zu jeder Zeit: das Bildchen hängt nicht an der Uhr
     expect(game('stillNow("windrad", 10, 10, 5) === stillNow("windrad", 10, 10, 9e9)')).toBe(true);
   });
+  it('Einstellung je Gerät (☰ → Grafik): „dreht sich“ zeichnet Windräder weit weg wieder live; Grafikkarte als Schalter', () => {
+    game("state.tiles.set('10,10', { b: 'windrad', lvl: 1 }); recalc()");
+    expect(game('stillFar')).toBe(true);                                    // Standard: still
+    game('showMenu()');
+    expect(game("document.getElementById('m-still').textContent")).toMatch(/steht still/);
+    game("document.getElementById('m-still').click()");
+    expect(game("localStorage.getItem('kachelhausen_still')")).toBe('0');
+    expect(game("document.getElementById('m-still').textContent")).toMatch(/dreht sich/);
+    frame(0.5);
+    expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
+    game("document.getElementById('m-still').click()");
+    expect(game('stillFar')).toBe(true);
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: aus$/);
+    game("document.getElementById('m-gl').click()");
+    expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('1');
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: an$/);
+    game("document.getElementById('m-gl').click(); closeModal()");
+    expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('0');
+  });
 });
 
 describe('Schnelles Nachschlagen', () => {

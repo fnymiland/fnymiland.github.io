@@ -240,9 +240,18 @@ let SPRITES_NEAR = false;                                            // Zoom zwi
 // Flügel/Gondeln in einer festen Stellung je Standort (stillNow). Nah dran (SPRITES_NEAR) dreht sich alles wie gehabt
 const STILL_FAR = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'wasserkraft', 'karussell', 'fz_karussell', 'fz_teetassen', 'fz_kette',
   'fz_freifall', 'fz_geister', 'fz_wildwasser']);
-const stillNow = (b, x, y, now) => STILL_FAR.has(b) && !SPRITES_NEAR ? 1e6 + hash(x, y, 9) * 6e4 : now;
-const spriteOk = b => SPRITES_NEAR ? !SPRITE_LIVE.has(b) && !ANIM_ITEMS.has(b) : !SPRITE_LIVE.has(b) || STILL_FAR.has(b);          // kleine Deko (nur die Art)
-const spriteTileOk = t => SPRITES_NEAR ? !SPRITE_LIVE.has(t.b) && !animLive(t) : !SPRITE_LIVE.has(t.b) || STILL_FAR.has(t.b);   // Gebäude (Stufe, Aussehen, Nacht)
+// Einstellung je Gerät (☰ → Grafik, localStorage kachelhausen_still): Standard still; „dreht sich“ = wie vor Block 144 live
+const STILL_KEY = 'kachelhausen_still';
+let stillFar = (() => { try { return localStorage.getItem(STILL_KEY) !== '0'; } catch (e) { return true; } })();
+function setStillFar(on) {
+  stillFar = !!on;
+  try { localStorage.setItem(STILL_KEY, on ? '1' : '0'); } catch (e) { /* privates Fenster: gilt bis zum Neuladen */ }
+  resetDrawCaches();                                                     // Bildchen und Standbild neu
+}
+const stillHere = b => stillFar && STILL_FAR.has(b) && !SPRITES_NEAR;
+const stillNow = (b, x, y, now) => stillHere(b) ? 1e6 + hash(x, y, 9) * 6e4 : now;
+const spriteOk = b => SPRITES_NEAR ? !SPRITE_LIVE.has(b) && !ANIM_ITEMS.has(b) : !SPRITE_LIVE.has(b) || stillHere(b);          // kleine Deko (nur die Art)
+const spriteTileOk = t => SPRITES_NEAR ? !SPRITE_LIVE.has(t.b) && !animLive(t) : !SPRITE_LIVE.has(t.b) || stillHere(t.b);   // Gebäude (Stufe, Aussehen, Nacht)
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, ver, glows, mask, night, next, used }
 let SPRITES_ON = false, spriteZooming = false, spriteZoomedLast = false;
 // Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,

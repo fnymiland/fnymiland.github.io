@@ -20,6 +20,11 @@ function glWanted() {
   if (GL_Q === '1') return true;
   try { return localStorage.getItem('kachelhausen_gl') === '1'; } catch (e) { return false; }
 }
+// Schalter im Menü (☰ → Grafik, nur dieses Gerät); ?gl=0/1 in der Adresse geht vor
+function setGlWanted(on) {
+  try { localStorage.setItem('kachelhausen_gl', on ? '1' : '0'); } catch (e) { /* privates Fenster */ }
+  glTouch();
+}
 function glInit() {
   if (GL.ready || GL.broken) return GL.ready;
   if (typeof WebGL2RenderingContext === 'undefined') { GL.broken = true; return false; }   // Test (jsdom), alte Browser
@@ -207,7 +212,7 @@ function glLive(x, y, l, u, r, d, fn) {
 // Darf dieses Bild über die Grafikkarte? (render, nach SPRITES_ON)
 function glFrameOk(z) {
   // Grund fürs Messen (?messen): warum gerade (nicht) per Grafikkarte
-  GL.why = GL.off || !glWanted() ? 'aus (?gl=1 zum Einschalten)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
+  GL.why = GL.off || !glWanted() ? 'aus (☰ → Grafik)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
     : night !== 0 ? 'Nacht/Dämmerung (noch 2D)' : tool !== 'look' || moving || plan ? 'Werkzeug gewählt (2D)' : !glInit() ? 'kein WebGL2 im Browser (2D)' : '';
   return !GL.why;
 }

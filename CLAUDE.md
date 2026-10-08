@@ -393,6 +393,13 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt` und `gameHour`), sonst hängen sie an der echten Uhrzeit.
+144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
+    Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird
+    jedes Bild neu gemalt – teuer. Darum: was sich nur selten ändert (Uhren, Fähnchen), in den Schlüssel von `glCacheStart`, nicht
+    live; was nichts zeichnet, gar nicht erst durch `glLive` schicken (Schienen ohne Übergang). `?messen` zeigt „Lebendige Felder“ mit
+    Grund. Einstellungen je Gerät (☰ → Grafik, localStorage): `stillFar` (`kachelhausen_still`, Standard still: `STILL_FAR` weit weg
+    als Bildchen mit `stillNow`, geteilte Deko-Bildchen ohne Ortsabhängigkeit), `kachelhausen_gl` (`setGlWanted`, `?gl=0/1` geht vor),
+    Bildrate. Pixelvergleich GL ↔ 2D: GL-Leinwand + `canvas` übereinander gegen `GL.off = true`.
 143. **Nachtbilder auch in der Dämmerung** (Block 143): `nightPicOn()` (Licht an, weit weg) statt `nightFull()` für alles, was
     Nachtbilder nutzt; das Löschbild wird mit night/NIGHT_MAX eingesetzt, gemalt wird es immer mit voller Nacht (`paintNight`
     setzt `night`). Vor dem Einschalten wärmt `prewarm` die beleuchteten Bildchen vor – wer einen neuen Bildchen-Schlüssel mit

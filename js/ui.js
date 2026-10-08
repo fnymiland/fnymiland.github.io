@@ -2519,7 +2519,10 @@ function showMenu() {
     <p class="muted">Figur, Erfolge, Album und Tagebuch findest du oben bei dir (${ANIMALS[meLook().a].icon}), Freunde und Online-Speicher unter 🌐.</p>
     <div class="label">⚙️ Einstellungen</div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-sound">${state.muted ? '🔇 Ton ist aus' : '🔊 Ton ist an'}</button><button class="btn ghost" style="flex:1" id="m-borders">${state.noBorders ? '▢ Randlinien aus' : '▣ Randlinien an'}</button></div>
+    <div class="label">🖥️ Grafik <span class="muted">(nur dieses Gerät)</span></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-still" title="Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer">${stillFar ? '⏸️ Weit weg: Drehendes steht still' : '🌀 Weit weg: Drehendes dreht sich'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-gl" title="Zeichnet weit weg bei Tag über die Grafikkarte – viel flüssiger auf PCs. Noch im Test: nachts und nah dran wie bisher">${glWanted() ? '🚀 Grafikkarte (Test): an' : '🚀 Grafikkarte (Test): aus'}</button></div>
     <div class="label">💾 Spielstand</div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>
@@ -2531,6 +2534,11 @@ function showMenu() {
   $('m-news').onclick = () => showNews(true);
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
+  $('m-still').onclick = () => { setStillFar(!stillFar); showMenu(); };                       // Block 144
+  $('m-gl').onclick = () => {
+    setGlWanted(!glWanted()); showMenu();
+    if (GL_Q) toast(`In der Adresse steht ?gl=${GL_Q} – das gilt, solange es dort steht`);
+  };
   $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark
   $('m-home').onclick = () => { const h = townHallAt(), c = h ? iso(h[0] + 1, h[1] + 1) : iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };   // wo es wirklich steht
   $('m-close').onclick = closeModal;
