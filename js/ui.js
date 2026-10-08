@@ -56,7 +56,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   if (scale !== 1) cx0.scale(scale, scale);
   const prev = g; g = cx0; FOG = false;
   const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
-  const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
+  const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
     poly([[cx, cy + hh * s], [cx + hw * s, cy], [cx + hw * s, cy + d], [cx, cy + hh * s + d]], '#b0895a');
@@ -97,7 +97,10 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
     const wet = ['meer', 'offshore', 'boot'].includes((ITEMS[type] || {}).needs);        // steht im Wasser: Wasser als Untergrund
     const ground = wet ? '#74d0e6' : { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
     block(1, ground);
-    drawObject(type, cx, cy, z, 0, 3, 7, lvl, tile);
+    // Parkbahn-Station: die Form ist der Zug – mit 1e6 malt die Station ihn am Bahnsteig (wie in der Zugwahl; sonst sahen
+    // Bimmelbahn, Straßenbahn und Mini-Zug in der Kunstakademie gleich aus, Nutzer 09.10.2026)
+    const far = type === 'pb_station' ? 1e6 : null;
+    drawObject(type, cx, cy, z, 0, far || 3, far || 7, lvl, tile);
   }
   g = prev;
   return c;

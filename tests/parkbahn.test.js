@@ -135,4 +135,9 @@ describe('Parkeisenbahn (Block 136)', () => {
     game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()');
     expect(game('pbForms(PB_RINGS[0])')).toEqual([0, 0, 1]);
   });
+  it('Kunstakademie: jede Form zeigt ihren Zug am Bahnsteig (Nutzer, 09.10.2026: Straßenbahn und Mini-Zug sahen gleich aus)', () => {
+    const models = game(`(() => { const orig = pbTrainAt, seen = []; pbTrainAt = (...a) => { seen.push(a[7]); return orig(...a); };
+      try { for (const d of DESIGN.filter(d => d.look && d.look[0] === 'pb_station')) thumbRaw('pb_station', 1, { form: d.look[1], col: 0, rot: 0, slot: 0 }, 2.5); } finally { pbTrainAt = orig; } return seen; })()`);
+    expect(models).toEqual(['tram', 'mini']);
+  });
 });
