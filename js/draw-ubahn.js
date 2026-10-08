@@ -150,8 +150,11 @@ function trainTunnelCut(m) {
   if (Math.abs(ed) < 0.5) return tunnelAt(rx, ry) ? 'hide' : null;   // quer zum Portal (Kurve davor): nicht schneiden
   const lo = ed > 0 ? -la : Math.max(-la, s), hi = ed > 0 ? Math.min(la, -s) : la;
   if (hi - lo < 0.02) return 'hide';
-  const ramp = portalForm(R[0], R[1], d) === 'rampe';
-  return { k: R[0] + ',' + R[1], cut: [lo, hi], portal: { R, d, ramp, len: ramp ? rampLen(R[0], R[1], d) : 1 } };
+  const ramp = portalForm(R[0], R[1], d) === 'rampe', len = ramp ? rampLen(R[0], R[1], d) : 1;
+  // Zeichnen mit dem Rampenfeld, das zuletzt dran ist (größeres x + y): sonst malt dessen hinterer Zaun über den Zug (Nutzer: „Zaun
+  // um die Abfahrt – glitcht komplett“)
+  const k = len === 2 && d[0] + d[1] < 0 ? (R[0] - d[0]) + ',' + (R[1] - d[1]) : R[0] + ',' + R[1];
+  return { k, cut: [lo, hi], portal: { R, d, ramp, len } };
 }
 // Tiefe eines Weltpunkts in der Rampe (für die Wagen)
 function rampSink(P, wx, wy) {
@@ -174,8 +177,9 @@ function rampClip(P, z) {
 
 // U-Bahn-Eingang (1×1): Treppe mit Mast (frei), Pavillon mit Glasdach, Häuschen (Kunstakademie). Vorn = Drehrichtung.
 // Umfärbbar (Nutzer: „Stationen farbig einfärben“): Wand = Mauern/Wände, Dach = Dach, Mast und Eisen; das U-Schild bleibt blau
-REPAINT.ubahn = { names: ['Wand', 'Dach & Mast'], wall: ['#e9e1d2', '#d8cfbf', '#cfc6b4', '#e3dccd'],
-  roof: ['#2f62b8', '#3f74c8', ['#2f7a56', -0.05], ['#3f9068', 0.05], ['#5b6470', -0.15], ['#6c7682', -0.08]] };
+// Pavillon (Nutzer: „Wand macht nichts“): Wand = das Eisengestell (dunkler getönt), Dach = das Glasdach (heller getönt)
+REPAINT.ubahn = { names: ['Wand', 'Dach & Mast'], wall: ['#e9e1d2', '#d8cfbf', '#cfc6b4', '#e3dccd', ['#2f7a56', -0.32], ['#3f9068', -0.22]],
+  roof: ['#2f62b8', '#3f74c8', ['#9fd3e3', 0.18], ['#c8ecf5', 0.42], ['#5b6470', -0.15], ['#6c7682', -0.08]] };
 function uSign(p, size, z) {
   const a = size * z;
   g.fillStyle = '#2d5fb3'; g.fillRect(p[0] - a / 2, p[1] - a / 2, a, a);   // Schild bleibt immer U-Bahn-blau (nicht umfärbbar)

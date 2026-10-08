@@ -263,6 +263,9 @@ describe('U-Bahn-Station einfärben (Nutzer: „Stationen farbig einfärben“)'
     const m = game("[...repaintMap(REPAINT.ubahn, { wall: 3, roof: 5 })].map(([k]) => k)");
     expect(m).toContain('#2f62b8');                                         // Dachkante folgt der Wahl
     expect(m).not.toContain('#2d5fb3');                                     // Schild nicht
+    const pav = game("(() => { const m = repaintMap(REPAINT.ubahn, { wall: 3, roof: 5 }); return [m.has('#2f7a56'), m.has('#9fd3e3')]; })()");
+    expect(pav).toEqual([true, true]);                                      // Pavillon: Gestell = Wand, Glasdach = Dach
+    expect(game("REPAINT.ubahn.roof.some(e => (Array.isArray(e) ? e[0] : e) === '#2f7a56')")).toBe(false);
     game('closePanel()');
   });
 });

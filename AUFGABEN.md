@@ -1647,6 +1647,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       des jeweiligen Felds (`rampTrack`, Farben aus railLookOf). Glitch: der Ausschnitt (`rampClip`) verdeckte auch am Rampenanfang
       alles unter der Öffnung – dort verschwand das Wagenende; jetzt nur unter der vorderen Längskante und (Wand abgewandt) unter der
       Wandkante. Mit Bildstreifen in beiden Richtungen geprüft (tools/vorschau/ub3-*.png).
+- [x] Nutzer: „Zaun ringsum um die Abfahrt – glitcht komplett“: Wagen wurden mit dem Portalfeld gezeichnet; lief die Rampe zum
+      Betrachter hin, kam das vordere Rampenfeld später und sein hinterer Zaun malte über den Zug. Jetzt mit dem zuletzt gezeichneten
+      Rampenfeld (`trainTunnelCut` → k). Mit Zaun ringsum (auch über der Wand und quer am Anfang) in beiden Richtungen geprüft (ub5-*.png).
+- [x] Nutzer: „beim Pavillon macht Wand nichts“ – Wand = Eisengestell (dunkler getönt), Dach & Mast = Glasdach. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
