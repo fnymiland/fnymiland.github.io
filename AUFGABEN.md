@@ -1473,9 +1473,16 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [ ] Schritt 5: Feinschliff (Deko-Plan, Linien-Bauplan, Streifen)
 - [ ] Schritt 6: Boden nach dem Bauen nur geänderte Grundstücke neu
 
-## Block 125: Wege
-- [ ] 125a: Linien beim Rauszoomen (wie bei Kies) bei allen Belägen finden und beseitigen
-- [ ] 125b: neue ruhige Stadtbeläge (z. B. Granit grau, Betonplatten, Sandstein, Asphalt ohne Mittelstreifen, Pflaster anthrazit)
+## Block 125: Wege – neue Beläge und die vorhandenen überarbeiten
+Wunsch Nutzer (07.10.2026): „Wege komplett neue Designs anbieten, die man auch in einer seriösen Stadt nutzen kann – aktuell mache ich
+alles mit Kies, weil der Rest nicht passend aussieht – und alte ohne Linien machen (beim Rauszoomen Linien wie bei Kies).“
+Heute 14 Beläge: Kiesweg, Erde, Schachbrett, Asphalt, Trittsteine, Kopfstein, Klinker, Terrakotta, Konfetti, Fischgrät rosé,
+Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspielt, kaum etwas Ruhiges für eine Stadt.
+- [ ] 125a: Vorhandene überarbeiten – alle 14 Beläge weit weg und nah ansehen: Linien/Raster beim Rauszoomen beseitigen (Muster mit
+      Fugen flimmern bzw. zeichnen Linien an den Feldgrenzen), Übergänge zwischen Belägen, Kanten; was hässlich ist, schöner machen
+- [ ] 125b: Neue ruhige Stadtbeläge (Vorschlag, mit Nutzer abstimmen): Granitplatten grau, Betonplatten hell, Sandstein, Asphalt
+      ohne Mittelstreifen, Pflaster anthrazit, Gehwegplatten mit Bordstein – wenige, aber stimmig zueinander und zu den Gebäuden
+- [ ] 125c: Mit Nutzer klären: welche alten Beläge bleiben, zusammenlegen oder weg (wie 29.09.: Sand+Kies, Holzbohlen weg)
 
 ## Block 126: Alle Hecken einfärbbar
 - [x] Farbauswahl wie Wilmerhecke/Busch (BUSH_COLS) für alle Heckenformen: Leiste beim Bauen, Fenster, „für alle übernehmen“
