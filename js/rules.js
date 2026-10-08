@@ -1559,6 +1559,21 @@ const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 // ins Meer höchstens BRIDGE_SEA Felder vor die Küste. Nur gerade (keine Kurven/Abzweige auf dem Wasser), und sie wächst
 // vom Ufer aus (ein Nachbar ist schon Weg oder Brücke). Aussehen nach Wegstil (bridgeKind), im Fenster umstellbar (t.brk).
 const BRIDGE_SEA = 3;
+// Höchstens BRIDGE_MAX Felder übers Wasser (Block 150b, Nutzer: länger sieht der Bogen nicht mehr gut aus) – dafür auch übers Meer
+// von Insel zu Insel, wenn das Wasser dazwischen nicht breiter ist (auf beiden Seiten eigenes Land in einer geraden Linie)
+const BRIDGE_MAX = 16;
+// Länge der Brücke durch (x, y) entlang der Achse (gebaute und geplante Brückenfelder, samt diesem)
+function bridgeRunLen(x, y, [dx, dy]) {
+  let n = 1;
+  for (const s of [1, -1]) for (let i = 1; i <= BRIDGE_MAX + 1 && isBridgeAt(x + dx * s * i, y + dy * s * i); i++) n++;
+  return n;
+}
+// Liegt (x, y) auf einer geraden Wasserstrecke von höchstens BRIDGE_MAX Feldern zwischen eigenem Land (beide Enden)?
+function seaGapBridgeable(x, y, [dx, dy]) {
+  const end = s => { for (let i = 1; i <= BRIDGE_MAX; i++) { const px = x + dx * s * i, py = y + dy * s * i; if (terrainAt(px, py) !== 'water') return ownedTile(px, py) ? i : 0; } return 0; };
+  const a = end(1), b = end(-1);
+  return !!a && !!b && a + b - 1 <= BRIDGE_MAX;
+}
 const WEG_BRIDGE = {
   holz:   { name: 'Holzsteg', icon: '🪵', cost: 30, mat: { bretter: 2 } },
   stein:  { name: 'Steinbogen', icon: '🌉', cost: 60, mat: { quader: 2 } },
@@ -1637,6 +1652,7 @@ function bridgeShapeError(x, y, water) {
     const arms = armsWith(x, y);
     if (!arms.length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
     if (!straightArms(arms)) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
+    if (bridgeRunLen(x, y, arms[0]) > BRIDGE_MAX) return `Brücken höchstens ${BRIDGE_MAX} Felder lang`;
   }
   for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && !straightArms(armsWith(x + dx, y + dy, [x, y]))) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
   return null;
@@ -2382,7 +2398,9 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const seaOk = sea && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : nearOwnLand(fx, fy));   // auch schräg am Ufer (Ecke an Ecke)
       if (b === 'weg' && isSea(fx, fy) && !ownedTile(fx, fy)) {                // Wegbrücke ins Meer (Block 66): kurz vor die Küste
         if (!claimable(fx, fy)) return 'Im Meer nur direkt neben deinem Land';
-        if (!landWithin(fx, fy, BRIDGE_SEA)) return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste`;
+        const arm = armsWith(fx, fy)[0];
+        if (!landWithin(fx, fy, BRIDGE_SEA) && !(arm && seaGapBridgeable(fx, fy, arm)))
+          return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste – oder bis ${BRIDGE_MAX} Felder zu deiner nächsten Insel`;
       } else if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
       if (sea) {
         if (COVER.has(k)) return 'Hier steht schon etwas';

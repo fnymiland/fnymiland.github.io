@@ -1812,3 +1812,6 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Schatten an den Füßen, GL-Rahmen höher). Boote nur unter hohen Stellen/durch Öffnungen (`archBoatOk`, `seaCross` → 'block');
       ist nirgends hoch genug (2er-Steinbrücke), überall durch wie bisher – nie absperren
 - [x] Gemessen: 16er-Steinbrücke nah +0,3 ms je Bild; Leistungs-Wächter grün (weit weg Bildchen). Test: bogenbruecken.test.js
+- [x] 150b: Brücken höchstens 16 Felder lang (`BRIDGE_MAX`, Nutzer nach Vorschau 16/20/24); ins Meer weiter 3 Felder – oder bis 16
+      Felder zu eigenem Land in gerader Linie (`seaGapBridgeable`: Insel zu Insel). Bestehende längere bleiben. In Fnymiland OG mit
+      künstlicher Insel 8 Felder vor der Küste geprüft (geht; ohne Insel nach 3 Feldern Schluss). Lange Meeresbrücken (Block 139) gestrichen

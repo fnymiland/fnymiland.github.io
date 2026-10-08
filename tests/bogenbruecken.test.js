@@ -50,4 +50,19 @@ describe('Bogenbrücken (Block 150)', () => {
       game("drawBridgeOver('10,12', 1.5, 1e6)");
     }
   });
+  it('höchstens 16 Felder übers Wasser (Block 150b): das 17. Feld geht nicht', () => {
+    game("for (let y = 5; y <= 20; y++) for (let x = 10; x < 27; x++) state.terra.set(x + ',' + y, 'water'); recalc(); chosenStyle.weg = 'sand'");
+    const r = game("planScan({ kind: 'line', tool: 'weg', a: { x: 6, y: 12 }, b: { x: 30, y: 12 } })");
+    expect(r.firstErr).toMatch(/höchstens 16 Felder/);
+    game("for (let x = 6; x <= 26; x++) build('weg', x, 12); recalc()");
+    expect(game("[...state.tiles].filter(([k, t]) => t.bridge).length")).toBe(16);
+  });
+  it('übers Meer: bis 16 Felder zu eigenem Land in gerader Linie, sonst nur 3 vor die Küste', () => {
+    game("for (let x = 10; x < 20; x++) state.terra.set(x + ',12', 'water')");                // 10 Felder Wasser, beidseits eigenes Land
+    expect(game('seaGapBridgeable(14, 12, [1, 0])')).toBe(true);
+    game("for (let x = 10; x < 27; x++) state.terra.set(x + ',12', 'water')");                // 17 Felder: zu weit
+    expect(game('seaGapBridgeable(14, 12, [1, 0])')).toBe(false);
+    game("for (let x = 10; x < 20; x++) state.terra.set(x + ',12', 'water'); state.claimed.delete('20,12')");   // drüben fremdes Land
+    if (!game('ownedTile(20, 12)')) expect(game('seaGapBridgeable(14, 12, [1, 0])')).toBe(false);
+  });
 });
