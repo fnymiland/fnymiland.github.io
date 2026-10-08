@@ -1483,6 +1483,7 @@ function openInfo(x, y) {
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };
   // Schiffe: Modell und Ziel wählen, kaufen, verkaufen
   for (const b of el.querySelectorAll('[data-shipmodel]')) b.onclick = () => { shipPick.model = b.dataset.shipmodel; openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-vlock]')) b.onclick = () => { closePanel(); openResearch('verkehr'); };   // gesperrtes Modell: zur Forschung
   for (const b of el.querySelectorAll('[data-shipto]')) b.onclick = () => { shipPick.to = b.dataset.shipto; openInfo(x, y); };
   if (el.querySelector('[data-shipbuy]')) el.querySelector('[data-shipbuy]').onclick = () => { if (buyShip(x + ',' + y, shipPick.model, shipPick.to)) openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-shipsell]')) b.onclick = () => { if (sellShip(x + ',' + y, +b.dataset.shipsell)) openInfo(x, y); };
@@ -1610,7 +1611,7 @@ function shipsHtml(k, t) {
   const m = SHIP_BY_ID[shipPick.model];
   return html + `<div class="label">Neues Schiff</div>
     <div class="looks">${SHIP_MODELS.map(v => vehicleOk('schiff', v.id) ? `<button class="look${v.id === m.id ? ' on' : ''}" data-shipmodel="${v.id}">${v.icon} ${v.name}</button>`
-      : `<button class="look" disabled title="Forschung → 🚢 Verkehr">🔒 ${v.name}</button>`).join('')}</div>
+      : `<button class="look locked" data-vlock="1" title="Forschung → 🚢 Verkehr">🔒 ${v.name}</button>`).join('')}</div>
     <div class="looks">${targets.map(o => `<button class="look${o === shipPick.to ? ' on' : ''}" data-shipto="${o}">${landingName(o)}</button>`).join('')}</div>
     <div class="row"><button class="btn" data-shipbuy data-cost="${m.buy.money}" data-mat='${JSON.stringify({ ...m.buy, money: undefined })}'>${m.icon} ${m.name} kaufen · ${costText(m.buy)}</button></div>
     <p class="muted">${Math.round(m.seats * m.speed)} Fahrgäste/min, ohne Strom. Schiffe zum selben Ziel teilen sich die Fahrgäste.</p>`;
@@ -1943,7 +1944,8 @@ function trainChooser(line) {
   const one = (lk, i) => `<div class="label">${n > 1 ? `Zug ${i + 1}` : 'Zug dieser Linie'}${i > 0 ? ` <button class="btn ghost small" data-tdel="${i}">Entfernen · +🪙 ${fmt(money + (lk.plus || 0) * cm)}</button>` : ''}</div>
     <div class="looks">${TRAIN_MODELS.map(m => vehicleOk('zug', m.id) || m.id === lk.model
       ? `<button class="look${m.id === lk.model ? ' on' : ''}" data-train="${i}:${m.id}">${m.icon} ${m.name}</button>`
-      : `<button class="look" disabled title="Forschung → 🚢 Verkehr">🔒 ${m.name}</button>`).join('')}</div>
+      : `<button class="look locked" data-vlock="1" title="Forschung → 🚢 Verkehr">🔒 ${m.name}</button>`).join('')}</div>
+    ${i === 0 && TRAIN_MODELS.some(m => !vehicleOk('zug', m.id)) ? `<p class="muted">🔒 Weitere Zugarten (mehr Wagen, schneller) gibt es in der Forschung → 🚢 Verkehr – antippen bringt dich hin.</p>` : ''}
     <div class="swatches">${TRAIN_COLS.map((c, j) => `<button class="sw${j === lk.col ? ' on' : ''}" data-tcol="${i}:${j}" style="background:${c}" aria-label="Zugfarbe ${j + 1}"></button>`).join('')}</div>
     <div class="row cars"><span>🚃 ${carsOf(lk)} Wagen · ${trainSeats(lk)} Fahrgäste/min · ${fmtPow(carNeed(line.tiles, carsOf(lk)))} ⚡</span>
       ${(lk.plus || 0) < MAX_PLUS_CARS ? `<button class="btn small" data-carplus="${i}" data-cost="${cm}" data-mat='${JSON.stringify(cmat)}'>+ Wagen · 🪙 ${fmt(cm)} ${matText(cmat)}</button>` : ''}
@@ -1967,6 +1969,7 @@ function wireTrainChooser(el, line, reopen) {
   };
   const looks = line.looks.map(l => ({ ...l }));
   for (const b of el.querySelectorAll('[data-train]')) b.onclick = () => { const [i, m] = b.dataset.train.split(':'); looks[+i].model = m; store(looks); };
+  for (const b of el.querySelectorAll('[data-vlock]')) b.onclick = () => { closePanel(); openResearch('verkehr'); };   // gesperrt: zur Forschung (Nutzer: „wieso kein Schnellzug?“)
   for (const b of el.querySelectorAll('[data-tcol]')) b.onclick = () => { const [i, c] = b.dataset.tcol.split(':'); looks[+i].col = +c; store(looks); };
   for (const b of el.querySelectorAll('[data-tdel]')) b.onclick = () => {
     const lk = looks[+b.dataset.tdel];

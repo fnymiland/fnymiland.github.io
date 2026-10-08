@@ -239,3 +239,19 @@ describe('Tunnel antippen (Nutzer: „ändern können, wenn man draufklickt“)'
   });
 });
 
+describe('Zugarten (Nutzer: „wieso kann man keinen Schnellzug auswählen?“)', () => {
+  it('gesperrte Züge: sichtbarer Hinweis, Antippen öffnet die Forschung bei Verkehr', () => {
+    twoPlaces();
+    for (let x = 4; x <= 16; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
+    game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('17,10', { b: 'station', lvl: 1, rot: 0 })");
+    wind(10); game('recalc(); openInfo(3, 10)');
+    const lock = [...document.querySelectorAll('#panel [data-vlock]')];
+    expect(lock.map(b => b.textContent)).toEqual(['🔒 Triebwagen', '🔒 Schnellzug']);
+    expect(document.getElementById('panel').textContent).toContain('Forschung → 🚢 Verkehr');
+    lock[1].click();
+    expect(game('researchTab')).toBe('verkehr');
+    expect(game("document.getElementById('modal').hidden")).toBe(false);
+    game('closeModal()');
+  });
+});
+
