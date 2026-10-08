@@ -1761,6 +1761,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] 148c (Screenshot Nutzer, Stein): „Weg schaut oben einen Millimeter durch“ = Überlapp der Wegfelder (seamPad) ragte unter den
       Bogen → zu einer Fußgängerbrücke hin kein Überlapp (`padBorder(…, [x, y])`), Rampe massiv ab |b| = 0,46. „Zipfel in den Boden“ =
       vordere Wange hing an den Rampenenden th unter den Boden → auf Bodenhöhe begrenzt. Form bleibt (Nutzer: gefällt so)
+- [x] 148d: „Bei Stein passt der Zug nicht durch, eine Wand davor“ – die dicke Wange (Stein 7) reichte über dem Gleis bis 15 (am
+      Rand der Fahrspur tiefer), der höchste Zug ist 13. Über dem Gleis (|b| < 0,38) jetzt mindestens ARCH_CLEAR = 16. Geprüft mit
+      einem Zug in Fnymiland OG unter einer Steinbrücke
 
 ## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
 - [x] Wächter je Bild (tests/leistung.test.js): Testwelten groß, Freizeitpark, Farben × Zoom 0,45/0,8/1,2/1,6/2,2 × Tag/Nacht, wie iPad

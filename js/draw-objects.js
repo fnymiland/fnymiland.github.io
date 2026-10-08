@@ -672,6 +672,7 @@ function crossingAxes(x, y) {
 // und rechts), in der Mitte hoch über dem Zug. b = Abstand zur Mitte entlang des Wegs in Feldern.
 // So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
 // ARCH_W (Block 148): so breit wie der Weg samt Rand – vorher schmaler, und der Weg schaute an den Rampen seitlich hervor
+const ARCH_CLEAR = 16;                                    // Durchfahrtshöhe über dem Gleis (höchster Zug 13 + Luft)
 const ARCH_H = 22, ARCH_W = EDGE_W + 0.01, ARCH_SPAN = 0.9;   // Span 0,9: Rampe setzt vor der Feldmitte auf – sonst ragte ihre Ecke über ein rundes Wegende (Block 148)
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
 const ARCH_LOOK = {
@@ -762,7 +763,10 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
     line(bs.map(b => P(0, b, archH(b))), '#ffffff', 1.4);  // Kristall: heller Glanz in der Mitte
     glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
   }
-  poly(rail(1, 0).concat(bs.map(b => P(ARCH_W, b, Math.max(0, archH(b) - lk.th))).reverse()), C(lk.side));   // vordere Wange – nie unter den Boden (Block 148c: Zipfel an den Rampenenden)
+  // vordere Wange: nie unter den Boden (Block 148c: Zipfel an den Rampenenden) und über dem Gleis nicht tiefer als ARCH_CLEAR –
+  // bei Stein (dick) stand sie sonst vor dem Zug (Block 148d)
+  const cheek = b => { const h = archH(b), lo = Math.max(0, h - lk.th); return Math.abs(b) < 0.38 ? Math.max(lo, Math.min(h - 1.5, ARCH_CLEAR)) : lo; };
+  poly(rail(1, 0).concat(bs.map(b => P(ARCH_W, b, cheek(b))).reverse()), C(lk.side));
   rampWalls(1);
   railing(1);
 }
