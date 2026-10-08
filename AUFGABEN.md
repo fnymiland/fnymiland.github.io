@@ -1568,6 +1568,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Farben = LANTERN_COLS. Nachts: kleiner Schein am Kopf + flacher Lichtfleck am Boden (drei weiche Lichter nebeneinander, ~1,5 Felder
       – Nutzer: „so wie im Bild“). Ausleger über den Weg (MID_TURN, rot & 2 = links), drehbar. Strom: zählt wie 2 kleine Laternen.
       Leistung nah: 27–138 Befehle (Boulevard am teuersten). Test: strassenlaterne
+- [x] 132b (Nutzer: „nach rechts gedreht sehen manche weird aus“, Peitschenmast an einem Weg von unten links nach oben rechts): Ausleger
+      waren nur waagerecht links/rechts – zeigten halb am Weg vorbei. Jetzt in Feldrichtung je rot (0 +u, 1 −v, 2 −u, 3 +v), Peitschenmast
+      kürzer (~⅓ Feld, zwei gegenüber treffen sich nicht), Kopf als flache Platte in Auslegerrichtung.
 
 ## Block 133: Monumente (wie in Alexandria)
 - [ ] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen
