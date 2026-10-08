@@ -1688,6 +1688,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „es fehlt eine weitere Latte“ – der Schutz verglich nur die x-Lage; links/rechts läuft der Bogen senkrecht um den
       Pfosten, obere und untere Latte stehen übereinander und galten als doppelt. Jetzt echter Abstand (`Math.hypot`). Oben/unten
       unverändert. Bilder tools/vorschau/latte-links2.png, latte-rechts2.png
+- [x] Nutzer: „Zaunvorschau broken, auch bei Hecken und Mauern“ – das Vorschaubild (Leiste, Fenster, Kunstakademie) malte die
+      Kanten b0,0/a0,0 und fragte dabei die ECHTE Insel um Feld 0,0 nach Nachbarn, Wegen, Toren: stand dort etwas, kam die Vorschau
+      halb, verbogen oder als Tor heraus (auf leeren Testinseln unsichtbar). Jetzt eigene Mini-Welt nur mit den zwei Stücken
+      (`thumbRaw`), spitze Ecke wie immer. Test: zaun („Vorschaubild hängt nicht von der Insel ab“)
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

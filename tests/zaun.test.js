@@ -234,6 +234,14 @@ describe('Abreißen, Speichern, alte Stände', () => {
       expect(() => game(`chosenStyle.${kind} = '${st}'; state.design.add('${kind}:${st}'); thumbRaw('${kind}')`)).not.toThrow();
     }
   });
+
+  it('Vorschaubild hängt nicht von der Insel ab (Nutzer: „Zaunvorschau broken“ – Hecke/Weg um Feld 0,0 verbogen sie)', () => {
+    game("for (const k of ['a0,0', 'b0,0', 'a-1,0', 'b0,-1', 'b0,1', 'a0,1']) state.edges.set(k, { b: 'hecke', style: 'buchs' }); state.tiles.set('0,0', { b: 'weg', lvl: 1, style: 'sand' })");
+    const seen = game(`(() => { const orig = drawEdge, seen = []; drawEdge = (k, e, z, now) => { seen.push([k, state.edges.size, wegAt(0, 0), e.b]); return orig(k, e, z, now); };
+      try { thumbRaw('zaun', 1, { style: 'latten' }); } finally { drawEdge = orig; } return seen; })()`);
+    expect(seen).toEqual([['b0,0', 2, null, 'zaun'], ['a0,0', 2, null, 'zaun']]);
+    expect(game("state.edges.get('a0,0').b + state.edges.size + state.tiles.get('0,0').b")).toBe('hecke6weg');   // die Insel ist danach wie vorher
+  });
 });
 
 describe('Endstücke, Torbögen, Licht', () => {

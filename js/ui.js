@@ -87,7 +87,12 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
     block(1, '#96d56f');
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
-    try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, { b: type, style: (tile && tile.style) || currentStyle(type) }, z * 1.3, 0); } finally { EDGE_PROJ = null; }
+    // eigene Mini-Welt: nur die zwei Stücke, keine Felder – sonst fragt die Zeichnung die echte Insel um Feld 0,0 nach
+    // Nachbarn, Wegen und Toren, und die Vorschau kommt verbogen, halb oder als Tor heraus (Nutzer: „Vorschau broken“)
+    // sq: spitze Ecke wie die Vorschau immer aussah
+    const e = { b: type, style: (tile && tile.style) || currentStyle(type), sq: true }, keep = [state.edges, state.tiles, state.decos];
+    state.edges = new Map([['b0,0', e], ['a0,0', e]]); state.tiles = new Map(); state.decos = new Map();
+    try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, e, z * 1.3, 0); } finally { EDGE_PROJ = null; [state.edges, state.tiles, state.decos] = keep; }
   } else {
     const wet = ['meer', 'offshore', 'boot'].includes((ITEMS[type] || {}).needs);        // steht im Wasser: Wasser als Untergrund
     const ground = wet ? '#74d0e6' : { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
