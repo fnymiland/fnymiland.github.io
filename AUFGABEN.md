@@ -1511,6 +1511,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] 125c: Am PC weit weg immer noch Linien, am Mac nicht (Rückmeldung Nutzer): kein Feldfehler, sondern die Fugen selbst – bei
       125–150 % Skalierung fallen sie auf halbe Bildpunkte und verschwimmen zu grauem Raster. `patternFade`: Schwelle für den
       Fugenabstand je nach Pixeldichte (4 bei DPR 2, 10 bei DPR 1). Nachgestellt mit devicePixelRatio 1,25/1,5: Raster weg
+- [x] 125c: Am PC trotzdem Linien an jeder Feldgrenze auf glatten grauen Plätzen (Screenshot Nutzer, Kontrast verstärkt: Raster genau
+      im Feldabstand). Am Mac/Chrome nicht nachstellbar (auch 12× Kontrast glatt) – Windows glättet die Kanten zweier Nachbarfelder
+      anders. Der Überlapp aus Block 116 (Strich 0,6) war weit weg unter 1 Gerätepunkt. Jetzt: Flächen an Kanten, wo der Weg
+      weitergeht, ~1 Gerätepunkt ins Nachbarfeld (`seamPad`, `padBorder`; breite Wege: Fläche zu breiten Nachbarn). Nebenbei
+      sichtbar behoben: grüne Naht zwischen Platz und Rathaus-Vorplatz (auch am Mac)
 - [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
 - [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
       stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle

@@ -896,9 +896,12 @@ const WIDE_CURB = 0.05;
 function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   g.strokeStyle = C(lk.fill); g.lineWidth = 0.6; g.lineJoin = 'round';     // Fuge zum Nachbarfeld schließen (Block 116, wie drawPath)
   g.beginPath(); [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
-  paintLook(L, lk, x, y, z, false, 0);
   const near = (dx, dy) => state.tiles.get((x + dx) + ',' + (y + dy));
   const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge; };
+  const pad = seamPad(L);                                                // zu breiten Nachbarn ~1 Gerätepunkt überlappen (Block 125c, PC)
+  if (pad) poly([[-0.5 - (wideAt(-1, 0) ? pad : 0), -0.5 - (wideAt(0, -1) ? pad : 0)], [0.5 + (wideAt(1, 0) ? pad : 0), -0.5 - (wideAt(0, -1) ? pad : 0)],
+    [0.5 + (wideAt(1, 0) ? pad : 0), 0.5 + (wideAt(0, 1) ? pad : 0)], [-0.5 - (wideAt(-1, 0) ? pad : 0), 0.5 + (wideAt(0, 1) ? pad : 0)]].map(L), C(lk.fill));
+  paintLook(L, lk, x, y, z, false, 0);
   const rect = (u0, u1, v0, v1) => poly([[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L), C(lk.edge));
   for (const [dx, dy] of DIRS) {
     if (wideAt(dx, dy)) continue;
@@ -918,6 +921,14 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
 }
+// Überlapp zum Nachbarfeld in Feldeinheiten: etwa 1 Gerätepunkt, wie weit auch rausgezoomt (Block 125c)
+function seamPad(L) {
+  const a = L([0, 0]), b = L([1, 0]), tr = g.getTransform ? g.getTransform() : null, ds = tr ? Math.hypot(tr.a, tr.b) : 1;
+  const px = Math.hypot(b[0] - a[0], b[1] - a[1]) * ds;                  // Gerätepunkte je Feld
+  return px > 0 ? Math.min(0.08, 1.2 / px) : 0;
+}
+// Punkte auf der Feldkante (|u| bzw. |v| = 0,5) um d nach außen – dort geht der Weg im Nachbarfeld weiter
+const padBorder = (sh, d) => d ? sh.map(([u, v]) => [u > 0.499 ? u + d : u < -0.499 ? u - d : u, v > 0.499 ? v + d : v < -0.499 ? v - d : v]) : sh;
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -937,8 +948,11 @@ function drawPath(cx, cy, z, x, y, t) {
   // Rand nur dort, wo das Stück nicht am Nachbarfeld weitergeht (sonst malt der Rand eine Linie über dessen Belag)
   const stubPolys = w => stubs.map(s => { const e = w > ROAD_W ? COURT_CURB : 0, q0 = s.q0 > -0.49 ? s.q0 - e : s.q0, q1 = s.q1 < 0.49 ? s.q1 + e : s.q1; return [[0, q0], [0.5, q0], [0.5, q1], [0, q1]].map(([a, bq]) => armUV(s.d, a, bq)); });
   const shapes = w => { const lf = lineFill(x, y, arms, w); return roadShapes(arms, t, w, quads, flares, !!lf.sides || !!(t && t.sq)).concat(lf, stubPolys(w)); };
+  // Kanten, an denen das Feld weitergeht, ~1 Gerätepunkt ins Nachbarfeld (Block 125c): am PC (Windows-Chrome, 100–125 %) ließ die
+  // Kantenglättung zweier Nachbarfelder einen Hauch Spalt – weit weg sah man auf glatten Plätzen jede Feldgrenze als Linie
+  const pad = seamPad(L);
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
-    for (const sh of shapes(w)) poly(sh.map(L), C(col));
+    for (const sh of shapes(w)) poly(padBorder(sh, pad).map(L), C(col));
   }
   // Fuge zwischen zwei Wegfeldern (Block 116): beide Kanten sind nur halb deckend, das Gras darunter schimmerte als grüner Saum
   // durch – die Fläche hauchdünn in Belagfarbe nachziehen, damit sich Nachbarfelder überlappen
@@ -948,7 +962,7 @@ function drawPath(cx, cy, z, x, y, t) {
     // Muster 2 % über die Feldkante (Block 125): die geglätteten Kanten zweier Nachbarfelder decken sich sonst nicht ganz, und der
     // helle Belag schimmert als feine Linie durch (Regenbogen); die Muster liegen im Weltraster, also deckungsgleich
     const grow = sh => sh.map(([u, v]) => [u * 1.02, v * 1.02]);
-    g.save(); clipTo(shapes(ROAD_W).map(grow), L); patSeam = true;
+    g.save(); clipTo(shapes(ROAD_W).map(sh => padBorder(grow(sh), pad)), L); patSeam = true;
     try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); }
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
