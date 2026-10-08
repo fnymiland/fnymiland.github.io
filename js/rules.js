@@ -1030,6 +1030,20 @@ function edgeRun(k) {
   while (todo.length) for (const v of ends(todo.pop())) for (const q of at.get(v) || []) if (!seen.has(q)) { seen.add(q); todo.push(q); }
   return [...seen];
 }
+// Neue Linie (Block 57b, Wunsch Nutzerin): bündig – außer sie hängt an einer Linie, die schon ausdrücklich eingestellt ist (dann
+// wie diese, sonst sähe ein Stück anders aus als der Rest). Vorher war neu immer „mit Grasstreifen“ (außer am Park), und an Ecken
+// blieb zwischen Hecke und Weg ein Graszwickel – jede Hecke musste einzeln auf bündig gestellt werden
+function newFlush(k) {
+  for (const q of edgeRun(k)) { const e = q !== k && state.edges.get(q); if (e && e.flush != null) return e.flush; }
+  return true;
+}
+// alle Linien der Insel bündig bzw. mit Grasstreifen (Knopf im Fenster einer Linie) – gibt zurück, wie viele sich geändert haben
+function setFlushAll(on) {
+  let n = 0;
+  for (const [q, e] of state.edges) { if (edgeFlush(q) !== on) n++; e.flush = on; }
+  groundVersion++; save();
+  return n;
+}
 function setFlush(k, on) {
   if (!state.edges.has(k)) return false;
   for (const q of edgeRun(k)) state.edges.get(q).flush = on;
@@ -1102,7 +1116,8 @@ function buildEdge(b, k) {
   if (old) { state.money += ITEMS[old.b].cost; for (const [r, n] of Object.entries(ITEMS[old.b].mat || {})) state.res[r] += n; }   // die alte Linie zurück (Block 84b)
   state.money -= d.cost; payMat(d.mat || {});
   const col = b === 'hecke' ? (bushColNew('hecke').col || (old && old.b === 'hecke' ? old.col : undefined)) : undefined;   // Buschfarbe (Block 89; alle Hecken: Block 126)
-  state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });   // Umfärben: Tor, Bogen, Bündig bleiben
+  state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });
+  if (!old) state.edges.get(k).flush = newFlush(k);                     // neue Linie: bündig (Block 57b)   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }
 function removeEdge(k) {

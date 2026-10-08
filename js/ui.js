@@ -1533,12 +1533,15 @@ function openGateInfo(k) {
     ${e.b === 'hecke' ? bushColHtml(e.col || 0, 'hecke', hedgeAll().filter(o => o !== e && (o.col || 0) !== (e.col || 0)).length) : ''}
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
-    <p class="muted">Gilt für die ganze zusammenhängende Linie.${e.flush == null ? ' Von selbst: bündig nur am Park.' : ''}</p>
+    ${(() => { const on = edgeFlush(k), n = [...state.edges.keys()].filter(q => edgeFlush(q) !== on).length;
+      return n ? `<div class="looks"><button class="look" data-flushall="1">${on ? '🧱' : '🌱'} Für alle anderen Linien übernehmen (${n} ${n === 1 ? 'Stück' : 'Stücke'})</button></div>` : ''; })()}
+    <p class="muted">Gilt für die ganze zusammenhängende Linie. Neue Linien sind von selbst bündig.</p>
     <div class="row"><button class="btn danger" id="p-del" aria-label="Entfernen">🗑️ +${fmt(refund)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-gate]')) b.onclick = () => undoable(() => { const v = b.dataset.gate; if (setGate(k, v === '1' ? true : v === 'offen' ? 'offen' : false)) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
+  for (const b of el.querySelectorAll('[data-flushall]')) b.onclick = () => undoable(() => { const n = setFlushAll(edgeFlush(k)); sfx('deco'); toast(`${n} ${n === 1 ? 'Stück' : 'Stücke'} jetzt ${edgeFlush(k) ? 'bündig' : 'mit Grasstreifen'}`); openGateInfo(k); });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;
   if (e.b === 'hecke') wireBushCol(el, { cur: e.col || 0, key: 'hecke', set: i => setCol(e, i), all: i => { const l = hedgeAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openGateInfo(k) });
@@ -2495,6 +2498,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-buendig', date: '8. Oktober', title: 'Wege bis an die Hecke', items: [
+    '🧱 <b>Neue Hecken, Zäune und Mauern sind bündig:</b> Der Weg läuft bis an die Linie – auch um Ecken bleibt kein Graszwickel mehr.',
+    '✨ <b>Alte Linien auf einmal umstellen:</b> Hecke antippen → „Bündig bis an die Linie“ → „Für alle anderen Linien übernehmen“.',
+  ] },
   { id: '2026-10-08-umfaerben', date: '8. Oktober', title: 'Wege auf einmal umfärben', items: [
     '🎨 <b>Ganzes Wegnetz umfärben:</b> Weg antippen → „Alle verbundenen“ → Muster und Farbe wählen. Kein Neuziehen mehr. ↶ macht es rückgängig.',
     '🔭 <b>Weit weg:</b> Große Platten und Schachbrett zeigen ihr Muster jetzt auch rausgezoomt.',

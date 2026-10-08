@@ -1766,3 +1766,11 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
       Bleiben (unsichtbar): localStorage-Schlüssel `kachelhausen_*`, `window.kachelhausen` – sonst wären gespeicherte Inseln weg.
       Alte geteilte Texte „Mein Kachelhausen-Freundescode“ werden weiter erkannt
+
+## Kleinigkeit: Wege bündig an neuen Hecken (Rückmeldung Nutzerin, Fnymiland OG, 08.10.2026)
+- [x] „Hecke um die Ecke ist rund, der Weg hört eher auf → Graskante; jedes Mal neu einstellen, bei manchen geht es nicht“. Ursache:
+      neue Linien standen auf „mit Grasstreifen“ (bündig nur am Park, Block 57) – jede Linie einzeln auf bündig stellen; „bis an den
+      Rand“ im Wegfenster gibt es nur an Wegenden, nicht an Ecken/Plätzen. Nachgestellt: L-Weg mit Hecke außen – Grasstreifen
+      lässt in der Ecke einen großen Zwickel, bündig nicht. Entscheidung Nutzer: neue Linien bündig (`newFlush`: wie eine schon
+      eingestellte Linie, an der sie hängt, sonst bündig), Knopf „Für alle anderen Linien übernehmen (N Stücke)“ (`setFlushAll`,
+      ↶), bestehende bleiben. In ihrer Welt: 280 Stücke mit einem Klick. „Das ist neu“: `2026-10-08-buendig`. Tests: zaun.test.js

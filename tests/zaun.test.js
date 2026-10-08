@@ -115,6 +115,31 @@ describe('Ecken und Wege', () => {
   });
 });
 
+describe('Bündig als Standard (Block 57b, Wunsch Nutzerin)', () => {
+  it('neue Linien sind bündig – an einer ausdrücklich eingestellten Linie wie diese; alte ohne Angabe bleiben', () => {
+    line('hecke', { x: 5, y: 5 }, { x: 5, y: 7 });
+    expect(game("[...state.edges.values()].every(e => e.flush === true)")).toBe(true);
+    game("state.edges.clear(); state.edges.set('b9,5', { b: 'hecke', style: 'hoch', flush: false }); state.edges.set('b9,4', { b: 'hecke', style: 'hoch' })");
+    game("chosenStyle.hecke = 'hoch'; buildEdge('hecke', 'b9,6')");                      // hängt an der Linie mit „Grasstreifen“
+    expect(game("state.edges.get('b9,6').flush")).toBe(false);
+    expect(game("state.edges.get('b9,4').flush")).toBe(undefined);                     // bestehende ohne Angabe: unverändert
+  });
+  it('Weg um die Ecke an neuer Hecke: Belag bis an die Linie, kein Graszwickel', () => {
+    game("for (let x = 3; x <= 6; x++) state.tiles.set(x + ',6', { b: 'weg', lvl: 1, style: 'sand' }); for (let y = 7; y <= 9; y++) state.tiles.set('6,' + y, { b: 'weg', lvl: 1, style: 'sand' })");
+    for (let x = 3; x <= 6; x++) game(`chosenStyle.hecke = 'hoch'; buildEdge('hecke', edgeBetween(${x}, 6, ${x}, 5))`);
+    for (let y = 6; y <= 9; y++) game(`buildEdge('hecke', edgeBetween(6, ${y}, 7, ${y}))`);
+    expect(game("lineFill(6, 6, pathArms(6, 6), ROAD_W).length")).toBeGreaterThan(0);   // Eckfeld: füllt zur Hecke
+  });
+  it('Knopf „Für alle anderen Linien übernehmen“: alle Stücke gleich, ↶ macht es rückgängig', () => {
+    game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch', flush: true }); state.edges.set('b12,3', { b: 'zaun', style: 'latten' }); state.edges.set('a14,3', { b: 'mauer', style: 'backstein', flush: false }); resetUndo(); openGateInfo('a6,6')");
+    expect(game("document.querySelector('[data-flushall]').textContent")).toMatch(/2 Stücke/);
+    game("document.querySelector('[data-flushall]').click()");
+    expect(game("[...state.edges.keys()].every(q => edgeFlush(q))")).toBe(true);
+    game('undo()');
+    expect(game("[state.edges.get('b12,3').flush, state.edges.get('a14,3').flush]")).toEqual([undefined, false]);
+  });
+});
+
 describe('Runde Ecken', () => {
   it('jede L-Ecke derselben Art ist rund – mit Weg innen folgt der Weg, mit Weg außen füllt der Belag; andere Art: eckig', () => {
     game("state.tiles.set('6,6', { b: 'weg', lvl: 1, style: 'sand' }); state.edges.set('a6,6', { b: 'hecke', style: 'hoch' }); state.edges.set('b6,6', { b: 'hecke', style: 'hoch' })");
@@ -150,7 +175,7 @@ describe('Abreißen, Speichern, alte Stände', () => {
   it('Speichern und Laden behält Art und Stil', () => {
     line('mauer', { x: 5, y: 5 }, { x: 5, y: 7 });
     const s = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
-    expect(new Map(s.edges).get('b5,5')).toEqual({ b: 'mauer', style: 'backstein' });
+    expect(new Map(s.edges).get('b5,5')).toEqual({ b: 'mauer', style: 'backstein', flush: true });   // neu: bündig (Block 57b)
   });
 
   it('alte Hecken-Ecken (kleine Deko) werden Büsche an derselben Stelle', () => {
