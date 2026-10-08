@@ -933,4 +933,17 @@ body.visiting #net-btn { display: none !important; }
 .cat::after { content: ' ▾'; font-size: 10px; opacity: .7; }
 .cat.has-tool:not(.active) { box-shadow: 0 3px 0 var(--shadow), inset 0 0 0 2px #e0c060; }   /* hier steckt das gewählte Ding */
 #toolbar .cats#cats { margin-bottom: 0; }
+/* Nutzer, 08.10.2026: alle Knöpfe der Reihe gleich hoch (Windows-Emojis machten die Bereiche höher), Symbole gleich groß;
+   Gewähltes so deutlich wie ein offener Bereich – dunkel statt gelb auf Creme */
+#cats .quick, #cats .cat { height: 34px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+#cats .quick { width: 38px; font-size: 17px; }
+#cats .cat { padding-top: 0; padding-bottom: 0; }
+#cats .cat .ic { font-size: 17px; line-height: 1; }
+#cats .quick.active { background: var(--brown); color: var(--cream); box-shadow: 0 3px 0 #4a3526, 0 0 0 2px var(--yellow); }
+#sheet .tool.active { background: var(--yellow); box-shadow: 0 3px 0 #4a3526, inset 0 0 0 3px var(--brown); }   /* gewählte Kachel: dunkler Rahmen */
+/* schmalere Fenster (iPad hochkant 768 px): Reihe muss trotzdem passen – erst ▾ weg und schmaler, dann nur Symbole außer dem offenen */
+@media (max-width: 900px) { .cat::after { content: none; } }
+@media (min-width: 601px) and (max-width: 900px) { #cats { gap: 5px; } #cats .cat { padding-left: 8px; padding-right: 8px; } }
+@media (max-width: 740px) { #cats .cat:not(.active) .tx { display: none; } }
+@media (max-width: 600px) { #cats .quick { width: 29px; font-size: 16px; } #cats .cat { padding: 0 6px; } #cats .cat .ic { font-size: 16px; } }   /* Handy: alles in 375 px */
 

@@ -1958,4 +1958,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       bei 375 px nachgemessen: Reihe 319/319 px).
 - [x] Nutzer: „die Suchfunktion können wir wegnehmen, die nutzt eh nie einer“ – 🔍 und Suchfeld entfernt (`searchQ`, `searchHits`).
       `searchNorm` bleibt fürs Nachschlagebuch. Tests: leiste, zuletzt.
+- [x] Nutzer: „gewählte Kacheln eindeutiger; Hand/Löschen kaum erkennbar; am PC alle Knöpfe unterschiedlich im Maßstab“ –
+      alle Knöpfe der unteren Reihe 34 px hoch, Symbole gleich groß. Gewähltes Werkzeug dunkel wie ein offener Bereich, gewählte
+      Kachel im Feld mit dunklem Rahmen. Die Reihe passt bei 375/640/768/1024 px (nachgemessen); unter 900 px ohne ▾, unter 740 px
+      nur der offene Bereich mit Namen.
 
