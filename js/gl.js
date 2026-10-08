@@ -695,7 +695,10 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
 // Ende von render, GLB_MS je Bild), dann nur umgeschaltet (glCacheStart → glBgSwapIn). Vorher kostete jedes neue Standbild ein
 // ganzes teures Bild (Mac ~35 ms, PC mehr) – beim Verschieben alle paar Bildschirmbreiten, sonst alle 8 s
 const GLB = { st: 'idle', bad: false, gpaint: 0, retry: false };                                  // st: idle | run | done
-const GLB_MS = 4, GLB_FROM = 0.3;                                         // ms je Bild; Start ab 30 % des Rands
+const GLB_MS = 4, GLB_FROM = 0.15;                                        // ms je Bild; Start ab 15 % des Rands (Block 125c: vorher 30 % –
+// schnelles Ziehen erreichte auf dem iPad den Rand, bevor das neue Standbild fertig war → alles auf einmal, Ruckler mitten im Ziehen)
+// Je näher am Rand (Anteil r von 0,9 M), desto mehr Zeit je Bild: bis 3× GLB_MS – lieber etwas langsamer als ein Bild mit 100 ms
+const glBgBudget = () => { if (!GLS.cam) return GLB_MS; const r = Math.max(Math.abs(GLS.cam.x - cam.x), Math.abs(GLS.cam.y - cam.y)) * cam.z / (GLS.M * 0.9); return GLB_MS * (1 + 2 * Math.max(0, Math.min(1, (r - 0.4) / 0.5))); };
 function glBgStart(key, z, now, dx, dy) {
   // etwas in Bewegungsrichtung vorausgreifen (dx/dy: wie weit das Bild schon vom alten Standbild weg ist)
   const lead = 0.6, cx = cam.x - dx / z * lead, cy = cam.y - dy / z * lead;
@@ -704,7 +707,7 @@ function glBgStart(key, z, now, dx, dy) {
 }
 // ein Stück aufnehmen: Zustand des Bilds beiseite (Liste, Kamera, Größe, Lichter, Symbole), Hintergrund-Zustand einsetzen, Felder bis GLB_MS
 function glBgStep(z, now, tileA, icons, labels, B = GLB) {
-  const t0 = performance.now(), miss0 = SPRITE_STATS.miss + SPRITE_STATS.nmiss;
+  const t0 = performance.now(), miss0 = SPRITE_STATS.miss + SPRITE_STATS.nmiss, ms = B === GLB ? glBgBudget() : GLB_MS;   // vor dem Tausch der Kamera
   GL.bgB = B;
   const keep = { recs: GL.recs, cam, W, H, FOG, g, gc: groundCached, tiles: GLS.tiles, dynWhy: GLS.dynWhy, warm: nightWarm, cells: glowCells, stats: { ...GL.stats },
     glows: glows.splice(0), pics: nightPics.splice(0), panes: nightPanes.splice(0), seen: [...nightSeen], icons: icons.splice(0), labels: labels.splice(0), am: afterMovers.splice(0) };
@@ -730,7 +733,7 @@ function glBgStep(z, now, tileA, icons, labels, B = GLB) {
       B.slist = GL.recs.slice(0, B.gEnd); B.groundEnd = B.gEnd; for (const r of B.slist) { B.srcs.add(r.src); B.pend.push(r); }
     }
     const vis = B.V.visible;
-    while (!ground && B.i >= 0 && B.i < vis.length && performance.now() - t0 < GLB_MS) {   // Boden allein in seinem Bild
+    while (!ground && B.i >= 0 && B.i < vis.length && performance.now() - t0 < ms) {   // Boden allein in seinem Bild
       const i = B.i, x = vis[i], y = vis[i + 1];
       glRecTile(i >> 2, x, y, icons.length, labels.length, true);
       tileA(x, y, vis[i + 2], vis[i + 3]);

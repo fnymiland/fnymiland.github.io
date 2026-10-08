@@ -237,11 +237,52 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   if (bg && f < 1) {
     f = Math.round(f * 32) / 32;                                         // Stufen: wenige Mischfarben im Zwischenspeicher
     const B = C(bg);
-    return patternDraw(L, kind, x, y, z, col && patMix(B, col, f), cols && cols.map(c => patMix(bg, c, f)), ext, box);
+    col = col && patMix(B, col, f); cols = cols && cols.map(c => patMix(bg, c, f));
+    if (patTileFill(L, kind, x, y, z, col, C(bg), ext, box)) return;
+    return patternDraw(L, kind, x, y, z, col, cols, ext, box);
   }
+  if (bg && patTileFill(L, kind, x, y, z, col, C(bg), ext, box)) return;
   const a0 = g.globalAlpha;
   g.globalAlpha = a0 * f;
   try { patternDraw(L, kind, x, y, z, col, cols, ext, box); } finally { g.globalAlpha = a0; }
+}
+// Muster als Kachelbild (Block 125c, Ruckeln am Freizeitpark): Linienmuster mit festem Weltraster (Wiederholung P Felder) einmal je
+// Farbe und Größe in ein kleines Bild malen – mit der Belagfarbe als Grund, also deckend – und als Füllmuster legen, statt je Feld
+// hunderte Striche (Fischgrät ~300). Deckend heißt auch: doppelt gemalte Ränder sehen gleich aus. Das Raster der Iso-Ansicht
+// wiederholt sich auf dem Bildschirm achsenparallel (2aP × 2bP), daher ein gerades Rechteck. Nur für die übliche Feldabbildung L.
+const PAT_TILE = { tiles: 0.5, big: 0.5, setts: 0.5, thirds: 1, checker: 0.5, herring2: 0.5, herring3: 2, basket: 0.5, diag: 0.5, stack: 0.5, slabs: 0.5, bricks: 1, herring: 0.5 };
+const patTiles = new Map();
+function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
+  const P = PAT_TILE[kind];
+  if (!P || !col || typeof col !== 'string' || col[0] !== '#' || !Number.isInteger(x) || !Number.isInteger(y) || typeof g.createPattern !== 'function') return false;
+  const O = L([0, 0]), U = L([1, 0]), V = L([0, 1]), a = U[0] - O[0], b = U[1] - O[1], T = L([0.37, 0.61]);
+  if (!(a > 0.5 && b > 0.25) || Math.abs(V[0] - O[0] + a) > 1e-6 * a || Math.abs(V[1] - O[1] - b) > 1e-6 * b
+    || Math.abs(T[0] - (O[0] + 0.37 * a - 0.61 * a)) > 0.01 || Math.abs(T[1] - (O[1] + 0.98 * b)) > 0.01) return false;   // nur affin, ohne Drehung
+  const tr = g.getTransform ? g.getTransform() : null, ds = tr ? Math.hypot(tr.a, tr.b) : 1;
+  const Wt = Math.max(4, Math.round(2 * P * a * ds)), Ht = Math.max(4, Math.round(2 * P * b * ds));
+  if (Wt * Ht > 600 * 600) return false;                                 // ganz nah: Striche sind dann ohnehin wenige je Bildpunkt
+  const key = kind + col + bg + Wt + ',' + Ht;
+  let e = patTiles.get(key);
+  if (!e) {
+    const c = document.createElement('canvas'); c.width = Wt; c.height = Ht;
+    const X = c.getContext('2d');
+    if (!X) return false;
+    X.fillStyle = bg; X.fillRect(0, 0, Wt, Ht);
+    const sx = Wt / (2 * P), sy = Ht / (2 * P), g0 = g, ps = patSeam;
+    g = X; patSeam = false;                                              // Feld (0, 0): Bildpunkt (0, 0) = Weltpunkt (−0,5, −0,5)
+    try { patternDraw(([u, v]) => [(u - v) * sx, (u + v + 1) * sy], kind, 0, 0, z * (sx / a + sy / b) / 2, col, null, 2 * P + 0.6); }   // Strichbreite: z in Bildpunkten der Kachel
+    finally { g = g0; patSeam = ps; }
+    const pat = g.createPattern(c, 'repeat');
+    if (!pat || typeof pat.setTransform !== 'function') return false;
+    if (patTiles.size > 200) patTiles.clear();
+    e = { pat }; patTiles.set(key, e);
+  }
+  const A = L([-0.5 - x, -0.5 - y]);
+  e.pat.setTransform(new DOMMatrix([2 * P * a / Wt, 0, 0, 2 * P * b / Ht, A[0], A[1]]));
+  const E = 0.55 + ext, [u0, u1, v0, v1] = box || [-E, E, -E, E];
+  g.fillStyle = e.pat;
+  g.beginPath(); [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.fill();
+  return true;
 }
 function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const R = 0.55, E = R + ext;
@@ -250,16 +291,22 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   if (kind === 'stones' || kind === 'dots') {
     // Raster über die ganze Insel (Block 100): Steine auf der Feldkante zeichnen beide Felder gleich – sonst bleiben an
     // jeder Kante angeschnittene halbe Steine stehen, die auf breiten Wegen wie Striche aussehen
-    const step = kind === 'stones' ? 0.11 : 0.09, M = R + ext;
+    // je Farbe ein Pfad, ein fill (Block 125c: vorher je Punkt – ~80 Füllungen je Kiesfeld)
+    const step = kind === 'stones' ? 0.11 : 0.09, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z, ry = (kind === 'stones' ? 1.6 : 0.9) * z;
     const gi0 = Math.ceil((x - M) / step), gi1 = Math.floor((x + M) / step), gj0 = Math.ceil((y - M) / step), gj1 = Math.floor((y + M) / step);
-    for (let i = gi0; i <= gi1; i++) for (let j = gj0; j <= gj1; j++) {
-      const u = i * step - x, v = j * step - y;
-      if (out(u, v)) continue;
-      const h = hash(i, j, 333);
-      if (kind === 'dots' && h > 0.45) continue;
-      const q = L([u + (h - 0.5) * 0.04, v + (hash(i, j, 334) - 0.5) * 0.04]);
-      g.fillStyle = cols ? cols[Math.floor(h * 97) % cols.length] : col;
-      g.beginPath(); g.ellipse(q[0], q[1], (kind === 'stones' ? 2.6 : 1.3) * z, (kind === 'stones' ? 1.6 : 0.9) * z, 0, 0, Math.PI * 2); g.fill();
+    const nc = cols ? cols.length : 1;
+    for (let k = 0; k < nc; k++) {
+      g.beginPath();
+      for (let i = gi0; i <= gi1; i++) for (let j = gj0; j <= gj1; j++) {
+        const u = i * step - x, v = j * step - y;
+        if (out(u, v)) continue;
+        const h = hash(i, j, 333);
+        if (kind === 'dots' && h > 0.45) continue;
+        if (cols && Math.floor(h * 97) % nc !== k) continue;
+        const q = L([u + (h - 0.5) * 0.04, v + (hash(i, j, 334) - 0.5) * 0.04]);
+        g.moveTo(q[0] + rx, q[1]); g.ellipse(q[0], q[1], rx, ry, 0, 0, Math.PI * 2);
+      }
+      g.fillStyle = cols ? cols[k] : col; g.fill();
     }
     return;
   }

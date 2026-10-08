@@ -1502,6 +1502,12 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] 125c: Weit weg sah man jedes Feld als Kachel (Rückmeldung Nutzer): die Fuge auf der Feldkante zeichneten beide Nachbarn,
       halb durchsichtig doppelt = dunkler (auch die Kantenglättung addiert sich). Jetzt zeichnet die hintere Kante nur das
       Nachbarfeld (`patSeam`), und Muster blassen per Farbmischung mit der Belagfarbe aus statt per Deckkraft (`pattern(…, bg)`)
+- [x] 125c: Ruckeln am Freizeitpark (Welt „Fnymiland OG“, Rückmeldung Nutzer): 142 Felder Fischgrät, nah (Zoom > 1,3) jedes Bild
+      live gezeichnet, ~300 Striche je Feld. Gemessen (Mac, iPad-Größe): Wege 82 von 146 ms je Bild (mit Rastern), reine Rechenzeit
+      Park Zoom 1: 20 → 6 ms, Zoom 1,5: 25 → 13 ms. Lösung: Linienmuster mit festem Weltraster als Kachelbild (`patTileFill`,
+      `PAT_TILE`, deckend mit Belagfarbe, CanvasPattern), Kies/Steine je Farbe ein fill. Bildvergleich alt/neu: < 0,01 % Bildpunkte
+      deutlich anders. Ruckler beim Ziehen weit weg: Standbild im Hintergrund war zu spät fertig (dann alles auf einmal, Mac 34–44 ms)
+      → Start ab 15 % statt 30 % des Rands, Zeit je Bild bis 3× GLB_MS, je näher am Rand (`glBgBudget`)
 - [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
 - [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
       stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle

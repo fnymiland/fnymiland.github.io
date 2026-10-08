@@ -400,6 +400,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     nur die). Neue Muster in `pattern()` im Weltraster (über Feldgrenzen durchgehend), feine Muster blassen weit weg aus (`patternFade`).
     Wer `pattern()` für Wegfelder im Raster ruft, gibt die Belagfarbe mit (`bg`: Ausblassen per Farbmischung) und setzt `patSeam`
     (Fuge auf der hinteren Feldkante zeichnet nur das Nachbarfeld) – sonst ist sie doppelt gemalt dunkler und man sieht jedes Feld.
+    Neue Linienmuster mit festem Weltraster in `PAT_TILE` eintragen (Wiederholung in Feldern, muss 1 teilen oder ein Vielfaches sein):
+    dann malt `patTileFill` sie als Kachelbild statt Strich für Strich (Ruckeln bei vielen Feldern). Zufallsmuster (hash) nicht.
+    Messen ohne `getImageData` auf der Hauptleinwand: Chrome schaltet sie danach auf Zeichnen ohne Grafikkarte um (falsche Zahlen).
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
     Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird
     jedes Bild neu gemalt – teuer. Darum: was sich nur selten ändert (Uhren, Fähnchen), in den Schlüssel von `glCacheStart`, nicht
