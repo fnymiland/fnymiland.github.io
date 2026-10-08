@@ -1677,6 +1677,12 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       und Tippen gleich). „Einfahrt von unten links nach oben rechts, Bahn fährt raus und bleibt stehen – glitcht“ (Schnellzug mit
       allen Wagen): kein Flackern (Bilder verglichen), aber die Rinne war mit 22 zu flach – die Wagen ragten heraus und schienen
       zu schweben. Jetzt 32 tief, Tunnelmund mit Bogen unten an der Wand. Bildstreifen tools/vorschau/ein-halt4.png. Test: ubahn
+- [x] Nutzer: „Zäune um die Kurve sehen echt weird aus“ – erst fälschlich allen Zäunen die Rundung genommen (Nutzer: „das haben
+      sauviele Leute auf ihrer Insel, du kannst nicht alle zwingen“) → sofort zurückgenommen. LEHRE: nie das Aussehen bestehender
+      Inseln für alle ändern; neue Wahl mit dem bisherigen Aussehen als Standard. Jetzt: (1) Rundung schöner – Latten/Stäbe im
+      Bogen auch an den Übergängen (keine doppelte Lücke), in der Seitenansicht fast deckende Latten fallen weg (`spots` in
+      drawFence). (2) Neue Wahl „Ecke rund / eckig“ für Hecke, Zaun, Mauer (`edgeShape.sq` in der Leiste, `e.sq` je Linie, im
+      Fenster „Ecken“ für die ganze Linie, `setEdgeSq`); Standard rund, alte Linien ohne Angabe bleiben rund. Tests: buschfarben, zaun
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

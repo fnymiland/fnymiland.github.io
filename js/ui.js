@@ -536,8 +536,10 @@ function edgeStyleBar(bar, t) {
   const C0 = BUSH_COLS[col] || BUSH_COLS[0];
   bar.innerHTML = pop
     + `<button class="style-chip on wsel${edgePop === 'form' ? ' open' : ''}" data-epop="form" aria-expanded="${edgePop === 'form'}" aria-label="Form: ${st.name} – ändern"><i style="background:${edgeStyleBg(t, st)}"></i><span>${st.name} ▾</span></button>`
-    + (hecke ? `<button class="style-chip on wsel${edgePop === 'col' ? ' open' : ''}" data-epop="col" aria-expanded="${edgePop === 'col'}" aria-label="Farbe: ${C0.name} – ändern"><i style="background:${C0.c[0]}"></i><span>${C0.name} ▾</span></button>` : '');
+    + (hecke ? `<button class="style-chip on wsel${edgePop === 'col' ? ' open' : ''}" data-epop="col" aria-expanded="${edgePop === 'col'}" aria-label="Farbe: ${C0.name} – ändern"><i style="background:${C0.c[0]}"></i><span>${C0.name} ▾</span></button>` : '')
+    + `<span class="style-sep"></span><button class="style-chip size-chip shape-chip${edgeShape.sq ? ' on' : ''}" data-esq="1" aria-pressed="${edgeShape.sq}" title="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'} – tippen zum Wechseln" aria-label="${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}"><i>${edgeShape.sq ? '⌐' : '⌒'}</i><span>${edgeShape.sq ? 'Ecke eckig' : 'Ecke rund'}</span></button>`;
   for (const b of bar.querySelectorAll('[data-epop]')) b.onclick = () => { edgePop = edgePop === b.dataset.epop ? null : b.dataset.epop; sfx('deco'); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-esq]')) b.onclick = () => { edgeShape.sq = !edgeShape.sq; edgePop = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; edgePop = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-bchip]')) b.onclick = () => { state.paintNew.hecke = { col: +b.dataset.bchip }; edgePop = null; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
   for (const b of bar.querySelectorAll('[data-emore]')) b.onclick = () => { const k = b.dataset.emore; edgePop = null; openResearch('design'); artJump(k === 'col' ? 'Büsche' : EDGE_GROUP[t]); };
@@ -1683,6 +1685,8 @@ function openGateInfo(k) {
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
     : '<p class="muted">Ein Stück zwischen zwei Feldern. Wo ein Weg auf beiden Seiten liegt, wird es ein Durchgang – oder du setzt hier ein Tor.</p>'}
     ${edgeLookHtml(k, e)}
+    <div class="label">Ecken</div>
+    <div class="looks"><button class="look${e.sq ? '' : ' on'}" data-esqp="0">⌒ Rund</button><button class="look${e.sq ? ' on' : ''}" data-esqp="1">⌐ Eckig</button></div>
     <div class="label">Wege an dieser Linie</div>
     <div class="looks"><button class="look${edgeFlush(k) ? ' on' : ''}" data-flush="1">🧱 Bündig bis an die Linie</button><button class="look${edgeFlush(k) ? '' : ' on'}" data-flush="0">🌱 Mit Grasstreifen</button></div>
     ${(() => { const on = edgeFlush(k), n = [...state.edges.keys()].filter(q => edgeFlush(q) !== on).length;
@@ -1693,6 +1697,7 @@ function openGateInfo(k) {
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-gate]')) b.onclick = () => undoable(() => { const v = b.dataset.gate; if (setGate(k, v === '1' ? true : v === 'offen' ? 'offen' : false)) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
+  for (const b of el.querySelectorAll('[data-esqp]')) b.onclick = () => undoable(() => { if (setEdgeSq(k, b.dataset.esqp === '1')) { sfx('deco'); openGateInfo(k); } });
   for (const b of el.querySelectorAll('[data-flushall]')) b.onclick = () => undoable(() => { const n = setFlushAll(edgeFlush(k)); sfx('deco'); toast(`${n} ${n === 1 ? 'Stück' : 'Stücke'} jetzt ${edgeFlush(k) ? 'bündig' : 'mit Grasstreifen'}`); openGateInfo(k); });
   $('p-del').onclick = () => { closePanel(); undoable(() => { if (removeEdge(k)) { sfx('dig'); recalc(); save(); } }); };
   $('p-close').onclick = closePanel;

@@ -132,7 +132,7 @@ function serialize() {
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
-    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), cam: state.cam, last: state.last, muted: state.muted,
+    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -309,7 +309,7 @@ function parseSave(d) {
     owned: new Set(d.owned), tiles: new Map(d.tiles), terra: new Map(d.terra || []), techs: new Set(d.techs.filter(id => id in TECH_BY_ID)),   // alte Forschung (Farben, Wege) ist jetzt Kunstakademie
     // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle
     decos: new Map((d.decos || []).map(([k, ds]) => [k, [...(ds || []), ...newSlots()].slice(0, SLOTS).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
-    edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style, ...(Number.isInteger(e.col) && BUSH_COLS[e.col] ? { col: e.col } : {}), ...(ARCHES[e.arch] ? { arch: e.arch } : {}), ...(typeof e.flush === 'boolean' ? { flush: e.flush } : {}), ...(e.gate === true || e.gate === 'offen' ? { gate: e.gate } : {}) }])),
+    edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style, ...(Number.isInteger(e.col) && BUSH_COLS[e.col] ? { col: e.col } : {}), ...(ARCHES[e.arch] ? { arch: e.arch } : {}), ...(typeof e.flush === 'boolean' ? { flush: e.flush } : {}), ...(e.gate === true || e.gate === 'offen' ? { gate: e.gate } : {}), ...(e.sq === true ? { sq: true } : {}) }])),
     tunnels: new Map((Array.isArray(d.tunnels) ? d.tunnels : []).filter(([k]) => /^-?\d+,-?\d+$/.test(k)).map(([k]) => [k, {}])),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };

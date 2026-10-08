@@ -108,7 +108,7 @@ describe('Leiste für Hecke, Zaun, Mauer (Nutzer: „dasselbe Aufklappmenü wie 
     game('for (const d of DESIGN) state.design.add(d.id)');
     for (const t of ['zaun', 'mauer', 'hecke']) {
       game(`edgePop = null; setTool('${t}')`);
-      const chips = game("[...document.querySelectorAll('#style-bar > .style-chip')].map(b => b.dataset.epop)");
+      const chips = game("[...document.querySelectorAll('#style-bar > .style-chip[data-epop]')].map(b => b.dataset.epop)");
       expect(chips, t).toEqual(t === 'hecke' ? ['form', 'col'] : ['form']);
       expect(game("document.querySelectorAll('#style-bar .wpop').length")).toBe(0);
       game("document.querySelector('#style-bar [data-epop=\"form\"]').click()");
@@ -122,3 +122,24 @@ describe('Leiste für Hecke, Zaun, Mauer (Nutzer: „dasselbe Aufklappmenü wie 
     game("setTool('look')");
   });
 });
+
+describe('Ecke rund oder eckig (Nutzer: „es gibt eine Option, du kannst nicht alle zwingen“)', () => {
+  it('Standard rund (auch alte Linien ohne Angabe); neue Linien nach der Wahl in der Leiste; im Fenster für die ganze Linie umstellbar; gespeichert', () => {
+    game("state.edges.clear(); edgeShape.sq = false; state.edges.set('a12,12', { b: 'zaun', style: 'latten' }); state.edges.set('b12,12', { b: 'zaun', style: 'latten' })");
+    expect(game('!!roundCorner(12, 12)')).toBe(true);                              // alte Insel: rund wie immer
+    game("setTool('zaun')");
+    game("document.querySelector('#style-bar [data-esq]').click()");
+    expect(game('edgeShape.sq')).toBe(true);
+    game("buildEdge('zaun', 'a20,12'); buildEdge('zaun', 'b20,12')");
+    expect(game("[state.edges.get('a20,12').sq, !!roundCorner(20, 12)]")).toEqual([true, false]);
+    game("openGateInfo('a20,12'); document.querySelector('#panel [data-esqp=\"0\"]').click()");
+    expect(game('!!roundCorner(20, 12)')).toBe(true);
+    game("openGateInfo('a12,12'); document.querySelector('#panel [data-esqp=\"1\"]').click(); closePanel()");
+    expect(game('!!roundCorner(12, 12)')).toBe(false);
+    const d = game('JSON.parse(JSON.stringify(serialize()))');
+    game(`adoptState(parseSave(${JSON.stringify(d)}))`);
+    expect(game("state.edges.get('a12,12').sq")).toBe(true);
+    game("edgeShape.sq = false; setTool('look')");
+  });
+});
+

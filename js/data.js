@@ -1051,6 +1051,7 @@ function wegComposite(id) {
 const isWegStyle = id => !!(wegComposite(id) || STYLES.weg.some(st => st.id === id));
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
 const wegShape = { wide: false, sq: false };      // Form neuer Wege (Block 77): ganz breit, eckige Kurven – Schalter in der Musterleiste
+const edgeShape = { sq: false };                   // Ecken neuer Hecken/Zäune/Mauern (Nutzer, 09.10.2026): rund (Standard) oder eckig
 
 
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',

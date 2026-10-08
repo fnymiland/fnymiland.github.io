@@ -154,7 +154,7 @@ function drawArc(rc, look, z) {
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
   if (rc.b === 'hecke' && look.bushes) { bushRow(roundArc(rc, 12), look, z, rc.ka.length, 0, 'E' + rc.ka); return; }   // (Wilmerhecke rundet nicht, 86e)   // Wilmerhecke im Bogen
-  if (rc.b === 'zaun') { const ap = roundArc(rc, 12); drawFence({ pts: ap }, look, rc.style, false, z, [false, false]); fencePost(ap[6], look, rc.style, z); if (look.lights) bulbsAlong(ap, look.h + 0.6, z, 'E' + rc.ka); return; }   // ein Pfosten mitten im Bogen
+  if (rc.b === 'zaun') { const ap = roundArc(rc, 12); drawFence({ pts: ap, arc: ap[6] }, look, rc.style, false, z, [false, false]); fencePost(ap[6], look, rc.style, z); if (look.lights) bulbsAlong(ap, look.h + 0.6, z, 'E' + rc.ka); return; }   // ein Pfosten mitten im Bogen
   const n = 10, pts = roundArc(rc, n), c = [rc.V[0] + rc.du * ROUND_R, rc.V[1] + rc.dv * ROUND_R], w = look.w, h = look.h;
   const off = (p, s) => { const d = [p[0] - c[0], p[1] - c[1]], L = Math.hypot(d[0], d[1]) || 1; return [p[0] + d[0] / L * w * s, p[1] + d[1] / L * w * s]; };
   const outer = pts.map(p => off(p, 1)), inner = pts.map(p => off(p, -1)), P = (pt, up) => edgeS(pt[0], pt[1], up, z), walls = [];
@@ -490,6 +490,18 @@ function drawFence(E, look, style, gate, z, posts = [true, true]) {
   if (posts[0]) post(pts[0]);
   if (posts[1]) post(pts[pts.length - 1]);
   const n = Math.max(2, Math.round(total * 7));                  // Latten/Stäbe je Länge wie beim geraden Stück
+  // Stellen der Latten: gerade Stücke ohne die Enden (dort Pfosten/Bogen), im Bogen MIT den Enden – sonst klafft am Übergang
+  // eine doppelte Lücke. Was auf dem Bildschirm fast genau über einer anderen Latte oder dem Bogenpfosten stünde (seitliche
+  // Ecke, man sieht den Bogen von der Seite), fällt weg (Nutzer: „um die Kurve sieht es weird aus“)
+  const spots = cnt => {
+    const out = [], xs = E.arc ? [S(E.arc, 0)[0]] : [];
+    for (let i = E.arc ? 0 : 1; i <= (E.arc ? cnt : cnt - 1); i++) {
+      const t = i / cnt, x = at(t, 0)[0];
+      if (E.arc && xs.some(o => Math.abs(o - x) < 1.4 * z)) continue;
+      xs.push(x); out.push(t);
+    }
+    return out;
+  };
   if (style === 'weide') {
     panel(1, h);
     for (let i = 0; i < 4; i++) rail(1.5 + i * (h - 2) / 3, shade(col, -0.2), 0.5);
@@ -503,21 +515,21 @@ function drawFence(E, look, style, gate, z, posts = [true, true]) {
   }
   if (style === 'gitter') {
     rail(h, col, 0.8); rail(1, col, 0.8);
-    for (let i = 1; i < Math.round(n * 1.4); i++) { const t = i / Math.round(n * 1.4); line(at(t, 1), at(t, h), col, 0.35); }
+    for (const t of spots(Math.round(n * 1.4))) line(at(t, 1), at(t, h), col, 0.35);
     for (const f of [h * 0.4, h * 0.7]) rail(f, col, 0.35);
     return;
   }
   if (style === 'eisen') {
     rail(h - 1.5, col, 0.7); rail(2, col, 0.7);
     const m = Math.round(n * 8 / 7);
-    for (let i = 1; i < m; i++) { const t = i / m; line(at(t, 0.5), at(t, h), col, 0.6); const [x, y] = at(t, h); poly([[x - 0.9 * z, y + 0.6 * z], [x + 0.9 * z, y + 0.6 * z], [x, y - 1.6 * z]], C(col)); }
+    for (const t of spots(m)) { line(at(t, 0.5), at(t, h), col, 0.6); const [x, y] = at(t, h); poly([[x - 0.9 * z, y + 0.6 * z], [x + 0.9 * z, y + 0.6 * z], [x, y - 1.6 * z]], C(col)); }
     return;
   }
   // Holz (auch mit Lichterkette): zwei Querlatten, davor die Latten (Staketen spitz und weiß)
   rail(h * 0.35, shade(col, -0.12), 1);
   rail(h * 0.75, shade(col, -0.12), 1);
-  for (let i = 1; i < n; i++) {
-    const t = i / n, [x0, y0] = at(t, 0.3), [x1, y1] = at(t, style === 'staketen' ? h - 1 : h - 0.5);
+  for (const t of spots(n)) {
+    const [x0, y0] = at(t, 0.3), [x1, y1] = at(t, style === 'staketen' ? h - 1 : h - 0.5);
     line([x0, y0], [x1, y1], col, 1.3);
     if (style === 'staketen') poly([[x1 - 0.65 * z, y1], [x1 + 0.65 * z, y1], [x1, y1 - 1.6 * z]], C(col));
   }

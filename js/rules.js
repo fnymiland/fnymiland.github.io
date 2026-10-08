@@ -1109,6 +1109,13 @@ function setFlushAll(on) {
   groundVersion++; save();
   return n;
 }
+// Ecke rund/eckig für die ganze zusammenhängende Linie (wie „bündig“)
+function setEdgeSq(k, sq) {
+  if (!state.edges.has(k)) return false;
+  for (const q of edgeRun(k)) { const e = state.edges.get(q); if (sq) e.sq = true; else delete e.sq; }
+  groundVersion++; save();
+  return true;
+}
 function setFlush(k, on) {
   if (!state.edges.has(k)) return false;
   for (const q of edgeRun(k)) state.edges.get(q).flush = on;
@@ -1127,6 +1134,7 @@ function roundCorner(i, j) {
   const [ka, du] = A[0], [kb, dv] = B[0], ea = state.edges.get(ka), eb = state.edges.get(kb);
   if (ea.b !== eb.b || isGate(ka) || isGate(kb)) return null;
   if (ea.b === 'hecke' && [ea, eb].some(e => (e.style || '').startsWith('wilmer'))) return null;   // Wilmerhecke: runde Büsche, eckige Ecke (Block 86e)
+  if (ea.sq || eb.sq) return null;                                    // „Ecke eckig“ gewählt (Nutzer, 09.10.2026) – sonst rund wie immer
   const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1, ox = du > 0 ? i - 1 : i, oy = dv > 0 ? j - 1 : j;
   const inPath = wegAt(tx, ty) != null, outWeg = inPath ? null : wegAt(ox, oy);
   return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5], inPath, outWeg };
@@ -1177,7 +1185,7 @@ function setArch(k, type) {
 // Farbe einer Hecke beim Bauen (Block 145): immer die in der Leiste markierte (ohne Wahl Grün) – auch beim Überbauen, wie bei Wegen.
 // Vorher behielt eine überbaute Hecke ihre Farbe, und gleiche Form in anderer Farbe galt als „schon alles fertig“
 const edgeWantCol = b => b === 'hecke' ? bushColNew('hecke').col : undefined;
-const edgeSame = (b, style, old) => !!old && old.b === b && old.style === style && (old.col || 0) === (edgeWantCol(b) || 0);
+const edgeSame = (b, style, old) => !!old && old.b === b && old.style === style && (old.col || 0) === (edgeWantCol(b) || 0) && !!old.sq === edgeShape.sq;
 function buildEdge(b, k) {
   const style = currentStyle(b), old = state.edges.get(k);
   if (edgeSame(b, style, old)) return false;
@@ -1185,7 +1193,7 @@ function buildEdge(b, k) {
   if (old) { state.money += ITEMS[old.b].cost; for (const [r, n] of Object.entries(ITEMS[old.b].mat || {})) state.res[r] += n; }   // die alte Linie zurück (Block 84b)
   state.money -= d.cost; payMat(d.mat || {});
   const col = edgeWantCol(b);                                            // Buschfarbe (Block 89; alle Hecken: Block 126; Grün überbaut: 145)
-  state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });
+  state.edges.set(k, { b, style, ...(col ? { col } : {}), ...(edgeShape.sq ? { sq: true } : {}), ...(old && old.arch ? { arch: old.arch } : {}), ...(old && old.gate ? { gate: old.gate } : {}), ...(old && old.flush != null ? { flush: old.flush } : {}), born: performance.now() });
   if (!old) state.edges.get(k).flush = newFlush(k);                     // neue Linie: bündig (Block 57b)   // Umfärben: Tor, Bogen, Bündig bleiben
   return true;
 }
