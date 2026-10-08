@@ -1657,6 +1657,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Schienen und Kanten wie eine Banane. Mit Zaun ringsum in beiden Richtungen geprüft (ub7-*.png).
 - [x] Nutzer: „Tunnel nicht mehrfach löschen, auch nicht in der Mitte einzeln“ – der Abriss (Rechteck, auch 1×1 beim Tippen) kannte
       Tunnel nicht (`scanDemolish`). Unter einem Gebäude bleibt der Tunnel, bis das Gebäude weg ist. Test: ubahn
+- [ ] 136o Tunneleinfahrt als eigenes Bauteil (Nutzer, 09.10.2026: „automatisch ist cool, aber mega unintuitiv – man will einen
+      Tunnel bauen, eine Einfahrt dazu und dann Schienen ran“): `tunneleinfahrt` 1×2, drehbar, 1.000 Taler; Formen Rampe/Backstein
+      frei, Naturstein Kunstakademie; immer 2 lang (Ein-Feld-Rampe fällt weg). Hinteres Ende an den Tunnel (dreht sich selbst),
+      vorderes Ende an Schienen. Keine automatischen Portale mehr: Schiene neben Tunnel verbindet nicht, Fenster-Hinweis
+      „Dazwischen eine Tunneleinfahrt setzen“. Danach Glitch „Zug hält auf der Einfahrt (Bahnhof dahinter)“ mit Bildstreifen prüfen.
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
