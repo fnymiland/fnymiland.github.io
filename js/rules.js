@@ -1565,6 +1565,41 @@ function setBridgeKind(x, y, kind) {
   groundVersion++; sfx('build'); recalc(); save();
   return true;
 }
+// Verbundene Wege (Block 125b, Wunsch Nutzer: „alle verbundenen Wege umfärben, statt alles neu zu ziehen“): alle Wegfelder, die
+// über Nachbarfelder mit (x, y) verbunden sind – auch Brücken und Bahnübergänge (sie tragen den Weg-Belag)
+const wegCarrier = t => !!t && (t.b === 'weg' || (t.cross && isCrossing(t)));
+function wegNetwork(x, y, max = 20000) {
+  const start = state.tiles.get(x + ',' + y);
+  if (!wegCarrier(start)) return [];
+  const seen = new Set([x + ',' + y]), out = [[x, y]];
+  for (let i = 0; i < out.length && out.length < max; i++) {
+    const [cx, cy] = out[i];
+    for (const [dx, dy] of DIRS) {
+      const k = (cx + dx) + ',' + (cy + dy);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      if (wegCarrier(state.tiles.get(k))) out.push([cx + dx, cy + dy]);
+    }
+  }
+  return out;
+}
+// Belag für mehrere Wegfelder (wie mit dem Weg-Werkzeug darüberziehen: je geändertes Feld ein Weg-Preis, Brücken bleiben, wie sie
+// bezahlt sind)
+function restyleWeg(list, style) {
+  const st = isWegStyle(style) && styleDef('weg', style);
+  if (!st || !styleOk(st)) return false;
+  const tiles = list.map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => wegCarrier(t) && (t.style || 'sand') !== style);
+  if (!tiles.length) return false;
+  const cost = ITEMS.weg.cost * tiles.length;
+  if (state.money < cost) { fail('Zu wenig Taler'); return false; }
+  state.money -= cost;
+  for (const t of tiles) {
+    if (isWegBridge(t)) { const kind = bridgeKind(t); t.style = style; if (kind === (BRIDGE_OF_STYLE[style] || 'stein')) delete t.brk; else t.brk = kind; }
+    else t.style = style;
+  }
+  groundVersion++; sfx('road'); recalc(); save();
+  return true;
+}
 // Belag (Wegmuster) der ganzen Brücke direkt wählen (66d) – die Brücken-Art bleibt, wie sie bezahlt ist; kostet wie Umfärben
 function setBridgeStyle(x, y, style) {
   const st = isWegStyle(style) && styleDef('weg', style);

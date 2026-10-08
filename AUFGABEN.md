@@ -1495,6 +1495,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       WEG_MUSTER/WEG_FARBEN (data.js), Belag-Name 'm:<muster>:<farbe>' bzw. alter Name für alte Kombinationen (WEG_PRESET,
       wegStyleOf/wegParts), Aussehen pathLook (draw-objects), wegMusterOk/wegFarbeOk (wer einen alten Belag hat, hat sein Muster),
       Kunstakademie „Wegmuster“ mit Vorschau (125d erledigt), Leiste: Muster, dann Farben, dann Form. „Das ist neu“ 2026-10-08-wege
+- [x] Weg antippen → Belag: „Nur dieses Feld“ / „Alle verbundenen (N Felder)“, dann Muster + Farbe (wegNetwork, restyleWeg;
+      je geändertes Feld ein Weg-Preis wie beim Darüberziehen, ↶). Wunsch Nutzer: nicht alles neu ziehen müssen
+- [x] Weit weg waren Muster ganz weg (nur farbige Flächen): Ausblenden jetzt auch nach dem Abstand im Muster (PAT_STEP) – weit
+      auseinander (große Platten, Schachbrett, gemischte Platten, Verband) bleibt sichtbar, eng (Kies, Pflaster, Holz) blasst aus
 - [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
 - [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
       stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle

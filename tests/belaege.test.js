@@ -27,8 +27,29 @@ describe('Wegbeläge (Block 125)', () => {
   });
   it('Muster blassen beim Rauszoomen aus (nah voll, weit weg schwach)', () => {
     // Boden-Bilder werden ~2,27 Gerätepunkte je Einheit von z gemalt (Zoom 0,8 / 0,45 / 0,35 → z 0,91 / 0,51 / 0,4 bei Maßstab 2)
-    const f = game(`(() => { const t = g.getTransform; g.getTransform = () => ({ a: 2, b: 0 }); try { return [patternFade('dots', 0.91), patternFade('dots', 0.51), patternFade('dots', 0.4), patternFade('tiles', 0.91), patternFade('tiles', 0.4)]; } finally { g.getTransform = t; } })()`);
-    expect(f[0]).toBeGreaterThan(0.95); expect(f[1]).toBeGreaterThan(0.2); expect(f[1]).toBeLessThan(0.5); expect(f[2]).toBeLessThan(0.05);
-    expect(f[3]).toBeGreaterThan(0.95); expect(f[4]).toBeLessThan(0.05);
+    const f = game(`(() => { const t = g.getTransform; g.getTransform = () => ({ a: 2, b: 0 }); try { return [patternFade('dots', 0.91), patternFade('dots', 0.51), patternFade('dots', 0.4), patternFade('tiles', 0.91), patternFade('tiles', 0.4), patternFade('big', 0.4), patternFade('checker', 0.4), patternFade('setts', 0.4)]; } finally { g.getTransform = t; } })()`);
+    expect(f[0]).toBeGreaterThan(0.95); expect(f[1]).toBeGreaterThan(0.2); expect(f[1]).toBeLessThan(0.5); expect(f[2]).toBeLessThan(0.05);   // Kies: flimmert → aus
+    expect(f[3]).toBeGreaterThan(0.95);
+    // weit auseinander bleibt weit weg sichtbar (sonst nur einfarbige Flächen, Rückmeldung Nutzer), eng blasst aus
+    expect(f[4]).toBeGreaterThan(0.3); expect(f[5]).toBe(1); expect(f[6]).toBeGreaterThan(0.3); expect(f[7]).toBeLessThan(0.2);
+  });
+  it('Weg antippen: nur dieses Feld oder alle verbundenen umfärben – je Feld ein Weg-Preis, ↶ macht es rückgängig (Block 125b)', () => {
+    // ein Netz aus 7 Feldern (Kreuz) und ein getrenntes Stück
+    game(`for (const [x, y] of [[5, 5], [6, 5], [7, 5], [8, 5], [6, 4], [6, 6], [6, 7]]) state.tiles.set(x + ',' + y, { b: 'weg', lvl: 1, style: 'sand' });
+      state.tiles.set('12,5', { b: 'weg', lvl: 1, style: 'sand' }); state.money = 1e6; state.design.add('wegmuster:verband'); recalc(); resetUndo()`);
+    expect(game('wegNetwork(6, 5).length')).toBe(7);
+    game('wegScope = "one"; openInfo(6, 5)');
+    expect(game("!!document.querySelector('#panel [data-wscope=\"all\"]')")).toBe(true);
+    game("document.querySelector('#panel [data-wscope=\"all\"]').click()");
+    const m = game('state.money');
+    game("document.querySelector('#panel [aria-label=\"Muster Plattenverband\"]').click()");
+    expect(game("[...state.tiles].filter(([k, t]) => t.b === 'weg' && t.style === 'm:verband:sand').length")).toBe(7);
+    expect(game("state.tiles.get('12,5').style")).toBe('sand');                        // nicht verbunden: bleibt
+    expect(game('state.money')).toBe(m - 7 * game('ITEMS.weg.cost'));
+    game('undo()');
+    expect(game("[...state.tiles].filter(([k, t]) => t.b === 'weg' && t.style === 'sand').length")).toBe(8);
+    game('wegScope = "one"; openInfo(6, 5)');
+    game("document.querySelector('#panel [aria-label=\"Farbe Anthrazit\"]').click()");
+    expect(game("[...state.tiles].filter(([k, t]) => t.b === 'weg' && t.style !== 'sand').map(([k]) => k)")).toEqual(['6,5']);
   });
 });

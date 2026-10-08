@@ -209,11 +209,18 @@ function clipTo(shapes, L) {
 // Weit weg blassen feine Muster aus (Block 125, wie Mipmapping): Je kleiner Punkte und Fugen in Gerätepunkten werden, desto
 // schwächer – sonst werden aus Kiespunkten Streifen und aus Fugen Linien und graues Flimmern. Nah dran unverändert
 const PAT_FADE = { dots: [1.0, 1.0], stones: [2.0, 2.1], confetti: [1.2, 1.3], line: [0.62, 0.66] };   // [ab Größe, voll nach +] in Gerätepunkten: voll ab Zoom ~0,8, ein Drittel bei 0,45
+// Abstand der Wiederholung je Muster (in Feldern): weit auseinander (große Platten, Schachbrett) flimmert nicht und bleibt auch weit
+// weg zu sehen – sonst waren dort nur noch einfarbige Flächen (Rückmeldung Nutzer); eng (Kies, Pflaster, Holz) blasst aus
+const PAT_STEP = { dots: 0.09, stones: 0.11, confetti: 0.085, tiles: 0.25, big: 0.5, thirds: 1 / 3, setts: 0.125, slabs: 0.25, ashlar: 0.2,
+  boards: 0.1, bricks: 0.1, herring: 0.125, herring2: 0.125, herring3: 1 / 6, checker: 0.25, basket: 0.25, diag: 0.25, stack: 0.25, modular: 0.25, planks: 0.07 };
 function patternFade(kind, z) {
   const t = g.getTransform ? g.getTransform() : null, px = (t ? Math.hypot(t.a, t.b) : 1) * z;   // Gerätepunkte je Einheit von z
   const size = kind === 'dots' ? 1.3 * px : kind === 'stones' ? 2.6 * px : kind === 'confetti' ? 1.6 * px : 0.8 * px;
   const [a, b] = PAT_FADE[kind] || PAT_FADE.line;
-  return Math.max(0, Math.min(1, (size - a) / b));
+  const bySize = Math.max(0, Math.min(1, (size - a) / b));
+  const gap = (PAT_STEP[kind] || 0.1) * Math.hypot(TW / 2, TH / 2) * px;                           // Abstand in Gerätepunkten
+  const byGap = Math.max(0, Math.min(1, (gap - 4) / 8));
+  return Math.max(bySize, byGap);
 }
 let patNoFade = false;                                                    // Vorschaubilder (Leiste, Kunstakademie): Muster immer voll
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {

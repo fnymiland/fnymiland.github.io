@@ -1039,16 +1039,30 @@ function walkerGone(w, r) {
 const REACH_HOW = { viertel: '🏘️ im selben Viertel', bahn: '🚆 per Bahn', seil: '🚡 per Seilbahn', faehre: '⛴️ per Schiff', garten: '🌿 Botanischer Garten' };
 const reachHow = c => c.ok && REACH_HOW[c.how] ? ` <small class="how">· ${REACH_HOW[c.how]}</small>` : '';
 // Wegform im Wegfenster (Block 77): Breite, Kurve (nur in Kurven), Ende (nur an Enden)
+// Belag eines Wegs im Fenster (Block 125b): erst wählen, ob nur dieses Feld oder alle verbundenen, dann Muster und Farbe
+let wegScope = 'one';
+function wegBelagHtml(t, x, y) {
+  const n = wegNetwork(x, y).length, all = wegScope === 'all' && n > 1;
+  return `<div class="label">Belag</div>
+    ${n > 1 ? `<div class="looks"><button class="look${all ? '' : ' on'}" data-wscope="one">Nur dieses Feld</button><button class="look${all ? ' on' : ''}" data-wscope="all">Alle verbundenen (${n} Felder)</button></div>` : ''}
+    ${wegPickHtml(t.style || 'sand', 'wbel')}
+    <p class="muted">${all ? `Färbt alle ${n} verbundenen Wegfelder um` : 'Färbt dieses Feld um'} – je Feld 🪙 ${fmt(ITEMS.weg.cost)}, ↶ macht es rückgängig.</p>`;
+}
 function wegFormHtml(t, x, y) {
   const arms = pathArms(x, y), curve = !t.wide && !!roadCurve(arms), end = arms.length <= 1;
   const btn = (key, v, on, label) => `<button class="look${on ? ' on' : ''}" data-wegf="${key}:${v}">${label}</button>`;
-  return `<div class="label">Form</div>
+  return `${wegBelagHtml(t, x, y)}<div class="label">Form</div>
     <div class="looks">${btn('wide', 0, !t.wide, '▭ schmal')}${btn('wide', 1, !!t.wide, '▬ ganz breit')}</div>
     ${curve ? `<div class="looks">${btn('sq', 0, !t.sq, '⌒ Kurve rund')}${btn('sq', 1, !!t.sq, '⌐ Kurve eckig')}</div>` : ''}
     ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
     <p class="muted">Automatisch: vor einem Gebäude läuft der Weg bis an die Wand, sonst endet er rund.</p>` : ''}`;
 }
 function wireWegForm(el, t, x, y) {
+  for (const b of el.querySelectorAll('[data-wscope]')) b.onclick = () => { wegScope = b.dataset.wscope; sfx('deco'); openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-wbel]')) b.onclick = () => undoable(() => {
+    const list = wegScope === 'all' ? wegNetwork(x, y) : [[x, y]];
+    if (restyleWeg(list, b.dataset.wbel)) openInfo(x, y);
+  });
   for (const b of el.querySelectorAll('[data-wegf]')) b.onclick = () => undoable(() => {
     const [k, v] = b.dataset.wegf.split(':');
     if (k === 'end') { if (v) t.end = v; else delete t.end; } else if (+v) t[k] = true; else delete t[k];
@@ -2481,6 +2495,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-umfaerben', date: '8. Oktober', title: 'Wege auf einmal umfärben', items: [
+    '🎨 <b>Ganzes Wegnetz umfärben:</b> Weg antippen → „Alle verbundenen“ → Muster und Farbe wählen. Kein Neuziehen mehr. ↶ macht es rückgängig.',
+    '🔭 <b>Weit weg:</b> Große Platten und Schachbrett zeigen ihr Muster jetzt auch rausgezoomt.',
+  ] },
   { id: '2026-10-08-wege', date: '8. Oktober', title: 'Wege: Muster + Farbe', items: [
     '🎨 <b>Muster und Farbe getrennt:</b> Beim Bauen wählst du unten erst das Muster (Kies, Platten, Pflaster, Holz …), dann eine von 21 Farben. Deine Wege bleiben, wie sie sind.',
     '🧱 <b>Neue Muster:</b> Große, kleine und gemischte Platten, Plattenverband, Steinreihen, Kleinpflaster, Fischgrät groß und Holzbohlen – in der Kunstakademie mit Vorschau, bevor du kaufst. Farben kosten nichts.',
