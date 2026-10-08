@@ -194,3 +194,13 @@ describe('Viertel verbinden (Nutzer: „Bahn und U-Bahn ergänzen sich“ – nu
   });
 });
 
+describe('Bauansicht', () => {
+  it('blass nur mit Tunnel/U-Bahn in der Hand, beim Entfernen nur die Linien (Nutzer: „genauso ausgegraut“)', () => {
+    game("state.tunnels.set('8,8', {}); recalc()");
+    const fills = t => game(`(() => { setTool('${t}'); let n = 0; const f0 = g.fillRect; g.fillRect = function (...a) { if (a[2] >= W) n++; return f0.apply(this, a); }; try { drawTunnelView(1) } finally { g.fillRect = f0 } setTool('look'); return n; })()`);
+    expect(fills('tunnel')).toBe(1);
+    expect(fills('abriss')).toBe(0);
+    expect(fills('schiene')).toBe(0);
+  });
+});
+

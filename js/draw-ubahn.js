@@ -218,13 +218,13 @@ function drawTunnelGhost(cx, cy, z) {
 }
 function diamondPath(cx, cy, a, b) { g.beginPath(); g.moveTo(cx, cy - b); g.lineTo(cx + a, cy); g.lineTo(cx, cy + b); g.lineTo(cx - a, cy); g.closePath(); }
 
-// Bauansicht (Nutzer: „passt so“): mit Schiene, Tunnel, U-Bahn-Station oder Abriss in der Hand wird die Welt blass, die Tunnel
-// erscheinen lila gestrichelt, U-Bahn-Stationen als U
+// Bauansicht (Nutzer: „passt so“): mit Tunnel oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss nicht
+// (Nutzer: „beim Entfernen genauso ausgegraut“) – die Tunnel erscheinen immer lila gestrichelt, U-Bahn-Stationen als U
 const TUNNEL_VIEW = new Set(['schiene', 'tunnel', 'ubahn', 'abriss']);
 function drawTunnelView(z) {
   if (!state.tunnels || !TUNNEL_VIEW.has(tool) || (tool !== 'tunnel' && tool !== 'ubahn' && !state.tunnels.size)) return;
   g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H);
+  if (tool === 'tunnel' || tool === 'ubahn') { g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H); }   // blass nur beim Tunnelbau – Entfernen/Schiene: nur die Linien (Nutzer)
   const segs = [];
   for (const k of state.tunnels.keys()) {
     const [x, y] = keyXY(k), p = toScreen(x, y);
