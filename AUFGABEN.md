@@ -1820,6 +1820,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       (3 × 16), Parkbahn mit 3 Zügen, alle Straßenlaternen-Formen beidseits zweier Straßen, alle Bänke auf einem Platz mit bündiger
       Hecke, Fußgängerbrücke über ein Gleis. Grenzen aufgenommen (nah Zoom 2,2: 3.172 Befehle Tag / 3.350 Nacht). Die Welt fand
       gleich einen echten Fehler: gekaufte Parkbahn-Züge (t.pbz) fehlten in tileOut → nach dem Laden weg (136h, behoben + Test).
+
+## Kleinigkeit: Fische springen durch Brücken (Nutzer, 08.10.2026)
+- [x] Wassertiere (Fisch, Goldfisch, Robbe, Frosch, Eisvogel) entstehen nicht mehr auf Wasserfeldern, auf oder direkt neben denen etwas
+      gebaut ist (Brücke, Steg, Hafen – `natureAt`, 3×3 um das Feld). Möwen fliegen weiter. Test: bogenbruecken (Fische und Brücken)
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.

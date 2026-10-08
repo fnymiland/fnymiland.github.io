@@ -880,15 +880,18 @@ function quietAt(x, y, r) {
 function natureAt(x, y, part) {
   const out = [], ter = terrainAt(x, y), night = part === 'nacht';
   if (ter === 'water') {
+    // über oder neben Gebautem auf dem Wasser (Brücke, Steg, Hafen) springt nichts – es spränge durch die Brücke (Nutzer, 08.10.2026)
+    const built = [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => { const k = (x + dx) + ',' + (y + dy); return terrainAt(x + dx, y + dy) === 'water' && (state.tiles.has(k) || COVER.has(k)); }));
     const shore = DIRS.some(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
     if (isSea(x, y)) {
       if (!landWithin(x, y, 3)) return out;
       if (!night) out.push(['moewe', 0.06]);
+      if (built) return out;
       if (shore && !night) out.push(['robbe', 0.035]);
       out.push(['fisch', 0.04]);
       return out;
     }
-    if (!ownedTile(x, y)) return out;
+    if (!ownedTile(x, y) || built) return out;
     const fl = flowersNear(x, y, 2);
     if (fl && shore && !night) out.push(['eisvogel', 0.02]);
     if (beautyAround(x, y, 2) >= 60) out.push(['goldfisch', 0.015]);

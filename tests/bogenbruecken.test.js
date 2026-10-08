@@ -77,3 +77,12 @@ describe('Bogenbrücken (Block 150)', () => {
     game("(() => { cam = state.cam; cam.z = 2; const p = iso(12, 11); cam.x = p.x; cam.y = p.y; render(1e6); render(1e6 + 17); })()");
   });
 });
+
+describe('Fische und Brücken (Nutzer: „Fische springen durch Brücken durch“)', () => {
+  it('unter und direkt neben einer Brücke springen keine Fische, weiter weg schon', () => {
+    river(6);
+    const kinds = (x, y) => game(`natureAt(${x}, ${y}, 'tag').map(([id]) => id)`);
+    for (const [x, y] of [[12, 12], [12, 11], [12, 13]]) expect(kinds(x, y), x + ',' + y).not.toContain('fisch');
+    expect(kinds(12, 17)).toContain('fisch');
+  });
+});
