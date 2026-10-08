@@ -1585,6 +1585,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Wagen, die ins nächste Feld ragten; jetzt flach im Bodenbild (`cachedPath`, `drawFlat`), mit den Gebäuden nur Bahnsteig/Dach.
       Zug wechseln wirkte erst nach recalc → `pbModel` liest die Station live. Beim Bauen/ohne Rundkurs stand schon ein Zug da →
       wartender Zug nur noch im Vorschaubild der Zugwahl
+- [x] 136c (Nutzer): Straßenbahn ohne Stromabnehmer (keine Oberleitung); offene Wagen/Tierwagen/Straßenbahn: hintere Wände fehlten je
+      nach Fahrtrichtung (nur zugewandte Seiten gezeichnet) – jetzt zuerst die Innenseite der abgewandten Wände (`pbBox` 'back'),
+      dann Fahrgäste, dann vorn. Geprüft in allen 4 Richtungen
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):

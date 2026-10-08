@@ -1308,7 +1308,7 @@ function pbFig(M, u, v, up, z, now, fig, figS) {
   drawWalker({ ...fig, sit: true, wait: 1, inside: 0, speed: 0, seat: true, figS, sx: p[0], sy: p[1] + 2.5 * z * figS }, z, now);
 }
 function pbDrawCar(M, u, v, du, dv, z, now, car, pax, figS, j = 1) {
-  const P = (a, b, up = 0) => M(u + du * a - dv * b, v + dv * a + du * b, up), box = (a0, a1, b0, b1, h0, h1, col, top, open) => pbBox(P, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open);
+  const P = (a, b, up = 0) => M(u + du * a - dv * b, v + dv * a + du * b, up), box = (a0, a1, b0, b1, h0, h1, col, top, open, which) => pbBox(P, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open, which);
   const wheels = (a0, a1, w, n) => { for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * (i + 0.5) / n; for (const s of [-1, 1]) { const p = P(a, s * w, 1.4); circle(p[0], p[1], 1.5 * z, C('#3a3a44')); } } };
   const shadowOf = l => { const p = P(0, 0); ellipse(p[0], p[1] + 1 * z, l * TW * 0.5 * z, l * TH * 0.5 * z, 'rgba(40,50,70,0.2)'); };
   const seats = (a0, a1, h) => { const n = Math.max(1, pax.length); (pax || []).forEach((f, i) => { if (f) pbFig(M, u + du * (a0 + (a1 - a0) * (i + 0.5) / n), v + dv * (a0 + (a1 - a0) * (i + 0.5) / n), h, z, now, f, figS); }); };
@@ -1327,12 +1327,14 @@ function pbDrawCar(M, u, v, du, dv, z, now, car, pax, figS, j = 1) {
     box(-0.22, 0.22, -0.11, 0.11, 1, 3, '#3a3a44'); wheels(-0.15, 0.15, 0.11, 2);
     const col = ['#2f6f9f', '#e8a33a', '#58b36a'][(j + 2) % 3];             // je Wagen eine Farbe (fest, auch beim Fahren)
     box(-0.22, 0.22, -0.12, 0.12, 3, 4.6, shade(col, -0.1), shade(col, -0.3));
+    box(-0.22, 0.22, -0.12, 0.12, 4.6, 6.4, shade(col, 0.15), null, true, 'back');   // hintere Bordwand (innen) – aus jeder Richtung geschlossen
     seats(-0.18, 0.18, 3.6);
     box(-0.22, 0.22, -0.12, 0.12, 4.6, 6.4, shade(col, 0.15), null, true);
   } else if (car === 'tram') {                                           // Straßenbahn: Fahrgäste hinter Fenstern (Wand mit Löchern)
     shadowOf(0.45);
     box(-0.36, 0.36, -0.13, 0.13, 1, 2.4, '#3a3a44'); wheels(-0.28, 0.28, 0.13, 2);
     box(-0.36, 0.36, -0.14, 0.14, 2.4, 3.2, '#7a3a2a');
+    box(-0.36, 0.36, -0.14, 0.14, 3.2, 11.5, '#f4ead2', null, true, 'back');   // Innenseite der hinteren Wände (hinter den Fahrgästen)
     seats(-0.28, 0.28, 2.6);
     const faces = box(-0.36, 0.36, -0.14, 0.14, 3.2, 6.5, '#c0392b', null, true);
     for (const f of faces) {                                             // oberer Teil: creme, mit Fensterlöchern
@@ -1344,8 +1346,7 @@ function pbDrawCar(M, u, v, du, dv, z, now, car, pax, figS, j = 1) {
       g.fillStyle = C(wall); g.fill('evenodd');
       for (let k = 0; k < n; k++) { const t0 = 0.07 + k * (0.86 / n), t1 = t0 + 0.86 / n - 0.05; poly([q(t0, 7.4), q(t1, 7.4), q(t1, 10.6), q(t0, 10.6)], 'rgba(191,227,255,0.35)'); }
     }
-    box(-0.4, 0.4, -0.16, 0.16, 11.5, 12.6, '#7a3a2a');
-    const a = P(0.1, 0, 12.6), b = P(-0.3, 0, 20); g.strokeStyle = C('#3a3a44'); g.lineWidth = 0.9 * z; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); circle(b[0], b[1], 1 * z, C('#3a3a44'));
+    box(-0.4, 0.4, -0.16, 0.16, 11.5, 12.6, '#7a3a2a');                      // Dach (ohne Stromabnehmer: keine Oberleitung, Nutzer)
   } else if (car === 'minilok') {                                        // Mini-Lok mit freundlichem Gesicht
     shadowOf(0.22);
     box(-0.16, 0.16, -0.08, 0.08, 1, 2.6, '#3a3a44'); wheels(-0.12, 0.12, 0.08, 2);
@@ -1358,6 +1359,7 @@ function pbDrawCar(M, u, v, du, dv, z, now, car, pax, figS, j = 1) {
     shadowOf(0.22);
     box(-0.14, 0.14, -0.08, 0.08, 1, 2.6, '#3a3a44'); wheels(-0.09, 0.09, 0.08, 2);
     box(-0.14, 0.14, -0.09, 0.09, 2.6, 4, shade(A[0], -0.1));
+    box(-0.14, 0.14, -0.09, 0.09, 4, 5.6, A[0], null, true, 'back');
     seats(-0.06, 0.02, 3.2);
     box(-0.14, 0.14, -0.09, 0.09, 4, 5.6, A[0], null, true);
     const h = P(0.15, 0, 7); circle(h[0], h[1], 2.6 * z, C(A[0]));

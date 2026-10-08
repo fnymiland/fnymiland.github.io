@@ -3067,14 +3067,15 @@ function drawParkTrack(cx, cy, z, x, y, t, now, part = 'all') {
   }
 }
 // Quader in einem Rahmen S(a, b, up) (a längs, b quer): sichtbare Seiten, dann der Deckel (top false: offen)
-function pbBox(S, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open) {
+// which 'back': nur die abgewandten Wände (Innenseite, dunkler) – für offene Wagen vor den Fahrgästen, damit man nie hindurchsieht
+function pbBox(S, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open, which = 'front') {
   const C4 = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
   const faces = [0, 1, 2, 3].map(i => {
     const [x0, y0] = C4[i], [x1, y1] = C4[(i + 1) % 4], na = Math.abs(x0 - x1) < 1e-9 ? Math.sign(x0 - (a0 + a1) / 2) : 0, nb = Math.abs(y0 - y1) < 1e-9 ? Math.sign(y0 - (b0 + b1) / 2) : 0;
     const nu = du * na - dv * nb, nv = dv * na + du * nb;
     return { p: S(x0, y0, h0), q: S(x1, y1, h0), vis: nu + nv, nu };
-  }).filter(f => f.vis > 0.02).sort((a, b) => a.vis - b.vis);
-  for (const f of faces) poly([f.p, f.q, [f.q[0], f.q[1] - (h1 - h0) * z], [f.p[0], f.p[1] - (h1 - h0) * z]], C(shade(col, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0)));
-  if (!open) poly(C4.map(([a, b]) => S(a, b, h1)), C(top || shade(col, 0.12)));
+  }).filter(f => which === 'back' ? f.vis <= 0.02 : f.vis > 0.02).sort((a, b) => a.vis - b.vis);
+  for (const f of faces) poly([f.p, f.q, [f.q[0], f.q[1] - (h1 - h0) * z], [f.p[0], f.p[1] - (h1 - h0) * z]], C(which === 'back' ? shade(col, -0.22) : shade(col, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0)));
+  if (!open && which !== 'back') poly(C4.map(([a, b]) => S(a, b, h1)), C(top || shade(col, 0.12)));
   return faces;
 }
