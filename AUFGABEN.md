@@ -1611,6 +1611,24 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       - Freischalten: Forschung „U-Bahn“ nach „Eisenbahn“.
       Schritte: 1 Entwürfe als Bild (Portal, Eingang, Tunnel gestrichelt) · 2 Tunnel-Linie + Netz · 3 Portal · 4 Station/Eingang ·
       5 Züge im Tunnel · 6 Viertel-Regel · 7 Forschung, Preise, Hilfe, Leistungs-Wächter, Testwelt
+- [x] 136i Entwürfe (tools/ubahn-entwurf.js): Nutzer wählte alle drei Eingänge als Formen (Treppe mit Mast frei, Pavillon 250,
+      Häuschen 200), Portale Backstein (Wand schmaler als der Hügel) und Naturstein im Hügel, statt Beton eine **Rampe** für die
+      Innenstadt (Nutzer: „wie fahren U-Bahnen in einer Innenstadt herunter? da ist nicht immer eine Wand mit Loch“). Rampe und
+      Backstein frei, Naturstein in der Kunstakademie; „Passend“ = Rampe neben Häusern/Wegen, sonst Backstein. An der Rampe ersetzt
+      ein eigener Zaun/Mauer/Hecke auf der Feldkante das Geländer. Bauansicht: Welt blass, Tunnel lila gestrichelt, U je Station.
+- [x] 136j Umsetzung: `state.tunnels` (Feld → { form }), gespeichert/geladen/rückgängig (`UNDO_MAPS.tunnels`). Ein Feld ist Schiene
+      ODER Tunnel (`tunnelError`, placeError für Schiene/Bahnhof über Tunnel); Netz = Schienen ∪ Tunnel (`trackAt`, computeRail,
+      railPath, railArms). Portal = Schiene neben Tunnel (`portalDir`, `portalForm`), gezeichnet im Objekt-Durchgang der Schiene
+      (js/draw-ubahn.js); zeigt die Wand weg, malt das Tunnelfeld den Hügel (`drawTunnelHill`). Züge: im Berg unsichtbar, am
+      Portal längs abgeschnitten (`trainTunnelCut` → car.cut), in der Rampe sinkend und nur durch die Öffnung sichtbar (`rampClip`).
+      U-Bahn-Station auf dem Tunnel, hält auf ihrem Feld (`stopDirs`), Fenster wie Bahnhof. Tunnel 60 (unter Wasser 150, darf ins
+      Meer wie Schienen), Station 900, Forschung „U-Bahn“ 400 nach „Eisenbahn“. Abriss: erst was oben steht, dann der Tunnel (voll
+      zurück). Leistungs-Wächter: tunnel 5, ubahn 51–169. Testszene tools/ubahnszene.js. Test: ubahn (17)
+- [x] 136k Viertel-Regel: Linien auf **einer** Insel (`l.inner`) fahren jetzt (bahn.test angepasst). Strom erst nach allen anderen
+      (bestehende Welten verlieren nichts). Halte-Viertel (`stopViertel`) werden verbunden: Wünsche über `buildAccess` ('bahn'),
+      Läden bekommen zusätzlich Kundschaft aus verbundenen Vierteln, die diese Ladenart nicht haben (`innerTraffic`, `LINE_SHOP` ½,
+      × Auslastung, geteilt durch alle Anbieter) – nie statt der eigenen. Fahrgäste = ½ der Einwohner aller Halte-Viertel außer dem
+      größten → Fahrkarten. Nutzerfrage „100 % U-Bahn?“: geht (Test).
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

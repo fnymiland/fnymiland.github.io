@@ -35,6 +35,24 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'tunnel') {                                // Tunnel (Block 136): unter der Oberfläche, oben bleibt alles stehen
+    if (state.tunnels.has(k0) && ownedTile(x, y)) {      // Portal-Form übermalen kostet nichts (wie das Gleisbett)
+      const f = decoLookNew('tunnel').form || 0, v = state.tunnels.get(k0);
+      if ((v.form || 0) === f) return false;
+      if (f) v.form = f; else delete v.form;
+      groundVersion++; save();
+      return true;
+    }
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    const c = costOf(b, x, y);
+    state.money -= c.cost; payMat(c.mat);
+    if (!ownedTile(x, y)) claimTile(x, y);
+    const f = decoLookNew('tunnel').form || 0;
+    state.tunnels.set(k0, f ? { form: f } : {});
+    groundVersion++; sfx('dig'); recalc(); save();
+    return true;
+  }
   if (b === 'pb_station' && old && old.b === 'pb_gleis') {           // Station auf ein Stück Parkbahn-Gleis (Block 136): Gleis wird Station
     const err = placeError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
@@ -149,7 +167,13 @@ function demolish(x, y) {
   let info = demolishInfo(x, y);
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
-  if (info.refund != null) {
+  if (info.tunnel) {                                                    // Tunnel (Block 136): voll zurück
+    state.tunnels.delete(info.tunnel);
+    state.money += info.refund;
+    for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
+    addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
+    groundVersion++;
+  } else if (info.refund != null) {
     const gone = state.tiles.get(info.anchor);
     if (gone && gone.b === 'pb_station' && gone.pbz) info = { ...info, refund: info.refund + pbHandOver(info.anchor, gone) };   // Block 136e
     state.tiles.delete(info.anchor);
@@ -846,7 +870,7 @@ const UNDO_MAX = 20, undoStack = [];
 let undoPending = null, undoCut = false;
 // Neues Spiel, Import: die Schritte gehören zum alten Stand (Block 84a)
 function resetUndo() { undoStack.length = 0; undoPending = null; undoCut = false; if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
-const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra };
+const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels };
 const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
 function undoSnap() {
   const maps = {};

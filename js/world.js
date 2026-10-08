@@ -199,7 +199,7 @@ function depthAlpha(x, y) {
   const f = Math.min(1, (d - DEEP_FROM) / 40);
   return 0.42 * f * (2 - f);
 }
-const CLAIM_TOOLS = new Set(['schuett', 'schiene']);
+const CLAIM_TOOLS = new Set(['schuett', 'schiene', 'tunnel']);
 // Werkzeuge, die man aufs Meer außerhalb des eigenen Gebiets setzen darf (wie weit, sagt placeError)
 const seaTool = t => CLAIM_TOOLS.has(t) || t === 'weg' || ['meer', 'boot', 'offshore'].includes((ITEMS[t] || {}).needs);   // Weg: Brücke kurz ins Meer (Block 66)
 // Wasserfeld am eigenen Ufer – auch schräg (Ecke an Ecke): an gezackten Küsten sieht das genauso nach „Ufer“ aus

@@ -293,6 +293,8 @@ function stopConf(k) {
   if (!t.gleis) t.gleis = [];
   return t.gleis[G.g] || (t.gleis[G.g] = {});
 }
+// Wo der Zug an einem Halt steht: neben dem Bahnhof (Bahnsteig), bei der U-Bahn-Station auf ihrem eigenen Tunnelfeld (Block 136)
+const stopDirs = k => bAt(...keyXY(k)) === 'ubahn' ? [[0, 0]] : DIRS;
 // Kasten um einen Halt (für Laufweite)
 const stopBox = k => { const f = stopFoot(k), xs = f.map(p => p[0]), ys = f.map(p => p[1]); return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)]; };
 const anchorAt = (x, y) => COVER.get(x + ',' + y) || null;
@@ -481,6 +483,44 @@ function kaufShares(kinds) {
   }
   return out;
 }
+// Linien auf einer Insel (Block 136): ihre Halte liegen in Vierteln (Viertel der Station und direkt daneben). Fahrgäste: die
+// Hälfte der Einwohner aller Halte-Viertel außer dem größten (wie Pendler); so viele, wie Plätze da sind (served). Verbundene
+// Viertel kaufen zusätzlich bei Ladenarten, die es bei ihnen nicht gibt – nie statt der eigenen (Nutzer: „nur zusätzlich“).
+const LINE_SHOP = 0.5;
+function stopViertel(net, s) {
+  const out = new Set(), [x0, y0, x1, y1] = stopBox(s), v0 = net.vOf(s);
+  if (v0) out.add(v0);
+  for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { const a = COVER.get(x + ',' + y), v = a && net.vOf(a); if (v) out.add(v); }
+  return out;
+}
+function innerTraffic(links, net, SW) {
+  const conn = new Map(), served = new Map(), pop = v => SW.vPop.get(v) || 0;
+  for (const l of links) {
+    if (!l.inner) continue;
+    const Vs = [...new Set(l.stations.flatMap(s => [...stopViertel(net, s)]))];
+    const pops = Vs.map(pop), demand = Vs.length > 1 ? LINE_SHOP * (pops.reduce((a, b) => a + b, 0) - Math.max(...pops)) : 0;
+    const f = demand > 0 ? Math.min(1, l.seats / demand) : 1;
+    l.traffic = { commute: demand, visits: new Map(), visitors: 0, demand, seats: l.seats, served: f, carried: demand * f, shared: 0, transfer: [],
+      fare: demand * f * FARE / 60, spend: 0, viertel: Vs.length, inner: true };
+    if (Vs.length > 1) for (const v of Vs) for (const u of Vs) if (u !== v) {
+      if (!conn.has(v)) conn.set(v, new Set());
+      conn.get(v).add(u);
+      served.set(v + '|' + u, Math.max(served.get(v + '|' + u) || 0, f));
+    }
+  }
+  // zusätzliche Kundschaft für einen Laden der Art b im Viertel v: Leute aus verbundenen Vierteln ohne b, geteilt durch alle Viertel,
+  // die ihnen b anbieten
+  const extra = (v, b) => {
+    let n = 0;
+    for (const u of conn.get(v) || []) {
+      if (SW.count(u, b)) continue;
+      const offer = [...(conn.get(u) || [])].filter(w => SW.count(w, b)).length;
+      n += pop(u) * LINE_SHOP * served.get(v + '|' + u) / Math.max(1, offer);
+    }
+    return n;
+  };
+  return { conn, extra };
+}
 function shopWorld(net, links) {
   const vPop = new Map(), visitors = new Map(), kinds = new Map(), isleKinds = new Map();
   for (const [k, t] of state.tiles) {
@@ -564,7 +604,7 @@ function totals() {
   const won = {};
   for (const [k, t] of state.tiles) if (WONDERS[t.b] && wonderDone(t)) won[t.b] = Math.max(won[t.b] || 0, off(k));
   const green = won.botgarten ? 1 + won.botgarten : 1;                   // Botanischer Garten: Obst und Felder doppelt
-  const SW = shopWorld(net, links), sales = [], shopTiles = [];
+  const SW = shopWorld(net, links), sales = [], shopTiles = [], IT = innerTraffic(links, net, SW);
   let marktInc = 0;
   const schoolFactor = Math.min(1, pop / 15);
   let inc = 0, sci = 0, beauty = 0;
@@ -603,7 +643,8 @@ function totals() {
     if (d.shop) {                                                             // Läden und Kultur (Block 30)
       const S = SHOPS[t.b], v = net.vOf(k), r = regionAt(x, y), inner = SW.inner(v), f = m * off(k);
       s.same = v ? SW.count(v, t.b) : 1; s.sameIsle = Math.max(1, SW.isleCount(r, t.b));
-      const want = ((v && SW.vPop.get(v)) || 0) / Math.max(1, s.same) + (SW.visitors.get(r) || 0) / s.sameIsle, kd = Math.min(want, shopCap(t.b));
+      s.line = v ? IT.extra(v, t.b) / Math.max(1, s.same) : 0;               // mit Bahn/U-Bahn aus anderen Vierteln (Block 136)
+      const want = ((v && SW.vPop.get(v)) || 0) / Math.max(1, s.same) + (SW.visitors.get(r) || 0) / s.sameIsle + s.line, kd = Math.min(want, shopCap(t.b));
       s.kunden = kd; s.want = want; s.full = want > kd + 0.5; s.inner = inner; s.types = SW.types(v);
       s.markt = nearMarket(x, y, ...sizeOf(t.b, t.rot, t));                // Marktviertel (Block 39)
       s.base = S.rate / 100 * kd * f * mT * (1 + inner) * (s.markt ? 1 + MARKT_BONUS : 1);   // vor der Kaufkraft – die teilt unten je Viertel
@@ -1795,12 +1836,46 @@ function setBridgeColor(x, y, key, v) {
 // Art eines neuen Brückenfelds: wie die Brücke, an die es anschließt, sonst nach dem gewählten Wegstil (66c)
 const newBridgeKind = (x, y) => { const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge); return nb ? bridgeKind(nb) : bridgeKind({ style: currentStyle('weg') }); };
 const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE
+  : b === 'tunnel' && terrainAt(x, y) === 'water' ? TUNNEL_WATER
   : b === 'weg' && terrainAt(x, y) === 'water' ? WEG_BRIDGE[newBridgeKind(x, y)]
   : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
-// Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock)
+// U-Bahn (Block 136): Tunnel liegen in state.tunnels unter der Oberfläche und gehören zum Schienennetz. Ein Feld ist Schiene ODER
+// Tunnel (nie beides) – so bleibt das Netz eine Menge von Feldern. Schiene neben Tunnel = Tunnelportal (die Schiene fährt hinunter).
+const TUNNEL_WATER = { cost: 150, mat: { quader: 2, metall: 3 } };      // unter Wasser
+const tunnelAt = (x, y) => !!state.tunnels && state.tunnels.has(x + ',' + y);
+const trackAt = (x, y) => bAt(x, y) === 'schiene' || tunnelAt(x, y);    // Schiene oder Tunnel: befahrbar
+// Portal: Richtung von der Schiene zum Tunnel (das erste passende Nachbarfeld), sonst null
+function portalDir(x, y) {
+  if (!state.tunnels || !state.tunnels.size || bAt(x, y) !== 'schiene') return null;
+  return DIRS.find(([dx, dy]) => tunnelAt(x + dx, y + dy)) || null;
+}
+// Form des Portals (Form des Tunnelfelds dahinter); „Passend“: Rampe, wenn ringsum Stadt ist (Wege, Gebäude), sonst Backstein
+function portalForm(x, y, d = portalDir(x, y)) {
+  if (!d) return null;
+  const v = state.tunnels.get((x + d[0]) + ',' + (y + d[1])) || {}, id = DECO_LOOKS.tunnel.forms[v.form || 0].id;
+  if (id !== 'auto') return id;
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+    const t = objAt(x + dx, y + dy);
+    if (t && t.b !== 'schiene' && t.b !== 'lm') return 'rampe';
+  }
+  return 'backstein';
+}
+function tunnelError(x, y, noCost) {
+  if (!available('tunnel')) return `Tunnel: ${lockText('tunnel').replace('🔒 ', 'erst mit ')}`;
+  if (!ownedTile(x, y) && !claimable(x, y)) return isSea(x, y) ? 'Im Meer nur direkt neben deinem Land' : notMine(x, y);
+  if (tunnelAt(x, y)) return 'Hier ist schon ein Tunnel';
+  const b = bAt(x, y);
+  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station') return 'Unter Schienen und Bahnhöfen geht kein Tunnel – wo er sie berührt, entsteht ein Portal';
+  if (noCost) return null;
+  const c = costOf('tunnel', x, y);
+  if (state.money < c.cost) return 'Zu wenig Taler';
+  if (Object.entries(c.mat || {}).some(([res, n]) => (state.res[res] || 0) < n)) return 'Zu wenig ' + RES[Object.entries(c.mat).find(([res, n]) => (state.res[res] || 0) < n)[0]].name;
+  return null;
+}
+// Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock); Schiene vor einem Tunnel ins Portal
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
-  return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || (e && e[0] === dx && e[1] === dy)); };
+  return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || tunnelAt(x + dx, y + dy) || (e && e[0] === dx && e[1] === dy)); };
 // Bahnübergang: ein Schienenfeld mit cross (und dem Stil des Wegs), gehört zu Schienen- und Wegenetz.
 // Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
 // foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
@@ -2020,9 +2095,10 @@ function railLoop(tiles, rails) {
 function computeRail() {
   const rails = new Set(), stations = [];
   let wind = 0, plants = 0;
+  for (const k of state.tunnels || []) rails.add(k[0]);                     // Tunnel (Block 136): Teil des Netzes
   for (const [k, t] of state.tiles) {
     if (t.b === 'schiene') rails.add(k);
-    else if (t.b === 'station') stations.push(k);
+    else if (t.b === 'station' || t.b === 'ubahn') stations.push(k);
     else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
     else if (POWER_OUT[t.b]) { wind += powerOf(t, k); plants++; }
   }
@@ -2042,9 +2118,10 @@ function computeRail() {
   const byNet = new Map(), stationNet = new Map();
   for (const s of stations.sort()) {
     let net = null;
-    for (const [fx, fy] of stopFoot(s)) for (const [dx, dy] of DIRS) {
-      const n = comp.get((fx + dx) + ',' + (fy + dy));
-      if (n != null && net == null) net = n;
+    if (bAt(...keyXY(s)) === 'ubahn') net = comp.has(s) ? comp.get(s) : null;   // U-Bahn: auf dem Tunnel
+    else for (const [fx, fy] of stopFoot(s)) for (const [dx, dy] of DIRS) {
+      const nk = (fx + dx) + ',' + (fy + dy), n = comp.get(nk);
+      if (n != null && net == null && !tunnelAt(fx + dx, fy + dy)) net = n;    // Bahnhof oben: nur an Schienen, nicht an Tunneln
     }
     stationNet.set(s, net);
     if (net != null) { if (!byNet.has(net)) byNet.set(net, []); byNet.get(net).push(s); }
@@ -2052,17 +2129,20 @@ function computeRail() {
   const lines = [];
   for (const [net, list] of byNet) {
     const regions = [...new Set(list.map(s => regionAt(...keyXY(s))))].sort(byRegion);          // Heimatinsel zuerst
-    if (regions.length < 2) continue;
+    // Linie auf einer Insel (Block 136, Nutzer: „Bahn und U-Bahn verbinden Viertel“): fährt, bekommt aber Strom erst nach allen
+    // anderen (nie schlechter für bestehende Welten) und bringt nur, wenn ihre Halte in verschiedenen Vierteln liegen
+    const inner = regions.length < 2;
+    if (inner && list.length < 2) continue;
     const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails);
     // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
     const onRing = ring && list.every(s => { const R = new Set(ring);
-      return stopFoot(s).some(([fx, fy]) => DIRS.some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
+      return stopFoot(s).some(([fx, fy]) => stopDirs(s).some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
     const loop = onRing ? ring : null, max = loop ? Math.max(1, Math.floor(tiles / KM / KM_PER_TRAIN)) : 1;
     const looks = lineLooks(list), count = Math.min(max, looks.length);
     const needs = looks.slice(0, count).map(lk => carNeed(tiles, carsOf(lk)));
-    lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count, need: needs[0], needs });
+    lines.push({ net, stations: list, regions, tiles, km: tiles / KM, loop, max, looks, count, need: needs[0], needs, ...(inner ? { inner: true } : {}) });
   }
-  lines.sort((a, b) => a.stations[0] < b.stations[0] ? -1 : 1);
+  lines.sort((a, b) => (!!a.inner - !!b.inner) || (a.stations[0] < b.stations[0] ? -1 : 1));   // Linien zwischen Inseln zuerst (Strom)
   const power = computePower(lines, wind, plants);
   for (const l of lines) l.seats = l.looks.slice(0, l.running).reduce((s, lk) => s + trainSeats(lk), 0);
   return { lines, stationNet, wind, trains: power.trains, comp, power };
@@ -2376,6 +2456,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.fixed && !opts.move) return 'Das lässt sich nicht bauen';                           // Rathaus, Sehenswürdigkeit, Truhe (nur verschieben)
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
+  if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
+  if ((b === 'schiene' || b === 'station' || b === 'hbf') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
+    return b === 'schiene' ? 'Über einem Tunnel keine Schiene – lass sie daneben enden, dann entsteht ein Portal' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
   if (b === 'fz_hoch' || b === 'fz_tief') {             // Höhen-Pinsel (Block 60e): nur über Schienen
     if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
     const t = state.tiles.get(x + ',' + y);
@@ -2846,7 +2930,7 @@ function beautyAround(x, y, r) {
 function buildAccess(net, links) {
   const add = (m, b, k) => { if (!m.has(b)) m.set(b, []); m.get(b).push(k); }, inV = new Map();
   for (const [k, t] of state.tiles) { const v = net.vOf(k); if (!v) continue; if (!inV.has(v)) inV.set(v, new Map()); add(inV.get(v), t.b, k); }
-  const byLink = links.filter(l => l.regions.length > 1 || l.kind === 'seil').map(l => {
+  const byLink = links.filter(l => l.regions.length > 1 || l.kind === 'seil' || (l.inner && l.traffic && l.traffic.viertel > 1)).map(l => {   // auch Linien zwischen Vierteln (Block 136)
     const near = new Set();
     for (const s of l.stations) {
       const v = net.vOf(s), [x0, y0, x1, y1] = stopBox(s);
@@ -2952,6 +3036,7 @@ function demolishInfo(x, y) {
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;
     return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
+  if (tunnelAt(x, y)) { const c = costOf('tunnel', x, y); return { tunnel: x + ',' + y, refund: c.cost, mat: c.mat, full: true, label: 'Tunnel entfernen' }; }   // Block 136: voll zurück wie Schienen
   const ter = terrainAt(x, y);
   if (ter === 'forest' || ter === 'obst') return { cost: 10, label: 'Roden' };
   if (ter === 'rock' || ter === 'erz' || ter === 'kristall') return { cost: 50, label: 'Sprengen' };

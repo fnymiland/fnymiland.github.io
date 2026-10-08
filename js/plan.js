@@ -4,9 +4,9 @@
 // Erst die Vorschau mit Anzahl und Preis, dann bestätigen – so passiert nichts aus Versehen.
 // ---------------------------------------------------------------------------
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
-const LINE_TOOLS = new Set(['weg', 'schiene', 'fz_bahn', 'fz_hoch', 'fz_tief', 'pb_gleis']);   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
+const LINE_TOOLS = new Set(['weg', 'schiene', 'tunnel', 'fz_bahn', 'fz_hoch', 'fz_tief', 'pb_gleis']);   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
 const RECT_TOOLS = new Set(['weg', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels']);
-const dragKind = t => t === 'schiene' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' || t === 'pb_gleis' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
+const dragKind = t => t === 'schiene' || t === 'tunnel' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' || t === 'pb_gleis' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small && !ITEMS[t].gift) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
 
@@ -61,6 +61,7 @@ function cancelPlan() { plan = null; }
 function planCheck(b, x, y) {
   const old = state.tiles.get(x + ',' + y);
   if (b === 'pb_gleis' && old && isPbTrack(old.b)) return { same: true };    // Parkbahn: schon Gleis (Block 136)
+  if (b === 'tunnel' && ownedTile(x, y) && tunnelAt(x, y)) return ((state.tunnels.get(x + ',' + y).form || 0) === (decoLookNew('tunnel').form || 0)) ? { same: true } : { cost: 0, mat: {} };   // Portal-Form (Block 136)
   if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') return (old.form || 0) === (decoLookNew('schiene').form || 0) ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil (Block 109)
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {      // umfärben
     const sameStyle = (old.style || 'sand') === currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;   // Wegform: kostenlos (Block 77)

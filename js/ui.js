@@ -81,6 +81,9 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
+  } else if (type === 'tunnel') {                          // Tunnel (Block 136): ein kleines Portal in der gewählten Form
+    block(1, '#96d56f');
+    drawTunnelIcon(cx, cy, z * 0.9, tile || decoLookNew('tunnel'));
   } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
     block(1, '#96d56f');
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
@@ -1313,7 +1316,7 @@ function openInfo(x, y) {
   }
   if (ITEMS[t.b].cat === 'fz') status.push(...fzStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
-  if (t.b === 'station') status.push(...stationStatus(x + ',' + y));
+  if (t.b === 'station' || t.b === 'ubahn') status.push(...stationStatus(x + ',' + y));
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
@@ -1416,7 +1419,7 @@ function openInfo(x, y) {
       if (t.b === 'schloss') wonder += decreeHtml();
     }
   }
-  const line = t.b === 'station' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
+  const line = t.b === 'station' || t.b === 'ubahn' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const footBtn = ([id, fs]) => {
     const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
@@ -1565,9 +1568,12 @@ function powerStatus() {
 const kmText = l => `${nf1.format(l.km)} km`;
 function stationStatus(k) {
   const line = lineOf(k), names = l => l.regions.map(regionName);
-  if (T.rail.stationNet.get(k) == null) return [`<div class="bad">✗ ${GLEIS.has(k) ? 'Noch keine Schiene vor dem Gleis' : 'Keine Schiene direkt am Bahnhof'}</div>`];
-  if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen bis zu einem Bahnhof auf einer anderen Insel legen</div>'];
-  const out = [`<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
+  if (T.rail.stationNet.get(k) == null) return [`<div class="bad">✗ ${GLEIS.has(k) ? 'Noch keine Schiene vor dem Gleis' : bAt(...keyXY(k)) === 'ubahn' ? 'Kein Tunnel unter der Station' : 'Keine Schiene direkt am Bahnhof'}</div>`];
+  if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen oder Tunnel bis zu einem Bahnhof bzw. einer U-Bahn-Station auf einer anderen Insel legen</div>'];
+  const nV = line.traffic && line.traffic.viertel || 0;
+  const out = [line.inner
+    ? `<div class="${nV > 1 ? 'ok' : 'bad'}">🚇 Linie auf ${regionName(line.regions[0])} · ${nV > 1 ? `verbindet ${nV} Viertel (Wünsche und Läden auch drüben)` : 'alle Halte im selben Viertel – bringt nichts, Halte in verschiedene Viertel setzen'} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`
+    : `<div class="ok">🚆 Linie ${names(line).join(' ↔ ')} · ${line.loop ? '🔁 Rundkurs' : 'hin und zurück'}, ${kmText(line)}</div>`];
   const tr = line.traffic;
   if (tr) out.push(...trafficStatus(line, tr));
   if (line.running < line.count || !line.powered) out.push(`<div class="bad">⚡ Zu wenig Strom: Ein Zug hier braucht ${fmtPow(line.needs[line.running] || line.need)} ⚡ – ${fmtPow(T.rail.power.supply)} ⚡ erzeugt, ${fmtPow(T.rail.power.demand)} ⚡ gebraucht</div>`);
@@ -1859,7 +1865,7 @@ function openGleis(gk) {
 // Fahrgäste, Plätze, Auslastung und was es bringt
 const regionIcon = r => r === 'home' ? '🏠' : ISLE_BY_ID[r].icon;
 // Zu welchem Ortsteil ein Halt zählt (Fahrgäste rechnen je Ortsteil) – auf aufgeschüttetem Land die nächste Insel
-const STOPS = new Set(['station', 'hbf', 'seilbahn', 'hafen', 'bootssteg']);
+const STOPS = new Set(['station', 'ubahn', 'hbf', 'seilbahn', 'hafen', 'bootssteg']);
 function placeLabel(x, y) {
   const r = regionAt(x, y), filled = islandAt(x, y) !== r;
   return `📍 Ortsteil ${regionIcon(r)} ${regionName(r)}${filled ? ' (aufgeschüttet)' : ''}`;

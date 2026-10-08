@@ -161,12 +161,13 @@ describe('Bahnhöfe, Linien, Strom und Bonus', () => {
     expect(game(`[state.tiles.get('8,8').train, state.tiles.get('${wx},${wy}').train, state.tiles.get('${wx},${wy}').trainCol]`)).toEqual(['tram', 'tram', 2]);
   });
 
-  it('zwei Bahnhöfe auf derselben Insel sind keine Linie', () => {
+  it('zwei Bahnhöfe auf derselben Insel: seit Block 136 eine Linie „innerhalb der Insel“ – Strom erst nach allen anderen', () => {
     unlock();
     game("state.tiles.set('8,4', { b: 'station', lvl: 1, train: 'regio' }); state.tiles.set('8,8', { b: 'station', lvl: 1, train: 'regio' })");
     for (let y = 4; y <= 9; y++) game(`state.tiles.set('10,${y}', { b: 'schiene', lvl: 1 })`);
     game("state.tiles.set('9,4', { b: 'schiene', lvl: 1 }); state.tiles.set('9,9', { b: 'schiene', lvl: 1 }); recalc()");
-    expect(game('T.rail.lines.length')).toBe(0);
+    expect(game('T.rail.lines.length')).toBe(1);
+    expect(game('T.rail.lines[0].inner')).toBe(true);
   });
 
   it('der Bahnhof dreht sich beim Setzen zur Schiene', () => {

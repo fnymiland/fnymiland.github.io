@@ -487,7 +487,7 @@ const TRAIN_KIND = {
 const trainSpeed = model => TRAIN_SPEED * (TRAIN_BY_ID[model] || TRAIN_BY_ID.tram).speed;   // schnellere Modelle fahren schneller
 // Schienenfeld direkt am Bahnhof (dort hält der Zug)
 function railStop(k) {
-  for (const [fx, fy] of stopFoot(k)) for (const [dx, dy] of DIRS) {
+  for (const [fx, fy] of stopFoot(k)) for (const [dx, dy] of stopDirs(k)) {
     const n = (fx + dx) + ',' + (fy + dy);
     if (T.rail.comp.has(n)) return n;
   }
@@ -502,7 +502,7 @@ function railPath(from, to) {
     const [x, y] = keyXY(k);
     for (const [dx, dy] of DIRS) {
       const n = (x + dx) + ',' + (y + dy);
-      if (!prev.has(n) && bAt(x + dx, y + dy) === 'schiene') { prev.set(n, k); q.push(n); }
+      if (!prev.has(n) && trackAt(x + dx, y + dy)) { prev.set(n, k); q.push(n); }   // auch durch Tunnel (Block 136)
     }
   }
   if (!prev.has(to)) return null;
@@ -558,7 +558,7 @@ function lineRoute(line) {
     for (let n = 0; n < 3 && list.length > 1; n++) {
       const [a, b] = atEnd ? [list[list.length - 2], list[list.length - 1]] : [list[1], list[0]];
       const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = 2 * bx - ax, ny = 2 * by - ay, nk = nx + ',' + ny;
-      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || bAt(nx, ny) !== 'schiene'))) break;
+      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || !trackAt(nx, ny)))) break;
       if (atEnd) list.push(nk); else list.unshift(nk);
     }
   };
@@ -568,7 +568,7 @@ function lineRoute(line) {
   // Halt: Mitte aller Schienenfelder direkt am Bahnhof, die auf der Strecke liegen
   route.stops = order.map(stop => {
     const st = line.stations.find(s => railStop(s) === stop), ds = [];
-    for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of DIRS) {
+    for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of stopDirs(st)) {
       const [d, off] = distOf((fx + dx) + ',' + (fy + dy));
       if (off < 0.01) ds.push(d);
     }
@@ -580,7 +580,7 @@ function lineRoute(line) {
 function stopOn(route, st) {
   const ds = [];
   let best = null, bd = 0.8;                                  // sonst: nächster Punkt (Bahnhof nur an einer Kurve)
-  for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of DIRS) {
+  for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of stopDirs(st)) {
     const x = fx + dx, y = fy + dy;
     route.pts.forEach((p, i) => {
       const d = Math.hypot(p[0] - x, p[1] - y);
@@ -593,7 +593,7 @@ function stopOn(route, st) {
 // Rundkurs: Ring ab einem Feld, an dem kein Bahnhof liegt (sonst läge ein Halt über dem Nahtpunkt)
 function loopRoute(line) {
   const near = new Set();
-  for (const st of line.stations) for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of [[0, 0], ...DIRS]) near.add((fx + dx) + ',' + (fy + dy));
+  for (const st of line.stations) for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of [[0, 0], ...DIRS]) near.add((fx + dx) + ',' + (fy + dy));   // auch U-Bahn (eigenes Feld)
   const i0 = Math.max(0, line.loop.findIndex(k => !near.has(k)));
   const route = railPolyline(line.loop.slice(i0).concat(line.loop.slice(0, i0)), true);
   route.stops = line.stations.map(st => stopOn(route, st)).filter(d => d != null).sort((a, b) => a - b);
@@ -680,17 +680,23 @@ function trainCars() {
 }
 // Ein Wagen als gedrehter Quader: a entlang der Fahrtrichtung, b quer; sichtbar sind Seiten, die nach vorn-unten zeigen
 function drawTrainCar(car, z, now) {
-  const tr = car.train, { du, dv } = car, col = TRAIN_COLS[tr.col] || TRAIN_COLS[0], H = tr.kind.h;
-  const P = (a, b, up = 0) => { const p = toScreen(car.px + du * a - dv * b, car.py + dv * a + du * b); return [p.x, p.y - up * z]; };
+  if (car.portal && car.portal.ramp) { g.save(); rampClip(car.portal, z); try { drawTrainCarBody(car, z, now); } finally { g.restore(); } return; }   // Rampe (Block 136)
+  drawTrainCarBody(car, z, now);
+}
+// car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg); car.portal.ramp: sinkt mit dem Gleis
+function drawTrainCarBody(car, z, now) {
+  const tr = car.train, { du, dv } = car, col = TRAIN_COLS[tr.col] || TRAIN_COLS[0], H = tr.kind.h, ramp = car.portal && car.portal.ramp ? car.portal : null;
+  const P = (a, b, up = 0) => { const wx = car.px + du * a - dv * b, wy = car.py + dv * a + du * b, p = toScreen(wx, wy); return [p.x, p.y - (up - (ramp ? rampSink(ramp, wx, wy) : 0)) * z]; };
   const la = car.len / 2, wb = tr.model === 'tram' ? 0.19 : 0.17, lit = night > 0.15 && isLive();
+  const [lo, hi] = car.cut || [-la, la], am = (lo + hi) / 2;
   const body = tr.model === 'modern' || tr.model === 'schnell' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
   const [cx, cy] = P(0, 0);
-  ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)');
-  const C4 = [[-la, -wb], [la, -wb], [la, wb], [-la, wb]];
+  if (!car.cut) ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)');
+  const C4 = [[lo, -wb], [hi, -wb], [hi, wb], [lo, wb]];
   const faces = [0, 1, 2, 3].map(i => {
-    const [a0, b0] = C4[i], [a1, b1] = C4[(i + 1) % 4], na = (a0 + a1) / 2 / la, nb = (b0 + b1) / 2 / wb;
+    const [a0, b0] = C4[i], [a1, b1] = C4[(i + 1) % 4], na = a0 === a1 ? Math.sign(a0 - am) : 0, nb = (b0 + b1) / 2 / wb;
     const nu = du * na - dv * nb, nv = dv * na + du * nb;
-    return { p: P(a0, b0), q: P(a1, b1), vis: nu + nv, nu, end: Math.abs(na) > 0.5, front: na > 0.5 };
+    return { p: P(a0, b0), q: P(a1, b1), vis: nu + nv, nu, end: na !== 0, front: na > 0 && hi >= la - 1e-6 };
   }).filter(f => f.vis > 0.02).sort((a, b) => a.vis - b.vis);
   for (const f of faces) {
     const wall = shade(body, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0);
@@ -712,9 +718,9 @@ function drawTrainCar(car, z, now) {
       if (lit) { const m = lerp(f.p, f.q, 0.5); glowQuad([[m[0] - 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.15 * z], [m[0] - 2, m[1] - H * 0.15 * z]], 22 * z); }
     }
   }
-  const roof = C4.map(([a, b]) => P(a * 0.97, b * 0.9, H));
+  const roof = C4.map(([a, b]) => P(am + (a - am) * 0.97, b * 0.9, H));
   poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
-  poly(C4.map(([a, b]) => P(a * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
+  poly(C4.map(([a, b]) => P(am + (a - am) * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
 }
 
 // Expedition: das Boot fährt vom Steg zur nächsten Insel, sucht dort eine Weile und kommt zurück (echte Zeit)

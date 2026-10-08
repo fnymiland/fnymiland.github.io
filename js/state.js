@@ -52,6 +52,7 @@ function newState() {
     techs: new Set(),
     decos: new Map(),          // kleine Dekos: Feld → [4 Ecken] mit { b, rot } oder null
     edges: new Map(),          // Linien auf Feldkanten (Block 41): 'a3,4' / 'b3,4' → { b: 'hecke'|'zaun'|'mauer', style }
+    tunnels: new Map(),        // U-Bahn (Block 136): Feld → { form? } – Strecke unter der Erde, oben darf alles stehen außer Schienen
     cam: { x: c.x, y: c.y, z: 1.4 },
     last: Date.now(),
     muted: false,
@@ -131,7 +132,7 @@ function serialize() {
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
-    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
+    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}) }]), tunnels: [...state.tunnels].map(([k, v]) => [k, Number.isInteger(v.form) && v.form ? { form: v.form } : {}]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -309,6 +310,7 @@ function parseSave(d) {
     // Block 41: die Hecke ist jetzt eine Linie – alte Hecken-Ecken werden kleine Büsche an derselben Stelle
     decos: new Map((d.decos || []).map(([k, ds]) => [k, [...(ds || []), ...newSlots()].slice(0, SLOTS).map(dd => dd && dd.b === 'hecke' ? { ...dd, b: 'busch' } : dd)])),
     edges: new Map((d.edges || []).filter(([k, e]) => /^[ab]-?\d+,-?\d+$/.test(k) && e && EDGE_TOOLS.has(e.b)).map(([k, e]) => [k, { b: e.b, style: e.style, ...(Number.isInteger(e.col) && BUSH_COLS[e.col] ? { col: e.col } : {}), ...(ARCHES[e.arch] ? { arch: e.arch } : {}), ...(typeof e.flush === 'boolean' ? { flush: e.flush } : {}), ...(e.gate === true || e.gate === 'offen' ? { gate: e.gate } : {}) }])),
+    tunnels: new Map((Array.isArray(d.tunnels) ? d.tunnels : []).filter(([k]) => /^-?\d+,-?\d+$/.test(k)).map(([k, v]) => [k, v && Number.isInteger(v.form) && DECO_LOOKS.tunnel.forms[v.form] ? { form: v.form } : {}])),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };
 }

@@ -1443,6 +1443,12 @@ function render(now) {
   for (const m of walkers.concat(strollers, paraders, typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
+    if (m.train) {                                                         // Tunnel (Block 136): im Berg unsichtbar, am Portal abgeschnitten
+      const tc = trainTunnelCut(m);
+      if (tc === 'hide') continue;
+      m.cut = tc ? tc.cut : null; m.portal = tc ? tc.portal : null;
+      if (tc) k = tc.k;
+    }
     if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
       const under = [];
       for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
@@ -1481,7 +1487,7 @@ function render(now) {
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
         const drawIt = () => {
-          if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
+          if (t.b === 'schiene' && !t.cross && !portalDir(ax, ay)) return;    // Schienen malen hier nur Bahnübergänge und Tunnelportale (Gleis liegt im Boden)
           let sc = 1;
           if (t.born) {
             const an = (now - t.born) / 380;
@@ -1521,7 +1527,7 @@ function render(now) {
           const s = T.st.get(a);
           if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
           if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
-          if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
+          if (t.b === 'station' || t.b === 'ubahn') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
           if (t.b === 'hbf' && [...GLEIS].some(([gk, G]) => { if (G.hub !== a) return false; const l = lineOf(gk); return l && l.traffic && l.traffic.served < 0.8; })) icons.push([c.x, c.y, '😣']);
           if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
           if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
@@ -1546,6 +1552,7 @@ function render(now) {
           glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
         }
         if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
+        if (state.tunnels && state.tunnels.size && tunnelAt(x, y)) drawTunnelHill(x, y, px, py, z);   // Portal mit abgewandter Wand: Hügel über dem Tunnel (Block 136)
       }
       if (preview && preview.small && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
@@ -1638,6 +1645,7 @@ function render(now) {
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
   for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht
 
+  drawTunnelView(z);                                                       // Tunnel in der Bauansicht (Block 136), über der Nacht
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const s of fallenStars) drawFallenStar(s, z, now);
   if (!(SHOWCASE && SHOWCASE.quiet)) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨

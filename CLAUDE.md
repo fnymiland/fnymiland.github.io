@@ -125,6 +125,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     nur Name, Preis, wie man baut und ⓘ. Solange etwas in der Hand ist, wird 👆 ein rotes ✕ (`syncDropBtn`). Alle Knöpfe der
     unteren Reihe und der Stil-Leiste 34 px hoch. Rathaus „Bereit“ über `buildGroups()`.
     Gruppen-Reihenfolge im Feld immer über `orderedGroups(top)` (eigene Anordnung je Gerät, „⇅ Anordnen“), nie direkt `top.groups`.
+25b. **U-Bahn** (Block 136, js/draw-ubahn.js): Tunnel liegen in `state.tunnels` (Feld → { form }), oben darf alles stehen außer
+    Schienen/Bahnhöfen – ein Feld ist Schiene ODER Tunnel. Befahrbar heißt `trackAt` (nie nur `bAt === 'schiene'` für Wege der
+    Züge). Portal = Schiene neben Tunnel (`portalDir`/`portalForm`), kein eigenes Feld. U-Bahn-Station steht auf dem Tunnel und
+    hält auf ihrem Feld (`stopDirs`). Linien auf einer Insel (`l.inner`) bekommen Strom zuletzt und dürfen nur zusätzlich wirken
+    (Wünsche, Läden ohne diese Art, Fahrkarten) – nie bestehende Einnahmen senken. Neues, das Schienenwege abfragt, Tunnel mitdenken.
     **Kacheln** zeigen Bild, Namen und Preis (`cardPrice`, kurz über `shortMoney`);
     Reihenfolge `menuList()` (Freies zuerst, auch für die Zahlentasten). Kachel antippen = `pickCard`: am iPad/Mac
     rechts das **Bau-Infofenster** (`openBuildInfo`, `showPanel(…, live, id)` setzt `buildInfo`), das offen bleibt,
