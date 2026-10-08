@@ -232,7 +232,7 @@ const PAT_COVER = { dots: 0.35, stones: 0.45, confetti: 0.4 };
 const lookFarCache = new Map();
 function lookFar(lk, z) {
   if (!lk || !lk.pat || !lk.fill || lk.pat[0] === 'rainbow' || patNoFade) return lk;
-  const f = Math.round(patternFade(lk.pat[0], z * patCoarse(lk.pat[0], z)) * 16) / 16;   // gröberes Muster: wie näher dran
+  const f = Math.round(patFadeEff(lk.pat[0], z) * 16) / 16;            // gröberes Muster: wie näher dran
   if (f >= 1) return lk;
   const list = (lk.cols && lk.cols.length ? lk.cols : [lk.pat[1]]).filter(c => typeof c === 'string' && c[0] === '#' && c.length === 7);
   if (!list.length) return lk;
@@ -257,6 +257,10 @@ const patMix = (bg, c, f) => { const k = bg + c + f; let v = patMixCache.get(k);
 // Weit weg gröber statt weg (Nutzer, PC: Muster verschwanden, Belag wirkte glatt wie Glas): wo das Muster sonst mehr als halb
 // ausblendet, Steinchen/Punkte mit doppeltem Abstand und nur ×1,4 Größe (×4 war „massiv riesig“). Stufe nur nach Zoom und Pixeldichte.
 let PAT_SCALE = 1, PAT_COARSE = true;
+// Wie stark das Muster noch zu sehen ist (0–1), mit gröberem Muster: nie schwächer als eine Mausrad-Stufe vor ganz draußen – dort
+// (Bildchen bei Zoom 0,64) sah es „perfekt“ aus, ganz draußen (0,51) blendete es auf ein Drittel aus (Nutzer, PC)
+const PAT_FLOOR = 0.66;
+const patFadeEff = (kind, z) => { const s = patCoarse(kind, z); return s > 1 ? Math.max(PAT_FLOOR, patternFade(kind, z * s)) : patternFade(kind, z); };
 function patCoarse(kind, z) {
   let s = 1;
   if (PAT_COARSE && (kind === 'dots' || kind === 'stones') && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
@@ -269,7 +273,7 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   return pattern1(L, kind, x, y, z, col, cols, ext, box, bg, z);
 }
 function pattern1(L, kind, x, y, zf, col, cols, ext, box, bg, z) {   // zf: Zoom fürs Ausblenden (gröber = wie näher dran)
-  let f = patternFade(kind, zf);
+  let f = PAT_SCALE > 1 ? Math.max(PAT_FLOOR, patternFade(kind, zf)) : patternFade(kind, zf);
   if (f <= 0.02) return;
   if (bg && f < 1) {
     f = Math.round(f * 32) / 32;                                         // Stufen: wenige Mischfarben im Zwischenspeicher

@@ -1847,6 +1847,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Mosaik blendete aus (patternFade). Nutzer wählte nach Vergleichsbild „Gröber“: Punkte/Steinchen (dots, stones) werden weit weg
       gröber statt zu verschwinden (`patCoarse`, `PAT_SCALE`) – erst ×2/×4 („massiv riesig“, Nutzer), jetzt: Abstand höchstens ×2,
       Steinchen nur ×1,4, nur wo das Muster sonst mehr als halb ausblendet;
+      dazu (Nutzer: „eine Zoomstufe davor perfekt, ganz draußen scheiße“): Bildchen ganz draußen bei 0,51 ließen das Mosaik auf 33 %
+      ausblenden, eine Stufe davor (0,64) 66 % – gröberes Muster jetzt nie unter 66 % (`PAT_FLOOR`, `patFadeEff`);
       Grundfarbe nimmt bei übrigem Ausblenden den Mittelton an (`lookFar`). Brückenbelag auch quer zwischen den Reihen überlappend.
       Gilt für alle Wege. Tests: fugen (Muster weit weg).
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
