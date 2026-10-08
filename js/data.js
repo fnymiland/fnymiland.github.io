@@ -1,5 +1,5 @@
 'use strict';
-/* Kachelhausen – eine kleine Inselwelt zum Verwalten und Gestalten.
+/* Fnymiland – eine kleine Inselwelt zum Verwalten und Gestalten.
    Wege verbinden Viertel, Betriebe liefern Rohstoffe,
    Schulen erzeugen Ideen (💡) für die Forschung, Sehenswürdigkeiten locken zum Ausbau. */
 // ---------------------------------------------------------------------------

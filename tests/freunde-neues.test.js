@@ -88,6 +88,7 @@ describe('Freunde: Name, Code, Neues (Block 111)', () => {
   });
   it('Block 112: Prüfung – eingefügte Nachricht, „!“ zuerst, erstes Mal nur die letzten Tage, Serverzeit, lange Namen', () => {
     expect(game("frCodeNorm('Mein Kachelhausen-Freundescode: FNYMI-7F3QK')")).toBe('7F3QK');
+    expect(game("frCodeNorm('Mein Fnymiland-Freundescode: FNYMI-7F3QK')")).toBe('7F3QK');
     expect(game("(() => { const el = $('fr-in') || document.createElement('input'); return frCodeNorm('7F' + 'FNYMI-7F3QK'); })()")).toBe('7F3QK');
     game("bookAll = { a: { k: 'h', from: 'f1', n: 'Ben', at: Date.now() - 1000 } }; mailAll = {}; cloudState = 'konflikt'; netDotShow()");
     expect(game("$('net-dot').textContent")).toBe('!');                                      // Konflikt geht vor der Zahl

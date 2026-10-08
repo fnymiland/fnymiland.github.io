@@ -2721,7 +2721,7 @@ $('import-file').addEventListener('change', async e => {
   if (!file) return;
   let s;
   try { s = parseSave(JSON.parse(await readFileText(file))); }
-  catch (err) { fail('Diese Datei ist kein lesbarer Kachelhausen-Spielstand.'); return; }
+  catch (err) { fail('Diese Datei ist kein lesbarer Fnymiland-Spielstand.'); return; }
   openModal(`
     <h2>Spielstand laden?</h2>
     <p>Insel <b>${escHtml(s.town.name)}</b> mit 🪙 ${fmt(s.money)} und ${s.tiles.size} Gebäuden.</p>

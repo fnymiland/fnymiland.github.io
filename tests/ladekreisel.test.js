@@ -4,8 +4,8 @@ const { loadGame, game } = require('./helpers/load-game');
 beforeAll(() => loadGame());
 const el = () => game("(() => { const e = document.getElementById('loading'); return { hidden: e.hidden, big: e.classList.contains('big'), text: e.querySelector('.ld-text').textContent }; })()");
 describe('Ladekreisel (Block 142)', () => {
-  it('steht schon vor allen Skripten im HTML: ganzer Bildschirm „Kachelhausen lädt …“, mit Drehkreisel', () => {
-    expect(el()).toEqual({ hidden: false, big: true, text: 'Kachelhausen lädt …' });
+  it('steht schon vor allen Skripten im HTML: ganzer Bildschirm „Fnymiland lädt …“, mit Drehkreisel', () => {
+    expect(el()).toEqual({ hidden: false, big: true, text: 'Fnymiland lädt …' });
     expect(game("document.querySelector('#loading').getAttribute('role')")).toBe('status');
     expect(game("!!document.querySelector('#loading .ld-spin')")).toBe(true);
   });

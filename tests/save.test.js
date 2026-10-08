@@ -20,7 +20,7 @@ describe('Spielstand sichern und laden', () => {
   });
 
   it('fremde oder kaputte Dateien werden abgelehnt', () => {
-    expect(() => game('parseSave({ hallo: 1 })')).toThrow(/kein Kachelhausen-Spielstand/);
+    expect(() => game('parseSave({ hallo: 1 })')).toThrow(/kein Fnymiland-Spielstand/);
     expect(() => game('parseSave(null)')).toThrow();
   });
 

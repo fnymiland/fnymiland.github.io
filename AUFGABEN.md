@@ -1750,3 +1750,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [ ] Vor jedem Push: Messlauf (Werkzeug wie in Block 125c: Welt laden, rendern, Zeiten/Spitzen beim Ziehen und Zoomen) und Zahlen
       neben die vorigen in AUFGABEN.md schreiben – wird es langsamer, erst klären
 - [ ] PC-Skalierung (100/125/150 %) und iPad-Größe immer mit nachstellen (`devicePixelRatio` setzen, `resize()`)
+
+## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
+- [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
+      (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
+      Bleiben (unsichtbar): localStorage-Schlüssel `kachelhausen_*`, `window.kachelhausen` – sonst wären gespeicherte Inseln weg.
+      Alte geteilte Texte „Mein Kachelhausen-Freundescode“ werden weiter erkannt

@@ -114,7 +114,7 @@ if (PROBE) {
     if (saveBlocked) $('m-raw').onclick = () => {    // den unlesbaren Text unverändert herunterladen, danach darf neu gespeichert werden
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([saveBlocked], { type: 'application/json' }));
-      a.download = 'kachelhausen-unlesbar.json';
+      a.download = 'fnymiland-unlesbar.json';
       document.body.append(a); a.click(); a.remove();
       saveBlocked = false; save();
       closeModal(); showIntro(true);

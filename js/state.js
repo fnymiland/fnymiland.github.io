@@ -126,7 +126,7 @@ function serialize() {
   const terraMap = new Map(state.terra), edgeMap = new Map(state.edges);    // getragener Rasen und Linien: am alten Platz (Block 117)
   for (const it of held) { if (it.kind === 'ground') terraMap.set(it.from, it.look); else if (it.kind === 'edge') edgeMap.set(it.from, it.e); }
   return {
-    game: 'kachelhausen', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
+    game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
@@ -152,7 +152,7 @@ function save(periodic) {
 // Gespeicherten Stand prüfen und auf den aktuellen Stand bringen (wirft bei Unsinn)
 function parseSave(d) {
   if (!d || typeof d !== 'object' || typeof d.seed !== 'number' || !Array.isArray(d.tiles) || !Array.isArray(d.owned)) {
-    throw new Error('Das ist kein Kachelhausen-Spielstand.');
+    throw new Error('Das ist kein Fnymiland-Spielstand.');
   }
   // 28.09.2026: Straßen, Gartenwege und Pflaster werden zu Wegen; Gehwege an Kanten entfallen
   const ROAD_TO = { sand: 'sand', asphalt: 'asphalt', kopf: 'kopf', klinker: 'klinker' };
@@ -413,7 +413,7 @@ function exportSave() {
   const name = (state.town.name || 'insel').replace(/[^\wäöüÄÖÜß-]+/g, '-');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `kachelhausen-${name}-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+  a.download = `fnymiland-${name}-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
   document.body.append(a);
   a.click();
   a.remove();

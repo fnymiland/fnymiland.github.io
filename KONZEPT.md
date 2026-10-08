@@ -1,4 +1,4 @@
-# Kachelhausen – Spielkonzept (Entwurf zum Abstimmen)
+# Fnymiland – Spielkonzept (Entwurf zum Abstimmen)
 
 > Alles hier ist ein Vorschlag. Streichen, ändern, ergänzen – erst danach wird gebaut.
 > Zahlen sind grobe Richtwerte und werden beim Spielen eingestellt.
@@ -127,7 +127,7 @@ Stadtname und Flagge, Bewohner, die herumlaufen, Tag und Nacht, Offline-Einnahme
 - **Bewohner bekommen Namen.**
 - **Hausformen:** alle fünf (Häuschen, Fachwerk, Reetdach, Stadthaus, Villa), nach und nach freigeschaltet.
 
-## Kachelhausen 2.0 – entschieden (28.09.2026)
+## Fnymiland 2.0 – entschieden (28.09.2026)
 
 **Wege statt Straßen**
 - Keine Straßen und keine Gehwege auf Feldkanten mehr. Es gibt nur noch **Wege**, jeder belegt **ein ganzes Feld**.

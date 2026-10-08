@@ -1,4 +1,8 @@
-# Kachelhausen – Projektwissen
+# Fnymiland – Projektwissen
+
+> Das Spiel heißt **Fnymiland** (früher „Kachelhausen“). Nirgends Sichtbares mehr mit „Kachelhausen“. Nur die internen
+> Speicher-Schlüssel (`kachelhausen_v3`, `kachelhausen_*` im localStorage, `window.kachelhausen`) bleiben – umbenennen hieße,
+> gespeicherte Inseln und Einstellungen gingen verloren.
 
 Gemütliches Aufbauspiel auf einer Insel (Polytopia-Kacheln, Animal-Crossing-Look). Der Nutzer entwickelt es
 gemeinsam mit Claude und spielt es auf dem iPad im WLAN. **Das Konzept steht in [KONZEPT.md](KONZEPT.md)** –

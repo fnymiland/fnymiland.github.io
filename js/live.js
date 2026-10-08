@@ -232,7 +232,7 @@ function visitUi() {
 // ---------------------------------------------------------------------------
 const FR_ALPHA = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';                 // ohne 0/O, 1/I/L
 const frCodeText = c => `FNYMI-${c}`;
-// auch aus einer eingefügten Nachricht („Mein Kachelhausen-Freundescode: FNYMI-7F3QK“, Block 112)
+// auch aus einer eingefügten Nachricht („Mein Fnymiland-Freundescode: FNYMI-7F3QK“, Block 112)
 const frCodeNorm = s => { const t = String(s || '').toUpperCase(), m = t.match(/FNYMI\s*-?\s*([A-Z0-9]{5})(?![A-Z0-9])/); return m ? m[1] : t.replace(/^\s*FNYMI\s*-?\s*/, '').replace(/[^A-Z0-9]/g, ''); };
 let frMine = null, frList = {}, frOff = null, frRenderTok = 0;
 async function frCode() {
@@ -365,7 +365,7 @@ async function openFriends() {
   // nur die 5 Zeichen nach FNYMI- (Block 111); ein ganzer eingefügter Code wird gekürzt
   $('fr-in').oninput = () => { const el = $('fr-in'), v = el.value; el.value = (v.length > 5 ? frCodeNorm(v) : v.toUpperCase().replace(/[^A-Z0-9]/g, '')).slice(0, 5); };
   const share = (text, link) => shareText(text, link);
-  $('fr-copy').onclick = () => share(`Mein Kachelhausen-Freundescode: ${code}`);
+  $('fr-copy').onclick = () => share(`Mein Fnymiland-Freundescode: ${code}`);
   $('fr-send').onclick = async () => { try { const err = await frAdd($('fr-in').value); toast(err || '📩 Anfrage geschickt'); if (!err) openFriends(); } catch (e) { toast('Hat nicht geklappt – später nochmal'); } };
   for (const b of document.querySelectorAll('[data-fracc]')) b.onclick = async () => { try { await frAccept(b.dataset.fracc); toast('👥 Ihr seid jetzt befreundet'); } catch (e) { toast('Hat nicht geklappt'); } };
   for (const b of document.querySelectorAll('[data-frdel]')) b.onclick = async () => { try { await frRemove(b.dataset.frdel); } catch (e) { toast('Hat nicht geklappt'); } };

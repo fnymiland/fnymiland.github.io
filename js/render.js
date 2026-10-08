@@ -278,7 +278,7 @@ function loadingUpdate() {
   el.hidden = !want;
   el.classList.toggle('big', want === 'start' || want === 'visit');
   const t = el.querySelector('.ld-text');
-  if (t && want) t.textContent = want === 'start' ? 'Kachelhausen lädt …' : want === 'visit' ? 'Die Insel wird geladen …' : 'Insel wird gezeichnet …';
+  if (t && want) t.textContent = want === 'start' ? 'Fnymiland lädt …' : want === 'visit' ? 'Die Insel wird geladen …' : 'Insel wird gezeichnet …';
 }
 const STALE_MS = 20;                               // Erneuern (andere Zoomstufe, andere Fassung): etwas mehr als sonst, aber ohne Pause
 // Kein Speicher mehr (getContext null, iPad): eine Weile gar nichts Neues malen, Entbehrliches freigeben – nie deswegen aufholen/vorbereiten
