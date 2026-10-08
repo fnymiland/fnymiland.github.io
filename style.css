@@ -450,12 +450,17 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 .wpop-cols .wopt.on i { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--brown); }
 @media (hover: hover) { .wopt:hover { background: var(--cream2); } .wpop-cols .wopt:hover { background: transparent; } }
 .wopt.more i { background: var(--cream2); }
+/* Wegform: Knöpfe immer gleich breit („schmal“/„ganz breit“, „Kurve rund“/„Kurve eckig“) – sonst änderte sich die Breite der
+   Leiste beim Umschalten, alles verschob sich (Rückmeldung Nutzer) */
+#style-bar .shape-chip, #style-bar .shape-chip.on { padding: 4px 12px 4px 4px; }
+#style-bar .shape-chip span, #style-bar .shape-chip.on span { display: inline-block; width: 80px; text-align: left; font-size: 12px; }
+#style-bar .shape-chip i, #style-bar .shape-chip.on i { width: 28px; height: 28px; }      /* an: nur Farbe, nicht größer */
 .swatches.wpick .sw.wsq { border-radius: 8px; }
 .wpick-cap { margin: 6px 0 2px; font-size: 12px; font-weight: 800; color: var(--brown); opacity: .8; }
 .sw-note { font-size: 12px; align-self: center; }
 @media (max-width: 560px) {                     /* Handy: alles in einer Zeile – Form nur als Zeichen, lange Namen gekürzt */
-  #style-bar .shape-chip span { display: none; }
-  #style-bar .shape-chip.on { padding: 4px; }
+  #style-bar .shape-chip span, #style-bar .shape-chip.on span { display: none; }
+  #style-bar .shape-chip, #style-bar .shape-chip.on { padding: 4px; }
   .style-chip.wsel { padding: 3px 8px 3px 3px; gap: 5px; }
   .style-chip.wsel i { width: 28px; height: 28px; }
   .style-chip.wsel span { max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
