@@ -353,8 +353,11 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 .design-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 7px; margin: 6px 0 4px; }
 .design {
   border: 0; font: inherit; color: var(--brown); background: var(--cream2); border-radius: 12px; padding: 6px 4px;
-  display: flex; flex-direction: column; align-items: center; gap: 2px; box-shadow: 0 2px 0 var(--shadow); cursor: pointer;
+  /* Bild mittig im freien Platz, Name, Preis immer unten – in einer Reihe stehen alle Preise auf einer Höhe (Rückmeldung Nutzer) */
+  display: grid; grid-template-rows: 1fr auto auto; justify-items: center; align-items: center; gap: 2px;
+  box-shadow: 0 2px 0 var(--shadow); cursor: pointer; min-height: 104px;   /* alle Karten gleich hoch, auch Farben ohne Namen */
 }
+.design .dn:empty { display: none; }
 .design i { width: 26px; height: 26px; border-radius: 8px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
 .design .emoji { font-size: 22px; }
 .design i.wlook { width: 62px; height: 44px; border-radius: 10px; }   /* Wegmuster: größere Vorschau (Block 125) */
@@ -366,7 +369,7 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 .dcard-cols .sw { cursor: default; }
 h2 .dcol { display: inline-block; width: 22px; height: 22px; border-radius: 50%; vertical-align: -3px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.12); }
 .design .dn { font-size: 11px; font-weight: 800; line-height: 1.1; text-align: center; }
-.design small { font-size: 11px; font-weight: 900; }
+.design small { font-size: 11px; font-weight: 900; line-height: 16px; }   /* Preis und ✓ gleich hoch */
 .design.have { background: #eaffea; }
 .design.cant { opacity: .6; }                   /* gerade nicht kaufbar (Taler, Meisterstück) – Karte zeigt den Grund */
 .design:disabled:not(.have) { opacity: .5; cursor: default; }
