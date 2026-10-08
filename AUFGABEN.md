@@ -1586,7 +1586,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       22 → 18 ms. Dazu Feldsuche ohne toScreen je Feld (visibleTiles, bitgleich) und live Wege nur aus LIVE_FLAT
 - [x] Messwerkzeug: ruckeln.js liest nicht mehr aus der Hauptleinwand (Chrome stellte sie sonst auf CPU um – frühere Messungen
       dadurch zu pessimistisch)
-- [ ] Nächste Schritte: Zuschneiden ohne Warten (~2,5 ms je neues Bildchen, Rückstau nach Zoom/Verschieben), Sammelbilder (Atlas)
+- [x] Zuschneiden im Hintergrund (cropAsync: createImageBitmap → Worker liest und meldet den Rahmen, zugeschnitten per drawImage;
+      ohne Worker/OffscreenCanvas bzw. mit Lichtmaske wie bisher). Echter Bildtakt, Verschieben + Zoomen, Full HD DPR 2:
+      alt 25,4 / 32,5 / 42,5 ms (Mitte/90 %/max), WebGL 21,0 / 32,7 / 69,7 – Spitzen jetzt vom Hochladen neuer Bildchen
+- [ ] Nächste Schritte: Sammelbilder (Atlas)
       statt 4.000 Texturwechsel, JS der Feldschleife (Deko-/Linien-Plan), Nacht/Dämmerung in GL, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich

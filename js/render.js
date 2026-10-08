@@ -393,8 +393,52 @@ const spriteCrops = [], CROP_MS = 8;
 function cropSprites(limit = CROP_MS) {
   const t0 = performance.now();
   let i = 0;
-  for (; i < spriteCrops.length; i++) { if (i > 0 && performance.now() - t0 > limit) break; cropSprite(spriteCrops[i]); }
+  for (; i < spriteCrops.length; i++) {
+    const e = spriteCrops[i];
+    if (!e.maskTodo && cropAsync(e)) continue;                            // im Hintergrund (Block 144): das Bild wartet nicht
+    if (i > 0 && performance.now() - t0 > limit) break;
+    cropSprite(e);
+  }
   spriteCrops.splice(0, i);
+}
+// Rand im Hintergrund suchen (Block 144): Das Lesen der Pixel (getImageData) wartet auf die Grafikkarte – im Hauptablauf ~2,5 ms je
+// neuem Bildchen, nach dem Verschieben/Zoomen Dutzende. Stattdessen eine Kopie (createImageBitmap, ohne Warten) an einen Worker, der
+// liest und den Rahmen zurückmeldet; zugeschnitten wird dann wie gehabt (drawImage, ohne Lesen). Ohne Worker/OffscreenCanvas
+// (Test, alte Browser) oder mit Lichtmaske: wie bisher sofort
+let cropWorker = null, cropSeq = 0;
+const cropWait = new Map();
+function cropAsync(e) {
+  if (cropWorker === false) return false;
+  if (!cropWorker) {
+    if (typeof Worker === 'undefined' || typeof OffscreenCanvas === 'undefined' || typeof createImageBitmap === 'undefined' || typeof Blob === 'undefined') { cropWorker = false; return false; }
+    try {
+      const src = `onmessage = ev => { const { id, bmp } = ev.data; let box = null;
+        try { const w = bmp.width, h = bmp.height, c = new OffscreenCanvas(w, h), x = c.getContext('2d', { willReadFrequently: true });
+          x.drawImage(bmp, 0, 0); const d = x.getImageData(0, 0, w, h).data; let x0 = w, y0 = h, x1 = -1, y1 = -1;
+          for (let y = 0; y < h; y++) { const r = y * w * 4; for (let i = 0; i < w; i++) if (d[r + i * 4 + 3]) { if (i < x0) x0 = i; if (i > x1) x1 = i; if (y < y0) y0 = y; y1 = y; } }
+          box = [x0, y0, x1, y1]; } catch (err) { box = null; }
+        try { bmp.close(); } catch (err) {}
+        postMessage({ id, box }); };`;
+      cropWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+      cropWorker.onmessage = ev => cropDone(ev.data.id, ev.data.box);
+      cropWorker.onerror = () => { cropWorker = false; for (const [, e] of cropWait) { e.crop = false; spriteCrops.push(e); } cropWait.clear(); };
+    } catch (err) { cropWorker = false; return false; }
+  }
+  const c = e.c;
+  if (!c || !c.width || !c.height) { e.crop = false; return true; }
+  const id = ++cropSeq;
+  cropWait.set(id, e);
+  createImageBitmap(c).then(bmp => { if (cropWorker) cropWorker.postMessage({ id, bmp }, [bmp]); else cropWait.delete(id); },
+    () => { cropWait.delete(id); e.crop = false; });
+  return true;
+}
+function cropDone(id, box) {
+  const e = cropWait.get(id);
+  cropWait.delete(id);
+  if (!e) return;
+  e.crop = false;
+  if (!box || !e.c || !e.c.width) return;                                // inzwischen freigegeben: nichts zu tun
+  cropApply(e, e.c, box[0], box[1], box[2], box[3]);
 }
 function cropSprite(e) {
   e.crop = false;
@@ -411,6 +455,11 @@ function cropSprite(e) {
   if (!d) return;                                                         // ohne Pixel (Test): ungeschnitten
   let x0 = nw, y0 = nh, x1 = -1, y1 = -1;
   for (let y = 0; y < nh; y++) { const row = y * nw * 4; for (let x = 0; x < nw; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
+  cropApply(e, c, x0, y0, x1, y1);
+}
+// Zuschneiden mit gefundenem Inhaltsrahmen (x1 < 0: leer), 1 Punkt Rand
+function cropApply(e, c, x0, y0, x1, y1) {
+  const nw = c.width, nh = c.height;
   let out = null;
   if (x1 >= 0) {
     x0 = Math.max(0, x0 - 1); y0 = Math.max(0, y0 - 1); x1 = Math.min(nw - 1, x1 + 1); y1 = Math.min(nh - 1, y1 + 1);
