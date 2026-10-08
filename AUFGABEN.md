@@ -1634,6 +1634,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Geländer/eigener Zaun je Feld. Test: ubahn
 - [x] 136m (Nutzer: „beim Entfernen genauso ausgegraut wie beim Tunnel“): blass nur mit Tunnel/U-Bahn-Station in der Hand; mit
       Abriss und Schiene nur die gestrichelten Tunnel. Test: ubahn (Bauansicht)
+- [x] 136n (Nutzer: „den Tunnel ändern können, wenn man draufklickt“): Fenster einer Schiene am Portal (auch vorderes Rampenfeld)
+      zeigt „🚇 Tunnelportal“ mit den Formen (Bildchen per drawTunnelIcon), „für alle anderen“ und „neu gebaute“; ein Tunnelfeld ohne
+      etwas darüber (Hügel) öffnet ein eigenes Tunnel-Fenster (`openTunnelInfo`) mit Form und 🗑️. `portalNear`. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

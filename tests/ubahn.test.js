@@ -204,3 +204,38 @@ describe('Bauansicht', () => {
   });
 });
 
+describe('Tunnel antippen (Nutzer: „ändern können, wenn man draufklickt“)', () => {
+  beforeEach(() => {
+    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
+    for (let x = 8; x <= 10; x++) game(`state.tunnels.set('${x},10', {})`);
+    game('recalc()');
+  });
+  const pick = (sel, id) => [...document.querySelectorAll(sel + ' [data-dform]')].find(b => b.getAttribute('aria-label') === 'Form: ' + id);
+  it('Schiene am Portal: Fenster zeigt das Portal; eine Form antippen ändert es (rückgängig machbar)', () => {
+    game('openInfo(7, 10)');
+    expect(document.querySelector('#panel .portal-look')).not.toBe(null);
+    pick('#panel .portal-look', 'Rampe').click();
+    expect(game("state.tunnels.get('8,10').form")).toBe(1);
+    expect(game("[state.tiles.get('7,10').form || 0]")).toEqual([0]);        // das Gleisbett bleibt
+    expect(game('undo()')).toBe(true);
+    expect(game("state.tunnels.get('8,10').form")).toBeUndefined();
+  });
+  it('vorderes Rampenfeld und das Tunnelfeld mit dem Hügel führen zum selben Portal', () => {
+    game("state.tunnels.get('8,10').form = 1; recalc()");
+    expect(game('portalNear(6, 10)')).toEqual({ R: [7, 10], d: [1, 0] });
+    expect(game('portalNear(8, 10)')).toEqual({ R: [7, 10], d: [1, 0] });
+    expect(game('portalNear(9, 10)')).toBe(null);
+  });
+  it('Tunnel ohne etwas darüber: eigenes Fenster mit Portal-Form und Entfernen', () => {
+    game('openTunnelInfo(8, 10)');
+    expect(document.getElementById('panel').textContent).toContain('Tunnel');
+    pick('#panel .portal-look', 'Backstein').click();
+    expect(game("state.tunnels.get('8,10').form")).toBe(2);
+    game('openTunnelInfo(10, 10)');
+    expect(document.querySelector('#panel .portal-look')).toBe(null);          // mitten im Tunnel: kein Portal
+    document.getElementById('p-del').click();
+    expect(game("state.tunnels.has('10,10')")).toBe(false);
+    game('closePanel()');
+  });
+});
+

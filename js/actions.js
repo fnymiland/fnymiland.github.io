@@ -708,6 +708,7 @@ function tap(sx, sy, isTouch) {
     if (wk) { openWalkerInfo(wk); return; }
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
     else if (t) openInfo(ax, ay);
+    else if (state.tunnels && tunnelAt(x, y)) openTunnelInfo(x, y);   // Tunnel ohne etwas darüber (Block 136)
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);
     else if (terraLook(x, y) === 'fz') openFzInfo(x, y);
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }

@@ -1178,6 +1178,7 @@ const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 const setLook = (obj, kind, i) => { if (i) obj[kind] = i; else delete obj[kind]; };
 const lookAll = b => {
   const out = [];
+  if (b === 'tunnel') { for (const [k, t] of state.tiles) { if (t.b !== 'schiene') continue; const [x, y] = keyXY(k), d = portalDir(x, y); if (d) out.push(state.tunnels.get((x + d[0]) + ',' + (y + d[1]))); } return out; }   // nur Tunnel hinter einem Portal
   for (const ds of state.decos.values()) for (const d of ds) if (d && baseOf(d.b) === b) out.push(d);
   for (const t of state.tiles.values()) if (baseOf(t.b) === b) out.push(t);
   return out;
@@ -1189,7 +1190,14 @@ function lookThumb(b, form, col) {
   if (lookThumbs.has(key)) return lookThumbs.get(key);
   let url = '';
   try {
-    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : b === 'strassenlaterne' ? 0.95 : b === 'blumen' ? 1.2 : 1.9, rail = b === 'schiene' || b === 'pb_station';
+    const c = document.createElement('canvas'), prev = g;
+    if (b === 'tunnel') {                                                   // Tunnelportal (Block 136): kleines Portal statt Geist
+      c.width = 64; c.height = 64; g = c.getContext('2d');
+      try { drawTunnelIcon(26, 40, 0.95, { form }); } finally { g = prev; }
+      url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
+      lookThumbs.set(key, url); return url;
+    }
+    const s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : b === 'strassenlaterne' ? 0.95 : b === 'blumen' ? 1.2 : 1.9, rail = b === 'schiene' || b === 'pb_station';
     c.width = 64; c.height = 64; g = c.getContext('2d');
     try { drawObject(b, 32, b === 'pb_station' ? 42 : b === 'strassenlaterne' ? 61 : b === 'blumen' ? 40 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
     url = c.toDataURL();
@@ -1383,6 +1391,8 @@ function openInfo(x, y) {
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
   if (t.b === 'pb_station') colors += pbTrainsHtml(x, y);                  // Züge der Strecke (Block 136e)
   if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t, [x, y]);   // Form/Farbe (Block 106); Gleise mit Auswahl (146)
+  const portal = t.b === 'schiene' ? portalNear(x, y) : null;             // Tunnelportal ändern (Block 136)
+  if (portal) colors += portalLookHtml(portal);
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
     ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
@@ -1520,6 +1530,7 @@ function openInfo(x, y) {
   wirePaintMore(el, t, () => openInfo(x, y));
   if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
   if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y), [x, y]);
+  if (portal) wireDecoLook(el.querySelector('.portal-look'), 'tunnel', portalTunnel(portal), () => openInfo(x, y));   // nach dem Gleisbett: eigene Knöpfe
   if (t.b === 'pb_station') wirePbTrains(el, x, y);
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
@@ -1716,6 +1727,36 @@ function parkStatus(k) {
     `<div class="ok">🌸 +${PARK_BEAUTY[p.stage]} Schönheit – auch für Häuser bis ${PARK_NEAR[p.stage]} Felder drumherum</div>`,
     `<div class="ok">👥 Zieht ${PARK_ATTR[p.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   return out;
+}
+// Tunnel (Block 136, Nutzer: „den Tunnel ändern können, wenn man draufklickt“): zu einem angetippten Feld das Portal –
+// Schienenfeld am Tunnel, vorderes Feld einer langen Rampe oder das Tunnelfeld dahinter (dort steht der Hügel)
+function portalNear(x, y) {
+  const d0 = portalDir(x, y);
+  if (d0) return { R: [x, y], d: d0 };
+  for (const [dx, dy] of DIRS) {
+    const q = portalDir(x + dx, y + dy);
+    if (q && q[0] === dx && q[1] === dy && bAt(x, y) === 'schiene' && portalForm(x + dx, y + dy, q) === 'rampe' && rampLen(x + dx, y + dy, q) === 2) return { R: [x + dx, y + dy], d: q };
+    const r = portalDir(x - dx, y - dy);
+    if (r && r[0] === dx && r[1] === dy && tunnelAt(x, y)) return { R: [x - dx, y - dy], d: r };
+  }
+  return null;
+}
+const portalTunnel = P => state.tunnels.get((P.R[0] + P.d[0]) + ',' + (P.R[1] + P.d[1]));
+function portalLookHtml(P) {
+  const f = portalTunnel(P).form || 0, now = DECO_LOOKS.tunnel.forms.find(e => e.id === portalForm(P.R[0], P.R[1], P.d));
+  return `<div class="portal-look"><div class="label">🚇 Tunnelportal${f ? '' : ` · passend: ${now.name}`}</div>${decoLookHtml('tunnel', portalTunnel(P))}</div>`;
+}
+function openTunnelInfo(x, y) {
+  const P = portalNear(x, y), c = costOf('tunnel', x, y);
+  showPanel(`
+    <h3>🚇 Tunnel</h3>
+    <p class="muted">Liegt unter der Erde – zu sehen nur mit Tunnel, U-Bahn-Station, Schiene oder 🧹 in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
+    ${P ? portalLookHtml(P) : ''}
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Tunnel hier entfernen">🗑️ +${fmt(c.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => tunnelAt(x, y) && !COVER.has(x + ',' + y) ? openTunnelInfo(x, y) : closePanel());
+  if (P) wireDecoLook($('panel').querySelector('.portal-look'), 'tunnel', portalTunnel(P), () => openTunnelInfo(x, y));
+  $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
+  $('p-close').onclick = closePanel;
 }
 function openParkInfo(x, y) {
   const k = x + ',' + y;
