@@ -1478,11 +1478,17 @@ Wunsch Nutzer (07.10.2026): „Wege komplett neue Designs anbieten, die man auch
 alles mit Kies, weil der Rest nicht passend aussieht – und alte ohne Linien machen (beim Rauszoomen Linien wie bei Kies).“
 Heute 14 Beläge: Kiesweg, Erde, Schachbrett, Asphalt, Trittsteine, Kopfstein, Klinker, Terrakotta, Konfetti, Fischgrät rosé,
 Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspielt, kaum etwas Ruhiges für eine Stadt.
-- [ ] 125a: Vorhandene überarbeiten – alle 14 Beläge weit weg und nah ansehen: Linien/Raster beim Rauszoomen beseitigen (Muster mit
-      Fugen flimmern bzw. zeichnen Linien an den Feldgrenzen), Übergänge zwischen Belägen, Kanten; was hässlich ist, schöner machen
+- [x] 125a: Linien beim Rauszoomen: Ursache sind die feinen Muster – Kiespunkte liegen in einem Raster (nur wenig verrückt) und
+      werden weit weg zu Streifen, Fugen (Platten, Klinker, Gold, Fischgrät) unter 1 Gerätepunkt zu Linien und Grauschleier.
+      Jetzt blassen sie aus wie bei Mipmapping (`patternFade`/`PAT_FADE` in draw-objects.js): voll ab Zoom ~0,8, ein Drittel bei
+      0,45, fast weg bei 0,35 – nah dran unverändert. Vergleichsbilder: tools/belaege.js (alle Beläge als 4×4-Plätze je Zoomstufe)
+- [ ] 125a2: Übergänge zwischen Belägen, Kanten; was hässlich ist, schöner machen (mit Nutzer anhand der Übersicht)
 - [ ] 125b: Neue ruhige Stadtbeläge (Vorschlag, mit Nutzer abstimmen): Granitplatten grau, Betonplatten hell, Sandstein, Asphalt
       ohne Mittelstreifen, Pflaster anthrazit, Gehwegplatten mit Bordstein – wenige, aber stimmig zueinander und zu den Gebäuden
 - [ ] 125c: Mit Nutzer klären: welche alten Beläge bleiben, zusammenlegen oder weg (wie 29.09.: Sand+Kies, Holzbohlen weg)
+- [ ] 125d: Vorschau vor dem Kauf (Wunsch Nutzer 08.10.): Wege in der Kunstakademie als Bild sehen, bevor man bezahlt
+- [ ] Kunstakademie allgemein durchschaubar machen (Wunsch Nutzer 08.10.: „man investiert 3 Minuten Einkommen und merkt am Ende,
+      dass man es vielleicht gar nicht so schön findet“): zu jedem Design eine Vorschau (Bildchen am Beispiel), evtl. kurz ausprobieren
 
 ## Block 126: Alle Hecken einfärbbar
 - [x] Farbauswahl wie Wilmerhecke/Busch (BUSH_COLS) für alle Heckenformen: Leiste beim Bauen, Fenster, „für alle übernehmen“

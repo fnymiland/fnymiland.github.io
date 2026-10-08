@@ -206,7 +206,24 @@ function clipTo(shapes, L) {
 }
 // ext: Muster über das Feld hinaus fortsetzen (gleiches Raster, wie es das Nachbarfeld selbst zeichnet) – für Übergänge
 // box [u0, u1, v0, v1]: nur Punkte darin zeichnen (Übergänge brauchen nur einen Streifen)
+// Weit weg blassen feine Muster aus (Block 125, wie Mipmapping): Je kleiner Punkte und Fugen in Gerätepunkten werden, desto
+// schwächer – sonst werden aus Kiespunkten Streifen und aus Fugen Linien und graues Flimmern. Nah dran unverändert
+const PAT_FADE = { dots: [1.0, 1.0], stones: [2.0, 2.1], confetti: [1.2, 1.3], line: [0.62, 0.66] };   // [ab Größe, voll nach +] in Gerätepunkten: voll ab Zoom ~0,8, ein Drittel bei 0,45
+function patternFade(kind, z) {
+  const t = g.getTransform ? g.getTransform() : null, px = (t ? Math.hypot(t.a, t.b) : 1) * z;   // Gerätepunkte je Einheit von z
+  const size = kind === 'dots' ? 1.3 * px : kind === 'stones' ? 2.6 * px : kind === 'confetti' ? 1.6 * px : 0.8 * px;
+  const [a, b] = PAT_FADE[kind] || PAT_FADE.line;
+  return Math.max(0, Math.min(1, (size - a) / b));
+}
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
+  if (kind === 'rainbow') return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
+  const f = patternFade(kind, z);
+  if (f <= 0.02) return;
+  const a0 = g.globalAlpha;
+  g.globalAlpha = a0 * f;
+  try { patternDraw(L, kind, x, y, z, col, cols, ext, box); } finally { g.globalAlpha = a0; }
+}
+function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const R = 0.55, E = R + ext;
   const out = (u, v) => box && (u < box[0] || u > box[1] || v < box[2] || v > box[3]);
   const span = step => [-Math.ceil(ext / step - 1e-9), Math.floor((2 * R + ext) / step + 1e-9)];   // Indizes im festen Raster
