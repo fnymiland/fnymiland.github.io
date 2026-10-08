@@ -904,11 +904,15 @@ function drawWegBridge(cx, cy, z, x, y, t) {
   }
   // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
   const b0 = latB ? -0.51 : -hw, b1 = latF ? 0.51 : hw;                  // Belag bis in die Nachbarreihe (keine Fuge)
-  const deck = strip(b0, b1);
+  // längs ~1,5 Gerätepunkte ins Nachbarfeld (wie seamPad bei Wegen): weit weg ist jedes Feld ein eigenes Bildchen, dessen Rand beim
+  // Verkleinern halb durchsichtig wird – sonst schimmert das Wasser als helle Linie zwischen den Feldern (Nutzer, PC FHD)
+  const tfd = g.getTransform ? g.getTransform() : null, dpd = (tfd ? Math.hypot(tfd.a, tfd.b) : 1) * z, pd = Math.min(0.08, 1.5 / (dpd * TW * 0.56));
+  const ASd = [AS[0] - pd, ...AS.slice(1, -1), AS[AS.length - 1] + pd], Hd = a => H(Math.max(-0.5, Math.min(0.5, a)));
+  const deck = ASd.slice(0, -1).map((a, i) => [P(a, b0, Hd(a)), P(ASd[i + 1], b0, Hd(ASd[i + 1])), P(ASd[i + 1], b1, Hd(ASd[i + 1])), P(a, b1, Hd(a))]);
   if (B.wall) {                                                         // Belag wie der Weg – mit seinem Muster (Block 66b)
     const st = styleDef('weg', t.style), lk = pathLook(st.id) || {}, fill = lk.fill || '#dcc69d';
-    const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, H(a)); };
-    const band2 = (w0, w1) => [...AS.map(a => ax ? [w0, a] : [a, w0]), ...[...AS].reverse().map(a => ax ? [w1, a] : [a, w1])];
+    const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, Hd(a)); };
+    const band2 = (w0, w1) => [...ASd.map(a => ax ? [w0, a] : [a, w0]), ...[...ASd].reverse().map(a => ax ? [w1, a] : [a, w1])];
     const inner = band2(latB ? b0 : -ROAD_W, latF ? b1 : ROAD_W);
     poly(band2(b0, b1).map(Lh), C(lk.edge || shade(fill, -0.18)));
     poly(inner.map(Lh), C(fill));

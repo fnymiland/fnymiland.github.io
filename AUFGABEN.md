@@ -1838,7 +1838,12 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Nachbesserung 2 (Nutzer: „wird sogar noch später scharf“, PC lud nachweislich v755 – Server-Protokoll): Am PC (Pixeldichte 1)
       zeichnet das Spiel bis Zoom 1,95 Bildchen (Mac nur bis 1,3, `2.6 / DPR`); die werden beim Einsetzen bis ×0,8 verkleinert und auf
       der Grafikkarte gefiltert – 1-Punkt-Fugen verwischen dabei. Jetzt weit weg zusätzlich Steine als Flächen in drei Tönen (`archWall`,
-      `far`): überstehen das Verkleinern. Offen/beobachten: feine helle Nähte zwischen den Bildchen der Brückenfelder auf dem Belag.
+      `far`): überstehen das Verkleinern.
+- [x] Nachbesserung 3 (Nutzer: „Es ist der BELAG auf der Brücke“ – das alte Linienproblem): Brückenbelag endete exakt an der Feldkante;
+      weit weg ist jedes Brückenfeld ein eigenes Bildchen, dessen Rand beim Verkleinern halb durchsichtig wird – das Wasser schimmerte
+      als helle Querlinie durch. Jetzt längs ~1,5 Gerätepunkte ins Nachbarfeld (`drawWegBridge`, `ASd`/`pd`, wie seamPad bei Wegen).
+- [ ] Linien auf Wegen weit weg am PC (Block 125c, vom Nutzer „aufgegeben“): mit tools/vorschau/melden.js (Konsole am PC, schickt
+      Bildschirm + Technik an den Mac, Empfänger sink-lan.py auf 192.168.178.82:4182) echte PC-Bilder holen, dann gezielt beheben.
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
