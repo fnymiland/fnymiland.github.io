@@ -1737,7 +1737,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Knopf „Für alle anderen übernehmen“. In Fnymiland OG: 41 verbundene, 292 Hecken. Tests: zaun.test.js, buschfarben.test.js
 
 ## Block 146: Schienen – nur verbundene umstellen (Wunsch Nutzer, 08.10.2026)
-- [ ] Gleis-Stil heute nur „alle Schienen“ → wie bei Wegen: „Nur dieses Feld“ / „Alle verbundenen (N Felder)“ / „Alle“
+- [x] Gleisfenster: „Ändern: Nur dieses Feld / Alle verbundenen (N) / Alle Gleise (M)“, dann Gleisbett antippen – kostenlos wie
+      bisher, ↶ (`railScopeSel`, `railNetwork`: aneinanderliegende Schienenfelder inkl. Bahnübergänge und Brücken; Hauptbahnhof ist
+      Kopfbahnhof, verbindet nichts; `restyleRails`). Ersetzt „Für alle anderen übernehmen“ beim Gleis. Überbauen durch Ziehen gab
+      es schon (Block 112). Test: bahn-gemuetlich.test.js (zwei Netze, verbunden/alle, ↶). Browser-Blick offen (Fenster ging nicht auf)
 
 ## Block 147: Bänke (Rückmeldung Nutzer, 08.10.2026)
 - [ ] Rundbank (Bank um den Baum) viel zu klein im Vergleich zur Parkbank → größer (Baum und Bank im richtigen Verhältnis)

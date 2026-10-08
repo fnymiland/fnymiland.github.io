@@ -48,11 +48,25 @@ describe('Gleis-Stile (Block 109)', () => {
     expect(game("document.querySelectorAll('#panel [data-dform]').length")).toBe(2);
     game("document.querySelector('#panel [data-dform=\"1\"]').click()");
     expect(rail(8, 8).form).toBe(1);
-    game("document.querySelector('#panel [data-dall]').click()");
+    game("document.querySelector('#panel [data-rscope=\"run\"]').click(); document.querySelector('#panel [data-dform=\"1\"]').click(); railScopeSel = 'one'");   // Block 146: alle verbundenen
     expect([7, 9, 10].map(x => rail(x, 8).form)).toEqual([1, 1, 1]);
     expect(game("railLookOf({ b: 'schiene', form: 1 }) === RAIL_LOOK.rasen")).toBe(true);
     expect(game("railLookOf({ b: 'schiene', form: 1, bridge: true }) === RAIL_LOOK.rasen")).toBe(true);     // auch auf Brücken (109b)
     expect(game("railLookOf({ b: 'schiene', form: 99 }) === RAIL_LOOK.schotter")).toBe(true);
+  });
+  it('Block 146: nur dieses Feld, alle verbundenen oder alle Gleise – ein anderes Netz bleibt bei „verbunden“, ↶ zurück', () => {
+    game("railScopeSel = 'one'; for (let x = 7; x <= 10; x++) build('schiene', x, 8); for (let y = 9; y <= 11; y++) build('schiene', 10, y); for (let x = 14; x <= 16; x++) build('schiene', x, 12); resetUndo()");
+    game("openInfo(8, 8)");
+    expect(game("[...document.querySelectorAll('#panel [data-rscope]')].map(b => b.textContent)")).toEqual(['Nur dieses Feld', 'Alle verbundenen (7)', 'Alle Gleise (10)']);
+    game("document.querySelector('#panel [data-dform=\"1\"]').click()");                       // nur dieses Feld
+    expect([7, 8, 9].map(x => rail(x, 8).form || 0)).toEqual([0, 1, 0]);
+    game("document.querySelector('#panel [data-rscope=\"run\"]').click(); document.querySelector('#panel [data-dform=\"1\"]').click()");
+    expect([rail(7, 8).form, rail(10, 11).form, rail(15, 12).form || 0]).toEqual([1, 1, 0]);    // Netz 2 bleibt
+    game("document.querySelector('#panel [data-rscope=\"all\"]').click(); document.querySelector('#panel [data-dform=\"1\"]').click()");
+    expect(rail(15, 12).form).toBe(1);
+    game('undo()');
+    expect([rail(15, 12).form || 0, rail(7, 8).form]).toEqual([0, 1]);
+    game("railScopeSel = 'one'");
   });
   it('keine Oberleitung mehr: weder Masten noch Draht noch Stromabnehmer', () => {
     expect(game("typeof drawRailWire")).toBe('undefined');

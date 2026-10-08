@@ -1674,6 +1674,37 @@ const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
 // Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
 // foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
 const isCrossing = t => !!t && t.b === 'schiene' && !!t.cross;
+// Gleise umstellen (Block 146, wie Wege und Hecken): verbunden = Schienenfelder, die aneinanderliegen (auch Bahnübergänge, Brücken)
+function railNetwork(x, y, max = 20000) {
+  const k0 = x + ',' + y;
+  if (bAt(x, y) !== 'schiene') return [];
+  const seen = new Set([k0]), out = [[x, y]];
+  for (let i = 0; i < out.length && out.length < max; i++) for (const [dx, dy] of DIRS) {
+    const nx = out[i][0] + dx, ny = out[i][1] + dy, k = nx + ',' + ny;
+    if (seen.has(k) || bAt(nx, ny) !== 'schiene') continue;
+    seen.add(k); out.push([nx, ny]);
+  }
+  return out;
+}
+function railScope(x, y, scope) {
+  if (scope === 'run') return railNetwork(x, y);
+  if (scope === 'all') return [...state.tiles].filter(([, t]) => t.b === 'schiene').map(([k]) => keyXY(k));
+  return bAt(x, y) === 'schiene' ? [[x, y]] : [];
+}
+// Gleisbett (Form) für eine Liste von Feldern – kostenlos wie bisher im Fenster; gibt zurück, wie viele sich geändert haben
+function restyleRails(list, form) {
+  if (!lookOk('schiene', 'form', form)) return 0;
+  let n = 0;
+  const now = performance.now();
+  for (const [x, y] of list) {
+    const t = state.tiles.get(x + ',' + y);
+    if (!t || t.b !== 'schiene' || (t.form || 0) === form) continue;
+    if (form) t.form = form; else delete t.form;
+    t.born = now; n++;
+  }
+  if (n) { groundVersion++; save(); }
+  return n;
+}
 const crossingAt = (x, y) => isCrossing(state.tiles.get(x + ',' + y));
 // Designs der Fußgängerbrücke. Wer umgestaltet, bekommt die alte Brücke voll zurück und zahlt die neue.
 const FOOT_STYLES = {

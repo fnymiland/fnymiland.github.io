@@ -1150,11 +1150,20 @@ function wireLookChips(bar, b, t) {
   if (bar.querySelector('[data-lmore]')) bar.querySelector('[data-lmore]').onclick = () => { openResearch('design'); artJump(DECO_LOOKS[b].group); };
 }
 // Im Fenster: Form, Farbe, auf alle gleichen übertragen, für neu Gebautes merken
-function decoLookHtml(b, o) {
-  const L = DECO_LOOKS[b], form = o.form || 0, col = o.col || 0, more = lookMore(b);
-  const others = lookAll(b).filter(x => x !== o && ((x.form || 0) !== form || (x.col || 0) !== col)).length;
+// Gleise (Block 146): erst wählen, wofür – nur dieses Feld, alle verbundenen, alle Gleise –, dann das Gleisbett antippen
+let railScopeSel = 'one';
+function railScopeHtml(x, y) {
+  const nRun = railNetwork(x, y).length, nAll = railScope(x, y, 'all').length;
+  if (railScopeSel === 'run' && nRun < 2 || railScopeSel === 'all' && nAll <= nRun) railScopeSel = nRun > 1 && railScopeSel === 'all' ? 'run' : 'one';
+  const sc = (v, label) => `<button class="look${railScopeSel === v ? ' on' : ''}" data-rscope="${v}">${label}</button>`;
+  return `<div class="label">Ändern</div>
+    <div class="looks">${sc('one', 'Nur dieses Feld')}${nRun > 1 ? sc('run', `Alle verbundenen (${nRun})`) : ''}${nAll > nRun ? sc('all', `Alle Gleise (${nAll})`) : ''}</div>`;
+}
+function decoLookHtml(b, o, at = null) {
+  const L = DECO_LOOKS[b], form = o.form || 0, col = o.col || 0, more = lookMore(b), rail = b === 'schiene' && at;
+  const others = rail ? 0 : lookAll(b).filter(x => x !== o && ((x.form || 0) !== form || (x.col || 0) !== col)).length;
   const p = state.paintNew[b], on = !!(p && (p.form != null || p.col != null));
-  return `<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
+  return `${rail ? railScopeHtml(at[0], at[1]) : ''}<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
     <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${L.cols ? `<div class="label">Farbe</div>
     <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
@@ -1162,9 +1171,13 @@ function decoLookHtml(b, o) {
     <div class="looks paint-more">${others ? `<button class="look" data-dall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
       <button class="look${on ? ' on' : ''}" data-dnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen das</button></div>`;
 }
-function wireDecoLook(el, b, o, reopen) {
+function wireDecoLook(el, b, o, reopen, at = null) {
   const remember = () => { if (state.paintNew[b] && (state.paintNew[b].form != null || state.paintNew[b].col != null)) state.paintNew[b] = { form: o.form || 0, col: o.col || 0 }; };
-  for (const x of el.querySelectorAll('[data-dform]')) x.onclick = () => { undoable(() => { setLook(o, 'form', +x.dataset.dform); remember(); o.born = performance.now(); groundVersion++; sfx('deco'); save(); }); reopen(); };   // Gleis liegt im Boden (Block 109)
+  for (const x of el.querySelectorAll('[data-rscope]')) x.onclick = () => { railScopeSel = x.dataset.rscope; reopen(); };
+  for (const x of el.querySelectorAll('[data-dform]')) x.onclick = () => {
+    if (b === 'schiene' && at) { undoable(() => { if (restyleRails(railScope(at[0], at[1], railScopeSel), +x.dataset.dform)) { remember(); sfx('deco'); } }); reopen(); return; }   // Block 146
+    undoable(() => { setLook(o, 'form', +x.dataset.dform); remember(); o.born = performance.now(); groundVersion++; sfx('deco'); save(); }); reopen();   // Gleis liegt im Boden (Block 109)
+  };
   for (const x of el.querySelectorAll('[data-dcol]')) x.onclick = () => { undoable(() => { setLook(o, 'col', +x.dataset.dcol); remember(); sfx('deco'); save(); }); reopen(); };
   const all = el.querySelector('[data-dall]'), nw = el.querySelector('[data-dnew]'), more = el.querySelector('[data-dmore]');
   if (all) all.onclick = () => { undoable(() => { const l = lookAll(b).filter(x => x !== o && ((x.form || 0) !== (o.form || 0) || (x.col || 0) !== (o.col || 0))); l.forEach(x => { setLook(x, 'form', o.form || 0); setLook(x, 'col', o.col || 0); }); groundVersion++; sfx('deco'); save(); toast(`🎨 ${l.length} angepasst`); }); reopen(); };
@@ -1272,7 +1285,7 @@ function openInfo(x, y) {
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<div class="looks"><button class="look art-more" data-openart="1">🎨 Mehr Farben freischalten ›</button></div>' : ''}`;
   }
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
-  if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t);   // Form/Farbe (Block 106)
+  if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t, [x, y]);   // Form/Farbe (Block 106); Gleise mit Auswahl (146)
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
     ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
@@ -1409,7 +1422,7 @@ function openInfo(x, y) {
   const pick = (kind, v) => { if (v === 'bunt') delete t[kind]; else t[kind] = +v; rememberPaint(t); sfx('deco'); save(); openInfo(x, y); };
   wirePaintMore(el, t, () => openInfo(x, y));
   if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
-  if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y));
+  if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y), [x, y]);
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
@@ -2529,6 +2542,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-08-hecken', date: '8. Oktober', title: 'Hecken wie Wege', items: [
     '✂️ <b>Hecke antippen → Ändern:</b> nur dieses Stück, alle verbundenen oder alle Hecken – dann Form oder Farbe wählen. Gilt auch für Zäune und Mauern.',
     '🔁 <b>Überbauen:</b> Einfach eine neue Hecke über die alte ziehen – auch nur in anderer Farbe.',
+    '🚂 <b>Gleise genauso:</b> Gleis antippen → nur dieses Feld, alle verbundenen oder alle Gleise – dann das Gleisbett wählen.',
   ] },
   { id: '2026-10-08-buendig', date: '8. Oktober', title: 'Wege bis an die Hecke', items: [
     '🧱 <b>Neue Hecken, Zäune und Mauern sind bündig:</b> Der Weg läuft bis an die Linie – auch um Ecken bleibt kein Graszwickel mehr.',
