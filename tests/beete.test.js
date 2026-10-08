@@ -29,4 +29,13 @@ describe('Beete (Block 152)', () => {
     game("closePanel(); state.tiles.get('6,6').form = 4; state.tiles.get('6,6').col = 1; adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()");
     expect(game("[state.tiles.get('6,6').form, state.tiles.get('6,6').col]")).toEqual([4, 1]);
   });
+  it('Größen heißen Klein · Mittel · Groß; eine Reihe in der Leiste (Form und Boden als aufklappende Knöpfe), keine Hinweiszeile am PC', () => {
+    expect(game("[ITEMS.blumen_l.name, ITEMS.blumen_xl.name]")).toEqual(['Blumenbeet (mittel)', 'Blumenbeet (groß)']);
+    game("setTool('blumen')");
+    expect(game("[...document.querySelectorAll('#style-bar [data-size] span')].map(s => s.textContent)")).toEqual(['Klein · 1×1', 'Mittel · 2×2', 'Groß · 3×3']);
+    expect(game("document.querySelectorAll('#style-bar [data-lpop]').length")).toBe(2);
+    expect(game("document.querySelectorAll('#style-bar [data-lform], #style-bar [data-lcol]').length")).toBe(0);
+    expect(game("document.getElementById('hint').hidden")).toBe(true);
+    game("setTool('look')");
+  });
 });

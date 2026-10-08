@@ -473,6 +473,7 @@ const isKind = (k, b) => kindOf(k).includes(b);
 // Größen (Block 43): manche Deko gibt es in mehreren Größen – je Größe ein eigener Eintrag (variantOf = Grundmodell),
 // im Menü und Album nur das Grundmodell; gewählt wird über die Größen-Leiste (SIZE_ORDER). 'base' = das Grundmodell.
 // f = wie viel größer gezeichnet als das Grundmodell, span = Beet: mehr Blumen statt größerer Blumen.
+const sizeName = (b, k) => (DECO_SIZES[b] && DECO_SIZES[b].names && DECO_SIZES[b].names[k]) || SIZE_NAMES[k];   // je Ding eigene Namen (Beet: Klein/Mittel/Groß)
 const SIZE_NAMES = { s: 'Klein', m: 'Mittel', l: 'Groß', xl: 'Riesig' }, SIZE_MUL = { s: 0.4, m: 1, l: 3.5, xl: 8 };
 const DECO_SIZES = {
   brunnen: { base: 'm', s: { small: true, f: 0.5 }, l: { size: [2, 2], f: 2 }, xl: { size: [3, 3], f: 3 } },
@@ -481,7 +482,7 @@ const DECO_SIZES = {
   palme: { base: 's', m: { f: 1.6 }, l: { size: [2, 2], f: 2.6, name: 'Palmengruppe' } },
   busch: { base: 's', m: { f: 1.7, name: 'Busch' }, l: { size: [2, 2], f: 2.8, name: 'Buschgruppe' } },
   kristall: { base: 's', m: { f: 1.7 }, l: { size: [2, 2], f: 2.8 } },
-  blumen: { base: 'm', l: { size: [2, 2], span: 2 }, xl: { size: [3, 3], span: 3 } },
+  blumen: { base: 'm', l: { size: [2, 2], span: 2 }, xl: { size: [3, 3], span: 3 }, names: { m: 'Klein', l: 'Mittel', xl: 'Groß' } },   // drei Größen: Klein/Mittel/Groß (Nutzer)
   statue: { base: 'm', l: { size: [2, 2], f: 2 } },
   pavillon: { base: 'm', l: { size: [2, 2], f: 2 } },
   glashaus: { base: 'm', l: { size: [2, 3], f: 1.5 } },
@@ -495,7 +496,7 @@ for (const [b, sz] of Object.entries(DECO_SIZES)) {
     if (!v) continue;
     const id = b + '_' + k, mul = SIZE_MUL[k] / SIZE_MUL[sz.base];
     const mat = B.mat ? Object.fromEntries(Object.entries(B.mat).map(([r, n]) => [r, Math.max(1, Math.round(n * mul))])) : undefined;
-    ITEMS[id] = { ...B, name: v.name || `${B.name} (${SIZE_NAMES[k].toLowerCase()})`, cost: Math.round(B.cost * mul), beauty: Math.round(B.beauty * mul * 10) / 10,
+    ITEMS[id] = { ...B, name: v.name || `${B.name} (${sizeName(b, k).toLowerCase()})`, cost: Math.round(B.cost * mul), beauty: Math.round(B.beauty * mul * 10) / 10,
       variantOf: b, vsize: k, vf: v.f || 1, span: v.span || 1, small: !!v.small, needs: v.small ? undefined : B.needs || 'grass' };
     if (mat) ITEMS[id].mat = mat; else delete ITEMS[id].mat;
     if (v.size) ITEMS[id].size = v.size; else delete ITEMS[id].size;

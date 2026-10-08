@@ -299,7 +299,8 @@ function syncSelBar() {
 }
 function updateHint() {
   const hint = $('hint'), t = tool;
-  if (t === 'look' || t === 'verschieben' || t === 'abriss') { hint.hidden = true; return; }   // ✋/Abriss: keine Zeile (Nutzer: „nervt, nimmt Platz“)
+  if (t === 'look' || t === 'verschieben' || t === 'abriss') { hint.hidden = true; return; }
+  if (!PHONE && document.body.classList.contains('has-styles') && !$('style-bar').hidden) { hint.hidden = true; return; }   // Stil-Leiste da: keine Zeile darüber (Nutzer: „überladen“)   // ✋/Abriss: keine Zeile (Nutzer: „nervt, nimmt Platz“)
   const d = ITEMS[t];
   if (PHONE) {
     const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
@@ -487,8 +488,9 @@ function renderStyleBar(t) {
   }
   if (sizes) {                                                   // Größen (Block 43): Klein · Mittel · Groß · Riesig
     const foot = id => ITEMS[id].small ? 'Ecke' : ITEMS[id].size ? ITEMS[id].size.join('×') : '1×1';
-    bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${SIZE_NAMES[k]}">
-      <i>${SIZE_NAMES[k][0]}</i><span>${SIZE_NAMES[k]} · ${foot(id)}</span></button>`).join('');
+    const nm = k => sizeName(baseOf(t), k);
+    bar.innerHTML = sizes.map(([k, id]) => `<button class="style-chip size-chip${id === t ? ' on' : ''}" data-size="${id}" title="${ITEMS[id].name}" aria-label="${nm(k)}">
+      <i>${nm(k)[0]}</i><span>${nm(k)} · ${foot(id)}</span></button>`).join('');
     if (baseOf(t) === 'busch') bar.innerHTML += bushChips('busch');                     // Farbe gleich beim Bauen (Block 89)
     if (DECO_LOOKS[baseOf(t)]) bar.innerHTML += lookChips(baseOf(t));                     // Form/Farbe (Block 106)
     wireBushChips(bar, 'busch', t);
@@ -1158,18 +1160,31 @@ function lookThumb(b, form, col) {
 }
 const lookFree = (b, kind) => (kind === 'form' ? DECO_LOOKS[b].forms : DECO_LOOKS[b].cols || []).map((e, i) => [e, i]).filter(([, i]) => lookOk(b, kind, i));
 const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !lookOk(b, 'form', i)).length + (DECO_LOOKS[b].cols || []).filter((e, i) => !lookOk(b, 'col', i)).length;
+// Leiste (Nutzer, 08.10.2026: „überladen, 5 Felder übereinander“): wie beim Weg je ein Knopf für Form und Farbe/Boden – die Auswahl
+// klappt als Raster darüber auf (lookPop), eine Wahl klappt sie wieder zu. So bleibt es eine Reihe, egal wie viele Formen es gibt
+let lookPop = null;
 function lookChips(b) {
-  const p = state.paintNew[b] || {}, form = lookOk(b, 'form', p.form | 0) ? p.form | 0 : 0, col = lookOk(b, 'col', p.col | 0) ? p.col | 0 : 0, more = lookMore(b);
-  return '<span class="style-sep"></span>' + lookFree(b, 'form').map(([f, i]) => `<button class="style-chip look-chip${i === form ? ' on' : ''}" data-lform="${i}" title="${f.name}" aria-label="Form: ${f.name}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><span>${f.name}</span></button>`).join('')
-    + (DECO_LOOKS[b].cols ? '<span class="style-sep"></span>' + lookFree(b, 'col').map(([c, i]) => `<button class="style-chip${i === col ? ' on' : ''}" data-lcol="${i}" title="${c.name}" aria-label="${DECO_LOOKS[b].colLabel || 'Farbe'}: ${c.name}"><i style="background:${c.c}"></i><span>${c.name}</span></button>`).join('') : '')
-    + (more ? `<button class="style-chip more" data-lmore="1" title="${more} weitere Formen und Farben in der Kunstakademie" aria-label="${more} weitere in der Kunstakademie">🎨<span>+${more}</span></button>` : '');
+  const L = DECO_LOOKS[b], p = state.paintNew[b] || {}, form = lookOk(b, 'form', p.form | 0) ? p.form | 0 : 0, col = lookOk(b, 'col', p.col | 0) ? p.col | 0 : 0;
+  const lab = L.colLabel || 'Farbe', F = L.forms[form], Cc = L.cols && L.cols[col];
+  const moreF = L.forms.length - lookFree(b, 'form').length, moreC = L.cols ? L.cols.length - lookFree(b, 'col').length : 0;
+  const more = n => n ? `<button class="wopt more" data-lmore="1"><i>🎨</i><small>+${n} in der Kunstakademie</small></button>` : '';
+  const pop = lookPop === 'form' ? `<div class="wpop" role="listbox" aria-label="Form">${lookFree(b, 'form').map(([f, i]) => `<button class="wopt${i === form ? ' on' : ''}" data-lform="${i}" role="option" aria-selected="${i === form}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><small>${f.name}</small></button>`).join('')}${more(moreF)}</div>`
+    : lookPop === 'col' && L.cols ? `<div class="wpop wpop-cols" role="listbox" aria-label="${lab}">${lookFree(b, 'col').map(([c, i]) => `<button class="wopt${i === col ? ' on' : ''}" data-lcol="${i}" role="option" aria-selected="${i === col}"><i style="background:${c.c}"></i><small>${c.name}</small></button>`).join('')}${more(moreC)}</div>` : '';
+  return '<span class="style-sep"></span>' + pop
+    + `<button class="style-chip on wsel look-chip${lookPop === 'form' ? ' open' : ''}" data-lpop="form" aria-expanded="${lookPop === 'form'}" aria-label="Form: ${F.name} – ändern"><i style="background:#f6efe2 url(${lookThumb(b, form, col)}) center / contain no-repeat"></i><span>${F.name} ▾</span></button>`
+    + (Cc ? `<button class="style-chip on wsel${lookPop === 'col' ? ' open' : ''}" data-lpop="col" aria-expanded="${lookPop === 'col'}" aria-label="${lab}: ${Cc.name} – ändern"><i style="background:${Cc.c}"></i><span>${Cc.name} ▾</span></button>` : '');
 }
 function wireLookChips(bar, b, t) {
-  const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
+  const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; lookPop = null; sfx('deco'); save(); renderStyleBar(t); };
+  for (const x of bar.querySelectorAll('[data-lpop]')) x.onclick = () => { lookPop = lookPop === x.dataset.lpop ? null : x.dataset.lpop; sfx('deco'); renderStyleBar(t); };
   for (const x of bar.querySelectorAll('[data-lform]')) x.onclick = () => set('form', +x.dataset.lform);
   for (const x of bar.querySelectorAll('[data-lcol]')) x.onclick = () => set('col', +x.dataset.lcol);
-  if (bar.querySelector('[data-lmore]')) bar.querySelector('[data-lmore]').onclick = () => { openResearch('design'); artJump(DECO_LOOKS[b].group); };
+  for (const x of bar.querySelectorAll('[data-lmore]')) x.onclick = () => { lookPop = null; openResearch('design'); artJump(DECO_LOOKS[b].group); };
 }
+document.addEventListener('pointerdown', e => {                          // daneben tippen: Auswahl zu
+  if (!lookPop || ($('style-bar') && $('style-bar').contains(e.target))) return;
+  lookPop = null; if (DECO_LOOKS[baseOf(tool)]) renderStyleBar(tool);
+}, true);
 // Im Fenster: Form, Farbe, auf alle gleichen übertragen, für neu Gebautes merken
 // Gleise (Block 146): erst wählen, wofür – nur dieses Feld, alle verbundenen, alle Gleise –, dann das Gleisbett antippen
 let railScopeSel = 'one';

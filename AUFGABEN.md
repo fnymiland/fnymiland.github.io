@@ -1925,6 +1925,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       bepflanzt/Kies/schlicht Grün) **Boden wählbar** (`BED_SOILS` als cols, im Fenster „Boden“): Rindenmulch, Kies, Grün frei,
       Gartenerde 60. Alte Beete: Rindenmulch. Lavendel immer Kies, Wildblumen Wiese. Leistung: Krümel je Farbe ein Pfad (sonst
       großes Beet 4 845 Befehle, jetzt 1 527). Test: beete
+- [x] Nachbesserung (Nutzer): Lavendel auf jedem Boden (nicht nur Kies). Beet-Größen heißen Klein · Mittel · Groß (`DECO_SIZES.blumen.names`,
+      `sizeName`). Leiste „überladen, 5 Felder übereinander“: Form und Farbe/Boden aller Schmuck-Dinge (Laternen, Bänke, Beete …) wie beim
+      Weg als je ein Knopf, die Auswahl klappt als Raster darüber auf (`lookPop`); am PC keine Hinweiszeile, wenn die Stil-Leiste da ist.
+      Beim Beet am PC jetzt eine Reihe statt drei. Tests: beete, schmuck
 ## Kleinigkeiten nach dem Push v764 (Nutzer, 08.10.2026)
 - [x] Ballons & Zeppelin abschaltbar: ☰ → Grafik „🎈 Ballons & Zeppelin: an/aus“ (nur wenn erfunden), je Gerät (localStorage
       `kachelhausen_himmel`, `skyShow`/`setSkyShow`), Seilbahn bleibt. Test: strassenlaterne (Ballons & Zeppelin abschaltbar)

@@ -212,9 +212,8 @@ function drawBed(cx, cy, z, x, y, t, span) {
       ellipse(q[0] - 1 * z, q[1] - 1.2 * z, 0.9 * z, 2 * z, C('#5aa84f'));
       poly([[q[0] - 1.5 * z, q[1] - 5 * z], [q[0] + 1.5 * z, q[1] - 5 * z], [q[0] + 1.6 * z, q[1] - 7.6 * z], [q[0] + 0.5 * z, q[1] - 6.6 * z], [q[0], q[1] - 7.8 * z], [q[0] - 0.5 * z, q[1] - 6.6 * z], [q[0] - 1.6 * z, q[1] - 7.6 * z]], C(col));
     }
-  } else if (form === 'lavendel') {                                        // Kiesbett mit Lavendelreihen
-    poly(quad(R), C('#d9cdb4'));
-    for (const [u, v, i] of scatter(30 * span * span, () => true, 1)) { const q = P(u, v); circle(q[0], q[1], 0.5 * z, C(i % 3 ? '#c4b796' : '#efe6d0')); }
+  } else if (form === 'lavendel') {                                        // Lavendelreihen (Boden wählbar)
+    soilPoly(quad(R), '#d9cdb4');                                         // Boden wählbar wie bei den anderen (Nutzer: „nur auf Kies?“)
     const rows = 2 + span, pts = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < 3 * span; c++) pts.push([-R * 0.7 + (r + 0.5) * 1.4 * R / rows, -R * 0.72 + (c + 0.5) * 1.44 * R / (3 * span), r * 10 + c]);
     for (const [u, v, i] of pts.sort((a, b) => a[0] + a[1] - b[0] - b[1])) {

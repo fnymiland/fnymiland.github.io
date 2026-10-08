@@ -44,11 +44,16 @@ describe('Stadtschmuck (Block 106)', () => {
   it('Leiste beim Bauen: Formen und Farben zum Wählen, „+N“ führt in die Kunstakademie', () => {
     game("setTool('bank')");
     expect(game("document.getElementById('style-bar').hidden")).toBe(false);
+    expect(game("document.querySelectorAll('#style-bar [data-lpop]').length")).toBe(2);              // je ein Knopf für Form und Farbe (Nutzer: „überladen“)
+    expect(game("document.querySelectorAll('#style-bar [data-lform]').length")).toBe(0);              // Auswahl zu
+    game("document.querySelector('#style-bar [data-lpop=\"form\"]').click()");
     expect(game("document.querySelectorAll('#style-bar [data-lform]').length")).toBe(2);
+    expect(game("!!document.querySelector('#style-bar [data-lmore]')")).toBe(true);
+    game("document.querySelector('#style-bar [data-lpop=\"col\"]').click()");
     expect(game("document.querySelectorAll('#style-bar [data-lcol]').length")).toBe(4);
     game("document.querySelector('#style-bar [data-lcol=\"3\"]').click()");
     expect(game('state.paintNew.bank.col')).toBe(3);
-    expect(game("!!document.querySelector('#style-bar [data-lmore]')")).toBe(true);
+    expect(game("document.querySelectorAll('#style-bar [data-lcol]').length")).toBe(0);              // Wahl klappt zu
     game("setTool('look')");
   });
   it('„Platz“ heißt jetzt „Stadtschmuck“', () => {
