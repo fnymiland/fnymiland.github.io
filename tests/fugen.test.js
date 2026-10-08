@@ -46,7 +46,7 @@ describe('Muster weit weg gröber statt weg (Nutzer: „Gröber“)', () => {
   it('Punkte/Steinchen werden weit weg doppelt bis vierfach so groß, nah bleiben sie; gröber zählt fürs Ausblenden wie näher dran', () => {
     expect(game("patCoarse('dots', 3)")).toBe(1);
     const s = game("patCoarse('dots', 0.45)");
-    expect(s).toBeGreaterThan(1); expect(s).toBeLessThanOrEqual(4);
+    expect(s).toBe(2);                                                              // höchstens doppelt (Nutzer: nicht riesig)
     expect(game(`patternFade('dots', 0.45 * ${s})`)).toBeGreaterThan(game("patternFade('dots', 0.45)"));
     expect(game("patCoarse('herring2', 0.45)")).toBe(1);                             // Linienmuster: wie bisher
   });

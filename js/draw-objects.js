@@ -254,12 +254,12 @@ let patSeam = false;
 // zeichnen beide Nachbarfelder, halb durchsichtig doppelt gemalt wurden sie dunkler, und weit weg sah man jedes Feld als Kachel
 const patMixCache = new Map();
 const patMix = (bg, c, f) => { const k = bg + c + f; let v = patMixCache.get(k); if (!v) { if (patMixCache.size > 4000) patMixCache.clear(); v = mix(bg, c, f); patMixCache.set(k, v); } return v; };
-// Weit weg gröber statt weg (Nutzer, PC: Muster verschwanden, Belag wirkte glatt wie Glas): Steinchen/Punkte doppelt bzw. vierfach so
-// groß und weit auseinander, bis sie nicht mehr zum feinen Raster verschwimmen. Die Stufe hängt nur an Zoom und Pixeldichte.
+// Weit weg gröber statt weg (Nutzer, PC: Muster verschwanden, Belag wirkte glatt wie Glas): wo das Muster sonst mehr als halb
+// ausblendet, Steinchen/Punkte mit doppeltem Abstand und nur ×1,4 Größe (×4 war „massiv riesig“). Stufe nur nach Zoom und Pixeldichte.
 let PAT_SCALE = 1, PAT_COARSE = true;
 function patCoarse(kind, z) {
   let s = 1;
-  if (PAT_COARSE && (kind === 'dots' || kind === 'stones')) while (s < 4 && patternFade(kind, z * s) < 0.9) s *= 2;
+  if (PAT_COARSE && (kind === 'dots' || kind === 'stones') && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
   return s;
 }
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
@@ -330,7 +330,7 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
     // Raster über die ganze Insel (Block 100): Steine auf der Feldkante zeichnen beide Felder gleich – sonst bleiben an
     // jeder Kante angeschnittene halbe Steine stehen, die auf breiten Wegen wie Striche aussehen
     // je Farbe ein Pfad, ein fill (Block 125c: vorher je Punkt – ~80 Füllungen je Kiesfeld)
-    const sc = PAT_SCALE, step = (kind === 'stones' ? 0.11 : 0.09) * sc, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z * sc, ry = (kind === 'stones' ? 1.6 : 0.9) * z * sc;   // weit weg gröber (patCoarse)
+    const sc = PAT_SCALE, rs = Math.sqrt(sc), step = (kind === 'stones' ? 0.11 : 0.09) * sc, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z * rs, ry = (kind === 'stones' ? 1.6 : 0.9) * z * rs;   // weit weg: Abstand ×2, Steinchen nur ×1,4 (patCoarse)
     const gi0 = Math.ceil((x - M) / step), gi1 = Math.floor((x + M) / step), gj0 = Math.ceil((y - M) / step), gj1 = Math.floor((y + M) / step);
     const nc = cols ? cols.length : 1;
     for (let k = 0; k < nc; k++) {

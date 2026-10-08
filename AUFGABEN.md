@@ -1845,7 +1845,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Echte PC-Bilder (tools/vorschau/melden.js in der Konsole am PC → Empfänger sink-lan.py auf 192.168.178.82:4182, nur vom PC):
       Edge, RTX 3070 Ti, Pixeldichte 1. Befund: Kristallweg auf breiter Bogenbrücke weit weg glatt fast weiß „wie Glasdach“ – das
       Mosaik blendete aus (patternFade). Nutzer wählte nach Vergleichsbild „Gröber“: Punkte/Steinchen (dots, stones) werden weit weg
-      ×2/×4 größer und weiter auseinander statt zu verschwinden (`patCoarse`, `PAT_SCALE`), bis sie kein feines Raster mehr bilden;
+      gröber statt zu verschwinden (`patCoarse`, `PAT_SCALE`) – erst ×2/×4 („massiv riesig“, Nutzer), jetzt: Abstand höchstens ×2,
+      Steinchen nur ×1,4, nur wo das Muster sonst mehr als halb ausblendet;
       Grundfarbe nimmt bei übrigem Ausblenden den Mittelton an (`lookFar`). Brückenbelag auch quer zwischen den Reihen überlappend.
       Gilt für alle Wege. Tests: fugen (Muster weit weg).
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
