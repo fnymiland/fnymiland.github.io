@@ -287,6 +287,23 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   } else if (kind === 'tiles') {
     const n = 2 + Math.ceil(ext / 0.25);
     for (let k = -n; k <= n; k++) { line([-E, k * 0.25], [E, k * 0.25]); line([k * 0.25, -E], [k * 0.25, E]); }
+  } else if (kind === 'big' || kind === 'setts' || kind === 'thirds') {   // Raster ab der Feldkante (Kanten liegen auf Fugen)
+    const step = kind === 'big' ? 0.5 : kind === 'setts' ? 0.125 : 1 / 3, n = Math.ceil((E + 0.5) / step);
+    for (let k = -n; k <= n; k++) { const c = -0.5 + k * step; if (Math.abs(c) > E) continue; line([-E, c], [E, c]); line([c, -E], [c, E]); }
+  } else if (kind === 'slabs' || kind === 'ashlar' || kind === 'boards') {
+    // Reihen in Weltkoordinaten (über Feldgrenzen durchgehend): Fugen quer zur Reihe versetzt bzw. (Sandstein, Holz) verschieden lang
+    const h = kind === 'slabs' ? 0.25 : kind === 'ashlar' ? 0.2 : 0.1, w = kind === 'slabs' ? 0.5 : kind === 'ashlar' ? 0.32 : 0.6;
+    for (let r = Math.floor((y - E) / h); r <= Math.ceil((y + E) / h); r++) {
+      const v = r * h - y;
+      if (v >= -E && v <= E) line([-E, v], [E, v]);
+      const off = kind === 'slabs' ? (r & 1) * w / 2 : 0;
+      for (let c = Math.floor((x - E - w) / w); c <= Math.ceil((x + E + w) / w); c++) {
+        const jit = kind === 'slabs' ? 0 : (hash(c, r, kind === 'ashlar' ? 341 : 342) - 0.5) * w * 0.7;
+        const u = c * w + off + jit - x;
+        if (u < -E || u > E) continue;
+        line([u, Math.max(-E, v)], [u, Math.min(E, v + h)]);
+      }
+    }
   } else if (kind === 'herring') {
     const n = Math.ceil(ext / 0.125);
     for (let i = -n; i < 9 + n; i++) for (let j = -n; j < 9 + n; j++) {
@@ -324,6 +341,15 @@ const PATH_LOOK = {
   terrakotta: { edge: '#bf7f58', fill: '#d99a73', pat: ['tiles', '#c4805a'] },
   fisch:      { edge: '#d3ada1', fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
   goldpflaster: { edge: '#d9b152', fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
+  // Block 125b: ruhige Stadtbeläge und Holz
+  granit:    { edge: '#8f8e88', fill: '#b9b8b2', pat: ['slabs', '#9c9b95'] },          // große Platten im Verband
+  beton:     { edge: '#b9b5ab', fill: '#dedbd3', pat: ['big', '#c8c4ba'] },            // halbe Felder, quadratisch
+  sandstein: { edge: '#c4a66c', fill: '#e6d09f', pat: ['ashlar', '#cdb27c'] },         // Reihen mit unterschiedlich langen Steinen
+  anthrazit: { edge: '#46484d', fill: '#64676d', pat: ['setts', '#505257'] },          // kleines dunkles Pflaster
+  glatt:     { edge: '#c9c2b5', fill: '#8f8a82' },                                     // Asphalt ohne Mittelstreifen
+  gehweg:    { edge: '#9d988e', fill: '#d9d4c9', pat: ['thirds', '#c2bcaf'] },         // Gehwegplatten, kräftiger Bordstein
+  bohlen:    { edge: '#7d5634', fill: '#b07f50', pat: ['boards', '#8a6038'] },         // warmes Holz
+  holzsteg:  { edge: '#9b8f7c', fill: '#cdbfa8', pat: ['boards', '#a99b84'] },         // verwittertes, helles Holz
 };
 const pathAt = (x, y) => { const w = wegAt(x, y); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen

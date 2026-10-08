@@ -1483,9 +1483,13 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Jetzt blassen sie aus wie bei Mipmapping (`patternFade`/`PAT_FADE` in draw-objects.js): voll ab Zoom ~0,8, ein Drittel bei
       0,45, fast weg bei 0,35 – nah dran unverändert. Vergleichsbilder: tools/belaege.js (alle Beläge als 4×4-Plätze je Zoomstufe)
 - [ ] 125a2: Übergänge zwischen Belägen, Kanten; was hässlich ist, schöner machen (mit Nutzer anhand der Übersicht)
-- [ ] 125b: Neue ruhige Stadtbeläge (Vorschlag, mit Nutzer abstimmen): Granitplatten grau, Betonplatten hell, Sandstein, Asphalt
-      ohne Mittelstreifen, Pflaster anthrazit, Gehwegplatten mit Bordstein – wenige, aber stimmig zueinander und zu den Gebäuden
-- [ ] 125c: Mit Nutzer klären: welche alten Beläge bleiben, zusammenlegen oder weg (wie 29.09.: Sand+Kies, Holzbohlen weg)
+- [x] 125b: 8 neue Beläge (Kunstakademie): Granitplatten (große Platten im Verband), Betonplatten (halbe Felder), Sandstein (Reihen,
+      verschieden lange Steine), Anthrazit-Pflaster (kleine dunkle Steine), Asphalt glatt (ohne Mittelstreifen), Gehwegplatten
+      (Drittel-Raster, kräftiger Bordstein), Holzbohlen (warm) und Holzsteg (verwittert hell). Neue Muster: big, setts, thirds (Raster
+      ab der Feldkante), slabs, ashlar, boards (Reihen in Weltkoordinaten, über Feldgrenzen durchgehend). Test: belaege.test.js
+- [x] 125c: Entscheidung Nutzer: alle alten bleiben, nur dazu
+- [x] Testwelt `?welt=wege` (testsave-wege.json): je Belag eine Raute (auf dem Bildschirm in Reihen) mit gerade in beide Richtungen,
+      Kreuzung, Einzelfeld, 4 Kurven, 4 T, Platz 3×3, ganz breiter Weg, eckige Kurve, zwei Spuren; unten alle Übergänge
 - [ ] 125d: Vorschau vor dem Kauf (Wunsch Nutzer 08.10.): Wege in der Kunstakademie als Bild sehen, bevor man bezahlt
 - [ ] Kunstakademie allgemein durchschaubar machen (Wunsch Nutzer 08.10.: „man investiert 3 Minuten Einkommen und merkt am Ende,
       dass man es vielleicht gar nicht so schön findet“): zu jedem Design eine Vorschau (Bildchen am Beispiel), evtl. kurz ausprobieren

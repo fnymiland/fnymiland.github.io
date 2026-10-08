@@ -915,6 +915,15 @@ const STYLES = {
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
     { id: 'regenbogen', name: 'Regenbogenweg', col: '#f7c6d8', shape: 'band', album: 'farben' },
     { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'band', album: 'wege' },
+    // Block 125b: ruhige Stadtbeläge und Holz (Wunsch Nutzer 08.10.2026: „auch in einer seriösen Stadt nutzbar“)
+    { id: 'granit', name: 'Granitplatten', col: '#b9b8b2', shape: 'band', design: 160 },
+    { id: 'beton', name: 'Betonplatten', col: '#dedbd3', shape: 'band', design: 120 },
+    { id: 'sandstein', name: 'Sandstein', col: '#e6d09f', shape: 'band', design: 180 },
+    { id: 'anthrazit', name: 'Anthrazit-Pflaster', col: '#64676d', shape: 'band', design: 220 },
+    { id: 'glatt', name: 'Asphalt glatt', col: '#8f8a82', shape: 'band', design: 140 },
+    { id: 'gehweg', name: 'Gehwegplatten', col: '#d9d4c9', shape: 'band', design: 150 },
+    { id: 'bohlen', name: 'Holzbohlen', col: '#b07f50', shape: 'band', design: 140 },
+    { id: 'holzsteg', name: 'Holzsteg', col: '#cdbfa8', shape: 'band', design: 170 },
   ],
   // Linien (Block 41): der erste Stil ist frei, die anderen in der Kunstakademie (design) oder mit dem Ort (lm)
   hecke: [
