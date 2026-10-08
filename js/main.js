@@ -173,11 +173,21 @@ function messLine(ms) {
   MESS.ms += 0.1 * (ms - MESS.ms);
   const now = performance.now(), gap = MESS.at ? now - MESS.at : 16; MESS.at = now;   // echter Bildabstand (mit Grafikkarte)
   MESS.gap = (MESS.gap || 16) + 0.1 * (Math.min(gap, 500) - (MESS.gap || 16));
-  const gl = typeof GL === 'undefined' ? '' : GL.why ? ` · GL ${GL.why}` : ` · GL an (${GL.stats.quads} Rechtecke, Standbild ${GL.cacheMode === 'play' ? 'spielt' : GL.cacheMode === 'rec' ? 'nimmt auf' : 'aus: ' + (GLS.why || '?')})`;
-  const t = `Bild ${MESS.gap.toFixed(0)} ms = ${(1000 / MESS.gap).toFixed(0)} B/s · Rechnen ${MESS.ms.toFixed(1)} ms${gl} · Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)} · Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss} neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`;
-  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '12px system-ui, sans-serif';
-  const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(8, H - 30, w, 20);
-  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(t, 14, H - 20); ctx.restore();
+  // als Kasten rechts in der Mitte (unten liegt die Bauleiste darüber), eine Sache je Zeile
+  const sb = GL.cacheMode === 'play' ? 'spielt ✓' : GL.cacheMode === 'rec' ? 'nimmt gerade auf' : 'aus – ' + (GLS.why || '?');
+  const lines = [
+    `Bild: ${MESS.gap.toFixed(0)} ms  (${(1000 / MESS.gap).toFixed(0)} Bilder/s)`,
+    `Rechnen: ${MESS.ms.toFixed(1)} ms`,
+    typeof GL === 'undefined' ? '' : GL.why ? `Grafikkarte: aus – ${GL.why}` : `Grafikkarte: an (${GL.stats.quads} Rechtecke)`,
+    typeof GL === 'undefined' || GL.why ? '' : `Standbild: ${sb}`,
+    `Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)}`,
+    `Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss}, neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`].filter(Boolean);
+  ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '600 14px system-ui, sans-serif';
+  const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, lh = 20, h = lines.length * lh + 12, x = W - w - 12, y = Math.round(H * 0.3);
+  ctx.fillStyle = 'rgba(0,0,0,0.72)'; ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+  lines.forEach((l, i) => ctx.fillText(l, x + 10, y + 6 + lh * (i + 0.5)));
+  ctx.restore();
 }
 // Erst loslegen, wenn ALLE Skripte da sind: cloud.js, live.js, friends.js und me.js kommen nach main.js. Im langsamen
 // WLAN zeichnete das erste Bild sonst schon, bevor me.js geladen war („youNews is not defined“, Block 99a).
