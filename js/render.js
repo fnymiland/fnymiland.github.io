@@ -1392,6 +1392,7 @@ function render(now) {
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
         const drawIt = () => {
+          if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
           let sc = 1;
           if (t.born) {
             const an = (now - t.born) / 380;

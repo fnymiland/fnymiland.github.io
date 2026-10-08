@@ -384,7 +384,8 @@ const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M +
 // am Bildanfang (render, vor den Sichtgrenzen): abspielen, aufzeichnen oder normal
 function glCacheStart(z, now) {
   GL.now = now;
-  const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
+  // Uhren (alle 10 Spielminuten ein neues Bildchen) und das Briefkasten-Fähnchen am Rathaus: dann neu aufnehmen statt jedes Bild live
+  const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG, Math.floor(gameHour() * 6), typeof mailWaiting === 'function' && mailWaiting() ? 1 : 0].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
   GLS.calm = sig === GLS.last && !spriteZooming && !spriteCatch && !spritePrep ? GLS.calm + 1 : 0;
   GLS.last = sig;
   const dx = GLS.cam ? (GLS.cam.x - cam.x) * z : 1e9, dy = GLS.cam ? (GLS.cam.y - cam.y) * z : 1e9;
@@ -404,10 +405,9 @@ function glRecTile(i, x, y, nIcons, nLabels, start) {
   if (start) { GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels }; GLS.dirty = false; GLS.dirtyWhy = ''; return; }
   const c = GLS.cur, a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
   c.a1 = GL.recs.length; c.i1 = nIcons; c.l1 = nLabels;
-  const clock = !!(t && (CLOCK_SPRITES.has(t.b) || t.b === 'rathaus'));
-  c.dyn = GLS.dirty || clock;                                            // Uhren, Briefkasten-Fähnchen: jedes Bild neu
+  c.dyn = GLS.dirty;                                                     // Uhren: neu aufnehmen, wenn sie weiterspringen (Schlüssel)
   if (c.dyn && MESS) {                                                   // ?messen: was hält Felder „lebendig“?
-    const ds = decosAt(x + ',' + y), n = (t ? t.b : ds && ds.find(Boolean) ? ds.find(Boolean).b : 'Feld') + (clock ? ' (Uhr)' : GLS.dirtyWhy ? ' (' + GLS.dirtyWhy + ')' : '');
+    const ds = decosAt(x + ',' + y), n = (t ? t.b : ds && ds.find(Boolean) ? ds.find(Boolean).b : 'Feld') + (GLS.dirtyWhy ? ' (' + GLS.dirtyWhy + ')' : '');
     GLS.dynWhy.set(n, (GLS.dynWhy.get(n) || 0) + 1);
   }
   GLS.dirtyWhy = '';
