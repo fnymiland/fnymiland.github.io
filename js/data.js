@@ -544,9 +544,9 @@ const NATURE = [
 ];
 const NATURE_BY_ID = Object.fromEntries(NATURE.map(n => [n.id, n]));
 
-// Baumenü (Block 40, gemeinsam entschieden): fünf Bereiche nach dem, was man gerade tun will –
-// 🏘️ Stadt (was eine Stadt zwingend braucht: Wohnen, Einrichtungen, Verkehr) · 🏭 Herstellen (produziert) · 🛍️ Einkaufen
-// (verdient an Kundschaft) · 🎡 Freizeit (Kultur, Wunder) · 🌸 Gestalten (Deko, Wege, Gelände – formt die Welt).
+// Baumenü (Block 40, gemeinsam entschieden; seit 08.10.2026 vier Bereiche, Nutzer wählte Entwurf A): nach dem, was man gerade tun will –
+// 🏘️ Stadt (wo Bewohner leben und einkaufen: Wohnen, Läden, Essen, Markt, Kaufhäuser, Einrichtungen, Verkehr) · 🏭 Herstellen
+// (produziert) · 🎡 Freizeit (Kultur, Wunder, Freizeitpark) · 🌸 Gestalten (Deko, Wege, Gelände – formt die Welt).
 // Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
 const SHOP_GROUPS = {
   laeden: ['kiosk', 'blumenladen', 'friseur', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
@@ -556,6 +556,10 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
+    { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
+    { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
+    { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
+    { id: 'gross', label: '🏬 Kaufhäuser', items: SHOP_GROUPS.gross },
     { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'station', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
   ] },
@@ -564,12 +568,6 @@ const MENU = [
     { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
     { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'offshore', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
-  ] },
-  { id: 'einkaufen', label: '🛍️ Einkaufen', groups: [
-    { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
-    { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
-    { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
-    { id: 'gross', label: '🏬 Kaufhäuser', items: SHOP_GROUPS.gross },
   ] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
@@ -604,8 +602,8 @@ const menuItemsOf = (top, sub) => {
   const m = MENU.find(e => e.id === top) || MENU[0];
   return m.groups ? (m.groups.find(g => g.id === sub) || m.groups[0]).items : m.items;
 };
-// Gruppen mit Gebäuden (Stadt, Herstellen, Einkaufen, Freizeit) – fürs Rathaus („Bereit“)
-const buildGroups = () => MENU.filter(m => ['stadt', 'herstellen', 'einkaufen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
+// Gruppen mit Gebäuden (Stadt, Herstellen, Freizeit) – fürs Rathaus („Bereit“)
+const buildGroups = () => MENU.filter(m => ['stadt', 'herstellen', 'freizeit'].includes(m.id)).flatMap(m => m.groups || [{ id: m.id, label: m.label, items: m.items }]);
 // Wirkung auf einen Blick (Karte in der Leiste unten)
 const FX = {
   hecke: '🌸 Linie · Lücke am Weg', zaun: '🌸 Linie · Tor am Weg', mauer: '🌸 Linie · Durchgang am Weg',

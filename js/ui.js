@@ -153,7 +153,7 @@ function buildToolbar() {
   rec.textContent = '🕘'; rec.title = 'Zuletzt gebaut'; rec.setAttribute('aria-label', 'Zuletzt gebaut');
   rec.onclick = () => { audio(); recentOpen = !recentOpen; setSheet(recentOpen); buildToolbar(); };
   cats.append(rec);
-  // Bereiche (Stadt · Herstellen · Einkaufen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
+  // Bereiche (Stadt · Herstellen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
   // Bereiche (Nutzer, 08.10.2026, Entwurf B): ein Tipp klappt darüber ein Feld mit ALLEM aus dem Bereich auf (Gruppen als
   // Überschriften); nochmal, daneben tippen, Esc oder eine Wahl klappt es zu. Das gewählte Werkzeug bleibt dabei.
@@ -2505,7 +2505,7 @@ const HELP_TABS = [['start', '🌱 Los geht\'s'], ['bauen', '🏗️ Bauen & Ges
 function helpBody(tab) {
   const li = items => `<ul class="help">${items.map(i => `<li>${i}</li>`).join('')}</ul>`;
   if (tab === 'bauen') return li([
-    '🧭 <b>Die Leiste unten</b> hat fünf Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🛍️ Einkaufen, 🎡 Freizeit, 🌸 Gestalten. Darunter die Gruppen. Karte antippen = auswählen, dann auf die Karte tippen = bauen. 🔍 findet alles beim Namen.',
+    '🧭 <b>Die Leiste unten</b> hat vier Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Antippen klappt alles aus dem Bereich auf, nach Gruppen sortiert. Karte antippen = auswählen, dann auf die Karte tippen = bauen. ✕ legt es wieder weg.',
     'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest – mit Knopf, der dich direkt hinbringt.',
     '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
     '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',

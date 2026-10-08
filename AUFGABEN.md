@@ -1966,4 +1966,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Stadt/Herstellen; aufm Handy keine Option, etwas loszulassen“ – Ring entfernt; Kachelrahmen nur innen (rundum 3 px); alle
       Knöpfe der Stil-Leiste 34 px (gewählt nur farbig, nicht größer). 👆 wird ✕ „Weglegen“, solange etwas in der Hand ist
       (`syncDropBtn`, auch Kopier-Stempel), rot mit weißem ✕ (Nutzer: „damit man erkennt, dass man abwählt“). Test: handy.
+- [x] Nutzer: „die 5 Kategorien sinnvoll zusammenlegen, ohne zu überladen“ – drei Entwürfe gezeigt (A Stadt + Einkaufen,
+      B Wirtschaft, C nur drei), Nutzer wählte A. Vier Bereiche: 🏘️ Stadt (Wohnen, Läden, Essen & Trinken, Markt, Kaufhäuser,
+      Einrichtungen, Verkehr – 46 Dinge), 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Gruppen-IDs unverändert. Anleitung angepasst.
+      Tests: menu, leiste.
 

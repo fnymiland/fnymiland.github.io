@@ -17,13 +17,13 @@ describe('Baumenü', () => {
     expect(placed.every(id => ids.includes(id))).toBe(true);
   });
 
-  it('eine Reihe mit fünf Bereichen; ein Bereich klappt darüber ein Feld mit allem auf, Gruppen als Überschriften (Entwurf B)', () => {
+  it('eine Reihe mit vier Bereichen (Einkaufen steckt in Stadt, Nutzer 08.10.2026: Entwurf A); ein Bereich klappt darüber ein Feld mit allem auf, Gruppen als Überschriften (Entwurf B)', () => {
     game('setSheet(false); buildToolbar()');
-    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['stadt', 'herstellen', 'einkaufen', 'freizeit', 'gestalten']);
+    expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['stadt', 'herstellen', 'freizeit', 'gestalten']);
     expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(false);   // zu Beginn zu
     area('stadt').onclick();
     expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(true);
-    expect(q('#tools .sheet-h').map(h => h.dataset.group)).toEqual(['wohnen', 'einrichtungen', 'verkehr']);
+    expect(q('#tools .sheet-h').map(h => h.dataset.group)).toEqual(['wohnen', 'laeden', 'essen', 'markt', 'gross', 'einrichtungen', 'verkehr']);
     expect(tools()).toEqual(game("MENU[0].groups.flatMap(g => [...g.items.filter(available), ...g.items.filter(id => !available(id))])"));
     expect(q('#subcats .sub').length).toBe(0);                                   // keine Gruppenzeile mehr
   });
@@ -42,7 +42,7 @@ describe('Baumenü', () => {
     for (const id of ['schule', 'post', 'apotheke', 'hotel', 'grandhotel']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'einrichtungen' });
     for (const id of ['schiene', 'station', 'hafen', 'bootssteg']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'verkehr' });
     expect(at('baecker')).toEqual({ top: 'herstellen', sub: 'taler' });
-    expect(at('stand_obst')).toEqual({ top: 'einkaufen', sub: 'markt' });
+    expect(at('stand_obst')).toEqual({ top: 'stadt', sub: 'markt' });
     expect(at('weg')).toEqual({ top: 'gestalten', sub: 'land' });
     expect(at('parkrasen')).toEqual({ top: 'gestalten', sub: 'land' });
     expect(at('leuchtturm')).toEqual({ top: 'freizeit', sub: 'wunder' });

@@ -42,20 +42,22 @@ describe('Kacheln', () => {
   });
 
   it('Freigeschaltetes zuerst, Gesperrtes mit Schloss dahinter – in Menü-Reihenfolge', () => {
-    open('einkaufen', 'laeden');
-    const shown = [...document.querySelectorAll('#tools .tool')];
+    open('stadt', 'laeden');
+    // je Gruppe sortiert: nur die Kacheln unter „Läden“ (bis zur nächsten Überschrift)
+    const group = () => { const out = []; let on = false; for (const el of document.getElementById('tools').children) { if (el.classList.contains('sheet-h')) on = el.dataset.group === 'laeden'; else if (on) out.push(el); } return out; };
+    const shown = group();
     const locked = shown.map(b => b.classList.contains('locked'));
     expect(locked.indexOf(true)).toBeGreaterThan(-1);
     expect(locked.slice(locked.indexOf(true)).every(Boolean)).toBe(true);       // hinter dem ersten gesperrten nur gesperrte
     expect(shown.filter(b => b.classList.contains('locked')).every(b => b.querySelector('.lock'))).toBe(true);
     game('state.restore.ruine = 1; updateHud()');                               // Buchladen wird frei → rückt nach vorn
-    const ids = [...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool);
-    const firstLocked = [...document.querySelectorAll('#tools .tool')].findIndex(b => b.classList.contains('locked'));
+    const ids = group().map(b => b.dataset.tool);
+    const firstLocked = group().findIndex(b => b.classList.contains('locked'));
     expect(ids.indexOf('buchladen')).toBeLessThan(firstLocked);
   });
 
   it('Zahlentasten wählen wie die Leiste sortiert ist', () => {
-    open('einkaufen', 'laeden');
+    open('stadt', 'laeden');
     const first = game('menuList()[0]');
     window.dispatchEvent(new window.KeyboardEvent('keydown', { key: '1' }));
     expect(game('tool')).toBe(first);
@@ -64,7 +66,7 @@ describe('Kacheln', () => {
 
 describe('Bau-Infofenster (iPad/Mac)', () => {
   it('Kachel anklicken wählt aus und zeigt rechts alles Wichtige', () => {
-    open('einkaufen', 'essen');
+    open('stadt', 'essen');
     game('state.lanterns = 99; state.money = 1e6; state.res.bretter = 100; updateHud()');
     card('cafe').click();
     expect(game('tool')).toBe('cafe');
