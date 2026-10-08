@@ -1718,7 +1718,11 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     case 'schiene':
       if (PASS !== 'object') drawRailBed(cx, cy, z, x, y, t);
       if (t && t.cross) drawCrossing(cx, cy, z, x, y, t, now);
-      if (PASS === 'object' && x < 1e5) { const pd = portalDir(x, y); if (pd) drawPortal(cx, cy, z, x, y, pd, portalForm(x, y, pd)); }   // Tunnelportal (Block 136)
+      if (PASS === 'object' && x < 1e5) {                                  // Tunnelportal (Block 136); Rampe ggf. vom vorderen Feld aus
+        const pd = portalDir(x, y), rf = !pd && rampFrontOf(x, y);
+        if (pd) drawPortal(cx, cy, z, x, y, pd, portalForm(x, y, pd));
+        else if (rf) drawRamp(portalFrame(cx + (rf.d[0] - rf.d[1]) * TW / 2 * z, cy + (rf.d[0] + rf.d[1]) * TH / 2 * z, z, rf.d), z, rf.R[0], rf.R[1], rf.d, portalFaceShown(rf.d));
+      }
       break;
     case 'tunnel': drawTunnelGhost(cx, cy, z); break;
     case 'ubahn': drawUbahn(cx, cy, z, t); break;

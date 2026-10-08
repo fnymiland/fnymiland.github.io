@@ -1487,7 +1487,7 @@ function render(now) {
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
         const drawIt = () => {
-          if (t.b === 'schiene' && !t.cross && !portalDir(ax, ay)) return;    // Schienen malen hier nur Bahnübergänge und Tunnelportale (Gleis liegt im Boden)
+          if (t.b === 'schiene' && !t.cross && !portalDir(ax, ay) && !rampFrontOf(ax, ay)) return;    // Schienen malen hier nur Bahnübergänge, Tunnelportale und Rampen (Gleis liegt im Boden)
           let sc = 1;
           if (t.born) {
             const an = (now - t.born) / 380;

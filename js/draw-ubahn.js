@@ -34,9 +34,21 @@ function portalHill(S, a0, len, H, wb, col) {
 const HILL = { backstein: [1.8, 32, 0.78, '#8fcf68'], stein: [1.9, 36, 0.85, '#86c75f'] };
 // Hügel nur, wenn auf dem Tunnelfeld oben nichts steht (sonst bleibt die Wand allein)
 const hillFree = (x, y) => x > 1e5 || !COVER.has(x + ',' + y) && !decosAt(x + ',' + y) && terrainAt(x, y) !== 'water';
+// Wer malt die Rampe? Das Feld der Rampe, das zuerst dran ist (kleineres x + y) – sonst malt die Rinne über die Zäune am anderen
+// Feld (Nutzer: „Zaun um die Abfahrt“). Taucht sie nach vorn ab und ist zwei lang, ist das das vordere Feld.
+const rampByFront = (x, y, d) => rampLen(x, y, d) === 2 && !portalFaceShown(d);
+// Schienenfeld vor einem Rampen-Portal, das die Rampe malt: { R, d } oder null
+function rampFrontOf(x, y) {
+  if (!state.tunnels || !state.tunnels.size) return null;
+  for (const [dx, dy] of DIRS) {
+    const q = portalDir(x + dx, y + dy);
+    if (q && q[0] === dx && q[1] === dy && portalForm(x + dx, y + dy, q) === 'rampe' && rampByFront(x + dx, y + dy, q)) return { R: [x + dx, y + dy], d: q };
+  }
+  return null;
+}
 function drawPortal(cx, cy, z, x, y, d, form) {
   const S = portalFrame(cx, cy, z, d), shown = portalFaceShown(d), tx = x + d[0], ty = y + d[1];
-  if (form === 'rampe') return drawRamp(S, z, x, y, d, shown);
+  if (form === 'rampe') return x > 1e5 || !rampByFront(x, y, d) ? drawRamp(S, z, x, y, d, shown) : null;
   if (shown && hillFree(tx, ty)) portalHill(S, 0.5, ...HILL[form]);
   if (!shown) return;                                                   // Wand abgewandt: den Hügel malt das Tunnelfeld
   if (form === 'stein') {
@@ -78,7 +90,7 @@ function rampLen(x, y, d) {
   const arms = railArms(px, py);
   return arms.length === 2 && arms.every(([ax, ay]) => ax === d[0] * Math.sign(ax * d[0] + ay * d[1]) && ay === d[1] * Math.sign(ax * d[0] + ay * d[1])) ? 2 : 1;
 }
-const rampDepth = (a, len) => RAMP_D * Math.pow(Math.max(0, Math.min(1, (a - 0.5 + len) / len)), 1.25);
+const rampDepth = (a, len) => RAMP_D * Math.max(0, Math.min(1, (a - 0.5 + len) / len));   // gleichmäßig (Nutzer: sonst krumme Schienen)
 function drawRamp(S, z, x, y, d, shown) {
   const len = rampLen(x, y, d), a0 = 0.5 - len, w = RAMP_W, N = 10 * len, as = i => a0 + len * i / N, dep = a => rampDepth(a, len);
   g.save();

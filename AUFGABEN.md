@@ -1651,6 +1651,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Betrachter hin, kam das vordere Rampenfeld später und sein hinterer Zaun malte über den Zug. Jetzt mit dem zuletzt gezeichneten
       Rampenfeld (`trainTunnelCut` → k). Mit Zaun ringsum (auch über der Wand und quer am Anfang) in beiden Richtungen geprüft (ub5-*.png).
 - [x] Nutzer: „beim Pavillon macht Wand nichts“ – Wand = Eisengestell (dunkler getönt), Dach & Mast = Glasdach. Test: ubahn
+- [x] Nutzer (Bild): „siehst selbst, wie scheiße das aussieht“ – (1) taucht die Rampe nach vorn ab, malte die Rinne erst mit dem
+      zweiten Feld und übermalte den Zaun am vorderen Feld (halber Zaun). Jetzt malt das Rampenfeld, das zuerst dran ist
+      (`rampByFront`/`rampFrontOf`), die Wagen gehören zum letzten. (2) Gefälle gleichmäßig statt beschleunigt – vorher bogen sich
+      Schienen und Kanten wie eine Banane. Mit Zaun ringsum in beiden Richtungen geprüft (ub7-*.png).
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
