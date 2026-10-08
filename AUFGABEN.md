@@ -1593,9 +1593,7 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       (Farbe wählbar), Steinarkaden. Stützen in Abständen, durchgehendes Dach, Enden sauber. Ein bisschen 🌸
 
 ## Block 139: Brücken breit und lang
-- [ ] So breit wie der Weg (1–3 Felder, breiter Weg auf der Brücke, Geländer nur außen) – zwei Brückenfelder nebeneinander sind dann
-      kein „Abzweig auf dem Wasser“
-- [ ] Übers Meer bis zur nächsten Insel (bis etwa 30 Felder, wie die Schienen), Schiffe weiter quer darunter durch
+- [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
 
 ## Block 140: Relief – erst im Hinterkopf
 - [ ] Nur Natur-Deko (Hügel/Berge 2×2–5×5), kein Höhenmodell. Zuerst einen Entwurf des **Tunnelportals für die Bahn** zeigen – erst
@@ -1815,3 +1813,12 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] 150b: Brücken höchstens 16 Felder lang (`BRIDGE_MAX`, Nutzer nach Vorschau 16/20/24); ins Meer weiter 3 Felder – oder bis 16
       Felder zu eigenem Land in gerader Linie (`seaGapBridgeable`: Insel zu Insel). Bestehende längere bleiben. In Fnymiland OG mit
       künstlicher Insel 8 Felder vor der Küste geprüft (geht; ohne Insel nach 3 Feldern Schluss). Lange Meeresbrücken (Block 139) gestrichen
+
+## Block 151: Breite Brücken (Wunsch Nutzer, 08.10.2026)
+- [x] Mehrere Wegreihen nebeneinander übers Wasser = eine breite Brücke, höchstens 4 breit (`BRIDGE_WIDE`, Nutzer). Bauregel:
+      `bridgeArmsAxis` – quer daneben nur Brückenfelder, alle Nachbarn in derselben Richtung (parallel ja; Abzweig/Ecke auf dem
+      Wasser nein; Reihen wachsen vom Ufer aus). Richtung (`bridgeAxis`) jetzt über Land an beiden Enden statt erster Nachbar;
+      Bogen auch ohne Weg vor dem Ufer (jede Reihe gleich hoch)
+- [x] Zeichnen: Geländer/Brüstung/Pfähle nur außen, Belag und Planken durchgehend (Nutzer: Holz hatte Lücken – Planken gingen nur
+      bis zum alten Rand), Stein/Ziegel: Seitenwand nur vorne, Bogenöffnung als Tunnel durch alle Reihen (`archWall` depth).
+      Boote quer darunter durch wie bisher. Test: bogenbruecken.test.js

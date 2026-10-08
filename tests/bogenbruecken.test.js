@@ -65,4 +65,15 @@ describe('Bogenbrücken (Block 150)', () => {
     game("for (let x = 10; x < 20; x++) state.terra.set(x + ',12', 'water'); state.claimed.delete('20,12')");   // drüben fremdes Land
     if (!game('ownedTile(20, 12)')) expect(game('seaGapBridgeable(14, 12, [1, 0])')).toBe(false);
   });
+  it('breite Brücken (Block 151): parallele Reihen vom Ufer aus, höchstens 4 breit; Abzweig quer bleibt verboten', () => {
+    game("for (let y = 5; y <= 20; y++) for (let x = 10; x < 16; x++) state.terra.set(x + ',' + y, 'water'); recalc(); chosenStyle.weg = 'sand'");
+    const row = y => game(`(() => { setTool('weg'); const info = planScan({ kind: 'line', tool: 'weg', a: { x: 7, y: ${y} }, b: { x: 18, y: ${y} } }); for (const [, , run] of info.order) run(); return info.firstErr; })()`);
+    for (const y of [10, 11, 12, 13]) expect(row(y), 'Reihe ' + y).toBe(null);
+    expect(game("[...state.tiles].filter(([k, t]) => t.bridge).length")).toBe(24);
+    expect(game("[10, 11, 12, 13].every(y => bridgeArch(12, y) && bridgeArch(12, y).ax === 0)")).toBe(true);   // jede Reihe ein Bogen, Richtung x
+    expect(row(14)).toMatch(/höchstens 4 Felder breit/);
+    expect(game('seaCross(13, 11)')).toBe('x');                                                // Boote quer unter der breiten Brücke durch
+    expect(game('placeError("weg", 12, 9)')).toMatch(/gerade/);                                // vom Rand quer weg: kein Abzweig
+    game("(() => { cam = state.cam; cam.z = 2; const p = iso(12, 11); cam.x = p.x; cam.y = p.y; render(1e6); render(1e6 + 17); })()");
+  });
 });

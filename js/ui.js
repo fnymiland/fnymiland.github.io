@@ -2542,6 +2542,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
     '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein und Ziegel mit echten Bogenöffnungen, Holz und Rot auf Pfählen.',
     '⛵ <b>Boote fahren darunter durch</b> – unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',
+    '↔️ <b>Breite Brücken:</b> bis zu 4 Wege nebeneinander übers Wasser ziehen – wird eine breite Brücke mit Geländer nur außen. Brücken sind höchstens 16 Felder lang, übers Meer auch von Insel zu Insel.',
   ] },
   { id: '2026-10-08-baenke', date: '8. Oktober', title: 'Neue Bänke, schönere Fußgängerbrücke', items: [
     '🌳 <b>Rundbank</b> jetzt richtig groß – mit einem echten kleinen Baum in der Mitte.',

@@ -1561,7 +1561,7 @@ const BRIDGE = { cost: 40, mat: { holz: 2, metall: 2 } };
 const BRIDGE_SEA = 3;
 // Höchstens BRIDGE_MAX Felder übers Wasser (Block 150b, Nutzer: länger sieht der Bogen nicht mehr gut aus) – dafür auch übers Meer
 // von Insel zu Insel, wenn das Wasser dazwischen nicht breiter ist (auf beiden Seiten eigenes Land in einer geraden Linie)
-const BRIDGE_MAX = 16;
+const BRIDGE_MAX = 16, BRIDGE_WIDE = 4;                               // breit: höchstens 4 Reihen nebeneinander (Block 151, Nutzer)
 // Länge der Brücke durch (x, y) entlang der Achse (gebaute und geplante Brückenfelder, samt diesem)
 function bridgeRunLen(x, y, [dx, dy]) {
   let n = 1;
@@ -1594,7 +1594,17 @@ function bridgeArch(x, y) {
   if (!C.map.has(k)) C.map.set(k, bridgeArchCalc(x, y));
   return C.map.get(k);
 }
-const bridgeAxis = (x, y, t) => { const arms = pathArms(x, y); return arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1); };   // 0: längs u (x), 1: längs v (y)
+// Richtung einer Brücke (0: längs u/x, 1: längs v/y): die Achse, an deren Enden Land liegt; sonst die längere Reihe Brückenfelder.
+// Breite Brücken (Block 151): quer liegen weitere Brückenfelder – die zählen nicht als Arm (vorher die ersten Nachbarn)
+function bridgeAxis(x, y, t) {
+  const walk = (dx, dy, s) => { let i = 1; while (i < 40 && isWegBridge(state.tiles.get((x + dx * s * i) + ',' + (y + dy * s * i)))) i++; return i; };
+  const ends = (dx, dy) => [1, -1].filter(s => { const i = walk(dx, dy, s); return terrainAt(x + dx * s * i, y + dy * s * i) !== 'water'; }).length;
+  const ex = ends(1, 0), ey = ends(0, 1);
+  if (ex !== ey) return ex > ey ? 0 : 1;
+  const rx = walk(1, 0, 1) + walk(1, 0, -1), ry = walk(0, 1, 1) + walk(0, 1, -1);
+  if (rx !== ry) return rx > ry ? 0 : 1;
+  const arms = pathArms(x, y); return arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);
+}
 function bridgeArchCalc(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!isWegBridge(t)) return null;
@@ -1602,7 +1612,7 @@ function bridgeArchCalc(x, y) {
   let i0 = 0, i1 = 0;
   while (i0 < 60 && isWegBridge(at(-i0 - 1))) i0++;
   while (i1 < 60 && isWegBridge(at(i1 + 1))) i1++;
-  const N = i0 + 1 + i1, landAt = i => { const n = at(i); return !!n && !isWegBridge(n) && terrainAt(x + dx * i, y + dy * i) !== 'water'; };
+  const N = i0 + 1 + i1, landAt = i => terrainAt(x + dx * i, y + dy * i) !== 'water';   // Ufer (breite Brücke: auch ohne Weg davor)
   if (N < 2 || !landAt(-i0 - 1) || !landAt(i1 + 1)) return null;
   const A = { ax, i0, N, peak: 20.4 * Math.pow(Math.min(N, 16) / 2, 0.6), wall: bridgeKind(t) === 'stein' || bridgeKind(t) === 'ziegel' };
   A.open = archOpenings(A);
@@ -1647,14 +1657,31 @@ const wegLike = (x, y) => { const t = state.tiles.get(x + ',' + y); return (!!t 
 const armsWith = (x, y, plus) => DIRS.filter(([dx, dy]) => (plus && plus[0] === x + dx && plus[1] === y + dy) || wegLike(x + dx, y + dy));
 const straightArms = arms => arms.length <= 1 || (arms.length === 2 && arms[0][0] === -arms[1][0] && arms[0][1] === -arms[1][1]);
 // Weg auf (x, y): bleibt jede Brücke gerade (das neue Feld übers Wasser und Brücken daneben)?
+// Achse eines Brückenfelds aus seinen Armen: längs höchstens gerade durch, quer nur weitere Brückenfelder (breite Brücke, Block 151);
+// −1 = Kurve/Abzweig. plus: ein Feld, das gerade dazukommt (übers Wasser zählt es als Brücke)
+function bridgeArmsAxis(px, py, plus) {
+  const arms = armsWith(px, py, plus);
+  const lat = ([dx, dy]) => isBridgeAt(px + dx, py + dy) || (!!plus && plus[0] === px + dx && plus[1] === py + dy && terrainAt(plus[0], plus[1]) === 'water');
+  let best = -1;
+  for (const axis of [0, 1]) {
+    const along = arms.filter(a => (axis ? a[1] : a[0]) !== 0), across = arms.filter(a => (axis ? a[1] : a[0]) === 0);
+    if (!across.every(lat)) continue;
+    if (along.length) return axis;
+    if (best < 0) best = axis;
+  }
+  return best;
+}
 function bridgeShapeError(x, y, water) {
   if (water) {
-    const arms = armsWith(x, y);
-    if (!arms.length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
-    if (!straightArms(arms)) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
-    if (bridgeRunLen(x, y, arms[0]) > BRIDGE_MAX) return `Brücken höchstens ${BRIDGE_MAX} Felder lang`;
+    if (!armsWith(x, y).length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
+    const ax = bridgeArmsAxis(x, y);
+    if (ax < 0) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
+    // alle Brückenfelder daneben laufen in dieselbe Richtung: parallele Reihen (breit) ja, Abzweig oder Ecke auf dem Wasser nein
+    for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) !== ax) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
+    if (bridgeRunLen(x, y, ax ? [0, 1] : [1, 0]) > BRIDGE_MAX) return `Brücken höchstens ${BRIDGE_MAX} Felder lang`;
+    if (bridgeRunLen(x, y, ax ? [1, 0] : [0, 1]) > BRIDGE_WIDE) return `Brücken höchstens ${BRIDGE_WIDE} Felder breit`;
   }
-  for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && !straightArms(armsWith(x + dx, y + dy, [x, y]))) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
+  for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) < 0) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
   return null;
 }
 // Eine Brücke = alle zusammenhängenden Brückenfelder (sie sind gerade): Art und Farben gelten für sie alle (Block 66c)
@@ -2398,7 +2425,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const seaOk = sea && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : nearOwnLand(fx, fy));   // auch schräg am Ufer (Ecke an Ecke)
       if (b === 'weg' && isSea(fx, fy) && !ownedTile(fx, fy)) {                // Wegbrücke ins Meer (Block 66): kurz vor die Küste
         if (!claimable(fx, fy)) return 'Im Meer nur direkt neben deinem Land';
-        const arm = armsWith(fx, fy)[0];
+        const bx = bridgeArmsAxis(fx, fy), arm = bx < 0 ? null : bx ? [0, 1] : [1, 0];
         if (!landWithin(fx, fy, BRIDGE_SEA) && !(arm && seaGapBridgeable(fx, fy, arm)))
           return `Übers Meer höchstens ${BRIDGE_SEA} Felder vor die Küste – oder bis ${BRIDGE_MAX} Felder zu deiner nächsten Insel`;
       } else if (!ownedTile(fx, fy) && !(rail && claimable(fx, fy)) && !seaOk) return (rail || sea) && isSea(fx, fy) ? (d.needs === 'offshore' ? `Höchstens ${OFFSHORE_REACH} Felder vor deiner Küste` : 'Im Meer nur direkt neben deinem Land') : notMine(fx, fy);
