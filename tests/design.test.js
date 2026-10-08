@@ -35,6 +35,21 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
     expect(game("designError(DESIGN_BY_ID['wegmuster:klinker'])")).toBe('Schon da');     // nicht noch einmal bezahlen
   });
 
+  it('Antippen öffnet erst eine Karte mit Vorschau und Preis – gekauft wird nur mit „Kaufen“ (Block 125)', () => {
+    game("openResearch('design')");
+    const m = game('state.money');
+    game(`document.querySelector('[data-design="hecke:bluete"]').click()`);
+    expect(game('state.money')).toBe(m);                                              // noch nichts bezahlt
+    expect(game("document.getElementById('modal').textContent")).toMatch(/Blütenhecke/);
+    expect(game("!!document.getElementById('m-buy')")).toBe(true);
+    game("document.getElementById('m-buy').click()");
+    expect(game("state.design.has('hecke:bluete')")).toBe(true);
+    expect(game('state.money')).toBe(m - game("designPrice(DESIGN_BY_ID['hecke:bluete'])"));
+    expect(game("document.getElementById('modal').textContent")).toMatch(/Schon da/);
+    game("document.getElementById('m-back').click()");
+    expect(game("!!document.querySelector('[data-design=\"hecke:bluete\"].have')")).toBe(true);
+  });
+
   it('Meisterstücke brauchen eine Kunstakademie', () => {
     expect(game("designError(DESIGN_BY_ID['wegmuster:fisch'])")).toBe('Braucht eine Kunstakademie');
     game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc()");

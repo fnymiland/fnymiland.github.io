@@ -43,15 +43,17 @@ function toast(msg) {
 }
 
 // Vorschaubild; ein Fehler in einer Zeichnung lässt nur dieses Bild leer – das Spiel startet trotzdem
-function thumb(type, lvl = 1, tile = null) {
+function thumb(type, lvl = 1, tile = null, scale = 1) {
   const prev = g;
-  try { return thumbRaw(type, lvl, tile); } catch (e) { g = prev; reportError(e); const c = document.createElement('canvas'); c.width = 112; c.height = 88; return c; }
+  try { return thumbRaw(type, lvl, tile, scale); } catch (e) { g = prev; reportError(e); const c = document.createElement('canvas'); c.width = 112 * scale; c.height = 88 * scale; return c; }
 }
-function thumbRaw(type, lvl = 1, tile = null) {
+// scale: größer gemalt (Karte in der Kunstakademie); tile.style: Weg/Hecke/Zaun/Mauer in diesem Stil statt des gewählten (Block 125)
+function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   const c = document.createElement('canvas');
-  c.width = 112; c.height = 88;
+  c.width = 112 * scale; c.height = 88 * scale;
   const cx0 = c.getContext('2d');
   if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
+  if (scale !== 1) cx0.scale(scale, scale);
   const prev = g; g = cx0; FOG = false;
   const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
   const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : 1.3, cx = 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
@@ -75,14 +77,14 @@ function thumbRaw(type, lvl = 1, tile = null) {
     else ellipse(cx + 6, cy + 2, 3, 2, '#ffd9e0');
   } else if (type === 'weg') {
     block(1, '#96d56f');
-    drawPath(cx, cy, z, 1e6, 1e6, { style: currentStyle('weg') });
+    drawPath(cx, cy, z, 1e6, 1e6, { style: (tile && tile.style) || currentStyle('weg'), ...(tile && tile.wide ? { wide: true } : {}) });
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
   } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
     block(1, '#96d56f');
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
-    try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, { b: type, style: currentStyle(type) }, z * 1.3, 0); } finally { EDGE_PROJ = null; }
+    try { for (const k of ['b0,0', 'a0,0']) drawEdge(k, { b: type, style: (tile && tile.style) || currentStyle(type) }, z * 1.3, 0); } finally { EDGE_PROJ = null; }
   } else {
     const wet = ['meer', 'offshore', 'boot'].includes((ITEMS[type] || {}).needs);        // steht im Wasser: Wasser als Untergrund
     const ground = wet ? '#74d0e6' : { stein: '#aabb94', holz: '#7fc460', obst: '#86c35b', mine: '#b0a287', kristallmine: '#b3c2cc' }[type] || '#96d56f';
@@ -397,7 +399,7 @@ function styleSwatch(st) {
   if (swatchCache.has(st.id)) return swatchCache.get(st.id);
   let bg = st.col;
   try {
-    const lk = pathLook(st.id), c = document.createElement('canvas');
+    const lk = (st.kind || 'weg') === 'weg' ? pathLook(st.id) : null, c = document.createElement('canvas');   // Hecken & Co.: nur Farbe (kein Wegbild)
     c.width = c.height = 48;
     const prev = g; g = c.getContext('2d');
     if (lk && lk.stones) { poly([[0, 0], [48, 0], [48, 48], [0, 48]], '#8ccb67'); for (const [u, v] of [[14, 16], [34, 18], [22, 34], [38, 38]]) { ellipse(u, v + 1, 8, 5, '#aaa498'); ellipse(u, v, 8, 5, '#dcd7cc'); } }
@@ -1905,6 +1907,46 @@ function announceIslands(m) {
 }
 
 // Wege, die es nur als Geschenk einer Sehenswürdigkeit gibt – zur Vorschau zwischen den käuflichen
+// Vorschau eines Kunstakademie-Stücks (Wunsch Nutzer 08.10.2026: „man kauft 3 Minuten Einkommen und merkt erst danach, ob es
+// schön ist“): Wand-/Dachfarbe an einem Haus, Busch, Form/Farbe von Stadtschmuck, Hecke/Zaun/Mauer als Ecke, Wegmuster als ganzes
+// Feld, Deko als Bild. scale 1 im Raster, größer auf der Karte
+const designThumbs = new Map();
+function designThumb(d, scale = 1) {
+  const key = d.id + '|' + scale;
+  if (designThumbs.has(key)) return designThumbs.get(key);
+  let c = null;
+  const [k, a, b] = d.id.split(':');
+  if (k === 'wall' || k === 'roof') c = thumb('haus', 2, { [k]: +a, ...(k === 'wall' ? { roof: 4 } : { wall: 0 }) }, scale);
+  else if (k === 'busch') c = thumb('busch', 1, { col: Math.max(0, BUSH_COLS.findIndex(x => x.id === a)), rot: 0, slot: 0 }, scale);
+  else if (d.look) c = thumb(d.look[0], 1, { form: a === 'form' ? d.look[1] : 0, col: a === 'col' ? d.look[1] : 0, rot: 0, slot: 0 }, scale);
+  else if (d.muster) c = thumb('weg', 1, { style: wegStyleOf(d.muster, WEG_MUSTER_BY[d.muster].farbe), wide: true }, scale);
+  else if (STYLES[k] && EDGE_TOOLS.has(k)) c = thumb(k, 1, { style: a }, scale);
+  else if (d.item) c = thumb(d.item, 1, null, scale);
+  let url = '';
+  try { url = c ? c.toDataURL() : ''; if (!url.startsWith('data:image')) url = ''; } catch (e) { url = ''; }
+  designThumbs.set(key, url);
+  return url;
+}
+// Karte zu einem Stück: großes Bild, Preis, Kaufen – vorher kaufte schon das Antippen im Raster
+function openDesignCard(id) {
+  const d = DESIGN_BY_ID[id];
+  if (!d) return;
+  const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d), url = designThumb(d, 2.5);
+  const extra = d.muster ? 'Ein Muster gibt es in allen Wegfarben – die wählst du beim Bauen.' : (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? 'Gilt für alle Häuser und Gebäude, die du umfärbst.' : '';
+  openModal(`
+    <h2>${d.master ? '✦ ' : ''}${escHtml(d.name)}${d.col && (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? ` <i class="dcol" style="background:${d.col}"></i>` : ''}</h2>
+    <div class="dcard">${url ? `<img src="${url}" alt="">` : `<i style="background:${d.col || '#eee'}"></i>`}</div>
+    ${d.muster && !WEG_MUSTER_BY[d.muster].fixed ? `<div class="swatches dcard-cols">${['sand', 'hell', 'granit', 'anthrazit', 'sandstein', 'terrakotta', 'ziegel', 'rose', 'hellblau', 'salbei', 'holz']
+      .map(f => `<i class="sw wsq" style="background:${styleSwatch(styleDef('weg', wegStyleOf(d.muster, f)))}" title="${WEG_FARBEN_BY[f].name}"></i>`).join('')}</div>` : ''}
+    <p class="muted">${escHtml(d.group)}${d.master ? ' · Meisterstück' : ''}${extra ? ' · ' + extra : ''}</p>
+    <div class="row">${have ? '<button class="btn" disabled style="flex:1">✓ Schon da</button>'
+      : `<button class="btn" id="m-buy" style="flex:1" ${err ? 'disabled' : ''}>Kaufen · 🪙 ${fmt(designPrice(d))}</button>`}
+      <button class="btn ghost" id="m-back" style="flex:1">Zurück</button></div>
+    ${!have && err ? `<p class="muted">${escHtml(err)}</p>` : ''}`, () => openDesignCard(id));   // frischt sich selbst auf (Taler)
+  $('modal-card').classList.add('research');
+  $('m-back').onclick = () => openResearch('design');
+  if ($('m-buy')) $('m-buy').onclick = () => { if (buyDesign(id)) openDesignCard(id); };
+}
 // Wegmuster, die es nicht zu kaufen gibt (Ort, Album) – mit Vorschau, wie die gekauften (Block 125)
 const giftStyles = () => WEG_MUSTER.filter(m => !m.design).filter(m => m.lm || m.album).map(m => {
   const have = wegMusterOk(m.id);
@@ -1974,11 +2016,13 @@ function openResearch(tab = researchTab) {
         ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
       ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
         const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d);
-        const look = d.muster ? `<i class="dlook wlook" style="background:${wegMusterSwatch(d.muster)}"></i>`   // Wegmuster mit echter Vorschau (Block 125)
+        const pic = designThumb(d);
+        const dot = d.col && (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? `radial-gradient(circle at 84% 20%, ${Array.isArray(d.col) ? d.col[0] : d.col} 0 8px, rgba(107,79,58,.35) 8.5px 9.5px, transparent 10px), ` : '';   // Farben: Punkt dazu
+        const look = pic ? `<i class="dthumb" style="background:${dot}#f6efe2 url(${pic}) center / contain no-repeat"></i>`   // echte Vorschau (Block 125)
           : d.look ? `<i class="dlook" style="background:#f6efe2 url(${lookThumb(d.look[0], d.look[1], 0)}) center / contain no-repeat"></i>`   // Form von Stadtschmuck (Block 106)
           : d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
-        return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
-          ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name.replace(/^Farbe /, '')}</span>
+        return `<button class="design${have ? ' have' : ''}${err ? ' cant' : ''}" data-design="${d.id}" title="${d.name}">
+          ${look}<span class="dn">${d.group === 'Wandfarben' || d.group === 'Dachfarben' ? '' : d.name.replace(/^Farbe /, '')}</span>
           <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}`}</small></button>`;
       }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben – die wählst du beim Bauen.</p>' : ''}`).join('')}`;
   }
@@ -2000,7 +2044,7 @@ function openResearch(tab = researchTab) {
   for (const b of document.querySelectorAll('[data-invent]')) b.onclick = () => { if (invent(b.dataset.invent)) openResearch('erfindung'); };
   for (const b of document.querySelectorAll('[data-vehicle]')) b.onclick = () => { const [k, id] = b.dataset.vehicle.split(':'); if (researchVehicle(k, id)) openResearch('verkehr'); };
   for (const b of document.querySelectorAll('[data-fire]')) b.onclick = () => { closeModal(); startFireworks(); };
-  for (const b of document.querySelectorAll('[data-design]')) b.onclick = () => { if (buyDesign(b.dataset.design)) openResearch('design'); };
+  for (const b of document.querySelectorAll('[data-design]')) b.onclick = () => openDesignCard(b.dataset.design);   // erst ansehen, dann kaufen
   $('m-close').onclick = closeModal;
 }
 $('sci-btn').onclick = () => { setTool('look'); openResearch(); };
@@ -2431,6 +2475,7 @@ const NEWS_HISTORY = [
   { id: '2026-10-08-wege', date: '8. Oktober', title: 'Wege: Muster + Farbe', items: [
     '🎨 <b>Muster und Farbe getrennt:</b> Beim Bauen wählst du unten erst das Muster (Kies, Platten, Pflaster, Holz …), dann eine von 21 Farben. Deine Wege bleiben, wie sie sind.',
     '🧱 <b>Neue Muster:</b> Große, kleine und gemischte Platten, Plattenverband, Steinreihen, Kleinpflaster, Fischgrät groß und Holzbohlen – in der Kunstakademie mit Vorschau, bevor du kaufst. Farben kosten nichts.',
+    '🖼️ <b>Kunstakademie mit Vorschau:</b> Jedes Stück zeigt, wie es aussieht. Antippen öffnet eine Karte mit großem Bild – gekauft wird erst mit „Kaufen“.',
     '✨ <b>Schöner:</b> Schachbrett und Gold als echtes Schachbrett, kräftigere Ränder, Erde heller, Fischgrät echt, Regenbogen ohne Kanten – und weit weg keine Streifen und Linien mehr.',
   ] },
   { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger – auch nachts', items: [

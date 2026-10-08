@@ -358,9 +358,17 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 .design i { width: 26px; height: 26px; border-radius: 8px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
 .design .emoji { font-size: 22px; }
 .design i.wlook { width: 62px; height: 44px; border-radius: 10px; }   /* Wegmuster: größere Vorschau (Block 125) */
+.design i.dthumb { width: 70px; height: 55px; border-radius: 8px; box-shadow: none; }   /* echte Vorschau (Block 125); Knopf 12 px − Rand 4 px = 8 px */
+.dcard { display: grid; place-items: center; background: #f6efe2; border-radius: 16px; padding: 8px; margin: 6px 0 8px; }
+.dcard img { width: min(280px, 100%); height: auto; border-radius: 8px; }
+.dcard i { width: 120px; height: 120px; border-radius: 50%; }
+.dcard-cols { justify-content: center; gap: 6px; margin-bottom: 4px; }
+.dcard-cols .sw { cursor: default; }
+h2 .dcol { display: inline-block; width: 22px; height: 22px; border-radius: 50%; vertical-align: -3px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.12); }
 .design .dn { font-size: 11px; font-weight: 800; line-height: 1.1; text-align: center; }
 .design small { font-size: 11px; font-weight: 900; }
-.design.have { background: #eaffea; cursor: default; }
+.design.have { background: #eaffea; }
+.design.cant { opacity: .6; }                   /* gerade nicht kaufbar (Taler, Meisterstück) – Karte zeigt den Grund */
 .design:disabled:not(.have) { opacity: .5; cursor: default; }
 .style-chip.locked { opacity: .6; }
 .tech {

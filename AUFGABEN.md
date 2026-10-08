@@ -1503,8 +1503,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Testwelt `?welt=wege` (testsave-wege.json): je Muster (Grundfarbe) eine Raute (auf dem Bildschirm in Reihen) mit gerade in beide
       Richtungen, Kreuzung, Einzelfeld, 4 Kurven, 4 T, Platz 3×3, ganz breiter Weg, eckige Kurve, zwei Spuren; alle Farben; Übergänge
 - [ ] 125d: Vorschau vor dem Kauf (Wunsch Nutzer 08.10.): Wege in der Kunstakademie als Bild sehen, bevor man bezahlt
-- [ ] Kunstakademie allgemein durchschaubar machen (Wunsch Nutzer 08.10.: „man investiert 3 Minuten Einkommen und merkt am Ende,
-      dass man es vielleicht gar nicht so schön findet“): zu jedem Design eine Vorschau (Bildchen am Beispiel), evtl. kurz ausprobieren
+- [x] Kunstakademie durchschaubar (Wunsch Nutzer 08.10., Entscheidung „Vorschau + Detailkarte“): jedes Stück mit echtem Bild
+      (designThumb: Wand-/Dachfarbe am Haus + Farbpunkt, Busch, Stadtschmuck, Hecke/Zaun/Mauer als Ecke, Wegmuster als ganzes Feld,
+      Deko). Antippen öffnet eine Karte (openDesignCard): großes Bild, bei Mustern 11 Farbbeispiele, Preis, „Kaufen“/„Zurück“ –
+      vorher kaufte schon das Antippen. thumb() kann jetzt Maßstab und Stil. Test: design.test.js
 
 ## Block 126: Alle Hecken einfärbbar
 - [x] Farbauswahl wie Wilmerhecke/Busch (BUSH_COLS) für alle Heckenformen: Leiste beim Bauen, Fenster, „für alle übernehmen“
