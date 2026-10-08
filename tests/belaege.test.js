@@ -27,11 +27,15 @@ describe('Wegbeläge (Block 125)', () => {
   });
   it('Muster blassen beim Rauszoomen aus (nah voll, weit weg schwach)', () => {
     // Boden-Bilder werden ~2,27 Gerätepunkte je Einheit von z gemalt (Zoom 0,8 / 0,45 / 0,35 → z 0,91 / 0,51 / 0,4 bei Maßstab 2)
-    const f = game(`(() => { const t = g.getTransform; g.getTransform = () => ({ a: 2, b: 0 }); try { return [patternFade('dots', 0.91), patternFade('dots', 0.51), patternFade('dots', 0.4), patternFade('tiles', 0.91), patternFade('tiles', 0.4), patternFade('big', 0.4), patternFade('checker', 0.4), patternFade('setts', 0.4)]; } finally { g.getTransform = t; } })()`);
+    const f = game(`(() => { const t = g.getTransform, d = DPR; g.getTransform = () => ({ a: 2, b: 0 }); DPR = 2; try { return [patternFade('dots', 0.91), patternFade('dots', 0.51), patternFade('dots', 0.4), patternFade('tiles', 0.91), patternFade('tiles', 0.4), patternFade('big', 0.4), patternFade('checker', 0.4), patternFade('setts', 0.4)]; } finally { g.getTransform = t; DPR = d; } })()`);
     expect(f[0]).toBeGreaterThan(0.95); expect(f[1]).toBeGreaterThan(0.2); expect(f[1]).toBeLessThan(0.5); expect(f[2]).toBeLessThan(0.05);   // Kies: flimmert → aus
     expect(f[3]).toBeGreaterThan(0.95);
     // weit auseinander bleibt weit weg sichtbar (sonst nur einfarbige Flächen, Rückmeldung Nutzer), eng blasst aus
     expect(f[4]).toBeGreaterThan(0.3); expect(f[5]).toBe(1); expect(f[6]).toBeGreaterThan(0.3); expect(f[7]).toBeLessThan(0.2);
+    // PC mit 125 % (Block 125c): dieselbe Stelle, aber Fugen auf halben Bildpunkten → Drittel-Platten weit weg aus, große Platten schwächer
+    const pc = game(`(() => { const t = g.getTransform, d = DPR; g.getTransform = () => ({ a: 1.25, b: 0 }); DPR = 1.25; try {
+      return [patternFade('thirds', 0.45), patternFade('big', 0.45)]; } finally { g.getTransform = t; DPR = d; } })()`);
+    expect(pc[0]).toBeLessThan(0.05); expect(pc[1]).toBeGreaterThan(0.1); expect(pc[1]).toBeLessThan(0.8);
   });
   it('weit weg keine Kacheln: Fuge auf der Feldkante nur einmal, Ausblassen per Farbmischung statt Deckkraft (Block 125c)', () => {
     const r = game(`(() => {

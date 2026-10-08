@@ -1508,6 +1508,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       `PAT_TILE`, deckend mit Belagfarbe, CanvasPattern), Kies/Steine je Farbe ein fill. Bildvergleich alt/neu: < 0,01 % Bildpunkte
       deutlich anders. Ruckler beim Ziehen weit weg: Standbild im Hintergrund war zu spät fertig (dann alles auf einmal, Mac 34–44 ms)
       → Start ab 15 % statt 30 % des Rands, Zeit je Bild bis 3× GLB_MS, je näher am Rand (`glBgBudget`)
+- [x] 125c: Am PC weit weg immer noch Linien, am Mac nicht (Rückmeldung Nutzer): kein Feldfehler, sondern die Fugen selbst – bei
+      125–150 % Skalierung fallen sie auf halbe Bildpunkte und verschwimmen zu grauem Raster. `patternFade`: Schwelle für den
+      Fugenabstand je nach Pixeldichte (4 bei DPR 2, 10 bei DPR 1). Nachgestellt mit devicePixelRatio 1,25/1,5: Raster weg
 - [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
 - [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
       stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle

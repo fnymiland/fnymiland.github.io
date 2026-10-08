@@ -219,7 +219,10 @@ function patternFade(kind, z) {
   const [a, b] = PAT_FADE[kind] || PAT_FADE.line;
   const bySize = Math.max(0, Math.min(1, (size - a) / b));
   const gap = (PAT_STEP[kind] || 0.1) * Math.hypot(TW / 2, TH / 2) * px;                           // Abstand in Gerätepunkten
-  const byGap = Math.max(0, Math.min(1, (gap - 4) / 8));
+  // Bildschirme mit weniger Pixeldichte (PC, 100–150 %): dieselben Fugen fallen auf halbe Bildpunkte und verschwimmen zu einem grauen
+  // Raster (Rückmeldung Nutzer: am PC Linien, am Mac nicht) – dort erst bei weiterem Abstand zeigen
+  const thr = 4 + 6 * (2 - Math.max(1, Math.min(2, DPR)));
+  const byGap = Math.max(0, Math.min(1, (gap - thr) / 8));
   return Math.max(bySize, byGap);
 }
 let patNoFade = false;                                                    // Vorschaubilder (Leiste, Kunstakademie): Muster immer voll
