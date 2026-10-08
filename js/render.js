@@ -1445,6 +1445,13 @@ function render(now) {
         if (Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by)) under.push(bx + ',' + by);   // was der Rumpf berührt – nicht, was schon hinter ihm liegt
       m.under = under.length ? under : null;
     }   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
+    if (m.pbtrain) {                                                       // Parkbahn-Wagen kurz vor einer Station: erst mit ihr zeichnen –
+      const [rx, ry] = keyXY(k);                                           // sie steht immer hinter dem Gleis und läge sonst über ihm (Block 136f)
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        const st = state.tiles.get((rx + dx) + ',' + (ry + dy));
+        if (st && st.b === 'pb_station' && Math.abs(m.px - rx - dx) <= 1.1 && Math.abs(m.py - ry - dy) <= 1.1) { k = (rx + dx) + ',' + (ry + dy); break; }
+      }
+    }
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }

@@ -102,4 +102,20 @@ describe('Parkeisenbahn (Block 136)', () => {
     game(`demolish(${other[0]}, ${other[1]})`);
     expect(game('state.money') - m3).toBeGreaterThanOrEqual((n - 2) * game('PB_ZUG_COST'));
   });
+  it('Wagen kurz vor einer Station werden nach ihr gezeichnet – sie steht hinter dem Gleis (Block 136f)', () => {
+    loop(); game("build('pb_station', 12, 8); build('pb_station', 8, 10); recalc(); pbWrite(PB_RINGS[0], [1]); pbRuns.clear(); stepParkTrains(0.01)");
+    for (const st of ['12,8', '8,10']) {
+      const bad = game(`(() => { const R = PB_RINGS[0], T = pbRuns.get(R.key).trains[0], i = R.ring.indexOf('${st}'), [sx, sy] = '${st}'.split(',').map(Number), out = [];
+        const dt = drawParkTrack, dc = drawParkCar;
+        drawParkTrack = (...a) => { if (a[3] === sx && a[4] === sy && a[7] === 'station') out.push('S'); return dt(...a); };
+        drawParkCar = (m, ...r) => { if (Math.abs(m.px - sx) < 1.1 && Math.abs(m.py - sy) < 1.1) out.push('C'); return dc(m, ...r); };
+        try {
+          cam = state.cam; cam.z = 2; const p = iso(sx, sy); cam.x = p.x; cam.y = p.y;
+          const res = [];
+          for (let f = -1.6; f <= 1.6; f += 0.2) { T.s = ((i + f) % R.n + R.n) % R.n; T.wait = 999; out.length = 0; render(1e6); const s = out.join(''); if (s.includes('S') && /C.*S/.test(s)) res.push(f.toFixed(1) + ':' + s); }
+          return res;
+        } finally { drawParkTrack = dt; drawParkCar = dc; } })()`);
+      expect(bad, 'Station ' + st).toEqual([]);
+    }
+  });
 });

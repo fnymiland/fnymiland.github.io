@@ -415,7 +415,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Messlauf (☰ → Grafik) im Browser ansehen.
     **Bogenbrücken (Block 150):** Höhe/Bögen/Durchfahrt nur über `bridgeArch(x, y)` (gemerkt je groundVersion, recalc leert;
     null = flach). Bogenbrücken zeichnet die Objekt-Schleife (`drawArchBridge`), nicht der flache Durchgang.
-    **Parkeisenbahn (Block 136):** Ringe über `computeParkRails` (PB_RINGS/PB_AT), Züge je Ring (`pbRuns.get(key).trains`, `parkTrainCars`; Liste `pbForms(R)` an einer Station als `t.pbz`, ohne Liste einer in der Form der ersten Station; ändern nur über `pbBuyTrain`/`pbSellTrain`/`pbSetModel`, Platz `pbRoom`, Abstand `pbFree`, Abriss `pbHandOver`); Fahrgäste
+    **Parkeisenbahn (Block 136):** Ringe über `computeParkRails` (PB_RINGS/PB_AT), Züge je Ring (`pbRuns.get(key).trains`, `parkTrainCars`; Liste `pbForms(R)` an einer Station als `t.pbz`, ohne Liste einer in der Form der ersten Station; ändern nur über `pbBuyTrain`/`pbSellTrain`/`pbSetModel`, Platz `pbRoom`, Abstand `pbFree`, Abriss `pbHandOver`); Wagen kurz vor einer Station hängen in deren Feld (render.js), sonst malt die Station über den Zug; Fahrgäste
     zeichnet `drawWalker` mit `seat`/`figS`/`sx,sy` – wer drawWalker ändert, prüft auch die sitzenden Figuren.
     Messen ohne `getImageData` auf der Hauptleinwand: Chrome schaltet sie danach auf Zeichnen ohne Grafikkarte um (falsche Zahlen).
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,

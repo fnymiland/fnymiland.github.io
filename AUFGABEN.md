@@ -1594,6 +1594,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       ✕ entfernen (Preis zurück), „+ Zug“ (1000 Taler). Einer ist immer dabei (im Stationspreis). Wie viele passen, hängt von der
       Länge ab (`pbRoom`); Züge halten Abstand (`pbFree`: Heck des vorderen + 1 Feld), neuer Zug startet in der größten Lücke.
       Station abgerissen: Züge wandern zur nächsten Station der Strecke, sonst Geld zurück. Test: parkbahn
+- [x] 136f (Nutzer: „Zug glitcht durch die Stationen“): Wagen wurden mit ihrem Feld gezeichnet – stand einer noch auf dem Feld vor
+      der Station, malte die Station (Dach, Schild, Bahnsteig) über ihn, ein Bild später er über sie. Die Station steht immer hinter dem
+      Gleis: Wagen bis 1,1 Felder vor einer Station werden jetzt mit ihr gezeichnet (render.js, byTile). Test: parkbahn (Reihenfolge)
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
