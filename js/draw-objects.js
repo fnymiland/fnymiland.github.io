@@ -54,6 +54,7 @@ function punchGlow(q, r, tint, part = null) {
   const strength = night / NIGHT_MAX;
   const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2;
   if (part === 'pane') {
+    if (glOnWorld()) { glOutQuad(q, 1); if (!GL.sky) return; }             // GL-Bild: Loch als Rechteck (Stärke im Shader, Block 144)
     g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0); g.globalCompositeOperation = 'destination-out';
     g.globalAlpha = Math.min(1, strength); poly(q, '#000');
     g.restore();
@@ -65,10 +66,16 @@ function punchGlow(q, r, tint, part = null) {
   if (!seen) glowCells.set(cell, seen = new Map());
   let n = seen.get(id);
   if (n === undefined) { n = seen.size; seen.set(id, n); }
+  const rr = (n ? r * 0.7 : r) * (blue && SPRITES_ON && nightPicOn() ? BLUE_SPOT : 1);   // weit weg mit Nachtbildern (auch Dämmerung, Block 143): blaues Loch so groß wie sein Fleck (render.js)
+  if (glOnWorld()) {                                                       // GL-Bild: Löcher als Rechtecke, Stärke im Shader (Block 144)
+    glOut(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2, 0.45 / (1 + n * 1.8));
+    if (!blue && !part) glOutQuad(q, 1);
+    if (!GL.sky) { glows.push({ q, r, tint }); return; }
+    // Himmel (Ballon, Zeppelin): liegt in 2D obendrauf – dort zusätzlich stanzen, damit das Licht durch seine Fenster scheint
+  }
   g.save();                                 // der Ausschnitt (Streifen großer Gebäude) bleibt erhalten
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   g.globalCompositeOperation = 'destination-out';
-  const rr = (n ? r * 0.7 : r) * (blue && SPRITES_ON && nightPicOn() ? BLUE_SPOT : 1);   // weit weg mit Nachtbildern (auch Dämmerung, Block 143): blaues Loch so groß wie sein Fleck (render.js)
   g.globalAlpha = 0.45 * strength / (1 + n * 1.8);
   g.drawImage(glowImage(blue), gx - rr, gy - rr, rr * 2, rr * 2);
   if (!blue && !part) { g.globalAlpha = Math.min(1, strength); poly(q, '#000'); }

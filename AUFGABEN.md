@@ -1616,6 +1616,14 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] PC des Nutzers danach (Tag, Zoom 0,45, ?gl=1): Bild 18 ms, Rechnen 3,5 ms (vorher 26 / 17) – „geisteskrank flüssig“
 - [x] ☰ → 🖥️ Grafik (nur dieses Gerät): Bildrate, „Weit weg: Drehendes steht still / dreht sich“ (Standard still, Entscheidung
       Nutzer), „🚀 Grafikkarte (Test)“ (Standard aus, ?gl= in der Adresse geht vor). Messkasten bleibt auf schmalen Bildschirmen im Bild
+- [x] Nacht und Dämmerung über die Grafikkarte: Welt in ein Zwischenbild mit zwei Ausgaben (Farbe + echte Deckkraft, gleiche
+      Mischung ONE/ONE_MINUS_SRC_ALPHA); Löcher (destination-out: Löschbild, Lichtmaske, punchGlow) als Rechtecke mit negativer
+      Deckkraft, Stärke als Uniform nk – Standbild hält durch die Dämmerung. Danach Nachtblau (source-atop) beim Zusammensetzen und
+      die Lichtschicht dahinter (destination-over), dieselbe wie 2D (nightLights in render.js: Fenster, warme Scheiben, Schein,
+      Lichtbilder), ruhende Lichter im Standbild (GLS.light), lebendige je Bild. Ballons/Zeppelin nachts noch während der Aufnahme
+      (GL.sky): stanzen Welt und 2D. Bild gegen 2D (Testwelt „alles“, Full HD): 23 Uhr 0,23 % > 8/255, 0,006 % > 40; 19:30, 20:30,
+      5:30, 2 Uhr ähnlich. Nachts 3,7 ms je Bild (99 % < 5,1 ms) statt 11 ms in 2D; Neuaufnahme 35 ms
+- [x] Nebenbei behoben: drawNight – warmer Schein nach blauem Fleck wurde blau (circle setzte fillStyle ungemerkt)
 - [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
@@ -1627,5 +1635,5 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Shader (S über D, dann E radieren) statt Mischart-Wechsel. Nach drawNight bleibt alles 2D-Overlay (Feuerwerk 'lighter' klären)
 - [ ] Offen zu klären: Hochladen in Safari (evtl. Rücklesen – nur am Bildanfang, aus cropSprite-Pixeln), iPad-Speicher (Leinwände
       nach Upload freigeben?), Zoom 1–2 (SPRITES_NEAR: viel live) evtl. 2D lassen, Tests (jsdom ohne WebGL → Rückfall immer)
-- [ ] Gefundene Fehler (unabhängig von WebGL): Sternschnuppe stanzt nachts NACH drawNight ein Loch (render.js drawFallenStar →
-      glowQuad); drawNight: circle() setzt fillStyle ohne `fill` nachzuführen → warmer Schein nach blauem Licht wird blau
+- [ ] Gefundener Fehler (unabhängig von WebGL): Sternschnuppe stanzt nachts NACH drawNight ein Loch (render.js drawFallenStar →
+      glowQuad) – nur im 2D-Weg sichtbar

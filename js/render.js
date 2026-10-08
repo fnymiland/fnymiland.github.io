@@ -1111,15 +1111,39 @@ function drawNight() {
   g.fillStyle = `rgba(25,35,85,${night})`;
   g.fillRect(0, 0, W, H);
   g.globalCompositeOperation = 'destination-over';
-  const seen = new Set(), lights = glows.filter(({ q, r }) => {                  // derselbe Text wie früher, ohne map/join (Block 124)
+  const lights = nightDedup(glows);
+  let fill = null;
+  const sq = (x, y, s, f) => { if (f !== fill) g.fillStyle = fill = f; g.fillRect(x, y, s, s); };
+  nightLights(lights, nightPics, nightPanes, nightWarm, {            // hinter das Bild (destination-over): was zuerst kommt, liegt vorn
+    win: q => { poly(q, '#ffd873'); fill = null; },
+    pre: (c, x, y, w, h) => g.drawImage(c, x, y, w, h),
+    pic: (c, x, y, w, h) => g.drawImage(c, x, y, w, h),
+    square: sq,
+    disc: (x, y, r, f) => { circle(x, y, r, f); fill = null; },   // circle setzt fillStyle selbst (vorher wurde danach warmer Schein blau)
+  });
+  if (nightWarm) { g.fillStyle = 'rgb(255,205,100)'; g.fillRect(0, 0, W, H); }   // übrige Löcher kommen nur noch aus warmen Nachtbildern
+  g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'source-over';
+  return lights.length;
+}
+// dasselbe Licht (große Gebäude stanzen es je Streifen) nur einmal (derselbe Text wie früher, ohne map/join – Block 124)
+function nightDedup(list) {
+  const seen = new Set();
+  return list.filter(({ q, r }) => {
     const k = Math.round(q[0][0] * 4) + ',' + Math.round(q[0][1] * 4) + ',' + Math.round(q[2][0] * 4) + ',' + Math.round(q[2][1] * 4) + ',' + Math.round(r * 4);
     return !seen.has(k) && seen.add(k);
   });
-  for (const { q, tint } of lights) if (tint !== 'blue') poly(q, '#ffd873');      // Fenster zuerst, ganz hell
+}
+// Die Lichtschicht der Nacht (hinter dem Bild, scheint durch die gestanzten Löcher) – für 2D (drawNight) und die Grafikkarte
+// (gl.js, Block 144) dieselbe Reihenfolge: Fensterscheiben, warme Scheiben neben Blau, weicher Schein, Lichtbilder der Bildchen.
+// E: { win(q), pre(c, x, y, w, h), square(x, y, size, farbe), disc(x, y, r, farbe), pic(c, x, y, w, h) } in Bildschirmpunkten
+function nightLights(lights, pics, panes, warm, E) {
+  for (const { q, tint } of lights) if (tint !== 'blue') E.win(q);                // Fenster zuerst, ganz hell
   // Nachtbilder (Block 124): ihre Löcher füllt sonst erst die warme Fläche ganz am Ende – liegt blaues Licht in der Nähe, käme das
   // zuerst und Fenster samt Schein würden blau. Darum dort Scheiben und warmen Schein vorher wie live (nur Bildchen, die Blau berühren)
-  if (nightWarm) {
-    const blue = nightPics.map(([, x, y, w, h]) => [x, y, x + w, y + h]);
+  if (warm) {
+    const blue = pics.map(([, x, y, w, h]) => [x, y, x + w, y + h]);
     for (const { q, r, tint } of lights) if (tint === 'blue') { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, h = r * BLUE_SPOT; blue.push([gx - h, gy - h, gx + h, gy + h]); }
     if (blue.length) {
       // Block 143: Nähe über ein Raster statt jedes gegen jedes (große Welt: 2.700 × 400 Vergleiche je Bild), und Scheiben samt Schein
@@ -1127,24 +1151,17 @@ function drawNight() {
       const CELL = 256, grid = new Map(), cells = (a, b, c, d, f) => { for (let i = Math.floor(a / CELL); i <= Math.floor(c / CELL); i++) for (let j = Math.floor(b / CELL); j <= Math.floor(d / CELL); j++) f(i + ',' + j); };
       for (const r of blue) cells(r[0], r[1], r[2], r[3], k => { const l = grid.get(k); if (l) l.push(r); else grid.set(k, [r]); });
       const hit = (x, y, w, h) => { let yes = false; cells(x, y, x + w, y + h, k => { if (!yes) for (const [a, b, c, d] of grid.get(k) || []) if (a < x + w && c > x && b < y + h && d > y) { yes = true; break; } }); return yes; };
-      for (const [n, x, y, w, h] of nightPanes) if (hit(x, y, w, h)) { const pre = warmPre(n); if (pre) g.drawImage(pre, x, y, w, h); }   // erst Scheiben, dann Schein (wie live)
+      for (const [n, x, y, w, h] of panes) if (hit(x, y, w, h)) { const pre = warmPre(n); if (pre) E.pre(pre, x, y, w, h); }   // erst Scheiben, dann Schein (wie live)
     }
   }
-  let fill = null;
   for (const { q, r, tint } of lights) {                                          // dann der weiche Schein
     const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, f = tint === 'blue' ? 'rgb(140,215,255)' : 'rgb(255,205,100)';
     // mit Nachtbildern: blaues Licht als kleiner fester Fleck (gestanzt wird dann auch nur so groß, punchGlow) – ein blaues Quadrat
     // träfe die Fensterlöcher der Nachbarn
-    if (nightWarm && tint === 'blue') { circle(gx, gy, r * BLUE_SPOT, f); continue; }
-    if (f !== fill) g.fillStyle = fill = f;
-    g.fillRect(gx - r, gy - r, r * 2, r * 2);
+    if (warm && tint === 'blue') E.disc(gx, gy, r * BLUE_SPOT, f);
+    else E.square(gx - r, gy - r, r * 2, f);
   }
-  for (const [c, x, y, w, h] of nightPics) g.drawImage(c, x, y, w, h);            // Lichtbilder der Bildchen (volle Nacht, Block 124)
-  if (nightWarm) { g.fillStyle = 'rgb(255,205,100)'; g.fillRect(0, 0, W, H); }   // übrige Löcher kommen nur noch aus warmen Nachtbildern
-  g.fillStyle = '#2a3f66';                                                        // Sicherheitsnetz: nie durchsichtig
-  g.fillRect(0, 0, W, H);
-  g.globalCompositeOperation = 'source-over';
-  return lights.length;
+  for (const [c, x, y, w, h] of pics) E.pic(c, x, y, w, h);                     // Lichtbilder der Bildchen (volle Nacht, Block 124)
 }
 // Nachtlicht: ein vorgezeichneter weicher Lichtfleck statt eines Farbverlaufs pro Fenster
 const glowSprites = {};
@@ -1256,7 +1273,7 @@ function render(now) {
       else drawFlat(visible[i + 2], visible[i + 3], z, x, y, t);
     }
   }
-  if (GL.frame && GL.cacheMode === 'rec') GLS.gEnd = GL.recs.length;     // Boden, Wellen, Tiefe, Brücken/leuchtende Wege: Ende (Block 144)
+  if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, Brücken/leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern
   FOG = false;
   if (!groundCached) {
     g.save();
@@ -1539,14 +1556,22 @@ function render(now) {
 
   const ml1 = MESS ? performance.now() : 0;
   if (MESS) GL.upMs = 0;
+  // Nachts im GL-Bild: Ballons & Co. noch während der Aufnahme – sie liegen in 2D obendrauf, ihre Lichter stanzen aber auch die
+  // Welt darunter und kommen in die Lichtschicht der Grafikkarte (punchGlow, GL.sky)
+  const skyIn = GL.frame && night > 0;
+  if (skyIn) { GL.sky = true; try { drawSky(now, z); } finally { GL.sky = false; } }
   if (GL.frame) glEnd();                  // Welt fertig aufgezeichnet: die Grafikkarte zeichnet, alles Weitere obendrauf in 2D (Block 144)
   const ml2 = MESS ? performance.now() : 0;
-  drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
+  if (!skyIn) drawSky(now, z);            // Erfindungen: Ballons, Zeppelin, Seilbahn
   const mt2 = MESS ? performance.now() : 0;
 
-  // 5) Nacht
-  if (night > 0) drawNight();
-  if (MESS) { const mt3 = performance.now(), a = 0.1; MESS.boden += a * (mt1 - mt0 - MESS.boden); MESS.obj += a * (mt2 - mt1 - MESS.obj); MESS.nacht += a * (mt3 - mt2 - MESS.nacht); MESS.lights = glows.length; MESS.miss = SPRITE_STATS.miss; MESS.made = SPRITE_STATS.made;
+  // 5) Nacht – im GL-Bild hat die Grafikkarte Löcher, Nachtblau und Lichtschicht schon gezeichnet (Block 144); hier nur noch das
+  // Nachtblau über das, was obendrauf in 2D kam (Ballons, Zeppelin …: deckend, ohne Löcher)
+  if (night > 0) {
+    if (GL.nightDone) { g.globalCompositeOperation = 'source-atop'; g.fillStyle = `rgba(25,35,85,${night})`; g.fillRect(0, 0, W, H); g.globalCompositeOperation = 'source-over'; }
+    else drawNight();
+  }
+  if (MESS) { const mt3 = performance.now(), a = 0.1; MESS.boden += a * (mt1 - mt0 - MESS.boden); MESS.obj += a * (mt2 - mt1 - MESS.obj); MESS.nacht += a * (mt3 - mt2 - MESS.nacht); if (!GL.nightDone) MESS.lights = glows.length; MESS.miss = SPRITE_STATS.miss; MESS.made = SPRITE_STATS.made;
     MESS.feld += a * (ml1 - ml0 - MESS.feld); MESS.gl += a * (ml2 - ml1 - MESS.gl); MESS.up += a * (GL.upMs - MESS.up); MESS.vor += a * (ml0 - mt1 - MESS.vor);
     MESS.movers = drawnMovers.size; MESS.la = LA.used | 0; }
 

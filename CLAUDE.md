@@ -400,6 +400,10 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Grund. Einstellungen je Gerät (☰ → Grafik, localStorage): `stillFar` (`kachelhausen_still`, Standard still: `STILL_FAR` weit weg
     als Bildchen mit `stillNow`, geteilte Deko-Bildchen ohne Ortsabhängigkeit), `kachelhausen_gl` (`setGlWanted`, `?gl=0/1` geht vor),
     Bildrate. Pixelvergleich GL ↔ 2D: GL-Leinwand + `canvas` übereinander gegen `GL.off = true`.
+    Nacht im GL-Bild: Löcher nur über `glOut`/`glOutQuad` bzw. drawImage mit destination-out (Deckkraft relativ zur Nachtstärke,
+    `nightK()`), nur wenn `glOnWorld()` (nie beim Malen eines Bildchens). Die Lichtschicht steht einmal in `nightLights` (render.js)
+    – 2D und GL nutzen sie; wer Licht ändert, ändert es dort. Was nach der Welt noch Lichter stanzt (Himmel), läuft nachts vor
+    `glEnd` mit `GL.sky`.
 143. **Nachtbilder auch in der Dämmerung** (Block 143): `nightPicOn()` (Licht an, weit weg) statt `nightFull()` für alles, was
     Nachtbilder nutzt; das Löschbild wird mit night/NIGHT_MAX eingesetzt, gemalt wird es immer mit voller Nacht (`paintNight`
     setzt `night`). Vor dem Einschalten wärmt `prewarm` die beleuchteten Bildchen vor – wer einen neuen Bildchen-Schlüssel mit

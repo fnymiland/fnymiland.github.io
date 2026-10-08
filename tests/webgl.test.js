@@ -49,12 +49,39 @@ describe('WebGL weit weg (Block 144)', () => {
     game('glHook(false)');
     expect(game("['drawImage', 'save', 'restore', 'beginPath', 'rect', 'clip'].some(k => Object.prototype.hasOwnProperty.call(ctx, k))")).toBe(false);
   });
-  it('GL-Bild nur bei Tag, weit weg, ohne Werkzeug; ?gl=0 schaltet ab', () => {
+  it('GL-Bild weit weg (auch nachts), ohne Werkzeug; ?gl=0 schaltet ab', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'gl.js'), 'utf8');
-    expect(src).toMatch(/night !== 0 \? 'Nacht/);
+    expect(src).not.toMatch(/night !== 0 \? 'Nacht/);
     expect(src).toMatch(/tool !== 'look'/);
     game('state.cam.z = 0.6; render(1e6)');
     expect(game('GL.why')).toMatch(/kein WebGL2|aus/);                              // Grund steht für die Messzeile bereit
     expect(src).toMatch(/GL_Q === '0'/);
+  });
+  it('Nachtlicht: 2D und Grafikkarte nutzen dieselbe Lichtschicht (Fenster, Schein, Lichtbilder) in derselben Reihenfolge', () => {
+    const r = game(`(() => {
+      const q = (x, y) => [[x, y], [x + 4, y], [x + 4, y - 6], [x, y - 6]];
+      const lights = [{ q: q(10, 50), r: 12 }, { q: q(40, 50), r: 12, tint: 'blue' }, { q: q(70, 50), r: 12 }];
+      const pic = document.createElement('canvas'); pic.width = pic.height = 8;
+      const seq = [];
+      nightLights(lights, [[pic, 0, 0, 8, 8]], [], true, { win: () => seq.push('win'), pre: () => seq.push('pre'), square: (x, y, s, f) => seq.push('sq ' + f),
+        disc: (x, y, rr, f) => seq.push('disc ' + f), pic: () => seq.push('pic') });
+      const G = glNightRecs(lights, [[pic, 0, 0, 8, 8]], [], true);
+      return { seq, ph: G.ph, n: G.recs.length };
+    })()`);
+    expect(r.seq).toEqual(['win', 'win', 'sq rgb(255,205,100)', 'disc rgb(140,215,255)', 'sq rgb(255,205,100)', 'pic']);
+    expect(r.ph).toEqual([0, 2, 2, 5, 6]);                                             // Phasen: Fenster, Scheiben, Schein, Lichtbilder
+    expect(r.n).toBe(6);
+  });
+  it('drawNight: nach blauem Fleck wird warmer Schein wieder warm (vorher setzte circle die Farbe, ohne dass es gemerkt wurde)', () => {
+    const fills = game(`(() => {
+      const q = (x, y) => [[x, y], [x + 4, y], [x + 4, y - 6], [x, y - 6]];
+      glows.length = 0; glows.push({ q: q(10, 50), r: 12 }, { q: q(40, 50), r: 12, tint: 'blue' }, { q: q(70, 50), r: 12 });
+      nightPics.length = 0; nightPanes.length = 0; nightWarm = true; night = NIGHT_MAX;
+      const out = [], fr = g.fillRect; g.fillRect = function (x, y, w, h) { out.push(String(g.fillStyle)); return fr.apply(this, arguments); };
+      try { drawNight(); } finally { g.fillRect = fr; glows.length = 0; nightWarm = false; }
+      return out;
+    })()`);
+    // Nachtblau, warmer Schein, (blauer Fleck als Kreis), warmer Schein, warme Fläche, Sicherheitsnetz
+    expect(fills.slice(1, 3).every(f => /ffcd64|255, ?205, ?100/i.test(f))).toBe(true);
   });
 });

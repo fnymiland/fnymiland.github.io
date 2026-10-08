@@ -10,7 +10,7 @@
 // Rückfall: ohne WebGL2, mit ?gl=0, nach einem Fehler oder Kontextverlust zeichnet render wie bisher alles in 2D (deckend).
 // Vorerst nur bei Tag, weit weg (nicht SPRITES_NEAR) und ohne Bau-Vorschau; sonst 2D.
 // ---------------------------------------------------------------------------
-const GL = { now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
+const GL = { sky: false, nightDone: false, now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
   frame: false, shown: false, stats: { quads: 0, draws: 0, live: 0, over: 0, up: 0, miss: 0 } };
 let GLPASS = false;                                             // gerade läuft der aufgezeichnete Welt-Durchgang
 const GL_Q = new URLSearchParams(location.search).get('gl');
@@ -42,26 +42,42 @@ function glInit() {
   const FS = `#version 300 es
   precision highp float;
   in vec2 uv; in float al; in vec2 clip; flat in int page; in vec4 rect;
-  uniform sampler2D tx, a0, a1, a2, a3, a4, a5; out vec4 o;
+  uniform sampler2D tx, a0, a1, a2, a3, a4, a5; uniform float nk;
+  layout(location = 0) out vec4 o; layout(location = 1) out vec4 o1;
   void main() {
     if (gl_FragCoord.x < clip.x || gl_FragCoord.x > clip.y) discard;
     vec2 u = clamp(uv, rect.xy, rect.zw); vec4 c;
     if (page < 0) c = texture(tx, u); else if (page == 0) c = texture(a0, u); else if (page == 1) c = texture(a1, u); else if (page == 2) c = texture(a2, u);
     else if (page == 3) c = texture(a3, u); else if (page == 4) c = texture(a4, u); else c = texture(a5, u);
-    o = c * al; }`;
+    // Nacht (Block 144): al < 0 = Loch stanzen (destination-out) mit −al · Nachtstärke nk. Mit derselben Mischung (ONE,
+    // ONE_MINUS_SRC_ALPHA) wird o zur Farbe mit Löchern und o1.r zur echten Deckkraft (o.a stimmt nach Löchern nicht mehr)
+    if (al < 0.0) { float e = c.a * -al * nk; o = vec4(0.0, 0.0, 0.0, e); o1 = vec4(0.0, 0.0, 0.0, e); }
+    else { o = c * al; o1 = vec4(o.a, 0.0, 0.0, o.a); } }`;
+  // Nacht zusammensetzen: Welt (Farbe w0, Deckkraft w1.r), darüber das Nachtblau wie source-atop
+  const CVS = `#version 300 es
+  void main() { vec2 p = vec2(gl_VertexID == 1 ? 3.0 : -1.0, gl_VertexID == 2 ? 3.0 : -1.0); gl_Position = vec4(p, 0.0, 1.0); }`;
+  const CFS = `#version 300 es
+  precision highp float;
+  uniform sampler2D w0, w1; uniform vec4 tint; out vec4 o;
+  void main() { ivec2 q = ivec2(gl_FragCoord.xy); vec4 c = texelFetch(w0, q, 0); float A = texelFetch(w1, q, 0).r;
+    o = vec4(tint.rgb * tint.a * A + c.rgb * (1.0 - tint.a), A); }`;
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
   try {
     const pr = gl.createProgram();
     gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-    GL.prog = pr; GL.buf = gl.createBuffer(); GL.sbuf = gl.createBuffer();
+    GL.prog = pr; GL.buf = gl.createBuffer(); GL.sbuf = gl.createBuffer(); GL.lbuf = gl.createBuffer();
+    const cp = gl.createProgram();
+    gl.attachShader(cp, sh(gl.VERTEX_SHADER, CVS)); gl.attachShader(cp, sh(gl.FRAGMENT_SHADER, CFS)); gl.linkProgram(cp);
+    if (!gl.getProgramParameter(cp, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(cp));
+    GL.comp = { prog: cp, w0: gl.getUniformLocation(cp, 'w0'), w1: gl.getUniformLocation(cp, 'w1'), tint: gl.getUniformLocation(cp, 'tint') };
     GL.loc = { p: gl.getAttribLocation(pr, 'p'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a'), cl: gl.getAttribLocation(pr, 'cl'), pg: gl.getAttribLocation(pr, 'pg'), rc: gl.getAttribLocation(pr, 'rc'),
-      w: gl.getAttribLocation(pr, 'wv'), wt: gl.getUniformLocation(pr, 'wt'),
+      w: gl.getAttribLocation(pr, 'wv'), wt: gl.getUniformLocation(pr, 'wt'), nk: gl.getUniformLocation(pr, 'nk'),
       sz: gl.getUniformLocation(pr, 'sz'), tx: gl.getUniformLocation(pr, 'tx'), off: gl.getUniformLocation(pr, 'off'), at: [0, 1, 2, 3, 4, 5].map(i => gl.getUniformLocation(pr, 'a' + i)) };
   } catch (e) { console.warn('WebGL', e); GL.broken = true; return false; }
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-  c.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.ready = false; GL.texs.clear(); atlReset(true); GLS.ok = false; glShow(false); });
+  c.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.ready = false; GL.fbo = null; GL.texs.clear(); atlReset(true); GLS.ok = false; glShow(false); });
   c.addEventListener('webglcontextrestored', () => { GL.broken = false; GL.gl = null; GL.texs.clear(); atlReset(true); glInit(); });
   ATL.size = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   GL.gl = gl; GL.canvas = c; GL.ready = true;
@@ -127,7 +143,8 @@ function glRec(src, sx, sy, sw, sh, m, alpha, clip, nearest) {
 }
 // ersetzt ctx.drawImage während GLPASS: Leinwände werden aufgezeichnet, alles andere wie gehabt
 function glDrawImage(img, ...a) {
-  if (!GLPASS || !(img instanceof HTMLCanvasElement) || !img.width || !img.height || glClip === 'x' || ctx.globalCompositeOperation !== 'source-over') {
+  const out = ctx.globalCompositeOperation === 'destination-out';      // Nacht: Loch stanzen (Löschbild, Lichtmaske)
+  if (!GLPASS || !(img instanceof HTMLCanvasElement) || !img.width || !img.height || glClip === 'x' || (ctx.globalCompositeOperation !== 'source-over' && !out)) {
     if (GLPASS) { GL.stats.miss++; GLS.dirty = true; GLS.dirtyWhy = 'kein Bildchen'; }
     return C2D.drawImage.call(ctx, img, ...a);
   }
@@ -136,7 +153,32 @@ function glDrawImage(img, ...a) {
   const t = ctx.getTransform();
   // Abbildung Quelle → Gerät: Ziel (dx, dy, dw, dh) unter der Transformation; als affine Matrix der Einheitsfläche
   const m = { a: t.a * dw, b: t.b * dw, c: t.c * dh, d: t.d * dh, e: t.a * dx + t.c * dy + t.e, f: t.b * dx + t.d * dy + t.f };
+  if (out) { const k = nightK(); if (k > 0) glRec(img, sx, sy, sw, sh, m, -ctx.globalAlpha / k, glClip, false); return; }   // Stärke ∝ Nacht: im Shader (nk)
   glRec(img, sx, sy, sw, sh, m, ctx.globalAlpha, glClip, ctx.imageSmoothingEnabled === false);
+}
+// zeichnet g gerade in die Welt des GL-Bilds (nicht in ein Bildchen, das nebenbei entsteht)?
+function glOnWorld() { return GLPASS && (g === ctx || (!!LA.x && g === LA.x)); }
+// Nachtstärke 0 … 1 (alle Löcher sind proportional dazu: punchGlow, Löschbild, Lichtmaske) – im Standbild als Uniform nk
+function nightK() { return Math.min(1, night / NIGHT_MAX); }
+// Loch stanzen (punchGlow im GL-Bild): Bildchen (weicher Schein) bzw. Fensterfläche q (Parallelogramm) in Bildschirmpunkten;
+// a relativ zur Nachtstärke. In einer Sammelflächen-Zelle (glLive) erst nach deren Rechteck (glLive sortiert nach)
+function glOut(src, x, y, w, h, a) {
+  glRec(src, 0, 0, src.width, src.height, { a: w * DPR, b: 0, c: 0, d: h * DPR, e: x * DPR, f: y * DPR }, -a, Array.isArray(glClip) ? glClip : null, false);
+}
+function glOutQuad(q, a) {
+  const [p0, p1, , p3] = q;
+  glRec(glSolid('#000'), 0, 0, 4, 4, { a: (p1[0] - p0[0]) * DPR, b: (p1[1] - p0[1]) * DPR, c: (p3[0] - p0[0]) * DPR, d: (p3[1] - p0[1]) * DPR, e: p0[0] * DPR, f: p0[1] * DPR }, -a, Array.isArray(glClip) ? glClip : null, false);
+}
+// einfarbige Fläche bzw. runder Fleck als Bildchen (Nachtlicht, Löcher)
+const GL_SOLID = new Map();
+function glSolid(col, disc = false) {
+  const k = col + (disc ? 'o' : ''); let c = GL_SOLID.get(k);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = c.height = disc ? 64 : 4;
+  const x = c.getContext('2d');
+  if (x) { x.fillStyle = col; if (disc) { x.beginPath(); x.arc(32, 32, 32, 0, Math.PI * 2); x.fill(); } else x.fillRect(0, 0, 4, 4); }
+  GL_SOLID.set(k, c);
+  return c;
 }
 function glSave() { glClipStack.push(glClip); return C2D.save.call(ctx); }
 function glRestore() { glClip = glClipStack.length ? glClipStack.pop() : null; return C2D.restore.call(ctx); }
@@ -203,9 +245,12 @@ function glLive(x, y, l, u, r, d, fn) {
   X.setTransform(DPR, 0, 0, DPR, 0, 0);                            // Bildschirmpunkte → Zelle
   X.globalAlpha = ctx.globalAlpha;
   g = X;
+  const r0 = GL.recs.length;
   try { fn(); } finally { C2D.restore.call(X); g = prev; LA.off = [0, 0]; }
   GL.stats.live++;
+  const holes = GL.recs.length > r0 ? GL.recs.splice(r0) : null;        // Löcher, die fn gestanzt hat: erst nach dem Gemalten (wie 2D)
   glRec(LA.c, cell.x, cell.y, bw, bh, { a: bw, b: 0, c: 0, d: bh, e: bx0, f: by0 }, 1, glClip, false);
+  if (holes) for (const r of holes) GL.recs.push(r);
 }
 
 // --- Bild ---
@@ -213,7 +258,7 @@ function glLive(x, y, l, u, r, d, fn) {
 function glFrameOk(z) {
   // Grund fürs Messen (?messen): warum gerade (nicht) per Grafikkarte
   GL.why = GL.off || !glWanted() ? 'aus (☰ → Grafik)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
-    : night !== 0 ? 'Nacht/Dämmerung (noch 2D)' : tool !== 'look' || moving || plan ? 'Werkzeug gewählt (2D)' : !glInit() ? 'kein WebGL2 im Browser (2D)' : '';
+    : tool !== 'look' || moving || plan ? 'Werkzeug gewählt (2D)' : !glInit() ? 'kein WebGL2 im Browser (2D)' : '';
   return !GL.why;
 }
 function glBegin() {
@@ -309,38 +354,130 @@ function glEnd() {
   GL.lastMiss = GL.stats.miss + GL.stats.over;
   if (mode === 'rec') { W = GLS.W0; H = GLS.H0; }                      // Rand fürs Aufzeichnen wieder weg (Schilder & Co. in echter Größe)
   try {
-    const CW = GL.canvas.width, CH = GL.canvas.height;
+    const CW = GL.canvas.width, CH = GL.canvas.height, dark = night > 0;
+    // Nacht (Block 144): Welt mit Löchern ins Zwischenbild, dann Nachtblau (source-atop) und die Lichtschicht dahinter
+    // (destination-over) – wie drawNight. Lichter dieses Bilds hinten an die Rechtecke (gleicher Puffer)
+    const dyn = dark ? glDynLights(mode) : null;
+    let screen0 = 0;
+    if (dyn) {
+      for (const r of dyn.recs) recs.push(r);
+      screen0 = recs.length;
+      const full = c => recs.push({ src: glSolid(c), sx: 0, sy: 0, sw: 4, sh: 4, m: { a: CW, b: 0, c: 0, d: CH, e: 0, f: 0 }, alpha: 1, clip: GL_NOCLIP, nearest: false });
+      if (mode === 'play' ? dyn.warm || (GLS.light && GLS.light.warm) : nightWarm) full('rgb(255,205,100)');   // übrige Löcher aus warmen Nachtbildern
+      full('#2a3f66');                                                     // Sicherheitsnetz: nie durchsichtig
+    }
     gl.viewport(0, 0, CW, CH);
-    gl.clearColor(0x6f / 255, 0xcb / 255, 0xe2 / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    if (dark) {
+      const F = glFbo(CW, CH);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, F.fb);
+      gl.clearBufferfv(gl.COLOR, 0, [0x6f / 255, 0xcb / 255, 0xe2 / 255, 1]); gl.clearBufferfv(gl.COLOR, 1, [1, 0, 0, 1]);
+    } else { gl.clearColor(0x6f / 255, 0xcb / 255, 0xe2 / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT); }
     gl.useProgram(GL.prog);
     gl.uniform2f(GL.loc.sz, CW, CH); gl.uniform1i(GL.loc.tx, 0); gl.activeTexture(gl.TEXTURE0);
     gl.uniform1f(GL.loc.wt, (GL.now / 900) % (2 * Math.PI));                // Wellen schaukeln wie drawWave (sin(now/900 + Phase))
+    gl.uniform1f(GL.loc.nk, nightK());                                       // Stärke der Löcher (Dämmerung: schwächer)
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);       // source-over, vormultipliziert
     if (LA.used) glTex(LA.c, false);                                       // Sammelfläche einmal je Bild hochladen
     if (mode !== 'play' && ATL.waste > ATL.size * ATL.size * 2 && ATL.pages.length >= ATL.max) atlReset(false);   // voll mit Freigegebenem: neu anfangen (nie beim Abspielen)
     const verts = glVerts(recs);                                           // legt Neues in den Atlas
     gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
     atlBind();
+    let off = [0, 0], dOff = 0;                                              // Standbild-Verschiebung; Neues beim Aufnehmen mit Rand
     if (mode === 'play') {
-      const off = glPlayOff();
+      off = glPlayOff();
       for (const op of GLS.ops) {
         if (op[0] === 's') { if (op[2] > op[1]) { glAttribs(GL.sbuf); gl.uniform2f(GL.loc.off, off[0], off[1]); glDrawRange(GLS.recs, op[1], op[2]); } }
         else if (op[2] > op[1]) { glAttribs(GL.buf); gl.uniform2f(GL.loc.off, 0, 0); glDrawRange(recs, op[1], op[2]); }
       }
+      if (n > GLS.tail) { glAttribs(GL.buf); gl.uniform2f(GL.loc.off, 0, 0); glDrawRange(recs, GLS.tail, n); }
       GL.stats.quads = n + GLS.recs.length;
     } else {
+      dOff = mode === 'rec' ? -GLS.M * DPR : 0;
       glAttribs(GL.buf);
-      gl.uniform2f(GL.loc.off, mode === 'rec' ? -GLS.M * DPR : 0, mode === 'rec' ? -GLS.M * DPR : 0);
+      gl.uniform2f(GL.loc.off, dOff, dOff);
       glDrawRange(recs, 0, n);
       GL.stats.quads = n;
-      if (mode === 'rec') glRecFinish();
+      if (mode === 'rec') { glRecFinish(); off = [dOff, dOff]; }
+    }
+    GL.nightDone = false;
+    if (dark) {
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      const C = GL.comp, F = GL.fbo;
+      gl.disable(gl.BLEND);
+      gl.useProgram(C.prog);
+      gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, F.t0); gl.uniform1i(C.w0, 7);
+      gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D, F.t1); gl.uniform1i(C.w1, 8);
+      gl.uniform4f(C.tint, 25 / 255, 35 / 255, 85 / 255, night);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D, null); gl.activeTexture(gl.TEXTURE0);
+      // Lichtschicht hinter die Welt: destination-over
+      gl.useProgram(GL.prog);
+      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE_MINUS_DST_ALPHA, gl.ONE);
+      const L = mode !== null && GLS.light ? GLS.light : null;
+      for (let k = 0; k < 4; k++) {
+        if (L && L.ph[k + 1] > L.ph[k]) { glAttribs(GL.lbuf); gl.uniform2f(GL.loc.off, off[0], off[1]); glDrawRange(L.recs, L.ph[k], L.ph[k + 1]); }
+        if (dyn.ph[k + 1] > dyn.ph[k]) { glAttribs(GL.buf); gl.uniform2f(GL.loc.off, dOff, dOff); glDrawRange(recs, n + dyn.ph[k], n + dyn.ph[k + 1]); }
+      }
+      glAttribs(GL.buf); gl.uniform2f(GL.loc.off, 0, 0); glDrawRange(recs, screen0, recs.length);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      GL.nightDone = true;
+      if (MESS) MESS.lights = dyn.n + (L ? L.n : 0);
     }
     glShow(true);
-  } catch (e) { console.warn('WebGL', e); GL.broken = true; GL.ready = false; glShow(false); }
+  } catch (e) { console.warn('WebGL', e); GL.broken = true; GL.ready = false; GL.nightDone = false; glShow(false); }
   GL.frame = false;
 }
 // 2D-Bild: GL-Leinwand verstecken (die deckende 2D-Leinwand liegt ohnehin darüber)
-function glIdle() { if (GL.shown) glShow(false); }
+function glIdle() { if (GL.shown) glShow(false); GL.nightDone = false; }
+// Lichtschicht der Nacht als Rechtecke (dieselbe Reihenfolge wie drawNight, nightLights in render.js), in Phasen: 0 Fenster,
+// 1 warme Scheiben neben Blau, 2 Schein, 3 Lichtbilder – Standbild und lebendige Felder werden Phase für Phase zusammengelegt
+function glNightRecs(lights, pics, panes, warm) {
+  const P = [[], [], [], []], D = DPR;
+  const rect = (k, c, x, y, w, h) => P[k].push({ src: c, sx: 0, sy: 0, sw: c.width, sh: c.height, m: { a: w * D, b: 0, c: 0, d: h * D, e: x * D, f: y * D }, alpha: 1, clip: GL_NOCLIP, nearest: false });
+  nightLights(lights, pics, panes, warm, {
+    win: q => { const [p0, p1, , p3] = q, c = glSolid('#ffd873');
+      P[0].push({ src: c, sx: 0, sy: 0, sw: 4, sh: 4, m: { a: (p1[0] - p0[0]) * D, b: (p1[1] - p0[1]) * D, c: (p3[0] - p0[0]) * D, d: (p3[1] - p0[1]) * D, e: p0[0] * D, f: p0[1] * D }, alpha: 1, clip: GL_NOCLIP, nearest: false }); },
+    pre: (c, x, y, w, h) => rect(1, c, x, y, w, h),
+    square: (x, y, sz, f) => rect(2, glSolid(f), x, y, sz, sz),
+    disc: (x, y, r, f) => rect(2, glSolid(f, true), x - r, y - r, 2 * r, 2 * r),
+    pic: (c, x, y, w, h) => rect(3, c, x, y, w, h),
+  });
+  const recs = [], ph = [];
+  for (const l of P) { ph.push(recs.length); for (const r of l) recs.push(r); }
+  ph.push(recs.length);
+  return { recs, ph, warm, n: lights.length };
+}
+// Nacht-Zwischenbild: Farbe (0) und echte Deckkraft (1) – in Bildschirmgröße, bei Größenwechsel neu
+function glFbo(w, h) {
+  const gl = GL.gl; let F = GL.fbo;
+  if (F && F.w === w && F.h === h) return F;
+  if (!F) F = GL.fbo = { fb: gl.createFramebuffer(), t0: gl.createTexture(), t1: gl.createTexture(), w: 0, h: 0 };
+  for (const t of [F.t0, F.t1]) {
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, F.fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, F.t0, 0);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, F.t1, 0);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+  const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (!ok) throw new Error('Nacht-Zwischenbild nicht möglich');
+  F.w = w; F.h = h;
+  return F;
+}
+// Lichter dieses Bilds, die nicht im Standbild stehen: beim Abspielen alle (nur lebendige Felder und Bewegtes liefen), beim
+// Aufnehmen alle außer Boden und ruhenden Feldern, ohne Standbild alle
+function glDynLights(mode) {
+  if (mode !== 'rec') return glNightRecs(nightDedup(glows), nightPics, nightPanes, nightWarm);
+  const G = GLS.gl0, mark = [new Uint8Array(glows.length), new Uint8Array(nightPics.length), new Uint8Array(nightPanes.length)];
+  mark[0].fill(1, 0, G[0]); mark[1].fill(1, 0, G[1]); mark[2].fill(1, 0, G[2]);
+  let warm = false;
+  for (const c of GLS.tiles) { if (c.dyn) { warm = warm || c.warm; continue; } mark[0].fill(1, c.g0, c.g1); mark[1].fill(1, c.p0, c.p1); mark[2].fill(1, c.n0, c.n1); }
+  return glNightRecs(nightDedup(glows.filter((_, i) => !mark[0][i])), nightPics.filter((_, i) => !mark[1][i]), nightPanes.filter((_, i) => !mark[2][i]), warm);
+}
 // Wellen (Block 144): alle haben dieselbe Form – ein Bildchen je Zoom, je Welle ein Rechteck (live waren es Striche im Bild obendrauf)
 const GL_WAVE = { c: null, k: '' };
 function glWaves(list, z, now) {
@@ -390,7 +527,9 @@ const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M +
 function glCacheStart(z, now) {
   GL.now = now;
   // Uhren (alle 10 Spielminuten ein neues Bildchen) und das Briefkasten-Fähnchen am Rathaus: dann neu aufnehmen statt jedes Bild live
-  const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG, Math.floor(gameHour() * 6), typeof mailWaiting === 'function' && mailWaiting() ? 1 : 0].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
+  // Nacht: ob Lichter/Nachtbilder an sind, ändert, was gezeichnet wird (die Stärke selbst regelt der Shader: nk, Nachtblau)
+  const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG, Math.floor(gameHour() * 6), typeof mailWaiting === 'function' && mailWaiting() ? 1 : 0,
+    night > 0 ? 1 : 0, night > 0.15 ? 1 : 0, nightPicOn() ? 1 : 0].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
   GLS.calm = sig === GLS.last && !spriteZooming && !spriteCatch && !spritePrep ? GLS.calm + 1 : 0;
   GLS.last = sig;
   const dx = GLS.cam ? (GLS.cam.x - cam.x) * z : 1e9, dy = GLS.cam ? (GLS.cam.y - cam.y) * z : 1e9;
@@ -407,9 +546,13 @@ function glCacheStart(z, now) {
 }
 // Feld i beginnt (start) bzw. endet (Teil A) – Grenzen der Rechtecke, Symbole und Schilder merken
 function glRecTile(i, x, y, nIcons, nLabels, start) {
-  if (start) { GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels }; GLS.dirty = false; GLS.dirtyWhy = ''; return; }
+  if (start) {
+    GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels, g0: glows.length, p0: nightPics.length, n0: nightPanes.length, wb: nightWarm };
+    GLS.dirty = false; GLS.dirtyWhy = ''; nightWarm = false; return;
+  }
   const c = GLS.cur, a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
-  c.a1 = GL.recs.length; c.i1 = nIcons; c.l1 = nLabels;
+  c.a1 = GL.recs.length; c.i1 = nIcons; c.l1 = nLabels; c.g1 = glows.length; c.p1 = nightPics.length; c.n1 = nightPanes.length;
+  c.warm = nightWarm; nightWarm = nightWarm || c.wb;                    // hat dieses Feld Nachtbilder eingesetzt?
   c.dyn = GLS.dirty;                                                     // Uhren: neu aufnehmen, wenn sie weiterspringen (Schlüssel)
   if (c.dyn && MESS) {                                                   // ?messen: was hält Felder „lebendig“?
     const ds = decosAt(x + ',' + y), n = (t ? t.b : ds && ds.find(Boolean) ? ds.find(Boolean).b : 'Feld') + (GLS.dirtyWhy ? ' (' + GLS.dirtyWhy + ')' : '');
@@ -433,8 +576,18 @@ function glRecFinish() {
   GLS.recs = st; GLS.groundEnd = groundEnd;
   const gl = GL.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER, GL.sbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(st), gl.STATIC_DRAW);
+  // Nacht: Lichter der ruhenden Felder (und des Bodens) einmal als Lichtschicht – die lebendigen kommen jedes Bild neu dazu
+  const G = GLS.gl0, lg = glows.slice(0, G[0]), lp = nightPics.slice(0, G[1]), ln = nightPanes.slice(0, G[2]);
+  let warm = G[3];
+  for (const c of GLS.tiles) if (!c.dyn) {
+    for (let i = c.g0; i < c.g1; i++) lg.push(glows[i]); for (let i = c.p0; i < c.p1; i++) lp.push(nightPics[i]); for (let i = c.n0; i < c.n1; i++) ln.push(nightPanes[i]);
+    warm = warm || c.warm;
+  }
+  const L = night > 0 ? glNightRecs(nightDedup(lg), lp, ln, warm) : { recs: [], ph: [0, 0, 0, 0, 0], warm: false };
+  GLS.light = L;
+  gl.bindBuffer(gl.ARRAY_BUFFER, GL.lbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(L.recs), gl.STATIC_DRAW);
   // was gemerkt ist, gilt als benutzt (sonst räumt die Hauspflege es nach einer Weile weg)
-  const used = GLS.srcs = new Set(st.map(r => r.src));
+  const used = GLS.srcs = new Set(st.map(r => r.src).concat(L.recs.map(r => r.src)));
   GLS.ents = [...objSprites.values()].filter(e => used.has(e.c)).concat([...groundCache.values()].filter(e => used.has(e.c)));
   GLS.tex = GL.texEpoch; GLS.draw = GL.drawEpoch; GLS.ok = true;
 }
@@ -464,6 +617,7 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
     ops.push(['d', d0, GL.recs.length]);
   }
   ops.push(['s', cur, GLS.recs.length]);
+  GLS.tail = GL.recs.length;                                             // was danach noch kommt (Himmel nachts) – glEnd zeichnet es obendrauf
   const off = glPlayOff();
   for (const [x, y, s] of GLS.icons) icons.push([x + off[0] / DPR + GLS.M, y + off[1] / DPR + GLS.M, s]);
   // Schilder nur, wenn ihr Feld wirklich im Bild ist (wie visibleTiles) – sonst schöbe pill sie aus dem Rand ins Bild
