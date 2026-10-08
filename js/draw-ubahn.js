@@ -8,7 +8,7 @@
 // Gezeichnet wie jedes große Gebäude in Streifen je Feld – so liegen Zäune ringsum, Züge und Hügel von selbst richtig.
 // Rahmen S(a, b, up): a längs d, b quer, up in Bildpunkten bei z = 1.
 // ---------------------------------------------------------------------------
-const RAMP_W = 0.42, RAMP_D = 22;
+const RAMP_W = 0.42, RAMP_D = 32;                                 // tief genug, dass ein Zug (bis 14 hoch) vor der Wand ganz drin ist (Nutzer: „glitcht“ – er ragte heraus)
 const portalFaceShown = d => d[0] + d[1] < 0;                     // Wand zeigt zum Betrachter (Tunnel läuft nach hinten)
 function portalFrame(cx, cy, z, d) {
   const L = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -97,7 +97,7 @@ function drawRamp(S, z, d, shown, lk) {
   }
   if (shown) {
     poly([S(0.5, -w, -RAMP_D), S(0.5, w, -RAMP_D), S(0.5, w, 0), S(0.5, -w, 0)], C('#a9a399'));
-    poly([S(0.5, -0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D + 17), S(0.5, -0.28, -RAMP_D + 17)], C('#231d1a'));
+    poly(portalArch(S, 0.5, 0.3, 14, 22).map(([px, py]) => [px, py + RAMP_D * z]), C('#231d1a'));   // Tunnelmund mit Bogen, unten an der Wand
   }
   rampTrack(S, z, a0, 0.5, dep, lk);
   g.restore();

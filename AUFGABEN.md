@@ -1672,6 +1672,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Portal-Formen am Tunnel) sind weg. Gleisbett der Einfahrt wie die Schiene davor. Fenster: Form + „hinten am Tunnel / vorn an
       der Schiene“. Netz-Abfragen über das Schienenfeld selbst (`railTileAt`), nicht über COVER. Leistungs-Wächter: Rampe 226,
       Hügel ~770. Bildstreifen beider Rampen mit Zaun, Hügel-Portale in beide Richtungen (tools/vorschau/ein-*.png). Test: ubahn
+- [x] Nutzer: „du stellst die Bahn falschherum hin“ – das Feld unter der Maus war immer das obere/linke der zwei; von unten/rechts an
+      den Tunnel gab es keine passende Drehung. `einAnchor`: das Feld unter der Maus wird das hintere Feld am Tunnelende (Vorschau
+      und Tippen gleich). „Einfahrt von unten links nach oben rechts, Bahn fährt raus und bleibt stehen – glitcht“ (Schnellzug mit
+      allen Wagen): kein Flackern (Bilder verglichen), aber die Rinne war mit 22 zu flach – die Wagen ragten heraus und schienen
+      zu schweben. Jetzt 32 tief, Tunnelmund mit Bogen unten an der Wand. Bildstreifen tools/vorschau/ein-halt4.png. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

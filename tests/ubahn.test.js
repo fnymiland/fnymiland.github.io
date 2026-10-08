@@ -90,6 +90,15 @@ describe('Tunneleinfahrt (Nutzer: „einen Tunnel bauen, eine Einfahrt dazu und 
     expect(game('state.money')).toBe(m - 1000);
     expect(game("einOf(7, 10)")).toEqual({ A: [6, 10], B: [7, 10], d: [1, 0] });
   });
+  it('Nutzer: „du stellst sie falschherum hin“ – das Feld unter der Maus wird das hintere Feld am Tunnel, aus allen vier Richtungen', () => {
+    game("state.tunnels.set('10,10', {}); recalc(); rotManual = false");
+    for (const [hx, hy] of [[11, 10], [9, 10], [10, 11], [10, 9]]) {
+      const [ax, ay] = game(`einAnchor(${hx}, ${hy})`), r = game(`placeRot('tunneleinfahrt', ${ax}, ${ay})`);
+      const E = game(`einTiles(${ax}, ${ay}, ${r})`);
+      expect(E.B, `${hx},${hy}`).toEqual([hx, hy]);                              // hinten = das Feld unter der Maus
+      expect([E.B[0] + E.d[0], E.B[1] + E.d[1]], `${hx},${hy}`).toEqual([10, 10]);   // dahinter der Tunnel
+    }
+  });
   it('nur vorn Schiene und hinten Tunnel verbinden – seitlich nicht', () => {
     game("state.tunnels.set('8,10', {}); state.tiles.set('5,10', { b: 'schiene', lvl: 1 }); state.tiles.set('6,11', { b: 'schiene', lvl: 1 }); state.tunnels.set('7,9', {})"); ein();
     expect(game('[trackLink(6, 10, 5, 10), trackLink(6, 10, 7, 10), trackLink(7, 10, 8, 10)]')).toEqual([true, true, true]);

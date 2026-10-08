@@ -1878,6 +1878,13 @@ function trackLink(x, y, nx, ny) {
   if (r1 && r2) return true;
   return tunnelAt(x, y) && tunnelAt(nx, ny);                            // Schiene–Tunnel direkt: nein
 }
+// Einfahrt bauen (Nutzer: „du stellst sie falschherum hin“): Das Feld unter der Maus wird das hintere Feld am Tunnelende, aus
+// jeder Richtung – der Anker (oben/links der Grundfläche) liegt dann ggf. ein Feld weiter. Ohne Tunnel daneben: wie immer.
+function einAnchor(x, y) {
+  if (tunnelAt(x, y)) return [x, y];
+  for (const [dx, dy] of DIRS) if (tunnelAt(x + dx, y + dy) && !tunnelAt(x - dx, y - dy)) return [Math.min(x, x - dx), Math.min(y, y - dy)];
+  return [x, y];
+}
 // Schiene, die direkt an einen Tunnel stößt (ohne Einfahrt) – für den Hinweis im Fenster
 const railAtTunnel = (x, y) => bAt(x, y) === 'schiene' && DIRS.some(([dx, dy]) => tunnelAt(x + dx, y + dy));
 function tunnelError(x, y, noCost) {

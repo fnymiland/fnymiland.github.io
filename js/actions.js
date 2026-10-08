@@ -671,6 +671,7 @@ function buyDesign(id) {
 
 function tap(sx, sy, isTouch) {
   let { x, y, slot } = slotAt(sx, sy);
+  if (tool === 'tunneleinfahrt') [x, y] = einAnchor(x, y);                // wie die Vorschau (Block 136)
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
