@@ -427,23 +427,28 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16px); }
 .style-chip.more { background: var(--cream2); padding: 4px 10px; gap: 3px; font-size: 12px; min-height: 32px; }
 .style-chip.more span { display: inline; }
-/* Wege (Block 125): zwei Knöpfe (Muster, Farbe) und darüber ein kleines Raster zum Aussuchen */
+/* Wege (Block 125): zwei Knöpfe (Muster, Farbe) und darüber ein kleines Raster zum Aussuchen.
+   Ecken konzentrisch (Wunsch Nutzer): innerer Radius = äußerer Radius − Abstand – Knopf rund → Bildchen rund,
+   Kasten 18 px mit 8 px Rand → Auswahlfeld 10 px → Vorschau darin (4 px Rand) 6 px */
 .style-chip.wsel { padding: 4px 12px 4px 4px; }
 .style-chip.wsel.open { background: var(--cream2); box-shadow: 0 3px 0 var(--shadow); }
-.style-chip.wsel i { border-radius: 10px; }
+.style-chip.wsel i { border-radius: 50%; }
 .wpop {
   position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
   width: min(560px, calc(100vw - 24px)); max-height: 40vh; overflow-y: auto;
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px;
-  padding: 10px; border-radius: 18px; background: rgba(255, 250, 240, .98); box-shadow: 0 6px 18px rgba(60, 40, 20, .25);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 4px;
+  padding: 8px; border-radius: 18px; background: rgba(255, 250, 240, .98); box-shadow: 0 6px 18px rgba(60, 40, 20, .25);
 }
 .wpop.wpop-cols { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
-.wopt { border: 0; background: transparent; border-radius: 12px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+.wopt { border: 0; background: transparent; border-radius: 10px; padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 3px;
   font: inherit; color: var(--brown); cursor: pointer; }
-.wopt i { width: 48px; height: 36px; border-radius: 9px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); display: grid; place-items: center; font-style: normal; font-size: 20px; }
+.wopt i { width: 52px; height: 38px; border-radius: 6px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); display: grid; place-items: center; font-style: normal; font-size: 20px; }
 .wpop-cols .wopt i { width: 32px; height: 32px; border-radius: 50%; }
 .wopt small { font-size: 11px; font-weight: 800; line-height: 1.1; text-align: center; }
 .wopt.on { background: var(--yellow); }
+.wpop-cols .wopt.on { background: transparent; }                       /* Farben: Ring um den Kreis statt Kasten */
+.wpop-cols .wopt.on i { box-shadow: 0 0 0 3px var(--cream), 0 0 0 5px var(--brown); }
+@media (hover: hover) { .wopt:hover { background: var(--cream2); } .wpop-cols .wopt:hover { background: transparent; } }
 .wopt.more i { background: var(--cream2); }
 .swatches.wpick .sw.wsq { border-radius: 8px; }
 .wpick-cap { margin: 6px 0 2px; font-size: 12px; font-weight: 800; color: var(--brown); opacity: .8; }
