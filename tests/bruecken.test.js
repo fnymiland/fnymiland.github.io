@@ -93,12 +93,14 @@ describe('Wegbrücken (Block 66)', () => {
   it('Belag direkt im Fenster wählen – für die ganze Brücke, die Art bleibt (66d)', () => {
     line('asphalt', { x: 5, y: 5 }, { x: 11, y: 5 });
     game("openInfo(8, 5)");
-    expect(game("!!document.querySelector('#panel [data-brs=\"klinker\"]')")).toBe(true);
+    // Block 125: erst das Muster (Farbe bleibt), dann die Farbe – Klinker in Ziegelrot ist der alte Belag „klinker“
     const m = game('state.money');
-    game("document.querySelector('#panel [data-brs=\"klinker\"]').click()");
+    game("document.querySelector('#panel [aria-label=\"Muster Klinker\"]').click()");
+    expect(game("state.tiles.get('8,5').style")).toBe('m:klinker:asphalt');
+    game("openInfo(8, 5); document.querySelector('#panel [aria-label=\"Farbe Ziegelrot\"]').click()");
     expect(game("[7, 8, 9].map(x => state.tiles.get(x + ',5').style)")).toEqual(['klinker', 'klinker', 'klinker']);
     expect(game("[7, 8, 9].map(x => bridgeKind(state.tiles.get(x + ',5')))")).toEqual(['stein', 'stein', 'stein']);   // bleibt Stein
-    expect(game('state.money')).toBe(m - 3 * game('ITEMS.weg.cost'));
+    expect(game('state.money')).toBe(m - 2 * 3 * game('ITEMS.weg.cost'));
     expect(game("state.tiles.get('6,5').style")).toBe('asphalt');                     // Weg an Land bleibt
   });
 

@@ -427,6 +427,35 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16px); }
 .style-chip.more { background: var(--cream2); padding: 4px 10px; gap: 3px; font-size: 12px; min-height: 32px; }
 .style-chip.more span { display: inline; }
+/* Wege (Block 125): zwei Knöpfe (Muster, Farbe) und darüber ein kleines Raster zum Aussuchen */
+.style-chip.wsel { padding: 4px 12px 4px 4px; }
+.style-chip.wsel.open { background: var(--cream2); box-shadow: 0 3px 0 var(--shadow); }
+.style-chip.wsel i { border-radius: 10px; }
+.wpop {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: min(560px, calc(100vw - 24px)); max-height: 40vh; overflow-y: auto;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px;
+  padding: 10px; border-radius: 18px; background: rgba(255, 250, 240, .98); box-shadow: 0 6px 18px rgba(60, 40, 20, .25);
+}
+.wpop.wpop-cols { grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); }
+.wopt { border: 0; background: transparent; border-radius: 12px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font: inherit; color: var(--brown); cursor: pointer; }
+.wopt i { width: 48px; height: 36px; border-radius: 9px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); display: grid; place-items: center; font-style: normal; font-size: 20px; }
+.wpop-cols .wopt i { width: 32px; height: 32px; border-radius: 50%; }
+.wopt small { font-size: 11px; font-weight: 800; line-height: 1.1; text-align: center; }
+.wopt.on { background: var(--yellow); }
+.wopt.more i { background: var(--cream2); }
+.swatches.wpick .sw.wsq { border-radius: 8px; }
+.wpick-cap { margin: 6px 0 2px; font-size: 12px; font-weight: 800; color: var(--brown); opacity: .8; }
+.sw-note { font-size: 12px; align-self: center; }
+@media (max-width: 560px) {                     /* Handy: alles in einer Zeile – Form nur als Zeichen, lange Namen gekürzt */
+  #style-bar .shape-chip span { display: none; }
+  #style-bar .shape-chip.on { padding: 4px; }
+  .style-chip.wsel { padding: 3px 8px 3px 3px; gap: 5px; }
+  .style-chip.wsel i { width: 28px; height: 28px; }
+  .style-chip.wsel span { max-width: 74px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+  #style-bar .shape-chip i { width: 28px; height: 28px; }
+}
 .design.gift small { font-size: 10px; text-align: center; line-height: 1.15; }
 
 /* ---------- v6: Lager ---------- */

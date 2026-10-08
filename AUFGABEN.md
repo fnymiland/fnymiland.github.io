@@ -1495,7 +1495,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       WEG_MUSTER/WEG_FARBEN (data.js), Belag-Name 'm:<muster>:<farbe>' bzw. alter Name für alte Kombinationen (WEG_PRESET,
       wegStyleOf/wegParts), Aussehen pathLook (draw-objects), wegMusterOk/wegFarbeOk (wer einen alten Belag hat, hat sein Muster),
       Kunstakademie „Wegmuster“ mit Vorschau (125d erledigt), Leiste: Muster, dann Farben, dann Form. „Das ist neu“ 2026-10-08-wege
-- [ ] Offen: Belag-Auswahl im Vorplatz-, Gartenweg- und Brückenfenster zeigt noch nur die alten Kombinationen
+- [x] Vorplatz/Weg zur Tür, Brücke und Schloss-Platz mit Muster + Farbe (wegPickHtml: Muster, darunter Farben; Knöpfe tragen den
+      fertigen Belag-Namen, die Fenster übernehmen ihn wie früher)
+- [x] Leiste beim Wegebauen (Wunsch Nutzer: „drei Leisten, 1/3 des Bildschirms“): eine Zeile mit zwei Knöpfen (Muster ▾, Farbe ▾)
+      und der Wegform; Antippen öffnet darüber ein kleines Raster (wegPop), Wahl oder Tippen daneben klappt zu. Handy: eine Zeile
+      (Form nur als Zeichen, lange Namen gekürzt), 42 statt ~130 Punkte hoch
 - [x] Testwelt `?welt=wege` (testsave-wege.json): je Muster (Grundfarbe) eine Raute (auf dem Bildschirm in Reihen) mit gerade in beide
       Richtungen, Kreuzung, Einzelfeld, 4 Kurven, 4 T, Platz 3×3, ganz breiter Weg, eckige Kurve, zwei Spuren; alle Farben; Übergänge
 - [ ] 125d: Vorschau vor dem Kauf (Wunsch Nutzer 08.10.): Wege in der Kunstakademie als Bild sehen, bevor man bezahlt

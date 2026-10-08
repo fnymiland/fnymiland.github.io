@@ -112,8 +112,16 @@ describe('Stil-Leiste', () => {
   it('zeigt nur, was man hat, plus einen Knopf zur Kunstakademie', () => {
     game("setTool('weg')");
     const chips = [...document.querySelectorAll('#style-bar .style-chip')];
-    expect(chips.filter(c => c.dataset.wm).map(c => c.dataset.wm)).toEqual(['kies', 'glatt']);   // Muster, die man von Anfang an hat (Block 125)
-    expect(chips.filter(c => c.dataset.wf).length).toBe(20);                                       // alle Farben außer Gold
+    // Block 125: eine Zeile – Knöpfe „Muster“ und „Farbe“; Antippen öffnet die Auswahl darüber
+    expect(chips.filter(c => c.dataset.wpop).map(c => c.dataset.wpop)).toEqual(['muster', 'farbe']);
+    document.querySelector('#style-bar [data-wpop="muster"]').onclick();
+    expect([...document.querySelectorAll('#style-bar [data-wm]')].map(c => c.dataset.wm)).toEqual(['kies', 'glatt']);   // Muster von Anfang an
+    document.querySelector('#style-bar [data-wpop="farbe"]').onclick();
+    expect(document.querySelectorAll('#style-bar [data-wf]').length).toBe(20);                    // alle Farben außer Gold
+    document.querySelector('#style-bar [data-wf="anthrazit"]').onclick();
+    expect(game('currentStyle("weg")')).toBe('m:kies:anthrazit');
+    expect(document.querySelectorAll('#style-bar [data-wf]').length).toBe(0);                     // zugeklappt
+    document.querySelector('#style-bar [data-wpop="muster"]').onclick();
     const more = document.querySelector('#style-bar [data-more]');
     expect(more).not.toBe(null);
     more.onclick();

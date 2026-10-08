@@ -472,8 +472,9 @@ describe('Märchenschloss: runde Türme und Turmgruppe (Block 74)', () => {
     game("state.money = 1e9; rotManual = true; buildRot = 0; build('fz_schloss', 8, 6, true); castleTab = 'zierde'; openInfo(8, 6)");
     game("document.querySelector('#panel [data-cs=\"gb:2\"]').click()");
     expect(game("state.tiles.get('8,6').cs.gb")).toBe(2);
-    expect(game("[...document.querySelectorAll('#panel [data-csgp]')].map(b => b.dataset.csgp)")).toEqual(game("STYLES.weg.filter(st => styleOk(st) && !PATH_LOOK[st.id].stones).map(st => st.id)"));
-    game("document.querySelector('#panel [data-csgp=\"sand\"]').click()");
+    expect(game("!!document.querySelector('#panel [aria-label=\"Muster Trittsteine\"]')")).toBe(false);   // Muster + Farbe (Block 125), ohne Trittsteine
+    game("document.querySelector('#panel [aria-label=\"Muster Kies\"]').click()");
+    game("document.querySelector('#panel [aria-label=\"Farbe Sand\"]').click()");
     expect(game("state.tiles.get('8,6').cs.gp")).toBe('sand');                        // Belag wie die Wege (Block 76b)
     expect(fills({ ...base, gb: 2, gp: 'sand' })).not.toBe(fills({ ...base, gb: 2, gp: 'platten' }));
     expect(game("castleChange(8, 6, { gp: 'gibtsnicht' })")).toBe(null);

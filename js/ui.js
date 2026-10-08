@@ -374,8 +374,18 @@ function courtHtml(t, x, y) {
   if (!gp && !ct && (!C0.own || C0.bare)) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
   const on = t.zug !== false, auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
   return `<div class="looks"><button class="look${on ? ' on' : ''}" data-zug="1" aria-pressed="${on}">${plaza ? '🧱' : '🌿'} ${name}</button></div>
-    ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && pathLook(st.id).stones)).map(st =>
-      `<button class="sw${courtVp(t) === st.id ? ' on' : ''}" data-vp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : ''}`;
+    ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button><span class="muted sw-note">${courtVp(t) ? '' : auto}</span></div>${wegPickHtml(courtVp(t), 'vp', plaza)}` : ''}`;
+}
+// Belag-Auswahl in Fenstern (Vorplatz, Brücke, Schloss-Platz – Block 125): Muster, die man hat, darunter die Farben des gewählten.
+// Jeder Knopf trägt den fertigen Belag-Namen in data-<key> – die Fenster übernehmen ihn wie früher einen alten Belag
+function wegPickHtml(cur, key, noStones = false) {
+  const [cm, cf] = cur ? wegParts(cur) : [null, null], M = cm && WEG_MUSTER_BY[cm];
+  const colFor = m => m.fixed ? null : (cf && wegFarbeOk(cf) ? cf : m.farbe);
+  const pats = WEG_MUSTER.filter(m => wegMusterOk(m.id) && !(noStones && m.id === 'tritt'));
+  return `<p class="wpick-cap">Muster${M ? ': ' + escHtml(M.name) : ''}</p><div class="swatches wpick">${pats.map(m => { const id = wegStyleOf(m.id, colFor(m));
+      return `<button class="sw wsq${m.id === cm ? ' on' : ''}" data-${key}="${id}" style="background:${styleSwatch(styleDef('weg', id))}" title="${m.name}" aria-label="Muster ${escHtml(m.name)}"></button>`; }).join('')}</div>`
+    + (M && !M.fixed ? `<p class="wpick-cap">Farbe: ${escHtml(WEG_FARBEN_BY[cf] ? WEG_FARBEN_BY[cf].name : '')}</p><div class="swatches wpick">${WEG_FARBEN.filter(f => wegFarbeOk(f.id)).map(f =>
+      `<button class="sw${f.id === cf ? ' on' : ''}" data-${key}="${wegStyleOf(cm, f.id)}" style="background:${f.c}" title="${f.name}" aria-label="Farbe ${escHtml(f.name)}"></button>`).join('')}</div>` : '');
 }
 function wireCourt(el, t, reopen) {
   const done = () => { groundVersion++; sfx('deco'); save(); reopen(); };
@@ -399,25 +409,36 @@ function styleSwatch(st) {
   swatchCache.set(st.id, bg);
   return bg;
 }
-// Wege (Block 125): erst die Muster, die man hat (in der gewählten Farbe), dann die Farben (nicht bei Mustern mit eigenen Farben),
-// dann die Wegform. Die Wahl ergibt einen Belag-Namen (wegStyleOf) – alte Kombinationen behalten ihren alten Namen
+// Wege (Block 125, Wunsch Nutzer: nicht drei Zeilen): eine Zeile mit zwei Knöpfen – Muster und Farbe – und der Wegform; Antippen
+// öffnet darüber ein kleines Raster (wegPop), eine Wahl klappt es wieder zu. Die Wahl ergibt einen Belag-Namen (wegStyleOf)
+let wegPop = null;
 function wegStyleBar(bar) {
-  const [cm, cf] = wegParts(currentStyle('weg')), M = WEG_MUSTER_BY[cm];
+  const [cm, cf] = wegParts(currentStyle('weg')), M = WEG_MUSTER_BY[cm], F = WEG_FARBEN_BY[cf];
   const colFor = m => m.fixed ? null : (cf && wegFarbeOk(cf) ? cf : m.farbe);
   const pats = WEG_MUSTER.filter(m => wegMusterOk(m.id)), more = WEG_MUSTER.length - pats.length;
-  bar.innerHTML = pats.map(m => { const st = styleDef('weg', wegStyleOf(m.id, colFor(m)));
-    return `<button class="style-chip${m.id === cm ? ' on' : ''}" data-wm="${m.id}" title="${m.name}" aria-label="Muster ${m.name}"><i style="background:${styleSwatch(st)}"></i><span>${m.name}</span></button>`; }).join('')
-    + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Muster in der Kunstakademie" aria-label="${more} weitere Muster freischalten">🎨<span>+${more}</span></button>` : '')
-    + (M && !M.fixed ? '<span class="style-sep"></span>' + WEG_FARBEN.filter(f => wegFarbeOk(f.id)).map(f =>
-      `<button class="style-chip${f.id === cf ? ' on' : ''}" data-wf="${f.id}" title="${f.name}" aria-label="Farbe: ${f.name}"><i style="background:${f.c}"></i><span>${f.name}</span></button>`).join('') : '')
+  const sw = id => styleSwatch(styleDef('weg', id));
+  const pop = wegPop === 'muster' ? `<div class="wpop" role="listbox" aria-label="Muster">${pats.map(m => { const id = wegStyleOf(m.id, colFor(m));
+        return `<button class="wopt${m.id === cm ? ' on' : ''}" data-wm="${m.id}" role="option" aria-selected="${m.id === cm}"><i style="background:${sw(id)}"></i><small>${m.name}</small></button>`; }).join('')}
+      ${more ? `<button class="wopt more" data-more="1"><i>🎨</i><small>+${more} in der Kunstakademie</small></button>` : ''}</div>`
+    : wegPop === 'farbe' && M && !M.fixed ? `<div class="wpop wpop-cols" role="listbox" aria-label="Farbe">${WEG_FARBEN.filter(f => wegFarbeOk(f.id)).map(f =>
+        `<button class="wopt${f.id === cf ? ' on' : ''}" data-wf="${f.id}" role="option" aria-selected="${f.id === cf}"><i style="background:${f.c}"></i><small>${f.name}</small></button>`).join('')}</div>` : '';
+  bar.innerHTML = pop
+    + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''} – ändern"><i style="background:${sw(currentStyle('weg'))}"></i><span>${M ? M.name : ''} ▾</span></button>`
+    + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''} – ändern"><i style="background:${M && M.fixed ? sw(currentStyle('weg')) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
     + `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
       `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}`;
-  for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; chosenStyle.weg = wegStyleOf(m.id, colFor(m)); sfx('deco'); renderStyleBar('weg'); };
-  for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { chosenStyle.weg = wegStyleOf(cm, b.dataset.wf); sfx('deco'); renderStyleBar('weg'); };
+  for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar('weg'); };
+  for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; chosenStyle.weg = wegStyleOf(m.id, colFor(m)); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
+  for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { chosenStyle.weg = wegStyleOf(cm, b.dataset.wf); wegPop = null; sfx('deco'); renderStyleBar('weg'); };
   for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar('weg'); };
-  if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
+  if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => { wegPop = null; openResearch('design'); };
   bar.hidden = false;
 }
+// Auswahl zuklappen, wenn man daneben tippt (z. B. auf die Insel, um zu bauen)
+document.addEventListener('pointerdown', e => {
+  if (!wegPop || ($('style-bar') && $('style-bar').contains(e.target))) return;
+  wegPop = null; if (tool === 'weg') renderStyleBar('weg');
+}, true);
 // Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
 // Farbchips in der Musterleiste (Block 89): gewählte Farbe gilt für neu Gebautes (state.paintNew[key])
 function bushChips(key) {
@@ -909,8 +930,7 @@ function castleHtml(t) {
       <div class="label">Fenster</div>${pick('wn')}
       <div class="label">Wappen über dem Tor</div>${pick('wp')}
       <div class="label">Boden</div>${pick('gb')}
-      ${c.gb ? `<div class="label">Belag ${c.gb === 1 ? '(Weg zum Portal)' : '(Platz)'}</div><div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !pathLook(st.id).stones).map(st =>
-        `<button class="sw${st.id === (c.gp || 'platten') ? ' on' : ''}" data-csgp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${st.name}" title="${st.name}"></button>`).join('')}</div>` : ''}
+      ${c.gb ? `<div class="label">Belag ${c.gb === 1 ? '(Weg zum Portal)' : '(Platz)'}</div>${wegPickHtml(c.gp || 'platten', 'csgp', true)}` : ''}
       <div class="label">Umgebung</div><div class="looks">${toggle('mo', '🌊 Wassergraben')}${toggle('mw', '🧱 Mauer mit Tor')}${toggle('gn', '🌷 Garten mit Brunnen')}</div>
       <p class="muted">Graben, Mauer und Garten brauchen ein Feld rundum mehr Platz.</p>${worth}`;
   if (castleTab === 'tuerme') return `${tabs}
@@ -1286,7 +1306,7 @@ function openInfo(x, y) {
       <div class="label">${BRIDGE_LOOK[bridgeKind(t)].wall ? 'Mauer und Brüstung' : 'Geländer und Pfähle'}</div>
       <div class="swatches"><button class="sw bunt${t.brc == null ? ' on' : ''}" data-brc="" aria-label="Farbe wie die Brücke" title="Wie die Brücke"></button>${BRIDGE_COLS.map((c, i) => `<button class="sw${t.brc === i ? ' on' : ''}" data-brc="${i}" style="background:${c}" aria-label="Brückenfarbe ${i + 1}"></button>`).join('')}</div>
       ${BRIDGE_LOOK[bridgeKind(t)].wall ? `<div class="label">Belag</div>
-      <div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !pathLook(st.id).stones).map(st => `<button class="sw${(t.style || 'sand') === st.id ? ' on' : ''}" data-brs="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : `<div class="label">Planken</div>
+      ${wegPickHtml(t.style || 'sand', 'brs', true)}` : `<div class="label">Planken</div>
       <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
