@@ -98,12 +98,13 @@ describe('Was weit weg still steht (Block 124, Entscheidung E1)', () => {
       return out; })()`);
     expect(still).toEqual(game('[...ANIM_ITEMS]'));                                    // nah (Zoom 1–2) zeichnet render.js genau diese live (ANIM_ITEMS)
   });
-  it('Fahrgeschäfte, Wasserrad und Bahnübergang bleiben weit weg live', () => {
+  it('Bahnübergang bleibt weit weg live; Fahrgeschäfte und Wasserrad stehen still als Bildchen (Block 144)', () => {
     game("state.tiles.set('4,4', { b: 'fz_karussell', lvl: 1 }); state.tiles.set('8,4', { b: 'wasserkraft', lvl: 1 }); state.tiles.set('6,9', { b: 'schiene', lvl: 1, cross: true }); state.tiles.set('7,9', { b: 'schiene', lvl: 1 }); recalc()");
     view(0.5, 6, 6);
     game('spriteNoBudget = true; render(1e6); spriteNoBudget = false');
     const keys = game('[...objSprites.keys()]');
-    for (const b of ['fz_karussell', 'wasserkraft', 'schiene']) expect(keys.some(k => k.includes(`|${b}|`))).toBe(false);
+    expect(keys.some(k => k.includes('|schiene|'))).toBe(false);
+    for (const b of ['fz_karussell', 'wasserkraft']) expect(keys.some(k => k.includes(`|${b}|`))).toBe(true);
   });
 });
 

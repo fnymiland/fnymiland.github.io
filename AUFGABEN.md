@@ -1610,6 +1610,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] PC des Nutzers: 613 „lebendige“ Felder im Standbild (388× Schiene, 77× Mühle, 73× Windrad, 44× Hbf-Uhr, 9× Riesenrad),
       5.253 Rechtecke je Bild, Felder 11 ms. Schienen ohne Bahnübergang zeichnen im Objekt-Durchgang nichts → übersprungen;
       Uhren und Rathaus-Fähnchen nicht mehr jedes Bild, sondern neu aufnehmen, wenn sie weiterspringen (Schlüssel)
+- [x] Entscheidung Nutzer (08.10.2026): Drehendes steht weit weg (Zoom < 1) still – Mühle, Windrad, Offshore, Wasserrad, Riesenrad,
+      Karussell, Fahrgeschäfte als fertige Bildchen in fester Stellung (STILL_FAR, stillNow; ersetzt Entscheidung E1 aus Block 124).
+      Nah dran dreht sich alles wie gehabt. Leuchtturm und Bahnübergang bleiben live. Gilt auch ohne WebGL
 - [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich

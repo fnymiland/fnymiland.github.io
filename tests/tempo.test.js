@@ -88,10 +88,13 @@ describe('Bildchen weit weg', () => {
     expect(n.night).toBe(true);                                                  // Nachtbilder entstehen trotzdem (ein Bild später)
   });
 
-  it('Riesenrad und Windräder drehen sich auch von weitem (live)', () => {
+  it('Windräder stehen weit weg still (Bildchen, Block 144) – nah dran drehen sie sich (live)', () => {
     game("state.tiles.set('10,10', { b: 'windrad', lvl: 1 }); recalc()");
     frame(0.5);
-    expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
+    expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(true);
+    expect(game('SPRITES_NEAR = true; const r = spriteTileOk({ b: "windrad", lvl: 1 }); SPRITES_NEAR = false; r')).toBe(false);
+    // dieselbe Stellung zu jeder Zeit: das Bildchen hängt nicht an der Uhr
+    expect(game('stillNow("windrad", 10, 10, 5) === stillNow("windrad", 10, 10, 9e9)')).toBe(true);
   });
 });
 

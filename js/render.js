@@ -236,8 +236,13 @@ const animLive = t => ANIM_ITEMS.has(t.b) || (t.b === 'haus' && (houseLook(t) ==
   || ((t.b === 'baumhaus' || t.b === 'feld') && (t.lvl || 1) >= 2) || ((t.b === 'mine' || t.b === 'uni') && (t.lvl || 1) >= 3)
   || (t.b === 'sternwarte' && night > 0.15) || (t.b === 'lm' && lmStage(t.lm) > 0);
 let SPRITES_NEAR = false;                                            // Zoom zwischen SPRITE_FROM und SPRITE_UNTIL: Bewegtes live
-const spriteOk = b => !SPRITE_LIVE.has(b) && !(SPRITES_NEAR && ANIM_ITEMS.has(b));          // kleine Deko (nur die Art)
-const spriteTileOk = t => !SPRITE_LIVE.has(t.b) && !(SPRITES_NEAR && animLive(t));         // Gebäude (Stufe, Aussehen, Nacht)
+// Weit weg (Zoom < 1) stehen Drehendes still (Block 144, Wunsch des Nutzers): ein fertiges Bildchen statt jedes Bild live –
+// Flügel/Gondeln in einer festen Stellung je Standort (stillNow). Nah dran (SPRITES_NEAR) dreht sich alles wie gehabt
+const STILL_FAR = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'wasserkraft', 'karussell', 'fz_karussell', 'fz_teetassen', 'fz_kette',
+  'fz_freifall', 'fz_geister', 'fz_wildwasser']);
+const stillNow = (b, x, y, now) => STILL_FAR.has(b) && !SPRITES_NEAR ? 1e6 + hash(x, y, 9) * 6e4 : now;
+const spriteOk = b => SPRITES_NEAR ? !SPRITE_LIVE.has(b) && !ANIM_ITEMS.has(b) : !SPRITE_LIVE.has(b) || STILL_FAR.has(b);          // kleine Deko (nur die Art)
+const spriteTileOk = t => SPRITES_NEAR ? !SPRITE_LIVE.has(t.b) && !animLive(t) : !SPRITE_LIVE.has(t.b) || STILL_FAR.has(t.b);   // Gebäude (Stufe, Aussehen, Nacht)
 const objSprites = new Map();        // Schlüssel → { c, ox, oy, z, ver, glows, mask, night, next, used }
 let SPRITES_ON = false, spriteZooming = false, spriteZoomedLast = false;
 // Zeitbudget fürs Neumalen (Block 124): gezählt wird nur die Malzeit – Boden und Bildchen zusammen höchstens PAINT_MS je Bild,
@@ -688,7 +693,7 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
     const tt = Object.assign({}, t);                                     // Stand beim Malen: das Nachtbild malt später noch einmal (Schritt 4)
     const pad = SPRITE_PAD[t.b] || [0, 0];
     const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * zs * ds, up = spriteTop(t.b, w, h) * zs * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * zs * ds;
-    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, now, ax, ay, tt.lvl, tt); } finally { PASS = null; } });
+    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, stillNow(tt.b, ax, ay, now), ax, ay, tt.lvl, tt); } finally { PASS = null; } });
     if (sp) sp.z = zs;
     return sp;
   };
@@ -708,7 +713,7 @@ function spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col = 0, form = 0) {
   const s = decoScale(b) * 0.9, mir = (rot & 1) && MIRROR.has(b);
   const zs = spriteStep(z);
   const make = () => {
-    const sp = paintSprite(26 * zs * s, 90 * zs * s, 12 * zs * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, zs, now, x, y, 1, { rot, slot, col, form }); });
+    const sp = paintSprite(26 * zs * s, 90 * zs * s, 12 * zs * s, () => { g.scale(mir ? -s : s, s); drawObject(b, 0, 0, zs, stillNow(b, 0, 0, now), x, y, 1, { rot, slot, col, form }); });
     if (sp) sp.z = zs;
     return sp;
   };
