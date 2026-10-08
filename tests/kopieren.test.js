@@ -96,3 +96,30 @@ describe('Kopieren (Block 134)', () => {
     expect(game('moving && moving.copy')).toBe(true);                     // Haus + Hecke: Stempel
   });
 });
+
+describe('Kopieren rückgängig (Nutzer: „Rückgängigmachen geht nicht, wenn man kopiert“)', () => {
+  it('jedes Absetzen ist ein Schritt; ↶ nimmt das letzte zurück (Geld zurück), auch während der Stempel noch am Finger hängt', () => {
+    town();
+    game('startCopy(4, 4, 5, 5)');
+    const m0 = game('state.money'), price = game('moving.cost.money');
+    game('undoable(() => dropGroup(12, 12))');
+    game('undoable(() => dropGroup(18, 18))');
+    expect([at(11, 11), at(17, 17)]).toEqual(['haus', 'haus']);
+    expect(game('undoStack.length')).toBeGreaterThanOrEqual(2);
+    expect(game('undo()')).toBe(true);                                      // Stempel hängt noch: trotzdem das letzte Absetzen zurück
+    expect(at(17, 17)).toBe(undefined);
+    expect(at(11, 11)).toBe('haus');
+    expect(game('state.money')).toBe(m0 - price);
+    expect(game('undo()')).toBe(true);
+    expect(at(11, 11)).toBe(undefined);
+    expect(game('state.money')).toBe(m0);
+    expect(at(4, 4)).toBe('haus');                                          // Original unberührt
+  });
+});
+describe('Keine Beschreibungszeile bei Verschieben und Abreißen (Nutzer: „nervt“)', () => {
+  it('Hinweis über der Leiste ist bei ✋ und Abriss aus, bei anderen Werkzeugen da', () => {
+    for (const t of ['verschieben', 'abriss']) { game(`setTool('${t}')`); expect(game("document.getElementById('hint').hidden"), t).toBe(true); }
+    game("setTool('haus')"); expect(game("document.getElementById('hint').hidden")).toBe(false);   // Weg hat schon länger keine Zeile
+    game("setTool('look')");
+  });
+});

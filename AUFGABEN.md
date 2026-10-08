@@ -1584,6 +1584,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Souvenir). Gespeichert wird beim Tragen nichts Doppeltes (`carried()` ohne Kopie). Esc beendet.
 - [x] Pipette (Nutzer): nur Wege / nur Gleise / nur eine Linienart, jeweils ein Stil → Werkzeug mit genau diesem Stil (Hecke auch
       Farbe) in die Hand, Linie wie gewohnt ziehen (`copyPipette`). Test: kopieren; planen (Verschieben: markieren → hineintippen)
+- [x] Nachbesserung (Nutzer): Rückgängig ging beim Kopieren nicht – `undoable` hielt den Schritt fest, solange etwas am Finger hing
+      (Stempel hängt immer). Jetzt: jedes Absetzen einer Kopie ein Schritt; ↶ mit Kopie am Finger legt sie weg und nimmt das letzte
+      Absetzen zurück. Keine Hinweiszeile mehr über der Leiste bei ✋ und Abriss. Test: kopieren
 
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 

@@ -861,11 +861,11 @@ function undoable(fn) {
   if (typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); return undefined; }   // zuschauendes Gerät (Block 94), Besuch (95)
   if (!undoPending) { undoPending = undoSnap(); undoCut = false; }
   else { undoPending.money = state.money; undoPending.res = { ...state.res }; }   // Ablegen: Taler/Lager erst ab jetzt (verdient und gekauft wird inzwischen weiter)
-  try { return fn(); } finally { if (!moving && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
+  try { return fn(); } finally { if ((!moving || moving.copy) && undoPending) { const s = undoPending; undoPending = null; undoCommit(s); } if (typeof updateUndoBtn === 'function') updateUndoBtn(); }   // Kopie: jedes Absetzen ein Schritt (Block 134)
 }
 function undo() {
   if (typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); return false; }   // zuschauen (Block 94), Besuch (95)
-  if (moving) { cancelMove(); undoPending = null; return true; }
+  if (moving) { const copy = moving.copy; cancelMove(); undoPending = null; if (!copy) return true; }   // Kopie am Finger: weglegen und das letzte Absetzen zurück
   const step = undoStack.pop();
   if (typeof updateUndoBtn === 'function') updateUndoBtn();
   if (!step) { toast('Nichts zum Rückgängigmachen'); return false; }

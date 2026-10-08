@@ -297,7 +297,7 @@ function syncSelBar() {
 }
 function updateHint() {
   const hint = $('hint'), t = tool;
-  if (t === 'look') { hint.hidden = true; return; }
+  if (t === 'look' || t === 'verschieben' || t === 'abriss') { hint.hidden = true; return; }   // ✋/Abriss: keine Zeile (Nutzer: „nervt, nimmt Platz“)
   const d = ITEMS[t];
   if (PHONE) {
     const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
