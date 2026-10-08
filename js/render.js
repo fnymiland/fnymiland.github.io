@@ -925,12 +925,16 @@ function drawFallenStar(s, z, now) {
     g.beginPath(); g.moveTo(x, y); g.lineTo(x + 60 * z, y - 90 * z); g.stroke();
   }
   const r = (8 + Math.sin(now / 250) * 1) * z;
+  if (night > 0.15) {                                                   // Schein: aufhellen statt glowQuad – das stanzte nach drawNight ein Loch
+    const R = 50 * z * 0.6, halo = g.createRadialGradient(x, y, 0, x, y, R);
+    halo.addColorStop(0, `rgba(255,236,160,${0.5 * Math.min(1, night / NIGHT_MAX)})`); halo.addColorStop(1, 'rgba(255,236,160,0)');
+    g.globalCompositeOperation = 'lighter'; g.fillStyle = halo; g.fillRect(x - R, y - R, 2 * R, 2 * R); g.globalCompositeOperation = 'source-over';
+  }
   g.beginPath();
   for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
   g.closePath(); g.fillStyle = '#ffe27a'; g.fill();
   circle(x, y, r * 0.3, '#fffbe6');
   g.restore();
-  glowQuad([[x - r, y - r], [x + r, y - r], [x + r, y + r], [x - r, y + r]], 50 * z);
 }
 // Tiefes Meer (Block 27b): weit draußen dunkler. Ein kleines Bild mit einem Punkt je Feld (depthAlpha), gedreht und
 // gestaucht wie die Felder über den Boden gelegt (ohne Glätten: jeder Punkt ist genau ein Feld). Neu gerechnet, wenn

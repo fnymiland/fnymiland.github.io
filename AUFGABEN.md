@@ -1775,8 +1775,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Shader (S über D, dann E radieren) statt Mischart-Wechsel. Nach drawNight bleibt alles 2D-Overlay (Feuerwerk 'lighter' klären)
 - [ ] Offen zu klären: Hochladen in Safari (evtl. Rücklesen – nur am Bildanfang, aus cropSprite-Pixeln), iPad-Speicher (Leinwände
       nach Upload freigeben?), Zoom 1–2 (SPRITES_NEAR: viel live) evtl. 2D lassen, Tests (jsdom ohne WebGL → Rückfall immer)
-- [ ] Gefundener Fehler (unabhängig von WebGL): Sternschnuppe stanzt nachts NACH drawNight ein Loch (render.js drawFallenStar →
-      glowQuad) – nur im 2D-Weg sichtbar
+- [x] Gefundener Fehler (unabhängig von WebGL): Sternschnuppe stanzte nachts NACH drawNight ein Loch (render.js drawFallenStar →
+      glowQuad) – nur im 2D-Weg sichtbar. Jetzt eigener Schein mit „lighter“ (hellt auf, stanzt nicht). Test: tageszeit
+      (scheitert mit dem alten Code). Im Browser nachts nachgesehen.
 
 ## Block 145: Hecken wie Wege – überbauen und umfärben (Wunsch Nutzer, 08.10.2026)
 - [x] Über eine Linie ziehen ersetzt sie (gab es schon für andere Art/Form – kostet netto nichts, die alte wird gutgeschrieben).

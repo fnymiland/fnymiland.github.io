@@ -57,4 +57,15 @@ describe('Spieluhr (Block 101)', () => {
     expect(game('fallenStars.length')).toBe(0);
     game('cloudLeadInfo = null; cloudUser = null');
   });
+  it('Sternschnuppe stanzt nachts kein Loch (sie wird nach der Nacht gezeichnet; glowQuad/destination-out wären ein Loch)', () => {
+    const r = game(`(() => {
+      const n0 = night, gq = glowQuad, f0 = g.fill; let calls = 0, fills = 0;
+      night = NIGHT_MAX; glowQuad = () => { calls++; }; g.fill = function (...a) { fills++; return f0.apply(this, a); };
+      try { const m = toTile(W / 2, H / 2); drawFallenStar({ x: m.x, y: m.y, t0: performance.now() - 2000 }, 1, performance.now()); }
+      finally { glowQuad = gq; night = n0; g.fill = f0; }
+      return [calls, g.globalCompositeOperation, fills]; })()`);
+    expect(r[2]).toBeGreaterThan(0);                                               // der Stern wurde wirklich gezeichnet
+    expect(r[0]).toBe(0);
+    expect(r[1]).toBe('source-over');                                              // nichts bleibt auf „lighter“ hängen
+  });
 });
