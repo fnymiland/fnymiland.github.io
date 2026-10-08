@@ -225,6 +225,27 @@ function patternFade(kind, z) {
   const byGap = Math.max(0, Math.min(1, (gap - thr) / 8));
   return Math.max(bySize, byGap);
 }
+// Weit weg blasst das Muster aus (patternFade) – die Grundfarbe nimmt dann den Mittelton des Musters an, statt dass z. B. der
+// Kristallweg (helle Grundfarbe, blaue Steinchen) weiß wird und auf einer Bogenbrücke wie ein Glasdach aussieht (Nutzer, PC FHD).
+// Deckend gemischt (keine Tonschicht): überlappende Feldränder geben sonst wieder Linien. Gleich für alle Wege und Plätze.
+const PAT_COVER = { dots: 0.35, stones: 0.45, confetti: 0.4 };
+const lookFarCache = new Map();
+function lookFar(lk, z) {
+  if (!lk || !lk.pat || !lk.fill || lk.pat[0] === 'rainbow' || patNoFade) return lk;
+  const f = Math.round(patternFade(lk.pat[0], z * patCoarse(lk.pat[0], z)) * 16) / 16;   // gröberes Muster: wie näher dran
+  if (f >= 1) return lk;
+  const list = (lk.cols && lk.cols.length ? lk.cols : [lk.pat[1]]).filter(c => typeof c === 'string' && c[0] === '#' && c.length === 7);
+  if (!list.length) return lk;
+  const key = lk.fill + '|' + list.join(',') + '|' + lk.pat[0] + '|' + f;
+  let out = lookFarCache.get(key);
+  if (!out) {
+    const rgb = list.map(hexToRgb), avg = '#' + [0, 1, 2].map(i => Math.round(rgb.reduce((a, c) => a + c[i], 0) / rgb.length).toString(16).padStart(2, '0')).join('');
+    out = { ...lk, fill: mix(lk.fill, avg, (1 - f) * (PAT_COVER[lk.pat[0]] || 0.25)) };
+    if (lookFarCache.size > 400) lookFarCache.clear();
+    lookFarCache.set(key, out);
+  }
+  return out;
+}
 let patNoFade = false;                                                    // Vorschaubilder (Leiste, Kunstakademie): Muster immer voll
 // Fuge auf der hinteren Feldkante (u bzw. v = +0,5) zeichnet nur das Nachbarfeld (seine vordere, −0,5) – doppelt gezeichnet war sie
 // dunkler (auch die Kantenglättung addiert sich), und weit weg sah man jedes Feld als Kachel (Block 125c). Nur für Felder im Raster
@@ -233,9 +254,22 @@ let patSeam = false;
 // zeichnen beide Nachbarfelder, halb durchsichtig doppelt gemalt wurden sie dunkler, und weit weg sah man jedes Feld als Kachel
 const patMixCache = new Map();
 const patMix = (bg, c, f) => { const k = bg + c + f; let v = patMixCache.get(k); if (!v) { if (patMixCache.size > 4000) patMixCache.clear(); v = mix(bg, c, f); patMixCache.set(k, v); } return v; };
+// Weit weg gröber statt weg (Nutzer, PC: Muster verschwanden, Belag wirkte glatt wie Glas): Steinchen/Punkte doppelt bzw. vierfach so
+// groß und weit auseinander, bis sie nicht mehr zum feinen Raster verschwimmen. Die Stufe hängt nur an Zoom und Pixeldichte.
+let PAT_SCALE = 1, PAT_COARSE = true;
+function patCoarse(kind, z) {
+  let s = 1;
+  if (PAT_COARSE && (kind === 'dots' || kind === 'stones')) while (s < 4 && patternFade(kind, z * s) < 0.9) s *= 2;
+  return s;
+}
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   if (kind === 'rainbow' || patNoFade) return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
-  let f = patternFade(kind, z);
+  const sc = patCoarse(kind, z);
+  if (sc > 1) { PAT_SCALE = sc; try { return pattern1(L, kind, x, y, z * sc, col, cols, ext, box, bg, z); } finally { PAT_SCALE = 1; } }
+  return pattern1(L, kind, x, y, z, col, cols, ext, box, bg, z);
+}
+function pattern1(L, kind, x, y, zf, col, cols, ext, box, bg, z) {   // zf: Zoom fürs Ausblenden (gröber = wie näher dran)
+  let f = patternFade(kind, zf);
   if (f <= 0.02) return;
   if (bg && f < 1) {
     f = Math.round(f * 32) / 32;                                         // Stufen: wenige Mischfarben im Zwischenspeicher
@@ -296,7 +330,7 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
     // Raster über die ganze Insel (Block 100): Steine auf der Feldkante zeichnen beide Felder gleich – sonst bleiben an
     // jeder Kante angeschnittene halbe Steine stehen, die auf breiten Wegen wie Striche aussehen
     // je Farbe ein Pfad, ein fill (Block 125c: vorher je Punkt – ~80 Füllungen je Kiesfeld)
-    const step = kind === 'stones' ? 0.11 : 0.09, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z, ry = (kind === 'stones' ? 1.6 : 0.9) * z;
+    const sc = PAT_SCALE, step = (kind === 'stones' ? 0.11 : 0.09) * sc, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z * sc, ry = (kind === 'stones' ? 1.6 : 0.9) * z * sc;   // weit weg gröber (patCoarse)
     const gi0 = Math.ceil((x - M) / step), gi1 = Math.floor((x + M) / step), gj0 = Math.ceil((y - M) / step), gj1 = Math.floor((y + M) / step);
     const nc = cols ? cols.length : 1;
     for (let k = 0; k < nc; k++) {
@@ -608,7 +642,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     railTrim(L, segs, lk, x, y, z);
   }
   if (t && t.cross && !t.foot) {                     // Bahnübergang: Wegbelag quer über die Gleise (nicht unter der Brücke)
-    const st = styleDef('weg', t.style), lk = pathLook(st.id), pa = pathArms(x, y);
+    const st = styleDef('weg', t.style), lk = lookFar(pathLook(st.id), z), pa = pathArms(x, y);
     const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
     const across = { rot: arms.length && arms[0][0] ? 1 : 0 };      // ohne Weg-Nachbarn: quer zur Schiene
     for (const [w, col] of [[EDGE_W, edge], [ROAD_W, fill]]) for (const sh of roadShapes(pa, across, w)) poly(sh.map(L), C(col));
@@ -903,14 +937,14 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     poly(arch, 'rgba(35,70,95,0.55)');
   }
   // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
-  const b0 = latB ? -0.51 : -hw, b1 = latF ? 0.51 : hw;                  // Belag bis in die Nachbarreihe (keine Fuge)
-  // längs ~1,5 Gerätepunkte ins Nachbarfeld (wie seamPad bei Wegen): weit weg ist jedes Feld ein eigenes Bildchen, dessen Rand beim
-  // Verkleinern halb durchsichtig wird – sonst schimmert das Wasser als helle Linie zwischen den Feldern (Nutzer, PC FHD)
+  // längs und quer ~1,5 Gerätepunkte ins Nachbarfeld (wie seamPad bei Wegen): weit weg ist jedes Feld ein eigenes Bildchen, dessen Rand
+  // beim Verkleinern halb durchsichtig wird – sonst schimmert das Wasser als helle Linie zwischen den Feldern bzw. Reihen (Nutzer, PC FHD)
   const tfd = g.getTransform ? g.getTransform() : null, dpd = (tfd ? Math.hypot(tfd.a, tfd.b) : 1) * z, pd = Math.min(0.08, 1.5 / (dpd * TW * 0.56));
+  const b0 = latB ? -0.5 - Math.max(0.01, pd) : -hw, b1 = latF ? 0.5 + Math.max(0.01, pd) : hw;   // Belag bis in die Nachbarreihe (keine Fuge)
   const ASd = [AS[0] - pd, ...AS.slice(1, -1), AS[AS.length - 1] + pd], Hd = a => H(Math.max(-0.5, Math.min(0.5, a)));
   const deck = ASd.slice(0, -1).map((a, i) => [P(a, b0, Hd(a)), P(ASd[i + 1], b0, Hd(ASd[i + 1])), P(ASd[i + 1], b1, Hd(ASd[i + 1])), P(a, b1, Hd(a))]);
   if (B.wall) {                                                         // Belag wie der Weg – mit seinem Muster (Block 66b)
-    const st = styleDef('weg', t.style), lk = pathLook(st.id) || {}, fill = lk.fill || '#dcc69d';
+    const st = styleDef('weg', t.style), lk = lookFar(pathLook(st.id), z) || {}, fill = lk.fill || '#dcc69d';
     const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, Hd(a)); };
     const band2 = (w0, w1) => [...ASd.map(a => ax ? [w0, a] : [a, w0]), ...[...ASd].reverse().map(a => ax ? [w1, a] : [a, w1])];
     const inner = band2(latB ? b0 : -ROAD_W, latF ? b1 : ROAD_W);
@@ -1047,7 +1081,7 @@ const padBorder = (sh, d, at = null) => {
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-  const st = styleDef('weg', t && t.style), lk = pathLook(st.id);
+  const st = styleDef('weg', t && t.style), lk = lookFar(pathLook(st.id), z);
   const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) {                                                                       // Trittsteine; zu Vorplätzen ein Stein mehr (Block 91)
     drawStones(L, arms, t, x, y, z);
@@ -1488,7 +1522,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
 // deckt ihn ab). Das Stück auf dem Wegfeld zeichnet der Weg selbst mit (drawPath, Block 78c), sonst läge es obendrauf.
 const GP_EDGE = 0.125, GP_FILL = 0.095;
 function drawGardenPath(cx, cy, z, x, y, gp) {
-  const lk = gp.style ? pathLook(gp.style) : PATH_LOOK.platten, [dx, dy] = gp.d;
+  const lk = lookFar(gp.style ? pathLook(gp.style) : PATH_LOOK.platten, z), [dx, dy] = gp.d;
   const L = ([a, b]) => { const u = a * dx - b * dy, v = a * dy + b * dx; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z]; };
   if (lk.stones) {                                                                      // Trittstein zur Tür, im Takt des Wegs (Block 91)
     const q = L([0.375, 0]); ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498')); ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d9d4c9'));

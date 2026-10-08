@@ -10,14 +10,14 @@ beforeEach(() => {
 describe('Fugen (Block 116)', () => {
   it('jedes Wegfeld zieht seine Fläche hauchdünn in Belagfarbe nach (Nachbarfelder überlappen)', () => {
     const strokes = game(`(() => { const out = []; g.stroke = () => out.push([String(g.strokeStyle), g.lineWidth]); try { const t = state.tiles.get('10,10'); drawPath(100, 100, 1, 10, 10, t); } finally { delete g.stroke; } return out; })()`);
-    const fill = game("C(PATH_LOOK[styleDef('weg', state.tiles.get('10,10').style).id].fill)");
+    const fill = game("C(lookFar(PATH_LOOK[styleDef('weg', state.tiles.get('10,10').style).id], 1).fill)");   // weit weg getönt (lookFar)
     expect(strokes.some(([c, w]) => c === String(fill) && w === 0.6)).toBe(true);
   });
   it('auch breite Wege (▬) und jeder Belag ziehen ihre Fläche nach', () => {
     for (const st of game('STYLES.weg.map(s => s.id)')) {
       if (game(`!!PATH_LOOK['${st}'].stones`)) continue;                                 // Trittsteine: Gras dazwischen ist gewollt
       for (const wide of [false, true]) {
-        const ok = game(`(() => { const out = []; g.stroke = () => out.push([String(g.strokeStyle), g.lineWidth]); try { const t = { ...state.tiles.get('10,10'), style: '${st}', ${wide ? 'wide: true' : ''} }; drawPath(100, 100, 1, 10, 10, t); } finally { delete g.stroke; } const f = String(C(PATH_LOOK['${st}'].fill)); return out.some(([c, w]) => c === f && w === 0.6); })()`);
+        const ok = game(`(() => { const out = []; g.stroke = () => out.push([String(g.strokeStyle), g.lineWidth]); try { const t = { ...state.tiles.get('10,10'), style: '${st}', ${wide ? 'wide: true' : ''} }; drawPath(100, 100, 1, 10, 10, t); } finally { delete g.stroke; } const f = String(C(lookFar(PATH_LOOK['${st}'], 1).fill)); return out.some(([c, w]) => c === f && w === 0.6); })()`);
         expect(ok, st + (wide ? ' breit' : '')).toBe(true);
       }
     }
@@ -28,5 +28,26 @@ describe('Fugen (Block 116)', () => {
     expect(src).toMatch(/clipTo\(0\.03 \+ 0\.052 \/ scale\)/);
     expect(src).toMatch(/clipTo\(0\);\s*\n?\s*try \{ drawShadows/);
     expect(() => game('renderGroundChunk(1, 1, 1.2)')).not.toThrow();
+  });
+});
+
+describe('Muster weit weg (Nutzer, PC: Kristallweg wurde weiß)', () => {
+  it('Grundfarbe nimmt weit weg den Mittelton des Musters an, nah bleibt sie wie sie ist', () => {
+    const far = game("lookFar(PATH_LOOK.kristall, 0.3).fill"), near = game("lookFar(PATH_LOOK.kristall, 6).fill"), base = game('PATH_LOOK.kristall.fill');
+    expect(near).toBe(base);
+    const blue = h => parseInt(h.slice(5, 7), 16) - parseInt(h.slice(1, 3), 16);   // wie blau: B − R
+    expect(far).not.toBe(base);
+    expect(blue(far)).toBeGreaterThan(blue(base));
+    expect(game("lookFar(PATH_LOOK.kristall, 0.3) === lookFar(PATH_LOOK.kristall, 0.3)")).toBe(true);   // gemerkt, nicht je Feld neu
+  });
+});
+
+describe('Muster weit weg gröber statt weg (Nutzer: „Gröber“)', () => {
+  it('Punkte/Steinchen werden weit weg doppelt bis vierfach so groß, nah bleiben sie; gröber zählt fürs Ausblenden wie näher dran', () => {
+    expect(game("patCoarse('dots', 3)")).toBe(1);
+    const s = game("patCoarse('dots', 0.45)");
+    expect(s).toBeGreaterThan(1); expect(s).toBeLessThanOrEqual(4);
+    expect(game(`patternFade('dots', 0.45 * ${s})`)).toBeGreaterThan(game("patternFade('dots', 0.45)"));
+    expect(game("patCoarse('herring2', 0.45)")).toBe(1);                             // Linienmuster: wie bisher
   });
 });
