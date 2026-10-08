@@ -100,3 +100,22 @@ describe('Infofenster auf dem Handy', () => {
     expect(grip()).toBe(null);
   });
 });
+
+describe('Weglegen (Nutzer: „aufm Handy keine Option, ihn loszulassen“)', () => {
+  it('👆 wird ✕, solange etwas in der Hand ist; antippen legt es weg – auch den Kopier-Stempel', () => {
+    game("setTool('look'); buildToolbar()");
+    const look = () => document.querySelector('#cats .quick[data-quick="look"]');
+    expect(look().textContent).toBe('👆');
+    game("setTool('haus')");
+    expect(look().textContent).toBe('✕');
+    expect(look().getAttribute('aria-label')).toMatch(/Weglegen/);
+    look().click();
+    expect(game('tool')).toBe('look');
+    expect(look().textContent).toBe('👆');
+    game("state.tiles.set('40,40', { b: 'haus', lvl: 1 }); recalc(); startCopy(40, 40, 40, 40)");
+    expect(game('!!moving')).toBe(true);
+    expect(look().textContent).toBe('✕');
+    look().click();
+    expect(game('[tool, moving]')).toEqual(['look', null]);
+  });
+});

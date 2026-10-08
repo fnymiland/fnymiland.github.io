@@ -939,8 +939,12 @@ body.visiting #net-btn { display: none !important; }
 #cats .quick { width: 38px; font-size: 17px; }
 #cats .cat { padding-top: 0; padding-bottom: 0; }
 #cats .cat .ic { font-size: 17px; line-height: 1; }
-#cats .quick.active { background: var(--brown); color: var(--cream); box-shadow: 0 3px 0 #4a3526, 0 0 0 2px var(--yellow); }
-#sheet .tool.active { background: var(--yellow); box-shadow: 0 3px 0 #4a3526, inset 0 0 0 3px var(--brown); }   /* gewählte Kachel: dunkler Rahmen */
+#cats .quick.active { background: var(--brown); color: var(--cream); box-shadow: 0 3px 0 #4a3526; }   /* ohne Ring (Nutzer: „weißer Rand dahinter“) */
+#cats .quick.drop { font-weight: 900; font-size: 18px; color: var(--brown); }   /* 👆 wird ✕, solange etwas in der Hand ist */
+#sheet .tool.active { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }   /* gewählte Kachel: Rahmen rundum gleich dick */
+/* Stil-Leiste (Wege, Beete, Hecken …): Knöpfe so hoch wie die Bereiche unten (Nutzer: „dieselben Maße“) – gewählt nur farbig, nicht größer */
+#style-bar > .style-chip { height: 34px; min-height: 0; box-sizing: border-box; padding-top: 0; padding-bottom: 0; }
+#style-bar > .style-chip i { width: 26px; height: 26px; }
 /* schmalere Fenster (iPad hochkant 768 px): Reihe muss trotzdem passen – erst ▾ weg und schmaler, dann nur Symbole außer dem offenen */
 @media (max-width: 900px) { .cat::after { content: none; } }
 @media (min-width: 601px) and (max-width: 900px) { #cats { gap: 5px; } #cats .cat { padding-left: 8px; padding-right: 8px; } }

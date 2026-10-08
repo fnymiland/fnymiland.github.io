@@ -1962,4 +1962,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       alle Knöpfe der unteren Reihe 34 px hoch, Symbole gleich groß. Gewähltes Werkzeug dunkel wie ein offener Bereich, gewählte
       Kachel im Feld mit dunklem Rahmen. Die Reihe passt bei 375/640/768/1024 px (nachgemessen); unter 900 px ohne ▾, unter 740 px
       nur der offene Bereich mit Namen.
+- [x] Nutzer: „weißer Rand hinter dem dunklen Knopf; bei Kacheln unten mehr Rand; Pillen der Stil-Leiste (Wege, Beete) größer als
+      Stadt/Herstellen; aufm Handy keine Option, etwas loszulassen“ – Ring entfernt; Kachelrahmen nur innen (rundum 3 px); alle
+      Knöpfe der Stil-Leiste 34 px (gewählt nur farbig, nicht größer). 👆 wird ✕ „Weglegen“, solange etwas in der Hand ist
+      (`syncDropBtn`, auch Kopier-Stempel). Test: handy.
 

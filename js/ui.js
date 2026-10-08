@@ -247,6 +247,15 @@ function pickCard(id) {
   if (next !== 'look' && !PHONE) openBuildInfo(next);
 }
 
+// 👆 wird ✕ (Weglegen), solange etwas in der Hand ist – auf dem Handy gab es sonst keinen Weg, es loszulassen (Nutzer, 08.10.2026)
+function syncDropBtn() {
+  const b = document.querySelector('.quick[data-quick="look"]');
+  if (!b) return;
+  const hold = tool !== 'look', label = hold ? 'Weglegen (Esc)' : 'Ansehen (A)';
+  b.classList.toggle('drop', hold);
+  b.textContent = hold ? '✕' : '👆';
+  b.title = label; b.setAttribute('aria-label', label);
+}
 function setTool(t) {
   if (t !== 'look' && typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); t = 'look'; }   // zuschauen/Besuch: nichts bauen (Block 94/95)
   if (t !== 'verschieben' && moving) cancelMove();
@@ -257,6 +266,7 @@ function setTool(t) {
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
   for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
+  syncDropBtn();
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
   updateHint();
