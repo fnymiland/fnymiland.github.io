@@ -672,7 +672,7 @@ function crossingAxes(x, y) {
 // und rechts), in der Mitte hoch über dem Zug. b = Abstand zur Mitte entlang des Wegs in Feldern.
 // So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
 // ARCH_W (Block 148): so breit wie der Weg samt Rand – vorher schmaler, und der Weg schaute an den Rampen seitlich hervor
-const ARCH_H = 22, ARCH_W = EDGE_W + 0.01, ARCH_SPAN = 1;
+const ARCH_H = 22, ARCH_W = EDGE_W + 0.01, ARCH_SPAN = 0.9;   // Span 0,9: Rampe setzt vor der Feldmitte auf – sonst ragte ihre Ecke über ein rundes Wegende (Block 148)
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
 const ARCH_LOOK = {
   holz:     { deck: '#c9a26f', seam: '#b08a5e', side: '#8a6440', rail: '#7a5236', th: 4, kind: 'posts' },
@@ -720,6 +720,23 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
       posts(s, 6, lk.rail, 0.8);
     }
   };
+  // Rampen auf den Wegfeldern massiv bis zum Boden, auf beiden Seiten (Block 148): sonst sah man unter der Rampe – vorn direkt,
+  // hinten durch den offenen Bogen – den Weg am Boden weiterlaufen. Nur über den Gleisen (|b| < ½) bleibt der Bogen offen
+  const rampWalls = s => {
+    for (const sg of [-1, 1]) {
+      const seg = bs.filter(b => sg * b >= 0.5 - 1e-6);
+      if (seg.length < 2) continue;
+      poly(seg.map(b => P(s * ARCH_W, b, archH(b))).concat(seg.slice().reverse().map(b => P(s * ARCH_W, b, 0))), C(shade(lk.side, s < 0 ? -0.1 : -0.04)));
+    }
+  };
+  rampWalls(-1);
+  // Stirnwand der Rampe zur Gleisseite (bei |b| = ½): sonst sieht man unter dem Bogen in die Rampe hinein (Weg am Boden)
+  for (const sg of [-1, 1]) {
+    const b = sg * 0.5;
+    if (b < Math.min(b0, b1) - 1e-6 || b > Math.max(b0, b1) + 1e-6) continue;
+    const w = ARCH_W + 0.02, bb = b + sg * 0.02;                           // etwas breiter und in die Rampe hinein: keine helle Naht
+    poly([P(-w, bb, 0), P(w, bb, 0), P(w, bb, archH(bb)), P(-w, bb, archH(bb))], C(shade(lk.side, -0.16)));
+  }
   railing(-1);                                             // hinteres Geländer
   const deck = rail(-1, 0).concat(rail(1, 0).reverse());
   poly(deck, C(lk.deck));
@@ -744,13 +761,7 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
     glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
   }
   poly(rail(1, 0).concat(rail(1, -lk.th).reverse()), C(lk.side));  // vordere Wange
-  // Rampen auf den Wegfeldern massiv bis zum Boden (Block 148): vorher sah man unter der ansteigenden Rampe den Weg am Boden
-  // weiterlaufen. Nur über den Gleisen (|b| < ½) bleibt der Bogen offen
-  for (const sg of [-1, 1]) {
-    const seg = bs.filter(b => sg * b >= 0.5 - 1e-6);
-    if (seg.length < 2) continue;
-    poly(seg.map(b => P(ARCH_W, b, archH(b))).concat(seg.slice().reverse().map(b => P(ARCH_W, b, 0))), C(shade(lk.side, -0.04)));
-  }
+  rampWalls(1);
   railing(1);
 }
 function drawCrossing(cx, cy, z, x, y, t, now) {

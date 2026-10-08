@@ -1755,6 +1755,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Deck war schmaler als der Weg (ARCH_W 0,3 < Weg mit Rand 0,36) – der Weg schaute an den Rampen seitlich hervor; jetzt
       `ARCH_W = EDGE_W + 0,01`. Unter der ansteigenden Rampe sah man den Weg am Boden weiterlaufen – Rampen auf den Wegfeldern
       jetzt massiv bis zum Boden, nur über den Gleisen offen. Alle vier Ausführungen im Browser geprüft. Test: baenke-fussbruecke.test.js
+- [x] 148b (Screenshot Nutzer): durch den Bogen sah man noch in die Rampe hinein → Wände auf beiden Seiten und Stirnwand zur
+      Gleisseite (etwas überlappend, keine helle Naht); Rampe landete in der Feldmitte und ragte über ein rundes Wegende („Zipfel“)
+      → ARCH_SPAN 0,9 (setzt vorher auf)
 
 ## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
 - [x] Wächter je Bild (tests/leistung.test.js): Testwelten groß, Freizeitpark, Farben × Zoom 0,45/0,8/1,2/1,6/2,2 × Tag/Nacht, wie iPad
