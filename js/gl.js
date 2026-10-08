@@ -198,13 +198,17 @@ const GL_HOOKS = { drawImage: glDrawImage, save: glSave, restore: glRestore, beg
 function glHook(on) { for (const [k, f] of Object.entries(GL_HOOKS)) { if (on) ctx[k] = f; else delete ctx[k]; } }
 
 // --- Sammelfläche für Live-Gezeichnetes (je Bild neu) ---
-// Höhe wächst/schrumpft mit dem Bedarf (256 … 2048): Safari liest beim Hochladen die GANZE Leinwand zurück, egal wie viel
+// Höhe wächst/schrumpft mit dem Bedarf (256 … 4096, 1024 breit): Safari liest beim Hochladen die GANZE Leinwand zurück, egal wie viel
 // benutzt ist – bei 2048² waren das auf dem iPad 14 ms je Bild für 70 benutzte Zeilen
-const LA = { c: null, x: null, w: 2048, h: 256, cx: 0, cy: 0, row: 0, used: 0, off: [0, 0], need: 0, peak: 0, calm: 0 };
+// Safari zusätzlich im Arbeitsspeicher (willReadFrequently): dann muss es nichts von der Grafikkarte zurücklesen und lädt nur die
+// benutzten Zeilen hoch. ?la=cpu / ?la=gpu zum Vergleichen
+const LA_CPU = (() => { const q = new URLSearchParams(location.search).get('la'); if (q) return q === 'cpu';
+  return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent || ''); })();
+const LA = { c: null, x: null, w: 1024, h: 256, cx: 0, cy: 0, row: 0, used: 0, off: [0, 0], need: 0, peak: 0, calm: 0 };
 function laInit() {
   if (LA.c) return !!LA.x;
   LA.c = document.createElement('canvas'); LA.c.width = LA.w; LA.c.height = LA.h;
-  LA.x = LA.c.getContext('2d');
+  LA.x = LA.c.getContext('2d', LA_CPU ? { willReadFrequently: true } : undefined);
   if (!LA.x) return false;
   // Zeichencode setzt manchmal Bildschirm-Transformationen (setTransform(DPR,…)): in der Sammelfläche um die Zelle verschieben
   const st = C2D.setTransform, gt = C2D.getTransform;
@@ -220,8 +224,8 @@ function laInit() {
 function laReset() {
   if (LA.c) {                                                           // Größe nach Bedarf: zu klein → sofort größer, lange viel Luft → kleiner
     let h = LA.h;
-    if (LA.need > h) while (h < LA.need && h < 2048) h *= 2;
-    else { LA.peak = Math.max(LA.peak, LA.used); if (++LA.calm > 120) { if (LA.peak < h / 4 && h > 256) h /= 2; LA.peak = 0; LA.calm = 0; } }
+    if (LA.need > h) while (h < LA.need && h < (ATL.size || 2048)) h *= 2;
+    else { LA.peak = Math.max(LA.peak, LA.used); if (++LA.calm > 600) { if (LA.peak < h / 2 && h > 256) h /= 2; LA.peak = 0; LA.calm = 0; } }
     if (h !== LA.h) { LA.h = h; LA.c.height = h; LA.used = 0; LA.peak = 0; LA.calm = 0; }   // neue Höhe: Leinwand leer, Textur neu (glTex)
     LA.need = 0;
   }
@@ -230,7 +234,7 @@ function laReset() {
 }
 function laAlloc(w, h) {
   w = Math.ceil(w) + 2; h = Math.ceil(h) + 2;
-  if (w > LA.w || h > 2048) return null;
+  if (w > LA.w || h > (ATL.size || 2048)) return null;
   if (h > LA.h) { LA.need = Math.max(LA.need, LA.cy + LA.row + h); return null; }
   if (LA.cx + w > LA.w) { LA.cx = 0; LA.cy += LA.row; LA.row = 0; }
   if (LA.cy + h > LA.h) { LA.need = Math.max(LA.need, LA.cy + h); return null; }   // nächstes Bild größer (diesmal obendrauf in 2D)

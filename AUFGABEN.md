@@ -1627,6 +1627,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] iPad (Safari): Tag und Nacht richtig, Standbild spielt, Felder 0,3 ms – aber „Hochladen 13,9 ms (68 Zeilen)“: Safari liest
       die ganze Sammelfläche zurück, egal wie viel benutzt ist. Sammelfläche jetzt 256 … 2048 Zeilen hoch nach Bedarf (wächst sofort,
       schrumpft nach 120 ruhigen Bildern)
+- [x] iPad danach: Hochladen 13,9 → 3,4–4,7 ms, Rechnen 15,8 → 5,8–7,5 ms, 49–60 Bilder/s. Weiter: Sammelfläche 1024 breit,
+      schrumpft schon bei halber Nutzung (über ~10 s); Safari zeichnet sie im Arbeitsspeicher (willReadFrequently, ?la=cpu/gpu)
 - [x] Nebenbei behoben: drawNight – warmer Schein nach blauem Fleck wurde blau (circle setzte fillStyle ungemerkt)
 - [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
