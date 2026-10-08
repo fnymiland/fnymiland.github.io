@@ -1896,3 +1896,12 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Zeichnen: Geländer/Brüstung/Pfähle nur außen, Belag und Planken durchgehend (Nutzer: Holz hatte Lücken – Planken gingen nur
       bis zum alten Rand), Stein/Ziegel: Seitenwand nur vorne, Bogenöffnung als Tunnel durch alle Reihen (`archWall` depth).
       Boote quer darunter durch wie bisher. Test: bogenbruecken.test.js
+
+## Kleinigkeiten nach dem Push v764 (Nutzer, 08.10.2026)
+- [x] Ballons & Zeppelin abschaltbar: ☰ → Grafik „🎈 Ballons & Zeppelin: an/aus“ (nur wenn erfunden), je Gerät (localStorage
+      `kachelhausen_himmel`, `skyShow`/`setSkyShow`), Seilbahn bleibt. Test: strassenlaterne (Ballons & Zeppelin abschaltbar)
+- [ ] Ballons/Zeppelin „stottern manchmal“ (PC): auf dem Mac nicht nachstellbar (60 Bilder/s gleichmäßig, 20 s ohne Ausreißer).
+      Messwerkzeug tools/vorschau/ruckeln.js (Konsole am PC, 60 s, schickt Ruckler mit laufenden Funktionen an sink-lan.py).
+- [ ] Fußgänger-/Wegbrücke Hauptinsel → Nebeninsel geht beim Nutzer nicht: in der Kopie von „OG“ klappen 13/14/16 Felder übers Meer.
+      Regeln: gerade Linie, ≤ 16 Felder Wasser, am anderen Ende eigenes Land (`seaGapBridgeable`). Meldung vom Nutzer abwarten.
+

@@ -2561,6 +2561,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-himmel', date: '8. Oktober', title: 'Ballons ausblenden', items: [
+    '🎈 <b>Himmel ruhig:</b> Heißluftballons und Zeppelin lassen sich jetzt im Menü unter Grafik ausblenden (gilt nur auf diesem Gerät).',
+  ] },
   { id: '2026-10-08-strassenlaternen', date: '8. Oktober', title: 'Große Straßenlaternen', items: [
     '💡 <b>Straßenlaternen:</b> Hohe Masten für Straßen und Plätze – nachts fällt ein weiter Lichtfleck auf den Weg. Am Wegrand zeigt der Ausleger von selbst über den Weg. In der Kunstakademie (Deko), dann unter Stadtschmuck.',
     '🎨 <b>6 Formen:</b> Mastleuchte, Peitschenmast, Kugelleuchte, Doppelausleger, Bischofsstab und der große Boulevard-Kandelaber – in allen Laternenfarben.',
@@ -2748,6 +2751,7 @@ function showMenu() {
     <div class="label">🖥️ Grafik <span class="muted">(nur dieses Gerät)</span></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-still" title="Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer">${stillFar ? '⏸️ Weit weg: Drehendes steht still' : '🌀 Weit weg: Drehendes dreht sich'}</button></div>
+    ${state.inventions && (state.inventions.has('ballon') || state.inventions.has('zeppelin')) ? `<div class="row"><button class="btn ghost" style="flex:1" id="m-sky" title="Heißluftballons und Zeppelin am Himmel zeigen oder ausblenden">${skyShow ? '🎈 Ballons & Zeppelin: an' : '🚫 Ballons & Zeppelin: aus'}</button></div>` : ''}
     <div class="row"><button class="btn ghost" style="flex:1" id="m-gl" title="Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)">${glWanted() ? '🚀 Grafikkarte: an' : '🐢 Grafikkarte: aus'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-bench" title="Zoomt und schiebt ~45 Sekunden von selbst und misst, wie flüssig es auf diesem Gerät läuft">📏 Messlauf (≈ 45 s)</button></div>
     <div class="label">💾 Spielstand</div>
@@ -2762,6 +2766,7 @@ function showMenu() {
   $('m-sound').onclick = () => { state.muted = !state.muted; save(); showMenu(); };
   $('m-fps').onclick = () => { setFpsMode(fpsMode === 'fluessig' ? 'sparsam' : 'fluessig'); showMenu(); };   // Bildrate (Block 79)
   $('m-still').onclick = () => { setStillFar(!stillFar); showMenu(); };                       // Block 144
+  if ($('m-sky')) $('m-sky').onclick = () => { setSkyShow(!skyShow); showMenu(); };              // Ballons & Zeppelin aus (Nutzer)
   $('m-gl').onclick = () => {
     setGlWanted(!glWanted()); showMenu();
     if (GL_Q) toast(`In der Adresse steht ?gl=${GL_Q} – das gilt, solange es dort steht`);

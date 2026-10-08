@@ -32,3 +32,19 @@ describe('Straßenlaternen (Block 132)', () => {
     expect(game("!!DESIGN_BY_ID['strassenlaterne'] && !!DESIGN_BY_ID['strassenlaterne:form:boulevard']")).toBe(true);
   });
 });
+
+describe('Ballons & Zeppelin abschaltbar (Nutzer, 08.10.2026)', () => {
+  it('Schalter im Menü (nur mit Ballon/Zeppelin), aus = nichts am Himmel, gilt je Gerät', () => {
+    game("closeModal(); state.inventions = new Set(); showMenu()");
+    expect(game("!!document.getElementById('m-sky')")).toBe(false);
+    game("closeModal(); state.inventions = new Set(['ballon', 'zeppelin']); setSkyShow(true); showMenu()");
+    const drawn = () => game("(() => { let n = 0; const b = drawBalloon, zz = drawZeppelin; drawBalloon = () => { n++; }; drawZeppelin = () => { n++; }; try { drawSky(1e6, 1); } finally { drawBalloon = b; drawZeppelin = zz; } return n; })()");
+    expect(drawn()).toBe(5);
+    game("document.getElementById('m-sky').click()");
+    expect(game('skyShow')).toBe(false);
+    expect(game("localStorage.getItem('kachelhausen_himmel')")).toBe('0');
+    expect(drawn()).toBe(0);
+    expect(game("document.getElementById('m-sky').textContent")).toMatch(/aus/);
+    game("setSkyShow(true); closeModal()");
+  });
+});

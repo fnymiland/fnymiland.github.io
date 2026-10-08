@@ -1814,11 +1814,19 @@ function drawCables(cables, z, now) {
     });
   }
 }
+// Ballons & Zeppelin abschaltbar (Nutzer, 08.10.2026) – je Gerät wie die Bildrate; die Seilbahn bleibt (gehört zum Verkehr)
+const SKY_KEY = 'kachelhausen_himmel';
+let skyShow = (() => { try { return localStorage.getItem(SKY_KEY) !== '0'; } catch (e) { return true; } })();
+function setSkyShow(on) {
+  skyShow = !!on;
+  try { localStorage.setItem(SKY_KEY, on ? '1' : '0'); } catch (e) { /* privates Fenster: gilt bis zum Neuladen */ }
+}
 function drawSky(now, z) {
   const inv = state.inventions;
   if (!inv || !inv.size) return;
   const { center: [cx, cy], cables } = skyInfo();
   if (cables.length) drawCables(cables, z, now);
+  if (!skyShow) return;
   if (inv.has('ballon')) for (const b of BALLOONS) drawBalloon(b, cx, cy, z, now);
   if (inv.has('zeppelin')) drawZeppelin(cx, cy, z, now);
 }
