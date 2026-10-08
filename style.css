@@ -887,3 +887,10 @@ body.visiting #net-btn { display: none !important; }
 @keyframes ld-spin { to { transform: rotate(360deg); } }
 @media (max-width: 600px) { #loading:not(.big) { top: 104px; } }   /* schmal: die obere Leiste hat zwei Reihen */
 @media (prefers-reduced-motion: reduce) { .ld-spin { animation-duration: 2.4s; } }
+
+/* Messlauf (Block 149) */
+.bench-badge[hidden] { display: none; }
+.bench-badge { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; background: rgba(40, 32, 26, .85); color: #fff;
+  padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 14px; pointer-events: none; max-width: calc(100vw - 32px); }
+.bench-out { white-space: pre-wrap; font-size: 11px; line-height: 1.45; background: rgba(0, 0, 0, .05); border-radius: 10px; padding: 10px;
+  max-height: 50vh; overflow: auto; user-select: text; -webkit-user-select: text; }

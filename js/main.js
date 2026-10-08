@@ -163,10 +163,71 @@ function frame(now) {
     if (live) { collectAlbum(); checkAchievements(); if ($('modal').hidden) checkExpedition(); checkOrders(); fairTick(); marktTick(); parkFestTick(); fzFestTick(); }
     starTick(now); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now;
   }
-  const rt = MESS ? performance.now() : 0;
+  if (BENCH) benchTick(now);
+  const rt = MESS || BENCH ? performance.now() : 0;
   render(now);
+  if (BENCH) benchAfter(now, performance.now() - rt);
   if (MESS) messLine(performance.now() - rt);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
+}
+// Messlauf (Block 149, ☰ → Grafik): fährt auf diesem Gerät Ruhe, Ziehen und Zoomen ab und misst die echten Bildabstände (mit
+// Grafikkarte) und die Rechenzeit – zum Vergleichen vor/nach einer Änderung und zwischen PC, Mac und iPad. Kamera danach zurück
+let BENCH = null;
+const BENCH_KEY = 'kachelhausen_messlauf';
+const BENCH_PLAN = [0.45, 0.8, 1.3, 2].flatMap(z => [{ name: `Zoom ${z} ruhig`, ms: 2000, z }, { name: `Zoom ${z} ziehen`, ms: 3000, z, pan: true }])
+  .concat([{ name: 'Zoomen rein/raus', ms: 5000, sweep: true }]);
+const BENCH_SETTLE = 700;                                                // vor jedem Schritt: nicht gemessen (Zoomwechsel nachmalen)
+function benchStart() {
+  closeModal(); closePanel(); setTool('look');
+  BENCH = { at: performance.now(), step: -1, cam0: { x: cam.x, y: cam.y, z: cam.z }, rows: [], last: 0 };
+  $('bench-badge').hidden = false;
+}
+function benchTick(now) {
+  const B = BENCH;
+  lastInput = performance.now();                                         // volle Bildrate, auch „sparsam“
+  let t = now - B.at, i = 0;
+  while (i < BENCH_PLAN.length && t > BENCH_SETTLE + BENCH_PLAN[i].ms) { t -= BENCH_SETTLE + BENCH_PLAN[i].ms; i++; }
+  if (i >= BENCH_PLAN.length) { benchEnd(); return; }
+  const S = BENCH_PLAN[i], c = B.cam0;
+  if (i !== B.step) { B.step = i; B.rows[i] = { name: S.name, gaps: [], cpu: [] }; B.last = 0; $('bench-badge').textContent = `📏 Messlauf ${i + 1}/${BENCH_PLAN.length}: ${S.name} – bitte nicht tippen`; }
+  B.rec = t > BENCH_SETTLE;
+  const u = Math.max(0, t - BENCH_SETTLE);
+  if (S.sweep) { const k = 1 - Math.abs(1 - 2 * (u / S.ms)); cam.z = Math.exp(Math.log(0.45) + (Math.log(2.2) - Math.log(0.45)) * k); cam.x = c.x; cam.y = c.y; }
+  else {
+    cam.z = S.z;
+    const R = 420 / S.z, a = S.pan ? u / S.ms * Math.PI * 2 : 0;            // Kreis: ~880 Bildschirmpunkte je Sekunde
+    cam.x = c.x + (S.pan ? Math.sin(a) * R : 0); cam.y = c.y + (S.pan ? (1 - Math.cos(a)) * R * 0.5 : 0);
+  }
+}
+function benchAfter(now, cpu) {
+  const B = BENCH;
+  if (!B) return;
+  const r = B.rows[B.step];
+  if (r && B.rec) { if (B.last) r.gaps.push(now - B.last); r.cpu.push(cpu); }
+  B.last = B.rec ? now : 0;
+}
+function benchEnd() {
+  const B = BENCH; BENCH = null;
+  cam.x = B.cam0.x; cam.y = B.cam0.y; cam.z = B.cam0.z;
+  $('bench-badge').hidden = true;
+  const q = (a, p) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.floor(s.length * p))]; };
+  const ver = ((document.querySelector('script[src*="main.js"]') || {}).src || '').match(/v=(\d+)/);
+  const ua = navigator.userAgent, dev = /iPad|Macintosh.*Mobile|Macintosh/.test(ua) && navigator.maxTouchPoints > 1 ? 'iPad' : /iPhone/.test(ua) ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : 'Gerät';
+  const d = new Date(), pad = n => String(n).padStart(2, '0');
+  const head = `Fnymiland Messlauf v${ver ? ver[1] : '?'} · ${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:${pad(d.getMinutes())} · ${dev} · ${W}×${H} · Pixeldichte ${DPR} · Grafikkarte ${glWanted() && GL.ready ? 'an' : 'aus'} · ${state.tiles.size} Felder`;
+  let jank = 0;
+  const lines = B.rows.map(r => {
+    const j = r.gaps.filter(g => g > 50).length; jank += j;
+    return `${r.name.padEnd(18)} Bild ${q(r.gaps, 0.5).toFixed(0).padStart(3)} / ${q(r.gaps, 0.95).toFixed(0).padStart(3)} / ${Math.max(0, ...r.gaps).toFixed(0).padStart(4)} ms · Ruckler ${String(j).padStart(2)} · Rechnen ${q(r.cpu, 0.5).toFixed(1)} / ${Math.max(0, ...r.cpu).toFixed(0)} ms`;
+  });
+  const text = [head, 'Bild = Abstand zweier Bilder (Mitte / 95 % / längstes), Ruckler = Bilder über 50 ms', ...lines, `Ruckler gesamt: ${jank}`].join('\n');
+  let prev = null; try { prev = JSON.parse(localStorage.getItem(BENCH_KEY)); localStorage.setItem(BENCH_KEY, JSON.stringify({ jank, head })); } catch (e) { /* privates Fenster */ }
+  openModal(`<h2>📏 Messlauf</h2>
+    <p class="muted">${jank === 0 ? 'Keine Ruckler gemessen.' : `${jank} Ruckler (Bilder über 50 ms).`}${prev ? ` Letztes Mal: ${prev.jank}.` : ''} Mit „Kopieren“ kannst du die Zahlen weitergeben – zum Vergleichen mit anderen Geräten oder nach einem Update.</p>
+    <pre class="bench-out">${escHtml(text)}</pre>
+    <div class="row"><button class="btn" id="bench-copy" style="flex:1">📋 Kopieren</button><button class="btn ghost" id="bench-close" style="flex:1">Schließen</button></div>`);
+  $('bench-copy').onclick = () => { (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast('Kopiert'), () => toast('Kopieren ging nicht – Text markieren')); };
+  $('bench-close').onclick = closeModal;
 }
 // ?messen (Block 124): Zeit je Bild (gleitend), Boden / Objekte / Nacht, Lichter, Bildchen fehlend/neu, Zoom
 function messLine(ms) {

@@ -11,6 +11,8 @@ document.body.innerHTML = body ? body[1].replace(/<script[\s\S]*?<\/script>/g, '
 const noop = () => {};
 const STATE_PROPS = ['globalCompositeOperation', 'globalAlpha', 'fillStyle', 'strokeStyle', 'lineWidth'];
 const stack = [];
+const DRAW_OPS = new Set(['fill', 'stroke', 'drawImage', 'fillRect', 'strokeRect', 'fillText', 'strokeText', 'clearRect', 'putImageData', 'getImageData',
+  'moveTo', 'lineTo', 'ellipse', 'arc', 'arcTo', 'bezierCurveTo', 'quadraticCurveTo', 'rect', 'roundRect']);
 const fakeCtx = new Proxy({ globalCompositeOperation: 'source-over', globalAlpha: 1 }, {
   get(target, prop) {
     if (prop in target) return target[prop];
@@ -21,8 +23,12 @@ const fakeCtx = new Proxy({ globalCompositeOperation: 'source-over', globalAlpha
     if (prop === 'measureText') return () => ({ width: 10 });
     if (prop === 'createImageData') return (w, h) => ({ width: w, height: h, data: new Uint8ClampedArray(w * h * 4) });
     if (prop === 'createRadialGradient' || prop === 'createLinearGradient') return () => ({ addColorStop: noop });
+    if (prop === 'createPattern') return () => ({ setTransform: noop });     // Musterkacheln (Block 125c) auch im Test
     // wie im Browser: negativer Radius wirft (IndexSizeError) – im echten Spiel hält das alles an (blauer Bildschirm)
     const neg = (name, rs) => { if (rs.some(r => r < 0)) throw new Error(`${name}: negativer Radius ${rs.join(', ')}`); };
+    // Leistungs-Wächter (Block 149): zählt Zeichenbefehle, wenn globalThis.__ctxCount ein Objekt ist
+    const C = globalThis.__ctxCount;
+    if (C && DRAW_OPS.has(prop)) C[prop] = (C[prop] || 0) + 1;
     if (prop === 'arc') return (x, y, r) => neg('arc', [r]);
     if (prop === 'ellipse') return (x, y, rx, ry) => neg('ellipse', [rx, ry]);
     return noop;

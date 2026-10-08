@@ -1,0 +1,152 @@
+{
+ "gross Tag Zoom 0.45": {
+  "ops": 4006,
+  "geo": 3586,
+  "live": 18
+ },
+ "gross Tag Zoom 0.8": {
+  "ops": 2757,
+  "geo": 24080,
+  "live": 22
+ },
+ "gross Tag Zoom 1.2": {
+  "ops": 5565,
+  "geo": 13726,
+  "live": 112
+ },
+ "gross Tag Zoom 1.6": {
+  "ops": 25318,
+  "geo": 109007,
+  "live": 929
+ },
+ "gross Tag Zoom 2.2": {
+  "ops": 15816,
+  "geo": 76230,
+  "live": 561
+ },
+ "gross Nacht Zoom 0.45": {
+  "ops": 6244,
+  "geo": 5555,
+  "live": 16
+ },
+ "gross Nacht Zoom 0.8": {
+  "ops": 3693,
+  "geo": 1995,
+  "live": 18
+ },
+ "gross Nacht Zoom 1.2": {
+  "ops": 6647,
+  "geo": 25806,
+  "live": 126
+ },
+ "gross Nacht Zoom 1.6": {
+  "ops": 31389,
+  "geo": 120634,
+  "live": 929
+ },
+ "gross Nacht Zoom 2.2": {
+  "ops": 19746,
+  "geo": 83788,
+  "live": 561
+ },
+ "freizeitpark Tag Zoom 0.45": {
+  "ops": 1978,
+  "geo": 3959,
+  "live": 5
+ },
+ "freizeitpark Tag Zoom 0.8": {
+  "ops": 796,
+  "geo": 10614,
+  "live": 7
+ },
+ "freizeitpark Tag Zoom 1.2": {
+  "ops": 237,
+  "geo": 904,
+  "live": 1
+ },
+ "freizeitpark Tag Zoom 1.6": {
+  "ops": 6590,
+  "geo": 22964,
+  "live": 27
+ },
+ "freizeitpark Tag Zoom 2.2": {
+  "ops": 5539,
+  "geo": 17585,
+  "live": 20
+ },
+ "freizeitpark Nacht Zoom 0.45": {
+  "ops": 2525,
+  "geo": 22004,
+  "live": 7
+ },
+ "freizeitpark Nacht Zoom 0.8": {
+  "ops": 1116,
+  "geo": 3877,
+  "live": 4
+ },
+ "freizeitpark Nacht Zoom 1.2": {
+  "ops": 287,
+  "geo": 960,
+  "live": 1
+ },
+ "freizeitpark Nacht Zoom 1.6": {
+  "ops": 7228,
+  "geo": 24236,
+  "live": 27
+ },
+ "freizeitpark Nacht Zoom 2.2": {
+  "ops": 6111,
+  "geo": 18725,
+  "live": 20
+ },
+ "farben Tag Zoom 0.45": {
+  "ops": 1358,
+  "geo": 1041,
+  "live": 1
+ },
+ "farben Tag Zoom 0.8": {
+  "ops": 646,
+  "geo": 555,
+  "live": 0
+ },
+ "farben Tag Zoom 1.2": {
+  "ops": 2689,
+  "geo": 6649,
+  "live": 28
+ },
+ "farben Tag Zoom 1.6": {
+  "ops": 7258,
+  "geo": 23749,
+  "live": 86
+ },
+ "farben Tag Zoom 2.2": {
+  "ops": 4531,
+  "geo": 14422,
+  "live": 52
+ },
+ "farben Nacht Zoom 0.45": {
+  "ops": 2092,
+  "geo": 990,
+  "live": 1
+ },
+ "farben Nacht Zoom 0.8": {
+  "ops": 1002,
+  "geo": 864,
+  "live": 0
+ },
+ "farben Nacht Zoom 1.2": {
+  "ops": 3080,
+  "geo": 6906,
+  "live": 28
+ },
+ "farben Nacht Zoom 1.6": {
+  "ops": 8896,
+  "geo": 27021,
+  "live": 86
+ },
+ "farben Nacht Zoom 2.2": {
+  "ops": 5437,
+  "geo": 16230,
+  "live": 52
+ }
+}

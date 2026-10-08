@@ -1742,14 +1742,23 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       und dahinter anschließen, kein Weg sichtbar unter dem Brückendeck
 
 ## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
-- [ ] Mess-Test mit großen Testwelten (testsave-gross, Fnymiland OG): zählt je Bild Zeichenbefehle, gemalte Bildchen, Felder, die
-      live gezeichnet werden („lebendige Felder“), und Rechenzeit – nah, mittel, weit, Tag/Nacht. Feste Obergrenzen; `npm test`
-      schlägt fehl, wenn etwas Neues sie reißt (z. B. ein neues bewegtes Ding, das jedes Bild live zeichnet)
-- [ ] Je Neuheit prüfen: Bewegtes über `ANIM_ITEMS`/Bewegtes-Pfad (nicht das ganze Feld live), Ruhendes als Bildchen, Muster als
-      Kachel (`PAT_TILE`), keine neue Arbeit je Feld und Bild; im Fenster „Grafik“ abschaltbar, wenn teuer
-- [ ] Vor jedem Push: Messlauf (Werkzeug wie in Block 125c: Welt laden, rendern, Zeiten/Spitzen beim Ziehen und Zoomen) und Zahlen
-      neben die vorigen in AUFGABEN.md schreiben – wird es langsamer, erst klären
-- [ ] PC-Skalierung (100/125/150 %) und iPad-Größe immer mit nachstellen (`devicePixelRatio` setzen, `resize()`)
+- [x] Wächter je Bild (tests/leistung.test.js): Testwelten groß, Freizeitpark, Farben × Zoom 0,45/0,8/1,2/1,6/2,2 × Tag/Nacht, wie iPad
+      (Pixeldichte 2). Vorlauf, bis nichts mehr nachgemalt wird; dann ein Bild zählen: Zeichenbefehle, Linienstücke/Formpunkte, live
+      gezeichnete Objekte. Grenzen in tests/leistung-grenzen.json (+10 % Spielraum). Im ruhenden Bild darf nichts neu gemalt werden
+      (Bodenstück im Bild, Bildchen) – sonst wird ein Zwischenspeicher ständig ungültig. Zahlen in jedem Lauf gleich (geprüft).
+- [x] Wächter je Ding (tests/leistung-je-ding.test.js): jedes Gebäude (Stufe 1 + höchste), jede Deko-Form, jeder Wegbelag allein nah
+      gezeichnet und gezählt (zweiter Durchgang, Einmaliges zählt nicht). Teurer als +10 % → Fehler; **neues Ding ohne Wert → Fehler**
+      (muss bewusst aufgenommen werden). Grenzen in tests/leistung-je-ding.json (202 Einträge).
+- [x] Gegenprobe: Musterkacheln abgeschaltet → Wächter je Ding meldet Fischgrät 818 statt ≤ 435, Klinker, Riesenrad. (Der Wächter je
+      Bild sah es nicht: in der ganzen Szene im Spielraum – darum beide.) Test-Zeichenfläche zählt (tests/setup.js `__ctxCount`) und
+      kann Füllmuster (`createPattern`), damit Musterkacheln auch im Test laufen.
+- [x] `npm run leistung:neu`: schreibt beide Grenz-Dateien neu – nur bei gewollter Änderung, dann hier begründen.
+- [x] Messlauf im Spiel (☰ → Grafik → „📏 Messlauf (≈ 45 s)“): fährt Zoom 0,45/0,8/1,3/2 je ruhig + ziehen (Kreis, ~880 px/s) und
+      rein/raus ab, misst echte Bildabstände (mit Grafikkarte) und Rechenzeit, zeigt Tabelle zum Kopieren (Gerät, Größe, Pixeldichte,
+      Grafikkarte, Version), merkt sich „Ruckler gesamt“ vom letzten Mal. Kamera danach zurück. Test: messlauf.test.js
+- [ ] Messlauf auf PC und iPad laufen lassen (Nutzer) und Zahlen hier eintragen – Ausgangswerte für spätere Vergleiche
+- Gemerkt (teuerste Dinge nah, je Ding): Schloss 15.161, Botanischer Garten 12.231, Sternwarte 8.751 – alle anderen < 1.100.
+  Kandidaten, wenn es nah am Schloss/Garten ruckelt. Einmal 104 ms Rechenzeit beim Ziehen (Zoom 0,8, Handygröße) nicht wiederholbar
 
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern

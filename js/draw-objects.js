@@ -281,7 +281,8 @@ function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
     e = { pat }; patTiles.set(key, e);
   }
   const A = L([-0.5 - x, -0.5 - y]);
-  e.pat.setTransform(new DOMMatrix([2 * P * a / Wt, 0, 0, 2 * P * b / Ht, A[0], A[1]]));
+  const M = { a: 2 * P * a / Wt, b: 0, c: 0, d: 2 * P * b / Ht, e: A[0], f: A[1] };
+  e.pat.setTransform(typeof DOMMatrix === 'function' ? new DOMMatrix([M.a, 0, 0, M.d, M.e, M.f]) : M);
   const E = 0.55 + ext, [u0, u1, v0, v1] = box || [-E, E, -E, E];
   g.fillStyle = e.pat;
   g.beginPath(); [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.fill();
