@@ -26,17 +26,17 @@ describe('Parkeisenbahn (Block 136)', () => {
   });
   it('der Zug fährt im Kreis und hält an der Station; Fahrgäste sind echte Bewohner', () => {
     loop(); game("build('pb_station', 7, 10); recalc(); pbRuns.clear(); stepParkTrains(0.01)");
-    const r = () => game('pbRuns.get(PB_RINGS[0].key)');
+    const r = () => game('pbRuns.get(PB_RINGS[0].key).trains[0]');
     game('for (let i = 0; i < 40; i++) stepParkTrains(0.1)');                            // Wartezeit vorbei, unterwegs
     expect(r().s).toBeGreaterThan(0.5);
-    const back = game(`(() => { const r = pbRuns.get(PB_RINGS[0].key); for (let i = 0; i < 600; i++) { stepParkTrains(0.1); if (r.wait > 0) return [i, r.s]; } return null; })()`);
+    const back = game(`(() => { const r = pbRuns.get(PB_RINGS[0].key).trains[0]; for (let i = 0; i < 600; i++) { stepParkTrains(0.1); if (r.wait > 0) return [i, r.s]; } return null; })()`);
     expect(back && back[1]).toBe(0);                                                  // nach einer Runde: Halt genau an der Station
     expect(back[0]).toBeGreaterThan(250);                                             // ~26 Felder bei 0,8 Feldern/s
     const cars = game('parkTrainCars()');
     expect(cars.map(c => c.car)).toEqual(['lok', 'wagen', 'wagen', 'wagen']);
     expect(cars.every(c => Number.isFinite(c.px) && Number.isFinite(c.py) && Math.abs(c.du) + Math.abs(c.dv) > 0.9)).toBe(true);
     const kinds = game('walkers.map(w => w.kind)');
-    for (const p of game('pbRuns.get(PB_RINGS[0].key).pax').filter(Boolean)) if (kinds.length) expect(kinds).toContain(p.kind);
+    for (const p of game('pbRuns.get(PB_RINGS[0].key).trains[0].pax').filter(Boolean)) if (kinds.length) expect(kinds).toContain(p.kind);
   });
   it('Zug wählen: Straßenbahn und Mini-Zug in der Kunstakademie; alle Züge zeichnen ohne Fehler (nah, weit, fahrend, wartend)', () => {
     expect(game("!!DESIGN_BY_ID['pb_station:form:tram'] && !!DESIGN_BY_ID['pb_station:form:mini']")).toBe(true);
@@ -59,5 +59,47 @@ describe('Parkeisenbahn (Block 136)', () => {
     expect(game('parkTrainCars()[0].model')).toBe('mini');
     const calls = game(`(() => { let n = 0; const d = pbTrainAt; pbTrainAt = () => { n++; }; try { drawObject('pb_station', 0, 0, 1, 0, 7, 10, 1, state.tiles.get('7,10')); drawObject('pb_station', 0, 0, 1, 0, 1e6, 1e6, 1, { b: 'pb_station', form: 1 }); } finally { pbTrainAt = d; } return n; })()`);
     expect(calls).toBe(1);                                                             // nur im Vorschaubild der Zugwahl
+  });
+  it('mehrere Züge (Block 136e): im Stationsfenster „+ Zug“, Modell je Zug, entfernen gibt Geld zurück; Züge halten Abstand', () => {
+    loop(); game("build('pb_station', 7, 10); build('pb_station', 10, 5); recalc(); pbRuns.clear(); stepParkTrains(0.01)");
+    expect(game('pbForms(PB_RINGS[0])')).toEqual([0]);                                   // einer ist immer dabei
+    game("openInfo(10, 5)");                                                             // Fenster der zweiten Station: dieselbe Strecke
+    expect(game("document.querySelector('#panel .label') && [...document.querySelectorAll('#panel .label')].some(l => /Züge auf dieser Strecke \\(1\\)/.test(l.textContent))")).toBe(true);
+    const m = game('state.money');
+    game("document.querySelector('#panel [data-pbadd]').click()");
+    expect(game('pbForms(PB_RINGS[0])')).toEqual([0, 0]);
+    expect(game('state.money')).toBe(m - game('PB_ZUG_COST'));
+    game("state.design.add('pb_station:form:mini'); openInfo(10, 5); document.querySelector('#panel [data-pbm=\"1,2\"]').click()");
+    expect(game('pbForms(PB_RINGS[0])')).toEqual([0, 2]);
+    game('stepParkTrains(0.01)');
+    expect(game('parkTrainCars().map(c => c.model)')).toEqual(['bimmel', 'bimmel', 'bimmel', 'bimmel', 'mini', 'mini', 'mini', 'mini', 'mini']);
+    // lange fahren: nie zu dicht auf (Heck des vorderen + 1 Feld), beide kommen voran
+    const ok = game(`(() => { const L = pbRuns.get(PB_RINGS[0].key).trains, R = PB_RINGS[0], s0 = L.map(r => r.s), moved = [0, 0];
+      for (let i = 0; i < 3000; i++) { const before = L.map(r => r.s); stepParkTrains(0.05); L.forEach((r, j) => { moved[j] += ((r.s - before[j]) % R.n + R.n) % R.n; });
+        for (const r of L) if (pbFree(R, L, r) < -1e-6) return 'zu nah bei ' + i; }
+      return moved.every(v => v > 2 * R.n) || moved; })()`);
+    expect(ok).toBe(true);
+    // Platz: so viele, wie die Strecke trägt
+    for (let i = 0; i < 20; i++) game('pbBuyTrain(PB_RINGS[0])');
+    const n = game('pbForms(PB_RINGS[0]).length');
+    expect(n).toBeGreaterThan(3); expect(game('pbRoom(PB_RINGS[0], pbForms(PB_RINGS[0]))')).toBe(true);
+    for (let i = 0; i < 400; i++) game('stepParkTrains(0.1)');                       // voll besetzt: kein Stillstand
+    expect(game('pbRuns.get(PB_RINGS[0].key).trains.every(r => pbFree(PB_RINGS[0], pbRuns.get(PB_RINGS[0].key).trains, r) > -1e-6)')).toBe(true);
+    // entfernen: Geld zurück, die anderen fahren weiter
+    const m2 = game('state.money');
+    expect(game('pbSellTrain(PB_RINGS[0], 1)')).toBe(true);
+    expect(game('state.money')).toBe(m2 + game('PB_ZUG_COST'));
+    expect(game('pbForms(PB_RINGS[0]).length')).toBe(n - 1);
+    // Station mit den Zügen abreißen: Züge wandern zur anderen Station
+    const holder = game("PB_RINGS[0].key");
+    const other = holder === '7,10' ? [10, 5] : [7, 10], [hx, hy] = holder.split(',').map(Number);
+    game(`demolish(${hx}, ${hy}); state.money = 1e9; build('pb_gleis', ${hx}, ${hy}); recalc()`);
+    expect(game('PB_RINGS.length')).toBe(1);
+    expect(game('pbForms(PB_RINGS[0]).length')).toBe(n - 1);
+    expect(game(`state.tiles.get('${other.join(',')}').pbz.length`)).toBe(n - 1);
+    // letzte Station weg: die gekauften gibt es zurück
+    const m3 = game('state.money');
+    game(`demolish(${other[0]}, ${other[1]})`);
+    expect(game('state.money') - m3).toBeGreaterThanOrEqual((n - 2) * game('PB_ZUG_COST'));
   });
 });

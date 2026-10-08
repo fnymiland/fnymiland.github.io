@@ -146,11 +146,12 @@ function claimSea(b, x, y, rot, t, bridge) {
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot, t)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
 }
 function demolish(x, y) {
-  const info = demolishInfo(x, y);
+  let info = demolishInfo(x, y);
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
   if (info.refund != null) {
     const gone = state.tiles.get(info.anchor);
+    if (gone && gone.b === 'pb_station' && gone.pbz) info = { ...info, refund: info.refund + pbHandOver(info.anchor, gone) };   // Block 136e
     state.tiles.delete(info.anchor);
     if (gone) restoreUnder(gone, ...keyXY(info.anchor));                  // Platz bleibt (auch unter großer Deko)
     state.money += info.refund;
@@ -676,6 +677,41 @@ function buyShip(k, model, to) {
   t.ships = (t.ships || []).concat([{ model, to }]);
   sfx('build'); toast(`${m.icon} ${m.name} legt ab!`); recalc(); save();
   return true;
+}
+// Parkeisenbahn (Block 136e): Züge einer Strecke kaufen, umstellen, entfernen. Die Liste liegt an der ersten Station (R.key)
+function pbWrite(R, forms) {
+  for (const k of R.ring) { const t = state.tiles.get(k); if (t && t.pbz) delete t.pbz; }
+  state.tiles.get(R.key).pbz = forms;
+}
+function pbBuyTrain(R) {
+  const f0 = pbForms(R), forms = f0.concat([f0[f0.length - 1]]);
+  if (!pbRoom(R, forms)) { fail('Für noch einen Zug ist die Strecke zu kurz'); return false; }
+  if (state.money < PB_ZUG_COST) { fail('Zu wenig Taler'); return false; }
+  state.money -= PB_ZUG_COST; pbWrite(R, forms);
+  sfx('build'); toast('🚂 Noch ein Zug fährt los!'); save();
+  return true;
+}
+function pbSellTrain(R, j) {
+  const forms = pbForms(R);
+  if (forms.length < 2 || !(j in forms)) return false;
+  forms.splice(j, 1); pbWrite(R, forms); pbDropRun(R, j);
+  state.money += PB_ZUG_COST;
+  sfx('dig'); save();
+  return true;
+}
+function pbSetModel(R, j, f) {
+  const forms = pbForms(R);
+  if (!(j in forms) || !lookOk('pb_station', 'form', f)) return false;
+  forms[j] = f;
+  if (!pbRoom(R, forms)) { fail('Der Zug ist zu lang für diese Strecke – erst einen entfernen'); return false; }
+  pbWrite(R, forms); sfx('deco'); save();
+  return true;
+}
+// Station abgerissen: ihre Züge wandern an eine andere Station derselben Strecke, sonst gibt es die gekauften zurück (Betrag)
+function pbHandOver(k, t) {
+  const A = PB_AT.get(k), R = A && PB_RINGS[A.r], to = R && R.ring.find(o => o !== k && (state.tiles.get(o) || {}).b === 'pb_station');
+  if (to) { const u = state.tiles.get(to); u.pbz = (u.pbz || []).concat(t.pbz); return 0; }
+  return Math.max(0, t.pbz.length - 1) * PB_ZUG_COST;                   // auszahlen macht demolish
 }
 function sellShip(k, i) {
   const t = state.tiles.get(k), s = t && t.ships && t.ships[i];

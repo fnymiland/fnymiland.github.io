@@ -1247,29 +1247,70 @@ const PB_TRAINS = {                                                     // Form 
   tram: { cars: ['tram'], gap: 0.8, seats: 4, figS: 0.5 },
   mini: { cars: ['minilok', 'hase', 'baer', 'frosch', 'ente'], gap: 0.36, seats: 1, figS: 0.38 },
 };
-const pbRuns = new Map();                                               // Ring-Schlüssel → { s, wait, pax, stop }
-const pbModel = R => { const t = state.tiles.get(R.key), F = DECO_LOOKS.pb_station.forms; return (F[(t && t.form) || 0] || F[0]).id; };   // live von der Station: Umstellen wirkt sofort
-function pbPassengers(R) {
-  const T = PB_TRAINS[pbModel(R)], n = T.cars.filter(c => c !== 'lok' && c !== 'minilok').length * T.seats, pool = walkers.filter(w => !(w.inside > 0));
+const pbRuns = new Map();                                               // Ring-Schlüssel → { trains: [{ s, wait, pax, model }] }
+// Züge einer Strecke (Block 136e): an einer Station der Strecke gespeichert (t.pbz = Formnummern, in Ringfolge). Ohne gekaufte
+// fährt einer in der Form der ersten Station (im Stationspreis); jeder weitere kostet PB_ZUG_COST
+const PB_ZUG_COST = 1000;
+const pbFormId = f => { const F = DECO_LOOKS.pb_station.forms; return (F[f] || F[0]).id; };
+function pbForms(R) {
+  const out = [];
+  for (const k of R.ring) { const t = state.tiles.get(k); if (t && t.b === 'pb_station' && t.pbz) out.push(...t.pbz); }
+  if (!out.length) { const t = state.tiles.get(R.key); out.push((t && t.form) || 0); }
+  return out;
+}
+const pbLen = f => { const T = PB_TRAINS[pbFormId(f)]; return (T.cars.length - 1) * T.gap + 1.6; };   // Platz eines Zugs auf der Strecke (mit Abstand)
+const pbRoom = (R, forms) => forms.reduce((s, f) => s + pbLen(f), 0) <= R.n - 1;
+const pbModel = R => pbFormId(pbForms(R)[0]);                          // erster Zug der Strecke
+function pbPassengers(R, model = pbModel(R)) {
+  const T = PB_TRAINS[model], n = T.cars.filter(c => c !== 'lok' && c !== 'minilok').length * T.seats, pool = walkers.filter(w => !(w.inside > 0));
   return Array.from({ length: n }, (_, i) => {
     if (Math.random() < 0.3) return null;                               // nicht jeder Platz ist besetzt
     const w = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
     return w ? { kind: w.kind, fur: w.fur, shirt: w.shirt, hat: w.hat, face: w.face } : { kind: i % ANIMALS.length, fur: FUR[i % FUR.length], shirt: SHIRTS[i % SHIRTS.length] };
   });
 }
+// neuer Zug: in die Mitte der größten Lücke
+function pbNewTrain(R, L, model) {
+  let s = 0;
+  if (L.length) {
+    const ss = L.map(r => r.s).sort((p, q) => p - q);
+    let best = -1;
+    ss.forEach((a, i) => { const gap = i + 1 < ss.length ? ss[i + 1] - a : ss[0] + R.n - a; if (gap > best) { best = gap; s = (a + gap / 2) % R.n; } });
+  }
+  return { s, wait: L.length ? 1 : 1.5, stop: 0, pax: pbPassengers(R, model), model };
+}
+// wie weit r fahren darf, bis es dem vorderen Zug zu nah kommt (Heck des vorderen + 1 Feld Abstand)
+function pbFree(R, L, r) {
+  let free = Infinity;
+  for (const a of L) {
+    if (a === r) continue;
+    let d = ((a.s - r.s) % R.n + R.n) % R.n;
+    if (d < 1e-9) d = R.n;
+    const T = PB_TRAINS[a.model];
+    free = Math.min(free, d - (T.cars.length - 1) * T.gap - 1);
+  }
+  return free;
+}
+const pbDropRun = (R, j) => { const run = pbRuns.get(R.key); if (run) run.trains.splice(j, 1); };   // entfernt: die anderen fahren weiter, wo sie sind
 function stepParkTrains(dt) {
   for (const R of PB_RINGS) {
-    let r = pbRuns.get(R.key);
-    if (!r) { r = { s: 0, wait: 1.5, stop: 0, pax: pbPassengers(R), model: pbModel(R) }; pbRuns.set(R.key, r); }
-    if (r.model !== pbModel(R)) { r.model = pbModel(R); r.pax = pbPassengers(R); }   // anderer Zug: andere Plätze
-    if (r.wait > 0) { r.wait = Math.max(0, r.wait - dt); continue; }
-    const prev = r.s;
-    r.s += PB_SPEED * dt;
-    for (const i of R.stops) {                                           // an jeder Station halten (Wagenmitte am Bahnsteig)
-      const at = i + (i === 0 && prev > R.n - 1 ? R.n : 0);
-      if (prev < at && r.s >= at) { r.s = at; r.wait = PB_WAIT; if (i === 0) r.pax = pbPassengers(R); break; }
+    const models = pbForms(R).map(pbFormId);
+    let run = pbRuns.get(R.key);
+    if (!run) { run = { trains: [] }; pbRuns.set(R.key, run); }
+    const L = run.trains;
+    if (L.length > models.length) L.length = models.length;
+    while (L.length < models.length) L.push(pbNewTrain(R, L, models[L.length]));
+    L.forEach((r, i) => { if (r.model !== models[i]) { r.model = models[i]; r.pax = pbPassengers(R, r.model); } });   // anderer Zug: andere Plätze
+    for (const r of L) {
+      if (r.wait > 0) { r.wait = Math.max(0, r.wait - dt); continue; }
+      const prev = r.s;
+      r.s += Math.max(0, Math.min(PB_SPEED * dt, L.length > 1 ? pbFree(R, L, r) : Infinity));   // vorn zu nah: warten
+      for (const i of R.stops) {                                         // an jeder Station halten (Wagenmitte am Bahnsteig)
+        const at = i + (i === 0 && prev > R.n - 1 ? R.n : 0);
+        if (prev < at && r.s >= at) { r.s = at; r.wait = PB_WAIT; if (i === 0) r.pax = pbPassengers(R, r.model); break; }
+      }
+      if (r.s >= R.n) r.s -= R.n;
     }
-    if (r.s >= R.n) r.s -= R.n;
   }
   for (const k of [...pbRuns.keys()]) if (!PB_RINGS.some(R => R.key === k)) pbRuns.delete(k);
 }
@@ -1284,12 +1325,15 @@ function pbPoint(R, s) {
 function parkTrainCars() {
   const out = [];
   PB_RINGS.forEach((R, ri) => {
-    const r = pbRuns.get(R.key) || { s: 0, pax: [] }, model = pbModel(R), T = PB_TRAINS[model];
-    let seat = 0;
-    T.cars.forEach((car, j) => {
-      const [u, v, du, dv] = pbPoint(R, r.s - j * T.gap + 0.3), pax = car === 'lok' || car === 'minilok' ? [] : (r.pax || []).slice(seat, seat + T.seats);
-      if (pax.length || car !== 'lok') seat += car === 'lok' || car === 'minilok' ? 0 : T.seats;
-      out.push({ pbtrain: true, ri, j, car, model, px: u, py: v, du, dv, pax });
+    const run = pbRuns.get(R.key), L = run && run.trains.length ? run.trains : [{ s: 0, pax: [], model: pbModel(R) }];
+    L.forEach((r, ti) => {
+      const model = r.model, T = PB_TRAINS[model];
+      let seat = 0;
+      T.cars.forEach((car, j) => {
+        const [u, v, du, dv] = pbPoint(R, r.s - j * T.gap + 0.3), pax = car === 'lok' || car === 'minilok' ? [] : (r.pax || []).slice(seat, seat + T.seats);
+        if (car !== 'lok' && car !== 'minilok') seat += T.seats;
+        out.push({ pbtrain: true, ri, ti, j, car, model, px: u, py: v, du, dv, pax });
+      });
     });
   });
   return out;

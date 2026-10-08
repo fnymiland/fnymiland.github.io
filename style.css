@@ -897,3 +897,7 @@ body.visiting #net-btn { display: none !important; }
 
 /* Linienformen im Fenster (Block 145): Bild statt Farbfläche, etwas größer */
 .swatches .sw.esw { width: 44px; height: 44px; }
+/* Parkeisenbahn: Züge der Strecke im Stationsfenster (Block 136e) */
+.pb-zug { align-items: center; flex-wrap: nowrap; gap: 4px; }
+.pb-zug .look { padding: 5px 8px; white-space: nowrap; }
+.pb-nr { font-weight: 700; min-width: 1.4em; text-align: center; opacity: .7; }

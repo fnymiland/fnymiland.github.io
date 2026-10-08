@@ -1163,13 +1163,33 @@ function decoLookHtml(b, o, at = null) {
   const L = DECO_LOOKS[b], form = o.form || 0, col = o.col || 0, more = lookMore(b), rail = b === 'schiene' && at;
   const others = rail ? 0 : lookAll(b).filter(x => x !== o && ((x.form || 0) !== form || (x.col || 0) !== col)).length;
   const p = state.paintNew[b], on = !!(p && (p.form != null || p.col != null));
-  return `${rail ? railScopeHtml(at[0], at[1]) : ''}<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
-    <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
+  return `${rail ? railScopeHtml(at[0], at[1]) : ''}${b === 'pb_station' && at ? '' : `<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
+    <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>`}
     ${L.cols ? `<div class="label">Farbe</div>
     <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-dmore="1">🎨 ${more} weitere ${L.cols ? 'Formen und Farben' : 'Formen'} freischalten ›</button></div>` : ''}
     <div class="looks paint-more">${others ? `<button class="look" data-dall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
       <button class="look${on ? ' on' : ''}" data-dnew="1" aria-pressed="${on}">${on ? '✓' : '○'} Neu gebaute bekommen das</button></div>`;
+}
+// Parkeisenbahn (Block 136e): Züge der ganzen Strecke im Fenster jeder ihrer Stationen – Modell je Zug, entfernen, „+ Zug“
+function pbTrainsHtml(x, y) {
+  const A = PB_AT.get(x + ',' + y), R = A && PB_RINGS[A.r];
+  if (!R) return '<div class="label">Züge</div><p class="muted">Sobald das Gleis ein geschlossener Rundkurs ist, fährt hier ein Zug.</p>';
+  const forms = pbForms(R), F = lookFree('pb_station', 'form'), more = DECO_LOOKS.pb_station.forms.length - F.length;
+  const room = pbRoom(R, forms.concat([forms[forms.length - 1]]));
+  return `<div class="label">Züge auf dieser Strecke (${forms.length})</div>
+    ${forms.map((f, j) => `<div class="looks pb-zug"><span class="pb-nr">${j + 1}</span>${F.map(([m, i]) => `<button class="look${i === f ? ' on' : ''}" data-pbm="${j},${i}" title="${m.name}">${m.short || m.name}</button>`).join('')}${forms.length > 1 ? `<button class="look" data-pbdel="${j}" aria-label="Zug ${j + 1} entfernen" title="Entfernen (gibt 🪙 ${fmt(PB_ZUG_COST)} zurück)">✕</button>` : ''}</div>`).join('')}
+    <div class="row"><button class="btn" data-pbadd="1" ${room && state.money >= PB_ZUG_COST ? '' : 'disabled'}>+ Zug · 🪙 ${fmt(PB_ZUG_COST)}</button></div>
+    ${room ? '' : '<p class="muted">Für noch einen Zug ist die Strecke zu kurz – länger bauen.</p>'}
+    ${more ? `<div class="looks"><button class="look art-more" data-pbmore="1">🎨 ${more} weitere Züge freischalten ›</button></div>` : ''}`;
+}
+function wirePbTrains(el, x, y) {
+  const R = () => { const A = PB_AT.get(x + ',' + y); return A && PB_RINGS[A.r]; }, again = () => openInfo(x, y);
+  for (const b of el.querySelectorAll('[data-pbm]')) b.onclick = () => { const [j, f] = b.dataset.pbm.split(',').map(Number); if (R()) undoable(() => pbSetModel(R(), j, f)); again(); };
+  for (const b of el.querySelectorAll('[data-pbdel]')) b.onclick = () => { if (R()) undoable(() => pbSellTrain(R(), +b.dataset.pbdel)); again(); };
+  const add = el.querySelector('[data-pbadd]'), more = el.querySelector('[data-pbmore]');
+  if (add) add.onclick = () => { if (R()) undoable(() => pbBuyTrain(R())); again(); };
+  if (more) more.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.pb_station.group); };
 }
 function wireDecoLook(el, b, o, reopen, at = null) {
   const remember = () => { if (state.paintNew[b] && (state.paintNew[b].form != null || state.paintNew[b].col != null)) state.paintNew[b] = { form: o.form || 0, col: o.col || 0 }; };
@@ -1285,6 +1305,7 @@ function openInfo(x, y) {
       ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<div class="looks"><button class="look art-more" data-openart="1">🎨 Mehr Farben freischalten ›</button></div>' : ''}`;
   }
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
+  if (t.b === 'pb_station') colors += pbTrainsHtml(x, y);                  // Züge der Strecke (Block 136e)
   if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t, [x, y]);   // Form/Farbe (Block 106); Gleise mit Auswahl (146)
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
@@ -1423,6 +1444,7 @@ function openInfo(x, y) {
   wirePaintMore(el, t, () => openInfo(x, y));
   if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
   if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y), [x, y]);
+  if (t.b === 'pb_station') wirePbTrains(el, x, y);
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
   for (const sw of el.querySelectorAll('[data-win]')) sw.onclick = () => pick('win', sw.dataset.win);   // Fenster (Block 60e)
@@ -2541,7 +2563,8 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 const NEWS_HISTORY = [
   { id: '2026-10-08-parkbahn', date: '8. Oktober', title: 'Parkeisenbahn', items: [
     '🚂 <b>Parkeisenbahn:</b> Unter Freizeit → Parkeisenbahn ein schmales Gleis als Rundkurs ziehen – über Wiese, Park und quer über Wege – und eine Station hineinsetzen. Dann dreht die Bimmelbahn ihre Runden, und deine Bewohner fahren mit.',
-    '🚋 <b>Mehr Züge:</b> Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie – an der Station umstellen.',
+    '🚋 <b>Mehr Züge:</b> Im Fenster jeder Station „+ Zug“ – mehrere Züge auf einer Strecke, jeder mit eigenem Modell. Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie.',
+    '🎨 <b>Dachfarbe:</b> Stationen gibt es in vielen Farben.',
   ] },
   { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
     '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein und Ziegel mit echten Bogenöffnungen, Holz und Rot auf Pfählen.',

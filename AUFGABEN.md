@@ -1590,6 +1590,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       dann Fahrgäste, dann vorn. Geprüft in allen 4 Richtungen
 - [x] 136d (Nutzer): Dachfarbe der Station wählbar (`STATION_COLS` in data.js: rot/blau/grün/gelb frei, rosa/türkis/lila/braun über
       Kunstakademie), wie bei Bänken über das Stationsfenster und die Bauleiste.
+- [x] 136e (Nutzer: „zwei Stationen, trotzdem nur eine Bahn“): Stationsfenster zeigt die Züge der ganzen Strecke – Modell je Zug,
+      ✕ entfernen (Preis zurück), „+ Zug“ (1000 Taler). Einer ist immer dabei (im Stationspreis). Wie viele passen, hängt von der
+      Länge ab (`pbRoom`); Züge halten Abstand (`pbFree`: Heck des vorderen + 1 Feld), neuer Zug startet in der größten Lücke.
+      Station abgerissen: Züge wandern zur nächsten Station der Strecke, sonst Geld zurück. Test: parkbahn
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
