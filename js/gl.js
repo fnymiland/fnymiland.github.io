@@ -147,7 +147,10 @@ function glLive(x, y, l, u, r, d, fn) {
 // --- Bild ---
 // Darf dieses Bild über die Grafikkarte? (render, nach SPRITES_ON)
 function glFrameOk(z) {
-  return !GL.off && glWanted() && SPRITES_ON && !SPRITES_NEAR && spriteForce !== false && night === 0 && tool === 'look' && !moving && !plan && glInit();
+  // Grund fürs Messen (?messen): warum gerade (nicht) per Grafikkarte
+  GL.why = GL.off || !glWanted() ? 'aus (?gl=1 zum Einschalten)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
+    : night !== 0 ? 'Nacht/Dämmerung (noch 2D)' : tool !== 'look' || moving || plan ? 'Werkzeug gewählt (2D)' : !glInit() ? 'kein WebGL2 im Browser (2D)' : '';
+  return !GL.why;
 }
 function glBegin() {
   const gl = GL.gl, c = GL.canvas;

@@ -171,7 +171,10 @@ function frame(now) {
 // ?messen (Block 124): Zeit je Bild (gleitend), Boden / Objekte / Nacht, Lichter, Bildchen fehlend/neu, Zoom
 function messLine(ms) {
   MESS.ms += 0.1 * (ms - MESS.ms);
-  const t = `${MESS.ms.toFixed(1)} ms · Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)} · Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss} neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`;
+  const now = performance.now(), gap = MESS.at ? now - MESS.at : 16; MESS.at = now;   // echter Bildabstand (mit Grafikkarte)
+  MESS.gap = (MESS.gap || 16) + 0.1 * (Math.min(gap, 500) - (MESS.gap || 16));
+  const gl = typeof GL === 'undefined' ? '' : GL.why ? ` · GL ${GL.why}` : ` · GL an (${GL.stats.quads} Rechtecke)`;
+  const t = `Bild ${MESS.gap.toFixed(0)} ms = ${(1000 / MESS.gap).toFixed(0)} B/s · Rechnen ${MESS.ms.toFixed(1)} ms${gl} · Boden ${MESS.boden.toFixed(1)} · Objekte ${MESS.obj.toFixed(1)} · Nacht ${MESS.nacht.toFixed(1)} · Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss} neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`;
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '12px system-ui, sans-serif';
   const w = ctx.measureText(t).width + 12; ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.fillRect(8, H - 30, w, 20);
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(t, 14, H - 20); ctx.restore();

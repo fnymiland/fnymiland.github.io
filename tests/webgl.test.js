@@ -51,8 +51,10 @@ describe('WebGL weit weg (Block 144)', () => {
   });
   it('GL-Bild nur bei Tag, weit weg, ohne Werkzeug; ?gl=0 schaltet ab', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'js', 'gl.js'), 'utf8');
-    expect(src).toMatch(/night === 0/);
-    expect(src).toMatch(/tool === 'look'/);
+    expect(src).toMatch(/night !== 0 \? 'Nacht/);
+    expect(src).toMatch(/tool !== 'look'/);
+    game('state.cam.z = 0.6; render(1e6)');
+    expect(game('GL.why')).toMatch(/kein WebGL2|aus/);                              // Grund steht für die Messzeile bereit
     expect(src).toMatch(/GL_Q === '0'/);
   });
 });
