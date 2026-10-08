@@ -44,6 +44,7 @@ describe('Buschfarben (Block 89)', () => {
   });
   it('Wilmerhecke: Farbe im Linienfenster und aus der Musterleiste; gespeichert', () => {
     game("chosenStyle.hecke = 'wilmer'; setTool('hecke')");
+    game("document.querySelector('#style-bar [data-epop=\"col\"]').click()");                    // Farbe aufklappen (Aufklappmenü wie beim Weg)
     expect(game("!!document.querySelector('#style-bar [data-bchip=\"1\"]')")).toBe(true);
     game("document.querySelector('#style-bar [data-bchip=\"1\"]').click()");
     game("buildEdge('hecke', 'a6,6'); buildEdge('hecke', 'a7,6'); setTool('look')");
@@ -62,6 +63,7 @@ describe('Buschfarben (Block 89)', () => {
     game('for (const d of DESIGN) state.design.add(d.id)');                                    // alle Heckenformen frei
     for (const st of forms) {
       game(`state.edges.clear(); state.paintNew = {}; chosenStyle.hecke = '${st}'; setTool('hecke')`);
+      game("document.querySelector('#style-bar [data-epop=\"col\"]').click()");
       expect(game("!!document.querySelector('#style-bar [data-bchip=\"2\"]')"), st).toBe(true);
       game("document.querySelector('#style-bar [data-bchip=\"2\"]').click()");
       game("buildEdge('hecke', 'a6,6'); buildEdge('hecke', 'a7,6'); setTool('look')");
@@ -98,5 +100,25 @@ describe('Buschfarben (Block 89)', () => {
     const d = game('JSON.parse(JSON.stringify(serialize()))');
     game(`adoptState(parseSave(${JSON.stringify(d)}))`);
     expect(game("state.tiles.get('8,8').col")).toBe(3);
+  });
+});
+
+describe('Leiste für Hecke, Zaun, Mauer (Nutzer: „dasselbe Aufklappmenü wie bei allem anderen“)', () => {
+  it('ein Knopf für die Form (Hecke: dazu Farbe); antippen klappt das Raster auf, eine Wahl klappt es zu', () => {
+    game('for (const d of DESIGN) state.design.add(d.id)');
+    for (const t of ['zaun', 'mauer', 'hecke']) {
+      game(`edgePop = null; setTool('${t}')`);
+      const chips = game("[...document.querySelectorAll('#style-bar > .style-chip')].map(b => b.dataset.epop)");
+      expect(chips, t).toEqual(t === 'hecke' ? ['form', 'col'] : ['form']);
+      expect(game("document.querySelectorAll('#style-bar .wpop').length")).toBe(0);
+      game("document.querySelector('#style-bar [data-epop=\"form\"]').click()");
+      const n = game("document.querySelectorAll('#style-bar .wpop [data-style]').length");
+      expect(n, t).toBe(game(`STYLES['${t}'].filter(styleOk).length`));
+      const id = game(`STYLES['${t}'][1].id`);
+      game(`document.querySelector('#style-bar .wpop [data-style="${id}"]').click()`);
+      expect(game(`chosenStyle['${t}']`)).toBe(id);
+      expect(game("document.querySelectorAll('#style-bar .wpop').length")).toBe(0);
+    }
+    game("setTool('look')");
   });
 });

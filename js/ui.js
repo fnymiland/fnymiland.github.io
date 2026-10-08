@@ -523,6 +523,30 @@ function bushChips(key) {
 function wireBushChips(bar, key, t) {
   for (const b of bar.querySelectorAll('[data-bchip]')) b.onclick = () => { state.paintNew[key] = { col: +b.dataset.bchip }; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
 }
+// Hecke, Zaun, Mauer (Nutzer, 09.10.2026: „komplett unübersichtlich – dasselbe Aufklappmenü wie bei allem anderen“): ein Knopf
+// für die Form, bei der Hecke einer für die Farbe; die Auswahl klappt als Raster darüber auf (wie Weg und Beete)
+let edgePop = null;
+const EDGE_GROUP = { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' };
+function edgeStyleBar(bar, t) {
+  const cur = currentStyle(t), st = styleDef(t, cur), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
+  const hecke = t === 'hecke', col = (state.paintNew.hecke && state.paintNew.hecke.col) || 0, cols = BUSH_COLS.map((c, i) => [c, i]).filter(([, i]) => bushColOk(i));
+  const moreC = BUSH_COLS.length - cols.length, artBtn = (n, k) => n ? `<button class="wopt more" data-emore="${k}"><i>🎨</i><small>+${n} in der Kunstakademie</small></button>` : '';
+  const pop = edgePop === 'form' ? `<div class="wpop" role="listbox" aria-label="Form">${have.map(s => `<button class="wopt${s.id === cur ? ' on' : ''}" data-style="${s.id}" role="option" aria-selected="${s.id === cur}"><i style="background:${edgeStyleBg(t, s)}"></i><small>${s.name}</small></button>`).join('')}${artBtn(more, 'form')}</div>`
+    : edgePop === 'col' && hecke ? `<div class="wpop wpop-cols" role="listbox" aria-label="Farbe">${cols.map(([c, i]) => `<button class="wopt${i === col ? ' on' : ''}" data-bchip="${i}" role="option" aria-selected="${i === col}"><i style="background:${c.c[0]}"></i><small>${c.name}</small></button>`).join('')}${artBtn(moreC, 'col')}</div>` : '';
+  const C0 = BUSH_COLS[col] || BUSH_COLS[0];
+  bar.innerHTML = pop
+    + `<button class="style-chip on wsel${edgePop === 'form' ? ' open' : ''}" data-epop="form" aria-expanded="${edgePop === 'form'}" aria-label="Form: ${st.name} – ändern"><i style="background:${edgeStyleBg(t, st)}"></i><span>${st.name} ▾</span></button>`
+    + (hecke ? `<button class="style-chip on wsel${edgePop === 'col' ? ' open' : ''}" data-epop="col" aria-expanded="${edgePop === 'col'}" aria-label="Farbe: ${C0.name} – ändern"><i style="background:${C0.c[0]}"></i><span>${C0.name} ▾</span></button>` : '');
+  for (const b of bar.querySelectorAll('[data-epop]')) b.onclick = () => { edgePop = edgePop === b.dataset.epop ? null : b.dataset.epop; sfx('deco'); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-style]')) b.onclick = () => { chosenStyle[t] = b.dataset.style; edgePop = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-bchip]')) b.onclick = () => { state.paintNew.hecke = { col: +b.dataset.bchip }; edgePop = null; previewCache = null; sfx('deco'); save(); renderStyleBar(t); };
+  for (const b of bar.querySelectorAll('[data-emore]')) b.onclick = () => { const k = b.dataset.emore; edgePop = null; openResearch('design'); artJump(k === 'col' ? 'Büsche' : EDGE_GROUP[t]); };
+  bar.hidden = false;
+}
+document.addEventListener('pointerdown', e => {                          // daneben tippen: Auswahl zu
+  if (!edgePop || ($('style-bar') && $('style-bar').contains(e.target))) return;
+  edgePop = null; if (EDGE_TOOLS.has(tool)) renderStyleBar(tool);
+}, true);
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station');
@@ -554,6 +578,7 @@ function renderStyleBar(t) {
   }
   if (!STYLES[t]) { bar.hidden = true; return; }
   if (t === 'weg') { wegStyleBar(bar); return; }
+  if (EDGE_TOOLS.has(t)) { edgeStyleBar(bar, t); return; }
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
       <i style="background:${EDGE_TOOLS.has(t) ? edgeStyleBg(t, st) : styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')

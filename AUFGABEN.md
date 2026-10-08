@@ -1657,6 +1657,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Schienen und Kanten wie eine Banane. Mit Zaun ringsum in beiden Richtungen geprüft (ub7-*.png).
 - [x] Nutzer: „Tunnel nicht mehrfach löschen, auch nicht in der Mitte einzeln“ – der Abriss (Rechteck, auch 1×1 beim Tippen) kannte
       Tunnel nicht (`scanDemolish`). Unter einem Gebäude bleibt der Tunnel, bis das Gebäude weg ist. Test: ubahn
+- [x] Nutzer: „bei Zäunen dasselbe Aufklappmenü wie bei allem anderen – komplett unübersichtlich“: Hecke/Zaun/Mauer zeigen in der
+      Leiste nur noch „Form ▾“ (Hecke dazu „Farbe ▾“), die Auswahl klappt als Raster mit Namen auf (`edgeStyleBar`, `edgePop`), eine
+      Wahl oder daneben tippen klappt zu; „+n in der Kunstakademie“ springt zur passenden Gruppe. Tests: buschfarben
 - [ ] 136o Tunneleinfahrt als eigenes Bauteil (Nutzer, 09.10.2026: „automatisch ist cool, aber mega unintuitiv – man will einen
       Tunnel bauen, eine Einfahrt dazu und dann Schienen ran“): `tunneleinfahrt` 1×2, drehbar, 1.000 Taler; Formen Rampe/Backstein
       frei, Naturstein Kunstakademie; immer 2 lang (Ein-Feld-Rampe fällt weg). Hinteres Ende an den Tunnel (dreht sich selbst),
