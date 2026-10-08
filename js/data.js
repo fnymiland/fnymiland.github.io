@@ -318,6 +318,11 @@ Object.assign(ITEMS, {
              desc: 'Zieh die Strecke wie einen Weg über den Freizeitpark-Boden – als geschlossenen Rundkurs mit einer Station. Hügel und Abfahrten kommen von selbst.' },
   fz_station: { cat: 'fz', name: 'Achterbahn-Station', festival: true, cost: 150000, fzMin: 12, needs: 'fz', beauty: 20,
                 desc: 'Hier steigen die Gäste ein. Gehört in den Rundkurs der Achterbahn – dann fährt der Zug.' },
+  // Block 136: Parkeisenbahn – schmales Gleis wie einen Weg ziehen (Wiese, Park, Freizeitpark, über Wege), Station hinein: fährt im Kreis
+  pb_gleis: { cat: 'deko', name: 'Parkbahn-Gleis', cost: 80, mat: { bretter: 1 }, needs: 'grass', beauty: 1,
+              desc: 'Schmales Gleis für die Parkeisenbahn. Zieh es wie einen Weg als Rundkurs über Wiese, Park oder Freizeitpark – auch quer über Wege. Mit einer Station fährt die Bahn.' },
+  pb_station: { cat: 'deko', name: 'Parkbahn-Station', cost: 2500, mat: { bretter: 10 }, needs: 'grass', beauty: 14,
+                desc: 'Bahnsteig mit Dach. Auf ein Stück Parkbahn-Gleis im Rundkurs setzen – dann fährt die Bahn, und Bewohner fahren eine Runde mit. Den Zug wählst du hier.' },
   fz_hoch: { cat: 'fz', name: 'Achterbahn höher', festival: true, cost: 0, paint: true, needs: 'fz',
              desc: 'Über Achterbahn-Schienen ziehen: jedes Stück eine Stufe höher (bis 10). Ohne Pinsel baut sich die Strecke von selbst als Hügelbahn.' },
   fz_tief: { cat: 'fz', name: 'Achterbahn tiefer', festival: true, cost: 0, paint: true, needs: 'fz',
@@ -570,6 +575,7 @@ const MENU = [
     { id: 'fzschloss', label: '🏰 Schloss', items: ['fz_schloss', 'fz_torturm'] },
     { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
     { id: 'fzbahn', label: '🎢 Achterbahn', items: ['fz_bahn', 'fz_station', 'fz_looping', 'fz_hoch', 'fz_tief'] },
+    { id: 'parkbahn', label: '🚂 Parkeisenbahn', items: ['pb_gleis', 'pb_station'] },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
@@ -690,6 +696,8 @@ const ITEM_TIPS = {
   fz_wildwasser: 'Die Wildwasserbahn – Platsch!',
   fz_eis: 'Ein Eis-Stand für heiße Tage im Park.',
   fz_ballon: 'Ein Ballonverkäufer mit bunten Luftballons.',
+  pb_gleis: 'Schmales Gleis für die Parkeisenbahn – als Rundkurs ziehen, auch über Wege.',
+  pb_station: 'Station der Parkeisenbahn – in den Rundkurs setzen, Zug wählen.',
   fz_bahn: 'Die Achterbahn! Zieh die Schiene als Rundkurs und setz eine Station hinein.',
   fz_station: 'Die Station für deine Achterbahn.',
   fz_looping: 'Ein Looping für deine Achterbahn – kopfüber!',
@@ -1070,6 +1078,8 @@ const DECO_LOOKS = {
   brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
     { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
   // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
+  pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: null, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', design: 300 },
+    { id: 'mini', name: 'Mini-Zug', design: 250 }] },   // Block 136: die Form ist der Zug
   schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
     { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },
 };

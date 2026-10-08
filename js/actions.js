@@ -35,6 +35,15 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'pb_station' && old && old.b === 'pb_gleis') {           // Station auf ein Stück Parkbahn-Gleis (Block 136): Gleis wird Station
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    const c = costOf(b, x, y);
+    state.money -= c.cost - ITEMS.pb_gleis.cost; payMat(c.mat);         // das Gleis ist schon bezahlt
+    old.b = 'pb_station'; old.born = performance.now(); Object.assign(old, decoLookNew('pb_station'));
+    sfx('build'); recalc(); save();
+    return true;
+  }
   if (b === 'fz_hoch' || b === 'fz_tief') {          // Höhen-Pinsel (Block 60e): eine Stufe höher bzw. tiefer
     const err = placeError(b, x, y);
     if (err) { if (!quiet) fail(err); return false; }

@@ -415,6 +415,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Messlauf (☰ → Grafik) im Browser ansehen.
     **Bogenbrücken (Block 150):** Höhe/Bögen/Durchfahrt nur über `bridgeArch(x, y)` (gemerkt je groundVersion, recalc leert;
     null = flach). Bogenbrücken zeichnet die Objekt-Schleife (`drawArchBridge`), nicht der flache Durchgang.
+    **Parkeisenbahn (Block 136):** Ringe über `computeParkRails` (PB_RINGS/PB_AT), Zug je Ring (`pbRuns`, `parkTrainCars`); Fahrgäste
+    zeichnet `drawWalker` mit `seat`/`figS`/`sx,sy` – wer drawWalker ändert, prüft auch die sitzenden Figuren.
     Messen ohne `getImageData` auf der Hauptleinwand: Chrome schaltet sie danach auf Zeichnen ohne Grafikkarte um (falsche Zahlen).
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
     Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird

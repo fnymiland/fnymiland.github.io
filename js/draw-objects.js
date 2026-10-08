@@ -1849,6 +1849,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     case 'fz_bahn': case 'fz_station': drawCoasterTile(cx, cy, z, x, y, t && t.b ? t : { b: type }); break;   // Achterbahn (Block 60c)
+    case 'pb_gleis': case 'pb_station': drawParkTrack(cx, cy, z, x, y, t && t.b ? t : { b: type, ...(t || {}) }, now); break;   // Parkeisenbahn (Block 136)
     case 'fz_looping': drawCoasterTile(cx, cy, z, x, y, { b: 'fz_bahn', loop: true }); break;
     case 'zauberbrunnen': {                  // Album-Belohnung (Block 60d): Brunnen mit Regenbogen und Funkeln
       ellipse(cx, cy + 1 * z, hw * 0.8, hh * 0.8, 'rgba(40,40,40,0.15)');
@@ -3016,3 +3017,56 @@ BIG_ART.leuchtturm = (cx, cy, z, now, x, y, lvl, t) => {
   }
   g.restore();
 };
+
+// ---------------------------------------------------------------------------
+// Parkeisenbahn (Block 136): schmales Gleis (Rasen- oder Kiesbett, über einem Weg nur die Schienen mit Andreaskreuz), Station mit
+// Bahnsteig und Dach hinter dem Gleis. Steht die Station in keinem fertigen Rundkurs (oder im Vorschaubild), wartet ihr Zug am Bahnsteig
+// ---------------------------------------------------------------------------
+function drawParkTrack(cx, cy, z, x, y, t, now) {
+  const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
+  const arms = x > 1e5 ? [] : pbArms(x, y), segs = railSegments(arms, t), onWeg = wegUnder(t) != null, fz = x < 1e5 && terraLook(x, y) === 'fz';
+  const band = (seg, w, col) => poly(offsetPath(seg, w).concat(offsetPath(seg, -w).reverse()).map(L), C(col));
+  if (!onWeg) {
+    const bed = fz ? ['#b9ad98', '#cfc4b0'] : ['#7fbd5e', '#9fd979'];
+    for (const seg of segs) band(seg, 0.13, bed[0]);
+    for (const seg of segs) band(seg, 0.1, bed[1]);
+    g.strokeStyle = C('#9a6a46'); g.lineWidth = 1.3 * z; g.lineCap = 'butt'; g.beginPath();
+    for (const seg of segs) alongPath(seg, 0.1, (p, dir) => { const n = [-dir[1] * 0.085, dir[0] * 0.085], a = L([p[0] + n[0], p[1] + n[1]]), b = L([p[0] - n[0], p[1] - n[1]]); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); });
+    g.stroke();
+  }
+  for (const o of [-0.05, 0.05]) {                                        // Schienen (über dem Weg eingelassen: dunkle Rille)
+    g.strokeStyle = C(onWeg ? '#5d5a55' : '#6f7682'); g.lineWidth = 0.9 * z; g.lineCap = 'round'; g.beginPath();
+    for (const seg of segs) offsetPath(seg, o).forEach((q, i) => { const p = L(q); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+    g.stroke();
+  }
+  if (onWeg && t.b === 'pb_gleis') {                                      // Bahnübergang: kleines Andreaskreuz am Rand
+    const p0 = L([0.38, -0.38]), top = [p0[0], p0[1] - 11 * z];
+    g.strokeStyle = C('#8a8f98'); g.lineWidth = 0.9 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...top); g.stroke();
+    for (const s of [1, -1]) { g.strokeStyle = C('#e8604f'); g.lineWidth = 1.4 * z; g.beginPath(); g.moveTo(top[0] - 3 * z, top[1] - 1.5 * z * s + 1.5 * z); g.lineTo(top[0] + 3 * z, top[1] + 1.5 * z * s + 1.5 * z); g.stroke(); }
+  }
+  if (t.b !== 'pb_station') return;
+  const ax = arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);
+  const S = (a, b, up = 0) => { const p = L(ax ? [b, a] : [a, b]); return [p[0], p[1] - up * z]; };
+  pbBox(S, ax ? 0 : 1, ax ? 1 : 0, -0.5, 0.5, -0.46, -0.18, 0, 2.2, '#cfc6b4', '#e8e1d2', z, false);   // Bahnsteig hinter dem Gleis
+  for (const a of [-0.36, 0.36]) { const p0 = S(a, -0.3, 2.2), p1 = S(a, -0.3, 13); g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
+  const bank = S(0, -0.38, 2.2); g.fillStyle = C('#9a6a46'); g.fillRect(bank[0] - 3 * z, bank[1] - 3 * z, 6 * z, 1.2 * z);
+  pbBox(S, ax ? 0 : 1, ax ? 1 : 0, -0.52, 0.52, -0.5, -0.06, 13, 14.2, '#e8604f', '#f4d3c8', z, false);   // Dach
+  const sg = S(0, -0.06, 15.8); g.fillStyle = C('#fffaf0'); g.fillRect(sg[0] - 8 * z, sg[1] - 2.6 * z, 16 * z, 5.2 * z);
+  g.font = `600 ${3.4 * z}px system-ui, sans-serif`; g.fillStyle = C('#5a4636'); g.textBaseline = 'middle'; centerText('Rundfahrt', sg[0], sg[1] + 0.2 * z);
+  if (x > 1e5 || !PB_AT.has(x + ',' + y)) {                               // noch kein Rundkurs (oder Vorschau): der Zug wartet
+    const du = ax ? 0 : 1, dv = ax ? 1 : 0, M = (u, v, up = 0) => { const p = L([u, v]); return [p[0], p[1] - up * z]; };
+    pbTrainAt(M, 0, 0, du, dv, z, 0, lookForm('pb_station', t), null);   // ruhig (gehört zum Bildchen der Station)
+  }
+}
+// Quader in einem Rahmen S(a, b, up) (a längs, b quer): sichtbare Seiten, dann der Deckel (top false: offen)
+function pbBox(S, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open) {
+  const C4 = [[a0, b0], [a1, b0], [a1, b1], [a0, b1]];
+  const faces = [0, 1, 2, 3].map(i => {
+    const [x0, y0] = C4[i], [x1, y1] = C4[(i + 1) % 4], na = Math.abs(x0 - x1) < 1e-9 ? Math.sign(x0 - (a0 + a1) / 2) : 0, nb = Math.abs(y0 - y1) < 1e-9 ? Math.sign(y0 - (b0 + b1) / 2) : 0;
+    const nu = du * na - dv * nb, nv = dv * na + du * nb;
+    return { p: S(x0, y0, h0), q: S(x1, y1, h0), vis: nu + nv, nu };
+  }).filter(f => f.vis > 0.02).sort((a, b) => a.vis - b.vis);
+  for (const f of faces) poly([f.p, f.q, [f.q[0], f.q[1] - (h1 - h0) * z], [f.p[0], f.p[1] - (h1 - h0) * z]], C(shade(col, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0)));
+  if (!open) poly(C4.map(([a, b]) => S(a, b, h1)), C(top || shade(col, 0.12)));
+  return faces;
+}

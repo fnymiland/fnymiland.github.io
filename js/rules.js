@@ -502,7 +502,7 @@ const HARBOR_CAP = 3;                  // Block 37: nur die drei besten Häfen g
 function totals() {
   rebuildCover();
   computeMarkets();
-  computeParks(); computeCoasters(); computeTorPairs(); computeFz();
+  computeParks(); computeCoasters(); computeParkRails(); computeTorPairs(); computeFz();
   const net = computeNet();
   const st = new Map();
   const lmOn = new Map(), lmHalf = new Map();       // Typ → [x, y]
@@ -1289,6 +1289,31 @@ function computeCoasters() {
   }
   return COASTERS;
 }
+// Parkeisenbahn (Block 136): Gleis + Station auf Wiese/Park/Freizeitpark (auch über Wegen, der Weg bleibt darunter). Ein
+// geschlossener Rundkurs mit mindestens einer Station fährt; die erste Station bestimmt den Zug (Form). PB_AT: Feld → { r, i, din, dout }
+const isPbTrack = b => b === 'pb_gleis' || b === 'pb_station';
+let PB_RINGS = [], PB_AT = new Map();
+function computeParkRails() {
+  PB_RINGS = []; PB_AT = new Map();
+  const all = new Set([...state.tiles].filter(([, t]) => isPbTrack(t.b)).map(([k]) => k)), seen = new Set();
+  for (const k0 of all) {
+    if (seen.has(k0)) continue;
+    const comp = [], todo = [k0]; seen.add(k0);
+    while (todo.length) { const k = todo.pop(); comp.push(k); const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (all.has(n) && !seen.has(n)) { seen.add(n); todo.push(n); } } }
+    let ring = comp.length >= 4 && railLoop(comp);
+    const st = ring ? ring.findIndex(k => state.tiles.get(k).b === 'pb_station') : -1;
+    if (!ring || st < 0 || ring.length !== comp.length) continue;
+    ring = ring.slice(st).concat(ring.slice(0, st));                      // erste Station vorn
+    const n = ring.length, r = PB_RINGS.length, stops = ring.map((k, i) => state.tiles.get(k).b === 'pb_station' ? i : -1).filter(i => i >= 0);
+    PB_RINGS.push({ ring, n, key: ring[0], form: state.tiles.get(ring[0]).form || 0, stops });
+    ring.forEach((k, i) => {
+      const [x, y] = keyXY(k), [px, py] = keyXY(ring[(i - 1 + n) % n]), [nx, ny] = keyXY(ring[(i + 1) % n]);
+      PB_AT.set(k, { r, i, din: [x - px, y - py], dout: [nx - x, ny - y] });
+    });
+  }
+  return PB_RINGS;
+}
+const pbArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return !!t && isPbTrack(t.b); });
 // Höhenstufe eines Schienenstücks: vom Pinsel gesetzt, sonst die angezeigte Höhe (Automatik) gerundet
 const trackLevel = (x, y) => { const t = state.tiles.get(x + ',' + y), ca = COASTER_AT.get(x + ',' + y); return t && t.hgt != null ? t.hgt : Math.round(((ca && ca.h) || 0) / COASTER_STEP); };
 const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b); });
@@ -2448,6 +2473,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       }
       if (d.needs === 'platz') return 'Marktstände gehören auf einen Weg oder Platz';
       if (COVER.has(k)) {
+        if (tiles.length === 1 && b === 'pb_station' && (state.tiles.get(k) || {}).b === 'pb_gleis' && !opts.move) continue;   // Station aufs Parkbahn-Gleis (Block 136)
         if (tiles.length === 1 && b === 'weg' && crossingAt(fx, fy) && !opts.move) return null;             // Übergang umfärben
         if (tiles.length === 1 && crossCandidate(b, fx, fy) && !opts.move) return crossError(b, fx, fy);    // wird ein Bahnübergang (verschoben: das Ziel ginge verloren)
         return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
@@ -2936,7 +2962,7 @@ function previewDelta(b, x, y) {
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen)
   const t = totals();
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
-  rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeTorPairs(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
+  rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeParkRails(); computeTorPairs(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,

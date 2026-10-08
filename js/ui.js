@@ -1126,9 +1126,9 @@ function lookThumb(b, form, col) {
   if (lookThumbs.has(key)) return lookThumbs.get(key);
   let url = '';
   try {
-    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : 1.9, rail = b === 'schiene';
+    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : 1.9, rail = b === 'schiene' || b === 'pb_station';
     c.width = 64; c.height = 64; g = c.getContext('2d');
-    try { drawObject(b, 32, rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
+    try { drawObject(b, 32, b === 'pb_station' ? 42 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
     url = c.toDataURL();
     if (!url || !url.startsWith('data:image')) url = '';
   } catch (e) { url = ''; }
@@ -2539,6 +2539,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-parkbahn', date: '8. Oktober', title: 'Parkeisenbahn', items: [
+    '🚂 <b>Parkeisenbahn:</b> Unter Freizeit → Parkeisenbahn ein schmales Gleis als Rundkurs ziehen – über Wiese, Park und quer über Wege – und eine Station hineinsetzen. Dann dreht die Bimmelbahn ihre Runden, und deine Bewohner fahren mit.',
+    '🚋 <b>Mehr Züge:</b> Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie – an der Station umstellen.',
+  ] },
   { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
     '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein und Ziegel mit echten Bogenöffnungen, Holz und Rot auf Pfählen.',
     '⛵ <b>Boote fahren darunter durch</b> – unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',

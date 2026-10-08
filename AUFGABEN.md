@@ -1573,10 +1573,14 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 
 ## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn
 - [ ] U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)
-- [ ] Parkeisenbahn / Straßenbahn (Wunsch Nutzer, 08.10.): eigene kleine Bahn auf einem Rundkurs, nur eine Station – „Rundfahrt
-      zum Gucken“ (fährt immer im Kreis, hält an der Station, Fahrgäste steigen ein und wieder aus). Kleinere Gleise/Züge als die
-      Eisenbahn, darf durch Parks und über Plätze. Vorher besprechen: Bahnarten (Dampflok-Bimmelbahn, Straßenbahn), eigene Gleise
-      oder auf Wegen, Nutzen (Schönheit/Freizeit statt Fracht)
+- [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
+      (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
+      Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
+      ein Zug fährt im Kreis (0,8 Felder/s), hält 3,5 s an jeder Station. Züge = Formen der Station (`DECO_LOOKS.pb_station`):
+      Bimmelbahn (Dampflok, 3 offene Sommerwagen) frei, Straßenbahn (300) und Mini-Zug mit Tierwagen (250) in der Kunstakademie.
+      Fahrgäste: Aussehen echter Bewohner (beim Halt an der ersten Station neu), gezeichnet mit drawWalker (sitzend, `figS`,
+      `seat`). Station ohne Rundkurs: Zug wartet am Bahnsteig (auch Vorschaubild). Nutzen: Schönheit (Gleis 1, Station 14).
+      Gemessen: fahrender Zug +0,1–0,2 ms je Bild. Leistungs-Wächter: Gleis 31, Station 168–382 aufgenommen. Test: parkbahn.test.js
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):

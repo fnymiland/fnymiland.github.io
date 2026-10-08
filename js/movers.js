@@ -214,6 +214,7 @@ function stepMover(w, dt, ok, preferWay) {
 function stepMovers(dt) {
   stepTrains(dt);
   stepCoasters(dt);
+  stepParkTrains(dt);                                                   // Parkeisenbahn (Block 136)
   stepCritters(performance.now());
   for (const w of walkers) stepWalker(w, dt);
   if (typeof stepMe === 'function') stepMe(dt);                         // eigene Figur (Block 97)
@@ -256,7 +257,7 @@ function bubbleTick(now) {
 // Fußpunkt verkleinert; Platz auf dem Weg, Höhe auf der Bogenbrücke und das Namensschild bleiben gleich groß.
 // Vorschau im Fenster „Du“ (figPreview, w.full) zeigt die Figur in voller Größe.
 const FIG_SCALE = 0.7;
-const figScale = w => (w && w.full ? 1 : FIG_SCALE);
+const figScale = w => (w && w.figS) || (w && w.full ? 1 : FIG_SCALE);   // figS: sitzend in der Parkeisenbahn (Block 136)
 const labelOff = w => (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12);   // Namensschild über Hut und Ballon
 // Kopf der Figur auf dem Bildschirm (wie drawWalker)
 function walkerHead(w, z) {
@@ -308,16 +309,16 @@ function walkerDoing(w) {
 const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
 function drawWalker(w, z, now) {
   if (w.inside > 0) return;                                              // gerade im Gebäude
-  const p = toScreen(w.px, w.py);
+  const p = w.seat ? { x: w.sx, y: w.sy } : toScreen(w.px, w.py);         // sitzend im Zug: Bildschirmpunkt vorgegeben (Block 136)
   const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
   // auf einer Bogenbrücke geht es hoch und wieder runter
-  const arch = archAt(w.px, w.py), lift = (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150)
+  const arch = !w.seat && archAt(w.px, w.py), lift = w.seat ? 0 : (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150)
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
   const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25), S = figScale(w), footY = p.y - lift;
   let hy = y - 11 * z;
   g.save(); g.translate(x, footY); g.scale(S, S); g.translate(-x, -footY);   // um den Fußpunkt verkleinert (Block 115)
   try {
-  ellipse(x, footY - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');                  // Schatten unter den Füßen (auch oben auf einer Brücke)
+  if (!w.seat) ellipse(x, footY - 1 * z, 4.5 * z, 2 * z, 'rgba(40,60,20,0.2)');     // Schatten unter den Füßen (auch oben auf einer Brücke)
   if (sp === 'eichhorn') { ellipse(x + 4.2 * z, y - 9 * z, 2.8 * z, 5.5 * z, f); ellipse(x + 4.6 * z, y - 12 * z, 1.6 * z, 2.6 * z, shade(f, 0.15)); }   // buschiger Schwanz
   if (w.body === 'umhang' || w.body === 'rucksack') drawWearBack(x, y, z, w);   // hinter dem Körper (Block 97)
   ellipse(x, y - 4 * z, 3.6 * z, 4 * z, w.shirt);
@@ -1234,4 +1235,135 @@ function syncParade() {
   const [sx, sy] = free[Math.floor(Math.random() * free.length)], a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
   paraders.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5, kind: ANIMALS.indexOf(a), fur: a.fur || FUR[Math.floor(Math.random() * FUR.length)],
     shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.6, flag: PARADE_FLAGS[Math.floor(Math.random() * PARADE_FLAGS.length)] });
+}
+
+// ---------------------------------------------------------------------------
+// Parkeisenbahn (Block 136): je fertigem Rundkurs (PB_RINGS) ein Zug, fährt gemütlich im Kreis und hält an jeder Station. Fahrgäste
+// sind echte Bewohner (Aussehen gezogen, wenn der Zug an der ersten Station hält) – gezeichnet wie unterwegs, nur sitzend und kleiner
+// ---------------------------------------------------------------------------
+const PB_SPEED = 0.8, PB_WAIT = 3.5;
+const PB_TRAINS = {                                                     // Form der Station → Wagen (Abstand in Feldern, Sitzplätze je Wagen)
+  bimmel: { cars: ['lok', 'wagen', 'wagen', 'wagen'], gap: 0.52, seats: 2, figS: 0.5 },
+  tram: { cars: ['tram'], gap: 0.8, seats: 4, figS: 0.5 },
+  mini: { cars: ['minilok', 'hase', 'baer', 'frosch', 'ente'], gap: 0.36, seats: 1, figS: 0.38 },
+};
+const pbRuns = new Map();                                               // Ring-Schlüssel → { s, wait, pax, stop }
+const pbModel = R => (DECO_LOOKS.pb_station.forms[R.form] || DECO_LOOKS.pb_station.forms[0]).id;
+function pbPassengers(R) {
+  const T = PB_TRAINS[pbModel(R)], n = T.cars.filter(c => c !== 'lok' && c !== 'minilok').length * T.seats, pool = walkers.filter(w => !(w.inside > 0));
+  return Array.from({ length: n }, (_, i) => {
+    if (Math.random() < 0.3) return null;                               // nicht jeder Platz ist besetzt
+    const w = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    return w ? { kind: w.kind, fur: w.fur, shirt: w.shirt, hat: w.hat, face: w.face } : { kind: i % ANIMALS.length, fur: FUR[i % FUR.length], shirt: SHIRTS[i % SHIRTS.length] };
+  });
+}
+function stepParkTrains(dt) {
+  for (const R of PB_RINGS) {
+    let r = pbRuns.get(R.key);
+    if (!r) { r = { s: 0, wait: 1.5, stop: 0, pax: pbPassengers(R) }; pbRuns.set(R.key, r); }
+    if (r.wait > 0) { r.wait = Math.max(0, r.wait - dt); continue; }
+    const prev = r.s;
+    r.s += PB_SPEED * dt;
+    for (const i of R.stops) {                                           // an jeder Station halten (Wagenmitte am Bahnsteig)
+      const at = i + (i === 0 && prev > R.n - 1 ? R.n : 0);
+      if (prev < at && r.s >= at) { r.s = at; r.wait = PB_WAIT; if (i === 0) r.pax = pbPassengers(R); break; }
+    }
+    if (r.s >= R.n) r.s -= R.n;
+  }
+  for (const k of [...pbRuns.keys()]) if (!PB_RINGS.some(R => R.key === k)) pbRuns.delete(k);
+}
+// Punkt auf dem Rundkurs bei s (Felder ab der ersten Station): [u, v, du, dv] – gerade oder Viertelkreis um die Feldecke
+function pbPoint(R, s) {
+  s = ((s % R.n) + R.n) % R.n;
+  const i = Math.floor(s), f = s - i, k = R.ring[i], [x, y] = keyXY(k), A = PB_AT.get(k), [ix, iy] = A.din, [ox, oy] = A.dout;
+  if (ix === ox && iy === oy) return [x - ix * 0.5 + ix * f, y - iy * 0.5 + iy * f, ix, iy];
+  const cx = x - ix * 0.5 + ox * 0.5, cy = y - iy * 0.5 + oy * 0.5, t = f * Math.PI / 2, c = Math.cos(t), sn = Math.sin(t);
+  return [cx + 0.5 * (-ox * c + ix * sn), cy + 0.5 * (-oy * c + iy * sn), ox * sn + ix * c, oy * sn + iy * c];
+}
+function parkTrainCars() {
+  const out = [];
+  PB_RINGS.forEach((R, ri) => {
+    const r = pbRuns.get(R.key) || { s: 0, pax: [] }, model = pbModel(R), T = PB_TRAINS[model];
+    let seat = 0;
+    T.cars.forEach((car, j) => {
+      const [u, v, du, dv] = pbPoint(R, r.s - j * T.gap + 0.3), pax = car === 'lok' || car === 'minilok' ? [] : (r.pax || []).slice(seat, seat + T.seats);
+      if (pax.length || car !== 'lok') seat += car === 'lok' || car === 'minilok' ? 0 : T.seats;
+      out.push({ pbtrain: true, ri, j, car, model, px: u, py: v, du, dv, pax });
+    });
+  });
+  return out;
+}
+const pbScreen = z => (u, v, up = 0) => { const p = toScreen(u, v); return [p.x, p.y - up * z]; };
+function drawParkCar(m, z, now) { pbDrawCar(pbScreen(z), m.px, m.py, m.du, m.dv, z, now, m.car, m.pax, PB_TRAINS[m.model].figS, m.j); }
+// ganzer Zug am Bahnsteig (Station ohne Rundkurs, Vorschaubild): Wagen hinter der Lok auf gerader Linie
+function pbTrainAt(M, u, v, du, dv, z, now, model, pax) {
+  const T = PB_TRAINS[model] || PB_TRAINS.bimmel, list = T.cars.map((car, j) => ({ car, j, u: u + du * (0.3 - j * T.gap), v: v + dv * (0.3 - j * T.gap) }));
+  list.sort((a, b) => (a.u + a.v) - (b.u + b.v));
+  for (const c of list) pbDrawCar(M, c.u, c.v, du, dv, z, now, c.car, pax ? pax : [], T.figS, c.j);
+}
+// sitzende Figur: wie unterwegs (drawWalker), kleiner, ohne Schatten, up Einheiten über dem Boden
+function pbFig(M, u, v, up, z, now, fig, figS) {
+  const p = M(u, v, up);
+  drawWalker({ ...fig, sit: true, wait: 1, inside: 0, speed: 0, seat: true, figS, sx: p[0], sy: p[1] + 2.5 * z * figS }, z, now);
+}
+function pbDrawCar(M, u, v, du, dv, z, now, car, pax, figS, j = 1) {
+  const P = (a, b, up = 0) => M(u + du * a - dv * b, v + dv * a + du * b, up), box = (a0, a1, b0, b1, h0, h1, col, top, open) => pbBox(P, du, dv, a0, a1, b0, b1, h0, h1, col, top, z, open);
+  const wheels = (a0, a1, w, n) => { for (let i = 0; i < n; i++) { const a = a0 + (a1 - a0) * (i + 0.5) / n; for (const s of [-1, 1]) { const p = P(a, s * w, 1.4); circle(p[0], p[1], 1.5 * z, C('#3a3a44')); } } };
+  const shadowOf = l => { const p = P(0, 0); ellipse(p[0], p[1] + 1 * z, l * TW * 0.5 * z, l * TH * 0.5 * z, 'rgba(40,50,70,0.2)'); };
+  const seats = (a0, a1, h) => { const n = Math.max(1, pax.length); (pax || []).forEach((f, i) => { if (f) pbFig(M, u + du * (a0 + (a1 - a0) * (i + 0.5) / n), v + dv * (a0 + (a1 - a0) * (i + 0.5) / n), h, z, now, f, figS); }); };
+  if (car === 'lok') {                                                   // Dampflok: Fahrgestell, Kessel, Dom, Schornstein, Führerhaus
+    shadowOf(0.32);
+    box(-0.24, 0.22, -0.1, 0.1, 1, 3.4, '#3a3a44'); wheels(-0.2, 0.18, 0.1, 3);
+    box(-0.06, 0.2, -0.075, 0.075, 3.4, 8.2, '#2f6f4f');
+    box(0.02, 0.06, -0.03, 0.03, 8.2, 9.6, '#d4a53a');
+    box(0.12, 0.17, -0.035, 0.035, 8.2, 12.5, '#2f2f38');
+    box(-0.24, -0.06, -0.11, 0.11, 3.4, 11, '#c0392b', '#2f2f38');
+    box(-0.28, -0.02, -0.13, 0.13, 11, 12, '#2f2f38');
+    const st = P(0.145, 0, 13.5); for (let i = 0; i < 3; i++) { const t = ((now / 900) + i / 3) % 1; circle(st[0] - t * 8 * z, st[1] - t * 9 * z, (1.6 + t * 2.4) * z, `rgba(245,245,245,${(0.85 - t * 0.8).toFixed(2)})`); }
+    const fl = P(0.22, 0, 5); circle(fl[0], fl[1], 1 * z, C('#fff3b0'));
+  } else if (car === 'wagen') {                                          // offener Sommerwagen: Boden, Fahrgäste, niedrige Bordwand davor
+    shadowOf(0.32);
+    box(-0.22, 0.22, -0.11, 0.11, 1, 3, '#3a3a44'); wheels(-0.15, 0.15, 0.11, 2);
+    const col = ['#2f6f9f', '#e8a33a', '#58b36a'][(j + 2) % 3];             // je Wagen eine Farbe (fest, auch beim Fahren)
+    box(-0.22, 0.22, -0.12, 0.12, 3, 4.6, shade(col, -0.1), shade(col, -0.3));
+    seats(-0.18, 0.18, 3.6);
+    box(-0.22, 0.22, -0.12, 0.12, 4.6, 6.4, shade(col, 0.15), null, true);
+  } else if (car === 'tram') {                                           // Straßenbahn: Fahrgäste hinter Fenstern (Wand mit Löchern)
+    shadowOf(0.45);
+    box(-0.36, 0.36, -0.13, 0.13, 1, 2.4, '#3a3a44'); wheels(-0.28, 0.28, 0.13, 2);
+    box(-0.36, 0.36, -0.14, 0.14, 2.4, 3.2, '#7a3a2a');
+    seats(-0.28, 0.28, 2.6);
+    const faces = box(-0.36, 0.36, -0.14, 0.14, 3.2, 6.5, '#c0392b', null, true);
+    for (const f of faces) {                                             // oberer Teil: creme, mit Fensterlöchern
+      const q = (t, h) => { const a = lerp(f.p, f.q, t); return [a[0], a[1] - h * z]; };
+      const wall = shade('#f4ead2', f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0);
+      g.beginPath(); [q(0, 6.5), q(1, 6.5), q(1, 11.5), q(0, 11.5)].forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath();
+      const n = Math.abs(f.nu) > 0.3 && f.vis > 0 && Math.hypot(f.q[0] - f.p[0], f.q[1] - f.p[1]) > 20 * z ? 5 : 1;
+      for (let k = 0; k < n; k++) { const t0 = 0.07 + k * (0.86 / n), t1 = t0 + 0.86 / n - 0.05; [q(t0, 7.4), q(t0, 10.6), q(t1, 10.6), q(t1, 7.4)].forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); }
+      g.fillStyle = C(wall); g.fill('evenodd');
+      for (let k = 0; k < n; k++) { const t0 = 0.07 + k * (0.86 / n), t1 = t0 + 0.86 / n - 0.05; poly([q(t0, 7.4), q(t1, 7.4), q(t1, 10.6), q(t0, 10.6)], 'rgba(191,227,255,0.35)'); }
+    }
+    box(-0.4, 0.4, -0.16, 0.16, 11.5, 12.6, '#7a3a2a');
+    const a = P(0.1, 0, 12.6), b = P(-0.3, 0, 20); g.strokeStyle = C('#3a3a44'); g.lineWidth = 0.9 * z; g.beginPath(); g.moveTo(...a); g.lineTo(...b); g.stroke(); circle(b[0], b[1], 1 * z, C('#3a3a44'));
+  } else if (car === 'minilok') {                                        // Mini-Lok mit freundlichem Gesicht
+    shadowOf(0.22);
+    box(-0.16, 0.16, -0.08, 0.08, 1, 2.6, '#3a3a44'); wheels(-0.12, 0.12, 0.08, 2);
+    box(-0.02, 0.16, -0.06, 0.06, 2.6, 6, '#58b36a');
+    box(0.1, 0.14, -0.025, 0.025, 6, 8.5, '#e8604f');
+    box(-0.16, -0.02, -0.09, 0.09, 2.6, 8, '#ffd23f', '#e8604f');
+    const f = P(0.17, 0, 4.4); circle(f[0], f[1], 1.6 * z, C('#fffaf0')); circle(f[0] - 0.6 * z, f[1] - 0.3 * z, 0.5 * z, C('#2f2f38')); circle(f[0] + 0.6 * z, f[1] - 0.3 * z, 0.5 * z, C('#2f2f38'));
+  } else {                                                               // Tierwagen (Hase, Bär, Frosch, Ente) mit einem Kind
+    const A = { hase: ['#f3ece2', '#f2a7c0'], baer: ['#b07a50', '#7a5236'], frosch: ['#7fcf6a', '#4f9e4a'], ente: ['#ffe58a', '#f2a03a'] }[car] || ['#ffd23f', '#e8604f'];
+    shadowOf(0.22);
+    box(-0.14, 0.14, -0.08, 0.08, 1, 2.6, '#3a3a44'); wheels(-0.09, 0.09, 0.08, 2);
+    box(-0.14, 0.14, -0.09, 0.09, 2.6, 4, shade(A[0], -0.1));
+    seats(-0.06, 0.02, 3.2);
+    box(-0.14, 0.14, -0.09, 0.09, 4, 5.6, A[0], null, true);
+    const h = P(0.15, 0, 7); circle(h[0], h[1], 2.6 * z, C(A[0]));
+    if (car === 'hase') for (const s of [-1, 1]) { g.fillStyle = C(A[0]); g.beginPath(); g.ellipse(h[0] + s * 1.2 * z, h[1] - 3.4 * z, 0.8 * z, 2 * z, s * 0.2, 0, Math.PI * 2); g.fill(); }
+    if (car === 'baer') for (const s of [-1, 1]) circle(h[0] + s * 1.8 * z, h[1] - 2 * z, 0.9 * z, C(A[1]));
+    if (car === 'frosch') for (const s of [-1, 1]) { circle(h[0] + s * 1.3 * z, h[1] - 2.2 * z, 0.9 * z, C('#fffaf0')); circle(h[0] + s * 1.3 * z, h[1] - 2.2 * z, 0.4 * z, C('#2f2f38')); }
+    if (car === 'ente') poly([[h[0] + 1.6 * z, h[1]], [h[0] + 3.6 * z, h[1] + 0.4 * z], [h[0] + 1.6 * z, h[1] + 1 * z]], C(A[1]));
+    circle(h[0] + 0.8 * z, h[1] - 0.4 * z, 0.45 * z, C('#2f2f38'));
+  }
 }
