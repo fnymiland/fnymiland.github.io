@@ -1600,7 +1600,17 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 
 ## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn
-- [ ] U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)
+- [ ] U-Bahn (Konzept mit Nutzer, 08.10.2026): **ein Netz mit der Eisenbahn**, kein eigenes System.
+      - Tunnel als Linie ziehen (Bereich Verkehr), unter Häusern/Wegen/Parks durch, ohne Abriss; unter Wasser erlaubt, teurer.
+        Im Bild unsichtbar, mit Schiene/Tunnel in der Hand gestrichelt. Kosten je Feld ≈ 4× Schiene (Wasser mehr).
+      - Tunnelportal entsteht von selbst, wo Schiene und Tunnel sich berühren (Entwurf vorher als Bild zeigen, = Block 140).
+      - U-Bahn-Station auf einem Tunnelstück, oben nur der Eingang (Häuschen, U-Schild, Treppe); zählt wie ein Bahnhof.
+      - Züge fahren übers ganze Netz, im Tunnel unsichtbar, am Portal auftauchen.
+      - Neu für Bahn UND U-Bahn: Linien innerhalb einer Insel verbinden Viertel – Wünsche und Kundschaft, **nur zusätzlich,
+        nie schlechter** (andere Viertel kaufen nur bei Ladenarten, die sie nicht haben; Wirkung ½–1 nach Plätzen wie bisher).
+      - Freischalten: Forschung „U-Bahn“ nach „Eisenbahn“.
+      Schritte: 1 Entwürfe als Bild (Portal, Eingang, Tunnel gestrichelt) · 2 Tunnel-Linie + Netz · 3 Portal · 4 Station/Eingang ·
+      5 Züge im Tunnel · 6 Viertel-Regel · 7 Forschung, Preise, Hilfe, Leistungs-Wächter, Testwelt
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
