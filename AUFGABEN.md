@@ -1571,7 +1571,7 @@ Wandschein (Bild + Löschbild) · Dämmerung bleibt live.
 - [ ] Offen (→ Block 144 WebGL): Grundlast ~37–41 ms bei Full HD (3.200 Bildchen kleben je Bild), Zoomen nachts 60–140 ms
       (jedes neu sichtbare Ding braucht Bildchen + Nachtbild), Verschieben nachts bis ~90 ms
 
-## Block 144: WebGL weit weg (begonnen 07.10.2026, weiter am nächsten Tag)
+## Block 144: WebGL weit weg (07.–08.10.2026, live seit v653/v667)
 Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwelt, Zoom 0.6), nachts beim Zoomen 60–140 ms.
 - [x] Schnelltest im Browser: dieselben 4.464 drawImage per WebGL2 (jedes Bildchen eigene Textur, kein Atlas) 6,7 ms statt 28,5 ms
       Canvas2D; Bild max. 15/255 Abweichung, keine „deutliche“ (ohne Streifen-Clip). Hochladen aller 1.209 Bildchen einmalig ~200 ms.
@@ -1651,7 +1651,7 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       mit 0 / 0 (90 % der Bilder 15,7 → 11,2 ms). ?vorladen=0 schaltet es zum Vergleichen ab
 - [ ] Offen: Ist alles voll, bekommt der Rest eigene Texturen (große Welt, Zoom 0,7: +126 MB, 600 Aufträge) – Speicher auf dem iPad
       weiter beobachten; Wunsch Nutzer: von selbst vorladen (Speicherfrage)
-- [ ] Nächste Schritte: Zoom ≥ 1 und Werkzeuge noch 2D
+- [ ] Zurückgestellt (Nutzer spürt nichts, 08.10.2026): Zoom ≥ 1 und gewähltes Werkzeug laufen noch im 2D-Weg
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
       drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als
