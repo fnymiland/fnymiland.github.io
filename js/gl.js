@@ -53,7 +53,7 @@ function glInit() {
 }
 function glShow(on) { if (GL.canvas && GL.shown !== on) { GL.canvas.style.visibility = on ? 'visible' : 'hidden'; GL.shown = on; } }
 // Leinwand freigegeben (freeCanvas): Textur auch weg
-function glForget(c) { const e = GL.texs.get(c); if (!e) return; if (GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); GL.texEpoch++; }   // gemerktes Standbild ungültig
+function glForget(c) { const e = GL.texs.get(c); if (!e) return; if (GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); if (GLS.srcs.has(c)) GL.texEpoch++; }   // nur wenn das Standbild sie braucht
 
 // --- Aufzeichnen (ctx.drawImage während GLPASS) ---
 const C2D = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingContext2D.prototype : {};   // im Test (jsdom) gibt es keins – dort ist GL ohnehin aus
@@ -292,7 +292,7 @@ function glMoverBox(m, z) {
 // Spieländerungen (drawEpoch: save), außerhalb des Rands und spätestens nach GLS_AGE ms. Nur in ruhigen Bildern (calm), sonst
 // wird wie bisher jedes Bild aufgezeichnet.
 // ---------------------------------------------------------------------------
-const GLS = { ok: false, key: '', tex: -1, draw: -1, at: 0, cam: null, M: 0, W0: 0, H0: 0, recs: [], tiles: [], dyn: [], sA0: [], sA1: [],
+const GLS = { srcs: new Set(), ok: false, key: '', tex: -1, draw: -1, at: 0, cam: null, M: 0, W0: 0, H0: 0, recs: [], tiles: [], dyn: [], sA0: [], sA1: [],
   order: new Map(), icons: [], labels: [], waves: [], ents: [], calm: 0, last: '', dirty: false, cur: null, w0: -1, w1: -1, gEnd: 0, ops: [] };
 const GLS_AGE = 8000, GLS_CALM = 6;
 function glTouch() { GL.drawEpoch++; }                                  // Spielstand geändert (save, neue Welt)
@@ -306,10 +306,12 @@ function glCacheStart(z, now) {
   if (GLS.ok && GLS.key === key && GLS.tex === GL.texEpoch && GLS.draw === GL.drawEpoch && now - GLS.at < GLS_AGE
     && Math.abs(dx) < GLS.M * 0.9 && Math.abs(dy) < GLS.M * 0.9) return (GL.cacheMode = 'play');
   GLS.ok = false;
-  if (GLS.calm < GLS_CALM || GL.lastMiss || liveFlatSet().size) return (GL.cacheMode = null);   // unruhig oder etwas fiele aufs Overlay
+  GLS.why = GLS.calm < GLS_CALM ? 'unruhig' : GL.lastMiss ? `2D-Reste ${GL.lastMiss}` : liveFlatSet().size ? `live Wege ${liveFlatSet().size}` : '';
+  if (GLS.why) return (GL.cacheMode = null);                             // unruhig oder etwas fiele aufs Overlay
   GLS.M = Math.round(Math.max(W, H) * 0.25); GLS.W0 = W; GLS.H0 = H; GLS.cam = { x: cam.x, y: cam.y }; GLS.key = key; GLS.at = now;
   W += 2 * GLS.M; H += 2 * GLS.M;                                        // mit Rand aufzeichnen (toScreen verschiebt alles um M)
   GLS.tiles.length = 0; GLS.dyn.length = 0; GLS.w0 = GLS.w1 = -1; GLS.waves = [];
+  GLS.why = '';
   return (GL.cacheMode = 'rec');
 }
 // Feld i beginnt (start) bzw. endet (Teil A) – Grenzen der Rechtecke, Symbole und Schilder merken
@@ -337,7 +339,7 @@ function glRecFinish() {
   const gl = GL.gl;
   gl.bindBuffer(gl.ARRAY_BUFFER, GL.sbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(st), gl.STATIC_DRAW);
   // was gemerkt ist, gilt als benutzt (sonst räumt die Hauspflege es nach einer Weile weg)
-  const used = new Set(st.map(r => r.src));
+  const used = GLS.srcs = new Set(st.map(r => r.src));
   GLS.ents = [...objSprites.values()].filter(e => used.has(e.c)).concat([...groundCache.values()].filter(e => used.has(e.c)));
   GLS.tex = GL.texEpoch; GLS.draw = GL.drawEpoch; GLS.ok = true;
 }
