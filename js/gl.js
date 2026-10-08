@@ -79,7 +79,7 @@ function glInit() {
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
   c.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.ready = false; GL.fbo = null; GL.texs.clear(); atlReset(true); GLS.ok = false; glShow(false); });
   c.addEventListener('webglcontextrestored', () => { GL.broken = false; GL.gl = null; GL.texs.clear(); atlReset(true); glInit(); });
-  ATL.size = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
+  ATL.size = Math.min(GL_LOWMEM ? 2048 : 4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));   // höchstens 6 Seiten: 96 MB (Safari) bzw. 384 MB
   GL.gl = gl; GL.canvas = c; GL.ready = true;
   return true;
 }
@@ -209,8 +209,11 @@ function glHook(on, bg = false) {
 // benutzt ist – bei 2048² waren das auf dem iPad 14 ms je Bild für 70 benutzte Zeilen
 // Safari zusätzlich im Arbeitsspeicher (willReadFrequently): dann muss es nichts von der Grafikkarte zurücklesen und lädt nur die
 // benutzten Zeilen hoch. ?la=cpu / ?la=gpu zum Vergleichen
-const LA_CPU = (() => { const q = new URLSearchParams(location.search).get('la'); if (q) return q === 'cpu';
-  return /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent || ''); })();
+const GL_SAFARI = /^((?!chrome|android|crios|fxios).)*safari/i.test((typeof navigator !== 'undefined' && navigator.userAgent) || '');
+const LA_CPU = (() => { const q = new URLSearchParams(location.search).get('la'); return q ? q === 'cpu' : GL_SAFARI; })();
+// wenig Speicher (Safari, v. a. iPad: Tab stürzt sonst ab – „wiederholt ein Fehler aufgetreten“): Sammelbilder kleiner und früher
+// aufräumen. ?glmem=low / ?glmem=hi zum Testen
+const GL_LOWMEM = (() => { const q = new URLSearchParams(location.search).get('glmem'); return q ? q === 'low' : GL_SAFARI; })();
 const LA = { c: null, x: null, w: 1024, h: 256, cx: 0, cy: 0, row: 0, used: 0, off: [0, 0], need: 0, peak: 0, calm: 0 };
 function laInit() {
   if (LA.c) return !!LA.x;
@@ -400,7 +403,6 @@ function glEnd() {
     gl.uniform1f(GL.loc.nk, nightK());                                       // Stärke der Löcher (Dämmerung: schwächer)
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);       // source-over, vormultipliziert
     if (LA.used) glTex(LA.c, false);                                       // Sammelfläche einmal je Bild hochladen
-    if (mode !== 'play' && ATL.waste > ATL.size * ATL.size * 2 && ATL.pages.length >= ATL.max) atlReset(false);   // voll mit Freigegebenem: neu anfangen (nie beim Abspielen)
     const verts = glVerts(recs);                                           // legt Neues in den Atlas
     gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
     atlBind();
@@ -548,6 +550,9 @@ const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M +
 // am Bildanfang (render, vor den Sichtgrenzen): abspielen, aufzeichnen oder normal
 function glCacheStart(z, now) {
   GL.now = now;
+  // Sammelbilder voll und viel davon Freigegebenes: neu anfangen (vor dem Bild – das Standbild wird dann neu aufgenommen). Vorher erst
+  // bei 2 Seiten Abfall und nie beim Abspielen: der Atlas hielt alles je Benutzte fest (bis 384 MB auf der Grafikkarte, iPad stürzte ab)
+  if (ATL.pages.length >= ATL.max && ATL.waste > ATL.size * ATL.size * (GL_LOWMEM ? 1 : 2)) atlReset(false);
   // Uhren (alle 10 Spielminuten ein neues Bildchen) und das Briefkasten-Fähnchen am Rathaus: dann neu aufnehmen statt jedes Bild live
   // Nacht: ob Lichter/Nachtbilder an sind, ändert, was gezeichnet wird (die Stärke selbst regelt der Shader: nk, Nachtblau)
   const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG, Math.floor(gameHour() * 6), typeof mailWaiting === 'function' && mailWaiting() ? 1 : 0,

@@ -1638,6 +1638,11 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       umgeschaltet (glBgSwapIn < 1 ms). Dabei malt nichts ins Bild (Füll-Befehle sind Leerlauf und machen das Feld lebendig, glLive
       malt nicht), fehlende Boden-Stücke je Schritt nur bis 4 ms. Testwelt Full HD, 600 Bilder Verschieben: keine Neuaufnahme mehr
       (vorher je Rand ~35–60 ms), Schritte 90 % < 8 ms, Bild gegen 2D unverändert (Tag, Nacht, Dämmerung). Neu: worldView/worldGround
+- [x] iPad stürzte ab („wiederholt ein Fehler aufgetreten“, Speicher): Sammelbilder hielten alles je Benutzte bis 6 × 4096² = 384 MB
+      auf der Grafikkarte (Aufräumen erst bei 2 Seiten Abfall und nie beim Abspielen – mit dem Hintergrund-Standbild also nie).
+      Jetzt Safari 2048er-Seiten (höchstens 96 MB), Aufräumen schon bei 1 Seite Abfall und vor jedem Bild; Messkasten zeigt den Speicher
+- [ ] Offen: Ist alles voll, bekommt der Rest eigene Texturen (große Welt, Zoom 0,7: +126 MB, 600 Aufträge) – Speicher auf dem iPad
+      weiter beobachten; Wunsch Nutzer: von selbst vorladen (Speicherfrage)
 - [ ] Nächste Schritte: Zoom ≥ 1 und Werkzeuge noch 2D
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
