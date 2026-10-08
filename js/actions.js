@@ -376,7 +376,7 @@ function copyClone(it) {
     const t = JSON.parse(JSON.stringify(it.t));
     for (const f of ['animal', 'name', 'more', 'born', 'ships', 'pbz', 'train', 'trainCol', 'trainPlus', 'extra', 'gleis']) delete t[f];   // Bewohner, Fahrzeuge: nicht mit
     c.t = t;
-  } else if (it.kind === 'deco') { const { born, sv, ...d } = it.d; c.d = d; }
+  } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt
   else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }
   return c;
 }
@@ -406,14 +406,26 @@ function copyCollect(x0, y0, x1, y1) {
 function copyCost(items) {
   const c = { money: 0 }, add = (m, mat, n = 1) => { c.money += (m || 0) * n; for (const [r, v] of Object.entries(mat || {})) c[r] = (c[r] || 0) + v * n; };
   for (const it of items) {
-    if (it.kind === 'tile') {
-      const t = it.t;
-      if (t.b === 'weg' && t.bridge) { const B = WEG_BRIDGE[bridgeKind(t)]; add(B.cost, B.mat); }
-      else { const { money, ...mat } = fullValue(t); add(money, mat); }
-    } else if (it.kind === 'deco') add(ITEMS[it.d.b].cost, ITEMS[it.d.b].mat);
-    else if (it.kind === 'edge') add(ITEMS[it.e.b].cost, ITEMS[it.e.b].mat);
+    if (it.kind === 'tile') { const { money, ...mat } = copyTileCost(it.t); add(money, mat); } else if (it.kind === 'deco') add(ITEMS[it.d.b].cost, ITEMS[it.d.b].mat);
+    else if (it.kind === 'edge') { add(ITEMS[it.e.b].cost, ITEMS[it.e.b].mat); if (it.e.arch && ARCHES[it.e.arch]) add(ARCHES[it.e.arch].cost); }   // Tor-/Rosenbogen kostet extra
     else add((it.look === 'fz' ? ITEMS.fzboden : ITEMS.parkrasen).cost, null);
   }
+  return c;
+}
+// Ein Feld wie neu gebaut, zum heutigen Preis (manches wird mit dem Einkommen teurer – nicht der alte, damals bezahlte Preis), samt
+// Ausbaustufen und Aufpreisen: Brücke, Märchenschloss-Gestalt, langer Bahnhof, Gleise im Hauptbahnhof, Looping, Bahnübergang/Fußgängerbrücke
+function copyTileCost(t) {
+  const d = ITEMS[t.b], c = { money: 0 }, add = (o, n = 1) => { for (const [r, v] of Object.entries(o || {})) c[r] = (c[r] || 0) + v * n; };
+  if (t.b === 'weg' && t.bridge) { const B = WEG_BRIDGE[bridgeKind(t)]; add({ money: B.cost, ...B.mat }); }
+  else if (t.b === 'schiene' && t.bridge) add({ money: BRIDGE.cost, ...BRIDGE.mat });
+  else if (t.b === 'fz_schloss') add({ money: castlePrice(csOf(t)), ...d.mat });
+  else add({ money: d.cost || 0, ...d.mat });
+  if (t.b === 'haus') for (let l = 1; l < t.lvl; l++) add(houseCost(HOUSE_STAGES[l]));
+  else if (BUILD_STAGES[t.b]) BUILD_STAGES[t.b].up.slice(0, (t.lvl || 1) - 1).forEach(u => add(u.cost));
+  if (t.b === 'station' && stationLen(t) === 3) add(STATION_LEN_COST);
+  if (t.b === 'hbf') add(GLEIS_COST, Math.max(0, hbfGleise(t) - HBF_MIN));
+  if (t.loop) add({ money: ITEMS.fz_looping.cost });
+  if (t.cross) { add({ money: ITEMS.weg.cost }); if (t.foot) add((FOOT_STYLES[footPaidOf(t)] || FOOT_STYLES.holz).cost); }
   return c;
 }
 // Pipette: nur Wege, nur Gleise oder nur eine Linienart – jeweils ein Stil. Gibt das Werkzeug zurück (oder null)
@@ -445,7 +457,8 @@ function startCopy(x0, y0, x1, y1) {
     if (pip.tool === 'schiene') state.paintNew.schiene = { ...(state.paintNew.schiene || {}), form: pip.style };
     if (pip.tool === 'hecke') state.paintNew.hecke = pip.col ? { col: pip.col } : {};
     renderStyleBar(pip.tool); updateHint();
-    toast(`🖌️ ${ITEMS[pip.tool].name} in der Hand – zieh die Linie wie gewohnt`);
+    const got = pip.tool === 'schiene' ? (decoLookNew('schiene').form || 0) === (pip.style || 0) : currentStyle(pip.tool) === pip.style;
+    toast(got ? `🖌️ ${ITEMS[pip.tool].name} in der Hand – zieh die Linie wie gewohnt` : `🖌️ ${ITEMS[pip.tool].name} in der Hand – diesen Stil hast du nicht freigeschaltet (Kunstakademie), darum der Standard`);
     return true;
   }
   moving = { kind: 'group', copy: true, items, cost: copyCost(items), cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };

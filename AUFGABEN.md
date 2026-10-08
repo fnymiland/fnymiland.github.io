@@ -1587,6 +1587,15 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nachbesserung (Nutzer): Rückgängig ging beim Kopieren nicht – `undoable` hielt den Schritt fest, solange etwas am Finger hing
       (Stempel hängt immer). Jetzt: jedes Absetzen einer Kopie ein Schritt; ↶ mit Kopie am Finger legt sie weg und nimmt das letzte
       Absetzen zurück. Keine Hinweiszeile mehr über der Leiste bei ✋ und Abriss. Test: kopieren
+- [x] Fehlersuche Kopieren (Nutzer: „kommt mir zu makellos vor“) – gefunden und behoben:
+      1. Preis: `fullValue` nimmt den damals bezahlten Preis (`t.price`) – Dinge, die mit dem Einkommen teurer werden (Uni, Kino,
+         Fahrgeschäfte …), hätte man billig kopiert (Bauland: Uni bezahlt 640 000, heute 1,1 Mio). Jetzt `copyTileCost`: heutiger Preis.
+      2. Aufpreise fehlten: Looping, Bahnübergang + Fußgängerbrücke, langer Bahnhof, Gleise im Hbf, Märchenschloss-Gestalt, Tor-/
+         Rosenbogen an Hecken – jetzt mitgerechnet.
+      3. Geschenkte Parkbäume (`free`) blieben in der Kopie „geschenkt“ (Abriss gäbe nichts zurück) – Kopie ist bezahlt.
+      4. Pipette mit nicht freigeschaltetem Stil: still der Standard – jetzt mit Hinweis.
+      5. Leiste: Knöpfe nur bei geändertem Inhalt austauschen (Klick ginge sonst ins Leere).
+      Härtetest im Spielstand „Bauland“: Straßen, Schulen, Kraftwerke, Läden, Kultur kopiert/abgesetzt/rückgängig – keine Fehler.
 
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 

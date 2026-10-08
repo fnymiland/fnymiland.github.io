@@ -123,3 +123,28 @@ describe('Keine Beschreibungszeile bei Verschieben und Abreißen (Nutzer: „ner
     game("setTool('look')");
   });
 });
+
+describe('Auswahl bedienen (Block 134)', () => {
+  it('neue Auswahl aufziehen ersetzt die alte; daneben tippen hebt sie auf; Werkzeugwechsel nimmt die Leiste weg', () => {
+    town();
+    select([4, 4], [5, 5]);
+    expect(game('planBox(plan)')).toEqual([4, 4, 5, 5]);
+    select([7, 7], [9, 8]);
+    expect(game('plan && plan.fixed && planBox(plan)')).toEqual([7, 7, 9, 8]);
+    expect(game("!document.getElementById('sel-bar').hidden")).toBe(true);
+    const p = scr(15, 15); ev('pointerdown', p, { buttons: 1 }); ev('pointerup', p); game('syncSelBar()');
+    expect(game('plan')).toBe(null);
+    expect(game('moving')).toBe(null);
+    expect(game("document.getElementById('sel-bar').hidden")).toBe(true);
+    select([4, 4], [5, 5]);
+    game("setTool('haus'); syncSelBar()");
+    expect(game("document.getElementById('sel-bar').hidden")).toBe(true);
+  });
+  it('Preis zum heutigen Preis: Stand im Freizeitpark mit altem Preis kopiert zum aktuellen', () => {
+    const b = game("Object.keys(ITEMS).find(id => incMinOf(ITEMS[id]) && ITEMS[id].cat === 'fz' && !WONDERS[id])");
+    const t = game(`({ b: '${b}', lvl: 1, price: 1 })`);
+    expect(game(`copyTileCost(${JSON.stringify(t)}).money`)).toBe(game(`ITEMS['${b}'].cost`));
+    expect(game("copyTileCost({ b: 'schiene', lvl: 1, cross: true, foot: true, footPaid: 'stein' }).money")).toBe(game('ITEMS.schiene.cost + ITEMS.weg.cost + FOOT_STYLES.stein.cost.money'));
+    expect(game("copyCost([{ kind: 'edge', e: { b: 'hecke', style: STYLES.hecke[0].id, arch: 'rosen' } }]).money")).toBe(game('ITEMS.hecke.cost + ARCHES.rosen.cost'));
+  });
+});

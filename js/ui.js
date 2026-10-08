@@ -283,14 +283,16 @@ function syncSelBar() {
   const bar = $('sel-bar');
   if (!bar) return;
   const on = !!(plan && plan.tool === 'verschieben' && plan.fixed && !moving);
-  if (!on) { if (!bar.hidden) { bar.hidden = true; selBarKey = null; } return; }
+  if (!on) { if (!bar.hidden) { bar.hidden = true; selBarKey = null; bar.dataset.html = ''; } return; }
   const box = planBox(plan), key = box.join() + '|' + groundVersion;
   if (key === selBarKey && !bar.hidden) return;
   selBarKey = key;
   const { items, stays } = copyCollect(...box), pip = copyPipette(items), cost = copyCost(items);
   const copyLabel = !items.length ? '⧉ Kopieren' : pip ? `🖌️ Pipette: ${ITEMS[pip.tool].name}` : `⧉ Kopieren · 🪙 ${fmt(cost.money)}${matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) ? ' ' + matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) : ''}`;
-  bar.innerHTML = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button><button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>`;
+  const html = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button><button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>`;
   bar.hidden = false;
+  if (bar.dataset.html === html) return;                                  // gleich geblieben: Knöpfe nicht austauschen (ein Klick ginge sonst ins Leere)
+  bar.dataset.html = html; bar.innerHTML = html;
   $('sel-move').onclick = () => { const b = planBox(plan); plan = null; undoable(() => pickUpGroup(...b)); syncSelBar(); };
   $('sel-copy').onclick = () => { const b = planBox(plan); plan = null; startCopy(...b); syncSelBar(); };
   $('sel-x').onclick = () => { plan = null; syncSelBar(); };
