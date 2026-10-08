@@ -300,7 +300,7 @@ const SPRITE_STATS = { miss: 0, made: 0, stale: 0, old: 0, nmiss: 0, fail: 0 };
 let spriteForce = null, spriteNoBudget = false;
 // immer live: was sich auch von weitem sichtbar dreht (Leuchtturm: Strahl, Block 83; Fahrgeschäfte, Block 124) und Schienen
 // (zeichnen hier nichts außer dem Bahnübergang, und der legt seine Vorderseite über die Züge, afterMovers)
-const SPRITE_LIVE = new Set(['riesenrad', 'windrad', 'offshore', 'muehle', 'wasserkraft', 'leuchtturm', 'karussell',
+const SPRITE_LIVE = new Set(['tunneleinfahrt', 'riesenrad', 'windrad', 'offshore', 'muehle', 'wasserkraft', 'leuchtturm', 'karussell',
   'fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser', 'schiene']);
 function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 70;              // Baugerüste ragen etwas höher (Block 84d)
@@ -1487,7 +1487,7 @@ function render(now) {
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
         const drawIt = () => {
-          if (t.b === 'schiene' && !t.cross && !portalDir(ax, ay) && !rampFrontOf(ax, ay)) return;    // Schienen malen hier nur Bahnübergänge, Tunnelportale und Rampen (Gleis liegt im Boden)
+          if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
           let sc = 1;
           if (t.born) {
             const an = (now - t.born) / 380;
@@ -1552,7 +1552,6 @@ function render(now) {
           glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
         }
         if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
-        if (state.tunnels && state.tunnels.size && tunnelAt(x, y)) drawTunnelHill(x, y, px, py, z);   // Portal mit abgewandter Wand: Hügel über dem Tunnel (Block 136)
       }
       if (preview && preview.small && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)

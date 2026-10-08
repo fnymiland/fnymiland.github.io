@@ -502,7 +502,7 @@ function railPath(from, to) {
     const [x, y] = keyXY(k);
     for (const [dx, dy] of DIRS) {
       const n = (x + dx) + ',' + (y + dy);
-      if (!prev.has(n) && trackAt(x + dx, y + dy)) { prev.set(n, k); q.push(n); }   // auch durch Tunnel (Block 136)
+      if (!prev.has(n) && trackAt(x + dx, y + dy) && trackLink(x, y, x + dx, y + dy)) { prev.set(n, k); q.push(n); }   // auch durch Einfahrt und Tunnel (Block 136)
     }
   }
   if (!prev.has(to)) return null;
@@ -558,7 +558,7 @@ function lineRoute(line) {
     for (let n = 0; n < 3 && list.length > 1; n++) {
       const [a, b] = atEnd ? [list[list.length - 2], list[list.length - 1]] : [list[1], list[0]];
       const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = 2 * bx - ax, ny = 2 * by - ay, nk = nx + ',' + ny;
-      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || !trackAt(nx, ny)))) break;
+      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || !trackAt(nx, ny) || !trackLink(bx, by, nx, ny)))) break;
       if (atEnd) list.push(nk); else list.unshift(nk);
     }
   };

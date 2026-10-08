@@ -126,8 +126,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     unteren Reihe und der Stil-Leiste 34 px hoch. Rathaus „Bereit“ über `buildGroups()`.
     Gruppen-Reihenfolge im Feld immer über `orderedGroups(top)` (eigene Anordnung je Gerät, „⇅ Anordnen“), nie direkt `top.groups`.
 25b. **U-Bahn** (Block 136, js/draw-ubahn.js): Tunnel liegen in `state.tunnels` (Feld → { form }), oben darf alles stehen außer
-    Schienen/Bahnhöfen – ein Feld ist Schiene ODER Tunnel. Befahrbar heißt `trackAt` (nie nur `bAt === 'schiene'` für Wege der
-    Züge). Portal = Schiene neben Tunnel (`portalDir`/`portalForm`), kein eigenes Feld. U-Bahn-Station steht auf dem Tunnel und
+    Schienen/Bahnhöfen – ein Feld ist Schiene ODER Tunnel. Ob zwei Nachbarfelder befahrbar zusammenhängen, sagt nur `trackLink`
+    (Schiene und Tunnel nie direkt – dazwischen gehört die Tunneleinfahrt, 2 Felder, `einOf`/`einTiles`: vorn Schiene, hinten
+    Tunnel). Netz-Abfragen über das Feld selbst (`railTileAt`), nicht über COVER. U-Bahn-Station steht auf dem Tunnel und
     hält auf ihrem Feld (`stopDirs`). Linien auf einer Insel (`l.inner`) bekommen Strom zuletzt und dürfen nur zusätzlich wirken
     (Wünsche, Läden ohne diese Art, Fahrkarten) – nie bestehende Einnahmen senken. Neues, das Schienenwege abfragt, Tunnel mitdenken.
     **Kacheln** zeigen Bild, Namen und Preis (`cardPrice`, kurz über `shortMoney`);

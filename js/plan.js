@@ -61,7 +61,7 @@ function cancelPlan() { plan = null; }
 function planCheck(b, x, y) {
   const old = state.tiles.get(x + ',' + y);
   if (b === 'pb_gleis' && old && isPbTrack(old.b)) return { same: true };    // Parkbahn: schon Gleis (Block 136)
-  if (b === 'tunnel' && ownedTile(x, y) && tunnelAt(x, y)) return ((state.tunnels.get(x + ',' + y).form || 0) === (decoLookNew('tunnel').form || 0)) ? { same: true } : { cost: 0, mat: {} };   // Portal-Form (Block 136)
+  if (b === 'tunnel' && ownedTile(x, y) && tunnelAt(x, y)) return { same: true };   // liegt schon (Block 136)
   if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') return (old.form || 0) === (decoLookNew('schiene').form || 0) ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil (Block 109)
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {      // umfärben
     const sameStyle = (old.style || 'sand') === currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;   // Wegform: kostenlos (Block 77)

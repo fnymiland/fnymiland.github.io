@@ -1660,11 +1660,18 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „bei Zäunen dasselbe Aufklappmenü wie bei allem anderen – komplett unübersichtlich“: Hecke/Zaun/Mauer zeigen in der
       Leiste nur noch „Form ▾“ (Hecke dazu „Farbe ▾“), die Auswahl klappt als Raster mit Namen auf (`edgeStyleBar`, `edgePop`), eine
       Wahl oder daneben tippen klappt zu; „+n in der Kunstakademie“ springt zur passenden Gruppe. Tests: buschfarben
-- [ ] 136o Tunneleinfahrt als eigenes Bauteil (Nutzer, 09.10.2026: „automatisch ist cool, aber mega unintuitiv – man will einen
+- [x] 136o Tunneleinfahrt als eigenes Bauteil (Nutzer, 09.10.2026: „automatisch ist cool, aber mega unintuitiv – man will einen
       Tunnel bauen, eine Einfahrt dazu und dann Schienen ran“): `tunneleinfahrt` 1×2, drehbar, 1.000 Taler; Formen Rampe/Backstein
       frei, Naturstein Kunstakademie; immer 2 lang (Ein-Feld-Rampe fällt weg). Hinteres Ende an den Tunnel (dreht sich selbst),
       vorderes Ende an Schienen. Keine automatischen Portale mehr: Schiene neben Tunnel verbindet nicht, Fenster-Hinweis
       „Dazwischen eine Tunneleinfahrt setzen“. Danach Glitch „Zug hält auf der Einfahrt (Bahnhof dahinter)“ mit Bildstreifen prüfen.
+      Umgesetzt: `trackLink` (welche Nachbarn befahrbar zusammenhängen: Schiene–Schiene, Tunnel–Tunnel, Einfahrt nur längs: vorn
+      Schiene, hinten Tunnel; Schiene–Tunnel direkt nie) in computeRail, railLoop (nur Schienennetz), railPath, lineRoute, railArms.
+      Ohne Einfahrt: Hinweis im Fenster der Schiene und des Tunnels. Einfahrt zeichnet sich wie jedes große Gebäude in Streifen je
+      Feld – Zäune ringsum, Züge und Hügel liegen damit von selbst richtig; die alten Sonderwege (rampFrontOf, drawTunnelHill,
+      Portal-Formen am Tunnel) sind weg. Gleisbett der Einfahrt wie die Schiene davor. Fenster: Form + „hinten am Tunnel / vorn an
+      der Schiene“. Netz-Abfragen über das Schienenfeld selbst (`railTileAt`), nicht über COVER. Leistungs-Wächter: Rampe 226,
+      Hügel ~770. Bildstreifen beider Rampen mit Zaun, Hügel-Portale in beide Richtungen (tools/vorschau/ein-*.png). Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

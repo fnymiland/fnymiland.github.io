@@ -81,9 +81,9 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
-  } else if (type === 'tunnel') {                          // Tunnel (Block 136): ein kleines Portal in der gewählten Form
+  } else if (type === 'tunnel') {                          // Tunnel (Block 136): Strecke unter einem Hügel
     block(1, '#96d56f');
-    drawTunnelIcon(cx, cy, z * 0.9, tile || decoLookNew('tunnel'));
+    drawTunnelIcon(cx, cy, z * 0.9);
   } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
     block(1, '#96d56f');
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
@@ -1203,7 +1203,6 @@ const setCol = (obj, i) => { if (i) obj.col = i; else delete obj.col; };
 const setLook = (obj, kind, i) => { if (i) obj[kind] = i; else delete obj[kind]; };
 const lookAll = b => {
   const out = [];
-  if (b === 'tunnel') { for (const [k, t] of state.tiles) { if (t.b !== 'schiene') continue; const [x, y] = keyXY(k), d = portalDir(x, y); if (d) out.push(state.tunnels.get((x + d[0]) + ',' + (y + d[1]))); } return out; }   // nur Tunnel hinter einem Portal
   for (const ds of state.decos.values()) for (const d of ds) if (d && baseOf(d.b) === b) out.push(d);
   for (const t of state.tiles.values()) if (baseOf(t.b) === b) out.push(t);
   return out;
@@ -1216,9 +1215,9 @@ function lookThumb(b, form, col) {
   let url = '';
   try {
     const c = document.createElement('canvas'), prev = g;
-    if (b === 'tunnel') {                                                   // Tunnelportal (Block 136): kleines Portal statt Geist
+    if (b === 'tunneleinfahrt') {                                           // Tunneleinfahrt (Block 136): zwei Felder, kleiner
       c.width = 64; c.height = 64; g = c.getContext('2d');
-      try { drawTunnelIcon(26, 40, 0.95, { form }); } finally { g = prev; }
+      try { drawObject(b, 32, 38, 0.75, 0, 3, 3, 1, { form, rot: 1 }); } finally { g = prev; }
       url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
       lookThumbs.set(key, url); return url;
     }
@@ -1350,6 +1349,10 @@ function openInfo(x, y) {
   if (ITEMS[t.b].cat === 'fz') status.push(...fzStatus(x + ',' + y));
   if (STOPS.has(t.b)) status.push(`<div>${placeLabel(x, y)} – Fahrgäste zählen je Ortsteil</div>`);
   if (t.b === 'station' || t.b === 'ubahn') status.push(...stationStatus(x + ',' + y));
+  if (t.b === 'schiene' && railAtTunnel(x, y)) status.push(`<div class="bad">✗ Hier endet ein Tunnel – ohne Einfahrt fährt der Zug nicht hinein. ${TUNNEL_EIN_HINT}</div>`);
+  if (t.b === 'tunneleinfahrt') { const E = einOf(x, y), inT = tunnelAt(E.B[0] + E.d[0], E.B[1] + E.d[1]), outR = bAt(E.A[0] - E.d[0], E.A[1] - E.d[1]) === 'schiene';
+    status.push(inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel – ans Tunnelende setzen oder den Tunnel bis hierher ziehen</div>',
+      outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene – Schiene an das offene Ende legen</div>'); }
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
@@ -1416,8 +1419,7 @@ function openInfo(x, y) {
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
   if (t.b === 'pb_station') colors += pbTrainsHtml(x, y);                  // Züge der Strecke (Block 136e)
   if (DECO_LOOKS[baseOf(t.b)]) colors += decoLookHtml(baseOf(t.b), t, [x, y]);   // Form/Farbe (Block 106); Gleise mit Auswahl (146)
-  const portal = t.b === 'schiene' ? portalNear(x, y) : null;             // Tunnelportal ändern (Block 136)
-  if (portal) colors += portalLookHtml(portal);
+
   // Häuser: Bewohner, Herzen, Wünsche und Ausbauen
   let house = isHome(t.b) && t.b !== 'haus' && t.animal
     ? `<p class="resident">${residentsOf(t).map(r => `${animalOf(r).icon} <b>${escHtml(residentName(r))}</b>`).join(' · ')}${t.b === 'ferienhaus' ? ' <small class="muted">(Feriengäste)</small>' : ''}</p>` : '';
@@ -1556,7 +1558,6 @@ function openInfo(x, y) {
   wirePaintMore(el, t, () => openInfo(x, y));
   if (baseOf(t.b) === 'busch') wireBushCol(el, { cur: t.col || 0, key: 'busch', set: i => setCol(t, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openInfo(x, y) });
   if (DECO_LOOKS[baseOf(t.b)]) wireDecoLook(el, baseOf(t.b), t, () => openInfo(x, y), [x, y]);
-  if (portal) wireDecoLook(el.querySelector('.portal-look'), 'tunnel', portalTunnel(portal), () => openInfo(x, y));   // nach dem Gleisbett: eigene Knöpfe
   if (t.b === 'pb_station') wirePbTrains(el, x, y);
   for (const sw of el.querySelectorAll('[data-wall]')) sw.onclick = () => pick('wall', sw.dataset.wall);
   for (const sw of el.querySelectorAll('[data-roof]')) sw.onclick = () => pick('roof', sw.dataset.roof);
@@ -1754,33 +1755,16 @@ function parkStatus(k) {
     `<div class="ok">👥 Zieht ${PARK_ATTR[p.stage]} Besucher auf die Insel (per Bahn und Schiff)</div>`);
   return out;
 }
-// Tunnel (Block 136, Nutzer: „den Tunnel ändern können, wenn man draufklickt“): zu einem angetippten Feld das Portal –
-// Schienenfeld am Tunnel, vorderes Feld einer langen Rampe oder das Tunnelfeld dahinter (dort steht der Hügel)
-function portalNear(x, y) {
-  const d0 = portalDir(x, y);
-  if (d0) return { R: [x, y], d: d0 };
-  for (const [dx, dy] of DIRS) {
-    const q = portalDir(x + dx, y + dy);
-    if (q && q[0] === dx && q[1] === dy && bAt(x, y) === 'schiene' && portalForm(x + dx, y + dy, q) === 'rampe' && rampLen(x + dx, y + dy, q) === 2) return { R: [x + dx, y + dy], d: q };
-    const r = portalDir(x - dx, y - dy);
-    if (r && r[0] === dx && r[1] === dy && tunnelAt(x, y)) return { R: [x - dx, y - dy], d: r };
-  }
-  return null;
-}
-const portalTunnel = P => state.tunnels.get((P.R[0] + P.d[0]) + ',' + (P.R[1] + P.d[1]));
-function portalLookHtml(P) {
-  const f = portalTunnel(P).form || 0, now = DECO_LOOKS.tunnel.forms.find(e => e.id === portalForm(P.R[0], P.R[1], P.d));
-  return `<div class="portal-look"><div class="label">🚇 Tunnelportal${f ? '' : ` · passend: ${now.name}`}</div>${decoLookHtml('tunnel', portalTunnel(P))}</div>`;
-}
+// Tunnel (Block 136): Fenster für ein Tunnelfeld ohne etwas darüber – Entfernen, Hinweis zur Einfahrt
+const TUNNEL_EIN_HINT = '🚇 Schiene und Tunnel verbindet eine Tunneleinfahrt (Verkehr): ans Tunnelende setzen, Schiene ans offene Ende.';
 function openTunnelInfo(x, y) {
-  const P = portalNear(x, y), c = costOf('tunnel', x, y);
+  const c = costOf('tunnel', x, y), atRail = DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
   showPanel(`
     <h3>🚇 Tunnel</h3>
-    <p class="muted">Liegt unter der Erde – zu sehen nur mit Tunnel, U-Bahn-Station, Schiene oder 🧹 in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
-    ${P ? portalLookHtml(P) : ''}
+    <p class="muted">Liegt unter der Erde – zu sehen nur mit Tunnel, Einfahrt, U-Bahn-Station, Schiene oder 🧹 in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
+    ${atRail ? `<div class="status"><div class="bad">✗ Schiene direkt am Tunnel fährt nicht hinein. ${TUNNEL_EIN_HINT}</div></div>` : ''}
     <div class="row"><button class="btn danger" id="p-del" aria-label="Tunnel hier entfernen">🗑️ +${fmt(c.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => tunnelAt(x, y) && !COVER.has(x + ',' + y) ? openTunnelInfo(x, y) : closePanel());
-  if (P) wireDecoLook($('panel').querySelector('.portal-look'), 'tunnel', portalTunnel(P), () => openTunnelInfo(x, y));
   $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
   $('p-close').onclick = closePanel;
 }

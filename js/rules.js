@@ -1616,6 +1616,10 @@ function placeRot(b, x, y) {
       return f.every(p => p === back ? terrainAt(...p) !== 'water' : terrainAt(...p) === 'water'); });
     return ok == null ? buildRot : ok;
   }
+  if (b === 'tunneleinfahrt') {                                         // zeigt von selbst mit dem hinteren Ende zum Tunnel (Block 136)
+    const ok = [buildRot, 0, 1, 2, 3].find(rr => { const { B, d } = einTiles(x, y, rr); return tunnelAt(B[0] + d[0], B[1] + d[1]); });
+    return ok == null ? buildRot : ok;
+  }
   return autoRot(b, x, y, buildRot);
 }
 
@@ -1841,41 +1845,56 @@ const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRI
   : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // U-Bahn (Block 136): Tunnel liegen in state.tunnels unter der Oberfläche und gehören zum Schienennetz. Ein Feld ist Schiene ODER
-// Tunnel (nie beides) – so bleibt das Netz eine Menge von Feldern. Schiene neben Tunnel = Tunnelportal (die Schiene fährt hinunter).
+// Tunnel (nie beides). Schiene und Tunnel verbinden sich NUR über eine Tunneleinfahrt (Nutzer, 09.10.2026: „automatisch ist mega
+// unintuitiv“) – trackLink sagt, welche Nachbarfelder befahrbar zusammenhängen.
 const TUNNEL_WATER = { cost: 150, mat: { quader: 2, metall: 3 } };      // unter Wasser
 const tunnelAt = (x, y) => !!state.tunnels && state.tunnels.has(x + ',' + y);
-const trackAt = (x, y) => bAt(x, y) === 'schiene' || tunnelAt(x, y);    // Schiene oder Tunnel: befahrbar
-// Portal: Richtung von der Schiene zum Tunnel (das erste passende Nachbarfeld), sonst null
-function portalDir(x, y) {
-  if (!state.tunnels || !state.tunnels.size || bAt(x, y) !== 'schiene') return null;
-  return DIRS.find(([dx, dy]) => tunnelAt(x + dx, y + dy)) || null;
+const isEinfahrt = (x, y) => bAt(x, y) === 'tunneleinfahrt';
+const railTileAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return !!t && t.b === 'schiene'; };   // das Schienenfeld selbst (nicht, was darüber steht)
+const trackAt = (x, y) => railTileAt(x, y) || tunnelAt(x, y) || isEinfahrt(x, y);   // befahrbar
+// Einfahrt am Feld (x, y): { A: vorderes Feld, B: hinteres (zum Tunnel), d } oder null
+function einOf(x, y) {
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
+  if (!t || t.b !== 'tunneleinfahrt') return null;
+  const [ax, ay] = keyXY(a);
+  return einTiles(ax, ay, t.rot || 0);
 }
-// Form des Portals (Form des Tunnelfelds dahinter); „Passend“: Rampe, wenn ringsum Stadt ist (Wege, Gebäude), sonst Backstein
-function portalForm(x, y, d = portalDir(x, y)) {
-  if (!d) return null;
-  const v = state.tunnels.get((x + d[0]) + ',' + (y + d[1])) || {}, id = DECO_LOOKS.tunnel.forms[v.form || 0].id;
-  if (id !== 'auto') return id;
-  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-    const t = objAt(x + dx, y + dy);
-    if (t && t.b !== 'schiene' && t.b !== 'lm') return 'rampe';
+const sameXY = (p, x, y) => p[0] === x && p[1] === y;
+// Ein Ende einer Einfahrt: vorn an Schiene (Feld vor A), hinten an Tunnel (Feld hinter B), innen A ↔ B
+function einLinks(E, x, y, nx, ny) {
+  if (sameXY(E.A, x, y) && sameXY(E.B, nx, ny) || sameXY(E.B, x, y) && sameXY(E.A, nx, ny)) return true;
+  if (sameXY(E.A, x, y)) return nx === x - E.d[0] && ny === y - E.d[1] && railTileAt(nx, ny);
+  if (sameXY(E.B, x, y)) return nx === x + E.d[0] && ny === y + E.d[1] && tunnelAt(nx, ny);
+  return false;
+}
+function trackLink(x, y, nx, ny) {
+  const e1 = isEinfahrt(x, y), e2 = isEinfahrt(nx, ny);
+  if (e1 || e2) {
+    if (e1 && !einLinks(einOf(x, y), x, y, nx, ny)) return false;
+    if (e2 && !einLinks(einOf(nx, ny), nx, ny, x, y)) return false;
+    return true;
   }
-  return 'backstein';
+  const r1 = railTileAt(x, y), r2 = railTileAt(nx, ny);
+  if (r1 && r2) return true;
+  return tunnelAt(x, y) && tunnelAt(nx, ny);                            // Schiene–Tunnel direkt: nein
 }
+// Schiene, die direkt an einen Tunnel stößt (ohne Einfahrt) – für den Hinweis im Fenster
+const railAtTunnel = (x, y) => bAt(x, y) === 'schiene' && DIRS.some(([dx, dy]) => tunnelAt(x + dx, y + dy));
 function tunnelError(x, y, noCost) {
   if (!available('tunnel')) return `Tunnel: ${lockText('tunnel').replace('🔒 ', 'erst mit ')}`;
   if (!ownedTile(x, y) && !claimable(x, y)) return isSea(x, y) ? 'Im Meer nur direkt neben deinem Land' : notMine(x, y);
   if (tunnelAt(x, y)) return 'Hier ist schon ein Tunnel';
   const b = bAt(x, y);
-  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station') return 'Unter Schienen und Bahnhöfen geht kein Tunnel – wo er sie berührt, entsteht ein Portal';
+  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station' || b === 'tunneleinfahrt') return 'Unter Schienen, Bahnhöfen und Einfahrten geht kein Tunnel – Schiene und Tunnel verbindet eine Tunneleinfahrt';
   if (noCost) return null;
   const c = costOf('tunnel', x, y);
   if (state.money < c.cost) return 'Zu wenig Taler';
   if (Object.entries(c.mat || {}).some(([res, n]) => (state.res[res] || 0) < n)) return 'Zu wenig ' + RES[Object.entries(c.mat).find(([res, n]) => (state.res[res] || 0) < n)[0]].name;
   return null;
 }
-// Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock); Schiene vor einem Tunnel ins Portal
+// Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock); vor einer Tunneleinfahrt in die Einfahrt
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
-  return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || tunnelAt(x + dx, y + dy) || (e && e[0] === dx && e[1] === dy)); };
+  return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || (isEinfahrt(x + dx, y + dy) && trackLink(x, y, x + dx, y + dy)) || (e && e[0] === dx && e[1] === dy)); };
 // Bahnübergang: ein Schienenfeld mit cross (und dem Stil des Wegs), gehört zu Schienen- und Wegenetz.
 // Entsteht, wenn man einen Weg über eine gerade Schiene zieht oder eine Schiene über einen Weg (nicht auf Brücken).
 // foot: statt Schranken eine Fußgängerbrücke (einmal bezahlt: footPaid).
@@ -2078,8 +2097,8 @@ const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
 // Strom eines Zugs: die Regionalbahn (2 Wagen) wie oben, jeder Wagen mehr oder weniger ein halbes Mal
 const carNeed = (tiles, cars) => trainNeed(tiles) * cars / 2;
 // Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs
-function railLoop(tiles, rails) {
-  const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k); return DIRS.map(([dx, dy]) => (x + dx) + ',' + (y + dy)).filter(n => core.has(n)); };
+function railLoop(tiles, rails, link = null) {   // link: welche Nachbarn zusammenhängen (Schienennetz: trackLink, Block 136)
+  const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k); return DIRS.filter(([dx, dy]) => !link || link(x, y, x + dx, y + dy)).map(([dx, dy]) => (x + dx) + ',' + (y + dy)).filter(n => core.has(n)); };
   let changed = true;
   while (changed) { changed = false; for (const k of [...core]) if (nb(k).length < 2) { core.delete(k); changed = true; } }
   if (core.size < 4 || [...core].some(k => nb(k).length !== 2)) return null;
@@ -2098,6 +2117,7 @@ function computeRail() {
   for (const k of state.tunnels || []) rails.add(k[0]);                     // Tunnel (Block 136): Teil des Netzes
   for (const [k, t] of state.tiles) {
     if (t.b === 'schiene') rails.add(k);
+    else if (t.b === 'tunneleinfahrt') { const [ax, ay] = keyXY(k); for (const [fx, fy] of footprint(t.b, ax, ay, t.rot || 0)) rails.add(fx + ',' + fy); }
     else if (t.b === 'station' || t.b === 'ubahn') stations.push(k);
     else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
     else if (POWER_OUT[t.b]) { wind += powerOf(t, k); plants++; }
@@ -2110,7 +2130,7 @@ function computeRail() {
     comp.set(k, nid);
     while (q.length) {
       const [x, y] = keyXY(q.pop());
-      for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n)) { comp.set(n, nid); q.push(n); list.push(n); } }
+      for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n) && trackLink(x, y, x + dx, y + dy)) { comp.set(n, nid); q.push(n); list.push(n); } }
     }
     netTiles.push(list);
     nid++;
@@ -2121,7 +2141,7 @@ function computeRail() {
     if (bAt(...keyXY(s)) === 'ubahn') net = comp.has(s) ? comp.get(s) : null;   // U-Bahn: auf dem Tunnel
     else for (const [fx, fy] of stopFoot(s)) for (const [dx, dy] of DIRS) {
       const nk = (fx + dx) + ',' + (fy + dy), n = comp.get(nk);
-      if (n != null && net == null && !tunnelAt(fx + dx, fy + dy)) net = n;    // Bahnhof oben: nur an Schienen, nicht an Tunneln
+      if (n != null && net == null && railTileAt(fx + dx, fy + dy)) net = n;    // Bahnhof oben: nur an Schienen (nicht an Tunnel, Einfahrt)
     }
     stationNet.set(s, net);
     if (net != null) { if (!byNet.has(net)) byNet.set(net, []); byNet.get(net).push(s); }
@@ -2133,7 +2153,7 @@ function computeRail() {
     // anderen (nie schlechter für bestehende Welten) und bringt nur, wenn ihre Halte in verschiedenen Vierteln liegen
     const inner = regions.length < 2;
     if (inner && list.length < 2) continue;
-    const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails);
+    const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails, trackLink);
     // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
     const onRing = ring && list.every(s => { const R = new Set(ring);
       return stopFoot(s).some(([fx, fy]) => stopDirs(s).some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)))); });
@@ -2458,8 +2478,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
-  if ((b === 'schiene' || b === 'station' || b === 'hbf') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
-    return b === 'schiene' ? 'Über einem Tunnel keine Schiene – lass sie daneben enden, dann entsteht ein Portal' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
+  if ((b === 'schiene' || b === 'station' || b === 'hbf' || b === 'tunneleinfahrt') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
+    return b === 'schiene' ? 'Über einem Tunnel keine Schiene – Schiene und Tunnel verbindet eine Tunneleinfahrt' : b === 'tunneleinfahrt' ? 'Nicht auf den Tunnel – ans Ende davon setzen' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
   if (b === 'fz_hoch' || b === 'fz_tief') {             // Höhen-Pinsel (Block 60e): nur über Schienen
     if (!available(b) && !opts.move) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
     const t = state.tiles.get(x + ',' + y);

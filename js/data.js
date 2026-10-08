@@ -73,7 +73,9 @@ const ITEMS = {
              desc: 'Für den Zug – das Gleisbett kannst du wählen (Schotter, Rasen …). Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
   // U-Bahn (Block 136, Konzept mit Nutzer 08.10.2026): Tunnel und U-Bahn-Station gehören zum selben Netz wie Schienen
   tunnel:  { cat: 'netz', name: 'Tunnel', cost: 60, mat: { quader: 1, metall: 1 }, needs: 'grass', tech: 'ubahn', paint: true,
-             desc: 'Strecke unter der Erde: unter Häusern, Wegen und Parks durch, ohne Abriss – auch unter Wasser (teurer). Trifft er auf eine Schiene, entsteht von selbst ein Tunnelportal.' },
+             desc: 'Strecke unter der Erde: unter Häusern, Wegen und Parks durch, ohne Abriss – auch unter Wasser (teurer). Mit der Schiene verbindet ihn eine Tunneleinfahrt.' },
+  tunneleinfahrt: { cat: 'netz', name: 'Tunneleinfahrt', size: [1, 2], cost: 1000, mat: { quader: 6, metall: 2 }, needs: 'grass', tech: 'ubahn',
+             desc: 'Verbindet Schiene und Tunnel: ans Ende eines Tunnels setzen (dreht sich von selbst), dann Schienen an das offene Ende. Zwei Felder lang – als Rampe oder als Portal im Hügel.' },
   ubahn:   { cat: 'netz', name: 'U-Bahn-Station', cost: 900, mat: { quader: 6, metall: 4 }, needs: 'grass', tech: 'ubahn',
              desc: 'Auf einen Tunnel setzen – oben sieht man nur den Eingang. Zählt wie ein Bahnhof: Züge, Fahrgäste, Fahrkarten.' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
@@ -563,7 +565,7 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'tunnel', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
     { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
@@ -619,7 +621,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
@@ -649,7 +651,8 @@ const ITEM_TIPS = {
   leuchtturm: 'Das Finale: ein Leuchtturm-Kap (3×3) an der Küste – dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
-  tunnel: 'Zieh den Tunnel wie eine Schiene – unter Häusern und Wegen durch. Wo er eine Schiene berührt, fährt der Zug durchs Portal hinunter.',
+  tunnel: 'Zieh den Tunnel wie eine Schiene – unter Häusern und Wegen durch. An sein Ende kommt eine Tunneleinfahrt, daran die Schiene.',
+  tunneleinfahrt: 'Ans Ende eines Tunnels setzen – sie dreht sich von selbst richtig herum. Dann Schienen an das offene Ende legen.',
   ubahn: 'Auf ein Stück Tunnel setzen. Zwei Stationen im selben Netz und Strom: Die Züge fahren unter der Stadt.',
   hbf: 'Der große Kopfbahnhof: Vor jedes Gleis eine eigene Strecke legen (mit einem Feld Abstand, sonst wird es eine Linie). Jede fährt mit eigenem Zug – und am Bahnhof steigen die Leute um. Mehr Gleise im Infofenster.',
   station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und Strom: Der Zug fährt, bringt Fahrgäste und bindet die Umgebung ans Dorf an. Auf derselben Insel verbindet er Viertel – Wünsche und Läden zählen dann auch drüben.',
@@ -1103,8 +1106,8 @@ const DECO_LOOKS = {
   // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
   pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: STATION_COLS, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', short: 'Tram', design: 300 },
     { id: 'mini', name: 'Mini-Zug', design: 250 }] },   // Block 136: die Form ist der Zug
-  // Tunnelportal (Block 136): Form am Tunnelfeld; „Passend“ = Rampe in der Stadt, Backstein auf dem Land
-  tunnel: { group: 'Tunnelportale', icon: '#b9644a', cols: null, forms: [{ id: 'auto', name: 'Passend' }, { id: 'rampe', name: 'Rampe' }, { id: 'backstein', name: 'Backstein' },
+  // Tunneleinfahrt (Block 136): Rampe und Backstein frei, Naturstein in der Kunstakademie
+  tunneleinfahrt: { group: 'Tunneleinfahrten', icon: '#b9644a', cols: null, forms: [{ id: 'rampe', name: 'Rampe' }, { id: 'backstein', name: 'Backstein' },
     { id: 'stein', name: 'Naturstein', design: 200 }] },
   ubahn: { group: 'U-Bahn', icon: '#2f62b8', cols: null, forms: [{ id: 'treppe', name: 'Treppe mit Mast' }, { id: 'pavillon', name: 'Pavillon', design: 250 },
     { id: 'haeuschen', name: 'Häuschen', design: 200 }] },

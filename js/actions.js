@@ -36,20 +36,13 @@ function build(b, x, y, quiet) {
     return true;
   }
   if (b === 'tunnel') {                                // Tunnel (Block 136): unter der Oberfläche, oben bleibt alles stehen
-    if (state.tunnels.has(k0) && ownedTile(x, y)) {      // Portal-Form übermalen kostet nichts (wie das Gleisbett)
-      const f = decoLookNew('tunnel').form || 0, v = state.tunnels.get(k0);
-      if ((v.form || 0) === f) return false;
-      if (f) v.form = f; else delete v.form;
-      groundVersion++; save();
-      return true;
-    }
+    if (state.tunnels.has(k0) && ownedTile(x, y)) return false;           // liegt schon
     const err = placeError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
     const c = costOf(b, x, y);
     state.money -= c.cost; payMat(c.mat);
     if (!ownedTile(x, y)) claimTile(x, y);
-    const f = decoLookNew('tunnel').form || 0;
-    state.tunnels.set(k0, f ? { form: f } : {});
+    state.tunnels.set(k0, {});
     groundVersion++; sfx('dig'); recalc(); save();
     return true;
   }

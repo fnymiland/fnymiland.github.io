@@ -1,7 +1,7 @@
 const { loadGame, game } = require('./helpers/load-game');
 
-// U-Bahn (Block 136, Konzept mit dem Nutzer): Tunnel unter der Erde gehören zum selben Netz wie Schienen; Portale entstehen
-// von selbst; U-Bahn-Stationen stehen auf dem Tunnel und zählen wie Bahnhöfe. Auch ein Netz ganz ohne Schienen fährt.
+// U-Bahn (Block 136, Konzept mit dem Nutzer): Tunnel unter der Erde gehören zum selben Netz wie Schienen; verbunden über eine
+// Tunneleinfahrt; U-Bahn-Stationen stehen auf dem Tunnel und zählen wie Bahnhöfe. Auch ein Netz ganz ohne Schienen fährt.
 beforeAll(() => loadGame());
 beforeEach(() => {
   game('startNew()'); game('closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true');
@@ -16,7 +16,7 @@ const twoPlaces = () => game("globalThis.__ra = regionAt; regionAt = (x, y) => x
 describe('Forschung und Menü', () => {
   it('U-Bahn kommt nach der Eisenbahn; Tunnel und U-Bahn-Station stehen unter Verkehr', () => {
     expect(game('TECH_BY_ID.ubahn.req')).toEqual(['bahn']);
-    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 4)")).toEqual(['schiene', 'tunnel', 'station', 'ubahn']);
+    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 5)")).toEqual(['schiene', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn']);
     game("state.techs.delete('ubahn')");
     expect(game("placeError('tunnel', 8, 8)")).toMatch(/erst mit/);
   });
@@ -56,9 +56,9 @@ describe('Tunnel bauen', () => {
     game("undoable(() => build('tunnel', 8, 8, true))");
     expect(game('undo()')).toBe(true);
     expect(game("state.tunnels.has('8,8')")).toBe(false);
-    game("build('tunnel', 8, 8, true); build('tunnel', 9, 8, true); state.tunnels.get('9,8').form = 3; save()");
+    game("build('tunnel', 8, 8, true); build('tunnel', 9, 8, true); save()");
     const s = game('load()');
-    expect(game(`[...load().tunnels]`)).toEqual([['8,8', {}], ['9,8', { form: 3 }]]);
+    expect(game(`[...load().tunnels]`)).toEqual([['8,8', {}], ['9,8', {}]]);
     expect(s).toBeTruthy();
   });
   it('als Linie ziehen (wie eine Schiene)', () => {
@@ -66,49 +66,63 @@ describe('Tunnel bauen', () => {
   });
 });
 
-describe('Ein Netz: Schiene – Portal – Tunnel', () => {
-  it('Schiene neben Tunnel ist ein Portal; beide sind ein Netz', () => {
-    for (let x = 4; x <= 7; x++) game(`build('schiene', ${x}, 10, true)`);
-    for (let x = 8; x <= 12; x++) game(`build('tunnel', ${x}, 10, true)`);
+describe('Tunneleinfahrt (Nutzer: „einen Tunnel bauen, eine Einfahrt dazu und dann Schienen ran“)', () => {
+  // Schiene 4–5, Einfahrt A = 6, B = 7 (Drehung 3: zum Tunnel nach +x), Tunnel ab 8
+  const ein = (form = 0) => game(`state.tiles.set('6,10', { b: 'tunneleinfahrt', lvl: 1, rot: 3, ${form ? `form: ${form}` : ''} }); recalc()`);
+  it('Schiene direkt am Tunnel verbindet nicht (Hinweis im Fenster); mit Einfahrt ist es ein Netz', () => {
+    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
+    for (let x = 8; x <= 12; x++) game(`state.tunnels.set('${x},10', {})`);
     game('recalc()');
-    expect(game('portalDir(7, 10)')).toEqual([1, 0]);
-    expect(game('portalDir(6, 10)')).toBe(null);
+    expect(game("T.rail.comp.get('4,10') === T.rail.comp.get('12,10')")).toBe(false);
+    game('openInfo(7, 10)');
+    expect(document.getElementById('panel').textContent).toContain('Tunneleinfahrt');
+    game("closePanel(); state.tiles.delete('6,10'); state.tiles.delete('7,10')"); ein();
     expect(game("T.rail.comp.get('4,10') === T.rail.comp.get('12,10')")).toBe(true);
-    expect(game("railArms(7, 10).map(a => a.join())").sort()).toEqual(['-1,0', '1,0']);
+    expect(game("railArms(5, 10).map(a => a.join())").sort()).toEqual(['-1,0', '1,0']);   // die Schiene läuft in die Einfahrt
   });
-  it('Form „Passend“: Rampe neben Häusern/Wegen, sonst Backstein; gewählte Form gilt', () => {
-    game("build('schiene', 7, 10, true); build('tunnel', 8, 10, true); recalc()");
-    expect(game('portalForm(7, 10)')).toBe('backstein');
-    game("state.tiles.set('6,9', { b: 'haus', lvl: 1 }); recalc()");
-    expect(game('portalForm(7, 10)')).toBe('rampe');
-    game("state.tunnels.get('8,10').form = DECO_LOOKS.tunnel.forms.findIndex(f => f.id === 'stein')");
-    expect(game('portalForm(7, 10)')).toBe('stein');
+  it('dreht sich von selbst mit dem hinteren Ende zum Tunnel; nicht auf den Tunnel; kostet 1.000', () => {
+    game("state.tunnels.set('8,10', {}); state.tunnels.set('20,8', {}); recalc(); rotManual = false");
+    expect(game("placeRot('tunneleinfahrt', 6, 10)")).toBe(3);
+    expect(game("placeRot('tunneleinfahrt', 20, 9)")).toBe(2);
+    expect(game("placeError('tunneleinfahrt', 8, 10)")).toMatch(/Nicht auf den Tunnel/);
+    const m = game('state.money');
+    expect(game("build('tunneleinfahrt', 6, 10, true)")).toBe(true);
+    expect(game('state.money')).toBe(m - 1000);
+    expect(game("einOf(7, 10)")).toEqual({ A: [6, 10], B: [7, 10], d: [1, 0] });
   });
-  it('Rampe zwei Felder lang (Nutzer: „sonst zu steil“), wenn davor gerade Schiene liegt; die Wagen dort sinken schon mit', () => {
-    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
-    game("state.tunnels.set('8,10', { form: 1 }); recalc()");
-    expect(game('rampLen(7, 10, [1, 0])')).toBe(2);
-    const c = game("trainTunnelCut({ px: 6, py: 10, du: 1, dv: 0, len: 0.8 })");
-    expect([c.k, c.portal.len, c.portal.ramp]).toEqual(['7,10', 2, true]);
-    expect(game("rampSink({ R: [7, 10], d: [1, 0], len: 2 }, 5.5, 10)")).toBe(0);           // oben am Anfang
-    expect(game("rampSink({ R: [7, 10], d: [1, 0], len: 2 }, 7.5, 10)")).toBe(game('RAMP_D'));   // unten an der Wand
-    game("state.tiles.delete('5,10'); state.tiles.set('6,11', { b: 'schiene', lvl: 1 }); recalc()");   // davor eine Kurve
-    expect(game('rampLen(7, 10, [1, 0])')).toBe(1);
+  it('nur vorn Schiene und hinten Tunnel verbinden – seitlich nicht', () => {
+    game("state.tunnels.set('8,10', {}); state.tiles.set('5,10', { b: 'schiene', lvl: 1 }); state.tiles.set('6,11', { b: 'schiene', lvl: 1 }); state.tunnels.set('7,9', {})"); ein();
+    expect(game('[trackLink(6, 10, 5, 10), trackLink(6, 10, 7, 10), trackLink(7, 10, 8, 10)]')).toEqual([true, true, true]);
+    expect(game('[trackLink(6, 10, 6, 11), trackLink(7, 10, 7, 9), trackLink(5, 10, 8, 10)]')).toEqual([false, false, false]);
   });
-  it('Zug fährt durch den Tunnel; im Berg ist der Wagen unsichtbar, am Portal abgeschnitten', () => {
+  it('Zug fährt hindurch: Rampe sinkt über beide Felder bis zur Wand; Portal: Wand zwischen A und B, dahinter unsichtbar', () => {
     twoPlaces();
-    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
+    for (let x = 4; x <= 5; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
     for (let x = 8; x <= 16; x++) game(`state.tunnels.set('${x},10', {})`);
-    game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('15,10', { b: 'ubahn', lvl: 1 })");
-    wind(10); game('recalc(); syncTrains()');
+    game("state.tiles.set('3,10', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('15,10', { b: 'ubahn', lvl: 1 })"); ein();
+    wind(10); game('syncTrains()');
     expect(game('T.rail.lines.length')).toBe(1);
-    const route = game('trains[0].route.pts.map(p => Math.round(p[0]) + "," + Math.round(p[1]))');
-    expect(route).toContain('12,10');                                       // durch den Tunnel
+    expect(game('trains[0].route.pts.map(p => Math.round(p[0]) + "," + Math.round(p[1]))')).toContain('12,10');
+    let c = game("trainTunnelCut({ px: 6, py: 10, du: 1, dv: 0, len: 0.8 })");                  // Rampe (Form 0)
+    expect([c.k, c.portal.ramp]).toEqual(['7,10', true]);                                   // mit dem späteren Feld
+    expect(game("rampSink({ R: [7, 10], d: [1, 0] }, 5.5, 10)")).toBe(0);
+    expect(game("rampSink({ R: [7, 10], d: [1, 0] }, 7.5, 10)")).toBe(game('RAMP_D'));
+    c = game("trainTunnelCut({ px: 7.4, py: 10, du: 1, dv: 0, len: 0.8 })");
+    expect(c.cut[1]).toBeCloseTo(0.1);
     expect(game("trainTunnelCut({ px: 12, py: 10, du: 1, dv: 0, len: 0.8 })")).toBe('hide');
-    expect(game("trainTunnelCut({ px: 4, py: 10, du: 1, dv: 0, len: 0.8 })")).toBe(null);
-    const c = game("trainTunnelCut({ px: 7.4, py: 10, du: 1, dv: 0, len: 0.8 })");   // Wand bei x = 7,5: vorne 0,1 drin
-    expect(c.k).toBe('7,10');
-    expect(c.cut[0]).toBeCloseTo(-0.4); expect(c.cut[1]).toBeCloseTo(0.1);
+    game("state.tiles.get('6,10').form = 1");                                                // Backstein: Wand zwischen A und B
+    c = game("trainTunnelCut({ px: 6.4, py: 10, du: 1, dv: 0, len: 0.8 })");
+    expect([c.k, c.portal.ramp]).toEqual(['6,10', false]); expect(c.cut[1]).toBeCloseTo(0.1);
+    expect(game("trainTunnelCut({ px: 7, py: 10, du: 1, dv: 0, len: 0.8 })")).toBe('hide');
+  });
+  it('Fenster der Einfahrt: Form wählen; zeigt, ob hinten Tunnel und vorn Schiene sind', () => {
+    game("state.tunnels.set('8,10', {})"); ein();
+    game('openInfo(6, 10)');
+    const txt = document.getElementById('panel').textContent;
+    expect(txt).toContain('Hinten am Tunnel'); expect(txt).toContain('Vorn noch keine Schiene');
+    [...document.querySelectorAll('#panel [data-dform]')].find(b => b.getAttribute('aria-label') === 'Form: Backstein').click();
+    expect(game("state.tiles.get('6,10').form")).toBe(1);
+    game('closePanel()');
   });
 });
 
@@ -204,35 +218,12 @@ describe('Bauansicht', () => {
   });
 });
 
-describe('Tunnel antippen (Nutzer: „ändern können, wenn man draufklickt“)', () => {
-  beforeEach(() => {
-    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
-    for (let x = 8; x <= 10; x++) game(`state.tunnels.set('${x},10', {})`);
-    game('recalc()');
-  });
-  const pick = (sel, id) => [...document.querySelectorAll(sel + ' [data-dform]')].find(b => b.getAttribute('aria-label') === 'Form: ' + id);
-  it('Schiene am Portal: Fenster zeigt das Portal; eine Form antippen ändert es (rückgängig machbar)', () => {
-    game('openInfo(7, 10)');
-    expect(document.querySelector('#panel .portal-look')).not.toBe(null);
-    pick('#panel .portal-look', 'Rampe').click();
-    expect(game("state.tunnels.get('8,10').form")).toBe(1);
-    expect(game("[state.tiles.get('7,10').form || 0]")).toEqual([0]);        // das Gleisbett bleibt
-    expect(game('undo()')).toBe(true);
-    expect(game("state.tunnels.get('8,10').form")).toBeUndefined();
-  });
-  it('vorderes Rampenfeld und das Tunnelfeld mit dem Hügel führen zum selben Portal', () => {
-    game("state.tunnels.get('8,10').form = 1; recalc()");
-    expect(game('portalNear(6, 10)')).toEqual({ R: [7, 10], d: [1, 0] });
-    expect(game('portalNear(8, 10)')).toEqual({ R: [7, 10], d: [1, 0] });
-    expect(game('portalNear(9, 10)')).toBe(null);
-  });
-  it('Tunnel ohne etwas darüber: eigenes Fenster mit Portal-Form und Entfernen', () => {
+describe('Tunnel antippen', () => {
+  it('Tunnel ohne etwas darüber: eigenes Fenster mit Entfernen; neben einer Schiene der Hinweis auf die Einfahrt', () => {
+    game("state.tiles.set('7,10', { b: 'schiene', lvl: 1 }); for (let x = 8; x <= 10; x++) state.tunnels.set(x + ',10', {}); recalc()");
     game('openTunnelInfo(8, 10)');
-    expect(document.getElementById('panel').textContent).toContain('Tunnel');
-    pick('#panel .portal-look', 'Backstein').click();
-    expect(game("state.tunnels.get('8,10').form")).toBe(2);
+    expect(document.getElementById('panel').textContent).toContain('Tunneleinfahrt');
     game('openTunnelInfo(10, 10)');
-    expect(document.querySelector('#panel .portal-look')).toBe(null);          // mitten im Tunnel: kein Portal
     document.getElementById('p-del').click();
     expect(game("state.tunnels.has('10,10')")).toBe(false);
     game('closePanel()');

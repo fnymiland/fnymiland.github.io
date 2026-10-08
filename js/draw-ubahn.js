@@ -1,13 +1,12 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// U-Bahn (Block 136, Entwürfe mit dem Nutzer 08.10.2026): Tunnelportale, U-Bahn-Eingänge, Tunnel in der Bauansicht.
-// Portal = Schienenfeld R neben einem Tunnelfeld T (portalDir). Rahmen am Portal: a läuft von R zum Tunnel (Wand bei a = 0,5),
-// b quer dazu, up in Bildpunkten bei z = 1.
-//   Backstein/Naturstein: Stirnwand mit Bogen, dahinter ein Erdhügel über T (nur, wenn auf T oben nichts steht).
-//   Rampe: offene Betonrinne im Feld R, das Gleis sinkt bis zur Wand ab; an den Längsseiten das eigene Geländer – außer dort
-//   steht ein Zaun/eine Mauer/Hecke des Spielers auf der Feldkante (Nutzer: „eigenen Zaun drübersetzen“).
-// Sieht man die Wand nicht (Tunnel läuft nach vorn, +x/+y), malt das Tunnelfeld den Hügel (drawTunnelHill) – sonst läge er unter
-// den Wagen, die auf R vor ihm fahren.
+// U-Bahn (Block 136): Tunneleinfahrt, U-Bahn-Eingänge, Tunnel in der Bauansicht.
+// Tunneleinfahrt (Nutzer, 09.10.2026: „man will einen Tunnel bauen, eine Einfahrt dazu und dann Schienen ran“): eigenes Bauteil,
+// immer 2 Felder lang, drehbar. A = vorderes Feld (Schiene davor), B = hinteres (Tunnel dahinter), d = Richtung zum Tunnel.
+//   Rampe: Rinne über A und B, das Gleis sinkt gleichmäßig bis zur Wand am Ende von B.
+//   Backstein/Naturstein: auf A offenes Gleis, Wand mit Bogen zwischen A und B, darüber ein Erdhügel.
+// Gezeichnet wie jedes große Gebäude in Streifen je Feld – so liegen Zäune ringsum, Züge und Hügel von selbst richtig.
+// Rahmen S(a, b, up): a längs d, b quer, up in Bildpunkten bei z = 1.
 // ---------------------------------------------------------------------------
 const RAMP_W = 0.42, RAMP_D = 22;
 const portalFaceShown = d => d[0] + d[1] < 0;                     // Wand zeigt zum Betrachter (Tunnel läuft nach hinten)
@@ -22,7 +21,7 @@ function portalArch(S, a0, w, spring, top, n = 12) {
   return pts;
 }
 function portalLine(pts, col, w, z) { g.strokeStyle = C(col); g.lineWidth = w * z; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); }
-// Erdhügel über dem Tunnelfeld: Kuppel aus Schichten, vorn an der Wand (a0) abgeschnitten
+// Erdhügel: Kuppel aus Schichten, vorn an der Wand (a0) abgeschnitten
 function portalHill(S, a0, len, H, wb, col) {
   const N = 22, ac = a0 + len * 0.32, ra = len * 0.68, M = 28;
   for (let k = 0; k <= N; k++) {
@@ -31,26 +30,35 @@ function portalHill(S, a0, len, H, wb, col) {
     poly(pts, C(shade(col, -0.16 + 0.22 * f)));
   }
 }
-const HILL = { backstein: [1.8, 32, 0.78, '#8fcf68'], stein: [1.9, 36, 0.85, '#86c75f'] };
-// Hügel nur, wenn auf dem Tunnelfeld oben nichts steht (sonst bleibt die Wand allein)
-const hillFree = (x, y) => x > 1e5 || !COVER.has(x + ',' + y) && !decosAt(x + ',' + y) && terrainAt(x, y) !== 'water';
-// Wer malt die Rampe? Das Feld der Rampe, das zuerst dran ist (kleineres x + y) – sonst malt die Rinne über die Zäune am anderen
-// Feld (Nutzer: „Zaun um die Abfahrt“). Taucht sie nach vorn ab und ist zwei lang, ist das das vordere Feld.
-const rampByFront = (x, y, d) => rampLen(x, y, d) === 2 && !portalFaceShown(d);
-// Schienenfeld vor einem Rampen-Portal, das die Rampe malt: { R, d } oder null
-function rampFrontOf(x, y) {
-  if (!state.tunnels || !state.tunnels.size) return null;
-  for (const [dx, dy] of DIRS) {
-    const q = portalDir(x + dx, y + dy);
-    if (q && q[0] === dx && q[1] === dy && portalForm(x + dx, y + dy, q) === 'rampe' && rampByFront(x + dx, y + dy, q)) return { R: [x + dx, y + dy], d: q };
-  }
-  return null;
+const HILL = { backstein: [1.25, 32, 0.78, '#8fcf68'], stein: [1.35, 36, 0.85, '#86c75f'] };
+const EIN_DIR = [[0, 1], [-1, 0], [0, -1], [1, 0]];                  // Drehung → Richtung zum Tunnel
+// Felder einer Einfahrt (Anker ax, ay, Drehung r): { A, B, d }
+function einTiles(ax, ay, r) {
+  const d = EIN_DIR[r & 3], f = footprint('tunneleinfahrt', ax, ay, r);
+  const [p, q] = f, B = (q[0] - p[0]) * d[0] + (q[1] - p[1]) * d[1] > 0 ? q : p, A = B === q ? p : q;
+  return { A, B, d };
 }
-function drawPortal(cx, cy, z, x, y, d, form) {
-  const S = portalFrame(cx, cy, z, d), shown = portalFaceShown(d), tx = x + d[0], ty = y + d[1];
-  if (form === 'rampe') return x > 1e5 || !rampByFront(x, y, d) ? drawRamp(S, z, x, y, d, shown) : null;
-  if (shown && hillFree(tx, ty)) portalHill(S, 0.5, ...HILL[form]);
-  if (!shown) return;                                                   // Wand abgewandt: den Hügel malt das Tunnelfeld
+// Gleisbett vor der Einfahrt: wie die Schiene, die dort anschließt (Nutzer: „Schienen wie das gewählte Muster“)
+function einRailLook(A, d) {
+  if (!A || A[0] > 1e5) return RAIL_LOOK.schotter;
+  const t = state.tiles.get((A[0] - d[0]) + ',' + (A[1] - d[1]));
+  return t && t.b === 'schiene' ? railLookOf(t) : RAIL_LOOK.schotter;
+}
+// Ganze Einfahrt, Mitte der Grundfläche bei (cx, cy); x, y = Anker (im Vorschaubild weit weg)
+function drawEinfahrt(cx, cy, z, x, y, t) {
+  const r = (t && t.rot) || 0, real = x < 1e5 && t && state.tiles.get(x + ',' + y) === t;
+  const { A, d } = real ? einTiles(x, y, r) : { A: null, d: EIN_DIR[r & 3] };
+  const form = lookForm('tunneleinfahrt', t), shown = portalFaceShown(d), lk = einRailLook(A, d);
+  const half = (s) => [cx + s * (d[0] - d[1]) * TW / 4 * z, cy + s * (d[0] + d[1]) * TH / 4 * z];
+  if (form === 'rampe') { const [bx, by] = half(1); return drawRamp(portalFrame(bx, by, z, d), z, d, shown, lk); }   // Rahmen am hinteren Feld
+  const [ax, ay] = half(-1), S = portalFrame(ax, ay, z, d);                // Rahmen am vorderen Feld, Wand bei a = 0,5
+  rampTrack(S, z, -0.5, 0.5, () => 0, lk);                               // offenes Gleis bis zur Wand
+  if (shown) portalHill(S, 0.5, ...HILL[form]);
+  if (shown) portalWall(S, z, form, x, y);
+  if (!shown) portalHill(S, 0.5, ...HILL[form]);                         // Wand abgewandt: der Hügel liegt vorn
+  if (form === 'stein') for (const [b, h] of [[-0.7, 6], [0.72, 9], [0.1, 33]]) { const p = S(0.6, b, h); circle(p[0], p[1], 4.5 * z, C('#5fa847')); circle(p[0] - z, p[1] - 1.5 * z, 3 * z, C('#7cc45c')); }
+}
+function portalWall(S, z, form, x, y) {
   if (form === 'stein') {
     poly(portalArch(S, 0.48, 0.46, 9, 27), C('#a8a197'));
     for (let i = 0; i < 9; i++) {
@@ -58,7 +66,6 @@ function drawPortal(cx, cy, z, x, y, d, form) {
       g.fillStyle = C(shade('#a8a197', hash(x * 9 + i, y, 3) * 0.25 - 0.12)); g.beginPath(); g.ellipse(p[0], p[1], 3.6 * z, 2.6 * z, 0, 0, 7); g.fill();
     }
     poly(portalArch(S, 0.48, 0.33, 9, 21), C('#231d1a'));
-    if (hillFree(tx, ty)) for (const [b, h] of [[-0.7, 6], [0.72, 9], [0.1, 33]]) { const p = S(0.6, b, h); circle(p[0], p[1], 4.5 * z, C('#5fa847')); circle(p[0] - z, p[1] - 1.5 * z, 3 * z, C('#7cc45c')); }
     return;
   }
   const W0 = 0.44;                                                      // Backstein
@@ -69,30 +76,11 @@ function drawPortal(cx, cy, z, x, y, d, form) {
   poly([S(0.5, -W0 - 0.03, 26), S(0.5, W0 + 0.03, 26), S(0.5, W0 + 0.03, 28.5), S(0.5, -W0 - 0.03, 28.5)], C('#d9cbb5'));
   for (const b of [-W0, W0 - 0.06]) poly([S(0.5, b, 0), S(0.5, b + 0.06, 0), S(0.5, b + 0.06, 26), S(0.5, b, 26)], C('#a3543d'));
 }
-// Hügel eines Portals mit abgewandter Wand – gemalt vom Tunnelfeld (render.js, nach den Wagen auf der Schiene davor)
-function drawTunnelHill(x, y, px, py, z) {
-  if (!hillFree(x, y)) return;
-  for (const [dx, dy] of DIRS) {
-    const rx = x - dx, ry = y - dy, d = portalDir(rx, ry);
-    if (!d || d[0] !== dx || d[1] !== dy || portalFaceShown(d)) continue;
-    const form = portalForm(rx, ry, d);
-    if (form === 'rampe') continue;
-    const p0 = toScreen(rx, ry);
-    portalHill(portalFrame(p0.x, p0.y, z, d), 0.5, ...HILL[form]);
-  }
-}
-// Rampe (Nutzer: „zwei lang, sonst zu steil“): Rinne über das Portalfeld und das gerade Schienenfeld davor (a −1,5 … 0,5), am
-// Tunnel RAMP_D tief. Ist das Feld davor keine gerade Schiene, nur über das Portalfeld.
-function rampLen(x, y, d) {
-  if (x > 1e5) return 2;                                                // Vorschaubild
-  const px = x - d[0], py = y - d[1], t = objAt(px, py);
-  if (!t || t.b !== 'schiene' || t.cross || portalDir(px, py)) return 1;
-  const arms = railArms(px, py);
-  return arms.length === 2 && arms.every(([ax, ay]) => ax === d[0] * Math.sign(ax * d[0] + ay * d[1]) && ay === d[1] * Math.sign(ax * d[0] + ay * d[1])) ? 2 : 1;
-}
-const rampDepth = (a, len) => RAMP_D * Math.max(0, Math.min(1, (a - 0.5 + len) / len));   // gleichmäßig (Nutzer: sonst krumme Schienen)
-function drawRamp(S, z, x, y, d, shown) {
-  const len = rampLen(x, y, d), a0 = 0.5 - len, w = RAMP_W, N = 10 * len, as = i => a0 + len * i / N, dep = a => rampDepth(a, len);
+// Rampe: Rinne über zwei Felder (a −1,5 … 0,5, Rahmen am hinteren Feld), gleichmäßig bis RAMP_D tief
+const RAMP_LEN = 2;
+const rampDepth = a => RAMP_D * Math.max(0, Math.min(1, (a - 0.5 + RAMP_LEN) / RAMP_LEN));
+function drawRamp(S, z, d, shown, lk) {
+  const len = RAMP_LEN, a0 = 0.5 - len, w = RAMP_W, N = 10 * len, as = i => a0 + len * i / N, dep = rampDepth;
   g.save();
   g.beginPath(); [S(a0, -w, 0), S(0.5, -w, 0), S(0.5, w, 0), S(a0, w, 0)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
   const floor = [];
@@ -111,18 +99,14 @@ function drawRamp(S, z, x, y, d, shown) {
     poly([S(0.5, -w, -RAMP_D), S(0.5, w, -RAMP_D), S(0.5, w, 0), S(0.5, -w, 0)], C('#a9a399'));
     poly([S(0.5, -0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D + 17), S(0.5, -0.28, -RAMP_D + 17)], C('#231d1a'));
   }
-  // Gleis im gewählten Gleisbett (Nutzer: „Schienen sollen sich dem Schienenmuster anpassen“) – je Feld wie dort gewählt
-  for (let i = 0; i < len; i++) {
-    const t = x > 1e5 ? null : state.tiles.get((x - d[0] * i) + ',' + (y - d[1] * i));
-    rampTrack(S, z, 0.5 - i - 1, 0.5 - i, dep, railLookOf(t));
-  }
+  rampTrack(S, z, a0, 0.5, dep, lk);
   g.restore();
-  for (const sg of [-1, 1]) {                                            // Betonkante; Geländer gibt es keins – ein eigener Zaun auf der Feldkante geht
+  for (const sg of [-1, 1]) {                                            // Betonkante; ein eigener Zaun auf der Feldkante geht
     const b = sg * (w + 0.04);
     poly([S(a0, b - 0.04, 0), S(0.5, b - 0.04, 0), S(0.5, b + 0.04, 0), S(a0, b + 0.04, 0)], C('#d9d5cc'));
   }
 }
-// Gleisbett und Schienen schräg in der Rampe (a von lo bis hi), Farben wie drawRailBed
+// Gleisbett und Schienen (a von lo bis hi, in der Rampe schräg), Farben wie drawRailBed
 function rampTrack(S, z, lo, hi, dep, lk) {
   const M = 8, at = (a, b) => S(a, b, -dep(a)), band = w => { const pts = []; for (let i = 0; i <= M; i++) pts.push(at(lo + (hi - lo) * i / M, -w)); for (let i = M; i >= 0; i--) pts.push(at(lo + (hi - lo) * i / M, w)); return pts; };
   if (lk.pave) { const pl = pathLook(lk.pave); poly(band(RAIL_W + 0.05), C(pl.edge)); poly(band(RAIL_W + 0.02), C(pl.fill)); }
@@ -139,49 +123,46 @@ function rampTrack(S, z, lo, hi, dep, lk) {
   }
 }
 
-// Zugwagen am Portal (render.js): wo die Wand ist, wird der Wagen abgeschnitten; in der Rampe sinkt er mit dem Gleis
-// → { k: Feld, auf dem er gezeichnet wird, cut: [lo, hi] längs des Wagens, portal } | 'hide' | null (kein Tunnel in der Nähe)
+// Zugwagen an der Einfahrt (render.js): im Berg unsichtbar, an der Wand abgeschnitten, in der Rampe sinkend
+// → { k: Feld, mit dem er gezeichnet wird, cut: [lo, hi] längs des Wagens, portal } | 'hide' | null
+function einAt(x, y) {
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
+  if (!t || t.b !== 'tunneleinfahrt') return null;
+  const [ax, ay] = keyXY(a);
+  return { ...einTiles(ax, ay, t.rot || 0), t };
+}
 function trainTunnelCut(m) {
   if (!state.tunnels || !state.tunnels.size) return null;
   const rx = Math.round(m.px), ry = Math.round(m.py);
-  let R = null, d = null;
-  const pd = portalDir(rx, ry);
-  if (pd) { R = [rx, ry]; d = pd; }
-  else if (tunnelAt(rx, ry)) {
-    for (const [dx, dy] of DIRS) { const q = portalDir(rx - dx, ry - dy); if (q && q[0] === dx && q[1] === dy) { R = [rx - dx, ry - dy]; d = q; break; } }
-    if (!R) return 'hide';
-  } else {                                                              // vorderes Feld einer zwei Felder langen Rampe
-    for (const [dx, dy] of DIRS) {
-      const q = portalDir(rx + dx, ry + dy);
-      if (q && q[0] === dx && q[1] === dy && portalForm(rx + dx, ry + dy, q) === 'rampe' && rampLen(rx + dx, ry + dy, q) === 2) { R = [rx + dx, ry + dy]; d = q; break; }
-    }
-    if (!R) return null;
+  let E = einAt(rx, ry);
+  if (!E && tunnelAt(rx, ry)) {                                         // im Tunnel: nur direkt hinter einer Einfahrt sichtbar
+    for (const [dx, dy] of DIRS) { const e = einAt(rx - dx, ry - dy); if (e && e.B[0] === rx - dx && e.B[1] === ry - dy && e.d[0] === dx && e.d[1] === dy) { E = e; break; } }
+    if (!E) return 'hide';
   }
-  const fx = R[0] + d[0] * 0.5, fy = R[1] + d[1] * 0.5, s = (m.px - fx) * d[0] + (m.py - fy) * d[1];
-  const ed = m.du * d[0] + m.dv * d[1], la = m.len / 2;
-  if (Math.abs(ed) < 0.5) return tunnelAt(rx, ry) ? 'hide' : null;   // quer zum Portal (Kurve davor): nicht schneiden
+  if (!E) return null;
+  const { A, B, d } = E, ramp = lookForm('tunneleinfahrt', E.t) === 'rampe';
+  const W0 = ramp ? B : A, fx = W0[0] + d[0] * 0.5, fy = W0[1] + d[1] * 0.5;   // Wand: Rampe am Ende von B, sonst zwischen A und B
+  const s = (m.px - fx) * d[0] + (m.py - fy) * d[1], ed = m.du * d[0] + m.dv * d[1], la = m.len / 2;
+  if (Math.abs(ed) < 0.5) return null;
   const lo = ed > 0 ? -la : Math.max(-la, s), hi = ed > 0 ? Math.min(la, -s) : la;
   if (hi - lo < 0.02) return 'hide';
-  const ramp = portalForm(R[0], R[1], d) === 'rampe', len = ramp ? rampLen(R[0], R[1], d) : 1;
-  // Zeichnen mit dem Rampenfeld, das zuletzt dran ist (größeres x + y): sonst malt dessen hinterer Zaun über den Zug (Nutzer: „Zaun
-  // um die Abfahrt – glitcht komplett“)
-  const k = len === 2 && d[0] + d[1] < 0 ? (R[0] - d[0]) + ',' + (R[1] - d[1]) : R[0] + ',' + R[1];
-  return { k, cut: [lo, hi], portal: { R, d, ramp, len } };
+  const later = (B[0] + B[1] > A[0] + A[1]) ? B : A;                   // mit dem Feld, das zuletzt dran ist (nach Rinne und Zäunen)
+  const k = ramp ? later.join() : A.join();
+  return { k, cut: [lo, hi], portal: { R: B, d, ramp, len: RAMP_LEN } };
 }
 // Tiefe eines Weltpunkts in der Rampe (für die Wagen)
 function rampSink(P, wx, wy) {
   const [rx, ry] = P.R, a = (wx - rx) * P.d[0] + (wy - ry) * P.d[1];
-  return rampDepth(a, P.len || 1);
+  return rampDepth(a);
 }
-// Wagen in der Rampe: was unter der Erde liegt, verdeckt die vordere Kante – also alles unterhalb der vorderen Längskante und (zeigt
-// die Wand weg) unterhalb der Kante an der Wand. Am Rampenanfang liegt das Gleis ebenerdig: dort nichts verdecken, sonst
-// verschwand dort das Ende des Wagens (Nutzer: „glitched beim Ein- und Ausfahren“)
+// Wagen in der Rampe: was unter der Erde liegt, verdeckt die vordere Kante – unterhalb der vorderen Längskante und (zeigt die
+// Wand weg) unterhalb der Kante an der Wand. Am Rampenanfang liegt das Gleis ebenerdig: dort nichts verdecken.
 function rampClip(P, z) {
-  const [rx, ry] = P.R, d = P.d, w = RAMP_W, a0 = 0.5 - (P.len || 1);
+  const [rx, ry] = P.R, d = P.d, w = RAMP_W, a0 = 0.5 - RAMP_LEN;
   const W2 = (a, b) => { const p = toScreen(rx + d[0] * a - d[1] * b, ry + d[1] * a + d[0] * b); return [p.x, p.y]; };
   const edges = [];
-  for (const sg of [-1, 1]) if (sg * (d[0] - d[1]) > 0) edges.push([W2(a0, sg * w), W2(0.5, sg * w)]);   // vordere Längskante
-  if (d[0] + d[1] > 0) edges.push([W2(0.5, -w), W2(0.5, w)]);            // Kante an der Wand, wenn sie vorn liegt
+  for (const sg of [-1, 1]) if (sg * (d[0] - d[1]) > 0) edges.push([W2(a0, sg * w), W2(0.5, sg * w)]);
+  if (d[0] + d[1] > 0) edges.push([W2(0.5, -w), W2(0.5, w)]);
   g.beginPath(); g.rect(-1e4, -1e4, 3e4, 3e4);
   for (const [p, q] of edges) { g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.lineTo(q[0], q[1] + 1e4); g.lineTo(p[0], p[1] + 1e4); g.closePath(); }
   g.clip('evenodd');
@@ -237,36 +218,37 @@ function drawUbahn(cx, cy, z, t) {
     uSign(S(-0.39, -0.4, 34), 11, z);
   }
 }
-// Vorschaubild/Geist des Tunnels: kleines Portal mit Hügel (Bauleiste) bzw. gestrichelte Strecke (Geist auf der Karte)
-function drawTunnelIcon(cx, cy, z, t) {
-  const f = DECO_LOOKS.tunnel.forms[(t && t.form) || 0].id, d = [-1, 0], S = portalFrame(cx + 10 * z, cy + 5 * z, z, d);
-  if (f === 'rampe') { drawRamp(S, z, 1e6, 1e6, d, true); return; }
-  drawPortal(cx + 10 * z, cy + 5 * z, z, 1e6, 1e6, d, f === 'auto' ? 'backstein' : f);
-}
+// Geist des Tunnels beim Bauen: gestrichelte Raute
 function drawTunnelGhost(cx, cy, z) {
   g.save(); g.setLineDash([5 * z, 4 * z]); g.strokeStyle = '#6a52c4'; g.lineWidth = 2.4 * z;
   diamondPath(cx, cy, TW / 2 * z * 0.7, TH / 2 * z * 0.7); g.stroke(); g.restore();
 }
 function diamondPath(cx, cy, a, b) { g.beginPath(); g.moveTo(cx, cy - b); g.lineTo(cx + a, cy); g.lineTo(cx, cy + b); g.lineTo(cx - a, cy); g.closePath(); }
+// Bauleiste: kleines Bild des Tunnels (Strecke unter einem Hügel)
+function drawTunnelIcon(cx, cy, z) {
+  const d = [-1, 0], S = portalFrame(cx + 10 * z, cy + 5 * z, z, d);
+  portalHill(S, 0.5, ...HILL.backstein);
+  portalWall(S, z, 'backstein', 0, 0);
+}
 
-// Bauansicht (Nutzer: „passt so“): mit Tunnel oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss nicht
-// (Nutzer: „beim Entfernen genauso ausgegraut“) – die Tunnel erscheinen immer lila gestrichelt, U-Bahn-Stationen als U
-const TUNNEL_VIEW = new Set(['schiene', 'tunnel', 'ubahn', 'abriss']);
+// Bauansicht (Nutzer: „passt so“): mit Tunnel, Einfahrt oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss
+// nicht (Nutzer: „beim Entfernen genauso ausgegraut“) – die Tunnel erscheinen immer lila gestrichelt, U-Bahn-Stationen als U
+const TUNNEL_VIEW = new Set(['schiene', 'tunnel', 'tunneleinfahrt', 'ubahn', 'abriss']);
 function drawTunnelView(z) {
-  if (!state.tunnels || !TUNNEL_VIEW.has(tool) || (tool !== 'tunnel' && tool !== 'ubahn' && !state.tunnels.size)) return;
+  if (!state.tunnels || !TUNNEL_VIEW.has(tool) || (tool !== 'tunnel' && tool !== 'ubahn' && tool !== 'tunneleinfahrt' && !state.tunnels.size)) return;
   g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0);
-  if (tool === 'tunnel' || tool === 'ubahn') { g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H); }   // blass nur beim Tunnelbau – Entfernen/Schiene: nur die Linien (Nutzer)
+  if (tool === 'tunnel' || tool === 'ubahn' || tool === 'tunneleinfahrt') { g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H); }
   const segs = [];
   for (const k of state.tunnels.keys()) {
     const [x, y] = keyXY(k), p = toScreen(x, y);
     if (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) continue;
     let n = 0;
     for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
-      const nx = x + dx, ny = y + dy, mine = tunnelAt(nx, ny), rail = bAt(nx, ny) === 'schiene';
-      if (!mine && !rail) continue;
+      const nx = x + dx, ny = y + dy, mine = tunnelAt(nx, ny), ein = !mine && trackLink(x, y, nx, ny);
+      if (!mine && !ein) continue;
       n++;
       if (mine && (dx < 0 || dy < 0)) continue;                        // jede Verbindung einmal
-      const q = toScreen(rail ? x + dx * 0.5 : nx, rail ? y + dy * 0.5 : ny);
+      const q = toScreen(ein ? x + dx * 0.5 : nx, ein ? y + dy * 0.5 : ny);
       segs.push([p, q]);
     }
     if (!n) segs.push([{ x: p.x - 4 * z, y: p.y }, { x: p.x + 4 * z, y: p.y }]);
