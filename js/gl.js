@@ -123,7 +123,7 @@ function glRec(src, sx, sy, sw, sh, m, alpha, clip, nearest) {
 // ersetzt ctx.drawImage während GLPASS: Leinwände werden aufgezeichnet, alles andere wie gehabt
 function glDrawImage(img, ...a) {
   if (!GLPASS || !(img instanceof HTMLCanvasElement) || !img.width || !img.height || glClip === 'x' || ctx.globalCompositeOperation !== 'source-over') {
-    if (GLPASS) { GL.stats.miss++; GLS.dirty = true; }
+    if (GLPASS) { GL.stats.miss++; GLS.dirty = true; GLS.dirtyWhy = 'kein Bildchen'; }
     return C2D.drawImage.call(ctx, img, ...a);
   }
   let sx = 0, sy = 0, sw = img.width, sh = img.height, dx, dy, dw, dh;
@@ -187,6 +187,7 @@ function glLive(x, y, l, u, r, d, fn) {
   const bx0 = Math.floor((x - l) * DPR), by0 = Math.floor((y - u) * DPR), bw = Math.ceil((x + r) * DPR) - bx0, bh = Math.ceil((y + d) * DPR) - by0;
   if (bx0 > W * DPR || by0 > H * DPR || bx0 + bw < 0 || by0 + bh < 0) return;   // ganz außerhalb (W/H: beim Aufzeichnen mit Rand)
   GLS.dirty = true;                                                     // dieses Feld ist „lebendig“ (Standbild: jedes Bild neu)
+  if (MESS && !GLS.dirtyWhy) GLS.dirtyWhy = 'bewegt sich';
   const cell = laInit() && laAlloc(bw, bh);
   if (!cell) { GL.stats.over++; return fn(); }                    // voll: diesmal obendrauf (2D)
   const prev = g, X = LA.x;
@@ -375,7 +376,7 @@ function glMoverBox(m, z) {
 // Spieländerungen (drawEpoch: save), außerhalb des Rands und spätestens nach GLS_AGE ms. Nur in ruhigen Bildern (calm), sonst
 // wird wie bisher jedes Bild aufgezeichnet.
 // ---------------------------------------------------------------------------
-const GLS = { srcs: new Set(), ok: false, key: '', tex: -1, draw: -1, at: 0, cam: null, M: 0, W0: 0, H0: 0, recs: [], tiles: [], dyn: [], sA0: [], sA1: [],
+const GLS = { dynWhy: new Map(), dirtyWhy: '', srcs: new Set(), ok: false, key: '', tex: -1, draw: -1, at: 0, cam: null, M: 0, W0: 0, H0: 0, recs: [], tiles: [], dyn: [], sA0: [], sA1: [],
   order: new Map(), icons: [], labels: [], waves: [], ents: [], calm: 0, last: '', dirty: false, cur: null, w0: -1, w1: -1, gEnd: 0, ops: [] };
 const GLS_AGE = 8000, GLS_CALM = 6;
 function glTouch() { GL.drawEpoch++; }                                  // Spielstand geändert (save, neue Welt)
@@ -394,16 +395,22 @@ function glCacheStart(z, now) {
   if (GLS.why) return (GL.cacheMode = null);                             // unruhig oder etwas fiele aufs Overlay
   GLS.M = Math.round(Math.max(W, H) * 0.25); GLS.W0 = W; GLS.H0 = H; GLS.cam = { x: cam.x, y: cam.y }; GLS.key = key; GLS.at = now;
   W += 2 * GLS.M; H += 2 * GLS.M;                                        // mit Rand aufzeichnen (toScreen verschiebt alles um M)
-  GLS.tiles.length = 0; GLS.dyn.length = 0; GLS.w0 = GLS.w1 = -1; GLS.waves = [];
+  GLS.tiles.length = 0; GLS.dyn.length = 0; GLS.dynWhy = new Map(); GLS.w0 = GLS.w1 = -1; GLS.waves = [];
   GLS.why = '';
   return (GL.cacheMode = 'rec');
 }
 // Feld i beginnt (start) bzw. endet (Teil A) – Grenzen der Rechtecke, Symbole und Schilder merken
 function glRecTile(i, x, y, nIcons, nLabels, start) {
-  if (start) { GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels }; GLS.dirty = false; return; }
+  if (start) { GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels }; GLS.dirty = false; GLS.dirtyWhy = ''; return; }
   const c = GLS.cur, a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
   c.a1 = GL.recs.length; c.i1 = nIcons; c.l1 = nLabels;
-  c.dyn = GLS.dirty || !!(t && (CLOCK_SPRITES.has(t.b) || t.b === 'rathaus'));   // Uhren, Briefkasten-Fähnchen: jedes Bild neu
+  const clock = !!(t && (CLOCK_SPRITES.has(t.b) || t.b === 'rathaus'));
+  c.dyn = GLS.dirty || clock;                                            // Uhren, Briefkasten-Fähnchen: jedes Bild neu
+  if (c.dyn && MESS) {                                                   // ?messen: was hält Felder „lebendig“?
+    const ds = decosAt(x + ',' + y), n = (t ? t.b : ds && ds.find(Boolean) ? ds.find(Boolean).b : 'Feld') + (clock ? ' (Uhr)' : GLS.dirtyWhy ? ' (' + GLS.dirtyWhy + ')' : '');
+    GLS.dynWhy.set(n, (GLS.dynWhy.get(n) || 0) + 1);
+  }
+  GLS.dirtyWhy = '';
   GLS.tiles.push(c);
 }
 // Ende des Aufzeichnens: ruhende Rechtecke als Standbild auf die Grafikkarte; Symbole des Aufzeichnens auf echte Größe

@@ -184,6 +184,8 @@ function messLine(ms) {
     `  davon Vorbereiten ${MESS.vor.toFixed(1)} · Felder ${MESS.feld.toFixed(1)} · Grafikkarte ${MESS.gl.toFixed(1)}`,
     typeof GL === 'undefined' || GL.why ? '' : `  Hochladen ${MESS.up.toFixed(1)} (${MESS.la} Zeilen) · Bewegtes ${MESS.movers}`,
     `  Rest (Schilder, Symbole …) ${Math.max(0, MESS.ms - MESS.boden - MESS.obj - MESS.nacht).toFixed(1)}`,
+    ...(typeof GL === 'undefined' || GL.why || !GLS.dyn.length ? [] : [`Lebendige Felder: ${GLS.dyn.length}`,
+      ...[...GLS.dynWhy].sort((p, q) => q[1] - p[1]).slice(0, 5).map(([n, k]) => `  ${k}× ${(ITEMS[n.split(' ')[0]] && ITEMS[n.split(' ')[0]].name) || n}${n.includes(' ') ? ' ' + n.slice(n.indexOf(' ') + 1) : ''}`)]),
     `Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss}, neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`].filter(Boolean);
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '600 14px system-ui, sans-serif';
   const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, lh = 20, h = lines.length * lh + 12, x = W - w - 12, y = Math.round(H * 0.3);
