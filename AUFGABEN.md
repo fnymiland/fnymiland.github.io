@@ -1833,6 +1833,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Mauerfugen der Bogenbrücken waren Striche 0,6 × Zoom – bei Pixeldichte 1 ab Zoom ~0,8 dünner als ein Bildpunkt, die Wand
       wurde einfarbig. Jetzt (`archWall`): Fugen mindestens 1 Gerätepunkt, Steinreihen nie enger als ~5 Gerätepunkte (sonst doppelt
       so hohe Steine – kein Grauschleier). Belag oben blasst wie bei Wegen bewusst aus (Block 125c).
+- [x] Nachbesserung (Nutzer-Foto: helle graue Steinbrücke „immer noch“): Fugen auf hellem Stein (#d9d2c3) nur 20 % dunkler – weit weg
+      kaum sichtbar. Jetzt werden sie weit weg kräftiger (bis 36 % dunkler, `far` aus den Gerätepunkten je Einheit).
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
