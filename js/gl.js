@@ -10,7 +10,7 @@
 // Rückfall: ohne WebGL2, mit ?gl=0, nach einem Fehler oder Kontextverlust zeichnet render wie bisher alles in 2D (deckend).
 // Vorerst nur bei Tag, weit weg (nicht SPRITES_NEAR) und ohne Bau-Vorschau; sonst 2D.
 // ---------------------------------------------------------------------------
-const GL = { ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
+const GL = { texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
   frame: false, shown: false, stats: { quads: 0, draws: 0, live: 0, over: 0, up: 0, miss: 0 } };
 let GLPASS = false;                                             // gerade läuft der aufgezeichnete Welt-Durchgang
 const GL_Q = new URLSearchParams(location.search).get('gl');
@@ -29,9 +29,9 @@ function glInit() {
   try { gl = c.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }); } catch (e) { gl = null; }
   if (!(gl instanceof WebGL2RenderingContext)) { GL.broken = true; return false; }
   const VS = `#version 300 es
-  in vec2 p; in vec2 t; in float a; in vec2 cl; uniform vec2 sz;
+  in vec2 p; in vec2 t; in float a; in vec2 cl; uniform vec2 sz; uniform vec2 off;
   out vec2 uv; out float al; out vec2 clip;
-  void main() { uv = t; al = a; clip = cl; gl_Position = vec4(p.x / sz.x * 2.0 - 1.0, 1.0 - p.y / sz.y * 2.0, 0.0, 1.0); }`;
+  void main() { uv = t; al = a; clip = cl + off.x; vec2 q = p + off; gl_Position = vec4(q.x / sz.x * 2.0 - 1.0, 1.0 - q.y / sz.y * 2.0, 0.0, 1.0); }`;
   const FS = `#version 300 es
   precision highp float;
   in vec2 uv; in float al; in vec2 clip; uniform sampler2D tx; out vec4 o;
@@ -41,8 +41,8 @@ function glInit() {
     const pr = gl.createProgram();
     gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
-    GL.prog = pr; GL.buf = gl.createBuffer();
-    GL.loc = { p: gl.getAttribLocation(pr, 'p'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a'), cl: gl.getAttribLocation(pr, 'cl'), sz: gl.getUniformLocation(pr, 'sz'), tx: gl.getUniformLocation(pr, 'tx') };
+    GL.prog = pr; GL.buf = gl.createBuffer(); GL.sbuf = gl.createBuffer();
+    GL.loc = { p: gl.getAttribLocation(pr, 'p'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a'), cl: gl.getAttribLocation(pr, 'cl'), sz: gl.getUniformLocation(pr, 'sz'), tx: gl.getUniformLocation(pr, 'tx'), off: gl.getUniformLocation(pr, 'off') };
   } catch (e) { console.warn('WebGL', e); GL.broken = true; return false; }
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
@@ -53,7 +53,7 @@ function glInit() {
 }
 function glShow(on) { if (GL.canvas && GL.shown !== on) { GL.canvas.style.visibility = on ? 'visible' : 'hidden'; GL.shown = on; } }
 // Leinwand freigegeben (freeCanvas): Textur auch weg
-function glForget(c) { const e = GL.texs.get(c); if (e && GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); }
+function glForget(c) { const e = GL.texs.get(c); if (!e) return; if (GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); GL.texEpoch++; }   // gemerktes Standbild ungültig
 
 // --- Aufzeichnen (ctx.drawImage während GLPASS) ---
 const C2D = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingContext2D.prototype : {};   // im Test (jsdom) gibt es keins – dort ist GL ohnehin aus
@@ -66,7 +66,7 @@ function glRec(src, sx, sy, sw, sh, m, alpha, clip, nearest) {
 // ersetzt ctx.drawImage während GLPASS: Leinwände werden aufgezeichnet, alles andere wie gehabt
 function glDrawImage(img, ...a) {
   if (!GLPASS || !(img instanceof HTMLCanvasElement) || !img.width || !img.height || glClip === 'x' || ctx.globalCompositeOperation !== 'source-over') {
-    if (GLPASS) GL.stats.miss++;
+    if (GLPASS) { GL.stats.miss++; GLS.dirty = true; }
     return C2D.drawImage.call(ctx, img, ...a);
   }
   let sx = 0, sy = 0, sw = img.width, sh = img.height, dx, dy, dw, dh;
@@ -128,7 +128,8 @@ function laAlloc(w, h) {
 function glLive(x, y, l, u, r, d, fn) {
   if (!GLPASS) return fn();
   const bx0 = Math.floor((x - l) * DPR), by0 = Math.floor((y - u) * DPR), bw = Math.ceil((x + r) * DPR) - bx0, bh = Math.ceil((y + d) * DPR) - by0;
-  if (bx0 > ctx.canvas.width || by0 > ctx.canvas.height || bx0 + bw < 0 || by0 + bh < 0) return;   // ganz außerhalb
+  if (bx0 > W * DPR || by0 > H * DPR || bx0 + bw < 0 || by0 + bh < 0) return;   // ganz außerhalb (W/H: beim Aufzeichnen mit Rand)
+  GLS.dirty = true;                                                     // dieses Feld ist „lebendig“ (Standbild: jedes Bild neu)
   const cell = laInit() && laAlloc(bw, bh);
   if (!cell) { GL.stats.over++; return fn(); }                    // voll: diesmal obendrauf (2D)
   const prev = g, X = LA.x;
@@ -176,45 +177,74 @@ function glTex(src, nearest) {
   GL.stats.up++;
   return e;
 }
-// Ende des Welt-Durchgangs: alles Aufgezeichnete zeichnen
-function glEnd() {
-  glHook(false); GLPASS = false;
-  const gl = GL.gl, recs = GL.recs, n = recs.length, CW = GL.canvas.width, CH = GL.canvas.height;
-  const F = 7, data = new Float32Array(n * 6 * F);
+// Rechtecke → Eckpunkte (6 je Rechteck: Position in Gerätepunkten, Texturkoordinate, Deckkraft, Ausschnitt x0/x1)
+const GL_F = 7;
+function glVerts(recs) {
+  const data = new Float32Array(recs.length * 6 * GL_F);
   let o = 0;
   for (const r of recs) {
-    const { m, sx, sy, sw, sh } = r, W0 = r.src.width, H0 = r.src.height;
+    const { m, sx, sy, sw, sh } = r, W0 = r.src.width || 1, H0 = r.src.height || 1;
     const u0 = sx / W0, v0 = sy / H0, u1 = (sx + sw) / W0, v1 = (sy + sh) / H0;
-    const P = (u, v) => [m.a * u + m.c * v + m.e, m.b * u + m.d * v + m.f];
-    const A = P(0, 0), B = P(1, 0), Cc = P(0, 1), D = P(1, 1);
-    for (const [p, tu, tv] of [[A, u0, v0], [B, u1, v0], [Cc, u0, v1], [Cc, u0, v1], [B, u1, v0], [D, u1, v1]]) {
-      data[o++] = p[0]; data[o++] = p[1]; data[o++] = tu; data[o++] = tv; data[o++] = r.alpha; data[o++] = r.clip[0]; data[o++] = r.clip[1];
-    }
+    const ax = m.e, ay = m.f, bx = m.a + m.e, by = m.b + m.f, cx = m.c + m.e, cy = m.d + m.f, dx = m.a + m.c + m.e, dy = m.b + m.d + m.f;
+    const al = r.alpha, c0 = r.clip[0], c1 = r.clip[1];
+    data[o++] = ax; data[o++] = ay; data[o++] = u0; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    data[o++] = bx; data[o++] = by; data[o++] = u1; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    data[o++] = cx; data[o++] = cy; data[o++] = u0; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    data[o++] = cx; data[o++] = cy; data[o++] = u0; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    data[o++] = bx; data[o++] = by; data[o++] = u1; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    data[o++] = dx; data[o++] = dy; data[o++] = u1; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
   }
+  return data;
+}
+function glAttribs(buf) {
+  const gl = GL.gl, L = GL.loc, S = GL_F * 4;
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.enableVertexAttribArray(L.p); gl.vertexAttribPointer(L.p, 2, gl.FLOAT, false, S, 0);
+  gl.enableVertexAttribArray(L.t); gl.vertexAttribPointer(L.t, 2, gl.FLOAT, false, S, 8);
+  gl.enableVertexAttribArray(L.a); gl.vertexAttribPointer(L.a, 1, gl.FLOAT, false, S, 16);
+  gl.enableVertexAttribArray(L.cl); gl.vertexAttribPointer(L.cl, 2, gl.FLOAT, false, S, 20);
+}
+// Rechtecke a … b−1 aus dem gebundenen Puffer zeichnen, je gleiche Textur ein Auftrag (Reihenfolge bleibt)
+function glDrawRange(recs, a, b) {
+  const gl = GL.gl;
+  let i = a;
+  while (i < b) {
+    const src = recs[i].src; let j = i + 1;
+    while (j < b && recs[j].src === src) j++;
+    const e = src === LA.c ? GL.texs.get(LA.c) : src.width ? glTex(src, recs[i].nearest) : null;   // inzwischen freigegeben: auslassen
+    if (e) { gl.bindTexture(gl.TEXTURE_2D, e.tex); gl.drawArrays(gl.TRIANGLES, i * 6, (j - i) * 6); GL.stats.draws++; }
+    i = j;
+  }
+}
+// Ende des Welt-Durchgangs: alles Aufgezeichnete zeichnen (Standbild: gemerkte Rechtecke verschoben + was dieses Bild neu kam)
+function glEnd() {
+  glHook(false); GLPASS = false;
+  const gl = GL.gl, recs = GL.recs, n = recs.length, mode = GL.cacheMode;
+  GL.lastMiss = GL.stats.miss + GL.stats.over;
+  if (mode === 'rec') { W = GLS.W0; H = GLS.H0; }                      // Rand fürs Aufzeichnen wieder weg (Schilder & Co. in echter Größe)
   try {
+    const CW = GL.canvas.width, CH = GL.canvas.height;
     gl.viewport(0, 0, CW, CH);
     gl.clearColor(0x6f / 255, 0xcb / 255, 0xe2 / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(GL.prog);
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STREAM_DRAW);
-    const L = GL.loc, S = F * 4;
-    gl.enableVertexAttribArray(L.p); gl.vertexAttribPointer(L.p, 2, gl.FLOAT, false, S, 0);
-    gl.enableVertexAttribArray(L.t); gl.vertexAttribPointer(L.t, 2, gl.FLOAT, false, S, 8);
-    gl.enableVertexAttribArray(L.a); gl.vertexAttribPointer(L.a, 1, gl.FLOAT, false, S, 16);
-    gl.enableVertexAttribArray(L.cl); gl.vertexAttribPointer(L.cl, 2, gl.FLOAT, false, S, 20);
-    gl.uniform2f(L.sz, CW, CH); gl.uniform1i(L.tx, 0); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform2f(GL.loc.sz, CW, CH); gl.uniform1i(GL.loc.tx, 0); gl.activeTexture(gl.TEXTURE0);
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);       // source-over, vormultipliziert
     if (LA.used) glTex(LA.c, false);                                       // Sammelfläche einmal je Bild hochladen
-    let i = 0;
-    while (i < n) {                                                        // je gleiche Textur ein Auftrag (Reihenfolge bleibt)
-      const src = recs[i].src; let j = i + 1;
-      while (j < n && recs[j].src === src) j++;
-      const e = src === LA.c ? GL.texs.get(LA.c) : glTex(src, recs[i].nearest);
-      gl.bindTexture(gl.TEXTURE_2D, e.tex);
-      gl.drawArrays(gl.TRIANGLES, i * 6, (j - i) * 6);
-      GL.stats.draws++;
-      i = j;
+    gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(recs), gl.STREAM_DRAW);
+    if (mode === 'play') {
+      const off = glPlayOff();
+      for (const op of GLS.ops) {
+        if (op[0] === 's') { if (op[2] > op[1]) { glAttribs(GL.sbuf); gl.uniform2f(GL.loc.off, off[0], off[1]); glDrawRange(GLS.recs, op[1], op[2]); } }
+        else if (op[2] > op[1]) { glAttribs(GL.buf); gl.uniform2f(GL.loc.off, 0, 0); glDrawRange(recs, op[1], op[2]); }
+      }
+      GL.stats.quads = n + GLS.recs.length;
+    } else {
+      glAttribs(GL.buf);
+      gl.uniform2f(GL.loc.off, mode === 'rec' ? -GLS.M * DPR : 0, mode === 'rec' ? -GLS.M * DPR : 0);
+      glDrawRange(recs, 0, n);
+      GL.stats.quads = n;
+      if (mode === 'rec') glRecFinish();
     }
-    GL.stats.quads = n;
     glShow(true);
   } catch (e) { console.warn('WebGL', e); GL.broken = true; GL.ready = false; glShow(false); }
   GL.frame = false;
@@ -235,12 +265,14 @@ function glWaves(list, z, now) {
     x.beginPath(); x.moveTo(-5 * z, 0); x.quadraticCurveTo(0, -2.5 * z, 5 * z, 0); x.stroke();
     GL_WAVE.c = c; GL_WAVE.k = k; GL_WAVE.ox = 2 + hx * DPR; GL_WAVE.oy = 2 + hy0 * DPR;
   }
-  const c = GL_WAVE.c, w = c.width, h = c.height, off = DEPTH * z * 0.7;
+  const c = GL_WAVE.c, w = c.width, h = c.height, off = DEPTH * z * 0.7, rec = GL.cacheMode === 'rec' && GLS.w0 < 0;
+  if (rec) { GLS.w0 = GL.recs.length; GLS.waves = list.slice(); }          // Standbild: Wellen jedes Bild neu
   for (let i = 0; i < list.length; i += 2) {
     const x = list[i], y = list[i + 1], p = toScreen(x, y), ph = now / 900 + hash(x, y, 10) * 20;
     const wx = (p.x + Math.sin(ph) * 5 * z) * DPR, wy = (p.y + off + (hash(x, y, 11) - 0.5) * 10 * z) * DPR;   // wie drawWave
     glRec(c, 0, 0, w, h, { a: w, b: 0, c: 0, d: h, e: wx - GL_WAVE.ox, f: wy - GL_WAVE.oy }, 1, glClip, false);
   }
+  if (rec) GLS.w1 = GL.recs.length;
   return true;
 }
 // Rahmen um Bewegtes (Bildschirmpunkte: links, oben, rechts, unten) – großzügig, was hinausragt, würde abgeschnitten
@@ -249,4 +281,100 @@ function glMoverBox(m, z) {
   if (m.train || m.coaster || !m.fur && !m.critter) return [60 * z, 80 * z, 60 * z, 35 * z];
   if (m.critter) return [25 * z, 35 * z, 25 * z, 12 * z];
   return m.label ? [80 * z, 70 * z, 80 * z, 12 * z] : [30 * z, 60 * z, 40 * z, 12 * z];
+}
+
+// ---------------------------------------------------------------------------
+// Standbild-Merker (Block 144): Rechnen war bei einem schwächeren Prozessor der Engpass (i5: ~20 ms je Bild, Feldschleife). Darum die
+// ruhenden Rechtecke (Boden, Tiefe, Linien, Gebäude, Dekos, Natur) einmal für einen etwas größeren Bereich aufzeichnen (Rand M) und
+// auf der Grafikkarte behalten; danach nur verschoben zeichnen (Uniform off). Jedes Bild neu: Wellen, Bewegtes (Teil B je Feld) und
+// „lebendige“ Felder (Live-Zeichnung, Uhren, Rathaus, fehlende Bildchen) – an ihrer Stelle in der Maler-Reihenfolge (GLS.ops).
+// Neu aufgezeichnet bei anderem Zoom, Größe, groundVersion, freigegebenen Texturen (texEpoch: neue/zugeschnittene Bildchen),
+// Spieländerungen (drawEpoch: save), außerhalb des Rands und spätestens nach GLS_AGE ms. Nur in ruhigen Bildern (calm), sonst
+// wird wie bisher jedes Bild aufgezeichnet.
+// ---------------------------------------------------------------------------
+const GLS = { ok: false, key: '', tex: -1, draw: -1, at: 0, cam: null, M: 0, W0: 0, H0: 0, recs: [], tiles: [], dyn: [], sA0: [], sA1: [],
+  order: new Map(), icons: [], labels: [], waves: [], ents: [], calm: 0, last: '', dirty: false, cur: null, w0: -1, w1: -1, gEnd: 0, ops: [] };
+const GLS_AGE = 8000, GLS_CALM = 6;
+function glTouch() { GL.drawEpoch++; }                                  // Spielstand geändert (save, neue Welt)
+const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M + (GLS.cam.y - cam.y) * cam.z) * DPR];
+// am Bildanfang (render, vor den Sichtgrenzen): abspielen, aufzeichnen oder normal
+function glCacheStart(z, now) {
+  const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
+  GLS.calm = sig === GLS.last && !spriteZooming && !spriteCatch && !spritePrep ? GLS.calm + 1 : 0;
+  GLS.last = sig;
+  const dx = GLS.cam ? (GLS.cam.x - cam.x) * z : 1e9, dy = GLS.cam ? (GLS.cam.y - cam.y) * z : 1e9;
+  if (GLS.ok && GLS.key === key && GLS.tex === GL.texEpoch && GLS.draw === GL.drawEpoch && now - GLS.at < GLS_AGE
+    && Math.abs(dx) < GLS.M * 0.9 && Math.abs(dy) < GLS.M * 0.9) return (GL.cacheMode = 'play');
+  GLS.ok = false;
+  if (GLS.calm < GLS_CALM || GL.lastMiss || liveFlatSet().size) return (GL.cacheMode = null);   // unruhig oder etwas fiele aufs Overlay
+  GLS.M = Math.round(Math.max(W, H) * 0.25); GLS.W0 = W; GLS.H0 = H; GLS.cam = { x: cam.x, y: cam.y }; GLS.key = key; GLS.at = now;
+  W += 2 * GLS.M; H += 2 * GLS.M;                                        // mit Rand aufzeichnen (toScreen verschiebt alles um M)
+  GLS.tiles.length = 0; GLS.dyn.length = 0; GLS.w0 = GLS.w1 = -1; GLS.waves = [];
+  return (GL.cacheMode = 'rec');
+}
+// Feld i beginnt (start) bzw. endet (Teil A) – Grenzen der Rechtecke, Symbole und Schilder merken
+function glRecTile(i, x, y, nIcons, nLabels, start) {
+  if (start) { GLS.cur = { x, y, a0: GL.recs.length, i0: nIcons, l0: nLabels }; GLS.dirty = false; return; }
+  const c = GLS.cur, a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
+  c.a1 = GL.recs.length; c.i1 = nIcons; c.l1 = nLabels;
+  c.dyn = GLS.dirty || !!(t && (CLOCK_SPRITES.has(t.b) || t.b === 'rathaus'));   // Uhren, Briefkasten-Fähnchen: jedes Bild neu
+  GLS.tiles.push(c);
+}
+// Ende des Aufzeichnens: ruhende Rechtecke als Standbild auf die Grafikkarte; Symbole des Aufzeichnens auf echte Größe
+function glRecFinish() {
+  const recs = GL.recs, st = [];
+  const w0 = GLS.w0 < 0 ? GLS.gEnd : GLS.w0, w1 = GLS.w1 < 0 ? GLS.gEnd : GLS.w1;
+  for (let i = 0; i < GLS.gEnd; i++) if (i < w0 || i >= w1) st.push(recs[i]);   // Boden und Tiefe, ohne Wellen
+  const groundEnd = st.length;
+  GLS.order.clear(); GLS.sA0 = []; GLS.sA1 = []; GLS.dyn = [];
+  GLS.tiles.forEach((c, j) => {
+    GLS.order.set(c.x + ',' + c.y, j);
+    GLS.sA0[j] = st.length;
+    if (!c.dyn) for (let i = c.a0; i < c.a1; i++) st.push(recs[i]); else GLS.dyn.push(j);
+    GLS.sA1[j] = st.length;
+  });
+  GLS.recs = st; GLS.groundEnd = groundEnd;
+  const gl = GL.gl;
+  gl.bindBuffer(gl.ARRAY_BUFFER, GL.sbuf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(st), gl.STATIC_DRAW);
+  // was gemerkt ist, gilt als benutzt (sonst räumt die Hauspflege es nach einer Weile weg)
+  const used = new Set(st.map(r => r.src));
+  GLS.ents = [...objSprites.values()].filter(e => used.has(e.c)).concat([...groundCache.values()].filter(e => used.has(e.c)));
+  GLS.tex = GL.texEpoch; GLS.draw = GL.drawEpoch; GLS.ok = true;
+}
+// render (rec): Symbole/Schilder der ruhenden Felder merken, alle Symbole auf echte Bildschirmpunkte
+function glRecOverlay(icons, labels) {
+  const M = GLS.M, keepI = [], keepL = [];
+  for (const c of GLS.tiles) if (!c.dyn) { for (let i = c.i0; i < c.i1; i++) keepI.push(icons[i]); for (let i = c.l0; i < c.l1; i++) keepL.push([labels[i], c.x, c.y]); }
+  GLS.icons = keepI.map(([x, y, s]) => [x - M, y - M, s]); GLS.labels = keepL;
+  for (const ic of icons) { ic[0] -= M; ic[1] -= M; }
+}
+// render (play): statt der Feldschleife nur Wellen, lebendige Felder und Bewegtes – in Maler-Reihenfolge zwischen den Standbild-Teilen
+function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
+  const ops = GLS.ops; ops.length = 0;
+  for (const e of GLS.ents) e.used = frameNo;
+  ops.push(['s', 0, GLS.groundEnd]);
+  let d0 = GL.recs.length;
+  if (GLS.waves.length) glWaves(GLS.waves, z, now);
+  ops.push(['d', d0, GL.recs.length]);
+  const ev = new Set(GLS.dyn);
+  for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
+  const list = [...ev].sort((p, q) => p - q);
+  let cur = GLS.groundEnd;
+  for (const j of list) {
+    const c = GLS.tiles[j], p = toScreen(c.x, c.y);
+    ops.push(['s', cur, c.dyn ? GLS.sA0[j] : GLS.sA1[j]]); cur = GLS.sA1[j];
+    d0 = GL.recs.length;
+    if (c.dyn) tileA(c.x, c.y, p.x, p.y);
+    tileB(c.x, c.y, p.x, p.y);
+    ops.push(['d', d0, GL.recs.length]);
+  }
+  ops.push(['s', cur, GLS.recs.length]);
+  const off = glPlayOff();
+  for (const [x, y, s] of GLS.icons) icons.push([x + off[0] / DPR + GLS.M, y + off[1] / DPR + GLS.M, s]);
+  // Schilder nur, wenn ihr Feld wirklich im Bild ist (wie visibleTiles) – sonst schöbe pill sie aus dem Rand ins Bild
+  const mX = TW * z, mTop = 110 * z, mBot = TH * z, mBig = 420 * z;
+  for (const [l, x, y] of GLS.labels) {
+    const p = toScreen(x, y), a = COVER.get(x + ',' + y), t = a && state.tiles.get(a), [w, h] = t ? sizeOf(t.b, t.rot, t) : [1, 1];
+    if (p.x >= -mX && p.x <= W + mX && p.y >= -mBot && p.y <= H + (w > 1 || h > 1 ? mBig : mTop)) labels.push(l);   // Schild steht am Eckfeld: große Gebäude dürfen tiefer
+  }
 }

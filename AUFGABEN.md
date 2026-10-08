@@ -1589,6 +1589,14 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Zuschneiden im Hintergrund (cropAsync: createImageBitmap → Worker liest und meldet den Rahmen, zugeschnitten per drawImage;
       ohne Worker/OffscreenCanvas bzw. mit Lichtmaske wie bisher). Echter Bildtakt, Verschieben + Zoomen, Full HD DPR 2:
       alt 25,4 / 32,5 / 42,5 ms (Mitte/90 %/max), WebGL 21,0 / 32,7 / 69,7 – Spitzen jetzt vom Hochladen neuer Bildchen
+- [x] Messzeile: echter Bildabstand (B/s) und GL-Zustand mit Grund. PC des Nutzers (i5, RTX 3070): GL an, Bild 30 ms, Rechnen
+      20 ms → Engpass ist der Prozessor, nicht die Grafikkarte
+- [x] Standbild-Merker (GLS in gl.js): Feldschleife geteilt in tileA (ruht) und tileB (Bewegtes); ruhende Rechtecke einmal mit
+      Rand (25 % der Bildbreite) aufgezeichnet und auf der Grafikkarte behalten, danach nur verschoben (Uniform off); je Bild neu:
+      Wellen, Bewegtes, „lebendige“ Felder (glLive/Fehlschlag, Uhren, Rathaus). Neu bei Zoom, Größe, groundVersion, texEpoch
+      (freigegebene Texturen), drawEpoch (save ohne periodic, resetDrawCaches), außerhalb des Rands, nach 8 s; nur in ruhigen
+      Bildern (calm ≥ 6). Schilder nur für wirklich sichtbare Felder. Mac Full HD: Rechnen 8,1 → 3,1 ms; Bild gegen 2D wie
+      vorher (nur Wellen; am Bildrand jetzt auch Wellen von Nachbar-Grundstücken, die vorher fehlten)
 - [ ] Nächste Schritte: Sammelbilder (Atlas)
       statt 4.000 Texturwechsel, JS der Feldschleife (Deko-/Linien-Plan), Nacht/Dämmerung in GL, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und

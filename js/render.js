@@ -759,6 +759,7 @@ function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n
 function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); spriteSwap.delete(k); freeSprite(e); }
 // Andere Welt (Laden, Besuch, Testwelt, neue Insel) oder andere Pixeldichte: Bildchen und Boden nicht weiter benutzen (Block 124)
 function resetDrawCaches() {
+  if (typeof glTouch === 'function') glTouch();
   for (const k of [...objSprites.keys()]) dropSprite(k);
   for (const e of spriteTrash) freeSprite(e);
   spriteTrash.length = 0; spriteCrops.length = 0; spriteSwap.clear();
@@ -1180,6 +1181,7 @@ function render(now) {
   spriteSpent = 0; spriteMade = 0; groundSpent = 0;
   spriteHousekeeping();
 
+  if (GL.frame) glCacheStart(z, now);                                     // Standbild abspielen/aufzeichnen (Block 144); 'rec' vergrößert W/H um den Rand
   const cs = [toTile(0, 0), toTile(W, 0), toTile(0, H), toTile(W, H)];
   groundCached = z * DPR <= GROUND_MAX_SCALE && isLive();
   let minX = Math.min(...cs.map(c => c.x)) - 2, maxX = Math.max(...cs.map(c => c.x)) + 6;
@@ -1195,18 +1197,21 @@ function render(now) {
   const visible = visibleTiles(minX, maxX, minY, maxY, z);
 
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
-  if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
+  const glPlay = GL.frame && GL.cacheMode === 'play';                     // Standbild: Boden, Tiefe kommen gemerkt (Block 144)
+  if (glPlay) { /* Boden gemerkt */ }
+  else if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
   else for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1];
     FOG = !ownedTile(x, y) && terrainAt(x, y) !== 'water';
     drawGround(x, y, { x: visible[i + 2], y: visible[i + 3] }, z, now);
   }
   FOG = false;
-  drawDepth(...seen, z);
+  if (!glPlay) drawDepth(...seen, z);
+  if (GL.frame && GL.cacheMode === 'rec') GLS.gEnd = GL.recs.length;
   const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
-  const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen
+  const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen (Standbild nur, wenn leer)
   if (!liveFlat || liveFlat.size) for (let i = 0; i < visible.length; i += 4) {
     if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
@@ -1345,137 +1350,152 @@ function render(now) {
   for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py); icons.push([p.x + 10 * z, p.y + 4 * z, '⚡']); } }   // Zug ohne Strom
   const labels = [];
   let staleCover = false;
-  for (let i = 0; i < visible.length; i += 4) {
-    const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
-    const owned = ownedTile(x, y);
-    FOG = !owned;
-    if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
-      if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, () => drawEdgesAt(x, y, z, now));
-      else drawEdgesAt(x, y, z, now);
-    }
-    const k = x + ',' + y;
-    // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
-    const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
-    if (a0 && !t) staleCover = true;
-    if (a) {
-      const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
-      const corner = x === ax + w - 1 && y === ay + h - 1;
-      const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
-      const drawIt = () => {
-        let sc = 1;
-        if (t.born) {
-          const an = (now - t.born) / 380;
-          if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
-        }
-        if (SPRITES_ON && sc === 1 && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
-        const ds = sc * decoScale(t.b);
-        const live = () => {
-          g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-          PASS = 'object';
-          try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
+  // Feldschleife in zwei Teilen (Block 144: Standbild-Merker): A = Linien, Gebäude, Dekos, Natur, Geister (ruht, kann gemerkt werden);
+  // B = Bewegtes dieses Felds (jedes Bild neu). Im GL-Standbild laufen nur noch B und die A der „lebendigen“ Felder
+  const tileA = (x, y, px, py) => {
+      const owned = ownedTile(x, y);
+      FOG = !owned;
+      if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
+        if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, () => drawEdgesAt(x, y, z, now));
+        else drawEdgesAt(x, y, z, now);
+      }
+      const k = x + ',' + y;
+      // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
+      const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
+      if (a0 && !t) staleCover = true;
+      if (a) {
+        const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
+        const corner = x === ax + w - 1 && y === ay + h - 1;
+        const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
+        const drawIt = () => {
+          let sc = 1;
+          if (t.born) {
+            const an = (now - t.born) / 380;
+            if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
+          }
+          if (SPRITES_ON && sc === 1 && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
+          const ds = sc * decoScale(t.b);
+          const live = () => {
+            g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+            PASS = 'object';
+            try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
+          };
+          if (!GLPASS) return live();
+          const pad = SPRITE_PAD[t.b] || [0, 0], hw = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds;   // Rahmen wie beim Bildchen, oben mehr Luft (Windräder)
+          glLive(c.x, c.y, hw, spriteTop(t.b, w, h) * 1.3 * z * ds, hw, ((w + h) * TH / 4 + 12 + pad[1]) * z * ds, live);
         };
-        if (!GLPASS) return live();
-        const pad = SPRITE_PAD[t.b] || [0, 0], hw = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds;   // Rahmen wie beim Bildchen, oben mehr Luft (Windräder)
-        glLive(c.x, c.y, hw, spriteTop(t.b, w, h) * 1.3 * z * ds, hw, ((w + h) * TH / 4 + 12 + pad[1]) * z * ds, live);
-      };
-      // Große Gebäude in senkrechten Streifen: jede Diagonale (x − y) der Grundfläche wird an ihrem vordersten
-      // Feld gezeichnet – so überdecken sie nichts, was seitlich vor ihnen steht (Bäume, Häuser, Bewohner)
-      if (big && t.b !== 'weg' && (x === ax + w - 1 || y === ay + h - 1)) {
-        const d = x - y, dMin = ax - (ay + h - 1), dMax = ax + w - 1 - ay;
-        const mid = (d * TW / 2 - cam.x) * z + W / 2, half = TW / 4 * z;
-        const snap = v => Math.round(v * DPR) / DPR;                       // Streifengrenzen auf ganze Bildpunkte – sonst eine haarfeine Fuge
-        const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
-        if (t.b === 'lm') FOG = false;
-        g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
-        try { drawIt(); } finally { g.restore(); }                         // sonst bliebe der Streifen-Ausschnitt für immer
-      }
-      if (corner) {
-        if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
-        if (!big) {
-          const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
-          if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
-          if (t.b !== 'weg') drawIt();
-          if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
+        // Große Gebäude in senkrechten Streifen: jede Diagonale (x − y) der Grundfläche wird an ihrem vordersten
+        // Feld gezeichnet – so überdecken sie nichts, was seitlich vor ihnen steht (Bäume, Häuser, Bewohner)
+        if (big && t.b !== 'weg' && (x === ax + w - 1 || y === ay + h - 1)) {
+          const d = x - y, dMin = ax - (ay + h - 1), dMax = ax + w - 1 - ay;
+          const mid = (d * TW / 2 - cam.x) * z + W / 2, half = TW / 4 * z;
+          const snap = v => Math.round(v * DPR) / DPR;                       // Streifengrenzen auf ganze Bildpunkte – sonst eine haarfeine Fuge
+          const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
+          if (t.b === 'lm') FOG = false;
+          g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
+          try { drawIt(); } finally { g.restore(); }                         // sonst bliebe der Streifen-Ausschnitt für immer
         }
-        const s = T.st.get(a);
-        if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
-        if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
-        if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
-        if (t.b === 'hbf' && [...GLEIS].some(([gk, G]) => { if (G.hub !== a) return false; const l = lineOf(gk); return l && l.traffic && l.traffic.served < 0.8; })) icons.push([c.x, c.y, '😣']);
-        if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
-        if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
-        if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet
-        if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
-        if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
-        if (s && s.wish && s.wish.next) {
-          if (s.wish.ready && canPay(houseCost(s.wish.next))) icons.push([c.x, c.y, '✨']);
-          else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);
+        if (corner) {
+          if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
+          if (!big) {
+            const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
+            if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
+            if (t.b !== 'weg') drawIt();
+            if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
+          }
+          const s = T.st.get(a);
+          if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
+          if (s && s.noPower) icons.push([c.x, c.y, '⚡']);
+          if (t.b === 'station') { const l = lineOf(a); if (l && l.traffic && l.traffic.served < 0.8) icons.push([c.x, c.y, '😣']); }   // überfüllt
+          if (t.b === 'hbf' && [...GLEIS].some(([gk, G]) => { if (G.hub !== a) return false; const l = lineOf(gk); return l && l.traffic && l.traffic.served < 0.8; })) icons.push([c.x, c.y, '😣']);
+          if (t.b === 'hafen' && (t.lvl || 1) >= 2 && state.orders.some(o => o.kind === 'sell' && state.res[o.res] >= o.amount)) icons.push([c.x, c.y, '🚢']);   // Auftrag erfüllbar
+          if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
+          if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet
+          if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
+          if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
+          if (s && s.wish && s.wish.next) {
+            if (s.wish.ready && canPay(houseCost(s.wish.next))) icons.push([c.x, c.y, '✨']);
+            else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);
+          }
+        }
+      } else {
+        const ter = terrainAt(x, y), hide = inGhost(x, y);
+        const gone = hide && tool !== 'verschieben' && ITEMS[ghostType] && willClear(ghostType, ter);   // wird beim Bauen weggeräumt
+        if (gone) { /* Vorschau: Natur schon ausblenden */ }
+        else if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
+        else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
+        else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
+        else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);
+        else if (ter === 'kristall' && !(hide && ghostType === 'kristallmine')) {
+          tileSprite('kristall', x, y, px, py, z);
+          glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
+        }
+        if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
+      }
+      if (preview && preview.small && hover.x === x && hover.y === y) {
+        const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
+        const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
+        const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
+        const [u, v] = slotPos(x, y, preview.slot, { b: ghostType, rot: gRot, form: gForm }), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+        g.globalAlpha = 0.65;
+        drawSmallOne(ghostType, gRot, q[0], q[1], z, now, x, y, 1, preview.slot, gCol, gForm);
+        g.globalAlpha = 1;
+      }
+      if (groupGhost && groupGhost.has(k)) {
+        g.globalAlpha = 0.65;
+        for (const f of groupGhost.get(k)) f();
+        g.globalAlpha = 1;
+      }
+      if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
+        const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
+        const rot = placeRot(ghostType, gx, gy);
+        g.globalAlpha = 0.65;
+        g.save(); g.translate(c.x, c.y);
+        const gs = decoScale(ghostType);
+        g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
+        const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
+          ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}), ...(ghostType === 'station' && stationNewLen === 3 ? { len: 3 } : {}) };   // wie gebaut wird (Block 84d)
+        drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
+        g.restore();
+        g.globalAlpha = 1;
+      }
+  };
+  const tileB = (x, y, px, py) => {
+    const k = x + ',' + y;
+      const ms = byTile.get(k);
+      if (ms) {
+        FOG = false;
+        ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
+        for (const m of ms) {
+          // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
+          const ar = m.fur && archAt(m.px, m.py);
+          if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
+          moverLive(m, z, now); drawnMovers.add(m);
+          if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
+            if (GLPASS) { const bp = toScreen(...keyXY(bk)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(bk, z, now)); }
+            else drawBridgeOver(bk, z, now);
+            const [bx, by] = keyXY(bk);                                       // was schon auf der Brücke fuhr (Zug, Bewohner), wieder obenauf (Block 112)
+            for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
+              if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);
+          }
         }
       }
-    } else {
-      const ter = terrainAt(x, y), hide = inGhost(x, y);
-      const gone = hide && tool !== 'verschieben' && ITEMS[ghostType] && willClear(ghostType, ter);   // wird beim Bauen weggeräumt
-      if (gone) { /* Vorschau: Natur schon ausblenden */ }
-      else if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
-      else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
-      else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
-      else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);
-      else if (ter === 'kristall' && !(hide && ghostType === 'kristallmine')) {
-        tileSprite('kristall', x, y, px, py, z);
-        glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
-      }
-      if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
-    }
-    if (preview && preview.small && hover.x === x && hover.y === y) {
-      const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
-      const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
-      const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
-      const [u, v] = slotPos(x, y, preview.slot, { b: ghostType, rot: gRot, form: gForm }), q = [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
-      g.globalAlpha = 0.65;
-      drawSmallOne(ghostType, gRot, q[0], q[1], z, now, x, y, 1, preview.slot, gCol, gForm);
-      g.globalAlpha = 1;
-    }
-    if (groupGhost && groupGhost.has(k)) {
-      g.globalAlpha = 0.65;
-      for (const f of groupGhost.get(k)) f();
-      g.globalAlpha = 1;
-    }
-    if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
-      const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
-      const rot = placeRot(ghostType, gx, gy);
-      g.globalAlpha = 0.65;
-      g.save(); g.translate(c.x, c.y);
-      const gs = decoScale(ghostType);
-      g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
-      const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),
-        ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}), ...(ghostType === 'station' && stationNewLen === 3 ? { len: 3 } : {}) };   // wie gebaut wird (Block 84d)
-      drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
-      g.restore();
-      g.globalAlpha = 1;
-    }
-    const ms = byTile.get(k);
-    if (ms) {
-      FOG = false;
-      ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
-      for (const m of ms) {
-        // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
-        const ar = m.fur && archAt(m.px, m.py);
-        if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-        moverLive(m, z, now); drawnMovers.add(m);
-        if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
-          if (GLPASS) { const bp = toScreen(...keyXY(bk)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(bk, z, now)); }
-          else drawBridgeOver(bk, z, now);
-          const [bx, by] = keyXY(bk);                                       // was schon auf der Brücke fuhr (Zug, Bewohner), wieder obenauf (Block 112)
-          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
-            if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);
-        }
-      }
-    }
-    if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
-    if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
+      if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
+      if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
+
+  };
+  const glc = GL.frame ? GL.cacheMode : null;
+  if (glc === 'play') glPlayTiles(z, now, byTile, icons, labels, tileA, tileB);
+  else for (let i = 0; i < visible.length; i += 4) {
+    const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
+    if (glc === 'rec') glRecTile(i >> 2, x, y, icons.length, labels.length, true);
+    tileA(x, y, px, py);
+    if (glc === 'rec') glRecTile(i >> 2, x, y, icons.length, labels.length, false);
+    tileB(x, y, px, py);
   }
   FOG = false;
   archWalkers.clear();
+  if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 
   if (GL.frame) glEnd();                  // Welt fertig aufgezeichnet: die Grafikkarte zeichnet, alles Weitere obendrauf in 2D (Block 144)

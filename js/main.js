@@ -186,7 +186,7 @@ else requestAnimationFrame(frame);
 
 // Größe ändern leert die Zeichenfläche – sofort neu zeichnen, sonst blitzt bis zum nächsten Bild der blaue Hintergrund durch
 window.addEventListener('resize', () => { resize(); try { render(performance.now()); } catch (e) { /* nächstes Bild holt es nach */ } });
-setInterval(save, 5000);
+setInterval(() => save(true), 5000);                                     // regelmäßig sichern (ändert nichts am Bild)
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { state.last = Date.now(); save(); }
   else lastTick = Date.now();          // bewusst nichts nachzahlen: gebaut und verdient wird nur beim Spielen

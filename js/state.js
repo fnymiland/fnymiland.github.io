@@ -140,7 +140,8 @@ function batch(fn) {
   BATCH++;
   try { return fn(); } finally { BATCH--; if (!BATCH) { recalc(); save(); } }
 }
-function save() {
+function save(periodic) {
+  if (!periodic && typeof glTouch === 'function') glTouch();            // Spielstand geändert: Standbild neu (Block 144)
   if (!state || PROBE || BATCH || TESTWELT || VISIT || saveBlocked) return;
   if (!document.hidden) state.last = Date.now();   // im Hintergrund zählt die Abwesenheit weiter
   try {
