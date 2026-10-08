@@ -1619,6 +1619,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Inseln nicht mehr – beim nächsten Mal die Ausgabe sichern. 08.10.: wieder einmal im vollen Lauf (v709), Ausgabe nicht gesichert;
       danach 10 Läufe grün. Ein Wächter-Test (Block 149) lief im vollen Lauf in die 5-s-Grenze – evtl. dieselbe Ursache (Last) → Zeit
 
+      08.10.2026 abends: wieder einmal im vollen Lauf rot (vor dem Push), im nächsten vollen Lauf grün – weiter beobachten; beim
+      nächsten Auftreten die Abweichung (welches Gebäude, welcher Platz) aus der Ausgabe festhalten.
 ## Block 138: Überdachungen (wie der Gang vom Parkplatz ins Disneyland Paris)
 - [ ] Als Linie über vorhandene Wege gezogen (wie ein Zaun), Figuren laufen darunter durch (Dach über den Figuren des Felds, wie
       die Bogenbrücke `afterMovers`). Arten: Glas-Gang (Stahlbögen, nachts beleuchtet), Holz-Pergola (Ranken, Blüten), Bunte Markise
