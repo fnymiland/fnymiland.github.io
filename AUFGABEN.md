@@ -1581,6 +1581,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Fahrgäste: Aussehen echter Bewohner (beim Halt an der ersten Station neu), gezeichnet mit drawWalker (sitzend, `figS`,
       `seat`). Station ohne Rundkurs: Zug wartet am Bahnsteig (auch Vorschaubild). Nutzen: Schönheit (Gleis 1, Station 14).
       Gemessen: fahrender Zug +0,1–0,2 ms je Bild. Leistungs-Wächter: Gleis 31, Station 168–382 aufgenommen. Test: parkbahn.test.js
+- [x] 136b (Rückmeldung Nutzer): Bahn „verschluckte“ die Schienen – Gleis wurde in der Objekt-Reihenfolge gezeichnet und deckte
+      Wagen, die ins nächste Feld ragten; jetzt flach im Bodenbild (`cachedPath`, `drawFlat`), mit den Gebäuden nur Bahnsteig/Dach.
+      Zug wechseln wirkte erst nach recalc → `pbModel` liest die Station live. Beim Bauen/ohne Rundkurs stand schon ein Zug da →
+      wartender Zug nur noch im Vorschaubild der Zugwahl
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):

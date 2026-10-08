@@ -1248,7 +1248,7 @@ const PB_TRAINS = {                                                     // Form 
   mini: { cars: ['minilok', 'hase', 'baer', 'frosch', 'ente'], gap: 0.36, seats: 1, figS: 0.38 },
 };
 const pbRuns = new Map();                                               // Ring-Schlüssel → { s, wait, pax, stop }
-const pbModel = R => (DECO_LOOKS.pb_station.forms[R.form] || DECO_LOOKS.pb_station.forms[0]).id;
+const pbModel = R => { const t = state.tiles.get(R.key), F = DECO_LOOKS.pb_station.forms; return (F[(t && t.form) || 0] || F[0]).id; };   // live von der Station: Umstellen wirkt sofort
 function pbPassengers(R) {
   const T = PB_TRAINS[pbModel(R)], n = T.cars.filter(c => c !== 'lok' && c !== 'minilok').length * T.seats, pool = walkers.filter(w => !(w.inside > 0));
   return Array.from({ length: n }, (_, i) => {
@@ -1260,7 +1260,8 @@ function pbPassengers(R) {
 function stepParkTrains(dt) {
   for (const R of PB_RINGS) {
     let r = pbRuns.get(R.key);
-    if (!r) { r = { s: 0, wait: 1.5, stop: 0, pax: pbPassengers(R) }; pbRuns.set(R.key, r); }
+    if (!r) { r = { s: 0, wait: 1.5, stop: 0, pax: pbPassengers(R), model: pbModel(R) }; pbRuns.set(R.key, r); }
+    if (r.model !== pbModel(R)) { r.model = pbModel(R); r.pax = pbPassengers(R); }   // anderer Zug: andere Plätze
     if (r.wait > 0) { r.wait = Math.max(0, r.wait - dt); continue; }
     const prev = r.s;
     r.s += PB_SPEED * dt;

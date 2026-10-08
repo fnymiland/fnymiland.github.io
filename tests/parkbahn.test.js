@@ -46,7 +46,18 @@ describe('Parkeisenbahn (Block 136)', () => {
       expect(game('parkTrainCars()[0].model')).toBe(['bimmel', 'tram', 'mini'][form]);
       for (const z of [2, 0.6]) game(`(() => { cam = state.cam; cam.z = ${z}; const p = iso(8, 7); cam.x = p.x; cam.y = p.y; render(1e6); render(1e6 + 17); })()`);
     }
-    game("state.tiles.delete('4,5'); recalc(); (() => { cam.z = 2; render(1e6); })()");   // Ring offen: Zug wartet an der Station (gezeichnet mit der Station)
+    game("state.tiles.delete('4,5'); recalc(); (() => { cam.z = 2; render(1e6); })()");   // Ring offen: kein Zug
     expect(game('PB_RINGS.length')).toBe(0);
+  });
+  it('Nachbesserung: Gleis liegt flach im Bodenbild (Zug versinkt nicht), Zugwechsel wirkt sofort, ohne Rundkurs kein wartender Zug', () => {
+    loop(); game("build('pb_station', 7, 10); recalc(); pbRuns.clear(); stepParkTrains(0.01)");
+    expect(game("cachedPath(state.tiles.get('6,5')) && cachedPath(state.tiles.get('7,10'))")).toBe(true);
+    const parts = game(`(() => { const out = []; const d = drawParkTrack; drawParkTrack = (...a) => { out.push(a[7]); return d(...a); };
+      try { PASS = 'object'; drawObject('pb_station', 0, 0, 1, 0, 7, 10, 1, state.tiles.get('7,10')); PASS = null; drawFlat(0, 0, 1, 7, 10, state.tiles.get('7,10')); } finally { drawParkTrack = d; PASS = null; } return out; })()`);
+    expect(parts).toEqual(['station', 'track']);                                     // mit den Gebäuden nur Bahnsteig und Dach
+    game("state.tiles.get('7,10').form = 2; stepParkTrains(0.01)");                    // wie im Fenster umgestellt (ohne recalc)
+    expect(game('parkTrainCars()[0].model')).toBe('mini');
+    const calls = game(`(() => { let n = 0; const d = pbTrainAt; pbTrainAt = () => { n++; }; try { drawObject('pb_station', 0, 0, 1, 0, 7, 10, 1, state.tiles.get('7,10')); drawObject('pb_station', 0, 0, 1, 0, 1e6, 1e6, 1, { b: 'pb_station', form: 1 }); } finally { pbTrainAt = d; } return n; })()`);
+    expect(calls).toBe(1);                                                             // nur im Vorschaubild der Zugwahl
   });
 });
