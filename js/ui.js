@@ -1927,10 +1927,19 @@ function designThumb(d, scale = 1) {
   designThumbs.set(key, url);
   return url;
 }
-// Karte zu einem Stück: großes Bild, Preis, Kaufen – vorher kaufte schon das Antippen im Raster
+// Karte zu einem Stück: großes Bild, Preis, Kaufen – vorher kaufte schon das Antippen im Raster. Wo man in der Liste war, merkt sich
+// designScroll: „Zurück“ landet wieder dort (Wunsch Nutzer: beim Stöbern nicht jedes Mal neu runterscrollen)
+let designScroll = 0;
+function backToDesign() {
+  openResearch('design');
+  const c = $('modal-card'), sc = c.querySelector(':scope > .tab-scroll') || c, top = designScroll;
+  sc.scrollTop = top; queueMicrotask(() => { sc.scrollTop = top; });
+}
 function openDesignCard(id) {
   const d = DESIGN_BY_ID[id];
   if (!d) return;
+  const c0 = $('modal-card');
+  if (!$('modal').hidden && c0.querySelector('[data-rtab="design"].on')) designScroll = (c0.querySelector(':scope > .tab-scroll') || c0).scrollTop;   // aus der Liste geöffnet
   const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d), url = designThumb(d, 2.5);
   const extra = d.muster ? 'Ein Muster gibt es in allen Wegfarben – die wählst du beim Bauen.' : (d.group === 'Wandfarben' || d.group === 'Dachfarben') ? 'Gilt für alle Häuser und Gebäude, die du umfärbst.' : '';
   openModal(`
@@ -1944,7 +1953,7 @@ function openDesignCard(id) {
       <button class="btn ghost" id="m-back" style="flex:1">Zurück</button></div>
     ${!have && err ? `<p class="muted">${escHtml(err)}</p>` : ''}`, () => openDesignCard(id));   // frischt sich selbst auf (Taler)
   $('modal-card').classList.add('research');
-  $('m-back').onclick = () => openResearch('design');
+  $('m-back').onclick = backToDesign;
   if ($('m-buy')) $('m-buy').onclick = () => { if (buyDesign(id)) openDesignCard(id); };
 }
 // Wegmuster, die es nicht zu kaufen gibt (Ort, Album) – mit Vorschau, wie die gekauften (Block 125)

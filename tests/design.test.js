@@ -48,6 +48,13 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
     expect(game("document.getElementById('modal').textContent")).toMatch(/Schon da/);
     game("document.getElementById('m-back').click()");
     expect(game("!!document.querySelector('[data-design=\"hecke:bluete\"].have')")).toBe(true);
+    // Zurück landet, wo man in der Liste war
+    game("(document.querySelector('#modal-card > .tab-scroll') || document.getElementById('modal-card')).scrollTop = 0; designScroll = 0");
+    game("const sc = document.querySelector('#modal-card > .tab-scroll'); Object.defineProperty(sc, 'scrollTop', { value: 640, writable: true, configurable: true })");
+    game(`document.querySelector('[data-design="zaun:glas"]').click()`);
+    expect(game('designScroll')).toBe(640);
+    game("document.getElementById('m-back').click()");
+    expect(game("(document.querySelector('#modal-card > .tab-scroll') || document.getElementById('modal-card')).scrollTop")).toBe(640);
   });
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {
