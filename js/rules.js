@@ -822,7 +822,7 @@ const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
 // teilt – so steht eine Laterne exakt zwischen zwei Feldern bzw. genau im Bogen einer Wegkurve. Nur Schmales (POST_OK).
 // Dafür bleiben die vier Ecken-Plätze, die zu diesem Punkt zeigen, frei (und umgekehrt).
 const VSLOT = 8, VSLOT_NEAR = 0.2;                              // so nah (Felder) an einer Ecke rastet schmale Deko dort ein
-const POST_OK = new Set(['laterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall']);
+const POST_OK = new Set(['laterne', 'strassenlaterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall']);
 const slotUV = i => i === VSLOT ? [-0.5, -0.5] : i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
 // die vier Felder um den Eckpunkt von Feld (x, y), je mit ihrem Ecken-Platz, der zum Punkt zeigt
 const vertexCorners = (x, y) => [[x, y, 0], [x - 1, y, 1], [x, y - 1, 2], [x - 1, y - 1, 3]];
@@ -1442,7 +1442,7 @@ function freeSlot(x, y, slot) {
   return i == null ? slot : i;
 }
 // Bank in einer Seitenmitte: längs zur Feldseite, der Sitz schaut zur Feldmitte (zum Weg), egal wie gerade gedreht wird
-const MID_FACE = { 4: 0, 5: 3, 6: 2, 7: 1 }, MID_TURN = new Set(['bank']);
+const MID_FACE = { 4: 0, 5: 3, 6: 2, 7: 1 }, MID_TURN = new Set(['bank', 'strassenlaterne']);   // Straßenlaterne: Ausleger über den Weg (Block 132)
 const midRot = slot => MID_FACE[slot];
 // Drehung kleiner Deko beim Setzen – Vorschau und Bauen nutzen dieselbe (Block 69): Bank in einer Seitenmitte von selbst längs
 // zur Seite, außer man hat selbst gedreht (⟳/Mausrad/R) – dann bleibt die eigene Drehung
@@ -2343,7 +2343,7 @@ function computePower(lines, supply, plants = 0) {
   const take = (n, what) => { demand += n; use[what] = (use[what] || 0) + n; if (left >= n - 1e-9) { left -= n; return true; } return false; };
   if (city) {
     const lamps = [];
-    for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); });
+    for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); else if (d && d.b === 'strassenlaterne') lamps.push(k + ',' + i, k + ',' + i); });   // große: zählt doppelt (Block 132)
     lamps.push(...edgeLamps());                                         // Lichter an Hecken, Zäunen, Mauern
     for (let i = 0; i < lamps.length; i += LAMPS_PER_POWER) if (!take(1, 'lamps')) lamps.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
     const keys = [...state.tiles.keys()].sort();

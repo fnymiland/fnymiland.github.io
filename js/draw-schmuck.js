@@ -55,6 +55,82 @@ function drawLantern(cx, cy, z, now, x, y, t) {
   }
 }
 
+// --- Große Straßenlaternen (Block 132): hoher Mast, nachts großer Lichtkegel auf dem Boden ---------------------------
+// Licht: die Lampe selbst (Scheibe) und ein weiter, weicher Schein am Boden (zwei winzige Lichter mit großem Radius – gehen
+// durch alle Wege: live, Bildchen, Nachtbilder, GL). Ohne Strom bleibt sie dunkel. Ausleger: rot 0/1 nach rechts, 2/3 nach links
+function drawStreetLamp(cx, cy, z, now, x, y, t) {
+  const col = lookCol('strassenlaterne', t), form = lookForm('strassenlaterne', t), hi = shade(col, 0.18), lo = shade(col, -0.22);
+  const dark = t && T.rail.power.dark.has(x + ',' + y + ',' + (t.slot || 0));
+  const lit = night > 0.15 && isLive() && !dark;
+  const lamp = lit ? '#ffe9a0' : dark && night > 0.15 ? '#9a978c' : '#fff7d6';
+  const side = ((t && t.rot) || 0) & 2 ? -1 : 1;                        // am Wegrand dreht smallRot zur Wegmitte (MID_TURN), sonst ⟳
+  const pane = (gx, gy, w, h, r = 16) => { if (!dark) glowQuad([[gx - w, gy], [gx + w, gy], [gx + w, gy - h], [gx - w, gy - h]], r * z); };
+  const pool = (px, py, R = 30) => {                                    // Lichtfleck am Boden: flach und breit (drei weiche Flecken nebeneinander)
+    if (dark) return;
+    for (const dx of [-0.75, 0, 0.75]) { const ax = px + dx * R * z, ay = py; glowQuad([[ax - 0.2, ay], [ax + 0.2, ay], [ax + 0.2, ay - 0.2], [ax - 0.2, ay - 0.2]], R * z * (dx ? 0.8 : 1)); }
+  };
+  const mast = (x0, y0, y1, w0, w1) => {                                // runder Mast: helle linke, dunkle rechte Hälfte
+    poly([[x0 - w0 * z, y0], [x0, y0 + 0.4 * z], [x0, y1], [x0 - w1 * z, y1]], C(hi));
+    poly([[x0, y0 + 0.4 * z], [x0 + w0 * z, y0], [x0 + w1 * z, y1], [x0, y1]], C(lo));
+  };
+  const arm = (pts, w = 1.3) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach(([px, py], i) => i ? g.lineTo(px, py) : g.moveTo(px, py)); g.stroke(); };
+  const lantern = (lx, ly, s = 1) => {                                  // klassischer Laternenkopf, ly = Unterkante
+    poly([[lx - 1.6 * s * z, ly], [lx + 1.6 * s * z, ly], [lx + 3.2 * s * z, ly - 7 * s * z], [lx - 3.2 * s * z, ly - 7 * s * z]], lamp);
+    g.strokeStyle = C(lo); g.lineWidth = 0.5 * z; g.beginPath(); g.moveTo(lx, ly); g.lineTo(lx, ly - 7 * s * z); g.stroke();
+    poly([[lx - 3.9 * s * z, ly - 7 * s * z], [lx + 3.9 * s * z, ly - 7 * s * z], [lx + 1.2 * s * z, ly - 10 * s * z], [lx - 1.2 * s * z, ly - 10 * s * z]], C(col));
+    circle(lx, ly - 10.8 * s * z, 0.9 * s * z, C(hi));
+    bar(lx - 1.9 * s * z, ly - 0.2 * z, 3.8 * s * z, 1 * z, C(col));
+    pane(lx, ly, 3 * s * z, 7 * s * z);
+  };
+  ellipse(cx, cy + 1 * z, 5 * z, 2.4 * z, 'rgba(40,60,20,0.18)');
+  if (form === 'peitsche') {                                            // Peitschenmast: schlank, oben im Bogen über den Weg, flacher Kopf
+    mast(cx, cy, cy - 44 * z, 1.5, 0.9);
+    arm([[cx, cy - 44 * z], [cx + side * 1 * z, cy - 50 * z], [cx + side * 6 * z, cy - 53 * z], [cx + side * 12 * z, cy - 52 * z]], 1.6);
+    const hx = cx + side * 14 * z, hy = cy - 51.5 * z;
+    poly([[hx - 4.5 * z, hy - 1.4 * z], [hx + 4.5 * z, hy - 1.4 * z], [hx + 3.6 * z, hy + 0.8 * z], [hx - 3.6 * z, hy + 0.8 * z]], C(col));
+    poly([[hx - 3.4 * z, hy + 0.8 * z], [hx + 3.4 * z, hy + 0.8 * z], [hx + 2.6 * z, hy + 1.8 * z], [hx - 2.6 * z, hy + 1.8 * z]], lamp);
+    pane(hx, hy + 1.8 * z, 3 * z, 1.2 * z); pool(cx + side * 7 * z, cy + 2 * z);
+  } else if (form === 'doppel') {                                       // Doppelausleger mit zwei hängenden Laternen
+    mast(cx, cy, cy - 42 * z, 2, 1.2);
+    bar(cx - 2.6 * z, cy - 4 * z, 5.2 * z, 4 * z, C(col));
+    arm([[cx - 11 * z, cy - 40 * z], [cx - 6 * z, cy - 44 * z], [cx, cy - 42.5 * z], [cx + 6 * z, cy - 44 * z], [cx + 11 * z, cy - 40 * z]], 1.4);
+    arm([[cx - 6 * z, cy - 36 * z], [cx, cy - 39 * z], [cx + 6 * z, cy - 36 * z]], 0.8);
+    circle(cx, cy - 45 * z, 1.4 * z, C(hi));
+    for (const s of [-1, 1]) { arm([[cx + s * 11 * z, cy - 40 * z], [cx + s * 11 * z, cy - 38 * z]], 0.7); lantern(cx + s * 11 * z, cy - 28 * z, 0.8); }
+    pool(cx, cy + 2 * z, 32);
+  } else if (form === 'kugel') {                                        // Parkleuchte mit drei Kugeln
+    mast(cx, cy, cy - 40 * z, 1.8, 1.1);
+    ellipse(cx, cy - 1 * z, 3 * z, 1.4 * z, C(lo));
+    arm([[cx - 7 * z, cy - 38 * z], [cx - 7 * z, cy - 40 * z], [cx, cy - 41 * z], [cx + 7 * z, cy - 40 * z], [cx + 7 * z, cy - 38 * z]], 1.2);
+    for (const [dx, dy, r] of [[-7, -41.5, 3.4], [7, -41.5, 3.4], [0, -46, 3.8]]) {
+      circle(cx + dx * z, cy + dy * z, r * z, lit ? '#fff3c4' : C('#f6f2e8'));
+      if (!lit) circle(cx + (dx - r * 0.35) * z, cy + (dy - r * 0.35) * z, r * 0.35 * z, C('#ffffff'));
+      pane(cx + dx * z, cy + (dy + r * 0.7) * z, r * 0.7 * z, r * 1.4 * z, 12);
+    }
+    pool(cx, cy + 2 * z, 30);
+  } else if (form === 'hirtenstab') {                                   // Bischofsstab: Mast biegt sich oben zum Haken, daran die Laterne
+    mast(cx, cy, cy - 40 * z, 1.9, 1.1);
+    for (const h of [6, 7.4]) bar(cx - 2.4 * z, cy - h * z, 4.8 * z, 0.8 * z, C(hi));
+    g.strokeStyle = C(col); g.lineWidth = 2 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(cx, cy - 40 * z);
+    g.bezierCurveTo(cx, cy - 52 * z, cx + side * 11 * z, cy - 52 * z, cx + side * 10 * z, cy - 44 * z); g.stroke();
+    arm([[cx + side * 10 * z, cy - 44 * z], [cx + side * 10 * z, cy - 41.5 * z]], 0.7);
+    lantern(cx + side * 10 * z, cy - 31 * z, 0.9); pool(cx + side * 5 * z, cy + 2 * z);
+  } else if (form === 'boulevard') {                                    // großer Kandelaber: fünf Lampen
+    mast(cx, cy, cy - 38 * z, 2.4, 1.3);
+    bar(cx - 3 * z, cy - 5 * z, 6 * z, 5 * z, C(col)); bar(cx - 3.6 * z, cy - 1 * z, 7.2 * z, 1.5 * z, C(lo));
+    for (const s of [-1, 1]) for (const [w, h] of [[13, 30], [7, 34]]) arm([[cx, cy - (h - 4) * z], [cx + s * w * 0.6 * z, cy - (h + 1) * z], [cx + s * w * z, cy - h * z]], 1.1);
+    for (const [dx, h] of [[-13, 30], [13, 30], [-7, 34], [7, 34], [0, 38]]) lantern(cx + dx * z, cy - h * z, 0.62);
+    pool(cx, cy + 2 * z, 34);
+  } else {                                                              // Schinkel-Mastleuchte (Standard): Sockel, Ringe, Laternenkopf
+    poly([[cx - 3 * z, cy], [cx + 3 * z, cy], [cx + 2.2 * z, cy - 5 * z], [cx - 2.2 * z, cy - 5 * z]], C(col));
+    poly([[cx, cy + 0.6 * z], [cx + 3 * z, cy], [cx + 2.2 * z, cy - 5 * z], [cx, cy - 5 * z]], C(lo));
+    mast(cx, cy - 5 * z, cy - 40 * z, 1.6, 1);
+    for (const h of [5, 20]) bar(cx - 2.2 * z, cy - h * z - 0.6 * z, 4.4 * z, 1.2 * z, C(hi));
+    arm([[cx - 3.5 * z, cy - 37 * z], [cx, cy - 39.5 * z], [cx + 3.5 * z, cy - 37 * z]], 0.8);
+    lantern(cx, cy - 40 * z, 1.1); pool(cx, cy + 2 * z);
+  }
+}
+
 // --- Bänke (gedreht wie bisher über den Baukasten: Sitz schaut nach vorn) ---------------------------------
 function drawBench(cx, cy, z, t, hw, hh) {
   const col = lookCol('bank', t), form = lookForm('bank', t), top = shade(col, 0.1), K = kit(cx, cy, z, (t && t.rot) || 0);

@@ -101,6 +101,8 @@ const ITEMS = {
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld. Nah an eine Feldecke getippt, steht sie genau zwischen den Feldern.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:1', cost: 20, mat: { kristall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
+  strassenlaterne: { cat: 'deko', name: 'Straßenlaterne', cost: 180, mat: { metall: 3 }, beauty: 9, small: true, design: 300,
+                     desc: 'Großer Mast mit weitem Lichtkegel – macht Straßen und Plätze nachts hell. Steht am Wegrand, bis zu 4 pro Feld.' },
   kristallaterne: { cat: 'deko', name: 'Kristall-Laterne', lm: 'kristall:2', cost: 60, mat: { kristall: 1, metall: 1 }, beauty: 6, small: true,
              desc: 'Leuchtet nachts hellblau. Klein – bis zu 4 pro Feld.' },
   glaskugel: { cat: 'deko', name: 'Glaskugel', lm: 'kristall:2', cost: 40, mat: { kristall: 1 }, beauty: 4, small: true,
@@ -581,7 +583,7 @@ const MENU = [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
-    { id: 'platz', label: '🏮 Stadtschmuck', items: ['bank', 'freundesbank', 'laterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
+    { id: 'platz', label: '🏮 Stadtschmuck', items: ['bank', 'freundesbank', 'laterne', 'strassenlaterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
@@ -661,6 +663,7 @@ const ITEM_TIPS = {
   laterne: 'Kleine Deko, leuchtet nachts – schön entlang der Wege. Tipp nah an eine Feldecke: Dann steht sie genau zwischen zwei Feldern oder im Bogen einer Kurve.',
   brunnen: 'Stadthäuser wünschen sich einen Park oder Brunnen in der Nähe.',
   kristall: 'Kleine leuchtende Deko für eine Ecke.',
+  strassenlaterne: 'Großer Mast am Wegrand, nachts fällt ein weiter Lichtfleck auf den Weg. 6 Formen (Mastleuchte, Peitschenmast, Kugelleuchte …), Farben wie die Laternen. Braucht doppelt so viel Strom wie eine kleine.',
   kristallaterne: 'Kleine Deko, leuchtet nachts hellblau.',
   glaskugel: 'Kleine schillernde Deko für eine Ecke.',
   kristallbrunnen: 'Große Deko mit viel Schönheit, glitzert und leuchtet nachts.',
@@ -1073,6 +1076,8 @@ const STATION_COLS = [                                                  // Dach 
   { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }, { id: 'lila', name: 'Lila', c: '#9a72c8', design: 120 }, { id: 'braun', name: 'Holzbraun', c: '#8a5a3c', design: 120 }];
 const DECO_LOOKS = {
+  strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
+    { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
   laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
     { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
   bank: { group: 'Bänke', icon: '#b57b4a', cols: BENCH_COLS, forms: [{ id: 'park', name: 'Parkbank' }, { id: 'garten', name: 'Gartenbank' },
@@ -1095,7 +1100,7 @@ const DESIGN = [
   // Wege (Block 125): Muster statt einzelner Beläge – die Farbe wählt man beim Bauen (alte 'weg:…'-Käufe gelten weiter, wegMusterOk)
   ...WEG_MUSTER.filter(m => m.design).map(m => ({ id: 'wegmuster:' + m.id, group: 'Wegmuster', muster: m.id, name: m.name, price: m.design, master: !!m.master })),
   ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
-  ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master, ...(b === 'laterne' ? { schmuck: true } : {}) })),
+  ...['laterne', 'strassenlaterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master, ...(b === 'laterne' || b === 'strassenlaterne' ? { schmuck: true } : {}) })),
 ];
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
 const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];

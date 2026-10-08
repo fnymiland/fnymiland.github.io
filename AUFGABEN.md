@@ -1563,6 +1563,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       freien Seite, 🪙 400 + Material, kürzer: halbe Taler zurück, ↶). Breiteres Empfangshaus, langes Dach, zwei Bänke. Test: bahnhof-lang.test.js
 
 ## Block 132: Große Straßenlaternen (Mast, großer Lichtkegel, Formen/Farben in der Kunstakademie)
+- [x] Neues Ding `strassenlaterne` (kleine Deko, 4 pro Feld, auch auf Eckpunkten), Kunstakademie 300 (Deko). 6 Formen nach Vorschau
+      mit dem Nutzer (alle genommen): Mastleuchte, Peitschenmast frei; Kugelleuchte, Doppelausleger 150, Bischofsstab 200, Boulevard 250.
+      Farben = LANTERN_COLS. Nachts: kleiner Schein am Kopf + flacher Lichtfleck am Boden (drei weiche Lichter nebeneinander, ~1,5 Felder
+      – Nutzer: „so wie im Bild“). Ausleger über den Weg (MID_TURN, rot & 2 = links), drehbar. Strom: zählt wie 2 kleine Laternen.
+      Leistung nah: 27–138 Befehle (Boulevard am teuersten). Test: strassenlaterne
 
 ## Block 133: Monumente (wie in Alexandria)
 - [ ] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen

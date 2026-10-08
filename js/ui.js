@@ -1126,9 +1126,9 @@ function lookThumb(b, form, col) {
   if (lookThumbs.has(key)) return lookThumbs.get(key);
   let url = '';
   try {
-    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : 1.9, rail = b === 'schiene' || b === 'pb_station';
+    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : b === 'strassenlaterne' ? 0.95 : 1.9, rail = b === 'schiene' || b === 'pb_station';
     c.width = 64; c.height = 64; g = c.getContext('2d');
-    try { drawObject(b, 32, b === 'pb_station' ? 42 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
+    try { drawObject(b, 32, b === 'pb_station' ? 42 : b === 'strassenlaterne' ? 61 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
     url = c.toDataURL();
     if (!url || !url.startsWith('data:image')) url = '';
   } catch (e) { url = ''; }
@@ -2561,6 +2561,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-strassenlaternen', date: '8. Oktober', title: 'Große Straßenlaternen', items: [
+    '💡 <b>Straßenlaternen:</b> Hohe Masten für Straßen und Plätze – nachts fällt ein weiter Lichtfleck auf den Weg. Am Wegrand zeigt der Ausleger von selbst über den Weg. In der Kunstakademie (Deko), dann unter Stadtschmuck.',
+    '🎨 <b>6 Formen:</b> Mastleuchte, Peitschenmast, Kugelleuchte, Doppelausleger, Bischofsstab und der große Boulevard-Kandelaber – in allen Laternenfarben.',
+  ] },
   { id: '2026-10-08-parkbahn', date: '8. Oktober', title: 'Parkeisenbahn', items: [
     '🚂 <b>Parkeisenbahn:</b> Unter Freizeit → Parkeisenbahn ein schmales Gleis als Rundkurs ziehen – über Wiese, Park und quer über Wege – und eine Station hineinsetzen. Dann dreht die Bimmelbahn ihre Runden, und deine Bewohner fahren mit.',
     '🚋 <b>Mehr Züge:</b> Im Fenster jeder Station „+ Zug“ – mehrere Züge auf einer Strecke, jeder mit eigenem Modell. Nostalgische Straßenbahn und Mini-Zug mit Tierwagen gibt es in der Kunstakademie.',
