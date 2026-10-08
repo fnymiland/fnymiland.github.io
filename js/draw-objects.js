@@ -946,10 +946,11 @@ function archWall(A, P, H, AS, B, hw, z, t, front, depth = 0) {
   };
   const trace = pts => pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]));
   const inner = shade(B.side, -0.38), vault = shade(B.side, -0.24), pier = shade(B.side, -0.12);
-  if (!front) for (const o of opens) {                                   // durch die Öffnung: Schatten aufs Wasser, Rückwand, Gewölbe
+  // durch die Öffnung: Rückwand und Gewölbe. Kein Schatten aufs Wasser – lag wie ein dunkler Schleier darunter, an den Feldkanten
+  // doppelt (Nutzer, 08.10.2026); die Tiefe zeigt das dunkle Gewölbe
+  if (!front) for (const o of opens) {
     const F = archPts(o, hw), Bk = archPts(o, bb);
     g.save(); g.beginPath(); trace(wallPoly(hw)); g.closePath(); g.clip(); g.beginPath(); trace(F); g.closePath(); g.clip();
-    poly([P(o.c - o.r, hw, -1), P(o.c + o.r, hw, -1), P(o.c + o.r, bb, -1), P(o.c - o.r, bb, -1)], 'rgba(20,45,70,0.3)');
     const qs = []; for (let q = -2.5; q <= 2.501; q += 0.125) qs.push(q);   // Rückwand über mehrere Felder (sonst Streifen an den Feldkanten)
     g.beginPath(); trace([...qs.map(q => P(q, bb, -1)), ...qs.slice().reverse().map(q => P(q, bb, Math.max(-1, H(q))))]); g.closePath(); trace(Bk); g.closePath();
     g.fillStyle = C(inner); g.fill('evenodd');

@@ -1824,6 +1824,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 ## Kleinigkeit: Fische springen durch Brücken (Nutzer, 08.10.2026)
 - [x] Wassertiere (Fisch, Goldfisch, Robbe, Frosch, Eisvogel) entstehen nicht mehr auf Wasserfeldern, auf oder direkt neben denen etwas
       gebaut ist (Brücke, Steg, Hafen – `natureAt`, 3×3 um das Feld). Möwen fliegen weiter. Test: bogenbruecken (Fische und Brücken)
+
+## Kleinigkeit: Wasser unter Steinbrücken wie ein Schleier (Nutzer, 08.10.2026)
+- [x] In den Bogenöffnungen lag ein halbdurchsichtiger dunkler „Schatten aufs Wasser“ (rgba 0,3), an den Feldkanten doppelt (Streifen).
+      Entfernt (`archWall`) – das Wasser unter dem Bogen sieht aus wie überall, die Tiefe zeigt das dunkle Gewölbe.
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
