@@ -420,7 +420,7 @@ document.addEventListener('click', e => {
   if (!el || el.closest(VIEW_OK) || el.matches(VIEW_OK)) return;
   e.stopPropagation(); e.preventDefault(); cloudBlocked();
 }, true);
-setInterval(() => { if (document.body) document.body.classList.toggle('viewonly', viewOnly()); }, 500);
+setInterval(() => { if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('viewonly', viewOnly()); }, 500);
 function cloudBlocked() {
   if (Date.now() - cloudBlockedAt < 2500) return;
   cloudBlockedAt = Date.now();

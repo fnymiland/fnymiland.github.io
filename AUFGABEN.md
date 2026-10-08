@@ -1599,8 +1599,13 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       vorher (nur Wellen; am Bildrand jetzt auch Wellen von Nachbar-Grundstücken, die vorher fehlten)
 - [x] Brücken und leuchtende Wege weit weg als Bildchen (spriteFlat, je Feld, Fassung groundVersion) – beim Nutzer 107 solche Felder
       hielten das Standbild aus („live Wege 107“) und kosteten Rechenzeit; Wellen im Standbild wieder unter Tiefe/Brücken (GLS.wAt)
-- [ ] Nächste Schritte: Sammelbilder (Atlas)
-      statt 4.000 Texturwechsel, JS der Feldschleife (Deko-/Linien-Plan), Nacht/Dämmerung in GL, Standard an nach iPad-Test
+- [x] Sammelbilder (Atlas, ATL in gl.js): Bildchen kommen auf Seiten von 4096² (bis 6, Regal-Packen mit 2 px Abstand), der Shader
+      wählt die Seite (pg) und klemmt die Koordinaten aufs Bildchen; freigegebene Plätze zählen als Abfall, Neuaufbau nur außerhalb
+      des Standbilds. Zeichenaufrufe je Bild ~2.000 → 54–63; glVerts ohne Hilfslisten je Eckpunkt
+- [x] Wellen im Standbild: Grundposition wird mit aufgezeichnet, das Schaukeln (sin(now/900 + Phase) · 5·Zoom) rechnet der
+      Vertex-Shader (Uniform wt, Attribut wv). Je Bild nur noch ~30 Rechtecke statt ~2.000. Testwelt „alles“, Full HD, Zoom 0,45:
+      Rechnen je Bild 2,2 → 0,7 ms; Bild gegen 2D unverändert (0,33 % > 8/255, 0,001 % > 40)
+- [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
       drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als

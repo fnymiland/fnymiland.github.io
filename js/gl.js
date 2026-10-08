@@ -10,7 +10,7 @@
 // Rückfall: ohne WebGL2, mit ?gl=0, nach einem Fehler oder Kontextverlust zeichnet render wie bisher alles in 2D (deckend).
 // Vorerst nur bei Tag, weit weg (nicht SPRITES_NEAR) und ohne Bau-Vorschau; sonst 2D.
 // ---------------------------------------------------------------------------
-const GL = { texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
+const GL = { now: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
   frame: false, shown: false, stats: { quads: 0, draws: 0, live: 0, over: 0, up: 0, miss: 0 } };
 let GLPASS = false;                                             // gerade läuft der aufgezeichnete Welt-Durchgang
 const GL_Q = new URLSearchParams(location.search).get('gl');
@@ -28,32 +28,89 @@ function glInit() {
   let gl = null;
   try { gl = c.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true }); } catch (e) { gl = null; }
   if (!(gl instanceof WebGL2RenderingContext)) { GL.broken = true; return false; }
+  // Sammelbilder (Atlas): pg = Seite (−1: eigene Textur in tx), rc = eigener Bereich (Texturkoordinaten, je ½ Texel nach innen) –
+  // dort wird geklemmt, sonst mischt das Glätten am Rand die Nachbarn im Atlas ein (drawImage klemmt am Bildrand genauso)
   const VS = `#version 300 es
-  in vec2 p; in vec2 t; in float a; in vec2 cl; uniform vec2 sz; uniform vec2 off;
-  out vec2 uv; out float al; out vec2 clip;
-  void main() { uv = t; al = a; clip = cl + off.x; vec2 q = p + off; gl_Position = vec4(q.x / sz.x * 2.0 - 1.0, 1.0 - q.y / sz.y * 2.0, 0.0, 1.0); }`;
+  in vec2 p; in vec2 t; in float a; in vec2 cl; in float pg; in vec4 rc; in vec2 wv; uniform vec2 sz; uniform vec2 off; uniform float wt;
+  out vec2 uv; out float al; out vec2 clip; flat out int page; out vec4 rect;
+  void main() { uv = t; al = a; clip = cl + off.x; page = int(pg); rect = rc; vec2 q = p + off; q.x += sin(wt + wv.x) * wv.y; gl_Position = vec4(q.x / sz.x * 2.0 - 1.0, 1.0 - q.y / sz.y * 2.0, 0.0, 1.0); }`;
   const FS = `#version 300 es
   precision highp float;
-  in vec2 uv; in float al; in vec2 clip; uniform sampler2D tx; out vec4 o;
-  void main() { if (gl_FragCoord.x < clip.x || gl_FragCoord.x > clip.y) discard; o = texture(tx, uv) * al; }`;
+  in vec2 uv; in float al; in vec2 clip; flat in int page; in vec4 rect;
+  uniform sampler2D tx, a0, a1, a2, a3, a4, a5; out vec4 o;
+  void main() {
+    if (gl_FragCoord.x < clip.x || gl_FragCoord.x > clip.y) discard;
+    vec2 u = clamp(uv, rect.xy, rect.zw); vec4 c;
+    if (page < 0) c = texture(tx, u); else if (page == 0) c = texture(a0, u); else if (page == 1) c = texture(a1, u); else if (page == 2) c = texture(a2, u);
+    else if (page == 3) c = texture(a3, u); else if (page == 4) c = texture(a4, u); else c = texture(a5, u);
+    o = c * al; }`;
   const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; };
   try {
     const pr = gl.createProgram();
     gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
     if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(pr));
     GL.prog = pr; GL.buf = gl.createBuffer(); GL.sbuf = gl.createBuffer();
-    GL.loc = { p: gl.getAttribLocation(pr, 'p'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a'), cl: gl.getAttribLocation(pr, 'cl'), sz: gl.getUniformLocation(pr, 'sz'), tx: gl.getUniformLocation(pr, 'tx'), off: gl.getUniformLocation(pr, 'off') };
+    GL.loc = { p: gl.getAttribLocation(pr, 'p'), t: gl.getAttribLocation(pr, 't'), a: gl.getAttribLocation(pr, 'a'), cl: gl.getAttribLocation(pr, 'cl'), pg: gl.getAttribLocation(pr, 'pg'), rc: gl.getAttribLocation(pr, 'rc'),
+      w: gl.getAttribLocation(pr, 'wv'), wt: gl.getUniformLocation(pr, 'wt'),
+      sz: gl.getUniformLocation(pr, 'sz'), tx: gl.getUniformLocation(pr, 'tx'), off: gl.getUniformLocation(pr, 'off'), at: [0, 1, 2, 3, 4, 5].map(i => gl.getUniformLocation(pr, 'a' + i)) };
   } catch (e) { console.warn('WebGL', e); GL.broken = true; return false; }
   gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
   gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.NONE);
-  c.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.ready = false; GL.texs.clear(); glShow(false); });
-  c.addEventListener('webglcontextrestored', () => { GL.broken = false; GL.gl = null; GL.texs.clear(); glInit(); });
+  c.addEventListener('webglcontextlost', e => { e.preventDefault(); GL.ready = false; GL.texs.clear(); atlReset(true); GLS.ok = false; glShow(false); });
+  c.addEventListener('webglcontextrestored', () => { GL.broken = false; GL.gl = null; GL.texs.clear(); atlReset(true); glInit(); });
+  ATL.size = Math.min(4096, gl.getParameter(gl.MAX_TEXTURE_SIZE));
   GL.gl = gl; GL.canvas = c; GL.ready = true;
   return true;
 }
 function glShow(on) { if (GL.canvas && GL.shown !== on) { GL.canvas.style.visibility = on ? 'visible' : 'hidden'; GL.shown = on; } }
 // Leinwand freigegeben (freeCanvas): Textur auch weg
-function glForget(c) { const e = GL.texs.get(c); if (!e) return; if (GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); if (GLS.srcs.has(c)) GL.texEpoch++; }   // nur wenn das Standbild sie braucht
+function glForget(c) {
+  const e = GL.texs.get(c), s = ATL.slots.get(c);
+  if (s) { ATL.slots.delete(c); ATL.waste += s.w * s.h; }                // Platz im Atlas bleibt bis zum nächsten Aufräumen belegt
+  if (e) { if (GL.gl) GL.gl.deleteTexture(e.tex); GL.texs.delete(c); }
+  if ((e || s) && GLS.srcs.has(c)) GL.texEpoch++;                        // nur wenn das Standbild sie braucht
+}
+// --- Sammelbilder (Atlas, Block 144): alle Bildchen auf wenigen großen Texturen (Seiten), damit ein Standbild in EINEM Auftrag
+// gezeichnet werden kann (vorher je Bildchen eine Textur: 2.000–4.000 Aufträge je Bild, auf einem i5 mehrere ms Rechenzeit).
+// Regale (shelf): Zeilen nach der Höhe des ersten Bildchens; 2 Punkte Luft. Freigegebenes bleibt belegt (waste) – ist alles voll,
+// wird der Atlas geleert (atlReset) und füllt sich mit dem, was gerade gebraucht wird, neu
+const ATL = { size: 4096, pages: [], slots: new Map(), waste: 0, max: 6 };
+function atlReset(lost) {
+  if (!lost && GL.gl) for (const p of ATL.pages) GL.gl.deleteTexture(p.tex);
+  ATL.pages = []; ATL.slots.clear(); ATL.waste = 0; GL.texEpoch++;
+}
+function atlNewPage() {
+  const gl = GL.gl, tex = gl.createTexture(), S = ATL.size;
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA8, S, S);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const p = { tex, x: 0, y: 0, row: 0 };
+  ATL.pages.push(p);
+  return p;
+}
+// Platz für Leinwand c (einmal hochladen); null: passt nicht (zu groß, Atlas voll) → eigene Textur
+function atlPut(c) {
+  const s = ATL.slots.get(c);
+  if (s && s.w === c.width && s.h === c.height) return s;
+  const w = c.width, h = c.height, S = ATL.size;
+  if (!w || !h || w > S / 2 || h > S / 2) return null;
+  let p = ATL.pages[ATL.pages.length - 1], pi = ATL.pages.length - 1;
+  const fits = q => (q.x + w + 2 <= S ? q.y : q.y + q.row) + h + 2 <= S;
+  if (!p || !fits(p)) {
+    if (ATL.pages.length >= ATL.max) return null;
+    p = atlNewPage(); pi = ATL.pages.length - 1;
+  }
+  if (p.x + w + 2 > S) { p.x = 0; p.y += p.row; p.row = 0; }
+  const slot = { page: pi, x: p.x + 1, y: p.y + 1, w, h };
+  p.x += w + 2; p.row = Math.max(p.row, h + 2);
+  const gl = GL.gl;
+  gl.bindTexture(gl.TEXTURE_2D, p.tex);
+  gl.texSubImage2D(gl.TEXTURE_2D, 0, slot.x, slot.y, gl.RGBA, gl.UNSIGNED_BYTE, c);
+  GL.stats.up++;
+  ATL.slots.set(c, slot);
+  return slot;
+}
 
 // --- Aufzeichnen (ctx.drawImage während GLPASS) ---
 const C2D = typeof CanvasRenderingContext2D !== 'undefined' ? CanvasRenderingContext2D.prototype : {};   // im Test (jsdom) gibt es keins – dort ist GL ohnehin aus
@@ -177,22 +234,33 @@ function glTex(src, nearest) {
   GL.stats.up++;
   return e;
 }
-// Rechtecke → Eckpunkte (6 je Rechteck: Position in Gerätepunkten, Texturkoordinate, Deckkraft, Ausschnitt x0/x1)
-const GL_F = 7;
+// Rechtecke → Eckpunkte (6 je Rechteck: Position in Gerätepunkten, Texturkoordinate, Deckkraft, Ausschnitt x0/x1, Seite, Bereich).
+// Legt dabei neue Bildchen in den Atlas (r.pg = Seite oder −1 = eigene Textur: Sammelfläche, Wellen, Tiefe, was nicht passt)
+const GL_F = 14;                                                        // … dazu Wellen-Phase und -Ausschlag (Shader schaukelt)
 function glVerts(recs) {
-  const data = new Float32Array(recs.length * 6 * GL_F);
+  const data = new Float32Array(recs.length * 6 * GL_F), S = ATL.size;
   let o = 0;
   for (const r of recs) {
-    const { m, sx, sy, sw, sh } = r, W0 = r.src.width || 1, H0 = r.src.height || 1;
-    const u0 = sx / W0, v0 = sy / H0, u1 = (sx + sw) / W0, v1 = (sy + sh) / H0;
+    const { m, sx, sy, sw, sh, src } = r;
+    const slot = src === LA.c || src === GL_WAVE.c || r.nearest || !src.width ? null : atlPut(src);
+    let u0, v0, u1, v1, k0, k1, k2, k3, pg;
+    if (slot) {
+      pg = slot.page; u0 = (slot.x + sx) / S; v0 = (slot.y + sy) / S; u1 = (slot.x + sx + sw) / S; v1 = (slot.y + sy + sh) / S;
+    } else {
+      const W0 = src.width || 1, H0 = src.height || 1;
+      pg = -1; u0 = sx / W0; v0 = sy / H0; u1 = (sx + sw) / W0; v1 = (sy + sh) / H0;
+    }
+    const tw = slot ? S : src.width || 1, th = slot ? S : src.height || 1;
+    k0 = u0 + 0.5 / tw; k1 = v0 + 0.5 / th; k2 = u1 - 0.5 / tw; k3 = v1 - 0.5 / th;   // ½ Texel nach innen klemmen
+    r.pg = pg;
     const ax = m.e, ay = m.f, bx = m.a + m.e, by = m.b + m.f, cx = m.c + m.e, cy = m.d + m.f, dx = m.a + m.c + m.e, dy = m.b + m.d + m.f;
     const al = r.alpha, c0 = r.clip[0], c1 = r.clip[1];
-    data[o++] = ax; data[o++] = ay; data[o++] = u0; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
-    data[o++] = bx; data[o++] = by; data[o++] = u1; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
-    data[o++] = cx; data[o++] = cy; data[o++] = u0; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
-    data[o++] = cx; data[o++] = cy; data[o++] = u0; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
-    data[o++] = bx; data[o++] = by; data[o++] = u1; data[o++] = v0; data[o++] = al; data[o++] = c0; data[o++] = c1;
-    data[o++] = dx; data[o++] = dy; data[o++] = u1; data[o++] = v1; data[o++] = al; data[o++] = c0; data[o++] = c1;
+    const wp = r.wph || 0, wa = r.wamp || 0;
+    const V = (px, py, tu, tv) => {                                      // ohne Hilfslisten
+      data[o] = px; data[o + 1] = py; data[o + 2] = tu; data[o + 3] = tv; data[o + 4] = al; data[o + 5] = c0; data[o + 6] = c1;
+      data[o + 7] = pg; data[o + 8] = k0; data[o + 9] = k1; data[o + 10] = k2; data[o + 11] = k3; data[o + 12] = wp; data[o + 13] = wa; o += GL_F;
+    };
+    V(ax, ay, u0, v0); V(bx, by, u1, v0); V(cx, cy, u0, v1); V(cx, cy, u0, v1); V(bx, by, u1, v0); V(dx, dy, u1, v1);
   }
   return data;
 }
@@ -203,15 +271,26 @@ function glAttribs(buf) {
   gl.enableVertexAttribArray(L.t); gl.vertexAttribPointer(L.t, 2, gl.FLOAT, false, S, 8);
   gl.enableVertexAttribArray(L.a); gl.vertexAttribPointer(L.a, 1, gl.FLOAT, false, S, 16);
   gl.enableVertexAttribArray(L.cl); gl.vertexAttribPointer(L.cl, 2, gl.FLOAT, false, S, 20);
+  gl.enableVertexAttribArray(L.pg); gl.vertexAttribPointer(L.pg, 1, gl.FLOAT, false, S, 28);
+  gl.enableVertexAttribArray(L.rc); gl.vertexAttribPointer(L.rc, 4, gl.FLOAT, false, S, 32);
+  gl.enableVertexAttribArray(L.w); gl.vertexAttribPointer(L.w, 2, gl.FLOAT, false, S, 48);
 }
-// Rechtecke a … b−1 aus dem gebundenen Puffer zeichnen, je gleiche Textur ein Auftrag (Reihenfolge bleibt)
+// Atlas-Seiten an die Einheiten 1 … 6 binden (einmal je Bild)
+function atlBind() {
+  const gl = GL.gl;
+  for (let i = 0; i < 6; i++) { gl.activeTexture(gl.TEXTURE1 + i); gl.bindTexture(gl.TEXTURE_2D, ATL.pages[i] ? ATL.pages[i].tex : null); gl.uniform1i(GL.loc.at[i], 1 + i); }
+  gl.activeTexture(gl.TEXTURE0); gl.uniform1i(GL.loc.tx, 0);
+}
+// Rechtecke a … b−1 aus dem gebundenen Puffer zeichnen: alles aus dem Atlas am Stück, eigene Texturen je gleiche Textur
 function glDrawRange(recs, a, b) {
   const gl = GL.gl;
   let i = a;
   while (i < b) {
-    const src = recs[i].src; let j = i + 1;
-    while (j < b && recs[j].src === src) j++;
-    const e = src === LA.c ? GL.texs.get(LA.c) : src.width ? glTex(src, recs[i].nearest) : null;   // inzwischen freigegeben: auslassen
+    const r0 = recs[i]; let j = i + 1;
+    if (r0.pg >= 0) { while (j < b && recs[j].pg >= 0) j++; gl.drawArrays(gl.TRIANGLES, i * 6, (j - i) * 6); GL.stats.draws++; i = j; continue; }
+    const src = r0.src;
+    while (j < b && recs[j].pg < 0 && recs[j].src === src) j++;
+    const e = src === LA.c ? GL.texs.get(LA.c) : src.width ? glTex(src, r0.nearest) : null;   // inzwischen freigegeben: auslassen
     if (e) { gl.bindTexture(gl.TEXTURE_2D, e.tex); gl.drawArrays(gl.TRIANGLES, i * 6, (j - i) * 6); GL.stats.draws++; }
     i = j;
   }
@@ -228,9 +307,13 @@ function glEnd() {
     gl.clearColor(0x6f / 255, 0xcb / 255, 0xe2 / 255, 1); gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(GL.prog);
     gl.uniform2f(GL.loc.sz, CW, CH); gl.uniform1i(GL.loc.tx, 0); gl.activeTexture(gl.TEXTURE0);
+    gl.uniform1f(GL.loc.wt, (GL.now / 900) % (2 * Math.PI));                // Wellen schaukeln wie drawWave (sin(now/900 + Phase))
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);       // source-over, vormultipliziert
     if (LA.used) glTex(LA.c, false);                                       // Sammelfläche einmal je Bild hochladen
-    gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, glVerts(recs), gl.STREAM_DRAW);
+    if (mode !== 'play' && ATL.waste > ATL.size * ATL.size * 2 && ATL.pages.length >= ATL.max) atlReset(false);   // voll mit Freigegebenem: neu anfangen (nie beim Abspielen)
+    const verts = glVerts(recs);                                           // legt Neues in den Atlas
+    gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
+    atlBind();
     if (mode === 'play') {
       const off = glPlayOff();
       for (const op of GLS.ops) {
@@ -265,14 +348,13 @@ function glWaves(list, z, now) {
     x.beginPath(); x.moveTo(-5 * z, 0); x.quadraticCurveTo(0, -2.5 * z, 5 * z, 0); x.stroke();
     GL_WAVE.c = c; GL_WAVE.k = k; GL_WAVE.ox = 2 + hx * DPR; GL_WAVE.oy = 2 + hy0 * DPR;
   }
-  const c = GL_WAVE.c, w = c.width, h = c.height, off = DEPTH * z * 0.7, rec = GL.cacheMode === 'rec' && GLS.w0 < 0;
-  if (rec) { GLS.w0 = GL.recs.length; GLS.waves = list.slice(); }          // Standbild: Wellen jedes Bild neu
+  const c = GL_WAVE.c, w = c.width, h = c.height, off = DEPTH * z * 0.7, amp = 5 * z * DPR;
+  // Grundposition ohne Schaukeln; das macht der Shader (sin(wt + Phase) · Ausschlag) – so können Wellen im Standbild stehen
   for (let i = 0; i < list.length; i += 2) {
-    const x = list[i], y = list[i + 1], p = toScreen(x, y), ph = now / 900 + hash(x, y, 10) * 20;
-    const wx = (p.x + Math.sin(ph) * 5 * z) * DPR, wy = (p.y + off + (hash(x, y, 11) - 0.5) * 10 * z) * DPR;   // wie drawWave
+    const x = list[i], y = list[i + 1], p = toScreen(x, y), wx = p.x * DPR, wy = (p.y + off + (hash(x, y, 11) - 0.5) * 10 * z) * DPR;   // wie drawWave
     glRec(c, 0, 0, w, h, { a: w, b: 0, c: 0, d: h, e: wx - GL_WAVE.ox, f: wy - GL_WAVE.oy }, 1, glClip, false);
+    const r = GL.recs[GL.recs.length - 1]; r.wph = (hash(x, y, 10) * 20) % (2 * Math.PI); r.wamp = amp;
   }
-  if (rec) GLS.w1 = GL.recs.length;
   return true;
 }
 // Rahmen um Bewegtes (Bildschirmpunkte: links, oben, rechts, unten) – großzügig, was hinausragt, würde abgeschnitten
@@ -299,6 +381,7 @@ function glTouch() { GL.drawEpoch++; }                                  // Spiel
 const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M + (GLS.cam.y - cam.y) * cam.z) * DPR];
 // am Bildanfang (render, vor den Sichtgrenzen): abspielen, aufzeichnen oder normal
 function glCacheStart(z, now) {
+  GL.now = now;
   const key = [z, W, H, DPR, groundVersion, SPRITES_ON, FOG].join('|'), sig = key + '|' + GL.texEpoch + '|' + GL.drawEpoch;
   GLS.calm = sig === GLS.last && !spriteZooming && !spriteCatch && !spritePrep ? GLS.calm + 1 : 0;
   GLS.last = sig;
@@ -325,10 +408,8 @@ function glRecTile(i, x, y, nIcons, nLabels, start) {
 // Ende des Aufzeichnens: ruhende Rechtecke als Standbild auf die Grafikkarte; Symbole des Aufzeichnens auf echte Größe
 function glRecFinish() {
   const recs = GL.recs, st = [];
-  const w0 = GLS.w0 < 0 ? GLS.gEnd : GLS.w0, w1 = GLS.w1 < 0 ? GLS.gEnd : GLS.w1;
-  for (let i = 0; i < GLS.gEnd; i++) if (i < w0 || i >= w1) st.push(recs[i]);   // Boden, Tiefe, Wege-Bildchen – ohne Wellen
+  for (let i = 0; i < GLS.gEnd; i++) st.push(recs[i]);                 // Boden, Wellen (schaukeln im Shader), Tiefe, Wege-Bildchen
   const groundEnd = st.length;
-  GLS.wAt = w0;                                                          // hier kommen beim Abspielen die Wellen hinein
   GLS.order.clear(); GLS.sA0 = []; GLS.sA1 = []; GLS.dyn = [];
   GLS.tiles.forEach((c, j) => {
     GLS.order.set(c.x + ',' + c.y, j);
@@ -355,11 +436,8 @@ function glRecOverlay(icons, labels) {
 function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
   const ops = GLS.ops; ops.length = 0;
   for (const e of GLS.ents) e.used = frameNo;
-  ops.push(['s', 0, GLS.wAt]);                                         // Boden bis zu den Wellen
-  let d0 = GL.recs.length;
-  if (GLS.waves.length) glWaves(GLS.waves, z, now);
-  ops.push(['d', d0, GL.recs.length]);
-  ops.push(['s', GLS.wAt, GLS.groundEnd]);                              // Tiefe, Brücken, leuchtende Wege über den Wellen
+  ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Brücken, leuchtende Wege
+  let d0;
   const ev = new Set(GLS.dyn);
   for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
   const list = [...ev].sort((p, q) => p - q);
