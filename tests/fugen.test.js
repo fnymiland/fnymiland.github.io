@@ -43,11 +43,13 @@ describe('Muster weit weg (Nutzer, PC: Kristallweg wurde weiß)', () => {
 });
 
 describe('Muster weit weg gröber statt weg (Nutzer: „Gröber“)', () => {
-  it('Punkte/Steinchen werden weit weg doppelt bis vierfach so groß, nah bleiben sie; gröber zählt fürs Ausblenden wie näher dran', () => {
+  it('Punkte/Steinchen, Konfetti und Kachel-Linienmuster werden weit weg gröber (×2), nah bleiben sie; gröber zählt fürs Ausblenden wie näher dran', () => {
     expect(game("patCoarse('dots', 3)")).toBe(1);
     const s = game("patCoarse('dots', 0.45)");
     expect(s).toBe(2);                                                              // höchstens doppelt (Nutzer: nicht riesig)
     expect(game(`patternFade('dots', 0.45 * ${s})`)).toBeGreaterThan(game("patternFade('dots', 0.45)"));
-    expect(game("patCoarse('herring2', 0.45)")).toBe(1);                             // Linienmuster: wie bisher
+    expect(game("patCoarse('herring2', 0.45)")).toBe(2);                             // Linienmuster als Kachel: auch gröber
+    expect(game("patCoarse('confetti', 0.45)")).toBe(2);
+    expect(game("patCoarse('ashlar', 0.45)")).toBe(1);                               // ohne Kachel (Steinreihen): wie bisher
   });
 });

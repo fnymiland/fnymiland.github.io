@@ -256,14 +256,15 @@ const patMixCache = new Map();
 const patMix = (bg, c, f) => { const k = bg + c + f; let v = patMixCache.get(k); if (!v) { if (patMixCache.size > 4000) patMixCache.clear(); v = mix(bg, c, f); patMixCache.set(k, v); } return v; };
 // Weit weg gröber statt weg (Nutzer, PC: Muster verschwanden, Belag wirkte glatt wie Glas): wo das Muster sonst mehr als halb
 // ausblendet, Steinchen/Punkte mit doppeltem Abstand und nur ×1,4 Größe (×4 war „massiv riesig“). Stufe nur nach Zoom und Pixeldichte.
-let PAT_SCALE = 1, PAT_COARSE = true;
+let PAT_SCALE = 1, PAT_COARSE = true, PAT_LINE_COARSE = true;   // Linienmuster (Kachel, patTileFill): Fliesen, Klinker, Fischgrät …
 // Wie stark das Muster noch zu sehen ist (0–1), mit gröberem Muster: nie schwächer als eine Mausrad-Stufe vor ganz draußen – dort
 // (Bildchen bei Zoom 0,64) sah es „perfekt“ aus, ganz draußen (0,51) blendete es auf ein Drittel aus (Nutzer, PC)
 const PAT_FLOOR = 0.66;
 const patFadeEff = (kind, z) => { const s = patCoarse(kind, z); return s > 1 ? Math.max(PAT_FLOOR, patternFade(kind, z * s)) : patternFade(kind, z); };
 function patCoarse(kind, z) {
   let s = 1;
-  if (PAT_COARSE && (kind === 'dots' || kind === 'stones') && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
+  const pts = kind === 'dots' || kind === 'stones' || kind === 'confetti', lines = PAT_LINE_COARSE && !!PAT_TILE[kind];
+  if (PAT_COARSE && (pts || lines) && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
   return s;
 }
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
@@ -273,7 +274,14 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   return pattern1(L, kind, x, y, z, col, cols, ext, box, bg, z);
 }
 function pattern1(L, kind, x, y, zf, col, cols, ext, box, bg, z) {   // zf: Zoom fürs Ausblenden (gröber = wie näher dran)
-  let f = PAT_SCALE > 1 ? Math.max(PAT_FLOOR, patternFade(kind, zf)) : patternFade(kind, zf);
+  const S = PAT_SCALE, pts = kind === 'dots' || kind === 'stones' || kind === 'confetti';
+  let f = S > 1 ? Math.max(PAT_FLOOR, patternFade(kind, zf)) : patternFade(kind, zf);
+  if (S > 1 && !pts) {                                                   // Linienmuster gröber nur als Kachel (patTileFill) – geht das hier nicht
+    const c0 = col, b0 = bg;                                             // (gewölbter Brückenbelag), wie bisher fein und ausgeblendet
+    if (bg && col) { const ff = Math.round(f * 32) / 32; if (patTileFill(L, kind, x, y, z, ff < 1 ? patMix(C(bg), col, ff) : col, C(bg), ext, box)) return; }
+    PAT_SCALE = 1;
+    try { return pattern1(L, kind, x, y, z, c0, cols, ext, box, b0, z); } finally { PAT_SCALE = S; }
+  }
   if (f <= 0.02) return;
   if (bg && f < 1) {
     f = Math.round(f * 32) / 32;                                         // Stufen: wenige Mischfarben im Zwischenspeicher
@@ -294,7 +302,7 @@ function pattern1(L, kind, x, y, zf, col, cols, ext, box, bg, z) {   // zf: Zoom
 const PAT_TILE = { tiles: 0.5, big: 0.5, setts: 0.5, thirds: 1, checker: 0.5, herring2: 0.5, herring3: 2, basket: 0.5, diag: 0.5, stack: 0.5, slabs: 0.5, bricks: 1, herring: 0.5 };
 const patTiles = new Map();
 function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
-  const P = PAT_TILE[kind];
+  const S = PAT_SCALE, P0 = PAT_TILE[kind], P = P0 && P0 * S;            // weit weg gröber (patCoarse): Kachel mit S-fach großen Steinen
   if (!P || !col || typeof col !== 'string' || col[0] !== '#' || !Number.isInteger(x) || !Number.isInteger(y) || typeof g.createPattern !== 'function') return false;
   const O = L([0, 0]), U = L([1, 0]), V = L([0, 1]), a = U[0] - O[0], b = U[1] - O[1], T = L([0.37, 0.61]);
   if (!(a > 0.5 && b > 0.25) || Math.abs(V[0] - O[0] + a) > 1e-6 * a || Math.abs(V[1] - O[1] - b) > 1e-6 * b
@@ -302,7 +310,7 @@ function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
   const tr = g.getTransform ? g.getTransform() : null, ds = tr ? Math.hypot(tr.a, tr.b) : 1;
   const Wt = Math.max(4, Math.round(2 * P * a * ds)), Ht = Math.max(4, Math.round(2 * P * b * ds));
   if (Wt * Ht > 600 * 600) return false;                                 // ganz nah: Striche sind dann ohnehin wenige je Bildpunkt
-  const key = kind + col + bg + Wt + ',' + Ht;
+  const key = kind + col + bg + Wt + ',' + Ht + '|' + S;
   let e = patTiles.get(key);
   if (!e) {
     const c = document.createElement('canvas'); c.width = Wt; c.height = Ht;
@@ -311,7 +319,7 @@ function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
     X.fillStyle = bg; X.fillRect(0, 0, Wt, Ht);
     const sx = Wt / (2 * P), sy = Ht / (2 * P), g0 = g, ps = patSeam;
     g = X; patSeam = false;                                              // Feld (0, 0): Bildpunkt (0, 0) = Weltpunkt (−0,5, −0,5)
-    try { patternDraw(([u, v]) => [(u - v) * sx, (u + v + 1) * sy], kind, 0, 0, z * (sx / a + sy / b) / 2, col, null, 2 * P + 0.6); }   // Strichbreite: z in Bildpunkten der Kachel
+    try { patternDraw(([u, v]) => [(u - v) * sx * S, (u + v + 1) * sy * S], kind, 0, 0, z * (sx / a + sy / b) / 2 * Math.sqrt(S), col, null, 2 * P0 + 0.6); }   // Strichbreite: z in Bildpunkten der Kachel (gröber: ×√S)
     finally { g = g0; patSeam = ps; }
     const pat = g.createPattern(c, 'repeat');
     if (!pat || typeof pat.setTransform !== 'function') return false;
@@ -363,15 +371,15 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   }
   if (kind === 'confetti') {
     // kleine, zufällig gedrehte Papierstreifen – je Farbe ein Pfad, das spart Zeichenaufrufe
-    const bits = cols.map(() => []), [i0, i1] = span(0.085);
+    const st = 0.085 * PAT_SCALE, rs = Math.sqrt(PAT_SCALE), bits = cols.map(() => []), [i0, i1] = span(st);   // weit weg gröber (patCoarse)
     for (let i = i0; i <= i1; i++) for (let j = i0; j <= i1; j++) {
-      const u = -R + i * 0.085, v = -R + j * 0.085;
+      const u = -R + i * st, v = -R + j * st;
       if (out(u, v)) continue;
       const h = hash(x * 16 + i, y * 16 + j, 335);
       if (h > 0.6) continue;
       const cu = u + (hash(x * 16 + i, y * 16 + j, 336) - 0.5) * 0.05, cv = v + (hash(x * 16 + i, y * 16 + j, 337) - 0.5) * 0.05;
       const a = h * 23, ca = Math.cos(a), sa = Math.sin(a);
-      bits[Math.floor(h * 97) % cols.length].push([[0.042, 0.02], [-0.042, 0.02], [-0.042, -0.02], [0.042, -0.02]]
+      bits[Math.floor(h * 97) % cols.length].push([[0.042 * rs, 0.02 * rs], [-0.042 * rs, 0.02 * rs], [-0.042 * rs, -0.02 * rs], [0.042 * rs, -0.02 * rs]]
         .map(([du, dv]) => L([cu + du * ca - dv * sa, cv + du * sa + dv * ca])));
     }
     bits.forEach((list, k) => {
