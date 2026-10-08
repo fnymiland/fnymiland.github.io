@@ -374,7 +374,7 @@ function courtHtml(t, x, y) {
   if (!gp && !ct && (!C0.own || C0.bare)) return `<div class="label">${name}</div><p class="muted">Liegt ein Weg vor der Tür, führt ein Belag im Stil des Wegs bis zur Tür.</p>`;
   const on = t.zug !== false, auto = gp || ct ? 'Wie der Weg vor der Tür' : 'Wie bisher';
   return `<div class="looks"><button class="look${on ? ' on' : ''}" data-zug="1" aria-pressed="${on}">${plaza ? '🧱' : '🌿'} ${name}</button></div>
-    ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && PATH_LOOK[st.id].stones)).map(st =>
+    ${on ? `<div class="label">Belag</div><div class="swatches"><button class="sw bunt${courtVp(t) ? '' : ' on'}" data-vp="" aria-label="${auto}" title="${auto}"></button>${STYLES.weg.filter(st => styleOk(st) && !(plaza && pathLook(st.id).stones)).map(st =>
       `<button class="sw${courtVp(t) === st.id ? ' on' : ''}" data-vp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : ''}`;
 }
 function wireCourt(el, t, reopen) {
@@ -387,17 +387,36 @@ function styleSwatch(st) {
   if (swatchCache.has(st.id)) return swatchCache.get(st.id);
   let bg = st.col;
   try {
-    const lk = PATH_LOOK[st.id], c = document.createElement('canvas');
+    const lk = pathLook(st.id), c = document.createElement('canvas');
     c.width = c.height = 48;
     const prev = g; g = c.getContext('2d');
     if (lk && lk.stones) { poly([[0, 0], [48, 0], [48, 48], [0, 48]], '#8ccb67'); for (const [u, v] of [[14, 16], [34, 18], [22, 34], [38, 38]]) { ellipse(u, v + 1, 8, 5, '#aaa498'); ellipse(u, v, 8, 5, '#dcd7cc'); } }
-    else if (lk) paintLook(([u, v]) => [24 + u * 48, 24 + v * 48], lk, 3, 3, 1.3, false, 0.1);
+    else if (lk) { patNoFade = true; try { paintLook(([u, v]) => [24 + u * 48, 24 + v * 48], lk, 3, 3, 1.3, false, 0.1); } finally { patNoFade = false; } }
     g = prev;
     const url = c.toDataURL();
     if (url && url.startsWith('data:image')) bg = `${st.col} url(${url}) center / cover`;
   } catch (e) { /* ohne Canvas (Test) bleibt die Farbe */ }
   swatchCache.set(st.id, bg);
   return bg;
+}
+// Wege (Block 125): erst die Muster, die man hat (in der gewählten Farbe), dann die Farben (nicht bei Mustern mit eigenen Farben),
+// dann die Wegform. Die Wahl ergibt einen Belag-Namen (wegStyleOf) – alte Kombinationen behalten ihren alten Namen
+function wegStyleBar(bar) {
+  const [cm, cf] = wegParts(currentStyle('weg')), M = WEG_MUSTER_BY[cm];
+  const colFor = m => m.fixed ? null : (cf && wegFarbeOk(cf) ? cf : m.farbe);
+  const pats = WEG_MUSTER.filter(m => wegMusterOk(m.id)), more = WEG_MUSTER.length - pats.length;
+  bar.innerHTML = pats.map(m => { const st = styleDef('weg', wegStyleOf(m.id, colFor(m)));
+    return `<button class="style-chip${m.id === cm ? ' on' : ''}" data-wm="${m.id}" title="${m.name}" aria-label="Muster ${m.name}"><i style="background:${styleSwatch(st)}"></i><span>${m.name}</span></button>`; }).join('')
+    + (more ? `<button class="style-chip more" data-more="1" title="${more} weitere Muster in der Kunstakademie" aria-label="${more} weitere Muster freischalten">🎨<span>+${more}</span></button>` : '')
+    + (M && !M.fixed ? '<span class="style-sep"></span>' + WEG_FARBEN.filter(f => wegFarbeOk(f.id)).map(f =>
+      `<button class="style-chip${f.id === cf ? ' on' : ''}" data-wf="${f.id}" title="${f.name}" aria-label="Farbe: ${f.name}"><i style="background:${f.c}"></i><span>${f.name}</span></button>`).join('') : '')
+    + `<span class="style-sep"></span>${[['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']].map(([k, i0, i1, n0, n1]) =>   // Wegform (Block 77)
+      `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`).join('')}`;
+  for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; chosenStyle.weg = wegStyleOf(m.id, colFor(m)); sfx('deco'); renderStyleBar('weg'); };
+  for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { chosenStyle.weg = wegStyleOf(cm, b.dataset.wf); sfx('deco'); renderStyleBar('weg'); };
+  for (const b of bar.querySelectorAll('[data-wegopt]')) b.onclick = () => { wegShape[b.dataset.wegopt] = !wegShape[b.dataset.wegopt]; previewCache = null; sfx('deco'); renderStyleBar('weg'); };
+  if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => openResearch('design');
+  bar.hidden = false;
 }
 // Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
 // Farbchips in der Musterleiste (Block 89): gewählte Farbe gilt für neu Gebautes (state.paintNew[key])
@@ -438,6 +457,7 @@ function renderStyleBar(t) {
     return;
   }
   if (!STYLES[t]) { bar.hidden = true; return; }
+  if (t === 'weg') { wegStyleBar(bar); return; }
   const cur = currentStyle(t), have = STYLES[t].filter(styleOk), more = STYLES[t].length - have.length;
   bar.innerHTML = have.map(st => `<button class="style-chip${st.id === cur ? ' on' : ''}" data-style="${st.id}" title="${st.name}" aria-label="${st.name}">
       <i style="background:${styleSwatch(st)}"></i><span>${st.name}</span></button>`).join('')
@@ -889,7 +909,7 @@ function castleHtml(t) {
       <div class="label">Fenster</div>${pick('wn')}
       <div class="label">Wappen über dem Tor</div>${pick('wp')}
       <div class="label">Boden</div>${pick('gb')}
-      ${c.gb ? `<div class="label">Belag ${c.gb === 1 ? '(Weg zum Portal)' : '(Platz)'}</div><div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !PATH_LOOK[st.id].stones).map(st =>
+      ${c.gb ? `<div class="label">Belag ${c.gb === 1 ? '(Weg zum Portal)' : '(Platz)'}</div><div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !pathLook(st.id).stones).map(st =>
         `<button class="sw${st.id === (c.gp || 'platten') ? ' on' : ''}" data-csgp="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${st.name}" title="${st.name}"></button>`).join('')}</div>` : ''}
       <div class="label">Umgebung</div><div class="looks">${toggle('mo', '🌊 Wassergraben')}${toggle('mw', '🧱 Mauer mit Tor')}${toggle('gn', '🌷 Garten mit Brunnen')}</div>
       <p class="muted">Graben, Mauer und Garten brauchen ein Feld rundum mehr Platz.</p>${worth}`;
@@ -1266,7 +1286,7 @@ function openInfo(x, y) {
       <div class="label">${BRIDGE_LOOK[bridgeKind(t)].wall ? 'Mauer und Brüstung' : 'Geländer und Pfähle'}</div>
       <div class="swatches"><button class="sw bunt${t.brc == null ? ' on' : ''}" data-brc="" aria-label="Farbe wie die Brücke" title="Wie die Brücke"></button>${BRIDGE_COLS.map((c, i) => `<button class="sw${t.brc === i ? ' on' : ''}" data-brc="${i}" style="background:${c}" aria-label="Brückenfarbe ${i + 1}"></button>`).join('')}</div>
       ${BRIDGE_LOOK[bridgeKind(t)].wall ? `<div class="label">Belag</div>
-      <div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !(PATH_LOOK[st.id] || {}).stones).map(st => `<button class="sw${(t.style || 'sand') === st.id ? ' on' : ''}" data-brs="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : `<div class="label">Planken</div>
+      <div class="swatches">${STYLES.weg.filter(st => styleOk(st) && !pathLook(st.id).stones).map(st => `<button class="sw${(t.style || 'sand') === st.id ? ' on' : ''}" data-brs="${st.id}" style="background:${styleSwatch(st)}" aria-label="Belag ${escHtml(st.name)}" title="${escHtml(st.name)}"></button>`).join('')}</div>` : `<div class="label">Planken</div>
       <div class="swatches"><button class="sw bunt${t.brw == null ? ' on' : ''}" data-brw="" aria-label="Planken wie die Brücke" title="Wie die Brücke"></button>${PLANK_COLS.map((c, i) => `<button class="sw${t.brw === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>`}`   // Wegbrücke (Block 66/66b)
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
@@ -1861,12 +1881,15 @@ function announceIslands(m) {
 }
 
 // Wege, die es nur als Geschenk einer Sehenswürdigkeit gibt – zur Vorschau zwischen den käuflichen
-const giftStyles = () => STYLES.weg.filter(st => st.lm).map(st => {
-  const have = styleOk(st);
-  return `<button class="design gift${have ? ' have' : ''}" disabled title="${st.name}">
-    <i style="background:${st.col}"></i><span class="dn">${st.name}</span>
-    <small>${have ? '✓' : '🎁 ' + unlockText(st, true)}</small></button>`;
+// Wegmuster, die es nicht zu kaufen gibt (Ort, Album) – mit Vorschau, wie die gekauften (Block 125)
+const giftStyles = () => WEG_MUSTER.filter(m => !m.design).filter(m => m.lm || m.album).map(m => {
+  const have = wegMusterOk(m.id);
+  return `<button class="design gift${have ? ' have' : ''}" disabled title="${m.name}">
+    <i class="dlook wlook" style="background:${wegMusterSwatch(m.id)}"></i><span class="dn">${m.name}</span>
+    <small>${have ? '✓' : '🎁 ' + unlockText({ lm: m.lm, album: m.album }, true)}</small></button>`;
 }).join('');
+// Vorschau eines Musters (in seiner Grundfarbe) – in der Kunstakademie sieht man, was man kauft (Wunsch Nutzer 08.10.2026)
+const wegMusterSwatch = m => styleSwatch(styleDef('weg', wegStyleOf(m, WEG_MUSTER_BY[m].farbe)));
 
 // Forschung
 // Forschung mit zwei Seiten: Wissen (Ideen, drei Stufen nach Schule/Bibliothek/Uni) und Kunstakademie (Aussehen, Taler)
@@ -1926,13 +1949,14 @@ function openResearch(tab = researchTab) {
       <p>Such dir aus, was dir gefällt – jedes Stück einzeln. Du hast <b>🪙 ${fmt(state.money)}</b>.
         ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
       ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
-        const have = !d.price || state.design.has(d.id), err = have ? null : designError(d);
-        const look = d.look ? `<i class="dlook" style="background:#f6efe2 url(${lookThumb(d.look[0], d.look[1], 0)}) center / contain no-repeat"></i>`   // Form von Stadtschmuck (Block 106)
+        const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d);
+        const look = d.muster ? `<i class="dlook wlook" style="background:${wegMusterSwatch(d.muster)}"></i>`   // Wegmuster mit echter Vorschau (Block 125)
+          : d.look ? `<i class="dlook" style="background:#f6efe2 url(${lookThumb(d.look[0], d.look[1], 0)}) center / contain no-repeat"></i>`   // Form von Stadtschmuck (Block 106)
           : d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
         return `<button class="design${have ? ' have' : ''}" data-design="${d.id}" ${have || err === 'Braucht eine Kunstakademie' ? 'disabled' : ''} title="${d.name}">
           ${look}<span class="dn">${d.col && d.group !== 'Wege' ? '' : d.name.replace(/^Farbe /, '')}</span>
           <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}`}</small></button>`;
-      }).join('')}${gr === 'Wege' ? giftStyles() : ''}</div>`).join('')}`;
+      }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben – die wählst du beim Bauen.</p>' : ''}`).join('')}`;
   }
   openModal(`
     <h2>🔬 Forschung</h2>
@@ -2380,6 +2404,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-wege', date: '8. Oktober', title: 'Wege: Muster + Farbe', items: [
+    '🎨 <b>Muster und Farbe getrennt:</b> Beim Bauen wählst du unten erst das Muster (Kies, Platten, Pflaster, Holz …), dann eine von 21 Farben. Deine Wege bleiben, wie sie sind.',
+    '🧱 <b>Neue Muster:</b> Große, kleine und gemischte Platten, Plattenverband, Steinreihen, Kleinpflaster, Fischgrät groß und Holzbohlen – in der Kunstakademie mit Vorschau, bevor du kaufst. Farben kosten nichts.',
+    '✨ <b>Schöner:</b> Schachbrett und Gold als echtes Schachbrett, kräftigere Ränder, Erde heller, Fischgrät echt, Regenbogen ohne Kanten – und weit weg keine Streifen und Linien mehr.',
+  ] },
   { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger – auch nachts', items: [
     '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte – Tag und Nacht deutlich flüssiger. Sieht etwas komisch aus? ☰ → Grafik → „Grafikkarte“ ausschalten.',
     '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist – nah dran drehen sie sich. Umstellen unter ☰ → Grafik.',

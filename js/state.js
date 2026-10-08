@@ -202,7 +202,7 @@ function parseSave(d) {
     // Block 37: Stände ohne incPeak – Baustellen merkten sich ihr Einkommen von vor der Personal-Grenze (oft viel zu hoch)
     if (!('incPeak' in d) && t.phase != null && WONDERS[t.b] && t.phase < WONDERS[t.b].phases.length) delete t.rate;
     if (t.b === 'strasse') { t.b = 'weg'; t.style = ROAD_TO[t.style] || 'asphalt'; }
-    else if ((t.b === 'weg' || t.cross) && t.style && !STYLES.weg.some(st => st.id === t.style)) t.style = WEG_TO[t.style] || 'sand';
+    else if ((t.b === 'weg' || t.cross) && t.style && !isWegStyle(t.style)) t.style = WEG_TO[t.style] || 'sand';
   }
   // v4 (28.09.2026): Drehung in 4 Richtungen. Lange Gebäude sind jetzt „1 tief, 2 breit“ (Tür an der Längsseite):
   // die alte Drehung um eins versetzen, damit Grundfläche und Tür bleiben, wo sie waren.

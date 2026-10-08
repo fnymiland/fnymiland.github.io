@@ -393,6 +393,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Was sich weit weg sichtbar bewegen soll, gehört in `SPRITE_LIVE`; alles andere (Rauch, Fahnen, Fontänen) steht im Bildchen still
     (Liste in tests/tempo-schritt3.test.js). Messen: `?messen`, tools/bench.js (Vergleich gegen eine Kopie in bench-base/), Testwelt
     `?welt=gross`. Leistungstests stellen die Spieluhr fest (`nightAt` und `gameHour`), sonst hängen sie an der echten Uhrzeit.
+125. **Wege = Muster + Farbe** (Block 125): Ein Belag ist ein Text – alte Namen (`STYLES.weg`, feste Kombination mit eigenem Aussehen in
+    `PATH_LOOK`) oder `'m:<muster>:<farbe>'` (`WEG_MUSTER`/`WEG_FARBEN`). Aussehen nur über `pathLook(id)`, nie `PATH_LOOK[id]`;
+    gültig ist ein Belag über `isWegStyle`, freigeschaltet über `styleOk` (Muster: `wegMusterOk`, Farbe: `wegFarbeOk`). Wer
+    Muster + Farbe wählt, bekommt über `wegStyleOf` den alten Namen, wenn es die Kombination schon gab (ältere Spiel-Fassungen kennen
+    nur die). Neue Muster in `pattern()` im Weltraster (über Feldgrenzen durchgehend), feine Muster blassen weit weg aus (`patternFade`).
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
     Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird
     jedes Bild neu gemalt – teuer. Darum: was sich nur selten ändert (Uhren, Fähnchen), in den Schlüssel von `glCacheStart`, nicht

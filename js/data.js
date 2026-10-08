@@ -915,15 +915,6 @@ const STYLES = {
     { id: 'kristall', name: 'Kristallweg', col: '#bfe6f7', shape: 'band', lm: 'kristall:3' },
     { id: 'regenbogen', name: 'Regenbogenweg', col: '#f7c6d8', shape: 'band', album: 'farben' },
     { id: 'goldpflaster', name: 'Goldpflaster', col: '#f3d27a', shape: 'band', album: 'wege' },
-    // Block 125b: ruhige Stadtbeläge und Holz (Wunsch Nutzer 08.10.2026: „auch in einer seriösen Stadt nutzbar“)
-    { id: 'granit', name: 'Granitplatten', col: '#b9b8b2', shape: 'band', design: 160 },
-    { id: 'beton', name: 'Betonplatten', col: '#dedbd3', shape: 'band', design: 120 },
-    { id: 'sandstein', name: 'Sandstein', col: '#e6d09f', shape: 'band', design: 180 },
-    { id: 'anthrazit', name: 'Anthrazit-Pflaster', col: '#64676d', shape: 'band', design: 220 },
-    { id: 'glatt', name: 'Asphalt glatt', col: '#8f8a82', shape: 'band', design: 140 },
-    { id: 'gehweg', name: 'Gehwegplatten', col: '#d9d4c9', shape: 'band', design: 150 },
-    { id: 'bohlen', name: 'Holzbohlen', col: '#b07f50', shape: 'band', design: 140 },
-    { id: 'holzsteg', name: 'Holzsteg', col: '#cdbfa8', shape: 'band', design: 170 },
   ],
   // Linien (Block 41): der erste Stil ist frei, die anderen in der Kunstakademie (design) oder mit dem Ort (lm)
   hecke: [
@@ -966,7 +957,76 @@ const ARCHES = {
 // An der Mauer ist der „Torbogen“ ein Paar hoher Torpfeiler mit Steinkugeln (kein Bogen), an der Hecke ein grüner Rankbogen
 const archLabel = (b, id) => id !== 'bogen' ? `${ARCHES[id].icon} ${ARCHES[id].name}` : b === 'mauer' ? '🏛️ Torpfeiler' : b === 'hecke' ? '🌿 Rankbogen' : `${ARCHES[id].icon} ${ARCHES[id].name}`;
 const EDGE_LIT = new Set(['hecke:lichter', 'hecke:wilmer_licht', 'zaun:lichter', 'mauer:laternen']);
-const styleDef = (kind, id) => STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
+const styleDef = (kind, id) => (kind === 'weg' && wegComposite(id)) || STYLES[kind].find(st => st.id === id) || STYLES[kind][0];
+// --- Wege aus Muster + Farbe (Block 125, Entscheidung Nutzer 08.10.2026): Muster kauft man in der Kunstakademie, Farben sind frei
+// (Gold über das Album). Ein Belag ist weiter ein Text: die alten Namen ('sand', 'klinker' …) bleiben feste Kombinationen mit
+// genau ihrem Aussehen, neue Kombinationen heißen 'm:<muster>:<farbe>'. Wer eine alte Kombination wählt, bekommt den alten Namen
+// (den verstehen auch ältere Fassungen des Spiels).
+// kind: Muster in pattern() (null = glatt); fixed: eigene Farben (keine Farbwahl); legacy: alte Beläge mit diesem Muster (wer einen
+// davon hat, hat das Muster); design/lm/album: wie bisher bei Belägen
+const WEG_MUSTER = [
+  { id: 'kies', name: 'Kies', kind: 'dots', farbe: 'sand', legacy: ['sand', 'mulch'] },
+  { id: 'glatt', name: 'Glatt', kind: null, farbe: 'dunkel' },
+  { id: 'strasse', name: 'Straße', kind: null, dash: true, farbe: 'asphalt', legacy: ['asphalt'], design: 200 },
+  { id: 'platten', name: 'Große Platten', kind: 'big', farbe: 'hell', design: 120 },
+  { id: 'drittel', name: 'Kleine Platten', kind: 'thirds', farbe: 'hell', design: 150 },
+  { id: 'gemischt', name: 'Gemischte Platten', kind: 'modular', farbe: 'hell', design: 180 },
+  { id: 'schach', name: 'Schachbrett', kind: 'checker', farbe: 'beige', legacy: ['platten', 'goldpflaster'], design: 200 },
+  { id: 'fliesen', name: 'Fliesen', kind: 'tiles', farbe: 'terrakotta', legacy: ['terrakotta'], design: 180 },
+  { id: 'verband', name: 'Plattenverband', kind: 'slabs', farbe: 'granit', design: 160 },
+  { id: 'reihen', name: 'Steinreihen', kind: 'ashlar', farbe: 'sandstein', design: 180 },
+  { id: 'pflaster', name: 'Kleinpflaster', kind: 'setts', farbe: 'anthrazit', design: 220 },
+  { id: 'kopf', name: 'Kopfstein', kind: 'stones', farbe: 'stein', legacy: ['kopf'], design: 200 },
+  { id: 'klinker', name: 'Klinker', kind: 'bricks', farbe: 'ziegel', legacy: ['klinker'], design: 180 },
+  { id: 'fisch', name: 'Fischgrät', kind: 'herring2', farbe: 'rose', legacy: ['fisch'], design: 350, master: true },
+  { id: 'fischgross', name: 'Fischgrät groß', kind: 'herring3', farbe: 'rose', design: 300, master: true },
+  { id: 'holz', name: 'Holzbohlen', kind: 'boards', farbe: 'holz', design: 140 },
+  // eigene Farben (wie bisher)
+  { id: 'tritt', name: 'Trittsteine', fixed: 'tritt', legacy: ['tritt'], design: 120 },
+  { id: 'konfetti', name: 'Konfetti', fixed: 'konfetti', legacy: ['konfetti'], design: 300 },
+  { id: 'blueten', name: 'Blütenpfad', fixed: 'blueten', legacy: ['blueten'], lm: 'obsthain:3' },
+  { id: 'kristall', name: 'Kristallweg', fixed: 'kristall', legacy: ['kristall'], lm: 'kristall:3' },
+  { id: 'regenbogen', name: 'Regenbogenweg', fixed: 'regenbogen', legacy: ['regenbogen'], album: 'farben' },
+];
+const WEG_FARBEN = [
+  { id: 'sand', name: 'Sand', c: '#eadbb2' }, { id: 'erde', name: 'Erde', c: '#a87a55' }, { id: 'beige', name: 'Beige', c: '#ece6d8' },
+  { id: 'hell', name: 'Hellgrau', c: '#dedbd3' }, { id: 'stein', name: 'Steingrau', c: '#cfc8bb' }, { id: 'granit', name: 'Granit', c: '#b9b8b2' },
+  { id: 'asphalt', name: 'Asphalt', c: '#9e988e' }, { id: 'dunkel', name: 'Dunkelgrau', c: '#8f8a82' }, { id: 'anthrazit', name: 'Anthrazit', c: '#64676d' },
+  { id: 'sandstein', name: 'Sandstein', c: '#e6d09f' }, { id: 'terrakotta', name: 'Terrakotta', c: '#d99a73' }, { id: 'ziegel', name: 'Ziegelrot', c: '#c97a5e' },
+  { id: 'rose', name: 'Rosé', c: '#ecccc2' }, { id: 'rosa', name: 'Rosa', c: '#f4d6e2' }, { id: 'flieder', name: 'Flieder', c: '#ddd3ef' },
+  { id: 'hellblau', name: 'Hellblau', c: '#d6ebf5' }, { id: 'mint', name: 'Mint', c: '#d3ecdf' }, { id: 'salbei', name: 'Salbei', c: '#b9cfae' },
+  { id: 'holz', name: 'Holz', c: '#b07f50' }, { id: 'treibholz', name: 'Treibholz', c: '#cdbfa8' }, { id: 'gold', name: 'Gold', c: '#f3d27a', album: 'wege' },
+];
+const WEG_MUSTER_BY = Object.fromEntries(WEG_MUSTER.map(m => [m.id, m])), WEG_FARBEN_BY = Object.fromEntries(WEG_FARBEN.map(f => [f.id, f]));
+// alte Beläge als feste Kombination (Muster, Farbe) – für die Auswahl in der Leiste und fürs Zurückübersetzen
+const WEG_PRESET = { sand: ['kies', 'sand'], mulch: ['kies', 'erde'], platten: ['schach', 'beige'], asphalt: ['strasse', 'asphalt'], tritt: ['tritt', null],
+  kopf: ['kopf', 'stein'], klinker: ['klinker', 'ziegel'], terrakotta: ['fliesen', 'terrakotta'], konfetti: ['konfetti', null], fisch: ['fisch', 'rose'],
+  blueten: ['blueten', null], kristall: ['kristall', null], regenbogen: ['regenbogen', null], goldpflaster: ['schach', 'gold'] };
+const WEG_FROM_PRESET = new Map(Object.entries(WEG_PRESET).map(([id, [m, f]]) => [m + ':' + (f || ''), id]));
+// Muster + Farbe → Belag-Name (alter Name, wenn es die Kombination schon gab)
+function wegStyleOf(m, f) {
+  const M = WEG_MUSTER_BY[m];
+  if (!M) return 'sand';
+  if (M.fixed) return M.fixed;
+  const fc = WEG_FARBEN_BY[f] ? f : M.farbe;
+  return WEG_FROM_PRESET.get(m + ':' + fc) || `m:${m}:${fc}`;
+}
+// Belag-Name → [Muster, Farbe]
+function wegParts(id) {
+  if (WEG_PRESET[id]) return WEG_PRESET[id];
+  const p = typeof id === 'string' && id.startsWith('m:') ? id.split(':') : null;
+  return p && WEG_MUSTER_BY[p[1]] && WEG_FARBEN_BY[p[2]] ? [p[1], p[2]] : ['kies', 'sand'];
+}
+const wegCompCache = new Map();
+function wegComposite(id) {
+  if (typeof id !== 'string' || !id.startsWith('m:')) return null;
+  if (wegCompCache.has(id)) return wegCompCache.get(id);
+  const [, m, f] = id.split(':'), M = WEG_MUSTER_BY[m], F = WEG_FARBEN_BY[f];
+  const def = M && F && !M.fixed ? { id, name: `${M.name} · ${F.name}`, col: F.c, shape: 'band', muster: m, farbe: f } : null;
+  wegCompCache.set(id, def);
+  return def;
+}
+const isWegStyle = id => !!(wegComposite(id) || STYLES.weg.some(st => st.id === id));
 const chosenStyle = { weg: 'sand', hecke: 'niedrig', zaun: 'latten', mauer: 'backstein' };
 const wegShape = { wide: false, sq: false };      // Form neuer Wege (Block 77): ganz breit, eckige Kurven – Schalter in der Musterleiste
 
@@ -1018,7 +1078,8 @@ const DESIGN = [
   ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),
   ...Object.entries(DECO_LOOKS).flatMap(([b, L]) => [...L.forms.map((f, i) => [f, i]).filter(([f]) => f.design).map(([f, i]) => ({ id: `${b}:form:${f.id}`, group: L.group, look: [b, i], name: f.name, price: f.design, schmuck: true })),
     ...(L.cols || []).filter(c => c.design).map(c => ({ id: `${b}:col:${c.id}`, group: L.group, col: c.c, name: `Farbe ${c.name}`, price: c.design, schmuck: true }))]),
-  ...STYLES.weg.filter(st => st.design).map(st => ({ id: 'weg:' + st.id, group: 'Wege', col: st.col, name: st.name, price: st.design, master: !!st.master })),
+  // Wege (Block 125): Muster statt einzelner Beläge – die Farbe wählt man beim Bauen (alte 'weg:…'-Käufe gelten weiter, wegMusterOk)
+  ...WEG_MUSTER.filter(m => m.design).map(m => ({ id: 'wegmuster:' + m.id, group: 'Wegmuster', muster: m.id, name: m.name, price: m.design, master: !!m.master })),
   ...['hecke', 'zaun', 'mauer'].flatMap(kind => STYLES[kind].filter(st => st.design).map(st => ({ id: kind + ':' + st.id, group: { hecke: 'Hecken', zaun: 'Zäune', mauer: 'Mauern' }[kind], col: st.col, name: st.name, price: st.design, master: !!st.master }))),
   ...['laterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master, ...(b === 'laterne' ? { schmuck: true } : {}) })),
 ];

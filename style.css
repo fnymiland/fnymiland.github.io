@@ -357,6 +357,7 @@ button.hall-row.link-row { width: 100%; background: none; border: 0; border-bott
 }
 .design i { width: 26px; height: 26px; border-radius: 8px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.08); }
 .design .emoji { font-size: 22px; }
+.design i.wlook { width: 62px; height: 44px; border-radius: 10px; }   /* Wegmuster: größere Vorschau (Block 125) */
 .design .dn { font-size: 11px; font-weight: 800; line-height: 1.1; text-align: center; }
 .design small { font-size: 11px; font-weight: 900; }
 .design.have { background: #eaffea; cursor: default; }

@@ -215,8 +215,9 @@ function patternFade(kind, z) {
   const [a, b] = PAT_FADE[kind] || PAT_FADE.line;
   return Math.max(0, Math.min(1, (size - a) / b));
 }
+let patNoFade = false;                                                    // Vorschaubilder (Leiste, Kunstakademie): Muster immer voll
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
-  if (kind === 'rainbow') return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
+  if (kind === 'rainbow' || patNoFade) return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
   const f = patternFade(kind, z);
   if (f <= 0.02) return;
   const a0 = g.globalAlpha;
@@ -368,30 +369,36 @@ function roadCenterline(arms, t) {
 const PATH_LOOK = {
   // Bänder
   sand:    { edge: '#d9c393', fill: '#eadbb2', pat: ['dots', null], cols: ['#c9b183', '#d8c79d'] },   // Kiesweg
-  mulch:   { edge: '#6f4a2e', fill: '#8b5e3c', pat: ['dots', null], cols: ['#6f4a2e', '#a0714d'] },
+  mulch:   { edge: '#86593a', fill: '#a87a55', pat: ['dots', null], cols: ['#86593a', '#c49a74'] },   // heller (Block 125)
   asphalt: { edge: '#cfc8bb', fill: '#9e988e', dash: true },
-  regenbogen: { edge: '#ecd3de', fill: '#fff7fb', pat: ['rainbow', null] },
+  regenbogen: { edge: '#d9a7bf', fill: '#fff7fb', pat: ['rainbow', null] },
   konfetti: { edge: '#e8d8cf', fill: '#fbf4ec', pat: ['confetti', null], cols: ['#f2a7c0', '#8fd3bf', '#b9a3ee', '#ffd36e', '#8fc1f0', '#f7b58a'] },
-  blueten: { edge: '#e9c6d2', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
+  blueten: { edge: '#dc9db4', fill: '#f7e3ea', pat: ['dots', null], cols: ['#f29bb8', '#ffffff', '#ffd36e', '#f6b6cb'] },
   tritt:   { stones: true },
-  kristall: { edge: '#9fcfe8', fill: '#e1f4fb', pat: ['dots', null], cols: ['#9fdcf7', '#ffffff', '#62b1dc'], glow: true },
+  kristall: { edge: '#6fb4dc', fill: '#e1f4fb', pat: ['dots', null], cols: ['#9fdcf7', '#ffffff', '#62b1dc'], glow: true },
   // früher Flächen (Plätze), jetzt Bänder wie alle
-  platten:    { edge: '#cfc5b1', fill: '#e6dfd0', pat: ['tiles', '#d6ccb9'] },
+  platten:    { edge: '#b3a68c', fill: '#ece6d8', pat: ['checker', '#d6cbb4'] },   // Schachbrett: zweifarbig, kräftiger Rand (Block 125)
   kopf:       { edge: '#b3ab9c', fill: '#cfc8bb', pat: ['stones', '#ddd7cc'] },
   klinker:    { edge: '#a95a43', fill: '#c97a5e', pat: ['bricks', '#a95a43'] },
   terrakotta: { edge: '#bf7f58', fill: '#d99a73', pat: ['tiles', '#c4805a'] },
-  fisch:      { edge: '#d3ada1', fill: '#ecccc2', pat: ['herring', '#d8aea2'] },
-  goldpflaster: { edge: '#d9b152', fill: '#f3d27a', pat: ['tiles', '#d9b152'] },
-  // Block 125b: ruhige Stadtbeläge und Holz
-  granit:    { edge: '#8f8e88', fill: '#b9b8b2', pat: ['slabs', '#9c9b95'] },          // große Platten im Verband
-  beton:     { edge: '#b9b5ab', fill: '#dedbd3', pat: ['big', '#c8c4ba'] },            // halbe Felder, quadratisch
-  sandstein: { edge: '#c4a66c', fill: '#e6d09f', pat: ['ashlar', '#cdb27c'] },         // Reihen mit unterschiedlich langen Steinen
-  anthrazit: { edge: '#46484d', fill: '#64676d', pat: ['setts', '#505257'] },          // kleines dunkles Pflaster
-  glatt:     { edge: '#c9c2b5', fill: '#8f8a82' },                                     // Asphalt ohne Mittelstreifen
-  gehweg:    { edge: '#9d988e', fill: '#d9d4c9', pat: ['thirds', '#c2bcaf'] },         // Gehwegplatten, kräftiger Bordstein
-  bohlen:    { edge: '#7d5634', fill: '#b07f50', pat: ['boards', '#8a6038'] },         // warmes Holz
-  holzsteg:  { edge: '#9b8f7c', fill: '#cdbfa8', pat: ['boards', '#a99b84'] },         // verwittertes, helles Holz
+  fisch:      { edge: '#c79a8d', fill: '#ecccc2', pat: ['herring2', '#cfa093'] },   // echtes Fischgrät (Block 125, Wahl A)
+  goldpflaster: { edge: '#c2932f', fill: '#f3d27a', pat: ['checker', '#e7bd55'] },   // Gold-Schachbrett (Block 125)
 };
+// Aussehen eines Belags: alte Namen fest (PATH_LOOK), Muster + Farbe ('m:…') daraus berechnet – Rand kräftig, Fugen und Punkte
+// aus der Farbe (Block 125)
+const pathLookCache = new Map();
+function pathLook(id) {
+  if (PATH_LOOK[id]) return PATH_LOOK[id];
+  if (pathLookCache.has(id)) return pathLookCache.get(id);
+  const def = wegComposite(id);
+  let lk = PATH_LOOK.sand;
+  if (def) {
+    const M = WEG_MUSTER_BY[def.muster], c = WEG_FARBEN_BY[def.farbe].c, dark = shade(c, -0.25), joint = shade(c, M.kind === 'checker' ? -0.09 : -0.14);
+    lk = { edge: dark, fill: c, ...(M.kind ? { pat: [M.kind, joint] } : {}), ...(M.kind === 'dots' ? { cols: [shade(c, -0.16), shade(c, 0.08)] } : {}), ...(M.dash ? { dash: true } : {}) };
+  }
+  pathLookCache.set(id, lk);
+  return lk;
+}
 const pathAt = (x, y) => { const w = wegAt(x, y); return w != null ? styleDef('weg', w) : null; };   // auch unter Marktständen
 // Ecken, die ganz gefüllt werden, weil ringsum Weg ist (Band oder Platz) – keine Löcher in breiten Wegen und an Plätzen
 // gepflastert für volle Ecken: Weg (außer Trittsteinen) – und das Rathaus-Grundstück (es ist selbst ein Arm der Wege), sonst
@@ -407,12 +414,13 @@ function pathQuads(x, y, hall = true) {
 const pathFlares = () => [];
 // Belag eines Felds zeichnen (ext: über seine Kante hinaus verlängert – z. B. für große Flächen der Wunderwerke)
 function paintLook(L, lk, x, y, z, band, ext, box = null) {
-  const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]];
+  const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], Ep = E + 0.01;
+  const patArea = band ? [rect(-Ep, Ep, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -Ep, Ep)] : [rect(-Ep, Ep, -Ep, Ep)];   // Muster etwas über die Kante (wie drawPath)
   const fillArea = band ? [rect(-E, E, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -E, E)] : [rect(-E, E, -E, E)];
   if (band) for (const sh of [rect(-E, E, -EDGE_W, EDGE_W), rect(-EDGE_W, EDGE_W, -E, E)]) poly(sh.map(L), C(lk.edge));
   for (const sh of fillArea) poly(sh.map(L), C(lk.fill));
   if (!lk.pat && !lk.checker) return;
-  g.save(); clipTo(fillArea, L);
+  g.save(); clipTo(patArea, L);
   if (lk.checker) {
     const n = Math.ceil(ext / 0.25);
     for (let i = -n; i < 4 + n; i++) for (let j = -n; j < 4 + n; j++) {
@@ -508,7 +516,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     for (const sh of roadShapes(arms, t, 0.27)) poly(sh.map(L), C('#b08a5e'));
   }
   if (lk.pave) {                                     // Pflastergleis: Belag des Wegs bis an die Schienen
-    const pl = PATH_LOOK[lk.pave];
+    const pl = pathLook(lk.pave);
     for (const sh of roadShapes(arms, t, RAIL_W + 0.05)) poly(sh.map(L), C(pl.edge));
     for (const sh of roadShapes(arms, t, RAIL_W + 0.02)) poly(sh.map(L), C(pl.fill));
     g.save(); clipTo(roadShapes(arms, t, RAIL_W + 0.02), L); pattern(L, pl.pat[0], x, y, z, pl.pat[1] && C(pl.pat[1]), pl.cols); g.restore();
@@ -526,7 +534,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     railTrim(L, segs, lk, x, y, z);
   }
   if (t && t.cross && !t.foot) {                     // Bahnübergang: Wegbelag quer über die Gleise (nicht unter der Brücke)
-    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id], pa = pathArms(x, y);
+    const st = styleDef('weg', t.style), lk = pathLook(st.id), pa = pathArms(x, y);
     const fill = lk.fill || '#dcc69d', edge = lk.edge || shade(fill, -0.18);
     const across = { rot: arms.length && arms[0][0] ? 1 : 0 };      // ohne Weg-Nachbarn: quer zur Schiene
     for (const [w, col] of [[EDGE_W, edge], [ROAD_W, fill]]) for (const sh of roadShapes(pa, across, w)) poly(sh.map(L), C(col));
@@ -599,7 +607,7 @@ const ARCH_LOOK = {
 function archLook(t) {
   const id = footPaidOf(t) || 'holz';
   if (id !== 'weg') return ARCH_LOOK[id];
-  const st = styleDef('weg', t.style), lk = st.id === 'tritt' ? PATH_LOOK.kopf : PATH_LOOK[st.id];
+  const st = styleDef('weg', t.style), lk = st.id === 'tritt' ? PATH_LOOK.kopf : pathLook(st.id);
   const edge = lk.edge || shade(lk.fill, -0.18);
   return { deck: lk.fill, side: shade(edge, -0.12), rail: shade(edge, -0.25), th: 4, kind: 'posts', path: lk };
 }
@@ -782,7 +790,7 @@ function drawWegBridge(cx, cy, z, x, y, t) {
   // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
   const deck = strip(-hw, hw);
   if (B.wall) {                                                         // Belag wie der Weg – mit seinem Muster (Block 66b)
-    const st = styleDef('weg', t.style), lk = PATH_LOOK[st.id] || {}, fill = lk.fill || '#dcc69d';
+    const st = styleDef('weg', t.style), lk = pathLook(st.id) || {}, fill = lk.fill || '#dcc69d';
     const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, H(a)); };
     const band = w => [...AS.map(a => ax ? [-w, a] : [a, -w]), ...[...AS].reverse().map(a => ax ? [w, a] : [a, w])];
     poly(band(hw).map(Lh), C(lk.edge || shade(fill, -0.18)));
@@ -840,7 +848,7 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
-  const st = styleDef('weg', t && t.style), lk = PATH_LOOK[st.id];
+  const st = styleDef('weg', t && t.style), lk = pathLook(st.id);
   const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) {                                                                       // Trittsteine; zu Vorplätzen ein Stein mehr (Block 91)
     drawStones(L, arms, t, x, y, z);
@@ -864,7 +872,10 @@ function drawPath(cx, cy, z, x, y, t) {
   g.strokeStyle = C(lk.fill); g.lineWidth = 0.6; g.lineJoin = 'round';
   g.beginPath(); for (const sh of shapes(ROAD_W)) { sh.map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); } g.stroke();
   if (lk.pat) {
-    g.save(); clipTo(shapes(ROAD_W), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    // Muster 2 % über die Feldkante (Block 125): die geglätteten Kanten zweier Nachbarfelder decken sich sonst nicht ganz, und der
+    // helle Belag schimmert als feine Linie durch (Regenbogen); die Muster liegen im Weltraster, also deckungsgleich
+    const grow = sh => sh.map(([u, v]) => [u * 1.02, v * 1.02]);
+    g.save(); clipTo(shapes(ROAD_W).map(grow), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
@@ -1274,7 +1285,7 @@ function drawObject(type, cx, cy, z, now, x, y, lvl, t) {
 // deckt ihn ab). Das Stück auf dem Wegfeld zeichnet der Weg selbst mit (drawPath, Block 78c), sonst läge es obendrauf.
 const GP_EDGE = 0.125, GP_FILL = 0.095;
 function drawGardenPath(cx, cy, z, x, y, gp) {
-  const lk = PATH_LOOK[gp.style] || PATH_LOOK.platten, [dx, dy] = gp.d;
+  const lk = gp.style ? pathLook(gp.style) : PATH_LOOK.platten, [dx, dy] = gp.d;
   const L = ([a, b]) => { const u = a * dx - b * dy, v = a * dy + b * dx; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z]; };
   if (lk.stones) {                                                                      // Trittstein zur Tür, im Takt des Wegs (Block 91)
     const q = L([0.375, 0]); ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498')); ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d9d4c9'));
@@ -1340,7 +1351,7 @@ const courtFront = b => (ITEMS[b].size || [1, 1])[0] / 2;
 // Gebäude mit eigenem Platz (COURTS[b].own): im Belag des Wegs davor bzw. dem gewählten; sonst classic() wie früher, aus: Wiese
 function courtFloor(K, t, x, y, classic) {
   if (t.zug === false) return;
-  const st = courtStyle(t, x, y), lk = st && PATH_LOOK[st];
+  const st = courtStyle(t, x, y), lk = st && pathLook(st);
   if (!lk || (lk.stones && courtPartsAt(t, x, y).some(c => !c.band))) { if (!COURTS[t.b] || !COURTS[t.b].bare || x > 1e5) classic(); } else paveCourt(K, COURTS[t.b], courtFront(t.b), lk, x, y, t);
 }
 const courtShown = (t, x, y) => !!courtStyle(t, x, y);                                // für Bilder, die dann anders aussehen (Büsche, Rasen)
@@ -1356,7 +1367,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   }
   if (C0 && PASS === 'ground') {
     if (GROUND_TYPES.has(type)) drawBuilding(type, cx, cy, z, now, x, y, lvl, t);     // eigene flache Teile zuerst
-    const st = courtStyle(t, x, y), lk = st && (PATH_LOOK[st] || PATH_LOOK.sand);
+    const st = courtStyle(t, x, y), lk = st && pathLook(st);
     if (lk) paveCourt(kit(cx, cy, z, t.rot), C0, courtFront(type), lk, x, y, t);
     return;
   }
@@ -2619,7 +2630,7 @@ function drawCastle(cx, cy, z, now, x, y, t) {
   };
   // Umgebung (Block 60i): ein Feld rundum – Weg zum Tor, Wassergraben mit Zugbrücke, Beete; Mauer und Brunnen stehen auf
   // ihrer Seite vor oder hinter dem Schloss (pre/post)
-  const groundLk = PATH_LOOK[c.gp] && !PATH_LOOK[c.gp].stones ? PATH_LOOK[c.gp] : PATH_LOOK.platten;   // Belag (Block 76b)
+  const groundLk = c.gp && isWegStyle(c.gp) && !pathLook(c.gp).stones ? pathLook(c.gp) : PATH_LOOK.platten;   // Belag (Block 76b)
   const RG = csRing(c), OA = HA + RG, OB = HB + RG, pre = [], post = [], tvB = K.facing(0, 1);
   const place = (a, b, fn) => (a > HA ? post : a < -HA ? pre : b * tvB > 0 ? post : pre).push([a, b, fn]);
   if (RG) {

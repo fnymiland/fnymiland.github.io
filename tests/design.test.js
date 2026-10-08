@@ -8,29 +8,37 @@ beforeEach(() => {
 });
 
 describe('Kunstakademie: Aussehen einzeln freischalten', () => {
-  it('am Anfang: drei Wand- und Dachfarben und der Kiesweg', () => {
+  it('am Anfang: drei Wand- und Dachfarben, Kies und Glatt in allen Farben (Wege: Muster + Farbe, Block 125)', () => {
     expect(game("colorsOf('wall').length")).toBe(3);
     expect(game("colorsOf('roof').length")).toBe(3);
-    expect(game("STYLES.weg.filter(styleOk).map(s => s.id)")).toEqual(expect.arrayContaining(['sand']));
-    expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(false);
+    expect(game("STYLES.weg.filter(styleOk).map(s => s.id)")).toEqual(expect.arrayContaining(['sand', 'mulch']));   // Erde = Kies in Erdfarbe
+    expect(game("styleOk(styleDef('weg', 'm:glatt:rosa'))")).toBe(true);
     expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(false);
+    expect(game("styleOk(styleDef('weg', 'm:kies:gold'))")).toBe(false);                 // Gold erst mit der Album-Seite
   });
 
-  it('jedes Stück einzeln kaufen – Erde ja, Asphalt nicht', () => {
-    const price = game("designPrice(DESIGN_BY_ID['weg:mulch'])");
-    expect(game("buyDesign('weg:mulch')")).toBe(true);
+  it('Muster einzeln kaufen – dann in jeder Farbe; Wandfarben weiter einzeln', () => {
+    const price = game("designPrice(DESIGN_BY_ID['wegmuster:strasse'])");
+    expect(game("buyDesign('wegmuster:strasse')")).toBe(true);
     expect(game('state.money')).toBe(1e6 - price);
-    expect(game("styleOk(styleDef('weg', 'mulch'))")).toBe(true);
-    expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(false);
+    expect(game("styleOk(styleDef('weg', 'asphalt'))")).toBe(true);                      // alter Belag mit diesem Muster
+    expect(game("styleOk(styleDef('weg', 'm:strasse:anthrazit'))")).toBe(true);
+    expect(game("styleOk(styleDef('weg', 'klinker'))")).toBe(false);
     expect(game("buyDesign('wall:5')")).toBe(true);
     expect(game("colorOk('wall', 5) && !colorOk('wall', 6)")).toBe(true);
-    expect(game("buyDesign('weg:mulch')")).toBe(false);                // schon da
+    expect(game("buyDesign('wegmuster:strasse')")).toBe(false);          // schon da
+  });
+
+  it('wer einen alten Belag gekauft hat, hat sein Muster – in allen Farben', () => {
+    game("state.design.add('weg:klinker')");
+    expect(game("wegMusterOk('klinker') && styleOk(styleDef('weg', 'm:klinker:anthrazit'))")).toBe(true);
+    expect(game("designError(DESIGN_BY_ID['wegmuster:klinker'])")).toBe('Schon da');     // nicht noch einmal bezahlen
   });
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {
-    expect(game("designError(DESIGN_BY_ID['weg:fisch'])")).toBe('Braucht eine Kunstakademie');
+    expect(game("designError(DESIGN_BY_ID['wegmuster:fisch'])")).toBe('Braucht eine Kunstakademie');
     game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc()");
-    expect(game("buyDesign('weg:fisch')")).toBe(true);
+    expect(game("buyDesign('wegmuster:fisch')")).toBe(true);
   });
 
   it('Deko wie die Laterne gibt es auch dort', () => {
@@ -85,7 +93,7 @@ describe('Überall bauen nach Forschung', () => {
 describe('Preise nach Einkommen (Block 50)', () => {
   it('mindestens 5× so teuer wie früher, Meisterstücke 25×; mit viel Einkommen ein paar Minuten davon', () => {
     game('state.incPeak = 0; T.inc = 0; T.salesInc = 0');
-    expect(game("designPrice(DESIGN_BY_ID['weg:mulch'])")).toBeGreaterThanOrEqual(200);   // 40 × 5
+    expect(game("designPrice(DESIGN_BY_ID['wegmuster:platten'])")).toBeGreaterThanOrEqual(600);   // 120 × 5
     expect(game("designPrice(DESIGN_BY_ID['statue'])")).toBeGreaterThanOrEqual(22000);    // 900 × 25 (gerundet)
     game('state.incPeak = 1000');                                                        // 1000 Taler/s
     const normal = game("designPrice(DESIGN_BY_ID['laterne'])"), master = game("designPrice(DESIGN_BY_ID['statue'])");
@@ -98,6 +106,6 @@ describe('Preise nach Einkommen (Block 50)', () => {
 
   it('zu wenig Taler: nicht kaufbar', () => {
     game('state.money = 100; state.incPeak = 0');
-    expect(game("designError(DESIGN_BY_ID['weg:mulch'])")).toBe('Zu wenig Taler');
+    expect(game("designError(DESIGN_BY_ID['wegmuster:platten'])")).toBe('Zu wenig Taler');
   });
 });

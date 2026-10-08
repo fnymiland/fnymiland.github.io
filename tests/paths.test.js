@@ -112,7 +112,8 @@ describe('Stil-Leiste', () => {
   it('zeigt nur, was man hat, plus einen Knopf zur Kunstakademie', () => {
     game("setTool('weg')");
     const chips = [...document.querySelectorAll('#style-bar .style-chip')];
-    expect(chips.filter(c => c.dataset.style).map(c => c.dataset.style)).toEqual(['sand']);
+    expect(chips.filter(c => c.dataset.wm).map(c => c.dataset.wm)).toEqual(['kies', 'glatt']);   // Muster, die man von Anfang an hat (Block 125)
+    expect(chips.filter(c => c.dataset.wf).length).toBe(20);                                       // alle Farben außer Gold
     const more = document.querySelector('#style-bar [data-more]');
     expect(more).not.toBe(null);
     more.onclick();

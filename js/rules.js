@@ -248,7 +248,7 @@ function castleChange(x, y, patch) {
   if (!t || t.b !== 'fz_schloss') return null;
   const cs = csOf(t), nc = csOf({ cs: { ...cs, ...patch } });
   for (const [key, [lo, hi]] of Object.entries(CS_LIM)) if (!(nc[key] >= lo && nc[key] <= hi)) { fail(nc[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
-  if (nc.gp != null && !STYLES.weg.some(st => st.id === nc.gp)) { fail('Diesen Belag gibt es nicht'); return null; }   // Boden-Belag (Block 76b)
+  if (nc.gp != null && !isWegStyle(nc.gp)) { fail('Diesen Belag gibt es nicht'); return null; }   // Boden-Belag (Block 76b)
   if (patch.tw && patch.tw.length > CS_TOWERS) { fail(`Höchstens ${CS_TOWERS} Turmpaare`); return null; }
   for (const o of nc.tw) for (const [key, [lo, hi]] of Object.entries(CT_LIM)) if (!(o[key] >= lo && o[key] <= hi)) { fail(o[key] < lo ? 'Kleiner geht es nicht' : 'Größer geht es nicht'); return null; }
   const paid = t.price != null ? t.price : castlePrice(cs), price = castlePrice(nc), diff = price - paid;   // t.price: das Höchste, was bezahlt ist (Block 137)
@@ -728,7 +728,33 @@ function unlockText(def, short) {
   if (def.bond && (state.bond || 0) < def.bond) return `💛 Freundschaft mit ${def.bond} Herzen`;
   return '';
 }
-const styleOk = st => unlockOk(st, (st.kind || 'weg') + ':' + st.id);
+// Wege (Block 125): Muster hat, wer es gekauft hat (wegmuster:…), es über Ort/Album bekam oder einen alten Belag mit diesem Muster
+// besitzt (nichts geht verloren); Farben sind frei, Gold gibt es mit der Album-Seite (bzw. wer Goldpflaster schon hat)
+function wegMusterOk(m) {
+  const M = WEG_MUSTER_BY[m];
+  if (!M) return false;
+  if (M.legacy && M.legacy.some(id => unlockOk(STYLES.weg.find(st => st.id === id) || {}, 'weg:' + id))) return true;
+  if (M.design) return state.design.has('wegmuster:' + m) || !!(state.legacy && state.legacy.has('wegmuster:' + m));
+  return unlockOk({ lm: M.lm, album: M.album }, 'wegmuster:' + m);
+}
+function wegFarbeOk(f) {
+  const F = f && WEG_FARBEN_BY[f];
+  if (!F || !F.album) return true;
+  return unlockOk({ album: F.album }, 'wegfarbe:' + f) || unlockOk(STYLES.weg.find(st => st.id === 'goldpflaster') || {}, 'weg:goldpflaster');
+}
+// Freischalt-Text eines Musters (Leiste, Fenster)
+function wegMusterText(m) {
+  const M = WEG_MUSTER_BY[m];
+  if (!M || wegMusterOk(m)) return '';
+  if (M.design) return `🎨 Kunstakademie · 🪙 ${fmt(designPrice(DESIGN_BY_ID['wegmuster:' + m]))}`;
+  return unlockText({ lm: M.lm, album: M.album });
+}
+const styleOk = st => {
+  const kind = st.kind || 'weg';
+  if (kind !== 'weg') return unlockOk(st, kind + ':' + st.id);
+  const [m, f] = wegParts(st.id);
+  return (!st.muster && unlockOk(st, 'weg:' + st.id)) || (wegMusterOk(m) && wegFarbeOk(f));
+};
 // Farben: die ersten FREE_COLORS gibt es von Anfang an, weitere in der Kunstakademie
 // Farben für viele (Block 73): „auf alle übertragen“ und neu Gebautes gleich so (state.paintNew[b]; false = abgeschaltet).
 // Häuser bleiben bunt gemischt, bis man es für sie selbst einschaltet.
@@ -777,7 +803,7 @@ function designPrice(d) {
 }
 // Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
-  if (!d || state.design.has(d.id) || !d.price) return 'Schon da';
+  if (!d || state.design.has(d.id) || !d.price || (d.muster && wegMusterOk(d.muster))) return 'Schon da';
   if (d.master && !hasBuilt('kunst')) return 'Braucht eine Kunstakademie';
   if (state.money < designPrice(d)) return 'Zu wenig Taler';
   return null;
@@ -868,7 +894,7 @@ const COURTS = {
 // Stücke eines Vorplatzes: { a, s: [quer von, bis], band: schmaler Weg }; s3: anders ab Stufe 3
 const courtParts = (C0, t) => [].concat((t && t.lvl >= 3 && C0.s3) || C0.parts || C0).map(c => ({ a: c.a, s: c.p || [c.b - (c.w || GP_FILL), c.b + (c.w || GP_FILL)], band: !c.p }));
 const courtIsPlaza = C0 => courtParts(C0).some(c => !c.band);
-const courtVp = t => t.vp && STYLES.weg.some(st => st.id === t.vp) ? t.vp : null;
+const courtVp = t => t.vp && isWegStyle(t.vp) ? t.vp : null;
 // Felder vor der Front: je Spalte c (quer, Mitte des Felds) das Feld davor
 function courtFrontTiles(t, x, y) {
   const r = (t.rot || 0) & 3, [w, h] = sizeOf(t.b, r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
@@ -1541,7 +1567,7 @@ function setBridgeKind(x, y, kind) {
 }
 // Belag (Wegmuster) der ganzen Brücke direkt wählen (66d) – die Brücken-Art bleibt, wie sie bezahlt ist; kostet wie Umfärben
 function setBridgeStyle(x, y, style) {
-  const st = STYLES.weg.find(o => o.id === style);
+  const st = isWegStyle(style) && styleDef('weg', style);
   if (!st || !styleOk(st)) return false;
   const tiles = bridgeSpan(x, y).map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => (t.style || 'sand') !== style);
   if (!tiles.length) return false;

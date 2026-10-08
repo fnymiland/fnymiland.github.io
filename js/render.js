@@ -79,7 +79,7 @@ function chunkBounds(cx, cy) {
 }
 // Brücken (Schiene wie Weg) nie aus dem Zwischenspeicher: Geländer und Anhebung ragen über den Rand der Bodenkachel hinaus und
 // würden dort abgeschnitten (Block 66e) – es sind nur wenige Felder, die live gezeichnet werden
-const cachedPath = t => !t.bridge && (t.b === 'schiene' || (wegUnder(t) != null && !PATH_LOOK[styleDef('weg', wegUnder(t)).id].glow));   // auch der Weg unter Marktständen
+const cachedPath = t => !t.bridge && (t.b === 'schiene' || (wegUnder(t) != null && !pathLook(styleDef('weg', wegUnder(t)).id).glow));   // auch der Weg unter Marktständen
 // Felder, deren Weg/Schiene NICHT im Boden-Bild steckt (Brücken, leuchtende Beläge) – weit weg wird nur dort live gezeichnet (Block 144).
 // Neu bei anderem groundVersion bzw. anderer Belegung (wie EDGE_FIELDS)
 let LIVE_FLAT = null;

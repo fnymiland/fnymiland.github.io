@@ -1488,8 +1488,16 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       (Drittel-Raster, kräftiger Bordstein), Holzbohlen (warm) und Holzsteg (verwittert hell). Neue Muster: big, setts, thirds (Raster
       ab der Feldkante), slabs, ashlar, boards (Reihen in Weltkoordinaten, über Feldgrenzen durchgehend). Test: belaege.test.js
 - [x] 125c: Entscheidung Nutzer: alle alten bleiben, nur dazu
-- [x] Testwelt `?welt=wege` (testsave-wege.json): je Belag eine Raute (auf dem Bildschirm in Reihen) mit gerade in beide Richtungen,
-      Kreuzung, Einzelfeld, 4 Kurven, 4 T, Platz 3×3, ganz breiter Weg, eckige Kurve, zwei Spuren; unten alle Übergänge
+- [x] Rückmeldung Nutzer (08.10.): Erde heller, Schachbrett/Gold als echtes Schachbrett mit sichtbarem Rand, Granit/Blüten/Kristall
+      kräftiger Rand, Regenbogen ohne Feldkanten (Streifen im Weltraster, Muster 2 % über die Feldkante), Fischgrät: echtes Fischgrät
+      klein (alter Belag) + groß; Platten: groß, Drittel, gemischt, Schachbrett
+- [x] Entscheidung Nutzer: Wege = Muster + Farbe (abgestimmte Palette, 21 Farben), Muster kaufen, Farben frei (Gold über das Album).
+      WEG_MUSTER/WEG_FARBEN (data.js), Belag-Name 'm:<muster>:<farbe>' bzw. alter Name für alte Kombinationen (WEG_PRESET,
+      wegStyleOf/wegParts), Aussehen pathLook (draw-objects), wegMusterOk/wegFarbeOk (wer einen alten Belag hat, hat sein Muster),
+      Kunstakademie „Wegmuster“ mit Vorschau (125d erledigt), Leiste: Muster, dann Farben, dann Form. „Das ist neu“ 2026-10-08-wege
+- [ ] Offen: Belag-Auswahl im Vorplatz-, Gartenweg- und Brückenfenster zeigt noch nur die alten Kombinationen
+- [x] Testwelt `?welt=wege` (testsave-wege.json): je Muster (Grundfarbe) eine Raute (auf dem Bildschirm in Reihen) mit gerade in beide
+      Richtungen, Kreuzung, Einzelfeld, 4 Kurven, 4 T, Platz 3×3, ganz breiter Weg, eckige Kurve, zwei Spuren; alle Farben; Übergänge
 - [ ] 125d: Vorschau vor dem Kauf (Wunsch Nutzer 08.10.): Wege in der Kunstakademie als Bild sehen, bevor man bezahlt
 - [ ] Kunstakademie allgemein durchschaubar machen (Wunsch Nutzer 08.10.: „man investiert 3 Minuten Einkommen und merkt am Ende,
       dass man es vielleicht gar nicht so schön findet“): zu jedem Design eine Vorschau (Bildchen am Beispiel), evtl. kurz ausprobieren

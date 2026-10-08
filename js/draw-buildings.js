@@ -40,7 +40,7 @@ function hangLamp(K, a, b, up) {
 function hbfTrack(K, b, lk, hx, hy) {
   const z = K.z, W = RAIL_W, rw = 0.013 * lk.rw;
   if (lk.pave) {
-    const pl = PATH_LOOK[lk.pave];
+    const pl = pathLook(lk.pave);
     K.rect(-0.95, b - W - 0.05, 2, b + W + 0.05, C(pl.edge)); K.rect(-0.95, b - W - 0.02, 2, b + W + 0.02, C(pl.fill));
     for (let a = -0.88, i = 0; a < 1.95; a += 0.07, i++) for (const d of [-0.15, 0, 0.15]) { const [px, py] = K.P(a + (i % 2) * 0.035, b + d); ellipse(px, py, 0.9 * z, 0.45 * z, C(pl.pat[1] || shade(pl.fill, 0.08))); }
   } else {

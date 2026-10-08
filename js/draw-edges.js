@@ -150,7 +150,7 @@ function segPrism(p, q, w, h, col, z) {
 // eine einzige Oberseite (so gibt es keine Stufen und keine Fugen). Innenseite einer Wegkurve: Belag bis an den Bogen.
 function drawArc(rc, look, z) {
   if (rc.outWeg != null) {
-    const lk = PATH_LOOK[styleDef('weg', rc.outWeg).id], pts = roundArc(rc, 10);
+    const lk = pathLook(styleDef('weg', rc.outWeg).id), pts = roundArc(rc, 10);
     if (lk) poly([...pts, rc.V].map(p => edgeS(p[0], p[1], 0, z)), C(lk.fill));
   }
   if (rc.b === 'hecke' && look.bushes) { bushRow(roundArc(rc, 12), look, z, rc.ka.length, 0, 'E' + rc.ka); return; }   // (Wilmerhecke rundet nicht, 86e)   // Wilmerhecke im Bogen
