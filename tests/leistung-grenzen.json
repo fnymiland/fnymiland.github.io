@@ -148,5 +148,55 @@
   "ops": 5437,
   "geo": 16230,
   "live": 52
+ },
+ "neu Tag Zoom 0.45": {
+  "ops": 1481,
+  "geo": 2784,
+  "live": 2
+ },
+ "neu Tag Zoom 0.8": {
+  "ops": 772,
+  "geo": 1594,
+  "live": 1
+ },
+ "neu Tag Zoom 1.2": {
+  "ops": 445,
+  "geo": 1163,
+  "live": 1
+ },
+ "neu Tag Zoom 1.6": {
+  "ops": 4710,
+  "geo": 48177,
+  "live": 29
+ },
+ "neu Tag Zoom 2.2": {
+  "ops": 3172,
+  "geo": 28209,
+  "live": 21
+ },
+ "neu Nacht Zoom 0.45": {
+  "ops": 1436,
+  "geo": 2525,
+  "live": 1
+ },
+ "neu Nacht Zoom 0.8": {
+  "ops": 744,
+  "geo": 1394,
+  "live": 1
+ },
+ "neu Nacht Zoom 1.2": {
+  "ops": 466,
+  "geo": 1163,
+  "live": 1
+ },
+ "neu Nacht Zoom 1.6": {
+  "ops": 4930,
+  "geo": 48619,
+  "live": 29
+ },
+ "neu Nacht Zoom 2.2": {
+  "ops": 3350,
+  "geo": 28567,
+  "live": 21
  }
 }

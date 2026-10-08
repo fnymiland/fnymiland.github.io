@@ -7,7 +7,7 @@ const fs = require('fs'), path = require('path');
 // Gewollt mehr? Dann `npm run leistung:neu` (schreibt tests/leistung-grenzen.json neu) und die Zahlen in AUFGABEN.md festhalten.
 const FILE = path.join(__dirname, 'leistung-grenzen.json');
 const NEU = !!process.env.LEISTUNG_NEU;
-const WORLDS = ['gross', 'freizeitpark', 'farben'], ZOOMS = [0.45, 0.8, 1.2, 1.6, 2.2];
+const WORLDS = ['gross', 'freizeitpark', 'farben', 'neu'], ZOOMS = [0.45, 0.8, 1.2, 1.6, 2.2];
 const SPIEL = { ops: [1.1, 40], geo: [1.1, 200], live: [1.1, 3] };       // Spielraum: × Faktor + Zuschlag
 const NAME = { ops: 'Zeichenbefehle', geo: 'Linienstücke/Formpunkte', live: 'live gezeichnete Objekte' };
 

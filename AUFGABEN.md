@@ -1602,6 +1602,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       ✕ entfernen (Preis zurück), „+ Zug“ (1000 Taler). Einer ist immer dabei (im Stationspreis). Wie viele passen, hängt von der
       Länge ab (`pbRoom`); Züge halten Abstand (`pbFree`: Heck des vorderen + 1 Feld), neuer Zug startet in der größten Lücke.
       Station abgerissen: Züge wandern zur nächsten Station der Strecke, sonst Geld zurück. Test: parkbahn
+- [x] 136h (gefunden von der Testwelt „neu“, Block 149b): gekaufte Züge (`t.pbz`) wurden nicht gespeichert (fehlten in `tileOut`) –
+      nach dem Laden nur noch ein Zug, Geld weg. Jetzt gespeichert. Test: parkbahn (Speichern und Laden)
 - [x] 136f (Nutzer: „Zug glitcht durch die Stationen“): Wagen wurden mit ihrem Feld gezeichnet – stand einer noch auf dem Feld vor
       der Station, malte die Station (Dach, Schild, Bahnsteig) über ihn, ein Bild später er über sie. Die Station steht immer hinter dem
       Gleis: Wagen bis 1,1 Felder vor einer Station werden jetzt mit ihr gezeichnet (render.js, byTile). Test: parkbahn (Reihenfolge)
@@ -1812,6 +1814,12 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - Gemerkt (teuerste Dinge nah, je Ding): Schloss 15.161, Botanischer Garten 12.231, Sternwarte 8.751 – alle anderen < 1.100.
   Kandidaten, wenn es nah am Schloss/Garten ruckelt. Einmal 104 ms Rechenzeit beim Ziehen (Zoom 0,8, Handygröße) nicht wiederholbar
 
+- [x] 149b (Nutzer: „Was sagt unser Performance Watcher?“ → „bau die Testwelt neu“): Die drei Testwelten enthielten nichts von
+      Block 132–151 – der Wächter je Bild sah die neuen Sachen nicht. Neue Testwelt „neu“ (tools/neuwelt.js, erzeugen mit
+      GEN=1 npx vitest run tests/neuwelt.test.js, im Browser ?welt=neu): Bogenbrücken 2/3/6/9/12/16 in allen Arten, breite Brücke
+      (3 × 16), Parkbahn mit 3 Zügen, alle Straßenlaternen-Formen beidseits zweier Straßen, alle Bänke auf einem Platz mit bündiger
+      Hecke, Fußgängerbrücke über ein Gleis. Grenzen aufgenommen (nah Zoom 2,2: 3.172 Befehle Tag / 3.350 Nacht). Die Welt fand
+      gleich einen echten Fehler: gekaufte Parkbahn-Züge (t.pbz) fehlten in tileOut → nach dem Laden weg (136h, behoben + Test).
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.

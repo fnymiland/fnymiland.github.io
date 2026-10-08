@@ -102,6 +102,7 @@ function tileOut(t) {
   if (t.cs) o.cs = JSON.parse(JSON.stringify(t.cs));                                                          // Märchenschloss: Gestalt (Block 60g)
   if (t.hgt != null) o.hgt = t.hgt;                                                     // Achterbahn: Höhenstufe (Block 60e)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
+  if (Array.isArray(t.pbz) && t.pbz.length) o.pbz = t.pbz.filter(Number.isInteger);    // Parkbahn-Station: Züge der Strecke (Block 136e/h)
   return o;
 }
 function serialize() {

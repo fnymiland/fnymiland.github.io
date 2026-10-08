@@ -129,4 +129,10 @@ describe('Parkeisenbahn (Block 136)', () => {
       expect(bad, x + ',' + y).toEqual([]);
     }
   });
+  it('gekaufte Züge überstehen Speichern und Laden (Block 136h)', () => {
+    loop(); game("state.design.add('pb_station:form:tram'); build('pb_station', 7, 10); recalc(); pbBuyTrain(PB_RINGS[0]); pbBuyTrain(PB_RINGS[0]); pbSetModel(PB_RINGS[0], 2, 1)");
+    expect(game('pbForms(PB_RINGS[0])')).toEqual([0, 0, 1]);
+    game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()');
+    expect(game('pbForms(PB_RINGS[0])')).toEqual([0, 0, 1]);
+  });
 });
