@@ -1835,6 +1835,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       so hohe Steine – kein Grauschleier). Belag oben blasst wie bei Wegen bewusst aus (Block 125c).
 - [x] Nachbesserung (Nutzer-Foto: helle graue Steinbrücke „immer noch“): Fugen auf hellem Stein (#d9d2c3) nur 20 % dunkler – weit weg
       kaum sichtbar. Jetzt werden sie weit weg kräftiger (bis 36 % dunkler, `far` aus den Gerätepunkten je Einheit).
+- [x] Nachbesserung 2 (Nutzer: „wird sogar noch später scharf“, PC lud nachweislich v755 – Server-Protokoll): Am PC (Pixeldichte 1)
+      zeichnet das Spiel bis Zoom 1,95 Bildchen (Mac nur bis 1,3, `2.6 / DPR`); die werden beim Einsetzen bis ×0,8 verkleinert und auf
+      der Grafikkarte gefiltert – 1-Punkt-Fugen verwischen dabei. Jetzt weit weg zusätzlich Steine als Flächen in drei Tönen (`archWall`,
+      `far`): überstehen das Verkleinern. Offen/beobachten: feine helle Nähte zwischen den Bildchen der Brückenfelder auf dem Belag.
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.

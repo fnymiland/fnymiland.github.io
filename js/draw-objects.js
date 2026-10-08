@@ -972,6 +972,18 @@ function archWall(A, P, H, AS, B, hw, z, t, front, depth = 0) {
   let RH = brick ? 2.2 : 4.2, BL = brick ? 0.14 : 0.3;
   while (RH * dp < 5) { RH *= 2; BL *= 2; }
   const far = Math.max(0, Math.min(1, (1.4 - dp) / 0.8));               // weit weg kräftigere Fugen – heller Stein verschwamm sonst zu einer Fläche
+  if (far > 0) {                                                         // weit weg Steine als Flächen in wechselnden Tönen: dünne Fugen verwischen im
+    const tones = [-0.07, 0, 0.05].map(d => C(shade(B.side, -0.12 + d * far)));   // Bildchen (verkleinert, am PC Pixeldichte 1) – Flächen nicht
+    for (let k = 0, h = -1; h < top; k++, h += RH) {
+      const sh = (k & 1) * BL / 2;
+      for (let s = Math.floor((A.i0 - sh) / BL) * BL + sh; s < A.i0 + 1; s += BL) {
+        const j = Math.round((s - sh) / BL), tn = ((k * 7 + j * 3) % 3 + 3) % 3;
+        if (tn === 1) continue;                                          // mittlerer Ton = die Wand selbst
+        const a0 = s - A.i0 - 0.5, a1 = a0 + BL;
+        poly([P(a0, hw, h), P(a1, hw, h), P(a1, hw, h + RH), P(a0, hw, h + RH)], tones[tn]);
+      }
+    }
+  }
   g.strokeStyle = C(shade(B.side, (brick ? -0.28 : -0.2) - 0.16 * far)); g.lineWidth = Math.max((brick ? 0.45 : 0.6) * z, 1 / sc); g.beginPath();
   for (let k = 0, h = -1; h < top; k++, h += RH) {                       // Lagerfugen und versetzte Stoßfugen (in Weltkoordinaten)
     const p0 = P(-0.5, hw, h), p1 = P(0.5, hw, h); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
