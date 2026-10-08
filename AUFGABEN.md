@@ -1907,4 +1907,6 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       hat beim Ziehen je Richtung genau einen Nachbarn (Feld davor, Reihe daneben) – bei Gleichstand galt immer Ost-West. Jetzt: mehr
       Arme längs entscheidet, bei Gleichstand die eindeutige Richtung eines Brückennachbarn (`bridgeRowAxis`). Ost-West war zufällig
       richtig, darum fand der Test aus Block 151 es nicht. Test: bogenbruecken (breite Brücke in beiden Richtungen)
+- [x] „Das ist neu“ nach Tagen (Nutzer: „nicht 20× am 08.10.“): Einträge bleiben je Push einzeln (gesehen-Stand), angezeigt wird je Tag
+      eine Karte mit allen Punkten (`newsDays`), Themenzeile höchstens 4 Titel + „weitere“. Test: news
 

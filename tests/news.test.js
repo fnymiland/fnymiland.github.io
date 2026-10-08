@@ -37,27 +37,35 @@ describe('Das ist neu', () => {
     expect(shown()).toBe(true);
   });
 
-  it('Versionsübersicht (Block 99): wer mehrere Updates verpasst hat, sieht alle – das neueste offen, ältere zum Aufklappen', () => {
-    game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[3].id); showNews()`);
-    expect(game('newsUnseen(NEWS_HISTORY[3].id)')).toBe(3);
+  it('Versionsübersicht (Block 99): wer mehrere Tage verpasst hat, sieht je Tag eine Karte – der neueste offen, ältere zum Aufklappen', () => {
+    const k = game("NEWS_HISTORY.findIndex((n, i) => i > 0 && newsDays(NEWS_HISTORY.slice(0, i)).length === 3)");   // genau 3 Tage verpasst
+    game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[${k}].id); showNews()`);
     const det = [...document.querySelectorAll('#modal-card details.news-v')];
     expect(det.length).toBe(3);
     expect(det.map(d => d.open)).toEqual([true, false, false]);
-    expect(document.getElementById('modal-card').textContent).toMatch(/3 Updates/);
+    expect(document.getElementById('modal-card').textContent).toMatch(/3 Tagen/);
     expect(game('localStorage.getItem(NEWS_KEY)')).toBe(game('NEWS.id'));
   });
-  it('nur das letzte verpasst: ein Eintrag, kein Zähler; ganz alter/unbekannter Stand: alle', () => {
+  it('Einträge desselben Tages in einer Karte, mit allen Punkten (Nutzer: nicht 20× am 08.10.)', () => {
+    game('showNews(true)');
+    const dates = [...document.querySelectorAll('#modal-card details.news-v > summary > b')].map(b => b.textContent);
+    expect(new Set(dates).size).toBe(dates.length);                                  // jedes Datum nur einmal
+    const n8 = game("NEWS_HISTORY.filter(n => n.date === '8. Oktober').reduce((a, n) => a + n.items.length, 0)");
+    const card = [...document.querySelectorAll('#modal-card details.news-v')].find(d => d.querySelector('summary b').textContent === '8. Oktober');
+    expect(card.querySelectorAll('li').length).toBe(n8);
+  });
+  it('nur das letzte verpasst: eine Karte, kein Zähler; ganz alter/unbekannter Stand: alle', () => {
     game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[1].id); showNews()`);
     expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(1);
-    expect(document.getElementById('modal-card').textContent).not.toMatch(/Updates\./);
+    expect(document.getElementById('modal-card').textContent).not.toMatch(/Tagen/);
     expect(game("newsUnseen('2025-uralt')")).toBe(game('NEWS_HISTORY.length'));
     expect(game("newsUnseen('2026-10-01')")).toBe(game("NEWS_HISTORY.findIndex(n => n.id === '2026-09-30-laeden')"));   // alte id gehört zu einem Stand
   });
   it('aus dem Menü: die ganze Geschichte, Verpasstes als „neu für dich“ markiert', () => {
     game(`localStorage.setItem(NEWS_KEY, NEWS_HISTORY[2].id); showMenu()`);
     document.getElementById('m-news').click();
-    expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(game('NEWS_HISTORY.length'));
-    expect(document.getElementById('modal-card').textContent.match(/neu für dich/g).length).toBe(2);
+    expect(document.querySelectorAll('#modal-card details.news-v').length).toBe(game('newsDays(NEWS_HISTORY).length'));   // je Tag eine Karte
+    expect(document.getElementById('modal-card').textContent.match(/neu für dich/g).length).toBe(game('newsDays(NEWS_HISTORY.slice(0, 2)).length'));
   });
   it('jeder Eintrag hat id, Datum, Titel und Punkte; ids einmalig', () => {
     const h = game('NEWS_HISTORY.map(n => ({ id: n.id, ok: !!(n.date && n.title && n.items.length) }))');

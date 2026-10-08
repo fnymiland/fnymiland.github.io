@@ -2719,16 +2719,27 @@ function newsUnseen(seen = newsSeenId()) {
   const i = NEWS_HISTORY.findIndex(n => n.id === seen || (n.also || []).includes(seen));
   return i < 0 ? NEWS_HISTORY.length : i;
 }
+// Einträge desselben Tages als eine Karte (Nutzer, 08.10.2026: „nicht 20× am 08.10.“) – die Daten bleiben je Push einzeln (gesehen-Stand)
+function newsDays(list) {
+  const out = [];
+  for (const n of list) {
+    const last = out[out.length - 1];
+    if (last && last.date === n.date) { last.titles.push(n.title); last.items.push(...n.items); last.n++; }
+    else out.push({ date: n.date, titles: [n.title], items: [...n.items], n: 1 });
+  }
+  return out;
+}
 // all: aus dem Menü – die ganze Geschichte; sonst nur das Verpasste
 function showNews(all = false) {
-  const miss = newsUnseen(), list = all ? NEWS_HISTORY : NEWS_HISTORY.slice(0, Math.max(1, miss));
+  const miss = newsUnseen(), days = newsDays(all ? NEWS_HISTORY : NEWS_HISTORY.slice(0, Math.max(1, miss)));
+  const newDays = all ? newsDays(NEWS_HISTORY.slice(0, miss)).length : days.length;
   markNewsSeen();
-  const entry = (n, i) => `<details class="news-v"${i === 0 ? ' open' : ''}><summary><b>${n.title}</b> <small class="muted">${n.date}${all && i < miss ? ' · neu für dich' : ''}</small></summary>
-    <ul class="news">${n.items.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
+  const entry = (d, i) => `<details class="news-v"${i === 0 ? ' open' : ''}><summary><b>${d.date}</b> <small class="muted">${d.titles.slice(0, 4).join(' · ')}${d.titles.length > 4 ? ` · + ${d.titles.length - 4} weitere` : ''}${all && i < newDays ? ' · neu für dich' : ''}</small></summary>
+    <ul class="news">${d.items.map(t => `<li>${t}</li>`).join('')}</ul></details>`;
   openModal(`
     <h2>✨ Das ist neu</h2>
-    ${!all && miss > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es <b>${miss} Updates</b>. Das neueste ist aufgeklappt – die älteren kannst du antippen, wenn du magst.</p>` : ''}
-    ${list.map(entry).join('')}
+    ${!all && days.length > 1 ? `<p class="muted">Seit du zuletzt hier warst, gab es an <b>${days.length} Tagen</b> Neues. Der neueste ist aufgeklappt – die älteren kannst du antippen, wenn du magst.</p>` : ''}
+    ${days.map(entry).join('')}
     ${!all ? '<p class="muted">Alle Updates: ☰ → ✨ Das ist neu.</p>' : ''}
     <div class="row"><button class="btn" id="m-ok" style="flex:1">Los geht's!</button></div>`);
   $('modal-card').classList.add('news-card');
