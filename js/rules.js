@@ -1127,6 +1127,7 @@ function roundCorner(i, j) {
   const [ka, du] = A[0], [kb, dv] = B[0], ea = state.edges.get(ka), eb = state.edges.get(kb);
   if (ea.b !== eb.b || isGate(ka) || isGate(kb)) return null;
   if (ea.b === 'hecke' && [ea, eb].some(e => (e.style || '').startsWith('wilmer'))) return null;   // Wilmerhecke: runde Büsche, eckige Ecke (Block 86e)
+  if (ea.b === 'zaun') return null;                                     // Zaun: scharfe Ecke mit Eckpfosten (Nutzer: „um die Kurve sieht es echt weird aus“)
   const tx = du > 0 ? i : i - 1, ty = dv > 0 ? j : j - 1, ox = du > 0 ? i - 1 : i, oy = dv > 0 ? j - 1 : j;
   const inPath = wegAt(tx, ty) != null, outWeg = inPath ? null : wegAt(ox, oy);
   return { ka, kb, du, dv, b: ea.b, style: ea.style, V: [i - 0.5, j - 0.5], inPath, outWeg };

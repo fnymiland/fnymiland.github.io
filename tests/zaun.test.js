@@ -222,7 +222,7 @@ describe('Abreißen, Speichern, alte Stände', () => {
   it('runde Ecken lassen sich in jedem Stil zeichnen (Muster läuft durch den Bogen)', () => {
     for (const kind of ['hecke', 'zaun', 'mauer']) for (const st of game(`STYLES.${kind}.map(s => s.id)`)) {
       game(`state.edges.clear(); state.edges.set('a12,12', { b: '${kind}', style: '${st}' }); state.edges.set('b12,12', { b: '${kind}', style: '${st}' })`);
-      expect(game('!!roundCorner(12, 12)')).toBe(!st.startsWith('wilmer'));        // Wilmerhecke: eckig (runde Büsche, Block 86e)
+      expect(game('!!roundCorner(12, 12)')).toBe(!st.startsWith('wilmer') && kind !== 'zaun');   // Wilmerhecke: eckig (Block 86e); Zaun: scharfe Ecke mit Pfosten (Nutzer: „weird um die Kurve“)
       expect(() => game(`drawEdge('a12,12', state.edges.get('a12,12'), 1.5, 0); drawEdge('b12,12', state.edges.get('b12,12'), 1.5, 0)`), `${kind} ${st}`).not.toThrow();
     }
   });
