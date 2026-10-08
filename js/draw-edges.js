@@ -491,13 +491,13 @@ function drawFence(E, look, style, gate, z, posts = [true, true]) {
   if (posts[1]) post(pts[pts.length - 1]);
   const n = Math.max(2, Math.round(total * 7));                  // Latten/Stäbe je Länge wie beim geraden Stück
   // Stellen der Latten: gerade Stücke ohne die Enden (dort Pfosten/Bogen), im Bogen MIT den Enden – sonst klafft am Übergang
-  // eine doppelte Lücke. Was auf dem Bildschirm fast genau über einer anderen Latte oder dem Bogenpfosten stünde (seitliche
-  // Ecke, man sieht den Bogen von der Seite), fällt weg (Nutzer: „um die Kurve sieht es weird aus“)
+  // eine doppelte Lücke. Was auf dem Bildschirm genau über einer anderen Latte oder dem Bogenpfosten stünde (seitliche Ecke, man
+  // sieht den Bogen von der Seite), fällt weg (Nutzer: „um die Kurve sieht es weird aus“)
   const spots = cnt => {
     const out = [], xs = E.arc ? [S(E.arc, 0)[0]] : [];
     for (let i = E.arc ? 0 : 1; i <= (E.arc ? cnt : cnt - 1); i++) {
       const t = i / cnt, x = at(t, 0)[0];
-      if (E.arc && xs.some(o => Math.abs(o - x) < 1.4 * z)) continue;
+      if (E.arc && xs.some(o => Math.abs(o - x) < 0.45 * z)) continue;   // nur, was genau deckt (Nutzer wählte B: Bogen bleibt, Latten auch im Bogen)
       xs.push(x); out.push(t);
     }
     return out;

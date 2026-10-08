@@ -1683,6 +1683,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Bogen auch an den Übergängen (keine doppelte Lücke), in der Seitenansicht fast deckende Latten fallen weg (`spots` in
       drawFence). (2) Neue Wahl „Ecke rund / eckig“ für Hecke, Zaun, Mauer (`edgeShape.sq` in der Leiste, `e.sq` je Linie, im
       Fenster „Ecken“ für die ganze Linie, `setEdgeSq`); Standard rund, alte Linien ohne Angabe bleiben rund. Tests: buschfarben, zaun
+- [x] Nutzer: „obere/untere Ecke okay, linke und rechte überhaupt nicht“ – dort filterte der Doppelte-Latten-Schutz den ganzen Bogen
+      leer. Zwei Bilder gezeigt (A: seitlich spitz, B: Bogen bleibt mit Latten), Nutzer wählte B: nur noch genau Deckendes fällt weg.
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →
