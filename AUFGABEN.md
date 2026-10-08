@@ -1758,6 +1758,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] 148b (Screenshot Nutzer): durch den Bogen sah man noch in die Rampe hinein → Wände auf beiden Seiten und Stirnwand zur
       Gleisseite (etwas überlappend, keine helle Naht); Rampe landete in der Feldmitte und ragte über ein rundes Wegende („Zipfel“)
       → ARCH_SPAN 0,9 (setzt vorher auf)
+- [x] 148c (Screenshot Nutzer, Stein): „Weg schaut oben einen Millimeter durch“ = Überlapp der Wegfelder (seamPad) ragte unter den
+      Bogen → zu einer Fußgängerbrücke hin kein Überlapp (`padBorder(…, [x, y])`), Rampe massiv ab |b| = 0,46. „Zipfel in den Boden“ =
+      vordere Wange hing an den Rampenenden th unter den Boden → auf Bodenhöhe begrenzt. Form bleibt (Nutzer: gefällt so)
 
 ## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
 - [x] Wächter je Bild (tests/leistung.test.js): Testwelten groß, Freizeitpark, Farben × Zoom 0,45/0,8/1,2/1,6/2,2 × Tag/Nacht, wie iPad

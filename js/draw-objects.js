@@ -722,20 +722,22 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
   };
   // Rampen auf den Wegfeldern massiv bis zum Boden, auf beiden Seiten (Block 148): sonst sah man unter der Rampe – vorn direkt,
   // hinten durch den offenen Bogen – den Weg am Boden weiterlaufen. Nur über den Gleisen (|b| < ½) bleibt der Bogen offen
+  const RAMP = 0.46;                                       // ab hier massiv: etwas vor der Feldkante, über den Überlapp des Wegs (seamPad) hinweg
   const rampWalls = s => {
     for (const sg of [-1, 1]) {
-      const seg = bs.filter(b => sg * b >= 0.5 - 1e-6);
+      const seg = bs.filter(b => sg * b >= RAMP - 1e-6).concat(bs.some(b => Math.abs(b - sg * RAMP) < 1e-6) || !bs.some(b => sg * b >= RAMP) ? [] : [sg * RAMP]).sort((p, q) => p - q);
       if (seg.length < 2) continue;
       poly(seg.map(b => P(s * ARCH_W, b, archH(b))).concat(seg.slice().reverse().map(b => P(s * ARCH_W, b, 0))), C(shade(lk.side, s < 0 ? -0.1 : -0.04)));
     }
   };
   rampWalls(-1);
-  // Stirnwand der Rampe zur Gleisseite (bei |b| = ½): sonst sieht man unter dem Bogen in die Rampe hinein (Weg am Boden)
+  // Stirnwand der Rampe zur Gleisseite: sonst sieht man unter dem Bogen in die Rampe hinein (Weg am Boden). Bei |b| = RAMP, also
+  // vor der Feldkante – der Weg des Nachbarfelds ragt ~1 Gerätepunkt über die Kante (seamPad) und schaute sonst darunter hervor
   for (const sg of [-1, 1]) {
-    const b = sg * 0.5;
+    const b = sg * RAMP;
     if (b < Math.min(b0, b1) - 1e-6 || b > Math.max(b0, b1) + 1e-6) continue;
-    const w = ARCH_W + 0.02, bb = b + sg * 0.02;                           // etwas breiter und in die Rampe hinein: keine helle Naht
-    poly([P(-w, bb, 0), P(w, bb, 0), P(w, bb, archH(bb)), P(-w, bb, archH(bb))], C(shade(lk.side, -0.16)));
+    const w = ARCH_W + 0.02;                                               // etwas breiter als die Seitenwände: keine helle Naht
+    poly([P(-w, b, 0), P(w, b, 0), P(w, b, archH(b)), P(-w, b, archH(b))], C(shade(lk.side, -0.16)));
   }
   railing(-1);                                             // hinteres Geländer
   const deck = rail(-1, 0).concat(rail(1, 0).reverse());
@@ -760,7 +762,7 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
     line(bs.map(b => P(0, b, archH(b))), '#ffffff', 1.4);  // Kristall: heller Glanz in der Mitte
     glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
   }
-  poly(rail(1, 0).concat(rail(1, -lk.th).reverse()), C(lk.side));  // vordere Wange
+  poly(rail(1, 0).concat(bs.map(b => P(ARCH_W, b, Math.max(0, archH(b) - lk.th))).reverse()), C(lk.side));   // vordere Wange – nie unter den Boden (Block 148c: Zipfel an den Rampenenden)
   rampWalls(1);
   railing(1);
 }
@@ -948,7 +950,13 @@ function seamPad(L) {
   return px > 0 ? Math.min(0.08, 1.2 / px) : 0;
 }
 // Punkte auf der Feldkante (|u| bzw. |v| = 0,5) um d nach außen – dort geht der Weg im Nachbarfeld weiter
-const padBorder = (sh, d) => d ? sh.map(([u, v]) => [u > 0.499 ? u + d : u < -0.499 ? u - d : u, v > 0.499 ? v + d : v < -0.499 ? v - d : v]) : sh;
+// at = [x, y]: nicht zu einer Fußgängerbrücke hin – der Überlapp schaute dort unter dem Bogen hervor (Block 148c)
+const padBorder = (sh, d, at = null) => {
+  if (!d) return sh;
+  const ok = (dx, dy) => { if (!at) return d; const t = state.tiles.get((at[0] + dx) + ',' + (at[1] + dy)); return isCrossing(t) && t.foot ? 0 : d; };
+  const px = ok(1, 0), mx = ok(-1, 0), py = ok(0, 1), my = ok(0, -1);
+  return sh.map(([u, v]) => [u > 0.499 ? u + px : u < -0.499 ? u - mx : u, v > 0.499 ? v + py : v < -0.499 ? v - my : v]);
+};
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -972,7 +980,7 @@ function drawPath(cx, cy, z, x, y, t) {
   // Kantenglättung zweier Nachbarfelder einen Hauch Spalt – weit weg sah man auf glatten Plätzen jede Feldgrenze als Linie
   const pad = seamPad(L);
   for (const [w, col] of [[EDGE_W, lk.edge], [ROAD_W, lk.fill]]) {
-    for (const sh of shapes(w)) poly(padBorder(sh, pad).map(L), C(col));
+    for (const sh of shapes(w)) poly(padBorder(sh, pad, [x, y]).map(L), C(col));
   }
   // Fuge zwischen zwei Wegfeldern (Block 116): beide Kanten sind nur halb deckend, das Gras darunter schimmerte als grüner Saum
   // durch – die Fläche hauchdünn in Belagfarbe nachziehen, damit sich Nachbarfelder überlappen
@@ -982,7 +990,7 @@ function drawPath(cx, cy, z, x, y, t) {
     // Muster 2 % über die Feldkante (Block 125): die geglätteten Kanten zweier Nachbarfelder decken sich sonst nicht ganz, und der
     // helle Belag schimmert als feine Linie durch (Regenbogen); die Muster liegen im Weltraster, also deckungsgleich
     const grow = sh => sh.map(([u, v]) => [u * 1.02, v * 1.02]);
-    g.save(); clipTo(shapes(ROAD_W).map(sh => padBorder(grow(sh), pad)), L); patSeam = true;
+    g.save(); clipTo(shapes(ROAD_W).map(sh => padBorder(grow(sh), pad, [x, y])), L); patSeam = true;
     try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); }
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
