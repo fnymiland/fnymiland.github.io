@@ -1687,14 +1687,19 @@ const straightArms = arms => arms.length <= 1 || (arms.length === 2 && arms[0][0
 function bridgeArmsAxis(px, py, plus) {
   const arms = armsWith(px, py, plus);
   const lat = ([dx, dy]) => isBridgeAt(px + dx, py + dy) || (!!plus && plus[0] === px + dx && plus[1] === py + dy && terrainAt(plus[0], plus[1]) === 'water');
-  let best = -1;
-  for (const axis of [0, 1]) {
-    const along = arms.filter(a => (axis ? a[1] : a[0]) !== 0), across = arms.filter(a => (axis ? a[1] : a[0]) === 0);
-    if (!across.every(lat)) continue;
-    if (along.length) return axis;
-    if (best < 0) best = axis;
-  }
-  return best;
+  // je Achse: gültig, wenn alles quer dazu Brücke ist (Nachbarreihe); Wert = Arme längs. Mehr Arme längs = diese Richtung
+  const ok = [0, 1].map(axis => arms.filter(a => (axis ? a[1] : a[0]) === 0).every(lat) ? arms.filter(a => (axis ? a[1] : a[0]) !== 0).length : -1);
+  if (ok[0] < 0 && ok[1] < 0) return -1;
+  if (ok[0] !== ok[1]) return ok[0] > ok[1] ? 0 : 1;
+  // Gleichstand (z. B. zweite Reihe einer breiten Brücke beim Ziehen: ein Feld davor, eine Reihe daneben): Richtung der Brückennachbarn,
+  // deren Richtung eindeutig ist – vorher galt dann immer Ost-West, und Nord-Süd-Brücken bekamen Löcher (Nutzer, 08.10.2026)
+  for (const [dx, dy] of DIRS) if (isBridgeAt(px + dx, py + dy)) { const n = bridgeRowAxis(px + dx, py + dy); if (n >= 0) return n; }
+  return 0;
+}
+// Richtung eines Brückenfelds nur aus seinen Armen (ohne Nachbarn zu fragen): mehr Arme längs x → 0, längs y → 1, gleich → −1
+function bridgeRowAxis(x, y) {
+  const nx = (wegLike(x - 1, y) ? 1 : 0) + (wegLike(x + 1, y) ? 1 : 0), ny = (wegLike(x, y - 1) ? 1 : 0) + (wegLike(x, y + 1) ? 1 : 0);
+  return nx === ny ? -1 : nx > ny ? 0 : 1;
 }
 function bridgeShapeError(x, y, water) {
   if (water) {

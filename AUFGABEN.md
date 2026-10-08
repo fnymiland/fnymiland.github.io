@@ -1902,6 +1902,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       `kachelhausen_himmel`, `skyShow`/`setSkyShow`), Seilbahn bleibt. Test: strassenlaterne (Ballons & Zeppelin abschaltbar)
 - [ ] Ballons/Zeppelin „stottern manchmal“ (PC): auf dem Mac nicht nachstellbar (60 Bilder/s gleichmäßig, 20 s ohne Ausreißer).
       Messwerkzeug tools/vorschau/ruckeln.js (Konsole am PC, 60 s, schickt Ruckler mit laufenden Funktionen an sink-lan.py).
-- [ ] Fußgänger-/Wegbrücke Hauptinsel → Nebeninsel geht beim Nutzer nicht: in der Kopie von „OG“ klappen 13/14/16 Felder übers Meer.
-      Regeln: gerade Linie, ≤ 16 Felder Wasser, am anderen Ende eigenes Land (`seaGapBridgeable`). Meldung vom Nutzer abwarten.
+- [x] Brücke Mittelinsel → Obsthain-Insel (Spielstand „Bauland“): breite Brücke **Nord-Süd** in mehreren Reihen gezogen – ab der zweiten
+      Reihe Löcher ohne Meldung (jedes 4.–5. Feld: „keine Abzweige“, „höchstens 4 breit“). Ursache `bridgeArmsAxis`: Feld der 2. Reihe
+      hat beim Ziehen je Richtung genau einen Nachbarn (Feld davor, Reihe daneben) – bei Gleichstand galt immer Ost-West. Jetzt: mehr
+      Arme längs entscheidet, bei Gleichstand die eindeutige Richtung eines Brückennachbarn (`bridgeRowAxis`). Ost-West war zufällig
+      richtig, darum fand der Test aus Block 151 es nicht. Test: bogenbruecken (breite Brücke in beiden Richtungen)
 

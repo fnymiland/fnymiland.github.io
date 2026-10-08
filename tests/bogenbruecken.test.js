@@ -86,3 +86,15 @@ describe('Fische und Brücken (Nutzer: „Fische springen durch Brücken durch�
     expect(kinds(12, 17)).toContain('fisch');
   });
 });
+
+describe('breite Brücke in beiden Richtungen (Nutzer: „Mittelinsel zur Obsthain-Insel – zwei halbe Brücken“)', () => {
+  it('drei parallele Reihen Nord-Süd übers fremde Meer: keine Löcher, keine falschen „Abzweig“/„4 breit“', () => {
+    // Fluss quer zur y-Richtung (y = 5 … 20 Wasser, x 6 … 9), Reihen entlang y
+    game("for (let y = 5; y <= 20; y++) for (let x = 0; x <= 20; x++) state.terra.set(x + ',' + y, 'water'); recalc(); chosenStyle.weg = 'sand'");
+    const rows = game(`(() => { const out = {}; for (const x of [6, 7, 8]) { setTool('weg'); const info = planScan({ kind: 'line', tool: 'weg', a: { x, y: 2 }, b: { x, y: 23 } });
+      for (const [, , run] of info.order) run(); recalc();
+      let s = ''; for (let y = 5; y <= 20; y++) { const t = state.tiles.get(x + ',' + y); s += t && t.bridge ? 'B' : '~'; } out[x] = [s, info.firstErr]; } return out; })()`);
+    for (const x of [6, 7, 8]) expect(rows[x], 'Reihe ' + x).toEqual(['B'.repeat(16), null]);
+    expect(game('[6, 7, 8].every(x => bridgeArch(x, 12) && bridgeArch(x, 12).ax === 1)')).toBe(true);
+  });
+});
