@@ -23,15 +23,15 @@ describe('Baumenü', () => {
     expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(false);   // zu Beginn zu
     area('stadt').onclick();
     expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(true);
-    expect(q('#tools .sheet-h').map(h => h.dataset.group)).toEqual(['wohnen', 'laeden', 'essen', 'markt', 'gross', 'einrichtungen', 'verkehr']);
-    expect(tools()).toEqual(game("MENU[0].groups.flatMap(g => [...g.items.filter(available), ...g.items.filter(id => !available(id))])"));
+    expect(q('#tools .sheet-h').map(h => h.dataset.group)).toEqual(game("(() => { const g = MENU[0].groups, r = x => x.items.some(available); return [...g.filter(r), ...g.filter(x => !r(x))].map(x => x.id); })()"));
+    expect(tools()).toEqual(game("(() => { const g = MENU[0].groups, r = x => x.items.some(available); return [...g.filter(r), ...g.filter(x => !r(x))]; })().flatMap(g => [...g.items.filter(available), ...g.items.filter(id => !available(id))])"));
     expect(q('#subcats .sub').length).toBe(0);                                   // keine Gruppenzeile mehr
   });
   it('alle Bereiche: jede Gruppe als Überschrift, jedes Ding mit Namen', () => {
     game('setSheet(false); buildToolbar()');
     for (const m of game('MENU.map(m => m.id)')) {
       area(m).onclick();
-      expect(q('#tools .sheet-h').map(h => h.dataset.group), m).toEqual(game(`MENU.find(x => x.id === '${m}').groups.map(g => g.id)`));
+      expect(q('#tools .sheet-h').map(h => h.dataset.group).sort(), m).toEqual(game(`MENU.find(x => x.id === '${m}').groups.map(g => g.id)`).sort());   // alle da (Gesperrte ans Ende)
       expect(q('#tools .tool').every(b => b.querySelector('.nm') && b.querySelector('.nm').textContent === game(`ITEMS['${b.dataset.tool}'].name`)), m).toBe(true);
       area(m).onclick();                                                          // nochmal: zu
       expect(game("document.getElementById('toolbar').classList.contains('open')"), m).toBe(false);
@@ -80,6 +80,16 @@ describe('Baumenü', () => {
     const e = new window.WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true });
     document.getElementById('tools').dispatchEvent(e);
     expect(e.defaultPrevented).toBe(false);
+    game('setSheet(false)');
+  });
+  it('Reihenfolge nach Häufigkeit (Nutzer: „für die Schnelligkeit“): Wohnen und Verkehr oben, Kaufhäuser unten; Gruppen ohne Freies ans Ende', () => {
+    expect(game("MENU.find(m => m.id === 'stadt').groups.map(g => g.id)")).toEqual(['wohnen', 'verkehr', 'einrichtungen', 'laeden', 'markt', 'essen', 'gross']);
+    expect(game("MENU.find(m => m.id === 'herstellen').groups.map(g => g.id).at(-1)")).toBe('veredeln');
+    game("menuTop = 'freizeit'; setSheet(true); buildToolbar()");
+    const hs = q('#tools .sheet-h').map(h => h.dataset.group);
+    const ready = game("Object.fromEntries(MENU.find(m => m.id === 'freizeit').groups.map(g => [g.id, g.items.some(available)]))");
+    const firstLocked = hs.findIndex(id => !ready[id]);
+    if (firstLocked >= 0) expect(hs.slice(firstLocked).every(id => !ready[id])).toBe(true);   // hinter der ersten gesperrten Gruppe nur gesperrte
     game('setSheet(false)');
   });
 });

@@ -210,7 +210,9 @@ function renderTools() {
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
-  for (const gr of top.groups || [{ label: top.label, items: top.items }]) {   // alle Gruppen untereinander, Überschrift je Gruppe
+  const grs = top.groups || [{ label: top.label, items: top.items }];
+  const ready = gr => gr.items.some(available);                           // Gruppen ganz ohne Freies ans Ende (Reihenfolge sonst wie MENU)
+  for (const gr of [...grs.filter(ready), ...grs.filter(gr => !ready(gr))]) {   // alle Gruppen untereinander, Überschrift je Gruppe
     const h = document.createElement('div'); h.className = 'sheet-h'; h.dataset.group = gr.id || top.id; menuLabel(h, gr.label); box.append(h);
     for (const id of freeFirst(gr.items)) box.append(card(id));
   }

@@ -1970,4 +1970,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       B Wirtschaft, C nur drei), Nutzer wählte A. Vier Bereiche: 🏘️ Stadt (Wohnen, Läden, Essen & Trinken, Markt, Kaufhäuser,
       Einrichtungen, Verkehr – 46 Dinge), 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Gruppen-IDs unverändert. Anleitung angepasst.
       Tests: menu, leiste.
+- [x] Nutzer: „für die Schnelligkeit innerhalb der Kategorien sortieren“ – gezählt in Fnymiland-OG und Bauland. Stadt: Wohnen,
+      Verkehr, Einrichtungen, Läden, Markt, Essen & Trinken, Kaufhäuser. Herstellen: Veredeln ans Ende. Freizeit: Freizeitpark-Gruppen
+      vor Wunder und Kultur. Grün: Blumenbeet vor Blumentopf. Stadtschmuck: Laterne, Bank, Brunnen vorn, Freundesbank hinten.
+      Gruppen ganz ohne Freies rutschen im Feld ans Ende (Anfänger sehen oben keine Schlösser). Test: menu.
 

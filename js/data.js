@@ -548,6 +548,8 @@ const NATURE_BY_ID = Object.fromEntries(NATURE.map(n => [n.id, n]));
 // 🏘️ Stadt (wo Bewohner leben und einkaufen: Wohnen, Läden, Essen, Markt, Kaufhäuser, Einrichtungen, Verkehr) · 🏭 Herstellen
 // (produziert) · 🎡 Freizeit (Kultur, Wunder, Freizeitpark) · 🌸 Gestalten (Deko, Wege, Gelände – formt die Welt).
 // Jedes Ding steht in genau einer Gruppe. ITEMS[].cat bleibt die Spiel-Kategorie.
+// Reihenfolge (Nutzer, 08.10.2026: „für die Schnelligkeit“): Häufiges oben – gezählt in seinen Spielständen. Gruppen, in denen
+// noch nichts frei ist, rutschen im Feld ans Ende (renderTools), damit Anfänger oben nicht nur Schlösser sehen.
 const SHOP_GROUPS = {
   laeden: ['kiosk', 'blumenladen', 'friseur', 'buchladen', 'spielzeug', 'boutique', 'uhrmacher', 'juwelier'],
   essen: ['cafe', 'teeladen', 'eisdiele', 'hofladen', 'bubbletea', 'pizzeria', 'nudelbar', 'konditorei', 'chocolaterie'],
@@ -556,33 +558,33 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
-    { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
-    { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
-    { id: 'gross', label: '🏬 Kaufhäuser', items: SHOP_GROUPS.gross },
-    { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'station', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+    { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
+    { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
+    { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
+    { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
+    { id: 'gross', label: '🏬 Kaufhäuser', items: SHOP_GROUPS.gross },
   ] },
   { id: 'herstellen', label: '🏭 Herstellen', groups: [
     { id: 'taler', label: '🪙 Taler', items: ['feld', 'muehle', 'fischer', 'baecker', 'fabrik'] },
     { id: 'rohstoffe', label: '📦 Rohstoffe', items: ['holz', 'obst', 'stein', 'mine', 'kristallmine', 'kaffeeplantage', 'teegarten', 'kakaoplantage'] },
-    { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
     { id: 'strom', label: '⚡ Strom', items: ['windrad', 'offshore', 'wasserkraft', 'solarfeld', 'geothermie', 'wellen'] },
+    { id: 'veredeln', label: '🔨 Veredeln', items: ['saege', 'steinmetz', 'schmiede'] },
   ] },
   { id: 'freizeit', label: '🎡 Freizeit', groups: [
-    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
-    { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
     { id: 'fzpark', label: '🎢 Freizeitpark', items: ['fzboden', 'fz_zuckerwatte', 'fz_eis', 'fz_ballon', 'zauberbrunnen'] },
-    { id: 'fzschloss', label: '🏰 Schloss', items: ['fz_schloss', 'fz_torturm'] },
     { id: 'fzfahrt', label: '🎠 Fahrgeschäfte', items: ['fz_karussell', 'fz_teetassen', 'fz_kette', 'fz_freifall', 'fz_geister', 'fz_wildwasser'] },
     { id: 'fzbahn', label: '🎢 Achterbahn', items: ['fz_bahn', 'fz_station', 'fz_looping', 'fz_hoch', 'fz_tief'] },
     { id: 'parkbahn', label: '🚂 Parkeisenbahn', items: ['pb_gleis', 'pb_station'] },
+    { id: 'fzschloss', label: '🏰 Schloss', items: ['fz_schloss', 'fz_torturm'] },
+    { id: 'wunder', label: '🏛️ Wunder', items: ['riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'leuchtturm'] },
+    { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
-    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumentopf', 'blumen', 'palme', 'riesenblume', 'rosenbogen', 'glashaus', 'freundschaftsbaum'] },
+    { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
-    { id: 'platz', label: '🏮 Stadtschmuck', items: ['bank', 'freundesbank', 'laterne', 'strassenlaterne', 'kristallaterne', 'brunnen', 'kristallbrunnen', 'pavillon', 'glaskugel', 'kristall'] },
+    { id: 'platz', label: '🏮 Stadtschmuck', items: ['laterne', 'bank', 'brunnen', 'pavillon', 'glaskugel', 'strassenlaterne', 'kristallaterne', 'kristallbrunnen', 'kristall', 'freundesbank'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
