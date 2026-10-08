@@ -189,6 +189,7 @@ function messLine(ms) {
       ...[...GLS.dynWhy].sort((p, q) => q[1] - p[1]).slice(0, 5).map(([n, k]) => `  ${k}× ${(ITEMS[n.split(' ')[0]] && ITEMS[n.split(' ')[0]].name) || n}${n.includes(' ') ? ' ' + n.slice(n.indexOf(' ') + 1) : ''}`)]),
     typeof GL === 'undefined' || !GL.ready ? '' : (() => { let own = 0; for (const e of GL.texs.values()) own += e.w * e.h * 4;
       return `Speicher Grafik: Sammelbilder ${(ATL.pages.length * ATL.size * ATL.size * 4 / 1048576).toFixed(0)} MB + einzeln ${(own / 1048576).toFixed(0)} MB (${GL.texs.size})`; })(),
+    spriteFails ? `Speicher voll: ${spriteFails}× (Bildchen werden neu gemalt)` : '',
     `Lichter ${MESS.lights} · Bildchen fehlen ${MESS.miss}, neu ${MESS.made} · Zoom ${cam.z.toFixed(2)}`].filter(Boolean);
   ctx.save(); ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.font = '600 14px system-ui, sans-serif';
   const w = Math.max(...lines.map(l => ctx.measureText(l).width)) + 20, lh = 20, h = lines.length * lh + 12, x = Math.max(4, W - w - 12), y = Math.round(H * 0.3);

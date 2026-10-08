@@ -1641,6 +1641,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] iPad stürzte ab („wiederholt ein Fehler aufgetreten“, Speicher): Sammelbilder hielten alles je Benutzte bis 6 × 4096² = 384 MB
       auf der Grafikkarte (Aufräumen erst bei 2 Seiten Abfall und nie beim Abspielen – mit dem Hintergrund-Standbild also nie).
       Jetzt Safari 2048er-Seiten (höchstens 96 MB), Aufräumen schon bei 1 Seite Abfall und vor jedem Bild; Messkasten zeigt den Speicher
+- [x] Schnell rein-/rauszoomen, dann verschieben ruckelte auf dem iPad stark: beim Tausch der scharfen Bildchen bis 490 Uploads in
+      einem Bild (Safari liest jedes zurück). Jetzt gleich nach dem Zuschneiden vorab hochladen (glWarm, 2–3 ms je Bild): höchstens
+      80–90, beim Wiederholen 7; statt mehrerer Neuaufnahmen je Zoom nur eine. Messkasten: „Speicher voll: N×“ (spriteFail)
 - [ ] Offen: Ist alles voll, bekommt der Rest eigene Texturen (große Welt, Zoom 0,7: +126 MB, 600 Aufträge) – Speicher auf dem iPad
       weiter beobachten; Wunsch Nutzer: von selbst vorladen (Speicherfrage)
 - [ ] Nächste Schritte: Zoom ≥ 1 und Werkzeuge noch 2D

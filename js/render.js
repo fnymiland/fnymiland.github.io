@@ -353,8 +353,9 @@ function makeSprite(make, ver) {
   return n;
 }
 // Kein Speicher (getContext null): Pause fürs Neumalen und Entbehrliches freigeben (Nachtbilder, wartende scharfe, lange nicht Benutztes)
+let spriteFails = 0;                                                       // ?messen: wie oft der Speicher voll war (seit dem Start)
 function spriteFail() {
-  SPRITE_STATS.fail++;
+  SPRITE_STATS.fail++; spriteFails++;
   if (frameNo < spritePause) return;
   spritePause = frameNo + FAIL_PAUSE;
   for (const [k, e] of objSprites) { if (frameNo - e.used > 30) dropSprite(k); else { freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } } }
@@ -451,8 +452,9 @@ function cropDone(id, box) {
   cropWait.delete(id);
   if (!e) return;
   e.crop = false;
-  if (!box || !e.c || !e.c.width) return;                                // inzwischen freigegeben: nichts zu tun
+  if (!box || !e.c || !e.c.width) { glWarm(e.c); return; }               // inzwischen freigegeben: nichts zu tun
   cropApply(e, e.c, box[0], box[1], box[2], box[3]);
+  glWarm(e.c);                                                            // fertig: schon jetzt zur Grafikkarte (nicht alle beim Tausch)
 }
 function cropSprite(e) {
   e.crop = false;
@@ -466,10 +468,11 @@ function cropSprite(e) {
   let img = null;
   try { img = c.getContext('2d').getImageData(0, 0, nw, nh); } catch (err) { img = null; }
   const d = img && img.data;
-  if (!d) return;                                                         // ohne Pixel (Test): ungeschnitten
+  if (!d) { glWarm(e.c); return; }                                       // ohne Pixel (Test): ungeschnitten
   let x0 = nw, y0 = nh, x1 = -1, y1 = -1;
   for (let y = 0; y < nh; y++) { const row = y * nw * 4; for (let x = 0; x < nw; x++) if (d[row + x * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; y1 = y; } }
   cropApply(e, c, x0, y0, x1, y1);
+  glWarm(e.c);
 }
 // Zuschneiden mit gefundenem Inhaltsrahmen (x1 < 0: leer), 1 Punkt Rand
 function cropApply(e, c, x0, y0, x1, y1) {
@@ -608,6 +611,7 @@ function paintNight(e) {
   freeCanvas(K[0]);
   const o = { ox: ax / DPR, oy: ay / DPR };
   const warmL = lights.filter(l => l.tint !== 'blue');
+  glWarm(E[0]); if (B) glWarm(B[0]);
   return { z: e.z, erase: { c: E[0], ...o }, light: { c: B ? B[0] : null, ...o }, panes: warmL.map(l => l.q),
     halos: warmL.map(({ q, r }) => [(q[0][0] + q[2][0]) / 2, (q[0][1] + q[2][1]) / 2, r]), lights: lights.length };
 }

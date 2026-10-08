@@ -111,6 +111,19 @@ function atlNewPage() {
   return p;
 }
 // Platz für Leinwand c (einmal hochladen); null: passt nicht (zu groß, Atlas voll) → eigene Textur
+// Vorab hochladen (Block 144): fertige Bildchen gleich nach dem Malen/Zuschneiden in die Sammelbilder, je Bild nur ein paar ms
+// (glEnd). Vorher kamen nach dem Zoomen beim Tausch der scharfen Bildchen bis zu 500 auf einmal – Safari liest jedes zurück, das ruckelte
+const GL_WARM = new Set();
+function glWarm(c) { if (GL.ready && c && c.width) GL_WARM.add(c); }
+function glWarmStep() {
+  if (!GL_WARM.size) return;
+  const t0 = performance.now(), lim = GL_LOWMEM ? 3 : 2;
+  for (const c of GL_WARM) {
+    GL_WARM.delete(c);
+    if (c.width && !ATL.slots.has(c) && !atlPut(c)) { GL_WARM.clear(); break; }   // Sammelbilder voll: lassen (glVerts entscheidet)
+    if (performance.now() - t0 > lim) break;
+  }
+}
 function atlPut(c) {
   const s = ATL.slots.get(c);
   if (s && s.w === c.width && s.h === c.height) return s;
@@ -403,6 +416,7 @@ function glEnd() {
     gl.uniform1f(GL.loc.nk, nightK());                                       // Stärke der Löcher (Dämmerung: schwächer)
     gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);       // source-over, vormultipliziert
     if (LA.used) glTex(LA.c, false);                                       // Sammelfläche einmal je Bild hochladen
+    glWarmStep();
     const verts = glVerts(recs);                                           // legt Neues in den Atlas
     gl.bindBuffer(gl.ARRAY_BUFFER, GL.buf); gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STREAM_DRAW);
     atlBind();
