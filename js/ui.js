@@ -110,6 +110,30 @@ function noteRecent(id) {
   const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
 }
+// Eigene Reihenfolge der Gruppen (Nutzer, 08.10.2026, Entwurf B „Anordnen“): je Gerät gemerkt, { bereich: [gruppenIds] }.
+// Unbekannte/alte IDs fallen weg, neue Gruppen (Update) hängen hinten an. Leer = Reihenfolge wie MENU.
+const ORDER_KEY = 'kachelhausen_menuorder';
+let arrangeMode = false;
+function savedOrders() { try { const o = JSON.parse(localStorage.getItem(ORDER_KEY) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+function orderedGroups(top) {
+  const grs = top.groups || [{ id: top.id, label: top.label, items: top.items }], ids = savedOrders()[top.id];
+  if (!Array.isArray(ids)) return grs;
+  const by = new Map(grs.map(g => [g.id, g])), seen = ids.filter(id => by.has(id));
+  return [...seen.map(id => by.get(id)), ...grs.filter(g => !seen.includes(g.id))];
+}
+function moveGroup(topId, gid, dir) {
+  const top = MENU.find(m => m.id === topId);
+  if (!top || !top.groups) return;
+  const ids = orderedGroups(top).map(g => g.id), i = ids.indexOf(gid), j = i + dir;
+  if (i < 0 || j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  const o = savedOrders(); o[topId] = ids;
+  try { localStorage.setItem(ORDER_KEY, JSON.stringify(o)); } catch (e) { /* privat: gilt dann nur bis zum Neuladen nicht */ }
+}
+function resetGroupOrder(topId) {
+  const o = savedOrders(); delete o[topId];
+  try { localStorage.setItem(ORDER_KEY, JSON.stringify(o)); } catch (e) { /* egal */ }
+}
 // „🏗️ Bauen“ → Symbol und Wort getrennt, damit schmale Bildschirme nur das Symbol zeigen können
 function menuLabel(b, label) {
   const m = label.match(/^(\S+)\s+(.+)$/);
@@ -122,6 +146,7 @@ let sheetOpen = false;
 function updateUndoBtn() { const b = document.querySelector('.quick.undo'); if (b) b.disabled = !undoStack.length && !moving; }
 function setSheet(open) {
   sheetOpen = !!open;
+  if (!sheetOpen) arrangeMode = false;
   $('toolbar').classList.toggle('open', sheetOpen);
 }
 document.addEventListener('pointerdown', e => {                          // daneben tippen: Feld zu – der Tipp baut nichts
@@ -210,12 +235,44 @@ function renderTools() {
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
-  const grs = top.groups || [{ label: top.label, items: top.items }];
-  const ready = gr => gr.items.some(available);                           // Gruppen ganz ohne Freies ans Ende (Reihenfolge sonst wie MENU)
+  const grs = orderedGroups(top);
+  if (arrangeMode && top.groups) { renderArrange(box, top, grs); return; }
+  const ready = gr => gr.items.some(available);                           // Gruppen ganz ohne Freies ans Ende (Reihenfolge sonst eigene bzw. MENU)
+  let first = true;
   for (const gr of [...grs.filter(ready), ...grs.filter(gr => !ready(gr))]) {   // alle Gruppen untereinander, Überschrift je Gruppe
     const h = document.createElement('div'); h.className = 'sheet-h'; h.dataset.group = gr.id || top.id; menuLabel(h, gr.label); box.append(h);
+    if (first && top.groups && top.groups.length > 1) {                   // ⇅ Anordnen: rechts in der ersten Überschrift
+      const a = document.createElement('button'); a.className = 'arrange-btn'; a.textContent = '⇅ Anordnen';
+      a.setAttribute('aria-label', 'Gruppen anordnen');
+      a.onclick = () => { audio(); arrangeMode = true; renderTools(); $('sheet').scrollTop = 0; };
+      h.append(a);
+    }
+    first = false;
     for (const id of freeFirst(gr.items)) box.append(card(id));
   }
+}
+// Anordnen (Entwurf B): Gruppen als Liste mit ↑/↓, dazu „Standard“ und „Fertig“
+function renderArrange(box, top, grs) {
+  const head = document.createElement('div'); head.className = 'sheet-h arrange-head';
+  head.textContent = 'Reihenfolge – was du oft brauchst, nach oben';
+  box.append(head);
+  grs.forEach((gr, i) => {
+    const r = document.createElement('div'); r.className = 'arrange-row'; r.dataset.group = gr.id;
+    const l = document.createElement('span'); l.className = 'arrange-l'; l.textContent = gr.label;
+    const up = document.createElement('button'); up.className = 'arrange-mv'; up.textContent = '↑'; up.disabled = i === 0;
+    up.setAttribute('aria-label', `${gr.label} nach oben`);
+    const dn = document.createElement('button'); dn.className = 'arrange-mv'; dn.textContent = '↓'; dn.disabled = i === grs.length - 1;
+    dn.setAttribute('aria-label', `${gr.label} nach unten`);
+    up.onclick = () => { audio(); moveGroup(top.id, gr.id, -1); renderTools(); };
+    dn.onclick = () => { audio(); moveGroup(top.id, gr.id, 1); renderTools(); };
+    r.append(l, up, dn); box.append(r);
+  });
+  const foot = document.createElement('div'); foot.className = 'arrange-foot';
+  const std = document.createElement('button'); std.className = 'btn ghost'; std.textContent = 'Standard';
+  std.onclick = () => { audio(); resetGroupOrder(top.id); renderTools(); };
+  const ok = document.createElement('button'); ok.className = 'btn'; ok.textContent = 'Fertig';
+  ok.onclick = () => { audio(); arrangeMode = false; renderTools(); };
+  foot.append(std, ok); box.append(foot);
 }
 // Maus über einer Kachel: Name sofort als Schild darüber (die Leiste scrollt – ein Schild in der Kachel würde abgeschnitten)
 function showCardName(b) {
@@ -231,7 +288,7 @@ const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
 const menuHas = (m, id) => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id);   // Bereich mit dem gewählten Werkzeug (Punkt)
 const menuList = () => { if (recentOpen) return recentList(); const top = MENU.find(m => m.id === menuTop) || MENU[0];
-  const all = top.groups ? top.groups.flatMap(g => g.items) : top.items; return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
+  const all = orderedGroups(top).flatMap(g => g.items); return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });

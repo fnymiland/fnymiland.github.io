@@ -92,4 +92,39 @@ describe('Baumenü', () => {
     if (firstLocked >= 0) expect(hs.slice(firstLocked).every(id => !ready[id])).toBe(true);   // hinter der ersten gesperrten Gruppe nur gesperrte
     game('setSheet(false)');
   });
+  it('Anordnen (Nutzer: „Anordnung dem Nutzer übergeben“): ↑/↓ verschiebt Gruppen, je Gerät gemerkt; Standard setzt zurück', () => {
+    game("localStorage.removeItem('kachelhausen_menuorder'); for (const d of DESIGN) state.design.add(d.id); state.money = 1e9; menuTop = 'stadt'; setSheet(true); buildToolbar()");
+    const heads = () => q('#tools .sheet-h').map(h => h.dataset.group);
+    expect(heads().slice(0, 2)).toEqual(['wohnen', 'verkehr']);
+    document.querySelector('#tools .arrange-btn').click();
+    expect(game('arrangeMode')).toBe(true);
+    expect(q('#tools .tool').length).toBe(0);                                   // nur die Liste
+    const rows = () => q('#tools .arrange-row').map(r => r.dataset.group);
+    expect(rows()[0]).toBe('wohnen');
+    document.querySelector('#tools .arrange-row[data-group="gross"] .arrange-mv:first-of-type').click();   // Kaufhäuser eins hoch
+    document.querySelector('#tools .arrange-row[data-group="verkehr"] .arrange-mv:first-of-type').click(); // Verkehr nach oben
+    expect(rows().slice(0, 2)).toEqual(['verkehr', 'wohnen']);
+    expect(rows().indexOf('gross')).toBe(rows().length - 2);
+    expect(JSON.parse(localStorage.getItem('kachelhausen_menuorder')).stadt[0]).toBe('verkehr');
+    [...document.querySelectorAll('#tools .arrange-foot .btn')].find(b => b.textContent === 'Fertig').click();
+    expect(game('arrangeMode')).toBe(false);
+    expect(heads()[0]).toBe('verkehr');
+    expect(game("menuList()[0]")).toBe(game("[...MENU[0].groups.find(g => g.id === 'verkehr').items].find(available)"));   // Zahlentasten folgen
+    game('setSheet(false); setSheet(true); buildToolbar()');                    // zu und wieder auf: bleibt
+    expect(heads()[0]).toBe('verkehr');
+    document.querySelector('#tools .arrange-btn').click();
+    [...document.querySelectorAll('#tools .arrange-foot .btn')].find(b => b.textContent === 'Standard').click();
+    expect(rows().slice(0, 2)).toEqual(['wohnen', 'verkehr']);
+    game('setSheet(false)');
+    expect(game('arrangeMode')).toBe(false);                                     // zuklappen beendet das Anordnen
+  });
+  it('gemerkte Reihenfolge mit alter/unbekannter Gruppe und kaputtem Wert: nichts geht verloren', () => {
+    game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ stadt: ['weg-gibts-nicht', 'markt'] }))`);
+    const ids = game("orderedGroups(MENU[0]).map(g => g.id)");
+    expect(ids[0]).toBe('markt');
+    expect(ids.slice().sort()).toEqual(game("MENU[0].groups.map(g => g.id)").sort());
+    game(`localStorage.setItem('kachelhausen_menuorder', '{kaputt')`);
+    expect(game("orderedGroups(MENU[0]).map(g => g.id)")).toEqual(game("MENU[0].groups.map(g => g.id)"));
+    game("localStorage.removeItem('kachelhausen_menuorder')");
+  });
 });

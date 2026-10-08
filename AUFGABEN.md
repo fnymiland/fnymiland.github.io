@@ -1974,4 +1974,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Verkehr, Einrichtungen, Läden, Markt, Essen & Trinken, Kaufhäuser. Herstellen: Veredeln ans Ende. Freizeit: Freizeitpark-Gruppen
       vor Wunder und Kultur. Grün: Blumenbeet vor Blumentopf. Stadtschmuck: Laterne, Bank, Brunnen vorn, Freundesbank hinten.
       Gruppen ganz ohne Freies rutschen im Feld ans Ende (Anfänger sehen oben keine Schlösser). Test: menu.
+- [x] Nutzer: „wieso übergeben wir nicht dem Nutzer die Anordnung?“ – drei Entwürfe (A Favoriten, B Anordnen-Modus, C frei ziehen),
+      Nutzer wählte B. „⇅ Anordnen“ rechts in der ersten Überschrift des Felds: Gruppen als Liste mit ↑/↓, „Standard“, „Fertig“.
+      Je Gerät gemerkt (`kachelhausen_menuorder`, `orderedGroups`/`moveGroup`); unbekannte IDs fallen weg, neue Gruppen hängen
+      hinten an, kaputter Wert = Standard. Zuklappen beendet das Anordnen. Zahlentasten folgen der Reihenfolge. Test: menu.
 

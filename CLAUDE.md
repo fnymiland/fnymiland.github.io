@@ -124,6 +124,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Handy: Bereiche nur als Symbol (sonst passt die Zeile nicht). Am PC/iPad keine Hinweiszeile beim Wählen, auf dem Handy
     nur Name, Preis, wie man baut und ⓘ. Solange etwas in der Hand ist, wird 👆 ein rotes ✕ (`syncDropBtn`). Alle Knöpfe der
     unteren Reihe und der Stil-Leiste 34 px hoch. Rathaus „Bereit“ über `buildGroups()`.
+    Gruppen-Reihenfolge im Feld immer über `orderedGroups(top)` (eigene Anordnung je Gerät, „⇅ Anordnen“), nie direkt `top.groups`.
     **Kacheln** zeigen Bild, Namen und Preis (`cardPrice`, kurz über `shortMoney`);
     Reihenfolge `menuList()` (Freies zuerst, auch für die Zahlentasten). Kachel antippen = `pickCard`: am iPad/Mac
     rechts das **Bau-Infofenster** (`openBuildInfo`, `showPanel(…, live, id)` setzt `buildInfo`), das offen bleibt,
