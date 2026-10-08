@@ -1495,6 +1495,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       WEG_MUSTER/WEG_FARBEN (data.js), Belag-Name 'm:<muster>:<farbe>' bzw. alter Name für alte Kombinationen (WEG_PRESET,
       wegStyleOf/wegParts), Aussehen pathLook (draw-objects), wegMusterOk/wegFarbeOk (wer einen alten Belag hat, hat sein Muster),
       Kunstakademie „Wegmuster“ mit Vorschau (125d erledigt), Leiste: Muster, dann Farben, dann Form. „Das ist neu“ 2026-10-08-wege
+- [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
+- [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
+      stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle
 - [x] Vorplatz/Weg zur Tür, Brücke und Schloss-Platz mit Muster + Farbe (wegPickHtml: Muster, darunter Farben; Knöpfe tragen den
       fertigen Belag-Namen, die Fenster übernehmen ihn wie früher)
 - [x] Leiste beim Wegebauen (Wunsch Nutzer: „drei Leisten, 1/3 des Bildschirms“): eine Zeile mit zwei Knöpfen (Muster ▾, Farbe ▾)

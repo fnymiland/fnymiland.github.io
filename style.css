@@ -793,6 +793,10 @@ body.visiting #toast, body.viewonly #toast { top: 116px; }
 /* Deine Figur (Block 97) */
 .me-edit canvas { width: 120px; height: 150px; }
 .me-edit input { width: 100%; box-sizing: border-box; margin-bottom: 6px; }
+/* Figur bleibt oben stehen, während man durch Kleidung & Co. scrollt – man sieht, was man anzieht (Rückmeldung Nutzer) */
+.tab-scroll > .me-edit { position: sticky; top: 0; z-index: 3; background: var(--cream); padding: 2px 0 8px; margin-bottom: 4px;
+  box-shadow: 0 -12px 0 var(--cream), 0 10px 8px -10px rgba(60, 40, 20, .3); }   /* oben: den Rand des Scrollbereichs mit abdecken */
+@media (max-width: 560px), (max-height: 640px) { .me-edit canvas { width: 84px; height: 105px; } .tab-scroll > .me-edit p.muted { display: none; } }
 .look.locked { opacity: 0.55; }
 .wear-lock { background: var(--cream2); border-radius: 12px; padding: 8px 10px; margin: 4px 0 8px; font-size: 13px; }
 .wear-lock .bar { height: 7px; background: rgba(107, 79, 58, .12); border-radius: 99px; overflow: hidden; margin: 6px 0 2px; }

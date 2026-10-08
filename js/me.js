@@ -326,7 +326,13 @@ function meHallHtml() {
     <p class="muted">🔒 Gesperrtes gibt es für Erfolge – antippen zeigt, wofür und wie weit du bist.</p>`;
 }
 function wireMeHall(card) {
-  const redo = () => openYou('figur');
+  // neu zeichnen, aber an derselben Stelle bleiben (Rückmeldung Nutzer: nach jeder Wahl sprang es nach oben)
+  const redo = () => {
+    const sc0 = card.querySelector(':scope > .tab-scroll') || card, top = sc0.scrollTop;
+    openYou('figur');
+    const c = $('modal-card'), sc = c.querySelector(':scope > .tab-scroll') || c;
+    sc.scrollTop = top; queueMicrotask(() => { sc.scrollTop = top; });
+  };
   const cv = card.querySelector('#me-prev');
   if (cv) figPreview(cv, meFigLook(), 4.2);
   for (const b of card.querySelectorAll('[data-mea]')) b.onclick = () => { setMe({ a: +b.dataset.mea }); sfx('deco'); redo(); };
