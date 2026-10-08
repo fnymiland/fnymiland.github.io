@@ -112,23 +112,22 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     +8 Pendler je Bahnhof, +10 % (`s.rail`) für alle Gebäude der Inseln. Schienen verbinden keine Viertel. Züge in
     movers.js (`syncTrains`/`stepTrains`/`trainCars`), Wagen als gedrehte Quader (`drawTrainCar`). Alles, was an einem
     Feld hängt und gespeichert werden muss (`bridge`, `train`), gehört auch in `tileOut` – der Zufallstest findet es sonst.
-25. **Baumenü** = `MENU` (data.js, Block 40) – fünf Bereiche nach dem, **was man gerade tun will**: 🏘️ Stadt (was eine
-    Stadt zwingend braucht: Wohnen / Einrichtungen inkl. Schule, Post, Apotheke, Hotels / Verkehr inkl. Schiene, Bahnhöfe,
-    Hafen, Steg) · 🏭 Herstellen (produziert: Taler / Rohstoffe / Veredeln / Strom) · 🛍️ Einkaufen (verdient an Kundschaft:
-    Läden / Essen & Trinken / Markt / Kaufhäuser) · 🎡 Freizeit (Kultur, Wunder inkl. Leuchtturm) · 🌸 Gestalten (formt die
-    Welt: Grün inkl. Park / Platz / Besonderes / Wege & Gelände). Nach dem echten Ort einsortieren, nicht nach der
+25. **Baumenü** = `MENU` (data.js, Block 40, seit 08.10.2026 vier Bereiche) – nach dem, **was man gerade tun will**: 🏘️ Stadt
+    (wo Bewohner leben und einkaufen: Wohnen / Läden / Essen & Trinken / Markt / Kaufhäuser / Einrichtungen inkl. Schule, Post,
+    Apotheke, Hotels / Verkehr inkl. Schiene, Bahnhöfe, Hafen, Steg) · 🏭 Herstellen (produziert: Taler / Rohstoffe / Veredeln /
+    Strom) · 🎡 Freizeit (Kultur, Wunder inkl. Leuchtturm, Freizeitpark) · 🌸 Gestalten (formt die Welt: Grün inkl. Park / Platz /
+    Besonderes / Wege & Gelände). Nach dem echten Ort einsortieren, nicht nach der
     Spielwirkung (die steht im Infofenster). Keine Erklär-
     Zeilen in der Leiste (Nutzer: selbsterklärend, stört). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
-    Kein „Alle“; Bereiche ohne Filter haben `menuSub` 'alle', sonst gilt der erste (`firstSub`), jeder merkt sich seinen
-    (`subOf`). Jedes Ding in **genau einer** Gruppe (Test), höchstens 10 je Filter; Wirkung in `FX`, Läden in `SHOP_GROUPS`.
-    🔍 Suche (`searchQ`, `searchHits`, Umlaute egal) ersetzt Bereich und Filter durch ein Suchfeld. Handy: auch der gewählte
-    Bereich nur als Symbol (sonst passt die Zeile nicht). Hinweis über der Leiste nur „wie man baut“, nie die Beschreibung
-    (die steht im Bau-Infofenster); beim Weg kein Hinweis. Rathaus „Bereit“ über `buildGroups()`.
-    **Kacheln** zeigen nur Bild + Preis (`cardPrice`, kurz über `shortMoney`), Name nur als `title`/`aria-label`;
+    Ein Bereich klappt ein Feld (`#sheet`, `setSheet`) mit allen Gruppen als Überschriften auf (Block 153); jedes Ding in
+    **genau einer** Gruppe (Test); Wirkung in `FX`, Läden in `SHOP_GROUPS`. Keine Suche mehr (Nutzer: „nutzt eh nie einer“).
+    Handy: Bereiche nur als Symbol (sonst passt die Zeile nicht). Am PC/iPad keine Hinweiszeile beim Wählen, auf dem Handy
+    nur Name, Preis, wie man baut und ⓘ. Solange etwas in der Hand ist, wird 👆 ein rotes ✕ (`syncDropBtn`). Alle Knöpfe der
+    unteren Reihe und der Stil-Leiste 34 px hoch. Rathaus „Bereit“ über `buildGroups()`.
+    **Kacheln** zeigen Bild, Namen und Preis (`cardPrice`, kurz über `shortMoney`);
     Reihenfolge `menuList()` (Freies zuerst, auch für die Zahlentasten). Kachel antippen = `pickCard`: am iPad/Mac
     rechts das **Bau-Infofenster** (`openBuildInfo`, `showPanel(…, live, id)` setzt `buildInfo`), das offen bleibt,
-    solange das Ding gewählt ist (`setTool` schließt nur bei einem anderen Werkzeug); der Hinweis zeigt dann nur, wie
-    man baut. Handy: kein Fenster, sondern ein ⓘ im Hinweis (`.hint-info`), Tippen auf die Karte schließt es wieder.
+    solange das Ding gewählt ist (`setTool` schließt nur bei einem anderen Werkzeug). Handy: kein Fenster, sondern ein ⓘ im Hinweis (`.hint-info`), Tippen auf die Karte schließt es wieder.
     Neue Infos zu einem Ding gehören ins Bau-Infofenster, nicht auf die Kachel.
 26. **Natur räumt sich weg** (`willClear`, `clearCost`, `clearNature`): Bauen auf Wald/Obsthain/Fels/Erz/Kristallfels
     rodet bzw. sprengt zum normalen Preis; Betriebe behalten ihr Gelände. Beim Verschieben wird nichts geräumt.
