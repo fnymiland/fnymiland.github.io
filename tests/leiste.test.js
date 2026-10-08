@@ -15,22 +15,21 @@ const panel = () => $('panel');
 const open = (top, sub = 'alle') => game(`menuTop = '${top}'; menuSub = '${sub}'; buildToolbar(); updateHud()`);
 
 describe('Kacheln', () => {
-  it('zeigen nur Bild und Preis; der Name steht im Tooltip und für Vorleser', () => {
+  it('zeigen Bild, Namen und Preis (Nutzer: „ich finde nichts“); Gesperrtes zeigt beim Zeigen, warum', () => {
     open('stadt', 'wohnen');
     const b = card('haus');
     expect(b.querySelector('canvas')).not.toBe(null);
     expect(b.querySelector('.cost').textContent).toBe('🪙 40');
-    expect(b.querySelector('.name')).toBe(null);
+    expect(b.querySelector('.nm').textContent).toBe('Haus');
     expect(b.querySelector('.fx')).toBe(null);
-    expect(b.textContent).toBe('🪙 40');
     expect(b.dataset.name).toBe('Haus');
-    const e = new window.MouseEvent('pointerenter'); Object.defineProperty(e, 'pointerType', { value: 'mouse' });
-    b.onpointerenter(e);
-    expect(document.getElementById('card-name').hidden).toBe(false);
-    expect(document.getElementById('card-name').textContent).toBe('Haus');
-    b.onpointerleave();
-    expect(document.getElementById('card-name').hidden).toBe(true);
-    expect(b.getAttribute('aria-label')).toBe('Haus');
+    const locked = [...document.querySelectorAll('#tools .tool.locked')][0];
+    if (locked) {
+      const e = new window.MouseEvent('pointerenter'); Object.defineProperty(e, 'pointerType', { value: 'mouse' });
+      locked.onpointerenter(e);
+      expect(document.getElementById('card-name').hidden).toBe(false);
+      expect(document.getElementById('card-name').textContent).toContain('🔒');
+    }
   });
 
   it('große Preise kurz: Tsd. und Mio.', () => {

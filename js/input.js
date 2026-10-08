@@ -180,7 +180,7 @@ window.addEventListener('keydown', e => {
     if (!spaceDown) { spaceDown = true; if (!drag) canvas.style.cursor = 'grab'; }
     return;
   }
-  if (e.key === 'Escape') { if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }
+  if (e.key === 'Escape') { if (sheetOpen) { setSheet(false); searchQ = null; recentOpen = false; buildToolbar(); return; } if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }   // Feld der Bauleiste zuerst zu
   if (!document.getElementById('modal').hidden) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }   // Rückgängig
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }

@@ -57,9 +57,11 @@ describe('Leiste auf dem Handy', () => {
     expect(document.getElementById('hint').textContent).toMatch(/^Weg · 🪙 5 · Anfang und Ende antippen ⓘ$/);
   });
 
-  it('Desktop/iPad: Bereiche klappen nichts, der Hinweis ohne Beschreibung', () => {
+  it('Desktop/iPad: Bereiche klappen das Feld auf wie auf dem Handy (Entwurf B), der Hinweis ohne Beschreibung', () => {
     size(1024, 768);
-    game('buildToolbar()');
+    game('setSheet(false); buildToolbar()');
+    catBtn('stadt').click();
+    expect(bar().contains('open')).toBe(true);
     catBtn('stadt').click();
     expect(bar().contains('open')).toBe(false);
     game("setTool('haus')");

@@ -124,6 +124,11 @@ function setSheet(open) {
   sheetOpen = !!open;
   $('toolbar').classList.toggle('open', sheetOpen);
 }
+document.addEventListener('pointerdown', e => {                          // daneben tippen: Feld zu – der Tipp baut nichts
+  if (!sheetOpen || $('toolbar').contains(e.target) || ($('panel') && $('panel').contains(e.target)) || ($('modal') && $('modal').contains(e.target))) return;
+  setSheet(false); searchQ = null; recentOpen = false; buildToolbar();
+  if (e.target && e.target.id === 'world') { e.stopPropagation(); e.preventDefault(); }
+}, true);
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
@@ -147,26 +152,26 @@ function buildToolbar() {
   const find = document.createElement('button');
   find.className = 'quick find' + (searchQ != null ? ' active' : '');
   find.textContent = '🔍'; find.title = 'Suchen'; find.setAttribute('aria-label', 'Suchen');
-  find.onclick = () => { audio(); recentOpen = false; searchQ = searchQ == null ? '' : null; if (PHONE) setSheet(searchQ != null); buildToolbar(); };
+  find.onclick = () => { audio(); recentOpen = false; searchQ = searchQ == null ? '' : null; setSheet(searchQ != null); buildToolbar(); };
   cats.append(find);
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
   rec.textContent = '🕘'; rec.title = 'Zuletzt gebaut'; rec.setAttribute('aria-label', 'Zuletzt gebaut');
-  rec.onclick = () => { audio(); recentOpen = !recentOpen; if (recentOpen) searchQ = null; if (PHONE) setSheet(recentOpen); buildToolbar(); };
+  rec.onclick = () => { audio(); recentOpen = !recentOpen; if (recentOpen) searchQ = null; setSheet(recentOpen); buildToolbar(); };
   cats.append(rec);
   // Bereiche (Stadt · Herstellen · Einkaufen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
+  // Bereiche (Nutzer, 08.10.2026, Entwurf B): ein Tipp klappt darüber ein Feld mit ALLEM aus dem Bereich auf (Gruppen als
+  // Überschriften); nochmal, daneben tippen, Esc oder eine Wahl klappt es zu. Das gewählte Werkzeug bleibt dabei.
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
-  subOf[top.id] = menuSub;
-  const keep = () => { if (tool !== 'look' && !QUICK.some(([id]) => id === tool) && !menuItemsOf(menuTop, menuSub).includes(tool)) { tool = 'look'; plan = null; } };   // angefangene Linie mit weg
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (m.id === menuTop && searchQ == null && !recentOpen ? ' active' : '');
+    b.className = 'cat' + (sheetOpen && m.id === menuTop && searchQ == null && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
-    // Handy: der Bereich klappt den Katalog auf (nochmal antippen: zu)
-    b.onclick = () => { if (PHONE) setSheet(!(sheetOpen && menuTop === m.id && searchQ == null && !recentOpen)); searchQ = null; recentOpen = false; menuTop = m.id; menuSub = subOf[m.id] || firstSub(m.id); keep(); buildToolbar(); };
+    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && searchQ == null && !recentOpen));
+    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && searchQ == null && !recentOpen; searchQ = null; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
     cats.append(b);
   }
   // Filter nach Zweck (oder das Suchfeld); darunter eine Zeile mit der Regel des Bereichs
@@ -186,17 +191,7 @@ function buildToolbar() {
     inp.onkeydown = e => { if (e.key === 'Escape') { searchQ = null; buildToolbar(); } };
     subs.append(inp);
     requestAnimationFrame(() => { if (searchQ != null && (hadFocus || !PHONE || sheetOpen)) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } });
-  } else {
-    subs.hidden = !top.groups;
-    if (top.groups) for (const { id, label } of top.groups) {
-      const b = document.createElement('button');
-      b.className = 'sub' + (id === menuSub ? ' active' : '');
-      b.dataset.sub = id;
-      menuLabel(b, label);
-      b.onclick = () => { menuSub = id; keep(); buildToolbar(); };
-      subs.append(b);
-    }
-  }
+  } else subs.hidden = true;                                              // Gruppen stehen als Überschriften im Feld
   renderTools();
   setTool(tool);
 }
@@ -205,28 +200,39 @@ function renderTools() {
   hideCardName();
   const box = $('tools');
   box.innerHTML = '';
-  const list = menuList();
-  if (searchQ != null && !list.length) {
-    const p = document.createElement('p'); p.className = 'search-none';
-    p.textContent = searchQ.trim() ? 'Nichts gefunden' : 'Tippe einen Namen ein'; box.append(p);
-  }
-  for (const id of list) {
+  const card = id => {
     const d = ITEMS[id], locked = !available(id);
     const b = document.createElement('button');
-    b.className = 'tool' + (locked ? ' locked' : '') + (tool === id ? ' active' : '');
+    b.className = 'tool' + (locked ? ' locked' : '') + (tool === id || baseOf(tool) === id ? ' active' : '');
     b.dataset.tool = id;
     b.dataset.name = d.name + (locked ? ' · 🔒 ' + unlockText(d, true) : '');
     b.setAttribute('aria-label', d.name);
-    b.onpointerenter = e => { if (e.pointerType === 'mouse') showCardName(b); };
+    b.onpointerenter = e => { if (e.pointerType === 'mouse' && locked) showCardName(b); };   // Name steht drunter – nur bei Gesperrtem, warum
     b.onpointerleave = hideCardName;
     b.append(id === 'abriss' ? emojiPic('🧹') : id === 'verschieben' ? emojiPic('✋') : thumb(id));
+    const n = document.createElement('span'); n.className = 'nm'; n.textContent = d.name; b.append(n);   // Name unter dem Bild (Nutzer: „ich finde nichts“)
     const c = document.createElement('span'); c.className = 'cost'; c.textContent = cardPrice(id);
     b.append(c);
     if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; b.append(l); }
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
     b.onclick = () => pickCard(id);
-    box.append(b);
+    return b;
+  };
+  const freeFirst = ids => [...ids.filter(available), ...ids.filter(id => !available(id))];
+  if (recentOpen || searchQ != null) {
+    const list = menuList();
+    if (searchQ != null && !list.length) {
+      const p = document.createElement('p'); p.className = 'search-none';
+      p.textContent = searchQ.trim() ? 'Nichts gefunden' : 'Tippe einen Namen ein'; box.append(p);
+    }
+    for (const id of list) box.append(card(id));
+    return;
+  }
+  const top = MENU.find(m => m.id === menuTop) || MENU[0];
+  for (const gr of top.groups || [{ label: top.label, items: top.items }]) {   // alle Gruppen untereinander, Überschrift je Gruppe
+    const h = document.createElement('div'); h.className = 'sheet-h'; h.dataset.group = gr.id || top.id; menuLabel(h, gr.label); box.append(h);
+    for (const id of freeFirst(gr.items)) box.append(card(id));
   }
 }
 let searchQ = null;                    // null = keine Suche, sonst der eingetippte Text
@@ -242,7 +248,9 @@ function showCardName(b) {
 function hideCardName() { $('card-name').hidden = true; }
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
-const menuList = () => { if (recentOpen) return recentList(); const all = searchQ != null ? searchHits(searchQ) : menuItemsOf(menuTop, menuSub); return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
+const menuHas = (m, id) => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id);   // Bereich mit dem gewählten Werkzeug (Punkt)
+const menuList = () => { if (recentOpen) return recentList(); const top = MENU.find(m => m.id === menuTop) || MENU[0];
+  const all = searchQ != null ? searchHits(searchQ) : top.groups ? top.groups.flatMap(g => g.items) : top.items; return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
@@ -2597,6 +2605,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-bauleiste', date: '8. Oktober', title: 'Bauleiste neu', items: [
+    '🧭 <b>Bauleiste aufgeräumt:</b> Unten ist nur noch eine Reihe. Tippe auf einen Bereich (Stadt, Herstellen …) – darüber klappt alles aus dem Bereich auf, nach Gruppen sortiert und mit Namen. Eine Wahl, Esc oder daneben tippen klappt es wieder zu.',
+  ] },
   { id: '2026-10-08-beete', date: '8. Oktober', title: 'Neue Beete', items: [
     '🌷 <b>Beete in neun Formen:</b> Steinrand, Rundbeet, Rosenbeet, Tulpen, Lavendel, Hochbeet, Sonnenblumen, Wildblumen – die meisten in der Kunstakademie (Beete).',
     '🪵 <b>Boden nach Wahl:</b> Rindenmulch, Kies oder Grün – im Fenster des Beets umstellen. Gartenerde gibt es in der Kunstakademie.',

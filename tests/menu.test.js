@@ -17,28 +17,26 @@ describe('Baumenü', () => {
     expect(placed.every(id => ids.includes(id))).toBe(true);
   });
 
-  it('oben fünf Bereiche nach dem, was man tun will; Stadt → Wohnen ist von Anfang an offen', () => {
-    game('buildToolbar()');
+  it('eine Reihe mit fünf Bereichen; ein Bereich klappt darüber ein Feld mit allem auf, Gruppen als Überschriften (Entwurf B)', () => {
+    game('setSheet(false); buildToolbar()');
     expect(q('#cats .cat').map(b => b.dataset.menu)).toEqual(['stadt', 'herstellen', 'einkaufen', 'freizeit', 'gestalten']);
-    expect([game('menuTop'), game('menuSub')]).toEqual(['stadt', 'wohnen']);
-    expect(tools()).toEqual(['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus']);
+    expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(false);   // zu Beginn zu
+    area('stadt').onclick();
+    expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(true);
+    expect(q('#tools .sheet-h').map(h => h.dataset.group)).toEqual(['wohnen', 'einrichtungen', 'verkehr']);
+    expect(tools()).toEqual(game("MENU[0].groups.flatMap(g => [...g.items.filter(available), ...g.items.filter(id => !available(id))])"));
+    expect(q('#subcats .sub').length).toBe(0);                                   // keine Gruppenzeile mehr
   });
-
-  it('Filter ohne „Alle“, der erste ist gewählt', () => {
-    game('buildToolbar()');
-    const subs = () => q('#subcats .sub').map(b => b.dataset.sub);
-    expect(subs()).toEqual(['wohnen', 'einrichtungen', 'verkehr']);
-    area('herstellen').onclick();
-    expect(subs()).toEqual(['taler', 'rohstoffe', 'veredeln', 'strom']);
-    expect(tools().sort()).toEqual(['feld', 'muehle', 'fischer', 'baecker', 'fabrik'].sort());
-    area('einkaufen').onclick();
-    expect(subs()).toEqual(['laeden', 'essen', 'markt', 'gross']);
-    area('freizeit').onclick();
-    expect(subs()).toEqual(['kultur', 'wunder', 'fzpark', 'fzschloss', 'fzfahrt', 'fzbahn', 'parkbahn']);
-    area('gestalten').onclick();
-    expect(subs()).toEqual(['land', 'gruen', 'linien', 'platz', 'besonderes']);
+  it('alle Bereiche: jede Gruppe als Überschrift, jedes Ding mit Namen', () => {
+    game('setSheet(false); buildToolbar()');
+    for (const m of game('MENU.map(m => m.id)')) {
+      area(m).onclick();
+      expect(q('#tools .sheet-h').map(h => h.dataset.group), m).toEqual(game(`MENU.find(x => x.id === '${m}').groups.map(g => g.id)`));
+      expect(q('#tools .tool').every(b => b.querySelector('.nm') && b.querySelector('.nm').textContent === game(`ITEMS['${b.dataset.tool}'].name`)), m).toBe(true);
+      area(m).onclick();                                                          // nochmal: zu
+      expect(game("document.getElementById('toolbar').classList.contains('open')"), m).toBe(false);
+    }
   });
-
   it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Parkrasen, Leuchtturm', () => {
     const at = id => game(`menuPlaceOf('${id}')`);
     for (const id of ['schule', 'post', 'apotheke', 'hotel', 'grandhotel']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'einrichtungen' });
@@ -51,25 +49,26 @@ describe('Baumenü', () => {
     expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });
 
-  it('jeder Bereich merkt sich seinen Filter', () => {
-    game('buildToolbar()');
-    area('freizeit').onclick();
-    sub('wunder').onclick();
-    area('stadt').onclick();
-    area('freizeit').onclick();
-    expect(game('menuSub')).toBe('wunder');
-  });
-
   it('kein Filter hat mehr als 10 Dinge', () => {
     const all = game('MENU.flatMap(m => m.groups ? m.groups.map(g => g.items.length) : [])');
     expect(Math.max(...all)).toBeLessThanOrEqual(10);
   });
 
-  it('Wechsel des Bereichs legt ein fremdes Werkzeug weg', () => {
-    game("buildToolbar(); setTool('haus')");
+  it('Bereich wechseln lässt das gewählte Werkzeug in der Hand; eine Wahl, Esc oder daneben tippen klappt zu', () => {
+    game("setSheet(false); buildToolbar(); setTool('haus')");
     area('gestalten').onclick();
-    expect(game('tool')).toBe('look');
-    expect(tools()).toContain('weg');                                           // Gestalten beginnt mit Wege & Gelände
+    expect(game('tool')).toBe('haus');
+    expect(tools()).toContain('weg');
+    expect(area('stadt').classList.contains('has-tool')).toBe(true);           // dort steckt das Haus
+    document.querySelector('#tools [data-tool="baum"]').click();
+    expect([game('tool'), game("document.getElementById('toolbar').classList.contains('open')")]).toEqual(['baum', false]);
+    area('stadt').onclick();
+    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(false);
+    expect(game('tool')).toBe('baum');                                        // Esc klappt nur zu
+    area('stadt').onclick();
+    document.getElementById('world').dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true }));
+    expect(game("document.getElementById('toolbar').classList.contains('open')")).toBe(false);
   });
 
   it('das Blumenbeet steht bei Deko und zählt im Spiel als Deko', () => {

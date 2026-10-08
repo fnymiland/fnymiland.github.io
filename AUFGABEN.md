@@ -1942,3 +1942,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] „Das ist neu“ nach Tagen (Nutzer: „nicht 20× am 08.10.“): Einträge bleiben je Push einzeln (gesehen-Stand), angezeigt wird je Tag
       eine Karte mit allen Punkten (`newsDays`), Themenzeile höchstens 4 Titel + „weitere“. Test: news
 
+## Block 153: Bauleiste neu – eine Reihe, Bereiche klappen auf (Nutzer, 08.10.2026: „ich finde dort NICHTS“)
+- [x] Drei Entwürfe gezeigt (A Katalog hinter „Bauen“, B Bereiche klappen auf, C zwei Reihen); Nutzer wählte B. Unten nur noch eine
+      Reihe (Werkzeuge, 🔍, 🕘, fünf Bereiche mit ▾). Ein Bereich klappt darüber ein Feld (`#sheet`, `setSheet`) mit allem aus dem
+      Bereich auf, Gruppen als Überschriften (`.sheet-h`), jede Kachel mit Bild, Name und Preis (`.nm`). Wahl, Esc, daneben tippen oder
+      derselbe Bereich nochmal: zu (Tipp auf die Karte baut dabei nichts). Bereichswechsel lässt das Werkzeug in der Hand; der Bereich
+      mit dem gewählten Ding ist umrandet (`has-tool`). Gruppenzeile entfällt. Gleich auf PC, iPad und Handy. Tests: menu, leiste, handy
+
