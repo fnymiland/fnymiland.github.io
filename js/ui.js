@@ -1147,9 +1147,9 @@ function lookThumb(b, form, col) {
   if (lookThumbs.has(key)) return lookThumbs.get(key);
   let url = '';
   try {
-    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : b === 'strassenlaterne' ? 0.95 : 1.9, rail = b === 'schiene' || b === 'pb_station';
+    const c = document.createElement('canvas'), prev = g, s = b === 'brunnen' ? 1.1 : b === 'schiene' ? 2.2 : b === 'pb_station' ? 0.95 : b === 'strassenlaterne' ? 0.95 : b === 'blumen' ? 1.2 : 1.9, rail = b === 'schiene' || b === 'pb_station';
     c.width = 64; c.height = 64; g = c.getContext('2d');
-    try { drawObject(b, 32, b === 'pb_station' ? 42 : b === 'strassenlaterne' ? 61 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
+    try { drawObject(b, 32, b === 'pb_station' ? 42 : b === 'strassenlaterne' ? 61 : b === 'blumen' ? 40 : rail ? 32 : 50, s, 0, rail ? 1e6 : 3, rail ? 1e6 : 3, 1, { form, col, rot: 0, slot: 0 }); } finally { g = prev; }   // Gleis: ohne Nachbarn (Block 109)
     url = c.toDataURL();
     if (!url || !url.startsWith('data:image')) url = '';
   } catch (e) { url = ''; }
@@ -1161,7 +1161,7 @@ const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !lookOk(b, 'form', 
 function lookChips(b) {
   const p = state.paintNew[b] || {}, form = lookOk(b, 'form', p.form | 0) ? p.form | 0 : 0, col = lookOk(b, 'col', p.col | 0) ? p.col | 0 : 0, more = lookMore(b);
   return '<span class="style-sep"></span>' + lookFree(b, 'form').map(([f, i]) => `<button class="style-chip look-chip${i === form ? ' on' : ''}" data-lform="${i}" title="${f.name}" aria-label="Form: ${f.name}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><span>${f.name}</span></button>`).join('')
-    + (DECO_LOOKS[b].cols ? '<span class="style-sep"></span>' + lookFree(b, 'col').map(([c, i]) => `<button class="style-chip${i === col ? ' on' : ''}" data-lcol="${i}" title="${c.name}" aria-label="Farbe: ${c.name}"><i style="background:${c.c}"></i><span>${c.name}</span></button>`).join('') : '')
+    + (DECO_LOOKS[b].cols ? '<span class="style-sep"></span>' + lookFree(b, 'col').map(([c, i]) => `<button class="style-chip${i === col ? ' on' : ''}" data-lcol="${i}" title="${c.name}" aria-label="${DECO_LOOKS[b].colLabel || 'Farbe'}: ${c.name}"><i style="background:${c.c}"></i><span>${c.name}</span></button>`).join('') : '')
     + (more ? `<button class="style-chip more" data-lmore="1" title="${more} weitere Formen und Farben in der Kunstakademie" aria-label="${more} weitere in der Kunstakademie">🎨<span>+${more}</span></button>` : '');
 }
 function wireLookChips(bar, b, t) {
@@ -1186,7 +1186,7 @@ function decoLookHtml(b, o, at = null) {
   const p = state.paintNew[b], on = !!(p && (p.form != null || p.col != null));
   return `${rail ? railScopeHtml(at[0], at[1]) : ''}${b === 'pb_station' && at ? '' : `<div class="label">${b === 'schiene' ? 'Gleisbett' : 'Form'}</div>
     <div class="looks look-forms">${lookFree(b, 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-dform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb(b, i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>`}
-    ${L.cols ? `<div class="label">Farbe</div>
+    ${L.cols ? `<div class="label">${L.colLabel || 'Farbe'}</div>
     <div class="swatches">${lookFree(b, 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-dcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-dmore="1">🎨 ${more} weitere ${L.cols ? 'Formen und Farben' : 'Formen'} freischalten ›</button></div>` : ''}
     <div class="looks paint-more">${others ? `<button class="look" data-dall="1">🎨 Für ${others === 1 ? 'den anderen' : `alle ${others} anderen`} übernehmen</button>` : ''}
@@ -2582,6 +2582,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-beete', date: '8. Oktober', title: 'Neue Beete', items: [
+    '🌷 <b>Beete in neun Formen:</b> Steinrand, Rundbeet, Rosenbeet, Tulpen, Lavendel, Hochbeet, Sonnenblumen, Wildblumen – die meisten in der Kunstakademie (Beete).',
+    '🪵 <b>Boden nach Wahl:</b> Rindenmulch, Kies oder Grün – im Fenster des Beets umstellen. Gartenerde gibt es in der Kunstakademie.',
+  ] },
   { id: '2026-10-08-kopieren', date: '8. Oktober', title: 'Kopieren', items: [
     '⧉ <b>Kopieren:</b> Mit ✋ ein Rechteck aufziehen – unten erscheinen „Verschieben“ und „Kopieren“ mit Preis. Die Kopie hängt am Finger, lässt sich drehen und so oft absetzen, wie du magst (fertig mit Esc). Sie kostet wie neu gebaut, in Häuser ziehen neue Bewohner.',
     '🖌️ <b>Pipette:</b> Markierst du nur Weg, nur Gleis oder nur eine Hecke/Zaun/Mauer, hast du danach genau diesen Stil in der Hand und ziehst ihn wie gewohnt weiter.',

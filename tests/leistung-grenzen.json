@@ -6,7 +6,7 @@
  },
  "gross Tag Zoom 0.8": {
   "ops": 2757,
-  "geo": 24080,
+  "geo": 8924,
   "live": 22
  },
  "gross Tag Zoom 1.2": {
@@ -36,7 +36,7 @@
  },
  "gross Nacht Zoom 1.2": {
   "ops": 6647,
-  "geo": 25806,
+  "geo": 16558,
   "live": 126
  },
  "gross Nacht Zoom 1.6": {
@@ -56,7 +56,7 @@
  },
  "freizeitpark Tag Zoom 0.8": {
   "ops": 796,
-  "geo": 10614,
+  "geo": 4302,
   "live": 7
  },
  "freizeitpark Tag Zoom 1.2": {
@@ -76,12 +76,12 @@
  },
  "freizeitpark Nacht Zoom 0.45": {
   "ops": 2525,
-  "geo": 22004,
+  "geo": 9548,
   "live": 7
  },
  "freizeitpark Nacht Zoom 0.8": {
   "ops": 1116,
-  "geo": 3877,
+  "geo": 3165,
   "live": 4
  },
  "freizeitpark Nacht Zoom 1.2": {
@@ -165,13 +165,13 @@
   "live": 1
  },
  "neu Tag Zoom 1.6": {
-  "ops": 4710,
-  "geo": 48177,
+  "ops": 4696,
+  "geo": 42803,
   "live": 29
  },
  "neu Tag Zoom 2.2": {
-  "ops": 3172,
-  "geo": 28209,
+  "ops": 3165,
+  "geo": 25723,
   "live": 21
  },
  "neu Nacht Zoom 0.45": {
@@ -190,13 +190,13 @@
   "live": 1
  },
  "neu Nacht Zoom 1.6": {
-  "ops": 4930,
-  "geo": 48619,
+  "ops": 4916,
+  "geo": 43245,
   "live": 29
  },
  "neu Nacht Zoom 2.2": {
-  "ops": 3350,
-  "geo": 28567,
+  "ops": 3343,
+  "geo": 26081,
   "live": 21
  }
 }

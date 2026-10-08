@@ -1917,6 +1917,14 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       bis zum alten Rand), Stein/Ziegel: Seitenwand nur vorne, Bogenöffnung als Tunnel durch alle Reihen (`archWall` depth).
       Boote quer darunter durch wie bisher. Test: bogenbruecken.test.js
 
+
+## Block 152: Mehr Beete (Wunsch Nutzer, 08.10.2026)
+- [x] Das Blumenbeet sah eher wie ein Feld aus. Neun Formen (DECO_LOOKS.blumen, `drawBed` in draw-schmuck.js), je Größe 1×1–3×3:
+      Blumenfeld, Steinrand (frei), Rundbeet 120, Rosenbeet 150, Tulpenbeet 120, Lavendel 150, Hochbeet 180, Sonnenblumen 150,
+      Wildblumen 120 (Kunstakademie, Gruppe „Beete“). Nutzer: „das Braun ist zu kackig“ → nach Vergleich (Gartenerde/Mulch/dicht
+      bepflanzt/Kies/schlicht Grün) **Boden wählbar** (`BED_SOILS` als cols, im Fenster „Boden“): Rindenmulch, Kies, Grün frei,
+      Gartenerde 60. Alte Beete: Rindenmulch. Lavendel immer Kies, Wildblumen Wiese. Leistung: Krümel je Farbe ein Pfad (sonst
+      großes Beet 4 845 Befehle, jetzt 1 527). Test: beete
 ## Kleinigkeiten nach dem Push v764 (Nutzer, 08.10.2026)
 - [x] Ballons & Zeppelin abschaltbar: ☰ → Grafik „🎈 Ballons & Zeppelin: an/aus“ (nur wenn erfunden), je Gerät (localStorage
       `kachelhausen_himmel`, `skyShow`/`setSkyShow`), Seilbahn bleibt. Test: strassenlaterne (Ballons & Zeppelin abschaltbar)

@@ -135,6 +135,130 @@ function drawStreetLamp(cx, cy, z, now, x, y, t) {
   }
 }
 
+let BED_SOIL = null;                                                       // nur Vorschau: Bodenart erzwingen (sonst t.col → BED_SOILS)
+// --- Beete (Block 152): Formen wie Laternen/Bänke (DECO_LOOKS.blumen), je Größe (span 1–3) mehr Blumen statt größerer ---------
+// Bodenpunkt (cx, cy) = Mitte der Fläche; R = halbe Kante in Feldern. Alles von hinten nach vorn (u + v), damit nichts durchscheint
+function drawBed(cx, cy, z, x, y, t, span) {
+  const form = lookForm('blumen', t), R = (0.72 + span - 1) / 2;
+  const P = (u, v, h = 0) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z];
+  const quad = (r, h = 0) => [P(-r, -r, h), P(r, -r, h), P(r, r, h), P(-r, r, h)];
+  const H = (i, s = 0) => hash(x * 7 + i, y * 13 + s, 777);
+  const ring = (r, n) => Array.from({ length: n }, (_, i) => { const a = i / n * Math.PI * 2; return [Math.cos(a) * r, Math.sin(a) * r]; });
+  const disc = (r, col, h = 0) => { g.fillStyle = C(col); g.beginPath(); for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2, q = P(Math.cos(a) * r, Math.sin(a) * r, h); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); } g.fill(); };
+  const scatter = (n, inside, jit = 0.5) => {                               // Punkte im Beet, hinten zuerst
+    const out = [], k = Math.ceil(Math.sqrt(n * 1.6));
+    for (let i = 0; i < k; i++) for (let j = 0; j < k; j++) {
+      const u = -R + (i + 0.5 + (H(i * 31 + j) - 0.5) * jit) * 2 * R / k, v = -R + (j + 0.5 + (H(j * 17 + i, 1) - 0.5) * jit) * 2 * R / k;
+      if (inside(u, v)) out.push([u, v, i * k + j]);
+    }
+    return out.sort((a, b) => a[0] + a[1] - b[0] - b[1]);
+  };
+  const flower = (u, v, col, s = 1, h = 3) => { const q = P(u, v); circle(q[0], q[1] - (h - 1.5) * z * s, 2.3 * z * s, C('#5aa84f')); circle(q[0], q[1] - h * z * s, 2.1 * z * s, C(col)); };
+  const stones = (pts, col = '#b9b4aa') => { for (const [u, v, i] of pts.sort((a, b) => a[0] + a[1] - b[0] - b[1])) { const q = P(u, v); const w = (2.2 + H(i, 5) * 1.2) * z; ellipse(q[0], q[1] + 0.6 * z, w, w * 0.55, C(shade(col, -0.25))); ellipse(q[0], q[1] - 0.2 * z, w, w * 0.6, C(shade(col, (H(i, 6) - 0.5) * 0.18))); } };
+  const edgePts = (r, step) => { const out = []; let i = 0; for (const [a0, b0, a1, b1] of [[-r, -r, r, -r], [r, -r, r, r], [r, r, -r, r], [-r, r, -r, -r]]) for (let s = 0; s < 1; s += step) out.push([a0 + (a1 - a0) * s, b0 + (b1 - b0) * s, i++]); return out; };
+  ellipse(cx, cy + 1 * z, TW / 2 * z * R * 1.6, TH / 2 * z * R * 1.6, 'rgba(40,60,20,0.08)');
+  // Boden (Nutzer: „das Braun ist zu kackig“) – Vorschau-Schalter BED_SOIL: erde, mulch, gruen, kies
+  const soilId = BED_SOIL || (BED_SOILS[(t && t.col) || 0] || BED_SOILS[0]).id;
+  const SOIL = { erde: ['#5b4232', '#4a3427', '#7a5a44'], mulch: ['#8a5038', '#6e3c2a', '#b0704e'], gruen: ['#5f9a4a', '#4f8a3e', '#7fb85c'], kies: ['#cfc8bb', '#b8b0a2', '#e8e2d6'], gruen0: ['#6aa852'] }[soilId === 'gruen' ? 'gruen0' : soilId] || null;
+  const soilPoly = (pts, fallback) => {
+    if (!SOIL) { poly(pts, C(fallback)); return; }
+    poly(pts, C(SOIL[0]));
+    if (SOIL.length < 2) return;                                            // schlicht: nur die Farbe
+    g.save(); g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+    const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]), x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const n = Math.round((x1 - x0) * (y1 - y0) / (30 * z * z)), r = (soilId === 'mulch' ? 1.3 : 0.8) * z;
+    for (const k of [1, 2]) {                                              // je Farbe ein Pfad, ein fill; Krümel als Ellipse (Leistungs-Wächter)
+      g.beginPath();
+      for (let i = k - 1; i < n; i += 2) { const px = x0 + H(i, 41) * (x1 - x0), py = y0 + H(i, 42) * (y1 - y0), rot = soilId === 'mulch' ? H(i, 43) * 3 : 0;
+        g.moveTo(px + r, py); g.ellipse(px, py, r, r * (soilId === 'mulch' ? 0.45 : 0.6), rot, 0, Math.PI * 2); }
+      g.fillStyle = C(SOIL[k]); g.fill();
+    }
+    g.restore();
+  };
+  if (form === 'stein') {                                                  // Feldsteine rundum, gemischte Blumen
+    soilPoly(quad(R * 0.94), '#8f6542');
+    const back = edgePts(R, 0.11 / span).filter(([u, v]) => u + v < 0), front = edgePts(R, 0.11 / span).filter(([u, v]) => u + v >= 0);
+    stones(back);
+    for (const [u, v, i] of scatter(10 * span * span, (u, v) => Math.abs(u) < R * 0.8 && Math.abs(v) < R * 0.8)) flower(u, v, FLOWER_COLS[i % FLOWER_COLS.length]);
+    stones(front);
+  } else if (form === 'rund') {                                            // Rundbeet: Steinkreis, Ringe aus Blumen, Mitte hoch
+    disc(R * 0.98, '#b9b4aa'); { const pts = []; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; pts.push(P(Math.cos(a) * R * 0.86, Math.sin(a) * R * 0.86)); } soilPoly(pts, '#8f6542'); }
+    const rings = [[R * 0.7, '#ffffff', 8], [R * 0.45, '#ff8fb1', 6], [R * 0.2, '#e8604f', 4]].map(([r, col, n]) => ring(r, Math.round(n * span)).map(([u, v]) => [u, v, col]));
+    const all = rings.flat().sort((a, b) => a[0] + a[1] - b[0] - b[1]);
+    const mid = P(0, 0);
+    for (const [u, v, col] of all) { if (u + v > 0) continue; flower(u, v, col); }
+    g.strokeStyle = C('#4f8f45'); g.lineWidth = 1.2 * z; g.beginPath(); g.moveTo(mid[0], mid[1]); g.lineTo(mid[0], mid[1] - 9 * z); g.stroke();
+    circle(mid[0], mid[1] - 10 * z, 3.4 * z, C('#ffd23f')); circle(mid[0], mid[1] - 10 * z, 1.3 * z, C('#a8662a'));
+    for (const [u, v, col] of all) { if (u + v <= 0) continue; flower(u, v, col); }
+  } else if (form === 'rosen') {                                           // Rosenbüsche, Ziegelkante
+    poly(quad(R, 1.6), C('#b8553f')); poly(quad(R), C(shade('#b8553f', -0.25)));
+    soilPoly(quad(R * 0.88, 1.6), '#7a5236');
+    const nR = span + 1, bushes = [];                                       // gleichmäßig verteilt (1×1: vier Büsche, nicht an den Rand gedrängt)
+    for (let i = 0; i < nR; i++) for (let j = 0; j < nR; j++) bushes.push([-R * 0.5 + i * R / (nR - 1), -R * 0.5 + j * R / (nR - 1), i * nR + j]);
+    for (const [u, v, i] of bushes.sort((a, b) => a[0] + a[1] - b[0] - b[1])) {
+      const q = P(u, v, 1.6);
+      for (const [dx, dy, r] of [[-2.2, -2, 3.2], [2.2, -2, 3.2], [0, -4, 3.4], [0, -1, 3.4]]) circle(q[0] + dx * z, q[1] + dy * z, r * z, C(i % 2 ? '#3f7d3a' : '#46883f'));
+      const rc = ['#e8364f', '#ff8fb1', '#ffffff', '#d81b60'][i % 4];
+      for (const [dx, dy] of [[-2.6, -3.6], [1.8, -4.4], [0.2, -6.2], [2.8, -1.8], [-1.4, -1.2]]) { circle(q[0] + dx * z, q[1] + dy * z, 1.25 * z, C(rc)); circle(q[0] + dx * z - 0.3 * z, q[1] + dy * z - 0.3 * z, 0.45 * z, 'rgba(255,255,255,0.5)'); }
+    }
+  } else if (form === 'tulpen') {                                          // Tulpen in Farbstreifen
+    soilPoly(quad(R), '#8f6542');
+    const cols = ['#e8364f', '#ffd23f', '#ff8fb1', '#ffffff', '#c49bff'], rows = 3 + 2 * (span - 1);
+    const pts = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < 4 * span; c++) pts.push([-R * 0.8 + (r + 0.5) * 1.6 * R / rows, -R * 0.82 + (c + 0.5) * 1.64 * R / (4 * span), cols[r % cols.length]]);
+    for (const [u, v, col] of pts.sort((a, b) => a[0] + a[1] - b[0] - b[1])) {
+      const q = P(u, v);
+      g.strokeStyle = C('#4f8f45'); g.lineWidth = 0.8 * z; g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0], q[1] - 5 * z); g.stroke();
+      ellipse(q[0] - 1 * z, q[1] - 1.2 * z, 0.9 * z, 2 * z, C('#5aa84f'));
+      poly([[q[0] - 1.5 * z, q[1] - 5 * z], [q[0] + 1.5 * z, q[1] - 5 * z], [q[0] + 1.6 * z, q[1] - 7.6 * z], [q[0] + 0.5 * z, q[1] - 6.6 * z], [q[0], q[1] - 7.8 * z], [q[0] - 0.5 * z, q[1] - 6.6 * z], [q[0] - 1.6 * z, q[1] - 7.6 * z]], C(col));
+    }
+  } else if (form === 'lavendel') {                                        // Kiesbett mit Lavendelreihen
+    poly(quad(R), C('#d9cdb4'));
+    for (const [u, v, i] of scatter(30 * span * span, () => true, 1)) { const q = P(u, v); circle(q[0], q[1], 0.5 * z, C(i % 3 ? '#c4b796' : '#efe6d0')); }
+    const rows = 2 + span, pts = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < 3 * span; c++) pts.push([-R * 0.7 + (r + 0.5) * 1.4 * R / rows, -R * 0.72 + (c + 0.5) * 1.44 * R / (3 * span), r * 10 + c]);
+    for (const [u, v, i] of pts.sort((a, b) => a[0] + a[1] - b[0] - b[1])) {
+      const q = P(u, v);
+      ellipse(q[0], q[1] - 1.6 * z, 3.4 * z, 2.2 * z, C('#7f9c6a'));
+      for (let k = -3; k <= 3; k++) { const hx = q[0] + k * 0.95 * z, hy = q[1] - 2 * z; g.strokeStyle = C(k % 2 ? '#8e6cc8' : '#a888dc'); g.lineWidth = 1.1 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(hx, hy); g.lineTo(hx + k * 0.3 * z, hy - (5 + H(i * 7 + k, 3) * 2) * z); g.stroke(); }
+    }
+  } else if (form === 'hochbeet') {                                        // Hochbeet aus Holz
+    const h = 6, r = R * 0.92, wood = '#a5713f';
+    poly([P(-r, r), P(r, r), P(r, r, h), P(-r, r, h)], C(wood));           // vorn links
+    poly([P(r, -r), P(r, r), P(r, r, h), P(r, -r, h)], C(shade(wood, -0.15)));   // vorn rechts
+    g.strokeStyle = C(shade(wood, -0.3)); g.lineWidth = 0.5 * z; g.beginPath();
+    for (const hh of [2, 4]) { for (const [a, b] of [[P(-r, r, hh), P(r, r, hh)], [P(r, -r, hh), P(r, r, hh)]]) { g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); } } g.stroke();
+    soilPoly(quad(r, h), '#6f4a2f'); g.strokeStyle = C(shade(wood, 0.15)); g.lineWidth = 1.2 * z; g.beginPath(); quad(r, h).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
+    for (const [u, v, i] of scatter(8 * span * span, (u, v) => Math.abs(u) < r * 0.8 && Math.abs(v) < r * 0.8)) { const q = P(u, v, h); circle(q[0], q[1] - 1.5 * z, 2.3 * z, C('#5aa84f')); circle(q[0], q[1] - 3 * z, 2.1 * z, C(FLOWER_COLS[(i + 2) % FLOWER_COLS.length])); }
+  } else if (form === 'sonnen') {                                          // Sonnenblumen
+    soilPoly(quad(R), '#8f6542');
+    for (const [u, v] of scatter(4 * span * span, (u, v) => Math.abs(u) < R * 0.75 && Math.abs(v) < R * 0.75, 0.6)) {
+      const q = P(u, v), top = q[1] - 15 * z;
+      g.strokeStyle = C('#4f8f45'); g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0], top); g.stroke();
+      for (const s of [-1, 1]) ellipse(q[0] + s * 2.2 * z, q[1] - 7 * z + s * z, 2.4 * z, 1.1 * z, C('#5aa84f'));
+      for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; ellipse(q[0] + Math.cos(a) * 2.6 * z, top + Math.sin(a) * 2.6 * z, 1.5 * z, 1.5 * z, C('#ffcf2a')); }
+      circle(q[0], top, 2 * z, C('#7a4a22'));
+    }
+  } else if (form === 'wild') {                                            // Wildblumen: ohne Rand, Gräser dazwischen
+    disc(R * 0.95, '#6fae55');
+    for (const [u, v, i] of scatter(24 * span * span, (u, v) => u * u + v * v < R * R * 0.82, 0.9)) {   // kräftiger (Nutzer: zu blass)
+      const q = P(u, v);
+      if (i % 4 === 0) { g.strokeStyle = C('#4f8a3e'); g.lineWidth = 0.8 * z; g.beginPath(); for (const k of [-1, 0, 1]) { g.moveTo(q[0], q[1]); g.lineTo(q[0] + k * 1.6 * z, q[1] - 5.5 * z); } g.stroke(); }
+      else { g.strokeStyle = C('#4f8a3e'); g.lineWidth = 0.7 * z; g.beginPath(); g.moveTo(q[0], q[1]); g.lineTo(q[0], q[1] - 4.5 * z); g.stroke();
+        const col = ['#ffffff', '#ffd23f', '#4f7fe0', '#e8364f', '#b07ad6', '#ff8f3a'][i % 6]; circle(q[0], q[1] - 5 * z, 1.9 * z, C(col)); circle(q[0], q[1] - 5 * z, 0.6 * z, C(col === '#ffffff' ? '#ffd23f' : '#fff3b0')); }
+    }
+  } else {                                                                 // Blumenfeld (bisher)
+    soilPoly(quad(R), '#a8764c');
+    const pts = [];
+    for (let i = 0; i < 14 * span * span; i++) {
+      const u = (hash(x, y, 100 + i) - 0.5) * (0.62 + span - 1), v = (hash(x, y, 120 + i) - 0.5) * (0.62 + span - 1);
+      pts.push([cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z, i]);
+    }
+    pts.sort((a, b) => a[1] - b[1]);
+    for (const [px, py, i] of pts) { circle(px, py - 1.5 * z, 2.4 * z, C('#5aa84f')); circle(px, py - 3 * z, 2.2 * z, C(FLOWER_COLS[i % FLOWER_COLS.length])); }
+  }
+}
+
 // --- Bänke (gedreht wie bisher über den Baukasten: Sitz schaut nach vorn) ---------------------------------
 function drawBench(cx, cy, z, t, hw, hh) {
   const col = lookCol('bank', t), form = lookForm('bank', t), top = shade(col, 0.1), K = kit(cx, cy, z, (t && t.rot) || 0);

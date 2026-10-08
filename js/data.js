@@ -1072,12 +1072,19 @@ const LANTERN_COLS = [
 const BENCH_COLS = [
   { id: 'holz', name: 'Holz', c: '#b57b4a' }, { id: 'weiss', name: 'Weiß', c: '#f4efe4' }, { id: 'gruen', name: 'Parkgrün', c: '#4f9a5a' }, { id: 'blau', name: 'Hellblau', c: '#7fb3e0' },
   { id: 'rot', name: 'Rot', c: '#d0574a', design: 80 }, { id: 'gelb', name: 'Sonnengelb', c: '#e9b93b', design: 80 }, { id: 'rosa', name: 'Rosa', c: '#ee9fbe', design: 120 }, { id: 'nuss', name: 'Nussbaum', c: '#6e4a32', design: 120 }];
+const BED_SOILS = [                                                     // Boden der Beete (Block 152, Nutzer: „das Braun ist zu kackig“) – wählbar
+  { id: 'mulch', name: 'Rindenmulch', c: '#8a5038' }, { id: 'kies', name: 'Kies', c: '#cfc8bb' }, { id: 'gruen', name: 'Grün', c: '#6aa852' },
+  { id: 'erde', name: 'Gartenerde', c: '#5b4232', design: 60 }];
 const STATION_COLS = [                                                  // Dach der Parkbahn-Station (Block 136d)
   { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }, { id: 'lila', name: 'Lila', c: '#9a72c8', design: 120 }, { id: 'braun', name: 'Holzbraun', c: '#8a5a3c', design: 120 }];
 const DECO_LOOKS = {
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
+  blumen: { group: 'Beete', icon: '#ff8fb1', colLabel: 'Boden', cols: BED_SOILS, forms: [{ id: 'feld', name: 'Blumenfeld' }, { id: 'stein', name: 'Steinrand' },
+    { id: 'rund', name: 'Rundbeet', design: 120 }, { id: 'rosen', name: 'Rosenbeet', design: 150 }, { id: 'tulpen', name: 'Tulpenbeet', design: 120 },
+    { id: 'lavendel', name: 'Lavendel', design: 150 }, { id: 'hochbeet', name: 'Hochbeet', design: 180 }, { id: 'sonnen', name: 'Sonnenblumen', design: 150 },
+    { id: 'wild', name: 'Wildblumen', design: 120 }] },   // Block 152: Formen und Boden nach Vorschauen mit dem Nutzer
   laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
     { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
   bank: { group: 'Bänke', icon: '#b57b4a', cols: BENCH_COLS, forms: [{ id: 'park', name: 'Parkbank' }, { id: 'garten', name: 'Gartenbank' },

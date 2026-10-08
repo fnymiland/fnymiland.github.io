@@ -1628,20 +1628,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   const hw = TW / 2 * z, hh = TH / 2 * z;
   switch (type) {
     case 'haus': drawHouse(cx, cy, z, now, x, y, lvl, t); break;
-    case 'blumen': {                         // großes Beet (span): mehr Blumen, nicht größere
-      diamond(cx, cy, hw * (0.72 + span - 1), hh * (0.72 + span - 1), C('#a8764c'));
-      const pts = [];
-      for (let i = 0; i < 14 * span * span; i++) {
-        const u = (hash(x, y, 100 + i) - 0.5) * (0.62 + span - 1), v = (hash(x, y, 120 + i) - 0.5) * (0.62 + span - 1);
-        pts.push([cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z, i]);
-      }
-      pts.sort((a, b) => a[1] - b[1]);
-      for (const [px, py, i] of pts) {
-        circle(px, py - 1.5 * z, 2.4 * z, C('#5aa84f'));
-        circle(px, py - 3 * z, 2.2 * z, C(FLOWER_COLS[i % FLOWER_COLS.length]));
-      }
-      break;
-    }
+    case 'blumen': drawBed(cx, cy, z, x, y, t, span); break;    // Beete in Formen (Block 152, draw-schmuck.js); großes Beet (span): mehr Blumen
     case 'leuchtturm': {                     // alter 1×1-Leuchtturm (t.mini, Block 83) – das Kap zeichnet BIG_ART.leuchtturm
       const K = kit(cx, cy, z, t && t.rot);
       kShadow(K, 0.24);
