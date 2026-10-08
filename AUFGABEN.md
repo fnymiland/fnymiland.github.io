@@ -1703,6 +1703,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „Vorschaubilder Straßenbahn und Mini-Zug in der Kunstakademie falsch“ – beide zeigten nur den leeren Bahnsteig
       (den Zug malt die Station nur bei Feld 1e6 wie in der Zugwahl). `thumbRaw`: pb_station mit 1e6, kleiner und versetzt, damit
       die lange Bimmelbahn ins Bild passt. Bild tools/vorschau/pb-thumbs4.png. Test: parkbahn
+- [x] Nutzer: „Wieso kostet die Kunstakademie nur Geld? Ist doch ein Forschungsinstitut, das Ideen braucht“ → Entscheidung Nutzer:
+      Taler UND Ideen; Taler weiter nach Einkommen, Ideen fest („je geiler und später, desto teurer“). `designIdeas`: Grundpreis
+      × 2 Stadtschmuck (120–600 💡), × 5 Farben/Wege/Hecken/Zäune/Mauern (300–1.500), × 25 ✦ Meisterstücke (6.300–23.000).
+      Maßstab: Bot-Simulation ~7–11 💡/s (tools/sim-bots.js misst jetzt auch Ideen). Gekauftes bleibt. Test: design
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

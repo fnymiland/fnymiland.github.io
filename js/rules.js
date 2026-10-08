@@ -758,7 +758,7 @@ function unlockText(def, short) {
     const [type, n] = def.lm.split(':');
     if (lmStage(type) < +n) return short ? `${LANDMARKS[type].icon} ${LANDMARKS[type].name}` : lmStepName(type, +n);
   }
-  if (def.design) { const d = DESIGN.find(x => (x.item && ITEMS[x.item] === def) || (!x.item && x.price === def.design && x.name === def.name)); return `🎨 Kunstakademie · 🪙 ${fmt(d ? designPrice(d) : def.design)}`; }
+  if (def.design) { const d = DESIGN.find(x => (x.item && ITEMS[x.item] === def) || (!x.item && x.price === def.design && x.name === def.name)); return `🎨 Kunstakademie · ${d ? designCostText(d) : '🪙 ' + fmt(def.design)}`; }
   if (def.lanterns && lanternCount() < def.lanterns) return `🏮 ${def.lanterns}`;
   if (def.tech && !hasTech(def.tech)) return '💡 ' + TECH_BY_ID[def.tech].name;
   if (def.rank && starCount() < def.rank) return `⭐ ${def.rank} Erfolgs-Sterne`;
@@ -787,7 +787,7 @@ function wegFarbeOk(f) {
 function wegMusterText(m) {
   const M = WEG_MUSTER_BY[m];
   if (!M || wegMusterOk(m)) return '';
-  if (M.design) return `🎨 Kunstakademie · 🪙 ${fmt(designPrice(DESIGN_BY_ID['wegmuster:' + m]))}`;
+  if (M.design) return `🎨 Kunstakademie · ${designCostText(DESIGN_BY_ID['wegmuster:' + m])}`;
   return unlockText({ lm: M.lm, album: M.album });
 }
 const styleOk = st => {
@@ -842,11 +842,18 @@ function designPrice(d) {
   const m = d.master ? DESIGN_MASTER : 1, minutes = (d.schmuck ? DESIGN_SCHMUCK : DESIGN_MIN) * Math.sqrt(d.price / 150) * m;
   return niceRound(Math.max(d.price * DESIGN_FLOOR * m, minutes * 60 * wonderRate()));
 }
-// Kunstakademie: kaufen (Taler); Meisterstücke brauchen eine Kunstakademie
+// Dazu Ideen (Nutzer, 09.10.2026: „ist doch ein Forschungsinstitut, das Ideen braucht“): fester Preis, je schöner und später
+// desto mehr – Grundpreis × 2 (Stadtschmuck), × 5 (Farben, Wege, Hecken, Zäune, Mauern), × 25 (✦ Meisterstücke). Bei ~10 💡/s
+// also ein bis drei Minuten für ein normales Stück, Meisterstücke eine halbe Stunde und mehr. Die Taler bleiben am Einkommen.
+const DESIGN_IDEEN = { schmuck: 2, normal: 5, master: 25 };
+const designIdeas = d => !d || !d.price ? 0 : niceSci(d.price * (d.master ? DESIGN_IDEEN.master : d.schmuck ? DESIGN_IDEEN.schmuck : DESIGN_IDEEN.normal));
+const designCostText = d => `🪙 ${fmt(designPrice(d))} · 💡 ${fmt(designIdeas(d))}`;
+// Kunstakademie: kaufen (Taler und Ideen); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
   if (!d || state.design.has(d.id) || !d.price || (d.muster && wegMusterOk(d.muster))) return 'Schon da';
   if (d.master && !hasBuilt('kunst')) return 'Braucht eine Kunstakademie';
   if (state.money < designPrice(d)) return 'Zu wenig Taler';
+  if (state.science < designIdeas(d)) return 'Zu wenig Ideen';
   return null;
 }
 const styleLock = st => unlockText(st);

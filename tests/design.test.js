@@ -59,7 +59,7 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {
     expect(game("designError(DESIGN_BY_ID['wegmuster:fisch'])")).toBe('Braucht eine Kunstakademie');
-    game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc()");
+    game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc(); state.science = 1e5");
     expect(game("buyDesign('wegmuster:fisch')")).toBe(true);
   });
 
@@ -124,6 +124,24 @@ describe('Preise nach Einkommen (Block 50)', () => {
     expect(game("designPrice(DESIGN_BY_ID['bank:form:stein'])")).toBeLessThanOrEqual(60 * 1000 * 1.05);
     expect(game("designPrice(DESIGN_BY_ID['pavillon'])")).toBeGreaterThanOrEqual(3 * 60 * 1000 * 0.95);   // andere Deko: weiter etwa 3 Minuten
     expect(master / game("designPrice(DESIGN_BY_ID['wall:5'])")).toBeGreaterThan(4);     // Meisterstück deutlich teurer
+  });
+
+  it('kostet auch Ideen – fest, je schöner und später desto mehr (Nutzer, 09.10.2026)', () => {
+    const I = id => game(`designIdeas(DESIGN_BY_ID['${id}'])`);
+    expect(I('laterne:col:rot')).toBeLessThan(I('wall:5'));                            // Stadtschmuck < Farben/Wege …
+    expect(I('wall:5')).toBeLessThan(I('wall:10'));                                   // … spätere Farben teurer …
+    expect(I('wall:10') * 3).toBeLessThan(I('wall:11'));                              // … ✦ Meisterstücke ein Vielfaches
+    expect(game("DESIGN.filter(d => d.price && !(designIdeas(d) > 0)).map(d => d.id)")).toEqual([]);
+    game("state.incPeak = 0");                                                         // Ideen-Preis hängt nicht am Einkommen
+    const before = I('wall:5'); game('state.incPeak = 1e9'); expect(I('wall:5')).toBe(before);
+    game("state.money = 1e12; state.science = 10");
+    expect(game("designError(DESIGN_BY_ID['wall:5'])")).toBe('Zu wenig Ideen');
+    expect(game("buyDesign('wall:5')")).toBe(false);
+    game(`state.science = ${before} + 7`);
+    expect(game("buyDesign('wall:5')")).toBe(true);
+    expect(game('state.science')).toBe(7);
+    game("openResearch('design')");
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/💡/);
   });
 
   it('zu wenig Taler: nicht kaufbar', () => {

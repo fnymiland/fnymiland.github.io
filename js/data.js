@@ -1058,7 +1058,7 @@ const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8',
                '#ffd1b3', '#c9f0e4', '#ffe066', '#d8c3a5', '#b8d8ff', '#ffc2d9', '#f5f5f5'];
 const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1', '#6b7a8f',
                '#2f9e9e', '#8b5a3c', '#3c4a6b', '#d94f8a', '#7cb342', '#ff8a3d', '#4a4a58'];
-// Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern). Die ersten drei Wand- und Dachfarben
+// Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern, dazu Ideen: designIdeas). Die ersten drei Wand- und Dachfarben
 // und der Kiesweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
 const FREE_COLORS = 3;
 // Buschfarben (Block 89): für den kleinen Busch, seine Größen und die Wilmerhecke. Grüntöne gleich frei, Herbst und Bunt in der

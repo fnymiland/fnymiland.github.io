@@ -2174,7 +2174,7 @@ function openDesignCard(id) {
       .map(f => `<i class="sw wsq" style="background:${styleSwatch(styleDef('weg', wegStyleOf(d.muster, f)))}" title="${WEG_FARBEN_BY[f].name}"></i>`).join('')}</div>` : ''}
     <p class="muted">${escHtml(d.group)}${d.master ? ' · Meisterstück' : ''}${extra ? ' · ' + extra : ''}</p>
     <div class="row">${have ? '<button class="btn" disabled style="flex:1">✓ Schon da</button>'
-      : `<button class="btn" id="m-buy" style="flex:1" ${err ? 'disabled' : ''}>Kaufen · 🪙 ${fmt(designPrice(d))}</button>`}
+      : `<button class="btn" id="m-buy" style="flex:1" ${err ? 'disabled' : ''}>Kaufen · ${designCostText(d)}</button>`}
       <button class="btn ghost" id="m-back" style="flex:1">Zurück</button></div>
     ${!have && err ? `<p class="muted">${escHtml(err)}</p>` : ''}`, () => openDesignCard(id));   // frischt sich selbst auf (Taler)
   $('modal-card').classList.add('research');
@@ -2192,7 +2192,7 @@ const giftStyles = () => WEG_MUSTER.filter(m => !m.design).filter(m => m.lm || m
 const wegMusterSwatch = m => styleSwatch(styleDef('weg', wegStyleOf(m, WEG_MUSTER_BY[m].farbe)));
 
 // Forschung
-// Forschung mit zwei Seiten: Wissen (Ideen, drei Stufen nach Schule/Bibliothek/Uni) und Kunstakademie (Aussehen, Taler)
+// Forschung mit zwei Seiten: Wissen (Ideen, drei Stufen nach Schule/Bibliothek/Uni) und Kunstakademie (Aussehen, Taler + Ideen)
 let researchTab = 'wissen';
 function openResearch(tab = researchTab) {
   researchTab = tab;
@@ -2246,7 +2246,7 @@ function openResearch(tab = researchTab) {
   } else {
     const groups = [...new Set(DESIGN.map(d => d.group))], master = hasBuilt('kunst');
     body = `
-      <p>Such dir aus, was dir gefällt – jedes Stück einzeln. Du hast <b>🪙 ${fmt(state.money)}</b>.
+      <p>Such dir aus, was dir gefällt – jedes Stück einzeln, für Taler und Ideen. Du hast <b>🪙 ${fmt(state.money)}</b> und <b>💡 ${fmt(state.science)}</b>.
         ${master ? '' : '<span class="muted">Meisterstücke (✦) braucht eine Kunstakademie.</span>'}</p>
       ${groups.map(gr => `<div class="label">${gr}</div><div class="design-grid">${DESIGN.filter(d => d.group === gr).map(d => {
         const have = !d.price || state.design.has(d.id) || (d.muster && wegMusterOk(d.muster)), err = have ? null : designError(d);
@@ -2257,7 +2257,7 @@ function openResearch(tab = researchTab) {
           : d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
         return `<button class="design${have ? ' have' : ''}${err ? ' cant' : ''}" data-design="${d.id}" title="${d.name}">
           ${look}<span class="dn">${d.group === 'Wandfarben' || d.group === 'Dachfarben' ? '' : d.name.replace(/^Farbe /, '')}</span>
-          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}`}</small></button>`;
+          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}<br>💡 ${fmt(designIdeas(d))}`}</small></button>`;
       }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben – die wählst du beim Bauen.</p>' : ''}`).join('')}`;
   }
   openModal(`

@@ -655,11 +655,12 @@ function research(id) {
   openResearch();
 }
 
-// Kunstakademie: ein Stück Aussehen (Farbe, Wege-Stil, Deko) mit Talern freischalten
+// Kunstakademie: ein Stück Aussehen (Farbe, Wege-Stil, Deko) mit Talern und Ideen freischalten
 function buyDesign(id) {
   const d = DESIGN_BY_ID[id], err = designError(d);
   if (err) { fail(err); return false; }
   state.money -= designPrice(d);
+  state.science -= designIdeas(d);
   state.design.add(id);
   sfx('research');
   buildToolbar();

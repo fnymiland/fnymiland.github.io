@@ -171,7 +171,7 @@ function simRun(strategy, opts = {}) {
     simT += DT;
     if (arrive != null && simT >= arrive) { const id = state.expedition && state.expedition.isle; state.expedition = null; arrive = null; if (id) { discoverIsland(id); closeModal(); refreshLand(); ev('insel', ISLE_BY_ID[id].name); } }
     if (simT >= nextDecide) { decide(); recalc(); nextDecide = simT + DECIDE; }
-    if (simT >= nextSample) { out.samples.push({ t: simT, inc: Math.round(inc()), money: Math.round(state.money), lanterns: lanternCount(), pop: T.pop, tiles: state.tiles.size }); nextSample = simT + 600; }
+    if (simT >= nextSample) { out.samples.push({ t: simT, inc: Math.round(inc()), money: Math.round(state.money), lanterns: lanternCount(), pop: T.pop, tiles: state.tiles.size, sci: Math.round(T.sci * 10) / 10, ideen: Math.round(state.science), techs: state.techs.size }); nextSample = simT + 600; }
   }
   out.end = { t: simT, festival: state.festival, inc: Math.round(inc()), lanterns: lanternCount(), pop: T.pop, peak: Math.round(state.incPeak || 0) };
   QUIET = false;
