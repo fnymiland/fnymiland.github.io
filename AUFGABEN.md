@@ -1577,6 +1577,17 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Canvas2D; Bild max. 15/255 Abweichung, keine „deutliche“ (ohne Streifen-Clip). Hochladen aller 1.209 Bildchen einmalig ~200 ms.
       Grenzen (Mac/Chrome-Fenster): MAX_TEXTURE_SIZE 16384, 16 Textur-Einheiten; alle Bildchen < 512 px
 - [x] Kartierung (3 von 5 Prüfern, tools/webgl-kartierung.txt): Reihenfolge, Nachtlicht (Blendfunktionen), Plattform
+- [x] Schritt 1+2 (Tag weit weg): js/gl.js – #world-gl unter #world; im GL-Bild (Tag, Zoom < 1, kein Werkzeug, ?gl=1 bzw.
+      localStorage kachelhausen_gl=1) zeichnet ctx.drawImage während GLPASS nicht, sondern zeichnet auf (glRec); Streifen großer
+      Gebäude als clipX; Live-Teile (Figuren, Züge, Schiffe, Brücke über Schiff, afterMovers, live Gebäude/Dekos/Linien) über
+      glLive in die Sammelfläche LA (2048²) und als Rechteck an derselben Stelle; Wellen als ein Bildchen je Zoom (glWaves);
+      danach (Himmel, Symbole, Schilder) wie bisher 2D obendrauf. Rückfall: kein WebGL2 (auch Tests), Fehler, Kontextverlust.
+      Bild gegen 2D: ≤ 0,34 % Punkte > 8/255, keiner > 40 (nur Wellen-Kanten). Full HD DPR 2 Tag still 21 → 14 ms, verschieben
+      22 → 18 ms. Dazu Feldsuche ohne toScreen je Feld (visibleTiles, bitgleich) und live Wege nur aus LIVE_FLAT
+- [x] Messwerkzeug: ruckeln.js liest nicht mehr aus der Hauptleinwand (Chrome stellte sie sonst auf CPU um – frühere Messungen
+      dadurch zu pessimistisch)
+- [ ] Nächste Schritte: Zuschneiden ohne Warten (~2,5 ms je neues Bildchen, Rückstau nach Zoom/Verschieben), Sammelbilder (Atlas)
+      statt 4.000 Texturwechsel, JS der Feldschleife (Deko-/Linien-Plan), Nacht/Dämmerung in GL, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
       drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als

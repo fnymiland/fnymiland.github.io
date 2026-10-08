@@ -80,6 +80,20 @@ function chunkBounds(cx, cy) {
 // Brücken (Schiene wie Weg) nie aus dem Zwischenspeicher: Geländer und Anhebung ragen über den Rand der Bodenkachel hinaus und
 // würden dort abgeschnitten (Block 66e) – es sind nur wenige Felder, die live gezeichnet werden
 const cachedPath = t => !t.bridge && (t.b === 'schiene' || (wegUnder(t) != null && !PATH_LOOK[styleDef('weg', wegUnder(t)).id].glow));   // auch der Weg unter Marktständen
+// Felder, deren Weg/Schiene NICHT im Boden-Bild steckt (Brücken, leuchtende Beläge) – weit weg wird nur dort live gezeichnet (Block 144).
+// Neu bei anderem groundVersion bzw. anderer Belegung (wie EDGE_FIELDS)
+let LIVE_FLAT = null;
+function liveFlatSet() {
+  const L = LIVE_FLAT;
+  if (L && L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L.set;
+  const set = new Set();
+  for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) {
+    const [x, y] = keyXY(k), t = flatAt(x, y);
+    if (t && (t.b === 'schiene' || wegUnder(t) != null) && !cachedPath(t)) set.add(k);
+  }
+  LIVE_FLAT = { v: groundVersion, tiles: state.tiles, n: state.tiles.size, set };
+  return set;
+}
 
 // Schlagschatten: Die Sonne steht links, jedes Gebäude wirft einen weichen Schatten nach rechts
 // (Grundfläche des Hauptbaus, um die Höhe versetzt). Gezeichnet in Weltkoordinaten (Zoom 1).
@@ -587,6 +601,13 @@ function putSprite(e, cx, cy, z) {
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
+// Bewegtes zeichnen – im GL-Bild in eine Zelle der Sammelfläche (Block 144)
+function moverLive(m, z, now, walker = false) {
+  const f = () => walker ? drawWalker(m, z, now) : drawMover(m, z, now);
+  if (!GLPASS) return f();
+  const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z);
+  glLive(p.x, p.y, l, u, r, d, f);
+}
 function drawMover(m, z, now) {
   if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
   else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
@@ -683,7 +704,7 @@ function spriteHousekeeping() {
 }
 // Leinwände gleich freigeben (Block 124): Breite 0 gibt den Speicher sofort zurück – auf dem iPad zählt jede Leinwand gegen eine
 // feste Grenze, bis die Speicherbereinigung irgendwann kommt
-function freeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
+function freeCanvas(c) { if (c) { if (typeof glForget === 'function') glForget(c); c.width = 0; c.height = 0; } }
 function freeSprite(e) { freeCanvas(e.c); if (e.mask) freeCanvas(e.mask.c); if (e.maskTodo) freeCanvas(e.maskTodo.c); freeNight(e); if (e.next) { freeSprite(e.next); e.next = null; } }
 function freeNight(e) { const n = e.night; e.night = null; if (n) { freeCanvas(n.erase.c); freeCanvas(n.light.c); freeCanvas(n.pre); } }
 function dropSprite(k) { const e = objSprites.get(k); if (!e) return; objSprites.delete(k); spriteSwap.delete(k); freeSprite(e); }
@@ -1055,8 +1076,31 @@ function glowImage(blue) {
   return (glowSprites[key] = c);
 }
 
+// Sichtbare Felder in Maler-Reihenfolge (Diagonalen x + y, darin x aufsteigend): [x, y, px, py, …]. Unter dem Bildrand: hohe große
+// Gebäude werden an ihren vordersten Feldern gezeichnet (Streifen) – die dürfen weiter unten liegen (Block 84d).
+// Block 144: dieselbe Rechnung wie toScreen, aber ohne Objekte je Feld, und eine Diagonale (gleiches x + y = gleiche Höhe im Bild)
+// außerhalb des Bilds wird ganz übersprungen – vorher je Bild ~13.000 toScreen für ~6.000 sichtbare Felder (Full HD)
+function visibleTiles(minX, maxX, minY, maxY, z) {
+  const mX = TW * z, mTop = 110 * z, mBot = TH * z, mBig = 420 * z;
+  const bigFront = (x, y) => { const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a); if (!t) return false;
+    const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); return (w > 1 || h > 1) && (x === ax + w - 1 || y === ay + h - 1); };
+  const visible = [];
+  for (let s = minX + minY; s <= maxX + maxY + 30; s++) {
+    const py = (s * TH / 2 - cam.y) * cam.z + H / 2;
+    if (py < -mBot || py > H + mBig) continue;
+    const low = py > H + mTop;
+    for (let x = Math.max(minX, s - maxY - 30); x <= Math.min(maxX + 30, s - minY); x++) {
+      const y = s - x, px = ((x - y) * TW / 2 - cam.x) * cam.z + W / 2;
+      if (px < -mX || px > W + mX) continue;
+      if (low && !bigFront(x, y)) continue;
+      visible.push(x, y, px, py);
+    }
+  }
+  return visible;
+}
 function render(now) {
   const mt0 = MESS ? performance.now() : 0;
+  if (GLPASS) { glHook(false); GLPASS = false; GL.frame = false; }         // letztes Bild brach ab (Fehler): Aufzeichnen aus
   g = ctx;
   if (spriteCrops.length) cropSprites(spritePrep ? 4 * CROP_MS : CROP_MS);   // Bildchen vom letzten Bild zuschneiden, bevor hier etwas gemalt wird (mit Zeitgrenze)
   cam = state.cam;
@@ -1072,6 +1116,7 @@ function render(now) {
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
   SPRITES_NEAR = SPRITES_ON && z >= SPRITE_FROM;
+  if (glFrameOk(z)) { ctx.clearRect(0, 0, W, H); glBegin(); } else glIdle();   // WebGL weit weg (Block 144): Welt auf die Grafikkarte
   const paused = frameNo < spritePause, st = SPRITE_STATS;                 // kein Speicher: nie aufholen/vorbereiten (das malte nur Fehlschläge)
   spriteCatch = !paused && st.miss + st.nmiss >= CATCH_MISS;              // viel fehlte im letzten Bild: aufholen (auch Nachtbilder)
   spritePrep = !paused && st.miss >= PREP_MISS;                           // fast alles fehlte: vorbereiten (nur echte Lücken, mit Hinweis)
@@ -1098,20 +1143,7 @@ function render(now) {
     minX = Math.max(minX, WORLD.cMin * CHUNK - 1); maxX = Math.min(maxX, (WORLD.cMax + 1) * CHUNK);
     minY = Math.max(minY, WORLD.cMin * CHUNK - 1); maxY = Math.min(maxY, (WORLD.cMax + 1) * CHUNK);
   }
-  const mX = TW * z, mTop = 110 * z, mBot = TH * z, mBig = 420 * z;
-  // Unter dem Bildrand: hohe große Gebäude werden an ihren vordersten Feldern gezeichnet (Streifen) – die dürfen weiter
-  // unten liegen, sonst fehlt das Gebäude streifenweise (Block 84d)
-  const bigFront = (x, y) => { const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a); if (!t) return false;
-    const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); return (w > 1 || h > 1) && (x === ax + w - 1 || y === ay + h - 1); };
-  const visible = [];
-  for (let s = minX + minY; s <= maxX + maxY + 30; s++) {
-    for (let x = Math.max(minX, s - maxY - 30); x <= Math.min(maxX + 30, s - minY); x++) {
-      const y = s - x, p = toScreen(x, y);
-      if (p.x < -mX || p.x > W + mX || p.y < -mBot) continue;
-      if (p.y > H + mTop && (p.y > H + mBig || !bigFront(x, y))) continue;
-      visible.push(x, y, p.x, p.y);
-    }
-  }
+  const visible = visibleTiles(minX, maxX, minY, maxY, z);
 
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   if (groundCached) drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now);
@@ -1125,7 +1157,9 @@ function render(now) {
   const visRange = ([ax, ay], w = 1, h = 1) => ax + w - 1 >= minX - 3 && ax <= maxX + 1 && ay + h - 1 >= minY - 3 && ay <= maxY + 1;   // ganze Fläche (lange Hbf)
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
-  for (let i = 0; i < visible.length; i += 4) {
+  const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen
+  if (!liveFlat || liveFlat.size) for (let i = 0; i < visible.length; i += 4) {
+    if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     FOG = !ownedTile(x, y);
@@ -1266,7 +1300,10 @@ function render(now) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
     const owned = ownedTile(x, y);
     FOG = !owned;
-    if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) drawEdgesAt(x, y, z, now);   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
+    if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
+      if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, () => drawEdgesAt(x, y, z, now));
+      else drawEdgesAt(x, y, z, now);
+    }
     const k = x + ',' + y;
     // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
     const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
@@ -1283,9 +1320,14 @@ function render(now) {
         }
         if (SPRITES_ON && sc === 1 && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
         const ds = sc * decoScale(t.b);
-        g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-        PASS = 'object';
-        try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
+        const live = () => {
+          g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+          PASS = 'object';
+          try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
+        };
+        if (!GLPASS) return live();
+        const pad = SPRITE_PAD[t.b] || [0, 0], hw = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds;   // Rahmen wie beim Bildchen, oben mehr Luft (Windräder)
+        glLive(c.x, c.y, hw, spriteTop(t.b, w, h) * 1.3 * z * ds, hw, ((w + h) * TH / 4 + 12 + pad[1]) * z * ds, live);
       };
       // Große Gebäude in senkrechten Streifen: jede Diagonale (x − y) der Grundfläche wird an ihrem vordersten
       // Feld gezeichnet – so überdecken sie nichts, was seitlich vor ihnen steht (Bäume, Häuser, Bewohner)
@@ -1370,22 +1412,24 @@ function render(now) {
         // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
         const ar = m.fur && archAt(m.px, m.py);
         if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-        drawMover(m, z, now); drawnMovers.add(m);
+        moverLive(m, z, now); drawnMovers.add(m);
         if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
-          drawBridgeOver(bk, z, now);
+          if (GLPASS) { const bp = toScreen(...keyXY(bk)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(bk, z, now)); }
+          else drawBridgeOver(bk, z, now);
           const [bx, by] = keyXY(bk);                                       // was schon auf der Brücke fuhr (Zug, Bewohner), wieder obenauf (Block 112)
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
-            if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) drawMover(o, z, now);
+            if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);
         }
       }
     }
-    if (afterMovers.length) { for (const f of afterMovers) f(); afterMovers.length = 0; }
-    if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) drawWalker(m, z, now); archWalkers.delete(k); }
+    if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
+    if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
   }
   FOG = false;
   archWalkers.clear();
   if (staleCover) recalc();
 
+  if (GL.frame) glEnd();                  // Welt fertig aufgezeichnet: die Grafikkarte zeichnet, alles Weitere obendrauf in 2D (Block 144)
   drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
   const mt2 = MESS ? performance.now() : 0;
 

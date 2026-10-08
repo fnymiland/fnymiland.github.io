@@ -5,7 +5,7 @@
 let night = 0;
 const glows = [];
 let SPRITE_PAINT = false;                   // render.js malt gerade ein Bildchen fürs Spiel (zählt wie live)
-const isLive = () => g === ctx || SPRITE_PAINT;
+const isLive = () => g === ctx || SPRITE_PAINT || (GLPASS && g === LA.x);   // Sammelfläche im GL-Bild (Block 144) zählt wie die Hauptleinwand
 
 // Nachtlicht: stanzt an Ort und Stelle ein Loch ins Bild (Fenster ganz, Lichtschein weich). Was danach davor
 // gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
@@ -2105,9 +2105,12 @@ const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' +
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
   if (SPRITES_ON && sc === 1 && g === ctx && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
   const s = decoScale(b) * 0.9 * sc;
-  g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
-  drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form });
-  g.restore();
+  const live = () => {
+    g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);
+    drawObject(b, 0, 0, z, now, x, y, 1, { rot, slot, col, form });
+    g.restore();
+  };
+  if (GLPASS && g === ctx) glLive(sx, sy, 30 * z * s, 100 * z * s, 30 * z * s, 14 * z * s, live); else live();   // GL-Bild: in die Sammelfläche (Block 144)
 }
 function drawSmall(k, px, py, z, now, x, y, which) {
   const ds = state.decos.get(k);

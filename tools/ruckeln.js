@@ -10,7 +10,12 @@ function ruckelMess({ z = 0.6, pan = 10, frames = 90 } = {}) {
   const R = window.__R || render;
   window.__R = R; window.render = () => {};                              // eigene Bildschleife, die normale malt nichts mehr
   let T = performance.now() + 1e7;
-  const sync = () => ctx.getImageData(0, 0, 1, 1);
+  // Warten auf die Grafikkarte, OHNE aus der Hauptleinwand zu lesen: Chrome stellt eine Leinwand, aus der oft gelesen wird, aufs
+  // Zeichnen ohne Grafikkarte um – dann misst man einen anderen (langsameren) Weg. Darum: 1 Punkt in eine Hilfsleinwand kopieren
+  // und die lesen; im GL-Bild zusätzlich gl.readPixels (Block 144)
+  const S = document.createElement('canvas'); S.width = S.height = 1;
+  const sx = S.getContext('2d', { willReadFrequently: true }), px = new Uint8Array(4);
+  const sync = () => { sx.drawImage(ctx.canvas, 0, 0, 1, 1, 0, 0, 1, 1); sx.getImageData(0, 0, 1, 1); if (typeof GL !== 'undefined' && GL.shown && GL.gl) GL.gl.readPixels(0, 0, 1, 1, GL.gl.RGBA, GL.gl.UNSIGNED_BYTE, px); };
   const frame = () => { T += 16; const a = performance.now(); R(T); const js = performance.now() - a; sync(); return [performance.now() - a, js]; };
   const scene = (label, n, step) => {
     const t = [], js = []; let prep = 0, catchN = 0;

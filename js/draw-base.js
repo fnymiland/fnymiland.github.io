@@ -126,6 +126,7 @@ function drawWave(x, y, p, z, now, batch) {
 // alle Wellen eines Bilds als ein Strich (Block 124): vorher je Welle ein eigener (weit weg über 1.600 je Bild); gleiche Farbe, deckend
 function drawWaves(list, z, now) {
   if (!list.length) return;
+  if (GLPASS && glWaves(list, z, now)) return;                            // GL-Bild: je Welle ein Rechteck aus einem Bildchen (Block 144)
   g.strokeStyle = C('#c4f0f8'); g.lineWidth = 1.6 * z; g.lineCap = 'round'; g.beginPath();
   for (let i = 0; i < list.length; i += 2) { const x = list[i], y = list[i + 1]; drawWave(x, y, toScreen(x, y), z, now, true); }
   g.stroke();
