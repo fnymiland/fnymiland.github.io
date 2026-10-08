@@ -477,20 +477,34 @@ function bondSync() {
 }
 // --- Wunschzettel ---
 let myWish = null, wishOff = null, wishWid = null, wishAt = 0;
-const wishClean = v => v && RES[v.r] && v.n > 0 ? { r: v.r, n: Math.floor(v.n), got: Math.max(0, Math.floor(+v.got || 0)), at: +v.at || 0 } : null;
+// Ein Wunsch hängt 24 Stunden (Wunsch Nutzer, 09.10.2026), dann verschwindet er von selbst – gemessen an der Uhr des Servers
+// (at ist ein Server-Zeitstempel; Geräteuhren gehen verschieden). Abgelaufen = wie kein Wunsch: Freunde sehen ihn nicht, Hilfe zählt nicht
+const WISH_TTL = 24 * 3600 * 1000;
+const wishNow = () => cloudApi && cloudApi.now ? cloudApi.now() : Date.now();
+const wishExpired = v => !!v && wishNow() - (+v.at || 0) >= WISH_TTL;
+const wishClean = v => v && RES[v.r] && v.n > 0 && !wishExpired(v) ? { r: v.r, n: Math.floor(v.n), got: Math.max(0, Math.floor(+v.got || 0)), at: +v.at || 0 } : null;
+function wishLeft(w) {                                                 // „noch 5 Std.“ / „noch 40 Min.“
+  const min = Math.max(1, Math.ceil((WISH_TTL - (wishNow() - w.at)) / 60000));
+  return min >= 60 ? `noch ${Math.round(min / 60)} Std.` : `noch ${min} Min.`;
+}
 // eigener Wunsch: alle 20 s nachsehen (eine Beobachtung auf eine noch nicht geschriebene Welt lehnen die Regeln ab – sie stürbe still)
 function wishWatch(force = false) {
   if (!cloudUser || VISIT || !liveWid || !cloudApi.get) return;
   if (!force && wishWid === liveWid && Date.now() - wishAt < 20000) return;
   wishWid = liveWid; wishAt = Date.now();
   const wid = liveWid;
-  cloudApi.get(`worlds/${wid}/wish`).then(v => { if (wishWid === wid) myWish = wishClean(v); }).catch(() => {});
+  cloudApi.get(`worlds/${wid}/wish`).then(v => {
+    if (wishWid !== wid) return;
+    myWish = wishClean(v);
+    // abgelaufen: selbst abnehmen – sonst sähen Freunde mit einer älteren App-Version ihn weiter
+    if (v && wishExpired(v) && !viewOnly()) cloudApi.update({ [`worlds/${wid}/wish`]: null }).catch(() => {});
+  }).catch(() => {});
 }
 async function wishSet(r, n) {
   if (viewOnly()) { cloudBlocked(); return false; }
   const uid = cloudUser.uid, wid = await liveWorldId();
   await cloudApi.update({ [`worlds/${wid}/wish`]: r ? { r, n: Math.floor(n), got: 0, at: cloudApi.TS() } : null, [`worlds/${wid}/owner`]: uid });   // owner: falls die Insel noch nicht geschrieben ist
-  myWish = r ? { r, n: Math.floor(n), got: 0, at: Date.now() } : null;
+  myWish = r ? { r, n: Math.floor(n), got: 0, at: wishNow() } : null;
   return true;
 }
 // Vorschlag: was den nächsten Laternen fehlt (sonst Bretter)
@@ -505,12 +519,12 @@ function wishSuggest() {
 const WISH_AMOUNTS = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 50000];
 function wishHtml() {
   if (!cloudUser) return `<div class="label">📌 Wunschzettel</div><p class="muted">Mit ☁️ Online und Freunden kannst du hier einen Wunsch aushängen – Freunde helfen dir mit Päckchen.</p>`;
-  const w = myWish;
+  const w = myWish && !wishExpired(myWish) ? myWish : null;          // läuft auch ab, während das Fenster offen ist
   const inBox = w ? Object.values(mailAll).reduce((s, m) => s + ((m && m.items && +m.items[w.r]) || 0), 0) : 0;   // geschickt, noch nicht abgeholt
-  return `<div class="label">📌 Wunschzettel</div>${w ? `<div class="hall-row"><span>${RES[w.r].icon} ${fmt(Math.min(w.got, w.n))} / ${fmt(w.n)} ${RES[w.r].name}${w.got >= w.n ? ' · <b class="ok">✓ erfüllt!</b>' : ''}</span>
+  return `<div class="label">📌 Wunschzettel</div>${w ? `<div class="hall-row"><span>${RES[w.r].icon} ${fmt(Math.min(w.got, w.n))} / ${fmt(w.n)} ${RES[w.r].name}${w.got >= w.n ? ' · <b class="ok">✓ erfüllt!</b>' : ` <small class="muted">· ${wishLeft(w)}</small>`}</span>
       <span><button class="btn ghost small" data-wishset="1">${w.got >= w.n ? 'Neuer Wunsch' : 'Ändern'}</button> <button class="btn ghost small" data-wishoff="1">Abnehmen</button></span></div><div class="wish-bar"><i style="width:${Math.min(100, w.got / w.n * 100)}%"></i></div>
       ${inBox > 0 ? `<p class="ok">📬 ${RES[w.r].icon} ${fmt(inBox)} liegen schon in deinem Briefkasten – unter 🌐 → Freunde abholen, dann zählt es.</p>` : ''}`
-    : `<p class="muted">Häng einen Wunsch aus – deine Freunde sehen ihn und können mit Päckchen helfen.</p><div class="row"><button class="btn small" data-wishset="1">📌 Wunsch aushängen</button></div>`}`;
+    : `<p class="muted">Häng einen Wunsch aus – deine Freunde sehen ihn 24 Stunden lang und können mit Päckchen helfen.</p><div class="row"><button class="btn small" data-wishset="1">📌 Wunsch aushängen</button></div>`}`;
 }
 function openWishPicker() {
   if (viewOnly()) { cloudBlocked(); return; }
@@ -518,7 +532,7 @@ function openWishPicker() {
   let r = sug.r, n = WISH_AMOUNTS.reduce((b, a) => Math.abs(a - sug.n) < Math.abs(b - sug.n) ? a : b, WISH_AMOUNTS[1]);
   const draw = () => {
     openModal(`<h2>📌 Wunschzettel</h2>
-      <p class="muted">Was brauchst du? Deine Freunde sehen den Wunsch unter 👥 und können dir etwas schicken. Für jede Hilfe gibt es ein Danke und eure Freundschaft wächst.</p>
+      <p class="muted">Was brauchst du? Deine Freunde sehen den Wunsch 24 Stunden lang unter 👥 und können dir etwas schicken. Für jede Hilfe gibt es ein Danke und eure Freundschaft wächst.</p>
       <div class="label">Material</div>
       <div class="book-st">${Object.keys(RES).map(id => `<button class="look${id === r ? ' on' : ''}" data-wr="${id}" aria-label="${RES[id].name}">${RES[id].icon}</button>`).join('')}</div>
       <p><b>${RES[r].icon} ${RES[r].name}</b></p>

@@ -102,7 +102,8 @@ describe('Souvenirs (Block 129)', () => {
 });
 
 describe('Wunschzettel (Block 129)', () => {
-  const wish = "{ r: 'holz', n: 1000, got: 200, at: 5 }";
+  const T0 = Date.now();                                                 // frisch – ein Wunsch hängt nur 24 Stunden
+  const wish = `{ r: 'holz', n: 1000, got: 200, at: ${T0} }`;
   it('Rohstoffe nur für einen Wunsch, höchstens was noch fehlt; „unterwegs“ zählt mit', async () => {
     game("state.res.holz = 5000; mailCompose('f1', 'Ben')");
     expect(game("$('modal').hidden")).toBe(true);                                         // ohne Wunsch: nichts
@@ -114,9 +115,9 @@ describe('Wunschzettel (Block 129)', () => {
     game(`mailCompose('f1', 'Ben', ${wish})`);
     expect(game("$('modal-card').textContent")).toContain('fehlen noch 300');
     // der Freund hat abgeholt: nicht doppelt zählen
-    expect(game(`wishCovered('f1', { r: 'holz', n: 1000, got: 700, at: 5 })`)).toBe(700);
+    expect(game(`wishCovered('f1', { r: 'holz', n: 1000, got: 700, at: ${T0} })`)).toBe(700);
     // anderer Wunsch: neu zählen
-    expect(game(`wishCovered('f1', { r: 'holz', n: 1000, got: 0, at: 6 })`)).toBe(0);
+    expect(game(`wishCovered('f1', { r: 'holz', n: 1000, got: 0, at: ${T0 + 1} })`)).toBe(0);
   });
   it('genug geschickt: statt „Helfen“ ein Hinweis; keine 100.000er-Grenze in den Regeln', async () => {
     game(`cloudApi.tree.users = { u1: { profile: { code: 'ABCDE' }, pub: { wid: 'w1', open: false } } }; cloudApi.tree.worlds = { w2: { wish: ${wish} } }; cloudApi.tree.fr = { u1: frList }; state.res.holz = 5000`);

@@ -1695,6 +1695,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „Weg → Alle verbundenen ändert nur den freien Weg, nicht den unter Stand oder Deko“ – `wegNetwork`/`restyleWeg`
       kannten nur Weg-Felder; unter Ständen/Deko liegt der Belag in `t.weg` (große Deko: `t.wegs`), das Netz riss dort sogar ab.
       Jetzt `wegCellStyle`/`setWegCell` (auch unter Ständen und Deko, Dinge bleiben stehen, je Feld ein Weg-Preis, ↶). Test: belaege
+- [x] Nutzer: „Wunsch an Freunde nur 24 Stunden anzeigen, dann automatisch weg“ – `WISH_TTL` (friends.js): `wishClean` lässt
+      abgelaufene Wünsche weg (Serverzeit `cloudApi.now()` gegen den Server-Zeitstempel `at`, Geräteuhren zählen nicht) → Freunde
+      sehen ihn nicht, Hilfe zählt nicht mehr (Päckchen kommen trotzdem an), im Rathaus wieder „Wunsch aushängen“. Der Besitzer
+      löscht den abgelaufenen Wunsch auch aus der Cloud (`wishWatch`), damit Freunde mit älterer App ihn nicht weiter sehen.
+      Anzeige „noch 5 Std.“ bei Besitzer und Freunden. Keine Regeländerung in Firebase nötig. Test: fuereinander
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

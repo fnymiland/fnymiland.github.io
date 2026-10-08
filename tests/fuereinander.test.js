@@ -62,7 +62,7 @@ describe('Füreinander (Block 105)', () => {
     expect(tree().users.u1.bonds.f1.p).toBe(3);                                             // Wunsch-Hilfe zählt am meisten
   });
   it('Freund hilft: Fenster zeigt seinen Wunsch, „Helfen“ füllt die fehlende Menge vor, das Päckchen trägt die Wunsch-Markierung', async () => {
-    game(`frList = { f1: { st: 'freund', name: 'Ben · Fischdorf', wid: 'w1' } }; frOff = () => {}; cloudApi.tree = { fr: { f1: { u1: { st: 'freund' } } }, worlds: { w1: { owner: 'f1', wish: { r: 'bretter', n: 200, got: 50, at: 1 } } } }; state.res.bretter = 500`);
+    game(`frList = { f1: { st: 'freund', name: 'Ben · Fischdorf', wid: 'w1' } }; frOff = () => {}; cloudApi.tree = { fr: { f1: { u1: { st: 'freund' } } }, worlds: { w1: { owner: 'f1', wish: { r: 'bretter', n: 200, got: 50, at: Date.now() } } } }; state.res.bretter = 500`);
     await game("openYou('freunde')"); await tick(20);
     const txt = game("document.getElementById('modal-card').textContent");
     expect(txt).toMatch(/wünscht sich .*200 Bretter/);
@@ -74,6 +74,32 @@ describe('Füreinander (Block 105)', () => {
     expect(m.items.bretter).toBe(150);
     expect(m.wish).toBe(true);
     expect(game('state.res.bretter')).toBe(350);
+  });
+  it('Wunsch hängt nur 24 Stunden: danach sehen Freunde ihn nicht mehr, Hilfe zählt nicht, der Besitzer nimmt ihn ab (Nutzer, 09.10.2026)', async () => {
+    const H = 3600 * 1000, now = Date.now();
+    // Freund f1 (frisch, 23 Std. alt) und f2 (25 Std. alt)
+    game(`frList = { f1: { st: 'freund', name: 'Ben', wid: 'w1' }, f2: { st: 'freund', name: 'Cem', wid: 'w2' } }; frOff = () => {};
+      cloudApi.tree = { fr: { f1: { u1: { st: 'freund' } }, f2: { u1: { st: 'freund' } } }, worlds: {
+        w1: { owner: 'f1', wish: { r: 'bretter', n: 200, got: 0, at: ${now - 23 * H} } }, w2: { owner: 'f2', wish: { r: 'holz', n: 300, got: 0, at: ${now - 25 * H} } } } }`);
+    await game("openYou('freunde')"); await tick(20);
+    const txt = game("document.getElementById('modal-card').textContent");
+    expect(txt).toMatch(/wünscht sich .*200 Bretter.*noch 1 Std\./);
+    expect(txt).not.toMatch(/300 Holz/);
+    expect(game("!!document.querySelector('[data-frhelp=\"f2\"]')")).toBe(false);
+    // Serveruhr zählt, nicht die des Geräts
+    expect(game(`(() => { const n = cloudApi.now; cloudApi.now = () => ${now - 2 * H}; try { return !!wishClean({ r: 'holz', n: 300, got: 0, at: ${now - 25 * H} }); } finally { cloudApi.now = n; } })()`)).toBe(true);
+    // eigener Wunsch: 25 Std. alt → weg, auch aus der Cloud (Freunde mit älterer App sähen ihn sonst weiter)
+    game(`cloudApi.tree = { worlds: { w9: { owner: 'u1', wish: { r: 'bretter', n: 200, got: 20, at: ${now - 25 * H} } } } }; liveWid = 'w9'; myWish = { r: 'bretter', n: 200, got: 20, at: ${now - 25 * H} }`);
+    game('wishWatch(true)'); await tick(20);
+    expect(game('myWish')).toBe(null);
+    expect(tree().worlds.w9.wish).toBeUndefined();
+    game("openTownHall('overview')");
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/Wunsch aushängen/);
+    // ein spät abgeholtes Wunsch-Päckchen füllt keinen abgelaufenen Wunsch mehr – die Bretter kommen trotzdem an
+    game(`cloudApi.tree.worlds.w9.wish = { r: 'bretter', n: 200, got: 0, at: ${now - 25 * H} }; cloudApi.tree.mail = { u1: { m1: { from: 'f1', n: 'Ben', a: 2, items: { bretter: 50 }, wish: true, at: 5 } } }; mailAll = cloudApi.tree.mail.u1; state.res.bretter = 0`);
+    await game("mailClaim('m1')"); await tick(20);
+    expect(game('state.res.bretter')).toBe(50);
+    expect(tree().worlds.w9.wish.got).toBe(0);
   });
   it('Partnerstadt: Flagge des Freundes, wird gespeichert, steht im Rathaus unter „Ort“', async () => {
     game(`frList = { f1: { st: 'freund', name: 'Ben · Fischdorf', wid: 'w1', flag: { c: '#58b36a', s: '🌻' } } }`);
