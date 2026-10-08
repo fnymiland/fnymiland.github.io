@@ -108,12 +108,12 @@ describe('Bildchen weit weg', () => {
     expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
     game("document.getElementById('m-still').click()");
     expect(game('stillFar')).toBe(true);
-    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: aus$/);
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: an$/);      // Standard an (Block 144)
     game("document.getElementById('m-gl').click()");
-    expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('1');
-    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: an$/);
-    game("document.getElementById('m-gl').click(); closeModal()");
     expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('0');
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: aus$/);
+    game("document.getElementById('m-gl').click(); closeModal()");
+    expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('1');
   });
 });
 

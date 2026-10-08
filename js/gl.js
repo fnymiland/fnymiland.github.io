@@ -18,7 +18,7 @@ const GL_Q = new URLSearchParams(location.search).get('gl');
 function glWanted() {
   if (GL_Q === '0') return false;
   if (GL_Q === '1') return true;
-  try { return localStorage.getItem('kachelhausen_gl') === '1'; } catch (e) { return false; }
+  try { return localStorage.getItem('kachelhausen_gl') !== '0'; } catch (e) { return true; }   // Standard an (Block 144); ☰ → Grafik schaltet aus
 }
 // Schalter im Menü (☰ → Grafik, nur dieses Gerät); ?gl=0/1 in der Adresse geht vor
 function setGlWanted(on) {

@@ -1632,7 +1632,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] iPad-Vergleich: Arbeitsspeicher (cpu) eindeutig besser – mit gpu lud auf dem iPad die halbe Insel nicht (Safari-Standard
       bleibt cpu; gpu nur Chrome & Co.)
 - [x] Nebenbei behoben: drawNight – warmer Schein nach blauem Fleck wurde blau (circle setzte fillStyle ungemerkt)
-- [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
+- [x] Entscheidung Nutzer: Grafikkarte für alle standardmäßig an (☰ → Grafik schaltet aus), „Das ist neu“ 2026-10-08-grafik
+- [ ] Nächste Schritte: kleiner Haken beim Neuaufnehmen (~35 ms, spätestens alle 8 s), Zoom ≥ 1 und Werkzeuge noch 2D
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich
       drawNight in EINEN GL-Puffer (Reihenfolge = Instanzliste der Felder-Schleife): Bildchen/Boden/Wald/Linien/Symbole als

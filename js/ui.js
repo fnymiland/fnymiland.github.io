@@ -2380,6 +2380,13 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger – auch nachts', items: [
+    '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte – Tag und Nacht deutlich flüssiger. Sieht etwas komisch aus? ☰ → Grafik → „Grafikkarte“ ausschalten.',
+    '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist – nah dran drehen sie sich. Umstellen unter ☰ → Grafik.',
+    '🟢 <b>Freunde online:</b> Ein grüner Punkt zeigt, wer gerade spielt, sonst „zuletzt vor …“. Das Freundesbuch fasst Besuche, Herzen und Geschenke je Freund in einer Zeile zusammen.',
+    '🎁 <b>Souvenirs:</b> Statt Rohstoffen verschickst du Andenken von deiner Insel; Wünsche auf dem Wunschzettel kannst du wieder abnehmen.',
+    '💰 <b>Bezahlt bleibt bezahlt:</b> Einmal gekaufte Varianten (Schloss, Bahnhofslänge, Gleise) kosten beim Umstellen nichts mehr.',
+  ] },
   { id: '2026-10-07-hecken', date: '7. Oktober', title: 'Bunte Hecken, passende Eingänge, längerer Bahnhof', items: [
     '🚉 <b>Bahnhof 3 Felder lang:</b> Beim Bauen in der Leiste „3 Felder“ wählen oder im Fenster umstellen – dann steht die Tür genau auf einem Feld, passend zu einem 1er-Weg.',
     '🚪 <b>Eingänge passen zum Weg:</b> Vor einem schmalen Weg führt ein Weg genauso breit bis zur Tür – statt eines breiten Platzes. Vor einem ganz breiten Weg bleibt der Vorplatz.',
@@ -2522,7 +2529,7 @@ function showMenu() {
     <div class="label">🖥️ Grafik <span class="muted">(nur dieses Gerät)</span></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-fps" title="${fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'}">${fpsMode === 'fluessig' ? '🎞️ Bildrate: flüssig' : '🔋 Bildrate: sparsam'}</button></div>
     <div class="row"><button class="btn ghost" style="flex:1" id="m-still" title="Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer">${stillFar ? '⏸️ Weit weg: Drehendes steht still' : '🌀 Weit weg: Drehendes dreht sich'}</button></div>
-    <div class="row"><button class="btn ghost" style="flex:1" id="m-gl" title="Zeichnet weit weg bei Tag über die Grafikkarte – viel flüssiger auf PCs. Noch im Test: nachts und nah dran wie bisher">${glWanted() ? '🚀 Grafikkarte (Test): an' : '🚀 Grafikkarte (Test): aus'}</button></div>
+    <div class="row"><button class="btn ghost" style="flex:1" id="m-gl" title="Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)">${glWanted() ? '🚀 Grafikkarte: an' : '🐢 Grafikkarte: aus'}</button></div>
     <div class="label">💾 Spielstand</div>
     <div class="row">
       <button class="btn ghost" style="flex:1" id="m-export">💾 Spielstand sichern</button>

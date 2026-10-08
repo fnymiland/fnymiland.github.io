@@ -398,7 +398,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     jedes Bild neu gemalt – teuer. Darum: was sich nur selten ändert (Uhren, Fähnchen), in den Schlüssel von `glCacheStart`, nicht
     live; was nichts zeichnet, gar nicht erst durch `glLive` schicken (Schienen ohne Übergang). `?messen` zeigt „Lebendige Felder“ mit
     Grund. Einstellungen je Gerät (☰ → Grafik, localStorage): `stillFar` (`kachelhausen_still`, Standard still: `STILL_FAR` weit weg
-    als Bildchen mit `stillNow`, geteilte Deko-Bildchen ohne Ortsabhängigkeit), `kachelhausen_gl` (`setGlWanted`, `?gl=0/1` geht vor),
+    als Bildchen mit `stillNow`, geteilte Deko-Bildchen ohne Ortsabhängigkeit), `kachelhausen_gl` (Standard an seit 08.10.2026, `'0'` = aus; `setGlWanted`, `?gl=0/1` geht vor),
     Bildrate. Pixelvergleich GL ↔ 2D: GL-Leinwand + `canvas` übereinander gegen `GL.off = true`.
     Nacht im GL-Bild: Löcher nur über `glOut`/`glOutQuad` bzw. drawImage mit destination-out (Deckkraft relativ zur Nachtstärke,
     `nightK()`), nur wenn `glOnWorld()` (nie beim Malen eines Bildchens). Die Lichtschicht steht einmal in `nightLights` (render.js)
