@@ -84,6 +84,17 @@ describe('Ein Netz: Schiene – Portal – Tunnel', () => {
     game("state.tunnels.get('8,10').form = DECO_LOOKS.tunnel.forms.findIndex(f => f.id === 'stein')");
     expect(game('portalForm(7, 10)')).toBe('stein');
   });
+  it('Rampe zwei Felder lang (Nutzer: „sonst zu steil“), wenn davor gerade Schiene liegt; die Wagen dort sinken schon mit', () => {
+    for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
+    game("state.tunnels.set('8,10', { form: 1 }); recalc()");
+    expect(game('rampLen(7, 10, [1, 0])')).toBe(2);
+    const c = game("trainTunnelCut({ px: 6, py: 10, du: 1, dv: 0, len: 0.8 })");
+    expect([c.k, c.portal.len, c.portal.ramp]).toEqual(['7,10', 2, true]);
+    expect(game("rampSink({ R: [7, 10], d: [1, 0], len: 2 }, 5.5, 10)")).toBe(0);           // oben am Anfang
+    expect(game("rampSink({ R: [7, 10], d: [1, 0], len: 2 }, 7.5, 10)")).toBe(game('RAMP_D'));   // unten an der Wand
+    game("state.tiles.delete('5,10'); state.tiles.set('6,11', { b: 'schiene', lvl: 1 }); recalc()");   // davor eine Kurve
+    expect(game('rampLen(7, 10, [1, 0])')).toBe(1);
+  });
   it('Zug fährt durch den Tunnel; im Berg ist der Wagen unsichtbar, am Portal abgeschnitten', () => {
     twoPlaces();
     for (let x = 4; x <= 7; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);

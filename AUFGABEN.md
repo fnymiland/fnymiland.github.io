@@ -1629,6 +1629,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Läden bekommen zusätzlich Kundschaft aus verbundenen Vierteln, die diese Ladenart nicht haben (`innerTraffic`, `LINE_SHOP` ½,
       × Auslastung, geteilt durch alle Anbieter) – nie statt der eigenen. Fahrgäste = ½ der Einwohner aller Halte-Viertel außer dem
       größten → Fahrkarten. Nutzerfrage „100 % U-Bahn?“: geht (Test).
+- [x] 136l (Nutzer: „Einfahrt sollte zwei lang sein, sonst steil und unschön“): Rampe über das Portalfeld und das gerade
+      Schienenfeld davor (`rampLen`, sonst wie bisher eins); Wagen auf dem vorderen Feld gehören schon zur Rampe (sinken, Ausschnitt).
+      Geländer/eigener Zaun je Feld. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

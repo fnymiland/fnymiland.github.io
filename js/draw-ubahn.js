@@ -69,40 +69,52 @@ function drawTunnelHill(x, y, px, py, z) {
     portalHill(portalFrame(p0.x, p0.y, z, d), 0.5, ...HILL[form]);
   }
 }
-// Rampe: Rinne über das Schienenfeld (a −0,5 … 0,5), am Tunnel RAMP_D tief
-const rampDepth = a => RAMP_D * Math.pow(Math.max(0, Math.min(1, a + 0.5)), 1.25);
-// Feldkante des Schienenfelds an der Längsseite b = ±0,5 (für Zaun statt Geländer)
+// Rampe (Nutzer: „zwei lang, sonst zu steil“): Rinne über das Portalfeld und das gerade Schienenfeld davor (a −1,5 … 0,5), am
+// Tunnel RAMP_D tief. Ist das Feld davor keine gerade Schiene, nur über das Portalfeld.
+function rampLen(x, y, d) {
+  if (x > 1e5) return 2;                                                // Vorschaubild
+  const px = x - d[0], py = y - d[1], t = objAt(px, py);
+  if (!t || t.b !== 'schiene' || t.cross || portalDir(px, py)) return 1;
+  const arms = railArms(px, py);
+  return arms.length === 2 && arms.every(([ax, ay]) => ax === d[0] * Math.sign(ax * d[0] + ay * d[1]) && ay === d[1] * Math.sign(ax * d[0] + ay * d[1])) ? 2 : 1;
+}
+const rampDepth = (a, len) => RAMP_D * Math.pow(Math.max(0, Math.min(1, (a - 0.5 + len) / len)), 1.25);
+// Feldkante eines Rampenfelds (x, y) an der Längsseite b = ±0,5 (für Zaun statt Geländer)
 function rampSideEdge(x, y, d, sg) {
   const u = -d[1] * sg * 0.5, v = d[0] * sg * 0.5;
   return Math.abs(v) > 0.4 ? 'a' + x + ',' + (y + (v > 0 ? 1 : 0)) : 'b' + (x + (u > 0 ? 1 : 0)) + ',' + y;
 }
 function drawRamp(S, z, x, y, d, shown) {
-  const w = RAMP_W, N = 10, as = i => -0.5 + i / N;
+  const len = rampLen(x, y, d), a0 = 0.5 - len, w = RAMP_W, N = 10 * len, as = i => a0 + len * i / N, dep = a => rampDepth(a, len);
   g.save();
-  g.beginPath(); [S(-0.5, -w, 0), S(0.5, -w, 0), S(0.5, w, 0), S(-0.5, w, 0)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+  g.beginPath(); [S(a0, -w, 0), S(0.5, -w, 0), S(0.5, w, 0), S(a0, w, 0)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
   const floor = [];
-  for (let i = 0; i <= N; i++) floor.push(S(as(i), -w, -rampDepth(as(i))));
-  for (let i = N; i >= 0; i--) floor.push(S(as(i), w, -rampDepth(as(i))));
+  for (let i = 0; i <= N; i++) floor.push(S(as(i), -w, -dep(as(i))));
+  for (let i = N; i >= 0; i--) floor.push(S(as(i), w, -dep(as(i))));
   poly(floor, C('#8e8a82'));
   for (const sg of [-1, 1]) {                                            // Innenwände: nur die, die zum Betrachter zeigen
     const nu = -d[1] * -sg, nv = d[0] * -sg;
     if (nu + nv <= 0) continue;
     const top = [], bot = [];
-    for (let i = 0; i <= N; i++) { top.push(S(as(i), sg * w, 0)); bot.push(S(as(i), sg * w, -rampDepth(as(i)))); }
+    for (let i = 0; i <= N; i++) { top.push(S(as(i), sg * w, 0)); bot.push(S(as(i), sg * w, -dep(as(i)))); }
     poly([...top, ...bot.reverse()], C('#bcb7ad'));
+    for (let i = 3; i < N; i += 4) portalLine([top[i], bot[N - i]], 'rgba(90,85,78,0.25)', 0.5, z);   // Fugen
   }
   if (shown) {
     poly([S(0.5, -w, -RAMP_D), S(0.5, w, -RAMP_D), S(0.5, w, 0), S(0.5, -w, 0)], C('#a9a399'));
     poly([S(0.5, -0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D + 17), S(0.5, -0.28, -RAMP_D + 17)], C('#231d1a'));
   }
-  for (const o of [-0.09, 0.09]) portalLine(Array.from({ length: N + 1 }, (_, i) => S(as(i), o, -rampDepth(as(i)))), '#7c838e', 1.1, z);
+  for (const o of [-0.09, 0.09]) portalLine(Array.from({ length: N + 1 }, (_, i) => S(as(i), o, -dep(as(i)))), '#7c838e', 1.1, z);
   g.restore();
   for (const sg of [-1, 1]) {                                            // Kante; Geländer nur ohne eigenen Zaun auf der Feldkante
     const b = sg * (w + 0.04);
-    poly([S(-0.5, b - 0.04, 0), S(0.5, b - 0.04, 0), S(0.5, b + 0.04, 0), S(-0.5, b + 0.04, 0)], C('#d9d5cc'));
-    if (state.edges.has(rampSideEdge(x, y, d, sg))) continue;
-    portalLine([S(-0.5, b, 6), S(0.5, b, 6)], '#6a7280', 1, z);
-    for (let a = -0.5; a <= 0.51; a += 0.25) portalLine([S(a, b, 0), S(a, b, 6)], '#6a7280', 0.8, z);
+    poly([S(a0, b - 0.04, 0), S(0.5, b - 0.04, 0), S(0.5, b + 0.04, 0), S(a0, b + 0.04, 0)], C('#d9d5cc'));
+    for (let i = 0; i < len; i++) {                                     // je Feld: Portalfeld (i = 0) und das davor
+      if (state.edges.has(rampSideEdge(x - d[0] * i, y - d[1] * i, d, sg))) continue;
+      const lo = -0.5 - i, hi = 0.5 - i;
+      portalLine([S(lo, b, 6), S(hi, b, 6)], '#6a7280', 1, z);
+      for (let a = lo; a <= hi + 0.01; a += 0.25) portalLine([S(a, b, 0), S(a, b, 6)], '#6a7280', 0.8, z);
+    }
   }
   portalLine([S(0.5, -w - 0.04, 6), S(0.5, w + 0.04, 6)], '#6a7280', 1, z);
 }
@@ -118,24 +130,31 @@ function trainTunnelCut(m) {
   else if (tunnelAt(rx, ry)) {
     for (const [dx, dy] of DIRS) { const q = portalDir(rx - dx, ry - dy); if (q && q[0] === dx && q[1] === dy) { R = [rx - dx, ry - dy]; d = q; break; } }
     if (!R) return 'hide';
-  } else return null;
+  } else {                                                              // vorderes Feld einer zwei Felder langen Rampe
+    for (const [dx, dy] of DIRS) {
+      const q = portalDir(rx + dx, ry + dy);
+      if (q && q[0] === dx && q[1] === dy && portalForm(rx + dx, ry + dy, q) === 'rampe' && rampLen(rx + dx, ry + dy, q) === 2) { R = [rx + dx, ry + dy]; d = q; break; }
+    }
+    if (!R) return null;
+  }
   const fx = R[0] + d[0] * 0.5, fy = R[1] + d[1] * 0.5, s = (m.px - fx) * d[0] + (m.py - fy) * d[1];
   const ed = m.du * d[0] + m.dv * d[1], la = m.len / 2;
   if (Math.abs(ed) < 0.5) return tunnelAt(rx, ry) ? 'hide' : null;   // quer zum Portal (Kurve davor): nicht schneiden
   const lo = ed > 0 ? -la : Math.max(-la, s), hi = ed > 0 ? Math.min(la, -s) : la;
   if (hi - lo < 0.02) return 'hide';
-  return { k: R[0] + ',' + R[1], cut: [lo, hi], portal: { R, d, ramp: portalForm(R[0], R[1], d) === 'rampe' } };
+  const ramp = portalForm(R[0], R[1], d) === 'rampe';
+  return { k: R[0] + ',' + R[1], cut: [lo, hi], portal: { R, d, ramp, len: ramp ? rampLen(R[0], R[1], d) : 1 } };
 }
 // Tiefe eines Weltpunkts in der Rampe (für die Wagen)
 function rampSink(P, wx, wy) {
   const [rx, ry] = P.R, a = (wx - rx) * P.d[0] + (wy - ry) * P.d[1];
-  return a < -0.5 ? 0 : rampDepth(a);
+  return rampDepth(a, P.len || 1);
 }
 // Wagen in der Rampe: nur durch die Öffnung und darüber sichtbar (die vordere Kante verdeckt, was tiefer liegt)
 function rampClip(P, z) {
-  const [rx, ry] = P.R, d = P.d, w = RAMP_W;
+  const [rx, ry] = P.R, d = P.d, w = RAMP_W, a0 = 0.5 - (P.len || 1);
   const W2 = (a, b) => { const p = toScreen(rx + d[0] * a - d[1] * b, ry + d[1] * a + d[0] * b); return [p.x, p.y]; };
-  const q = [W2(-0.5, -w), W2(0.5, -w), W2(0.5, w), W2(-0.5, w)];
+  const q = [W2(a0, -w), W2(0.5, -w), W2(0.5, w), W2(a0, w)];
   const left = q.reduce((p, c) => c[0] < p[0] ? c : p), right = q.reduce((p, c) => c[0] > p[0] ? c : p);
   const low = q.filter(c => c !== left && c !== right).reduce((p, c) => c[1] > p[1] ? c : p);
   g.beginPath(); g.moveTo(left[0], -1e4); g.lineTo(left[0], left[1]); g.lineTo(low[0], low[1]); g.lineTo(right[0], right[1]); g.lineTo(right[0], -1e4); g.closePath(); g.clip();
