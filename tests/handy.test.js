@@ -65,7 +65,7 @@ describe('Leiste auf dem Handy', () => {
     catBtn('stadt').click();
     expect(bar().contains('open')).toBe(false);
     game("setTool('haus')");
-    expect(document.getElementById('hint').textContent).not.toContain(game('ITEMS.haus.desc'));   // Beschreibung steht im Infofenster
+    expect(document.getElementById('hint').hidden).toBe(true);              // keine Hinweiszeile (Nutzer: „unnötig“)
   });
 });
 

@@ -117,9 +117,8 @@ describe('Kopieren rückgängig (Nutzer: „Rückgängigmachen geht nicht, wenn 
   });
 });
 describe('Keine Beschreibungszeile bei Verschieben und Abreißen (Nutzer: „nervt“)', () => {
-  it('Hinweis über der Leiste ist bei ✋ und Abriss aus, bei anderen Werkzeugen da', () => {
-    for (const t of ['verschieben', 'abriss']) { game(`setTool('${t}')`); expect(game("document.getElementById('hint').hidden"), t).toBe(true); }
-    game("setTool('haus')"); expect(game("document.getElementById('hint').hidden")).toBe(false);   // Weg hat schon länger keine Zeile
+  it('am PC gar keine Hinweiszeile beim Wählen (Nutzer: „unnötig, was da steht“)', () => {
+    for (const t of ['verschieben', 'abriss', 'haus', 'kunst', 'bank', 'weg']) { game(`setTool('${t}')`); expect(game("document.getElementById('hint').hidden"), t).toBe(true); }
     game("setTool('look')");
   });
 });

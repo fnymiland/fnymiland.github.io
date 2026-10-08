@@ -110,15 +110,12 @@ describe('Bau-Infofenster (iPad/Mac)', () => {
     expect(panel().querySelector('.stats span.bad')).toBe(null);
   });
 
-  it('der Hinweis zeigt nur, wie man baut – beim Weg gar keiner', () => {
+  it('am PC keine Hinweiszeile, auch ohne Infofenster nicht', () => {
     open('stadt', 'wohnen');
     card('haus').click();
-    expect($('hint').textContent.startsWith('Haus · ')).toBe(true);
-    expect($('hint').textContent).not.toContain(game('ITEMS.haus.desc'));
+    expect($('hint').hidden).toBe(true);
     game('closePanel()');
-    expect($('hint').textContent.startsWith('Haus · ')).toBe(true);           // auch ohne Fenster nur „wie man baut“
-    game("setTool('weg')");
-    expect($('hint').hidden).toBe(true);                                       // Weg: kein Hinweis, die Stil-Leiste reicht
+    expect($('hint').hidden).toBe(true);
   });
 
   it('ein Gebäude-Infofenster ersetzt das Bau-Infofenster sauber', () => {

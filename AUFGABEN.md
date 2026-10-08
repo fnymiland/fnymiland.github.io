@@ -1948,4 +1948,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Bereich auf, Gruppen als Überschriften (`.sheet-h`), jede Kachel mit Bild, Name und Preis (`.nm`). Wahl, Esc, daneben tippen oder
       derselbe Bereich nochmal: zu (Tipp auf die Karte baut dabei nichts). Bereichswechsel lässt das Werkzeug in der Hand; der Bereich
       mit dem gewählten Ding ist umrandet (`has-tool`). Gruppenzeile entfällt. Gleich auf PC, iPad und Handy. Tests: menu, leiste, handy
+- [x] Nutzer: „man kann nicht scrollen in dem aufgeklappten Fenster“ – ein alter Mausrad-Handler an `#tools` lenkte senkrechtes
+      Rad zur Seite um und verhinderte das Scrollen. Entfernt; das Feld scrollt normal (im Browser nachgemessen). Test: menu.
+- [x] Nutzer: „die Hinweise, wenn man einen Gegenstand in die Hand nimmt, sollen weg“ (z. B. „Kunstakademie · Tür zeigt von selbst
+      zum Weg“) – am PC/iPad keine Hinweiszeile mehr beim Wählen. Handy behält die kurze Zeile mit Preis und ⓘ (dort einziger Weg zum
+      Infofenster). Tests: kopieren, leiste, handy.
 

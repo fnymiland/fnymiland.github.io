@@ -307,29 +307,16 @@ function syncSelBar() {
 }
 function updateHint() {
   const hint = $('hint'), t = tool;
-  if (t === 'look' || t === 'verschieben' || t === 'abriss') { hint.hidden = true; return; }
-  if (!PHONE && document.body.classList.contains('has-styles') && !$('style-bar').hidden) { hint.hidden = true; return; }   // Stil-Leiste da: keine Zeile darüber (Nutzer: „überladen“)   // ✋/Abriss: keine Zeile (Nutzer: „nervt, nimmt Platz“)
+  // PC/iPad: keine Zeile beim Wählen (Nutzer: „unnötig, was da steht“) – Name, Preis und Beschreibung stehen im Infofenster.
+  // Handy: kurze Zeile mit Preis und ⓘ, weil das Infofenster dort nur über ⓘ aufgeht
+  if (t === 'look' || t === 'verschieben' || t === 'abriss' || !PHONE) { hint.hidden = true; return; }
   const d = ITEMS[t];
-  if (PHONE) {
-    const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : t === 'verschieben' ? 'antippen oder Rechteck aufziehen'
-      : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
-    hint.textContent = `${d.name}${WONDERS[t] ? ' · 🪙 ' + fmt(wonderTotal(t)) + ' in ' + WONDERS[t].phases.length + ' Abschnitten' : d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
-    const i = document.createElement('button');
-    i.className = 'hint-info'; i.textContent = 'ⓘ'; i.setAttribute('aria-label', `Mehr über ${d.name}`);
-    i.onclick = () => { audio(); openBuildInfo(t); };
-    hint.append(' ', i);
-    hint.hidden = false;
-    return;
-  }
-  const how = [LINE_TOOLS.has(t) ? 'Linie: Anfang und Ende anklicken' : '',
-    t === 'verschieben' ? 'Mehrere auf einmal: Rechteck aufziehen'
-      : t === 'abriss' ? 'Fläche: aufziehen, hineinklicken reißt ab'
-      : dragKind(t) === 'rect' ? 'Fläche: aufziehen, hineinklicken baut' : '',
-    d.paint || dragKind(t) ? 'Karte bewegen: rechte Maustaste (iPad: zwei Finger)' : '',
-    ROTATABLE.has(t) && !d.small ? 'Tür zeigt von selbst zum Weg (drehen: ⟳/Mausrad)' : ROTATABLE.has(t) ? 'drehen: ⟳' : ''].filter(Boolean);
-  // Beschreibung und Werte stehen im Infofenster – hier nur, wie man baut; beim Weg gar nichts (Stil-Leiste reicht)
-  if (t === 'weg') { hint.hidden = true; return; }
-  hint.textContent = [d.name, ...(how.length ? how : ['Platz auf der Karte anklicken'])].join(' · ');
+  const how = LINE_TOOLS.has(t) ? 'Anfang und Ende antippen' : dragKind(t) === 'rect' ? 'antippen oder Fläche aufziehen' : 'Platz antippen, nochmal tippen baut';
+  hint.textContent = `${d.name}${WONDERS[t] ? ' · 🪙 ' + fmt(wonderTotal(t)) + ' in ' + WONDERS[t].phases.length + ' Abschnitten' : d.cost ? ' · 🪙 ' + fmt(d.cost) : ''}${d.mat ? ' ' + matText(d.mat) : ''} · ${how}`;
+  const i = document.createElement('button');
+  i.className = 'hint-info'; i.textContent = 'ⓘ'; i.setAttribute('aria-label', `Mehr über ${d.name}`);
+  i.onclick = () => { audio(); openBuildInfo(t); };
+  hint.append(' ', i);
   hint.hidden = false;
 }
 
@@ -918,12 +905,6 @@ function panelAt(sx, sy) {
   const top = Math.max(top0, Math.min(bottom0 - h, sy - h / 2));
   el.style.left = left + 'px'; el.style.top = top + 'px';
 }
-// Mausrad über der Werkzeugleiste blättert seitwärts
-$('tools').addEventListener('wheel', e => {
-  if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-  e.currentTarget.scrollLeft += e.deltaY;
-  e.preventDefault();
-}, { passive: false });
 // Höhe der Leiste unten merken, damit Infozeile und Fenster immer darüber sitzen
 if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--bar', $('toolbar').offsetHeight + 'px')).observe($('toolbar'));
 if (window.ResizeObserver) new ResizeObserver(() => document.documentElement.style.setProperty('--sbar', $('style-bar').offsetHeight + 'px')).observe($('style-bar'));

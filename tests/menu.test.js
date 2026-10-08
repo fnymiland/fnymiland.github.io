@@ -75,4 +75,11 @@ describe('Baumenü', () => {
     expect(game("menuPlaceOf('blumen')")).toEqual({ top: 'gestalten', sub: 'gruen' });
     expect(game("ITEMS.blumen.cat")).toBe('deko');
   });
+  it('im aufgeklappten Feld scrollt das Mausrad ganz normal nach unten (kein Umlenken zur Seite)', () => {
+    game('setSheet(true); buildToolbar()');
+    const e = new window.WheelEvent('wheel', { deltaY: 120, bubbles: true, cancelable: true });
+    document.getElementById('tools').dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    game('setSheet(false)');
+  });
 });
