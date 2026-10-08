@@ -1605,6 +1605,8 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Wellen im Standbild: Grundposition wird mit aufgezeichnet, das Schaukeln (sin(now/900 + Phase) · 5·Zoom) rechnet der
       Vertex-Shader (Uniform wt, Attribut wv). Je Bild nur noch ~30 Rechtecke statt ~2.000. Testwelt „alles“, Full HD, Zoom 0,45:
       Rechnen je Bild 2,2 → 0,7 ms; Bild gegen 2D unverändert (0,33 % > 8/255, 0,001 % > 40)
+- [x] PC des Nutzers nach Atlas + Wellen: Bild 22 ms, Rechnen 13 (verschieben max. 30 / Rechnen 20). Sammelfläche LA lädt nur noch
+      ihre benutzten Zeilen hoch (vorher 2048² je Bild); Messzeile zeigt Vorbereiten / Felder / Grafikkarte / Hochladen / Rest
 - [ ] Nächste Schritte: JS der Feldschleife beim Aufnehmen, Nacht/Dämmerung in GL, Zoom ≥ 1, Standard an nach iPad-Test
 - [ ] Plan: neue `<canvas id="world-gl">` UNTER #world (pointer-events none); #world bleibt 2D (Eingabe, Schilder, Symbole) und
       wird in GL-Bildern durchsichtig – zugleich der Rückfall (?gl=0/1, Kontextverlust, Fehler → 2D). Alles bis einschließlich

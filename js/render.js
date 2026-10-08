@@ -1508,7 +1508,7 @@ function render(now) {
       if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
 
   };
-  const glc = GL.frame ? GL.cacheMode : null;
+  const glc = GL.frame ? GL.cacheMode : null, ml0 = MESS ? performance.now() : 0;
   if (glc === 'play') glPlayTiles(z, now, byTile, icons, labels, tileA, tileB);
   else for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
@@ -1522,13 +1522,18 @@ function render(now) {
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 
+  const ml1 = MESS ? performance.now() : 0;
+  if (MESS) GL.upMs = 0;
   if (GL.frame) glEnd();                  // Welt fertig aufgezeichnet: die Grafikkarte zeichnet, alles Weitere obendrauf in 2D (Block 144)
+  const ml2 = MESS ? performance.now() : 0;
   drawSky(now, z);                        // Erfindungen: Ballons, Zeppelin, Seilbahn
   const mt2 = MESS ? performance.now() : 0;
 
   // 5) Nacht
   if (night > 0) drawNight();
-  if (MESS) { const mt3 = performance.now(), a = 0.1; MESS.boden += a * (mt1 - mt0 - MESS.boden); MESS.obj += a * (mt2 - mt1 - MESS.obj); MESS.nacht += a * (mt3 - mt2 - MESS.nacht); MESS.lights = glows.length; MESS.miss = SPRITE_STATS.miss; MESS.made = SPRITE_STATS.made; }
+  if (MESS) { const mt3 = performance.now(), a = 0.1; MESS.boden += a * (mt1 - mt0 - MESS.boden); MESS.obj += a * (mt2 - mt1 - MESS.obj); MESS.nacht += a * (mt3 - mt2 - MESS.nacht); MESS.lights = glows.length; MESS.miss = SPRITE_STATS.miss; MESS.made = SPRITE_STATS.made;
+    MESS.feld += a * (ml1 - ml0 - MESS.feld); MESS.gl += a * (ml2 - ml1 - MESS.gl); MESS.up += a * (GL.upMs - MESS.up); MESS.vor += a * (ml0 - mt1 - MESS.vor);
+    MESS.movers = drawnMovers.size; MESS.la = LA.used | 0; }
 
   drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
   for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht
