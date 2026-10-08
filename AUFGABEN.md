@@ -1571,7 +1571,12 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 
-## Block 136: U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)
+## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn
+- [ ] U-Bahn – nur Eingänge (Häuschen mit U-Schild, unterirdisch verbunden, Fahrgäste wie Bahn)
+- [ ] Parkeisenbahn / Straßenbahn (Wunsch Nutzer, 08.10.): eigene kleine Bahn auf einem Rundkurs, nur eine Station – „Rundfahrt
+      zum Gucken“ (fährt immer im Kreis, hält an der Station, Fahrgäste steigen ein und wieder aus). Kleinere Gleise/Züge als die
+      Eisenbahn, darf durch Parks und über Plätze. Vorher besprechen: Bahnarten (Dampflok-Bimmelbahn, Straßenbahn), eigene Gleise
+      oder auf Wegen, Nutzen (Schönheit/Freizeit statt Fracht)
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
@@ -1719,3 +1724,29 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       nach Upload freigeben?), Zoom 1–2 (SPRITES_NEAR: viel live) evtl. 2D lassen, Tests (jsdom ohne WebGL → Rückfall immer)
 - [ ] Gefundener Fehler (unabhängig von WebGL): Sternschnuppe stanzt nachts NACH drawNight ein Loch (render.js drawFallenStar →
       glowQuad) – nur im 2D-Weg sichtbar
+
+## Block 145: Hecken wie Wege – überbauen und umfärben (Wunsch Nutzer, 08.10.2026)
+- [ ] Neue Hecke auf eine alte ziehen ersetzt sie (wie Wege), statt „Hier steht schon was“ – kostet wie neu, ↶ macht es rückgängig
+- [ ] Hecke antippen → Farbe/Form: „Nur dieses Stück“ / „Alle verbundenen (N Stücke)“ / „Alle Hecken“ (wie `wegNetwork`/`restyleWeg`)
+
+## Block 146: Schienen – nur verbundene umstellen (Wunsch Nutzer, 08.10.2026)
+- [ ] Gleis-Stil heute nur „alle Schienen“ → wie bei Wegen: „Nur dieses Feld“ / „Alle verbundenen (N Felder)“ / „Alle“
+
+## Block 147: Bänke (Rückmeldung Nutzer, 08.10.2026)
+- [ ] Rundbank (Bank um den Baum) viel zu klein im Vergleich zur Parkbank → größer (Baum und Bank im richtigen Verhältnis)
+- [ ] Gartenbank „komisch“: sieht seltsam aus, Nutzen unklar → neu zeichnen und klar sagen, was sie bringt (oder durch etwas
+      Schöneres ersetzen) – Entwürfe zeigen
+
+## Block 148: Fußgängerbrücke über Schienen sauber anschließen (Rückmeldung Nutzer, 08.10.2026)
+- [ ] Weg läuft heute unter der Brücke durch bzw. schließt schlecht an („sieht doof aus“) – Rampe/Treppe sauber an den Weg davor
+      und dahinter anschließen, kein Weg sichtbar unter dem Brückendeck
+
+## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
+- [ ] Mess-Test mit großen Testwelten (testsave-gross, Fnymiland OG): zählt je Bild Zeichenbefehle, gemalte Bildchen, Felder, die
+      live gezeichnet werden („lebendige Felder“), und Rechenzeit – nah, mittel, weit, Tag/Nacht. Feste Obergrenzen; `npm test`
+      schlägt fehl, wenn etwas Neues sie reißt (z. B. ein neues bewegtes Ding, das jedes Bild live zeichnet)
+- [ ] Je Neuheit prüfen: Bewegtes über `ANIM_ITEMS`/Bewegtes-Pfad (nicht das ganze Feld live), Ruhendes als Bildchen, Muster als
+      Kachel (`PAT_TILE`), keine neue Arbeit je Feld und Bild; im Fenster „Grafik“ abschaltbar, wenn teuer
+- [ ] Vor jedem Push: Messlauf (Werkzeug wie in Block 125c: Welt laden, rendern, Zeiten/Spitzen beim Ziehen und Zoomen) und Zahlen
+      neben die vorigen in AUFGABEN.md schreiben – wird es langsamer, erst klären
+- [ ] PC-Skalierung (100/125/150 %) und iPad-Größe immer mit nachstellen (`devicePixelRatio` setzen, `resize()`)
