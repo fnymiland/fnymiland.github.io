@@ -962,10 +962,10 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
       // Neu malen, was fehlt; Veraltetes (Zoom, Bauen) nur, solange das Zeitbudget reicht – sonst das alte Bild (Block 31)
       const ratio = e ? want / e.scale : 0, usable = e && ratio > 0.4 && ratio < 2.5;
       if (!e || ((e.v !== groundVersion || stale(e)) && (!usable || groundSpent < GROUND_MS))) {   // Veraltetes, das noch zu sehen ist: immer nur GROUND_MS (das Aufholen gehört den fehlenden Bildchen)
-        if (GL.bg && GLB.gpaint > GLB_MS) { if (!e) { GLB.retry = true; continue; } }   // Standbild im Hintergrund: Rest im nächsten Bild (Block 144)
+        if (GL.bg && GL.bgB.gpaint > GLB_MS) { if (!e) { GL.bgB.retry = true; continue; } }   // Standbild im Hintergrund/Vorladen: Rest im nächsten Bild (Block 144)
         else {
           const t0 = performance.now(), n = renderGroundChunk(cx, cy, want), dt = performance.now() - t0;
-          groundSpent += dt; if (GL.bg) GLB.gpaint += dt;
+          groundSpent += dt; if (GL.bg) GL.bgB.gpaint += dt;
           if (n) { if (e) freeCanvas(e.c); e = n; groundCache.set(ck, e); }   // kein Speicher: altes Bild weiter (oder diesmal keins)
         }
       }
@@ -991,9 +991,10 @@ function drawGroundCached(cMinX, cMaxX, cMinY, cMaxY, z, now) {
     }
   }
   if (frameNo % 60 === 0) {
-    for (const [ck, e] of groundCache) if (frameNo - e.used > 900) { groundCache.delete(ck); freeCanvas(e.c); }   // länger behalten: beim Zurückschieben schon da
-    if (groundCache.size > GROUND_KEEP) {                                // aber nicht unbegrenzt (Speicher iPad): die am längsten nicht gesehenen weg
-      const old = [...groundCache].sort((a, b) => a[1].used - b[1].used).slice(0, groundCache.size - GROUND_KEEP);
+    const keepF = GL_LOWMEM ? 900 : 3600, keepN = GL_LOWMEM ? GROUND_KEEP : GROUND_KEEP * 3;   // PC: länger und mehr (Vorladen, Block 144)
+    for (const [ck, e] of groundCache) if (frameNo - e.used > keepF) { groundCache.delete(ck); freeCanvas(e.c); }   // länger behalten: beim Zurückschieben schon da
+    if (groundCache.size > keepN) {                                // aber nicht unbegrenzt (Speicher iPad): die am längsten nicht gesehenen weg
+      const old = [...groundCache].sort((a, b) => a[1].used - b[1].used).slice(0, groundCache.size - keepN);
       for (const [ck, e] of old) if (e.used !== frameNo) { groundCache.delete(ck); freeCanvas(e.c); }
     }
     if (seaInfo.size > 400) seaInfo.clear();
@@ -1669,6 +1670,7 @@ function render(now) {
   }
   // 10) Nächstes Standbild im Hintergrund weiter vorbereiten (Block 144): ein paar ms Felder, danach wird nur umgeschaltet
   if (glc === 'play' && GLB.st === 'run') glBgStep(z, now, tileA, icons, labels);
+  else if (glc === 'play' && GLP.st === 'run' && now - GLP.movedAt > 300) { glBgStep(z, now, tileA, icons, labels, GLP); glPreAfter(); }   // Vorladen: nur in Ruhe, das Hintergrund-Standbild geht vor
 }
 
 // Glitzern, wenn ein Haus wächst

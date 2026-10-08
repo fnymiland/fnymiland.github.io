@@ -10,7 +10,7 @@
 // Rückfall: ohne WebGL2, mit ?gl=0, nach einem Fehler oder Kontextverlust zeichnet render wie bisher alles in 2D (deckend).
 // Vorerst nur bei Tag, weit weg (nicht SPRITES_NEAR) und ohne Bau-Vorschau; sonst 2D.
 // ---------------------------------------------------------------------------
-const GL = { bg: false, sky: false, nightDone: false, now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
+const GL = { bgB: null, bg: false, sky: false, nightDone: false, now: 0, upMs: 0, texEpoch: 0, drawEpoch: 0, cacheMode: null, lastMiss: 0, ready: false, broken: false, gl: null, canvas: null, prog: null, buf: null, loc: null, texs: new Map(), recs: [],
   frame: false, shown: false, stats: { quads: 0, draws: 0, live: 0, over: 0, up: 0, miss: 0 } };
 let GLPASS = false;                                             // gerade läuft der aufgezeichnete Welt-Durchgang
 const GL_Q = new URLSearchParams(location.search).get('gl');
@@ -564,6 +564,7 @@ const glPlayOff = () => [(-GLS.M + (GLS.cam.x - cam.x) * cam.z) * DPR, (-GLS.M +
 // am Bildanfang (render, vor den Sichtgrenzen): abspielen, aufzeichnen oder normal
 function glCacheStart(z, now) {
   GL.now = now;
+  if (!GLP.cam0 || GLP.cam0.x !== cam.x || GLP.cam0.y !== cam.y || GLP.cam0.z !== z) { GLP.cam0 = { x: cam.x, y: cam.y, z }; GLP.movedAt = now; }   // Vorladen nur in Ruhe
   // Sammelbilder voll und viel davon Freigegebenes: neu anfangen (vor dem Bild – das Standbild wird dann neu aufgenommen). Vorher erst
   // bei 2 Seiten Abfall und nie beim Abspielen: der Atlas hielt alles je Benutzte fest (bis 384 MB auf der Grafikkarte, iPad stürzte ab)
   if (ATL.pages.length >= ATL.max && ATL.waste > ATL.size * ATL.size * (GL_LOWMEM ? 1 : 2)) atlReset(false);
@@ -582,6 +583,7 @@ function glCacheStart(z, now) {
     if (GLB.st === 'run' && (GLB.key !== key || GLB.tex !== GL.texEpoch || GLB.draw !== GL.drawEpoch)) GLB.st = 'idle';
     if (GLB.st === 'idle' && GLS.calm >= GLS_CALM && !GL.lastMiss && (Math.abs(dx) > GLS.M * GLB_FROM || Math.abs(dy) > GLS.M * GLB_FROM || now - GLS.at > GLS_AGE * 0.6))
       glBgStart(key, z, now, dx, dy);
+    else if (GLB.st === 'idle' && GLP.st === 'idle' && !GL_LOWMEM && now - GLP.movedAt > 1000 && !GL.lastMiss && glPreWanted(z)) glPreStart(z);
     return (GL.cacheMode = 'play');
   }
   GLB.st = 'idle';                                                       // zu spät: jetzt doch auf einmal aufnehmen
@@ -701,8 +703,9 @@ function glBgStart(key, z, now, dx, dy) {
     V: null, i: -1, recs: [], tiles: [], vparts: [], pend: [], slist: [], srcs: new Set(), order: new Map(), sA0: [], sA1: [], dyn: [], groundEnd: 0, verts: null, light: null, lverts: null, icons: [], labels: [], glows: [], pics: [], panes: [], seen: new Set(), warm: false, cells: new Map(), dynWhy: new Map(), gEnd: 0, gl0: null });
 }
 // ein Stück aufnehmen: Zustand des Bilds beiseite (Liste, Kamera, Größe, Lichter, Symbole), Hintergrund-Zustand einsetzen, Felder bis GLB_MS
-function glBgStep(z, now, tileA, icons, labels) {
-  const B = GLB, t0 = performance.now();
+function glBgStep(z, now, tileA, icons, labels, B = GLB) {
+  const t0 = performance.now(), miss0 = SPRITE_STATS.miss + SPRITE_STATS.nmiss;
+  GL.bgB = B;
   const keep = { recs: GL.recs, cam, W, H, FOG, g, gc: groundCached, tiles: GLS.tiles, dynWhy: GLS.dynWhy, warm: nightWarm, cells: glowCells, stats: { ...GL.stats },
     glows: glows.splice(0), pics: nightPics.splice(0), panes: nightPanes.splice(0), seen: [...nightSeen], icons: icons.splice(0), labels: labels.splice(0), am: afterMovers.splice(0) };
   GL.recs = B.recs; cam = B.cam; W = B.W0 + 2 * B.M; H = B.H0 + 2 * B.M; GLS.tiles = B.tiles; GLS.dynWhy = B.dynWhy;
@@ -718,8 +721,9 @@ function glBgStep(z, now, tileA, icons, labels) {
       worldGround(B.V, z, now, false);
       if (GLS.dirty) B.bad = true;                                          // Boden mit Lebendigem: so nicht merkbar
     }
-    if (B.i < 0 && B.retry) {                                              // fehlende Boden-Stücke: je Bild nur ein paar malen, dann noch einmal
+    if (B.i < 0 && (B.retry || B.dry)) {                                    // fehlende Boden-Stücke: je Bild nur ein paar malen, dann noch einmal
       GL.recs.length = 0; glows.length = 0; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false; glowCells = new Map();
+      if (B.dry && !B.retry) B.i = 0;                                       // Vorladen: Boden ist gemalt, weiter mit den Feldern
     } else if (B.i < 0) {
       B.gEnd = GL.recs.length; B.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; B.i = 0;
       // Standbild-Liste, Reihenfolge, Bildchen und Eckpunkte schon jetzt (sonst beim Umschalten 6–15 ms am Stück)
@@ -731,6 +735,7 @@ function glBgStep(z, now, tileA, icons, labels) {
       glRecTile(i >> 2, x, y, icons.length, labels.length, true);
       tileA(x, y, vis[i + 2], vis[i + 3]);
       glRecTile(i >> 2, x, y, icons.length, labels.length, false);
+      if (B.dry) { GL.recs.length = 0; B.tiles.length = 0; B.i += 4; continue; }   // Vorladen: nur die Bildchen zählen, nichts merken
       const j = B.tiles.length - 1, c = B.tiles[j];
       B.order.set(c.x + ',' + c.y, j); B.sA0[j] = B.slist.length;
       if (!c.dyn) for (let k = c.a0; k < c.a1; k++) { const r = GL.recs[k]; B.slist.push(r); B.pend.push(r); B.srcs.add(r.src); } else B.dyn.push(j);
@@ -738,7 +743,7 @@ function glBgStep(z, now, tileA, icons, labels) {
       B.i += 4;
     }
     if (B.pend.length && !ground) { B.vparts.push(glVerts(B.pend)); B.pend = []; }   // Eckpunkte des Bodens im nächsten Bild
-    if (B.i >= 0 && B.i >= vis.length) {                                    // fertig: Lichtschicht und Eckpunkte am Stück
+    if (B.i >= 0 && B.i >= vis.length && !B.dry) {                          // fertig: Lichtschicht und Eckpunkte am Stück
       if (B.pend.length) { B.vparts.push(glVerts(B.pend)); B.pend = []; }
       B.light = glStaticLights(B.tiles, B.gl0); B.lverts = glVerts(B.light.recs);
       let n = 0; for (const v of B.vparts) n += v.length;
@@ -747,6 +752,8 @@ function glBgStep(z, now, tileA, icons, labels) {
     }
   } catch (e) { B.bad = true; console.warn('Standbild im Hintergrund', e); }
   finally {
+    B.miss = (B.miss || 0) + SPRITE_STATS.miss + SPRITE_STATS.nmiss - miss0;
+    if (B.dry) { glows.length = 0; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); icons.length = 0; labels.length = 0; }
     GL.bg = false; GLPASS = false; glHook(false);
     afterMovers.length = 0;                                                 // gehört zu Bewegtem – das läuft beim Abspielen
     B.glows = glows.splice(0); B.pics = nightPics.splice(0); B.panes = nightPanes.splice(0); B.seen = new Set(nightSeen); B.warm = nightWarm; B.cells = glowCells;
@@ -773,4 +780,26 @@ function glBgSwapIn() {
   try { glRecFinish(B); glRecOverlay(B.icons, B.labels); GL.bgSwaps = (GL.bgSwaps || 0) + 1; }
   catch (e) { GLS.ok = false; console.warn('Standbild im Hintergrund', e); }
   finally { GL.recs = keep; B.recs = null; B.V = null; B.vparts = []; B.slist = null; B.verts = null; B.lverts = null; }
+}
+
+// --- Vorladen (Block 144, Wunsch Nutzer): ruht das Bild ~1 s, werden Bildchen und Boden für einen Ring von einer Bildschirmbreite
+// rings um das Bild schon gemalt (glBgStep trocken: nichts merken, nur getSprite/Boden). Je Bild höchstens GLB_MS, das
+// Hintergrund-Standbild geht vor. Nicht auf Safari/iPad (Speicher). Fehlte etwas (Budget), noch einmal – höchstens 3 Durchgänge
+const GLP = { st: 'idle', dry: true, last: null, pass: 0, off: new URLSearchParams(location.search).get('vorladen') === '0' };   // ?vorladen=0 zum Vergleichen
+function glPreWanted(z) {
+  const L = GLP.last;
+  if (GLP.off) return false;
+  return !L || L.z !== z || Math.abs(L.x - cam.x) * z > W * 0.4 || Math.abs(L.y - cam.y) * z > H * 0.4 || (L.again && GLP.pass < 3);
+}
+function glPreStart(z) {
+  const again = GLP.last && GLP.last.again && GLP.last.z === z && GLP.last.x === cam.x && GLP.last.y === cam.y;
+  GLP.pass = again ? GLP.pass + 1 : 1;
+  Object.assign(GLP, { st: 'run', bad: false, cam: { x: cam.x, y: cam.y, z }, M: Math.round(Math.max(W, H)), W0: W, H0: H, V: null, i: -1, recs: [], tiles: [],
+    vparts: [], pend: [], slist: [], srcs: new Set(), order: new Map(), sA0: [], sA1: [], dyn: [], icons: [], labels: [], glows: [], pics: [], panes: [], seen: new Set(),
+    warm: false, cells: new Map(), dynWhy: new Map(), gEnd: 0, gl0: null, miss: 0, gpaint: 0, retry: false });
+  GLP.last = { x: cam.x, y: cam.y, z, again: false };
+}
+// nach einem Schritt: fertig? Dann merken, ob noch etwas fehlte (dann später noch ein Durchgang)
+function glPreAfter() {
+  if (GLP.st === 'done' || GLP.bad) { if (GLP.last) GLP.last.again = !GLP.bad && GLP.miss > 0; GLP.st = 'idle'; GLP.V = null; GLP.recs = []; }
 }

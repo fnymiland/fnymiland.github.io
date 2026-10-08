@@ -1644,6 +1644,11 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Schnell rein-/rauszoomen, dann verschieben ruckelte auf dem iPad stark: beim Tausch der scharfen Bildchen bis 490 Uploads in
       einem Bild (Safari liest jedes zurück). Jetzt gleich nach dem Zuschneiden vorab hochladen (glWarm, 2–3 ms je Bild): höchstens
       80–90, beim Wiederholen 7; statt mehrerer Neuaufnahmen je Zoom nur eine. Messkasten: „Speicher voll: N×“ (spriteFail)
+- [x] Vorladen (Wunsch Nutzer, GLP in gl.js, nicht auf Safari/iPad): ruht das Bild 1 s, malt glBgStep „trocken“ Bildchen und Boden
+      für einen Ring von einer Bildschirmbreite rings um das Bild (2–4 ms je Bild, Pause beim Bewegen, Hintergrund-Standbild geht vor,
+      bis 3 Durchgänge, wenn das Budget nicht reichte). Boden auf dem PC länger und mehr behalten (3600 Bilder, 480 Stücke).
+      Große Testwelt, Zoom 0,62, danach 1 Bildschirm weit verschieben: ohne 257 Bildchen gemalt und 541 Felder live beim Verschieben,
+      mit 0 / 0 (90 % der Bilder 15,7 → 11,2 ms). ?vorladen=0 schaltet es zum Vergleichen ab
 - [ ] Offen: Ist alles voll, bekommt der Rest eigene Texturen (große Welt, Zoom 0,7: +126 MB, 600 Aufträge) – Speicher auf dem iPad
       weiter beobachten; Wunsch Nutzer: von selbst vorladen (Speicherfrage)
 - [ ] Nächste Schritte: Zoom ≥ 1 und Werkzeuge noch 2D
