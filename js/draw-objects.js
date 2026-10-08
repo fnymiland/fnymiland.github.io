@@ -671,7 +671,8 @@ function crossingAxes(x, y) {
 // Bogenbrücke: flacher Bogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
 // und rechts), in der Mitte hoch über dem Zug. b = Abstand zur Mitte entlang des Wegs in Feldern.
 // So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
-const ARCH_H = 22, ARCH_W = 0.3, ARCH_SPAN = 1;
+// ARCH_W (Block 148): so breit wie der Weg samt Rand – vorher schmaler, und der Weg schaute an den Rampen seitlich hervor
+const ARCH_H = 22, ARCH_W = EDGE_W + 0.01, ARCH_SPAN = 1;
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
 const ARCH_LOOK = {
   holz:     { deck: '#c9a26f', seam: '#b08a5e', side: '#8a6440', rail: '#7a5236', th: 4, kind: 'posts' },
@@ -743,6 +744,13 @@ function drawArch(P, z, b0, b1, lk, x, y, d, n) {
     glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
   }
   poly(rail(1, 0).concat(rail(1, -lk.th).reverse()), C(lk.side));  // vordere Wange
+  // Rampen auf den Wegfeldern massiv bis zum Boden (Block 148): vorher sah man unter der ansteigenden Rampe den Weg am Boden
+  // weiterlaufen. Nur über den Gleisen (|b| < ½) bleibt der Bogen offen
+  for (const sg of [-1, 1]) {
+    const seg = bs.filter(b => sg * b >= 0.5 - 1e-6);
+    if (seg.length < 2) continue;
+    poly(seg.map(b => P(ARCH_W, b, archH(b))).concat(seg.slice().reverse().map(b => P(ARCH_W, b, 0))), C(shade(lk.side, -0.04)));
+  }
   railing(1);
 }
 function drawCrossing(cx, cy, z, x, y, t, now) {

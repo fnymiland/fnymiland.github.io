@@ -1065,7 +1065,8 @@ const DECO_LOOKS = {
   laterne: { group: 'Laternen', icon: '#ffe58a', cols: LANTERN_COLS, forms: [{ id: 'gas', name: 'Gaslaterne' }, { id: 'kandelaber', name: 'Kandelaber' },
     { id: 'lampion', name: 'Lampion', design: 150 }, { id: 'pilz', name: 'Pilzlaterne', design: 150 }, { id: 'stab', name: 'Stablaterne', design: 200 }] },
   bank: { group: 'Bänke', icon: '#b57b4a', cols: BENCH_COLS, forms: [{ id: 'park', name: 'Parkbank' }, { id: 'garten', name: 'Gartenbank' },
-    { id: 'stein', name: 'Steinbank', design: 120 }, { id: 'picknick', name: 'Picknicktisch', design: 150 }, { id: 'rund', name: 'Rundbank', design: 200 }] },
+    { id: 'stein', name: 'Steinbank', design: 120 }, { id: 'picknick', name: 'Picknicktisch', design: 150 }, { id: 'rund', name: 'Rundbank', design: 200 },
+    { id: 'blumen', name: 'Bank mit Blumenkästen', design: 140 }, { id: 'laube', name: 'Laubenbank', design: 180 }] },   // Block 147
   brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
     { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
   // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken

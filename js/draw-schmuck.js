@@ -60,15 +60,51 @@ function drawBench(cx, cy, z, t, hw, hh) {
   const col = lookCol('bank', t), form = lookForm('bank', t), top = shade(col, 0.1), K = kit(cx, cy, z, (t && t.rot) || 0);
   const iron = '#4a4a58';
   shadow(cx, cy, hw * 0.35, hh * 0.25);
-  if (form === 'garten') {                                              // geschwungene Lehne, Armlehnen, filigrane Beine
+  const dk = shade(col, -0.2);
+  const seat = (hb = 0.46) => { for (const b of [-hb + 0.06, hb - 0.06]) kPost(K, 0.16, b, 5, dk, 1.3); K.block({ a: 0.06, ha: 0.14, hb, h: 1.4, lift: 4.6, wall: col, roof: top, type: 'flat' }); };
+  if (form === 'garten') {
+    // Englische Gartenbank (Block 147, vorher ein frei schwebender Bogen über der Lehne): Latten-Lehne mit geschwungenem
+    // Abschluss, Armlehnen auf Pfosten
     K.scene([
-      [-0.1, 0, () => { for (const b of [-0.42, 0.42]) kPost(K, -0.1, b, 12, shade(col, -0.18), 1.1);
-        K.block({ a: -0.1, ha: 0.03, hb: 0.44, h: 4, lift: 7, wall: col, roof: top, type: 'flat' });
-        const [ax, ay] = K.P(-0.1, 0, 13.5);                                // Bogen über der Lehne
-        g.strokeStyle = C(col); g.lineWidth = 1.2 * z; g.beginPath(); g.ellipse(ax, ay, 9 * z, 2 * z, 0, Math.PI, 0); g.stroke(); }],
-      [0.08, 0, () => { for (const b of [-0.42, 0.42]) kPost(K, 0.16, b, 5, shade(col, -0.18), 1.1);
-        K.block({ a: 0.06, ha: 0.14, hb: 0.44, h: 1.2, lift: 4.6, wall: col, roof: top, type: 'flat' });
-        for (const b of [-0.44, 0.44]) K.block({ a: 0.02, b, ha: 0.12, hb: 0.03, h: 1, lift: 8, wall: col, roof: top, type: 'flat' }); }],
+      [-0.1, 0, () => { for (const b of [-0.44, 0.44]) kPost(K, -0.1, b, 13, dk, 1.4);
+        K.block({ a: -0.1, ha: 0.03, hb: 0.44, h: 6.5, lift: 6, wall: col, roof: top, type: 'flat' });
+        g.strokeStyle = C(dk); g.lineWidth = 0.7 * z; g.beginPath();
+        for (let i = -3; i <= 3; i++) { const b = i * 0.11, p0 = K.P(-0.07, b, 6.4), p1 = K.P(-0.07, b, 12); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
+        g.stroke();
+        g.fillStyle = C(top); g.beginPath();
+        for (let i = 0; i <= 12; i++) { const b = -0.46 + 0.92 * i / 12, p = K.P(-0.1, b, 12.5 + 2.6 * Math.cos(b / 0.46 * Math.PI / 2)); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }
+        for (let i = 12; i >= 0; i--) { const p = K.P(-0.1, -0.46 + 0.92 * i / 12, 11.6); g.lineTo(p[0], p[1]); }
+        g.closePath(); g.fill(); }],
+      [0.08, 0, () => { seat(); for (const b of [-0.46, 0.46]) { K.block({ a: 0.02, b, ha: 0.13, hb: 0.03, h: 1.2, lift: 8.4, wall: col, roof: top, type: 'flat' }); kPost(K, 0.14, b, 8.4, dk, 1.2); } }],
+    ]);
+  } else if (form === 'blumen') {                                       // kurze Bank mit je einem Blumenkasten (Block 147)
+    const box = b => {
+      K.block({ a: 0.02, b, ha: 0.16, hb: 0.1, h: 5, wall: '#9a6a46', roof: '#7a5236', type: 'flat' });
+      for (const [da, db] of [[-0.1, 0], [0.1, 0.02]]) { const p = K.P(0.02 + da, b + db, 5.6); circle(p[0], p[1], 1.6 * z, C('#5aa84f')); }
+      for (const [da, db, c] of [[-0.08, -0.05, '#f28cb1'], [0.06, 0.04, '#ffd36e'], [-0.02, 0.06, '#ffffff'], [0.08, -0.06, '#b9a3ee'], [0, 0, '#f6b6cb']]) { const p = K.P(0.02 + da, b + db, 6.6); circle(p[0], p[1], 1.8 * z, C(c)); }
+    };
+    K.scene([
+      [-0.1, 0, () => { for (const b of [-0.32, 0.32]) kPost(K, -0.1, b, 11, dk, 1.4); K.block({ a: -0.1, ha: 0.035, hb: 0.34, h: 5, lift: 6.5, wall: col, roof: top, type: 'flat' }); }],
+      [0.04, -0.5, () => box(-0.5)],
+      [0.08, 0, () => seat(0.34)],
+      [0.04, 0.5, () => box(0.5)],
+    ]);
+  } else if (form === 'laube') {                                        // Laubenbank: Bank unter einem Rosenbogen (Block 147)
+    const archH = b => 22 + 6 * Math.cos(Math.min(0.5, Math.abs(b)) / 0.5 * Math.PI / 2);
+    K.scene([
+      [-0.22, 0, () => {
+        for (const b of [-0.5, 0.5]) kPost(K, -0.2, b, 22, '#7a5236', 1.4);
+        g.strokeStyle = C('#7a5236'); g.lineWidth = 1.4 * z; g.beginPath();
+        for (let i = 0; i <= 14; i++) { const b = -0.5 + i / 14, p = K.P(-0.2, b, archH(b)); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }
+        g.stroke();
+        const leaf = (b, h, i) => { const p = K.P(-0.2, b, h); circle(p[0], p[1], 2.6 * z, C(i % 2 ? '#4f9e4a' : '#5db556')); if (i % 3 === 0) circle(p[0] + 1 * z, p[1] - 1 * z, 1.3 * z, C('#f28cb1')); };
+        let i = 0;
+        for (const b of [-0.5, 0.5]) for (let h = 4; h < 21; h += 4.5) leaf(b, h, i++);   // an den Pfosten hoch
+        for (let k = 0; k <= 12; k++) { const b = -0.5 + k / 12; leaf(b, archH(b), i++); }   // über den Bogen
+        for (const b of [-0.4, 0.4]) kPost(K, -0.1, b, 11, dk, 1.3);
+        K.block({ a: -0.1, ha: 0.035, hb: 0.42, h: 5, lift: 6.5, wall: col, roof: top, type: 'flat' });
+      }],
+      [0.08, 0, () => seat(0.44)],
     ]);
   } else if (form === 'stein') {                                        // Steinplatte auf zwei Blöcken, Sitzkissen in Farbe
     K.scene([[0, 0, () => {
@@ -81,12 +117,29 @@ function drawBench(cx, cy, z, t, hw, hh) {
       [0, 0, () => { for (const b of [-0.28, 0.28]) kPost(K, 0, b, 7, shade(col, -0.25), 1.3); K.block({ a: 0, ha: 0.11, hb: 0.38, h: 1.2, lift: 7, wall: col, roof: top, type: 'flat' }); }],
       [0.2, 0, () => { for (const b of [-0.3, 0.3]) kPost(K, 0.2, b, 3.6, shade(col, -0.25), 1.1); K.block({ a: 0.2, ha: 0.05, hb: 0.36, h: 1, lift: 3.6, wall: col, roof: top, type: 'flat' }); }],
     ]);
-  } else if (form === 'rund') {                                         // Rundbank: Sitzring mit Rückenlehne, in der Mitte ein Bäumchen
-    const ring = (r, lift, h, c) => { for (const s of [1, 0]) { g.fillStyle = s ? C(shade(c, -0.2)) : C(c); g.beginPath(); g.ellipse(cx, cy - (lift + (s ? 0 : h)) * z, r * z, r * 0.5 * z, 0, 0, Math.PI * 2); g.ellipse(cx, cy - (lift + (s ? 0 : h)) * z, (r - 2.4) * z, (r - 2.4) * 0.5 * z, 0, 0, Math.PI * 2, true); g.fill('evenodd'); } };
-    for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.fillStyle = C(iron); g.fillRect(cx + Math.cos(a) * 9.5 * z - 0.5 * z, cy + Math.sin(a) * 4.75 * z - 6 * z, 1 * z, 6 * z); }
-    ring(11, 6, 1.2, col);                                              // Sitz über den Beinen
-    g.fillStyle = C('#8a5a3c'); g.fillRect(cx - 1.2 * z, cy - 18 * z, 2.4 * z, 13 * z);
-    for (const [dx, dy, r, c] of [[-3, -20, 4.2, '#58ad52'], [3, -20, 4.2, '#4f9e4a'], [0, -24, 5, '#62b85a']]) circle(cx + dx * z, cy + dy * z, r * z, C(c));
+  } else if (form === 'rund') {
+    // Rundbank (Block 147, Rückmeldung Nutzer: viel zu klein neben der Parkbank): Sitzring so breit wie eine Parkbank lang ist,
+    // innen eine niedrige Lehne, in der Mitte ein richtiger kleiner Baum. Hintere Hälfte – Stamm – vordere Hälfte, damit der Ring
+    // den Stamm vorn verdeckt
+    const R = 17, W = 4.2, lift = 6, oy = 0.5;
+    const band = (r0, r1, l, h, c, a0, a1) => {                         // Ringstück zwischen r0 und r1 (innen/außen), Höhe h über l
+      const top = cy - (l + h) * z;
+      g.fillStyle = C(shade(c, -0.22)); g.beginPath(); g.ellipse(cx, cy - l * z, r1 * z, r1 * oy * z, 0, a0, a1); g.ellipse(cx, top, r1 * z, r1 * oy * z, 0, a1, a0, true); g.closePath(); g.fill();
+      g.fillStyle = C(c); g.beginPath(); g.ellipse(cx, top, r1 * z, r1 * oy * z, 0, a0, a1); g.ellipse(cx, top, r0 * z, r0 * oy * z, 0, a1, a0, true); g.closePath(); g.fill();
+    };
+    shadow(cx, cy + 1 * z, (R + 3) * z, (R + 3) * oy * z);
+    const legs = (front) => { for (let i = 0; i < 8; i++) { const a = (i + 0.5) / 8 * Math.PI * 2; if ((Math.sin(a) > 0) !== front) continue;
+      g.fillStyle = C(iron); g.fillRect(cx + Math.cos(a) * (R - 2) * z - 0.6 * z, cy + Math.sin(a) * (R - 2) * oy * z - lift * z, 1.2 * z, lift * z); } };
+    legs(false);
+    band(R - W, R, lift, 1.4, col, Math.PI, Math.PI * 2);              // Sitz hinten
+    band(R - W - 1.2, R - W, lift, 5.5, col, Math.PI, Math.PI * 2);    // Lehne hinten (innen)
+    g.fillStyle = C('#8a5a3c'); g.fillRect(cx - 2.2 * z, cy - 26 * z, 4.4 * z, 22 * z);                     // Stamm
+    g.fillStyle = C('#74492f'); g.fillRect(cx + 0.7 * z, cy - 26 * z, 1.5 * z, 22 * z);
+    for (const [dx, dy, r, c] of [[-9, -27, 9.5, '#4a9446'], [9, -27, 9.5, '#458c42'], [0, -31, 12, '#4f9e4a'], [-6, -38, 9.5, '#58ad52'], [6, -38, 9, '#5db556'], [0, -44, 8, '#6cc062']])
+      circle(cx + dx * z, cy + dy * z, r * z, C(c));
+    legs(true);
+    band(R - W - 1.2, R - W, lift, 5.5, col, 0, Math.PI);              // Lehne vorn
+    band(R - W, R, lift, 1.4, col, 0, Math.PI);                        // Sitz vorn
   } else {                                                              // Parkbank (wie bisher)
     K.scene([
       [-0.1, 0, () => { for (const b of [-0.4, 0.4]) kPost(K, -0.1, b, 11, '#6b4f3a', 1.4);

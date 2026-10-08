@@ -1743,13 +1743,18 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       es schon (Block 112). Test: bahn-gemuetlich.test.js (zwei Netze, verbunden/alle, ↶). Browser-Blick offen (Fenster ging nicht auf)
 
 ## Block 147: Bänke (Rückmeldung Nutzer, 08.10.2026)
-- [ ] Rundbank (Bank um den Baum) viel zu klein im Vergleich zur Parkbank → größer (Baum und Bank im richtigen Verhältnis)
-- [ ] Gartenbank „komisch“: sieht seltsam aus, Nutzen unklar → neu zeichnen und klar sagen, was sie bringt (oder durch etwas
-      Schöneres ersetzen) – Entwürfe zeigen
+- [x] Rundbank war halb so breit wie die Parkbank, das Bäumchen winzig: Sitzring so breit wie eine Parkbank lang, innen niedrige
+      Lehne, richtiger kleiner Baum (Stamm, volle Krone); Ring vorn vor dem Stamm
+- [x] Gartenbank (schwebender Drahtbogen über der Lehne) – drei Entwürfe gezeigt, Nutzer: „alle drei“. Gartenbank = Englische
+      Gartenbank (Latten-Lehne, geschwungener Abschluss, Armlehnen); neu in der Kunstakademie: Bank mit Blumenkästen (140),
+      Laubenbank unter einem Rosenbogen (180). Alte Formen behalten ihre Nummer. Nutzen: alle Bankformen bringen gleich viel Schönheit
+- Leistungs-Wächter: Gartenbank 76 → 122, Rundbank 21 → 50, neu 102 / 122 Zeichenbefehle nah – bewusst aufgenommen (Bänke,
+  weit weg ohnehin Bildchen). Test: baenke-fussbruecke.test.js
 
 ## Block 148: Fußgängerbrücke über Schienen sauber anschließen (Rückmeldung Nutzer, 08.10.2026)
-- [ ] Weg läuft heute unter der Brücke durch bzw. schließt schlecht an („sieht doof aus“) – Rampe/Treppe sauber an den Weg davor
-      und dahinter anschließen, kein Weg sichtbar unter dem Brückendeck
+- [x] Deck war schmaler als der Weg (ARCH_W 0,3 < Weg mit Rand 0,36) – der Weg schaute an den Rampen seitlich hervor; jetzt
+      `ARCH_W = EDGE_W + 0,01`. Unter der ansteigenden Rampe sah man den Weg am Boden weiterlaufen – Rampen auf den Wegfeldern
+      jetzt massiv bis zum Boden, nur über den Gleisen offen. Alle vier Ausführungen im Browser geprüft. Test: baenke-fussbruecke.test.js
 
 ## Block 149: Leistungs-Wächter – flüssig bleibt flüssig (Wunsch Nutzer, 08.10.2026: „Zukunftssicherheit ist mir wichtig“)
 - [x] Wächter je Bild (tests/leistung.test.js): Testwelten groß, Freizeitpark, Farben × Zoom 0,45/0,8/1,2/1,6/2,2 × Tag/Nacht, wie iPad
