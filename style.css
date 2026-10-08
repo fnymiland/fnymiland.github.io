@@ -523,13 +523,8 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 #card-name { position: fixed; z-index: 30; pointer-events: none; background: var(--brown); color: var(--cream); font-weight: 800;
   font-size: 13px; padding: 4px 10px; border-radius: 10px; white-space: nowrap; box-shadow: 0 3px 8px rgba(60, 40, 20, .25); }
 #card-name[hidden] { display: none; }
-/* Block 38: Suchfeld */
-.search-in { flex: 1 1 auto; min-width: 180px; max-width: 320px; border: 0; border-radius: 99px; padding: 5px 12px; font: inherit; font-weight: 800;
-  font-size: 14px; color: var(--brown); background: var(--cream); box-shadow: inset 0 0 0 2px #e0c060; }
-.search-in:focus { outline: none; box-shadow: inset 0 0 0 2px var(--brown); }
-.search-none { margin: 14px 8px; font-weight: 800; color: var(--brown2); }
 @media (max-width: 600px) {
-  .cat:not(.active) .tx, .sub:not(.active) .tx { display: none; }
+  .cat .tx, .sub:not(.active) .tx { display: none; }   /* Bereiche nur als Symbol, auch der offene – sonst fallen rechts welche raus */
   .cats { gap: 2px; }                  /* sechs Bereiche + vier Schnellknöpfe passen in 375 px (auch mit „Verbinden“) */
   .cat { padding: 5px 6px; font-size: 12px; }
   .quick { width: 29px; }
@@ -670,6 +665,16 @@ body.has-styles #hint { bottom: calc(var(--bar, 160px) + var(--sbar, 44px) + 16p
 body.phone #toolbar { padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); transition: background .15s; }
 body.phone #sheet { width: 100vw; border-radius: 22px 22px 0 0; bottom: 100%; }
 body.phone .cats { margin-bottom: 0; }
+body.phone .cat::after { content: none; }                                  /* kein ▾: sonst passen nicht alle Bereiche in die Reihe */
+/* Feld auf dem Handy: höchstens knapp die halbe Höhe, fünf kleine Kacheln nebeneinander (Nutzer: „unspielbar“) */
+body.phone #sheet { max-height: 46dvh; padding: 6px 8px 10px; }
+body.phone #sheet .tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); gap: 8px 6px; }
+body.phone #sheet .sheet-h { grid-column: 1 / -1; margin: 6px 2px 0; }
+body.phone #sheet .tool { width: auto; padding: 3px 2px 5px; border-radius: 14px; }
+body.phone #sheet .tool canvas { width: 44px; height: 34px; }
+body.phone #sheet .tool .emoji { font-size: 22px; height: 34px; }
+body.phone #sheet .tool .nm { font-size: 9.5px; max-width: 100%; min-height: 21px; }
+body.phone #sheet .tool .cost { font-size: 10px; }
 /* Hochformat: Kacheln als Raster (vier nebeneinander), höchstens halbe Höhe */
 
 /* Zielkasten: von selbst nur eine Zeile (antippen klappt ihn auf) */

@@ -1,9 +1,9 @@
 const { loadGame, game } = require('./helpers/load-game');
 
-// Block 120: 🕘 Zuletzt gebaut – die letzten 8 gebauten Dinge, neben der Suche
+// Block 120: 🕘 Zuletzt gebaut – die letzten 8 gebauten Dinge
 beforeAll(() => loadGame());
 beforeEach(() => {
-  game("localStorage.clear(); startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; recentOpen = false; searchQ = null; buildToolbar()");
+  game("localStorage.clear(); startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; recentOpen = false; buildToolbar()");
   game("for (let y = 4; y <= 14; y++) for (let x = 4; x <= 14; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } recalc()");
 });
 
@@ -23,7 +23,7 @@ describe('Zuletzt gebaut (Block 120)', () => {
     game("state.tiles.set('9,9', { b: 'haus', lvl: 1 }); recalc(); setTool('kiosk'); tap(...(() => { const p = toScreen(9, 9); return [p.x, p.y]; })(), false)");
     expect(game('recentList()')).not.toContain('kiosk');                                      // besetzt: nicht gebaut
   });
-  it('🕘 neben der Suche zeigt die Liste in der Leiste; Bereich oder Suche schließt sie', () => {
+  it('🕘 zeigt die Liste in der Leiste; ein Bereich schließt sie', () => {
     game("noteRecent('baum'); noteRecent('haus'); buildToolbar()");
     expect(game("!!document.querySelector('#cats .quick.recent')")).toBe(true);
     game("document.querySelector('#cats .quick.recent').click()");
@@ -32,7 +32,5 @@ describe('Zuletzt gebaut (Block 120)', () => {
     expect(game("document.querySelector('#subcats .recent-label').textContent")).toMatch(/Zuletzt gebaut/);
     game("document.querySelector('#cats .cat').click()");
     expect(game('recentOpen')).toBe(false);
-    game("document.querySelector('#cats .quick.recent').click(); document.querySelector('#cats .quick.find').click()");
-    expect(game('[recentOpen, searchQ]')).toEqual([false, '']);
   });
 });

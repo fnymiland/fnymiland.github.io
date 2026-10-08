@@ -1953,4 +1953,9 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 - [x] Nutzer: „die Hinweise, wenn man einen Gegenstand in die Hand nimmt, sollen weg“ (z. B. „Kunstakademie · Tür zeigt von selbst
       zum Weg“) – am PC/iPad keine Hinweiszeile mehr beim Wählen. Handy behält die kurze Zeile mit Preis und ⓘ (dort einziger Weg zum
       Infofenster). Tests: kopieren, leiste, handy.
+- [x] Nutzer: „aufm Handy ist diese Leiste unspielbar“ – der offene Bereich zeigte seinen Namen, dadurch fielen Freizeit/Gestalten
+      rechts raus. Handy: Bereiche immer nur als Symbol, ohne ▾; Feld höchstens 46 % hoch, fünf kleinere Kacheln je Reihe (im Browser
+      bei 375 px nachgemessen: Reihe 319/319 px).
+- [x] Nutzer: „die Suchfunktion können wir wegnehmen, die nutzt eh nie einer“ – 🔍 und Suchfeld entfernt (`searchQ`, `searchHits`).
+      `searchNorm` bleibt fürs Nachschlagebuch. Tests: leiste, zuletzt.
 

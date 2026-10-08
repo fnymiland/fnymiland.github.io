@@ -2,7 +2,7 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Block 36: schmale Kacheln (Bild + Preis), Klick zeigt rechts das Bau-Infofenster; Handy: ⓘ im Hinweis
 beforeAll(() => loadGame());
-beforeEach(() => { size(1024, 768); game('startNew()'); game("closeModal(); closePanel(); searchQ = null; setTool('look'); state.tutorial = -1; state.tipsOff = true"); });
+beforeEach(() => { size(1024, 768); game('startNew()'); game("closeModal(); closePanel(); setTool('look'); state.tutorial = -1; state.tipsOff = true"); });
 afterAll(() => size(1024, 768));
 function size(w, h) {
   Object.defineProperty(window, 'innerWidth', { value: w, configurable: true });
@@ -149,35 +149,10 @@ describe('Handy', () => {
 });
 
 describe('Suche', () => {
-  it('🔍 öffnet ein Suchfeld; „back“ findet die Bäckerei, egal in welchem Bereich', () => {
-    open('stadt', 'wohnen');
-    document.querySelector('#cats .find').click();
-    const inp = document.getElementById('search-in');
-    expect(inp).not.toBe(null);
-    expect([...document.querySelectorAll('#cats .cat.active')].length).toBe(0);
-    inp.value = 'back'; inp.oninput();
-    expect([...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool)).toEqual(['baecker']);
-    inp.value = 'LADEN'; inp.oninput();
-    const ids = [...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool);
-    expect(ids).toEqual(expect.arrayContaining(['blumenladen', 'teeladen', 'hofladen', 'spielzeug']));
-    inp.value = 'xyz'; inp.oninput();
-    expect(document.getElementById('tools').textContent).toContain('Nichts gefunden');
-  });
-
-  it('Auswahl aus der Suche wählt das Werkzeug; ein Bereich oder Escape beendet die Suche', () => {
-    open('stadt', 'wohnen');
-    document.querySelector('#cats .find').click();
-    const inp = document.getElementById('search-in');
-    inp.value = 'haus'; inp.oninput();
-    document.querySelector('#tools [data-tool="haus"]').click();
-    expect(game('tool')).toBe('haus');
-    document.getElementById('search-in').onkeydown({ key: 'Escape' });
-    expect(game('searchQ')).toBe(null);
+  it('ist weg (Nutzer: „nutzt eh nie einer“)', () => {
+    game('buildToolbar()');
+    expect(document.querySelector('#cats .find')).toBe(null);
     expect(document.getElementById('search-in')).toBe(null);
-    document.querySelector('#cats .find').click();
-    document.querySelector('#cats [data-menu="gestalten"]').click();
-    expect(game('searchQ')).toBe(null);
-    expect(game('menuTop')).toBe('gestalten');
   });
 
   it('keine Erklär-Zeile neben den Filtern', () => {

@@ -126,7 +126,7 @@ function setSheet(open) {
 }
 document.addEventListener('pointerdown', e => {                          // daneben tippen: Feld zu – der Tipp baut nichts
   if (!sheetOpen || $('toolbar').contains(e.target) || ($('panel') && $('panel').contains(e.target)) || ($('modal') && $('modal').contains(e.target))) return;
-  setSheet(false); searchQ = null; recentOpen = false; buildToolbar();
+  setSheet(false); recentOpen = false; buildToolbar();
   if (e.target && e.target.id === 'world') { e.stopPropagation(); e.preventDefault(); }
 }, true);
 function buildToolbar() {
@@ -148,16 +148,10 @@ function buildToolbar() {
   un.onclick = () => { audio(); undo(); };
   cats.append(un); updateUndoBtn();
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
-  // 🔍 Suche (Block 38): findet jedes Ding beim Namen, egal in welchem Bereich
-  const find = document.createElement('button');
-  find.className = 'quick find' + (searchQ != null ? ' active' : '');
-  find.textContent = '🔍'; find.title = 'Suchen'; find.setAttribute('aria-label', 'Suchen');
-  find.onclick = () => { audio(); recentOpen = false; searchQ = searchQ == null ? '' : null; setSheet(searchQ != null); buildToolbar(); };
-  cats.append(find);
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
   rec.textContent = '🕘'; rec.title = 'Zuletzt gebaut'; rec.setAttribute('aria-label', 'Zuletzt gebaut');
-  rec.onclick = () => { audio(); recentOpen = !recentOpen; if (recentOpen) searchQ = null; setSheet(recentOpen); buildToolbar(); };
+  rec.onclick = () => { audio(); recentOpen = !recentOpen; setSheet(recentOpen); buildToolbar(); };
   cats.append(rec);
   // Bereiche (Stadt · Herstellen · Einkaufen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
@@ -167,30 +161,21 @@ function buildToolbar() {
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (sheetOpen && m.id === menuTop && searchQ == null && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
+    b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
-    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && searchQ == null && !recentOpen));
-    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && searchQ == null && !recentOpen; searchQ = null; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
+    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen));
+    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
     cats.append(b);
   }
-  // Filter nach Zweck (oder das Suchfeld); darunter eine Zeile mit der Regel des Bereichs
-  const subs = $('subcats'), hadFocus = document.activeElement && document.activeElement.id === 'search-in';
+  // Über den Kacheln nur bei „Zuletzt gebaut“ ein Schild (die Suche ist weg, Nutzer 08.10.2026: „nutzt eh nie einer“)
+  const subs = $('subcats');
   subs.innerHTML = '';
   if (recentOpen) {                                                       // Zuletzt gebaut: nur ein Schild statt Filter
     subs.hidden = false;
     const l = document.createElement('span'); l.className = 'sub active recent-label';
     l.textContent = recentList().length ? '🕘 Zuletzt gebaut' : '🕘 Noch nichts – was du baust, steht dann hier';
     subs.append(l);
-  } else if (searchQ != null) {
-    subs.hidden = false;
-    const inp = document.createElement('input');
-    inp.id = 'search-in'; inp.className = 'search-in'; inp.type = 'search'; inp.placeholder = 'Suchen, z. B. Bäckerei';
-    inp.value = searchQ; inp.setAttribute('aria-label', 'Gebäude suchen'); inp.autocomplete = 'off';
-    inp.oninput = () => { searchQ = inp.value; renderTools(); };
-    inp.onkeydown = e => { if (e.key === 'Escape') { searchQ = null; buildToolbar(); } };
-    subs.append(inp);
-    requestAnimationFrame(() => { if (searchQ != null && (hadFocus || !PHONE || sheetOpen)) { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); } });
   } else subs.hidden = true;                                              // Gruppen stehen als Überschriften im Feld
   renderTools();
   setTool(tool);
@@ -220,13 +205,8 @@ function renderTools() {
     return b;
   };
   const freeFirst = ids => [...ids.filter(available), ...ids.filter(id => !available(id))];
-  if (recentOpen || searchQ != null) {
-    const list = menuList();
-    if (searchQ != null && !list.length) {
-      const p = document.createElement('p'); p.className = 'search-none';
-      p.textContent = searchQ.trim() ? 'Nichts gefunden' : 'Tippe einen Namen ein'; box.append(p);
-    }
-    for (const id of list) box.append(card(id));
+  if (recentOpen) {
+    for (const id of menuList()) box.append(card(id));
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
@@ -235,7 +215,6 @@ function renderTools() {
     for (const id of freeFirst(gr.items)) box.append(card(id));
   }
 }
-let searchQ = null;                    // null = keine Suche, sonst der eingetippte Text
 // Maus über einer Kachel: Name sofort als Schild darüber (die Leiste scrollt – ein Schild in der Kachel würde abgeschnitten)
 function showCardName(b) {
   const el = $('card-name');
@@ -250,7 +229,7 @@ const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
 const menuHas = (m, id) => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id);   // Bereich mit dem gewählten Werkzeug (Punkt)
 const menuList = () => { if (recentOpen) return recentList(); const top = MENU.find(m => m.id === menuTop) || MENU[0];
-  const all = searchQ != null ? searchHits(searchQ) : top.groups ? top.groups.flatMap(g => g.items) : top.items; return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
+  const all = top.groups ? top.groups.flatMap(g => g.items) : top.items; return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
 const nfShort = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
@@ -786,7 +765,7 @@ function tryUnlock(k) {
   let id = k;
   if (k.startsWith('weg:')) { chosenStyle.weg = k.slice(4); id = 'weg'; }
   const p = menuPlaceOf(id);
-  searchQ = null; menuTop = p.top; menuSub = p.sub;
+  menuTop = p.top; menuSub = p.sub;
   buildToolbar();
   setTool(id);
   if (!PHONE && ITEMS[id]) openBuildInfo(id);
@@ -1979,7 +1958,7 @@ function openIsle(id, sx, sy) {
     ${isNext ? expeditionHtml(true) : `<div class="status"><div class="bad">🔒 Erst die ${nxt.icon} ${nxt.name} entdecken</div></div>`}
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => isleOpen(id) ? closePanel() : openIsle(id));
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition()) openIsle(id); };
-  if ($('p-steg')) $('p-steg').onclick = () => { closePanel(); searchQ = null; ({ top: menuTop, sub: menuSub } = menuPlaceOf('bootssteg')); buildToolbar(); setTool('bootssteg'); };
+  if ($('p-steg')) $('p-steg').onclick = () => { closePanel(); ({ top: menuTop, sub: menuSub } = menuPlaceOf('bootssteg')); buildToolbar(); setTool('bootssteg'); };
   $('p-close').onclick = closePanel;
   panelAt(sx, sy);
 }

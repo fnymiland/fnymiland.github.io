@@ -588,9 +588,8 @@ const MENU = [
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
 ];
-// Suche (Block 38): Name ohne Groß/Klein und Umlaute („back“ findet die Bäckerei)
+// Namen vergleichen ohne Groß/Klein und Umlaute (Nachschlagebuch; die Suche in der Bauleiste ist seit 08.10.2026 weg)
 const searchNorm = t => t.toLowerCase().replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ß/g, 'ss');
-const searchHits = q => { const n = searchNorm(q.trim()); return n ? MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items).filter(id => searchNorm(ITEMS[id].name).includes(n)) : []; };
 // Bereiche ohne Filter haben den Filter 'alle'; mit Filtern ist der erste der Standard
 const firstSub = top => { const m = MENU.find(e => e.id === top) || MENU[0]; return m.groups ? m.groups[0].id : 'alle'; };
 // Wo steht ein Ding im Menü? (für „Ausprobieren“)
