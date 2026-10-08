@@ -1642,6 +1642,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       (Triebwagen/Schnellzug: Universität bauen, dann dort kaufen.) Test: ubahn
 - [x] Nutzer: „Stationen farbig einfärben“ – Bahnhof/Hbf hatten Wand/Dach schon (BUILDING_ART), Parkbahn-Station ihre Dachfarben;
       neu die U-Bahn-Station über `REPAINT.ubahn` (Wand · Dach & Mast, alle drei Formen); das U-Schild bleibt blau. Test: ubahn
+- [x] Nutzer: „Zaun oben an der Rampe weg (eigener Zaun bleibt möglich), Ein-/Ausfahrt glitcht, Schienen wie das Gleismuster“ –
+      Rampe ohne eigenes Geländer (nur Betonkante; Zäune auf den Feldkanten wie überall). Gleis in der Rinne schräg im Gleisbett
+      des jeweiligen Felds (`rampTrack`, Farben aus railLookOf). Glitch: der Ausschnitt (`rampClip`) verdeckte auch am Rampenanfang
+      alles unter der Öffnung – dort verschwand das Wagenende; jetzt nur unter der vorderen Längskante und (Wand abgewandt) unter der
+      Wandkante. Mit Bildstreifen in beiden Richtungen geprüft (tools/vorschau/ub3-*.png).
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

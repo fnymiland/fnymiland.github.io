@@ -79,11 +79,6 @@ function rampLen(x, y, d) {
   return arms.length === 2 && arms.every(([ax, ay]) => ax === d[0] * Math.sign(ax * d[0] + ay * d[1]) && ay === d[1] * Math.sign(ax * d[0] + ay * d[1])) ? 2 : 1;
 }
 const rampDepth = (a, len) => RAMP_D * Math.pow(Math.max(0, Math.min(1, (a - 0.5 + len) / len)), 1.25);
-// Feldkante eines Rampenfelds (x, y) an der Längsseite b = ±0,5 (für Zaun statt Geländer)
-function rampSideEdge(x, y, d, sg) {
-  const u = -d[1] * sg * 0.5, v = d[0] * sg * 0.5;
-  return Math.abs(v) > 0.4 ? 'a' + x + ',' + (y + (v > 0 ? 1 : 0)) : 'b' + (x + (u > 0 ? 1 : 0)) + ',' + y;
-}
 function drawRamp(S, z, x, y, d, shown) {
   const len = rampLen(x, y, d), a0 = 0.5 - len, w = RAMP_W, N = 10 * len, as = i => a0 + len * i / N, dep = a => rampDepth(a, len);
   g.save();
@@ -104,19 +99,32 @@ function drawRamp(S, z, x, y, d, shown) {
     poly([S(0.5, -w, -RAMP_D), S(0.5, w, -RAMP_D), S(0.5, w, 0), S(0.5, -w, 0)], C('#a9a399'));
     poly([S(0.5, -0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D), S(0.5, 0.28, -RAMP_D + 17), S(0.5, -0.28, -RAMP_D + 17)], C('#231d1a'));
   }
-  for (const o of [-0.09, 0.09]) portalLine(Array.from({ length: N + 1 }, (_, i) => S(as(i), o, -dep(as(i)))), '#7c838e', 1.1, z);
+  // Gleis im gewählten Gleisbett (Nutzer: „Schienen sollen sich dem Schienenmuster anpassen“) – je Feld wie dort gewählt
+  for (let i = 0; i < len; i++) {
+    const t = x > 1e5 ? null : state.tiles.get((x - d[0] * i) + ',' + (y - d[1] * i));
+    rampTrack(S, z, 0.5 - i - 1, 0.5 - i, dep, railLookOf(t));
+  }
   g.restore();
-  for (const sg of [-1, 1]) {                                            // Kante; Geländer nur ohne eigenen Zaun auf der Feldkante
+  for (const sg of [-1, 1]) {                                            // Betonkante; Geländer gibt es keins – ein eigener Zaun auf der Feldkante geht
     const b = sg * (w + 0.04);
     poly([S(a0, b - 0.04, 0), S(0.5, b - 0.04, 0), S(0.5, b + 0.04, 0), S(a0, b + 0.04, 0)], C('#d9d5cc'));
-    for (let i = 0; i < len; i++) {                                     // je Feld: Portalfeld (i = 0) und das davor
-      if (state.edges.has(rampSideEdge(x - d[0] * i, y - d[1] * i, d, sg))) continue;
-      const lo = -0.5 - i, hi = 0.5 - i;
-      portalLine([S(lo, b, 6), S(hi, b, 6)], '#6a7280', 1, z);
-      for (let a = lo; a <= hi + 0.01; a += 0.25) portalLine([S(a, b, 0), S(a, b, 6)], '#6a7280', 0.8, z);
-    }
   }
-  portalLine([S(0.5, -w - 0.04, 6), S(0.5, w + 0.04, 6)], '#6a7280', 1, z);
+}
+// Gleisbett und Schienen schräg in der Rampe (a von lo bis hi), Farben wie drawRailBed
+function rampTrack(S, z, lo, hi, dep, lk) {
+  const M = 8, at = (a, b) => S(a, b, -dep(a)), band = w => { const pts = []; for (let i = 0; i <= M; i++) pts.push(at(lo + (hi - lo) * i / M, -w)); for (let i = M; i >= 0; i--) pts.push(at(lo + (hi - lo) * i / M, w)); return pts; };
+  if (lk.pave) { const pl = pathLook(lk.pave); poly(band(RAIL_W + 0.05), C(pl.edge)); poly(band(RAIL_W + 0.02), C(pl.fill)); }
+  else {
+    poly(band(RAIL_W + 0.03), C(lk.edge)); poly(band(RAIL_W), C(lk.bed));
+    g.strokeStyle = C(lk.tie); g.lineWidth = 1.7 * z; g.lineCap = 'butt'; g.beginPath();
+    for (let a = lo + 0.0625; a < hi; a += 0.125) { const p = at(a, -0.15), q = at(a, 0.15); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.stroke();
+  }
+  for (const o of [-RAIL_GAUGE, RAIL_GAUGE]) {
+    const line = Array.from({ length: M + 1 }, (_, i) => at(lo + (hi - lo) * i / M, o));
+    portalLine(line, lk.rail, lk.rw, z);
+    portalLine(line.map(p => [p[0], p[1] - 0.4 * z]), '#dfe3e8', 0.45, z);
+  }
 }
 
 // Zugwagen am Portal (render.js): wo die Wand ist, wird der Wagen abgeschnitten; in der Rampe sinkt er mit dem Gleis
@@ -150,14 +158,18 @@ function rampSink(P, wx, wy) {
   const [rx, ry] = P.R, a = (wx - rx) * P.d[0] + (wy - ry) * P.d[1];
   return rampDepth(a, P.len || 1);
 }
-// Wagen in der Rampe: nur durch die Öffnung und darüber sichtbar (die vordere Kante verdeckt, was tiefer liegt)
+// Wagen in der Rampe: was unter der Erde liegt, verdeckt die vordere Kante – also alles unterhalb der vorderen Längskante und (zeigt
+// die Wand weg) unterhalb der Kante an der Wand. Am Rampenanfang liegt das Gleis ebenerdig: dort nichts verdecken, sonst
+// verschwand dort das Ende des Wagens (Nutzer: „glitched beim Ein- und Ausfahren“)
 function rampClip(P, z) {
   const [rx, ry] = P.R, d = P.d, w = RAMP_W, a0 = 0.5 - (P.len || 1);
   const W2 = (a, b) => { const p = toScreen(rx + d[0] * a - d[1] * b, ry + d[1] * a + d[0] * b); return [p.x, p.y]; };
-  const q = [W2(a0, -w), W2(0.5, -w), W2(0.5, w), W2(a0, w)];
-  const left = q.reduce((p, c) => c[0] < p[0] ? c : p), right = q.reduce((p, c) => c[0] > p[0] ? c : p);
-  const low = q.filter(c => c !== left && c !== right).reduce((p, c) => c[1] > p[1] ? c : p);
-  g.beginPath(); g.moveTo(left[0], -1e4); g.lineTo(left[0], left[1]); g.lineTo(low[0], low[1]); g.lineTo(right[0], right[1]); g.lineTo(right[0], -1e4); g.closePath(); g.clip();
+  const edges = [];
+  for (const sg of [-1, 1]) if (sg * (d[0] - d[1]) > 0) edges.push([W2(a0, sg * w), W2(0.5, sg * w)]);   // vordere Längskante
+  if (d[0] + d[1] > 0) edges.push([W2(0.5, -w), W2(0.5, w)]);            // Kante an der Wand, wenn sie vorn liegt
+  g.beginPath(); g.rect(-1e4, -1e4, 3e4, 3e4);
+  for (const [p, q] of edges) { g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); g.lineTo(q[0], q[1] + 1e4); g.lineTo(p[0], p[1] + 1e4); g.closePath(); }
+  g.clip('evenodd');
 }
 
 // U-Bahn-Eingang (1×1): Treppe mit Mast (frei), Pavillon mit Glasdach, Häuschen (Kunstakademie). Vorn = Drehrichtung.
