@@ -1655,6 +1655,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       zweiten Feld und übermalte den Zaun am vorderen Feld (halber Zaun). Jetzt malt das Rampenfeld, das zuerst dran ist
       (`rampByFront`/`rampFrontOf`), die Wagen gehören zum letzten. (2) Gefälle gleichmäßig statt beschleunigt – vorher bogen sich
       Schienen und Kanten wie eine Banane. Mit Zaun ringsum in beiden Richtungen geprüft (ub7-*.png).
+- [x] Nutzer: „Tunnel nicht mehrfach löschen, auch nicht in der Mitte einzeln“ – der Abriss (Rechteck, auch 1×1 beim Tippen) kannte
+      Tunnel nicht (`scanDemolish`). Unter einem Gebäude bleibt der Tunnel, bis das Gebäude weg ist. Test: ubahn
 - [x] Parkeisenbahn (Wunsch Nutzer, 08.10.; Vorschau abgenommen, „Züge detaillierter, echte Bewohner“): `pb_gleis` als Linie ziehen
       (Wiese, Park, Freizeitpark; über einen Weg bleibt der Weg darunter – Bahnübergang mit Andreaskreuz), `pb_station` auf ein
       Gleisstück (Gleis wird Station, nur der Unterschied kostet). Fertiger Rundkurs mit Station (`computeParkRails`, `PB_RINGS`) →

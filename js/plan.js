@@ -193,6 +193,7 @@ function scanDemolish(p) {
       continue;
     }
     const info = ownedTile(x, y) ? demolishInfo(x, y) : { err: 'nichts' };
+    if (info.tunnel) { order.push([x, y, () => { demolish(x, y); return true; }]); gain += info.refund; things++; states.set(k, 'ok'); continue; }   // Tunnel (Block 136): einzeln und im Rechteck
     if (info.cost) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
     else if (!states.has(k)) states.set(k, 'same');
   }

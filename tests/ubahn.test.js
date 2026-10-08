@@ -270,3 +270,16 @@ describe('U-Bahn-Station einfärben (Nutzer: „Stationen farbig einfärben“)'
   });
 });
 
+describe('Tunnel abreißen (Nutzer: „nicht mehrfach löschen, auch nicht in der Mitte einzeln“)', () => {
+  it('mit 🧹 als Rechteck und einzeln mitten im Tunnel; unter einem Haus bleibt er (erst das Haus)', () => {
+    for (let x = 4; x <= 12; x++) game(`state.tunnels.set('${x},10', {})`);
+    game("state.tiles.set('6,10', { b: 'haus', lvl: 1 }); recalc(); setTool('abriss')");
+    game("startPlan('rect', { x: 8, y: 10 }, { x: 8, y: 10 }, true); undoable(() => runPlan())");   // einzeln in der Mitte
+    expect(game("state.tunnels.has('8,10')")).toBe(false);
+    game("startPlan('rect', { x: 4, y: 10 }, { x: 7, y: 10 }, true); undoable(() => runPlan())");   // mehrere, eins unter dem Haus
+    expect(game("[4, 5, 6, 7].map(x => state.tunnels.has(x + ',10'))")).toEqual([false, false, true, false]);
+    expect(game("state.tiles.has('6,10')")).toBe(false);                     // das Haus ist weg, der Tunnel darunter noch da
+    game("setTool('look')");
+  });
+});
+
