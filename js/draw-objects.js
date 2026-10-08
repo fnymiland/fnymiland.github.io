@@ -3054,12 +3054,13 @@ function drawParkTrack(cx, cy, z, x, y, t, now, part = 'all') {
   }
   if (t.b !== 'pb_station' || part === 'track') return;
   const ax = arms.length ? (arms[0][0] ? 0 : 1) : ((t.rot || 0) & 1);
-  const S = (a, b, up = 0) => { const p = L(ax ? [b, a] : [a, b]); return [p[0], p[1] - up * z]; };
-  pbBox(S, ax ? 0 : 1, ax ? 1 : 0, -0.5, 0.5, -0.46, -0.18, 0, 2.2, '#cfc6b4', '#e8e1d2', z, false);   // Bahnsteig hinter dem Gleis
+  // Rahmen: a längs (du, dv), b quer = (−dv, du) – so wie pbBox die Seiten richtet; quer liegend a nach −y, sonst wären die Seiten gespiegelt (Block 136g)
+  const S = (a, b, up = 0) => { const p = L(ax ? [b, -a] : [a, b]); return [p[0], p[1] - up * z]; };
+  pbBox(S, ax ? 0 : 1, ax ? -1 : 0, -0.5, 0.5, -0.46, -0.18, 0, 2.2, '#cfc6b4', '#e8e1d2', z, false);   // Bahnsteig hinter dem Gleis
   for (const a of [-0.36, 0.36]) { const p0 = S(a, -0.3, 2.2), p1 = S(a, -0.3, 13); g.strokeStyle = C('#6b4f3a'); g.lineWidth = 1.3 * z; g.beginPath(); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
   const bank = S(0, -0.38, 2.2); g.fillStyle = C('#9a6a46'); g.fillRect(bank[0] - 3 * z, bank[1] - 3 * z, 6 * z, 1.2 * z);
   const roof = lookCol('pb_station', t);                                 // Dachfarbe wählbar (Block 136d)
-  pbBox(S, ax ? 0 : 1, ax ? 1 : 0, -0.52, 0.52, -0.5, -0.06, 13, 14.2, roof, mix(roof, '#ffffff', 0.3), z, false);   // Dach
+  pbBox(S, ax ? 0 : 1, ax ? -1 : 0, -0.52, 0.52, -0.5, -0.06, 13, 14.2, roof, mix(roof, '#ffffff', 0.3), z, false);   // Dach
   const sg = S(0, -0.06, 15.8); g.fillStyle = C('#fffaf0'); g.fillRect(sg[0] - 8 * z, sg[1] - 2.6 * z, 16 * z, 5.2 * z);
   g.font = `600 ${3.4 * z}px system-ui, sans-serif`; g.fillStyle = C('#5a4636'); g.textBaseline = 'middle'; centerText('Rundfahrt', sg[0], sg[1] + 0.2 * z);
   if (x > 1e5) {                                                          // nur im Vorschaubild der Zugwahl: der Zug am Bahnsteig

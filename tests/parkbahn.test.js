@@ -118,4 +118,15 @@ describe('Parkeisenbahn (Block 136)', () => {
       expect(bad, 'Station ' + st).toEqual([]);
     }
   });
+  it('Station in beiden Richtungen: Bahnsteig und Dach zeigen ihre vorderen Seiten (Block 136g)', () => {
+    loop(); game("build('pb_station', 8, 10); build('pb_station', 12, 8); recalc()");
+    for (const [x, y] of [[8, 10], [12, 8]]) {
+      const bad = game(`(() => { const o = pbBox, bad = [];
+        pbBox = (S, du, dv, a0, a1, b0, b1, h0, ...r) => { const f = o(S, du, dv, a0, a1, b0, b1, h0, ...r), c = S((a0 + a1) / 2, (b0 + b1) / 2, h0)[1];
+          if (!f.length || f.some(e => (e.p[1] + e.q[1]) / 2 < c - 1e-6)) bad.push(f.length); return f; };
+        try { PASS = 'object'; drawObject('pb_station', 0, 0, 2, 0, ${x}, ${y}, 1, state.tiles.get('${x},${y}')); } finally { pbBox = o; PASS = null; }
+        return bad; })()`);
+      expect(bad, x + ',' + y).toEqual([]);
+    }
+  });
 });

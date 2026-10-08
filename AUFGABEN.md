@@ -1597,6 +1597,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] 136f (Nutzer: „Zug glitcht durch die Stationen“): Wagen wurden mit ihrem Feld gezeichnet – stand einer noch auf dem Feld vor
       der Station, malte die Station (Dach, Schild, Bahnsteig) über ihn, ein Bild später er über sie. Die Station steht immer hinter dem
       Gleis: Wagen bis 1,1 Felder vor einer Station werden jetzt mit ihr gezeichnet (render.js, byTile). Test: parkbahn (Reihenfolge)
+- [x] 136g (Nutzer: „seitlich gedreht fehlt unten der Boden vorn“): quer liegende Station hatte einen gespiegelten Rahmen (b quer ≠ (−dv, du)),
+      pbBox zeichnete die verdeckten statt der vorderen Seiten. Jetzt a nach −y, dv = −1. Test: parkbahn (vordere Seiten, beide Richtungen)
 
 ## Block 137: Umbauen – „bezahlt bleibt bezahlt“
 - [x] Gebäude merken sich das Höchste, was schon bezahlt wurde (Schloss `t.price` = Guthaben, Bahnhof `t.lenPaid`, Hbf `t.gleisePaid`):
