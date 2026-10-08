@@ -965,8 +965,13 @@ function archWall(A, P, H, AS, B, hw, z, t, front, depth = 0) {
   for (const o of opens) { trace(archPts(o, hw)); g.closePath(); }
   g.clip('evenodd');                                                     // die Wand ohne die Öffnungen
   poly(wallPoly(hw), C(shade(B.side, -0.12)));
-  const brick = bridgeKind(t) === 'ziegel', RH = brick ? 2.2 : 4.2, BL = brick ? 0.14 : 0.3, top = Math.max(...AS.map(H)) + 1;
-  g.strokeStyle = C(shade(B.side, brick ? -0.28 : -0.2)); g.lineWidth = (brick ? 0.45 : 0.6) * z; g.beginPath();
+  // Fugen weit weg (Nutzer, PC FHD): nie dünner als ein Gerätepunkt, und Reihen nie enger als ~5 Gerätepunkte (sonst grauer Schleier) –
+  // dann eben doppelt so hohe Steine. dp = Gerätepunkte je Einheit (wie patternFade, gilt auch im Bildchen)
+  const tf = g.getTransform ? g.getTransform() : null, sc = tf ? Math.hypot(tf.a, tf.b) : 1, dp = sc * z;
+  const brick = bridgeKind(t) === 'ziegel', top = Math.max(...AS.map(H)) + 1;
+  let RH = brick ? 2.2 : 4.2, BL = brick ? 0.14 : 0.3;
+  while (RH * dp < 5) { RH *= 2; BL *= 2; }
+  g.strokeStyle = C(shade(B.side, brick ? -0.28 : -0.2)); g.lineWidth = Math.max((brick ? 0.45 : 0.6) * z, 1 / sc); g.beginPath();
   for (let k = 0, h = -1; h < top; k++, h += RH) {                       // Lagerfugen und versetzte Stoßfugen (in Weltkoordinaten)
     const p0 = P(-0.5, hw, h), p1 = P(0.5, hw, h); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
     const sh = (k & 1) * BL / 2;

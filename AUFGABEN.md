@@ -1828,6 +1828,11 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 ## Kleinigkeit: Wasser unter Steinbrücken wie ein Schleier (Nutzer, 08.10.2026)
 - [x] In den Bogenöffnungen lag ein halbdurchsichtiger dunkler „Schatten aufs Wasser“ (rgba 0,3), an den Feldkanten doppelt (Streifen).
       Entfernt (`archWall`) – das Wasser unter dem Bogen sieht aus wie überall, die Tiefe zeigt das dunkle Gewölbe.
+
+## Kleinigkeit: Steinbrücke weit weg ohne Textur am PC (Nutzer, 24" FHD, 08.10.2026)
+- [x] Mauerfugen der Bogenbrücken waren Striche 0,6 × Zoom – bei Pixeldichte 1 ab Zoom ~0,8 dünner als ein Bildpunkt, die Wand
+      wurde einfarbig. Jetzt (`archWall`): Fugen mindestens 1 Gerätepunkt, Steinreihen nie enger als ~5 Gerätepunkte (sonst doppelt
+      so hohe Steine – kein Grauschleier). Belag oben blasst wie bei Wegen bewusst aus (Block 125c).
 ## Kleinigkeit: Name überall „Fnymiland“ (Wunsch Nutzer, 08.10.2026)
 - [x] Fenstertitel, Ladebildschirm, Fehlermeldungen beim Laden, Freundescode-Text zum Teilen, Dateinamen beim Sichern
       (`fnymiland-….json`), Kennung im Spielstand (`game: 'fnymiland'`, wird nirgends geprüft), Kopf von CLAUDE.md/KONZEPT.md.
