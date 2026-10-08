@@ -398,6 +398,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     gültig ist ein Belag über `isWegStyle`, freigeschaltet über `styleOk` (Muster: `wegMusterOk`, Farbe: `wegFarbeOk`). Wer
     Muster + Farbe wählt, bekommt über `wegStyleOf` den alten Namen, wenn es die Kombination schon gab (ältere Spiel-Fassungen kennen
     nur die). Neue Muster in `pattern()` im Weltraster (über Feldgrenzen durchgehend), feine Muster blassen weit weg aus (`patternFade`).
+    Wer `pattern()` für Wegfelder im Raster ruft, gibt die Belagfarbe mit (`bg`: Ausblassen per Farbmischung) und setzt `patSeam`
+    (Fuge auf der hinteren Feldkante zeichnet nur das Nachbarfeld) – sonst ist sie doppelt gemalt dunkler und man sieht jedes Feld.
 144. **WebGL weit weg und Grafik-Einstellungen** (Block 144): `js/gl.js` zeichnet tags weit weg über `#world-gl` (Standbild `GLS`,
     Atlas `ATL`, Bewegtes über `glLive` in die Sammelfläche). Jedes Feld, das `glLive` braucht, ist im Standbild „lebendig“ und wird
     jedes Bild neu gemalt – teuer. Darum: was sich nur selten ändert (Uhren, Fähnchen), in den Schlüssel von `glCacheStart`, nicht

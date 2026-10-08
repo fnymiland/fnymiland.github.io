@@ -223,10 +223,22 @@ function patternFade(kind, z) {
   return Math.max(bySize, byGap);
 }
 let patNoFade = false;                                                    // Vorschaubilder (Leiste, Kunstakademie): Muster immer voll
-function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null) {
+// Fuge auf der hinteren Feldkante (u bzw. v = +0,5) zeichnet nur das Nachbarfeld (seine vordere, −0,5) – doppelt gezeichnet war sie
+// dunkler (auch die Kantenglättung addiert sich), und weit weg sah man jedes Feld als Kachel (Block 125c). Nur für Felder im Raster
+let patSeam = false;
+// bg: Belagfarbe darunter – dann blasst das Muster per Farbmischung aus statt per Deckkraft (Block 125c): Fugen auf der Feldkante
+// zeichnen beide Nachbarfelder, halb durchsichtig doppelt gemalt wurden sie dunkler, und weit weg sah man jedes Feld als Kachel
+const patMixCache = new Map();
+const patMix = (bg, c, f) => { const k = bg + c + f; let v = patMixCache.get(k); if (!v) { if (patMixCache.size > 4000) patMixCache.clear(); v = mix(bg, c, f); patMixCache.set(k, v); } return v; };
+function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   if (kind === 'rainbow' || patNoFade) return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
-  const f = patternFade(kind, z);
+  let f = patternFade(kind, z);
   if (f <= 0.02) return;
+  if (bg && f < 1) {
+    f = Math.round(f * 32) / 32;                                         // Stufen: wenige Mischfarben im Zwischenspeicher
+    const B = C(bg);
+    return patternDraw(L, kind, x, y, z, col && patMix(B, col, f), cols && cols.map(c => patMix(bg, c, f)), ext, box);
+  }
   const a0 = g.globalAlpha;
   g.globalAlpha = a0 * f;
   try { patternDraw(L, kind, x, y, z, col, cols, ext, box); } finally { g.globalAlpha = a0; }
@@ -282,7 +294,11 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   }
   g.strokeStyle = col; g.lineWidth = 0.8 * z;
   g.beginPath();
-  const line = (a, b) => { const p0 = L(a), p1 = L(b); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); };
+  const hi = patSeam && !ext && !box ? 0.499 : Infinity;
+  const line = (a, b) => {
+    if ((a[0] > hi && b[0] > hi) || (a[1] > hi && b[1] > hi)) return;
+    const p0 = L(a), p1 = L(b); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+  };
   if (kind === 'bricks') {
     const [r0, r1] = span(0.1), [c0, c1] = span(0.2);
     for (let r = r0; r <= r1; r++) {
@@ -435,7 +451,7 @@ function paintLook(L, lk, x, y, z, band, ext, box = null) {
       const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
       poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
     }
-  } else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box);
+  } else { patSeam = true; try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box, lk.fill); } finally { patSeam = false; } }
   g.restore();
 }
 // Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
@@ -548,7 +564,7 @@ function drawRailBed(cx, cy, z, x, y, t) {
     if (lk.pat || lk.checker) {                      // Muster des Wegs auch zwischen den Schienen
       g.save(); clipTo(roadShapes(pa, across, ROAD_W), L);
       if (lk.checker) paintLook(L, lk, x, y, z, false, 0);
-      else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols);
+      else pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, fill);
       g.restore();
     }
   }
@@ -802,7 +818,7 @@ function drawWegBridge(cx, cy, z, x, y, t) {
     const band = w => [...AS.map(a => ax ? [-w, a] : [a, -w]), ...[...AS].reverse().map(a => ax ? [w, a] : [a, w])];
     poly(band(hw).map(Lh), C(lk.edge || shade(fill, -0.18)));
     poly(band(ROAD_W).map(Lh), C(fill));
-    if (lk.pat || lk.checker) { g.save(); clipTo([band(ROAD_W)], Lh); pattern(Lh, lk.pat ? lk.pat[0] : 'tiles', x, y, z, lk.pat && lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
+    if (lk.pat || lk.checker) { g.save(); clipTo([band(ROAD_W)], Lh); pattern(Lh, lk.pat ? lk.pat[0] : 'tiles', x, y, z, lk.pat && lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, fill); g.restore(); }
     if (lk.dash) {                                                     // Asphalt: Mittelstreifen
       g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.setLineDash([2.5 * z, 3 * z]); g.beginPath();
       AS.forEach((a, i) => { const q = P(a, 0, H(a)); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
@@ -882,7 +898,8 @@ function drawPath(cx, cy, z, x, y, t) {
     // Muster 2 % über die Feldkante (Block 125): die geglätteten Kanten zweier Nachbarfelder decken sich sonst nicht ganz, und der
     // helle Belag schimmert als feine Linie durch (Regenbogen); die Muster liegen im Weltraster, also deckungsgleich
     const grow = sh => sh.map(([u, v]) => [u * 1.02, v * 1.02]);
-    g.save(); clipTo(shapes(ROAD_W).map(grow), L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore();
+    g.save(); clipTo(shapes(ROAD_W).map(grow), L); patSeam = true;
+    try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); }
   }
   if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
   const cl = roadCenterline(arms, t);
@@ -936,7 +953,7 @@ function groundRect(cx, cy, z, hu, hv, fill, pat, x, y) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const sq = [[-hu, -hv], [hu, -hv], [hu, hv], [-hu, hv]];
   poly(sq.map(L), C(fill));
-  if (pat) { g.save(); clipTo([sq], L); pattern(L, pat[0], x, y, z, pat[1] && C(pat[1]), pat[2]); g.restore(); }
+  if (pat) { g.save(); clipTo([sq], L); pattern(L, pat[0], x, y, z, pat[1] && C(pat[1]), pat[2], 0, null, fill); g.restore(); }
   return L;
 }
 const RH_ROOF = 10;                                     // Rathausdach bis zum Plateau unter dem Uhrturm (Block 88c, flacher: 88d)
@@ -948,7 +965,7 @@ const BIG_ART = {
       courtFloor(K, t, x, y, () => {                                                      // Platz (Block 91: im Belag des Wegs davor)
         K.rect(-E, -E, E, E, C('#e6dfd0'));
         g.save(); clipTo([[[-E, -E], [E, -E], [E, E], [-E, E]]], p => K.P(p[0], p[1]));
-        pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'));
+        pattern(p => K.P(p[0] * 1.8, p[1] * 1.8), 'tiles', x, y, z, C('#d6ccb9'), null, 0, null, '#e6dfd0');
         g.restore();
         K.rect(0.35, -0.28, E, 0.28, C('#efe8da'));                                      // heller Weg zur Tür
       });
@@ -1301,7 +1318,7 @@ function drawGardenPath(cx, cy, z, x, y, gp) {
   const band = w => [[0.18, -w], [0.5, -w], [0.5, w], [0.18, w]];
   poly(band(GP_EDGE).map(L), C(lk.edge));
   poly(band(GP_FILL).map(L), C(lk.fill));
-  if (lk.pat) { g.save(); clipTo([band(GP_FILL)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols); g.restore(); }
+  if (lk.pat) { g.save(); clipTo([band(GP_FILL)], L); pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); g.restore(); }
 }
 // Vorplatz bzw. Weg zur Tür (Block 91, Regeln: COURTS in rules.js): flach im Boden-Durchgang, Schatten fallen darauf
 const COURT_CURB = GP_EDGE - GP_FILL;

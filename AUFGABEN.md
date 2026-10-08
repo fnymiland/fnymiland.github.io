@@ -1499,6 +1499,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       je geändertes Feld ein Weg-Preis wie beim Darüberziehen, ↶). Wunsch Nutzer: nicht alles neu ziehen müssen
 - [x] Weit weg waren Muster ganz weg (nur farbige Flächen): Ausblenden jetzt auch nach dem Abstand im Muster (PAT_STEP) – weit
       auseinander (große Platten, Schachbrett, gemischte Platten, Verband) bleibt sichtbar, eng (Kies, Pflaster, Holz) blasst aus
+- [x] 125c: Weit weg sah man jedes Feld als Kachel (Rückmeldung Nutzer): die Fuge auf der Feldkante zeichneten beide Nachbarn,
+      halb durchsichtig doppelt = dunkler (auch die Kantenglättung addiert sich). Jetzt zeichnet die hintere Kante nur das
+      Nachbarfeld (`patSeam`), und Muster blassen per Farbmischung mit der Belagfarbe aus statt per Deckkraft (`pattern(…, bg)`)
 - [x] Kunstakademie: „Zurück“ von der Karte landet an derselben Stelle der Liste (designScroll)
 - [x] Figur-Fenster (Du → Figur, Rückmeldung Nutzer: Figur verdeckt, springt nach jeder Wahl nach oben): Figur mit Name bleibt oben
       stehen (sticky), jede Wahl zeichnet neu an derselben Scrollstelle

@@ -33,6 +33,25 @@ describe('Wegbeläge (Block 125)', () => {
     // weit auseinander bleibt weit weg sichtbar (sonst nur einfarbige Flächen, Rückmeldung Nutzer), eng blasst aus
     expect(f[4]).toBeGreaterThan(0.3); expect(f[5]).toBe(1); expect(f[6]).toBeGreaterThan(0.3); expect(f[7]).toBeLessThan(0.2);
   });
+  it('weit weg keine Kacheln: Fuge auf der Feldkante nur einmal, Ausblassen per Farbmischung statt Deckkraft (Block 125c)', () => {
+    const r = game(`(() => {
+      const t = g.getTransform, mt = g.moveTo, st = g.stroke, seen = [];
+      let n = 0; g.moveTo = function () { n++; return mt.apply(this, arguments); };
+      g.stroke = function () { seen.push([String(g.strokeStyle), g.globalAlpha]); return st.apply(this, arguments); };
+      g.getTransform = () => ({ a: 2, b: 0 });
+      const L = ([u, v]) => [u * 10, v * 10];
+      try {
+        n = 0; pattern(L, 'tiles', 3, 3, 1, '#000000', null); const all = n;
+        n = 0; patSeam = true; try { pattern(L, 'tiles', 3, 3, 1, '#000000', null); } finally { patSeam = false; } const own = n;
+        seen.length = 0; pattern(L, 'tiles', 3, 3, 0.4, '#000000', null, 0, null, '#ffffff');
+        return { all, own, f: patternFade('tiles', 0.4), col: seen[0][0], alpha: seen[0][1] };
+      } finally { g.getTransform = t; g.moveTo = mt; g.stroke = st; }
+    })()`);
+    expect(r.all - r.own).toBe(2);                                                    // je eine Fuge bei u = +0,5 und v = +0,5 weniger
+    expect(r.f).toBeLessThan(1);
+    expect(r.alpha).toBe(1);                                                          // deckend …
+    expect(r.col).not.toMatch(/^#000000$/i);                                         // … in einer Mischfarbe
+  });
   it('Weg antippen: nur dieses Feld oder alle verbundenen umfärben – je Feld ein Weg-Preis, ↶ macht es rückgängig (Block 125b)', () => {
     // ein Netz aus 7 Feldern (Kreuz) und ein getrenntes Stück
     game(`for (const [x, y] of [[5, 5], [6, 5], [7, 5], [8, 5], [6, 4], [6, 6], [6, 7]]) state.tiles.set(x + ',' + y, { b: 'weg', lvl: 1, style: 'sand' });
