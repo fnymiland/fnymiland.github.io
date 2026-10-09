@@ -473,7 +473,7 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
       for (const s of springs) for (const w of colW(s)) for (const d of [-w, w]) { const t = s + d; if (t > e.a && t < e.b) ts.push(t - 1e-6, t + 1e-6); }   // Kanten am Kapitell
       ts.sort((p, q) => p - q);
       const arch = ts.map(t => pt(t, base - dep(t))), band = ts.map(t => pt(t, Math.min(base, base - dep(t) + 2.2)));
-      poly([...arch, pt(e.b, base), pt(e.a, base)], e.ax === 'v' ? S.side : S.stone);
+      poly([...arch, pt(e.b, base), pt(e.a, base)], e.ax === 'u' ? F.sU : F.sV);   // wie der Balken darüber: rechte Seiten im Schatten (Nutzer)
       poly([...arch, ...band.slice().reverse()], S.top);                  // Bogenleiste
       line(arch, S.dark, 0.6);
     }
