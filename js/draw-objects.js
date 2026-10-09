@@ -2463,6 +2463,7 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   for (const i of which) {
     const d = ds[i];
     if (!d) continue;
+    if (d.b === 'stuetze' && state.roofs && state.roofs.size) continue;   // mit Dächern: in render.js tileB vor dem Dach (Block 138)
     let [u, v] = slotPos(x, y, i, d);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }

@@ -1778,6 +1778,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       liegt bei 0,5, die Dachkante bei 0,42 → Stützen standen neben dem Dach). Jetzt rückt eine Stütze bis 0,16 neben einem Dach an
       den nächsten Punkt seiner Fläche (`pillarSnap`/`pillarPos`, auch für die Arkadenbögen); mitten unter breitem Dach bleibt sie.
       Bild tools/vorschau/dach-eckpunkte.png. Test: dach
+- [x] Nutzer: „das Dach ist verpixelt und liegt unter den Pfeilern“ → (1) Dach-Bildchen mindestens so fein wie gezoomt (halbe
+      Stufen nach oben, nie hochgezogen; vorher bei spriteStep gedeckelt). (2) Stützen werden mit dem hintersten Feld gezeichnet,
+      das sie berühren, direkt vor dessen Dach (`drawPillarsOf` in tileB; ohne Dächer wie bisher in drawSmall) – vorher kam eine
+      Stütze des vorderen Felds nach dem Dach des hinteren. Bild tools/vorschau/dach-nah-scharf.png
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b

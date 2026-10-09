@@ -212,7 +212,8 @@ function roofSig(x, y, r) {
 function drawRoofTile(x, y, px, py, z) {
   const r = roofAt(x, y);
   if (!r) return;
-  const zs = spriteStep(z), want = zs * DPR, key = x + ',' + y;
+  // Auflösung: mindestens so fein wie gezoomt (halbe Stufen nach oben gerundet) – nie hochgezogen (Nutzer: „das Dach ist verpixelt“)
+  const want = DPR * Math.pow(2, Math.ceil(Math.log2(Math.max(z, 0.2)) * 2 - 1e-9) / 2), key = x + ',' + y;
   let e = roofSprites.get(key);
   // Schlüssel nur neu prüfen, wenn sich am Spielstand etwas getan hat (jedes Speichern zählt GL.drawEpoch hoch)
   const ver = groundVersion + ':' + (typeof GL !== 'undefined' ? GL.drawEpoch : 0) + ':' + state.roofs.size + ':' + state.decos.size + '|' + want.toFixed(3) + (FOG ? 'n' : '');
@@ -275,6 +276,25 @@ function roofPick(sx, sy) {
   const A = roofArea(roofCov(r)), s = v => { const k = Math.round(v); const f = v - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); };
   return A.sub(s(a), s(b)) ? { x, y } : null;
 }
+// Stützen werden mit dem hintersten Feld gezeichnet, das sie berühren – direkt vor dessen Dach (Nutzer: „das Dach liegt unter den
+// Pfeilern“: eine Stütze, die zum Feld davor gehört, kam sonst nach dem Dach des Felds dahinter). Ohne Dächer zeichnet drawSmall.
+const pillarOwner = (pu, pv) => [Math.round(pu - 1e-6), Math.round(pv - 1e-6)];
+function drawPillarsOf(x, y, px, py, z, now) {
+  for (const [tx, ty] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) {
+    const ds = state.decos.get(tx + ',' + ty);
+    if (!ds) continue;
+    ds.forEach((d, i) => {
+      if (!d || d.b !== 'stuetze') return;
+      const [pu, pv] = pillarPos(tx, ty, i, d), [ox, oy] = pillarOwner(pu, pv);
+      if (ox !== x || oy !== y) return;
+      let sc = 1;
+      if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
+      const u = pu - x, v = pv - y;
+      drawSmallOne('stuetze', d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, tx, ty, sc, i, 0, pillarForm(x, y, u, v));
+    });
+  }
+}
+const hasPillarNear = (x, y) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([tx, ty]) => { const ds = state.decos.get(tx + ',' + ty); return !!ds && ds.some(d => d && d.b === 'stuetze'); });
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }
