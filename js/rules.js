@@ -2526,6 +2526,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
+  if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
     return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
@@ -2623,7 +2624,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       if (terraLook(fx, fy) === 'park' && !parkOk(b)) return 'Auf den Parkrasen gehören nur Deko und Wege';
       if (terraLook(fx, fy) === 'fz' && !fzOk(b)) return 'Auf den Freizeitpark gehören Fahrgeschäfte, Stände, Deko und Wege';
       if (d.needs === 'fz' && terraLook(fx, fy) !== 'fz') return 'Fahrgeschäfte gehören auf Freizeitpark-Boden';
-      if (plazaSpot(b, fx, fy)) { if (decosAt(k)) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter)
+      if (plazaSpot(b, fx, fy)) { if (decosAt(k) && !(b === 'dachtreppe' && decosAt(k).every(d => !d || d.b === 'stuetze'))) return 'Hier stehen schon kleine Dekos'; continue; }   // auf den Platz (Weg bleibt darunter); Dachtreppe: Stützen stören nicht
       if (replacesWeg(b) && plainWeg(k)) {                                  // Gebäude: ersetzt den Weg
         const ds = decosAt(k);
         if (ds && (tiles.length > 1 || BIG_ON_TILE.has(b) || ds.slice(4).some(Boolean))) return 'Erst die kleine Deko vom Weg nehmen';
@@ -2643,8 +2644,9 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         if (b === 'weg') { const e = bridgeShapeError(fx, fy, true); if (e) return e; continue; }   // Wegbrücke (Block 66)
         return 'Nicht auf dem Wasser';
       }
-      if ((BIG_ON_TILE.has(b) || tiles.length > 1) && decosAt(k)) return 'Hier stehen schon kleine Dekos';
-      if (b !== 'weg' && b !== 'schiene' && (decosAt(k) || []).slice(4, 8).some(Boolean)) return 'Erst die kleine Deko von der Seite nehmen';   // auf Gebäudefeldern nur Ecken
+      const dk = b === 'dachtreppe' ? (decosAt(k) || []).filter(d => d && d.b !== 'stuetze') : decosAt(k);   // Dachtreppe: Stützen am Rand stören nicht (Block 138d)
+      if ((BIG_ON_TILE.has(b) || tiles.length > 1) && dk && dk.length) return 'Hier stehen schon kleine Dekos';
+      if (b !== 'weg' && b !== 'schiene' && b !== 'dachtreppe' && (decosAt(k) || []).slice(4, 8).some(Boolean)) return 'Erst die kleine Deko von der Seite nehmen';   // auf Gebäudefeldern nur Ecken
       const ne = needError(d, ter, opts);
       if (ne) return ne;
     }
