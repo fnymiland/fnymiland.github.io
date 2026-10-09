@@ -155,6 +155,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Randbalken als Kanthölzer (`PERG_T` 0,05, `PERG_BH` 1,6, Außenseite auf der Dachkante, Ecken laufen zusammen), Pfosten gleich
     stark bündig darunter (`PILLAR_HALF.pergola`), Latten als feines Gitter in beiden Richtungen (alle 0,25), zwischen den
     Randbalken eingelassen, oben knapp unter deren Oberkante (Nutzer wählte B, dann C).
+    Innere Pfosten (nicht am Rand) tragen Balken wie die Randbalken in beide Richtungen bis zum Rand (`roofInnerBeams`) – nur wo
+    wirklich ein Pfosten steht; ohne Pfosten bleibt das dünne Gitter (Nutzer: weite, luftige Pergolen sollen möglich sein).
     Nicht anfassen, auch nicht „nebenbei“.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere

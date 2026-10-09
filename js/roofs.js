@@ -177,7 +177,25 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) lath(u, va, u, vb);
       for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) lath(ua, v, ub, v);
     } };
-    drawLaths(); drawBeams();
+    // Balken über Pfosten mitten unterm Dach, in beide Richtungen bis zum Rand – nur wo wirklich ein Pfosten steht (Nutzer, 09.10.2026:
+    // „sonst bleibt es bei den dünnen“). Gleiche Stärke wie die Randbalken, die Latten liegen darunter eingelassen
+    const drawInner = () => {
+      for (const [ax, at] of roofInnerBeams(A, x, y)) for (const [ua, ub, va, vb] of quads) {
+        const t = PERG_T;
+        if (ax === 'u') {                                                // Balken längs u (v = at)
+          const v0 = Math.max(va, at - t / 2), v1 = Math.min(vb, at + t / 2);
+          if (v1 <= v0) continue;
+          poly([P(ua, v1, H - PERG_BH), P(ub, v1, H - PERG_BH), P(ub, v1, H), P(ua, v1, H)], '#8a5a3a');
+          poly([P(ua, v0, H), P(ub, v0, H), P(ub, v1, H), P(ua, v1, H)], '#9c6a45', '#9c6a45', 0.3);
+        } else {                                                         // Balken längs v (u = at)
+          const u0 = Math.max(ua, at - t / 2), u1 = Math.min(ub, at + t / 2);
+          if (u1 <= u0) continue;
+          poly([P(u1, va, H - PERG_BH), P(u1, vb, H - PERG_BH), P(u1, vb, H), P(u1, va, H)], '#6f4529');
+          poly([P(u0, va, H), P(u1, va, H), P(u1, vb, H), P(u0, vb, H)], '#9c6a45', '#9c6a45', 0.3);
+        }
+      }
+    };
+    drawLaths(); drawInner(); drawBeams();
     for (const q of quads) {
       const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 3);
       if (hh > 0.45) continue;
@@ -227,6 +245,7 @@ function roofSig(x, y, r) {
   const reach = roofForm(r) === 'markise' ? 3 : 1, cov = roofCov(r);
   let s = (r.form || 0) + ':' + (r.col || 0) + ':';
   for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) s += cov(x + dx, y + dy) ? 1 : 0;
+  if (roofForm(r) === 'pergola') s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
   if (roofForm(r) === 'arkaden') {                                      // Bögen hängen an den Stützen des ganzen Laufs
     const A = roofArea(cov);
     for (const e of roofEdges(A, x, y)) if (e.n > 0) { const [a, b] = roofRun(A, e); s += '|' + a.toFixed(2) + ',' + b.toFixed(2) + ':' + roofPillarsOn(e, a, b).map(t => t.toFixed(2)).join(','); }
@@ -343,6 +362,29 @@ function pillarSnap(pu, pv) {
     }
   }
   return best || [pu, pv];
+}
+// Pergola (Block 138): innere Pfosten (nicht am Rand) tragen Balken in beide Richtungen bis zum Rand. Welche laufen durch Feld (x, y)?
+// Ein Balken längs u liegt bei v = Pfosten-v; er gilt hier, wenn das Dach vom Pfosten bis hierher ohne Lücke weitergeht. → [[ax, at]]
+const ROOF_REACH = 14;
+function roofInnerBeams(A, x, y) {
+  if (!state.decos.size) return [];
+  const sOf = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); };
+  const cov = (u, v) => A.sub(sOf(u), sOf(v));
+  const clear = (u0, v0, u1, v1) => { const n = Math.ceil(Math.hypot(u1 - u0, v1 - v0) / 0.2); for (let i = 0; i <= n; i++) if (!cov(u0 + (u1 - u0) * i / n, v0 + (v1 - v0) * i / n)) return false; return true; };
+  const out = new Map();
+  const look = (tx, ty) => {
+    const ds = state.decos.get(tx + ',' + ty);
+    if (ds) ds.forEach((d, i) => {
+      if (!d || d.b !== 'stuetze') return;
+      const [pu, pv] = pillarPos(tx, ty, i, d);
+      if (A.dist(pu, pv) <= PERG_T * 1.5) return;                        // am Rand: trägt der Randbalken
+      if (Math.abs(pv - y) <= 0.5 + PERG_T && clear(pu, pv, x, pv)) out.set('u' + pv.toFixed(3), ['u', pv]);
+      if (Math.abs(pu - x) <= 0.5 + PERG_T && clear(pu, pv, pu, y)) out.set('v' + pu.toFixed(3), ['v', pu]);
+    });
+  };
+  for (let ty = y - 1; ty <= y + 1; ty++) for (let tx = x - ROOF_REACH; tx <= x + ROOF_REACH; tx++) look(tx, ty);
+  for (let tx = x - 1; tx <= x + 1; tx++) for (let ty = y - ROOF_REACH; ty <= y + ROOF_REACH; ty++) if (Math.abs(ty - y) > 1) look(tx, ty);
+  return [...out.values()];
 }
 // Platz einer Stütze in Weltkoordinaten (Slot, an die Dachkante gerückt)
 function pillarPos(x, y, i, d) { const [u, v] = slotPos(x, y, i, d); return pillarSnap(x + u, y + v); }

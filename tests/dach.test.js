@@ -122,6 +122,23 @@ describe('Überdachungen (Block 138)', () => {
     expect(game('pillarSnap(8.5, 8.5)')).toEqual([8.5, 8.5]);                         // Mitte eines 2×2-Dachs: bleibt
   });
 
+  it('Pergola: Balken in beide Richtungen nur über Pfosten mitten unterm Dach – ohne Pfosten bleibt das dünne Gitter (Nutzer)', () => {
+    for (let y = 3; y <= 5; y++) roof(row(3, 5, y));                                  // 3 × 3, Pergola
+    const beams = (x, y) => game(`roofInnerBeams(roofArea(roofCov(roofAt(${x}, ${y}))), ${x}, ${y}).map(([a, t]) => a + t)`).sort();
+    expect(beams(3, 3)).toEqual([]);                                                  // noch kein innerer Pfosten
+    game("buildSmall('stuetze', 3, 3, 0)");                                           // Außenecke: trägt der Randbalken
+    expect(beams(3, 3)).toEqual([]);
+    const sig0 = game('roofSig(3, 4, roofAt(3, 4))');
+    game("buildSmall('stuetze', 5, 5, VSLOT)");                                       // innen: Eckpunkt bei 4,5 | 4,5
+    expect(beams(4, 4)).toEqual(['u4.5', 'v4.5']);
+    expect(beams(3, 4)).toEqual(['u4.5']);                                             // Balken längs u läuft bis zum Rand
+    expect(beams(4, 3)).toEqual(['v4.5']);
+    expect(beams(3, 3)).toEqual([]);
+    expect(game('roofSig(3, 4, roofAt(3, 4))')).not.toBe(sig0);                       // Bildchen wird neu gemalt
+    way(row(7, 9, 4)); roof(row(7, 9, 4));                                            // getrennte Fläche in derselben Reihe
+    expect(beams(8, 4)).toEqual([]);                                                  // der Balken springt nicht über die Lücke
+  });
+
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
     way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");

@@ -1801,6 +1801,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „gefällt mir nicht, dass die Streben so überstehen – zeig Alternativen“ → 4 Varianten (tools/vorschau/latten-varianten.png),
       Nutzer wählte C: Latten fein (0,7) und zwischen den Randbalken eingelassen, oben knapp unter deren Oberkante. Bild
       tools/vorschau/pergola-fein.png
+      Nutzer: „wieso sieht das weird aus – in echt würde man doch keine dünnen Streben nehmen und den Pfeiler drunterstellen“ →
+      in echt tragen Pfosten Balken, auf denen das Gitter liegt. Varianten gezeigt (tools/vorschau/innere-balken.png), Nutzer: Balken
+      in beide Richtungen, ABER NUR, wo Pfeiler drunter sind; ohne Pfeiler bleibt es dünn. `roofInnerBeams` (Balken bis zum Rand,
+      nur solange das Dach ohne Lücke weitergeht; im Bildchen-Schlüssel). Test: dach. Bild tools/vorschau/innere-balken-spiel.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
