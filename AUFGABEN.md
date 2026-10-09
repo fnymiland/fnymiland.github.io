@@ -1847,6 +1847,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Steinarkaden-Dach (Nutzer: Ziegel, Terrasse, Gewölbe … gefielen nicht): Dachgarten (Standard) oder Belag mit Wegmuster und
       -farbe (`r.bel`, Weg-Stilname, `roofBel`; Wahl im Dach-Fenster per `wegPickHtml`, ohne Trittsteine). Test: dach. Szene
       tools/dachbelag.js, Bilder arkaden-belag-alle.png, arkaden-belag-nah.png
+- [x] 138b Deko auf dem Dach (Nutzer: „imagine man könnte da jetzt Deko oben draufstellen“): nur Steinarkaden, nur kleine Deko
+      (ohne Stütze/Souvenir), 8 Plätze je Feld (`r.top`, `roofTopPos` 0,3). Kleine Deko übers Steindach getippt → oben (`roofTopAt`,
+      Vorschau mit `hover.top`); 🧹/👆 treffen die Deko oben vor dem Dach (`roofTopHit`, `openRoofTopInfo`). Dach abreißen bzw. andere
+      Form: Deko voll zurück (`roofTopClear`). Zieht beim Verschieben/Kopieren mit (`roofCopy`, Kopie kostet sie mit). Zählt für
+      Schönheit, Erfolge, Strom (Laternen als Platz 10 + i). Test: dachdeko. Szene tools/dachdeko.js, Bilder dachdeko-*.png
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

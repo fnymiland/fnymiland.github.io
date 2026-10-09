@@ -666,6 +666,7 @@ function totals() {
     const [x, y] = keyXY(k), nearHome = nearHouse(x, y) || isHouse(x, y);
     ds.forEach((d, i) => { if (d) beauty += ITEMS[d.b].beauty * (nearHome ? 1.5 : 1) * (rail.power.dark.has(k + ',' + i) ? NO_POWER : 1); });
   }
+  for (const [k, i, d] of roofTopAll()) { const [x, y] = keyXY(k); beauty += ITEMS[d.b].beauty * (nearHouse(x, y) || isHouse(x, y) ? 1.5 : 1) * (rail.power.dark.has(k + ',' + (ROOF_TOP_SLOT0 + i)) ? NO_POWER : 1); }   // Deko auf Dächern (Block 138b)
   // Kaufkraft je Viertel: Arten nach Ertrag je Rate-Punkt, die besten KAUF_BUDGET Punkte voll (kaufShares)
   const byV = new Map();
   for (const [v, b, s] of shopTiles) {
@@ -2475,6 +2476,7 @@ function placeStats() {
     else if (d.cat === 'deko' && d.beauty) add(attr, r, d.beauty / 10);           // Schönes zieht auch ein wenig an
   }
   for (const [k, ds] of state.decos) { const r = regionAt(...keyXY(k)); for (const d of ds) if (d) add(attr, r, ITEMS[d.b].beauty / 10); }
+  for (const [k, , d] of roofTopAll()) add(attr, regionAt(...keyXY(k)), ITEMS[d.b].beauty / 10);
   // Kultur zieht an, Hotels machen die ganze Insel anziehender (Übernachtungsgäste)
   const hotel = new Map();
   for (const [k, t] of state.tiles) { const S = SHOPS[t.b]; if (!S) continue; const r = regionAt(...keyXY(k)); if (S.attr) add(attr, r, S.attr); if (S.hotel) add(hotel, r, S.hotel); }
@@ -2494,6 +2496,7 @@ function computePower(lines, supply, plants = 0) {
   if (city) {
     const lamps = [];
     for (const k of [...state.decos.keys()].sort()) state.decos.get(k).forEach((d, i) => { if (d && d.b === 'laterne') lamps.push(k + ',' + i); else if (d && d.b === 'strassenlaterne') lamps.push(k + ',' + i, k + ',' + i); });   // große: zählt doppelt (Block 132)
+    for (const [k, i, d] of [...roofTopAll()].sort((p, q) => p[0] < q[0] ? -1 : p[0] > q[0] ? 1 : p[1] - q[1])) { const key = k + ',' + (ROOF_TOP_SLOT0 + i); if (d.b === 'laterne') lamps.push(key); else if (d.b === 'strassenlaterne') lamps.push(key, key); }   // auf Dächern (Block 138b)
     lamps.push(...edgeLamps());                                         // Lichter an Hecken, Zäunen, Mauern
     for (let i = 0; i < lamps.length; i += LAMPS_PER_POWER) if (!take(1, 'lamps')) lamps.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
     const keys = [...state.tiles.keys()].sort();
@@ -3076,7 +3079,7 @@ function houseWishes(t, x, y, acc = T.access) {
 
 function demolishInfo(x, y) {
   if (!ownedTile(x, y)) return { err: isSea(x, y) ? 'Hier ist nur Meer' : 'Das ist nicht dein Grundstück' };
-  if (roofAt(x, y)) return { roof: x + ',' + y, refund: ITEMS.dach.cost, mat: ITEMS.dach.mat, full: true, label: 'Überdachung entfernen' };   // erst das Dach (Block 138)
+  if (roofAt(x, y)) { const tb = roofTopBack(roofAt(x, y)); return { roof: x + ',' + y, refund: ITEMS.dach.cost + tb, mat: ITEMS.dach.mat, full: true, label: roofTopsOf(roofAt(x, y)).some(Boolean) ? 'Überdachung samt Deko entfernen' : 'Überdachung entfernen' }; }   // erst das Dach (Block 138)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t) {
     const d = ITEMS[t.b];

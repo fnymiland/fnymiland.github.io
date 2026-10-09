@@ -1381,6 +1381,14 @@ function render(now) {
       const has = (hds && hds[hoverSlot]) || anchorAt(hx, hy);
       if (!(hds && hds[hoverSlot])) box = objBox(hx, hy);
       preview = { ok: !!has, text: has ? 'Aufnehmen' : 'Hier ist nichts' };
+    } else if (hover.top && tool !== 'verschieben' && roofTopOk(tool)) {   // Deko auf dem Dach (Block 138b)
+      const slot = roofTopFree(hx, hy, hoverSlot), err = roofTopError(tool, hx, hy, slot);
+      const q = toScreen(hx, hy);                                       // Schild über dem Dach, kein Rahmen am Boden
+      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', top: true, slot, text: err || `🌸 +${ITEMS[tool].beauty} auf dem Dach`, p: { x: q.x, y: q.y - ROOF_H * z } };
+    } else if (tool === 'abriss' && hover.top) {
+      const d = roofTopsOf(roofAt(hx, hy))[hoverSlot];
+      const q = toScreen(hx, hy);
+      preview = { ok: !!d, text: d ? `${ITEMS[d.b].name} vom Dach nehmen: +${fmt(decoBack(d))}` : 'Hier ist nichts', p: { x: q.x, y: q.y - ROOF_H * z } };
     } else if (smallMode) {
       const slot = freeSlot(hx, hy, hoverSlot);
       const err = tool === 'verschieben' ? moveError(hx, hy, slot) : smallError(tool, hx, hy, slot);
@@ -1563,7 +1571,7 @@ function render(now) {
         }
         if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
-      if (preview && preview.small && hover.x === x && hover.y === y) {
+      if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
         const gForm = tool === 'verschieben' ? moving.d.form || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).form || 0 : 0;
@@ -1614,8 +1622,19 @@ function render(now) {
       if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
       if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
       if (state.roofs.size && (state.roofs.has(k) || hasPillarNear(x, y))) {   // Überdachung (Block 138): Stützen, dann Dach über den Figuren des Felds
-        const f = () => { drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z); };
-        if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
+        const topGhost = preview && preview.top && preview.small && hover && hover.x === x && hover.y === y;   // Deko oben (Block 138b): Geist auf dem Dach
+        const f = () => {
+          drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z); drawRoofTops(x, y, px, py, z, now);
+          if (topGhost) {
+            const gRot = smallRot(ghostType, preview.slot), L = DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
+            const [u, v] = roofTopPos(preview.slot);
+            g.globalAlpha = 0.65;
+            drawSmallOne(ghostType, gRot, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, 1, ROOF_TOP_SLOT0 + preview.slot, gCol, L.form || 0);
+            g.globalAlpha = 1;
+          }
+        };
+        const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost ? 100 * z : 0;   // Deko oben ragt übers Dach hinaus
+        if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
       }
 
   };

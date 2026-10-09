@@ -1,0 +1,108 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+// Block 138b: Deko auf dem Dach der Steinarkaden (Nutzer: „imagine man könnte da jetzt Deko oben draufstellen“)
+beforeAll(() => loadGame());
+beforeEach(() => {
+  game('startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; state.money = 1e9; for (const r of Object.keys(RES)) state.res[r] = 9999');
+  game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.design.add('dach:form:arkaden'); state.design.add('dach:form:glas'); state.design.add('laterne'); recalc(); resetUndo()");
+  game('cam = state.cam; cam.z = 2; { const p = iso(5, 5); cam.x = p.x; cam.y = p.y; }');
+});
+const roof = (cells, form = 3) => game(`state.paintNew.dach = { form: ${form} }; for (const [x, y] of ${JSON.stringify(cells)}) build('dach', x, y, true); state.paintNew.dach = {}`);
+const row = (x0, x1, y) => Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y]);
+// Bildschirmpunkt eines Platzes auf dem Dach von Feld (x, y)
+const onTop = (x, y, slot) => game(`(() => { const [u, v] = roofTopPos(${slot}), p = toScreen(${x} + u, ${y} + v); return [p.x, p.y - ROOF_H * cam.z]; })()`);
+const tapAt = (tool, [sx, sy]) => game(`setTool('${tool}'); setHover(${sx}, ${sy}); undoable(() => tap(${sx}, ${sy}, false)); setTool('look')`);
+
+describe('Deko auf dem Dach (Block 138b)', () => {
+  it('kleine Deko übers Steindach getippt landet oben – mit Vorschau, kostet, zählt für die Schönheit; Rückgängig nimmt sie wieder', () => {
+    roof(row(3, 6, 5));
+    const m = game('state.money'), b0 = game('T.beauty');
+    const s = onTop(4, 5, 3);
+    expect(game(`roofTopAt(${s[0]}, ${s[1]})`)).toEqual({ x: 4, y: 5, slot: 3 });
+    game(`setTool('blumentopf'); setHover(${s[0]}, ${s[1]})`);
+    expect(game('[hover.x, hover.y, !!hover.top, hoverSlot]')).toEqual([4, 5, true, 3]);
+    tapAt('blumentopf', s);
+    expect(game("roofAt(4, 5).top[3].b")).toBe('blumentopf');
+    expect(game("decosAt('4,5')")).toBeFalsy();                                     // nicht am Boden darunter
+    expect(game('state.money')).toBe(m - game('ITEMS.blumentopf.cost'));
+    expect(game('T.beauty')).toBeGreaterThan(b0);
+    tapAt('blumentopf', s);                                                          // derselbe Platz: nächster freier
+    expect(game("roofAt(4, 5).top.filter(Boolean).length")).toBe(2);
+    game('undo()');
+    expect(game("roofAt(4, 5).top.filter(Boolean).length")).toBe(1);
+  });
+
+  it('nur auf Steinarkaden und nur kleine Deko (keine Stütze, kein Souvenir)', () => {
+    roof(row(3, 4, 5)); roof(row(3, 4, 8), 1);
+    expect(game("roofTopError('laterne', 3, 5, 0)")).toBe(null);
+    expect(game("roofTopError('laterne', 3, 8, 0)")).toBe('Deko geht nur auf Steinarkaden');
+    expect(game("roofTopError('stuetze', 3, 5, 0)")).toBe('Das passt nicht aufs Dach');
+    expect(game("roofTopError('souvenir', 3, 5, 0)")).toBe('Das passt nicht aufs Dach');
+    expect(game("roofTopError('haus', 3, 5, 0)")).toBe('Das passt nicht aufs Dach');
+    const s = onTop(3, 8, 0);
+    expect(game(`roofTopAt(${s[0]}, ${s[1]})`)).toBe(null);                          // Glasdach: bleibt beim Boden
+  });
+
+  it('🧹: erst die Deko oben, dann das Dach samt Rest – alles voll zurück', () => {
+    roof(row(3, 5, 5));
+    const m = game('state.money');
+    game("buildRoofTop('laterne', 4, 5, 0); buildRoofTop('bank', 4, 5, 6)");
+    const s = game('(() => { const [u, v] = roofTopPos(6), p = toScreen(4 + u, 5 + v); return [p.x, p.y - ROOF_H * cam.z - 4 * cam.z]; })()');   // auf die Bank
+    expect(game(`roofTopHit(${s[0]}, ${s[1]})`)).toMatchObject({ x: 4, y: 5, slot: 6 });
+    tapAt('abriss', s);
+    expect(game("roofAt(4, 5).top.filter(Boolean).map(d => d.b)")).toEqual(['laterne']);
+    expect(game("demolishInfo(4, 5)")).toMatchObject({ label: 'Überdachung samt Deko entfernen', refund: game('ITEMS.dach.cost + ITEMS.laterne.cost') });
+    const metall = game('state.res.metall');
+    game('demolish(4, 5)');
+    expect(game("state.roofs.has('4,5')")).toBe(false);
+    expect(game('state.res.metall')).toBe(metall + 1);                              // Material der Laterne zurück
+    expect(game('state.money')).toBe(m + game('ITEMS.dach.cost'));                  // alles zurück (Dach war vorher bezahlt)
+  });
+
+  it('andere Form im Fenster: Deko oben geht zurück ins Lager; Belag/Dachgarten bleibt Deko-fähig', () => {
+    roof(row(3, 4, 5));
+    game("buildRoofTop('blumentopf', 3, 5, 0); buildRoofTop('blumentopf', 4, 5, 1)");
+    const m = game('state.money');
+    game("openRoofInfo(3, 5); document.querySelector('[data-roofscope=\"run\"]').click(); document.querySelector('[data-roofbel]').click()");
+    expect(game("[...state.roofs.values()].every(r => r.top)")).toBe(true);
+    game("openRoofInfo(3, 5); document.querySelector('[data-roofform=\"1\"]').click()");
+    expect(game("[...state.roofs.values()].some(r => r.top)")).toBe(false);
+    expect(game('state.money')).toBe(m + 2 * game('ITEMS.blumentopf.cost'));
+    game('closePanel()');
+  });
+
+  it('👆 auf die Deko oben: ihr Fenster (Farbe/Form, Entfernen)', () => {
+    roof(row(3, 5, 5));
+    game("buildRoofTop('laterne', 4, 5, 3)");
+    const s = game('(() => { const [u, v] = roofTopPos(3), p = toScreen(4 + u, 5 + v); return [p.x, p.y - ROOF_H * cam.z - 10 * cam.z]; })()');
+    game(`setTool('look'); tap(${s[0]}, ${s[1]}, false)`);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Laterne.*auf dem Dach/s);
+    game("document.getElementById('p-del').click()");
+    expect(game("!!roofAt(4, 5).top")).toBe(false);
+  });
+
+  it('Verschieben und Kopieren nehmen die Deko oben mit; die Kopie kostet sie mit', () => {
+    roof([[3, 3], [4, 3], [3, 4], [4, 4]]);
+    game("buildRoofTop('blumentopf', 3, 3, 0); buildRoofTop('laterne', 4, 4, 3)");
+    game("setTool('verschieben'); pickUpGroup(3, 3, 4, 4); hover = { x: 11, y: 11 }; dropGroup(11, 11); setTool('look')");
+    expect(game("[roofAt(10, 10).top[0].b, roofAt(11, 11).top[3].b]")).toEqual(['blumentopf', 'laterne']);
+    const cost = game('copyCost(copyCollect(10, 10, 11, 11).items).money');
+    expect(cost).toBe(4 * game('ITEMS.dach.cost') + game('ITEMS.blumentopf.cost + ITEMS.laterne.cost') + game('copyCost(copyCollect(10, 10, 11, 11).items.filter(i => i.kind !== "roof")).money'));
+    game("startCopy(10, 10, 11, 11); hover = { x: 15, y: 15 }; dropGroup(15, 15); cancelMove(); setTool('look')");
+    expect(game("roofAt(14, 14).top[0].b")).toBe('blumentopf');
+    game("roofAt(14, 14).top[0].col = 2");
+    expect(game("roofAt(10, 10).top[0].col")).toBeUndefined();                      // eigene Kopie, nicht dieselbe Deko
+  });
+
+  it('Speichern und Laden; Unbekanntes und Stützen fallen weg; Laternen oben brauchen Strom wie unten', () => {
+    roof(row(3, 4, 5));
+    game("buildRoofTop('laterne', 3, 5, 0)");
+    const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['9,9', { form: 3, top: [{ b: 'stuetze' }, { b: 'quatsch' }, { b: 'bank', rot: 1 }] }]); return Object.fromEntries(parseSave(d).roofs); })()");
+    expect(back['3,5'].top[0]).toMatchObject({ b: 'laterne' });
+    expect(back['4,5'].top).toBeUndefined();
+    expect(back['9,9'].top.map(d => d && d.b)).toEqual([null, null, 'bank', null, null, null, null, null, null]);
+    expect(game("[...roofTopAll()].length")).toBe(1);
+    expect(game("[...computePower([], 0, 1).dark]")).toContain('3,5,10');          // ohne Strom: dunkel (Platz 10 + i)
+    expect(game("computePower([], 1, 1).dark.has('3,5,10')")).toBe(false);
+  });
+});

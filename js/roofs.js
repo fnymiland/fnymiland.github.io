@@ -533,3 +533,109 @@ function drawRoofIcon(cx, cy, z, form = 0, col = 0) {
   for (const [u, v] of [[-RW, -RW], [RW, -RW], [-RW, RW], [RW, RW]]) { const p = P(u - Math.sign(u) * h, v - Math.sign(v) * h); drawPillar(p[0], p[1], z, form); }
   paintRoof(P, A, 0, 0, { form, col }, z);
 }
+
+// ---------------------------------------------------------------------------
+// Deko auf dem Dach (Block 138b, Nutzer 09.10.2026: „imagine man könnte da jetzt Deko oben draufstellen“): nur auf Steinarkaden,
+// nur kleine Deko. Sie gehört zum Dachfeld (r.top, 8 Plätze wie am Boden: 4 Ecken, 4 Seitenmitten) – so zieht sie beim Verschieben,
+// Kopieren und Rückgängig mit dem Dach mit. Wer das Dach abreißt oder die Form wechselt, bekommt sie voll zurück (roofTopClear).
+// Gezeichnet mit dem Dach des Felds (render.js tileB), Laternen als Platz 10 + i (Strom: computePower)
+// ---------------------------------------------------------------------------
+const ROOF_TOP_OFF = 0.3, ROOF_TOP_SLOT0 = 10;                        // Abstand von der Feldmitte (der Steinrand liegt bei 0,41)
+const ROOF_TOP_NO = new Set(['stuetze', 'souvenir']);                  // Stütze trägt das Dach; Souvenirs hängen am Bodenplatz
+const roofTopOk = b => !!(ITEMS[b] && ITEMS[b].small && !ROOF_TOP_NO.has(baseOf(b)));
+const roofTopRoof = (x, y) => { const r = roofAt(x, y); return r && roofForm(r) === 'arkaden' ? r : null; };
+const roofTopPos = i => i < 4 ? [(i & 1 ? 1 : -1) * ROOF_TOP_OFF, (i & 2 ? 1 : -1) * ROOF_TOP_OFF] : [[-1, 0], [0, -1], [1, 0], [0, 1]][i - 4].map(c => c * ROOF_TOP_OFF);
+const roofTopsOf = r => (r && Array.isArray(r.top) ? r.top : []);
+// Platz auf dem Dach unter dem Finger (Steinarkaden): nächster der 8 Plätze, gemessen auf Dachhöhe
+function roofTopAt(sx, sy) {
+  if (!state.roofs || !state.roofs.size || !cam) return null;
+  const p = roofPick(sx, sy);
+  if (!p || !roofTopRoof(p.x, p.y)) return null;
+  const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), du = a - p.x, dv = b - p.y;
+  let slot = 0, best = Infinity;
+  for (let i = 0; i < 8; i++) { const [u, v] = roofTopPos(i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }
+  return { x: p.x, y: p.y, slot };
+}
+// Deko oben, die man dort sieht (Antippen, 🧹): Platz unter dem Finger, sonst die Deko, deren Bild den Punkt trifft
+function roofTopHit(sx, sy) {
+  if (!state.roofs || !state.roofs.size || !cam) return null;
+  const z = cam.z, cand = [];
+  for (const [k, r] of state.roofs) {
+    if (!r.top) continue;
+    const [x, y] = keyXY(k), p = toScreen(x, y);
+    r.top.forEach((d, i) => {
+      if (!d) return;
+      const [u, v] = roofTopPos(i), s = decoScale(d.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z - ROOF_H * z;
+      if (Math.abs(sx - qx) <= 9 * z * s && sy <= qy + 4 * z * s && sy >= qy - 40 * z * s) cand.push({ x, y, slot: i, d: x + y + (u + v) * 0.1 });
+    });
+  }
+  if (!cand.length) return null;
+  cand.sort((p, q) => q.d - p.d);
+  return cand[0];
+}
+function roofTopError(b, x, y, slot, opts = {}) {
+  const d = ITEMS[b];
+  if (!ownedTile(x, y)) return notMine(x, y);
+  if (!roofTopOk(b)) return 'Das passt nicht aufs Dach';
+  if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  const r = roofTopRoof(x, y);
+  if (!r) return 'Deko geht nur auf Steinarkaden';
+  const top = roofTopsOf(r);
+  if (top[slot]) return top.slice(0, 8).every(Boolean) ? 'Alle Plätze auf dem Dach sind belegt' : 'Dieser Platz ist schon belegt';
+  if (opts.move || opts.noCost) return null;
+  if (state.money < d.cost) return 'Zu wenig Taler';
+  return matError(d.mat);
+}
+function roofTopFree(x, y, slot) {
+  const top = roofTopsOf(roofAt(x, y));
+  const i = (slot < 4 ? [slot, slot ^ 1, slot ^ 2, slot ^ 3] : [slot, 4 + ((slot - 2) & 3), 4 + ((slot - 3) & 3), 4 + ((slot - 1) & 3)]).find(n => !top[n]);
+  return i == null ? slot : i;
+}
+function buildRoofTop(b, x, y, slot) {
+  const err = roofTopError(b, x, y, slot);
+  if (err) { fail(err); return false; }
+  const r = roofAt(x, y);
+  state.money -= ITEMS[b].cost;
+  payMat(ITEMS[b].mat);
+  if (!r.top) r.top = newSlots();
+  r.top[slot] = { b, rot: smallRot(b, slot), born: performance.now(), ...(b === 'busch' ? bushColNew('busch') : {}), ...(DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)) : {}) };
+  sfx('deco'); recalc(); checkStars(); save();
+  return true;
+}
+function removeRoofTop(x, y, slot) {
+  const r = roofAt(x, y), d = r && roofTopsOf(r)[slot];
+  if (!d) return false;
+  payBackDeco(d);
+  r.top[slot] = null;
+  if (r.top.every(v => !v)) delete r.top;
+  sfx('dig'); recalc(); save();
+  return true;
+}
+// Dach mit seiner Deko kopieren (Verschieben, Kopieren): eigene Liste, ohne Animation; fresh: die Kopie ist bezahlt
+const roofCopy = (r, fresh = false) => { const o = { ...r }; if (r.top) o.top = r.top.map(d => { if (!d) return null; const { born, ...e } = d; if (fresh) delete e.free; return e; }); return o; };
+// alles von einem Dach herunter, voll zurück (Abreißen, andere Form); Rückgabe: wie viele
+function roofTopClear(r) {
+  let n = 0;
+  for (const d of roofTopsOf(r)) if (d) { payBackDeco(d); n++; }
+  if (r) delete r.top;
+  return n;
+}
+const roofTopBack = r => roofTopsOf(r).reduce((s, d) => s + (d ? decoBack(d) : 0), 0);
+// Zeichnen: nach dem Dach desselben Felds, von hinten nach vorn
+function drawRoofTops(x, y, px, py, z, now) {
+  const r = roofAt(x, y);
+  if (!r || !r.top) return;
+  for (const i of SLOTS_ALL) {
+    const d = i < 8 && r.top[i];
+    if (!d) continue;
+    const [u, v] = roofTopPos(i);
+    let sc = 1;
+    if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
+    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, sc, ROOF_TOP_SLOT0 + i, d.col || 0, d.form || 0);
+  }
+}
+// alle Deko auf Dächern: [Feldschlüssel, Platz, Deko] (Schönheit, Strom, Erfolge)
+function* roofTopAll() {
+  if (!state.roofs) return;
+  for (const [k, r] of state.roofs) if (r.top) for (let i = 0; i < 8; i++) if (r.top[i]) yield [k, i, r.top[i]];
+}

@@ -147,7 +147,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 29. **Bildrate** (main.js `frameInterval`): beim Bedienen höchstens 60/s, beim Zuschauen 30/s, im Hintergrund oder nach
     2 Minuten ohne Eingabe 15/s – sonst läuft der Rechner warm (vorher 60–120/s ohne Pause). Alles, was sich bewegt,
     rechnet mit der echten Zeit (dt), nie mit „pro Bild“.
-29a. **Überdachungen** (Block 138, js/roofs.js): `state.roofs` (Feld → { form, col, bel }) ist eine Fläche aus 3 × 3 Teilstücken je
+29a. **Überdachungen** (Block 138, js/roofs.js): `state.roofs` (Feld → { form, col, bel, top }) ist eine Fläche aus 3 × 3 Teilstücken je
     Feld (`roofArea`: `sub`, `dist`) – neue Formen/Teile nur über diese Teilstücke zeichnen, nie über Feldgrenzen hinaus (sonst
     überlappen Nachbarn). Stützen setzt der Nutzer (`stuetze`, Platz 0,42 = `RW` = Dachkante); das Spiel stellt nie selbst welche.
     Bildchen je Feld (`roofSprites`, Schlüssel `roofSig`): wer etwas ändert, das die Nachbarschaft betrifft, ruft `roofDirty`.
@@ -158,6 +158,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Innere Pfosten (nicht am Rand) tragen Balken wie die Randbalken in beide Richtungen bis zum Rand (`roofInnerBeams`) – nur wo
     wirklich ein Pfosten steht; ohne Pfosten bleibt das dünne Gitter (Nutzer: weite, luftige Pergolen sollen möglich sein).
     Nicht anfassen, auch nicht „nebenbei“.
+    Deko auf dem Dach (138b) gehört zum Dachfeld (`r.top`): wer ein Dach löscht, ersetzt oder die Form wechselt, gibt sie über
+    `roofTopClear` zurück; wer ein Dach kopiert, nimmt `roofCopy` (eigene Liste). Wer Deko zählt (Schönheit, Strom, Erfolge, „alle
+    umfärben“), nimmt `roofTopAll()` dazu.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

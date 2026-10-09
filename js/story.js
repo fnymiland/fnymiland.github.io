@@ -502,7 +502,7 @@ const GUIDE = [
 // Werte kommen aus dem aktuellen Stand; „Taler verdient“ zählt state.stats.earned (auch wenn man sie ausgibt).
 // ---------------------------------------------------------------------------
 const tileCount = f => { let n = 0; for (const t of state.tiles.values()) if (f(t)) n++; return n; };
-const decoCount = f => { let n = 0; for (const ds of state.decos.values()) for (const d of ds) if (d && f(d)) n++; return n; };
+const decoCount = f => { let n = 0; for (const ds of state.decos.values()) for (const d of ds) if (d && f(d)) n++; for (const [, , d] of roofTopAll()) if (f(d)) n++; return n; };   // auch auf Dächern (Block 138b)
 const ACHIEVEMENTS = [
   { id: 'taler', icon: '🪙', name: 'Taler verdient', tiers: [1e4, 1e5, 1e6, 1e7, 1e8], value: () => state.stats.earned },
   { id: 'einwohner', icon: '👥', name: 'Einwohner', tiers: [50, 200, 1000, 5000, 10000], value: () => T.pop },
@@ -601,6 +601,7 @@ function collectAlbum() {
     if (t.weg != null) add('weg:' + t.weg);                        // Weg unter einem Marktstand
   }
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + baseOf(d.b));
+  for (const [, , d] of roofTopAll()) add('b:' + baseOf(d.b));
   for (const v of state.terra.values()) { if (v === 'park') add('b:parkrasen'); else if (v === 'fz') add('b:fzboden'); }   // Boden zählt auch (Block 84c)
   for (const t of state.tiles.values()) if (t.hgt > 0) add('b:fz_hoch');                                                  // ▼ zählt beim Benutzen (build)
   for (const e of state.edges.values()) add('b:' + e.b);             // Hecken, Zäune, Mauern (Block 41)

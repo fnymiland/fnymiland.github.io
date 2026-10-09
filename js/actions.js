@@ -39,7 +39,9 @@ function build(b, x, y, quiet) {
     const err = placeError(b, x, y);
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
     state.money -= ITEMS.dach.cost; payMat(ITEMS.dach.mat);
-    state.roofs.set(k0, { ...decoLookNew('dach') });
+    const old = state.roofs.get(k0), nr = { ...decoLookNew('dach') };
+    if (old && old.top) { if (roofForm(nr) === 'arkaden') nr.top = old.top; else roofTopClear(old); }   // Deko oben bleibt nur auf Stein (Block 138b)
+    state.roofs.set(k0, nr);
     roofDirty(x, y); groundVersion++; sfx('deco'); recalc(); save();   // groundVersion: Schatten im Boden-Bild
     return true;
   }
@@ -169,8 +171,10 @@ function demolish(x, y) {
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
   if (info.roof) {                                                      // Überdachung (Block 138): voll zurück, der Weg bleibt
+    const r = state.roofs.get(info.roof), tb = roofTopBack(r);
+    roofTopClear(r);                                                    // Deko oben: voll zurück, samt Material (Block 138b)
     state.roofs.delete(info.roof);
-    state.money += info.refund;
+    state.money += info.refund - tb;
     for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
     addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
     roofDirty(x, y); groundVersion++;
@@ -263,7 +267,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
     const look = terraLook(x, y);                                       // Parkrasen, Freizeitpark-Boden ziehen mit (Block 117)
     if (look === 'park' || look === 'fz') items.push({ kind: 'ground', look, from: k, dx: x - x0, dy: y - y0 });
-    if (state.roofs.has(k)) items.push({ kind: 'roof', r: { ...state.roofs.get(k) }, from: k, dx: x - x0, dy: y - y0 });   // Überdachung zieht mit (Block 138)
+    if (state.roofs.has(k)) items.push({ kind: 'roof', r: roofCopy(state.roofs.get(k)), from: k, dx: x - x0, dy: y - y0 });   // Überdachung zieht mit (Block 138)
   }
   for (const [k, e] of state.edges) {                                    // Hecken, Zäune, Mauern im Rechteck und auf seinem Rand
     const [mx, my] = edgeMid(k);
@@ -382,7 +386,7 @@ function dropGroup(hx, hy) {
   for (const it of [...moving.items].sort((p, q) => order(p.kind) - order(q.kind))) {
     const P = groupPlaced(it);
     if (it.kind === 'ground') { state.terra.set((ox + P.dx) + ',' + (oy + P.dy), it.look); continue; }
-    if (it.kind === 'roof') { state.roofs.set((ox + P.dx) + ',' + (oy + P.dy), { ...P.r }); roofDirty(ox + P.dx, oy + P.dy); groundVersion++; continue; }
+    if (it.kind === 'roof') { state.roofs.set((ox + P.dx) + ',' + (oy + P.dy), roofCopy(P.r)); roofDirty(ox + P.dx, oy + P.dy); groundVersion++; continue; }
     if (it.kind === 'edge') { state.edges.set(edgeAtMid(ox + P.mx, oy + P.my), { ...P.e, born: now }); continue; }
     const k = (ox + P.dx) + ',' + (oy + P.dy);
     if (it.kind === 'tile') {
@@ -420,7 +424,7 @@ function copyClone(it) {
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt
   else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }
-  else if (it.kind === 'roof') c.r = { ...it.r };
+  else if (it.kind === 'roof') c.r = roofCopy(it.r, true);           // samt Deko oben (Block 138b)
   return c;
 }
 function copyCollect(x0, y0, x1, y1) {
@@ -452,7 +456,7 @@ function copyCost(items) {
   for (const it of items) {
     if (it.kind === 'tile') { const { money, ...mat } = copyTileCost(it.t); add(money, mat); } else if (it.kind === 'deco') add(ITEMS[it.d.b].cost, ITEMS[it.d.b].mat);
     else if (it.kind === 'edge') { add(ITEMS[it.e.b].cost, ITEMS[it.e.b].mat); if (it.e.arch && ARCHES[it.e.arch]) add(ARCHES[it.e.arch].cost); }   // Tor-/Rosenbogen kostet extra
-    else if (it.kind === 'roof') add(ITEMS.dach.cost, ITEMS.dach.mat);
+    else if (it.kind === 'roof') { add(ITEMS.dach.cost, ITEMS.dach.mat); for (const d of roofTopsOf(it.r)) if (d) add(ITEMS[d.b].cost, ITEMS[d.b].mat); }   // Deko oben (Block 138b)
     else add((it.look === 'fz' ? ITEMS.fzboden : ITEMS.parkrasen).cost, null);
   }
   return c;
@@ -705,6 +709,21 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  if (tool === 'abriss' && !plan) {                              // Deko auf dem Dach zuerst (Block 138b)
+    const th = !pillarAt(sx, sy) && roofTopHit(sx, sy);
+    if (th) {
+      if (isTouch && (!hover || !hover.top || hover.x !== th.x || hover.y !== th.y || hoverSlot !== th.slot)) { hover = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; previewCache = null; return; }
+      removeRoofTop(th.x, th.y, th.slot); return;
+    }
+  }
+  if (!plan && ITEMS[tool] && roofTopOk(tool)) {                   // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
+    const tp = roofTopAt(sx, sy);
+    if (tp) {
+      if (isTouch && (!hover || !hover.top || hover.x !== tp.x || hover.y !== tp.y || hoverSlot !== tp.slot)) { hover = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; previewCache = null; return; }
+      if (buildRoofTop(tool, tp.x, tp.y, roofTopFree(tp.x, tp.y, tp.slot))) noteRecent(tool);
+      return;
+    }
+  }
   if (tool === 'abriss') {                                       // Stütze vor Dach, Dach vor dem Feld dahinter (Block 138)
     const ph = pillarAt(sx, sy), rp = !ph && roofPick(sx, sy);
     if (ph) ({ x, y, slot } = ph); else if (rp) { ({ x, y } = rp); slot = -1; }
@@ -719,6 +738,8 @@ function tap(sx, sy, isTouch) {
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
   if (!viewOnly() && collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
+  const th = tool === 'look' && !hit ? roofTopHit(sx, sy) : null;      // Deko auf dem Dach (Block 138b): ihr Fenster
+  if (th) { openRoofTopInfo(th.x, th.y, th.slot); return; }
   const ph = tool === 'look' && !hit ? pillarAt(sx, sy) : null;        // Stütze angetippt (Block 138): ihr Fenster, nicht das des Dachs
   if (ph) { openDecoInfo(ph.x, ph.y, ph.slot); return; }
   const rp = tool === 'look' && !hit ? roofPick(sx, sy) : null;         // Dach angetippt (Block 138)

@@ -1192,6 +1192,7 @@ function wirePaintMore(el, t, reopen) {
 const bushAll = () => {                                           // alle Büsche: Deko-Ecken und Busch-Felder (Größen)
   const out = [];
   for (const ds of state.decos.values()) for (const d of ds) if (d && d.b === 'busch') out.push(d);
+  for (const [, , d] of roofTopAll()) if (d.b === 'busch') out.push(d);   // auf Dächern (Block 138b)
   for (const t of state.tiles.values()) if (baseOf(t.b) === 'busch') out.push(t);
   return out;
 };
@@ -1221,6 +1222,7 @@ const setLook = (obj, kind, i) => { if (i) obj[kind] = i; else delete obj[kind];
 const lookAll = b => {
   const out = [];
   for (const ds of state.decos.values()) for (const d of ds) if (d && baseOf(d.b) === b) out.push(d);
+  for (const [, , d] of roofTopAll()) if (baseOf(d.b) === b) out.push(d);
   for (const t of state.tiles.values()) if (baseOf(t.b) === b) out.push(t);
   if (b === 'dach' && state.roofs) for (const r of state.roofs.values()) out.push(r);   // Überdachungen (Block 138)
   return out;
@@ -1266,7 +1268,16 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
     groundVersion++; sfx('deco'); save();
   });
   for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; reopen(); };
-  for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => { set('form', +b.dataset.roofform); reopen(); };
+  for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => {
+    let n = 0;
+    undoable(() => {                                                   // Deko oben geht nur auf Stein: zurück ins Lager (Block 138b)
+      const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y];
+      if (DECO_LOOKS.dach.forms[+b.dataset.roofform].id !== 'arkaden') for (const k of keys) n += roofTopClear(state.roofs.get(k));
+      set('form', +b.dataset.roofform);
+    });
+    if (n) toast(`${n} × Deko vom Dach zurückgegeben`);
+    reopen();
+  };
   for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); reopen(); };
   for (const b of el.querySelectorAll('[data-roofbel]')) b.onclick = () => { set('bel', b.dataset.roofbel); reopen(); };   // Steinarkaden: Dachgarten oder Belag
   const m = el.querySelector('[data-roofmore]');
@@ -2101,6 +2112,28 @@ function openDecoInfo(x, y, slot) {
   $('p-close').onclick = closePanel;
   if (d.b === 'busch') wireBushCol($('panel'), { cur: d.col || 0, key: 'busch', set: i => setCol(d, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen: () => openDecoInfo(x, y, slot) });
   if (DECO_LOOKS[baseOf(d.b)]) wireDecoLook($('panel'), baseOf(d.b), d, () => openDecoInfo(x, y, slot));
+}
+
+// Deko auf dem Dach (Block 138b): wie am Boden – Farbe/Form, Drehen, Entfernen (Verschieben geht mit dem Dach)
+function openRoofTopInfo(x, y, slot) {
+  const r = roofAt(x, y), d = roofTopsOf(r)[slot];
+  if (!d) { closePanel(); return; }
+  const it = ITEMS[d.b], reopen = () => roofTopsOf(roofAt(x, y))[slot] === d ? openRoofTopInfo(x, y, slot) : closePanel();
+  showPanel(`
+    <h3>${it.name}</h3><p class="muted">Steht auf dem Dach der Steinarkaden.</p>
+    <div class="stats"><span>🌸 +${it.beauty}${nearHouse(x, y) || isHouse(x, y) ? ' ×1,5 neben Häusern' : ''}</span></div>
+    ${d.b === 'busch' ? bushColHtml(d.col || 0, 'busch', bushAll().filter(o => o !== d && (o.col || 0) !== (d.col || 0)).length) : ''}
+    ${DECO_LOOKS[baseOf(d.b)] ? decoLookHtml(baseOf(d.b), d) : ''}
+    <div class="row">
+      ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${decoBack(d) ? ` +${fmt(decoBack(d))}` : ''}</button>
+      <button class="btn ghost" id="p-close">Schließen</button>
+    </div>`, reopen);
+  if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
+  $('p-del').onclick = () => { closePanel(); undoable(() => removeRoofTop(x, y, slot)); };
+  $('p-close').onclick = closePanel;
+  if (d.b === 'busch') wireBushCol($('panel'), { cur: d.col || 0, key: 'busch', set: i => setCol(d, i), all: i => { const l = bushAll().filter(o => (o.col || 0) !== i); l.forEach(o => setCol(o, i)); return l.length; }, reopen });
+  if (DECO_LOOKS[baseOf(d.b)]) wireDecoLook($('panel'), baseOf(d.b), d, reopen);
 }
 
 function openLandmark(x, y) {
