@@ -455,15 +455,26 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
         poly([A0, B0, [B0[0], B0[1] + 1.4 * lw], [(A0[0] + B0[0]) / 2, (A0[1] + B0[1]) / 2 + 2.8 * lw], [A0[0], A0[1] + 1.4 * lw]], cols[Math.floor(((t0 + t1) / 2) / 0.12 + 1000) % 2], '#d9c9b8', 0.3);
       }
     } else if (form === 'arkaden') {
-      // Bögen zwischen den Stützen dieses Laufs (ohne Stützen: von Ende zu Ende): Kämpfer H − 9, Scheitel H − 2
-      const [ra, rb] = roofRun(A, e), springs = [ra, ...roofPillarsOn(e, ra, rb), rb].sort((p, q) => p - q);
-      const arch = [], n = 10;
-      for (let k = 0; k <= n; k++) {
-        const t = e.a + (e.b - e.a) * k / n, j = Math.max(0, springs.findIndex((s, i) => i < springs.length - 1 && t >= s - 1e-9 && t <= springs[i + 1] + 1e-9));
-        const s0 = springs[j], s1 = springs[j + 1] != null ? springs[j + 1] : s0 + 1, f = s1 - s0 > 1e-6 ? (t - s0) / (s1 - s0) : 0;
-        arch.push(pt(t, H - F.BH - 7 + 5.5 * Math.sin(Math.PI * Math.min(1, Math.max(0, f)))));   // Bogen unter dem Steinbalken
-      }
-      poly([...arch, pt(e.b, H - F.BH), pt(e.a, H - F.BH)], e.ax === 'v' ? S.side : S.stone);
+      // Säulengang (Nutzer, 09.10.2026): runde Säulen bis zum Kapitell (ARK_CAP), darauf die Wand; zwischen je zwei Säulen dieses Laufs
+      // ein Rundbogen mit heller Bogenleiste, der am Kapitell ansetzt (ohne Säule: von Ende zu Ende). Wo Pfeiler stehen, kommen die Bögen hin
+      const [ra, rb] = roofRun(A, e), pils = roofPillarsOn(e, ra, rb), springs = [ra, ...pils, rb].sort((p, q) => p - q);
+      const base = H - F.BH, d0 = base - ARK_CAP, ph = F.T / 2 * 1.3;     // Bogenansatz neben dem Kapitell
+      const colW = s => !pils.some(p => Math.abs(p - s) < 0.01) ? [0, 0] : Math.abs(s - ra) < 0.01 ? [0, 2 * ph] : Math.abs(s - rb) < 0.01 ? [2 * ph, 0] : [ph, ph];
+      const dep = t => {                                                 // Bogentiefe unter dem Balken: am Kapitell d0, im Scheitel 1,5
+        const j = Math.max(0, springs.findIndex((s, i) => i < springs.length - 1 && t >= s - 1e-9 && t <= springs[i + 1] + 1e-9));
+        const sa = springs[j], sb = springs[j + 1] != null ? springs[j + 1] : sa + 1, s0 = sa + colW(sa)[1], s1 = sb - colW(sb)[0];
+        const f = s1 - s0 > 1e-6 ? Math.min(1, Math.max(0, (t - s0) / (s1 - s0))) : 0;
+        const pa = pils.some(p => Math.abs(p - sa) < 0.01), pb = pils.some(p => Math.abs(p - sb) < 0.01);
+        // ohne Säule an einem Ende (z. B. Innenecke am Hof) hängt dort keine Wand in der Luft: der Bogen läuft bis unter den Balken
+        const x = pa && pb ? Math.abs(2 * f - 1) : pa ? 1 - f : pb ? f : 0;   // x = 1 am Kapitell, 0 im Scheitel
+        return d0 - (d0 - 1.5) * Math.sqrt(Math.max(0, 1 - x * x));
+      };
+      const ts = []; for (let k = 0; k <= 24; k++) ts.push(e.a + (e.b - e.a) * k / 24);
+      for (const s of springs) for (const w of colW(s)) for (const d of [-w, w]) { const t = s + d; if (t > e.a && t < e.b) ts.push(t - 1e-6, t + 1e-6); }   // Kanten am Kapitell
+      ts.sort((p, q) => p - q);
+      const arch = ts.map(t => pt(t, base - dep(t))), band = ts.map(t => pt(t, Math.min(base, base - dep(t) + 2.2)));
+      poly([...arch, pt(e.b, base), pt(e.a, base)], e.ax === 'v' ? S.side : S.stone);
+      poly([...arch, ...band.slice().reverse()], S.top);                  // Bogenleiste
       line(arch, S.dark, 0.6);
     }
   }
@@ -718,10 +729,24 @@ function pillarForm(x, y, u, v) {
 // Stütze zeichnen (drawObject 'stuetze'): Fuß bei (cx, cy), Höhe genau bis unters Dach
 function drawPillar(cx, cy, z, form) {
   const f = (DECO_LOOKS.dach.forms[form] || DECO_LOOKS.dach.forms[0]).id, F = ROOF_FRAME[f], H = ROOF_H, a = F.T * TW / 2 * z, b = F.T * TH / 2 * z;
-  if (f === 'arkaden') {                                                 // Steinpfeiler mit Sockel; oben trägt der Steinbalken
-    box(cx, cy, a * 1.25, b * 1.25, 1.6 * z, '#c8b896', null, 0);
-    box(cx, cy - 1.6 * z, a, b, (H - F.BH - 1.6) * z, F.post, null, 0);
-  } else box(cx, cy, a, b, (H - F.BH) * z, F.post, null, 0);            // so stark wie der Rahmen, trägt ihn bündig
+  if (f === 'arkaden') arkColumn((u, v, up) => [cx, cy - up * z], 0, 0, z, ARK_CAP);   // runde Säule bis zum Kapitell, darauf die Wand
+  else box(cx, cy, a, b, (H - F.BH) * z, F.post, null, 0);            // so stark wie der Rahmen, trägt ihn bündig
+}
+// Steinarkaden: Höhe des Kapitells – darüber die Wand mit den Bögen (Nutzer wählte Y, 09.10.2026)
+const ARK_CAP = (ROOF_H - ROOF_FRAME.arkaden.BH) * 0.65;
+// Runde Säule (Steinarkaden): Sockel, Schaft, Kapitell – Fuß auf dem Boden bei (u, v), Kapitell bis topH. P(u, v, Höhe)
+function arkColumn(P, u, v, lw, topH = null) {
+  const F = ROOF_FRAME.arkaden, r = F.T / 2, top = topH != null ? topH : ROOF_H - F.BH, rx = r * TW / 2 * Math.SQRT2 * lw, ry = r * TH / 2 * Math.SQRT2 * lw;
+  const cyl = (k, z0, h, col) => {
+    const [cx, y0] = P(u, v, z0), [, y1] = P(u, v, z0 + h), X = rx * k, Y = ry * k;
+    g.fillStyle = C(col); g.beginPath(); g.moveTo(cx - X, y1); g.lineTo(cx - X, y0); g.ellipse(cx, y0, X, Y, 0, Math.PI, 0, true); g.lineTo(cx + X, y1); g.closePath(); g.fill();
+    g.fillStyle = C(shade(col, LIGHT.side)); g.beginPath(); g.moveTo(cx + X * 0.15, y1); g.lineTo(cx + X * 0.15, y0 + Y * 0.99); g.ellipse(cx, y0, X, Y, 0, Math.PI * 0.45, 0, true); g.lineTo(cx + X, y1); g.closePath(); g.fill();
+    g.fillStyle = C(shade(col, 0.08)); g.fillRect(cx - X * 0.62, y1, X * 0.22, y0 - y1);
+    g.beginPath(); g.ellipse(cx, y1, X, Y, 0, 0, Math.PI * 2); g.fillStyle = C(shade(col, 0.06)); g.fill();
+  };
+  const full = ROOF_H - F.BH;
+  if (top < full - 0.1) cyl(1.0, top, full - top, F.post);              // über dem Kapitell bis unter den Balken (vorn verdeckt die Wand das)
+  cyl(1.35, 0, 1.4, '#c8b896'); cyl(1.0, 1.4, top - 2.7, F.post); cyl(1.3, top - 1.3, 1.3, '#d8caad');
 }
 // Vorschaubild (Leiste, Kunstakademie): ein Feld Weg mit Dach und vier Stützen
 function drawRoofIcon(cx, cy, z, form = 0, col = 0) {
@@ -964,10 +989,9 @@ function dtSteps(rot, P, q, jM = false, jP = false, only = null, out = null) {  
   if (out) { out.push(...parts); return; }
   parts.sort((p, r) => p.k - r.k).forEach(p => p.draw());
 }
-// drawObject 'dachtreppe': unter Steinarkaden malt das Dach die Treppe (durch die Öffnung, paintRoof) – sonst würden Stufen, die zu
-// einem späteren Feld gehören, über das Dach davor gemalt. Ohne Dach darüber (oder als Bildchen) hier
+// drawObject 'dachtreppe': die Treppe unter dem Dach – in Streifen je Feld gezeichnet (wie große Gebäude), jedes Dach deckt seinen Teil;
+// durch die Bögen sieht man sie (Nutzer: „die Treppe sollte man schon sehen“). Durch die Öffnung malt sie das Dach noch einmal (paintRoof)
 function drawDachtreppe(cx, cy, z, rot, x, y) {
-  if (x != null && roofTopRoof(x, y) && (state.tiles.get(x + ',' + y) || {}).b === 'dachtreppe') return;
   const P = (u, v, up) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
   dtSteps(rot, P, dtLive(z));
 }

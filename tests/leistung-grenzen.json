@@ -215,13 +215,13 @@
   "live": 10
  },
  "dach Tag Zoom 1.6": {
-  "ops": 2268,
-  "geo": 13538,
+  "ops": 3545,
+  "geo": 15996,
   "live": 59
  },
  "dach Tag Zoom 2.2": {
-  "ops": 1361,
-  "geo": 10424,
+  "ops": 1658,
+  "geo": 10962,
   "live": 31
  },
  "dach Nacht Zoom 0.45": {
@@ -240,13 +240,13 @@
   "live": 10
  },
  "dach Nacht Zoom 1.6": {
-  "ops": 2300,
-  "geo": 13598,
+  "ops": 3577,
+  "geo": 16056,
   "live": 59
  },
  "dach Nacht Zoom 2.2": {
-  "ops": 1381,
-  "geo": 10460,
+  "ops": 1678,
+  "geo": 10998,
   "live": 31
  }
 }

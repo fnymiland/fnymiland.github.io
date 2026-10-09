@@ -1895,6 +1895,13 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       (`e.fc`): 0,45 → 1.511, 0,8 → 844, nah 2,2 → 1.361. Grenzen aufgenommen
       Bild tools/vorschau/dach-buendig.png
 
+- [x] Nutzer: „die Seite der Steinarkade gefällt mir nicht – 5 Alternativen“ (seite-varianten.png) → A/C gefallen, „Bögen bis zum Boden,
+      automatisch, wo man einen Pfeiler hinstellt“, „Pfeiler rund“. Zwei Irrwege (Wand aufgeschnitten; Säule vor der Wand) → gewählt:
+      Säulengang (saeulen-kapitell.png, Y): runde Säulen bis zum Kapitell (`ARK_CAP` = 65 % der Höhe), darauf die Wand, Rundbogen mit
+      Bogenleiste zwischen je zwei Säulen; an Enden ohne Säule läuft der Bogen bis unter den Balken (keine Wand in der Luft).
+      Vorschaubild Steinarkaden im Wächter 714 → 960 (nur einmal gemalt). Dachtreppe unter dem Dach wieder gezeichnet (Streifen je Feld):
+      durch die Bögen sichtbar (treppe-seite.png). Szene tools/bodenbogen.js
+
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
 
