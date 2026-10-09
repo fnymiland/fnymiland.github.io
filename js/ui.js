@@ -345,6 +345,7 @@ function syncDropBtn() {
 function setTool(t) {
   if (t !== 'look' && typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); t = 'look'; }   // zuschauen/Besuch: nichts bauen (Block 94/95)
   if (t !== 'verschieben' && moving) cancelMove();
+  if (t !== 'tunnel') tunnelErase = false;     // 🗑️ Tunnel entfernen gilt nur, solange der Tunnel in der Hand ist
   if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
   if (t !== tool || t === 'look') rotManual = false;   // selbst gedreht: gilt bis zum Werkzeugwechsel (Block 84b)
   tool = t;
@@ -605,7 +606,13 @@ document.addEventListener('pointerdown', e => {                          // dane
 }, true);
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
-  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station');
+  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station' || t === 'tunnel');
+  if (t === 'tunnel') {                                          // Graben oder Entfernen (Nutzer, 09.10.2026)
+    bar.innerHTML = [[0, '+', 'Graben'], [1, '−', 'Entfernen']].map(([v, i, n]) => `<button class="style-chip size-chip${+tunnelErase === v ? ' on' : ''}" data-terase="${v}" title="Tunnel ${n.toLowerCase()}" aria-label="Tunnel ${n.toLowerCase()}"><i>${i}</i><span>${n}</span></button>`).join('');
+    for (const b of bar.querySelectorAll('[data-terase]')) b.onclick = () => { tunnelErase = b.dataset.terase === '1'; plan = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
+    bar.hidden = false;
+    return;
+  }
   if (t === 'station') {                                         // kleiner Bahnhof: 2 oder 3 Felder lang (Block 131)
     bar.innerHTML = [2, 3].map(n => `<button class="style-chip size-chip${stationNewLen === n ? ' on' : ''}" data-slen="${n}" title="${n} Felder lang" aria-label="${n} Felder lang"><i>${n}</i><span>${n} Felder${n === 3 ? ' · Tür mittig' : ''}</span></button>`).join('');
     for (const b of bar.querySelectorAll('[data-slen]')) b.onclick = () => { stationNewLen = +b.dataset.slen; previewCache = null; sfx('deco'); renderStyleBar(t); };

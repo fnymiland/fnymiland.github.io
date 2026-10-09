@@ -1408,6 +1408,9 @@ function render(now) {
     } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
+    } else if (tool === 'tunnel' && tunnelErase) {                  // Tunnel entfernen (Nutzer, 09.10.2026): kein Geist, nur der Hinweis
+      const err = !tunnelAt(hx, hy) ? 'Hier liegt kein Tunnel' : tunnelEraseErr(hx, hy);
+      preview = { ok: !err, text: err || `Tunnel entfernen: +${fmt(costOf('tunnel', hx, hy).cost)}` };
     } else if (tool === 'abriss') {
       const info = demolishInfo(hx, hy, !!hover.under);
       box = objBox(hx, hy);

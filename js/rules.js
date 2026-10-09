@@ -1946,6 +1946,18 @@ function einAnchor(x, y) {
 }
 // Schiene, die direkt an einen Tunnel stößt (ohne Einfahrt) – für den Hinweis im Fenster
 const railAtTunnel = (x, y) => bAt(x, y) === 'schiene' && DIRS.some(([dx, dy]) => tunnelAt(x + dx, y + dy));
+// Tunnel entfernen (Tunnel-Werkzeug, 🗑️): nur der Tunnel, oben bleibt alles; voll zurück wie beim Abreißen
+const tunnelEraseErr = (x, y) => bAt(x, y) === 'ubahn' ? 'Erst die U-Bahn-Station abreißen – sie steht auf dem Tunnel' : null;
+function removeTunnel(x, y) {
+  const k = x + ',' + y;
+  if (!state.tunnels.has(k) || tunnelEraseErr(x, y)) return false;
+  const c = costOf('tunnel', x, y);
+  state.tunnels.delete(k);
+  state.money += c.cost;
+  for (const [r, n] of Object.entries(c.mat || {})) state.res[r] += n;
+  groundVersion++; recalc(); save();
+  return true;
+}
 function tunnelError(x, y, noCost) {
   if (!available('tunnel')) return `Tunnel: ${lockText('tunnel').replace('🔒 ', 'erst mit ')}`;
   if (!ownedTile(x, y) && !claimable(x, y)) return isSea(x, y) ? 'Im Meer nur direkt neben deinem Land' : notMine(x, y);

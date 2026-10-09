@@ -14,6 +14,9 @@ const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kan
 //   fixed = false: Linie per Klick begonnen, das Ende folgt der Maus – der nächste Klick baut
 //   fixed = true:  die Vorschau steht – Klick/Tippen hinein baut, daneben bricht ab (Touch-Linie: neues Ende)
 let plan = null;
+// Tunnel entfernen im Tunnel-Werkzeug (Nutzer, 09.10.2026: „damit man nicht die halbe Stadt umbauen muss“): Schalter über der Leiste
+// ⛏ Graben / 🗑️ Entfernen; entfernt wird nur der Tunnel – was darüber steht, bleibt. Gilt, bis ein anderes Werkzeug gewählt wird
+let tunnelErase = false;
 let planTouch = false;                            // zuletzt per Finger bedient (für den Hinweis im Schild)
 
 // Linie von a nach b: erst in der längeren Richtung, dann einmal abbiegen (L-Form)
@@ -52,7 +55,7 @@ function planEnd(kind, a, b) {
   return { x: a.x + dx, y: a.y + dy };
 }
 function startPlan(kind, a, b, fixed, slot = 0) {
-  plan = { kind, tool, a: { x: a.x, y: a.y }, b: planEnd(kind, a, b), fixed, dragging: false, slot };
+  plan = { kind, tool, a: { x: a.x, y: a.y }, b: planEnd(kind, a, b), fixed, dragging: false, slot, ...(tool === 'tunnel' && tunnelErase ? { erase: true } : {}) };
 }
 function setPlanEnd(b) { if (plan) plan.b = planEnd(plan.kind, plan.a, b); }
 function cancelPlan() { plan = null; }
@@ -82,6 +85,7 @@ function planCheck(b, x, y) {
 function planScan(p) {
   if (p.kind === 'edge') return scanEdges(p);
   if (p.tool === 'abriss') return scanDemolish(p);
+  if (p.tool === 'tunnel' && p.erase) return scanTunnelErase(p);
   if (p.tool === 'verschieben') return scanSelect(p);
   if (ITEMS[p.tool].small) return scanSmall(p);
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [], grow = CLAIM_TOOLS.has(b) || b === 'weg';   // Weg: Brücke wächst vom Ufer aus
@@ -166,6 +170,19 @@ function scanSelect(p) {
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, firstErr: 'Hier ist nichts zum Verschieben' };
 }
+// Tunnel entfernen: jedes Tunnelfeld der Linie, voll zurück; unter einer U-Bahn-Station nicht (sie braucht ihn)
+function scanTunnelErase(p) {
+  const states = new Map(), order = [];
+  let gain = 0, things = 0, firstErr = null;
+  for (const [x, y] of planTiles(p)) {
+    const k = x + ',' + y;
+    if (!tunnelAt(x, y) || !ownedTile(x, y)) { states.set(k, 'same'); continue; }
+    const err = tunnelEraseErr(x, y);
+    if (err) { states.set(k, 'bad'); firstErr = firstErr || err; continue; }
+    order.push([x, y, () => removeTunnel(x, y)]); gain += costOf('tunnel', x, y).cost; things++; states.set(k, 'ok');
+  }
+  return { states, order, n: things, things, cost: 0, gain, mat: {}, bad: [...states.values()].filter(s => s === 'bad').length, firstErr: firstErr || 'Hier liegt kein Tunnel' };
+}
 // Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt
 // (aus der ✋-Auswahl, Block 155a: `keepLand` – Wald/Fels bleiben, gerodet wird nur per 👆 einzeln).
 // Leeres bleibt hell, was nicht geht (Rathaus, Sehenswürdigkeit, ragt hinaus) rot.
@@ -214,7 +231,7 @@ function scanDemolish(p) {
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch
 let planMemo = null;
 function planInfo(p) {
-  const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
+  const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.erase ? 'e' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')
@@ -225,7 +242,8 @@ function planInfo(p) {
 function planText(p, info) {
   const d = ITEMS[p.tool], parts = [];
   if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · ${p.fixed ? 'unten wählen, was damit passiert' : 'loslassen: auswählen'}`;
-  if (p.tool === 'abriss') {
+  if (p.erase) parts.push(`Tunnel entfernen: ${info.things} ${info.things === 1 ? 'Feld' : 'Felder'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
+  else if (p.tool === 'abriss') {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
   } else {
@@ -235,7 +253,7 @@ function planText(p, info) {
   if (matText(info.mat)) parts.push(matText(info.mat));
   if (info.bad) parts.push(`${info.bad} ${info.bad === 1 ? 'geht' : 'gehen'} nicht`);
   if (info.err) return info.n ? `${info.err} · ${parts.join(' · ')}` : info.err;
-  const verb = p.tool === 'abriss' ? 'abreißen' : 'bauen';
+  const verb = p.erase ? 'entfernen' : p.tool === 'abriss' ? 'abreißen' : 'bauen';
   parts.push(planTouch ? `${p.kind !== 'rect' ? 'nochmal tippen' : 'hineintippen'}: ${verb}` : `${p.fixed ? 'hineinklicken' : 'Klick'}: ${verb}`);
   return parts.join(' · ');
 }

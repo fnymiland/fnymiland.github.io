@@ -2288,3 +2288,6 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
 ## Kleinigkeit: Tunnel löschen ohne 🧹 (Nutzer, 09.10.2026: „wie löschen wir jetzt Tunnelwege?“)
 - [x] Einzeln: 👁 an (Tunnel sichtbar) → 👆 antippen → 🗑️ (wie vorher: steht etwas darüber, erst das). Fehler aus Block 155 behoben:
       ✋-Auswahl → Abreißen riss auch unsichtbare Tunnel mit – jetzt nur mit 👁 Durchsicht. Test: auswahl-abriss
+- [x] Tunnel-Werkzeug mit Schalter „+ Graben / − Entfernen“ (Nutzer: „damit man nicht die halbe Stadt umbauen muss“): Linie ziehen
+      bzw. antippen entfernt nur den Tunnel, oben bleibt alles stehen, Taler voll zurück; unter einer U-Bahn-Station nicht.
+      `tunnelErase` (gilt, solange der Tunnel in der Hand ist), `scanTunnelErase`, `removeTunnel`. Test: tunnel-entfernen
