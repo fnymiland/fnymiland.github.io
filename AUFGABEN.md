@@ -1824,8 +1824,6 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „Überdachung im Kreis, Mitte offen – Leisten oben innen nicht bündig“ → an Innenecken lagen die eingerückten Randbalken
       nebeneinander vorbei (leeres Quadrat, Stufe). Jetzt läuft ein Balken an einer Innenecke um seine Stärke weiter (Oberseite und
       Seite). Außenecken unverändert. Bild tools/vorschau/ring-ecken3.png
-      Nutzer: „fast – an beiden Ecken liegt der rechte Balken auf dem linken, optisch richtig wäre andersrum“ → Zeichenreihenfolge der
-      Randbalken: erst die längs u (nach rechts unten), dann die längs v (nach links unten). Bilder ring-ecken4.png, ecken-hinten.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

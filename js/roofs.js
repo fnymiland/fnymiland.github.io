@@ -159,9 +159,7 @@ function paintRoof(P, A, x, y, r, lw = 1) {
   } else if (form === 'pergola') {
     // Randbalken als Kanthölzer (Entwurf D): Außenseite genau auf der Dachkante, Stärke PERG_T nach innen, Höhe PERG_BH unter H;
     // sichtbar die Seite zum Betrachter (+u dunkler, +v heller) und die Oberseite – an Ecken laufen sie zusammen (keine Kerbe, kein Kreuz)
-    // Reihenfolge: erst die Balken längs u (nach rechts unten), dann die längs v (nach links unten) – an Ecken liegt so der linke auf dem
-    // rechten (Nutzer: „nach optischer Logik andersrum“); innerhalb einer Richtung von hinten nach vorn
-    const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => (p.e.ax === q.e.ax ? 0 : p.e.ax === 'v' ? -1 : 1) || p.k - q.k);
+    const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => p.k - q.k);
     const drawBeams = () => { for (const { e } of beams) {
       const inn = e.at - e.n * PERG_T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
       const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
