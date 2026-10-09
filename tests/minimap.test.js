@@ -8,6 +8,14 @@ beforeEach(() => {
 });
 
 describe('Minimap (Block 135)', () => {
+  it('Seitenfenster (Infos rechts) liegen über der Minimap, nicht darunter (Nutzer)', () => {
+    const css = require('fs').readFileSync(require('path').join(__dirname, '..', 'style.css'), 'utf8');
+    const z = sel => +((css.match(new RegExp('^' + sel + ' \\{[^}]*?z-index: *(\\d+)', 'm')) || [])[1] || 0);
+    expect(z('#minimap')).toBeGreaterThan(0);
+    expect(z('#panel')).toBeGreaterThan(z('#minimap'));
+    expect(z('#panel')).toBeLessThan(30);                                            // Fenster und Bänder bleiben darüber
+  });
+
   it('nur am PC: Maus und mindestens 900 px breit – nicht auf dem Handy, nicht bei offenem Fenster oder Katalog', () => {
     expect(game('miniWanted()')).toBe(true);
     game('miniTick(1e6)');

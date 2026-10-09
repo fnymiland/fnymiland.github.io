@@ -132,6 +132,7 @@ html, body {
 /* ---------- Infofenster ---------- */
 #panel {
   position: fixed;
+  z-index: 7;                  /* über der Minimap (z 6), unter Fenstern und Bändern (ab z 30) */
   right: 12px;
   top: 64px;
   width: min(320px, calc(100% - 24px));

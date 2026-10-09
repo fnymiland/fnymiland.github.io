@@ -1258,6 +1258,7 @@ function openRoofInfo(x, y) {
     ${roofInfoHtml(x, y)}
     <div class="row">${delButton(x, y)}<button class="btn ghost" id="p-close">Schließen</button></div>`, reopen);
   wireDel(x, y);
+  $('p-close').onclick = closePanel;
   wireRoofInfo(el, x, y, reopen);
 }
 function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {

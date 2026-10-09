@@ -137,6 +137,8 @@ describe('Überdachungen (Block 138)', () => {
     expect(game("document.getElementById('panel').textContent")).toMatch(/Holz-Pergola.*Alle verbundenen \(2\)/s);
     game("document.getElementById('p-del').click()");
     expect(game("state.roofs.has('3,9')")).toBe(false);
+    game("openRoofInfo(4, 9); document.getElementById('p-close').click()");          // Schließen schließt (Nutzer)
+    expect(game("document.getElementById('panel').hidden")).toBe(true);
   });
 
   it('Stützen auf dem Eckpunkt rücken an die Dachkante (Nutzer: „man kann die Pfeiler auf die Ecken stellen“); mitten unterm Dach bleiben sie', () => {
