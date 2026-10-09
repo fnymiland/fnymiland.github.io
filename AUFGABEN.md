@@ -2298,3 +2298,6 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
 - [x] Treppe mit Mast: Rückwand zwischen den Seitenwänden (Ecken bündig, vorher überlappten sie hinten)
 - [x] Mast „überdimensioniert, steht drauf“: Entwürfe tools/ubahn-mast.js (A heute, B Mauerecke, C vorn, D ohne Mast) – Nutzer wählte
       „B, aber mittig wie D“: kleiner Mast (17 hoch, Schild 7) mittig aus der Rückwand. Pavillon/Häuschen unverändert
+- [x] „Mauerecken sind Schrott – alle 3 Modelle ansehen“: Treppe und Pavillon bestanden aus überlappenden Kästen, je Drehung in falscher
+      Reihenfolge gemalt. Jetzt eine U-förmige Mauer als ein Stück (`ubPrism`, `ubU`: Seiten von hinten nach vorn, dann oben),
+      Pavillon-Pfosten genau auf den Rahmenecken. Häuschen (ein Kasten) war in Ordnung. Prüfbild: tools/ubahn-ecken.js

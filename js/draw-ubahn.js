@@ -180,6 +180,26 @@ function uSign(p, size, z) {
   g.fillStyle = '#ffffff'; g.font = `800 ${a * 0.72}px system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText('U', p[0], p[1] + a * 0.04); g.textAlign = 'left';
 }
+// Mauer als ein Stück (Nutzer: „Mauerecken sind Schrott“): Grundriss pts (a, b) hochgezogen – sichtbare Seiten von hinten nach vorn,
+// dann die Oberseite. Einzelne Kästen überlappen an den Ecken und landen je nach Drehung in falscher Reihenfolge
+function ubPrism(S, du, dv, pts, h0, h1, col, top, z) {
+  const n = pts.length;
+  let area = 0; for (let i = 0; i < n; i++) { const [a0, b0] = pts[i], [a1, b1] = pts[(i + 1) % n]; area += a0 * b1 - a1 * b0; }
+  const sg = area > 0 ? 1 : -1, faces = [];
+  for (let i = 0; i < n; i++) {
+    const [a0, b0] = pts[i], [a1, b1] = pts[(i + 1) % n], len = Math.hypot(a1 - a0, b1 - b0);
+    const na = sg * (b1 - b0) / len, nb = -sg * (a1 - a0) / len;                // nach außen
+    const nu = du * na - dv * nb, nv = dv * na + du * nb;
+    if (nu + nv <= 0.02) continue;
+    const ma = (a0 + a1) / 2, mb = (b0 + b1) / 2;
+    faces.push({ p: [a0, b0], q: [a1, b1], nu, d: (du * ma - dv * mb) + (dv * ma + du * mb) });
+  }
+  faces.sort((f, h) => f.d - h.d);
+  for (const f of faces) poly([S(...f.p, h0), S(...f.q, h0), S(...f.q, h1), S(...f.p, h1)], C(shade(col, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0)));
+  poly(pts.map(([a, b]) => S(a, b, h1)), C(top || shade(col, 0.12)));
+}
+// U-förmige Mauer: hinten bei a0..a1 (Dicke), Seiten b ±(bi..bo), offen nach vorn bis aEnd
+const ubU = (a0, a1, aEnd, bi, bo) => [[a0, -bo], [aEnd, -bo], [aEnd, -bi], [a1, -bi], [a1, bi], [aEnd, bi], [aEnd, bo], [a0, bo]];
 function drawUbahn(cx, cy, z, t) {
   const r = (t && t.rot) || 0, du = [1, 0, -1, 0][r], dv = [0, 1, 0, -1][r];
   const L = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -193,9 +213,10 @@ function drawUbahn(cx, cy, z, t) {
   if (form === 'pavillon') {
     const GR = '#2f7a56', GL = '#3f9068';
     stairs(-0.34, 0.36, 0.22);
-    for (const sg of [-1, 1]) pbBox(S, du, dv, -0.4, 0.36, sg > 0 ? 0.24 : -0.29, sg > 0 ? 0.29 : -0.24, 0, 5, GR, GL, z, false);
-    pbBox(S, du, dv, -0.4, -0.34, -0.29, 0.29, 0, 5, GR, GL, z, false);
-    for (const [a, b] of [[-0.38, -0.3], [-0.38, 0.3], [0.34, -0.3], [0.34, 0.3]]) pbBox(S, du, dv, a - 0.025, a + 0.025, b - 0.025, b + 0.025, 0, 18, GR, GL, z, false);
+    ubPrism(S, du, dv, ubU(-0.4, -0.34, 0.36, 0.24, 0.29), 0, 5, GR, GL, z);   // Rahmen als ein Stück (Ecken bündig)
+    const posts = [[-0.4, -0.34, -0.29, -0.24], [-0.4, -0.34, 0.24, 0.29], [0.3, 0.36, -0.29, -0.24], [0.3, 0.36, 0.24, 0.29]];   // Pfosten genau auf den Rahmenecken
+    posts.sort((p, q) => { const d = e => { const a = (e[0] + e[1]) / 2, b = (e[2] + e[3]) / 2; return (du * a - dv * b) + (dv * a + du * b); }; return d(p) - d(q); });
+    for (const [a0, a1, b0, b1] of posts) pbBox(S, du, dv, a0, a1, b0, b1, 0, 18, GR, GL, z, false);
     g.globalAlpha *= 0.85; pbBox(S, du, dv, -0.44, 0.42, -0.36, 0.36, 18, 19.5, '#9fd3e3', '#c8ecf5', z, false); g.globalAlpha /= 0.85;
     const arc = []; for (let i = 0; i <= 12; i++) { const t2 = Math.PI - i * Math.PI / 12; arc.push(S(0.36, Math.cos(t2) * 0.3, 19.5 + Math.sin(t2) * 5)); }
     portalLine(arc, GR, 1.6, z);
@@ -212,8 +233,7 @@ function drawUbahn(cx, cy, z, t) {
     uSign(S(0, 0, 26), 10, z);
   } else {                                                              // Treppe mit Mast
     stairs(-0.36, 0.38, 0.24);
-    pbBox(S, du, dv, -0.44, -0.36, -0.24, 0.24, 0, 6, '#cfc6b4', '#e3dccd', z, false);   // Rückwand zwischen den Seitenwänden – Ecken bündig (Nutzer)
-    for (const sg of [-1, 1]) pbBox(S, du, dv, -0.44, 0.38, sg > 0 ? 0.24 : -0.32, sg > 0 ? 0.32 : -0.24, 0, 6, '#cfc6b4', '#e3dccd', z, false);
+    ubPrism(S, du, dv, ubU(-0.44, -0.36, 0.38, 0.24, 0.32), 0, 6, '#cfc6b4', '#e3dccd', z);   // Mauer als ein Stück – Ecken bündig (Nutzer)
     pbBox(S, du, dv, -0.43, -0.37, -0.03, 0.03, 6, 17, '#5b6470', '#6c7682', z, false);   // kleiner Mast mittig aus der Rückwand (Nutzer wählte „B, mittig“;
     uSign(S(-0.4, 0, 20), 7, z);                                                          // vorher 30 hoch neben der Ecke – „überdimensioniert“)
   }
