@@ -2463,9 +2463,10 @@ function drawSmall(k, px, py, z, now, x, y, which) {
   for (const i of which) {
     const d = ds[i];
     if (!d) continue;
-    const [u, v] = slotPos(x, y, i, d);
+    let [u, v] = slotPos(x, y, i, d);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
+    if (d.b === 'stuetze') { const [pu, pv] = pillarSnap(x + u, y + v); u = pu - x; v = pv - y; }   // an die Dachkante (Block 138)
     const form = d.b === 'stuetze' ? pillarForm(x, y, u, v) : d.form || 0;   // Stütze: Form des Dachs darüber (Block 138)
     drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0, form);
   }

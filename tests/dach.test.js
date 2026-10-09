@@ -84,7 +84,7 @@ describe('Überdachungen (Block 138)', () => {
     // Arkaden: Bögen spannen sich zwischen den Stützen der Kante
     const e = game("(() => { const A = roofArea(roofCov(roofAt(4, 5))); const e = roofEdges(A, 4, 5).find(e => e.ax === 'v' && e.n < 0); const [a, b] = roofRun(A, e); return { a, b, p: roofPillarsOn(e, a, b) }; })()");
     expect(e.a).toBeCloseTo(2.58, 6); expect(e.b).toBeCloseTo(6.42, 6);       // Gang-Enden: Dachkante bei Feldmitte ± RW
-    expect(e.p.map(v => +v.toFixed(2)).sort()).toEqual([3.58, 4]);
+    expect(e.p.map(v => +v.toFixed(2)).sort()).toEqual([3.58, 4, 4.5]);   // auch die vom Eckpunkt (an die Kante gerückt)
   });
 
   it('Antippen trifft das Dach, das man sieht (nicht das Feld dahinter); 🧹 dort nimmt nur das Dach; Schatten am Boden', () => {
@@ -110,6 +110,16 @@ describe('Überdachungen (Block 138)', () => {
     expect(game("document.getElementById('panel').textContent")).toMatch(/Holz-Pergola.*Alle verbundenen \(2\)/s);
     game("document.getElementById('p-del').click()");
     expect(game("state.roofs.has('3,9')")).toBe(false);
+  });
+
+  it('Stützen auf dem Eckpunkt rücken an die Dachkante (Nutzer: „man kann die Pfeiler auf die Ecken stellen“); mitten unterm Dach bleiben sie', () => {
+    way(row(3, 6, 5)); roof(row(3, 6, 5));
+    game("buildSmall('stuetze', 5, 5, VSLOT); buildSmall('stuetze', 5, 6, VSLOT)");   // Eckpunkte (4,5 | 4,5 hinten) und (4,5 | 5,5 vorn)
+    expect(game("pillarPos(5, 5, VSLOT, state.decos.get('5,5')[VSLOT]).map(v => +v.toFixed(2))")).toEqual([4.5, 4.58]);
+    expect(game("pillarPos(5, 6, VSLOT, state.decos.get('5,6')[VSLOT]).map(v => +v.toFixed(2))")).toEqual([4.5, 5.42]);
+    expect(game('pillarSnap(4.5, 7.5)')).toEqual([4.5, 7.5]);                         // weit weg vom Dach: bleibt
+    for (let y = 8; y <= 9; y++) { way(row(8, 9, y)); roof(row(8, 9, y)); }
+    expect(game('pillarSnap(8.5, 8.5)')).toEqual([8.5, 8.5]);                         // Mitte eines 2×2-Dachs: bleibt
   });
 
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {

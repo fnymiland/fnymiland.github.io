@@ -102,7 +102,7 @@ function roofPillarsOn(e, a, b) {
     if (!ds) continue;
     ds.forEach((d, i) => {
       if (!d || d.b !== 'stuetze') return;
-      const [du, dv] = slotPos(x, y, i, d), u = x + du, v = y + dv, on = e.ax === 'u' ? u : v, along = e.ax === 'u' ? v : u;
+      const [u, v] = pillarPos(x, y, i, d), on = e.ax === 'u' ? u : v, along = e.ax === 'u' ? v : u;
       if (Math.abs(on - line) < 0.04 && along > a - 0.04 && along < b + 0.04) out.push(along);
     });
   }
@@ -279,6 +279,29 @@ function roofPick(sx, sy) {
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }
 }
+// Stütze an die Dachkante (Nutzer: „man kann die Pfeiler auf die Ecken stellen“ – der Eckpunkt zwischen vier Feldern liegt bei 0,5,
+// die Kante bei RW = 0,42): steht eine Stütze bis ROOF_SNAP neben einem Dach, rückt sie auf den nächsten Punkt seiner Fläche.
+// Mitten unter einem breiten Dach bleibt sie, wo sie ist. Weltkoordinaten rein und raus.
+const ROOF_SNAP = 0.16;
+function pillarSnap(pu, pv) {
+  if (!state.roofs || !state.roofs.size) return [pu, pv];
+  let best = null, bd = ROOF_SNAP;
+  for (let ty = Math.round(pv) - 1; ty <= Math.round(pv) + 1; ty++) for (let tx = Math.round(pu) - 1; tx <= Math.round(pu) + 1; tx++) {
+    const r = roofAt(tx, ty);
+    if (!r) continue;
+    const A = roofArea(roofCov(r));
+    for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      const su = 3 * tx + i, sv = 3 * ty + j;
+      if (!A.sub(su, sv)) continue;
+      const cu = Math.min(roofHi(su), Math.max(roofLo(su), pu)), cv = Math.min(roofHi(sv), Math.max(roofLo(sv), pv)), d = Math.hypot(cu - pu, cv - pv);
+      if (d < 1e-9) return [pu, pv];                                   // liegt schon unter dem Dach
+      if (d < bd) { bd = d; best = [cu, cv]; }
+    }
+  }
+  return best || [pu, pv];
+}
+// Platz einer Stütze in Weltkoordinaten (Slot, an die Dachkante gerückt)
+function pillarPos(x, y, i, d) { const [u, v] = slotPos(x, y, i, d); return pillarSnap(x + u, y + v); }
 // Form der Stütze: die des Dachs darüber (Feld des Platzes, am Eckpunkt eins der vier), sonst Pergola (Holzpfosten)
 function pillarForm(x, y, u, v) {
   const fx = Math.round(x + u), fy = Math.round(y + v);

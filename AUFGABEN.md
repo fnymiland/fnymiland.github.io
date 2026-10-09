@@ -1774,6 +1774,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       👆/🧹 trifft das Dach, das man sieht (`roofPick`: Punkt ROOF_H unter dem Zeiger), nicht das Bodenfeld dahinter. (3) Dach auf
       jedem eigenen Land außer Wasser, Gebäuden, Gleisen, Brücken (`roofOver`); Dach über Wiese hat ein eigenes Fenster
       (`openRoofInfo`); unter ein Dach kommt kein Gebäude. Test: dach
+- [x] Nutzer: „ach ich weiß, was das Problem ist – man kann die Pfeiler auf die Ecken stellen“ (Eckpunkt zwischen vier Feldern
+      liegt bei 0,5, die Dachkante bei 0,42 → Stützen standen neben dem Dach). Jetzt rückt eine Stütze bis 0,16 neben einem Dach an
+      den nächsten Punkt seiner Fläche (`pillarSnap`/`pillarPos`, auch für die Arkadenbögen); mitten unter breitem Dach bleibt sie.
+      Bild tools/vorschau/dach-eckpunkte.png. Test: dach
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
