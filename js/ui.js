@@ -2878,6 +2878,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-09-mitte', date: '9. Oktober', title: 'Deko in die Mitte, Tunnel entfernen', items: [
+    '🌳 <b>Deko genau in die Feldmitte:</b> Tippst du nah an die Mitte, rastet kleine Deko dort ein – auf Wiese, Plätzen und breiten Wegen (nicht mitten auf einen schmalen Weg). Die Ecken bleiben frei.',
+    '🚇 <b>Tunnel entfernen</b> direkt im Tunnel-Werkzeug: oben „− Entfernen“ wählen und über die Tunnel ziehen – was darüber steht, bleibt stehen.',
+    '🚉 <b>U-Bahn-Station:</b> auf einem Weg oder Platz bleibt der Weg darunter, der Mast ist kleiner, die Mauerecken sind sauber.',
+  ] },
   { id: '2026-10-09-werkzeuge', date: '9. Oktober', title: 'Abreißen über ✋, neue 👁 Durchsicht', items: [
     '✋ <b>Auswählen statt 🧹:</b> Das Abreißen ist aus der Leiste in ✋ gewandert. Rechteck aufziehen → unten „🗑️ Abreißen“ (mit Erstattung), ein Ding antippen → es hängt am Finger → „🗑️ Wegwerfen“. Einzeln geht es weiter im Fenster (👆 → 🗑️). Tasten: Entf oder E.',
     '🌲 <b>Wald roden, Fels sprengen:</b> einfach antippen → 🪓 Roden bzw. 🧨 Sprengen.',
