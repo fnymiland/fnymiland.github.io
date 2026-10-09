@@ -11,6 +11,11 @@ const floats = [];
 function fail(msg) { toast(msg); sfx('error'); }
 
 function build(b, x, y, quiet) {
+  if (b === 'anhoehe') {                               // Anhöhe (Block 157): Feld anheben bzw. die Wand umstellen (hills.js)
+    const err = quiet && !hillAt(x, y) && hillRaiseError(x, y);
+    if (err && err !== 'Zu wenig Taler') return false;                    // im Rechteck still wie die anderen
+    return raiseHill(x, y);
+  }
   // Umfärben: bestehenden Weg im anderen Stil übermalen
   const k0 = x + ',' + y, old = state.tiles.get(k0);
   if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') {   // Gleis-Stil (Block 109): übermalen kostet nichts
@@ -170,6 +175,7 @@ function claimSea(b, x, y, rot, t, bridge) {
 function demolish(x, y, under = false) {
   let info = demolishInfo(x, y, under);
   if (info.err) { fail(info.err); return; }
+  if (info.hill) { lowerHill(...keyXY(info.hill)); return; }            // Anhöhe (Block 157): abtragen – erstattet, zeigt es, rechnet neu
   const k = x + ',' + y;
   if (info.roof) {                                                      // Überdachung (Block 138): voll zurück, der Weg bleibt
     const r = state.roofs.get(info.roof), tb = roofTopBack(r);
@@ -218,6 +224,21 @@ function removeLawn(x, y) {
   if (terraLook(x, y) !== 'park') return false;
   state.terra.set(x + ',' + y, 'grass'); state.money += ITEMS.parkrasen.cost;
   sandCache.clear(); landCache.clear(); sfx('dig'); recalc(); save();
+  return true;
+}
+// Wald, Obsthain, Fels räumen – auch oben auf einer Anhöhe (Block 157), wo demolish zuerst die Anhöhe meint. Preise wie demolishInfo
+function landClearInfo(x, y) {
+  const ter = terrainAt(x, y);
+  return ter === 'forest' || ter === 'obst' ? { cost: 10, label: 'Roden' } : ter === 'rock' || ter === 'erz' || ter === 'kristall' ? { cost: 50, label: 'Sprengen' } : null;
+}
+function clearLand(x, y) {
+  const c = landClearInfo(x, y);
+  if (!c || COVER.has(x + ',' + y)) return false;
+  if (state.money < c.cost) { fail('Zu wenig Taler'); return false; }
+  state.money -= c.cost;
+  state.terra.set(x + ',' + y, 'grass');
+  addFloat(x, y, '−' + fmt(c.cost), '#d9534a');
+  sfx('dig'); recalc(); save();
   return true;
 }
 // Verschieben: aufnehmen, Ziel antippen, ablegen – kostenlos. Während des Tragens bleibt das Objekt
@@ -418,6 +439,7 @@ function groupErrors(hx, hy) {
       const x = ox + P.dx, y = oy + P.dy, k = x + ',' + y, ot = state.tiles.get(COVER.get(k) || k);
       if (!ownedTile(x, y)) err = notMine(x, y);
       else if (state.roofs.has(k)) err = 'Hier ist schon eine Überdachung';
+      else if (hillAt(x, y)) err = 'Auf einer Anhöhe geht keine Überdachung';   // Anhöhe (Block 157), wie roofError
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
@@ -865,6 +887,7 @@ function tap(sx, sy, isTouch) {
     if (wk) { openWalkerInfo(wk); return; }
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
     else if (t) openInfo(ax, ay);
+    else if (hillAt(x, y)) openHillInfo(x, y);                       // Anhöhe ohne etwas darauf (Block 157): Wand, Abtragen
     else if (state.tunnels && tunnelAt(x, y)) openTunnelInfo(x, y);   // Tunnel ohne etwas darüber (Block 136)
     else if (roofAt(x, y)) openRoofInfo(x, y);                       // Dach über Wiese (Block 138)
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);
@@ -1030,7 +1053,8 @@ const UNDO_MAX = 20, undoStack = [];
 let undoPending = null, undoCut = false;
 // Neues Spiel, Import: die Schritte gehören zum alten Stand (Block 84a)
 function resetUndo() { undoStack.length = 0; undoPending = null; undoCut = false; if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
-const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels, roofs: () => state.roofs };
+const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels, roofs: () => state.roofs,
+  hills: () => state.hills || (state.hills = new Map()) };              // Anhöhen (Block 157): sonst gäbe ↶ die Taler zurück und die Anhöhe bliebe
 const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
 function undoSnap() {
   const maps = {};
@@ -1075,6 +1099,11 @@ function undo() {
     if (n !== 'tiles' || b === undefined) continue;
     const t = JSON.parse(b), [x, y] = keyXY(k);
     if (footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+  }
+  for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude und Wege
+    if (n !== 'hills' || b === undefined) continue;
+    const o = objAt(...keyXY(k));
+    if (o && !hillOk(o.b)) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

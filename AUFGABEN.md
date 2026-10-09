@@ -2308,3 +2308,23 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
 - [x] Unter Dingen auf einem Platz liegt Weg – jede Zaunseite wurde ein Durchgang (nur Pfosten). Gewählt: nichts ändert sich von selbst,
       im Fenster der Linie (antippen) „⬜ Durchgang / Zaun geschlossen“ (`e.shut`, `setShut`, `wayAcross`; Bogen geht beim Schließen
       zurück). Test: zaun-durchgang
+
+## Block 157: Anhöhen (Relief à la Animal Crossing, Nutzer 09.10.2026: „ich lass mich drauf ein“)
+Ziel in Stufen: 1 Anhöhe mit Deko · 2 Wege + Rampe · 3 Gebäude oben · 4 Bahn (erst Tunnel durch den Berg, Steigungen vielleicht nie).
+Fundament von Anfang an: jedes Feld hat eine Höhe (`state.hills`: Feld → { w: Wandart, h?: Ebene, Standard 1 }), nicht als Dachform.
+Konzeptbild: tools/anhoehe-entwurf.js. Entscheidungen Stufe 1: Wand wählbar (Fels Standard, Erde, Trockenmauer), erst eine Ebene
+(Fundament kann mehr), Rechteck aufziehen wie Gelände (Gestalten → Wege & Gelände), oben Kleinkram + Deko-Felder (Brunnen, Beete,
+Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
+- [x] 157a Datenmodell, Speichern/Laden, Werkzeug „Anhöhe“ (Rechteck, Wandart in der Leiste), Regeln (was darf drauf, was nicht),
+      Abtragen (✋ Auswahl → Abreißen, Fenster der Anhöhe)
+- [x] 157b Zeichnen: Block (Wände + Oberseite, als Bildchen), Inhalt der Felder angehoben, große Deko, Schatten, weit weg / GL
+- [x] 157c Antippen und Vorschau in der Höhe (Feld, Deko-Platz, Linien, Bau-Vorschau, Planen)
+- [ ] 157d Aufgang: Treppe am Fuß der Wand (drehbar)
+- [ ] 157e Spaziergänger: über die Treppe hinauf, oben bummeln, auf Bänke setzen, wieder hinunter
+- [~] 157f Rest: erledigt – Tiere nicht auf die Wand, Laternenlicht oben, Minimap, Hilfe; offen – Testwelt im Leistungs-Wächter,
+      „Das ist neu“ (beim Push), Schatten von Dingen oben, Tunnel unter einer Anhöhe im 👁-Bild, zweite Ebene (pickFrac maxLv, Rand)
+      Leistungs-Wächter je Ding: `anhoehe` Form 0–2 = 0 Zeichenbefehle – `drawObject` zeichnet für die Anhöhe nichts, Wand und
+      Oberseite kommen als Bildchen aus `drawHillTile` (hills.js). Test: anhoehe
+      Umgesetzt mit Ultracode-Ablauf (5 Bereiche parallel, dann Tests und Prüfung). Nachgebessert: dunkle Kante oben zur tieferen
+      Seite hinten (Oberseite hob sich nicht ab), Linien oben/unten an der Kante nicht verbunden (`freeEnd`), Stützen und Deko auf
+      Dächern hinter einer Anhöhe nicht durch sie hindurch antippbar (`hillInFront`).

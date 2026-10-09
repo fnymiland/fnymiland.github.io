@@ -54,6 +54,7 @@ function newState() {
     edges: new Map(),          // Linien auf Feldkanten (Block 41): 'a3,4' / 'b3,4' → { b: 'hecke'|'zaun'|'mauer', style }
     tunnels: new Map(),        // U-Bahn (Block 136): Feld → { form? } – Strecke unter der Erde, oben darf alles stehen außer Schienen
     roofs: new Map(),          // Überdachungen (Block 138): Feld → { form?, col? } über einem Weg
+    hills: new Map(),          // Anhöhen (Block 157): Feld → { w: Wandart, h?: Ebene (fehlt = 1) }
     cam: { x: c.x, y: c.y, z: 1.4 },
     last: Date.now(),
     muted: false,
@@ -140,6 +141,7 @@ function serialize() {
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
+    hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}), ...(e.shut ? { shut: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}), ...(r.bel ? { bel: r.bel } : {}), ...(r.par ? { par: r.par } : {}), ...(r.top ? { top: r.top.map(decoOut) } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -328,6 +330,10 @@ function parseSave(d) {
       const top = r && Array.isArray(r.top) ? [...r.top, ...newSlots()].slice(0, SLOTS).map((d, i) => i !== VSLOT && d && roofTopOk(d.b) ? d : null) : null;   // Deko oben (Block 138b)
       if (top && top.some(Boolean)) o.top = top;
       return [k, o];
+    })),
+    hills: new Map((Array.isArray(d.hills) ? d.hills : []).filter(e => Array.isArray(e) && /^-?\d+,-?\d+$/.test(e[0])).map(([k, h]) => {   // Block 157
+      const w = h && +h.w, lv = h && +h.h;
+      return [k, { w: Number.isInteger(w) && w > 0 && w < HILL_WALLS.length ? w : 0, ...(Number.isInteger(lv) && lv > 1 && lv <= 3 ? { h: lv } : {}) }];
     })),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };

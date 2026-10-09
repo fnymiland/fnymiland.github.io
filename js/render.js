@@ -129,8 +129,10 @@ function hull(pts) {                      // konvexe Hülle (Monotone Chain)
 // Flache Teile der Gebäude (Plätze, Rasen, Beete) – vor Wegen und Schatten
 function drawGroundParts(want, at, z) {
   PASS = 'ground';
+  const hs = state.hills && state.hills.size;                           // Anhöhe (Block 157): flache Teile oben zeichnet tileA mit dem Ding
   for (const [k, t] of state.tiles) {
     if (!hasGroundPart(t)) continue;
+    if (hs && state.hills.has(k)) continue;
     const [ax, ay] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t);
     if (!want([ax, ay], w, h)) continue;
     const c = at(ax + (w - 1) / 2, ay + (h - 1) / 2);
@@ -143,10 +145,12 @@ function drawGroundParts(want, at, z) {
 // alle Schatten als eine Fläche (Überlappungen werden nicht dunkler); want(anker) filtert
 function drawShadows(want) {
   if (!GFX.shadows) return;                                             // ⚙️ Schatten aus
+  const hs = state.hills && state.hills.size;                           // Anhöhe (Block 157): Dinge oben werfen keinen Schatten unten neben die Wand
   g.beginPath();
   for (const [k, t] of state.tiles) {
     const a = keyXY(k);
     if (!want(a)) continue;
+    if (hs && state.hills.has(k)) continue;
     const sh = shadowOf(t, a[0], a[1]);
     if (sh) sh.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
     if (sh) g.closePath();
@@ -154,6 +158,7 @@ function drawShadows(want) {
   g.fillStyle = SHADOW_COL;
   g.fill('nonzero');
   if (state.roofs && state.roofs.size) drawRoofShadows(want);              // Überdachungen (Block 138)
+  if (hs) drawHillShadows(want);                                         // Anhöhen (Block 157)
 }
 let groundCached = false;           // in diesem Bild kommt der Boden (mit Wegen) aus dem Zwischenspeicher
 // Reines Meer sieht auf jedem Grundstück gleich aus (Wellen kommen extra): ein gemeinsames Bild
@@ -671,11 +676,13 @@ function putSprite(e, cx, cy, z) {
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
 // Bewegtes zeichnen – im GL-Bild in eine Zelle der Sammelfläche (Block 144)
-function moverLive(m, z, now, walker = false) {
-  const f = () => seeFaded(seeThrough, () => walker ? drawWalker(m, z, now) : drawMover(m, z, now));   // 👁 Figuren und Fahrzeuge blass
+// lift: um so viele Bildpunkte angehoben (Feld auf einer Anhöhe, Block 157) – Zelle im GL-Bild mit, gezeichnet verschoben
+function moverLive(m, z, now, walker = false, lift = 0) {
+  const f0 = () => seeFaded(seeThrough, () => walker ? drawWalker(m, z, now) : drawMover(m, z, now));   // 👁 Figuren und Fahrzeuge blass
+  const f = lift ? () => { g.save(); g.translate(0, -lift); try { f0(); } finally { g.restore(); } } : f0;
   if (!GLPASS) return f();
   const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z);
-  glLive(p.x, p.y, l, u, r, d, f);
+  glLive(p.x, p.y - lift, l, u, r, d, f);
 }
 function drawMover(m, z, now) {
   if (m.pbtrain) return drawParkCar(m, z, now);                            // Parkeisenbahn (Block 136)
@@ -836,6 +843,7 @@ function resetDrawCaches() {
   if (seaImage) { freeCanvas(seaImage.c); seaImage = null; }
   depthImg = null;
   if (typeof ICON_SPRITES !== 'undefined') ICON_SPRITES.clear();
+  if (typeof hillSprites !== 'undefined') { for (const e of hillSprites.values()) freeCanvas(e.c); hillSprites.clear(); }   // Anhöhen (Block 157): andere Welt/Pixeldichte
 }
 
 // Was liegt unter dem Finger? (Block 71) Gebäude und Dekos zählen dort, wo sie gezeichnet sind – Dach, Turm und Fahne,
@@ -868,12 +876,14 @@ function inkAt(sx, sy, cx, cy, sc, draw) {
 // { x, y, slot, d } – Gebäude: Anker und slot −1, Deko: ihr Feld und Platz; d = Tiefe (größer = weiter vorn)
 function objectAt(sx, sy) {
   if (seeThrough) return null;                                          // 👁 Durchsicht: das Feld unter dem Finger zählt
-  const z = cam.z, now = performance.now(), [fa, fb] = tileFrac(sx, sy), col = Math.round(fa - fb), cand = [];
+  const z = cam.z, now = performance.now(), [fa, fb] = tileFrac(sx, sy), col = Math.round(fa - fb), cand = [];   // Spalte: auf jeder Höhe dieselbe
+  const hs = state.hills && state.hills.size;                           // Anhöhe (Block 157): Dinge oben sind angehoben gezeichnet
   for (const [k, t] of state.tiles) {
     if (FLAT_HIT.has(t.b)) continue;
     const [ax, ay] = keyXY(k);
     if (t.b !== 'lm' && !ownedTile(ax, ay)) continue;
     const [w, h] = sizeOf(t.b, t.rot, t), c = toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2), ds = decoScale(t.b);
+    if (hs) c.y -= hillLift(ax, ay) * z;
     if (Math.abs(sx - c.x) > ((w + h) * TW / 4 + 30) * z * ds || sy > c.y + ((w + h) * TH / 4 + 14) * z * ds || sy < c.y - spriteTop(t.b, w, h) * 1.4 * z * ds) continue;
     const d = Math.max(ax - (ay + h - 1), Math.min(ax + w - 1 - ay, col)), fx = Math.min(ax + w - 1, ay + h - 1 + d);   // Spalte des Fingers
     const mir = (t.rot & 1) && MIRROR.has(t.b);
@@ -883,6 +893,7 @@ function objectAt(sx, sy) {
     const [x, y] = keyXY(k);
     if (!ownedTile(x, y)) continue;
     const p = toScreen(x, y);
+    if (hs) p.y -= hillLift(x, y) * z;
     slots.forEach((dc, i) => {
       if (!dc) return;
       const [u, v] = slotPos(x, y, i, dc), s = decoScale(dc.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z;
@@ -891,11 +902,15 @@ function objectAt(sx, sy) {
       cand.push({ x, y, slot: i, d: x + y + (back ? -0.25 : 0.25) + (u + v) * 0.1, ink: () => inkAt(sx, sy, qx, qy, [mir ? -s : s, s], () => drawObject(dc.b, 0, 0, z, now, x, y, 1, { rot: dc.rot || 0, slot: i, col: dc.col || 0, form: dc.form || 0 })) });   // Treffer wie gezeichnet (Form, Block 106)
     });
   }
+  if (hs) {                                                              // die Anhöhe selbst deckt ab, was hinter ihr steht: dann gilt ihr Feld (null)
+    const [ha, hb] = pickFrac(sx, sy), hx = Math.round(ha), hy = Math.round(hb);
+    if (hillAt(hx, hy)) cand.push({ hill: true, d: hx + hy - 0.45, ink: () => 1 });   // hinter allem, was auf ihr steht (hintere Ecke −0,33)
+  }
   cand.sort((a, b) => b.d - a.d);
   let thin = null;
   for (const c of cand) {
     const f = c.ink();
-    if (f >= HIT_SOLID) return { x: c.x, y: c.y, slot: c.slot, d: c.d };
+    if (f >= HIT_SOLID) return c.hill ? null : { x: c.x, y: c.y, slot: c.slot, d: c.d };
     if (f > 0 && !thin) thin = c;
   }
   const gt = toTile(sx, sy), ga = COVER.get(gt.x + ',' + gt.y), under = ga && state.tiles.get(ga);
@@ -917,6 +932,7 @@ function pillAt(sx, sy) {
 // Sternschnuppe (Sternwarte): fällt in der ersten Sekunde schräg vom Himmel, liegt dann funkelnd da und verblasst am Ende
 function drawFallenStar(s, z, now) {
   const age = now - s.t0, p = toScreen(s.x, s.y), fall = Math.min(1, age / 1000);
+  p.y -= liftAt(s.x, s.y);                                               // Anhöhe (Block 157): liegt oben auf ihr
   const x = p.x + (1 - fall) * 220 * z, y = p.y - 14 * z - (1 - fall) * 320 * z, fade = Math.min(1, (STAR_LIFE - age) / 5000);
   if (fade <= 0 || x < -60 || x > W + 60 || y < -60 || y > H + 60) return;
   g.save();
@@ -1063,23 +1079,57 @@ function tileSprite(kind, x, y, px, py, z) {
   const B = SPRITE_BOX;
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
 }
+// Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
+// (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
+let HILL_MARKS = null;
+// Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
+const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
+function hillMark(x, y, f) {
+  if (!HILL_MARKS || !hillAt(x, y)) return f();
+  const k = x + ',' + y;
+  if (!HILL_MARKS.has(k)) HILL_MARKS.set(k, []);
+  HILL_MARKS.get(k).push(f);
+}
+const hillMarkEdge = (k, col, z, w) => { const { i, j } = edgeParse(k); hillMark(i, j, () => edgeMark(k, col, z, w)); };   // Kante gehört zum Feld i,j
+function boxOnHill(x0, y0, w, h) {
+  if (!HILL_MARKS) return false;
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) if (hillAt(x, y)) return true;
+  return false;
+}
+// Rahmen um x0…x1 × y0…y1 je Feld (Randstücke des Felds), damit er auf Anhöhen oben liegt; style setzt Farbe, Breite, Strichelung
+function hillFrame(x0, y0, x1, y1, style) {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const segs = [];
+    if (y === y0) segs.push([x - 0.5, y - 0.5, x + 0.5, y - 0.5]);
+    if (x === x1) segs.push([x + 0.5, y - 0.5, x + 0.5, y + 0.5]);
+    if (y === y1) segs.push([x + 0.5, y + 0.5, x - 0.5, y + 0.5]);
+    if (x === x0) segs.push([x - 0.5, y + 0.5, x - 0.5, y - 0.5]);
+    if (!segs.length) continue;
+    hillMark(x, y, () => {
+      g.save(); style(); g.lineCap = 'round'; g.beginPath();
+      for (const [a, b, c, d] of segs) { const p = toScreen(a, b), q = toScreen(c, d); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }
+      g.stroke(); g.restore();
+    });
+  }
+}
 // Vorschau einer Linie bzw. eines Rechtecks: grün = wird gebaut, rot = geht nicht, hell = ist schon so
 function planPreview(z) {
-  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line) => {      // etwas eingerückt: jedes Feld einzeln sichtbar
+  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
     const c = [toScreen(x - ins, y - ins), toScreen(x + ins, y - ins), toScreen(x + ins, y + ins), toScreen(x - ins, y + ins)];
     g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
     g.fillStyle = fill; g.fill();
     if (line) { g.strokeStyle = line; g.lineWidth = 1.6 * z; g.stroke(); }
-  };
+  });
   g.save();
   g.lineJoin = 'round';
   if (plan.kind === 'edge') {                                   // Zaun & Co.: die Kanten farbig am Boden
     for (const k of planEdges(plan)) {
       const s = info.states.get(k);
-      edgeMark(k, s === 'ok' ? (info.err ? '#e8913a' : '#2f9f55') : s === 'same' ? 'rgba(255,255,255,0.6)' : '#e5484d', z);
+      hillMarkEdge(k, s === 'ok' ? (info.err ? '#e8913a' : '#2f9f55') : s === 'same' ? 'rgba(255,255,255,0.6)' : '#e5484d', z);   // auf Anhöhen oben (Block 157)
     }
     g.restore();
     const e = toScreen(plan.b.x - 0.5, plan.b.y - 0.5);
+    if (HILL_MARKS) e.y -= hillLift(plan.b.x, plan.b.y) * z;
     return { ok: !info.err, text: planText(plan, info), p: e };
   }
   for (const [x, y] of planTiles(plan)) {
@@ -1089,34 +1139,40 @@ function planPreview(z) {
     else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d');
   }
   const [x0, y0, x1, y1] = planBox(plan);
-  if (plan.kind === 'rect') {                                   // Rahmen um die ganze Fläche
+  if (plan.kind === 'rect' && boxOnHill(x0, y0, x1 - x0 + 1, y1 - y0 + 1)) {   // Anhöhe (Block 157): Rahmen je Feld, auf Anhöhen oben
+    const col = info.err ? '#e5484d' : '#3fbf6f';
+    hillFrame(x0, y0, x1, y1, () => { g.strokeStyle = col; g.lineWidth = 2.5 * z; g.setLineDash([6 * z, 4 * z]); });
+  } else if (plan.kind === 'rect') {                            // Rahmen um die ganze Fläche
     const c = [toScreen(x0 - 0.5, y0 - 0.5), toScreen(x1 + 0.5, y0 - 0.5), toScreen(x1 + 0.5, y1 + 0.5), toScreen(x0 - 0.5, y1 + 0.5)];
     g.strokeStyle = info.err ? '#e5484d' : '#3fbf6f'; g.lineWidth = 2.5 * z; g.setLineDash([6 * z, 4 * z]);
     g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath(); g.stroke();
   }
   g.restore();
   const p = plan.kind === 'line' ? toScreen(plan.b.x, plan.b.y) : toScreen((x0 + x1) / 2, (y0 + y1) / 2);
+  if (HILL_MARKS) p.y -= (plan.kind === 'line' ? hillLift(plan.b.x, plan.b.y) : hillLift(Math.round((x0 + x1) / 2), Math.round((y0 + y1) / 2))) * z;   // Schild über der Anhöhe
   return { ok: !info.err, text: planText(plan, info), p };
 }
 // Vorschau beim Verschieben einer Gruppe: Grundflächen grün/rot, die Dinge als Geister an ihrem vordersten Feld
 function groupPreview(z) {
   const { ox, oy, errs, first } = groupErrors(hover.x, hover.y), ghosts = new Map(), now = performance.now();
   const add = (k, f) => { if (!ghosts.has(k)) ghosts.set(k, []); ghosts.get(k).push(f); };
-  const dia = (x, y, bad) => {
+  const dia = (x, y, bad) => hillMark(x, y, () => {                     // auf Anhöhen oben (Block 157)
     const c = [toScreen(x - 0.44, y - 0.44), toScreen(x + 0.44, y - 0.44), toScreen(x + 0.44, y + 0.44), toScreen(x - 0.44, y + 0.44)];
     g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
     g.fillStyle = bad ? 'rgba(229,72,77,0.45)' : 'rgba(255,255,255,0.5)'; g.fill();
     g.strokeStyle = bad ? '#e5484d' : '#2f9f55'; g.lineWidth = 1.6 * z; g.stroke();
-  };
+  });
   g.save(); g.lineJoin = 'round';
   for (const it of moving.items) {
     const P = groupPlaced(it), bad = !!errs.get(it);                  // nach der Drehung (Block 117)
     if (it.kind === 'edge') {                                          // Linie: ein Strich auf der Feldkante
-      const k = edgeAtMid(ox + P.mx, oy + P.my), [[ax, ay], [bx, by]] = edgeEndPoints(k).map(([vx, vy]) => [vx - 0.5, vy - 0.5]), p0 = toScreen(ax, ay), p1 = toScreen(bx, by);
-      g.lineCap = 'round';
-      for (const [col, w] of [['rgba(255,255,255,0.9)', 5.5], [bad ? '#e5484d' : C(shade((STYLES[P.e.b] && styleDef(P.e.b, P.e.style).col) || '#7a5236', -0.25)), 3]]) {   // heller Rand: auch auf Rasen sichtbar
-        g.strokeStyle = col; g.lineWidth = w * z; g.beginPath(); g.moveTo(p0.x, p0.y - 3 * z); g.lineTo(p1.x, p1.y - 3 * z); g.stroke();
-      }
+      const k = edgeAtMid(ox + P.mx, oy + P.my), [[ax, ay], [bx, by]] = edgeEndPoints(k).map(([vx, vy]) => [vx - 0.5, vy - 0.5]), p0 = toScreen(ax, ay), p1 = toScreen(bx, by), ek = edgeParse(k);
+      hillMark(ek.i, ek.j, () => {                                       // auf Anhöhen oben (Block 157)
+        g.lineCap = 'round';
+        for (const [col, w] of [['rgba(255,255,255,0.9)', 5.5], [bad ? '#e5484d' : C(shade((STYLES[P.e.b] && styleDef(P.e.b, P.e.style).col) || '#7a5236', -0.25)), 3]]) {   // heller Rand: auch auf Rasen sichtbar
+          g.strokeStyle = col; g.lineWidth = w * z; g.beginPath(); g.moveTo(p0.x, p0.y - 3 * z); g.lineTo(p1.x, p1.y - 3 * z); g.stroke();
+        }
+      });
       continue;
     }
     const x = ox + P.dx, y = oy + P.dy;
@@ -1128,9 +1184,11 @@ function groupPreview(z) {
       continue;
     }
     if (it.kind === 'ground') {                                        // Rasen: grüne Raute
-      const c = [toScreen(x - 0.5, y - 0.5), toScreen(x + 0.5, y - 0.5), toScreen(x + 0.5, y + 0.5), toScreen(x - 0.5, y + 0.5)];
-      g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
-      g.fillStyle = bad ? 'rgba(229,72,77,0.4)' : it.look === 'fz' ? 'rgba(242,140,177,0.45)' : 'rgba(110,190,80,0.55)'; g.fill();
+      hillMark(x, y, () => {                                             // auf Anhöhen oben (Block 157)
+        const c = [toScreen(x - 0.5, y - 0.5), toScreen(x + 0.5, y - 0.5), toScreen(x + 0.5, y + 0.5), toScreen(x - 0.5, y + 0.5)];
+        g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
+        g.fillStyle = bad ? 'rgba(229,72,77,0.4)' : it.look === 'fz' ? 'rgba(242,140,177,0.45)' : 'rgba(110,190,80,0.55)'; g.fill();
+      });
       continue;
     }
     if (it.kind === 'deco') {
@@ -1150,7 +1208,9 @@ function groupPreview(z) {
   }
   g.restore();
   const n = moving.items.length;
-  return { groupGhost: ghosts, preview: { ok: !first, text: first || (moving.copy ? `⧉ Kopie · 🪙 ${fmt(moving.cost.money || 0)}${state.money < (moving.cost.money || 0) ? ' – zu wenig Taler' : ''} · hierhin` : `${n} Dinge · hierhin`), p: toScreen(hover.x, hover.y) } };
+  const hp = toScreen(hover.x, hover.y);
+  if (HILL_MARKS) hp.y -= hillLift(hover.x, hover.y) * z;                // Schild über der Anhöhe (Block 157)
+  return { groupGhost: ghosts, preview: { ok: !first, text: first || (moving.copy ? `⧉ Kopie · 🪙 ${fmt(moving.cost.money || 0)}${state.money < (moving.cost.money || 0) ? ' – zu wenig Taler' : ''} · hierhin` : `${n} Dinge · hierhin`), p: hp } };
 }
 // Nacht: Die Lichter haben beim Zeichnen Löcher gestanzt (glowQuad). Nur das übrige Bild wird dunkel, dann kommt
 // hinter die Löcher das Licht – wo inzwischen etwas davor steht, ist kein Loch mehr. Große Gebäude werden in
@@ -1232,7 +1292,8 @@ function glowImage(blue) {
 // Block 144: dieselbe Rechnung wie toScreen, aber ohne Objekte je Feld, und eine Diagonale (gleiches x + y = gleiche Höhe im Bild)
 // außerhalb des Bilds wird ganz übersprungen – vorher je Bild ~13.000 toScreen für ~6.000 sichtbare Felder (Full HD)
 function visibleTiles(minX, maxX, minY, maxY, z) {
-  const mX = TW * z, mTop = 110 * z, mBot = TH * z, mBig = 420 * z;
+  const hm = state.hills && state.hills.size ? HILL_H * z : 0;          // Anhöhe (Block 157): angehobene Felder unter dem Bildrand ragen höher hinein
+  const mX = TW * z, mTop = 110 * z + hm, mBot = TH * z, mBig = 420 * z + hm;
   const bigFront = (x, y) => { const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a); if (!t) return false;
     const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t); return (w > 1 || h > 1) && (x === ax + w - 1 || y === ay + h - 1); };
   const visible = [];
@@ -1345,8 +1406,16 @@ function render(now) {
 
   const mt1 = MESS ? performance.now() : 0;
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
+  const HILLS = !!(state.hills && state.hills.size);                     // Anhöhen (Block 157): sonst alles wie vorher
+  HILL_MARKS = HILLS ? new Map() : null;                                 // Vorschau auf Anhöhen-Feldern: erst in tileA, oben (hillMark)
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
+    if (boxOnHill(ax, ay, w, h)) {                                       // Anhöhe: Rahmen je Feld, oben auf der Anhöhe
+      const col = ok ? '#3fbf6f' : '#e5484d';
+      hillFrame(ax, ay, ax + w - 1, ay + h - 1, () => { g.strokeStyle = col; g.lineWidth = 3 * z; });
+      const p = toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2); p.y -= hillLift(ax, ay) * z;
+      return p;
+    }
     const c = [toScreen(ax - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay + h - 0.5), toScreen(ax - 0.5, ay + h - 0.5)];
     g.strokeStyle = ok ? '#3fbf6f' : '#e5484d';
     g.lineWidth = 3 * z;
@@ -1371,12 +1440,13 @@ function render(now) {
     let box = [hx, hy, 1, 1];
     if (EDGE_TOOLS.has(tool) && hoverVertex) {
       const q = toScreen(hoverVertex.x - 0.5, hoverVertex.y - 0.5);
-      g.fillStyle = '#2f9f55'; g.beginPath(); g.arc(q.x, q.y, 4 * z, 0, Math.PI * 2); g.fill();
-      preview = { ok: true, text: `${ITEMS[tool].name} · ${styleDef(tool, currentStyle(tool)).name}: Anfang antippen (oder ziehen)`, p: q };
+      hillMark(hoverVertex.x, hoverVertex.y, () => { g.fillStyle = '#2f9f55'; g.beginPath(); g.arc(q.x, q.y, 4 * z, 0, Math.PI * 2); g.fill(); });   // Eckpunkt = obere Ecke des Felds (Block 157: auf Anhöhen oben)
+      preview = { ok: true, text: `${ITEMS[tool].name} · ${styleDef(tool, currentStyle(tool)).name}: Anfang antippen (oder ziehen)`, p: HILLS ? { x: q.x, y: q.y - hillLift(hoverVertex.x, hoverVertex.y) * z } : q };
     } else if (tool === 'abriss' && hoverEdge && state.edges.has(hoverEdge)) {
       const e = state.edges.get(hoverEdge);
-      edgeMark(hoverEdge, '#e5484d', z, 5);
+      hillMarkEdge(hoverEdge, '#e5484d', z, 5);                          // auf Anhöhen oben (Block 157)
       const E = edgeEnds(hoverEdge), m = toScreen((E.p[0] + E.q[0]) / 2, (E.p[1] + E.q[1]) / 2);
+      if (HILLS) { const { i, j } = edgeParse(hoverEdge); m.y -= hillLift(i, j) * z; }
       preview = { ok: true, text: `${ITEMS[e.b].name} entfernen: +${fmt(ITEMS[e.b].cost)}`, p: m };
     } else if (tool === 'verschieben' && !moving && (hover.top || hover.roof)) {   // Deko oben bzw. Dachfeld aufnehmen (Block 138b)
       const q = toScreen(hx, hy), d = hover.top && roofTopsOf(roofAt(hx, hy))[hoverSlot];
@@ -1421,7 +1491,8 @@ function render(now) {
       box = [hx, hy, w, h];
       let text = err;
       if (!err) {
-        if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
+        if (tool === 'anhoehe' && hillAt(hx, hy)) text = `Wand: ${DECO_LOOKS.anhoehe.forms[hillAt(hx, hy).w || 0].name} → ${DECO_LOOKS.anhoehe.forms[decoLookNew('anhoehe').form || 0].name} · kostenlos`;   // Anhöhe (Block 157): nur umstellen
+        else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
@@ -1497,21 +1568,50 @@ function render(now) {
   let staleCover = false;
   // Feldschleife in zwei Teilen (Block 144: Standbild-Merker): A = Linien, Gebäude, Dekos, Natur, Geister (ruht, kann gemerkt werden);
   // B = Bewegtes dieses Felds (jedes Bild neu). Im GL-Standbild laufen nur noch B und die A der „lebendigen“ Felder
+  // Anhöhe (Block 157): Vorschau eines Felds oben auf seiner Anhöhe (gemerkt in hillMark, Zeichnen wie am Boden, angehoben)
+  const runMarks = (x, y, lift) => {
+    const ms = HILL_MARKS && HILL_MARKS.get(x + ',' + y);
+    if (!ms) return;
+    g.save(); g.translate(0, -lift * z); g.lineJoin = 'round';
+    try { for (const f of ms) f(); } finally { g.restore(); }
+  };
+  // Zeichnung, die ihre Bildpunkte selbst rechnet (toScreen: Linien, Geister), um lift (Bildpunkte) angehoben – nie um glLive herum
+  const lifted = (lift, f) => { if (!lift) return f(); g.save(); g.translate(0, -lift); try { return f(); } finally { g.restore(); } };
+  // große Deko auf einer Anhöhe: die Anhöhe der ganzen Grundfläche in Maler-Reihenfolge, dann deren Vorschau – in jedem Streifen der Deko
+  const hillsUnder = (ax, ay, w, h) => {
+    for (let s = ax + ay; s <= ax + ay + w + h - 2; s++) for (let fx = Math.max(ax, s - ay - h + 1); fx <= Math.min(ax + w - 1, s - ay); fx++) {
+      const fy = s - fx, q = toScreen(fx, fy);
+      drawHillTile(fx, fy, q.x, q.y, z);
+    }
+    if (HILL_MARKS && HILL_MARKS.size) for (let fy = ay; fy < ay + h; fy++) for (let fx = ax; fx < ax + w; fx++) runMarks(fx, fy, hillLift(fx, fy));
+  };
   const tileA = (x, y, px, py) => {
       const owned = ownedTile(x, y);
       FOG = !owned;
-      if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
-        if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, () => drawEdgesAt(x, y, z, now));
-        else drawEdgesAt(x, y, z, now);
-      }
       const k = x + ',' + y;
       // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
+      // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
+      // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
+      const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
+      if (lift) {
+        const bigOn = a && (() => { const [w0, h0] = sizeOf(t.b, t.rot, t), [ax0, ay0] = keyXY(a); return (w0 > 1 || h0 > 1) && hillLevel(ax0, ay0) > 0 && t.b !== 'weg'; })();
+        if (!bigOn) { drawHillTile(x, y, px, py, z); runMarks(x, y, lift / z); }
+        py -= lift;
+      }
+      if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
+        if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, lift ? () => lifted(lift, () => drawEdgesAt(x, y, z, now)) : () => drawEdgesAt(x, y, z, now));
+        else if (lift) lifted(lift, () => drawEdgesAt(x, y, z, now));
+        else drawEdgesAt(x, y, z, now);                                    // ohne Anhöhe wie vorher: keine zusätzliche Funktion je Feld und Bild
+      }
       if (a0 && !t) staleCover = true;
       if (a) {
         const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
+        const oLift = HILLS ? hillLift(ax, ay) * z : 0;                    // Anhöhe (Block 157): große Deko steht ganz oben (gleiche Höhe)
+        if (big) c.y -= oLift;
+        const oGround = oLift && hasGroundPart(t);                         // flache Teile oben: mit dem Ding zeichnen (nicht im Boden-Bild)
         const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht
         const drawIt = () => seeFaded(fadeIt, drawIt0);
         const drawIt0 = () => {
@@ -1521,11 +1621,11 @@ function render(now) {
             const an = (now - t.born) / 380;
             if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
           }
-          if (SPRITES_ON && sc === 1 && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
+          if (SPRITES_ON && sc === 1 && !oGround && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
           const ds = sc * decoScale(t.b);
           const live = () => {
             g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-            PASS = 'object';
+            PASS = oGround ? null : 'object';
             try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
           };
           if (!GLPASS) return live();
@@ -1541,7 +1641,7 @@ function render(now) {
           const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
           if (t.b === 'lm') FOG = false;
           g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
-          try { drawIt(); } finally { g.restore(); }                         // sonst bliebe der Streifen-Ausschnitt für immer
+          try { if (oLift) hillsUnder(ax, ay, w, h); drawIt(); } finally { g.restore(); }   // sonst bliebe der Streifen-Ausschnitt für immer
         }
         if (corner) {
           if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
@@ -1592,11 +1692,12 @@ function render(now) {
       }
       if (groupGhost && groupGhost.has(k)) {
         g.globalAlpha = 0.65;
-        for (const f of groupGhost.get(k)) f();
+        for (const f of groupGhost.get(k)) lifted(lift, f);              // rechnen selbst per toScreen: angehoben (Block 157)
         g.globalAlpha = 1;
       }
       if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
         const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
+        if (HILLS) c.y -= hillLift(gx, gy) * z;                            // Anhöhe (Block 157): so, wie es oben stehen wird
         const rot = placeRot(ghostType, gx, gy);
         g.globalAlpha = 0.65;
         g.save(); g.translate(c.x, c.y);
@@ -1611,6 +1712,8 @@ function render(now) {
   };
   const tileB = (x, y, px, py) => {
     const k = x + ',' + y;
+      const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
+      py -= lift;
       const ms = byTile.get(k);
       if (ms) {
         FOG = false;
@@ -1619,7 +1722,7 @@ function render(now) {
           // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
           const ar = m.fur && archAt(m.px, m.py);
           if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
-          moverLive(m, z, now); drawnMovers.add(m);
+          moverLive(m, z, now, false, m.critter ? 0 : lift); drawnMovers.add(m);   // Tiere nicht: ihre Höhe (c.h) zählt schon ab dem Boden
           if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
             if (GLPASS) { const bp = toScreen(...keyXY(bk)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(bk, z, now)); }
             else drawBridgeOver(bk, z, now);
@@ -1670,6 +1773,7 @@ function render(now) {
   }
   FOG = false;
   archWalkers.clear();
+  HILL_MARKS = null;                                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 
@@ -1748,6 +1852,7 @@ function render(now) {
     const f = floats[i], a = (now - f.t0) / 1500;
     if (a >= 1) { floats.splice(i, 1); continue; }
     const p = toScreen(f.x, f.y);
+    if (HILLS) p.y -= liftAt(f.x, f.y);                                   // Anhöhe (Block 157): über dem, was oben steht
     g.globalAlpha = a < 0.8 ? 1 : (1 - a) / 0.2;
     g.font = `900 ${Math.max(12, 12 * z)}px Nunito, system-ui, sans-serif`;
     g.textBaseline = 'middle';
@@ -1786,6 +1891,7 @@ function drawSparkles(now, z) {
     const s = sparkles[i], a = (now - s.t0) / 1400;
     if (a >= 1) { sparkles.splice(i, 1); continue; }
     const p = toScreen(s.x + Math.cos(s.a) * s.r * a, s.y + Math.sin(s.a) * s.r * a);
+    p.y -= liftAt(s.x, s.y);                                             // Anhöhe (Block 157): über ihrem Feld
     const y = p.y - 20 * z - a * 30 * z, r = (1 - a) * 4 * z;
     g.globalAlpha = 1 - a;
     g.fillStyle = s.col;

@@ -68,6 +68,9 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'schuett') {
     diamond(cx, cy + 5, hw, hh, '#74d0e6');
     block(0.6, '#96d56f');
+  } else if (type === 'anhoehe') {                         // Anhöhe (Block 157): kleines Plateau mit Felswand, oben ein Baum
+    block(1, '#96d56f');
+    drawHillIcon(cx, cy + 3 * z, z, (tile && tile.form) || 0, 0.68, true);
   } else if (TERRAFORM[type]) {                           // Terraforming: ein Feld im neuen Gelände
     const tf = TERRAFORM[type];
     block(1, tf === 'park' ? '#7fcc5e' : tf === 'sand' ? '#f1dfae' : tf === 'forest' ? '#7fc460' : tf === 'obst' ? '#86c35b' : tf === 'rock' ? '#aabb94' : '#96d56f');
@@ -1351,6 +1354,16 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
   const m = el.querySelector('[data-roofmore]');
   if (m) m.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.dach.group); };
 }
+// Anhöhe (Block 157): kleines Plateau für Leiste und Wandwahl – Wand wie im Spiel (paintHillWall), so hoch wie im Verhältnis zur Fläche
+function drawHillIcon(cx, cy, z, w = 0, s = 0.7, withTree = false) {
+  const kind = HILL_WALLS[w] || 'fels', H = HILL_H * s, hw = TW / 2 * z * s, hh = TH / 2 * z * s, sx = SUN.dx * H * z, sy = SUN.dy * H * z;
+  const P = (u, v, up = 0) => [cx + (u - v) * hw, cy + (u + v) * hh - up * z];
+  poly([[cx + sx, cy - hh + sy], [cx + hw + sx, cy + sy], [cx + sx, cy + hh + sy], [cx - hw + sx, cy + sy]], 'rgba(30,42,62,0.18)');   // Schatten nach rechts
+  diamond(cx, cy - H * z, hw, hh, C('#a2d879'));                         // Oberseite: Wiese
+  paintHillWall(P, -0.5, 0.5, 0.5, 0.5, 'v', kind, 0, H, 7);
+  paintHillWall(P, 0.5, -0.5, 0.5, 0.5, 'u', kind, 0, H, 3);
+  if (withTree) tree(cx + 3 * z * s, cy - H * z - 3 * z * s, z * 0.55, 0.3);
+}
 const lookThumbs = new Map();
 // kleines Vorschaubild einer Form in einer Farbe (im Test ohne Canvas: leer)
 function lookThumb(b, form, col) {
@@ -1359,6 +1372,12 @@ function lookThumb(b, form, col) {
   let url = '';
   try {
     const c = document.createElement('canvas'), prev = g;
+    if (b === 'anhoehe') {                                                  // Anhöhe (Block 157): die Wand groß
+      c.width = 64; c.height = 64; g = c.getContext('2d');
+      try { drawHillIcon(32, 43, 1.15, form, 0.8); } finally { g = prev; }
+      url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
+      lookThumbs.set(key, url); return url;
+    }
     if (b === 'tunneleinfahrt') {                                           // Tunneleinfahrt (Block 136): zwei Felder, kleiner
       c.width = 64; c.height = 64; g = c.getContext('2d');
       try { drawObject(b, 32, 38, 0.75, 0, 3, 3, 1, { form, rot: 1 }); } finally { g = prev; }
@@ -1929,6 +1948,31 @@ function openLandInfo(x, y) {
     <div class="row"><button class="btn danger" id="p-del">${rock ? '🧨 Sprengen' : '🪓 Roden'} · 🪙 ${fmt(info.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => terrainAt(x, y) === ter && !COVER.has(x + ',' + y) ? openLandInfo(x, y) : closePanel());
   $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
+  $('p-close').onclick = closePanel;
+}
+// Anhöhe ohne etwas darauf angetippt (Block 157): Wand für die ganze Anhöhe, oben Roden/Sprengen, Abtragen (voll zurück)
+let hillInfoN = { k: '', v: -1, n: 0 };                                  // Größe der Anhöhe, gemerkt je Boden-Fassung (Fenster frischt alle 0,2 s auf)
+function openHillInfo(x, y) {
+  const h = hillAt(x, y), k = x + ',' + y;
+  if (!h) { closePanel(); return; }
+  if (hillInfoN.k !== k || hillInfoN.v !== groundVersion) hillInfoN = { k, v: groundVersion, n: hillGroup(x, y).length };
+  const L = DECO_LOOKS.anhoehe, w = h.w || 0, n = hillInfoN.n, land = landClearInfo(x, y), rock = land && land.label === 'Sprengen';
+  const di = demolishInfo(x, y);                                         // Abtragen wie 🗑️ überall: Linien/Eckpunkt-Deko am Rand sperren (rules.js)
+  const el = showPanel(`
+    <h3>⛰️ Anhöhe · ${escHtml((L.forms[w] || L.forms[0]).name)}</h3>
+    <p class="muted">Eine Ebene höher. Oben gehen Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Wege und Gebäude kommen später.</p>
+    <div class="label">Wand</div>
+    <div class="looks look-forms">${lookFree('anhoehe', 'form').map(([f, i]) => `<button class="look look-form${i === w ? ' on' : ''}" data-hwall="${i}" aria-label="Wand: ${f.name}"><img alt="" src="${lookThumb('anhoehe', i, 0) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
+    <p class="muted">Gilt für die ganze zusammenhängende Anhöhe${n > 1 ? ` (${n} Felder)` : ''}.</p>
+    ${land ? `<div class="label">Oben: ${escHtml(TERRAIN_NAMES[terrainAt(x, y)] || '')}</div><div class="row"><button class="btn" id="p-clear">${rock ? '🧨 Sprengen' : '🪓 Roden'} · 🪙 ${fmt(land.cost)}</button></div>` : ''}
+    ${terraLook(x, y) === 'park' ? '<div class="looks"><button class="look" id="p-park">🌳 Park ansehen ›</button></div>' : ''}
+    ${di.err ? `<p class="muted">🗑️ ${escHtml(di.err)}</p>` : ''}
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Anhöhe abtragen"${di.hill ? '' : ' disabled'}>🗑️ Abtragen +${fmt(di.hill ? di.refund : ITEMS.anhoehe.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => hillAt(x, y) && !COVER.has(k) ? openHillInfo(x, y) : closePanel());
+  for (const b of el.querySelectorAll('[data-hwall]')) b.onclick = () => { undoable(() => setHillWall(x, y, +b.dataset.hwall)); openHillInfo(x, y); };
+  if ($('p-clear')) $('p-clear').onclick = () => { undoable(() => clearLand(x, y)); openHillInfo(x, y); };
+  if ($('p-park')) $('p-park').onclick = () => openParkInfo(x, y);
+  $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };   // → lowerHill (actions.js), erstattet voll
   $('p-close').onclick = closePanel;
 }
 function openParkInfo(x, y) {
@@ -2813,6 +2857,7 @@ function helpBody(tab) {
     '🧭 <b>Die Leiste unten</b> hat vier Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Antippen klappt alles aus dem Bereich auf, nach Gruppen sortiert. Karte antippen = auswählen, dann auf die Karte tippen = bauen. ✕ legt es wieder weg.',
     'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest – mit Knopf, der dich direkt hinbringt.',
     '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
+    '⛰️ <b>Anhöhen</b> (Gestalten → Wege & Gelände) ziehst du genauso als Rechteck auf – die Felder liegen dann eine Ebene höher, mit Felswand, Erde oder Trockenmauer, und oben stehen Bäume, Bänke, Brunnen, Beete und Gelände.',
     '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',

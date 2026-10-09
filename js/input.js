@@ -29,18 +29,19 @@ function toScreen(x, y) {
   const p = iso(x, y);
   return { x: (p.x - cam.x) * cam.z + W / 2, y: (p.y - cam.y) * cam.z + H / 2 };
 }
+// flach, ohne Anhöhen (Kamera, Dächer); Antippen geht über pickFrac (hills.js, Block 157), ohne Anhöhen dasselbe
 function tileFrac(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
   return [(px / (TW / 2) + py / (TH / 2)) / 2, (py / (TH / 2) - px / (TW / 2)) / 2];
 }
-function toTile(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a), y: Math.round(b) }; }
+function toTile(sx, sy) { const [a, b] = pickFrac(sx, sy); return { x: Math.round(a), y: Math.round(b) }; }   // Anhöhe (Block 157): das Feld, das man sieht
 // Zaun & Co. (Block 41): der nächste Eckpunkt zwischen den Feldern
-function toVertex(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a + 0.5), y: Math.round(b + 0.5) }; }
+function toVertex(sx, sy) { const [a, b] = pickFrac(sx, sy); return { x: Math.round(a + 0.5), y: Math.round(b + 0.5) }; }
 const planPoint = (sx, sy) => (plan ? plan.kind === 'edge' : dragKind(tool) === 'edge') ? toVertex(sx, sy)
   : (tool === 'abriss' && !plan && !pillarAt(sx, sy) && roofPick(sx, sy)) || toTile(sx, sy);   // Abreißen: das Dach, das man sieht (Block 138)
 // Liegt der Zeiger auf einer Linie? (Abreißen, Ansehen) – die Kante, deren Mitte am nächsten ist
 function edgeNear(sx, sy) {
-  const [a, b] = tileFrac(sx, sy), gu = Math.round(a - 0.5) + 0.5, gv = Math.round(b - 0.5) + 0.5;
+  const [a, b] = pickFrac(sx, sy), gu = Math.round(a - 0.5) + 0.5, gv = Math.round(b - 0.5) + 0.5;   // Linien oben auf der Anhöhe (Block 157)
   const cand = [];
   if (Math.abs(a - gu) < 0.2) cand.push(['b' + (gu + 0.5) + ',' + Math.round(b), Math.abs(a - gu)]);
   if (Math.abs(b - gv) < 0.2) cand.push(['a' + Math.round(a) + ',' + (gv + 0.5), Math.abs(b - gv)]);

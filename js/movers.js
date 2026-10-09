@@ -8,6 +8,7 @@ const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
 const walkable = (x, y, open = false) => {             // open: Schranke egal (wer schon drauf ist, geht weiter)
   if (!ownedTile(x, y)) return false;
+  if (hillAt(x, y)) return false;                                                   // Anhöhe (Block 157, Stufe 1): ohne Treppe kommt niemand hinauf
   const t = objAt(x, y);
   if (terrainAt(x, y) === 'water') return isWegBridge(t);                          // übers Wasser nur auf einer Wegbrücke (Block 66)
   return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || open || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
@@ -890,6 +891,7 @@ function quietAt(x, y, r) {
 // Welche Tiere hier vorkommen können, mit Chance je Versuch
 function natureAt(x, y, part) {
   const out = [], ter = terrainAt(x, y), night = part === 'nacht';
+  if (hillAt(x, y)) return out;                                          // Anhöhe (Block 157, Stufe 1): oben noch keine Tiere
   if (ter === 'water') {
     // über oder neben Gebautem auf dem Wasser (Brücke, Steg, Hafen) springt nichts – es spränge durch die Brücke (Nutzer, 08.10.2026)
     const built = [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => { const k = (x + dx) + ',' + (y + dy); return terrainAt(x + dx, y + dy) === 'water' && (state.tiles.has(k) || COVER.has(k)); }));
@@ -938,7 +940,9 @@ function spawnCritter(id, x, y, now) {
   const c = { critter: true, id, x: x + (r() - 0.5) * 0.6, y: y + (r() - 0.5) * 0.6, t0: now, until: now + (life + r() * life * 0.4) * 1000, seed: r() * 100,
     col: FALTER[Math.floor(r() * FALTER.length)], dir: r() * Math.PI * 2 };
   if ((id === 'frosch' || id === 'eisvogel') && terrainAt(x, y) === 'water') {   // ans Ufer, nicht mitten aufs Wasser
-    const land = DIRS.find(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
+    // Anhöhe (Block 157): lieber flaches Ufer; sonst vor eine sichtbare Wand (Anhöhe nach −x/−y), nicht hinter eine
+    const lands = DIRS.filter(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
+    const land = lands.find(([dx, dy]) => !hillAt(x + dx, y + dy)) || lands.find(([dx, dy]) => dx + dy < 0) || lands[0];
     if (land) { c.x = x + land[0] * 0.42; c.y = y + land[1] * 0.42; }
   }
   critterPos(c, now);
@@ -981,7 +985,16 @@ function critterPos(c, now) {
     case 'gluehwurm': ox = Math.sin(t * 0.3 + s) * 0.3; oy = Math.cos(t * 0.25 + s) * 0.3; h = 6 + Math.sin(t * 0.8) * 2; break;
     case 'reh': if (c.flee) { ox = Math.cos(c.dir) * fl * 2.5; oy = Math.sin(c.dir) * fl * 2.5; } break;
   }
-  c.px = c.x + ox; c.py = c.y + oy; c.h = h;
+  const px = c.x + ox, py = c.y + oy;
+  // Anhöhe (Block 157, Stufe 1): unter ihrer Oberkante kommt kein Tier auf ein Anhöhen-Feld (es liefe/flöge durch die Wand) – es bleibt
+  // an der Kante stehen; wer flieht, bleibt dort (sonst spränge es vor, sobald es hoch genug ist). Wo jetzt eine Anhöhe ist: weg
+  if (state.hills && state.hills.size && (c.hold || h < hillLift(Math.round(px), Math.round(py)))) {
+    if (c.px == null) { c.px = c.x; c.py = c.y; }                       // gleich beim Auftauchen: dort, wo es auftaucht
+    if (c.flee) c.hold = true;
+    if (h < hillLift(Math.round(c.px), Math.round(c.py))) c.until = Math.min(c.until, now);
+    c.h = h; return;
+  }
+  c.px = px; c.py = py; c.h = h;
 }
 function stepCritters(now) { for (const c of critters) critterPos(c, now); }
 // Wegfliegen, abtauchen, weglaufen – und fürs Album eintragen

@@ -130,7 +130,7 @@ function hbfUpgradePlan(k) {
     const t2 = { ...t, wing: 2, mid }, foot = footprint('hbf', nx, ny, r, t2);
     if (!door.includes(hbfEntrance(t2, nx, ny)[0].join()) || old.size !== foot.filter(p => old.has(p.join())).length) continue;
     const bad = foot.filter(p => !old.has(p.join())).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
-      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos'
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : hillAt(fx, fy) ? 'Daneben ist eine Anhöhe'   // Block 157
       : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
     if (!bad) return { nk: nx + ',' + ny, mid };
     why = why || bad;
@@ -173,7 +173,7 @@ function stationLenPlan(k, n) {
   let why = null;
   for (const [nx, ny] of [[x, y], r & 1 ? [x - 1, y] : [x, y - 1]]) {
     const bad = footprint('station', nx, ny, r, t2).filter(([fx, fy]) => !old.has(fx + ',' + fy)).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
-      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos'
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : hillAt(fx, fy) ? 'Daneben ist eine Anhöhe'   // Block 157
       : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
     if (!bad) return n <= stationLenPaid(t) || canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
     why = why || bad;
@@ -217,6 +217,7 @@ function hbfResizePlan(k, d, side = 1) {
     if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
     if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für ein Gleis';
     if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
+    if (hillAt(fx, fy)) return 'Daneben ist eine Anhöhe – dort ist kein Platz für ein Gleis';   // Block 157
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
   return m <= gleisePaid(t) || canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
@@ -1032,8 +1033,7 @@ function slotPos(x, y, i, d) {                                  // d: die Deko (
 const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, CSLOT, 6, 7, 3], SLOTS_ALL = [...SLOTS_BACK, ...SLOTS_FRONT];      // hinter bzw. vor dem Ding auf dem Feld zeichnen (von hinten nach vorn: Ecke 3 zuletzt)
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
-  const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
-  const a = (px / (TW / 2) + py / (TH / 2)) / 2, b = (py / (TH / 2) - px / (TW / 2)) / 2;
+  const [a, b] = pickFrac(sx, sy);                               // Anhöhe (Block 157): auf der getroffenen Höhe (ohne Anhöhen wie tileFrac)
   const x = Math.round(a), y = Math.round(b), du = a - x, dv = b - y;
   let slot = 0, best = Infinity;                                 // der nächste der 8 Plätze
   for (let i = 0; i < 8; i++) { const [u, v] = slotPos(x, y, i), d = (u - du) ** 2 + (v - dv) ** 2; if (d < best) { best = d; slot = i; } }   // wo die Plätze wirklich liegen (Kurve, Linien)
@@ -1164,7 +1164,8 @@ function setFlush(k, on) {
   groundVersion++; save();
   return true;
 }
-const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return state.edges.has(k) && !isGate(k); };
+// Anhöhe (Block 157, Stufe 1): zwischen zwei Höhen geht keiner hindurch – die Wand hinauf führt erst später eine Treppe
+const edgeBlocks = (x, y, nx, ny) => { const k = edgeBetween(x, y, nx, ny); return (state.edges.has(k) && !isGate(k)) || (!!state.hills && state.hills.size > 0 && hillLevel(x, y) !== hillLevel(nx, ny)); };
 // Runde Ecke: am Eckpunkt (i, j) genau eine waagerechte und eine senkrechte Linie derselben Art (kein Tor) → Viertelkreis
 // (Radius ROUND_R). Liegt innen ein Weg (inPath), folgt er dem Bogen (lineFill); liegt der Weg außen (Innenseite einer
 // Wegkurve, outWeg = sein Stil), füllt drawArc die kleine Fläche zwischen Bogen und Ecke im Wegbelag
@@ -1192,6 +1193,7 @@ function edgeError(b, k) {
   const tiles = edgeTiles(k);
   if (!tiles.some(([x, y]) => ownedTile(x, y))) return 'Das ist nicht dein Grundstück';
   if (tiles.every(([x, y]) => terrainAt(x, y) === 'water')) return 'Nicht mitten im Wasser';
+  if (state.hills && state.hills.size && !sameLevel(tiles)) return 'Nicht an der Kante einer Anhöhe';   // Anhöhe (Block 157, Stufe 1): nur ganz oben oder ganz unten
   const [p, q] = tiles.map(([x, y]) => COVER.get(x + ',' + y));
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
   if (edgeEndPoints(k).some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';   // Eckpunkt-Deko (Block 65)
@@ -1199,7 +1201,7 @@ function edgeError(b, k) {
 }
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
 const edgesAt = (vx, vy) => ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].filter(o => state.edges.has(o));
-const freeEnd = (k, vx, vy) => edgesAt(vx, vy).every(o => o === k);
+const freeEnd = (k, vx, vy) => edgesAt(vx, vy).every(o => o === k || (state.hills && state.hills.size > 0 && hillLevel(...edgeTiles(o)[0]) !== hillLevel(...edgeTiles(k)[0])));   // oben/unten an der Kante: nicht verbunden (Block 157)
 function edgeEndPoints(k) { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j], [i + 1, j]] : [[i, j], [i, j + 1]]; }
 // Lichter an Linien (je eines zählt wie eine Laterne): beleuchtete Stile, Torbögen, Endpfeiler von Mauer und Zaun
 function edgeLamps() {
@@ -1473,7 +1475,7 @@ const fzOk = b => parkOk(b) || ITEMS[b].cat === 'fz';
 // Auf dem Parkrasen stehen nur Deko und Wege (sonst wäre es kein Park)
 const parkOk = b => b === 'weg' || (ITEMS[b] || {}).cat === 'deko' || !!(ITEMS[b] || {}).edge;   // Pinsel → Gelände
 function willClear(b, ter) {
-  if (!(ter in CLEAR_COST) || b === 'parkrasen') return false;     // Parkrasen im Wald: die Bäume bleiben (als Parkbäume)
+  if (!(ter in CLEAR_COST) || b === 'parkrasen' || b === 'anhoehe') return false;     // Parkrasen im Wald: die Bäume bleiben (als Parkbäume); Anhöhe: Wald/Fels kommt mit hinauf (Block 157)
   const need = ITEMS[b].needs;
   return ter !== need && !(ter === 'rock' && (need === 'rock' || need === 'erz'));
 }
@@ -1498,6 +1500,10 @@ function smallError(b, x, y, slot, opts = {}) {
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (slot === VSLOT) {                                          // Eckpunkt (Block 65): alle vier Felder drumherum prüfen
     if (!POST_OK.has(baseOf(b))) return 'Auf die Ecke passt nur Schmales (Laterne, Blumentopf …)';
+    if (state.hills && state.hills.size) {                       // Anhöhe (Block 157): alle vier Felder gleich hoch; oben keine Stützen (kein Dach)
+      if (!sameLevel(vertexCorners(x, y))) return 'Nicht über die Kante einer Anhöhe';
+      if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung – Stützen nur unten';
+    }
     if (postAt(x, y)) return 'Hier steht schon etwas';
     if (edgesAt(x, y).length) return 'Hier steht der Pfosten einer Linie';
     for (const [fx, fy, cs] of vertexCorners(x, y)) {
@@ -1515,6 +1521,7 @@ function smallError(b, x, y, slot, opts = {}) {
     return matError(d.mat);
   }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
+  if (baseOf(b) === 'stuetze' && hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung – Stützen nur unten';   // Anhöhe (Block 157); sonst darf kleine Deko hinauf
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (slot < 4 && postAt(...cornerVertex(x, y, slot))) return 'An dieser Ecke steht schon etwas';
@@ -1987,6 +1994,7 @@ const roofOver = t => !t || t.b === 'weg' || (wegUnder(t) != null && t.b !== 'ub
 const roofSame = (x, y) => { const r = roofAt(x, y), n = decoLookNew('dach'); return !!r && (r.form || 0) === (n.form || 0) && (r.col || 0) === (n.col || 0); };
 function roofError(x, y, noCost) {
   if (!ownedTile(x, y)) return notMine(x, y);
+  if (hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung';                    // Anhöhe (Block 157)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t && (isWegBridge(t) || isCrossing(t))) return 'Nicht auf Brücken und Bahnübergängen';
   if (terrainAt(x, y) === 'water' && !t) return 'Nicht übers Wasser';
@@ -2584,9 +2592,18 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.fixed && !opts.move) return 'Das lässt sich nicht bauen';                           // Rathaus, Sehenswürdigkeit, Truhe (nur verschieben)
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
+  if (b === 'anhoehe') {                                                                   // Anhöhe (Block 157): Feld anheben
+    const h = hillAt(x, y);                                                                // liegt schon eine: nur die Wand umstellen (kostenlos, raiseHill)
+    if (h) return (h.w || 0) !== (decoLookNew('anhoehe').form || 0) ? null : 'Hier ist schon eine Anhöhe';
+    return hillRaiseError(x, y, opts.noCost);
+  }
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
+  if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 1): oben nur Deko und Gelände, nie über die Kante (auch Verschieben)
+    const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : hillError(b, footprint(b, x, y, r, opts.t));
+    if (he) return he;
+  }
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
     return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
@@ -2923,7 +2940,7 @@ function lighthouseSpot(k, t) {
   for (const r of [t.rot || 0, 0, 1, 2, 3]) for (let ay = y - 2; ay <= y; ay++) for (let ax = x - 2; ax <= x; ax++) {
     let ok = true, score = 0;
     for (const [fx, fy] of footprint('leuchtturm', ax, ay, r)) {
-      if (!ownedTile(fx, fy) || terrainAt(fx, fy) !== 'grass' || ['park', 'fz'].includes(terraLook(fx, fy))) { ok = false; break; }   // Parkrasen zählt als Wiese (Block 84a)
+      if (!ownedTile(fx, fy) || terrainAt(fx, fy) !== 'grass' || ['park', 'fz'].includes(terraLook(fx, fy)) || hillAt(fx, fy)) { ok = false; break; }   // Parkrasen zählt als Wiese (Block 84a); nicht auf eine Anhöhe (Block 157)
       const a = anchorAt(fx, fy), o = a && state.tiles.get(a);
       if (o && a !== k && o.b !== 'weg') { ok = false; break; }
       if (o && a !== k) score += 1;
@@ -3169,6 +3186,12 @@ function demolishInfo(x, y, under = false) {                            // under
     const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;
     return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
+  }
+  if (hillAt(x, y)) {                                                    // Anhöhe (Block 157): abtragen, voll zurück (lowerHill); kleine Deko oben landet unten
+    for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // Linien/Eckpunkt-Deko am Rand stünden sonst an der Kante
+      if (state.edges.has(k)) return { err: `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen` };
+    for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return { err: `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen` };
+    return { hill: x + ',' + y, refund: ITEMS.anhoehe.cost, mat: ITEMS.anhoehe.mat || null, full: true, label: 'Anhöhe abtragen' };
   }
   if (tunnelAt(x, y)) { const c = costOf('tunnel', x, y); return { tunnel: x + ',' + y, refund: c.cost, mat: c.mat, full: true, label: 'Tunnel entfernen' }; }   // Block 136: voll zurück wie Schienen
   const ter = terrainAt(x, y);

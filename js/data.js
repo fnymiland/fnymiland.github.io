@@ -182,6 +182,7 @@ const ITEMS = {
   wald:    { cat: 'land', name: 'Wald pflanzen', tech: 'terraform', cost: 20, paint: true, desc: 'Pflanzt Wald – Gelände für Holzfäller.' },
   obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen.' },
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
+  anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben Wiese, Bäume, Bänke, Brunnen.' },   // Block 157 (Treppe hinauf: 157d)
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
@@ -593,7 +594,7 @@ const MENU = [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
+    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'anhoehe'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'dachtreppe'] },   // Block 138
@@ -629,7 +630,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -742,6 +743,7 @@ const ITEM_TIPS = {
   wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
+  anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
 };
 // Läden, Kultur und Plantagen: Kurzwirkung und Tipp aus der Tabelle
 for (const [id, S] of Object.entries(SHOPS)) {
@@ -1103,6 +1105,7 @@ const MARKISE_COLS = [                                                  // Über
   { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }];
 const DECO_LOOKS = {
+  anhoehe: { group: 'Anhöhen', icon: '#8a7f73', cols: null, forms: [{ id: 'fels', name: 'Felswand' }, { id: 'erde', name: 'Erde mit Grasnarbe' }, { id: 'mauer', name: 'Trockenmauer' }] },   // Block 157
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
   blumen: { group: 'Beete', icon: '#ff8fb1', colLabel: 'Boden', cols: BED_SOILS, forms: [{ id: 'feld', name: 'Blumenfeld' }, { id: 'stein', name: 'Steinrand' },

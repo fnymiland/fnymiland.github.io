@@ -182,6 +182,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 29a4. **Deko-Plätze** (Block 42/65/156): je Feld 0–3 Ecken, 4–7 Seitenmitten, 8 Eckpunkt (`VSLOT`), 9 Mitte (`CSLOT`). „Seitenmitte“
     nur über `isSide(i)`, nie `i >= 4`; „alle Plätze im Feld“ über `PLACE_SLOTS`, nie `i < 8`. Ein neuer Platz bekommt eine neue
     Nummer hinten (alte Versionen schneiden mit `slice(0, 9)` ab und laufen weiter).
+29a5. **Anhöhen** (Block 157, js/hills.js): Höhe je Feld in `state.hills` (Feld → { w, h? }), `hillLift(x, y)` = Ebene × `HILL_H`.
+    Alles, was zu einem Feld gehört, wird um den Hub angehoben gezeichnet (render.js tileA/tileB; wer selbst per toScreen Punkte eines
+    Felds rechnet, zieht `hillLift` ab). Bildschirm → Feld nur über `pickFrac` (toTile, toVertex, edgeNear, slotAt), nie tileFrac
+    (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError`; Fundament kann mehrere Ebenen, gebaut ist eine.
+    Ohne Anhöhen muss alles exakt wie vorher laufen (früh aussteigen, wenn `state.hills.size` 0).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

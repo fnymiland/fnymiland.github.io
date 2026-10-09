@@ -28,9 +28,10 @@ function miniColor(x, y) {
     c = look === 'park' ? '#80c05c' : look === 'fz' ? '#9ad27a' : look === 'sand' || (ter === 'grass' && look !== 'wiese' && isBeach(x, y)) ? '#f1dfae'
       : ter === 'grass' ? '#96d56f' : ter === 'forest' ? '#6fb352' : ter === 'obst' ? '#86c35b' : ter === 'erz' ? '#b0a287' : ter === 'kristall' ? '#b3c2cc' : '#aabb94';
   }
+  if (hillAt(x, y)) c = mix(c, '#fff8e2', 0.3);                          // Anhöhe (Block 157): heller, wie in der Sonne
   return ownedTile(x, y) ? c : mix(c, '#eef2ee', 0.45);
 }
-const miniSig = () => [groundVersion, state.tiles.size, state.owned.size, state.claimed.size, state.terra.size, WORLD.cMin, WORLD.cMax].join('|');
+const miniSig = () => [groundVersion, state.tiles.size, state.owned.size, state.claimed.size, state.terra.size, state.hills ? state.hills.size : 0, WORLD.cMin, WORLD.cMax].join('|');
 function miniBounds() { return { lo: WORLD.cMin * CHUNK, hi: (WORLD.cMax + 1) * CHUNK - 1 }; }
 function miniPaint() {
   const { lo, hi } = miniBounds(), land = [];

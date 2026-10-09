@@ -268,6 +268,13 @@ function laAlloc(w, h) {
 // fn live zeichnen; im GL-Bild in eine Zelle der Sammelfläche (Rahmen in Bildschirmpunkten um (x, y): links, oben, rechts, unten)
 function glLive(x, y, l, u, r, d, fn) {
   if (!GLPASS) return fn();
+  // Anhöhe (Block 157): ist die Welt-Leinwand gerade verschoben (Inhalt eines Anhöhen-Felds angehoben), wandern Zelle und Zeichnung mit –
+  // sonst fehlte das Anheben im GL-Bild. Ohne Anhöhen wie bisher (keine Abfrage)
+  let tx = 0, ty = 0;
+  if (state.hills && state.hills.size && g === ctx) {
+    const t = ctx.getTransform();
+    if (t.a === DPR && t.d === DPR && !t.b && !t.c && (t.e || t.f)) { tx = t.e / DPR; ty = t.f / DPR; x += tx; y += ty; }
+  }
   const bx0 = Math.floor((x - l) * DPR), by0 = Math.floor((y - u) * DPR), bw = Math.ceil((x + r) * DPR) - bx0, bh = Math.ceil((y + d) * DPR) - by0;
   if (bx0 > W * DPR || by0 > H * DPR || bx0 + bw < 0 || by0 + bh < 0) return;   // ganz außerhalb (W/H: beim Aufzeichnen mit Rand)
   GLS.dirty = true;                                                     // dieses Feld ist „lebendig“ (Standbild: jedes Bild neu)
@@ -280,7 +287,7 @@ function glLive(x, y, l, u, r, d, fn) {
   C2D.save.call(X);
   C2D.setTransform.call(X, 1, 0, 0, 1, 0, 0);
   X.beginPath(); X.rect(cell.x, cell.y, bw, bh); X.clip();
-  X.setTransform(DPR, 0, 0, DPR, 0, 0);                            // Bildschirmpunkte → Zelle
+  X.setTransform(DPR, 0, 0, DPR, tx * DPR, ty * DPR);              // Bildschirmpunkte → Zelle (tx/ty: angehoben, sonst 0)
   X.globalAlpha = ctx.globalAlpha;
   g = X;
   const r0 = GL.recs.length;

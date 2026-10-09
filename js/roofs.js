@@ -591,9 +591,15 @@ function drawRoofShadows(want) {
 }
 // Antippen (👆, 🧹): getroffen ist das Dach, das man sieht – nicht das Bodenfeld dahinter. Der Punkt ROOF_H unter dem Zeiger liegt
 // auf dem Boden unter dem Dach; ist dort Dach, gilt dieses Feld
+// Anhöhe (Block 157): Dächer stehen nie oben; eine Anhöhe davor (höher als das Dach) verdeckt sie – dann gilt sie, nicht das Dach dahinter
+function roofHillFront(sx, sy) {
+  if (!state.hills || !state.hills.size) return false;
+  for (let t = HILL_H; t > ROOF_H; t -= 2) { const [a, b] = tileFrac(sx, sy + t * cam.z); if (hillLift(Math.round(a), Math.round(b)) >= t) return true; }
+  return false;
+}
 function roofPick(sx, sy) {
   if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
-  if (!state.roofs || !state.roofs.size || !cam) return null;
+  if (!state.roofs || !state.roofs.size || !cam || roofHillFront(sx, sy)) return null;
   const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b), r = roofAt(x, y);
   if (!r) return null;
   const A = roofArea(roofCov(r)), s = v => { return roofSubOf(v); };
@@ -635,6 +641,7 @@ function pillarAt(sx, sy) {
       if (Math.abs(sx - p.x) <= Math.max(5, 3 * z) && sy <= p.y + 3 * z && sy >= p.y - ROOF_H * z && (!best || p.y > best.fy)) best = { x: tx, y: ty, slot: i, fy: p.y };
     });
   }
+  if (best && hillInFront(sx, sy, best.x, best.y)) return null;           // Anhöhe davor (Block 157): sie gilt
   return best;
 }
 // Felder, deren tileB Dach oder Stützen zeichnet (GL-Standbild, gl.js glPlayTiles: sie werden jedes Bild neu gezeichnet – sonst fehlten
@@ -833,6 +840,7 @@ function roofTopHit(sx, sy) {
   }
   if (!cand.length) return null;
   cand.sort((p, q) => q.d - p.d);
+  if (hillInFront(sx, sy, cand[0].x, cand[0].y)) return null;            // Anhöhe davor (Block 157)
   return cand[0];
 }
 function roofTopError(b, x, y, slot, opts = {}) {
@@ -1057,7 +1065,7 @@ function drawDachtreppe(cx, cy, z, rot, x, y) {
 // Antippen in einer Öffnung (Dachhöhe): die Dachtreppe darunter – ihr Ankerfeld (Fenster, Abreißen, Verschieben)
 function holeHit(sx, sy) {
   if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
-  if (!state.roofs || !state.roofs.size || !cam) return null;
+  if (!state.roofs || !state.roofs.size || !cam || roofHillFront(sx, sy)) return null;
   const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b);
   if (!roofTopRoof(x, y) || !inHole(roofHoles(x, y), a, b)) return null;
   const k = COVER.get(x + ',' + y) || x + ',' + y, t = state.tiles.get(k);

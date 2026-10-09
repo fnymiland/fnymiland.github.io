@@ -5,7 +5,7 @@
 // ---------------------------------------------------------------------------
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'dach', 'schiene', 'tunnel', 'fz_bahn', 'fz_hoch', 'fz_tief', 'pb_gleis']);   // Überdachung wie der Weg (Block 138)   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
-const RECT_TOOLS = new Set(['weg', 'dach', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels']);
+const RECT_TOOLS = new Set(['weg', 'dach', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels', 'anhoehe']);   // Anhöhe aufziehen (Block 157)
 const dragKind = t => t === 'schiene' || t === 'tunnel' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' || t === 'pb_gleis' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small && !ITEMS[t].gift) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
@@ -63,6 +63,12 @@ function cancelPlan() { plan = null; }
 // Ein Feld prüfen, ohne auf das Geld zu schauen (das zählt die Summe): ok, schon so (same) oder geht nicht
 function planCheck(b, x, y) {
   const old = state.tiles.get(x + ',' + y);
+  if (b === 'anhoehe') {                                                     // Anhöhe (Block 157): schon da – gleiche Wand oder umstellen (kostenlos)
+    const h = ownedTile(x, y) && hillAt(x, y);
+    if (h) return (h.w || 0) === (decoLookNew('anhoehe').form || 0) ? { same: true } : { cost: 0, mat: {} };
+    const err = hillRaiseError(x, y, true);
+    return err ? { err } : { cost: ITEMS.anhoehe.cost, mat: { ...(ITEMS.anhoehe.mat || {}) } };
+  }
   if (b === 'pb_gleis' && old && isPbTrack(old.b)) return { same: true };    // Parkbahn: schon Gleis (Block 136)
   if (b === 'tunnel' && ownedTile(x, y) && tunnelAt(x, y)) return { same: true };   // liegt schon (Block 136)
   if (b === 'dach' && ownedTile(x, y) && roofSame(x, y)) return { same: true };      // Block 138
@@ -186,8 +192,9 @@ function scanTunnelErase(p) {
 // Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt
 // (aus der ✋-Auswahl, Block 155a: `keepLand` – Wald/Fels bleiben, gerodet wird nur per 👆 einzeln).
 // Leeres bleibt hell, was nicht geht (Rathaus, Sehenswürdigkeit, ragt hinaus) rot.
+// Anhöhen (Block 157) werden zuletzt abgetragen, wo oben nichts stehen bleibt – auch aus der ✋-Auswahl (keepLand gilt nicht für sie).
 function scanDemolish(p) {
-  const states = new Map(), order = [], clear = [], [x0, y0, x1, y1] = planBox(p), seen = new Set();
+  const states = new Map(), order = [], clear = [], lower = [], [x0, y0, x1, y1] = planBox(p), seen = new Set();
   let gain = 0, cost = 0, things = 0, firstErr = null, lost = 0, freed = 0;
   const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
   for (const [x, y] of planTiles(p)) {
@@ -212,6 +219,7 @@ function scanDemolish(p) {
       continue;
     }
     const info = ownedTile(x, y) ? demolishInfo(x, y) : { err: 'nichts' };
+    if (info.hill) { if (!states.has(k)) states.set(k, 'same'); continue; }   // Anhöhe: kommt unten nach allem anderen dran (Block 157)
     if (info.tunnel && p.keepLand && !seeThrough) { if (!states.has(k)) states.set(k, 'same'); continue; }   // ✋-Auswahl: unsichtbare Tunnel nur mit 👁 (Block 155)
     if (info.tunnel || info.roof) { order.push([x, y, () => { demolish(x, y); return true; }]); gain += info.refund; things++; states.set(k, 'ok'); continue; }   // Tunnel (136), Dach (138)   // Tunnel (Block 136): einzeln und im Rechteck
     if (info.cost && !p.keepLand) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
@@ -223,9 +231,18 @@ function scanDemolish(p) {
     order.push([ex, ey, () => removeEdge(k)]);
     gain += ITEMS[state.edges.get(k).b].cost; things++;
   }
+  // Anhöhe (Block 157): abtragen, wenn oben nichts stehen bleibt (Rotes bleibt, samt Anhöhe) und an keiner Ecke von draußen etwas steht
+  // (Eckpunkt-Deko braucht ringsum dieselbe Höhe). Direkt über lowerHill – im Batch wäre demolishInfo (COVER) noch vom alten Stand.
+  if (state.hills && state.hills.size) for (const [x, y] of planTiles(p)) {
+    const k = x + ',' + y;
+    if (!hillAt(x, y) || !ownedTile(x, y) || states.get(k) === 'bad') continue;
+    if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => !inside(vx, vy) && postAt(vx, vy))) { states.set(k, 'bad'); firstErr = firstErr || 'An der Ecke der Anhöhe steht noch etwas'; continue; }
+    lower.push([x, y, () => lowerHill(x, y)]);
+    gain += ITEMS.anhoehe.cost; things++; states.set(k, 'ok');
+  }
   if (lost && T.pop - lost < T.jobs - freed) firstErr = 'Hier wohnen Leute, die bei dir arbeiten. Erst Betriebe abreißen.';
   const bad = [...states.values()].filter(s => s === 'bad').length;
-  return { states, order: order.concat(clear), n: things + clear.length, things, cleared: clear.length, cost, gain, mat: {}, bad, firstErr,
+  return { states, order: order.concat(clear, lower), n: things + clear.length, things, cleared: clear.length, cost, gain, mat: {}, bad, firstErr,
     block: lost && T.pop - lost < T.jobs - freed };
 }
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch

@@ -543,10 +543,16 @@ function gatePillarsAt(vx, vy, z) {
   const ks = ['a' + vx + ',' + vy, 'b' + vx + ',' + vy, 'a' + (vx - 1) + ',' + vy, 'b' + vx + ',' + (vy - 1)];
   const k = ks.find(o => { const n = state.edges.get(o); return n && n.b === 'mauer' && isGate(o); });
   if (!k) return;
+  // Anhöhe (Block 157): gezeichnet mit dem Feld vx,vy (dort angehoben), der Pfeiler steht aber auf der Höhe seiner Mauer
+  let dl = 0;
+  if (state.hills && state.hills.size) { const { i, j } = edgeParse(k); dl = (hillLift(vx, vy) - hillLift(i, j)) * z; }
+  if (dl) { g.save(); g.translate(0, dl); }
+  try {
   const e = state.edges.get(k), look = EDGE_LOOK.mauer[e.style] || EDGE_LOOK.mauer.backstein, m = [vx - 0.5, vy - 0.5];
   const tall = e.arch === 'bogen', top = wallPillar(m, look, z, Infinity, tall ? 6 : 0), id = 'G' + (ks.indexOf(k) < 2 ? 0 : 1) + k;
   if (litLook(look) && e.arch !== 'rosen') lampAt(m, top, z, id);          // „Torbogen“: hohe Torpfeiler mit Steinkugel (bzw. Laterne)
   else if (tall) { const [x, y] = edgeS(m[0], m[1], top + 1.6, z), r = 1.9 * z; circle(x, y, r, C(shade(look.col, 0.05))); circle(x - r * 0.3, y - r * 0.35, r * 0.4, C(shade(look.col, 0.3))); }
+  } finally { if (dl) g.restore(); }
 }
 // Felder, auf denen drawEdgesAt überhaupt etwas zeichnet (Block 124): je Linie ihr Feld i,j, bei Mauern auch ihre beiden Eckpunkte
 // (Torpfeiler, gatePillarsAt). Als Zahlen, neu bei anderem groundVersion, anderer Map oder anderer Anzahl Linien
