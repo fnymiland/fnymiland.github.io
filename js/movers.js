@@ -288,6 +288,7 @@ function drawBubble(z) {
 }
 // Angetippte Figur (nur Bewohner mit Haus): die nächste in der Nähe des Fingers
 function walkerAt(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht
   const z = cam.z;
   let best = null, bd = 4 + 7 * z;                                       // etwas größer als die Figur – weit weg nicht aus Versehen
   for (const w of walkers.concat(strollers, typeof roofers !== 'undefined' ? roofers : [])) {   // auch Leute auf dem Dach (Block 138d)
@@ -996,6 +997,7 @@ function tapCritter(c) {
   return true;
 }
 function critterAt(sx, sy) {
+  if (seeThrough) return null;
   const z = cam.z;
   let best = null, bd = 6 + 7 * z;
   for (const c of critters) {

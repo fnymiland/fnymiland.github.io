@@ -672,7 +672,7 @@ function putSprite(e, cx, cy, z) {
 const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
 // Bewegtes zeichnen – im GL-Bild in eine Zelle der Sammelfläche (Block 144)
 function moverLive(m, z, now, walker = false) {
-  const f = () => walker ? drawWalker(m, z, now) : drawMover(m, z, now);
+  const f = () => seeFaded(seeThrough, () => walker ? drawWalker(m, z, now) : drawMover(m, z, now));   // 👁 Figuren und Fahrzeuge blass
   if (!GLPASS) return f();
   const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z);
   glLive(p.x, p.y, l, u, r, d, f);
@@ -867,6 +867,7 @@ function inkAt(sx, sy, cx, cy, sc, draw) {
 }
 // { x, y, slot, d } – Gebäude: Anker und slot −1, Deko: ihr Feld und Platz; d = Tiefe (größer = weiter vorn)
 function objectAt(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht: das Feld unter dem Finger zählt
   const z = cam.z, now = performance.now(), [fa, fb] = tileFrac(sx, sy), col = Math.round(fa - fb), cand = [];
   for (const [k, t] of state.tiles) {
     if (FLAT_HIT.has(t.b)) continue;
@@ -1508,7 +1509,9 @@ function render(now) {
         const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
-        const drawIt = () => {
+        const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht
+        const drawIt = () => seeFaded(fadeIt, drawIt0);
+        const drawIt0 = () => {
           if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
           let sc = 1;
           if (t.born) {
@@ -1565,8 +1568,8 @@ function render(now) {
         const ter = terrainAt(x, y), hide = inGhost(x, y);
         const gone = hide && tool !== 'verschieben' && ITEMS[ghostType] && willClear(ghostType, ter);   // wird beim Bauen weggeräumt
         if (gone) { /* Vorschau: Natur schon ausblenden */ }
-        else if (ter === 'forest' && !(hide && ghostType === 'holz')) tileSprite('forest', x, y, px, py, z);
-        else if (ter === 'obst' && !(hide && ghostType === 'obst')) tileSprite('obst', x, y, px, py, z);
+        else if (ter === 'forest' && !(hide && ghostType === 'holz')) seeFaded(seeThrough, () => tileSprite('forest', x, y, px, py, z));   // 👁 Wald blass
+        else if (ter === 'obst' && !(hide && ghostType === 'obst')) seeFaded(seeThrough, () => tileSprite('obst', x, y, px, py, z));
         else if (ter === 'rock' && !(hide && ghostType === 'stein')) tileSprite('rock', x, y, px, py, z);
         else if (ter === 'erz' && !(hide && ghostType === 'mine')) tileSprite('erz', x, y, px, py, z);
         else if (ter === 'kristall' && !(hide && ghostType === 'kristallmine')) {

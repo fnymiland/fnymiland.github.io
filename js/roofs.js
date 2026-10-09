@@ -592,6 +592,7 @@ function drawRoofShadows(want) {
 // Antippen (👆, 🧹): getroffen ist das Dach, das man sieht – nicht das Bodenfeld dahinter. Der Punkt ROOF_H unter dem Zeiger liegt
 // auf dem Boden unter dem Dach; ist dort Dach, gilt dieses Feld
 function roofPick(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
   if (!state.roofs || !state.roofs.size || !cam) return null;
   const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b), r = roofAt(x, y);
   if (!r) return null;
@@ -806,6 +807,7 @@ function roofTopSpot(x, y, i, d) {
 }
 // Platz auf dem Dach unter dem Finger (Steinarkaden): nächster der 8 Plätze, gemessen auf Dachhöhe
 function roofTopAt(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
   if (!state.roofs || !state.roofs.size || !cam) return null;
   const p = roofPick(sx, sy);
   if (!p || !roofTopRoof(p.x, p.y)) return null;
@@ -816,6 +818,7 @@ function roofTopAt(sx, sy) {
 }
 // Deko oben, die man dort sieht (Antippen, 🧹): Platz unter dem Finger, sonst die Deko, deren Bild den Punkt trifft
 function roofTopHit(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
   if (!state.roofs || !state.roofs.size || !cam) return null;
   const z = cam.z, cand = [];
   for (const [k, r] of state.roofs) {
@@ -913,11 +916,9 @@ function drawRoofFront(x, y, px, py, z) {
   if (e.fc) { const B = ROOF_BOX; g.drawImage(e.fc, px + B.left * z, py + B.top * z, B.w * z, B.h * z); return; }
   roofOps(e.front, (u, v, up = 0) => [px + (u - x - (v - y)) * TW / 2 * z, py + (u - x + v - y) * TH / 2 * z - up * z], z);
 }
-// Dächer ausblenden beim Bauen darunter (Nutzer, 09.10.2026): durchsichtig (ROOF_FADE), wenn das Werkzeug nur unter ein Dach kann
-// (Weg, Stütze, Dachtreppe, Deko, die oben nicht geht) – oder bei kleiner Deko, die auch oben ginge: unter Glas/Pergola/Markise immer,
-// unter Steinarkaden, wenn „⬇ Unters Dach“ gewählt ist (roofDown, Schalter in der Leiste)
-const ROOF_FADE = 0.25;
-let roofDown = false;
+// Dächer blass (Nutzer, 09.10.2026): mit 👁 Durchsicht immer; sonst von selbst, wenn das Werkzeug nur unter ein Dach kann (Weg, Stütze,
+// Dachtreppe, Deko, die oben nicht darf) – und bei kleiner Deko unter Glas/Pergola/Markise (oben geht dort nichts)
+const ROOF_FADE = SEE_A;
 function roofFadeTool() {                                               // was gerade gebaut bzw. getragen wird (oder null)
   if (typeof tool === 'undefined') return null;
   if (tool === 'verschieben') return moving && moving.kind === 'deco' ? moving.d.b : moving && moving.kind === 'tile' ? moving.t.b : null;
@@ -925,13 +926,12 @@ function roofFadeTool() {                                               // was g
   return tool;
 }
 function roofFade(r) {
+  if (seeThrough) return !!r;
   const b = roofFadeTool();
   if (!b || !r) return false;
   if (!roofTopOk(b)) return true;                                       // kann nur unter das Dach
-  return roofForm(r) !== 'arkaden' || roofDown;
+  return roofForm(r) !== 'arkaden';
 }
-// gibt es Steinarkaden? (dann zeigt die Leiste bei kleiner Deko den Schalter oben/unten)
-const roofStoneAny = () => !!state.roofs && [...state.roofs.values()].some(r => roofForm(r) === 'arkaden');
 // alle Deko auf Dächern: [Feldschlüssel, Platz, Deko] (Schönheit, Strom, Erfolge)
 function* roofTopAll() {
   if (!state.roofs) return;
@@ -1052,6 +1052,7 @@ function drawDachtreppe(cx, cy, z, rot, x, y) {
 }
 // Antippen in einer Öffnung (Dachhöhe): die Dachtreppe darunter – ihr Ankerfeld (Fenster, Abreißen, Verschieben)
 function holeHit(sx, sy) {
+  if (seeThrough) return null;                                          // 👁 Durchsicht: durch das Dach hindurch
   if (!state.roofs || !state.roofs.size || !cam) return null;
   const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b);
   if (!roofTopRoof(x, y) || !inHole(roofHoles(x, y), a, b)) return null;

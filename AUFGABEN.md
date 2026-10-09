@@ -1911,8 +1911,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 
 - [x] Nutzer: „Ausblendefunktion für die Dächer, wenn man darunter etwas platzieren will“ → `roofFade`: Dächer zu 25 % durchsichtig,
       wenn das Werkzeug nur unten geht (Weg, Stütze, Dachtreppe, Deko, die oben nicht darf); bei kleiner Deko unter Glas/Pergola/Markise
-      immer, unter Steinarkaden per Schalter in der Leiste „⬆ Aufs Dach / ⬇ Unters Dach“ (`roofDown`, nur wenn es Steinarkaden gibt;
-      ⬇ setzt jeden Tipp unten). Test: dachdeko
+      immer. Statt eines eigenen Dach-Schalters (Nutzer: „Leiste ist mir heilig“) ein Knopf, der mehr kann:
+- [x] 👁 Durchsicht (Nutzer, auch Kevins Wunsch „Insel drehen, um dahinter zu bauen“): Knopf in der Leiste nach ↶ und Taste D –
+      Dächer, Gebäude, Bäume und Wald, Bewohner und Fahrzeuge zu 25 % sichtbar, Tippen geht hindurch (bauen, anschauen, abreißen
+      am Feld darunter; kleine Deko landet unter Steinarkaden dann unten statt oben). Nah, weit (Bildchen) und im GL-Standbild
+      geprüft. Nebenbei: `setTool` nahm 👁 (und 🕘) das Leuchten. Test: dachdeko
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b

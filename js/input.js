@@ -177,7 +177,7 @@ function setHover(sx, sy) {
   } else if (tool === 'verschieben' && !moving && !plan) {          // ✋ übers Dach: Deko oben, sonst das Dachfeld (Block 138b)
     const th = roofTopHit(sx, sy), rp = !th && !pillarAt(sx, sy) && roofPick(sx, sy);
     if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (rp) t = { x: rp.x, y: rp.y, roof: true };
-  } else if (!plan && !roofDown && (tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool))) {   // kleine Deko übers Steindach: oben drauf (außer „⬇ Unters Dach“)
+  } else if (!plan && (tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool))) {   // kleine Deko übers Steindach: oben drauf (mit 👁 nicht: roofTopAt)
     const tp = roofTopAt(sx, sy);
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }
@@ -200,6 +200,7 @@ window.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }   // Rückgängig
   if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || ROTATABLE.has(tool))) { rotateBuild(); return; }
   if (e.repeat) return;                              // gedrückt halten schaltet nicht hin und her
+  if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey) { setSeeThrough(!seeThrough); return; }   // 👁 Durchsicht
   const quick = { a: 'look', w: 'weg', v: 'verschieben', e: 'abriss', Delete: 'abriss', Backspace: 'abriss' }[e.key.length === 1 ? e.key.toLowerCase() : e.key];
   if (quick) { setTool(tool === quick && quick !== 'look' ? 'look' : quick); return; }
   const list = menuList();                           // wie die Leiste: Freigeschaltetes zuerst

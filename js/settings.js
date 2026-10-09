@@ -26,6 +26,20 @@ function setGfx(k, v) {
   if (k === 'sharp') resize();                                            // neue Pixeldichte (leert Bildchen und Boden)
   if (k === 'shadows' && typeof resetDrawCaches === 'function') { resetDrawCaches(); groundVersion++; }   // Schatten stecken im Boden-Bild
 }
+// 👁 Durchsicht (Nutzer, 09.10.2026: „Dächer ausblenden, auch Gebäude, Bäume, Bewohner – ein Knopf, der mehr kann“): alles Hohe zu
+// SEE_A sichtbar, Tippen geht hindurch (Dächer, Gebäude, Figuren werden nicht getroffen – das Feld darunter zählt). Nur fürs Bild, nicht
+// gespeichert. Taste D
+const SEE_A = 0.25;
+let seeThrough = false;
+function setSeeThrough(v) {
+  seeThrough = !!v;
+  if (typeof glTouch === 'function') glTouch();                         // GL-Standbild neu (Bildchen mit anderer Deckkraft)
+  if (typeof previewCache !== 'undefined') previewCache = null;
+  hover = null;
+  if (typeof buildToolbar === 'function') buildToolbar();
+}
+// mit halber Deckkraft zeichnen, wenn on
+function seeFaded(on, f) { if (!on) return f(); const a0 = g.globalAlpha; g.globalAlpha = a0 * SEE_A; try { return f(); } finally { g.globalAlpha = a0; } }
 // Schärfe „halb“: halb so viele Bildpunkte je Richtung – auf schwachen Geräten viel flüssiger, etwas weicher
 const gfxDprMul = () => GFX.sharp === 'halb' ? 0.5 : 1;
 // Einwohner „wenige“: jeder dritte, fest je Figur (sonst flackert, wer gezeigt wird)

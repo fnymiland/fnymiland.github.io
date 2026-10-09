@@ -190,6 +190,12 @@ function buildToolbar() {
   un.title = 'Rückgängig (Strg/⌘+Z)'; un.setAttribute('aria-label', 'Rückgängig');
   un.onclick = () => { audio(); undo(); };
   cats.append(un); updateUndoBtn();
+  const see = document.createElement('button');                         // 👁 Durchsicht (Nutzer, 09.10.2026): Dächer, Gebäude, Bäume, Figuren blass
+  see.className = 'quick see' + (seeThrough ? ' active' : '');
+  see.textContent = '👁'; see.title = 'Durchsicht: Dächer, Gebäude, Bäume und Figuren blass – tippen geht hindurch (D)';
+  see.setAttribute('aria-label', 'Durchsicht'); see.setAttribute('aria-pressed', String(seeThrough));
+  see.onclick = () => { audio(); setSeeThrough(!seeThrough); };
+  cats.append(see);
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
@@ -342,7 +348,7 @@ function setTool(t) {
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
-  for (const b of document.querySelectorAll('.quick')) b.classList.toggle('active', b.dataset.quick === t);
+  for (const b of document.querySelectorAll('.quick[data-quick]')) b.classList.toggle('active', b.dataset.quick === t);   // 👁 hat seinen eigenen Zustand
   syncDropBtn();
   $('rot-btn').hidden = !ROTATABLE.has(t);
   renderStyleBar(t);
@@ -564,19 +570,7 @@ document.addEventListener('pointerdown', e => {                          // dane
   if (!edgePop || ($('style-bar') && $('style-bar').contains(e.target))) return;
   edgePop = null; if (EDGE_TOOLS.has(tool)) renderStyleBar(tool);
 }, true);
-// Schalter oben/unten (Nutzer, 09.10.2026): kleine Deko, die auch aufs Steindach darf – nur, wenn es Steinarkaden gibt
 function renderStyleBar(t) {
-  renderStyleBar0(t);
-  if (!ITEMS[t] || !roofTopOk(t) || !roofStoneAny()) return;
-  const bar = $('style-bar');
-  if (bar.hidden) bar.innerHTML = '';                                    // ohne eigene Auswahl: nur der Schalter (nicht doppelt anhängen)
-  const had = bar.innerHTML.trim();
-  document.body.classList.add('has-styles');
-  bar.insertAdjacentHTML('beforeend', (had ? '<span class="style-sep"></span>' : '') + `<button class="style-chip size-chip roof-chip${roofDown ? ' on' : ''}" data-roofdown="1" aria-pressed="${roofDown}" title="${roofDown ? 'Unter das Dach bauen – Dächer durchsichtig' : 'Auf das Steindach bauen'} – tippen zum Wechseln" aria-label="${roofDown ? 'Unters Dach' : 'Aufs Dach'}"><i>${roofDown ? '⬇' : '⬆'}</i><span>${roofDown ? 'Unters Dach' : 'Aufs Dach'}</span></button>`);
-  bar.querySelector('[data-roofdown]').onclick = () => { roofDown = !roofDown; hover = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
-  bar.hidden = false;
-}
-function renderStyleBar0(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station');
   if (t === 'station') {                                         // kleiner Bahnhof: 2 oder 3 Felder lang (Block 131)

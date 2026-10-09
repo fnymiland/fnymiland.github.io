@@ -178,24 +178,27 @@ describe('Deko auf dem Dach (Block 138b)', () => {
     expect(busch[0]).toBeLessThanOrEqual(edge); expect(busch[1]).toBeLessThanOrEqual(edge);
     expect(game("roofTopSpot(4, 5, 6, roofAt(4, 5).top[6])[0]")).toBeCloseTo(0.3);  // Mitte: Nachbar ist Dach, bleibt
   });
-  it('Dächer ausblenden beim Bauen darunter (Nutzer): Weg/Stütze immer, kleine Deko unter Glas immer, unter Stein mit „⬇ Unters Dach“', () => {
+  it('Dächer blass beim Bauen darunter (Nutzer): Weg/Stütze immer, kleine Deko unter Glas immer; 👁 Durchsicht: alles, Tippen geht hindurch', () => {
     roof(row(3, 5, 5)); roof(row(3, 4, 8), 1);
     const stein = () => game("roofFade(roofAt(4, 5))"), glas = () => game("roofFade(roofAt(3, 8))");
     game("setTool('look')"); expect([stein(), glas()]).toEqual([false, false]);
     game("setTool('weg')"); expect([stein(), glas()]).toEqual([true, true]);
     game("setTool('stuetze')"); expect([stein(), glas()]).toEqual([true, true]);
     game("setTool('blumentopf')"); expect([stein(), glas()]).toEqual([false, true]);      // oben ginge es nur auf Stein
-    expect(game("document.querySelector('#style-bar [data-roofdown]').textContent")).toMatch(/Aufs Dach/);
-    game("document.querySelector('#style-bar [data-roofdown]').click()");
-    expect(game('roofDown')).toBe(true);
-    expect(game("document.querySelectorAll('#style-bar [data-roofdown]').length")).toBe(1);              // nicht doppelt
-    expect(game("document.querySelector('#style-bar [data-roofdown]').textContent")).toMatch(/Unters Dach/);
+    // 👁 Durchsicht: Knopf in der Leiste, Taste D
+    expect(game("!!document.querySelector('#cats .quick.see')")).toBe(true);
+    game("document.querySelector('#cats .quick.see').click()");
+    expect(game('seeThrough')).toBe(true);
     expect(stein()).toBe(true);
-    // getippt aufs (durchsichtige) Dach: landet unten, nicht oben
     const s = onTop(4, 5, 3);
     expect(game(`(() => { setHover(${s[0]}, ${s[1]}); return !!hover.top; })()`)).toBe(false);
+    expect(game(`roofPick(${s[0]}, ${s[1]})`)).toBe(null);                          // Dach wird nicht getroffen
     game(`undoable(() => tap(${s[0]}, ${s[1]}, false))`);
-    expect(game("!!(roofAt(4, 5).top || []).some(Boolean)")).toBe(false);
-    game("roofDown = false; setTool('look')");
+    expect(game("!!(roofAt(4, 5).top || []).some(Boolean)")).toBe(false);            // nicht oben gelandet
+    game("setTool('look')");                                                          // Werkzeugwechsel lässt 👁 leuchten
+    expect(game("document.querySelector('#cats .quick.see').classList.contains('active')")).toBe(true);
+    game("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' }))");
+    expect(game('seeThrough')).toBe(false);
+    game("setTool('look')");
   });
 });

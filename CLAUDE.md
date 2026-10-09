@@ -168,6 +168,12 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Figur noch einmal – bei jeder neuen Sache in der Öffnung alle vier Drehungen ansehen (Nutzer).
     Reihenfolge prüft tests/dachverdeckung.test.js; Leistung die Testwelt „dach“ im Wächter (tools/dachwelt.js). Was je Bild über dem
     Dachbild liegt (vordere Brüstung), als Bildchen ablegen (`e.fc`), nie Strich für Strich.
+    Hohe Deko unter Dächern: `DECO_TALL`/`roofClear`/`tooTallUnderRoof` (auch Dach drüber, Formwechsel, Verschieben). Dächer blass
+    beim Bauen darunter: `roofFade` (Werkzeug, das oben nicht darf).
+29a2. **👁 Durchsicht** (settings.js `seeThrough`, Knopf `.quick.see` in der Leiste, Taste D): Dächer, Gebäude (ohne Wege/Boden),
+    Bäume/Wald/Obst, Bewohner und Fahrzeuge zu 25 % (`SEE_A`) – blass nur über `seeFaded(an, f)` beim Zeichnen; Tippen geht
+    hindurch (`objectAt`, `walkerAt`, `critterAt`, `roofPick`, `roofTopAt`, `holeHit` liefern dann nichts). Nur Ansicht, nie im
+    Spielstand. Umschalten über `setSeeThrough` (zeichnet Standbild/Vorschau neu). `setTool` färbt nur `.quick[data-quick]`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
