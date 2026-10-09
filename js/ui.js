@@ -2876,6 +2876,16 @@ const NEWS_HISTORY = [
     '🌲 <b>Wald roden, Fels sprengen:</b> einfach antippen → 🪓 Roden bzw. 🧨 Sprengen.',
     '👁 <b>Durchsicht</b> (neben ↶, Taste D): Dächer, Gebäude, Bäume und Figuren werden blass, Tippen geht hindurch – praktisch, um hinter oder unter etwas zu bauen. Tunnel sieht man dabei auch.',
   ] },
+  { id: '2026-10-09-ueberdachungen', date: '9. Oktober', title: 'Überdachungen', items: [
+    '⛱️ <b>Überdachungen</b> (Gestalten → Überdachungen): Holz-Pergola, Glas, Markise oder Steinarkaden über Wege, Plätze und Wiese ziehen – an die Außenecken kommen Stützen gleich mit, weitere stellst du selbst.',
+    '🏛️ <b>Steinarkaden</b> mit Säulengang und Rundbögen. Oben Dachgarten oder Pflaster nach Wahl, eine Brüstung (Mauer, Balustrade, Geländer) und kleine Deko obendrauf.',
+    '🪜 <b>Treppe aufs Dach:</b> unter Steinarkaden stellen – das Dach bekommt eine Öffnung, nebeneinander werden sie breiter. Dann gehen Leute oben spazieren.',
+    '✋ Überdachungen lassen sich samt Deko verschieben und kopieren.',
+  ] },
+  { id: '2026-10-09-einstellungen', date: '9. Oktober', title: 'Minimap und Einstellungen', items: [
+    '🗺️ <b>Minimap</b> unten rechts (PC/iPad): zeigt die ganze Insel, Antippen springt hin. Ausschalten in ☰ → ⚙️ Einstellungen.',
+    '⚙️ <b>Einstellungen</b> als eigenes Fenster: Schnellwahl Schön · Ausgewogen · Schnell, dazu neue Schalter (immer Tag, Schatten, Symbole, Namensschilder, Einwohner, Tiere …).',
+  ] },
   { id: '2026-10-08-bauleiste', date: '8. Oktober', title: 'Bauleiste neu', items: [
     '🧭 <b>Bauleiste aufgeräumt:</b> Unten ist nur noch eine Reihe. Tippe auf einen Bereich (Stadt, Herstellen …) – darüber klappt alles aus dem Bereich auf, nach Gruppen sortiert und mit Namen. Eine Wahl, Esc oder daneben tippen klappt es wieder zu.',
   ] },
