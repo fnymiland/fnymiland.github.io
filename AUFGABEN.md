@@ -1794,6 +1794,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       PERG_T 0,05, Höhe PERG_BH 1,6, Außenseite auf der Kante, laufen an Ecken zusammen), Pfosten gleich stark darunter, Querlatten
       obenauf. Nur die Pergola geändert. Bild tools/vorschau/dach-pergola-d.png. LEHRE: bei Form-Wünschen zuerst ein großes Bild
       der Stelle mit Varianten zeigen statt raten.
+      Nutzer: „perfekt – halte das fest und änder an dieser Grundstruktur nichts mehr“ (in CLAUDE.md 29a festgeschrieben).
+      Nutzer: „manche Streben sind nur angedeutet – gewollt?“ → nein: Latten-Richtung sprang je Stückchen um (Stummel). Varianten
+      gezeigt (tools/vorschau/streben-varianten.png), Nutzer wählte B: Gitter in beiden Richtungen, alle 0,25, überall gleich.
+      Leistungs-Wächter dach Form 0: 246 → 350 (mehr Latten, nur beim einmaligen Malen). Bild tools/vorschau/pergola-gitter.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

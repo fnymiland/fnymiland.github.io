@@ -162,7 +162,11 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       poly([at(hi2, e.a, H - PERG_BH), at(hi2, e.b, H - PERG_BH), at(hi2, e.b, H), at(hi2, e.a, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
       poly([at(lo, e.a, H), at(hi2, e.a, H), at(hi2, e.b, H), at(lo, e.b, H)], '#9c6a45', '#9c6a45', 0.3);
     }
-    ribs(0.25, () => H + 1, S.beam, 1.1);
+    // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich – keine abgebrochenen Stummel (Nutzer wählte B, 09.10.2026)
+    for (const [ua, ub, va, vb] of quads) {
+      for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) line([P(u, va, H + 1), P(u, vb, H + 1)], S.beam, 1.1);
+      for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) line([P(ua, v, H + 1), P(ub, v, H + 1)], S.beam, 1.1);
+    }
     for (const q of quads) {
       const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 3);
       if (hh > 0.45) continue;

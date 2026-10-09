@@ -153,7 +153,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Bildchen je Feld (`roofSprites`, Schlüssel `roofSig`): wer etwas ändert, das die Nachbarschaft betrifft, ruft `roofDirty`.
     **Pergola-Grundstruktur ist abgenommen und bleibt (Nutzer, 09.10.2026: „perfekt, änder an dieser Grundstruktur nichts mehr!!“):**
     Randbalken als Kanthölzer (`PERG_T` 0,05, `PERG_BH` 1,6, Außenseite auf der Dachkante, Ecken laufen zusammen), Pfosten gleich
-    stark bündig darunter (`PILLAR_HALF.pergola`), Querlatten obenauf. Nicht anfassen, auch nicht „nebenbei“.
+    stark bündig darunter (`PILLAR_HALF.pergola`), Latten obenauf als Gitter in beiden Richtungen (alle 0,25, Nutzer wählte B).
+    Nicht anfassen, auch nicht „nebenbei“.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
