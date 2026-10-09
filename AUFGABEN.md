@@ -1819,6 +1819,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       WLAN verglichen (tools/vorschau/vergleich-ecken.png): Pfosten nicht eingerückt. Ursache: Kommazahl-Rundung abhängig von der Lage
       (−50,42 − (−50) = −0,4200000000000017 < −0,42) → Punkt auf der Dachkante galt als draußen. `roofSubOf` mit ROOF_EPS an allen
       drei Stellen. Test an vier Inselstellen (u. a. −15, −50). LEHRE: Grenzvergleiche mit Kommazahlen immer mit Spielraum.
+      Nutzer: „unter einer Überdachung nachträglich einen Weg langziehen“ → die Sperre „kein Gebäude unters Dach“ traf auch den Weg
+      (cat 'netz'); Weg ausgenommen, das Dach bleibt. Test: dach
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

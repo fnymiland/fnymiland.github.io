@@ -120,6 +120,17 @@ describe('Überdachungen (Block 138)', () => {
     game('closePanel()');
   });
 
+  it('unter eine Überdachung darf man nachträglich einen Weg ziehen (Nutzer); das Dach bleibt', () => {
+    roof(row(3, 6, 9));
+    expect(game("placeError('weg', 4, 9)")).toBe(null);
+    game("setTool('weg'); startPlan('line', { x: 3, y: 9 }, { x: 6, y: 9 }, true)");
+    expect(game('(() => { const i = planInfo(plan); return [i.order.length, i.firstErr]; })()')).toEqual([4, null]);
+    game('(() => { for (const [, , run] of planInfo(plan).order) run(); cancelPlan(); setTool("look"); })()');
+    expect(game('[3, 4, 5, 6].map(x => bAt(x, 9))')).toEqual(['weg', 'weg', 'weg', 'weg']);
+    expect(game('[3, 4, 5, 6].every(x => roofAt(x, 9))')).toBe(true);
+    expect(game("placeError('haus', 4, 9)")).toMatch(/Überdachung|Weg|belegt|frei/);   // Gebäude weiter nicht
+  });
+
   it('Dach über der Wiese: eigenes Fenster mit Form und Abreißen', () => {
     roof(row(3, 4, 9));
     game('openRoofInfo(3, 9)');
