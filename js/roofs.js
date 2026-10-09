@@ -244,6 +244,37 @@ function drawRoofTile(x, y, px, py, z) {
     glowQuad([[px - e, ly], [px + e, ly], [px + e, ly - e], [px - e, ly - e]], (roofForm(r) === 'glas' ? 30 : 22) * z);
   }
 }
+// Schatten am Boden (render.js drawShadows, im Boden-Bild): die Dachfläche, mit der Sonne um ROOF_H verschoben – so sieht man,
+// worüber das Dach liegt. Durchsichtiges wirft weniger Schatten.
+const ROOF_SHADE = { pergola: 'rgba(30,42,62,0.16)', glas: 'rgba(30,42,62,0.1)', markise: 'rgba(30,42,62,0.26)', arkaden: 'rgba(30,42,62,0.28)' };
+function drawRoofShadows(want) {
+  const dx = SUN.dx * ROOF_H, dy = SUN.dy * ROOF_H, by = {};
+  for (const [k, r] of state.roofs) {
+    const [x, y] = keyXY(k);
+    if (!want([x, y])) continue;
+    const f = roofForm(r), A = roofArea(roofCov(r));
+    (by[f] = by[f] || []).push([A, x, y]);
+  }
+  for (const [f, list] of Object.entries(by)) {
+    g.beginPath();
+    for (const [A, x, y] of list) for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) {
+      const su = 3 * x + i, sv = 3 * y + j;
+      if (!A.sub(su, sv)) continue;
+      const c = [[roofLo(su), roofLo(sv)], [roofHi(su), roofLo(sv)], [roofHi(su), roofHi(sv)], [roofLo(su), roofHi(sv)]].map(([u, v]) => { const p = iso(u, v); return [p.x + dx, p.y + dy]; });
+      c.forEach((p, n) => n ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
+    }
+    g.fillStyle = ROOF_SHADE[f]; g.fill('nonzero');
+  }
+}
+// Antippen (👆, 🧹): getroffen ist das Dach, das man sieht – nicht das Bodenfeld dahinter. Der Punkt ROOF_H unter dem Zeiger liegt
+// auf dem Boden unter dem Dach; ist dort Dach, gilt dieses Feld
+function roofPick(sx, sy) {
+  if (!state.roofs || !state.roofs.size || !cam) return null;
+  const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b), r = roofAt(x, y);
+  if (!r) return null;
+  const A = roofArea(roofCov(r)), s = v => { const k = Math.round(v); const f = v - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); };
+  return A.sub(s(a), s(b)) ? { x, y } : null;
+}
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }

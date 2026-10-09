@@ -1245,16 +1245,25 @@ function roofInfoHtml(x, y) {
     ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
     <p class="muted">Stützen stellst du selbst darunter: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Feldern.</p>`;
 }
-function wireRoofInfo(el, x, y) {
+function openRoofInfo(x, y) {
+  if (!roofAt(x, y)) { closePanel(); return; }
+  const reopen = () => roofAt(x, y) ? openRoofInfo(x, y) : closePanel();
+  const el = showPanel(`<h3>${DECO_LOOKS.dach.forms[roofAt(x, y).form || 0].name}</h3><p class="muted">${ITEMS.dach.desc}</p>
+    ${roofInfoHtml(x, y)}
+    <div class="row">${delButton(x, y)}<button class="btn ghost" id="p-close">Schließen</button></div>`, reopen);
+  wireDel(x, y);
+  wireRoofInfo(el, x, y, reopen);
+}
+function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
   const set = (kind, i) => undoable(() => {
     const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y];
     for (const k of keys) { const o = state.roofs.get(k); if (o) setLook(o, kind, i); }
     for (const k of keys) roofDirty(...keyXY(k));
     groundVersion++; sfx('deco'); save();
   });
-  for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => { set('form', +b.dataset.roofform); openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; reopen(); };
+  for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => { set('form', +b.dataset.roofform); reopen(); };
+  for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); reopen(); };
   const m = el.querySelector('[data-roofmore]');
   if (m) m.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.dach.group); };
 }

@@ -40,7 +40,7 @@ function build(b, x, y, quiet) {
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
     state.money -= ITEMS.dach.cost; payMat(ITEMS.dach.mat);
     state.roofs.set(k0, { ...decoLookNew('dach') });
-    roofDirty(x, y); sfx('deco'); recalc(); save();
+    roofDirty(x, y); groundVersion++; sfx('deco'); recalc(); save();   // groundVersion: Schatten im Boden-Bild
     return true;
   }
   if (b === 'tunnel') {                                // Tunnel (Block 136): unter der Oberfläche, oben bleibt alles stehen
@@ -173,7 +173,7 @@ function demolish(x, y) {
     state.money += info.refund;
     for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
     addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
-    roofDirty(x, y);
+    roofDirty(x, y); groundVersion++;
   } else if (info.tunnel) {                                                    // Tunnel (Block 136): voll zurück
     state.tunnels.delete(info.tunnel);
     state.money += info.refund;
@@ -690,6 +690,7 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  if (tool === 'abriss') { const rp = roofPick(sx, sy); if (rp) { ({ x, y } = rp); slot = -1; } }   // das Dach, das man sieht (Block 138)
   const pl = pillAt(sx, sy);                                // Schild angetippt (Block 71): Sehenswürdigkeit nur beim Ansehen
   if (pl && (tool === 'look' || !pl.look)) { pl.open(sx, sy); return; }
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
@@ -700,6 +701,8 @@ function tap(sx, sy, isTouch) {
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
   if (!viewOnly() && collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
+  const rp = tool === 'look' && !hit ? roofPick(sx, sy) : null;         // Dach angetippt (Block 138)
+  if (rp) { if (state.tiles.get(rp.x + ',' + rp.y)) openInfo(rp.x, rp.y); else openRoofInfo(rp.x, rp.y); return; }
   if (hit) ({ x, y, slot } = hit);
   const ck = chunkOf(x, y);
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
@@ -718,6 +721,7 @@ function tap(sx, sy, isTouch) {
     if (ds && ds[slot]) openDecoInfo(x, y, slot);
     else if (t) openInfo(ax, ay);
     else if (state.tunnels && tunnelAt(x, y)) openTunnelInfo(x, y);   // Tunnel ohne etwas darüber (Block 136)
+    else if (roofAt(x, y)) openRoofInfo(x, y);                       // Dach über Wiese (Block 138)
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);
     else if (terraLook(x, y) === 'fz') openFzInfo(x, y);
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }

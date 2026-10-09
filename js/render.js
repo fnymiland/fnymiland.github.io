@@ -153,6 +153,7 @@ function drawShadows(want) {
   }
   g.fillStyle = SHADOW_COL;
   g.fill('nonzero');
+  if (state.roofs && state.roofs.size) drawRoofShadows(want);              // Überdachungen (Block 138)
 }
 let groundCached = false;           // in diesem Bild kommt der Boden (mit Wegen) aus dem Zwischenspeicher
 // Reines Meer sieht auf jedem Grundstück gleich aus (Wellen kommen extra): ein gemeinsames Bild

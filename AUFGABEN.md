@@ -1768,6 +1768,12 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       mit Zeitbudget 8 ms je Bild (sonst altes Bildchen der anderen Zoomstufe), erstes Malen Markise ~4 ms je Feld. Nachts weiches
       Licht unter Glas und Pergola. Fenster des Felds: Form/Farbe für dieses Feld oder alle verbundenen; 🧹 nimmt erst das Dach.
       Leistungs-Wächter: dach Form 0–3 und stuetze neu eingetragen (nur das Vorschaubild zählt, im Spiel gemerkt). Test: dach
+- [x] Rückmeldung Nutzer (Bild): Dach wirkt, als hinge es über der Wiese hinter dem Weg; „wie löscht man die Abdeckung? ich lösche
+      immer den Weg darunter“; „es sollte nicht zwingend Weg darunter sein“. → (1) Schatten der Dachfläche am Boden, mit der Sonne
+      verschoben, je Form unterschiedlich dunkel (`drawRoofShadows`, im Boden-Bild) – man sieht, worüber es liegt. (2) Antippen mit
+      👆/🧹 trifft das Dach, das man sieht (`roofPick`: Punkt ROOF_H unter dem Zeiger), nicht das Bodenfeld dahinter. (3) Dach auf
+      jedem eigenen Land außer Wasser, Gebäuden, Gleisen, Brücken (`roofOver`); Dach über Wiese hat ein eigenes Fenster
+      (`openRoofInfo`); unter ein Dach kommt kein Gebäude. Test: dach
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b

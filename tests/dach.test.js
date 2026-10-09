@@ -11,9 +11,15 @@ const roof = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build
 const row = (x0, x1, y) => Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y]);
 
 describe('Überdachungen (Block 138)', () => {
-  it('nur über einem Weg; kostet, gibt beim Abreißen alles zurück, der Weg bleibt', () => {
+  it('über Wege, Wiese und Deko – nicht über Gebäude oder Wasser; kostet, gibt beim Abreißen alles zurück, der Weg bleibt', () => {
     way(row(2, 5, 5));
-    expect(game("placeError('dach', 2, 7)")).toBe('Nur über einem Weg');
+    expect(game("placeError('dach', 2, 7)")).toBe(null);                              // Wiese geht (Nutzer: nicht zwingend Weg)
+    game("state.tiles.set('8,8', { b: 'haus', lvl: 1 }); state.terra.set('9,9', 'water'); recalc()");
+    expect(game("placeError('dach', 8, 8)")).toMatch(/Nicht über Gebäude/);
+    expect(game("placeError('dach', 9, 9)")).toBe('Nicht übers Wasser');
+    game("build('dach', 2, 7, true)");
+    expect(game("placeError('haus', 2, 7)")).toMatch(/Überdachung/);                 // unter ein Dach kein Haus
+    game("demolish(2, 7)");
     const m = game('state.money');
     roof(row(2, 5, 5));
     expect(game('state.roofs.size')).toBe(4);
@@ -79,6 +85,31 @@ describe('Überdachungen (Block 138)', () => {
     const e = game("(() => { const A = roofArea(roofCov(roofAt(4, 5))); const e = roofEdges(A, 4, 5).find(e => e.ax === 'v' && e.n < 0); const [a, b] = roofRun(A, e); return { a, b, p: roofPillarsOn(e, a, b) }; })()");
     expect(e.a).toBeCloseTo(2.58, 6); expect(e.b).toBeCloseTo(6.42, 6);       // Gang-Enden: Dachkante bei Feldmitte ± RW
     expect(e.p.map(v => +v.toFixed(2)).sort()).toEqual([3.58, 4]);
+  });
+
+  it('Antippen trifft das Dach, das man sieht (nicht das Feld dahinter); 🧹 dort nimmt nur das Dach; Schatten am Boden', () => {
+    way(row(3, 6, 5)); way(row(3, 6, 4)); roof(row(3, 6, 5));
+    game('cam = state.cam; cam.z = 2; { const p = iso(5, 5); cam.x = p.x; cam.y = p.y; }');
+    // Bildschirmpunkt auf dem Dach über 4,5 – am Boden läge dort 4,4 (ein Weg ohne Dach)
+    const s = game('(() => { const p = toScreen(4, 5); return [p.x, p.y - ROOF_H * cam.z]; })()');
+    expect(game(`toTile(${s[0]}, ${s[1]})`)).not.toEqual({ x: 4, y: 5 });
+    expect(game(`roofPick(${s[0]}, ${s[1]})`)).toEqual({ x: 4, y: 5 });
+    game(`setTool('abriss'); setHover(${s[0]}, ${s[1]})`);
+    expect(game('[hover.x, hover.y]')).toEqual([4, 5]);
+    game(`tap(${s[0]}, ${s[1]}, false); tap(${s[0]}, ${s[1]}, false)`);
+    expect(game("[state.roofs.has('4,5'), bAt(4, 5), bAt(4, 4)]")).toEqual([false, 'weg', 'weg']);   // Dach weg, beide Wege bleiben
+    game("setTool('look')");
+    // Schatten: gezeichnet, mit der Sonne verschoben
+    const n = game("(() => { let n = 0; const f = g.fill; g.fill = (...a) => { n++; return f.apply(g, a); }; try { drawRoofShadows(() => true); } finally { g.fill = f; } return n; })()");
+    expect(n).toBe(1);
+  });
+
+  it('Dach über der Wiese: eigenes Fenster mit Form und Abreißen', () => {
+    roof(row(3, 4, 9));
+    game('openRoofInfo(3, 9)');
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Holz-Pergola.*Alle verbundenen \(2\)/s);
+    game("document.getElementById('p-del').click()");
+    expect(game("state.roofs.has('3,9')")).toBe(false);
   });
 
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {

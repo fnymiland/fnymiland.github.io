@@ -36,7 +36,8 @@ function tileFrac(sx, sy) {
 function toTile(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a), y: Math.round(b) }; }
 // Zaun & Co. (Block 41): der nächste Eckpunkt zwischen den Feldern
 function toVertex(sx, sy) { const [a, b] = tileFrac(sx, sy); return { x: Math.round(a + 0.5), y: Math.round(b + 0.5) }; }
-const planPoint = (sx, sy) => (plan ? plan.kind === 'edge' : dragKind(tool) === 'edge') ? toVertex(sx, sy) : toTile(sx, sy);
+const planPoint = (sx, sy) => (plan ? plan.kind === 'edge' : dragKind(tool) === 'edge') ? toVertex(sx, sy)
+  : (tool === 'abriss' && !plan && roofPick(sx, sy)) || toTile(sx, sy);   // Abreißen: das Dach, das man sieht (Block 138)
 // Liegt der Zeiger auf einer Linie? (Abreißen, Ansehen) – die Kante, deren Mitte am nächsten ist
 function edgeNear(sx, sy) {
   const [a, b] = tileFrac(sx, sy), gu = Math.round(a - 0.5) + 0.5, gv = Math.round(b - 0.5) + 0.5;
@@ -167,6 +168,7 @@ function setHover(sx, sy) {
   const sa = slotAt(sx, sy);
   hoverSlot = sa.slot;
   let t = sa.slot === VSLOT ? { x: sa.x, y: sa.y } : toTile(sx, sy);   // Eckpunkt (Block 65): gehört zum Feld unter der Ecke
+  if ((tool === 'abriss' || tool === 'look') && !plan) { const rp = roofPick(sx, sy); if (rp) t = rp; }   // Dach, das man sieht (Block 138)
   if (tool === 'tunneleinfahrt') { const [ex, ey] = einAnchor(t.x, t.y); t = { x: ex, y: ey }; }   // Feld unter der Maus = hinteres Feld am Tunnel
   if (!hover || hover.x !== t.x || hover.y !== t.y) { hover = t; previewCache = null; }
   hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;

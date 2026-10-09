@@ -1922,14 +1922,16 @@ function tunnelError(x, y, noCost) {
   if (Object.entries(c.mat || {}).some(([res, n]) => (state.res[res] || 0) < n)) return 'Zu wenig ' + RES[Object.entries(c.mat).find(([res, n]) => (state.res[res] || 0) < n)[0]].name;
   return null;
 }
-// Überdachung (Block 138): nur über einem Weg (auch unter Ständen und Deko), nicht auf Brücken und Bahnübergängen.
-// Liegt schon eine, wird sie umgestaltet (gleiche Form und Farbe: nichts zu tun)
+// Überdachung (Block 138): auf eigenem Land – über Wegen, Wiese, Parks, Ständen und Deko (Nutzer: „nicht zwingend Weg darunter“);
+// nicht über Wasser, Gebäuden, Gleisen, Brücken. Liegt schon eine, wird sie umgestaltet (gleiche Form und Farbe: nichts zu tun)
+const roofOver = t => !t || t.b === 'weg' || wegUnder(t) != null || (ITEMS[t.b] && ITEMS[t.b].cat === 'deko');
 const roofSame = (x, y) => { const r = roofAt(x, y), n = decoLookNew('dach'); return !!r && (r.form || 0) === (n.form || 0) && (r.col || 0) === (n.col || 0); };
 function roofError(x, y, noCost) {
   if (!ownedTile(x, y)) return notMine(x, y);
-  const t = state.tiles.get(x + ',' + y);
+  const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t && (isWegBridge(t) || isCrossing(t))) return 'Nicht auf Brücken und Bahnübergängen';
-  if (wegCellStyle(x, y) == null) return 'Nur über einem Weg';
+  if (terrainAt(x, y) === 'water' && !t) return 'Nicht übers Wasser';
+  if (!roofOver(t)) return 'Nicht über Gebäude – über Wege, Wiese, Parks und Deko';
   if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
   if (noCost) return null;
   if (state.money < ITEMS.dach.cost) return 'Zu wenig Taler';
@@ -2521,6 +2523,8 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
+  if (state.roofs.size && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
+    return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
   if ((b === 'schiene' || b === 'station' || b === 'hbf' || b === 'tunneleinfahrt') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
     return b === 'schiene' ? 'Über einem Tunnel keine Schiene – Schiene und Tunnel verbindet eine Tunneleinfahrt' : b === 'tunneleinfahrt' ? 'Nicht auf den Tunnel – ans Ende davon setzen' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
