@@ -1,7 +1,7 @@
 'use strict';
 // ---------------------------------------------------------------------------
 // Einstellungen (Nutzer, 09.10.2026: „welche Grafikoptionen können wir noch anbieten – eigenes Menü“): ☰ → ⚙️ Einstellungen
-// öffnet ein eigenes Fenster mit Schnellwahl (Schön · Ausgewogen · Schnell) und drei Gruppen: 🔊 Ton, 👁️ Anzeige, 🚀 Leistung.
+// öffnet ein eigenes Fenster mit Schnellwahl (Schön · Ausgewogen · Schnell) darunter der Ton-Knopf und zwei Gruppen: Anzeige, Leistung (ohne Emojis, Nutzer).
 // Neue Schalter je Gerät in GFX (localStorage GFX_KEY); die älteren behalten ihre Schlüssel (Bildrate, still, himmel, gl,
 // minimap). Ton und Randlinien bleiben im Spielstand. Standard = wie bisher (alles an, echte Uhr, volle Schärfe) –
 // bestehende Spieler sehen nach dem Update nichts anders; „Schnell“ wird nie von selbst gewählt.
@@ -33,9 +33,9 @@ const gfxPersonShown = w => GFX.people === 'viele' || (GFX.people === 'wenige' &
 
 // Schnellwahl: setzt nur, was Leistung kostet – Tageszeit, Symbole, Schilder, Minimap und Randlinien bleiben, wie man sie hat
 const GFX_PRESETS = {
-  schoen: { name: '✨ Schön', fps: 'fluessig', sharp: 'voll', still: false, sky: true, people: 'viele', animals: true, shadows: true, sparkle: true },
-  ausgewogen: { name: '⚖️ Ausgewogen', fps: null, sharp: 'voll', still: true, sky: true, people: 'viele', animals: true, shadows: true, sparkle: true },   // fps null: wie das Gerät (PC flüssig, iPad sparsam)
-  schnell: { name: '🚀 Schnell', fps: 'sparsam', sharp: 'halb', still: true, sky: false, people: 'wenige', animals: false, shadows: false, sparkle: false },
+  schoen: { name: 'Schön', fps: 'fluessig', sharp: 'voll', still: false, sky: true, people: 'viele', animals: true, shadows: true, sparkle: true },
+  ausgewogen: { name: 'Ausgewogen', fps: null, sharp: 'voll', still: true, sky: true, people: 'viele', animals: true, shadows: true, sparkle: true },   // fps null: wie das Gerät (PC flüssig, iPad sparsam)
+  schnell: { name: 'Schnell', fps: 'sparsam', sharp: 'halb', still: true, sky: false, people: 'wenige', animals: false, shadows: false, sparkle: false },
 };
 const presetFps = P => P.fps || (touchDevice() ? 'sparsam' : 'fluessig');
 function gfxPresetOf() {
@@ -57,33 +57,32 @@ function applyGfxPreset(id) {
 function showSettings() {
   const onOff = b => b ? 'an' : 'aus';
   // eine Zeile je Schalter: links was, rechts der Wert (tippen schaltet weiter); idAttr wörtlich (structure.test sucht id="…")
-  const cur = gfxPresetOf(), btn = (idAttr, label, value, title = '') => `<button class="set-btn" ${idAttr}${title ? ` title="${title}"` : ''}><span>${label.replace(' ', '\u00a0')}</span><b>${value}</b></button>`;   // Symbol nie allein in der Zeile
+  const cur = gfxPresetOf(), btn = (idAttr, label, value, title = '') => `<button class="set-btn" ${idAttr}${title ? ` title="${title}"` : ''}><span>${label}</span><b>${value}</b></button>`;
   const grid = (...b) => `<div class="set-grid">${b.filter(Boolean).join('')}</div>`;
   const sky = state.inventions && (state.inventions.has('ballon') || state.inventions.has('zeppelin'));
   openModal(`
-    <h2>⚙️ Einstellungen</h2>
+    <h2>Einstellungen</h2>
     <div class="label">Schnellwahl <span class="muted">(nur dieses Gerät)</span></div>
     <div class="looks set-presets">${Object.entries(GFX_PRESETS).map(([id, P]) => `<button class="look${cur === id ? ' on' : ''}" data-preset="${id}" aria-pressed="${cur === id}">${P.name}</button>`).join('')}</div>
     <p class="muted set-note">${cur === 'schnell' ? 'Halbe Schärfe, weniger Einwohner, ohne Tiere, Schatten und Glitzer – für ältere Geräte.' : cur === 'schoen' ? 'Alles an, immer 60 Bilder pro Sekunde, Drehendes dreht sich auch weit weg.' : cur === 'ausgewogen' ? 'Wie das Spiel von selbst eingestellt ist.' : 'Eigene Einstellung – unten einzeln gewählt.'}</p>
-    <div class="label">🔊 Ton</div>
-    ${grid(btn('id="m-sound"', state.muted ? '🔇 Ton' : '🔊 Ton', onOff(!state.muted)))}
-    <div class="label">👁️ Anzeige</div>
-    ${grid(btn('id="m-day"', GFX.day === 'tag' ? '☀️ Tageszeit' : '🕰️ Tageszeit', GFX.day === 'tag' ? 'immer Tag' : 'echte Uhr', 'Echte Uhr: ein Spieltag dauert 24 Minuten, nachts leuchten die Laternen. Immer Tag: nie dunkel (die Spieluhr läuft weiter)'),
-      btn('id="m-shadow"', '🌗 Schatten', onOff(GFX.shadows)),
-      btn('id="m-icons"', '✨ Symbole über Häusern', onOff(GFX.icons), '✨ bereit zum Ausbau, 💭 fast geschafft, 😣 Bahnhof voll, ⚡ ohne Strom …'),
-      btn('id="m-labels"', '🏷️ Namensschilder', onOff(GFX.labels), 'Schilder der Sehenswürdigkeiten und Namen über Figuren (neue Inseln zum Entdecken bleiben angeschrieben)'),
-      btn('id="m-sparkle"', '🎆 Glitzer & Feuerwerk', onOff(GFX.sparkle)),
-      btn('id="m-borders"', '▣ Randlinien', onOff(!state.noBorders), 'Ränder von Park und Freizeitpark'),
-      sky && btn('id="m-sky"', '🎈 Ballons & Zeppelin', onOff(skyShow), 'Heißluftballons und Zeppelin am Himmel zeigen oder ausblenden'),
-      miniWanted() && btn('id="m-mini"', miniOpen ? '🗺️ Minimap ausschalten' : '🗺️ Minimap einschalten', '', 'Übersichtskarte unten rechts'))}
-    <div class="label">🚀 Leistung <span class="muted">(nur dieses Gerät)</span></div>
-    ${grid(btn('id="m-fps"', '🎞️ Bildrate', fpsMode === 'fluessig' ? 'flüssig' : 'sparsam', fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'),
-      btn('id="m-sharp"', '🔍 Schärfe', GFX.sharp, 'Halb: halb so viele Bildpunkte je Richtung – viel flüssiger auf älteren Geräten, etwas weicher'),
-      btn('id="m-people"', '🚶 Einwohner', GFX.people, 'Nur was man sieht – gezählt und gerechnet wird immer mit allen'),
-      btn('id="m-animals"', '🦋 Tiere', onOff(GFX.animals), 'Vögel, Schmetterlinge, Glühwürmchen und Co. – aus: man kann sie auch nicht fürs Album entdecken'),
-      btn('id="m-still"', '🌀 Drehendes weit weg', stillFar ? 'steht still' : 'dreht sich', 'Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer'),
-      btn('id="m-gl"', '🚀 Grafikkarte', onOff(glWanted()), 'Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)'),
-      btn('id="m-bench"', '📏 Messlauf', '≈ 45 s', 'Zoomt und schiebt ~45 Sekunden von selbst und misst, wie flüssig es auf diesem Gerät läuft'))}
+    <div class="set-grid set-one">${btn('id="m-sound"', 'Ton', onOff(!state.muted))}</div>
+    <div class="label">Anzeige</div>
+    ${grid(btn('id="m-day"', 'Tageszeit', GFX.day === 'tag' ? 'immer Tag' : 'echte Uhr', 'Echte Uhr: ein Spieltag dauert 24 Minuten, nachts leuchten die Laternen. Immer Tag: nie dunkel (die Spieluhr läuft weiter)'),
+      btn('id="m-shadow"', 'Schatten', onOff(GFX.shadows)),
+      btn('id="m-icons"', 'Symbole über Häusern', onOff(GFX.icons), '✨ bereit zum Ausbau, 💭 fast geschafft, 😣 Bahnhof voll, ⚡ ohne Strom …'),
+      btn('id="m-labels"', 'Namensschilder', onOff(GFX.labels), 'Schilder der Sehenswürdigkeiten und Namen über Figuren (neue Inseln zum Entdecken bleiben angeschrieben)'),
+      btn('id="m-sparkle"', 'Glitzer & Feuerwerk', onOff(GFX.sparkle)),
+      btn('id="m-borders"', 'Randlinien', onOff(!state.noBorders), 'Ränder von Park und Freizeitpark'),
+      sky && btn('id="m-sky"', 'Ballons & Zeppelin', onOff(skyShow), 'Heißluftballons und Zeppelin am Himmel zeigen oder ausblenden'),
+      miniWanted() && btn('id="m-mini"', miniOpen ? 'Minimap ausschalten' : 'Minimap einschalten', '', 'Übersichtskarte unten rechts'))}
+    <div class="label">Leistung <span class="muted">(nur dieses Gerät)</span></div>
+    ${grid(btn('id="m-fps"', 'Bildrate', fpsMode === 'fluessig' ? 'flüssig' : 'sparsam', fpsMode === 'fluessig' ? 'Immer 60 Bilder pro Sekunde – braucht mehr Strom' : 'Beim Zuschauen 30, später 15 Bilder pro Sekunde – schont Akku und hält das Gerät kühl'),
+      btn('id="m-sharp"', 'Schärfe', GFX.sharp, 'Halb: halb so viele Bildpunkte je Richtung – viel flüssiger auf älteren Geräten, etwas weicher'),
+      btn('id="m-people"', 'Einwohner', GFX.people, 'Nur was man sieht – gezählt und gerechnet wird immer mit allen'),
+      btn('id="m-animals"', 'Tiere', onOff(GFX.animals), 'Vögel, Schmetterlinge, Glühwürmchen und Co. – aus: man kann sie auch nicht fürs Album entdecken'),
+      btn('id="m-still"', 'Drehendes weit weg', stillFar ? 'steht still' : 'dreht sich', 'Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer'),
+      btn('id="m-gl"', 'Grafikkarte', onOff(glWanted()), 'Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)'),
+      btn('id="m-bench"', 'Messlauf', '≈ 45 s', 'Zoomt und schiebt ~45 Sekunden von selbst und misst, wie flüssig es auf diesem Gerät läuft'))}
     <div class="row"><button class="btn ghost" style="flex:1" id="m-back">Zurück</button><button class="btn" style="flex:1" id="m-close">Weiterspielen</button></div>`);
   const again = () => showSettings();
   const click = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = () => { fn(); again(); }; };

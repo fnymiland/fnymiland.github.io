@@ -973,7 +973,9 @@ body.visiting #net-btn { display: none !important; }
 .set-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 40px; padding: 6px 12px; border: 0;
   border-radius: 12px; background: var(--cream2); color: var(--brown); font: 700 14px/1.2 Nunito, system-ui, sans-serif; text-align: left;
   cursor: pointer; box-shadow: 0 2px 0 var(--shadow); }
-.set-btn b { flex: none; padding: 2px 8px; border-radius: 8px; background: var(--cream); font-weight: 800; font-size: 13px; }
+.set-btn span { flex: 1 1 auto; min-width: 0; }                       /* der Name bricht um, der Wert nie (sonst ragt „immer Tag“ hinaus) */
+.set-btn b { flex: none; padding: 2px 8px; border-radius: 8px; background: var(--cream); font-weight: 800; font-size: 13px; white-space: nowrap; }
+.set-one { grid-template-columns: 1fr; margin-top: 10px; }
 .set-btn b:empty { display: none; }
 @media (hover: hover) { .set-btn:hover { background: var(--yellow); } }
 .set-note { margin: 4px 0 8px; }
