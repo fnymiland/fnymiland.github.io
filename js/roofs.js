@@ -419,9 +419,10 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
     try {
       const all = roofHoles(x, y, 0.01).sort((a, b) => a.mu + a.mv - b.mu - b.mv), F0 = ROOF_FRAME.arkaden;
       // Schachtwände bis zum Boden an den Seiten, die man von oben sieht (kleines u bzw. v), dann die Stufen davor
+      // – nie am Fuß: dort geht man unter dem Dach in die Treppe hinein (Nutzer: „unten ist gar nicht offen sondern eine Wand“)
       for (const h of all) {
-        if (!(h.Dv && h.jM)) poly([P(h.u0, h.v0, 0), P(h.u0, h.v1, 0), P(h.u0, h.v1, H), P(h.u0, h.v0, H)], F0.sU, F0.sU, 0.3);
-        if (!(h.Du && h.jM)) poly([P(h.u0, h.v0, 0), P(h.u1, h.v0, 0), P(h.u1, h.v0, H), P(h.u0, h.v0, H)], F0.sV, F0.sV, 0.3);
+        if (h.Dv ? !h.jM : h.Du < 0) poly([P(h.u0, h.v0, 0), P(h.u0, h.v1, 0), P(h.u0, h.v1, H), P(h.u0, h.v0, H)], F0.sU, F0.sU, 0.3);   // längs: Seite; quer: nur oben
+        if (h.Du ? !h.jM : h.Dv < 0) poly([P(h.u0, h.v0, 0), P(h.u1, h.v0, 0), P(h.u1, h.v0, H), P(h.u0, h.v0, H)], F0.sV, F0.sV, 0.3);
       }
       const parts = [];                                                 // alle Spuren gemeinsam von hinten nach vorn
       for (const h of all) { parts.base = h.mu + h.mv; dtSteps(h.rot, (u, v, up) => P(h.mu + u, h.mv + v, up), (pts, col, w) => w ? line(pts, col, w) : poly(pts, col, col, 0.3), h.jM, h.jP, null, parts); }
