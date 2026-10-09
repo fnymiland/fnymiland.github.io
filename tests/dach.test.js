@@ -164,6 +164,17 @@ describe('Überdachungen (Block 138)', () => {
     expect(n).toBe(4);
   });
 
+  it('Pfosten bündig an jeder Stelle der Insel – auch wo Kommazahlen schief runden (Nutzer: Dach bei −15, −50)', () => {
+    for (const [X, Y] of [[-15, -50], [-5, -6], [37, 81], [-123, 64]]) {
+      game(`state.claimed.add('${X},${Y}'); state.roofs.set('${X},${Y}', {})`);
+      for (const [su, sv] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+        const q = game(`pillarInset(${X} + ${su} * RW, ${Y} + ${sv} * RW, 0)`);
+        expect([+(q[0] - X).toFixed(3), +(q[1] - Y).toFixed(3)], `${X},${Y} Ecke ${su},${sv}`).toEqual([su * 0.395, sv * 0.395]);   // halbe Stärke nach innen
+      }
+      game(`state.roofs.delete('${X},${Y}')`);
+    }
+  });
+
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
     way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");

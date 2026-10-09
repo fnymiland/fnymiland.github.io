@@ -1815,6 +1815,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „in meiner Welt immer noch so“ → Daten aus seiner Welt per WLAN-Empfänger (v866, Säulen korrekt an der Kante): Fehler
       im GL-Standbild weit weg – Dach und Stützen zeichnet tileB, das im Standbild nur für Felder mit Bewegtem läuft → sie fehlten
       ganz (nur der Schatten blieb). Jetzt `roofLiveTiles` (Dachfelder + Besitzerfelder der Stützen) in glPlayTiles immer neu.
+      Nutzer: „in deiner Ansicht geht es, in meinem Chrome nicht – selbe Version, anderes Verhalten“ → Bild aus seinem Chrome per
+      WLAN verglichen (tools/vorschau/vergleich-ecken.png): Pfosten nicht eingerückt. Ursache: Kommazahl-Rundung abhängig von der Lage
+      (−50,42 − (−50) = −0,4200000000000017 < −0,42) → Punkt auf der Dachkante galt als draußen. `roofSubOf` mit ROOF_EPS an allen
+      drei Stellen. Test an vier Inselstellen (u. a. −15, −50). LEHRE: Grenzvergleiche mit Kommazahlen immer mit Spielraum.
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

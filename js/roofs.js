@@ -22,6 +22,10 @@ const ROOF_STY = {
   arkaden: { stone: '#dccfb4', side: '#c8b896', dark: '#b3a283', top: '#e8dec9', vault: 0, lamp: false },   // geschlossenes Dach: kein Licht von oben sichtbar
 };
 // Teilstück-Gitter: Index s (je Achse) = 3·x + i, i ∈ {−1, 0, 1}
+// Teilstück eines Punkts (Weltkoordinate) – mit Spielraum: −50,42 − (−50) ist im Rechner −0,4200000000000017, und ohne ROOF_EPS
+// zählte ein Punkt genau auf der Dachkante je nach Lage auf der Insel als „draußen“ (Nutzer: „selbe Version, anderes Verhalten“)
+const ROOF_EPS = 1e-6;
+const roofSubOf = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW - ROOF_EPS ? -1 : f > RW + ROOF_EPS ? 1 : 0); };
 const roofLo = s => { const x = Math.round(s / 3), i = s - 3 * x; return i === -1 ? x - 0.5 : i === 0 ? x - RW : x + RW; };
 const roofHi = s => { const x = Math.round(s / 3), i = s - 3 * x; return i === -1 ? x - RW : i === 0 ? x + RW : x + 0.5; };
 // Fläche einer Form: cov(x, y) sagt, ob das Feld dazugehört (Spiel: gleiche Form; Vorschaubild: nur ein Feld)
@@ -316,7 +320,7 @@ function roofPick(sx, sy) {
   if (!state.roofs || !state.roofs.size || !cam) return null;
   const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b), r = roofAt(x, y);
   if (!r) return null;
-  const A = roofArea(roofCov(r)), s = v => { const k = Math.round(v); const f = v - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); };
+  const A = roofArea(roofCov(r)), s = v => { return roofSubOf(v); };
   return A.sub(s(a), s(b)) ? { x, y } : null;
 }
 // Stützen werden mit dem hintersten Feld gezeichnet, das sie berühren – direkt vor dessen Dach (Nutzer: „das Dach liegt unter den
@@ -403,7 +407,7 @@ function pillarSnap(pu, pv) {
 const ROOF_REACH = 14;
 function roofInnerBeams(A, x, y) {
   if (!state.decos.size) return [];
-  const sOf = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); };
+  const sOf = roofSubOf;
   const cov = (u, v) => A.sub(sOf(u), sOf(v));
   const clear = (u0, v0, u1, v1) => { const n = Math.ceil(Math.hypot(u1 - u0, v1 - v0) / 0.2); for (let i = 0; i <= n; i++) if (!cov(u0 + (u1 - u0) * i / n, v0 + (v1 - v0) * i / n)) return false; return true; };
   const out = new Map();
@@ -429,7 +433,7 @@ const PILLAR_HALF = { pergola: PERG_T / 2, arkaden: 0.1 };
 function pillarInset(pu, pv, form) {
   const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id];
   if (!h) return [pu, pv];
-  const at = (u, v) => { const r = roofAt(Math.round(u), Math.round(v)); if (!r) return false; const A = roofArea(roofCov(r)), s = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); }; return A.sub(s(u), s(v)); };
+  const at = (u, v) => { const r = roofAt(Math.round(u), Math.round(v)); if (!r) return false; const A = roofArea(roofCov(r)), s = roofSubOf; return A.sub(s(u), s(v)); };
   const e = 0.06, du = at(pu + e, pv) && !at(pu - e, pv) ? 1 : at(pu - e, pv) && !at(pu + e, pv) ? -1 : 0, dv = at(pu, pv + e) && !at(pu, pv - e) ? 1 : at(pu, pv - e) && !at(pu, pv + e) ? -1 : 0;
   return [pu + du * h, pv + dv * h];
 }
