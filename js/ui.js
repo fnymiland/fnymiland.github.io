@@ -1289,7 +1289,7 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
   for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; reopen(); };
   for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => {
     const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y], toStone = DECO_LOOKS.dach.forms[+b.dataset.roofform].id === 'arkaden';
-    const lock = !toStone && roofFormLock(keys);                       // Deko oben, Treppe darunter: erst wegräumen (Block 138b/d)
+    const lock = (!toStone && roofFormLock(keys)) || roofFormLock(keys, +b.dataset.roofform);   // Deko oben, Treppe, Hohes darunter: erst wegräumen
     if (lock) { fail(lock); return; }
     undoable(() => {
       if (toStone) for (const k of keys) { const o = state.roofs.get(k); if (o && roofForm(o) !== 'arkaden' && o.par == null) o.par = 1; }   // wird Stein: mit Mauer wie neu gebaut

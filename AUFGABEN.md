@@ -1902,6 +1902,13 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Vorschaubild Steinarkaden im Wächter 714 → 960 (nur einmal gemalt). Dachtreppe unter dem Dach wieder gezeichnet (Streifen je Feld):
       durch die Bögen sichtbar (treppe-seite.png). Szene tools/bodenbogen.js
 
+- [x] Nutzer: „Straßenlaterne/hohe Gegenstände ragen durch die Überdachung“ → gemessene Höhen der kleinen Deko (`DECO_TALL`), unter ein
+      Dach nur, was unter den Rahmen passt (`roofClear` = Höhe unter dem Balken − 1; Stein 18, Pergola 19,4, Glas/Markise 20):
+      Straßenlaterne, Palme, Riesenblume, Kristall-Laterne (Stein/Pergola), Bankform 4 nicht. Auch kein Dach über zu Hohes, kein
+      Formwechsel dorthin, Verschieben/Kopieren geprüft. „Bänke/Büsche oben ragen über die Überdachung“ → `roofTopSpot`: am Rand
+      nach innen, samt Ausdehnung innerhalb der Brüstung. Tests: dach, dachdeko. Offen: „Schatten-Kreis beim Baum in der unteren Ecke“
+      (nicht nachgestellt – Bild vom Nutzer erbeten)
+
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
 

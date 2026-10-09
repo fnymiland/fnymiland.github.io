@@ -301,4 +301,21 @@ describe('Überdachungen (Block 138)', () => {
     expect(game('roofAt(8, 8).par')).toBe(1);
     game('closePanel()');
   });
+  it('zu Hohes nicht unter eine Überdachung (Nutzer: „Straßenlaterne ragt durch“) – und kein Dach über zu Hohes', () => {
+    roof(row(3, 5, 5));
+    game("state.design.add('strassenlaterne'); state.design.add('laterne')");
+    expect(game("smallError('strassenlaterne', 4, 5, 4)")).toMatch(/zu hoch/);
+    expect(game("smallError('palme', 4, 5, 0, { move: true })")).toMatch(/zu hoch/);
+    expect(game("smallError('blumentopf', 4, 5, 0)")).toBe(null);
+    expect(game("smallError('laterne', 4, 5, 0)")).toBe(null);                      // passt unter die Pergola
+    expect(game("smallError('strassenlaterne', 4, 5, VSLOT)")).toMatch(/zu hoch/);  // auf dem Eckpunkt unter dem Dach
+    game("buildSmall('strassenlaterne', 8, 5, 4)");
+    expect(game("placeError('dach', 8, 5)")).toMatch(/zu Hohes/);
+    // Steinarkaden sind innen niedriger: Kristall-Laterne passt unter Glas, nicht unter Stein; Wechsel dorthin gesperrt
+    game("state.design.add('dach:form:glas'); state.design.add('dach:form:arkaden'); state.paintNew.dach = { form: 1 }; build('dach', 10, 9, true); state.paintNew.dach = {}");
+    game("state.decos.set('10,9', [{ b: 'kristallaterne', rot: 0 }, null, null, null, null, null, null, null, null])");
+    expect(game("roofFormLock(['10,9'], 3)")).toMatch(/zu Hohes/);
+    expect(game("roofFormLock(['10,9'], 1)")).toBe(null);
+  });
+
 });

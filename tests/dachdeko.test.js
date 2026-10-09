@@ -168,4 +168,14 @@ describe('Deko auf dem Dach (Block 138b)', () => {
     game(`setHover(${s[0]}, ${s[1]}); undoable(() => tap(${s[0]}, ${s[1]}, false)); setTool('look')`);
     expect(game("[roofAt(5, 5).top[3].b, decosAt('9,9')]")).toEqual(['bank', undefined]);
   });
+  it('Deko oben ragt nicht über den Rand (Nutzer): am Rand rückt sie nach innen, zwischen zwei Dachfeldern nicht', () => {
+    roof(row(3, 5, 5));
+    game("buildRoofTop('bank', 5, 5, 6); buildRoofTop('bank', 4, 5, 6); buildRoofTop('busch', 5, 5, 3)");
+    const edge = 0.42 - 0.09;
+    const bankR = game("(() => { const d = roofAt(5, 5).top[6], [u] = roofTopSpot(5, 5, 6, d); return u + decoExt(d)[0]; })()");
+    expect(bankR).toBeLessThanOrEqual(edge);                                         // rechter Rand: innen
+    const busch = game("(() => { const d = roofAt(5, 5).top[3], [u, v] = roofTopSpot(5, 5, 3, d), [eu, ev] = decoExt(d); return [u + eu, v + ev]; })()");
+    expect(busch[0]).toBeLessThanOrEqual(edge); expect(busch[1]).toBeLessThanOrEqual(edge);
+    expect(game("roofTopSpot(4, 5, 6, roofAt(4, 5).top[6])[0]")).toBeCloseTo(0.3);  // Mitte: Nachbar ist Dach, bleibt
+  });
 });

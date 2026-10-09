@@ -419,7 +419,8 @@ function groupErrors(hx, hy) {
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
-    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true });
+      else if (tallUnder(x, y, P.r.form || 0)) err = 'Darunter steht etwas zu Hohes';
+    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true, form: P.d.form || 0 });
     else {
       const x = ox + P.dx, y = oy + P.dy, b = P.t.b;
       err = P.bad;
@@ -581,7 +582,7 @@ function startCopy(x0, y0, x1, y1) {
   return true;
 }
 function moveError(x, y, slot) {
-  if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true });
+  if (moving.kind === 'deco') return smallError(moving.d.b, x, y, slot, { move: true, form: moving.d.form || 0 });
   const b = moving.t.b;
   if (b === 'schiene' || b === 'weg') {                       // Brücken wie beim Verschieben einer Gruppe (Block 84b)
     const water = terrainAt(x, y) === 'water';

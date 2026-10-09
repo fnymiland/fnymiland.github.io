@@ -1636,7 +1636,7 @@ function render(now) {
           if (topGhost) {
             const mv = tool === 'verschieben' && moving && moving.kind === 'deco';   // getragene Deko: so, wie sie abgelegt wird
             const gRot = mv ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot), L = mv ? moving.d : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = !mv && ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
-            const [u, v] = roofTopPos(preview.slot);
+            const [u, v] = roofTopSpot(x, y, preview.slot, { b: ghostType, rot: gRot, form: L.form || 0 });
             g.globalAlpha = 0.65;
             drawSmallOne(ghostType, gRot, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, 1, ROOF_TOP_SLOT0 + preview.slot, gCol, L.form || 0);
             g.globalAlpha = 1;

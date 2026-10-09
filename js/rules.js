@@ -1474,6 +1474,8 @@ function smallError(b, x, y, slot, opts = {}) {
       const fds = decosAt(fx + ',' + fy);
       if (fds && fds[cs]) return 'An dieser Ecke steht schon etwas';
     }
+    const tt = tooTallUnderRoof(b, x, y, slot, opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0));   // Block 138
+    if (tt) return tt;
     if (opts.move || opts.noCost) return null;
     if (state.money < d.cost) return 'Zu wenig Taler';
     return matError(d.mat);
@@ -1487,6 +1489,8 @@ function smallError(b, x, y, slot, opts = {}) {
     const ds = decosAt(k);
     return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
   }
+  const tt = tooTallUnderRoof(b, x, y, slot, opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0));   // zu hoch unters Dach (Block 138)
+  if (tt) return tt;
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
   if (opts.noCost) return null;
   if (state.money < d.cost + clearCost(b, x, y)) return 'Zu wenig Taler';
@@ -1935,6 +1939,7 @@ function roofError(x, y, noCost) {
   if (!roofOver(t)) return 'Nicht über Gebäude – über Wege, Wiese, Parks und Deko';
   if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
   if (roofAt(x, y) && roofForm(decoLookNew('dach')) !== 'arkaden') { const l = roofFormLock([x + ',' + y]); if (l) return l; }   // Stein mit Deko/Treppe: nicht überbauen
+  { const tl = tallUnder(x, y, decoLookNew('dach').form || 0); if (tl) return `Darunter steht etwas zu Hohes (${ITEMS[tl.b].name})`; }   // Straßenlaterne, Palme … ragten durchs Dach
   if (noCost) return null;
   if (state.money < ITEMS.dach.cost) return 'Zu wenig Taler';
   return matError(ITEMS.dach.mat);

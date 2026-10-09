@@ -223,6 +223,30 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
   }
   return { back, front };
 }
+// Hohe Deko unter einer Überdachung (Nutzer: „Straßenlaterne ragt durch die Überdachung“): gemessene Höhe (Bildpunkte bei Zoom 1) der
+// kleinen Deko über 15; was höher ist als der Platz unter dem Rahmen (minus 1), darf nicht darunter
+const DECO_TALL = { strassenlaterne: 37, palme: 27, riesenblume: 26, kristallaterne: 20, baum: 18, laterne: 17, 'bank:4': 21 };
+const decoHeight = (b, form = 0) => { const k = baseOf(b); return DECO_TALL[k + ':' + (form || 0)] || DECO_TALL[k] || 0; };
+const roofClear = form => { const F = ROOF_FRAME[(DECO_LOOKS.dach.forms[form || 0] || DECO_LOOKS.dach.forms[0]).id]; return ROOF_H - F.BH - 1; };
+// Felder, unter deren Dach ein Platz liegt (Eckpunkt: die vier Felder drumherum)
+const slotRoofTiles = (x, y, slot) => slot === VSLOT ? [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]] : [[x, y]];
+function tooTallUnderRoof(b, x, y, slot, form = 0, roofForm = null) {
+  if (!state.roofs || baseOf(b) === 'stuetze') return null;
+  const h = decoHeight(b, form);
+  if (!h) return null;
+  for (const [fx, fy] of slotRoofTiles(x, y, slot)) {
+    const r = roofAt(fx, fy), f = roofForm != null ? roofForm : r && (r.form || 0);
+    if ((r || roofForm != null) && h > roofClear(f)) return `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Überdachung`;
+  }
+  return null;
+}
+// Steht auf Feld (x, y) schon etwas, das unter ein Dach der Form f nicht passt? (Dach bauen, Form wechseln)
+function tallUnder(x, y, f) {
+  const ds = decosAt(x + ',' + y) || [];
+  for (let i = 0; i < 8; i++) if (ds[i] && decoHeight(ds[i].b, ds[i].form) > roofClear(f)) return ds[i];
+  for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && p.b !== 'stuetze' && decoHeight(p.b, p.form) > roofClear(f)) return p; }
+  return null;
+}
 // Steinarkaden: Belag auf dem Dach (Weg-Stilname) statt Dachgarten – Trittsteine gibt es oben nicht
 const roofBel = r => r && typeof r.bel === 'string' && isWegStyle(r.bel) && !pathLook(r.bel).stones ? r.bel : null;
 // Belag beim Umschalten: ein Plattenmuster, das man schon hat, in Steinfarbe (sonst glatt)
@@ -769,6 +793,17 @@ const roofTopOk = b => !!(ITEMS[b] && ITEMS[b].small && !ROOF_TOP_NO.has(baseOf(
 const roofTopRoof = (x, y) => { const r = roofAt(x, y); return r && roofForm(r) === 'arkaden' ? r : null; };
 const roofTopPos = i => i < 4 ? [(i & 1 ? 1 : -1) * ROOF_TOP_OFF, (i & 2 ? 1 : -1) * ROOF_TOP_OFF] : [[-1, 0], [0, -1], [1, 0], [0, 1]][i - 4].map(c => c * ROOF_TOP_OFF);
 const roofTopsOf = r => (r && Array.isArray(r.top) ? r.top : []);
+// Wo eine Deko oben wirklich steht (Nutzer: „Bänke oder Büsche ragen über die Überdachung“): am Rand – wo das Nachbarfeld kein Steindach
+// ist – so weit nach innen, dass sie samt ihrer Ausdehnung (decoExt, gedreht) innerhalb der Brüstung bleibt
+function roofTopSpot(x, y, i, d) {
+  let [u, v] = roofTopPos(i);
+  const r = roofAt(x, y), same = (tx, ty) => { const o = roofAt(tx, ty); return !!o && (o.form || 0) === ((r && r.form) || 0); };
+  const [eu, ev] = d ? decoExt(d) : [0, 0], lim = e => Math.max(0, RW - ROOF_FRAME.arkaden.T - e - 0.015);
+  const su = Math.sign(u), sv = Math.sign(v), diag = su && sv && !same(x + su, y + sv);
+  if (su && (!same(x + su, y) || diag)) u = su * Math.min(Math.abs(u), lim(eu));
+  if (sv && (!same(x, y + sv) || diag)) v = sv * Math.min(Math.abs(v), lim(ev));
+  return [u, v];
+}
 // Platz auf dem Dach unter dem Finger (Steinarkaden): nächster der 8 Plätze, gemessen auf Dachhöhe
 function roofTopAt(sx, sy) {
   if (!state.roofs || !state.roofs.size || !cam) return null;
@@ -788,7 +823,7 @@ function roofTopHit(sx, sy) {
     const [x, y] = keyXY(k), p = toScreen(x, y);
     r.top.forEach((d, i) => {
       if (!d) return;
-      const [u, v] = roofTopPos(i), s = decoScale(d.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z - ROOF_H * z;
+      const [u, v] = roofTopSpot(x, y, i, d), s = decoScale(d.b) * 0.9, qx = p.x + (u - v) * TW / 2 * z, qy = p.y + (u + v) * TH / 2 * z - ROOF_H * z;
       if (Math.abs(sx - qx) <= 9 * z * s && sy <= qy + 4 * z * s && sy >= qy - 40 * z * s) cand.push({ x, y, slot: i, d: x + y + (u + v) * 0.1 });
     });
   }
@@ -837,9 +872,10 @@ function removeRoofTop(x, y, slot) {
 }
 // Steinarkaden in eine andere Form? Nicht, solange oben Deko steht oder darunter eine Dachtreppe (Nutzer: „verschwindet ALLES darauf –
 // das sollte gesperrt sein“). keys: die Felder, die umgestellt werden sollen
-function roofFormLock(keys) {
+function roofFormLock(keys, toForm = null) {
   for (const k of keys) {
     const r = state.roofs.get(k);
+    if (r && toForm != null) { const tl = tallUnder(...keyXY(k), toForm); if (tl) return `Darunter steht etwas zu Hohes (${ITEMS[tl.b].name}) – erst wegräumen`; }
     if (!r || roofForm(r) !== 'arkaden') continue;
     if (roofTopsOf(r).some(Boolean)) return 'Auf dem Dach steht Deko – erst wegräumen, dann die Form ändern';
     const [x, y] = keyXY(k), a = COVER.get(k) || k, t = state.tiles.get(a);
@@ -864,7 +900,7 @@ function drawRoofTops(x, y, px, py, z, now) {
   for (const i of SLOTS_ALL) {
     const d = i < 8 && r.top[i];
     if (!d) continue;
-    const [u, v] = roofTopPos(i);
+    const [u, v] = roofTopSpot(x, y, i, d);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
     drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, sc, ROOF_TOP_SLOT0 + i, d.col || 0, d.form || 0);
@@ -1027,7 +1063,7 @@ function rfSpotOk(a, b) {
     let A = c.areas.get(r.form || 0);
     if (!A) { A = roofArea(roofCov(r)); c.areas.set(r.form || 0, A); }
     ok = A.sub(roofSubOf(u), roofSubOf(v)) && A.dist(u, v) >= 0.16 && !inHole(roofHoles(x, y), u, v, 0.1)
-      && !roofTopsOf(r).some((d, i) => d && i < 8 && d.b !== 'bank' && Math.hypot(x + roofTopPos(i)[0] - u, y + roofTopPos(i)[1] - v) < 0.14);
+      && !roofTopsOf(r).some((d, i) => d && i < 8 && d.b !== 'bank' && Math.hypot(x + roofTopSpot(x, y, i, d)[0] - u, y + roofTopSpot(x, y, i, d)[1] - v) < 0.14);
   }
   c.spots.set(key, ok);
   return ok;
@@ -1079,7 +1115,7 @@ function rfWalkIn(s) {
 // Bank oben auf Feld (x, y) nahe am Rasterpunkt: Platz zum Sitzen
 function rfBench(a, b) {
   const x = Math.round(a / 3), y = Math.round(b / 3), r = roofAt(x, y);
-  for (const [i, d] of roofTopsOf(r).entries()) if (d && i < 8 && d.b === 'bank') { const [u, v] = roofTopPos(i); if (Math.hypot(x + u - a / 3, y + v - b / 3) < 0.25) return [x + u, y + v]; }
+  for (const [i, d] of roofTopsOf(r).entries()) if (d && i < 8 && d.b === 'bank') { const [u, v] = roofTopSpot(x, y, i, d); if (Math.hypot(x + u - a / 3, y + v - b / 3) < 0.25) return [x + u, y + v]; }
   return null;
 }
 function stepRoofers(dt) {
