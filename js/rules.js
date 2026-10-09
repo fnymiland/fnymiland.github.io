@@ -1242,7 +1242,8 @@ function removeEdge(k) {
 // wird mitgezeichnet (pathAt, pathArms, drawFlat) und kommt beim Abreißen/Wegtragen zurück
 // Block 58: jede (große) Deko darf auf Wege, auch über mehrere Felder – der Weg bleibt darunter (Ankerfeld t.weg, die
 // übrigen Felder t.wegs['dx,dy']). Gebäude dagegen ersetzen den Weg (Taler zurück, Rückgängig holt ihn wieder).
-const plazaOk = b => !!STANDS[b] || (ITEMS[b].cat === 'deko' && !ITEMS[b].small && !ITEMS[b].edge && !ITEMS[b].paint && !ITEMS[b].old);
+// U-Bahn-Station (Nutzer, 09.10.2026: „auf einem Platz ist Wiese drunter“): der Weg bleibt darunter wie bei Ständen und Deko
+const plazaOk = b => !!STANDS[b] || b === 'ubahn' || (ITEMS[b].cat === 'deko' && !ITEMS[b].small && !ITEMS[b].edge && !ITEMS[b].paint && !ITEMS[b].old);
 const PLAZA_OK = { has: plazaOk };                                     // (alter Name)
 const plainWeg = k => { const t = state.tiles.get(k); return !!t && t.b === 'weg' && !t.cross && !t.bridge; };   // Brücke: kein Platz für Stände/Gebäude
 const plazaSpot = (b, x, y) => plazaOk(b) && plainWeg(x + ',' + y);
@@ -1515,7 +1516,7 @@ function smallError(b, x, y, slot, opts = {}) {
     if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas – die Mitte ist zu eng';
   }
   if (isSide(slot) && decosAt(k) && decosAt(k)[CSLOT]) return 'In der Mitte steht schon etwas';
-  if (isSide(slot) && t && wegUnder(t) == null && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
+  if (isSide(slot) && t && (wegUnder(t) == null || t.b === 'ubahn') && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
   if (decosAt(k) && decosAt(k)[slot]) {
     const ds = decosAt(k);
     return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
@@ -1972,7 +1973,7 @@ function tunnelError(x, y, noCost) {
 }
 // Überdachung (Block 138): auf eigenem Land – über Wegen, Wiese, Parks, Ständen und Deko (Nutzer: „nicht zwingend Weg darunter“);
 // nicht über Wasser, Gebäuden, Gleisen, Brücken. Liegt schon eine, wird sie umgestaltet (gleiche Form und Farbe: nichts zu tun)
-const roofOver = t => !t || t.b === 'weg' || wegUnder(t) != null || (ITEMS[t.b] && ITEMS[t.b].cat === 'deko');
+const roofOver = t => !t || t.b === 'weg' || (wegUnder(t) != null && t.b !== 'ubahn') || (ITEMS[t.b] && ITEMS[t.b].cat === 'deko');
 const roofSame = (x, y) => { const r = roofAt(x, y), n = decoLookNew('dach'); return !!r && (r.form || 0) === (n.form || 0) && (r.col || 0) === (n.col || 0); };
 function roofError(x, y, noCost) {
   if (!ownedTile(x, y)) return notMine(x, y);

@@ -283,3 +283,18 @@ describe('Tunnel abreißen (Nutzer: „nicht mehrfach löschen, auch nicht in de
   });
 });
 
+
+// Nutzer, 09.10.2026: „man kann keinen Weg als Untergrund machen – auf einem Platz ist Wiese drunter“
+describe('U-Bahn-Station auf einem Weg', () => {
+  it('der Weg bleibt darunter (wie bei Ständen); nachträglich Weg darunter legen geht auch; kein Dach drüber, keine Deko an die Seiten', () => {
+    game("for (let x = 8; x <= 10; x++) state.tiles.set(x + ',8', { b: 'weg', lvl: 1, style: 'kopf' }); recalc(); build('tunnel', 9, 8, true)");
+    expect(game("build('ubahn', 9, 8, true)")).toBe(true);
+    expect(game("[bAt(9, 8), wegUnder(state.tiles.get('9,8'))]")).toEqual(['ubahn', 'kopf']);
+    game("build('tunnel', 12, 12, true); build('ubahn', 12, 12, true)");
+    expect(game("wegUnder(state.tiles.get('12,12'))")).toBe(null);
+    expect(game("build('weg', 12, 12, true)")).toBe(true);                       // Weg unter die Station legen
+    expect(game("[bAt(12, 12), wegUnder(state.tiles.get('12,12'))]")).toEqual(['ubahn', game("currentStyle('weg')")]);
+    expect(game("roofError(9, 8, true)")).toBeTruthy();
+    expect(game("smallError('blumentopf', 9, 8, 5, { noCost: true })")).toBe('Auf Gebäudefeldern nur an die Ecken');
+  });
+});

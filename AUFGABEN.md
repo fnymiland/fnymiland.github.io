@@ -2291,3 +2291,10 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
 - [x] Tunnel-Werkzeug mit Schalter „+ Graben / − Entfernen“ (Nutzer: „damit man nicht die halbe Stadt umbauen muss“): Linie ziehen
       bzw. antippen entfernt nur den Tunnel, oben bleibt alles stehen, Taler voll zurück; unter einer U-Bahn-Station nicht.
       `tunnelErase` (gilt, solange der Tunnel in der Hand ist), `scanTunnelErase`, `removeTunnel`. Test: tunnel-entfernen
+
+## Kleinigkeiten U-Bahn-Station (Nutzer, 09.10.2026)
+- [x] Weg als Untergrund: Station auf einem Weg/Platz lässt den Weg liegen (`plazaOk` wie Stände), Weg auch nachträglich darunter;
+      Sockel nur ohne Weg. Seitenmitten bleiben gesperrt, kein Dach drüber (Mast). Test: ubahn
+- [x] Treppe mit Mast: Rückwand zwischen den Seitenwänden (Ecken bündig, vorher überlappten sie hinten)
+- [x] Mast „überdimensioniert, steht drauf“: Entwürfe tools/ubahn-mast.js (A heute, B Mauerecke, C vorn, D ohne Mast) – Nutzer wählte
+      „B, aber mittig wie D“: kleiner Mast (17 hoch, Schild 7) mittig aus der Rückwand. Pavillon/Häuschen unverändert

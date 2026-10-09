@@ -185,7 +185,7 @@ function drawUbahn(cx, cy, z, t) {
   const L = (u, v) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const S = (a, b, up = 0) => { const p = L(du * a - dv * b, dv * a + du * b); return [p[0], p[1] - up * z]; };
   const form = lookForm('ubahn', t);
-  poly([S(-0.48, -0.48), S(0.48, -0.48), S(0.48, 0.48), S(-0.48, 0.48)], C('#d9d2c4'));      // gepflasterter Sockel
+  if (!t || wegUnder(t) == null) poly([S(-0.48, -0.48), S(0.48, -0.48), S(0.48, 0.48), S(-0.48, 0.48)], C('#d9d2c4'));   // gepflasterter Sockel (auf einem Weg: der Weg)
   const stairs = (a0, a1, w) => {
     poly([S(a0, -w), S(a1, -w), S(a1, w), S(a0, w)], C('#3a332e'));
     for (let i = 1; i <= 6; i++) { const a = a0 + (a1 - a0) * i / 7; portalLine([S(a, -w, -i), S(a, w, -i)], 'rgba(220,210,195,0.55)', 0.8, z); }
@@ -212,10 +212,10 @@ function drawUbahn(cx, cy, z, t) {
     uSign(S(0, 0, 26), 10, z);
   } else {                                                              // Treppe mit Mast
     stairs(-0.36, 0.38, 0.24);
-    pbBox(S, du, dv, -0.44, -0.36, -0.32, 0.32, 0, 6, '#cfc6b4', '#e3dccd', z, false);
+    pbBox(S, du, dv, -0.44, -0.36, -0.24, 0.24, 0, 6, '#cfc6b4', '#e3dccd', z, false);   // Rückwand zwischen den Seitenwänden – Ecken bündig (Nutzer)
     for (const sg of [-1, 1]) pbBox(S, du, dv, -0.44, 0.38, sg > 0 ? 0.24 : -0.32, sg > 0 ? 0.32 : -0.24, 0, 6, '#cfc6b4', '#e3dccd', z, false);
-    pbBox(S, du, dv, -0.42, -0.36, -0.44, -0.36, 0, 30, '#5b6470', '#6c7682', z, false);
-    uSign(S(-0.39, -0.4, 34), 11, z);
+    pbBox(S, du, dv, -0.43, -0.37, -0.03, 0.03, 6, 17, '#5b6470', '#6c7682', z, false);   // kleiner Mast mittig aus der Rückwand (Nutzer wählte „B, mittig“;
+    uSign(S(-0.4, 0, 20), 7, z);                                                          // vorher 30 hoch neben der Ecke – „überdimensioniert“)
   }
 }
 // Geist des Tunnels beim Bauen: gestrichelte Raute
