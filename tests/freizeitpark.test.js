@@ -267,7 +267,7 @@ describe('Station, Looping, Randlinien (Block 60f)', () => {
   });
 
   it('Randlinien von Park und Freizeitpark lassen sich im Menü ausblenden (gespeichert)', () => {
-    game('showMenu()');
+    game('showSettings()');
     game("document.getElementById('m-borders').click()");
     expect(game('state.noBorders')).toBe(true);
     expect(game('parseSave(JSON.parse(JSON.stringify(serialize()))).noBorders')).toBe(true);

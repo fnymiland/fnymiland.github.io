@@ -35,9 +35,9 @@ describe('Straßenlaternen (Block 132)', () => {
 
 describe('Ballons & Zeppelin abschaltbar (Nutzer, 08.10.2026)', () => {
   it('Schalter im Menü (nur mit Ballon/Zeppelin), aus = nichts am Himmel, gilt je Gerät', () => {
-    game("closeModal(); state.inventions = new Set(); showMenu()");
+    game("closeModal(); state.inventions = new Set(); showSettings()");
     expect(game("!!document.getElementById('m-sky')")).toBe(false);
-    game("closeModal(); state.inventions = new Set(['ballon', 'zeppelin']); setSkyShow(true); showMenu()");
+    game("closeModal(); state.inventions = new Set(['ballon', 'zeppelin']); setSkyShow(true); showSettings()");
     const drawn = () => game("(() => { let n = 0; const b = drawBalloon, zz = drawZeppelin; drawBalloon = () => { n++; }; drawZeppelin = () => { n++; }; try { drawSky(1e6, 1); } finally { drawBalloon = b; drawZeppelin = zz; } return n; })()");
     expect(drawn()).toBe(5);
     game("document.getElementById('m-sky').click()");

@@ -134,7 +134,7 @@ describe('Unlesbarer Stand und Neue Insel (84a)', () => {
   });
 
   it('„Neue Insel beginnen“ fragt in einem eigenen Fenster – zweimal schnell tippen löscht nichts', () => {
-    game('state.money = 777777; showMenu()');
+    game('state.money = 777777; showSaveMenu()');
     game("document.getElementById('m-reset').click()");
     expect(game("!!document.getElementById('m-reset')")).toBe(false);          // anderes Fenster, anderer Knopf
     expect(game('state.money')).toBe(777777);

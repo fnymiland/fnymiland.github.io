@@ -13,7 +13,7 @@ let PHONE = false;
 
 function resize() {
   const dprWas = DPR;
-  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  DPR = Math.min(window.devicePixelRatio || 1, 2) * gfxDprMul();          // ⚙️ Schärfe „halb“ (settings.js)
   // andere Pixeldichte (Browser-Zoom, anderer Bildschirm): Bildchen und Boden passen nicht mehr (Block 124)
   if (dprWas && DPR !== dprWas && typeof resetDrawCaches === 'function') resetDrawCaches();
   W = window.innerWidth; H = window.innerHeight;

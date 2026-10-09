@@ -362,7 +362,7 @@ function drawWalker(w, z, now) {
     ellipse(x + 2.9 * z, hy + 1.4 * z, 1 * z, 0.6 * z, 'rgba(255,120,120,0.45)');
   }
   } finally { g.restore(); }
-  if (w.label) {                                                         // Besucher (Block 96): Namensschild über dem Kopf – in voller Größe
+  if (w.label && GFX.labels) {                                           // Besucher (Block 96): Namensschild über dem Kopf – in voller Größe (⚙️ abschaltbar)
     g.font = `800 ${Math.max(9, 5 * z)}px Nunito, system-ui, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const tw = g.measureText(w.label).width + 8 * z, ly = footY + (hy - footY) * S - labelOff(w) * z * S;   // über Hut und Ballon
     g.beginPath(); g.roundRect(x - tw / 2, ly - 4 * z, tw, 8 * z, 4 * z); g.fillStyle = 'rgba(255,250,240,0.92)'; g.fill();

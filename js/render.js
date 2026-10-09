@@ -142,6 +142,7 @@ function drawGroundParts(want, at, z) {
 }
 // alle Schatten als eine Fläche (Überlappungen werden nicht dunkler); want(anker) filtert
 function drawShadows(want) {
+  if (!GFX.shadows) return;                                             // ⚙️ Schatten aus
   g.beginPath();
   for (const [k, t] of state.tiles) {
     const a = keyXY(k);
@@ -1297,7 +1298,7 @@ function render(now) {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
-  night = nightAt();                                                     // Spieluhr (Block 101)
+  night = GFX.day === 'tag' ? 0 : nightAt();                             // Spieluhr (Block 101); ⚙️ „immer Tag“: nur das Bild
   glows.length = 0; glowCells.clear(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
@@ -1440,7 +1441,8 @@ function render(now) {
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
-  for (const m of walkers.concat(strollers, paraders, typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), critters.filter(c => c.id !== 'gluehwurm'))) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
+  const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders) : walkers.concat(strollers, paraders).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
+  for (const m of people.concat(typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), GFX.animals ? critters.filter(c => c.id !== 'gluehwurm') : [])) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
     if (m.train) {                                                         // Tunnel (Block 136): im Berg unsichtbar, am Portal abgeschnitten
@@ -1641,19 +1643,19 @@ function render(now) {
     MESS.feld += a * (ml1 - ml0 - MESS.feld); MESS.gl += a * (ml2 - ml1 - MESS.gl); MESS.up += a * (GL.upMs - MESS.up); MESS.vor += a * (ml0 - mt1 - MESS.vor);
     MESS.movers = drawnMovers.size; MESS.la = LA.used | 0; }
 
-  drawFireworks(now, z);                  // über der Nacht, damit es leuchtet
-  for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht
+  if (GFX.sparkle) drawFireworks(now, z);  // über der Nacht, damit es leuchtet (⚙️ Glitzer & Feuerwerk)
+  if (GFX.animals) for (const c of critters) if (c.id === 'gluehwurm') drawCritter(c, z, now);   // leuchten über der Nacht
 
   drawTunnelView(z);                                                       // Tunnel in der Bauansicht (Block 136), über der Nacht
   // Symbole (✨ bereit, 💭 fast geschafft, 🐌 weit weg) über der Nacht, damit man sie immer sieht
   for (const s of fallenStars) drawFallenStar(s, z, now);
-  if (!(SHOWCASE && SHOWCASE.quiet)) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨
+  if (!(SHOWCASE && SHOWCASE.quiet) && GFX.icons) for (const [px, py, icon] of icons) drawStatusIcon(px, py, z, icon, now);   // Testwelt „farben“: ohne 🐌 ✨; ⚙️ Symbole aus
   drawShowcaseLabels(z);                                                   // Testwelt „tiere“: Namensschilder
   loadingUpdate();                                                       // Ladekreisel: Start, Besuch, „Insel wird gezeichnet …“ (Block 142)
 
   // 6) Schilder: Sehenswürdigkeiten und „Zu verkaufen“ (antippbar: pillHits)
   pillHits.length = 0;
-  for (const [x, y, type] of labels) {
+  for (const [x, y, type] of GFX.labels ? labels : []) {                // ⚙️ Namensschilder aus: Sehenswürdigkeiten ohne Schild (antippbar bleiben sie)
     const [w, h] = sizeOf('lm', 0), p = toScreen(x + (w - 1) / 2, y + (h - 1) / 2), L = LANDMARKS[type], st = lmStage(type);
     const ready = ownedTile(x, y) && st < 3 && !restoreInfo(type).err;
     const lanterns = '🏮'.repeat(st) + '·'.repeat(3 - st);
@@ -1685,7 +1687,7 @@ function render(now) {
     pillHits.push({ ...r, open: (sx, sy) => openIsle(i.id, sx, sy) });
   }
 
-  drawSparkles(now, z);
+  if (GFX.sparkle) drawSparkles(now, z); else sparkles.length = 0;       // ⚙️ Glitzer aus
 
   drawBubble(z);                                                          // Sprechblase (Block 55)
 

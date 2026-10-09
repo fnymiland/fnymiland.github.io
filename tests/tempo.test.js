@@ -99,7 +99,7 @@ describe('Bildchen weit weg', () => {
   it('Einstellung je Gerät (☰ → Grafik): „dreht sich“ zeichnet Windräder weit weg wieder live; Grafikkarte als Schalter', () => {
     game("state.tiles.set('10,10', { b: 'windrad', lvl: 1 }); recalc()");
     expect(game('stillFar')).toBe(true);                                    // Standard: still
-    game('showMenu()');
+    game('showSettings()');
     expect(game("document.getElementById('m-still').textContent")).toMatch(/steht still/);
     game("document.getElementById('m-still').click()");
     expect(game("localStorage.getItem('kachelhausen_still')")).toBe('0');
@@ -108,10 +108,10 @@ describe('Bildchen weit weg', () => {
     expect(game('[...objSprites.keys()].some(k => k.includes("|windrad|"))')).toBe(false);
     game("document.getElementById('m-still').click()");
     expect(game('stillFar')).toBe(true);
-    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: an$/);      // Standard an (Block 144)
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/an$/);      // Standard an (Block 144)
     game("document.getElementById('m-gl').click()");
     expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('0');
-    expect(game("document.getElementById('m-gl').textContent")).toMatch(/: aus$/);
+    expect(game("document.getElementById('m-gl').textContent")).toMatch(/aus$/);
     game("document.getElementById('m-gl').click(); closeModal()");
     expect(game("localStorage.getItem('kachelhausen_gl')")).toBe('1');
   });

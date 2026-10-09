@@ -5,7 +5,7 @@ beforeAll(() => loadGame());
 describe('Messlauf (Block 149)', () => {
   it('läuft alle Schritte ab, zählt Ruckler, stellt die Kamera zurück und zeigt die Tabelle', () => {
     game('startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; resize(); cam.x = 123; cam.y = 45; cam.z = 0.9');
-    game('showMenu()');
+    game('showSettings()');
     expect(game("!!document.getElementById('m-bench')")).toBe(true);
     game("document.getElementById('m-bench').click()");
     expect(game('!!BENCH && !$("bench-badge").hidden')).toBe(true);

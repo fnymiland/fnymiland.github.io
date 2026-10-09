@@ -57,17 +57,17 @@ describe('Minimap (Block 135)', () => {
   it('im Menü ausschalten und wieder einschalten – kein Knopf an der Karte, je Gerät gemerkt (Nutzer, 09.10.2026)', () => {
     game('miniTick(1e6)');
     expect(game("document.querySelectorAll('#minimap button').length")).toBe(0);
-    game('showMenu()');
+    game('showSettings()');
     expect(game("document.getElementById('m-mini').textContent")).toMatch(/Minimap ausschalten/);
     game("document.getElementById('m-mini').click(); miniTick(1e6)");
     expect(game('localStorage.getItem(MINI_KEY)')).toBe('zu');
     expect(game("document.getElementById('m-mini').textContent")).toMatch(/Minimap einschalten/);
     game('closeModal(); miniTick(1e6)');
     expect(game("document.getElementById('minimap').hidden")).toBe(true);           // aus: bleibt weg
-    game("showMenu(); document.getElementById('m-mini').click(); closeModal(); miniTick(1e6)");
+    game("showSettings(); document.getElementById('m-mini').click(); closeModal(); miniTick(1e6)");
     expect(game('localStorage.getItem(MINI_KEY)')).toBe('auf');
     expect(game("document.getElementById('minimap').hidden")).toBe(false);
-    game('PHONE = true; showMenu()');
+    game('PHONE = true; showSettings()');
     expect(game("!!document.getElementById('m-mini')")).toBe(false);                 // Handy/iPad: gibt es nicht, also kein Schalter
     game('closeModal(); PHONE = false');
   });

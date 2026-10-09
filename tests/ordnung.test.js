@@ -39,10 +39,14 @@ describe('Aufgeräumt (Block 98)', () => {
     await game("openYou('freunde')");                                                     // alter Weg leitet weiter
     expect(ids('[data-net]')).toEqual(['freunde', 'online']);
   });
-  it('☰ nur noch Hilfe, Neues, Einstellungen und Spielstand', () => {
+  it('☰ nur noch Hilfe, Neues, Einstellungen und Spielstand (Einstellungen und Spielstand als eigene Fenster, 09.10.2026)', () => {
     game('showMenu()');
-    for (const id of ['m-help', 'm-news', 'm-sound', 'm-fps', 'm-export', 'm-import', 'm-reset']) expect(game(`!!document.getElementById('${id}')`), id).toBe(true);
-    for (const id of ['m-tips', 'm-lex', 'm-diary', 'm-achv', 'm-album', 'm-friends', 'm-cloud']) expect(game(`!!document.getElementById('${id}')`), id).toBe(false);
+    for (const id of ['m-help', 'm-news', 'm-home', 'm-settings', 'm-savegame']) expect(game(`!!document.getElementById('${id}')`), id).toBe(true);
+    for (const id of ['m-tips', 'm-lex', 'm-diary', 'm-achv', 'm-album', 'm-friends', 'm-cloud', 'm-sound', 'm-fps', 'm-export']) expect(game(`!!document.getElementById('${id}')`), id).toBe(false);
+    game("document.getElementById('m-settings').click()");
+    for (const id of ['m-sound', 'm-fps', 'm-sharp', 'm-day', 'm-people', 'm-back']) expect(game(`!!document.getElementById('${id}')`), id).toBe(true);
+    game("document.getElementById('m-back').click(); document.getElementById('m-savegame').click()");
+    for (const id of ['m-export', 'm-import', 'm-reset', 'm-back']) expect(game(`!!document.getElementById('${id}')`), id).toBe(true);
   });
   it('Hilfe-Buch: Anleitung, Tipps, Nachschlagen; Suche oben springt nach „Nachschlagen“', () => {
     game("openHelp('tipps')");

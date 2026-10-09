@@ -2093,3 +2093,10 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Je Gerät gemerkt (`kachelhausen_menuorder`, `orderedGroups`/`moveGroup`); unbekannte IDs fallen weg, neue Gruppen hängen
       hinten an, kaputter Wert = Standard. Zuklappen beendet das Anordnen. Zahlentasten folgen der Reihenfolge. Test: menu.
 
+
+## Block 154: Einstellungen als eigenes Fenster, neue Grafik-Schalter (Nutzer, 09.10.2026)
+- [x] ☰ gekürzt: Hilfe, Das ist neu, Rathaus, ⚙️ Einstellungen ›, 💾 Spielstand › (sichern/laden/neu, `showSaveMenu`), Weiterspielen.
+- [x] ⚙️ Einstellungen (js/settings.js): Schnellwahl ✨ Schön · ⚖️ Ausgewogen · 🚀 Schnell (nur Leistung; markiert, was passt),
+      Zeilen „Name … Wert“ in zwei Spalten (Handy eine). Neu: Tageszeit (echte Uhr / immer Tag), Schatten, Symbole über Häusern,
+      Namensschilder (Sehenswürdigkeiten + Figuren; „entdecken“-Schilder bleiben), Glitzer & Feuerwerk, Schärfe (voll/halb =
+      DPR × 0,5), Einwohner (viele/wenige/keine, nur Bild), Tiere. Standard wie bisher = „Ausgewogen“. Test: einstellungen

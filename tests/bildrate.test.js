@@ -27,7 +27,7 @@ describe('Bildrate wählbar (Block 79)', () => {
     expect(fps('frameInterval(10000 + 121000)')).toBe(60);
     game('document.hasFocus = () => false');
     expect(fps('frameInterval(15000)')).toBe(30);
-    game('document.hasFocus = () => true; showMenu()');
+    game('document.hasFocus = () => true; showSettings()');
     expect(game("document.getElementById('m-fps').textContent")).toMatch(/flüssig/);
     game("document.getElementById('m-fps').click()");
     expect(game('fpsMode')).toBe('sparsam');
