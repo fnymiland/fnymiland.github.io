@@ -1633,6 +1633,7 @@ function placeRot(b, x, y) {
       return f.every(p => p === back ? terrainAt(...p) !== 'water' : terrainAt(...p) === 'water'); });
     return ok == null ? buildRot : ok;
   }
+  if (b === 'aufgang') return stairRot(x, y);                          // Freitreppe: von selbst zum Steindach (Block 138d)
   if (b === 'tunneleinfahrt') {                                         // zeigt von selbst mit dem hinteren Ende zum Tunnel (Block 136)
     const ok = [buildRot, 0, 1, 2, 3].find(rr => { const { B, d } = einTiles(x, y, rr); return tunnelAt(B[0] + d[0], B[1] + d[1]); });
     return ok == null ? buildRot : ok;
@@ -2526,6 +2527,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
+  if (b === 'aufgang') { const e = stairError(x, y, r); if (e) return e; }                   // Freitreppe an Steinarkaden (Block 138d)
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
     return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
