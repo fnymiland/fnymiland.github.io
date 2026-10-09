@@ -961,3 +961,15 @@ body.visiting #net-btn { display: none !important; }
 @media (max-width: 740px) { #cats .cat:not(.active) .tx { display: none; } }
 @media (max-width: 600px) { #cats .quick { width: 29px; font-size: 16px; } #cats .cat { padding: 0 6px; } #cats .cat .ic { font-size: 16px; } }   /* Handy: alles in 375 px */
 
+
+/* Minimap am PC (Block 135): unten rechts, einklappbar */
+#minimap { position: fixed; right: 12px; bottom: 64px; z-index: 6; padding: 6px; border-radius: 14px; background: var(--cream);
+  box-shadow: 0 3px 0 var(--shadow), 0 6px 18px rgba(0,0,0,.12); }
+#minimap[hidden] { display: none; }
+#minimap canvas { display: block; cursor: pointer; border-radius: 8px; }
+#minimap .mini-x { position: absolute; top: 2px; right: 2px; width: 24px; height: 24px; border: 0; border-radius: 50%;
+  background: var(--cream); color: var(--brown); font: 700 16px/1 system-ui, sans-serif; cursor: pointer; box-shadow: 0 1px 0 var(--shadow); }
+#minimap .mini-open { display: none; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; font-size: 22px; cursor: pointer; }
+#minimap.zu { padding: 2px; }
+#minimap.zu canvas, #minimap.zu .mini-x { display: none; }
+#minimap.zu .mini-open { display: block; }

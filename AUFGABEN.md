@@ -1598,6 +1598,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Härtetest im Spielstand „Bauland“: Straßen, Schulen, Kraftwerke, Läden, Kultur kopiert/abgesetzt/rückgängig – keine Fehler.
 
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
+- [x] Umgesetzt (09.10.2026, js/minimap.js): unten rechts die Welt schräg wie das Spiel (je Feld eine Raute), zugeschnitten auf das
+      Land + 5 Felder Meer; Wege beige, Gleise grau, Häuser rot, Gebäude braun, Kultur lila, Freizeitpark rosa, Wunder gold, Deko grün;
+      fremdes Land blasser. Sichtfeld als Rahmen, Klicken/Ziehen springt hin. Nur mit Maus und ab 900 px (`miniWanted`), versteckt
+      bei offenem Fenster/Katalog; „–“ klappt sie zu 🗺️ ein (je Gerät, `kachelhausen_minimap`). Neu gemalt nur bei Änderung, in
+      einer Pause (~17 ms in Fnymiland OG). Bild tools/vorschau/mini2.png. Test: minimap
 
 ## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn
 - [x] U-Bahn (Konzept mit Nutzer, 08.10.2026; fertig, live seit v825 – Einzelheiten 136i–o): **ein Netz mit der Eisenbahn**, kein eigenes System.

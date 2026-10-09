@@ -169,6 +169,7 @@ function frame(now) {
   if (BENCH) benchAfter(now, performance.now() - rt);
   if (MESS) messLine(performance.now() - rt);
   if (now - lastHud > 200) { updateHud(); lastHud = now; }
+  miniTick(now);                                           // Übersichtskarte am PC (Block 135)
 }
 // Messlauf (Block 149, ☰ → Grafik): fährt auf diesem Gerät Ruhe, Ziehen und Zoomen ab und misst die echten Bildabstände (mit
 // Grafikkarte) und die Rechenzeit – zum Vergleichen vor/nach einer Änderung und zwischen PC, Mac und iPad. Kamera danach zurück
