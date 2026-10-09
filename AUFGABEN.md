@@ -1808,6 +1808,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „wenn ich eine Stütze entferne, geht das ganze Dach weg“ → der Dach-Treffer (`roofPick`) nahm alles unter dem Dach.
       Jetzt `pillarAt` zuerst (Zeiger auf dem Pfosten zwischen Fuß und Dach): 🧹 entfernt nur die Stütze, 👆 öffnet ihr Fenster;
       daneben gilt weiter das Dach. Test: dach
+      Nutzer: „erst alle vier Säulen hinstellen, dann das Dach – die Säulen werden nicht mit rangezogen“ → Säulen auf Ecken der
+      Nachbarfelder lagen 0,16 (schräg 0,23) neben der Kante (Rückzug nur bis 0,16) und wurden zum Teil gar nicht gezeichnet (Dach
+      suchte Stützen nur auf Feld + 3 Nachbarn). Jetzt ROOF_SNAP 0,24 und Suche in allen 8 Nachbarn (`PILLAR_NEAR`). Test: dach.
+      Bild tools/vorschau/erst-saeulen4.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

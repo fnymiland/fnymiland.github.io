@@ -321,9 +321,12 @@ function roofPick(sx, sy) {
 }
 // Stützen werden mit dem hintersten Feld gezeichnet, das sie berühren – direkt vor dessen Dach (Nutzer: „das Dach liegt unter den
 // Pfeilern“: eine Stütze, die zum Feld davor gehört, kam sonst nach dem Dach des Felds dahinter). Ohne Dächer zeichnet drawSmall.
+// Stützen-Speicherfelder, die eine Stütze in Feld (x, y) haben können: das Feld und alle acht Nachbarn (Ecken der Nachbarfelder rücken
+// ans Dach – Säulen erst, Dach danach, Nutzer)
+const PILLAR_NEAR = (x, y) => [[x - 1, y - 1], [x, y - 1], [x + 1, y - 1], [x - 1, y], [x, y], [x + 1, y], [x - 1, y + 1], [x, y + 1], [x + 1, y + 1]];
 const pillarOwner = (pu, pv) => [Math.round(pu - 1e-6), Math.round(pv - 1e-6)];
 function drawPillarsOf(x, y, px, py, z, now) {
-  for (const [tx, ty] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) {
+  for (const [tx, ty] of PILLAR_NEAR(x, y)) {
     const ds = state.decos.get(tx + ',' + ty);
     if (!ds) continue;
     ds.forEach((d, i) => {
@@ -337,7 +340,7 @@ function drawPillarsOf(x, y, px, py, z, now) {
     });
   }
 }
-const hasPillarNear = (x, y) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([tx, ty]) => { const ds = state.decos.get(tx + ',' + ty); return !!ds && ds.some(d => d && d.b === 'stuetze'); });
+const hasPillarNear = (x, y) => PILLAR_NEAR(x, y).some(([tx, ty]) => { const ds = state.decos.get(tx + ',' + ty); return !!ds && ds.some(d => d && d.b === 'stuetze'); });
 // Antippen einer Stütze (👆, 🧹): die Stütze geht vor dem Dach darüber (Nutzer: „wenn ich eine Stütze entferne, geht das ganze Dach
 // weg“ – der Dach-Treffer nahm sonst alles unter dem Dach). Getroffen: Zeiger auf dem Pfosten zwischen Fuß und Dach, ± ein paar Punkte
 function pillarAt(sx, sy) {
@@ -361,7 +364,7 @@ function roofDirty(x, y) {
 // Stütze an die Dachkante (Nutzer: „man kann die Pfeiler auf die Ecken stellen“ – der Eckpunkt zwischen vier Feldern liegt bei 0,5,
 // die Kante bei RW = 0,42): steht eine Stütze bis ROOF_SNAP neben einem Dach, rückt sie auf den nächsten Punkt seiner Fläche.
 // Mitten unter einem breiten Dach bleibt sie, wo sie ist. Weltkoordinaten rein und raus.
-const ROOF_SNAP = 0.16;
+const ROOF_SNAP = 0.24;   // reicht bis zu Ecken und Seitenmitten der Nachbarfelder (0,16 bzw. schräg 0,23) – Säulen erst, Dach danach (Nutzer)
 function pillarSnap(pu, pv) {
   if (!state.roofs || !state.roofs.size) return [pu, pv];
   let best = null, bd = ROOF_SNAP;

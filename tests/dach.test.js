@@ -134,6 +134,9 @@ describe('Überdachungen (Block 138)', () => {
     expect(game("pillarPos(5, 5, VSLOT, state.decos.get('5,5')[VSLOT]).map(v => +v.toFixed(2))")).toEqual([4.5, 4.58]);
     expect(game("pillarPos(5, 6, VSLOT, state.decos.get('5,6')[VSLOT]).map(v => +v.toFixed(2))")).toEqual([4.5, 5.42]);
     expect(game('pillarSnap(4.5, 7.5)')).toEqual([4.5, 7.5]);                         // weit weg vom Dach: bleibt
+    // erst Säulen, dann Dach (Nutzer): Ecken der Nachbarfelder (0,16 weg, schräg 0,23) rücken auch an die Dachkante
+    expect(game('pillarSnap(2.42, 4.42).map(v => +v.toFixed(2))')).toEqual([2.58, 4.58]);
+    expect(game('pillarSnap(2.42, 5).map(v => +v.toFixed(2))')).toEqual([2.58, 5]);
     for (let y = 8; y <= 9; y++) { way(row(8, 9, y)); roof(row(8, 9, y)); }
     expect(game('pillarSnap(8.5, 8.5)')).toEqual([8.5, 8.5]);                         // Mitte eines 2×2-Dachs: bleibt
   });
@@ -153,6 +156,12 @@ describe('Überdachungen (Block 138)', () => {
     expect(game('roofSig(3, 4, roofAt(3, 4))')).not.toBe(sig0);                       // Bildchen wird neu gemalt
     way(row(7, 9, 4)); roof(row(7, 9, 4));                                            // getrennte Fläche in derselben Reihe
     expect(beams(8, 4)).toEqual([]);                                                  // der Balken springt nicht über die Lücke
+  });
+
+  it('erst vier Säulen auf die Ecken der Nachbarfelder, dann das Dach: alle vier werden gezeichnet, an der Dachkante (Nutzer)', () => {
+    game("buildSmall('stuetze', 9, 9, 3); buildSmall('stuetze', 11, 9, 2); buildSmall('stuetze', 9, 11, 1); buildSmall('stuetze', 11, 11, 0); build('dach', 10, 10, true); recalc()");
+    const n = game("(() => { const o = drawSmallOne; let n = 0; drawSmallOne = (b, ...a) => { if (b === 'stuetze') n++; return o(b, ...a); }; try { cam = state.cam; cam.z = 2; const p = iso(10, 10); cam.x = p.x; cam.y = p.y; render(1e6); } finally { drawSmallOne = o; } return n; })()");
+    expect(n).toBe(4);
   });
 
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
