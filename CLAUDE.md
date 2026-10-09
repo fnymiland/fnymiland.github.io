@@ -116,7 +116,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     (wo Bewohner leben und einkaufen: Wohnen / Läden / Essen & Trinken / Markt / Kaufhäuser / Einrichtungen inkl. Schule, Post,
     Apotheke, Hotels / Verkehr inkl. Schiene, Bahnhöfe, Hafen, Steg) · 🏭 Herstellen (produziert: Taler / Rohstoffe / Veredeln /
     Strom) · 🎡 Freizeit (Kultur, Wunder inkl. Leuchtturm, Freizeitpark) · 🌸 Gestalten (formt die Welt: Grün inkl. Park / Platz /
-    Besonderes / Wege & Gelände). Nach dem echten Ort einsortieren, nicht nach der
+    Besonderes / Wege & Gelände / Anhöhen). Nach dem echten Ort einsortieren, nicht nach der
     Spielwirkung (die steht im Infofenster). Keine Erklär-
     Zeilen in der Leiste (Nutzer: selbsterklärend, stört). Neue Dinge nach der Regel einsortieren, nie nach dem Namen („Bäckerei“ = Herstellen).
     Ein Bereich klappt ein Feld (`#sheet`, `setSheet`) mit allen Gruppen als Überschriften auf (Block 153); jedes Ding in
@@ -187,6 +187,15 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Felds rechnet, zieht `hillLift` ab). Bildschirm → Feld nur über `pickFrac` (toTile, toVertex, edgeNear, slotAt), nie tileFrac
     (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError`; Fundament kann mehrere Ebenen, gebaut ist eine.
     Ohne Anhöhen muss alles exakt wie vorher laufen (früh aussteigen, wenn `state.hills.size` 0).
+    **Treppe** (157d, `huegeltreppe`): steht unten (Ebene 0) direkt vor der Wand, Stufen auf dem eigenen Feld bis zur Oberkante. Regeln über
+    `stairError`, Drehung nur über `stairRot` (placeRot, auch Vorschau/Verschieben; in einer gedrehten ✋-Gruppe dreht sie mit, `groupPlaced`), kein
+    Dach darüber (roofError und `groupErrors`), Treppen ringsum `stairsAround` – eine Anhöhe mit Treppe davor ist nicht abtragbar (lowerHill,
+    demolishInfo, ✋-Rechteck, ↶). Aussehen hängt an den Nachbarn (`stairLook`: Anhöhe = Wange, gleiche
+    Treppe = breit, sonst Keil) – als Bildchen in `hillSprites` ('s' + Feld). Antippen in der Höhe kennt die Stufen (`stairHeight` in pickFrac).
+    **Spaziergänger** (157e, js/hill-walkers.js): `w.up` = Höhe über dem Feld, auf dem gezeichnet wird (oben 0, Treppe = Stufe am gezeichneten
+    Fußpunkt `hwFootD`, Boden null); Kopf/Antippen über `walkerHead` (+ `hillLift`). Wer Listen von Bewohnern prüft (Fenster, Antippen,
+    Sprechblase), nimmt `hillWalkers` dazu wie `roofers`. Treppe weg oder kein Weg mehr zum Ausstieg (`hwRoute` false: Zaun, Deko): sie
+    verschwinden, nie in der Luft oder ewig oben. Tests mit Spaziergängern stellen die Spieluhr fest (`gameHour`) – nachts kommen halb so viele.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

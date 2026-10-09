@@ -2319,8 +2319,17 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Abtragen (✋ Auswahl → Abreißen, Fenster der Anhöhe)
 - [x] 157b Zeichnen: Block (Wände + Oberseite, als Bildchen), Inhalt der Felder angehoben, große Deko, Schatten, weit weg / GL
 - [x] 157c Antippen und Vorschau in der Höhe (Feld, Deko-Platz, Linien, Bau-Vorschau, Planen)
-- [ ] 157d Aufgang: Treppe am Fuß der Wand (drehbar)
-- [ ] 157e Spaziergänger: über die Treppe hinauf, oben bummeln, auf Bänke setzen, wieder hinunter
+- [x] 157d Aufgang: Treppe in die Anhöhe eingelassen (Nutzer; Entwurf tools/treppe-entwurf.js): Ding `huegeltreppe` unten vor der
+      Wand, dreht sich von selbst hinauf (`stairRot`), Stufen im Wegstil (Leiste wie beim Weg ohne Trittsteine/Wegform, Fenster für die
+      ganze breite Treppe), nebeneinander breit ohne Wangen, an der Kante ein Keil in der Wandart der Anhöhe. Anhöhe mit Treppe nicht
+      abtragbar (auch nicht per ↶). Menü: eigene Gruppe „⛰️ Anhöhen“ (Anhöhe + Treppe, wie die Überdachungen) – „Wege & Gelände“ hätte
+      sonst 11 Dinge; gemerkte eigene Anordnungen bekommen neue Gruppen hinter ihren Vorgänger (`orderedGroups`).
+      Leistungs-Wächter je Ding: `huegeltreppe` = 1 Zeichenbefehl – die Treppe ist ein fertiges Bildchen je Feld (`drawHillStair`,
+      `hillSprites` 's' + Feld, Neumalen im Zeitbudget wie die Anhöhe), gezeichnet wird nur das `drawImage`. Tests: huegeltreppe-regeln,
+      anhoehe-treppe
+- [x] 157e Spaziergänger (js/hill-walkers.js): kommen vom nahen Weg zum Fuß, steigen hinauf, bummeln oben (Raster ⅓ Feld, nicht an der
+      Kante, nicht durch Deko/Linien), setzen sich auf Bänke, gehen wieder hinunter und weg; je Anhöhe nach Größe, höchstens 16, nachts
+      halb so viele. Antippen → Bewohner-Fenster. Offen: Deko direkt am oberen Ende sperrt den Ausstieg (dann keine Leute, ohne Hinweis)
 - [~] 157f Rest: erledigt – Tiere nicht auf die Wand, Laternenlicht oben, Minimap, Hilfe; offen – Testwelt im Leistungs-Wächter,
       „Das ist neu“ (beim Push), Schatten von Dingen oben, Tunnel unter einer Anhöhe im 👁-Bild, zweite Ebene (pickFrac maxLv, Rand)
       Leistungs-Wächter je Ding: `anhoehe` Form 0–2 = 0 Zeichenbefehle – `drawObject` zeichnet für die Anhöhe nichts, Wand und

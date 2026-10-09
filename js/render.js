@@ -686,7 +686,7 @@ function moverLive(m, z, now, walker = false, lift = 0) {
 }
 function drawMover(m, z, now) {
   if (m.pbtrain) return drawParkCar(m, z, now);                            // Parkeisenbahn (Block 136)
-  if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) drawWalker(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
+  if (m.critter) drawCritter(m, z, now); else if (m.coaster) drawCoasterCar(m, z); else if (m.fur) (m.hillw ? drawHillWalker : drawWalker)(m, z, now); else if (m.train) drawTrainCar(m, z, now); else if (m.ship) drawShipMover(m, z, now); else if (m.fish) drawFishMover(m, z, now);
   else if (m.cargo) drawCargoMover(m, z, now); else if (m.boat) drawBoatMover(m, z, now); else drawCar(m, z);
 }
 // Brückenstück (Schiene, Wegbrücke) über einem Schiff noch einmal zeichnen (Block 107): Brücken gehören zum Boden und lägen
@@ -1536,7 +1536,8 @@ function render(now) {
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
   const ground = roofers.length ? roofers.filter(w => w.st === 'in' || w.st === 'out') : [];   // auf dem Weg zur Dachtreppe (Block 138d)
-  const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders, ground) : walkers.concat(strollers, paraders, ground).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
+  // Spaziergänger auf Anhöhen (Block 157d): am Boden, auf der Treppe und oben – je im Feld, auf dem sie stehen (oben hebt tileB an)
+  const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders, ground, hillWalkers) : walkers.concat(strollers, paraders, ground, hillWalkers).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
   for (const m of people.concat(typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), GFX.animals ? critters.filter(c => c.id !== 'gluehwurm') : [])) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
@@ -1612,7 +1613,7 @@ function render(now) {
         const oLift = HILLS ? hillLift(ax, ay) * z : 0;                    // Anhöhe (Block 157): große Deko steht ganz oben (gleiche Höhe)
         if (big) c.y -= oLift;
         const oGround = oLift && hasGroundPart(t);                         // flache Teile oben: mit dem Ding zeichnen (nicht im Boden-Bild)
-        const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht
+        const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'huegeltreppe' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht (Treppe in die Anhöhe: Gelände wie die Anhöhe, Block 157d)
         const drawIt = () => seeFaded(fadeIt, drawIt0);
         const drawIt0 = () => {
           if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)

@@ -406,7 +406,7 @@ function groupPlaced(it) {
   }
   const t = it.t, rot0 = t.rot || 0, cells = footprint(t.b, it.dx, it.dy, rot0, t).map(([x, y]) => grot(x, y));
   const ax = Math.min(...cells.map(c => c[0])), ay = Math.min(...cells.map(c => c[1]));
-  const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene', rot = turns ? (rot0 + r) & 3 : rot0;
+  const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene' || t.b === 'huegeltreppe', rot = turns ? (rot0 + r) & 3 : rot0;   // Treppe (157d): zeigt mit der Gruppe weiter hinauf
   const nt = { ...t, rot };
   if (t.wegs) { nt.wegs = {}; for (const [o, st] of Object.entries(t.wegs)) { const [ox, oy] = keyXY(o), [px, py] = grot(it.dx + ox, it.dy + oy); nt.wegs[(px - ax) + ',' + (py - ay)] = st; } }
   const fit = footprint(t.b, ax, ay, rot, nt).map(c => c.join()).sort().join(';') === cells.map(c => c.join()).sort().join(';');
@@ -441,6 +441,7 @@ function groupErrors(hx, hy) {
       else if (state.roofs.has(k)) err = 'Hier ist schon eine Überdachung';
       else if (hillAt(x, y)) err = 'Auf einer Anhöhe geht keine Überdachung';   // Anhöhe (Block 157), wie roofError
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
+      else if (ot && ot.b === 'huegeltreppe') err = 'Über einer Treppe geht keine Überdachung';   // Treppe in die Anhöhe (Block 157d), wie roofError
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
       else if (tallUnder(x, y, P.r.form || 0)) err = 'Darunter steht etwas zu Hohes';
@@ -820,7 +821,7 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
-  if (tool === 'look' && !plan && roofers.length) { const rw = walkerAt(sx, sy); if (rw && rw.roofer) { openWalkerInfo(rw); return; } }   // Leute auf dem Dach vor dem Dach (Block 138d)
+  if (tool === 'look' && !plan && (roofers.length || hillWalkers.length)) { const rw = walkerAt(sx, sy); if (rw && (rw.roofer || rw.hillw)) { openWalkerInfo(rw); return; } }   // Leute auf dem Dach vor dem Dach (Block 138d), auf Anhöhe und Treppe vor deren Feld (157d)
   const hh = !plan && (tool === 'look' || tool === 'abriss' || (tool === 'verschieben' && !moving)) && !roofTopHit(sx, sy) ? holeHit(sx, sy) : null;
   if (hh) {                                                        // in die Öffnung getippt: die Treppe darunter (Block 138d)
     if (tool === 'look') { openInfo(hh.x, hh.y); return; }
@@ -1101,6 +1102,7 @@ function undo() {
     if (footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
   }
   for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude und Wege
+    if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
     if (n !== 'hills' || b === undefined) continue;
     const o = objAt(...keyXY(k));
     if (o && !hillOk(o.b)) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }

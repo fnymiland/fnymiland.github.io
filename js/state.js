@@ -398,6 +398,7 @@ function adoptState(s) {
   if (other && typeof resetDrawCaches === 'function') resetDrawCaches();   // Bildchen und Boden der alten Welt weg (Block 124)
   walkers.length = 0; cars.length = 0;
   if (typeof roofers !== 'undefined') roofers.length = 0;   // Leute auf dem Dach gehören zum alten Stand (Block 138d)
+  if (typeof hillWalkers !== 'undefined') hillWalkers.length = 0;   // Spaziergänger auf Anhöhen ebenso (Block 157d)
   plan = null; moving = null;                      // Planung und Getragenes gehören zum alten Stand
   afterLoad();
   buildToolbar();

@@ -806,7 +806,8 @@ const PAINT_KEYS = ['wall', 'roof', 'win'];
 const paintOf = t => Object.fromEntries(PAINT_KEYS.filter(k => t[k] != null).map(k => [k, t[k]]));
 const samePaint = (a, b) => PAINT_KEYS.every(k => (a[k] != null ? a[k] : null) === (b[k] != null ? b[k] : null));
 // nur Wand/Dach/Fenster – Form und Farbe von Stadtschmuck/Gleisen prüft decoLookNew (sonst käme Ungekauftes mit, Block 109)
-const paintNewOf = b => state.paintNew[b] ? Object.fromEntries(Object.entries(state.paintNew[b]).filter(([k]) => PAINT_KEYS.includes(k))) : {};
+const paintNewOf = b => b === 'huegeltreppe' ? { style: stairStyleNew() }   // Treppe (Block 157d): Wegstil der Stufen aus der Leiste (Bauen und Vorschau)
+  : state.paintNew[b] ? Object.fromEntries(Object.entries(state.paintNew[b]).filter(([k]) => PAINT_KEYS.includes(k))) : {};
 const paintLikeOthers = t => [...state.tiles.values()].filter(o => o !== t && o.b === t.b && !samePaint(o, t));
 function rememberPaint(t) {
   const p = state.paintNew[t.b];
@@ -1065,7 +1066,7 @@ function vertexWanted(vx, vy) {
   if (tool === 'look' || tool === 'abriss') return has;
   return !!(ITEMS[tool] && ITEMS[tool].small && POST_OK.has(baseOf(tool)));
 }
-const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'zauberbrunnen', 'lm', ...Object.keys(STANDS),
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'zauberbrunnen', 'lm', 'huegeltreppe', ...Object.keys(STANDS),
   ...Object.keys(ITEMS).filter(id => ITEMS[id].variantOf && !ITEMS[id].small && !ITEMS[id].size)]);   // Größe „Mittel“ kleiner Deko belegt das Feld
 // Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
 // Kante 'a' i,j läuft von (i, j) nach (i + 1, j) – zwischen Feld (i, j − 1) und (i, j); 'b' i,j von (i, j) nach (i, j + 1) –
@@ -1194,6 +1195,7 @@ function edgeError(b, k) {
   if (!tiles.some(([x, y]) => ownedTile(x, y))) return 'Das ist nicht dein Grundstück';
   if (tiles.every(([x, y]) => terrainAt(x, y) === 'water')) return 'Nicht mitten im Wasser';
   if (state.hills && state.hills.size && !sameLevel(tiles)) return 'Nicht an der Kante einer Anhöhe';   // Anhöhe (Block 157, Stufe 1): nur ganz oben oder ganz unten
+  if (state.hills && state.hills.size) { const se = stairEdgeError(k); if (se) return se; }   // Treppe (Block 157d): Fuß und oberes Ende frei, nicht durch eine breite Treppe
   const [p, q] = tiles.map(([x, y]) => COVER.get(x + ',' + y));
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
   if (edgeEndPoints(k).some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';   // Eckpunkt-Deko (Block 65)
@@ -1678,6 +1680,7 @@ function autoRot(b, x, y, fallback) {
   return best;
 }
 function placeRot(b, x, y) {
+  if (b === 'huegeltreppe') return stairRot(x, y);                     // Treppe (Block 157d): dreht sich von selbst zur Anhöhe (hills.js)
   if (!ROTATABLE.has(b)) return 0;
   if (rotManual || ITEMS[b].small) return buildRot;
   if (ITEMS[b].needs === 'pier') {                  // Seebrücke zeigt von selbst ins Wasser
@@ -1997,6 +2000,7 @@ function roofError(x, y, noCost) {
   if (hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung';                    // Anhöhe (Block 157)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t && (isWegBridge(t) || isCrossing(t))) return 'Nicht auf Brücken und Bahnübergängen';
+  if (t && t.b === 'huegeltreppe') return 'Über einer Treppe geht keine Überdachung';   // Block 157d: sie reicht bis an die Dachhöhe
   if (terrainAt(x, y) === 'water' && !t) return 'Nicht übers Wasser';
   if (!roofOver(t)) return 'Nicht über Gebäude – über Wege, Wiese, Parks und Deko';
   if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
@@ -2600,8 +2604,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
+  if (b === 'huegeltreppe') { const e = stairError(x, y, rot); if (e) return e; }           // Treppe in die Anhöhe (Block 157d): unten, zur Anhöhe, nicht auf Weg/Dach
   if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 1): oben nur Deko und Gelände, nie über die Kante (auch Verschieben)
-    const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : hillError(b, footprint(b, x, y, r, opts.t));
+    const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : b === 'graben' && stairsAround(x, y, true).length ? 'Vor dem Fuß der Treppe muss Platz bleiben'   // Treppe (157d): wie hillRaiseError
+      : hillError(b, footprint(b, x, y, r, opts.t));
     if (he) return he;
   }
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
@@ -2629,6 +2635,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   }
   if (b === 'weg' && !opts.move && decoOver(x, y)) {    // Weg unter vorhandene Deko legen bzw. dort umfärben (Block 58; nicht beim Tragen)
     if (!ownedTile(x, y)) return notMine(x, y);
+    if (decoOver(x, y)[0].b === 'huegeltreppe') return 'Auf der Treppe geht kein Weg – davor schon';   // Block 157d
     if (wegAt(x, y) === currentStyle('weg')) return 'Hier liegt schon dieser Weg';
     return state.money < d.cost ? 'Zu wenig Taler' : null;
   }
@@ -3188,6 +3195,7 @@ function demolishInfo(x, y, under = false) {                            // under
     return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }
   if (hillAt(x, y)) {                                                    // Anhöhe (Block 157): abtragen, voll zurück (lowerHill); kleine Deko oben landet unten
+    if (stairsAround(x, y).length) return { err: 'Hier führt eine Treppe hinauf – erst die Treppe abreißen' };   // Block 157d (lowerHill sperrt auch)
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // Linien/Eckpunkt-Deko am Rand stünden sonst an der Kante
       if (state.edges.has(k)) return { err: `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen` };
     for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return { err: `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen` };

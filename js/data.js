@@ -183,6 +183,9 @@ const ITEMS = {
   obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen.' },
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
   anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben Wiese, Bäume, Bänke, Brunnen.' },   // Block 157 (Treppe hinauf: 157d)
+  // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
+  huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 3,
+    desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen, sie dreht sich von selbst. Nebeneinander wird eine breite Treppe daraus; die Stufen haben Muster und Farbe der Wege.' },
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
@@ -594,7 +597,8 @@ const MENU = [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels', 'anhoehe'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
+    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
+    { id: 'hoehen', label: '⛰️ Anhöhen', items: ['anhoehe', 'huegeltreppe'] },   // Block 157d: Anhöhe und Treppe zusammen, wie die Überdachungen (Wege & Gelände hätte sonst 11)
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'dachtreppe'] },   // Block 138
@@ -630,7 +634,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', huegeltreppe: '⛰️ führt hinauf', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -744,6 +748,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
+  huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe – sie dreht sich von selbst hinauf. Nebeneinander wird sie breit; Muster und Farbe der Stufen wählst du oben in der Leiste.',
 };
 // Läden, Kultur und Plantagen: Kurzwirkung und Tipp aus der Tabelle
 for (const [id, S] of Object.entries(SHOPS)) {
