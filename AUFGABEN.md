@@ -1600,7 +1600,7 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 ## Block 135: Minimap am PC (unten rechts, Antippen springt hin)
 
 ## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn
-- [ ] U-Bahn (Konzept mit Nutzer, 08.10.2026): **ein Netz mit der Eisenbahn**, kein eigenes System.
+- [x] U-Bahn (Konzept mit Nutzer, 08.10.2026; fertig, live seit v825 – Einzelheiten 136i–o): **ein Netz mit der Eisenbahn**, kein eigenes System.
       - Tunnel als Linie ziehen (Bereich Verkehr), unter Häusern/Wegen/Parks durch, ohne Abriss; unter Wasser erlaubt, teurer.
         Im Bild unsichtbar, mit Schiene/Tunnel in der Hand gestrichelt. Kosten je Feld ≈ 4× Schiene (Wasser mehr).
       - Tunnelportal entsteht von selbst, wo Schiene und Tunnel sich berühren (Entwurf vorher als Bild zeigen, = Block 140).
