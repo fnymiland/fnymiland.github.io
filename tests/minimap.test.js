@@ -40,10 +40,18 @@ describe('Minimap (Block 135)', () => {
     const back = game("(() => { const p = iso(5, -3), [ix, iy] = miniOf(p.x, p.y), [X, Y] = miniTo(ix, iy); return [X - p.x, Y - p.y]; })()");
     expect(Math.abs(back[0]) + Math.abs(back[1])).toBeLessThan(1e-6);
     // Klick auf die Kartenstelle der Heimatinsel (Kärtchen in jsdom ohne Layout: Größe vorgeben)
-    game("mini.cv.getBoundingClientRect = () => ({ left: 100, top: 50, width: mini.base.width, height: mini.base.height }); cam.x = 0; cam.y = -9999");
-    game("(() => { const p = iso(3, 3), [ix, iy] = miniOf(p.x, p.y); mini.cv.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 100 + ix, clientY: 50 + iy, bubbles: true })); })()");
+    game("mini.cv.getBoundingClientRect = () => ({ left: 100, top: 50, width: 200, height: 200 }); cam.x = 0; cam.y = -9999");
+    game(`(() => { const p = iso(3, 3), [ix, iy] = miniOf(p.x, p.y), k = 100 / mini.rmax;            // rund: Mitte des Lands in der Kreismitte
+      mini.cv.dispatchEvent(new window.MouseEvent('pointerdown', { clientX: 200 + (ix - mini.mc[0]) * k, clientY: 150 + (iy - mini.mc[1]) * k, bubbles: true })); })()`);
     const d = game("(() => { const p = iso(3, 3); return [cam.x - p.x, cam.y - p.y]; })()");
     expect(Math.abs(d[0]) + Math.abs(d[1])).toBeLessThan(1);
+  });
+
+  it('rund: alles Land liegt im Kreis', () => {
+    game('miniTick(1e6); miniPaint()');
+    const out = game(`(() => { let n = 0; for (const [k] of state.tiles) { const [x, y] = keyXY(k), p = iso(x, y), [ix, iy] = miniOf(p.x, p.y);
+      if (Math.hypot(ix - mini.mc[0], iy - mini.mc[1]) > mini.rmax) n++; } return n; })()`);
+    expect(out).toBe(0);
   });
 
   it('einklappen und wieder zeigen – je Gerät gemerkt', () => {

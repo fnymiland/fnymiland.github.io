@@ -2,12 +2,13 @@
 // ---------------------------------------------------------------------------
 // Minimap am PC (Block 135): unten rechts die ganze Welt schräg wie das Spiel (Rauten), das Sichtfeld als Rahmen.
 // Antippen oder Ziehen springt hin. Nur mit Maus und breitem Fenster; einklappbar (je Gerät gemerkt).
+// Rund (Nutzer, 09.10.2026, Entwurf B): die Mitte des Lands in der Kreismitte, das äußerste Land knapp im Rand (mini.rmax).
 // Bild: je Feld ein 2×1-Rechteck an seiner Rautenmitte – u = x − y (waagerecht), v = (x + y) / 2 (senkrecht). Gezeigt wird
 // nur der Teil mit Land (und eigenem Aufgeschüttetem) plus MINI_PAD Felder Meer – sonst wären die Inseln winzig.
 // Neu gemalt nur, wenn sich die Welt ändert (miniSig), höchstens alle MINI_EVERY ms; der Rahmen jedes Bild.
 // ---------------------------------------------------------------------------
-const MINI_KEY = 'kachelhausen_minimap', MINI_EVERY = 1500, MINI_W = 240, MINI_H = 160, MINI_PAD = 5, MINI_SEA = '#74d0e6';
-let mini = null;                       // { box, cv, base, u0, v0, sig, at, view }
+const MINI_KEY = 'kachelhausen_minimap', MINI_EVERY = 1500, MINI_D = 200, MINI_PAD = 5, MINI_SEA = '#74d0e6';
+let mini = null;                       // { box, cv, base, u0, v0, mc: Kartenmitte, rmax, sig, at, view }
 let miniOpen = (() => { try { return localStorage.getItem(MINI_KEY) !== 'zu'; } catch (e) { return true; } })();
 const miniWanted = () => !PHONE && window.innerWidth >= 900 && !!(window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches);
 
@@ -42,6 +43,10 @@ function miniPaint() {
   }
   if (!land.length) { u0 = v0 = -10; u1 = v1 = 10; }
   mini.u0 = u0 - 1 - MINI_PAD * 2; mini.v0 = v0 - 0.5 - MINI_PAD;          // Ränder: ein Feld ist 2 breit, 1 hoch
+  const mu = (u0 + u1) / 2 + 1 - mini.u0 - 1, mv = (v0 + v1) / 2 + 0.5 - mini.v0 - 0.5;   // Mitte des Lands im Bild
+  let r2 = 16;                                                             // weitester Feldrand von der Mitte (Kreis)
+  for (let i = 0; i < land.length; i += 2) { const du = Math.abs(land[i] - land[i + 1] - mini.u0 - mu) + 1, dv = Math.abs((land[i] + land[i + 1]) / 2 - mini.v0 - mv) + 0.5; r2 = Math.max(r2, du * du + dv * dv); }
+  mini.mc = [mu, mv]; mini.rmax = Math.sqrt(r2) + 2;
   const c = mini.base || document.createElement('canvas');
   c.width = Math.ceil(u1 + 1 + MINI_PAD * 2 - mini.u0); c.height = Math.ceil(v1 + 0.5 + MINI_PAD - mini.v0);
   mini.base = c;
@@ -65,8 +70,8 @@ function miniBuild() {
   document.body.appendChild(box);
   mini = { box, cv: box.querySelector('canvas'), base: null, u0: 0, v0: 0, sig: '', at: -1e9, view: '' };
   const jump = e => {
-    const r = mini.cv.getBoundingClientRect(), s = mini.base.width / r.width;
-    const [X, Y] = miniTo((e.clientX - r.left) * s, (e.clientY - r.top) * s);
+    const r = mini.cv.getBoundingClientRect(), R = r.width / 2, k = R / mini.rmax;   // Kartenpunkt je CSS-Pixel
+    const [X, Y] = miniTo(mini.mc[0] + (e.clientX - r.left - R) / k, mini.mc[1] + (e.clientY - r.top - R) / k);
     cam.x = X; cam.y = Y; clampCam(); lastInput = performance.now();
   };
   let down = false;
@@ -94,14 +99,17 @@ function miniTick(now) {
   const b = mini.base, view = [Math.round(cam.x), Math.round(cam.y), cam.z.toFixed(3), W, H, mini.at].join('|');
   if (!b || view === mini.view) return;
   mini.view = view;
-  const dpr = window.devicePixelRatio || 1, k = Math.min(MINI_W / b.width, MINI_H / b.height), w = Math.round(b.width * k), h = Math.round(b.height * k), cv = mini.cv;
-  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.width = w + 'px'; cv.style.height = h + 'px'; }
+  const dpr = window.devicePixelRatio || 1, cv = mini.cv, D = Math.round(MINI_D * dpr);
+  if (cv.width !== D) { cv.width = cv.height = D; cv.style.width = cv.style.height = MINI_D + 'px'; }
   const c2 = cv.getContext('2d');
   if (!c2) return;
-  const s = cv.width / b.width;
-  c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, cv.width, cv.height);
-  c2.imageSmoothingEnabled = true; c2.drawImage(b, 0, 0, cv.width, cv.height);
+  const R = D / 2, s = R / mini.rmax, ox = R - mini.mc[0] * s, oy = R - mini.mc[1] * s;   // Bild → Kreis
+  c2.setTransform(1, 0, 0, 1, 0, 0); c2.clearRect(0, 0, D, D);
+  c2.save(); c2.beginPath(); c2.arc(R, R, R, 0, Math.PI * 2); c2.clip();
+  c2.fillStyle = MINI_SEA; c2.fillRect(0, 0, D, D);
+  c2.imageSmoothingEnabled = true; c2.drawImage(b, ox, oy, b.width * s, b.height * s);
   const [cx, cy] = miniOf(cam.x, cam.y), hw = W / 2 / cam.z / (TW / 2), hh = H / 2 / cam.z / TH;   // Sichtfeld in Kartenpunkten
   c2.lineWidth = 1.5 * dpr; c2.strokeStyle = '#5a3e2b'; c2.fillStyle = 'rgba(255,255,255,0.18)';
-  c2.beginPath(); c2.rect((cx - hw) * s, (cy - hh) * s, 2 * hw * s, 2 * hh * s); c2.fill(); c2.stroke();
+  c2.beginPath(); c2.rect(ox + (cx - hw) * s, oy + (cy - hh) * s, 2 * hw * s, 2 * hh * s); c2.fill(); c2.stroke();
+  c2.restore();
 }
