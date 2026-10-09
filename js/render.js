@@ -1408,7 +1408,7 @@ function render(now) {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
     } else if (tool === 'abriss') {
-      const info = demolishInfo(hx, hy);
+      const info = demolishInfo(hx, hy, !!hover.under);
       box = objBox(hx, hy);
       preview = { ok: !info.err, text: info.err || (info.refund != null ? `${info.label}: +${fmt(info.refund)}` : `${info.label}: −${fmt(info.cost)}`) };
     } else {

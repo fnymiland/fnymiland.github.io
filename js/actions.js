@@ -167,8 +167,8 @@ function claimSea(b, x, y, rot, t, bridge) {
   if ((CLAIM_TOOLS.has(b) || d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore' || (b === 'weg' && bridge)) && !ownedTile(x, y)) claimTile(x, y);
   if (d.needs === 'pier') for (const [fx, fy] of footprint(b, x, y, rot, t)) if (!ownedTile(fx, fy)) claimTile(fx, fy);   // Seebrücke ins Meer
 }
-function demolish(x, y) {
-  let info = demolishInfo(x, y);
+function demolish(x, y, under = false) {
+  let info = demolishInfo(x, y, under);
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
   if (info.roof) {                                                      // Überdachung (Block 138): voll zurück, der Weg bleibt
@@ -317,8 +317,13 @@ function pickUpRoofs(keys) {
       if (under.length && under.every(f => set.has(f))) items.push({ kind: 'deco', d, from: [k, i], dx: tx - x0, dy: ty - y0 });
     });
   }
+  for (const [k, t] of state.tiles) if (t.b === 'dachtreppe') {           // Dachtreppen ganz unter den Feldern ziehen mit (Block 138d)
+    const [ax, ay] = keyXY(k);
+    if (footprint(t.b, ax, ay, t.rot || 0, t).every(([fx, fy]) => set.has(fx + ',' + fy))) items.push({ kind: 'tile', t, from: k, dx: ax - x0, dy: ay - y0 });
+  }
   for (const it of items) {
     if (it.kind === 'roof') { state.roofs.delete(it.from); roofDirty(...keyXY(it.from)); }
+    else if (it.kind === 'tile') state.tiles.delete(it.from);
     else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
   }
   groundVersion++;
@@ -388,7 +393,15 @@ function groupPlaced(it) {
 function groupErrors(hx, hy) {
   const ox = hx - moving.cx, oy = hy - moving.cy, errs = new Map();
   let first = null;
-  for (const it of moving.items) {
+  // erst die Dächer prüfen, dann zur Probe hinlegen: was darunter steht (Dachtreppe), braucht sie schon (Nutzer: „Aufgänge nicht mit
+  // kopieren und bewegen“) – danach wieder weg
+  const order = [...moving.items].sort((p, q) => (p.kind === 'roof' ? 0 : 1) - (q.kind === 'roof' ? 0 : 1)), probe = [];
+  try {
+  for (const it of order) {
+    if (it.kind !== 'roof' && !probe.done) {
+      probe.done = true;
+      for (const r of moving.items) if (r.kind === 'roof' && !errs.get(r)) { const P = groupPlaced(r), k = (ox + P.dx) + ',' + (oy + P.dy); if (!state.roofs.has(k)) { state.roofs.set(k, P.r); probe.push(k); } }
+    }
     const P = groupPlaced(it);
     let err = null;
     if (it.kind === 'edge') {
@@ -421,6 +434,7 @@ function groupErrors(hx, hy) {
     errs.set(it, err);
     first = first || err;
   }
+  } finally { for (const k of probe) state.roofs.delete(k); }
   return { ox, oy, errs, first };
 }
 function dropGroup(hx, hy) {
@@ -759,6 +773,13 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  const hh = !plan && (tool === 'look' || tool === 'abriss' || (tool === 'verschieben' && !moving)) && !roofTopHit(sx, sy) ? holeHit(sx, sy) : null;
+  if (hh) {                                                        // in die Öffnung getippt: die Treppe darunter (Block 138d)
+    if (tool === 'look') { openInfo(hh.x, hh.y); return; }
+    if (isTouch && (!hover || !hover.under || hover.x !== hh.x || hover.y !== hh.y)) { hover = { x: hh.x, y: hh.y, under: true }; previewCache = null; return; }
+    if (tool === 'abriss') demolish(hh.x, hh.y, true); else pickUp(hh.x, hh.y, -1);
+    return;
+  }
   if (tool === 'abriss' && !plan) {                              // Deko auf dem Dach zuerst (Block 138b)
     const th = !pillarAt(sx, sy) && roofTopHit(sx, sy);
     if (th) {

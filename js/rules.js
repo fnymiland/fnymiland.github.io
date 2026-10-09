@@ -3080,9 +3080,9 @@ function houseWishes(t, x, y, acc = T.access) {
   return { next, list, met, total: list.length, ready: met === list.length };
 }
 
-function demolishInfo(x, y) {
+function demolishInfo(x, y, under = false) {                            // under: was unter dem Dach steht (Dachtreppe), nicht das Dach
   if (!ownedTile(x, y)) return { err: isSea(x, y) ? 'Hier ist nur Meer' : 'Das ist nicht dein Grundstück' };
-  if (roofAt(x, y)) { const tb = roofTopBack(roofAt(x, y)); return { roof: x + ',' + y, refund: ITEMS.dach.cost + tb, mat: ITEMS.dach.mat, full: true, label: roofTopsOf(roofAt(x, y)).some(Boolean) ? 'Überdachung samt Deko entfernen' : 'Überdachung entfernen' }; }   // erst das Dach (Block 138)
+  if (roofAt(x, y) && !under) { const tb = roofTopBack(roofAt(x, y)); return { roof: x + ',' + y, refund: ITEMS.dach.cost + tb, mat: ITEMS.dach.mat, full: true, label: roofTopsOf(roofAt(x, y)).some(Boolean) ? 'Überdachung samt Deko entfernen' : 'Überdachung entfernen' }; }   // erst das Dach (Block 138)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t) {
     const d = ITEMS[t.b];

@@ -1102,20 +1102,20 @@ function wireCastle(el, t, x, y) {
 }
 let delSure = null;                                                     // { at: Feld, until }
 const delAsked = (x, y) => !!delSure && delSure.at === x + ',' + y && performance.now() < delSure.until;
-function delButton(x, y) {
-  const info = demolishInfo(x, y);
+function delButton(x, y, under = false) {
+  const info = demolishInfo(x, y, under);
   if (info.err || info.refund == null) return '';
   return `<button class="btn danger" id="p-del" aria-label="${info.label}">${delAsked(x, y) ? `Wirklich? ${fmt(info.lost)} Taler sind weg` : `🗑️${info.refund ? ` +${fmt(info.refund)}` : ''}`}</button>`;
 }
-function wireDel(x, y) {
+function wireDel(x, y, under = false) {                                 // under: die Dachtreppe, nicht das Dach darüber
   const b = $('p-del');
   if (!b) return;
   b.onclick = () => {
-    const info = demolishInfo(x, y), t = info.anchor && state.tiles.get(info.anchor);
+    const info = demolishInfo(x, y, under), t = info.anchor && state.tiles.get(info.anchor);
     if (!delAsked(x, y) && (info.lost >= DEL_ASK || (t && WONDERS[t.b]))) {
       delSure = { at: x + ',' + y, until: performance.now() + 5000 }; b.textContent = `Wirklich? ${fmt(info.lost)} Taler sind weg`; return;
     }
-    delSure = null; closePanel(); undoable(() => demolish(x, y));
+    delSure = null; closePanel(); undoable(() => demolish(x, y, under));
   };
 }
 
@@ -1600,10 +1600,10 @@ function openInfo(x, y) {
     <div class="row">
       ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
-      ${delButton(x, y)}
+      ${delButton(x, y, t.b === 'dachtreppe')}
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
-  wireDel(x, y);
+  wireDel(x, y, t.b === 'dachtreppe');
   wireRoofInfo(el, x, y);                                        // Überdachung (Block 138)
   $('p-move').onclick = () => startMove(x, y, -1);              // das Gebäude, nicht die Deko in seiner Ecke
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);

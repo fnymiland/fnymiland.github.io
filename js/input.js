@@ -168,7 +168,9 @@ function setHover(sx, sy) {
   const sa = slotAt(sx, sy);
   hoverSlot = sa.slot;
   let t = sa.slot === VSLOT ? { x: sa.x, y: sa.y } : toTile(sx, sy);   // Eckpunkt (Block 65): gehört zum Feld unter der Ecke
-  if ((tool === 'abriss' || tool === 'look') && !plan) {           // Stütze vor Dach, Dach vor dem Feld dahinter (Block 138)
+  const hh = !plan && (tool === 'abriss' || (tool === 'verschieben' && !moving)) && !roofTopHit(sx, sy) ? holeHit(sx, sy) : null;
+  if (hh) t = { x: hh.x, y: hh.y, under: true };                  // in der Öffnung: die Dachtreppe (Block 138d)
+  else if ((tool === 'abriss' || tool === 'look') && !plan) {      // Stütze vor Dach, Dach vor dem Feld dahinter (Block 138)
     const ph = pillarAt(sx, sy), rp = !ph && roofPick(sx, sy);
     const th = tool === 'abriss' && !ph && roofTopHit(sx, sy);       // Deko auf dem Dach vor dem Dach (Block 138b)
     if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (ph) { t = { x: ph.x, y: ph.y }; hoverSlot = ph.slot; } else if (rp) t = rp;
@@ -180,7 +182,7 @@ function setHover(sx, sy) {
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }
   if (tool === 'tunneleinfahrt') { const [ex, ey] = einAnchor(t.x, t.y); t = { x: ex, y: ey }; }   // Feld unter der Maus = hinteres Feld am Tunnel
-  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof) { hover = t; previewCache = null; }
+  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof || !!hover.under !== !!t.under) { hover = t; previewCache = null; }
   hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
   if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus
   hoverChunk = null;

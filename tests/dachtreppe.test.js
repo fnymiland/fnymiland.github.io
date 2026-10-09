@@ -114,4 +114,34 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
     expect(kinds(2).filter(k => k === 'l2.1').length).toBeGreaterThan(10);               // Säulchen
     expect(kinds(3).filter(k => k === 'l1.1').length).toBeGreaterThan(0);                // Handlauf
   });
+  it('Verschieben und Kopieren nehmen die Dachtreppe mit dem Dach mit (Nutzer: „kann die Aufgänge nicht mitkopieren und bewegen“)', () => {
+    roof(rect(3, 5, 3, 5));
+    game("buildRot = 0; build('dachtreppe', 4, 4)");
+    game("setTool('verschieben'); pickUpGroup(3, 3, 5, 5)");
+    expect(game('groupErrors(11, 11).first')).toBe(null);
+    game("hover = { x: 11, y: 11 }; dropGroup(11, 11); setTool('look')");
+    expect(game("[state.tiles.get('11,11') && state.tiles.get('11,11').b, roofAt(11, 11) && roofAt(11, 11).form, state.roofs.size]")).toEqual(['dachtreppe', 3, 9]);
+    expect(game('roofHoles(11, 11).length')).toBe(1);
+    game("startCopy(10, 10, 12, 12); hover = { x: 16, y: 16 }");
+    expect(game('groupErrors(16, 16).first')).toBe(null);
+    game("dropGroup(16, 16); cancelMove(); setTool('look')");
+    expect(game("[state.tiles.get('16,16') && state.tiles.get('16,16').b, state.roofs.size]")).toEqual(['dachtreppe', 18]);
+    expect(game("state.roofs.has('11,11') && state.roofs.has('12,12')")).toBe(true);   // Probe-Dächer wieder weg, Original bleibt
+  });
+
+  it('✋ im Dach-Fenster nimmt Treppen ganz unter den Feldern mit; in die Öffnung tippen trifft die Treppe (Fenster, 🧹)', () => {
+    roof(rect(3, 5, 3, 5));
+    game("buildRot = 0; build('dachtreppe', 4, 4); roofScope = 'run'; openRoofInfo(3, 3); document.getElementById('p-move').click()");
+    expect(game("moving.items.filter(i => i.kind === 'tile').map(i => i.t.b)")).toEqual(['dachtreppe']);
+    game("hover = { x: 11, y: 11 }; dropGroup(11, 11); setTool('look')");
+    expect(game("state.tiles.get('11,11').b")).toBe('dachtreppe');
+    game('cam = state.cam; cam.z = 2.5; { const p = iso(11, 11); cam.x = p.x; cam.y = p.y; }');
+    const s = game('(() => { const p = toScreen(11, 11.3); return [p.x, p.y - ROOF_H * cam.z]; })()');   // mitten in der Öffnung
+    expect(game(`holeHit(${s[0]}, ${s[1]})`)).toEqual({ x: 11, y: 11 });
+    game(`tap(${s[0]}, ${s[1]}, false)`);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Treppe aufs Dach/);
+    expect(game("demolishInfo(11, 11, true).label")).not.toMatch(/Überdachung/);
+    game(`setTool('abriss'); setHover(${s[0]}, ${s[1]}); undoable(() => tap(${s[0]}, ${s[1]}, false)); setTool('look')`);
+    expect(game("[state.tiles.has('11,11'), state.roofs.has('11,11')]")).toEqual([false, true]);   // Treppe weg, Dach bleibt
+  });
 });

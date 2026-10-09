@@ -951,6 +951,16 @@ function drawDachtreppe(cx, cy, z, rot, x, y) {
   const P = (u, v, up) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
   dtSteps(rot, P, dtLive(z));
 }
+// Antippen in einer Öffnung (Dachhöhe): die Dachtreppe darunter – ihr Ankerfeld (Fenster, Abreißen, Verschieben)
+function holeHit(sx, sy) {
+  if (!state.roofs || !state.roofs.size || !cam) return null;
+  const [a, b] = tileFrac(sx, sy + ROOF_H * cam.z), x = Math.round(a), y = Math.round(b);
+  if (!roofTopRoof(x, y) || !inHole(roofHoles(x, y), a, b)) return null;
+  const k = COVER.get(x + ',' + y) || x + ',' + y, t = state.tiles.get(k);
+  if (!t || t.b !== 'dachtreppe') return null;
+  const [ax, ay] = keyXY(k);
+  return { x: ax, y: ay };
+}
 // Höhe auf der Treppe (für die Leute darauf): die Stufe, auf der man bei d steht (oben das Dach, unten der Boden)
 const dtHeight = d => { const i = Math.floor((DT_LEN - d) / ((DT_LEN + DT_FOOT) / DT_N)); return i < 0 ? ROOF_H : i >= DT_N ? 0 : ROOF_H * (DT_N - i) / DT_N; };
 

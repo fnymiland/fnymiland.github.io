@@ -1874,6 +1874,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       zum Betrachter ansteigen. Balustrade auch um die Öffnung. Form wechseln gesperrt, solange oben Deko oder darunter eine Treppe
       ist (`roofFormLock`, auch beim Überbauen). Geländer-Ecken bündig, Öffnung am Rand ohne doppelte Brüstung (T-Stoß).
       Tests: dachtreppe, dachdeko. Szenen tools/breitdrehung.js, tools/gelaenderszene.js
+- [x] Nutzer: „kann die Aufgänge nicht mitkopieren und bewegen“ → beim Ablegen/Kopieren liegen die mitgetragenen Dächer zur Probe schon
+      da (`groupErrors`), ✋ im Dach-Fenster nimmt Dachtreppen ganz unter den Feldern mit (`pickUpRoofs`); in die Öffnung tippen trifft
+      die Treppe (`holeHit`: 👆 Fenster, 🧹 nur die Treppe, ✋ aufnehmen; `demolishInfo(x, y, under)`). Test: dachtreppe
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 
