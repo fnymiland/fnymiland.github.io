@@ -977,17 +977,17 @@ function drawRoofers(list, x, y, z, now, onStair) {
   for (const w of list) {
     if ((w.st === 'roof') === onStair) continue;
     if (!onStair) { drawWalker(w, z, now); continue; }
-    const hs = roofHoles(x, y);
+    const hs = roofHoles(x, y, 0.01);
     if (!hs.length) continue;
+    // sichtbar ist, was man durch die ganze Öffnung sieht (die Dächer danach sind dort durchsichtig) – und darüber nur, was wirklich
+    // über das Dach hinausragt: alles oberhalb der Dachhöhe an der Stelle der Figur (Nutzer: „laufen unter dem Belag durch“)
     g.save(); g.beginPath();
     for (const h of hs) {
-      const u0 = Math.max(h.u0, x - 0.5), u1 = Math.min(h.u1, x + 0.5), v0 = Math.max(h.v0, y - 0.5), v1 = Math.min(h.v1, y + 0.5);
-      if (u1 <= u0 || v1 <= v0) continue;
-      const c = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => { const p = toScreen(u, v); return [p.x, p.y - ROOF_H * z]; });
-      const up = 80 * z;                                                // was über dem Dach ist, sieht man auch über dem Rand der Öffnung
-      for (let i = 0; i < 4; i++) { const a = c[i], b = c[(i + 1) % 4]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(b[0], b[1] - up); g.lineTo(a[0], a[1] - up); g.closePath(); }
+      const c = [[h.u0, h.v0], [h.u1, h.v0], [h.u1, h.v1], [h.u0, h.v1]].map(([u, v]) => { const p = toScreen(u, v); return [p.x, p.y - ROOF_H * z]; });
       g.moveTo(c[0][0], c[0][1]); for (let i = 1; i < 4; i++) g.lineTo(c[i][0], c[i][1]); g.closePath();
     }
+    const top = toScreen(w.px, w.py).y - ROOF_H * z;
+    g.rect(-1e5, -1e5, 2e5, 1e5 + top);
     g.clip('nonzero');
     try { drawWalker(w, z, now); } finally { g.restore(); }
   }
