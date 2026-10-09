@@ -1782,6 +1782,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Stufen nach oben, nie hochgezogen; vorher bei spriteStep gedeckelt). (2) Stützen werden mit dem hintersten Feld gezeichnet,
       das sie berühren, direkt vor dessen Dach (`drawPillarsOf` in tileB; ohne Dächer wie bisher in drawSmall) – vorher kam eine
       Stütze des vorderen Felds nach dem Dach des hinteren. Bild tools/vorschau/dach-nah-scharf.png
+- [x] Nutzer: „du arbeitest unsauber“ (Pfosten ragt über das Balkenende, Oberseite schaut heraus). Nahaufnahmen aller Formen an
+      Gang-Ende, T, Kurve, Innenecke, 3 × 3-Platz (tools/vorschau/dach-ende-nah.png, dach-kurve-nah.png, dach-platz-nah.png,
+      dach-feinschliff.png) → Pergola-Pfosten enden unter dem Randbalken, Randbalken stehen an Außenecken über und kreuzen sich
+      (an Innenecken nicht – sonst stächen sie in den Gang); Glas und Pergola: gleichmäßiges Raster statt umspringender Richtung
+      (keine halben Bögen mehr); Markise: Zacken je Lauf gleichmäßig über Feldgrenzen; Stangen enden unter der Dachkante.
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
