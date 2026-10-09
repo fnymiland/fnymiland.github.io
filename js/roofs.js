@@ -149,7 +149,7 @@ function holeFootEdge(h) {
 }
 // Brüstung um eine Öffnung (Dachtreppe): hinten/vorn getrennt (vorn nach der Deko oben und den Leuten darin)
 function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur dieser Teil (ein Feld); sonst die ganze Öffnung
-  const H = ROOF_H, back = [], front = [], Fa = ROOF_FRAME.arkaden, t = Fa.T, hh = Pd && Pd.id === 'gelaender' ? Pd.h : 3.5;   // niedrig, damit man die Treppe sieht; Geländer ist durchsichtig
+  const H = ROOF_H, back = [], front = [], Fa = ROOF_FRAME.arkaden, t = Fa.T, hh = Pd && Pd.id !== 'mauer' ? Pd.h : 3.5;   // Mauer niedrig, damit man die Treppe sieht; Balustrade und Geländer sind durchsichtig
   const [fu0, fu1, fv0, fv1] = clip || [-1e9, 1e9, -1e9, 1e9];
   const clipBox = (u0, u1, v0, v1) => [Math.max(u0, fu0), Math.min(u1, fu1), Math.max(v0, fv0), Math.min(v1, fv1)];
   const box = (B, h0, h1, list, faces = 'uvt') => {
@@ -199,7 +199,20 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
     }
     if (!h.jM) walls.push(longV ? [p0 - t, p0, sa, sb] : [sa, sb, p0 - t, p0]);   // lange Seiten nur außen (Doppel-/Dreifachtreppe: innen offen)
     if (!h.jP) walls.push(longV ? [p1, p1 + t, sa, sb] : [sa, sb, p1, p1 + t]);
-    for (const W of walls) box(W, H, H + hh, (W[0] + W[1]) / 2 + (W[2] + W[3]) / 2 > h.mu + h.mv ? front : back, W.faces || 'uvt');
+    for (const W of walls) {
+      const L = (W[0] + W[1]) / 2 + (W[2] + W[3]) / 2 > h.mu + h.mv ? front : back;
+      if (!(Pd && Pd.id === 'balustrade')) { box(W, H, H + hh, L, W.faces || 'uvt'); continue; }
+      // Balustrade wie am Rand (Nutzer: „Balustrade ändert das Geländer beim Aufgang nicht“): Sockel, Säulchen, Deckplatte – gleiche Ecken
+      box(W, H, H + 1.2, L, W.faces || 'uvt');
+      const [u0, u1, v0, v1] = clipBox(...W), alongU = W[1] - W[0] > W[3] - W[2], cu = (W[0] + W[1]) / 2, cv = (W[2] + W[3]) / 2;
+      if (u1 > u0 && v1 > v0) {
+        const a0 = alongU ? u0 : v0, a1 = alongU ? u1 : v1, at = (q, up) => alongU ? [q, cv, up] : [cu, q, up];
+        for (let q = Math.ceil(a0 / 0.09 - 1e-6) * 0.09; q < a1 - 1e-6; q += 0.09) if (q > (alongU ? W[0] : W[2]) + 0.03 && q < (alongU ? W[1] : W[3]) - 0.03) {
+          L.push({ pts: [at(q, H + 1.2), at(q, H + hh - 1.2)], col: '#d7cbb2', line: 2.1 }, { pts: [at(q - 0.008, H + 1.2), at(q - 0.008, H + hh - 1.2)], col: '#efe7d6', line: 0.7 });
+        }
+      }
+      box(W, H + hh - 1.2, H + hh, L, W.faces || 'uvt');
+    }
   }
   return { back, front };
 }
@@ -409,7 +422,9 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
         if (!(h.Dv && h.jM)) poly([P(h.u0, h.v0, 0), P(h.u0, h.v1, 0), P(h.u0, h.v1, H), P(h.u0, h.v0, H)], F0.sU, F0.sU, 0.3);
         if (!(h.Du && h.jM)) poly([P(h.u0, h.v0, 0), P(h.u1, h.v0, 0), P(h.u1, h.v0, H), P(h.u0, h.v0, H)], F0.sV, F0.sV, 0.3);
       }
-      for (const h of all) dtSteps(h.rot, (u, v, up) => P(h.mu + u, h.mv + v, up), (pts, col) => poly(pts, col, col, 0.3), h.jM, h.jP);
+      const parts = [];                                                 // alle Spuren gemeinsam von hinten nach vorn
+      for (const h of all) { parts.base = h.mu + h.mv; dtSteps(h.rot, (u, v, up) => P(h.mu + u, h.mv + v, up), (pts, col, w) => w ? line(pts, col, w) : poly(pts, col, col, 0.3), h.jM, h.jP, null, parts); }
+      parts.sort((p, r) => p.k - r.k).forEach(p => p.draw());
     } finally { g.restore(); }
   }
   // Brüstung am Rand und um die Öffnung (Dachtreppe): hinten erst der Rand, dann die Öffnung davor; vorn erst die Öffnung, dann der Rand
@@ -700,7 +715,7 @@ function drawRoofIcon(cx, cy, z, form = 0, col = 0) {
 // ---------------------------------------------------------------------------
 // Deko auf dem Dach (Block 138b, Nutzer 09.10.2026: „imagine man könnte da jetzt Deko oben draufstellen“): nur auf Steinarkaden,
 // nur kleine Deko. Sie gehört zum Dachfeld (r.top, 8 Plätze wie am Boden: 4 Ecken, 4 Seitenmitten) – so zieht sie beim Verschieben,
-// Kopieren und Rückgängig mit dem Dach mit. Wer das Dach abreißt oder die Form wechselt, bekommt sie voll zurück (roofTopClear).
+// Kopieren und Rückgängig mit dem Dach mit. Wer das Dach abreißt, bekommt sie voll zurück (roofTopClear); die Form wechseln geht erst, wenn sie weg ist (roofFormLock).
 // Gezeichnet mit dem Dach des Felds (render.js tileB), Laternen als Platz 10 + i (Strom: computePower)
 // ---------------------------------------------------------------------------
 const ROOF_TOP_OFF = 0.3, ROOF_TOP_SLOT0 = 10;                        // Abstand von der Feldmitte (der Steinrand liegt bei 0,41)
@@ -774,6 +789,18 @@ function removeRoofTop(x, y, slot) {
   if (r.top.every(v => !v)) delete r.top;
   sfx('dig'); recalc(); save();
   return true;
+}
+// Steinarkaden in eine andere Form? Nicht, solange oben Deko steht oder darunter eine Dachtreppe (Nutzer: „verschwindet ALLES darauf –
+// das sollte gesperrt sein“). keys: die Felder, die umgestellt werden sollen
+function roofFormLock(keys) {
+  for (const k of keys) {
+    const r = state.roofs.get(k);
+    if (!r || roofForm(r) !== 'arkaden') continue;
+    if (roofTopsOf(r).some(Boolean)) return 'Auf dem Dach steht Deko – erst wegräumen, dann die Form ändern';
+    const [x, y] = keyXY(k), a = COVER.get(k) || k, t = state.tiles.get(a);
+    if (t && t.b === 'dachtreppe') return 'Unter dem Dach steht eine Treppe – erst abreißen, dann die Form ändern';
+  }
+  return null;
 }
 // Dach mit seiner Deko kopieren (Verschieben, Kopieren): eigene Liste, ohne Animation; fresh: die Kopie ist bezahlt
 const roofCopy = (r, fresh = false) => { const o = { ...r }; if (r.top) o.top = r.top.map(d => { if (!d) return null; const { born, ...e } = d; if (fresh) delete e.free; return e; }); return o; };
@@ -889,7 +916,12 @@ function dtError(x, y, rot) {
 }
 // Stufen der Treppe als Quader vom Boden, oben bündig mit dem Dach, unten bis kurz hinter die Öffnung; P in Weltkoordinaten
 // relativ zur Mitte (u, v, Höhe). Von hinten nach vorn
-function dtSteps(rot, P, q, jM = false, jP = false, only = null) {     // jM/jP: Nachbartreppe auf der Seite mit kleinerem/größerem u bzw. v; only(d0, d1): nur diese Stufen
+// Zeichnen auf dem Spielbild (Bildpunkte): Fläche, oder mit w eine Linie (Schattenkante)
+const dtLive = z => (pts, col, w) => {
+  if (w) { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); g.lineTo(pts[1][0], pts[1][1]); g.stroke(); return; }
+  poly(pts, C(col)); g.strokeStyle = C(col); g.lineWidth = 0.3 * z; g.lineJoin = 'round'; g.stroke();
+};
+function dtSteps(rot, P, q, jM = false, jP = false, only = null, out = null) {   // out: Teile dort sammeln (mehrere Spuren gemeinsam sortieren)     // jM/jP: Nachbartreppe auf der Seite mit kleinerem/größerem u bzw. v; only(d0, d1): nur diese Stufen
   const H = ROOF_H, F = ROOF_FRAME.arkaden, [Du, Dv] = DT_UP[rot & 3], [Su, Sv] = [-Dv, Du], w = DT_HALF;   // bis an die Lochwand
   const plus = Su + Sv > 0, wp = (plus ? jP : jM) ? 0.51 : w, wm = (plus ? jM : jP) ? 0.51 : w;   // zur Nachbartreppe: über die Feldgrenze, ohne Fuge
   const parts = [], dd = (DT_LEN + DT_FOOT) / DT_N;
@@ -898,12 +930,17 @@ function dtSteps(rot, P, q, jM = false, jP = false, only = null) {     // jM/jP:
     if (only && !only(d0, d1)) continue;
     const a = [Du * d0 + Su * -wm, Dv * d0 + Sv * -wm], b = [Du * d1 + Su * wp, Dv * d1 + Sv * wp];
     const u0 = Math.min(a[0], b[0]), u1 = Math.max(a[0], b[0]), v0 = Math.min(a[1], b[1]), v1 = Math.max(a[1], b[1]);
-    parts.push({ k: u0 + u1 + v0 + v1, draw: () => {
+    parts.push({ k: u0 + u1 + v0 + v1 + 2 * (out ? out.base || 0 : 0), draw: () => {
       q([P(u0, v1, 0), P(u1, v1, 0), P(u1, v1, h), P(u0, v1, h)], F.sV);
       q([P(u1, v0, 0), P(u1, v1, 0), P(u1, v1, h), P(u1, v0, h)], F.sU);
       q([P(u0, v0, h), P(u1, v0, h), P(u1, v1, h), P(u0, v1, h)], F.top);
+      if (Du + Dv > 0 && i < DT_N - 1) {                                 // steigt zum Betrachter an: die Stufe davor sieht man nicht –
+        const e0 = [Du * d0 + Su * -wm, Dv * d0 + Sv * -wm], e1 = [Du * d0 + Su * wp, Dv * d0 + Sv * wp];   // Schattenkante, wo es hinabgeht
+        q([P(e0[0], e0[1], h), P(e1[0], e1[1], h)], F.sU, 0.9);
+      }
     } });
   }
+  if (out) { out.push(...parts); return; }
   parts.sort((p, r) => p.k - r.k).forEach(p => p.draw());
 }
 // drawObject 'dachtreppe': unter Steinarkaden malt das Dach die Treppe (durch die Öffnung, paintRoof) – sonst würden Stufen, die zu
@@ -911,7 +948,7 @@ function dtSteps(rot, P, q, jM = false, jP = false, only = null) {     // jM/jP:
 function drawDachtreppe(cx, cy, z, rot, x, y) {
   if (x != null && roofTopRoof(x, y) && (state.tiles.get(x + ',' + y) || {}).b === 'dachtreppe') return;
   const P = (u, v, up) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
-  dtSteps(rot, P, (pts, col) => { poly(pts, C(col)); g.strokeStyle = C(col); g.lineWidth = 0.3 * z; g.lineJoin = 'round'; g.stroke(); });
+  dtSteps(rot, P, dtLive(z));
 }
 // Höhe auf der Treppe (für die Leute darauf): die Stufe, auf der man bei d steht (oben das Dach, unten der Boden)
 const dtHeight = d => { const i = Math.floor((DT_LEN - d) / ((DT_LEN + DT_FOOT) / DT_N)); return i < 0 ? ROOF_H : i >= DT_N ? 0 : ROOF_H * (DT_N - i) / DT_N; };
@@ -1005,12 +1042,32 @@ function stepRoofers(dt) {
   }
   for (let i = roofers.length - 1; i >= 0; i--) if (roofers[i].gone) roofers.splice(i, 1);
 }
+// Eine Treppe samt Nachbartreppen (breite Treppe): ihre Öffnungen und das Feld, das davon zuletzt gezeichnet wird (render.js: nach
+// Diagonale x + y, dann x) – Leute auf der Treppe kommen erst dort dran, sonst malt das Dachbild eines späteren Felds seine Stufen
+// über sie (Nutzer: „glitchen durch die Stufen“)
+function rfGroup(s) {
+  const c = rfFresh(), hit = c.groups && c.groups.get(s.k);
+  if (hit) return hit;
+  const t0 = state.tiles.get(s.k), rot = ((t0 && t0.rot) || 0) & 3, [pu, pv] = rot & 1 ? [0, 1] : [1, 0], [ax, ay] = keyXY(s.k), anchors = [[ax, ay]];
+  const same = (x, y) => { const t = state.tiles.get(x + ',' + y); return !!t && t.b === 'dachtreppe' && ((t.rot || 0) & 3) === rot; };
+  for (const sg of [1, -1]) for (let i = 1; i < 50 && same(ax + sg * i * pu, ay + sg * i * pv); i++) anchors.push([ax + sg * i * pu, ay + sg * i * pv]);
+  const holes = new Map();
+  let last = null;
+  for (const [x, y] of anchors) for (const [fx, fy] of footprint('dachtreppe', x, y, rot)) {
+    if (!last || fx + fy > last[0] + last[1] || (fx + fy === last[0] + last[1] && fx > last[0])) last = [fx, fy];
+    for (const h of roofHoles(fx, fy)) holes.set(h.mu + ',' + h.mv, h);
+  }
+  const g = { last: last[0] + ',' + last[1], holes: [...holes.values()] };
+  if (!c.groups) c.groups = new Map();
+  c.groups.set(s.k, g);
+  return g;
+}
 // je Feld (gerundete Lage), wer dort auf dem Dach bzw. auf der Treppe ist – render.js baut das einmal je Bild
 function roofersByTile() {
   const m = new Map();
   for (const w of roofers) {
     if (typeof gfxPersonShown === 'function' && !gfxPersonShown(w)) continue;
-    const k = Math.round(w.px) + ',' + Math.round(w.py);
+    const k = w.st === 'roof' ? Math.round(w.px) + ',' + Math.round(w.py) : rfGroup(w.stair).last;
     if (!m.has(k)) m.set(k, []);
     m.get(k).push(w);
   }
@@ -1021,7 +1078,7 @@ function drawRoofers(list, x, y, z, now, onStair) {
   for (const w of list) {
     if ((w.st === 'roof') === onStair) continue;
     if (!onStair) { drawWalker(w, z, now); continue; }
-    const hs = roofHoles(x, y, 0.01);
+    const hs = rfGroup(w.stair).holes;
     if (!hs.length) continue;
     // sichtbar ist, was man durch die ganze Öffnung sieht (die Dächer danach sind dort durchsichtig) – und darüber nur, was wirklich
     // über das Dach hinausragt: alles oberhalb der Dachhöhe an der Stelle der Figur (Nutzer: „laufen unter dem Belag durch“)
@@ -1042,12 +1099,13 @@ function drawRoofers(list, x, y, z, now, onStair) {
     g.save(); g.beginPath(); g.rect(p0.x - 12 * z, feet - 50 * z, 38 * z, 58 * z); g.clip();
     try {
       if (s.Du + s.Dv > 0) {
-        const own = hs.find(h => Math.abs(h.mu - s.mu) < 1e-9 && Math.abs(h.mv - s.mv) < 1e-9) || {};
         g.save(); g.beginPath();
         for (const h of hs) { const c = [[h.u0, h.v0], [h.u1, h.v0], [h.u1, h.v1], [h.u0, h.v1]].map(([u, v]) => Pl(u, v, ROOF_H)); g.moveTo(...c[0]); for (let i = 1; i < 4; i++) g.lineTo(...c[i]); g.closePath(); }
         g.clip();
         try {
-          dtSteps(s.rot, (u, v, up) => Pl(s.mu + u, s.mv + v, up), (pts, col) => { poly(pts, C(col)); g.strokeStyle = C(col); g.lineWidth = 0.3 * z; g.stroke(); }, own.jM, own.jP, d0 => d0 >= w.d - 1e-6);
+          const parts = [];                                             // auch die Spuren daneben (breite Treppe), gemeinsam sortiert
+          for (const h of hs) if (h.rot === s.rot) { parts.base = h.mu + h.mv; dtSteps(h.rot, (u, v, up) => Pl(h.mu + u, h.mv + v, up), dtLive(z), h.jM, h.jP, d0 => d0 >= w.d - 1e-6, parts); }
+          parts.sort((p, r) => p.k - r.k).forEach(p => p.draw());
         } finally { g.restore(); }
       }
       for (const h of hs) roofOps(holeWallOps(h, roofPar(roofAt(Math.round(h.mu + h.Du * 0.4), Math.round(h.mv + h.Dv * 0.4)))).front, Pl, z);

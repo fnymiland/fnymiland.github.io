@@ -1869,6 +1869,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „Doppel-/Dreifach-Aufgang – kombinieren, breiter“: Dachtreppen nebeneinander in gleicher Richtung werden eine breite
       Treppe (`roofHoles` jM/jP: Öffnung bis zur Feldgrenze, innen keine Mauer, Stufen laufen durch; jedes Feld malt auch die Treppen
       der Nachbarn in seine Öffnung). Lochwand als Schacht bis zum Boden. Test: dachtreppe. Szene tools/breittreppe.js, Bild breit-beide.png
+- [x] Nutzer (Screenshot): Leute glitchen durch die Stufen → Leute auf der Treppe kommen mit dem zuletzt gezeichneten Feld der ganzen
+      (auch breiten) Öffnung dran (`rfGroup`), Stufen davor aller Spuren gemeinsam sortiert nachgezeichnet; Schattenkante an Stufen, die
+      zum Betrachter ansteigen. Balustrade auch um die Öffnung. Form wechseln gesperrt, solange oben Deko oder darunter eine Treppe
+      ist (`roofFormLock`, auch beim Überbauen). Geländer-Ecken bündig, Öffnung am Rand ohne doppelte Brüstung (T-Stoß).
+      Tests: dachtreppe, dachdeko. Szenen tools/breitdrehung.js, tools/gelaenderszene.js
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

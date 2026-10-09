@@ -1288,15 +1288,13 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
   });
   for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; reopen(); };
   for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => {
-    let n = 0;
-    undoable(() => {                                                   // Deko oben geht nur auf Stein: zurück ins Lager (Block 138b)
-      const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y];
-      const toStone = DECO_LOOKS.dach.forms[+b.dataset.roofform].id === 'arkaden';
-      if (!toStone) for (const k of keys) n += roofTopClear(state.roofs.get(k));
-      else for (const k of keys) { const o = state.roofs.get(k); if (o && roofForm(o) !== 'arkaden' && o.par == null) o.par = 1; }   // wird Stein: mit Mauer wie neu gebaut
+    const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y], toStone = DECO_LOOKS.dach.forms[+b.dataset.roofform].id === 'arkaden';
+    const lock = !toStone && roofFormLock(keys);                       // Deko oben, Treppe darunter: erst wegräumen (Block 138b/d)
+    if (lock) { fail(lock); return; }
+    undoable(() => {
+      if (toStone) for (const k of keys) { const o = state.roofs.get(k); if (o && roofForm(o) !== 'arkaden' && o.par == null) o.par = 1; }   // wird Stein: mit Mauer wie neu gebaut
       set('form', +b.dataset.roofform);
     });
-    if (n) toast(`${n} × Deko vom Dach zurückgegeben`);
     reopen();
   };
   for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); reopen(); };

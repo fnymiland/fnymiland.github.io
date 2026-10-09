@@ -91,4 +91,27 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
     expect(game('roofSig(6, 6, roofAt(6, 6))')).not.toBe(before);                  // Nachbar weg: wieder schmal (neues Bild)
     expect(() => game("(() => { cam = state.cam; cam.z = 2.5; const p = iso(6, 6); cam.x = p.x; cam.y = p.y; render(1e6); })()")).not.toThrow();
   });
+  it('mit Treppe darunter keine andere Form (Nutzer); Leute auf der Treppe kommen mit dem letzten Feld der ganzen Öffnung dran', () => {
+    roof(rect(3, 9, 3, 9));
+    game("buildRot = 0; for (const x of [5, 6, 7]) build('dachtreppe', x, 6)");
+    expect(game("roofFormLock(['6,7'])")).toMatch(/Treppe/);
+    game("openRoofInfo(6, 6); document.querySelector('[data-roofform=\"1\"]').click(); closePanel()");
+    expect(game('roofAt(6, 6).form')).toBe(3);
+    // Gruppe: drei Treppen nebeneinander, zuletzt gezeichnet wird 7,7 (größte Diagonale, dann größtes x)
+    expect(game("rfGroup(roofStairs().find(s => s.k === '5,6'))")).toMatchObject({ last: '7,7' });
+    expect(game("rfGroup(roofStairs().find(s => s.k === '5,6')).holes.length")).toBe(3);
+    game("roofers.length = 0; roofers.push({ roofer: true, stair: roofStairs().find(s => s.k === '5,6'), st: 'up', d: 0, px: 5, py: 6.5, up: 10, wait: 0, kind: 0, fur: '#fff', shirt: '#f00', speed: 0.4, life: 9 })");
+    expect(game('[...roofersByTile().keys()]')).toEqual(['7,7']);
+    expect(() => game("(() => { cam = state.cam; cam.z = 2.5; const p = iso(6, 6); cam.x = p.x; cam.y = p.y; render(1e6); })()")).not.toThrow();
+    game('roofers.length = 0');
+  });
+
+  it('Brüstung um die Öffnung wie am Rand: Mauer niedrig, Balustrade mit Säulchen, Geländer mit Handlauf (Nutzer)', () => {
+    roof(rect(3, 9, 3, 9));
+    game("buildRot = 0; build('dachtreppe', 6, 6)");
+    const kinds = par => game(`(() => { const h = roofHoles(6, 6)[0], o = holeWallOps(h, ROOF_PAR[${par}]); return o.back.concat(o.front).map(op => op.line ? 'l' + op.line : 'p'); })()`);
+    expect(kinds(1).every(k => k === 'p')).toBe(true);
+    expect(kinds(2).filter(k => k === 'l2.1').length).toBeGreaterThan(10);               // Säulchen
+    expect(kinds(3).filter(k => k === 'l1.1').length).toBeGreaterThan(0);                // Handlauf
+  });
 });

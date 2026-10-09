@@ -59,15 +59,20 @@ describe('Deko auf dem Dach (Block 138b)', () => {
     expect(game('state.money')).toBe(m + game('ITEMS.dach.cost'));                  // alles zurück (Dach war vorher bezahlt)
   });
 
-  it('andere Form im Fenster: Deko oben geht zurück ins Lager; Belag/Dachgarten bleibt Deko-fähig', () => {
+  it('andere Form gesperrt, solange oben Deko steht (Nutzer: „verschwindet ALLES – sollte gesperrt sein“); Belag/Dachgarten geht', () => {
     roof(row(3, 4, 5));
     game("buildRoofTop('blumentopf', 3, 5, 0); buildRoofTop('blumentopf', 4, 5, 1)");
-    const m = game('state.money');
     game("openRoofInfo(3, 5); document.querySelector('[data-roofscope=\"run\"]').click(); document.querySelector('[data-roofbel]').click()");
-    expect(game("[...state.roofs.values()].every(r => r.top)")).toBe(true);
+    expect(game("[...state.roofs.values()].every(r => r.top)")).toBe(true);           // Belag: Deko bleibt
+    const m = game('state.money');
     game("openRoofInfo(3, 5); document.querySelector('[data-roofform=\"1\"]').click()");
-    expect(game("[...state.roofs.values()].some(r => r.top)")).toBe(false);
-    expect(game('state.money')).toBe(m + 2 * game('ITEMS.blumentopf.cost'));
+    expect(game("[...state.roofs.values()].map(r => [r.form, r.top.filter(Boolean).length])")).toEqual([[3, 1], [3, 1]]);   // nichts geändert
+    expect(game('state.money')).toBe(m);
+    expect(game("roofFormLock(['3,5'])")).toMatch(/Deko/);
+    game("state.paintNew.dach = { form: 1 }");
+    expect(game("placeError('dach', 3, 5)")).toMatch(/Deko/);                         // auch nicht mit Glas überbauen
+    game("state.paintNew.dach = {}; removeRoofTop(3, 5, 0); removeRoofTop(4, 5, 1); openRoofInfo(3, 5); document.querySelector('[data-roofform=\"1\"]').click()");
+    expect(game("[...state.roofs.values()].map(r => r.form)")).toEqual([1, 1]);       // leer: geht
     game('closePanel()');
   });
 

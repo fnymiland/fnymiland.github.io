@@ -1934,6 +1934,7 @@ function roofError(x, y, noCost) {
   if (terrainAt(x, y) === 'water' && !t) return 'Nicht übers Wasser';
   if (!roofOver(t)) return 'Nicht über Gebäude – über Wege, Wiese, Parks und Deko';
   if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
+  if (roofAt(x, y) && roofForm(decoLookNew('dach')) !== 'arkaden') { const l = roofFormLock([x + ',' + y]); if (l) return l; }   // Stein mit Deko/Treppe: nicht überbauen
   if (noCost) return null;
   if (state.money < ITEMS.dach.cost) return 'Zu wenig Taler';
   return matError(ITEMS.dach.mat);
