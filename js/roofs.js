@@ -223,31 +223,18 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
       const a0 = inA ? e.a - T : e.a, b0 = inB ? e.b + T : e.b;
       const fa = e.n < 0 && endA ? e.a + (inA ? -T : T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? T : -T) : e.b;
       const side = e.ax === 'u' ? F.sU : F.sV;
-      // Lücke, wo eine Freitreppe ankommt (Mitte des Felds ± STAIR_W); die Stücke bis ± (STAIR_W + Wange) setzen die Wangen fort
-      const gaps = [];
-      for (const st of stairsAt(x, y)) if ((e.ax === 'u' ? st.dx : st.dy) === e.n && (e.ax === 'u' ? !st.dy : !st.dx)) { const c = e.ax === 'u' ? y : x; gaps.push([c - STAIR_W, c + STAIR_W]); }
-      const pieces = (p0, p1) => { let out = [[p0, p1]]; for (const [g0, g1] of gaps) out = out.flatMap(([c0, c1]) => g1 <= c0 || g0 >= c1 ? [[c0, c1]] : [...(g0 > c0 ? [[c0, g0]] : []), ...(g1 < c1 ? [[g1, c1]] : [])]); return out; };
-      const face = (h0, h1) => { for (const [p0, p1] of pieces(fa, fb)) if (p1 > p0) ops.push({ pts: [at(hi2, p0, H + h0), at(hi2, p1, H + h0), at(hi2, p1, H + h1), at(hi2, p0, H + h1)], col: side }); };
-      const top = hh => { for (const [p0, p1] of pieces(a0, b0)) ops.push({ pts: [at(lo, p0, H + hh), at(hi2, p0, H + hh), at(hi2, p1, H + hh), at(lo, p1, H + hh)], col: F.top }); };
-      const ends = hh => { for (const [g0] of gaps) if (g0 > a0 && g0 < b0) ops.push({ pts: [at(lo, g0, H), at(hi2, g0, H), at(hi2, g0, H + hh), at(lo, g0, H + hh)], col: e.ax === 'u' ? F.sV : F.sU }); };   // Stirnseite zur Lücke (+ sichtbar)
-      const each = (step, f) => { for (let t = Math.ceil(a0 / step - 1e-6) * step; t < b0 - 1e-6; t += step) if (!gaps.some(([g0, g1]) => t > g0 - STAIR_CHEEK - 1e-6 && t < g1 + STAIR_CHEEK + 1e-6)) f(t); };   // im Weltraster
-      const posts = () => {                                             // Geländer/Balustrade: an der Lücke ein Steinpfosten wie die Wange
-        for (const [g0, g1] of gaps) for (const [p0, p1] of [[g0 - STAIR_CHEEK, g0], [g1, g1 + STAIR_CHEEK]]) {
-          if (p1 <= a0 || p0 >= b0) continue;
-          ops.push({ pts: [at(hi2, p0, H), at(hi2, p1, H), at(hi2, p1, H + 6), at(hi2, p0, H + 6)], col: side });
-          ops.push({ pts: [at(lo, p1, H), at(hi2, p1, H), at(hi2, p1, H + 6), at(lo, p1, H + 6)], col: e.ax === 'u' ? F.sV : F.sU });   // Stirnseite (+ sichtbar)
-          ops.push({ pts: [at(lo, p0, H + 6), at(hi2, p0, H + 6), at(hi2, p1, H + 6), at(lo, p1, H + 6)], col: F.top });
-        }
-      };
-      if (Pd.id === 'mauer') { face(0, h); ends(h); top(h); }
+      const face = (h0, h1) => { if (fb > fa) ops.push({ pts: [at(hi2, fa, H + h0), at(hi2, fb, H + h0), at(hi2, fb, H + h1), at(hi2, fa, H + h1)], col: side }); };
+      const top = hh => ops.push({ pts: [at(lo, a0, H + hh), at(hi2, a0, H + hh), at(hi2, b0, H + hh), at(lo, b0, H + hh)], col: F.top });
+      const each = (step, f) => { for (let t = Math.ceil(a0 / step - 1e-6) * step; t < b0 - 1e-6; t += step) f(t); };   // im Weltraster: läuft über Felder weiter
+      if (Pd.id === 'mauer') { face(0, h); top(h); }
       else if (Pd.id === 'balustrade') {
         face(0, 1.2); top(1.2);
         each(0.09, t => { ops.push({ pts: [at(mid, t, H + 1.2), at(mid, t, H + h - 1.2)], col: '#d7cbb2', line: 2.1 }); ops.push({ pts: [at(mid, t - 0.008, H + 1.2), at(mid, t - 0.008, H + h - 1.2)], col: '#efe7d6', line: 0.7 }); });
-        face(h - 1.2, h); top(h); posts();
+        face(h - 1.2, h); top(h);
       } else {
         each(0.2, t => ops.push({ pts: [at(mid, t, H), at(mid, t, H + h)], col: '#4f4a44', line: 0.9 }));
-        for (const [p0, p1] of pieces(a0, b0)) for (const hh of [h * 0.5, h]) ops.push({ pts: [at(mid, p0, H + hh), at(mid, p1, H + hh)], col: '#4f4a44', line: hh === h ? 1.1 : 0.6 });
-        posts();
+        ops.push({ pts: [at(mid, a0, H + h * 0.5), at(mid, b0, H + h * 0.5)], col: '#4f4a44', line: 0.6 });
+        ops.push({ pts: [at(mid, a0, H + h), at(mid, b0, H + h)], col: '#4f4a44', line: 1.1 });
       }
     }
     return ops;
@@ -353,7 +340,6 @@ function roofSig(x, y, r) {
   const reach = roofForm(r) === 'markise' ? 3 : 1, cov = roofCov(r);
   let s = (r.form || 0) + ':' + (r.col || 0) + ':' + (roofBel(r) || '') + ':' + (r.par || 0) + ':';
   for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) s += cov(x + dx, y + dy) ? 1 : 0;
-  s += '|' + stairsAt(x, y).map(t => t.dx + ',' + t.dy).join(';');      // Lücke in der Brüstung (Aufgang)
   s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
   if (roofForm(r) === 'arkaden') {                                      // Bögen hängen an den Stützen des ganzen Laufs
     const A = roofArea(cov);
@@ -743,67 +729,3 @@ function roofTopPutBack(it) {
 }
 // was gerade getragen wird, ist Deko, die aufs Dach darf (Verschieben)
 const roofTopCarried = () => tool === 'verschieben' && moving && moving.kind === 'deco' && !moving.copy && roofTopOk(moving.d.b) ? moving.d.b : null;
-
-// ---------------------------------------------------------------------------
-// Aufgang (Block 138d, Nutzer 09.10.2026: „einen Aufgang, wo die Bewohner drauf rumlaufen können“ – gewählt C, Freitreppe frontal):
-// eigenes Feld vor einer Steinarkade, steigt zu ihr hinauf (rot: Fuß vorn = FRONT_DIR[rot], hinauf = −FRONT_DIR). Breite ±0,36,
-// Wangen bis ±0,42 (genau die Mitte des Dachfelds) – die Brüstung hat dort eine Lücke, ihre Enden stehen bündig auf den Wangen
-// ---------------------------------------------------------------------------
-const STAIR_W = 0.36, STAIR_CHEEK = 0.06, STAIR_N = 10, STAIR_LAND = 0.12;
-const stairUp = rot => { const [dx, dy] = FRONT_DIR[rot & 3]; return [-dx, -dy]; };
-// Feld, auf das die Treppe führt (oder null), und umgekehrt: Treppen, die an Feld (x, y) ankommen [{ x, y, dir }]
-const stairRoof = (x, y, rot) => { const [dx, dy] = stairUp(rot); return [x + dx, y + dy]; };
-function stairsAt(x, y) {
-  const out = [];
-  for (const [dx, dy] of DIRS) {
-    const t = state.tiles.get((x + dx) + ',' + (y + dy));
-    if (t && t.b === 'aufgang') { const [rx, ry] = stairRoof(x + dx, y + dy, t.rot || 0); if (rx === x && ry === y) out.push({ x: x + dx, y: y + dy, dx, dy }); }
-  }
-  return out;
-}
-function stairError(x, y, rot) {
-  if (roofAt(x, y)) return 'Nicht unter die Überdachung – davor stellen';
-  const [rx, ry] = stairRoof(x, y, rot);
-  if (!roofTopRoof(rx, ry)) return 'Mit der Treppe direkt an Steinarkaden stellen';
-  return null;
-}
-// von selbst zum Steindach drehen (wie die Seebrücke zum Wasser)
-function stairRot(x, y) { const ok = [buildRot, 0, 1, 2, 3].find(r => !roofAt(x, y) && roofTopRoof(...stairRoof(x, y, r))); return ok == null ? buildRot : ok; }
-// Freitreppe zeichnen: Fuß bei der Feldmitte (cx, cy). Stufen, Podest und zwei Wangen als Quader, sichtbare Seiten (+u, +v, oben),
-// von hinten nach vorn
-function drawStair(cx, cy, z, rot) {
-  const H = ROOF_H, F = ROOF_FRAME.arkaden, [Du, Dv] = stairUp(rot), [Su, Sv] = [-Dv, Du];
-  const W = (d, s) => [Du * d + Su * s, Dv * d + Sv * s];
-  const P = (u, v, up) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
-  const q = (pts, col) => { poly(pts, C(col)); g.strokeStyle = C(col); g.lineWidth = 0.3 * z; g.lineJoin = 'round'; g.stroke(); };
-  const top = 1 - RW, land = top - STAIR_LAND, foot = -0.5, dd = (land - foot) / STAIR_N, CH = 6;   // Podest bis an die Dachkante
-  const box = (d0, d1, s0, s1, h1) => {                                    // Quader vom Boden bis h1, in (d, s) gegeben
-    const [a, b] = W(d0, s0), [c, e] = W(d1, s1), u0 = Math.min(a, c), u1 = Math.max(a, c), v0 = Math.min(b, e), v1 = Math.max(b, e);
-    return { k: (u0 + u1 + v0 + v1) / 2, draw: () => {
-      q([P(u0, v1, 0), P(u1, v1, 0), P(u1, v1, h1), P(u0, v1, h1)], F.sV);
-      q([P(u1, v0, 0), P(u1, v1, 0), P(u1, v1, h1), P(u1, v0, h1)], F.sU);
-      q([P(u0, v0, h1), P(u1, v0, h1), P(u1, v1, h1), P(u0, v1, h1)], F.top);
-    } };
-  };
-  // Wange: im Schnitt oben schräg (Fuß CH hoch, ab dem Podest H + CH), quer s0…s1; sichtbar sind Flächen mit Normale +u/+v und oben
-  const cheek = (s0, s1) => {
-    const prof = [[foot, 0], [top, 0], [top, H + CH], [land, H + CH], [foot, CH]];
-    const pt = (d, s, h) => { const [u, v] = W(d, s); return P(u, v, h); };
-    const vis = (nu, nv) => nu > 1e-9 || nv > 1e-9;
-    const sm = (s0 + s1) / 2, [ou, ov] = W(0, sm);
-    return { k: 2 * (ou + ov), draw: () => {
-      for (const [s, sg] of [[s0, -1], [s1, 1]]) if (vis(Su * sg, Sv * sg)) q(prof.map(([d, h]) => pt(d, s, h)), Su ? F.sU : F.sV);   // Seiten
-      if (vis(-Du, -Dv)) q([pt(foot, s0, 0), pt(foot, s1, 0), pt(foot, s1, CH), pt(foot, s0, CH)], Du ? F.sU : F.sV);   // Fuß-Ende
-      if (vis(Du, Dv)) q([pt(top, s0, 0), pt(top, s1, 0), pt(top, s1, H + CH), pt(top, s0, H + CH)], Du ? F.sU : F.sV);
-      q([pt(foot, s0, CH), pt(foot, s1, CH), pt(land, s1, H + CH), pt(land, s0, H + CH)], F.top);                         // Oberseite
-      q([pt(land, s0, H + CH), pt(land, s1, H + CH), pt(top, s1, H + CH), pt(top, s0, H + CH)], F.top);
-    } };
-  };
-  const steps = [box(land, top, -STAIR_W, STAIR_W, H)];
-  for (let i = 1; i <= STAIR_N; i++) steps.push(box(land - i * dd, land - (i - 1) * dd, -STAIR_W, STAIR_W, H * (STAIR_N - i + 0.6) / STAIR_N));
-  steps.sort((a, b) => a.k - b.k);
-  const cs = [cheek(-STAIR_W - STAIR_CHEEK, -STAIR_W), cheek(STAIR_W, STAIR_W + STAIR_CHEEK)].sort((a, b) => a.k - b.k);
-  cs[0].draw(); for (const s of steps) s.draw(); cs[1].draw();
-}
-// Höhe auf der Treppe (für die Leute darauf): d von der Feldmitte zur Dachkante
-const stairHeight = d => { const top = 1 - RW, land = top - STAIR_LAND; return d >= land ? ROOF_H : Math.max(0, ROOF_H * (d + 0.5) / (land + 0.5)); };

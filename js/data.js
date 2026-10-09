@@ -107,7 +107,6 @@ const ITEMS = {
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
   dach:    { cat: 'deko', name: 'Überdachung', cost: 40, mat: { bretter: 1 }, beauty: 2, roof: true,
              desc: 'Ein Dach über Wegen, Wiese oder Plätzen – die Leute laufen darunter durch. Als Fläche ziehen, auch 2–3 breit. An die Außenecken kommen Stützen gleich mit – versetzen, entfernen oder weitere dazustellen kannst du selbst.' },
-  aufgang: { cat: 'deko', name: 'Freitreppe', cost: 300, mat: { quader: 8 }, needs: 'grass', beauty: 6, desc: 'Eine breite Steintreppe hinauf auf Steinarkaden – dort oben gehen die Leute spazieren. Direkt an die Kante stellen.' },   // Block 138d
   stuetze: { cat: 'deko', name: 'Stütze', cost: 10, mat: { bretter: 1 }, beauty: 0, small: true,
              desc: 'Trägt eine Überdachung: an eine Feldecke, eine Seitenmitte am Wegrand oder genau auf den Punkt zwischen vier Feldern. Sieht aus wie das Dach darüber.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld. Nah an eine Feldecke getippt, steht sie genau zwischen den Feldern.' },
@@ -596,7 +595,7 @@ const MENU = [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
-    { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'aufgang'] },   // Block 138
+    { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze'] },   // Block 138
     { id: 'platz', label: '🏮 Stadtschmuck', items: ['laterne', 'bank', 'brunnen', 'pavillon', 'glaskugel', 'strassenlaterne', 'kristallaterne', 'kristallbrunnen', 'kristall', 'freundesbank'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
@@ -658,7 +657,6 @@ const ITEM_TIPS = {
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
   dach: 'Zieh die Überdachung über Wege, Wiese oder Plätze – auch 2 oder 3 Felder breit. An die Außenecken kommen Stützen gleich mit; weitere stellst du selbst dazu.',
-  aufgang: 'Stell die Freitreppe direkt vor Steinarkaden – sie dreht sich von selbst zum Dach. Oben gehen dann Leute spazieren.',
   stuetze: 'Stell Stützen unter deine Überdachung – an Ecken, Seitenmitten oder auf den Punkt zwischen vier Feldern. Wie viele, entscheidest du.',
   tunnel: 'Zieh den Tunnel wie eine Schiene – unter Häusern und Wegen durch. An sein Ende kommt eine Tunneleinfahrt, daran die Schiene.',
   tunneleinfahrt: 'Ans Ende eines Tunnels setzen – sie dreht sich von selbst richtig herum. Dann Schienen an das offene Ende legen.',
