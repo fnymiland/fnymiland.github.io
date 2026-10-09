@@ -1010,6 +1010,21 @@ function startMove(x, y, slot = 0) {
   undoable(() => pickUp(x, y, slot));                           // Aufheben … Ablegen = ein Schritt zum Zurücknehmen
   hover = { x, y }; hoverSlot = Math.max(0, slot);
 }
+// Überdachung (Block 138): dieses Feld oder alle verbundenen – wie im Fenster gewählt; Deko oben samt Platz (138b)
+function startRoofMove(x, y) {
+  const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y];
+  closePanel();
+  if (moving) cancelMove();
+  setTool('verschieben');
+  if (undoable(() => pickUpRoofs(keys))) hover = { x, y };
+}
+function startRoofTopMove(x, y, slot) {
+  closePanel();
+  if (moving) cancelMove();
+  setTool('verschieben');
+  undoable(() => pickUpRoofTop(x, y, slot));
+  hover = { x, y, top: true }; hoverSlot = slot;
+}
 const moveBtn = '<button class="btn ghost" id="p-move" aria-label="Verschieben">✋</button>';
 // Löschen im Fenster (Block 45): wie das Abriss-Werkzeug (Deko und Wege voll zurück, Gebäude zur Hälfte). Was viel kostet,
 // fragt einmal nach (zweites Tippen); alles lässt sich mit ↶ zurücknehmen.
@@ -1237,7 +1252,7 @@ function roofRunKeys(x, y) {
   }
   return out;
 }
-function roofInfoHtml(x, y) {
+function roofInfoHtml(x, y, moveHere = false) {                     // moveHere: im Fenster des Felds darunter (dessen ✋ verschiebt das Feld)
   const r = roofAt(x, y);
   if (!r) return '';
   const n = roofRunKeys(x, y).length, form = r.form || 0, col = r.col || 0, more = lookMore('dach');
@@ -1248,6 +1263,7 @@ function roofInfoHtml(x, y) {
     <div class="looks look-forms">${lookFree('dach', 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-roofform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb('dach', i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${roofForm(r) === 'markise' ? `<div class="label">Markisenfarbe</div><div class="swatches">${lookFree('dach', 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-roofcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
     ${roofForm(r) === 'arkaden' ? `<div class="label">Dach</div><div class="looks">${[['', 'Dachgarten'], [roofBel(r) || roofBelDefault(), 'Belag']].map(([v, n]) => `<button class="look${!v === !roofBel(r) ? ' on' : ''}" data-roofbel="${escHtml(v)}">${n}</button>`).join('')}</div>${roofBel(r) ? wegPickHtml(roofBel(r), 'roofbel', true) : ''}` : ''}
+    ${moveHere ? `<div class="looks"><button class="look" data-roofmove="1" aria-label="Überdachung verschieben">✋ Überdachung verschieben</button></div>` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
     <p class="muted">An die Außenecken kommen Stützen gleich mit. Weitere stellst du selbst: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Felder; mit 🧹 entfernen.</p>`;
 }
@@ -1256,9 +1272,10 @@ function openRoofInfo(x, y) {
   const reopen = () => roofAt(x, y) ? openRoofInfo(x, y) : closePanel();
   const el = showPanel(`<h3>${DECO_LOOKS.dach.forms[roofAt(x, y).form || 0].name}</h3><p class="muted">${ITEMS.dach.desc}</p>
     ${roofInfoHtml(x, y)}
-    <div class="row">${delButton(x, y)}<button class="btn ghost" id="p-close">Schließen</button></div>`, reopen);
+    <div class="row">${moveBtn}${delButton(x, y)}<button class="btn ghost" id="p-close">Schließen</button></div>`, reopen);
   wireDel(x, y);
   $('p-close').onclick = closePanel;
+  $('p-move').onclick = () => startRoofMove(x, y);
   wireRoofInfo(el, x, y, reopen);
 }
 function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
@@ -1280,6 +1297,8 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
     reopen();
   };
   for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); reopen(); };
+  const mv = el.querySelector('[data-roofmove]');
+  if (mv) mv.onclick = () => startRoofMove(x, y);
   for (const b of el.querySelectorAll('[data-roofbel]')) b.onclick = () => { set('bel', b.dataset.roofbel); reopen(); };   // Steinarkaden: Dachgarten oder Belag
   const m = el.querySelector('[data-roofmore]');
   if (m) m.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.dach.group); };
@@ -1573,7 +1592,7 @@ function openInfo(x, y) {
     ${boat}
     ${hub}
     ${train}
-    ${roofInfoHtml(x, y)}
+    ${roofInfoHtml(x, y, true)}
     ${castle}
     ${colors}
     <div class="row">
@@ -2115,7 +2134,7 @@ function openDecoInfo(x, y, slot) {
   if (DECO_LOOKS[baseOf(d.b)]) wireDecoLook($('panel'), baseOf(d.b), d, () => openDecoInfo(x, y, slot));
 }
 
-// Deko auf dem Dach (Block 138b): wie am Boden – Farbe/Form, Drehen, Entfernen (Verschieben geht mit dem Dach)
+// Deko auf dem Dach (Block 138b): wie am Boden – Farbe/Form, Drehen, Verschieben, Entfernen
 function openRoofTopInfo(x, y, slot) {
   const r = roofAt(x, y), d = roofTopsOf(r)[slot];
   if (!d) { closePanel(); return; }
@@ -2127,9 +2146,11 @@ function openRoofTopInfo(x, y, slot) {
     ${DECO_LOOKS[baseOf(d.b)] ? decoLookHtml(baseOf(d.b), d) : ''}
     <div class="row">
       ${ROTATABLE.has(d.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${moveBtn}
       <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${decoBack(d) ? ` +${fmt(decoBack(d))}` : ''}</button>
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, reopen);
+  $('p-move').onclick = () => startRoofTopMove(x, y, slot);
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
   $('p-del').onclick = () => { closePanel(); undoable(() => removeRoofTop(x, y, slot)); };
   $('p-close').onclick = closePanel;

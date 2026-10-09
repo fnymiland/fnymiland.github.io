@@ -1852,6 +1852,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Vorschau mit `hover.top`); 🧹/👆 treffen die Deko oben vor dem Dach (`roofTopHit`, `openRoofTopInfo`). Dach abreißen bzw. andere
       Form: Deko voll zurück (`roofTopClear`). Zieht beim Verschieben/Kopieren mit (`roofCopy`, Kopie kostet sie mit). Zählt für
       Schönheit, Erfolge, Strom (Laternen als Platz 10 + i). Test: dachdeko. Szene tools/dachdeko.js, Bilder dachdeko-*.png
+- [x] Nutzer: „bei den Überdachungen und bei der Deko drauf keinen Verschieben-Knopf“ → ✋ im Dach-Fenster (dieses Feld oder
+      alle verbundenen, samt Deko oben und den Stützen, die nur sie tragen: `pickUpRoofs`, als Gruppe mit Drehen; `roofTopTurn`),
+      im Fenster des Wegs darunter „✋ Überdachung verschieben“, im Fenster der Deko oben (`pickUpRoofTop`, `moving.top`; ablegen
+      aufs Steindach `dropRoofTop` oder an den Boden). ✋-Werkzeug aufs Dach: erst Deko oben, sonst das Dachfeld. Test: dachdeko
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

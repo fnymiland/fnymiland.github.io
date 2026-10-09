@@ -105,4 +105,62 @@ describe('Deko auf dem Dach (Block 138b)', () => {
     expect(game("[...computePower([], 0, 1).dark]")).toContain('3,5,10');          // ohne Strom: dunkel (Platz 10 + i)
     expect(game("computePower([], 1, 1).dark.has('3,5,10')")).toBe(false);
   });
+
+  it('✋ im Fenster der Deko oben: aufnehmen, auf ein anderes Dachfeld oder an den Boden legen; Abbrechen legt sie zurück (Nutzer)', () => {
+    roof(row(3, 6, 5));
+    game("buildRoofTop('laterne', 4, 5, 3)");
+    game("openRoofTopInfo(4, 5, 3)");
+    expect(game("!!document.getElementById('p-move')")).toBe(true);
+    game("document.getElementById('p-move').click()");
+    expect(game("[tool, moving && moving.d.b, !!moving.top, !!roofAt(4, 5).top]")).toEqual(['verschieben', 'laterne', true, false]);
+    expect(game("JSON.parse(JSON.stringify(serialize())).roofs.find(([k]) => k === '4,5')[1].top[3].b")).toBe('laterne');   // Speichern zwischendurch: am alten Platz
+    game('cancelMove()');
+    expect(game("roofAt(4, 5).top[3].b")).toBe('laterne');
+    // aufs Nachbarfeld oben
+    game("openRoofTopInfo(4, 5, 3); document.getElementById('p-move').click()");
+    const s = onTop(6, 5, 0);
+    game(`setHover(${s[0]}, ${s[1]})`);
+    expect(game('[hover.x, hover.y, !!hover.top]')).toEqual([6, 5, true]);
+    game(`undoable(() => tap(${s[0]}, ${s[1]}, false))`);
+    expect(game("[moving, roofAt(6, 5).top[0].b, !!roofAt(4, 5).top]")).toEqual([null, 'laterne', false]);
+    game('undo()');                                                                  // ein Schritt: wieder auf 4,5
+    expect(game("[roofAt(4, 5).top[3].b, !!roofAt(6, 5).top]")).toEqual(['laterne', false]);
+    // an den Boden
+    game("openRoofTopInfo(4, 5, 3); document.getElementById('p-move').click(); dropAt(9, 9, 0); setTool('look')");
+    expect(game("[decosAt('9,9')[0].b, !!roofAt(4, 5).top]")).toEqual(['laterne', false]);
+  });
+
+  it('✋ im Fenster der Überdachung: dieses Feld oder alle verbundenen samt Deko oben und Stützen; Drehen dreht die Deko mit (Nutzer)', () => {
+    roof([[3, 3], [4, 3], [3, 4], [4, 4]]);
+    game("roofAutoPillars([[3, 3], [4, 3], [3, 4], [4, 4]]); buildRoofTop('bank', 3, 3, 4); buildRoofTop('laterne', 4, 4, 3); recalc()");
+    const pillars = () => game("[...state.decos].reduce((n, [, ds]) => n + ds.filter(d => d && d.b === 'stuetze').length, 0)");
+    expect(pillars()).toBe(4);
+    game("roofScope = 'run'; openRoofInfo(3, 3)");
+    expect(game("!!document.getElementById('p-move')")).toBe(true);
+    game("document.getElementById('p-move').click()");
+    expect(game("[tool, moving.kind, state.roofs.size, moving.items.filter(i => i.kind === 'deco').length]")).toEqual(['verschieben', 'group', 0, 4]);
+    game("hover = { x: 11, y: 11 }; undoable(() => dropGroup(11, 11)); setTool('look')");
+    expect(game('[...state.roofs.keys()].sort()')).toEqual(['10,10', '10,11', '11,10', '11,11']);
+    expect(game("[roofAt(10, 10).top[4].b, roofAt(11, 11).top[3].b]")).toEqual(['bank', 'laterne']);
+    expect(pillars()).toBe(4);
+    // nur ein Feld, gedreht: die Deko oben wandert mit auf ihren gedrehten Platz
+    game("roofScope = 'one'; openRoofInfo(11, 11); document.getElementById('p-move').click(); rotateGroup(1); hover = { x: 15, y: 15 }; dropGroup(15, 15); setTool('look')");
+    expect(game("[state.roofs.has('11,11'), roofAt(15, 15) && roofAt(15, 15).top.findIndex(Boolean)]")).toEqual([false, 2]);   // Ecke 3 (vorn) → nach einer Vierteldrehung Ecke 2
+  });
+
+  it('✋-Werkzeug: Deko oben antippen nimmt sie auf, ein Dachfeld ohne Deko nimmt das Dach; Deko vom Boden darf aufs Dach', () => {
+    roof(row(3, 6, 5));
+    game("buildRoofTop('blumentopf', 4, 5, 3)");
+    const d = game('(() => { const [u, v] = roofTopPos(3), p = toScreen(4 + u, 5 + v); return [p.x, p.y - ROOF_H * cam.z - 4 * cam.z]; })()');
+    game(`setTool('verschieben'); setHover(${d[0]}, ${d[1]}); undoable(() => tap(${d[0]}, ${d[1]}, false))`);
+    expect(game("moving && [moving.d.b, !!moving.top]")).toEqual(['blumentopf', true]);
+    game('cancelMove()');
+    const r = onTop(6, 5, 7);
+    game(`undoable(() => tap(${r[0]}, ${r[1]}, false))`);
+    expect(game("moving && [moving.kind, moving.items.map(i => i.kind)]")).toEqual(['group', ['roof']]);
+    game("cancelMove(); buildSmall('bank', 9, 9, 0); pickUp(9, 9, 0)");
+    const s = onTop(5, 5, 3);
+    game(`setHover(${s[0]}, ${s[1]}); undoable(() => tap(${s[0]}, ${s[1]}, false)); setTool('look')`);
+    expect(game("[roofAt(5, 5).top[3].b, decosAt('9,9')]")).toEqual(['bank', undefined]);
+  });
 });

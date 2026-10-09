@@ -294,6 +294,53 @@ function pickUpGroup(x0, y0, x1, y1) {
   toast(`${items.length} Dinge angehoben – tippe, wohin sie sollen · drehen mit ⟳` + (stays ? ' (manches bleibt stehen)' : ''));
   return true;
 }
+// Überdachung verschieben (Block 138, Nutzer: „kein Verschieben-Knopf“): die Dachfelder samt Deko oben und den Stützen, die nur
+// sie tragen – als Gruppe (Ablegen, Drehen, Abbrechen wie beim Rechteck). keys: ein Feld oder alle verbundenen
+function pickUpRoofs(keys) {
+  if (moving) return false;
+  const set = new Set(keys.filter(k => state.roofs.has(k)));
+  if (!set.size) { toast('Hier ist nichts zum Verschieben'); return false; }
+  const cells = [...set].map(keyXY), x0 = Math.min(...cells.map(c => c[0])), y0 = Math.min(...cells.map(c => c[1]));
+  const x1 = Math.max(...cells.map(c => c[0])), y1 = Math.max(...cells.map(c => c[1]));
+  const items = [...set].map(k => { const [x, y] = keyXY(k); return { kind: 'roof', r: roofCopy(state.roofs.get(k)), from: k, dx: x - x0, dy: y - y0 }; });
+  const seen = new Set();
+  for (const [x, y] of cells) for (const [tx, ty] of PILLAR_NEAR(x, y)) {
+    const k = tx + ',' + ty, ds = decosAt(k);
+    if (!ds) continue;
+    ds.forEach((d, i) => {
+      if (!d || d.b !== 'stuetze' || seen.has(k + '|' + i)) return;
+      seen.add(k + '|' + i);
+      const [pu, pv] = pillarPos(tx, ty, i, d), under = [];               // Dachfelder, die die Stütze berührt
+      for (let fy = Math.round(pv) - 1; fy <= Math.round(pv) + 1; fy++) for (let fx = Math.round(pu) - 1; fx <= Math.round(pu) + 1; fx++)
+        if (state.roofs.has(fx + ',' + fy) && Math.abs(pu - fx) <= 0.5 + 1e-6 && Math.abs(pv - fy) <= 0.5 + 1e-6) under.push(fx + ',' + fy);
+      if (under.length && under.every(f => set.has(f))) items.push({ kind: 'deco', d, from: [k, i], dx: tx - x0, dy: ty - y0 });
+    });
+  }
+  for (const it of items) {
+    if (it.kind === 'roof') { state.roofs.delete(it.from); roofDirty(...keyXY(it.from)); }
+    else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
+  }
+  groundVersion++;
+  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };
+  $('rot-btn').hidden = false;
+  recalc();
+  sfx('deco');
+  toast(`${set.size === 1 ? 'Überdachung' : set.size + ' Dachfelder'} angehoben – tippe, wohin · drehen mit ⟳`);
+  return true;
+}
+// Deko oben dreht mit dem Dach (Gruppe drehen): Plätze und Blickrichtung wie bei Deko am Boden
+function roofTopTurn(top, r) {
+  if (!top || !r) return top;
+  const out = newSlots();
+  top.forEach((d, slot) => {
+    if (!d || slot >= 8) return;
+    const [u0, v0] = SLOT_UV(slot), [u, v] = kitTurn(r, u0, v0);
+    const ns = slot < 4 ? (u > 0 ? 1 : 0) | (v > 0 ? 2 : 0) : 4 + MID_SIDE.findIndex(([a, b]) => a === Math.sign(u) && b === Math.sign(v));
+    const auto = slot >= 4 && MID_TURN.has(d.b) && (d.rot || 0) === midRot(slot);
+    out[ns] = { ...d, rot: auto ? midRot(ns) : ROTATABLE.has(d.b) ? ((d.rot || 0) + r) & 3 : d.rot || 0 };
+  });
+  return out;
+}
 // Mitte einer Linie in Feldkoordinaten: a i,j liegt zwischen (i, j−1) und (i, j), b i,j zwischen (i−1, j) und (i, j)
 const edgeMid = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [i, j - 0.5] : [i - 0.5, j]; };
 const edgeAtMid = (mx, my) => Math.abs(my - Math.round(my)) > 0.25 ? 'a' + Math.round(mx) + ',' + Math.round(my + 0.5) : 'b' + Math.round(mx + 0.5) + ',' + Math.round(my);
@@ -316,7 +363,8 @@ const SLOT_UV = i => i < 4 ? [i & 1 ? 1 : -1, i & 2 ? 1 : -1] : MID_SIDE[i - 4];
 function groupPlaced(it) {
   const r = moving.r || 0;
   if (!r) return it.kind === 'edge' ? { mx: it.mx, my: it.my, e: it.e } : it.kind === 'deco' ? { dx: it.dx, dy: it.dy, d: it.d, slot: it.from[1] } : it;
-  if (it.kind === 'ground' || it.kind === 'roof') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy, r: it.r }; }
+  if (it.kind === 'ground') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy, r: it.r }; }
+  if (it.kind === 'roof') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy, r: it.r.top ? { ...it.r, top: roofTopTurn(it.r.top, r) } : it.r }; }   // Deko oben dreht mit (138b)
   if (it.kind === 'edge') { const [mx, my] = grot(it.mx, it.my); return { mx, my, e: it.e }; }
   if (it.kind === 'deco') {
     const d = it.d, slot = it.from[1];
@@ -557,6 +605,7 @@ function cancelMove() {
     if (it.kind === 'ground') state.terra.set(it.from, it.look);
     else if (it.kind === 'roof') { state.roofs.set(it.from, it.r); roofDirty(...keyXY(it.from)); groundVersion++; }
     else if (it.kind === 'edge') state.edges.set(it.from, it.e);
+    else if (it.kind === 'deco' && it.top) roofTopPutBack(it);         // Deko vom Dach (Block 138b)
     else if (it.kind === 'deco') {
       const [k, slot] = it.from;
       if (!state.decos.has(k)) state.decos.set(k, newSlots());
@@ -716,11 +765,18 @@ function tap(sx, sy, isTouch) {
       removeRoofTop(th.x, th.y, th.slot); return;
     }
   }
-  if (!plan && ITEMS[tool] && roofTopOk(tool)) {                   // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
+  if (tool === 'verschieben' && !moving && !plan) {                // ✋ aufs Dach: erst die Deko oben, sonst das Dachfeld (Block 138b)
+    const th = roofTopHit(sx, sy), rp = !th && !pillarAt(sx, sy) && roofPick(sx, sy);
+    if (th) { pickUpRoofTop(th.x, th.y, th.slot); return; }
+    if (rp) { if (pickUpRoofs([rp.x + ',' + rp.y])) { hover = { x: rp.x, y: rp.y }; } return; }
+  }
+  const topB = tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool) ? tool : null;
+  if (!plan && topB) {                                             // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
     const tp = roofTopAt(sx, sy);
     if (tp) {
       if (isTouch && (!hover || !hover.top || hover.x !== tp.x || hover.y !== tp.y || hoverSlot !== tp.slot)) { hover = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; previewCache = null; return; }
-      if (buildRoofTop(tool, tp.x, tp.y, roofTopFree(tp.x, tp.y, tp.slot))) noteRecent(tool);
+      if (tool === 'verschieben') dropRoofTop(tp.x, tp.y, roofTopFree(tp.x, tp.y, tp.slot));
+      else if (buildRoofTop(tool, tp.x, tp.y, roofTopFree(tp.x, tp.y, tp.slot))) noteRecent(tool);
       return;
     }
   }

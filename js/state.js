@@ -119,8 +119,14 @@ function serialize() {
   }
   const tiles = [...tmap];
   const decoMap = new Map([...state.decos].map(([k, ds]) => [k, ds.slice()]));
+  const roofMap = new Map(state.roofs || []);                               // getragene Dächer: am alten Platz (Block 138)
   for (const it of held) {
     if (it.kind !== 'deco') continue;
+    if (it.top) {                                                           // Deko vom Dach (Block 138b): zurück aufs Dach (Kopie)
+      const [k, slot] = it.from, r = roofMap.get(k);
+      if (r) { const top = r.top ? r.top.slice() : newSlots(); if (!top[slot]) top[slot] = it.d; roofMap.set(k, { ...r, top }); }
+      continue;
+    }
     const [k, slot] = it.from;
     if (!decoMap.has(k)) decoMap.set(k, newSlots());
     decoMap.get(k)[slot] = it.d;
@@ -128,7 +134,6 @@ function serialize() {
   const decoOut = d => d && { b: d.b, rot: d.rot || 0, ...(d.col ? { col: d.col } : {}), ...(d.form ? { form: d.form } : {}), ...(d.free ? { free: true } : {}), ...(d.sv ? { sv: d.sv } : {}) };
   const decos = [...decoMap].map(([k, ds]) => [k, ds.map(decoOut)]);   // Buschfarbe (Block 89), geschenkt (84b), Form (106), Souvenir (129)
   const terraMap = new Map(state.terra), edgeMap = new Map(state.edges);    // getragener Rasen und Linien: am alten Platz (Block 117)
-  const roofMap = new Map(state.roofs || []);                               // getragene Dächer: am alten Platz (Block 138)
   for (const it of held) { if (it.kind === 'ground') terraMap.set(it.from, it.look); else if (it.kind === 'edge') edgeMap.set(it.from, it.e); else if (it.kind === 'roof') roofMap.set(it.from, it.r); }
   return {
     game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,

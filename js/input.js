@@ -172,12 +172,15 @@ function setHover(sx, sy) {
     const ph = pillarAt(sx, sy), rp = !ph && roofPick(sx, sy);
     const th = tool === 'abriss' && !ph && roofTopHit(sx, sy);       // Deko auf dem Dach vor dem Dach (Block 138b)
     if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (ph) { t = { x: ph.x, y: ph.y }; hoverSlot = ph.slot; } else if (rp) t = rp;
-  } else if (!plan && ITEMS[tool] && roofTopOk(tool)) {             // kleine Deko übers Steindach: oben drauf
+  } else if (tool === 'verschieben' && !moving && !plan) {          // ✋ übers Dach: Deko oben, sonst das Dachfeld (Block 138b)
+    const th = roofTopHit(sx, sy), rp = !th && !pillarAt(sx, sy) && roofPick(sx, sy);
+    if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (rp) t = { x: rp.x, y: rp.y, roof: true };
+  } else if (!plan && (tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool))) {   // kleine Deko übers Steindach: oben drauf
     const tp = roofTopAt(sx, sy);
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }
   if (tool === 'tunneleinfahrt') { const [ex, ey] = einAnchor(t.x, t.y); t = { x: ex, y: ey }; }   // Feld unter der Maus = hinteres Feld am Tunnel
-  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top) { hover = t; previewCache = null; }
+  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof) { hover = t; previewCache = null; }
   hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
   if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus
   hoverChunk = null;

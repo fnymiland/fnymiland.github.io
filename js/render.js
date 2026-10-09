@@ -1377,14 +1377,17 @@ function render(now) {
       edgeMark(hoverEdge, '#e5484d', z, 5);
       const E = edgeEnds(hoverEdge), m = toScreen((E.p[0] + E.q[0]) / 2, (E.p[1] + E.q[1]) / 2);
       preview = { ok: true, text: `${ITEMS[e.b].name} entfernen: +${fmt(ITEMS[e.b].cost)}`, p: m };
+    } else if (tool === 'verschieben' && !moving && (hover.top || hover.roof)) {   // Deko oben bzw. Dachfeld aufnehmen (Block 138b)
+      const q = toScreen(hx, hy), d = hover.top && roofTopsOf(roofAt(hx, hy))[hoverSlot];
+      preview = { ok: true, text: d ? `${ITEMS[d.b].name} aufnehmen` : 'Überdachung aufnehmen', p: { x: q.x, y: q.y - ROOF_H * z } };
     } else if (tool === 'verschieben' && !moving) {
       const has = (hds && hds[hoverSlot]) || anchorAt(hx, hy);
       if (!(hds && hds[hoverSlot])) box = objBox(hx, hy);
       preview = { ok: !!has, text: has ? 'Aufnehmen' : 'Hier ist nichts' };
-    } else if (hover.top && tool !== 'verschieben' && roofTopOk(tool)) {   // Deko auf dem Dach (Block 138b)
-      const slot = roofTopFree(hx, hy, hoverSlot), err = roofTopError(tool, hx, hy, slot);
+    } else if (hover.top && (tool === 'verschieben' ? roofTopCarried() : roofTopOk(tool))) {   // Deko auf dem Dach (Block 138b)
+      const mv = tool === 'verschieben', slot = roofTopFree(hx, hy, hoverSlot), err = roofTopError(ghostType, hx, hy, slot, { move: mv });
       const q = toScreen(hx, hy);                                       // Schild über dem Dach, kein Rahmen am Boden
-      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', top: true, slot, text: err || `🌸 +${ITEMS[tool].beauty} auf dem Dach`, p: { x: q.x, y: q.y - ROOF_H * z } };
+      preview = { ok: !err, small: !err || err === 'Zu wenig Taler', top: true, slot, text: err || (mv ? 'Hierhin aufs Dach' : `🌸 +${ITEMS[tool].beauty} auf dem Dach`), p: { x: q.x, y: q.y - ROOF_H * z } };
     } else if (tool === 'abriss' && hover.top) {
       const d = roofTopsOf(roofAt(hx, hy))[hoverSlot];
       const q = toScreen(hx, hy);
@@ -1626,7 +1629,8 @@ function render(now) {
         const f = () => {
           drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z); drawRoofTops(x, y, px, py, z, now);
           if (topGhost) {
-            const gRot = smallRot(ghostType, preview.slot), L = DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
+            const mv = tool === 'verschieben' && moving && moving.kind === 'deco';   // getragene Deko: so, wie sie abgelegt wird
+            const gRot = mv ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot), L = mv ? moving.d : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = !mv && ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
             const [u, v] = roofTopPos(preview.slot);
             g.globalAlpha = 0.65;
             drawSmallOne(ghostType, gRot, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, 1, ROOF_TOP_SLOT0 + preview.slot, gCol, L.form || 0);

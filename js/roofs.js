@@ -639,3 +639,38 @@ function* roofTopAll() {
   if (!state.roofs) return;
   for (const [k, r] of state.roofs) if (r.top) for (let i = 0; i < 8; i++) if (r.top[i]) yield [k, i, r.top[i]];
 }
+// Deko oben verschieben (Nutzer: „kein Verschieben-Knopf“): aufnehmen wie Deko am Boden (moving.top merkt, wohin sie zurückgehört);
+// ablegen aufs Steindach (dropRoofTop) oder an den Boden (dropAt) – und Deko vom Boden darf genauso aufs Dach
+function pickUpRoofTop(x, y, slot) {
+  if (moving) return false;
+  const r = roofAt(x, y), d = r && roofTopsOf(r)[slot];
+  if (!d) { toast('Hier ist nichts zum Verschieben'); return false; }
+  moving = { kind: 'deco', d, from: [x + ',' + y, slot], top: true };
+  r.top[slot] = null;
+  if (r.top.every(v => !v)) delete r.top;
+  buildRot = d.rot || 0; rotManual = false;
+  recalc(); sfx('deco');
+  $('rot-btn').hidden = !ROTATABLE.has(d.b);
+  toast('Tippe, wohin es soll – aufs Dach oder an den Boden' + (ROTATABLE.has(d.b) ? ' · drehen mit ⟳ oder Mausrad' : ''));
+  return true;
+}
+function dropRoofTop(x, y, slot) {
+  const err = roofTopError(moving.d.b, x, y, slot, { move: true });
+  if (err) { fail(err); return false; }
+  const r = roofAt(x, y);
+  if (!r.top) r.top = newSlots();
+  r.top[slot] = { ...moving.d, rot: ROTATABLE.has(moving.d.b) ? buildRot : 0, born: performance.now() };
+  moving = null;
+  $('rot-btn').hidden = true;
+  sfx('build'); recalc(); save();
+  return true;
+}
+// zurück aufs Dach, von dem sie kam (Abbrechen, Speichern zwischendurch); ist das Dach weg, zurück ins Lager
+function roofTopPutBack(it) {
+  const [k, slot] = it.from, r = state.roofs.get(k);
+  if (!r || roofForm(r) !== 'arkaden' || (r.top && r.top[slot])) { payBackDeco(it.d); return; }
+  if (!r.top) r.top = newSlots();
+  r.top[slot] = it.d;
+}
+// was gerade getragen wird, ist Deko, die aufs Dach darf (Verschieben)
+const roofTopCarried = () => tool === 'verschieben' && moving && moving.kind === 'deco' && !moving.copy && roofTopOk(moving.d.b) ? moving.d.b : null;
