@@ -166,7 +166,8 @@ function scanSelect(p) {
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, firstErr: 'Hier ist nichts zum Verschieben' };
 }
-// Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt.
+// Abriss: was ganz im Rechteck steht (Gebäude, Wege, Deko) kommt weg, Wald/Fels wird gerodet bzw. gesprengt
+// (aus der ✋-Auswahl, Block 155a: `keepLand` – Wald/Fels bleiben, gerodet wird nur per 👆 einzeln).
 // Leeres bleibt hell, was nicht geht (Rathaus, Sehenswürdigkeit, ragt hinaus) rot.
 function scanDemolish(p) {
   const states = new Map(), order = [], clear = [], [x0, y0, x1, y1] = planBox(p), seen = new Set();
@@ -195,7 +196,7 @@ function scanDemolish(p) {
     }
     const info = ownedTile(x, y) ? demolishInfo(x, y) : { err: 'nichts' };
     if (info.tunnel || info.roof) { order.push([x, y, () => { demolish(x, y); return true; }]); gain += info.refund; things++; states.set(k, 'ok'); continue; }   // Tunnel (136), Dach (138)   // Tunnel (Block 136): einzeln und im Rechteck
-    if (info.cost) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
+    if (info.cost && !p.keepLand) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
     else if (!states.has(k)) states.set(k, 'same');
   }
   for (let j = y0; j <= y1 + 1; j++) for (let i = x0; i <= x1 + 1; i++) for (const k of [i <= x1 ? 'a' + i + ',' + j : null, j <= y1 ? 'b' + i + ',' + j : null]) {
@@ -212,7 +213,7 @@ function scanDemolish(p) {
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch
 let planMemo = null;
 function planInfo(p) {
-  const key = [p.kind, p.tool, p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
+  const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')
@@ -222,7 +223,7 @@ function planInfo(p) {
 }
 function planText(p, info) {
   const d = ITEMS[p.tool], parts = [];
-  if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · ${p.fixed ? 'unten wählen: verschieben oder kopieren' : 'loslassen: auswählen'}`;
+  if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · ${p.fixed ? 'unten wählen, was damit passiert' : 'loslassen: auswählen'}`;
   if (p.tool === 'abriss') {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);

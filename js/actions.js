@@ -614,6 +614,28 @@ function dropAt(x, y, slot) {
   recalc();
   save();
 }
+// 🗑️ Wegwerfen (Block 155b, Nutzer: „Abreißen in die Auswahl“): was am Finger hängt, an den alten Platz zurück und dort abreißen –
+// Erstattung und Sperren wie beim Abreißen (Haus mit Arbeitern bleibt stehen). Reihenfolge: Deko oben, Dächer, Deko, Gebäude, Linien
+function discardCarried() {
+  if (!moving || moving.copy) return false;
+  const its = carried().slice();
+  cancelMove();
+  const xy = it => keyXY(Array.isArray(it.from) ? it.from[0] : it.from);
+  return undoable(() => {
+    let n = 0;
+    batch(() => {
+      for (const it of its) if (it.kind === 'deco' && it.top && removeRoofTop(...xy(it), it.from[1])) n++;
+      for (const it of its) if (it.kind === 'roof' && state.roofs.has(it.from)) { demolish(...xy(it)); if (!state.roofs.has(it.from)) n++; }
+      for (const it of its) if (it.kind === 'deco' && !it.top) {
+        const ds = decosAt(it.from[0]);
+        if (ds && ds[it.from[1]] === it.d) { removeSmall(...xy(it), it.from[1]); n++; }
+      }
+      for (const it of its) if (it.kind === 'tile' && state.tiles.get(it.from) === it.t) { demolish(...xy(it), true); if (state.tiles.get(it.from) !== it.t) n++; }
+      for (const it of its) if (it.kind === 'edge' && state.edges.get(it.from) === it.e && removeEdge(it.from)) n++;
+    });
+    return n > 0;
+  });
+}
 function cancelMove() {
   if (!moving) return;
   if (moving.copy) { moving = null; $('rot-btn').hidden = true; undoPending = null; return; }   // Kopie (Block 134): nichts zurückzulegen
@@ -845,6 +867,7 @@ function tap(sx, sy, isTouch) {
     else if (roofAt(x, y)) openRoofInfo(x, y);                       // Dach über Wiese (Block 138)
     else if (terraLook(x, y) === 'park') openParkInfo(x, y);
     else if (terraLook(x, y) === 'fz') openFzInfo(x, y);
+    else if (demolishInfo(x, y).cost) openLandInfo(x, y);                // Wald/Fels: Roden, Sprengen (Block 155c)
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }
     return;
   }

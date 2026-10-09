@@ -232,10 +232,11 @@ function drawTunnelIcon(cx, cy, z) {
 }
 
 // Bauansicht (Nutzer: „passt so“): mit Tunnel, Einfahrt oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss
-// nicht (Nutzer: „beim Entfernen genauso ausgegraut“) – die Tunnel erscheinen immer lila gestrichelt, U-Bahn-Stationen als U
+// nicht (Nutzer: „beim Entfernen genauso ausgegraut“) – die Tunnel erscheinen immer lila gestrichelt, U-Bahn-Stationen als U.
+// Auch bei 👁 Durchsicht (Block 155d: 🧹 ist nicht mehr in der Leiste)
 const TUNNEL_VIEW = new Set(['schiene', 'tunnel', 'tunneleinfahrt', 'ubahn', 'abriss']);
 function drawTunnelView(z) {
-  if (!state.tunnels || !TUNNEL_VIEW.has(tool) || (tool !== 'tunnel' && tool !== 'ubahn' && tool !== 'tunneleinfahrt' && !state.tunnels.size)) return;
+  if (!state.tunnels || !(TUNNEL_VIEW.has(tool) || seeThrough) || (tool !== 'tunnel' && tool !== 'ubahn' && tool !== 'tunneleinfahrt' && !state.tunnels.size)) return;
   g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (tool === 'tunnel' || tool === 'ubahn' || tool === 'tunneleinfahrt') { g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H); }
   const segs = [];

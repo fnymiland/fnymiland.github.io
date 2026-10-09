@@ -593,7 +593,7 @@ const MENU = [
     { id: 'kultur', label: '🎭 Kultur', items: Object.keys(SHOPS).filter(id => ITEMS[id].cat === 'kultur') },
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
-    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
+    { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'dachtreppe'] },   // Block 138

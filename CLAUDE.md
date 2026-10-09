@@ -174,6 +174,11 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Bäume/Wald/Obst, Bewohner und Fahrzeuge zu 25 % (`SEE_A`) – blass nur über `seeFaded(an, f)` beim Zeichnen; Tippen geht
     hindurch (`objectAt`, `walkerAt`, `critterAt`, `roofPick`, `roofTopAt`, `holeHit` liefern dann nichts). Nur Ansicht, nie im
     Spielstand. Umschalten über `setSeeThrough` (zeichnet Standbild/Vorschau neu). `setTool` färbt nur `.quick[data-quick]`.
+29a3. **Schnellwerkzeuge** (Block 155): Leiste = 👆/✕ · 🛤️ · ✋ Auswählen · ↶ · 👁 | 🕘 – kein 🧹 mehr (Nutzer: „Leiste ist mir heilig“).
+    Löschen geht über ✋-Auswahl → `demolishSelection` (Abriss-Plan mit `keepLand`: Wald/Fels bleiben), Aufgenommenes →
+    `discardCarried` (erst zurücklegen, dann über `demolish`/`removeSmall`/`removeEdge` – nie selbst erstatten), 👆-Fenster 🗑️
+    (`#p-del`, Entf klickt ihn), Wald/Fels → `openLandInfo`. Was nur mit dem Werkzeug 'abriss' zu sehen war, braucht einen anderen
+    Weg (Tunnel: 👁). Neue Fenster mit Löschen: Knopf `id="p-del"`, dann geht auch Entf.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

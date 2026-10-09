@@ -111,17 +111,20 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
 }
 
 // Schnellzugriff: die Werkzeuge, die man ständig braucht, ohne Umweg über die Kategorien (Tasten A, W, V, E)
-const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Verschieben (V)'], ['abriss', '🧹', 'Abreißen (E)']];
+// 🧹 Abreißen ist nicht mehr in der Leiste (Block 155, Nutzer: „Auswählen und Löschen zusammenlegen“): ✋ Auswählen → 🗑️ Abreißen,
+// Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
+const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
+const NOT_RECENT = new Set(['abriss', 'verschieben']);
 // Zuletzt gebaut (Block 120): die letzten RECENT_MAX Dinge, je Gerät gemerkt; 🕘 neben der Suche zeigt sie in der Leiste
 // (Form, Farbe, Stil gelten wie zuletzt gewählt). Was ohnehin einen Schnellknopf hat, zählt nicht.
 const RECENT_MAX = 8, RECENT_KEY = 'kachelhausen_recent';
 let recentOpen = false;
 function recentList() {
-  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !QUICK.some(([q]) => q === id)).slice(0, RECENT_MAX) : []; }
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !NOT_RECENT.has(id) && !QUICK.some(([q]) => q === id)).slice(0, RECENT_MAX) : []; }
   catch (e) { return []; }
 }
 function noteRecent(id) {
-  if (!ITEMS[id] || ITEMS[id].gift || QUICK.some(([q]) => q === id)) return;
+  if (!ITEMS[id] || ITEMS[id].gift || NOT_RECENT.has(id) || QUICK.some(([q]) => q === id)) return;
   const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
 }
@@ -356,26 +359,56 @@ function setTool(t) {
 }
 // Hinweis über der Leiste: auf dem Handy nur Name, Preis und wie man baut (sonst verdeckt er die halbe Karte) und ein ⓘ
 // fürs Infofenster; am iPad/Mac ohne Infofenster ausführlich, mit Infofenster nur, wie man baut
-// Auswahl mit ✋ (Block 134): Leiste „↔ Verschieben“ / „⧉ Kopieren · Preis“ (bzw. Pipette) / „✕“ – erscheint von selbst, solange
-// eine Auswahl feststeht; render ruft das je Bild (nur bei Änderung neu)
+// Auswahl mit ✋ (Block 134): Leiste „↔ Verschieben“ / „⧉ Kopieren · Preis“ (bzw. Pipette) / „🗑️ Abreißen · Erstattung“ (155a) / „✕“ –
+// erscheint von selbst, solange eine Auswahl feststeht; hängt etwas am Finger (keine Kopie): „🗑️ Wegwerfen“ (155b).
+// render ruft das je Bild (nur bei Änderung neu)
 let selBarKey = null;
+const selDemolishPlan = p => ({ ...p, tool: 'abriss', keepLand: true, fixed: true });   // Wald/Fels bleiben (gerodet wird per 👆)
 function syncSelBar() {
   const bar = $('sel-bar');
   if (!bar) return;
-  const on = !!(plan && plan.tool === 'verschieben' && plan.fixed && !moving);
-  if (!on) { if (!bar.hidden) { bar.hidden = true; selBarKey = null; bar.dataset.html = ''; } return; }
+  const sel = !!(plan && plan.tool === 'verschieben' && plan.fixed && !moving), held = !!(moving && !moving.copy && tool === 'verschieben');
+  if (!sel && !held) { if (!bar.hidden) { bar.hidden = true; selBarKey = null; bar.dataset.html = ''; } return; }
+  if (held) {
+    const html = '<button class="btn danger" id="sel-del" title="Zurück an seinen Platz und abreißen (Entf)">🗑️ Wegwerfen</button>';
+    bar.hidden = false; selBarKey = null;
+    if (bar.dataset.html === html) return;
+    bar.dataset.html = html; bar.innerHTML = html;
+    $('sel-del').onclick = () => { audio(); discardCarried(); syncSelBar(); };
+    return;
+  }
   const box = planBox(plan), key = box.join() + '|' + groundVersion;
   if (key === selBarKey && !bar.hidden) return;
   selBarKey = key;
   const { items, stays } = copyCollect(...box), pip = copyPipette(items), cost = copyCost(items);
   const copyLabel = !items.length ? '⧉ Kopieren' : pip ? `🖌️ Pipette: ${ITEMS[pip.tool].name}` : `⧉ Kopieren · 🪙 ${fmt(cost.money)}${matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) ? ' ' + matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) : ''}`;
-  const html = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button><button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>`;
+  const di = planInfo(selDemolishPlan(plan)), delLabel = di.err || !di.gain ? '🗑️ Abreißen' : `🗑️ Abreißen · +🪙 ${fmt(di.gain)}`;
+  const html = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button>`
+    + `<button class="btn danger" id="sel-del" ${di.err ? 'disabled' : ''} title="${escHtml(di.err || (di.bad ? 'Rotes bleibt stehen' : 'Alles in der Auswahl abreißen – Wald und Fels bleiben (Entf)'))}">${delLabel}</button>`
+    + '<button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>';
   bar.hidden = false;
   if (bar.dataset.html === html) return;                                  // gleich geblieben: Knöpfe nicht austauschen (ein Klick ginge sonst ins Leere)
   bar.dataset.html = html; bar.innerHTML = html;
   $('sel-move').onclick = () => { const b = planBox(plan); plan = null; undoable(() => pickUpGroup(...b)); syncSelBar(); };
   $('sel-copy').onclick = () => { const b = planBox(plan); plan = null; startCopy(...b); syncSelBar(); };
+  $('sel-del').onclick = () => { audio(); demolishSelection(); };
   $('sel-x').onclick = () => { plan = null; syncSelBar(); };
+}
+// Entf/Rücktaste/E (Block 155e): die Auswahl, das Aufgenommene oder das Ding im offenen Fenster entfernen
+function deleteKey() {
+  if (plan && plan.tool === 'verschieben' && plan.fixed && !moving) return demolishSelection();
+  if (moving && !moving.copy) { const ok = discardCarried(); syncSelBar(); return ok; }
+  const del = !$('panel').hidden && $('p-del');
+  if (del && !del.disabled) { del.click(); return true; }
+  return false;
+}
+// Auswahl abreißen (Block 155a): wie das 🧹-Rechteck, nur ohne Roden
+function demolishSelection() {
+  if (!(plan && plan.tool === 'verschieben' && plan.fixed)) return false;
+  plan = selDemolishPlan(plan);
+  const ok = undoable(() => runPlan());
+  plan = null; syncSelBar();
+  return ok;
 }
 function updateHint() {
   const hint = $('hint'), t = tool;
@@ -1272,7 +1305,7 @@ function roofInfoHtml(x, y, moveHere = false) {                     // moveHere:
       <div class="label">Brüstung</div><div class="looks">${ROOF_PAR.map((p, i) => `<button class="look${(r.par || 0) === i ? ' on' : ''}" data-roofpar="${i}">${p ? p.name : 'Keine'}</button>`).join('')}</div>` : ''}
     ${moveHere ? `<div class="looks"><button class="look" data-roofmove="1" aria-label="Überdachung verschieben">✋ Überdachung verschieben</button></div>` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
-    <p class="muted">An die Außenecken kommen Stützen gleich mit. Weitere stellst du selbst: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Felder; mit 🧹 entfernen.</p>`;
+    <p class="muted">An die Außenecken kommen Stützen gleich mit. Weitere stellst du selbst: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Felder; zum Entfernen antippen → 🗑️.</p>`;
 }
 function openRoofInfo(x, y) {
   if (!roofAt(x, y)) { closePanel(); return; }
@@ -1870,10 +1903,21 @@ function openTunnelInfo(x, y) {
   const c = costOf('tunnel', x, y), atRail = DIRS.some(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene');
   showPanel(`
     <h3>🚇 Tunnel</h3>
-    <p class="muted">Liegt unter der Erde – zu sehen nur mit Tunnel, Einfahrt, U-Bahn-Station, Schiene oder 🧹 in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
+    <p class="muted">Liegt unter der Erde – zu sehen mit 👁 Durchsicht oder mit Tunnel, Einfahrt, U-Bahn-Station oder Schiene in der Hand.${terrainAt(x, y) === 'water' ? ' Hier unter Wasser.' : ''}</p>
     ${atRail ? `<div class="status"><div class="bad">✗ Schiene direkt am Tunnel fährt nicht hinein. ${TUNNEL_EIN_HINT}</div></div>` : ''}
     <div class="row"><button class="btn danger" id="p-del" aria-label="Tunnel hier entfernen">🗑️ +${fmt(c.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => tunnelAt(x, y) && !COVER.has(x + ',' + y) ? openTunnelInfo(x, y) : closePanel());
+  $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
+  $('p-close').onclick = closePanel;
+}
+// Wald, Obsthain, Fels angetippt (Block 155c, statt 🧹): Name und Roden/Sprengen mit Preis
+function openLandInfo(x, y) {
+  const ter = terrainAt(x, y), info = demolishInfo(x, y), rock = info.label === 'Sprengen';
+  showPanel(`
+    <h3>${rock ? '🪨' : '🌲'} ${escHtml(TERRAIN_NAMES[ter] || '')}</h3>
+    <p class="muted">${rock ? 'Sprengen' : 'Roden'} macht daraus Wiese – dann kannst du hier bauen.</p>
+    <div class="row"><button class="btn danger" id="p-del">${rock ? '🧨 Sprengen' : '🪓 Roden'} · 🪙 ${fmt(info.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => terrainAt(x, y) === ter && !COVER.has(x + ',' + y) ? openLandInfo(x, y) : closePanel());
   $('p-del').onclick = () => { closePanel(); undoable(() => demolish(x, y)); };
   $('p-close').onclick = closePanel;
 }
@@ -2766,7 +2810,8 @@ function helpBody(tab) {
   '🦋 <b>Tiere in der Natur</b> zeigen dir, wo es schön ist: Schmetterlinge bei Blumen, Vögel im Wald, Fische und Frösche im Teich, Möwen und Robben an der Küste. Antippen trägt sie ins Album „Naturbeobachtungen“ ein – dort steht auch, wo man die fehlenden findet. Für 4, 8 und alle 12 gibt es besondere Deko.',
   '📏 <b>Größen:</b> Brunnen, Bäume, Beete & Co. gibt es klein bis riesig – die Größe wählst du über der Leiste.',
     '🧺 <b>Marktplatz:</b> ein Platz aus Wegen mit mindestens 3 Marktständen. 🌳 <b>Park:</b> Parkrasen mit Deko darauf – ab 4 Feldern und 3 Deko eine Grünanlage.',
-    '✋ <b>Verschieben</b> kostet nichts. 🧹 <b>Abreißen:</b> Deko und Wege gibt es voll zurück, Gebäude zur Hälfte. In jedem Fenster gibt es 🗑️.',
+    '✋ <b>Auswählen:</b> ein Ding antippen hebt es auf (Verschieben kostet nichts, 🗑️ Wegwerfen reißt es ab); ein Rechteck aufziehen, dann unten Verschieben, Kopieren oder 🗑️ Abreißen. Einzeln geht es auch im Fenster (👆 antippen → 🗑️). Deko und Wege gibt es voll zurück, Gebäude zur Hälfte.',
+    '🌲 <b>Wald roden, Fels sprengen:</b> antippen → 🪓 Roden bzw. 🧨 Sprengen. Wer darauf baut, räumt ihn gleich mit weg.',
     '↶ <b>Verbaut?</b> Rückgängig nimmt die letzten 20 Schritte zurück – mit allen Talern.']);
   if (tab === 'wachsen') return li([
     '💡 <b>Forschung:</b> Schulen, Bibliotheken und die Universität bringen Ideen. Damit erforschst du neue Gebäude und Boni – oben auf 💡 tippen.',
@@ -2826,6 +2871,11 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-09-werkzeuge', date: '9. Oktober', title: 'Abreißen über ✋, neue 👁 Durchsicht', items: [
+    '✋ <b>Auswählen statt 🧹:</b> Das Abreißen ist aus der Leiste in ✋ gewandert. Rechteck aufziehen → unten „🗑️ Abreißen“ (mit Erstattung), ein Ding antippen → es hängt am Finger → „🗑️ Wegwerfen“. Einzeln geht es weiter im Fenster (👆 → 🗑️). Tasten: Entf oder E.',
+    '🌲 <b>Wald roden, Fels sprengen:</b> einfach antippen → 🪓 Roden bzw. 🧨 Sprengen.',
+    '👁 <b>Durchsicht</b> (neben ↶, Taste D): Dächer, Gebäude, Bäume und Figuren werden blass, Tippen geht hindurch – praktisch, um hinter oder unter etwas zu bauen. Tunnel sieht man dabei auch.',
+  ] },
   { id: '2026-10-08-bauleiste', date: '8. Oktober', title: 'Bauleiste neu', items: [
     '🧭 <b>Bauleiste aufgeräumt:</b> Unten ist nur noch eine Reihe. Tippe auf einen Bereich (Stadt, Herstellen …) – darüber klappt alles aus dem Bereich auf, nach Gruppen sortiert und mit Namen. Eine Wahl, Esc oder daneben tippen klappt es wieder zu.',
   ] },

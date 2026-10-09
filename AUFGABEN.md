@@ -2262,3 +2262,17 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
 ## Kleinigkeit: 🕘 öffnet manchmal erst beim zweiten Klick (Nutzer, 09.10.2026)
 - [x] Nach einer Wahl aus „Zuletzt gebaut“ (oder ✕/Werkzeug) klappte die Leiste zu, `recentOpen` blieb aber an – der nächste 🕘-Klick
       schaltete nur den Merker aus. `setSheet(false)` setzt ihn jetzt mit zurück (und nimmt die Hervorhebung vom 🕘). Test: zuletzt
+
+## Block 155: Schnellwerkzeuge entrümpeln – 🧹 geht in ✋ Auswählen auf (Nutzer, 09.10.2026)
+Nutzer: „können wir auswählen und löschen nicht zusammenlegen … löschen aus dem Schnellzugriff entfernen“. Gewählt: Wald/Fels über
+👆-Fenster roden, Aufgenommenes hat 🗑️, ✋ heißt „Auswählen“, 🛤️ Weg bleibt.
+- [x] 155a ✋-Auswahl: „🗑️ Abreißen · +X“ neben Verschieben/Kopieren (wie das 🧹-Rechteck, aber Wald/Fels bleiben)
+- [x] 155b ✋ aufgenommenes Ding: „🗑️ Wegwerfen“ (Abriss am alten Platz, Erstattung wie 🧹)
+- [x] 155c 👆 auf Wald/Obstwiese/Fels: Fenster mit 🪓 Roden/Sprengen samt Preis
+- [x] 155d 👁 Durchsicht zeigt Tunnel (bisher nur mit 🧹 in der Hand)
+- [x] 155e 🧹 raus aus der Leiste; ✋ heißt „Auswählen“; Tasten E/Entf/Rücktaste löschen Auswahl/Aufgenommenes/offenes Fenster
+- [x] 155f Texte (Hilfe, Tipps mit 🧹), „Das ist neu“
+      Umgesetzt: `selDemolishPlan`/`demolishSelection` (plan.js `keepLand`), `discardCarried` (actions.js: zurücklegen, dann wie
+      Abreißen; Kopie am Finger hat kein Wegwerfen), `openLandInfo`, `drawTunnelView` mit `seeThrough`, `deleteKey`; „Abreißen“ nie
+      in 🕘 (`NOT_RECENT`). Werkzeug 'abriss' bleibt intern (Tests, Vorschau). Test: auswahl-abriss. Offen/zur Ansicht: auf dem Handy
+      stapelt die Auswahl-Leiste jetzt vier Zeilen (Verschieben, Kopieren, Abreißen, ✕)
