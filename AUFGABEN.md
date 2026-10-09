@@ -1787,6 +1787,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       dach-feinschliff.png) → Pergola-Pfosten enden unter dem Randbalken, Randbalken stehen an Außenecken über und kreuzen sich
       (an Innenecken nicht – sonst stächen sie in den Gang); Glas und Pergola: gleichmäßiges Raster statt umspringender Richtung
       (keine halben Bögen mehr); Markise: Zacken je Lauf gleichmäßig über Feldgrenzen; Stangen enden unter der Dachkante.
+      Leistungs-Wächter: dach Form 0 246 → 318, Form 1 579 → 651 (Raster in beiden Richtungen) – gewollt, zählt nur beim einmaligen
+      Malen des Bildchens (im Spiel gemerkt, danach ein Bild je Feld).
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
