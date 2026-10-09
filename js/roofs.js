@@ -396,7 +396,7 @@ function roofDirty(x, y) {
 const ROOF_SNAP = 0.24;   // reicht bis zu Ecken und Seitenmitten der Nachbarfelder (0,16 bzw. schräg 0,23) – Säulen erst, Dach danach (Nutzer)
 function pillarSnap(pu, pv) {
   if (!state.roofs || !state.roofs.size) return [pu, pv];
-  let best = null, bd = ROOF_SNAP;
+  let best = null, bd = ROOF_SNAP, onU = null, onV = null;
   for (let ty = Math.round(pv) - 1; ty <= Math.round(pv) + 1; ty++) for (let tx = Math.round(pu) - 1; tx <= Math.round(pu) + 1; tx++) {
     const r = roofAt(tx, ty);
     if (!r) continue;
@@ -407,8 +407,11 @@ function pillarSnap(pu, pv) {
       const cu = Math.min(roofHi(su), Math.max(roofLo(su), pu)), cv = Math.min(roofHi(sv), Math.max(roofLo(sv), pv)), d = Math.hypot(cu - pu, cv - pv);
       if (d < 1e-9) return [pu, pv];                                   // liegt schon unter dem Dach
       if (d < bd) { bd = d; best = [cu, cv]; }
+      if (d < ROOF_SNAP) { if (Math.abs(cv - pv) < 1e-9 && (!onU || d < onU.d)) onU = { u: cu, d }; if (Math.abs(cu - pu) < 1e-9 && (!onV || d < onV.d)) onV = { v: cv, d }; }
     }
   }
+  // nah an zwei Kanten zugleich (Innenecke, z. B. Ecke des Hofs in einem Ring): in die Ecke, nicht an eine der beiden Kanten (Nutzer)
+  if (onU && onV && Math.abs(onU.d - onV.d) < 0.05) { const r = roofAt(Math.round(onU.u), Math.round(onV.v)); if (r && roofArea(roofCov(r)).sub(roofSubOf(onU.u), roofSubOf(onV.v))) return [onU.u, onV.v]; }
   return best || [pu, pv];
 }
 // Pergola (Block 138): innere Pfosten (nicht am Rand) tragen Balken in beide Richtungen bis zum Rand. Welche laufen durch Feld (x, y)?
@@ -443,8 +446,12 @@ function pillarInset(pu, pv, form) {
   const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id];
   if (!h) return [pu, pv];
   const at = (u, v) => { const r = roofAt(Math.round(u), Math.round(v)); if (!r) return false; const A = roofArea(roofCov(r)), s = roofSubOf; return A.sub(s(u), s(v)); };
-  const e = 0.06, du = at(pu + e, pv) && !at(pu - e, pv) ? 1 : at(pu - e, pv) && !at(pu + e, pv) ? -1 : 0, dv = at(pu, pv + e) && !at(pu, pv - e) ? 1 : at(pu, pv - e) && !at(pu, pv + e) ? -1 : 0;
-  return [pu + du * h, pv + dv * h];
+  // Richtung ins Dach aus den vier schrägen Nachbarpunkten: Außenecke (nur einer gedeckt) → zu ihm, Kante (zwei) → senkrecht zur Kante,
+  // Innenecke (drei gedeckt, Ecke eines Hofs) → weg vom freien, mitten im Dach (vier) → bleibt
+  const e = 0.06, c = [[1, 1], [1, -1], [-1, 1], [-1, -1]].filter(([a, b]) => at(pu + a * e, pv + b * e));
+  if (c.length === 4 || !c.length) return [pu, pv];
+  const su = c.reduce((t, [a]) => t + a, 0), sv = c.reduce((t, [, b]) => t + b, 0);
+  return [pu + Math.sign(su) * h, pv + Math.sign(sv) * h];
 }
 // Form der Stütze: die des Dachs darüber (Feld des Platzes, am Eckpunkt eins der vier), sonst Pergola (Holzpfosten)
 function pillarForm(x, y, u, v) {

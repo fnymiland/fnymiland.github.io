@@ -186,6 +186,18 @@ describe('Überdachungen (Block 138)', () => {
     }
   });
 
+  it('Ring mit offenem Hof: Stützen in den Hof-Ecken rutschen in die Ecke und stehen bündig unter dem Eck der Balken (Nutzer)', () => {
+    for (let y = 3; y <= 5; y++) for (let x = 3; x <= 5; x++) if (x !== 4 || y !== 4) game(`build('dach', ${x}, ${y}, true)`);
+    for (const s of [0, 1, 2, 3]) game(`buildSmall('stuetze', 4, 4, ${s})`);   // Ecken des Hof-Felds
+    const T = game('PERG_T');
+    for (const [s, su, sv] of [[0, -1, -1], [1, 1, -1], [2, -1, 1], [3, 1, 1]]) {
+      const q = game(`pillarPos(4, 4, ${s}, state.decos.get('4,4')[${s}]).map(v => +v.toFixed(3))`);
+      expect(q, 'Hof-Ecke ' + s).toEqual([4 + su * 0.58, 4 + sv * 0.58]);
+      const r = game(`pillarInset(${q[0]}, ${q[1]}, 0).map(v => +v.toFixed(3))`);
+      expect(r, 'bündig ' + s).toEqual([+(4 + su * (0.58 + T / 2)).toFixed(3), +(4 + sv * (0.58 + T / 2)).toFixed(3)]);   // ins Eck der Balken
+    }
+  });
+
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
     way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");

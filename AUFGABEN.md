@@ -1827,6 +1827,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „rechter Balken liegt auf dem linken“ → erster Versuch (Reihenfolge umdrehen) machte es schlimmer, zurückgenommen.
       Varianten gezeigt (ecke-hinten-varianten.png), Nutzer wählte C: die sichtbare Innenseite eines Randbalkens endet genau dort, wo
       der andere beginnt (Außenecke kürzer, Innenecke länger); Außenseiten unverändert. Bild ring-ecken-c.png
+      Nutzer: „Stützen in den Innenkreis – nicht bündig, nicht richtig in den Ecken“ → (1) eine Stütze nah an zwei Kanten zugleich
+      (Ecke des Hof-Felds) rutschte an eine der Kanten statt in die Hof-Ecke: `pillarSnap` nimmt dann die Ecke. (2) `pillarInset`
+      aus den vier schrägen Nachbarpunkten (Außenecke/Kante/Innenecke) – in der Innenecke unter das Eck der Balken. Test: dach.
+      Bild tools/vorschau/hof-stuetzen2.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
