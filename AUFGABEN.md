@@ -1782,13 +1782,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Stufen nach oben, nie hochgezogen; vorher bei spriteStep gedeckelt). (2) Stützen werden mit dem hintersten Feld gezeichnet,
       das sie berühren, direkt vor dessen Dach (`drawPillarsOf` in tileB; ohne Dächer wie bisher in drawSmall) – vorher kam eine
       Stütze des vorderen Felds nach dem Dach des hinteren. Bild tools/vorschau/dach-nah-scharf.png
-- [x] Nutzer: „du arbeitest unsauber“ (Pfosten ragt über das Balkenende, Oberseite schaut heraus). Nahaufnahmen aller Formen an
-      Gang-Ende, T, Kurve, Innenecke, 3 × 3-Platz (tools/vorschau/dach-ende-nah.png, dach-kurve-nah.png, dach-platz-nah.png,
-      dach-feinschliff.png) → Pergola-Pfosten enden unter dem Randbalken, Randbalken stehen an Außenecken über und kreuzen sich
-      (an Innenecken nicht – sonst stächen sie in den Gang); Glas und Pergola: gleichmäßiges Raster statt umspringender Richtung
-      (keine halben Bögen mehr); Markise: Zacken je Lauf gleichmäßig über Feldgrenzen; Stangen enden unter der Dachkante.
-      Leistungs-Wächter: dach Form 0 246 → 318, Form 1 579 → 651 (Raster in beiden Richtungen) – gewollt, zählt nur beim einmaligen
-      Malen des Bildchens (im Spiel gemerkt, danach ein Bild je Feld).
+- [x] Nutzer: „du arbeitest unsauber“ (Pfosten ragt über das Balkenende, Oberseite schaut heraus) → bündig: Pergola-Pfosten enden
+      unter dem Randbalken, der Randbalken reicht an Außenecken nur bis zur Außenseite des Pfostens (0,03), Markisenstange endet
+      unter der Kante. Erst hatte ich zusätzlich das Raster und die Zacken umgebaut – Nutzer: „sieht richtig scheiße aus, du solltest
+      doch nur es bündig machen“ → zurückgenommen. LEHRE: nur ändern, was der Nutzer anspricht; nichts „nebenbei verbessern“.
+      Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b

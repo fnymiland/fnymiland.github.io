@@ -137,12 +137,12 @@ function paintRoof(P, A, x, y, r, lw = 1) {
   }
   quads.sort((p, q) => (p[0] + p[2]) - (q[0] + q[2]));
   const corners = ([ua, ub, va, vb], up = 0) => [P(ua, va, hAt(ua, va) + up), P(ub, va, hAt(ub, va) + up), P(ub, vb, hAt(ub, vb) + up), P(ua, vb, hAt(ua, vb) + up)];
-  // Raster alle step Felder in beiden Richtungen, überall gleich (vorher sprang die Richtung an Ecken um – halbe Bögen, Nutzer:
-  // „unsauber“). Je Viereck nur die Linien, die in ihm liegen (Anfang inklusive) – Nachbarn setzen sie fort
+  const across = (u, v) => { const e = 0.02, gu = A.dist(u + e, v) - A.dist(u - e, v), gv = A.dist(u, v + e) - A.dist(u, v - e); return Math.abs(gu) < 1e-4 && Math.abs(gv) < 1e-4 ? 'both' : Math.abs(gv) > Math.abs(gu) ? 'v' : 'u'; };
   const ribs = (step, hFn, col, w) => {
     for (const [ua, ub, va, vb] of quads) {
-      for (let u = Math.ceil(ua / step - 1e-6) * step; u < ub - 1e-6; u += step) line([P(u, va, hFn(u, va)), P(u, vb, hFn(u, vb))], col, w);
-      for (let v = Math.ceil(va / step - 1e-6) * step; v < vb - 1e-6; v += step) line([P(ua, v, hFn(ua, v)), P(ub, v, hFn(ub, v))], col, w);
+      const dir = across((ua + ub) / 2, (va + vb) / 2);
+      if (dir !== 'u') for (let u = Math.ceil(ua / step - 1e-6) * step; u < ub - 1e-6; u += step) line([P(u, va, hFn(u, va)), P(u, vb, hFn(u, vb))], col, w);
+      if (dir !== 'v') for (let v = Math.ceil(va / step - 1e-6) * step; v < vb - 1e-6; v += step) line([P(ua, v, hFn(ua, v)), P(ub, v, hFn(ub, v))], col, w);
     }
   };
   if (form === 'glas') {
@@ -170,24 +170,22 @@ function paintRoof(P, A, x, y, r, lw = 1) {
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
-    if (form === 'pergola') {                                          // Randbalken liegen auf den Pfosten und stehen an den Enden über
+    if (form === 'pergola') {                                          // Randbalken liegen auf den Pfosten, an Außenecken bündig mit seiner Außenseite
       // nur an Außenecken: geht das Dach hinter dem Lauf-Ende nach innen weiter (Innenecke), stünde der Balken in den Gang
-      const [ra, rb] = roofRun(A, e), OV = 0.07, inner = (t, dir) => { const q = t + dir * 0.03, w = e.at - e.n * 0.03;
+      const [ra, rb] = roofRun(A, e), OV = 0.03, inner = (t, dir) => { const q = t + dir * 0.03, w = e.at - e.n * 0.03;
         const [u, v] = e.ax === 'u' ? [w, q] : [q, w], su = 3 * Math.round(u) + (u - Math.round(u) < -RW ? -1 : u - Math.round(u) > RW ? 1 : 0), sv = 3 * Math.round(v) + (v - Math.round(v) < -RW ? -1 : v - Math.round(v) > RW ? 1 : 0);
         return A.sub(su, sv); };
       const a0 = Math.abs(e.a - ra) < 1e-6 && !inner(ra, -1) ? e.a - OV : e.a, b0 = Math.abs(e.b - rb) < 1e-6 && !inner(rb, 1) ? e.b + OV : e.b;
-      line([pt(a0, H), pt(b0, H)], S.beam, 1.8);
+      line([pt(a0, H), pt(b0, H)], S.beam, 1.6);
       continue;
     }
     if (form === 'glas') { line([pt(e.a, H), pt(e.b, H)], S.rib, 0.9); continue; }
     if (!front) continue;
-    if (form === 'markise') {                                          // Zacken: der ganze Lauf gleichmäßig geteilt, über Feldgrenzen hinweg
-      const cols = [MARKISE_COLS[(r && r.col) || 0].c, '#fffaf0'], [ra, rb] = roofRun(A, e), n = Math.max(1, Math.round((rb - ra) / 0.12)), w = (rb - ra) / n;
+    if (form === 'markise') {
+      const cols = [MARKISE_COLS[(r && r.col) || 0].c, '#fffaf0'], n = Math.max(1, Math.round((e.b - e.a) / 0.12));
       for (let i = 0; i < n; i++) {
-        const t0 = ra + w * i, t1 = t0 + w, m = (t0 + t1) / 2;
-        if (m < e.a - 1e-9 || m >= e.b - 1e-9) continue;               // gehört dem Teilstück seiner Mitte
-        const A0 = pt(t0, H), B0 = pt(t1, H);
-        poly([A0, B0, [B0[0], B0[1] + 1.4 * lw], [(A0[0] + B0[0]) / 2, (A0[1] + B0[1]) / 2 + 2.8 * lw], [A0[0], A0[1] + 1.4 * lw]], cols[i % 2], '#d9c9b8', 0.3);
+        const t0 = e.a + (e.b - e.a) * i / n, t1 = e.a + (e.b - e.a) * (i + 1) / n, A0 = pt(t0, H), B0 = pt(t1, H);
+        poly([A0, B0, [B0[0], B0[1] + 1.4 * lw], [(A0[0] + B0[0]) / 2, (A0[1] + B0[1]) / 2 + 2.8 * lw], [A0[0], A0[1] + 1.4 * lw]], cols[Math.floor(((t0 + t1) / 2) / 0.12 + 1000) % 2], '#d9c9b8', 0.3);
       }
     } else if (form === 'arkaden') {
       // Bögen zwischen den Stützen dieses Laufs (ohne Stützen: von Ende zu Ende): Kämpfer H − 9, Scheitel H − 2
