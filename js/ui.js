@@ -2921,6 +2921,7 @@ function showMenu() {
     <div class="row"><button class="btn ghost" style="flex:1" id="m-still" title="Mühlen, Windräder, Riesenrad und Fahrgeschäfte, wenn du weit rausgezoomt bist – still ist schneller, nah dran drehen sie sich immer">${stillFar ? '⏸️ Weit weg: Drehendes steht still' : '🌀 Weit weg: Drehendes dreht sich'}</button></div>
     ${state.inventions && (state.inventions.has('ballon') || state.inventions.has('zeppelin')) ? `<div class="row"><button class="btn ghost" style="flex:1" id="m-sky" title="Heißluftballons und Zeppelin am Himmel zeigen oder ausblenden">${skyShow ? '🎈 Ballons & Zeppelin: an' : '🚫 Ballons & Zeppelin: aus'}</button></div>` : ''}
     <div class="row"><button class="btn ghost" style="flex:1" id="m-gl" title="Zeichnet weit weg über die Grafikkarte – viel flüssiger. Bei Darstellungsfehlern ausschalten (dann wie früher)">${glWanted() ? '🚀 Grafikkarte: an' : '🐢 Grafikkarte: aus'}</button></div>
+    ${miniWanted() ? `<div class="row"><button class="btn ghost" style="flex:1" id="m-mini" title="Übersichtskarte unten rechts">${miniOpen ? '🗺️ Minimap ausschalten' : '🗺️ Minimap einschalten'}</button></div>` : ''}
     <div class="row"><button class="btn ghost" style="flex:1" id="m-bench" title="Zoomt und schiebt ~45 Sekunden von selbst und misst, wie flüssig es auf diesem Gerät läuft">📏 Messlauf (≈ 45 s)</button></div>
     <div class="label">💾 Spielstand</div>
     <div class="row">
@@ -2940,6 +2941,7 @@ function showMenu() {
     if (GL_Q) toast(`In der Adresse steht ?gl=${GL_Q} – das gilt, solange es dort steht`);
   };
   $('m-bench').onclick = () => benchStart();                                                   // Block 149
+  if ($('m-mini')) $('m-mini').onclick = () => { setMiniOpen(!miniOpen); showMenu(); };         // Minimap (Block 135)
   $('m-borders').onclick = () => { state.noBorders = !state.noBorders; groundVersion++; save(); showMenu(); };   // Ränder von Park und Freizeitpark
   $('m-home').onclick = () => { const h = townHallAt(), c = h ? iso(h[0] + 1, h[1] + 1) : iso(ISLAND.cx, ISLAND.cy); state.cam.x = c.x; state.cam.y = c.y; closeModal(); };   // wo es wirklich steht
   $('m-close').onclick = closeModal;

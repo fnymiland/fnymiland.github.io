@@ -1602,7 +1602,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Land + 5 Felder Meer; Wege beige, Gleise grau, Häuser rot, Gebäude braun, Kultur lila, Freizeitpark rosa, Wunder gold, Deko grün;
       fremdes Land blasser. Rund (Nutzer wählte aus 4 Entwürfen, tools/vorschau/mini-formen.png): Land-Mitte in der Kreismitte,
       äußerstes Land knapp im Rand (`mini.rmax`). Sichtfeld als Rahmen, Klicken/Ziehen springt hin. Nur mit Maus und ab 900 px (`miniWanted`), versteckt
-      bei offenem Fenster/Katalog; „–“ klappt sie zu 🗺️ ein (je Gerät, `kachelhausen_minimap`). Neu gemalt nur bei Änderung, in
+      bei offenem Fenster/Katalog; ausschalten im Menü ☰ → Grafik „Minimap ausschalten“ (Nutzer: kein Knopf an der Karte; je Gerät,
+      `kachelhausen_minimap`). Neu gemalt nur bei Änderung, in
       einer Pause (~17 ms in Fnymiland OG). Bild tools/vorschau/mini2.png. Test: minimap
 
 ## Block 136: Bahn – U-Bahn-Eingänge und Parkeisenbahn

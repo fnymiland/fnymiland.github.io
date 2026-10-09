@@ -1,7 +1,7 @@
 'use strict';
 // ---------------------------------------------------------------------------
 // Minimap am PC (Block 135): unten rechts die ganze Welt schräg wie das Spiel (Rauten), das Sichtfeld als Rahmen.
-// Antippen oder Ziehen springt hin. Nur mit Maus und breitem Fenster; einklappbar (je Gerät gemerkt).
+// Antippen oder Ziehen springt hin. Nur mit Maus und breitem Fenster; im Menü (☰ → Grafik) ausschaltbar, je Gerät gemerkt.
 // Rund (Nutzer, 09.10.2026, Entwurf B): die Mitte des Lands in der Kreismitte, das äußerste Land knapp im Rand (mini.rmax).
 // Bild: je Feld ein 2×1-Rechteck an seiner Rautenmitte – u = x − y (waagerecht), v = (x + y) / 2 (senkrecht). Gezeigt wird
 // nur der Teil mit Land (und eigenem Aufgeschüttetem) plus MINI_PAD Felder Meer – sonst wären die Inseln winzig.
@@ -65,8 +65,7 @@ const miniTo = (ix, iy) => [(ix + mini.u0) * TW / 2, (iy + mini.v0) * TH];
 function miniBuild() {
   const box = document.createElement('div');
   box.id = 'minimap';
-  box.innerHTML = `<canvas role="button" tabindex="0" aria-label="Übersichtskarte – antippen springt hin"></canvas>
-    <button class="mini-x" aria-label="Übersichtskarte einklappen">–</button><button class="mini-open" aria-label="Übersichtskarte zeigen">🗺️</button>`;
+  box.innerHTML = `<canvas role="button" tabindex="0" aria-label="Übersichtskarte – antippen springt hin"></canvas>`;
   document.body.appendChild(box);
   mini = { box, cv: box.querySelector('canvas'), base: null, u0: 0, v0: 0, sig: '', at: -1e9, view: '' };
   const jump = e => {
@@ -79,17 +78,19 @@ function miniBuild() {
   mini.cv.addEventListener('pointermove', e => { if (down) jump(e); });
   for (const ev of ['pointerup', 'pointercancel']) mini.cv.addEventListener(ev, () => { down = false; });
   mini.cv.addEventListener('wheel', e => e.preventDefault(), { passive: false });   // kein Seiten-Zoom über der Karte
-  const set = open => { miniOpen = open; try { localStorage.setItem(MINI_KEY, open ? 'auf' : 'zu'); } catch (e) { /* privat */ } mini.view = ''; miniTick(performance.now()); };
-  box.querySelector('.mini-x').onclick = () => set(false);
-  box.querySelector('.mini-open').onclick = () => set(true);
+}
+// ☰ → Grafik: „Minimap ausschalten“ (Nutzer, 09.10.2026: statt eines Knopfs an der Karte)
+function setMiniOpen(open) {
+  miniOpen = !!open;
+  try { localStorage.setItem(MINI_KEY, open ? 'auf' : 'zu'); } catch (e) { /* privat: gilt bis zum Neuladen */ }
+  if (mini) mini.view = '';
 }
 // jedes Bild (main.js): zeigen/verstecken, bei Änderung neu malen, Sichtfeld-Rahmen
 function miniTick(now) {
-  const want = miniWanted() && $('modal').hidden && !sheetOpen;
+  const want = miniWanted() && miniOpen && $('modal').hidden && !sheetOpen;
   if (!mini) { if (!want) return; miniBuild(); }
   mini.box.hidden = !want;
-  mini.box.classList.toggle('zu', !miniOpen);
-  if (!want || !miniOpen) return;
+  if (!want) return;
   const sig = miniSig();
   if (sig !== mini.sig && now - mini.at > MINI_EVERY && !mini.wait) {         // neu malen in einer Pause (~17 ms bei großer Welt)
     mini.sig = sig; mini.at = now; mini.wait = true;

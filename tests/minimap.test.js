@@ -54,14 +54,21 @@ describe('Minimap (Block 135)', () => {
     expect(out).toBe(0);
   });
 
-  it('einklappen und wieder zeigen – je Gerät gemerkt', () => {
+  it('im Menü ausschalten und wieder einschalten – kein Knopf an der Karte, je Gerät gemerkt (Nutzer, 09.10.2026)', () => {
     game('miniTick(1e6)');
-    game("document.querySelector('#minimap .mini-x').click()");
-    expect(game("document.getElementById('minimap').classList.contains('zu')")).toBe(true);
+    expect(game("document.querySelectorAll('#minimap button').length")).toBe(0);
+    game('showMenu()');
+    expect(game("document.getElementById('m-mini').textContent")).toMatch(/Minimap ausschalten/);
+    game("document.getElementById('m-mini').click(); miniTick(1e6)");
     expect(game('localStorage.getItem(MINI_KEY)')).toBe('zu');
-    expect(game("document.querySelector('#minimap .mini-open').getAttribute('aria-label')")).toMatch(/zeigen/);
-    game("document.querySelector('#minimap .mini-open').click()");
-    expect(game("document.getElementById('minimap').classList.contains('zu')")).toBe(false);
+    expect(game("document.getElementById('m-mini').textContent")).toMatch(/Minimap einschalten/);
+    game('closeModal(); miniTick(1e6)');
+    expect(game("document.getElementById('minimap').hidden")).toBe(true);           // aus: bleibt weg
+    game("showMenu(); document.getElementById('m-mini').click(); closeModal(); miniTick(1e6)");
     expect(game('localStorage.getItem(MINI_KEY)')).toBe('auf');
+    expect(game("document.getElementById('minimap').hidden")).toBe(false);
+    game('PHONE = true; showMenu()');
+    expect(game("!!document.getElementById('m-mini')")).toBe(false);                 // Handy/iPad: gibt es nicht, also kein Schalter
+    game('closeModal(); PHONE = false');
   });
 });
