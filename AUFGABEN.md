@@ -1877,6 +1877,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
 - [x] Nutzer: „kann die Aufgänge nicht mitkopieren und bewegen“ → beim Ablegen/Kopieren liegen die mitgetragenen Dächer zur Probe schon
       da (`groupErrors`), ✋ im Dach-Fenster nimmt Dachtreppen ganz unter den Feldern mit (`pickUpRoofs`); in die Öffnung tippen trifft
       die Treppe (`holeHit`: 👆 Fenster, 🧹 nur die Treppe, ✋ aufnehmen; `demolishInfo(x, y, under)`). Test: dachtreppe
+- [x] Nutzer (Screenshot): „Figuren spawnen aus dem Nichts und glitchen wieder durch die Treppe“ → sie kommen von draußen (2–6 Felder,
+      nicht überdacht) über den Boden unter den Bögen zum Fuß (`rfWalkIn`, Zustände in/out, gezeichnet wie alle Bewohner) und gehen
+      auf demselben Weg wieder hinaus; Leute auf der Treppe von hinten nach vorn gezeichnet, danach auch die vordere Randbrüstung
+      ringsum im Bereich der Figur nachgezeichnet. Am Fuß keine Schachtwand (unten offen). Test: dachtreppe
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

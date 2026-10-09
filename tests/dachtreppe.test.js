@@ -56,8 +56,10 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
     for (let i = 0; i < 6; i++) game('syncRoofers()');
     expect(game('roofers.length')).toBeGreaterThan(0);
     expect(game('roofers.length')).toBeLessThanOrEqual(game('ROOFER_MAX'));
-    expect(game("roofers.every(w => w.st === 'up' && w.up === 0)")).toBe(true);    // unten am Fuß
-    game('for (let i = 0; i < 200; i++) stepRoofers(0.05)');
+    // kommen von draußen (Nutzer: „spawnen aus dem Nichts“): Start nicht überdacht, Weg am Boden bis an den Fuß der Stufen
+    expect(game("roofers.every(w => w.st === 'in' && w.up === 0 && !roofAt(Math.round(w.path[0][0]), Math.round(w.path[0][1])))")).toBe(true);
+    expect(game("roofers.every(w => { const e = w.path[w.path.length - 1]; return Math.abs(e[0] - (w.stair.mu - w.stair.Du * DT_FOOT)) < 1e-9 && Math.abs(e[1] - (w.stair.mv - w.stair.Dv * DT_FOOT)) < 1e-9; })")).toBe(true);
+    game('for (let i = 0; i < 700; i++) stepRoofers(0.05)');
     expect(game("roofers.some(w => w.st === 'roof')")).toBe(true);
     expect(game("roofers.filter(w => w.st === 'roof' && !w.sit).every(w => rfSpotOk(w.fa, w.fb) || (w.fa === w.stair.ex && w.fb === w.stair.ey))")).toBe(true);
     expect(game("roofers.filter(w => w.st === 'roof').every(w => w.up === ROOF_H)")).toBe(true);

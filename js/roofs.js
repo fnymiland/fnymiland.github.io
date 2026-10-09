@@ -1011,9 +1011,27 @@ function syncRoofers() {
   if (live.length >= want || !stairs.length) return;
   const s = stairs[Math.floor(Math.random() * stairs.length)];
   const homes = [...state.tiles].filter(([, t]) => isHome(t.b) && t.animal), [hk, ht] = homes.length ? homes[Math.floor(Math.random() * homes.length)] : [null, null];
-  roofers.push({ roofer: true, stair: s, st: 'up', d: -DT_FOOT - 0.05, px: s.mu - s.Du * DT_FOOT, py: s.mv - s.Dv * DT_FOOT, up: 0, wait: 0,
+  const path = rfWalkIn(s), foot = [s.mu - s.Du * DT_FOOT, s.mv - s.Dv * DT_FOOT];
+  roofers.push({ roofer: true, stair: s, ...(path ? { st: 'in', path, pi: 0, px: path[0][0], py: path[0][1] } : { st: 'up', d: -DT_FOOT - 0.05, px: foot[0], py: foot[1] }), up: 0, wait: 0,
     ...(hk ? residentLook(hk, Math.floor(Math.random() * residentsOf(ht).length)) : { kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)] }),
     shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.35 + Math.random() * 0.25, life: 18 + Math.random() * 25 });
+}
+// Weg zur Treppe (Nutzer: „spawnen aus dem Nichts“): von einem Feld draußen (nicht überdacht, 2–6 Schritte entfernt) über den Boden
+// unter den Bögen bis vor den Fuß, dann an den Fuß der Stufen. Punkte in Feldkoordinaten; null, wenn es keinen Weg gibt
+function rfWalkIn(s) {
+  const [fx, fy] = [Math.round(s.mu - s.Du * 1.5), Math.round(s.mv - s.Dv * 1.5)];   // das Feld vor dem Fuß
+  if (typeof walkable !== 'function' || !walkable(fx, fy)) return null;
+  const dist = new Map([[fx + ',' + fy, 0]]), q = [[fx, fy]], outside = [];
+  for (let i = 0; i < q.length && i < 400; i++) {
+    const [x, y] = q[i], d0 = dist.get(x + ',' + y);
+    if (!roofAt(x, y) && d0 >= 2) outside.push([x, y, d0]);
+    if (d0 >= 6) continue;
+    for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, nk = nx + ',' + ny; if (dist.has(nk) || !walkable(nx, ny) || edgeBlocks(x, y, nx, ny)) continue; dist.set(nk, d0 + 1); q.push([nx, ny]); }
+  }
+  if (!outside.length) return null;
+  const [ex, ey] = outside[Math.floor(Math.random() * outside.length)], tiles = walkPath(ex, ey, [[fx, fy]]);
+  if (!tiles) return null;
+  return [[ex, ey], ...tiles, [s.mu - s.Du * DT_FOOT, s.mv - s.Dv * DT_FOOT]];
 }
 // Bank oben auf Feld (x, y) nahe am Rasterpunkt: Platz zum Sitzen
 function rfBench(a, b) {
@@ -1025,10 +1043,23 @@ function stepRoofers(dt) {
   for (const w of roofers) {
     const s = w.stair;
     if (w.wait > 0) { w.wait -= dt; if (w.wait <= 0 && w.sit) { w.sit = false; w.px = w.fa / 3; w.py = w.fb / 3; } continue; }
+    if (w.st === 'in' || w.st === 'out') {                              // am Boden zur Treppe hin bzw. von ihr weg
+      let step = dt * w.speed;
+      while (step > 0 && w.pi < w.path.length - 1) {
+        const [tx, ty] = w.path[w.pi + 1], dx = tx - w.px, dy = ty - w.py, l = Math.hypot(dx, dy);
+        if (l <= step) { w.px = tx; w.py = ty; w.pi++; step -= l; } else { w.px += dx / l * step; w.py += dy / l * step; step = 0; }
+      }
+      w.up = 0;
+      if (w.pi >= w.path.length - 1) { if (w.st === 'in') { w.st = 'up'; w.d = -DT_FOOT; } else w.gone = true; }
+      continue;
+    }
     if (w.st === 'up' || w.st === 'down') {
       w.d += (w.st === 'up' ? 1 : -1) * dt * w.speed * 0.9;
       if (w.st === 'up' && w.d >= DT_LEN) { w.st = 'roof'; w.fa = w.ta = s.ex; w.fb = w.tb = s.ey; w.t = 1; }
-      else if (w.st === 'down' && w.d <= -DT_FOOT - 0.05) { w.gone = true; continue; }
+      else if (w.st === 'down' && w.d <= -DT_FOOT) {                     // unten: auf dem Weg, auf dem man kam, wieder hinaus
+        if (w.path) { w.st = 'out'; w.path = w.path.slice().reverse(); w.pi = 0; w.px = w.path[0][0]; w.py = w.path[0][1]; w.up = 0; } else w.gone = true;
+        continue;
+      }
       if (w.st !== 'roof') { w.px = s.mu + s.Du * w.d; w.py = s.mv + s.Dv * w.d; w.up = dtHeight(w.d); continue; }
     }
     w.up = ROOF_H;
@@ -1079,6 +1110,7 @@ function roofersByTile() {
   const m = new Map();
   for (const w of roofers) {
     if (typeof gfxPersonShown === 'function' && !gfxPersonShown(w)) continue;
+    if (w.st === 'in' || w.st === 'out') continue;                      // am Boden: wie alle Bewohner (render.js byTile)
     const k = w.st === 'roof' ? Math.round(w.px) + ',' + Math.round(w.py) : rfGroup(w.stair).last;
     if (!m.has(k)) m.set(k, []);
     m.get(k).push(w);
@@ -1087,7 +1119,7 @@ function roofersByTile() {
 }
 // zeichnen: stair = auf der Treppe (nur durch die Öffnung dieses Felds zu sehen, darüber frei), sonst oben
 function drawRoofers(list, x, y, z, now, onStair) {
-  for (const w of list) {
+  for (const w of [...list].sort((a, b) => a.px + a.py - b.px - b.py)) {   // von hinten nach vorn: was davor nachgezeichnet wird, liegt nur über Hinteren
     if ((w.st === 'roof') === onStair) continue;
     if (!onStair) { drawWalker(w, z, now); continue; }
     const hs = rfGroup(w.stair).holes;
@@ -1121,6 +1153,12 @@ function drawRoofers(list, x, y, z, now, onStair) {
         } finally { g.restore(); }
       }
       for (const h of hs) roofOps(holeWallOps(h, roofPar(roofAt(Math.round(h.mu + h.Du * 0.4), Math.round(h.mv + h.Dv * 0.4)))).front, Pl, z);
+      // und die vordere Randbrüstung ringsum: gehört sie zu einem Feld, das schon gezeichnet war, läge die Figur sonst davor
+      for (let fy = Math.round(w.py) - 1; fy <= Math.round(w.py) + 1; fy++) for (let fx = Math.round(w.px) - 1; fx <= Math.round(w.px) + 1; fx++) {
+        if (!roofAt(fx, fy)) continue;
+        const q = toScreen(fx, fy);
+        drawRoofFront(fx, fy, q.x, q.y, z);
+      }
     } finally { g.restore(); }
   }
 }

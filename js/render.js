@@ -1460,7 +1460,8 @@ function render(now) {
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
-  const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders) : walkers.concat(strollers, paraders).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
+  const ground = roofers.length ? roofers.filter(w => w.st === 'in' || w.st === 'out') : [];   // auf dem Weg zur Dachtreppe (Block 138d)
+  const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders, ground) : walkers.concat(strollers, paraders, ground).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
   for (const m of people.concat(typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), GFX.animals ? critters.filter(c => c.id !== 'gluehwurm') : [])) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
