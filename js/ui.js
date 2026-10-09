@@ -2760,8 +2760,8 @@ const NEWS_HISTORY = [
     '✨ <b>Schöner:</b> Schachbrett und Gold als echtes Schachbrett, kräftigere Ränder, Erde heller, Fischgrät echt, Regenbogen ohne Kanten – und weit weg keine Streifen und Linien mehr.',
   ] },
   { id: '2026-10-08-grafik', date: '8. Oktober', title: 'Viel flüssiger – auch nachts', items: [
-    '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte – Tag und Nacht deutlich flüssiger. Sieht etwas komisch aus? ☰ → Grafik → „Grafikkarte“ ausschalten.',
-    '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist – nah dran drehen sie sich. Umstellen unter ☰ → Grafik.',
+    '🚀 <b>Grafikkarte:</b> Weit rausgezoomt zeichnet jetzt die Grafikkarte – Tag und Nacht deutlich flüssiger. Sieht etwas komisch aus? ☰ → ⚙️ Einstellungen → „Grafikkarte“ ausschalten.',
+    '⏸️ <b>Drehendes steht weit weg still:</b> Mühlen, Windräder, Riesenrad und Fahrgeschäfte ruhen, wenn du weit rausgezoomt bist – nah dran drehen sie sich. Umstellen unter ☰ → ⚙️ Einstellungen.',
     '🟢 <b>Freunde online:</b> Ein grüner Punkt zeigt, wer gerade spielt, sonst „zuletzt vor …“. Das Freundesbuch fasst Besuche, Herzen und Geschenke je Freund in einer Zeile zusammen.',
     '🎁 <b>Souvenirs:</b> Statt Rohstoffen verschickst du Andenken von deiner Insel; Wünsche auf dem Wunschzettel kannst du wieder abnehmen.',
     '💰 <b>Bezahlt bleibt bezahlt:</b> Einmal gekaufte Varianten (Schloss, Bahnhofslänge, Gleise) kosten beim Umstellen nichts mehr.',

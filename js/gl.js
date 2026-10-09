@@ -295,7 +295,7 @@ function glLive(x, y, l, u, r, d, fn) {
 // Darf dieses Bild über die Grafikkarte? (render, nach SPRITES_ON)
 function glFrameOk(z) {
   // Grund fürs Messen (?messen): warum gerade (nicht) per Grafikkarte
-  GL.why = GL.off || !glWanted() ? 'aus (☰ → Grafik)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
+  GL.why = GL.off || !glWanted() ? 'aus (☰ → ⚙️ Einstellungen)' : !SPRITES_ON ? 'nah dran (2D)' : SPRITES_NEAR ? 'Zoom ≥ 1 (2D)' : spriteForce === false ? 'Messwerkzeug (2D)'
     : tool !== 'look' || moving || plan ? 'Werkzeug gewählt (2D)' : !glInit() ? 'kein WebGL2 im Browser (2D)' : '';
   return !GL.why;
 }
