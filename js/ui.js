@@ -2881,6 +2881,9 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-09-zaun', date: '9. Oktober', title: 'Zaun um Dinge auf dem Platz', items: [
+    '🧱 <b>Durchgang schließen:</b> Ein Zaun (auch Hecke oder Mauer) über einem Weg wird von selbst ein Durchgang. Tipp das Stück an und wähle „geschlossen“ – so geht jetzt auch ein Zaun rund um einen Brunnen auf dem Platz.',
+  ] },
   { id: '2026-10-09-mitte', date: '9. Oktober', title: 'Deko in die Mitte, Tunnel entfernen', items: [
     '🌳 <b>Deko genau in die Feldmitte:</b> Tippst du nah an die Mitte, rastet kleine Deko dort ein – auf Wiese, Plätzen und breiten Wegen (nicht mitten auf einen schmalen Weg). Die Ecken bleiben frei.',
     '🚇 <b>Tunnel entfernen</b> direkt im Tunnel-Werkzeug: oben „− Entfernen“ wählen und über die Tunnel ziehen – was darüber steht, bleibt stehen.',
