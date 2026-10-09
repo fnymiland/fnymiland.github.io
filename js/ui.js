@@ -161,7 +161,10 @@ let sheetOpen = false;
 function updateUndoBtn() { const b = document.querySelector('.quick.undo'); if (b) b.disabled = !undoStack.length && !moving; }
 function setSheet(open) {
   sheetOpen = !!open;
-  if (!sheetOpen) arrangeMode = false;
+  if (!sheetOpen) {                                                       // zu: auch „Zuletzt gebaut“ zu – sonst schloss der nächste 🕘-Klick nur
+    arrangeMode = false;                                                  // den Merker und erst der zweite öffnete (Nutzer)
+    if (recentOpen) { recentOpen = false; const r = document.querySelector('#cats .recent'); if (r) r.classList.remove('active'); }
+  }
   $('toolbar').classList.toggle('open', sheetOpen);
 }
 document.addEventListener('pointerdown', e => {                          // daneben tippen: Feld zu – der Tipp baut nichts

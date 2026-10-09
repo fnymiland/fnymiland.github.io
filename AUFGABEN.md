@@ -2164,3 +2164,7 @@ Grund: Grundlast bei Full HD ~40 ms je Bild (4.464 drawImage tags, große Testwe
       Zeilen „Name … Wert“ in zwei Spalten (Handy eine). Neu: Tageszeit (echte Uhr / immer Tag), Schatten, Symbole über Häusern,
       Namensschilder (Sehenswürdigkeiten + Figuren; „entdecken“-Schilder bleiben), Glitzer & Feuerwerk, Schärfe (voll/halb =
       DPR × 0,5), Einwohner (viele/wenige/keine, nur Bild), Tiere. Standard wie bisher = „Ausgewogen“. Test: einstellungen
+
+## Kleinigkeit: 🕘 öffnet manchmal erst beim zweiten Klick (Nutzer, 09.10.2026)
+- [x] Nach einer Wahl aus „Zuletzt gebaut“ (oder ✕/Werkzeug) klappte die Leiste zu, `recentOpen` blieb aber an – der nächste 🕘-Klick
+      schaltete nur den Merker aus. `setSheet(false)` setzt ihn jetzt mit zurück (und nimmt die Hervorhebung vom 🕘). Test: zuletzt

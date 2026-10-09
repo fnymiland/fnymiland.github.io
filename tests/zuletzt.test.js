@@ -17,6 +17,23 @@ describe('Zuletzt gebaut (Block 120)', () => {
     game("localStorage.setItem('kachelhausen_recent', '{kaputt')");
     expect(game('recentList()')).toEqual([]);                                                 // kaputter Speicher: einfach leer
   });
+  it('🕘 öffnet immer mit dem ersten Klick – auch nachdem man daraus etwas gewählt hat (Nutzer: „erst mit dem zweiten Klick“)', () => {
+    for (const id of ['baum', 'bank']) game(`noteRecent('${id}')`);
+    const rec = () => game("document.querySelector('#cats .recent').click()");
+    rec();
+    expect(game('sheetOpen')).toBe(true);
+    game("document.querySelector('#tools [data-tool=\"bank\"]').click()");        // Ding gewählt: Leiste klappt zu
+    expect(game('sheetOpen')).toBe(false);
+    expect(game("document.querySelector('#cats .recent').classList.contains('active')")).toBe(false);
+    rec();
+    expect(game('sheetOpen')).toBe(true);                                             // gleich wieder offen
+    game("document.querySelector('#cats .quick[data-quick=\"look\"]').click()");   // anderer Weg zu
+    rec();
+    expect(game('sheetOpen')).toBe(true);
+    rec();
+    expect(game('sheetOpen')).toBe(false);                                            // nochmal: zu
+    game("setTool('look')");
+  });
   it('nur wirklich Gebautes zählt (Antippen, Linie/Fläche)', () => {
     game("setTool('haus'); hover = { x: 8, y: 8 }; tap(...(() => { const p = toScreen(8, 8); return [p.x, p.y]; })(), false)");
     expect(game('recentList()[0]')).toBe('haus');
