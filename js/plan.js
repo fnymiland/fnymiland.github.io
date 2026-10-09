@@ -247,6 +247,7 @@ function runPlan() {
   let n = 0;
   batch(() => { for (const [, , run] of info.order) if (run()) n++; });
   if (!n) return false;
+  if (p.tool === 'dach' && roofAutoPillars(info.order.map(([x, y]) => [x, y]))) { recalc(); save(); }   // Stützen kommen mit (Block 138)
   noteRecent(p.tool);                                                     // zuletzt gebaut (Block 120)
   sfx(ITEMS[p.tool].small || ITEMS[p.tool].edge ? 'deco' : p.tool === 'weg' || p.tool === 'schiene' ? 'road' : 'dig');
   const [ex, ey] = info.order[info.order.length - 1], diff = state.money - money0;

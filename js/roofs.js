@@ -386,6 +386,28 @@ function roofLiveTiles() {
   roofLiveCache = { v, keys: [...out] };
   return roofLiveCache.keys;
 }
+// Stützen kommen mit (Nutzer wählte A, 09.10.2026): nach dem Bauen einer Fläche an jede Außenecke eine Stütze, wo noch keine steht –
+// gratis (free: Abreißen gibt nichts zurück), frei versetz- und entfernbar. Nur Außenecken (Innenecken, Seiten: stellt der Nutzer).
+function roofAutoPillars(cells) {
+  let n = 0;
+  const near = (pu, pv) => { for (const [tx, ty] of PILLAR_NEAR(Math.round(pu), Math.round(pv))) { const ds = state.decos.get(tx + ',' + ty);
+    if (ds && ds.some((d, i) => d && d.b === 'stuetze' && (([qu, qv]) => Math.hypot(qu - pu, qv - pv) < 0.15)(pillarPos(tx, ty, i, d)))) return true; } return false; };
+  for (const [x, y] of cells) {
+    const r = roofAt(x, y);
+    if (!r) continue;
+    const cov = roofCov(r);
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+      if (cov(x + sx, y) || cov(x, y + sy)) continue;                     // keine Außenecke
+      const pu = x + sx * RW, pv = y + sy * RW, slot = (sx > 0 ? 1 : 0) + (sy > 0 ? 2 : 0);
+      if (near(pu, pv) || smallError('stuetze', x, y, slot, { noCost: true })) continue;   // steht schon eine / Platz belegt
+      const k = x + ',' + y;
+      if (!state.decos.has(k)) state.decos.set(k, newSlots());
+      state.decos.get(k)[slot] = { b: 'stuetze', rot: smallRot('stuetze', slot), free: true, born: performance.now() };
+      n++;
+    }
+  }
+  return n;
+}
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }

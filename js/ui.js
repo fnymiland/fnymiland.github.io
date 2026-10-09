@@ -1246,7 +1246,7 @@ function roofInfoHtml(x, y) {
     <div class="looks look-forms">${lookFree('dach', 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-roofform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb('dach', i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${roofForm(r) === 'markise' ? `<div class="label">Markisenfarbe</div><div class="swatches">${lookFree('dach', 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-roofcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
-    <p class="muted">Stützen stellst du selbst darunter: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Feldern.</p>`;
+    <p class="muted">An die Außenecken kommen Stützen gleich mit. Weitere stellst du selbst: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Felder; mit 🧹 entfernen.</p>`;
 }
 function openRoofInfo(x, y) {
   if (!roofAt(x, y)) { closePanel(); return; }

@@ -745,7 +745,7 @@ function tap(sx, sy, isTouch) {
   if (tool === 'verschieben') dropAt(x, y, moving.kind === 'deco' ? freeSlot(x, y, slot) : slot);
   else if (tool === 'abriss') { if (ds && ds[slot]) removeSmall(x, y, slot); else demolish(x, y); }
   else if (ITEMS[tool].small) { if (buildSmall(tool, x, y, freeSlot(x, y, slot))) noteRecent(tool); }
-  else if (build(tool, x, y)) noteRecent(tool);                             // zuletzt gebaut (Block 120)
+  else if (build(tool, x, y)) { noteRecent(tool); if (tool === 'dach' && roofAutoPillars([[x, y]])) { recalc(); save(); } }   // zuletzt gebaut (Block 120); Stützen kommen mit (138)
 }
 
 // Stufen-Forschung: nächste Stufe kaufen (Ideen)

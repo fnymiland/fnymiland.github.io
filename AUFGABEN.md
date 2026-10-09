@@ -1831,6 +1831,10 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       (Ecke des Hof-Felds) rutschte an eine der Kanten statt in die Hof-Ecke: `pillarSnap` nimmt dann die Ecke. (2) `pillarInset`
       aus den vier schrägen Nachbarpunkten (Außenecke/Kante/Innenecke) – in der Innenecke unter das Eck der Balken. Test: dach.
       Bild tools/vorschau/hof-stuetzen2.png
+      Nutzer: „wie lösen wir, dass man schwebende Dächer bauen kann, Pfeiler aber selbst stellen soll?“ → 4 Wege gezeigt, Nutzer wählte
+      A: Stützen kommen mit. Nach dem Ziehen (runPlan) bzw. Tippen bekommt jede Außenecke der neuen Fläche eine Stütze, wo im Umkreis
+      0,15 keine steht – gratis (`free`, Abreißen gibt nichts), frei versetz-/entfernbar, ↶ nimmt sie mit dem Dach. Nur Außenecken.
+      `roofAutoPillars`. Texte angepasst. Test: dach. Bild tools/vorschau/stuetzen-kommen-mit.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

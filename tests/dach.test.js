@@ -198,6 +198,23 @@ describe('Überdachungen (Block 138)', () => {
     }
   });
 
+  it('Stützen kommen mit (Nutzer wählte A): nach dem Ziehen an jede Außenecke eine, gratis; vorhandene zählen; entfernen gibt nichts zurück', () => {
+    const pillars = () => game("[...state.decos].flatMap(([k, ds]) => ds.map((d, i) => d && d.b === 'stuetze' ? pillarPos(...keyXY(k), i, d).map(v => +v.toFixed(2)).join('|') : null).filter(Boolean)).sort()");
+    game("buildSmall('stuetze', 6, 3, 1)");                                           // schon eine an der späteren Ecke (6,42 | 2,58)
+    const m = game('state.money');
+    game("resetUndo(); setTool('dach'); startPlan('rect', { x: 3, y: 3 }, { x: 6, y: 4 }, true); undoable(runPlan); setTool('look')");   // 4 × 2, ein Schritt wie beim Tippen
+    expect(pillars()).toEqual(['2.58|2.58', '2.58|4.42', '6.42|2.58', '6.42|4.42']);  // vier Außenecken, keine doppelt, keine an den Seiten
+    expect(game('state.money')).toBe(m - 8 * game('ITEMS.dach.cost'));                // Stützen gratis
+    expect(game("state.decos.get('3,3')[0].free")).toBe(true);
+    game('undo()');
+    expect(game('state.roofs.size')).toBe(0);                                         // ↶ nimmt Dach samt Stützen
+    expect(pillars()).toEqual(['6.42|2.58']);
+    game("setTool('dach'); startPlan('rect', { x: 3, y: 3 }, { x: 6, y: 4 }, true); runPlan(); setTool('look')");
+    const m2 = game('state.money');
+    game("removeSmall(3, 3, 0)");
+    expect(game('state.money')).toBe(m2);                                             // gratis gekommen: nichts zurück
+  });
+
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
     way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");
