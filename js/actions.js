@@ -690,7 +690,10 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
-  if (tool === 'abriss') { const rp = roofPick(sx, sy); if (rp) { ({ x, y } = rp); slot = -1; } }   // das Dach, das man sieht (Block 138)
+  if (tool === 'abriss') {                                       // Stütze vor Dach, Dach vor dem Feld dahinter (Block 138)
+    const ph = pillarAt(sx, sy), rp = !ph && roofPick(sx, sy);
+    if (ph) ({ x, y, slot } = ph); else if (rp) { ({ x, y } = rp); slot = -1; }
+  }
   const pl = pillAt(sx, sy);                                // Schild angetippt (Block 71): Sehenswürdigkeit nur beim Ansehen
   if (pl && (tool === 'look' || !pl.look)) { pl.open(sx, sy); return; }
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
@@ -701,6 +704,8 @@ function tap(sx, sy, isTouch) {
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
   if (!viewOnly() && collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
+  const ph = tool === 'look' && !hit ? pillarAt(sx, sy) : null;        // Stütze angetippt (Block 138): ihr Fenster, nicht das des Dachs
+  if (ph) { openDecoInfo(ph.x, ph.y, ph.slot); return; }
   const rp = tool === 'look' && !hit ? roofPick(sx, sy) : null;         // Dach angetippt (Block 138)
   if (rp) { if (state.tiles.get(rp.x + ',' + rp.y)) openInfo(rp.x, rp.y); else openRoofInfo(rp.x, rp.y); return; }
   if (hit) ({ x, y, slot } = hit);

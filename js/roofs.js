@@ -338,6 +338,22 @@ function drawPillarsOf(x, y, px, py, z, now) {
   }
 }
 const hasPillarNear = (x, y) => [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([tx, ty]) => { const ds = state.decos.get(tx + ',' + ty); return !!ds && ds.some(d => d && d.b === 'stuetze'); });
+// Antippen einer Stütze (👆, 🧹): die Stütze geht vor dem Dach darüber (Nutzer: „wenn ich eine Stütze entferne, geht das ganze Dach
+// weg“ – der Dach-Treffer nahm sonst alles unter dem Dach). Getroffen: Zeiger auf dem Pfosten zwischen Fuß und Dach, ± ein paar Punkte
+function pillarAt(sx, sy) {
+  if (!state.decos.size || !cam) return null;
+  const z = cam.z, c = toTile(sx, sy + ROOF_H * z / 2);
+  let best = null;
+  for (let ty = c.y - 2; ty <= c.y + 2; ty++) for (let tx = c.x - 2; tx <= c.x + 2; tx++) {
+    const ds = state.decos.get(tx + ',' + ty);
+    if (ds) ds.forEach((d, i) => {
+      if (!d || d.b !== 'stuetze') return;
+      const [pu, pv] = pillarPos(tx, ty, i, d), [qu, qv] = pillarInset(pu, pv, pillarForm(tx, ty, pu - tx, pv - ty)), p = toScreen(qu, qv);
+      if (Math.abs(sx - p.x) <= Math.max(5, 3 * z) && sy <= p.y + 3 * z && sy >= p.y - ROOF_H * z && (!best || p.y > best.fy)) best = { x: tx, y: ty, slot: i, fy: p.y };
+    });
+  }
+  return best;
+}
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }

@@ -104,6 +104,22 @@ describe('Überdachungen (Block 138)', () => {
     expect(n).toBe(1);
   });
 
+  it('🧹 auf eine Stütze entfernt nur die Stütze, nicht das Dach (Nutzer); 👆 öffnet ihr Fenster', () => {
+    way(row(3, 6, 5)); roof(row(3, 6, 5));
+    game("buildSmall('stuetze', 4, 5, 7)");                                           // vordere Seitenmitte von 4,5
+    game('cam = state.cam; cam.z = 2.5; { const p = iso(5, 5); cam.x = p.x; cam.y = p.y; }');
+    const mid = game("(() => { const d = state.decos.get('4,5')[7], [u, v] = pillarPos(4, 5, 7, d), p = toScreen(u, v); return [p.x, p.y - ROOF_H * cam.z * 0.5]; })()");   // halbe Höhe am Pfosten
+    expect(game(`pillarAt(${mid[0]}, ${mid[1]})`)).toMatchObject({ x: 4, y: 5, slot: 7 });
+    game(`setTool('abriss'); setHover(${mid[0]}, ${mid[1]})`);
+    expect(game('[hover.x, hover.y, hoverSlot]')).toEqual([4, 5, 7]);
+    game(`tap(${mid[0]}, ${mid[1]}, false)`);
+    expect(game("[!!(state.decos.get('4,5') || [])[7], state.roofs.has('4,5')]")).toEqual([false, true]);   // Stütze weg, Dach bleibt
+    game("buildSmall('stuetze', 4, 5, 7); setTool('look')");
+    game(`tap(${mid[0]}, ${mid[1]}, false)`);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Stütze/);
+    game('closePanel()');
+  });
+
   it('Dach über der Wiese: eigenes Fenster mit Form und Abreißen', () => {
     roof(row(3, 4, 9));
     game('openRoofInfo(3, 9)');

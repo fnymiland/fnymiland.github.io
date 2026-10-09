@@ -1805,6 +1805,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       in echt tragen Pfosten Balken, auf denen das Gitter liegt. Varianten gezeigt (tools/vorschau/innere-balken.png), Nutzer: Balken
       in beide Richtungen, ABER NUR, wo Pfeiler drunter sind; ohne Pfeiler bleibt es dünn. `roofInnerBeams` (Balken bis zum Rand,
       nur solange das Dach ohne Lücke weitergeht; im Bildchen-Schlüssel). Test: dach. Bild tools/vorschau/innere-balken-spiel.png
+      Nutzer: „wenn ich eine Stütze entferne, geht das ganze Dach weg“ → der Dach-Treffer (`roofPick`) nahm alles unter dem Dach.
+      Jetzt `pillarAt` zuerst (Zeiger auf dem Pfosten zwischen Fuß und Dach): 🧹 entfernt nur die Stütze, 👆 öffnet ihr Fenster;
+      daneben gilt weiter das Dach. Test: dach
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
