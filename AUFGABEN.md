@@ -1842,7 +1842,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Höhe, Farben; `drawFrame`/`drawInnerFrame` aus der Pergola herausgelöst, Pergola unverändert), Pfosten je Form gleich stark bündig
       (`PILLAR_HALF` aus ROOF_FRAME), innere Balken und Auto-Eckstützen für alle Formen. Entwurf aller vier: tools/vorschau/vier-formen.png.
       Glas zuerst: Stahlrahmen 0,03, Bögen in beide Richtungen überall gleich (Nutzer wählte A aus glas-varianten.png). Bild glas-nah2.png
-- [ ] Markise und Steinarkaden nach dem Modell durchgehen (Entwurf steht, Nutzer schaut sie sich als Nächstes an)
+- [x] Steinarkaden: massives Dach (`solid`) – Innenseiten der Steinbalken und innere Balken liegen unter den bündigen Platten
+      (vorher Rinne am hinteren Rand, Klötzchen an der Hof-Ecke, Rillen über inneren Pfeilern). Bilder stein-nah.png → stein-nah2.png
+- [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

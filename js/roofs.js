@@ -19,7 +19,7 @@ const ROOF_FRAME = {
   pergola: { T: PERG_T, BH: PERG_BH, top: '#9c6a45', sU: '#6f4529', sV: '#8a5a3a', post: '#8a5a3a' },
   glas:    { T: 0.03, BH: 1.0, top: '#7d8893', sU: '#4a535d', sV: '#5d6772', post: '#5d6772' },
   markise: { T: 0.03, BH: 0.9, top: '#ffffff', sU: '#d8d2c6', sV: '#ece6da', post: '#ece6da' },
-  arkaden: { T: 0.09, BH: 3.0, top: '#e8dec9', sU: '#b3a283', sV: '#c8b896', post: '#dccfb4' },
+  arkaden: { T: 0.09, BH: 3.0, top: '#e8dec9', sU: '#b3a283', sV: '#c8b896', post: '#dccfb4', solid: true },   // massiv: Platten bündig, Innenseiten verdeckt
 };
 const roofAt = (x, y) => !!state.roofs && state.roofs.get(x + ',' + y);
 const roofForm = r => (DECO_LOOKS.dach.forms[(r && r.form) || 0] || DECO_LOOKS.dach.forms[0]).id;
@@ -171,7 +171,7 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       // sichtbare Seite: bei n < 0 die Innenseite (zum Dach hin) – sie endet genau dort, wo der andere Balken beginnt (Nutzer wählte C):
       // an Außenecken um die Stärke kürzer, an Innenecken um die Stärke länger. Bei n > 0 die Außenseite: endet an der Lauf-Ecke
       const fa = e.n < 0 && endA ? e.a + (inA ? -F.T : F.T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? F.T : -F.T) : e.b;
-      if (fb > fa) poly([at(hi2, fa, H - F.BH), at(hi2, fb, H - F.BH), at(hi2, fb, H), at(hi2, fa, H)], e.ax === 'u' ? F.sU : F.sV);
+      if (fb > fa && !(F.solid && e.n < 0)) poly([at(hi2, fa, H - F.BH), at(hi2, fb, H - F.BH), at(hi2, fb, H), at(hi2, fa, H)], e.ax === 'u' ? F.sU : F.sV);   // massiv: Innenseite unter den Platten
       poly([at(lo, a0, H), at(hi2, a0, H), at(hi2, b0, H), at(lo, b0, H)], F.top, F.top, 0.3);
     } };
     // Balken über Pfosten mitten unterm Dach, in beide Richtungen bis zum Rand – nur wo wirklich ein Pfosten steht (Nutzer, 09.10.2026:
@@ -239,7 +239,7 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       if (Math.abs(ub * 2 - Math.round(ub * 2)) < 1e-6) line([P(ub, va, H), P(ub, vb, H)], S.side, 0.4);
       if (Math.abs(vb * 2 - Math.round(vb * 2)) < 1e-6) line([P(ua, vb, H), P(ub, vb, H)], S.side, 0.4);
     }
-    drawInnerFrame(F); drawFrame(F);
+    drawFrame(F);                                                         // innere Balken liegen unter den Platten (massiv)
   }
   // Ränder
   for (const e of edges) {
