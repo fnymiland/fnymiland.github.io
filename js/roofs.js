@@ -12,6 +12,7 @@
 // Felds (render.js, tileB) – sie laufen darunter durch.
 // ---------------------------------------------------------------------------
 const RW = 0.42, ROOF_H = 22, ROOF_STRIPE = 0.09;
+const PERG_T = 0.05, PERG_BH = 1.6;   // Pergola (Nutzer wählte Entwurf D): Randbalken und Pfosten gleich stark (Felder), Balkenhöhe
 const roofAt = (x, y) => !!state.roofs && state.roofs.get(x + ',' + y);
 const roofForm = r => (DECO_LOOKS.dach.forms[(r && r.form) || 0] || DECO_LOOKS.dach.forms[0]).id;
 const ROOF_STY = {
@@ -152,6 +153,15 @@ function paintRoof(P, A, x, y, r, lw = 1) {
     const cols = [MARKISE_COLS[(r && r.col) || 0].c, '#fffaf0'];
     for (const q of quads) { const c = cols[Math.floor(A.dist((q[0] + q[1]) / 2, (q[2] + q[3]) / 2, 2, true) / ROOF_STRIPE) % 2]; poly(corners(q), c, c, 0.35); }
   } else if (form === 'pergola') {
+    // Randbalken als Kanthölzer (Entwurf D): Außenseite genau auf der Dachkante, Stärke PERG_T nach innen, Höhe PERG_BH unter H;
+    // sichtbar die Seite zum Betrachter (+u dunkler, +v heller) und die Oberseite – an Ecken laufen sie zusammen (keine Kerbe, kein Kreuz)
+    const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => p.k - q.k);
+    for (const { e } of beams) {
+      const inn = e.at - e.n * PERG_T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
+      const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
+      poly([at(hi2, e.a, H - PERG_BH), at(hi2, e.b, H - PERG_BH), at(hi2, e.b, H), at(hi2, e.a, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
+      poly([at(lo, e.a, H), at(hi2, e.a, H), at(hi2, e.b, H), at(lo, e.b, H)], '#9c6a45', '#9c6a45', 0.3);
+    }
     ribs(0.25, () => H + 1, S.beam, 1.1);
     for (const q of quads) {
       const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 3);
@@ -170,7 +180,6 @@ function paintRoof(P, A, x, y, r, lw = 1) {
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
-    if (form === 'pergola') { line([pt(e.a, H), pt(e.b, H)], S.beam, 1.6); continue; }   // Randbalken enden genau an der Ecke (kein Kreuz)
     if (form === 'glas') { line([pt(e.a, H), pt(e.b, H)], S.rib, 0.9); continue; }
     if (!front) continue;
     if (form === 'markise') {
@@ -324,7 +333,7 @@ function pillarSnap(pu, pv) {
 function pillarPos(x, y, i, d) { const [u, v] = slotPos(x, y, i, d); return pillarSnap(x + u, y + v); }
 // Dicke Pfosten (Pergola, Arkaden) bündig: um ihre halbe Breite nach innen unters Dach, damit ihre Außenseiten genau unter der Kante
 // liegen (Nutzer: „bündig“) – sonst stünde die Hälfte über die Kante hinaus. Nur zum Zeichnen; Bögen rechnen mit der Kante.
-const PILLAR_HALF = { pergola: 0.044, arkaden: 0.1 };
+const PILLAR_HALF = { pergola: PERG_T / 2, arkaden: 0.1 };
 function pillarInset(pu, pv, form) {
   const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id];
   if (!h) return [pu, pv];
@@ -356,13 +365,14 @@ function drawPillar(cx, cy, z, form) {
     g.strokeStyle = C('#efe9dc'); g.lineWidth = 1.3 * z; g.lineCap = 'butt'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - (H - 0.6) * z); g.stroke();   // endet unter der Dachkante
     circle(cx, cy - (H - 1.4) * z, 0.8 * z, C('#d9c9b8'));
   } else {
-    box(cx, cy, 1.4 * z, 0.7 * z, (H - 0.9) * z, '#8a5a3a', null, 0);   // endet unter dem Randbalken (der liegt obenauf)
+    box(cx, cy, PERG_T * TW / 2 * z, PERG_T * TH / 2 * z, (H - PERG_BH) * z, '#8a5a3a', null, 0);   // so stark wie der Randbalken, trägt ihn
   }
 }
 // Vorschaubild (Leiste, Kunstakademie): ein Feld Weg mit Dach und vier Stützen
 function drawRoofIcon(cx, cy, z, form = 0, col = 0) {
   const P = (u, v, up = 0) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z];
   const cov = (x, y) => x === 0 && y === 0, A = roofArea(cov);
-  for (const [u, v] of [[-RW, -RW], [RW, -RW], [-RW, RW], [RW, RW]]) { const p = P(u, v); drawPillar(p[0], p[1], z, form); }
+  const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id] || 0;   // bündig unter der Kante wie im Spiel
+  for (const [u, v] of [[-RW, -RW], [RW, -RW], [-RW, RW], [RW, RW]]) { const p = P(u - Math.sign(u) * h, v - Math.sign(v) * h); drawPillar(p[0], p[1], z, form); }
   paintRoof(P, A, 0, 0, { form, col }, z);
 }

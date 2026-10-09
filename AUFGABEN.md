@@ -1789,6 +1789,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „wieso ist da so ein Kreuz in den Ecken“ → Randbalken ohne Überstand (enden genau an der Ecke); dicke Pfosten
       (Pergola, Arkaden) stattdessen um ihre halbe Breite nach innen unters Dach (`pillarInset`, nur beim Zeichnen) – so liegen
       ihre Außenseiten unter der Kante. Bild tools/vorschau/dach-buendig2.png
+      Nutzer: „NEIN passt es nicht – was muss ich tun, damit du raffst, was ich will“ → Ecke groß in 4 Varianten gezeigt
+      (tools/vorschau/ecke-varianten.png, ecke-variante-d.png), Nutzer wählte D: Pergola-Randbalken als Kanthölzer (Stärke
+      PERG_T 0,05, Höhe PERG_BH 1,6, Außenseite auf der Kante, laufen an Ecken zusammen), Pfosten gleich stark darunter, Querlatten
+      obenauf. Nur die Pergola geändert. Bild tools/vorschau/dach-pergola-d.png. LEHRE: bei Form-Wünschen zuerst ein großes Bild
+      der Stelle mit Varianten zeigen statt raten.
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
