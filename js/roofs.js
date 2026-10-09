@@ -167,8 +167,12 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       // seine Stärke weiter – sonst bliebe in der Ecke ein Quadrat ohne Balken (Stufe). Außenecken überlappen ohnehin
       const [ra, rb] = roofRun(A, e), w = e.at - e.n * PERG_T / 2;
       const cov = (t) => { const [u, v] = e.ax === 'u' ? [w, t] : [t, w]; return A.sub(roofSubOf(u), roofSubOf(v)); };
-      const a0 = Math.abs(e.a - ra) < 1e-6 && cov(ra - 0.01) ? e.a - PERG_T : e.a, b0 = Math.abs(e.b - rb) < 1e-6 && cov(rb + 0.01) ? e.b + PERG_T : e.b;
-      poly([at(hi2, a0, H - PERG_BH), at(hi2, b0, H - PERG_BH), at(hi2, b0, H), at(hi2, a0, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
+      const endA = Math.abs(e.a - ra) < 1e-6, endB = Math.abs(e.b - rb) < 1e-6, inA = endA && cov(ra - 0.01), inB = endB && cov(rb + 0.01);
+      const a0 = inA ? e.a - PERG_T : e.a, b0 = inB ? e.b + PERG_T : e.b;
+      // sichtbare Seite: bei n < 0 die Innenseite (zum Dach hin) – sie endet genau dort, wo der andere Balken beginnt (Nutzer wählte C):
+      // an Außenecken um die Stärke kürzer, an Innenecken um die Stärke länger. Bei n > 0 die Außenseite: endet an der Lauf-Ecke
+      const fa = e.n < 0 && endA ? e.a + (inA ? -PERG_T : PERG_T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? PERG_T : -PERG_T) : e.b;
+      if (fb > fa) poly([at(hi2, fa, H - PERG_BH), at(hi2, fb, H - PERG_BH), at(hi2, fb, H), at(hi2, fa, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
       poly([at(lo, a0, H), at(hi2, a0, H), at(hi2, b0, H), at(lo, b0, H)], '#9c6a45', '#9c6a45', 0.3);
     } };
     // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich (Nutzer wählte B), fein und zwischen den Randbalken
