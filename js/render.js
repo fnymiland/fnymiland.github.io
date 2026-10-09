@@ -1636,6 +1636,7 @@ function render(now) {
             drawSmallOne(ghostType, gRot, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, 1, ROOF_TOP_SLOT0 + preview.slot, gCol, L.form || 0);
             g.globalAlpha = 1;
           }
+          drawRoofFront(x, y, px, py, z);                                 // vordere Brüstung vor allem, was oben steht
         };
         const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost ? 100 * z : 0;   // Deko oben ragt übers Dach hinaus
         if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();

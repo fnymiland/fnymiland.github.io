@@ -258,7 +258,7 @@ describe('Überdachungen (Block 138)', () => {
     expect(game("roofAt(3, 5).bel")).toBe('m:verband:anthrazit');
     expect(game("roofSig(3, 5, roofAt(3, 5)) !== roofSig(3, 5, { form: 3 })")).toBe(true);   // neues Bildchen
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['9,9', { form: 3, bel: 'quatsch' }]); return [...parseSave(d).roofs]; })()");
-    expect(back).toEqual([['3,5', { form: 3, bel: 'm:verband:anthrazit' }], ['4,5', { form: 3, bel: 'm:verband:anthrazit' }], ['5,5', { form: 3, bel: 'm:verband:anthrazit' }], ['9,9', { form: 3 }]]);
+    expect(back).toEqual([['3,5', { form: 3, bel: 'm:verband:anthrazit', par: 1 }], ['4,5', { form: 3, bel: 'm:verband:anthrazit', par: 1 }], ['5,5', { form: 3, bel: 'm:verband:anthrazit', par: 1 }], ['9,9', { form: 3 }]]);   // neu gebaut: mit Mauer
     expect(game("roofBel({ form: 3, bel: 'tritt' })")).toBe(null);                   // alter Stand mit Trittsteinen: Dachgarten
     for (const z of [2.5, 0.5]) game(`(() => { cam = state.cam; cam.z = ${z}; const p = iso(4, 5); cam.x = p.x; cam.y = p.y; render(1e6); })()`);
     game("[...document.querySelectorAll('.looks [data-roofbel]')][0].click()");
@@ -284,5 +284,21 @@ describe('Überdachungen (Block 138)', () => {
     game("state.design.add('dach:form:markise'); state.paintNew.dach = { form: 2 }; renderStyleBar('dach')");
     expect(game("!!document.querySelector('#style-bar [data-lpop=\"col\"]')")).toBe(true);
     game("setTool('look')");
+  });
+  it('Brüstung auf Steinarkaden (Nutzer): neu mit Mauer, im Fenster Mauer/Balustrade/Geländer/keine; alte Dächer bleiben ohne', () => {
+    way(row(3, 5, 5)); game("state.paintNew.dach = { form: 3 }; state.design.add('dach:form:arkaden'); state.design.add('dach:form:glas')"); roof(row(3, 5, 5));
+    expect(game("[...state.roofs.values()].map(r => r.par)")).toEqual([1, 1, 1]);
+    game('openInfo(4, 5)');
+    expect(game("[...document.querySelectorAll('[data-roofpar]')].map(b => b.textContent + (b.classList.contains('on') ? '*' : ''))")).toEqual(['Keine', 'Mauer*', 'Balustrade', 'Geländer']);
+    game("document.querySelector('[data-roofscope=\"run\"]').click(); document.querySelector('[data-roofpar=\"2\"]').click()");
+    expect(game("[...state.roofs.values()].map(r => r.par)")).toEqual([2, 2, 2]);
+    expect(game("roofSig(4, 5, roofAt(4, 5)) !== roofSig(4, 5, { ...roofAt(4, 5), par: 3 })")).toBe(true);
+    game("openInfo(4, 5); document.querySelector('[data-roofpar=\"0\"]').click()");
+    expect(game("[...state.roofs.values()].some(r => r.par)")).toBe(false);
+    expect(game("[...parseSave({ ...JSON.parse(JSON.stringify(serialize())), roofs: [['1,1', { form: 3 }], ['2,2', { form: 3, par: 9 }], ['3,3', { form: 3, par: 3 }]] }).roofs.values()].map(r => r.par)")).toEqual([undefined, undefined, 3]);   // alter Stand: ohne
+    // aus Glas wird Stein: mit Mauer wie neu gebaut
+    game("state.paintNew.dach = { form: 1 }; build('dach', 8, 8, true); openRoofInfo(8, 8); document.querySelector('[data-roofform=\"3\"]').click()");
+    expect(game('roofAt(8, 8).par')).toBe(1);
+    game('closePanel()');
   });
 });

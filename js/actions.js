@@ -40,6 +40,7 @@ function build(b, x, y, quiet) {
     if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
     state.money -= ITEMS.dach.cost; payMat(ITEMS.dach.mat);
     const old = state.roofs.get(k0), nr = { ...decoLookNew('dach') };
+    if (roofForm(nr) === 'arkaden') nr.par = 1;                         // neue Steinarkaden: mit Mauer (abschaltbar im Fenster)
     if (old && old.top) { if (roofForm(nr) === 'arkaden') nr.top = old.top; else roofTopClear(old); }   // Deko oben bleibt nur auf Stein (Block 138b)
     state.roofs.set(k0, nr);
     roofDirty(x, y); groundVersion++; sfx('deco'); recalc(); save();   // groundVersion: Schatten im Boden-Bild

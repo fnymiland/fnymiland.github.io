@@ -33,6 +33,9 @@ const ROOF_STY = {
 // Teilstück eines Punkts (Weltkoordinate) – mit Spielraum: −50,42 − (−50) ist im Rechner −0,4200000000000017, und ohne ROOF_EPS
 // zählte ein Punkt genau auf der Dachkante je nach Lage auf der Insel als „draußen“ (Nutzer: „selbe Version, anderes Verhalten“)
 const ROOF_EPS = 1e-6;
+// Brüstung oben auf Steinarkaden (Nutzer, 09.10.2026: „oben drauf ein Zaun oder eine Mauer wie bei C, die rumgeht“ – alle drei wählbar,
+// abschaltbar): r.par = 1 Mauer, 2 Balustrade, 3 Geländer; fehlt = keine. Steht genau auf dem Steinrahmen (gleiche Stärke, gleiche Ecken)
+const ROOF_PAR = [null, { id: 'mauer', name: 'Mauer', h: 6 }, { id: 'balustrade', name: 'Balustrade', h: 7 }, { id: 'gelaender', name: 'Geländer', h: 7 }];
 const roofSubOf = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW - ROOF_EPS ? -1 : f > RW + ROOF_EPS ? 1 : 0); };
 const roofLo = s => { const x = Math.round(s / 3), i = s - 3 * x; return i === -1 ? x - 0.5 : i === 0 ? x - RW : x + RW; };
 const roofHi = s => { const x = Math.round(s / 3), i = s - 3 * x; return i === -1 ? x - RW : i === 0 ? x + RW : x + 0.5; };
@@ -121,6 +124,15 @@ function roofPillarsOn(e, a, b) {
   }
   return out;
 }
+const roofPar = r => r && roofForm(r) === 'arkaden' && ROOF_PAR[r.par] ? ROOF_PAR[r.par] : null;
+// gesammelte Zeichenschritte in Weltkoordinaten [u, v, Höhe] – für das Dachbild und für das, was davor live gezeichnet wird
+function roofOps(ops, P, lw) {
+  for (const o of ops) {
+    g.beginPath(); o.pts.forEach((q, i) => { const p = P(q[0], q[1], q[2]); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+    if (o.line) { g.strokeStyle = C(o.col); g.lineWidth = o.line * lw; g.lineCap = 'round'; g.stroke(); continue; }
+    g.closePath(); g.fillStyle = C(o.col); g.fill(); g.strokeStyle = C(o.col); g.lineWidth = 0.3 * lw; g.lineJoin = 'round'; g.stroke();
+  }
+}
 // Steinarkaden: Belag auf dem Dach (Weg-Stilname) statt Dachgarten – Trittsteine gibt es oben nicht
 const roofBel = r => r && typeof r.bel === 'string' && isWegStyle(r.bel) && !pathLook(r.bel).stones ? r.bel : null;
 // Belag beim Umschalten: ein Plattenmuster, das man schon hat, in Steinfarbe (sonst glatt)
@@ -129,7 +141,7 @@ const roofProf = (d, A) => A * Math.sin(Math.PI / 2 * Math.min(1, d / RW));
 
 // Ein Feld malen. P(u, v, up) → Bildpunkt (Weltkoordinaten); lw: Strichstärke-Faktor. Nur die Teilstücke dieses Felds und seine
 // Ränder – Nachbarn malen ihre eigenen (so überlappt nichts). Glas/Pergola: Rand rundum; Markise/Arkaden: Volant/Wand zum Betrachter.
-function paintRoof(P, A, x, y, r, lw = 1) {
+function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOut: vordere Brüstung dorthin statt gleich malen (vor die Deko oben)
   const form = roofForm(r), S = ROOF_STY[form], H = ROOF_H;
   const poly = (pts, fill, stroke, w = 1) => { g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); if (fill) { g.fillStyle = C(fill); g.fill(); } if (stroke) { g.strokeStyle = C(stroke); g.lineWidth = w * lw; g.lineJoin = 'round'; g.stroke(); } };
   const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * lw; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.stroke(); };
@@ -196,6 +208,37 @@ function paintRoof(P, A, x, y, r, lw = 1) {
         }
       }
     };
+  // Brüstung (Steinarkaden): auf jedem Randstück der Rahmen nach oben verlängert – dieselben Enden wie drawFrame (Außenecken laufen
+  // zusammen, Innenecken um die Stärke weiter, sichtbare Innenseite endet an der Ecke), also bündig. front: Stücke mit Außenseite
+  // zum Betrachter (n > 0) – die stehen vor der Deko oben und werden danach gezeichnet
+  const parapetOps = (F, Pd, front) => {
+    const ops = [], T = F.T, h = Pd.h;
+    for (const { e } of beams) {
+      if ((e.n > 0) !== front) continue;
+      const inn = e.at - e.n * T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn), mid = (lo + hi2) / 2;
+      const at = (w, t, up) => e.ax === 'u' ? [w, t, up] : [t, w, up];
+      const [ra, rb] = roofRun(A, e), w = e.at - e.n * T / 2;
+      const cov = t => { const [u, v] = e.ax === 'u' ? [w, t] : [t, w]; return A.sub(roofSubOf(u), roofSubOf(v)); };
+      const endA = Math.abs(e.a - ra) < 1e-6, endB = Math.abs(e.b - rb) < 1e-6, inA = endA && cov(ra - 0.01), inB = endB && cov(rb + 0.01);
+      const a0 = inA ? e.a - T : e.a, b0 = inB ? e.b + T : e.b;
+      const fa = e.n < 0 && endA ? e.a + (inA ? -T : T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? T : -T) : e.b;
+      const side = e.ax === 'u' ? F.sU : F.sV;
+      const face = (h0, h1) => { if (fb > fa) ops.push({ pts: [at(hi2, fa, H + h0), at(hi2, fb, H + h0), at(hi2, fb, H + h1), at(hi2, fa, H + h1)], col: side }); };
+      const top = hh => ops.push({ pts: [at(lo, a0, H + hh), at(hi2, a0, H + hh), at(hi2, b0, H + hh), at(lo, b0, H + hh)], col: F.top });
+      const each = (step, f) => { for (let t = Math.ceil(a0 / step - 1e-6) * step; t < b0 - 1e-6; t += step) f(t); };   // im Weltraster: läuft über Felder weiter
+      if (Pd.id === 'mauer') { face(0, h); top(h); }
+      else if (Pd.id === 'balustrade') {
+        face(0, 1.2); top(1.2);
+        each(0.09, t => { ops.push({ pts: [at(mid, t, H + 1.2), at(mid, t, H + h - 1.2)], col: '#d7cbb2', line: 2.1 }); ops.push({ pts: [at(mid, t - 0.008, H + 1.2), at(mid, t - 0.008, H + h - 1.2)], col: '#efe7d6', line: 0.7 }); });
+        face(h - 1.2, h); top(h);
+      } else {
+        each(0.2, t => ops.push({ pts: [at(mid, t, H), at(mid, t, H + h)], col: '#4f4a44', line: 0.9 }));
+        ops.push({ pts: [at(mid, a0, H + h * 0.5), at(mid, b0, H + h * 0.5)], col: '#4f4a44', line: 0.6 });
+        ops.push({ pts: [at(mid, a0, H + h), at(mid, b0, H + h)], col: '#4f4a44', line: 1.1 });
+      }
+    }
+    return ops;
+  };
   const F = ROOF_FRAME[form];
   if (form === 'glas') {                                                // Stahlrahmen, darauf Glas mit Stahlbögen
     drawInnerFrame(F); drawFrame(F);
@@ -257,6 +300,12 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       if (hh < 0.05) { g.fillStyle = C(['#f28cb1', '#ffd23f', '#ffffff'][Math.floor(hh * 60) % 3]); g.beginPath(); g.arc(p[0] + 0.8 * lw, p[1] - 2.5 * lw, 0.9 * lw, 0, 7); g.fill(); }
     }
   }
+  const Pd = roofPar(r);
+  if (Pd) {                                                             // Brüstung: hinten ins Bild, vorn danach (frontOut) oder gleich
+    roofOps(parapetOps(F, Pd, false), P, lw);
+    const fr = parapetOps(F, Pd, true);
+    if (frontOut) frontOut.push(...fr); else roofOps(fr, P, lw);
+  }
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
@@ -289,7 +338,7 @@ const ROOF_BOX = { left: -TW / 2 - 4, top: -TH / 2 - ROOF_H - 12, w: TW + 8, h: 
 function roofCov(r) { const f = (r && r.form) || 0; return (x, y) => { const o = roofAt(x, y); return !!o && ((o.form || 0) === f); }; }
 function roofSig(x, y, r) {
   const reach = roofForm(r) === 'markise' ? 3 : 1, cov = roofCov(r);
-  let s = (r.form || 0) + ':' + (r.col || 0) + ':' + (roofBel(r) || '') + ':';
+  let s = (r.form || 0) + ':' + (r.col || 0) + ':' + (roofBel(r) || '') + ':' + (r.par || 0) + ':';
   for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) s += cov(x + dx, y + dy) ? 1 : 0;
   s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
   if (roofForm(r) === 'arkaden') {                                      // Bögen hängen an den Stützen des ganzen Laufs
@@ -311,7 +360,7 @@ function drawRoofTile(x, y, px, py, z) {
   if (roofFrame !== frameNo) { roofFrame = frameNo; roofSpent = 0; }
   const onlyZoom = e && e.base === sig.slice(0, sig.lastIndexOf('|'));     // nur die Zoomstufe ist anders
   if (!e || (e.sig !== sig && !(onlyZoom && roofSpent > ROOF_BUDGET))) {
-    const t0 = performance.now(), B = ROOF_BOX, c = document.createElement('canvas');
+    const t0 = performance.now(), B = ROOF_BOX, c = document.createElement('canvas'), front = [];
     c.width = Math.ceil(B.w * want); c.height = Math.ceil(B.h * want);
     const cg = c.getContext('2d');
     if (!cg) return;
@@ -319,10 +368,10 @@ function drawRoofTile(x, y, px, py, z) {
     try {
       g.setTransform(want, 0, 0, want, -B.left * want, -B.top * want);
       const P = (u, v, up = 0) => [(u - x - (v - y)) * TW / 2, (u - x + v - y) * TH / 2 - up];
-      paintRoof(P, roofArea(roofCov(r)), x, y, r, 1);
+      paintRoof(P, roofArea(roofCov(r)), x, y, r, 1, front);
     } finally { g = prev; }
     if (e) freeCanvas(e.c);
-    e = { c, sig, ver, base: sig.slice(0, sig.lastIndexOf('|')) };
+    e = { c, sig, ver, base: sig.slice(0, sig.lastIndexOf('|')), front };
     roofSpent += performance.now() - t0;
     roofSprites.set(key, e);
   }
@@ -633,6 +682,12 @@ function drawRoofTops(x, y, px, py, z, now) {
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
     drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - ROOF_H * z, z, now, x, y, sc, ROOF_TOP_SLOT0 + i, d.col || 0, d.form || 0);
   }
+}
+// vordere Brüstung eines Felds (nach der Deko oben und den Leuten darauf): aus dem Dachbild gemerkt, live gezeichnet
+function drawRoofFront(x, y, px, py, z) {
+  const e = roofSprites.get(x + ',' + y);
+  if (!e || !e.front || !e.front.length) return;
+  roofOps(e.front, (u, v, up = 0) => [px + (u - x - (v - y)) * TW / 2 * z, py + (u - x + v - y) * TH / 2 * z - up * z], z);
 }
 // alle Deko auf Dächern: [Feldschlüssel, Platz, Deko] (Schönheit, Strom, Erfolge)
 function* roofTopAll() {
