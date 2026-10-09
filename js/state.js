@@ -325,7 +325,7 @@ function parseSave(d) {
       if (Number.isInteger(c) && c > 0 && c < MARKISE_COLS.length) o.col = c;
       if (r && typeof r.bel === 'string' && isWegStyle(r.bel)) o.bel = r.bel;   // Belag der Steinarkaden
       if (r && Number.isInteger(r.par) && r.par > 0 && r.par < ROOF_PAR.length) o.par = r.par;   // Brüstung
-      const top = r && Array.isArray(r.top) ? [...r.top, ...newSlots()].slice(0, SLOTS).map((d, i) => i < 8 && d && roofTopOk(d.b) ? d : null) : null;   // Deko oben (Block 138b)
+      const top = r && Array.isArray(r.top) ? [...r.top, ...newSlots()].slice(0, SLOTS).map((d, i) => i !== VSLOT && d && roofTopOk(d.b) ? d : null) : null;   // Deko oben (Block 138b)
       if (top && top.some(Boolean)) o.top = top;
       return [k, o];
     })),

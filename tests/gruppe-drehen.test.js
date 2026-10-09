@@ -13,9 +13,9 @@ function park() {
     state.tiles.set('5,4', { b: 'weg', lvl: 1, style: 'kopf' }); state.tiles.set('5,5', { b: 'weg', lvl: 1, style: 'kopf' }); state.tiles.set('5,6', { b: 'weg', lvl: 1, style: 'kopf' });
     state.tiles.set('4,6', { b: 'brunnen', lvl: 1 });
     state.tiles.set('7,4', { b: 'reihenhaus', lvl: 1, rot: 0 });
-    state.decos.set('5,5', [null, null, null, null, null, null, { b: 'bank', rot: midRot(6) }, null, null]);
-    state.decos.set('4,4', [null, { b: 'laterne', rot: 0 }, null, null, null, null, null, null, null]);
-    state.decos.set('6,4', [null, null, null, null, null, null, null, null, { b: 'laterne', rot: 0 }]);
+    state.decos.set('5,5', [null, null, null, null, null, null, { b: 'bank', rot: midRot(6) }, null, null, null]);
+    state.decos.set('4,4', [null, { b: 'laterne', rot: 0 }, null, null, null, null, null, null, null, null]);
+    state.decos.set('6,4', [null, null, null, null, null, null, null, null, { b: 'laterne', rot: 0 }, null]);
     for (let x = 4; x <= 6; x++) state.edges.set('a' + x + ',4', { b: 'hecke', style: 'niedrig' });
     state.edges.set('b4,5', { b: 'zaun', style: 'latten', gate: true });
     recalc()`);

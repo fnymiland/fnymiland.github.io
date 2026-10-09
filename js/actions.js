@@ -339,7 +339,8 @@ function roofTopTurn(top, r) {
   if (!top || !r) return top;
   const out = newSlots();
   top.forEach((d, slot) => {
-    if (!d || slot >= 8) return;
+    if (!d || slot === VSLOT) return;
+    if (slot === CSLOT) { out[slot] = { ...d, rot: ROTATABLE.has(d.b) ? ((d.rot || 0) + r) & 3 : d.rot || 0 }; return; }   // Mitte bleibt Mitte (Block 156)
     const [u0, v0] = SLOT_UV(slot), [u, v] = kitTurn(r, u0, v0);
     const ns = slot < 4 ? (u > 0 ? 1 : 0) | (v > 0 ? 2 : 0) : 4 + MID_SIDE.findIndex(([a, b]) => a === Math.sign(u) && b === Math.sign(v));
     const auto = slot >= 4 && MID_TURN.has(d.b) && (d.rot || 0) === midRot(slot);
@@ -375,6 +376,7 @@ function groupPlaced(it) {
   if (it.kind === 'deco') {
     const d = it.d, slot = it.from[1];
     if (slot === VSLOT) { const [px, py] = grot(it.dx - 0.5, it.dy - 0.5); return { dx: Math.round(px + 0.5), dy: Math.round(py + 0.5), slot, d }; }
+    if (slot === CSLOT) { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy, slot, d: { ...d, rot: ROTATABLE.has(d.b) ? ((d.rot || 0) + r) & 3 : d.rot || 0 } }; }   // Mitte (Block 156)
     const [dx, dy] = grot(it.dx, it.dy), [u0, v0] = SLOT_UV(slot), [u, v] = kitTurn(r, u0, v0);
     const ns = slot < 4 ? (u > 0 ? 1 : 0) | (v > 0 ? 2 : 0) : 4 + MID_SIDE.findIndex(([a, b]) => a === Math.sign(u) && b === Math.sign(v));
     const auto = slot >= 4 && MID_TURN.has(d.b) && (d.rot || 0) === midRot(slot);   // Bank am Wegrand: wie das Spiel sie selbst stellt

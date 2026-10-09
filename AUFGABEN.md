@@ -2276,3 +2276,11 @@ Nutzer: „können wir auswählen und löschen nicht zusammenlegen … löschen 
       Abreißen; Kopie am Finger hat kein Wegwerfen), `openLandInfo`, `drawTunnelView` mit `seeThrough`, `deleteKey`; „Abreißen“ nie
       in 🕘 (`NOT_RECENT`). Werkzeug 'abriss' bleibt intern (Tests, Vorschau). Test: auswahl-abriss. Offen/zur Ansicht: auf dem Handy
       stapelt die Auswahl-Leiste jetzt vier Zeilen (Verschieben, Kopieren, Abreißen, ✕)
+
+## Block 156: Deko in der Feldmitte (Nutzer, 09.10.2026: „wieso kann man Dekoelemente nicht exakt mittig setzen?“)
+Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken bleiben frei; alle kleine Deko.
+- [x] Platz 9 = `CSLOT` (`SLOTS` jetzt 10): nah der Mitte getippt (`CSLOT_NEAR` 0,2) rastet ein (`centerWanted`), nicht auf schmalem
+      Weg/Gebäudefeld (`centerTileErr`; Platz = 2×2 Wege oder breiter Weg geht), keine Stützen. Gezeichnet zwischen den Ecken 1/2 und den
+      vorderen Seiten (`SLOTS_FRONT`). Verschieben, Gruppe drehen, Kopieren, Abreißen, Speichern; oben auf Steinarkaden ebenso
+      (`roofTopPos`, `roofTopAll` über `PLACE_SLOTS`). Ältere Versionen schneiden den Platz beim Laden ab (zeigen ihn nicht).
+      Test: deko-mitte (SLOTS-Erwartungen in decos, gruppe-drehen, dachdeko angepasst)

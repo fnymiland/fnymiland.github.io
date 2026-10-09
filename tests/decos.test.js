@@ -60,9 +60,9 @@ describe('Kleinkram: 8 Plätze', () => {
   beforeEach(() => { game('startNew()'); game("closeModal(); state.money = 5000; for (const k of Object.keys(LM_STAGES)) state.restore[k] = 3; for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 99; for (let y = 3; y <= 9; y++) for (let x = 3; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); state.decos.delete(x + ',' + y); } recalc()"); });
 
   it('Seitenmitten liegen zwischen den Ecken am Rand, näher an der Kante', () => {
-    expect(game('SLOTS')).toBe(9);                                       // 8 + Eckpunkt (Block 65)
+    expect(game('SLOTS')).toBe(10);                                      // 8 + Eckpunkt (Block 65) + Mitte (Block 156)
     expect(game('[4, 5, 6, 7].map(slotUV)')).toEqual([[-0.42, 0], [0, -0.42], [0.42, 0], [0, 0.42]]);
-    expect(game('newSlots().length')).toBe(9);
+    expect(game('newSlots().length')).toBe(10);
   });
 
   it('Bank in der Seitenmitte eines Wegs: längs zum Weg gedreht; acht Dinge passen auf ein Feld', () => {
@@ -82,7 +82,7 @@ describe('Kleinkram: 8 Plätze', () => {
 
   it('alte Stände mit 4 Plätzen werden beim Laden auf 8 erweitert', () => {
     const d = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.decos = [['7,7', [{ b: 'busch', rot: 0 }, null, null, null]]]; return d; })()");
-    expect(new Map(game(`parseSave(${JSON.stringify(d)})`).decos).get('7,7').length).toBe(9);
+    expect(new Map(game(`parseSave(${JSON.stringify(d)})`).decos).get('7,7').length).toBe(10);
   });
 
   it('Tippen trifft den nächsten der 8 Plätze', () => {

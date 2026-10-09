@@ -866,14 +866,20 @@ function currentStyle(kind) {
 // Kleine Dekos (Block 42): 8 Plätze pro Feld – 4 Ecken (0 hinten, 1 rechts, 2 links, 3 vorn) und 4 Seitenmitten
 // (4 −u oben links, 5 −v oben rechts, 6 +u unten rechts, 7 +v unten links). Auf einem Weg liegen die Seitenmitten am
 // Wegrand – dort stehen Bänke und Laternen, zum Weg gedreht. Auf Gebäudefeldern nur die Ecken.
-const SLOTS = 9, SLOT_OFF = 0.42, MID_OFF = 0.42;   // weit außen (Block 46): neben dem Weg, nicht darauf
+const SLOTS = 10, SLOT_OFF = 0.42, MID_OFF = 0.42;  // weit außen (Block 46): neben dem Weg, nicht darauf
 const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
 // Eckpunkte (Block 65): Platz 8 eines Felds liegt genau auf seiner oberen Ecke (x − ½, y − ½), die es mit drei Nachbarn
 // teilt – so steht eine Laterne exakt zwischen zwei Feldern bzw. genau im Bogen einer Wegkurve. Nur Schmales (POST_OK).
 // Dafür bleiben die vier Ecken-Plätze, die zu diesem Punkt zeigen, frei (und umgekehrt).
 const VSLOT = 8, VSLOT_NEAR = 0.2;                              // so nah (Felder) an einer Ecke rastet schmale Deko dort ein
 const POST_OK = new Set(['laterne', 'strassenlaterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall', 'stuetze']);
-const slotUV = i => i === VSLOT ? [-0.5, -0.5] : i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
+// Feldmitte (Block 156, Nutzer: „wieso kann man Deko nicht exakt mittig setzen“): Platz 9, rastet ein, wenn man nah der Mitte tippt.
+// Nicht auf schmalen Wegen und Gebäudefeldern, keine Stützen. Belegt sperrt sie die vier Seitenmitten (und umgekehrt), Ecken bleiben.
+// Ältere Spielversionen schneiden den Platz beim Laden ab (slice(0, 9)) – sie zeigen ihn nur nicht
+const CSLOT = 9, CSLOT_NEAR = 0.2;
+const PLACE_SLOTS = [0, 1, 2, 3, 4, 5, 6, 7, CSLOT];             // Plätze im Feld (ohne Eckpunkt)
+const isSide = i => i >= 4 && i < 8;
+const slotUV = i => i === CSLOT ? [0, 0] : i === VSLOT ? [-0.5, -0.5] : i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
 // die vier Felder um den Eckpunkt von Feld (x, y), je mit ihrem Ecken-Platz, der zum Punkt zeigt
 const vertexCorners = (x, y) => [[x, y, 0], [x - 1, y, 1], [x, y - 1, 2], [x - 1, y - 1, 3]];
 // Eckpunkt (= Feld, dessen Platz 8 es ist), zu dem der Ecken-Platz slot (0–3) von Feld (x, y) zeigt
@@ -1003,6 +1009,7 @@ function curveSlot(x, y) {
 }
 function slotPos(x, y, i, d) {                                  // d: die Deko (oder nur ihr Typ)
   if (i === VSLOT) return [-0.5, -0.5];                          // Eckpunkt: genau auf der Ecke
+  if (i === CSLOT) return [0, 0];                                // Feldmitte (Block 156)
   const [ru, rv] = decoExt(d), r = Math.max(ru, rv);
   if (i < 4) {
     const cs = curveSlot(x, y);
@@ -1022,7 +1029,7 @@ function slotPos(x, y, i, d) {                                  // d: die Deko (
   }
   return [su * u, sv * v];
 }
-const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, 6, 7, 3], SLOTS_ALL = [...SLOTS_BACK, ...SLOTS_FRONT];      // hinter bzw. vor dem Ding auf dem Feld zeichnen (von hinten nach vorn: Ecke 3 zuletzt)
+const SLOTS_BACK = [VSLOT, 0, 4, 5], SLOTS_FRONT = [1, 2, CSLOT, 6, 7, 3], SLOTS_ALL = [...SLOTS_BACK, ...SLOTS_FRONT];      // hinter bzw. vor dem Ding auf dem Feld zeichnen (von hinten nach vorn: Ecke 3 zuletzt)
 const decosAt = k => state.decos.get(k);
 function slotAt(sx, sy) {
   const px = (sx - W / 2) / cam.z + cam.x, py = (sy - H / 2) / cam.z + cam.y;
@@ -1033,7 +1040,23 @@ function slotAt(sx, sy) {
   // nah an einer Feldecke: der Eckpunkt (Block 65) – mit schmaler Deko in der Hand oder wenn dort schon etwas steht
   const vx = Math.round(a + 0.5), vy = Math.round(b + 0.5), ex = a - (vx - 0.5), ey = b - (vy - 0.5);
   if (ex * ex + ey * ey < VSLOT_NEAR * VSLOT_NEAR && vertexWanted(vx, vy)) return { x: vx, y: vy, slot: VSLOT };
+  if (du * du + dv * dv < CSLOT_NEAR * CSLOT_NEAR && centerWanted(x, y)) return { x, y, slot: CSLOT };   // Feldmitte (Block 156)
   return { x, y, slot };
+}
+// Feldmitte: darf das Feld sie haben? null = ja, sonst warum nicht (schmaler Weg, Gebäude)
+function centerTileErr(x, y) {
+  const t = objAt(x, y);
+  if (!t) return null;
+  if (t.b === 'weg' && !t.bridge && (t.wide || pathQuads(x, y).length)) return null;   // Platz oder breiter Weg
+  return t.b === 'weg' ? 'Nicht mitten auf den Weg – die Mitte geht auf Plätzen und breiten Wegen' : 'Auf Gebäudefeldern nur an die Ecken';
+}
+const centerOk = (b, x, y) => baseOf(b) !== 'stuetze' && !centerTileErr(x, y);
+function centerWanted(x, y) {
+  const ds = decosAt(x + ',' + y), has = !!(ds && ds[CSLOT]);
+  if (typeof tool === 'undefined') return has;
+  if (tool === 'verschieben') return moving ? moving.kind === 'deco' && !moving.copy && centerOk(moving.d.b, x, y) : has;
+  if (tool === 'look' || tool === 'abriss') return has;
+  return !!(ITEMS[tool] && ITEMS[tool].small) && centerOk(tool, x, y);
 }
 function vertexWanted(vx, vy) {
   const has = !!postAt(vx, vy);
@@ -1484,7 +1507,15 @@ function smallError(b, x, y, slot, opts = {}) {
   const t = objAt(x, y);
   if (t && (BIG_ON_TILE.has(t.b) || isBig(t.b))) return 'Hier ist kein Platz für Deko';
   if (slot < 4 && postAt(...cornerVertex(x, y, slot))) return 'An dieser Ecke steht schon etwas';
-  if (slot >= 4 && t && wegUnder(t) == null && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
+  if (slot === CSLOT) {                                          // Feldmitte (Block 156)
+    if (baseOf(b) === 'stuetze') return 'Stützen an Ecken, Seitenmitten oder zwischen vier Felder';
+    const ce = centerTileErr(x, y);
+    if (ce) return ce;
+    const ds = decosAt(k);
+    if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas – die Mitte ist zu eng';
+  }
+  if (isSide(slot) && decosAt(k) && decosAt(k)[CSLOT]) return 'In der Mitte steht schon etwas';
+  if (isSide(slot) && t && wegUnder(t) == null && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
   if (decosAt(k) && decosAt(k)[slot]) {
     const ds = decosAt(k);
     return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
@@ -1499,7 +1530,7 @@ function smallError(b, x, y, slot, opts = {}) {
 // Ist die angetippte Ecke belegt, die nächste freie nehmen: erst die beiden Nachbarecken, dann die gegenüber
 function freeSlot(x, y, slot) {
   const ds = decosAt(x + ',' + y);
-  if (!ds || slot === VSLOT) return slot;
+  if (!ds || slot === VSLOT || slot === CSLOT) return slot;
   const i = (slot < 4 ? [slot, slot ^ 1, slot ^ 2, slot ^ 3] : [slot, 4 + ((slot - 2) & 3), 4 + ((slot - 3) & 3), 4 + ((slot - 1) & 3)]).find(n => !ds[n]);
   return i == null ? slot : i;
 }

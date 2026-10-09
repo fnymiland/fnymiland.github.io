@@ -105,7 +105,7 @@ describe('Deko auf dem Dach (Block 138b)', () => {
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['9,9', { form: 3, top: [{ b: 'stuetze' }, { b: 'quatsch' }, { b: 'bank', rot: 1 }] }]); return Object.fromEntries(parseSave(d).roofs); })()");
     expect(back['3,5'].top[0]).toMatchObject({ b: 'laterne' });
     expect(back['4,5'].top).toBeUndefined();
-    expect(back['9,9'].top.map(d => d && d.b)).toEqual([null, null, 'bank', null, null, null, null, null, null]);
+    expect(back['9,9'].top.map(d => d && d.b)).toEqual([null, null, 'bank', null, null, null, null, null, null, null]);
     expect(game("[...roofTopAll()].length")).toBe(1);
     expect(game("[...computePower([], 0, 1).dark]")).toContain('3,5,10');          // ohne Strom: dunkel (Platz 10 + i)
     expect(game("computePower([], 1, 1).dark.has('3,5,10')")).toBe(false);

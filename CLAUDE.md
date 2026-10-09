@@ -179,6 +179,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     `discardCarried` (erst zurücklegen, dann über `demolish`/`removeSmall`/`removeEdge` – nie selbst erstatten), 👆-Fenster 🗑️
     (`#p-del`, Entf klickt ihn), Wald/Fels → `openLandInfo`. Was nur mit dem Werkzeug 'abriss' zu sehen war, braucht einen anderen
     Weg (Tunnel: 👁). Neue Fenster mit Löschen: Knopf `id="p-del"`, dann geht auch Entf.
+29a4. **Deko-Plätze** (Block 42/65/156): je Feld 0–3 Ecken, 4–7 Seitenmitten, 8 Eckpunkt (`VSLOT`), 9 Mitte (`CSLOT`). „Seitenmitte“
+    nur über `isSide(i)`, nie `i >= 4`; „alle Plätze im Feld“ über `PLACE_SLOTS`, nie `i < 8`. Ein neuer Platz bekommt eine neue
+    Nummer hinten (alte Versionen schneiden mit `slice(0, 9)` ab und laufen weiter).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
