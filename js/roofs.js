@@ -152,11 +152,14 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
   const H = ROOF_H, back = [], front = [], Fa = ROOF_FRAME.arkaden, t = Fa.T, hh = Pd && Pd.id !== 'mauer' ? Pd.h : 3.5;   // Mauer niedrig, damit man die Treppe sieht; Balustrade und Geländer sind durchsichtig
   const [fu0, fu1, fv0, fv1] = clip || [-1e9, 1e9, -1e9, 1e9];
   const clipBox = (u0, u1, v0, v1) => [Math.max(u0, fu0), Math.min(u1, fu1), Math.max(v0, fv0), Math.min(v1, fv1)];
-  const box = (B, h0, h1, list, faces = 'uvt') => {
+  // span: Seite zur Öffnung nur so lang wie die Öffnung (Nutzer: „nicht bündig“ – über dem Eckquadrat steckt sie in der Fuß-Mauer)
+  const box = (B, h0, h1, list, faces = 'uvt', span = null) => {
     const [u0, u1, v0, v1] = clipBox(...B);
     if (u1 <= u0 + 1e-6 || v1 <= v0 + 1e-6) return;
-    if (faces.includes('v')) list.push({ pts: [[u0, v1, h0], [u1, v1, h0], [u1, v1, h1], [u0, v1, h1]], col: Fa.sV });
-    if (faces.includes('u')) list.push({ pts: [[u1, v0, h0], [u1, v1, h0], [u1, v1, h1], [u1, v0, h1]], col: Fa.sU });
+    const su = span && span.face === 'v' ? [Math.max(u0, span.a), Math.min(u1, span.b)] : [u0, u1];
+    const sv = span && span.face === 'u' ? [Math.max(v0, span.a), Math.min(v1, span.b)] : [v0, v1];
+    if (faces.includes('v') && su[1] > su[0] + 1e-6) list.push({ pts: [[su[0], v1, h0], [su[1], v1, h0], [su[1], v1, h1], [su[0], v1, h1]], col: Fa.sV });
+    if (faces.includes('u') && sv[1] > sv[0] + 1e-6) list.push({ pts: [[u1, sv[0], h0], [u1, sv[1], h0], [u1, sv[1], h1], [u1, sv[0], h1]], col: Fa.sU });
     if (faces.includes('t')) list.push({ pts: [[u0, v0, h1], [u1, v0, h1], [u1, v1, h1], [u0, v1, h1]], col: Fa.top });
   };
   // Lage längs der Treppe (l) und quer (q); d > 0: hinauf zu größerem l. Fuß-Ende, offenes Ende
@@ -197,13 +200,17 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
       const fa = Math.min(footE, footE + sg * t), fb = Math.max(footE, footE + sg * t), f = longV ? [p0, p1, fa, fb] : [fa, fb, p0, p1];
       f.faces = longV ? 'vt' : 'ut'; walls.push(f);
     }
-    if (!h.jM) walls.push(longV ? [p0 - t, p0, sa, sb] : [sa, sb, p0 - t, p0]);   // lange Seiten nur außen (Doppel-/Dreifachtreppe: innen offen)
+    if (!h.jM) {                                                         // lange Seiten nur außen (Doppel-/Dreifachtreppe: innen offen)
+      const w = longV ? [p0 - t, p0, sa, sb] : [sa, sb, p0 - t, p0];
+      if (!near) w.span = { face: longV ? 'u' : 'v', a: l0, b: l1 };     // ihre Innenseite (zur Öffnung) endet an der Fuß-Mauer
+      walls.push(w);
+    }
     if (!h.jP) walls.push(longV ? [p1, p1 + t, sa, sb] : [sa, sb, p1, p1 + t]);
     for (const W of walls) {
       const L = (W[0] + W[1]) / 2 + (W[2] + W[3]) / 2 > h.mu + h.mv ? front : back;
-      if (!(Pd && Pd.id === 'balustrade')) { box(W, H, H + hh, L, W.faces || 'uvt'); continue; }
+      if (!(Pd && Pd.id === 'balustrade')) { box(W, H, H + hh, L, W.faces || 'uvt', W.span); continue; }
       // Balustrade wie am Rand (Nutzer: „Balustrade ändert das Geländer beim Aufgang nicht“): Sockel, Säulchen, Deckplatte – gleiche Ecken
-      box(W, H, H + 1.2, L, W.faces || 'uvt');
+      box(W, H, H + 1.2, L, W.faces || 'uvt', W.span);
       const [u0, u1, v0, v1] = clipBox(...W), alongU = W[1] - W[0] > W[3] - W[2], cu = (W[0] + W[1]) / 2, cv = (W[2] + W[3]) / 2;
       if (u1 > u0 && v1 > v0) {
         const a0 = alongU ? u0 : v0, a1 = alongU ? u1 : v1, at = (q, up) => alongU ? [q, cv, up] : [cu, q, up];
@@ -211,7 +218,7 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
           L.push({ pts: [at(q, H + 1.2), at(q, H + hh - 1.2)], col: '#d7cbb2', line: 2.1 }, { pts: [at(q - 0.008, H + 1.2), at(q - 0.008, H + hh - 1.2)], col: '#efe7d6', line: 0.7 });
         }
       }
-      box(W, H + hh - 1.2, H + hh, L, W.faces || 'uvt');
+      box(W, H + hh - 1.2, H + hh, L, W.faces || 'uvt', W.span);
     }
   }
   return { back, front };
