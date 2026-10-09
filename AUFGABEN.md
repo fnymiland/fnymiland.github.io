@@ -1821,6 +1821,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       drei Stellen. Test an vier Inselstellen (u. a. −15, −50). LEHRE: Grenzvergleiche mit Kommazahlen immer mit Spielraum.
       Nutzer: „unter einer Überdachung nachträglich einen Weg langziehen“ → die Sperre „kein Gebäude unters Dach“ traf auch den Weg
       (cat 'netz'); Weg ausgenommen, das Dach bleibt. Test: dach
+      Nutzer: „Überdachung im Kreis, Mitte offen – Leisten oben innen nicht bündig“ → an Innenecken lagen die eingerückten Randbalken
+      nebeneinander vorbei (leeres Quadrat, Stufe). Jetzt läuft ein Balken an einer Innenecke um seine Stärke weiter (Oberseite und
+      Seite). Außenecken unverändert. Bild tools/vorschau/ring-ecken3.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

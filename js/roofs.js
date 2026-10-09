@@ -163,8 +163,13 @@ function paintRoof(P, A, x, y, r, lw = 1) {
     const drawBeams = () => { for (const { e } of beams) {
       const inn = e.at - e.n * PERG_T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
       const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
-      poly([at(hi2, e.a, H - PERG_BH), at(hi2, e.b, H - PERG_BH), at(hi2, e.b, H), at(hi2, e.a, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
-      poly([at(lo, e.a, H), at(hi2, e.a, H), at(hi2, e.b, H), at(lo, e.b, H)], '#9c6a45', '#9c6a45', 0.3);
+      // Innenecke (Ring mit offener Mitte, Nutzer): geht das Dach hinter dem Lauf-Ende auf der Balkenseite weiter, läuft der Balken um
+      // seine Stärke weiter – sonst bliebe in der Ecke ein Quadrat ohne Balken (Stufe). Außenecken überlappen ohnehin
+      const [ra, rb] = roofRun(A, e), w = e.at - e.n * PERG_T / 2;
+      const cov = (t) => { const [u, v] = e.ax === 'u' ? [w, t] : [t, w]; return A.sub(roofSubOf(u), roofSubOf(v)); };
+      const a0 = Math.abs(e.a - ra) < 1e-6 && cov(ra - 0.01) ? e.a - PERG_T : e.a, b0 = Math.abs(e.b - rb) < 1e-6 && cov(rb + 0.01) ? e.b + PERG_T : e.b;
+      poly([at(hi2, a0, H - PERG_BH), at(hi2, b0, H - PERG_BH), at(hi2, b0, H), at(hi2, a0, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
+      poly([at(lo, a0, H), at(hi2, a0, H), at(hi2, b0, H), at(lo, b0, H)], '#9c6a45', '#9c6a45', 0.3);
     } };
     // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich (Nutzer wählte B), fein und zwischen den Randbalken
     // eingelassen, oben knapp unter deren Oberkante (Nutzer wählte C, 09.10.2026: nichts steht über) – erst die Latten, dann die Balken davor
