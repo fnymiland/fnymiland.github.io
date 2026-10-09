@@ -1856,6 +1856,16 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       alle verbundenen, samt Deko oben und den Stützen, die nur sie tragen: `pickUpRoofs`, als Gruppe mit Drehen; `roofTopTurn`),
       im Fenster des Wegs darunter „✋ Überdachung verschieben“, im Fenster der Deko oben (`pickUpRoofTop`, `moving.top`; ablegen
       aufs Steindach `dropRoofTop` oder an den Boden). ✋-Werkzeug aufs Dach: erst Deko oben, sonst das Dachfeld. Test: dachdeko
+- [x] 138c Brüstung oben auf Steinarkaden (Nutzer: „oben ein Zaun oder eine Mauer wie bei C, die rumgeht“): Mauer, Balustrade,
+      Geländer wählbar im Dach-Fenster, abschaltbar (`r.par` 1–3; neue Steinarkaden mit Mauer, alte ohne). Steht genau auf dem
+      Steinrahmen mit denselben Ecken (`parapetOps`), hinten im Dachbild, vorn live vor der Deko (`drawRoofFront`). Test: dach.
+      Bilder bruestung-alle.png, bruestung-ecken.png
+- [x] 138d Aufgang (Nutzer: „einen Aufgang, wo die Bewohner drauf rumlaufen können“): Entwürfe aufgang-varianten(2).png; erst
+      Freitreppe C außen gebaut, dann auf Wunsch wieder entfernt – nur die Treppe durch die Dachöffnung (`dachtreppe`, 2 Felder unter
+      Steinarkaden, oben Platz zum Aussteigen). Das Dach malt die Öffnung samt Treppe darin (`roofHoles`, `dtSteps`, niedrige
+      Brüstung an drei Seiten, bündig: Fuß-Seite zwischen den langen). Leute oben (`roofers`): erscheinen an der Treppe, steigen
+      hinauf, bummeln auf einem 1/3-Raster (`rfSpotOk`), setzen sich auf Bänke oben, gehen wieder hinunter. Test: dachtreppe.
+      Szene tools/dachtreppeszene.js, Bilder dachtreppe-alle.png, dachleute-alle.png
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

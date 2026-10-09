@@ -1455,7 +1455,7 @@ function render(now) {
   const inGhost = (x, y) => preview && preview.ghost && x >= preview.box[0] && x < preview.box[0] + preview.box[2] && y >= preview.box[1] && y < preview.box[1] + preview.box[3];
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
-  const byTile = new Map(), drawnMovers = new Set();
+  const byTile = new Map(), drawnMovers = new Set(), onRoof = roofers.length ? roofersByTile() : null;   // Leute auf dem Dach (Block 138d)
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
@@ -1626,8 +1626,12 @@ function render(now) {
       if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
       if (state.roofs.size && (state.roofs.has(k) || hasPillarNear(x, y))) {   // Überdachung (Block 138): Stützen, dann Dach über den Figuren des Felds
         const topGhost = preview && preview.top && preview.small && hover && hover.x === x && hover.y === y;   // Deko oben (Block 138b): Geist auf dem Dach
+        const rw = onRoof && onRoof.get(k);
         const f = () => {
-          drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z); drawRoofTops(x, y, px, py, z, now);
+          drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z);
+          if (rw) drawRoofers(rw, x, y, z, now, true);                     // auf der Treppe: durch die Öffnung
+          drawRoofTops(x, y, px, py, z, now);
+          if (rw) drawRoofers(rw, x, y, z, now, false);                    // oben auf dem Dach
           if (topGhost) {
             const mv = tool === 'verschieben' && moving && moving.kind === 'deco';   // getragene Deko: so, wie sie abgelegt wird
             const gRot = mv ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot), L = mv ? moving.d : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}, gCol = !mv && ghostType === 'busch' ? bushColNew('busch').col || 0 : L.col || 0;
@@ -1638,7 +1642,7 @@ function render(now) {
           }
           drawRoofFront(x, y, px, py, z);                                 // vordere Brüstung vor allem, was oben steht
         };
-        const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost ? 100 * z : 0;   // Deko oben ragt übers Dach hinaus
+        const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost || rw ? 100 * z : 0;   // Deko und Leute oben ragen übers Dach hinaus
         if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
       }
 

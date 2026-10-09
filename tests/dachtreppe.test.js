@@ -10,28 +10,28 @@ const roof = (cells, form = 3) => game(`state.paintNew.dach = { form: ${form} };
 const rect = (x0, x1, y0, y1) => { const out = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) out.push([x, y]); return out; };
 
 describe('Treppe durch die Dachöffnung (Block 138d)', () => {
-  it('nur unter Steinarkaden (beide Felder); Stützen und Wege darunter stören nicht', () => {
+  it('nur unter Steinarkaden (beide Felder), oben Platz zum Aussteigen; Stützen und Wege darunter stören nicht', () => {
     roof(rect(5, 7, 5, 7)); roof(rect(10, 11, 5, 6), 1);
     game('roofAutoPillars(' + JSON.stringify(rect(5, 7, 5, 7)) + ')');
-    expect(game("placeError('dachtreppe', 6, 5, 0)")).toBe(null);
+    expect(game("placeError('dachtreppe', 6, 6, 0)")).toBe(null);
     expect(game("placeError('dachtreppe', 6, 7, 0)")).toMatch(/Steinarkaden/);       // zweites Feld nicht überdacht
     expect(game("placeError('dachtreppe', 10, 5, 0)")).toMatch(/Steinarkaden/);      // Glas
-    expect(game("placeError('dachtreppe', 5, 5, 0)")).toBe(null);                    // Eckfeld mit Stütze
-    game("build('weg', 7, 5, true); build('weg', 7, 6, true)");
-    expect(game("placeError('dachtreppe', 7, 5, 0)")).toBe(null);                    // über einem Weg
-    expect(game("build('dachtreppe', 6, 5)")).toBe(true);
-    expect(game("[state.tiles.get('6,5').b, COVER.get('6,6')]")).toEqual(['dachtreppe', '6,5']);
+    expect(game("placeError('dachtreppe', 6, 5, 0)")).toMatch(/Aussteigen/);         // oben gleich die Brüstung
+    expect(game("placeError('dachtreppe', 6, 6, 2)")).toMatch(/Aussteigen/);
+    expect(game("placeError('dachtreppe', 5, 6, 0)")).toBe(null);                    // Randfeld mit Stütze
+    game("build('weg', 7, 6, true); build('weg', 7, 7, true)");
+    expect(game("placeError('dachtreppe', 7, 6, 0)")).toBe(null);                    // über einem Weg
+    expect(game("build('dachtreppe', 6, 6)")).toBe(true);
+    expect(game("[state.tiles.get('6,6').b, COVER.get('6,7')]")).toEqual(['dachtreppe', '6,6']);
   });
 
   it('das Dach darüber hat eine Öffnung (neues Bild); dort keine Deko oben', () => {
     roof(rect(5, 7, 5, 7));
-    const before = game('roofSig(6, 5, roofAt(6, 5))');
-    game("build('dachtreppe', 6, 5)");
-    expect(game('roofSig(6, 5, roofAt(6, 5))')).not.toBe(before);
-    expect(game('roofHoles(6, 5).length')).toBe(1);
-    expect(game('roofHoles(6, 6).length')).toBe(1);
-    expect(game('roofHoles(6, 7).length')).toBe(0);
-    expect(game("roofTopError('blumentopf', 6, 5, 7)")).toMatch(/Öffnung/);        // Seitenmitte vorn: in der Öffnung
+    const before = game('roofSig(6, 6, roofAt(6, 6))');
+    game("build('dachtreppe', 6, 6)");
+    expect(game('roofSig(6, 6, roofAt(6, 6))')).not.toBe(before);
+    expect(game('[roofHoles(6, 5).length, roofHoles(6, 6).length, roofHoles(6, 7).length]')).toEqual([0, 1, 1]);
+    expect(game("roofTopError('blumentopf', 6, 6, 7)")).toMatch(/Öffnung/);        // Seitenmitte: in der Öffnung
     expect(game("roofTopError('blumentopf', 5, 5, 0)")).toBe(null);
     game("buildRoofTop('blumentopf', 7, 7, 4)");
     expect(game("placeError('dachtreppe', 7, 6, 0)")).toMatch(/Deko oben/);
@@ -45,5 +45,36 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
       for (const z of [2.5, 0.6]) expect(() => game(`(() => { cam = state.cam; cam.z = ${z}; const p = iso(6, 6); cam.x = p.x; cam.y = p.y; render(1e6); })()`)).not.toThrow();
     }
     expect(() => game("thumbRaw('dachtreppe', 1, { rot: 0 })")).not.toThrow();
+  });
+  it('Leute auf dem Dach: kommen über die Treppe hinauf, bleiben oben auf freien Plätzen (nicht am Rand, nicht in der Öffnung), gehen wieder hinunter', () => {
+    roof(rect(5, 8, 5, 8));
+    game("build('dachtreppe', 6, 6); buildRoofTop('bank', 8, 8, 3); state.tiles.set('1,1', { b: 'haus', lvl: 1 }); recalc(); roofers.length = 0");
+    expect(game('T.pop > 0')).toBe(true);
+    expect(game('rfSpotOk(21, 21)')).toBe(true);                                   // Mitte von 7,7
+    expect(game('rfSpotOk(18, 19)')).toBe(false);                                  // in der Öffnung (6 / 6,33)
+    expect(game('rfSpotOk(14, 18)')).toBe(false);                                  // am Rand (Brüstung, 4,67)
+    for (let i = 0; i < 6; i++) game('syncRoofers()');
+    expect(game('roofers.length')).toBeGreaterThan(0);
+    expect(game('roofers.length')).toBeLessThanOrEqual(game('ROOFER_MAX'));
+    expect(game("roofers.every(w => w.st === 'up' && w.up === 0)")).toBe(true);    // unten am Fuß
+    game('for (let i = 0; i < 200; i++) stepRoofers(0.05)');
+    expect(game("roofers.some(w => w.st === 'roof')")).toBe(true);
+    expect(game("roofers.filter(w => w.st === 'roof' && !w.sit).every(w => rfSpotOk(w.fa, w.fb) || (w.fa === w.stair.ex && w.fb === w.stair.ey))")).toBe(true);
+    expect(game("roofers.filter(w => w.st === 'roof').every(w => w.up === ROOF_H)")).toBe(true);
+    // zeichnen (oben und auf der Treppe) ohne Fehler
+    expect(() => game("(() => { cam = state.cam; cam.z = 2.5; const p = iso(6, 6); cam.x = p.x; cam.y = p.y; render(1e6); })()")).not.toThrow();
+    // Treppe weg: alle weg
+    game("demolish(6, 6); syncRoofers(); stepRoofers(0.05)");
+    expect(game('roofers.length')).toBe(0);
+  });
+
+  it('wer genug hat, geht über den Ausgang wieder hinunter und verschwindet unten', () => {
+    roof(rect(5, 8, 5, 8));
+    game("build('dachtreppe', 6, 6); state.tiles.set('1,1', { b: 'haus', lvl: 1 }); recalc(); roofers.length = 0; syncRoofers()");
+    game('for (let i = 0; i < 100; i++) stepRoofers(0.05)');
+    game('for (const w of roofers) w.life = -1');
+    let gone = false;
+    for (let i = 0; i < 40 && !gone; i++) gone = game('(() => { for (let i = 0; i < 100; i++) stepRoofers(0.05); return roofers.length === 0; })()');
+    expect(gone).toBe(true);
   });
 });

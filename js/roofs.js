@@ -816,6 +816,9 @@ function dtError(x, y, rot) {
     const G = dtGeo(x, y, rot), lu = G.Du ? DT_LEN : DT_HALF, lv = G.Dv ? DT_LEN : DT_HALF, hs = [{ u0: G.mu - lu, u1: G.mu + lu, v0: G.mv - lv, v1: G.mv + lv }];
     if (roofTopsOf(r).some((d, s) => d && s < 8 && inHole(hs, x + i + roofTopPos(s)[0], y + j + roofTopPos(s)[1], 0.12))) return 'Erst die Deko oben an der Öffnung wegräumen';
   }
+  // oben Platz zum Aussteigen: hinter dem oberen Ende noch Dach, nicht gleich die Brüstung
+  const G = dtGeo(x, y, rot), eu = G.mu + G.Du * (DT_LEN + 0.25), ev = G.mv + G.Dv * (DT_LEN + 0.25), er = roofTopRoof(Math.round(eu), Math.round(ev));
+  if (!er || roofArea(roofCov(er)).dist(eu, ev) < 0.16) return 'Oben braucht die Treppe Platz zum Aussteigen – ein Feld weiter ins Dach';
   return null;
 }
 // Stufen der Treppe als Quader vom Boden, oben bündig mit dem Dach, unten bis kurz hinter die Öffnung; P in Weltkoordinaten
@@ -844,3 +847,124 @@ function drawDachtreppe(cx, cy, z, rot, x, y) {
 }
 // Höhe auf der Treppe (für die Leute darauf): d von der Mitte hinauf
 const dtHeight = d => Math.max(0, Math.min(ROOF_H, ROOF_H * (d + DT_FOOT) / (DT_LEN + DT_FOOT)));
+
+// ---------------------------------------------------------------------------
+// Leute auf dem Dach (Block 138d): erscheinen am Fuß einer Dachtreppe, steigen hinauf, bummeln über die Steinarkaden (Raster 1/3
+// Feld, nicht an die Brüstung, nicht in Öffnungen oder Deko), setzen sich gern auf eine Bank oben und gehen wieder hinunter.
+// Gezeichnet mit dem Dachfeld (render.js): auf der Treppe nur durch die Öffnung, oben vor der Deko und hinter der vorderen Brüstung
+// ---------------------------------------------------------------------------
+const roofers = [], ROOFER_MAX = 16;
+let rfCache = { ver: '', spots: new Map(), areas: new Map() };
+function rfVer() { return groundVersion + ':' + state.roofs.size + ':' + state.tiles.size + ':' + (typeof GL !== 'undefined' ? GL.drawEpoch : 0); }
+function rfFresh() { const v = rfVer(); if (rfCache.ver !== v) rfCache = { ver: v, spots: new Map(), areas: new Map() }; return rfCache; }
+// Rasterpunkt (a/3, b/3) begehbar? Auf Steinarkaden, weg vom Rand (Brüstung), nicht in einer Öffnung, nicht auf Deko oben
+function rfSpotOk(a, b) {
+  const c = rfFresh(), key = a + ',' + b;
+  if (c.spots.has(key)) return c.spots.get(key);
+  const u = a / 3, v = b / 3, x = Math.round(u), y = Math.round(v), r = roofTopRoof(x, y);
+  let ok = false;
+  if (r) {
+    let A = c.areas.get(r.form || 0);
+    if (!A) { A = roofArea(roofCov(r)); c.areas.set(r.form || 0, A); }
+    ok = A.sub(roofSubOf(u), roofSubOf(v)) && A.dist(u, v) >= 0.16 && !inHole(roofHoles(x, y), u, v, 0.1)
+      && !roofTopsOf(r).some((d, i) => d && i < 8 && d.b !== 'bank' && Math.hypot(x + roofTopPos(i)[0] - u, y + roofTopPos(i)[1] - v) < 0.14);
+  }
+  c.spots.set(key, ok);
+  return ok;
+}
+// alle Dachtreppen unter Steinarkaden: Mitte, Richtung hinauf, Rasterpunkt oben am Ausgang
+function roofStairs() {
+  const out = [];
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'dachtreppe') continue;
+    const [ax, ay] = keyXY(k), G = dtGeo(ax, ay, t.rot || 0);
+    if (!roofTopRoof(ax, ay)) continue;
+    const ex = Math.round((G.mu + G.Du * (DT_LEN + 0.09)) * 3), ey = Math.round((G.mv + G.Dv * (DT_LEN + 0.09)) * 3);
+    out.push({ k, ...G, ex, ey });
+  }
+  return out;
+}
+function syncRoofers() {
+  const stairs = typeof T !== 'undefined' && T.pop ? roofStairs() : [];
+  const night = typeof dayPart === 'function' && dayPart() === 'nacht';
+  const want = Math.min(ROOFER_MAX, stairs.reduce((n, s) => n + Math.min(4, 1 + Math.floor(roofRunKeys(...keyXY(s.k)).length / 3)), 0) >> (night ? 1 : 0));
+  for (const w of roofers) if (!stairs.some(s => s.k === w.stair.k)) w.gone = true;   // Treppe weg: verschwinden
+  const live = roofers.filter(w => !w.gone && w.st !== 'down' && !w.leave);
+  for (let i = want; i < live.length; i++) live[i].leave = true;                      // zu viele: gehen wieder hinunter
+  if (live.length >= want || !stairs.length) return;
+  const s = stairs[Math.floor(Math.random() * stairs.length)];
+  const homes = [...state.tiles].filter(([, t]) => isHome(t.b) && t.animal), [hk, ht] = homes.length ? homes[Math.floor(Math.random() * homes.length)] : [null, null];
+  roofers.push({ roofer: true, stair: s, st: 'up', d: -DT_FOOT - 0.05, px: s.mu - s.Du * DT_FOOT, py: s.mv - s.Dv * DT_FOOT, up: 0, wait: 0,
+    ...(hk ? residentLook(hk, Math.floor(Math.random() * residentsOf(ht).length)) : { kind: Math.floor(Math.random() * 3), fur: FUR[Math.floor(Math.random() * FUR.length)] }),
+    shirt: SHIRTS[Math.floor(Math.random() * SHIRTS.length)], speed: 0.35 + Math.random() * 0.25, life: 18 + Math.random() * 25 });
+}
+// Bank oben auf Feld (x, y) nahe am Rasterpunkt: Platz zum Sitzen
+function rfBench(a, b) {
+  const x = Math.round(a / 3), y = Math.round(b / 3), r = roofAt(x, y);
+  for (const [i, d] of roofTopsOf(r).entries()) if (d && i < 8 && d.b === 'bank') { const [u, v] = roofTopPos(i); if (Math.hypot(x + u - a / 3, y + v - b / 3) < 0.25) return [x + u, y + v]; }
+  return null;
+}
+function stepRoofers(dt) {
+  for (const w of roofers) {
+    const s = w.stair;
+    if (w.wait > 0) { w.wait -= dt; if (w.wait <= 0 && w.sit) { w.sit = false; w.px = w.fa / 3; w.py = w.fb / 3; } continue; }
+    if (w.st === 'up' || w.st === 'down') {
+      w.d += (w.st === 'up' ? 1 : -1) * dt * w.speed * 0.9;
+      if (w.st === 'up' && w.d >= DT_LEN) { w.st = 'roof'; w.fa = w.ta = s.ex; w.fb = w.tb = s.ey; w.t = 1; }
+      else if (w.st === 'down' && w.d <= -DT_FOOT - 0.05) { w.gone = true; continue; }
+      if (w.st !== 'roof') { w.px = s.mu + s.Du * w.d; w.py = s.mv + s.Dv * w.d; w.up = dtHeight(w.d); continue; }
+    }
+    w.up = ROOF_H;
+    w.life -= dt;
+    w.t += dt * w.speed * 3;                                            // ein Rasterschritt ist 1/3 Feld
+    if (w.t >= 1) {
+      w.fa = w.ta; w.fb = w.tb; w.t = 0;
+      const home = w.fa === s.ex && w.fb === s.ey;
+      if ((w.leave || w.life < 0) && home) { w.st = 'down'; w.d = DT_LEN; continue; }
+      const bench = !w.leave && w.life > 0 && Math.random() < 0.3 && rfBench(w.fa, w.fb);
+      if (bench && !roofers.some(o => o !== w && o.sit && o.fa === w.fa && o.fb === w.fb)) { w.sit = true; w.wait = 5 + Math.random() * 7; w.px = bench[0]; w.py = bench[1]; continue; }
+      const cand = DIRS.map(([dx, dy]) => [w.fa + dx, w.fb + dy]).filter(([a, b]) => rfSpotOk(a, b) || (a === s.ex && b === s.ey));
+      let pool = cand.length > 1 && w.pa != null ? cand.filter(([a, b]) => a !== w.pa || b !== w.pb) : cand;
+      if (w.leave || w.life < 0) {                                       // heimwärts: zum Ausgang an der Treppe
+        const dist = ([a, b]) => Math.abs(a - s.ex) + Math.abs(b - s.ey), m = Math.min(...cand.map(dist));
+        pool = Math.random() < 0.85 ? cand.filter(c => dist(c) === m) : pool;
+      }
+      w.pa = w.fa; w.pb = w.fb;
+      if (!pool.length) { w.ta = w.fa; w.tb = w.fb; w.wait = 1; }
+      else { [w.ta, w.tb] = pool[Math.floor(Math.random() * pool.length)]; if (Math.random() < 0.1) w.wait = 1 + Math.random() * 2; }
+    }
+    w.px = (w.fa + (w.ta - w.fa) * w.t) / 3; w.py = (w.fb + (w.tb - w.fb) * w.t) / 3;
+  }
+  for (let i = roofers.length - 1; i >= 0; i--) if (roofers[i].gone) roofers.splice(i, 1);
+}
+// je Feld (gerundete Lage), wer dort auf dem Dach bzw. auf der Treppe ist – render.js baut das einmal je Bild
+function roofersByTile() {
+  const m = new Map();
+  for (const w of roofers) {
+    if (typeof gfxPersonShown === 'function' && !gfxPersonShown(w)) continue;
+    const k = Math.round(w.px) + ',' + Math.round(w.py);
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(w);
+  }
+  return m;
+}
+// zeichnen: stair = auf der Treppe (nur durch die Öffnung dieses Felds zu sehen, darüber frei), sonst oben
+function drawRoofers(list, x, y, z, now, onStair) {
+  for (const w of list) {
+    if ((w.st === 'roof') === onStair) continue;
+    if (!onStair) { drawWalker(w, z, now); continue; }
+    const hs = roofHoles(x, y);
+    if (!hs.length) continue;
+    g.save(); g.beginPath();
+    for (const h of hs) {
+      const u0 = Math.max(h.u0, x - 0.5), u1 = Math.min(h.u1, x + 0.5), v0 = Math.max(h.v0, y - 0.5), v1 = Math.min(h.v1, y + 0.5);
+      if (u1 <= u0 || v1 <= v0) continue;
+      const c = [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(([u, v]) => { const p = toScreen(u, v); return [p.x, p.y - ROOF_H * z]; });
+      const up = 80 * z;                                                // was über dem Dach ist, sieht man auch über dem Rand der Öffnung
+      for (let i = 0; i < 4; i++) { const a = c[i], b = c[(i + 1) % 4]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.lineTo(b[0], b[1] - up); g.lineTo(a[0], a[1] - up); g.closePath(); }
+      g.moveTo(c[0][0], c[0][1]); for (let i = 1; i < 4; i++) g.lineTo(c[i][0], c[i][1]); g.closePath();
+    }
+    g.clip('nonzero');
+    try { drawWalker(w, z, now); } finally { g.restore(); }
+  }
+}

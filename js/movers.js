@@ -152,6 +152,7 @@ function syncMovers() {
     }
   }
   syncStrollers();
+  if (typeof syncRoofers === 'function') syncRoofers();              // Leute auf dem Dach (Block 138d)
   syncParade();
   cars.length = 0;             // keine Straßen mehr – dafür fahren Züge (syncTrains)
   syncTrains();
@@ -219,6 +220,7 @@ function stepMovers(dt) {
   for (const w of walkers) stepWalker(w, dt);
   if (typeof stepMe === 'function') stepMe(dt);                         // eigene Figur (Block 97)
   for (const w of strollers) stepMover(w, dt, parkWalk, true);
+  if (typeof stepRoofers === 'function') stepRoofers(dt);
   for (const w of paraders) stepMover(w, dt, fzWalk, false);
   for (const c of cars) stepMover(c, dt, drivable, false);
   for (const list of [walkers, cars, strollers, paraders]) for (let i = list.length - 1; i >= 0; i--) if (list[i].gone) list.splice(i, 1);
@@ -312,7 +314,7 @@ function drawWalker(w, z, now) {
   const p = w.seat ? { x: w.sx, y: w.sy } : toScreen(w.px, w.py);         // sitzend im Zug: Bildschirmpunkt vorgegeben (Block 136)
   const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
   // auf einer Bogenbrücke geht es hoch und wieder runter
-  const arch = !w.seat && archAt(w.px, w.py), lift = w.seat ? 0 : (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150)
+  const arch = !w.seat && w.up == null && archAt(w.px, w.py), lift = w.up != null ? w.up * z : w.seat ? 0 : (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150); w.up: auf dem Dach (138d)
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
   const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25), S = figScale(w), footY = p.y - lift;
   let hy = y - 11 * z;

@@ -9,9 +9,11 @@
     state.paintNew.dach = { form: 3 }; setTool('dach');
     startPlan('rect', { x: ox, y: oy }, { x: ox + 2, y: oy + 2 }, true); runPlan();
     for (let y = oy; y <= oy + 2; y++) for (let x = ox; x <= ox + 2; x++) { const r = state.roofs.get(x + ',' + y); r.par = pars[i]; if (bels[i]) r.bel = bels[i]; }
-    buildRot = rots[i]; rotManual = true; build('dachtreppe', ox + 1, oy + (rots[i] & 1 ? 1 : 0)); rotManual = false;
+    const at = [[1, 1], [1, 1], [1, 0], [0, 1]][rots[i]];                // oben Platz zum Aussteigen
+    buildRot = rots[i]; rotManual = true; build('dachtreppe', ox + at[0], oy + at[1]); rotManual = false;
     buildRoofTop('bank', ox, oy, 5); buildRoofTop('baum', ox + 2, oy + 2, 3);
   });
+  for (const [x, y] of [[-15, -13], [-15, -11], [-15, -9]]) state.tiles.set(x + ',' + y, { b: 'haus', lvl: 3 });   // Bewohner für die Leute oben
   setTool('look'); window.fail = of; recalc(); groundVersion++; floats.length = 0;
   return [...state.tiles.values()].filter(t => t.b === 'dachtreppe').length;
 })();
