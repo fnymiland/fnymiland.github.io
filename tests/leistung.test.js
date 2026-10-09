@@ -7,7 +7,7 @@ const fs = require('fs'), path = require('path');
 // Gewollt mehr? Dann `npm run leistung:neu` (schreibt tests/leistung-grenzen.json neu) und die Zahlen in AUFGABEN.md festhalten.
 const FILE = path.join(__dirname, 'leistung-grenzen.json');
 const NEU = !!process.env.LEISTUNG_NEU;
-const WORLDS = ['gross', 'freizeitpark', 'farben', 'neu'], ZOOMS = [0.45, 0.8, 1.2, 1.6, 2.2];
+const WORLDS = ['gross', 'freizeitpark', 'farben', 'neu', 'dach'], ZOOMS = [0.45, 0.8, 1.2, 1.6, 2.2];
 const SPIEL = { ops: [1.1, 40], geo: [1.1, 200], live: [1.1, 3] };       // Spielraum: × Faktor + Zuschlag
 const NAME = { ops: 'Zeichenbefehle', geo: 'Linienstücke/Formpunkte', live: 'live gezeichnete Objekte' };
 
@@ -45,6 +45,9 @@ describe('Leistungs-Wächter (Block 149)', () => {
       // wie iPad/Mac (doppelte Pixeldichte): nah wird der Boden live gezeichnet (GROUND_MAX_SCALE) – mit 1 stünde alles im Zwischenspeicher
       Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: () => 2 });
       game('adoptState(parseSave(WG)); closeModal(); closePanel(); state.tipsOff = true; resize()');
+      // Testwelt „dach“ (Block 138): Leute auf den Dächern und Treppen – mit festem Zufall verteilt, dann angehalten (gleiche Zahlen je Lauf)
+      if (w === 'dach') game(`(() => { const mr = Math.random; let s = 7; Math.random = () => (s = s * 16807 % 2147483647) / 2147483647;
+        try { roofers.length = 0; for (let i = 0; i < 80; i++) { syncRoofers(); stepRoofers(0.4); } for (const r of roofers) { r.wait = 1e9; r.sit = false; } } finally { Math.random = mr; } })()`);
       const limits = !NEU && fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE, 'utf8')) : {};
       const bad = [], better = [];
       for (const night of [0, 1]) for (const z of ZOOMS) {

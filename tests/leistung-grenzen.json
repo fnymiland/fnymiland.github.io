@@ -198,5 +198,55 @@
   "ops": 3343,
   "geo": 26081,
   "live": 21
+ },
+ "dach Tag Zoom 0.45": {
+  "ops": 1511,
+  "geo": 1820,
+  "live": 1
+ },
+ "dach Tag Zoom 0.8": {
+  "ops": 844,
+  "geo": 717,
+  "live": 0
+ },
+ "dach Tag Zoom 1.2": {
+  "ops": 877,
+  "geo": 1674,
+  "live": 10
+ },
+ "dach Tag Zoom 1.6": {
+  "ops": 2268,
+  "geo": 13538,
+  "live": 59
+ },
+ "dach Tag Zoom 2.2": {
+  "ops": 1361,
+  "geo": 10424,
+  "live": 31
+ },
+ "dach Nacht Zoom 0.45": {
+  "ops": 1631,
+  "geo": 2018,
+  "live": 1
+ },
+ "dach Nacht Zoom 0.8": {
+  "ops": 932,
+  "geo": 805,
+  "live": 0
+ },
+ "dach Nacht Zoom 1.2": {
+  "ops": 965,
+  "geo": 1558,
+  "live": 10
+ },
+ "dach Nacht Zoom 1.6": {
+  "ops": 2300,
+  "geo": 13598,
+  "live": 59
+ },
+ "dach Nacht Zoom 2.2": {
+  "ops": 1381,
+  "geo": 10460,
+  "live": 31
  }
 }

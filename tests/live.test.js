@@ -78,6 +78,28 @@ describe('Live-Spiegel (Block 95)', () => {
     expect(game('state.res.holz')).toBe(0);
     expect(JSON.stringify(tree().worlds.w2)).not.toMatch(/777777/);                          // Taler liegen gar nicht im öffentlichen Teil
   });
+  it('Überdachungen beim Zuschauen und Besuch (Block 138): Form, Belag, Brüstung, Deko oben, Dachtreppe kommen an und ändern sich mit', async () => {
+    game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.claimed.add(k); } state.money = 1e9; for (const r of Object.keys(RES)) state.res[r] = 9999; state.design.add('dach:form:arkaden')");
+    game("state.paintNew.dach = { form: 3 }; for (let y = 5; y <= 7; y++) for (let x = 5; x <= 7; x++) build('dach', x, y, true); state.paintNew.dach = {}; for (const r of state.roofs.values()) { r.bel = 'm:verband:beige'; r.par = 2; } buildRoofTop('blumentopf', 5, 5, 0); buildRot = 0; build('dachtreppe', 6, 6); recalc()");
+    const want = game('JSON.stringify(serialize().roofs)');
+    game("(sp => { cloudApi.tree = { users: { u1: { pub: { wid: 'w1', open: false }, live: { eco: sp.eco, priv: sp.priv } } }, worlds: { w1: { ...sp.maps, rest: sp.rest, owner: 'u1', open: false, rev: 3 } } }; })(liveSplit(serialize()))");
+    game("startNew(); state.tutorial = -1");
+    lead('ipad');
+    await game('liveTick()'); await tick(); await tick();
+    expect(game('JSON.stringify(serialize().roofs)')).toBe(want);                         // alles da: bel, par, top
+    expect(game("[state.tiles.get('6,6').b, roofHoles(6, 6).length, roofAt(5, 5).top[0].b]")).toEqual(['dachtreppe', 1, 'blumentopf']);
+    // das andere Gerät stellt die Brüstung um und nimmt den Blumentopf herunter: Dächer liegen im „Rest“, der Stand wird übernommen
+    const rest = game("(() => { const d = JSON.parse(cloudApi.tree.worlds.w1.rest); for (const [, r] of d.roofs) { r.par = 3; delete r.top; } return JSON.stringify(d); })()");
+    await game(`cloudApi.update({ 'worlds/w1/rest': ${JSON.stringify(rest)} })`); await tick();
+    expect(game('[...state.roofs.values()].every(r => r.par === 3 && !r.top)')).toBe(true);
+    // Treppe weg (Feld-Karte): die Öffnung schließt sich
+    await game("cloudApi.update({ 'worlds/w1/tiles/6,6': null })"); await tick();
+    expect(game('roofHoles(6, 6).length')).toBe(0);
+    // Besuch: dieselben Dächer, ohne Taler
+    game("(sp => { cloudApi.tree.worlds.w2 = { ...sp.maps, rest: sp.rest, owner: 'u9', open: true }; })(liveSplit(serialize()))");
+    game("liveFollowStop(); startNew(); cloudUser = null; liveFollowStart('w2', false)"); await tick(); await tick();
+    expect(game('[state.roofs.size, state.money]')).toEqual([9, 0]);
+  });
   it('wer wieder führt, schreibt einmal alles neu', async () => {
     lead();
     await game('livePush(true)');

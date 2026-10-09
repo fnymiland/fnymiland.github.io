@@ -1139,7 +1139,7 @@ function openWalkerInfo(w) {
     <div class="status"><div>${walkerDoing(w)}</div>
       ${wish ? `<div>${wish.next ? '♥'.repeat(wish.met) + '♡'.repeat(wish.total - wish.met) : '♥♥♥♥♥'} ${miss.length ? `💭 Wünscht sich: ${miss[0].text}` : 'Rundum glücklich'}</div>` : ''}</div>
     <div class="row"><button class="btn" id="p-home">🏠 Zum Haus</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
-    () => walkers.includes(w) || strollers.includes(w) ? openWalkerInfo(w) : walkerGone(w, r));
+    () => walkers.includes(w) || strollers.includes(w) || roofers.includes(w) ? openWalkerInfo(w) : walkerGone(w, r));
   $('p-close').onclick = closePanel;
   $('p-home').onclick = () => { const [w0, h0] = sizeOf(t.b, t.rot, t); jumpTo(hx, hy, w0, h0); sparkle(hx + (w0 - 1) / 2, hy + (h0 - 1) / 2); openInfo(hx, hy); };
   void el;

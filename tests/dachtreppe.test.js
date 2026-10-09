@@ -146,4 +146,15 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
     game(`setTool('abriss'); setHover(${s[0]}, ${s[1]}); undoable(() => tap(${s[0]}, ${s[1]}, false)); setTool('look')`);
     expect(game("[state.tiles.has('11,11'), state.roofs.has('11,11')]")).toEqual([false, true]);   // Treppe weg, Dach bleibt
   });
+  it('Leute auf dem Dach antippen (Nutzer): ihr Fenster wie bei Bewohnern, Kopf auf Dachhöhe', () => {
+    roof(rect(3, 5, 3, 5));
+    game("buildRot = 0; build('dachtreppe', 4, 4); state.tiles.set('1,1', { b: 'haus', lvl: 3, animal: 1 }); recalc(); roofers.length = 0");
+    game("roofers.push({ roofer: true, stair: roofStairs()[0], st: 'roof', px: 3.3, py: 3.3, up: ROOF_H, wait: 0, fa: 10, fb: 10, ta: 10, tb: 10, t: 0, home: '1,1', who: 0, kind: 0, fur: '#fff', shirt: '#f00', speed: 0.4, life: 99 })");
+    game('cam = state.cam; cam.z = 2.5; { const p = iso(4, 4); cam.x = p.x; cam.y = p.y; }');
+    const s = game('(() => { const [hx, hy] = walkerHead(roofers[0], cam.z); return [hx, hy + 6 * cam.z * FIG_SCALE]; })()');
+    expect(game('walkerHead(roofers[0], cam.z)[1] < toScreen(3.3, 3.3).y - ROOF_H * cam.z')).toBe(true);
+    game(`setTool('look'); tap(${s[0]}, ${s[1]}, false)`);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Spaziert auf dem Dach/);
+    game('closePanel(); roofers.length = 0');
+  });
 });

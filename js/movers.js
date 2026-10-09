@@ -236,6 +236,7 @@ const GOAL_SAY = { arbeit: ['Auf zur Arbeit!', 'Heute wird ein fleißiger Tag.']
   bummel: ['Was für ein schöner Tag.', 'Einfach mal treiben lassen …'] };
 const PART_SAY = { morgen: ['Guten Morgen!', 'Die Sonne ist schon wach.'], mittag: ['Was für ein schöner Tag.'], abend: ['Der Himmel wird ganz rosa …'],
   nacht: ['Gute Nacht!', 'Die Laternen leuchten so schön ✨'] };
+const ROOF_SAY = ['Was für eine Aussicht von hier oben!', 'Hier oben ist es so schön ruhig.', 'Man sieht bis zum Meer!'];   // Leute auf dem Dach (Block 138d)
 let bubble = null, bubbleNext = 0;
 function bubbleText(w) {
   const pool = [], t = w.home && state.tiles.get(w.home), s = w.home && T.st.get(w.home);
@@ -244,7 +245,7 @@ function bubbleText(w) {
     if (miss.length) pool.push(...miss.map(v => WISH_SAY[v.id]), ...miss.map(v => WISH_SAY[v.id]));   // Wünsche doppelt so oft
     else if (!s.wish.next) pool.push('Ich wohne hier so gern! ♥', 'Schönstes Haus der Insel! ♥');
   }
-  pool.push(...(GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
+  pool.push(...(w.roofer ? ROOF_SAY : GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + Math.max(5000, String(text).length * 90) }; }
@@ -252,7 +253,7 @@ function bubbleTick(now) {
   if (bubble && (now > bubble.until || bubble.w.gone || bubble.w.inside > 0)) bubble = null;
   if (bubble || now < bubbleNext) return;
   bubbleNext = now + 20e3 + Math.random() * 10e3;
-  const seen = walkers.concat(strollers).filter(w => { if (w.inside > 0 || !w.home) return false; const p = toScreen(w.px, w.py); return p.x > 40 && p.x < W - 40 && p.y > 80 && p.y < H - 80; });
+  const seen = walkers.concat(strollers, typeof roofers !== 'undefined' ? roofers.filter(w => w.st === 'roof') : []).filter(w => { if (w.inside > 0 || !w.home) return false; const p = toScreen(w.px, w.py); return p.x > 40 && p.x < W - 40 && p.y > 80 && p.y < H - 80; });
   if (seen.length) { const w = seen[Math.floor(Math.random() * seen.length)]; speak(w, bubbleText(w), now); }
 }
 // Größe der Figuren auf der Insel (Block 115): 70 % – die Häuser wirken größer, die Wege luftiger. Gezeichnet wird um den
@@ -263,8 +264,8 @@ const figScale = w => (w && w.figS) || (w && w.full ? 1 : FIG_SCALE);   // figS:
 const labelOff = w => (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12);   // Namensschild über Hut und Ballon
 // Kopf der Figur auf dem Bildschirm (wie drawWalker)
 function walkerHead(w, z) {
-  const p = toScreen(w.px, w.py);
-  return [p.x + (w.sit ? 0 : 6 * z), p.y - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z * figScale(w)];
+  const p = toScreen(w.px, w.py), up = (w.up || 0) * z;                 // auf dem Dach bzw. der Dachtreppe höher (Block 138d)
+  return [p.x + (w.sit ? 0 : 6 * z), p.y - up - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z * figScale(w)];
 }
 function drawBubble(z) {
   if (!bubble || bubble.w.gone || bubble.w.inside > 0) return;
@@ -289,7 +290,7 @@ function drawBubble(z) {
 function walkerAt(sx, sy) {
   const z = cam.z;
   let best = null, bd = 4 + 7 * z;                                       // etwas größer als die Figur – weit weg nicht aus Versehen
-  for (const w of walkers.concat(strollers)) {
+  for (const w of walkers.concat(strollers, typeof roofers !== 'undefined' ? roofers : [])) {   // auch Leute auf dem Dach (Block 138d)
     if (w.inside > 0 || !w.home || !state.tiles.get(w.home)) continue;
     const [hx, hy] = walkerHead(w, z), d = Math.hypot(sx - hx, sy - (hy + 6 * z * FIG_SCALE));
     if (d < bd) { bd = d; best = w; }
@@ -301,6 +302,7 @@ const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem W
   markt: '🧺 Geht zum Markt', park: '🌳 Geht in den Park', fzpark: '🎢 Geht in den Freizeitpark', home: '🏠 Auf dem Heimweg', bummel: '🚶 Bummelt ein bisschen herum' };
 const GOAL_IN = { arbeit: '💼 Arbeitet gerade', schule: '🎒 Lernt gerade', essen: '☕ Macht Pause', laden: '🛍️ Kauft gerade ein', markt: '🧺 Auf dem Markt' };
 function walkerDoing(w) {
+  if (w.roofer) return w.sit ? '🪑 Sitzt auf einer Bank auf dem Dach' : w.st === 'roof' ? '🏛️ Spaziert auf dem Dach' : w.st === 'up' || w.st === 'in' ? '🪜 Geht aufs Dach' : '🪜 Kommt vom Dach herunter';
   if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
   const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
   if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';

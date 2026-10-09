@@ -773,6 +773,7 @@ function tap(sx, sy, isTouch) {
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  if (tool === 'look' && !plan && roofers.length) { const rw = walkerAt(sx, sy); if (rw && rw.roofer) { openWalkerInfo(rw); return; } }   // Leute auf dem Dach vor dem Dach (Block 138d)
   const hh = !plan && (tool === 'look' || tool === 'abriss' || (tool === 'verschieben' && !moving)) && !roofTopHit(sx, sy) ? holeHit(sx, sy) : null;
   if (hh) {                                                        // in die Öffnung getippt: die Treppe darunter (Block 138d)
     if (tool === 'look') { openInfo(hh.x, hh.y); return; }

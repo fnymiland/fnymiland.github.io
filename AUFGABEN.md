@@ -1881,7 +1881,18 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       nicht überdacht) über den Boden unter den Bögen zum Fuß (`rfWalkIn`, Zustände in/out, gezeichnet wie alle Bewohner) und gehen
       auf demselben Weg wieder hinaus; Leute auf der Treppe von hinten nach vorn gezeichnet, danach auch die vordere Randbrüstung
       ringsum im Bereich der Figur nachgezeichnet. Am Fuß keine Schachtwand (unten offen). Test: dachtreppe
-- [ ] Markise nach dem Modell durchgehen
+- [x] Markise nach dem Modell durchgehen – Nutzer: „Markise passt so“ (09.10.2026)
+- [x] Nutzer: „Leute auf dem Dach antippen“ → `walkerAt` kennt `roofers` (Kopf auf Dachhöhe, `walkerHead` mit w.up), Fenster wie
+      bei Bewohnern („Spaziert auf dem Dach“ …), eigene Sprechblasen. Test: dachtreppe
+- [x] Nutzer: „Verdeckung testen“ → tests/dachverdeckung.test.js: in allen vier Drehungen die Zeichen-Reihenfolge (Leute auf der Treppe
+      nach allen Dachbildern der Öffnung, von hinten nach vorn, danach Stufen/Brüstung davor; oben vor der vorderen Brüstung).
+      Gegenprobe: beide alten Glitches (eigenes Feld statt letztes der Öffnung; unsortiert) lassen ihn fehlschlagen
+- [x] Nutzer: „Online testen“ → live.test.js: Zuschauen und Besuch mit Belag, Brüstung, Deko oben, Dachtreppe; Änderungen im „Rest“
+      (Dächer) und in der Feld-Karte (Treppe) kommen an. Neuer Stand: `roofers` geleert (adoptState)
+- [x] Nutzer: „vor allem mit unserem Wächter“ → Testwelt „dach“ (tools/dachwelt.js, GEN=1 npx vitest run tests/dachwelt.test.js,
+      ?welt=dach) im Wächter je Bild, Leute oben mit festem Zufall. Fand gleich etwas: die vordere Brüstung wurde je Bild Strich für
+      Strich gezeichnet (Balustrade!) – weit weg 3.170 Befehle statt ~1.500 wie die anderen Welten. Jetzt als zweites Bildchen
+      (`e.fc`): 0,45 → 1.511, 0,8 → 844, nah 2,2 → 1.361. Grenzen aufgenommen
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

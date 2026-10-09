@@ -508,8 +508,19 @@ function drawRoofTile(x, y, px, py, z) {
       const P = (u, v, up = 0) => [(u - x - (v - y)) * TW / 2, (u - x + v - y) * TH / 2 - up];
       paintRoof(P, roofArea(roofCov(r)), x, y, r, 1, front);
     } finally { g = prev; }
-    if (e) freeCanvas(e.c);
-    e = { c, sig, ver, base: sig.slice(0, sig.lastIndexOf('|')), front };
+    // vordere Brüstung als zweites Bildchen (Leistungs-Wächter, Testwelt „dach“: Strich für Strich je Bild war weit weg das Teuerste)
+    let fc = null;
+    if (front.length) {
+      fc = document.createElement('canvas'); fc.width = c.width; fc.height = c.height;
+      const fg = fc.getContext('2d');
+      if (fg) {
+        const prev2 = g; g = fg;
+        try { g.setTransform(want, 0, 0, want, -B.left * want, -B.top * want); roofOps(front, (u, v, up = 0) => [(u - x - (v - y)) * TW / 2, (u - x + v - y) * TH / 2 - up], 1); }
+        finally { g = prev2; }
+      } else fc = null;
+    }
+    if (e) { freeCanvas(e.c); if (e.fc) freeCanvas(e.fc); }
+    e = { c, fc, sig, ver, base: sig.slice(0, sig.lastIndexOf('|')), front };
     roofSpent += performance.now() - t0;
     roofSprites.set(key, e);
   }
@@ -630,7 +641,7 @@ function roofAutoPillars(cells) {
 }
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
-  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); if (e.fc) freeCanvas(e.fc); roofSprites.delete(k); } }
 }
 // Stütze an die Dachkante (Nutzer: „man kann die Pfeiler auf die Ecken stellen“ – der Eckpunkt zwischen vier Feldern liegt bei 0,5,
 // die Kante bei RW = 0,42): steht eine Stütze bis ROOF_SNAP neben einem Dach, rückt sie auf den nächsten Punkt seiner Fläche.
@@ -838,6 +849,7 @@ function drawRoofTops(x, y, px, py, z, now) {
 function drawRoofFront(x, y, px, py, z) {
   const e = roofSprites.get(x + ',' + y);
   if (!e || !e.front || !e.front.length) return;
+  if (e.fc) { const B = ROOF_BOX; g.drawImage(e.fc, px + B.left * z, py + B.top * z, B.w * z, B.h * z); return; }
   roofOps(e.front, (u, v, up = 0) => [px + (u - x - (v - y)) * TW / 2 * z, py + (u - x + v - y) * TH / 2 * z - up * z], z);
 }
 // alle Deko auf Dächern: [Feldschlüssel, Platz, Deko] (Schönheit, Strom, Erfolge)
