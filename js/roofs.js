@@ -133,6 +133,20 @@ function roofOps(ops, P, lw) {
     g.closePath(); g.fillStyle = C(o.col); g.fill(); g.strokeStyle = C(o.col); g.lineWidth = 0.3 * lw; g.lineJoin = 'round'; g.stroke();
   }
 }
+// Liegt hinter dem Fuß einer Öffnung gleich der Dachrand (näher als 0,3)? Dann keine eigene Fuß-Brüstung (sonst zwei fast aufeinander,
+// Nutzer: „Ecken bündig“) – die Seiten laufen bis an die Randbrüstung. edge: Lage der Dachkante längs der Treppe; joints: wo die Seiten
+// auf die Randbrüstung treffen (quer), für deren Pfosten
+function holeFootEdge(h) {
+  const longV = !!h.Dv, d = h.Dv || h.Du, sg = d > 0 ? -1 : 1, footE = longV ? (d > 0 ? h.v0 : h.v1) : (d > 0 ? h.u0 : h.u1), qc = longV ? h.mu : h.mv;
+  const r = roofAt(Math.round(h.mu + h.Du * 0.4), Math.round(h.mv + h.Dv * 0.4)), A = r && roofArea(roofCov(r));
+  let edge = null;
+  for (let k = 1; A && k <= 40; k++) {
+    const l = footE + sg * k * 0.01, [u, v] = longV ? [qc, l] : [l, qc];
+    if (!A.sub(roofSubOf(u), roofSubOf(v))) { const a = footE + sg * (k - 1) * 0.01; edge = Math.round(a - sg * RW) + sg * RW; break; }
+  }
+  const near = edge != null && Math.abs(edge - footE) < 0.3, t = ROOF_FRAME.arkaden.T, [p0, p1] = longV ? [h.u0, h.u1] : [h.v0, h.v1];
+  return { edge, near, longV, joints: near ? [...(h.jM ? [] : [p0 - t / 2]), ...(h.jP ? [] : [p1 + t / 2])] : [] };
+}
 // Brüstung um eine Öffnung (Dachtreppe): hinten/vorn getrennt (vorn nach der Deko oben und den Leuten darin)
 function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur dieser Teil (ein Feld); sonst die ganze Öffnung
   const H = ROOF_H, back = [], front = [], Fa = ROOF_FRAME.arkaden, t = Fa.T, hh = Pd && Pd.id === 'gelaender' ? Pd.h : 3.5;   // niedrig, damit man die Treppe sieht; Geländer ist durchsichtig
@@ -145,35 +159,47 @@ function holeWallOps(h, Pd, clip = null) {   // clip [u0, u1, v0, v1]: nur diese
     if (faces.includes('u')) list.push({ pts: [[u1, v0, h0], [u1, v1, h0], [u1, v1, h1], [u1, v0, h1]], col: Fa.sU });
     if (faces.includes('t')) list.push({ pts: [[u0, v0, h1], [u1, v0, h1], [u1, v1, h1], [u0, v1, h1]], col: Fa.top });
   };
-  {
-    // (die Lochwände malt paintRoof als Schacht bis zum Boden, vor den Stufen)
-    // Brüstung: Seiten außer der oberen (Richtung D). Lange Seiten (längs D) mit Ecken, Fuß-Seite dazwischen
+  // Lage längs der Treppe (l) und quer (q); d > 0: hinauf zu größerem l. Fuß-Ende, offenes Ende
+  const longV = !!h.Dv, d = h.Dv || h.Du, sg = d > 0 ? -1 : 1;           // sg: vom Loch zum Fuß hin
+  const [p0, p1, l0, l1] = longV ? [h.u0, h.u1, h.v0, h.v1] : [h.v0, h.v1, h.u0, h.u1];
+  const footE = d > 0 ? l0 : l1, openE = d > 0 ? l1 : l0, qc = longV ? h.mu : h.mv;
+  const pt = (q, l, up) => longV ? [q, l, up] : [l, q, up];
+  const { edge, near } = Pd ? holeFootEdge(h) : { edge: null, near: false };
+  if (Pd && Pd.id === 'gelaender') {
+    // Geländer: Handläufe auf der Mitte der Mauerlinien, an den Ecken genau bis zur Mitte des anderen, Eckpfosten; am offenen Ende ein
+    // Pfosten. Nur der Teil auf diesem Feld (clip)
+    const lineOps = [], posts = [];
+    const footC = near ? edge - sg * t / 2 : footE + sg * t / 2;          // Fuß: eigene Linie oder die Mitte der Randbrüstung
+    const sides = [];
+    if (!h.jM) sides.push(p0 - t / 2);
+    if (!h.jP) sides.push(p1 + t / 2);
+    for (const q of sides) { lineOps.push([[q, Math.min(footC, openE)], [q, Math.max(footC, openE)], q]); posts.push(...(near ? [] : [[q, footC]]), [q, openE]); }   // am Rand: den Pfosten setzt die Randbrüstung
+    if (!near) lineOps.push([[h.jM ? p0 : p0 - t / 2, footC], [h.jP ? p1 : p1 + t / 2, footC], null]);
+    const inF = (u, v) => u >= fu0 - 1e-6 && u <= fu1 + 1e-6 && v >= fv0 - 1e-6 && v <= fv1 + 1e-6;
+    const isF = (q, l) => q + l > h.mu + h.mv;
+    const post = (q, l) => { const [u, v] = pt(q, l, 0); if (inF(u, v)) (isF(q, l) ? front : back).push({ pts: [pt(q, l, H), pt(q, l, H + hh)], col: '#4f4a44', line: 0.9 }); };
+    posts.forEach(([q, l]) => post(q, l));
+    for (const [[qa, la], [qb, lb], side] of lineOps) {
+      const alongL = side != null, s0 = alongL ? la : qa, s1 = alongL ? lb : qb, fix = alongL ? side : la;
+      for (let s = Math.ceil(s0 / 0.2 - 1e-6) * 0.2; s < s1 - 1e-6; s += 0.2) if (Math.abs(s - s0) > 0.08 && Math.abs(s - s1) > 0.08) alongL ? post(fix, s) : post(s, fix);
+      const [uA, vA] = alongL ? pt(fix, s0, 0) : pt(s0, fix, 0), [uB, vB] = alongL ? pt(fix, s1, 0) : pt(s1, fix, 0);
+      const cu0 = Math.max(Math.min(uA, uB), fu0), cu1 = Math.min(Math.max(uA, uB), fu1), cv0 = Math.max(Math.min(vA, vB), fv0), cv1 = Math.min(Math.max(vA, vB), fv1);
+      if (cu1 < cu0 - 1e-9 || cv1 < cv0 - 1e-9) continue;
+      const L = isF(alongL ? fix : (s0 + s1) / 2, alongL ? (s0 + s1) / 2 : fix) ? front : back;
+      for (const [hgt, lw] of [[hh, 1.1], [hh / 2, 0.6]]) L.push({ pts: [[cu0, cv0, H + hgt], [cu1, cv1, H + hgt]], col: '#4f4a44', line: lw });
+    }
+  } else {
+    // Mauer: lange Seiten mit den Ecken (bis zur Fuß-Mauer außen bzw. bis an die Randbrüstung), Fuß-Mauer dazwischen
+    const fEnd = near ? edge - sg * t : footE + sg * t;                    // wo die Seiten am Fuß enden
+    const sa = Math.min(fEnd, openE), sb = Math.max(fEnd, openE);
     const walls = [];
-    if (h.Dv) {                                                     // längs v: lange Seiten bei u0 / u1
-      const vf0 = h.Dv > 0 ? h.v0 - t : h.v0, vf1 = h.Dv > 0 ? h.v1 : h.v1 + t;
-      const foot = h.Dv > 0 ? [h.u0, h.u1, h.v0 - t, h.v0] : [h.u0, h.u1, h.v1, h.v1 + t];
-      foot.faces = 'vt';                                              // Fuß-Seite liegt zwischen den langen: ihre Stirnseiten sind innen
-      walls.push(foot);
-      if (!h.jM) walls.push([h.u0 - t, h.u0, vf0, vf1]);              // lange Seiten nur außen (Doppel-/Dreifachtreppe: innen offen)
-      if (!h.jP) walls.push([h.u1, h.u1 + t, vf0, vf1]);
-    } else {
-      const uf0 = h.Du > 0 ? h.u0 - t : h.u0, uf1 = h.Du > 0 ? h.u1 : h.u1 + t;
-      const foot = h.Du > 0 ? [h.u0 - t, h.u0, h.v0, h.v1] : [h.u1, h.u1 + t, h.v0, h.v1];
-      foot.faces = 'ut';
-      walls.push(foot);
-      if (!h.jM) walls.push([uf0, uf1, h.v0 - t, h.v0]);
-      if (!h.jP) walls.push([uf0, uf1, h.v1, h.v1 + t]);
+    if (!near) {                                                         // Fuß-Mauer zwischen den langen: ihre Stirnseiten sind innen
+      const fa = Math.min(footE, footE + sg * t), fb = Math.max(footE, footE + sg * t), f = longV ? [p0, p1, fa, fb] : [fa, fb, p0, p1];
+      f.faces = longV ? 'vt' : 'ut'; walls.push(f);
     }
-    for (const W of walls) {
-      const isFront = (W[0] + W[1]) / 2 + (W[2] + W[3]) / 2 > h.mu + h.mv;   // vor der Öffnung: nach der Deko oben
-      if (Pd && Pd.id === 'gelaender') {
-        const L = isFront ? front : back, [u0, u1, v0, v1] = clipBox(...W), cu = (u0 + u1) / 2, cv = (v0 + v1) / 2;
-        if (u1 <= u0 || v1 <= v0) continue;
-        const along = u1 - u0 > v1 - v0, a0 = along ? u0 : v0, a1 = along ? u1 : v1, at = (s, up) => along ? [s, cv, up] : [cu, s, up];
-        for (let s = Math.ceil(a0 / 0.2 - 1e-6) * 0.2; s < a1 - 1e-6; s += 0.2) L.push({ pts: [at(s, H), at(s, H + hh)], col: '#4f4a44', line: 0.9 });
-        L.push({ pts: [at(a0, H + hh), at(a1, H + hh)], col: '#4f4a44', line: 1.1 }, { pts: [at(a0, H + hh / 2), at(a1, H + hh / 2)], col: '#4f4a44', line: 0.6 });
-      } else box(W, H, H + hh, isFront ? front : back, W.faces || 'uvt');
-    }
+    if (!h.jM) walls.push(longV ? [p0 - t, p0, sa, sb] : [sa, sb, p0 - t, p0]);   // lange Seiten nur außen (Doppel-/Dreifachtreppe: innen offen)
+    if (!h.jP) walls.push(longV ? [p1, p1 + t, sa, sb] : [sa, sb, p1, p1 + t]);
+    for (const W of walls) box(W, H, H + hh, (W[0] + W[1]) / 2 + (W[2] + W[3]) / 2 > h.mu + h.mv ? front : back, W.faces || 'uvt');
   }
   return { back, front };
 }
@@ -278,9 +304,21 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
         each(0.09, t => { ops.push({ pts: [at(mid, t, H + 1.2), at(mid, t, H + h - 1.2)], col: '#d7cbb2', line: 2.1 }); ops.push({ pts: [at(mid, t - 0.008, H + 1.2), at(mid, t - 0.008, H + h - 1.2)], col: '#efe7d6', line: 0.7 }); });
         face(h - 1.2, h); top(h);
       } else {
-        each(0.2, t => ops.push({ pts: [at(mid, t, H), at(mid, t, H + h)], col: '#4f4a44', line: 0.9 }));
-        ops.push({ pts: [at(mid, a0, H + h * 0.5), at(mid, b0, H + h * 0.5)], col: '#4f4a44', line: 0.6 });
-        ops.push({ pts: [at(mid, a0, H + h), at(mid, b0, H + h)], col: '#4f4a44', line: 1.1 });
+        // Geländer (Nutzer: „die Ecken sollen abschließen und bündig sein“): Handläufe auf der Mitte des Rahmens, an Ecken genau bis zur
+        // Mitte des anderen (außen um T/2 kürzer, innen um T/2 länger) – kein Kreuz, kein Überstand; dort ein Eckpfosten, Rasterpfosten
+        // zu nah an der Ecke fallen weg
+        const r0 = endA ? e.a + (inA ? -T / 2 : T / 2) : e.a, r1 = endB ? e.b + (inB ? T / 2 : -T / 2) : e.b, corner = [];
+        if (endA) corner.push(r0);
+        if (endB) corner.push(r1);
+        for (const hl of holes) {                                       // Seiten einer Öffnung stoßen hier an: dort der Pfosten (T-Stoß)
+          const f = holeFootEdge(hl);
+          if (f.near && (f.longV ? e.ax === 'v' : e.ax === 'u') && Math.abs(f.edge - e.at) < 0.02) for (const j of f.joints) if (j > r0 - 1e-6 && j < r1 + 1e-6) corner.push(j);
+        }
+        const post = t => ops.push({ pts: [at(mid, t, H), at(mid, t, H + h)], col: '#4f4a44', line: 0.9 });
+        corner.forEach(post);
+        each(0.2, t => { if (t > r0 - 1e-6 && t < r1 + 1e-6 && !corner.some(c => Math.abs(c - t) < 0.08)) post(t); });
+        ops.push({ pts: [at(mid, r0, H + h * 0.5), at(mid, r1, H + h * 0.5)], col: '#4f4a44', line: 0.6 });
+        ops.push({ pts: [at(mid, r0, H + h), at(mid, r1, H + h)], col: '#4f4a44', line: 1.1 });
       }
     }
     return ops;
@@ -374,14 +412,13 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
       for (const h of all) dtSteps(h.rot, (u, v, up) => P(h.mu + u, h.mv + v, up), (pts, col) => poly(pts, col, col, 0.3), h.jM, h.jP);
     } finally { g.restore(); }
   }
-  const hop = holes.length ? holeOps(holes, Pd) : null;               // Öffnung: Dachstärke und Brüstung ringsum (außer oben)
-  if (hop) roofOps(hop.back, P, lw);
-  if (Pd) {                                                             // Brüstung: hinten ins Bild, vorn danach (frontOut) oder gleich
-    roofOps(parapetOps(F, Pd, false), P, lw);
-    const fr = parapetOps(F, Pd, true);
-    if (frontOut) frontOut.push(...fr); else roofOps(fr, P, lw);
-  }
-  if (hop) { if (frontOut) frontOut.push(...hop.front); else roofOps(hop.front, P, lw); }
+  // Brüstung am Rand und um die Öffnung (Dachtreppe): hinten erst der Rand, dann die Öffnung davor; vorn erst die Öffnung, dann der Rand
+  // davor (die Seiten der Öffnung stoßen dort an) – vorn nach der Deko oben (frontOut) oder gleich
+  const hop = holes.length ? holeOps(holes, Pd) : null, fr = [];
+  if (Pd) roofOps(parapetOps(F, Pd, false), P, lw);
+  if (hop) { roofOps(hop.back, P, lw); fr.push(...hop.front); }
+  if (Pd) fr.push(...parapetOps(F, Pd, true));
+  if (frontOut) frontOut.push(...fr); else roofOps(fr, P, lw);
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
