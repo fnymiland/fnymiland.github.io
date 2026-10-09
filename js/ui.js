@@ -84,6 +84,10 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'tunnel') {                          // Tunnel (Block 136): Strecke unter einem Hügel
     block(1, '#96d56f');
     drawTunnelIcon(cx, cy, z * 0.9);
+  } else if (type === 'dach') {                            // Überdachung (Block 138): ein Feld Weg mit Dach und vier Stützen
+    block(1, '#96d56f');
+    drawPath(cx, cy, z, 1e6, 1e6, { style: 'm:platten:sand', wide: true });
+    drawRoofIcon(cx, cy, z * 0.95, (tile && tile.form) || 0, (tile && tile.col) || 0);
   } else if (EDGE_TOOLS.has(type)) {                       // Hecke, Zaun, Mauer: zwei Kanten über Eck im aktuellen Stil
     block(1, '#96d56f');
     EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
@@ -1215,8 +1219,45 @@ const lookAll = b => {
   const out = [];
   for (const ds of state.decos.values()) for (const d of ds) if (d && baseOf(d.b) === b) out.push(d);
   for (const t of state.tiles.values()) if (baseOf(t.b) === b) out.push(t);
+  if (b === 'dach' && state.roofs) for (const r of state.roofs.values()) out.push(r);   // Überdachungen (Block 138)
   return out;
 };
+// Überdachung im Fenster des Felds (Block 138): Form und Farbe für dieses Feld oder alle verbundenen; Abreißen nimmt erst das Dach
+let roofScope = 'one';
+function roofRunKeys(x, y) {
+  const seen = new Set([x + ',' + y]), out = [x + ',' + y];
+  for (let i = 0; i < out.length && out.length < 5000; i++) {
+    const [cx, cy] = keyXY(out[i]);
+    for (const [dx, dy] of DIRS) { const k = (cx + dx) + ',' + (cy + dy); if (!seen.has(k) && state.roofs.has(k)) { seen.add(k); out.push(k); } }
+  }
+  return out;
+}
+function roofInfoHtml(x, y) {
+  const r = roofAt(x, y);
+  if (!r) return '';
+  const n = roofRunKeys(x, y).length, form = r.form || 0, col = r.col || 0, more = lookMore('dach');
+  if (n < 2) roofScope = 'one';
+  const sc = (v, label) => `<button class="look${roofScope === v ? ' on' : ''}" data-roofscope="${v}">${label}</button>`;
+  return `<div class="label">Überdachung</div>
+    ${n > 1 ? `<div class="looks">${sc('one', 'Nur dieses Feld')}${sc('run', `Alle verbundenen (${n})`)}</div>` : ''}
+    <div class="looks look-forms">${lookFree('dach', 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-roofform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb('dach', i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
+    ${roofForm(r) === 'markise' ? `<div class="label">Markisenfarbe</div><div class="swatches">${lookFree('dach', 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-roofcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
+    ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
+    <p class="muted">Stützen stellst du selbst darunter: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Feldern.</p>`;
+}
+function wireRoofInfo(el, x, y) {
+  const set = (kind, i) => undoable(() => {
+    const keys = roofScope === 'run' ? roofRunKeys(x, y) : [x + ',' + y];
+    for (const k of keys) { const o = state.roofs.get(k); if (o) setLook(o, kind, i); }
+    for (const k of keys) roofDirty(...keyXY(k));
+    groundVersion++; sfx('deco'); save();
+  });
+  for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => { set('form', +b.dataset.roofform); openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); openInfo(x, y); };
+  const m = el.querySelector('[data-roofmore]');
+  if (m) m.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.dach.group); };
+}
 const lookThumbs = new Map();
 // kleines Vorschaubild einer Form in einer Farbe (im Test ohne Canvas: leer)
 function lookThumb(b, form, col) {
@@ -1247,7 +1288,7 @@ const lookMore = (b) => DECO_LOOKS[b].forms.filter((e, i) => !lookOk(b, 'form', 
 let lookPop = null;
 function lookChips(b) {
   const L = DECO_LOOKS[b], p = state.paintNew[b] || {}, form = lookOk(b, 'form', p.form | 0) ? p.form | 0 : 0, col = lookOk(b, 'col', p.col | 0) ? p.col | 0 : 0;
-  const lab = L.colLabel || 'Farbe', F = L.forms[form], Cc = L.cols && L.cols[col];
+  const lab = L.colLabel || 'Farbe', F = L.forms[form], Cc = L.cols && !(b === 'dach' && F.id !== 'markise') && L.cols[col];   // Dach: Farbe nur für die Markise
   const moreF = L.forms.length - lookFree(b, 'form').length, moreC = L.cols ? L.cols.length - lookFree(b, 'col').length : 0;
   const more = n => n ? `<button class="wopt more" data-lmore="1"><i>🎨</i><small>+${n} in der Kunstakademie</small></button>` : '';
   const pop = lookPop === 'form' ? `<div class="wpop" role="listbox" aria-label="Form">${lookFree(b, 'form').map(([f, i]) => `<button class="wopt${i === form ? ' on' : ''}" data-lform="${i}" role="option" aria-selected="${i === form}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><small>${f.name}</small></button>`).join('')}${more(moreF)}</div>`
@@ -1506,6 +1547,7 @@ function openInfo(x, y) {
     ${boat}
     ${hub}
     ${train}
+    ${roofInfoHtml(x, y)}
     ${castle}
     ${colors}
     <div class="row">
@@ -1515,6 +1557,7 @@ function openInfo(x, y) {
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, () => state.tiles.get(x + ',' + y) === t ? openInfo(x, y) : closePanel());
   wireDel(x, y);
+  wireRoofInfo(el, x, y);                                        // Überdachung (Block 138)
   $('p-move').onclick = () => startMove(x, y, -1);              // das Gebäude, nicht die Deko in seiner Ecke
   if ($('p-stage')) $('p-stage').onclick = () => stageUpgrade(x, y);
   if ($('p-expo')) $('p-expo').onclick = () => { if (sendExpedition(x + ',' + y)) openInfo(x, y); };

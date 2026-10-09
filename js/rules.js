@@ -659,6 +659,7 @@ function totals() {
     }
   }
   for (const [, e] of state.edges) beauty += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0);   // Hecken, Zäune, Mauern, Torbögen
+  if (state.roofs) beauty += state.roofs.size * ITEMS.dach.beauty;      // Überdachungen (Block 138)
   for (const p of PARKS) beauty += PARK_BEAUTY[p.stage];                  // ein ganzer Park ist mehr als seine Deko
   for (const p of FZPARKS) beauty += FZ_BEAUTY[p.stage];                 // Freizeitpark (Block 60)
   for (const [k, ds] of state.decos) {
@@ -870,7 +871,7 @@ const MID_UV = [[-MID_OFF, 0], [0, -MID_OFF], [MID_OFF, 0], [0, MID_OFF]];
 // teilt – so steht eine Laterne exakt zwischen zwei Feldern bzw. genau im Bogen einer Wegkurve. Nur Schmales (POST_OK).
 // Dafür bleiben die vier Ecken-Plätze, die zu diesem Punkt zeigen, frei (und umgekehrt).
 const VSLOT = 8, VSLOT_NEAR = 0.2;                              // so nah (Felder) an einer Ecke rastet schmale Deko dort ein
-const POST_OK = new Set(['laterne', 'strassenlaterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall']);
+const POST_OK = new Set(['laterne', 'strassenlaterne', 'kristallaterne', 'blumentopf', 'glaskugel', 'kristall', 'stuetze']);
 const slotUV = i => i === VSLOT ? [-0.5, -0.5] : i < 4 ? [(i & 1 ? 1 : -1) * SLOT_OFF, (i & 2 ? 1 : -1) * SLOT_OFF] : MID_UV[i - 4];
 // die vier Felder um den Eckpunkt von Feld (x, y), je mit ihrem Ecken-Platz, der zum Punkt zeigt
 const vertexCorners = (x, y) => [[x, y, 0], [x - 1, y, 1], [x, y - 1, 2], [x - 1, y - 1, 3]];
@@ -882,7 +883,7 @@ const newSlots = () => Array(SLOTS).fill(null);
 // Abstand von der Mitte bis zum Rand des Dings), an einer Hecke/Zaun/Mauer um deren Dicke nach innen, an einem Eckpunkt mit
 // Linie (Pfeiler, Heckenende) mit Abstand zur Ecke
 const MID_SIDE = [[-1, 0], [0, -1], [1, 0], [0, 1]];
-const DECO_R = { baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbogen: 0.12, bank: 0.1, brunnen: 0.12, kristallbrunnen: 0.12 };
+const DECO_R = { stuetze: 0.06, baum: 0.14, palme: 0.14, busch: 0.12, riesenblume: 0.1, rosenbogen: 0.12, bank: 0.1, brunnen: 0.12, kristallbrunnen: 0.12 };
 const decoR = b => !b ? 0.08 : DECO_R[baseOf(b)] || 0.08;
 // Bänke (Block 108): lang und schmal – halbe Tiefe (a) und halbe Länge (b) in Feldern, je nach Form. Steht eine Bank längs zum
 // Feldrand, rückt sie um ihre halbe Länge nach innen, sonst steckt sie in der Bank auf dem Nachbarfeld
@@ -1921,6 +1922,19 @@ function tunnelError(x, y, noCost) {
   if (Object.entries(c.mat || {}).some(([res, n]) => (state.res[res] || 0) < n)) return 'Zu wenig ' + RES[Object.entries(c.mat).find(([res, n]) => (state.res[res] || 0) < n)[0]].name;
   return null;
 }
+// Überdachung (Block 138): nur über einem Weg (auch unter Ständen und Deko), nicht auf Brücken und Bahnübergängen.
+// Liegt schon eine, wird sie umgestaltet (gleiche Form und Farbe: nichts zu tun)
+const roofSame = (x, y) => { const r = roofAt(x, y), n = decoLookNew('dach'); return !!r && (r.form || 0) === (n.form || 0) && (r.col || 0) === (n.col || 0); };
+function roofError(x, y, noCost) {
+  if (!ownedTile(x, y)) return notMine(x, y);
+  const t = state.tiles.get(x + ',' + y);
+  if (t && (isWegBridge(t) || isCrossing(t))) return 'Nicht auf Brücken und Bahnübergängen';
+  if (wegCellStyle(x, y) == null) return 'Nur über einem Weg';
+  if (roofSame(x, y)) return 'Hier ist schon so ein Dach';
+  if (noCost) return null;
+  if (state.money < ITEMS.dach.cost) return 'Zu wenig Taler';
+  return matError(ITEMS.dach.mat);
+}
 // Schiene vor einem Gleis des Hauptbahnhofs läuft in die Halle weiter (kein Prellbock); vor einer Tunneleinfahrt in die Einfahrt
 const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
   return DIRS.filter(([dx, dy]) => bAt(x + dx, y + dy) === 'schiene' || (isEinfahrt(x + dx, y + dy) && trackLink(x, y, x + dx, y + dy)) || (e && e[0] === dx && e[1] === dy)); };
@@ -2506,6 +2520,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
+  if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
   if ((b === 'schiene' || b === 'station' || b === 'hbf' || b === 'tunneleinfahrt') && footprint(b, x, y, r, opts.t).some(([fx, fy]) => tunnelAt(fx, fy)))
     return b === 'schiene' ? 'Über einem Tunnel keine Schiene – Schiene und Tunnel verbindet eine Tunneleinfahrt' : b === 'tunneleinfahrt' ? 'Nicht auf den Tunnel – ans Ende davon setzen' : 'Nicht über einen Tunnel – dafür gibt es die U-Bahn-Station';
@@ -3057,6 +3072,7 @@ function houseWishes(t, x, y, acc = T.access) {
 
 function demolishInfo(x, y) {
   if (!ownedTile(x, y)) return { err: isSea(x, y) ? 'Hier ist nur Meer' : 'Das ist nicht dein Grundstück' };
+  if (roofAt(x, y)) return { roof: x + ',' + y, refund: ITEMS.dach.cost, mat: ITEMS.dach.mat, full: true, label: 'Überdachung entfernen' };   // erst das Dach (Block 138)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t) {
     const d = ITEMS[t.b];

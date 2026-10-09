@@ -1755,9 +1755,19 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       08.10.2026 abends: wieder einmal im vollen Lauf rot (vor dem Push), im nächsten vollen Lauf grün – weiter beobachten; beim
       nächsten Auftreten die Abweichung (welches Gebäude, welcher Platz) aus der Ausgabe festhalten.
 ## Block 138: Überdachungen (wie der Gang vom Parkplatz ins Disneyland Paris)
-- [ ] Als Linie über vorhandene Wege gezogen (wie ein Zaun), Figuren laufen darunter durch (Dach über den Figuren des Felds, wie
-      die Bogenbrücke `afterMovers`). Arten: Glas-Gang (Stahlbögen, nachts beleuchtet), Holz-Pergola (Ranken, Blüten), Bunte Markise
-      (Farbe wählbar), Steinarkaden. Stützen in Abständen, durchgehendes Dach, Enden sauber. Ein bisschen 🌸
+- [x] Umgesetzt (09.10.2026, js/roofs.js) nach Entwürfen mit dem Nutzer (tools/vorschau/dach-entwurf*.png, dach-ecken6.png):
+      FLÄCHE statt Linie (Nutzer: „Ecken sauber, nichts überlagern, auch 2–3 breit“): `state.roofs` Feld → { form, col }, über Wegen
+      (auch unter Ständen/Deko; nicht Brücke/Bahnübergang), gezogen wie Wege (Linie/Rechteck). Je Feld 3 × 3 Teilstücke (Grenzen
+      x ± ½, x ± RW = 0,42 = Platz der Laternen am Wegrand): Mitte immer, Rand nur zum Nachbarn gleicher Form, Ecke nur mit beiden
+      Nachbarn und dem schrägen – nie doppelt. Dachform aus dem Abstand zum Rand (Gewölbe, breit oben flach), Markisenstreifen mit
+      eckigem Abstand und Schnitten genau auf den Streifengrenzen (keine Treppen). Formen (`DECO_LOOKS.dach`): Holz-Pergola (frei),
+      Glas-Gang, Bunte Markise (6 Farben), Steinarkaden (Bögen zwischen den Stützen der Kante). STÜTZEN stellt der Nutzer selbst
+      (Nutzer: „das Spiel kann das schlecht beurteilen“ → „Stützen aufstellen und dann das Dach drüber ziehen“): kleines Ding
+      `stuetze` auf Ecken/Seitenmitten/Eckpunkt, steht genau unter der Dachkante, sieht aus wie das Dach darüber (`pillarForm`).
+      Zeichnen: je Feld ein Bildchen (`roofSprites`) nach den Figuren des Felds (render.js tileB) – danach < 1 ms je Bild; Neumalen
+      mit Zeitbudget 8 ms je Bild (sonst altes Bildchen der anderen Zoomstufe), erstes Malen Markise ~4 ms je Feld. Nachts weiches
+      Licht unter Glas und Pergola. Fenster des Felds: Form/Farbe für dieses Feld oder alle verbundenen; 🧹 nimmt erst das Dach.
+      Leistungs-Wächter: dach Form 0–3 und stuetze neu eingetragen (nur das Vorschaubild zählt, im Spiel gemerkt). Test: dach
 
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b

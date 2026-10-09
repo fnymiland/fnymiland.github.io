@@ -1466,7 +1466,7 @@ const ROTATABLE = new Set([...MIRROR, 'bank', 'strassenlaterne', 'ubahn', 'tunne
   'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_schloss', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
 // Deko im Verhältnis zu Häusern: kleine Dinge auch klein zeichnen
-const DECO_SCALE = { freundesbank: 0.5, rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, strassenlaterne: 0.78, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
+const DECO_SCALE = { stuetze: 1 / 0.9, freundesbank: 0.5, rosenbogen: 0.75, denkmal: 0.8, uhrturm: 0.85, karussell: 0.85, pokal_bronze: 0.6, pokal_silber: 0.6, pokal_gold: 0.6, bank: 0.45, laterne: 0.62, strassenlaterne: 0.78, kristallaterne: 0.66, glaskugel: 0.7, kristallbrunnen: 0.72, hecke: 0.5, blumentopf: 0.8, busch: 0.8, brunnen: 0.72, pavillon: 0.8, statue: 0.7, baum: 0.89, blumen: 0.85, windrad: 0.9, offshore: 0.9 };
 // Größen (Block 43): das Grundmodell, um vf größer; kleine (Ecke) und Feld-Deko werden verschieden skaliert gezeichnet
 function decoScale(b) {
   const d = ITEMS[b];
@@ -1818,6 +1818,8 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
       break;
     }
     case 'laterne': drawLantern(cx, cy, z, now, x, y, t); break;
+    case 'stuetze': drawPillar(cx, cy, z, (t && t.form) || 0); break;              // Block 138: sieht aus wie das Dach darüber
+    case 'dach': drawRoofIcon(cx, cy, z, (t && t.form) || 0, (t && t.col) || 0); break;   // nur als Bildchen (Leiste, Kunstakademie)
     case 'strassenlaterne': drawStreetLamp(cx, cy, z, now, x, y, t); break;   // Block 132      // Formen und Farben (Block 106, draw-schmuck.js)
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel
       ellipse(cx, cy + 1 * z, 16 * z, 7 * z, 'rgba(40,40,40,0.15)');
@@ -2464,7 +2466,8 @@ function drawSmall(k, px, py, z, now, x, y, which) {
     const [u, v] = slotPos(x, y, i, d);
     let sc = 1;
     if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
-    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0, d.form || 0);
+    const form = d.b === 'stuetze' ? pillarForm(x, y, u, v) : d.form || 0;   // Stütze: Form des Dachs darüber (Block 138)
+    drawSmallOne(d.b, d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, x, y, sc, i, d.col || 0, form);
   }
 }
 

@@ -35,6 +35,14 @@ function build(b, x, y, quiet) {
     sfx('road'); save();
     return true;
   }
+  if (b === 'dach') {                                  // Überdachung (Block 138): über dem Weg, darunter bleibt alles
+    const err = placeError(b, x, y);
+    if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+    state.money -= ITEMS.dach.cost; payMat(ITEMS.dach.mat);
+    state.roofs.set(k0, { ...decoLookNew('dach') });
+    roofDirty(x, y); sfx('deco'); recalc(); save();
+    return true;
+  }
   if (b === 'tunnel') {                                // Tunnel (Block 136): unter der Oberfläche, oben bleibt alles stehen
     if (state.tunnels.has(k0) && ownedTile(x, y)) return false;           // liegt schon
     const err = placeError(b, x, y);
@@ -160,7 +168,13 @@ function demolish(x, y) {
   let info = demolishInfo(x, y);
   if (info.err) { fail(info.err); return; }
   const k = x + ',' + y;
-  if (info.tunnel) {                                                    // Tunnel (Block 136): voll zurück
+  if (info.roof) {                                                      // Überdachung (Block 138): voll zurück, der Weg bleibt
+    state.roofs.delete(info.roof);
+    state.money += info.refund;
+    for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
+    addFloat(x, y, '+' + fmt(info.refund), '#3f8f43');
+    roofDirty(x, y);
+  } else if (info.tunnel) {                                                    // Tunnel (Block 136): voll zurück
     state.tunnels.delete(info.tunnel);
     state.money += info.refund;
     for (const [r, n] of Object.entries(info.mat || {})) state.res[r] += n;
@@ -866,7 +880,7 @@ const UNDO_MAX = 20, undoStack = [];
 let undoPending = null, undoCut = false;
 // Neues Spiel, Import: die Schritte gehören zum alten Stand (Block 84a)
 function resetUndo() { undoStack.length = 0; undoPending = null; undoCut = false; if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
-const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels };
+const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels, roofs: () => state.roofs };
 const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
 function undoSnap() {
   const maps = {};

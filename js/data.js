@@ -105,6 +105,10 @@ const ITEMS = {
   palme:   { cat: 'deko', name: 'Palme', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten. Klein – bis zu 4 pro Feld.' },
   riesenblume: { cat: 'deko', name: 'Riesenblume', cost: 300, beauty: 10, small: true, garden: 'botgarten', desc: 'Aus dem Botanischen Garten: so groß wie ein Mensch. Bis zu 4 pro Feld.' },
   bank:    { cat: 'deko', name: 'Bank', cost: 35, mat: { bretter: 2 }, beauty: 3, small: true, desc: 'Klein – bis zu 4 pro Feld, auch vor dem Haus. In die gewünschte Ecke tippen.' },
+  dach:    { cat: 'deko', name: 'Überdachung', cost: 40, mat: { bretter: 1 }, beauty: 2, roof: true,
+             desc: 'Ein Dach über dem Weg – die Leute laufen darunter durch. Als Fläche ziehen, auch 2–3 breit. Stützen stellst du selbst darunter (Stütze, an Ecken und Seiten).' },
+  stuetze: { cat: 'deko', name: 'Stütze', cost: 10, mat: { bretter: 1 }, beauty: 0, small: true,
+             desc: 'Trägt eine Überdachung: an eine Feldecke, eine Seitenmitte am Wegrand oder genau auf den Punkt zwischen vier Feldern. Sieht aus wie das Dach darüber.' },
   laterne: { cat: 'deko', name: 'Laterne', cost: 40, mat: { metall: 1 }, beauty: 4, small: true, design: 150, desc: 'Leuchtet nachts. Klein – bis zu 4 pro Feld. Nah an eine Feldecke getippt, steht sie genau zwischen den Feldern.' },
   brunnen: { cat: 'deko', name: 'Brunnen', lm: 'quelle:2', cost: 250, mat: { quader: 8 }, needs: 'grass', beauty: 15, desc: 'Plätschert.' },
   kristall: { cat: 'deko', name: 'Kristall', lm: 'kristall:1', cost: 20, mat: { kristall: 1 }, beauty: 5, small: true, desc: 'Ein kleiner leuchtender Kristall. Klein – bis zu 4 pro Feld.' },
@@ -591,6 +595,7 @@ const MENU = [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ 🧹 stehen in der Werkzeugleiste
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
+    { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze'] },   // Block 138
     { id: 'platz', label: '🏮 Stadtschmuck', items: ['laterne', 'bank', 'brunnen', 'pavillon', 'glaskugel', 'strassenlaterne', 'kristallaterne', 'kristallbrunnen', 'kristall', 'freundesbank'] },
     { id: 'besonderes', label: '🏆 Besonderes', items: ['statue', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'seerosenteich', 'pokal_bronze', 'pokal_silber', 'pokal_gold'] },
   ] },
@@ -651,6 +656,8 @@ const ITEM_TIPS = {
   leuchtturm: 'Das Finale: ein Leuchtturm-Kap (3×3) an der Küste – dann beginnt das Laternenfest.',
   weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
   schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
+  dach: 'Zieh die Überdachung über einen Weg – auch 2 oder 3 Felder breit. Dann Stützen darunter stellen: an die Ecken und Seiten.',
+  stuetze: 'Stell Stützen unter deine Überdachung – an Ecken, Seitenmitten oder auf den Punkt zwischen vier Feldern. Wie viele, entscheidest du.',
   tunnel: 'Zieh den Tunnel wie eine Schiene – unter Häusern und Wegen durch. An sein Ende kommt eine Tunneleinfahrt, daran die Schiene.',
   tunneleinfahrt: 'Ans Ende eines Tunnels setzen – sie dreht sich von selbst richtig herum. Dann Schienen an das offene Ende legen.',
   ubahn: 'Auf ein Stück Tunnel setzen. Zwei Stationen im selben Netz und Strom: Die Züge fahren unter der Stadt.',
@@ -1090,6 +1097,9 @@ const BED_SOILS = [                                                     // Boden
 const STATION_COLS = [                                                  // Dach der Parkbahn-Station (Block 136d)
   { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }, { id: 'lila', name: 'Lila', c: '#9a72c8', design: 120 }, { id: 'braun', name: 'Holzbraun', c: '#8a5a3c', design: 120 }];
+const MARKISE_COLS = [                                                  // Überdachung „Bunte Markise“ (Block 138): Streifen mit Weiß
+  { id: 'rot', name: 'Rot', c: '#e8604f' }, { id: 'blau', name: 'Blau', c: '#4f86c6' }, { id: 'gruen', name: 'Grün', c: '#4f9a5a' }, { id: 'gelb', name: 'Gelb', c: '#e9b93b' },
+  { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }];
 const DECO_LOOKS = {
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
@@ -1112,6 +1122,8 @@ const DECO_LOOKS = {
     { id: 'stein', name: 'Naturstein', design: 200 }] },
   ubahn: { group: 'U-Bahn', icon: '#2f62b8', cols: null, forms: [{ id: 'treppe', name: 'Treppe mit Mast' }, { id: 'pavillon', name: 'Pavillon', design: 250 },
     { id: 'haeuschen', name: 'Häuschen', design: 200 }] },
+  dach: { group: 'Überdachungen', icon: '#8a5a3a', colLabel: 'Markisenfarbe', cols: MARKISE_COLS, forms: [{ id: 'pergola', name: 'Holz-Pergola' },   // Block 138
+    { id: 'glas', name: 'Glas-Gang', design: 250 }, { id: 'markise', name: 'Bunte Markise', design: 200 }, { id: 'arkaden', name: 'Steinarkaden', design: 300 }] },
   schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
     { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },
 };

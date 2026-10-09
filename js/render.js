@@ -1605,6 +1605,10 @@ function render(now) {
       }
       if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
       if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
+      if (state.roofs.size && state.roofs.has(k)) {                       // Überdachung (Block 138): über den Figuren des Felds
+        const f = () => drawRoofTile(x, y, px, py, z);
+        if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
+      }
 
   };
   const glc = GL.frame ? GL.cacheMode : null, ml0 = MESS ? performance.now() : 0;

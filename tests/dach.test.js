@@ -1,0 +1,111 @@
+const { loadGame, game } = require('./helpers/load-game');
+
+// Block 138: Überdachungen – Fläche über Wegen (auch 2–3 breit), Stützen stellt man selbst
+beforeAll(() => loadGame());
+beforeEach(() => {
+  game('startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; state.money = 1e9; for (const r of Object.keys(RES)) state.res[r] = 9999');
+  game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.paintNew.dach = {}; chosenStyle.weg = 'sand'; recalc(); resetUndo()");
+});
+const way = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('weg', x, y, true)`);
+const roof = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('dach', x, y, true)`);
+const row = (x0, x1, y) => Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y]);
+
+describe('Überdachungen (Block 138)', () => {
+  it('nur über einem Weg; kostet, gibt beim Abreißen alles zurück, der Weg bleibt', () => {
+    way(row(2, 5, 5));
+    expect(game("placeError('dach', 2, 7)")).toBe('Nur über einem Weg');
+    const m = game('state.money');
+    roof(row(2, 5, 5));
+    expect(game('state.roofs.size')).toBe(4);
+    expect(game('state.money')).toBe(m - 4 * game('ITEMS.dach.cost'));
+    expect(game("placeError('dach', 3, 5)")).toBe('Hier ist schon so ein Dach');
+    expect(game("demolishInfo(3, 5).label")).toBe('Überdachung entfernen');
+    game('demolish(3, 5)');
+    expect(game("state.roofs.has('3,5')")).toBe(false);
+    expect(game("state.tiles.get('3,5').b")).toBe('weg');                           // erst das Dach, der Weg bleibt
+    expect(game('state.money')).toBe(m - 3 * game('ITEMS.dach.cost'));
+  });
+
+  it('als Fläche ziehen wie Wege (Rechteck); schon gleich gedeckte Felder zählen nicht', () => {
+    for (let y = 4; y <= 6; y++) way(row(3, 6, y));
+    game("setTool('dach'); startPlan('rect', { x: 3, y: 4 }, { x: 6, y: 6 }, true)");
+    const info = game('(() => { const i = planInfo(plan); return { n: i.order.length, err: i.firstErr }; })()');
+    expect(info).toEqual({ n: 12, err: null });
+    game('(() => { for (const [, , run] of planInfo(plan).order) run(); cancelPlan(); })()');
+    expect(game('state.roofs.size')).toBe(12);
+    game("startPlan('rect', { x: 3, y: 4 }, { x: 6, y: 6 }, true)");
+    expect(game('planInfo(plan).order.length')).toBe(0);
+    game("cancelPlan(); setTool('look')");
+  });
+
+  it('Teilstücke: Mitte immer, Rand nur zum gedeckten Nachbarn, Ecke nur mit beiden Nachbarn und dem schrägen – nichts überlappt', () => {
+    // L aus einem schmalen Gang (5,5)-(6,5)-(6,6) und daneben ein 2×2-Block (10..11, 5..6)
+    way([[5, 5], [6, 5], [6, 6], [10, 5], [11, 5], [10, 6], [11, 6]]); roof([[5, 5], [6, 5], [6, 6], [10, 5], [11, 5], [10, 6], [11, 6]]);
+    const sub = (su, sv) => game(`roofArea(roofCov(roofAt(5, 5))).sub(${su}, ${sv})`);
+    expect(sub(15, 15)).toBe(true);                                                  // Mitte von 5,5
+    expect(sub(16, 15)).toBe(true);                                                  // Rand Richtung 6,5
+    expect(sub(15, 16)).toBe(false);                                                 // Rand nach unten: dort kein Dach
+    expect(sub(17, 16)).toBe(false);                                                 // Innenecke der Kurve bei 6,5 bleibt frei
+    expect(sub(31, 16)).toBe(true);                                                  // 2×2-Block: Ecke zwischen allen vier gedeckt
+    // jeder Punkt gehört höchstens zu einem Feld: die Teilstück-Grenzen berühren sich nur
+    expect(game('[roofHi(15), roofLo(16), roofHi(16), roofLo(17)]')).toEqual([5.42, 5.42, 5.5, 5.5]);
+  });
+
+  it('andere Form = eigene Fläche; Umstellen im Fenster für dieses Feld oder alle verbundenen', () => {
+    way(row(3, 8, 5)); roof(row(3, 8, 5));
+    game('openInfo(4, 5)');
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Überdachung.*Alle verbundenen \(6\)/s);
+    game("state.design.add('dach:form:glas'); openInfo(4, 5); document.querySelector('[data-roofform=\"1\"]').click()");
+    expect(game("[...state.roofs.values()].map(r => r.form || 0)")).toEqual([0, 1, 0, 0, 0, 0]);
+    expect(game('roofCov(roofAt(4, 5))(5, 5)')).toBe(false);                         // Glas und Pergola wachsen nicht zusammen
+    game("document.querySelector('[data-roofscope=\"run\"]').click(); document.querySelector('[data-roofform=\"1\"]').click()");
+    expect(game("[...state.roofs.values()].every(r => r.form === 1)")).toBe(true);
+    game('undo()');
+    expect(game("[...state.roofs.values()].map(r => r.form || 0)")).toEqual([0, 1, 0, 0, 0, 0]);
+  });
+
+  it('Stützen: stehen genau unter der Dachkante, sehen aus wie das Dach darüber, auch auf dem Punkt zwischen vier Feldern', () => {
+    way(row(3, 6, 5));
+    game("state.paintNew.dach = { form: 3 }; state.design.add('dach:form:arkaden')"); roof(row(3, 6, 5));
+    expect(game("buildSmall('stuetze', 4, 5, 5)")).toBe(true);                       // Seitenmitte am Wegrand
+    expect(game("buildSmall('stuetze', 4, 5, 0)")).toBe(true);                       // Ecke
+    expect(game("buildSmall('stuetze', 5, 5, VSLOT)")).toBe(true);                   // Eckpunkt
+    const at = game("[slotPos(4, 5, 5, state.decos.get('4,5')[5]), slotPos(4, 5, 0, state.decos.get('4,5')[0])]");
+    expect(at[0][1]).toBeCloseTo(-game('RW'), 6);
+    expect(at[1].map(Math.abs)).toEqual([game('RW'), game('RW')]);
+    expect(game('pillarForm(4, 5, 0, -RW)')).toBe(3);                                 // Arkaden-Pfeiler
+    expect(game('pillarForm(9, 9, 0, 0)')).toBe(0);                                   // ohne Dach: Holzpfosten
+    // Arkaden: Bögen spannen sich zwischen den Stützen der Kante
+    const e = game("(() => { const A = roofArea(roofCov(roofAt(4, 5))); const e = roofEdges(A, 4, 5).find(e => e.ax === 'v' && e.n < 0); const [a, b] = roofRun(A, e); return { a, b, p: roofPillarsOn(e, a, b) }; })()");
+    expect(e.a).toBeCloseTo(2.58, 6); expect(e.b).toBeCloseTo(6.42, 6);       // Gang-Enden: Dachkante bei Feldmitte ± RW
+    expect(e.p.map(v => +v.toFixed(2)).sort()).toEqual([3.58, 4]);
+  });
+
+  it('Speichern und Laden; unbekannte Werte fallen weg', () => {
+    way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
+    const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");
+    expect(back).toEqual([['3,5', { form: 2, col: 1 }], ['4,5', { form: 2, col: 1 }], ['5,5', { form: 2, col: 1 }], ['9,9', {}]]);
+    expect(game('[...parseSave({ ...JSON.parse(JSON.stringify(serialize())), roofs: undefined }).roofs].length')).toBe(0);   // alter Stand ohne Dächer
+  });
+
+  it('alle Formen zeichnen ohne Fehler – nah, weit weg, Tag und Nacht, mit Figuren darunter; Schönheit zählt', () => {
+    for (let y = 4; y <= 6; y++) way(row(2, 9, y));
+    const b0 = game('T.beauty');
+    for (let f = 0; f < 4; f++) game(`state.paintNew.dach = { form: ${f}, col: ${f} }; state.design.add('dach:form:' + DECO_LOOKS.dach.forms[${f}].id); for (let x = 2 + 2 * ${f}; x <= 3 + 2 * ${f}; x++) for (let y = 4; y <= 6; y++) build('dach', x, y, true)`);
+    game("buildSmall('stuetze', 2, 4, 0); buildSmall('stuetze', 9, 6, 3); recalc()");
+    expect(game('T.beauty')).toBeGreaterThan(b0);
+    for (const h of [12, 23]) for (const z of [2.5, 1, 0.5]) game(`(() => { const gh = gameHour; gameHour = () => ${h}; try { cam = state.cam; cam.z = ${z}; const p = iso(5, 5); cam.x = p.x; cam.y = p.y; render(1e6); render(1e6 + 17); } finally { gameHour = gh; } })()`);
+    expect(game("roofSprites.size")).toBeGreaterThan(0);
+    for (let f = 0; f < 4; f++) expect(() => game(`thumbRaw('dach', 1, { form: ${f}, col: 0 }); lookThumb('dach', ${f}, 0)`)).not.toThrow();
+  });
+
+  it('Kunstakademie: Pergola frei, Glas, Markise und Arkaden zu kaufen; Farbknopf in der Leiste nur bei der Markise', () => {
+    expect(game("lookOk('dach', 'form', 0)")).toBe(true);
+    expect(game("['glas', 'markise', 'arkaden'].map(id => !!DESIGN_BY_ID['dach:form:' + id] && !lookOk('dach', 'form', DECO_LOOKS.dach.forms.findIndex(f => f.id === id)))")).toEqual([true, true, true]);
+    game("setTool('dach'); renderStyleBar('dach')");
+    expect(game("!!document.querySelector('#style-bar [data-lpop=\"col\"]')")).toBe(false);
+    game("state.design.add('dach:form:markise'); state.paintNew.dach = { form: 2 }; renderStyleBar('dach')");
+    expect(game("!!document.querySelector('#style-bar [data-lpop=\"col\"]')")).toBe(true);
+    game("setTool('look')");
+  });
+});
