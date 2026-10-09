@@ -409,8 +409,9 @@ function paintRoof(P, A, x, y, r, lw = 1, frontOut = null) {          // frontOu
     g.save(); g.beginPath();                                            // auch die der Nachbarn, schräg sieht man in einer breiten Öffnung hinüber
     const e = 0.012;                                                    // wo die Öffnung ins Nachbarfeld weitergeht: knapp darüber (keine Fuge)
     for (const h of holes) {
-      const u0 = Math.max(h.u0, x - 0.5 - (h.u0 < x - 0.5 ? e : 0)), u1 = Math.min(h.u1, x + 0.5 + (h.u1 > x + 0.5 ? e : 0));
-      const v0 = Math.max(h.v0, y - 0.5 - (h.v0 < y - 0.5 ? e : 0)), v1 = Math.min(h.v1, y + 0.5 + (h.v1 > y + 0.5 ? e : 0));
+      // bis zur Feldgrenze oder darüber (auch genau darauf: breite Treppe, die Nachbarspur geht dort weiter – Nutzer: „Linie in der Mitte“)
+      const u0 = h.u0 <= x - 0.5 + 1e-9 ? x - 0.5 - e : h.u0, u1 = h.u1 >= x + 0.5 - 1e-9 ? x + 0.5 + e : h.u1;
+      const v0 = h.v0 <= y - 0.5 + 1e-9 ? y - 0.5 - e : h.v0, v1 = h.v1 >= y + 0.5 - 1e-9 ? y + 0.5 + e : h.v1;
       if (u1 > u0 && v1 > v0) [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].forEach(([u, v], i) => { const p = P(u, v, H); i ? g.lineTo(...p) : g.moveTo(...p); });
       g.closePath();
     }
