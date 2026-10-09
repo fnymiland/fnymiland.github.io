@@ -1819,11 +1819,13 @@ const WARE_FROM = { kaffee: 'Kaffeeplantage', tee: 'Teegarten', kakao: 'Kakaopla
 function openGateInfo(k) {
   const e = state.edges.get(k);
   if (!e) { closePanel(); return; }
-  const gate = isGate(k), byPath = pathGate(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
+  const gate = isGate(k), byPath = pathGate(k), across = wayAcross(k), refund = ITEMS[e.b].cost + (e.arch ? ARCHES[e.arch].cost : 0);
   const cur = e.arch || '', opts = [['', '✕ Ohne Bogen', 0], ...Object.entries(ARCHES).map(([id, A]) => [id, archLabel(e.b, id), A.cost])];
   const el = showPanel(`
     <h3>${gate ? (gardenGate(k) ? 'Gartentor · ' : 'Durchgang · ') : ''}${ITEMS[e.b].name}${gate ? '' : ` · ${styleDef(e.b, e.style).name}`}</h3>
-    ${byPath ? '' : `<div class="looks">${[['0', `${ITEMS[e.b].name} geschlossen`, !e.gate], ['1', '🚪 Gartentor', e.gate === true], ['offen', '⬜ Durchgang', e.gate === 'offen']]
+    ${across ? `<div class="looks">${[['0', '⬜ Durchgang', !e.shut], ['1', `${ITEMS[e.b].name} geschlossen`, !!e.shut]]
+      .map(([v, name, on]) => `<button class="look${on ? ' on' : ''}" data-shut="${v}">${name}</button>`).join('')}</div>` : ''}
+    ${byPath || across ? '' : `<div class="looks">${[['0', `${ITEMS[e.b].name} geschlossen`, !e.gate], ['1', '🚪 Gartentor', e.gate === true], ['offen', '⬜ Durchgang', e.gate === 'offen']]
       .map(([v, name, on]) => `<button class="look${on ? ' on' : ''}" data-gate="${v}">${name}</button>`).join('')}</div>`}
     ${gate ? `<p class="muted">${byPath ? `Wo ein Weg durch die ${ITEMS[e.b].name} geht, ist ein Durchgang.` : gardenGate(k) ? 'Ein Gartentürchen – es geht auf, wenn jemand hindurchgeht.' : 'Eine offene Lücke ohne Türchen.'} Ein Bogen darüber bringt Schönheit; bei beleuchteten Stilen brennt nachts eine Laterne (braucht Strom wie Laternen).</p>
     <div class="looks">${opts.map(([id, name, cost]) => `<button class="look${id === cur ? ' on' : ''}" data-arch="${id}">${name}${cost && id !== cur ? ` · 🪙 ${fmt(cost)}` : ''}</button>`).join('')}</div>`
@@ -1839,6 +1841,7 @@ function openGateInfo(k) {
     <div class="row"><button class="btn danger" id="p-del" aria-label="Entfernen">🗑️ +${fmt(refund)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => state.edges.get(k) === e ? openGateInfo(k) : closePanel());
   for (const b of el.querySelectorAll('[data-arch]')) b.onclick = () => undoable(() => { if (setArch(k, b.dataset.arch || null)) openGateInfo(k); });
+  for (const b of el.querySelectorAll('[data-shut]')) b.onclick = () => undoable(() => { if (setShut(k, b.dataset.shut === '1')) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-gate]')) b.onclick = () => undoable(() => { const v = b.dataset.gate; if (setGate(k, v === '1' ? true : v === 'offen' ? 'offen' : false)) openGateInfo(k); });
   for (const b of el.querySelectorAll('[data-flush]')) b.onclick = () => undoable(() => { if (setFlush(k, b.dataset.flush === '1')) { sfx('deco'); openGateInfo(k); } });
   for (const b of el.querySelectorAll('[data-esqp]')) b.onclick = () => undoable(() => { if (setEdgeSq(k, b.dataset.esqp === '1')) { sfx('deco'); openGateInfo(k); } });

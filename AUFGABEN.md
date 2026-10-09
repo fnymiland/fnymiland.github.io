@@ -2303,3 +2303,8 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
       Pavillon-Pfosten genau auf den Rahmenecken. Häuschen (ein Kasten) war in Ordnung. Prüfbild: tools/ubahn-ecken.js
 - [x] Pavillon: „die vertikalen Streben stehen komisch vor der Wand“ – die Pfosten gingen bis zum Boden und wurden nach dem Rahmen gemalt
       (ihr Teil im Rahmen landete davor). Jetzt stehen sie auf dem Rahmen (Höhe 5–18), darunter ist der Rahmen selbst
+
+## Kleinigkeit: Zaun um einen Brunnen auf dem Platz (Nutzer, 09.10.2026)
+- [x] Unter Dingen auf einem Platz liegt Weg – jede Zaunseite wurde ein Durchgang (nur Pfosten). Gewählt: nichts ändert sich von selbst,
+      im Fenster der Linie (antippen) „⬜ Durchgang / Zaun geschlossen“ (`e.shut`, `setShut`, `wayAcross`; Bogen geht beim Schließen
+      zurück). Test: zaun-durchgang

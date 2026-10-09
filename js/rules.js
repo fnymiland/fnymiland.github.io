@@ -1079,7 +1079,17 @@ const edgeParse = k => { const [i, j] = k.slice(1).split(',').map(Number); retur
 const edgeTiles = k => { const { dir, i, j } = edgeParse(k); return dir === 'a' ? [[i, j - 1], [i, j]] : [[i - 1, j], [i, j]]; };
 const edgeBetween = (x, y, nx, ny) => nx === x ? 'a' + x + ',' + Math.max(y, ny) : 'b' + Math.max(x, nx) + ',' + y;
 // Wo ein Weg durch die Linie geht (Weg auf beiden Seiten), ist ein Tor bzw. eine Lücke
-const pathGate = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
+const wayAcross = k => edgeTiles(k).every(([x, y]) => wegAt(x, y) != null || crossingAt(x, y));
+// Durchgang abschaltbar (Nutzer, 09.10.2026: „um einen Brunnen auf dem Platz kein Zaun“ – unter dem Brunnen liegt Weg): e.shut = zu
+const pathGate = k => { const e = state.edges.get(k); return !(e && e.shut) && wayAcross(k); };
+function setShut(k, shut) {
+  const e = state.edges.get(k);
+  if (!e || !!e.shut === !!shut) return false;
+  if (shut) { e.shut = true; if (e.arch && !e.gate) { state.money += ARCHES[e.arch].cost; delete e.arch; } }   // zu: kein Bogen mehr (Taler zurück)
+  else delete e.shut;
+  sfx('deco'); recalc(); save();
+  return true;
+}
 // Block 59: ein Tor geht auch ohne Weg (e.gate, im Fenster der Linie) – dort steht ein Gartentürchen in der Lücke
 const isGate = k => { const e = state.edges.get(k); return !!(e && e.gate) || pathGate(k); };
 // e.gate: true = Gartentor mit Türchen, 'offen' = Durchgang ohne Türchen (Bogen bei beiden möglich)
