@@ -1798,6 +1798,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „manche Streben sind nur angedeutet – gewollt?“ → nein: Latten-Richtung sprang je Stückchen um (Stummel). Varianten
       gezeigt (tools/vorschau/streben-varianten.png), Nutzer wählte B: Gitter in beiden Richtungen, alle 0,25, überall gleich.
       Leistungs-Wächter dach Form 0: 246 → 350 (mehr Latten, nur beim einmaligen Malen). Bild tools/vorschau/pergola-gitter.png
+      Nutzer: „gefällt mir nicht, dass die Streben so überstehen – zeig Alternativen“ → 4 Varianten (tools/vorschau/latten-varianten.png),
+      Nutzer wählte C: Latten fein (0,7) und zwischen den Randbalken eingelassen, oben knapp unter deren Oberkante. Bild
+      tools/vorschau/pergola-fein.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

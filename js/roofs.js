@@ -156,17 +156,28 @@ function paintRoof(P, A, x, y, r, lw = 1) {
     // Randbalken als Kanthölzer (Entwurf D): Außenseite genau auf der Dachkante, Stärke PERG_T nach innen, Höhe PERG_BH unter H;
     // sichtbar die Seite zum Betrachter (+u dunkler, +v heller) und die Oberseite – an Ecken laufen sie zusammen (keine Kerbe, kein Kreuz)
     const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => p.k - q.k);
-    for (const { e } of beams) {
+    const drawBeams = () => { for (const { e } of beams) {
       const inn = e.at - e.n * PERG_T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
       const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
       poly([at(hi2, e.a, H - PERG_BH), at(hi2, e.b, H - PERG_BH), at(hi2, e.b, H), at(hi2, e.a, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
       poly([at(lo, e.a, H), at(hi2, e.a, H), at(hi2, e.b, H), at(lo, e.b, H)], '#9c6a45', '#9c6a45', 0.3);
-    }
-    // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich – keine abgebrochenen Stummel (Nutzer wählte B, 09.10.2026)
-    for (const [ua, ub, va, vb] of quads) {
-      for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) line([P(u, va, H + 1), P(u, vb, H + 1)], S.beam, 1.1);
-      for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) line([P(ua, v, H + 1), P(ub, v, H + 1)], S.beam, 1.1);
-    }
+    } };
+    // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich (Nutzer wählte B), fein und zwischen den Randbalken
+    // eingelassen, oben knapp unter deren Oberkante (Nutzer wählte C, 09.10.2026: nichts steht über) – erst die Latten, dann die Balken davor
+    const inset = PERG_T, lh = H - 0.5, lw2 = 0.7;
+    const trim = (u0, v0, u1, v1) => {
+      const d0 = A.dist(u0, v0), d1 = A.dist(u1, v1);
+      if (d0 < inset - 1e-6 && d1 < inset - 1e-6) return null;
+      if (d0 < inset) { const t = (inset - d0) / (d1 - d0); u0 += (u1 - u0) * t; v0 += (v1 - v0) * t; }
+      else if (d1 < inset) { const t = (inset - d1) / (d0 - d1); u1 += (u0 - u1) * t; v1 += (v0 - v1) * t; }
+      return [u0, v0, u1, v1];
+    };
+    const lath = (u0, v0, u1, v1) => { const q = trim(u0, v0, u1, v1); if (q) line([P(q[0], q[1], lh), P(q[2], q[3], lh)], S.beam, lw2); };
+    const drawLaths = () => { for (const [ua, ub, va, vb] of quads) {
+      for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) lath(u, va, u, vb);
+      for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) lath(ua, v, ub, v);
+    } };
+    drawLaths(); drawBeams();
     for (const q of quads) {
       const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 3);
       if (hh > 0.45) continue;
