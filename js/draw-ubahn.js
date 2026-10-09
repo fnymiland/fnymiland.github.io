@@ -216,7 +216,7 @@ function drawUbahn(cx, cy, z, t) {
     ubPrism(S, du, dv, ubU(-0.4, -0.34, 0.36, 0.24, 0.29), 0, 5, GR, GL, z);   // Rahmen als ein Stück (Ecken bündig)
     const posts = [[-0.4, -0.34, -0.29, -0.24], [-0.4, -0.34, 0.24, 0.29], [0.3, 0.36, -0.29, -0.24], [0.3, 0.36, 0.24, 0.29]];   // Pfosten genau auf den Rahmenecken
     posts.sort((p, q) => { const d = e => { const a = (e[0] + e[1]) / 2, b = (e[2] + e[3]) / 2; return (du * a - dv * b) + (dv * a + du * b); }; return d(p) - d(q); });
-    for (const [a0, a1, b0, b1] of posts) pbBox(S, du, dv, a0, a1, b0, b1, 0, 18, GR, GL, z, false);
+    for (const [a0, a1, b0, b1] of posts) pbBox(S, du, dv, a0, a1, b0, b1, 5, 18, GR, GL, z, false);   // stehen auf dem Rahmen (darunter ist er selbst) – sonst malten sie sich vor die Wand (Nutzer)
     g.globalAlpha *= 0.85; pbBox(S, du, dv, -0.44, 0.42, -0.36, 0.36, 18, 19.5, '#9fd3e3', '#c8ecf5', z, false); g.globalAlpha /= 0.85;
     const arc = []; for (let i = 0; i <= 12; i++) { const t2 = Math.PI - i * Math.PI / 12; arc.push(S(0.36, Math.cos(t2) * 0.3, 19.5 + Math.sin(t2) * 5)); }
     portalLine(arc, GR, 1.6, z);

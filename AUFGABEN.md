@@ -2301,3 +2301,5 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
 - [x] „Mauerecken sind Schrott – alle 3 Modelle ansehen“: Treppe und Pavillon bestanden aus überlappenden Kästen, je Drehung in falscher
       Reihenfolge gemalt. Jetzt eine U-förmige Mauer als ein Stück (`ubPrism`, `ubU`: Seiten von hinten nach vorn, dann oben),
       Pavillon-Pfosten genau auf den Rahmenecken. Häuschen (ein Kasten) war in Ordnung. Prüfbild: tools/ubahn-ecken.js
+- [x] Pavillon: „die vertikalen Streben stehen komisch vor der Wand“ – die Pfosten gingen bis zum Boden und wurden nach dem Rahmen gemalt
+      (ihr Teil im Rahmen landete davor). Jetzt stehen sie auf dem Rahmen (Höhe 5–18), darunter ist der Rahmen selbst
