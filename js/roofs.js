@@ -357,6 +357,22 @@ function pillarAt(sx, sy) {
   }
   return best;
 }
+// Felder, deren tileB Dach oder Stützen zeichnet (GL-Standbild, gl.js glPlayTiles: sie werden jedes Bild neu gezeichnet – sonst fehlten
+// Dach und Stützen weit weg ganz, Nutzer: „in meiner Welt immer noch so“)
+let roofLiveCache = { v: -1, keys: [] };
+function roofLiveTiles() {
+  if (!state.roofs || (!state.roofs.size && !state.decos.size)) return [];
+  const v = (typeof GL !== 'undefined' ? GL.drawEpoch : 0) + ':' + groundVersion + ':' + state.roofs.size + ':' + state.decos.size;
+  if (roofLiveCache.v === v) return roofLiveCache.keys;
+  const out = new Set(state.roofs.keys());
+  if (state.roofs.size) for (const [k, ds] of state.decos) ds.forEach((d, i) => {
+    if (!d || d.b !== 'stuetze') return;
+    const [x, y] = keyXY(k), [ox, oy] = pillarOwner(...pillarPos(x, y, i, d));
+    out.add(ox + ',' + oy);
+  });
+  roofLiveCache = { v, keys: [...out] };
+  return roofLiveCache.keys;
+}
 // Dach weg/geändert: Bildchen der Nachbarschaft verwerfen (das Abstandsfeld reicht bis 3 Felder)
 function roofDirty(x, y) {
   for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const k = (x + dx) + ',' + (y + dy), e = roofSprites.get(k); if (e) { freeCanvas(e.c); roofSprites.delete(k); } }

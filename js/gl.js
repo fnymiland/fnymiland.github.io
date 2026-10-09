@@ -670,6 +670,7 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
   let d0;
   const ev = new Set(GLS.dyn);
   for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
+  for (const k of roofLiveTiles()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild
   const list = [...ev].sort((p, q) => p - q);
   let cur = GLS.groundEnd;
   for (const j of list) {

@@ -1812,6 +1812,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nachbarfelder lagen 0,16 (schräg 0,23) neben der Kante (Rückzug nur bis 0,16) und wurden zum Teil gar nicht gezeichnet (Dach
       suchte Stützen nur auf Feld + 3 Nachbarn). Jetzt ROOF_SNAP 0,24 und Suche in allen 8 Nachbarn (`PILLAR_NEAR`). Test: dach.
       Bild tools/vorschau/erst-saeulen4.png
+      Nutzer: „in meiner Welt immer noch so“ → Daten aus seiner Welt per WLAN-Empfänger (v866, Säulen korrekt an der Kante): Fehler
+      im GL-Standbild weit weg – Dach und Stützen zeichnet tileB, das im Standbild nur für Felder mit Bewegtem läuft → sie fehlten
+      ganz (nur der Schatten blieb). Jetzt `roofLiveTiles` (Dachfelder + Besitzerfelder der Stützen) in glPlayTiles immer neu.
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang
