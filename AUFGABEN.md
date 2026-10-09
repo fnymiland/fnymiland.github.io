@@ -2284,3 +2284,7 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
       vorderen Seiten (`SLOTS_FRONT`). Verschieben, Gruppe drehen, Kopieren, Abreißen, Speichern; oben auf Steinarkaden ebenso
       (`roofTopPos`, `roofTopAll` über `PLACE_SLOTS`). Ältere Versionen schneiden den Platz beim Laden ab (zeigen ihn nicht).
       Test: deko-mitte (SLOTS-Erwartungen in decos, gruppe-drehen, dachdeko angepasst)
+
+## Kleinigkeit: Tunnel löschen ohne 🧹 (Nutzer, 09.10.2026: „wie löschen wir jetzt Tunnelwege?“)
+- [x] Einzeln: 👁 an (Tunnel sichtbar) → 👆 antippen → 🗑️ (wie vorher: steht etwas darüber, erst das). Fehler aus Block 155 behoben:
+      ✋-Auswahl → Abreißen riss auch unsichtbare Tunnel mit – jetzt nur mit 👁 Durchsicht. Test: auswahl-abriss

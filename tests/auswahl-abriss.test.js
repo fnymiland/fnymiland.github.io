@@ -125,6 +125,23 @@ describe('Schnellwerkzeuge entrümpelt (Block 155)', () => {
     expect(game("!!decosAt('5,5')")).toBe(false);
   });
 
+  it('Tunnel: Auswahl-Abreißen nimmt sie nur mit 👁 mit (sonst unsichtbar); einzeln per 👆 → 🗑️', () => {
+    game("state.tunnels.set('12,12', {}); state.tunnels.set('13,12', {}); state.tiles.set('12,13', { b: 'weg', lvl: 1 }); recalc()");
+    select([12, 12], [13, 13]);
+    game('demolishSelection()');
+    expect(game("[tunnelAt(12, 12), tunnelAt(13, 12), !!state.tiles.get('12,13')]")).toEqual([true, true, false]);
+    game('setSeeThrough(true)');
+    game("setTool('verschieben'); startPlan('rect', { x: 12, y: 12 }, { x: 12, y: 12 }, true); demolishSelection()");
+    expect(game('[tunnelAt(12, 12), tunnelAt(13, 12)]')).toEqual([false, true]);
+    game("setTool('look')");
+    const s = scr(13, 12);
+    game(`tap(${s[0]}, ${s[1]}, false)`);
+    expect(game("document.getElementById('panel').textContent")).toContain('Tunnel');
+    game("document.getElementById('p-del').click()");
+    expect(game('tunnelAt(13, 12)')).toBe(false);
+    game('setSeeThrough(false)');
+  });
+
   it('👁 Durchsicht zeigt die Tunnel (bisher nur mit 🧹 in der Hand)', () => {
     game("state.tunnels.set('10,10', {}); state.tunnels.set('11,10', {}); recalc(); setTool('look')");
     const dashes = () => game('(() => { let n = 0; const o = g.setLineDash; g.setLineDash = function (...a) { n++; return o.apply(this, a); }; try { drawTunnelView(1); } finally { g.setLineDash = o; } return n; })()');

@@ -195,6 +195,7 @@ function scanDemolish(p) {
       continue;
     }
     const info = ownedTile(x, y) ? demolishInfo(x, y) : { err: 'nichts' };
+    if (info.tunnel && p.keepLand && !seeThrough) { if (!states.has(k)) states.set(k, 'same'); continue; }   // ✋-Auswahl: unsichtbare Tunnel nur mit 👁 (Block 155)
     if (info.tunnel || info.roof) { order.push([x, y, () => { demolish(x, y); return true; }]); gain += info.refund; things++; states.set(k, 'ok'); continue; }   // Tunnel (136), Dach (138)   // Tunnel (Block 136): einzeln und im Rechteck
     if (info.cost && !p.keepLand) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
     else if (!states.has(k)) states.set(k, 'same');
