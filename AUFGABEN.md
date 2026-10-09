@@ -1838,6 +1838,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Nutzer: „beim Kopieren/Verschieben nimmt er nur die Pfeiler“ → Gruppe kennt jetzt `kind: 'roof'` (einsammeln, drehen, prüfen,
       Vorschau gestrichelt in Dachhöhe, absetzen nach allem anderen, abbrechen, Kopie kostet Dach, Speichern während des Tragens am
       alten Platz). Test: dach. Bilder dach-verschieben.png, dach-verschoben.png
+- [x] Nutzer: „Holzüberdachung passt – auf Basis dieses Modells die anderen 3 anpassen“ → Rahmen allgemein (`ROOF_FRAME` je Form: Stärke,
+      Höhe, Farben; `drawFrame`/`drawInnerFrame` aus der Pergola herausgelöst, Pergola unverändert), Pfosten je Form gleich stark bündig
+      (`PILLAR_HALF` aus ROOF_FRAME), innere Balken und Auto-Eckstützen für alle Formen. Entwurf aller vier: tools/vorschau/vier-formen.png.
+      Glas zuerst: Stahlrahmen 0,03, Bögen in beide Richtungen überall gleich (Nutzer wählte A aus glas-varianten.png). Bild glas-nah2.png
+- [ ] Markise und Steinarkaden nach dem Modell durchgehen (Entwurf steht, Nutzer schaut sie sich als Nächstes an)
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

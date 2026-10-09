@@ -13,6 +13,14 @@
 // ---------------------------------------------------------------------------
 const RW = 0.42, ROOF_H = 22, ROOF_STRIPE = 0.09;
 const PERG_T = 0.05, PERG_BH = 1.6;   // Pergola (Nutzer wählte Entwurf D): Randbalken und Pfosten gleich stark (Felder), Balkenhöhe
+// Rahmen je Form nach dem Modell der Pergola (Nutzer, 09.10.2026: „auf Basis dieses Modells die anderen 3 anpassen“): Randbalken
+// (Stärke T, Höhe BH unter H) auf der Dachkante, Ecken auf Gehrung, Pfosten gleich stark bündig darunter, Balken über inneren Pfosten
+const ROOF_FRAME = {
+  pergola: { T: PERG_T, BH: PERG_BH, top: '#9c6a45', sU: '#6f4529', sV: '#8a5a3a', post: '#8a5a3a' },
+  glas:    { T: 0.03, BH: 1.0, top: '#7d8893', sU: '#4a535d', sV: '#5d6772', post: '#5d6772' },
+  markise: { T: 0.03, BH: 0.9, top: '#ffffff', sU: '#d8d2c6', sV: '#ece6da', post: '#ece6da' },
+  arkaden: { T: 0.09, BH: 3.0, top: '#e8dec9', sU: '#b3a283', sV: '#c8b896', post: '#dccfb4' },
+};
 const roofAt = (x, y) => !!state.roofs && state.roofs.get(x + ',' + y);
 const roofForm = r => (DECO_LOOKS.dach.forms[(r && r.form) || 0] || DECO_LOOKS.dach.forms[0]).id;
 const ROOF_STY = {
@@ -150,31 +158,57 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       if (dir !== 'v') for (let v = Math.ceil(va / step - 1e-6) * step; v < vb - 1e-6; v += step) line([P(ua, v, hFn(ua, v)), P(ub, v, hFn(ub, v))], col, w);
     }
   };
-  if (form === 'glas') {
+  const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => p.k - q.k);
+  const drawFrame = F => { for (const { e } of beams) {
+      const inn = e.at - e.n * F.T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
+      const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
+      // Innenecke (Ring mit offener Mitte, Nutzer): geht das Dach hinter dem Lauf-Ende auf der Balkenseite weiter, läuft der Balken um
+      // seine Stärke weiter – sonst bliebe in der Ecke ein Quadrat ohne Balken (Stufe). Außenecken überlappen ohnehin
+      const [ra, rb] = roofRun(A, e), w = e.at - e.n * F.T / 2;
+      const cov = (t) => { const [u, v] = e.ax === 'u' ? [w, t] : [t, w]; return A.sub(roofSubOf(u), roofSubOf(v)); };
+      const endA = Math.abs(e.a - ra) < 1e-6, endB = Math.abs(e.b - rb) < 1e-6, inA = endA && cov(ra - 0.01), inB = endB && cov(rb + 0.01);
+      const a0 = inA ? e.a - F.T : e.a, b0 = inB ? e.b + F.T : e.b;
+      // sichtbare Seite: bei n < 0 die Innenseite (zum Dach hin) – sie endet genau dort, wo der andere Balken beginnt (Nutzer wählte C):
+      // an Außenecken um die Stärke kürzer, an Innenecken um die Stärke länger. Bei n > 0 die Außenseite: endet an der Lauf-Ecke
+      const fa = e.n < 0 && endA ? e.a + (inA ? -F.T : F.T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? F.T : -F.T) : e.b;
+      if (fb > fa) poly([at(hi2, fa, H - F.BH), at(hi2, fb, H - F.BH), at(hi2, fb, H), at(hi2, fa, H)], e.ax === 'u' ? F.sU : F.sV);
+      poly([at(lo, a0, H), at(hi2, a0, H), at(hi2, b0, H), at(lo, b0, H)], F.top, F.top, 0.3);
+    } };
+    // Balken über Pfosten mitten unterm Dach, in beide Richtungen bis zum Rand – nur wo wirklich ein Pfosten steht (Nutzer, 09.10.2026:
+    // „sonst bleibt es bei den dünnen“). Gleiche Stärke wie die Randbalken, die Latten liegen darunter eingelassen
+  const drawInnerFrame = F => {
+      for (const [ax, at] of roofInnerBeams(A, x, y)) for (const [ua, ub, va, vb] of quads) {
+        const t = F.T;
+        if (ax === 'u') {                                                // Balken längs u (v = at)
+          const v0 = Math.max(va, at - t / 2), v1 = Math.min(vb, at + t / 2);
+          if (v1 <= v0) continue;
+          poly([P(ua, v1, H - F.BH), P(ub, v1, H - F.BH), P(ub, v1, H), P(ua, v1, H)], F.sV);
+          poly([P(ua, v0, H), P(ub, v0, H), P(ub, v1, H), P(ua, v1, H)], F.top, F.top, 0.3);
+        } else {                                                         // Balken längs v (u = at)
+          const u0 = Math.max(ua, at - t / 2), u1 = Math.min(ub, at + t / 2);
+          if (u1 <= u0) continue;
+          poly([P(u1, va, H - F.BH), P(u1, vb, H - F.BH), P(u1, vb, H), P(u1, va, H)], F.sU);
+          poly([P(u0, va, H), P(u1, va, H), P(u1, vb, H), P(u0, vb, H)], F.top, F.top, 0.3);
+        }
+      }
+    };
+  const F = ROOF_FRAME[form];
+  if (form === 'glas') {                                                // Stahlrahmen, darauf Glas mit Stahlbögen
+    drawInnerFrame(F); drawFrame(F);
     for (const q of quads) poly(corners(q), S.glass);
-    ribs(0.25, hAt, S.rib, 0.7);
-  } else if (form === 'markise') {
+    // Stahlbögen in beide Richtungen, alle 0,25 Felder, überall gleich – keine halben Bögen an Ecken (Nutzer wählte A, 09.10.2026)
+    for (const [ua, ub, va, vb] of quads) {
+      for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) line([P(u, va, hAt(u, va)), P(u, vb, hAt(u, vb))], S.rib, 0.7);
+      for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) line([P(ua, v, hAt(ua, v)), P(ub, v, hAt(ub, v))], S.rib, 0.7);
+    }
+  } else if (form === 'markise') {                                      // schlanker Rahmen, darüber der Stoff (Zackenrand hängt über den Rahmen)
+    drawInnerFrame(F); drawFrame(F);
     const cols = [MARKISE_COLS[(r && r.col) || 0].c, '#fffaf0'];
     for (const q of quads) { const c = cols[Math.floor(A.dist((q[0] + q[1]) / 2, (q[2] + q[3]) / 2, 2, true) / ROOF_STRIPE) % 2]; poly(corners(q), c, c, 0.35); }
   } else if (form === 'pergola') {
     // Randbalken als Kanthölzer (Entwurf D): Außenseite genau auf der Dachkante, Stärke PERG_T nach innen, Höhe PERG_BH unter H;
     // sichtbar die Seite zum Betrachter (+u dunkler, +v heller) und die Oberseite – an Ecken laufen sie zusammen (keine Kerbe, kein Kreuz)
-    const beams = edges.map(e => ({ e, k: e.at + (e.a + e.b) / 2 })).sort((p, q) => p.k - q.k);
-    const drawBeams = () => { for (const { e } of beams) {
-      const inn = e.at - e.n * PERG_T, lo = Math.min(e.at, inn), hi2 = Math.max(e.at, inn);
-      const at = (w, t, up) => e.ax === 'u' ? P(w, t, up) : P(t, w, up);
-      // Innenecke (Ring mit offener Mitte, Nutzer): geht das Dach hinter dem Lauf-Ende auf der Balkenseite weiter, läuft der Balken um
-      // seine Stärke weiter – sonst bliebe in der Ecke ein Quadrat ohne Balken (Stufe). Außenecken überlappen ohnehin
-      const [ra, rb] = roofRun(A, e), w = e.at - e.n * PERG_T / 2;
-      const cov = (t) => { const [u, v] = e.ax === 'u' ? [w, t] : [t, w]; return A.sub(roofSubOf(u), roofSubOf(v)); };
-      const endA = Math.abs(e.a - ra) < 1e-6, endB = Math.abs(e.b - rb) < 1e-6, inA = endA && cov(ra - 0.01), inB = endB && cov(rb + 0.01);
-      const a0 = inA ? e.a - PERG_T : e.a, b0 = inB ? e.b + PERG_T : e.b;
-      // sichtbare Seite: bei n < 0 die Innenseite (zum Dach hin) – sie endet genau dort, wo der andere Balken beginnt (Nutzer wählte C):
-      // an Außenecken um die Stärke kürzer, an Innenecken um die Stärke länger. Bei n > 0 die Außenseite: endet an der Lauf-Ecke
-      const fa = e.n < 0 && endA ? e.a + (inA ? -PERG_T : PERG_T) : e.a, fb = e.n < 0 && endB ? e.b + (inB ? PERG_T : -PERG_T) : e.b;
-      if (fb > fa) poly([at(hi2, fa, H - PERG_BH), at(hi2, fb, H - PERG_BH), at(hi2, fb, H), at(hi2, fa, H)], e.ax === 'u' ? '#6f4529' : '#8a5a3a');
-      poly([at(lo, a0, H), at(hi2, a0, H), at(hi2, b0, H), at(lo, b0, H)], '#9c6a45', '#9c6a45', 0.3);
-    } };
+    const drawBeams = () => drawFrame(F);
     // Latten als Gitter in beiden Richtungen, alle 0,25 Felder, überall gleich (Nutzer wählte B), fein und zwischen den Randbalken
     // eingelassen, oben knapp unter deren Oberkante (Nutzer wählte C, 09.10.2026: nichts steht über) – erst die Latten, dann die Balken davor
     const inset = PERG_T, lh = H - 0.5, lw2 = 0.7;
@@ -190,24 +224,7 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       for (let u = Math.ceil(ua / 0.25 - 1e-6) * 0.25; u < ub - 1e-6; u += 0.25) lath(u, va, u, vb);
       for (let v = Math.ceil(va / 0.25 - 1e-6) * 0.25; v < vb - 1e-6; v += 0.25) lath(ua, v, ub, v);
     } };
-    // Balken über Pfosten mitten unterm Dach, in beide Richtungen bis zum Rand – nur wo wirklich ein Pfosten steht (Nutzer, 09.10.2026:
-    // „sonst bleibt es bei den dünnen“). Gleiche Stärke wie die Randbalken, die Latten liegen darunter eingelassen
-    const drawInner = () => {
-      for (const [ax, at] of roofInnerBeams(A, x, y)) for (const [ua, ub, va, vb] of quads) {
-        const t = PERG_T;
-        if (ax === 'u') {                                                // Balken längs u (v = at)
-          const v0 = Math.max(va, at - t / 2), v1 = Math.min(vb, at + t / 2);
-          if (v1 <= v0) continue;
-          poly([P(ua, v1, H - PERG_BH), P(ub, v1, H - PERG_BH), P(ub, v1, H), P(ua, v1, H)], '#8a5a3a');
-          poly([P(ua, v0, H), P(ub, v0, H), P(ub, v1, H), P(ua, v1, H)], '#9c6a45', '#9c6a45', 0.3);
-        } else {                                                         // Balken längs v (u = at)
-          const u0 = Math.max(ua, at - t / 2), u1 = Math.min(ub, at + t / 2);
-          if (u1 <= u0) continue;
-          poly([P(u1, va, H - PERG_BH), P(u1, vb, H - PERG_BH), P(u1, vb, H), P(u1, va, H)], '#6f4529');
-          poly([P(u0, va, H), P(u1, va, H), P(u1, vb, H), P(u0, vb, H)], '#9c6a45', '#9c6a45', 0.3);
-        }
-      }
-    };
+    const drawInner = () => drawInnerFrame(F);
     drawLaths(); drawInner(); drawBeams();
     for (const q of quads) {
       const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 3);
@@ -216,17 +233,18 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       g.fillStyle = C(S.leaf[i % 3]); g.beginPath(); g.ellipse(p[0], p[1], 1.7 * lw, 1.1 * lw, 0, 0, 7); g.fill();
       if (i % 4 === 0) { g.fillStyle = C(S.flower[(i >> 2) % 4]); g.beginPath(); g.arc(p[0] + 0.7 * lw, p[1] - 0.5 * lw, 0.75 * lw, 0, 7); g.fill(); }
     }
-  } else if (form === 'arkaden') {
-    for (const q of quads) { const c = corners(q, 3); poly(c, S.top, S.top, 0.4); }
+  } else if (form === 'arkaden') {                                      // Steinplatten, darum der Steinbalken (Rahmen), Bögen darunter (Ränder)
+    for (const q of quads) { const c = corners(q); poly(c, S.top, S.top, 0.4); }
     for (const [ua, ub, va, vb] of quads) {                               // Steinfugen alle ½ Feld (an der Vorderkante des Vierecks)
-      if (Math.abs(ub * 2 - Math.round(ub * 2)) < 1e-6) line([P(ub, va, H + 3), P(ub, vb, H + 3)], S.side, 0.4);
-      if (Math.abs(vb * 2 - Math.round(vb * 2)) < 1e-6) line([P(ua, vb, H + 3), P(ub, vb, H + 3)], S.side, 0.4);
+      if (Math.abs(ub * 2 - Math.round(ub * 2)) < 1e-6) line([P(ub, va, H), P(ub, vb, H)], S.side, 0.4);
+      if (Math.abs(vb * 2 - Math.round(vb * 2)) < 1e-6) line([P(ua, vb, H), P(ub, vb, H)], S.side, 0.4);
     }
+    drawInnerFrame(F); drawFrame(F);
   }
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
-    if (form === 'glas') { line([pt(e.a, H), pt(e.b, H)], S.rib, 0.9); continue; }
+    if (form === 'glas') continue;                                        // Rand: der Stahlrahmen
     if (!front) continue;
     if (form === 'markise') {
       const cols = [MARKISE_COLS[(r && r.col) || 0].c, '#fffaf0'], n = Math.max(1, Math.round((e.b - e.a) / 0.12));
@@ -241,11 +259,10 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       for (let k = 0; k <= n; k++) {
         const t = e.a + (e.b - e.a) * k / n, j = Math.max(0, springs.findIndex((s, i) => i < springs.length - 1 && t >= s - 1e-9 && t <= springs[i + 1] + 1e-9));
         const s0 = springs[j], s1 = springs[j + 1] != null ? springs[j + 1] : s0 + 1, f = s1 - s0 > 1e-6 ? (t - s0) / (s1 - s0) : 0;
-        arch.push(pt(t, H - 9 + 7 * Math.sin(Math.PI * Math.min(1, Math.max(0, f)))));
+        arch.push(pt(t, H - F.BH - 7 + 5.5 * Math.sin(Math.PI * Math.min(1, Math.max(0, f)))));   // Bogen unter dem Steinbalken
       }
-      poly([...arch, pt(e.b, H), pt(e.a, H)], e.ax === 'v' ? S.side : S.stone);
+      poly([...arch, pt(e.b, H - F.BH), pt(e.a, H - F.BH)], e.ax === 'v' ? S.side : S.stone);
       line(arch, S.dark, 0.6);
-      poly([pt(e.a, H), pt(e.b, H), pt(e.b, H + 3), pt(e.a, H + 3)], e.ax === 'v' ? S.dark : S.side);
     }
   }
 }
@@ -258,7 +275,7 @@ function roofSig(x, y, r) {
   const reach = roofForm(r) === 'markise' ? 3 : 1, cov = roofCov(r);
   let s = (r.form || 0) + ':' + (r.col || 0) + ':';
   for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) s += cov(x + dx, y + dy) ? 1 : 0;
-  if (roofForm(r) === 'pergola') s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
+  s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
   if (roofForm(r) === 'arkaden') {                                      // Bögen hängen an den Stützen des ganzen Laufs
     const A = roofArea(cov);
     for (const e of roofEdges(A, x, y)) if (e.n > 0) { const [a, b] = roofRun(A, e); s += '|' + a.toFixed(2) + ',' + b.toFixed(2) + ':' + roofPillarsOn(e, a, b).map(t => t.toFixed(2)).join(','); }
@@ -450,7 +467,7 @@ function roofInnerBeams(A, x, y) {
     if (ds) ds.forEach((d, i) => {
       if (!d || d.b !== 'stuetze') return;
       const [pu, pv] = pillarPos(tx, ty, i, d);
-      if (A.dist(pu, pv) <= PERG_T * 1.5) return;                        // am Rand: trägt der Randbalken
+      if (A.dist(pu, pv) <= 0.15) return;                                  // am Rand: trägt der Randbalken
       if (Math.abs(pv - y) <= 0.5 + PERG_T && clear(pu, pv, x, pv)) out.set('u' + pv.toFixed(3), ['u', pv]);
       if (Math.abs(pu - x) <= 0.5 + PERG_T && clear(pu, pv, pu, y)) out.set('v' + pu.toFixed(3), ['v', pu]);
     });
@@ -463,7 +480,7 @@ function roofInnerBeams(A, x, y) {
 function pillarPos(x, y, i, d) { const [u, v] = slotPos(x, y, i, d); return pillarSnap(x + u, y + v); }
 // Dicke Pfosten (Pergola, Arkaden) bündig: um ihre halbe Breite nach innen unters Dach, damit ihre Außenseiten genau unter der Kante
 // liegen (Nutzer: „bündig“) – sonst stünde die Hälfte über die Kante hinaus. Nur zum Zeichnen; Bögen rechnen mit der Kante.
-const PILLAR_HALF = { pergola: PERG_T / 2, arkaden: 0.1 };
+const PILLAR_HALF = Object.fromEntries(Object.entries(ROOF_FRAME).map(([k, F]) => [k, F.T / 2]));   // Pfosten so stark wie der Rahmen
 function pillarInset(pu, pv, form) {
   const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id];
   if (!h) return [pu, pv];
@@ -486,21 +503,11 @@ function pillarForm(x, y, u, v) {
 }
 // Stütze zeichnen (drawObject 'stuetze'): Fuß bei (cx, cy), Höhe genau bis unters Dach
 function drawPillar(cx, cy, z, form) {
-  const f = (DECO_LOOKS.dach.forms[form] || DECO_LOOKS.dach.forms[0]).id, H = ROOF_H;
-  if (f === 'arkaden') {
-    const w = 3.2;
-    box(cx, cy, w * z, w * 0.5 * z, 2 * z, '#c8b896', null, 0);
-    box(cx, cy - 2 * z, w * 0.8 * z, w * 0.4 * z, (H - 4) * z, '#dccfb4', null, 0);
-    box(cx, cy - (H - 2) * z, w * z, w * 0.5 * z, 2 * z, '#e8dec9', null, 0);
-  } else if (f === 'glas') {
-    box(cx, cy, 2.4 * z, 1.2 * z, 0.8 * z, '#7a838c', null, 0);
-    g.strokeStyle = C('#56606b'); g.lineWidth = 1.3 * z; g.lineCap = 'butt'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - H * z); g.stroke();
-  } else if (f === 'markise') {
-    g.strokeStyle = C('#efe9dc'); g.lineWidth = 1.3 * z; g.lineCap = 'butt'; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - (H - 0.6) * z); g.stroke();   // endet unter der Dachkante
-    circle(cx, cy - (H - 1.4) * z, 0.8 * z, C('#d9c9b8'));
-  } else {
-    box(cx, cy, PERG_T * TW / 2 * z, PERG_T * TH / 2 * z, (H - PERG_BH) * z, '#8a5a3a', null, 0);   // so stark wie der Randbalken, trägt ihn
-  }
+  const f = (DECO_LOOKS.dach.forms[form] || DECO_LOOKS.dach.forms[0]).id, F = ROOF_FRAME[f], H = ROOF_H, a = F.T * TW / 2 * z, b = F.T * TH / 2 * z;
+  if (f === 'arkaden') {                                                 // Steinpfeiler mit Sockel; oben trägt der Steinbalken
+    box(cx, cy, a * 1.25, b * 1.25, 1.6 * z, '#c8b896', null, 0);
+    box(cx, cy - 1.6 * z, a, b, (H - F.BH - 1.6) * z, F.post, null, 0);
+  } else box(cx, cy, a, b, (H - F.BH) * z, F.post, null, 0);            // so stark wie der Rahmen, trägt ihn bündig
 }
 // Vorschaubild (Leiste, Kunstakademie): ein Feld Weg mit Dach und vier Stützen
 function drawRoofIcon(cx, cy, z, form = 0, col = 0) {
