@@ -1119,6 +1119,13 @@ function groupPreview(z) {
       continue;
     }
     const x = ox + P.dx, y = oy + P.dy;
+    if (it.kind === 'roof') {                                          // Überdachung: Fläche oben in Dachhöhe, braun gestrichelt (Block 138)
+      const c = [[-RW, -RW], [RW, -RW], [RW, RW], [-RW, RW]].map(([a, b]) => { const q = toScreen(x + a, y + b); return [q.x, q.y - ROOF_H * z]; });
+      g.beginPath(); c.forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.closePath();
+      g.fillStyle = bad ? 'rgba(229,72,77,0.4)' : 'rgba(156,106,69,0.35)'; g.fill();
+      g.setLineDash([4 * z, 3 * z]); g.strokeStyle = bad ? '#e5484d' : '#6f4529'; g.lineWidth = 1.2 * z; g.stroke(); g.setLineDash([]);
+      continue;
+    }
     if (it.kind === 'ground') {                                        // Rasen: grüne Raute
       const c = [toScreen(x - 0.5, y - 0.5), toScreen(x + 0.5, y - 0.5), toScreen(x + 0.5, y + 0.5), toScreen(x - 0.5, y + 0.5)];
       g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();

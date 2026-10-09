@@ -263,6 +263,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
     const look = terraLook(x, y);                                       // Parkrasen, Freizeitpark-Boden ziehen mit (Block 117)
     if (look === 'park' || look === 'fz') items.push({ kind: 'ground', look, from: k, dx: x - x0, dy: y - y0 });
+    if (state.roofs.has(k)) items.push({ kind: 'roof', r: { ...state.roofs.get(k) }, from: k, dx: x - x0, dy: y - y0 });   // Überdachung zieht mit (Block 138)
   }
   for (const [k, e] of state.edges) {                                    // Hecken, Zäune, Mauern im Rechteck und auf seinem Rand
     const [mx, my] = edgeMid(k);
@@ -277,6 +278,7 @@ function pickUpGroup(x0, y0, x1, y1) {
   for (const it of items) {
     if (it.kind === 'tile') state.tiles.delete(it.from);
     else if (it.kind === 'ground') state.terra.set(it.from, 'grass');
+    else if (it.kind === 'roof') { state.roofs.delete(it.from); roofDirty(...keyXY(it.from)); groundVersion++; }
     else if (it.kind === 'edge') state.edges.delete(it.from);
     else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
   }
@@ -310,7 +312,7 @@ const SLOT_UV = i => i < 4 ? [i & 1 ? 1 : -1, i & 2 ? 1 : -1] : MID_SIDE[i - 4];
 function groupPlaced(it) {
   const r = moving.r || 0;
   if (!r) return it.kind === 'edge' ? { mx: it.mx, my: it.my, e: it.e } : it.kind === 'deco' ? { dx: it.dx, dy: it.dy, d: it.d, slot: it.from[1] } : it;
-  if (it.kind === 'ground') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy }; }
+  if (it.kind === 'ground' || it.kind === 'roof') { const [dx, dy] = grot(it.dx, it.dy); return { dx, dy, r: it.r }; }
   if (it.kind === 'edge') { const [mx, my] = grot(it.mx, it.my); return { mx, my, e: it.e }; }
   if (it.kind === 'deco') {
     const d = it.d, slot = it.from[1];
@@ -344,6 +346,13 @@ function groupErrors(hx, hy) {
       if (!ownedTile(x, y)) err = notMine(x, y);
       else if (terrainAt(x, y) !== 'grass') err = it.look === 'fz' ? 'Freizeitpark-Boden nur auf Wiese' : 'Parkrasen nur auf Wiese';
       else if (ot && !(it.look === 'fz' ? fzOk(ot.b) : parkOk(ot.b))) err = 'Hier steht ein Gebäude';
+    } else if (it.kind === 'roof') {                                     // Überdachung (Block 138): eigenes Land, kein Gebäude, kein anderes Dach
+      const x = ox + P.dx, y = oy + P.dy, k = x + ',' + y, ot = state.tiles.get(COVER.get(k) || k);
+      if (!ownedTile(x, y)) err = notMine(x, y);
+      else if (state.roofs.has(k)) err = 'Hier ist schon eine Überdachung';
+      else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
+      else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
+      else if (!roofOver(ot)) err = 'Nicht über Gebäude';
     } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true });
     else {
       const x = ox + P.dx, y = oy + P.dy, b = P.t.b;
@@ -369,9 +378,11 @@ function dropGroup(hx, hy) {
     addCost(moving.cost, -1);
   }
   const now = performance.now();
-  for (const it of [...moving.items].sort((p, q) => (p.kind === 'ground' ? 0 : 1) - (q.kind === 'ground' ? 0 : 1))) {   // erst der Rasen, dann was darauf steht
+  const order = k => k === 'ground' ? 0 : k === 'roof' ? 2 : 1;            // erst der Rasen, dann was darauf steht, zuletzt die Dächer
+  for (const it of [...moving.items].sort((p, q) => order(p.kind) - order(q.kind))) {
     const P = groupPlaced(it);
     if (it.kind === 'ground') { state.terra.set((ox + P.dx) + ',' + (oy + P.dy), it.look); continue; }
+    if (it.kind === 'roof') { state.roofs.set((ox + P.dx) + ',' + (oy + P.dy), { ...P.r }); roofDirty(ox + P.dx, oy + P.dy); groundVersion++; continue; }
     if (it.kind === 'edge') { state.edges.set(edgeAtMid(ox + P.mx, oy + P.my), { ...P.e, born: now }); continue; }
     const k = (ox + P.dx) + ',' + (oy + P.dy);
     if (it.kind === 'tile') {
@@ -409,6 +420,7 @@ function copyClone(it) {
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt
   else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }
+  else if (it.kind === 'roof') c.r = { ...it.r };
   return c;
 }
 function copyCollect(x0, y0, x1, y1) {
@@ -426,6 +438,7 @@ function copyCollect(x0, y0, x1, y1) {
     (decosAt(k) || []).forEach((d, slot) => { if (d) { if (ITEMS[d.b].gift) stays++; else items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); } });
     const look = terraLook(x, y);
     if (look === 'park' || look === 'fz') items.push({ kind: 'ground', look, from: k, dx: x - x0, dy: y - y0 });
+    if (state.roofs.has(k)) items.push({ kind: 'roof', r: state.roofs.get(k), from: k, dx: x - x0, dy: y - y0 });   // Überdachung (Block 138)
   }
   for (const [k, e] of state.edges) {
     const [mx, my] = edgeMid(k);
@@ -439,6 +452,7 @@ function copyCost(items) {
   for (const it of items) {
     if (it.kind === 'tile') { const { money, ...mat } = copyTileCost(it.t); add(money, mat); } else if (it.kind === 'deco') add(ITEMS[it.d.b].cost, ITEMS[it.d.b].mat);
     else if (it.kind === 'edge') { add(ITEMS[it.e.b].cost, ITEMS[it.e.b].mat); if (it.e.arch && ARCHES[it.e.arch]) add(ARCHES[it.e.arch].cost); }   // Tor-/Rosenbogen kostet extra
+    else if (it.kind === 'roof') add(ITEMS.dach.cost, ITEMS.dach.mat);
     else add((it.look === 'fz' ? ITEMS.fzboden : ITEMS.parkrasen).cost, null);
   }
   return c;
@@ -537,6 +551,7 @@ function cancelMove() {
   if (moving.copy) { moving = null; $('rot-btn').hidden = true; undoPending = null; return; }   // Kopie (Block 134): nichts zurückzulegen
   for (const it of carried()) {
     if (it.kind === 'ground') state.terra.set(it.from, it.look);
+    else if (it.kind === 'roof') { state.roofs.set(it.from, it.r); roofDirty(...keyXY(it.from)); groundVersion++; }
     else if (it.kind === 'edge') state.edges.set(it.from, it.e);
     else if (it.kind === 'deco') {
       const [k, slot] = it.from;

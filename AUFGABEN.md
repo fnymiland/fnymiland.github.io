@@ -1835,6 +1835,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       A: Stützen kommen mit. Nach dem Ziehen (runPlan) bzw. Tippen bekommt jede Außenecke der neuen Fläche eine Stütze, wo im Umkreis
       0,15 keine steht – gratis (`free`, Abreißen gibt nichts), frei versetz-/entfernbar, ↶ nimmt sie mit dem Dach. Nur Außenecken.
       `roofAutoPillars`. Texte angepasst. Test: dach. Bild tools/vorschau/stuetzen-kommen-mit.png
+      Nutzer: „beim Kopieren/Verschieben nimmt er nur die Pfeiler“ → Gruppe kennt jetzt `kind: 'roof'` (einsammeln, drehen, prüfen,
+      Vorschau gestrichelt in Dachhöhe, absetzen nach allem anderen, abbrechen, Kopie kostet Dach, Speichern während des Tragens am
+      alten Platz). Test: dach. Bilder dach-verschieben.png, dach-verschoben.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

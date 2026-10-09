@@ -215,6 +215,28 @@ describe('Überdachungen (Block 138)', () => {
     expect(game('state.money')).toBe(m2);                                             // gratis gekommen: nichts zurück
   });
 
+  it('Verschieben und Kopieren nehmen das Dach mit, nicht nur die Stützen (Nutzer)', () => {
+    game("state.paintNew.dach = { form: 0 }; setTool('dach'); startPlan('rect', { x: 3, y: 3 }, { x: 4, y: 4 }, true); runPlan(); setTool('look')");   // 2 × 2 samt Eckstützen
+    const pillars = () => game("[...state.decos].reduce((n, [, ds]) => n + ds.filter(d => d && d.b === 'stuetze').length, 0)");
+    expect([game('state.roofs.size'), pillars()]).toEqual([4, 4]);
+    // verschieben
+    game("setTool('verschieben'); pickUpGroup(3, 3, 4, 4)");
+    expect(game('state.roofs.size')).toBe(0);                                         // angehoben
+    expect(game("JSON.parse(JSON.stringify(serialize())).roofs.length")).toBe(4);     // Speichern zwischendurch: am alten Platz
+    game("hover = { x: 11, y: 11 }; dropGroup(11, 11)");
+    expect(game('[...state.roofs.keys()].sort()')).toEqual(['10,10', '10,11', '11,10', '11,11']);
+    expect(pillars()).toBe(4);
+    // kopieren: kostet auch die Dächer, die Kopie hat Dach und Stützen
+    const cost = game('copyCost(copyCollect(10, 10, 11, 11).items).money');
+    expect(cost).toBe(4 * game('ITEMS.dach.cost') + 4 * game('ITEMS.stuetze.cost'));
+    game("setTool('look'); startCopy(10, 10, 11, 11); hover = { x: 15, y: 15 }; dropGroup(15, 15); cancelMove(); setTool('look')");
+    expect(game('[...state.roofs.keys()].filter(k => k.startsWith("14") || k.startsWith("15")).sort()')).toEqual(['14,14', '14,15', '15,14', '15,15']);
+    expect(pillars()).toBe(8);
+    // abbrechen legt das Dach zurück
+    game("setTool('verschieben'); pickUpGroup(14, 14, 15, 15); cancelMove(); setTool('look')");
+    expect(game("state.roofs.has('14,14')")).toBe(true);
+  });
+
   it('Speichern und Laden; unbekannte Werte fallen weg', () => {
     way(row(3, 5, 5)); game("state.paintNew.dach = { form: 2, col: 1 }; state.design.add('dach:form:markise')"); roof(row(3, 5, 5));
     const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['x', {}], ['9,9', { form: 99, col: -1 }]); return [...parseSave(d).roofs]; })()");
