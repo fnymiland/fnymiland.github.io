@@ -1866,6 +1866,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Brüstung an drei Seiten, bündig: Fuß-Seite zwischen den langen). Leute oben (`roofers`): erscheinen an der Treppe, steigen
       hinauf, bummeln auf einem 1/3-Raster (`rfSpotOk`), setzen sich auf Bänke oben, gehen wieder hinunter. Test: dachtreppe.
       Szene tools/dachtreppeszene.js, Bilder dachtreppe-alle.png, dachleute-alle.png
+- [x] Nutzer: „Doppel-/Dreifach-Aufgang – kombinieren, breiter“: Dachtreppen nebeneinander in gleicher Richtung werden eine breite
+      Treppe (`roofHoles` jM/jP: Öffnung bis zur Feldgrenze, innen keine Mauer, Stufen laufen durch; jedes Feld malt auch die Treppen
+      der Nachbarn in seine Öffnung). Lochwand als Schacht bis zum Boden. Test: dachtreppe. Szene tools/breittreppe.js, Bild breit-beide.png
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

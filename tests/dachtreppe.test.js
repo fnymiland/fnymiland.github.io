@@ -77,4 +77,18 @@ describe('Treppe durch die Dachöffnung (Block 138d)', () => {
     for (let i = 0; i < 40 && !gone; i++) gone = game('(() => { for (let i = 0; i < 100; i++) stepRoofers(0.05); return roofers.length === 0; })()');
     expect(gone).toBe(true);
   });
+  it('nebeneinander in gleicher Richtung: eine breite Treppe – Öffnungen gehen ineinander über, innen keine Mauer (Nutzer)', () => {
+    roof(rect(3, 9, 3, 9));
+    game("buildRot = 0; for (const x of [5, 6, 7]) build('dachtreppe', x, 6)");
+    const hs = game("[5, 6, 7].map(x => roofHoles(x, 6).find(h => Math.abs(h.mu - x) < 1e-9))");
+    expect(hs.map(h => [h.jM, h.jP])).toEqual([[false, true], [true, true], [true, false]]);
+    expect(hs.map(h => [h.u0, h.u1])).toEqual([[4.7, 5.5], [5.5, 6.5], [6.5, 7.3]]);   // durchgehend von 4,7 bis 7,3
+    expect(game('[5.45, 5.55].every(u => inHole(roofHoles(6, 6).concat(roofHoles(5, 6)), u, 6.5))')).toBe(true);   // zwischen zwei Treppen: offen
+    game("buildRot = 2; build('dachtreppe', 4, 4)");                                   // andere Richtung: eigene Treppe
+    expect(game("roofHoles(4, 4).find(h => h.rot === 2).jP")).toBe(false);
+    const before = game('roofSig(6, 6, roofAt(6, 6))');
+    game("demolish(7, 6)");
+    expect(game('roofSig(6, 6, roofAt(6, 6))')).not.toBe(before);                  // Nachbar weg: wieder schmal (neues Bild)
+    expect(() => game("(() => { cam = state.cam; cam.z = 2.5; const p = iso(6, 6); cam.x = p.x; cam.y = p.y; render(1e6); })()")).not.toThrow();
+  });
 });
