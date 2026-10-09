@@ -1844,6 +1844,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       Glas zuerst: Stahlrahmen 0,03, Bögen in beide Richtungen überall gleich (Nutzer wählte A aus glas-varianten.png). Bild glas-nah2.png
 - [x] Steinarkaden: massives Dach (`solid`) – Innenseiten der Steinbalken und innere Balken liegen unter den bündigen Platten
       (vorher Rinne am hinteren Rand, Klötzchen an der Hof-Ecke, Rillen über inneren Pfeilern). Bilder stein-nah.png → stein-nah2.png
+- [x] Steinarkaden-Dach (Nutzer: Ziegel, Terrasse, Gewölbe … gefielen nicht): Dachgarten (Standard) oder Belag mit Wegmuster und
+      -farbe (`r.bel`, Weg-Stilname, `roofBel`; Wahl im Dach-Fenster per `wegPickHtml`, ohne Trittsteine). Test: dach. Szene
+      tools/dachbelag.js, Bilder arkaden-belag-alle.png, arkaden-belag-nah.png
 - [ ] Markise nach dem Modell durchgehen
       Bild tools/vorschau/dach-buendig.png
 

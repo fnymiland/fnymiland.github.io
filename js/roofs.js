@@ -121,6 +121,10 @@ function roofPillarsOn(e, a, b) {
   }
   return out;
 }
+// Steinarkaden: Belag auf dem Dach (Weg-Stilname) statt Dachgarten – Trittsteine gibt es oben nicht
+const roofBel = r => r && typeof r.bel === 'string' && isWegStyle(r.bel) && !pathLook(r.bel).stones ? r.bel : null;
+// Belag beim Umschalten: ein Plattenmuster, das man schon hat, in Steinfarbe (sonst glatt)
+const roofBelDefault = () => wegStyleOf(['verband', 'reihen', 'drittel', 'platten', 'gemischt', 'schach'].find(m => wegMusterOk(m)) || 'glatt', 'beige');
 const roofProf = (d, A) => A * Math.sin(Math.PI / 2 * Math.min(1, d / RW));
 
 // Ein Feld malen. P(u, v, up) → Bildpunkt (Weltkoordinaten); lw: Strichstärke-Faktor. Nur die Teilstücke dieses Felds und seine
@@ -233,13 +237,25 @@ function paintRoof(P, A, x, y, r, lw = 1) {
       g.fillStyle = C(S.leaf[i % 3]); g.beginPath(); g.ellipse(p[0], p[1], 1.7 * lw, 1.1 * lw, 0, 0, 7); g.fill();
       if (i % 4 === 0) { g.fillStyle = C(S.flower[(i >> 2) % 4]); g.beginPath(); g.arc(p[0] + 0.7 * lw, p[1] - 0.5 * lw, 0.75 * lw, 0, 7); g.fill(); }
     }
-  } else if (form === 'arkaden') {                                      // Steinplatten, darum der Steinbalken (Rahmen), Bögen darunter (Ränder)
-    for (const q of quads) { const c = corners(q); poly(c, S.top, S.top, 0.4); }
-    for (const [ua, ub, va, vb] of quads) {                               // Steinfugen alle ½ Feld (an der Vorderkante des Vierecks)
-      if (Math.abs(ub * 2 - Math.round(ub * 2)) < 1e-6) line([P(ub, va, H), P(ub, vb, H)], S.side, 0.4);
-      if (Math.abs(vb * 2 - Math.round(vb * 2)) < 1e-6) line([P(ua, vb, H), P(ub, vb, H)], S.side, 0.4);
+  } else if (form === 'arkaden' && roofBel(r)) {                      // Belag (Nutzer, 09.10.2026: „ein Muster aufm Dach“): Muster und Farbe der
+    const lk = lookFar(pathLook(roofBel(r)), lw), L = ([u, v]) => P(x + u, y + v, H);   // Wege, im selben Weltraster – läuft über Feldgrenzen weiter
+    const loc = ([ua, ub, va, vb]) => [[ua - x, va - y], [ub - x, va - y], [ub - x, vb - y], [ua - x, vb - y]];
+    for (const q of quads) poly(loc(q).map(L), lk.fill, lk.fill, 0.35);
+    if (lk.pat) {
+      g.save(); clipTo(quads.map(loc), L); patSeam = true;
+      try { pattern(L, lk.pat[0], x, y, lw, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); }
     }
-    drawFrame(F);                                                         // innere Balken liegen unter den Platten (massiv)
+    drawFrame(F);
+  } else if (form === 'arkaden') {                                      // Dachgarten (Nutzer, 09.10.2026): Rasen mit Büschen und Blumen im Steinrand,
+    for (const q of quads) poly(corners(q), '#86c35b', '#86c35b', 0.4);   // massiv: Innenseiten und innere Balken liegen darunter
+    drawFrame(F);
+    for (const q of quads) {
+      const hh = hash(Math.round(q[0] * 97), Math.round(q[2] * 89), 7);
+      if (hh > 0.18 || A.dist((q[0] + q[1]) / 2, (q[2] + q[3]) / 2) < 0.12) continue;
+      const p = P((q[0] + q[1]) / 2, (q[2] + q[3]) / 2, H);
+      g.fillStyle = C(hh < 0.08 ? '#4f9a3c' : '#6fbf4f'); g.beginPath(); g.ellipse(p[0], p[1] - 1.5 * lw, 2.6 * lw, 2 * lw, 0, 0, 7); g.fill();
+      if (hh < 0.05) { g.fillStyle = C(['#f28cb1', '#ffd23f', '#ffffff'][Math.floor(hh * 60) % 3]); g.beginPath(); g.arc(p[0] + 0.8 * lw, p[1] - 2.5 * lw, 0.9 * lw, 0, 7); g.fill(); }
+    }
   }
   // Ränder
   for (const e of edges) {
@@ -273,7 +289,7 @@ const ROOF_BOX = { left: -TW / 2 - 4, top: -TH / 2 - ROOF_H - 12, w: TW + 8, h: 
 function roofCov(r) { const f = (r && r.form) || 0; return (x, y) => { const o = roofAt(x, y); return !!o && ((o.form || 0) === f); }; }
 function roofSig(x, y, r) {
   const reach = roofForm(r) === 'markise' ? 3 : 1, cov = roofCov(r);
-  let s = (r.form || 0) + ':' + (r.col || 0) + ':';
+  let s = (r.form || 0) + ':' + (r.col || 0) + ':' + (roofBel(r) || '') + ':';
   for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) s += cov(x + dx, y + dy) ? 1 : 0;
   s += '|' + roofInnerBeams(roofArea(cov), x, y).map(([a, t]) => a + t.toFixed(3)).sort().join(',');   // innere Balken
   if (roofForm(r) === 'arkaden') {                                      // Bögen hängen an den Stützen des ganzen Laufs

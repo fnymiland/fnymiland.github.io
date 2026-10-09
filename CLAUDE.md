@@ -147,7 +147,7 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 29. **Bildrate** (main.js `frameInterval`): beim Bedienen höchstens 60/s, beim Zuschauen 30/s, im Hintergrund oder nach
     2 Minuten ohne Eingabe 15/s – sonst läuft der Rechner warm (vorher 60–120/s ohne Pause). Alles, was sich bewegt,
     rechnet mit der echten Zeit (dt), nie mit „pro Bild“.
-29a. **Überdachungen** (Block 138, js/roofs.js): `state.roofs` (Feld → { form, col }) ist eine Fläche aus 3 × 3 Teilstücken je
+29a. **Überdachungen** (Block 138, js/roofs.js): `state.roofs` (Feld → { form, col, bel }) ist eine Fläche aus 3 × 3 Teilstücken je
     Feld (`roofArea`: `sub`, `dist`) – neue Formen/Teile nur über diese Teilstücke zeichnen, nie über Feldgrenzen hinaus (sonst
     überlappen Nachbarn). Stützen setzt der Nutzer (`stuetze`, Platz 0,42 = `RW` = Dachkante); das Spiel stellt nie selbst welche.
     Bildchen je Feld (`roofSprites`, Schlüssel `roofSig`): wer etwas ändert, das die Nachbarschaft betrifft, ruft `roofDirty`.

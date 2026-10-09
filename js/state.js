@@ -134,7 +134,7 @@ function serialize() {
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
-    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
+    decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}), ...(r.bel ? { bel: r.bel } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
 
@@ -317,6 +317,7 @@ function parseSave(d) {
       const o = {}, f = r && +r.form, c = r && +r.col;
       if (Number.isInteger(f) && f > 0 && f < DECO_LOOKS.dach.forms.length) o.form = f;
       if (Number.isInteger(c) && c > 0 && c < MARKISE_COLS.length) o.col = c;
+      if (r && typeof r.bel === 'string' && isWegStyle(r.bel)) o.bel = r.bel;   // Belag der Steinarkaden
       return [k, o];
     })),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,

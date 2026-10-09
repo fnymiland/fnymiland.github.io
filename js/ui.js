@@ -1245,6 +1245,7 @@ function roofInfoHtml(x, y) {
     ${n > 1 ? `<div class="looks">${sc('one', 'Nur dieses Feld')}${sc('run', `Alle verbundenen (${n})`)}</div>` : ''}
     <div class="looks look-forms">${lookFree('dach', 'form').map(([f, i]) => `<button class="look look-form${i === form ? ' on' : ''}" data-roofform="${i}" aria-label="Form: ${f.name}"><img alt="" src="${lookThumb('dach', i, col) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     ${roofForm(r) === 'markise' ? `<div class="label">Markisenfarbe</div><div class="swatches">${lookFree('dach', 'col').map(([c, i]) => `<button class="sw${i === col ? ' on' : ''}" data-roofcol="${i}" style="background:${c.c}" title="${c.name}" aria-label="Farbe: ${c.name}"></button>`).join('')}</div>` : ''}
+    ${roofForm(r) === 'arkaden' ? `<div class="label">Dach</div><div class="looks">${[['', 'Dachgarten'], [roofBel(r) || roofBelDefault(), 'Belag']].map(([v, n]) => `<button class="look${!v === !roofBel(r) ? ' on' : ''}" data-roofbel="${escHtml(v)}">${n}</button>`).join('')}</div>${roofBel(r) ? wegPickHtml(roofBel(r), 'roofbel', true) : ''}` : ''}
     ${more ? `<div class="looks"><button class="look art-more" data-roofmore="1">🎨 ${more} weitere Formen und Farben freischalten ›</button></div>` : ''}
     <p class="muted">An die Außenecken kommen Stützen gleich mit. Weitere stellst du selbst: Stütze (Gestalten → Überdachungen) an Ecken, Seitenmitten oder zwischen vier Felder; mit 🧹 entfernen.</p>`;
 }
@@ -1267,6 +1268,7 @@ function wireRoofInfo(el, x, y, reopen = () => openInfo(x, y)) {
   for (const b of el.querySelectorAll('[data-roofscope]')) b.onclick = () => { roofScope = b.dataset.roofscope; reopen(); };
   for (const b of el.querySelectorAll('[data-roofform]')) b.onclick = () => { set('form', +b.dataset.roofform); reopen(); };
   for (const b of el.querySelectorAll('[data-roofcol]')) b.onclick = () => { set('col', +b.dataset.roofcol); reopen(); };
+  for (const b of el.querySelectorAll('[data-roofbel]')) b.onclick = () => { set('bel', b.dataset.roofbel); reopen(); };   // Steinarkaden: Dachgarten oder Belag
   const m = el.querySelector('[data-roofmore]');
   if (m) m.onclick = () => { closePanel(); openResearch('design'); artJump(DECO_LOOKS.dach.group); };
 }

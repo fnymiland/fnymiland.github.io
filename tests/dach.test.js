@@ -244,6 +244,25 @@ describe('Überdachungen (Block 138)', () => {
     expect(game('[...parseSave({ ...JSON.parse(JSON.stringify(serialize())), roofs: undefined }).roofs].length')).toBe(0);   // alter Stand ohne Dächer
   });
 
+  it('Steinarkaden: Dachgarten oder Belag mit Wegmuster und -farbe (Nutzer); bleibt beim Speichern, Unbekanntes fällt weg', () => {
+    way(row(3, 5, 5)); game("state.paintNew.dach = { form: 3 }; state.design.add('dach:form:arkaden'); state.design.add('wegmuster:verband')"); roof(row(3, 5, 5));
+    game('openInfo(4, 5)');
+    expect(game("[...document.querySelectorAll('.looks [data-roofbel]')].map(b => b.textContent + (b.classList.contains('on') ? '*' : ''))")).toEqual(['Dachgarten*', 'Belag']);
+    game("document.querySelector('[data-roofscope=\"run\"]').click(); [...document.querySelectorAll('.looks [data-roofbel]')][1].click()");
+    expect(game("[...state.roofs.values()].map(r => r.bel)")).toEqual(['m:verband:beige', 'm:verband:beige', 'm:verband:beige']);   // Plattenmuster, das man hat, in Steinfarbe
+    expect(game("document.querySelectorAll('.wpick [data-roofbel]').length")).toBeGreaterThan(5);   // Muster und Farben wie beim Weg
+    expect(game("[...document.querySelectorAll('.wpick [data-roofbel]')].some(b => b.dataset.roofbel === 'tritt')")).toBe(false);   // keine Trittsteine auf dem Dach
+    game("document.querySelector('[data-roofbel=\"m:verband:anthrazit\"]').click()");
+    expect(game("roofAt(3, 5).bel")).toBe('m:verband:anthrazit');
+    expect(game("roofSig(3, 5, roofAt(3, 5)) !== roofSig(3, 5, { form: 3 })")).toBe(true);   // neues Bildchen
+    const back = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.roofs.push(['9,9', { form: 3, bel: 'quatsch' }]); return [...parseSave(d).roofs]; })()");
+    expect(back).toEqual([['3,5', { form: 3, bel: 'm:verband:anthrazit' }], ['4,5', { form: 3, bel: 'm:verband:anthrazit' }], ['5,5', { form: 3, bel: 'm:verband:anthrazit' }], ['9,9', { form: 3 }]]);
+    expect(game("roofBel({ form: 3, bel: 'tritt' })")).toBe(null);                   // alter Stand mit Trittsteinen: Dachgarten
+    for (const z of [2.5, 0.5]) game(`(() => { cam = state.cam; cam.z = ${z}; const p = iso(4, 5); cam.x = p.x; cam.y = p.y; render(1e6); })()`);
+    game("[...document.querySelectorAll('.looks [data-roofbel]')][0].click()");
+    expect(game("[...state.roofs.values()].some(r => 'bel' in r)")).toBe(false);     // zurück zum Dachgarten
+  });
+
   it('alle Formen zeichnen ohne Fehler – nah, weit weg, Tag und Nacht, mit Figuren darunter; Schönheit zählt', () => {
     for (let y = 4; y <= 6; y++) way(row(2, 9, y));
     const b0 = game('T.beauty');
