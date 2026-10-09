@@ -1786,6 +1786,9 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       unter dem Randbalken, der Randbalken reicht an Außenecken nur bis zur Außenseite des Pfostens (0,03), Markisenstange endet
       unter der Kante. Erst hatte ich zusätzlich das Raster und die Zacken umgebaut – Nutzer: „sieht richtig scheiße aus, du solltest
       doch nur es bündig machen“ → zurückgenommen. LEHRE: nur ändern, was der Nutzer anspricht; nichts „nebenbei verbessern“.
+      Nutzer: „wieso ist da so ein Kreuz in den Ecken“ → Randbalken ohne Überstand (enden genau an der Ecke); dicke Pfosten
+      (Pergola, Arkaden) stattdessen um ihre halbe Breite nach innen unters Dach (`pillarInset`, nur beim Zeichnen) – so liegen
+      ihre Außenseiten unter der Kante. Bild tools/vorschau/dach-buendig2.png
       Bild tools/vorschau/dach-buendig.png
 
 ## Block 139: Brücken breit und lang

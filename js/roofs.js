@@ -170,15 +170,7 @@ function paintRoof(P, A, x, y, r, lw = 1) {
   // Ränder
   for (const e of edges) {
     const pt = (t, up) => e.ax === 'u' ? P(e.at, t, up) : P(t, e.at, up), front = e.n > 0;
-    if (form === 'pergola') {                                          // Randbalken liegen auf den Pfosten, an Außenecken bündig mit seiner Außenseite
-      // nur an Außenecken: geht das Dach hinter dem Lauf-Ende nach innen weiter (Innenecke), stünde der Balken in den Gang
-      const [ra, rb] = roofRun(A, e), OV = 0.03, inner = (t, dir) => { const q = t + dir * 0.03, w = e.at - e.n * 0.03;
-        const [u, v] = e.ax === 'u' ? [w, q] : [q, w], su = 3 * Math.round(u) + (u - Math.round(u) < -RW ? -1 : u - Math.round(u) > RW ? 1 : 0), sv = 3 * Math.round(v) + (v - Math.round(v) < -RW ? -1 : v - Math.round(v) > RW ? 1 : 0);
-        return A.sub(su, sv); };
-      const a0 = Math.abs(e.a - ra) < 1e-6 && !inner(ra, -1) ? e.a - OV : e.a, b0 = Math.abs(e.b - rb) < 1e-6 && !inner(rb, 1) ? e.b + OV : e.b;
-      line([pt(a0, H), pt(b0, H)], S.beam, 1.6);
-      continue;
-    }
+    if (form === 'pergola') { line([pt(e.a, H), pt(e.b, H)], S.beam, 1.6); continue; }   // Randbalken enden genau an der Ecke (kein Kreuz)
     if (form === 'glas') { line([pt(e.a, H), pt(e.b, H)], S.rib, 0.9); continue; }
     if (!front) continue;
     if (form === 'markise') {
@@ -297,8 +289,8 @@ function drawPillarsOf(x, y, px, py, z, now) {
       if (ox !== x || oy !== y) return;
       let sc = 1;
       if (d.born) { const a = (now - d.born) / 380; if (a < 1) sc = 0.5 + 0.5 * Math.sin(a * Math.PI / 2); }
-      const u = pu - x, v = pv - y;
-      drawSmallOne('stuetze', d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, tx, ty, sc, i, 0, pillarForm(x, y, u, v));
+      const form = pillarForm(x, y, pu - x, pv - y), [qu, qv] = pillarInset(pu, pv, form), u = qu - x, v = qv - y;
+      drawSmallOne('stuetze', d.rot || 0, px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z, z, now, tx, ty, sc, i, 0, form);
     });
   }
 }
@@ -330,6 +322,16 @@ function pillarSnap(pu, pv) {
 }
 // Platz einer Stütze in Weltkoordinaten (Slot, an die Dachkante gerückt)
 function pillarPos(x, y, i, d) { const [u, v] = slotPos(x, y, i, d); return pillarSnap(x + u, y + v); }
+// Dicke Pfosten (Pergola, Arkaden) bündig: um ihre halbe Breite nach innen unters Dach, damit ihre Außenseiten genau unter der Kante
+// liegen (Nutzer: „bündig“) – sonst stünde die Hälfte über die Kante hinaus. Nur zum Zeichnen; Bögen rechnen mit der Kante.
+const PILLAR_HALF = { pergola: 0.044, arkaden: 0.1 };
+function pillarInset(pu, pv, form) {
+  const h = PILLAR_HALF[(DECO_LOOKS.dach.forms[form] || {}).id];
+  if (!h) return [pu, pv];
+  const at = (u, v) => { const r = roofAt(Math.round(u), Math.round(v)); if (!r) return false; const A = roofArea(roofCov(r)), s = w => { const k = Math.round(w), f = w - k; return 3 * k + (f < -RW ? -1 : f > RW ? 1 : 0); }; return A.sub(s(u), s(v)); };
+  const e = 0.06, du = at(pu + e, pv) && !at(pu - e, pv) ? 1 : at(pu - e, pv) && !at(pu + e, pv) ? -1 : 0, dv = at(pu, pv + e) && !at(pu, pv - e) ? 1 : at(pu, pv - e) && !at(pu, pv + e) ? -1 : 0;
+  return [pu + du * h, pv + dv * h];
+}
 // Form der Stütze: die des Dachs darüber (Feld des Platzes, am Eckpunkt eins der vier), sonst Pergola (Holzpfosten)
 function pillarForm(x, y, u, v) {
   const fx = Math.round(x + u), fy = Math.round(y + v);
