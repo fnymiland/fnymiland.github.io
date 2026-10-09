@@ -163,7 +163,9 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     umfärben“), nimmt `roofTopAll()` dazu.
     Dachtreppe (138d): die Treppe malt unter Steinarkaden das Dach (durch die Öffnung, zugeschnitten auf das Feld) – nie das
     Gebäude selbst, sonst landen Stufen eines späteren Felds über dem Dach davor. Leute oben (`roofers`) zeichnet die Dach-Schleife
-    des Felds: auf der Treppe nur durch die Öffnung, oben nach der Deko und vor der vorderen Brüstung.
+    des Felds: auf der Treppe nur durch die Öffnung, oben nach der Deko und vor der vorderen Brüstung. Was vor einer Figur auf der
+    Treppe liegt (höhere Stufen, vordere Mauern der Öffnung, auch auf dem Nachbarfeld), zeichnet `drawRoofers` danach im Bereich der
+    Figur noch einmal – bei jeder neuen Sache in der Öffnung alle vier Drehungen ansehen (Nutzer).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
