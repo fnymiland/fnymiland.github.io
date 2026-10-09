@@ -795,7 +795,7 @@ function tap(sx, sy, isTouch) {
     if (rp) { if (pickUpRoofs([rp.x + ',' + rp.y])) { hover = { x: rp.x, y: rp.y }; } return; }
   }
   const topB = tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool) ? tool : null;
-  if (!plan && topB) {                                             // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
+  if (!plan && topB && !roofDown) {                                             // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
     const tp = roofTopAt(sx, sy);
     if (tp) {
       if (isTouch && (!hover || !hover.top || hover.x !== tp.x || hover.y !== tp.y || hoverSlot !== tp.slot)) { hover = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; previewCache = null; return; }

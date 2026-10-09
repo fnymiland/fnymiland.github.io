@@ -1628,8 +1628,12 @@ function render(now) {
       if (state.roofs.size && (state.roofs.has(k) || hasPillarNear(x, y))) {   // Überdachung (Block 138): Stützen, dann Dach über den Figuren des Felds
         const topGhost = preview && preview.top && preview.small && hover && hover.x === x && hover.y === y;   // Deko oben (Block 138b): Geist auf dem Dach
         const rw = onRoof && onRoof.get(k);
+        const fade = roofFade(state.roofs.get(k));                         // beim Bauen darunter durchsichtig (Nutzer)
         const f = () => {
-          drawPillarsOf(x, y, px, py, z, now); drawRoofTile(x, y, px, py, z);
+          drawPillarsOf(x, y, px, py, z, now);
+          const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * ROOF_FADE;
+          try {
+          drawRoofTile(x, y, px, py, z);
           if (rw) drawRoofers(rw, x, y, z, now, true);                     // auf der Treppe: durch die Öffnung
           drawRoofTops(x, y, px, py, z, now);
           if (rw) drawRoofers(rw, x, y, z, now, false);                    // oben auf dem Dach
@@ -1642,6 +1646,7 @@ function render(now) {
             g.globalAlpha = 1;
           }
           drawRoofFront(x, y, px, py, z);                                 // vordere Brüstung vor allem, was oben steht
+          } finally { g.globalAlpha = a0; }
         };
         const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost || rw ? 100 * z : 0;   // Deko und Leute oben ragen übers Dach hinaus
         if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();

@@ -177,7 +177,7 @@ function setHover(sx, sy) {
   } else if (tool === 'verschieben' && !moving && !plan) {          // ✋ übers Dach: Deko oben, sonst das Dachfeld (Block 138b)
     const th = roofTopHit(sx, sy), rp = !th && !pillarAt(sx, sy) && roofPick(sx, sy);
     if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (rp) t = { x: rp.x, y: rp.y, roof: true };
-  } else if (!plan && (tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool))) {   // kleine Deko übers Steindach: oben drauf
+  } else if (!plan && !roofDown && (tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool))) {   // kleine Deko übers Steindach: oben drauf (außer „⬇ Unters Dach“)
     const tp = roofTopAt(sx, sy);
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }

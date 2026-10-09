@@ -913,6 +913,25 @@ function drawRoofFront(x, y, px, py, z) {
   if (e.fc) { const B = ROOF_BOX; g.drawImage(e.fc, px + B.left * z, py + B.top * z, B.w * z, B.h * z); return; }
   roofOps(e.front, (u, v, up = 0) => [px + (u - x - (v - y)) * TW / 2 * z, py + (u - x + v - y) * TH / 2 * z - up * z], z);
 }
+// Dächer ausblenden beim Bauen darunter (Nutzer, 09.10.2026): durchsichtig (ROOF_FADE), wenn das Werkzeug nur unter ein Dach kann
+// (Weg, Stütze, Dachtreppe, Deko, die oben nicht geht) – oder bei kleiner Deko, die auch oben ginge: unter Glas/Pergola/Markise immer,
+// unter Steinarkaden, wenn „⬇ Unters Dach“ gewählt ist (roofDown, Schalter in der Leiste)
+const ROOF_FADE = 0.25;
+let roofDown = false;
+function roofFadeTool() {                                               // was gerade gebaut bzw. getragen wird (oder null)
+  if (typeof tool === 'undefined') return null;
+  if (tool === 'verschieben') return moving && moving.kind === 'deco' ? moving.d.b : moving && moving.kind === 'tile' ? moving.t.b : null;
+  if (tool === 'look' || tool === 'abriss' || tool === 'dach' || !ITEMS[tool]) return null;
+  return tool;
+}
+function roofFade(r) {
+  const b = roofFadeTool();
+  if (!b || !r) return false;
+  if (!roofTopOk(b)) return true;                                       // kann nur unter das Dach
+  return roofForm(r) !== 'arkaden' || roofDown;
+}
+// gibt es Steinarkaden? (dann zeigt die Leiste bei kleiner Deko den Schalter oben/unten)
+const roofStoneAny = () => !!state.roofs && [...state.roofs.values()].some(r => roofForm(r) === 'arkaden');
 // alle Deko auf Dächern: [Feldschlüssel, Platz, Deko] (Schönheit, Strom, Erfolge)
 function* roofTopAll() {
   if (!state.roofs) return;

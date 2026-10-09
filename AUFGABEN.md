@@ -1909,6 +1909,11 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       nach innen, samt Ausdehnung innerhalb der Brüstung. Tests: dach, dachdeko. Offen: „Schatten-Kreis beim Baum in der unteren Ecke“
       (nicht nachgestellt – Bild vom Nutzer erbeten)
 
+- [x] Nutzer: „Ausblendefunktion für die Dächer, wenn man darunter etwas platzieren will“ → `roofFade`: Dächer zu 25 % durchsichtig,
+      wenn das Werkzeug nur unten geht (Weg, Stütze, Dachtreppe, Deko, die oben nicht darf); bei kleiner Deko unter Glas/Pergola/Markise
+      immer, unter Steinarkaden per Schalter in der Leiste „⬆ Aufs Dach / ⬇ Unters Dach“ (`roofDown`, nur wenn es Steinarkaden gibt;
+      ⬇ setzt jeden Tipp unten). Test: dachdeko
+
 ## Block 139: Brücken breit und lang
 - [x] Breit → umgesetzt als Block 151 (unten). Lang übers Meer bis zur nächsten Insel: gestrichen (Nutzer), stattdessen Block 150b
 

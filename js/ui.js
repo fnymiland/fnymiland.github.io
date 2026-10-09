@@ -564,7 +564,19 @@ document.addEventListener('pointerdown', e => {                          // dane
   if (!edgePop || ($('style-bar') && $('style-bar').contains(e.target))) return;
   edgePop = null; if (EDGE_TOOLS.has(tool)) renderStyleBar(tool);
 }, true);
+// Schalter oben/unten (Nutzer, 09.10.2026): kleine Deko, die auch aufs Steindach darf – nur, wenn es Steinarkaden gibt
 function renderStyleBar(t) {
+  renderStyleBar0(t);
+  if (!ITEMS[t] || !roofTopOk(t) || !roofStoneAny()) return;
+  const bar = $('style-bar');
+  if (bar.hidden) bar.innerHTML = '';                                    // ohne eigene Auswahl: nur der Schalter (nicht doppelt anhängen)
+  const had = bar.innerHTML.trim();
+  document.body.classList.add('has-styles');
+  bar.insertAdjacentHTML('beforeend', (had ? '<span class="style-sep"></span>' : '') + `<button class="style-chip size-chip roof-chip${roofDown ? ' on' : ''}" data-roofdown="1" aria-pressed="${roofDown}" title="${roofDown ? 'Unter das Dach bauen – Dächer durchsichtig' : 'Auf das Steindach bauen'} – tippen zum Wechseln" aria-label="${roofDown ? 'Unters Dach' : 'Aufs Dach'}"><i>${roofDown ? '⬇' : '⬆'}</i><span>${roofDown ? 'Unters Dach' : 'Aufs Dach'}</span></button>`);
+  bar.querySelector('[data-roofdown]').onclick = () => { roofDown = !roofDown; hover = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
+  bar.hidden = false;
+}
+function renderStyleBar0(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station');
   if (t === 'station') {                                         // kleiner Bahnhof: 2 oder 3 Felder lang (Block 131)
