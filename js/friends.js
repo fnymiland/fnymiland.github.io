@@ -63,8 +63,9 @@ const visitorFigs = [];
 // Startfeld: begehbar, nah am Rathaus (sonst am angegebenen Feld)
 function guestSpawn(x, y) {
   const h = townHallAt(), cx = Math.round(h ? h[0] + 1 : x), cy = Math.round(h ? h[1] + 1 : y);   // ganze Felder (ISLAND.cx ist 2,5)
-  // am liebsten vorn vor dem Rathaus (Bildschirm-unten = großes x+y), dort gern auf dem Weg (Block 97)
-  const ds = h ? doorsOf(h.join(',')) : [], best = Math.max(...ds.map(([a, b]) => a + b));
+  // am liebsten vorn vor dem Rathaus (Bildschirm-unten = großes x+y), dort gern auf dem Weg (Block 97). Rathaus oben (157j): nur, wenn eine Treppe
+  // hinaufführt (hillRegions: Gegend 0) – sonst säßen die Besucher oben fest
+  const hr = hillRegions(), ds = h ? doorsOf(h.join(',')).filter(([a, b]) => !hr || !hr.get(a + ',' + b)) : [], best = Math.max(...ds.map(([a, b]) => a + b));
   const front = ds.filter(([a, b]) => a + b >= best - 1), wegs = front.filter(([a, b]) => bAt(a, b) === 'weg');
   const pool = wegs.length ? wegs : front;
   if (pool.length) return pool[Math.floor(Math.random() * pool.length)];

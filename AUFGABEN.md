@@ -2416,3 +2416,64 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       daneben kein Anheben/Abtragen/Treppe/Rampe (`archHillError`, `archAround`). Offen: Tunneleinfahrt direkt vor dem Fuß verbindet nicht (beide
       Seiten zeigen den Prellbock – eine Schiene dazwischen legen); Linie an der Seite einer Rampe A ohne Wange steht in ihrer Wand.
 
+- [x] 157j **Stufe 3: Gebäude oben** (Nutzer 10.10.2026: „mach schritt 3 direkt“). Entscheidungen:
+      Oben erlaubt: **alle normalen Gebäude** (Häuser, Betriebe, Läden, Bildung, Strom auf Wiese – was Wasser/Ufer/Strand/Steg braucht, geht
+      oben nicht), **große Bauten** (Wunder, Kultur, Freizeitpark), **Bahnhof und Hauptbahnhof** (Züge halten oben, Linien unten ↔ oben über die
+      Gleis-Rampe), **U-Bahn-Eingang** (auf dem Tunnel unter der Anhöhe, Treppe führt durch die Anhöhe hinunter). **Tunneleinfahrt nur unten.**
+      Mehrfeld-Gebäude immer ganz oben auf einer Ebene, nie über die Kante. **Ohne Treppe:** Bauen geht, das Fenster warnt („Keine Treppe führt
+      hinauf“), Erreichbarkeit wie bei „weit weg“ (🐌 50 %, ein Zug oben hilft wie unten). **Überdachungen oben: später, eigener Block (157k).**
+      **Umgesetzt** (Ultracode-Ablauf: Regeln, Zeichnen, Bahn, Figuren parallel, dann Prüfung Logik + Bilder): `hillOk` lässt alle Gebäude oben zu
+      außer `HILL_NO` (Dächer, Dachtreppe, Stütze, Parkbahn, Seilbahn, Tunneleinfahrt, Treppe, Gleis-Rampe …) und `HILL_WET` (Ufer, Strand, Hausboot,
+      Meer, Offshore, Seebrücke); `hillError` mit eigenen Hinweisen, Mehrfeld über `sameLevel` (gilt so auch für ✋, Gruppen, Kopien, Ausbau).
+      Gelände: `hillCarryOk` (was beim Anheben/Abtragen mitkommt, die alte Stufe-2-Liste), `hillStuckOn`; Anheben unter Gebäuden gesperrt („erst mit ✋
+      wegtragen“), Abtragen nur, wenn das Gebäude mit wegkommt; ↶ bringt nie ein Gebäude über die Kante. Erreichbarkeit: `hillNoStair`, Häuser und
+      Bahnhof in Laufweite nur in derselben Gegend; Fenster `hillInfoStatus` (keine Treppe / keine Tür auf ebenen Boden), Vorschau und Toast.
+      Zeichnen: Schlagschatten oben im Bildchen der Anhöhe (`hillShadeFresh/Sig/Paint/On`), Zuschnitt an der Kante (`hillCutOf`, `hillCutClip`:
+      Garten, Büsche, Hof, Vorplatz nie in der Luft, Dächer ganz), Felder davor vorgezogen (`hillEarly`, `hillPre`), Höfe oben weit weg als Bildchen,
+      U-Bahn-Eingang in der 👁-Ansicht mit Strich vom Tunnel hinauf. Bahn: Zug in der Halle eines Hbf oben zeichnet der Hbf selbst (Boden → Zug →
+      Gebäude), kein Zug in die Halle eines Hbf auf anderer Höhe (`lineRoute`), Bahnhof länger/Hbf-Gleise nur auf der eigenen Ebene (`growLevelErr`),
+      Viertel einer Linie je Gegend (`stopViertel`), Achterbahn nur auf einer Ebene (`coasterLevelOk`), Bahnhofsfenster nennt den Grund ohne Halt
+      (`stopLevelHint`). Figuren: Wege und Ziele nur in derselben Gegend (`walkPath`, `findGoal`), `setGoal`/`meGo` suchen ab dem nächsten Feld,
+      Besucher fangen nie oben ohne Treppe an (`guestSpawn`); eine Treppe direkt vor einem Haus oben ist seine Tür. Tests: stufe3-regeln, -zeichnen,
+      -bahn, -figuren, -kritik, -pruefung und stufe3-ganz (eine Welt mit allem zusammen: Linie unten ↔ oben, U-Bahn oben ↔ unten, Bewohner,
+      Speichern/Laden, Abriss-Rechteck mit ↶, ✋-Gruppe an der Kante, Zeichnen nah/weit/nachts/👁). Entscheidungen der Agenten (dem Nutzer zeigen):
+      Büsche/Garten an der Kante gerade abgeschnitten statt über die Wand; Zuschnitt gilt auch für große Deko und Marktstände oben; Treppe zählt nur
+      mit begehbarem Fuß und oberem Feld (`hillStairUse`). Einzelne 1×1-Gebäude einer ✋-Gruppe dürfen auf verschiedenen Ebenen landen (jedes ganz).
+      **Kritische Prüfung (Logik)** (10.10.2026, Test stufe3-kritik): behoben – ↶ nach „Wandart umstellen“ unter einem Gebäude oder großer Deko oben
+      scheiterte („dort steht inzwischen etwas“) und warf den Schritt weg (große Deko: Rückschritt gegenüber Stufe 2; undo prüft jetzt nur, wenn sich die
+      Höhe ändert); Tortürme oben und unten bekamen einen Bogen über die Kante (`torLevelOk`: beide Türme und alles dazwischen auf einer Ebene);
+      **Treppe zugestellt** (offener Widerspruch aus dem Zusammenbau): ein Gebäude auf dem oberen Feld oder dem Fuß der einzigen Treppe sperrte
+      den Aufgang, die Anhöhe galt aber weiter als erreichbar („nah“, Bewohner suchten vergeblich, kein Hinweis) – jetzt zählt eine Treppe nur, wenn
+      Fuß und oberes Feld begehbar sind (`hillStairUse`; breite Treppe auch über die Nachbartreppe). Was sie versperrt, gehört zu beiden Gegenden
+      (die Treppe ist seine Tür; `hillRegions` both, `sameRegion`), der Rest der Anhöhe ist „weit weg“. Hinweise: Fenster „Die Treppe hinauf ist
+      zugestellt“ bzw. „🪜 Versperrt die Treppe“, beim Bauen ein Toast, in der Bau-Vorschau „🪜 versperrt die Treppe“ (`previewDelta.blocks`).
+      `hillRegions` merkt sich dafür auch COVER (Schlüssel `cv`). „Weg am Eingang“ des Hbf oben zählte einen Weg unten vor dem Portal (jetzt nur
+      gleiche Höhe). Geprüft ohne Befund: Drehen (R, im Fenster), ✋ Tragen, Gruppen gedreht, ⧉ Kopien, Ausbau (Bahnhof länger, Gleise, Halle,
+      Märchenschloss), Abriss-Rechteck/✋-Auswahl mit Anhöhe darunter, Treppe/Gleis-Rampe einsetzen und Form wechseln (auch auf Nebenfeldern großer
+      Gebäude), Anheben/Abtragen daneben, Wasser-Bedarf, Wunder, Laden alter Stände (keine Bereinigung), Besuch (Anhöhen kommen über `rest` mit).
+      Dazu ein Wächter aus 400 zufälligen echten Spielzügen (fester Zufall): nie über die Kante, oben nur `hillOk`, nie doppelt belegt (sabotiert
+      man hillError, schlägt er an). Offen: Freizeitpark und Park zählen weiter über die Kante als eine Fläche (schon seit Stufe 2); Blumenbeet-Bonus,
+      Hässliches und Schönheit ringsum wirken über die Kante (Sichtweite, so gelassen); Fuß über eine Ecktreppe erreichbar wird nicht erkannt (dann nur
+      ein Hinweis zu viel).
+      **Kritische Prüfung (Bilder)** (11.10.2026, Nahaufnahmen Zoom 4–8 mit tools/stufe3-pruefung.js → tools/vorschau/stufe3-nah-final.png; dazu
+      Vergleich oben ↔ dieselbe Szene flach Bildpunkt für Bildpunkt (`s3pDiff`): 7 Größen × 4 Drehungen × Kante +y/+x/Ecke/hinten, alle 87 Arten
+      innen, Ausbau-Stufen; Test stufe3-pruefung): behoben – (1) an hinteren Kanten (−x, −y, Ecken) schnitt die Oberseite des Felds neben/vor dem
+      Gebäude Garten, Hof, Büsche und weiche Schatten gerade ab (es durfte nicht vorgezogen werden, weil dahinter Tieferes später kommt): jetzt malt
+      es das Gebäude nach seiner Oberseite auf seiner Raute noch einmal (`hillLate`), schon gezeichnetes Tieferes dahinter sperrt nicht mehr, und
+      entschieden wird je Gebäude einmal vor dem ersten Streifen (`hillPreDone`; Schloss: weicher Schatten lag sonst doppelt); (2) das Feld schräg
+      rechts hinter jedem Gebäude oben kam später und legte den Streifen, um den seine Oberseite nach vorn größer ist, über das vorgezogene Feld
+      davor (Feldgrenze 2 Punkte versetzt) – solche Felder dahinter werden mit vorgezogen (bis 4 tief, breite Gebäude); (3) der Schatten auf dem
+      Garten, der über die Grundfläche reicht (Reetdachhaus), lag unter dem Garten und endete an der Feldgrenze – jetzt darüber wie unten
+      (`hillShadeSpill`: Boden-Durchgang als Maske, `hillSpills` misst je Aussehen, nah je Gebäude gemerkt); (4) heller Strich (1 Gerätepunkt), wo
+      ein Schatten über den Rand einer Grundfläche mit flachen Teilen läuft (Schule, Höfe): das Bildchen der Anhöhe beschattet den Streifen vorn
+      (`hillShadePaint`, nur zu fremden Nachbarn), `hillShadeOn` genau auf der Grundfläche; (5) Bau-Vorschau oben: Rahmen vorn und rechts nur halb
+      so breit (die Nachbarn deckten die äußere Hälfte; seit Stufe 1, auch Deko) – `hillFrame` zeichnet ihn auf gleich hohen Nachbarn nach;
+      (6) flache Teile oben liefen mit der Zeit (Becken der Glasvilla schimmerte oben, unten ruht es im Boden-Bild) – oben jetzt auch Zeit 0.
+      Geprüft ohne Befund: Vorderkante +x/+y und Ecken aller Größen 1×1 … 7×7 in allen Drehungen (Garten, Hof, Vorplatz und Schatten enden genau an
+      der Kante, Grasnarbe durchgehend, Tür zur Kante ohne Vorplatz), innen alle Arten gleich wie unten (bis auf Kantenglättung), Ausbau-Stufen,
+      Treppe und Gleis-Rampe A/B neben Gebäuden, Bahnhof und Hbf oben mit Zug (auch Einfahrt in die Halle), U-Bahn-Eingang oben und an der Kante
+      (👁: Strich vom Tunnel hinauf), Nacht (Lichter an hinteren Kanten wie innen), weit weg als Bildchen und mit WebGL, Geist an der Kante.
+      Leistung: Reetdachhaus oben nah ~10 µs je Bild ruhend, ~20 µs beim Schwenken (Mac, 36 Häuser). Offen: beim Nachmalen bleibt im
+      beschatteten Garten an der Feldgrenze eine Naht von 1 Gerätepunkt (Kantenglättung zweier Zeichnungen, ebenso ±1 Punkt an Grundflächen mit
+      Hof); weit weg mit WebGL wird nicht nachgemalt (Überstand unter 1 Punkt); Vorschau von Linien (Zaun-Plan, `hillMarkEdge`) nicht geprüft.
+- [ ] 157k Überdachungen oben (Pergola, Glas, Markise, Arkaden, Stützen, Dachtreppe) – eigener Block nach 157j.

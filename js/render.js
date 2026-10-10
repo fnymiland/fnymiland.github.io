@@ -161,6 +161,222 @@ function drawShadows(want) {
   if (state.roofs && state.roofs.size) drawRoofShadows(want);              // Überdachungen (Block 138)
   if (hs) drawHillShadows(want);                                         // Anhöhen (Block 157)
 }
+// Anhöhe (Block 157j): Schlagschatten der Dinge oben fallen auf die Oberseite derselben Höhe – nie in die Luft über der Kante, nie auf tiefere
+// Felder (dort fällt das Stück weg). Je Feld gemerkt (Fassung wie das Boden-Bild): das Bildchen der Anhöhe malt sie mit (paintHill, Schlüssel
+// hillShadeSig), außer unter Dingen mit flachen Teilen (own: Hof, Vorplatz, Beete) – dort zwischen Boden und Ding (hillShadeOn), wie unten
+let hillShadeCache = { v: '', m: new Map(), own: new Set() };
+function hillShadeFresh() {
+  const v = groundVersion + ':' + state.tiles.size + ':' + state.hills.size + ':' + (GFX.shadows ? 1 : 0);
+  if (hillShadeCache.v === v) return hillShadeCache;
+  const m = new Map(), own = new Set();
+  if (GFX.shadows && state.hills.size) for (const [k, t] of state.tiles) {
+    if (!state.hills.has(k)) continue;                                   // Anker unten: im Boden-Bild (drawShadows)
+    const [ax, ay] = keyXY(k), lv = hillLevel(ax, ay), [w, h] = sizeOf(t.b, t.rot, t);
+    if (hasGroundPart(t)) for (let y = ay; y < ay + h; y++) for (let x = ax; x < ax + w; x++) own.add(x + ',' + y);
+    const sh = shadowOf(t, ax, ay);
+    if (!sh) continue;
+    let u0 = 1e9, u1 = -1e9, v0 = 1e9, v1 = -1e9;                       // Felder unter der Fläche (iso zurückgerechnet)
+    for (const [px, py] of sh) { const a = px / TW + py / TH, b = py / TH - px / TW; u0 = Math.min(u0, a); u1 = Math.max(u1, a); v0 = Math.min(v0, b); v1 = Math.max(v1, b); }
+    for (let y = Math.round(v0); y <= Math.round(v1); y++) for (let x = Math.round(u0); x <= Math.round(u1); x++) {
+      if (hillLevel(x, y) !== lv) continue;
+      const fk = x + ',' + y;
+      if (!m.has(fk)) m.set(fk, []);
+      m.get(fk).push(sh);
+    }
+  }
+  hillShadeCache = { v, m, own };
+  return hillShadeCache;
+}
+// fürs Bildchen der Anhöhe: welche Schatten liegen auf der Oberseite von (x, y) ('' = keine)
+function hillShadeSig(x, y) {
+  const L = hillShadeFresh(), k = x + ',' + y, ps = L.m.get(k);
+  if (!ps) return '';
+  const o = iso(x, y);
+  return (L.own.has(k) ? ':o' : ':s') + ps.map(sh => sh.map(([a, b]) => (a - o.x).toFixed(1) + ',' + (b - o.y).toFixed(1)).join(' ')).join('/');
+}
+// im Bildchen der Anhöhe (paintHill: Feldmitte im Ursprung, Zoom 1), zugeschnitten auf die Oberseite cl ([T, R, B, L]); top = Hub. Unter
+// Dingen mit flachen Teilen (own) nur im Streifen, um den die Oberseite nach vorn größer ist, und nur zu Nachbarn, die nicht auch darunter
+// liegen (kritische Prüfung 157j): den Streifen deckt der Nachbar, nur an seinem Rand scheint er durch – ohne Schatten stand dort ein heller
+// Strich (hillShadeOn malt genau auf der Grundfläche)
+function hillShadePaint(x, y, top, cl) {
+  const L = hillShadeFresh(), k = x + ',' + y, ps = L.m.get(k);
+  if (!ps) return;
+  const o = iso(x, y), own = L.own.has(k);
+  g.save();
+  try {
+    g.beginPath();
+    if (!own) cl.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    else {
+      const fu = (cl[1][1] + top) / (TH / 2), fv = (cl[3][1] + top) / (TH / 2), Q = (u, v) => [(u - v) * TW / 2, (u + v) * TH / 2 - top];
+      const strip = pts => { pts.forEach(([u, v], i) => { const p = Q(u, v); if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); }); g.closePath(); };
+      if (fu > 0 && !L.own.has((x + 1) + ',' + y)) strip([[0.5, -0.5], [0.5 + fu, -0.5], [0.5 + fu, 0.5 + fv], [0.5, 0.5]]);
+      if (fv > 0 && !L.own.has(x + ',' + (y + 1))) strip([[0.5, 0.5], [0.5 + fu, 0.5 + fv], [-0.5, 0.5 + fv], [-0.5, 0.5]]);
+    }
+    g.closePath(); g.clip();
+    g.beginPath();
+    for (const sh of ps) { sh.forEach(([a, b], i) => i ? g.lineTo(a - o.x, b - o.y - top) : g.moveTo(a - o.x, b - o.y - top)); g.closePath(); }
+    g.fillStyle = SHADOW_COL; g.fill('nonzero');
+  } finally { g.restore(); }
+}
+// auf die flachen Teile eines Dings oben (Grundfläche ax, ay, w × h): nach seinem Boden, vor ihm selbst. (ox, oy) = Bildpunkt der Mitte der
+// Grundfläche (angehoben), zz = Zoom. Alle Schatten auf der Grundfläche auf einmal (an Feldgrenzen sonst feine Striche); genau auf der Grundfläche
+// – den Streifen, um den ihre Oberseite nach vorn größer ist, beschattet das Bildchen der Anhöhe (hillShadePaint), auch unter vorgezogenen
+// Nachbarn (hillPre); mit eigenem Überstand hier blieb an deren Grenze ein heller Strich (kritische Prüfung 157j)
+function hillShadeOn(ax, ay, w, h, ox, oy, zz) {
+  if (hillLateK && !SPRITE_PAINT) return;                                // Nachmalen auf einem später gezeichneten Nachbarn (hillLate): nur dessen Raute
+  const L = hillShadeFresh(), all = new Set();
+  for (let y = ay; y < ay + h; y++) for (let x = ax; x < ax + w; x++) for (const sh of L.m.get(x + ',' + y) || []) all.add(sh);
+  if (!all.size) return;
+  const c = iso(ax + (w - 1) / 2, ay + (h - 1) / 2), P = (a, b) => [ox + (a - c.x) * zz, oy + (b - c.y) * zz];
+  g.save();
+  try {
+    g.beginPath();
+    for (let y = ay; y < ay + h; y++) for (let x = ax; x < ax + w; x++) {
+      [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(([u, v], i) => { const p = iso(x + u, y + v), q = P(p.x, p.y); if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); });
+      g.closePath();
+    }
+    g.clip('nonzero');
+    g.beginPath();
+    for (const sh of all) { sh.forEach(([a, b], i) => { const q = P(a, b); if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); }
+    g.fillStyle = SHADOW_COL; g.fill('nonzero');
+  } finally { g.restore(); }
+}
+// Anhöhe (Block 157j, kritische Prüfung): was der Boden-Durchgang über die Grundfläche hinaus auf gleich hohe Nachbarn malt (Garten des
+// Reetdachhauses, Beete), deckte deren Schatten zu – die stecken im Bildchen der Anhöhe darunter, der Schatten endete im Garten an der Feldgrenze.
+// Unten liegen Schatten über allen flachen Teilen; hier ebenso: der Boden-Durchgang (ground: zeichnet ihn auf g) als Maske auf eigener Leinwand,
+// darauf die Schatten dieser Nachbarn (source-in), dann aufs Bild. Nur für Dinge, deren Boden-Durchgang hinausmalt (hillSpills), und Nachbarn mit
+// Schatten; beim Nachmalen (hillLateK) nur dieser eine Nachbar. (ox, oy, zz) wie hillShadeOn
+let hillLateK = null;
+const hillSpillMemo = new Map();
+let hillSpillCv = null;
+// wie weit (Felder) der Boden-Durchgang von t über seine Grundfläche hinausmalt, 0 = nicht; einmal je Aussehen gemessen (Zoom 1)
+function hillSpills(t) {
+  const key = t.b + '|' + ((t.rot || 0) & 3) + '|' + (t.lvl || 1) + '|' + (t.b === 'haus' ? houseLook(t) : t.look || '');
+  let r = hillSpillMemo.get(key);
+  if (r != null) return r;
+  r = 0;
+  try {
+    const [w, h] = sizeOf(t.b, t.rot, t), S = Math.ceil((w + h) * TW / 2 + 48), cv = document.createElement('canvas');
+    cv.width = S; cv.height = S;
+    const o = cv.getContext('2d');
+    if (o && o.getImageData) {
+      const g0 = g, p0 = PASS, ds = decoScale(t.b), gs = GLOW_SINK, ga = GLOW_ATLAS;
+      g = o; GLOW_SINK = []; GLOW_ATLAS = null;                             // Lichter nicht ins Bild stanzen
+      try { o.translate(S / 2, S / 2); o.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds); PASS = 'ground'; drawObject(t.b, 0, 0, 1, 0, 1e6, 1e6, t.lvl, t); }
+      finally { g = g0; PASS = p0; GLOW_SINK = gs; GLOW_ATLAS = ga; }
+      const d = o.getImageData(0, 0, S, S).data, mx = (w - 1) / 2, my = (h - 1) / 2;
+      for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+        if (d[(j * S + i) * 4 + 3] < 8) continue;
+        const X = (i - S / 2) / (TW / 2), Y = (j - S / 2) / (TH / 2), u = (X + Y) / 2 + mx, v = (Y - X) / 2 + my;
+        r = Math.max(r, -0.5 - u, u - (w - 0.5), -0.5 - v, v - (h - 0.5));
+      }
+      r = r > 0.03 ? Math.ceil(r * 100) / 100 : 0;
+    }
+  } catch (e) { r = 0; }
+  hillSpillMemo.set(key, r);
+  return r;
+}
+// Nah (2D, nicht beim Nachmalen) bleibt die Maske je Gebäude liegen (hillSpillCache), solange Zoom, Boden-Fassung, Aussehen und die Lage im
+// Bildpunkt-Raster gleich sind – im ruhenden Bild dann nur noch ein drawImage (sonst je Bild und Haus eine eigene Leinwand neu)
+const hillSpillCache = new Map();                                        // Anker → { key, cv, ix, iy, used }
+function hillShadeSpill(t, ax, ay, w, h, ox, oy, zz, ground) {
+  if (!GFX.shadows) return;
+  const L = hillShadeFresh(), lv = drawLevel(ax, ay), polys = new Set(), tiles = [];
+  for (let y = ay - 1; y <= ay + h; y++) for (let x = ax - 1; x <= ax + w; x++) {
+    const k = x + ',' + y;
+    if ((x >= ax && x < ax + w && y >= ay && y < ay + h) || (hillLateK && !SPRITE_PAINT && k !== hillLateK) || drawLevel(x, y) !== lv || L.own.has(k)) continue;
+    const ps = L.m.get(k);
+    if (!ps) continue;
+    tiles.push([x, y]); for (const sh of ps) polys.add(sh);
+  }
+  const E = tiles.length ? hillSpills(t) : 0;
+  if (!E) return;
+  const c = iso(ax + (w - 1) / 2, ay + (h - 1) / 2), P = (a, b) => [ox + (a - c.x) * zz, oy + (b - c.y) * zz], m = g.getTransform();
+  const rh = (x, y) => [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(([u, v]) => { const p = iso(x + u, y + v); return P(p.x, p.y); });
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;                          // Ausschnitt: nur so weit, wie der Boden-Durchgang hinausmalt
+  for (const [u, v] of [[ax - 0.52 - E, ay - 0.52 - E], [ax + w - 0.48 + E, ay - 0.52 - E], [ax + w - 0.48 + E, ay + h - 0.48 + E], [ax - 0.52 - E, ay + h - 0.48 + E]]) {
+    const p = iso(u, v), [qx, qy] = P(p.x, p.y), dx = m.a * qx + m.c * qy + m.e, dy = m.b * qx + m.d * qy + m.f;
+    x0 = Math.min(x0, dx); y0 = Math.min(y0, dy); x1 = Math.max(x1, dx); y1 = Math.max(y1, dy);
+  }
+  const keep = g === ctx && !hillLateK && !SPRITE_PAINT, cx = m.a * ox + m.c * oy + m.e, cy = m.b * ox + m.d * oy + m.f;
+  if (!keep) {
+    const scr = typeof LA !== 'undefined' && g === LA.x, cw = scr ? canvas.width : g.canvas.width, ch = scr ? canvas.height : g.canvas.height;
+    x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(cw, x1); y1 = Math.min(ch, y1);
+  }
+  x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.ceil(x1); y1 = Math.ceil(y1);
+  const bw = x1 - x0, bh = y1 - y0;
+  if (bw <= 0 || bh <= 0 || bw * bh > (keep ? 2e6 : 8e6)) return;
+  const paint = cv => {                                                  // Maske (Boden-Durchgang auf den Nachbarn) mit ihren Schatten
+    const o = cv.getContext('2d');
+    if (!o) return false;
+    o.setTransform(1, 0, 0, 1, 0, 0); o.globalCompositeOperation = 'source-over'; o.clearRect(0, 0, bw, bh);
+    o.setTransform(m.a, m.b, m.c, m.d, m.e - x0, m.f - y0);
+    const g0 = g, gs = GLOW_SINK, ga = GLOW_ATLAS;
+    o.save();
+    try {
+      o.beginPath();
+      for (const [x, y] of tiles) { rh(x, y).forEach((q, i) => i ? o.lineTo(q[0], q[1]) : o.moveTo(q[0], q[1])); o.closePath(); }
+      o.clip('nonzero');
+      g = o; GLOW_SINK = []; GLOW_ATLAS = null;                            // nur die Maske: Lichter kommen vom echten Boden-Durchgang
+      try { ground(); } finally { g = g0; GLOW_SINK = gs; GLOW_ATLAS = ga; }
+      o.globalCompositeOperation = 'source-in';
+      o.beginPath();
+      for (const sh of polys) { sh.forEach(([a, b], i) => { const q = P(a, b); if (i) o.lineTo(q[0], q[1]); else o.moveTo(q[0], q[1]); }); o.closePath(); }
+      o.fillStyle = SHADOW_COL; o.fill('nonzero');
+    } finally { o.restore(); o.globalCompositeOperation = 'source-over'; g = g0; }
+    return true;
+  };
+  let cv, px = x0, py = y0;
+  if (keep) {
+    const ak = ax + ',' + ay, fr = v => Math.round((v - Math.floor(v)) * 8);
+    const key = [t.b, t.rot || 0, t.lvl, t.look || '', t.b === 'haus' ? houseLook(t) : '', zz.toFixed(4), m.a.toFixed(4), groundVersion, FOG ? 1 : 0, fr(cx), fr(cy), bw, bh].join('|');
+    let e = hillSpillCache.get(ak);
+    if (!e || e.key !== key) {
+      if (!e) { if (hillSpillCache.size > 96) for (const [k, o] of hillSpillCache) if (o.used < frameNo - 60) { freeCanvas(o.cv); hillSpillCache.delete(k); } }
+      const nc = e && e.cv.width >= bw && e.cv.height >= bh ? e.cv : document.createElement('canvas');
+      if (nc !== (e && e.cv)) { if (e) freeCanvas(e.cv); nc.width = bw; nc.height = bh; }
+      if (!paint(nc)) return;
+      e = { key, cv: nc, ix: x0 - Math.floor(cx), iy: y0 - Math.floor(cy), used: 0 };
+      hillSpillCache.set(ak, e);
+    }
+    e.used = frameNo; cv = e.cv; px = Math.floor(cx) + e.ix; py = Math.floor(cy) + e.iy;
+  } else {
+    if (!hillSpillCv) hillSpillCv = document.createElement('canvas');
+    cv = hillSpillCv;
+    if (cv.width < bw || cv.height < bh) { cv.width = Math.max(cv.width, bw); cv.height = Math.max(cv.height, bh); }
+    if (!paint(cv)) return;
+  }
+  g.save();
+  try { g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(cv, 0, 0, bw, bh, px, py, bw, bh); } finally { g.restore(); }
+}
+// Anhöhe (Block 157j): Dinge oben an einer Kante – was sie flach über ihre Grundfläche hinaus malen (Garten, Beete, Hof, Vorplatz), endet an der
+// Kante, nie in der Luft. Je Grundfläche gemerkt (Fassung groundVersion, Vorschau hillGap): front = tiefere Felder vor bzw. neben ihr (+x, +y) –
+// dort fällt weg, was im Bild unter ihren oberen Kanten in Höhe der Oberseite liegt (Wand, Boden davor); back = tiefere Felder dahinter (−x, −y) –
+// dort nur im flachen Durchgang ihre Raute (darüber ragt das Gebäude selbst hinaus). null = ringsum gleich hoch
+const hillCutMemo = { v: '', m: new Map() };
+function hillCutOf(ax, ay, w, h) {
+  const v = groundVersion + ':' + state.hills.size + ':' + (hillGap ? hillGap.k || [...hillGap.keys].join(';') : '');
+  if (hillCutMemo.v !== v) { hillCutMemo.v = v; hillCutMemo.m.clear(); }
+  const k = ax + ',' + ay + ',' + w + ',' + h;
+  if (hillCutMemo.m.has(k)) return hillCutMemo.m.get(k);
+  const lv = drawLevel(ax, ay), front = [], back = [];
+  for (let y = ay - 1; y <= ay + h; y++) for (let x = ax - 1; x <= ax + w; x++) {
+    if ((x >= ax && x < ax + w && y >= ay && y < ay + h) || drawLevel(x, y) >= lv) continue;
+    (x >= ax + w || y >= ay + h ? front : back).push([x, y]);
+  }
+  const rel = l => l.map(([x, y]) => (x - ax) + ',' + (y - ay)).join(';');
+  const c = front.length || back.length ? { front, back, cx: ax + (w - 1) / 2, cy: ay + (h - 1) / 2, sig: 'k' + rel(front) + '|' + rel(back) } : null;
+  hillCutMemo.m.set(k, c);
+  return c;
+}
+// den Zuschnitt setzen (im save/restore des Aufrufers): (ox, oy) = Bildpunkt der Mitte der Grundfläche (angehoben), zz = Zoom; flat: der flache
+// Durchgang (auch die Rauten dahinter)
+function hillCutClip(cut, ox, oy, zz, flat) {
+  const P = (u, v) => [ox + ((u - v) - (cut.cx - cut.cy)) * TW / 2 * zz, oy + ((u + v) - (cut.cx + cut.cy)) * TH / 2 * zz], B = 1e5;
+  const hole = pts => { g.beginPath(); g.rect(-B, -B, 2 * B, 2 * B); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip('evenodd'); };
+  for (const [x, y] of cut.front) { const L = P(x - 0.5, y + 0.5), T = P(x - 0.5, y - 0.5), R = P(x + 0.5, y - 0.5); hole([L, T, R, [R[0], R[1] + B], [L[0], L[1] + B]]); }
+  if (flat) for (const [x, y] of cut.back) hole([P(x - 0.5, y - 0.5), P(x + 0.5, y - 0.5), P(x + 0.5, y + 0.5), P(x - 0.5, y + 0.5)]);
+}
 let groundCached = false;           // in diesem Bild kommt der Boden (mit Wegen) aus dem Zwischenspeicher
 // Reines Meer sieht auf jedem Grundstück gleich aus (Wellen kommen extra): ein gemeinsames Bild
 const seaInfo = new Map();           // ck → { v, sea, waves }
@@ -726,15 +942,17 @@ function spriteArchBridge(x, y, px, py, z, t, A) {
   putSprite(e, px, py, z);
   return true;
 }
-function spriteTile(t, ax, ay, c, z, now, w, h) {
+// gnd (Anhöhe, Block 157j): samt flachen Teilen und den Schatten darauf (oben gibt es sie nicht im Boden-Bild); cut: an der Kante zugeschnitten
+// (hillCutOf) – beides je Platz, nie geteilt
+function spriteTile(t, ax, ay, c, z, now, w, h, gnd = false, cut = null) {
   const keyOf = lit => {
   // ohne eigene Farbe: Würfel mit „r“ (nie gleich einer gewählten Farbe); Reihenhaus: Fassaden und Giebel; Rathaus: Flagge (Block 84d)
   const look = [t.b, t.lvl, t.rot || 0, t.wall != null ? t.wall : 'r' + Math.floor(hash(ax, ay, 3) * 7), t.roof != null ? t.roof : 'r' + Math.floor(hash(ax, ay, 4) * 7),
     t.b === 'reihenhaus' ? Math.floor(hash(ax, ay, 71) * 6) + '-' + Math.floor(hash(ax, ay, 72) * 3) : '', t.b === 'rathaus' ? state.town.color + state.town.symbol + (typeof mailWaiting === 'function' && mailWaiting() ? 'm' : '') + (state.partner ? state.partner.c + state.partner.s : '') : '',
     t.look || '', t.style || '', t.win != null ? t.win : '', t.fl || '', t.col || '', t.form || '', t.cs ? JSON.stringify(t.cs) : '', FOG ? 1 : 0, lit, (gardenPath(t, ax, ay) || {}).style || '', COURTS[t.b] && courtShown(t, ax, ay) ? 'v' : ''].join('|');   // Gartenweg (Block 78), Vorplatz (91)
-  return shared ? look : `${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}`;
+  return shared ? look : `${gnd ? 'g|' : ''}${cut ? cut.sig + '|' : ''}${ax},${ay}|${look}|${t.phase != null ? t.phase : ''}|${t.gleise || ''}${t.len || ''}${t.wing ? 'w' + t.wing + (t.mid != null ? 'm' + t.mid : '') : ''}|${t.cross ? 1 : 0}${t.foot ? 1 : 0}`;
   };
-  const shared = (isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size), key = keyOf(night > 0.15 && isLive() ? 1 : 0);
+  const shared = !gnd && !cut && ((isHome(t.b) && t.b !== 'hausboot') || (SHOPS[t.b] && !SHOPS[t.b].size)), key = keyOf(night > 0.15 && isLive() ? 1 : 0);
   // Fassung statt Schlüssel (Block 124): Bildchen mit Platz werden mit dem Boden (groundVersion) erneuert, Uhren alle 10 Spielminuten –
   // dazwischen zeigt getSprite das alte weiter und ersetzt es im Budget (dasselbe Bildchen, nichts bleibt liegen)
   const ver = (shared ? '' : groundVersion) + (CLOCK_SPRITES.has(t.b) ? '|' + Math.floor(gameHour() * 6) : '');
@@ -744,7 +962,13 @@ function spriteTile(t, ax, ay, c, z, now, w, h) {
     const tt = Object.assign({}, t);                                     // Stand beim Malen: das Nachtbild malt später noch einmal (Schritt 4)
     const pad = SPRITE_PAD[t.b] || [0, 0];
     const halfW = ((w + h) * TW / 4 + 26 + pad[0]) * zs * ds, up = spriteTop(t.b, w, h) * zs * ds, down = ((w + h) * TH / 4 + 12 + pad[1]) * zs * ds;
-    const sp = paintSprite(halfW, up, down, () => { g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, stillNow(tt.b, ax, ay, now), ax, ay, tt.lvl, tt); } finally { PASS = null; } });
+    const sp = paintSprite(halfW, up, down, () => {
+      if (gnd) {                                                         // Anhöhe: Boden, Schatten, Ding (Block 157j)
+        const gp = () => { g.save(); if (cut) hillCutClip(cut, 0, 0, zs, true); g.scale(mir ? -ds : ds, ds); PASS = 'ground'; try { drawObject(tt.b, 0, 0, zs, 0, ax, ay, tt.lvl, tt); } finally { PASS = null; g.restore(); } };
+        gp(); hillShadeOn(ax, ay, w, h, 0, 0, zs); hillShadeSpill(tt, ax, ay, w, h, 0, 0, zs, gp);
+      }
+      if (cut) hillCutClip(cut, 0, 0, zs, false);
+      g.scale(mir ? -ds : ds, ds); PASS = 'object'; try { drawObject(tt.b, 0, 0, zs, stillNow(tt.b, ax, ay, now), ax, ay, tt.lvl, tt); } finally { PASS = null; } });
     if (sp) sp.z = zs;
     return sp;
   };
@@ -1101,6 +1325,7 @@ function boxOnHill(x0, y0, w, h) {
 }
 // Rahmen um x0…x1 × y0…y1 je Feld (Randstücke des Felds), damit er auf Anhöhen oben liegt; style setzt Farbe, Breite, Strichelung
 function hillFrame(x0, y0, x1, y1, style) {
+  const all = [];
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     const segs = [];
     if (y === y0) segs.push([x - 0.5, y - 0.5, x + 0.5, y - 0.5]);
@@ -1108,9 +1333,27 @@ function hillFrame(x0, y0, x1, y1, style) {
     if (y === y1) segs.push([x + 0.5, y + 0.5, x - 0.5, y + 0.5]);
     if (x === x0) segs.push([x - 0.5, y + 0.5, x - 0.5, y - 0.5]);
     if (!segs.length) continue;
+    all.push(...segs);
     hillMark(x, y, () => {
       g.save(); style(); g.lineCap = 'round'; g.beginPath();
       for (const [a, b, c, d] of segs) { const p = toScreen(a, b), q = toScreen(c, d); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }
+      g.stroke(); g.restore();
+    });
+  }
+  // Anhöhe (kritische Prüfung 157j): die äußere Hälfte des Strichs vorn und rechts liegt auf Nachbarfeldern, die später kommen – deren Oberseite
+  // deckte sie (der Rahmen war dort halb so breit). Auf gleich hohen Nachbarn noch einmal, auf ihre Raute zugeschnitten
+  if (!HILL_MARKS) return;
+  const nb = [];
+  for (let y = y0 - 1; y <= y1 + 1; y++) nb.push([x1 + 1, y, x1, Math.min(Math.max(y, y0), y1)]);
+  for (let x = x0; x <= x1; x++) nb.push([x, y1 + 1, x, y1]);
+  for (const [nx, ny, bx, by] of nb) {
+    if (!hillAt(nx, ny) || drawLevel(nx, ny) !== drawLevel(bx, by)) continue;
+    hillMark(nx, ny, () => {
+      g.save(); g.beginPath();
+      [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].forEach(([u, v], i) => { const p = toScreen(nx + u, ny + v); if (i) g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y); });
+      g.closePath(); g.clip();
+      style(); g.lineCap = 'round'; g.beginPath();
+      for (const [a, b, c, d] of all) { const p = toScreen(a, b), q = toScreen(c, d); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); }
       g.stroke(); g.restore();
     });
   }
@@ -1510,7 +1753,10 @@ function render(now) {
           if (hk !== hoverKey) { hoverKey = hk; hoverSince = now; }
           const ready = now - hoverSince > HOVER_CALM || (previewCache && previewCache.k === hx + ',' + hy && previewCache.b === tool);
           const pv = ready ? previewDelta(tool, hx, hy) : { inc: 0, sci: 0, beauty: 0 }, parts = STOPS.has(tool) ? [placeLabel(hx, hy)] : [];
-          if (needsReach(tool) && pv.how === 'weit') parts.push('🐌 weit weg: 50 %');
+          const upNo = hillNoStair(hx, hy) && !hillCarryOk(tool);     // Gebäude oben ohne Treppe (157j)
+          if (needsReach(tool) && pv.how === 'weit') parts.push(upNo ? '🐌 oben ohne Treppe: 50 %' : '🐌 weit weg: 50 %');
+          else if (upNo) parts.push('⛰️ oben ohne Treppe');
+          if (pv.blocks) parts.push('🪜 versperrt die Treppe');               // auf Fuß/oberem Feld der einzigen Treppe (157j)
           if (Math.abs(pv.inc) >= 0.05) parts.push(`${pv.inc > 0 ? '+' : ''}${fmtRate(pv.inc)}/s`);
           if (Math.abs(pv.sci) >= 0.05) parts.push(`💡 +${fmtRate(pv.sci)}`);
           if (pv.prod) for (const [r, v] of Object.entries(pv.prod)) parts.push(`${RES[r].icon} +${fmtRate(v * 60)}/min`);
@@ -1545,6 +1791,7 @@ function render(now) {
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
+  const hallHill = HILLS && HALL.size ? new Map() : null;                // Hbf oben (157j): Anker → Wagen in seiner Halle
   const ground = roofers.length ? roofers.filter(w => w.st === 'in' || w.st === 'out') : [];   // auf dem Weg zur Dachtreppe (Block 138d)
   // Spaziergänger auf Anhöhen (Block 157d): am Boden, auf der Treppe und oben – je im Feld, auf dem sie stehen (oben hebt tileB an)
   const people = GFX.people === 'viele' ? walkers.concat(strollers, paraders, ground, hillWalkers) : walkers.concat(strollers, paraders, ground, hillWalkers).filter(gfxPersonShown);   // ⚙️ Einwohner (nur das Bild)
@@ -1557,6 +1804,8 @@ function render(now) {
       m.cut = tc ? tc.cut : null; m.portal = tc ? tc.portal : null;
       if (tc) k = tc.k;
       else if (HILLS && !HALL.has(k) && typeof trainOnHills === 'function') k = trainOnHills(m, k);   // Anhöhe/Gleis-Rampe (movers.js): vorderstes Feld unter dem Wagen
+      // Hbf oben (157j): Wagen in der Halle malt das Hbf selbst – nach Anhöhe und Boden, vor dem Gebäude (unten liegt der Boden im Boden-Bild)
+      if (hallHill && !tc && HALL.has(k) && hillLevel(...keyXY(k)) > 0) { const a = COVER.get(k); if (!hallHill.has(a)) hallHill.set(a, []); hallHill.get(a).push(m); continue; }
     }
     if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
       const under = [];
@@ -1575,7 +1824,7 @@ function render(now) {
     byTile.get(k).push(m);
   }
   const icons = [];
-  for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py); icons.push([p.x + 10 * z, p.y + 4 * z - (f.hill ? trainMidUp(f) * z : 0), '⚡']); } }   // Zug ohne Strom (auf Anhöhe/Rampe angehoben)
+  for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py), hk = HILLS && Math.round(f.px) + ',' + Math.round(f.py); icons.push([p.x + 10 * z, p.y + 4 * z - (f.hill ? trainMidUp(f) * z : hk && HALL.has(hk) ? hillLift(...keyXY(hk)) * z : 0), '⚡']); } }   // Zug ohne Strom (auf Anhöhe/Rampe angehoben; in der Halle eines Hbf oben, 157j)
   const labels = [];
   let staleCover = false;
   // Feldschleife in zwei Teilen (Block 144: Standbild-Merker): A = Linien, Gebäude, Dekos, Natur, Geister (ruht, kann gemerkt werden);
@@ -1626,7 +1875,82 @@ function render(now) {
       hillFlat(fx, fy, q.x, q.y - lf);                                    // Weg unter der großen Deko
       if (hillGlows.length) hillRelight(fx, fy, q.x, q.y, lf);
     }
+    if (hillEarly && hillEarly.size && !GLPASS) {                         // vorgezogene Felder daneben (hillPre, 157j): ihre Oberseite noch einmal genau
+      const redo = [];                                                   // auf ihrer Raute – die der Grundfläche reicht ein Stück darüber (sonst ein Strich)
+      for (let fy = ay; fy < ay + h; fy++) redo.push([ax + w, fy]);
+      for (let fx = ax; fx < ax + w; fx++) redo.push([fx, ay + h]);
+      for (const [nx, ny] of redo) {
+        if (!hillEarly.has(nx + ',' + ny)) continue;
+        const q = toScreen(nx, ny), lf = hillLift(nx, ny) * z, P = (u, v) => [q.x + (u - v) * TW / 2 * z, q.y + (u + v) * TH / 2 * z - lf], gl = hillGlows.length;
+        g.save();
+        try {
+          g.beginPath(); [P(-0.5, -0.5), P(0.5, -0.5), P(0.5, 0.5), P(-0.5, 0.5)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+          drawHillTile(nx, ny, q.x, q.y, z); hillFlat(nx, ny, q.x, q.y - lf);
+        } finally { g.restore(); hillGlows.length = gl; }
+      }
+    }
     if (HILL_MARKS && HILL_MARKS.size) for (let fy = ay; fy < ay + h; fy++) for (let fx = ax; fx < ax + w; fx++) runMarks(fx, fy, hillLift(fx, fy));
+  };
+  // Anhöhe (Block 157j): die Felder gleicher Höhe vor einem Ding oben (+x, +y, auch schräg) vorziehen – ihre Oberseite käme sonst erst nach dem
+  // Ding und schnitte ab, was es flach über die Grundfläche hinaus malt (Garten, Büsche); am Boden liegt das darüber. Nur Felder, die im Bild
+  // später kommen (s = x + y des gerade gezeichneten Felds), hinter denen nichts Tieferes liegt (das ihre Oberseite decken muss) und die keine
+  // große Deko trägt (deren Streifen malen sie selbst); tileA überspringt sie dann (hillEarly, je Bild)
+  const hillEarly = HILLS ? new Set() : null;
+  // Darf ein solches Feld nicht vorgezogen werden (etwas Tieferes dahinter kommt erst später und muss unter seiner Oberseite liegen, oder ein
+  // leuchtender Weg), malt es das Ding nach seiner Oberseite noch einmal, auf seine Raute zugeschnitten (hillLate: Feld → Anker → [drawIt, FOG];
+  // kritische Prüfung 157j: an hinteren Kanten schnitt die Oberseite sonst Garten, Hof, Büsche und weiche Schatten gerade ab). x0 = Feld, an
+  // dem gerade gezeichnet wird (gleiche Diagonale s: was links davon liegt, ist schon gezeichnet), redo = das Ding (drawIt). Entschieden wird je
+  // Ding einmal, vor seinem ersten Streifen (hillPreDone) – ein später vorgezogenes Feld deckte, was frühere Streifen schon darauf gemalt haben
+  const hillLate = HILLS ? new Map() : null, hillPreDone = HILLS ? new Set() : null;
+  const hillPre = (ax, ay, w, h, s, x0, redo) => {
+    const lv = drawLevel(ax, ay), ring = [], late = new Set(), ak = ax + ',' + ay;
+    if (hillPreDone.has(ak)) return;
+    hillPreDone.add(ak);
+    const before = (bx, by) => bx + by < s || (bx + by === s && bx <= x0);   // schon gezeichnet
+    const lateAdd = nk => {
+      late.add(nk);
+      if (!redo || GLPASS) return;                                       // weit weg (Grafikkarte): kein Zuschnitt auf die Raute, ein Bildpunkt
+      let m = hillLate.get(nk);
+      if (!m) hillLate.set(nk, m = new Map());
+      if (!m.has(ak)) m.set(ak, [redo, FOG]);
+    };
+    // Felder dahinter, die später kommen, decken ein vorgezogenes Feld: tiefere ganz (dann nachmalen), gleich hohe mit dem Stück, um das ihre
+    // Oberseite nach vorn größer ist (kritische Prüfung 157j: an der Feldgrenze stand dann ein Streifen in der Farbe des Nachbarn) – die werden
+    // selbst vorgezogen (bis 4 Felder tief, z. B. hinter breiten Gebäuden), sonst wird nachgemalt
+    const inFp = (bx, by) => bx >= ax && bx < ax + w && by >= ay && by < ay + h;
+    const okBehind = (bx, by, d) => {
+      const bk = bx + ',' + by;
+      if (before(bx, by) || hillEarly.has(bk) || inFp(bx, by)) return true;
+      if (late.has(bk)) return false;
+      const bl = drawLevel(bx, by);
+      return bl > lv || (bl === lv && d > 0 && pre(bx, by, d - 1) === true);
+    };
+    // vorziehen: true, nein (Nachmalen nötig): false, nie (große Deko darauf, deren Streifen malen es): null
+    const pre = (nx, ny, d) => {
+      const nk = nx + ',' + ny;
+      if (hillEarly.has(nk)) return true;
+      if (!state.hills.has(nk) || hillGapHas(nk) || drawLevel(nx, ny) !== lv) return null;
+      if (![[nx - 1, ny], [nx, ny - 1], [nx - 1, ny - 1]].every(([bx, by]) => okBehind(bx, by, d))) return false;
+      if (night > 0.15 && [[nx - 1, ny], [nx, ny - 1]].some(([bx, by]) => {   // leuchtender Weg dahinter, der erst danach kommt: sein Schein fehlte
+        if (bx + by < s) return false;
+        const ft = flatAt(bx, by), wu = ft && wegUnder(ft);
+        return wu != null && !!pathLook(styleDef('weg', wu).id).glow;
+      })) return false;
+      const na = COVER.get(nk), nt = na && state.tiles.get(na);
+      if (nt && nt.b !== 'weg') { const [w0, h0] = sizeOf(nt.b, nt.rot, nt); if (w0 > 1 || h0 > 1) return null; }
+      hillEarly.add(nk);
+      const q = toScreen(nx, ny), lf = lv * HILL_H * z;
+      drawHillTile(nx, ny, q.x, q.y, z); hillFlat(nx, ny, q.x, q.y - lf);
+      if (hillGlows.length) hillRelight(nx, ny, q.x, q.y, lf);
+      return true;
+    };
+    for (let fx = ax - 1; fx <= ax + w; fx++) ring.push([fx, ay + h]);
+    for (let fy = ay - 1; fy < ay + h; fy++) ring.push([ax + w, fy]);
+    ring.sort((p, q) => (p[0] + p[1]) - (q[0] + q[1]) || p[0] - q[0]);   // Maler-Reihenfolge
+    for (const [nx, ny] of ring) {
+      if (before(nx, ny) || hillEarly.has(nx + ',' + ny)) continue;
+      if (pre(nx, ny, 4) === false) lateAdd(nx + ',' + ny);
+    }
   };
   const tileA = (x, y, px, py) => {
       const owned = ownedTile(x, y);
@@ -1639,7 +1963,18 @@ function render(now) {
       const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
       if (lift) {
         const bigOn = a && (() => { const [w0, h0] = sizeOf(t.b, t.rot, t), [ax0, ay0] = keyXY(a); return (w0 > 1 || h0 > 1) && hillLevel(ax0, ay0) > 0 && t.b !== 'weg'; })();
-        if (!bigOn) { drawHillTile(x, y, px, py, z); hillFlat(x, y, px, py - lift); if (hillGlows.length) hillRelight(x, y, px, py, lift); runMarks(x, y, lift / z); }
+        if (!bigOn) {
+          if (!hillEarly.has(k)) { drawHillTile(x, y, px, py, z); hillFlat(x, y, px, py - lift); if (hillGlows.length) hillRelight(x, y, px, py, lift); }   // sonst vorgezogen (hillPre, 157j)
+          if (hillLate.size && hillLate.has(k) && !hillEarly.has(k)) {    // Dinge daneben noch einmal auf diese Raute (hillPre, 157j)
+            const P = (u, v) => [px + (u - v) * TW / 2 * z, py - lift + (u + v) * TH / 2 * z], fog = FOG, gc = glowCells;
+            g.save(); hillLateK = k; glowCells = new Map();               // Lichter: die Oberseite deckte ihren Schein hier – noch einmal voll stanzen
+            try {
+              g.beginPath(); [P(-0.5, -0.5), P(0.5, -0.5), P(0.5, 0.5), P(-0.5, 0.5)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+              for (const [redo, f] of hillLate.get(k).values()) { FOG = f; redo(); }
+            } finally { g.restore(); hillLateK = null; FOG = fog; glowCells = gc; }
+          }
+          runMarks(x, y, lift / z);
+        }
         py -= lift;
       } else if (gap) runMarks(x, y, 0);                                  // Vorschau „Treppe in die Anhöhe“: Feld abgesenkt, Rahmen unten
       if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
@@ -1656,6 +1991,7 @@ function render(now) {
         const oLift = HILLS ? hillLift(ax, ay) * z : 0;                    // Anhöhe (Block 157): große Deko steht ganz oben (gleiche Höhe)
         if (big) c.y -= oLift;
         const oGround = oLift && hasGroundPart(t);                         // flache Teile oben: mit dem Ding zeichnen (nicht im Boden-Bild)
+        const hc = oGround && hallHill && hallHill.get(a);                 // Hbf oben (157j): Wagen in der Halle zwischen Boden und Gebäude
         const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'huegeltreppe' && t.b !== 'huegelrampe' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht (Treppe/Rampe in die Anhöhe: Gelände wie die Anhöhe, Block 157d)
         const drawIt = () => seeFaded(fadeIt, drawIt0);
         const drawIt0 = () => {
@@ -1665,12 +2001,19 @@ function render(now) {
             const an = (now - t.born) / 380;
             if (an < 1) { const c1 = 1.70158, c3 = c1 + 1; sc = 0.55 + 0.45 * (1 + c3 * Math.pow(an - 1, 3) + c1 * Math.pow(an - 1, 2)); }
           }
-          if (SPRITES_ON && sc === 1 && !oGround && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes)
+          const cut = oLift ? hillCutOf(ax, ay, w, h) : null;              // Anhöhe (Block 157j): an der Kante zugeschnitten
+          if (SPRITES_ON && sc === 1 && !hc && spriteTileOk(t) && spriteTile(t, ax, ay, c, z, now, w, h, !!oGround, cut)) return;   // weit weg: fertiges Bildchen (nah nur Ruhendes; oben samt flachen Teilen, Block 157j)
           const ds = sc * decoScale(t.b);
+          const one = pass => {
+            g.save(); if (cut) hillCutClip(cut, c.x, c.y, z, pass === 'ground');
+            g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
+            PASS = pass;
+            try { drawObject(t.b, 0, 0, z, pass === 'ground' ? 0 : now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen; flache Teile ruhen wie im Boden-Bild unten (Zeit 0, 157j)
+          };
           const live = () => {
-            g.save(); g.translate(c.x, c.y); g.scale((t.rot & 1) && MIRROR.has(t.b) ? -ds : ds, ds);
-            PASS = oGround ? null : 'object';
-            try { drawObject(t.b, 0, 0, z, now, ax, ay, t.lvl, t); } finally { PASS = null; g.restore(); }   // ein Fehler lässt nichts hängen
+            if (oGround) { one('ground'); hillShadeOn(ax, ay, w, h, c.x, c.y, z); hillShadeSpill(t, ax, ay, w, h, c.x, c.y, z, () => one('ground')); }   // flache Teile oben (Block 157j): Boden, Schatten darauf (auch auf dem, was über die Grundfläche hinausreicht), dann das Ding – wie unten
+            if (hc) { g.save(); g.translate(0, -oLift); try { for (const m of hc.sort((p, q) => (p.px + p.py) - (q.px + q.py))) drawMover(m, z, now); } finally { g.restore(); } }   // Zug in der Halle (157j)
+            one('object');
           };
           if (!GLPASS) return live();
           const pad = SPRITE_PAD[t.b] || [0, 0], hw = ((w + h) * TW / 4 + 26 + pad[0]) * z * ds;   // Rahmen wie beim Bildchen, oben mehr Luft (Windräder)
@@ -1684,6 +2027,7 @@ function render(now) {
           const snap = v => Math.round(v * DPR) / DPR;                       // Streifengrenzen auf ganze Bildpunkte – sonst eine haarfeine Fuge
           const left = d === dMin ? -1e5 : snap(mid - half), right = d === dMax ? 1e5 : snap(mid + half);
           if (t.b === 'lm') FOG = false;
+          if (oLift) hillPre(ax, ay, w, h, x + y, x, drawIt);                 // Felder davor vorziehen (157j)
           g.save(); g.beginPath(); g.rect(left, -1e5, right - left, 2e5); g.clip();
           try { if (oLift) hillsUnder(ax, ay, w, h); drawIt(); } finally { g.restore(); }   // sonst bliebe der Streifen-Ausschnitt für immer
         }
@@ -1691,6 +2035,7 @@ function render(now) {
           if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
+            if (oLift && t.b !== 'weg' && t.b !== 'schiene') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();
             else if (t.bridge && bridgeArch(x, y)) drawArchBridge(x, y, px, py, z, t);   // hoher Bogen: wie ein Gebäude (Block 150)
@@ -1744,7 +2089,9 @@ function render(now) {
         if (HILLS) c.y -= drawLevel(gx, gy) * HILL_H * z;                  // Anhöhe (Block 157): so, wie es oben stehen wird (Treppe in die Anhöhe: unten)
         const rot = placeRot(ghostType, gx, gy);
         g.globalAlpha = 0.65;
-        g.save(); g.translate(c.x, c.y);
+        g.save();
+        if (HILLS && drawLevel(gx, gy) > 0) { const gc = hillCutOf(gx, gy, gw, gh); if (gc) hillCutClip(gc, c.x, c.y, z, false); }   // oben an der Kante zugeschnitten wie gebaut (157j)
+        g.translate(c.x, c.y);
         const gs = decoScale(ghostType);
         g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
         const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? wegShapeNew() : {}),

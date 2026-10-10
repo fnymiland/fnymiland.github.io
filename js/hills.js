@@ -3,7 +3,7 @@
 // Anhöhen (Block 157, Relief wie bei Animal Crossing): Felder liegen eine Ebene höher. `state.hills`: Feld → { w: Wandart, h?: Ebene
 // (fehlt = 1) }. Alles auf dem Feld wird angehoben gezeichnet (render.js tileA/tileB), die Oberseite ist der normale Boden (drawGround),
 // sichtbare Wände (+x, +y), wo das Nachbarfeld tiefer liegt. Stufe 2: oben Wege, Gleise, Plätze (Dinge, die auf einen Weg dürfen), Deko
-// und Gelände; Gebäude und Bahnhöfe erst Stufe 3. Hinauf führen die Treppe (Block 157d, zu Fuß; Wegenetz) und die Gleis-Rampe (nur Züge) –
+// und Gelände; Stufe 3 (157j): auch Gebäude und Bahnhöfe. Hinauf führen die Treppe (Block 157d, zu Fuß; Wegenetz) und die Gleis-Rampe (nur Züge) –
 // unten in dieser Datei.
 // ---------------------------------------------------------------------------
 const HILL_H = 26;                                                       // eine Ebene (so hoch wie die Steinarkaden)
@@ -20,23 +20,45 @@ const hillWall = h => HILL_WALLS[(h && h.w) || 0] || 'fels';
 // Gleiche Höhe auf allen Feldern (große Deko, Eckpunkt-Deko)
 const sameLevel = tiles => tiles.every(([x, y]) => hillLevel(x, y) === hillLevel(tiles[0][0], tiles[0][1]));
 
-// --- Was darf auf eine Anhöhe (Stufe 2) ---
-// Wege in allen Stilen, Gleise (Nutzer 10.10.2026: oben angehoben wie die Wege, über die Kante verbunden nur über die Gleis-Rampe – levelLink
-// 'gleis'), Deko-Felder (Brunnen, Beete, Statuen …), Platz-Dinge (was auf einen Weg darf: Marktstände, plazaOk), Kleinkram, Gelände-Pinsel;
-// keine Gebäude, Bahnhöfe, Tunneleinfahrten (Stufe 3 – bis dahin endet ein Gleis oben am Prellbock), Dächer, Stationen (Parkbahn und
-// Seilbahn-Station sind cat 'deko', fahren/hängen aber am Boden; die U-Bahn-Station darf auf einen Weg, steht aber auf dem Tunnel). Treppe
-// und Gleis-Rampe stehen unten
-const HILL_NO = new Set(['dach', 'dachtreppe', 'stuetze', 'pb_gleis', 'pb_station', 'seilbahn', 'ubahn', 'huegeltreppe', 'huegelrampe']);
-const HILL_RAIL_LATER = new Set(['station', 'hbf', 'ubahn', 'tunneleinfahrt']);   // Bahn oben: erst Stufe 3
-const hillOk = b => { const d = ITEMS[b]; return !!d && !HILL_NO.has(b) && (b === 'anhoehe' || b === 'tunnel' || b === 'weg' || b === 'schiene' || !!TERRAFORM[b] || (d.cat === 'deko' && !d.edge) || plazaOk(b)); };
+// --- Was darf auf eine Anhöhe (Stufe 3, Block 157j, Nutzer 10.10.2026) ---
+// Alle Gebäude (Häuser, Betriebe, Läden, Bildung, Strom auf Wiese), große Bauten (Wunder, Kultur, Freizeitpark), Bahnhof und Hbf (Züge halten
+// oben, hinauf über die Gleis-Rampe), U-Bahn-Eingang (auf dem Tunnel unter der Anhöhe), dazu wie in Stufe 2 Wege, Gleise, Plätze, Deko, Gelände.
+// Nicht: was Wasser braucht (Ufer, Strand, Steg, Meer, Seebrücke: HILL_WET), die Tunneleinfahrt (nur unten), Überdachungen (eigener Block 157k),
+// Parkbahn und Seilbahn-Station (fahren/hängen am Boden), Treppe und Gleis-Rampe (stehen unten), Teich und Aufschütten. Mehrfeld-Gebäude stehen
+// ganz oben auf einer Ebene (sameLevel, auch getragen, gedreht, kopiert). Ohne Treppe geht Bauen trotzdem – „weit weg“ (hillRegions)
+const HILL_NO = new Set(['dach', 'dachtreppe', 'stuetze', 'pb_gleis', 'pb_station', 'seilbahn', 'tunneleinfahrt', 'huegeltreppe', 'huegelrampe', 'graben', 'schuett']);
+const HILL_ROOF = new Set(['dach', 'dachtreppe', 'stuetze']);
+const HILL_WET = new Set(['shore', 'strand', 'boot', 'meer', 'offshore', 'pier']);
+const hillOk = b => { const d = ITEMS[b]; return !!d && !HILL_NO.has(b) && !HILL_WET.has(d.needs) && !d.edge; };
+// Was beim Anheben und Abtragen mit hinauf bzw. hinunter kommt (wie Stufe 2): Wege, Gleise, Plätze, Deko-Felder, Gelände. Gebäude nie – erst mit
+// ✋ wegtragen, dann oben absetzen (157j); große Deko auch nicht (hillStuckOn)
+const HILL_CARRY_NO = new Set(['dach', 'dachtreppe', 'stuetze', 'pb_gleis', 'pb_station', 'seilbahn', 'ubahn', 'huegeltreppe', 'huegelrampe']);
+const hillCarryOk = b => { const d = ITEMS[b]; return !!d && !HILL_CARRY_NO.has(b) && (b === 'anhoehe' || b === 'weg' || b === 'schiene' || !!TERRAFORM[b] || (d.cat === 'deko' && !d.edge) || plazaOk(b)); };
+const HILL_STUCK_UP = 'Hier steht ein Gebäude – erst mit ✋ wegtragen, dann oben absetzen';
+const HILL_STUCK_DOWN = 'Oben steht ein Gebäude – erst abreißen oder mit ✋ wegtragen';
+// Steht auf Feld (x, y) etwas, das beim Anheben/Abtragen nicht mitkommt (Gebäude, große Deko)? → das Ding oder null. Nur, was noch in state.tiles
+// steht und das Feld deckt: im Abriss-Rechteck (batch) ist COVER noch vom alten Stand
+function hillStuckOn(x, y) {
+  const a = COVER.get(x + ',' + y), t = a && state.tiles.get(a);
+  if (!t) return null;
+  const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot || 0, t);
+  if (x < ax || y < ay || x >= ax + w || y >= ay + h) return null;
+  return !hillCarryOk(t.b) || w > 1 || h > 1 ? t : null;
+}
 // Fehler, wenn b auf (Teilen von) tiles nicht stehen darf
 function hillError(b, tiles) {
   if (!state.hills || !state.hills.size) return null;
   const up = tiles.some(([x, y]) => hillAt(x, y));
   if (!up) return null;
-  if (!hillOk(b)) return b === 'pb_gleis' ? 'Die Parkeisenbahn fährt unten – auf Anhöhen geht die Eisenbahn'
-    : HILL_RAIL_LATER.has(b) ? 'Bahnhöfe auf Anhöhen kommen später – oben endet das Gleis am Prellbock'
-    : 'Gebäude auf Anhöhen kommen später – oben gehen Wege, Gleise, Plätze und Deko';
+  if (!hillOk(b)) {
+    const d = ITEMS[b];
+    return b === 'pb_gleis' || b === 'pb_station' ? 'Die Parkeisenbahn fährt unten – auf Anhöhen geht die Eisenbahn'
+      : b === 'tunneleinfahrt' ? 'Die Tunneleinfahrt steht unten – der Tunnel darf unter der Anhöhe weiterführen'
+      : b === 'seilbahn' ? 'Die Seilbahn-Station steht unten – nicht auf einer Anhöhe'
+      : HILL_ROOF.has(b) ? 'Auf einer Anhöhe geht keine Überdachung'
+      : d && HILL_WET.has(d.needs) ? 'Das gehört ans Wasser – oben auf der Anhöhe geht es nicht'
+      : 'Das geht oben auf einer Anhöhe nicht';
+  }
   if (!sameLevel(tiles)) return 'Nicht über die Kante einer Anhöhe';
   return null;
 }
@@ -71,7 +93,7 @@ function hillRaiseError(x, y, noCost) {
   if (t) {
     if (t.b === 'huegeltreppe') return 'Hier steht eine Treppe – erst abreißen';   // Treppe (Block 157d)
     if (t.b === 'huegelrampe') return 'Hier ist eine Gleis-Rampe – erst abreißen';
-    if (!hillOk(t.b) || t.b === 'tunnel') return 'Hier steht ein Gebäude';   // Gleise kommen mit hinauf (wie Wege)
+    if (!hillCarryOk(t.b)) return HILL_STUCK_UP;                         // Gleise kommen mit hinauf (wie Wege); Gebäude nie (157j)
     const [w, h] = sizeOf(t.b, t.rot || 0, t);
     if (w > 1 || h > 1) return 'Große Deko erst wegnehmen – sie kommt danach auf die fertige Anhöhe';
   }                                                                      // Wege (auch unter Platz-Dingen) kommen mit hinauf (Stufe 2)
@@ -102,6 +124,7 @@ function lowerHill(x, y) {
   const k = x + ',' + y;
   if (!state.hills.has(k)) return false;
   if (stairsAround(x, y).length || rampsAround(x, y).length || archAround(x, y)) return false;   // Treppe/Gleis-Rampe führt hinauf, Fußgängerbrücke: erst sie abreißen (demolishInfo sagt es)
+  if (hillStuckOn(x, y)) { fail(HILL_STUCK_DOWN); return false; }      // Gebäude oben (157j): käme sonst über die Kante
   hillTake(x, y);
   addFloat(x, y, '+' + fmt(ITEMS.anhoehe.cost), '#3f8f43');
   sfx('dig'); recalc(); save();
@@ -171,6 +194,7 @@ function hillSig(x, y, h) {
   if (hillMiter(x, y, lv)) { const rl = miterRamp(x - 1, y, 1, lv), ru = miterRamp(x, y - 1, 2, lv); s += ':m' + (rl || ru ? rl + '' + ru : ''); }
   const ex = hillExt(x, y, lv, st, wu, wv);
   if (ex[0] || ex[1]) s += ':e' + (ex[0] ? 1 : 0) + (ex[1] ? 1 : 0);
+  s += hillShadeSig(x, y);                                               // Schlagschatten der Dinge oben (Block 157j)
   return s;
 }
 // Treppen, die auf Feld (x, y) hinaufführen, als Zeichen je Seite: v/u = vorn (+y/+x, Wand ohne Grasnarbe – die Stufen decken sie),
@@ -355,6 +379,7 @@ function paintHill(x, y, h) {
       }
     } finally { g.restore(); }
   }
+  hillShadePaint(x, y, top, [T, R, B, L]);                               // Schlagschatten der Dinge oben (Block 157j, render.js)
   const [ev, eu] = hillExt(x, y, lv, st, wu, wv);
   if (wv > 0) paintHillWall(P, -0.5, 0.5, 0.5, 0.5, 'v', kind, top - wv * HILL_H, top, x * 7 + y * 13, top, !st.includes('v'), 1, 0, ev);
   if (wu > 0) paintHillWall(P, 0.5, -0.5, 0.5, 0.5, 'u', kind, top - wu * HILL_H, top, x * 11 + y * 5 + 3, top, !st.includes('u'), 1, 0, eu);

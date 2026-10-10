@@ -281,6 +281,15 @@ function drawTunnelView(z) {
     g.stroke();
   }
   g.setLineDash([]);
-  for (const [k, t] of state.tiles) if (t.b === 'ubahn') { const p = toScreen(...keyXY(k)); if (p.x > -40 && p.x < W + 40 && p.y > -40 && p.y < H + 40) uSign([p.x, p.y - 4 * z], 9, z); }
+  for (const [k, t] of state.tiles) if (t.b === 'ubahn') {
+    const [x, y] = keyXY(k), p = toScreen(x, y), up = state.hills && state.hills.size ? hillLift(x, y) * z : 0;   // Anhöhe (157j): Eingang oben
+    if (p.x < -40 || p.x > W + 40 || p.y < -40 - up || p.y > H + 40) continue;
+    if (up) {                                                            // Treppe durch die Anhöhe: vom Tunnel hinauf zum Eingang
+      g.lineCap = 'round'; g.setLineDash([6 * z, 5 * z]);
+      for (const [col, w] of [['rgba(60,40,110,0.25)', 7], ['#6a52c4', 2.4]]) { g.strokeStyle = col; g.lineWidth = w * z; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x, p.y - up); g.stroke(); }
+      g.setLineDash([]);
+    }
+    uSign([p.x, p.y - 4 * z - up], 9, z);
+  }
   g.restore();
 }

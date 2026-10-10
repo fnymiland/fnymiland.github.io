@@ -171,7 +171,8 @@ function build(b, x, y, quiet) {
   recalc();
   if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
   const s = statusOf(x, y);
-  if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
+  if (s && s.how === 'weit' && !quiet) toast(hillNoStair(x, y) ? 'Oben ohne Treppe: nur halbe Kraft. Eine Treppe hinauf hilft.' : 'Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');   // Anhöhe ohne Treppe (157j)
+  else if (!quiet && hillsOn() && hillStairBlock(x + ',' + y)) toast('Versperrt die Treppe – zu Fuß kommt sonst niemand mehr auf die Anhöhe');   // auf Fuß/oberem Feld (157j)
   if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
@@ -1116,18 +1117,28 @@ function undo() {
     if ((v === undefined ? undefined : undoStr(v)) !== a) { fail('Geht nicht mehr – dort hat sich seitdem etwas verändert'); return false; }
   }
   const mine = new Set(step.changes.filter(c => c[0] === 'tiles').map(c => c[1]));    // große Gebäude: ist ihre Fläche noch frei?
+  // Gebäude oben (157j): Ebene je Feld nach dem ↶ (Anhöhen dieses Schritts wie vorher, sonst wie jetzt) – ein Ding, das zurückkommt, steht nie
+  // über der Kante und nur oben, wenn es dort stehen darf (hillOk). Ohne Anhöhen nichts zu prüfen
+  const hillBack = new Map(step.changes.filter(c => c[0] === 'hills').map(c => [c[1], c[2] === undefined ? 0 : JSON.parse(c[2]).h || 1]));
+  const lvBack = (x, y) => hillBack.has(x + ',' + y) ? hillBack.get(x + ',' + y) : hillLevel(x, y), hl = hillBack.size > 0 || hillsOn();
   for (const [n, k, b] of step.changes) {
     if (n !== 'tiles' || b === undefined) continue;
-    const t = JSON.parse(b), [x, y] = keyXY(k);
-    if (footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    const t = JSON.parse(b), [x, y] = keyXY(k), fp = footprint(t.b, x, y, t.rot || 0, t);
+    if (fp.some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    const lv = hl ? fp.map(([fx, fy]) => lvBack(fx, fy)) : null;
+    if (lv && lv.some(v => v !== lv[0])) { fail('Geht nicht mehr – das stünde jetzt über der Kante einer Anhöhe'); return false; }
+    if (lv && lv[0] && !hillOk(t.b)) { fail('Geht nicht mehr – dort ist inzwischen eine Anhöhe'); return false; }
   }
-  for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillOk)
+  for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillCarryOk)
     if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
     if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier führt inzwischen eine Gleis-Rampe hinauf'); return false; }   // Gleis-Rampe (hills.js) wie die Treppe
+    if (n === 'hills' && b === undefined && hillStuckOn(...keyXY(k)) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – oben steht inzwischen ein Gebäude'); return false; }   // Anhöhe weg (157j): wie lowerHill
     if (n !== 'hills' || b === undefined) continue;
-    const o = objAt(...keyXY(k));
-    if (o && !hillOk(o.b) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }   // Treppe in die Anhöhe: geht mit zurück
-    if (UNDO_MAPS.hills().has(k)) continue;
+    const cur = UNDO_MAPS.hills().get(k);
+    if (cur && (cur.h || 1) === (JSON.parse(b).h || 1)) continue;       // nur die Wandart zurück (157j): die Höhe bleibt, was oben steht, darf bleiben
+    const o = hillStuckOn(...keyXY(k));                                  // Gebäude, große Deko (157j); Treppe in die Anhöhe: geht mit zurück
+    if (o && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    if (cur) continue;
     if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
     if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
   }

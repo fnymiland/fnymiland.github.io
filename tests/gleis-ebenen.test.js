@@ -28,13 +28,13 @@ const twoRamps = () => {
 };
 
 describe('Gleise oben und unten', () => {
-  it('Schienen dürfen auf die Anhöhe (nicht auf die Gleis-Rampe); Bahnhöfe, Einfahrten oben erst später', () => {
+  it('Schienen dürfen auf die Anhöhe (nicht auf die Gleis-Rampe); Bahnhöfe oben (Stufe 3), Einfahrten nur unten', () => {
     hills(block(10, 8, 16, 14));
     expect(game("placeError('schiene', 12, 10)")).toBe(null);
     expect(game("build('schiene', 12, 10)")).toBe(true);
-    expect(game("placeError('station', 13, 10)")).toMatch(/Bahnhöfe auf Anhöhen kommen später/);
+    expect(game("placeError('station', 13, 10)")).toBe(null);                        // Stufe 3 (157j)
     game("state.techs.add('ubahn')");
-    expect(game("placeError('tunneleinfahrt', 13, 10)")).toMatch(/kommen später/);
+    expect(game("placeError('tunneleinfahrt', 13, 10)")).toMatch(/Tunneleinfahrt steht unten/);
     game("build('huegelrampe', 12, 13)");
     expect(game("placeError('schiene', 12, 14)")).toMatch(/Gleis-Rampe – die Schiene schließt an ihren Fuß/);
     expect(game("placeError('weg', 12, 14)")).toMatch(/Gleis-Rampe/);

@@ -115,7 +115,7 @@ function meScan(now) {
 }
 function meGo(goals, say = null) {
   if (!goals || !goals.length) return false;
-  const p = walkPath(meFig.fx, meFig.fy, goals, 1500);
+  const p = hillsOn() ? walkPath(meFig.tx, meFig.ty, goals, 1500) : walkPath(meFig.fx, meFig.fy, goals, 1500);   // Anhöhe (157j): ab dem Feld, auf das sie zugeht (wie setGoal)
   if (!p) return false;
   meFig.path = p; meFig.say = say;
   return true;

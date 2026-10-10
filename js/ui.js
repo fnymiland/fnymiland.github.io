@@ -1538,6 +1538,20 @@ function artJump(group) {
   const lab = [...document.querySelectorAll('#modal-card .label')].find(l => l.textContent.trim() === group), sc = document.querySelector('#modal-card > .tab-scroll');
   if (lab && sc) sc.scrollTop = Math.max(0, lab.offsetTop - sc.offsetTop - 8);
 }
+// Gebäude oben (Block 157j, Nutzer: Bauen geht, das Fenster warnt): keine Treppe auf die Anhöhe (eigene Gegend, hillNoStair – „weit weg“); keine
+// Tür auf ebenen Boden derselben Höhe (doorsOf: nur solche nehmen die Bewohner) bei Häusern, Betrieben, Läden, wenn eine Kante daneben der Grund
+// ist. Nur Gebäude (was beim Anheben nicht mitkäme), ohne Anhöhen nichts
+function hillInfoStatus(t, x, y) {
+  if (!hillsOn() || hillCarryOk(t.b)) return [];
+  const out = [], fp = footprint(t.b, x, y, t.rot || 0, t);
+  if (hillNoStair(x, y)) out.push(hillStairShut(x, y) ? '<div class="bad">⛰️ Die Treppe hinauf ist zugestellt – von unten kommt zu Fuß niemand hierher</div>'   // 157j: oben/am Fuß steht etwas
+    : '<div class="bad">⛰️ Keine Treppe führt auf diese Anhöhe – zu Fuß kommt niemand hinauf</div>');
+  if (hillStairBlock(x + ',' + y)) out.push('<div class="bad">🪜 Versperrt die Treppe – zu Fuß kommt sonst niemand auf die Anhöhe</div>');   // steht auf ihrem Fuß bzw. oberen Feld
+  const visited = isHome(t.b) || !!ITEMS[t.b].workers || !!SHOPS[t.b];
+  if (visited && fp.some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) !== hillLevel(fx, fy))) && !doorsOf(x + ',' + y).length)
+    out.push('<div class="bad">🚪 Keine Tür führt auf ebenen Boden – zu Fuß kommt hier niemand hinein</div>');
+  return out;
+}
 function openInfo(x, y) {
   const t = state.tiles.get(x + ',' + y);
   if (!t) { closePanel(); return; }
@@ -1550,11 +1564,13 @@ function openInfo(x, y) {
     status.push({
       viertel: '<div class="ok">✓ Liegt im Wohnviertel</div>',
       nah: `<div class="ok">✓ Häuser in Laufweite (bis ${WALK_REACH} Felder)</div>`,
-      weit: '<div class="bad" data-help="term:schnecke">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf oder ein Bahnhof in der Nähe bringt 100 %.</div>',
+      weit: hillNoStair(x, y) ? '<div class="bad" data-help="term:schnecke">🐌 Weit weg vom Dorf: 50 %. Eine Treppe hinauf oder ein Bahnhof oben bringt 100 %.</div>'   // Anhöhe ohne Treppe (157j)
+        : '<div class="bad" data-help="term:schnecke">🐌 Weit weg vom Dorf: 50 %. Ein Weg zum Dorf oder ein Bahnhof in der Nähe bringt 100 %.</div>',
       bahn: s.served >= 1 ? '<div class="ok">🚆 Mit dem Zug ans Dorf angebunden</div>'
         : `<div class="bad">🚆 Mit dem Zug angebunden, aber die Linie ist überfüllt: ${Math.round(s.eff * 100)} %</div>`,
     }[s.how]);
   }
+  status.push(...hillInfoStatus(t, x, y));                                // Gebäude oben (157j): ohne Treppe, ohne Tür
   if (s.bonus) status.push(`<div class="ok" ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden: +${Math.round(s.bonus * 100)} %</div>`);
   else if (s.n > 1) status.push(`<div ${helpAttr('term:viertel')}>🏘️ Viertel mit ${s.n} Gebäuden (ab 3 gibt es +10 %)</div>`);
   else if (s.n) status.push('<div>🏘️ Steht noch allein – ab 3 Gebäuden im Viertel gibt es +10 %</div>');
@@ -1849,11 +1865,22 @@ function powerStatus() {
   out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
   return out;
 }
+// Anhöhen (157j): liegt die Schiene am Halt auf einer anderen Höhe bzw. ist es die Gleis-Rampe? Dann sagt das Fenster es (sonst null)
+function stopLevelHint(k) {
+  if (!hillsOn()) return null;
+  let other = false, ramp = false;
+  for (const [fx, fy] of stopFoot(k)) for (const [dx, dy] of stopDirs(k)) {
+    if (rampTrackAt(fx + dx, fy + dy)) ramp = true;
+    else if (railTileAt(fx + dx, fy + dy) && hillLevel(fx + dx, fy + dy) !== hillLevel(fx, fy)) other = true;
+  }
+  return other ? `Die Schiene ${GLEIS.has(k) ? 'vor dem Gleis' : 'daneben'} liegt ${hillLevel(...keyXY(k)) > 0 ? 'unten' : 'oben auf der Anhöhe'} – Zug und Bahnhof brauchen dieselbe Höhe (hinauf über die Gleis-Rampe)`
+    : ramp ? 'Auf der Gleis-Rampe hält kein Zug – den Bahnhof oben oder unten an die Schiene setzen' : null;
+}
 // Bahnhof: wohin fährt der Zug, hat er Strom?
 const kmText = l => `${nf1.format(l.km)} km`;
 function stationStatus(k) {
   const line = lineOf(k), names = l => l.regions.map(regionName);
-  if (T.rail.stationNet.get(k) == null) return [`<div class="bad">✗ ${GLEIS.has(k) ? 'Noch keine Schiene vor dem Gleis' : bAt(...keyXY(k)) === 'ubahn' ? 'Kein Tunnel unter der Station' : 'Keine Schiene direkt am Bahnhof'}</div>`];
+  if (T.rail.stationNet.get(k) == null) return [`<div class="bad">✗ ${stopLevelHint(k) || (GLEIS.has(k) ? 'Noch keine Schiene vor dem Gleis' : bAt(...keyXY(k)) === 'ubahn' ? 'Kein Tunnel unter der Station' : 'Keine Schiene direkt am Bahnhof')}</div>`];
   if (!line) return ['<div class="bad">✗ Noch kein Ziel: Schienen oder Tunnel bis zu einem Bahnhof bzw. einer U-Bahn-Station auf einer anderen Insel legen</div>'];
   const nV = line.traffic && line.traffic.viertel || 0;
   const out = [line.inner
@@ -2165,7 +2192,7 @@ function hbfHtml(x, y, t) {
   }
   hubRegions.delete(home);
   const k = x + ',' + y, wing = hbfWing(t), L = hbfLeft(t), { money: gm, ...gmat } = GLEIS_COST;
-  const atDoor = hbfEntrance(t, x, y).some(([ex, ey]) => wegAt(ex, ey) != null), v = NET && NET.vOf(x + ',' + y), village = v && NET.vHome.has(v);
+  const atDoor = hbfEntrance(t, x, y).some(([ex, ey]) => wegAt(ex, ey) != null && (!hillsOn() || hillLevel(ex, ey) === hillLevel(x, y))), v = NET && NET.vOf(x + ',' + y), village = v && NET.vHome.has(v);   // Anhöhe (157j): Weg auf gleicher Höhe
   const door = atDoor ? `<div class="status"><div class="ok">🛤️ Weg am Eingang${village ? ' – mit dem Dorf verbunden' : ''}</div></div>`   // Block 85
     : '<p class="muted">🛤️ Leg einen Weg vor das Portal (die Seite gegenüber den Gleisen) – dann führt er bis an die Tür und verbindet den Bahnhof mit dem Dorf.</p>';
   // + / − Gleis je Seite der Halle (Block 123); alter Bahnhof ohne Halle: nur rechts, dazu „Halle bauen“

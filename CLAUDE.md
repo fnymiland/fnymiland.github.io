@@ -186,8 +186,16 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
 29a5. **Anhöhen** (Block 157, js/hills.js): Höhe je Feld in `state.hills` (Feld → { w, h? }), `hillLift(x, y)` = Ebene × `HILL_H`.
     Alles, was zu einem Feld gehört, wird um den Hub angehoben gezeichnet (render.js tileA/tileB; wer selbst per toScreen Punkte eines
     Felds rechnet, zieht `hillLift` ab). Bildschirm → Feld nur über `pickFrac` (toTile, toVertex, edgeNear, slotAt), nie tileFrac
-    (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError` (Stufe 2: Wege aller Stile, Platz-Dinge `plazaOk`, Deko,
-    Gelände, Schienen – keine Gebäude, Bahnhöfe/Hbf/U-Bahn/Tunneleinfahrt (Stufe 3), Parkbahn, Dächer); Fundament kann mehrere Ebenen, gebaut ist eine.
+    (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError` (Stufe 3, Block 157j: alle Gebäude, Wunder, Bahnhof, Hbf, U-Bahn-Eingang, Achterbahn,
+    Wege, Platz-Dinge, Deko, Gelände, Schienen – nicht `HILL_NO` (Dächer/Dachtreppe/Stütze bis 157k, Parkbahn, Seilbahn, Tunneleinfahrt, Treppe,
+    Gleis-Rampe) und `HILL_WET` (was Wasser braucht)); Mehrfeld immer ganz auf einer Ebene (`sameLevel`). Was beim Anheben/Abtragen mitkommt:
+    `hillCarryOk` (Gebäude nie – Anheben gesperrt, Abtragen nur mit dem Gebäude; `hillStuckOn`). Erreichbarkeit oben über Gegenden (`hillRegions`,
+    `sameRegion`, `hillNoStair`): eine Treppe zählt nur mit begehbarem Fuß und oberem Feld (`hillStairUse`), was sie versperrt, gehört zu beiden
+    Gegenden; Wege/Ziele der Figuren nur in derselben Gegend (`walkPath`, `findGoal`). Fenster: `hillInfoStatus`. Zeichnen oben: Schatten im
+    Bildchen der Anhöhe (`hillShadePaint`/`hillShadeOn`, über Gärten `hillShadeSpill`), was flach über die Grundfläche ragt, wird an der Kante
+    abgeschnitten (`hillCutClip`), Felder davor werden vorgezogen (`hillPre`) oder malen das Gebäude auf ihrer Raute nach (`hillLate`), flache
+    Teile oben mit Zeit 0. Bahn oben: `growLevelErr` (Bahnhof/Hbf wachsen nur auf ihrer Ebene), `coasterLevelOk`, `stopLevelHint`, Zug in der Halle
+    eines Hbf oben zeichnet der Hbf selbst. Fundament kann mehrere Ebenen, gebaut ist eine.
     Ohne Anhöhen muss alles exakt wie vorher laufen (früh aussteigen, wenn `state.hills.size` 0).
     **Treppe** (157d, `huegeltreppe`): steht unten (Ebene 0) direkt vor der Wand, Stufen auf dem eigenen Feld bis zur Oberkante. Regeln über
     `stairError`, Drehung nur über `stairRot` (placeRot, auch Vorschau/Verschieben; in einer gedrehten ✋-Gruppe dreht sie mit, `groupPlaced`), kein

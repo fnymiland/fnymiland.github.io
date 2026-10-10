@@ -115,6 +115,8 @@ function hbfEntrance(t, x, y) {
   const r = (t.rot || 0) & 3, [w, h] = sizeOf('hbf', r, t), cx = x + (w - 1) / 2, cy = y + (h - 1) / 2;
   return (hbfWing(t) ? [hbfPortalB(t)] : [-0.5, 0.5]).map(b => { const [u, v] = kitTurn(r, -2.5, b); return [Math.round(cx + u), Math.round(cy + v)]; });   // mit Flügel/Halle: genau ein Feld
 }
+// Bahnhof/Hbf wächst (Länge, Gleise, Halle): neue Felder auf der Ebene lv des Bahnhofs (Anhöhen, Block 157j – nie über die Kante); sonst Hinweis
+const growLevelErr = (fx, fy, lv) => { const n = hillLevel(fx, fy); return n === lv ? null : n > lv ? 'Daneben ist eine Anhöhe' : 'Daneben geht es die Anhöhe hinunter'; };
 // Alte Bahnhöfe umstellen (Block 123): ohne Halle wird der Bahnhof ein Feld breiter – zu der Seite, wo Platz ist –, die Halle
 // kommt dorthin, wo der Eingang war. Alte Seitenflügel (±1) haben schon die Breite: nur noch t.wing = 2 und t.mid setzen.
 // Rückgabe { nk, mid } oder ein Hinweis, warum es nicht geht. Gleise können dabei ein Feld rücken.
@@ -130,8 +132,8 @@ function hbfUpgradePlan(k) {
     const t2 = { ...t, wing: 2, mid }, foot = footprint('hbf', nx, ny, r, t2);
     if (!door.includes(hbfEntrance(t2, nx, ny)[0].join()) || old.size !== foot.filter(p => old.has(p.join())).length) continue;
     const bad = foot.filter(p => !old.has(p.join())).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
-      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : hillAt(fx, fy) ? 'Daneben ist eine Anhöhe'   // Block 157
-      : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : growLevelErr(fx, fy, hillLevel(x, y))   // Block 157/157j: auf derselben Ebene
+      || (terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null)).find(Boolean);
     if (!bad) return { nk: nx + ',' + ny, mid };
     why = why || bad;
   }
@@ -173,8 +175,8 @@ function stationLenPlan(k, n) {
   let why = null;
   for (const [nx, ny] of [[x, y], r & 1 ? [x - 1, y] : [x, y - 1]]) {
     const bad = footprint('station', nx, ny, r, t2).filter(([fx, fy]) => !old.has(fx + ',' + fy)).map(([fx, fy]) => !ownedTile(fx, fy) ? 'Daneben ist nicht dein Grundstück'
-      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : hillAt(fx, fy) ? 'Daneben ist eine Anhöhe'   // Block 157
-      : terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null).find(Boolean);
+      : COVER.has(fx + ',' + fy) ? 'Daneben steht etwas' : decosAt(fx + ',' + fy) ? 'Daneben stehen kleine Dekos' : growLevelErr(fx, fy, hillLevel(x, y))   // Block 157/157j: auf derselben Ebene
+      || (terrainAt(fx, fy) !== 'grass' ? (terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen') : null)).find(Boolean);
     if (!bad) return n <= stationLenPaid(t) || canPay(STATION_LEN_COST) ? { nk: nx + ',' + ny } : state.money < STATION_LEN_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
     why = why || bad;
   }
@@ -217,7 +219,7 @@ function hbfResizePlan(k, d, side = 1) {
     if (!ownedTile(fx, fy)) return 'Daneben ist nicht dein Grundstück';
     if (COVER.has(fx + ',' + fy)) return 'Daneben steht etwas – dort ist kein Platz für ein Gleis';
     if (decosAt(fx + ',' + fy)) return 'Daneben stehen kleine Dekos';
-    if (hillAt(fx, fy)) return 'Daneben ist eine Anhöhe – dort ist kein Platz für ein Gleis';   // Block 157
+    { const e = growLevelErr(fx, fy, hillLevel(x, y)); if (e) return e + ' – dort ist kein Platz für ein Gleis'; }   // Block 157/157j: auf derselben Ebene
     if (terrainAt(fx, fy) !== 'grass') return terrainAt(fx, fy) === 'water' ? 'Daneben ist Wasser' : 'Daneben erst roden bzw. sprengen';
   }
   return m <= gleisePaid(t) || canPay(GLEIS_COST) ? plan : state.money < GLEIS_COST.money ? 'Zu wenig Taler' : 'Material fehlt noch';
@@ -375,13 +377,13 @@ const wegLink = (x1, y1, x2, y2) => !hillsOn() || levelLink(x1, y1, x2, y2, 'weg
 const slopeWegAt = (x, y) => hillsOn() && rampFresh().s > 0 && !!stairAt(x, y);
 // Wohin man hinkommt (Erreichbarkeit „in der Nähe“): Boden = 0; eine Anhöhe (zusammenhängende Felder gleicher Ebene) auch 0, wenn eine
 // Treppe auf sie hinaufführt (die Gleis-Rampe nicht – nur Züge), sonst eine eigene Nummer. null = alles ist erreichbar (keine Anhöhen oder jede hat einen Aufgang) –
-// dann muss niemand nachsehen. Gemerkt je Boden-Fassung wie rampFresh
+// dann muss niemand nachsehen. Gemerkt je Boden-Fassung wie rampFresh, dazu je COVER (157j: was auf Fuß und oberem Feld steht, zählt mit)
 let hillRegionCache = null;
 function hillRegions() {
   if (!hillsOn()) return null;
   const c = hillRegionCache;
-  if (c && c.gv === groundVersion && c.ts === state.tiles.size && c.hs === state.hills.size && c.st === state) return c.map;
-  const map = new Map(), up = new Set(hillStairs().map(s => (s.x + s.dx) + ',' + (s.y + s.dy)));
+  if (c && c.gv === groundVersion && c.ts === state.tiles.size && c.hs === state.hills.size && c.st === state && c.cv === COVER) return c.map;
+  const map = new Map(), { up, door, tops } = hillStairUse(), both = new Map(), blocked = new Set(), shut = new Set();
   let id = 0;
   for (const k0 of state.hills.keys()) {
     if (map.has(k0)) continue;
@@ -392,12 +394,50 @@ function hillRegions() {
     }
     const r = comp.some(k => up.has(k)) ? 0 : ++id;
     for (const k of comp) map.set(k, r);
+    if (!r) continue;
+    if (comp.some(k => tops.has(k))) shut.add(r);                       // eine Treppe führt herauf, ist aber zugestellt (157j)
+    for (const k of comp) for (const a of door.get(k) || []) {           // was sie versperrt, erreicht man über sie: gehört zu beiden Gegenden
+      const t = state.tiles.get(a), [ax, ay] = keyXY(a);
+      blocked.add(a);
+      for (const [fx, fy] of footprint(t.b, ax, ay, t.rot || 0, t)) { map.set(fx + ',' + fy, 0); both.set(fx + ',' + fy, r); }
+    }
   }
-  hillRegionCache = { gv: groundVersion, ts: state.tiles.size, hs: state.hills.size, st: state, map: id ? map : null };
+  hillRegionCache = { gv: groundVersion, ts: state.tiles.size, hs: state.hills.size, st: state, cv: COVER, map: id ? map : null, both, blocked, shut };
   return hillRegionCache.map;
 }
-// Feld k (Text-Schlüssel) in derselben Gegend wie Feld m? (reg = hillRegions())
-const sameRegion = (reg, k, m) => !reg || (reg.get(k) || 0) === (reg.get(m) || 0);
+// Treppen, die wirklich hinaufführen (157j): unten erreichbar (Fuß begehbar – breite Treppe auch über die Nachbartreppe) und oben frei. Steht auf
+// dem oberen Feld oder dem Fuß ein Ding (Gebäude, Gleis, Brunnen …), ist die Treppe nur dessen Tür. up: freie obere Felder; door: oberes Feld →
+// Anker, die die Treppe dorthin versperren; tops: alle oberen Felder
+function hillStairUse() {
+  const st = hillStairs(), byK = new Map(st.map(s => [s.k, s])), seen = new Set(), todo = [];
+  for (const s of st) if (walkable(s.x - s.dx, s.y - s.dy, true)) { seen.add(s.k); todo.push(s); }
+  while (todo.length) {
+    const s = todo.pop();
+    for (const [dx, dy] of DIRS) { const n = byK.get((s.x + dx) + ',' + (s.y + dy)); if (n && !seen.has(n.k) && levelLink(s.x, s.y, n.x, n.y, 'fuss')) { seen.add(n.k); todo.push(n); } }
+  }
+  const up = new Set(), door = new Map(), tops = new Set();
+  for (const s of st) {
+    const tx = s.x + s.dx, ty = s.y + s.dy, tk = tx + ',' + ty, free = walkable(tx, ty, true);
+    tops.add(tk);
+    if (seen.has(s.k) && free) { up.add(tk); continue; }
+    const a = seen.has(s.k) ? COVER.get(tk) : free ? COVER.get((s.x - s.dx) + ',' + (s.y - s.dy)) : null;   // oben bzw. auf dem Fuß
+    if (a && state.tiles.has(a)) { if (!door.has(tk)) door.set(tk, []); door.get(tk).push(a); }
+  }
+  return { up, door, tops };
+}
+// Feld k (Text-Schlüssel) in derselben Gegend wie Feld m? (reg = hillRegions()) – was eine Treppe versperrt, gehört zu beiden (157j)
+const sameRegion = (reg, k, m) => {
+  if (!reg) return true;
+  const a = reg.get(k) || 0, b = reg.get(m) || 0;
+  if (a === b) return true;
+  const B = hillRegionCache.both;
+  return B.size > 0 && (B.get(k) === b || B.get(m) === a);
+};
+// Gebäude oben (157j): liegt Feld (x, y) auf einer Anhöhe, auf die keine Treppe führt? (Fenster, Bau-Vorschau, Hinweis beim Bauen) – ohne Anhöhen nie
+const hillNoStair = (x, y) => { const reg = hillRegions(); return !!reg && (reg.get(x + ',' + y) || 0) > 0; };
+// … und führt eine hinauf, die zugestellt ist? (Fenster) / Versperrt das Ding mit Anker k eine Treppe (oben oder auf dem Fuß)? (Fenster)
+const hillStairShut = (x, y) => { const reg = hillRegions(); return !!reg && hillRegionCache.shut.has(reg.get(x + ',' + y) || 0); };
+const hillStairBlock = k => { const reg = hillRegions(); return !!reg && hillRegionCache.blocked.has(k); };
 
 // Viertel: alles Bebaute (Gebäude, Wege, Dekos), das direkt oder über Eck aneinandergrenzt.
 // Wege verbinden so auch weit entfernte Orte mit dem Dorf.
@@ -431,10 +471,10 @@ function computeNet() {
     if (isHome(t.b)) vHome.add(v);
   }
   for (const k of state.decos.keys()) if (!COVER.has(k)) { const v = vOf(k); vSize.set(v, (vSize.get(v) || 0) + 1); }
-  // Häuser in Laufweite
-  const houses = [];
-  for (const [k, t] of state.tiles) if (isHome(t.b)) houses.push(keyXY(k));
-  const nearHome = (x, y) => houses.some(([hx, hy]) => Math.max(Math.abs(hx - x), Math.abs(hy - y)) <= WALK_REACH);
+  // Häuser in Laufweite – Anhöhe ohne Treppe (157j): nur Häuser derselben Gegend (hillRegions; ohne Anhöhen null, dann wie bisher)
+  const houses = [], reg = hillRegions();
+  for (const [k, t] of state.tiles) if (isHome(t.b)) houses.push([...keyXY(k), k]);
+  const nearHome = (x, y) => { const m = reg && x + ',' + y; return houses.some(([hx, hy, hk]) => Math.max(Math.abs(hx - x), Math.abs(hy - y)) <= WALK_REACH && (!reg || sameRegion(reg, hk, m))); };
   const paths = [...state.tiles].filter(([, t]) => t.b === 'weg').map(([k]) => k);
   return { vOf, vSize, vHome, nearHome, paths };
 }
@@ -528,9 +568,9 @@ function kaufShares(kinds) {
 // Viertel kaufen zusätzlich bei Ladenarten, die es bei ihnen nicht gibt – nie statt der eigenen (Nutzer: „nur zusätzlich“).
 const LINE_SHOP = 0.5;
 function stopViertel(net, s) {
-  const out = new Set(), [x0, y0, x1, y1] = stopBox(s), v0 = net.vOf(s);
+  const out = new Set(), [x0, y0, x1, y1] = stopBox(s), v0 = net.vOf(s), hr = hillRegions();   // Anhöhen (157j): Nachbarn nur aus derselben Gegend
   if (v0) out.add(v0);
-  for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { const a = COVER.get(x + ',' + y), v = a && net.vOf(a); if (v) out.add(v); }
+  for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { const a = COVER.get(x + ',' + y), v = a && net.vOf(a); if (v && sameRegion(hr, a, s)) out.add(v); }
   return out;
 }
 function innerTraffic(links, net, SW) {
@@ -596,17 +636,17 @@ function totals() {
   for (const l of rail.lines) l.traffic = null;
   const links = [...rail.lines.filter(l => l.powered), ...cables, ...ferries.filter(f => !f.noSea)];
   transitTraffic(links, places);
-  const railV = new Map(), railSt = [];
+  const railV = new Map(), railSt = [], hreg = hillRegions();
   for (const l of links) for (const s of l.stations) {
     const f = l.traffic.served, v = net.vOf(s);
     if (v) railV.set(v, Math.max(railV.get(v) || 0, f));
-    railSt.push([...stopBox(s), f]);
+    railSt.push([...stopBox(s), f, s]);
   }
   const railReach = (k, t, x, y) => {
     const [w, h] = sizeOf(t.b, t.rot, t), x1 = x + w - 1, y1 = y + h - 1;
     let f = railV.get(net.vOf(k)) || 0;
-    for (const [a0, b0, a1, b1, g] of railSt) {
-      if (Math.max(0, a0 - x1, x - a1, b0 - y1, y - b1) <= WALK_REACH) f = Math.max(f, g);
+    for (const [a0, b0, a1, b1, g, s] of railSt) {                     // Bahnhof in Laufweite – Anhöhe ohne Treppe (157j): nur in derselben Gegend
+      if (Math.max(0, a0 - x1, x - a1, b0 - y1, y - b1) <= WALK_REACH && sameRegion(hreg, k, s)) f = Math.max(f, g);
     }
     return f;
   };
@@ -1406,7 +1446,7 @@ function computeCoasters() {
   for (const k0 of all) {
     if (seen.has(k0)) continue;
     const comp = [], todo = [k0]; seen.add(k0);
-    while (todo.length) { const k = todo.pop(); comp.push(k); const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (all.has(n) && !seen.has(n)) { seen.add(n); todo.push(n); } } }
+    while (todo.length) { const k = todo.pop(); comp.push(k); const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (all.has(n) && !seen.has(n) && coasterLevelOk(x, y, x + dx, y + dy)) { seen.add(n); todo.push(n); } } }
     let ring = comp.length >= 4 && railLoop(comp);
     const st = ring && ring.findIndex(k => state.tiles.get(k).b === 'fz_station');
     if (ring && st >= 0 && ring.length === comp.length) {
@@ -1458,7 +1498,9 @@ function computeParkRails() {
 const pbArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return !!t && isPbTrack(t.b); });
 // Höhenstufe eines Schienenstücks: vom Pinsel gesetzt, sonst die angezeigte Höhe (Automatik) gerundet
 const trackLevel = (x, y) => { const t = state.tiles.get(x + ',' + y), ca = COASTER_AT.get(x + ',' + y); return t && t.hgt != null ? t.hgt : Math.round(((ca && ca.h) || 0) / COASTER_STEP); };
-const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b); });
+const coasterArms = (x, y) => DIRS.filter(([dx, dy]) => { const t = state.tiles.get((x + dx) + ',' + (y + dy)); return t && isTrack(t.b) && coasterLevelOk(x, y, x + dx, y + dy); });
+// Achterbahn auf Anhöhen (157j): Schienen hängen nur auf derselben Ebene zusammen, nie über die Kante (ohne Anhöhen immer)
+const coasterLevelOk = (x1, y1, x2, y2) => !hillsOn() || hillLevel(x1, y1) === hillLevel(x2, y2);
 // Tortürme (Block 60f): je zwei in derselben Reihe oder Spalte, 2 bis 7 Felder auseinander, die einander am nächsten sind
 let TOR_PAIR = new Map();
 function computeTorPairs() {
@@ -1467,10 +1509,17 @@ function computeTorPairs() {
   for (const a of towers) {
     const [ax, ay] = keyXY(a);
     let pick = null, pd = 99;
-    for (const b of towers) { if (a === b) continue; const [bx, by] = keyXY(b), d = ax === bx ? Math.abs(ay - by) : ay === by ? Math.abs(ax - bx) : 99; if (d >= 2 && d <= 7 && d < pd) { pd = d; pick = b; } }
+    for (const b of towers) { if (a === b) continue; const [bx, by] = keyXY(b), d = ax === bx ? Math.abs(ay - by) : ay === by ? Math.abs(ax - bx) : 99; if (d >= 2 && d <= 7 && d < pd && torLevelOk(ax, ay, bx, by)) { pd = d; pick = b; } }
     if (pick) best.set(a, pick);
   }
   for (const [a, b] of best) if (best.get(b) === a) TOR_PAIR.set(a, b);
+}
+// Anhöhen (157j): Bogen nur, wenn beide Türme und alles dazwischen auf derselben Ebene liegen – nie über die Kante (ohne Anhöhen immer)
+function torLevelOk(ax, ay, bx, by) {
+  if (!hillsOn()) return true;
+  const lv = hillLevel(ax, ay), n = Math.abs(bx - ax) + Math.abs(by - ay), sx = Math.sign(bx - ax), sy = Math.sign(by - ay);
+  for (let i = 1; i <= n; i++) if (hillLevel(ax + sx * i, ay + sy * i) !== lv) return false;
+  return true;
 }
 // Freizeitparks (Block 60): zusammenhängender Freizeitpark-Boden; Fahrgeschäfte & Stände darauf (je eins) → Stufe nach FZ_STEPS
 let FZPARKS = [];
@@ -3333,12 +3382,12 @@ function previewDelta(b, x, y) {
   if (previewCache && previewCache.k === k && previewCache.b === b && previewCache.rot === rot) return previewCache;
   const old = state.tiles.get(k);                                  // Weg unter einem Marktstand bleibt liegen
   state.tiles.set(k, { b, lvl: 1, rot, ...(old && plazaSpot(b, x, y) ? { weg: wegUnder(old) } : {}), ...(b === 'huegelrampe' ? { form: rampFormNow() } : {}) });   // (übrige Wegfelder bleiben für die Vorschau liegen; Gleis-Rampe: ihre Form)
-  const t = totals();
+  const t = totals(), blocks = hillsOn() && hillStairBlock(k);          // Anhöhe (157j): versperrte es eine Treppe? (noch mit dem Ding gerechnet)
   if (old) state.tiles.set(k, old); else state.tiles.delete(k);
   rebuildCover(); computeMarkets(); computeParks(); computeCoasters(); computeParkRails(); computeTorPairs(); computeFz();   // Marktplätze und Parks wieder wie wirklich gebaut
   const st = t.st.get(k) || {};
   previewCache = { k, b, rot, inc: t.inc - T.inc, beauty: t.beauty - T.beauty, sci: t.sci - T.sci, prod: st.prod, conv: st.conv,
                    pop: t.pop - T.pop, how: t.st.get(k)?.how, bonus: t.st.get(k)?.bonus || 0,
-                   site: siteOf(b, k, rot), pow: POWER_OUT[b] ? powerOf({ b, lvl: 1, rot }, k) : 0 };
+                   site: siteOf(b, k, rot), pow: POWER_OUT[b] ? powerOf({ b, lvl: 1, rot }, k) : 0, blocks };
   return previewCache;
 }

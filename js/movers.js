@@ -57,10 +57,13 @@ function doorsOf(k) {
   }
   return out;
 }
-// Kürzester Fußweg (nicht durch Zäune) zu einem der Zielfelder; Liste der Felder ohne den Start, null wenn keiner
+// Kürzester Fußweg (nicht durch Zäune) zu einem der Zielfelder; Liste der Felder ohne den Start, null wenn keiner.
+// Anhöhe ohne Treppe (157j): eigene Gegend (hillRegions) – hinauf und hinunter kommt dort keiner, die Suche spart sich das (ohne Anhöhen null)
 function walkPath(sx, sy, goals, limit = 2500) {
   const want = new Set(goals.map(([x, y]) => x + ',' + y)), start = sx + ',' + sy;
   if (want.has(start)) return [];
+  const hr = hillRegions();
+  if (hr && !goals.some(([x, y]) => sameRegion(hr, x + ',' + y, start))) return null;
   const prev = new Map([[start, null]]), q = [[sx, sy]];
   for (let i = 0; i < q.length && prev.size < limit; i++) {
     const [x, y] = q[i];
@@ -78,16 +81,17 @@ function walkPath(sx, sy, goals, limit = 2500) {
   }
   return null;
 }
-// Ziel für einen Bewohner: ein passendes Gebäude in der Nähe (eins der fünf nächsten) bzw. ein Stück Parkrasen
+// Ziel für einen Bewohner: ein passendes Gebäude in der Nähe (eins der fünf nächsten) bzw. ein Stück Parkrasen. Gebäude oben (157j): nur, wenn
+// eine Treppe auf ihre Anhöhe führt (bzw. man selbst oben ist) – sonst verdrängten unerreichbare Ziele die erreichbaren
 function findGoal(kind, x, y) {
-  const reg = regionAt(x, y), near = [];
+  const reg = regionAt(x, y), near = [], hr = hillRegions(), here = x + ',' + y;
   if (kind === 'park' || kind === 'fzpark') {                          // Park bzw. Freizeitpark (Block 60d): ein begehbares Feld darin
-    for (const p of kind === 'park' ? PARKS : FZPARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
+    for (const p of kind === 'park' ? PARKS : FZPARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py) && sameRegion(hr, k, here)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
   } else if (GOAL_OF[kind]) {
     for (const [k, t] of state.tiles) {
       if (!GOAL_OF[kind](t.b)) continue;
       const [gx, gy] = keyXY(k), d = Math.abs(gx - x) + Math.abs(gy - y);
-      if (d <= 30 && regionAt(gx, gy) === reg) near.push({ k, d });
+      if (d <= 30 && regionAt(gx, gy) === reg && sameRegion(hr, k, here)) near.push({ k, d });
     }
   }
   near.sort((a, b) => a.d - b.d);
@@ -95,9 +99,12 @@ function findGoal(kind, x, y) {
   return pick.length ? pick[Math.floor(Math.random() * pick.length)] : null;
 }
 // Unterwegs zu goal (kind, k); ohne Ziel oder Weg dorthin: ein Stück bummeln
+// Anhöhe (157j): Weg ab dem Feld, auf das man gerade zugeht (w.tx) – ab w.fx sprang man nach dem Bummeln vom schon gewählten Nachbarfeld schräg
+// aufs erste Feld des Wegs, an der Kante auch über Eck zur Treppe. Ohne Anhöhen wie vorher ab w.fx
 function setGoal(w, kind) {
-  const g = kind === 'home' ? { k: w.home } : findGoal(kind, w.fx, w.fy);
-  const path = g && walkPath(w.fx, w.fy, g.tiles || doorsOf(g.k));
+  const [sx, sy] = hillsOn() && w.tx != null ? [w.tx, w.ty] : [w.fx, w.fy];
+  const g = kind === 'home' ? { k: w.home } : findGoal(kind, sx, sy);
+  const path = g && walkPath(sx, sy, g.tiles || doorsOf(g.k));
   if (path) { w.goal = { kind, k: g.k }; w.path = path; w.steps = null; return true; }
   if (kind === 'home') { w.gone = true; return false; }                     // kein Weg nach Hause: geht einfach rein
   w.goal = { kind: 'bummel' }; w.path = null; w.steps = 6 + Math.floor(Math.random() * 10);
@@ -610,7 +617,8 @@ function lineRoute(line) {
     for (let n = 0; n < 3 && list.length > 1; n++) {
       const [a, b] = atEnd ? [list[list.length - 2], list[list.length - 1]] : [list[1], list[0]];
       const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = 2 * bx - ax, ny = 2 * by - ay, nk = nx + ',' + ny;
-      if (list.includes(nk) || (!HALL.has(nk) && (n >= 2 || !trackAt(nx, ny) || !trackLink(bx, by, nx, ny)))) break;
+      const hall = HALL.has(nk) && (!hillsOn() || hillLevel(nx, ny) === hillLevel(bx, by));   // Anhöhen (157j): nie in die Halle eines Hbf anderer Höhe
+      if (list.includes(nk) || (!hall && (n >= 2 || !trackAt(nx, ny) || !trackLink(bx, by, nx, ny)))) break;
       if (atEnd) list.push(nk); else list.unshift(nk);
     }
   };

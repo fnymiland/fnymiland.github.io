@@ -259,9 +259,9 @@ describe('Wege oben bauen, Pinsel über die Kante', () => {
     expect([game('wegNetwork(13, 17).length'), game('wegNetwork(13, 11).length')]).toEqual([4, 1]);   // nicht über die Rampe verbunden
   });
 
-  it('Gebäude weiter nicht oben; Häuser drehen die Tür nicht zum Weg oben auf der Anhöhe', () => {
+  it('Gebäude oben (Stufe 3, 157j); Häuser drehen die Tür nicht zum Weg oben auf der Anhöhe', () => {
     hills(block(10, 10, 13, 13)); weg([[11, 13]]);
-    expect(game("placeError('haus', 11, 12)")).toMatch(/Gebäude auf Anhöhen/);
+    expect(game("placeError('haus', 11, 12)")).toBe(null);                          // Stufe 3 (157j): Gebäude oben
     game('buildRot = 0');
     expect(game("FRONT_DIR[placeRot('haus', 11, 14)]")).not.toEqual([0, -1]);        // Weg oben dahinter zählt nicht
     weg([[11, 15]]);

@@ -131,13 +131,13 @@ describe('Gleis-Rampe: Höhe und Verbindungen', () => {
     for (const who of ['weg', 'fuss']) expect([L(17, 10, 16, 10, who), L(16, 10, 15, 10, who), L(16, 10, 16, 11, who)]).toEqual([true, true, false]);
   });
 
-  it('oben dürfen Gleise (kommen beim Anheben mit hinauf), Wege, Deko; Bahnhöfe, Tunneleinfahrt und Parkbahn nicht', () => {
+  it('oben dürfen Gleise (kommen beim Anheben mit hinauf), Wege, Deko, Bahnhöfe (Stufe 3); Tunneleinfahrt und Parkbahn nicht', () => {
     hills(block(5, 5, 7, 7));
     expect(game("placeError('schiene', 6, 6)")).toBe(null);
     expect(game("build('schiene', 6, 6) && build('schiene', 6, 5)")).toBe(true);
-    expect(game("[hillOk('schiene'), hillOk('weg'), hillOk('huegelrampe'), hillOk('huegeltreppe'), hillOk('station'), hillOk('tunneleinfahrt'), hillOk('pb_gleis')]")).toEqual([true, true, false, false, false, false, false]);
-    expect(game("hillError('station', [[5, 5], [5, 6]])")).toMatch(/Bahnhöfe auf Anhöhen kommen später/);
-    expect(game("hillError('tunneleinfahrt', [[5, 5], [5, 6]])")).toMatch(/Prellbock/);
+    expect(game("[hillOk('schiene'), hillOk('weg'), hillOk('huegelrampe'), hillOk('huegeltreppe'), hillOk('station'), hillOk('tunneleinfahrt'), hillOk('pb_gleis')]")).toEqual([true, true, false, false, true, false, false]);   // Bahnhof oben: Stufe 3 (157j)
+    expect(game("hillError('station', [[5, 5], [5, 6]])")).toBe(null);
+    expect(game("hillError('tunneleinfahrt', [[5, 5], [5, 6]])")).toMatch(/Tunneleinfahrt steht unten/);
     expect(game("hillError('pb_gleis', [[5, 5]])")).toMatch(/Parkeisenbahn/);
     expect(game("hillError('schiene', [[7, 7], [8, 7]])")).toMatch(/Kante/);                 // nie über die Kante
     rails([[10, 10], [10, 11]]);
