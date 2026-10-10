@@ -2604,10 +2604,10 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
-  if (b === 'huegeltreppe') { const e = stairError(x, y, rot); if (e) return e; }           // Treppe in die Anhöhe (Block 157d): unten, zur Anhöhe, nicht auf Weg/Dach
+  if (b === 'huegeltreppe') { const e = stairError(x, y, rot, opts.move || !!opts.t); if (e) return e; }   // Treppe in die Anhöhe (Block 157d): unten bzw. in den Rand eingelassen (nicht getragen: Verschieben, Kopie), zur Anhöhe
   if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 1): oben nur Deko und Gelände, nie über die Kante (auch Verschieben)
     const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : b === 'graben' && stairsAround(x, y, true).length ? 'Vor dem Fuß der Treppe muss Platz bleiben'   // Treppe (157d): wie hillRaiseError
-      : hillError(b, footprint(b, x, y, r, opts.t));
+      : b === 'huegeltreppe' ? null : hillError(b, footprint(b, x, y, r, opts.t));          // Treppe: stairError kennt die Anhöhe (in den Rand eingelassen)
     if (he) return he;
   }
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
@@ -2756,7 +2756,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (d.wonder && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `${WONDERS[b].the} gibt es schon`;
   if (opts.move || opts.noCost) return null;            // noCost: Linie/Rechteck rechnen den Preis zusammen
   const c = costOf(b, x, y);
-  if (state.money < c.cost + clearCost(b, x, y, r)) return 'Zu wenig Taler';
+  if (state.money < c.cost + clearCost(b, x, y, r) - (b === 'huegeltreppe' ? stairIntoBack(x, y) : 0)) return 'Zu wenig Taler';   // Treppe in die Anhöhe: Erstattung verrechnet
   return matError(c.mat);
 }
 

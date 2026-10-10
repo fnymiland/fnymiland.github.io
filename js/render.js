@@ -1408,12 +1408,13 @@ function render(now) {
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   const HILLS = !!(state.hills && state.hills.size);                     // Anhöhen (Block 157): sonst alles wie vorher
   HILL_MARKS = HILLS ? new Map() : null;                                 // Vorschau auf Anhöhen-Feldern: erst in tileA, oben (hillMark)
+  hillGap = null;                                                        // Vorschau „Treppe in die Anhöhe“ (hills.js): gesetzt unten im Bauen-Zweig
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
     if (boxOnHill(ax, ay, w, h)) {                                       // Anhöhe: Rahmen je Feld, oben auf der Anhöhe
       const col = ok ? '#3fbf6f' : '#e5484d';
       hillFrame(ax, ay, ax + w - 1, ay + h - 1, () => { g.strokeStyle = col; g.lineWidth = 3 * z; });
-      const p = toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2); p.y -= hillLift(ax, ay) * z;
+      const p = toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2); p.y -= drawLevel(ax, ay) * HILL_H * z;   // Treppe in die Anhöhe: unten
       return p;
     }
     const c = [toScreen(ax - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay - 0.5), toScreen(ax + w - 0.5, ay + h - 0.5), toScreen(ax - 0.5, ay + h - 0.5)];
@@ -1492,6 +1493,7 @@ function render(now) {
       let text = err;
       if (!err) {
         if (tool === 'anhoehe' && hillAt(hx, hy)) text = `Wand: ${DECO_LOOKS.anhoehe.forms[hillAt(hx, hy).w || 0].name} → ${DECO_LOOKS.anhoehe.forms[decoLookNew('anhoehe').form || 0].name} · kostenlos`;   // Anhöhe (Block 157): nur umstellen
+        else if (tool === 'huegeltreppe' && hillAt(hx, hy)) text = `Treppe in die Anhöhe: −${fmt(ITEMS.huegeltreppe.cost - stairIntoBack(hx, hy))}`;   // Feld wird abgesenkt (hills.js)
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
@@ -1519,6 +1521,7 @@ function render(now) {
         const wn = replacesWeg(tool) ? pathsUnder(tool, hx, hy, rotOf(tool)).length : 0;   // Gebäude auf dem Weg (Block 58)
         if (wn) text += `  🛤️ ersetzt den Weg +${fmt(wn * ITEMS.weg.cost)}`;
       }
+      if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1 };   // Feld ohne Anhöhe, mit Treppe
       const onWeg = k => plainWeg(k) && (plazaOk(tool) || replacesWeg(tool));   // Wege darf man über- bzw. ersetzen
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => (!COVER.has(fx + ',' + fy) || onWeg(fx + ',' + fy)) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
@@ -1594,12 +1597,12 @@ function render(now) {
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
-      const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
+      const hl = HILLS && state.hills.get(k), gap = hl && hillGap && hillGap.k === k, lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
       if (lift) {
         const bigOn = a && (() => { const [w0, h0] = sizeOf(t.b, t.rot, t), [ax0, ay0] = keyXY(a); return (w0 > 1 || h0 > 1) && hillLevel(ax0, ay0) > 0 && t.b !== 'weg'; })();
         if (!bigOn) { drawHillTile(x, y, px, py, z); runMarks(x, y, lift / z); }
         py -= lift;
-      }
+      } else if (gap) runMarks(x, y, 0);                                  // Vorschau „Treppe in die Anhöhe“: Feld abgesenkt, Rahmen unten
       if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
         if (GLPASS && edgeFieldsHas(x, y)) glLive(px, py, (TW * 0.75 + 24) * z, (TH + 120) * z, (TW * 0.75 + 24) * z, (TH * 0.5 + 24) * z, lift ? () => lifted(lift, () => drawEdgesAt(x, y, z, now)) : () => drawEdgesAt(x, y, z, now));
         else if (lift) lifted(lift, () => drawEdgesAt(x, y, z, now));
@@ -1698,7 +1701,7 @@ function render(now) {
       }
       if (ghostFront && x === ghostFront[0] && y === ghostFront[1]) {
         const [gx, gy, gw, gh] = preview.box, c = toScreen(gx + (gw - 1) / 2, gy + (gh - 1) / 2);
-        if (HILLS) c.y -= hillLift(gx, gy) * z;                            // Anhöhe (Block 157): so, wie es oben stehen wird
+        if (HILLS) c.y -= drawLevel(gx, gy) * HILL_H * z;                  // Anhöhe (Block 157): so, wie es oben stehen wird (Treppe in die Anhöhe: unten)
         const rot = placeRot(ghostType, gx, gy);
         g.globalAlpha = 0.65;
         g.save(); g.translate(c.x, c.y);
@@ -1715,7 +1718,7 @@ function render(now) {
     const k = x + ',' + y;
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
-      const ms = byTile.get(k);
+      const ms0 = byTile.get(k), ms = ms0 && hl && hillGap && hillGap.k === k ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe in die Anhöhe: oben ist dort nichts
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
@@ -1774,7 +1777,7 @@ function render(now) {
   }
   FOG = false;
   archWalkers.clear();
-  HILL_MARKS = null;                                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
+  HILL_MARKS = null; hillGap = null;                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 

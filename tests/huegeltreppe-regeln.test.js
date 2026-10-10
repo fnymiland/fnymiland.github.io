@@ -22,7 +22,7 @@ describe('Treppe in die Anhöhe (Block 157d)', () => {
   it('nur unten direkt vor der Wand; dreht sich von selbst zur Anhöhe', () => {
     hills(block(6, 6, 8, 7));                                            // Anhöhe 3 × 2
     expect(game("placeError('huegeltreppe', 12, 12)")).toMatch(/vor die Wand einer Anhöhe/);
-    expect(game("placeError('huegeltreppe', 7, 7)")).toMatch(/steht unten/);
+    expect(game("placeError('huegeltreppe', 7, 7)")).toBe(null);           // auf den Rand der Anhöhe: wird eingelassen (Treppe in eine bestehende Anhöhe)
     // vor der vorderen Wand (+y): hinauf = −y (rot 0); vor der rechten (+x): hinauf = −x (rot 3); hinter der Anhöhe: +y (rot 2)
     expect(game("[placeRot('huegeltreppe', 7, 8), placeRot('huegeltreppe', 9, 6), placeRot('huegeltreppe', 7, 5), placeRot('huegeltreppe', 5, 6)]")).toEqual([0, 3, 2, 1]);
     expect(game("placeError('huegeltreppe', 7, 8)")).toBe(null);

@@ -2337,3 +2337,17 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Umgesetzt mit Ultracode-Ablauf (5 Bereiche parallel, dann Tests und Prüfung). Nachgebessert: dunkle Kante oben zur tieferen
       Seite hinten (Oberseite hob sich nicht ab), Linien oben/unten an der Kante nicht verbunden (`freeEnd`), Stützen und Deko auf
       Dächern hinter einer Anhöhe nicht durch sie hindurch antippbar (`hillInFront`).
+- [x] 157g Treppe in eine bestehende Anhöhe (Nutzer 10.10.2026: „nicht erst ranbauen … sondern auch überschreiben“): Treppe auf ein
+      Randfeld getippt → Feld abgesenkt (Erstattung der Anhöhe mit dem Treppenpreis verrechnet, Schild „Treppe in die Anhöhe: −40“), Treppe
+      dreht hinauf, ein ↶-Schritt. Meldungen: Inneres, etwas darauf, schon eine Treppe hinauf, Linie/Eckpunkt-Deko, Ebene ≠ 1, zu schmal,
+      Wasser davor. Wald/Fels oben: roden/sprengen wie unten. Verschieben/Gruppe/Kopie in die Anhöhe gesperrt (Ablegen senkt nie ab;
+      Abreißen gibt alles zurück). Vorschau zeigt das Feld abgesenkt, Nachbarn mit Wand (eigene Bildchen). Spaziergänger: wer auf dem Feld
+      steht, ist weg, wer hinwollte, kehrt um (`hwLowered`). Offen: Schatten im Boden-Bild erst nach dem Bauen (Vorschau zeigt den alten).
+      Nachgebessert „bündig“ (Nutzer): Keil ohne Überstand (vorn eine Stufe hoch, hinten so hoch wie die Anhöhe, Oberseite wie der Boden,
+      Grasnarbe so dick wie die der Wand und um die Ecke durchlaufend), Grasnarbe/Felsschichten an Feldgrenzen ohne Versatz, Oberseite ohne
+      Spitzen an Ecken, dunkle Kante oben mit geraden Enden, neben der Treppe bis zur obersten Stufe, Innenecken auf Gehrung, Lichtkanten
+      breiter Treppen nicht doppelt. Test: treppe-buendig
+- [x] Wandfuge (1 Gerätepunkt grünlich zwischen zwei Wandbildchen, alle Anhöhen): Wand reicht `HILL_EXT` unter das später gezeichnete
+      Nachbarbild, nur gerade weiter und an Innenecken (`hillExt`, im Bildchen-Schlüssel). Gemessen bei z 4,5: Vorder- und Seitenwand an
+      allen Fugen durchgehend Wandfarbe. Test: treppe-buendig (die Helfer scheiterten am Wochenlimit, selbst fertiggestellt)
+

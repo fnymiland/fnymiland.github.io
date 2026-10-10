@@ -192,6 +192,18 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Dach darüber (roofError und `groupErrors`), Treppen ringsum `stairsAround` – eine Anhöhe mit Treppe davor ist nicht abtragbar (lowerHill,
     demolishInfo, ✋-Rechteck, ↶). Aussehen hängt an den Nachbarn (`stairLook`: Anhöhe = Wange, gleiche
     Treppe = breit, sonst Keil) – als Bildchen in `hillSprites` ('s' + Feld). Antippen in der Höhe kennt die Stufen (`stairHeight` in pickFrac).
+    **In eine bestehende Anhöhe** (10.10.2026): auf ein Randfeld (Ebene 1, dahinter gleich hoch, davor Fuß wie unten: `stairDirs` mit `stairBase`)
+    senkt `build` das Feld ab (`hillTake`, Erstattung verrechnet: `stairIntoBack`, auch in placeError/Schild) – ein ↶-Schritt (undo nimmt die Treppe
+    der Stufe mit, `mine`). Regeln `stairIntoError`; getragen (✋, Gruppe, ⧉ Kopie: placeError mit `opts.t`) nie. Vorschau: `hillGap` gilt nur für das
+    Bild (render setzt und löscht es) – Feld ohne Anhöhe und Anheben, Nachbarn als eigene Bildchen ('p' + Feld); Zeichnen fragt Nachbarhöhen über
+    `drawLevel`, Spielregeln nie.
+    **Bündig** (Nutzer 10.10.2026, tests/treppe-buendig.test.js): Keil = schmale Anhöhe – oben auf der Linie der Stufenkanten (vorn eine Stufe
+    hoch, ab der obersten waagerecht auf `HILL_H`, nie darüber), Oberseite in Bodenfarbe (`groundTopAt`), hinten 0,0075 über die Feldgrenze wie
+    Anhöhe an Anhöhe (sonst feiner dunkler Strich zur Oberseite dahinter), Wände mit derselben Grasnarbe; hinterer
+    Keil außen mit dunkler Kante. `paintHillWall`: Grasnarbe und Felsschichten treffen an jedem Wandende genau ihre Mitte (Feldgrenzen, Ecken,
+    Keil ↔ Anhöhe), nie unter den Fuß. Oberseite nach hinten und über Wänden genau auf der Raute, nur zu gleich hohen Nachbarn vorn größer
+    (sonst Spitzen an Ecken). Dunkle Kante oben im selben Zuschnitt (gerade Enden), neben einer Treppe nur bis zur obersten Stufe
+    (`hillStairEnds` a–d), Innenecken schließt `hillMiter`. Wer Neues an Wand oder Kante malt, hält diese Enden ein.
     **Spaziergänger** (157e, js/hill-walkers.js): `w.up` = Höhe über dem Feld, auf dem gezeichnet wird (oben 0, Treppe = Stufe am gezeichneten
     Fußpunkt `hwFootD`, Boden null); Kopf/Antippen über `walkerHead` (+ `hillLift`). Wer Listen von Bewohnern prüft (Fenster, Antippen,
     Sprechblase), nimmt `hillWalkers` dazu wie `roofers`. Treppe weg oder kein Weg mehr zum Ausstieg (`hwRoute` false: Zaun, Deko): sie

@@ -111,6 +111,7 @@ function build(b, x, y, quiet) {
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
+  const back = b === 'huegeltreppe' ? stairIntoBack(x, y) : 0;          // Treppe in die Anhöhe (hills.js): Feld absenken, Erstattung verrechnet
   for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
   if (replaced.length) { state.money += replaced.length * ITEMS.weg.cost; if (!quiet) toast(`Weg ersetzt: +${fmt(replaced.length * ITEMS.weg.cost)}`); }
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
@@ -137,6 +138,7 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(paid.mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
     }
   } else {
+    if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (bridge && b === 'weg') {                                      // Brücke verlängern: Art und Farben der alten übernehmen (66c)
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge), nt = state.tiles.get(k);
@@ -157,7 +159,7 @@ function build(b, x, y, quiet) {
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }
   recalc();
-  if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost), '#d9534a');
+  if (d.cost && !d.paint) addFloat(x, y, '−' + fmt(d.cost - back), '#d9534a');
   const s = statusOf(x, y);
   if (s && s.how === 'weit' && !quiet) toast('Weit weg vom Dorf: nur halbe Kraft. Ein Weg zum Dorf hilft.');
   if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
@@ -1105,7 +1107,9 @@ function undo() {
     if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
     if (n !== 'hills' || b === undefined) continue;
     const o = objAt(...keyXY(k));
-    if (o && !hillOk(o.b)) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
+    if (o && !hillOk(o.b) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }   // Treppe in die Anhöhe: geht mit zurück
+    if (UNDO_MAPS.hills().has(k)) continue;
+    if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

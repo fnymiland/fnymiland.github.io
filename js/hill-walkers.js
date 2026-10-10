@@ -258,6 +258,16 @@ function hwStep(w, dt) {
   }
   hwPut(w, (w.fa + (w.ta - w.fa) * w.t) / 3, (w.fb + (w.tb - w.fb) * w.t) / 3, s.lv * HILL_H);
 }
+// Feld (x, y) abgesenkt (Treppe in die Anhöhe, actions.js build): wer dort oben steht, ist weg (nie in der Luft); wer gerade dorthin
+// geht, kehrt um – der nächste Schritt fragt die Rasterpunkte neu (hwFresh)
+function hwLowered(x, y) {
+  const on = (u, v) => Math.round(u) === x && Math.round(v) === y;
+  for (const w of hillWalkers) {
+    if (w.st !== 'top' || w.gone) continue;
+    if (on(w.px, w.py) || on(w.fa / 3, w.fb / 3) || (w.bench && on(w.bench.u, w.bench.v))) { w.gone = true; continue; }
+    if (on(w.ta / 3, w.tb / 3)) { [w.fa, w.fb, w.ta, w.tb] = [w.ta, w.tb, w.fa, w.fb]; w.t = 1 - w.t; w.route = null; w.pa = w.pb = null; }
+  }
+}
 function stepHillWalkers(dt) {
   if (!hillWalkers.length) return;
   for (const w of hillWalkers) if (!w.gone) hwStep(w, dt);

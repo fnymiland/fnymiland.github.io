@@ -33,7 +33,7 @@ describe('Treppe in die Anhöhe (Block 157d)', () => {
 
   it('nur unten direkt vor der Wand, dreht sich von selbst zur Anhöhe; nicht auf Anhöhe, Wasser, Weg; kostet Taler und Stein', () => {
     hills(block(10, 10, 13, 13));
-    expect(game("placeError('huegeltreppe', 11, 11)")).toMatch(/steht unten/);               // oben auf der Anhöhe
+    expect(game("placeError('huegeltreppe', 11, 11)")).toMatch(/an den Rand der Anhöhe/);    // mitten auf der Anhöhe (am Rand: eingelassen, unten)
     expect(game("placeError('huegeltreppe', 17, 17)")).toMatch(/vor die Wand/);              // frei auf der Wiese
     game("state.terra.set('12,14', 'water'); recalc()");
     expect(game("placeError('huegeltreppe', 12, 14)")).toBe('Nicht auf dem Wasser');
@@ -309,5 +309,204 @@ describe('Spaziergänger auf Anhöhen (Block 157d)', () => {
     // 👁 Durchsicht: Treppe bleibt wie die Anhöhe (nicht blass), Zeichnen ohne Fehler
     expect(() => game('setSeeThrough(true); render(1e6); setSeeThrough(false)')).not.toThrow();
     expect(() => game("thumbRaw('huegeltreppe', 1, { style: 'klinker' })")).not.toThrow();
+  });
+});
+
+describe('Treppe in eine bestehende Anhöhe', () => {
+  // Nutzer (10.10.2026): „nicht erst ranbauen und dann links rechts eine Anhöhe drumrum, sondern auch überschreiben“ – auf ein Randfeld der
+  // Anhöhe getippt, wird das Feld abgesenkt und die Treppe steht dort, hinauf zur Anhöhe dahinter. Je Seite der Anhöhe 10–13 × 10–13:
+  // Feld (Randfeld), Drehung (hinauf: STAIR_UP[rot])
+  const INTO = [[11, 13, 0], [13, 11, 3], [11, 10, 2], [10, 11, 1]];
+  const net = () => game('ITEMS.huegeltreppe.cost - ITEMS.anhoehe.cost');
+  beforeEach(() => game('window.__gh = gameHour; gameHour = () => 12'));                     // Spaziergänger: Spieluhr fest auf Mittag
+  afterEach(() => game('gameHour = window.__gh'));
+
+  it('alle vier Richtungen: Feld abgesenkt, Treppe dreht sich hinauf, Taler verrechnet (Treppe − Anhöhe); ↶ ist ein Schritt für beides', () => {
+    game('state.paintNew.anhoehe = { form: 2 }');                                           // Trockenmauer: kommt mit ↶ so zurück
+    hills(block(10, 10, 13, 13));
+    for (const [x, y, rot] of INTO) {
+      game(`buildRot = ${(rot + 2) % 4}`);                                                  // gewählte Drehung passt nicht: dreht trotzdem hinauf
+      expect(game(`placeError('huegeltreppe', ${x}, ${y})`)).toBe(null);
+      expect(game(`placeRot('huegeltreppe', ${x}, ${y})`)).toBe(rot);
+      const m0 = game('state.money'), s0 = game('state.res.stein'), n0 = game('undoStack.length');
+      expect(game(`undoable(() => build('huegeltreppe', ${x}, ${y}))`)).toBe(true);
+      expect(game(`[hillAt(${x}, ${y}), state.tiles.get('${x},${y}').b, state.tiles.get('${x},${y}').rot || 0]`)).toEqual([null, 'huegeltreppe', rot]);
+      expect([game('state.money'), game('state.res.stein')]).toEqual([m0 - net(), s0 - game('ITEMS.huegeltreppe.mat.stein')]);
+      expect(game(`hillStairs().find(s => s.x === ${x} && s.y === ${y})`)).toMatchObject({ rot, dx: game(`STAIR_UP[${rot}][0]`), dy: game(`STAIR_UP[${rot}][1]`) });
+      expect(game('undoStack.length')).toBe(n0 + 1);
+      expect(game('undo()')).toBe(true);                                                    // ein Schritt: Treppe weg, Anhöhe wieder da, Taler und Stein zurück
+      expect(game(`[state.hills.get('${x},${y}'), state.tiles.has('${x},${y}'), state.money, state.res.stein]`)).toEqual([{ w: 2 }, false, m0, s0]);
+      expect(game('undoStack.length')).toBe(n0);
+      game(`build('huegeltreppe', ${x}, ${y})`);                                            // für den nächsten Durchgang stehen lassen
+    }
+    expect(game('hillStairs().length')).toBe(4);
+    // Wald oben: wird gerodet wie unten vor der Wand (Preis dazu), ↶ bringt ihn zurück
+    game("state.terra.set('12,13', 'forest'); recalc()");
+    expect(game("placeError('huegeltreppe', 12, 13)")).toBe(null);
+    const m1 = game('state.money');
+    game("undoable(() => build('huegeltreppe', 12, 13))");
+    expect([game('state.money'), game("terrainAt(12, 13)")]).toEqual([m1 - net() - game('CLEAR_COST.forest'), 'grass']);
+    expect(game("stairRow(12, 13).length")).toBe(2);                                        // neben der Treppe in (11, 13): breit
+    game('undo()');
+    expect([game('state.money'), game("terrainAt(12, 13)"), !!game("hillAt(12, 13)")]).toEqual([m1, 'forest', true]);
+  });
+
+  it('neben einer Treppe davor: wird eine breite Treppe; Abreißen gibt die Treppe zurück, das Feld bleibt unten', () => {
+    hills(block(10, 10, 14, 12).concat(block(10, 13, 13, 13)));                             // rechts vorn eine Ecke ausgespart
+    game("build('huegeltreppe', 14, 13)");                                                  // unten vor der Wand
+    game("build('huegeltreppe', 13, 13)");                                                  // daneben in die Anhöhe
+    const look = (x, y) => game(`(o => o.m + o.p)(stairLook(${x}, ${y}, stairAt(${x}, ${y})))`);
+    expect([look(13, 13), look(14, 13)]).toEqual(['hj', 'jk']);
+    expect(game('stairRow(13, 13).length')).toBe(2);
+    const m0 = game('state.money');
+    expect(game('demolishInfo(13, 13)')).toMatchObject({ full: true, refund: game('ITEMS.huegeltreppe.cost') });
+    game('demolish(13, 13)');
+    expect([game('state.money'), game("state.tiles.has('13,13')"), game('hillAt(13, 13)')]).toEqual([m0 + game('ITEMS.huegeltreppe.cost'), false, null]);
+  });
+
+  it('Meldungen statt Bauen: Inneres, etwas darauf, schon eine Treppe hinauf, Linie am Rand, Ecke, Ebene ≠ 1, zu schmal, Wasser davor, Taler', () => {
+    hills(block(10, 10, 13, 13));
+    const err = (x, y) => game(`placeError('huegeltreppe', ${x}, ${y})`);
+    expect(err(11, 11)).toBe('Die Treppe gehört an den Rand der Anhöhe');
+    game("buildSmall('bank', 12, 13, 4)");
+    expect(err(12, 13)).toBe('Hier steht: Bank – erst wegnehmen');
+    game("state.decos.clear(); state.tiles.set('12,13', { b: 'brunnen', lvl: 1 }); recalc()");   // Deko-Feld oben
+    expect(err(12, 13)).toBe('Hier steht: Brunnen – erst wegnehmen');
+    game("state.tiles.delete('12,13'); recalc()");
+    game("build('huegeltreppe', 11, 14)");                                                  // führt schon auf (11, 13) hinauf
+    expect(err(11, 13)).toBe('Hierher führt schon eine Treppe hinauf');
+    game("state.edges.set(edgeBetween(12, 13, 13, 13), { b: 'zaun', style: 0 }); recalc()");   // oben zwischen zwei Feldern
+    expect(err(12, 13)).toBe('Am Rand steht: Zaun – erst entfernen');
+    expect(err(13, 13)).toBe('Am Rand steht: Zaun – erst entfernen');
+    game("state.edges.clear(); buildSmall('laterne', 13, 13, VSLOT); recalc()");           // Eckpunkt oben (12,5 | 12,5), gespeichert beim Feld (13, 13)
+    expect(game('postAt(13, 13) && postAt(13, 13).b')).toBe('laterne');
+    expect(err(12, 13)).toBe('An der Ecke steht: Laterne – erst wegnehmen');               // rechte Ecke von (12, 13)
+    game("state.decos.clear(); recalc(); state.hills.get('12,13').h = 2");
+    expect(err(12, 13)).toBe('Die Treppe führt nur auf die erste Ebene');
+    game("delete state.hills.get('12,13').h");
+    hills([[17, 10], [17, 17], [18, 17], [19, 17], [17, 20], [17, 21]]);
+    expect(err(17, 10)).toBe('Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal');   // einzelnes Feld
+    expect(err(18, 17)).toBe('Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal');   // mitten im schmalen Grat
+    expect(err(19, 17)).toBe(null);                                                           // am Ende des Grats: hinauf nach −x
+    expect(game("placeRot('huegeltreppe', 19, 17)")).toBe(3);
+    game("state.terra.set('17,22', 'water'); recalc()");
+    expect(err(17, 21)).toBe('Vor der Treppe braucht es Platz – kein Wasser');
+    game(`state.money = ${net() - 1}`);
+    expect(err(12, 13)).toBe('Zu wenig Taler');
+    game(`state.money = ${net()}`);
+    expect(err(12, 13)).toBe(null);                                                           // die Erstattung zählt mit
+    game('state.money = 1e6');
+  });
+
+  it('Verschieben (✋), Gruppe und Kopie: nicht in die Anhöhe – getragen wird nie abgesenkt', () => {
+    hills(block(10, 10, 13, 13));
+    game("build('huegeltreppe', 11, 14); setTool('verschieben')");
+    game('pickUp(11, 14, -1)');
+    expect(game('moveError(12, 13, -1)')).toBe('Nur vor die Wand – in die Anhöhe die Treppe neu bauen');
+    game('dropAt(12, 13, -1)');
+    expect(game("[!!hillAt(12, 13), !!moving, state.tiles.has('12,13')]")).toEqual([true, true, false]);
+    expect(game('moveError(14, 12, -1)')).toBe(null);                                         // vor die Wand geht weiter
+    game('cancelMove()');
+    game("buildSmall('bank', 11, 15, 0)");                                                    // mit Bank am Fuß: eine Gruppe
+    for (const start of ['pickUpGroup(11, 14, 11, 15)', 'startCopy(11, 14, 11, 15)']) {
+      game(start);
+      expect(game('moving.kind')).toBe('group');
+      expect(game('groupErrors(12, 13).first')).toBe('Nur vor die Wand – in die Anhöhe die Treppe neu bauen');
+      expect(game('dropGroup(12, 13)')).toBe(false);
+      game('cancelMove()');
+    }
+    expect(game("[!!hillAt(12, 13), stairAt(11, 14) && stairAt(11, 14).rot || 0]")).toEqual([true, 0]);
+  });
+
+  it('Vorschau: Schild mit Saldo, Feld ohne Anhöhe, Treppe als Geist unten, Nachbarn mit Wand zum Feld – die echten Bildchen bleiben; Touch: erst zeigen, dann bauen', () => {
+    hills(block(10, 10, 13, 13));
+    const N = ['11,12', '10,13', '12,13'];                                                    // dahinter, links, rechts
+    game("setTool('huegeltreppe'); hover = null; render(1e6)");
+    const real = game(`${JSON.stringify(N)}.map(k => hillSprites.get(k).base)`);
+    game(`window.__realC = ${JSON.stringify(N)}.map(k => hillSprites.get(k).c)`);
+    game(`window.__hill = []; window.__txt = []; window.__tr = null; window.__ghost = null;
+      { const dh = drawHillTile, ds = drawHillStair;
+        window.__unspy = () => { drawHillTile = dh; drawHillStair = ds; delete g.fillText; delete g.translate; };
+        drawHillTile = (x, y, ...a) => { __hill.push(x + ',' + y); return dh(x, y, ...a); };
+        drawHillStair = (cx, cy, z, x, y, t) => { if (t && !stairAt(x, y)) __ghost = { x, y, at: __tr, rot: t.rot, gap: hillGap && hillGap.k }; return ds(cx, cy, z, x, y, t); };
+        g.fillText = s => __txt.push(String(s)); g.translate = (a, b) => { __tr = [a, b]; }; }`);
+    try { game('hover = { x: 11, y: 13 }; previewCache = null; render(1e6)'); } finally { game('__unspy()'); }
+    expect(game(`__txt.some(s => s.includes('Treppe in die Anhöhe: −${net()}'))`)).toBe(true);
+    expect(game('__hill')).not.toContain('11,13');                                            // keine Anhöhe auf dem Feld
+    expect(game('__hill')).toEqual(expect.arrayContaining(N));
+    expect(game('__ghost')).toMatchObject({ x: 11, y: 13, rot: 0, gap: '11,13' });
+    expect(game('__ghost.at')).toEqual(game('(p => [p.x, p.y])(toScreen(11, 13))'));          // unten, nicht angehoben
+    expect(game('hillGap')).toBe(null);                                                       // nur für dieses Bild
+    expect(game(`${JSON.stringify(N)}.every((k, i) => hillSprites.get(k).c === __realC[i])`)).toBe(true);   // echte Bildchen nicht verworfen
+    expect(game(`${JSON.stringify(N)}.map(k => hillSprites.get(k).base)`)).toEqual(real);
+    const pv = game(`${JSON.stringify(N)}.map(k => hillSprites.get('p' + k).base)`);
+    expect(pv).not.toEqual(real);
+    expect(pv[0]).toMatch(/:tv/);                                                             // dahinter: Wand ohne Grasnarbe, wo die Treppe ankommt
+    const sg = game("hillSprites.get('sg').base");
+    // gebaut: die Nachbarn sehen genau so aus wie in der Vorschau, die Treppe wie ihr Geist
+    game("undoable(() => build('huegeltreppe', 11, 13)); hover = null; render(1e6)");
+    expect(game(`${JSON.stringify(N)}.map(k => hillSprites.get(k).base)`)).toEqual(pv);
+    expect(sg).toBe(game("hillSprites.get('s11,13').base") + '|11,13');
+    expect(game('undo()')).toBe(true);
+    // Fehler (mitten auf der Anhöhe): keine Vorschau-Lücke
+    game('hover = { x: 11, y: 11 }; previewCache = null; window.__gaps = []; { const dh = drawHillTile; window.__unspy = () => { drawHillTile = dh; }; drawHillTile = (...a) => { if (hillGap) __gaps.push(hillGap.k); return dh(...a); }; }');
+    try { game('render(1e6)'); } finally { game('__unspy()'); }
+    expect(game('__gaps')).toEqual([]);
+    // Touch: erstes Tippen zeigt, zweites baut – als ein Schritt zurückzunehmen
+    game('resetUndo(); hover = null; cam.z = 2.5; { const p = iso(11, 12); cam.x = p.x; cam.y = p.y; }');
+    const [sx, sy] = game('(p => [p.x, p.y - HILL_H * cam.z])(toScreen(11, 13))');
+    game(`undoable(() => tap(${sx}, ${sy}, true))`);
+    expect([game('hover'), !!game('hillAt(11, 13)'), game("state.tiles.has('11,13')")]).toEqual([{ x: 11, y: 13 }, true, false]);
+    game(`undoable(() => tap(${sx}, ${sy}, true))`);
+    expect([game('hillAt(11, 13)'), game("stairAt(11, 13) && stairAt(11, 13).rot || 0"), game('undoStack.length')]).toEqual([null, 0, 1]);
+    game("setTool('look')");
+  });
+
+  it('Speichern und Laden: Treppe bleibt, das Feld bleibt unten', () => {
+    hills(block(10, 10, 13, 13));
+    for (const [x, y] of INTO) game(`build('huegeltreppe', ${x}, ${y})`);
+    const before = game('JSON.stringify(hillStairs().map(s => [s.k, s.rot]).sort())');
+    game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize()))))');
+    expect(game('JSON.stringify(hillStairs().map(s => [s.k, s.rot]).sort())')).toBe(before);
+    expect(game(`${JSON.stringify(INTO)}.every(([x, y]) => !hillAt(x, y))`)).toBe(true);
+    expect(game('state.hills.size')).toBe(16 - 4);
+  });
+
+  for (const [sx, sy, rot] of INTO) it(`Spaziergänger: über die eingelassene Treppe (rot ${rot}) hinauf, oben nur auf der Anhöhe, wieder hinunter`, () => {
+    hills(block(10, 10, 13, 13));
+    game(`build('huegeltreppe', ${sx}, ${sy}); buildSmall('baum', 12, 12, CSLOT)`);
+    weg(footWay(sx, sy, rot));
+    game('for (let i = 0; i < 12; i++) syncHillWalkers()');
+    expect(game('hillWalkers.length')).toBeGreaterThan(0);
+    expect(game(`hillWalkers.every(w => w.stair.k === '${sx},${sy}')`)).toBe(true);
+    const H = game('HILL_H');
+    game(`window.__prev = new Map(); window.__jump = 0; window.__bad = []; window.__top = 0; window.__maxH = 0`);
+    for (let k = 0; k < 120; k++) game(`(() => { for (let i = 0; i < 10; i++) { stepHillWalkers(0.05); if (i === 0) syncHillWalkers();
+      for (const w of hillWalkers) { const h = ${H_ABS}(w), p = __prev.has(w) ? __prev.get(w) : h; __jump = Math.max(__jump, Math.abs(h - p)); __prev.set(w, h); __maxH = Math.max(__maxH, h);
+        if (w.st !== 'top') continue;
+        __top++;
+        if (hillLevel(Math.round(w.px), Math.round(w.py)) !== 1 || w.up !== 0) __bad.push('Kante ' + w.px + ',' + w.py);
+      } } })()`);
+    expect(game('__top')).toBeGreaterThan(0);
+    expect(game('__bad')).toEqual([]);
+    expect(game('__maxH')).toBeCloseTo(H);
+    expect(game('__jump')).toBeLessThanOrEqual(H / 8 + 1e-9);
+    game('for (const w of hillWalkers) { w.life = -1; w.leave = true; }');
+    for (let k = 0; k < 80 && game('hillWalkers.length'); k++) game('for (let i = 0; i < 25; i++) stepHillWalkers(0.05)');
+    expect(game('hillWalkers.length')).toBe(0);
+  });
+
+  it('Spaziergänger oben, wenn das Feld abgesenkt wird: wer darauf steht, ist weg; wer hinwollte, kehrt um – keiner in der Luft', () => {
+    hills(block(10, 10, 13, 13));
+    game("build('huegeltreppe', 10, 14)");
+    const fig = (fa, fb, ta, tb, t) => `{ hillw: true, st0: state, stair: hwStairs()[0], st: 'top', fa: ${fa}, fb: ${fb}, ta: ${ta}, tb: ${tb}, t: ${t}, px: ${(fa + (ta - fa) * t) / 3}, py: ${(fb + (tb - fb) * t) / 3}, up: 0, wait: 0, lane: 0, home: '22,22', who: 0, kind: 0, fur: '#fff', shirt: '#f00', speed: 0.4, life: 99 }`;
+    game(`hillWalkers.length = 0; hillWalkers.push(${fig(36, 39, 36, 39, 0)}, ${fig(36, 37, 36, 38, 0.4)}); window.__on = hillWalkers[0]; window.__to = hillWalkers[1]`);
+    expect(game('[Math.round(__on.py), Math.round(__to.py)]')).toEqual([13, 12]);
+    game("build('huegeltreppe', 12, 13)");
+    expect(game('__on.gone')).toBe(true);
+    expect(game('[__to.gone, __to.fb, __to.tb]')).toEqual([undefined, 38, 37]);              // umgekehrt, an derselben Stelle
+    game('window.__into = 0; for (let i = 0; i < 200; i++) { stepHillWalkers(0.05); if (__to.st === "top" && hillLevel(Math.round(__to.px), Math.round(__to.py)) !== 1) __into++; }');
+    expect(game('__into')).toBe(0);
+    expect(game('hillWalkers.includes(__on)')).toBe(false);
   });
 });

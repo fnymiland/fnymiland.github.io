@@ -185,7 +185,7 @@ const ITEMS = {
   anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben Wiese, Bäume, Bänke, Brunnen.' },   // Block 157 (Treppe hinauf: 157d)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 3,
-    desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen, sie dreht sich von selbst. Nebeneinander wird eine breite Treppe daraus; die Stufen haben Muster und Farbe der Wege.' },
+    desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Nebeneinander wird eine breite Treppe daraus; die Stufen haben Muster und Farbe der Wege.' },
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
@@ -748,7 +748,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe – sie dreht sich von selbst hinauf. Nebeneinander wird sie breit; Muster und Farbe der Stufen wählst du oben in der Leiste.',
+  huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Nebeneinander wird sie breit; Muster und Farbe der Stufen wählst du oben in der Leiste.',
 };
 // Läden, Kultur und Plantagen: Kurzwirkung und Tipp aus der Tabelle
 for (const [id, S] of Object.entries(SHOPS)) {

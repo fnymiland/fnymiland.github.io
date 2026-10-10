@@ -131,6 +131,21 @@ function drawWaves(list, z, now) {
   for (let i = 0; i < list.length; i += 2) { const x = list[i], y = list[i + 1]; drawWave(x, y, toScreen(x, y), z, now, true); }
   g.stroke();
 }
+// Farbe der Oberseite eines Felds an Land (drawGround; groundTopAt auch für den Keil der Treppe in die Anhöhe, hills.js)
+function groundTopOf(ter, alt, park, fz, beach) {
+  return park && !fz ? (alt ? '#88c863' : '#80c05c')                // Parkrasen: gescheckt wie die Wiese, etwas dunkler (Freizeitpark: Wiese)
+       : beach ? (alt ? '#f6e6b8' : '#f1dfae')
+       : ter === 'grass' ? (alt ? '#96d56f' : '#8dcd67')
+       : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')
+       : ter === 'obst' ? (alt ? '#8fcb62' : '#86c35b')
+       : ter === 'erz' ? (alt ? '#b9ab8f' : '#b0a287')
+       : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
+       : (alt ? '#b3c29c' : '#aabb94');
+}
+function groundTopAt(x, y) {
+  const ter = terrainAt(x, y), look = terraLook(x, y), fz = look === 'fz', park = look === 'park' || fz;
+  return groundTopOf(ter, (x + y) & 1, park, fz, look === 'sand' || (ter === 'grass' && look !== 'wiese' && !park && isBeach(x, y)));
+}
 // noWaves: für den Boden-Zwischenspeicher (Wellen bewegen sich und werden jedes Bild extra gezeichnet)
 function drawGround(x, y, p, z, now, noWaves) {
   const hw = TW / 2 * z + 0.5, hh = TH / 2 * z + 0.3, d = DEPTH * z;
@@ -144,15 +159,7 @@ function drawGround(x, y, p, z, now, noWaves) {
   const look = terraLook(x, y), fz = look === 'fz', park = look === 'park' || fz, beach = look === 'sand' || (ter === 'grass' && look !== 'wiese' && !park && isBeach(x, y));
   poly([[p.x - hw, p.y], [p.x, p.y + hh], [p.x, p.y + hh + d], [p.x - hw, p.y + d]], C(beach ? '#e6cf97' : '#caa26c'));
   poly([[p.x, p.y + hh], [p.x + hw, p.y], [p.x + hw, p.y + d], [p.x, p.y + hh + d]], C(beach ? '#d4ba7f' : '#b0895a'));
-  const alt = (x + y) & 1;
-  const top = park && !fz ? (alt ? '#88c863' : '#80c05c')          // Parkrasen: gescheckt wie die Wiese, etwas dunkler (Freizeitpark: Wiese)
-            : beach ? (alt ? '#f6e6b8' : '#f1dfae')
-            : ter === 'grass' ? (alt ? '#96d56f' : '#8dcd67')
-            : ter === 'forest' ? (alt ? '#7fc460' : '#79bd5a')
-            : ter === 'obst' ? (alt ? '#8fcb62' : '#86c35b')
-            : ter === 'erz' ? (alt ? '#b9ab8f' : '#b0a287')
-            : ter === 'kristall' ? (alt ? '#bccad3' : '#b3c2cc')
-            : (alt ? '#b3c29c' : '#aabb94');
+  const top = groundTopOf(ter, (x + y) & 1, park, fz, beach);
   diamond(p.x, p.y, hw, hh, C(top));
   if (park && !state.noBorders) {                                 // Rand der Parkfläche: feine dunklere Kante nach innen versetzt (☰ abschaltbar)
     const T = [p.x, p.y - hh], R = [p.x + hw, p.y], B = [p.x, p.y + hh], L = [p.x - hw, p.y], k = 0.12;
