@@ -509,4 +509,12 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     expect(game('__into')).toBe(0);
     expect(game('hillWalkers.includes(__on)')).toBe(false);
   });
+
+  it('Treppe ist keine Deko (Nutzer): keine Schönheit, zählt nicht für den Deko-Wunsch und nicht für Parks', () => {
+    expect(game('ITEMS.huegeltreppe.beauty')).toBe(0);
+    // Haus mit nur einer Treppe in der Nähe: Deko-Wunsch nicht erfüllt
+    game("for (const [x, y] of [[20, 5], [20, 6], [19, 5], [21, 5], [19, 6], [21, 6]]) build('anhoehe', x, y, true); build('huegeltreppe', 20, 7, true); state.tiles.set('22,9', { b: 'haus', lvl: 1 }); recalc()");
+    expect(game("bAt(20, 7)")).toBe('huegeltreppe');
+    expect(game("wishMet('deko', 22, 9)")).toBe(false);
+  });
 });

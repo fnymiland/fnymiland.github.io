@@ -1334,7 +1334,7 @@ function computeParks() {
       const k = todo.pop(), [x, y] = keyXY(k);
       tiles.push(k);
       const t = state.tiles.get(k);
-      if (t && t.b !== 'weg' && ITEMS[t.b] && ITEMS[t.b].cat === 'deko') { deco++; if (PARK_SORT[baseOf(t.b)]) sorts.add(PARK_SORT[baseOf(t.b)]); }
+      if (t && t.b !== 'weg' && t.b !== 'huegeltreppe' && ITEMS[t.b] && ITEMS[t.b].cat === 'deko') { deco++; if (PARK_SORT[baseOf(t.b)]) sorts.add(PARK_SORT[baseOf(t.b)]); }
       for (const d of state.decos.get(k) || []) if (d) { deco++; if (PARK_SORT[baseOf(d.b)]) sorts.add(PARK_SORT[baseOf(d.b)]); }
       for (const [dx, dy] of DIRS) {
         const n = (x + dx) + ',' + (y + dy);
@@ -3142,7 +3142,7 @@ function wishMet(w, x, y) {
         const tx = x + dx, ty = y + dy;
         if (DIRS.some(([ex, ey]) => state.edges.has(edgeBetween(tx, ty, tx + ex, ty + ey)))) return true;
       }
-      return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg');
+      return objWithin(x, y, 2, b => ITEMS[b].cat === 'deko' && b !== 'weg' && b !== 'huegeltreppe');   // Treppe ist keine Deko (Nutzer)
     }
     case 'ruhe': return !objWithin(x, y, 1, b => NOISY.has(b));
     case 'schoen': return beautyAround(x, y, 3) >= 30;
