@@ -2494,3 +2494,10 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       - Beschreibung der Anhöhe im Baumenü (data.js `anhoehe.desc` und Tipp) nennt noch keine Gebäude oben.
       - Leistung: Gebäude mit Garten oben kosten nah ~10–20 µs je Bild (iPad ansehen); Testwelt mit Anhöhen fehlt im Leistungs-Wächter.
       - Vor dem Push: „Das ist neu“/NEWS_HISTORY für Anhöhen, Treppe, Gleis-Rampe, Gebäude oben.
+- [ ] 157m **Bergportal: Tunnel in die Wand einer Anhöhe** (Nutzer 11.10.2026: „wieso haben wir keine Tunneleinfahrt an einer Seitenwand?“).
+      Entscheidungen: als Wand mit Öffnung (kein Block vor der Wand), eine Öffnung reicht (keine Mindesttiefe der Anhöhe). Formen zur Wahl:
+      **A Steinbogen** (Keilsteine, Schlussstein im Ring) und **D nur die Öffnung** (schmaler dunkler Rand in Wandfarbe) – Entwurf
+      tools/bergportal-entwurf.js, Bilder tools/vorschau/bergportal-varianten.png (A–E), bergportal-zug.png/-zug-nah.png (A/D mit Zug, +y/+x,
+      Fels/Erde/Mauer). Öffnung 0,6 Feld breit, Kämpfer 7, Scheitel ~18 (Wand 26); Gleis läuft eben hinein und wird nach hinten dunkel, dahinter
+      der Tunnel unter der Anhöhe (U-Bahn-Netz). Offen beim Bau: Wagen am Portal (Stück im Berg nur durch die Öffnung, dunkel), Fenster des
+      abgeschnittenen Stücks werden gestaucht (wie heute an der Tunneleinfahrt).
