@@ -1,7 +1,7 @@
 const { loadGame, game } = require('./helpers/load-game');
 
 // Anhöhen Stufe 2 – Netz, Regeln, Bauen (rules.js, actions.js): Wege hängen nur auf gleicher Ebene zusammen und über die Rampe hinauf
-// (levelLink 'weg'), nie über die Kante; die Treppe verbindet das Wegenetz nicht (nur zu Fuß). Viertel, Marktplätze, „verbundene Wege“,
+// (levelLink 'weg'), nie über die Kante; die Treppe verbindet das Wegenetz genauso (Nutzer, 10.10.2026). Viertel, Marktplätze, „verbundene Wege“,
 // Wunsch „Weg“, Erreichbarkeit in der Nähe (hillRegions), Bauen/Erstatten/↶/Verschieben der Rampe, keine Dächer über ihr.
 // Ohne Anhöhen fragt nichts davon nach (früh aussteigen)
 beforeAll(() => loadGame());
@@ -54,12 +54,24 @@ describe('Wegenetz und Viertel', () => {
     expect(V(12, 14)).toBe(V(12, 11));
   });
 
-  it('Treppe verbindet das Wegenetz nicht – sie gehört zum Viertel unten', () => {
+  it('Treppe verbindet das Wegenetz wie die Rampe (schmal und breit; zählt wie ein Weg, nicht für die Größe des Viertels)', () => {
     scene();
+    put(11, 11, { b: 'brunnen', lvl: 1 }); put(13, 21, { b: 'brunnen', lvl: 1 });  // je ein Brunnen oben und unten
     expect(game("build('huegeltreppe', 12, 14)")).toBe(true);
+    expect(game("stairSchmal(stairAt(12, 14))")).toBe(true);                       // neu: wie die Wegform (schmal)
     expect(V(12, 14)).toBe(V(12, 15));
-    expect(V(12, 13)).not.toBe(V(12, 15));
-    expect(game('wegNetwork(12, 15).length')).toBe(BELOW.length);
+    expect(V(12, 13)).toBe(V(12, 15));
+    expect(V(11, 11)).toBe(V(13, 21));
+    expect(game("T.net.vSize.get(T.net.vOf('12,14'))")).toBe(2);
+    expect(game("countsForViertel('huegeltreppe')")).toBe(false);
+    expect(game('wegNetwork(12, 15).length')).toBe(BELOW.length + TOP.length);
+    game("delete state.tiles.get('12,14').schmal; groundVersion++; recalc()");     // breit genauso
+    expect(V(12, 13)).toBe(V(12, 15));
+    // nicht über Eck und nicht von der Seite (wie die Rampe)
+    put(13, 15, { b: 'brunnen', lvl: 1 }); game("state.tiles.delete('12,15'); recalc()");
+    expect(V(13, 15)).not.toBe(V(12, 14));
+    put(11, 14, { b: 'brunnen', lvl: 1 });
+    expect(V(11, 14)).not.toBe(V(12, 14));
   });
 
   it('„Alle verbundenen Wege“: je Ebene, über die Rampe weiter (die Rampe selbst ist kein Wegfeld)', () => {
@@ -105,22 +117,30 @@ describe('Erreichbarkeit', () => {
     for (const [x, b] of [[10, 'stand_obst'], [11, 'stand_brot'], [13, 'stand_kaese']]) game(`build('${b}', ${x}, 11, true)`);
     put(12, 22, { b: 'haus', lvl: 1 });
   };
-  it('Markt oben: ohne Rampe nicht erreichbar, über die Treppe auch nicht, über die Rampe im selben Viertel', () => {
+  it('Markt oben: ohne Aufgang nicht erreichbar, über Treppe (schmal oder breit) und Rampe im selben Viertel; ein Markt über die Treppe', () => {
     market();
     expect(game("wishCheck('markt', 12, 22)")).toEqual({ ok: false, how: null });
     game("state.tiles.delete('12,14'); recalc(); build('huegeltreppe', 12, 14); recalc()");
-    expect(game("wishCheck('markt', 12, 22)")).toEqual({ ok: false, how: null });
+    expect(game("wishCheck('markt', 12, 22)")).toEqual({ ok: true, how: 'viertel' });
+    game("stairNewWide = true; demolish(12, 14); build('huegeltreppe', 12, 14); stairNewWide = null; recalc()");
+    expect([game("stairSchmal(stairAt(12, 14))"), game("wishCheck('markt', 12, 22)")]).toEqual([false, { ok: true, how: 'viertel' }]);
     game("demolish(12, 14); build('huegelrampe', 12, 14); recalc()");
     expect(game("wishCheck('markt', 12, 22)")).toEqual({ ok: true, how: 'viertel' });
+    // Stände oben und unten hängen über die Treppe zu einem Markt zusammen
+    game("demolish(12, 14); build('huegeltreppe', 12, 14); for (const [x, b] of [[10, 'stand_obst'], [11, 'stand_brot'], [13, 'stand_kaese']]) { build('weg', x, 15, true); build(b, x, 15, true); } recalc()");
+    expect(game('MARKETS.map(m => m.stands.length)')).toEqual([6]);
   });
 
-  it('in der Nähe: nur, wenn man auf die Anhöhe kommt (irgendeine Rampe hinauf); Treppe zählt nicht', () => {
+  it('in der Nähe: nur, wenn man auf die Anhöhe kommt (irgendeine Rampe oder Treppe hinauf)', () => {
     market();
     put(15, 15, { b: 'haus', lvl: 1 });                                            // 4 Felder vom Markt, aber unten
     expect(game('hillRegions().get("12,11")')).toBeGreaterThan(0);
     expect(game("wishCheck('markt', 15, 15)")).toEqual({ ok: false, how: null });
     expect(game('nearMarket(15, 15)')).toBe(false);
-    game("build('huegeltreppe', 14, 12); recalc()");
+    game("build('huegeltreppe', 14, 12); recalc()");                              // Treppe hinauf, ohne Weg
+    expect(game('hillRegions()')).toBe(null);
+    expect(game("wishCheck('markt', 15, 15)")).toEqual({ ok: true, how: 'nah' });
+    game("demolish(14, 12); recalc()");
     expect(game("wishCheck('markt', 15, 15).ok")).toBe(false);
     game("build('huegelrampe', 10, 14); recalc()");                               // irgendwo hinauf, ohne Weg
     expect(game('hillRegions()')).toBe(null);                                     // alles erreichbar

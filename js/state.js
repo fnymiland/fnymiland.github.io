@@ -107,6 +107,7 @@ function tileOut(t) {
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   if (Array.isArray(t.pbz) && t.pbz.length) o.pbz = t.pbz.filter(Number.isInteger);    // Parkbahn-Station: Züge der Strecke (Block 136e/h)
   if (t.ecke === true && t.b === 'huegeltreppe') o.ecke = true;                        // Ecktreppe (Block 157)
+  else if (t.schmal === true && t.b === 'huegeltreppe') o.schmal = true;                // schmale Treppe (fehlt = breit, wie alte Stände)
   if (t.len === 2 && t.b === 'huegelrampe') o.len = 2;                                  // Rampe über 2 Felder (Anhöhen Stufe 2)
   return o;
 }

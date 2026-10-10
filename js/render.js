@@ -1527,7 +1527,7 @@ function render(now) {
         const wn = replacesWeg(tool) ? pathsUnder(tool, hx, hy, rotOf(tool)).length : 0;   // Gebäude auf dem Weg (Block 58)
         if (wn) text += `  🛤️ ersetzt den Weg +${fmt(wn * ITEMS.weg.cost)}`;
       }
-      if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1 };   // Feld ohne Anhöhe, mit Treppe
+      if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1, schmal: !stairWideNew() };   // Feld ohne Anhöhe, mit Treppe (schmal: Streifen Anhöhe daneben)
       if (tool === 'huegelrampe') hillGap = rampGapFor(hx, hy, rotOf(tool));   // Rampe in die Anhöhe: abgesenkte Felder (hills.js)
       const onWeg = k => plainWeg(k) && (plazaOk(tool) || replacesWeg(tool));   // Wege darf man über- bzw. ersetzen
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => (!COVER.has(fx + ',' + fy) || onWeg(fx + ',' + fy)) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));

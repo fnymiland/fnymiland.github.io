@@ -148,6 +148,7 @@ function build(b, x, y, quiet) {
     else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
+    if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
     if (bridge && b === 'weg') {                                      // Brücke verlängern: Art und Farben der alten übernehmen (66c)
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge), nt = state.tiles.get(k);
@@ -502,6 +503,7 @@ function dropGroup(hx, hy) {
     else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[P.slot] = { ...P.d, born: now }; }
   }
   if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
+  for (const it of moving.items) if (it.kind === 'tile' && it.t.b === 'huegeltreppe') { const P = groupPlaced(it); stairDropped(ox + P.dx, oy + P.dy); }   // Treppen: Ecke oder gerade wie gebaut (hills.js)
   if (moving.copy) {                                                     // Stempel: dieselbe Kopie gleich noch einmal (frische Dinge)
     moving.items = moving.items.map(copyClone);
     addFloat(hx, hy, '−' + fmt(moving.cost.money || 0), '#d9534a');
@@ -645,6 +647,7 @@ function dropAt(x, y, slot) {
     setUnder(t, x, y, plazaOk(b) ? covered : []);
     state.tiles.set(k, t);
     claimSea(b, x, y, rot, t, t.bridge);
+    if (b === 'huegeltreppe') stairDropped(x, y);                       // Treppe: Ecke oder gerade wie gebaut (hills.js)
   }
   moving = null;
   $('rot-btn').hidden = true;

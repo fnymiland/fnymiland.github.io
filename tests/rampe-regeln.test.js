@@ -1,7 +1,7 @@
 const { loadGame, game } = require('./helpers/load-game');
 
 // Anhöhen Stufe 2: Rampe in die Anhöhe (hills.js) – Bauen vor der Wand und in den Rand, Länge 1/2, Drehung, Meldungen, Leiste und Fenster,
-// Höhe (rampHeight, surfaceHeight), wer wohin kommt (levelLink: Rampe für alle, Treppe nur zu Fuß), was oben darf (Wege, Plätze), Zeichnen
+// Höhe (rampHeight, surfaceHeight), wer wohin kommt (levelLink: Rampe für alle, Treppe für Wegenetz und Fußgänger, nicht für Fahrzeuge), was oben darf (Wege, Plätze), Zeichnen
 // (bündig wie im Entwurf tools/rampe-entwurf.js). Braucht den Einbau in rules.js/actions.js/render.js/draw-objects.js (sizeOf, placeRot,
 // placeError, build, drawObject …)
 beforeAll(() => loadGame());
@@ -200,21 +200,21 @@ describe('Rampe: Höhe und Verbindungen', () => {
     expect(game('surfaceHeight(11.3, 11.2)')).toBe(H);
   });
 
-  it('levelLink: Rampe verbindet für alle längs ihrer Achse (auch breit), nie quer zur Wiese; Treppe nur zu Fuß; ohne Anhöhen immer', () => {
+  it('levelLink: Rampe verbindet für alle längs ihrer Achse (auch breit), nie quer zur Wiese; Treppe auch fürs Wegenetz, nur nicht für Fahrzeuge; ohne Anhöhen immer', () => {
     expect(game("[levelLink(3, 3, 4, 3), levelLink(3, 3, 4, 4, 'fuss')]")).toEqual([true, true]);   // ohne Anhöhen wie bisher
     hills(block(10, 10, 13, 13));
     game("rampNewLen = 2; build('huegelrampe', 11, 14); build('huegelrampe', 12, 14)");      // breite Rampe, 2 lang: 11/12,14 oben, 11/12,15 Fuß
     game("rampNewLen = 1; build('huegeltreppe', 14, 11)");                                  // Treppe rechts, hinauf nach −x
     const L = (a, b, c, d, who = 'weg') => game(`levelLink(${a}, ${b}, ${c}, ${d}, '${who}')`);
-    for (const who of ['weg', 'fuss']) {
+    for (const who of ['weg', 'fuss', 'fahr']) {
       expect([L(11, 16, 11, 15, who), L(11, 15, 11, 16, who)]).toEqual([true, true]);        // Feld davor ↔ Fuß
       expect([L(11, 15, 11, 14, who), L(11, 14, 11, 13, who), L(11, 13, 11, 14, who)]).toEqual([true, true, true]);   // Fuß ↔ oben ↔ Anhöhe
       expect([L(11, 15, 12, 15, who), L(12, 14, 11, 14, who)]).toEqual([true, true]);        // breit: quer gleiche Stufe
       expect([L(11, 15, 12, 14, who), L(11, 15, 10, 15, who), L(12, 14, 13, 14, who), L(10, 14, 11, 14, who)]).toEqual([false, false, false, false]);   // über Eck, quer zur Wiese/Anhöhe
       expect([L(11, 16, 12, 16, who), L(10, 11, 11, 11, who), L(13, 15, 13, 14, who), L(13, 14, 13, 13, who)]).toEqual([true, true, true, false]);   // ohne Rampe: gleiche Ebene
     }
-    expect([L(15, 11, 14, 11), L(14, 11, 13, 11)]).toEqual([false, false]);                  // Treppe: nicht fürs Wegenetz
-    expect([L(15, 11, 14, 11, 'fuss'), L(14, 11, 13, 11, 'fuss'), L(14, 11, 14, 12, 'fuss'), L(14, 12, 14, 11, 'fuss')]).toEqual([true, true, false, false]);
+    expect([L(15, 11, 14, 11, 'fahr'), L(14, 11, 13, 11, 'fahr')]).toEqual([false, false]);  // Treppe: keine Fahrzeuge
+    for (const who of ['weg', 'fuss']) expect([L(15, 11, 14, 11, who), L(14, 11, 13, 11, who), L(14, 11, 14, 12, who), L(14, 12, 14, 11, who)]).toEqual([true, true, false, false]);   // Wegenetz (seit 10.10.2026) und zu Fuß
   });
 
   it('oben dürfen Wege (alle Stile), Deko-Felder und Platz-Dinge; Gebäude und Schienen nicht; anheben unter einem Weg geht jetzt', () => {

@@ -200,8 +200,8 @@ function stepMover(w, dt, ok, preferWay) {
     const px = w.fx, py = w.fy;
     w.fx = w.tx; w.fy = w.ty; w.t = 0;
     if (w.stroll && (px !== w.fx || py !== w.fy) && sitDown(w)) return;
-    // Bewohner nicht durch Zäune und nur über Treppe/Rampe hinauf (edgeBlocks), Fahrzeuge nur über die Rampe (levelLink 'weg')
-    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b) && !(w.fur ? edgeBlocks(w.fx, w.fy, a, b) : hillsOn() && !levelLink(w.fx, w.fy, a, b, 'weg')));
+    // Bewohner nicht durch Zäune und nur über Treppe/Rampe hinauf (edgeBlocks), Fahrzeuge nur über die Rampe (levelLink 'fahr')
+    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b) && !(w.fur ? edgeBlocks(w.fx, w.fy, a, b) : hillsOn() && !levelLink(w.fx, w.fy, a, b, 'fahr')));
     let pool = cands;
     if (preferWay) {
       const ways = cands.filter(([a, b]) => wayish(bAt(a, b)));

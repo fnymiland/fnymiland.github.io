@@ -206,6 +206,15 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Keil ↔ Anhöhe), nie unter den Fuß. Oberseite nach hinten und über Wänden genau auf der Raute, nur zu gleich hohen Nachbarn vorn größer
     (sonst Spitzen an Ecken). Dunkle Kante oben im selben Zuschnitt (gerade Enden), neben einer Treppe nur bis zur obersten Stufe
     (`hillStairEnds` a–d), Innenecken schließt `hillMiter`. Wer Neues an Wand oder Kante malt, hält diese Enden ein.
+    **Schmale Treppe** (Nutzer 10.10.2026, tests/treppe-breite.test.js): `t.schmal` (fehlt = breit, alte Stände), neu wie die Wegform bzw. die Wahl
+    in der Leiste (`stairNewWide`, `stairWideNew`; der Wegform-Knopf setzt sie zurück), im Fenster für die ganze Reihe (`stairRow(…, true)`,
+    `setStairWidth`). Stufen so breit wie ein Weg samt Rand (`STAIR_NW` = `EDGE_W`), Seiten nur über `stairSide`: 'h' Anhöhe daneben → im Feld
+    bleibt ein Streifen Anhöhe stehen (ganz hoch); 'k' Keil bis an die Feldgrenze (kein Grasstreifen dazwischen); Treppe daneben, eine schmal:
+    eingelassen (`stairRowCut`) Streifen 'r' bzw. bei der breiten 'h', vor der Wand Keile 'w' ohne Außenwand. Schmale verschmelzen nie, Ecktreppen
+    nur breit (`cornerDirs`, `stairFit`; Hinweis `STAIR_ECKE_BREIT`, auch beim Einsetzen: `stairIntoRefits(…, true)`). Anhöhen am Streifen:
+    `hillStairEnds` A/C (keine dunkle Kante), M/N (keine Wand, `hillWallsAt`, Wand am Fuß läuft unter den Streifen: `hillExt`). Kurze Wände mit
+    ihrer Länge malen (`paintHillWall` … `len`), sonst drängen sich Risse und Zacken. Getragen abgelegt (dropAt, dropGroup) richtet `stairDropped`
+    die Treppe aus wie `build` (Ecke ↔ gerade, Ecke immer breit, dann `refitStairs`) – der Geist in drawHillStair zeigt es schon so.
     **Spaziergänger** (157e, js/hill-walkers.js): `w.up` = Höhe über dem Feld, auf dem gezeichnet wird (oben 0, Treppe = Stufe am gezeichneten
     Fußpunkt `hwFootD`, Boden null); Kopf/Antippen über `walkerHead` (+ `hillLift`). Wer Listen von Bewohnern prüft (Fenster, Antippen,
     Sprechblase), nimmt `hillWalkers` dazu wie `roofers`. Treppe weg oder kein Weg mehr zum Ausstieg (`hwRoute` false: Zaun, Deko): sie
@@ -221,9 +230,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Bündig (Prüfung 10.10.2026, tests/anhoehe-pruefung.test.js, Bild tools/stufe2-nahszene.js): Keilwände nach der ganzen Höhe geschichtet
     (`paintHillWall` … `hs`), dunkle Kante des hinteren Keils genau auf seiner schrägen Kante, Innenecke mit schrägem Keil über `rampMiter`
     (Signatur ':m' + Längen), Geist über 2 Felder erst deckend zusammensetzen (`rampGhostBuf`), keine Eckpunkt-Deko auf der Schräge (smallError).
-    **Wer kommt wohin:** nur über `levelLink(x1, y1, x2, y2, who)` – 'weg' (Wegenetz, Viertel, Markt, „alle verbundenen“, Wunsch Weg,
-    Fahrzeuge) geht über die Rampe längs ihrer Achse, 'fuss' (Bewohner, `edgeBlocks`) auch über die Treppe; sonst nur gleiche Ebene, nie über Eck
-    an Rampe/Treppe. Ohne Anhöhen immer true. Erreichbarkeit „in der Nähe“: `hillRegions`/`sameRegion` (Anhöhe ohne Rampe = eigene Gegend).
+    **Wer kommt wohin:** nur über `levelLink(x1, y1, x2, y2, who)` – 'weg' (Wegenetz, Viertel, Markt, „alle verbundenen“, Wunsch Weg) und 'fuss'
+    (Bewohner, `edgeBlocks`) gehen über Rampe und Treppe längs ihrer Achse (die Treppe verbindet seit 10.10.2026 auch das Wegenetz, Nutzer;
+    `slopeWegAt`, zählt nicht fürs Viertel), 'fahr' (Fahrzeuge) nur über die Rampe; sonst nur gleiche Ebene, nie über Eck an Rampe/Treppe, quer
+    nur in der breiten. Ohne Anhöhen immer true. Erreichbarkeit „in der Nähe“: `hillRegions`/`sameRegion` (Anhöhe ohne Rampe/Treppe = eigene Gegend).
     Figurenhöhe: `figUp`/`slopeUp` (movers.js, am gezeichneten Fußpunkt) – wer `w.up` selbst setzt (Dach, Spaziergänger), rechnet relativ zum Feld.
     **Wege oben** zeichnet tileA (`hillFlat` → `drawHillFlat`, weit weg `spriteFlat(…, true)`), nie das Boden-Bild. `pathArms`, `pathQuads`,
     Bordstein, Wegenden (`hillEnds`), Vorplätze und Gartenwege (`courtFrontTiles`, `gardenPath`) nur über `levelLink` bzw. gleiche Ebene.

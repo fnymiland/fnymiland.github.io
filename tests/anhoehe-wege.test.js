@@ -28,7 +28,7 @@ const record = body => game(`(() => {
 const uv = ([X, Y]) => [(X / 32 + Y / 16) / 2, (Y / 16 - X / 32) / 2];
 
 describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
-  it('Arme nie über die Kante; die Rampe ist ein Arm an Fuß und Oberkante, nicht an ihrer Seite; die Treppe keiner', () => {
+  it('Arme nie über die Kante; Rampe und Treppe sind ein Arm an Fuß und Oberkante, nicht an ihrer Seite', () => {
     hills(block(10, 10, 13, 13));
     weg([[11, 12], [11, 13], [12, 13], [11, 14], [11, 15], [12, 15], [13, 14], [10, 15], [10, 16]]);
     ramp(12, 14, 0);                                                                          // vor der Wand 12,13, hinauf nach −y
@@ -38,8 +38,8 @@ describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
     expect(arms(12, 15)).toEqual(['-1,0', '0,-1']);                                           // Fuß der Rampe
     expect(arms(12, 13)).toEqual(['-1,0', '0,1']);                                            // Oberkante der Rampe
     expect(arms(13, 14)).toEqual([]);                                                         // an der Seite der Rampe: Wegende
-    expect(arms(10, 15)).toEqual(['0,1', '1,0']);                                             // vor der Treppe: kein Arm …
-    expect(game("hillEnds(10, 15, state.tiles.get('10,15'), [[0, -1]])")).toEqual([[0, -1]]);   // … aber das Wegende läuft wie bisher bis an sie
+    expect(arms(10, 15)).toEqual(['0,-1', '0,1', '1,0']);                                     // vor der Treppe: ein Arm (Wegenetz, seit 10.10.2026)
+    expect(game("hillEnds(10, 15, state.tiles.get('10,15'), [[0, -1]])")).toEqual([[0, -1]]);
   });
 
   it('Wegende über einem Gebäude unten endet rund (gerade bis an den Rand nur, wenn gewählt); kein Gartenweg-Anschluss über die Kante', () => {

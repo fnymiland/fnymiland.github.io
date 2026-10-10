@@ -137,12 +137,12 @@ function pathArms(x, y) {
   return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || wegAt(x + dx, y + dy) != null; });
 }
 // Anhöhen (Stufe 2): nur zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink 'weg') – nie über die Kante, dort endet der Weg wie
-// jedes Wegende; die Rampe ist ein Arm an ihrem Fuß und an ihrer Oberkante (hills.js), die Treppe keiner (nur zu Fuß, pathEnds)
+// jedes Wegende; Rampe und Treppe sind ein Arm an ihrem Fuß und an ihrer Oberkante (hills.js)
 function pathArmsHill(x, y) {
-  const rs = rampFresh().n > 0;
+  const c = rampFresh(), rs = c.n > 0, ss = c.s > 0;
   return DIRS.filter(([dx, dy]) => {
     const nx = x + dx, ny = y + dy, b = bAt(nx, ny);
-    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (rs && !!rampAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
+    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (rs && !!rampAt(nx, ny)) || (ss && !!stairAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
   });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
@@ -538,9 +538,10 @@ function pathQuads(x, y, hall = true) {
   const paved = hall ? quadPaved : (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
   const out = [];
   if (state.hills && state.hills.size) {
-    // Anhöhen (Stufe 2): nur, wo alle vier Felder zusammenhängen (levelLink: nie über die Kante). Rampenfelder davor bzw. dahinter zählen
-    // als Belag – vor einer breiten Rampe schließen sich die Wege zu ihrer ganzen Breite, sonst bliebe zwischen ihren Armen Wiese
-    const rs = rampFresh().n > 0, pv = (px, py) => paved(px, py) || (rs && !!rampAt(px, py)), lk = (ax, ay, bx, by) => levelLink(ax, ay, bx, by, 'weg');
+    // Anhöhen (Stufe 2): nur, wo alle vier Felder zusammenhängen (levelLink: nie über die Kante). Rampenfelder und breite Treppen davor bzw.
+    // dahinter zählen als Belag – vor einer breiten Rampe/Treppe schließen sich die Wege zu ihrer ganzen Breite, sonst bliebe zwischen ihren Armen Wiese
+    const c = rampFresh(), rs = c.n > 0, ss = c.s > 0, lk = (ax, ay, bx, by) => levelLink(ax, ay, bx, by, 'weg');
+    const pv = (px, py) => { if (paved(px, py) || (rs && !!rampAt(px, py))) return true; const s = ss && stairAt(px, py); return !!s && !s.ecke && !stairSchmal(s); };
     for (const su of [1, -1]) for (const sv of [1, -1]) {
       const ux = x + su, vy = y + sv;
       if (pv(ux, y) && pv(x, vy) && pv(ux, vy) && lk(x, y, ux, y) && lk(x, y, x, vy) && lk(ux, y, ux, vy) && lk(x, vy, ux, vy)) out.push([su, sv]);
@@ -1105,7 +1106,7 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
     const fills = hl ? s => pathQuads(x + dx, y + dy).some(([su, sv]) => dx ? su === -dx && sv === s : su === s && sv === -dy)   // Anhöhen: genau die Ecken, die er füllt
       : s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0));
     const halves = nbFills ? [-1, 1].filter(fills).map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
-    const lane = hl && arm && !nbFills ? rampLane(x, y, dx, dy) : null;   // Rampe (hills.js): Lücke so breit wie ihre Fahrbahn
+    const lane = hl && arm && !nbFills ? rampLane(x, y, dx, dy) || stairLane(x, y, dx, dy) : null;   // Rampe/Treppe (hills.js): Lücke so breit wie ihre Fahrbahn bzw. Stufen
     const gaps = (arm ? [lane || [-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
       .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
@@ -1123,6 +1124,14 @@ function rampLane(x, y, dx, dy) {
   const o = rampLook(x + dx, y + dy, r), [Du, Dv] = STAIR_UP[r.rot];
   const lo = o.m === 'k' ? -0.5 + STAIR_CW : -0.5, hi = o.p === 'k' ? 0.5 - STAIR_CW : 0.5, k = dx ? Du : -Dv;   // quer S = (−Dv, Du)
   return [lo * k, hi * k].sort((a, b) => a - b);
+}
+// Treppe dort (wie rampLane): das Stück der Kante unter ihren Stufen – schmal so breit wie ein Weg samt Rand, breit bis an Keil bzw. Wange
+function stairLane(x, y, dx, dy) {
+  const t = stairAt(x + dx, y + dy);
+  if (!t || t.ecke) return null;
+  if (stairSchmal(t)) return [-STAIR_NW, STAIR_NW];
+  const o = stairLook(x + dx, y + dy, t), [Du, Dv] = STAIR_UP[stairRotOf(t)], k = dx ? Du : -Dv, kw = c => c === 'k' || c === 'w';
+  return [(kw(o.m) ? -0.5 + STAIR_CW : -0.5) * k, (kw(o.p) ? 0.5 - STAIR_CW : 0.5) * k].sort((a, b) => a - b);
 }
 // Leuchtender Belag (Kristall): Licht in der Feldmitte. pathGlowOff: drawHillFlat setzt es selbst, außerhalb seines Zuschnitts
 let pathGlowOff = false;

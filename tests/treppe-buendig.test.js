@@ -3,10 +3,11 @@ const { loadGame, game } = require('./helpers/load-game');
 // Nutzer (10.10.2026): „achte drauf, dass die Zeichnungen bündig sind“ – Keil der Treppe in die Anhöhe, Anhöhenwände, dunkle Kante oben
 // (hills.js): Kanten treffen sich genau, nichts steht über, Grasnarbe und Kante laufen gleich dick über Feldgrenzen und um Ecken
 beforeAll(() => loadGame());
+// Treppen hier breit wie bisher (stairNewWide = true); die schmale prüft tests/treppe-breite.test.js
 beforeEach(() => {
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; plan = null; if (moving) cancelMove(); setTool('look')");
   game("state.money = 1e6; state.techs.add('terraform'); for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 9999");
-  game("for (let y = 4; y <= 24; y++) for (let x = 4; x <= 24; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; buildRot = 0; rotManual = false; hillWalkers.length = 0; recalc(); resetUndo()");
+  game("for (let y = 4; y <= 24; y++) for (let x = 4; x <= 24; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; buildRot = 0; stairNewWide = true; rotManual = false; hillWalkers.length = 0; recalc(); resetUndo()");
 });
 const block = (x0, y0, x1, y1) => { const out = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) out.push([x, y]); return out; };
 const hills = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('anhoehe', x, y, true); recalc()`);

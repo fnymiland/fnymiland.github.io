@@ -4,10 +4,11 @@ const { loadGame, game } = require('./helpers/load-game');
 // Stufen im Wegstil (Leiste und Fenster), breite Treppe, Wange an der Kante, Abtragen/Abreißen, Speichern/Laden, ↶; Leute kommen vom
 // Weg, steigen hinauf, bummeln oben, setzen sich auf Bänke, gehen wieder; Antippen; Zeichnen nah/weit/nachts
 beforeAll(() => loadGame());
+// Treppen hier breit wie bisher (stairNewWide = true); die schmale prüft tests/treppe-breite.test.js
 beforeEach(() => {
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; plan = null; if (moving) cancelMove(); setTool('look'); setSeeThrough(false)");
   game("state.money = 1e6; state.techs.add('terraform'); for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 9999");
-  game("for (let y = 4; y <= 24; y++) for (let x = 4; x <= 24; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; delete chosenStyle.huegeltreppe; chosenStyle.weg = 'sand'; buildRot = 0; rotManual = false; hillWalkers.length = 0; recalc(); resetUndo()");
+  game("for (let y = 4; y <= 24; y++) for (let x = 4; x <= 24; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; delete chosenStyle.huegeltreppe; chosenStyle.weg = 'sand'; buildRot = 0; stairNewWide = true; rotManual = false; hillWalkers.length = 0; recalc(); resetUndo()");
   game("state.tiles.set('22,22', { b: 'haus', lvl: 3, animal: 1 }); recalc()");          // Bewohner, aus denen Spaziergänger werden
   game('cam = state.cam; cam.z = 2; { const p = iso(11, 11); cam.x = p.x; cam.y = p.y; }');
 });

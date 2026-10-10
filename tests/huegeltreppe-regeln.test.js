@@ -2,10 +2,11 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Block 157d: Treppe in die Anhöhe – Regeln, Drehung, Stil, Abtragen, Antippen, Zeichnen (ohne draw-objects.js: drawHillStair direkt)
 beforeAll(() => loadGame());
+// Treppen hier breit wie bisher (stairNewWide = true); die schmale prüft tests/treppe-breite.test.js
 beforeEach(() => {
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; plan = null; if (moving) cancelMove(); setTool('look'); setSeeThrough(false)");
   game("state.money = 1e6; state.techs.add('terraform'); for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 9999");
-  game("for (let y = 4; y <= 22; y++) for (let x = 4; x <= 22; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; delete chosenStyle.huegeltreppe; chosenStyle.weg = 'sand'; buildRot = 0; recalc(); resetUndo()");
+  game("for (let y = 4; y <= 22; y++) for (let x = 4; x <= 22; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); state.paintNew.anhoehe = {}; delete chosenStyle.huegeltreppe; chosenStyle.weg = 'sand'; buildRot = 0; stairNewWide = true; recalc(); resetUndo()");
   game('cam = state.cam; cam.z = 2; { const p = iso(9, 9); cam.x = p.x; cam.y = p.y; }');
 });
 const hills = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) build('anhoehe', x, y, true)`);

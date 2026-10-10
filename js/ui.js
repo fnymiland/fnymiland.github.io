@@ -73,7 +73,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
     drawHillIcon(cx, cy + 3 * z, z, (tile && tile.form) || 0, 0.68, true);
   } else if (type === 'huegeltreppe') {                    // Treppe in die Anhöhe (Block 157d): Eck Anhöhe mit eingelassener Treppe
     block(1, '#96d56f');
-    drawStairIcon(cx, cy, z, (tile && tile.style) || stairStyleNew());
+    drawStairIcon(cx, cy, z, (tile && tile.style) || stairStyleNew(), tile ? stairSchmal(tile) : !stairWideNew());
   } else if (type === 'huegelrampe') {                     // Rampe in die Anhöhe (Stufe 2): Eck Anhöhe, davor die Rampe mit Geländer
     block(1, '#96d56f');
     drawRampIcon(cx, cy, z, (tile && tile.style) || rampStyleNew());
@@ -549,10 +549,14 @@ function styleSwatch(st) {
 // öffnet darüber ein kleines Raster (wegPop), eine Wahl klappt es wieder zu. Die Wahl ergibt einen Belag-Namen (wegStyleOf)
 let wegPop = null;
 const WEG_SHAPES = [['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']];   // Wegform (Block 77)
+// Breite neuer Treppen (hills.js stairWideNew): ein Knopf wie die Wegform
+const stairWideChip = () => { const w = stairWideNew(), n = w ? 'breit' : 'schmal';
+  return `<button class="style-chip size-chip shape-chip${w ? ' on' : ''}" data-stairw="1" aria-pressed="${w}" title="${w ? 'breit' : 'schmal wie ein Weg'} – tippen zum Wechseln" aria-label="Treppe ${w ? 'breit' : 'schmal wie ein Weg'}"><i>${w ? '▬' : '▭'}</i><span>${n}</span></button>`; };
 const shapeChip = ([k, i0, i1, n0, n1]) => `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`;
-// Treppe in die Anhöhe (Block 157d, stair): dieselbe Leiste für den Belag der Stufen – ohne Trittsteine (keine Fläche) und ohne Wegform;
-// gewählt wird chosenStyle.huegeltreppe (ohne Wahl: der Stil des Wegs, stairStyleNew). Rampe (stair = 'huegelrampe'): ebenso für ihren
-// Belag (chosenStyle.huegelrampe, rampStyleNew), dazu statt der Wegform die Länge (1 / 2 Felder, rampNewLen) wie beim Bahnhof
+// Treppe in die Anhöhe (Block 157d, stair): dieselbe Leiste für den Belag der Stufen – ohne Trittsteine (keine Fläche); gewählt wird
+// chosenStyle.huegeltreppe (ohne Wahl: der Stil des Wegs, stairStyleNew), statt der Wegform die Breite (schmal wie ein Weg / breit,
+// stairNewWide – ohne Wahl wie die Wegform). Rampe (stair = 'huegelrampe'): ebenso für ihren Belag (chosenStyle.huegelrampe, rampStyleNew),
+// dazu statt der Wegform die Länge (1 / 2 Felder, rampNewLen) wie beim Bahnhof
 function wegStyleBar(bar, stair = false) {
   const ramp = stair === 'huegelrampe', kind = ramp ? 'huegelrampe' : stair ? 'huegeltreppe' : 'weg';
   const cur = ramp ? rampStyleNew() : stair ? stairStyleNew() : currentStyle('weg'), pick = id => { if (stair) chosenStyle[kind] = id; else chosenStyle.weg = id; };
@@ -569,15 +573,19 @@ function wegStyleBar(bar, stair = false) {
     + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''} – ändern"><i style="background:${sw(cur)}"></i><span>${M ? M.name : ''} ▾</span></button>`
     + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''} – ändern"><i style="background:${M && M.fixed ? sw(cur) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
     + (ramp ? '<span class="style-sep"></span>' + [1, 2].map(n => `<button class="style-chip size-chip${rampNewLen === n ? ' on' : ''}" data-rlen="${n}" title="${n === 1 ? '1 Feld lang' : '2 Felder lang'}" aria-label="${n === 1 ? '1 Feld lang' : '2 Felder lang'}"><i>${n}</i><span>${n === 1 ? '1 Feld · steil' : '2 Felder · flacher'}</span></button>`).join('')
-      : stair ? '' : `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`);
+      : stair ? `<span class="style-sep"></span>${stairWideChip()}` : `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`);
   for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-rlen]')) b.onclick = () => { rampNewLen = +b.dataset.rlen; wegPop = null; previewCache = null; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; pick(wegStyleOf(m.id, colFor(m))); wegPop = null; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { pick(wegStyleOf(cm, b.dataset.wf)); wegPop = null; sfx('deco'); renderStyleBar(kind); };
-  // Wegform: nur diesen Knopf ändern – die offene Auswahl bleibt offen und unverändert (vorher baute sich alles neu auf und sprang)
-  const wireShape = b => { b.onclick = () => { const k = b.dataset.wegopt; wegShape[k] = !wegShape[k]; previewCache = null; sfx('deco');
+  // Wegform: nur diesen Knopf ändern – die offene Auswahl bleibt offen und unverändert (vorher baute sich alles neu auf und sprang).
+  // Breite Wege: neue Treppen wieder wie die Wegform (stairNewWide)
+  const wireShape = b => { b.onclick = () => { const k = b.dataset.wegopt; wegShape[k] = !wegShape[k]; if (k === 'wide') stairNewWide = null; previewCache = null; sfx('deco');
     const tmp = document.createElement('div'); tmp.innerHTML = shapeChip(WEG_SHAPES.find(x => x[0] === k)); const nb = tmp.firstElementChild; b.replaceWith(nb); wireShape(nb); }; };
   for (const b of bar.querySelectorAll('[data-wegopt]')) wireShape(b);
+  const wireStairW = b => { b.onclick = () => { stairNewWide = !stairWideNew(); previewCache = null; sfx('deco');   // Treppe: schmal ↔ breit (wie die Wegform)
+    const tmp = document.createElement('div'); tmp.innerHTML = stairWideChip(); const nb = tmp.firstElementChild; b.replaceWith(nb); wireStairW(nb); }; };
+  for (const b of bar.querySelectorAll('[data-stairw]')) wireStairW(b);
   if (bar.querySelector('[data-more]')) bar.querySelector('[data-more]').onclick = () => { wegPop = null; openResearch('design'); };
   bar.hidden = false;
 }
@@ -1243,6 +1251,20 @@ function wegFormHtml(t, x, y) {
     ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
     <p class="muted">Automatisch: vor einem Gebäude läuft der Weg bis an die Wand, sonst endet er rund.</p>` : ''}`;
 }
+// Treppe (Anhöhe): schmal wie ein Weg oder breit – für alle gleich gerichteten Treppen nebeneinander (stairRow any). Ecktreppen sind immer breit
+function stairWidthHtml(t, x, y) {
+  if (t.ecke) return '';
+  // gezählt wie setStairWidth: ohne die Ecktreppe (sie hat die Drehung eines ihrer Arme)
+  const n = stairRow(x, y, true).filter(([sx, sy]) => !stairAt(sx, sy).ecke).length, w = !stairSchmal(t), btn = (v, label) => `<button class="look${v === w ? ' on' : ''}" data-stairw="${v ? 1 : 0}">${label}</button>`;
+  return `<div class="label">Breite${n > 1 ? ` <small class="muted">(alle ${n} nebeneinander)</small>` : ''}</div><div class="looks">${btn(false, '▭ schmal wie ein Weg')}${btn(true, '▬ breit')}</div>`;
+}
+function setStairWidth(x, y, wide) {
+  const row = stairRow(x, y, true).filter(([sx, sy]) => !stairAt(sx, sy).ecke);
+  if (!row.some(([sx, sy]) => stairSchmal(stairAt(sx, sy)) === wide)) return false;
+  if (!wide && row.some(([sx, sy]) => cornerOn(sx, sy))) { fail('Hier hängt eine Ecktreppe dran – um die Ecke geht nur die breite Treppe'); return false; }
+  undoable(() => { for (const [sx, sy] of row) { const s = stairAt(sx, sy); if (wide) delete s.schmal; else s.schmal = true; } groundVersion++; sfx('deco'); recalc(); save(); });
+  return true;
+}
 function wireWegForm(el, t, x, y) {
   for (const b of el.querySelectorAll('[data-wscope]')) b.onclick = () => { wegScope = b.dataset.wscope; sfx('deco'); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-wbel]')) b.onclick = () => undoable(() => {
@@ -1664,7 +1686,7 @@ function openInfo(x, y) {
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
     : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz – er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
       <div class="row"><button class="btn" data-lgrow="1" ${lighthouseSpot(x + ',' + y, t) ? '' : 'disabled'}>🗼 Zum Kap ausbauen</button></div>`   // Block 83
-    : t.b === 'huegeltreppe' ? `<div class="label">Stufen${stairRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Treppe, ${stairRow(x, y).length} Felder)</small>` : ''}</div>${wegPickHtml(stairStyleOf(t), 'stairbel', true)}`   // Block 157d: Belag wie die Wege
+    : t.b === 'huegeltreppe' ? `<div class="label">Stufen${stairRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Treppe, ${stairRow(x, y).length} Felder)</small>` : ''}</div>${wegPickHtml(stairStyleOf(t), 'stairbel', true)}${stairWidthHtml(t, x, y)}`   // Block 157d: Belag wie die Wege, Breite
     : t.b === 'huegelrampe' ? `<div class="label">Belag${rampRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Rampe, ${rampRow(x, y).length} Rampen)</small>` : ''}</div>${wegPickHtml(rampStyleOf(t), 'rampbel', true)}`   // Rampe: Belag wie die Wege
     : courtHtml(t, x, y);   // Gartenweg (Block 78), Vorplatz (Block 91)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
@@ -1709,6 +1731,7 @@ function openInfo(x, y) {
     undoable(() => { for (const [sx, sy] of stairRow(x, y)) stairAt(sx, sy).style = b.dataset.stairbel; groundVersion++; sfx('deco'); save(); });
     openInfo(x, y);
   };
+  for (const b of el.querySelectorAll('[data-stairw]')) b.onclick = () => { if (setStairWidth(x, y, b.dataset.stairw === '1')) openInfo(x, y); };   // Treppe: schmal/breit für die ganze Reihe
   for (const b of el.querySelectorAll('[data-rampbel]')) b.onclick = () => {    // Rampe: Belag für die ganze breite Rampe
     undoable(() => { for (const [rx, ry] of rampRow(x, y)) state.tiles.get(rx + ',' + ry).style = b.dataset.rampbel; groundVersion++; sfx('deco'); save(); });
     openInfo(x, y);
@@ -1991,7 +2014,7 @@ function openHillInfo(x, y) {
   const di = demolishInfo(x, y);                                         // Abtragen wie 🗑️ überall: Linien/Eckpunkt-Deko am Rand sperren (rules.js)
   const el = showPanel(`
     <h3>⛰️ Anhöhe · ${escHtml((L.forms[w] || L.forms[0]).name)}</h3>
-    <p class="muted">Eine Ebene höher. Oben gehen Wege, Plätze mit Ständen, Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Gebäude kommen später. Hinauf führen Treppe und Rampe (Gestalten → Anhöhen); über die Rampe hängt der Weg oben mit dem unten zusammen.</p>
+    <p class="muted">Eine Ebene höher. Oben gehen Wege, Plätze mit Ständen, Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Gebäude kommen später. Hinauf führen Treppe und Rampe (Gestalten → Anhöhen); über beide hängt der Weg oben mit dem unten zusammen.</p>
     <div class="label">Wand</div>
     <div class="looks look-forms">${lookFree('anhoehe', 'form').map(([f, i]) => `<button class="look look-form${i === w ? ' on' : ''}" data-hwall="${i}" aria-label="Wand: ${f.name}"><img alt="" src="${lookThumb('anhoehe', i, 0) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     <p class="muted">Gilt für die ganze zusammenhängende Anhöhe${n > 1 ? ` (${n} Felder)` : ''}.</p>
@@ -2888,7 +2911,7 @@ function helpBody(tab) {
     '🧭 <b>Die Leiste unten</b> hat vier Bereiche: 🏘️ Stadt, 🏭 Herstellen, 🎡 Freizeit, 🌸 Gestalten. Antippen klappt alles aus dem Bereich auf, nach Gruppen sortiert. Karte antippen = auswählen, dann auf die Karte tippen = bauen. ✕ legt es wieder weg.',
     'ℹ️ <b>Tippst du eine Karte an</b>, erscheint rechts ihr Info-Fenster. Gesperrt? Dort steht, wie du es freischaltest – mit Knopf, der dich direkt hinbringt.',
     '🛤️ <b>Wege, Parkrasen, Gelände</b> ziehst du als Linie oder Rechteck auf: erst die Vorschau, dann hineintippen zum Bauen.',
-    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen) ziehst du genauso als Rechteck auf – die Felder liegen dann eine Ebene höher, mit Felswand, Erde oder Trockenmauer, und oben stehen Bäume, Bänke, Brunnen, Beete und Gelände. Hinauf führt eine <b>Treppe</b>: unten direkt vor die Wand stellen oder auf den Rand der Anhöhe, sie dreht sich von selbst – nebeneinander wird sie breit, und oben gehen dann Leute spazieren.',
+    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen) ziehst du genauso als Rechteck auf – die Felder liegen dann eine Ebene höher, mit Felswand, Erde oder Trockenmauer, und oben stehen Bäume, Bänke, Brunnen, Beete und Gelände. Hinauf führt eine <b>Treppe</b>: unten direkt vor die Wand stellen oder auf den Rand der Anhöhe, sie dreht sich von selbst – schmal wie ein Weg oder breit, und oben gehen dann Leute spazieren.',
     '🧱 <b>Hecken, Zäune, Mauern</b> liegen zwischen den Feldern. Wo ein Weg hindurchgeht, entsteht ein Tor – antippen für Torbogen, Rosenbogen oder Torpfeiler.',
     '🪑 <b>Kleinkram</b> (Bänke, Laternen, Bäume, Blumentöpfe) passt zu acht auf ein Feld: in die Ecke oder an die Seite tippen, wo er stehen soll.',
     '📍 <b>Der Platz zählt:</b> Windräder am Wasser oder neben Fels, Offshore-Anlagen weit draußen, Geothermie nah an der heißen Quelle, Solarfelder auf Sand, Holzfäller im Wald, Steinbrüche am Fels und Obstplantagen zwischen Obstbäumen bringen bis +50 %. Die Vorschau beim Bauen zeigt, wie gut ein Platz ist – schlechter als vorher wird nichts.',
