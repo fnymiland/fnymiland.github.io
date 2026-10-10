@@ -106,6 +106,7 @@ function tileOut(t) {
   if (t.hgt != null) o.hgt = t.hgt;                                                     // Achterbahn: Höhenstufe (Block 60e)
   if (t.cross) { o.cross = true; if (t.foot) o.foot = true; if (t.footPaid) o.footPaid = t.footPaid; }
   if (Array.isArray(t.pbz) && t.pbz.length) o.pbz = t.pbz.filter(Number.isInteger);    // Parkbahn-Station: Züge der Strecke (Block 136e/h)
+  if (t.ecke === true && t.b === 'huegeltreppe') o.ecke = true;                        // Ecktreppe (Block 157)
   return o;
 }
 function serialize() {

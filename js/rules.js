@@ -3170,6 +3170,7 @@ function demolishInfo(x, y, under = false) {                            // under
   if (t) {
     const d = ITEMS[t.b];
     if (t.b === 'lm') return { err: 'Sehenswürdigkeiten bleiben stehen' };
+    if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) return { err: 'Hier hängt eine Ecktreppe dran – erst die Ecktreppe abreißen' };   // Block 157
     if (t.b === 'truhe') return { err: 'Die Truhe erst öffnen (antippen)' };
     if (d.fixed) return { err: 'Das Rathaus bleibt stehen' };
     if (d.pop) {

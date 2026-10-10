@@ -2350,4 +2350,11 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
 - [x] Wandfuge (1 Gerätepunkt grünlich zwischen zwei Wandbildchen, alle Anhöhen): Wand reicht `HILL_EXT` unter das später gezeichnete
       Nachbarbild, nur gerade weiter und an Innenecken (`hillExt`, im Bildchen-Schlüssel). Gemessen bei z 4,5: Vorder- und Seitenwand an
       allen Fugen durchgehend Wandfarbe. Test: treppe-buendig (die Helfer scheiterten am Wochenlimit, selbst fertiggestellt)
+- [x] Nutzer: Treppe keine Deko (keine Schönheit, kein Deko-Wunsch, kein Park); Menügruppe „Anhöhen“ bleibt; Treppen hinten erlaubt
+- [x] Ecktreppe (Nutzer: „Treppen um die Ecke – erhöhter Platz aus allen Richtungen“): Feld schräg vor der Ecke zwischen zwei Treppen,
+      die um sie hinaufführen; erkannt beim Setzen (auch eingesetzt), `t.ecke`, Drehung r = Achsen STAIR_UP[r], STAIR_UP[r+1]. Stufen
+      L-förmig (Stufe = min der beiden), an den Grenzen genau wie die Nachbartreppen; gemalt als n×n Zellen von hinten nach vorn
+      (`paintStairCorner`). Hängt an Nachbartreppen und Anhöhe (Abreißen/Aufnehmen/Abtragen gesperrt), keine Linien daran, kein
+      Aufgang für Spaziergänger. Nebenbei: Drehung beim Einsetzen am Rand bevorzugt echten Fuß und Nachbartreppe gleicher Richtung
+      (zweite Randtreppe drehte sich sonst längs). Test: anhoehe-treppe
 

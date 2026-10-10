@@ -517,4 +517,44 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     expect(game("bAt(20, 7)")).toBe('huegeltreppe');
     expect(game("wishMet('deko', 22, 9)")).toBe(false);
   });
+
+  it('Ecktreppe (Nutzer: „Treppen um die Ecke – erhöhter Platz aus allen Richtungen“): schräg vor der Ecke zwischen zwei Treppen, L-förmige Stufen, nahtlos', () => {
+    for (let y = 6; y <= 8; y++) for (let x = 6; x <= 8; x++) game(`build('anhoehe', ${x}, ${y}, true)`);
+    for (const x of [6, 7, 8]) expect(game(`build('huegeltreppe', ${x}, 9, true)`)).toBe(true);   // Süden, hinauf nach −y
+    for (const y of [6, 7, 8]) expect(game(`build('huegeltreppe', 9, ${y}, true)`)).toBe(true);   // Osten, hinauf nach −x
+    expect(game("[stairAt(8, 9).rot, stairAt(9, 8).rot]")).toEqual([0, 3]);
+    expect(game("placeError('huegeltreppe', 9, 9)")).toBe(null);
+    expect(game("build('huegeltreppe', 9, 9, true)")).toBe(true);
+    expect(game("[stairAt(9, 9).ecke, stairAt(9, 9).rot]")).toEqual([true, 3]);
+    const H = game('HILL_H'), n = game('STAIR_N');
+    expect(game('stairHeight(9, 9, 8.52, 8.52)')).toBe(H);                // an der Ecke der Anhöhe ganz oben
+    expect(game('stairHeight(9, 9, 9.48, 9.48)')).toBe(H / n);            // außen ganz unten
+    for (const v of [9.1, 9.3, 9.45]) expect(game(`stairHeight(9, 9, 8.51, ${v})`)).toBe(game(`stairHeight(8, 9, 8.49, ${v})`));   // nahtlos zur Treppe im Süden
+    for (const u of [9.1, 9.3, 9.45]) expect(game(`stairHeight(9, 9, ${u}, 8.51)`)).toBe(game(`stairHeight(9, 8, ${u}, 8.49)`));   // … und im Osten
+    expect(game("stairLook(8, 9, stairAt(8, 9)).p + stairLook(8, 9, stairAt(8, 9)).m")).not.toContain('k');   // keine Wange zur Ecke hin
+    expect(game("stairLook(9, 9, stairAt(9, 9)).ecke")).toBe(true);
+    // hängt an den Nachbarn und an der Anhöhe: nicht abreißen, nicht aufnehmen, nicht abtragen
+    expect(game("demolishInfo(8, 9).err")).toMatch(/Ecktreppe/);
+    expect(game('lowerHill(8, 8)')).toBe(false);
+    expect(game("edgeError('zaun', edgeBetween(9, 9, 9, 10))")).toBeTruthy();
+    expect(game('hillStairs().some(s => s.x === 9 && s.y === 9)')).toBe(false);   // kein Aufgang für Spaziergänger
+    // Speichern/Laden
+    const back = game("(() => { const s = parseSave(JSON.parse(JSON.stringify(serialize()))); return new Map(s.tiles).get('9,9'); })()");
+    expect(back.ecke).toBe(true);
+    // Zeichnen ohne Fehler, Ecke abreißen geht, danach die Nachbarn
+    game('cam.z = 5; { const p = iso(9, 9); cam.x = p.x; cam.y = p.y; } render(performance.now())');
+    expect(game("demolishInfo(9, 9).err")).toBeFalsy();
+    game('demolish(9, 9)');
+    expect(game("demolishInfo(8, 9).err")).toBeFalsy();
+  });
+
+  it('Ecktreppe auch in eine fertige Anhöhe eingesetzt (Ecke zuletzt)', () => {
+    for (let y = 6; y <= 10; y++) for (let x = 12; x <= 16; x++) game(`build('anhoehe', ${x}, ${y}, true)`);
+    for (const x of [13, 14, 15]) expect(game(`build('huegeltreppe', ${x}, 10, true)`)).toBe(true);
+    for (const y of [7, 8, 9]) expect(game(`build('huegeltreppe', 16, ${y}, true)`)).toBe(true);
+    expect(game("build('huegeltreppe', 16, 10, true)")).toBe(true);
+    expect(game('[13, 14, 15].map(x => stairAt(x, 10).rot).concat([7, 8, 9].map(y => stairAt(16, y).rot))')).toEqual([0, 0, 0, 3, 3, 3]);   // alle nach außen, keine längs des Rands
+    expect(game("[stairAt(16, 10).ecke, hillLevel(16, 10), hillLevel(15, 9)]")).toEqual([true, 0, 1]);
+    expect(game('stairHeight(16, 10, 15.52, 9.52)')).toBe(game('HILL_H'));
+  });
 });

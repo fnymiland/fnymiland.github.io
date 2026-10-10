@@ -353,14 +353,15 @@ function stairFresh() {
   const v = groundVersion + ':' + state.tiles.size + ':' + state.hills.size;
   if (stairCache.ver === v) return stairCache;
   const list = [];
-  let n = 0;
+  let n = 0, ecken = 0;
   for (const [k, t] of state.tiles) {
     if (!isStair(t)) continue;
     n++;
+    if (t.ecke) { ecken++; continue; }                                    // Ecktreppe: kein Aufgang für Spaziergänger (führt schräg)
     const [x, y] = keyXY(k), rot = stairRotOf(t), [dx, dy] = STAIR_UP[rot];
     if (hillLevel(x + dx, y + dy) === hillLevel(x, y) + 1) list.push({ k, x, y, dx, dy, rot });
   }
-  stairCache = { ver: v, list, n };
+  stairCache = { ver: v, list, n, ecken };
   return stairCache;
 }
 // [{ k, x, y, dx, dy, rot }] – (dx, dy) zeigt hinauf zur Anhöhe (Spaziergänger, js/hill-walkers.js)
@@ -370,7 +371,8 @@ const hillStairs = () => stairFresh().list;
 function stairHeight(x, y, u, v) {
   const t = stairAt(x, y), a = u - x, b = v - y;
   if (!t || Math.abs(a) > 0.5 || Math.abs(b) > 0.5) return 0;
-  const [Du, Dv] = STAIR_UP[stairRotOf(t)], i = Math.min(STAIR_N - 1, Math.max(0, Math.floor((a * Du + b * Dv + 0.5) * STAIR_N)));
+  const idx = ([Du, Dv]) => Math.min(STAIR_N - 1, Math.max(0, Math.floor((a * Du + b * Dv + 0.5) * STAIR_N)));
+  const i = t.ecke ? Math.min(...cornerAxes(stairRotOf(t)).map(idx)) : idx(STAIR_UP[stairRotOf(t)]);   // Ecke: L-förmig
   return HILL_H * (i + 1) / STAIR_N;
 }
 // Treppen um Feld (x, y): foot = die, deren Fuß (Feld davor) (x, y) ist; sonst die, die auf (x, y) hinaufführen. [[x, y], …]
@@ -378,11 +380,45 @@ function stairsAround(x, y, foot = false) {
   const out = [];
   for (const [ex, ey] of DIRS) {
     const t = stairAt(x + ex, y + ey);
-    if (!t) continue;
+    if (!t || t.ecke) continue;
     const [dx, dy] = STAIR_UP[stairRotOf(t)];
     if (foot ? dx === ex && dy === ey : dx === -ex && dy === -ey) out.push([x + ex, y + ey]);
   }
+  // Ecktreppen ringsum: führen schräg hinauf auf die Ecke (n + D1 + D2), ihre Füße sind die beiden äußeren Seiten (n − D1, n − D2)
+  if (stairFresh().ecken) for (let ey = -1; ey <= 1; ey++) for (let ex = -1; ex <= 1; ex++) {
+    const nx = x + ex, ny = y + ey, t = (ex || ey) && stairAt(nx, ny);
+    if (!t || !t.ecke) continue;
+    const [D1, D2] = cornerAxes(stairRotOf(t));
+    if (foot ? (nx - D1[0] === x && ny - D1[1] === y) || (nx - D2[0] === x && ny - D2[1] === y) : nx + D1[0] + D2[0] === x && ny + D1[1] + D2[1] === y) out.push([nx, ny]);
+  }
   return out;
+}
+// Ecktreppe (Nutzer, 10.10.2026: „Treppen sollten auch um die Ecke gehen dürfen – ein erhöhter Platz, der aus allen Richtungen begangen
+// werden kann“): das Feld schräg vor der Ecke einer Anhöhe, an den beiden Seiten zur Ecke hin je eine Treppe, die um diese Ecke hinaufführt.
+// Drehung r: Seiten D1 = STAIR_UP[r], D2 = STAIR_UP[r + 1]; die Ecke der Anhöhe liegt bei D1 + D2. Stufen L-förmig (wie eine Stufenpyramide):
+// Stufe = kleinere der beiden Stufen längs D1 und D2 – an der Grenze zur Nachbartreppe genau deren Stufen, ohne Fuge
+// wird eine neue Treppe auf (x, y) eine Ecktreppe? (keine gerade Richtung, aber eine Ecke; build, Vorschau)
+const stairCornerNew = (x, y) => !stairDirs(x, y, stairBase(x, y)).length && cornerDirs(x, y).length > 0;
+const cornerAxes = r => [STAIR_UP[r & 3], STAIR_UP[(r + 1) & 3]];
+function cornerDirs(x, y, lv = stairBase(x, y)) {
+  const out = [];
+  for (let r = 0; r < 4; r++) {
+    const [[ax, ay], [bx, by]] = cornerAxes(r), s1 = stairAt(x + ax, y + ay), s2 = stairAt(x + bx, y + by);
+    if (hillLevel(x + ax + bx, y + ay + by) === lv + 1 && s1 && !s1.ecke && stairRotOf(s1) === ((r + 1) & 3) && s2 && !s2.ecke && stairRotOf(s2) === r
+      && hillLevel(x + ax, y + ay) === lv && hillLevel(x + bx, y + by) === lv) out.push(r);
+  }
+  return out;
+}
+// Ecktreppe neben (x, y), die an dieser Treppe hängt (Abreißen, Aufnehmen sperren)
+function cornerOn(x, y) {
+  if (!stairFresh().ecken) return null;
+  for (const [ex, ey] of DIRS) {
+    const t = stairAt(x + ex, y + ey);
+    if (!t || !t.ecke) continue;
+    const [D1, D2] = cornerAxes(stairRotOf(t));
+    if ((x + ex + D1[0] === x && y + ey + D1[1] === y) || (x + ex + D2[0] === x && y + ey + D2[1] === y)) return [x + ex, y + ey];
+  }
+  return null;
 }
 // Richtungen, in die eine Treppe auf (x, y) zeigen kann: dahinter eine Anhöhe genau eine Ebene höher, davor kein Wasser und nichts Höheres.
 // lv: Ebene, auf der die Treppe steht (stairBase: in eine Anhöhe eingelassen eine tiefer)
@@ -398,8 +434,15 @@ function stairDirs(x, y, lv = hillLevel(x, y)) {
 // die gewählte (buildRot), sonst die erste. Passt keine: buildRot (die Vorschau zeigt dann rot)
 function stairRot(x, y) {
   const ok = stairDirs(x, y, stairBase(x, y));
-  if (!ok.length) return buildRot & 3;
-  const weg = ok.filter(r => wegAt(x - STAIR_UP[r][0], y - STAIR_UP[r][1]) != null), c = weg.length ? weg : ok;
+  if (!ok.length) { const cd = cornerDirs(x, y); return cd.length ? cd[0] : buildRot & 3; }   // Ecktreppe
+  // Punkte: Weg am Fuß, ein echter Fuß (keine Treppe – sonst dreht sich eine am Rand eingesetzte längs zur Nachbartreppe), eine Treppe gleicher
+  // Richtung daneben (wird breit); bei Gleichstand die gewählte Drehung, sonst die erste
+  const score = r => {
+    const [dx, dy] = STAIR_UP[r], fx = x - dx, fy = y - dy;
+    const side = [[x - dy, y + dx], [x + dy, y - dx]].some(([nx, ny]) => { const n = stairAt(nx, ny); return n && !n.ecke && stairRotOf(n) === r; });
+    return (wegAt(fx, fy) != null ? 4 : 0) + (stairAt(fx, fy) ? 0 : 2) + (side ? 1 : 0);
+  };
+  const best = Math.max(...ok.map(score)), c = ok.filter(r => score(r) === best);
   return c.includes(buildRot & 3) ? buildRot & 3 : c[0];
 }
 // Darf hier eine Treppe stehen (placeError, vor den allgemeinen Prüfungen: Belegung, kleine Deko, Gelände)? move: getragen (✋, Kopie)
@@ -410,7 +453,12 @@ function stairError(x, y, rot, move) {
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   if (wegAt(x, y) != null) return 'Nicht auf einen Weg – stell die Treppe ans Ende des Wegs';
   if (state.roofs && state.roofs.size && roofAt(x, y)) return 'Unter einer Überdachung geht keine Treppe';
-  const ok = stairDirs(x, y, stairBase(x, y));
+  const ok = stairDirs(x, y, stairBase(x, y)), cd = ok.length ? [] : cornerDirs(x, y);
+  if (cd.length) {                                                       // Ecktreppe zwischen zwei Treppen um die Ecke
+    if (!cd.includes(rot & 3)) return 'Die Ecktreppe muss in die Ecke der Anhöhe zeigen';
+    for (const [ex, ey] of DIRS) { const e = state.edges.get(edgeBetween(x, y, x + ex, y + ey)); if (e) return `An der Ecktreppe steht: ${ITEMS[e.b].name} – erst entfernen`; }
+    return null;
+  }
   if (!ok.length && into) {                                              // Randfeld, aber kein Fuß: davor Wasser, oder dahinter keine Anhöhe
     const lv = hillLevel(x, y), wet = DIRS.some(([dx, dy]) => hillLevel(x + dx, y + dy) === lv && hillLevel(x - dx, y - dy) < lv);
     return wet ? 'Vor der Treppe braucht es Platz – kein Wasser' : 'Hinter der Treppe muss Anhöhe bleiben – hier ist sie zu schmal';
@@ -449,6 +497,7 @@ function stairIntoError(x, y, move) {
 // stünde unten zwischen den Stufen); an die Seite schon
 function stairEdgeError(k) {
   const [[ax, ay], [bx, by]] = edgeTiles(k), a = stairAt(ax, ay), b = stairAt(bx, by);
+  if ((a && a.ecke) || (b && b.ecke)) return 'Nicht an die Ecktreppe';
   if (a && b && stairRotOf(a) === stairRotOf(b)) return 'Nicht mitten durch die breite Treppe';
   for (const [t, x, y, ox, oy] of [[a, ax, ay, bx, by], [b, bx, by, ax, ay]]) {
     if (!t) continue;
@@ -481,12 +530,19 @@ function stairRow(x, y) {
 function stairLook(x, y, t) {
   const L = hillGap && hillGap.x === x && hillGap.y === y ? drawLevel : hillLevel;   // Geist der Vorschau in die Anhöhe: eine Ebene tiefer (echte Treppen nie)
   const rot = stairRotOf(t), [Du, Dv] = STAIR_UP[rot], Su = -Dv, Sv = Du, lv = L(x, y);
-  const side = sg => { const nx = x + sg * Su, ny = y + sg * Sv, n = stairAt(nx, ny); return L(nx, ny) > lv ? 'h' : n && stairRotOf(n) === rot ? 'j' : 'k'; };
+  const side = sg => {
+    const nx = x + sg * Su, ny = y + sg * Sv, n = stairAt(nx, ny);
+    if (L(nx, ny) > lv) return 'h';
+    if (n && n.ecke) { const [D1, D2] = cornerAxes(stairRotOf(n)); return (nx + D1[0] === x && ny + D1[1] === y) || (nx + D2[0] === x && ny + D2[1] === y) ? 'j' : 'k'; }   // Ecktreppe daneben: läuft um die Ecke weiter
+    return n && stairRotOf(n) === rot ? 'j' : 'k';
+  };
+  if (t.ecke) { const [D1, D2] = cornerAxes(rot); return { rot, ecke: true, style: stairStyleOf(t), kind: hillWall(hillAt(x + D1[0] + D2[0], y + D1[1] + D2[1])), m: 'j', p: 'j', top: groundTopAt(x, y) }; }
   return { rot, style: stairStyleOf(t), kind: hillWall(hillAt(x + Du, y + Dv)), m: side(-1), p: side(1), top: groundTopAt(x, y) };
 }
 // Treppe malen. P(u, v, up) → Bildpunkt (Feldkoordinaten relativ zur Feldmitte, Höhe in Bildpunkten bei Zoom 1); x, y: Feld (Musterraster).
 // Von hinten nach vorn: Keil auf der abgewandten Seite, die Stufen (Trittfläche im Wegstil, sichtbare Stirnseite dunkler), Keil vorn
 function paintStair(P, o, x, y) {
+  if (o.ecke) { paintStairCorner(P, o, x, y); return; }
   const H = HILL_H, n = STAIR_N, [Du, Dv] = STAIR_UP[o.rot & 3], Su = -Dv, Sv = Du, S = HILL_STY[o.kind] || HILL_STY.fels;
   const UV = (d, s) => [Du * d + Su * s, Dv * d + Sv * s];               // d längs (hinauf), s quer → (u, v)
   const W = (d, s, h) => P(...UV(d, s), h);
@@ -534,14 +590,45 @@ function paintStair(P, o, x, y) {
   for (let j = 0; j < n; j++) step(toward ? j : n - 1 - j);
   if ((nearP ? o.p : o.m) === 'k') keil(nearP ? 1 : -1);
 }
-const stairSig = o => o.rot + '|' + o.style + '|' + o.kind + '|' + o.m + o.p + '|' + o.top;
+// Ecktreppe malen: n × n Zellen, Höhe je Zelle = Stufe min(i1, i2) (L-förmig um die Ecke); von hinten nach vorn (u + v), je Zelle die sichtbaren
+// Seiten bis zur tieferen Nachbarzelle (außen bis zum Boden; zur Nachbartreppe gleich hoch – keine Seite), dann die Trittfläche im Wegstil.
+// Kanten wie bei der geraden Treppe: oben an einer sichtbaren Stirnseite hell, wo es nach hinten hinabgeht dunkel
+function paintStairCorner(P, o, x, y) {
+  const H = HILL_H, n = STAIR_N, [D1, D2] = cornerAxes(o.rot);
+  const UV = (s1, s2) => [D1[0] * (s1 - 0.5) + D2[0] * (s2 - 0.5), D1[1] * (s1 - 0.5) + D2[1] * (s2 - 0.5)];   // s1, s2: 0 außen … 1 zur Ecke
+  const lk = lookFar(pathLook(o.style), 1), riser = shade(lk.fill, -0.2);
+  const ht = (i, j) => i < 0 || j < 0 ? 0 : i >= n || j >= n ? H : H * (Math.min(i, j) + 1) / n;   // außen Boden, innen (Nachbartreppe/Anhöhe) oben
+  const cells = [];
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const [u, v] = UV((i + 0.5) / n, (j + 0.5) / n); cells.push([i, j, u + v]); }
+  cells.sort((p, q) => p[2] - q[2]);
+  const line = (a, b, col, w) => { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = col; g.lineWidth = w; g.lineCap = 'butt'; g.stroke(); };
+  for (const [i, j] of cells) {
+    const h = ht(i, j), c = [UV(i / n, j / n), UV((i + 1) / n, j / n), UV((i + 1) / n, (j + 1) / n), UV(i / n, (j + 1) / n)];
+    // Seiten: zu den vier Nachbarzellen (−s1, +s1, −s2, +s2) – sichtbar, wenn sie zum Betrachter zeigen und der Nachbar tiefer liegt
+    const sides = [[c[0], c[3], i - 1, j, -1, 0], [c[1], c[2], i + 1, j, 1, 0], [c[0], c[1], i, j - 1, 0, -1], [c[3], c[2], i, j + 1, 0, 1]];
+    const edgesTop = [];
+    for (const [a, b, ni, nj, g1, g2] of sides) {
+      const hn = ht(ni, nj);
+      if (hn >= h) continue;
+      const nu = D1[0] * g1 + D2[0] * g2, nv = D1[1] * g1 + D2[1] * g2, vis = nu + nv > 0;
+      if (vis) poly([P(...a, hn), P(...b, hn), P(...b, h), P(...a, h)], C(riser));
+      edgesTop.push([a, b, vis]);
+    }
+    const q = c.map(([u, v]) => P(u, v, h));
+    poly(q, C(lk.fill));
+    if (lk.pat) { const L = ([u, v]) => P(u, v, h); g.save(); clipTo([c], L); patSeam = true; try { pattern(L, lk.pat[0], x, y, 1, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); } }
+    for (const [a, b, vis] of edgesTop) line(P(...a, h), P(...b, h), vis ? 'rgba(255,255,255,0.35)' : 'rgba(40,30,20,0.28)', vis ? 0.7 : 0.9);
+  }
+}
+const stairSig = o => (o.ecke ? 'E' : '') + o.rot + '|' + o.style + '|' + o.kind + '|' + o.m + o.p + '|' + o.top;
 // drawObject 'huegeltreppe' (draw-objects.js): als Bildchen je Feld (wie drawHillTile, mit Zeitbudget beim Zoomen). Steht die Treppe so
 // nicht auf dem Feld (Vorschau beim Bauen/Verschieben): ein eigenes Bildchen 'sg' mit dem Feld im Schlüssel (Muster im Weltraster).
 // t kann eine Kopie sein (spriteTile malt mit einer) – verglichen wird der Inhalt, nicht das Ding
 function drawHillStair(cx, cy, z, x, y, t) {
   t = t || stairAt(x, y);
   if (!t) return;
-  const on = stairAt(x, y), real = !!on && stairRotOf(on) === stairRotOf(t) && on.style === t.style, key = real ? 's' + x + ',' + y : 'sg';
+  if (t.ecke == null && !stairAt(x, y) && stairCornerNew(x, y)) t = { ...t, ecke: true };   // Geist der Vorschau: wird eine Ecktreppe
+  const on = stairAt(x, y), real = !!on && stairRotOf(on) === stairRotOf(t) && on.style === t.style && !!on.ecke === !!t.ecke, key = real ? 's' + x + ',' + y : 'sg';
   const want = DPR * Math.pow(2, Math.ceil(Math.log2(Math.max(z, 0.2)) * 2 - 1e-9) / 2);
   let e = hillSprites.get(key);
   // Aussehen nur neu bestimmen, wenn sich am Spielstand etwas getan hat (Stil im Fenster: groundVersion++)
