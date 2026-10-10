@@ -1,12 +1,12 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Spaziergänger auf Anhöhen (Block 157d): kommen von einem nahen Weg zum Fuß einer Hügeltreppe oder Rampe (Stufe 2), steigen hinauf, bummeln
+// Spaziergänger auf Anhöhen (Block 157d): kommen von einem nahen Weg zum Fuß einer Hügeltreppe (die Gleis-Rampe ist nur für Züge), steigen hinauf, bummeln
 // oben (Raster 1/3 Feld wie die Leute auf dem Dach: nur gleich hohe Anhöhe, Wiese oder Weg, nicht in Deko, nicht durch Linien, Abstand zur
 // Kante), setzen sich gern auf eine Bank und gehen wieder hinunter und weg. Gezeichnet wie alle Bewohner mit dem Feld, auf dem sie stehen
-// (render.js byTile): w.up ist die Höhe über diesem Feld – oben 0 (das Feld hebt sie an), auf Treppe/Rampe ihre Höhe, am Boden null
-// (dann gelten Brücken, Treppen und Rampen wie bei allen: figUp in movers.js). So bleibt die Höhe beim Übergang Treppe → oben stetig.
-// Aufgang w.stair (hwStairs): { k: Ding, x, y: Fuß, dx, dy: hinauf, rot, len (Treppe 1), ramp, tx, ty: oberes Feld } aus hillStairs() und
-// hillRamps() (hills.js); d = −½ Vorderkante des Fußes … len − ½ oberes Ende
+// (render.js byTile): w.up ist die Höhe über diesem Feld – oben 0 (das Feld hebt sie an), auf der Treppe ihre Höhe, am Boden null
+// (dann gelten Brücken und Treppen wie bei allen: figUp in movers.js). So bleibt die Höhe beim Übergang Treppe → oben stetig.
+// Aufgang w.stair (hwStairs): { k: Ding, x, y: Fuß, dx, dy: hinauf, rot, len (1), tx, ty: oberes Feld } aus hillStairs() (hills.js);
+// d = −½ Vorderkante des Fußes … len − ½ oberes Ende
 // ---------------------------------------------------------------------------
 const hillWalkers = [], HW_MAX = 16;
 const HW_EDGE = 0.2;              // Abstand der Rasterpunkte zur Kante: die äußeren Punkte (1/6 vor einer Wand oder Linie) fallen weg
@@ -17,15 +17,14 @@ function hwFresh() {
   const v = groundVersion + ':' + state.hills.size + ':' + state.tiles.size + ':' + state.decos.size;
   if (hwCache.ver !== v || hwCache.st !== state) {
     const upAt = new Map();                                              // oberes Feld → Aufgang (Treppe: ihr Feld)
-    if (typeof hillStairs === 'function') for (const s of hillStairs()) upAt.set(s.k, { ...s, len: 1, ramp: false, tx: s.x, ty: s.y });
-    if (typeof hillRamps === 'function') for (const r of hillRamps()) upAt.set(r.top.join(), { k: r.k, x: r.foot[0], y: r.foot[1], dx: r.dx, dy: r.dy, rot: r.rot, len: r.len, ramp: true, tx: r.top[0], ty: r.top[1] });
+    if (typeof hillStairs === 'function') for (const s of hillStairs()) upAt.set(s.k, { ...s, len: 1, tx: s.x, ty: s.y });   // nur Treppen: die Gleis-Rampe ist für Züge
     hwCache = { ver: v, st: state, upAt, spots: new Map(), groups: new Map(), stairs: null, benches: null };
   }
   return hwCache;
 }
 // Feld oben begehbar: Anhöhe dieser Ebene, Wiese ohne etwas darauf (kein Wald, Fels, große Deko, Platz-Ding) oder ein Weg (Stufe 2)
 const hwTileOk = (x, y, lv) => { if (hillLevel(x, y) !== lv) return false; const t = objAt(x, y); return t ? t.b === 'weg' : terrainAt(x, y) === 'grass'; };
-// über eine Seite weiter: gleich hohe Anhöhe ohne Linie dazwischen – oder das obere Feld einer Treppe/Rampe, die hierher führt
+// über eine Seite weiter: gleich hohe Anhöhe ohne Linie dazwischen – oder das Feld einer Treppe, die hierher führt
 function hwSideOk(x, y, nx, ny, lv) {
   if (hwTileOk(nx, ny, lv)) return !edgeBlocks(x, y, nx, ny);
   const s = hwFresh().upAt.get(nx + ',' + ny);
@@ -61,7 +60,7 @@ function hwSpotOk(a, b, lv) {
 }
 // Schritt zum Nachbarpunkt: nicht mitten durch eine Deko zwischen den beiden Punkten
 const hwPassOk = (a, b, a2, b2) => { const u = (a + a2) / 6, v = (b + b2) / 6; return !hwDecoNear(u, v, Math.round(u), Math.round(v), 0.03); };
-// Treppen und Rampen, auf denen man hinaufkommt (oben Platz zum Aussteigen), mit ihrer Anhöhe (G: zusammenhängende Felder gleicher Ebene)
+// Treppen, auf denen man hinaufkommt (oben Platz zum Aussteigen), mit ihrer Anhöhe (G: zusammenhängende Felder gleicher Ebene)
 function hwStairs() {
   const c = hwFresh();
   if (c.stairs) return c.stairs;
@@ -140,7 +139,7 @@ function syncHillWalkers() {
   const byK = new Map(stairs.map(s => [s.k, s]));
   for (const w of hillWalkers) {                                         // Treppe weg oder gedreht, anderer Stand: verschwinden
     const s = byK.get(w.stair.k);
-    if (w.st0 !== state || !s || s.rot !== w.stair.rot || s.len !== w.stair.len || s.ramp !== w.stair.ramp) w.gone = true; else w.stair = s;
+    if (w.st0 !== state || !s || s.rot !== w.stair.rot || s.len !== w.stair.len) w.gone = true; else w.stair = s;
   }
   if (!stairs.length) return;
   // je Anhöhe nach ihrer Größe (mehr Treppen, etwas mehr Leute), alle zusammen höchstens HW_MAX, nachts halb so viele
@@ -168,15 +167,13 @@ function hwPut(w, u, v, h) { w.px = u; w.py = v; w.up = h - hillLift(Math.round(
 // Treppe (dx − dy)·3/32 Feld – mit der Höhe der Lage stünden sie sonst halb vor bzw. in der nächsten Stufe. Oberste Stufe = Oberkante
 const hwFootD = (s, d) => Math.max(-0.5, Math.min(0.5 - 1e-6, d + (s.dx - s.dy) * 3 / 32));
 const hwStepH = (s, d) => stairHeight(s.x, s.y, s.x + s.dx * d, s.y + s.dy * d);
-// Rampe: Höhe am gezeichneten Fußpunkt, stetig von der Vorderkante des Fußes (0) bis zum oberen Ende (HILL_H), darüber hinaus waagerecht
-const hwRampH = (s, d) => HILL_H * Math.max(0, Math.min(1, (d + (s.dx - s.dy) * 3 / 32 + 0.5) / s.len));
-const hwEnd = s => s.len - 0.5;                                         // d am oberen Ende der Treppe/Rampe
+const hwEnd = s => s.len - 0.5;                                         // d am oberen Ende der Treppe
 const hwTopD = s => s.len - 1 + HW_TOP;                                 // d am Ausstieg
-const hwUpThere = s => { const t = state.tiles.get(s.k); return s.ramp ? isRamp(t) : isStair(t); };
-// auf Treppe/Rampe (d bis zum oberen Ende) und oben bis zum Ausstieg: seitlich versetzt (lane), oben zur Mitte des Ausstiegs
+const hwUpThere = s => isStair(state.tiles.get(s.k));
+// auf der Treppe (d bis zum oberen Ende) und oben bis zum Ausstieg: seitlich versetzt (lane), oben zur Mitte des Ausstiegs
 function hwOnStair(w) {
   const s = w.stair, d = w.d, e = hwEnd(s), top = hwTopD(s), lane = w.lane * Math.max(0, Math.min(1, (top - d) / (top - e)));
-  hwPut(w, s.x + s.dx * d - s.dy * lane, s.y + s.dy * d + s.dx * lane, s.b0 * HILL_H + (s.ramp ? hwRampH(s, d) : d < e ? hwStepH(s, hwFootD(s, d)) : HILL_H));
+  hwPut(w, s.x + s.dx * d - s.dy * lane, s.y + s.dy * d + s.dx * lane, s.b0 * HILL_H + (d < e ? hwStepH(s, hwFootD(s, d)) : HILL_H));
 }
 // am Boden zur Treppe hin bzw. von ihr weg
 function hwAlong(w, dt) {
@@ -230,7 +227,7 @@ function hwStep(w, dt) {
   }
   if (w.st === 'in' || w.st === 'out') { hwAlong(w, dt); return; }
   if (w.st === 'up' || w.st === 'down') {
-    if (!hwUpThere(s)) { w.gone = true; return; }                       // Treppe/Rampe abgerissen/aufgenommen: nicht bis zum nächsten Abgleich in der Luft stehen
+    if (!hwUpThere(s)) { w.gone = true; return; }                       // Treppe abgerissen/aufgenommen: nicht bis zum nächsten Abgleich in der Luft stehen
     w.d += (w.st === 'up' ? 1 : -1) * dt * w.speed * 0.8;
     if (w.st === 'down' && w.d <= -0.5) {                               // unten: auf dem Weg, auf dem man kam, wieder hinaus
       w.st = 'out'; w.path = w.path.slice().reverse(); w.pi = 0; [w.px, w.py] = w.path[0]; w.up = null;
@@ -281,7 +278,7 @@ function stepHillWalkers(dt) {
   for (const w of hillWalkers) if (!w.gone) hwStep(w, dt);
   for (let i = hillWalkers.length - 1; i >= 0; i--) if (hillWalkers[i].gone) hillWalkers.splice(i, 1);
 }
-// Zeichnen (render.js drawMover): wie alle Bewohner (drawWalker kennt Treppe und Rampe unter der Figur)
+// Zeichnen (render.js drawMover): wie alle Bewohner (drawWalker kennt die Treppe unter der Figur)
 function drawHillWalker(w, z, now) { drawWalker(w, z, now); }
 // Figur auf der Treppe (x, y) zeichnen (drawWalker, movers.js), d = gezeichneter Fußpunkt längs der Treppe (−½ … ½). Steigt die Treppe zum
 // Betrachter hin an (hinauf nach +x/+y), liegt die nächsthöhere Stufe vor den Füßen – die Figur dann nur oberhalb ihrer Kante (auf dem

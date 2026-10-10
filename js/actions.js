@@ -117,7 +117,7 @@ function build(b, x, y, quiet) {
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
-  const back = b === 'huegeltreppe' ? stairIntoBack(x, y) : b === 'huegelrampe' ? rampIntoBack(x, y, rot) : 0;          // Treppe in die Anhöhe (hills.js): Feld absenken, Erstattung verrechnet
+  const back = b === 'huegeltreppe' ? stairIntoBack(x, y) : b === 'huegelrampe' ? rampIntoBack(x, y, rot) : 0;          // Treppe/Gleis-Rampe A, C in die Anhöhe (hills.js): Felder absenken, Erstattung verrechnet
   for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
   if (replaced.length) { state.money += replaced.length * ITEMS.weg.cost; if (!quiet) toast(`Weg ersetzt: +${fmt(replaced.length * ITEMS.weg.cost)}`); }
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
@@ -144,7 +144,7 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(paid.mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
     }
   } else {
-    if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Rampe in die Anhöhe (hills.js): ihre Felder absenken
+    if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Gleis-Rampe in die Anhöhe (A, C; hills.js): ihre eingelassenen Felder absenken
     else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
@@ -455,7 +455,7 @@ function groupErrors(hx, hy) {
       else if (hillAt(x, y)) err = 'Auf einer Anhöhe geht keine Überdachung';   // Anhöhe (Block 157), wie roofError
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
       else if (ot && ot.b === 'huegeltreppe') err = 'Über einer Treppe geht keine Überdachung';   // Treppe in die Anhöhe (Block 157d), wie roofError
-      else if (ot && ot.b === 'huegelrampe') err = 'Über einer Rampe geht keine Überdachung';
+      else if (ot && ot.b === 'huegelrampe') err = 'Über einer Gleis-Rampe geht keine Überdachung';
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
       else if (tallUnder(x, y, P.r.form || 0)) err = 'Darunter steht etwas zu Hohes';
@@ -571,6 +571,7 @@ function copyTileCost(t) {
   const d = ITEMS[t.b], c = { money: 0 }, add = (o, n = 1) => { for (const [r, v] of Object.entries(o || {})) c[r] = (c[r] || 0) + v * n; };
   if (t.b === 'weg' && t.bridge) { const B = WEG_BRIDGE[bridgeKind(t)]; add({ money: B.cost, ...B.mat }); }
   else if (t.b === 'schiene' && t.bridge) add({ money: BRIDGE.cost, ...BRIDGE.mat });
+  else if (t.b === 'huegelrampe') { const R = rampCost(rampFormOf(t)); add({ money: R.cost, ...R.mat }); }   // Gleis-Rampe: Preis ihrer Form (ITEMS zeigt die der Leiste)
   else if (t.b === 'fz_schloss') add({ money: castlePrice(csOf(t)), ...d.mat });
   else add({ money: d.cost || 0, ...d.mat });
   if (t.b === 'haus') for (let l = 1; l < t.lvl; l++) add(houseCost(HOUSE_STAGES[l]));
@@ -834,6 +835,7 @@ function buyDesign(id) {
 function tap(sx, sy, isTouch) {
   let { x, y, slot } = slotAt(sx, sy);
   if (tool === 'tunneleinfahrt') [x, y] = einAnchor(x, y);                // wie die Vorschau (Block 136)
+  else if (rampTool()) [x, y] = rampAnchor(x, y);                        // Gleis-Rampe bauen oder getragen: angetippt an der Wand (hills.js), wie die Vorschau
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
   if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
@@ -878,6 +880,8 @@ function tap(sx, sy, isTouch) {
   if (ek) { if (removeEdge(ek)) { hoverEdge = null; sfx('dig'); recalc(); save(); } return; }
   // Ansehen: getroffen ist, was dort gezeichnet ist – auch Dach und Turm, nicht nur das Bodenfeld (Block 71)
   const hit = tool === 'look' ? objectAt(sx, sy) : null;
+  const tc = tool === 'look' && !hit ? trainAt(sx, sy) : null, ta = tc && anchorAt(tc.x, tc.y);   // Zug oben auf der Anhöhe/Gleis-Rampe (movers.js): Fenster seines Gleisfelds
+  if (ta) { openInfo(...keyXY(ta)); return; }
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
   if (!viewOnly() && collectStarAt(x, y)) return;                          // Sternschnuppe aufsammeln (Sternwarte) – liegt obenauf
@@ -1119,13 +1123,13 @@ function undo() {
   }
   for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillOk)
     if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
-    if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier führt inzwischen eine Rampe hinauf'); return false; }   // Rampe (hills.js) wie die Treppe
+    if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier führt inzwischen eine Gleis-Rampe hinauf'); return false; }   // Gleis-Rampe (hills.js) wie die Treppe
     if (n !== 'hills' || b === undefined) continue;
     const o = objAt(...keyXY(k));
     if (o && !hillOk(o.b) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }   // Treppe in die Anhöhe: geht mit zurück
     if (UNDO_MAPS.hills().has(k)) continue;
     if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
-    if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Rampe davor'); return false; }
+    if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

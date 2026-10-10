@@ -16,7 +16,7 @@ const twoPlaces = () => game("globalThis.__ra = regionAt; regionAt = (x, y) => x
 describe('Forschung und Menü', () => {
   it('U-Bahn kommt nach der Eisenbahn; Tunnel und U-Bahn-Station stehen unter Verkehr', () => {
     expect(game('TECH_BY_ID.ubahn.req')).toEqual(['bahn']);
-    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 5)")).toEqual(['schiene', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn']);
+    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 6)")).toEqual(['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn']);   // Gleis-Rampe (Anhöhen) gleich hinter der Schiene
     game("state.techs.delete('ubahn')");
     expect(game("placeError('tunnel', 8, 8)")).toMatch(/erst mit/);
   });

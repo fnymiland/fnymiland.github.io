@@ -2,7 +2,8 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Anhöhen Stufe 2 – Wege zeichnen (render.js, draw-objects.js): Wege oben liegen nicht im Boden-Bild, sondern werden mit der Anhöhe angehoben
 // gezeichnet (tileA: nach ihr, vor ihrer Vorschau und dem, was auf ihnen steht); Arme, Platz-Ecken, Bordsteine, Wegenden und Vorplätze nur
-// zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink) – nie über die Kante, die Rampe an Fuß und Oberkante. Ohne Anhöhen wie vorher
+// zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink) – nie über die Kante, die Treppe an Fuß und Oberkante, die Gleis-Rampe nie (nur
+// Züge). Ohne Anhöhen wie vorher
 beforeAll(() => loadGame());
 beforeEach(() => {
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; plan = null; if (moving) cancelMove(); setTool('look'); setSeeThrough(false)");
@@ -13,7 +14,8 @@ beforeEach(() => {
 const block = (x0, y0, x1, y1) => { const out = []; for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) out.push([x, y]); return out; };
 const hills = cells => game(`for (const [x, y] of ${JSON.stringify(cells)}) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()`);
 const weg = (cells, st = 'kopf', extra = {}) => game(`for (const [x, y] of ${JSON.stringify(cells)}) state.tiles.set(x + ',' + y, { b: 'weg', lvl: 1, style: '${st}', ...${JSON.stringify(extra)} }); groundVersion++; recalc()`);
-const ramp = (x, y, rot, len = 1) => game(`state.tiles.set('${x},${y}', { b: 'huegelrampe', lvl: 1, rot: ${rot}, style: 'kopf'${len === 2 ? ', len: 2' : ''} }); groundVersion++; recalc()`);
+// Gleis-Rampe (Anker x, y) der Form f direkt gesetzt (ohne Prüfung): B/D stehen vor der Wand, nichts wird abgesenkt
+const ramp = (x, y, rot, f = 'b') => game(`state.tiles.set('${x},${y}', { b: 'huegelrampe', lvl: 1, rot: ${rot}, form: '${f}' }); groundVersion++; recalc()`);
 const arms = (x, y) => game(`pathArms(${x}, ${y}).map(([a, b]) => a + ',' + b).sort()`);
 const quads = (x, y) => game(`pathQuads(${x}, ${y}).map(([a, b]) => a + ',' + b).sort()`);
 // Zeichnen mitschreiben (wie tests/treppe-buendig.test.js): g zeichnet nichts, merkt sich jeden Aufruf; poly mit Punkten und Farbe
@@ -28,16 +30,16 @@ const record = body => game(`(() => {
 const uv = ([X, Y]) => [(X / 32 + Y / 16) / 2, (Y / 16 - X / 32) / 2];
 
 describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
-  it('Arme nie über die Kante; Rampe und Treppe sind ein Arm an Fuß und Oberkante, nicht an ihrer Seite', () => {
+  it('Arme nie über die Kante; die Treppe ist ein Arm an Fuß und Oberkante, nicht an ihrer Seite; zur Gleis-Rampe nie', () => {
     hills(block(10, 10, 13, 13));
-    weg([[11, 12], [11, 13], [12, 13], [11, 14], [11, 15], [12, 15], [13, 14], [10, 15], [10, 16]]);
-    ramp(12, 14, 0);                                                                          // vor der Wand 12,13, hinauf nach −y
+    weg([[11, 12], [11, 13], [12, 13], [11, 14], [11, 15], [12, 17], [13, 14], [10, 15], [10, 16]]);
+    ramp(12, 14, 0);                                                                          // Gleis-Rampe B vor der Wand: 12,14 oben … 12,16 Fuß
     game("state.tiles.set('10,14', { b: 'huegeltreppe', lvl: 1, rot: 0, style: 'kopf' }); groundVersion++; recalc()");
     expect(arms(11, 13)).toEqual(['0,-1', '1,0']);                                            // oben: nicht hinunter zu 11,14
     expect(arms(11, 14)).toEqual(['0,1']);                                                    // unten: nicht hinauf, nicht in die Seite der Rampe
-    expect(arms(12, 15)).toEqual(['-1,0', '0,-1']);                                           // Fuß der Rampe
-    expect(arms(12, 13)).toEqual(['-1,0', '0,1']);                                            // Oberkante der Rampe
-    expect(arms(13, 14)).toEqual([]);                                                         // an der Seite der Rampe: Wegende
+    expect(arms(12, 17)).toEqual([]);                                                         // vor dem Fuß der Gleis-Rampe: Wegende
+    expect(arms(12, 13)).toEqual(['-1,0']);                                                   // hinter ihrer Oberkante auch
+    expect(arms(13, 14)).toEqual([]);                                                         // an ihrer Seite
     expect(arms(10, 15)).toEqual(['0,-1', '0,1', '1,0']);                                     // vor der Treppe: ein Arm (Wegenetz, seit 10.10.2026)
     expect(game("hillEnds(10, 15, state.tiles.get('10,15'), [[0, -1]])")).toEqual([[0, -1]]);
   });
@@ -56,7 +58,7 @@ describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
     expect(game('courtLinksAt(11, 13).length')).toBe(1);
   });
 
-  it('Platz-Ecken nur, wo alle vier Felder zusammenhängen; vor und hinter einer breiten Rampe schließt sich der Belag über ihre ganze Breite', () => {
+  it('Platz-Ecken nur, wo alle vier Felder zusammenhängen; nie über zwei Gleis-Rampen nebeneinander', () => {
     hills(block(10, 10, 13, 13));
     weg(block(10, 10, 11, 11));
     weg([[12, 13], [13, 13], [12, 14], [13, 14]]);                                            // 2×2 über die Kante
@@ -64,17 +66,12 @@ describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
     expect(quads(12, 13)).toEqual([]);
     expect(quads(12, 14)).toEqual([]);
     game("for (const k of ['12,13', '13,13', '12,14', '13,14']) state.tiles.delete(k); recalc()");
-    ramp(11, 14, 0); ramp(12, 14, 0);                                                         // breite Rampe
-    weg([[11, 15], [12, 15], [11, 13], [12, 13]]);
-    expect(quads(11, 15)).toEqual(['1,-1']);
-    expect(quads(12, 15)).toEqual(['-1,-1']);
-    expect(quads(11, 13)).toEqual(['1,1']);
-    expect(quads(12, 13)).toEqual(['-1,1']);
-    game("state.tiles.delete('12,14'); groundVersion++; recalc()");                          // nur noch eine Rampe: dort bleibt Wiese
-    expect(quads(11, 15)).toEqual([]);
+    ramp(11, 14, 0); ramp(12, 14, 0);                                                         // zwei Dämme nebeneinander
+    weg([[11, 17], [12, 17], [11, 13], [12, 13]]);
+    expect([quads(11, 17), quads(12, 17), quads(11, 13), quads(12, 13)]).toEqual([[], [], [], []]);
   });
 
-  it('breiter Weg oben: Bordstein an der Kante (auch über einem breiten Weg unten); vor der Rampe Lücke so breit wie ihre Fahrbahn', () => {
+  it('breiter Weg oben: Bordstein an der Kante (auch über einem breiten Weg unten und über einer Gleis-Rampe)', () => {
     hills(block(10, 10, 13, 13));
     weg([[11, 13]], 'kopf', { wide: true }); weg([[11, 14]], 'kopf', { wide: true });
     const curbFront = () => record("drawPath(0, 0, 1, 11, 13, state.tiles.get('11,13'))").filter(c => c.op === 'poly' && c.fill === game("C(pathLook('kopf').edge)")
@@ -83,12 +80,9 @@ describe('Wege auf Anhöhen: wer mit wem verbunden gezeichnet wird', () => {
     game("state.hills.clear(); groundVersion++; recalc()");
     expect(curbFront()).toBe(0);                                                              // unten an einem breiten Weg: kein Bordstein (wie bisher)
     hills(block(10, 10, 13, 13));
-    ramp(12, 14, 0);
-    expect(game('rampLane(12, 15, 0, -1)')).toEqual([-0.4, 0.4]);                             // Keil mit Geländer an beiden Seiten
-    game("state.hills.delete('12,13'); state.tiles.delete('12,14'); groundVersion++; recalc()");
-    ramp(12, 13, 0);                                                                          // in den Rand eingelassen: Wangen beidseits
-    expect(game('rampLane(12, 14, 0, -1)')).toEqual([-0.5, 0.5]);
-    expect(game('rampLane(11, 14, 0, -1)')).toBe(null);
+    game("state.tiles.delete('11,14'); groundVersion++; recalc()");
+    ramp(11, 14, 0);                                                                          // Gleis-Rampe davor: kein Anschluss, also Kante
+    expect(curbFront()).toBeGreaterThan(0);
   });
 
   it('Vorplatz eines Gebäudes unten läuft nicht bis an die Kante, als wäre oben Weg ringsum', () => {
@@ -164,7 +158,7 @@ describe('Wege auf Anhöhen: wo und wann gezeichnet', () => {
     }
   });
 
-  it('Zuschnitt: an der Kante genau auf der Raute, zu Nachbarn derselben Ebene und zur Rampe ein Stück darüber', () => {
+  it('Zuschnitt: an der Kante genau auf der Raute, zu Nachbarn derselben Ebene ein Stück darüber, zur Gleis-Rampe nicht (Kante)', () => {
     hills(block(10, 10, 12, 12));
     weg([[10, 10], [11, 10], [10, 11], [12, 12]]);
     ramp(12, 13, 0);
@@ -176,7 +170,7 @@ describe('Wege auf Anhöhen: wo und wann gezeichnet', () => {
       return [Math.min(...P.map(p => p[0])), Math.max(...P.map(p => p[0])), Math.min(...P.map(p => p[1])), Math.max(...P.map(p => p[1]))].map(v => Math.round(v * 1000) / 1000);
     };
     expect(clipOf(10, 10)).toEqual([-0.5, 0.56, -0.5, 0.56]);                                 // hinten links Kante, rechts/vorn Anhöhe
-    expect(clipOf(12, 12)).toEqual([-0.56, 0.5, -0.56, 0.56]);                                // vorn (+y) die Oberkante der Rampe
+    expect(clipOf(12, 12)).toEqual([-0.56, 0.5, -0.56, 0.5]);                                 // vorn (+y) die Oberkante der Gleis-Rampe: Kante
   });
 
   it('nachts: der Schein eines leuchtenden Wegs oben liegt auch auf den Anhöhen davor', () => {
@@ -219,15 +213,15 @@ describe('ohne Anhöhen wie bisher', () => {
 });
 
 describe('Rampe zeichnen (Einbau)', () => {
-  it('drawObject zeichnet die Rampe (je Feld ein Bildchen), nah, weit, nachts und mit Wegen und Vorschau oben ohne Fehler', () => {
+  it('drawObject zeichnet die Gleis-Rampe (je Feld ein Bildchen), nah, weit, nachts und mit Wegen und Vorschau oben ohne Fehler', () => {
     hills(block(10, 10, 13, 13));
-    ramp(11, 14, 0); ramp(12, 14, 0); ramp(14, 11, 3);
-    weg([[11, 15], [12, 15], [11, 13], [12, 13], [15, 11], [13, 11], [13, 12]]);
+    ramp(11, 14, 0); ramp(12, 14, 0); ramp(14, 11, 3, 'd');                                   // zwei Dämme vorn, rechts ein Viadukt (14,11 oben … 17,11 Fuß)
+    weg([[11, 17], [12, 17], [11, 13], [12, 13], [18, 11], [13, 11], [13, 12]]);
     let n = 0;
     n = game(`(() => { const d = drawHillRamp; let n = 0; drawHillRamp = (...a) => { n++; return d(...a); }; try { drawObject('huegelrampe', 0, 0, 1, 0, 11, 14, 1, state.tiles.get('11,14')); } finally { drawHillRamp = d; } return n; })()`);
     expect(n).toBe(1);
     for (const [z, h] of [[3, 12], [1.5, 12], [0.6, 12], [3, 23], [0.6, 23]]) game(`(() => { const gh = gameHour; gameHour = () => ${h}; try { cam.z = ${z}; render(1e6); render(1e6 + 17); } finally { gameHour = gh; } })()`);
-    expect(game("hillSprites.has('r11,14') && hillSprites.has('r12,14') && hillSprites.has('r14,11')")).toBe(true);
+    expect(game("['r11,14', 'r11,16', 'r12,15', 'r14,11', 'r17,11'].every(k => hillSprites.has(k))")).toBe(true);
     // Vorschau beim Wegebau oben: Rauten und Geist
     game("setTool('weg'); startPlan('line', { x: 10, y: 11 }, { x: 13, y: 11 }, true); cam.z = 3; render(2e6); cancelPlan()");
     game("(() => { const q = toScreen(10, 12); setHover(q.x, q.y - HILL_H * cam.z); render(2e6 + 17); })()");

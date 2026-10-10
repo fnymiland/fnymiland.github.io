@@ -50,12 +50,13 @@ describe('Anhöhen (Block 157)', () => {
     expect([game("state.hills.has('6,6')"), game('state.money')]).toEqual([false, m0]);
   });
 
-  it('oben Wege, Plätze, Deko und Gelände (Stufe 2): keine Gebäude, Schienen, Dächer, Stützen; große Deko nur ganz oben', () => {
+  it('oben Wege, Plätze, Deko, Gelände (Stufe 2) und Schienen (Gleis-Rampe): keine Gebäude, Bahnhöfe, Dächer, Stützen; große Deko nur ganz oben', () => {
     hills(block(5, 5, 6, 6));
     expect(game("placeError('haus', 5, 5)")).toMatch(/Gebäude auf Anhöhen/);
     expect(game("placeError('weg', 5, 5)")).toBe(null);                              // Stufe 2: Wege oben
-    expect(game("placeError('schiene', 5, 5, 0, { move: true })")).toMatch(/Schienen/);
-    expect(game("placeError('pb_gleis', 5, 5, 0, { move: true })")).toMatch(/Schienen/);   // Parkbahn fährt am Boden
+    expect(game("placeError('schiene', 5, 5, 0, { move: true })")).toBe(null);          // Gleise oben (über die Gleis-Rampe erreichbar)
+    expect(game("placeError('station', 5, 5, 0, { move: true })")).toMatch(/kommen später/);   // Bahnhöfe oben erst später
+    expect(game("placeError('pb_gleis', 5, 5, 0, { move: true })")).toMatch(/Parkeisenbahn fährt unten/);   // Parkbahn fährt am Boden
     expect(game("placeError('seilbahn', 5, 5, 0, { move: true })")).toMatch(/Gebäude auf Anhöhen/);
     expect(game("placeError('dach', 5, 5)")).toBe('Auf einer Anhöhe geht keine Überdachung');
     expect(game("placeError('graben', 5, 5)")).toBe('Auf einer Anhöhe geht kein Teich');

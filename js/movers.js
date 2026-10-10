@@ -6,21 +6,21 @@ const FUR = ['#f4c28f', '#c9a27e', '#fffaf2', '#b9b9c6', '#f7d9a8', '#e7a06c', '
 const SHIRTS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
-// Anhöhe (Block 157, Stufe 2): oben geht es wie unten; Rampe und Treppe sind begehbar. Von welchem Feld man auf welches kommt, sagt allein
-// edgeBlocks (levelLink: zu Fuß über Treppe und Rampe längs ihrer Achse, nie über die Kante) – wer Schritte prüft, fragt beides
+// Anhöhe (Block 157, Stufe 2): oben geht es wie unten; die Treppe ist begehbar, die Gleis-Rampe nicht (nur für Züge). Von welchem Feld man
+// auf welches kommt, sagt allein edgeBlocks (levelLink: zu Fuß über die Treppe längs ihrer Achse, nie über die Kante) – wer Schritte prüft, fragt beides
 const walkable = (x, y, open = false) => {             // open: Schranke egal (wer schon drauf ist, geht weiter)
   if (!ownedTile(x, y)) return false;
   const t = objAt(x, y);
   if (terrainAt(x, y) === 'water') return isWegBridge(t);                          // übers Wasser nur auf einer Wegbrücke (Block 66)
   if (!t || t.b === 'weg' || (isCrossing(t) && (t.foot || open || !crossingClosed(x, y)))) return true;   // an der Schranke warten, über die Brücke nie
-  return (t.b === 'huegelrampe' || t.b === 'huegeltreppe') && hillsOn();
+  return t.b === 'huegeltreppe' && hillsOn();
 };
-// Rampe oder Treppe auf dem Feld (dort hängt die Höhe am Punkt, nicht am Feld)
+// Rampe oder Treppe auf dem Feld (dort hängt die Höhe am Punkt, nicht am Feld; Tiere und Spaziergänger im Park meiden beide)
 const slopeAt = (x, y) => { if (!hillsOn()) return false; const c = rampFresh(); return (c.n > 0 && !!rampAt(x, y)) || (c.s > 0 && !!stairAt(x, y)); };
 // flacher Boden: Ebene 0, keine Rampe/Treppe – Spaziergänger im Park und die Parade tauchen nur dort auf (oben nur, wer hinaufgeht)
 const flatGround = (x, y) => !hillsOn() || (!hillLevel(x, y) && !slopeAt(x, y));
-// Feld, das zum Weg gehört (bummelnde Bewohner bleiben gern darauf): Weg, Rampe, Treppe
-const wayish = b => b === 'weg' || b === 'huegelrampe' || b === 'huegeltreppe';
+// Feld, das zum Weg gehört (bummelnde Bewohner bleiben gern darauf): Weg, Treppe
+const wayish = b => b === 'weg' || b === 'huegeltreppe';
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
 function crossingClosed(x, y) {
   if (!trains.length) return false;
@@ -251,7 +251,6 @@ const PART_SAY = { morgen: ['Guten Morgen!', 'Die Sonne ist schon wach.'], mitta
   nacht: ['Gute Nacht!', 'Die Laternen leuchten so schön ✨'] };
 const ROOF_SAY = ['Was für eine Aussicht von hier oben!', 'Hier oben ist es so schön ruhig.', 'Man sieht bis zum Meer!'];   // Leute auf dem Dach (Block 138d)
 const HILL_SAY = ['Von hier oben sieht man so weit!', 'Ein schönes Plätzchen hier oben.', 'Die paar Stufen haben sich gelohnt.'];   // Spaziergänger auf Anhöhen (Block 157d)
-const RAMP_SAY = ['Von hier oben sieht man so weit!', 'Ein schönes Plätzchen hier oben.', 'Ganz gemütlich, so eine Rampe.'];        // … über die Rampe hinauf (Stufe 2)
 let bubble = null, bubbleNext = 0;
 function bubbleText(w) {
   const pool = [], t = w.home && state.tiles.get(w.home), s = w.home && T.st.get(w.home);
@@ -260,7 +259,7 @@ function bubbleText(w) {
     if (miss.length) pool.push(...miss.map(v => WISH_SAY[v.id]), ...miss.map(v => WISH_SAY[v.id]));   // Wünsche doppelt so oft
     else if (!s.wish.next) pool.push('Ich wohne hier so gern! ♥', 'Schönstes Haus der Insel! ♥');
   }
-  pool.push(...(w.roofer ? ROOF_SAY : w.hillw ? (w.stair && w.stair.ramp ? RAMP_SAY : HILL_SAY) : GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
+  pool.push(...(w.roofer ? ROOF_SAY : w.hillw ? HILL_SAY : GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + Math.max(5000, String(text).length * 90) }; }
@@ -337,7 +336,7 @@ const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem W
 const GOAL_IN = { arbeit: '💼 Arbeitet gerade', schule: '🎒 Lernt gerade', essen: '☕ Macht Pause', laden: '🛍️ Kauft gerade ein', markt: '🧺 Auf dem Markt' };
 function walkerDoing(w) {
   if (w.roofer) return w.sit ? '🪑 Sitzt auf einer Bank auf dem Dach' : w.st === 'roof' ? '🏛️ Spaziert auf dem Dach' : w.st === 'up' || w.st === 'in' ? '🪜 Geht aufs Dach' : '🪜 Kommt vom Dach herunter';
-  if (w.hillw) { const ic = w.stair && w.stair.ramp ? '⛰️' : '🪜'; return w.sit ? '🪑 Sitzt auf einer Bank auf der Anhöhe' : w.st === 'top' ? '⛰️ Spaziert auf der Anhöhe' : w.st === 'up' || w.st === 'in' ? ic + ' Geht auf die Anhöhe' : ic + ' Kommt von der Anhöhe herunter'; }   // Block 157d; über die Rampe ohne Leiter
+  if (w.hillw) return w.sit ? '🪑 Sitzt auf einer Bank auf der Anhöhe' : w.st === 'top' ? '⛰️ Spaziert auf der Anhöhe' : w.st === 'up' || w.st === 'in' ? '🪜 Geht auf die Anhöhe' : '🪜 Kommt von der Anhöhe herunter';   // Block 157d (nur über Treppen)
   if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
   const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
   if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';
@@ -346,15 +345,14 @@ function walkerDoing(w) {
   return GOAL_DO[g0.kind] + (t && !['home', 'park', 'fzpark'].includes(g0.kind) ? ` (${stageName(t)})` : '');
 }
 const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
-// Figur zeichnen. Steht sie auf einer Rampe oder Treppe (Anhöhen Stufe 2: Feld, in dem sie gezeichnet wird), kommt danach, was von dem Feld
-// vor ihr liegt, noch einmal darüber: der vordere Keil mit Geländer (drawHillRampOver), auf der Treppe auch die höheren Stufen (drawOnStair,
-// hill-walkers.js). Leute auf dem Dach (eigene Höhe am Boden) und Vorschauen nicht
+// Figur zeichnen. Steht sie auf einer Treppe (Anhöhen Stufe 2: Feld, in dem sie gezeichnet wird), kommt danach, was von dem Feld vor ihr
+// liegt, noch einmal darüber: die höheren Stufen und der Keil davor (drawOnStair, hill-walkers.js). Auf die Gleis-Rampe kommt keine Figur
+// (walkable). Leute auf dem Dach (eigene Höhe am Boden) und Vorschauen nicht
 function drawWalker(w, z, now) {
   if (w.inside > 0) return;                                              // gerade im Gebäude
   if (w.seat || w.full || w.roofer || !hillsOn() || !slopeAt(Math.round(w.px), Math.round(w.py))) return drawFigure(w, z, now);
-  const x = Math.round(w.px), y = Math.round(w.py), s = rampFresh().n && rampAt(x, y) ? null : stairAt(x, y);
-  if (!s) { drawFigure(w, z, now); drawHillRampOver(x, y, z); return; }
-  if (s.ecke) return drawFigure(w, z, now);                              // Ecktreppe: Stufen über Eck, nichts davor nachzuzeichnen
+  const x = Math.round(w.px), y = Math.round(w.py), s = stairAt(x, y);
+  if (!s || s.ecke) return drawFigure(w, z, now);                        // Ecktreppe: Stufen über Eck, nichts davor nachzuzeichnen
   const [Du, Dv] = STAIR_UP[stairRotOf(s)], f = w.sit ? 0 : FOOT_D;
   drawOnStair(w, z, now, x, y, Math.max(-0.5, Math.min(0.5 - 1e-6, (w.px + f - x) * Du + (w.py - f - y) * Dv)));   // Fußpunkt längs der Treppe
 }
@@ -510,10 +508,9 @@ function drawWear(x, hy, z, w, y = hy + 11 * z, now = 0) {
   }
 }
 function drawCar(c, z) {
-  const p = toScreen(c.px, c.py), up = slopeUp(c.px, c.py, 0, 'weg');   // auf der Rampe (Anhöhen Stufe 2): angehoben, gerade (nicht geneigt)
+  const p = toScreen(c.px, c.py), up = slopeUp(c.px, c.py, 0, 'weg');   // Anhöhen: nie auf Rampe oder Treppe (levelLink 'fahr'), up bleibt null
   if (up != null) p.y -= up * z;
   drawCarBody(c, z, p);
-  if (up != null && rampAt(Math.round(c.px), Math.round(c.py))) drawHillRampOver(Math.round(c.px), Math.round(c.py), z);   // vorderer Keil mit Geländer davor
 }
 function drawCarBody(c, z, p) {
   if (c.bus) {
@@ -540,11 +537,11 @@ const TRAIN_KIND = {
   schnell: { n: 4, len: 0.62, gap: 0.03, h: 10 },
 };
 const trainSpeed = model => TRAIN_SPEED * (TRAIN_BY_ID[model] || TRAIN_BY_ID.tram).speed;   // schnellere Modelle fahren schneller
-// Schienenfeld direkt am Bahnhof (dort hält der Zug)
+// Schienenfeld direkt am Bahnhof (dort hält der Zug; Anhöhen: auf seiner Ebene, nie auf der Gleis-Rampe – stopTrackOk)
 function railStop(k) {
   for (const [fx, fy] of stopFoot(k)) for (const [dx, dy] of stopDirs(k)) {
     const n = (fx + dx) + ',' + (fy + dy);
-    if (T.rail.comp.has(n)) return n;
+    if (T.rail.comp.has(n) && stopTrackOk(fx, fy, dx, dy)) return n;
   }
   return null;
 }
@@ -624,6 +621,7 @@ function lineRoute(line) {
   route.stops = order.map(stop => {
     const st = line.stations.find(s => railStop(s) === stop), ds = [];
     for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of stopDirs(st)) {
+      if (!stopTrackOk(fx, fy, dx, dy)) continue;
       const [d, off] = distOf((fx + dx) + ',' + (fy + dy));
       if (off < 0.01) ds.push(d);
     }
@@ -636,6 +634,7 @@ function stopOn(route, st) {
   const ds = [];
   let best = null, bd = 0.8;                                  // sonst: nächster Punkt (Bahnhof nur an einer Kurve)
   for (const [fx, fy] of stopFoot(st)) for (const [dx, dy] of stopDirs(st)) {
+    if (!stopTrackOk(fx, fy, dx, dy)) continue;                       // Anhöhen: nicht an der Schiene einer anderen Ebene
     const x = fx + dx, y = fy + dy;
     route.pts.forEach((p, i) => {
       const d = Math.hypot(p[0] - x, p[1] - y);
@@ -728,7 +727,7 @@ function trainCars() {
     for (let i = 0; i < n; i++) {
       const d = tr.c + ((n - 1) / 2 - i) * (len + gap) * moving;
       const [u, v, du, dv] = railPoint(tr.route, d);
-      out.push({ train: tr, px: u, py: v, du: du * moving, dv: dv * moving, i, n, len });
+      out.push({ train: tr, px: u, py: v, du: du * moving, dv: dv * moving, i, n, len, d, mv: moving });   // d, mv: Lage auf der Strecke (Anhöhen)
     }
   }
   return out;
@@ -736,17 +735,26 @@ function trainCars() {
 // Ein Wagen als gedrehter Quader: a entlang der Fahrtrichtung, b quer; sichtbar sind Seiten, die nach vorn-unten zeigen
 function drawTrainCar(car, z, now) {
   if (car.portal && car.portal.ramp) { g.save(); rampClip(car.portal, z); try { drawTrainCarBody(car, z, now); } finally { g.restore(); } return; }   // Rampe (Block 136)
+  if (car.hill) return drawTrainCarHill(car, z, now);                  // Anhöhe, Gleis-Rampe (trainOnHills)
   drawTrainCarBody(car, z, now);
 }
-// car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg); car.portal.ramp: sinkt mit dem Gleis
+const trainHalfW = tr => (tr.model === 'tram' ? 0.19 : 0.17);          // halbe Breite eines Wagens (Feld)
+// car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg); car.portal.ramp: sinkt mit dem Gleis;
+// car.hill: Höhe über dem Feld, mit dem er gezeichnet wird – starr von hinten (ha) nach vorn (hb), auf der Gleis-Rampe also schräg
 function drawTrainCarBody(car, z, now) {
   const tr = car.train, { du, dv } = car, col = TRAIN_COLS[tr.col] || TRAIN_COLS[0], H = tr.kind.h, ramp = car.portal && car.portal.ramp ? car.portal : null;
-  const P = (a, b, up = 0) => { const wx = car.px + du * a - dv * b, wy = car.py + dv * a + du * b, p = toScreen(wx, wy); return [p.x, p.y - (up - (ramp ? rampSink(ramp, wx, wy) : 0)) * z]; };
-  const la = car.len / 2, wb = tr.model === 'tram' ? 0.19 : 0.17, lit = night > 0.15 && isLive();
+  const hl = car.hill, hz = hl ? a => hl.ha + (hl.hb - hl.ha) * (a / car.len + 0.5) - hl.base : null;
+  const P = hz ? (a, b, up = 0) => { const p = toScreen(car.px + du * a - dv * b, car.py + dv * a + du * b); return [p.x, p.y - (up + hz(a)) * z]; }
+    : (a, b, up = 0) => { const wx = car.px + du * a - dv * b, wy = car.py + dv * a + du * b, p = toScreen(wx, wy); return [p.x, p.y - (up - (ramp ? rampSink(ramp, wx, wy) : 0)) * z]; };
+  const la = car.len / 2, wb = trainHalfW(tr), lit = night > 0.15 && isLive();
   const [lo, hi] = car.cut || [-la, la], am = (lo + hi) / 2;
   const body = tr.model === 'modern' || tr.model === 'schnell' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
   const [cx, cy] = P(0, 0);
-  if (!car.cut) ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)');
+  if (!car.cut) {                                                       // Schatten; auf Damm/Viadukt nicht an ihrer Wand (rampShadowClip, hills.js)
+    const sc = !!hl && !!hl.ramp;
+    if (sc) { g.save(); rampShadowClip(hl.ramp[0], hl.ramp[1], (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - (h - hl.base) * z]; }); }
+    try { ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)'); } finally { if (sc) g.restore(); }
+  }
   const C4 = [[lo, -wb], [hi, -wb], [hi, wb], [lo, wb]];
   const faces = [0, 1, 2, 3].map(i => {
     const [a0, b0] = C4[i], [a1, b1] = C4[(i + 1) % 4], na = a0 === a1 ? Math.sign(a0 - am) : 0, nb = (b0 + b1) / 2 / wb;
@@ -776,6 +784,104 @@ function drawTrainCarBody(car, z, now) {
   const roof = C4.map(([a, b]) => P(am + (a - am) * 0.97, b * 0.9, H));
   poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
   poly(C4.map(([a, b]) => P(am + (a - am) * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
+}
+
+// --- Züge auf Anhöhen und Gleis-Rampen (Block 157, hills.js) ---
+// Oben fährt der Zug um den Hub der Anhöhe angehoben, auf der Gleis-Rampe steigt er stetig (surfaceHeight am Gleis). Ein Wagen ist starr: seine
+// Enden liegen auf dem Gleis, dazwischen geradlinig – auf der Rampe steht er schräg (wie in der Rampe der Tunneleinfahrt), an der Oberkante hängt
+// seine Mitte einen Hauch durch. Gezeichnet wird er mit dem vordersten Feld unter ihm (sonst malte das spätere Rampen- bzw. Anhöhenfeld über ihn),
+// danach, was vor ihm liegt: Streifen im schmalen Einschnitt und Brüstung des Viadukts (rampOverSpan). Anhöhen davor, die schon gezeichnet sind
+// (Wange des Einschnitts, Anhöhe neben dem Gleis unten), deckt er nicht zu (car.hill.occ). Ohne Anhöhen bleibt alles wie vorher
+const trainEndPts = m => [-1, 1].map(s => railPoint(m.train.route, m.d + s * m.len / 2 * m.mv));   // Gleis unter hinterem/vorderem Ende
+const trainTileOrder = (x, y) => (x + y) * 1e5 + x;                     // Maler-Reihenfolge der Felder (render.js visibleTiles)
+// render.js: mit welchem Feld der Wagen m gezeichnet wird (k: sein Mittelfeld) – setzt m.hill = { up: steht auf Anhöhe/Rampe, base: Hub dieses
+// Felds (tileB hebt um ihn an), ha/hb: Höhe des Gleises unter hinterem/vorderem Ende, occ: [[x, y, Höhe]] Anhöhen davor, ramp: [x, y, a0, a1] für
+// rampOverSpan } oder null (unten ohne Anhöhe davor)
+function trainOnHills(m, k) {
+  m.hill = null;
+  const tr = m.train;
+  if (!hillsOn() || m.d == null || !tr || !tr.route) return k;
+  // Felder unter dem Wagen: unter Mitte und Enden (knapp eingerückt – ein Ende genau auf der Feldkante berührt das nächste nicht)
+  const rs = rampFresh().n > 0, cells = [], [pa, pb] = trainEndPts(m), inset = p => [m.px + (p[0] - m.px) * 0.94, m.py + (p[1] - m.py) * 0.94];
+  let up = false, rf = null;
+  for (const [u, v] of [[m.px, m.py], inset(pa), inset(pb)]) {
+    const x = Math.round(u), y = Math.round(v);
+    if (cells.some(c => c[0] === x && c[1] === y)) continue;
+    cells.push([x, y]);
+    if (hillAt(x, y)) up = true;
+    else if (rs && rampAt(x, y)) { up = true; if (!rf) rf = [x, y]; }
+  }
+  const [kx, ky] = keyXY(k);
+  const D = up ? cells.reduce((a, c) => (trainTileOrder(c[0], c[1]) > trainTileOrder(a[0], a[1]) ? c : a)) : [kx, ky];
+  // Anhöhen davor, die vor dem Feld D gezeichnet werden (gleiche Diagonale weiter links): rechts bzw. vorn neben einem anderen Feld des Wagens,
+  // der ganz auf dieser Seite ihrer Wand liegt
+  const occ = [], la = m.len / 2, wb = trainHalfW(tr), oD = trainTileOrder(D[0], D[1]);
+  const C4 = [[-la, -wb], [la, -wb], [la, wb], [-la, wb]].map(([a, b]) => [m.px + m.du * a - m.dv * b, m.py + m.dv * a + m.du * b]);
+  for (const [px, py] of cells) for (const [ex, ey] of [[0, 1], [1, 0]]) {
+    const qx = px + ex, qy = py + ey;
+    if (trainTileOrder(qx, qy) >= oD || !hillAt(qx, qy) || cells.some(c => c[0] === qx && c[1] === qy) || occ.some(o => o[0] === qx && o[1] === qy)) continue;
+    if (C4.every(([u, v]) => (ex ? u : v) <= (ex ? qx : qy) - 0.5 + 0.02)) occ.push([qx, qy, hillLift(qx, qy)]);
+  }
+  const ha = surfaceHeight(pa[0], pa[1]), hb = surfaceHeight(pb[0], pb[1]);   // ein Ende schon knapp auf dem Fuß: auch angehoben (sonst ein Sprung)
+  up = up || ha > 0 || hb > 0;
+  if (!up && !occ.length) return k;                                       // unten, keine Anhöhe davor: wie bisher
+  const ramp = rf && [rf[0], rf[1], ...[pa, pb].map(p => rampAlong(rf[0], rf[1], p[0], p[1])).sort((a, b) => a - b)];
+  m.hill = { up, base: hillLift(D[0], D[1]), ha, hb, occ, ramp };
+  return up ? D.join() : k;
+}
+// Wagen auf Anhöhe/Rampe: nicht über die Anhöhen davor (je Anhöhe ein Ausschnitt, genau ihr Umriss – darüber zeigte sich sonst der Boden), danach
+// die Teile der Rampe vor ihm. g ist um den Hub des Felds angehoben (render.js moverLive) – Punkte also relativ zu ihm
+function drawTrainCarHill(car, z, now) {
+  const hl = car.hill, S = (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - (h - hl.base) * z]; };
+  g.save();
+  try {
+    for (const [qx, qy, qh] of hl.occ) {
+      const pts = [S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)];
+      g.beginPath(); g.rect(-1e4, -1e4, 3e4, 3e4);
+      pts.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]))); g.closePath();
+      g.clip('evenodd');                                                  // nacheinander: zusammen nie dort, wo eine der Anhöhen liegt
+    }
+    drawTrainCarBody(car, z, now);
+  } finally { g.restore(); }
+  if (hl.ramp) rampOverSpan(hl.ramp[0], hl.ramp[1], hl.ramp[2], hl.ramp[3], z, hl.base * z);
+}
+// Höhe des Gleises unter der Mitte des Wagens m (Bildpunkte bei Zoom 1; trainOnHills vorher) – Schild ⚡, Antippen
+const trainMidUp = m => (m.hill ? (m.hill.ha + m.hill.hb) / 2 : 0);
+// Zug angetippt (Anhöhen): der Wagen oben bzw. auf der Gleis-Rampe unter dem Finger, so wie er gezeichnet ist (angehoben, schräg; nicht durch
+// eine Anhöhe davor hindurch) → { x, y: Feld des Gleises unter seiner Mitte (Schiene bzw. Gleis-Rampe), car } – der vorderste; sonst null (wie
+// bisher: das Feld unter dem Finger zählt)
+function trainAt(sx, sy) {
+  if (seeThrough || !hillsOn() || !trains.length) return null;
+  const z = cam.z;
+  let best = null;
+  for (const m of trainCars()) {
+    if ((state.tunnels && state.tunnels.size && trainTunnelCut(m)) || HALL.has(Math.round(m.px) + ',' + Math.round(m.py))) continue;   // Einfahrt, Halle: wie bisher
+    trainOnHills(m, Math.round(m.px) + ',' + Math.round(m.py));
+    const hl = m.hill, la = m.len / 2, wb = trainHalfW(m.train), H = m.train.kind.h;
+    if (!hl || !hl.up) continue;                                          // unten: wie bisher (das Feld unter dem Finger zählt)
+    const hz = a => hl.ha + (hl.hb - hl.ha) * (a / m.len + 0.5);
+    const S = (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - h * z]; };
+    const pts = [];
+    for (const a of [-la, la]) for (const b of [-wb, wb]) {
+      const u = m.px + m.du * a - m.dv * b, v = m.py + m.dv * a + m.du * b;
+      pts.push(S(u, v, hz(a)), S(u, v, hz(a) + H + 1));
+    }
+    if (!ptInConvex(hull(pts), sx, sy)) continue;
+    if (hl.occ.some(([qx, qy, qh]) => ptInConvex([S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)], sx, sy))) continue;
+    if (!best || m.px + m.py > best.car.px + best.car.py) best = { x: Math.round(m.px), y: Math.round(m.py), car: m };
+  }
+  return best;
+}
+// Punkt (sx, sy) im konvexen Vieleck pts (beliebiger Umlaufsinn)
+function ptInConvex(pts, sx, sy) {
+  let s = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, ay] = pts[i], [bx, by] = pts[(i + 1) % pts.length], c = (bx - ax) * (sy - ay) - (by - ay) * (sx - ax);
+    if (Math.abs(c) < 1e-9) continue;
+    if (s && Math.sign(c) !== s) return false;
+    s = Math.sign(c);
+  }
+  return s !== 0;
 }
 
 // Expedition: das Boot fährt vom Steg zur nächsten Insel, sucht dort eine Weile und kommt zurück (echte Zeit)

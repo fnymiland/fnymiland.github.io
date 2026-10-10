@@ -108,7 +108,7 @@ function tileOut(t) {
   if (Array.isArray(t.pbz) && t.pbz.length) o.pbz = t.pbz.filter(Number.isInteger);    // Parkbahn-Station: Züge der Strecke (Block 136e/h)
   if (t.ecke === true && t.b === 'huegeltreppe') o.ecke = true;                        // Ecktreppe (Block 157)
   else if (t.schmal === true && t.b === 'huegeltreppe') o.schmal = true;                // schmale Treppe (fehlt = breit, wie alte Stände)
-  if (t.len === 2 && t.b === 'huegelrampe') o.len = 2;                                  // Rampe über 2 Felder (Anhöhen Stufe 2)
+  // Gleis-Rampe: Form (t.form 'a'–'d') und bezahlter Preis (t.price) stehen schon oben
   return o;
 }
 function serialize() {
@@ -245,6 +245,14 @@ function parseSave(d) {
     const [k, st] = typeof w === 'string' ? [w, 'alt'] : w;
     if (!taken.has(k)) { d.tiles.push([k, { b: 'weg', lvl: 1, style: PAVE_TO[st] || 'platten' }]); taken.add(k); }
   }
+  // 10.10.2026: die Rampe auf die Anhöhe ist jetzt eine Gleis-Rampe (Formen 'a'–'d', hills.js). Alte Weg-Rampen (ohne Form, 1–2 Felder – nur in
+  // lokalen Testwelten, online gab es sie nie) passen in keine Form: sie verschwinden, ihr Preis kommt zurück (200 Taler, 8 Stein); in die
+  // Anhöhe abgesenkte Felder bleiben unten
+  d.tiles = d.tiles.filter(([, t]) => {
+    if (!t || t.b !== 'huegelrampe' || rampFormOk(t.form)) return true;
+    d.money = (+d.money || 0) + 200; d.res = { ...(d.res || {}) }; d.res.stein = (+d.res.stein || 0) + 8;
+    return false;
+  });
   // Strom (27.09.) und Busse/Bahnhöfe (28.09.) wurden entfernt: Kosten erstatten
   const REFUND = { kraftwerk: 500, solar: 350, bus: 120, bahnhof: 900 };
   const SCI_REFUND = { wind: 30, solar: 120, bus: 25, bus2: 70, zug: 160 };

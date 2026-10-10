@@ -2,8 +2,9 @@
 // ---------------------------------------------------------------------------
 // Anhöhen (Block 157, Relief wie bei Animal Crossing): Felder liegen eine Ebene höher. `state.hills`: Feld → { w: Wandart, h?: Ebene
 // (fehlt = 1) }. Alles auf dem Feld wird angehoben gezeichnet (render.js tileA/tileB), die Oberseite ist der normale Boden (drawGround),
-// sichtbare Wände (+x, +y), wo das Nachbarfeld tiefer liegt. Stufe 2: oben Wege, Plätze (Dinge, die auf einen Weg dürfen), Deko und
-// Gelände; Gebäude erst Stufe 3. Hinauf führen die Treppe (Block 157d, zu Fuß; Wegenetz) und die Rampe (Stufe 2, alle) – unten in dieser Datei.
+// sichtbare Wände (+x, +y), wo das Nachbarfeld tiefer liegt. Stufe 2: oben Wege, Gleise, Plätze (Dinge, die auf einen Weg dürfen), Deko
+// und Gelände; Gebäude und Bahnhöfe erst Stufe 3. Hinauf führen die Treppe (Block 157d, zu Fuß; Wegenetz) und die Gleis-Rampe (nur Züge) –
+// unten in dieser Datei.
 // ---------------------------------------------------------------------------
 const HILL_H = 26;                                                       // eine Ebene (so hoch wie die Steinarkaden)
 const HILL_WALLS = ['fels', 'erde', 'mauer'];
@@ -20,20 +21,47 @@ const hillWall = h => HILL_WALLS[(h && h.w) || 0] || 'fels';
 const sameLevel = tiles => tiles.every(([x, y]) => hillLevel(x, y) === hillLevel(tiles[0][0], tiles[0][1]));
 
 // --- Was darf auf eine Anhöhe (Stufe 2) ---
-// Wege in allen Stilen, Deko-Felder (Brunnen, Beete, Statuen …), Platz-Dinge (was auf einen Weg darf: Marktstände, plazaOk), Kleinkram,
-// Gelände-Pinsel; keine Gebäude (Stufe 3), Schienen, Dächer, Stationen (Parkbahn und Seilbahn-Station sind cat 'deko', fahren/hängen aber
-// am Boden; die U-Bahn-Station darf auf einen Weg, steht aber auf dem Tunnel). Treppe und Rampe stehen unten
+// Wege in allen Stilen, Gleise (Nutzer 10.10.2026: oben angehoben wie die Wege, über die Kante verbunden nur über die Gleis-Rampe – levelLink
+// 'gleis'), Deko-Felder (Brunnen, Beete, Statuen …), Platz-Dinge (was auf einen Weg darf: Marktstände, plazaOk), Kleinkram, Gelände-Pinsel;
+// keine Gebäude, Bahnhöfe, Tunneleinfahrten (Stufe 3 – bis dahin endet ein Gleis oben am Prellbock), Dächer, Stationen (Parkbahn und
+// Seilbahn-Station sind cat 'deko', fahren/hängen aber am Boden; die U-Bahn-Station darf auf einen Weg, steht aber auf dem Tunnel). Treppe
+// und Gleis-Rampe stehen unten
 const HILL_NO = new Set(['dach', 'dachtreppe', 'stuetze', 'pb_gleis', 'pb_station', 'seilbahn', 'ubahn', 'huegeltreppe', 'huegelrampe']);
-const hillOk = b => { const d = ITEMS[b]; return !!d && !HILL_NO.has(b) && (b === 'anhoehe' || b === 'tunnel' || b === 'weg' || !!TERRAFORM[b] || (d.cat === 'deko' && !d.edge) || plazaOk(b)); };
+const HILL_RAIL_LATER = new Set(['station', 'hbf', 'ubahn', 'tunneleinfahrt']);   // Bahn oben: erst Stufe 3
+const hillOk = b => { const d = ITEMS[b]; return !!d && !HILL_NO.has(b) && (b === 'anhoehe' || b === 'tunnel' || b === 'weg' || b === 'schiene' || !!TERRAFORM[b] || (d.cat === 'deko' && !d.edge) || plazaOk(b)); };
 // Fehler, wenn b auf (Teilen von) tiles nicht stehen darf
 function hillError(b, tiles) {
   if (!state.hills || !state.hills.size) return null;
   const up = tiles.some(([x, y]) => hillAt(x, y));
   if (!up) return null;
-  if (!hillOk(b)) return b === 'schiene' || b === 'pb_gleis' ? 'Schienen gehen nicht auf eine Anhöhe' : 'Gebäude auf Anhöhen kommen später – oben gehen Wege, Plätze und Deko';
+  if (!hillOk(b)) return b === 'pb_gleis' ? 'Die Parkeisenbahn fährt unten – auf Anhöhen geht die Eisenbahn'
+    : HILL_RAIL_LATER.has(b) ? 'Bahnhöfe auf Anhöhen kommen später – oben endet das Gleis am Prellbock'
+    : 'Gebäude auf Anhöhen kommen später – oben gehen Wege, Gleise, Plätze und Deko';
   if (!sameLevel(tiles)) return 'Nicht über die Kante einer Anhöhe';
   return null;
 }
+// Fußgängerbrücke (Bogenbrücke über den Bahnübergang, draw-objects.js archAt): ihre Rampen reichen je ein halbes Feld auf die Nachbarn längs des
+// Wegs – dort muss ebener Boden derselben Höhe sein, sonst hinge sie über der Kante einer Anhöhe bzw. steckte in deren Wand, einer Treppe oder
+// Gleis-Rampe (Nutzer: „nichts steht über“). archHillError: darf der Bahnübergang (x, y) eine bekommen (setCrossing)? Ohne Anhöhen immer.
+// archAround: (x, y) ist eine Fußgängerbrücke oder ihr Nachbar längs des Wegs – dort ändert sich die Höhe nicht (Anheben, Abtragen, Treppe,
+// Gleis-Rampe). Prüft auch ohne Anhöhen (die erste Anhöhe könnte daneben entstehen)
+const ARCH_LEVEL = 'Die Fußgängerbrücke braucht auf beiden Seiten ebenen Boden in derselben Höhe';
+function archHillError(x, y) {
+  if (!state.hills || !state.hills.size) return null;
+  const { n } = crossingAxes(x, y), lv = hillLevel(x, y);
+  return [-1, 1].some(s => hillLevel(x + s * n[0], y + s * n[1]) !== lv || slopeAt(x + s * n[0], y + s * n[1])) ? ARCH_LEVEL : null;
+}
+function archAround(x, y) {
+  for (const [dx, dy] of [[0, 0], ...DIRS]) {
+    const t = state.tiles.get((x + dx) + ',' + (y + dy));
+    if (!isCrossing(t) || !t.foot) continue;
+    if (!dx && !dy) return true;
+    const { n } = crossingAxes(x + dx, y + dy);
+    if (Math.abs(dx) === n[0] && Math.abs(dy) === n[1]) return true;
+  }
+  return false;
+}
+const ARCH_HERE = 'Hier steht eine Fußgängerbrücke – ihr Boden bleibt eben';
 // Ein Feld anheben? (Rechteck aufziehen, plan.js)
 function hillRaiseError(x, y, noCost) {
   if (!available('anhoehe')) return `Anhöhe: ${lockText('anhoehe').replace('🔒 ', 'erst mit ')}`;
@@ -42,8 +70,8 @@ function hillRaiseError(x, y, noCost) {
   const t = objAt(x, y);
   if (t) {
     if (t.b === 'huegeltreppe') return 'Hier steht eine Treppe – erst abreißen';   // Treppe (Block 157d)
-    if (t.b === 'huegelrampe') return 'Hier ist eine Rampe – erst abreißen';
-    if (!hillOk(t.b) || t.b === 'tunnel') return t.b === 'schiene' ? 'Auf Schienen geht keine Anhöhe' : 'Hier steht ein Gebäude';
+    if (t.b === 'huegelrampe') return 'Hier ist eine Gleis-Rampe – erst abreißen';
+    if (!hillOk(t.b) || t.b === 'tunnel') return 'Hier steht ein Gebäude';   // Gleise kommen mit hinauf (wie Wege)
     const [w, h] = sizeOf(t.b, t.rot || 0, t);
     if (w > 1 || h > 1) return 'Große Deko erst wegnehmen – sie kommt danach auf die fertige Anhöhe';
   }                                                                      // Wege (auch unter Platz-Dingen) kommen mit hinauf (Stufe 2)
@@ -53,7 +81,8 @@ function hillRaiseError(x, y, noCost) {
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y]) if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen`;
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return 'An der Ecke steht schon etwas';
   if (stairsAround(x, y, true).length) return 'Vor dem Fuß der Treppe muss Platz bleiben';   // Treppe (Block 157d): sonst führte sie in eine Wand
-  if (rampsAround(x, y, true).length) return 'Vor dem Fuß der Rampe muss Platz bleiben';
+  if (rampsAround(x, y, true).length) return 'Vor dem Fuß der Gleis-Rampe muss Platz bleiben';
+  if (archAround(x, y)) return ARCH_HERE;
   if (noCost) return null;
   if (state.money < ITEMS.anhoehe.cost) return 'Zu wenig Taler';
   return matError(ITEMS.anhoehe.mat);
@@ -72,7 +101,7 @@ function raiseHill(x, y) {
 function lowerHill(x, y) {
   const k = x + ',' + y;
   if (!state.hills.has(k)) return false;
-  if (stairsAround(x, y).length || rampsAround(x, y).length) return false;   // Treppe/Rampe führt hinauf: erst sie abreißen (demolishInfo sagt es)
+  if (stairsAround(x, y).length || rampsAround(x, y).length || archAround(x, y)) return false;   // Treppe/Gleis-Rampe führt hinauf, Fußgängerbrücke: erst sie abreißen (demolishInfo sagt es)
   hillTake(x, y);
   addFloat(x, y, '+' + fmt(ITEMS.anhoehe.cost), '#3f8f43');
   sfx('dig'); recalc(); save();
@@ -110,7 +139,8 @@ let hillPaintMs = 0, hillPaintFrame = -1;
 const HILL_BOX = { left: -TW / 2 - 3, top: -TH / 2 - HILL_H - 8, w: TW + 6, h: TH + HILL_H + 14 };
 // Vorschau „Treppe in die Anhöhe“ (render.js, nur für dieses Bild): { k, x, y, rot, lv } – das Feld zeichnet sich eine Ebene tiefer mit
 // der Treppe (rot), seine Nachbarn als eigene Bildchen (drawHillTile 'p' + Feld), die echten bleiben. Spielregeln fragen es nie.
-// Rampe (rampGapFor): dazu ramp: true, keys = alle abgesenkten Felder (bis 2), top = Schlüssel ihres oberen Felds, len = ihre Länge
+// Gleis-Rampe (rampGapFor): dazu ramp: true, keys = alle abgesenkten Felder (die eingelassenen, bis 2), top = Schlüssel ihres oberen Felds,
+// len/form = ihre Länge und Form, ax/ay = Anker
 let hillGap = null;
 const hillGapHas = k => !!hillGap && (hillGap.keys ? hillGap.keys.has(k) : hillGap.k === k);   // Feld k gehört zur Vorschau (render.js)
 const drawLevel = (x, y) => hillGap && (hillGap.keys ? hillGap.keys.has(x + ',' + y) : hillGap.x === x && hillGap.y === y) ? hillGap.lv : hillLevel(x, y);
@@ -146,20 +176,30 @@ function hillSig(x, y, h) {
 // Treppen, die auf Feld (x, y) hinaufführen, als Zeichen je Seite: v/u = vorn (+y/+x, Wand ohne Grasnarbe – die Stufen decken sie),
 // U/V = hinten (−x/−y, keine dunkle Kante oben – die oberste Stufe schließt bündig an). Treppen hinten daneben (Feld ist ihre Wange, oberste
 // Stufe so hoch wie die Oberseite): a/b = bei −x, oberste Stufe bei −y/+y; c/d = bei −y, oberste Stufe bei −x/+x. '' = keine.
-// Rampe: ihr oberes Feld wie die oberste Stufe (v/u/U/V); a–d nicht – sie hat keine oberste Stufe, die Kante läuft an ihr bis ans Ende.
+// Gleis-Rampe: ihr oberes Feld eingelassen (A, C) wie die oberste Stufe (v/u/U/V – ganz breit bzw. mit den Streifen Anhöhe gleich hoch); a–d
+// nicht. Davor (B Damm, D Viadukt, schmal): vorn behält die Wand ihre Grasnarbe (die Rampe deckt sie nur in der Mitte), hinten endet die dunkle
+// Kante nur, wo die Rampe anschließt: P/Q = bei −x/−y ein Damm (±GR_DW), X/Y = ein Viadukt (±GR_VW).
 // Schmale Treppe daneben: ihr Streifen Anhöhe lehnt an dieses Feld, gleich hoch – A/C = bei −x/−y (statt a–d: dort gar keine dunkle Kante),
-// M/N = bei +x/+y (keine Wand, die Oberseite reicht ein Stück unter den Streifen wie unter eine gleich hohe Anhöhe)
+// M/N = bei +x/+y (keine Wand, die Oberseite reicht ein Stück unter den Streifen wie unter eine gleich hohe Anhöhe). Ebenso der Streifen im
+// schmalen Einschnitt der Gleis-Rampe C daneben: U/V bei −x/−y, M/N bei +x/+y
 function hillStairEnds(x, y) {
-  if (!stairFresh().n && !rampFresh().n && !hillGap) return '';
+  const rs = rampFresh().n > 0 || (!!hillGap && !!hillGap.ramp);
+  if (!stairFresh().n && !rs && !hillGap) return '';
   let s = '';
   for (const [c, r, dx, dy] of [['v', 0, 0, 1], ['u', 3, 1, 0], ['U', 1, -1, 0], ['V', 2, 0, -1], ['a', 0, -1, 0], ['b', 2, -1, 0], ['c', 3, 0, -1], ['d', 1, 0, -1]]) {
     const nx = x + dx, ny = y + dy, side = 'abcd'.includes(c);
     if (stairRotAt(nx, ny) === r && (!side || drawLevel(nx, ny) + 1 === hillLevel(x, y))) s += side && stairSchmalAt(nx, ny) ? (c < 'c' ? 'A' : 'C') : c;
-    else if (!side && rampTopRotAt(nx, ny) === r) s += c;
+    else if (!side && rs) {
+      const F = RAMP_FORMS[rampTopFormAt(nx, ny, r)];
+      if (F) s += F.cut ? c : c === 'U' ? (F.viadukt ? 'X' : 'P') : c === 'V' ? (F.viadukt ? 'Y' : 'Q') : '';
+    }
   }
   for (const [c, dx, dy] of [['M', 1, 0], ['N', 0, 1]]) {                // quer daneben: bei +x eine Treppe hinauf nach ±y, bei +y nach ±x
     const r = stairRotAt(x + dx, y + dy);
     if (r >= 0 && (r & 1) === dy && stairSchmalAt(x + dx, y + dy) && drawLevel(x + dx, y + dy) + 1 === hillLevel(x, y)) s += c;
+  }
+  if (rs) for (const [c, dx, dy] of [['U', -1, 0], ['V', 0, -1], ['M', 1, 0], ['N', 0, 1]]) {   // Streifen im schmalen Einschnitt daneben
+    if (!s.includes(c) && rampStripAt(x + dx, y + dy, dy ? 1 : 0) && drawLevel(x + dx, y + dy) + 1 === hillLevel(x, y)) s += c;
   }
   return s;
 }
@@ -173,25 +213,26 @@ function hillMiter(x, y, lv) {
   if (cl >= lv) return false;
   const arm = (ax, ay, r, cut) => {                                      // r: Treppe dort hinauf zu (x, y); cut: Zeichen, mit denen die Kante vor der Ecke endet
     if (hillAt(ax, ay) && drawLevel(ax, ay) === lv) { const st = hillStairEnds(ax, ay); return !cut.some(c => st.includes(c)); }
-    if (rampTopRotAt(ax, ay) === r) {                                    // Rampe: ihr hinterer Keil trägt die Kante (nicht neben einer gleichen: breit)
+    if (rampTopRotAt(ax, ay) === r) {                                    // Gleis-Rampe A (ganz breit): ihre offene Seite hinten trägt die Kante
+      if (!rampWideForm(rampTopFormAt(ax, ay, r))) return false;          // schmale (B, C, D): ihre Kante trifft die der Anhöhe nicht an der Ecke
       const a = rampAt(ax, ay), n = rampAt(x - 1, y - 1);
-      return drawLevel(ax, ay) + 1 === lv && cl <= drawLevel(ax, ay) && !(a && n && n.rot === a.rot && n.len === a.len && n.i === a.i);
+      return drawLevel(ax, ay) + 1 === lv && cl <= drawLevel(ax, ay) && !(a && n && rampWide(a, n));
     }
     return stairRotAt(ax, ay) === r && drawLevel(ax, ay) + 1 === lv && cl <= drawLevel(ax, ay) && stairRotAt(x - 1, y - 1) !== r;   // dort ein Keil
   };
   return arm(x - 1, y, 1, ['V', 'd', 'C']) && arm(x, y - 1, 2, ['U', 'b', 'A']);
 }
-// Arm der Gehrung (hillMiter) an Feld (ax, ay), das mit Drehung r hinauf zu (x, y) führt: Länge der Rampe, deren hinterer Keil dort die Kante
-// trägt (auch Vorschau in die Anhöhe); 0 = gerade Kante (Anhöhe, Treppe – deren Keil liegt oben waagerecht)
+// Arm der Gehrung (hillMiter) an Feld (ax, ay), das mit Drehung r hinauf zu (x, y) führt: Länge der Gleis-Rampe A, deren offene Seite hinten
+// dort die Kante trägt (auch Vorschau in die Anhöhe); 0 = gerade Kante (Anhöhe, Treppe – deren Keil liegt oben waagerecht)
 const miterRamp = (ax, ay, r, lv) => {
   if ((hillAt(ax, ay) && drawLevel(ax, ay) === lv) || rampTopRotAt(ax, ay) !== r) return 0;
   const a = rampAt(ax, ay);
   return a ? a.len : (hillGap && hillGap.len) || 1;
 };
-// Gehrung, wenn ein Arm der hintere Keil einer Rampe ist (paintHill; Nutzer: bündig – sonst blieb unter der Ecke eine helle Kerbe): Fläche
-// zwischen den Enden der beiden dunklen Streifen unter der Ecke V – V, Ende des linken (an der −x-Kante), Schnitt der Unterkanten, Ende des
-// hinteren (an der −y-Kante). Gerade Kante: Streifen 1,68 senkrecht darunter (wie paintHill); Keil (paintRamp): quer zu seiner schrägen Kante
-// 1,5 breit, höchstens so breit wie der Keil selbst. rl/ru: Länge der Rampe links bzw. hinten, 0 = gerade. Bildpunkte bei Zoom 1
+// Gehrung, wenn ein Arm die schräge Kante einer Gleis-Rampe A ist (paintHill; Nutzer: bündig – sonst blieb unter der Ecke eine helle Kerbe):
+// Fläche zwischen den Enden der beiden dunklen Streifen unter der Ecke V – V, Ende des linken (an der −x-Kante), Schnitt der Unterkanten, Ende
+// des hinteren (an der −y-Kante). Gerade Kante: Streifen 1,68 senkrecht darunter (wie paintHill); Rampe (paintRamp): quer zu ihrer schrägen
+// Kante 1,5 breit. rl/ru: Länge der Rampe links bzw. hinten, 0 = gerade. Bildpunkte bei Zoom 1
 function rampMiter(V, rl, ru) {
   const dU = [TW / 2, TH / 2], dV = [-TW / 2, TH / 2];                    // −y-Kante (längs u) und −x-Kante (längs v) im Bild
   const low = (len, along, side) => {                                    // Unterkante des Streifens: [Punkt, Richtung]
@@ -199,7 +240,7 @@ function rampMiter(V, rl, ru) {
     const d = [along[0], along[1] - HILL_H / len], l = Math.hypot(d[0], d[1]);   // Kante des Keils: je Feld HILL_H/len hinauf
     let n = [-d[1] / l, d[0] / l];
     if (n[0] * side[0] + n[1] * side[1] < 0) n = [-n[0], -n[1]];          // zur Oberseite des Keils hin
-    const w = Math.min(1.5, STAIR_CW * (n[0] * side[0] + n[1] * side[1]));
+    const w = Math.min(1.5, 0.5 * (n[0] * side[0] + n[1] * side[1]));   // ganz breit (A): nie schmaler als der Streifen
     return [[V[0] + w * n[0], V[1] + w * n[1]], d];
   };
   const cut = ([p, d], [q, e]) => { const c = d[0] * e[1] - d[1] * e[0]; if (Math.abs(c) < 1e-9) return null; const t = ((q[0] - p[0]) * e[1] - (q[1] - p[1]) * e[0]) / c; return [p[0] + t * d[0], p[1] + t * d[1]]; };
@@ -214,8 +255,8 @@ function rampMiter(V, rl, ru) {
 // e0/e1: Stück über Anfang/Ende hinaus (Anteil der Wand) – nur unter ein später gezeichnetes Bildchen, das es ganz deckt (Nachbarwand
 // geradeaus, Innenecke, Keil ↔ Anhöhe). Sonst schimmert an der Fuge der Boden durch beide geglätteten Kanten (grünlicher Strich).
 // Dort Höhe wie am Ende, Schichten waagerecht weiter, die Grasnarbe läuft auf die Oberkante aus (an Innenecken stünde sie sonst über).
-// hs: Höhe, nach der Felsschichten und Mauerreihen verteilt sind (sonst die der Wand) – Keil einer Rampe über 2 Felder: das untere Stück ist
-// nur halb so hoch, seine Schichten liegen trotzdem wie die des oberen (sonst springen sie an der Feldgrenze).
+// hs: Höhe, nach der Felsschichten und Mauerreihen verteilt sind (sonst die der Wand) – Damm einer Gleis-Rampe über mehrere Felder: das untere
+// Stück ist niedriger, seine Schichten liegen trotzdem wie die des oberen (sonst springen sie an der Feldgrenze).
 // len: Länge der Wand in Feldern – kurze Wände (Streifen Anhöhe neben der schmalen Treppe) mit entsprechend weniger Wellen, Rissen, Steinen
 // (sonst standen auf 0,14 Feld drei Risse dicht nebeneinander und die Schichten zackten); 1 = wie bisher
 function paintHillWall(P, a0, b0, a1, b1, dir, kind, hb, ht, seed, ht1 = ht, lip = true, knee = 1, e0 = 0, e1 = 0, hs = null, len = 1) {
@@ -277,29 +318,33 @@ function paintHill(x, y, h) {
   // Kante oben zur tieferen Seite hinten (Nutzer: Oberseite hob sich hinten nicht von der Wiese ab) – wie im Konzeptbild, 1,5 breit innen an
   // der Kante. Zugeschnitten wie die Oberseite: an Feldgrenzen schließt sie bündig an die des Nachbarn an, an Ecken steht nichts über;
   // treffen sich beide hinten an der Ecke, je eine Hälfte der Raute (auf Gehrung, nie doppelt dunkel). Neben einer Treppe (a/b, c/d) endet
-  // sie an der obersten Stufe – dort liegen Stufe und Oberseite gleich hoch
+  // sie an der obersten Stufe – dort liegen Stufe und Oberseite gleich hoch. Hinter einer schmalen Gleis-Rampe (P/Q Damm, X/Y Viadukt) fehlt
+  // sie nur, wo die Rampe anschließt (gerade abgeschnitten)
   const bu = drawLevel(x - 1, y) < lv && !st.includes('U') && !st.includes('A'), bv = drawLevel(x, y - 1) < lv && !st.includes('V') && !st.includes('C');
   const both = bu && bv && !st.includes('a') && !st.includes('c'), n1 = 1 / STAIR_N;
+  const gap = (c1, c2) => st.includes(c1) ? GR_DW : st.includes(c2) ? GR_VW : 0;
   g.strokeStyle = 'rgba(45,85,30,0.5)'; g.lineWidth = 1.5; g.lineCap = 'butt';
-  for (const [on, half, at, s0, s1] of [
-    [bu, [T, B, L], (s, w) => P(-0.5 + w, s, top), st.includes('a') ? -0.5 + n1 : -1, st.includes('b') ? 0.5 - n1 : 1],   // −x: s längs v
-    [bv, [T, R, B], (s, w) => P(s, -0.5 + w, top), st.includes('c') ? -0.5 + n1 : -1, st.includes('d') ? 0.5 - n1 : 1],   // −y: s längs u
+  for (const [on, half, at, s0, s1, gw] of [
+    [bu, [T, B, L], (s, w) => P(-0.5 + w, s, top), st.includes('a') ? -0.5 + n1 : -1, st.includes('b') ? 0.5 - n1 : 1, gap('P', 'X')],   // −x: s längs v
+    [bv, [T, R, B], (s, w) => P(s, -0.5 + w, top), st.includes('c') ? -0.5 + n1 : -1, st.includes('d') ? 0.5 - n1 : 1, gap('Q', 'Y')],   // −y: s längs u
   ]) {
     if (!on) continue;
-    g.save();
-    try {
-      clip(both ? half : [T, R, B, L]);
-      if (s0 > -1 || s1 < 1) clip([at(s0, -1), at(s0, 2), at(s1, 2), at(s1, -1)]);
-      const p = at(-0.6, 0), q = at(0.6, 0);
-      g.beginPath(); g.moveTo(p[0], p[1] + 0.84); g.lineTo(q[0], q[1] + 0.84); g.stroke();
-    } finally { g.restore(); }
+    for (const [a0, a1] of gw ? [[s0, -gw], [gw, s1]] : [[s0, s1]]) {
+      g.save();
+      try {
+        clip(both ? half : [T, R, B, L]);
+        if (a0 > -1 || a1 < 1) clip([at(a0, -1), at(a0, 2), at(a1, 2), at(a1, -1)]);
+        const p = at(-0.6, 0), q = at(0.6, 0);
+        g.beginPath(); g.moveTo(p[0], p[1] + 0.84); g.lineTo(q[0], q[1] + 0.84); g.stroke();
+      } finally { g.restore(); }
+    }
   }
   if (hillMiter(x, y, lv)) {                                             // Innenecke hinten: die Gehrung der Kanten von links und rechts
     const rl = miterRamp(x - 1, y, 1, lv), ru = miterRamp(x, y - 1, 2, lv);
     g.save();
     try {
       clip([T, R, B, L]);
-      if (rl || ru) {                                                    // Keil einer Rampe: kommt schräg heran (rampMiter)
+      if (rl || ru) {                                                    // offene Seite eines Einschnitts A: kommt schräg heran (rampMiter)
         g.beginPath(); rampMiter(T, rl, ru).forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
         g.fillStyle = 'rgba(45,85,30,0.5)'; g.fill();
       } else {
@@ -378,13 +423,14 @@ function drawHillShadows(want) {
       shape(q.flatMap(([u, v]) => [P(u, v, 0), P(u, v, H)]));
     }
   }
-  if (rampFresh().n) for (const [k, t] of state.tiles) {                 // Rampe: je Feld die schräge Fläche (vorn h0, hinten h1) samt Grundfläche
-    if (!isRamp(t)) continue;
-    const [ax, ay] = keyXY(k), rot = (t.rot || 0) & 3, len = rampLen(t), [Du, Dv] = STAIR_UP[rot];
+  if (rampFresh().n) for (const [k, t] of state.tiles) {                 // Gleis-Rampe: je Feld der Körper (vorn h0, hinten h1) samt Grundfläche –
+    if (!isRamp(t)) continue;                                            // Damm schmal, Viadukt schmaler, schmaler Einschnitt mit seinen Streifen ganz hoch
+    const [ax, ay] = keyXY(k), rot = (t.rot || 0) & 3, len = rampLen(t), [Du, Dv] = STAIR_UP[rot], F = RAMP_FORMS[rampFormOf(t)], Su = -Dv, Sv = Du;
     rampFields(ax, ay, rot, len).forEach(([x, y], i) => {
       if (!want([x, y])) return;
-      const h0 = HILL_H * i / len, h1 = HILL_H * (i + 1) / len, P = (u, v, up) => { const p = iso(x + u, y + v); return [p.x + SUN.dx * up, p.y + SUN.dy * up]; };
-      const pts = [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].flatMap(([u, v]) => { const h = u * Du + v * Dv > 0 ? h1 : h0; return h > 0 ? [P(u, v, 0), P(u, v, h)] : [P(u, v, 0)]; });
+      const cut = i >= len - F.cut, strip = cut && F.narrow, w = F.viadukt ? GR_VW : F.narrow && !cut ? GR_DW : 0.5;
+      const h0 = strip ? HILL_H : HILL_H * i / len, h1 = strip ? HILL_H : HILL_H * (i + 1) / len, P = (u, v, up) => { const p = iso(x + u, y + v); return [p.x + SUN.dx * up, p.y + SUN.dy * up]; };
+      const pts = [[-0.5, -w], [0.5, -w], [0.5, w], [-0.5, w]].flatMap(([d, s]) => { const u = Du * d + Su * s, v = Dv * d + Sv * s, h = d > 0 ? h1 : h0; return h > 0 ? [P(u, v, 0), P(u, v, h)] : [P(u, v, 0)]; });
       let c = hull(pts), area = 0;
       for (let n = 0; n < c.length; n++) { const a = c[n], b = c[(n + 1) % c.length]; area += a[0] * b[1] - b[0] * a[1]; }
       if (area < 0) c = c.reverse();
@@ -411,7 +457,7 @@ function pickFrac(sx, sy) {
     const [a, b] = tileFrac(sx, sy + t * cam.z), x = Math.round(a), y = Math.round(b), lift = hillLift(x, y);
     if (lift >= t) return [a, b];                                          // oben oder an seiner Wand getroffen
     if (stairs && stairHeight(x, y, a, b) >= t) return [a, b];             // Treppe (Block 157d): die Stufe unter dem Zeiger – nicht die Anhöhe dahinter
-    if (ramps && rampHeight(x, y, a, b) >= t) return [a, b];               // Rampe: die Stelle der Schräge unter dem Zeiger
+    if (ramps && rampHitHeight(x, y, a, b) >= t) return [a, b];            // Gleis-Rampe: die Stelle unter dem Zeiger (Schräge, Streifen, Brüstung)
   }
   return tileFrac(sx, sy);
 }
@@ -646,6 +692,7 @@ function stairError(x, y, rot, move) {
   if (into) { const e = stairIntoError(x, y, move); if (e) return e; }
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   if (wegAt(x, y) != null) return 'Nicht auf einen Weg – stell die Treppe ans Ende des Wegs';
+  if (archAround(x, y)) return ARCH_HERE;
   if (state.roofs && state.roofs.size && roofAt(x, y)) return 'Unter einer Überdachung geht keine Treppe';
   const ok = stairDirs(x, y, stairBase(x, y)), cd = ok.length ? [] : cornerDirs(x, y);
   if (cd.length) {                                                       // Ecktreppe zwischen zwei Treppen um die Ecke
@@ -684,6 +731,8 @@ function stairIntoError(x, y, move) {
     const fit = stairIntoRefits(x, y, true);
     if (fit !== true) return fit === 'schmal' ? STAIR_ECKE_BREIT : 'Hierher führt schon eine Treppe hinauf';
   }
+  if (rampsAround(x, y).length) return 'Hierher führt schon eine Gleis-Rampe hinauf';   // abgesenkt führte sie gegen die Treppe (wie rampIntoError)
+  if (archAround(x, y)) return ARCH_HERE;
   const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
   if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // wie lowerHill: stünden sonst an der Kante
@@ -692,7 +741,8 @@ function stairIntoError(x, y, move) {
   return null;
 }
 // Linie k an einer Treppe (edgeError): nicht quer vor den Fuß oder ans obere Ende, nicht mitten durch eine breite Treppe (die Linie
-// stünde unten zwischen den Stufen); an die Seite schon. Rampe genauso, dazu nicht zwischen ihre beiden Felder
+// stünde unten zwischen den Stufen); an die Seite schon. Gleis-Rampe genauso (sonst stünde sie quer über dem Gleis), dazu nicht zwischen ihre
+// Felder und nicht zwischen zwei Einschnitte A nebeneinander (ein Einschnitt, zwei Gleise)
 function stairEdgeError(k) {
   const [[ax, ay], [bx, by]] = edgeTiles(k), a = stairAt(ax, ay), b = stairAt(bx, by);
   if ((a && a.ecke) || (b && b.ecke)) return 'Nicht an die Ecktreppe';
@@ -704,12 +754,12 @@ function stairEdgeError(k) {
   }
   if (!rampFresh().n) return null;
   const ra = rampAt(ax, ay), rb = rampAt(bx, by);
-  if (ra && rb && ra.k === rb.k) return 'Nicht quer über die Rampe';
-  if (ra && rb && rampWide(ra, rb)) return 'Nicht mitten durch die breite Rampe';
+  if (ra && rb && ra.k === rb.k) return 'Nicht quer über die Gleis-Rampe';
+  if (ra && rb && rampWide(ra, rb) && rampWideForm(ra.form)) return 'Nicht mitten durch den Einschnitt';
   for (const [r, x, y, ox, oy] of [[ra, ax, ay, bx, by], [rb, bx, by, ax, ay]]) {
     if (!r) continue;
     const [dx, dy] = STAIR_UP[r.rot];
-    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Rampe – an ihre Seiten geht es';
+    if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Gleis-Rampe – an ihre Seiten geht es';
   }
   return null;
 }
@@ -950,48 +1000,88 @@ function drawStairIcon(cx, cy, z, style, nar = false) {
 }
 
 // ---------------------------------------------------------------------------
-// Rampe in die Anhöhe (Anhöhen Stufe 2, Entwurf tools/rampe-entwurf.js – Nutzer: alle vier Varianten): Ding 'huegelrampe', eingelassen wie
-// die Treppe. Ihre Felder liegen unten und steigen gleichmäßig von der Vorderkante des Fußfelds (Boden) bis zur Hinterkante des oberen
-// Felds (Oberkante der Anhöhe dahinter; STAIR_UP[rot] zeigt hinauf). t.len 1 (steil) oder 2 (flacher, 2 Felder in Steigrichtung), t.style
-// = Wegstil des Belags. Wie alle großen Dinge steht sie mit dem Ankerfeld im Spielstand (kleinstes x/y, Grundfläche sizeOf [1, len]) – bei
-// rot 0/3 ist das ihr oberes Feld, bei rot 1/2 ihr Fuß; welches Feld welches ist, sagt rampAt. Seitlich Anhöhe: deren Wand ist die Wange
-// (A, B, D); offene Seite: Keil mit Geländer (C, D); gleich gerichtete Rampen gleicher Länge nebeneinander: breite Rampe. Über die Rampe
-// kommen alle hinauf und das Wegenetz hängt zusammen (levelLink 'weg'); über die Treppe auch, nur keine Fahrzeuge ('fahr')
+// Gleis-Rampe (Nutzer 10.10.2026: „die Rampe ist nur für Züge da – Autos soll es nie geben“; Entwurf tools/gleisrampe-entwurf.js, Bild
+// tools/vorschau/gleisrampe-varianten.png): Ding 'huegelrampe' unten (Ebene 0), steigt gleichmäßig von der Vorderkante des Fußfelds (Boden)
+// bis zur Hinterkante des oberen Felds (Oberkante der Anhöhe dahinter; STAIR_UP[rot] zeigt hinauf). Vier Formen (t.form 'a'–'d', RAMP_FORMS
+// in data.js; neu gebaut die Wahl in der Leiste, rampNewForm): A 2 Felder in die Anhöhe eingelassen – ganz breit, die Wände der Anhöhe daneben
+// sind die Wangen; B 3 Felder Damm mit Stützmauer vor der Wand (schmal wie das Gleis); C 4 Felder, oben 2 schmal eingelassen (links und rechts
+// bleibt ein Streifen Anhöhe stehen), unten 2 als Damm; D 4 Felder Viadukt auf Steinbögen vor der Wand, mit Brüstung. Wie alle großen Dinge
+// steht sie mit dem Ankerfeld im Spielstand (kleinstes x/y, Grundfläche sizeOf [1, len]); welches Feld was ist, sagt nur rampAt. Gleise
+// verbinden sich über sie (levelLink 'gleis', railRampTrack), Wege, Bewohner und Fahrzeuge nie – hinauf zu Fuß geht es über die Treppe
 // ---------------------------------------------------------------------------
-let rampNewLen = 1;                                                      // Länge neu gebauter Rampen (Leiste)
+let rampNewForm = 'a';                                                   // Form neu gebauter Gleis-Rampen (Leiste)
+const RAMP_MAX = 4;                                                      // längste Form in Feldern (so weit sucht rampAt zurück)
+const GR_E = 0.0075, GR_DW = 0.32, GR_VW = 0.3, GR_PW = 0.035, GR_PH = 3;   // Überlapp; schmal (Damm, Einschnitt) ±GR_DW, Viadukt ±GR_VW, Brüstung dick/hoch
+const GR_STONE = { v: '#d6cdbb', u: '#bcb29f', top: '#e6dfcf', deck: '#bdb4a3' };   // Viadukt: hell wie die Steinbogenbrücke
 const isRamp = t => !!t && t.b === 'huegelrampe';
-// Länge der Rampe t; ohne t so, wie sie gerade gesetzt würde: getragen die getragene, sonst die Wahl in der Leiste (sizeOf, placeRot, Vorschau)
-const rampLen = t => t ? (t.len === 2 ? 2 : 1) : typeof moving !== 'undefined' && moving && moving.kind === 'tile' && isRamp(moving.t) ? rampLen(moving.t) : rampNewLen;
+// Form gerade beim Setzen: getragen die der getragenen Rampe, sonst die Wahl in der Leiste
+const rampFormNow = () => typeof moving !== 'undefined' && moving && moving.kind === 'tile' && isRamp(moving.t) && rampFormOk(moving.t.form) ? moving.t.form : rampNewForm;
+// Form der Rampe t ('a'–'d'); ohne gültige Form (Vorschau-Kachel in previewDelta) wie gerade gesetzt
+const rampFormOf = t => (t && rampFormOk(t.form) ? t.form : rampFormNow());
+// Länge der Rampe t; ohne t so, wie sie gerade gesetzt würde (sizeOf, placeRot, Vorschau)
+const rampLen = t => RAMP_FORMS[rampFormOf(t)].len;
+// ganz breit (Einschnitt A): nebeneinander ein Einschnitt mit mehreren Gleisen, keine Wand dazwischen
+const rampWideForm = f => rampFormOk(f) && !RAMP_FORMS[f].narrow && !RAMP_FORMS[f].viadukt;
+// Form zur Länge (placeError gibt nur die Länge): f, wenn sie passt, sonst die gerade gesetzte, sonst die erste so lange
+const rampFormFor = (len, f) => rampFormOk(f) && RAMP_FORMS[f].len === len ? f : RAMP_FORMS[rampFormNow()].len === len ? rampFormNow() : Object.keys(RAMP_FORMS).find(k => RAMP_FORMS[k].len === len) || 'a';
+// Preis einer Form { cost, mat } (ITEMS.huegelrampe.cost/.mat zeigen die gerade gesetzte); bezahlt für die Rampe t (Abreißen erstattet es voll –
+// Deko-Regel –, Form wechseln verrechnet es)
+const rampCost = (f = rampFormNow()) => ({ cost: RAMP_FORMS[f].cost, mat: RAMP_FORMS[f].mat });
+const rampPaid = t => ({ cost: t && t.price != null ? t.price : RAMP_FORMS[rampFormOf(t)].cost, mat: RAMP_FORMS[rampFormOf(t)].mat });
+// neu gebaute Rampe (build und Vorschau über paintNewOf): Form aus der Leiste, bezahlter Preis
+const rampNew = () => ({ form: rampNewForm, price: RAMP_FORMS[rampNewForm].cost });
 // Felder einer Rampe mit Anker (ax, ay), vom Fuß (i = 0) bis zum oberen Feld
 function rampFields(ax, ay, rot, len) {
   const [Du, Dv] = STAIR_UP[rot & 3], fx = ax + (len - 1) * Math.max(0, -Du), fy = ay + (len - 1) * Math.max(0, -Dv), out = [];
   for (let i = 0; i < len; i++) out.push([fx + i * Du, fy + i * Dv]);
   return out;
 }
-// Rampe auf Feld (x, y): { k: Ankerfeld, t, ax, ay, len, rot, i: 0 Fuß … len − 1 oberes Feld } oder null. Schaut selbst nach (nicht in
+// Rampe auf Feld (x, y): { k: Ankerfeld, t, ax, ay, len, rot, i: 0 Fuß … len − 1 oberes Feld, form } oder null. Schaut selbst nach (nicht in
 // COVER) – stimmt auch mitten in einem batch
+let rampIgnore = null;                                                   // Ankerfeld einer Rampe, die gerade nicht zählt (rampFormPlan)
 function rampAt(x, y) {
   let ax = x, ay = y, t = state.tiles.get(x + ',' + y);
   if (!isRamp(t)) {
-    t = state.tiles.get((x - 1) + ',' + y);
-    if (isRamp(t) && t.len === 2 && (t.rot & 1)) ax = x - 1;
-    else { t = state.tiles.get(x + ',' + (y - 1)); if (!isRamp(t) || t.len !== 2 || (t.rot & 1)) return null; ay = y - 1; }
+    t = null;
+    for (let i = 1; i < RAMP_MAX && !t; i++) {                          // rot 1/3 liegt längs x, rot 0/2 längs y
+      const a = state.tiles.get((x - i) + ',' + y), b = state.tiles.get(x + ',' + (y - i));
+      if (isRamp(a) && (a.rot & 1) && rampLen(a) > i) { t = a; ax = x - i; }
+      else if (isRamp(b) && !(b.rot & 1) && rampLen(b) > i) { t = b; ay = y - i; }
+    }
+    if (!t) return null;
   }
-  const rot = (t.rot || 0) & 3, len = rampLen(t), [Du, Dv] = STAIR_UP[rot];
+  const k = ax + ',' + ay;
+  if (k === rampIgnore) return null;                                     // Form wechseln: die alte zählt beim Prüfen nicht
+  const rot = (t.rot || 0) & 3, form = rampFormOf(t), len = RAMP_FORMS[form].len, [Du, Dv] = STAIR_UP[rot];
   const fx = ax + (len - 1) * Math.max(0, -Du), fy = ay + (len - 1) * Math.max(0, -Dv);
-  return { k: ax + ',' + ay, t, ax, ay, len, rot, i: (x - fx) * Du + (y - fy) * Dv };
+  return { k, t, ax, ay, len, rot, i: (x - fx) * Du + (y - fy) * Dv, form };
 }
-// zwei Rampenfelder (rampAt) nebeneinander gehören zu einer breiten Rampe: gleiche Richtung, Länge und Stufe, verschiedene Rampen
-const rampWide = (a, b) => a.k !== b.k && a.rot === b.rot && a.len === b.len && a.i === b.i;
-// Höhe (Bildpunkte bei Zoom 1, 0 … HILL_H) auf dem Rampenfeld (x, y) am Weltpunkt (u, v): stetig linear von der Vorderkante des Fußes (0)
-// bis zur Hinterkante des oberen Felds (HILL_H); 0 außerhalb des Felds oder ohne Rampe
+// zwei Rampenfelder (rampAt) nebeneinander auf gleicher Höhe: gleiche Richtung, Form und Stufe, verschiedene Rampen (nur A wird dadurch breit)
+const rampWide = (a, b) => a.k !== b.k && a.rot === b.rot && a.form === b.form && a.i === b.i;
+// Lage längs der ganzen Rampe am Weltpunkt (u, v) auf ihrem Feld (x, y): 0 Vorderkante des Fußes … len Hinterkante oben; null ohne Rampe
+function rampAlong(x, y, u, v) {
+  const r = rampAt(x, y);
+  if (!r) return null;
+  const [Du, Dv] = STAIR_UP[r.rot];
+  return r.i + (u - x) * Du + (v - y) * Dv + 0.5;
+}
+// Höhe des Gleises (Bildpunkte bei Zoom 1, 0 … HILL_H) auf dem Rampenfeld (x, y) am Weltpunkt (u, v): stetig linear von der Vorderkante des
+// Fußes (0) bis zur Hinterkante des oberen Felds (HILL_H); 0 außerhalb des Felds oder ohne Rampe
 function rampHeight(x, y, u, v) {
   const r = rampAt(x, y), a = u - x, b = v - y;
   if (!r || Math.abs(a) > 0.5 || Math.abs(b) > 0.5) return 0;
   const [Du, Dv] = STAIR_UP[r.rot];
   return HILL_H * (r.i + a * Du + b * Dv + 0.5) / r.len;
 }
-// Höhe der begehbaren Oberfläche am Weltpunkt (u, v): Anhöhe des Felds, auf einer Rampe die Schräge, auf einer Treppe die Stufe
+// Antippen (pickFrac): Höhe dessen, was dort zu sehen ist – im schmalen Einschnitt die Streifen Anhöhe ganz hoch, am Viadukt die Brüstung
+function rampHitHeight(x, y, u, v) {
+  const r = rampAt(x, y), a = u - x, b = v - y;
+  if (!r || Math.abs(a) > 0.5 || Math.abs(b) > 0.5) return 0;
+  const F = RAMP_FORMS[r.form], [Du, Dv] = STAIR_UP[r.rot];
+  if (F.narrow && r.i >= r.len - F.cut && Math.abs(b * Du - a * Dv) > GR_DW) return HILL_H;
+  return rampHeight(x, y, u, v) + (F.viadukt ? GR_PH : 0);
+}
+// Höhe der Oberfläche am Weltpunkt (u, v): Anhöhe des Felds, auf einer Gleis-Rampe das Gleis, auf einer Treppe die Stufe
 function surfaceHeight(u, v) {
   if (!state.hills || !state.hills.size) return 0;
   const x = Math.round(u), y = Math.round(v), base = hillLift(x, y);
@@ -1013,14 +1103,14 @@ function rampFresh() {
   for (const [k, t] of state.tiles) {
     if (isStair(t)) s++;
     if (!isRamp(t)) continue;
-    const [ax, ay] = keyXY(k), rot = (t.rot || 0) & 3, len = rampLen(t), [dx, dy] = STAIR_UP[rot], F = rampFields(ax, ay, rot, len), top = F[len - 1];
+    const [ax, ay] = keyXY(k), rot = (t.rot || 0) & 3, form = rampFormOf(t), len = RAMP_FORMS[form].len, [dx, dy] = STAIR_UP[rot], F = rampFields(ax, ay, rot, len), top = F[len - 1];
     n++; f += len;
-    if (hillLevel(top[0] + dx, top[1] + dy) === hillLevel(top[0], top[1]) + 1) list.push({ k, ax, ay, len, rot, dx, dy, foot: F[0], top });
+    if (hillLevel(top[0] + dx, top[1] + dy) === hillLevel(top[0], top[1]) + 1) list.push({ k, ax, ay, len, rot, dx, dy, form, foot: F[0], top });
   }
   rampCache = { gv: groundVersion, ts: state.tiles.size, hs: state.hills.size, st: state, list, n, f, s };
   return rampCache;
 }
-// [{ k: Ankerfeld, ax, ay, len, rot, dx, dy, foot: [x, y], top: [x, y] }] – (dx, dy) zeigt hinauf; nur Rampen, die auf die Anhöhe führen
+// [{ k: Ankerfeld, ax, ay, len, rot, dx, dy, form, foot: [x, y], top: [x, y] }] – (dx, dy) zeigt hinauf; nur Rampen, die auf die Anhöhe führen
 const hillRamps = () => rampFresh().list;
 // Drehung der Rampe, deren oberes Feld (x, y) ist (auch der Vorschau in die Anhöhe); −1 = keine
 const rampTopRotAt = (x, y) => {
@@ -1028,13 +1118,36 @@ const rampTopRotAt = (x, y) => {
   if (r) return r.i === r.len - 1 ? r.rot : -1;
   return hillGap && hillGap.ramp && hillGap.top === x + ',' + y ? hillGap.rot : -1;
 };
+// Form der Rampe, deren oberes Feld (x, y) ist und die mit Drehung r hinaufführt (auch die Vorschau in die Anhöhe); null = keine
+const rampTopFormAt = (x, y, r) => {
+  const a = rampFresh().n ? rampAt(x, y) : null;
+  if (a) return a.i === a.len - 1 && a.rot === r ? a.form : null;
+  return hillGap && hillGap.ramp && hillGap.top === x + ',' + y && hillGap.rot === r ? hillGap.form : null;
+};
+// (x, y) liegt im schmalen Einschnitt (C oben) einer Rampe längs y (ax 0: rot 0/2) bzw. längs x (ax 1) – an beiden Seiten stehen Streifen
+// Anhöhe (auch die Vorschau in die Anhöhe)
+function rampStripAt(x, y, ax) {
+  const r = rampFresh().n ? rampAt(x, y) : null;
+  if (r) { const F = RAMP_FORMS[r.form]; return !!F.narrow && r.i >= r.len - F.cut && (r.rot & 1) === ax; }
+  return !!hillGap && !!hillGap.ramp && hillGap.keys.has(x + ',' + y) && !!RAMP_FORMS[hillGap.form].narrow && (hillGap.rot & 1) === ax;
+}
+// Für das Schienennetz: das Rampenfeld (x, y) als gerades Gleisstück längs seiner Achse, null ohne Gleis-Rampe. { k: Anker, rot, form, i, len,
+// dx, dy: hinauf, arms: [[dx, dy], [−dx, −dy]] – Arme nur in Achsrichtung; ob dort Gleis anschließt, sagt levelLink(…, 'gleis') –, foot, top:
+// Felder, h0/h1: Höhe des Gleises an Vorder-/Hinterkante dieses Felds (Bildpunkte bei Zoom 1) }
+function railRampTrack(x, y) {
+  const r = rampAt(x, y);
+  if (!r) return null;
+  const [dx, dy] = STAIR_UP[r.rot], F = rampFields(r.ax, r.ay, r.rot, r.len);
+  return { k: r.k, rot: r.rot, form: r.form, i: r.i, len: r.len, dx, dy, arms: [[dx, dy], [0 - dx, 0 - dy]], foot: F[0], top: F[r.len - 1], h0: HILL_H * r.i / r.len, h1: HILL_H * (r.i + 1) / r.len };
+}
 
-// --- Wer kommt wohin (Wegenetz, Fahrzeuge, Bewohner) ---
-// Darf man von Feld (x1, y1) auf das Nachbarfeld (x2, y2)? who: 'weg' (Wegenetz, Viertel, Erreichbarkeit), 'fuss' (Bewohner zu Fuß) oder
-// 'fahr' (Fahrzeuge). Gleiche Ebene, keine Rampe/Treppe dabei: ja. Rampe nur längs ihrer Achse (Fuß ↔ Feld davor auf ihrer Ebene, oberes Feld ↔
-// Anhöhe dahinter, ihre Felder untereinander) und quer in der breiten Rampe (gleiche Richtung, Länge, Stufe). Treppe genauso (Nutzer, 10.10.2026:
-// sie verbindet auch das Wegenetz), nur nicht für Fahrzeuge; quer nur in der breiten Treppe – schmale stehen für sich (Ecktreppe: ihre beiden
-// Füße und die beiden Treppen, an denen sie hängt). Über Eck nie an Rampe oder Treppe. Ohne Anhöhen immer ja (wie bisher)
+// --- Wer kommt wohin (Wegenetz, Bewohner, Fahrzeuge, Gleise) ---
+// Darf man von Feld (x1, y1) auf das Nachbarfeld (x2, y2)? who: 'weg' (Wegenetz, Viertel, Erreichbarkeit), 'fuss' (Bewohner zu Fuß), 'fahr'
+// (Fahrzeuge) oder 'gleis' (Schiene ↔ Schiene). Gleiche Ebene, keine Rampe/Treppe dabei: ja. Gleis-Rampe nur für 'gleis', nur längs ihrer Achse
+// (Fuß ↔ Feld davor auf ihrer Ebene, oberes Feld ↔ Anhöhe dahinter, ihre Felder untereinander), nie quer (auch nicht im breiten Einschnitt).
+// Treppe (Nutzer, 10.10.2026: sie verbindet auch das Wegenetz) für 'weg' und 'fuss' längs ihrer Achse, quer nur in der breiten Treppe –
+// schmale stehen für sich (Ecktreppe: ihre beiden Füße und die beiden Treppen, an denen sie hängt); nicht für Fahrzeuge und Gleise. Über Eck
+// nie an Rampe oder Treppe. Ohne Anhöhen immer ja (wie bisher)
 function levelLink(x1, y1, x2, y2, who = 'weg') {
   if (!state.hills || !state.hills.size) return true;
   const c = rampFresh(), rs = c.n > 0, ss = c.s > 0;
@@ -1042,8 +1155,8 @@ function levelLink(x1, y1, x2, y2, who = 'weg') {
   const sa = !a && ss ? stairAt(x1, y1) : null, sb = !b && ss ? stairAt(x2, y2) : null;
   if (!a && !b && !sa && !sb) return hillLevel(x1, y1) === hillLevel(x2, y2);
   if (Math.abs(x2 - x1) + Math.abs(y2 - y1) !== 1 || (a && sb) || (b && sa)) return false;   // über Eck; Rampe ↔ Treppe
-  if (a || b) return a ? rampLinks(a, x1, y1, x2, y2, b) : rampLinks(b, x2, y2, x1, y1, a);
-  if (who === 'fahr') return false;                                      // Treppe: Fahrzeuge nicht
+  if (a || b) return who === 'gleis' && (a ? rampLinks(a, x1, y1, x2, y2, b) : rampLinks(b, x2, y2, x1, y1, a));   // Gleis-Rampe: nur Züge
+  if (who === 'fahr' || who === 'gleis') return false;                   // Treppe: keine Fahrzeuge, keine Gleise
   return sa ? stairLinks(sa, x1, y1, x2, y2, sb) : stairLinks(sb, x2, y2, x1, y1, sa);
 }
 // vom Rampenfeld r (x, y) zum Nachbarn (nx, ny); n = rampAt dort (dort keine Treppe – levelLink prüft das)
@@ -1051,7 +1164,7 @@ function rampLinks(r, x, y, nx, ny, n) {
   const [Du, Dv] = STAIR_UP[r.rot], dx = nx - x, dy = ny - y;
   if (dx === Du && dy === Dv) return r.i < r.len - 1 ? !!n && n.k === r.k : !n && hillLevel(nx, ny) === hillLevel(x, y) + 1;   // hinauf
   if (dx === -Du && dy === -Dv) return r.i > 0 ? !!n && n.k === r.k : !n && hillLevel(nx, ny) === hillLevel(x, y);              // hinab
-  return !!n && rampWide(r, n);                                          // quer: nur in der breiten Rampe
+  return false;                                                          // quer: Gleise laufen nie seitlich ab
 }
 // von der Treppe s (x, y) zum Nachbarn (nx, ny); n = Treppe dort
 function stairLinks(s, x, y, nx, ny, n) {
@@ -1084,72 +1197,118 @@ function rampsAround(x, y, foot = false) {
   }
   return out;
 }
-// Passt eine Rampe (Anker x, y) in Richtung rot? Alle Felder auf einer Ebene (in die Anhöhe eingelassene eine tiefer, stairBase), hinter dem
-// oberen Feld Anhöhe genau eine Ebene höher, vor dem Fuß dieselbe Ebene und kein Wasser
-function rampFits(x, y, rot, len) {
-  const F = rampFields(x, y, rot, len), [dx, dy] = STAIR_UP[rot & 3], lv = stairBase(F[0][0], F[0][1]), [fx, fy] = F[0], [tx, ty] = F[len - 1];
-  return F.every(([px, py]) => stairBase(px, py) === lv) && hillLevel(tx + dx, ty + dy) === lv + 1 && hillLevel(fx - dx, fy - dy) === lv && terrainAt(fx - dx, fy - dy) !== 'water';
+// Passt eine Rampe der Form form (Anker x, y) in Richtung rot? Alle Felder auf einer Ebene (eingelassene eine tiefer, stairBase), hinter dem
+// oberen Feld Anhöhe genau eine Ebene höher, vor dem Fuß dieselbe Ebene und kein Wasser – und die Form (rampFormFits)
+function rampFits(x, y, rot, len = rampLen(), form = rampFormFor(len)) {
+  const F = rampFields(x, y, rot, len), [dx, dy] = STAIR_UP[rot & 3], [fx, fy] = F[0], [tx, ty] = F[len - 1], lv = stairBase(fx, fy);
+  return F.every(([px, py]) => stairBase(px, py) === lv) && hillLevel(tx + dx, ty + dy) === lv + 1 && hillLevel(fx - dx, fy - dy) === lv
+    && terrainAt(fx - dx, fy - dy) !== 'water' && rampFormFits(F, rot, lv, form);
 }
-const rampDirs = (x, y, len = rampLen()) => [0, 1, 2, 3].filter(r => rampFits(x, y, r, len));
+// Form: die oberen RAMP_FORMS[form].cut Felder liegen in der Anhöhe – jetzt Anhöhe (wird beim Bauen abgesenkt) oder schon eingelassen –, je mit
+// einer Wange (rampCutOk); die übrigen stehen davor: keine Anhöhe und nicht mitten in einem Einschnitt (beidseits Anhöhe)
+function rampFormFits(F, rot, lv, form) {
+  const cut = RAMP_FORMS[form].cut, [Du, Dv] = STAIR_UP[rot & 3], hi = (nx, ny) => hillLevel(nx, ny) === lv + 1;
+  return F.every(([px, py], i) => i >= F.length - cut ? rampCutOk(px, py, rot, lv, form, i) : !hillAt(px, py) && !(hi(px - Dv, py + Du) && hi(px + Dv, py - Du)));
+}
+// eingelassenes Feld i: an mindestens einer Seite Anhöhe (die Wange) bzw. ein gleiches eingelassenes Feld (A, C nebeneinander)
+function rampCutOk(x, y, rot, lv, form, i) {
+  const [Du, Dv] = STAIR_UP[rot & 3];
+  return [[x - Dv, y + Du], [x + Dv, y - Du]].some(([nx, ny]) => {
+    const n = rampAt(nx, ny);
+    return n ? n.rot === (rot & 3) && n.form === form && n.i === i : hillLevel(nx, ny) === lv + 1;
+  });
+}
+const rampDirs = (x, y, len = rampLen(), form = rampFormFor(len)) => [0, 1, 2, 3].filter(r => rampFits(x, y, r, len, form));
+// Angetipptes Feld → Anker und Drehung (für Vorschau/Bauen, wer mag): der Anker ist sonst das kleinste x/y, also bei Rampen hinauf nach +x/+y
+// ihr Fuß – bis zu 3 Felder vor dem angetippten. Hier gilt das Feld an der Wand: bei A und C das erste in der Anhöhe, bei B und D das oberste.
+// Liefert { ax, ay, rot } der besten passenden Richtung (wie rampRot) oder null
+function rampSnap(x, y, form = rampFormNow()) {
+  const len = RAMP_FORMS[form].len, iw = len - Math.max(1, RAMP_FORMS[form].cut), out = [];
+  for (let r = 0; r < 4; r++) {
+    const [Du, Dv] = STAIR_UP[r], fx = x - iw * Du, fy = y - iw * Dv, ax = Math.min(fx, fx + (len - 1) * Du), ay = Math.min(fy, fy + (len - 1) * Dv);
+    if (rampFits(ax, ay, r, len, form)) out.push({ ax, ay, rot: r });
+  }
+  if (out.length < 2) return out[0] || null;
+  const best = out.find(o => o.rot === rampRot(o.ax, o.ay, len, form));
+  return best || out[0];
+}
+// Bauen und Ablegen (tap, setHover; wie einAnchor der Tunneleinfahrt): passt die Rampe mit dem angetippten Feld als Anker, bleibt es (wie bisher);
+// sonst gilt es als Feld an der Wand (rampSnap) – an Wänden hinten (hinauf nach +x/+y) läge der Anker sonst bis zu 3 Felder davor. Ohne Anhöhen:
+// (x, y). rampTool: gerade eine Gleis-Rampe bauen oder eine getragene (✋, einzeln) ablegen
+const rampTool = () => tool === 'huegelrampe' || (tool === 'verschieben' && !!moving && moving.kind === 'tile' && isRamp(moving.t));
+function rampAnchor(x, y) {
+  if (!state.hills || !state.hills.size || rampDirs(x, y).length) return [x, y];
+  const s = rampSnap(x, y);
+  return s ? [s.ax, s.ay] : [x, y];
+}
 // Drehung beim Setzen (placeRot, Vorschau, Verschieben): zur Anhöhe hin. Selbst gedreht (⟳, R, Mausrad: rotManual): die gewählte bzw. die
-// nächste passende – so wird z. B. an einer Ecke aus „vor die Wand“ eine Rampe längs der Wand (D). Sonst Punkte: ein Weg vor dem Fuß, ein echter Fuß (keine
-// Treppe/Rampe davor), eine gleiche Rampe daneben (wird breit), je abzusenkendes Feld einer weniger (vor der Wand bleibt sie vor der Wand) –
-// bei Gleichstand die gewählte (buildRot), sonst die erste. Passt keine: buildRot
-function rampRot(x, y, len = rampLen()) {
-  const ok = rampDirs(x, y, len);
+// nächste passende (so geht es z. B. an einer Ecke längs der Wand). Sonst Punkte: ein Gleis vor dem Fuß, ein echter Fuß (keine Treppe/Rampe
+// davor), eine gleiche Rampe daneben (A: ein Einschnitt), je abzusenkendes Feld einer weniger – bei Gleichstand die gewählte (buildRot), sonst
+// die erste. Passt keine: buildRot
+function rampRot(x, y, len = rampLen(), form = rampFormFor(len)) {
+  const ok = rampDirs(x, y, len, form);
   if (!ok.length) return buildRot & 3;
   if (rotManual) for (let k = 0; k < 4; k++) if (ok.includes((buildRot + k) & 3)) return (buildRot + k) & 3;   // selbst gedreht: die nächste passende
   const score = r => {
-    const F = rampFields(x, y, r, len), [dx, dy] = STAIR_UP[r], ffx = F[0][0] - dx, ffy = F[0][1] - dy;
-    const side = F.some(([px, py], i) => [[px - dy, py + dx], [px + dy, py - dx]].some(([nx, ny]) => { const n = rampAt(nx, ny); return n && n.rot === r && n.len === len && n.i === i; }));
-    return (wegAt(ffx, ffy) != null ? 8 : 0) + (stairAt(ffx, ffy) || rampAt(ffx, ffy) ? 0 : 4) + (side ? 2 : 0) - F.filter(([px, py]) => hillAt(px, py)).length;
+    const F = rampFields(x, y, r, len), [dx, dy] = STAIR_UP[r], ffx = F[0][0] - dx, ffy = F[0][1] - dy, ft = state.tiles.get(ffx + ',' + ffy);
+    const side = F.some(([px, py], i) => [[px - dy, py + dx], [px + dy, py - dx]].some(([nx, ny]) => { const n = rampAt(nx, ny); return n && n.rot === r && n.form === form && n.i === i; }));
+    return (ft && ft.b === 'schiene' ? 8 : 0) + (stairAt(ffx, ffy) || rampAt(ffx, ffy) ? 0 : 4) + (side ? 2 : 0) - F.filter(([px, py]) => hillAt(px, py)).length;
   };
   const best = Math.max(...ok.map(score)), c = ok.filter(r => score(r) === best);
   return c.includes(buildRot & 3) ? buildRot & 3 : c[0];
 }
-// Darf hier (Anker x, y) eine Rampe stehen (placeError, vor den allgemeinen Prüfungen)? Wie die Treppe: unten direkt vor der Wand oder in den
-// Rand einer Anhöhe eingelassen (Felder werden abgesenkt, nicht getragen: move), nicht auf Wasser, Weg, unter einem Dach; frei (auch das
-// zweite Feld: Dinge, kleine Deko, Eckpunkte); keine Linie quer (vor dem Fuß, hinter dem oberen Feld, zwischen den Feldern, in der breiten)
-function rampError(x, y, rot, len = rampLen(), move = false) {
-  rot &= 3;
-  const F = rampFields(x, y, rot, len), into = F.filter(([fx, fy]) => hillAt(fx, fy));
+// Darf hier (Anker x, y) eine Gleis-Rampe der Form form stehen (placeError, vor den allgemeinen Prüfungen)? Wie die Treppe: unten vor der Wand
+// bzw. (A, C) in den Rand einer Anhöhe eingelassen (Felder werden abgesenkt, nicht getragen: move), nicht auf Wasser, Weg, Gleis, unter einem
+// Dach; frei (alle Felder: Dinge, kleine Deko, Eckpunkte); keine Linie quer (vor dem Fuß, hinter dem oberen Feld, zwischen den Feldern, im
+// breiten Einschnitt). form fehlt: die zur Länge passende (rampFormFor – placeError sollte die Form der getragenen mitgeben)
+function rampError(x, y, rot, len = rampLen(), move = false, form = null) {
+  rot &= 3; form = rampFormFor(len, form);
+  const Fm = RAMP_FORMS[form], F = rampFields(x, y, rot, len), into = F.filter(([fx, fy]) => hillAt(fx, fy));
   for (const [fx, fy] of F) if (!ownedTile(fx, fy)) return notMine(fx, fy);
-  if (into.length) { const e = rampIntoError(into, move); if (e) return e; }
+  if (into.length) { const e = rampIntoError(into, move, Fm); if (e) return e; }
   if (F.some(([fx, fy]) => terrainAt(fx, fy) === 'water')) return 'Nicht auf dem Wasser';
-  if (F.some(([fx, fy]) => wegAt(fx, fy) != null)) return 'Nicht auf einen Weg – stell die Rampe ans Ende des Wegs';
-  if (state.roofs && state.roofs.size && F.some(([fx, fy]) => roofAt(fx, fy))) return 'Unter einer Überdachung geht keine Rampe';
-  const ok = rampDirs(x, y, len);
-  if (!ok.length) {
-    const G = [0, 1, 2, 3].map(r => rampFields(x, y, r, len)), front = r => { const [dx, dy] = STAIR_UP[r], [fx, fy] = G[r][0]; return [fx - dx, fy - dy]; };
-    const wet = [0, 1, 2, 3].some(r => terrainAt(...front(r)) === 'water' && hillLevel(G[r][len - 1][0] + STAIR_UP[r][0], G[r][len - 1][1] + STAIR_UP[r][1]) === 1);
-    if (wet) return 'Vor der Rampe braucht es Platz – kein Wasser';
-    if (into.length) return [0, 1, 2, 3].every(r => hillLevel(...front(r)) >= 1) ? 'Die Rampe gehört an den Rand der Anhöhe' : 'Hinter der Rampe muss Anhöhe bleiben – hier ist sie zu schmal';
-    return F.some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) > hillLevel(fx, fy))) ? 'Vor der Rampe braucht es Platz – keine Anhöhe und kein Wasser' : 'Direkt vor die Wand einer Anhöhe stellen – die Rampe führt hinauf';
-  }
-  if (!ok.includes(rot)) return 'Die Rampe muss zur Anhöhe hinauf zeigen';
+  if (F.some(([fx, fy]) => wegAt(fx, fy) != null)) return 'Nicht auf einen Weg – Gleis und Weg kreuzen sich nur auf ebenem Boden';
+  if (F.some(([fx, fy]) => archAround(fx, fy))) return ARCH_HERE;
+  if (F.some(([fx, fy]) => { const t = objAt(fx, fy); return t && t.b === 'schiene'; })) return 'Nicht auf ein Gleis – stell die Rampe ans Ende des Gleises';
+  if (state.roofs && state.roofs.size && F.some(([fx, fy]) => roofAt(fx, fy))) return 'Unter einer Überdachung geht keine Gleis-Rampe';
+  const ok = rampDirs(x, y, len, form);
+  if (!ok.length) return rampWhy(x, y, len, form, into);
+  if (!ok.includes(rot)) return 'Die Gleis-Rampe muss zur Anhöhe hinauf zeigen';
   for (const [fx, fy] of F) {
-    if (objAt(fx, fy)) return len > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
+    if (objAt(fx, fy) && !(rampIgnore && COVER.get(fx + ',' + fy) === rampIgnore)) return 'Hier ist nicht genug Platz';
     if ((decosAt(fx + ',' + fy) || []).some(Boolean)) return 'Hier stehen schon kleine Dekos';
   }
   const [dx, dy] = STAIR_UP[rot], [x0, y0] = F[0], [x1, y1] = F[len - 1];
   for (let vy = Math.min(y0, y1); vy <= Math.max(y0, y1) + 1; vy++) for (let vx = Math.min(x0, x1); vx <= Math.max(x0, x1) + 1; vx++) { const p = postAt(vx, vy); if (p) return `An der Ecke steht schon: ${ITEMS[p.b].name}`; }
   const edge = (ax, ay, bx, by) => state.edges.get(edgeBetween(ax, ay, bx, by));
-  for (const [ax, ay, bx, by] of [[x0, y0, x0 - dx, y0 - dy], [x1, y1, x1 + dx, y1 + dy]]) { const e = edge(ax, ay, bx, by); if (e) return `Quer vor der Rampe steht: ${ITEMS[e.b].name} – erst entfernen`; }
-  for (let i = 1; i < len; i++) { const e = edge(...F[i - 1], ...F[i]); if (e) return `Quer über die Rampe läuft: ${ITEMS[e.b].name} – erst entfernen`; }
-  for (let i = 0; i < len; i++) for (const [nx, ny] of [[F[i][0] - dy, F[i][1] + dx], [F[i][0] + dy, F[i][1] - dx]]) {   // daneben eine gleiche: wird breit
-    const n = rampAt(nx, ny), e = n && n.rot === rot && n.len === len && n.i === i && edge(...F[i], nx, ny);
-    if (e) return `Zwischen den Rampen steht: ${ITEMS[e.b].name} – erst entfernen`;
+  for (const [ax, ay, bx, by] of [[x0, y0, x0 - dx, y0 - dy], [x1, y1, x1 + dx, y1 + dy]]) { const e = edge(ax, ay, bx, by); if (e) return `Quer vor der Gleis-Rampe steht: ${ITEMS[e.b].name} – erst entfernen`; }
+  for (let i = 1; i < len; i++) { const e = edge(...F[i - 1], ...F[i]); if (e) return `Quer über die Gleis-Rampe läuft: ${ITEMS[e.b].name} – erst entfernen`; }
+  if (rampWideForm(form)) for (let i = 0; i < len; i++) for (const [nx, ny] of [[F[i][0] - dy, F[i][1] + dx], [F[i][0] + dy, F[i][1] - dx]]) {   // daneben ein gleicher Einschnitt
+    const n = rampAt(nx, ny), e = n && n.rot === rot && n.form === form && n.i === i && edge(...F[i], nx, ny);
+    if (e) return `Zwischen den Einschnitten steht: ${ITEMS[e.b].name} – erst entfernen`;
   }
   return null;
 }
-// In eine bestehende Anhöhe (wie stairIntoError): nur die erste Ebene, die Felder leer (nichts darauf, keine Linie am Rand, nichts an den Ecken)
-// und keine Treppe/Rampe, die auf sie hinaufführt (sie führte sonst ins Leere). Getragen (✋, Gruppe, ⧉ Kopie) nie: Ablegen senkt nichts ab
-function rampIntoError(into, move) {
-  if (move) return 'Nur vor die Wand – in die Anhöhe die Rampe neu bauen';
-  if (into.some(([x, y]) => hillLevel(x, y) !== 1)) return 'Die Rampe führt nur auf die erste Ebene';
+// Warum passt keine Richtung (rampError)? Erst, was für jede Form gilt (Wasser, Anhöhe dahinter, Rand), dann die Lage der Form
+function rampWhy(x, y, len, form, into) {
+  const G = [0, 1, 2, 3].map(r => rampFields(x, y, r, len)), at = (r, k) => { const [dx, dy] = STAIR_UP[r], [px, py] = G[r][k < 0 ? 0 : len - 1]; return [px + k * dx, py + k * dy]; };
+  const base = r => { const lv = stairBase(...G[r][0]); return G[r].every(([px, py]) => stairBase(px, py) === lv) && hillLevel(...at(r, 1)) === lv + 1 && hillLevel(...at(r, -1)) === lv; };
+  if ([0, 1, 2, 3].some(r => base(r) && terrainAt(...at(r, -1)) === 'water')) return 'Vor der Gleis-Rampe braucht es Platz – kein Wasser';
+  if ([0, 1, 2, 3].some(base)) return RAMP_FORMS[form].where;           // die Lage passt, nur nicht für diese Form
+  if (into.length) return [0, 1, 2, 3].every(r => hillLevel(...at(r, -1)) >= 1) ? 'Die Gleis-Rampe gehört an den Rand der Anhöhe' : 'Hinter der Gleis-Rampe muss Anhöhe bleiben – hier ist sie zu schmal';
+  return G[0].some(([fx, fy]) => DIRS.some(([dx, dy]) => hillLevel(fx + dx, fy + dy) > hillLevel(fx, fy))) ? 'Vor der Gleis-Rampe braucht es Platz – keine Anhöhe und kein Wasser' : RAMP_FORMS[form].where;
+}
+// In eine bestehende Anhöhe (A, C; wie stairIntoError): nur die erste Ebene, die Felder leer (nichts darauf, keine Linie am Rand, nichts an den
+// Ecken) und keine Treppe/Rampe, die auf sie hinaufführt (sie führte sonst ins Leere). Getragen (✋, Gruppe, ⧉ Kopie) nie: Ablegen senkt nichts
+// ab. B und D stehen immer davor
+function rampIntoError(into, move, Fm) {
+  if (!Fm.cut) return Fm.where;
+  if (move) return 'Nur in einen schon vorhandenen Einschnitt – in die Anhöhe die Gleis-Rampe neu bauen';
+  if (into.some(([x, y]) => hillLevel(x, y) !== 1)) return 'Die Gleis-Rampe führt nur auf die erste Ebene';
   for (const [x, y] of into) {
     if (stairsAround(x, y).length) return 'Hierher führt schon eine Treppe hinauf';
-    if (rampsAround(x, y).length) return 'Hierher führt schon eine Rampe hinauf';
+    if (rampsAround(x, y).length) return 'Hierher führt schon eine Gleis-Rampe hinauf';
+    if (archAround(x, y)) return ARCH_HERE;
     const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
     if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])
@@ -1170,132 +1329,293 @@ function rampIntoSink(x, y, rot = rampRot(x, y), len = rampLen()) {
   }
   return n;
 }
-// Vorschau „Rampe in die Anhöhe“ (render.js setzt hillGap für ein Bild): die abgesenkten Felder; null, wenn nichts abgesenkt wird oder es nicht geht
-function rampGapFor(x, y, rot = rampRot(x, y), len = rampLen()) {
+// Vorschau „Gleis-Rampe in die Anhöhe“ (render.js setzt hillGap für ein Bild): die abgesenkten Felder; null, wenn nichts abgesenkt wird oder es
+// nicht geht
+function rampGapFor(x, y, rot = rampRot(x, y), len = rampLen(), form = rampFormFor(len)) {
   const F = rampFields(x, y, rot, len), into = F.filter(([fx, fy]) => hillAt(fx, fy));
-  if (!into.length || rampError(x, y, rot, len)) return null;
+  if (!into.length || rampError(x, y, rot, len, false, form)) return null;
   const [gx, gy] = into[0];
-  return { k: gx + ',' + gy, x: gx, y: gy, rot: rot & 3, lv: hillLevel(gx, gy) - 1, keys: new Set(into.map(p => p.join())), ramp: true, top: F[len - 1].join(), len };
+  return { k: gx + ',' + gy, x: gx, y: gy, rot: rot & 3, lv: hillLevel(gx, gy) - 1, keys: new Set(into.map(p => p.join())), ramp: true, top: F[len - 1].join(), len, form, ax: x, ay: y };
 }
-// Belag: jeder Wegstil mit Fläche (wie die Stufen der Treppe). Neu gebaut: die Wahl in der Leiste, sonst der Stil des Wegs
-function rampStyleNew() {
-  const c = chosenStyle.huegelrampe;
-  if (stairStyleOk(c) && styleOk(styleDef('weg', c))) return c;
-  const w = currentStyle('weg');
-  return stairStyleOk(w) ? w : roofBelDefault();
+// Form im Fenster wechseln (Nutzer: nur, wenn Platz und Regeln passen, sonst Hinweis): oberes Feld und Richtung bleiben, die Rampe wird zum Fuß
+// hin kürzer oder länger. Gelände ändert sich dabei nie – A/C liegen in der Anhöhe, B/D davor: dazwischen nur über Abreißen und neu Bauen. Bezahlt
+// wird wie Abreißen (voll zurück, Deko) und neu Bauen: die Differenz. Liefert { ax, ay, money, mat: { r: n } (Saldo, negativ = zurück) } oder
+// einen Hinweis
+function rampFormPlan(x, y, form) {
+  const r = rampAt(x, y), Fm = rampFormOk(form) && RAMP_FORMS[form];
+  if (!r || !Fm) return 'Hier ist keine Gleis-Rampe';
+  if (r.form === form) return `${Fm.name} ist sie schon`;
+  const [Du, Dv] = STAIR_UP[r.rot], [tx, ty] = rampFields(r.ax, r.ay, r.rot, r.len)[r.len - 1], fx = tx - (Fm.len - 1) * Du, fy = ty - (Fm.len - 1) * Dv;
+  const ax = Math.min(fx, tx), ay = Math.min(fy, ty);
+  if (!!RAMP_FORMS[r.form].cut !== !!Fm.cut) return Fm.cut ? `${Fm.name} liegt in der Anhöhe – diese Rampe steht davor. Dafür abreißen und auf den Rand der Anhöhe neu bauen`
+    : `${Fm.name} steht vor der Wand – diese Rampe liegt in der Anhöhe. Dafür abreißen und vor der Wand neu bauen`;
+  rampIgnore = r.k;                                                     // probehalber ohne die alte prüfen (wie getragen: nichts absenken)
+  let err;
+  try { err = rampError(ax, ay, r.rot, Fm.len, true, form); } finally { rampIgnore = null; }
+  if (err) return err;
+  const old = rampPaid(r.t), mat = {};
+  for (const [k, n] of Object.entries(Fm.mat || {})) mat[k] = (mat[k] || 0) + n;
+  for (const [k, n] of Object.entries(old.mat || {})) mat[k] = (mat[k] || 0) - n;
+  const money = Fm.cost - old.cost;
+  if (money > 0 && state.money < money) return 'Zu wenig Taler';
+  for (const [k, n] of Object.entries(mat)) if (n > 0 && state.res[k] < n) return `Zu wenig ${RES[k].name} (${n} ${RES[k].icon} mehr nötig)`;
+  return { ax, ay, money, mat };
 }
-const rampStyleOf = t => (t && stairStyleOk(t.style) ? t.style : t && t.style == null ? rampStyleNew() : 'sand');
-// neu gebaute Rampe: Belag und Länge (build und Vorschau über paintNewOf)
-const rampNew = () => ({ style: rampStyleNew(), ...(rampNewLen === 2 ? { len: 2 } : {}) });
-// breite Rampe: diese und alle daneben, die mit ihr breit sind (Belag im Fenster für alle) – [[ax, ay], …] Ankerfelder
-function rampRow(x, y) {
-  const r0 = rampAt(x, y);
-  if (!r0) return [];
-  const seen = new Set([r0.k]), q = [r0], out = [];
-  while (q.length && out.length < 60) {
-    const r = q.shift(), [Du, Dv] = STAIR_UP[r.rot];
-    out.push([r.ax, r.ay]);
-    for (const [fx, fy] of rampFields(r.ax, r.ay, r.rot, r.len)) for (const sg of [1, -1]) {
-      const n = rampAt(fx - sg * Dv, fy + sg * Du);
-      if (n && !seen.has(n.k) && rampWide(rampAt(fx, fy), n)) { seen.add(n.k); q.push(n); }
-    }
-  }
-  return out;
+// Form wechseln (Fenster, in undoable): liefert den neuen Anker [ax, ay] oder null (Hinweis über fail)
+function setRampForm(x, y, form) {
+  const p = rampFormPlan(x, y, form);
+  if (typeof p === 'string') { fail(p); return null; }
+  const r = rampAt(x, y), t = r.t;
+  state.tiles.delete(r.k);
+  t.form = form; t.price = RAMP_FORMS[form].cost;
+  state.tiles.set(p.ax + ',' + p.ay, t);
+  state.money -= p.money;
+  for (const [k, n] of Object.entries(p.mat)) state.res[k] -= n;
+  if (Object.values(p.mat).some(n => n > 0) && typeof flashStore === 'function') flashStore(Object.fromEntries(Object.entries(p.mat).filter(([, n]) => n > 0)));
+  groundVersion++; sfx('deco'); recalc(); save();
+  return [p.ax, p.ay];
 }
 
 // --- Zeichnen ---
-// Aussehen eines Rampenfelds aus der Nachbarschaft: je Seite (m = −S, p = +S, S quer zur Steigung) 'h' Anhöhe (ihre Wand ist die Wange),
-// 'j' breite Rampe (Belag läuft durch), 'k' Keil mit Geländer; kind = Wandart der Anhöhe hinter dem oberen Feld; em/ep: die Außenwand des
-// Keils am oberen Feld läuft in der Wand der Anhöhe dahinter weiter (ein Stück darüber, bündig). r: rampAt bzw. Geist { t, ax, ay, rot, len, i };
-// real false: Geist – Nachbarhöhen wie gezeichnet (Vorschau in die Anhöhe, drawLevel)
+// Aussehen eines Rampenfelds aus der Nachbarschaft: je Seite (m = −S, p = +S, S quer zur Steigung) 'h' Anhöhe daneben (A: ihre Wand ist die
+// Wange; im schmalen Einschnitt auch ein gleicher Einschnitt daneben – Streifen an Streifen), 'j' gleicher Einschnitt A daneben (ein Einschnitt,
+// keine Wand), 'k' offen (tiefer: Damm-/Streifenwand bzw. dunkle Kante). cut: Feld liegt im Einschnitt, first: das vorderste davon; kind = Wandart
+// der Anhöhe hinter dem oberen Feld (Grasnarbe), wall = Wand des Damms (B: Stützmauer); rl = Gleis-Stil (RAIL_LOOK) der Strecke am Fuß bzw. oben.
+// r: rampAt bzw. Geist { t, ax, ay, rot, len, i, form }; real false: Geist – Nachbarhöhen wie gezeichnet (Vorschau in die Anhöhe, drawLevel)
 function rampLook(x, y, r, real = true) {
-  const L = real ? hillLevel : drawLevel, [Du, Dv] = STAIR_UP[r.rot], Su = -Dv, Sv = Du, lv = L(x, y);
+  const L = real ? hillLevel : drawLevel, rot = r.rot & 3, [Du, Dv] = STAIR_UP[rot], Su = -Dv, Sv = Du, lv = L(x, y);
+  const form = rampFormOk(r.form) ? r.form : 'a', Fm = RAMP_FORMS[form], cutI = i => i >= r.len - Fm.cut && i < r.len, cut = cutI(r.i);
   const side = sg => {
     const nx = x + sg * Su, ny = y + sg * Sv;
     if (L(nx, ny) > lv) return 'h';
     const n = rampAt(nx, ny);
-    return n && n.rot === r.rot && n.len === r.len && n.i === r.i && (!real || n.k !== r.k) ? 'j' : 'k';
+    if (n && n.rot === rot && n.form === form && n.i === r.i && (!real || n.k !== r.k)) return Fm.narrow && cut ? 'h' : rampWideForm(form) ? 'j' : 'k';
+    return 'k';
   };
-  const [tx, ty] = rampFields(r.ax, r.ay, r.rot, r.len)[r.len - 1], bx = tx + Du, by = ty + Dv, m = side(-1), p = side(1);
-  const ext = sg => r.i === r.len - 1 && L(bx, by) === lv + 1 && L(bx + sg * Su, by + sg * Sv) <= lv ? 1 : 0;
-  return { rot: r.rot, len: r.len, i: r.i, style: rampStyleOf(r.t), kind: hillWall(hillAt(bx, by)), m, p, em: m === 'k' ? ext(-1) : 0, ep: p === 'k' ? ext(1) : 0, top: groundTopAt(x, y) };
+  const F = rampFields(r.ax, r.ay, rot, r.len), [tx, ty] = F[r.len - 1], [fx, fy] = F[0], kind = hillWall(hillAt(tx + Du, ty + Dv));
+  const rail = [[fx - Du, fy - Dv], [tx + Du, ty + Dv]].map(([px, py]) => state.tiles.get(px + ',' + py)).find(t => t && t.b === 'schiene');
+  // freies Ende (Prellbock wie am Ende eines Gleises): vor dem Fuß keine Schiene auf seiner Ebene, hinter dem oberen Feld keine eine Ebene höher
+  const railOn = (px, py, lv) => { const t = state.tiles.get(px + ',' + py); return !!t && t.b === 'schiene' && L(px, py) === lv; };
+  return { rot, len: r.len, i: r.i, form, cut, first: cut && !cutI(r.i - 1), narrow: !!Fm.narrow, viadukt: !!Fm.viadukt, kind, wall: Fm.wall || kind,
+    m: side(-1), p: side(1), top: groundTopAt(x, y), rl: (DECO_LOOKS.schiene.forms[(rail && rail.form) || 0] || {}).id || 'schotter',
+    ef: r.i === 0 && !railOn(fx - Du, fy - Dv, L(fx, fy)), et: r.i === r.len - 1 && !railOn(tx + Du, ty + Dv, L(tx, ty) + 1) };
 }
-const rampSig = o => 'R' + o.rot + o.len + o.i + '|' + o.style + '|' + o.kind + '|' + o.m + o.p + o.em + o.ep + '|' + o.top;
-const RAMP_RAIL = 7;                                                     // Geländer: Höhe über dem Keil (wie an den Überdachungen)
-// Ein Rampenfeld malen. P(u, v, up) → Bildpunkt (Feldkoordinaten relativ zur Feldmitte, Höhe in Bildpunkten bei Zoom 1); x, y: Feld
-// (Musterraster). Von hinten nach vorn: Keil auf der abgewandten Seite, die Fahrbahn (Belag als Ganzes auf die Schräge gelegt), Keil vorn.
-// Bündig (Nutzer): hinten 0,0075 über die Feldgrenze, am Fuß 0,0075 flach auf den Boden davor (dort endet der Schatten genau an der Kante),
-// Wände derselben Ebene überlappen sich ein Stück unter dem später gezeichneten Bildchen
+const rampSig = o => 'G' + o.form + o.rot + o.len + o.i + '|' + o.kind + o.wall + '|' + o.m + o.p + '|' + o.top + '|' + o.rl + (o.ef ? 'f' : '') + (o.et ? 't' : '');
+// Gleis gerade über ein Rampenfeld von d0 bis d1 (längs; W(d, s) → Bildpunkt auf der Schräge), Farben und Maße wie drawRailBed (Bett ±RAIL_W
+// samt Rand, Schwellen alle 0,125 wie im Boden, zwei Schienen mit Glanz); Pflastergleis: Belag des Wegs bis an die Schienen. trim [x, y]: Büschel
+// und Blumen am Gleis wie im Boden (railTrim, fest nach Feld) – auf Damm und Einschnitt, nicht auf dem Steinviadukt
+function rampRail(W, d0, d1, lk, trim = null) {
+  const ds = [d0, ...[-0.5, 0.5].filter(d => d > d0 && d < d1), d1];  // Knicke der Höhe (oben waagerecht) mitnehmen
+  const band = w => [...ds.map(d => W(d, -w)), ...ds.slice().reverse().map(d => W(d, w))];
+  if (lk.pave) { const pl = pathLook(lk.pave); poly(band(RAIL_W + 0.05), C(pl.edge)); poly(band(RAIL_W + 0.02), C(pl.fill)); }
+  else {
+    poly(band(RAIL_W + 0.03), C(lk.edge)); poly(band(RAIL_W), C(lk.bed));
+    g.strokeStyle = C(lk.tie); g.lineWidth = 1.7; g.lineCap = 'butt'; g.beginPath();
+    for (let d = -0.4375; d < 0.5; d += 0.125) { const a = W(d, -0.15), b = W(d, 0.15); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+    g.stroke();
+    if (trim) railTrim(([d, s]) => W(d, s), [[[-0.5, 0], [0.5, 0]]], lk, trim[0], trim[1], 1);
+  }
+  const line = (o, col, w, dy) => { g.beginPath(); ds.forEach((d, i) => { const p = W(d, o); i ? g.lineTo(p[0], p[1] + dy) : g.moveTo(p[0], p[1] + dy); }); g.strokeStyle = C(col); g.lineWidth = w; g.lineCap = 'round'; g.stroke(); };
+  for (const o of [-RAIL_GAUGE, RAIL_GAUGE]) { line(o, lk.rail, lk.rw, 0); line(o, '#dfe3e8', 0.45, -0.4); }
+}
+// Prellbock an einem freien Ende der Rampe (rampLook ef/et; wie drawRailBed am Ende eines Gleises): quer über den Schienen, kurz vor der Kante
+function rampStop(W, o) {
+  for (const d of [...(o.ef ? [-0.48] : []), ...(o.et ? [0.48] : [])]) {               // wie im Boden knapp vor dem Ende der Schienen
+    const a = W(d, -0.17, 1.5), b = W(d, 0.17, 1.5);
+    g.strokeStyle = C('#d9534a'); g.lineWidth = 2.6; g.lineCap = 'round'; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
+    g.strokeStyle = C('#ffffff'); g.lineWidth = 1; g.beginPath(); g.moveTo(...lerp(a, b, 0.35)); g.lineTo(...lerp(a, b, 0.65)); g.stroke();
+  }
+}
+// Stirn eines Streifens im schmalen Einschnitt (an der Vorderkante seines ersten Felds, s0 … s1 quer): die Wand, die hier ohne Einschnitt stünde
+// (ganzes Feld, Seite und Muster wie paintHill), auf den Streifen zugeschnitten – so liegen Steine und Wurzeln wie an jeder Anhöhe. Die
+// Grasnarbe eigens für das Stück: an beiden Enden genau in der Mitte (wie paintHillWall), so läuft sie um die Ecke zur Wand des Einschnitts
+// und über die Feldgrenze zur Anhöhe daneben bündig weiter (ext: dort ein Stück darüber – nur, wo daneben Anhöhe ist)
+function rampStirn(P, x, y, UV, s0, s1, dir, kind, ext) {
+  const H = HILL_H, E = GR_E, S = HILL_STY[kind] || HILL_STY.fels, sa = Math.min(s0, s1), sb = Math.max(s0, s1), o = 0.5 + 2 * E;
+  const lo = sa <= -0.5 && ext ? -o : sa, hi = sb >= 0.5 && ext ? o : sb;
+  const [ua, va] = UV(-0.5, lo), [ub, vb] = UV(-0.5, hi);
+  g.save();
+  try {
+    g.beginPath(); [P(ua, va, -2), P(ub, vb, -2), P(ub, vb, H + 2), P(ua, va, H + 2)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+    if (dir === 'v') paintHillWall(P, -0.5, 0.5, 0.5, 0.5, 'v', kind, 0, H, x * 7 + y * 13, H, false, 1, E, E);
+    else paintHillWall(P, 0.5, -0.5, 0.5, 0.5, 'u', kind, 0, H, x * 11 + y * 5 + 3, H, false, 1, E, E);
+  } finally { g.restore(); }
+  const [a0, b0] = UV(-0.5, s0), [a1, b1] = UV(-0.5, s1), at = (t, h) => P(a0 + (a1 - a0) * t, b0 + (b1 - b0) * t, h);
+  const ext0 = Math.abs(s0) >= 0.5 && ext ? E / Math.abs(s1 - s0) : 0, ext1 = Math.abs(s1) >= 0.5 && ext ? E / Math.abs(s1 - s0) : 0, n = 2;
+  const low = i => H - S.lipH - (i % n ? hash(x * 3 + y, 90 + i, 157) : 0.5) * S.lipH * 0.7;
+  const pts = [at(-ext0, H + 0.4)];
+  for (let i = 0; i <= n; i++) pts.push(at(i / n, H + 0.4));
+  pts.push(at(1 + ext1, H + 0.4), at(1 + ext1, low(n)));
+  for (let i = n; i >= 0; i--) pts.push(at(i / n, low(i)));
+  pts.push(at(-ext0, low(0)));
+  poly(pts, C(S.lip));
+}
+// Ein Rampenfeld malen (Entwurf tools/gleisrampe-entwurf.js). P(u, v, up) → Bildpunkt (Feldkoordinaten relativ zur Feldmitte, Höhe in
+// Bildpunkten bei Zoom 1); x, y: Feld (Muster). Bündig (Nutzer): vorn flach 0,0075 auf den Boden davor (nur der Fuß), hinten 0,0075 unter bzw.
+// über das nächste Feld; Wände derselben Ebene reichen ein Stück unter das später gezeichnete Bildchen; Schichten nach der ganzen Höhe
 function paintRamp(P, o, x, y) {
-  const H = HILL_H, [Du, Dv] = STAIR_UP[o.rot & 3], Su = -Dv, Sv = Du, S = HILL_STY[o.kind] || HILL_STY.fels, E = 0.0075;
-  const h0 = H * o.i / o.len, h1 = H * (o.i + 1) / o.len, full = o.i === o.len - 1, prev = o.i > 0, next = !full;
+  const H = HILL_H, E = GR_E, [Du, Dv] = STAIR_UP[o.rot & 3], Su = -Dv, Sv = Du;
+  const h0 = H * o.i / o.len, h1 = H * (o.i + 1) / o.len, full = o.i === o.len - 1, prev = o.i > 0;
   const UV = (d, s) => [Du * d + Su * s, Dv * d + Sv * s];               // d längs (hinauf), s quer → (u, v)
   const hd = d => { const h = Math.max(0, h0 + (h1 - h0) * (d + 0.5)); return full ? Math.min(H, h) : h; };   // über die Enden hinaus waagerecht
   const W = (d, s, up = 0) => P(...UV(d, s), hd(d) + up);
-  const toward = Du + Dv > 0, nearP = Su + Sv > 0;                       // steigt zum Betrachter an; Seite +S liegt vorn
-  const lk = lookFar(pathLook(o.style), 1);
-  const lo = o.m === 'k' ? -0.5 + STAIR_CW : o.m === 'j' ? -0.51 : -0.5, hi = o.p === 'k' ? 0.5 - STAIR_CW : o.p === 'j' ? 0.51 : 0.5;
-  const seed = x * 5 + y * 9 + o.rot;
-  // Geländer auf dem Keil (wie an den Überdachungen): Pfosten etwa alle 0,24 über die ganze Rampe, Handlauf oben und ein zweiter auf 0,6
-  // (auf 0,5 liefe er im Bild fast genau auf der Innenkante des Keils). Zum Nachbarfeld derselben Rampe gerade Enden – dort geht es weiter
-  const rail = sg => {
-    const sR = sg * (0.5 - STAIR_CW / 2), col = C('#4f4a44'), t0 = 0.05, t1 = o.len - 0.05, n = 4 * o.len, at = (d, up) => W(d, sR, up);
-    const ln = (a, b, w, cap) => { g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = col; g.lineWidth = w; g.lineCap = cap; g.stroke(); };
-    const a = Math.max(t0, o.i) - o.i - 0.5, b = Math.min(t1, o.i + 1) - o.i - 0.5;   // Stück dieses Felds (d)
-    for (const [k, w] of [[RAMP_RAIL * 0.6, 0.6], [RAMP_RAIL, 1.1]]) ln(at(a, k), at(b, k), w, 'butt');
-    for (let j = 0; j <= n; j++) { const tt = t0 + (t1 - t0) * j / n; if (tt >= o.i && (tt < o.i + 1 || (full && tt <= o.len))) ln(at(tt - o.i - 0.5, 0), at(tt - o.i - 0.5, RAMP_RAIL), 0.9, 'round'); }
-  };
-  // Keil = schmale Anhöhe neben der Rampe: oben genau auf der Linie der Rampenkante, Oberseite in Bodenfarbe, sichtbare Seite als Wand mit
-  // derselben Grasnarbe. Oberseite und Wand reichen ein Stück unter das später gezeichnete Nachbarbild: zum nächsten Rampenfeld (steigt sie
-  // vom Betrachter weg, liegt das vordere davor, sonst das obere), hinten über die Anhöhe; die Außenwand am oberen Ende über die Wand der
-  // Anhöhe, in der sie weiterläuft (em/ep)
-  const keil = sg => {
-    const sOut = 0.5 * sg, sIn = sg * (0.5 - STAIR_CW), outVis = sg * (Su + Sv) > 0;
-    const sF = outVis ? sOut : sIn, nu = (outVis ? sg : -sg) * Su;      // sichtbare Seite: außen (vorderer Keil) bzw. innen (hinterer); zeigt nach +u?
-    const kf = !toward || !prev ? -0.5 - E : -0.5, kb = full || toward ? 0.5 + E : 0.5;
-    const topQ = [W(kf, sIn), W(kf, sOut), W(-0.5, sOut), W(0.5, sOut), W(kb, sOut), W(kb, sIn), W(0.5, sIn), W(-0.5, sIn)];
-    poly(topQ, C(o.top || S.lip));
-    if (!outVis) {                                                       // hinterer Keil: außen oben die dunkle Kante zur Wiese (wie bei der Anhöhe)
-      g.save();
-      try {
-        g.beginPath(); topQ.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
-        // genau auf der Kante (ohne Kappen an Boden und Oberkante; oben ab dem Ende waagerecht) – eine Sehne über die gekappten Enden lag
-        // oben bis zu 2 Bildpunkte darunter und traf die Kante der Anhöhe nicht (helle Kerbe an der Ecke)
-        const WL = (d, s) => P(...UV(d, s), h0 + (h1 - h0) * (d + 0.5));
-        const e = full ? [WL(-0.6, sOut), WL(0.5, sOut), W(0.6, sOut)] : [WL(-0.6, sOut), WL(0.6, sOut)], dk = 'rgba(45,85,30,0.5)', d1 = (H / 4 - h0) / (h1 - h0) - 0.5;
-        let st = dk;
-        if (d1 > -0.5) {                                                 // am Fuß liegt der Keil flach am Boden – dort ist keine Kante: bis ¼ Höhe einblenden
-          const a = W(-0.5, sOut), b = W(Math.min(0.5, d1), sOut), gr = g.createLinearGradient(a[0], a[1], b[0], b[1]);
-          if (gr) { gr.addColorStop(0, 'rgba(45,85,30,0)'); gr.addColorStop(1, dk); st = gr; }
-        }
-        g.beginPath(); e.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-        g.strokeStyle = st; g.lineWidth = 3; g.lineCap = 'butt'; g.stroke();
-      } finally { g.restore(); }
-    }
-    const [a0, b0] = UV(-0.5, sF), [a1, b1] = UV(0.5, sF);
-    const e0 = prev && !toward ? E : 0, e1 = (next && toward ? E : 0) + (outVis && (sg < 0 ? o.em : o.ep) ? E : 0);
-    paintHillWall(P, a0, b0, a1, b1, nu > 0 ? 'u' : 'v', o.kind, 0, h0, seed + 3 * sg, h1, true, 1, e0, e1, H);   // Schichten nach der ganzen Höhe: über die Feldgrenze bündig
-    if (o[sg < 0 ? 'm' : 'p'] === 'k') rail(sg);
-  };
-  if ((nearP ? o.m : o.p) === 'k') keil(nearP ? -1 : 1);
-  // Fahrbahn: eine schräge Fläche im Wegbelag, am Fuß flach auf den Boden davor, hinten ein Stück weiter (unter das obere Feld bzw. die Anhöhe)
-  const ft = prev ? -0.5 : -0.5 - E, bk = 0.5 + E;
-  const q = [UV(ft, lo), UV(ft, hi), UV(-0.5, hi), UV(0.5, hi), UV(bk, hi), UV(bk, lo), UV(0.5, lo), UV(-0.5, lo)];
-  const L = ([u, v]) => P(u, v, hd(u * Du + v * Dv));
-  poly(q.map(L), C(lk.fill));
-  // Muster flach gemalt und als Ganzes auf die schräge Ebene abgebildet (affin: h = hc + gu·u + gv·v) – so liegen die Steine auf der Rampe,
-  // und an Fuß und oberem Ende treffen sie genau die Steine des Wegs davor bzw. dahinter (einzeln angehoben verrutschten sie um ihre Höhe)
-  if (lk.pat) {
-    const k = h1 - h0, gu = k * Du, gv = k * Dv, hc = h0 + k / 2;
+  const sgF = Su + Sv > 0 ? 1 : -1, toward = Du + Dv > 0;                // Seite zum Betrachter; steigt zum Betrachter an
+  const ft = prev ? -0.5 : -0.5 - E, bk = 0.5 + E, ds = [ft, -0.5, 0.5, bk];
+  const quad = (s0, s1) => [...ds.map(d => W(d, s0)), ...ds.slice().reverse().map(d => W(d, s1))];
+  const lk = RAIL_LOOK[o.rl] || RAIL_LOOK.schotter, seed = x * 5 + y * 9 + o.rot, dk = 'rgba(45,85,30,0.5)';
+  const trace = pts => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); };
+  const K = { H, E, Du, Dv, Su, Sv, h0, h1, full, prev, UV, hd, W, sgF, toward, ft, bk, ds, quad, lk, seed, dk, trace };
+  if (o.viadukt) return paintViaduct(P, o, x, y, K);
+  if (o.narrow && o.cut) return paintRampCut(P, o, x, y, K);
+  // Damm (B, C unten; schmal ±GR_DW) bzw. Einschnitt A über das ganze Feld: Oberseite in Bodenfarbe, darauf das Gleis. Hinten an den schmalen
+  // Seiten etwas schmaler (sonst stand ihr Eck über der Stirn des Einschnitts dahinter)
+  const w = o.narrow ? GR_DW : 0.5, back = sgF > 0 ? o.m : o.p, front = sgF > 0 ? o.p : o.m;
+  const sa = -w - (back === 'j' && sgF > 0 ? E : 0), sb = w + (back === 'j' && sgF < 0 ? E : 0);   // breiter Einschnitt: hinten ein Stück über den Nachbarn
+  const nb = (s, sg) => Math.abs(s) >= 0.5 ? s : s - sg * 2 * E;
+  poly([W(ft, sa), W(-0.5, sa), W(0.5, sa), W(bk, nb(sa, -1)), W(bk, nb(sb, 1)), W(0.5, sb), W(-0.5, sb), W(ft, sb)], C(o.top));
+  rampRail(W, ft, bk, lk, [x, y]);
+  rampStop(W, o);
+  if (back === 'k') {                                                    // offene Seite hinten: dunkle Kante oben, am Fuß bis ¼ Höhe eingeblendet
+    const sOut = -w * sgF;
     g.save();
     try {
-      clipTo([q], L);
-      g.transform(1, -(gu - gv) / TW, 0, 1 - (gu + gv) / TH, 0, -hc);
-      patSeam = true;
-      pattern(([u, v]) => P(u, v, 0), lk.pat[0], x, y, 1, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill);
-    } finally { patSeam = false; g.restore(); }
+      trace(quad(-w, w)); g.closePath(); g.clip();
+      const WL = (d, s) => P(...UV(d, s), h0 + (h1 - h0) * (d + 0.5));
+      const e = full ? [WL(-0.6, sOut), WL(0.5, sOut), W(0.6, sOut)] : [WL(-0.6, sOut), WL(0.6, sOut)], d1 = (H / 4 - h0) / (h1 - h0) - 0.5;
+      let st = dk;
+      if (d1 > -0.5) { const a = W(-0.5, sOut), b = W(Math.min(0.5, d1), sOut), gr = g.createLinearGradient(a[0], a[1], b[0], b[1]); if (gr) { gr.addColorStop(0, 'rgba(45,85,30,0)'); gr.addColorStop(1, dk); st = gr; } }
+      trace(e); g.strokeStyle = st; g.lineWidth = 3; g.lineCap = 'butt'; g.stroke();
+    } finally { g.restore(); }
   }
-  if ((nearP ? o.p : o.m) === 'k') keil(nearP ? 1 : -1);
+  if (front === 'k') {                                                   // offene Seite vorn: Wand des Damms, Grasnarbe in der Farbe der Anhöhe
+    const sF = w * sgF, [a0, b0] = UV(-0.5, sF), [a1, b1] = UV(0.5, sF), nu = sgF * Su;
+    // oben am Ende nur bis zur hinteren Kante der Oberseite: die Grasnarbe steht 0,4 über der Kante und schaute sonst als hellgrüner Zipfel über
+    // die Wand dahinter (Stirn des Einschnitts, Anhöhe)
+    const c = W(0.5, sF), q = W(0.5, -sF), f = W(-0.5, sF), dx = q[0] - c[0], dy = q[1] - c[1], sd = Math.sign(dx * (f[1] - c[1]) - dy * (f[0] - c[0]));
+    const e0 = prev && !toward ? E : 0, e1 = !full && toward ? E : 0;    // unter das später gezeichnete Nachbarfeld derselben Rampe
+    g.save();
+    try {
+      if (full) { g.beginPath(); g.moveTo(c[0] + dx * 50, c[1] + dy * 50); g.lineTo(c[0] - dx * 50, c[1] - dy * 50);
+        g.lineTo(c[0] - dx * 50 - sd * dy * 50, c[1] - dy * 50 + sd * dx * 50); g.lineTo(c[0] + dx * 50 - sd * dy * 50, c[1] + dy * 50 + sd * dx * 50); g.closePath(); g.clip(); }
+      const S0 = HILL_STY[o.wall] || HILL_STY.fels;
+      HILL_STY[o.wall] = { ...S0, lip: (HILL_STY[o.kind] || S0).lip };   // Stützmauer vor Fels: an der Ecke sonst zwei Grüntöne
+      try { paintHillWall(P, a0, b0, a1, b1, nu > 0 ? 'u' : 'v', o.wall, 0, h0, seed + 3, h1, true, 1, e0, e1, H); } finally { HILL_STY[o.wall] = S0; }
+    } finally { g.restore(); }
+  }
+}
+// Schmaler Einschnitt (C oben): links und rechts bleibt ein Streifen Anhöhe stehen (bis ±GR_DW), dazwischen der Boden mit dem Gleis. Im ersten
+// Feld (davor kein Einschnitt) vorn die Stirn der Streifen – sie setzt die Wand der Anhöhe daneben fort (steigt die Rampe zum Betrachter an,
+// liegt sie abgewandt: dort oben die dunkle Kante). Ist neben einem Streifen tiefer Boden ('k'), hat er außen eine Wand (vorn) bzw. oben die
+// dunkle Kante (hinten); sonst reicht er ein Stück über die Feldgrenze (gleich hoch)
+function paintRampCut(P, o, x, y, K) {
+  const { H, E, Du, UV, W, sgF, toward, ft, bk, quad, lk, seed, dk, trace, h0, h1, full } = K, Hq = (d, s) => P(...UV(d, s), H);
+  const kind = o.kind, back = sgF > 0 ? o.m : o.p, front = sgF > 0 ? o.p : o.m, fs = o.first ? -0.5 : -0.5 - E;
+  const topQ = (s0, s1) => [Hq(fs, s0), Hq(0.5 + E, s0), Hq(0.5 + E, s1), Hq(fs, s1)];
+  const sBo = -(back === 'h' ? 0.5 + E : 0.5) * sgF, sBi = -GR_DW * sgF, sFi = GR_DW * sgF, sFo = (front === 'h' ? 0.5 + E : 0.5) * sgF;
+  const dirS = sgF * K.Su > 0 ? 'u' : 'v', dirD = -Du > 0 ? 'u' : 'v', stirn = o.first && !toward;
+  const e0 = !o.first && !toward ? E : 0, e1 = !full && toward ? E : 0;  // Wände unter das später gezeichnete Nachbarfeld
+  // dunkle Kanten oben als ein Linienzug je Streifen (an Ecken auf Gehrung, nie doppelt dunkel), über die Enden hinaus und auf die Oberseite
+  // zugeschnitten – so treffen sie die Kante der Anhöhe daneben genau
+  const edge = (pts, clipPts, st = dk) => { if (pts.length < 2) return; g.save(); try { trace(clipPts); g.closePath(); g.clip(); trace(pts); g.strokeStyle = st; g.lineWidth = 3; g.lineCap = 'butt'; g.lineJoin = 'miter'; g.stroke(); } finally { g.restore(); } };
+  const down = o.first && toward;                                        // steigt zum Betrachter an: vorn (abgewandt) geht es hinab
+  // hinterer Streifen: Oberseite, Wand zum Einschnitt, dunkle Kanten, Stirn
+  const bq = topQ(sBo, sBi);
+  poly(bq, C(o.top));
+  { const [a0, b0] = UV(-0.5, sBi), [a1, b1] = UV(0.5, sBi); paintHillWall(P, a0, b0, a1, b1, dirS, kind, 0, H, seed + 11, H, true, 1, e0, e1); }
+  edge([...(back === 'k' ? [Hq(0.6, -0.5 * sgF), Hq(down ? -0.5 : -0.6, -0.5 * sgF)] : down ? [Hq(-0.5, -0.6 * sgF)] : []), ...(down ? [Hq(-0.5, 0)] : [])], bq);
+  if (stirn) rampStirn(P, x, y, UV, -0.5 * sgF, sBi, dirD, kind, back === 'h');
+  poly(quad(-GR_DW, GR_DW), C(o.top));                                  // Boden (deckt den unteren Teil der Wand) und Gleis
+  rampRail(W, ft, bk, lk, [x, y]);
+  rampStop(W, o);
+  // vorderer Streifen: Oberseite mit dunkler Kante zum Einschnitt – sie blendet aus, wo der Boden die Oberkante erreicht (oben am Ende gleich hoch)
+  const fq = topQ(sFi, sFo);
+  poly(fq, C(o.top));
+  const dA = (H * 0.75 - h0) / (h1 - h0) - 0.5, dB = (H - h0) / (h1 - h0) - 0.5;
+  let st = dk;
+  if (dA < 0.5 + E) { const a = Hq(dA, sFi), b = Hq(dB, sFi), gr = g.createLinearGradient(a[0], a[1], b[0], b[1]); if (gr) { gr.addColorStop(0, dk); gr.addColorStop(1, 'rgba(45,85,30,0)'); st = gr; } }
+  edge(down ? [Hq(0.6, sFi), Hq(-0.5, sFi), Hq(-0.5, 0.6 * sgF)] : [Hq(0.6, sFi), Hq(-0.6, sFi)], fq, st);
+  if (front === 'k') { const [a0, b0] = UV(-0.5, 0.5 * sgF), [a1, b1] = UV(0.5, 0.5 * sgF); paintHillWall(P, a0, b0, a1, b1, dirS, kind, 0, H, seed + 13, H, true, 1, e0, e1); }
+  if (stirn) rampStirn(P, x, y, UV, sFi, 0.5 * sgF, dirD, kind, front === 'h');
+}
+// Viadukt (D): schmaler als das Feld (±GR_VW), Wand mit Bögen, Brüstung beidseits, Gleis obenauf. Bögen über die ganze Rampe (viaductArches:
+// zwei je Feld, Pfeiler an Feldgrenze und Feldmitte), Mauerwerk längs der ganzen Rampe ausgerichtet – über Feldgrenzen bündig
+function viaductArches(len) {
+  const out = [], r = 0.17;
+  for (let c = 0.25; c < len; c += 0.5) {
+    const hc = HILL_H * (c - r) / len - 4.5;                             // Scheitel 4,5 unter der Fahrbahn an ihrem unteren Ende; zu niedrig: voll
+    if (hc < 7) continue;
+    out.push({ c, r, hc, hs: hc - Math.min(6, hc - 1.5) });
+  }
+  return out;
+}
+function paintViaduct(P, o, x, y, K) {
+  const { E, UV, hd, W, ds, sgF, prev, lk, h0, h1 } = K, i0 = o.i, [Du, Dv] = STAIR_UP[o.rot & 3];
+  const sF = sgF * GR_VW, sB = -sgF * GR_VW, side = sgF * K.Su > 0 ? GR_STONE.u : GR_STONE.v;
+  const Wh = (d, s, h) => P(...UV(d, s), h);
+  const trace = pts => pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]));
+  const strip = (s0, s1, up) => [...ds.map(d => W(d, s0, up)), ...ds.slice().reverse().map(d => W(d, s1, up))];
+  const sBi = sB + sgF * GR_PW;                                           // hintere Brüstung: Innenseite und Oberseite
+  poly([...ds.map(d => W(d, sBi, 0)), ...ds.slice().reverse().map(d => W(d, sBi, GR_PH))], C(shade(GR_STONE.v, -0.08)));
+  poly(strip(sB, sBi, GR_PH), C(GR_STONE.top));
+  poly(strip(sBi, sF - sgF * GR_PW, 0), C(GR_STONE.deck));               // Fahrbahn und Gleis
+  rampRail(W, ds[0], ds[3], lk);
+  rampStop(W, o);
+  // vordere Wand mit Bögen (d − 0,5 … 0,5 im Feld, vorn ein Stück unter das Feld davor, hinten ein Hauch über das dahinter)
+  const dA = -0.5 - (prev ? E : 0), dB = 0.5 + E;
+  const opens = viaductArches(o.len).map(a => ({ ...a, d: a.c - i0 - 0.5 })).filter(a => a.d + a.r > -0.5 && a.d - a.r < 0.5);
+  const archPts = (a, s) => {
+    const out = [Wh(a.d - a.r, s, -1)];
+    for (let k = 0; k <= 16; k++) { const t = Math.PI - k * Math.PI / 16; out.push(Wh(a.d + Math.cos(t) * a.r, s, a.hs + Math.sin(t) * (a.hc - a.hs))); }
+    out.push(Wh(a.d + a.r, s, -1));
+    return out;
+  };
+  const wallPts = s => { const dd = [dA, ...[-0.5, 0.5].filter(d => d > dA && d < dB), dB]; return [...dd.map(d => Wh(d, s, 0)), ...dd.slice().reverse().map(d => W(d, s, 0))]; };
+  const inner = shade(side, -0.4), pier = shade(side, -0.16);
+  for (const a of opens) {                                               // durch die Öffnung: Rückwand (mit ihrer Öffnung) und Laibung
+    const Fo = archPts(a, sF), Bo = archPts(a, sB);
+    g.save();
+    try {
+      g.beginPath(); trace(wallPts(sF)); g.closePath(); g.clip();
+      g.beginPath(); trace(Fo); g.closePath(); g.clip();
+      g.beginPath(); trace(wallPts(sB)); g.closePath(); trace(Bo); g.closePath();
+      g.fillStyle = C(inner); g.fill('evenodd');
+      // Laibung: nur Flächen, die zum Betrachter zeigen – Normale (Δh, −Δd) gegen die Blickrichtung (1, 1, 32/39,2 je Feld; 39,2 Bildpunkte
+      // Höhe = 1 Feld). Von oben sieht man nie ins Gewölbe, nur die Laibung des hinteren Pfeilers
+      const pts = [[a.d - a.r, -1], ...Array.from({ length: 17 }, (_, k) => { const t = Math.PI - k * Math.PI / 16; return [a.d + Math.cos(t) * a.r, a.hs + Math.sin(t) * (a.hc - a.hs)]; }), [a.d + a.r, -1]];
+      for (let k = 0; k < Fo.length - 1; k++) {
+        const dd = pts[k + 1][0] - pts[k][0], dh = (pts[k + 1][1] - pts[k][1]) / 39.2;
+        if (dh * (Du + Dv) - 0.816 * dd > 1e-6) poly([Fo[k], Fo[k + 1], Bo[k + 1], Bo[k]], C(pier));
+      }
+    } finally { g.restore(); }
+  }
+  g.save();
+  try {
+    g.beginPath(); trace(wallPts(sF)); g.closePath(); g.clip();
+    g.beginPath(); g.rect(-1e4, -1e4, 2e4, 2e4); for (const a of opens) { trace(archPts(a, sF)); g.closePath(); } g.clip('evenodd');
+    poly(wallPts(sF), C(side));
+    const RH = 4.2, BL = 0.3;                                            // Mauerwerk in festen Steinen (wie archWall)
+    g.strokeStyle = C(shade(side, -0.2)); g.lineWidth = 0.6; g.lineCap = 'butt'; g.beginPath();
+    for (let k = 0, h = -1; h < HILL_H + 2; k++, h += RH) {
+      const p0 = Wh(dA, sF, h), p1 = Wh(dB, sF, h); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+      const sh = (k & 1) * BL / 2, g0 = i0 + dA + 0.5;
+      // Stoßfugen bis einschließlich der Feldgrenze dahinter (dieses Feld liegt darüber – sonst nur eine halbe Fuge)
+      for (let s = Math.ceil((g0 - sh) / BL) * BL + sh; s < i0 + 1 + 1e-6; s += BL) { const d = s - i0 - 0.5, q0 = Wh(d, sF, h), q1 = Wh(d, sF, h + RH); g.moveTo(q0[0], q0[1]); g.lineTo(q1[0], q1[1]); }
+    }
+    g.stroke();
+  } finally { g.restore(); }
+  g.strokeStyle = C(shade(side, 0.14)); g.lineWidth = 0.8; g.lineCap = 'butt';   // heller Bogenrand
+  for (const a of opens) { g.save(); try { g.beginPath(); trace(wallPts(sF)); g.closePath(); g.clip(); g.beginPath(); trace(archPts(a, sF).slice(1, -1)); g.stroke(); } finally { g.restore(); } }
+  // vordere Brüstung: Außenseite (in der Ebene der Wand, etwas heller) und Oberseite; am Fuß die Stirn. Außen reicht sie als Gesims 1,6 unter
+  // die Fahrbahn – dort liefen die waagerechten Fugen sonst flach in die schräge Oberkante (lange dünne Keile)
+  const sFi = sF - sgF * GR_PW, gs = d => -Math.min(1.6, hd(d)), dk = -0.5 + (1.6 - h0) / (h1 - h0), dg = [ds[0], ds[1], ...(dk > -0.5 && dk < 0.5 ? [dk] : []), ...ds.slice(2)];   // am Fuß nie unter den Boden
+  poly([...dg.map(d => W(d, sF, gs(d))), ...ds.slice().reverse().map(d => W(d, sF, GR_PH))], C(shade(side, 0.06)));
+  g.strokeStyle = C(shade(side, -0.12)); g.lineWidth = 0.5; g.lineCap = 'butt'; g.beginPath();
+  dg.forEach((d, i) => { const p = W(d, sF, gs(d)); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); g.stroke();
+  poly(strip(sFi, sF, GR_PH), C(GR_STONE.top));
+  // Stirnseiten der Brüstungen: am Fuß, wenn die Rampe vom Betrachter weg steigt, oben am Ende, wenn sie zu ihm hin steigt (dort ragen sie über
+  // die Anhöhe davor); die abgewandten nie (sie lägen über Fahrbahn und Brüstung)
+  const ends = [...(!prev && !K.toward ? [-0.5] : []), ...(K.full && K.toward ? [0.5] : [])];
+  for (const d of ends) for (const s0 of [sBi, sF]) { const s1 = s0 === sF ? sFi : sB; poly([W(d, s0, 0), W(d, s1, 0), W(d, s1, GR_PH), W(d, s0, GR_PH)], C(shade(GR_STONE.v, -0.04))); }
 }
 // drawObject 'huegelrampe' (draw-objects.js). Steht genau diese Rampe auf (x, y), malt es dieses eine Feld bei (cx, cy) – render.js zeichnet
 // jedes Rampenfeld für sich (eigene Reihenfolge, nie in Streifen). Sonst (Vorschau beim Bauen/Verschieben, Bildchen der Leiste): (x, y) ist
@@ -1305,17 +1625,17 @@ function drawHillRamp(cx, cy, z, x, y, t) {
   const r = rampAt(x, y);
   t = t || (r && r.t);
   if (!t) return;
-  const rot = (t.rot || 0) & 3, len = rampLen(t);
-  if (r && (r.t === t || (r.rot === rot && r.len === len && r.t.style === t.style))) { rampFieldDraw(cx, cy, z, x, y, r, true); return; }
+  const rot = (t.rot || 0) & 3, form = rampFormOf(t), len = RAMP_FORMS[form].len;
+  if (r && (r.t === t || (r.rot === rot && r.form === form))) { rampFieldDraw(cx, cy, z, x, y, r, true); return; }
   const F = rampFields(x, y, rot, len), mx = x + (rot & 1 ? (len - 1) / 2 : 0), my = y + (rot & 1 ? 0 : (len - 1) / 2);
   const order = F.map((p, i) => [p, i]).sort((a, b) => a[0][0] + a[0][1] - b[0][0] - b[0][1]).map(([[fx, fy], i]) => {
     const du = fx - mx, dv = fy - my;
     return [cx + (du - dv) * TW / 2 * z, cy + (du + dv) * TH / 2 * z, fx, fy, i];
   });
-  const draw = () => { for (const [px, py, fx, fy, i] of order) rampFieldDraw(px, py, z, fx, fy, { t, ax: x, ay: y, rot, len, i }, false); };
-  // Geist (halb durchsichtig) über 2 Felder: erst deckend zusammensetzen, dann einmal durchsichtig darüber – sonst stand, wo sich die Felder
-  // bündig überlappen, ein heller Strich quer über der Rampe
-  if (len < 2 || g.globalAlpha >= 1) { draw(); return; }
+  const draw = () => { for (const [px, py, fx, fy, i] of order) rampFieldDraw(px, py, z, fx, fy, { t, ax: x, ay: y, rot, len, i, form }, false); };
+  // Geist (halb durchsichtig) über mehrere Felder: erst deckend zusammensetzen, dann einmal durchsichtig darüber – sonst stand, wo sich die
+  // Felder bündig überlappen, ein heller Strich quer über der Rampe
+  if (g.globalAlpha >= 1) { draw(); return; }
   const B = HILL_BOX, tr = g.getTransform ? g.getTransform() : null, sc = Math.max(0.1, tr ? Math.hypot(tr.a, tr.b) : 1);
   const x0 = Math.min(...order.map(o => o[0])) + B.left * z, y0 = Math.min(...order.map(o => o[1])) + B.top * z;
   const w = Math.max(...order.map(o => o[0])) + (B.left + B.w) * z - x0, h = Math.max(...order.map(o => o[1])) + (B.top + B.h) * z - y0;
@@ -1334,8 +1654,8 @@ function rampFieldDraw(px, py, z, x, y, r, real) {
   const key = real ? 'r' + x + ',' + y : 'rg' + r.i;
   const want = DPR * Math.pow(2, Math.ceil(Math.log2(Math.max(z, 0.2)) * 2 - 1e-9) / 2);
   let e = hillSprites.get(key);
-  // Aussehen nur neu bestimmen, wenn sich am Spielstand etwas getan hat (Belag im Fenster: groundVersion++)
-  const ver = groundVersion + ':' + (typeof GL !== 'undefined' ? GL.drawEpoch : 0) + ':' + (state.hills ? state.hills.size : 0) + ':' + state.tiles.size + (FOG ? 'n' : '') + '|' + r.rot + r.len + r.t.style;
+  // Aussehen nur neu bestimmen, wenn sich am Spielstand etwas getan hat (Form im Fenster, Gleis-Stil daneben: groundVersion++)
+  const ver = groundVersion + ':' + (typeof GL !== 'undefined' ? GL.drawEpoch : 0) + ':' + (state.hills ? state.hills.size : 0) + ':' + state.tiles.size + (FOG ? 'n' : '') + '|' + r.rot + r.form;
   const fresh = real && e && e.ver === ver, o = fresh ? e.o : rampLook(x, y, r, real);
   const base = fresh ? e.base : rampSig(o) + (real ? '' : '|' + x + ',' + y) + (FOG ? 'n' : ''), sig = base + '|' + want.toFixed(3);
   if (e && e.base === base) { e.ver = ver; e.o = o; }
@@ -1356,29 +1676,75 @@ function rampFieldDraw(px, py, z, x, y, r, real) {
   const B = HILL_BOX;
   g.drawImage(e.c, px + B.left * z, py + B.top * z, B.w * z, B.h * z);
 }
-// Für Figuren und Fahrzeuge auf der Rampe (nach ihnen aufrufen, nur im Feld der Rampe): der vordere Keil mit Geländer liegt immer vor ihnen –
-// aus dem Bildchen noch einmal darüber. Die Fahrbahn selbst verdeckt nie etwas (auch steigend zum Betrachter ist sie ihm zugewandt)
-function drawHillRampOver(x, y, z) {
+// Über einen Zug auf der Rampe (nach ihm aufrufen): was im Feld (x, y) der Rampe vor ihm liegt, aus dem Bildchen noch einmal darüber – im
+// schmalen Einschnitt der vordere Streifen Anhöhe (sein ganzer Block), am Viadukt die vordere Brüstung. Damm und Einschnitt A liegen nie vor
+// dem Zug (die Anhöhen daneben sind eigene Felder). lift: um so viel (Bildschirmpunkte) ist g gerade nach oben verschoben (wird aufgehoben)
+function drawHillRampOver(x, y, z, lift = 0) {
   const e = rampAt(x, y) && hillSprites.get('r' + x + ',' + y), o = e && e.o;
-  if (!o) return;
-  const [Du, Dv] = STAIR_UP[o.rot & 3], Su = -Dv, Sv = Du, nearP = Su + Sv > 0, sg = nearP ? 1 : -1;
-  if (o[sg < 0 ? 'm' : 'p'] !== 'k') return;
-  const H = HILL_H, c = toScreen(x, y), h0 = H * o.i / o.len, h1 = H * (o.i + 1) / o.len;
-  const W = (d, s, h) => { const u = Du * d + Su * s, v = Dv * d + Sv * s; return [c.x + (u - v) * TW / 2 * z, c.y + (u + v) * TH / 2 * z - h * z]; };
-  const pts = hull([[-0.5, h0], [0.5, h1]].flatMap(([d, h]) => [W(d, 0.5 * sg, 0), W(d, 0.5 * sg, h + RAMP_RAIL + 1), W(d, sg * (0.5 - STAIR_CW), h + RAMP_RAIL + 1), W(d, sg * (0.5 - STAIR_CW), h)]));
-  g.save();
-  try {
-    g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
-    const B = HILL_BOX; g.drawImage(e.c, c.x + B.left * z, c.y + B.top * z, B.w * z, B.h * z);
-  } finally { g.restore(); }
+  if (!o || !(o.viadukt || (o.narrow && o.cut))) return;
+  const H = HILL_H, [Du, Dv] = STAIR_UP[o.rot & 3], Su = -Dv, Sv = Du, sgF = Su + Sv > 0 ? 1 : -1, c = toScreen(x, y);
+  const h0 = H * o.i / o.len, h1 = Math.min(H, H * (o.i + 1) / o.len);
+  const Wp = (d, s, h) => { const u = Du * d + Su * s, v = Dv * d + Sv * s; return [c.x + (u - v) * TW / 2 * z, c.y + (u + v) * TH / 2 * z - h * z]; };
+  const sF = sgF * GR_VW, sFi = sF - sgF * GR_PW, E = GR_E;
+  // Viadukt: die Brüstung als Ganzes (Umriss). Schmaler Einschnitt: nur die Flächen des vorderen Streifens, die man sieht – Oberseite, Wand
+  // außen (nur bei tieferem Boden daneben, 'k'), Stirn vorn (paintRampCut). Nie sein Umriss: darin lagen Boden und Gleis des Einschnitts (wo die
+  // Anhöhe daneben die Außenseite deckt), die dann über der Anhöhe davor standen (Nutzer: „nichts steht über“)
+  const front = sgF > 0 ? o.p : o.m, so = 0.5 + (front === 'h' ? E : 0), ss = 0.5 + (front === 'h' ? 2 * E : 0), d0 = o.first ? -0.5 : -0.5 - E;   // Stirn: wie rampStirn
+  const faces = o.viadukt ? [hull([[-0.5, h0], [0.5, h1]].flatMap(([d, h]) => [Wp(d, sF, h - 0.5), Wp(d, sF, h + GR_PH + 0.6), Wp(d, sFi, h + GR_PH + 0.6), Wp(d, sFi, h)]))]
+    : [[Wp(d0, GR_DW * sgF, H), Wp(0.5 + E, GR_DW * sgF, H), Wp(0.5 + E, so * sgF, H), Wp(d0, so * sgF, H)],
+      ...(front === 'k' ? [[Wp(-0.5 - E, 0.5 * sgF, -2), Wp(0.5 + E, 0.5 * sgF, -2), Wp(0.5 + E, 0.5 * sgF, H + 0.6), Wp(-0.5 - E, 0.5 * sgF, H + 0.6)]] : []),
+      ...(o.first && !(Du + Dv > 0) ? [[Wp(-0.5, GR_DW * sgF, -2), Wp(-0.5, ss * sgF, -2), Wp(-0.5, ss * sgF, H + 0.6), Wp(-0.5, GR_DW * sgF, H + 0.6)]] : [])];
+  const B = HILL_BOX;
+  for (const pts of faces) {
+    g.save();
+    try {
+      if (lift) g.translate(0, lift);
+      g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+      g.drawImage(e.c, c.x + B.left * z, c.y + B.top * z, B.w * z, B.h * z);
+    } finally { g.restore(); }
+  }
 }
-// Vorschaubild (Leiste, Bau-Infofenster): ein Eck Anhöhe (Felswand), rechts davor die eingelassene Rampe, offene Seite mit Keil und Geländer
-function drawRampIcon(cx, cy, z, style) {
-  const k = z * 0.56, H = HILL_H, P = (u, v, up = 0) => [cx + (u - v) * TW / 2 * k, cy + (u + v + 0.5) * TH / 2 * k - (up - H * 0.45) * k];
-  const top = (u, v) => poly([P(u - 0.5, v - 0.5, H), P(u + 0.5, v - 0.5, H), P(u + 0.5, v + 0.5, H), P(u - 0.5, v + 0.5, H)], C('#a2d879'));
-  const at = (u, v) => (a, b, h) => P(u + a, v + b, h);
-  top(-1, -1);
-  top(0, -1); paintHillWall(at(0, -1), 0.5, -0.5, 0.5, 0.5, 'u', 'fels', 0, H, 3);
-  top(-1, 0); paintHillWall(at(-1, 0), 0.5, -0.5, 0.5, 0.5, 'u', 'fels', 0, H, 5); paintHillWall(at(-1, 0), -0.5, 0.5, 0.5, 0.5, 'v', 'fels', 0, H, 7);
-  paintRamp(at(0, 0), { rot: 0, len: 1, i: 0, style: stairStyleOk(style) ? style : 'sand', kind: 'fels', m: 'h', p: 'k', em: 1, ep: 1, top: '#a2d879' }, 1e6, 1e6);
+// dasselbe für alle Felder der Rampe durch (x, y), die längs a0 … a1 (rampAlong: 0 Fuß … len oben) unter dem Zug liegen
+function rampOverSpan(x, y, a0, a1, z, lift = 0) {
+  const r = rampAt(x, y);
+  if (!r) return;
+  rampFields(r.ax, r.ay, r.rot, r.len).forEach(([fx, fy], i) => { if (i + 1 > a0 && i < a1) drawHillRampOver(fx, fy, z, lift); });
+}
+// Schatten eines Wagens auf der Gleis-Rampe (movers.js drawTrainCarBody, vor seiner Ellipse): neben Damm und Viadukt fällt er nicht auf deren
+// Wand – die Streifen quer neben ihrer Oberseite (|quer| > Breite, über die Felder vor der Anhöhe, in der Höhe der Schräge) spart der Ausschnitt
+// aus (sonst hingen Schattenreste an der Stützmauer bzw. unter der Brüstung). S(u, v, h) → Bildpunkt. Liefert, ob ausgeschnitten wurde
+function rampShadowClip(x, y, S) {
+  const r = rampAt(x, y), Fm = r && RAMP_FORMS[r.form], w = !Fm ? 0 : Fm.viadukt ? GR_VW : Fm.narrow ? GR_DW : 0, n = r ? r.len - (Fm.cut || 0) : 0;
+  if (!w || n <= 0) return false;
+  const [Du, Dv] = STAIR_UP[r.rot], [fx, fy] = rampFields(r.ax, r.ay, r.rot, r.len)[0];
+  const b = hillLift(fx, fy), Wp = (d, s) => S(fx + Du * d - Dv * s, fy + Dv * d + Du * s, b + HILL_H * (d + 0.5) / r.len);   // d längs ab der Mitte des Fußes, s quer
+  g.beginPath(); g.rect(-1e5, -1e5, 2e5, 2e5);
+  for (const sg of [-1, 1]) [Wp(-0.5, sg * w), Wp(n - 0.5, sg * w), Wp(n - 0.5, sg * 2), Wp(-0.5, sg * 2)].forEach((p, i) => { if (i) g.lineTo(p[0], p[1]); else g.moveTo(p[0], p[1]); if (i === 3) g.closePath(); });
+  g.clip('evenodd');
+  return true;
+}
+// Vorschaubild (Leiste, Bau-Infofenster): ein Stück Anhöhe (Felswand) mit Gleis oben, davor bzw. darin die Gleis-Rampe der Form form
+function drawRampIcon(cx, cy, z, form) {
+  // so groß wie das Bild der Treppe (2 × 2 Felder bei z · 0,56): die ganze Szene (3 Felder breit, Länge + 1 tief) passt hinein
+  const Fm = RAMP_FORMS[rampFormOk(form) ? form : 'a'], len = Fm.len, H = HILL_H, k = z * 2.25 / (len + 4);
+  const P = (u, v, up = 0) => [cx + (u - v - (2 - len) / 2) * TW / 2 * k, cy + (u + v - (len - 2) / 2) * TH / 2 * k - (up - H * 0.5) * k];
+  const hill = new Set();
+  for (let v = -1; v < Fm.cut; v++) for (let u = -1; u <= 1; u++) if (u || v < 0) hill.add(u + ',' + v);
+  const at = (u, v) => (a, b, h = 0) => P(u + a, v + b, h);
+  const cells = [];
+  for (let v = -1; v < len; v++) for (let u = -1; u <= 1; u++) if (hill.has(u + ',' + v) || u === 0) cells.push([u, v]);
+  cells.sort((a, b) => a[0] + a[1] - b[0] - b[1] || a[0] - b[0]);
+  for (const [u, v] of cells) {
+    if (hill.has(u + ',' + v)) {
+      const A = at(u, v);
+      poly([A(-0.5, -0.5, H), A(0.5, -0.5, H), A(0.5, 0.5, H), A(-0.5, 0.5, H)], C('#a2d879'));
+      if (!hill.has(u + ',' + (v + 1))) paintHillWall(A, -0.5, 0.5, 0.5, 0.5, 'v', 'fels', 0, H, u * 7 + v * 13);
+      if (!hill.has((u + 1) + ',' + v)) paintHillWall(A, 0.5, -0.5, 0.5, 0.5, 'u', 'fels', 0, H, u * 11 + v * 5);
+      if (u === 0) rampRail((d, s) => A(s, -d, H), -0.5, 0.5, RAIL_LOOK.schotter);   // das Gleis oben weiter
+    } else {
+      const i = len - 1 - v, cut = i >= len - Fm.cut;
+      paintRamp(at(u, v), { rot: 0, len, i, form, cut, first: cut && i === len - Fm.cut, narrow: !!Fm.narrow, viadukt: !!Fm.viadukt, kind: 'fels', wall: Fm.wall || 'fels',
+        m: cut ? 'h' : 'k', p: cut ? 'h' : 'k', top: '#a2d879', rl: 'schotter' }, 1e6, 1e6);
+    }
+  }
 }

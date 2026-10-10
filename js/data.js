@@ -23,6 +23,21 @@ const TESTWELT = (new URLSearchParams(location.search).get('welt') || '').replac
 // Zu Besuch (Block 95): ?besuch=<Spiegel-Kennung> – fremde Insel live ansehen, nichts speichern, nichts bauen
 const VISIT = (new URLSearchParams(location.search).get('besuch') || '').replace(/[^a-z0-9]/g, '') || null;
 
+// Gleis-Rampe (hills.js): die vier Formen ('a'–'d' = t.form). len Felder in Steigrichtung, die oberen cut davon liegen in der Anhöhe
+// (eingelassen), narrow: schmal wie das Gleis (Damm, schmaler Einschnitt), viadukt: auf Steinbögen, wall: Wand des Damms (sonst wie die
+// Anhöhe). Preise: Stein für Erdarbeiten, Pflastersteine für Mauern und Bögen, Metall fürs Gleis. where: Hinweis, wohin sie gehört
+const RAMP_FORMS = {
+  a: { len: 2, cut: 2, name: 'Einschnitt A', short: '2 Felder · eingelassen', cost: 400, mat: { stein: 8, metall: 2 },
+    where: 'Einschnitt A liegt ganz in der Anhöhe: 2 Felder in ihren Rand hinein, dahinter bleibt Anhöhe' },
+  b: { len: 3, cut: 0, narrow: true, wall: 'mauer', name: 'Damm B', short: '3 Felder · Damm mit Stützmauer', cost: 500, mat: { stein: 4, quader: 6, metall: 3 },
+    where: 'Damm B steht unten vor der Wand: 3 Felder davor, das oberste direkt an der Anhöhe' },
+  c: { len: 4, cut: 2, narrow: true, name: 'Halb eingelassen C', short: '4 Felder · halb Einschnitt, halb Damm', cost: 600, mat: { stein: 10, quader: 2, metall: 4 },
+    where: 'C liegt halb in der Anhöhe: die oberen 2 Felder in ihrem Rand, die unteren 2 davor' },
+  d: { len: 4, cut: 0, viadukt: true, name: 'Viadukt D', short: '4 Felder · Viadukt auf Bögen', cost: 900, mat: { quader: 10, metall: 4 },
+    where: 'Viadukt D steht unten vor der Wand: 4 Felder davor, das oberste direkt an der Anhöhe' },
+};
+const rampFormOk = f => typeof f === 'string' && Object.prototype.hasOwnProperty.call(RAMP_FORMS, f);   // gültige Form (Spielstand, Fenster)
+
 // cat: bau | netz | bildung | deko | land;  needs: Untergrund;  workers/science: Netzwerte
 const ITEMS = {
   // --- Wohnen & Arbeit ---
@@ -182,14 +197,17 @@ const ITEMS = {
   wald:    { cat: 'land', name: 'Wald pflanzen', tech: 'terraform', cost: 20, paint: true, desc: 'Pflanzt Wald – Gelände für Holzfäller.' },
   obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen.' },
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
-  anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen Treppe und Rampe.' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege oben, Rampe)
+  anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
-  // Rampe in die Anhöhe (Stufe 2, hills.js): wie die Treppe, aber für alle (Wegenetz); t.len 1 oder 2 (Leiste), t.style Belag. Wie die Treppe
-  // keine Deko (beauty 0) – cat 'deko', damit Abreißen voll erstattet, die Vorschau einen Geist zeigt und ein Weg sie nie ersetzt
-  huegelrampe: { cat: 'deko', name: 'Rampe (Anhöhe)', tech: 'terraform', cost: 200, mat: { stein: 8 }, needs: 'grass', beauty: 0,
-    desc: 'Führt den Weg auf eine Anhöhe – oben und unten hängen die Wege dann zusammen (wie über die Treppe). In die Wand eingelassen, 1 Feld (steil) oder 2 Felder lang (flacher). Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (die Felder werden abgesenkt), sie dreht sich von selbst. An einer offenen Seite bekommt sie ein Geländer; nebeneinander wird sie breit.' },
+  // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
+  // cost/mat zeigen die gerade gesetzte, gebaut wird t.price gemerkt (Erstatten). Keine Deko (beauty 0) – cat 'deko', damit Abreißen voll
+  // erstattet, die Vorschau einen Geist zeigt und ein Weg sie nie ersetzt
+  huegelrampe: { cat: 'deko', name: 'Gleis-Rampe', tech: 'bahn', needs: 'grass', beauty: 0,
+    get cost() { return RAMP_FORMS[typeof rampFormNow === 'function' ? rampFormNow() : 'a'].cost; },
+    get mat() { return RAMP_FORMS[typeof rampFormNow === 'function' ? rampFormNow() : 'a'].mat; },
+    desc: 'Führt die Schiene auf eine Anhöhe – nur für Züge (zu Fuß geht es über die Treppe). Vier Formen: A in die Anhöhe eingelassen (2 Felder), B Damm mit Stützmauer (3 Felder), C halb eingelassen, halb Damm (4 Felder), D Viadukt auf Steinbögen (4 Felder). Sie dreht sich von selbst hinauf; Gleise schließen am Fuß und oben an.' },
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
@@ -578,7 +596,7 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
     { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
@@ -602,7 +620,7 @@ const MENU = [
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
-    { id: 'hoehen', label: '⛰️ Anhöhen', items: ['anhoehe', 'huegeltreppe', 'huegelrampe'] },   // Block 157d: Anhöhe, Treppe und Rampe zusammen, wie die Überdachungen (Wege & Gelände hätte sonst 11)
+    { id: 'hoehen', label: '⛰️ Anhöhen', items: ['anhoehe', 'huegeltreppe'] },   // Block 157d: Anhöhe und Treppe zusammen, wie die Überdachungen (Wege & Gelände hätte sonst 11); die Gleis-Rampe steht beim Verkehr (Schiene)
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'dachtreppe'] },   // Block 138
@@ -638,7 +656,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', huegeltreppe: '⛰️ führt hinauf', huegelrampe: '⛰️ Weg hinauf', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', huegeltreppe: '⛰️ führt hinauf', huegelrampe: '🚆 Gleis hinauf', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -751,9 +769,9 @@ const ITEM_TIPS = {
   wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
-  anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
+  anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
-  huegelrampe: 'Stell die Rampe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Über die Rampe hängt der Weg oben mit dem unten zusammen, genau wie über die Treppe. Länge und Belag wählst du oben in der Leiste.',
+  huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };
 // Läden, Kultur und Plantagen: Kurzwirkung und Tipp aus der Tabelle
 for (const [id, S] of Object.entries(SHOPS)) {

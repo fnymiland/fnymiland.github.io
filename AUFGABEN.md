@@ -2310,7 +2310,8 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
       zurück). Test: zaun-durchgang
 
 ## Block 157: Anhöhen (Relief à la Animal Crossing, Nutzer 09.10.2026: „ich lass mich drauf ein“)
-Ziel in Stufen: 1 Anhöhe mit Deko ✓ · 2 Wege + Rampe ✓ (157h) · 3 Gebäude oben · 4 Bahn (erst Tunnel durch den Berg, Steigungen vielleicht nie).
+Ziel in Stufen: 1 Anhöhe mit Deko ✓ · 2 Wege + Rampe ✓ (157h) · Gleise oben + Gleis-Rampe ✓ (157i) · 3 Gebäude oben (auch Bahnhöfe) ·
+4 Bahn (Tunnel durch den Berg geht schon, Steigungen über die Gleis-Rampe).
 Fundament von Anfang an: jedes Feld hat eine Höhe (`state.hills`: Feld → { w: Wandart, h?: Ebene, Standard 1 }), nicht als Dachform.
 Konzeptbild: tools/anhoehe-entwurf.js. Entscheidungen Stufe 1: Wand wählbar (Fels Standard, Erde, Trockenmauer), erst eine Ebene
 (Fundament kann mehr), Rechteck aufziehen wie Gelände (Gestalten → Wege & Gelände), oben Kleinkram + Deko-Felder (Brunnen, Beete,
@@ -2361,7 +2362,8 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       `refitStairs`): nach jedem Bauen einer Treppe die Treppen ringsum (Ecke, gerade Richtung); eine Treppe auf eine Treppe gesetzt =
       kostenlos ausrichten (`stairRefitError`); Einsetzen in den Rand, auf den schon eine Treppe führt, geht, wenn sie sich danach neu
       ausrichten lässt (`stairIntoRefits`, probehalber). Test: anhoehe-treppe (Ecke zuerst, dann die Nachbarn; ↶)
-- [x] 157h **Stufe 2: Wege oben und Rampe** (Nutzer 10.10.2026, Entwurf tools/rampe-entwurf.js, Vorschau tools/vorschau/rampe-varianten.png):
+- [x] 157h **Stufe 2: Wege oben und Rampe** (Nutzer 10.10.2026, Entwurf tools/rampe-entwurf.js, Vorschau tools/vorschau/rampe-varianten.png).
+      **Die Weg-Rampe ist durch die Gleis-Rampe ersetzt (157i)** – hinauf zu Fuß nur noch über die Treppe; der Rest dieses Eintrags ist Geschichte:
       Ding `huegelrampe` mit allen vier Entwürfen – A 1 Feld (steil), B 2 Felder (flacher, Länge in der Leiste), C offene Seite = Keil mit
       Geländer, D längs der Wand (an der Ecke selbst drehen: ⟳/R springt zur nächsten passenden Richtung). Eingelassen wie die Treppe, auch in
       den Rand einer fertigen Anhöhe (Felder abgesenkt, Erstattung verrechnet, ein ↶-Schritt), Belag = Wegstil aus der Leiste, nebeneinander
@@ -2382,4 +2384,35 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       vor der Wand/eingesetzt: Netz, Wege, Bewohner, Fahrzeuge, ↶, Speichern)
       Offen: Testwelt mit Anhöhen im Leistungs-Wächter (157f); große Plätze oben werden nah jedes Bild live gezeichnet (iPad ansehen);
       Bewohner, die oben festsitzen (Rampe abgerissen), bummeln bis zum Heimweg weiter; „Das ist neu“/NEWS beim Push
+- [x] 157i **Gleis-Rampe und Gleise auf Anhöhen** (Nutzer 10.10.2026: „die Rampe ist nur für Züge da“, „Autos soll es nie geben“; Entwurf
+      tools/gleisrampe-entwurf.js, Bild tools/vorschau/gleisrampe-varianten.png). `huegelrampe` ist jetzt die Gleis-Rampe (Verkehr, hinter der
+      Schiene; Forschung Bahn), vier Formen in der Leiste wie im Entwurf: A 2 Felder eingelassen (Wände der Anhöhe als Wangen), B 3 Felder Damm mit
+      Stützmauer davor, C 4 Felder (oben 2 schmal eingelassen, unten 2 Damm), D 4 Felder Viadukt auf Steinbögen mit Brüstung. Preise: A 400 + Stein 8,
+      Metall 2 · B 500 + Stein 4, Pflaster 6, Metall 3 · C 600 + Stein 10, Pflaster 2, Metall 4 · D 900 + Pflaster 10, Metall 4 (A/C mit Erstattung
+      der abgesenkten Anhöhe). Im Fenster Form wechseln (A ↔ C, B ↔ D; anderes nur mit Abreißen, weil sich sonst Gelände ändern müsste).
+      Schienen dürfen oben liegen, verbinden sich nie über die Kante (Prellbock), nur über die Rampe; Bahnhöfe/Hbf/U-Bahn/Einfahrt oben erst Stufe 3.
+      Züge fahren über alle Formen hinauf und hinunter, Höhe stetig, Wagen starr und schräg, verdeckt von Wangen/Streifen/Brüstung davor; halten
+      nur unten. Wege, Bewohner, Spaziergänger, Tiere nie auf der Rampe; die Treppe verbindet das Wegenetz.
+      Entscheidungen: `t.form` als Buchstabe (bei Stadtschmuck/Gleis-Stil sind Formen Zahlen – so verwechselt nichts); alte Weg-Rampen (nur lokale
+      Testwelten, nie online) entfernt `parseSave` mit Erstattung statt Umwandlung (eine 1-Feld-Rampe passt in keine Form, eine 2-Feld-Rampe vor der
+      Wand nicht als A); `cat: 'deko'` bleibt (volle Erstattung, Geist, kein Weg ersetzt sie); Gleis-Stil auf der Rampe = der der Strecke am Fuß bzw.
+      oben (keine eigene Bedienung).
+      Umgesetzt mit Ultracode-Ablauf (Rampe, Gleisnetz, Gleise zeichnen, Züge parallel, dann Zusammenbau). Beim Zusammenbau ergänzt: Spaziergänger
+      nur noch über Treppen (`hwFresh`), Antippen eines Zugs oben öffnet sein Gleisfeld (`tap` → `trainAt`), eine gezogene Schienenlinie über die
+      Rampe zählt ihre Felder als schon gebaut (`planCheck`), Bauen und ✋ Ablegen per Tippen an der Wand (`rampAnchor` in tap/setHover: an
+      Wänden hinten lag der Anker sonst bis zu 3 Felder davor), Prellbock an freien Enden der Rampe und Büschel/Blumen des Gleis-Stils auf Damm und Einschnitt
+      (`rampStop`, `railTrim`), Texte („Gleis und Weg kreuzen sich nur auf ebenem Boden“, Tipp der Anhöhe nennt Gleise). Alte Anhöhen-Tests auf
+      die Gleis-Rampe umgeschrieben (Weg-Rampe → Treppe bzw. „nie über die Gleis-Rampe“). Leistungs-Wächter je Ding unverändert (`huegelrampe` = 1
+      Zeichenbefehl, je Feld ein Bildchen) – nicht neu aufgenommen. Tests: gleisrampe, rampe-regeln, gleis-ebenen, gleis-zeichnen, zuege-ebenen,
+      anhoehe-stufe2 (jede Form × alle Drehungen mit echtem Zug zwischen zwei Bahnhöfen, ↶, Speichern, Zeichnen nah/weit/nachts) u. a.
+      Offen: Wagen beim Feldwechsel können Bäume/Deko vorn links übermalen (wie unten schon vorher); Treppen vor einem Zug werden nicht ausgespart;
+      weit weg (WebGL) kann die Zelle das Nachmalen der Rampe am Rand abschneiden; ✋-Gruppen/⧉ Kopien mit Rampe legen weiter am Griff ab (kein
+      `rampAnchor`); „Das ist neu“/`NEWS_HISTORY` beim Push.
+      Kritische Prüfung (10.10.2026, Nahaufnahmen tools/gleisrampe-pruefung.js → tools/vorschau/gleisrampe-nah-final.png, Test gleisrampe-kritik):
+      behoben – Übermalen im schmalen Einschnitt C malte den ganzen Umriss des Streifens samt Boden und Gleis über die Anhöhe davor (jetzt nur
+      Oberseite/Wand/Stirn); Wagenschatten hingen an Stützmauer und Viaduktwand (`rampShadowClip`); Treppe in die Anhöhe direkt hinter dem oberen
+      Feld einer Rampe senkte es ab (Rampe führte gegen die Treppe); Schienenlinie quer über die Rampe war grün (gab zwei getrennte Enden);
+      Fußgängerbrücke über einen Bahnübergang oben an der Kante hing über die Kante (auch getragen) – jetzt nur bei ebenem Boden längs des Wegs,
+      daneben kein Anheben/Abtragen/Treppe/Rampe (`archHillError`, `archAround`). Offen: Tunneleinfahrt direkt vor dem Fuß verbindet nicht (beide
+      Seiten zeigen den Prellbock – eine Schiene dazwischen legen); Linie an der Seite einer Rampe A ohne Wange steht in ihrer Wand.
 

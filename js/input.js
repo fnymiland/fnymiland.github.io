@@ -183,6 +183,7 @@ function setHover(sx, sy) {
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }
   if (tool === 'tunneleinfahrt') { const [ex, ey] = einAnchor(t.x, t.y); t = { x: ex, y: ey }; }   // Feld unter der Maus = hinteres Feld am Tunnel
+  else if (rampTool()) { const [ax, ay] = rampAnchor(t.x, t.y); t = { x: ax, y: ay }; }   // Gleis-Rampe bauen/getragen: Feld an der Wand (hills.js)
   if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof || !!hover.under !== !!t.under) { hover = t; previewCache = null; }
   hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
   if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus

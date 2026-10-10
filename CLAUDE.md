@@ -187,7 +187,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Alles, was zu einem Feld gehört, wird um den Hub angehoben gezeichnet (render.js tileA/tileB; wer selbst per toScreen Punkte eines
     Felds rechnet, zieht `hillLift` ab). Bildschirm → Feld nur über `pickFrac` (toTile, toVertex, edgeNear, slotAt), nie tileFrac
     (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError` (Stufe 2: Wege aller Stile, Platz-Dinge `plazaOk`, Deko,
-    Gelände – keine Gebäude, Schienen, Dächer, U-Bahn-Station); Fundament kann mehrere Ebenen, gebaut ist eine.
+    Gelände, Schienen – keine Gebäude, Bahnhöfe/Hbf/U-Bahn/Tunneleinfahrt (Stufe 3), Parkbahn, Dächer); Fundament kann mehrere Ebenen, gebaut ist eine.
     Ohne Anhöhen muss alles exakt wie vorher laufen (früh aussteigen, wenn `state.hills.size` 0).
     **Treppe** (157d, `huegeltreppe`): steht unten (Ebene 0) direkt vor der Wand, Stufen auf dem eigenen Feld bis zur Oberkante. Regeln über
     `stairError`, Drehung nur über `stairRot` (placeRot, auch Vorschau/Verschieben; in einer gedrehten ✋-Gruppe dreht sie mit, `groupPlaced`), kein
@@ -219,25 +219,51 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Fußpunkt `hwFootD`, Boden null); Kopf/Antippen über `walkerHead` (+ `hillLift`). Wer Listen von Bewohnern prüft (Fenster, Antippen,
     Sprechblase), nimmt `hillWalkers` dazu wie `roofers`. Treppe weg oder kein Weg mehr zum Ausstieg (`hwRoute` false: Zaun, Deko): sie
     verschwinden, nie in der Luft oder ewig oben. Tests mit Spaziergängern stellen die Spieluhr fest (`gameHour`) – nachts kommen halb so viele.
-    **Rampe** (Stufe 2, `huegelrampe`, Entwurf tools/rampe-entwurf.js): eingelassen wie die Treppe, `t.len` 1 (steil) oder 2 (flacher, Leiste:
-    `rampNewLen`, nur `len: 2` wird gespeichert), `t.style` Belag. Grundfläche `sizeOf` [1, len], Anker = kleinstes x/y (bei rot 0/3 das obere
-    Feld, bei rot 1/2 der Fuß) – welches Feld was ist, sagt nur `rampAt(x, y)` (`i` 0 = Fuß … len − 1 = oben), alle: `hillRamps()`. Höhe stetig
-    `rampHeight` (Vorderkante Fuß 0 … Hinterkante oben `HILL_H`), Oberfläche überall `surfaceHeight(u, v)` (Anhöhe, Rampe, Treppe). Regeln wie die
-    Treppe: `rampError`/`rampIntoError`, Drehung `rampRot` (in `ROTATABLE`: selbst gedreht springt sie zur nächsten passenden Richtung, so entsteht
-    „längs der Wand“), `rampsAround` (Abtragen, Anheben, Teich, ✋-Rechteck, ↶), Einsetzen `rampIntoBack`/`rampIntoSink` (nicht `rampSink` – den
-    hat die U-Bahn). Aussehen `rampLook` (Anhöhe = Wange, gleiche Richtung + Länge = breit, sonst Keil mit Geländer), je Feld ein Bildchen
-    ('r' + Feld) – render.js zeichnet jedes Rampenfeld für sich, nie in Streifen. Figuren/Fahrzeuge darauf: danach `drawHillRampOver`.
-    Bündig (Prüfung 10.10.2026, tests/anhoehe-pruefung.test.js, Bild tools/stufe2-nahszene.js): Keilwände nach der ganzen Höhe geschichtet
-    (`paintHillWall` … `hs`), dunkle Kante des hinteren Keils genau auf seiner schrägen Kante, Innenecke mit schrägem Keil über `rampMiter`
-    (Signatur ':m' + Längen), Geist über 2 Felder erst deckend zusammensetzen (`rampGhostBuf`), keine Eckpunkt-Deko auf der Schräge (smallError).
+    **Gleis-Rampe** (`huegelrampe`, Nutzer 10.10.2026: „nur für Züge da, Autos soll es nie geben“; Entwurf tools/gleisrampe-entwurf.js, Bild
+    tools/vorschau/gleisrampe-varianten.png): die frühere Weg-Rampe ist weg – zu Fuß hinauf geht es über die Treppe. `t.form` 'a'–'d' (`RAMP_FORMS`
+    in data.js, nie Zahlen; `rampFormOk`), `t.price` = bezahlt (Abreißen voll zurück wie Deko: `rampPaid`; Kopie/Preis je Form `rampCost`). A 2 Felder
+    ganz eingelassen (Wände der Anhöhe = Wangen, ganz breit), B 3 Felder Damm mit Stützmauer davor, C 4 Felder (oben 2 schmal eingelassen, unten 2
+    Damm), D 4 Felder Viadukt auf Bögen davor. Form neu: Leiste (`rampNewForm`, `rampFormBar`), im Fenster nur A ↔ C bzw. B ↔ D (`rampFormPlan`/
+    `setRampForm`, oberes Feld bleibt, Differenz bezahlt, ↶). Alte Weg-Rampen (ohne Form, nie online) entfernt `parseSave` mit Erstattung.
+    Grundfläche `sizeOf` [1, len], Anker = kleinstes x/y; welches Feld was ist, sagt nur `rampAt(x, y)` → { k, t, ax, ay, len, rot, i (0 Fuß …
+    len − 1 oben), form }, alle: `hillRamps()` (mit foot/top). Höhe stetig `rampHeight` (Vorderkante Fuß 0 … Hinterkante oben `HILL_H`), Lage
+    längs `rampAlong`, Oberfläche überall `surfaceHeight(u, v)`. Regeln `rampError`/`rampIntoError` (A/C in den Rand eingelassen: `rampIntoBack`/
+    `rampIntoSink`, getragen nie; B/D davor), Drehung `rampRot`, `rampsAround` (Abtragen, Anheben, Teich, ✋-Rechteck, ↶), getragen/kopiert in
+    ihrer eigenen Form prüfen (placeError mit `opts.t`). Bauen und ✋ Ablegen per Tippen (`rampTool`): `rampAnchor` in tap/setHover wie `einAnchor` –
+    passt das angetippte Feld als Anker, bleibt es, sonst zählt es als Feld an der Wand (`rampSnap`; sonst läge der Anker an Wänden hinten bis 3
+    Felder davor).
+    Aussehen `rampLook` (Wange/Einschnitt daneben, Grasnarbe der Anhöhe, Gleis-Stil der Strecke am Fuß bzw. oben, freie Enden `ef`/`et` →
+    Prellbock `rampStop`, Büschel/Blumen `railTrim` außer auf dem Viadukt), je Feld ein Bildchen ('r' + Feld, `rampSig`) – render.js zeichnet
+    jedes Rampenfeld für sich, nie in Streifen. Anhöhe daneben/dahinter kennt sie (`hillStairEnds` A/C wie die Treppe, P/Q Damm, X/Y Viadukt,
+    U/V/M/N neben dem schmalen Einschnitt), Gehrung nur für A (`rampMiter`, `hillMiter` mit `rampWideForm`). Keine Eckpunkt-Deko auf der Schräge.
+    **Gleise auf Anhöhen**: Schienen dürfen oben liegen (kommen beim Anheben mit hinauf), verbinden sich aber nie über die Kante – nur über die
+    Gleis-Rampe an Fuß und Oberkante. Zusammenhang nur über `trackLink`/`railArms` (rules.js, eine Quelle für Netz und Bild) und `levelLink(…,
+    'gleis')`; die Rampe ist über `rampTrackAt`/`trackAt` Teil des Netzes (`railRampTrack`: Arme nur in Achsrichtung), eine Schiene darauf gibt es
+    nicht, eine Linie (Pinsel) längs über sie zählt ihre Felder als schon gebaut (`planCheck`), quer ist sie rot (`planScan`). Über die Kante endet
+    ein Gleis am Prellbock. Fußgängerbrücke über einen Bahnübergang nur mit ebenem Boden gleicher Höhe längs des Wegs (`archHillError` in
+    setCrossing/placeError); daneben ändert sich die Höhe nie (`archAround`: Anheben, Abtragen, Treppe, Gleis-Rampe). Halte nur
+    über `stopTrackOk` (eigene Ebene, nie auf der Rampe); Bahnhof richtet sich nicht zur Schiene oben aus (`autoRot`). Tunnel unter einer Anhöhe
+    ja (die Einfahrt prüft nur vorn die Ebene), unter der Rampe nie (ein Feld ist Gleis oder Tunnel). Gleise oben zeichnet tileA wie Wege
+    (`hillFlat` → `drawHillFlat`; zur Rampe nur `GR_E` über die Feldgrenze, sie ist schräg).
+    **Züge** (movers.js): oben um den Hub angehoben, auf der Rampe stetig (`surfaceHeight` unter beiden Wagenenden, starr und schräg).
+    `trainOnHills` (render.js, nur auf Anhöhe/Rampe, sonst Mittelfeld wie bisher) wählt das vorderste Feld unter dem Wagen und setzt `m.hill`
+    (`base`, `ha`/`hb`, `occ`: früher gezeichnete Anhöhen davor = Ausschnitt, `ramp` → danach `rampOverSpan`/`drawHillRampOver`: Streifen des
+    schmalen Einschnitts bzw. Brüstung des Viadukts über den Wagen – im Einschnitt nur seine sichtbaren Flächen, nie der Umriss: darin lagen Boden
+    und Gleis, die dann über der Anhöhe davor standen). Schatten der Wagen auf Damm/Viadukt ohne die Streifen neben der Oberseite
+    (`rampShadowClip`), sonst hängt er an ihrer Wand. Antippen: `trainAt` (tap öffnet das Fenster des Gleisfelds unter dem Zug).
+    Treppe in die Anhöhe hinter dem oberen Feld einer Gleis-Rampe: nie (`stairIntoError` fragt `rampsAround` wie umgekehrt `rampIntoError`).
+    Nahaufnahmen aller Formen/Drehungen mit Zug: tools/gleisrampe-pruefung.js (→ tools/vorschau/gleisrampe-nah-final.png).
     **Wer kommt wohin:** nur über `levelLink(x1, y1, x2, y2, who)` – 'weg' (Wegenetz, Viertel, Markt, „alle verbundenen“, Wunsch Weg) und 'fuss'
-    (Bewohner, `edgeBlocks`) gehen über Rampe und Treppe längs ihrer Achse (die Treppe verbindet seit 10.10.2026 auch das Wegenetz, Nutzer;
-    `slopeWegAt`, zählt nicht fürs Viertel), 'fahr' (Fahrzeuge) nur über die Rampe; sonst nur gleiche Ebene, nie über Eck an Rampe/Treppe, quer
-    nur in der breiten. Ohne Anhöhen immer true. Erreichbarkeit „in der Nähe“: `hillRegions`/`sameRegion` (Anhöhe ohne Rampe/Treppe = eigene Gegend).
+    (Bewohner, `edgeBlocks`) gehen über die Treppe längs ihrer Achse (sie verbindet das Wegenetz, `slopeWegAt`, zählt nicht fürs Viertel; quer nur in
+    der breiten, Ecktreppe über ihre Füße), 'gleis' nur über die Gleis-Rampe, 'fahr' nirgends hinauf; sonst nur gleiche Ebene, nie über Eck an
+    Rampe/Treppe. Die Gleis-Rampe gehört zu keinem Viertel und zählt für keine Gegend: Erreichbarkeit „in der Nähe“ `hillRegions`/`sameRegion`
+    (Anhöhe ohne Treppe = eigene Gegend). Bewohner, Spaziergänger (`hwFresh` nur Treppen), Leute zur Dachtreppe und Tiere betreten sie nie
+    (`walkable`/`wayish` ohne Rampe; `slopeAt`/`flatGround` kennen sie, damit Tiere und Parkbesuch sie meiden). Ohne Anhöhen immer true.
     Figurenhöhe: `figUp`/`slopeUp` (movers.js, am gezeichneten Fußpunkt) – wer `w.up` selbst setzt (Dach, Spaziergänger), rechnet relativ zum Feld.
     **Wege oben** zeichnet tileA (`hillFlat` → `drawHillFlat`, weit weg `spriteFlat(…, true)`), nie das Boden-Bild. `pathArms`, `pathQuads`,
     Bordstein, Wegenden (`hillEnds`), Vorplätze und Gartenwege (`courtFrontTiles`, `gardenPath`) nur über `levelLink` bzw. gleiche Ebene.
-    Tests: rampe-regeln, anhoehe-netz, anhoehe-wege, anhoehe-bewegt, anhoehe-stufe2 (alles zusammen, alle Drehungen).
+    Tests: gleisrampe, gleisrampe-kritik, rampe-regeln, gleis-ebenen, gleis-zeichnen, zuege-ebenen, anhoehe-netz, anhoehe-wege, anhoehe-bewegt, anhoehe-pruefung,
+    anhoehe-stufe2 (Gesamtprüfung: jede Form in allen Drehungen mit echtem Zug zwischen zwei Bahnhöfen, ↶, Speichern, Zeichnen nah/weit/nachts).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

@@ -1499,7 +1499,7 @@ function render(now) {
       if (!err) {
         if (tool === 'anhoehe' && hillAt(hx, hy)) text = `Wand: ${DECO_LOOKS.anhoehe.forms[hillAt(hx, hy).w || 0].name} → ${DECO_LOOKS.anhoehe.forms[decoLookNew('anhoehe').form || 0].name} · kostenlos`;   // Anhöhe (Block 157): nur umstellen
         else if (tool === 'huegeltreppe' && hillAt(hx, hy)) text = `Treppe in die Anhöhe: −${fmt(ITEMS.huegeltreppe.cost - stairIntoBack(hx, hy))}`;   // Feld wird abgesenkt (hills.js)
-        else if (tool === 'huegelrampe' && rampIntoBack(hx, hy, rotOf(tool))) text = `Rampe in die Anhöhe: −${fmt(ITEMS.huegelrampe.cost - rampIntoBack(hx, hy, rotOf(tool)))}`;   // Felder werden abgesenkt (hills.js)
+        else if (tool === 'huegelrampe' && rampIntoBack(hx, hy, rotOf(tool))) text = `Gleis-Rampe in die Anhöhe: −${fmt(ITEMS.huegelrampe.cost - rampIntoBack(hx, hy, rotOf(tool)))}`;   // Felder werden abgesenkt (hills.js)
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
@@ -1556,6 +1556,7 @@ function render(now) {
       if (tc === 'hide') continue;
       m.cut = tc ? tc.cut : null; m.portal = tc ? tc.portal : null;
       if (tc) k = tc.k;
+      else if (HILLS && !HALL.has(k) && typeof trainOnHills === 'function') k = trainOnHills(m, k);   // Anhöhe/Gleis-Rampe (movers.js): vorderstes Feld unter dem Wagen
     }
     if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
       const under = [];
@@ -1574,7 +1575,7 @@ function render(now) {
     byTile.get(k).push(m);
   }
   const icons = [];
-  for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py); icons.push([p.x + 10 * z, p.y + 4 * z, '⚡']); } }   // Zug ohne Strom
+  for (const tr of trains) if (!tr.powered) { const f = cars4.find(c => c.train === tr); if (f) { const p = toScreen(f.px, f.py); icons.push([p.x + 10 * z, p.y + 4 * z - (f.hill ? trainMidUp(f) * z : 0), '⚡']); } }   // Zug ohne Strom (auf Anhöhe/Rampe angehoben)
   const labels = [];
   let staleCover = false;
   // Feldschleife in zwei Teilen (Block 144: Standbild-Merker): A = Linien, Gebäude, Dekos, Natur, Geister (ruht, kann gemerkt werden);
@@ -1589,15 +1590,16 @@ function render(now) {
   // Zeichnung, die ihre Bildpunkte selbst rechnet (toScreen: Linien, Geister), um lift (Bildpunkte) angehoben – nie um glLive herum
   const lifted = (lift, f) => { if (!lift) return f(); g.save(); g.translate(0, -lift); try { return f(); } finally { g.restore(); } };
   // Anhöhe (Stufe 2): der Weg oben (auch unter Platz-Dingen) – im Boden-Bild fehlt er; nach der Anhöhe des Felds, vor ihrer Vorschau und
-  // allem, was auf ihm steht. Weit weg als Bildchen, nah live (wie die leuchtenden Wege am Boden). (qx, qy) = Feldmitte oben
+  // allem, was auf ihm steht. Weit weg als Bildchen, nah live (wie die leuchtenden Wege am Boden). (qx, qy) = Feldmitte oben. Gleise oben
+  // (Gleis-Rampe) genauso: Gleisbett samt Bahnübergang hier, Schranken bzw. Bogen danach als Ding des Felds
   const hillFlat = (x, y, qx, qy) => {
-    const ft = flatAt(x, y);
-    if (!ft || wegUnder(ft) == null) return;
+    const ft = flatAt(x, y), w = ft && wegUnder(ft);
+    if (!ft || (w == null && ft.b !== 'schiene')) return;
     if (SPRITES_ON && spriteFlat(x, y, qx, qy, z, ft, true)) return;
     if (GLPASS) { GL.stats.miss++; glLive(qx, qy, TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawHillFlat(qx, qy, z, x, y, ft)); }
     else {
       drawHillFlat(qx, qy, z, x, y, ft);
-      if (night > 0.15 && pathLook(styleDef('weg', wegUnder(ft)).id).glow) hillGlows.push([x, y, qx, qy]);
+      if (w != null && night > 0.15 && pathLook(styleDef('weg', w).id).glow) hillGlows.push([x, y, qx, qy]);
     }
   };
   // Leuchtender Weg oben (nah, live): sein Schein liegt auch auf den Anhöhen davor – die werden erst danach gezeichnet und füllten sein Loch
@@ -1647,7 +1649,7 @@ function render(now) {
       }
       if (a0 && !t) staleCover = true;
       if (a) {
-        const ramp = t.b === 'huegelrampe';                                // Rampe (hills.js): jedes Feld für sich, an seinem Platz (nie in Streifen)
+        const ramp = t.b === 'huegelrampe';                                // Gleis-Rampe (hills.js): jedes Feld für sich, an seinem Platz (nie in Streifen)
         const [ax, ay] = ramp ? [x, y] : keyXY(a), [w, h] = ramp ? [1, 1] : sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };

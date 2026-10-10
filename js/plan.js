@@ -73,6 +73,7 @@ function planCheck(b, x, y) {
   if (b === 'tunnel' && ownedTile(x, y) && tunnelAt(x, y)) return { same: true };   // liegt schon (Block 136)
   if (b === 'dach' && ownedTile(x, y) && roofSame(x, y)) return { same: true };      // Block 138
   if (b === 'schiene' && ownedTile(x, y) && old && old.b === 'schiene') return (old.form || 0) === (decoLookNew('schiene').form || 0) ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil (Block 109)
+  if (b === 'schiene' && rampTrackAt(x, y)) return { same: true };            // Gleis-Rampe auf der Linie: ist schon Gleis (hills.js)
   if (STYLES[b] && ownedTile(x, y) && old && (old.b === b || (b === 'weg' && isCrossing(old)))) {      // umfärben
     const sameStyle = (old.style || 'sand') === currentStyle(b), shape = b === 'weg' && !old.bridge && !old.cross;   // Wegform: kostenlos (Block 77)
     return sameStyle ? (shape && !sameWegShape(old) ? { cost: 0, mat: {} } : { same: true }) : { cost: ITEMS[b].cost, mat: {} };
@@ -97,11 +98,18 @@ function planScan(p) {
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [], grow = CLAIM_TOOLS.has(b) || b === 'weg';   // Weg: Brücke wächst vom Ufer aus
   let cost = 0, firstErr = null, rest = planTiles(p);
   if (b === 'weg') PLANNED = new Set();
+  // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
+  // die Linie bekäme dort zwei getrennte Enden. Ohne Anhöhen nie
+  const quer = new Map();
+  if (b === 'schiene' && p.kind === 'line' && hillsOn() && rampFresh().n) rest.forEach(([x, y], i) => {
+    const r = rampAt(x, y);
+    if (r && [rest[i - 1], rest[i + 1]].some(q => q && (r.rot & 1 ? q[1] !== y : q[0] !== x))) quer.set(x + ',' + y, { err: 'Quer über die Gleis-Rampe geht kein Gleis – sie führt nur hinauf' });
+  });
   try {
     for (let round = 0; rest.length; round++) {
       const next = [];
       for (const [x, y] of rest) {
-        const c = planCheck(b, x, y), k = x + ',' + y;
+        const k = x + ',' + y, c = quer.get(k) || planCheck(b, x, y);
         if (c.err) { next.push([x, y, c.err]); continue; }
         states.set(k, c.same ? 'same' : 'ok');
         if (c.same) continue;
@@ -239,7 +247,8 @@ function scanDemolish(p) {
     if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => !inside(vx, vy) && postAt(vx, vy))) { states.set(k, 'bad'); firstErr = firstErr || 'An der Ecke der Anhöhe steht noch etwas'; continue; }
     // Treppe hinauf (Block 157d): nur mit ab, wenn sie selbst im Rechteck abgerissen wird (das passiert vorher, order)
     if (stairsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Treppe hinauf – erst die Treppe abreißen'; continue; }
-    if (rampsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Rampe hinauf – erst die Rampe abreißen'; continue; }   // Rampe (Stufe 2) wie die Treppe
+    if (rampsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Gleis-Rampe hinauf – erst die Rampe abreißen'; continue; }   // Gleis-Rampe wie die Treppe
+    if (archAround(x, y)) { states.set(k, 'bad'); firstErr = firstErr || ARCH_HERE; continue; }   // Fußgängerbrücke daneben (hills.js)
     lower.push([x, y, () => lowerHill(x, y)]);
     gain += ITEMS.anhoehe.cost; things++; states.set(k, 'ok');
   }

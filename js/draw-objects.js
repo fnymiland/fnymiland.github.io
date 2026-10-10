@@ -137,12 +137,12 @@ function pathArms(x, y) {
   return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || wegAt(x + dx, y + dy) != null; });
 }
 // Anhöhen (Stufe 2): nur zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink 'weg') – nie über die Kante, dort endet der Weg wie
-// jedes Wegende; Rampe und Treppe sind ein Arm an ihrem Fuß und an ihrer Oberkante (hills.js)
+// jedes Wegende; die Treppe ist ein Arm an ihrem Fuß und an ihrer Oberkante (hills.js). Die Gleis-Rampe nie (sie ist Gleis)
 function pathArmsHill(x, y) {
-  const c = rampFresh(), rs = c.n > 0, ss = c.s > 0;
+  const ss = rampFresh().s > 0;
   return DIRS.filter(([dx, dy]) => {
     const nx = x + dx, ny = y + dy, b = bAt(nx, ny);
-    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (rs && !!rampAt(nx, ny)) || (ss && !!stairAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
+    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (ss && !!stairAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
   });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
@@ -538,10 +538,10 @@ function pathQuads(x, y, hall = true) {
   const paved = hall ? quadPaved : (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
   const out = [];
   if (state.hills && state.hills.size) {
-    // Anhöhen (Stufe 2): nur, wo alle vier Felder zusammenhängen (levelLink: nie über die Kante). Rampenfelder und breite Treppen davor bzw.
-    // dahinter zählen als Belag – vor einer breiten Rampe/Treppe schließen sich die Wege zu ihrer ganzen Breite, sonst bliebe zwischen ihren Armen Wiese
-    const c = rampFresh(), rs = c.n > 0, ss = c.s > 0, lk = (ax, ay, bx, by) => levelLink(ax, ay, bx, by, 'weg');
-    const pv = (px, py) => { if (paved(px, py) || (rs && !!rampAt(px, py))) return true; const s = ss && stairAt(px, py); return !!s && !s.ecke && !stairSchmal(s); };
+    // Anhöhen (Stufe 2): nur, wo alle vier Felder zusammenhängen (levelLink: nie über die Kante). Breite Treppen davor bzw. dahinter zählen
+    // als Belag – vor einer breiten Treppe schließen sich die Wege zu ihrer ganzen Breite, sonst bliebe zwischen ihren Armen Wiese
+    const ss = rampFresh().s > 0, lk = (ax, ay, bx, by) => levelLink(ax, ay, bx, by, 'weg');
+    const pv = (px, py) => { if (paved(px, py)) return true; const s = ss && stairAt(px, py); return !!s && !s.ecke && !stairSchmal(s); };
     for (const su of [1, -1]) for (const sv of [1, -1]) {
       const ux = x + su, vy = y + sv;
       if (pv(ux, y) && pv(x, vy) && pv(ux, vy) && lk(x, y, ux, y) && lk(x, y, x, vy) && lk(ux, y, ux, vy) && lk(x, vy, ux, vy)) out.push([su, sv]);
@@ -636,6 +636,8 @@ const RAIL_LOOK = {
   blumen:   { edge: '#7fbd5e', bed: '#9fd979', tie: '#d6b585', rail: '#7d818b', rw: 1.1, flowers: true },
 };
 const railLookOf = t => RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id] || RAIL_LOOK.schotter;   // auch auf Brücken (Block 109b)
+// Arme (Kurve, Weiche, Prellbock) nur über railArms (rules.js): mit Anhöhen nur zu Nachbarn, mit denen das Gleis zusammenhängt (levelLink
+// 'gleis' – über die Kante endet es am Prellbock), dazu die Gleis-Rampe an Fuß und Oberkante
 function drawRailBed(cx, cy, z, x, y, t) {
   const arms = railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
@@ -878,10 +880,12 @@ const drawFlat = (cx, cy, z, x, y, t) => {
   return t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t.weg != null ? { style: t.weg, rot: 0 } : t);
 };
 // Anhöhe (Stufe 2): Weg oben (render.js hillFlat, auch als Bildchen) – zugeschnitten auf die Raute des Felds wie seine Oberseite: zu Nachbarn,
-// mit denen er zusammenhängt (levelLink, auch Fuß/Oberkante von Treppe und Rampe), ein Stück darüber (Überlapp an der Fuge wie am Boden), an
-// der Kante genau – nichts ragt über die Grasnarbe oder die dunkle Kante (Ränder, Fuge, Muster über den Rand). Licht danach (nicht beschnitten)
+// mit denen er zusammenhängt (levelLink, auch Fuß/Oberkante einer Treppe), ein Stück darüber (Überlapp an der Fuge wie am Boden), an
+// der Kante genau – nichts ragt über die Grasnarbe oder die dunkle Kante (Ränder, Fuge, Muster über den Rand). Licht danach (nicht beschnitten).
+// Gleis oben genauso; zur Gleis-Rampe (schräg) nur der Überlapp der Anhöhen GR_E – ein flaches Stück darüber stünde über ihrem Gleis
 function drawHillFlat(cx, cy, z, x, y, t) {
-  const e = (dx, dy) => levelLink(x, y, x + dx, y + dy, 'fuss') ? 0.06 : 0;
+  const rail = t.b === 'schiene' && rampFresh().n > 0;
+  const e = (dx, dy) => rail && rampAt(x + dx, y + dy) ? (levelLink(x, y, x + dx, y + dy, 'gleis') ? GR_E : 0) : levelLink(x, y, x + dx, y + dy, 'fuss') ? 0.06 : 0;
   const u0 = -0.5 - e(-1, 0), u1 = 0.5 + e(1, 0), v0 = -0.5 - e(0, -1), v1 = 0.5 + e(0, 1);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   g.save();
@@ -1106,7 +1110,7 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
     const fills = hl ? s => pathQuads(x + dx, y + dy).some(([su, sv]) => dx ? su === -dx && sv === s : su === s && sv === -dy)   // Anhöhen: genau die Ecken, die er füllt
       : s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0));
     const halves = nbFills ? [-1, 1].filter(fills).map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
-    const lane = hl && arm && !nbFills ? rampLane(x, y, dx, dy) || stairLane(x, y, dx, dy) : null;   // Rampe/Treppe (hills.js): Lücke so breit wie ihre Fahrbahn bzw. Stufen
+    const lane = hl && arm && !nbFills ? stairLane(x, y, dx, dy) : null;   // Treppe (hills.js): Lücke so breit wie ihre Stufen
     const gaps = (arm ? [lane || [-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
       .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
@@ -1116,16 +1120,8 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   }
   if (lk.glow) pathGlow(L, z);
 }
-// Rampe auf dem Nachbarfeld (x + dx, y + dy), an deren Fuß bzw. Oberkante der Weg (x, y) liegt: das Stück der gemeinsamen Kante unter ihrer
-// Fahrbahn [von, bis] (quer wie in drawWidePath: v bei dx, u bei dy) – am Keil mit Geländer bleibt der Bordstein; null = keine Rampe
-function rampLane(x, y, dx, dy) {
-  const r = rampAt(x + dx, y + dy);
-  if (!r) return null;
-  const o = rampLook(x + dx, y + dy, r), [Du, Dv] = STAIR_UP[r.rot];
-  const lo = o.m === 'k' ? -0.5 + STAIR_CW : -0.5, hi = o.p === 'k' ? 0.5 - STAIR_CW : 0.5, k = dx ? Du : -Dv;   // quer S = (−Dv, Du)
-  return [lo * k, hi * k].sort((a, b) => a - b);
-}
-// Treppe dort (wie rampLane): das Stück der Kante unter ihren Stufen – schmal so breit wie ein Weg samt Rand, breit bis an Keil bzw. Wange
+// Treppe auf dem Nachbarfeld (x + dx, y + dy), an deren Fuß bzw. Oberkante der Weg (x, y) liegt: das Stück der gemeinsamen Kante unter ihren
+// Stufen [von, bis] (quer wie in drawWidePath: v bei dx, u bei dy) – schmal so breit wie ein Weg samt Rand, breit bis an Keil bzw. Wange
 function stairLane(x, y, dx, dy) {
   const t = stairAt(x + dx, y + dy);
   if (!t || t.ecke) return null;
@@ -1886,7 +1882,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     case 'stuetze': drawPillar(cx, cy, z, (t && t.form) || 0); break;
     case 'dachtreppe': drawDachtreppe(cx, cy, z, (t && t.rot) || 0, x, y); break;   // Treppe durch die Dachöffnung (Block 138d)              // Block 138: sieht aus wie das Dach darüber
     case 'huegeltreppe': drawHillStair(cx, cy, z, x, y, t); break;   // Treppe in die Anhöhe (Block 157d, hills.js): als Bildchen
-    case 'huegelrampe': drawHillRamp(cx, cy, z, x, y, t); break;     // Rampe in die Anhöhe (hills.js): je Feld ein Bildchen
+    case 'huegelrampe': drawHillRamp(cx, cy, z, x, y, t); break;     // Gleis-Rampe (hills.js): je Feld ein Bildchen
     case 'dach': drawRoofIcon(cx, cy, z, (t && t.form) || 0, (t && t.col) || 0); break;   // nur als Bildchen (Leiste, Kunstakademie)
     case 'strassenlaterne': drawStreetLamp(cx, cy, z, now, x, y, t); break;   // Block 132      // Formen und Farben (Block 106, draw-schmuck.js)
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel
