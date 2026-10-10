@@ -2604,6 +2604,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
+  if (b === 'huegeltreppe' && !opts.move && !opts.t && state.hills && state.hills.size && stairAt(x, y)) return stairRefitError(x, y);   // auf eine Treppe gesetzt: ausrichten (hills.js)
   if (b === 'huegeltreppe') { const e = stairError(x, y, rot, opts.move || !!opts.t); if (e) return e; }   // Treppe in die Anhöhe (Block 157d): unten bzw. in den Rand eingelassen (nicht getragen: Verschieben, Kopie), zur Anhöhe
   if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 1): oben nur Deko und Gelände, nie über die Kante (auch Verschieben)
     const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : b === 'graben' && stairsAround(x, y, true).length ? 'Vor dem Fuß der Treppe muss Platz bleiben'   // Treppe (157d): wie hillRaiseError

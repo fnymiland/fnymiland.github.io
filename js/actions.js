@@ -106,6 +106,12 @@ function build(b, x, y, quiet) {
     sfx('road'); recalc(); save();
     return true;
   }
+  if (b === 'huegeltreppe' && state.hills && state.hills.size && stairAt(x, y)) {   // Treppe auf eine Treppe (hills.js): nur ausrichten, kostenlos
+    const e = stairRefitError(x, y);
+    if (e) { if (!quiet) fail(e); return false; }
+    refitStairs(x, y); sfx('deco'); recalc(); save();
+    return true;
+  }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
@@ -141,6 +147,7 @@ function build(b, x, y, quiet) {
     if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
+    if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
     if (bridge && b === 'weg') {                                      // Brücke verlängern: Art und Farben der alten übernehmen (66c)
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge), nt = state.tiles.get(k);
       if (nb) { for (const key of ['brc', 'brw']) if (nb[key] != null) nt[key] = nb[key]; if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }

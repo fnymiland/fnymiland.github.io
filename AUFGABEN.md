@@ -2357,4 +2357,8 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       (`paintStairCorner`). Hängt an Nachbartreppen und Anhöhe (Abreißen/Aufnehmen/Abtragen gesperrt), keine Linien daran, kein
       Aufgang für Spaziergänger. Nebenbei: Drehung beim Einsetzen am Rand bevorzugt echten Fuß und Nachbartreppe gleicher Richtung
       (zweite Randtreppe drehte sich sonst längs). Test: anhoehe-treppe
+- [x] Nutzer: „wenn da schon so etwas steht, muss man erst die Teile entfernen – umständlich“ → Treppen richten sich aus (`stairFit`,
+      `refitStairs`): nach jedem Bauen einer Treppe die Treppen ringsum (Ecke, gerade Richtung); eine Treppe auf eine Treppe gesetzt =
+      kostenlos ausrichten (`stairRefitError`); Einsetzen in den Rand, auf den schon eine Treppe führt, geht, wenn sie sich danach neu
+      ausrichten lässt (`stairIntoRefits`, probehalber). Test: anhoehe-treppe (Ecke zuerst, dann die Nachbarn; ↶)
 

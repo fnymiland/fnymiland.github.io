@@ -409,6 +409,59 @@ function cornerDirs(x, y, lv = stairBase(x, y)) {
   }
   return out;
 }
+// Treppen ausrichten (Nutzer, 10.10.2026: „was ist, wenn da schon so etwas steht – erst die Teile entfernen und neu bauen ist umständlich“):
+// Wie soll die Treppe auf (x, y) liegen? Ecke, wenn es eine Ecke ist; sonst gerade – die eigene Richtung, solange sie passt, sonst die beste
+// (stairRot). null = passt nirgends hin
+function stairFit(x, y) {
+  const t = stairAt(x, y);
+  if (!t) return null;
+  const lv = hillLevel(x, y), cd = cornerDirs(x, y, lv);
+  if (cd.length) return { ecke: true, rot: t.ecke && cd.includes(stairRotOf(t)) ? stairRotOf(t) : cd[0] };
+  const ok = stairDirs(x, y, lv);
+  if (!ok.length) return null;
+  return { ecke: false, rot: !t.ecke && ok.includes(stairRotOf(t)) ? stairRotOf(t) : stairRot(x, y) };
+}
+// Treppen um (x, y) (5 × 5) neu ausrichten, bis nichts mehr wechselt (Ecken hängen an geraden Nachbarn). dry: nur zählen, danach wie vorher.
+// Liefert die Zahl der umgestellten Treppen
+function refitStairs(x, y, dry = false) {
+  const before = new Map();
+  let n = 0;
+  for (let pass = 0; pass < 4; pass++) {
+    let changed = false;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const t = stairAt(x + dx, y + dy), f = t && stairFit(x + dx, y + dy);
+      if (!f || (f.ecke === !!t.ecke && f.rot === stairRotOf(t))) continue;
+      const k = (x + dx) + ',' + (y + dy);
+      if (!before.has(k)) { before.set(k, { rot: t.rot, ecke: t.ecke }); n++; }
+      t.rot = f.rot; if (f.ecke) t.ecke = true; else delete t.ecke;
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  if (dry) for (const [k, o] of before) { const t = state.tiles.get(k); t.rot = o.rot; if (o.ecke) t.ecke = true; else delete t.ecke; }
+  else if (n) groundVersion++;
+  return n;
+}
+// Treppe auf eine Treppe gesetzt: nur ausrichten (kostenlos) – geht, wenn sich dabei etwas ändert
+const stairRefitError = (x, y) => refitStairs(x, y, true) ? null : 'Hier steht schon eine Treppe, die passt';
+// Feld (x, y) wird zur Treppe eingesetzt, obwohl schon Treppen hinaufführen: geht, wenn die sich danach neu ausrichten lassen (z. B. als Ecke).
+// Probehalber: Anhöhe weg, Treppe hin, ausrichten, prüfen – danach alles wie vorher
+function stairIntoRefits(x, y) {
+  const k = x + ',' + y, h = state.hills.get(k), old = state.tiles.get(k);
+  if (old) return false;
+  const tmp = { b: 'huegeltreppe', lvl: 1, rot: 0 };
+  state.hills.delete(k); state.tiles.set(k, tmp);
+  const saved = [];
+  for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const t = stairAt(x + dx, y + dy); if (t && t !== tmp) saved.push([t, t.rot, t.ecke, x + dx, y + dy]); }
+  try {
+    tmp.rot = stairRot(x, y);
+    refitStairs(x, y);
+    return !!stairFit(x, y) && saved.every(([, , , tx, ty]) => !!stairFit(tx, ty));
+  } finally {
+    for (const [t, r, e] of saved) { t.rot = r; if (e) t.ecke = true; else delete t.ecke; }
+    state.tiles.delete(k); state.hills.set(k, h);
+  }
+}
 // Ecktreppe neben (x, y), die an dieser Treppe hängt (Abreißen, Aufnehmen sperren)
 function cornerOn(x, y) {
   if (!stairFresh().ecken) return null;
@@ -485,7 +538,7 @@ function stairIntoError(x, y, move) {
   const lv = hillLevel(x, y);
   if (lv !== 1) return 'Die Treppe führt nur auf die erste Ebene';
   if (DIRS.every(([dx, dy]) => hillLevel(x + dx, y + dy) >= lv)) return 'Die Treppe gehört an den Rand der Anhöhe';
-  if (stairsAround(x, y).length) return 'Hierher führt schon eine Treppe hinauf';   // sie führte sonst ins Leere
+  if (stairsAround(x, y).length && !stairIntoRefits(x, y)) return 'Hierher führt schon eine Treppe hinauf';   // sie führte sonst ins Leere – außer sie richtet sich neu aus (z. B. als Ecke)
   const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
   if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // wie lowerHill: stünden sonst an der Kante

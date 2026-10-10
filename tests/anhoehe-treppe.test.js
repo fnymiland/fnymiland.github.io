@@ -557,4 +557,19 @@ describe('Treppe in eine bestehende Anhöhe', () => {
     expect(game("[stairAt(16, 10).ecke, hillLevel(16, 10), hillLevel(15, 9)]")).toEqual([true, 0, 1]);
     expect(game('stairHeight(16, 10, 15.52, 9.52)')).toBe(game('HILL_H'));
   });
+
+  it('Ausrichten statt erst entfernen (Nutzer: „umständlich“): Ecke zuerst eingesetzt, danach die Nachbarn – die Ecke baut sich von selbst um; ↶ geht', () => {
+    for (let y = 6; y <= 10; y++) for (let x = 12; x <= 16; x++) game(`build('anhoehe', ${x}, ${y}, true)`);
+    expect(game("build('huegeltreppe', 16, 10, true)")).toBe(true);     // erst die Ecke: noch eine gerade Treppe
+    expect(game('stairAt(16, 10).ecke')).toBeFalsy();
+    expect(game("placeError('huegeltreppe', 15, 10)")).toBe(null);       // führte früher zu „Hierher führt schon eine Treppe hinauf“
+    expect(game("build('huegeltreppe', 15, 10, true)")).toBe(true);
+    expect(game("undoable(() => build('huegeltreppe', 16, 9, true))")).toBe(true);
+    expect(game("[stairAt(16, 10).ecke, stairAt(15, 10).rot, stairAt(16, 9).rot]")).toEqual([true, 0, 3]);
+    expect(game('stairFit(16, 10).ecke')).toBe(true);
+    game('undo()');                                                       // letzter Schritt zurück: (16, 9) wieder Anhöhe, Ecke wieder gerade
+    expect(game('[hillLevel(16, 9), !!stairAt(16, 10).ecke]')).toEqual([1, false]);
+    // auf eine Treppe gesetzt, die schon passt: Meldung, nichts passiert
+    expect(game("placeError('huegeltreppe', 15, 10)")).toBe('Hier steht schon eine Treppe, die passt');
+  });
 });
