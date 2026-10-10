@@ -2477,3 +2477,20 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       beschatteten Garten an der Feldgrenze eine Naht von 1 Gerätepunkt (Kantenglättung zweier Zeichnungen, ebenso ±1 Punkt an Grundflächen mit
       Hof); weit weg mit WebGL wird nicht nachgemalt (Überstand unter 1 Punkt); Vorschau von Linien (Zaun-Plan, `hillMarkEdge`) nicht geprüft.
 - [ ] 157k Überdachungen oben (Pergola, Glas, Markise, Arkaden, Stützen, Dachtreppe) – eigener Block nach 157j.
+- [ ] 157l **Offen zu Anhöhen – später gemeinsam ansehen** (Nutzer 11.10.2026: „das gucken wir uns später an“):
+      - Entscheidungen der Agenten bestätigen: Garten/Büsche an der Kante gerade abgeschnitten (statt über die Wand); Zuschnitt auch für große Deko
+        und Marktstände oben; zugestellte Treppe (Fuß/oberes Feld belegt) = Anhöhe „weit weg“ mit Hinweis; ✋-Gruppe mit 1×1-Gebäuden darf halb oben,
+        halb unten landen (jedes ganz auf einer Ebene).
+      - Naht von 1 Bildpunkt im beschatteten Garten an Feldgrenzen (Nachmalen, Kantenglättung); weit weg mit WebGL wird nicht nachgemalt.
+      - Vorschau beim Zaun-Ziehen oben (`hillMarkEdge`) ungeprüft – evtl. vorn halb so breit wie früher der Bau-Rahmen.
+      - Park und Freizeitpark zählen über die Kante als eine Fläche; Blumenbeet-Bonus, Schönheit, Hässliches wirken über die Kante.
+      - Bewohner springen beim Losgehen schräg aufs erste Wegfeld – behoben nur mit Anhöhen; für alle Inseln beheben?
+      - Treppe: Breite folgt nicht der Nachbartreppe; Antippen einer Treppe mit dem Werkzeug übernimmt die gewählte Breite nicht; Fuß nur über eine
+        Ecktreppe erreichbar wird nicht erkannt (Hinweis zu viel).
+      - Gleis-Rampe: Wagen übermalen Deko/Bäume vorn links; Treppen vor einem Zug nicht ausgespart; weit weg kann das Nachmalen abgeschnitten werden;
+        ✋-Gruppen/⧉ Kopien mit Rampe legen am Griff ab; Tunneleinfahrt direkt vor dem Fuß verbindet nicht; Zaun an der offenen Seite einer A-Rampe
+        ohne Wange steht in ihrer Wand.
+      - Fußgängerbrücken, die schon vorher an einer Kante standen, werden nicht nachgeprüft.
+      - Beschreibung der Anhöhe im Baumenü (data.js `anhoehe.desc` und Tipp) nennt noch keine Gebäude oben.
+      - Leistung: Gebäude mit Garten oben kosten nah ~10–20 µs je Bild (iPad ansehen); Testwelt mit Anhöhen fehlt im Leistungs-Wächter.
+      - Vor dem Push: „Das ist neu“/NEWS_HISTORY für Anhöhen, Treppe, Gleis-Rampe, Gebäude oben.
