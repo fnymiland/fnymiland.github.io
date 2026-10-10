@@ -743,11 +743,13 @@ function trainCars() {
 // Ein Wagen als gedrehter Quader: a entlang der Fahrtrichtung, b quer; sichtbar sind Seiten, die nach vorn-unten zeigen
 function drawTrainCar(car, z, now) {
   if (car.portal && car.portal.ramp) { g.save(); rampClip(car.portal, z); try { drawTrainCarBody(car, z, now); } finally { g.restore(); } return; }   // Rampe (Block 136)
+  if (car.portal && car.portal.bp) return drawCarPortal(car, z, now);    // Bergportal (157m, hills.js): im Berg nur durch die Öffnung
   if (car.hill) return drawTrainCarHill(car, z, now);                  // Anhöhe, Gleis-Rampe (trainOnHills)
   drawTrainCarBody(car, z, now);
 }
 const trainHalfW = tr => (tr.model === 'tram' ? 0.19 : 0.17);          // halbe Breite eines Wagens (Feld)
-// car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg); car.portal.ramp: sinkt mit dem Gleis;
+// car.cut: nur das Stück [lo, hi] längs des Wagens (am Tunnelportal steckt der Rest schon im Berg) – Fenster und Dach sitzen, wo sie am ganzen
+// Wagen säßen, und enden am Schnitt; eine Schnittfläche ist keine Stirn (keine Fenster, keine Scheinwerfer; Block 157m); car.portal.ramp: sinkt mit dem Gleis;
 // car.hill: Höhe über dem Feld, mit dem er gezeichnet wird – starr von hinten (ha) nach vorn (hb), auf der Gleis-Rampe also schräg
 function drawTrainCarBody(car, z, now) {
   const tr = car.train, { du, dv } = car, col = TRAIN_COLS[tr.col] || TRAIN_COLS[0], H = tr.kind.h, ramp = car.portal && car.portal.ramp ? car.portal : null;
@@ -767,7 +769,7 @@ function drawTrainCarBody(car, z, now) {
   const faces = [0, 1, 2, 3].map(i => {
     const [a0, b0] = C4[i], [a1, b1] = C4[(i + 1) % 4], na = a0 === a1 ? Math.sign(a0 - am) : 0, nb = (b0 + b1) / 2 / wb;
     const nu = du * na - dv * nb, nv = dv * na + du * nb;
-    return { p: P(a0, b0), q: P(a1, b1), vis: nu + nv, nu, end: na !== 0, front: na > 0 && hi >= la - 1e-6 };
+    return { p: P(a0, b0), q: P(a1, b1), a0, a1, vis: nu + nv, nu, end: na !== 0, front: na > 0 && hi >= la - 1e-6, cutEnd: !!car.cut && (na > 0 ? hi < la - 1e-6 : na < 0 && lo > -la + 1e-6) };
   }).filter(f => f.vis > 0.02).sort((a, b) => a.vis - b.vis);
   for (const f of faces) {
     const wall = shade(body, f.nu > 0 ? LIGHT.side * Math.min(1, f.nu * 1.4) : 0);
@@ -776,12 +778,18 @@ function drawTrainCarBody(car, z, now) {
     if (tr.model === 'modern') faceQuad(f.p, f.q, 0, 1, H * 0.1 * z, H * 0.3 * z, C(col));
     if (tr.model === 'schnell') { faceQuad(f.p, f.q, 0, 1, H * 0.12 * z, H * 0.24 * z, C(col)); faceQuad(f.p, f.q, 0, 1, H * 0.86 * z, H * 0.94 * z, C(col)); }   // Zierstreifen unten und oben
     const glass = lit ? '#ffd873' : C(tr.model === 'modern' || tr.model === 'schnell' ? '#3d4a5c' : '#bfe3ff');
+    if (f.cutEnd) continue;                                             // Schnittfläche: nur die Wand (das Stück daneben deckt sie)
     if (f.end) faceQuad(f.p, f.q, 0.18, 0.82, H * 0.48 * z, H * 0.82 * z, glass);
     else {
       const w = tr.model === 'tram' ? 3 : tr.model === 'modern' || tr.model === 'schnell' ? 1 : 4;
       for (let k = 0; k < w; k++) {
         const t0 = 0.08 + k * 0.84 / w, t1 = t0 + 0.84 / w - (w > 1 ? 0.05 : 0);
-        faceQuad(f.p, f.q, t0, t1, H * 0.48 * z, H * 0.82 * z, glass);
+        if (!car.cut) { faceQuad(f.p, f.q, t0, t1, H * 0.48 * z, H * 0.82 * z, glass); continue; }
+        // abgeschnitten: das Fenster dort, wo es am ganzen Wagen säße (a längs des Wagens), auf das Stück der Seite zugeschnitten
+        const sd = Math.sign(f.a1 - f.a0), wa = -sd * la + sd * t0 * 2 * la, wz = -sd * la + sd * t1 * 2 * la;   // Seite läuft wie am ganzen Wagen
+        const s0 = Math.max(Math.min(wa, wz), lo), s1 = Math.min(Math.max(wa, wz), hi);
+        if (s1 - s0 < 1e-4) continue;
+        faceQuad(f.p, f.q, (s0 - f.a0) / (f.a1 - f.a0), (s1 - f.a0) / (f.a1 - f.a0), H * 0.48 * z, H * 0.82 * z, glass);
       }
     }
     if (f.end && f.front && car.i === 0) {                // Scheinwerfer vorn
@@ -789,9 +797,15 @@ function drawTrainCarBody(car, z, now) {
       if (lit) { const m = lerp(f.p, f.q, 0.5); glowQuad([[m[0] - 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.3 * z], [m[0] + 2, m[1] - H * 0.15 * z], [m[0] - 2, m[1] - H * 0.15 * z]], 22 * z); }
     }
   }
-  const roof = C4.map(([a, b]) => P(am + (a - am) * 0.97, b * 0.9, H));
-  poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
-  poly(C4.map(([a, b]) => P(am + (a - am) * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
+  if (!car.cut) {
+    const roof = C4.map(([a, b]) => P(am + (a - am) * 0.97, b * 0.9, H));
+    poly(roof, C(tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4'));
+    poly(C4.map(([a, b]) => P(am + (a - am) * 0.8, b * 0.5, H + (tr.model === 'tram' ? 1.6 : 1))), C(tr.model === 'modern' ? '#eceff2' : '#dcdfe5'));
+  } else {                                                              // abgeschnitten: Dach wie am ganzen Wagen, am Schnitt gerade zu Ende
+    const part = (k, bw, up, col) => { const r0 = Math.max(lo, -la * k), r1 = Math.min(hi, la * k); if (r1 - r0 > 1e-4) poly([[r0, -bw], [r1, -bw], [r1, bw], [r0, bw]].map(([a, b]) => P(a, b * wb, up)), C(col)); };
+    part(0.97, 0.9, H, tr.model === 'modern' ? '#dfe3e8' : '#c9ccd4');
+    part(0.8, 0.5, H + (tr.model === 'tram' ? 1.6 : 1), tr.model === 'modern' ? '#eceff2' : '#dcdfe5');
+  }
 }
 
 // --- Züge auf Anhöhen und Gleis-Rampen (Block 157, hills.js) ---

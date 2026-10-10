@@ -16,7 +16,7 @@ const twoPlaces = () => game("globalThis.__ra = regionAt; regionAt = (x, y) => x
 describe('Forschung und Menü', () => {
   it('U-Bahn kommt nach der Eisenbahn; Tunnel und U-Bahn-Station stehen unter Verkehr', () => {
     expect(game('TECH_BY_ID.ubahn.req')).toEqual(['bahn']);
-    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 6)")).toEqual(['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn']);   // Gleis-Rampe (Anhöhen) gleich hinter der Schiene
+    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 7)")).toEqual(['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'bergportal', 'station', 'ubahn']);   // Bergportal (157m) hinter der Einfahrt   // Gleis-Rampe (Anhöhen) gleich hinter der Schiene
     game("state.techs.delete('ubahn')");
     expect(game("placeError('tunnel', 8, 8)")).toMatch(/erst mit/);
   });
@@ -104,7 +104,7 @@ describe('Tunneleinfahrt (Nutzer: „einen Tunnel bauen, eine Einfahrt dazu und 
     expect(game('[trackLink(6, 10, 5, 10), trackLink(6, 10, 7, 10), trackLink(7, 10, 8, 10)]')).toEqual([true, true, true]);
     expect(game('[trackLink(6, 10, 6, 11), trackLink(7, 10, 7, 9), trackLink(5, 10, 8, 10)]')).toEqual([false, false, false]);
   });
-  it('Zug fährt hindurch: Rampe sinkt über beide Felder bis zur Wand; Portal: Wand zwischen A und B, dahinter unsichtbar', () => {
+  it('Zug fährt hindurch: Rampe sinkt über beide Felder bis zur Wand, dahinter unsichtbar; alte Portal-Formen fahren wie die Rampe (157m)', () => {
     twoPlaces();
     for (let x = 4; x <= 5; x++) game(`state.tiles.set('${x},10', { b: 'schiene', lvl: 1 })`);
     for (let x = 8; x <= 16; x++) game(`state.tunnels.set('${x},10', {})`);
@@ -119,18 +119,17 @@ describe('Tunneleinfahrt (Nutzer: „einen Tunnel bauen, eine Einfahrt dazu und 
     c = game("trainTunnelCut({ px: 7.4, py: 10, du: 1, dv: 0, len: 0.8 })");
     expect(c.cut[1]).toBeCloseTo(0.1);
     expect(game("trainTunnelCut({ px: 12, py: 10, du: 1, dv: 0, len: 0.8 })")).toBe('hide');
-    game("state.tiles.get('6,10').form = 1");                                                // Backstein: Wand zwischen A und B
-    c = game("trainTunnelCut({ px: 6.4, py: 10, du: 1, dv: 0, len: 0.8 })");
-    expect([c.k, c.portal.ramp]).toEqual(['6,10', false]); expect(c.cut[1]).toBeCloseTo(0.1);
-    expect(game("trainTunnelCut({ px: 7, py: 10, du: 1, dv: 0, len: 0.8 })")).toBe('hide');
+    game("state.tiles.get('6,10').form = 1");                                                // Backstein gibt es nicht mehr (157m): wie die Rampe
+    c = game("trainTunnelCut({ px: 7.4, py: 10, du: 1, dv: 0, len: 0.8 })");
+    expect([c.k, c.portal.ramp]).toEqual(['7,10', true]); expect(c.cut[1]).toBeCloseTo(0.1);
   });
-  it('Fenster der Einfahrt: Form wählen; zeigt, ob hinten Tunnel und vorn Schiene sind', () => {
+  it('Fenster der Einfahrt: zeigt, ob hinten Tunnel und vorn Schiene sind; keine Formen mehr (nur die Rampe, 157m)', () => {
     game("state.tunnels.set('8,10', {})"); ein();
     game('openInfo(6, 10)');
     const txt = document.getElementById('panel').textContent;
     expect(txt).toContain('Hinten am Tunnel'); expect(txt).toContain('Vorn noch keine Schiene');
-    [...document.querySelectorAll('#panel [data-dform]')].find(b => b.getAttribute('aria-label') === 'Form: Backstein').click();
-    expect(game("state.tiles.get('6,10').form")).toBe(1);
+    expect(document.querySelectorAll('#panel [data-dform]').length).toBe(0);
+    expect(game("!!DECO_LOOKS.tunneleinfahrt || DESIGN.some(d => d.id.startsWith('tunneleinfahrt:'))")).toBe(false);
     game('closePanel()');
   });
 });

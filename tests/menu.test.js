@@ -49,9 +49,10 @@ describe('Baumenü', () => {
     expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });
 
-  it('kein Filter hat mehr als 10 Dinge', () => {
-    const all = game('MENU.flatMap(m => m.groups ? m.groups.map(g => g.items.length) : [])');
+  it('kein Filter hat mehr als 10 Dinge (Verkehr 11: das Bergportal gehört laut Nutzer direkt hinter die Tunneleinfahrt, 157m)', () => {
+    const all = game("MENU.flatMap(m => m.groups ? m.groups.filter(g => g.id !== 'verkehr').map(g => g.items.length) : [])");
     expect(Math.max(...all)).toBeLessThanOrEqual(10);
+    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.length")).toBeLessThanOrEqual(11);
   });
 
   it('Bereich wechseln lässt das gewählte Werkzeug in der Hand; eine Wahl, Esc oder daneben tippen klappt zu', () => {

@@ -2494,10 +2494,36 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       - Beschreibung der Anhöhe im Baumenü (data.js `anhoehe.desc` und Tipp) nennt noch keine Gebäude oben.
       - Leistung: Gebäude mit Garten oben kosten nah ~10–20 µs je Bild (iPad ansehen); Testwelt mit Anhöhen fehlt im Leistungs-Wächter.
       - Vor dem Push: „Das ist neu“/NEWS_HISTORY für Anhöhen, Treppe, Gleis-Rampe, Gebäude oben.
-- [ ] 157m **Bergportal: Tunnel in die Wand einer Anhöhe** (Nutzer 11.10.2026: „wieso haben wir keine Tunneleinfahrt an einer Seitenwand?“).
+- [x] 157m **Bergportal: Tunnel in die Wand einer Anhöhe** (Nutzer 11.10.2026: „wieso haben wir keine Tunneleinfahrt an einer Seitenwand?“).
       Entscheidungen: als Wand mit Öffnung (kein Block vor der Wand), eine Öffnung reicht (keine Mindesttiefe der Anhöhe). Formen zur Wahl:
       **A Steinbogen** (Keilsteine, Schlussstein im Ring) und **D nur die Öffnung** (schmaler dunkler Rand in Wandfarbe) – Entwurf
       tools/bergportal-entwurf.js, Bilder tools/vorschau/bergportal-varianten.png (A–E), bergportal-zug.png/-zug-nah.png (A/D mit Zug, +y/+x,
       Fels/Erde/Mauer). Öffnung 0,6 Feld breit, Kämpfer 7, Scheitel ~18 (Wand 26); Gleis läuft eben hinein und wird nach hinten dunkel, dahinter
       der Tunnel unter der Anhöhe (U-Bahn-Netz). Offen beim Bau: Wagen am Portal (Stück im Berg nur durch die Öffnung, dunkel), Fenster des
       abgeschnittenen Stücks werden gestaucht (wie heute an der Tunneleinfahrt).
+      **Umgesetzt** (11.10.2026, Nutzer: „los“): Ding `bergportal` auf dem Randfeld P der Anhöhe (das Feld bleibt Anhöhe, oben frei), `t.rot` zeigt in
+      die Anhöhe (STAIR_UP), `t.form` 0 A Steinbogen / 1 D nur die Öffnung (`DECO_LOOKS.bergportal`, beide frei). Menü Verkehr direkt hinter der
+      Tunneleinfahrt (Verkehr hat damit 11 Dinge – Test erlaubt dort 11), Forschung U-Bahn, **800 Taler + Quader 4 + Metall 2** (Einfahrt 1.000 + 6 + 2).
+      Regeln (`bpError`/`bpDirs`/`bpRot`, hills.js): nur Randfeld der ersten Ebene, davor ebener Boden eine Ebene tiefer (kein Wasser, keine Treppe, keine
+      Gleis-Rampe), oben nichts, kein Tunnel auf P, keine Treppe/Rampe hinauf auf P, keine Fußgängerbrücke; dreht sich zur Wand (alle vier, bei Wahl:
+      Schiene davor, Tunnel dahinter, sichtbare Wand). Gesperrt: Anhöhe darunter abtragen (Portal zuerst abreißen; Abriss-Rechteck nimmt beides, ↶ bringt
+      beides), vor dem Portal anheben/Teich/Treppe/Gleis-Rampe/Linie (`bpFronts`), Tragen/Gruppe/Kopie (bleibt stehen, `noCopy`), Kleinkram oben
+      (`BIG_ON_TILE`); ↶ prüft Wand und Fuß. Netz: `trackLink` (vorn Schiene eine Ebene tiefer, hinten Tunnel; `bpLinks`), `trackAt`, `railArmsHill`
+      (Arm zur Wand, kein Prellbock), `computeRail`. Zählt nicht fürs Viertel. Fenster: „Vorn an der Schiene / Hinten am Tunnel“, Form wählbar.
+      Zeichnen im Bildchen der Anhöhe (`paintBergportal` nach den Wänden, `hillSig` + `bpSig`: Form, Richtung, Gleisbett davor, Schatten an), Maße und
+      Zeichnung aus dem Entwurf (Öffnung s 0,2…0,8, Kämpfer 7, Gleis im Tunnel wie die Schiene davor mit Verlauf ins Dunkle, Naht 0,6 Punkt tiefer); an der
+      Wand nach +x liegt die Öffnung im Schatten der Anhöhe – innen derselbe Schatten darüber (sonst helle Stufe an der Wandlinie). Wagen
+      (`bpCut` in `trainTunnelCut`, `drawCarPortal`): mit dem Feld davor gezeichnet, draußen abgeschnitten, das Stück im Berg nur durch die Öffnung
+      (Ausschnitt) und mit demselben Verlauf ins Dunkle (auf den Umriss des Wagens begrenzt – keine Leinwand, nur für Wagen am Portal); an hinteren Wänden
+      verdeckt die Anhöhe ihn von selbst. Bild in der Leiste/Kunstakademie `drawBergportalIcon` (auch das Bild des Tunnels).
+      **Fenster beim Schnitt** (für alle, auch die Rampe der Tunneleinfahrt): `drawTrainCarBody` setzt bei `car.cut` Fenster und Dach dorthin, wo sie am
+      ganzen Wagen säßen, und schneidet sie am Schnitt ab; eine Schnittfläche bekommt keine Fenster/Scheinwerfer. Ungeschnitten unverändert.
+      **Alte Tunnelportale entfernt** (Nutzer: „die Abfahrt nach unten natürlich nicht“): Backstein und Naturstein der Einfahrt samt `portalHill`/
+      `portalWall`/`HILL` sind weg, `DECO_LOOKS.tunneleinfahrt` auch (nur noch Rampe, keine Formwahl). `parseSave` löscht `form` an Einfahrten (= Rampe;
+      ältere Versionen lesen das als Rampe) und `paintNew.tunneleinfahrt`. Wer Naturstein in der Kunstakademie gekauft hatte (`tunneleinfahrt:form:stein`),
+      bekommt einmal Taler (wie der heutige Preis: mindestens 200 × 5 = 1.000, sonst nach dem besten Einkommen) und die Ideen (400) zurück; der Kauf
+      verschwindet. Leistungs-Wächter: `tunneleinfahrt` 226 (wie bisher Form 0), `bergportal Form 0/1` = 0 Zeichenbefehle (steckt im Bildchen der Anhöhe).
+      Prüfung: Nahaufnahmen tools/bergportal-pruefung.js → tools/vorschau/bergportal-final.png (beide sichtbaren Wände × Fels/Erde/Mauer × A/D, Zug halb
+      drin z 5 und z 8, Naht z 8, ganz drin, kurz davor, hintere Wände, Nacht, weit weg 2D und WebGL). Test: bergportal (dazu ubahn, menu angepasst).
+      Offen: kein Geist beim Bauen (die Vorschau zeigt nur den Rahmen oben auf dem Feld); Verkehr mit 11 Dingen (Nutzer-Wunsch „direkt hinter die
+      Tunneleinfahrt“, Grenze bisher 10); „Das ist neu“/NEWS beim Push.

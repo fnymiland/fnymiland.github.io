@@ -129,7 +129,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
 25b. **U-Bahn** (Block 136, js/draw-ubahn.js): Tunnel liegen in `state.tunnels` (Feld → { form }), oben darf alles stehen außer
     Schienen/Bahnhöfen – ein Feld ist Schiene ODER Tunnel. Ob zwei Nachbarfelder befahrbar zusammenhängen, sagt nur `trackLink`
     (Schiene und Tunnel nie direkt – dazwischen gehört die Tunneleinfahrt, 2 Felder, `einOf`/`einTiles`: vorn Schiene, hinten
-    Tunnel). Netz-Abfragen über das Feld selbst (`railTileAt`), nicht über COVER. U-Bahn-Station steht auf dem Tunnel und
+    Tunnel; nur noch als Rampe – oder das Bergportal in der Wand einer Anhöhe, 29a5). Netz-Abfragen über das Feld selbst (`railTileAt`), nicht über COVER. U-Bahn-Station steht auf dem Tunnel und
     hält auf ihrem Feld (`stopDirs`). Linien auf einer Insel (`l.inner`) bekommen Strom zuletzt und dürfen nur zusätzlich wirken
     (Wünsche, Läden ohne diese Art, Fahrkarten) – nie bestehende Einnahmen senken. Neues, das Schienenwege abfragt, Tunnel mitdenken.
     **Kacheln** zeigen Bild, Namen und Preis (`cardPrice`, kurz über `shortMoney`);
@@ -261,6 +261,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (`rampShadowClip`), sonst hängt er an ihrer Wand. Antippen: `trainAt` (tap öffnet das Fenster des Gleisfelds unter dem Zug).
     Treppe in die Anhöhe hinter dem oberen Feld einer Gleis-Rampe: nie (`stairIntoError` fragt `rampsAround` wie umgekehrt `rampIntoError`).
     Nahaufnahmen aller Formen/Drehungen mit Zug: tools/gleisrampe-pruefung.js (→ tools/vorschau/gleisrampe-nah-final.png).
+    **Bergportal** (157m, `bergportal`, hills.js unten; Entwurf tools/bergportal-entwurf.js): Ding auf dem Randfeld P (Feld bleibt Anhöhe, oben frei),
+    `t.rot` in die Anhöhe (STAIR_UP: F = P − d davor, Tunnel auf P + d), `t.form` 0 Steinbogen / 1 Öffnung. Gibt es welche: `bpOn()` (Zähler `p` in
+    `rampFresh`) – ohne sie keine einzige Abfrage mehr. Regeln `bpError`/`bpDirs`/`bpRot`, Fuß frei `bpFronts` (Anheben, Teich, Treppe, Gleis-Rampe,
+    Linie, ↶), nie getragen/kopiert. Netz nur über `trackLink` (`bpLinks`), `trackAt`, `railArmsHill`, `computeRail`. Gezeichnet im Bildchen der Anhöhe
+    (`paintBergportal`, Schlüssel `bpSig`), nur an +y (rot 0) und +x (rot 3); `drawObject` zeichnet nichts. Wagen: `bpCut` (aus `trainTunnelCut`) →
+    mit dem Feld F, `drawCarPortal` (Stück im Berg nur durch die Öffnung, gedunkelt; dann das Stück draußen). Wer Neues an diese Wand malt, lässt die
+    Öffnung frei. Abgeschnittene Wagen (`car.cut`, auch Tunneleinfahrt): Fenster/Dach wie am ganzen Wagen, am Schnitt abgeschnitten, Schnittfläche ohne Stirn.
+    Die Tunneleinfahrt ist nur noch die Rampe (Portal-Formen 11.10.2026 entfernt, `parseSave` löscht `form`). Test: bergportal.
     **Wer kommt wohin:** nur über `levelLink(x1, y1, x2, y2, who)` – 'weg' (Wegenetz, Viertel, Markt, „alle verbundenen“, Wunsch Weg) und 'fuss'
     (Bewohner, `edgeBlocks`) gehen über die Treppe längs ihrer Achse (sie verbindet das Wegenetz, `slopeWegAt`, zählt nicht fürs Viertel; quer nur in
     der breiten, Ecktreppe über ihre Füße), 'gleis' nur über die Gleis-Rampe, 'fahr' nirgends hinauf; sonst nur gleiche Ebene, nie über Eck an

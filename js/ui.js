@@ -90,9 +90,12 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
-  } else if (type === 'tunnel') {                          // Tunnel (Block 136): Strecke unter einem Hügel
+  } else if (type === 'tunnel') {                          // Tunnel (Block 136): Strecke in den Berg (Bergportal, 157m)
     block(1, '#96d56f');
     drawTunnelIcon(cx, cy, z * 0.9);
+  } else if (type === 'bergportal') {                      // Bergportal (157m): Eck Anhöhe mit der Öffnung, davor die Schiene
+    block(1, '#96d56f');
+    drawBergportalIcon(cx + 2 * z, cy + 2 * z, z * 0.95, (tile && tile.form) || decoLookNew('bergportal').form || 0);
   } else if (type === 'dach') {                            // Überdachung (Block 138): ein Feld Weg mit Dach und vier Stützen
     block(1, '#96d56f');
     drawPath(cx, cy, z, 1e6, 1e6, { style: 'm:platten:sand', wide: true });
@@ -1436,9 +1439,9 @@ function lookThumb(b, form, col) {
       url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
       lookThumbs.set(key, url); return url;
     }
-    if (b === 'tunneleinfahrt') {                                           // Tunneleinfahrt (Block 136): zwei Felder, kleiner
+    if (b === 'bergportal') {                                               // Bergportal (157m, hills.js): Eck Anhöhe mit der Öffnung der Form
       c.width = 64; c.height = 64; g = c.getContext('2d');
-      try { drawObject(b, 32, 38, 0.75, 0, 3, 3, 1, { form, rot: 1 }); } finally { g = prev; }
+      try { drawBergportalIcon(34, 34, 1, form); } finally { g = prev; }
       url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
       lookThumbs.set(key, url); return url;
     }
@@ -1590,6 +1593,12 @@ function openInfo(x, y) {
   if (t.b === 'tunneleinfahrt') { const E = einOf(x, y), inT = tunnelAt(E.B[0] + E.d[0], E.B[1] + E.d[1]), outR = bAt(E.A[0] - E.d[0], E.A[1] - E.d[1]) === 'schiene';
     status.push(inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel – ans Tunnelende setzen oder den Tunnel bis hierher ziehen</div>',
       outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene – Schiene an das offene Ende legen</div>'); }
+  if (t.b === 'bergportal') {                                           // Bergportal (157m, hills.js): wie die Tunneleinfahrt
+    const [dx, dy] = bpDir(t), inT = tunnelAt(x + dx, y + dy), outR = railTileAt(x - dx, y - dy);
+    status.push(outR ? '<div class="ok">✓ Vorn an der Schiene</div>' : '<div class="bad">✗ Vorn noch keine Schiene – an den Fuß der Wand legen</div>',
+      inT ? '<div class="ok">✓ Hinten am Tunnel</div>' : '<div class="bad">✗ Hinten noch kein Tunnel – den Tunnel unter der Anhöhe bis hierher ziehen</div>');
+    if (!bpShown(t)) status.push('<div class="muted">Die Öffnung liegt in der hinteren Wand – von hier aus sieht man sie nicht</div>');
+  }
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (t.b === 'huegeltreppe') status.push(hillStairs().some(s => s.x === x && s.y === y) ? '<div class="ok">✓ Führt hinauf auf die Anhöhe</div>'   // Block 157d
     : '<div class="bad">✗ Oben ist keine Anhöhe mehr – die Treppe führt ins Leere</div>');

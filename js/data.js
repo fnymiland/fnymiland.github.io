@@ -90,7 +90,11 @@ const ITEMS = {
   tunnel:  { cat: 'netz', name: 'Tunnel', cost: 60, mat: { quader: 1, metall: 1 }, needs: 'grass', tech: 'ubahn', paint: true,
              desc: 'Strecke unter der Erde: unter Häusern, Wegen und Parks durch, ohne Abriss – auch unter Wasser (teurer). Mit der Schiene verbindet ihn eine Tunneleinfahrt.' },
   tunneleinfahrt: { cat: 'netz', name: 'Tunneleinfahrt', size: [1, 2], cost: 1000, mat: { quader: 6, metall: 2 }, needs: 'grass', tech: 'ubahn',
-             desc: 'Verbindet Schiene und Tunnel: ans Ende eines Tunnels setzen (dreht sich von selbst), dann Schienen an das offene Ende. Zwei Felder lang – als Rampe oder als Portal im Hügel.' },
+             desc: 'Verbindet Schiene und Tunnel: ans Ende eines Tunnels setzen (dreht sich von selbst), dann Schienen an das offene Ende. Zwei Felder lang – eine Rampe hinab unter die Erde.' },
+  // Bergportal (Block 157m, hills.js): Öffnung in der Wand einer Anhöhe – Ding auf ihrem Randfeld (das Feld bleibt Anhöhe), t.rot zeigt in die Anhöhe
+  // hinein (STAIR_UP), t.form wie DECO_LOOKS.bergportal. Vorn die Schiene am Fuß der Wand, hinten der Tunnel unter der Anhöhe
+  bergportal: { cat: 'netz', name: 'Bergportal', cost: 800, mat: { quader: 4, metall: 2 }, needs: 'grass', tech: 'ubahn',
+             desc: 'Ein Tunnel in die Wand einer Anhöhe: auf den Rand der Anhöhe setzen – es dreht sich von selbst zur Wand. Vorn die Schiene an den Fuß der Wand legen, hinten den Tunnel unter der Anhöhe weiterziehen. Als Steinbogen oder nur als Öffnung.' },
   ubahn:   { cat: 'netz', name: 'U-Bahn-Station', cost: 900, mat: { quader: 6, metall: 4 }, needs: 'grass', tech: 'ubahn',
              desc: 'Auf einen Tunnel setzen – oben sieht man nur den Eingang. Zählt wie ein Bahnhof: Züge, Fahrgäste, Fahrkarten.' },
   // intern „station“: „bahnhof“ war ein früheres, entferntes Gebäude (alte Stände bekommen dafür Geld zurück)
@@ -596,7 +600,7 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'bergportal', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
     { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
@@ -654,7 +658,7 @@ const FX = {
   saege: '🪵 → 🪚', steinmetz: '🪨 → 🧱', schmiede: '⛏️ → 🔩',
   hafen: '+8 % Betriebe · 🎣 · ⛴️', blumen: '+15 % Nachbarn',
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
-  weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
+  weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', bergportal: '🚇 Schiene ↔ Tunnel in der Anhöhe', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
   graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', huegeltreppe: '⛰️ führt hinauf', huegelrampe: '🚆 Gleis hinauf', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
@@ -689,6 +693,7 @@ const ITEM_TIPS = {
   stuetze: 'Stell Stützen unter deine Überdachung – an Ecken, Seitenmitten oder auf den Punkt zwischen vier Feldern. Wie viele, entscheidest du.',
   tunnel: 'Zieh den Tunnel wie eine Schiene – unter Häusern und Wegen durch. An sein Ende kommt eine Tunneleinfahrt, daran die Schiene.',
   tunneleinfahrt: 'Ans Ende eines Tunnels setzen – sie dreht sich von selbst richtig herum. Dann Schienen an das offene Ende legen.',
+  bergportal: 'Auf den Rand einer Anhöhe setzen – die Öffnung kommt in die Wand davor. Davor die Schiene, dahinter den Tunnel unter der Anhöhe: Der Zug fährt in den Berg.',
   ubahn: 'Auf ein Stück Tunnel setzen. Zwei Stationen im selben Netz und Strom: Die Züge fahren unter der Stadt.',
   hbf: 'Der große Kopfbahnhof: Vor jedes Gleis eine eigene Strecke legen (mit einem Feld Abstand, sonst wird es eine Linie). Jede fährt mit eigenem Zug – und am Bahnhof steigen die Leute um. Mehr Gleise im Infofenster.',
   station: 'Direkt an die Schiene stellen. Zwei verbundene Bahnhöfe auf verschiedenen Inseln und Strom: Der Zug fährt, bringt Fahrgäste und bindet die Umgebung ans Dorf an. Auf derselben Insel verbindet er Viertel – Wünsche und Läden zählen dann auch drüben.',
@@ -1150,9 +1155,9 @@ const DECO_LOOKS = {
   // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
   pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: STATION_COLS, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', short: 'Tram', design: 300 },
     { id: 'mini', name: 'Mini-Zug', design: 250 }] },   // Block 136: die Form ist der Zug
-  // Tunneleinfahrt (Block 136): Rampe und Backstein frei, Naturstein in der Kunstakademie
-  tunneleinfahrt: { group: 'Tunneleinfahrten', icon: '#b9644a', cols: null, forms: [{ id: 'rampe', name: 'Rampe' }, { id: 'backstein', name: 'Backstein' },
-    { id: 'stein', name: 'Naturstein', design: 200 }] },
+  // Tunneleinfahrt (Block 136): nur noch die Rampe – Backstein und Naturstein (Portal im Hügel) sind weg (Block 157m, parseSave macht sie zur Rampe)
+  // Bergportal (Block 157m, Entwurf tools/bergportal-entwurf.js): A Steinbogen, D nur die Öffnung – beide frei
+  bergportal: { group: 'Bergportale', icon: '#d6cdbb', cols: null, forms: [{ id: 'bogen', name: 'Steinbogen' }, { id: 'offen', name: 'Nur die Öffnung' }] },
   ubahn: { group: 'U-Bahn', icon: '#2f62b8', cols: null, forms: [{ id: 'treppe', name: 'Treppe mit Mast' }, { id: 'pavillon', name: 'Pavillon', design: 250 },
     { id: 'haeuschen', name: 'Häuschen', design: 200 }] },
   dach: { group: 'Überdachungen', icon: '#8a5a3a', colLabel: 'Markisenfarbe', cols: MARKISE_COLS, forms: [{ id: 'pergola', name: 'Holz-Pergola' },   // Block 138

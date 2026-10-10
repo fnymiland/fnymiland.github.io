@@ -253,6 +253,17 @@ function parseSave(d) {
     d.money = (+d.money || 0) + 200; d.res = { ...(d.res || {}) }; d.res.stein = (+d.res.stein || 0) + 8;
     return false;
   });
+  // 11.10.2026 (Block 157m): die Tunneleinfahrt gibt es nur noch als Rampe – Backstein und Naturstein (Portal im Hügel, t.form 1/2) werden zur
+  // Rampe (gleiche Felder, gleiches Netz; ohne form lesen auch ältere Versionen sie als Rampe). Naturstein kostete in der Kunstakademie Taler und
+  // Ideen: wer ihn gekauft hat, bekommt beides zurück (Taler wie der heutige Preis, mindestens der Grundpreis × 5, nach dem besten Einkommen)
+  for (const [, t] of d.tiles) if (t && t.b === 'tunneleinfahrt' && t.form != null) delete t.form;
+  if (d.paintNew && d.paintNew.tunneleinfahrt) delete d.paintNew.tunneleinfahrt;
+  if ((d.design || []).includes('tunneleinfahrt:form:stein')) {
+    const old = { price: 200, schmuck: true };
+    d.money = (+d.money || 0) + niceRound(Math.max(old.price * DESIGN_FLOOR, DESIGN_SCHMUCK * Math.sqrt(old.price / 150) * 60 * (isFinite(d.incPeak) && d.incPeak > 0 ? d.incPeak : 0)));
+    d.science = (+d.science || 0) + designIdeas(old);
+    d.design = d.design.filter(id => id !== 'tunneleinfahrt:form:stein');
+  }
   // Strom (27.09.) und Busse/Bahnhöfe (28.09.) wurden entfernt: Kosten erstatten
   const REFUND = { kraftwerk: 500, solar: 350, bus: 120, bahnhof: 900 };
   const SCI_REFUND = { wind: 30, solar: 120, bus: 25, bus2: 70, zug: 160 };

@@ -1995,7 +1995,7 @@ function render(now) {
         const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'huegeltreppe' && t.b !== 'huegelrampe' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht (Treppe/Rampe in die Anhöhe: Gelände wie die Anhöhe, Block 157d)
         const drawIt = () => seeFaded(fadeIt, drawIt0);
         const drawIt0 = () => {
-          if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
+          if ((t.b === 'schiene' && !t.cross) || t.b === 'bergportal') return;   // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden); Bergportal: im Bildchen der Anhöhe (157m)
           let sc = 1;
           if (t.born) {
             const an = (now - t.born) / 380;
@@ -2035,7 +2035,7 @@ function render(now) {
           if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
-            if (oLift && t.b !== 'weg' && t.b !== 'schiene') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
+            if (oLift && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();
             else if (t.bridge && bridgeArch(x, y)) drawArchBridge(x, y, px, py, z, t);   // hoher Bogen: wie ein Gebäude (Block 150)

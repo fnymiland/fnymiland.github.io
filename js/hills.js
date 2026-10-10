@@ -89,6 +89,7 @@ function hillRaiseError(x, y, noCost) {
   if (!available('anhoehe')) return `Anhöhe: ${lockText('anhoehe').replace('🔒 ', 'erst mit ')}`;
   if (!ownedTile(x, y)) return notMine(x, y);
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
+  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
   const t = objAt(x, y);
   if (t) {
     if (t.b === 'huegeltreppe') return 'Hier steht eine Treppe – erst abreißen';   // Treppe (Block 157d)
@@ -195,6 +196,7 @@ function hillSig(x, y, h) {
   const ex = hillExt(x, y, lv, st, wu, wv);
   if (ex[0] || ex[1]) s += ':e' + (ex[0] ? 1 : 0) + (ex[1] ? 1 : 0);
   s += hillShadeSig(x, y);                                               // Schlagschatten der Dinge oben (Block 157j)
+  if (bpOn()) { const bp = bpAt(x, y); if (bp) s += bpSig(x, y, bp); }   // Bergportal (157m): Form, Richtung, Gleisbett davor
   return s;
 }
 // Treppen, die auf Feld (x, y) hinaufführen, als Zeichen je Seite: v/u = vorn (+y/+x, Wand ohne Grasnarbe – die Stufen decken sie),
@@ -383,6 +385,7 @@ function paintHill(x, y, h) {
   const [ev, eu] = hillExt(x, y, lv, st, wu, wv);
   if (wv > 0) paintHillWall(P, -0.5, 0.5, 0.5, 0.5, 'v', kind, top - wv * HILL_H, top, x * 7 + y * 13, top, !st.includes('v'), 1, 0, ev);
   if (wu > 0) paintHillWall(P, 0.5, -0.5, 0.5, 0.5, 'u', kind, top - wu * HILL_H, top, x * 11 + y * 5 + 3, top, !st.includes('u'), 1, 0, eu);
+  if (bpOn()) { const bp = bpAt(x, y); if (bp) paintBergportal(P, x, y, bp, top, kind); }   // Bergportal (157m): Öffnung in dieselbe Wand
 }
 function drawHillTile(x, y, px, py, z) {
   const h = hillAt(x, y);
@@ -718,6 +721,7 @@ function stairError(x, y, rot, move) {
   if (terrainAt(x, y) === 'water') return 'Nicht auf dem Wasser';
   if (wegAt(x, y) != null) return 'Nicht auf einen Weg – stell die Treppe ans Ende des Wegs';
   if (archAround(x, y)) return ARCH_HERE;
+  if (bpFronts(x, y).length) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
   if (state.roofs && state.roofs.size && roofAt(x, y)) return 'Unter einer Überdachung geht keine Treppe';
   const ok = stairDirs(x, y, stairBase(x, y)), cd = ok.length ? [] : cornerDirs(x, y);
   if (cd.length) {                                                       // Ecktreppe zwischen zwei Treppen um die Ecke
@@ -770,6 +774,10 @@ function stairIntoError(x, y, move) {
 // Felder und nicht zwischen zwei Einschnitte A nebeneinander (ein Einschnitt, zwei Gleise)
 function stairEdgeError(k) {
   const [[ax, ay], [bx, by]] = edgeTiles(k), a = stairAt(ax, ay), b = stairAt(bx, by);
+  if (bpOn()) for (const [px, py, ox, oy] of [[ax, ay, bx, by], [bx, by, ax, ay]]) {   // Bergportal (157m): nicht quer vor die Öffnung
+    const t = bpAt(px, py);
+    if (t && ox === px - bpDir(t)[0] && oy === py - bpDir(t)[1]) return 'Nicht vor das Bergportal – dort fährt der Zug hinein';
+  }
   if ((a && a.ecke) || (b && b.ecke)) return 'Nicht an die Ecktreppe';
   if (a && b && stairRotOf(a) === stairRotOf(b)) return stairSchmal(a) || stairSchmal(b) ? 'Nicht zwischen die Treppen' : 'Nicht mitten durch die breite Treppe';
   for (const [t, x, y, ox, oy] of [[a, ax, ay, bx, by], [b, bx, by, ax, ay]]) {
@@ -1117,22 +1125,23 @@ function surfaceHeight(u, v) {
 }
 // alle Rampen (gemerkt je Boden-Fassung wie stairFresh, aber ohne Text-Schlüssel: levelLink fragt oft): list = die, hinter deren oberem
 // Feld die Anhöhe eine Ebene höher liegt (hillRamps); n = Rampen, f = ihre Felder, s = Treppen
-const RAMP_NONE = { list: [], n: 0, f: 0, s: 0 };
+const RAMP_NONE = { list: [], n: 0, f: 0, s: 0, p: 0 };
 let rampCache = RAMP_NONE;
 function rampFresh() {
   const c = rampCache;
   if (!state.hills || !state.hills.size) return (rampCache = RAMP_NONE);  // ohne Anhöhen keine Rampen (und Treppen)
   if (c.gv === groundVersion && c.ts === state.tiles.size && c.hs === state.hills.size && c.st === state) return c;
   const list = [];
-  let n = 0, f = 0, s = 0;
+  let n = 0, f = 0, s = 0, p = 0;
   for (const [k, t] of state.tiles) {
     if (isStair(t)) s++;
+    else if (t.b === 'bergportal') p++;                                  // Bergportale (157m): bpOn
     if (!isRamp(t)) continue;
     const [ax, ay] = keyXY(k), rot = (t.rot || 0) & 3, form = rampFormOf(t), len = RAMP_FORMS[form].len, [dx, dy] = STAIR_UP[rot], F = rampFields(ax, ay, rot, len), top = F[len - 1];
     n++; f += len;
     if (hillLevel(top[0] + dx, top[1] + dy) === hillLevel(top[0], top[1]) + 1) list.push({ k, ax, ay, len, rot, dx, dy, form, foot: F[0], top });
   }
-  rampCache = { gv: groundVersion, ts: state.tiles.size, hs: state.hills.size, st: state, list, n, f, s };
+  rampCache = { gv: groundVersion, ts: state.tiles.size, hs: state.hills.size, st: state, list, n, f, s, p };
   return rampCache;
 }
 // [{ k: Ankerfeld, ax, ay, len, rot, dx, dy, form, foot: [x, y], top: [x, y] }] – (dx, dy) zeigt hinauf; nur Rampen, die auf die Anhöhe führen
@@ -1294,6 +1303,7 @@ function rampError(x, y, rot, len = rampLen(), move = false, form = null) {
   if (F.some(([fx, fy]) => terrainAt(fx, fy) === 'water')) return 'Nicht auf dem Wasser';
   if (F.some(([fx, fy]) => wegAt(fx, fy) != null)) return 'Nicht auf einen Weg – Gleis und Weg kreuzen sich nur auf ebenem Boden';
   if (F.some(([fx, fy]) => archAround(fx, fy))) return ARCH_HERE;
+  if (F.some(([fx, fy]) => bpFronts(fx, fy).length)) return 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein';   // Block 157m
   if (F.some(([fx, fy]) => { const t = objAt(fx, fy); return t && t.b === 'schiene'; })) return 'Nicht auf ein Gleis – stell die Rampe ans Ende des Gleises';
   if (state.roofs && state.roofs.size && F.some(([fx, fy]) => roofAt(fx, fy))) return 'Unter einer Überdachung geht keine Gleis-Rampe';
   const ok = rampDirs(x, y, len, form);
@@ -1772,4 +1782,228 @@ function drawRampIcon(cx, cy, z, form) {
         m: cut ? 'h' : 'k', p: cut ? 'h' : 'k', top: '#a2d879', rl: 'schotter' }, 1e6, 1e6);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Bergportal (Block 157m, Nutzer 11.10.2026: „wieso haben wir keine Tunneleinfahrt an einer Seitenwand?“ – „als Wand mit Öffnung, kein Block
+// vor der Wand“; Entwurf tools/bergportal-entwurf.js, Bilder tools/vorschau/bergportal-zug*.png). Ding 'bergportal' auf einem Randfeld P der
+// Anhöhe (das Feld bleibt Anhöhe, oben steht nichts), die Öffnung in ihrer Wand zum Feld F = P − d davor (d = STAIR_UP[rot], in die Anhöhe
+// hinein; F eine Ebene tiefer). Ein Gleisstück: vorn die Schiene auf F, hinten der Tunnel auf P + d (bpLinks in trackLink). Gezeichnet im
+// Bildchen der Anhöhe (paintHill → paintBergportal), nur an den sichtbaren Wänden (+y: rot 0, +x: rot 3) – an den hinteren verdeckt die
+// Anhöhe den Zug von selbst. Form t.form: 0 A Steinbogen, 1 D nur die Öffnung (DECO_LOOKS.bergportal). Wagen am Portal: bpCut/drawCarPortal
+// ---------------------------------------------------------------------------
+const BP_S0 = 0.2, BP_S1 = 0.8, BP_HK = 7, BP_D = 0.9;                   // Öffnung längs der Wand (0,6 Feld), Kämpfer, Tiefe des Gleises darin
+const BP_HOLE = '#2b2723', BP_JAMB = '#5a5148', BP_FLOOR = '#8a8070';
+const BP_STONE = { face: '#d6cdbb', dark: '#bcb29f', top: '#e6dfcf', line: 'rgba(90,75,55,0.45)' };
+const BP_WALL_LEN = Math.hypot(TW / 2, TH / 2);                          // Bildpunkte je Feld längs der Wand
+const bpOn = () => hillsOn() && rampFresh().p > 0;                       // gibt es Bergportale? (sonst nichts nachsehen)
+const bpAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return t && t.b === 'bergportal' ? t : null; };
+const bpDir = t => STAIR_UP[(t.rot || 0) & 3];
+const bpShown = t => ((t.rot || 0) & 3) === 0 || ((t.rot || 0) & 3) === 3;   // Wand nach +y bzw. +x: zu sehen
+// Portale, deren Fuß (Feld vor der Wand) (x, y) ist → [[px, py], …] (Anheben, Teich, Treppe, Gleis-Rampe davor)
+function bpFronts(x, y) {
+  if (!bpOn()) return [];
+  const out = [];
+  for (const [ex, ey] of DIRS) { const t = bpAt(x + ex, y + ey); if (t) { const [dx, dy] = bpDir(t); if (dx === ex && dy === ey) out.push([x + ex, y + ey]); } }
+  return out;
+}
+// Hängt das Portal t auf (x, y) mit dem Nachbarn (nx, ny) befahrbar zusammen? Vorn die Schiene eine Ebene tiefer, hinten der Tunnel (trackLink)
+function bpLinks(t, x, y, nx, ny) {
+  const [dx, dy] = bpDir(t);
+  if (nx === x - dx && ny === y - dy) return railTileAt(nx, ny) && hillLevel(nx, ny) === hillLevel(x, y) - 1;
+  if (nx === x + dx && ny === y + dy) return tunnelAt(nx, ny);
+  return false;
+}
+// Richtungen, in die ein Portal auf (x, y) zeigen kann: davor ebener Boden eine Ebene tiefer – kein Wasser, keine Treppe, keine Gleis-Rampe
+function bpDirs(x, y) {
+  const out = [], lv = hillLevel(x, y);
+  if (!lv) return out;
+  for (let r = 0; r < 4; r++) {
+    const [dx, dy] = STAIR_UP[r], fx = x - dx, fy = y - dy;
+    if (hillLevel(fx, fy) === lv - 1 && !hillAt(fx, fy) && terrainAt(fx, fy) !== 'water' && !stairAt(fx, fy) && !(rampFresh().n && rampAt(fx, fy))) out.push(r);
+  }
+  return out;
+}
+// Drehung beim Setzen (placeRot): zur Wand; passen mehrere, die mit Schiene davor, Tunnel dahinter, sichtbarer Wand – bei Gleichstand die gewählte
+function bpRot(x, y) {
+  const ok = bpDirs(x, y);
+  if (!ok.length) return buildRot & 3;
+  const score = r => { const [dx, dy] = STAIR_UP[r]; return (railTileAt(x - dx, y - dy) ? 4 : 0) + (tunnelAt(x + dx, y + dy) ? 2 : 0) + (r === 0 || r === 3 ? 1 : 0); };
+  const best = Math.max(...ok.map(score)), c = ok.filter(r => score(r) === best);
+  return c.includes(buildRot & 3) ? buildRot & 3 : c[0];
+}
+// Darf hier ein Portal stehen (placeError)? move: getragen (✋, Gruppe, ⧉ Kopie) – nie, es sitzt in der Wand
+function bpError(x, y, rot, move, noCost) {
+  if (move) return 'Das Bergportal sitzt in der Wand – abreißen und an der neuen Wand neu bauen';
+  if (!ownedTile(x, y)) return notMine(x, y);
+  if (!hillAt(x, y)) return 'Auf den Rand einer Anhöhe setzen – die Öffnung kommt in ihre Wand';
+  if (hillLevel(x, y) !== 1) return 'Das Bergportal geht nur in die Wand der ersten Ebene';
+  const ok = bpDirs(x, y);
+  if (!ok.length) return DIRS.some(([dx, dy]) => hillLevel(x - dx, y - dy) < 1) ? 'Vor der Wand braucht es ebenen Boden – kein Wasser, keine Treppe, keine Gleis-Rampe' : 'Das Bergportal gehört an den Rand der Anhöhe';
+  if (!ok.includes(rot & 3)) return 'Das Bergportal muss in die Wand zeigen';
+  const t = objAt(x, y), dd = (decosAt(x + ',' + y) || []).find(Boolean);
+  if (t || dd) return `Oben steht: ${ITEMS[(t || dd).b].name} – erst wegnehmen`;
+  if (tunnelAt(x, y)) return 'Nicht auf den Tunnel – das Portal kommt vor sein Ende';
+  if (stairsAround(x, y).length) return 'Hierher führt eine Treppe hinauf';
+  if (rampsAround(x, y).length) return 'Hierher führt eine Gleis-Rampe hinauf';
+  if (archAround(x, y)) return ARCH_HERE;
+  const [dx, dy] = STAIR_UP[rot & 3], e = state.edges.get(edgeBetween(x, y, x - dx, y - dy));
+  if (e) return `Vor der Wand steht: ${ITEMS[e.b].name} – erst entfernen`;
+  const ter = terrainAt(x, y);
+  if (ter !== 'grass' && !willClear('bergportal', ter)) return needError(ITEMS.bergportal, ter, {}) || 'Hier geht es nicht';
+  if (noCost) return null;
+  if (state.money < ITEMS.bergportal.cost + clearCost('bergportal', x, y, rot)) return 'Zu wenig Taler';
+  return matError(ITEMS.bergportal.mat);
+}
+// Wand des Felds im Bildchen (P wie paintHill, relativ zur Feldmitte): at(s, h) – s längs der Wand (0 … 1, im Bild von links nach rechts),
+// h über dem Fuß hb; into(s, d, h): d Felder in die Anhöhe hinein (Laibung, Boden im Tunnel)
+function bpWall(P, side, hb) {
+  if (side === 'v') return { at: (s, h) => P(-0.5 + s, 0.5, hb + h), into: (s, d, h) => P(-0.5 + s, 0.5 - d, hb + h) };
+  return { at: (s, h) => P(0.5, 0.5 - s, hb + h), into: (s, d, h) => P(0.5 - d, 0.5 - s, hb + h) };
+}
+const bpPath = pts => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+const bpFill = (pts, col) => { bpPath(pts); g.fillStyle = C(col); g.fill(); };
+const bpLine = (pts, col, w) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.strokeStyle = C(col); g.lineWidth = w; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); };
+// Bogenöffnung in der Wand: s0 … s1, Kämpfer bei hk, Halbkreis in der Wandebene (Radius in Bildpunkten der Wand); grow: so viel größer (Ring, Rand)
+function bpArch(at, s0, s1, hk, grow = 0, n = 16) {
+  const sm = (s0 + s1) / 2, rs = (s1 - s0) / 2 + grow / BP_WALL_LEN, rh = (s1 - s0) / 2 * BP_WALL_LEN + grow, out = [at(sm - rs, 0)];
+  for (let i = 0; i <= n; i++) { const a = Math.PI - i * Math.PI / n; out.push(at(sm + Math.cos(a) * rs, hk + Math.sin(a) * rh)); }
+  out.push(at(sm + rs, 0));
+  return out;
+}
+// Verlauf ins Dunkle über die Tiefe (Gleis im Tunnel und Wagen darin gleich): von p0 an der Wand bis p1 0,7 Feld tief
+function bpDark(p0, p1) {
+  const gr = g.createLinearGradient(p0[0], p0[1], p1[0], p1[1]);
+  gr.addColorStop(0, 'rgba(30,26,22,0.05)'); gr.addColorStop(0.35, 'rgba(30,26,22,0.6)'); gr.addColorStop(1, 'rgba(30,26,22,0.97)');
+  return gr;
+}
+// Inneres: dunkel, Laibung links, Boden mit dem Gleis (Gleisbett wie die Schiene davor, lk), das nach hinten ins Dunkle läuft
+// shade: die Öffnung liegt im Schatten der Anhöhe (Wand nach +x, ⚙️ Schatten an) – innen mindestens so dunkel wie der Boden davor, sonst stand an der
+// Wandlinie eine helle Stufe
+const BP_SHADE = 'rgba(30,42,62,0.22)';                                  // wie drawHillShadows
+function bpInside(W, hole, s0, s1, hTop, lk, shade = false) {
+  // Naht an der Wand: das Gleis draußen (Boden-Bild) endet genau an der Wandlinie – das Innere reicht einen halben Punkt unter sie (sonst
+  // schien dort ein Haar Gras durch die Kantenglättung)
+  const clipHole = hole.map((p, i) => i === 0 || i === hole.length - 1 ? [p[0], p[1] + 0.6] : p);
+  g.save(); bpPath(clipHole); g.clip();
+  try {
+    bpFill(hole, BP_HOLE);
+    const D = BP_D;
+    bpFill([W.at(s0, 0), W.into(s0, D, 0), W.into(s0, D, hTop), W.at(s0, hTop)], BP_JAMB);   // Laibung (zur Kamera hin offen)
+    bpFill([W.at(s0, 0), W.at(s1, 0), W.into(s1, D, 0), W.into(s0, D, 0)], BP_FLOOR);       // Boden neben dem Gleis
+    // Gleis: Bett, Schwellen, Schienen wie draußen (Maße wie drawRailBed, Schwellen im selben Takt ab der Wand) – dunkel wird es erst über
+    // den Verlauf, so geht das Gleis an der Wand ohne Stufe weiter
+    const sm = (s0 + s1) / 2, band = w => [W.into(sm - w, -0.03, 0), W.into(sm + w, -0.03, 0), W.into(sm + w, D, 0), W.into(sm - w, D, 0)];
+    if (lk.pave) { const pl = pathLook(lk.pave); bpFill(band(RAIL_W + 0.05), pl.edge); bpFill(band(RAIL_W + 0.02), pl.fill); }
+    else {
+      bpFill(band(RAIL_W + 0.03), lk.edge); bpFill(band(RAIL_W), lk.bed);
+      g.strokeStyle = C(lk.tie); g.lineWidth = 1.7; g.lineCap = 'butt'; g.beginPath();
+      for (let d = 0.0625; d < D; d += 0.125) { const p = W.into(sm - 0.15, d, 0), q = W.into(sm + 0.15, d, 0); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+      g.stroke();
+    }
+    for (const o of [-RAIL_GAUGE, RAIL_GAUGE]) { bpLine([W.into(sm + o, -0.03, 0), W.into(sm + o, D, 0)], lk.rail, lk.rw); bpLine([W.into(sm + o, -0.03, 0.4), W.into(sm + o, D, 0.4)], '#dfe3e8', 0.45); }
+    if (shade) { g.fillStyle = BP_SHADE; bpPath(hole); g.fill(); }
+    g.fillStyle = bpDark(W.at(sm, 0), W.into(sm, 0.7, 0)); bpPath(hole); g.fill();
+  } finally { g.restore(); }
+}
+// Steinring (Keilsteine) um die Öffnung, mit hellerem Schlussstein im Scheitel (im Ring, nichts steht über)
+function bpRing(W, s0, s1, hk, t) {
+  const col = BP_STONE, outer = bpArch(W.at, s0, s1, hk, t), inner = bpArch(W.at, s0, s1, hk, 0);
+  bpFill([...outer, ...inner.slice().reverse()], col.face);
+  const n = 16, sm = (s0 + s1) / 2, rs = (s1 - s0) / 2, rh = rs * BP_WALL_LEN, at = (i, r, h) => { const a = Math.PI - i * Math.PI / n; return W.at(sm + Math.cos(a) * r, hk + Math.sin(a) * h); };
+  for (let i = 1; i < n; i += 2) bpLine([at(i, rs, rh), at(i, rs + t / BP_WALL_LEN, rh + t)], col.line, 0.8);   // Fugen der Keilsteine
+  for (const sg of [-1, 1]) for (const h of [hk * 0.33, hk * 0.66]) bpLine([W.at(sm + sg * rs, h), W.at(sm + sg * (rs + t / BP_WALL_LEN), h)], col.line, 0.8);   // Fugen der Pfeiler
+  const seg = [];
+  for (let i = 7; i <= 9; i++) seg.push(at(i, rs + t / BP_WALL_LEN, rh + t));
+  for (let i = 9; i >= 7; i--) seg.push(at(i, rs, rh));
+  bpFill(seg, col.top);
+  for (const i of [7, 9]) bpLine([at(i, rs, rh), at(i, rs + t / BP_WALL_LEN, rh + t)], col.line, 0.8);
+  bpLine(outer.slice(1, -1), col.dark, 0.7);
+}
+// Gleisbett im Tunnel: wie die Schiene vor der Wand (sonst Schotter)
+function bpRailLook(x, y, t) {
+  const [dx, dy] = bpDir(t), f = state.tiles.get((x - dx) + ',' + (y - dy));
+  return f && f.b === 'schiene' ? railLookOf(f) : RAIL_LOOK.schotter;
+}
+// Portal in die Wand malen (paintHill, nach den Wänden): P wie dort, top = Oberkante, kind = Wandart; nur an einer sichtbaren Wand, die da ist
+function paintBergportal(P, x, y, t, top, kind, lk = bpRailLook(x, y, t)) {
+  const r = (t.rot || 0) & 3, side = r === 0 ? 'v' : r === 3 ? 'u' : null;
+  if (!side) return;
+  const [dx, dy] = bpDir(t), wall = hillLevel(x, y) - drawLevel(x - dx, y - dy);
+  if (wall <= 0) return;
+  const W = bpWall(P, side, top - wall * HILL_H), H = wall * HILL_H, hole = bpArch(W.at, BP_S0, BP_S1, BP_HK), sh = side === 'u' && GFX.shadows;
+  if ((t.form || 0) === 1) {                                              // D: nur die Öffnung, ein schmaler Rand in Wandfarbe
+    bpFill(bpArch(W.at, BP_S0, BP_S1, BP_HK, 1.3), HILL_STY[kind].u);
+    bpInside(W, hole, BP_S0, BP_S1, H, lk, sh);
+  } else {                                                                // A: Steinbogen, Ring aus Keilsteinen
+    bpInside(W, hole, BP_S0, BP_S1, H, lk, sh);
+    bpRing(W, BP_S0, BP_S1, BP_HK, 2.6);
+  }
+}
+const bpSig = (x, y, t) => ':P' + ((t.rot || 0) & 3) + (t.form || 0) + (GFX.shadows ? 's' : '') + (() => { const [dx, dy] = bpDir(t), f = state.tiles.get((x - dx) + ',' + (y - dy)); return f && f.b === 'schiene' ? 'g' + (f.form || 0) : ''; })();
+
+// --- Wagen am Portal (render.js über trainTunnelCut): draußen normal, das Stück im Berg nur durch die Öffnung und nach hinten dunkel ---
+// → null (nicht am Portal), 'hide' (ganz im Berg bzw. hinter einer verdeckten Wand) oder { k: Feld vor der Wand (danach gezeichnet), cut: Stück
+// draußen [lo, hi] oder null, portal: { bp: [px, py, dx, dy], inn: Stück im Berg (nur an sichtbarer Wand, bis BP_D tief) oder null, out } }
+function bpCut(m) {
+  const rx = Math.round(m.px), ry = Math.round(m.py), la = m.len / 2;
+  for (const [ox, oy] of [[0, 0], ...DIRS]) {                             // Portal auf dem Feld, dahinter (Wagen auf dem Fuß) oder davor (im Tunnel)
+    const px = rx + ox, py = ry + oy, t = bpAt(px, py);
+    if (!t) continue;
+    const [dx, dy] = bpDir(t);
+    if ((ox || oy) && !(ox === dx && oy === dy) && !(ox === -dx && oy === -dy)) continue;
+    const ed = m.du * dx + m.dv * dy;
+    if (Math.abs(ed) < 0.5) continue;                                     // quer davor (Kurve am Fuß): nicht hinein
+    const s = (m.px - px) * dx + (m.py - py) * dy + 0.5, aw = -s / ed;    // s > 0: hinter der Wand; aw: Stelle längs des Wagens an der Wand
+    const out = ed > 0 ? [-la, Math.min(la, aw)] : [Math.max(-la, aw), la], inn = ed > 0 ? [Math.max(-la, aw), la] : [-la, Math.min(la, aw)];
+    const hasOut = out[1] - out[0] > 0.02, hasIn = inn[1] - inn[0] > 0.02;
+    if (!hasIn) return null;                                              // ganz draußen: wie immer
+    const near = Math.min(s + inn[0] * ed, s + inn[1] * ed), wall = hillLevel(px, py) > hillLevel(px - dx, py - dy);
+    const showIn = bpShown(t) && wall && near < BP_D;
+    if (!hasOut && !showIn) return 'hide';
+    return { k: (px - dx) + ',' + (py - dy), cut: hasOut ? out : null, portal: { bp: [px, py, dx, dy], inn: showIn ? inn : null, out: hasOut } };
+  }
+  return null;
+}
+// Öffnung auf dem Bildschirm (wie im Bildchen der Anhöhe, über toScreen; unten einen halben Punkt tiefer wie bpInside)
+function bpHoleScreen(px, py, r, z) {
+  const at = r === 0 ? (s, h) => { const p = toScreen(px - 0.5 + s, py + 0.5); return [p.x, p.y - h * z]; }
+    : (s, h) => { const p = toScreen(px + 0.5, py + 0.5 - s); return [p.x, p.y - h * z]; };
+  return bpArch((s, h) => at(s, h), BP_S0, BP_S1, BP_HK).map(([x, y], i, A) => i === 0 || i === A.length - 1 ? [x, y + 0.6 * z] : [x, y]);
+}
+// Wagen am Portal: erst das Stück im Berg (nur durch die Öffnung, mit demselben Verlauf ins Dunkle wie das Gleis – auf seine Fläche begrenzt,
+// keine Leinwand), dann das Stück draußen darüber (es deckt die Schnittfläche an der Wand)
+function drawCarPortal(car, z, now) {
+  const Q = car.portal, out = car.cut;
+  if (Q.inn) {
+    const [px, py, dx, dy] = Q.bp, r = dy ? 0 : 3, tr = car.train, H = tr.kind.h + 1.6, wb = trainHalfW(tr), { du, dv } = car;
+    g.save();
+    try {
+      bpPath(bpHoleScreen(px, py, r, z)); g.clip();
+      car.cut = Q.inn; drawTrainCarBody(car, z, now);
+      const pts = [];                                                     // Umriss des Stücks (Quader: konvex) – nur dort dunkeln
+      for (const a of Q.inn) for (const b of [-wb, wb]) { const p = toScreen(car.px + du * a - dv * b, car.py + dv * a + du * b); pts.push([p.x, p.y], [p.x, p.y - H * z]); }
+      const w0 = toScreen(px - dx * 0.5, py - dy * 0.5), w1 = toScreen(px - dx * 0.5 + dx * 0.7, py - dy * 0.5 + dy * 0.7), hp = hull(pts);
+      if (r === 3 && GFX.shadows) { g.fillStyle = BP_SHADE; bpPath(hp); g.fill(); }   // im Schatten der Anhöhe wie das Gleis (bpInside)
+      g.fillStyle = bpDark([w0.x, w0.y], [w1.x, w1.y]); bpPath(hp); g.fill();
+    } finally { g.restore(); car.cut = out; }
+  }
+  if (Q.out) drawTrainCarBody(car, z, now);
+}
+// Bauleiste/Leiste: Eck einer Anhöhe mit dem Portal in der linken Wand, davor die Schiene (auch das Bild des Tunnels)
+function drawBergportalIcon(cx, cy, z, form = 0) {
+  const s = 0.75, hw = TW / 2 * z * s, hh = TH / 2 * z * s;
+  const P = (u, v, up = 0) => [cx + (u - v) * hw, cy + (u + v) * hh - up * z * s];
+  const lk = RAIL_LOOK.schotter, rail = (u0, u1) => {
+    const band = w => [P(-w, u0), P(w, u0), P(w, u1), P(-w, u1)];
+    poly(band(RAIL_W + 0.03), C(lk.edge)); poly(band(RAIL_W), C(lk.bed));
+    for (const o of [-RAIL_GAUGE, RAIL_GAUGE]) { g.strokeStyle = C(lk.rail); g.lineWidth = lk.rw * z * s; g.beginPath(); g.moveTo(...P(o, u0)); g.lineTo(...P(o, u1)); g.stroke(); }
+  };
+  rail(0.5, 1.2);                                                         // die Schiene davor
+  poly([P(-0.5, -0.5, HILL_H), P(0.5, -0.5, HILL_H), P(0.5, 0.5, HILL_H), P(-0.5, 0.5, HILL_H)], C('#a2d879'));
+  paintHillWall(P, -0.5, 0.5, 0.5, 0.5, 'v', 'fels', 0, HILL_H, 7);
+  paintHillWall(P, 0.5, -0.5, 0.5, 0.5, 'u', 'fels', 0, HILL_H, 3);
+  const W = bpWall(P, 'v', 0), hole = bpArch(W.at, BP_S0, BP_S1, BP_HK);
+  if (form === 1) { bpFill(bpArch(W.at, BP_S0, BP_S1, BP_HK, 1.3), HILL_STY.fels.u); bpInside(W, hole, BP_S0, BP_S1, HILL_H, lk); }
+  else { bpInside(W, hole, BP_S0, BP_S1, HILL_H, lk); bpRing(W, BP_S0, BP_S1, BP_HK, 2.6); }
 }

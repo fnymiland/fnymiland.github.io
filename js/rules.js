@@ -367,7 +367,7 @@ const WALK_REACH = 4, FAR_EFF = 0.5;
 const VIERTEL_STEPS = [[15, 0.3], [8, 0.2], [3, 0.1]];
 const LM_RADIUS = 10, LM_BOOST = 0.15;
 const needsReach = b => b === 'lm' || !!ITEMS[b].workers;
-const countsForViertel = b => b !== 'weg' && b !== 'schiene' && b !== 'huegelrampe' && b !== 'huegeltreppe';   // Treppe (Anhöhen) zählt wie ein Weg, die Gleis-Rampe wie die Schiene
+const countsForViertel = b => b !== 'weg' && b !== 'schiene' && b !== 'huegelrampe' && b !== 'huegeltreppe' && b !== 'bergportal';   // Treppe (Anhöhen) zählt wie ein Weg, Gleis-Rampe und Bergportal wie die Schiene
 
 // Anhöhen (Stufe 2, hills.js): Wege hängen nur auf gleicher Ebene zusammen, hinauf nur über die Treppe (levelLink 'weg', seit 10.10.2026, Nutzer;
 // die Gleis-Rampe ist nur für Züge). Ohne Anhöhen immer (wie bisher)
@@ -1148,7 +1148,7 @@ function vertexWanted(vx, vy) {
   if (tool === 'look' || tool === 'abriss') return has;
   return !!(ITEMS[tool] && ITEMS[tool].small && POST_OK.has(baseOf(tool)));
 }
-const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'zauberbrunnen', 'lm', 'huegeltreppe', 'huegelrampe', ...Object.keys(STANDS),
+const BIG_ON_TILE = new Set(['brunnen', 'kristallbrunnen', 'pavillon', 'statue', 'blumen', 'windrad', 'denkmal', 'uhrturm', 'karussell', 'schmetterlingsgarten', 'vogelbaum', 'zauberbrunnen', 'lm', 'huegeltreppe', 'huegelrampe', 'bergportal', ...Object.keys(STANDS),
   ...Object.keys(ITEMS).filter(id => ITEMS[id].variantOf && !ITEMS[id].small && !ITEMS[id].size)]);   // Größe „Mittel“ kleiner Deko belegt das Feld
 // Linien auf Feldkanten (Block 41). Eckpunkt (i, j) = obere Ecke von Feld (i, j), also bei (i − ½, j − ½).
 // Kante 'a' i,j läuft von (i, j) nach (i + 1, j) – zwischen Feld (i, j − 1) und (i, j); 'b' i,j von (i, j) nach (i, j + 1) –
@@ -1779,6 +1779,7 @@ function autoRot(b, x, y, fallback) {
 function placeRot(b, x, y) {
   if (b === 'huegeltreppe') return stairRot(x, y);                     // Treppe (Block 157d): dreht sich von selbst zur Anhöhe (hills.js)
   if (b === 'huegelrampe') return rampRot(x, y);                       // Gleis-Rampe (hills.js): ebenso
+  if (b === 'bergportal') return bpRot(x, y);                           // Bergportal (157m, hills.js): zur Wand
   if (!ROTATABLE.has(b)) return 0;
   if (rotManual || ITEMS[b].small) return buildRot;
   if (ITEMS[b].needs === 'pier') {                  // Seebrücke zeigt von selbst ins Wasser
@@ -2050,7 +2051,7 @@ const railTileAt = (x, y) => { const t = state.tiles.get(x + ',' + y); return !!
 // Anhöhen (hills.js, Nutzer 10.10.2026): die Gleis-Rampe ist ein gerades Gleisstück längs ihrer Achse (railRampTrack); Schienen oben und unten
 // hängen nur über sie zusammen (levelLink 'gleis': gleiche Ebene oder längs der Rampe, nie über die Kante). Ohne Anhöhen gibt es sie nicht
 const rampTrackAt = (x, y) => hillsOn() && rampFresh().n > 0 && !!rampAt(x, y);
-const trackAt = (x, y) => railTileAt(x, y) || tunnelAt(x, y) || isEinfahrt(x, y) || rampTrackAt(x, y);   // befahrbar
+const trackAt = (x, y) => railTileAt(x, y) || tunnelAt(x, y) || isEinfahrt(x, y) || rampTrackAt(x, y) || (bpOn() && !!bpAt(x, y));   // befahrbar (Bergportal 157m: hills.js)
 // Halt (stopFoot × stopDirs): darf der Zug am Feld (fx + dx, fy + dy) für das Haltfeld (fx, fy) halten? Anhöhen: nur auf seiner Ebene (nie die
 // Schiene oben neben einem Bahnhof unten) und nie auf der Gleis-Rampe. Ohne Anhöhen immer (computeRail, Züge: railStop, stopOn, lineRoute)
 const stopTrackOk = (fx, fy, dx, dy) => !hillsOn() || (!rampTrackAt(fx + dx, fy + dy) && levelLink(fx, fy, fx + dx, fy + dy, 'gleis'));
@@ -2071,6 +2072,10 @@ function einLinks(E, x, y, nx, ny) {
 }
 function trackLink(x, y, nx, ny) {
   const e1 = isEinfahrt(x, y), e2 = isEinfahrt(nx, ny), hills = hillsOn();
+  if (hills && bpOn()) {                                                // Bergportal (157m, hills.js): vorn die Schiene am Fuß der Wand, hinten der Tunnel
+    const p1 = bpAt(x, y), p2 = bpAt(nx, ny);
+    if (p1 || p2) return (!p1 || bpLinks(p1, x, y, nx, ny)) && (!p2 || bpLinks(p2, nx, ny, x, y));
+  }
   if (e1 || e2) {
     if (e1 && !einLinks(einOf(x, y), x, y, nx, ny)) return false;
     if (e2 && !einLinks(einOf(nx, ny), nx, ny, x, y)) return false;
@@ -2107,7 +2112,7 @@ function tunnelError(x, y, noCost) {
   if (!ownedTile(x, y) && !claimable(x, y)) return isSea(x, y) ? 'Im Meer nur direkt neben deinem Land' : notMine(x, y);
   if (tunnelAt(x, y)) return 'Hier ist schon ein Tunnel';
   const b = bAt(x, y);
-  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station' || b === 'tunneleinfahrt' || b === 'huegelrampe') return 'Unter Schienen, Bahnhöfen und Einfahrten geht kein Tunnel – Schiene und Tunnel verbindet eine Tunneleinfahrt';   // Gleis-Rampe: ein Feld ist Gleis oder Tunnel
+  if (b === 'schiene' || b === 'station' || b === 'hbf' || b === 'pb_gleis' || b === 'pb_station' || b === 'tunneleinfahrt' || b === 'huegelrampe' || b === 'bergportal') return 'Unter Schienen, Bahnhöfen und Einfahrten geht kein Tunnel – Schiene und Tunnel verbindet eine Tunneleinfahrt';   // Gleis-Rampe: ein Feld ist Gleis oder Tunnel
   if (noCost) return null;
   const c = costOf('tunnel', x, y);
   if (state.money < c.cost) return 'Zu wenig Taler';
@@ -2144,7 +2149,7 @@ function railArmsHill(x, y, e) {
   const own = rampTrackAt(x, y), lv = hillLevel(x, y);
   return DIRS.filter(([dx, dy]) => {
     const nx = x + dx, ny = y + dy;
-    if (isEinfahrt(nx, ny)) return trackLink(x, y, nx, ny);
+    if (isEinfahrt(nx, ny) || (bpOn() && bpAt(nx, ny))) return trackLink(x, y, nx, ny);   // Bergportal (157m): Arm zur Wand, kein Prellbock
     const rail = bAt(nx, ny) === 'schiene';
     if (rail && !own) return hillLevel(nx, ny) === lv;                  // Schiene ↔ Schiene: gleiche Ebene (schnell, wie levelLink)
     if (!rail && !rampTrackAt(nx, ny) && !(e && e[0] === dx && e[1] === dy)) return false;
@@ -2390,6 +2395,7 @@ function computeRail() {
   for (const [k, t] of state.tiles) {
     if (t.b === 'schiene') rails.add(k);
     else if (t.b === 'tunneleinfahrt') { const [ax, ay] = keyXY(k); for (const [fx, fy] of footprint(t.b, ax, ay, t.rot || 0)) rails.add(fx + ',' + fy); }
+    else if (t.b === 'bergportal' && hills) rails.add(k);                 // Bergportal (157m, hills.js): sein Feld
     else if (t.b === 'huegelrampe' && hills) { const [ax, ay] = keyXY(k); for (const [fx, fy] of footprint(t.b, ax, ay, t.rot || 0, t)) rails.add(fx + ',' + fy); }   // Gleis-Rampe (hills.js): ihre Felder
     else if (t.b === 'station' || t.b === 'ubahn') stations.push(k);
     else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
@@ -2757,6 +2763,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     return hillRaiseError(x, y, opts.noCost);
   }
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
+  if (b === 'bergportal') return bpError(x, y, rot, opts.move || !!opts.t, opts.noCost);   // Bergportal (157m, hills.js): in die Wand, nie getragen
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
   if (b === 'dachtreppe') { const e = dtError(x, y, r); if (e) return e; }                 // Treppe durch die Dachöffnung (Block 138d)
   if (b === 'huegeltreppe' && !opts.move && !opts.t && state.hills && state.hills.size && stairAt(x, y)) return stairRefitError(x, y);   // auf eine Treppe gesetzt: ausrichten (hills.js)
@@ -2766,6 +2773,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   if (state.hills && state.hills.size) {                                                   // Anhöhe (Block 157, Stufe 2): oben Wege, Plätze, Deko und Gelände (hillError), nie über die Kante (auch Verschieben)
     const he = b === 'graben' && hillAt(x, y) ? 'Auf einer Anhöhe geht kein Teich' : b === 'graben' && stairsAround(x, y, true).length ? 'Vor dem Fuß der Treppe muss Platz bleiben'   // Treppe (157d): wie hillRaiseError
       : b === 'graben' && rampsAround(x, y, true).length ? 'Vor dem Fuß der Gleis-Rampe muss Platz bleiben'
+      : b === 'graben' && bpFronts(x, y).length ? 'Vor dem Bergportal muss Platz bleiben – dort kommt die Schiene hinein'   // Block 157m
       : b === 'huegeltreppe' || b === 'huegelrampe' ? null : hillError(b, footprint(b, x, y, r, opts.t));          // Treppe: stairError kennt die Anhöhe (in den Rand eingelassen)
     if (he) return he;
     if (b === 'schiene' && opts.t && isCrossing(opts.t) && opts.t.foot) { const e = archHillError(x, y); if (e) return e; }   // getragene Fußgängerbrücke: nie über die Kante (hills.js)

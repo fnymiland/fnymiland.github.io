@@ -274,6 +274,7 @@ function pickUp(x, y, slot) {
     if (!t) { toast('Hier ist nichts zum Verschieben'); return; }
     if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
     if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) { fail('Hier hängt eine Ecktreppe dran – erst die Ecktreppe aufnehmen'); return; }
+    if (t.b === 'bergportal') { fail('Das Bergportal sitzt in der Wand – abreißen und an der neuen Wand neu bauen'); return; }   // Block 157m
     moving = { kind: 'tile', t, from: a };
     state.tiles.delete(a);
     restoreUnder(t, ...keyXY(a));                     // Platz bleibt liegen (cancelMove legt es wieder drauf)
@@ -297,7 +298,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     if (t && !seen.has(a)) {
       seen.add(a);
       const [ax, ay] = keyXY(a);
-      if (t.b === 'lm' || ITEMS[t.b].fixed || !footprint(t.b, ax, ay, t.rot || 0, t).every(([fx, fy]) => inside(fx, fy))) stays++;
+      if (t.b === 'lm' || t.b === 'bergportal' || ITEMS[t.b].fixed || !footprint(t.b, ax, ay, t.rot || 0, t).every(([fx, fy]) => inside(fx, fy))) stays++;   // Bergportal (157m): sitzt in der Wand
       else items.push({ kind: 'tile', t, from: a, dx: ax - x0, dy: ay - y0 });
     }
     (decosAt(k) || []).forEach((d, slot) => { if (d) items.push({ kind: 'deco', d, from: [k, slot], dx: x - x0, dy: y - y0 }); });
@@ -520,7 +521,7 @@ function dropGroup(hx, hy) {
 // --- Kopieren (Block 134, Wunsch Nutzer): mit ✋ markieren → „⧉ Kopieren“. Gleiche Stufe zum vollen Preis (was ein Neubau samt
 // Ausbauten kostet), die Kopie bleibt als Stempel am Finger, neue Bewohner ziehen ein. Einzelstücke bleiben draußen. Nur eine Art
 // Linie in einem Stil (Weg, Gleis, Hecke/Zaun/Mauer): Pipette – das Werkzeug mit genau diesem Stil in die Hand
-const noCopy = b => b === 'lm' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift;
+const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift;   // Bergportal (157m): nur in die Wand bauen
 function copyClone(it) {
   const c = { ...it };
   if (it.kind === 'tile') {
@@ -1128,6 +1129,7 @@ function undo() {
     const lv = hl ? fp.map(([fx, fy]) => lvBack(fx, fy)) : null;
     if (lv && lv.some(v => v !== lv[0])) { fail('Geht nicht mehr – das stünde jetzt über der Kante einer Anhöhe'); return false; }
     if (lv && lv[0] && !hillOk(t.b)) { fail('Geht nicht mehr – dort ist inzwischen eine Anhöhe'); return false; }
+    if (t.b === 'bergportal') { const [dx, dy] = bpDir(t); if (lvBack(x, y) !== 1 || lvBack(x - dx, y - dy) !== 0) { fail('Geht nicht mehr – die Wand des Bergportals ist nicht mehr da'); return false; } }   // Block 157m
   }
   for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillCarryOk)
     if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
@@ -1141,6 +1143,7 @@ function undo() {
     if (cur) continue;
     if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
     if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
+    if (bpFronts(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier ist inzwischen ein Bergportal davor'); return false; }   // Block 157m
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

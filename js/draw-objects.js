@@ -1883,6 +1883,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     case 'dachtreppe': drawDachtreppe(cx, cy, z, (t && t.rot) || 0, x, y); break;   // Treppe durch die Dachöffnung (Block 138d)              // Block 138: sieht aus wie das Dach darüber
     case 'huegeltreppe': drawHillStair(cx, cy, z, x, y, t); break;   // Treppe in die Anhöhe (Block 157d, hills.js): als Bildchen
     case 'huegelrampe': drawHillRamp(cx, cy, z, x, y, t); break;     // Gleis-Rampe (hills.js): je Feld ein Bildchen
+    case 'bergportal': break;                                         // Bergportal (157m, hills.js): steckt im Bildchen der Anhöhe (paintHill)
     case 'dach': drawRoofIcon(cx, cy, z, (t && t.form) || 0, (t && t.col) || 0); break;   // nur als Bildchen (Leiste, Kunstakademie)
     case 'strassenlaterne': drawStreetLamp(cx, cy, z, now, x, y, t); break;   // Block 132      // Formen und Farben (Block 106, draw-schmuck.js)
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel
