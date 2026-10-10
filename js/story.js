@@ -514,7 +514,7 @@ const ACHIEVEMENTS = [
   { id: 'bruecken', icon: '🌉', name: 'Brückenfelder', tiers: [10, 50], value: () => tileCount(t => t.bridge) },
   { id: 'schoen', icon: '🌸', name: 'Schönheit', tiers: [200, 1000, 5000], value: () => T.beauty },
   { id: 'baeume', icon: '🌳', name: 'Bäume gepflanzt', tiers: [25, 100, 500], value: () => decoCount(d => d.b === 'baum') },
-  { id: 'deko', icon: '🪴', name: 'Deko aufgestellt', tiers: [50, 250, 1000], value: () => decoCount(() => true) + tileCount(t => ITEMS[t.b].cat === 'deko') },
+  { id: 'deko', icon: '🪴', name: 'Deko aufgestellt', tiers: [50, 250, 1000], value: () => decoCount(() => true) + tileCount(t => ITEMS[t.b].cat === 'deko' && t.b !== 'huegeltreppe' && t.b !== 'huegelrampe') },   // Treppe/Rampe sind keine Deko (Nutzer)
   { id: 'laternen', icon: '🏮', name: 'Laternen', tiers: [3, 10, 22], value: () => lanternCount() },
   { id: 'inseln', icon: '🏝️', name: 'Inseln', tiers: [2, 5, 8], value: () => state.islands.size },
   { id: 'forschung', icon: '💡', name: 'Forschungen', tiers: [5, 15, TECHS.length], value: () => state.techs.size },
@@ -609,7 +609,7 @@ function collectAlbum() {
   if (!state.legacy) state.legacy = new Set();
   for (const p of ALBUM) if (albumKeys(p).every(k => state.album.has(k) || LATE_ALBUM.has(k))) state.legacy.add(p.reward);
 }
-const LATE_ALBUM = new Set(['b:zaun', 'b:mauer', 'b:reihenhaus', 'b:baumhaus', 'b:hausboot', 'b:ferienhaus', 'b:windrad', 'b:wasserkraft', 'b:solarfeld', 'b:geothermie', 'b:wellen', 'b:offshore', 'b:seilbahn']);
+const LATE_ALBUM = new Set(['b:zaun', 'b:mauer', 'b:reihenhaus', 'b:baumhaus', 'b:hausboot', 'b:ferienhaus', 'b:windrad', 'b:wasserkraft', 'b:solarfeld', 'b:geothermie', 'b:wellen', 'b:offshore', 'b:seilbahn', 'b:huegeltreppe', 'b:huegelrampe']);   // Treppe und Rampe der Anhöhe (Block 157)
 
 // ---------------------------------------------------------------------------
 // Wunderwerke: Baustelle (phase 0), dann Abschnitt für Abschnitt; Wirkung (effect) erst, wenn alle fertig sind

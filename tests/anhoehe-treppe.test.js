@@ -22,10 +22,10 @@ const footWay = (x, y, rot) => { const [dx, dy] = game(`STAIR_UP[${rot}]`); retu
 const H_ABS = "(w => w.up == null ? 0 : w.up + hillLift(Math.round(w.px), Math.round(w.py)))";
 
 describe('Treppe in die Anhöhe (Block 157d)', () => {
-  it('Menü: Anhöhe und Treppe in eigener Gruppe hinter „Wege & Gelände“ – auch bei gemerkter eigener Anordnung', () => {
+  it('Menü: Anhöhe, Treppe und Rampe in eigener Gruppe hinter „Wege & Gelände“ – auch bei gemerkter eigener Anordnung', () => {
     const top = "MENU.find(m => m.id === 'gestalten')";
     expect(game(`${top}.groups.map(g => g.id).slice(0, 2)`)).toEqual(['land', 'hoehen']);
-    expect(game(`${top}.groups.find(g => g.id === 'hoehen').items`)).toEqual(['anhoehe', 'huegeltreppe']);
+    expect(game(`${top}.groups.find(g => g.id === 'hoehen').items`)).toEqual(['anhoehe', 'huegeltreppe', 'huegelrampe']);
     game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ gestalten: ['dach', 'land', 'gruen', 'platz', 'linien', 'besonderes'] }))`);   // vor Block 157d angeordnet
     expect(game(`orderedGroups(${top}).map(g => g.id)`)).toEqual(['dach', 'land', 'hoehen', 'gruen', 'platz', 'linien', 'besonderes']);
     game("localStorage.removeItem('kachelhausen_menuorder')");

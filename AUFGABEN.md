@@ -2310,7 +2310,7 @@ Gewählt: überall außer auf schmalem Weg; Mitte sperrt die Seitenmitten, Ecken
       zurück). Test: zaun-durchgang
 
 ## Block 157: Anhöhen (Relief à la Animal Crossing, Nutzer 09.10.2026: „ich lass mich drauf ein“)
-Ziel in Stufen: 1 Anhöhe mit Deko · 2 Wege + Rampe · 3 Gebäude oben · 4 Bahn (erst Tunnel durch den Berg, Steigungen vielleicht nie).
+Ziel in Stufen: 1 Anhöhe mit Deko ✓ · 2 Wege + Rampe ✓ (157h) · 3 Gebäude oben · 4 Bahn (erst Tunnel durch den Berg, Steigungen vielleicht nie).
 Fundament von Anfang an: jedes Feld hat eine Höhe (`state.hills`: Feld → { w: Wandart, h?: Ebene, Standard 1 }), nicht als Dachform.
 Konzeptbild: tools/anhoehe-entwurf.js. Entscheidungen Stufe 1: Wand wählbar (Fels Standard, Erde, Trockenmauer), erst eine Ebene
 (Fundament kann mehr), Rechteck aufziehen wie Gelände (Gestalten → Wege & Gelände), oben Kleinkram + Deko-Felder (Brunnen, Beete,
@@ -2361,4 +2361,25 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       `refitStairs`): nach jedem Bauen einer Treppe die Treppen ringsum (Ecke, gerade Richtung); eine Treppe auf eine Treppe gesetzt =
       kostenlos ausrichten (`stairRefitError`); Einsetzen in den Rand, auf den schon eine Treppe führt, geht, wenn sie sich danach neu
       ausrichten lässt (`stairIntoRefits`, probehalber). Test: anhoehe-treppe (Ecke zuerst, dann die Nachbarn; ↶)
+- [x] 157h **Stufe 2: Wege oben und Rampe** (Nutzer 10.10.2026, Entwurf tools/rampe-entwurf.js, Vorschau tools/vorschau/rampe-varianten.png):
+      Ding `huegelrampe` mit allen vier Entwürfen – A 1 Feld (steil), B 2 Felder (flacher, Länge in der Leiste), C offene Seite = Keil mit
+      Geländer, D längs der Wand (an der Ecke selbst drehen: ⟳/R springt zur nächsten passenden Richtung). Eingelassen wie die Treppe, auch in
+      den Rand einer fertigen Anhöhe (Felder abgesenkt, Erstattung verrechnet, ein ↶-Schritt), Belag = Wegstil aus der Leiste, nebeneinander
+      gleich gerichtet und gleich lang = breite Rampe. Preis 200 Taler + 8 Stein für beide Längen (Länge 2 ganz eingelassen: 40).
+      Verbindung über `levelLink`: Rampe für alle (Wegenetz, Viertel, Markt, Erreichbarkeit, Fahrzeuge), Treppe nur zu Fuß; Weg oben und Weg
+      unten nebeneinander sind getrennt. Oben dürfen Wege aller Stile und Platz-Dinge (Stände, Brunnen, Laternen, Bänke …), Gebäude erst
+      Stufe 3; Anheben unter einem Weg geht (er kommt mit hinauf). Erreichbarkeit „in der Nähe“ nur in derselben Gegend (`hillRegions`:
+      Anhöhe ohne Rampe zählt nicht). Bewohner/Spaziergänger gehen über Rampe und Treppe, Fahrzeuge nur über die Rampe, Höhe stetig am
+      Fußpunkt (`figUp`); Tiere bleiben unten.
+      Umgesetzt mit Ultracode-Ablauf (Rampe, Netz, Wege zeichnen, Bewegtes parallel, dann Zusammenbau). Beim Zusammenbau gefunden und
+      behoben: `rampSink` der Rampe überschrieb die gleichnamige Funktion der Tunneleinfahrt (Züge sanken nicht mehr – jetzt `rampIntoSink`,
+      Test auf doppelte globale Namen); Gartenweg und Vorplatz eines Gebäudes unten liefen bis an die Felswand, wenn oben ein Weg vor der Tür lag;
+      Leute auf dem Weg zur Dachtreppe hätten über Rampe/Anhöhe gehen können (in der Schräge, `w.up` 0) – jetzt unten, sonst Höhe der Schräge;
+      GL-Rahmen um Figuren auf Rampe/Treppe reicht um ihre Höhe weiter hinauf (Ballon); Treppe und Rampe in `LATE_ALBUM` (Deko-Seite).
+      Leistungs-Wächter je Ding: `huegelrampe` = 1 Zeichenbefehl – wie die Treppe ein fertiges Bildchen je Feld (`rampFieldDraw`, `hillSprites`
+      'r' + Feld, Neumalen im Zeitbudget), gezeichnet wird nur das `drawImage`. Wege oben nah live (wie Gebäude), weit weg als Bildchen
+      (`spriteFlat` 'hflat'). Tests: rampe-regeln, anhoehe-netz, anhoehe-wege, anhoehe-bewegt, anhoehe-stufe2 (alle Drehungen × Länge 1/2 ×
+      vor der Wand/eingesetzt: Netz, Wege, Bewohner, Fahrzeuge, ↶, Speichern)
+      Offen: Testwelt mit Anhöhen im Leistungs-Wächter (157f); große Plätze oben werden nah jedes Bild live gezeichnet (iPad ansehen);
+      Bewohner, die oben festsitzen (Rampe abgerissen), bummeln bis zum Heimweg weiter; „Das ist neu“/NEWS beim Push
 

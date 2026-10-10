@@ -14,7 +14,7 @@ const block = (x0, y0, x1, y1) => { const out = []; for (let y = y0; y <= y1; y+
 describe('Treppe in die Anhöhe (Block 157d)', () => {
   it('steht im Menü hinter der Anhöhe (eigene Gruppe „Anhöhen“), mit Kurzwirkung und Tipp', () => {
     const items = game("MENU.find(m => m.id === 'gestalten').groups.find(g => g.id === 'hoehen').items");
-    expect(items).toEqual(['anhoehe', 'huegeltreppe']);
+    expect(items).toEqual(['anhoehe', 'huegeltreppe', 'huegelrampe']);   // Rampe: Anhöhen Stufe 2
     expect(game("menuPlaceOf('huegeltreppe')")).toEqual({ top: 'gestalten', sub: 'hoehen' });
     expect(game("[ITEMS.huegeltreppe.cat, ITEMS.huegeltreppe.tech, !!FX.huegeltreppe, !!ITEM_TIPS.huegeltreppe]")).toEqual(['deko', 'terraform', true, true]);
   });

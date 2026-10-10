@@ -32,7 +32,8 @@ globalen Scope (klassische Skripte, keine Module):
 | `js/main.js` | Neues Spiel, Probeansicht (`?probe`), Start und Spielschleife |
 
 Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus **früheren** Dateien benutzen
-(Funktionsaufrufe über Dateigrenzen erst zur Laufzeit).
+(Funktionsaufrufe über Dateigrenzen erst zur Laufzeit). Jeder globale Name nur in einer Datei – ein zweites `function x` in einer späteren
+Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` das der Tunneleinfahrt; tests/anhoehe-stufe2.test.js prüft es).
 
 ## Regeln
 
@@ -185,7 +186,8 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
 29a5. **Anhöhen** (Block 157, js/hills.js): Höhe je Feld in `state.hills` (Feld → { w, h? }), `hillLift(x, y)` = Ebene × `HILL_H`.
     Alles, was zu einem Feld gehört, wird um den Hub angehoben gezeichnet (render.js tileA/tileB; wer selbst per toScreen Punkte eines
     Felds rechnet, zieht `hillLift` ab). Bildschirm → Feld nur über `pickFrac` (toTile, toVertex, edgeNear, slotAt), nie tileFrac
-    (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError`; Fundament kann mehrere Ebenen, gebaut ist eine.
+    (das bleibt flach für Kamera und Dächer). Was oben darf: `hillOk`/`hillError` (Stufe 2: Wege aller Stile, Platz-Dinge `plazaOk`, Deko,
+    Gelände – keine Gebäude, Schienen, Dächer, U-Bahn-Station); Fundament kann mehrere Ebenen, gebaut ist eine.
     Ohne Anhöhen muss alles exakt wie vorher laufen (früh aussteigen, wenn `state.hills.size` 0).
     **Treppe** (157d, `huegeltreppe`): steht unten (Ebene 0) direkt vor der Wand, Stufen auf dem eigenen Feld bis zur Oberkante. Regeln über
     `stairError`, Drehung nur über `stairRot` (placeRot, auch Vorschau/Verschieben; in einer gedrehten ✋-Gruppe dreht sie mit, `groupPlaced`), kein
@@ -208,6 +210,24 @@ Oberste Ebene jeder Datei darf nur Funktionen/Konstanten anlegen oder Dinge aus 
     Fußpunkt `hwFootD`, Boden null); Kopf/Antippen über `walkerHead` (+ `hillLift`). Wer Listen von Bewohnern prüft (Fenster, Antippen,
     Sprechblase), nimmt `hillWalkers` dazu wie `roofers`. Treppe weg oder kein Weg mehr zum Ausstieg (`hwRoute` false: Zaun, Deko): sie
     verschwinden, nie in der Luft oder ewig oben. Tests mit Spaziergängern stellen die Spieluhr fest (`gameHour`) – nachts kommen halb so viele.
+    **Rampe** (Stufe 2, `huegelrampe`, Entwurf tools/rampe-entwurf.js): eingelassen wie die Treppe, `t.len` 1 (steil) oder 2 (flacher, Leiste:
+    `rampNewLen`, nur `len: 2` wird gespeichert), `t.style` Belag. Grundfläche `sizeOf` [1, len], Anker = kleinstes x/y (bei rot 0/3 das obere
+    Feld, bei rot 1/2 der Fuß) – welches Feld was ist, sagt nur `rampAt(x, y)` (`i` 0 = Fuß … len − 1 = oben), alle: `hillRamps()`. Höhe stetig
+    `rampHeight` (Vorderkante Fuß 0 … Hinterkante oben `HILL_H`), Oberfläche überall `surfaceHeight(u, v)` (Anhöhe, Rampe, Treppe). Regeln wie die
+    Treppe: `rampError`/`rampIntoError`, Drehung `rampRot` (in `ROTATABLE`: selbst gedreht springt sie zur nächsten passenden Richtung, so entsteht
+    „längs der Wand“), `rampsAround` (Abtragen, Anheben, Teich, ✋-Rechteck, ↶), Einsetzen `rampIntoBack`/`rampIntoSink` (nicht `rampSink` – den
+    hat die U-Bahn). Aussehen `rampLook` (Anhöhe = Wange, gleiche Richtung + Länge = breit, sonst Keil mit Geländer), je Feld ein Bildchen
+    ('r' + Feld) – render.js zeichnet jedes Rampenfeld für sich, nie in Streifen. Figuren/Fahrzeuge darauf: danach `drawHillRampOver`.
+    Bündig (Prüfung 10.10.2026, tests/anhoehe-pruefung.test.js, Bild tools/stufe2-nahszene.js): Keilwände nach der ganzen Höhe geschichtet
+    (`paintHillWall` … `hs`), dunkle Kante des hinteren Keils genau auf seiner schrägen Kante, Innenecke mit schrägem Keil über `rampMiter`
+    (Signatur ':m' + Längen), Geist über 2 Felder erst deckend zusammensetzen (`rampGhostBuf`), keine Eckpunkt-Deko auf der Schräge (smallError).
+    **Wer kommt wohin:** nur über `levelLink(x1, y1, x2, y2, who)` – 'weg' (Wegenetz, Viertel, Markt, „alle verbundenen“, Wunsch Weg,
+    Fahrzeuge) geht über die Rampe längs ihrer Achse, 'fuss' (Bewohner, `edgeBlocks`) auch über die Treppe; sonst nur gleiche Ebene, nie über Eck
+    an Rampe/Treppe. Ohne Anhöhen immer true. Erreichbarkeit „in der Nähe“: `hillRegions`/`sameRegion` (Anhöhe ohne Rampe = eigene Gegend).
+    Figurenhöhe: `figUp`/`slopeUp` (movers.js, am gezeichneten Fußpunkt) – wer `w.up` selbst setzt (Dach, Spaziergänger), rechnet relativ zum Feld.
+    **Wege oben** zeichnet tileA (`hillFlat` → `drawHillFlat`, weit weg `spriteFlat(…, true)`), nie das Boden-Bild. `pathArms`, `pathQuads`,
+    Bordstein, Wegenden (`hillEnds`), Vorplätze und Gartenwege (`courtFrontTiles`, `gardenPath`) nur über `levelLink` bzw. gleiche Ebene.
+    Tests: rampe-regeln, anhoehe-netz, anhoehe-wege, anhoehe-bewegt, anhoehe-stufe2 (alles zusammen, alle Drehungen).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

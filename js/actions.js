@@ -117,7 +117,7 @@ function build(b, x, y, quiet) {
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
-  const back = b === 'huegeltreppe' ? stairIntoBack(x, y) : 0;          // Treppe in die Anhöhe (hills.js): Feld absenken, Erstattung verrechnet
+  const back = b === 'huegeltreppe' ? stairIntoBack(x, y) : b === 'huegelrampe' ? rampIntoBack(x, y, rot) : 0;          // Treppe in die Anhöhe (hills.js): Feld absenken, Erstattung verrechnet
   for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);
   if (replaced.length) { state.money += replaced.length * ITEMS.weg.cost; if (!quiet) toast(`Weg ersetzt: +${fmt(replaced.length * ITEMS.weg.cost)}`); }
   clearNature(b, x, y, rot);                        // Wald, Fels … auf dem Bauplatz verschwinden (Roden/Sprengen)
@@ -144,7 +144,8 @@ function build(b, x, y, quiet) {
       for (const [r, n] of Object.entries(paid.mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
     }
   } else {
-    if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
+    if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Rampe in die Anhöhe (hills.js): ihre Felder absenken
+    else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
@@ -417,7 +418,7 @@ function groupPlaced(it) {
   }
   const t = it.t, rot0 = t.rot || 0, cells = footprint(t.b, it.dx, it.dy, rot0, t).map(([x, y]) => grot(x, y));
   const ax = Math.min(...cells.map(c => c[0])), ay = Math.min(...cells.map(c => c[1]));
-  const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene' || t.b === 'huegeltreppe', rot = turns ? (rot0 + r) & 3 : rot0;   // Treppe (157d): zeigt mit der Gruppe weiter hinauf
+  const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene' || t.b === 'huegeltreppe' || t.b === 'huegelrampe', rot = turns ? (rot0 + r) & 3 : rot0;   // Treppe (157d): zeigt mit der Gruppe weiter hinauf
   const nt = { ...t, rot };
   if (t.wegs) { nt.wegs = {}; for (const [o, st] of Object.entries(t.wegs)) { const [ox, oy] = keyXY(o), [px, py] = grot(it.dx + ox, it.dy + oy); nt.wegs[(px - ax) + ',' + (py - ay)] = st; } }
   const fit = footprint(t.b, ax, ay, rot, nt).map(c => c.join()).sort().join(';') === cells.map(c => c.join()).sort().join(';');
@@ -453,6 +454,7 @@ function groupErrors(hx, hy) {
       else if (hillAt(x, y)) err = 'Auf einer Anhöhe geht keine Überdachung';   // Anhöhe (Block 157), wie roofError
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
       else if (ot && ot.b === 'huegeltreppe') err = 'Über einer Treppe geht keine Überdachung';   // Treppe in die Anhöhe (Block 157d), wie roofError
+      else if (ot && ot.b === 'huegelrampe') err = 'Über einer Rampe geht keine Überdachung';
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
       else if (tallUnder(x, y, P.r.form || 0)) err = 'Darunter steht etwas zu Hohes';
@@ -1112,13 +1114,15 @@ function undo() {
     const t = JSON.parse(b), [x, y] = keyXY(k);
     if (footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => { const c = COVER.get(fx + ',' + fy); return c && !mine.has(c); })) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }
   }
-  for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude und Wege
+  for (const [n, k, b] of step.changes) {                               // abgetragene Anhöhe zurück (Block 157): nicht unter Gebäude (Wege, Plätze, Deko dürfen hinauf: hillOk)
     if (n === 'hills' && b === undefined && stairsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier führt inzwischen eine Treppe hinauf'); return false; }   // Treppe (Block 157d): wie lowerHill
+    if (n === 'hills' && b === undefined && rampsAround(...keyXY(k)).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier führt inzwischen eine Rampe hinauf'); return false; }   // Rampe (hills.js) wie die Treppe
     if (n !== 'hills' || b === undefined) continue;
     const o = objAt(...keyXY(k));
     if (o && !hillOk(o.b) && !mine.has(COVER.get(k))) { fail('Geht nicht mehr – dort steht inzwischen etwas'); return false; }   // Treppe in die Anhöhe: geht mit zurück
     if (UNDO_MAPS.hills().has(k)) continue;
     if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
+    if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Rampe davor'); return false; }
   }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }

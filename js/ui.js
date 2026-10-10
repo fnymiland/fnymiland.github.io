@@ -74,6 +74,9 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'huegeltreppe') {                    // Treppe in die Anhöhe (Block 157d): Eck Anhöhe mit eingelassener Treppe
     block(1, '#96d56f');
     drawStairIcon(cx, cy, z, (tile && tile.style) || stairStyleNew());
+  } else if (type === 'huegelrampe') {                     // Rampe in die Anhöhe (Stufe 2): Eck Anhöhe, davor die Rampe mit Geländer
+    block(1, '#96d56f');
+    drawRampIcon(cx, cy, z, (tile && tile.style) || rampStyleNew());
   } else if (TERRAFORM[type]) {                           // Terraforming: ein Feld im neuen Gelände
     const tf = TERRAFORM[type];
     block(1, tf === 'park' ? '#7fcc5e' : tf === 'sand' ? '#f1dfae' : tf === 'forest' ? '#7fc460' : tf === 'obst' ? '#86c35b' : tf === 'rock' ? '#aabb94' : '#96d56f');
@@ -548,9 +551,11 @@ let wegPop = null;
 const WEG_SHAPES = [['wide', '▭', '▬', 'schmal', 'ganz breit'], ['sq', '⌒', '⌐', 'Kurve rund', 'Kurve eckig']];   // Wegform (Block 77)
 const shapeChip = ([k, i0, i1, n0, n1]) => `<button class="style-chip size-chip shape-chip${wegShape[k] ? ' on' : ''}" data-wegopt="${k}" aria-pressed="${wegShape[k]}" title="${wegShape[k] ? n1 : n0} – tippen zum Wechseln" aria-label="${wegShape[k] ? n1 : n0}"><i>${wegShape[k] ? i1 : i0}</i><span>${wegShape[k] ? n1 : n0}</span></button>`;
 // Treppe in die Anhöhe (Block 157d, stair): dieselbe Leiste für den Belag der Stufen – ohne Trittsteine (keine Fläche) und ohne Wegform;
-// gewählt wird chosenStyle.huegeltreppe (ohne Wahl: der Stil des Wegs, stairStyleNew)
+// gewählt wird chosenStyle.huegeltreppe (ohne Wahl: der Stil des Wegs, stairStyleNew). Rampe (stair = 'huegelrampe'): ebenso für ihren
+// Belag (chosenStyle.huegelrampe, rampStyleNew), dazu statt der Wegform die Länge (1 / 2 Felder, rampNewLen) wie beim Bahnhof
 function wegStyleBar(bar, stair = false) {
-  const kind = stair ? 'huegeltreppe' : 'weg', cur = stair ? stairStyleNew() : currentStyle('weg'), pick = id => { if (stair) chosenStyle.huegeltreppe = id; else chosenStyle.weg = id; };
+  const ramp = stair === 'huegelrampe', kind = ramp ? 'huegelrampe' : stair ? 'huegeltreppe' : 'weg';
+  const cur = ramp ? rampStyleNew() : stair ? stairStyleNew() : currentStyle('weg'), pick = id => { if (stair) chosenStyle[kind] = id; else chosenStyle.weg = id; };
   const [cm, cf] = wegParts(cur), M = WEG_MUSTER_BY[cm], F = WEG_FARBEN_BY[cf];
   const colFor = m => m.fixed ? null : (cf && wegFarbeOk(cf) ? cf : m.farbe);
   const pats = WEG_MUSTER.filter(m => wegMusterOk(m.id) && !(stair && m.id === 'tritt')), more = WEG_MUSTER.filter(m => !wegMusterOk(m.id)).length;
@@ -563,8 +568,10 @@ function wegStyleBar(bar, stair = false) {
   bar.innerHTML = pop
     + `<button class="style-chip on wsel${wegPop === 'muster' ? ' open' : ''}" data-wpop="muster" aria-expanded="${wegPop === 'muster'}" aria-label="Muster: ${M ? M.name : ''} – ändern"><i style="background:${sw(cur)}"></i><span>${M ? M.name : ''} ▾</span></button>`
     + `<button class="style-chip on wsel${wegPop === 'farbe' ? ' open' : ''}" data-wpop="farbe" ${M && M.fixed ? 'disabled title="Dieses Muster hat eigene Farben"' : ''} aria-expanded="${wegPop === 'farbe'}" aria-label="Farbe: ${M && M.fixed ? 'eigene' : F ? F.name : ''} – ändern"><i style="background:${M && M.fixed ? sw(cur) : F ? F.c : '#ccc'}"></i><span>${M && M.fixed ? 'eigene Farben' : F ? F.name + ' ▾' : ''}</span></button>`
-    + (stair ? '' : `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`);
+    + (ramp ? '<span class="style-sep"></span>' + [1, 2].map(n => `<button class="style-chip size-chip${rampNewLen === n ? ' on' : ''}" data-rlen="${n}" title="${n === 1 ? '1 Feld lang' : '2 Felder lang'}" aria-label="${n === 1 ? '1 Feld lang' : '2 Felder lang'}"><i>${n}</i><span>${n === 1 ? '1 Feld · steil' : '2 Felder · flacher'}</span></button>`).join('')
+      : stair ? '' : `<span class="style-sep"></span>${WEG_SHAPES.map(shapeChip).join('')}`);
   for (const b of bar.querySelectorAll('[data-wpop]')) b.onclick = () => { wegPop = wegPop === b.dataset.wpop ? null : b.dataset.wpop; sfx('deco'); renderStyleBar(kind); };
+  for (const b of bar.querySelectorAll('[data-rlen]')) b.onclick = () => { rampNewLen = +b.dataset.rlen; wegPop = null; previewCache = null; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-wm]')) b.onclick = () => { const m = WEG_MUSTER_BY[b.dataset.wm]; pick(wegStyleOf(m.id, colFor(m))); wegPop = null; sfx('deco'); renderStyleBar(kind); };
   for (const b of bar.querySelectorAll('[data-wf]')) b.onclick = () => { pick(wegStyleOf(cm, b.dataset.wf)); wegPop = null; sfx('deco'); renderStyleBar(kind); };
   // Wegform: nur diesen Knopf ändern – die offene Auswahl bleibt offen und unverändert (vorher baute sich alles neu auf und sprang)
@@ -577,7 +584,7 @@ function wegStyleBar(bar, stair = false) {
 // Auswahl zuklappen, wenn man daneben tippt (z. B. auf die Insel, um zu bauen)
 document.addEventListener('pointerdown', e => {
   if (!wegPop || ($('style-bar') && $('style-bar').contains(e.target))) return;
-  wegPop = null; if (tool === 'weg' || tool === 'huegeltreppe') renderStyleBar(tool);
+  wegPop = null; if (tool === 'weg' || tool === 'huegeltreppe' || tool === 'huegelrampe') renderStyleBar(tool);
 }, true);
 // Stil-Leiste: nur Kreise mit Muster; der gewählte wird größer und zeigt seinen Namen
 // Farbchips in der Musterleiste (Block 89): gewählte Farbe gilt für neu Gebautes (state.paintNew[key])
@@ -617,8 +624,9 @@ document.addEventListener('pointerdown', e => {                          // dane
 }, true);
 function renderStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
-  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station' || t === 'tunnel' || t === 'huegeltreppe');
+  document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station' || t === 'tunnel' || t === 'huegeltreppe' || t === 'huegelrampe');
   if (t === 'huegeltreppe') { wegStyleBar(bar, true); return; }   // Treppe in die Anhöhe (Block 157d): Belag der Stufen
+  if (t === 'huegelrampe') { wegStyleBar(bar, 'huegelrampe'); return; }   // Rampe (Stufe 2): Belag und Länge
   if (t === 'tunnel') {                                          // Graben oder Entfernen (Nutzer, 09.10.2026)
     bar.innerHTML = [[0, '+', 'Graben'], [1, '−', 'Entfernen']].map(([v, i, n]) => `<button class="style-chip size-chip${+tunnelErase === v ? ' on' : ''}" data-terase="${v}" title="Tunnel ${n.toLowerCase()}" aria-label="Tunnel ${n.toLowerCase()}"><i>${i}</i><span>${n}</span></button>`).join('');
     for (const b of bar.querySelectorAll('[data-terase]')) b.onclick = () => { tunnelErase = b.dataset.terase === '1'; plan = null; previewCache = null; sfx('deco'); renderStyleBar(t); };
@@ -1528,6 +1536,8 @@ function openInfo(x, y) {
   if (t.b === 'seilbahn') status.push(...cableStatus(x + ',' + y));
   if (t.b === 'huegeltreppe') status.push(hillStairs().some(s => s.x === x && s.y === y) ? '<div class="ok">✓ Führt hinauf auf die Anhöhe</div>'   // Block 157d
     : '<div class="bad">✗ Oben ist keine Anhöhe mehr – die Treppe führt ins Leere</div>');
+  if (t.b === 'huegelrampe') status.push(hillRamps().some(r => r.k === x + ',' + y) ? '<div class="ok">✓ Führt hinauf – der Weg oben hängt mit dem unten zusammen</div>'   // Rampe (Stufe 2)
+    : '<div class="bad">✗ Oben ist keine Anhöhe mehr – die Rampe führt ins Leere</div>');
   if (SITE_TIP[t.b]) status.push(siteStatus(siteOf(t.b, x + ',' + y, t.rot, t)));
   if (POWER_OUT[t.b]) status.push(`<div class="ok">⚡ Liefert ${fmtPow(powerOf(t, x + ',' + y))} Strom${t.b === 'windrad' && hasTech('rotor') ? ' (Rotorblätter +50 %)' : ''}${hasTech('stromnetz') ? ' · Stromnetz +25 %' : ''}</div>`, ...powerStatus());
   else if (CONSUMERS[t.b] && T.rail.power.city && !s.noPower && (!WONDERS[t.b] || wonderDone(t))) status.push(`<div class="ok">⚡ Hat Strom (braucht ${CONSUMERS[t.b]} ⚡)</div>`);
@@ -1655,6 +1665,7 @@ function openInfo(x, y) {
     : t.b === 'leuchtturm' && t.mini ? `<div class="label">🗼 Leuchtturm-Kap</div><p class="muted">Der Leuchtturm ist jetzt ein ganzes Kap (3×3) mit Wärterhaus, großem Leuchtfeuer und den 21 Laternen. ${lighthouseSpot(x + ',' + y, t) ? 'Rundherum ist Platz – er kann wachsen (kostenlos, Wege und Dekos dort gibt es zurück).' : 'Rundherum fehlt Platz: 3×3 Felder an der Küste, darauf nur Gras, Wege oder Dekos. Platz schaffen, dann wächst er.'}</p>
       <div class="row"><button class="btn" data-lgrow="1" ${lighthouseSpot(x + ',' + y, t) ? '' : 'disabled'}>🗼 Zum Kap ausbauen</button></div>`   // Block 83
     : t.b === 'huegeltreppe' ? `<div class="label">Stufen${stairRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Treppe, ${stairRow(x, y).length} Felder)</small>` : ''}</div>${wegPickHtml(stairStyleOf(t), 'stairbel', true)}`   // Block 157d: Belag wie die Wege
+    : t.b === 'huegelrampe' ? `<div class="label">Belag${rampRow(x, y).length > 1 ? ` <small class="muted">(ganze breite Rampe, ${rampRow(x, y).length} Rampen)</small>` : ''}</div>${wegPickHtml(rampStyleOf(t), 'rampbel', true)}`   // Rampe: Belag wie die Wege
     : courtHtml(t, x, y);   // Gartenweg (Block 78), Vorplatz (Block 91)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)].name : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
@@ -1675,7 +1686,7 @@ function openInfo(x, y) {
     ${castle}
     ${colors}
     <div class="row">
-      ${ROTATABLE.has(t.b) ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${ROTATABLE.has(t.b) && t.b !== 'huegelrampe' ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
       ${moveBtn}
       ${delButton(x, y, t.b === 'dachtreppe')}
       <button class="btn ghost" id="p-close">Schließen</button>
@@ -1696,6 +1707,10 @@ function openInfo(x, y) {
   if ($('p-grow')) $('p-grow').onclick = () => houseUpgrade(x, y);
   for (const b of el.querySelectorAll('[data-stairbel]')) b.onclick = () => {   // Treppe (Block 157d): Belag der Stufen, für die ganze breite Treppe
     undoable(() => { for (const [sx, sy] of stairRow(x, y)) stairAt(sx, sy).style = b.dataset.stairbel; groundVersion++; sfx('deco'); save(); });
+    openInfo(x, y);
+  };
+  for (const b of el.querySelectorAll('[data-rampbel]')) b.onclick = () => {    // Rampe: Belag für die ganze breite Rampe
+    undoable(() => { for (const [rx, ry] of rampRow(x, y)) state.tiles.get(rx + ',' + ry).style = b.dataset.rampbel; groundVersion++; sfx('deco'); save(); });
     openInfo(x, y);
   };
   if ($('p-rename')) $('p-rename').onclick = () => {
@@ -1976,7 +1991,7 @@ function openHillInfo(x, y) {
   const di = demolishInfo(x, y);                                         // Abtragen wie 🗑️ überall: Linien/Eckpunkt-Deko am Rand sperren (rules.js)
   const el = showPanel(`
     <h3>⛰️ Anhöhe · ${escHtml((L.forms[w] || L.forms[0]).name)}</h3>
-    <p class="muted">Eine Ebene höher. Oben gehen Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Wege und Gebäude kommen später. Hinauf führt eine Treppe (Gestalten → Anhöhen).</p>
+    <p class="muted">Eine Ebene höher. Oben gehen Wege, Plätze mit Ständen, Bäume, Bänke, Laternen, Brunnen, Beete und Gelände – Gebäude kommen später. Hinauf führen Treppe und Rampe (Gestalten → Anhöhen); über die Rampe hängt der Weg oben mit dem unten zusammen.</p>
     <div class="label">Wand</div>
     <div class="looks look-forms">${lookFree('anhoehe', 'form').map(([f, i]) => `<button class="look look-form${i === w ? ' on' : ''}" data-hwall="${i}" aria-label="Wand: ${f.name}"><img alt="" src="${lookThumb('anhoehe', i, 0) || 'data:,'}"><span>${f.name}</span></button>`).join('')}</div>
     <p class="muted">Gilt für die ganze zusammenhängende Anhöhe${n > 1 ? ` (${n} Felder)` : ''}.</p>

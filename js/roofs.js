@@ -1131,13 +1131,13 @@ function syncRoofers() {
 // unter den Bögen bis vor den Fuß, dann an den Fuß der Stufen. Punkte in Feldkoordinaten; null, wenn es keinen Weg gibt
 function rfWalkIn(s) {
   const [fx, fy] = [Math.round(s.mu - s.Du * 1.5), Math.round(s.mv - s.Dv * 1.5)];   // das Feld vor dem Fuß
-  if (typeof walkable !== 'function' || !walkable(fx, fy)) return null;
+  if (typeof walkable !== 'function' || !walkable(fx, fy) || !flatGround(fx, fy)) return null;
   const dist = new Map([[fx + ',' + fy, 0]]), q = [[fx, fy]], outside = [];
   for (let i = 0; i < q.length && i < 400; i++) {
     const [x, y] = q[i], d0 = dist.get(x + ',' + y);
     if (!roofAt(x, y) && d0 >= 2) outside.push([x, y, d0]);
     if (d0 >= 6) continue;
-    for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, nk = nx + ',' + ny; if (dist.has(nk) || !walkable(nx, ny) || edgeBlocks(x, y, nx, ny)) continue; dist.set(nk, d0 + 1); q.push([nx, ny]); }
+    for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy, nk = nx + ',' + ny; if (dist.has(nk) || !walkable(nx, ny) || !flatGround(nx, ny) || edgeBlocks(x, y, nx, ny)) continue; dist.set(nk, d0 + 1); q.push([nx, ny]); }   // Anhöhe (Stufe 2): unten bleiben, nicht über Rampe/Treppe hinauf
   }
   if (!outside.length) return null;
   const [ex, ey] = outside[Math.floor(Math.random() * outside.length)], tiles = walkPath(ex, ey, [[fx, fy]]);
@@ -1160,7 +1160,7 @@ function stepRoofers(dt) {
         const [tx, ty] = w.path[w.pi + 1], dx = tx - w.px, dy = ty - w.py, l = Math.hypot(dx, dy);
         if (l <= step) { w.px = tx; w.py = ty; w.pi++; step -= l; } else { w.px += dx / l * step; w.py += dy / l * step; step = 0; }
       }
-      w.up = 0;
+      w.up = (hillsOn() && slopeUp(w.px, w.py, FOOT_D)) || 0;              // Anhöhe (Stufe 2): führt der Weg über eine Rampe/Treppe, ihre Höhe
       if (w.pi >= w.path.length - 1) { if (w.st === 'in') { w.st = 'up'; w.d = -DT_FOOT; } else w.gone = true; }
       continue;
     }

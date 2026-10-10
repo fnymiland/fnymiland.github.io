@@ -133,7 +133,17 @@ function arcPts(cu, cv, r, a0, a1, n = 12) {
 }
 const sweep = (a0, a1) => { let d = a1 - a0; while (d > Math.PI) d -= 2 * Math.PI; while (d <= -Math.PI) d += 2 * Math.PI; return a0 + d; };
 function pathArms(x, y) {
+  if (state.hills && state.hills.size) return pathArmsHill(x, y);
   return DIRS.filter(([dx, dy]) => { const b = bAt(x + dx, y + dy); return b === 'weg' || b === 'rathaus' || crossingAt(x + dx, y + dy) || wegAt(x + dx, y + dy) != null; });
+}
+// Anhöhen (Stufe 2): nur zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink 'weg') – nie über die Kante, dort endet der Weg wie
+// jedes Wegende; die Rampe ist ein Arm an ihrem Fuß und an ihrer Oberkante (hills.js), die Treppe keiner (nur zu Fuß, pathEnds)
+function pathArmsHill(x, y) {
+  const rs = rampFresh().n > 0;
+  return DIRS.filter(([dx, dy]) => {
+    const nx = x + dx, ny = y + dy, b = bAt(nx, ny);
+    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (rs && !!rampAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
+  });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
 function roadCurve(arms) {
@@ -527,6 +537,16 @@ const quadPaved = (px, py) => { const n = pathAt(px, py); return n ? n.id !== 't
 function pathQuads(x, y, hall = true) {
   const paved = hall ? quadPaved : (px, py) => { const n = pathAt(px, py); return !!n && n.id !== 'tritt'; };
   const out = [];
+  if (state.hills && state.hills.size) {
+    // Anhöhen (Stufe 2): nur, wo alle vier Felder zusammenhängen (levelLink: nie über die Kante). Rampenfelder davor bzw. dahinter zählen
+    // als Belag – vor einer breiten Rampe schließen sich die Wege zu ihrer ganzen Breite, sonst bliebe zwischen ihren Armen Wiese
+    const rs = rampFresh().n > 0, pv = (px, py) => paved(px, py) || (rs && !!rampAt(px, py)), lk = (ax, ay, bx, by) => levelLink(ax, ay, bx, by, 'weg');
+    for (const su of [1, -1]) for (const sv of [1, -1]) {
+      const ux = x + su, vy = y + sv;
+      if (pv(ux, y) && pv(x, vy) && pv(ux, vy) && lk(x, y, ux, y) && lk(x, y, x, vy) && lk(ux, y, ux, vy) && lk(x, vy, ux, vy)) out.push([su, sv]);
+    }
+    return out;
+  }
   for (const su of [1, -1]) for (const sv of [1, -1]) if (paved(x + su, y) && paved(x, y + sv) && paved(x + su, y + sv)) out.push([su, sv]);
   return out;
 }
@@ -856,6 +876,22 @@ const drawFlat = (cx, cy, z, x, y, t) => {
   }
   return t.b === 'schiene' ? drawRailBed(cx, cy, z, x, y, t) : drawPath(cx, cy, z, x, y, t.weg != null ? { style: t.weg, rot: 0 } : t);
 };
+// Anhöhe (Stufe 2): Weg oben (render.js hillFlat, auch als Bildchen) – zugeschnitten auf die Raute des Felds wie seine Oberseite: zu Nachbarn,
+// mit denen er zusammenhängt (levelLink, auch Fuß/Oberkante von Treppe und Rampe), ein Stück darüber (Überlapp an der Fuge wie am Boden), an
+// der Kante genau – nichts ragt über die Grasnarbe oder die dunkle Kante (Ränder, Fuge, Muster über den Rand). Licht danach (nicht beschnitten)
+function drawHillFlat(cx, cy, z, x, y, t) {
+  const e = (dx, dy) => levelLink(x, y, x + dx, y + dy, 'fuss') ? 0.06 : 0;
+  const u0 = -0.5 - e(-1, 0), u1 = 0.5 + e(1, 0), v0 = -0.5 - e(0, -1), v1 = 0.5 + e(0, 1);
+  const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
+  g.save();
+  pathGlowOff = true;
+  try {
+    g.beginPath(); [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+    drawFlat(cx, cy, z, x, y, t);
+  } finally { pathGlowOff = false; g.restore(); }
+  const w = wegUnder(t);
+  if (w != null && pathLook(styleDef('weg', w).id).glow) pathGlow(L, z);
+}
 
 // Steht an einer Seite des Wegfelds eine Hecke, ein Zaun oder eine Mauer, läuft der Weg dort bis an die Feldkante
 // (eckig) – kein Grasstreifen zwischen Weg und Linie (Block 41)
@@ -1052,7 +1088,8 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
   g.strokeStyle = C(lk.fill); g.lineWidth = 0.6; g.lineJoin = 'round';     // Fuge zum Nachbarfeld schließen (Block 116, wie drawPath)
   g.beginPath(); [[-0.5, -0.5], [0.5, -0.5], [0.5, 0.5], [-0.5, 0.5]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke();
   const near = (dx, dy) => state.tiles.get((x + dx) + ',' + (y + dy));
-  const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge; };
+  const hl = state.hills && state.hills.size && x < 1e5;                 // Anhöhen (Stufe 2): Nachbarn nur, wenn der Weg dorthin führt (nie über die Kante)
+  const wideAt = (dx, dy) => { const n = near(dx, dy); return !!n && n.b === 'weg' && !!n.wide && !n.bridge && (!hl || levelLink(x, y, x + dx, y + dy, 'weg')); };
   const pad = seamPad(L);                                                // zu breiten Nachbarn ~1 Gerätepunkt überlappen (Block 125c, PC)
   if (pad) poly([[-0.5 - (wideAt(-1, 0) ? pad : 0), -0.5 - (wideAt(0, -1) ? pad : 0)], [0.5 + (wideAt(1, 0) ? pad : 0), -0.5 - (wideAt(0, -1) ? pad : 0)],
     [0.5 + (wideAt(1, 0) ? pad : 0), 0.5 + (wideAt(0, 1) ? pad : 0)], [-0.5 - (wideAt(-1, 0) ? pad : 0), 0.5 + (wideAt(0, 1) ? pad : 0)]].map(L), C(lk.fill));
@@ -1065,17 +1102,34 @@ function drawWidePath(L, lk, x, y, z, arms, stubs = []) {
     // schmaler Weg (oder Rathaus) daneben, und auf einer Hälfte der Kante ist auch quer daneben Weg: dort füllt der Nachbar
     // seine Ecke ganz (pathQuads) – kein Bordstein-Stück mitten in die Fläche (Block 100)
     const nb = near(dx, dy), nbFills = arm && quadPaved(x + dx, y + dy) && !(nb && nb.bridge);   // Trittsteine/Brücke füllen keine Ecken
-    const halves = nbFills ? [-1, 1].filter(s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0)))
-      .map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
-    const gaps = (arm ? [[-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
+    const fills = hl ? s => pathQuads(x + dx, y + dy).some(([su, sv]) => dx ? su === -dx && sv === s : su === s && sv === -dy)   // Anhöhen: genau die Ecken, die er füllt
+      : s => quadPaved(x + (dx ? 0 : s), y + (dx ? s : 0)) && quadPaved(x + dx + (dx ? 0 : s), y + dy + (dx ? s : 0));
+    const halves = nbFills ? [-1, 1].filter(fills).map(s => s < 0 ? [-0.5, 0] : [0, 0.5]) : [];
+    const lane = hl && arm && !nbFills ? rampLane(x, y, dx, dy) : null;   // Rampe (hills.js): Lücke so breit wie ihre Fahrbahn
+    const gaps = (arm ? [lane || [-ROAD_W, ROAD_W]] : []).concat(halves, stubs.filter(s => s.d[0] === dx && s.d[1] === dy)
       .map(s => (dx ? [s.q0 * dx, s.q1 * dx] : [-s.q1 * dy, -s.q0 * dy]).sort((p, q) => p - q))).sort((p, q) => p[0] - q[0]), e0 = 0.5 - WIDE_CURB;
     const seg = (s0, s1) => dx ? rect(dx > 0 ? e0 : -0.5, dx > 0 ? 0.5 : -e0, s0, s1) : rect(s0, s1, dy > 0 ? e0 : -0.5, dy > 0 ? 0.5 : -e0);
     let at = -0.5;
     for (const [g0, g1] of gaps) { if (g0 > at) seg(at, g0); at = Math.max(at, g1); }
     if (at < 0.5) seg(at, 0.5);
   }
-  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
+  if (lk.glow) pathGlow(L, z);
 }
+// Rampe auf dem Nachbarfeld (x + dx, y + dy), an deren Fuß bzw. Oberkante der Weg (x, y) liegt: das Stück der gemeinsamen Kante unter ihrer
+// Fahrbahn [von, bis] (quer wie in drawWidePath: v bei dx, u bei dy) – am Keil mit Geländer bleibt der Bordstein; null = keine Rampe
+function rampLane(x, y, dx, dy) {
+  const r = rampAt(x + dx, y + dy);
+  if (!r) return null;
+  const o = rampLook(x + dx, y + dy, r), [Du, Dv] = STAIR_UP[r.rot];
+  const lo = o.m === 'k' ? -0.5 + STAIR_CW : -0.5, hi = o.p === 'k' ? 0.5 - STAIR_CW : 0.5, k = dx ? Du : -Dv;   // quer S = (−Dv, Du)
+  return [lo * k, hi * k].sort((a, b) => a - b);
+}
+// Leuchtender Belag (Kristall): Licht in der Feldmitte. pathGlowOff: drawHillFlat setzt es selbst, außerhalb seines Zuschnitts
+let pathGlowOff = false;
+const pathGlow = (L, z) => { if (!pathGlowOff) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue'); };
+// Anhöhen (Stufe 2): Wegende bis ans Gebäude bzw. an den Rand (pathEnds) nur zu Nachbarn auf derselben Ebene bzw. dorthin, wohin man geht
+// (Fuß/Oberkante einer Treppe wie bisher) – nie über die Kante zu einem Gebäude unten; „gerade bis an den Rand“ (t.end) gilt immer
+const hillEnds = (x, y, t, ends) => t && t.end === 'rand' ? ends : ends.filter(([dx, dy]) => levelLink(x, y, x + dx, y + dy, 'fuss'));
 // Überlapp zum Nachbarfeld in Feldeinheiten: etwa 1 Gerätepunkt, wie weit auch rausgezoomt (Block 125c)
 function seamPad(L) {
   const a = L([0, 0]), b = L([1, 0]), tr = g.getTransform ? g.getTransform() : null, ds = tr ? Math.hypot(tr.a, tr.b) : 1;
@@ -1094,7 +1148,7 @@ function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = lookFar(pathLook(st.id), z);
-  const arms0 = pathArms(x, y), arms = arms0.concat(pathEnds(x, y, t, arms0));   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
+  const arms0 = pathArms(x, y), ends = pathEnds(x, y, t, arms0), arms = arms0.concat(state.hills && state.hills.size && ends.length ? hillEnds(x, y, t, ends) : ends);   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
   if (lk.stones) {                                                                       // Trittsteine; zu Vorplätzen ein Stein mehr (Block 91)
     drawStones(L, arms, t, x, y, z);
     for (const s of courtLinksAt(x, y)) { const q = L(armUV(s.d, 0.375, (s.q0 + s.q1) / 2)); ellipse(q[0], q[1] + 0.8 * z, 6 * z, 3.1 * z, C('#aaa498')); ellipse(q[0], q[1], 6 * z, 3.1 * z, C('#d9d4c9')); }
@@ -1126,7 +1180,7 @@ function drawPath(cx, cy, z, x, y, t) {
     g.save(); clipTo(shapes(ROAD_W).map(sh => padBorder(grow(sh), pad, [x, y])), L); patSeam = true;
     try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); }
   }
-  if (lk.glow) glowQuad([L([-0.15, -0.15]), L([0.15, -0.15]), L([0.15, 0.15]), L([-0.15, 0.15])], 26 * z, 'blue');
+  if (lk.glow) pathGlow(L, z);
   const cl = roadCenterline(arms, t);
   if (lk.dash && cl && !pathQuads(x, y, false).length) {              // Ecken am Rathaus sind keine breite Straße
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round';
@@ -1461,7 +1515,7 @@ function drawTorArch(cx, cy, z, x, y, t, H, now) {
 }
 // Freizeitpark-Farben (Block 60e): Fassade/Dach aus WALLS/ROOFS, Fenster aus WIN_COLS – sonst die Grundfarbe
 const fzCol = (t, kind, def) => !t || t[kind] == null ? def : (kind === 'wall' ? WALLS : kind === 'roof' ? ROOFS : WIN_COLS)[t[kind]] || def;
-const ROTATABLE = new Set([...MIRROR, 'dachtreppe', 'bank', 'strassenlaterne', 'ubahn', 'tunneleinfahrt', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'glashaus_l', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
+const ROTATABLE = new Set([...MIRROR, 'dachtreppe', 'huegelrampe', 'bank', 'strassenlaterne', 'ubahn', 'tunneleinfahrt', 'riesenrad', 'sternwarte', 'seebruecke', 'botgarten', 'schloss', 'holz', 'fischer', 'obst', 'stein', 'mine', 'kristallmine', 'glashaus', 'glashaus_l', 'station', 'hbf', 'haus', 'muehle', 'steinmetz', 'schmiede',
   'rathaus', 'hafen', 'schule', 'uni', 'baecker', 'saege', 'fabrik', 'bibliothek', 'kunst', 'leuchtturm', 'wasserkraft', 'geothermie', 'solarfeld', 'reihenhaus', 'ferienhaus', 'baumhaus', 'hausboot',
   'kaffeeplantage', 'teegarten', 'kakaoplantage', 'fz_schloss', 'fz_zuckerwatte', 'fz_geister', 'fz_wildwasser', 'fz_eis', 'fz_station', ...Object.keys(SHOPS), ...Object.keys(STANDS)]);
 let buildRot = 0;
@@ -1553,6 +1607,7 @@ function courtLinksAt(x, y) {
   for (const [dx, dy] of DIRS) {
     const k = anchorAt(x + dx, y + dy);
     if (!k) continue;
+    if (state.hills && state.hills.size && !levelLink(x, y, x + dx, y + dy, 'weg')) continue;   // Anhöhe (Stufe 2): nie über die Kante
     const t = state.tiles.get(k), [ax, ay] = keyXY(k), gp = gardenPath(t, ax, ay);
     if (gp) { if (gp.d[0] === -dx && gp.d[1] === -dy) out.push({ d: [dx, dy], q0: -GP_FILL, q1: GP_FILL }); continue; }
     const ct = courtOf(t, ax, ay);
@@ -1569,7 +1624,8 @@ function courtOpenSides(K, t, x, y) {
   if (!t || !ITEMS[t.b] || x > 1e5) return null;
   const [w, h] = sizeOf(t.b, t.rot, t), [sa, sb] = ITEMS[t.b].size || [1, 1], HA = sa / 2, HB = sb / 2;
   const mx = x + (w - 1) / 2, my = y + (h - 1) / 2;
-  const paved = (a, b) => { const [u, v] = K.turn(a, b); return quadPaved(Math.round(mx + u), Math.round(my + v)); };
+  const hl = state.hills && state.hills.size, lv = hl ? hillLevel(x, y) : 0;   // Anhöhe (Stufe 2): Weg oben ist kein Weg ringsum
+  const paved = (a, b) => { const [u, v] = K.turn(a, b), px = Math.round(mx + u), py = Math.round(my + v); return quadPaved(px, py) && (!hl || hillLevel(px, py) === lv); };
   const along = n => Array.from({ length: n }, (_, i) => -n / 2 + 0.5 + i);
   return { HA, HB, mx, my, back: along(sb).every(b => paved(-HA - 0.5, b)), lo: along(sa).every(a => paved(a, -HB - 0.5)), hi: along(sa).every(a => paved(a, HB + 0.5)) };
 }
@@ -1821,6 +1877,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     case 'stuetze': drawPillar(cx, cy, z, (t && t.form) || 0); break;
     case 'dachtreppe': drawDachtreppe(cx, cy, z, (t && t.rot) || 0, x, y); break;   // Treppe durch die Dachöffnung (Block 138d)              // Block 138: sieht aus wie das Dach darüber
     case 'huegeltreppe': drawHillStair(cx, cy, z, x, y, t); break;   // Treppe in die Anhöhe (Block 157d, hills.js): als Bildchen
+    case 'huegelrampe': drawHillRamp(cx, cy, z, x, y, t); break;     // Rampe in die Anhöhe (hills.js): je Feld ein Bildchen
     case 'dach': drawRoofIcon(cx, cy, z, (t && t.form) || 0, (t && t.col) || 0); break;   // nur als Bildchen (Leiste, Kunstakademie)
     case 'strassenlaterne': drawStreetLamp(cx, cy, z, now, x, y, t); break;   // Block 132      // Formen und Farben (Block 106, draw-schmuck.js)
     case 'denkmal': {                        // Sockel, Obelisk mit goldener Spitze, Tafel

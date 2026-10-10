@@ -87,9 +87,10 @@ function liveFlatSet() {
   const L = LIVE_FLAT;
   if (L && L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L.set;
   const set = new Set();
+  const hs = state.hills && state.hills.size;                           // Anhöhe (Stufe 2): Wege oben zeichnet tileA (hillFlat)
   for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) {
     const [x, y] = keyXY(k), t = flatAt(x, y);
-    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t)) set.add(k);
+    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t) && !(hs && state.hills.has(k))) set.add(k);
   }
   LIVE_FLAT = { v: groundVersion, tiles: state.tiles, n: state.tiles.size, set };
   return set;
@@ -209,11 +210,12 @@ function renderGroundChunk(cx, cy, scale) {
     g.save(); clipTo(0.03 + 0.052 / scale);
     try {
       drawGroundParts(near, iso, 1);
+      const hs = state.hills && state.hills.size;                         // Anhöhe (Stufe 2): Wege oben nicht flach am Boden (tileA zeichnet sie oben)
       for (let s = -2; s <= 2 * CHUNK; s++) for (let i = -1; i <= CHUNK; i++) {   // samt Ring der Nachbarfelder: deckt das eigene
         const j = s - i;                                                      // Gras zu, das über die Kante ragt (Block 116b)
         if (j < -1 || j > CHUNK) continue;
         const x = cx * CHUNK + i, y = cy * CHUNK + j, t = flatAt(x, y);
-        if (t && cachedPath(t)) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
+        if (t && cachedPath(t) && !(hs && state.hills.has(x + ',' + y))) { const p = iso(x, y); drawFlat(p.x, p.y, 1, x, y, t); }
       }
     } finally { g.restore(); }
     g.save(); clipTo(0);
@@ -800,13 +802,14 @@ function spriteEdges(x, y, px, py, z, now) {
 // nachts) und wurden jedes Bild live gezeichnet – in einer Welt mit 107 solchen Feldern ein Gutteil der Rechenzeit, und das
 // GL-Standbild blieb aus. Jetzt je Feld ein Bildchen (Fassung groundVersion; Form hängt an den Nachbarn); das Brückenstück über
 // einem Schiff zeichnet drawBridgeOver weiter live
-function spriteFlat(x, y, px, py, z, t) {
-  const zs = spriteStep(z), keyOf = lit => `flat|${x},${y}|${FOG ? 1 : 0}|${lit}`;
+// hill: Weg oben auf einer Anhöhe (tileA, angehoben; zugeschnitten wie drawHillFlat)
+function spriteFlat(x, y, px, py, z, t, hill = false) {
+  const zs = spriteStep(z), keyOf = lit => `${hill ? 'hflat' : 'flat'}|${x},${y}|${FOG ? 1 : 0}|${lit}`;
   const key = keyOf(night > 0.15 && isLive() ? 1 : 0), fog = FOG;
   const make = () => {
     const sp = paintSprite((TW * 0.75 + 24) * zs, (TH + 60) * zs, (TH + 70) * zs, () => {
       const pf = FOG; FOG = fog;
-      try { drawFlat(0, 0, zs, x, y, t); } finally { FOG = pf; }
+      try { (hill ? drawHillFlat : drawFlat)(0, 0, zs, x, y, t); } finally { FOG = pf; }
     });
     if (sp) sp.z = zs;
     return sp;
@@ -1343,10 +1346,12 @@ function worldGround(V, z, now, glPlay) {
   if (!groundCached) drawGroundParts(visRange, toScreen, z);
   // Wege immer vor allem anderen (sie liegen flach); aus dem Zwischenspeicher fehlen nur die leuchtenden
   const liveFlat = groundCached ? liveFlatSet() : null;                 // Block 144: meist leer – dann gar nicht durchgehen (Standbild nur, wenn leer)
+  const hs = !liveFlat && state.hills && state.hills.size;              // Anhöhe (Stufe 2): Wege oben zeichnet tileA (liveFlatSet lässt sie schon aus)
   if (!liveFlat || liveFlat.size) for (let i = 0; i < visible.length; i += 4) {
     if (liveFlat && !liveFlat.has(visible[i] + ',' + visible[i + 1])) continue;
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && !isPbTrack(t.b) && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
+    if (hs && state.hills.has(x + ',' + y)) continue;
     if (isWegBridge(t) && bridgeArch(x, y)) continue;                   // Bogenbrücken (Block 150): mit den Gebäuden, in Maler-Reihenfolge
     FOG = !ownedTile(x, y);
     if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
@@ -1494,6 +1499,7 @@ function render(now) {
       if (!err) {
         if (tool === 'anhoehe' && hillAt(hx, hy)) text = `Wand: ${DECO_LOOKS.anhoehe.forms[hillAt(hx, hy).w || 0].name} → ${DECO_LOOKS.anhoehe.forms[decoLookNew('anhoehe').form || 0].name} · kostenlos`;   // Anhöhe (Block 157): nur umstellen
         else if (tool === 'huegeltreppe' && hillAt(hx, hy)) text = `Treppe in die Anhöhe: −${fmt(ITEMS.huegeltreppe.cost - stairIntoBack(hx, hy))}`;   // Feld wird abgesenkt (hills.js)
+        else if (tool === 'huegelrampe' && rampIntoBack(hx, hy, rotOf(tool))) text = `Rampe in die Anhöhe: −${fmt(ITEMS.huegelrampe.cost - rampIntoBack(hx, hy, rotOf(tool)))}`;   // Felder werden abgesenkt (hills.js)
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
@@ -1522,6 +1528,7 @@ function render(now) {
         if (wn) text += `  🛤️ ersetzt den Weg +${fmt(wn * ITEMS.weg.cost)}`;
       }
       if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1 };   // Feld ohne Anhöhe, mit Treppe
+      if (tool === 'huegelrampe') hillGap = rampGapFor(hx, hy, rotOf(tool));   // Rampe in die Anhöhe: abgesenkte Felder (hills.js)
       const onWeg = k => plainWeg(k) && (plazaOk(tool) || replacesWeg(tool));   // Wege darf man über- bzw. ersetzen
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => (!COVER.has(fx + ',' + fy) || onWeg(fx + ',' + fy)) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
       preview = { ok: !err, ghost: d.cat !== 'land' && !d.ground && free, text };
@@ -1581,11 +1588,41 @@ function render(now) {
   };
   // Zeichnung, die ihre Bildpunkte selbst rechnet (toScreen: Linien, Geister), um lift (Bildpunkte) angehoben – nie um glLive herum
   const lifted = (lift, f) => { if (!lift) return f(); g.save(); g.translate(0, -lift); try { return f(); } finally { g.restore(); } };
-  // große Deko auf einer Anhöhe: die Anhöhe der ganzen Grundfläche in Maler-Reihenfolge, dann deren Vorschau – in jedem Streifen der Deko
+  // Anhöhe (Stufe 2): der Weg oben (auch unter Platz-Dingen) – im Boden-Bild fehlt er; nach der Anhöhe des Felds, vor ihrer Vorschau und
+  // allem, was auf ihm steht. Weit weg als Bildchen, nah live (wie die leuchtenden Wege am Boden). (qx, qy) = Feldmitte oben
+  const hillFlat = (x, y, qx, qy) => {
+    const ft = flatAt(x, y);
+    if (!ft || wegUnder(ft) == null) return;
+    if (SPRITES_ON && spriteFlat(x, y, qx, qy, z, ft, true)) return;
+    if (GLPASS) { GL.stats.miss++; glLive(qx, qy, TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawHillFlat(qx, qy, z, x, y, ft)); }
+    else {
+      drawHillFlat(qx, qy, z, x, y, ft);
+      if (night > 0.15 && pathLook(styleDef('weg', wegUnder(ft)).id).glow) hillGlows.push([x, y, qx, qy]);
+    }
+  };
+  // Leuchtender Weg oben (nah, live): sein Schein liegt auch auf den Anhöhen davor – die werden erst danach gezeichnet und füllten sein Loch
+  // (der Schein endete dann scharf an ihrer Kante). Auf ihnen noch einmal stanzen (wie die Streifen großer Gebäude), bevor dort etwas steht
+  const hillGlows = [];
+  const hillRelight = (x, y, px, py, lift) => {
+    for (const [gx, gy, qx, qy] of hillGlows) {
+      const dx = x - gx, dy = y - gy;
+      if (dx < 0 || dy < 0 || dx > 1 || dy > 1 || !(dx || dy)) continue;
+      const P = (u, v, up) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - up];   // Umriss der Anhöhe dieses Felds
+      g.save();
+      try {
+        g.beginPath(); [P(-0.5, -0.5, lift), P(0.5, -0.5, lift), P(0.5, -0.5, 0), P(0.5, 0.5, 0), P(-0.5, 0.5, 0), P(-0.5, 0.5, lift)].forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+        pathGlow(([u, v]) => [qx + (u - v) * TW / 2 * z, qy + (u + v) * TH / 2 * z], z);
+      } finally { g.restore(); }
+    }
+  };
+  // große Deko auf einer Anhöhe: die Anhöhe der ganzen Grundfläche in Maler-Reihenfolge (samt Weg darunter), dann deren Vorschau – in jedem
+  // Streifen der Deko
   const hillsUnder = (ax, ay, w, h) => {
     for (let s = ax + ay; s <= ax + ay + w + h - 2; s++) for (let fx = Math.max(ax, s - ay - h + 1); fx <= Math.min(ax + w - 1, s - ay); fx++) {
-      const fy = s - fx, q = toScreen(fx, fy);
+      const fy = s - fx, q = toScreen(fx, fy), lf = hillLift(fx, fy) * z;
       drawHillTile(fx, fy, q.x, q.y, z);
+      hillFlat(fx, fy, q.x, q.y - lf);                                    // Weg unter der großen Deko
+      if (hillGlows.length) hillRelight(fx, fy, q.x, q.y, lf);
     }
     if (HILL_MARKS && HILL_MARKS.size) for (let fy = ay; fy < ay + h; fy++) for (let fx = ax; fx < ax + w; fx++) runMarks(fx, fy, hillLift(fx, fy));
   };
@@ -1597,10 +1634,10 @@ function render(now) {
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
-      const hl = HILLS && state.hills.get(k), gap = hl && hillGap && hillGap.k === k, lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
+      const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
       if (lift) {
         const bigOn = a && (() => { const [w0, h0] = sizeOf(t.b, t.rot, t), [ax0, ay0] = keyXY(a); return (w0 > 1 || h0 > 1) && hillLevel(ax0, ay0) > 0 && t.b !== 'weg'; })();
-        if (!bigOn) { drawHillTile(x, y, px, py, z); runMarks(x, y, lift / z); }
+        if (!bigOn) { drawHillTile(x, y, px, py, z); hillFlat(x, y, px, py - lift); if (hillGlows.length) hillRelight(x, y, px, py, lift); runMarks(x, y, lift / z); }
         py -= lift;
       } else if (gap) runMarks(x, y, 0);                                  // Vorschau „Treppe in die Anhöhe“: Feld abgesenkt, Rahmen unten
       if (!(SPRITES_ON && spriteEdges(x, y, px, py, z, now))) {   // Hecken, Zäune, Mauern an den hinteren Kanten (Block 41); weit weg als Bildchen
@@ -1610,13 +1647,14 @@ function render(now) {
       }
       if (a0 && !t) staleCover = true;
       if (a) {
-        const [ax, ay] = keyXY(a), [w, h] = sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
+        const ramp = t.b === 'huegelrampe';                                // Rampe (hills.js): jedes Feld für sich, an seinem Platz (nie in Streifen)
+        const [ax, ay] = ramp ? [x, y] : keyXY(a), [w, h] = ramp ? [1, 1] : sizeOf(t.b, t.rot, t), big = w > 1 || h > 1;
         const corner = x === ax + w - 1 && y === ay + h - 1;
         const c = big ? toScreen(ax + (w - 1) / 2, ay + (h - 1) / 2) : { x: px, y: py };
         const oLift = HILLS ? hillLift(ax, ay) * z : 0;                    // Anhöhe (Block 157): große Deko steht ganz oben (gleiche Höhe)
         if (big) c.y -= oLift;
         const oGround = oLift && hasGroundPart(t);                         // flache Teile oben: mit dem Ding zeichnen (nicht im Boden-Bild)
-        const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'huegeltreppe' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht (Treppe in die Anhöhe: Gelände wie die Anhöhe, Block 157d)
+        const fadeIt = seeThrough && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'huegeltreppe' && t.b !== 'huegelrampe' && !ITEMS[t.b].ground && ITEMS[t.b].cat !== 'land';   // 👁 Durchsicht (Treppe/Rampe in die Anhöhe: Gelände wie die Anhöhe, Block 157d)
         const drawIt = () => seeFaded(fadeIt, drawIt0);
         const drawIt0 = () => {
           if (t.b === 'schiene' && !t.cross) return;                         // Schienen malen hier nur Bahnübergänge (Gleis liegt im Boden)
@@ -1718,7 +1756,7 @@ function render(now) {
     const k = x + ',' + y;
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
-      const ms0 = byTile.get(k), ms = ms0 && hl && hillGap && hillGap.k === k ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe in die Anhöhe: oben ist dort nichts
+      const ms0 = byTile.get(k), ms = ms0 && hl && hillGapHas(k) ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe/Rampe in die Anhöhe: oben ist dort nichts
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));

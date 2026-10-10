@@ -6,13 +6,21 @@ const FUR = ['#f4c28f', '#c9a27e', '#fffaf2', '#b9b9c6', '#f7d9a8', '#e7a06c', '
 const SHIRTS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const CARS = ['#e8705f', '#5f8fe8', '#58b36a', '#ffffff', '#b07ad6', '#f2b53a'];
 const walkers = [], cars = [], strollers = [];   // strollers (Block 44): Spaziergänger im Park
+// Anhöhe (Block 157, Stufe 2): oben geht es wie unten; Rampe und Treppe sind begehbar. Von welchem Feld man auf welches kommt, sagt allein
+// edgeBlocks (levelLink: zu Fuß über Treppe und Rampe längs ihrer Achse, nie über die Kante) – wer Schritte prüft, fragt beides
 const walkable = (x, y, open = false) => {             // open: Schranke egal (wer schon drauf ist, geht weiter)
   if (!ownedTile(x, y)) return false;
-  if (hillAt(x, y)) return false;                                                   // Anhöhe (Block 157, Stufe 1): ohne Treppe kommt niemand hinauf
   const t = objAt(x, y);
   if (terrainAt(x, y) === 'water') return isWegBridge(t);                          // übers Wasser nur auf einer Wegbrücke (Block 66)
-  return !t || t.b === 'weg' || (isCrossing(t) && (t.foot || open || !crossingClosed(x, y)));   // an der Schranke warten, über die Brücke nie
+  if (!t || t.b === 'weg' || (isCrossing(t) && (t.foot || open || !crossingClosed(x, y)))) return true;   // an der Schranke warten, über die Brücke nie
+  return (t.b === 'huegelrampe' || t.b === 'huegeltreppe') && hillsOn();
 };
+// Rampe oder Treppe auf dem Feld (dort hängt die Höhe am Punkt, nicht am Feld)
+const slopeAt = (x, y) => { if (!hillsOn()) return false; const c = rampFresh(); return (c.n > 0 && !!rampAt(x, y)) || (c.s > 0 && !!stairAt(x, y)); };
+// flacher Boden: Ebene 0, keine Rampe/Treppe – Spaziergänger im Park und die Parade tauchen nur dort auf (oben nur, wer hinaufgeht)
+const flatGround = (x, y) => !hillsOn() || (!hillLevel(x, y) && !slopeAt(x, y));
+// Feld, das zum Weg gehört (bummelnde Bewohner bleiben gern darauf): Weg, Rampe, Treppe
+const wayish = b => b === 'weg' || b === 'huegelrampe' || b === 'huegeltreppe';
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
 function crossingClosed(x, y) {
   if (!trains.length) return false;
@@ -42,9 +50,10 @@ function doorsOf(k) {
   const t = state.tiles.get(k);
   if (!t) return [];
   const [ax, ay] = keyXY(k), [w, h] = sizeOf(t.b, t.rot, t), out = [];
+  const hills = hillsOn();
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) for (const [dx, dy] of DIRS) {
     const x = ax + i + dx, y = ay + j + dy;
-    if ((x < ax || x >= ax + w || y < ay || y >= ay + h) && walkable(x, y)) out.push([x, y]);
+    if ((x < ax || x >= ax + w || y < ay || y >= ay + h) && walkable(x, y) && (!hills || levelLink(ax + i, ay + j, x, y, 'fuss'))) out.push([x, y]);   // Anhöhe: auf derselben Ebene
   }
   return out;
 }
@@ -165,7 +174,7 @@ function syncStrollers() {
   const want = T.pop ? Math.min(12, PARKS.reduce((n, p) => n + Math.min(p.stage * 2 + 1, Math.floor(p.tiles.length / 3)), 0)) : 0;
   while (strollers.length > want) strollers.pop();
   if (strollers.length >= want) return;
-  const p = PARKS[Math.floor(Math.random() * PARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => parkWalk(x, y));
+  const p = PARKS[Math.floor(Math.random() * PARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => parkWalk(x, y) && flatGround(x, y));
   if (!free.length) return;
   const [sx, sy] = free[Math.floor(Math.random() * free.length)];
   const homes = [...state.tiles].filter(([, t]) => isHome(t.b) && t.animal), [hk, ht] = homes.length ? homes[Math.floor(Math.random() * homes.length)] : [null, null];
@@ -191,11 +200,12 @@ function stepMover(w, dt, ok, preferWay) {
     const px = w.fx, py = w.fy;
     w.fx = w.tx; w.fy = w.ty; w.t = 0;
     if (w.stroll && (px !== w.fx || py !== w.fy) && sitDown(w)) return;
-    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b) && !(w.fur && edgeBlocks(w.fx, w.fy, a, b)));   // Bewohner nicht durch Zäune
+    // Bewohner nicht durch Zäune und nur über Treppe/Rampe hinauf (edgeBlocks), Fahrzeuge nur über die Rampe (levelLink 'weg')
+    const cands = DIRS.map(([dx, dy]) => [w.fx + dx, w.fy + dy]).filter(([a, b]) => ok(a, b) && !(w.fur ? edgeBlocks(w.fx, w.fy, a, b) : hillsOn() && !levelLink(w.fx, w.fy, a, b, 'weg')));
     let pool = cands;
     if (preferWay) {
-      const ways = cands.filter(([a, b]) => bAt(a, b) === 'weg');
-      if (ways.length && Math.random() < (bAt(w.fx, w.fy) === 'weg' ? 0.95 : 0.6)) pool = ways;
+      const ways = cands.filter(([a, b]) => wayish(bAt(a, b)));
+      if (ways.length && Math.random() < (wayish(bAt(w.fx, w.fy)) ? 0.95 : 0.6)) pool = ways;
     }
     if (pool.length > 1) pool = pool.filter(([a, b]) => a !== px || b !== py);
     if (w.stroll && pool.length > 1 && Math.random() < 0.45) {        // Spaziergänger steuern gern die nächste Bank an
@@ -241,6 +251,7 @@ const PART_SAY = { morgen: ['Guten Morgen!', 'Die Sonne ist schon wach.'], mitta
   nacht: ['Gute Nacht!', 'Die Laternen leuchten so schön ✨'] };
 const ROOF_SAY = ['Was für eine Aussicht von hier oben!', 'Hier oben ist es so schön ruhig.', 'Man sieht bis zum Meer!'];   // Leute auf dem Dach (Block 138d)
 const HILL_SAY = ['Von hier oben sieht man so weit!', 'Ein schönes Plätzchen hier oben.', 'Die paar Stufen haben sich gelohnt.'];   // Spaziergänger auf Anhöhen (Block 157d)
+const RAMP_SAY = ['Von hier oben sieht man so weit!', 'Ein schönes Plätzchen hier oben.', 'Ganz gemütlich, so eine Rampe.'];        // … über die Rampe hinauf (Stufe 2)
 let bubble = null, bubbleNext = 0;
 function bubbleText(w) {
   const pool = [], t = w.home && state.tiles.get(w.home), s = w.home && T.st.get(w.home);
@@ -249,7 +260,7 @@ function bubbleText(w) {
     if (miss.length) pool.push(...miss.map(v => WISH_SAY[v.id]), ...miss.map(v => WISH_SAY[v.id]));   // Wünsche doppelt so oft
     else if (!s.wish.next) pool.push('Ich wohne hier so gern! ♥', 'Schönstes Haus der Insel! ♥');
   }
-  pool.push(...(w.roofer ? ROOF_SAY : w.hillw ? HILL_SAY : GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
+  pool.push(...(w.roofer ? ROOF_SAY : w.hillw ? (w.stair && w.stair.ramp ? RAMP_SAY : HILL_SAY) : GOAL_SAY[w.goal && w.goal.kind] || []), ...PART_SAY[dayPart()]);
   return pool[Math.floor(Math.random() * pool.length)];
 }
 function speak(w, text, now = performance.now()) { bubble = { w, text, until: now + Math.max(5000, String(text).length * 90) }; }
@@ -266,9 +277,27 @@ function bubbleTick(now) {
 const FIG_SCALE = 0.7;
 const figScale = w => (w && w.figS) || (w && w.full ? 1 : FIG_SCALE);   // figS: sitzend in der Parkeisenbahn (Block 136)
 const labelOff = w => (w.hand === 'ballon' || w.hand === 'herzballon' ? 19 : w.hat ? 16 : 12);   // Namensschild über Hut und Ballon
+// Rampe und Treppe (Anhöhen Stufe 2): Höhe (Bildpunkte bei Zoom 1) über dem Feld, in dem gezeichnet wird (render.js tileB hebt es um
+// hillLift an), an der Stelle (px + f, py − f) – f = FOOT_D: dort zeichnet drawWalker die Füße (6 Punkte rechts), so stehen sie auf der
+// Schräge statt halb darin. Liegt dieser Punkt schon im Nachbarfeld und kommt man dorthin (levelLink), gilt dessen Oberfläche, sonst die des
+// eigenen Felds an seinem Rand – so springt beim Feldwechsel nichts. null: weder hier noch am Fußpunkt Rampe/Treppe (dann wie bisher: Feld, Brücken)
+const FOOT_D = 6 / TW;
+function slopeUp(px, py, f, who = 'fuss') {
+  if (!hillsOn()) return null;
+  const c = rampFresh();
+  if (!c.n && !c.s) return null;
+  const x = Math.round(px), y = Math.round(py), fu = px + f, fv = py - f, fx = Math.round(fu), fy = Math.round(fv), here = slopeAt(x, y), other = fx !== x || fy !== y;
+  if (!here && !(other && slopeAt(fx, fy))) return null;
+  if (other && levelLink(x, y, fx, fy, who)) return surfaceHeight(fu, fv) - hillLift(x, y);
+  if (!here) return null;
+  const cu = Math.max(x - 0.5, Math.min(x + 0.5, fu)), cv = Math.max(y - 0.5, Math.min(y + 0.5, fv));
+  return c.n && rampAt(x, y) ? rampHeight(x, y, cu, cv) : stairHeight(x, y, cu, cv);
+}
+// Höhe der Figur über ihrem Feld: w.up, wenn gesetzt (Dach, Anhöhen-Spaziergänger), sonst auf Rampe/Treppe ihre Oberfläche; null = am Boden
+const figUp = w => w.up != null ? w.up : w.seat ? null : slopeUp(w.px, w.py, w.sit ? 0 : FOOT_D);
 // Kopf der Figur auf dem Bildschirm (wie drawWalker)
 function walkerHead(w, z) {
-  const p = toScreen(w.px, w.py), up = ((w.up || 0) + (state.hills && state.hills.size ? hillLift(Math.round(w.px), Math.round(w.py)) : 0)) * z;   // auf dem Dach bzw. der Dachtreppe höher (Block 138d); oben auf einer Anhöhe um ihren Hub (Block 157d, wie render.js tileB)
+  const p = toScreen(w.px, w.py), up = ((figUp(w) || 0) + (state.hills && state.hills.size ? hillLift(Math.round(w.px), Math.round(w.py)) : 0)) * z;   // auf dem Dach bzw. der Dachtreppe höher (Block 138d); oben auf einer Anhöhe um ihren Hub (Block 157d, wie render.js tileB), auf Rampe/Treppe ihre Höhe
   return [p.x + (w.sit ? 0 : 6 * z), p.y - up - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z * figScale(w)];
 }
 function drawBubble(z) {
@@ -308,7 +337,7 @@ const GOAL_DO = { arbeit: '💼 Auf dem Weg zur Arbeit', schule: '🎒 Auf dem W
 const GOAL_IN = { arbeit: '💼 Arbeitet gerade', schule: '🎒 Lernt gerade', essen: '☕ Macht Pause', laden: '🛍️ Kauft gerade ein', markt: '🧺 Auf dem Markt' };
 function walkerDoing(w) {
   if (w.roofer) return w.sit ? '🪑 Sitzt auf einer Bank auf dem Dach' : w.st === 'roof' ? '🏛️ Spaziert auf dem Dach' : w.st === 'up' || w.st === 'in' ? '🪜 Geht aufs Dach' : '🪜 Kommt vom Dach herunter';
-  if (w.hillw) return w.sit ? '🪑 Sitzt auf einer Bank auf der Anhöhe' : w.st === 'top' ? '⛰️ Spaziert auf der Anhöhe' : w.st === 'up' || w.st === 'in' ? '🪜 Geht auf die Anhöhe' : '🪜 Kommt von der Anhöhe herunter';   // Block 157d
+  if (w.hillw) { const ic = w.stair && w.stair.ramp ? '⛰️' : '🪜'; return w.sit ? '🪑 Sitzt auf einer Bank auf der Anhöhe' : w.st === 'top' ? '⛰️ Spaziert auf der Anhöhe' : w.st === 'up' || w.st === 'in' ? ic + ' Geht auf die Anhöhe' : ic + ' Kommt von der Anhöhe herunter'; }   // Block 157d; über die Rampe ohne Leiter
   if (w.stroll) return w.sit ? '🪑 Sitzt auf einer Bank im Park' : '🌳 Spaziert durch den Park';
   const g0 = w.goal || { kind: 'bummel' }, t = g0.k && state.tiles.get(g0.k);
   if (g0.kind === 'park' && g0.there) return '🌳 Spaziert durch den Park';
@@ -317,12 +346,23 @@ function walkerDoing(w) {
   return GOAL_DO[g0.kind] + (t && !['home', 'park', 'fzpark'].includes(g0.kind) ? ` (${stageName(t)})` : '');
 }
 const bar = (x, y, w, h, c) => poly([[x, y], [x + w, y], [x + w, y + h], [x, y + h]], c);
+// Figur zeichnen. Steht sie auf einer Rampe oder Treppe (Anhöhen Stufe 2: Feld, in dem sie gezeichnet wird), kommt danach, was von dem Feld
+// vor ihr liegt, noch einmal darüber: der vordere Keil mit Geländer (drawHillRampOver), auf der Treppe auch die höheren Stufen (drawOnStair,
+// hill-walkers.js). Leute auf dem Dach (eigene Höhe am Boden) und Vorschauen nicht
 function drawWalker(w, z, now) {
   if (w.inside > 0) return;                                              // gerade im Gebäude
+  if (w.seat || w.full || w.roofer || !hillsOn() || !slopeAt(Math.round(w.px), Math.round(w.py))) return drawFigure(w, z, now);
+  const x = Math.round(w.px), y = Math.round(w.py), s = rampFresh().n && rampAt(x, y) ? null : stairAt(x, y);
+  if (!s) { drawFigure(w, z, now); drawHillRampOver(x, y, z); return; }
+  if (s.ecke) return drawFigure(w, z, now);                              // Ecktreppe: Stufen über Eck, nichts davor nachzuzeichnen
+  const [Du, Dv] = STAIR_UP[stairRotOf(s)], f = w.sit ? 0 : FOOT_D;
+  drawOnStair(w, z, now, x, y, Math.max(-0.5, Math.min(0.5 - 1e-6, (w.px + f - x) * Du + (w.py - f - y) * Dv)));   // Fußpunkt längs der Treppe
+}
+function drawFigure(w, z, now) {
   const p = w.seat ? { x: w.sx, y: w.sy } : toScreen(w.px, w.py);         // sitzend im Zug: Bildschirmpunkt vorgegeben (Block 136)
   const bob = w.wait > 0 ? (w.sit ? -2.5 * z : 0) : Math.abs(Math.sin(now / 150 + w.speed * 10)) * 1.6 * z;   // sitzend etwas tiefer
-  // auf einer Bogenbrücke geht es hoch und wieder runter
-  const arch = !w.seat && w.up == null && archAt(w.px, w.py), lift = w.up != null ? w.up * z : w.seat ? 0 : (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150); w.up: auf dem Dach (138d)
+  // auf einer Bogenbrücke geht es hoch und wieder runter; auf Rampe/Treppe ihre Oberfläche (figUp)
+  const up = figUp(w), arch = !w.seat && up == null && archAt(w.px, w.py), lift = up != null ? up * z : w.seat ? 0 : (arch ? archH(arch.b) : wegBridgeLift(w.px, w.py)) * z;   // auch Bogenbrücken übers Wasser (Block 150); w.up: auf dem Dach (138d)
   const x = p.x + (w.sit ? 0 : 6 * z), y = p.y - bob - 2 * z - lift;          // auf der Bank genau an ihrem Platz
   const sp = (ANIMALS[w.kind] || ANIMALS[0]).id, f = w.fur, dark = shade(f, -0.25), S = figScale(w), footY = p.y - lift;
   let hy = y - 11 * z;
@@ -470,7 +510,12 @@ function drawWear(x, hy, z, w, y = hy + 11 * z, now = 0) {
   }
 }
 function drawCar(c, z) {
-  const p = toScreen(c.px, c.py);
+  const p = toScreen(c.px, c.py), up = slopeUp(c.px, c.py, 0, 'weg');   // auf der Rampe (Anhöhen Stufe 2): angehoben, gerade (nicht geneigt)
+  if (up != null) p.y -= up * z;
+  drawCarBody(c, z, p);
+  if (up != null && rampAt(Math.round(c.px), Math.round(c.py))) drawHillRampOver(Math.round(c.px), Math.round(c.py), z);   // vorderer Keil mit Geländer davor
+}
+function drawCarBody(c, z, p) {
   if (c.bus) {
     const bx = box(p.x, p.y, 9 * z, 4.5 * z, 8 * z, '#ffd23f', null, 0);
     faceQuad(bx.L, bx.B, 0.1, 0.9, 4 * z, 7 * z, '#bfe3ff');
@@ -895,7 +940,7 @@ function quietAt(x, y, r) {
 // Welche Tiere hier vorkommen können, mit Chance je Versuch
 function natureAt(x, y, part) {
   const out = [], ter = terrainAt(x, y), night = part === 'nacht';
-  if (hillAt(x, y)) return out;                                          // Anhöhe (Block 157, Stufe 1): oben noch keine Tiere
+  if (hillAt(x, y) || slopeAt(x, y)) return out;                         // Anhöhe (Block 157): Tiere bleiben unten – oben, auf Rampe und Treppe keine
   if (ter === 'water') {
     // über oder neben Gebautem auf dem Wasser (Brücke, Steg, Hafen) springt nichts – es spränge durch die Brücke (Nutzer, 08.10.2026)
     const built = [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => { const k = (x + dx) + ',' + (y + dy); return terrainAt(x + dx, y + dy) === 'water' && (state.tiles.has(k) || COVER.has(k)); }));
@@ -944,9 +989,9 @@ function spawnCritter(id, x, y, now) {
   const c = { critter: true, id, x: x + (r() - 0.5) * 0.6, y: y + (r() - 0.5) * 0.6, t0: now, until: now + (life + r() * life * 0.4) * 1000, seed: r() * 100,
     col: FALTER[Math.floor(r() * FALTER.length)], dir: r() * Math.PI * 2 };
   if ((id === 'frosch' || id === 'eisvogel') && terrainAt(x, y) === 'water') {   // ans Ufer, nicht mitten aufs Wasser
-    // Anhöhe (Block 157): lieber flaches Ufer; sonst vor eine sichtbare Wand (Anhöhe nach −x/−y), nicht hinter eine
+    // Anhöhe (Block 157): lieber flaches Ufer (keine Anhöhe, Rampe, Treppe); sonst vor eine sichtbare Wand (Anhöhe nach −x/−y), nicht hinter eine
     const lands = DIRS.filter(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
-    const land = lands.find(([dx, dy]) => !hillAt(x + dx, y + dy)) || lands.find(([dx, dy]) => dx + dy < 0) || lands[0];
+    const land = lands.find(([dx, dy]) => !hillAt(x + dx, y + dy) && !slopeAt(x + dx, y + dy)) || lands.find(([dx, dy]) => dx + dy < 0) || lands[0];
     if (land) { c.x = x + land[0] * 0.42; c.y = y + land[1] * 0.42; }
   }
   critterPos(c, now);
@@ -990,16 +1035,19 @@ function critterPos(c, now) {
     case 'reh': if (c.flee) { ox = Math.cos(c.dir) * fl * 2.5; oy = Math.sin(c.dir) * fl * 2.5; } break;
   }
   const px = c.x + ox, py = c.y + oy;
-  // Anhöhe (Block 157, Stufe 1): unter ihrer Oberkante kommt kein Tier auf ein Anhöhen-Feld (es liefe/flöge durch die Wand) – es bleibt
-  // an der Kante stehen; wer flieht, bleibt dort (sonst spränge es vor, sobald es hoch genug ist). Wo jetzt eine Anhöhe ist: weg
-  if (state.hills && state.hills.size && (c.hold || h < hillLift(Math.round(px), Math.round(py)))) {
+  // Anhöhe (Block 157): unter ihrer Oberkante kommt kein Tier auf ein Anhöhen-Feld (es liefe/flöge durch die Wand) – es bleibt an der Kante
+  // stehen; wer flieht, bleibt dort (sonst spränge es vor, sobald es hoch genug ist). Wo jetzt eine Anhöhe ist: weg. Rampe und Treppe genauso,
+  // mit ihrer Höhe am Punkt (surfaceHeight)
+  if (state.hills && state.hills.size && (c.hold || critterUnder(px, py, h))) {
     if (c.px == null) { c.px = c.x; c.py = c.y; }                       // gleich beim Auftauchen: dort, wo es auftaucht
     if (c.flee) c.hold = true;
-    if (h < hillLift(Math.round(c.px), Math.round(c.py))) c.until = Math.min(c.until, now);
+    if (critterUnder(c.px, c.py, h)) c.until = Math.min(c.until, now);
     c.h = h; return;
   }
   c.px = px; c.py = py; c.h = h;
 }
+// in Höhe h unter der Oberfläche einer Anhöhe/Rampe/Treppe? Nur, wo sie über dem Boden liegt – Fische und Robben tauchen unter (h < 0)
+const critterUnder = (u, v, h) => { const s = surfaceHeight(u, v); return s > 0 && h < s; };
 function stepCritters(now) { for (const c of critters) critterPos(c, now); }
 // Wegfliegen, abtauchen, weglaufen – und fürs Album eintragen
 function tapCritter(c) {
@@ -1262,7 +1310,7 @@ function syncParade() {
   const want = fzFestLeft() > 0 ? Math.min(10, FZPARKS.reduce((n, p) => n + 2 + p.stage * 2, 0)) : 0;
   while (paraders.length > want) paraders.pop();
   if (paraders.length >= want || !FZPARKS.length) return;
-  const p = FZPARKS[Math.floor(Math.random() * FZPARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => fzWalk(x, y));
+  const p = FZPARKS[Math.floor(Math.random() * FZPARKS.length)], free = p.tiles.map(keyXY).filter(([x, y]) => fzWalk(x, y) && flatGround(x, y));
   if (!free.length) return;
   const [sx, sy] = free[Math.floor(Math.random() * free.length)], a = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
   paraders.push({ fx: sx, fy: sy, tx: sx, ty: sy, px: sx, py: sy, t: 1, wait: 0.5, kind: ANIMALS.indexOf(a), fur: a.fur || FUR[Math.floor(Math.random() * FUR.length)],

@@ -50,11 +50,12 @@ describe('Anhöhen (Block 157)', () => {
     expect([game("state.hills.has('6,6')"), game('state.money')]).toEqual([false, m0]);
   });
 
-  it('oben nur Deko und Gelände: keine Wege, Gebäude, Schienen, Dächer, Stützen; große Deko nur ganz oben', () => {
+  it('oben Wege, Plätze, Deko und Gelände (Stufe 2): keine Gebäude, Schienen, Dächer, Stützen; große Deko nur ganz oben', () => {
     hills(block(5, 5, 6, 6));
     expect(game("placeError('haus', 5, 5)")).toMatch(/Gebäude auf Anhöhen/);
-    expect(game("placeError('weg', 5, 5)")).toMatch(/Wege und Schienen/);
-    expect(game("placeError('pb_gleis', 5, 5, 0, { move: true })")).toMatch(/Wege und Schienen/);   // Parkbahn fährt am Boden
+    expect(game("placeError('weg', 5, 5)")).toBe(null);                              // Stufe 2: Wege oben
+    expect(game("placeError('schiene', 5, 5, 0, { move: true })")).toMatch(/Schienen/);
+    expect(game("placeError('pb_gleis', 5, 5, 0, { move: true })")).toMatch(/Schienen/);   // Parkbahn fährt am Boden
     expect(game("placeError('seilbahn', 5, 5, 0, { move: true })")).toMatch(/Gebäude auf Anhöhen/);
     expect(game("placeError('dach', 5, 5)")).toBe('Auf einer Anhöhe geht keine Überdachung');
     expect(game("placeError('graben', 5, 5)")).toBe('Auf einer Anhöhe geht kein Teich');
@@ -80,16 +81,16 @@ describe('Anhöhen (Block 157)', () => {
     expect(game("smallError('laterne', 7, 7, VSLOT)")).toBe('Nicht über die Kante einer Anhöhe');
     expect(game("smallError('laterne', 10, 10, VSLOT)")).toBe(null);
     expect(game("smallError('stuetze', 6, 6, VSLOT)")).toMatch(/keine Überdachung/);
-    // niemand läuft die Wand hinauf
-    expect(game('[walkable(5, 5), walkable(8, 8), !!edgeBlocks(6, 6, 7, 6), !!edgeBlocks(5, 5, 6, 5)]')).toEqual([false, true, true, false]);
+    // niemand läuft die Wand hinauf: oben ist begehbar (Stufe 2), hinauf nur über Treppe/Rampe (edgeBlocks an der Kante)
+    expect(game('[walkable(5, 5), walkable(8, 8), !!edgeBlocks(6, 6, 7, 6), !!edgeBlocks(5, 5, 6, 5)]')).toEqual([true, true, true, false]);
     expect(game("natureAt(5, 5, 'mittag').length")).toBe(0);
   });
 
-  it('anheben geht nicht unter Weg, Gebäude, Dach, großer Deko, Linie am Rand oder Eckpunkt-Deko; Deko-Feld darunter kommt mit hinauf', () => {
+  it('anheben geht nicht unter Gebäude, Dach, großer Deko, Linie am Rand oder Eckpunkt-Deko; Deko-Feld und Weg (Stufe 2) darunter kommen mit hinauf', () => {
     game("build('weg', 10, 10, true); state.tiles.set('12,10', { b: 'haus', lvl: 1 }); state.tiles.set('14,14', { b: 'seerosenteich', lvl: 1 }); recalc()");
     game("build('dach', 16, 10, true); state.edges.set(edgeBetween(18, 10, 19, 10), { b: 'zaun', style: currentStyle('zaun') })");
     game("const ds = newSlots(); ds[VSLOT] = { b: 'laterne', rot: 0 }; state.decos.set('21,21', ds); state.tiles.set('5,12', { b: 'brunnen', lvl: 1 }); recalc()");
-    expect(game('hillRaiseError(10, 10)')).toMatch(/Weg/);
+    expect(game('hillRaiseError(10, 10)')).toBe(null);                               // Weg kommt mit hinauf (Stufe 2)
     expect(game('hillRaiseError(12, 10)')).toBe('Hier steht ein Gebäude');
     expect(game('hillRaiseError(15, 15)')).toMatch(/Große Deko erst wegnehmen/);
     expect(game('hillRaiseError(16, 10)')).toBe('Unter einer Überdachung geht keine Anhöhe');

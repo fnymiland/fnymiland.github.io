@@ -551,7 +551,7 @@ function glMoverBox(m, z) {
   if (m.ship || m.boat || m.cargo || m.fish) return [110 * z, 130 * z, 110 * z, 50 * z];
   if (m.train || m.coaster || !m.fur && !m.critter) return [60 * z, 80 * z, 60 * z, 35 * z];
   if (m.critter) return [25 * z, 35 * z, 25 * z, 12 * z];
-  const lb = m.fur ? wegBridgeLift(m.px, m.py) * z : 0;                 // auf einer Bogenbrücke höher (Block 150)
+  const lb = m.fur ? (wegBridgeLift(m.px, m.py) + (hillsOn() ? Math.max(0, figUp(m) || 0) : 0)) * z : 0;   // auf einer Bogenbrücke höher (Block 150), auf Rampe/Treppe/Dach (Anhöhen Stufe 2)
   return m.label ? [80 * z, 70 * z + lb, 80 * z, 12 * z] : [30 * z, 60 * z + lb, 40 * z, 12 * z];
 }
 

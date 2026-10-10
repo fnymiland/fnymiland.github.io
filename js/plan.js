@@ -239,6 +239,7 @@ function scanDemolish(p) {
     if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => !inside(vx, vy) && postAt(vx, vy))) { states.set(k, 'bad'); firstErr = firstErr || 'An der Ecke der Anhöhe steht noch etwas'; continue; }
     // Treppe hinauf (Block 157d): nur mit ab, wenn sie selbst im Rechteck abgerissen wird (das passiert vorher, order)
     if (stairsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Treppe hinauf – erst die Treppe abreißen'; continue; }
+    if (rampsAround(x, y).some(([sx, sy]) => !inside(sx, sy) || states.get(sx + ',' + sy) === 'bad')) { states.set(k, 'bad'); firstErr = firstErr || 'Hier führt eine Rampe hinauf – erst die Rampe abreißen'; continue; }   // Rampe (Stufe 2) wie die Treppe
     lower.push([x, y, () => lowerHill(x, y)]);
     gain += ITEMS.anhoehe.cost; things++; states.set(k, 'ok');
   }

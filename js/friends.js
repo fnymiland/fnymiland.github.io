@@ -70,7 +70,7 @@ function guestSpawn(x, y) {
   if (pool.length) return pool[Math.floor(Math.random() * pool.length)];
   for (let r = 0; r < 12; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-    if (walkable(cx + dx, cy + dy)) return [cx + dx, cy + dy];
+    if (walkable(cx + dx, cy + dy) && flatGround(cx + dx, cy + dy)) return [cx + dx, cy + dy];   // Anhöhe (Block 157): unten anfangen
   }
   return [Math.round(x) || 0, Math.round(y) || 0];
 }
