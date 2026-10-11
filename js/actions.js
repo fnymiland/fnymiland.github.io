@@ -438,6 +438,10 @@ function groupErrors(hx, hy) {
   // erst die Dächer prüfen, dann zur Probe hinlegen: was darunter steht (Dachtreppe), braucht sie schon (Nutzer: „Aufgänge nicht mit
   // kopieren und bewegen“) – danach wieder weg
   const order = [...moving.items].sort((p, q) => (p.kind === 'roof' ? 0 : 1) - (q.kind === 'roof' ? 0 : 1)), probe = [];
+  // Wege der Gruppe zählen beim Prüfen schon als gelegt (160c V4): sonst fand das mittlere Feld einer Wegbrücke keinen Arm am Ufer
+  const planned0 = PLANNED, mine = new Set();
+  for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it); if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) mine.add((ox + P.dx) + ',' + (oy + P.dy)); }
+  if (mine.size) PLANNED = planned0 ? new Set([...planned0, ...mine]) : mine;
   try {
   for (const it of order) {
     if (it.kind !== 'roof' && !probe.done) {
@@ -481,7 +485,7 @@ function groupErrors(hx, hy) {
     errs.set(it, err);
     first = first || err;
   }
-  } finally { for (const k of probe) state.roofs.delete(k); }
+  } finally { for (const k of probe) state.roofs.delete(k); PLANNED = planned0; }
   return { ox, oy, errs, first };
 }
 function dropGroup(hx, hy) {
