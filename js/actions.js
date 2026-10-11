@@ -532,6 +532,7 @@ function copyClone(it) {
   if (it.kind === 'tile') {
     const t = JSON.parse(JSON.stringify(it.t));
     for (const f of ['animal', 'name', 'more', 'born', 'ships', 'pbz', 'train', 'trainCol', 'trainPlus', 'extra', 'gleis']) delete t[f];   // Bewohner, Fahrzeuge: nicht mit
+    if (t.cross && !t.foot) delete t.footPaid;                           // Schranken: die Brücke von früher ist nicht mitgekauft (160c V3)
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt
   else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }

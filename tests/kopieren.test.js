@@ -139,6 +139,17 @@ describe('Auswahl bedienen (Block 134)', () => {
     game("setTool('haus'); syncSelBar()");
     expect(game("document.getElementById('sel-bar').hidden")).toBe(true);
   });
+  it('Bahnübergang mit Schranken, früher einmal Fußgängerbrücke: die Kopie hat keinen bezahlten Brückenpreis (Abriss gäbe sonst Geld aus dem Nichts; 160c V3)', () => {
+    const t0 = { b: 'schiene', lvl: 1, cross: true, style: 'sand', foot: false, footPaid: 'stein' };
+    const c = game(`copyClone({ kind: 'tile', t: ${JSON.stringify(t0)} }).t`);
+    expect(c.footPaid).toBe(undefined);
+    const cost = game(`copyTileCost(${JSON.stringify(t0)})`);
+    game(`state.tiles.set('20,20', ${JSON.stringify(c)}); recalc()`);
+    expect(game('demolishInfo(20, 20).refund')).toBe(cost.money);                // Abriss der Kopie = was sie gekostet hat
+    const withFoot = game(`copyClone({ kind: 'tile', t: ${JSON.stringify({ ...t0, foot: true })} }).t`);
+    expect(withFoot.footPaid).toBe('stein');                                      // mit Brücke: bezahlt (copyTileCost rechnet sie)
+  });
+
   it('Preis zum heutigen Preis: Stand im Freizeitpark mit altem Preis kopiert zum aktuellen', () => {
     const b = game("Object.keys(ITEMS).find(id => incMinOf(ITEMS[id]) && ITEMS[id].cat === 'fz' && !WONDERS[id])");
     const t = game(`({ b: '${b}', lvl: 1, price: 1 })`);
