@@ -367,7 +367,7 @@ function setTool(t) {
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
   for (const b of document.querySelectorAll('.quick[data-quick]')) b.classList.toggle('active', b.dataset.quick === t);   // 👁 hat seinen eigenen Zustand
   syncDropBtn();
-  $('rot-btn').hidden = !ROTATABLE.has(t);
+  $('rot-btn').hidden = !turnsWhileBuilding(t);
   renderStyleBar(t);
   updateHint();
 }

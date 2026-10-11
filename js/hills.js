@@ -705,7 +705,7 @@ function stairRot(x, y) {
   if (!ok.length) { const cd = cornerDirs(x, y); return cd.length ? cd[0] : buildRot & 3; }   // Ecktreppe
   // selbst gedreht (⟳, R, Mausrad: rotManual): die gewählte bzw. die nächste passende – wie bei der Gleis-Rampe (Nutzer 11.10.2026: „warum
   // erlaubt er mir nicht, die Treppe nach rechts zu drehen?“ – vorher gewann die Wertung unten, z. B. eine Treppe daneben, und R tat nichts)
-  if (rotManual) for (let k = 0; k < 4; k++) if (ok.includes((buildRot + k) & 3)) return (buildRot + k) & 3;
+  if (rotManual) for (let k = 0; k < 4; k++) { const r = (buildRot + k * rotStep + 8) & 3; if (ok.includes(r)) return r; }
   // Punkte: Weg am Fuß, ein echter Fuß (keine Treppe – sonst dreht sich eine am Rand eingesetzte längs zur Nachbartreppe), eine Treppe gleicher
   // Richtung daneben (wird breit); bei Gleichstand die gewählte Drehung, sonst die erste
   const score = r => {

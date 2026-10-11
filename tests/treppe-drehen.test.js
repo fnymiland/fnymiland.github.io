@@ -27,6 +27,30 @@ describe('beim Bauen', () => {
   });
 });
 
+describe('Drehen beim Bauen: ⟳ unten, R, Mausrad', () => {
+  // Nutzer 11.10.2026: „wieso gibt es keinen R-Drehen-Knopf?“ – für die Treppe fehlten ⟳, R und Mausrad (nur ROTATABLE)
+  it('⟳ ist zu sehen, R und Mausrad drehen reihum unter den Richtungen, die hinaufführen – in beide Richtungen', () => {
+    game("setTool('huegeltreppe'); hover = { x: 10, y: 10 }");
+    expect(game("document.getElementById('rot-btn').hidden")).toBe(false);
+    const r0 = game('placeRot("huegeltreppe", 10, 10)');
+    game("document.getElementById('rot-btn').click()");
+    const r1 = game('placeRot("huegeltreppe", 10, 10)');
+    expect(r1).not.toBe(r0); expect([0, 3]).toContain(r1);
+    game("window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r' })); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', bubbles: true }))");
+    const r2 = game('placeRot("huegeltreppe", 10, 10)');
+    expect([0, 3]).toContain(r2);
+    game('rotateBuild(-1)');                                                // Mausrad rückwärts: ebenso reihum
+    expect(game('placeRot("huegeltreppe", 10, 10)')).not.toBe(r2);
+    game('rotateBuild(-1)');
+    expect(game('placeRot("huegeltreppe", 10, 10)')).toBe(r2);
+    // gerade Wand: nur eine Richtung – drehen ändert nichts
+    game('hover = { x: 7, y: 9 }; rotateBuild(1)');
+    expect(game('placeRot("huegeltreppe", 7, 9)')).toBe(1);
+    game("setTool('look')");
+    expect(game("document.getElementById('rot-btn').hidden")).toBe(true);
+  });
+});
+
 describe('im Fenster', () => {
   it('⟳ reihum durch die Richtungen, die hinaufführen; ↶ zurück; nur eine Richtung: Knopf aus', () => {
     game("build('huegeltreppe', 10, 10, true); recalc()");

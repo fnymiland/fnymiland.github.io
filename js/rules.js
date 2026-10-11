@@ -1755,7 +1755,7 @@ const hasBuilt = b => [...state.tiles.values()].some(t => t.b === b);
 
 // Drehen: Beim Setzen schaut ein Gebäude von selbst mit der Tür zum Weg. Wer selbst dreht (⟳, Mausrad, R),
 // behält seine Richtung, bis er das Werkzeug wechselt.
-let rotManual = false;
+let rotManual = false, rotStep = 1;
 // Felder direkt vor der Tür (vor der ganzen Vorderseite)
 function frontTiles(b, x, y, rot, t) {
   const [w, h] = sizeOf(b, rot, t), [dx, dy] = FRONT_DIR[rot & 3], out = [];

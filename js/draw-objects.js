@@ -1533,13 +1533,16 @@ function decoScale(b) {
   const B = ITEMS[d.variantOf];
   return (DECO_SCALE[d.variantOf] || 1) * (B.small ? 0.9 : 1) * d.vf / (d.small ? 0.9 : 1);
 }
+// Beim Bauen drehbar (⟳ unten, R, Mausrad): alles aus ROTATABLE und die Treppe (Nutzer 11.10.2026: „wieso gibt es keinen R-Drehen-Knopf?“ – sie
+// dreht sich von selbst zur Anhöhe, gedreht wird reihum unter den Richtungen, die hinaufführen: stairRot mit rotManual)
+const turnsWhileBuilding = b => ROTATABLE.has(b) || b === 'huegeltreppe';
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
   if (tool === 'verschieben' && rotateGroup(dir)) { previewCache = null; sfx('deco'); return; }   // ganze Gruppe (Block 117)
   const type = tool === 'verschieben' ? movingType() : tool;
-  const cur = hover && type && ITEMS[type] && ROTATABLE.has(type) ? placeRot(type, hover.x, hover.y) : buildRot;
+  const cur = hover && type && ITEMS[type] && turnsWhileBuilding(type) ? placeRot(type, hover.x, hover.y) : buildRot;
   buildRot = (cur + dir + 4) % 4;
-  rotManual = true;
+  rotManual = true; rotStep = dir < 0 ? -1 : 1;                         // Treppe: passt die Richtung nicht, weiter in dieser Drehrichtung
   previewCache = null;
   sfx('deco');
 }

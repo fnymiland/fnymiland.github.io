@@ -2549,3 +2549,6 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Stehende Treppe: ⟳ im Fenster (`p-stairrot`, `stairTurns`/`turnStair`) reihum durch die Richtungen, in die sie hier hinaufführt (nie gegen
       eine Wand oder ins Leere, keine Linie quer davor; Ecktreppen nicht), danach `refitStairs`; nur eine Richtung: Knopf aus. Test: treppe-drehen.
       Offen: ob im Fall des Nutzers die Richtung überhaupt hinaufführen kann (an einer geraden Wand nur quer hinein) – nachfragen, falls es noch klemmt.
+      Nachtrag (Nutzer: „wieso gibt es keinen R-Drehen-Knopf?“): für die Treppe fehlten beim Bauen ⟳ unten, R und Mausrad (galten nur für
+      ROTATABLE) – jetzt `turnsWhileBuilding` (ROTATABLE + Treppe); gedreht wird reihum unter den passenden Richtungen, rückwärts (Mausrad) auch
+      rückwärts (`rotStep`). Test: treppe-drehen.
