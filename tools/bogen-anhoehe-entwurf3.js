@@ -11,7 +11,7 @@
   const LOOK = {
     holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' },
     rot: { side: '#a8392f', deck: '#c79a6a', plank: '#9a7048', rail: '#d9483b', rib: '#a8392f' },
-    stein: { face: '#5d5852', joint: '#36322e', deck: '#77716a', top: '#6b665f', soff: '#3e3a36', col: '#4a4641' },
+    stein: { face: '#d9d2c3', joint: '#a99f8c', deck: '#e6dcc8', top: '#efe8da', soff: '#8f8676', col: '#d2c9b6' },   // hell wie Entwurf 2 (Nutzer: „das Schwarz bitte gar nicht“)
   };
   // Brücken: [Zeile y, Anhöhe A bis xa1, Anhöhe B ab xb0, Art]
   const BR = [];
@@ -77,11 +77,11 @@
     poly([...us.map(u => sh(u, -W)), ...[...us].reverse().map(u => sh(u, W))], 'rgba(40,60,30,0.16)');
     if (art === 'stein') {                                                // Basalt wie die Rakotzbrücke: fast halbrunde Leibung, unregelmäßige Steine
       const L = LOOK.stein, t01 = u => Math.max(0, Math.min(1, (u - U0) / N));
-      const ri = u => H - 16 + (pk + 16 - 3.5) * Math.sqrt(Math.max(0, Math.sin(Math.PI * t01(u))));   // Leibung: setzt tief an der Wand an, rund
+      const ri = u => H - 14 + (pk + 14 - 2.6) * Math.sqrt(Math.max(0, Math.sin(Math.PI * t01(u))));   // Leibung: setzt tief an der Wand an, rund, schlank
       band(-W, u => dk(u), u => dk(u) + 2.5, C(shade(L.top, -0.15)));                                // hintere Brüstung (Innenseite)
       poly([...us.map(u => S(u, -W, dk(u))), ...[...us].reverse().map(u => S(u, W, dk(u)))], C(L.deck));   // Belag: Bruchstein
       for (let k = 0; k < 7 * N; k++) { const u0 = U0 + (k + rnd(k, y) * 0.4) / 7, u1 = Math.min(U1, u0 + 0.08); const v = (rnd(k, y + 1) - 0.5) * 0.4;
-        path([S(u0, v - 0.08, dk(u0)), S(u1, v + 0.06, dk(u1))], 'rgba(30,28,25,0.35)', 0.6); }
+        path([S(u0, v - 0.08, dk(u0)), S(u1, v + 0.06, dk(u1))], 'rgba(120,105,85,0.35)', 0.6); }
       band(W, ri, dk, C(L.face));                                                                     // Stirn
       { // unregelmäßige Steine: Lagen längs des Bogens, Fugen versetzt
         X.save(); X.beginPath(); [...us.map(u => S(u, W, ri(u))), ...[...us].reverse().map(u => S(u, W, dk(u)))].forEach((p, i) => i ? X.lineTo(p[0], p[1]) : X.moveTo(p[0], p[1])); X.closePath(); X.clip();
@@ -106,7 +106,7 @@
     const L = LOOK[art];
     const rib = u => dk(u) - 7 + 3 * Math.sin(Math.PI * Math.max(0, Math.min(1, (u - U0) / N)));   // Bogenträger unter dem Belag
     const posts = (b.edges || []).map(k => U0 + k);                        // Stützen auf den Kanten zwischen den Feldern der Lücke
-    const post = (u, v) => { poly([S(u - 0.035, v, 0), S(u + 0.035, v, 0), S(u + 0.035, v, rib(u) - 1), S(u - 0.035, v, rib(u) - 1)], C(L.side));
+    const post = (u, v) => { poly([S(u - 0.035, v, 0), S(u + 0.035, v, 0), S(u + 0.035, v, dk(u) - 0.5), S(u - 0.035, v, dk(u) - 0.5)], C(L.side));   // bis unter den Belag
       path([S(u, v, 1), S(u, v + (v < 0 ? 0.001 : 0), 1)], C(L.side), 1); };
     for (const u of posts) post(u, -W + 0.06);                                                       // Stütze hinten
     for (let k = 0; k <= 4 * N; k++) { const u = U0 + k / 4; path([S(u, -W, dk(u)), S(u, -W, dk(u) + 6)], C(L.rail), 1); }   // hinteres Geländer
@@ -140,8 +140,8 @@
     setup();
     const na = nightAt, gh = gameHour; nightAt = () => 0; gameHour = () => 12; night = 0;
     const list = [
-      [15, 6, 2.6, 'Basalt (Rakotz), 3 Felder'], [14.3, 6, 4.4, 'Basalt nah: Säulen, Steine'], [45, 6, 2.6, 'Basalt, 2 Felder'],
-      [30, 6, 3.2, 'Basalt, 1 Feld'], [45, 12, 2.6, 'Basalt übers Wasser (Vergleich)'], [15, 9, 2.6, 'Holz: keine Stützen'],
+      [15, 6, 2.6, 'Stein (Rakotz-Form), 3 Felder'], [14.3, 6, 4.4, 'Stein nah: Säulen, Steine'], [45, 6, 2.6, 'Stein, 2 Felder'],
+      [30, 6, 3.2, 'Stein, 1 Feld'], [45, 12, 2.6, 'Stein, Bach darunter'], [15, 9, 2.6, 'Holz: keine Stützen'],
       [15, 12, 2.6, 'Holz: Stützen an jeder Kante (3 Felder)'], [15, 15, 2.6, 'Rot: Stützen an jeder Kante'], [45, 9, 2.6, 'Holz, 2 Felder: Mitte'],
       [31.5, 14, 2.2, 'Holz, 4 Felder: Mitte'], [31.5, 17, 2.2, 'Holz, 4 Felder: wenige (2)'], [31.5, 20, 2.2, 'Holz, 4 Felder: jede Kante (3)'],
     ];
