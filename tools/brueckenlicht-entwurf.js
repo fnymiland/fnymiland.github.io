@@ -15,7 +15,7 @@
     [16, 'F-kristall', 'Fußgänger · Kristall K1'], [20, 'F-zacken', 'Fußgänger · Kristall K1 mit Zacken'],
     [24, 'B-holz', 'Bahn · Holz'], [28, 'B-stein', 'Bahn · Stein'], [32, 'B-metall', 'Bahn · Metall'], [36, 'B-kristall', 'Bahn · Kristall B2'],
   ];
-  let STEIN_GEL = 'massiv';                                                // Geländer der Steinbrücke: 'niedrig' (bisher), 'massiv' (A), 'baluster' (B)
+  let STEIN_GEL = 'baluster';                                              // abgenommen: Balustrade                                                // Geländer der Steinbrücke: 'niedrig' (bisher), 'massiv' (A), 'baluster' (B)
   const LAMP = '#ffd873', LAMP_C = '#bff3ff', LANTERN_S = 0.6;   // Minilaterne auf der Brüstung
   const mock = new Set();
   function setup() {
@@ -58,8 +58,8 @@
       const p = S(u, v, h); X.beginPath(); X.arc(p[0], p[1], 0.85 * cam.z * dpr, 0, 7); X.fillStyle = NIGHT ? '#ffe58a' : C(col); X.fill();
       glowAt(p, 0.8 * cam.z, r);
     };
-    const lantern = (u, v, h) => {                                          // Minilaterne: Kopf der Gaslaterne des Spiels (drawLantern) auf kurzem Stummel, gleiches Licht
-      const p = S(u, v, h), z = cam.z * LANTERN_S, col = lookCol('laterne', { b: 'laterne' }), lit = NIGHT && night > 0.15 && isLive();
+    const lantern = (u, v, h, frame = null) => {                                          // Minilaterne: Kopf der Gaslaterne des Spiels (drawLantern) auf kurzem Stummel, gleiches Licht
+      const p = S(u, v, h), z = cam.z * LANTERN_S, col = frame || lookCol('laterne', { b: 'laterne' }), lit = NIGHT && night > 0.15 && isLive();
       g.strokeStyle = C(col); g.lineWidth = 1.8 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] - 4 * z); g.stroke();
       const lb = box(p[0], p[1] - 4 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : '#fff7d6', col, 3 * z);
       if (NIGHT) glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 30 * z);
@@ -118,7 +118,7 @@
         path(seg.map(u => S(u, W, ri(u))), C(shade(L.face, -0.25)), 1); path(seg.map(u => S(u, W, ri(u) + 3.2)), C(L.joint), 0.6); }
       if (!foot) rails();
       parapet(W, true);
-      for (let k = 1; k < N; k++) for (const v of [-W, W]) lantern(U0 + k, v, dk(U0 + k) + PH);   // Laternen auf der Brüstung (je Kante)
+      for (let k = 1; k < N; k++) for (const v of [-W, W]) lantern(U0 + k, v, dk(U0 + k) + PH, '#b8ad97');   // Laterne in Stein (Nutzer: „dieselbe Farbe wie die Brücke“)   // Laternen auf der Brüstung (je Kante)
     };
     if (id === 'F-holz') {                                                   // Entwurf 3b, Stützen „wenige“ (Kanten 1 und 3)
       const L = { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' };
