@@ -954,8 +954,10 @@ body.visiting #net-btn { display: none !important; }
 #cats .quick.drop { font-weight: 900; font-size: 18px; color: #fff; background: var(--red); box-shadow: 0 3px 0 #a8443a; }   /* 👆 wird rotes ✕, solange etwas in der Hand ist (Nutzer: „rot, damit man erkennt, dass man abwählt“) */
 #cats .quick.drag { border-top-right-radius: 4px; border-bottom-right-radius: 4px; margin-right: 0; }   /* Ziehen-Knopf (11.10.2026): mit ▾ zusammen ein Knopf */
 #cats .quick.drag-more { width: 18px; font-size: 12px; padding: 0; margin-left: 1px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
-#tools .tool .fav { position: absolute; top: 1px; left: 3px; font-size: 15px; line-height: 1; color: var(--brown2); cursor: pointer; }   /* ⭐-Ansicht: Favorit an/aus */
-#tools .tool .fav.on { color: #e8a317; }
+#tools .tool .fav { position: absolute; top: 0; right: 0; width: 28px; height: 28px; display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px 0 0; box-sizing: border-box; font-size: 15px; line-height: 1; color: var(--brown2); opacity: .4; cursor: pointer; }   /* Favorit an/aus: oben rechts, blass, Trefferfläche 28 × 28 */
+#tools .tool .fav.on { color: #e8a317; opacity: 1; }
+@media (hover: hover) { #tools .tool .fav:hover { opacity: 1; } }
+#tools .tool .fav ~ .lock, #tools .tool .lock { right: auto; left: 4px; }   /* das Schloss rückt nach links, oben rechts sitzt der Stern */
 #tools .sheet-note { grid-column: 1 / -1; font-size: 12px; color: var(--brown2); padding: 2px 6px 8px; }
 #sheet .tool.active { background: var(--yellow); box-shadow: inset 0 0 0 3px var(--brown); }   /* gewählte Kachel: Rahmen rundum gleich dick */
 /* Stil-Leiste (Wege, Beete, Hecken …): Knöpfe so hoch wie die Bereiche unten (Nutzer: „dieselben Maße“) – gewählt nur farbig, nicht größer */

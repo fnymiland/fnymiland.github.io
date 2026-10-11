@@ -134,7 +134,7 @@ let dragOpen = false;
 function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isDragTool(d) && available(d) ? d : 'weg'; } catch (e) { return 'weg'; } }
 function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
 // Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an
-// der Kachel dort oder lange Drücken auf eine Kachel im Menü. Je Gerät gemerkt, höchstens FAV_MAX
+// jeder Kachel (oben rechts, Nutzer: „dezent, aber treffbar“). Je Gerät gemerkt, höchstens FAV_MAX
 const FAV_KEY = 'kachelhausen_fav', FAV_MAX = 12;
 function favList() { try { const l = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !ITEMS[id].gift).slice(0, FAV_MAX) : []; } catch (e) { return []; } }
 function toggleFav(id) {
@@ -292,14 +292,12 @@ function renderTools() {
     if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; b.append(l); }
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
-    b.onclick = () => { if (b.dataset.longpress) { delete b.dataset.longpress; return; } pickCard(id); };
-    b.onpointerdown = () => { clearTimeout(b._lp); b._lp = setTimeout(() => { b.dataset.longpress = '1'; toggleFav(id); if (recentOpen) renderTools(); }, 550); };   // lange drücken: Favorit
-    b.onpointerup = b.onpointercancel = () => clearTimeout(b._lp);
-    if (recentOpen && !ITEMS[id].gift) {                                  // ⭐-Ansicht: ☆/★ an der Kachel
+    b.onclick = () => pickCard(id);
+    if (!ITEMS[id].gift && id !== 'abriss' && id !== 'verschieben') {     // Stern oben rechts an jeder Kachel (Nutzer: „dezent, aber treffbar“): ☆ blass, ★ Favorit
       const fav = favList().includes(id), s = document.createElement('span');
       s.className = 'fav' + (fav ? ' on' : ''); s.textContent = fav ? '★' : '☆'; s.setAttribute('role', 'button'); s.tabIndex = 0;
       s.setAttribute('aria-label', fav ? `${d.name}: kein Favorit mehr` : `${d.name} als Favorit`);
-      s.onclick = e => { e.stopPropagation(); audio(); toggleFav(id); renderTools(); };
+      s.onclick = e => { e.stopPropagation(); audio(); toggleFav(id); if (recentOpen) renderTools(); else { const on = favList().includes(id); s.classList.toggle('on', on); s.textContent = on ? '★' : '☆'; s.setAttribute('aria-label', on ? `${d.name}: kein Favorit mehr` : `${d.name} als Favorit`); } };
       s.onpointerdown = e => e.stopPropagation();
       b.append(s);
     }
@@ -310,7 +308,7 @@ function renderTools() {
   if (recentOpen) {                                                       // ⭐: Favoriten, darunter zuletzt gebaut
     const favs = favList(), rec = recentList().filter(id => !favs.includes(id));
     head('⭐ Favoriten').dataset.group = 'fav';
-    if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine – tippe ☆ an einer Kachel oder drück im Menü lange auf ein Ding'; box.append(p); }
+    if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine – tippe im Menü auf ☆ oben rechts an einer Kachel'; box.append(p); }
     for (const id of favs) box.append(card(id));
     head('🕘 Zuletzt gebaut').dataset.group = 'recent';
     if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts – was du baust, steht dann hier'; box.append(p); }

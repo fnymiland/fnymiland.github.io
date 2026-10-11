@@ -2573,3 +2573,6 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Bauleiste auf (`dragOpen`). 🕘 ist jetzt ⭐: oben „⭐ Favoriten“, darunter „🕘 Zuletzt gebaut“ (ohne Favoriten und Ziehen-Dinge); Favorit über
       ☆/★ an der Kachel dort oder lange Drücken (0,55 s) auf eine Kachel im Menü (`favList`/`toggleFav`, `kachelhausen_fav`, höchstens 12);
       Zahlentasten folgen. Leiste gleich lang (▾ schmal), passt in 375 px. Tests: schnellwahl, zuletzt angepasst.
+      Nachtrag (Nutzer: „kleiner Stern nur bei zuletzt genutzt – Gefriemel“; „ein dezenter, aber treffbarer Stern oben rechts in einer Ecke“): ☆
+      oben rechts an jeder Kachel im Menü und in der ⭐-Ansicht (blass, ★ gold; Trefferfläche 28 × 28, wählt nichts aus), das Schloss gesperrter
+      Dinge sitzt dafür oben links; langes Drücken entfällt.

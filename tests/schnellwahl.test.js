@@ -2,7 +2,7 @@ const { loadGame, game } = require('./helpers/load-game');
 
 // Schnellwahl (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“ – gewählt: Ziehen-Knopf; „🕘 mit ⭐ zusammenlegen“):
 // 🛤️ nimmt, was man zuletzt gezogen hat, ▾ klappt Weg · Schiene · Tunnel · Zaun · Hecke · Mauer auf; ⭐ zeigt Favoriten und zuletzt Gebautes,
-// Favorit über ☆ an der Kachel dort oder lange Drücken im Menü
+// Favorit über ☆ oben rechts an jeder Kachel
 beforeAll(() => loadGame());
 beforeEach(() => {
   game("localStorage.clear(); startNew(); closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; state.money = 1e7; for (const r of Object.keys(RES)) state.res[r] = 999; for (const t of TECHS) state.techs.add(t.id); setSheet(false); setTool('look'); buildToolbar()");
@@ -54,13 +54,13 @@ describe('⭐ Favoriten und zuletzt gebaut', () => {
     expect(game('favList()')).toEqual([]);
     game('setSheet(false)');
   });
-  it('lange drücken im Menü: Favorit, ohne das Ding zu wählen; Speicher kaputt: leer', async () => {
+  it('Stern oben rechts an jeder Kachel im Menü (Nutzer: „dezent, aber treffbar“): ☆ macht Favorit ohne das Ding zu wählen; Speicher kaputt: leer', () => {
     game("menuTop = 'stadt'; setSheet(true); buildToolbar()");
-    game("(() => { const b = document.querySelector('#tools [data-tool=\"haus\"]'); b.onpointerdown(); })()");   // jsdom kennt onpointerdown nicht als Ereignis – direkt aufrufen
-    await new Promise(r => setTimeout(r, 650));
-    game("(() => { const b = document.querySelector('#tools [data-tool=\"haus\"]'); b.onpointerup(); b.click(); })()");
+    expect(game("[...document.querySelectorAll('#tools .tool')].every(b => b.querySelector('.fav'))")).toBe(true);
+    game("document.querySelector('#tools [data-tool=\"haus\"] .fav').click()");
     expect(game('favList()')).toEqual(['haus']);
-    expect(game('tool')).toBe('look');                                            // langes Drücken wählt nicht
+    expect([game('tool'), game('sheetOpen')]).toEqual(['look', true]);           // Stern wählt nichts, Leiste bleibt offen
+    expect(game("(s => [s.textContent, s.classList.contains('on')])(document.querySelector('#tools [data-tool=\"haus\"] .fav'))")).toEqual(['★', true]);
     game("localStorage.setItem('kachelhausen_fav', '{kaputt')");
     expect(game('favList()')).toEqual([]);
     game('setSheet(false)');
