@@ -2590,3 +2590,7 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       offen ist, bleibt ihre Reihenfolge (`dragRow`); eine angetippte Kugel wird an ihrem Platz groß und bleibt unter dem Finger (Leiste rückt um
       den Größenunterschied). Das Große nochmal antippen: zu, vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen
       rücken in ihrer Reihenfolge nach (Weg → Schiene → zu → auf: 🚆 🛤️ 🚇 🪵 🌿 🧱). Nachgemessen bei 375/640/768/1200 px. Tests: schnellwahl.
+      Nachtrag 5 (Nutzer: „die Leiste rückt beim Durchklicken jedes Mal ein Stück nach rechts“): Die Leiste rückte um den Größenunterschied nach,
+      damit das Angetippte unter der Maus blieb – das summierte sich. Jetzt steht jede Kugel auf einem Platz so breit wie der große Knopf
+      (Rand 6 px, Handy 3,5 px), beim Durchklicken wechselt nur die Größe; die Leiste rückt nur noch beim Aufgehen. Nachgemessen bei
+      375/640/768/1200 px: alle sechs Mitten und die Leiste bleiben über sechs Klicks aufs Zehntel gleich.

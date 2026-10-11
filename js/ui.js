@@ -135,9 +135,9 @@ function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isD
 function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
 // Großer Knopf = zuletzt Gezogenes; mit einem Ziehen-Ding in der Hand stehen alle sechs in einer Reihe, das Gewählte groß, der Rest als Kugeln.
 // Nutzer 11.10.2026: „es sollte immer alles an derselben Stelle bleiben“ – solange die Reihe offen ist, ändert sich ihre Reihenfolge nicht
-// (dragRow): eine angetippte Kugel wird an ihrem Platz groß, die Leiste rückt so, dass sie unter dem Finger bleibt (dragAnchor = Mitte des
-// Angetippten, Leiste um dragShift verschoben). Das Große nochmal: zu, vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn,
-// die übrigen rücken in ihrer Reihenfolge nach
+// (dragRow), jede Kugel steht auf einem Platz so breit wie der große Knopf (style.css): eine angetippte wird an ihrem Platz groß, nichts rückt.
+// Beim Aufgehen bleibt der große Knopf, wo man getippt hat (dragAnchor = seine Mitte, Leiste um dragShift verschoben). Das Große nochmal: zu,
+// vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen rücken in ihrer Reihenfolge nach
 let dragAnchor = null, dragShift = 0, dragRow = DRAG_TOOLS.map(([d]) => d), dragShown = false;
 function holdDragSpot(el) { if (el) { const r = el.getBoundingClientRect(); dragAnchor = r.left + r.width / 2; } }
 function shiftCats(px) { dragShift = px; $('cats').style.translate = px ? px + 'px 0' : ''; }
@@ -159,11 +159,11 @@ function syncDragGroup() {
     const b = document.createElement('button'), ok = available(id), icon = DRAG_TOOLS.find(([d]) => d === id)[1];
     b.className = 'quick drag-ball' + (ok ? '' : ' locked'); b.textContent = icon; b.dataset.ball = id;
     b.title = ok ? `${ITEMS[id].name} ziehen` : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
-    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } holdDragSpot(b); setSheet(false); setTool(id); };
+    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } setSheet(false); setTool(id); };
     if (k < i) big.before(b); else { at.after(b); at = b; }             // die Reihe bleibt, wie sie aufging: das Große an seinem Platz
   });
   if (dragAnchor == null) return;
-  // Leiste so verschieben, dass das Angetippte unter dem Finger bleibt – aber nie aus dem Bild. Reicht der Platz nicht (iPad hochkant),
+  // Leiste so verschieben, dass der große Knopf beim Aufgehen unter dem Finger bleibt – aber nie aus dem Bild. Reicht der Platz nicht (iPad hochkant),
   // zeigen die Bereiche solange nur ihr Symbol (drag-tight, style.css), reicht auch das nicht (kleines Tablet), treten sie ganz zur Seite
   // (drag-tighter) – wie auf dem Handy
   const mid = () => { const r = big.getBoundingClientRect(); return r.left + r.width / 2; };
