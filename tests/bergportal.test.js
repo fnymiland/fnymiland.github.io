@@ -118,6 +118,13 @@ describe('Netz und Zug durch den Berg', () => {
     expect([c.k, c.portal.inn]).toEqual(['7,10', null]); expect(c.cut[1]).toBeCloseTo(-0.2);
     expect(game("trainTunnelCut({ px: 8.2, py: 10, du: 1, dv: 0, len: 0.78 })")).toBe('hide');
     expect(game("trainTunnelCut({ px: 13, py: 10, du: -1, dv: 0, len: 0.78 })")).toBe(null);
+    // Nutzer 11.10.2026 („beim Herausfahren blitzt er kurz auf“): ragt die Front nur einen Hauch heraus, ist es der ganze Wagen im Berg – keine
+    // Schnittfläche (ohne Fenster und Scheinwerfer) als Front für ein Bild
+    c = game("trainTunnelCut({ px: 11.12, py: 10, du: 1, dv: 0, len: 0.78 })");
+    expect([c.cut, c.portal.out, c.portal.inn]).toEqual([null, false, [-0.39, 0.39]]);
+    // im Berg kein Schatten der Anhöhe auf dem Wagen, der Verlauf läuft waagerecht (nur nach der Tiefe dunkler)
+    expect(game("String(drawCarPortal)")).not.toMatch(/BP_SHADE/);
+    expect(game("String(drawCarPortal)")).toMatch(/\[w1\.x, w0\.y\]/);
     // gezeichnet ohne Fehler: erst im Berg (Öffnung als Ausschnitt), dann draußen
     expect(() => game("(() => { const m = { train: trains[0], px: 11.7, py: 10, du: -1, dv: 0, len: 0.78, i: 0, n: 2 }, c = trainTunnelCut(m); m.cut = c.cut; m.portal = c.portal; drawTrainCar(m, 2, 0); })()")).not.toThrow();
   });

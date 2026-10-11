@@ -1955,9 +1955,11 @@ function bpCut(m) {
     const ed = m.du * dx + m.dv * dy;
     if (Math.abs(ed) < 0.5) continue;                                     // quer davor (Kurve am Fuß): nicht hinein
     const s = (m.px - px) * dx + (m.py - py) * dy + 0.5, aw = -s / ed;    // s > 0: hinter der Wand; aw: Stelle längs des Wagens an der Wand
-    const out = ed > 0 ? [-la, Math.min(la, aw)] : [Math.max(-la, aw), la], inn = ed > 0 ? [Math.max(-la, aw), la] : [-la, Math.min(la, aw)];
+    const out = ed > 0 ? [-la, Math.min(la, aw)] : [Math.max(-la, aw), la];
+    let inn = ed > 0 ? [Math.max(-la, aw), la] : [-la, Math.min(la, aw)];
     const hasOut = out[1] - out[0] > 0.02, hasIn = inn[1] - inn[0] > 0.02;
     if (!hasIn) return null;                                              // ganz draußen: wie immer
+    if (!hasOut) inn = [-la, la];                                         // ragt nur ein Hauch heraus: ganzer Wagen (sonst blitzte die Front ein Bild lang als Schnittfläche ohne Fenster auf)
     const near = Math.min(s + inn[0] * ed, s + inn[1] * ed), wall = hillLevel(px, py) > hillLevel(px - dx, py - dy);
     const showIn = bpShown(t) && wall && near < BP_D;
     if (!hasOut && !showIn) return 'hide';
@@ -1984,8 +1986,8 @@ function drawCarPortal(car, z, now) {
       const pts = [];                                                     // Umriss des Stücks (Quader: konvex) – nur dort dunkeln
       for (const a of Q.inn) for (const b of [-wb, wb]) { const p = toScreen(car.px + du * a - dv * b, car.py + dv * a + du * b); pts.push([p.x, p.y], [p.x, p.y - H * z]); }
       const w0 = toScreen(px - dx * 0.5, py - dy * 0.5), w1 = toScreen(px - dx * 0.5 + dx * 0.7, py - dy * 0.5 + dy * 0.7), hp = hull(pts);
-      if (r === 3 && GFX.shadows) { g.fillStyle = BP_SHADE; bpPath(hp); g.fill(); }   // im Schatten der Anhöhe wie das Gleis (bpInside)
-      g.fillStyle = bpDark([w0.x, w0.y], [w1.x, w1.y]); bpPath(hp); g.fill();
+      // kein Schatten der Anhöhe auf dem Wagen (das Stück draußen hat keinen – sonst sprang die Front beim Herausfahren von dunkel auf hell); nur der Verlauf, an der Wand fast 0
+      g.fillStyle = bpDark([w0.x, w0.y], [w1.x, w0.y]); bpPath(hp); g.fill();   // waagerecht: dunkler nur mit der Tiefe, nicht nach oben (sonst war die Front an der Wand schon dunkel)
     } finally { g.restore(); car.cut = out; }
   }
   if (Q.out) drawTrainCarBody(car, z, now);
