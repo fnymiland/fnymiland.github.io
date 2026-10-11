@@ -14,6 +14,9 @@ describe('Zuletzt gebaut (Block 120)', () => {
     for (const id of ['laterne', 'brunnen', 'busch', 'blumen', 'kiosk', 'cafe', 'post', 'apotheke', 'hecke', 'schiene']) game(`noteRecent('${id}')`);
     expect(game('recentList().length')).toBe(8);
     expect(game('recentList()[0]')).toBe('apotheke');                                         // Hecke, Schiene: am Ziehen-Knopf
+    // Kategorien des Ziehen-Knopfs (157s): nur Linien-Werkzeuge fehlen – Bahnhof, Anhöhe, Brücke, Wiese … stehen wieder drin
+    for (const id of ['station', 'anhoehe', 'bruecke', 'wiese', 'tunnel', 'zaun', 'mauer']) game(`noteRecent('${id}')`);
+    expect(game('recentList().slice(0, 4)')).toEqual(['wiese', 'bruecke', 'anhoehe', 'station']);
     game("localStorage.setItem('kachelhausen_recent', '{kaputt')");
     expect(game('recentList()')).toEqual([]);                                                 // kaputter Speicher: einfach leer
   });
