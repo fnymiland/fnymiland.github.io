@@ -2581,3 +2581,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Namen (`p-fav`, 36 × 36), dazu weiter an den Kacheln. Ziehen: ▾ und das aufklappende Feld sind weg – ist ein Ziehen-Ding in der Hand, ist es
       der große Knopf, die übrigen fünf stehen rechts daneben als kleine Kugeln (`syncDragGroup`, Tipp: wird groß; nicht erforscht: blass mit
       Hinweis); auf dem Handy blenden sich solange die Bereiche aus (passt in 375 px). Tests: schnellwahl.
+      Nachtrag 3 (Nutzer: „weird, dass das Icon wegspringt, wenn ich es anklicke – es sollte immer alles an derselben Stelle bleiben“): Die Leiste
+      ist mittig und wurde mit Kugeln breiter (Handy: ohne Bereiche schmaler), der Knopf rückte unter der Maus weg. Jetzt bleibt der große Knopf, wo
+      man getippt hat (`holdDragSpot`, Leiste per `translate` verschoben, nie aus dem Bild); reicht der Platz nicht, zeigen die Bereiche solange nur
+      ihr Symbol (`drag-tight`, iPad hochkant), notfalls treten sie ganz zur Seite (`drag-tighter`, kleines Tablet). Eine angetippte Kugel tauscht
+      den Platz mit dem großen Knopf (`dragBalls`), die übrigen bleiben stehen – nochmal tippen nimmt einen Fehlgriff zurück. Nachgemessen bei
+      375/414/640/700/768/900/1024/1200 px: Knopf bleibt aufs Pixel. Tests: schnellwahl.

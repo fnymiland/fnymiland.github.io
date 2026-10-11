@@ -25,7 +25,10 @@ describe('Ziehen-Knopf', () => {
     game("setTool('weg'); document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
     expect(game('tool')).toBe('tunnel');
     expect(big()).toEqual(['tunnel', '🚇', true]);
-    expect(balls()).toEqual(['weg', 'schiene', 'zaun', 'hecke', 'mauer']);
+    expect(balls()).toEqual(['schiene', 'weg', 'zaun', 'hecke', 'mauer']);         // Platz getauscht: der Weg liegt, wo der Tunnel lag
+    game("document.querySelector('#cats .drag-ball[data-ball=\"weg\"]').click()");   // Fehlklick: dieselbe Stelle nochmal
+    expect([game('tool'), balls()]).toEqual(['weg', ['schiene', 'tunnel', 'zaun', 'hecke', 'mauer']]);
+    game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
     game("setTool('look'); buildToolbar()");
     expect([big()[0], balls().length]).toEqual(['tunnel', 0]);                    // gemerkt, zu
     game("document.querySelector('#cats .quick.drag').click()");

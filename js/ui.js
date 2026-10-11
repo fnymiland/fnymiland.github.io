@@ -134,25 +134,47 @@ const isDragTool = id => DRAG_TOOLS.some(([d]) => d === id);
 function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isDragTool(d) && available(d) ? d : 'weg'; } catch (e) { return 'weg'; } }
 function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
 // Großer Knopf = zuletzt Gezogenes; mit einem Ziehen-Ding in der Hand rechts daneben die übrigen als kleine Kugeln (Tipp: wird groß)
+// Nutzer 11.10.2026: „es sollte immer alles an derselben Stelle bleiben“ – die Leiste ist mittig, mit Kugeln breiter (Handy: ohne Bereiche
+// schmaler) und rückte unter dem Finger weg. Darum bleibt der große Knopf, wo man getippt hat (dragAnchor, Leiste um dragShift verschoben),
+// und eine angetippte Kugel tauscht den Platz mit ihm (dragBalls): unter dem Finger liegt dann das Vorige, nochmal tippen nimmt es zurück
+let dragAnchor = null, dragShift = 0, dragBalls = null;
+function holdDragSpot() { const big = document.querySelector('#cats .quick.drag'); dragAnchor = big ? big.getBoundingClientRect().left : null; }
+function shiftCats(px) { dragShift = px; $('cats').style.translate = px ? px + 'px 0' : ''; }
 function syncDragGroup() {
   const big = document.querySelector('#cats .quick.drag');
   if (!big) return;
-  const cur = dragTool(), l = `${ITEMS[cur].name} ziehen (W: Weg)`;
-  if (big.dataset.quick !== cur) { big.dataset.quick = cur; big.textContent = DRAG_TOOLS.find(([x]) => x === cur)[1]; big.title = l; big.setAttribute('aria-label', l); }
+  const cur = dragTool(), prev = big.dataset.quick, l = `${ITEMS[cur].name} ziehen (W: Weg)`;
+  if (prev !== cur) { big.dataset.quick = cur; big.textContent = DRAG_TOOLS.find(([x]) => x === cur)[1]; big.title = l; big.setAttribute('aria-label', l); }
   for (const b of document.querySelectorAll('#cats .drag-ball')) b.remove();
-  const open = isDragTool(tool);
-  big.classList.toggle('drag-open', open); $('cats').classList.toggle('drag-open', open);   // Handy: dann ohne Bereiche (style.css)
-  if (!open) return;
+  const open = isDragTool(tool), cats = $('cats');
+  big.classList.toggle('drag-open', open); cats.classList.toggle('drag-open', open);   // Handy: dann ohne Bereiche (style.css)
+  if (!open) { dragAnchor = null; shiftCats(0); cats.classList.remove('drag-tight', 'drag-tighter'); return; }
+  const rest = DRAG_TOOLS.map(([d]) => d).filter(d => d !== cur);
+  if (dragBalls && dragBalls.includes(cur) && isDragTool(prev) && !dragBalls.includes(prev)) dragBalls = dragBalls.map(d => d === cur ? prev : d);   // Platz tauschen
+  else if (!dragBalls || dragBalls.length !== rest.length || !rest.every(d => dragBalls.includes(d))) dragBalls = rest;
   let at = big;
-  for (const [id, icon] of DRAG_TOOLS) {
-    if (id === cur) continue;
-    const b = document.createElement('button'), ok = available(id);
+  for (const id of dragBalls) {
+    const b = document.createElement('button'), ok = available(id), icon = DRAG_TOOLS.find(([d]) => d === id)[1];
     b.className = 'quick drag-ball' + (ok ? '' : ' locked'); b.textContent = icon; b.dataset.ball = id;
     b.title = ok ? `${ITEMS[id].name} ziehen` : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
-    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } setSheet(false); setTool(id); };
+    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } holdDragSpot(); setSheet(false); setTool(id); };
     at.after(b); at = b;
   }
+  if (dragAnchor == null) return;
+  // Leiste so verschieben, dass der große Knopf an der getippten Stelle bleibt – aber nie aus dem Bild. Reicht der Platz nicht (iPad hochkant),
+  // zeigen die Bereiche solange nur ihr Symbol (drag-tight, style.css), reicht auch das nicht (kleines Tablet), treten sie ganz zur Seite
+  // (drag-tighter) – wie auf dem Handy
+  for (let k = 0; k < 3; k++) {
+    const r = cats.getBoundingClientRect(), natural = r.left - dragShift, W = window.innerWidth || 0;
+    const want = dragShift + dragAnchor - big.getBoundingClientRect().left;
+    let px = want;
+    if (W && r.width <= W - 8) px = Math.max(4 - natural, Math.min(W - 4 - r.width - natural, px));
+    shiftCats(px);
+    if (Math.abs(px - want) < 0.5 || cats.classList.contains('drag-tighter')) break;
+    cats.classList.add(cats.classList.contains('drag-tight') ? 'drag-tighter' : 'drag-tight');
+  }
 }
+window.addEventListener('resize', () => { if (dragShift) { dragAnchor = null; shiftCats(0); } });
 // Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an
 // jeder Kachel (oben rechts, Nutzer: „dezent, aber treffbar“). Je Gerät gemerkt, höchstens FAV_MAX
 const FAV_KEY = 'kachelhausen_fav', FAV_MAX = 12;
@@ -239,7 +261,7 @@ function buildToolbar() {
     b.dataset.quick = id;
     b.textContent = icon;
     b.title = label; b.setAttribute('aria-label', label);
-    b.onclick = () => { audio(); setSheet(false); const q = b.dataset.quick; setTool(tool === q && q !== 'look' ? 'look' : q); };   // Ziehen-Knopf: was er gerade zeigt
+    b.onclick = () => { audio(); if (drag) holdDragSpot(); setSheet(false); const q = b.dataset.quick; setTool(tool === q && q !== 'look' ? 'look' : q); };   // Ziehen-Knopf: was er gerade zeigt, bleibt beim Aufgehen stehen
     cats.append(b);
   }
   // ↶ Rückgängig (Block 45): grau, wenn es nichts zurückzunehmen gibt; Strg/⌘+Z
