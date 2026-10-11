@@ -2567,3 +2567,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       aufteilen“): unter Stadt statt 🚆 Verkehr (11 Dinge) drei Gruppen – 🚆 Bahn (Schiene, Gleis-Rampe, Bahnhof, Hauptbahnhof), 🚇 Untergrund
       (Tunnel, Tunneleinfahrt, Bergportal, U-Bahn-Station), ⛴️ Wasser & Seil (Steg, Hafen, Seilbahn). Gemerkte eigene Reihenfolgen: an der Stelle
       von „verkehr“ stehen die drei (`GROUP_ALIAS`, orderedGroups). ⛰️ Anhöhen unter Gestalten wie bisher. Tests: menu u. a.
+- [x] 157s **Schnellwahl: Ziehen-Knopf und ⭐** (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel – generell Shortcuts für
+      Häufiges, ohne zu überladen“, gewählt: Ziehen-Knopf + 🕘 mit ⭐ zusammenlegen): 🛤️ nimmt, was man zuletzt gezogen hat (`dragTool`, je Gerät
+      `kachelhausen_drag`, auch aus dem Menü gewählt; nicht erforscht → Weg), ▾ daneben klappt Weg · Schiene · Tunnel · Zaun · Hecke · Mauer in der
+      Bauleiste auf (`dragOpen`). 🕘 ist jetzt ⭐: oben „⭐ Favoriten“, darunter „🕘 Zuletzt gebaut“ (ohne Favoriten und Ziehen-Dinge); Favorit über
+      ☆/★ an der Kachel dort oder lange Drücken (0,55 s) auf eine Kachel im Menü (`favList`/`toggleFav`, `kachelhausen_fav`, höchstens 12);
+      Zahlentasten folgen. Leiste gleich lang (▾ schmal), passt in 375 px. Tests: schnellwahl, zuletzt angepasst.

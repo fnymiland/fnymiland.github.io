@@ -126,16 +126,33 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
 // Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
 const NOT_RECENT = new Set(['abriss', 'verschieben']);
+// Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“): der 🛤️-Knopf nimmt, was man zuletzt gezogen hat,
+// ▾ daneben klappt die Auswahl auf (Bauleiste). Je Gerät gemerkt
+const DRAG_TOOLS = [['weg', '🛤️'], ['schiene', '🚆'], ['tunnel', '🚇'], ['zaun', '🪵'], ['hecke', '🌿'], ['mauer', '🧱']], DRAG_KEY = 'kachelhausen_drag';
+const isDragTool = id => DRAG_TOOLS.some(([d]) => d === id);
+let dragOpen = false;
+function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isDragTool(d) && available(d) ? d : 'weg'; } catch (e) { return 'weg'; } }
+function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
+// Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an
+// der Kachel dort oder lange Drücken auf eine Kachel im Menü. Je Gerät gemerkt, höchstens FAV_MAX
+const FAV_KEY = 'kachelhausen_fav', FAV_MAX = 12;
+function favList() { try { const l = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !ITEMS[id].gift).slice(0, FAV_MAX) : []; } catch (e) { return []; } }
+function toggleFav(id) {
+  const l = favList(), on = l.includes(id), n = on ? l.filter(x => x !== id) : [...l, id].slice(-FAV_MAX);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify(n)); } catch (e) { /* privat */ }
+  toast(on ? `☆ ${ITEMS[id].name}: kein Favorit mehr` : `⭐ ${ITEMS[id].name} ist jetzt Favorit`);
+  return !on;
+}
 // Zuletzt gebaut (Block 120): die letzten RECENT_MAX Dinge, je Gerät gemerkt; 🕘 neben der Suche zeigt sie in der Leiste
 // (Form, Farbe, Stil gelten wie zuletzt gewählt). Was ohnehin einen Schnellknopf hat, zählt nicht.
 const RECENT_MAX = 8, RECENT_KEY = 'kachelhausen_recent';
 let recentOpen = false;
 function recentList() {
-  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !NOT_RECENT.has(id) && !QUICK.some(([q]) => q === id)).slice(0, RECENT_MAX) : []; }
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !NOT_RECENT.has(id) && !QUICK.some(([q]) => q === id) && !isDragTool(id)).slice(0, RECENT_MAX) : []; }
   catch (e) { return []; }
 }
 function noteRecent(id) {
-  if (!ITEMS[id] || ITEMS[id].gift || NOT_RECENT.has(id) || QUICK.some(([q]) => q === id)) return;
+  if (!ITEMS[id] || ITEMS[id].gift || NOT_RECENT.has(id) || QUICK.some(([q]) => q === id) || isDragTool(id)) return;
   const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
 }
@@ -183,6 +200,7 @@ function setSheet(open) {
   if (!sheetOpen) {                                                       // zu: auch „Zuletzt gebaut“ zu – sonst schloss der nächste 🕘-Klick nur
     arrangeMode = false;                                                  // den Merker und erst der zweite öffnete (Nutzer)
     if (recentOpen) { recentOpen = false; const r = document.querySelector('#cats .recent'); if (r) r.classList.remove('active'); }
+    if (dragOpen) { dragOpen = false; const r = document.querySelector('#cats .drag-more'); if (r) r.classList.remove('active'); }
   }
   $('toolbar').classList.toggle('open', sheetOpen);
 }
@@ -194,14 +212,24 @@ document.addEventListener('pointerdown', e => {                          // dane
 function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
-  for (const [id, icon, label] of QUICK) {
+  for (const [id0, icon0, label0] of QUICK) {
+    const drag = id0 === 'weg', id = drag ? dragTool() : id0;            // Ziehen-Knopf: das zuletzt Gezogene
+    const icon = drag ? DRAG_TOOLS.find(([d]) => d === id)[1] : icon0, label = drag ? `${ITEMS[id].name} ziehen (W: Weg)` : label0;
     const b = document.createElement('button');
-    b.className = 'quick' + (tool === id ? ' active' : '');
+    b.className = 'quick' + (drag ? ' drag' : '') + (tool === id ? ' active' : '');
     b.dataset.quick = id;
     b.textContent = icon;
     b.title = label; b.setAttribute('aria-label', label);
     b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
     cats.append(b);
+    if (drag) {                                                          // ▾: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer
+      const m = document.createElement('button');
+      m.className = 'quick drag-more' + (dragOpen ? ' active' : ''); m.textContent = '▾';
+      m.title = 'Ziehen: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer'; m.setAttribute('aria-label', 'Ziehen: Auswahl');
+      m.setAttribute('aria-expanded', String(dragOpen));
+      m.onclick = () => { audio(); const open = !dragOpen; setSheet(false); dragOpen = open; setSheet(open); buildToolbar(); };
+      cats.append(m);
+    }
   }
   // ↶ Rückgängig (Block 45): grau, wenn es nichts zurückzunehmen gibt; Strg/⌘+Z
   const un = document.createElement('button');
@@ -218,8 +246,8 @@ function buildToolbar() {
   const sep = document.createElement('span'); sep.className = 'quick-sep'; cats.append(sep);
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
-  rec.textContent = '🕘'; rec.title = 'Zuletzt gebaut'; rec.setAttribute('aria-label', 'Zuletzt gebaut');
-  rec.onclick = () => { audio(); recentOpen = !recentOpen; setSheet(recentOpen); buildToolbar(); };
+  rec.textContent = '⭐'; rec.title = 'Favoriten und zuletzt gebaut'; rec.setAttribute('aria-label', 'Favoriten und zuletzt gebaut');
+  rec.onclick = () => { audio(); const open = !recentOpen; setSheet(false); recentOpen = open; setSheet(open); buildToolbar(); };
   cats.append(rec);
   // Bereiche (Stadt · Herstellen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
@@ -229,22 +257,17 @@ function buildToolbar() {
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
+    b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen && !dragOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
-    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen));
-    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
+    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen && !dragOpen));
+    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen && !dragOpen; recentOpen = false; dragOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
     cats.append(b);
   }
   // Über den Kacheln nur bei „Zuletzt gebaut“ ein Schild (die Suche ist weg, Nutzer 08.10.2026: „nutzt eh nie einer“)
   const subs = $('subcats');
   subs.innerHTML = '';
-  if (recentOpen) {                                                       // Zuletzt gebaut: nur ein Schild statt Filter
-    subs.hidden = false;
-    const l = document.createElement('span'); l.className = 'sub active recent-label';
-    l.textContent = recentList().length ? '🕘 Zuletzt gebaut' : '🕘 Noch nichts – was du baust, steht dann hier';
-    subs.append(l);
-  } else subs.hidden = true;                                              // Gruppen stehen als Überschriften im Feld
+  subs.hidden = true;                                                     // Gruppen (auch ⭐ Favoriten, 🕘 zuletzt gebaut, Ziehen) stehen als Überschriften im Feld
   renderTools();
   setTool(tool);
 }
@@ -269,12 +292,34 @@ function renderTools() {
     if (locked) { const l = document.createElement('span'); l.className = 'lock'; l.textContent = '🔒'; b.append(l); }
     if (d.cost) b.dataset.cost = d.cost;
     if (d.mat) b.dataset.mat = JSON.stringify(d.mat);
-    b.onclick = () => pickCard(id);
+    b.onclick = () => { if (b.dataset.longpress) { delete b.dataset.longpress; return; } pickCard(id); };
+    b.onpointerdown = () => { clearTimeout(b._lp); b._lp = setTimeout(() => { b.dataset.longpress = '1'; toggleFav(id); if (recentOpen) renderTools(); }, 550); };   // lange drücken: Favorit
+    b.onpointerup = b.onpointercancel = () => clearTimeout(b._lp);
+    if (recentOpen && !ITEMS[id].gift) {                                  // ⭐-Ansicht: ☆/★ an der Kachel
+      const fav = favList().includes(id), s = document.createElement('span');
+      s.className = 'fav' + (fav ? ' on' : ''); s.textContent = fav ? '★' : '☆'; s.setAttribute('role', 'button'); s.tabIndex = 0;
+      s.setAttribute('aria-label', fav ? `${d.name}: kein Favorit mehr` : `${d.name} als Favorit`);
+      s.onclick = e => { e.stopPropagation(); audio(); toggleFav(id); renderTools(); };
+      s.onpointerdown = e => e.stopPropagation();
+      b.append(s);
+    }
     return b;
   };
   const freeFirst = ids => [...ids.filter(available), ...ids.filter(id => !available(id))];
-  if (recentOpen) {
-    for (const id of menuList()) box.append(card(id));
+  const head = t => { const h = document.createElement('div'); h.className = 'sheet-h'; menuLabel(h, t); box.append(h); return h; };
+  if (recentOpen) {                                                       // ⭐: Favoriten, darunter zuletzt gebaut
+    const favs = favList(), rec = recentList().filter(id => !favs.includes(id));
+    head('⭐ Favoriten').dataset.group = 'fav';
+    if (!favs.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch keine – tippe ☆ an einer Kachel oder drück im Menü lange auf ein Ding'; box.append(p); }
+    for (const id of favs) box.append(card(id));
+    head('🕘 Zuletzt gebaut').dataset.group = 'recent';
+    if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts – was du baust, steht dann hier'; box.append(p); }
+    for (const id of rec) box.append(card(id));
+    return;
+  }
+  if (dragOpen) {                                                         // Ziehen: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer
+    head('🛤️ Ziehen').dataset.group = 'drag';
+    for (const [id] of DRAG_TOOLS) box.append(card(id));
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
@@ -330,7 +375,7 @@ function hideCardName() { $('card-name').hidden = true; }
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
 const menuHas = (m, id) => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id);   // Bereich mit dem gewählten Werkzeug (Punkt)
-const menuList = () => { if (recentOpen) return recentList(); const top = MENU.find(m => m.id === menuTop) || MENU[0];
+const menuList = () => { if (recentOpen) { const f = favList(); return [...f, ...recentList().filter(id => !f.includes(id))]; } if (dragOpen) return DRAG_TOOLS.map(([d]) => d); const top = MENU.find(m => m.id === menuTop) || MENU[0];
   const all = orderedGroups(top).flatMap(g => g.items); return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
@@ -368,6 +413,11 @@ function setTool(t) {
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
+  if (isDragTool(t)) {                                                   // Ziehen-Knopf zeigt, was man zuletzt gezogen hat (auch aus dem Menü gewählt)
+    noteDrag(t);
+    const d = document.querySelector('.quick.drag');
+    if (d && d.dataset.quick !== t) { const l = `${ITEMS[t].name} ziehen (W: Weg)`; d.dataset.quick = t; d.textContent = DRAG_TOOLS.find(([x]) => x === t)[1]; d.title = l; d.setAttribute('aria-label', l); }
+  }
   for (const b of document.querySelectorAll('.quick[data-quick]')) b.classList.toggle('active', b.dataset.quick === t);   // 👁 hat seinen eigenen Zustand
   syncDropBtn();
   $('rot-btn').hidden = !turnsWhileBuilding(t);

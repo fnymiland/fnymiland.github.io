@@ -8,12 +8,12 @@ beforeEach(() => {
 });
 
 describe('Zuletzt gebaut (Block 120)', () => {
-  it('merkt sich Gebautes, neuestes zuerst, ohne Doppel, höchstens 8; Schnellknopf-Dinge (Weg) zählen nicht', () => {
+  it('merkt sich Gebautes, neuestes zuerst, ohne Doppel, höchstens 8; Schnellknopf-Dinge (Weg und alles vom Ziehen-Knopf) zählen nicht', () => {
     for (const id of ['haus', 'baum', 'bank', 'haus', 'weg']) game(`noteRecent('${id}')`);
     expect(game('recentList()')).toEqual(['haus', 'bank', 'baum']);
-    for (const id of ['laterne', 'brunnen', 'busch', 'blumen', 'kiosk', 'cafe', 'post', 'hecke']) game(`noteRecent('${id}')`);
+    for (const id of ['laterne', 'brunnen', 'busch', 'blumen', 'kiosk', 'cafe', 'post', 'apotheke', 'hecke', 'schiene']) game(`noteRecent('${id}')`);
     expect(game('recentList().length')).toBe(8);
-    expect(game('recentList()[0]')).toBe('hecke');
+    expect(game('recentList()[0]')).toBe('apotheke');                                         // Hecke, Schiene: am Ziehen-Knopf
     game("localStorage.setItem('kachelhausen_recent', '{kaputt')");
     expect(game('recentList()')).toEqual([]);                                                 // kaputter Speicher: einfach leer
   });
@@ -40,13 +40,14 @@ describe('Zuletzt gebaut (Block 120)', () => {
     game("state.tiles.set('9,9', { b: 'haus', lvl: 1 }); recalc(); setTool('kiosk'); tap(...(() => { const p = toScreen(9, 9); return [p.x, p.y]; })(), false)");
     expect(game('recentList()')).not.toContain('kiosk');                                      // besetzt: nicht gebaut
   });
-  it('🕘 zeigt die Liste in der Leiste; ein Bereich schließt sie', () => {
+  it('⭐ zeigt Favoriten und darunter zuletzt Gebautes in der Leiste; ein Bereich schließt sie', () => {
     game("noteRecent('baum'); noteRecent('haus'); buildToolbar()");
     expect(game("!!document.querySelector('#cats .quick.recent')")).toBe(true);
     game("document.querySelector('#cats .quick.recent').click()");
     expect(game('recentOpen')).toBe(true);
     expect(game("[...document.querySelectorAll('#tools .tool')].map(b => b.dataset.tool)")).toEqual(['haus', 'baum']);
-    expect(game("document.querySelector('#subcats .recent-label').textContent")).toMatch(/Zuletzt gebaut/);
+    expect(game("[...document.querySelectorAll('#tools .sheet-h')].map(h => h.dataset.group)")).toEqual(['fav', 'recent']);
+    expect(game("document.querySelector('#tools .sheet-h[data-group=\"recent\"]').textContent")).toMatch(/Zuletzt gebaut/);
     game("document.querySelector('#cats .cat').click()");
     expect(game('recentOpen')).toBe(false);
   });
