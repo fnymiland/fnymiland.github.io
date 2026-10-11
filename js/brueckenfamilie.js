@@ -33,14 +33,16 @@ function brLegacyLook(o, at) {
   if (at === 'gleis') { L.fam = 'bahn'; return L; }
   if (at === 'wasser') {
     const kind = typeof bridgeKind === 'function' ? bridgeKind(o) : 'holz', st = typeof o.style === 'string' ? o.style : 'sand';
+    if (WEG_BRIDGE[kind]) L.kind = kind;                                  // alte Art: ihr Preis gilt weiter (brPrice), bis das Material wechselt
     if (kind === 'stein' || kind === 'ziegel') { L.mat = 'stein'; L.deck = 'belag'; L.belag = st; L.plank = null; if (kind === 'ziegel' && L.col == null) L.col = BR_ZIEGEL_COL; }
     else if (kind === 'rot') { if (L.col == null) L.col = BR_ROT_COL; if (L.plank == null) L.plank = BR_ROT_PLANK; }
     return L;
   }
   if (at === 'uebergang') {
     const fp = o.footPaid;
+    L.kind = FOOT_STYLES[fp] ? fp : 'holz';                               // altes Design: sein Preis gilt weiter (brPrice)
     if (fp === 'stein') L.mat = 'stein';                                    // die alte Steinbrücke zeigt ihr eigenes Deck, nicht den Weg
-    else if (fp === 'kristall') { L.mat = 'kristall'; L.licht = 'an'; }      // leuchtet heute schon
+    else if (fp === 'kristall') { L.mat = 'kristall'; L.licht = 'an'; L.lichtGratis = true; }   // leuchtet heute schon – ohne Aufpreis
     else if (fp === 'weg') { L.deck = 'belag'; L.belag = typeof o.style === 'string' ? o.style : 'sand'; }   // „Wie der Weg“ → Holz mit Belag
     return L;
   }
@@ -57,12 +59,70 @@ function brLegacyLook(o, at) {
 function brLook(o, at) {
   const L = brLegacyLook(o, at);
   if (!o || !brPaidOk(o.brp)) return L;
-  const id = at === 'anhoehe' ? o.art : o.brm, mat = BR_MAT[id] ? id : L.mat;
+  const id = at === 'anhoehe' ? o.art : o.brm, mat = BR_MAT[id] ? id : L.mat, same = mat === L.mat;   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
   return { at, fam: L.fam, mat, col: brIdx(o.brc), plank: mat === 'holz' ? brIdx(o.brw) : null,
-    deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : BR_MAT[mat].deck, belag: L.belag,
-    licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : null,
+    deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : same ? L.deck : BR_MAT[mat].deck, belag: L.belag || (typeof o.style === 'string' ? o.style : null),
+    licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : same ? L.licht : null, ...(o.brl == null && same && L.lichtGratis ? { lichtGratis: true } : {}),
+    ...(same && L.kind ? { kind: L.kind } : {}),
     zacken: mat === 'kristall' && L.fam === 'fuss' && o.brz === 'an',
     stuetzen: mat === 'holz' && L.fam === 'fuss' && (o.bru === 'keine' || o.bru === 'jede') ? o.bru : 'wenige' };
+}
+// ---------------------------------------------------------------------------
+// Geld (160c A4): Kosten-Objekt { money, <Rohstoff>: n }. Grundpreis je Feld (Übergang: je Brücke). VORLÄUFIG (Nutzer 11.10.2026: Geld und
+// Fortschritt später besprechen; Licht kostet extra, Kristall „fürstlich“). Die alten Preise bleiben: Holz/Stein übers Wasser, Holz-Gleis,
+// Holz/Stein am Übergang, Holz/Stahl zwischen Anhöhen. Jede Brücke merkt sich, was bezahlt wurde (brp) – erstattet wird genau das (brPaid);
+// ohne brp nach den alten Tabellen (eingefroren in tests/bruecken-altversion.test.js). Neuer Preis ≥ Erstattung des Rückfalls (brFallback)
+// je Rohstoff: eine ältere App-Version, die nur den Rückfall kennt, erstattet nie mehr als bezahlt
+// ---------------------------------------------------------------------------
+const brMoney = (cost, mat) => ({ money: cost || 0, ...(mat || {}) });
+const BR_COST = {
+  wasser: { holz: brMoney(WEG_BRIDGE.holz.cost, WEG_BRIDGE.holz.mat), stein: brMoney(WEG_BRIDGE.stein.cost, WEG_BRIDGE.stein.mat),
+    stahl: brMoney(100, { quader: 2, metall: 2 }), kristall: brMoney(400, { quader: 2, kristall: 3, metall: 1 }) },
+  gleis: { holz: brMoney(BRIDGE.cost, BRIDGE.mat), stein: brMoney(80, { holz: 2, metall: 2, quader: 3 }), stahl: brMoney(100, { holz: 2, metall: 4 }),
+    kristall: brMoney(600, { holz: 2, metall: 2, kristall: 4 }) },
+  uebergang: { holz: { ...FOOT_STYLES.holz.cost }, stein: { ...FOOT_STYLES.stein.cost }, stahl: { money: 200, bretter: 4, metall: 6 }, kristall: { money: 1500, kristall: 10, metall: 2 } },
+  anhoehe: { holz: brMoney(BK_ARTEN.holz.cost, BK_ARTEN.holz.mat), stahl: brMoney(BK_ARTEN.stahl.cost, BK_ARTEN.stahl.mat), stein: brMoney(120, { quader: 3 }),
+    kristall: brMoney(800, { kristall: 4, metall: 1 }) },
+};
+const BR_OPT = { licht: { feld: { money: 20, metall: 1 }, ganz: { money: 60, metall: 2 } }, zacken: { feld: { money: 150, kristall: 2 }, ganz: { money: 400, kristall: 5 } } };
+const brAdd = (a, b, n = 1) => { for (const [r, v] of Object.entries(b || {})) a[r] = (a[r] || 0) + v * n; return a; };
+// Preis im Aussehen look: n Felder (Übergang: die Brücke), samt gekaufter Optionen (licht gesetzt, zacken)
+function brPrice(look, at, n = 1) {
+  const tab = BR_COST[at] || BR_COST.wasser, per = at === 'uebergang' ? 1 : n, opt = at === 'uebergang' ? 'ganz' : 'feld';
+  let base = tab[look && look.mat] || tab.holz;
+  if (look && look.kind && at === 'wasser' && WEG_BRIDGE[look.kind]) base = brMoney(WEG_BRIDGE[look.kind].cost, WEG_BRIDGE[look.kind].mat);   // alte Art: alter Preis
+  if (look && look.kind && at === 'uebergang' && FOOT_STYLES[look.kind]) base = { ...FOOT_STYLES[look.kind].cost };
+  const c = brAdd({ money: 0 }, base, per);
+  if (look && look.licht && !look.lichtGratis) brAdd(c, BR_OPT.licht[opt], per);
+  if (look && look.zacken) brAdd(c, BR_OPT.zacken[opt], per);
+  return c;
+}
+// Was ein Brückenfeld (Übergang: die Brücke, Anhöhe: das ganze Bauwerk) gekostet hat – fürs Erstatten
+function brPaid(o, at) {
+  if (o && brPaidOk(o.brp)) return { ...o.brp };
+  o = o && typeof o === 'object' ? o : {};
+  if (at === 'wasser') { const B = WEG_BRIDGE[bridgeKind(o)] || WEG_BRIDGE.holz; return brMoney(B.cost, B.mat); }
+  if (at === 'gleis') return brMoney(BRIDGE.cost, BRIDGE.mat);
+  if (at === 'uebergang') { const id = footPaidOf(o); return id ? { ...(FOOT_STYLES[id] || FOOT_STYLES.holz).cost } : { money: 0 }; }
+  if (at === 'anhoehe') { const n = Number.isInteger(o.n) && o.n > 0 ? o.n : 1; return brAdd({ money: 0 }, BR_COST.anhoehe[BK_ARTEN[o.art] ? o.art : 'holz'], n); }
+  return { money: 0 };
+}
+// Kopie, Verlängern: nur eingeschaltete Optionen kommen mit (ausgeschaltete gekaufte fallen weg)
+const brOnLook = look => ({ ...look, licht: look.licht === 'an' ? 'an' : null, zacken: !!look.zacken });
+// Rückfallfelder für ältere Fassungen (Bauplan 1.6): was sie als Art bzw. Design lesen
+function brFallback(at, mat) {
+  if (at === 'wasser') return { brk: mat === 'holz' ? 'holz' : 'stein' };
+  if (at === 'uebergang') return { footPaid: mat === 'stein' ? 'stein' : mat === 'kristall' ? 'kristall' : 'holz' };
+  if (at === 'anhoehe') return { art: mat };
+  return {};
+}
+// Kosten-Objekt ↔ { cost, mat } (costOf, demolishInfo)
+const brCostMat = c => { const { money, ...mat } = c; return { cost: money || 0, mat }; };
+// Aussehen eines neuen Brückenfelds übers Wasser: wie die Brücke daneben (verlängern), sonst nach dem Wegstil bzw. Holz (160c F3: später die Leiste)
+function brNewLook(x, y, at) {
+  const want = at === 'gleis' ? (t => !!t && t.b === 'schiene' && !!t.bridge) : isWegBridge;
+  for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy; if (want(state.tiles.get(nx + ',' + ny))) return brOnLook(brSpanLook(nx, ny) || brLegacyLook({}, at)); }
+  return at === 'gleis' ? brLegacyLook({}, 'gleis') : brLegacyLook({ style: currentStyle('weg') }, 'wasser');
 }
 // Speichern/Laden (state.js): die br-Felder eines Objekts streng prüfen – nur gültige Werte, sonst weglassen (= Standard)
 function brClean(o) {

@@ -1990,10 +1990,10 @@ function setBridgeKind(x, y, kind) {
   const tiles = bridgeSpan(x, y).map(([px, py]) => state.tiles.get(px + ',' + py)).filter(t => bridgeKind(t) !== kind);
   if (!tiles.length) return false;
   const nw = WEG_BRIDGE[kind], c = (B, n = 1) => Object.fromEntries(Object.entries({ money: B.cost, ...B.mat }).map(([r, v]) => [r, v * n]));
-  for (const t of tiles) addCost(c(WEG_BRIDGE[bridgeKind(t)]), 1);
-  if (!canPay(c(nw, tiles.length))) { for (const t of tiles) addCost(c(WEG_BRIDGE[bridgeKind(t)]), -1); fail(state.money < nw.cost * tiles.length ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  for (const t of tiles) addCost(brPaid(t, 'wasser'), 1);                // was bezahlt wurde zurück (160c A4: auch Kopien mit brp)
+  if (!canPay(c(nw, tiles.length))) { for (const t of tiles) addCost(brPaid(t, 'wasser'), -1); fail(state.money < nw.cost * tiles.length ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
   addCost(c(nw, tiles.length), -1);
-  for (const t of tiles) { if (kind === (BRIDGE_OF_STYLE[t.style || 'sand'] || 'stein')) delete t.brk; else t.brk = kind; }
+  for (const t of tiles) { delete t.brp; for (const f of BR_KEYS) if (f !== 'brc' && f !== 'brw') delete t[f]; if (kind === (BRIDGE_OF_STYLE[t.style || 'sand'] || 'stein')) delete t.brk; else t.brk = kind; }   // wieder alte Art
   groundVersion++; sfx('build'); recalc(); save();
   return true;
 }
@@ -2074,11 +2074,10 @@ function setBridgeColor(x, y, key, v) {
   for (const [px, py] of bridgeSpan(x, y)) { const t = state.tiles.get(px + ',' + py); if (v == null) delete t[key]; else t[key] = v; }
   groundVersion++; save();
 }
-// Art eines neuen Brückenfelds: wie die Brücke, an die es anschließt, sonst nach dem gewählten Wegstil (66c)
-const newBridgeKind = (x, y) => { const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge); return nb ? bridgeKind(nb) : bridgeKind({ style: currentStyle('weg') }); };
-const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? BRIDGE
+// Brücke übers Wasser (Block 66; 160c A4): Preis im Aussehen der Brücke, an die das Feld anschließt, sonst nach dem Wegstil bzw. Holz-Gleis
+const costOf = (b, x, y) => b === 'schiene' && terrainAt(x, y) === 'water' ? brCostMat(brPrice(brNewLook(x, y, 'gleis'), 'gleis'))
   : b === 'tunnel' && terrainAt(x, y) === 'water' ? TUNNEL_WATER
-  : b === 'weg' && terrainAt(x, y) === 'water' ? WEG_BRIDGE[newBridgeKind(x, y)]
+  : b === 'weg' && terrainAt(x, y) === 'water' ? brCostMat(brPrice(brNewLook(x, y, 'wasser'), 'wasser'))
   : b === 'schuett' ? { cost: fillCost(x, y), mat: undefined }
   : { cost: ITEMS[b].cost || 0, mat: ITEMS[b].mat };
 // U-Bahn (Block 136): Tunnel liegen in state.tunnels unter der Oberfläche und gehören zum Schienennetz. Ein Feld ist Schiene ODER
@@ -2295,11 +2294,11 @@ function setCrossing(x, y, foot, style) {
     const had = footPaidOf(t);
     style = FOOT_STYLES[style] ? style : had || 'holz';
     if (had !== style) {
-      const cost = FOOT_STYLES[style].cost, back = had ? FOOT_STYLES[had].cost : {};
+      const cost = FOOT_STYLES[style].cost, back = had ? brPaid(t, 'uebergang') : {};   // was bezahlt wurde zurück (160c A4: auch Kopien mit brp)
       addCost(back, 1);
       if (!canPay(cost)) { addCost(back, -1); fail(state.money < cost.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
       addCost(cost, -1);
-      t.footPaid = style;
+      t.footPaid = style; delete t.brp; for (const f of BR_KEYS) if (f !== 'brc' && f !== 'brw') delete t[f];   // wieder altes Design
     }
   }
   t.foot = !!foot;
@@ -3066,7 +3065,8 @@ function fullValue(t) {
   const d = ITEMS[t.b], c = { money: (t.price != null ? t.price : d.baseCost || d.cost) || 0, ...(d.mat || {}) }, add = o => { for (const [r, n] of Object.entries(o || {})) c[r] = (c[r] || 0) + n; };
   if (t.b === 'haus') for (let l = 1; l < t.lvl; l++) add(houseCost(HOUSE_STAGES[l]));
   else if (BUILD_STAGES[t.b]) BUILD_STAGES[t.b].up.slice(0, (t.lvl || 1) - 1).forEach(u => add(u.cost));
-  if (t.b === 'schiene' && t.bridge) { c.money = BRIDGE.cost; }
+  if (t.bridge && (t.b === 'schiene' || t.b === 'weg')) { const p = brPaid(t, t.b === 'weg' ? 'wasser' : 'gleis'); for (const r of Object.keys(c)) delete c[r]; brAdd(c, p); }   // Brücke: was sie gekostet hat (160c A4)
+  if (isCrossing(t)) { brAdd(c, { money: ITEMS.weg.cost }); brAdd(c, brPaid(t, 'uebergang')); }   // Übergang: Weg und Fußgängerbrücke mit
   return c;
 }
 function growTownHall() {
@@ -3413,10 +3413,10 @@ function demolishInfo(x, y, under = false) {                            // under
     }
     // Deko und Wege gibt es voll zurück (Umgestalten soll nichts kosten), Gebäude zur Hälfte – auch die Ausbau-Taler
     const full = d.cat === 'deko' || d.cat === 'markt' || t.b === 'weg' || t.b === 'schiene';
-    const paid = t.b === 'schiene' && t.bridge ? BRIDGE : isWegBridge(t) ? WEG_BRIDGE[bridgeKind(t)] : t.b === 'huegelrampe' ? rampPaid(t)   // Gleis-Rampe: Preis ihrer Form (hills.js)
+    const paid = t.b === 'schiene' && t.bridge ? brCostMat(brPaid(t, 'gleis')) : isWegBridge(t) ? brCostMat(brPaid(t, 'wasser')) : t.b === 'huegelrampe' ? rampPaid(t)   // Brücke: was sie gekostet hat (160c A4); Gleis-Rampe: Preis ihrer Form (hills.js)
       : { cost: t.price != null ? t.price : d.baseCost || d.cost, mat: d.mat };   // Preis nach Einkommen: was bezahlt wurde (alte Stände: Grundpreis)
     if (isCrossing(t)) {                             // Übergang: Schiene und Weg (und die Fußgängerbrücke) zurück
-      const { money: fm, ...fmat } = footPaidOf(t) ? FOOT_STYLES[footPaidOf(t)].cost : { money: 0 }, mat = { ...d.mat };
+      const { money: fm, ...fmat } = brPaid(t, 'uebergang'), mat = { ...d.mat };   // Fußgängerbrücke: was sie gekostet hat (160c A4)
       for (const [r, n] of Object.entries(fmat)) mat[r] = (mat[r] || 0) + n;
       return { anchor: a, refund: d.cost + ITEMS.weg.cost + fm, mat, label: 'Bahnübergang entfernen' };
     }

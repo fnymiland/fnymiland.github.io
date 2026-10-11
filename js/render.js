@@ -1760,7 +1760,7 @@ function render(now) {
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
-        else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${c === BRIDGE ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
+        else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${terrainAt(hx, hy) === 'water' ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
           // Die ganze Insel neu rechnen kostet: erst, wenn die Maus kurz auf dem Feld ruht (beim Drüberfahren nur Name/Ort)
           const hk = hx + ',' + hy + tool;

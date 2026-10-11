@@ -140,10 +140,10 @@ function build(b, x, y, quiet) {
     state.terra.set(k, 'grass'); sandCache.clear(); waterChanged(); sfx('dig');
     const rt = state.tiles.get(k);                 // unter einer Brücke aufgeschüttet: normale Schiene, Unterschied zurück
     if (rt && rt.bridge) {
-      const paid = rt.b === 'weg' ? WEG_BRIDGE[bridgeKind(rt)] : BRIDGE;          // Wegbrücke (Block 66) wie Schienenbrücke
-      delete rt.bridge; delete rt.brk;
-      state.money += paid.cost - ITEMS[rt.b].cost;
-      for (const [r, n] of Object.entries(paid.mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
+      const { money, ...mat } = brPaid(rt, rt.b === 'weg' ? 'wasser' : 'gleis');   // was die Brücke gekostet hat (160c A4), Weg-/Schienenpreis bleibt
+      delete rt.bridge; delete rt.brk; delete rt.brp; for (const f of BR_KEYS) delete rt[f];   // ganz zur normalen Schiene bzw. zum Weg
+      state.money += money - ITEMS[rt.b].cost;
+      for (const [r, n] of Object.entries(mat)) state.res[r] += n - ((ITEMS[rt.b].mat || {})[r] || 0);
     }
   } else {
     if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Gleis-Rampe in die Anhöhe (A, C; hills.js): ihre eingelassenen Felder absenken
@@ -152,9 +152,13 @@ function build(b, x, y, quiet) {
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
-    if (bridge && b === 'weg') {                                      // Brücke verlängern: Art und Farben der alten übernehmen (66c)
-      const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(isWegBridge), nt = state.tiles.get(k);
-      if (nb) { for (const key of ['brc', 'brw']) if (nb[key] != null) nt[key] = nb[key]; if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
+    if (bridge) {                                                     // Brücke verlängern: Aussehen der alten übernehmen (66c; 160c: alle br-Felder, nur Eingeschaltetes)
+      const want = b === 'weg' ? isWegBridge : (t => !!t && t.b === 'schiene' && !!t.bridge);
+      const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(want), nt = state.tiles.get(k);
+      if (nb) {
+        for (const key of BR_KEYS) if (nb[key] != null && !((key === 'brl' || key === 'brz') && nb[key] !== 'an')) nt[key] = nb[key];
+        if (b === 'weg') { if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
+      }
     }
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (b === 'weg') state.tiles.get(k).lauf = wegLaufNew(x, y);        // Wegrichtung (Block 158): aus der Zugrichtung, sonst wie die Nachbarn
@@ -537,6 +541,17 @@ function copyClone(it) {
     const t = JSON.parse(JSON.stringify(it.t));
     for (const f of ['animal', 'name', 'more', 'born', 'ships', 'pbz', 'train', 'trainCol', 'trainPlus', 'extra', 'gleis']) delete t[f];   // Bewohner, Fahrzeuge: nicht mit
     if (t.cross && !t.foot) delete t.footPaid;                           // Schranken: die Brücke von früher ist nicht mitgekauft (160c V3)
+    const at = t.b === 'weg' && t.bridge ? 'wasser' : t.b === 'schiene' && t.bridge ? 'gleis' : t.cross && t.foot ? 'uebergang' : null;
+    if (at) {                                                            // Brücke (160c A4): die Kopie hat bezahlt, was sie kostet – nur Eingeschaltetes,
+      const look = brOnLook(brLook(t, at));                               // Aussehen ausdrücklich (brp = neues Format, die Altfelder bleiben als Rückfall)
+      t.brm = look.mat; t.brb = look.deck;
+      if (look.licht === 'an') t.brl = 'an'; else delete t.brl;
+      if (look.zacken) t.brz = 'an'; else delete t.brz;
+      if (look.stuetzen !== 'wenige') t.bru = look.stuetzen; else delete t.bru;
+      if (look.col != null) t.brc = look.col; else delete t.brc;
+      if (look.plank != null) t.brw = look.plank; else delete t.brw;
+      t.brp = brPrice(look, at);
+    }
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt
   else if (it.kind === 'edge') { const { born, ...e } = it.e; c.e = e; }
@@ -581,8 +596,8 @@ function copyCost(items) {
 // Ausbaustufen und Aufpreisen: Brücke, Märchenschloss-Gestalt, langer Bahnhof, Gleise im Hauptbahnhof, Looping, Bahnübergang/Fußgängerbrücke
 function copyTileCost(t) {
   const d = ITEMS[t.b], c = { money: 0 }, add = (o, n = 1) => { for (const [r, v] of Object.entries(o || {})) c[r] = (c[r] || 0) + v * n; };
-  if (t.b === 'weg' && t.bridge) { const B = WEG_BRIDGE[bridgeKind(t)]; add({ money: B.cost, ...B.mat }); }
-  else if (t.b === 'schiene' && t.bridge) add({ money: BRIDGE.cost, ...BRIDGE.mat });
+  if (t.b === 'weg' && t.bridge) add(brPrice(brOnLook(brLook(t, 'wasser')), 'wasser'));        // Brücke (160c A4): im Aussehen, nur Eingeschaltetes
+  else if (t.b === 'schiene' && t.bridge) add(brPrice(brOnLook(brLook(t, 'gleis')), 'gleis'));
   else if (t.b === 'huegelrampe') { const R = rampCost(rampFormOf(t)); add({ money: R.cost, ...R.mat }); }   // Gleis-Rampe: Preis ihrer Form (ITEMS zeigt die der Leiste)
   else if (t.b === 'fz_schloss') add({ money: castlePrice(csOf(t)), ...d.mat });
   else add({ money: d.cost || 0, ...d.mat });
@@ -591,7 +606,7 @@ function copyTileCost(t) {
   if (t.b === 'station' && stationLen(t) === 3) add(STATION_LEN_COST);
   if (t.b === 'hbf') add(GLEIS_COST, Math.max(0, hbfGleise(t) - HBF_MIN));
   if (t.loop) add({ money: ITEMS.fz_looping.cost });
-  if (t.cross) { add({ money: ITEMS.weg.cost }); if (t.foot) add((FOOT_STYLES[footPaidOf(t)] || FOOT_STYLES.holz).cost); }
+  if (t.cross) { add({ money: ITEMS.weg.cost }); if (t.foot) add(brPrice(brOnLook(brLook(t, 'uebergang')), 'uebergang')); }
   return c;
 }
 // Pipette: nur Wege, nur Gleise oder nur eine Linienart – jeweils ein Stil. Gibt das Werkzeug zurück (oder null)

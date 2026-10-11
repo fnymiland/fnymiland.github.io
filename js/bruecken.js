@@ -18,7 +18,7 @@ const BK_READ_MAX = 8;                                                    // so 
 const BK_NO_PAINT = new Set(['wald', 'obstwald', 'fels', 'anhoehe']);   // Gelände, das darunter nicht passt (Bäume, Felsen, Anhöhe)
 const bkArtOf = b => BK_ARTEN[b && b.art] ? b.art : 'holz';
 const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';
-const bkCost = (art, n) => { const A = BK_ARTEN[art]; return { cost: A.cost * n, mat: Object.fromEntries(Object.entries(A.mat).map(([r, v]) => [r, v * n])) }; };
+const bkCost = (art, n) => brCostMat(brAdd({ money: 0 }, BR_COST.anhoehe[art] || BR_COST.anhoehe.holz, n));   // Preise: brueckenfamilie.js (160c A4)
 // Holzbock auf Feld i der Lücke (nur Holz, länger als frei spannt): dort darf unten kein Weg und keine Schiene durch. Trägt der Holzsteg ein Gleis
 // (160b, Nutzer: „Holz bekommt engere Böcke, wie ein Eisenbahn-Holzviadukt“): ab 2 Feldern unter jedem Feld ein Bock
 const bkBock = (art, n, i, rail = false) => art === 'holz' && (rail ? n >= 2 : n > BK_ARTEN.holz.frei && (i === 0 || i === n - 1));
@@ -156,7 +156,7 @@ function bkDemolishInfo(x, y) {
   const nw = (c.b.weg || []).filter(Boolean).length, ng = bkRailCount(c.b);
   if (nw) return { k: c.k, weg: true, refund: nw * ITEMS.weg.cost, label: 'Weg auf der Brücke entfernen' };
   if (ng) return { k: c.k, gleis: true, refund: ng * ITEMS.schiene.cost, mat: Object.fromEntries(Object.entries(ITEMS.schiene.mat || {}).map(([r, v]) => [r, v * ng])), label: 'Gleis auf der Brücke entfernen' };
-  const bc = bkCost(bkArtOf(c.b), c.b.n);
+  const bc = brCostMat(brPaid(c.b, 'anhoehe'));                            // was sie gekostet hat (160c A4)
   return { k: c.k, refund: bc.cost, mat: bc.mat, label: `${BK_ARTEN[bkArtOf(c.b)].name} abreißen` };
 }
 function bkDemolishAt(x, y, all = false) {                                // all: Weg/Gleis und Brücke zusammen (Fenster „Abreißen“)
@@ -167,7 +167,7 @@ function bkDemolishAt(x, y, all = false) {                                // all
   if (nw) { back += nw * ITEMS.weg.cost; delete b.weg; }
   if (ng) { back += ng * ITEMS.schiene.cost; for (const [r, n] of Object.entries(ITEMS.schiene.mat || {})) state.res[r] += n * ng; delete b.gleis; }
   if ((!nw && !ng) || all) {
-    const bc = bkCost(bkArtOf(b), b.n);
+    const bc = brCostMat(brPaid(b, 'anhoehe'));                            // was sie gekostet hat (160c A4)
     back += bc.cost;
     for (const [r, n] of Object.entries(bc.mat)) state.res[r] += n;
     state.bruecken.delete(c.k);
@@ -185,13 +185,14 @@ function bkSetArt(k, art) {
   if (A.tech && !state.techs.has(A.tech)) { fail(`${A.name}: erst mit der Eisenbahn`); return false; }
   const cells = bkCellsOf(k, b);
   for (let i = 0; i < cells.length; i++) { const t = objAt(...cells[i]); if (t && bkBock(art, b.n, i, bkRailAny(b))) { fail(`Hier käme ein Holzbock hin – erst ${t.b === 'weg' ? 'den Weg' : 'die Schiene'} darunter wegnehmen`); return false; } }
-  const old = bkCost(bkArtOf(b), b.n), nu = bkCost(art, b.n);
+  const old = brCostMat(brPaid(b, 'anhoehe')), nu = bkCost(art, b.n);      // alt: was bezahlt wurde (160c A4)
   if (state.money + old.cost < nu.cost) { fail('Zu wenig Taler'); return false; }
   for (const [r, n] of Object.entries(nu.mat)) if ((state.res[r] || 0) + (old.mat[r] || 0) < n) { fail(`Zu wenig ${RES[r].name}`); return false; }
   state.money += old.cost - nu.cost;
   for (const [r, n] of Object.entries(old.mat)) state.res[r] += n;
   payMat(nu.mat);
   b.art = art;
+  if (b.brp) b.brp = brMoney(nu.cost, nu.mat);                              // neues Format: bezahlt ist jetzt die neue Art
   groundVersion++; sfx('road'); save();
   return true;
 }

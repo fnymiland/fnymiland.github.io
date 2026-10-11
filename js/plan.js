@@ -246,7 +246,7 @@ function scanDemolish(p) {
     }
     const [cx, cy] = cells[0];
     order.push([cx, cy, () => bkDemolishAt(cx, cy, true)]);
-    gain += bkCost(bkArtOf(br), br.n).cost + (br.weg || []).filter(Boolean).length * ITEMS.weg.cost + bkRailCount(br) * ITEMS.schiene.cost; things++;   // samt Gleis (160b)
+    gain += brPaid(br, 'anhoehe').money + (br.weg || []).filter(Boolean).length * ITEMS.weg.cost + bkRailCount(br) * ITEMS.schiene.cost; things++;   // samt Gleis (160b)
     for (const [qx, qy] of cells) if (states.get(qx + ',' + qy) !== 'bad') states.set(qx + ',' + qy, 'ok');
     onHill = true;                                                        // ihre Anhöhen bleiben (erst, was oben steht)
   }
