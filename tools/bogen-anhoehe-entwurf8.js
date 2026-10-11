@@ -18,7 +18,7 @@
   // Brücken: [Zeile y, Anhöhe A bis xa1, Anhöhe B ab xb0, Art]
   const BR = [];
   // Abwandlungen: pk Höhe (× Entwurf 2), sp Ansatz unter der Kante, th Dicke am Scheitel, par Brüstung, ring Bogenkante, col Farben, deck Belag
-  const VAR = [], STUFEN = [10, 14, 17, 20, 23];                             // Ansatz der Bögen an den Pfeilern (Anhöhe: 26)
+  const VAR = [], STUFEN = [0.4, 0.7, 1, 1.4, 1.9];                        // Höhe des Buckels (× halbe Höhe übers Wasser); Nutzer: „ich sehe keinen Unterschied“ – vorher nur der Ansatz an den Pfeilern
   const mock = new Set();
   function setup() {
     for (let y = 0; y <= 38; y++) for (let x = 2; x <= 30; x++) {
@@ -39,7 +39,7 @@
       BR.push({ y, U0: xa1 + 0.5, U1: xb0 - 0.5, art, st, B: [xb0, xb1, ...hy], o });
     };
     hill(6, 2, 9, 31); hill(16, 2, 19, 31); hy = [2, 31];                    // Lücke 6, fünf Stufen
-    STUFEN.forEach((hp, k) => row(4 + 6 * k, 6, 9, 16, 19, 'stein', { piers: true, hp }));
+    STUFEN.forEach((f, k) => row(4 + 6 * k, 6, 9, 16, 19, 'stein', { piers: true, hp: 14, pk: f }));
     for (const px of [10, 13, 15]) for (let y = 0; y <= 33; y++) weg(px, y, 'sand');
     groundVersion++; recalc();
     hill(24, 20, 25, 22); hill(28, 20, 29, 22);                              // eine echte Brücke weit weg: bkOn() gilt (Arme über die Kante)
@@ -168,7 +168,7 @@
   window.bogenEntwurf8 = async (name = 'bogen-anhoehe-8.png', Wd = 620, Hd = 460) => {
     setup();
     const na = nightAt, gh = gameHour; nightAt = () => 0; gameHour = () => 12; night = 0;
-    const list = STUFEN.map((hp, k) => [12.5, 4 + 6 * k, 1.45, `Stufe ${k + 1}: Bögen setzen bei ${hp} an`]).concat([[9.9, 4, 5, 'Stufe 1, Anfang nah'], [9.9, 16, 5, 'Stufe 3, Anfang nah'], [9.9, 28, 5, 'Stufe 5, Anfang nah']]);
+    const list = STUFEN.map((f, k) => [12.5, 4 + 6 * k, 1.45, `Stufe ${k + 1}: Buckel ${Math.round(f * 100)} %`]).concat([[9.9, 4, 5, 'Stufe 1, Anfang nah'], [9.9, 16, 5, 'Stufe 3, Anfang nah'], [9.9, 28, 5, 'Stufe 5, Anfang nah']]);
     const cols = 2, rows = Math.ceil(list.length / cols), sheet = document.createElement('canvas'); sheet.width = cols * (Wd + 16); sheet.height = rows * (Hd + 50);
     const sx = sheet.getContext('2d'); sx.fillStyle = '#fffaf0'; sx.fillRect(0, 0, sheet.width, sheet.height);
     try {
