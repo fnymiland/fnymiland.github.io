@@ -147,7 +147,7 @@ describe('Ecktreppen nur breit', () => {
 });
 
 describe('Aussehen', () => {
-  it('eingelassen: links und rechts ein Streifen Anhöhe; vor der Wand Keile; zwei schmale nebeneinander: eingelassen bleibt Anhöhe dazwischen, vor der Wand Keile', () => {
+  it('eingelassen: links und rechts eine Grasböschung (bis 11.10.2026 ein Streifen Anhöhe); vor der Wand Keile; zwei schmale nebeneinander: eingelassen Böschung an Böschung, vor der Wand Keile', () => {
     hills(block(10, 10, 16, 13));
     game("build('huegeltreppe', 11, 13)");                                                   // eingelassen
     expect(look(11, 13)).toBe('hh:n');
@@ -156,20 +156,20 @@ describe('Aussehen', () => {
     hills(block(4, 4, 8, 6));
     game("build('huegeltreppe', 5, 7); build('huegeltreppe', 6, 7)");                        // vor der Wand
     expect([look(5, 7), look(6, 7)]).toEqual(['kw:n', 'wk:n']);
-    // breit neben schmal: eingelassen ist der Streifen der schmalen die Wange der breiten, vor der Wand je ein Keil
+    // breit neben schmal: eingelassen liegt die Böschung der schmalen tiefer als die Stufen der breiten – die breite zeigt dorthin ihre Wangen (cm)
     game("stairNewWide = true; build('huegeltreppe', 16, 13); stairNewWide = null; build('huegeltreppe', 15, 13)");
     expect([look(15, 13), look(16, 13)]).toEqual(['rr:n', 'hk']);                           // 16,13 am Rand der Anhöhe: außen ein Keil
-    expect(game("(o => [o.fm, o.op])(stairLook(15, 13, stairAt(15, 13)))")).toEqual([1, 1]);   // links Streifen an Streifen, rechts Wand zur breiten
+    expect(game("(o => [!!o.cm, !!o.cp])(stairLook(16, 13, stairAt(16, 13)))")).toEqual([true, false]);
     game("stairNewWide = true; build('huegeltreppe', 7, 7); stairNewWide = null");
     expect(look(7, 7)).toBe('wk');
     expect(game('levelLink(6, 7, 7, 7, "fuss") || levelLink(5, 7, 6, 7, "weg")')).toBe(false);   // getrennte Durchgänge
   });
 
-  it('Zeichnen: Stufen so breit wie ein Weg samt Rand, Streifen auf Höhe der Anhöhe, nichts darüber; alle Richtungen, alle Seiten ohne Fehler', () => {
+  it('Zeichnen: Stufen so breit wie ein Weg samt Rand, Grasböschung vom Fuß bis oben, nichts darüber; alle Richtungen, alle Seiten ohne Fehler', () => {
     expect(game('STAIR_NW')).toBe(game('EDGE_W'));
     const fill = game("C(lookFar(pathLook('sand'), 1).fill)"), top = game("C('#123456')");
     for (let rot = 0; rot < 4; rot++) for (const [m, p] of [['h', 'h'], ['k', 'k'], ['r', 'w'], ['w', 'r'], ['h', 'k']]) {
-      const o = { rot, style: 'sand', kind: 'fels', m, p, top: '#123456', nar: 1, fm: 1, fp: 1, ...(m === 'r' ? { om: 1 } : {}) };
+      const o = { rot, style: 'sand', kind: 'fels', m, p, top: '#123456', nar: 1 };
       const calls = record(`paintStair((u, v, up = 0) => [u, v, up], ${JSON.stringify(o)}, 5, 5)`);
       const [Du, Dv] = game(`STAIR_UP[${rot}]`), s = ([u, v]) => u * -Dv + v * Du;
       const treads = calls.filter(c => c.op === 'poly' && c.fill === fill);
@@ -181,35 +181,26 @@ describe('Aussehen', () => {
         const t = tops.find(tp => tp.pts.every(q => s(q) * sg > 0.3));
         expect(t).toBeTruthy();
         expect(Math.max(...t.pts.map(q => s(q) * sg))).toBeGreaterThanOrEqual(0.5);
-        if (c === 'h' || c === 'r') expect(t.pts.every(q => q[2] === H)).toBe(true);           // Streifen Anhöhe: ganz oben
+        if (c === 'h' || c === 'r') expect([Math.min(...t.pts.map(q => q[2])), Math.max(...t.pts.map(q => q[2]))]).toEqual([0, H]);   // Böschung: vom Boden bis oben
         else expect(Math.min(...t.pts.map(q => q[2]))).toBe(H / 8);                            // Keil: vorn eine Stufe hoch
       }
       for (const c of calls) if (c.op === 'poly') for (const q of c.pts) expect(q[2]).toBeLessThanOrEqual(H + 0.4 + 1e-9);
-      // kurze Wände (Streifen am Fuß) mit ihrer Länge: keine gedrängten Risse
-      const strips = calls.filter(c => c.op === 'wall' && c.a[7] === H);                       // Wände der Streifen (ganz hoch)
-      const nearSg = -Dv + Du > 0 ? 1 : -1, want = [[-1, m, 'om'], [1, p, 'op']].filter(([, c]) => c === 'h' || c === 'r')   // sichtbar: Fuß (steigt weg), innen (hinten), außen (vorn, an breiter Treppe)
-        .reduce((n, [sg, , k]) => n + (rot === 0 || rot === 3 ? 1 : 0) + (sg !== nearSg ? 1 : 0) + (sg === nearSg && o[k] ? 1 : 0), 0);
-      expect(strips.length).toBe(want);
-      for (const w of strips) expect([0.5 - 0.36, 7 / 8]).toContain(w.a[15]);
+      expect(calls.filter(c => c.op === 'wall' && c.a[7] === H).length).toBe(0);              // keine Wände ganz hoch mehr (die Streifen sind weg)
     }
   });
 
-  it('Anhöhe neben dem Streifen: keine Wand und keine dunkle Kante dorthin (er ist gleich hoch), ihre Wand am Fuß läuft in seine weiter', () => {
+  it('Anhöhe neben der schmalen Treppe: wie neben einer breiten – ihre Wand ist die Wange über der Böschung', () => {
     hills(block(10, 10, 14, 13));
     game("build('huegeltreppe', 12, 13)");                                                   // hinauf nach −y, Anhöhe bei 11,13 und 13,13
-    expect([game('hillStairEnds(11, 13)'), game('hillStairEnds(13, 13)')]).toEqual(['M', 'A']);
-    expect(game('hillWallsAt(11, 13, 1, hillStairEnds(11, 13))')).toEqual([0, 1]);           // keine Wand nach +x, vorn schon
-    expect(game('hillExt(11, 13, 1, "M")[0]')).toBe(0.0075);                                  // Wand vorn ein Stück unter den Streifen
-    const calls = record('paintHill(13, 13, hillAt(13, 13))');
-    expect(calls.filter(c => c.op === 'stroke' && c.stroke === 'rgba(45,85,30,0.5)').length).toBe(0);   // keine dunkle Kante zur Treppe hin
-    // breit wie bisher: Wange und dunkle Kante bis zur obersten Stufe
-    game("delete stairAt(12, 13).schmal; groundVersion++");
-    expect([game('hillStairEnds(11, 13)'), game('hillStairEnds(13, 13)')]).toEqual(['', 'a']);
-    // quer (hinauf nach ±x): N und C
+    expect([game('hillStairEnds(11, 13)'), game('hillStairEnds(13, 13)')]).toEqual(['', 'a']);   // wie breit
+    expect(game('hillWallsAt(11, 13, 1, hillStairEnds(11, 13))')).toEqual([1, 1]);           // Wand nach +x (zur Treppe hin) und vorn
+    // quer (hinauf nach ±x): ebenso wie breit
     hills(block(17, 10, 20, 14));
     game("build('huegeltreppe', 17, 12)");                                                   // hinauf nach +x, Anhöhe bei 17,11 und 17,13
     expect(game('stairAt(17, 12).rot')).toBe(1);
-    expect([game('hillStairEnds(17, 11)'), game('hillStairEnds(17, 13)')]).toEqual(['N', 'C']);
+    const nar = [game('hillStairEnds(17, 11)'), game('hillStairEnds(17, 13)')];
+    game("delete stairAt(17, 12).schmal; groundVersion++");
+    expect([game('hillStairEnds(17, 11)'), game('hillStairEnds(17, 13)')]).toEqual(nar);
   });
 
   it('Bilder: zeichnen in allen Richtungen ohne Fehler (nah, weit, nachts, Vorschau in die Anhöhe), Schatten der Streifen', () => {
@@ -234,13 +225,13 @@ describe('Aussehen', () => {
 });
 
 describe('Spiel', () => {
-  it('Höhe: auf den Stufen wie bisher, auf dem Streifen Anhöhe oben; Bewohner gehen in der Mitte hinauf', () => {
+  it('Höhe: auf den Stufen wie bisher, auf der Böschung gerade vom Fuß bis oben; Bewohner gehen in der Mitte hinauf', () => {
     hills(block(10, 10, 14, 13));
     game("build('huegeltreppe', 12, 13)");
     const n = game('STAIR_N');
     expect(game('stairHeight(12, 13, 12, 13.45)')).toBe(H / n);                              // vorn, Mitte
-    expect(game('stairHeight(12, 13, 11.6, 13.45)')).toBe(H);                                 // Streifen links
-    expect(game('stairHeight(12, 13, 12.4, 13.45)')).toBe(H);                                 // Streifen rechts
+    expect(game('stairHeight(12, 13, 11.6, 13.45)')).toBeCloseTo(H * 0.05, 9);                // Böschung links, vorn
+    expect(game('stairHeight(12, 13, 12.4, 12.6)')).toBeCloseTo(H * 0.9, 9);                  // Böschung rechts, oben
     expect(game('stairHeight(12, 13, 12.3, 13.45)')).toBe(H / n);                             // noch auf den Stufen
     // Weg über die Treppe: Bewohner zu Fuß, Fahrzeuge nicht
     expect([game('levelLink(12, 14, 12, 13, "fuss")'), game('levelLink(12, 14, 12, 13, "weg")'), game('levelLink(12, 14, 12, 13, "fahr")')]).toEqual([true, true, false]);

@@ -2552,3 +2552,11 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Nachtrag (Nutzer: „wieso gibt es keinen R-Drehen-Knopf?“): für die Treppe fehlten beim Bauen ⟳ unten, R und Mausrad (galten nur für
       ROTATABLE) – jetzt `turnsWhileBuilding` (ROTATABLE + Treppe); gedreht wird reihum unter den passenden Richtungen, rückwärts (Mausrad) auch
       rückwärts (`rotStep`). Test: treppe-drehen.
+- [x] 157q **Schmale Treppe: Grasböschung statt Streifen Anhöhe** (Nutzer 11.10.2026: „besser, wenn der Aufgang immer gleich breit ist und nur
+      der Weg darauf schmaler oder breiter – dann eine Graskante links und rechts“; Entwurf tools/treppe-boeschung-entwurf.js, gewählt A, „breit
+      bleibt wie jetzt“): eingelassen läuft links und rechts der schmalen Stufen eine Grasböschung gerade vom Fuß bis zur Oberkante (durch die
+      Hinterkanten der Stufen, Farbe des Felds), zur sichtbaren Seite je Stufe eine Wange; die Anhöhe daneben behandelt sie wie eine breite (ihre
+      Wand ist die Wange, `hillStairEnds` ohne A/C/M/N für Treppen); breit neben schmal zeigt zur Böschung hin ihre Wangen (`cm`/`cp`); Höhe für
+      Figuren und Antippen auf der Böschung schräg (`stairHeight`); Schatten ohne die Streifen-Quader; Übermalen vor Figuren vorn als Keil. Vor
+      der Wand unverändert (Keil). Prüfung tools/treppe-boeschung-pruefung.js (+y/+x, zwei nebeneinander, breit/schmal gemischt, am Rand; z 1,6/4/8).
+      Tests: treppe-breite angepasst.

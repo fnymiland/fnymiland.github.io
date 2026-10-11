@@ -214,15 +214,11 @@ function hillStairEnds(x, y) {
   let s = '';
   for (const [c, r, dx, dy] of [['v', 0, 0, 1], ['u', 3, 1, 0], ['U', 1, -1, 0], ['V', 2, 0, -1], ['a', 0, -1, 0], ['b', 2, -1, 0], ['c', 3, 0, -1], ['d', 1, 0, -1]]) {
     const nx = x + dx, ny = y + dy, side = 'abcd'.includes(c);
-    if (stairRotAt(nx, ny) === r && (!side || drawLevel(nx, ny) + 1 === hillLevel(x, y))) s += side && stairSchmalAt(nx, ny) ? (c < 'c' ? 'A' : 'C') : c;
+    if (stairRotAt(nx, ny) === r && (!side || drawLevel(nx, ny) + 1 === hillLevel(x, y))) s += c;   // schmal wie breit: neben ihr die Böschung (11.10.2026), die Wand hier ist ihre Wange
     else if (!side && rs) {
       const F = RAMP_FORMS[rampTopFormAt(nx, ny, r)];
       if (F) s += F.cut ? c : c === 'U' ? (F.viadukt ? 'X' : 'P') : c === 'V' ? (F.viadukt ? 'Y' : 'Q') : '';
     }
-  }
-  for (const [c, dx, dy] of [['M', 1, 0], ['N', 0, 1]]) {                // quer daneben: bei +x eine Treppe hinauf nach ±y, bei +y nach ±x
-    const r = stairRotAt(x + dx, y + dy);
-    if (r >= 0 && (r & 1) === dy && stairSchmalAt(x + dx, y + dy) && drawLevel(x + dx, y + dy) + 1 === hillLevel(x, y)) s += c;
   }
   if (rs) for (const [c, dx, dy] of [['U', -1, 0], ['V', 0, -1], ['M', 1, 0], ['N', 0, 1]]) {   // Streifen im schmalen Einschnitt daneben
     if (!s.includes(c) && rampStripAt(x + dx, y + dy, dy ? 1 : 0) && drawLevel(x + dx, y + dy) + 1 === hillLevel(x, y)) s += c;
@@ -445,11 +441,6 @@ function drawHillShadows(want) {
       c.forEach((p, n) => n ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath();
     };
     shape(pts);
-    if (stairSchmal(t)) for (const sg of [-1, 1]) {                      // schmal: die Streifen Anhöhe daneben sind ganz hoch (Quader)
-      if (!stairStrip(stairSide(x, y, t, sg))) continue;
-      const q = [[-0.5, STAIR_NW], [0.5, STAIR_NW], [0.5, 0.5], [-0.5, 0.5]].map(([d, s]) => [Du * d - Dv * s * sg, Dv * d + Du * s * sg]);
-      shape(q.flatMap(([u, v]) => [P(u, v, 0), P(u, v, H)]));
-    }
   }
   if (rampFresh().n) for (const [k, t] of state.tiles) {                 // Gleis-Rampe: je Feld der Körper (vorn h0, hinten h1) samt Grundfläche –
     if (!isRamp(t)) continue;                                            // Damm schmal, Viadukt schmaler, schmaler Einschnitt mit seinen Streifen ganz hoch
@@ -541,7 +532,7 @@ function stairRowCut(x, y, rot, L = hillLevel) {
   }
   return false;
 }
-const stairStrip = c => c === 'h' || c === 'r';                          // schmal: Seite mit Streifen Anhöhe (ganz hoch)
+const stairStrip = c => c === 'h' || c === 'r';                          // schmal: Seite mit Grasböschung (Anhöhe bzw. schmale Treppe daneben; bis 11.10.2026 ein Streifen Anhöhe)
 // alle Treppen (gemerkt je Boden-Fassung wie rfFresh): list = die, hinter denen Anhöhe liegt; n = alle Treppenfelder
 let stairCache = { ver: '', list: [], n: 0 };
 function stairFresh() {
@@ -567,9 +558,9 @@ const hillStairs = () => stairFresh().list;
 function stairHeight(x, y, u, v) {
   const t = stairAt(x, y), a = u - x, b = v - y;
   if (!t || Math.abs(a) > 0.5 || Math.abs(b) > 0.5) return 0;
-  if (stairSchmal(t)) {                                                  // schmal: neben den Stufen der Streifen Anhöhe (oben)
+  if (stairSchmal(t)) {                                                  // schmal: neben den Stufen die Grasböschung (gerade vom Fuß bis oben)
     const [Du, Dv] = STAIR_UP[stairRotOf(t)], s = b * Du - a * Dv;
-    if (Math.abs(s) > STAIR_NW && stairStrip(stairSide(x, y, t, Math.sign(s)))) return HILL_H;
+    if (Math.abs(s) > STAIR_NW && stairStrip(stairSide(x, y, t, Math.sign(s)))) return HILL_H * Math.max(0, Math.min(1, a * Du + b * Dv + 0.5));
   }
   const idx =([Du, Dv]) => Math.min(STAIR_N - 1, Math.max(0, Math.floor((a * Du + b * Dv + 0.5) * STAIR_N)));
   const i = t.ecke ? Math.min(...cornerAxes(stairRotOf(t)).map(idx)) : idx(STAIR_UP[stairRotOf(t)]);   // Ecke: L-förmig
@@ -848,13 +839,10 @@ function stairLook(x, y, t) {
   const rot = stairRotOf(t), [Du, Dv] = STAIR_UP[rot];
   if (t.ecke) { const [D1, D2] = cornerAxes(rot); return { rot, ecke: true, style: stairStyleOf(t), kind: hillWall(hillAt(x + D1[0] + D2[0], y + D1[1] + D2[1])), m: 'j', p: 'j', top: groundTopAt(x, y) }; }
   const o = { rot, style: stairStyleOf(t), kind: hillWall(hillAt(x + Du, y + Dv)), m: stairSide(x, y, t, -1, L), p: stairSide(x, y, t, 1, L), top: groundTopAt(x, y) };
-  if (stairSchmal(t)) {
-    o.nar = 1;
-    for (const [sg, c] of [[-1, 'm'], [1, 'p']]) {
-      const nx = x - sg * Dv, ny = y + sg * Du;
-      if (o[c] === 'h') { o['k' + c] = hillWall(hillAt(nx, ny)); o['f' + c] = L(nx - Du, ny - Dv) < L(nx, ny) ? 1 : 0; }
-      else if (o[c] === 'r') { if (stairSchmal(stairAt(nx, ny))) o['f' + c] = 1; else o['o' + c] = 1; }
-    }
+  if (stairSchmal(t)) o.nar = 1;
+  else for (const [sg, c] of [[-1, 'm'], [1, 'p']]) {                   // breit, daneben eine schmale (Reihe in der Anhöhe): ihre Böschung liegt tiefer
+    const n = o[c] === 'h' && stairAt(x - sg * Dv, y + sg * Du);
+    if (n && stairSchmal(n) && stairRotOf(n) === rot) o['c' + c] = 1;
   }
   return o;
 }
@@ -905,34 +893,18 @@ function paintStair(P, o, x, y) {
       paintHillWall(P, c0, e0, c1, e1, -Du > 0 ? 'u' : 'v', o.kind, 0, hf, x * 3 + y * 7 + sg + o.rot, hf, true, 1, 0, w && outVis ? E / cw : 0);   // e: Anteil der Wand
     }
   };
-  // Streifen Anhöhe neben schmalen Stufen (eingelassen: links und rechts bleibt die Anhöhe stehen): Oberseite wie der Boden auf Höhe der
-  // Anhöhe, hinten und nach +x/+y ein Stück über die Feldgrenze (wie Anhöhe an Anhöhe – nicht zu einer breiten Treppe daneben, die liegt
-  // tiefer); sichtbar die Wand zum Fuß (läuft in der des Nachbarn weiter: f, dann ein Stück unter sein Bildchen), die zu den Stufen und – neben
-  // einer breiten Treppe (o) – die außen, beide bis zur obersten Stufe (dort ist es gleich hoch). Abgewandte Seiten bekommen oben die dunkle
-  // Kante wie die Anhöhe, gerade abgeschnitten an der Feldgrenze bzw. an der obersten Stufe
-  const strip = sg => {
-    const c = sg < 0 ? 'm' : 'p', K = o['k' + c] || o.kind, oo = !!o['o' + c], sOut = 0.5 * sg, sIn = sg * STAIR_NW, outVis = sg * (Su + Sv) > 0;
-    const sT = outVis && !oo ? sg * (0.5 + E) : sOut, inVis = !outVis, footVis = !toward;
-    poly([W(-0.5, sIn, H), W(-0.5, sT, H), W(bk, sT, H), W(bk, sIn, H)], C(o.top || S.lip));
-    const eOut = oo && !outVis, eIn = !inVis, eFoot = !footVis;         // dunkle Kanten (außen und innen nie beide: eine Seite zeigt immer her)
-    if (eOut || eIn || eFoot) {
-      const pts = [], dEnd = eOut || eIn ? kn - 0.5 : 0.5;
-      if (eOut) pts.push(W(0.6, sOut, H), W(eFoot ? -0.5 : -0.6, sOut, H));
-      if (eFoot) { if (!eOut) pts.push(W(-0.5, sOut + sg * 0.1, H)); pts.push(W(-0.5, eIn ? sIn : sIn - sg * 0.1, H)); }
-      if (eIn) { if (!eFoot) pts.push(W(-0.6, sIn, H)); pts.push(W(0.6, sIn, H)); }
-      g.save();
-      try {
-        clipPts([W(-0.5, sIn, H), W(-0.5, sOut, H), W(dEnd, sOut, H), W(dEnd, sIn, H)]);
-        g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-        g.strokeStyle = DARK; g.lineWidth = 3; g.lineJoin = 'miter'; g.lineCap = 'butt'; g.stroke();
-      } finally { g.restore(); }
-    }
-    const seed = x * 5 + y * 9 + 3 * sg + o.rot + 1, side = (s0, nrm, sd) => { const [a0, b0] = UV(-0.5, s0), [a1, b1] = UV(kn - 0.5, s0); paintHillWall(P, a0, b0, a1, b1, nrm * Su > 0 ? 'u' : 'v', K, 0, H, sd, H, true, 1, 0, 0, null, kn); };
-    if (inVis) side(sIn, -sg, seed);
-    if (oo && outVis) side(sOut, sg, seed + 3);
-    if (footVis) { const [a0, b0] = UV(-0.5, sIn), [a1, b1] = UV(-0.5, sOut); paintHillWall(P, a0, b0, a1, b1, -Du > 0 ? 'u' : 'v', K, 0, H, seed + 7, H, true, 1, 0, outVis && o['f' + c] ? E / (0.5 - STAIR_NW) : 0, null, 0.5 - STAIR_NW); }
+  // Grasböschung neben schmalen Stufen (Nutzer 11.10.2026, Entwurf A tools/treppe-boeschung-entwurf.js: „der Aufgang immer gleich breit, nur der
+  // Weg darauf schmaler oder breiter – links und rechts eine Graskante“): statt des Streifens Anhöhe eine Böschung vom Fuß (0) gerade bis zur
+  // Oberkante (H), durch die Hinterkanten der Stufen – die Stufen sitzen darin, zur sichtbaren Seite je Stufe eine Wange bis zur Trittfläche.
+  // Außen liegt die Wand der Anhöhe daneben (deren Bildchen) bzw. die Böschung der schmalen Treppe daneben (gleiche Ebene, keine Fuge)
+  const slopeH = d => H * Math.max(0, Math.min(1, d + 0.5));
+  const slope = sg => {
+    const sIn = sg * STAIR_NW, sOut = sg * (0.5 + (sg * (Su + Sv) > 0 ? E : 0));
+    poly([W(-0.5, sIn, 0), W(-0.5, sOut, 0), W(0.5 + E, sOut, H), W(0.5 + E, sIn, H)], C(o.top || S.lip));
   };
-  const side = sg => { const c = sg < 0 ? o.m : o.p; if (c === 'k' || c === 'w') keil(sg); else if (nar && stairStrip(c)) strip(sg); };
+  const cheek = (i, s) => { const d0 = -0.5 + i / n, d1 = d0 + 1 / n, h = H * (i + 1) / n; poly([W(d0, s, slopeH(d0)), W(d1, s, slopeH(d1)), W(d1, s, h), W(d0, s, h)], C(shade(riser, -0.05))); };
+  const nearSlope = nar && stairStrip(nearP ? o.p : o.m), nearS = nearP ? STAIR_NW : -STAIR_NW;
+  const side = sg => { const c = sg < 0 ? o.m : o.p; if (c === 'k' || c === 'w') keil(sg); else if (nar && stairStrip(c)) slope(sg); };
   const step = i => {
     const d0 = -0.5 + i / n, d1 = d0 + 1 / n, h = H * (i + 1) / n, hb = H * i / n;
     if (!toward) poly([W(d0, lo, hb), W(d0, hi, hb), W(d0, hi, h), W(d0, lo, h)], C(riser));   // Stirnseite
@@ -941,6 +913,8 @@ function paintStair(P, o, x, y) {
     if (lk.pat) { g.save(); clipTo([q], L); patSeam = true; try { pattern(L, lk.pat[0], x, y, 1, lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, lk.fill); } finally { patSeam = false; g.restore(); } }
     if (!toward) line(W(d0, ll, h), W(d0, lh, h), 'rgba(255,255,255,0.35)', 0.7);   // Kante vorn im Licht
     else if (i > 0) line(W(d0, ll, h), W(d0, lh, h), 'rgba(40,30,20,0.28)', 0.9);   // steigt zum Betrachter an: Schattenkante, wo es hinabgeht
+    if (nearSlope) cheek(i, nearS);                                       // Wange zur Böschung vorn
+    if (!nar && (nearP ? o.cp : o.cm)) cheek(i, nearP ? hi : lo);         // breit neben einer schmalen (Böschung tiefer): Wange zu ihr hin
   };
   side(nearP ? -1 : 1);
   for (let j = 0; j < n; j++) step(toward ? j : n - 1 - j);
@@ -976,7 +950,7 @@ function paintStairCorner(P, o, x, y) {
     for (const [a, b, vis] of edgesTop) line(P(...a, h), P(...b, h), vis ? 'rgba(255,255,255,0.35)' : 'rgba(40,30,20,0.28)', vis ? 0.7 : 0.9);
   }
 }
-const stairSig = o => (o.ecke ? 'E' : '') + o.rot + '|' + o.style + '|' + o.kind + '|' + o.m + o.p + '|' + o.top + (o.nar ? '|n' + (o.km || '') + (o.fm || 0) + (o.om || 0) + (o.kp || '') + (o.fp || 0) + (o.op || 0) : '');
+const stairSig = o => (o.ecke ? 'E' : '') + o.rot + '|' + o.style + '|' + o.kind + '|' + o.m + o.p + '|' + o.top + (o.nar ? '|n' : '') + (o.cm ? '|cm' : '') + (o.cp ? '|cp' : '');
 // drawObject 'huegeltreppe' (draw-objects.js): als Bildchen je Feld (wie drawHillTile, mit Zeitbudget beim Zoomen). Steht die Treppe so
 // nicht auf dem Feld (Vorschau beim Bauen/Verschieben): ein eigenes Bildchen 'sg' mit dem Feld im Schlüssel (Muster im Weltraster).
 // t kann eine Kopie sein (spriteTile malt mit einer) – verglichen wird der Inhalt, nicht das Ding
@@ -1029,8 +1003,8 @@ function drawHillStairOver(x, y, z, d) {
   const near = nearP ? o.p : o.m, sg = nearP ? 1 : -1, sO = 0.5 * sg, sI = sg * (o.nar ? STAIR_NW : 0.5 - STAIR_CW);
   if (near === 'k' || near === 'w') {                                    // Keil wie in paintStair: vorn eine Stufe hoch, ab der obersten waagerecht
     add(hull([[-0.5, 0], [-0.5, H / n], [0.5 - 1 / n, H], [0.5, H], [0.5, 0]].flatMap(([dd, h]) => [W(dd, sO, h), W(dd, sI, h)]))); any = true;
-  } else if (stairStrip(near) && o.nar) {                                // schmal: der Streifen Anhöhe daneben (ganz hoch)
-    add(hull([[-0.5, 0], [-0.5, H], [0.5, H], [0.5, 0]].flatMap(([dd, h]) => [W(dd, sO, h), W(dd, sI, h)]))); any = true;
+  } else if (stairStrip(near) && o.nar) {                                // schmal: die Grasböschung vorn (gerade vom Fuß bis oben)
+    add(hull([[-0.5, 0], [0.5, H], [0.5, 0]].flatMap(([dd, h]) => [W(dd, sO, h), W(dd, sI, h)]))); any = true;
   }
   if (Du + Dv > 0) {
     const ed = c => o.nar ? STAIR_NW : c === 'k' || c === 'w' ? 0.5 - STAIR_CW : 0.5, lo = -ed(o.m), hi = ed(o.p);
