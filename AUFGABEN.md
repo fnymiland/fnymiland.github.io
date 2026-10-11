@@ -2576,3 +2576,8 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Nachtrag (Nutzer: „kleiner Stern nur bei zuletzt genutzt – Gefriemel“; „ein dezenter, aber treffbarer Stern oben rechts in einer Ecke“): ☆
       oben rechts an jeder Kachel im Menü und in der ⭐-Ansicht (blass, ★ gold; Trefferfläche 28 × 28, wählt nichts aus), das Schloss gesperrter
       Dinge sitzt dafür oben links; langes Drücken entfällt.
+      Nachtrag 2 (Nutzer: „der Stern soll oben rechts in das Fenster, das aufploppt, neben den Namen – die Kacheln kannst du auch lassen“;
+      „warum die anderen Ziehen-Teile nicht einfach rechts daneben als kleine Kreise – wie die Apple-Leiste“): ☆/★ im Bau-Infofenster rechts neben dem
+      Namen (`p-fav`, 36 × 36), dazu weiter an den Kacheln. Ziehen: ▾ und das aufklappende Feld sind weg – ist ein Ziehen-Ding in der Hand, ist es
+      der große Knopf, die übrigen fünf stehen rechts daneben als kleine Kugeln (`syncDragGroup`, Tipp: wird groß; nicht erforscht: blass mit
+      Hinweis); auf dem Handy blenden sich solange die Bereiche aus (passt in 375 px). Tests: schnellwahl.

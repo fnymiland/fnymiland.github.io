@@ -952,8 +952,12 @@ body.visiting #net-btn { display: none !important; }
 #cats .cat .ic { font-size: 17px; line-height: 1; }
 #cats .quick.active { background: var(--brown); color: var(--cream); box-shadow: 0 3px 0 #4a3526; }   /* ohne Ring (Nutzer: „weißer Rand dahinter“) */
 #cats .quick.drop { font-weight: 900; font-size: 18px; color: #fff; background: var(--red); box-shadow: 0 3px 0 #a8443a; }   /* 👆 wird rotes ✕, solange etwas in der Hand ist (Nutzer: „rot, damit man erkennt, dass man abwählt“) */
-#cats .quick.drag { border-top-right-radius: 4px; border-bottom-right-radius: 4px; margin-right: 0; }   /* Ziehen-Knopf (11.10.2026): mit ▾ zusammen ein Knopf */
-#cats .quick.drag-more { width: 18px; font-size: 12px; padding: 0; margin-left: 1px; border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+#cats .quick.drag-ball { width: 26px; height: 26px; padding: 0; font-size: 13px; border-radius: 50%; align-self: center; margin-left: -1px; }   /* Ziehen (11.10.2026): die übrigen als kleine Kugeln neben dem großen */
+#cats .quick.drag-ball.locked { opacity: .4; }
+#panel h3.with-fav { display: flex; align-items: flex-start; gap: 8px; }
+#panel h3 .fav-head { margin-left: auto; flex: none; width: 36px; height: 36px; margin-top: -6px; margin-right: -6px; border: 0; background: none; font-size: 24px; line-height: 1; color: var(--brown2); opacity: .45; cursor: pointer; }   /* Favorit: dezent, aber gut zu treffen */
+#panel h3 .fav-head.on { color: #e8a317; opacity: 1; }
+@media (hover: hover) { #panel h3 .fav-head:hover { opacity: 1; } }
 #tools .tool .fav { position: absolute; top: 0; right: 0; width: 28px; height: 28px; display: flex; align-items: flex-start; justify-content: flex-end; padding: 3px 5px 0 0; box-sizing: border-box; font-size: 15px; line-height: 1; color: var(--brown2); opacity: .4; cursor: pointer; }   /* Favorit an/aus: oben rechts, blass, Trefferfläche 28 × 28 */
 #tools .tool .fav.on { color: #e8a317; opacity: 1; }
 @media (hover: hover) { #tools .tool .fav:hover { opacity: 1; } }
@@ -967,7 +971,7 @@ body.visiting #net-btn { display: none !important; }
 @media (max-width: 900px) { .cat::after { content: none; } }
 @media (min-width: 601px) and (max-width: 900px) { #cats { gap: 5px; } #cats .cat { padding-left: 8px; padding-right: 8px; } }
 @media (max-width: 740px) { #cats .cat:not(.active) .tx { display: none; } }
-@media (max-width: 600px) { #cats .quick { width: 29px; font-size: 16px; } #cats .quick.drag-more { width: 14px; font-size: 10px; } #cats .cat { padding: 0 6px; } #cats .cat .ic { font-size: 16px; } }   /* Handy: alles in 375 px */
+@media (max-width: 600px) { #cats .quick { width: 29px; font-size: 16px; } #cats .quick.drag-ball { width: 22px; height: 22px; font-size: 11px; } #cats.drag-open .cat, #cats.drag-open .quick-sep, #cats.drag-open .quick.recent { display: none; } #cats .cat { padding: 0 6px; } #cats .cat .ic { font-size: 16px; } }   /* Handy: alles in 375 px */
 
 
 /* Minimap am PC (Block 135): unten rechts, rund; ausschalten im Menü (☰ → Grafik) */

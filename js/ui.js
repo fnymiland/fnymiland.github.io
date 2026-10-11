@@ -126,13 +126,33 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
 // Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
 const NOT_RECENT = new Set(['abriss', 'verschieben']);
-// Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“): der 🛤️-Knopf nimmt, was man zuletzt gezogen hat,
-// ▾ daneben klappt die Auswahl auf (Bauleiste). Je Gerät gemerkt
+// Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“ – „wie die Apple-Leiste: was man wählt, wird groß,
+// der Rest kleine Kugeln daneben“): der 🛤️-Knopf nimmt, was man zuletzt gezogen hat; ist ein Ziehen-Ding in der Hand, stehen die anderen als
+// kleine Kugeln rechts daneben (syncDragGroup). Je Gerät gemerkt
 const DRAG_TOOLS = [['weg', '🛤️'], ['schiene', '🚆'], ['tunnel', '🚇'], ['zaun', '🪵'], ['hecke', '🌿'], ['mauer', '🧱']], DRAG_KEY = 'kachelhausen_drag';
 const isDragTool = id => DRAG_TOOLS.some(([d]) => d === id);
-let dragOpen = false;
 function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isDragTool(d) && available(d) ? d : 'weg'; } catch (e) { return 'weg'; } }
 function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
+// Großer Knopf = zuletzt Gezogenes; mit einem Ziehen-Ding in der Hand rechts daneben die übrigen als kleine Kugeln (Tipp: wird groß)
+function syncDragGroup() {
+  const big = document.querySelector('#cats .quick.drag');
+  if (!big) return;
+  const cur = dragTool(), l = `${ITEMS[cur].name} ziehen (W: Weg)`;
+  if (big.dataset.quick !== cur) { big.dataset.quick = cur; big.textContent = DRAG_TOOLS.find(([x]) => x === cur)[1]; big.title = l; big.setAttribute('aria-label', l); }
+  for (const b of document.querySelectorAll('#cats .drag-ball')) b.remove();
+  const open = isDragTool(tool);
+  big.classList.toggle('drag-open', open); $('cats').classList.toggle('drag-open', open);   // Handy: dann ohne Bereiche (style.css)
+  if (!open) return;
+  let at = big;
+  for (const [id, icon] of DRAG_TOOLS) {
+    if (id === cur) continue;
+    const b = document.createElement('button'), ok = available(id);
+    b.className = 'quick drag-ball' + (ok ? '' : ' locked'); b.textContent = icon; b.dataset.ball = id;
+    b.title = ok ? `${ITEMS[id].name} ziehen` : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
+    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } setSheet(false); setTool(id); };
+    at.after(b); at = b;
+  }
+}
 // Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an
 // jeder Kachel (oben rechts, Nutzer: „dezent, aber treffbar“). Je Gerät gemerkt, höchstens FAV_MAX
 const FAV_KEY = 'kachelhausen_fav', FAV_MAX = 12;
@@ -200,7 +220,6 @@ function setSheet(open) {
   if (!sheetOpen) {                                                       // zu: auch „Zuletzt gebaut“ zu – sonst schloss der nächste 🕘-Klick nur
     arrangeMode = false;                                                  // den Merker und erst der zweite öffnete (Nutzer)
     if (recentOpen) { recentOpen = false; const r = document.querySelector('#cats .recent'); if (r) r.classList.remove('active'); }
-    if (dragOpen) { dragOpen = false; const r = document.querySelector('#cats .drag-more'); if (r) r.classList.remove('active'); }
   }
   $('toolbar').classList.toggle('open', sheetOpen);
 }
@@ -220,16 +239,8 @@ function buildToolbar() {
     b.dataset.quick = id;
     b.textContent = icon;
     b.title = label; b.setAttribute('aria-label', label);
-    b.onclick = () => { audio(); setSheet(false); setTool(tool === id && id !== 'look' ? 'look' : id); };
+    b.onclick = () => { audio(); setSheet(false); const q = b.dataset.quick; setTool(tool === q && q !== 'look' ? 'look' : q); };   // Ziehen-Knopf: was er gerade zeigt
     cats.append(b);
-    if (drag) {                                                          // ▾: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer
-      const m = document.createElement('button');
-      m.className = 'quick drag-more' + (dragOpen ? ' active' : ''); m.textContent = '▾';
-      m.title = 'Ziehen: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer'; m.setAttribute('aria-label', 'Ziehen: Auswahl');
-      m.setAttribute('aria-expanded', String(dragOpen));
-      m.onclick = () => { audio(); const open = !dragOpen; setSheet(false); dragOpen = open; setSheet(open); buildToolbar(); };
-      cats.append(m);
-    }
   }
   // ↶ Rückgängig (Block 45): grau, wenn es nichts zurückzunehmen gibt; Strg/⌘+Z
   const un = document.createElement('button');
@@ -247,7 +258,7 @@ function buildToolbar() {
   const rec = document.createElement('button');                        // 🕘 zuletzt gebaut (Block 120)
   rec.className = 'quick recent' + (recentOpen ? ' active' : '');
   rec.textContent = '⭐'; rec.title = 'Favoriten und zuletzt gebaut'; rec.setAttribute('aria-label', 'Favoriten und zuletzt gebaut');
-  rec.onclick = () => { audio(); const open = !recentOpen; setSheet(false); recentOpen = open; setSheet(open); buildToolbar(); };
+  rec.onclick = () => { audio(); recentOpen = !recentOpen; setSheet(recentOpen); buildToolbar(); };
   cats.append(rec);
   // Bereiche (Stadt · Herstellen · Freizeit · Gestalten); ein Werkzeug aus einem anderen Bereich
   // wird weggelegt. Jeder Bereich merkt sich seinen Filter (subOf), ein unbekannter Filter wird zum ersten des Bereichs.
@@ -257,17 +268,17 @@ function buildToolbar() {
   if (top.groups ? !top.groups.some(g => g.id === menuSub) : menuSub !== 'alle') menuSub = firstSub(top.id);
   for (const m of MENU) {
     const b = document.createElement('button');
-    b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen && !dragOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
+    b.className = 'cat' + (sheetOpen && m.id === menuTop && !recentOpen ? ' active' : '') + (menuHas(m, baseOf(tool)) ? ' has-tool' : '');
     b.dataset.menu = m.id;
     menuLabel(b, m.label);
-    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen && !dragOpen));
-    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen && !dragOpen; recentOpen = false; dragOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
+    b.setAttribute('aria-expanded', String(sheetOpen && m.id === menuTop && !recentOpen));
+    b.onclick = () => { audio(); const same = sheetOpen && menuTop === m.id && !recentOpen; recentOpen = false; menuTop = m.id; menuSub = firstSub(m.id); setSheet(!same); buildToolbar(); };
     cats.append(b);
   }
   // Über den Kacheln nur bei „Zuletzt gebaut“ ein Schild (die Suche ist weg, Nutzer 08.10.2026: „nutzt eh nie einer“)
   const subs = $('subcats');
   subs.innerHTML = '';
-  subs.hidden = true;                                                     // Gruppen (auch ⭐ Favoriten, 🕘 zuletzt gebaut, Ziehen) stehen als Überschriften im Feld
+  subs.hidden = true;                                                     // Gruppen (auch ⭐ Favoriten, 🕘 zuletzt gebaut) stehen als Überschriften im Feld
   renderTools();
   setTool(tool);
 }
@@ -313,11 +324,6 @@ function renderTools() {
     head('🕘 Zuletzt gebaut').dataset.group = 'recent';
     if (!rec.length) { const p = document.createElement('div'); p.className = 'sheet-note'; p.textContent = 'Noch nichts – was du baust, steht dann hier'; box.append(p); }
     for (const id of rec) box.append(card(id));
-    return;
-  }
-  if (dragOpen) {                                                         // Ziehen: Weg, Schiene, Tunnel, Zaun, Hecke, Mauer
-    head('🛤️ Ziehen').dataset.group = 'drag';
-    for (const [id] of DRAG_TOOLS) box.append(card(id));
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
@@ -373,7 +379,7 @@ function hideCardName() { $('card-name').hidden = true; }
 const subOf = {};
 // Was die Leiste gerade zeigt (auch für die Zahlentasten): Freigeschaltetes zuerst, Reihenfolge sonst wie im Menü
 const menuHas = (m, id) => (m.groups ? m.groups.flatMap(g => g.items) : m.items).includes(id);   // Bereich mit dem gewählten Werkzeug (Punkt)
-const menuList = () => { if (recentOpen) { const f = favList(); return [...f, ...recentList().filter(id => !f.includes(id))]; } if (dragOpen) return DRAG_TOOLS.map(([d]) => d); const top = MENU.find(m => m.id === menuTop) || MENU[0];
+const menuList = () => { if (recentOpen) { const f = favList(); return [...f, ...recentList().filter(id => !f.includes(id))]; } const top = MENU.find(m => m.id === menuTop) || MENU[0];
   const all = orderedGroups(top).flatMap(g => g.items); return [...all.filter(available), ...all.filter(id => !available(id))]; };   // zuletzt gebaut: neuestes zuerst
 const emojiPic = e => { const s = document.createElement('span'); s.className = 'emoji'; s.textContent = e; return s; };
 // Preis auf der Kachel: kurz (ab 10.000 „12 Tsd.“, ab 1 Mio. „1,2 Mio.“) – den genauen Preis zeigt das Infofenster
@@ -411,11 +417,8 @@ function setTool(t) {
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
-  if (isDragTool(t)) {                                                   // Ziehen-Knopf zeigt, was man zuletzt gezogen hat (auch aus dem Menü gewählt)
-    noteDrag(t);
-    const d = document.querySelector('.quick.drag');
-    if (d && d.dataset.quick !== t) { const l = `${ITEMS[t].name} ziehen (W: Weg)`; d.dataset.quick = t; d.textContent = DRAG_TOOLS.find(([x]) => x === t)[1]; d.title = l; d.setAttribute('aria-label', l); }
-  }
+  if (isDragTool(t)) noteDrag(t);                                        // Ziehen-Knopf zeigt, was man zuletzt gezogen hat (auch aus dem Menü gewählt)
+  syncDragGroup();
   for (const b of document.querySelectorAll('.quick[data-quick]')) b.classList.toggle('active', b.dataset.quick === t);   // 👁 hat seinen eigenen Zustand
   syncDropBtn();
   $('rot-btn').hidden = !turnsWhileBuilding(t);
@@ -505,8 +508,9 @@ function openBuildInfo(id) {
   const facts = [w * h > 1 ? `📐 ${w}×${h} Felder` : '', d.workers ? `👷 ${d.workers} Mitarbeiter` : '', SHOPS[id] ? `🛒 bedient bis ${fmt(shopCap(id))} Kunden` : '',
     d.beauty && id !== 'weg' ? `🌸 +${d.beauty}` : '', d.ugly ? `🌸 −${d.ugly} neben Häusern` : '',
     CONSUMERS[id] ? `⚡ braucht ${CONSUMERS[id]}` : '', built ? `🏗️ ${built} gebaut` : ''].filter(Boolean);
+  const fav = !d.gift && favList().includes(id);
   showPanel(`
-    <h3>${d.name}</h3>
+    <h3 class="with-fav">${d.name}${d.gift ? '' : `<button class="fav-head${fav ? ' on' : ''}" id="p-fav" aria-pressed="${fav}" aria-label="${fav ? d.name + ': kein Favorit mehr' : d.name + ' als Favorit'}" title="Favorit (⭐ unten links)">${fav ? '★' : '☆'}</button>`}</h3>
     ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(ud)}</div></div>${go ? `<div class="row"><button class="btn" id="p-unlock">${go.label}</button></div>` : ''}` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
@@ -516,6 +520,7 @@ function openBuildInfo(id) {
     ${facts.length ? `<div class="stats">${facts.map(f => `<span>${f}</span>`).join('')}</div>` : ''}
     <div class="row"><button class="btn ghost" id="p-close">Schließen</button></div>`, () => tool === id ? openBuildInfo(id) : closePanel(), id);
   if ($('p-unlock')) $('p-unlock').onclick = () => go.go();
+  if ($('p-fav')) $('p-fav').onclick = () => { audio(); toggleFav(id); openBuildInfo(id); if (sheetOpen) renderTools(); };   // Stern neben dem Namen (Nutzer 11.10.2026)
   $('p-close').onclick = closePanel;
 }
 // Gesperrt (Block 49): Knopf, der dorthin springt, wo man es freischaltet – dieselbe Reihenfolge wie unlockText.

@@ -10,32 +10,40 @@ beforeEach(() => {
 const q = s => game(`[...document.querySelectorAll('${s}')].map(b => b.dataset.tool || b.dataset.quick || b.dataset.group)`);
 
 describe('Ziehen-Knopf', () => {
-  it('zeigt zuerst den Weg; ▾ klappt die sechs Ziehen-Dinge auf; gewählt wird der Knopf zu dem Ding und bleibt es (auch nach Neuaufbau)', () => {
-    expect(game("document.querySelector('#cats .quick.drag').dataset.quick")).toBe('weg');
-    game("document.querySelector('#cats .quick.drag-more').click()");
-    expect([game('sheetOpen'), game('dragOpen')]).toEqual([true, true]);
-    expect(q('#tools .tool')).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
-    game("document.querySelector('#tools [data-tool=\"schiene\"]').click()");
-    expect([game('tool'), game('sheetOpen'), game('dragOpen')]).toEqual(['schiene', false, false]);
-    expect(game("(b => [b.dataset.quick, b.textContent, b.classList.contains('active')])(document.querySelector('#cats .quick.drag'))")).toEqual(['schiene', '🚆', true]);
-    game("setTool('look'); buildToolbar()");
-    expect(game("document.querySelector('#cats .quick.drag').dataset.quick")).toBe('schiene');   // gemerkt
+  // Nutzer: „wie die Apple-Leiste: was man wählt, wird groß, der Rest kleine Kugeln daneben“
+  const balls = () => game("[...document.querySelectorAll('#cats .drag-ball')].map(b => b.dataset.ball)");
+  const big = () => game("(b => [b.dataset.quick, b.textContent, b.classList.contains('active')])(document.querySelector('#cats .quick.drag'))");
+  it('ohne Ziehen-Ding in der Hand nur der große Knopf; mit Weg in der Hand die übrigen fünf als Kugeln daneben', () => {
+    expect(big()).toEqual(['weg', '🛤️', false]);
+    expect(balls()).toEqual([]);
     game("document.querySelector('#cats .quick.drag').click()");
-    expect(game('tool')).toBe('schiene');
-    game("document.querySelector('#cats .quick.drag').click()");                // nochmal: weglegen
-    expect(game('tool')).toBe('look');
-    game("setTool('tunnel')");                                                     // auch aus dem Menü gewählt
-    expect(game("document.querySelector('#cats .quick.drag').dataset.quick")).toBe('tunnel');
+    expect(game('tool')).toBe('weg');
+    expect(balls()).toEqual(['schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    expect(game("document.querySelector('#cats .quick.drag').nextElementSibling.dataset.ball")).toBe('schiene');   // gleich rechts daneben
+  });
+  it('Kugel antippen: sie wird groß (in der Hand), der Weg wird Kugel; gemerkt; nochmal der große: weglegen, Kugeln weg', () => {
+    game("setTool('weg'); document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
+    expect(game('tool')).toBe('tunnel');
+    expect(big()).toEqual(['tunnel', '🚇', true]);
+    expect(balls()).toEqual(['weg', 'schiene', 'zaun', 'hecke', 'mauer']);
+    game("setTool('look'); buildToolbar()");
+    expect([big()[0], balls().length]).toEqual(['tunnel', 0]);                    // gemerkt, zu
+    game("document.querySelector('#cats .quick.drag').click()");
+    expect(game('tool')).toBe('tunnel');
+    game("document.querySelector('#cats .quick.drag').click()");
+    expect([game('tool'), balls().length]).toEqual(['look', 0]);
+    game("setTool('schiene')");                                                     // auch aus dem Menü gewählt
+    expect(big()).toEqual(['schiene', '🚆', true]);
     game("setTool('look')");
   });
-  it('nicht erforscht: der Knopf fällt auf den Weg zurück; ▾ und ein Bereich schließen sich gegenseitig', () => {
+  it('nicht erforscht: großer Knopf fällt auf den Weg zurück, die Kugel ist blass und sagt, was fehlt', () => {
     game("localStorage.setItem('kachelhausen_drag', 'tunnel'); state.techs.delete('ubahn'); buildToolbar()");
-    expect(game("document.querySelector('#cats .quick.drag').dataset.quick")).toBe('weg');
-    game("document.querySelector('#cats .quick.drag-more').click(); document.querySelector('#cats .cat').click()");
-    expect([game('dragOpen'), game('sheetOpen')]).toEqual([false, true]);
-    game("document.querySelector('#cats .quick.recent').click()");
-    expect([game('dragOpen'), game('recentOpen')]).toEqual([false, true]);
-    game('setSheet(false)');
+    expect(big()[0]).toBe('weg');
+    game("setTool('weg')");
+    expect(game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').classList.contains('locked')")).toBe(true);
+    game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
+    expect(game('tool')).toBe('weg');
+    game("setTool('look')");
   });
 });
 
@@ -64,5 +72,18 @@ describe('⭐ Favoriten und zuletzt gebaut', () => {
     game("localStorage.setItem('kachelhausen_fav', '{kaputt')");
     expect(game('favList()')).toEqual([]);
     game('setSheet(false)');
+  });
+});
+
+describe('Stern im Info-Fenster', () => {
+  it('neben dem Namen (Nutzer: „oben rechts in dem Fenster, das aufploppt“): ☆ → ★ Favorit, Kachel im offenen Menü zeigt es auch', () => {
+    game("menuTop = 'stadt'; setSheet(true); buildToolbar(); openBuildInfo('haus')");
+    expect(game("document.getElementById('p-fav').textContent")).toBe('☆');
+    game("document.getElementById('p-fav').click()");
+    expect(game('favList()')).toEqual(['haus']);
+    expect(game("[document.getElementById('p-fav').textContent, document.querySelector('#tools [data-tool=\"haus\"] .fav').textContent]")).toEqual(['★', '★']);
+    game("document.getElementById('p-fav').click()");
+    expect(game('favList()')).toEqual([]);
+    game('closePanel(); setSheet(false)');
   });
 });
