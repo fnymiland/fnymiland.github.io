@@ -2703,7 +2703,7 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       - [x] V1 AUFGABEN/Plan bereinigt · [x] V2 Übergang-Knöpfe in undoable · [x] V3 Kopie-Lücke footPaid · [x] V4 Gruppe mit Wegbrücke ablegen
         · [x] V5 t.lauf in tileOut
       - [x] A1 Prüfstand (Brückenwelt: tools/brueckenwelt.js, testsave-bruecken.json, Vorlage tests/vorlagen/alte-bruecken.json, Vorher-Bilder
-        tools/brueckenpruefung.js, Leistungs-Grundlinie Welt „bruecken“ ohne Änderung der übrigen Welten) · [ ] A2 Leser brLook · [ ] A3 Speicherformat + Altversions-Wächter · [ ] A4 Geld-Schicht
+        tools/brueckenpruefung.js, Leistungs-Grundlinie Welt „bruecken“ ohne Änderung der übrigen Welten) · [x] A2 Leser brLook (js/brueckenfamilie.js) · [ ] A3 Speicherformat + Altversions-Wächter · [ ] A4 Geld-Schicht
       - [ ] B1 Lagen-Maler · [ ] B2 ruhend in tileA, Nachmalen in tileB
       - [ ] C1 Stützen auf Kanten · [ ] C2 Höhenprofil, Holz/Metall · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle
         · [ ] C6 Fenster/Leiste/Kosten · [ ] C7 Licht (mit Strom) · [ ] C8 bis 8 Felder · [ ] C9 Bauen per Linie · [ ] C10 Schiffe unter Anhöhen-Brücken
