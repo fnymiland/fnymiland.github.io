@@ -2702,5 +2702,9 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
         alle einfärbbar. Ziegel und Rot fallen weg (= Stein bzw. Holz eingefärbt), „Wie der Weg“ = Belag wählen; alte Stände wandeln so um,
         dass sie gleich aussehen. Neu zu zeichnen: Fußgänger-Bogen Metall, Kristall (Wasser/Anhöhen), Bahn flach Stein, Kristall, Metall
         übers Wasser. Zwischen Anhöhen bis 8 Felder. Bauen: Weg/Gleis über die Lücke ziehen → Brücke entsteht; Brücken-Werkzeug bleibt.
+      - **Kristall Fußgänger = K1 Glasbogen** (tools/kristallbruecke-entwurf.js); K3s Leuchtband wird ihre Beleuchtung. Bahn (B1–B3) offen.
+      - **Beleuchtung für alle Brücken** (Nutzer: „wichtig“): je Brücke an/aus, nachts mit Schein wie Laternen; je Material eigene Lampen
+        (Holz Laternen, Stein Kugelleuchten, Metall Mast/Lichterkette, Kristall Leuchtband). Kosten offen.
+      - Bahnübergang mit Fußgängerbrücke: gehört zur Fußgänger-Familie (4 Materialien, einfärbbar, Belag wählbar).
       - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
         eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
