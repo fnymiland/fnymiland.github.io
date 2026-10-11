@@ -8,14 +8,13 @@ beforeEach(() => {
 });
 
 describe('Zuletzt gebaut (Block 120)', () => {
-  it('merkt sich Gebautes, neuestes zuerst, ohne Doppel, höchstens 8; Schnellknopf-Dinge (Weg und alles vom Ziehen-Knopf) zählen nicht', () => {
+  it('merkt sich Gebautes, neuestes zuerst, ohne Doppel, höchstens 8; alles zählt, auch Weg und Schiene (Nutzer: „alles zählt“)', () => {
     for (const id of ['haus', 'baum', 'bank', 'haus', 'weg']) game(`noteRecent('${id}')`);
-    expect(game('recentList()')).toEqual(['haus', 'bank', 'baum']);
+    expect(game('recentList()')).toEqual(['weg', 'haus', 'bank', 'baum']);
     for (const id of ['laterne', 'brunnen', 'busch', 'blumen', 'kiosk', 'cafe', 'post', 'apotheke', 'hecke', 'schiene']) game(`noteRecent('${id}')`);
     expect(game('recentList().length')).toBe(8);
-    expect(game('recentList()[0]')).toBe('apotheke');                                         // Hecke, Schiene: am Ziehen-Knopf
-    // Kategorien des Ziehen-Knopfs (157s): nur Linien-Werkzeuge fehlen – Bahnhof, Anhöhe, Brücke, Wiese … stehen wieder drin
-    for (const id of ['station', 'anhoehe', 'bruecke', 'wiese', 'tunnel', 'zaun', 'mauer']) game(`noteRecent('${id}')`);
+    expect(game('recentList().slice(0, 2)')).toEqual(['schiene', 'hecke']);
+    for (const id of ['station', 'anhoehe', 'bruecke', 'wiese', 'abriss', 'verschieben']) game(`noteRecent('${id}')`);   // Werkzeuge nicht
     expect(game('recentList().slice(0, 4)')).toEqual(['wiese', 'bruecke', 'anhoehe', 'station']);
     game("localStorage.setItem('kachelhausen_recent', '{kaputt')");
     expect(game('recentList()')).toEqual([]);                                                 // kaputter Speicher: einfach leer

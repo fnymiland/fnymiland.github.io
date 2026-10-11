@@ -127,7 +127,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
 // 🧹 Abreißen ist nicht mehr in der Leiste (Block 155, Nutzer: „Auswählen und Löschen zusammenlegen“): ✋ Auswählen → 🗑️ Abreißen,
 // Aufgenommenes → 🗑️ Wegwerfen, im 👆-Fenster 🗑️, Wald/Fels über 👆 → Roden. Das Werkzeug 'abriss' gibt es intern weiter
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
-const NOT_RECENT = new Set(['abriss', 'verschieben', 'weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);   // Linien-Werkzeuge: am Ziehen-Knopf (die übrigen Dinge seiner Kategorien zählen, wie vor 157s)
+const NOT_RECENT = new Set(['abriss', 'verschieben']);                 // alles Gebaute zählt, auch Weg und Schiene (Nutzer 11.10.2026: „alles zählt“)
 // Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“ – „wie die Apple-Leiste: was man wählt, wird groß,
 // der Rest kleine Kugeln daneben“; dann: „Eisenbahn, Zäune, Wege, Terraforming als Kategorien – Spielbilder statt Emojis“): der Knopf zeigt die
 // Kategorie dessen, was man zuletzt genommen hat; ist etwas daraus in der Hand, stehen die übrigen Kategorien als Kugeln daneben, die Dinge der
@@ -251,15 +251,15 @@ function toggleFav(id) {
   return !on;
 }
 // Zuletzt gebaut (Block 120): die letzten RECENT_MAX Dinge, je Gerät gemerkt; 🕘 neben der Suche zeigt sie in der Leiste
-// (Form, Farbe, Stil gelten wie zuletzt gewählt). Was ohnehin einen Schnellknopf hat, zählt nicht.
+// (Form, Farbe, Stil gelten wie zuletzt gewählt). Alles zählt, auch was am Ziehen-Knopf liegt.
 const RECENT_MAX = 8, RECENT_KEY = 'kachelhausen_recent';
 let recentOpen = false;
 function recentList() {
-  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !NOT_RECENT.has(id) && !QUICK.some(([q]) => q === id)).slice(0, RECENT_MAX) : []; }
+  try { const l = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(id => typeof id === 'string' && ITEMS[id] && !NOT_RECENT.has(id)).slice(0, RECENT_MAX) : []; }
   catch (e) { return []; }
 }
 function noteRecent(id) {
-  if (!ITEMS[id] || ITEMS[id].gift || NOT_RECENT.has(id) || QUICK.some(([q]) => q === id)) return;
+  if (!ITEMS[id] || ITEMS[id].gift || NOT_RECENT.has(id)) return;
   const l = [id, ...recentList().filter(x => x !== id)].slice(0, RECENT_MAX);
   try { localStorage.setItem(RECENT_KEY, JSON.stringify(l)); } catch (e) { /* privat: dann eben nicht */ }
 }

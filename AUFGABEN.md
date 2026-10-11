@@ -2635,7 +2635,8 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
 - [x] Nutzer: „zuletzt gebaut funktioniert nicht mehr“. Seit den Kategorien des Ziehen-Knopfs (157s Nachtrag 6) fiel alles daraus aus der
       Liste (Bahnhof, U-Bahn, Einfahrt, Gleis-Rampe, Bergportal, Brücke, Anhöhe, Teich, Aufschütten, Wiese, Strand, Parkrasen) – und beim
       nächsten Bauen auch aus dem Gemerkten. Jetzt fehlen wieder nur die Linien-Werkzeuge (Weg, Schiene, Tunnel, Zaun, Hecke, Mauer:
-      `NOT_RECENT`). Test: zuletzt.
+      `NOT_RECENT`). Test: zuletzt. Danach Nutzer: „alles zählt“ – auch Weg, Schiene, Tunnel, Zaun, Hecke, Mauer kommen in die Liste
+      (nur Abreißen und Auswählen nicht).
 
 ## Block 160 – Brücke als eigenes Bauwerk (11.10.2026)
 Nutzer: „das ist immer dieselbe Brücke, man baut sie halt da hin, wo man will, und dann kann man über diese Brücke einen Weg oder Schienen
