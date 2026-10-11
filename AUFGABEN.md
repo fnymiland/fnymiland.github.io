@@ -2701,7 +2701,7 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
         am Ende, Ausschnitt an der fernen Anhöhe – je Schritt Nahaufnahmen aller Anschlüsse in beiden Achsen, Tag/Nacht/weit/GL.
       Schritte (je ein Commit, Details PLAN-160c.md §3):
       - [x] V1 AUFGABEN/Plan bereinigt · [x] V2 Übergang-Knöpfe in undoable · [x] V3 Kopie-Lücke footPaid · [x] V4 Gruppe mit Wegbrücke ablegen
-        · [ ] V5 t.lauf in tileOut
+        · [x] V5 t.lauf in tileOut
       - [ ] A1 Prüfstand (Brückenwelt) · [ ] A2 Leser brLook · [ ] A3 Speicherformat + Altversions-Wächter · [ ] A4 Geld-Schicht
       - [ ] B1 Lagen-Maler · [ ] B2 ruhend in tileA, Nachmalen in tileB
       - [ ] C1 Stützen auf Kanten · [ ] C2 Höhenprofil, Holz/Metall · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle

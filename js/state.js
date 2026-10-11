@@ -80,6 +80,7 @@ function tileOut(t) {
   if (t.wide) o.wide = true;                                                             // Wegform (Block 77)
   if (t.sq) o.sq = true;
   if (t.end) o.end = t.end;
+  if (t.lauf === 0 || t.lauf === 1) o.lauf = t.lauf;                                     // Wegrichtung (Block 158; fehlt = alter Weg, 160c V5)
   if (t.zug === false) o.zug = false;                                                       // Gartenweg aus
   if (t.vp) o.vp = t.vp;                                                                    // Belag des Vorplatzes (Block 91)
   if (t.brk) o.brk = t.brk;

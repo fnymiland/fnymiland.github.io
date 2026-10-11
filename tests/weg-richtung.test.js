@@ -107,3 +107,15 @@ describe('Wegrichtung nachträglich', () => {
     expect(lauf(22, 22)).toBe(0);
   });
 });
+
+describe('Wegrichtung bleibt gespeichert (160c V5)', () => {
+  it('Speichern und Laden (auch Datei/Cloud) und der Live-Spiegel behalten lauf 0 und 1; alte Wege ohne lauf bleiben ohne', () => {
+    expect(draw({ x: 21, y: 22 }, { x: 25, y: 25 }, HOLZ)).toBe(true);
+    game(`state.tiles.set('28,28', { b: 'weg', lvl: 1, style: ${HOLZ} }); recalc()`);
+    const before = [lauf(23, 22), lauf(25, 24), lauf(28, 28)];
+    expect(before).toEqual([0, 1, undefined]);
+    game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()');
+    expect([lauf(23, 22), lauf(25, 24), lauf(28, 28)]).toEqual(before);
+    expect(game("tileOut(state.tiles.get('23,22')).lauf")).toBe(0);
+  });
+});
