@@ -703,6 +703,9 @@ function stairDirs(x, y, lv = hillLevel(x, y)) {
 function stairRot(x, y) {
   const ok = stairDirs(x, y, stairBase(x, y));
   if (!ok.length) { const cd = cornerDirs(x, y); return cd.length ? cd[0] : buildRot & 3; }   // Ecktreppe
+  // selbst gedreht (⟳, R, Mausrad: rotManual): die gewählte bzw. die nächste passende – wie bei der Gleis-Rampe (Nutzer 11.10.2026: „warum
+  // erlaubt er mir nicht, die Treppe nach rechts zu drehen?“ – vorher gewann die Wertung unten, z. B. eine Treppe daneben, und R tat nichts)
+  if (rotManual) for (let k = 0; k < 4; k++) if (ok.includes((buildRot + k) & 3)) return (buildRot + k) & 3;
   // Punkte: Weg am Fuß, ein echter Fuß (keine Treppe – sonst dreht sich eine am Rand eingesetzte längs zur Nachbartreppe), eine Treppe gleicher
   // Richtung daneben (wird breit); bei Gleichstand die gewählte Drehung, sonst die erste
   const score = r => {
@@ -712,6 +715,21 @@ function stairRot(x, y) {
   };
   const best = Math.max(...ok.map(score)), c = ok.filter(r => score(r) === best);
   return c.includes(buildRot & 3) ? buildRot & 3 : c[0];
+}
+// Stehende Treppe im Fenster drehen (⟳, Nutzer 11.10.2026): reihum die Richtungen, in die sie hier hinaufführt (stairDirs auf ihrer Ebene, ohne
+// Linie quer davor) – nie gegen eine Wand oder ins Leere; Ecktreppen nicht. Danach die Treppen ringsum ausrichten (breit, Ecken)
+function stairTurns(x, y) {
+  const t = stairAt(x, y);
+  if (!t || t.ecke) return [];
+  return stairDirs(x, y, hillLevel(x, y)).filter(r => { const [dx, dy] = STAIR_UP[r]; return ![[x - dx, y - dy], [x + dx, y + dy]].some(([nx, ny]) => state.edges.get(edgeBetween(x, y, nx, ny))); });
+}
+function turnStair(x, y) {
+  const t = stairAt(x, y), opts = stairTurns(x, y);
+  if (!t || opts.length < 2) return false;
+  const i = opts.indexOf(stairRotOf(t));
+  t.rot = opts[(i + 1) % opts.length];
+  refitStairs(x, y); groundVersion++; sfx('deco'); recalc(); save();
+  return true;
 }
 // Darf hier eine Treppe stehen (placeError, vor den allgemeinen Prüfungen: Belegung, kleine Deko, Gelände)? move: getragen (✋, Kopie)
 function stairError(x, y, rot, move) {

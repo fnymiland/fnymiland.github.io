@@ -1757,6 +1757,7 @@ function openInfo(x, y) {
     ${colors}
     <div class="row">
       ${ROTATABLE.has(t.b) && t.b !== 'huegelrampe' ? '<button class="btn ghost" id="p-rot" aria-label="Drehen">⟳</button>' : ''}
+      ${t.b === 'huegeltreppe' && !t.ecke ? `<button class="btn ghost" id="p-stairrot" aria-label="Drehen" ${stairTurns(x, y).length < 2 ? 'disabled title="Hier führt sie nur in diese Richtung hinauf"' : ''}>⟳</button>` : ''}
       ${moveBtn}
       ${delButton(x, y, t.b === 'dachtreppe')}
       <button class="btn ghost" id="p-close">Schließen</button>
@@ -1797,6 +1798,7 @@ function openInfo(x, y) {
     inp.onkeydown = e => { if (e.key === 'Enter') done(); };
     inp.onblur = done;
   };
+  if ($('p-stairrot')) $('p-stairrot').onclick = () => { undoable(() => turnStair(x, y)); openInfo(x, y); };   // Treppe (157): reihum, wohin sie hier hinaufführt
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => {
     // Große Gebäude nur drehen, wenn die gedrehte Grundfläche frei ist
     const k = x + ',' + y, nr = ((t.rot || 0) + 1) % 4, big = isBig(t.b);
@@ -2349,6 +2351,7 @@ function openDecoInfo(x, y, slot) {
       <button class="btn danger" id="p-del" aria-label="Entfernen">🗑️${decoBack(d) ? ` +${fmt(decoBack(d))}` : ''}</button>
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, () => (decosAt(x + ',' + y) || [])[slot] === d ? openDecoInfo(x, y, slot) : closePanel());   // weg (↶, Verschieben): Fenster zu
+  if ($('p-stairrot')) $('p-stairrot').onclick = () => { undoable(() => turnStair(x, y)); openInfo(x, y); };   // Treppe (157): reihum, wohin sie hier hinaufführt
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
   $('p-del').onclick = () => { closePanel(); undoable(() => removeSmall(x, y, slot)); };
   $('p-move').onclick = () => startMove(x, y, slot);
@@ -2374,6 +2377,7 @@ function openRoofTopInfo(x, y, slot) {
       <button class="btn ghost" id="p-close">Schließen</button>
     </div>`, reopen);
   $('p-move').onclick = () => startRoofTopMove(x, y, slot);
+  if ($('p-stairrot')) $('p-stairrot').onclick = () => { undoable(() => turnStair(x, y)); openInfo(x, y); };   // Treppe (157): reihum, wohin sie hier hinaufführt
   if ($('p-rot')) $('p-rot').onclick = () => undoable(() => { d.rot = ((d.rot || 0) + 1) % 4; d.born = performance.now(); sfx('deco'); save(); });
   $('p-del').onclick = () => { closePanel(); undoable(() => removeRoofTop(x, y, slot)); };
   $('p-close').onclick = closePanel;

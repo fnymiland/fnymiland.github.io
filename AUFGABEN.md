@@ -2543,3 +2543,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       im Kurvenfeld direkt hinter der Einfahrt stand der Wagen quer zu ihr (|ed| < 0,5), `trainTunnelCut` gab null zurück – er wurde ganz oben auf
       der Wiese gezeichnet. Jetzt unsichtbar ('hide'), solange er auf einem Tunnelfeld quer zur Einfahrt steht. Geprüft mit tools/einfahrt-kurve.js
       (echter Zug Bild für Bild), Test einfahrt-kurve (ganze Fahrt, ohne die Korrektur 598 Bilder mit dem Wagen oben).
+- [x] 157p **Treppe drehen** (Nutzer 11.10.2026: „kann man eine Treppe zur Anhöhe drehen?“ – „ja!“; „warum erlaubt er mir hier nicht, die Treppe
+      nach rechts zu drehen?“): beim Bauen gewinnt jetzt die selbst gewählte Drehung (R, ⟳, Mausrad: `rotManual`), solange sie hinaufführt, sonst
+      die nächste passende (wie die Gleis-Rampe) – vorher entschied die Wertung (Weg am Fuß, Treppe gleicher Richtung daneben) und R tat nichts.
+      Stehende Treppe: ⟳ im Fenster (`p-stairrot`, `stairTurns`/`turnStair`) reihum durch die Richtungen, in die sie hier hinaufführt (nie gegen
+      eine Wand oder ins Leere, keine Linie quer davor; Ecktreppen nicht), danach `refitStairs`; nur eine Richtung: Knopf aus. Test: treppe-drehen.
+      Offen: ob im Fall des Nutzers die Richtung überhaupt hinaufführen kann (an einer geraden Wand nur quer hinein) – nachfragen, falls es noch klemmt.
