@@ -2527,3 +2527,12 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       drin z 5 und z 8, Naht z 8, ganz drin, kurz davor, hintere Wände, Nacht, weit weg 2D und WebGL). Test: bergportal (dazu ubahn, menu angepasst).
       Offen: kein Geist beim Bauen (die Vorschau zeigt nur den Rahmen oben auf dem Feld); Verkehr mit 11 Dingen (Nutzer-Wunsch „direkt hinter die
       Tunneleinfahrt“, Grenze bisher 10); „Das ist neu“/NEWS beim Push.
+- [x] 157n **Nachbesserungen Bergportal/Tunnel** (Nutzer 11.10.2026, mit Bildschirmfoto): (1) Tunnel und Bergportal hatten im Menü dasselbe Bild – der
+      Tunnel zeigt jetzt einen Querschnitt (Wiese, Erdreich, runde Röhre mit Gleis, oben lila gestrichelt; `drawTunnelIcon`, Nutzer wählte
+      „Querschnitt“). (2) Tunnel unter einer Anhöhe sah in der Tunnel-Ansicht versetzt aus (Linie am Boden, Anhöhe davor angehoben) – Variante A
+      (Bild tools/vorschau/tunnel-anhoehe-varianten.png): die Linie liegt oben auf dem Feld, das man sieht und antippt, und führt an der Wand
+      senkrecht hinunter, in ein Bergportal an seiner Wand (`drawTunnelView`; der Extra-Strich zum U-Bahn-Eingang oben entfällt). (3) Zug blitzte
+      beim Herausfahren auf: ragte die Front nur einen Hauch (< 0,02) heraus, war sie ein Bild lang eine Schnittfläche ohne Fenster/Scheinwerfer
+      (`bpCut`: dann ganzer Wagen im Berg); das Stück im Berg bekam den Schatten der Anhöhe (draußen nicht – Sprung dunkel → hell) und der Verlauf
+      dunkelte auch nach oben (Front an der Wand schon dunkel) – jetzt kein Schatten auf dem Wagen, Verlauf waagerecht (`drawCarPortal`). Geprüft mit
+      tools/bergportal-fahrt.js (echter Zug, Bild für Bild, Mittag). Tests: bergportal, stufe3-zeichnen.

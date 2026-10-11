@@ -211,9 +211,27 @@ function drawTunnelGhost(cx, cy, z) {
   diamondPath(cx, cy, TW / 2 * z * 0.7, TH / 2 * z * 0.7); g.stroke(); g.restore();
 }
 function diamondPath(cx, cy, a, b) { g.beginPath(); g.moveTo(cx, cy - b); g.lineTo(cx + a, cy); g.lineTo(cx, cy + b); g.lineTo(cx - a, cy); g.closePath(); }
-// Bauleiste: kleines Bild des Tunnels – eine Anhöhe mit Bergportal, die Schiene fährt hinein (Block 157m; vorher Backstein im Erdhügel)
+// Bauleiste: kleines Bild des Tunnels als Querschnitt (Nutzer 11.10.2026: Tunnel und Bergportal sahen im Menü gleich aus) – ein Stück Wiese,
+// vorn aufgeschnitten: Erdreich, darin die runde Tunnelröhre mit Gleis, oben lila gestrichelt wie in der Tunnel-Ansicht
 function drawTunnelIcon(cx, cy, z) {
-  drawBergportalIcon(cx + 2 * z, cy + 2 * z, z * 0.95, 0);
+  const s = 0.72, hw = TW / 2 * z * s, hh = TH / 2 * z * s, D = 30;     // D: Tiefe des Schnitts (Bildpunkte)
+  const P = (u, v, h = 0) => [cx + (u - v) * hw, cy - 6 * z + (u + v) * hh + h * z * s];   // h nach unten
+  const quad = (pts, col) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = C(col); g.fill(); };
+  quad([P(-0.5, 0.5), P(0.5, 0.5), P(0.5, 0.5, D), P(-0.5, 0.5, D)], '#a57a52');           // Schnitt vorn links (+y): Erdreich
+  quad([P(0.5, -0.5), P(0.5, 0.5), P(0.5, 0.5, D), P(0.5, -0.5, D)], '#8a6342');          // Schnitt vorn rechts (+x)
+  quad([P(-0.5, -0.5), P(0.5, -0.5), P(0.5, 0.5), P(-0.5, 0.5)], '#9fd979');              // Wiese oben
+  quad([P(-0.5, 0.5), P(0.5, 0.5), P(0.5, 0.5, 3), P(-0.5, 0.5, 3)], '#7fbf55');          // Grasnarbe
+  quad([P(0.5, -0.5), P(0.5, 0.5), P(0.5, 0.5, 3), P(0.5, -0.5, 3)], '#6aa847');
+  // Röhre im linken Schnitt: Kreis in der Schnittfläche (s längs, h nach unten), Ring aus Beton, innen dunkel, unten das Gleis
+  const at = (t, h) => P(-0.5 + t, 0.5, h), R = 9, mc = 0.5, mh = 18, rs = R / Math.hypot(hw, hh) * z * s;
+  const ring = r => { const out = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2; out.push(at(mc + Math.cos(a) * rs * r / R, mh + Math.sin(a) * r)); } return out; };
+  quad(ring(R + 2.2), '#cfc8bc'); quad(ring(R), '#2b2723');
+  g.strokeStyle = C('#8a909a'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.beginPath();
+  for (const o of [-0.09, 0.09]) { const a = at(mc + o, mh + R - 2.5), b = [a[0] + 4 * z, a[1] - 2 * z]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+  g.stroke();
+  // oben: die Linie der Tunnel-Ansicht
+  g.save(); g.setLineDash([3 * z, 2.5 * z]); g.strokeStyle = C('#6a52c4'); g.lineWidth = 2 * z; g.beginPath();
+  const a = P(mc - 0.5, -0.5), b = P(mc - 0.5, 0.5); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.restore();
 }
 
 // Bauansicht (Nutzer: „passt so“): mit Tunnel, Einfahrt oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss
@@ -224,20 +242,33 @@ function drawTunnelView(z) {
   if (!state.tunnels || !(TUNNEL_VIEW.has(tool) || seeThrough) || (tool !== 'tunnel' && tool !== 'ubahn' && tool !== 'tunneleinfahrt' && !state.tunnels.size)) return;
   g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0);
   if (tool === 'tunnel' || tool === 'ubahn' || tool === 'tunneleinfahrt') { g.fillStyle = 'rgba(245,240,255,0.42)'; g.fillRect(0, 0, W, H); }
-  const segs = [];
+  const segs = [], hl = state.hills && state.hills.size;
+  // Anhöhen (Nutzer 11.10.2026: „unter einer Anhöhe sieht das versetzt aus, ich checke gar nicht, wo der Tunnel ist“, Variante A): die Linie liegt
+  // oben auf dem Feld, das man sieht und antippt (um den Hub angehoben), und führt an der Wand senkrecht hinunter – in ein Bergportal an seiner
+  // Wand, sonst an der Feldgrenze. Ohne Anhöhen wie vorher
+  const S = (x, y, h) => { const p = toScreen(x, y); return h ? { x: p.x, y: p.y - h } : p; }, up = (x, y) => hl ? hillLift(x, y) * z : 0;
   for (const k of state.tunnels.keys()) {
-    const [x, y] = keyXY(k), p = toScreen(x, y);
-    if (p.x < -80 || p.x > W + 80 || p.y < -80 || p.y > H + 80) continue;
+    const [x, y] = keyXY(k), p = toScreen(x, y), h0 = up(x, y);
+    if (p.x < -80 || p.x > W + 80 || p.y < -80 - h0 || p.y > H + 80) continue;
     let n = 0;
     for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
       const nx = x + dx, ny = y + dy, mine = tunnelAt(nx, ny), ein = !mine && trackLink(x, y, nx, ny);
       if (!mine && !ein) continue;
       n++;
       if (mine && (dx < 0 || dy < 0)) continue;                        // jede Verbindung einmal
-      const q = toScreen(ein ? x + dx * 0.5 : nx, ein ? y + dy * 0.5 : ny);
-      segs.push([p, q]);
+      if (!hl) { const q = toScreen(ein ? x + dx * 0.5 : nx, ein ? y + dy * 0.5 : ny); segs.push([p, q]); continue; }
+      if (ein) {                                                         // Einfahrt/Bergportal: bis an seine Wand, dort hinunter
+        const bp = typeof bpAt === 'function' && bpAt(nx, ny), e = bp ? 1.5 : 0.5, ex = x + dx * e, ey = y + dy * e;
+        segs.push([S(x, y, h0), S(ex, ey, h0)]);
+        if (h0) segs.push([S(ex, ey, h0), S(ex, ey, 0)]);
+        continue;
+      }
+      const h1 = up(nx, ny), mx = x + dx * 0.5, my = y + dy * 0.5;
+      segs.push([S(x, y, h0), S(mx, my, h0)]);
+      if (h1 !== h0) segs.push([S(mx, my, h0), S(mx, my, h1)]);         // an der Wand senkrecht
+      segs.push([S(mx, my, h1), S(nx, ny, h1)]);
     }
-    if (!n) segs.push([{ x: p.x - 4 * z, y: p.y }, { x: p.x + 4 * z, y: p.y }]);
+    if (!n) segs.push([{ x: p.x - 4 * z, y: p.y - h0 }, { x: p.x + 4 * z, y: p.y - h0 }]);
   }
   g.lineCap = 'round'; g.setLineDash([6 * z, 5 * z]);
   for (const [col, w] of [['rgba(60,40,110,0.25)', 7], ['#6a52c4', 2.4]]) {
@@ -249,11 +280,6 @@ function drawTunnelView(z) {
   for (const [k, t] of state.tiles) if (t.b === 'ubahn') {
     const [x, y] = keyXY(k), p = toScreen(x, y), up = state.hills && state.hills.size ? hillLift(x, y) * z : 0;   // Anhöhe (157j): Eingang oben
     if (p.x < -40 || p.x > W + 40 || p.y < -40 - up || p.y > H + 40) continue;
-    if (up) {                                                            // Treppe durch die Anhöhe: vom Tunnel hinauf zum Eingang
-      g.lineCap = 'round'; g.setLineDash([6 * z, 5 * z]);
-      for (const [col, w] of [['rgba(60,40,110,0.25)', 7], ['#6a52c4', 2.4]]) { g.strokeStyle = col; g.lineWidth = w * z; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x, p.y - up); g.stroke(); }
-      g.setLineDash([]);
-    }
     uSign([p.x, p.y - 4 * z - up], 9, z);
   }
   g.restore();

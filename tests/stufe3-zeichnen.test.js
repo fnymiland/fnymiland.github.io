@@ -173,11 +173,20 @@ describe('alle Arten oben zeichnen', () => {
 });
 
 describe('U-Bahn-Eingang oben', () => {
-  it('Tunnel-Ansicht: U über dem Eingang oben, die Treppe als Strich vom Tunnel hinauf', () => {
+  it('Tunnel-Ansicht: U über dem Eingang oben; die Tunnel-Linie liegt oben auf der Anhöhe und führt an der Wand senkrecht hinunter', () => {
     hills(5, 5, 12, 12);
     game("for (let x = 3; x <= 14; x++) state.tunnels.set(x + ',9', {}); state.tiles.set('8,9', { b: 'ubahn', lvl: 1, rot: 0 }); recalc(); setSeeThrough(true)");
     const r = game(`(() => { const u = uSign, out = []; uSign = (p, s, z) => { out.push(p[1]); return u(p, s, z); }; try { cam.z = 2; const p = iso(8, 9); cam.x = p.x; cam.y = p.y; render(1e6); } finally { uSign = u; setSeeThrough(false); } return [out, toScreen(8, 9).y - 4 * cam.z - HILL_H * cam.z]; })()`);
     expect(r[0].map(v => Math.round(v))).toContain(Math.round(r[1]));
+    // Nutzer 11.10.2026 („unter einer Anhöhe versetzt, ich checke nicht, wo der Tunnel ist“, Variante A): Punkte der Linie unter der Anhöhe
+    // um den Hub angehoben, an der Kante (x = 4,5 und 12,5) ein senkrechtes Stück, außerhalb unten
+    const pts = game(`(() => { const out = [], c = g, wrap = n => { const f = c[n]; c[n] = (x, y) => { out.push([x, y]); return f.call(c, x, y); }; return () => { c[n] = f; }; };
+      setSeeThrough(true); cam.z = 2; const p = iso(8, 9); cam.x = p.x; cam.y = p.y; render(1e6);
+      const u1 = wrap('moveTo'), u2 = wrap('lineTo'); try { drawTunnelView(cam.z); } finally { u1(); u2(); setSeeThrough(false); }
+      const up = HILL_H * cam.z, at = (x, y, h) => { const q = toScreen(x, y); return [Math.round(q.x * DPR), Math.round((q.y - h) * DPR)]; };
+      const has = ([x, y]) => out.some(([a, b]) => Math.abs(a - x) <= 1 && Math.abs(b - y) <= 1);
+      return [has(at(8, 9, up)), has(at(8, 9, 0)), has(at(12.5, 9, up)), has(at(12.5, 9, 0)), has(at(14, 9, 0))]; })()`);
+    expect(pts).toEqual([true, false, true, true, true]);
     expect(game('errorShown')).toBe(false);
   });
 });
