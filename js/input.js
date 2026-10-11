@@ -200,7 +200,7 @@ window.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (sheetOpen) { setSheet(false); recentOpen = false; buildToolbar(); return; } if (plan) cancelPlan(); else { setTool('look'); closePanel(); closeModal(); } return; }   // Feld der Bauleiste zuerst zu
   if (!document.getElementById('modal').hidden) return;
   if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { e.preventDefault(); undo(); return; }   // Rückgängig
-  if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || turnsWhileBuilding(tool))) { rotateBuild(); return; }
+  if ((e.key === 'r' || e.key === 'R') && (wheelRotates() || turnsWhileBuilding(tool) || wegFlipNow())) { rotateBuild(); return; }   // Weg: Musterrichtung (Block 158)
   if (e.repeat) return;                              // gedrückt halten schaltet nicht hin und her
   if ((e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey) { setSeeThrough(!seeThrough); return; }   // 👁 Durchsicht
   if ((e.key === 'Delete' || e.key === 'Backspace' || e.key === 'e' || e.key === 'E') && !e.ctrlKey && !e.metaKey) { e.preventDefault(); deleteKey(); return; }   // Block 155e

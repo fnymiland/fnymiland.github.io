@@ -2612,3 +2612,15 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       bei sichtbarer Karte mittig über ihr (CSS `:has`). Gleis-Rampe: im Knopf nur der Name („Einschnitt A“), der Rest im Titel. Prüfung:
       tools/karte-ueberlapp-pruefung.js (alle 70 Dinge, offene Aufklappfelder mit) bei 900/1024/1200/1440 px – nichts über der Karte, nichts aus
       dem Bild; die Kategorie-Dinge stehen weiter fest.
+- [x] 158 **Wegrichtung: Muster drehen** (Nutzer 11.10.2026: „Wege drehen können – die Textur dreht sich mit“; gewählt: C – folgt der
+      Zugrichtung, R dreht um; „Mitte, ohne Fuge“; „bedenke, dass man auch im Nachhinein drehen will – Boden anklicken oder per Auswahl aufnehmen“).
+      `t.lauf` (0 entlang x, 1 entlang y; fehlt = alter Weg, Muster wie immer). Muster mit Richtung (`PAT_DIR`): Holzbohlen quer zum Weg,
+      Klinker, Plattenverband, Steinreihen, Fischgrät (klein/groß) längs; geprüft und ohne Richtung gelassen: Kleine/Große Platten, Kleinpflaster
+      (sieht gedreht gleich aus), Gemischte Platten (nur anders verteilt). Zeichnen: `patRot` in `pattern()` – Muster und Weltraster um 90° gedreht,
+      gesetzt nur in `drawPath` (Boden, breite Wege, oben auf Anhöhen); Brücken, Treppen, Plätze unverändert. Bauen: Linie je Schenkel (Ecke zum
+      ersten), Fläche nach der längeren Seite (`planLauf`), einzelnes Feld wie die Arme/Nachbarn (`wegLaufGuess`); alter Weg mit neuem Belag bekommt
+      eine Richtung. R/⟳ beim Weg (nur Belag mit Richtung; Mausrad zoomt weiter) dreht um, mit Hinweis, gilt bis zum Werkzeugwechsel (`wegFlip`).
+      Nachträglich: 👆 Weg → „Richtung · ⟳ Muster drehen“ (dieses Feld, zeigt „liegt quer/längs zum Weg“); ✋ Auswahl → „⟳ Wegmuster“ (alle Wege
+      darin, nichts verschoben); aufgenommene Gruppe dreht ihr Muster mit; ein aufgenommenes Wegfeld dreht mit ⟳/R (Abbrechen: wie vorher). Alles
+      mit ↶. Prüfung: tools/weg-richtung-pruefung.js (alle Muster an Kreuzung und Kurve, Fläche, Anhöhe, Nahaufnahmen; Musterblatt normal/gedreht),
+      Entwurf tools/weg-drehen-entwurf.js. Tests: weg-richtung.

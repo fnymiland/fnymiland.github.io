@@ -34,6 +34,7 @@ function build(b, x, y, quiet) {
       state.money -= ITEMS[b].cost;
       if (isWegBridge(old)) { old.brk = bridgeKind(old); if (old.brk === (BRIDGE_OF_STYLE[style] || 'stein')) delete old.brk; }   // Brücke bleibt, wie sie bezahlt ist
       old.style = style;
+      if (old.b === 'weg' && old.lauf == null) old.lauf = wegLaufNew(x, y);   // alter Weg bekommt einen Belag: Richtung wie beim Neubau (Block 158)
     }
     if (shape) applyWegShape(old);
     groundVersion++;
@@ -155,6 +156,7 @@ function build(b, x, y, quiet) {
       if (nb) { for (const key of ['brc', 'brw']) if (nb[key] != null) nt[key] = nb[key]; if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
     }
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
+    if (b === 'weg') state.tiles.get(k).lauf = wegLaufNew(x, y);        // Wegrichtung (Block 158): aus der Zugrichtung, sonst wie die Nachbarn
     if (d.fl0) state.tiles.get(k).fl = d.fl0;                       // Torturm: Stockwerke (Block 60f)
     if (b === 'fz_schloss') state.tiles.get(k).cs = csNew();     // Märchenschloss: Gestalt (Block 60g)
     if (baseOf(b) === 'busch') Object.assign(state.tiles.get(k), bushColNew('busch'));   // Buschfarbe (Block 89)
@@ -283,8 +285,8 @@ function pickUp(x, y, slot) {
   }
   recalc();
   sfx('deco');
-  $('rot-btn').hidden = !ROTATABLE.has(movingType());
-  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : ''));
+  $('rot-btn').hidden = !ROTATABLE.has(movingType()) && !wegFlipNow();   // Wegfeld mit Richtung: Muster drehen (Block 158)
+  toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : wegFlipNow() ? ' – Muster drehen mit ⟳ oder R' : ''));
 }
 // Mehrere Dinge auf einmal: alles, was ganz im Rechteck steht (samt Deko, Wegen, Schienen), wird angehoben und
 // zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus und Sehenswürdigkeiten bleiben stehen.
@@ -423,6 +425,7 @@ function groupPlaced(it) {
   const ax = Math.min(...cells.map(c => c[0])), ay = Math.min(...cells.map(c => c[1]));
   const turns = ROTATABLE.has(t.b) || t.b === 'weg' || t.b === 'schiene' || t.b === 'huegeltreppe' || t.b === 'huegelrampe', rot = turns ? (rot0 + r) & 3 : rot0;   // Treppe (157d): zeigt mit der Gruppe weiter hinauf
   const nt = { ...t, rot };
+  if (t.b === 'weg' && (r & 1)) nt.lauf = wegLauf(t) ^ 1;             // Wegrichtung (Block 158): das Muster dreht mit
   if (t.wegs) { nt.wegs = {}; for (const [o, st] of Object.entries(t.wegs)) { const [ox, oy] = keyXY(o), [px, py] = grot(it.dx + ox, it.dy + oy); nt.wegs[(px - ax) + ',' + (py - ay)] = st; } }
   const fit = footprint(t.b, ax, ay, rot, nt).map(c => c.join()).sort().join(';') === cells.map(c => c.join()).sort().join(';');
   return { dx: ax, dy: ay, t: nt, bad: fit ? null : `${ITEMS[t.b].name} lässt sich nicht drehen` };
@@ -695,6 +698,7 @@ function cancelMove() {
     } else {
       const [fx, fy] = keyXY(it.from);
       for (const o of Object.keys(it.t.wegs || {})) { const [dx, dy] = keyXY(o); state.tiles.delete((fx + dx) + ',' + (fy + dy)); }   // die liegengelassenen Wege wieder zudecken
+      if ('lauf0' in it) { if (it.lauf0 == null) delete it.t.lauf; else it.t.lauf = it.lauf0; }   // aufgenommenen Weg gedreht (Block 158): wie vorher
       state.tiles.set(it.from, it.t);
     }
   }

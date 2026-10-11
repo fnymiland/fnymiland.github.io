@@ -502,11 +502,12 @@ function setTool(t) {
   previewCache = null;
   if (buildInfo ? buildInfo !== t : t !== 'look') closePanel();     // Bau-Infofenster bleibt, solange sein Ding gewählt ist
   for (const b of document.querySelectorAll('.tool')) b.classList.toggle('active', b.dataset.tool === baseOf(t));   // auch bei einer anderen Größe
+  if (t !== 'weg') wegFlip = 0;                                          // R beim Weg gilt bis zum Werkzeugwechsel (Block 158)
   if (isDragTool(t)) noteDrag(t);                                        // Ziehen-Knopf zeigt, was man zuletzt gezogen hat (auch aus dem Menü gewählt)
   syncDragGroup();
   for (const b of document.querySelectorAll('.quick[data-quick]')) b.classList.toggle('active', b.dataset.quick === t);   // 👁 hat seinen eigenen Zustand
   syncDropBtn();
-  $('rot-btn').hidden = !turnsWhileBuilding(t);
+  $('rot-btn').hidden = !rotBtnShown(t);
   renderStyleBar(t);
   updateHint();
 }
@@ -516,6 +517,18 @@ function setTool(t) {
 // erscheint von selbst, solange eine Auswahl feststeht; hängt etwas am Finger (keine Kopie): „🗑️ Wegwerfen“ (155b).
 // render ruft das je Bild (nur bei Änderung neu)
 let selBarKey = null;
+// Wegfelder mit Richtung im Rechteck (Block 158) – und ihr Muster drehen (Auswahl bleibt stehen, ↶ nimmt es zurück)
+function selWegTurns([x0, y0, x1, y1]) {
+  const out = [];
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const t = state.tiles.get(x + ',' + y); if (wegTurns(t)) out.push(t); }
+  return out;
+}
+function turnSelWegs(box) {
+  const ts = selWegTurns(box);
+  if (!ts.length) return false;
+  undoable(() => { for (const t of ts) t.lauf = wegLauf(t) ^ 1; groundVersion++; sfx('road'); save(); });
+  return true;
+}
 const selDemolishPlan = p => ({ ...p, tool: 'abriss', keepLand: true, fixed: true });   // Wald/Fels bleiben (gerodet wird per 👆)
 function syncSelBar() {
   const bar = $('sel-bar');
@@ -536,13 +549,15 @@ function syncSelBar() {
   const { items, stays } = copyCollect(...box), pip = copyPipette(items), cost = copyCost(items);
   const copyLabel = !items.length ? '⧉ Kopieren' : pip ? `🖌️ Pipette: ${ITEMS[pip.tool].name}` : `⧉ Kopieren · 🪙 ${fmt(cost.money)}${matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) ? ' ' + matText(Object.fromEntries(Object.entries(cost).filter(([r]) => r !== 'money'))) : ''}`;
   const di = planInfo(selDemolishPlan(plan)), delLabel = di.err || !di.gain ? '🗑️ Abreißen' : `🗑️ Abreißen · +🪙 ${fmt(di.gain)}`;
-  const html = `<button class="btn" id="sel-move">↔ Verschieben</button><button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button>`
+  const turn = selWegTurns(box).length;                                  // Wegrichtung (Block 158): Muster aller Wege darin drehen, ohne zu verschieben
+  const html = `<button class="btn" id="sel-move">↔ Verschieben</button>${turn ? `<button class="btn" id="sel-turn" title="Das Muster der ${turn} Wegfelder drehen – nichts wird verschoben">⟳ Wegmuster</button>` : ''}<button class="btn" id="sel-copy" ${items.length ? '' : 'disabled'} title="${stays ? 'Rathaus, Sehenswürdigkeiten und Wunderwerke werden nicht mitkopiert' : ''}">${copyLabel}</button>`
     + `<button class="btn danger" id="sel-del" ${di.err ? 'disabled' : ''} title="${escHtml(di.err || (di.bad ? 'Rotes bleibt stehen' : 'Alles in der Auswahl abreißen – Wald und Fels bleiben (Entf)'))}">${delLabel}</button>`
     + '<button class="btn ghost" id="sel-x" aria-label="Auswahl aufheben">✕</button>';
   bar.hidden = false;
   if (bar.dataset.html === html) return;                                  // gleich geblieben: Knöpfe nicht austauschen (ein Klick ginge sonst ins Leere)
   bar.dataset.html = html; bar.innerHTML = html;
   $('sel-move').onclick = () => { const b = planBox(plan); plan = null; undoable(() => pickUpGroup(...b)); syncSelBar(); };
+  if ($('sel-turn')) $('sel-turn').onclick = () => turnSelWegs(planBox(plan));
   $('sel-copy').onclick = () => { const b = planBox(plan); plan = null; startCopy(...b); syncSelBar(); };
   $('sel-del').onclick = () => { audio(); demolishSelection(); };
   $('sel-x').onclick = () => { plan = null; syncSelBar(); };
@@ -778,7 +793,10 @@ function rampFormBar(bar) {
   bar.hidden = false;
 }
 // Stil-Zeile; bei Dingen aus einer Ziehen-Kategorie stehen deren Dinge vorn (katChips)
-function renderStyleBar(t) { renderOwnStyleBar(t); katChips($('style-bar'), t); fitStyleBar($('style-bar')); }
+function renderStyleBar(t) {
+  renderOwnStyleBar(t); katChips($('style-bar'), t); fitStyleBar($('style-bar'));
+  if (t === 'weg' && t === tool) $('rot-btn').hidden = !rotBtnShown(t);   // Belag gewechselt: ⟳ nur mit Richtung (Block 158)
+}
 // Nie unter die Minikarte (unten rechts, Block 135; Nutzer 11.10.2026: „ragt sehr weit nach rechts, unter die Minimap“): die links feste Zeile
 // (Kategorie-Dinge) bricht vor ihr um, die mittige wird schmaler – zu schmal (< 260 px), dann steht sie links und bricht vor der Karte um
 const MINI_BOX = 14 + 212;                                               // Abstand rechts + Karte samt Rand (minimap.js, MINI_D 200)
@@ -1420,7 +1438,11 @@ function wegBelagHtml(t, x, y) {
 function wegFormHtml(t, x, y) {
   const arms = pathArms(x, y), curve = !t.wide && !!roadCurve(arms), end = arms.length <= 1;
   const btn = (key, v, on, label) => `<button class="look${on ? ' on' : ''}" data-wegf="${key}:${v}">${label}</button>`;
-  return `${wegBelagHtml(t, x, y)}<div class="label">Form</div>
+  // Wegrichtung (Block 158): nur bei einem Belag mit Richtung; dreht dieses Feld (ganze Strecken: ✋ Auswahl → ⟳ Wegmuster)
+  const patAxis = t.lauf == null ? 0 : wegPatRot(t), across = patAxis !== wegLaufGuess(x, y);   // Grundmuster liegt entlang x
+  const dir = wegTurns(t) ? `<div class="label">Richtung</div>
+    <div class="looks"><button class="look" data-wlauf="1">⟳ Muster drehen</button><span class="muted wlauf-now">liegt ${across ? 'quer' : 'längs'} zum Weg</span></div>` : '';
+  return `${wegBelagHtml(t, x, y)}${dir}<div class="label">Form</div>
     <div class="looks">${btn('wide', 0, !t.wide, '▭ schmal')}${btn('wide', 1, !!t.wide, '▬ ganz breit')}</div>
     ${curve ? `<div class="looks">${btn('sq', 0, !t.sq, '⌒ Kurve rund')}${btn('sq', 1, !!t.sq, '⌐ Kurve eckig')}</div>` : ''}
     ${end && !t.wide ? `<div class="label">Ende</div><div class="looks">${btn('end', '', !t.end, '✨ automatisch')}${btn('end', 'rund', t.end === 'rund', '◖ rund')}${btn('end', 'rand', t.end === 'rand', '▌ bis an den Rand')}</div>
@@ -1454,6 +1476,9 @@ function wireWegForm(el, t, x, y) {
   for (const b of el.querySelectorAll('[data-wbel]')) b.onclick = () => undoable(() => {
     const list = wegScope === 'all' ? wegNetwork(x, y) : [[x, y]];
     if (restyleWeg(list, b.dataset.wbel)) openInfo(x, y);
+  });
+  for (const b of el.querySelectorAll('[data-wlauf]')) b.onclick = () => undoable(() => {   // Wegrichtung (Block 158): dieses Feld
+    t.lauf = wegLauf(t) ^ 1; groundVersion++; sfx('road'); save(); openInfo(x, y);
   });
   for (const b of el.querySelectorAll('[data-wegf]')) b.onclick = () => undoable(() => {
     const [k, v] = b.dataset.wegf.split(':');

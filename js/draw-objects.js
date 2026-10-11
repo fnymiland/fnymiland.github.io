@@ -277,7 +277,14 @@ function patCoarse(kind, z) {
   if (PAT_COARSE && (pts || lines) && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
   return s;
 }
+// Wegrichtung (Block 158): patRot = 1 zeichnet das Muster um 90° gedreht; das Weltraster dreht mit (Feld x, y → y, −x), so bleiben gedrehte
+// Stücke unter sich nahtlos. Setzen nur die Wegfelder (drawPath, Brückenbelag) – nie Treppen, Plätze, Gebäude
+let patRot = 0;
 function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
+  if (patRot) {
+    patRot = 0;
+    try { return pattern(p => L([-p[1], p[0]]), kind, y, -x, z, col, cols, ext, box && [box[2], box[3], -box[1], -box[0]], bg); } finally { patRot = 1; }
+  }
   if (kind === 'rainbow' || patNoFade) return patternDraw(L, kind, x, y, z, col, cols, ext, box);   // breite Streifen: bleiben
   const sc = patCoarse(kind, z);
   if (sc > 1) { PAT_SCALE = sc; try { return pattern1(L, kind, x, y, z * sc, col, cols, ext, box, bg, z); } finally { PAT_SCALE = 1; } }
@@ -1151,6 +1158,10 @@ const padBorder = (sh, d, at = null) => {
 };
 function drawPath(cx, cy, z, x, y, t) {
   if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
+  patRot = wegPatRot(t);                                                 // Wegrichtung (Block 158)
+  try { drawPathTile(cx, cy, z, x, y, t); } finally { patRot = 0; }
+}
+function drawPathTile(cx, cy, z, x, y, t) {
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const st = styleDef('weg', t && t.style), lk = lookFar(pathLook(st.id), z);
   const arms0 = pathArms(x, y), ends = pathEnds(x, y, t, arms0), arms = arms0.concat(state.hills && state.hills.size && ends.length ? hillEnds(x, y, t, ends) : ends);   // Enden bis ans Gebäude bzw. an den Rand (Block 77)
@@ -1536,8 +1547,23 @@ function decoScale(b) {
 // Beim Bauen drehbar (⟳ unten, R, Mausrad): alles aus ROTATABLE und die Treppe (Nutzer 11.10.2026: „wieso gibt es keinen R-Drehen-Knopf?“ – sie
 // dreht sich von selbst zur Anhöhe, gedreht wird reihum unter den Richtungen, die hinaufführen: stairRot mit rotManual)
 const turnsWhileBuilding = b => ROTATABLE.has(b) || b === 'huegeltreppe';
+// Wegrichtung (Block 158): ⟳ und R gibt es beim Weg nur mit einem Belag mit Richtung; das Mausrad zoomt dort weiter (Wege baut man ständig)
+const wegFlipNow = () => tool === 'weg' ? wegStyleTurns(currentStyle('weg')) : tool === 'verschieben' && !!moving && moving.kind === 'tile' && wegTurns(moving.t);
+const rotBtnShown = t => turnsWhileBuilding(t) || (t === tool && wegFlipNow());
 // Drehen per ⟳/R (+1) oder Mausrad (±1): ab der Richtung, die man gerade sieht (auch wenn sie automatisch war)
 function rotateBuild(dir = 1) {
+  if (tool === 'weg') {                                                   // Wegrichtung umdrehen: gilt für das, was man als Nächstes zieht
+    if (!wegFlipNow()) return;
+    const st = currentStyle('weg');
+    wegFlip ^= 1; previewCache = null; sfx('deco');
+    toast(`⟳ ${styleDef('weg', st).name}: ${(PAT_DIR[wegPatKind(st)] ^ wegFlip) ? 'quer' : 'längs'} zum Weg`);   // die Vorschau beim Ziehen zeigt nur Rauten
+    return;
+  }
+  if (tool === 'verschieben' && moving && moving.kind === 'tile' && wegTurns(moving.t)) {   // aufgenommenes Wegfeld: Muster drehen
+    if (!('lauf0' in moving)) moving.lauf0 = moving.t.lauf;              // Abbrechen legt es wieder hin wie vorher (cancelMove)
+    moving.t.lauf = wegLauf(moving.t) ^ 1; previewCache = null; sfx('deco');
+    return;
+  }
   if (tool === 'verschieben' && rotateGroup(dir)) { previewCache = null; sfx('deco'); return; }   // ganze Gruppe (Block 117)
   const type = tool === 'verschieben' ? movingType() : tool;
   const cur = hover && type && ITEMS[type] && turnsWhileBuilding(type) ? placeRot(type, hover.x, hover.y) : buildRot;

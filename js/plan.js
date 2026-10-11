@@ -294,7 +294,8 @@ function runPlan() {
   plan = null;
   const money0 = state.money;
   let n = 0;
-  batch(() => { for (const [, , run] of info.order) if (run()) n++; });
+  wegLaufPlan = p.tool === 'weg' ? planLauf(p) : null;                     // Wegrichtung (Block 158)
+  try { batch(() => { for (const [, , run] of info.order) if (run()) n++; }); } finally { wegLaufPlan = null; }
   if (!n) return false;
   if (p.tool === 'dach' && roofAutoPillars(info.order.map(([x, y]) => [x, y]))) { recalc(); save(); }   // Stützen kommen mit (Block 138)
   noteRecent(p.tool);                                                     // zuletzt gebaut (Block 120)
@@ -305,6 +306,21 @@ function runPlan() {
   return true;
 }
 
+// Wegrichtung (Block 158): jedes Stück folgt seiner Zugrichtung – Linie: zum Vorgänger (die Ecke gehört zum ersten Schenkel), Fläche: die
+// längere Seite; R (wegFlip) dreht um. Ein einzelnes Feld fehlt hier – es richtet sich nach den Nachbarn (wegLaufGuess)
+function planLauf(p) {
+  const out = new Map();
+  if (p.kind === 'rect') {
+    const [x0, y0, x1, y1] = planBox(p);
+    if (x0 === x1 && y0 === y1) return out;
+    for (const [x, y] of planTiles(p)) out.set(x + ',' + y, ((x1 - x0 >= y1 - y0 ? 0 : 1) ^ wegFlip) & 1);
+    return out;
+  }
+  const v = lineTiles(p.a, p.b);
+  if (v.length < 2) return out;
+  v.forEach(([x, y], i) => { const o = v[i ? i - 1 : 1]; out.set(x + ',' + y, ((o[1] === y ? 0 : 1) ^ wegFlip) & 1); });
+  return out;
+}
 // Tippen/Klicken, solange geplant wird (oder mit Weg/Schiene in der Hand). true = erledigt
 function planTap(x, y, isTouch) {
   planTouch = isTouch;

@@ -992,6 +992,27 @@ const lineW = e => !e ? 0 : e.arch ? 0.22 : e.b === 'zaun' ? 0.05 : 0.14;   // h
 const wegShapeNew = () => ({ ...(wegShape.wide ? { wide: true } : {}), ...(wegShape.sq ? { sq: true } : {}) });
 const sameWegShape = t => !!t.wide === wegShape.wide && !!t.sq === wegShape.sq;
 function applyWegShape(t) { for (const k of ['wide', 'sq']) { if (wegShape[k]) t[k] = true; else delete t[k]; } }
+// Wegrichtung (Block 158, Nutzer 11.10.2026: „Wege drehen – die Textur dreht sich mit“; gewählt: folgt der Zugrichtung, R dreht um, ohne
+// Randfuge): t.lauf 0 = der Weg läuft entlang x, 1 = entlang y; fehlt = alter Weg, Muster wie immer im Weltraster. Nur Muster mit Richtung
+// drehen (PAT_DIR: 0 längs zum Weg, 1 quer – Holzbohlen wie ein Steg); ihr Grundmuster liegt entlang x. Neue Wege merken sich die Richtung
+// immer, damit sie bei einem späteren Belag mit Richtung gleich passt
+const PAT_DIR = { bricks: 0, slabs: 0, ashlar: 0, herring2: 0, herring3: 0, boards: 1 };
+const wegPatKind = style => { const lk = pathLook(styleDef('weg', style).id); return lk && lk.pat ? lk.pat[0] : null; };
+const wegStyleTurns = style => PAT_DIR[wegPatKind(style)] != null;          // Belag mit Richtung
+const wegTurns = t => !!t && t.b === 'weg' && !t.bridge && wegStyleTurns(t.style);
+const wegLauf = t => t.lauf != null ? t.lauf & 1 : PAT_DIR[wegPatKind(t.style)] || 0;   // alter Weg: so, dass er aussieht wie bisher
+const wegPatRot = t => t && t.lauf != null && wegStyleTurns(t.style) ? (t.lauf ^ PAT_DIR[wegPatKind(t.style)]) & 1 : 0;
+let wegFlip = 0;                                                          // R beim Ziehen: andersherum als die Regel (bis zum Werkzeugwechsel)
+let wegLaufPlan = null;                                                  // runPlan: Feld → Laufrichtung aus der Zugrichtung
+// Ohne Zugrichtung (ein einzelnes Feld, Belag fürs ganze Netz): wohin der Weg hier läuft – mehr Arme entlang x oder y, sonst wie ein Nachbar
+const wegLaufNew = (x, y) => wegLaufPlan && wegLaufPlan.has(x + ',' + y) ? wegLaufPlan.get(x + ',' + y) : (wegLaufGuess(x, y) ^ wegFlip) & 1;
+function wegLaufGuess(x, y) {
+  let ax = 0, ay = 0;
+  for (const [dx, dy] of pathArms(x, y)) { if (dx) ax++; if (dy) ay++; }
+  if (ax !== ay) return ax > ay ? 0 : 1;
+  for (const [dx, dy] of DIRS) { const n = state.tiles.get((x + dx) + ',' + (y + dy)); if (n && n.b === 'weg' && n.lauf != null) return n.lauf & 1; }
+  return 0;
+}
 // Zusätzliche Arme bis an die Feldkante: zum Gebäude (automatisch) oder gerade weiter ('rand'); nur an Enden
 function pathEnds(x, y, t, arms) {
   if (!t || t.end === 'rund' || arms.length > 1 || t.cross || t.bridge) return [];
@@ -1967,7 +1988,7 @@ function setWegCell(x, y, style) {
   const t = state.tiles.get(x + ',' + y);
   if (wegCarrier(t)) {
     if (isWegBridge(t)) { const kind = bridgeKind(t); t.style = style; if (kind === (BRIDGE_OF_STYLE[style] || 'stein')) delete t.brk; else t.brk = kind; }
-    else t.style = style;
+    else { t.style = style; if (t.b === 'weg' && t.lauf == null) t.lauf = wegLaufGuess(x, y); }   // alter Weg, neuer Belag: Richtung wie die Arme (Block 158)
   } else if (t) t.weg = style;                                         // Ding steht mit seinem Ankerfeld hier
   else { const a = COVER.get(x + ',' + y), o = state.tiles.get(a), [ax, ay] = keyXY(a); o.wegs[(x - ax) + ',' + (y - ay)] = style; }
 }

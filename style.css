@@ -1007,3 +1007,4 @@ body:has(#minimap:not([hidden])) #rot-btn { right: calc(14px + 106px - 26px); bo
 @media (hover: hover) { .set-btn:hover { background: var(--yellow); } }
 .set-note { margin: 4px 0 8px; }
 body.phone .set-grid { grid-template-columns: 1fr; }
+.wlauf-now { align-self: center; font-size: 12px; margin-left: 4px; }   /* Wegrichtung (Block 158): wie das Muster gerade liegt */

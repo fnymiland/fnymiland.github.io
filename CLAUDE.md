@@ -551,6 +551,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (Fuge auf der hinteren Feldkante zeichnet nur das Nachbarfeld) – sonst ist sie doppelt gemalt dunkler und man sieht jedes Feld.
     Neue Linienmuster mit festem Weltraster in `PAT_TILE` eintragen (Wiederholung in Feldern, muss 1 teilen oder ein Vielfaches sein):
     dann malt `patTileFill` sie als Kachelbild statt Strich für Strich (Ruckeln bei vielen Feldern). Zufallsmuster (hash) nicht.
+    **Wegrichtung (Block 158):** Wegfelder merken sich `t.lauf` (0 entlang x, 1 entlang y; fehlt = alter Weg, Muster wie immer – nie für
+    alte Wege raten, sonst dreht sich ihr Aussehen). Gedreht wird nur über `patRot` (in `pattern()`: Muster samt Weltraster um 90°), und
+    nur `drawPath` setzt es (`wegPatRot`) – wer Wegbelag woanders zeichnet, setzt es nicht. Ein neues Muster mit Richtung kommt in
+    `PAT_DIR` (0 längs zum Weg, 1 quer; sein Grundmuster liegt entlang x). Wer Wegfelder anlegt, dreht oder umzieht, setzt `lauf` mit:
+    Neubau `wegLaufNew`, Gruppe drehen `groupPlaced`, nachträglich `wegLauf(t) ^ 1`. `t.rot` von Wegen hat zufällige alte Werte, nie dafür nutzen.
     Flächen von Wegfeldern überlappen an Kanten, wo es weitergeht, ~1 Gerätepunkt (`seamPad`/`padBorder`) – Nähte zeigt sonst nur
     Windows (am Mac nicht nachstellbar). Nachstellen von PC-Skalierung: `devicePixelRatio` per defineProperty setzen, dann `resize()`.
     **Leistungs-Wächter (Block 149):** `npm test` prüft je Bild (tests/leistung.test.js) und je Ding (tests/leistung-je-ding.test.js),
