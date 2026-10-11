@@ -15,6 +15,7 @@
     [16, 'F-kristall', 'Fußgänger · Kristall K1'], [20, 'F-zacken', 'Fußgänger · Kristall K1 mit Zacken'],
     [24, 'B-holz', 'Bahn · Holz'], [28, 'B-stein', 'Bahn · Stein'], [32, 'B-metall', 'Bahn · Metall'], [36, 'B-kristall', 'Bahn · Kristall B2'],
   ];
+  let STEIN_GEL = 'massiv';                                                // Geländer der Steinbrücke: 'niedrig' (bisher), 'massiv' (A), 'baluster' (B)
   const LAMP = '#ffd873', LAMP_C = '#bff3ff', LANTERN_S = 0.6;   // Minilaterne auf der Brüstung
   const mock = new Set();
   function setup() {
@@ -87,8 +88,22 @@
       const ri = u => { const k = u < edges[1] ? 0 : 1, a = edges[k] + (k ? PW : 0), c = edges[k + 1] - (k ? 0 : PW), t = Math.max(0, Math.min(1, (u - a) / (c - a)));
         const sa = k ? hp : H - sp, sc = k ? H - sp : hp, base = sa + (sc - sa) * t, top = dk((a + c) / 2) - gap, mid = (sa + sc) / 2;
         return Math.min(dk(u) - 3, base + Math.max(0, top - mid) * Math.sqrt(Math.max(0, Math.sin(Math.PI * t)))); };
-      const parH = u => 3 * Math.min(1, Math.min(u - U0, U1 - u) / 0.45);
-      band(-W, u => dk(u), u => dk(u) + parH(u), C(shade(L.top, -0.12)));
+      const PH = STEIN_GEL === 'niedrig' ? 3 : 6.5, ramp = u => Math.min(1, Math.min(u - U0, U1 - u) / 0.45), parH = u => PH * ramp(u);
+      // Geländer (Nutzer: „die Steinbrücke ist die einzige ohne Geländer“): A massiv hoch, B Balustrade (Pfosten + Handlauf)
+      const parapet = (v, front) => {
+        if (STEIN_GEL === 'baluster') {
+          const n = Math.round(10 * N);
+          for (let k = 0; k <= n; k++) { const u = U0 + N * k / n, h = parH(u); if (h < 1) continue;
+            poly([S(u - 0.022, v, dk(u)), S(u + 0.022, v, dk(u)), S(u + 0.022, v, dk(u) + h - 1.4), S(u - 0.022, v, dk(u) + h - 1.4)], C(front ? L.top : shade(L.top, -0.14)), C(L.joint), 0.4); }
+          band(v, u => dk(u) + parH(u) - 1.6, u => dk(u) + parH(u), C(front ? L.top : shade(L.top, -0.1)), C(L.joint), 0.5);
+          band(v, u => dk(u) - 0.01, u => dk(u) + 0.9 * ramp(u), C(front ? shade(L.top, -0.05) : shade(L.top, -0.16)));
+        } else {
+          band(v, u => dk(u), u => dk(u) + parH(u), C(front ? L.top : shade(L.top, -0.12)), front ? C(L.joint) : null);
+          if (front) for (let k = 1; k < 4 * N; k++) { const u = U0 + k / 4; if (ramp(u) > 0.9) path([S(u, v, dk(u) + 0.6), S(u, v, dk(u) + parH(u) - 1.4)], 'rgba(150,135,110,0.4)', 0.5); }
+        }
+        path(us.map(u => S(u, v, dk(u) + parH(u))), C(shade(L.top, front ? 0.06 : -0.04)), 1.3);   // Abdeckung
+      };
+      parapet(-W, false);
       deckTop(C(L.deck));
       if (foot) for (let i = 1; i < M; i += 2) path([S(us[i], -W, dk(us[i])), S(us[i], W, dk(us[i]))], 'rgba(150,135,110,0.45)', 0.6);
       poly([S(edges[1] + PW, -W, 0), S(edges[1] + PW, W, 0), S(edges[1] + PW, W, hp), S(edges[1] + PW, -W, hp)], C(shade(L.face, -0.12)), C(L.joint), 0.5);
@@ -102,9 +117,8 @@
         for (let q = 1; q < 10; q++) { const u = a + (c - a) * q / 10; path([S(u, W, ri(u)), S(u, W, ri(u) + 3.2)], C(L.joint), 0.6); }
         path(seg.map(u => S(u, W, ri(u))), C(shade(L.face, -0.25)), 1); path(seg.map(u => S(u, W, ri(u) + 3.2)), C(L.joint), 0.6); }
       if (!foot) rails();
-      band(W, u => dk(u), u => dk(u) + parH(u), C(L.top), C(L.joint));
-      path(us.map(u => S(u, W, dk(u) + parH(u))), C(shade(L.top, 0.06)), 1.2);
-      for (let k = 1; k < N; k++) for (const v of [-W, W]) lantern(U0 + k, v, dk(U0 + k) + 3);   // Laternen auf der Brüstung (je Kante)
+      parapet(W, true);
+      for (let k = 1; k < N; k++) for (const v of [-W, W]) lantern(U0 + k, v, dk(U0 + k) + PH);   // Laternen auf der Brüstung (je Kante)
     };
     if (id === 'F-holz') {                                                   // Entwurf 3b, Stützen „wenige“ (Kanten 1 und 3)
       const L = { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' };
@@ -214,6 +228,7 @@
     return c;
   }
   const post = async (name, cv) => { try { const r = await fetch('http://127.0.0.1:4181/' + name, { method: 'POST', body: cv.toDataURL('image/png') }); return await r.text(); } catch (e) { return 'kein Sammler'; } };
+  window.steinGelaender = gel => { STEIN_GEL = gel; };
   window.brueckenlichtBild = async (name = 'brueckenlicht.png', Wd = 500, Hd = 400) => {
     setup();
     const na = nightAt, gh = gameHour, n0 = night;
