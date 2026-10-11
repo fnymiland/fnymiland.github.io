@@ -3277,6 +3277,13 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-11-anhoehen', date: '11. Oktober', title: 'Anhöhen, Brücken und Schnellwahl', items: [
+    '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen): Felder eine Ebene höher, mit Wand nach Wahl. Oben gehen Wege, Plätze, Deko und sogar Häuser und Bahnhöfe. <b>Treppen</b> führen hinauf – schmal oder breit, auch um die Ecke (drehen mit R bzw. ⟳).',
+    '🚆 <b>Züge auf die Anhöhe:</b> mit der Gleis-Rampe (vier Formen) hinauf, mit dem Bergportal hinein in den Berg.',
+    '🌉 <b>Brücke von Anhöhe zu Anhöhe:</b> Holzsteg oder Stahlbrücke, darüber ein Weg oder eine Schiene – darunter bleibt Platz für Wege und Schienen.',
+    '👆 <b>Schnellwahl</b> unten links: ein Ziehen-Knopf mit Eisenbahn, Zäunen, Wegen und Gelände; ⭐ zeigt deine Favoriten (Stern an jeder Kachel) und was du zuletzt gebaut hast.',
+    '🧭 <b>Wegmuster folgen der Zugrichtung</b> – R dreht es um, angetippte Wege lassen sich nachträglich drehen.',
+  ] },
   { id: '2026-10-09-zaun', date: '9. Oktober', title: 'Zaun um Dinge auf dem Platz', items: [
     '🧱 <b>Durchgang schließen:</b> Ein Zaun (auch Hecke oder Mauer) über einem Weg wird von selbst ein Durchgang. Tipp das Stück an und wähle „geschlossen“ – so geht jetzt auch ein Zaun rund um einen Brunnen auf dem Platz.',
   ] },
