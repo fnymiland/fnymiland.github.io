@@ -15,7 +15,7 @@
     [16, 'F-kristall', 'Fußgänger · Kristall K1'], [20, 'F-zacken', 'Fußgänger · Kristall K1 mit Zacken'],
     [24, 'B-holz', 'Bahn · Holz'], [28, 'B-stein', 'Bahn · Stein'], [32, 'B-metall', 'Bahn · Metall'], [36, 'B-kristall', 'Bahn · Kristall B2'],
   ];
-  const LAMP = '#ffd873', LAMP_C = '#bff3ff', LANTERN_S = 0.5;   // Laterne auf der Brüstung: halb so groß wie auf dem Weg
+  const LAMP = '#ffd873', LAMP_C = '#bff3ff', LANTERN_S = 0.6;   // Minilaterne auf der Brüstung
   const mock = new Set();
   function setup() {
     for (let y = 0; y <= 42; y++) for (let x = 4; x <= 36; x++) {
@@ -57,9 +57,11 @@
       const p = S(u, v, h); X.beginPath(); X.arc(p[0], p[1], 0.85 * cam.z * dpr, 0, 7); X.fillStyle = NIGHT ? '#ffe58a' : C(col); X.fill();
       glowAt(p, 0.8 * cam.z, r);
     };
-    const lantern = (u, v, h) => {                                          // die kleine Laterne des Spiels (drawLantern, samt ihrem Licht), etwas kleiner
-      const p = S(u, v, h);
-      drawLantern(p[0], p[1], cam.z * LANTERN_S, performance.now(), -999, -999, { b: 'laterne' });
+    const lantern = (u, v, h) => {                                          // Minilaterne: Kopf der Gaslaterne des Spiels (drawLantern) auf kurzem Stummel, gleiches Licht
+      const p = S(u, v, h), z = cam.z * LANTERN_S, col = lookCol('laterne', { b: 'laterne' }), lit = NIGHT && night > 0.15 && isLive();
+      g.strokeStyle = C(col); g.lineWidth = 1.8 * z; g.lineCap = 'round'; g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] - 4 * z); g.stroke();
+      const lb = box(p[0], p[1] - 4 * z, 2.6 * z, 1.4 * z, 5 * z, lit ? '#ffe58a' : '#fff7d6', col, 3 * z);
+      if (NIGHT) glowQuad([[lb.L[0], lb.L[1]], [lb.R[0], lb.R[1]], [lb.R[0], lb.R[1] - 5 * z], [lb.L[0], lb.L[1] - 5 * z]], 30 * z);
     };
     const blueStrip = (v, f) => {                                           // Kristall: Leuchtstreifen, nachts bläulich nach oben
       for (let k = 0; k < 4 * N; k++) { const u0 = U0 + k / 4, u1 = u0 + 0.25;
