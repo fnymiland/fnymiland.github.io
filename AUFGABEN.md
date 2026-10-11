@@ -2682,4 +2682,13 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       Wagen knapp über der Kante schwebte doppelt hoch; „Gleise umstellen“ übersprang Deck und andere Seite; Strecke zu kurz gezählt; Zug
       oben angetippt öffnete das Feld darunter; nach ↶ rechnete das Netz mit der alten Brücke (`groundVersion`); ↶ an einer stehenden Brücke
       prüft nur neue Böcke, Achterbahn nicht mehr unter die Brücke. Tests: bruecke-gleis.
-- [ ] 160c Schritt 3: Wasserbrücken auf dasselbe Bauwerk umstellen (alte Spielstände umwandeln, gleiches Aussehen, Abkürzung beim Ziehen).
+- [ ] 160c Schritt 3: Brücken vereinheitlichen. **Besprochen 11.10.2026** (Brückenschau tools/brueckenschau.js, Entwürfe
+      tools/bogen-anhoehe-entwurf*.js): „eine Brücke für alles“ geht nicht, stattdessen **zwei Familien**:
+      - **Fußgängerbrücke = immer ein Bogen** (übers Wasser, über ein Gleis, zwischen Anhöhen), **Bahnbrücke = immer flach** (übers Wasser,
+        zwischen Anhöhen; Holzviadukt/Stahl). Ein Gleis fährt nie über einen Bogen.
+      - Zwischen Anhöhen halb so hoch wie übers Wasser. **Holz/Rot:** Bogenträger unter dem Belag mit Hängern, Stützen vom Boden bis unter
+        den Belag mit Kreuzstreben, **auf den Kachelkanten** (Wege darunter laufen durch die Feldmitte), im Fenster einstellbar:
+        keine / wenige / jede Kante (Entwurf 3b – „perfekt so“). **Stein:** dünner heller Bogen (Entwurf 2) **ohne Zipfel**: setzt knapp
+        unter der Kante an, Brüstung läuft an den Enden flach aus (Entwurf 6 „C“). Keine Basaltsäulen, kein Schwarz, keine Mauer bis unten.
+      - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
+        eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
