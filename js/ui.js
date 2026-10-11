@@ -2058,8 +2058,8 @@ function openInfo(x, y) {
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (setCrossing(x, y, b.dataset.cross === '1')) openInfo(x, y); };
-  for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (setCrossing(x, y, true, b.dataset.foot)) openInfo(x, y); };
+  for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, b.dataset.cross === '1'))) openInfo(x, y); };   // ↶, zuschauen/Besuch gesperrt (160c V2)
+  for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, true, b.dataset.foot))) openInfo(x, y); };
   if (!liveNow) updateHud();
 }
 

@@ -93,6 +93,23 @@ describe('Bahnübergang', () => {
     expect(document.querySelectorAll('#panel [data-foot]').length).toBe(4);
   });
 
+  it('Knöpfe im Fenster: ↶ nimmt Brücke und Design zurück; zuschauen und Besuch schalten nichts um (160c V2)', () => {
+    for (let y = 7; y <= 9; y++) game(`build('weg', 9, ${y}, true)`);
+    game('resetUndo()');
+    const m = game('state.money');
+    game("openInfo(9, 8); document.querySelector('#panel [data-foot=\"holz\"]').click()");
+    expect([t(9, 8).foot, game('state.money')]).toEqual([true, m - 60]);
+    game("openInfo(9, 8); document.querySelector('#panel [data-cross=\"0\"]').click()");
+    expect(t(9, 8).foot).toBe(false);
+    game('undo()'); game('undo()');
+    expect([!!t(9, 8).foot, t(9, 8).footPaid, game('state.money')]).toEqual([false, undefined, m]);
+    game('globalThis.__vo = viewOnly; viewOnly = () => true');
+    try {
+      game("openInfo(9, 8); document.querySelector('#panel [data-foot=\"stein\"]').click()");
+      expect([!!t(9, 8).foot, game('state.money')]).toEqual([false, m]);
+    } finally { game('viewOnly = globalThis.__vo; delete globalThis.__vo; closePanel()'); }
+  });
+
   it('die Brücke ist so breit wie ein Weg', () => {
     expect(game('ARCH_W')).toBeGreaterThanOrEqual(game('ROAD_W') - 0.05);
   });
