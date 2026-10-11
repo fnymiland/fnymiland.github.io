@@ -18,7 +18,7 @@
   // Brücken: [Zeile y, Anhöhe A bis xa1, Anhöhe B ab xb0, Art]
   const BR = [];
   // Abwandlungen: pk Höhe (× Entwurf 2), sp Ansatz unter der Kante, th Dicke am Scheitel, par Brüstung, ring Bogenkante, col Farben, deck Belag
-  const VAR = [], STUFEN = [0.4, 0.7, 1, 1.4, 1.9];                        // Höhe des Buckels (× halbe Höhe übers Wasser); Nutzer: „ich sehe keinen Unterschied“ – vorher nur der Ansatz an den Pfeilern
+  const VAR = [], STUFEN = [[13, 7], [10, 10], [7.5, 13], [5, 16], [3.2, 19]];   // Öffnung unter der Brücke: [Stein über dem Scheitel, Ansatz am Pfeiler]; Buckel wie Entwurf 7 (Nutzer: „der Buckel war perfekt, es geht ums Loch“)
   const mock = new Set();
   function setup() {
     for (let y = 0; y <= 38; y++) for (let x = 2; x <= 30; x++) {
@@ -39,7 +39,7 @@
       BR.push({ y, U0: xa1 + 0.5, U1: xb0 - 0.5, art, st, B: [xb0, xb1, ...hy], o });
     };
     hill(6, 2, 9, 31); hill(16, 2, 19, 31); hy = [2, 31];                    // Lücke 6, fünf Stufen
-    STUFEN.forEach((f, k) => row(4 + 6 * k, 6, 9, 16, 19, 'stein', { piers: true, hp: 14, pk: f }));
+    STUFEN.forEach(([g, hp], k) => row(4 + 6 * k, 6, 9, 16, 19, 'stein', { piers: true, hp, gap: g }));
     for (const px of [10, 13, 15]) for (let y = 0; y <= 33; y++) weg(px, y, 'sand');
     groundVersion++; recalc();
     hill(24, 20, 25, 22); hill(28, 20, 29, 22);                              // eine echte Brücke weit weg: bkOn() gilt (Arme über die Kante)
@@ -76,7 +76,7 @@
       const ri = u => {                                                      // Leibung über u: Ansatz am Pfeiler hp, an der Wand knapp unter der Kante (wie C); dünn unter dem Belag
         const k = Math.min(n - 1, Math.floor((u - U0) / (N / n))), a = edgesA[k] + (k ? PW : 0), c = edgesA[k + 1] - (k < n - 1 ? PW : 0);
         const t = Math.max(0, Math.min(1, (u - a) / (c - a))), sa = k ? hp : H - sp, sc = k < n - 1 ? hp : H - sp;
-        const base = sa + (sc - sa) * t, top = dk((a + c) / 2) - th, mid = (sa + sc) / 2;
+        const base = sa + (sc - sa) * t, top = dk((a + c) / 2) - (b.o.gap || th), mid = (sa + sc) / 2;
         return Math.min(dk(u) - th, base + Math.max(0, top - mid) * Math.sqrt(Math.max(0, Math.sin(Math.PI * t))));
       };
       const parH = u => 3 * Math.min(1, Math.min(u - U0, U1 - u) / 0.45);
@@ -168,7 +168,7 @@
   window.bogenEntwurf8 = async (name = 'bogen-anhoehe-8.png', Wd = 620, Hd = 460) => {
     setup();
     const na = nightAt, gh = gameHour; nightAt = () => 0; gameHour = () => 12; night = 0;
-    const list = STUFEN.map((f, k) => [12.5, 4 + 6 * k, 1.45, `Stufe ${k + 1}: Buckel ${Math.round(f * 100)} %`]).concat([[9.9, 4, 5, 'Stufe 1, Anfang nah'], [9.9, 16, 5, 'Stufe 3, Anfang nah'], [9.9, 28, 5, 'Stufe 5, Anfang nah']]);
+    const list = STUFEN.map((f, k) => [12.5, 4 + 6 * k, 1.45, `Stufe ${k + 1}: ${['kleines Loch', 'etwas größer', 'mittel', 'groß', 'sehr groß'][k]}`]).concat([[9.9, 4, 5, 'Stufe 1, Anfang nah'], [9.9, 16, 5, 'Stufe 3, Anfang nah'], [9.9, 28, 5, 'Stufe 5, Anfang nah']]);
     const cols = 2, rows = Math.ceil(list.length / cols), sheet = document.createElement('canvas'); sheet.width = cols * (Wd + 16); sheet.height = rows * (Hd + 50);
     const sx = sheet.getContext('2d'); sx.fillStyle = '#fffaf0'; sx.fillRect(0, 0, sheet.width, sheet.height);
     try {
