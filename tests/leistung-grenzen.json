@@ -248,5 +248,55 @@
   "ops": 1678,
   "geo": 10998,
   "live": 31
+ },
+ "bruecken Tag Zoom 0.45": {
+  "ops": 1717,
+  "geo": 5080,
+  "live": 6
+ },
+ "bruecken Tag Zoom 0.8": {
+  "ops": 419,
+  "geo": 1056,
+  "live": 1
+ },
+ "bruecken Tag Zoom 1.2": {
+  "ops": 259,
+  "geo": 968,
+  "live": 0
+ },
+ "bruecken Tag Zoom 1.6": {
+  "ops": 1980,
+  "geo": 8601,
+  "live": 1
+ },
+ "bruecken Tag Zoom 2.2": {
+  "ops": 1205,
+  "geo": 5432,
+  "live": 1
+ },
+ "bruecken Nacht Zoom 0.45": {
+  "ops": 1734,
+  "geo": 5106,
+  "live": 6
+ },
+ "bruecken Nacht Zoom 0.8": {
+  "ops": 427,
+  "geo": 1059,
+  "live": 1
+ },
+ "bruecken Nacht Zoom 1.2": {
+  "ops": 217,
+  "geo": 445,
+  "live": 0
+ },
+ "bruecken Nacht Zoom 1.6": {
+  "ops": 1982,
+  "geo": 8601,
+  "live": 1
+ },
+ "bruecken Nacht Zoom 2.2": {
+  "ops": 1207,
+  "geo": 5432,
+  "live": 1
  }
 }
