@@ -2584,6 +2584,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Nachtrag 3 (Nutzer: „weird, dass das Icon wegspringt, wenn ich es anklicke – es sollte immer alles an derselben Stelle bleiben“): Die Leiste
       ist mittig und wurde mit Kugeln breiter (Handy: ohne Bereiche schmaler), der Knopf rückte unter der Maus weg. Jetzt bleibt der große Knopf, wo
       man getippt hat (`holdDragSpot`, Leiste per `translate` verschoben, nie aus dem Bild); reicht der Platz nicht, zeigen die Bereiche solange nur
-      ihr Symbol (`drag-tight`, iPad hochkant), notfalls treten sie ganz zur Seite (`drag-tighter`, kleines Tablet). Eine angetippte Kugel tauscht
-      den Platz mit dem großen Knopf (`dragBalls`), die übrigen bleiben stehen – nochmal tippen nimmt einen Fehlgriff zurück. Nachgemessen bei
+      ihr Symbol (`drag-tight`, iPad hochkant), notfalls treten sie ganz zur Seite (`drag-tighter`, kleines Tablet). Nachgemessen bei
       375/414/640/700/768/900/1024/1200 px: Knopf bleibt aufs Pixel. Tests: schnellwahl.
+      Nachtrag 4 (Nutzer: „das Ersetzen ist genau das Problem, man muss mit der Maus wieder so weit“): kein Platztausch mehr. Solange die Reihe
+      offen ist, bleibt ihre Reihenfolge (`dragRow`); eine angetippte Kugel wird an ihrem Platz groß und bleibt unter dem Finger (Leiste rückt um
+      den Größenunterschied). Das Große nochmal antippen: zu, vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen
+      rücken in ihrer Reihenfolge nach (Weg → Schiene → zu → auf: 🚆 🛤️ 🚇 🪵 🌿 🧱). Nachgemessen bei 375/640/768/1200 px. Tests: schnellwahl.

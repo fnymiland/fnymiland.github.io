@@ -21,22 +21,28 @@ describe('Ziehen-Knopf', () => {
     expect(balls()).toEqual(['schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
     expect(game("document.querySelector('#cats .quick.drag').nextElementSibling.dataset.ball")).toBe('schiene');   // gleich rechts daneben
   });
-  it('Kugel antippen: sie wird groß (in der Hand), der Weg wird Kugel; gemerkt; nochmal der große: weglegen, Kugeln weg', () => {
-    game("setTool('weg'); document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
-    expect(game('tool')).toBe('tunnel');
-    expect(big()).toEqual(['tunnel', '🚇', true]);
-    expect(balls()).toEqual(['schiene', 'weg', 'zaun', 'hecke', 'mauer']);         // Platz getauscht: der Weg liegt, wo der Tunnel lag
-    game("document.querySelector('#cats .drag-ball[data-ball=\"weg\"]').click()");   // Fehlklick: dieselbe Stelle nochmal
-    expect([game('tool'), balls()]).toEqual(['weg', ['schiene', 'tunnel', 'zaun', 'hecke', 'mauer']]);
-    game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
-    game("setTool('look'); buildToolbar()");
-    expect([big()[0], balls().length]).toEqual(['tunnel', 0]);                    // gemerkt, zu
+  it('Kugel antippen: wird an ihrem Platz groß, die Reihe bleibt (Nutzer: „alles an derselben Stelle“); das Große nochmal: zu, vorn das zuletzt Genutzte; wieder auf: es steht vorn, die übrigen rücken nach', () => {
+    const row = () => game("[...document.querySelectorAll('#cats .quick.drag, #cats .drag-ball')].map(b => b.dataset.ball || b.dataset.quick)");
     game("document.querySelector('#cats .quick.drag').click()");
-    expect(game('tool')).toBe('tunnel');
-    game("document.querySelector('#cats .quick.drag').click()");
-    expect([game('tool'), balls().length]).toEqual(['look', 0]);
-    game("setTool('schiene')");                                                     // auch aus dem Menü gewählt
+    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    game("document.querySelector('#cats .drag-ball[data-ball=\"schiene\"]').click()");
+    expect(game('tool')).toBe('schiene');
     expect(big()).toEqual(['schiene', '🚆', true]);
+    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);  // Reihe unverändert, Schiene groß an ihrem Platz
+    expect(balls()).toEqual(['weg', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    game("document.querySelector('#cats .drag-ball[data-ball=\"hecke\"]').click()");
+    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    game("document.querySelector('#cats .drag-ball[data-ball=\"schiene\"]').click()");
+    game("document.querySelector('#cats .quick.drag').click()");                  // das Große nochmal: zu
+    expect([game('tool'), big()[0], balls().length]).toEqual(['look', 'schiene', 0]);
+    expect(game("document.querySelector('#cats .quick.drag').previousElementSibling.dataset.quick")).toBe('look');   // vorn, gleich hinter 👆
+    game("document.querySelector('#cats .quick.drag').click()");                  // wieder auf: Schiene vorn, die übrigen rücken nach
+    expect(row()).toEqual(['schiene', 'weg', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    game("setTool('look'); buildToolbar()");
+    expect([big()[0], balls().length]).toEqual(['schiene', 0]);                   // gemerkt
+    game("setTool('tunnel')");                                                      // auch aus dem Menü gewählt
+    expect(big()).toEqual(['tunnel', '🚇', true]);
+    expect(row()).toEqual(['tunnel', 'schiene', 'weg', 'zaun', 'hecke', 'mauer']);
     game("setTool('look')");
   });
   it('nicht erforscht: großer Knopf fällt auf den Weg zurück, die Kugel ist blass und sagt, was fehlt', () => {
