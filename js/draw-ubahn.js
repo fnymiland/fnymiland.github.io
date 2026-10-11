@@ -211,27 +211,35 @@ function drawTunnelGhost(cx, cy, z) {
   diamondPath(cx, cy, TW / 2 * z * 0.7, TH / 2 * z * 0.7); g.stroke(); g.restore();
 }
 function diamondPath(cx, cy, a, b) { g.beginPath(); g.moveTo(cx, cy - b); g.lineTo(cx + a, cy); g.lineTo(cx, cy + b); g.lineTo(cx - a, cy); g.closePath(); }
-// Bauleiste: kleines Bild des Tunnels als Querschnitt (Nutzer 11.10.2026: Tunnel und Bergportal sahen im Menü gleich aus) – ein Stück Wiese,
-// vorn aufgeschnitten: Erdreich, darin die runde Tunnelröhre mit Gleis, oben lila gestrichelt wie in der Tunnel-Ansicht
-function drawTunnelIcon(cx, cy, z) {
-  const s = 0.72, hw = TW / 2 * z * s, hh = TH / 2 * z * s, D = 30;     // D: Tiefe des Schnitts (Bildpunkte)
-  const P = (u, v, h = 0) => [cx + (u - v) * hw, cy - 6 * z + (u + v) * hh + h * z * s];   // h nach unten
-  const quad = (pts, col) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = C(col); g.fill(); };
+// Bauleiste: kleines Bild des Tunnels als Querschnitt (Nutzer 11.10.2026: Tunnel und Bergportal sahen im Menü gleich aus; „es steht über den
+// Untergrund“) – das Bild IST das Feld: oben die Wiese genau als Feld (wie die Bodenplatte der anderen Bilder), darunter aufgeschnitten das
+// Erdreich, darin die runde Röhre mit Gleis (man sieht hinein, nach hinten dunkel), oben lila gestrichelt wie in der Tunnel-Ansicht.
+// (cx, cy) = Mitte der Wiese, D = Tiefe des Schnitts in Bildpunkten (× z)
+function drawTunnelIcon(cx, cy, z, D = 26) {
+  const hw = TW / 2 * z, hh = TH / 2 * z, L = Math.hypot(hw, hh);
+  const P = (u, v, h = 0) => [cx + (u - v) * hw, cy + (u + v) * hh + h * z];   // h nach unten
+  const path = pts => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+  const quad = (pts, col) => { path(pts); g.fillStyle = C(col); g.fill(); };
   quad([P(-0.5, 0.5), P(0.5, 0.5), P(0.5, 0.5, D), P(-0.5, 0.5, D)], '#a57a52');           // Schnitt vorn links (+y): Erdreich
   quad([P(0.5, -0.5), P(0.5, 0.5), P(0.5, 0.5, D), P(0.5, -0.5, D)], '#8a6342');          // Schnitt vorn rechts (+x)
-  quad([P(-0.5, -0.5), P(0.5, -0.5), P(0.5, 0.5), P(-0.5, 0.5)], '#9fd979');              // Wiese oben
-  quad([P(-0.5, 0.5), P(0.5, 0.5), P(0.5, 0.5, 3), P(-0.5, 0.5, 3)], '#7fbf55');          // Grasnarbe
-  quad([P(0.5, -0.5), P(0.5, 0.5), P(0.5, 0.5, 3), P(0.5, -0.5, 3)], '#6aa847');
-  // Röhre im linken Schnitt: Kreis in der Schnittfläche (s längs, h nach unten), Ring aus Beton, innen dunkel, unten das Gleis
-  const at = (t, h) => P(-0.5 + t, 0.5, h), R = 9, mc = 0.5, mh = 18, rs = R / Math.hypot(hw, hh) * z * s;
-  const ring = r => { const out = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2; out.push(at(mc + Math.cos(a) * rs * r / R, mh + Math.sin(a) * r)); } return out; };
-  quad(ring(R + 2.2), '#cfc8bc'); quad(ring(R), '#2b2723');
-  g.strokeStyle = C('#8a909a'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.beginPath();
-  for (const o of [-0.09, 0.09]) { const a = at(mc + o, mh + R - 2.5), b = [a[0] + 4 * z, a[1] - 2 * z]; g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+  quad([P(-0.5, -0.5), P(0.5, -0.5), P(0.5, 0.5), P(-0.5, 0.5)], '#96d56f');              // Wiese (Farbe der Bodenplatte)
+  quad([P(-0.5, 0.5), P(0.5, 0.5), P(0.5, 0.5, 2.4), P(-0.5, 0.5, 2.4)], '#7fbf55');      // Grasnarbe
+  quad([P(0.5, -0.5), P(0.5, 0.5), P(0.5, 0.5, 2.4), P(0.5, -0.5, 2.4)], '#6aa847');
+  // Röhre im linken Schnitt: Kreis in der Schnittfläche (t längs, h nach unten), Betonring; innen Boden mit Gleis, das in die Tiefe läuft
+  const R = 7.5, mh = 14, rs = R * z / L, at = (t, h) => P(-0.5 + t, 0.5, h), into = (t, d, h) => P(-0.5 + t, 0.5 - d, h);
+  const circ = r => { const o = []; for (let i = 0; i <= 28; i++) { const a = i / 28 * Math.PI * 2; o.push(at(0.5 + Math.cos(a) * rs * r / R, mh + Math.sin(a) * r)); } return o; };
+  quad(circ(R + 2), '#cfc8bc'); quad(circ(R), '#2b2723');
+  g.save(); path(circ(R)); g.clip();
+  const fh = mh + R * 0.66, fw = rs * 0.75;
+  quad([at(0.5 - fw, fh), at(0.5 + fw, fh), into(0.5 + fw, 1, fh), into(0.5 - fw, 1, fh)], '#6d655b');
+  g.strokeStyle = C('#8a909a'); g.lineWidth = 1 * z; g.lineCap = 'butt'; g.beginPath();
+  for (const o of [-0.07, 0.07]) { const a = at(0.5 + o, fh - 0.4), b = into(0.5 + o, 1, fh - 0.4); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
   g.stroke();
-  // oben: die Linie der Tunnel-Ansicht
-  g.save(); g.setLineDash([3 * z, 2.5 * z]); g.strokeStyle = C('#6a52c4'); g.lineWidth = 2 * z; g.beginPath();
-  const a = P(mc - 0.5, -0.5), b = P(mc - 0.5, 0.5); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.restore();
+  const p0 = at(0.5, mh), p1 = into(0.5, 0.6, mh), gr = g.createLinearGradient(p0[0], p0[1], p1[0], p0[1]);   // waagerecht: nur nach der Tiefe dunkler
+  gr.addColorStop(0, 'rgba(30,26,22,0.1)'); gr.addColorStop(1, 'rgba(30,26,22,0.95)'); g.fillStyle = gr; path(circ(R)); g.fill();
+  g.restore();
+  g.save(); g.setLineDash([3 * z, 2.5 * z]); g.strokeStyle = C('#6a52c4'); g.lineWidth = 2 * z; g.lineCap = 'round'; g.beginPath();   // oben: die Linie der Tunnel-Ansicht, genau über der Röhre
+  const a = P(0, -0.5), b = P(0, 0.5); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); g.restore();
 }
 
 // Bauansicht (Nutzer: „passt so“): mit Tunnel, Einfahrt oder U-Bahn-Station in der Hand wird die Welt blass; mit Schiene oder Abriss

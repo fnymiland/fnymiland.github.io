@@ -90,9 +90,8 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'schiene') {
     block(1, '#96d56f');
     drawObject('schiene', cx, cy, z, 0, 1e6, 1e6, 1, { rot: 0 });
-  } else if (type === 'tunnel') {                          // Tunnel (Block 136): Strecke in den Berg (Bergportal, 157m)
-    block(1, '#96d56f');
-    drawTunnelIcon(cx, cy, z * 0.9);
+  } else if (type === 'tunnel') {                          // Tunnel: das Feld selbst als Querschnitt (keine Bodenplatte darunter – es stand sonst über ihr)
+    drawTunnelIcon(cx, cy - 32, z);
   } else if (type === 'bergportal') {                      // Bergportal (157m): Eck Anhöhe mit der Öffnung, davor die Schiene
     block(1, '#96d56f');
     drawBergportalIcon(cx + 2 * z, cy + 2 * z, z * 0.95, (tile && tile.form) || decoLookNew('bergportal').form || 0);

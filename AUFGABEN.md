@@ -2528,7 +2528,7 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Offen: kein Geist beim Bauen (die Vorschau zeigt nur den Rahmen oben auf dem Feld); Verkehr mit 11 Dingen (Nutzer-Wunsch „direkt hinter die
       Tunneleinfahrt“, Grenze bisher 10); „Das ist neu“/NEWS beim Push.
 - [x] 157n **Nachbesserungen Bergportal/Tunnel** (Nutzer 11.10.2026, mit Bildschirmfoto): (1) Tunnel und Bergportal hatten im Menü dasselbe Bild – der
-      Tunnel zeigt jetzt einen Querschnitt (Wiese, Erdreich, runde Röhre mit Gleis, oben lila gestrichelt; `drawTunnelIcon`, Nutzer wählte
+      Tunnel zeigt jetzt einen Querschnitt – das Feld selbst, ohne Bodenplatte darunter (Nutzer: „es steht über den Untergrund“): Wiese, Erdreich, runde Röhre mit Gleis (man sieht hinein), oben lila gestrichelt; `drawTunnelIcon`, Nutzer wählte
       „Querschnitt“). (2) Tunnel unter einer Anhöhe sah in der Tunnel-Ansicht versetzt aus (Linie am Boden, Anhöhe davor angehoben) – Variante A
       (Bild tools/vorschau/tunnel-anhoehe-varianten.png): die Linie liegt oben auf dem Feld, das man sieht und antippt, und führt an der Wand
       senkrecht hinunter, in ein Bergportal an seiner Wand (`drawTunnelView`; der Extra-Strich zum U-Bahn-Eingang oben entfällt). (3) Zug blitzte
