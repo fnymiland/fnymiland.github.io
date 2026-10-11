@@ -1103,6 +1103,15 @@ const wegShape = { wide: false, sq: false };      // Form neuer Wege (Block 77):
 const edgeShape = { sq: false };                   // Ecken neuer Hecken/Zäune/Mauern (Nutzer, 09.10.2026): rund (Standard) oder eckig
 
 
+// Brückenfarben (Block 66b; 160c A3: für alle Brücken, mit Namen). Der Index wird gespeichert (brc/brw) – nur hinten anhängen
+const BRIDGE_COL_DEFS = [
+  { id: 'dunkelbraun', name: 'Dunkelbraun', c: '#6f5238' }, { id: 'holzton', name: 'Holz', c: '#b08a5e' }, { id: 'weiss', name: 'Weiß', c: '#fbf7ef' },
+  { id: 'rot', name: 'Rot', c: '#d9483b' }, { id: 'blau', name: 'Blau', c: '#3f6fb5' }, { id: 'gruen', name: 'Grün', c: '#3f8f5a' },
+  { id: 'sandstein', name: 'Sandstein', c: '#d9d2c3' }, { id: 'grau', name: 'Grau', c: '#8c8a85' }, { id: 'ziegel', name: 'Ziegel', c: '#b5654a' },
+  { id: 'gelb', name: 'Gelb', c: '#f2c14e' },
+];
+const BRIDGE_COLS = BRIDGE_COL_DEFS.map(c => c.c);                                                                       // Bauwerk
+const PLANK_COLS = ['#b08a5e', '#8a6440', '#c9b79c', '#a9a9a3', '#f1e7d6', '#c79a6a'];   // Holzplanken; [5] = Planken der alten Roten Bogenbrücke (160c)
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',
                '#ffd1b3', '#c9f0e4', '#ffe066', '#d8c3a5', '#b8d8ff', '#ffc2d9', '#f5f5f5'];
 const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1', '#6b7a8f',

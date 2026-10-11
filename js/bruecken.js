@@ -14,6 +14,7 @@ const BK_ARTEN = {
 };
 const BK_ART_IDS = ['holz', 'stahl'];                                    // = DECO_LOOKS.bruecke.forms
 const BK_MAX = 4, BK_W = 0.4, BK_CLEAR = HILL_H - 6;                    // längste Lücke, halbe Breite des Decks, Platz darunter (Deko-Höhe)
+const BK_READ_MAX = 8;                                                    // so lange Brücken liest parseSave schon (160c: gebaut wird bis 8 erst später)
 const BK_NO_PAINT = new Set(['wald', 'obstwald', 'fels', 'anhoehe']);   // Gelände, das darunter nicht passt (Bäume, Felsen, Anhöhe)
 const bkArtOf = b => BK_ARTEN[b && b.art] ? b.art : 'holz';
 const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';

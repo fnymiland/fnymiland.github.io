@@ -64,6 +64,20 @@ function brLook(o, at) {
     zacken: mat === 'kristall' && L.fam === 'fuss' && o.brz === 'an',
     stuetzen: mat === 'holz' && L.fam === 'fuss' && (o.bru === 'keine' || o.bru === 'jede') ? o.bru : 'wenige' };
 }
+// Speichern/Laden (state.js): die br-Felder eines Objekts streng prüfen – nur gültige Werte, sonst weglassen (= Standard)
+function brClean(o) {
+  const out = {};
+  if (!o || typeof o !== 'object') return out;
+  if (BR_MAT[o.brm]) out.brm = o.brm;
+  if (brIdx(o.brc) != null && o.brc < BRIDGE_COLS.length) out.brc = o.brc;
+  if (brIdx(o.brw) != null && o.brw < PLANK_COLS.length) out.brw = o.brw;
+  if (o.brb === 'belag' || o.brb === 'muster') out.brb = o.brb;
+  if (o.brl === 'an' || o.brl === 'aus') out.brl = o.brl;
+  if (o.brz === 'an' || o.brz === 'aus') out.brz = o.brz;
+  if (o.bru === 'keine' || o.bru === 'jede') out.bru = o.bru;
+  if (brPaidOk(o.brp)) out.brp = { ...o.brp };
+  return out;
+}
 // Gleisbrücke als Ganzes: zusammenhängende Gleisfelder mit bridge (über die Arme des Gleises, auch Kurven, Abzweige, Doppelgleis)
 function brRailSpan(x, y) {
   const out = [], seen = new Set(), todo = [[x, y]];

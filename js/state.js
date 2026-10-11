@@ -83,9 +83,11 @@ function tileOut(t) {
   if (t.lauf === 0 || t.lauf === 1) o.lauf = t.lauf;                                     // Wegrichtung (Block 158; fehlt = alter Weg, 160c V5)
   if (t.zug === false) o.zug = false;                                                       // Gartenweg aus
   if (t.vp) o.vp = t.vp;                                                                    // Belag des Vorplatzes (Block 91)
-  if (t.brk) o.brk = t.brk;
+  if (t.brk) o.brk = t.brk;                                                              // Wegbrücke: Art (Block 66; alter Wortschatz holz/stein/ziegel/rot)
   if (t.brc != null) o.brc = t.brc;                                                      // Brückenfarben (Block 66b)
-  if (t.brw != null) o.brw = t.brw;                                                              // Wegbrücke: Art (Block 66)
+  if (t.brw != null) o.brw = t.brw;                                                              // Planken (Block 66b)
+  for (const f of ['brm', 'brb', 'brl', 'brz', 'bru']) if (t[f] != null) o[f] = t[f];            // Brückenfamilie (160c): Material, Deck, Licht, Zacken, Stützen
+  if (t.brp) o.brp = { ...t.brp };                                                                // … bezahlter Preis (Kennung „neues Format“)
   if (t.phase != null) { o.phase = t.phase; if (t.rate != null) o.rate = t.rate; if (t.paid) o.paid = t.paid; }
   if (t.train) { o.train = t.train; o.trainCol = t.trainCol || 0; if (t.trainPlus) o.trainPlus = t.trainPlus; }
   if (t.extra) o.extra = t.extra.map(e => ({ model: e.model, col: e.col, ...(e.plus ? { plus: e.plus } : {}) }));
@@ -148,7 +150,7 @@ function serialize() {
     town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
-      ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}) }]),   // Brücken (Block 160; Gleis 160b)
+      ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
     decos, edges: [...edgeMap].map(([k, e]) => [k, { b: e.b, style: e.style, ...(e.col ? { col: e.col } : {}), ...(e.arch ? { arch: e.arch } : {}), ...(e.flush != null ? { flush: e.flush } : {}), ...(e.gate ? { gate: e.gate } : {}), ...(e.sq ? { sq: true } : {}), ...(e.shut ? { shut: true } : {}) }]), tunnels: [...state.tunnels.keys()].map(k => [k, {}]), roofs: [...roofMap].map(([k, r]) => [k, { ...(r.form ? { form: r.form } : {}), ...(r.col ? { col: r.col } : {}), ...(r.bel ? { bel: r.bel } : {}), ...(r.par ? { par: r.par } : {}), ...(r.top ? { top: r.top.map(decoOut) } : {}) }]), cam: state.cam, last: state.last, muted: state.muted,
   };
 }
@@ -361,11 +363,12 @@ function parseSave(d) {
       const w = h && +h.w, lv = h && +h.h;
       return [k, { w: Number.isInteger(w) && w > 0 && w < HILL_WALLS.length ? w : 0, ...(Number.isInteger(lv) && lv > 1 && lv <= 3 ? { h: lv } : {}) }];
     })),
-    bruecken: new Map((Array.isArray(d.bruecken) ? d.bruecken : []).filter(e => Array.isArray(e) && /^-?\d+,-?\d+$/.test(e[0]) && e[1] && Number.isInteger(+e[1].n) && +e[1].n >= 1 && +e[1].n <= BK_MAX).map(([k, b]) => {   // Block 160: streng (fremde Inseln)
+    bruecken: new Map((Array.isArray(d.bruecken) ? d.bruecken : []).filter(e => Array.isArray(e) && /^-?\d+,-?\d+$/.test(e[0]) && e[1] && Number.isInteger(+e[1].n) && +e[1].n >= 1 && +e[1].n <= BK_READ_MAX).map(([k, b]) => {   // Block 160: streng (fremde Inseln); bis 8 Felder (160c)
       const n = +b.n, weg = Array.isArray(b.weg) ? b.weg.slice(0, n).map(w => typeof w === 'string' && isWegStyle(w) ? w : null) : null;
       const gl = !(weg && weg.some(Boolean)) && Array.isArray(b.gleis) ? b.gleis.slice(0, n).map(f => Number.isInteger(f) && f >= 0 && f < DECO_LOOKS.schiene.forms.length ? f : null) : null;   // Weg ODER Gleis (160b)
-      return [k, { ax: b.ax ? 1 : 0, n, art: BK_ARTEN[b.art] ? b.art : 'holz', ...(weg && weg.some(Boolean) ? { weg: [...weg, ...Array(n - weg.length).fill(null)] } : {}),
-        ...(gl && gl.some(f => f != null) ? { gleis: [...gl, ...Array(n - gl.length).fill(null)] } : {}) }];
+      const { brm, ...br } = brClean(b);                                     // Brückenfamilie (160c): Material steht hier in art
+      return [k, { ax: b.ax ? 1 : 0, n, art: BR_MAT[b.art] ? b.art : 'holz', ...(weg && weg.some(Boolean) ? { weg: [...weg, ...Array(n - weg.length).fill(null)] } : {}),
+        ...(gl && gl.some(f => f != null) ? { gleis: [...gl, ...Array(n - gl.length).fill(null)] } : {}), ...br }];
     })),
     cam: d.cam || newState().cam, last: d.last || Date.now(), muted: !!d.muted,
   };

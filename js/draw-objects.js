@@ -947,8 +947,7 @@ function lineFill(x, y, arms, w) {
 // Wegbrücke (Block 66): gerade über das Wasser, leicht angehoben, an Land-Enden eine kurze Rampe. Art nach Wegstil
 // (bridgeKind): Holzsteg (Pfähle, Planken, Geländer), Steinbogen und Ziegelbrücke (Seitenwand mit Bogen, Brüstung,
 // Belag wie der Weg), rote Bogenbrücke (höher, rote Pfosten und Geländer).
-const BRIDGE_COLS = ['#6f5238', '#b08a5e', '#fbf7ef', '#d9483b', '#3f6fb5', '#3f8f5a', '#d9d2c3', '#8c8a85', '#b5654a', '#f2c14e'];   // Bauwerk
-const PLANK_COLS = ['#b08a5e', '#8a6440', '#c9b79c', '#a9a9a3', '#f1e7d6'];                                                        // Holzplanken
+// Farben der Brücken (BRIDGE_COLS, PLANK_COLS): data.js (160c A3)
 const BRIDGE_LOOK = {
   holz:   { lift: 3, side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238' },
   stein:  { lift: 7, side: '#d9d2c3', wall: true, rail: '#cfc6b4' },
