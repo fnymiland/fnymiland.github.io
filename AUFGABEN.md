@@ -2630,3 +2630,36 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       alle Anhöhen der Auswahl stehen (keine Inseln); ist sie leer, trägt das nächste Abreißen sie ab. 👆 einzeln war schon so. Tests:
       anhoehe-wege (Weg oben), anhoehe, stufe3-regeln, bergportal auf zwei Schritte umgestellt. Hauptbahnhof bleibt außerhalb der
       Eisenbahn-Kategorie (Nutzer).
+
+## Block 160 – Brücke als eigenes Bauwerk (11.10.2026)
+Nutzer: „das ist immer dieselbe Brücke, man baut sie halt da hin, wo man will, und dann kann man über diese Brücke einen Weg oder Schienen
+ziehen“ – Zugbrücken übers Wasser, Wegbrücken, Anhöhenbrücken. Gewählt: Holzsteg und Stahl (Steinbogen verworfen), darunter nur Flaches,
+Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöhen mit Weg, 2) Schiene darüber, 3) Wasserbrücken umstellen.
+- [x] 160a **Schritt 1: Brücke zwischen Anhöhen mit Weg** (js/bruecken.js). `state.bruecken`: erstes Feld der Lücke → { ax, n (1–4), art,
+      weg?: [Stil|null je Feld] }; Deck auf HILL_H über den Feldern der Lücke, der Boden darunter bleibt in state.tiles. Bauen: Gestalten →
+      Anhöhen → Brücke bzw. Ziehen-Kategorie „Wege“ – von der Oberkante einer Anhöhe hinüber zur anderen ziehen (`scanBruecke`, großzügig:
+      Felder oben zählen nicht); Holz (60 + 3 Bretter je Feld, ab 3 Feldern Holzböcke am ersten und letzten Feld) oder Stahl (120 + 3 Metall,
+      erst mit der Bahn, spannt frei). Darunter nur Flaches (`bkUnderError`, `bkPlaceError`, `bkTooTall`: Weg, Schiene, Tunnel, Wasser,
+      Gelände, niedrige Deko bis BK_CLEAR; am Holzbock kein Weg/keine Schiene; keine Überdachung, keine Anhöhe, kein Wald/Fels). Die Anhöhen an
+      den Enden tragen sie (`bkOnHill`: Abtragen, Treppe/Rampe hinein, ↶, Abriss-Rechteck gesperrt). Weg darüber: Linie (oder 1 Feld breites
+      Rechteck) von der Anhöhe am Ende längs über das Deck bzw. auf dem Deck angefangen → aufs Deck (`bkPlanDeck`, `bkLayWeg`), sonst bleibt
+      alles unten (Nutzer: „was, wenn ich unten einen Weg bauen will?“). Arm über die Kante (`bkArmFrom` in pathArmsHill/drawHillFlat);
+      durchgehender Weg verbindet Viertel (computeNet) und Gegenden (hillRegions: „oben ohne Treppe“ gilt über die Brücke nicht mehr).
+      Spaziergänger gehen hinüber (hill-walkers.js, render.js `onDeck`: nach dem Deck gezeichnet). Zeichnen je Feld in tileB (`bkDrawTile`,
+      wie die Überdachung), Schatten im Boden-Bild, GL-Standbild (`bkLiveTiles`). Antippen: Deck vor dem Feld dahinter (`bkPick`) → Fenster
+      (Art wechseln, Weg entfernen, Abreißen); 🧹 erst der Weg darauf, dann die Brücke; Abriss-Rechteck nur ganz darin (Anhöhen bleiben).
+      ↶ mit Prüfungen, Speichern streng (fremde Inseln). Prüfung: tools/bruecke-pruefung.js (Übersicht, alle vier Anschlüsse, Mitte mit Weg
+      bzw. Schiene darunter, Nacht; GL weit weg in Aufzeichnen und Standbild geprüft). Tests: bruecke (Menü-Tests angepasst, Leistungswerte
+      0 für beide Arten: drawObject zeichnet sie nicht, das Deck kommt aus tileB).
+      Gegengelesen (3 Prüfer, jeder Fund gegengeprüft, nur lesen) und behoben: Überdachung per ✋/⧉ unter die Brücke (groupErrors),
+      Fußgängerbrücke (setCrossing) und Wasserbrücke (bkPlaceError mit getragenem Ding) nachträglich darunter, Erz/Kristall wie Fels, ↶ holt
+      nichts Hohes und kein Dach unter eine stehende Brücke; Schatten wurde nie gezeichnet (`want` bekam Index/Array); Spaziergänger auf dem
+      Deck im GL-Bild unsichtbar (glLive in glLive – jetzt direkt in die Zelle der Brücke); Vorschau und Klick treffen dasselbe (`bkPickFront`
+      mit Tiefe, Deck vor Linie/Deko, kein Zaun rot darunter), Geländer-Treffer nicht durch eine Anhöhe davor; Ziehen auf dem Deck begonnen
+      (Maus) bleibt oben; Abriss-Rechteck: unter einer herausragenden Brücke Abgerissenes grün; Deko unter dem Deck sperrt Spaziergänger
+      nicht; Bewohner gehen noch nicht über Brücken – ihre Wege rechnen ohne sie (`hillWalkRegions`), Wirtschaft und Spaziergänger mit;
+      ↶ meldet sich beim Online-Speicher (galt auch für Anhöhen/Dächer); Bildchen eingepasst; keine Fugen zwischen Deckfeldern; Belag auf dem
+      Deck wie am Boden (Muster, Schachbrett), Trittsteine nicht aufs Deck; Deck blass bei 👁 und beim Bauen darunter; Vorschau-Rauten und
+      Hinweis des Wegs auf dem Deck oben.
+- [ ] 160b Schritt 2: Schiene über die Brücke (Züge oben und unten, Gleisnetz über die Brücke, breitere Fahrbahn, engere Holzböcke).
+- [ ] 160c Schritt 3: Wasserbrücken auf dasselbe Bauwerk umstellen (alte Spielstände umwandeln, gleiches Aussehen, Abkürzung beim Ziehen).

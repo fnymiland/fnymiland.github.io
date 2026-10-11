@@ -378,7 +378,19 @@ const slopeWegAt = (x, y) => hillsOn() && rampFresh().s > 0 && !!stairAt(x, y);
 // Wohin man hinkommt (Erreichbarkeit „in der Nähe“): Boden = 0; eine Anhöhe (zusammenhängende Felder gleicher Ebene) auch 0, wenn eine
 // Treppe auf sie hinaufführt (die Gleis-Rampe nicht – nur Züge), sonst eine eigene Nummer. null = alles ist erreichbar (keine Anhöhen oder jede hat einen Aufgang) –
 // dann muss niemand nachsehen. Gemerkt je Boden-Fassung wie rampFresh, dazu je COVER (157j: was auf Fuß und oberem Feld steht, zählt mit)
-let hillRegionCache = null;
+let hillRegionCache = null, hillWalkCache = null;
+// Bewohner (walkPath, findGoal, Gäste) gehen noch nicht über Brücken (Block 160): für sie Gegenden ohne Brücken – sonst suchten sie Ziele drüben
+function hillWalkRegions() {
+  const reg = hillRegions();
+  if (!hillsOn() || !bkLinks().length) return reg;                        // ohne Brücken mit Weg: dieselbe Karte
+  const c = hillWalkCache;
+  if (c && c.base === hillRegionCache) return c.map;
+  const keep = hillRegionCache;
+  hillRegionCache = null; BK_NO_LINKS = true;
+  try { hillRegions(); hillWalkCache = { base: keep, map: hillRegionCache.map, both: hillRegionCache.both }; } finally { BK_NO_LINKS = false; hillRegionCache = keep; }
+  return hillWalkCache.map;
+}
+let BK_NO_LINKS = false;
 function hillRegions() {
   if (!hillsOn()) return null;
   const c = hillRegionCache;
@@ -391,6 +403,7 @@ function hillRegions() {
     for (let i = 0; i < comp.length; i++) {
       const [x, y] = keyXY(comp[i]);
       for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (!seen.has(n) && hillLevel(x + dx, y + dy) === lv) { seen.add(n); comp.push(n); } }
+      if (!BK_NO_LINKS) for (const [nx, ny] of bkHillLinks(x, y)) { const n = nx + ',' + ny; if (!seen.has(n) && hillLevel(nx, ny) === lv) { seen.add(n); comp.push(n); } }   // über die Brücke (Block 160)
     }
     const r = comp.some(k => up.has(k)) ? 0 : ++id;
     for (const k of comp) map.set(k, r);
@@ -430,7 +443,7 @@ const sameRegion = (reg, k, m) => {
   if (!reg) return true;
   const a = reg.get(k) || 0, b = reg.get(m) || 0;
   if (a === b) return true;
-  const B = hillRegionCache.both;
+  const B = hillWalkCache && reg === hillWalkCache.map ? hillWalkCache.both : hillRegionCache.both;   // Bewohner-Karte ohne Brücken (Block 160)
   return B.size > 0 && (B.get(k) === b || B.get(m) === a);
 };
 // Gebäude oben (157j): liegt Feld (x, y) auf einer Anhöhe, auf die keine Treppe führt? (Fenster, Bau-Vorschau, Hinweis beim Bauen) – ohne Anhöhen nie
@@ -460,6 +473,12 @@ function computeNet() {
     const j = idOf.get(netNum(xs[i] + dx, ys[i] + dy));
     if (j === undefined) continue;
     if (hills && (rf && (rf[i] || rf[j]) ? !levelLink(xs[i], ys[i], xs[j], ys[j], 'weg') : lv[i] !== lv[j])) continue;   // über die Kante nicht
+    const a = find(i), b = find(j);
+    if (a !== b) parent[a] = b;
+  }
+  for (const [[ax, ay], [bx, by]] of bkLinks()) {                       // Weg über eine Brücke (Block 160): beide Anhöhen ein Viertel
+    const i = idOf.get(netNum(ax, ay)), j = idOf.get(netNum(bx, by));
+    if (i === undefined || j === undefined) continue;
     const a = find(i), b = find(j);
     if (a !== b) parent[a] = b;
   }
@@ -1634,7 +1653,7 @@ function smallError(b, x, y, slot, opts = {}) {
       const fds = decosAt(fx + ',' + fy);
       if (fds && fds[cs]) return 'An dieser Ecke steht schon etwas';
     }
-    const tt = tooTallUnderRoof(b, x, y, slot, opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0));   // Block 138
+    const fm = opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0), tt = tooTallUnderRoof(b, x, y, slot, fm) || bkTooTall(b, x, y, slot, fm);   // Block 138, Brücke (160)
     if (tt) return tt;
     if (opts.move || opts.noCost) return null;
     if (state.money < d.cost) return 'Zu wenig Taler';
@@ -1658,7 +1677,7 @@ function smallError(b, x, y, slot, opts = {}) {
     const ds = decosAt(k);
     return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
   }
-  const tt = tooTallUnderRoof(b, x, y, slot, opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0));   // zu hoch unters Dach (Block 138)
+  const fm = opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0), tt = tooTallUnderRoof(b, x, y, slot, fm) || bkTooTall(b, x, y, slot, fm);   // zu hoch unters Dach (Block 138), unter die Brücke (160)
   if (tt) return tt;
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
   if (opts.noCost) return null;
@@ -2147,6 +2166,7 @@ const roofSame = (x, y) => { const r = roofAt(x, y), n = decoLookNew('dach'); re
 function roofError(x, y, noCost) {
   if (!ownedTile(x, y)) return notMine(x, y);
   if (hillAt(x, y)) return 'Auf einer Anhöhe geht keine Überdachung';                    // Anhöhe (Block 157)
+  if (bkAt(x, y)) return 'Unter einer Brücke geht keine Überdachung';                      // Brücke (Block 160)
   const a = anchorAt(x, y), t = a && state.tiles.get(a);
   if (t && (isWegBridge(t) || isCrossing(t))) return 'Nicht auf Brücken und Bahnübergängen';
   if (t && t.b === 'huegeltreppe') return 'Über einer Treppe geht keine Überdachung';   // Block 157d: sie reicht bis an die Dachhöhe
@@ -2259,7 +2279,7 @@ function crossError(b, x, y, noCost) {
 function setCrossing(x, y, foot, style) {
   const t = state.tiles.get(x + ',' + y);
   if (!isCrossing(t)) return false;
-  if (foot && !t.foot) { const e = archHillError(x, y); if (e) { fail(e); return false; } }   // Anhöhen (hills.js): nie über die Kante
+  if (foot && !t.foot) { const e = bkAt(x, y) ? 'Unter der Brücke ist kein Platz für die Fußgängerbrücke' : archHillError(x, y); if (e) { fail(e); return false; } }   // Anhöhen (hills.js): nie über die Kante; Brücke darüber (Block 160)
   if (foot) {
     const had = footPaidOf(t);
     style = FOOT_STYLES[style] ? style : had || 'holz';
@@ -2783,6 +2803,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (h) return (h.w || 0) !== (decoLookNew('anhoehe').form || 0) ? null : 'Hier ist schon eine Anhöhe';
     return hillRaiseError(x, y, opts.noCost);
   }
+  if (b === 'bruecke') return hillLevel(x, y) >= 1 && ownedTile(x, y) ? null : 'Auf der Oberkante einer Anhöhe anfangen und hinüberziehen';   // Block 160: als Ganzes (scanBruecke)
   if (b === 'tunnel') return tunnelError(x, y, opts.noCost);
   if (b === 'bergportal') return bpError(x, y, rot, opts.move || !!opts.t, opts.noCost);   // Bergportal (157m, hills.js): in die Wand, nie getragen
   if (b === 'dach') return roofError(x, y, opts.noCost);                                   // Überdachung (Block 138)
@@ -2799,6 +2820,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (he) return he;
     if (b === 'schiene' && opts.t && isCrossing(opts.t) && opts.t.foot) { const e = archHillError(x, y); if (e) return e; }   // getragene Fußgängerbrücke: nie über die Kante (hills.js)
   }
+  if (bkOn()) { const e = bkPlaceError(b, footprint(b, x, y, r, opts.t), opts.t); if (e) return e; }   // unter einer Brücke nur Flaches (Block 160)
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
     return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';
   if (b === 'ubahn' && !tunnelAt(x, y)) return 'Auf einen Tunnel setzen (Verkehr → Tunnel)';
@@ -3392,6 +3414,7 @@ function demolishInfo(x, y, under = false) {                            // under
     if (stairsAround(x, y).length) return { err: 'Hier führt eine Treppe hinauf – erst die Treppe abreißen' };   // Block 157d (lowerHill sperrt auch)
     if (rampsAround(x, y).length) return { err: 'Hier führt eine Gleis-Rampe hinauf – erst die Gleis-Rampe abreißen' };   // Gleis-Rampe (hills.js) wie die Treppe
     if (archAround(x, y)) return { err: ARCH_HERE };                        // Fußgängerbrücke daneben (hills.js): Boden bleibt eben
+    if (bkOnHill(x, y)) return { err: BK_ON_HILL };                         // Brücke liegt auf (Block 160, bruecken.js)
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // Linien/Eckpunkt-Deko am Rand stünden sonst an der Kante
       if (state.edges.has(k)) return { err: `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen` };
     for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return { err: `An der Ecke steht: ${ITEMS[postAt(vx, vy).b].name} – erst wegnehmen` };

@@ -11,6 +11,7 @@ const floats = [];
 function fail(msg) { toast(msg); sfx('error'); }
 
 function build(b, x, y, quiet) {
+  if (b === 'bruecke') { if (!quiet) fail('Brücke: von der Oberkante einer Anhöhe hinüber zur anderen ziehen'); return false; }   // nur als Ganzes (plan.js scanBruecke)
   if (b === 'anhoehe') {                               // Anhöhe (Block 157): Feld anheben bzw. die Wand umstellen (hills.js)
     const err = quiet && !hillAt(x, y) && hillRaiseError(x, y);
     if (err && err !== 'Zu wenig Taler') return false;                    // im Rechteck still wie die anderen
@@ -458,6 +459,7 @@ function groupErrors(hx, hy) {
       if (!ownedTile(x, y)) err = notMine(x, y);
       else if (state.roofs.has(k)) err = 'Hier ist schon eine Überdachung';
       else if (hillAt(x, y)) err = 'Auf einer Anhöhe geht keine Überdachung';   // Anhöhe (Block 157), wie roofError
+      else if (bkAt(x, y)) err = 'Unter einer Brücke geht keine Überdachung';   // Brücke (Block 160), wie roofError
       else if (ot && (isWegBridge(ot) || isCrossing(ot))) err = 'Nicht auf Brücken und Bahnübergängen';
       else if (ot && ot.b === 'huegeltreppe') err = 'Über einer Treppe geht keine Überdachung';   // Treppe in die Anhöhe (Block 157d), wie roofError
       else if (ot && ot.b === 'huegelrampe') err = 'Über einer Gleis-Rampe geht keine Überdachung';
@@ -844,7 +846,7 @@ function tap(sx, sy, isTouch) {
   else if (rampTool()) [x, y] = rampAnchor(x, y);                        // Gleis-Rampe bauen oder getragen: angetippt an der Wand (hills.js), wie die Vorschau
   lastTap = { sx, sy, t: performance.now() };             // Handy: Fenster rückt das Angetippte ins Bild
   const v = planPoint(sx, sy);                              // Zaun & Co.: Eckpunkt statt Feld
-  if (planTap(v.x, v.y, isTouch)) return;                   // Linie/Rechteck: Ende setzen, bauen oder abbrechen
+  if (planTap(v.x, v.y, isTouch, !!v.deck)) return;         // Linie/Rechteck: Ende setzen, bauen oder abbrechen (deck: auf der Brücke angefangen)
   if (tool === 'look' && !plan && (roofers.length || hillWalkers.length)) { const rw = walkerAt(sx, sy); if (rw && (rw.roofer || rw.hillw)) { openWalkerInfo(rw); return; } }   // Leute auf dem Dach vor dem Dach (Block 138d), auf Anhöhe und Treppe vor deren Feld (157d)
   const hh = !plan && (tool === 'look' || tool === 'abriss' || (tool === 'verschieben' && !moving)) && !roofTopHit(sx, sy) ? holeHit(sx, sy) : null;
   if (hh) {                                                        // in die Öffnung getippt: die Treppe darunter (Block 138d)
@@ -881,6 +883,14 @@ function tap(sx, sy, isTouch) {
   }
   const pl = pillAt(sx, sy);                                // Schild angetippt (Block 71): Sehenswürdigkeit nur beim Ansehen
   if (pl && (tool === 'look' || !pl.look)) { pl.open(sx, sy); return; }
+  if ((tool === 'look' || tool === 'abriss') && !plan && !pillarAt(sx, sy) && !roofPick(sx, sy)) {   // Deck einer Brücke (Block 160): vor dem Feld dahinter, nicht vor Dingen davor
+    const bp = bkPickFront(sx, sy);
+    if (bp) {
+      if (tool === 'look') { openBkInfo(bp.x, bp.y); return; }
+      if (isTouch && (!hover || !hover.deck || hover.x !== bp.x || hover.y !== bp.y)) { hover = bp; hoverEdge = null; previewCache = null; return; }
+      bkDemolishAt(bp.x, bp.y); return;
+    }
+  }
   const ek = tool === 'abriss' && edgeNear(sx, sy);           // Abreißen: auf eine Linie getippt
   if (ek && isTouch && hoverEdge !== ek) { hoverEdge = ek; hover = null; return; }   // Touch: erst zeigen, dann entfernen (Block 84b)
   if (ek) { if (removeEdge(ek)) { hoverEdge = null; sfx('dig'); recalc(); save(); } return; }
@@ -1081,7 +1091,8 @@ let undoPending = null, undoCut = false;
 // Neues Spiel, Import: die Schritte gehören zum alten Stand (Block 84a)
 function resetUndo() { undoStack.length = 0; undoPending = null; undoCut = false; if (typeof updateUndoBtn === 'function') updateUndoBtn(); }
 const UNDO_MAPS = { tiles: () => state.tiles, decos: () => state.decos, edges: () => state.edges, terra: () => state.terra, tunnels: () => state.tunnels, roofs: () => state.roofs,
-  hills: () => state.hills || (state.hills = new Map()) };              // Anhöhen (Block 157): sonst gäbe ↶ die Taler zurück und die Anhöhe bliebe
+  hills: () => state.hills || (state.hills = new Map()),                // Anhöhen (Block 157): sonst gäbe ↶ die Taler zurück und die Anhöhe bliebe
+  bruecken: () => state.bruecken || (state.bruecken = new Map()) };      // Brücken (Block 160)
 const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === 'rate' ? undefined : val);   // ohne Animation/Tempo
 function undoSnap() {
   const maps = {};
@@ -1149,6 +1160,27 @@ function undo() {
     if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
     if (bpFronts(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier ist inzwischen ein Bergportal davor'); return false; }   // Block 157m
   }
+  // Brücken (Block 160): eine Anhöhe, auf der inzwischen eine Brücke aufliegt, kommt nicht weg; nichts Hohes und keine Anhöhe unter eine
+  // stehende Brücke zurück; eine Brücke kommt nur zurück, wenn ihre Anhöhen dann da sind und darunter nichts Hohes steht
+  if (bkOn() || step.changes.some(c => c[0] === 'bruecken')) {
+    const bkMine = new Set(step.changes.filter(c => c[0] === 'bruecken').map(c => c[1])), other = c => c && !bkMine.has(c.k);
+    for (const [n, k, b] of step.changes) {
+      const [x, y] = keyXY(k);
+      if (n === 'hills' && b === undefined && (bkOnHill(x, y) || []).some(other)) { fail('Geht nicht mehr – hier liegt inzwischen eine Brücke auf'); return false; }
+      if (n === 'hills' && b !== undefined && !UNDO_MAPS.hills().get(k) && other(bkAt(x, y))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
+      if (n === 'roofs' && b !== undefined && other(bkAt(x, y))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
+      if (n === 'tiles' && b !== undefined) {
+        const t = JSON.parse(b);
+        const flat = (t.b === 'weg' || t.b === 'schiene') && !t.bridge && !(isCrossing(t) && t.foot);   // Wasser- und Fußgängerbrücken sind zu hoch
+        if (!flat && footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => other(bkAt(fx, fy)))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
+      }
+      if (n === 'bruecken' && b !== undefined && !UNDO_MAPS.bruecken().get(k)) {
+        const o = JSON.parse(b), art = bkArtOf(o);
+        if (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0)) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
+        if (bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy, bkBock(art, o.n, i)); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
+      }
+    }
+  }
   const short = state.money - step.dm < 0 ? 'Taler' : Object.entries(step.dres).find(([r, d]) => state.res[r] - d < 0);
   if (short) { fail(`Zu wenig ${short === 'Taler' ? 'Taler' : RES[short[0]].name}, um das zurückzunehmen`); undoStack.push(step); updateUndoBtn(); return false; }
   for (const [n, k, b] of step.changes) { const m = UNDO_MAPS[n](); if (b === undefined) m.delete(k); else m.set(k, JSON.parse(b)); }
@@ -1156,6 +1188,7 @@ function undo() {
   state.money -= step.dm;
   for (const [r, d] of Object.entries(step.dres)) state.res[r] -= d;
   sandCache.clear(); landCache.clear(); waterChanged(); previewCache = null;
+  if (typeof cloudTouched === 'function') cloudTouched();                // auch ↶ ist eine eigene Aktion (Online-Speicher; Anhöhen, Dächer, Brücken)
   sfx('dig'); recalc(); save();
   if (panelLive && !$('panel').hidden) panelLive();             // offenes Fenster: Ding noch da? (sonst zu)
   toast('↶ Rückgängig');

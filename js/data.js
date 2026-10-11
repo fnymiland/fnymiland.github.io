@@ -203,6 +203,7 @@ const ITEMS = {
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
   anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
+  bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform', cost: 60, mat: { bretter: 3 }, desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holzsteg oder Stahlbrücke (mit der Eisenbahn); danach ziehst du einen Weg darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -627,7 +628,7 @@ const MENU = [
   ] },
   { id: 'gestalten', label: '🌸 Gestalten', groups: [
     { id: 'land', label: '🛤️ Wege & Gelände', items: ['weg', 'parkrasen', 'graben', 'schuett', 'wiese', 'strand', 'wald', 'obstwald', 'fels'] },   // ✋ steht in der Werkzeugleiste (🧹 ging darin auf, Block 155)
-    { id: 'hoehen', label: '⛰️ Anhöhen', items: ['anhoehe', 'huegeltreppe'] },   // Block 157d: Anhöhe und Treppe zusammen, wie die Überdachungen (Wege & Gelände hätte sonst 11); die Gleis-Rampe steht beim Verkehr (Schiene)
+    { id: 'hoehen', label: '⛰️ Anhöhen', items: ['anhoehe', 'huegeltreppe', 'bruecke'] },   // Block 157d: Anhöhe und Treppe zusammen, wie die Überdachungen (Wege & Gelände hätte sonst 11); die Gleis-Rampe steht beim Verkehr (Schiene)
     { id: 'gruen', label: '🌳 Grün', items: ['baum', 'busch', 'blumen', 'blumentopf', 'riesenblume', 'palme', 'glashaus', 'rosenbogen', 'freundschaftsbaum'] },
     { id: 'linien', label: '🧱 Zäune & Hecken', items: ['hecke', 'zaun', 'mauer'] },
     { id: 'dach', label: '⛱️ Überdachungen', items: ['dach', 'stuetze', 'dachtreppe'] },   // Block 138
@@ -663,7 +664,7 @@ const FX = {
   schule: '💡 Ideen', bibliothek: '💡 +1/s', uni: '💡 +3/s', kunst: '🌸 +25 · 💡',
   weg: 'verbindet Viertel', schiene: '🚆 Strecke', tunnel: '🚇 Strecke unter der Erde', tunneleinfahrt: '🚇 Schiene ↔ Tunnel', bergportal: '🚇 Schiene ↔ Tunnel in der Anhöhe', ubahn: '🚇 wie ein Bahnhof', station: '👥 Fahrgäste · 🪙', hbf: '🚉 viele Linien · Umsteigen', seilbahn: '🚡 80 Fahrgäste/min · 🌸 +10',
   windrad: '⚡ +1 (bis 3)', wasserkraft: '⚡ +4 (bis 12)', solarfeld: '⚡ +3 (bis 9)', geothermie: '⚡ +8 (bis 24)', wellen: '⚡ +5 (bis 15)', offshore: '⚡ +6 im Meer',
-  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', huegeltreppe: '⛰️ führt hinauf', huegelrampe: '🚆 Gleis hinauf', leuchtturm: '🏮 Laternenfest',
+  graben: '💧 Wasser', schuett: '🏝️ neues Land', wiese: '🌿 Wiese', parkrasen: '🌳 wird ein Park', strand: '🏖️ Sand', wald: '🌲 für Holzfäller', obstwald: '🍎 für Obst', fels: '🪨 für Stein', anhoehe: '⛰️ eine Ebene höher', bruecke: '🌉 von Anhöhe zu Anhöhe', huegeltreppe: '⛰️ führt hinauf', huegelrampe: '🚆 Gleis hinauf', leuchtturm: '🏮 Laternenfest',
   riesenrad: '🪙 +25 % · 🎡 Jahrmarkt', sternwarte: '💡 +50 % · 🌠', seebruecke: '👥 +20 % · ⚓ Aufträge', botgarten: '🌸 +50 % · 🌴', schloss: '+50 % auf alles · 👑',
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
@@ -778,6 +779,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Holz oder Stahl wählst du oben in der Leiste; danach ziehst du einen Weg darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };
@@ -1142,6 +1144,7 @@ const MARKISE_COLS = [                                                  // Über
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }];
 const DECO_LOOKS = {
   anhoehe: { group: 'Anhöhen', icon: '#8a7f73', cols: null, forms: [{ id: 'fels', name: 'Felswand' }, { id: 'erde', name: 'Erde mit Grasnarbe' }, { id: 'mauer', name: 'Trockenmauer' }] },   // Block 157
+  bruecke: { group: 'Brücken', icon: '#a9774a', cols: null, forms: [{ id: 'holz', name: 'Holzsteg' }, { id: 'stahl', name: 'Stahlbrücke' }] },   // Block 160 (bruecken.js BK_ART_IDS)
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
   blumen: { group: 'Beete', icon: '#ff8fb1', colLabel: 'Boden', cols: BED_SOILS, forms: [{ id: 'feld', name: 'Blumenfeld' }, { id: 'stein', name: 'Steinrand' },

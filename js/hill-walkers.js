@@ -14,7 +14,7 @@ const HW_TOP = 2 / 3;             // d am Ausstieg: Rasterpunkt ein Drittel Feld
 const HW_REACH = 8;               // so weit (Schritte) suchen sie den Weg, von dem sie kommen
 let hwCache = { ver: '' };
 function hwFresh() {
-  const v = groundVersion + ':' + state.hills.size + ':' + state.tiles.size + ':' + state.decos.size;
+  const v = groundVersion + ':' + state.hills.size + ':' + state.tiles.size + ':' + state.decos.size + ':' + (state.bruecken ? state.bruecken.size : 0);
   if (hwCache.ver !== v || hwCache.st !== state) {
     const upAt = new Map();                                              // oberes Feld → Aufgang (Treppe: ihr Feld)
     if (typeof hillStairs === 'function') for (const s of hillStairs()) upAt.set(s.k, { ...s, len: 1, tx: s.x, ty: s.y });   // nur Treppen: die Gleis-Rampe ist für Züge
@@ -23,9 +23,19 @@ function hwFresh() {
   return hwCache;
 }
 // Feld oben begehbar: Anhöhe dieser Ebene, Wiese ohne etwas darauf (kein Wald, Fels, große Deko, Platz-Ding) oder ein Weg (Stufe 2)
-const hwTileOk = (x, y, lv) => { if (hillLevel(x, y) !== lv) return false; const t = objAt(x, y); return t ? t.b === 'weg' : terrainAt(x, y) === 'grass'; };
+const hwTileOk = (x, y, lv) => {
+  if (bkOn()) { const c = bkAt(x, y); if (c) return lv === 1 && bkWegAt(c); }   // Brücke (Block 160): oben über das Deck, wenn dort Weg liegt
+  if (hillLevel(x, y) !== lv) return false; const t = objAt(x, y); return t ? t.b === 'weg' : terrainAt(x, y) === 'grass';
+};
+// Schritt über die Kante aufs Deck einer Brücke bzw. von Deckfeld zu Deckfeld (Block 160): längs, beide Seiten mit Weg
+function hwDeckSide(x, y, nx, ny) {
+  const a = bkAt(x, y), b = bkAt(nx, ny);
+  if (a && b) return a.k === b.k && bkWegAt(a) && bkWegAt(b);
+  return (!!b && bkArmFrom(x, y, nx - x, ny - y)) || (!!a && bkArmFrom(nx, ny, x - nx, y - ny));
+}
 // über eine Seite weiter: gleich hohe Anhöhe ohne Linie dazwischen – oder das Feld einer Treppe, die hierher führt
 function hwSideOk(x, y, nx, ny, lv) {
+  if (bkOn() && (bkAt(x, y) || bkAt(nx, ny))) return lv === 1 && hwDeckSide(x, y, nx, ny);   // Brücke (Block 160)
   if (hwTileOk(nx, ny, lv)) return !edgeBlocks(x, y, nx, ny);
   const s = hwFresh().upAt.get(nx + ',' + ny);
   return !!s && s.tx + s.dx === x && s.ty + s.dy === y;
@@ -34,7 +44,7 @@ function hwSideOk(x, y, nx, ny, lv) {
 function hwDecoNear(u, v, x, y, m) {
   for (let ty = y - 1; ty <= y + 1; ty++) for (let tx = x - 1; tx <= x + 1; tx++) {
     const ds = decosAt(tx + ',' + ty);
-    if (!ds) continue;
+    if (!ds || (bkOn() && bkAt(tx, ty))) continue;                       // Deko unten unter dem Deck einer Brücke stört oben nie (Block 160)
     for (let i = 0; i < ds.length; i++) {
       const d = ds[i];
       if (!d) continue;
@@ -237,7 +247,8 @@ function hwStep(w, dt) {
     w.d = hwTopD(s); w.st = 'top'; w.fa = w.ta = s.ea; w.fb = w.tb = s.eb; w.t = 1; w.pa = w.pb = null;
   }
   // oben
-  if (hillLevel(Math.round(w.px), Math.round(w.py)) !== s.lv) { w.gone = true; return; }   // Anhöhe darunter abgetragen
+  const rx = Math.round(w.px), ry = Math.round(w.py);
+  if (hillLevel(rx, ry) !== s.lv && !(s.lv === 1 && bkOn() && bkWegAt(bkAt(rx, ry)))) { w.gone = true; return; }   // Anhöhe darunter abgetragen (Brücke mit Weg: oben, Block 160)
   if (w.go) { hwBenchWalk(w, dt); return; }
   w.life -= dt;
   w.t += dt * w.speed * 3;                                              // ein Rasterschritt ist 1/3 Feld

@@ -101,6 +101,7 @@ function hillRaiseError(x, y, noCost) {
   const ds = decosAt(x + ',' + y);                                       // Stütze im Eck-/Seitenplatz (geht auch ohne Dach): oben gibt es keine (smallError)
   if (ds && ds.some(d => d && baseOf(d.b) === 'stuetze')) return 'Hier steht eine Stütze – erst wegnehmen';
   if (state.roofs && roofAt(x, y)) return 'Unter einer Überdachung geht keine Anhöhe';
+  if (bkAt(x, y)) return 'Unter einer Brücke geht keine Anhöhe';             // Brücke (Block 160)
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y]) if (state.edges.has(k)) return `Am Rand steht: ${ITEMS[state.edges.get(k).b].name} – erst entfernen`;
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) if (postAt(vx, vy)) return 'An der Ecke steht schon etwas';
   if (stairsAround(x, y, true).length) return 'Vor dem Fuß der Treppe muss Platz bleiben';   // Treppe (Block 157d): sonst führte sie in eine Wand
@@ -124,7 +125,7 @@ function raiseHill(x, y) {
 function lowerHill(x, y) {
   const k = x + ',' + y;
   if (!state.hills.has(k)) return false;
-  if (stairsAround(x, y).length || rampsAround(x, y).length || archAround(x, y)) return false;   // Treppe/Gleis-Rampe führt hinauf, Fußgängerbrücke: erst sie abreißen (demolishInfo sagt es)
+  if (stairsAround(x, y).length || rampsAround(x, y).length || archAround(x, y) || bkOnHill(x, y)) return false;   // Treppe/Gleis-Rampe führt hinauf, Fußgängerbrücke, Brücke liegt auf: erst sie abreißen (demolishInfo sagt es)
   if (hillStuckOn(x, y)) { fail(HILL_STUCK_DOWN); return false; }      // Gebäude oben (157j): käme sonst über die Kante
   hillTake(x, y);
   addFloat(x, y, '+' + fmt(ITEMS.anhoehe.cost), '#3f8f43');
@@ -771,6 +772,7 @@ function stairIntoError(x, y, move) {
   }
   if (rampsAround(x, y).length) return 'Hierher führt schon eine Gleis-Rampe hinauf';   // abgesenkt führte sie gegen die Treppe (wie rampIntoError)
   if (archAround(x, y)) return ARCH_HERE;
+  if (bkOnHill(x, y)) return BK_ON_HILL;                                 // Brücke liegt auf (Block 160)
   const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
   if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
   for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])   // wie lowerHill: stünden sonst an der Kante
@@ -1328,6 +1330,7 @@ function rampIntoError(into, move, Fm) {
     if (stairsAround(x, y).length) return 'Hierher führt schon eine Treppe hinauf';
     if (rampsAround(x, y).length) return 'Hierher führt schon eine Gleis-Rampe hinauf';
     if (archAround(x, y)) return ARCH_HERE;
+    if (bkOnHill(x, y)) return BK_ON_HILL;                               // Brücke liegt auf (Block 160)
     const t = objAt(x, y), d = (decosAt(x + ',' + y) || []).find(Boolean);
     if (t || d) return `Hier steht: ${ITEMS[(t || d).b].name} – erst wegnehmen`;
     for (const k of ['a' + x + ',' + y, 'a' + x + ',' + (y + 1), 'b' + x + ',' + y, 'b' + (x + 1) + ',' + y])

@@ -26,7 +26,7 @@ describe('Treppe in die Anhöhe (Block 157d)', () => {
   it('Menü: Anhöhe und Treppe in eigener Gruppe hinter „Wege & Gelände“ (die Gleis-Rampe steht beim Verkehr) – auch bei gemerkter eigener Anordnung', () => {
     const top = "MENU.find(m => m.id === 'gestalten')";
     expect(game(`${top}.groups.map(g => g.id).slice(0, 2)`)).toEqual(['land', 'hoehen']);
-    expect(game(`${top}.groups.find(g => g.id === 'hoehen').items`)).toEqual(['anhoehe', 'huegeltreppe']);
+    expect(game(`${top}.groups.find(g => g.id === 'hoehen').items`)).toEqual(['anhoehe', 'huegeltreppe', 'bruecke']);   // Brücke (Block 160)
     game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ gestalten: ['dach', 'land', 'gruen', 'platz', 'linien', 'besonderes'] }))`);   // vor Block 157d angeordnet
     expect(game(`orderedGroups(${top}).map(g => g.id)`)).toEqual(['dach', 'land', 'hoehen', 'gruen', 'platz', 'linien', 'besonderes']);
     game("localStorage.removeItem('kachelhausen_menuorder')");

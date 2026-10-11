@@ -160,6 +160,7 @@ function drawShadows(want) {
   g.fill('nonzero');
   if (state.roofs && state.roofs.size) drawRoofShadows(want);              // Überdachungen (Block 138)
   if (hs) drawHillShadows(want);                                         // Anhöhen (Block 157)
+  if (bkOn()) drawBkShadows(want);                                        // Brücken (Block 160, bruecken.js)
 }
 // Anhöhe (Block 157j): Schlagschatten der Dinge oben fallen auf die Oberseite derselben Höhe – nie in die Luft über der Kante, nie auf tiefere
 // Felder (dort fällt das Stück weg). Je Feld gemerkt (Fassung wie das Boden-Bild): das Bildchen der Anhöhe malt sie mit (paintHill, Schlüssel
@@ -1379,10 +1380,13 @@ function planPreview(z) {
     return { ok: !info.err, text: planText(plan, info), p: e };
   }
   for (const [x, y] of planTiles(plan)) {
-    const s = info.states.get(x + ',' + y);
-    if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55');
-    else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)');
-    else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d');
+    const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y);   // Weg aufs Deck einer Brücke (Block 160): Raute oben
+    if (up) { g.save(); g.translate(0, -HILL_H * z); }
+    try {
+      if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55');
+      else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)');
+      else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d');
+    } finally { if (up) g.restore(); }
   }
   const [x0, y0, x1, y1] = planBox(plan);
   if (plan.kind === 'rect' && boxOnHill(x0, y0, x1 - x0 + 1, y1 - y0 + 1)) {   // Anhöhe (Block 157): Rahmen je Feld, auf Anhöhen oben
@@ -1691,6 +1695,9 @@ function render(now) {
       const q = toScreen(hoverVertex.x - 0.5, hoverVertex.y - 0.5);
       hillMark(hoverVertex.x, hoverVertex.y, () => { g.fillStyle = '#2f9f55'; g.beginPath(); g.arc(q.x, q.y, 4 * z, 0, Math.PI * 2); g.fill(); });   // Eckpunkt = obere Ecke des Felds (Block 157: auf Anhöhen oben)
       preview = { ok: true, text: `${ITEMS[tool].name} · ${styleDef(tool, currentStyle(tool)).name}: Anfang antippen (oder ziehen)`, p: HILLS ? { x: q.x, y: q.y - hillLift(hoverVertex.x, hoverVertex.y) * z } : q };
+    } else if (tool === 'abriss' && hover.deck && bkAt(hx, hy)) {        // Deck einer Brücke (Block 160): erst der Weg darauf, dann sie – wie tap
+      const info = bkDemolishInfo(hx, hy), q = toScreen(hx, hy);
+      preview = { ok: true, text: `${info.label}: +${fmt(info.refund)}`, p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
     } else if (tool === 'abriss' && hoverEdge && state.edges.has(hoverEdge)) {
       const e = state.edges.get(hoverEdge);
       hillMarkEdge(hoverEdge, '#e5484d', z, 5);                          // auf Anhöhen oben (Block 157)
@@ -1724,6 +1731,9 @@ function render(now) {
     } else if (tool === 'abriss' && hds && hds[hoverSlot]) {
       const it = ITEMS[hds[hoverSlot].b];
       preview = { ok: true, text: `${it.name} entfernen: +${fmt(decoBack(hds[hoverSlot]))}` };
+    } else if (tool === 'weg' && hover.deck && bkAt(hx, hy)) {           // Weg aufs Deck einer Brücke (Block 160): oben, kein Geist am Boden
+      const c = bkAt(hx, hy), q = toScreen(hx, hy), st = styleDef('weg', currentStyle('weg'));
+      preview = { ok: !bkWegAt(c) || c.b.weg[c.i] !== st.id, text: bkWegAt(c) ? `Weg auf der Brücke: ${styleDef('weg', c.b.weg[c.i]).name}` : `${st.name} über die Brücke: von hier längs übers Deck ziehen`, p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
     } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
@@ -1743,6 +1753,7 @@ function render(now) {
         if (tool === 'anhoehe' && hillAt(hx, hy)) text = `Wand: ${DECO_LOOKS.anhoehe.forms[hillAt(hx, hy).w || 0].name} → ${DECO_LOOKS.anhoehe.forms[decoLookNew('anhoehe').form || 0].name} · kostenlos`;   // Anhöhe (Block 157): nur umstellen
         else if (tool === 'huegeltreppe' && hillAt(hx, hy)) text = `Treppe in die Anhöhe: −${fmt(ITEMS.huegeltreppe.cost - stairIntoBack(hx, hy))}`;   // Feld wird abgesenkt (hills.js)
         else if (tool === 'huegelrampe' && rampIntoBack(hx, hy, rotOf(tool))) text = `Gleis-Rampe in die Anhöhe: −${fmt(ITEMS.huegelrampe.cost - rampIntoBack(hx, hy, rotOf(tool)))}`;   // Felder werden abgesenkt (hills.js)
+        else if (tool === 'bruecke') text = `🌉 ${BK_ARTEN[bkArtNew()].name}: von hier hinüber zur Anhöhe gegenüber ziehen`;   // Block 160
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
         else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
@@ -1787,6 +1798,7 @@ function render(now) {
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map(), drawnMovers = new Set(), onRoof = roofers.length ? roofersByTile() : null;   // Leute auf dem Dach (Block 138d)
+  const onDeck = bkOn() && hillWalkers.length ? new Map() : null;        // Spaziergänger auf einer Brücke (Block 160): nach dem Deck zeichnen
   const cars4 = trainCars(), boat = expeditionBoat();
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
@@ -1820,6 +1832,7 @@ function render(now) {
         if (st && st.b === 'pb_station' && Math.abs(m.px - rx - dx) <= 1.1 && Math.abs(m.py - ry - dy) <= 1.1) { k = (rx + dx) + ',' + (ry + dy); break; }
       }
     }
+    if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) { if (!onDeck.has(k)) onDeck.set(k, []); onDeck.get(k).push(m); continue; }
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }
@@ -2150,6 +2163,19 @@ function render(now) {
         };
         const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost || rw ? 100 * z : 0;   // Deko und Leute oben ragen übers Dach hinaus
         if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
+      }
+      if (bkOn() && bkAt(x, y)) {                                         // Brücke (Block 160, bruecken.js): Deck über dem Bewegten dieses Felds
+        const figs = onDeck && onDeck.get(k);                              // Leute oben: zwischen Deck und vorderem Geländer
+        const fade = bkFadeNow(x, y);                                     // 👁 bzw. darunter bauen: blass
+        const f = () => {
+          const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A;
+          try {
+            bkDrawTile(x, y, px, py, z, figs ? () => {                     // direkt zeichnen: im GL-Bild liegt schon die Zelle der Brücke darum (kein zweites glLive)
+              FOG = false; for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) { drawMover(m, z, now); drawnMovers.add(m); }
+            } : null);
+          } finally { g.globalAlpha = a0; }
+        };
+        if (GLPASS) glLive(px, py, TW * z, (HILL_H + 44) * z + TH * z, TW * z, TH * z + 4, f); else f();
       }
 
   };

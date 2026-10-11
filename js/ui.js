@@ -71,6 +71,8 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   } else if (type === 'anhoehe') {                         // Anhöhe (Block 157): kleines Plateau mit Felswand, oben ein Baum
     block(1, '#96d56f');
     drawHillIcon(cx, cy + 3 * z, z, (tile && tile.form) || 0, 0.68, true);
+  } else if (type === 'bruecke') {                         // Brücke (Block 160): zwei Anhöhen, dazwischen die Brücke der gewählten Art
+    drawBkIcon(cx, cy + 4 * z, z, BK_ART_IDS[(tile && tile.form) || 0] || bkArtNew());
   } else if (type === 'huegeltreppe') {                    // Treppe in die Anhöhe (Block 157d): Eck Anhöhe mit eingelassener Treppe
     block(1, '#96d56f');
     drawStairIcon(cx, cy, z, (tile && tile.style) || stairStyleNew(), tile ? stairSchmal(tile) : !stairWideNew());
@@ -133,7 +135,7 @@ const NOT_RECENT = new Set(['abriss', 'verschieben']);
 const DRAG_KATS = [
   ['bahn', 'Eisenbahn', 'schiene', ['schiene', 'tunnel', 'station', 'ubahn', 'tunneleinfahrt', 'huegelrampe', 'bergportal']],
   ['linien', 'Zäune', 'zaun', ['zaun', 'hecke', 'mauer']],
-  ['wege', 'Wege', 'weg', ['weg']],
+  ['wege', 'Wege', 'weg', ['weg', 'bruecke']],                                // Brücke (Block 160): über die Lücke zwischen Anhöhen
   ['gelaende', 'Gelände', 'anhoehe', ['graben', 'schuett', 'wiese', 'strand', 'parkrasen', 'anhoehe']],
 ], DRAG_KEY = 'kachelhausen_drag', KAT_KEY = 'kachelhausen_kat';
 const katOf = id => DRAG_KATS.find(k => k[3].includes(id));
@@ -1623,6 +1625,12 @@ function lookThumb(b, form, col) {
     if (b === 'anhoehe') {                                                  // Anhöhe (Block 157): die Wand groß
       c.width = 64; c.height = 64; g = c.getContext('2d');
       try { drawHillIcon(32, 43, 1.15, form, 0.8); } finally { g = prev; }
+      url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
+      lookThumbs.set(key, url); return url;
+    }
+    if (b === 'bruecke') {                                                  // Brücke (Block 160): die Art zwischen zwei Anhöhen
+      c.width = 64; c.height = 64; g = c.getContext('2d');
+      try { drawBkIcon(32, 38, 0.95, BK_ART_IDS[form] || 'holz'); } finally { g = prev; }
       url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
       lookThumbs.set(key, url); return url;
     }

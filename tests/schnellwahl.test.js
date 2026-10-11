@@ -17,7 +17,7 @@ describe('Ziehen-Knopf: Kategorien', () => {
   const row = () => game("[...document.querySelectorAll('#cats .quick.drag, #cats .drag-ball')].map(b => b.dataset.ball || b.dataset.kat)");
   const items = () => game("[...document.querySelectorAll('#style-bar .kat-item')].map(b => b.dataset.katItem + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('locked') ? '🔒' : ''))");
   const click = s => game(`document.querySelector('${s}').click()`);
-  it('zu: nur der große Knopf mit Spielbild statt Emoji; mit Weg in der Hand die übrigen drei Kategorien als Kugeln daneben, Wege allein: keine Dinge in der Stil-Zeile', () => {
+  it('zu: nur der große Knopf mit Spielbild statt Emoji; mit Weg in der Hand die übrigen drei Kategorien als Kugeln daneben, Wege: Weg und Brücke vorn in der Stil-Zeile', () => {
     expect(big()).toEqual(['weg', 'wege', false, true, '']);
     expect(balls()).toEqual([]);
     click('#cats .quick.drag');
@@ -25,7 +25,7 @@ describe('Ziehen-Knopf: Kategorien', () => {
     expect(row()).toEqual(['wege', 'bahn', 'linien', 'gelaende']);
     expect(game("document.querySelector('#cats .quick.drag').nextElementSibling.dataset.ball")).toBe('bahn');   // gleich rechts daneben
     expect(game("[...document.querySelectorAll('#cats .drag-ball')].every(b => b.querySelector('canvas.kat-pic'))")).toBe(true);
-    expect(items()).toEqual([]);
+    expect(items()).toEqual(['weg*', 'bruecke']);                                // Wege: Weg und Brücke (Block 160)
   });
   it('Kategorie antippen: wird an ihrem Platz groß, die Reihe bleibt; ihre Dinge vorn in der Stil-Zeile; je Kategorie das Letzte gemerkt; das Große nochmal: zu, wieder auf: vorn, die übrigen rücken nach', () => {
     click('#cats .quick.drag');

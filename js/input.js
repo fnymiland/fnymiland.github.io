@@ -38,7 +38,7 @@ function toTile(sx, sy) { const [a, b] = pickFrac(sx, sy); return { x: Math.roun
 // Zaun & Co. (Block 41): der nächste Eckpunkt zwischen den Feldern
 function toVertex(sx, sy) { const [a, b] = pickFrac(sx, sy); return { x: Math.round(a + 0.5), y: Math.round(b + 0.5) }; }
 const planPoint = (sx, sy) => (plan ? plan.kind === 'edge' : dragKind(tool) === 'edge') ? toVertex(sx, sy)
-  : (tool === 'abriss' && !plan && !pillarAt(sx, sy) && roofPick(sx, sy)) || toTile(sx, sy);   // Abreißen: das Dach, das man sieht (Block 138)
+  : (tool === 'abriss' && !plan && !pillarAt(sx, sy) && roofPick(sx, sy)) || (tool === 'weg' && bkPick(sx, sy)) || toTile(sx, sy);   // Abreißen: das Dach, das man sieht (Block 138); Weg aufs Deck einer Brücke (160)
 // Liegt der Zeiger auf einer Linie? (Abreißen, Ansehen) – die Kante, deren Mitte am nächsten ist
 function edgeNear(sx, sy) {
   const [a, b] = pickFrac(sx, sy), gu = Math.round(a - 0.5) + 0.5, gv = Math.round(b - 0.5) + 0.5;   // Linien oben auf der Anhöhe (Block 157)
@@ -83,7 +83,7 @@ canvas.addEventListener('pointerdown', e => {
     drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, button: e.button, pan, right: e.button === 2 || (e.ctrlKey && e.button === 0) };
     // Mit Weg, Schiene oder Gelände in der Hand zieht man eine Linie bzw. ein Rechteck auf (erst Vorschau)
     if (pan) canvas.style.cursor = 'grabbing';
-    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) { drag.plan = dragKind(tool) === 'edge' ? toVertex(e.clientX, e.clientY) : toTile(e.clientX, e.clientY); drag.slot = slotAt(e.clientX, e.clientY).slot; }
+    else if (e.button === 0 && tool !== 'look' && dragKind(tool)) { drag.plan = dragKind(tool) === 'edge' ? toVertex(e.clientX, e.clientY) : (tool === 'weg' && bkPick(e.clientX, e.clientY)) || toTile(e.clientX, e.clientY); drag.slot = slotAt(e.clientX, e.clientY).slot; }   // Weg auf dem Deck angefangen: oben (Block 160)
   } else if (pointers.size === 2) {
     if (plan && plan.dragging) plan = null;              // zweiter Finger: doch lieber Karte bewegen
     const [a, b] = [...pointers.values()];
@@ -174,7 +174,8 @@ function setHover(sx, sy) {
   else if ((tool === 'abriss' || tool === 'look') && !plan) {      // Stütze vor Dach, Dach vor dem Feld dahinter (Block 138)
     const ph = pillarAt(sx, sy), rp = !ph && roofPick(sx, sy);
     const th = tool === 'abriss' && !ph && roofTopHit(sx, sy);       // Deko auf dem Dach vor dem Dach (Block 138b)
-    if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (ph) { t = { x: ph.x, y: ph.y }; hoverSlot = ph.slot; } else if (rp) t = rp;
+    const bp = !th && !ph && !rp && bkPickFront(sx, sy);              // Deck einer Brücke vor dem Feld dahinter (Block 160), wie tap
+    if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (ph) { t = { x: ph.x, y: ph.y }; hoverSlot = ph.slot; } else if (rp) t = rp; else if (bp) t = bp;
   } else if (tool === 'verschieben' && !moving && !plan) {          // ✋ übers Dach: Deko oben, sonst das Dachfeld (Block 138b)
     const th = roofTopHit(sx, sy), rp = !th && !pillarAt(sx, sy) && roofPick(sx, sy);
     if (th) { t = { x: th.x, y: th.y, top: true }; hoverSlot = th.slot; } else if (rp) t = { x: rp.x, y: rp.y, roof: true };
@@ -182,10 +183,11 @@ function setHover(sx, sy) {
     const tp = roofTopAt(sx, sy);
     if (tp) { t = { x: tp.x, y: tp.y, top: true }; hoverSlot = tp.slot; }
   }
+  if (tool === 'weg' && !plan) { const bp = bkPick(sx, sy); if (bp) t = bp; }   // Weg aufs Deck einer Brücke (Block 160): Zeiger oben, Deck bleibt deckend
   if (tool === 'tunneleinfahrt') { const [ex, ey] = einAnchor(t.x, t.y); t = { x: ex, y: ey }; }   // Feld unter der Maus = hinteres Feld am Tunnel
   else if (rampTool()) { const [ax, ay] = rampAnchor(t.x, t.y); t = { x: ax, y: ay }; }   // Gleis-Rampe bauen/getragen: Feld an der Wand (hills.js)
-  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof || !!hover.under !== !!t.under) { hover = t; previewCache = null; }
-  hoverVertex = toVertex(sx, sy); hoverEdge = tool === 'abriss' || tool === 'look' ? edgeNear(sx, sy) : null;
+  if (!hover || hover.x !== t.x || hover.y !== t.y || !!hover.top !== !!t.top || !!hover.roof !== !!t.roof || !!hover.under !== !!t.under || !!hover.deck !== !!t.deck) { hover = t; previewCache = null; }
+  hoverVertex = toVertex(sx, sy); hoverEdge = (tool === 'abriss' || tool === 'look') && !t.deck ? edgeNear(sx, sy) : null;   // aufs Deck gezeigt: keine Linie darunter (Block 160)
   if (plan && !plan.fixed) setPlanEnd(planPoint(sx, sy));   // Linie per Klick begonnen: das Ende folgt der Maus
   hoverChunk = null;
 }

@@ -678,6 +678,7 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
   const ev = new Set(GLS.dyn);
   for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
   for (const k of roofLiveTiles()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild
+  for (const k of bkLiveTiles()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }   // Brücken (Block 160): wie die Überdachungen
   const list = [...ev].sort((p, q) => p - q);
   let cur = GLS.groundEnd;
   for (const j of list) {

@@ -142,7 +142,8 @@ function pathArmsHill(x, y) {
   const ss = rampFresh().s > 0;
   return DIRS.filter(([dx, dy]) => {
     const nx = x + dx, ny = y + dy, b = bAt(nx, ny);
-    return (b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (ss && !!stairAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg');
+    return ((b === 'weg' || b === 'rathaus' || crossingAt(nx, ny) || wegAt(nx, ny) != null || (ss && !!stairAt(nx, ny))) && levelLink(x, y, nx, ny, 'weg'))
+      || (bkOn() && bkArmFrom(x, y, dx, dy));                              // über die Kante aufs Deck einer Brücke (Block 160)
   });
 }
 // Kurve: zwei Arme über Eck → Mittelpunkt ist die gemeinsame Feldecke
@@ -892,7 +893,7 @@ const drawFlat = (cx, cy, z, x, y, t) => {
 // Gleis oben genauso; zur Gleis-Rampe (schräg) nur der Überlapp der Anhöhen GR_E – ein flaches Stück darüber stünde über ihrem Gleis
 function drawHillFlat(cx, cy, z, x, y, t) {
   const rail = t.b === 'schiene' && rampFresh().n > 0;
-  const e = (dx, dy) => rail && rampAt(x + dx, y + dy) ? (levelLink(x, y, x + dx, y + dy, 'gleis') ? GR_E : 0) : levelLink(x, y, x + dx, y + dy, 'fuss') ? 0.06 : 0;
+  const e = (dx, dy) => rail && rampAt(x + dx, y + dy) ? (levelLink(x, y, x + dx, y + dy, 'gleis') ? GR_E : 0) : levelLink(x, y, x + dx, y + dy, 'fuss') || (bkOn() && bkArmFrom(x, y, dx, dy)) ? 0.06 : 0;   // Brücke (Block 160): bis aufs Deck
   const u0 = -0.5 - e(-1, 0), u1 = 0.5 + e(1, 0), v0 = -0.5 - e(0, -1), v1 = 0.5 + e(0, 1);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   g.save();

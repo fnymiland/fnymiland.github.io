@@ -62,7 +62,7 @@ function doorsOf(k) {
 function walkPath(sx, sy, goals, limit = 2500) {
   const want = new Set(goals.map(([x, y]) => x + ',' + y)), start = sx + ',' + sy;
   if (want.has(start)) return [];
-  const hr = hillRegions();
+  const hr = hillWalkRegions();                                         // ohne Brücken: über sie gehen Bewohner noch nicht (Block 160)
   if (hr && !goals.some(([x, y]) => sameRegion(hr, x + ',' + y, start))) return null;
   const prev = new Map([[start, null]]), q = [[sx, sy]];
   for (let i = 0; i < q.length && prev.size < limit; i++) {
@@ -84,7 +84,7 @@ function walkPath(sx, sy, goals, limit = 2500) {
 // Ziel für einen Bewohner: ein passendes Gebäude in der Nähe (eins der fünf nächsten) bzw. ein Stück Parkrasen. Gebäude oben (157j): nur, wenn
 // eine Treppe auf ihre Anhöhe führt (bzw. man selbst oben ist) – sonst verdrängten unerreichbare Ziele die erreichbaren
 function findGoal(kind, x, y) {
-  const reg = regionAt(x, y), near = [], hr = hillRegions(), here = x + ',' + y;
+  const reg = regionAt(x, y), near = [], hr = hillWalkRegions(), here = x + ',' + y;
   if (kind === 'park' || kind === 'fzpark') {                          // Park bzw. Freizeitpark (Block 60d): ein begehbares Feld darin
     for (const p of kind === 'park' ? PARKS : FZPARKS) for (const k of p.tiles) { const [px, py] = keyXY(k); if (walkable(px, py) && sameRegion(hr, k, here)) near.push({ k, d: Math.abs(px - x) + Math.abs(py - y), tiles: [[px, py]] }); }
   } else if (GOAL_OF[kind]) {
