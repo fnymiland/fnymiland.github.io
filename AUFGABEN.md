@@ -2682,40 +2682,31 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       Wagen knapp über der Kante schwebte doppelt hoch; „Gleise umstellen“ übersprang Deck und andere Seite; Strecke zu kurz gezählt; Zug
       oben angetippt öffnete das Feld darunter; nach ↶ rechnete das Netz mit der alten Brücke (`groundVersion`); ↶ an einer stehenden Brücke
       prüft nur neue Böcke, Achterbahn nicht mehr unter die Brücke. Tests: bruecke-gleis.
-- [ ] 160c Schritt 3: Brücken vereinheitlichen. **Besprochen 11.10.2026** (Brückenschau tools/brueckenschau.js, Entwürfe
-      tools/bogen-anhoehe-entwurf*.js): „eine Brücke für alles“ geht nicht, stattdessen **zwei Familien**:
-      - **Fußgängerbrücke = immer ein Bogen** (übers Wasser, über ein Gleis, zwischen Anhöhen), **Bahnbrücke = immer flach** (übers Wasser,
-        zwischen Anhöhen; Holzviadukt/Stahl). Ein Gleis fährt nie über einen Bogen.
-      - Zwischen Anhöhen halb so hoch wie übers Wasser. **Holz/Rot:** Bogenträger unter dem Belag mit Hängern, Stützen vom Boden bis unter
-        den Belag mit Kreuzstreben, **auf den Kachelkanten** (Wege darunter laufen durch die Feldmitte), im Fenster einstellbar:
-        keine / wenige / jede Kante (Entwurf 3b – „perfekt so“). **Stein:** dünner heller Bogen (Entwurf 2) **ohne Zipfel**: setzt knapp
-        unter der Kante an, Brüstung läuft an den Enden flach aus (Entwurf 6 „C“). Keine Basaltsäulen, kein Schwarz, keine Mauer bis unten.
-      - **Stein mit Pfeilern** (Entwurf 7–10, tools/bogen-anhoehe-entwurf8.js): Pfeiler auf den Kachelkanten, Bögen je 2 Felder, Buckel wie
-        Entwurf 7 (Höhe wie beim Einzelbogen), Öffnung **Stufe 3 „mittel“** (Stein über dem Scheitel 7,5, Ansatz am Pfeiler 13); äußere Bögen
-        setzen an der Wand knapp unter der Kante an (kein Zipfel). Gezeigt für 4/6/8 Felder – zwischen Anhöhen sind heute höchstens 4
-        erlaubt (übers Wasser 16); ob mehr, ist offen. Grafikfehler im Entwurf, im Spiel vermeiden (Nutzer: „achte auf Grafikglitches“):
-        Seitenfläche der Pfeiler steht als helle Platte neben dem Pfeiler (zu breit/zu hoch, nicht vom Bogen verdeckt); in den Öffnungen fehlt
-        die Unterseite des Gewölbes (man sieht durch den Bogen ohne Tiefe); hintere Stirnseite fehlt; Schatten der Öffnungen fehlen;
-        Knick an der Wand, wo der äußere Bogen ansetzt; Ausschnitt an der fernen Anhöhe nur grob. Immer Nahaufnahmen aller Anschlüsse prüfen.
-      - **Materialien (Nutzer 11.10.2026):** Holz (Waldinsel), Stein (Windinsel), Metall (Erzinsel), Kristall (Kristallinsel, Spezial) – je
-        als Fußgängerbrücke (immer Bogen; Belag frei wählbar oder Muster der Brücke) und als Bahnbrücke (immer flach; Gleis-Stil frei);
-        alle einfärbbar. Ziegel und Rot fallen weg (= Stein bzw. Holz eingefärbt), „Wie der Weg“ = Belag wählen; alte Stände wandeln so um,
-        dass sie gleich aussehen. Neu zu zeichnen: Fußgänger-Bogen Metall, Kristall (Wasser/Anhöhen), Bahn flach Stein, Kristall, Metall
-        übers Wasser. Zwischen Anhöhen bis 8 Felder. Bauen: Weg/Gleis über die Lücke ziehen → Brücke entsteht; Brücken-Werkzeug bleibt.
-      - **Kristall Fußgänger = K1 Glasbogen** (tools/kristallbruecke-entwurf.js); K3s Leuchtband wird ihre Beleuchtung. Bahn (B1–B3) offen.
-      - **Beleuchtung für alle Brücken** (Nutzer: „wichtig“): je Brücke an/aus, nachts mit Schein wie Laternen; je Material eigene Lampen
-        (Holz Laternen, Stein Kugelleuchten, Metall Mast/Lichterkette, Kristall Leuchtband). Kosten offen.
-      - Bahnübergang mit Fußgängerbrücke: gehört zur Fußgänger-Familie (4 Materialien, einfärbbar, Belag wählbar).
-      - **Modelle abgenommen (Nutzer 11.10.2026: „gefallen mir alle, so perfekt“)** – tools/brueckenfamilie-entwurf.js, Tagbilder:
-        Fußgänger Holz (3b), Stein (Pfeiler, Stufe 3), Metall (neu: Gitterrost, Stahlträger, Stahlbogen mit Hängern), Kristall K1 (+ Zacken
-        als Option); Bahn Holz (Böcke auf den Kachelkanten), Stein (flacher Viadukt), Metall (Fachwerk), Kristall B2 (Fachwerk aus Kristall).
-        Nacht zuerst verworfen (Schleier + Kreise); **neu abgenommen** (tools/brueckenlicht-entwurf.js, echtes Nachtlicht über glowQuad/
-        drawNight): Holz und Metall kleine Lichtpunkte auf Pfosten/Handlauf, **Stein: Balustrade** (Pfosten + Handlauf, statt niedriger
-        Brüstung – „die einzige ohne Geländer“) mit **Minilaternen** (Kopf der Gaslaterne auf kurzem Stummel, in der Farbe der Brücke),
-        Kristall: bläulicher Streifen am Fuß des Glasgeländers (Bahn B2: am Fuß des Fachwerks).
-      - **Optionen je Brücke:** Farbe (Laternen färben mit), **Licht an/aus** (kostet extra), Kristall: **Zacken** (Fanny). Kosten: Licht
-        extra, Kristall „fürstlich“. Progression/Geld insgesamt später besprechen (Nutzer).
-      - **Alte Brücken bekommen die neuen Modelle** (Nutzer 11.10.2026, Frage „neue Modelle / altes Aussehen / umschaltbar“): jede alte
-        Wasser-, Gleis- und Übergangsbrücke wird zum passenden neuen Modell, Material und Farbe so nah wie möglich am alten.
-      - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
-        eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
+- [ ] 160c **Brücken vereinheitlichen** – Bauplan: **PLAN-160c.md** (Karten des Codes: plan-160c/). Entschieden mit dem Nutzer (11.10.2026,
+      Brückenschau tools/brueckenschau.js, Entwürfe tools/bogen-anhoehe-entwurf*.js, kristallbruecke-, brueckenfamilie-, brueckenlicht-entwurf.js):
+      - **Zwei Familien:** Fußgängerbrücke = immer Bogen (übers Wasser, über ein Gleis am Übergang, zwischen Anhöhen), Bahnbrücke = immer
+        flach (übers Wasser, zwischen Anhöhen). Ein Gleis fährt nie über einen Bogen. Familie folgt aus dem Inhalt (Gleis → Bahn).
+      - **Vier Materialien:** Holz (Waldinsel), Stein (Windinsel), Metall (Erzinsel), Kristall (Kristallinsel, „fürstlich“ teuer). Ziegel und
+        Rot fallen weg (= Stein bzw. Holz eingefärbt), „Wie der Weg“ = Holz mit Belag. Alle einfärbbar (Laternen färben mit).
+      - **Modelle abgenommen** (brueckenfamilie-entwurf.js): Fußgänger Holz (Bogenträger, Hänger, Stützen auf den Kachelkanten:
+        keine/wenige/jede), Stein (dünner heller Bogen ohne Zipfel; mit Pfeilern auf den Kanten, Bögen je 2 Felder, Öffnung Stufe 3;
+        **Balustrade**), Metall (Gitterrost, Stahlträger, Stahlbogen mit Hängern), Kristall K1 (Glasbogen, Glasgeländer, **Zacken als
+        Option**); Bahn Holz (Böcke auf den Kanten), Stein (flacher Viadukt), Metall (Fachwerk), Kristall B2 (Fachwerk aus Kristall).
+        Zwischen Anhöhen halb so hoch wie übers Wasser, 1 Feld = kleiner Buckel, **bis 8 Felder**.
+      - **Licht** (brueckenlicht-entwurf.js, echtes Nachtlicht): Holz/Metall kleine Punkte, Stein Minilaternen auf der Balustrade (in der
+        Brückenfarbe), Kristall bläulicher Streifen am Glasfuß. Je Brücke kaufen, dann an/aus. **Mit Strom** (F2): bekommt Strom zuletzt.
+      - **Alte Brücken bekommen die neuen Modelle** (Material/Farbe so nah wie möglich); **Form übers Wasser bleibt** (Block 150, F1); Material
+        für beim Ziehen entstehende Brücken in der Leiste des Brücken-Werkzeugs (F3); Gleisbrücken-Kurven: schlichtes Kurvenstück (F4).
+      - **Grafikfehler vermeiden** (Nutzer): Pfeiler-Platte, Gewölbe ohne Tiefe, fehlende hintere Stirn/Schatten, Knick an der Wand, Zipfel
+        am Ende, Ausschnitt an der fernen Anhöhe – je Schritt Nahaufnahmen aller Anschlüsse in beiden Achsen, Tag/Nacht/weit/GL.
+      Schritte (je ein Commit, Details PLAN-160c.md §3):
+      - [ ] V1 AUFGABEN/Plan bereinigt · [ ] V2 Übergang-Knöpfe in undoable · [ ] V3 Kopie-Lücke footPaid · [ ] V4 Gruppe mit Wegbrücke ablegen
+        · [ ] V5 t.lauf in tileOut
+      - [ ] A1 Prüfstand (Brückenwelt) · [ ] A2 Leser brLook · [ ] A3 Speicherformat + Altversions-Wächter · [ ] A4 Geld-Schicht
+      - [ ] B1 Lagen-Maler · [ ] B2 ruhend in tileA, Nachmalen in tileB
+      - [ ] C1 Stützen auf Kanten · [ ] C2 Höhenprofil, Holz/Metall · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle
+        · [ ] C6 Fenster/Leiste/Kosten · [ ] C7 Licht (mit Strom) · [ ] C8 bis 8 Felder · [ ] C9 Bauen per Linie · [ ] C10 Schiffe unter Anhöhen-Brücken
+      - [ ] D0 Entwurf Wasser-Weg · [ ] D1 Zeichenort · [ ] D2 Modelle · [ ] D3 Fenster/Kosten · [ ] D4 Anhöhe am Brückenende sperren
+      - [ ] E0 Entwurf Wasser-Gleis · [ ] E1 Zeichenort · [ ] E2 Modelle/Spanne/Fenster
+      - [ ] F0 Entwurf Übergang · [ ] F1 Bekleidung/Fenster/Kosten
+      - [ ] G1 Texte/Erfolg/Album · [ ] G2 Gesamtprüfung · [ ] G3 CLAUDE.md, „Das ist neu“
