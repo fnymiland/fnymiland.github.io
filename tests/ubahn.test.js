@@ -16,7 +16,7 @@ const twoPlaces = () => game("globalThis.__ra = regionAt; regionAt = (x, y) => x
 describe('Forschung und Menü', () => {
   it('U-Bahn kommt nach der Eisenbahn; Tunnel und U-Bahn-Station stehen unter Verkehr', () => {
     expect(game('TECH_BY_ID.ubahn.req')).toEqual(['bahn']);
-    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.slice(0, 7)")).toEqual(['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'bergportal', 'station', 'ubahn']);   // Bergportal (157m) hinter der Einfahrt   // Gleis-Rampe (Anhöhen) gleich hinter der Schiene
+    expect(game("MENU[0].groups.find(g => g.id === 'untergrund').items")).toEqual(['tunnel', 'tunneleinfahrt', 'bergportal', 'ubahn']);   // Verkehr aufgeteilt (11.10.2026)   // Bergportal (157m) hinter der Einfahrt   // Gleis-Rampe (Anhöhen) gleich hinter der Schiene
     game("state.techs.delete('ubahn')");
     expect(game("placeError('tunnel', 8, 8)")).toMatch(/erst mit/);
   });

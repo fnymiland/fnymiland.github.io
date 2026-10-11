@@ -37,10 +37,11 @@ describe('Baumenü', () => {
       expect(game("document.getElementById('toolbar').classList.contains('open')"), m).toBe(false);
     }
   });
-  it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Bahn und Hafen Verkehr; Weg, Parkrasen, Leuchtturm', () => {
+  it('Einordnung: Schule, Post, Hotel sind Einrichtungen; Schiene und Bahnhof Bahn, Hafen und Steg Wasser & Seil; Weg, Parkrasen, Leuchtturm', () => {
     const at = id => game(`menuPlaceOf('${id}')`);
     for (const id of ['schule', 'post', 'apotheke', 'hotel', 'grandhotel']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'einrichtungen' });
-    for (const id of ['schiene', 'station', 'hafen', 'bootssteg']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'verkehr' });
+    for (const id of ['schiene', 'station']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'bahn' });
+    for (const id of ['hafen', 'bootssteg']) expect(at(id), id).toEqual({ top: 'stadt', sub: 'wasser' });
     expect(at('baecker')).toEqual({ top: 'herstellen', sub: 'taler' });
     expect(at('stand_obst')).toEqual({ top: 'stadt', sub: 'markt' });
     expect(at('weg')).toEqual({ top: 'gestalten', sub: 'land' });
@@ -49,10 +50,13 @@ describe('Baumenü', () => {
     expect(at('kino')).toEqual({ top: 'freizeit', sub: 'kultur' });
   });
 
-  it('kein Filter hat mehr als 10 Dinge (Verkehr 11: das Bergportal gehört laut Nutzer direkt hinter die Tunneleinfahrt, 157m)', () => {
-    const all = game("MENU.flatMap(m => m.groups ? m.groups.filter(g => g.id !== 'verkehr').map(g => g.items.length) : [])");
+  it('kein Filter hat mehr als 10 Dinge; Verkehr ist aufgeteilt (Nutzer 11.10.2026): Bahn, Untergrund, Wasser & Seil', () => {
+    const all = game("MENU.flatMap(m => m.groups ? m.groups.map(g => g.items.length) : [])");
     expect(Math.max(...all)).toBeLessThanOrEqual(10);
-    expect(game("MENU[0].groups.find(g => g.id === 'verkehr').items.length")).toBeLessThanOrEqual(11);
+    const g = id => game(`MENU[0].groups.find(g => g.id === '${id}').items`);
+    expect(g('bahn')).toEqual(['schiene', 'huegelrampe', 'station', 'hbf']);
+    expect(g('untergrund')).toEqual(['tunnel', 'tunneleinfahrt', 'bergportal', 'ubahn']);
+    expect(g('wasser')).toEqual(['bootssteg', 'hafen', 'seilbahn']);
   });
 
   it('Bereich wechseln lässt das gewählte Werkzeug in der Hand; eine Wahl, Esc oder daneben tippen klappt zu', () => {
@@ -84,7 +88,7 @@ describe('Baumenü', () => {
     game('setSheet(false)');
   });
   it('Reihenfolge nach Häufigkeit (Nutzer: „für die Schnelligkeit“): Wohnen und Verkehr oben, Kaufhäuser unten; Gruppen ohne Freies ans Ende', () => {
-    expect(game("MENU.find(m => m.id === 'stadt').groups.map(g => g.id)")).toEqual(['wohnen', 'verkehr', 'einrichtungen', 'laeden', 'markt', 'essen', 'gross']);
+    expect(game("MENU.find(m => m.id === 'stadt').groups.map(g => g.id)")).toEqual(['wohnen', 'bahn', 'untergrund', 'wasser', 'einrichtungen', 'laeden', 'markt', 'essen', 'gross']);
     expect(game("MENU.find(m => m.id === 'herstellen').groups.map(g => g.id).at(-1)")).toBe('veredeln');
     game("menuTop = 'freizeit'; setSheet(true); buildToolbar()");
     const hs = q('#tools .sheet-h').map(h => h.dataset.group);
@@ -94,30 +98,35 @@ describe('Baumenü', () => {
     game('setSheet(false)');
   });
   it('Anordnen (Nutzer: „Anordnung dem Nutzer übergeben“): ↑/↓ verschiebt Gruppen, je Gerät gemerkt; Standard setzt zurück', () => {
-    game("localStorage.removeItem('kachelhausen_menuorder'); for (const d of DESIGN) state.design.add(d.id); state.money = 1e9; menuTop = 'stadt'; setSheet(true); buildToolbar()");
+    game("localStorage.removeItem('kachelhausen_menuorder'); for (const d of DESIGN) state.design.add(d.id); state.techs.add('bahn'); state.money = 1e9; menuTop = 'stadt'; setSheet(true); buildToolbar()");   // Bahn erforscht: ihre Gruppe steht oben (Gesperrtes rutscht ans Ende)
     const heads = () => q('#tools .sheet-h').map(h => h.dataset.group);
-    expect(heads().slice(0, 2)).toEqual(['wohnen', 'verkehr']);
+    expect(heads().slice(0, 2)).toEqual(['wohnen', 'bahn']);
     document.querySelector('#tools .arrange-btn').click();
     expect(game('arrangeMode')).toBe(true);
     expect(q('#tools .tool').length).toBe(0);                                   // nur die Liste
     const rows = () => q('#tools .arrange-row').map(r => r.dataset.group);
     expect(rows()[0]).toBe('wohnen');
     document.querySelector('#tools .arrange-row[data-group="gross"] .arrange-mv:first-of-type').click();   // Kaufhäuser eins hoch
-    document.querySelector('#tools .arrange-row[data-group="verkehr"] .arrange-mv:first-of-type').click(); // Verkehr nach oben
-    expect(rows().slice(0, 2)).toEqual(['verkehr', 'wohnen']);
+    document.querySelector('#tools .arrange-row[data-group="bahn"] .arrange-mv:first-of-type').click(); // Bahn nach oben
+    expect(rows().slice(0, 2)).toEqual(['bahn', 'wohnen']);
     expect(rows().indexOf('gross')).toBe(rows().length - 2);
-    expect(JSON.parse(localStorage.getItem('kachelhausen_menuorder')).stadt[0]).toBe('verkehr');
+    expect(JSON.parse(localStorage.getItem('kachelhausen_menuorder')).stadt[0]).toBe('bahn');
     [...document.querySelectorAll('#tools .arrange-foot .btn')].find(b => b.textContent === 'Fertig').click();
     expect(game('arrangeMode')).toBe(false);
-    expect(heads()[0]).toBe('verkehr');
-    expect(game("menuList()[0]")).toBe(game("[...MENU[0].groups.find(g => g.id === 'verkehr').items].find(available)"));   // Zahlentasten folgen
+    expect(heads()[0]).toBe('bahn');
+    expect(game("menuList()[0]")).toBe(game("[...MENU[0].groups.find(g => g.id === 'bahn').items].find(available)"));   // Zahlentasten folgen
     game('setSheet(false); setSheet(true); buildToolbar()');                    // zu und wieder auf: bleibt
-    expect(heads()[0]).toBe('verkehr');
+    expect(heads()[0]).toBe('bahn');
     document.querySelector('#tools .arrange-btn').click();
     [...document.querySelectorAll('#tools .arrange-foot .btn')].find(b => b.textContent === 'Standard').click();
-    expect(rows().slice(0, 2)).toEqual(['wohnen', 'verkehr']);
+    expect(rows().slice(0, 2)).toEqual(['wohnen', 'bahn']);
     game('setSheet(false)');
     expect(game('arrangeMode')).toBe(false);                                     // zuklappen beendet das Anordnen
+  });
+  it('gemerkte Reihenfolge mit „verkehr“ (vor der Aufteilung): an seiner Stelle Bahn, Untergrund, Wasser & Seil', () => {
+    game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ stadt: ['einrichtungen', 'verkehr', 'wohnen', 'laeden', 'markt', 'essen', 'gross'] }))`);
+    expect(game("orderedGroups(MENU[0]).map(g => g.id).slice(0, 5)")).toEqual(['einrichtungen', 'bahn', 'untergrund', 'wasser', 'wohnen']);
+    game("localStorage.removeItem('kachelhausen_menuorder')");
   });
   it('gemerkte Reihenfolge mit alter/unbekannter Gruppe und kaputtem Wert: nichts geht verloren', () => {
     game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ stadt: ['weg-gibts-nicht', 'markt'] }))`);

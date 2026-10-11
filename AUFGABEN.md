@@ -2563,3 +2563,7 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Nachtrag (Nutzer: „links flach, rechts erhöht – ungleichmäßig“, Bild tools/vorschau/treppe-boeschung-hoch-flach.png, gewählt „hoch“): die
       Böschung liegt jetzt auf der Linie der Stufenvorderkanten wie der Keil (Stufen leicht versenkt) – sie ist ein Keil ohne Außenwand (`keil(sg,
       true)`), neben einer breiten Treppe mit Außenwand, beide ohne dunkle Kante (`'wand'`, `om`/`op`); Höhe für Figuren wie auf dem Keil.
+- [x] 157r **Menü: Verkehr aufgeteilt** (Nutzer 11.10.2026: „einige neue Dinge im Menü – zusammenlegen, übersichtlicher?“, gewählt „Verkehr
+      aufteilen“): unter Stadt statt 🚆 Verkehr (11 Dinge) drei Gruppen – 🚆 Bahn (Schiene, Gleis-Rampe, Bahnhof, Hauptbahnhof), 🚇 Untergrund
+      (Tunnel, Tunneleinfahrt, Bergportal, U-Bahn-Station), ⛴️ Wasser & Seil (Steg, Hafen, Seilbahn). Gemerkte eigene Reihenfolgen: an der Stelle
+      von „verkehr“ stehen die drei (`GROUP_ALIAS`, orderedGroups). ⛰️ Anhöhen unter Gestalten wie bisher. Tests: menu u. a.

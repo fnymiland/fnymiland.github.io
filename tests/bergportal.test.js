@@ -25,7 +25,7 @@ function bergbahn() {
 
 describe('Einbau', () => {
   it('Menü direkt hinter der Tunneleinfahrt, Forschung U-Bahn, Preis 800 + Quader 4 + Metall 2, zwei Formen frei; Tipp, Wirkung, Album, Bild ohne Fehler', () => {
-    const v = game("MENU[0].groups.find(g => g.id === 'verkehr').items");
+    const v = game("MENU[0].groups.find(g => g.id === 'untergrund').items");
     expect(v[v.indexOf('tunneleinfahrt') + 1]).toBe('bergportal');
     expect(game("[ITEMS.bergportal.tech, ITEMS.bergportal.cost, ITEMS.bergportal.mat]")).toEqual(['ubahn', 800, { quader: 4, metall: 2 }]);
     expect(game("DECO_LOOKS.bergportal.forms.map(f => f.id + (f.design ? '$' : ''))")).toEqual(['bogen', 'offen']);

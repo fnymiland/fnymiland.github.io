@@ -600,7 +600,10 @@ const SHOP_GROUPS = {
 const MENU = [
   { id: 'stadt', label: '🏘️ Stadt', groups: [
     { id: 'wohnen', label: '🏠 Wohnen', items: ['haus', 'reihenhaus', 'baumhaus', 'hausboot', 'ferienhaus'] },
-    { id: 'verkehr', label: '🚆 Verkehr', items: ['schiene', 'huegelrampe', 'tunnel', 'tunneleinfahrt', 'bergportal', 'station', 'ubahn', 'hbf', 'seilbahn', 'bootssteg', 'hafen'] },
+    // Verkehr aufgeteilt (Nutzer 11.10.2026: „einige neue Dinge im Menü – zusammenlegen, übersichtlicher?“; gemerkte Reihenfolgen: GROUP_ALIAS, ui.js)
+    { id: 'bahn', label: '🚆 Bahn', items: ['schiene', 'huegelrampe', 'station', 'hbf'] },
+    { id: 'untergrund', label: '🚇 Untergrund', items: ['tunnel', 'tunneleinfahrt', 'bergportal', 'ubahn'] },
+    { id: 'wasser', label: '⛴️ Wasser & Seil', items: ['bootssteg', 'hafen', 'seilbahn'] },
     { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },

@@ -36,8 +36,8 @@ describe('Einbau: alles verbunden', () => {
   });
 
   it('Gleis-Rampe überall eingehängt: Menü (Verkehr), Tipp, drawObject, Drehen, Form im Spielstand, Album, Antippen des Zugs; Leiste und Vorschaubild ohne Fehler', () => {
-    expect(game("MENU.find(m => m.id === 'stadt').groups.find(g => g.id === 'verkehr').items.slice(0, 2)")).toEqual(['schiene', 'huegelrampe']);
-    expect(game("MENU.some(m => m.groups.some(g => g.id !== 'verkehr' && g.items.includes('huegelrampe')))")).toBe(false);
+    expect(game("MENU.find(m => m.id === 'stadt').groups.find(g => g.id === 'bahn').items.slice(0, 2)")).toEqual(['schiene', 'huegelrampe']);
+    expect(game("MENU.some(m => m.groups.some(g => g.id !== 'bahn' && g.items.includes('huegelrampe')))")).toBe(false);
     expect(game("[!!FX.huegelrampe, !!ITEM_TIPS.huegelrampe, ROTATABLE.has('huegelrampe'), BIG_ON_TILE.has('huegelrampe'), LATE_ALBUM.has('b:huegelrampe'), LATE_ALBUM.has('b:huegeltreppe')]"))
       .toEqual([true, true, true, true, true, true]);
     expect(game("tileOut({ b: 'huegelrampe', lvl: 1, rot: 1, len: 2, form: 'c', price: 600 })")).toEqual({ b: 'huegelrampe', lvl: 1, rot: 1, form: 'c', price: 600 });

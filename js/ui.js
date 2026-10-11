@@ -144,9 +144,12 @@ function noteRecent(id) {
 const ORDER_KEY = 'kachelhausen_menuorder';
 let arrangeMode = false;
 function savedOrders() { try { const o = JSON.parse(localStorage.getItem(ORDER_KEY) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+// Gruppen, die aufgeteilt wurden: in gemerkten Reihenfolgen stehen ihre Nachfolger an ihrer Stelle (🚆 Verkehr → Bahn, Untergrund, Wasser & Seil)
+const GROUP_ALIAS = { verkehr: ['bahn', 'untergrund', 'wasser'] };
 function orderedGroups(top) {
-  const grs = top.groups || [{ id: top.id, label: top.label, items: top.items }], ids = savedOrders()[top.id];
-  if (!Array.isArray(ids)) return grs;
+  const grs = top.groups || [{ id: top.id, label: top.label, items: top.items }], saved = savedOrders()[top.id];
+  if (!Array.isArray(saved)) return grs;
+  const ids = saved.flatMap(id => GROUP_ALIAS[id] || [id]);
   const by = new Map(grs.map(g => [g.id, g])), seen = ids.filter(id => by.has(id)), out = seen.map(id => by.get(id)), tail = [];
   // später dazugekommene Gruppen (z. B. ⛰️ Anhöhen, Block 157d): hinter ihren Vorgänger im Menü, wenn der gemerkt ist – sonst ans Ende
   grs.forEach((g, i) => { if (seen.includes(g.id)) return; const p = i ? out.indexOf(grs[i - 1]) : -1; if (p >= 0) out.splice(p + 1, 0, g); else tail.push(g); });
