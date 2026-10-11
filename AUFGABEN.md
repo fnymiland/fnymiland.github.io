@@ -2601,3 +2601,8 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Hand (`katPick`, je Gerät `kachelhausen_kat`); ihre Dinge stehen vorn in der Stil-Zeile (`katChips`, Gewähltes dunkel, Gesperrtes blass mit
       Hinweis, Trennstrich zum Stil – entfällt, wo die Zeile genau dort umbricht). Feste Plätze wie zuvor. Am Computer und iPad eine Zeile, auf
       dem Handy bricht nur die Eisenbahn um. Hauptbahnhof nicht dabei (nicht genannt). Entwurf: tools/kategorien-entwurf.js. Tests: schnellwahl.
+      Nachtrag 7 (Nutzer: „in der oberen Leiste springen die Icons hin und her, je nach Auswahl“): Die Stil-Zeile stand mittig, dahinter je nach
+      Ding ein anderer Stil (Schotter, Graben/Entfernen, nichts) – sie rückte. Mit Dingen einer Kategorie beginnt sie jetzt links fest über dem
+      großen Knopf (`kat-anchored`, nie aus dem Bild), der Stil wächst nach rechts, ein Umbruch geht nach oben (`wrap-reverse`): die Dinge bleiben
+      in der untersten Zeile. Aufklappfelder (Zaunform …) dann mittig auf dem Bildschirm. Nachgemessen 375/768/1200 px: jedes Ding jeder
+      Kategorie angetippt – alle Symbole stehen waagerecht und senkrecht aufs Pixel gleich. Andere Dinge: Stil-Zeile wie bisher mittig.

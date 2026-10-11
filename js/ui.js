@@ -213,6 +213,7 @@ function katChips(bar, t) {
   const kat = katOf(t);
   if (bar.hidden) bar.innerHTML = '';                                    // ohne eigene Stile: nur versteckt, alter Inhalt steht noch drin
   for (const e of bar.querySelectorAll('.kat-item, .kat-sep')) e.remove();
+  bar.classList.remove('kat-anchored'); bar.style.left = bar.style.maxWidth = ''; bar.style.removeProperty('--kat-left');
   if (!kat || kat[3].length < 2) return;
   const had = bar.children.length;
   if (had) { const sep = document.createElement('span'); sep.className = 'style-sep kat-sep'; bar.prepend(sep); }
@@ -225,8 +226,16 @@ function katChips(bar, t) {
     bar.prepend(b);
   }
   bar.hidden = false; document.body.classList.add('has-styles');
+  // Nutzer: „die Icons springen hin und her, je nach Auswahl“ – mittig gestellt rückte die Zeile mit dem Stil dahinter (Schotter, Graben/
+  // Entfernen, nichts …). Darum beginnt sie links fest über dem großen Knopf unten, der Stil wächst nur nach rechts; nie aus dem Bild. Bricht der
+  // Stil um, geht er nach oben (wrap-reverse, style.css): die Dinge bleiben in der untersten Zeile, auch in der Höhe fest
+  const big = document.querySelector('#cats .quick.drag'), items = bar.querySelectorAll('.kat-item');
+  bar.classList.add('kat-anchored');
+  const W = window.innerWidth || 0, iw = items[items.length - 1].getBoundingClientRect().right - items[0].getBoundingClientRect().left + 8;
+  const want = big ? big.getBoundingClientRect().left - 4 : 12, left = Math.max(12, Math.min(want, W - 12 - iw));
+  bar.style.left = left + 'px'; bar.style.maxWidth = `calc(100% - ${left + 12}px)`; bar.style.setProperty('--kat-left', left + 'px');
   const sep = bar.querySelector('.kat-sep');                             // bricht die Zeile genau dort um, hinge der Strich allein am Zeilenende
-  if (sep && sep.nextElementSibling && sep.nextElementSibling.offsetTop > sep.offsetTop + 4) sep.hidden = true;
+  if (sep && sep.nextElementSibling && Math.abs(sep.nextElementSibling.offsetTop - sep.offsetTop) > 4) sep.hidden = true;
 }
 window.addEventListener('resize', () => { if (dragShift) { dragAnchor = null; shiftCats(0); } });
 // Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an

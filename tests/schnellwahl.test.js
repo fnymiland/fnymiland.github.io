@@ -54,8 +54,12 @@ describe('Ziehen-Knopf: Kategorien', () => {
     expect([big()[1], balls().length]).toEqual(['bahn', 0]);                        // gemerkt, zu
     game("setTool('strand')");                                                      // auch aus dem Menü gewählt
     expect([big()[1], items()[3]]).toEqual(['gelaende', 'strand*']);
+    expect(game("$('style-bar').classList.contains('kat-anchored')")).toBe(true);   // Nutzer: „die Icons springen je nach Auswahl“ – Zeile links fest
     game("setTool('look')");
     expect(game("document.querySelectorAll('#style-bar .kat-item').length")).toBe(0);
+    game("setTool('baum')");                                                        // andere Dinge: Stil-Zeile wie immer mittig
+    expect(game("[$('style-bar').classList.contains('kat-anchored'), $('style-bar').style.left]")).toEqual([false, '']);
+    game("setTool('look')");
   });
   it('nicht erforscht: großer Knopf fällt auf den Weg zurück, Gesperrtes blass mit Hinweis; ganze Kategorie gesperrt: Kugel blass, nimmt nichts', () => {
     game("localStorage.setItem('kachelhausen_drag', 'tunnel'); state.techs.delete('ubahn'); buildToolbar()");
