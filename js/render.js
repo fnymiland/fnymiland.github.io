@@ -495,7 +495,7 @@ const PREP_MISS = 250, PAINT_PREP = 150, SPRITE_PREP_MAX = 1000;
 let loadingStart = true, loadingVisit = 0, loadingShown = '';            // loadingVisit: seit wann (nach 25 s nicht mehr, falls nie etwas kommt)
 function loadingUpdate() {
   if (loadingStart && frameNo > 2 && !spritePrep && SPRITE_STATS.miss < PREP_MISS) loadingStart = false;   // Insel steht
-  const want = loadingVisit && Date.now() - loadingVisit < 25000 ? 'visit' : loadingStart ? 'start' : performance.now() - prepShown < 500 ? 'draw' : '';
+  const want = loadingVisit && Date.now() - loadingVisit < 25000 ? 'visit' : loadingStart ? 'start' : prepShown && performance.now() - prepShown < 500 ? 'draw' : '';   // prepShown 0 = nie (sonst in den ersten 0,5 s nach dem Laden „Insel wird gezeichnet …“)
   if (want === loadingShown) return;
   loadingShown = want;
   const el = document.getElementById('loading');
