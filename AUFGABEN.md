@@ -2697,5 +2697,10 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
         Seitenfläche der Pfeiler steht als helle Platte neben dem Pfeiler (zu breit/zu hoch, nicht vom Bogen verdeckt); in den Öffnungen fehlt
         die Unterseite des Gewölbes (man sieht durch den Bogen ohne Tiefe); hintere Stirnseite fehlt; Schatten der Öffnungen fehlen;
         Knick an der Wand, wo der äußere Bogen ansetzt; Ausschnitt an der fernen Anhöhe nur grob. Immer Nahaufnahmen aller Anschlüsse prüfen.
+      - **Materialien (Nutzer 11.10.2026):** Holz (Waldinsel), Stein (Windinsel), Metall (Erzinsel), Kristall (Kristallinsel, Spezial) – je
+        als Fußgängerbrücke (immer Bogen; Belag frei wählbar oder Muster der Brücke) und als Bahnbrücke (immer flach; Gleis-Stil frei);
+        alle einfärbbar. Ziegel und Rot fallen weg (= Stein bzw. Holz eingefärbt), „Wie der Weg“ = Belag wählen; alte Stände wandeln so um,
+        dass sie gleich aussehen. Neu zu zeichnen: Fußgänger-Bogen Metall, Kristall (Wasser/Anhöhen), Bahn flach Stein, Kristall, Metall
+        übers Wasser. Zwischen Anhöhen bis 8 Felder. Bauen: Weg/Gleis über die Lücke ziehen → Brücke entsteht; Brücken-Werkzeug bleibt.
       - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
         eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
