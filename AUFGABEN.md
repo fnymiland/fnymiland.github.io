@@ -2606,3 +2606,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       großen Knopf (`kat-anchored`, nie aus dem Bild), der Stil wächst nach rechts, ein Umbruch geht nach oben (`wrap-reverse`): die Dinge bleiben
       in der untersten Zeile. Aufklappfelder (Zaunform …) dann mittig auf dem Bildschirm. Nachgemessen 375/768/1200 px: jedes Ding jeder
       Kategorie angetippt – alle Symbole stehen waagerecht und senkrecht aufs Pixel gleich. Andere Dinge: Stil-Zeile wie bisher mittig.
+      Nachtrag 8 (Nutzer: „manche ragen sehr weit nach rechts, unter die Minimap – Auffahrt vom Zug, unnötig viel Text; der Drehknopf ist auch
+      unter der Minimap“): `fitStyleBar` – ist die Minikarte da, endet die Stil-Zeile vor ihr (links feste Zeile bricht um, mittige wird schmaler,
+      unter 260 px steht sie links), Aufklappfelder (Wegbelag, Zaunform, Heckenfarbe …) mittig im freien Platz links der Karte. Drehknopf steht
+      bei sichtbarer Karte mittig über ihr (CSS `:has`). Gleis-Rampe: im Knopf nur der Name („Einschnitt A“), der Rest im Titel. Prüfung:
+      tools/karte-ueberlapp-pruefung.js (alle 70 Dinge, offene Aufklappfelder mit) bei 900/1024/1200/1440 px – nichts über der Karte, nichts aus
+      dem Bild; die Kategorie-Dinge stehen weiter fest.

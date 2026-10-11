@@ -962,7 +962,12 @@ body.visiting #net-btn { display: none !important; }
 .kat-item.locked { opacity: .4; }
 .kat-sep[hidden] { display: none; }
 #style-bar.kat-anchored { transform: none; justify-content: flex-start; flex-wrap: wrap-reverse; }   /* Dinge einer Kategorie: Zeile beginnt fest über dem großen Knopf (left per JS), Umbruch nach oben – nichts rückt */
-#style-bar.kat-anchored .wpop { left: calc(50vw - var(--kat-left, 0px)); }   /* Aufklappfeld mittig auf dem Bildschirm, nicht über der links stehenden Zeile */
+#style-bar.kat-anchored .wpop { left: calc(50vw - var(--kat-left, 0px)); }
+#style-bar.fit-left { transform: none; justify-content: flex-start; flex-wrap: wrap-reverse; }   /* neben der Minikarte zu eng: links (fitStyleBar) */
+#style-bar.fit-left .wpop { left: calc(50vw - 12px); }
+#style-bar.fit-mini .wpop { left: var(--pop-x); width: min(560px, var(--pop-w)); }   /* Minikarte da: Aufklappfeld im freien Platz links davon (fitStyleBar) */
+/* Drehknopf nie unter der Minikarte (Nutzer 11.10.2026): ist sie da, steht er mittig über ihr */
+body:has(#minimap:not([hidden])) #rot-btn { right: calc(14px + 106px - 26px); bottom: calc(64px + 212px + 12px); }   /* Aufklappfeld mittig auf dem Bildschirm, nicht über der links stehenden Zeile */
 #cats.drag-tight .cat .tx { display: none; } #cats.drag-tight .cat::after { content: none; } #cats.drag-tighter .cat, #cats.drag-tighter .quick-sep, #cats.drag-tighter .quick.recent { display: none; }   /* Ziehen offen, Platz zu knapp: Bereiche nur als Symbol, damit der große Knopf stehen bleibt */
 #panel h3.with-fav { display: flex; align-items: flex-start; gap: 8px; }
 #panel h3 .fav-head { margin-left: auto; flex: none; width: 36px; height: 36px; margin-top: -6px; margin-right: -6px; border: 0; background: none; font-size: 24px; line-height: 1; color: var(--brown2); opacity: .45; cursor: pointer; }   /* Favorit: dezent, aber gut zu treffen */

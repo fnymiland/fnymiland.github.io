@@ -773,12 +773,38 @@ document.addEventListener('pointerdown', e => {                          // dane
 // Gleis-Rampe (hills.js, Nutzer 10.10.2026): die vier Formen als Knöpfe mit Bild wie die Stile – die gewählte zeigt ihren Namen (rampNewForm)
 function rampFormBar(bar) {
   bar.innerHTML = Object.entries(RAMP_FORMS).map(([f, F]) => `<button class="style-chip${f === rampNewForm ? ' on' : ''}" data-rform="${f}" title="${F.name}: ${F.short}" aria-label="${F.name}: ${F.short}" aria-pressed="${f === rampNewForm}">
-      <i style="background:#f6efe2 url(${lookThumb('huegelrampe', f, 0)}) center / contain no-repeat"></i><span>${F.name} · ${F.short}</span></button>`).join('');
+      <i style="background:#f6efe2 url(${lookThumb('huegelrampe', f, 0)}) center / contain no-repeat"></i><span>${F.name}</span></button>`).join('');   // nur der Name (Nutzer: „unnötig viel Text“), das Weitere steht im Titel
   for (const b of bar.querySelectorAll('[data-rform]')) b.onclick = () => { rampNewForm = b.dataset.rform; previewCache = null; sfx('deco'); renderStyleBar('huegelrampe'); if (buildInfo) openBuildInfo('huegelrampe'); };
   bar.hidden = false;
 }
 // Stil-Zeile; bei Dingen aus einer Ziehen-Kategorie stehen deren Dinge vorn (katChips)
-function renderStyleBar(t) { renderOwnStyleBar(t); katChips($('style-bar'), t); }
+function renderStyleBar(t) { renderOwnStyleBar(t); katChips($('style-bar'), t); fitStyleBar($('style-bar')); }
+// Nie unter die Minikarte (unten rechts, Block 135; Nutzer 11.10.2026: „ragt sehr weit nach rechts, unter die Minimap“): die links feste Zeile
+// (Kategorie-Dinge) bricht vor ihr um, die mittige wird schmaler – zu schmal (< 260 px), dann steht sie links und bricht vor der Karte um
+const MINI_BOX = 14 + 212;                                               // Abstand rechts + Karte samt Rand (minimap.js, MINI_D 200)
+function fitStyleBar(bar) {
+  bar.classList.remove('fit-left', 'fit-mini');
+  if (!bar.classList.contains('kat-anchored')) bar.style.left = bar.style.maxWidth = '';
+  if (bar.hidden) return;
+  const W = window.innerWidth || 0;
+  let mini = false;
+  try { mini = miniWanted() && miniOpen; } catch (e) { /* minimap.js lädt erst nach ui.js */ }
+  if (!W || !mini) return;
+  const lim = W - MINI_BOX - 10;
+  if (bar.classList.contains('kat-anchored')) {
+    const items = bar.querySelectorAll('.kat-item'), iw = items[items.length - 1].getBoundingClientRect().right - items[0].getBoundingClientRect().left + 8;
+    const left = Math.max(12, Math.min(parseFloat(bar.style.left) || 12, lim - iw));
+    bar.style.left = left + 'px'; bar.style.maxWidth = (lim - left) + 'px'; bar.style.setProperty('--kat-left', left + 'px');
+  } else {
+    const maxW = Math.min(720, W - 24, 2 * (lim - W / 2));
+    if (maxW >= 260) bar.style.maxWidth = maxW + 'px';
+    else { bar.classList.add('fit-left'); bar.style.left = '12px'; bar.style.maxWidth = (lim - 12) + 'px'; }
+  }
+  // Aufklappfelder (Wegbelag, Zaunform …): mittig im freien Platz links der Karte, höchstens so breit wie er
+  bar.classList.add('fit-mini');
+  bar.style.setProperty('--pop-x', ((12 + lim) / 2 - bar.getBoundingClientRect().left) + 'px');
+  bar.style.setProperty('--pop-w', (lim - 12) + 'px');
+}
 function renderOwnStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station' || t === 'tunnel' || t === 'huegeltreppe' || t === 'huegelrampe');
