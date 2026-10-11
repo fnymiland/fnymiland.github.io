@@ -15,7 +15,7 @@
     [16, 'F-kristall', 'Fußgänger · Kristall K1'], [20, 'F-zacken', 'Fußgänger · Kristall K1 mit Zacken'],
     [24, 'B-holz', 'Bahn · Holz'], [28, 'B-stein', 'Bahn · Stein'], [32, 'B-metall', 'Bahn · Metall'], [36, 'B-kristall', 'Bahn · Kristall B2'],
   ];
-  const LAMP = '#ffd873', LAMP_C = '#bff3ff';
+  const LAMP = '#ffd873', LAMP_C = '#bff3ff', LANTERN_S = 0.5;   // Laterne auf der Brüstung: halb so groß wie auf dem Weg
   const mock = new Set();
   function setup() {
     for (let y = 0; y <= 42; y++) for (let x = 4; x <= 36; x++) {
@@ -57,12 +57,9 @@
       const p = S(u, v, h); X.beginPath(); X.arc(p[0], p[1], 0.85 * cam.z * dpr, 0, 7); X.fillStyle = NIGHT ? '#ffe58a' : C(col); X.fill();
       glowAt(p, 0.8 * cam.z, r);
     };
-    const lantern = (u, v, h) => {                                          // Laterne wie im Spiel, kleiner: Mast, Glaskasten, Dach
-      path([S(u, v, h), S(u, v, h + 7)], C('#4d5a4f'), 1.3);
-      const bx = [S(u - 0.035, v, h + 7), S(u + 0.035, v, h + 7), S(u + 0.035, v, h + 10.4), S(u - 0.035, v, h + 10.4)];
-      poly(bx, NIGHT ? '#ffe58a' : '#fff7d6', C('#4d5a4f'), 0.5);
-      poly([S(u - 0.05, v, h + 10.4), S(u + 0.05, v, h + 10.4), S(u, v, h + 12)], C('#4d5a4f'));
-      if (NIGHT && X === g) glowQuad(bx, 22 * cam.z);
+    const lantern = (u, v, h) => {                                          // die kleine Laterne des Spiels (drawLantern, samt ihrem Licht), etwas kleiner
+      const p = S(u, v, h);
+      drawLantern(p[0], p[1], cam.z * LANTERN_S, performance.now(), -999, -999, { b: 'laterne' });
     };
     const blueStrip = (v, f) => {                                           // Kristall: Leuchtstreifen, nachts bläulich nach oben
       for (let k = 0; k < 4 * N; k++) { const u0 = U0 + k / 4, u1 = u0 + 0.25;
@@ -207,11 +204,11 @@
     GL.off = true; resetDrawCaches(); groundVersion++;
     try { const now = performance.now(); spriteNoBudget = true; for (let k = 0; k < 6; k++) render(now + k * 16); spriteNoBudget = false; render(now + 200); }
     finally { bkArmFrom = o.baf; bkRailArmFrom = o.braf; GL.off = o.off; drawNight = o.dn; }
+    if (!nt) { g.save(); g.setTransform(DPR, 0, 0, DPR, 0, 0); try { drawAll(g, 1); } finally { g.restore(); } }   // tags: ins Spielbild darüber (Laterne zeichnet in g)
     const d = canvas.width / innerWidth;
     const c = document.createElement('canvas'); c.width = Wd; c.height = Hd; const cx2 = c.getContext('2d');
     const ox = canvas.width / 2 - Wd / 2, oy = canvas.height / 2 - Hd / 2;
     cx2.fillStyle = '#fffaf0'; cx2.fillRect(0, 0, Wd, Hd); cx2.drawImage(canvas, ox, oy, Wd, Hd, 0, 0, Wd, Hd);
-    if (!nt) { cx2.save(); cx2.translate(-ox, -oy); try { drawAll(cx2, d); } finally { cx2.restore(); } }   // tags darüber gemalt (wie bisher)
     return c;
   }
   const post = async (name, cv) => { try { const r = await fetch('http://127.0.0.1:4181/' + name, { method: 'POST', body: cv.toDataURL('image/png') }); return await r.text(); } catch (e) { return 'kein Sammler'; } };
