@@ -203,7 +203,7 @@ function scanTunnelErase(p) {
 // Anhöhen (Block 157) werden zuletzt abgetragen, wo oben nichts stehen bleibt – auch aus der ✋-Auswahl (keepLand gilt nicht für sie).
 function scanDemolish(p) {
   const states = new Map(), order = [], clear = [], lower = [], [x0, y0, x1, y1] = planBox(p), seen = new Set();
-  let gain = 0, cost = 0, things = 0, firstErr = null, lost = 0, freed = 0;
+  let gain = 0, cost = 0, things = 0, firstErr = null, lost = 0, freed = 0, onHill = false;
   const inside = (x, y) => x >= x0 && x <= x1 && y >= y0 && y <= y1;
   for (const [x, y] of planTiles(p)) {
     const k = x + ',' + y, ds = decosAt(k);
@@ -236,12 +236,16 @@ function scanDemolish(p) {
   for (let j = y0; j <= y1 + 1; j++) for (let i = x0; i <= x1 + 1; i++) for (const k of [i <= x1 ? 'a' + i + ',' + j : null, j <= y1 ? 'b' + i + ',' + j : null]) {
     if (!k || !state.edges.has(k)) continue;                                 // Zäune, Hecken, Mauern auf und um die Felder
     const [ex, ey] = edgeTiles(k)[1];
+    for (const [tx, ty] of edgeTiles(k)) if (inside(tx, ty) && hillAt(tx, ty)) onHill = true;   // Zaun & Co. auf der Anhöhe
     order.push([ex, ey, () => removeEdge(k)]);
     gain += ITEMS[state.edges.get(k).b].cost; things++;
   }
   // Anhöhe (Block 157): abtragen, wenn oben nichts stehen bleibt (Rotes bleibt, samt Anhöhe) und an keiner Ecke von draußen etwas steht
   // (Eckpunkt-Deko braucht ringsum dieselbe Höhe). Direkt über lowerHill – im Batch wäre demolishInfo (COVER) noch vom alten Stand.
-  if (state.hills && state.hills.size) for (const [x, y] of planTiles(p)) {
+  // Nutzer 11.10.2026: „wenn man einen Weg oben auf einer Anhöhe löscht, löscht man die Anhöhe – doof“: steht oben etwas, das jetzt
+  // abgerissen wird (Weg, Deko, Gebäude, Zaun), bleiben alle Anhöhen der Auswahl stehen; leer trägt sie das nächste Abreißen ab
+  if (!onHill) onHill = planTiles(p).some(([x, y]) => hillAt(x, y) && states.get(x + ',' + y) === 'ok');
+  if (state.hills && state.hills.size && !onHill) for (const [x, y] of planTiles(p)) {
     const k = x + ',' + y;
     if (!hillAt(x, y) || !ownedTile(x, y) || states.get(k) === 'bad') continue;
     if ([[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]].some(([vx, vy]) => !inside(vx, vy) && postAt(vx, vy))) { states.set(k, 'bad'); firstErr = firstErr || 'An der Ecke der Anhöhe steht noch etwas'; continue; }

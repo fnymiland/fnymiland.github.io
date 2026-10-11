@@ -230,3 +230,14 @@ describe('Rampe zeichnen (Einbau)', () => {
     expect(game('errorShown')).toBe(false);
   });
 });
+
+describe('Weg oben abreißen', () => {
+  it('✋-Auswahl / Abriss-Rechteck (Nutzer 11.10.2026: „Weg oben löschen löscht die Anhöhe – doof“): nur der Weg kommt weg, die Anhöhe bleibt; leer trägt sie das nächste ab', () => {
+    hills(block(5, 5, 7, 5)); weg(block(5, 5, 7, 5));
+    game("setTool('verschieben'); startPlan('rect', { x: 5, y: 5 }, { x: 7, y: 5 }, true); demolishSelection()");
+    expect([game("['5,5', '6,5', '7,5'].some(k => state.tiles.has(k))"), game('state.hills.size')]).toEqual([false, 3]);
+    game("plan = { kind: 'rect', tool: 'abriss', a: { x: 5, y: 5 }, b: { x: 7, y: 5 }, fixed: true }; runPlan()");
+    expect(game('state.hills.size')).toBe(0);
+    game("setTool('look')");
+  });
+});

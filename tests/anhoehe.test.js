@@ -150,20 +150,27 @@ describe('Anhöhen (Block 157)', () => {
     game('closePanel()');
   });
 
-  it('✋-Auswahl → Abreißen trägt Anhöhen ab (Erstattung), Deko darauf kommt mit weg, Wald bleibt; was hinausragt, bleibt samt Anhöhe', () => {
+  it('✋-Auswahl → Abreißen: erst was oben steht (Anhöhe bleibt, Nutzer: „Weg oben löschen löscht die Anhöhe – doof“), leer dann die Anhöhe (Erstattung); Wald bleibt; was hinausragt, bleibt samt Anhöhe', () => {
     hills(block(5, 5, 7, 6));
     game("state.decos.set('5,5', [null, { b: 'blumentopf', rot: 0 }, null, null]); state.terra.set('6,6', 'forest'); state.tiles.set('7,5', { b: 'seerosenteich', lvl: 1 }); recalc()");
     expect(game('hillRaiseError(9, 9)')).toBe(null);
     game("setTool('verschieben'); startPlan('rect', { x: 5, y: 5 }, { x: 6, y: 6 }, true)");
     const i = game('(() => { const i = planInfo(selDemolishPlan(plan)); return { gain: i.gain, err: i.err }; })()');
     expect(i.err).toBe(null);
-    expect(i.gain).toBe(4 * game('ITEMS.anhoehe.cost') + game("decoBack({ b: 'blumentopf' })"));
+    expect(i.gain).toBe(game("decoBack({ b: 'blumentopf' })"));                     // nur die Deko oben
     const m0 = game('state.money');
     game('demolishSelection()');
+    expect([game('state.hills.size'), game("!!decosAt('5,5')"), game('state.money')]).toEqual([6, false, m0 + i.gain]);
+    game("startPlan('rect', { x: 5, y: 5 }, { x: 6, y: 6 }, true)");                // nochmal: jetzt leer – die Anhöhe kommt weg
+    const j = game('(() => { const i = planInfo(selDemolishPlan(plan)); return { gain: i.gain, err: i.err }; })()');
+    expect(j.gain).toBe(4 * game('ITEMS.anhoehe.cost'));
+    game('demolishSelection()');
     expect(game('[...state.hills.keys()].sort()')).toEqual(['7,5', '7,6']);            // unter dem Teich (ragt hinaus) bleibt sie
-    expect([game("!!decosAt('5,5')"), game('terrainAt(6, 6)'), game('state.money')]).toEqual([false, 'forest', m0 + i.gain]);
+    expect([game('terrainAt(6, 6)'), game('state.money')]).toEqual(['forest', m0 + i.gain + j.gain]);
     game('undo()');
-    expect([game('state.hills.size'), game("decosAt('5,5')[1].b"), game('state.money')]).toEqual([6, 'blumentopf', m0]);
+    expect([game('state.hills.size'), game('state.money')]).toEqual([6, m0 + i.gain]);
+    game('undo()');
+    expect([game("decosAt('5,5')[1].b"), game('state.money')]).toEqual(['blumentopf', m0]);
     game("setTool('look')");
   });
 

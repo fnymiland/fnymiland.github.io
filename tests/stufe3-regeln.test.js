@@ -106,12 +106,17 @@ describe('Gelände unter und neben Gebäuden', () => {
     expect(game("(i => [i.states.get('12,11'), i.states.get('13,11')])(planInfo(plan))")).toEqual(['bad', 'ok']);
     game('runPlan()');
     expect([game('hillLevel(12, 11)'), game('hillLevel(13, 11)'), game('bAt(12, 10)')]).toEqual([1, 0, 'reihenhaus']);
-    // ganz im Rechteck (✋-Auswahl, keepLand): erst das Gebäude weg, dann die Anhöhe
+    // ganz im Rechteck (✋-Auswahl, keepLand): erst nur das Gebäude (Nutzer 11.10.2026: „Weg oben löschen löscht die Anhöhe – doof“),
+    // das nächste Abreißen die leere Anhöhe
     game("plan = { kind: 'rect', tool: 'abriss', keepLand: true, a: { x: 12, y: 10 }, b: { x: 12, y: 11 }, fixed: true }; runPlan()");
-    expect([game("state.tiles.has('12,10')"), game('hillLevel(12, 10)'), game('hillLevel(12, 11)')]).toEqual([false, 0, 0]);
-    // Haus allein auf der ganzen Anhöhe: Rechteck darüber nimmt beides
+    expect([game("state.tiles.has('12,10')"), game('hillLevel(12, 10)'), game('hillLevel(12, 11)')]).toEqual([false, 1, 1]);
+    game("plan = { kind: 'rect', tool: 'abriss', keepLand: true, a: { x: 12, y: 10 }, b: { x: 12, y: 11 }, fixed: true }; runPlan()");
+    expect([game('hillLevel(12, 10)'), game('hillLevel(12, 11)')]).toEqual([0, 0]);
+    // Haus allein auf der ganzen Anhöhe: erst das Haus, dann die Anhöhe
     game("plan = { kind: 'rect', tool: 'abriss', a: { x: 10, y: 10 }, b: { x: 13, y: 13 }, fixed: true }; runPlan()");
-    expect([game("state.tiles.has('11,11')"), game('state.hills.size')]).toEqual([false, 0]);
+    expect([game("state.tiles.has('11,11')"), game('state.hills.size') > 0]).toEqual([false, true]);
+    game("plan = { kind: 'rect', tool: 'abriss', a: { x: 10, y: 10 }, b: { x: 13, y: 13 }, fixed: true }; runPlan()");
+    expect(game('state.hills.size')).toBe(0);
   });
 
   it('Treppe einsetzen und Gleis-Rampe einsenken nie auf Feldern mit Gebäude; daneben schon', () => {

@@ -80,9 +80,9 @@ describe('Regeln', () => {
     expect(game("[!!moving, state.tiles.get('10,12').b]")).toEqual([false, 'bergportal']);
     expect(game("pickUpGroup(9, 11, 11, 12)")).toBe(false);                   // nur das Portal darin: bleibt stehen
     expect(game("placeError('bergportal', 12, 10, 3, { move: true })")).toMatch(/sitzt in der Wand/);
-    // Abriss-Rechteck: Portal und Anhöhe zusammen gehen (erst das Portal), ↶ bringt beides zurück
+    // Abriss-Rechteck: erst nur das Portal – die Anhöhe bleibt (Nutzer 11.10.2026), ↶ bringt es zurück
     game("undoable(() => { plan = { kind: 'rect', tool: 'abriss', a: { x: 10, y: 12 }, b: { x: 10, y: 12 } }; const p = planScan(plan); for (const [, , f] of p.order) f(); plan = null; recalc(); })");
-    expect(game("[!!state.tiles.get('10,12'), !!hillAt(10, 12)]")).toEqual([false, false]);
+    expect(game("[!!state.tiles.get('10,12'), !!hillAt(10, 12)]")).toEqual([false, true]);
     expect(game('undo()')).toBe(true);
     expect(game("[state.tiles.get('10,12') && state.tiles.get('10,12').b, !!hillAt(10, 12)]")).toEqual(['bergportal', true]);
   });

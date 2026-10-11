@@ -2624,3 +2624,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       darin, nichts verschoben); aufgenommene Gruppe dreht ihr Muster mit; ein aufgenommenes Wegfeld dreht mit ⟳/R (Abbrechen: wie vorher). Alles
       mit ↶. Prüfung: tools/weg-richtung-pruefung.js (alle Muster an Kreuzung und Kurve, Fläche, Anhöhe, Nahaufnahmen; Musterblatt normal/gedreht),
       Entwurf tools/weg-drehen-entwurf.js. Tests: weg-richtung.
+- [x] 159 **Abreißen auf der Anhöhe: erst was oben steht** (Nutzer 11.10.2026: „wenn man einen Weg oben auf einer Anhöhe löscht, löscht man
+      die Anhöhe – das ist doof“). Abriss-Rechteck und ✋-Auswahl → Abreißen trugen Anhöhen gleich mit ab, sobald oben nichts mehr stand.
+      Jetzt (`scanDemolish`): steht auf einer Anhöhe der Auswahl etwas, das abgerissen wird (Weg, Deko, Gebäude, Bergportal, Zaun & Co.), bleiben
+      alle Anhöhen der Auswahl stehen (keine Inseln); ist sie leer, trägt das nächste Abreißen sie ab. 👆 einzeln war schon so. Tests:
+      anhoehe-wege (Weg oben), anhoehe, stufe3-regeln, bergportal auf zwei Schritte umgestellt. Hauptbahnhof bleibt außerhalb der
+      Eisenbahn-Kategorie (Nutzer).
