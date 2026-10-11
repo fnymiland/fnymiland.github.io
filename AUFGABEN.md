@@ -2560,3 +2560,6 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Figuren und Antippen auf der Böschung schräg (`stairHeight`); Schatten ohne die Streifen-Quader; Übermalen vor Figuren vorn als Keil. Vor
       der Wand unverändert (Keil). Prüfung tools/treppe-boeschung-pruefung.js (+y/+x, zwei nebeneinander, breit/schmal gemischt, am Rand; z 1,6/4/8).
       Tests: treppe-breite angepasst.
+      Nachtrag (Nutzer: „links flach, rechts erhöht – ungleichmäßig“, Bild tools/vorschau/treppe-boeschung-hoch-flach.png, gewählt „hoch“): die
+      Böschung liegt jetzt auf der Linie der Stufenvorderkanten wie der Keil (Stufen leicht versenkt) – sie ist ein Keil ohne Außenwand (`keil(sg,
+      true)`), neben einer breiten Treppe mit Außenwand, beide ohne dunkle Kante (`'wand'`, `om`/`op`); Höhe für Figuren wie auf dem Keil.

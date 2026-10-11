@@ -156,16 +156,16 @@ describe('Aussehen', () => {
     hills(block(4, 4, 8, 6));
     game("build('huegeltreppe', 5, 7); build('huegeltreppe', 6, 7)");                        // vor der Wand
     expect([look(5, 7), look(6, 7)]).toEqual(['kw:n', 'wk:n']);
-    // breit neben schmal: eingelassen liegt die Böschung der schmalen tiefer als die Stufen der breiten – die breite zeigt dorthin ihre Wangen (cm)
+    // breit neben schmal: die Böschung der schmalen liegt auf Höhe der Stufenvorderkanten (wie ein Keil) – zur breiten hin mit Außenwand (op)
     game("stairNewWide = true; build('huegeltreppe', 16, 13); stairNewWide = null; build('huegeltreppe', 15, 13)");
     expect([look(15, 13), look(16, 13)]).toEqual(['rr:n', 'hk']);                           // 16,13 am Rand der Anhöhe: außen ein Keil
-    expect(game("(o => [!!o.cm, !!o.cp])(stairLook(16, 13, stairAt(16, 13)))")).toEqual([true, false]);
+    expect(game("(o => [!!o.om, !!o.op])(stairLook(15, 13, stairAt(15, 13)))")).toEqual([false, true]);
     game("stairNewWide = true; build('huegeltreppe', 7, 7); stairNewWide = null");
     expect(look(7, 7)).toBe('wk');
     expect(game('levelLink(6, 7, 7, 7, "fuss") || levelLink(5, 7, 6, 7, "weg")')).toBe(false);   // getrennte Durchgänge
   });
 
-  it('Zeichnen: Stufen so breit wie ein Weg samt Rand, Grasböschung vom Fuß bis oben, nichts darüber; alle Richtungen, alle Seiten ohne Fehler', () => {
+  it('Zeichnen: Stufen so breit wie ein Weg samt Rand, Grasböschung auf Höhe der Stufenvorderkanten (wie der Keil), nichts darüber; alle Richtungen, alle Seiten ohne Fehler', () => {
     expect(game('STAIR_NW')).toBe(game('EDGE_W'));
     const fill = game("C(lookFar(pathLook('sand'), 1).fill)"), top = game("C('#123456')");
     for (let rot = 0; rot < 4; rot++) for (const [m, p] of [['h', 'h'], ['k', 'k'], ['r', 'w'], ['w', 'r'], ['h', 'k']]) {
@@ -181,8 +181,7 @@ describe('Aussehen', () => {
         const t = tops.find(tp => tp.pts.every(q => s(q) * sg > 0.3));
         expect(t).toBeTruthy();
         expect(Math.max(...t.pts.map(q => s(q) * sg))).toBeGreaterThanOrEqual(0.5);
-        if (c === 'h' || c === 'r') expect([Math.min(...t.pts.map(q => q[2])), Math.max(...t.pts.map(q => q[2]))]).toEqual([0, H]);   // Böschung: vom Boden bis oben
-        else expect(Math.min(...t.pts.map(q => q[2]))).toBe(H / 8);                            // Keil: vorn eine Stufe hoch
+        expect(Math.min(...t.pts.map(q => q[2]))).toBe(H / 8);                                 // Böschung (Nutzer: „hoch“) wie Keil: vorn eine Stufe hoch
       }
       for (const c of calls) if (c.op === 'poly') for (const q of c.pts) expect(q[2]).toBeLessThanOrEqual(H + 0.4 + 1e-9);
       expect(calls.filter(c => c.op === 'wall' && c.a[7] === H).length).toBe(0);              // keine Wände ganz hoch mehr (die Streifen sind weg)
@@ -225,13 +224,13 @@ describe('Aussehen', () => {
 });
 
 describe('Spiel', () => {
-  it('Höhe: auf den Stufen wie bisher, auf der Böschung gerade vom Fuß bis oben; Bewohner gehen in der Mitte hinauf', () => {
+  it('Höhe: auf den Stufen wie bisher, auf der Böschung wie auf dem Keil (eine Stufe über der Hinterkante); Bewohner gehen in der Mitte hinauf', () => {
     hills(block(10, 10, 14, 13));
     game("build('huegeltreppe', 12, 13)");
     const n = game('STAIR_N');
     expect(game('stairHeight(12, 13, 12, 13.45)')).toBe(H / n);                              // vorn, Mitte
-    expect(game('stairHeight(12, 13, 11.6, 13.45)')).toBeCloseTo(H * 0.05, 9);                // Böschung links, vorn
-    expect(game('stairHeight(12, 13, 12.4, 12.6)')).toBeCloseTo(H * 0.9, 9);                  // Böschung rechts, oben
+    expect(game('stairHeight(12, 13, 11.6, 13.45)')).toBeCloseTo(H * (0.05 + 1 / n), 9);      // Böschung links, vorn (wie der Keil: eine Stufe höher)
+    expect(game('stairHeight(12, 13, 12.4, 12.6)')).toBe(H);                                  // Böschung rechts, oben
     expect(game('stairHeight(12, 13, 12.3, 13.45)')).toBe(H / n);                             // noch auf den Stufen
     // Weg über die Treppe: Bewohner zu Fuß, Fahrzeuge nicht
     expect([game('levelLink(12, 14, 12, 13, "fuss")'), game('levelLink(12, 14, 12, 13, "weg")'), game('levelLink(12, 14, 12, 13, "fahr")')]).toEqual([true, true, false]);
