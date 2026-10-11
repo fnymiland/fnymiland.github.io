@@ -2536,3 +2536,6 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       (`bpCut`: dann ganzer Wagen im Berg); das Stück im Berg bekam den Schatten der Anhöhe (draußen nicht – Sprung dunkel → hell) und der Verlauf
       dunkelte auch nach oben (Front an der Wand schon dunkel) – jetzt kein Schatten auf dem Wagen, Verlauf waagerecht (`drawCarPortal`). Geprüft mit
       tools/bergportal-fahrt.js (echter Zug, Bild für Bild, Mittag). Tests: bergportal, stufe3-zeichnen.
+      Nachtrag (Nutzer: „Zug glitcht beim Einfahren“): steckte die Front erst < 0,02 in der Wand, galt der Wagen als ganz draußen, und trainOnHills
+      sah sein vorderes Ende auf dem Portalfeld oben – der Wagen kippte zwei Bilder lang steil hoch (tools/bergportal-fahrt.js, Einfahrt Bild für Bild).
+      `bpCut` gibt dann den ganzen Wagen draußen zurück (nie über trainOnHills). Test: bergportal (alle Wagenlängen, hinein/hinaus, beide Wände).

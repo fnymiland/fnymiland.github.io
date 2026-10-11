@@ -1958,7 +1958,8 @@ function bpCut(m) {
     const out = ed > 0 ? [-la, Math.min(la, aw)] : [Math.max(-la, aw), la];
     let inn = ed > 0 ? [Math.max(-la, aw), la] : [-la, Math.min(la, aw)];
     const hasOut = out[1] - out[0] > 0.02, hasIn = inn[1] - inn[0] > 0.02;
-    if (!hasIn) return null;                                              // ganz draußen: wie immer
+    if (inn[1] <= inn[0]) return null;                                    // ganz draußen: wie immer
+    if (!hasIn) return { k: (px - dx) + ',' + (py - dy), cut: null, portal: { bp: [px, py, dx, dy], inn: null, out: true } };   // steckt erst einen Hauch drin: ganzer Wagen draußen – nie über trainOnHills (das Ende auf dem Portalfeld galt sonst als oben, der Wagen kippte zwei Bilder lang steil hoch)
     if (!hasOut) inn = [-la, la];                                         // ragt nur ein Hauch heraus: ganzer Wagen (sonst blitzte die Front ein Bild lang als Schnittfläche ohne Fenster auf)
     const near = Math.min(s + inn[0] * ed, s + inn[1] * ed), wall = hillLevel(px, py) > hillLevel(px - dx, py - dy);
     const showIn = bpShown(t) && wall && near < BP_D;

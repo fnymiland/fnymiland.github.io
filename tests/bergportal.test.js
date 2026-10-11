@@ -122,6 +122,14 @@ describe('Netz und Zug durch den Berg', () => {
     // Schnittfläche (ohne Fenster und Scheinwerfer) als Front für ein Bild
     c = game("trainTunnelCut({ px: 11.12, py: 10, du: 1, dv: 0, len: 0.78 })");
     expect([c.cut, c.portal.out, c.portal.inn]).toEqual([null, false, [-0.39, 0.39]]);
+    // Nutzer 11.10.2026 („Zug glitcht beim Einfahren“): steckt die Front erst einen Hauch in der Wand, nie „ganz draußen“ (null) – sonst sah
+    // trainOnHills das Ende auf dem Portalfeld oben und kippte den Wagen steil hoch. Alle Wagenlängen, hinein und hinaus, beide Portale
+    for (const len of [0.78, 1, 1.2]) for (const e of [0.001, 0.01, 0.019]) {
+      const la = len / 2;
+      expect(game(`trainTunnelCut({ px: ${11.5 + la - e}, py: 10, du: -1, dv: 0, len: ${len} })`)).not.toBe(null);   // hinein (+x-Wand)
+      expect(game(`trainTunnelCut({ px: ${11.5 - la + e}, py: 10, du: 1, dv: 0, len: ${len} })`)).not.toBe(null);    // hinaus: Heck noch drin
+      expect(game(`trainTunnelCut({ px: ${7.5 - la + e}, py: 10, du: 1, dv: 0, len: ${len} })`)).not.toBe(null);     // hinein (−x-Wand)
+    }
     // im Berg kein Schatten der Anhöhe auf dem Wagen, der Verlauf läuft waagerecht (nur nach der Tiefe dunkler)
     expect(game("String(drawCarPortal)")).not.toMatch(/BP_SHADE/);
     expect(game("String(drawCarPortal)")).toMatch(/\[w1\.x, w0\.y\]/);
