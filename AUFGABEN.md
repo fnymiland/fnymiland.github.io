@@ -2594,3 +2594,10 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       damit das Angetippte unter der Maus blieb – das summierte sich. Jetzt steht jede Kugel auf einem Platz so breit wie der große Knopf
       (Rand 6 px, Handy 3,5 px), beim Durchklicken wechselt nur die Größe; die Leiste rückt nur noch beim Aufgehen. Nachgemessen bei
       375/640/768/1200 px: alle sechs Mitten und die Leiste bleiben über sechs Klicks aufs Zehntel gleich.
+      Nachtrag 6 (Nutzer: „Eisenbahn, Zäune, Wege, Terraforming als Kategorien – Spielbilder statt Emojis“; gewählt: ein Knopf, Kugeln =
+      Kategorien, die Dinge vorn in der Stil-Zeile, Gelände-Bild = Anhöhe): `DRAG_KATS` – Eisenbahn (Gleis, Tunnel, Bahnhof, U-Bahn-Station,
+      Tunneleinfahrt, Gleis-Rampe, Bergportal), Zäune (Zaun, Hecke, Mauer), Wege (Weg), Gelände (Teich, Aufschütten, Wiese, Strand, Parkrasen,
+      Anhöhe). Großer Knopf und Kugeln zeigen Spielbilder (`katPic`, Mitte des Vorschaubilds); eine Kategorie gibt ihr zuletzt Genommenes in die
+      Hand (`katPick`, je Gerät `kachelhausen_kat`); ihre Dinge stehen vorn in der Stil-Zeile (`katChips`, Gewähltes dunkel, Gesperrtes blass mit
+      Hinweis, Trennstrich zum Stil – entfällt, wo die Zeile genau dort umbricht). Feste Plätze wie zuvor. Am Computer und iPad eine Zeile, auf
+      dem Handy bricht nur die Eisenbahn um. Hauptbahnhof nicht dabei (nicht genannt). Entwurf: tools/kategorien-entwurf.js. Tests: schnellwahl.

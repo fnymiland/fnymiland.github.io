@@ -9,48 +9,64 @@ beforeEach(() => {
 });
 const q = s => game(`[...document.querySelectorAll('${s}')].map(b => b.dataset.tool || b.dataset.quick || b.dataset.group)`);
 
-describe('Ziehen-Knopf', () => {
-  // Nutzer: „wie die Apple-Leiste: was man wählt, wird groß, der Rest kleine Kugeln daneben“
+describe('Ziehen-Knopf: Kategorien', () => {
+  // Nutzer: „wie die Apple-Leiste: was man wählt, wird groß, der Rest kleine Kugeln daneben“ – dann „Eisenbahn, Zäune, Wege, Terraforming als
+  // Kategorien, Spielbilder statt Emojis“ (ein Knopf, Kugeln = Kategorien, die Dinge vorn in der Stil-Zeile)
   const balls = () => game("[...document.querySelectorAll('#cats .drag-ball')].map(b => b.dataset.ball)");
-  const big = () => game("(b => [b.dataset.quick, b.textContent, b.classList.contains('active')])(document.querySelector('#cats .quick.drag'))");
-  it('ohne Ziehen-Ding in der Hand nur der große Knopf; mit Weg in der Hand die übrigen fünf als Kugeln daneben', () => {
-    expect(big()).toEqual(['weg', '🛤️', false]);
+  const big = () => game("(b => [b.dataset.quick, b.dataset.kat, b.classList.contains('active'), !!b.querySelector('canvas.kat-pic'), b.textContent])(document.querySelector('#cats .quick.drag'))");
+  const row = () => game("[...document.querySelectorAll('#cats .quick.drag, #cats .drag-ball')].map(b => b.dataset.ball || b.dataset.kat)");
+  const items = () => game("[...document.querySelectorAll('#style-bar .kat-item')].map(b => b.dataset.katItem + (b.classList.contains('on') ? '*' : '') + (b.classList.contains('locked') ? '🔒' : ''))");
+  const click = s => game(`document.querySelector('${s}').click()`);
+  it('zu: nur der große Knopf mit Spielbild statt Emoji; mit Weg in der Hand die übrigen drei Kategorien als Kugeln daneben, Wege allein: keine Dinge in der Stil-Zeile', () => {
+    expect(big()).toEqual(['weg', 'wege', false, true, '']);
     expect(balls()).toEqual([]);
-    game("document.querySelector('#cats .quick.drag').click()");
+    click('#cats .quick.drag');
     expect(game('tool')).toBe('weg');
-    expect(balls()).toEqual(['schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
-    expect(game("document.querySelector('#cats .quick.drag').nextElementSibling.dataset.ball")).toBe('schiene');   // gleich rechts daneben
+    expect(row()).toEqual(['wege', 'bahn', 'linien', 'gelaende']);
+    expect(game("document.querySelector('#cats .quick.drag').nextElementSibling.dataset.ball")).toBe('bahn');   // gleich rechts daneben
+    expect(game("[...document.querySelectorAll('#cats .drag-ball')].every(b => b.querySelector('canvas.kat-pic'))")).toBe(true);
+    expect(items()).toEqual([]);
   });
-  it('Kugel antippen: wird an ihrem Platz groß, die Reihe bleibt (Nutzer: „alles an derselben Stelle“); das Große nochmal: zu, vorn das zuletzt Genutzte; wieder auf: es steht vorn, die übrigen rücken nach', () => {
-    const row = () => game("[...document.querySelectorAll('#cats .quick.drag, #cats .drag-ball')].map(b => b.dataset.ball || b.dataset.quick)");
-    game("document.querySelector('#cats .quick.drag').click()");
-    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
-    game("document.querySelector('#cats .drag-ball[data-ball=\"schiene\"]').click()");
+  it('Kategorie antippen: wird an ihrem Platz groß, die Reihe bleibt; ihre Dinge vorn in der Stil-Zeile; je Kategorie das Letzte gemerkt; das Große nochmal: zu, wieder auf: vorn, die übrigen rücken nach', () => {
+    click('#cats .quick.drag');
+    click('#cats .drag-ball[data-ball="bahn"]');
     expect(game('tool')).toBe('schiene');
-    expect(big()).toEqual(['schiene', '🚆', true]);
-    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);  // Reihe unverändert, Schiene groß an ihrem Platz
-    expect(balls()).toEqual(['weg', 'tunnel', 'zaun', 'hecke', 'mauer']);
-    game("document.querySelector('#cats .drag-ball[data-ball=\"hecke\"]').click()");
-    expect(row()).toEqual(['weg', 'schiene', 'tunnel', 'zaun', 'hecke', 'mauer']);
-    game("document.querySelector('#cats .drag-ball[data-ball=\"schiene\"]').click()");
-    game("document.querySelector('#cats .quick.drag').click()");                  // das Große nochmal: zu
-    expect([game('tool'), big()[0], balls().length]).toEqual(['look', 'schiene', 0]);
-    expect(game("document.querySelector('#cats .quick.drag').previousElementSibling.dataset.quick")).toBe('look');   // vorn, gleich hinter 👆
-    game("document.querySelector('#cats .quick.drag').click()");                  // wieder auf: Schiene vorn, die übrigen rücken nach
-    expect(row()).toEqual(['schiene', 'weg', 'tunnel', 'zaun', 'hecke', 'mauer']);
+    expect(big().slice(0, 3)).toEqual(['schiene', 'bahn', true]);
+    expect(row()).toEqual(['wege', 'bahn', 'linien', 'gelaende']);                // Reihe unverändert, Eisenbahn groß an ihrem Platz
+    expect(items()).toEqual(['schiene*', 'tunnel', 'station', 'ubahn', 'tunneleinfahrt', 'huegelrampe', 'bergportal']);
+    expect(game("document.querySelector('#style-bar .kat-sep') !== null")).toBe(true);   // Trennstrich vor dem Belag der Schiene
+    click('#style-bar [data-kat-item="tunnel"]');
+    expect([game('tool'), big()[0], big()[1]]).toEqual(['tunnel', 'tunnel', 'bahn']);
+    expect(items()[1]).toBe('tunnel*');
+    click('#cats .drag-ball[data-ball="linien"]');
+    expect([game('tool'), items()]).toEqual(['zaun', ['zaun*', 'hecke', 'mauer']]);
+    click('#cats .drag-ball[data-ball="gelaende"]');
+    expect(items().map(x => x.replace('🔒', ''))).toEqual(['graben*', 'schuett', 'wiese', 'strand', 'parkrasen', 'anhoehe']);   // Parkrasen braucht Bäume (hier gesperrt)
+    click('#cats .drag-ball[data-ball="bahn"]');
+    expect(game('tool')).toBe('tunnel');                                            // gemerkt: in der Eisenbahn zuletzt der Tunnel
+    expect(row()).toEqual(['wege', 'bahn', 'linien', 'gelaende']);
+    click('#cats .quick.drag');                                                     // das Große nochmal: zu
+    expect([game('tool'), big()[1], balls().length]).toEqual(['look', 'bahn', 0]);
+    expect(game("document.querySelector('#cats .quick.drag').previousElementSibling.dataset.quick")).toBe('look');
+    click('#cats .quick.drag');                                                     // wieder auf: Eisenbahn vorn mit dem Tunnel
+    expect([game('tool'), row()]).toEqual(['tunnel', ['bahn', 'wege', 'linien', 'gelaende']]);
     game("setTool('look'); buildToolbar()");
-    expect([big()[0], balls().length]).toEqual(['schiene', 0]);                   // gemerkt
-    game("setTool('tunnel')");                                                      // auch aus dem Menü gewählt
-    expect(big()).toEqual(['tunnel', '🚇', true]);
-    expect(row()).toEqual(['tunnel', 'schiene', 'weg', 'zaun', 'hecke', 'mauer']);
+    expect([big()[1], balls().length]).toEqual(['bahn', 0]);                        // gemerkt, zu
+    game("setTool('strand')");                                                      // auch aus dem Menü gewählt
+    expect([big()[1], items()[3]]).toEqual(['gelaende', 'strand*']);
     game("setTool('look')");
+    expect(game("document.querySelectorAll('#style-bar .kat-item').length")).toBe(0);
   });
-  it('nicht erforscht: großer Knopf fällt auf den Weg zurück, die Kugel ist blass und sagt, was fehlt', () => {
+  it('nicht erforscht: großer Knopf fällt auf den Weg zurück, Gesperrtes blass mit Hinweis; ganze Kategorie gesperrt: Kugel blass, nimmt nichts', () => {
     game("localStorage.setItem('kachelhausen_drag', 'tunnel'); state.techs.delete('ubahn'); buildToolbar()");
     expect(big()[0]).toBe('weg');
-    game("setTool('weg')");
-    expect(game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').classList.contains('locked')")).toBe(true);
-    game("document.querySelector('#cats .drag-ball[data-ball=\"tunnel\"]').click()");
+    game("setTool('schiene')");
+    expect(items().slice(0, 2)).toEqual(['schiene*', 'tunnel🔒']);
+    click('#style-bar [data-kat-item="tunnel"]');
+    expect(game('tool')).toBe('schiene');
+    game("state.techs.delete('bahn'); setTool('weg')");
+    expect(game("document.querySelector('#cats .drag-ball[data-ball=\"bahn\"]').classList.contains('locked')")).toBe(true);
+    click('#cats .drag-ball[data-ball="bahn"]');
     expect(game('tool')).toBe('weg');
     game("setTool('look')");
   });

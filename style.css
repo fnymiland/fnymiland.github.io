@@ -954,6 +954,13 @@ body.visiting #net-btn { display: none !important; }
 #cats .quick.drop { font-weight: 900; font-size: 18px; color: #fff; background: var(--red); box-shadow: 0 3px 0 #a8443a; }   /* 👆 wird rotes ✕, solange etwas in der Hand ist (Nutzer: „rot, damit man erkennt, dass man abwählt“) */
 #cats .quick.drag-ball { width: 26px; height: 26px; padding: 0; font-size: 13px; border-radius: 50%; align-self: center; margin: 0 6px; }   /* Ziehen (11.10.2026): die übrigen als kleine Kugeln neben dem großen; jede auf einem Platz so breit wie der große Knopf (26 + 2 × 6 = 38), damit beim Durchklicken nichts rückt */
 #cats .quick.drag-ball.locked { opacity: .4; }
+#cats .quick.drag .kat-pic, #cats .drag-ball .kat-pic, .kat-item .kat-pic { display: block; pointer-events: none; }   /* Spielbilder statt Emojis (Nutzer 11.10.2026) */
+#cats .quick.drag-ball { overflow: hidden; }
+.kat-item { flex: none; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(255, 250, 240, .95); box-shadow: 0 3px 0 var(--shadow); cursor: pointer; }   /* Dinge der Kategorie vorn in der Stil-Zeile */
+.kat-item.on { background: var(--brown); box-shadow: 0 3px 0 #4a3526; }
+.kat-item.locked { opacity: .4; }
+.kat-sep[hidden] { display: none; }
 #cats.drag-tight .cat .tx { display: none; } #cats.drag-tight .cat::after { content: none; } #cats.drag-tighter .cat, #cats.drag-tighter .quick-sep, #cats.drag-tighter .quick.recent { display: none; }   /* Ziehen offen, Platz zu knapp: Bereiche nur als Symbol, damit der große Knopf stehen bleibt */
 #panel h3.with-fav { display: flex; align-items: flex-start; gap: 8px; }
 #panel h3 .fav-head { margin-left: auto; flex: none; width: 36px; height: 36px; margin-top: -6px; margin-right: -6px; border: 0; background: none; font-size: 24px; line-height: 1; color: var(--brown2); opacity: .45; cursor: pointer; }   /* Favorit: dezent, aber gut zu treffen */

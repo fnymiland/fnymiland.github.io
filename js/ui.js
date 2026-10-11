@@ -127,40 +127,70 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
 const QUICK = [['look', '👆', 'Ansehen (A)'], ['weg', '🛤️', 'Weg (W)'], ['verschieben', '✋', 'Auswählen: verschieben, kopieren, abreißen (V)']];
 const NOT_RECENT = new Set(['abriss', 'verschieben']);
 // Ziehen-Knopf (Nutzer 11.10.2026: „bei der Wege-Schnellauswahl auch Schienen und Tunnel“ – „wie die Apple-Leiste: was man wählt, wird groß,
-// der Rest kleine Kugeln daneben“): der 🛤️-Knopf nimmt, was man zuletzt gezogen hat; ist ein Ziehen-Ding in der Hand, stehen die anderen als
-// kleine Kugeln rechts daneben (syncDragGroup). Je Gerät gemerkt
-const DRAG_TOOLS = [['weg', '🛤️'], ['schiene', '🚆'], ['tunnel', '🚇'], ['zaun', '🪵'], ['hecke', '🌿'], ['mauer', '🧱']], DRAG_KEY = 'kachelhausen_drag';
-const isDragTool = id => DRAG_TOOLS.some(([d]) => d === id);
+// der Rest kleine Kugeln daneben“; dann: „Eisenbahn, Zäune, Wege, Terraforming als Kategorien – Spielbilder statt Emojis“): der Knopf zeigt die
+// Kategorie dessen, was man zuletzt genommen hat; ist etwas daraus in der Hand, stehen die übrigen Kategorien als Kugeln daneben, die Dinge der
+// Kategorie vorn in der Stil-Zeile (katChips). Je Gerät gemerkt: zuletzt Genommenes (DRAG_KEY), je Kategorie das Letzte (KAT_KEY)
+const DRAG_KATS = [
+  ['bahn', 'Eisenbahn', 'schiene', ['schiene', 'tunnel', 'station', 'ubahn', 'tunneleinfahrt', 'huegelrampe', 'bergportal']],
+  ['linien', 'Zäune', 'zaun', ['zaun', 'hecke', 'mauer']],
+  ['wege', 'Wege', 'weg', ['weg']],
+  ['gelaende', 'Gelände', 'anhoehe', ['graben', 'schuett', 'wiese', 'strand', 'parkrasen', 'anhoehe']],
+], DRAG_KEY = 'kachelhausen_drag', KAT_KEY = 'kachelhausen_kat';
+const katOf = id => DRAG_KATS.find(k => k[3].includes(id));
+const katById = k => DRAG_KATS.find(x => x[0] === k);
+const isDragTool = id => !!katOf(id);
 function dragTool() { try { const d = localStorage.getItem(DRAG_KEY); return isDragTool(d) && available(d) ? d : 'weg'; } catch (e) { return 'weg'; } }
-function noteDrag(id) { if (!isDragTool(id)) return; try { localStorage.setItem(DRAG_KEY, id); } catch (e) { /* privat */ } }
-// Großer Knopf = zuletzt Gezogenes; mit einem Ziehen-Ding in der Hand stehen alle sechs in einer Reihe, das Gewählte groß, der Rest als Kugeln.
-// Nutzer 11.10.2026: „es sollte immer alles an derselben Stelle bleiben“ – solange die Reihe offen ist, ändert sich ihre Reihenfolge nicht
-// (dragRow), jede Kugel steht auf einem Platz so breit wie der große Knopf (style.css): eine angetippte wird an ihrem Platz groß, nichts rückt.
-// Beim Aufgehen bleibt der große Knopf, wo man getippt hat (dragAnchor = seine Mitte, Leiste um dragShift verschoben). Das Große nochmal: zu,
-// vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen rücken in ihrer Reihenfolge nach
-let dragAnchor = null, dragShift = 0, dragRow = DRAG_TOOLS.map(([d]) => d), dragShown = false;
+function katMemory() { try { const m = JSON.parse(localStorage.getItem(KAT_KEY) || '{}'); return m && typeof m === 'object' ? m : {}; } catch (e) { return {}; } }
+function noteDrag(id) {
+  const k = katOf(id); if (!k) return;
+  try { localStorage.setItem(DRAG_KEY, id); localStorage.setItem(KAT_KEY, JSON.stringify({ ...katMemory(), [k[0]]: id })); } catch (e) { /* privat */ }
+}
+// Was eine Kategorie beim Antippen in die Hand gibt: ihr zuletzt Genommenes, sonst das erste Freigeschaltete (null: alles gesperrt)
+function katPick(k) { const kat = katById(k), m = katMemory()[k]; return kat[3].includes(m) && available(m) ? m : kat[3].find(available) || null; }
+// Spielbild als Symbol (Mitte des Vorschaubilds, quadratisch); einmal gemalt, je Knopf eine Kopie
+const katPicCache = new Map();
+function katPic(id, s) {
+  let src = katPicCache.get(id);
+  if (!src) {
+    src = document.createElement('canvas'); src.width = src.height = 64;
+    const x = src.getContext('2d'); if (x) x.drawImage(thumb(id), 14, 8, 84, 84, 0, 0, 64, 64);
+    katPicCache.set(id, src);
+  }
+  const c = document.createElement('canvas'); c.width = c.height = 64; c.className = 'kat-pic'; c.style.width = c.style.height = s + 'px';
+  const x = c.getContext('2d'); if (x) x.drawImage(src, 0, 0);
+  return c;
+}
+// Großer Knopf = Kategorie des zuletzt Genommenen; mit etwas daraus in der Hand stehen alle vier Kategorien in einer Reihe, die gewählte groß,
+// die übrigen als Kugeln. Nutzer 11.10.2026: „es sollte immer alles an derselben Stelle bleiben“ – solange die Reihe offen ist, ändert sich ihre
+// Reihenfolge nicht (dragRow), jede Kugel steht auf einem Platz so breit wie der große Knopf (style.css): eine angetippte wird an ihrem Platz
+// groß, nichts rückt. Beim Aufgehen bleibt der große Knopf, wo man getippt hat (dragAnchor = seine Mitte, Leiste um dragShift verschoben). Das
+// Große nochmal: zu, vorn steht das zuletzt Genutzte; beim nächsten Aufgehen steht es vorn, die übrigen rücken in ihrer Reihenfolge nach
+let dragAnchor = null, dragShift = 0, dragRow = DRAG_KATS.map(([k]) => k), dragShown = false;
 function holdDragSpot(el) { if (el) { const r = el.getBoundingClientRect(); dragAnchor = r.left + r.width / 2; } }
 function shiftCats(px) { dragShift = px; $('cats').style.translate = px ? px + 'px 0' : ''; }
+function dragBigLabel(id) { return `${katOf(id)[1]}: ${ITEMS[id].name} (W: Weg)`; }
 function syncDragGroup() {
   const big = document.querySelector('#cats .quick.drag');
   if (!big) return;
-  const cur = dragTool(), l = `${ITEMS[cur].name} ziehen (W: Weg)`;
-  if (big.dataset.quick !== cur) { big.dataset.quick = cur; big.textContent = DRAG_TOOLS.find(([x]) => x === cur)[1]; big.title = l; big.setAttribute('aria-label', l); }
+  const cur = dragTool(), kat = katOf(cur);
+  if (big.dataset.quick !== cur) { big.dataset.quick = cur; big.title = dragBigLabel(cur); big.setAttribute('aria-label', big.title); }
+  if (big.dataset.kat !== kat[0]) { big.dataset.kat = kat[0]; big.replaceChildren(katPic(kat[2], innerWidth <= 600 ? 25 : 32)); }
   for (const b of document.querySelectorAll('#cats .drag-ball')) b.remove();
   const open = isDragTool(tool), cats = $('cats');
   big.classList.toggle('drag-open', open); cats.classList.toggle('drag-open', open);   // Handy: dann ohne Bereiche (style.css)
   if (!open) { dragShown = false; dragAnchor = null; shiftCats(0); cats.classList.remove('drag-tight', 'drag-tighter'); return; }
-  if (!dragShown) dragRow = [cur, ...dragRow.filter(d => d !== cur)];   // geht auf: das Gewählte vorn, die übrigen rücken nach
+  if (!dragShown) dragRow = [kat[0], ...dragRow.filter(k => k !== kat[0])];   // geht auf: das Gewählte vorn, die übrigen rücken nach
   dragShown = true;
-  const i = dragRow.indexOf(cur);
+  const i = dragRow.indexOf(kat[0]);
   let at = big;
-  dragRow.forEach((id, k) => {
-    if (k === i) return;
-    const b = document.createElement('button'), ok = available(id), icon = DRAG_TOOLS.find(([d]) => d === id)[1];
-    b.className = 'quick drag-ball' + (ok ? '' : ' locked'); b.textContent = icon; b.dataset.ball = id;
-    b.title = ok ? `${ITEMS[id].name} ziehen` : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
-    b.onclick = () => { audio(); if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } setSheet(false); setTool(id); };
-    if (k < i) big.before(b); else { at.after(b); at = b; }             // die Reihe bleibt, wie sie aufging: das Große an seinem Platz
+  dragRow.forEach((k, n) => {
+    if (n === i) return;
+    const [, name, icon] = katById(k), pick = katPick(k), b = document.createElement('button');
+    b.className = 'quick drag-ball' + (pick ? '' : ' locked'); b.dataset.ball = k;
+    b.append(katPic(icon, innerWidth <= 600 ? 22 : 26));
+    b.title = pick ? `${name}: ${ITEMS[pick].name}` : `${name} – ${unlockText(ITEMS[katById(k)[3][0]], true)}`; b.setAttribute('aria-label', b.title);
+    b.onclick = () => { audio(); const p = katPick(k); if (!p) { toast(`🔒 ${name}: ${unlockText(ITEMS[katById(k)[3][0]], true)}`); return; } setSheet(false); setTool(p); };
+    if (n < i) big.before(b); else { at.after(b); at = b; }             // die Reihe bleibt, wie sie aufging: das Große an seinem Platz
   });
   if (dragAnchor == null) return;
   // Leiste so verschieben, dass der große Knopf beim Aufgehen unter dem Finger bleibt – aber nie aus dem Bild. Reicht der Platz nicht (iPad hochkant),
@@ -177,6 +207,26 @@ function syncDragGroup() {
     cats.classList.add(cats.classList.contains('drag-tight') ? 'drag-tighter' : 'drag-tight');
   }
   dragAnchor = null;
+}
+// Die Dinge der Kategorie vorn in der Stil-Zeile (Nutzer: Variante 3), Spielbild, das Gewählte dunkel; Gesperrtes blass mit Hinweis
+function katChips(bar, t) {
+  const kat = katOf(t);
+  if (bar.hidden) bar.innerHTML = '';                                    // ohne eigene Stile: nur versteckt, alter Inhalt steht noch drin
+  for (const e of bar.querySelectorAll('.kat-item, .kat-sep')) e.remove();
+  if (!kat || kat[3].length < 2) return;
+  const had = bar.children.length;
+  if (had) { const sep = document.createElement('span'); sep.className = 'style-sep kat-sep'; bar.prepend(sep); }
+  for (const id of [...kat[3]].reverse()) {
+    const ok = available(id), b = document.createElement('button');
+    b.className = 'kat-item' + (id === t ? ' on' : '') + (ok ? '' : ' locked'); b.dataset.katItem = id;
+    b.title = ok ? ITEMS[id].name : `${ITEMS[id].name} – ${unlockText(ITEMS[id], true)}`; b.setAttribute('aria-label', b.title);
+    b.append(katPic(id, 30));
+    b.onclick = () => { if (!available(id)) { toast(`🔒 ${ITEMS[id].name}: ${unlockText(ITEMS[id], true)}`); return; } sfx('deco'); setTool(id); };
+    bar.prepend(b);
+  }
+  bar.hidden = false; document.body.classList.add('has-styles');
+  const sep = bar.querySelector('.kat-sep');                             // bricht die Zeile genau dort um, hinge der Strich allein am Zeilenende
+  if (sep && sep.nextElementSibling && sep.nextElementSibling.offsetTop > sep.offsetTop + 4) sep.hidden = true;
 }
 window.addEventListener('resize', () => { if (dragShift) { dragAnchor = null; shiftCats(0); } });
 // Favoriten (Nutzer 11.10.2026: „🕘 mit ⭐ zusammenlegen“): ⭐ zeigt oben die Favoriten, darunter zuletzt Gebautes. Favorit wird man über ☆ an
@@ -258,8 +308,8 @@ function buildToolbar() {
   const cats = $('cats');
   cats.innerHTML = '';
   for (const [id0, icon0, label0] of QUICK) {
-    const drag = id0 === 'weg', id = drag ? dragTool() : id0;            // Ziehen-Knopf: das zuletzt Gezogene
-    const icon = drag ? DRAG_TOOLS.find(([d]) => d === id)[1] : icon0, label = drag ? `${ITEMS[id].name} ziehen (W: Weg)` : label0;
+    const drag = id0 === 'weg', id = drag ? dragTool() : id0;            // Ziehen-Knopf: das zuletzt Genommene, Bild seiner Kategorie (syncDragGroup)
+    const icon = drag ? '' : icon0, label = drag ? dragBigLabel(id) : label0;
     const b = document.createElement('button');
     b.className = 'quick' + (drag ? ' drag' : '') + (tool === id ? ' active' : '');
     b.dataset.quick = id;
@@ -718,7 +768,9 @@ function rampFormBar(bar) {
   for (const b of bar.querySelectorAll('[data-rform]')) b.onclick = () => { rampNewForm = b.dataset.rform; previewCache = null; sfx('deco'); renderStyleBar('huegelrampe'); if (buildInfo) openBuildInfo('huegelrampe'); };
   bar.hidden = false;
 }
-function renderStyleBar(t) {
+// Stil-Zeile; bei Dingen aus einer Ziehen-Kategorie stehen deren Dinge vorn (katChips)
+function renderStyleBar(t) { renderOwnStyleBar(t); katChips($('style-bar'), t); }
+function renderOwnStyleBar(t) {
   const bar = $('style-bar'), sizes = SIZE_ORDER[baseOf(t)];
   document.body.classList.toggle('has-styles', !!STYLES[t] || !!sizes || !!DECO_LOOKS[baseOf(t)] || t === 'station' || t === 'tunnel' || t === 'huegeltreppe' || t === 'huegelrampe');
   if (t === 'huegeltreppe') { wegStyleBar(bar, true); return; }   // Treppe in die Anhöhe (Block 157d): Belag der Stufen
