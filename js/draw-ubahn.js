@@ -110,7 +110,7 @@ function trainTunnelCut(m) {
   const { A, B, d } = E, ramp = true;                                   // nur noch die Rampe (Block 157m)
   const fx = B[0] + d[0] * 0.5, fy = B[1] + d[1] * 0.5;                // Wand am Ende von B
   const s = (m.px - fx) * d[0] + (m.py - fy) * d[1], ed = m.du * d[0] + m.dv * d[1], la = m.len / 2;
-  if (Math.abs(ed) < 0.5) return null;
+  if (Math.abs(ed) < 0.5) return tunnelAt(rx, ry) && !einAt(rx, ry) ? 'hide' : null;   // quer zur Einfahrt: im Tunnel (Kurve direkt dahinter, Nutzer 11.10.2026) unsichtbar – sonst stand er oben auf der Wiese
   const lo = ed > 0 ? -la : Math.max(-la, s), hi = ed > 0 ? Math.min(la, -s) : la;
   if (hi - lo < 0.02) return 'hide';
   const later = (B[0] + B[1] > A[0] + A[1]) ? B : A;                   // mit dem Feld, das zuletzt dran ist (nach Rinne und Zäunen)

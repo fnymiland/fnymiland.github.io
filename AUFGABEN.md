@@ -2539,3 +2539,7 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Nachtrag (Nutzer: „Zug glitcht beim Einfahren“): steckte die Front erst < 0,02 in der Wand, galt der Wagen als ganz draußen, und trainOnHills
       sah sein vorderes Ende auf dem Portalfeld oben – der Wagen kippte zwei Bilder lang steil hoch (tools/bergportal-fahrt.js, Einfahrt Bild für Bild).
       `bpCut` gibt dann den ganzen Wagen draußen zurück (nie über trainOnHills). Test: bergportal (alle Wagenlängen, hinein/hinaus, beide Wände).
+- [x] 157o **Tunneleinfahrt direkt hinter einer Kurve im Tunnel** (Nutzer 11.10.2026: „Zug fährt, Rechtskurve, wo direkt ein Tunnel hochgeht → glitch“):
+      im Kurvenfeld direkt hinter der Einfahrt stand der Wagen quer zu ihr (|ed| < 0,5), `trainTunnelCut` gab null zurück – er wurde ganz oben auf
+      der Wiese gezeichnet. Jetzt unsichtbar ('hide'), solange er auf einem Tunnelfeld quer zur Einfahrt steht. Geprüft mit tools/einfahrt-kurve.js
+      (echter Zug Bild für Bild), Test einfahrt-kurve (ganze Fahrt, ohne die Korrektur 598 Bilder mit dem Wagen oben).
