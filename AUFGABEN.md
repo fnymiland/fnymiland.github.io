@@ -2690,5 +2690,12 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
         den Belag mit Kreuzstreben, **auf den Kachelkanten** (Wege darunter laufen durch die Feldmitte), im Fenster einstellbar:
         keine / wenige / jede Kante (Entwurf 3b – „perfekt so“). **Stein:** dünner heller Bogen (Entwurf 2) **ohne Zipfel**: setzt knapp
         unter der Kante an, Brüstung läuft an den Enden flach aus (Entwurf 6 „C“). Keine Basaltsäulen, kein Schwarz, keine Mauer bis unten.
+      - **Stein mit Pfeilern** (Entwurf 7–10, tools/bogen-anhoehe-entwurf8.js): Pfeiler auf den Kachelkanten, Bögen je 2 Felder, Buckel wie
+        Entwurf 7 (Höhe wie beim Einzelbogen), Öffnung **Stufe 3 „mittel“** (Stein über dem Scheitel 7,5, Ansatz am Pfeiler 13); äußere Bögen
+        setzen an der Wand knapp unter der Kante an (kein Zipfel). Gezeigt für 4/6/8 Felder – zwischen Anhöhen sind heute höchstens 4
+        erlaubt (übers Wasser 16); ob mehr, ist offen. Grafikfehler im Entwurf, im Spiel vermeiden (Nutzer: „achte auf Grafikglitches“):
+        Seitenfläche der Pfeiler steht als helle Platte neben dem Pfeiler (zu breit/zu hoch, nicht vom Bogen verdeckt); in den Öffnungen fehlt
+        die Unterseite des Gewölbes (man sieht durch den Bogen ohne Tiefe); hintere Stirnseite fehlt; Schatten der Öffnungen fehlen;
+        Knick an der Wand, wo der äußere Bogen ansetzt; Ausschnitt an der fernen Anhöhe nur grob. Immer Nahaufnahmen aller Anschlüsse prüfen.
       - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
         eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
