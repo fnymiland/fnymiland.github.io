@@ -2706,5 +2706,9 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       - **Beleuchtung für alle Brücken** (Nutzer: „wichtig“): je Brücke an/aus, nachts mit Schein wie Laternen; je Material eigene Lampen
         (Holz Laternen, Stein Kugelleuchten, Metall Mast/Lichterkette, Kristall Leuchtband). Kosten offen.
       - Bahnübergang mit Fußgängerbrücke: gehört zur Fußgänger-Familie (4 Materialien, einfärbbar, Belag wählbar).
+      - **Modelle abgenommen (Nutzer 11.10.2026: „gefallen mir alle, so perfekt“)** – tools/brueckenfamilie-entwurf.js, Tagbilder:
+        Fußgänger Holz (3b), Stein (Pfeiler, Stufe 3), Metall (neu: Gitterrost, Stahlträger, Stahlbogen mit Hängern), Kristall K1 (+ Zacken
+        als Option); Bahn Holz (Böcke auf den Kachelkanten), Stein (flacher Viadukt), Metall (Fachwerk), Kristall B2 (Fachwerk aus Kristall).
+        **Nacht/Beleuchtung NICHT abgenommen** („sieht beschissen aus, Lampen gehen so nicht, Lichtstreifen hässlich“) – neu angehen.
       - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
         eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
