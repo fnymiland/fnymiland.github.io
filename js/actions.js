@@ -897,6 +897,7 @@ function tap(sx, sy, isTouch) {
   // Ansehen: getroffen ist, was dort gezeichnet ist – auch Dach und Turm, nicht nur das Bodenfeld (Block 71)
   const hit = tool === 'look' ? objectAt(sx, sy) : null;
   const tc = tool === 'look' && !hit ? trainAt(sx, sy) : null, ta = tc && anchorAt(tc.x, tc.y);   // Zug oben auf der Anhöhe/Gleis-Rampe (movers.js): Fenster seines Gleisfelds
+  if (tc && tc.deck) { openBkInfo(tc.x, tc.y); return; }                // Zug oben auf einer Brücke (160b): ihr Fenster, nicht das darunter
   if (ta) { openInfo(...keyXY(ta)); return; }
   const gk = tool === 'look' && edgeNear(sx, sy);             // Ansehen: Durchgang angetippt → Torbogen wählen
   if (gk && !(hit && hit.d > edgeDepth(gk))) { openGateInfo(gk); return; }   // jede Linie: Fenster mit Löschen (am Durchgang auch Bögen)
@@ -1174,10 +1175,13 @@ function undo() {
         const flat = (t.b === 'weg' || t.b === 'schiene') && !t.bridge && !(isCrossing(t) && t.foot);   // Wasser- und Fußgängerbrücken sind zu hoch
         if (!flat && footprint(t.b, x, y, t.rot || 0, t).some(([fx, fy]) => other(bkAt(fx, fy)))) { fail('Geht nicht mehr – darüber liegt inzwischen eine Brücke'); return false; }
       }
-      if (n === 'bruecken' && b !== undefined && !UNDO_MAPS.bruecken().get(k)) {
+      if (n === 'bruecken' && b !== undefined) {                         // auch eine stehende: ein Gleis, das zurückkommt, braucht am Holzsteg Böcke (160b)
         const o = JSON.parse(b), art = bkArtOf(o);
-        if (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0)) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
-        if (bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy, bkBock(art, o.n, i)); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
+        if (!UNDO_MAPS.bruecken().get(k) && (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0))) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
+        const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Böcke zählen
+        if (bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy), bock = bkBock(art, o.n, i, bkRailAny(o)); if (a && mine.has(a)) return false;
+          if (stand) { const t = objAt(cx, cy); return bock && !!t && (t.b === 'weg' || t.b === 'schiene'); }
+          return bkUnderError(cx, cy, bock); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
       }
     }
   }
@@ -1188,6 +1192,7 @@ function undo() {
   state.money -= step.dm;
   for (const [r, d] of Object.entries(step.dres)) state.res[r] -= d;
   sandCache.clear(); landCache.clear(); waterChanged(); previewCache = null;
+  if (step.changes.some(c => c[0] === 'bruecken')) groundVersion++;       // Brücken (160b): bkFresh merkt sich die Objekte je Boden-Fassung – ↶ setzt neue ein
   if (typeof cloudTouched === 'function') cloudTouched();                // auch ↶ ist eine eigene Aktion (Online-Speicher; Anhöhen, Dächer, Brücken)
   sfx('dig'); recalc(); save();
   if (panelLive && !$('panel').hidden) panelLive();             // offenes Fenster: Ding noch da? (sonst zu)

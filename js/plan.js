@@ -56,7 +56,7 @@ function planEnd(kind, a, b) {
 }
 function startPlan(kind, a, b, fixed, slot = 0) {
   plan = { kind, tool, a: { x: a.x, y: a.y }, b: planEnd(kind, a, b), fixed, dragging: false, slot, ...(tool === 'tunnel' && tunnelErase ? { erase: true } : {}),
-    ...(tool === 'weg' && a.deck ? { deck: true } : {}) };                 // auf dem Deck einer Brücke angefangen (Block 160): dort oben
+    ...((tool === 'weg' || tool === 'schiene') && a.deck ? { deck: true } : {}) };   // auf dem Deck einer Brücke angefangen (Block 160, Gleis 160b): dort oben
 }
 function setPlanEnd(b) { if (plan) plan.b = planEnd(plan.kind, plan.a, b); }
 function cancelPlan() { plan = null; }
@@ -98,7 +98,7 @@ function planScan(p) {
   if (ITEMS[p.tool].small) return scanSmall(p);
   if (p.tool === 'bruecke') return scanBruecke(p);                         // Brücke (Block 160, bruecken.js): als Ganzes
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [], grow = CLAIM_TOOLS.has(b) || b === 'weg';   // Weg: Brücke wächst vom Ufer aus
-  const deck = b === 'weg' ? bkPlanDeck(p) : null;                       // Weg über eine Brücke (Block 160): diese Felder oben aufs Deck
+  const deck = b === 'weg' || b === 'schiene' ? bkPlanDeck(p) : null;   // Weg/Schiene über eine Brücke (Block 160, 160b): diese Felder oben aufs Deck
   let cost = 0, firstErr = null, rest = planTiles(p);
   if (b === 'weg') PLANNED = new Set();
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
@@ -112,12 +112,12 @@ function planScan(p) {
     for (let round = 0; rest.length; round++) {
       const next = [];
       for (const [x, y] of rest) {
-        const k = x + ',' + y, onDeck = !!deck && deck.has(k), c = quer.get(k) || (onDeck ? bkWegCheck(x, y) : planCheck(b, x, y));
+        const k = x + ',' + y, onDeck = !!deck && deck.has(k), c = quer.get(k) || (onDeck ? (b === 'weg' ? bkWegCheck(x, y) : bkRailCheck(x, y)) : planCheck(b, x, y));
         if (c.err) { next.push([x, y, c.err]); continue; }
         states.set(k, c.same ? 'same' : 'ok');
         if (c.same) continue;
-        order.push([x, y, onDeck ? () => bkLayWeg(x, y) : () => build(b, x, y, true)]);
-        if (onDeck) { cost += c.cost || 0; continue; }
+        order.push([x, y, onDeck ? () => (b === 'weg' ? bkLayWeg : bkLayRail)(x, y) : () => build(b, x, y, true)]);
+        if (onDeck) { cost += c.cost || 0; for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n; continue; }
         cost += c.cost || 0;
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
@@ -131,7 +131,7 @@ function planScan(p) {
     }
   } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; }
   if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das
-    const old = ([x, y]) => bAt(x, y) === 'schiene';                    // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird
+    const old = ([x, y]) => deck && deck.has(x + ',' + y) ? bkRailAt(bkAt(x, y)) : bAt(x, y) === 'schiene';   // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird (Deck: sein Gleis, nicht das darunter)
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
   }
   const bad = [...states.values()].filter(s => s === 'bad').length;
@@ -237,7 +237,7 @@ function scanDemolish(p) {
     if (info.cost && !p.keepLand) { clear.push([x, y, () => { demolish(x, y); return true; }]); cost += info.cost; states.set(k, 'ok'); }
     else if (!states.has(k)) states.set(k, 'same');
   }
-  if (bkOn()) for (const [bk, br] of state.bruecken) {                     // Brücke (Block 160): nur ganz im Rechteck, samt Weg darauf, voll zurück
+  if (bkOn()) for (const [bk, br] of state.bruecken) {                     // Brücke (Block 160): nur ganz im Rechteck, samt Weg/Gleis darauf, voll zurück
     const cells = bkCellsOf(bk, br);
     if (!cells.some(([cx, cy]) => inside(cx, cy))) continue;
     if (!cells.every(([cx, cy]) => inside(cx, cy))) {                     // ragt hinaus: sie bleibt; was darunter abgerissen wird, bleibt grün
@@ -246,7 +246,7 @@ function scanDemolish(p) {
     }
     const [cx, cy] = cells[0];
     order.push([cx, cy, () => bkDemolishAt(cx, cy, true)]);
-    gain += bkCost(bkArtOf(br), br.n).cost + (br.weg || []).filter(Boolean).length * ITEMS.weg.cost; things++;
+    gain += bkCost(bkArtOf(br), br.n).cost + (br.weg || []).filter(Boolean).length * ITEMS.weg.cost + bkRailCount(br) * ITEMS.schiene.cost; things++;   // samt Gleis (160b)
     for (const [qx, qy] of cells) if (states.get(qx + ',' + qy) !== 'bad') states.set(qx + ',' + qy, 'ok');
     onHill = true;                                                        // ihre Anhöhen bleiben (erst, was oben steht)
   }

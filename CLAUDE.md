@@ -280,6 +280,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Bordstein, Wegenden (`hillEnds`), Vorplätze und Gartenwege (`courtFrontTiles`, `gardenPath`) nur über `levelLink` bzw. gleiche Ebene.
     Tests: gleisrampe, gleisrampe-kritik, rampe-regeln, gleis-ebenen, gleis-zeichnen, zuege-ebenen, anhoehe-netz, anhoehe-wege, anhoehe-bewegt, anhoehe-pruefung,
     anhoehe-stufe2 (Gesamtprüfung: jede Form in allen Drehungen mit echtem Zug zwischen zwei Bahnhöfen, ↶, Speichern, Zeichnen nah/weit/nachts).
+    **Brücke zwischen Anhöhen** (Block 160, js/bruecken.js): eigenes Bauwerk in `state.bruecken` (Anker → { ax, n, art, weg?, gleis? }), Deck auf
+    HILL_H über der Lücke, der Boden darunter bleibt in state.tiles. Nachschlagen nur über `bkAt`/`bkOnHill` (gemerkt je `groundVersion` – wer
+    Brücken-Objekte ersetzt, auch ↶, zählt `groundVersion` hoch). Je Brücke **Weg ODER Gleis** (`bkRailAny`/`bkWegAny`; `gleis`-Form 0 = Schotter,
+    also `!= null` prüfen); Holzsteg mit Gleis: Bock unter jedem Feld (`bkBockOf`). Das Deck hat **keine Feldschlüssel**: das Gleisnetz verbindet
+    die beiden Endfelder direkt (`bkRailJumps`) – wer das Gleisnetz durchläuft (computeRail, railPath, railLoop, railNetworkHill), nimmt die
+    Sprünge mit; Strecken merken sich das Stück übers Deck (`railPolyline` → `route.deck`, Richtung per `Math.sign`), Wagen darüber `car.deck`.
+    Gezeichnet werden sie in Stücken je Feld (`bkCarPieces`, `car.cut`): übers Deck im Rückruf von `bkDrawTile` (nach der Oberseite, vor dem
+    vorderen Geländer), auf der Anhöhe mit ihrem Feld. Tests: bruecke, bruecke-gleis; Bilder: tools/bruecke-pruefung.js, tools/bruecke-gleis-pruefung.js.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

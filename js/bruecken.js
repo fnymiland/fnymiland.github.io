@@ -4,7 +4,7 @@
 // kann man über diese Brücke einen Weg oder Schienen ziehen“). Schritt 1: zwischen zwei Anhöhen, Holzsteg und Stahlbrücke (Steinbogen
 // verworfen: „sieht omega scheiße aus“); darunter nur Flaches (Weg, Schiene, Wasser, Gelände, niedrige Deko).
 // state.bruecken: Anker = erstes Feld der Lücke (kleinste Koordinate längs) → { ax: 0 längs x | 1 längs y, n: Felder der Lücke (1–BK_MAX),
-// art: 'holz' | 'stahl', weg?: [Wegstil | null je Feld] }. Das Deck liegt auf Höhe der Anhöhen (HILL_H) über den Feldern der Lücke; was darunter
+// art: 'holz' | 'stahl', weg?: [Wegstil | null je Feld], gleis?: [Gleis-Form | null je Feld] } – Weg ODER Gleis (160b; Form 0 = Schotter, also != null prüfen). Das Deck liegt auf Höhe der Anhöhen (HILL_H) über den Feldern der Lücke; was darunter
 // liegt, bleibt in state.tiles. Die beiden Anhöhen an den Enden tragen sie: Abtragen, Treppe oder Rampe hinein erst nach dem Abriss.
 // Gezeichnet je Feld in tileB (render.js) nach dem Bewegten darunter, wie die Überdachung; Schatten im Boden-Bild.
 // ---------------------------------------------------------------------------
@@ -18,8 +18,12 @@ const BK_NO_PAINT = new Set(['wald', 'obstwald', 'fels', 'anhoehe']);   // Gelä
 const bkArtOf = b => BK_ARTEN[b && b.art] ? b.art : 'holz';
 const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';
 const bkCost = (art, n) => { const A = BK_ARTEN[art]; return { cost: A.cost * n, mat: Object.fromEntries(Object.entries(A.mat).map(([r, v]) => [r, v * n])) }; };
-// Holzbock auf Feld i der Lücke (nur Holz, länger als frei spannt): dort darf unten kein Weg und keine Schiene durch
-const bkBock = (art, n, i) => art === 'holz' && n > BK_ARTEN.holz.frei && (i === 0 || i === n - 1);
+// Holzbock auf Feld i der Lücke (nur Holz, länger als frei spannt): dort darf unten kein Weg und keine Schiene durch. Trägt der Holzsteg ein Gleis
+// (160b, Nutzer: „Holz bekommt engere Böcke, wie ein Eisenbahn-Holzviadukt“): ab 2 Feldern unter jedem Feld ein Bock
+const bkBock = (art, n, i, rail = false) => art === 'holz' && (rail ? n >= 2 : n > BK_ARTEN.holz.frei && (i === 0 || i === n - 1));
+const bkRailAny = b => !!b && !!b.gleis && b.gleis.some(f => f != null);
+const bkWegAny = b => !!b && !!b.weg && b.weg.some(Boolean);
+const bkBockOf = (b, i) => bkBock(bkArtOf(b), b.n, i, bkRailAny(b));
 
 // Nachschlagen: Feld der Lücke → { k, b, i, x0, y0, dx, dy }; Anhöhen-Feld am Ende → [{ k, b, side, … }] (gemerkt je Boden-Fassung)
 let bkCache = { v: -1, st: null, size: -1, cell: new Map(), end: new Map() };
@@ -70,10 +74,10 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
     if (d.small) continue;                                                 // kleine Deko: nach Höhe (bkTooTall, smallError)
     if ((b === 'weg' || b === 'schiene') && ((t && t.bridge) || terrainAt(x, y) === 'water')) return 'Unter der Brücke geht keine Wasserbrücke';   // wie bkUnderError
     if (t && isCrossing(t) && t.foot) return 'Unter der Brücke ist kein Platz für die Fußgängerbrücke';
-    const flat = b === 'weg' || b === 'schiene' || b === 'tunnel' || (d.paint && !BK_NO_PAINT.has(b)) || b === 'graben' || b === 'schuett';
+    const flat = b === 'weg' || b === 'schiene' || b === 'tunnel' || (d.paint && !BK_NO_PAINT.has(b) && d.cat !== 'fz') || b === 'graben' || b === 'schuett';   // Achterbahn: fährt hoch hinaus (160b-Prüfung)
     if (BK_NO_PAINT.has(b)) return b === 'anhoehe' ? 'Unter einer Brücke geht keine Anhöhe' : 'Unter der Brücke wächst kein Wald und liegt kein Fels';
     if (!flat) return BK_UNDER_ONLY;
-    if ((b === 'weg' || b === 'schiene') && bkBock(bkArtOf(c.b), c.b.n, c.i)) return 'Hier steht ein Holzbock der Brücke';
+    if ((b === 'weg' || b === 'schiene') && bkBockOf(c.b, c.i)) return 'Hier steht ein Holzbock der Brücke';
   }
   return null;
 }
@@ -143,22 +147,25 @@ function bkBuild(sp, art) {
   groundVersion++; sfx('road'); recalc(); save();
   return true;
 }
-// Abreißen: erst der Weg auf dem Deck (wie oben auf der Anhöhe: erst, was oben steht), dann die Brücke – voll zurück
+// Abreißen: erst der Weg bzw. das Gleis auf dem Deck (wie oben auf der Anhöhe: erst, was oben steht), dann die Brücke – voll zurück
+const bkRailCount = b => (b.gleis || []).filter(f => f != null).length;
 function bkDemolishInfo(x, y) {
   const c = bkAt(x, y);
   if (!c) return null;
-  const nw = (c.b.weg || []).filter(Boolean).length;
+  const nw = (c.b.weg || []).filter(Boolean).length, ng = bkRailCount(c.b);
   if (nw) return { k: c.k, weg: true, refund: nw * ITEMS.weg.cost, label: 'Weg auf der Brücke entfernen' };
+  if (ng) return { k: c.k, gleis: true, refund: ng * ITEMS.schiene.cost, mat: Object.fromEntries(Object.entries(ITEMS.schiene.mat || {}).map(([r, v]) => [r, v * ng])), label: 'Gleis auf der Brücke entfernen' };
   const bc = bkCost(bkArtOf(c.b), c.b.n);
   return { k: c.k, refund: bc.cost, mat: bc.mat, label: `${BK_ARTEN[bkArtOf(c.b)].name} abreißen` };
 }
-function bkDemolishAt(x, y, all = false) {                                // all: Weg und Brücke zusammen (Fenster „Abreißen“)
+function bkDemolishAt(x, y, all = false) {                                // all: Weg/Gleis und Brücke zusammen (Fenster „Abreißen“)
   const c = bkAt(x, y);
   if (!c) return false;
-  const b = c.b, nw = (b.weg || []).filter(Boolean).length;
+  const b = c.b, nw = (b.weg || []).filter(Boolean).length, ng = bkRailCount(b);
   let back = 0;
   if (nw) { back += nw * ITEMS.weg.cost; delete b.weg; }
-  if (!nw || all) {
+  if (ng) { back += ng * ITEMS.schiene.cost; for (const [r, n] of Object.entries(ITEMS.schiene.mat || {})) state.res[r] += n * ng; delete b.gleis; }
+  if ((!nw && !ng) || all) {
     const bc = bkCost(bkArtOf(b), b.n);
     back += bc.cost;
     for (const [r, n] of Object.entries(bc.mat)) state.res[r] += n;
@@ -176,7 +183,7 @@ function bkSetArt(k, art) {
   const A = BK_ARTEN[art];
   if (A.tech && !state.techs.has(A.tech)) { fail(`${A.name}: erst mit der Eisenbahn`); return false; }
   const cells = bkCellsOf(k, b);
-  for (let i = 0; i < cells.length; i++) { const t = objAt(...cells[i]); if (t && bkBock(art, b.n, i)) { fail(`Hier käme ein Holzbock hin – erst ${t.b === 'weg' ? 'den Weg' : 'die Schiene'} darunter wegnehmen`); return false; } }
+  for (let i = 0; i < cells.length; i++) { const t = objAt(...cells[i]); if (t && bkBock(art, b.n, i, bkRailAny(b))) { fail(`Hier käme ein Holzbock hin – erst ${t.b === 'weg' ? 'den Weg' : 'die Schiene'} darunter wegnehmen`); return false; } }
   const old = bkCost(bkArtOf(b), b.n), nu = bkCost(art, b.n);
   if (state.money + old.cost < nu.cost) { fail('Zu wenig Taler'); return false; }
   for (const [r, n] of Object.entries(nu.mat)) if ((state.res[r] || 0) + (old.mat[r] || 0) < n) { fail(`Zu wenig ${RES[r].name}`); return false; }
@@ -212,6 +219,7 @@ const BK_NO_STONES = 'Trittsteine gehen nicht über eine Brücke – einen ander
 function bkWegCheck(x, y) {
   const c = bkAt(x, y), st = currentStyle('weg');
   if (pathLook(styleDef('weg', st).id).stones) return { err: BK_NO_STONES };
+  if (bkRailAny(c.b)) return { err: 'Auf dieser Brücke liegt ein Gleis – Weg oder Gleis, nicht beides' };
   if (c.b.weg && c.b.weg[c.i] === st) return { same: true };
   return { cost: ITEMS.weg.cost, mat: {} };
 }
@@ -219,6 +227,7 @@ function bkLayWeg(x, y) {
   const c = bkAt(x, y), st = currentStyle('weg');
   if (!c || (c.b.weg && c.b.weg[c.i] === st)) return false;
   if (pathLook(styleDef('weg', st).id).stones) { fail(BK_NO_STONES); return false; }
+  if (bkRailAny(c.b)) { fail('Auf dieser Brücke liegt ein Gleis – Weg oder Gleis, nicht beides'); return false; }
   if (state.money < ITEMS.weg.cost) { fail('Zu wenig Taler'); return false; }
   state.money -= ITEMS.weg.cost;
   if (!c.b.weg) c.b.weg = Array(c.b.n).fill(null);
@@ -240,6 +249,88 @@ function bkArmFrom(x, y, dx, dy) {
   const c = bkAt(x + dx, y + dy);
   if (!c || c.dx !== Math.abs(dx) || c.dy !== Math.abs(dy)) return false;
   return c.i === (dx + dy > 0 ? 0 : c.b.n - 1) && bkWegAt(c);
+}
+
+// Gleis auf dem Deck (160b): eine Linie Schiene längs über die Brücke legt sie aufs Deck (bkPlanDeck wie beim Weg). Netz: ist das Deck durchgehend
+// belegt und liegt an beiden Enden oben eine Schiene, hängen die beiden Endfelder direkt zusammen (bkRailJumps: computeRail, railPath, railLoop) –
+// die Zugstrecke läuft gerade von Endfeld zu Endfeld, ihr langes Stück ist das Deck (railPolyline route.deck). Keine eigenen Feldschlüssel:
+// darunter darf weiter ein Gleis oder ein Tunnel liegen
+const bkRailAt = c => !!c && !!c.b.gleis && c.b.gleis[c.i] != null;
+const bkRailFull = b => !!b.gleis && b.gleis.length === b.n && b.gleis.every(f => f != null);
+const bkRailTiles = () => (bkOn() ? [...state.bruecken.values()].reduce((s, b) => s + bkRailCount(b), 0) : 0);   // Gleisfelder auf Brücken (Erfolg „Eisenbahn“)
+function bkRailArmFrom(x, y, dx, dy) {                                    // Gleisarm vom Anhöhen-Feld über die Kante aufs Deck (railArmsHill)
+  const c = bkAt(x + dx, y + dy);
+  if (!c || c.dx !== Math.abs(dx) || c.dy !== Math.abs(dy) || hillLevel(x, y) < 1) return false;
+  return c.i === (dx + dy > 0 ? 0 : c.b.n - 1) && bkRailAt(c);
+}
+function bkRailArms(c) {                                                   // Arme eines Deckfelds: längs zum Nachbarn mit Gleis bzw. zur Schiene oben am Ende
+  const out = [];
+  for (const sg of [-1, 1]) {
+    const j = c.i + sg, nx = c.x0 + c.dx * j, ny = c.y0 + c.dy * j;
+    if (j >= 0 && j < c.b.n ? c.b.gleis[j] != null : railTileAt(nx, ny) && hillLevel(nx, ny) >= 1) out.push([c.dx * sg, c.dy * sg]);
+  }
+  return out;
+}
+function bkRailJumps(x, y) {                                               // Schiene oben am Brückenende → Schienenfeld am anderen Ende (Gleis durchgehend)
+  const out = [];
+  for (const e of bkOnHill(x, y) || []) {
+    if (!bkRailFull(e.b)) continue;
+    const o = bkEndsOf(e.k, e.b)[e.side < 0 ? 1 : 0];
+    if (railTileAt(x, y) && railTileAt(o[0], o[1])) out.push(o);
+  }
+  return out;
+}
+const BK_BOTH = 'Auf dieser Brücke liegt ein Weg – Weg oder Gleis, nicht beides';
+function bkRailCheck(x, y) {
+  const c = bkAt(x, y), f = decoLookNew('schiene').form || 0;
+  if (!available('schiene')) return { err: `Schiene: ${lockText('schiene').replace('🔒 ', 'erst mit ')}` };
+  if (bkWegAny(c.b)) return { err: BK_BOTH };
+  if (bkRailAt(c)) return c.b.gleis[c.i] === f ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil umstellen: kostenlos (wie am Boden)
+  if (bkArtOf(c.b) === 'holz' && c.b.n >= 2) for (const [cx, cy] of bkCellsOf(c.k, c.b)) {   // Holzviadukt: unter jedem Feld ein Bock
+    const t = objAt(cx, cy);
+    if (t && (t.b === 'weg' || t.b === 'schiene')) return { err: `Für ein Gleis braucht der Holzsteg unter jedem Feld einen Bock – erst ${t.b === 'weg' ? 'den Weg' : 'die Schiene'} darunter wegnehmen oder Stahl wählen` };
+  }
+  return { cost: ITEMS.schiene.cost, mat: { ...(ITEMS.schiene.mat || {}) } };
+}
+function bkLayRail(x, y) {
+  const c = bkAt(x, y), f = decoLookNew('schiene').form || 0, chk = c && bkRailCheck(x, y);
+  if (!chk || chk.same) return false;
+  if (chk.err) { fail(chk.err); return false; }
+  if (state.money < chk.cost) { fail('Zu wenig Taler'); return false; }
+  const me = matError(chk.mat); if (me) { fail(me); return false; }
+  state.money -= chk.cost; payMat(chk.mat);
+  if (!c.b.gleis) c.b.gleis = Array(c.b.n).fill(null);
+  c.b.gleis[c.i] = f;
+  groundVersion++;
+  return true;
+}
+// Strecke (railPolyline route.deck: [d0, d1] über dem Deck, von Kante zu Kante der Lücke): reicht ein Wagen um Strecke d (± half) übers Deck?
+function bkDeckAt(route, d, half = 0) {
+  if (!route || !route.deck) return false;
+  const ds = route.loop ? [((d % route.len) + route.len) % route.len] : [d];
+  if (route.loop) ds.push(ds[0] - route.len, ds[0] + route.len);
+  return route.deck.some(([a, b]) => ds.some(e => e + half > a && e - half < b));
+}
+// Wagen über einer Brücke (render.js): in Stücke je Feld längs der Brücke (car.cut, wie am Tunnelportal). Das Stück über einem Deckfeld malt
+// das Deck nach seiner Oberseite und vor dem vorderen Geländer (onDeck), das Stück auf einer Anhöhe ihr Feld (angehoben) – so liegt jedes
+// Geländer vor dem Wagen und keine Anhöhe malt über ihn. → [{ k: Feld, deck, m: Stück }] oder null (doch nicht über einer Brücke)
+const bkCarHill = base => ({ up: true, base, ha: HILL_H, hb: HILL_H, occ: [], ramp: null });   // oben auf Höhe der Anhöhen, waagerecht
+function bkCarPieces(m) {
+  const la = m.len / 2;
+  let c = bkAt(Math.round(m.px), Math.round(m.py));
+  for (const sg of [-1, 1]) if (!c) c = bkAt(Math.round(m.px + m.du * la * sg), Math.round(m.py + m.dv * la * sg));   // auch ein Ende knapp über der Kante
+  if (!c) return null;
+  const ca = c.b.ax ? m.dv : m.du, wc = c.b.ax ? m.py : m.px, cuts = [-la, la];
+  if (Math.abs(ca) > 0.3) for (let h = Math.floor(wc - la) + 0.5; h < wc + la + 1; h++) { const a = (h - wc) / ca; if (a > -la + 1e-3 && a < la - 1e-3) cuts.push(a); }   // Feldkanten längs der Brücke
+  cuts.sort((p, q) => p - q);
+  const out = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const lo = cuts[i], hi = cuts[i + 1], am = (lo + hi) / 2;
+    if (hi - lo < 0.01) continue;
+    const x = Math.round(m.px + m.du * am), y = Math.round(m.py + m.dv * am), dk = !!bkAt(x, y);
+    out.push({ k: x + ',' + y, deck: dk, m: { ...m, cut: cuts.length === 2 ? null : [lo, hi], portal: null, hill: bkCarHill(dk ? 0 : hillLift(x, y)) } });
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +366,8 @@ function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
     for (let j = 0; j <= 2 * n; j++) { const t = A + j / 2; seg(t, s, H, t, s, H + 8, L.dark, w); }
     seg(A, s, H + 8, B, s, H + 8, col, w * 1.3); seg(A, s, H + 4, B, s, H + 4, col, w * 0.8);
   };
-  if (art === 'holz' && n > BK_ARTEN.holz.frei) for (const t of [A + 0.55, B - 0.55]) {   // Holzböcke: je zwei Beine mit Kreuz
+  const bocks = art !== 'holz' ? [] : opts.rail && n >= 2 ? Array.from({ length: n }, (_, i) => i) : n > BK_ARTEN.holz.frei ? [A + 0.55, B - 0.55] : [];
+  for (const t of bocks) {                                                 // Holzböcke: je zwei Beine mit Kreuz (mit Gleis unter jedem Feld)
     for (const s of [-W + 0.06, W - 0.06]) seg(t, s, 0, t, s, H - 3, L.dark, 2.2);
     seg(t, -W + 0.06, 2, t, W - 0.06, H - 5, L.dark, 1.1); seg(t, W - 0.06, 2, t, -W + 0.06, H - 5, L.dark, 1.1);
   }
@@ -284,6 +376,7 @@ function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
   const a0 = Math.max(A, t0), b0 = Math.min(B, t1);
   if (b0 > a0) for (let j = 0, N = Math.ceil((B - A) * (art === 'holz' ? 9 : 6)); j <= N; j++) { const t = A + j / (art === 'holz' ? 9 : 6); if (t >= a0 && t <= b0) seg(t, -W, H, t, W, H, L.line, 0.6); }
   if (weg && opts.wegPaint) opts.wegPaint(H);
+  if (opts.railPaint) opts.railPaint(H);                                   // Gleis auf dem Deck (160b)
   if (opts.after) opts.after(H);                                           // Leute oben (zwischen Deck und vorderem Geländer)
   quad(A, B, W, W, H - (art === 'holz' ? 3 : 4), H, L.beam);              // Längsträger vorn
   if (art === 'stahl') sideTruss(W + 0.02, L.rail, 1.5); else rail(W, L.rail, 1.4);   // vorn
@@ -295,7 +388,8 @@ function bkDrawTile(x, y, px, py, z, after) {
   const art = bkArtOf(c.b), ax = c.b.ax;
   const P = (t, s, h) => { const du = ax ? s : t - c.i, dv = ax ? t - c.i : s; return [px + (du - dv) * TW / 2 * z, py + (du + dv) * TH / 2 * z - h * z]; };
   const wegPaint = H => bkWegPaint(c, px, py, z, H);
-  bkPaint(P, z, art, c.b.n, c.i - 0.5, c.i + 0.5, bkWegAt(c), { wegPaint, after: after ? H => after(H) : null, ext: c.i < c.b.n - 1 ? 0.012 : 0 });
+  const railPaint = bkRailAt(c) ? H => drawRailBed(px, py - H * z, z, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, { b: 'schiene', rot: c.b.ax, form: c.b.gleis[c.i] || 0 }, bkRailArms(c)) : null;
+  bkPaint(P, z, art, c.b.n, c.i - 0.5, c.i + 0.5, bkWegAt(c), { wegPaint, railPaint, rail: bkRailAny(c.b), after: after ? H => after(H) : null, ext: c.i < c.b.n - 1 ? 0.012 : 0 });
 }
 // Weg auf dem Deck: Band längs, Belag und Muster wie der Weg (Richtung der Brücke)
 function bkWegPaint(c, px, py, z, H) {
@@ -381,7 +475,7 @@ function bkPickFront(sx, sy) {
 function openBkInfo(x, y) {
   const c = bkAt(x, y);
   if (!c) { closePanel(); return; }
-  const art = bkArtOf(c.b), A = BK_ARTEN[art], nw = (c.b.weg || []).filter(Boolean).length;
+  const art = bkArtOf(c.b), A = BK_ARTEN[art], nw = (c.b.weg || []).filter(Boolean).length, ng = bkRailCount(c.b);
   const cur = bkCost(art, c.b.n);
   const btn = id => {
     const B = BK_ARTEN[id], nu = bkCost(id, c.b.n), dm = nu.cost - cur.cost, lock = B.tech && !state.techs.has(B.tech);
@@ -390,9 +484,11 @@ function openBkInfo(x, y) {
   const el = showPanel(`<h3>🌉 ${escHtml(A.name)}</h3>
     <p class="muted">Brücke zwischen zwei Anhöhen · ${c.b.n} ${c.b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
     <div class="label">Art</div><div class="looks look-forms">${BK_ART_IDS.map(btn).join('')}</div>
-    <div class="label">Weg darauf</div>
-    ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>` : '<p class="muted">Zieh einen Weg von der einen Anhöhe über die Brücke zur anderen.</p>'}
-    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt(cur.cost + nw * ITEMS.weg.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
+    ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`
+      : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(c.b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
+      : '<p class="muted">Zieh einen Weg oder eine Schiene von der einen Anhöhe über die Brücke zur anderen.</p>'}
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt(cur.cost + nw * ITEMS.weg.cost + ng * ITEMS.schiene.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => bkAt(x, y) ? openBkInfo(x, y) : closePanel());
   for (const b of el.querySelectorAll('[data-bkart]')) b.onclick = () => { undoable(() => bkSetArt(c.k, b.dataset.bkart)); openBkInfo(x, y); };
   if ($('p-bkweg')) $('p-bkweg').onclick = () => { undoable(() => bkDemolishAt(x, y)); openBkInfo(x, y); };

@@ -203,7 +203,7 @@ const ITEMS = {
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
   anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
-  bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform', cost: 60, mat: { bretter: 3 }, desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holzsteg oder Stahlbrücke (mit der Eisenbahn); danach ziehst du einen Weg darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
+  bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform', cost: 60, mat: { bretter: 3 }, desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holzsteg oder Stahlbrücke (mit der Eisenbahn); danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -779,7 +779,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Holz oder Stahl wählst du oben in der Leiste; danach ziehst du einen Weg darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Holz oder Stahl wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };

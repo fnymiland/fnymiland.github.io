@@ -646,8 +646,8 @@ const RAIL_LOOK = {
 const railLookOf = t => RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id] || RAIL_LOOK.schotter;   // auch auf Brücken (Block 109b)
 // Arme (Kurve, Weiche, Prellbock) nur über railArms (rules.js): mit Anhöhen nur zu Nachbarn, mit denen das Gleis zusammenhängt (levelLink
 // 'gleis' – über die Kante endet es am Prellbock), dazu die Gleis-Rampe an Fuß und Oberkante
-function drawRailBed(cx, cy, z, x, y, t) {
-  const arms = railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
+function drawRailBed(cx, cy, z, x, y, t, armsIn = null) {             // armsIn: Gleis auf dem Deck einer Brücke (160b, bkRailArms)
+  const arms = armsIn || railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const stroke = (paths, col, w) => {
     g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round';
@@ -893,7 +893,7 @@ const drawFlat = (cx, cy, z, x, y, t) => {
 // Gleis oben genauso; zur Gleis-Rampe (schräg) nur der Überlapp der Anhöhen GR_E – ein flaches Stück darüber stünde über ihrem Gleis
 function drawHillFlat(cx, cy, z, x, y, t) {
   const rail = t.b === 'schiene' && rampFresh().n > 0;
-  const e = (dx, dy) => rail && rampAt(x + dx, y + dy) ? (levelLink(x, y, x + dx, y + dy, 'gleis') ? GR_E : 0) : levelLink(x, y, x + dx, y + dy, 'fuss') || (bkOn() && bkArmFrom(x, y, dx, dy)) ? 0.06 : 0;   // Brücke (Block 160): bis aufs Deck
+  const e = (dx, dy) => rail && rampAt(x + dx, y + dy) ? (levelLink(x, y, x + dx, y + dy, 'gleis') ? GR_E : 0) : levelLink(x, y, x + dx, y + dy, 'fuss') || (bkOn() && (bkArmFrom(x, y, dx, dy) || bkRailArmFrom(x, y, dx, dy))) ? 0.06 : 0;   // Brücke (Block 160, Gleis 160b): bis aufs Deck
   const u0 = -0.5 - e(-1, 0), u1 = 0.5 + e(1, 0), v0 = -0.5 - e(0, -1), v1 = 0.5 + e(0, 1);
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   g.save();

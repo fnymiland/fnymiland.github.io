@@ -1734,6 +1734,9 @@ function render(now) {
     } else if (tool === 'weg' && hover.deck && bkAt(hx, hy)) {           // Weg aufs Deck einer Brücke (Block 160): oben, kein Geist am Boden
       const c = bkAt(hx, hy), q = toScreen(hx, hy), st = styleDef('weg', currentStyle('weg'));
       preview = { ok: !bkWegAt(c) || c.b.weg[c.i] !== st.id, text: bkWegAt(c) ? `Weg auf der Brücke: ${styleDef('weg', c.b.weg[c.i]).name}` : `${st.name} über die Brücke: von hier längs übers Deck ziehen`, p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
+    } else if (tool === 'schiene' && hover.deck && bkAt(hx, hy)) {       // Schiene aufs Deck (160b): wie der Weg
+      const c = bkAt(hx, hy), q = toScreen(hx, hy), chk = bkRailCheck(hx, hy), F = DECO_LOOKS.schiene.forms;
+      preview = { ok: !chk.err && !chk.same, text: chk.err || (bkRailAt(c) ? `Gleis auf der Brücke: ${F[c.b.gleis[c.i]].name}` : 'Schiene über die Brücke: von hier längs übers Deck ziehen'), p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
     } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
@@ -1798,8 +1801,9 @@ function render(now) {
 
   // 4) Objekte, Bewohner, Fahrzeuge (von hinten nach vorn; große Gebäude am vordersten Feld)
   const byTile = new Map(), drawnMovers = new Set(), onRoof = roofers.length ? roofersByTile() : null;   // Leute auf dem Dach (Block 138d)
-  const onDeck = bkOn() && hillWalkers.length ? new Map() : null;        // Spaziergänger auf einer Brücke (Block 160): nach dem Deck zeichnen
   const cars4 = trainCars(), boat = expeditionBoat();
+  const onDeck = bkOn() && (hillWalkers.length || cars4.some(c => c.deck)) ? new Map() : null;   // Spaziergänger und Züge auf einer Brücke (Block 160, 160b): nach dem Deck zeichnen
+  const deckPut = (k, m) => { if (!onDeck.has(k)) onDeck.set(k, []); onDeck.get(k).push(m); };
   const ships = [boat, cargoShip()].filter(Boolean).concat(shipMovers(now), fishBoats(now), typeof friendBoats === 'function' ? friendBoats() : []);   // Freundesschiffe (Block 105)
   const hallFirst = new Map();                             // je Hauptbahnhof das erste Feld, das im Bild gezeichnet wird
   if (HALL.size) for (let i = 0; i < visible.length; i += 4) { const k = visible[i] + ',' + visible[i + 1], a = HALL.has(k) && COVER.get(k); if (a && !hallFirst.has(a)) hallFirst.set(a, k); }
@@ -1810,6 +1814,11 @@ function render(now) {
   for (const m of people.concat(typeof visitorFigs !== 'undefined' ? visitorFigs : [], typeof meFigs !== 'undefined' ? meFigs : [], cars, cars4, ships, coasterCars(), parkTrainCars(), GFX.animals ? critters.filter(c => c.id !== 'gluehwurm') : [])) {   // Besucher (Block 96)   // Glühwürmchen erst über der Nacht
     let k = Math.round(m.px) + ',' + Math.round(m.py);
     if (m.train && HALL.has(k)) k = hallFirst.get(COVER.get(k)) || k;
+    if (m.train && m.deck && onDeck) {                                   // über einer Brücke (160b, bruecken.js): Stück je Feld – übers Deck nach seiner Oberseite
+      trainOnHills(m, k);                                                  // m.hill fürs Schild ⚡
+      const ps = bkCarPieces(m);
+      if (ps) { for (const p of ps) { if (p.deck) deckPut(p.k, p.m); else { if (!byTile.has(p.k)) byTile.set(p.k, []); byTile.get(p.k).push(p.m); } } continue; }
+    }
     if (m.train) {                                                         // Tunnel (Block 136): im Berg unsichtbar, am Portal abgeschnitten
       const tc = trainTunnelCut(m);
       if (tc === 'hide') continue;
@@ -1832,7 +1841,7 @@ function render(now) {
         if (st && st.b === 'pb_station' && Math.abs(m.px - rx - dx) <= 1.1 && Math.abs(m.py - ry - dy) <= 1.1) { k = (rx + dx) + ',' + (ry + dy); break; }
       }
     }
-    if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) { if (!onDeck.has(k)) onDeck.set(k, []); onDeck.get(k).push(m); continue; }
+    if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) { deckPut(k, m); continue; }
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }

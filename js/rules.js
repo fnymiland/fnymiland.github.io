@@ -2188,8 +2188,10 @@ const railArms = (x, y) => { const e = GEXIT.get(x + ',' + y);
 // dazu die Gleis-Rampe am Fuß und oben. Auf einem Rampenfeld selbst: die Arme in Achsrichtung, wo es weitergeht
 function railArmsHill(x, y, e) {
   const own = rampTrackAt(x, y), lv = hillLevel(x, y);
+  const bk = bkOn();
   return DIRS.filter(([dx, dy]) => {
     const nx = x + dx, ny = y + dy;
+    if (bk && bkRailArmFrom(x, y, dx, dy)) return true;                 // Gleis auf dem Deck einer Brücke (160b): über die Kante weiter
     if (isEinfahrt(nx, ny) || (bpOn() && bpAt(nx, ny))) return trackLink(x, y, nx, ny);   // Bergportal (157m): Arm zur Wand, kein Prellbock
     const rail = bAt(nx, ny) === 'schiene';
     if (rail && !own) return hillLevel(nx, ny) === lv;                  // Schiene ↔ Schiene: gleiche Ebene (schnell, wie levelLink)
@@ -2216,14 +2218,18 @@ function railNetwork(x, y, max = 20000) {
   return out;
 }
 function railNetworkHill(x, y, max) {
-  const seen = new Set([x + ',' + y]), q = [[x, y]], out = [[x, y]];
-  for (let i = 0; i < q.length && out.length < max; i++) for (const [dx, dy] of DIRS) {
-    const [cx, cy] = q[i], nx = cx + dx, ny = cy + dy, k = nx + ',' + ny;
-    if (seen.has(k)) continue;
-    const rail = bAt(nx, ny) === 'schiene';
-    if ((!rail && !rampTrackAt(nx, ny)) || !levelLink(cx, cy, nx, ny, 'gleis')) continue;   // erst prüfen, dann merken: von der anderen Ebene aus kommt man vielleicht hin
-    seen.add(k); q.push([nx, ny]);
-    if (rail) out.push([nx, ny]);
+  const seen = new Set([x + ',' + y]), q = [[x, y]], out = [[x, y]], bk = bkOn();
+  for (let i = 0; i < q.length && out.length < max; i++) {
+    const [cx, cy] = q[i];
+    for (const [dx, dy] of DIRS) {
+      const nx = cx + dx, ny = cy + dy, k = nx + ',' + ny;
+      if (seen.has(k)) continue;
+      const rail = bAt(nx, ny) === 'schiene';
+      if ((!rail && !rampTrackAt(nx, ny)) || !levelLink(cx, cy, nx, ny, 'gleis')) continue;   // erst prüfen, dann merken: von der anderen Ebene aus kommt man vielleicht hin
+      seen.add(k); q.push([nx, ny]);
+      if (rail) out.push([nx, ny]);
+    }
+    if (bk) for (const [ox, oy] of bkRailJumps(cx, cy)) { const k = ox + ',' + oy; if (!seen.has(k)) { seen.add(k); q.push([ox, oy]); out.push([ox, oy]); } }   // über eine Brücke (160b)
   }
   return out;
 }
@@ -2242,6 +2248,11 @@ function restyleRails(list, form) {
     if (!t || t.b !== 'schiene' || (t.form || 0) === form) continue;
     if (form) t.form = form; else delete t.form;
     t.born = now; n++;
+  }
+  if (bkOn()) {                                                           // Gleis auf einer Brücke (160b): mit, wenn beide Endfelder dabei sind
+    const keys = new Set(list.map(p => p[0] + ',' + p[1]));
+    for (const [k, b] of state.bruecken) if (b.gleis && bkEndsOf(k, b).every(e => keys.has(e[0] + ',' + e[1])))
+      b.gleis.forEach((f, i) => { if (f != null && f !== form) { b.gleis[i] = form; n++; } });
   }
   if (n) { groundVersion++; save(); }
   return n;
@@ -2415,7 +2426,10 @@ const trainNeed = tiles => 1 + Math.max(1, Math.ceil(tiles / KM));
 const carNeed = (tiles, cars) => trainNeed(tiles) * cars / 2;
 // Kreis im Netz: Äste (Felder mit nur einem Nachbarn) abschneiden; bleibt genau ein Ring übrig, ist das der Rundkurs
 function railLoop(tiles, rails, link = null) {   // link: welche Nachbarn zusammenhängen (Schienennetz: trackLink, Block 136)
-  const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k); return DIRS.filter(([dx, dy]) => !link || link(x, y, x + dx, y + dy)).map(([dx, dy]) => (x + dx) + ',' + (y + dy)).filter(n => core.has(n)); };
+  const jumps = !!link && bkOn();                                          // Gleis über eine Brücke (160b): die beiden Endfelder hängen zusammen
+  const core = new Set(tiles), nb = k => { const [x, y] = keyXY(k), out = DIRS.filter(([dx, dy]) => !link || link(x, y, x + dx, y + dy)).map(([dx, dy]) => (x + dx) + ',' + (y + dy));
+    if (jumps) for (const [ox, oy] of bkRailJumps(x, y)) out.push(ox + ',' + oy);
+    return out.filter(n => core.has(n)); };
   let changed = true;
   while (changed) { changed = false; for (const k of [...core]) if (nb(k).length < 2) { core.delete(k); changed = true; } }
   if (core.size < 4 || [...core].some(k => nb(k).length !== 2)) return null;
@@ -2442,7 +2456,7 @@ function computeRail() {
     else if (t.b === 'hbf') { for (const [gk, G] of GLEIS) if (G.hub === k) stations.push(gk); }
     else if (POWER_OUT[t.b]) { wind += powerOf(t, k); plants++; }
   }
-  const comp = new Map(), netTiles = [];
+  const comp = new Map(), netTiles = [], bk = bkOn(), netGap = [];      // netGap: Felder über Brücken je Netz (Länge, Strom, Züge; 160b)
   let nid = 0;
   for (const k of rails) {
     if (comp.has(k)) continue;
@@ -2451,9 +2465,14 @@ function computeRail() {
     while (q.length) {
       const [x, y] = keyXY(q.pop());
       for (const [dx, dy] of DIRS) { const n = (x + dx) + ',' + (y + dy); if (rails.has(n) && !comp.has(n) && trackLink(x, y, x + dx, y + dy)) { comp.set(n, nid); q.push(n); list.push(n); } }
+      if (bk) for (const [ox, oy] of bkRailJumps(x, y)) { const n = ox + ',' + oy; if (rails.has(n) && !comp.has(n)) { comp.set(n, nid); q.push(n); list.push(n); } }   // über eine Brücke (160b)
     }
     netTiles.push(list);
     nid++;
+  }
+  if (bk) for (const [gk, gb] of state.bruecken) {                       // Brücke mit durchgehendem Gleis: ihre Felder zählen zur Strecke (160b)
+    const [e0, e1] = bkEndsOf(gk, gb);
+    if (bkRailJumps(e0[0], e0[1]).some(o => o[0] === e1[0] && o[1] === e1[1])) { const c = comp.get(e0.join()); netGap[c] = (netGap[c] || 0) + gb.n; }
   }
   const byNet = new Map(), stationNet = new Map();
   for (const s of stations.sort()) {
@@ -2473,7 +2492,7 @@ function computeRail() {
     // anderen (nie schlechter für bestehende Welten) und bringt nur, wenn ihre Halte in verschiedenen Vierteln liegen
     const inner = regions.length < 2;
     if (inner && list.length < 2) continue;
-    const tiles = netTiles[net].length, ring = railLoop(netTiles[net], rails, trackLink);
+    const tiles = netTiles[net].length + (netGap[net] || 0), ring = railLoop(netTiles[net], rails, trackLink);
     // Rundkurs nur, wenn jeder Bahnhof direkt am Ring liegt
     const onRing = ring && list.every(s => { const R = new Set(ring);
       return stopFoot(s).some(([fx, fy]) => stopDirs(s).some(([dx, dy]) => R.has((fx + dx) + ',' + (fy + dy)) && stopTrackOk(fx, fy, dx, dy))); });

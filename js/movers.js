@@ -24,7 +24,7 @@ const wayish = b => b === 'weg' || b === 'huegeltreppe';
 // Schranke zu, sobald ein Zugwagen in der Nähe ist
 function crossingClosed(x, y) {
   if (!trains.length) return false;
-  return trainCars().some(c => Math.abs(c.px - x) + Math.abs(c.py - y) < 2.3);
+  return trainCars().some(c => !(c.deck && bkAt(x, y)) && Math.abs(c.px - x) + Math.abs(c.py - y) < 2.3);   // Übergang unter einer Brücke: der Zug oben schließt ihn nicht (160b)
 }
 const drivable = () => false;
 
@@ -554,7 +554,7 @@ function railStop(k) {
 }
 // kürzester Weg über Schienen (Liste von Feldern), null wenn keiner
 function railPath(from, to) {
-  const prev = new Map([[from, null]]), q = [from];
+  const prev = new Map([[from, null]]), q = [from], bk = bkOn();
   for (let i = 0; i < q.length; i++) {
     const k = q[i];
     if (k === to) break;
@@ -563,6 +563,7 @@ function railPath(from, to) {
       const n = (x + dx) + ',' + (y + dy);
       if (!prev.has(n) && trackAt(x + dx, y + dy) && trackLink(x, y, x + dx, y + dy)) { prev.set(n, k); q.push(n); }   // auch durch Einfahrt und Tunnel (Block 136)
     }
+    if (bk) for (const [ox, oy] of bkRailJumps(x, y)) { const n = ox + ',' + oy; if (!prev.has(n)) { prev.set(n, k); q.push(n); } }   // über eine Brücke (160b)
   }
   if (!prev.has(to)) return null;
   const out = [];
@@ -571,22 +572,35 @@ function railPath(from, to) {
 }
 // Punkte in Feld-Koordinaten entlang einer Feldfolge; in Kurven ein Bogen um die gemeinsame Ecke.
 // closed: Ring – das letzte Feld hängt wieder am ersten
+// Brücke (160b): zwei Felder, die nicht benachbart sind, sind die Enden einer Brücke – dazwischen gerade übers Deck (Richtung nur das Vorzeichen);
+// route.deck: [d0, d1] je Brücke, die Strecke über ihrem Deck (von Kante zu Kante der Lücke)
 function railPolyline(keys, closed = false) {
-  const P = keys.map(keyXY), pts = [], n = P.length;
+  const P = keys.map(keyXY), pts = [], n = P.length, last = [], first = [], sg = (a, b) => [Math.sign(b[0] - a[0]), Math.sign(b[1] - a[1])];
   for (let i = 0; i < n; i++) {
     const [x, y] = P[i];
     const pv = closed ? P[(i - 1 + n) % n] : P[i - 1], nx = closed ? P[(i + 1) % n] : P[i + 1];
-    const din = pv ? [x - pv[0], y - pv[1]] : nx ? [nx[0] - x, nx[1] - y] : [1, 0];
-    const dout = nx ? [nx[0] - x, nx[1] - y] : din;
-    if ((!closed && (i === 0 || i === n - 1)) || (din[0] === dout[0] && din[1] === dout[1])) { pts.push([x, y]); continue; }
+    const din = pv ? sg(pv, P[i]) : nx ? sg(P[i], nx) : [1, 0];
+    const dout = nx ? sg(P[i], nx) : din;
+    first[i] = pts.length;
+    if ((!closed && (i === 0 || i === n - 1)) || (din[0] === dout[0] && din[1] === dout[1])) { pts.push([x, y]); last[i] = pts.length - 1; continue; }
     const ein = [-din[0] * 0.5, -din[1] * 0.5], eout = [dout[0] * 0.5, dout[1] * 0.5], c = [ein[0] + eout[0], ein[1] + eout[1]];
     const a0 = Math.atan2(ein[1] - c[1], ein[0] - c[0]), a1 = sweep(a0, Math.atan2(eout[1] - c[1], eout[0] - c[0]));
     for (const [u, v] of arcPts(c[0], c[1], 0.5, a0, a1, 6)) pts.push([x + u, y + v]);
+    last[i] = pts.length - 1;
   }
   if (closed) pts.push([...pts[0]]);
   const cum = [0];
   for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
-  return { pts, cum, len: cum[cum.length - 1], loop: closed };
+  const deck = [];
+  for (let i = 0; i < (closed ? n : n - 1); i++) {
+    const j = (i + 1) % n, A = P[i], B = P[j];
+    if (Math.abs(B[0] - A[0]) + Math.abs(B[1] - A[1]) < 2) continue;
+    const pa = pts[last[i]], pb = pts[j ? first[j] : pts.length - 1], d = sg(A, B);
+    const ea = [A[0] + d[0] * 0.5, A[1] + d[1] * 0.5], eb = [B[0] - d[0] * 0.5, B[1] - d[1] * 0.5];   // Kanten der Lücke
+    const ca = j ? cum[last[i]] : cum[last[i]], cb = j ? cum[first[j]] : cum[pts.length - 1];
+    deck.push([ca + Math.hypot(ea[0] - pa[0], ea[1] - pa[1]), cb - Math.hypot(pb[0] - eb[0], pb[1] - eb[1])]);
+  }
+  return { pts, cum, len: cum[cum.length - 1], loop: closed, ...(deck.length ? { deck } : {}) };
 }
 // Ort und Fahrtrichtung bei Strecke d
 function railPoint(route, d) {
@@ -616,7 +630,7 @@ function lineRoute(line) {
   const extend = (list, atEnd) => {
     for (let n = 0; n < 3 && list.length > 1; n++) {
       const [a, b] = atEnd ? [list[list.length - 2], list[list.length - 1]] : [list[1], list[0]];
-      const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = 2 * bx - ax, ny = 2 * by - ay, nk = nx + ',' + ny;
+      const [ax, ay] = keyXY(a), [bx, by] = keyXY(b), nx = bx + Math.sign(bx - ax), ny = by + Math.sign(by - ay), nk = nx + ',' + ny;   // nach einer Brücke (160b): ein Feld weiter
       const hall = HALL.has(nk) && (!hillsOn() || hillLevel(nx, ny) === hillLevel(bx, by));   // Anhöhen (157j): nie in die Halle eines Hbf anderer Höhe
       if (list.includes(nk) || (!hall && (n >= 2 || !trackAt(nx, ny) || !trackLink(bx, by, nx, ny)))) break;
       if (atEnd) list.push(nk); else list.unshift(nk);
@@ -735,7 +749,7 @@ function trainCars() {
     for (let i = 0; i < n; i++) {
       const d = tr.c + ((n - 1) / 2 - i) * (len + gap) * moving;
       const [u, v, du, dv] = railPoint(tr.route, d);
-      out.push({ train: tr, px: u, py: v, du: du * moving, dv: dv * moving, i, n, len, d, mv: moving });   // d, mv: Lage auf der Strecke (Anhöhen)
+      out.push({ train: tr, px: u, py: v, du: du * moving, dv: dv * moving, i, n, len, d, mv: moving, ...(tr.route.deck && bkDeckAt(tr.route, d, len / 2) ? { deck: true } : {}) });   // d, mv: Lage auf der Strecke (Anhöhen); deck: über einer Brücke (160b)
     }
   }
   return out;
@@ -823,6 +837,7 @@ function trainOnHills(m, k) {
   m.hill = null;
   const tr = m.train;
   if (!hillsOn() || m.d == null || !tr || !tr.route) return k;
+  if (m.deck) { const [kx, ky] = keyXY(k); m.hill = bkCarHill(bkAt(kx, ky) ? 0 : hillLift(kx, ky)); return k; }   // über einer Brücke (160b): oben, waagerecht (render.js zerlegt ihn: bkCarPieces; sonst mit Feld k, das tileB schon anhebt)
   // Felder unter dem Wagen: unter Mitte und Enden (knapp eingerückt – ein Ende genau auf der Feldkante berührt das nächste nicht)
   const rs = rampFresh().n > 0, cells = [], [pa, pb] = trainEndPts(m), inset = p => [m.px + (p[0] - m.px) * 0.94, m.py + (p[1] - m.py) * 0.94];
   let up = false, rf = null;
@@ -877,7 +892,7 @@ function trainAt(sx, sy) {
   const z = cam.z;
   let best = null;
   for (const m of trainCars()) {
-    if ((state.tunnels && state.tunnels.size && trainTunnelCut(m)) || HALL.has(Math.round(m.px) + ',' + Math.round(m.py))) continue;   // Einfahrt, Halle: wie bisher
+    if (!m.deck && ((state.tunnels && state.tunnels.size && trainTunnelCut(m)) || HALL.has(Math.round(m.px) + ',' + Math.round(m.py)))) continue;   // Einfahrt, Halle: wie bisher (über einer Brücke: nie)
     trainOnHills(m, Math.round(m.px) + ',' + Math.round(m.py));
     const hl = m.hill, la = m.len / 2, wb = trainHalfW(m.train), H = m.train.kind.h;
     if (!hl || !hl.up) continue;                                          // unten: wie bisher (das Feld unter dem Finger zählt)
@@ -890,7 +905,7 @@ function trainAt(sx, sy) {
     }
     if (!ptInConvex(hull(pts), sx, sy)) continue;
     if (hl.occ.some(([qx, qy, qh]) => ptInConvex([S(qx - 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, qh), S(qx + 0.5, qy - 0.5, 0), S(qx + 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, 0), S(qx - 0.5, qy + 0.5, qh)], sx, sy))) continue;
-    if (!best || m.px + m.py > best.car.px + best.car.py) best = { x: Math.round(m.px), y: Math.round(m.py), car: m };
+    if (!best || m.px + m.py > best.car.px + best.car.py) best = { x: Math.round(m.px), y: Math.round(m.py), car: m, ...(m.deck && bkAt(Math.round(m.px), Math.round(m.py)) ? { deck: true } : {}) };   // über dem Deck: die Brücke (160b)
   }
   return best;
 }

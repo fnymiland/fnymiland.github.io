@@ -2661,5 +2661,18 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       ↶ meldet sich beim Online-Speicher (galt auch für Anhöhen/Dächer); Bildchen eingepasst; keine Fugen zwischen Deckfeldern; Belag auf dem
       Deck wie am Boden (Muster, Schachbrett), Trittsteine nicht aufs Deck; Deck blass bei 👁 und beim Bauen darunter; Vorschau-Rauten und
       Hinweis des Wegs auf dem Deck oben.
-- [ ] 160b Schritt 2: Schiene über die Brücke (Züge oben und unten, Gleisnetz über die Brücke, breitere Fahrbahn, engere Holzböcke).
+- [x] 160b **Schritt 2: Schiene über die Brücke.** Je Brücke Weg ODER Gleis (`b.gleis`: Form je Feld). Gleis aufs Deck wie der Weg: Linie von der
+      Anhöhe längs übers Deck bzw. auf dem Deck angefangen (`bkPlanDeck`, `bkRailCheck`/`bkLayRail`, je Feld 15 Taler + Holz + Metall, Stil
+      umstellen kostenlos); Holzsteg mit Gleis = Holzviadukt mit Bock unter jedem Feld (darunter dann nichts), Stahl spannt frei. Netz:
+      durchgehendes Gleis mit Schiene oben an beiden Enden verbindet die Endfelder direkt (`bkRailJumps` in computeRail, railPath, railLoop,
+      railNetworkHill; Arme über die Kante `bkRailArmFrom`, auf dem Deck `bkRailArms`); die Brückenfelder zählen zur Streckenlänge (Strom,
+      Züge im Rundkurs, Erfolg „Eisenbahn“). Züge fahren oben gerade übers Deck (`route.deck`, `car.deck`), gezeichnet in Stücken je Feld
+      (`bkCarPieces`): übers Deck nach dessen Oberseite und vor dem vorderen Geländer, auf der Anhöhe mit ihr. Unten fährt weiter ein Zug
+      quer durch (am Holzsteg nur zwischen den Böcken, mit Gleis oben gar nicht). Fenster: Gleis entfernen (Taler und Material zurück),
+      Abreißen samt Gleis; Speichern streng (Weg hat Vorrang). Breitere Fahrbahn war nicht nötig (Deck 0,8 Felder, Gleisbett 0,46).
+      Prüfung: tools/bruecke-gleis-pruefung.js (Stahl längs x und y, Holzviadukt, Zug oben/unten, alle Anschlüsse, Nacht; GL-Standbild).
+      Gegengelesen (4 Blickwinkel, je ein Prüfer) und behoben: Schranke auf dem Endfeld blieb offen, solange der Zug übers Deck reichte;
+      Wagen knapp über der Kante schwebte doppelt hoch; „Gleise umstellen“ übersprang Deck und andere Seite; Strecke zu kurz gezählt; Zug
+      oben angetippt öffnete das Feld darunter; nach ↶ rechnete das Netz mit der alten Brücke (`groundVersion`); ↶ an einer stehenden Brücke
+      prüft nur neue Böcke, Achterbahn nicht mehr unter die Brücke. Tests: bruecke-gleis.
 - [ ] 160c Schritt 3: Wasserbrücken auf dasselbe Bauwerk umstellen (alte Spielstände umwandeln, gleiches Aussehen, Abkürzung beim Ziehen).
