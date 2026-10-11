@@ -2638,6 +2638,11 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       `NOT_RECENT`). Test: zuletzt. Danach Nutzer: „alles zählt“ – auch Weg, Schiene, Tunnel, Zaun, Hecke, Mauer kommen in die Liste
       (nur Abreißen und Auswählen nicht).
 
+## Nachtrag 157s: Knopfbilder der Ziehen-Kategorien (11.10.2026)
+- [x] Nutzer: „man erkennt kaum, was Schiene, Weg, Terraforming oder Zaun ist – immer Untergrund drunter; das Grün muss weg (außer
+      Terraforming)“. Weg und Schiene als kurzes Stück über zwei Felder, Zaun/Hecke/Mauer als zwei Stücke über Eck – ohne Grasplatte, in
+      einer eigenen Mini-Welt (ui.js `katBare`); Gelände bleibt die Vorschau mit Platte. Gilt auch für die Dinge vorn in der Stil-Zeile.
+
 ## Block 160 – Brücke als eigenes Bauwerk (11.10.2026)
 Nutzer: „das ist immer dieselbe Brücke, man baut sie halt da hin, wo man will, und dann kann man über diese Brücke einen Weg oder Schienen
 ziehen“ – Zugbrücken übers Wasser, Wegbrücken, Anhöhenbrücken. Gewählt: Holzsteg und Stahl (Steinbogen verworfen), darunter nur Flaches,

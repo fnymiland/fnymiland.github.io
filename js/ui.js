@@ -151,11 +151,39 @@ function noteDrag(id) {
 function katPick(k) { const kat = katById(k), m = katMemory()[k]; return kat[3].includes(m) && available(m) ? m : kat[3].find(available) || null; }
 // Spielbild als Symbol (Mitte des Vorschaubilds, quadratisch); einmal gemalt, je Knopf eine Kopie
 const katPicCache = new Map();
+// Weg, Schiene, Zaun als Knopfbild ohne Grasplatte (Nutzer 11.10.2026: „man erkennt kaum, was Schiene, Weg oder Zaun ist – das Grün muss
+// weg“): ein kurzes Stück über zwei Felder bzw. zwei Zaunstücke über Eck, in einer eigenen Mini-Welt (nie die echte Insel fragen). Gelände: Vorschau
+function katBare(id) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const x = c.getContext('2d');
+  if (!x) return c;
+  const prev = g, keep = [state.tiles, state.hills, state.edges, state.decos, COVER], X = 1e6, Y = 1e6;
+  g = x; FOG = false;
+  try {
+    state.hills = new Map(); state.decos = new Map(); state.edges = new Map(); state.tiles = new Map(); COVER = new Map();
+    if (id === 'weg' || id === 'schiene') {
+      const z = 0.9, tw = TW / 2 * z, th = TH / 2 * z;
+      const t = id === 'weg' ? { b: 'weg', lvl: 1, style: currentStyle('weg'), lauf: 0 } : { b: 'schiene', lvl: 1, rot: 0, ...decoLookNew('schiene') };
+      for (const i of [0, 1]) { const k = (X + i) + ',' + Y; state.tiles.set(k, t); COVER.set(k, k); }
+      for (const i of [0, 1]) {
+        const px = 32 + (i - 0.5) * tw, py = 33 + (i - 0.5) * th;
+        if (id === 'weg') drawPath(px, py, z, X + i, Y, t); else drawObject('schiene', px, py, z, 0, X + i, Y, 1, t);
+      }
+    } else {
+      const z = 0.95, cx = 32, cy = 42;
+      EDGE_PROJ = (u, v) => ({ x: cx + (u - v) * TW / 2 * z, y: cy + (u + v) * TH / 2 * z });
+      const e = { b: id, style: currentStyle(id), sq: true };
+      state.edges = new Map([['b0,0', e], ['a0,0', e]]);
+      for (const k of ['b0,0', 'a0,0']) drawEdge(k, e, z * 1.3, 0);
+    }
+  } finally { EDGE_PROJ = null; g = prev; [state.tiles, state.hills, state.edges, state.decos, COVER] = keep; }
+  return c;
+}
 function katPic(id, s) {
   let src = katPicCache.get(id);
   if (!src) {
-    src = document.createElement('canvas'); src.width = src.height = 64;
-    const x = src.getContext('2d'); if (x) x.drawImage(thumb(id), 14, 8, 84, 84, 0, 0, 64, 64);
+    if (id === 'weg' || id === 'schiene' || EDGE_TOOLS.has(id)) src = katBare(id);
+    else { src = document.createElement('canvas'); src.width = src.height = 64; const x = src.getContext('2d'); if (x) x.drawImage(thumb(id), 14, 8, 84, 84, 0, 0, 64, 64); }
     katPicCache.set(id, src);
   }
   const c = document.createElement('canvas'); c.width = c.height = 64; c.className = 'kat-pic'; c.style.width = c.style.height = s + 'px';
