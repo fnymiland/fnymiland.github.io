@@ -2709,6 +2709,11 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       - **Modelle abgenommen (Nutzer 11.10.2026: „gefallen mir alle, so perfekt“)** – tools/brueckenfamilie-entwurf.js, Tagbilder:
         Fußgänger Holz (3b), Stein (Pfeiler, Stufe 3), Metall (neu: Gitterrost, Stahlträger, Stahlbogen mit Hängern), Kristall K1 (+ Zacken
         als Option); Bahn Holz (Böcke auf den Kachelkanten), Stein (flacher Viadukt), Metall (Fachwerk), Kristall B2 (Fachwerk aus Kristall).
-        **Nacht/Beleuchtung NICHT abgenommen** („sieht beschissen aus, Lampen gehen so nicht, Lichtstreifen hässlich“) – neu angehen.
+        Nacht zuerst verworfen (Schleier + Kreise); **neu abgenommen** (tools/brueckenlicht-entwurf.js, echtes Nachtlicht über glowQuad/
+        drawNight): Holz und Metall kleine Lichtpunkte auf Pfosten/Handlauf, **Stein: Balustrade** (Pfosten + Handlauf, statt niedriger
+        Brüstung – „die einzige ohne Geländer“) mit **Minilaternen** (Kopf der Gaslaterne auf kurzem Stummel, in der Farbe der Brücke),
+        Kristall: bläulicher Streifen am Fuß des Glasgeländers (Bahn B2: am Fuß des Fachwerks).
+      - **Optionen je Brücke:** Farbe (Laternen färben mit), **Licht an/aus** (kostet extra), Kristall: **Zacken** (Fanny). Kosten: Licht
+        extra, Kristall „fürstlich“. Progression/Geld insgesamt später besprechen (Nutzer).
       - 1 Feld Lücke: kleiner Buckel. Offen: Ziegel/Rot/Kristall/„Wie der Weg“ je Ort, Bauen per Weg-/Gleis-Linie über die Lücke statt
         eigenem Brücken-Werkzeug, Umwandeln alter Stände ohne Änderung im Aussehen.
