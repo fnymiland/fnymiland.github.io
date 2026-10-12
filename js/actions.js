@@ -1210,7 +1210,8 @@ function undo() {
         const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Stützen zählen (160c C1)
         const hid = (step.bkHid && step.bkHid.get(k)) || [];               // vor dem Schritt schon verdeckt (alter Stand): zählt nicht
         const neu = (stand ? bkSupports(o).filter(e => !bkSupports(UNDO_MAPS.bruecken().get(k)).includes(e)) : bkSupports(o)).filter(e => !hid.includes(e)), [ox, oy] = keyXY(k);
-        if ((!stand && bkCellsOf(k, o).some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy); }))
+        const Go = bkGeom(o);                                              // Stein (160c C3): Pfeiler und Bögen wie gebaut
+        if ((!stand && bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy, Go, i); }))
           || neu.some(e => { const cs = bkEdgeCells(ox, oy, o.ax, e); return !cs.some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return a && mine.has(a); }) && bkEdgeBlocker(...cs); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
       }
     }

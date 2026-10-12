@@ -337,3 +337,35 @@ describe('Tunnelschatten (160c C3)', () => {
     expect(paths().n).toEqual([2 * (12 * 3 + 1)]);
   });
 });
+
+// 160c C3f: Stein – Pfeiler und Lichtraum in den Regeln, Antippen trifft Stirn und Pfeiler (dieselbe Geometrie wie das Bild, G8)
+describe('Pfeiler und Lichtraum (160c C3)', () => {
+  const stein4 = (ax = 0) => game(`(() => { for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); }   // Lücke 14–17: 4 Felder
+    const b = { ax: 0, n: 4, art: 'stein' }; b.brp = { ...brPrice({ mat: 'stein' }, 'anhoehe', 4), k: brSig(b, 'anhoehe') }; state.bruecken.set('14,12', b); groundVersion++; recalc(); })()`);
+  it('Ecken am Pfeiler: kein Platz (auch nicht für Blumen); unter dem Bogen bis 20; Holz: dieselben Ecken frei', () => {
+    stein4();
+    expect(game("bkAt(15, 12).G.stone.piers")).toEqual([2]);
+    for (const [x, s] of [[15, 1], [15, 3], [16, 0], [16, 2]]) expect(game(`smallError('blumen', ${x}, 12, ${s})`)).toMatch(/Pfeiler/);
+    expect(game("smallError('blumen', 15, 12, 0)")).toBe(null);
+    expect(game("bkTooTall('kristallaterne', 15, 12, CSLOT)")).toBe(null);                   // Feldmitte unter dem Bogen: 20 passt
+    expect(game("smallError('strassenlaterne', 15, 12, CSLOT)")).toMatch(/zu hoch/);
+    game("state.bruecken.set('14,12', { ax: 0, n: 4, art: 'holz' }); groundVersion++; recalc()");
+    expect(game("smallError('blumen', 16, 12, 0)")).toBe(null);                              // Holz: Stützen [1, 3], nicht an Kante 2
+  });
+  it('↶: eine Steinbrücke kommt nicht zurück, wenn inzwischen Blumen an ihrer Pfeilerecke stehen', () => {
+    stein4();
+    game("resetUndo(); undoable(() => bkDemolishAt(15, 12))");
+    expect(game('state.bruecken.size')).toBe(0);
+    game("state.decos.set('15,12', [null, { b: 'blumen' }]); groundVersion++");
+    expect(game('undo()')).toBe(false);
+  });
+  it('Antippen: Stirn und Pfeiler treffen die Brücke, die Öffnung nicht', () => {
+    stein4();
+    const hit = (t, s, h) => game(`(() => { cam.z = 2; const p0 = iso(15.5, 12); cam.x = p0.x; cam.y = p0.y; const c = bkAt(14, 12), p = toScreen(14, 12);
+      const sx = p.x + (${t} - ${s}) * TW / 2 * cam.z, sy = p.y + (${t} + ${s}) * TH / 2 * cam.z - ${h} * cam.z, r = bkPick(sx, sy); return r ? r.x : null; })()`);
+    expect(hit(1, 0.39, 30)).toBe(15);                                                     // Stirn über dem Bogen
+    expect(hit(1.43, 0.4, 5)).toBe(15);                                                    // Pfeilerfront (Kante 15|16 bei 1,5)
+    expect(hit(1.65, 0, 5)).toBe(16);                                                      // durch die Öffnung auf die Pfeilerseite
+    expect(hit(1, 0.4, 12)).toBe(null);                                                    // Öffnung
+  });
+});

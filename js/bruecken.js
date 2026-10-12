@@ -105,7 +105,7 @@ const BK_ON_HILL = 'Hier liegt eine Brücke auf – erst die Brücke abreißen';
 const BK_UNDER_ONLY = 'Unter der Brücke ist nur Platz für Flaches – Wege, Schienen, Gelände und niedrige Deko';
 
 // Was unter dem Deck auf Feld (x, y) liegt: passt es? (Brücke bauen, Art wechseln)
-function bkUnderError(x, y) {
+function bkUnderError(x, y, G = null, i = 0) {                             // G, i: Geometrie der Brücke und Feld (Stein: Pfeiler und Bögen, 160c C3)
   if (state.roofs && roofAt(x, y)) return 'Unter einer Brücke geht keine Überdachung – erst das Dach abreißen';
   const tr = terrainAt(x, y);
   if (tr === 'forest' || tr === 'obst') return 'Unter der Brücke erst roden (👆 aufs Feld)';
@@ -118,7 +118,13 @@ function bkUnderError(x, y) {
   }
   for (const [dx, dy] of DIRS) { const e = state.edges.get(edgeBetween(x, y, x + dx, y + dy)); if (e && e.arch) return 'Unter der Brücke ist kein Platz für einen Torbogen'; }   // R8
   const ds = decosAt(x + ',' + y) || [];
-  for (const d of ds) if (d && decoHeight(d.b, d.form) > brClear()) return `${ITEMS[d.b] ? ITEMS[d.b].name : 'Das'} ist zu hoch für unter die Brücke`;
+  for (let j = 0; j < ds.length; j++) {
+    const d = ds[j];
+    if (!d) continue;
+    const cl = G && G.stone && j !== VSLOT ? bkSlotClearG(G, i, x, y, j, d) : brClear(), nm = ITEMS[d.b] ? ITEMS[d.b].name : 'Das';
+    if (cl < 0) return `${BK_PIER} – erst ${nm} wegnehmen`;
+    if (decoHeight(d.b, d.form) > cl) return `${nm} ist zu hoch für unter die Brücke`;
+  }
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && decoHeight(p.b, p.form) > brClear()) return `${ITEMS[p.b] ? ITEMS[p.b].name : 'Das'} ist zu hoch für unter die Brücke`; }
   return null;
 }
@@ -145,10 +151,17 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
   }
   return null;
 }
-// Kleine Deko unter dem Deck: nur, was darunter passt (wie unter der Überdachung, smallError)
+// Kleine Deko unter dem Deck: nur, was darunter passt (wie unter der Überdachung, smallError). Stein (160c C3): nicht in einen Pfeiler, unter
+// dem Bogen nur so hoch, wie er dort ist – dieselbe Geometrie wie das Bild (brClear über slotPos/decoExt)
+const BK_PIER = 'Hier steht ein Pfeiler der Brücke';
+function bkSlotClearG(G, i, x, y, slot, d) {
+  const [u, v] = slotPos(x, y, slot, d), [ru, rv] = decoExt(d);
+  return brClear(G.stone, i + (G.ax ? v : u), G.ax ? rv : ru);
+}
 function bkTooTall(b, x, y, slot, form = 0) {
   if (!bkOn()) return null;
-  const h = decoHeight(b, form);
+  const h = decoHeight(b, form), c = slot !== VSLOT && bkAt(x, y);
+  if (c && c.G && c.G.stone) { const cl = bkSlotClearG(c.G, c.i, x, y, slot, { b, form }); return cl < 0 ? BK_PIER : h > cl ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null; }
   if (h <= brClear()) return null;
   const tiles = slot === VSLOT ? [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]] : [[x, y]];
   return tiles.some(([fx, fy]) => bkAt(fx, fy)) ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null;
@@ -505,11 +518,12 @@ function drawBkIcon(cx, cy, z, art) {
 // ---------------------------------------------------------------------------
 function bkPick(sx, sy) {
   if (!bkOn() || (typeof seeThrough !== 'undefined' && seeThrough)) return null;
-  for (let h = HILL_H + bkPeakMax() + 4; h >= HILL_H - 3; h -= 1) {          // von oben: was zuerst trifft, liegt vorn (Bogen, 160c C2: Höhe je Stelle)
+  const h0 = bkFresh().stone ? -0.7 * DEPTH - 1 : HILL_H - 3;               // Stein (160c C3): Stirn und Pfeiler reichen bis zum Boden
+  for (let h = HILL_H + bkPeakMax() + 4; h >= h0; h -= 1) {                 // von oben: was zuerst trifft, liegt vorn (Bogen, 160c C2: Höhe je Stelle)
     const [a, b] = tileFrac(sx, sy + h * cam.z), x = Math.round(a), y = Math.round(b), c = bkAt(x, y);
     if (!c) continue;
-    const hd = bkH(c.b, bkT(c, a, b));
-    if (h > hd + 4 || h < hd - 3) continue;
+    const t = bkT(c, a, b), hd = bkH(c.b, t), low = c.G && c.G.art === 'stein' ? c.G.stone.low(t, bkGround(c, t)) : hd - 3;
+    if (h > hd + 4 || h < low) continue;
     if (h > hd) {                                                      // Geländer: nur, wenn auf Deckhöhe nicht die Oberseite einer Anhöhe davor liegt
       const [ha, hb] = tileFrac(sx, sy + HILL_H * cam.z), hx = Math.round(ha), hy = Math.round(hb);
       if (!bkAt(hx, hy) && hillLift(hx, hy) >= HILL_H) continue;
