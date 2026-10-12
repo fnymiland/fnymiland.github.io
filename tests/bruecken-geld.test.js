@@ -111,3 +111,53 @@ describe('Gegengelesen (160c A4)', () => {
     expect(game('brPaidOk({ money: 0, toString: 1 })')).toBe(false);
   });
 });
+
+describe('Gegengelesen 2 (160c A4: Altstände, live Fassung v1016)', () => {
+  const refund = (x, y) => game(`(() => { const d = demolishInfo(${x}, ${y}); return { money: d.refund, ...(d.mat || {}) }; })()`);
+  const base = (x, y) => game(`(() => { const t = state.tiles.get('${x},${y}'); return t.b === 'schiene' ? ITEMS.schiene.cost + ITEMS.weg.cost : ITEMS.weg.cost; })()`);
+  it('v1016 stellt eine Kopie auf eine andere Art, ohne brp anzufassen: hier gilt die neue Art (alter Preis), nie der veraltete brp', () => {
+    for (const [k, from, to, want] of [['6,11', 'stein', 'holz', { bretter: 2 }], ['6,17', 'rot', 'holz', { bretter: 2 }]]) {
+      game(`state.tiles.set('${k}', copyClone({ kind: 'tile', t: state.tiles.get('${k}') }).t)`);
+      expect(game(`brLook(state.tiles.get('${k}'), 'wasser').kind`)).toBe(from);
+      game(`state.tiles.get('${k}').brk = '${to}'; groundVersion++`);                // so stellt v1016 um: nur brk, brp/brm bleiben
+      const [x, y] = k.split(',').map(Number), r = refund(x, y);
+      const legacy = game(`(() => { const t = state.tiles.get('${k}'), k2 = { ...t }; state.tiles.set('${k}', { b: 'weg', lvl: 1, style: t.style, bridge: true, brk: '${to}' }); groundVersion++;
+        const d = demolishInfo(${x}, ${y}); state.tiles.set('${k}', k2); groundVersion++; return { money: d.refund, ...(d.mat || {}) }; })()`);   // so erstattet eine alte Holzbrücke
+      expect(r).toEqual(legacy);
+      expect(r.bretter).toBe(want.bretter); expect(r.quader || 0).toBe(0);
+      expect(game(`brLook(state.tiles.get('${k}'), 'wasser').mat`)).toBe('holz');
+    }
+  });
+  it('v1016 kopiert einen Übergang als Schranken (footPaid weg, brp bleibt): der Abriss erstattet keine Brücke', () => {
+    const t1 = game("copyClone({ kind: 'tile', t: state.tiles.get('11,52') }).t");
+    const t2 = { ...t1, foot: false }; delete t2.footPaid;                     // v1016-Kopie mit Schranken
+    game(`state.tiles.set('11,52', ${JSON.stringify(t2)})`);
+    expect(refund(11, 52).money).toBe(base(11, 52));
+    expect(refund(11, 52).bretter || 0).toBe(0);
+  });
+  it('Kopie eines Übergangs mit Brücke ohne footPaid: das bezahlte Design ist gesetzt, „Holz“ kostet nicht noch einmal, Abriss = Preis', () => {
+    const c = game("(() => { const t0 = state.tiles.get('26,52'), t = copyClone({ kind: 'tile', t: t0 }).t, cost = copyTileCost(t0); state.tiles.set('26,52', t); return { cost, fp: t.footPaid }; })()");
+    expect(c.fp).toBe('holz');
+    const w0 = wallet();
+    game("setCrossing(26, 52, true, 'holz')");
+    expect(diff(wallet(), w0)).toEqual({});
+    const r = refund(26, 52);
+    expect({ ...r, money: r.money }).toEqual({ ...c.cost });
+  });
+  it('Kopie einer roten Brücke: nach dem Artwechsel auf Holz dieselbe Farbe wie das Original', () => {
+    game("state.tiles.set('7,17', copyClone({ kind: 'tile', t: state.tiles.get('7,17') }).t)");
+    expect([game("state.tiles.get('7,17').brc"), game("brLook(state.tiles.get('7,17'), 'wasser').col")]).toEqual([undefined, 3]);
+    game("setBridgeKind(6, 17, 'holz')");
+    expect(game("brLook(state.tiles.get('7,17'), 'wasser').col")).toBe(game("brLook(state.tiles.get('8,17'), 'wasser').col"));
+  });
+  it('Verlängern einer Brücke im neuen Format (Metall): das neue Feld merkt sich, was costOf abgebucht hat – Bilanz 0', () => {
+    game("for (let x = 30; x <= 34; x++) for (let y = 56; y <= 58; y++) state.terra.set(x + ',' + y, 'water'); waterChanged(); recalc(); setTool('weg'); chosenStyle.weg = 'sand'");
+    game("for (let x = 29; x <= 31; x++) build('weg', x, 57, true); for (const x of [30, 31]) { const t = state.tiles.get(x + ',57'); t.brm = 'stahl'; brStamp(t, 'wasser', brOnLook(brLook(t, 'wasser'))); } groundVersion++; recalc()");
+    const w0 = wallet();
+    expect(game("build('weg', 32, 57, true)")).toBe(true);
+    const paid = diff(wallet(), w0), d = game('demolishInfo(32, 57)');
+    expect(paid.money).toBe(game("BR_COST.wasser.stahl.money"));
+    expect({ money: d.refund, ...d.mat }).toEqual(paid);
+    expect(game("brLook(state.tiles.get('32,57'), 'wasser').mat")).toBe('stahl');
+  });
+});

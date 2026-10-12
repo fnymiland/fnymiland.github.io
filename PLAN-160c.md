@@ -121,7 +121,7 @@ Werte sind als Text gespeichert, nur Farben als Index. Geschrieben wird nur, was
 | `brl` | `'an'` · `'aus'` (beides gekauft) | nicht gekauft | beide | – |
 | `brz` | `'an'` · `'aus'` (gekauft) | keine Zacken (nur Kristall-Fußgänger) | beide | – |
 | `bru` | `'keine'` · `'jede'` | `'wenige'` (nur Holz-Fußgänger) | beide | – |
-| `brp` | `{ money, bretter?, quader?, metall?, kristall?, holz? }`, ganze Zahlen ≥ 0, nur bekannte Rohstoffe | **alter Stand**: Erstattung nach eingefrorener Alttabelle, Aussehen nach 1.5 | beide | verworfen, dann wird nach dem Rückfall erstattet (≤ bezahlt) |
+| `brp` | `{ money, bretter?, quader?, metall?, kristall?, holz?, k }`, ganze Zahlen ≥ 0, nur bekannte Rohstoffe; **`k` = `brSig`** (wofür bezahlt: `w:<Art>`, `g:1`, `u:<Design>`, `a:<art>`). Passt `k` nicht mehr zu den Altfeldern, ist `brp` veraltet (Nachtrag 12.10.: die live Fassung v1016 behält `brp`, stellt aber Art/Design um, ohne es anzufassen) – gelesen nur über `brIsNew`, geschrieben über `brStamp` | **alter Stand**: Erstattung nach eingefrorener Alttabelle, Aussehen nach 1.5 | beide | verworfen, dann wird nach dem Rückfall erstattet (≤ bezahlt) |
 
 Weitere Regeln:
 - `BR_KEYS = ['brm','brc','brw','brb','brl','brz','bru']`, dazu `brp` gesondert.

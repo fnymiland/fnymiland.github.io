@@ -19,12 +19,26 @@ const BR_MAT_IDS = ['holz', 'stahl', 'stein', 'kristall'];
 const BR_KEYS = ['brm', 'brc', 'brw', 'brb', 'brl', 'brz', 'bru'];       // Aussehen an Kachel und Bauwerk (dazu brp: bezahlter Preis)
 const BR_ROT_COL = 3, BR_ZIEGEL_COL = 8, BR_ROT_PLANK = 5;                // alte Rote Bogenbrücke / Ziegelbrücke: Farbe so nah wie möglich
 const brIdx = v => (Number.isInteger(v) && v >= 0 && v < 64 ? v : null);  // Farbindex: Müll → null (Farbe des Materials)
-// Bezahlter Preis: { money, bretter?, quader?, metall?, kristall?, holz? } – ganze Zahlen ≥ 0, nur bekannte Rohstoffe
+// Bezahlter Preis: { money, bretter?, quader?, metall?, kristall?, holz?, k } – ganze Zahlen ≥ 0, nur bekannte Rohstoffe; k: wofür bezahlt (brSig)
 function brPaidOk(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p) || !Number.isInteger(p.money) || p.money < 0) return false;
-  for (const [r, v] of Object.entries(p)) if (r !== 'money' && (!Object.prototype.hasOwnProperty.call(RES, r) || !Number.isInteger(v) || v < 0)) return false;   // nur eigene Rohstoffe (nie constructor …)
+  for (const [r, v] of Object.entries(p)) if (r === 'k' ? typeof v !== 'string' : r !== 'money' && (!Object.prototype.hasOwnProperty.call(RES, r) || !Number.isInteger(v) || v < 0)) return false;   // nur eigene Rohstoffe (nie constructor …)
   return true;
 }
+// Wofür bezahlt wurde: die Altfelder, die eine ältere App-Version liest (Art bzw. Design). Die Fassung v1016 behält brp, ändert aber Art/Design
+// ohne es anzufassen (setBridgeKind, setCrossing, Aufschütten, Kopie mit Schranken) – passt k nicht mehr, ist brp veraltet: dann gelten
+// die Altfelder samt alter Preistabelle (nie mehr erstatten, als zuletzt bezahlt wurde)
+function brSig(o, at) {
+  o = o && typeof o === 'object' ? o : {};
+  if (at === 'wasser') return 'w:' + (typeof bridgeKind === 'function' ? bridgeKind(o) : '');
+  if (at === 'gleis') return 'g:' + (o.bridge ? 1 : 0);
+  if (at === 'uebergang') return 'u:' + ((typeof footPaidOf === 'function' && footPaidOf(o)) || '');
+  if (at === 'anhoehe') return 'a:' + (typeof o.art === 'string' ? o.art : '');
+  return '';
+}
+const brIsNew = (o, at) => !!o && brPaidOk(o.brp) && o.brp.k === brSig(o, at);   // neues Format, und brp gehört noch zu dieser Art
+const brStamp = (o, at, look) => { o.brp = { ...brPrice(look, at), k: brSig(o, at) }; };   // nach dem Setzen der Altfelder aufrufen
+const brNoK = p => { const { k, ...c } = p; return c; };
 // Altfelder deuten (Nutzer 11.10.2026: „alte Brücken bekommen die neuen Modelle, Material und Farbe so nah wie möglich“).
 // at: 'wasser' (Wegbrücke übers Wasser) · 'gleis' (Gleisbrücke übers Wasser) · 'uebergang' (Fußgängerbrücke am Bahnübergang) · 'anhoehe'
 function brLegacyLook(o, at) {
@@ -58,9 +72,9 @@ function brLegacyLook(o, at) {
 // Aussehen einer Brücke (jeder Träger): neues Format (gültiges brp) aus den br-Feldern, sonst aus den Altfeldern
 function brLook(o, at) {
   const L = brLegacyLook(o, at);
-  if (!o || !brPaidOk(o.brp)) return L;
+  if (!brIsNew(o, at)) return L;
   const id = at === 'anhoehe' ? o.art : o.brm, mat = BR_MAT[id] ? id : L.mat, same = mat === L.mat;   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
-  return { at, fam: L.fam, mat, col: brIdx(o.brc), plank: mat === 'holz' ? brIdx(o.brw) : null,
+  return { at, fam: L.fam, mat, col: same ? L.col : brIdx(o.brc), plank: mat === 'holz' ? (same ? L.plank : brIdx(o.brw)) : null,   // Rot/Ziegel: Farbe aus der Art
     deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : same ? L.deck : BR_MAT[mat].deck, belag: L.belag || (typeof o.style === 'string' ? o.style : null),
     licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : same ? L.licht : null, ...(o.brl == null && same && L.lichtGratis ? { lichtGratis: true } : {}),
     ...(same && L.kind ? { kind: L.kind } : {}),
@@ -99,7 +113,7 @@ function brPrice(look, at, n = 1) {
 }
 // Was ein Brückenfeld (Übergang: die Brücke, Anhöhe: das ganze Bauwerk) gekostet hat – fürs Erstatten
 function brPaid(o, at) {
-  if (o && brPaidOk(o.brp)) return { ...o.brp };
+  if (brIsNew(o, at)) return brNoK(o.brp);
   o = o && typeof o === 'object' ? o : {};
   if (at === 'wasser') { const B = WEG_BRIDGE[bridgeKind(o)] || WEG_BRIDGE.holz; return brMoney(B.cost, B.mat); }
   if (at === 'gleis') return brMoney(BRIDGE.cost, BRIDGE.mat);
@@ -167,7 +181,7 @@ function brSpanAnchor(cells) {
   for (const c of cells) {
     if (!best || rank(c) < rank(best)) best = c;
     const t = state.tiles.get(c[0] + ',' + c[1]);
-    if (t && brPaidOk(t.brp) && (!bestNew || rank(c) < rank(bestNew))) bestNew = c;
+    if (t && brIsNew(t, t.b === 'schiene' ? 'gleis' : 'wasser') && (!bestNew || rank(c) < rank(bestNew))) bestNew = c;
   }
   return bestNew || best;
 }

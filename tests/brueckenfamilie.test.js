@@ -55,13 +55,13 @@ describe('Gleis, Übergang, Anhöhe', () => {
 });
 describe('Neues Format, Müll, Anker', () => {
   it('neues Format nur mit gültigem brp; Zacken nur Kristall-Fußgänger, Stützen nur Holz-Fußgänger', () => {
-    const p = "{ money: 500, kristall: 3 }";
-    expect(game(`brLook({ b: 'weg', bridge: true, style: 'sand', brm: 'kristall', brz: 'an', brl: 'an', brp: ${p} }, 'wasser')`)).toMatchObject({ mat: 'kristall', zacken: true, licht: 'an', deck: 'muster' });
-    expect(game(`brLook({ b: 'schiene', bridge: true, brm: 'kristall', brz: 'an', brp: ${p} }, 'gleis')`)).toMatchObject({ fam: 'bahn', mat: 'kristall', zacken: false });
+    const p = at => `{ money: 500, kristall: 3, k: '${at}' }`;
+    expect(game(`brLook({ b: 'weg', bridge: true, style: 'sand', brm: 'kristall', brz: 'an', brl: 'an', brp: ${p('w:holz')} }, 'wasser')`)).toMatchObject({ mat: 'kristall', zacken: true, licht: 'an', deck: 'muster' });
+    expect(game(`brLook({ b: 'schiene', bridge: true, brm: 'kristall', brz: 'an', brp: ${p('g:1')} }, 'gleis')`)).toMatchObject({ fam: 'bahn', mat: 'kristall', zacken: false });
     expect(game(`brLook({ b: 'weg', bridge: true, style: 'sand', brm: 'kristall', brz: 'an', brp: { money: -1 } }, 'wasser')`)).toMatchObject({ mat: 'holz', zacken: false });   // ungültig: alter Stand
-    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'holz', bru: 'jede', brp: { money: 30, bretter: 2 } }, 'wasser').stuetzen`)).toBe('jede');
-    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'stein', bru: 'jede', brp: { money: 60, quader: 2 } }, 'wasser').stuetzen`)).toBe('wenige');
-    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'gold', brp: { money: 1 } }, 'wasser').mat`)).toBe('holz');                            // unbekannt: Rückfall
+    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'holz', bru: 'jede', brp: { money: 30, bretter: 2, k: 'w:holz' } }, 'wasser').stuetzen`)).toBe('jede');
+    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'stein', bru: 'jede', brp: { money: 60, quader: 2, k: 'w:holz' } }, 'wasser').stuetzen`)).toBe('wenige');
+    expect(game(`brLook({ b: 'weg', bridge: true, brm: 'gold', brp: { money: 1, k: 'w:holz' } }, 'wasser').mat`)).toBe('holz');                            // unbekannt: Rückfall
     expect(game(`brPaidOk({ money: 3, gold: 1 })`)).toBe(false);
   });
   it('Müll wirft nie (Live-Spiegel kommt roh an)', () => {
@@ -71,7 +71,7 @@ describe('Neues Format, Müll, Anker', () => {
   });
   it('ein Aussehen je Brücke: der Anker der Spanne; ein Feld im neuen Format geht vor (ältere Fassung hat verlängert)', () => {
     expect(game("brSpanLook(8, 17).col")).toBe(3);                                             // ganze rote Brücke wie ihr Anker
-    game("Object.assign(state.tiles.get('9,17'), { brm: 'stahl', brc: 6, brp: { money: 100, quader: 2, metall: 2 } }); groundVersion++");
+    game("Object.assign(state.tiles.get('9,17'), { brm: 'stahl', brc: 6, brp: { money: 100, quader: 2, metall: 2, k: 'w:' + bridgeKind(state.tiles.get('9,17')) } }); groundVersion++");
     expect([6, 7, 8, 9, 10, 11].map(x => game(`brSpanLook(${x}, 17).mat`))).toEqual(Array(6).fill('stahl'));
     expect(game("brSpanLook(22, 39).fam")).toBe('bahn');                                      // Kurve: ganze Gleisbrücke
     expect(game("brRailSpan(22, 36).length")).toBe(game("[...state.tiles.entries()].filter(([k, t]) => t.b === 'schiene' && t.bridge && (([x, y]) => x >= 19 && x <= 25 && y >= 33 && y <= 40)(keyXY(k))).length"));

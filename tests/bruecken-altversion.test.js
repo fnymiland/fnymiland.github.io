@@ -22,7 +22,7 @@ beforeEach(() => {
   global.__V = V;
   game('for (const [k, t] of __V.tiles) { state.tiles.set(k, JSON.parse(JSON.stringify(t))); if (t.bridge) state.terra.set(k, "water"); } state.bruecken = new Map(__V.bruecken.map(([k, b]) => [k, JSON.parse(JSON.stringify(b))])); groundVersion++; rebuildCover(); recalc()');
 });
-const NEW_TILE = "{ b: 'weg', lvl: 1, style: 'sand', bridge: true, brk: 'stein', brm: 'kristall', brc: 4, brw: 5, brb: 'muster', brl: 'an', brz: 'an', bru: 'jede', brp: { money: 400, quader: 2, kristall: 3, metall: 1 } }";
+const NEW_TILE = "{ b: 'weg', lvl: 1, style: 'sand', bridge: true, brk: 'stein', brm: 'kristall', brc: 4, brw: 5, brb: 'muster', brl: 'an', brz: 'an', bru: 'jede', brp: { money: 400, quader: 2, kristall: 3, metall: 1, k: 'w:stein' } }";
 
 describe('Speicherformat (160c A3)', () => {
   it('Kachel: alle br-Felder und brp kommen durch Speichern/Laden und den Live-Spiegel (roh)', () => {

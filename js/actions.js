@@ -158,6 +158,8 @@ function build(b, x, y, quiet) {
       if (nb) {
         for (const key of BR_KEYS) if (nb[key] != null && !((key === 'brl' || key === 'brz') && nb[key] !== 'an')) nt[key] = nb[key];
         if (b === 'weg') { if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
+        const at = b === 'weg' ? 'wasser' : 'gleis';
+        if (brIsNew(nb, at)) { if (b === 'weg') nt.brk = bridgeKind(nb); brStamp(nt, at, brOnLook(brLook(nb, at))); }   // neues Format: bezahlt, was costOf abgebucht hat (brNewLook)
       }
     }
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
@@ -544,13 +546,14 @@ function copyClone(it) {
     const at = t.b === 'weg' && t.bridge ? 'wasser' : t.b === 'schiene' && t.bridge ? 'gleis' : t.cross && t.foot ? 'uebergang' : null;
     if (at) {                                                            // Brücke (160c A4): die Kopie hat bezahlt, was sie kostet – nur Eingeschaltetes,
       const look = brOnLook(brLook(t, at));                               // Aussehen ausdrücklich (brp = neues Format, die Altfelder bleiben als Rückfall)
+      if (at === 'wasser') t.brk = bridgeKind(t);                         // Art fest (nicht mehr aus dem Wegstil): brSig bleibt beim Umstreichen gleich
+      if (at === 'uebergang' && !footPaidOf(t)) t.footPaid = brFallback('uebergang', look.mat).footPaid;   // foot ohne footPaid: bezahlt ist jetzt das Design
       t.brm = look.mat; t.brb = look.deck;
       if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else delete t.brl;   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis
       if (look.zacken) t.brz = 'an'; else delete t.brz;
       if (look.stuetzen !== 'wenige') t.bru = look.stuetzen; else delete t.bru;
-      if (look.col != null) t.brc = look.col; else delete t.brc;
-      if (look.plank != null) t.brw = look.plank; else delete t.brw;
-      t.brp = brPrice(look, at);
+      // brc/brw nur, wie sie am Original stehen: Rot/Ziegel-Farben ergeben sich aus der Art (folgen ihr beim Artwechsel wie am Original)
+      brStamp(t, at, look);
     }
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt

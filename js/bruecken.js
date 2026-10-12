@@ -185,14 +185,14 @@ function bkSetArt(k, art) {
   if (A.tech && !state.techs.has(A.tech)) { fail(`${A.name}: erst mit der Eisenbahn`); return false; }
   const cells = bkCellsOf(k, b);
   for (let i = 0; i < cells.length; i++) { const t = objAt(...cells[i]); if (t && bkBock(art, b.n, i, bkRailAny(b))) { fail(`Hier käme ein Holzbock hin – erst ${t.b === 'weg' ? 'den Weg' : 'die Schiene'} darunter wegnehmen`); return false; } }
-  const old = brCostMat(brPaid(b, 'anhoehe')), nu = bkCost(art, b.n);      // alt: was bezahlt wurde (160c A4)
+  const old = brCostMat(brPaid(b, 'anhoehe')), nu = bkCost(art, b.n), wasNew = brIsNew(b, 'anhoehe');   // alt: was bezahlt wurde (160c A4)
   if (state.money + old.cost < nu.cost) { fail('Zu wenig Taler'); return false; }
   for (const [r, n] of Object.entries(nu.mat)) if ((state.res[r] || 0) + (old.mat[r] || 0) < n) { fail(`Zu wenig ${RES[r].name}`); return false; }
   state.money += old.cost - nu.cost;
   for (const [r, n] of Object.entries(old.mat)) state.res[r] += n;
   payMat(nu.mat);
   b.art = art;
-  if (b.brp) b.brp = brMoney(nu.cost, nu.mat);                              // neues Format: bezahlt ist jetzt die neue Art
+  if (wasNew) b.brp = { ...brMoney(nu.cost, nu.mat), k: brSig(b, 'anhoehe') };   // neues Format: bezahlt ist jetzt die neue Art
   groundVersion++; sfx('road'); save();
   return true;
 }
