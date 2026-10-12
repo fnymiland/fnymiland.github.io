@@ -170,3 +170,67 @@ describe('Durchsicht auf dem Deck (160c C4)', () => {
     expect(a).toBeLessThan(1);
   });
 });
+
+// 160c C7: Brückenlicht – Bildchen weit weg mit |lit nur für Gruppen mit Lampen, Vorwärmen vor der Dämmerung, B2 mit Licht in tileB (t1/t2),
+// blass ohne Schein, Nachmalen ohne zweiten Schein
+describe('Brückenlicht im Bild (160c C7)', () => {
+  const LIT = "state.bruecken.get('14,12').brl = 'an';";
+  const far = () => game("(() => { cam.z = 0.5; lastZoom = 0.5; lastZoomChange = -1e9; const p = iso(15, 12); cam.x = p.x; cam.y = p.y; spriteForce = null; })()");
+  const sprites = () => game("[...objSprites.entries()].filter(([k]) => k.startsWith('br|')).map(([k, e]) => [k, e.glows.length, !!e.night])");
+  it('weit weg nachts: vd und o mit |1 und Schein, h ohne Licht im Schlüssel (Holz); im neuen Spiel nie dunkel (ohne Stadtstrom)', () => {
+    scene(0, [], LIT); far();
+    expect(game('T.rail.power.city')).toBe(false);
+    game('nightAt = () => NIGHT_MAX; spriteNoBudget = true; render(1e6); render(1e6 + 16); spriteNoBudget = false; nightAt = () => 0');
+    const S = sprites();
+    for (const x of [14, 15, 16]) {
+      for (const gr of ['vd', 'o']) { const e = S.find(([k]) => k === `br|${x},12|${gr}|0|1`); expect(e, x + ' ' + gr).toBeTruthy(); expect(e[1]).toBeGreaterThan(0); }
+      expect(S.some(([k]) => k === `br|${x},12|h|0`)).toBe(true);
+    }
+    expect(S.some(([k]) => /\|h\|0\|/.test(k))).toBe(false);
+  });
+  it('Kristall K1 mit Licht: h und t2 mit |1 (blau), Bahn-Kristall B2 mit Licht läuft jedes Bild in tileB (t1/t2), ohne Licht nicht', () => {
+    const kr = "(b => { b.art = 'kristall'; b.brl = 'an'; })(state.bruecken.get('14,12'));";
+    scene(0, [], kr); far();
+    game('nightAt = () => NIGHT_MAX; spriteNoBudget = true; render(1e6); render(1e6 + 16); spriteNoBudget = false; nightAt = () => 0');
+    const S = sprites();
+    for (const gr of ['h', 't2']) expect(S.some(([k, gl]) => k === `br|15,12|${gr}|0|1` && gl > 0)).toBe(true);
+    expect(S.some(([k]) => k === 'br|15,12|vd|0')).toBe(true);                // Deck ohne Lampe: Schlüssel ohne Licht
+    const b2 = "(b => { b.art = 'kristall'; b.gleis = [0, 0, 0]; })(state.bruecken.get('14,12'));";
+    scene(0, [], b2);
+    expect(game('brLiveTiles()')).toEqual([]);
+    const log = scene(0, [{ id: 'U', px: 15, py: 12 }], b2 + LIT);
+    expect(game('brLiveTiles()').sort()).toEqual(['14,12', '15,12', '16,12']);
+    for (const k of ['14,12', '16,12']) expect(log.filter(e => e.endsWith(' ' + k)).map(e => e.split(' ')[0]).filter(g => /^(h|vd|o|t1|t2)$/.test(g))).toEqual(['h', 'vd', 'o', 't1', 't2']);
+    const L = own(log, 0), i = L.indexOf('fig U'), after = L.slice(i + 1).filter(e => /^(h|vd|o|t1|t2) /.test(e)).map(e => e.split(' ')[0]);
+    expect(after).toEqual(['vd', 't1', 'o', 't2']);                            // Streifen nie nachgemalt (Blau hat keine Scheibe), sondern danach
+  });
+  it('Dämmerung: kurz vor dem Einschalten entstehen die beleuchteten Bildchen samt Nachtbild schon (Regel 143)', () => {
+    scene(0, [], LIT); far();
+    game('nightAt = () => 0.1; for (let i = 0; i < 6; i++) render(1e6 + i * 16)');
+    const lit = sprites().filter(([k]) => k.endsWith('|1'));
+    expect(lit.length).toBe(6);                                                // 3 Felder × vd, o
+    expect(lit.every(([, , n]) => n)).toBe(true);
+    game('nightAt = () => 0.2; render(2e6)');
+    expect(game('SPRITE_STATS.miss')).toBe(0);
+    game('nightAt = () => 0');
+  });
+  it('nachts nah: Scheine mit und ohne Figur oben gleich, im Nachmalen nur Scheiben; 👁 blass ganz ohne Schein', () => {
+    const run = (figs, see = false) => {
+      scene(0, [], LIT);
+      return game(`(() => { const pg = punchGlow, out = []; let inRedo = false; const rd = bkRedo;
+        punchGlow = (q, r, tint, part) => { out.push((inRedo ? 'redo:' : '') + (part || 'voll')); return pg(q, r, tint, part); };
+        bkRedo = (...a) => { inRedo = true; try { return rd(...a); } finally { inRedo = false; } };
+        const ml = moverLive; moverLive = () => {}; const na = nightAt; nightAt = () => NIGHT_MAX; setSeeThrough(${see});
+        for (const f of ${JSON.stringify(figs)}) hillWalkers.push({ hillw: true, st: 'top', fur: '#fff', shirt: '#f00', kind: 0, px: f.px, py: f.py, up: 0, wait: 99, lane: 0, id: f.id });
+        try { cam.z = 2.5; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); }
+        finally { punchGlow = pg; bkRedo = rd; moverLive = ml; nightAt = na; hillWalkers.length = 0; setSeeThrough(false); }
+        return out; })()`);
+    };
+    const leer = run([]), fig = run([{ id: 'oben', px: 15, py: 12 }]);
+    expect(leer.length).toBeGreaterThan(0);
+    expect(fig.filter(p => !p.startsWith('redo:'))).toEqual(leer);            // kein zweiter Schein (L1)
+    const redo = fig.filter(p => p.startsWith('redo:'));
+    expect(redo.length).toBeGreaterThan(0); expect(redo.every(p => p === 'redo:pane')).toBe(true);   // Lampen im Rahmen der Figur behalten die Scheibe (L2)
+    expect(run([], true)).toEqual([]);                                          // blass: kein Loch (L16)
+  });
+});

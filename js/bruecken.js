@@ -53,7 +53,8 @@ function bkGeom(b, art = null, rail = null) {
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
 const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'fuss';   // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB (B2 ist deckend)
-const brLiveTiles = () => bkOn() ? bkFresh().glas : [];                   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas)
+const bkTileBAt = c => bkGlasAt(c) || (!!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'bahn' && !!c.G.look.licht);   // dazu B2 mit Licht (C7): Streifen in t1/t2
+const brLiveTiles = () => bkOn() ? bkFresh().glas : [];                   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas, B2-Licht)
 const bkGround = (c, t) => { const i = Math.max(0, Math.min(c.b.n - 1, Math.round(t))); return terrainAt(c.x0 + c.dx * i, c.y0 + c.dy * i) === 'water' ? -0.7 * DEPTH : 0; };   // Boden unter Feld bei t (Wasser −6,3)
 // Die zwei Felder an Kante k (zwischen Feld k−1 und k)
 const bkEdgeCells = (x0, y0, ax, k) => ax ? [[x0, y0 + k - 1], [x0, y0 + k]] : [[x0 + k - 1, y0], [x0 + k, y0]];
@@ -103,7 +104,7 @@ function bkFresh() {
     for (let i = 0; i < b.n; i++) cell.set((x0 + dx * i) + ',' + (y0 + dy * i), { ...o, i });
     for (const [ek, side] of [[(x0 - dx) + ',' + (y0 - dy), -1], [(x0 + dx * b.n) + ',' + (y0 + dy * b.n), 1]]) { if (!end.has(ek)) end.set(ek, []); end.get(ek).push({ ...o, side }); }
   }
-  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein'), glas: [...cell].filter(([, c]) => bkGlasAt(c)).map(([k]) => k) });
+  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein'), glas: [...cell].filter(([, c]) => bkTileBAt(c)).map(([k]) => k) });
 }
 const bkAt = (x, y) => bkOn() ? bkFresh().cell.get(x + ',' + y) || null : null;
 const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : null;   // Anhöhen-Feld, auf dem eine Brücke aufliegt
@@ -528,7 +529,8 @@ function bkTileArgs(c, px, py, z) {
   const G = c.G || bkGeom(c.b);
   const foot = k => bkEdgeCells(c.x0, c.y0, ax, k).every(([x, y]) => terrainAt(x, y) === 'water') ? -0.7 * DEPTH : 0;   // Stütze im Wasser: bis auf die Wasserfläche
   return { P, art: G.art, n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
-    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t), zacken: !!G.look.zacken, col: G.look.col, plank: G.look.plank } };   // Farbe (C6d)
+    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t), zacken: !!G.look.zacken, col: G.look.col, plank: G.look.plank,   // Farbe (C6d)
+    licht: G.look.licht, dark: !!G.look.licht && !!(T.rail && T.rail.power) && T.rail.power.dark.has('B' + c.k) } };   // Licht (C7): gekauft an/aus, ohne Strom dunkel
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {

@@ -40,7 +40,7 @@ describe('Brückenbild in Lagen (160c B1)', () => {
 // 160c B2a: Gerüst fürs Zeichnen in tileA/tileB – Gruppen h | vd | o, Rahmen, Deko nach Querlage, Lichtsperre, lebendige GL-Felder
 describe('Brückenbild: Gerüst für B2', () => {
   const setup = () => game("for (let y = 4; y <= 26; y++) for (let x = 4; x <= 26; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.hills.clear(); state.bruecken.clear(); for (let y = 10; y <= 14; y++) for (const x of [10, 11, 12, 13, 17, 18, 19, 20]) state.hills.set(x + ',' + y, { w: 0 }); for (let x = 10; x <= 14; x++) for (const y of [4, 5, 6, 7, 11, 12, 13, 14]) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");
-  it('Rahmen: jede Gruppe bleibt in brBox (Holz/Stahl, n 1–4, Weg/Gleis/leer, beide Achsen, z 0,5/1/2,5)', () => {
+  it('Rahmen: jede Gruppe bleibt in brBox (alle Materialien, n 1–4, Weg/Gleis/leer, beide Achsen, z 0,5/1/2,5, mit und ohne Licht – C7)', () => {
     setup();
     const bad = game(`(() => {
       const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clipped = 0;   // was nach clip() kommt, ist beschnitten (Muster im Weg)
@@ -48,13 +48,13 @@ describe('Brückenbild: Gerüst für B2', () => {
       const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); } : k === 'save' ? () => st.push(clipped) : k === 'restore' ? () => { clipped = st.pop() || 0; } : k === 'clip' ? () => { clipped = 1; } : k in o ? o[k] : () => {},
         set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
       try {
-        for (const art of ['holz', 'stahl']) for (let n = 1; n <= 4; n++) for (const top of ['', 'weg', 'gleis']) for (const ax of [0, 1]) {
+        for (const art of ['holz', 'stahl', 'stein', 'kristall']) for (let n = 1; n <= 4; n++) for (const top of ['', 'weg', 'gleis']) for (const ax of [0, 1]) for (const brl of [null, 'an']) {
           state.bruecken.clear();
-          const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0);
+          const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0); if (brl) b.brl = brl;
           state.bruecken.set(ax ? '12,8' : '14,12', b); groundVersion++;
           for (let i = 0; i < n; i++) for (const z of [0.5, 1, 2.5]) for (const gr of Object.keys(BK_GRUPPEN)) {
             const x = ax ? 12 : 14 + i, y = ax ? 8 + i : 12;
-            cur = art + ' n' + n + ' ' + top + ' ax' + ax + ' i' + i + ' z' + z + ' ' + gr; box = brBox(gr, bkAt(x, y)).map(v => v * z);
+            cur = art + ' n' + n + ' ' + top + ' ax' + ax + (brl ? ' licht' : '') + ' i' + i + ' z' + z + ' ' + gr; box = brBox(gr, bkAt(x, y)).map(v => v * z);
             g = fake; try { bkDrawLagen(x, y, 0, 0, z, gr); } finally { g = g0; }
           }
         }
@@ -301,5 +301,82 @@ describe('Bahn-Brücke (160c C5)', () => {
     expect(r.bh).toEqual([0.5, 1.5, 2.5]); expect(r.bv).toEqual([0.5, 1.5, 2.5]);
     expect(r.kh).toBe(6); expect(r.kv).toBe(0);
     expect(r.posts).toBe(2 * 4 - 1);
+  });
+});
+
+// 160c C7: Brückenlicht – je Modell die Orte des Entwurfs (jede Lampe genau einmal je Seite, Kanten halboffen), hinten/vorn in der richtigen
+// Lage, Schein warm/blau mit Radius; aus bzw. ohne Strom nachts grau ohne Schein (Kristall: Tagfarbe), tags Tagfarbe; nicht gekauft: nichts
+describe('Brückenlicht (160c C7)', () => {
+  const MODELLE = [['holz', 'fuss'], ['stahl', 'fuss'], ['stein', 'fuss'], ['kristall', 'fuss'], ['holz', 'bahn'], ['stein', 'bahn'], ['stahl', 'bahn'], ['kristall', 'bahn']];
+  // je Modell, n, Achse: Lampen (Köpfe: circle/box, Scheine: glowQuad in GLOW_SINK, Streifen: Strichfarbe) mit Feld, Lage, Ort t, Seite
+  const lampLog = (o = {}) => game(`(() => { const O = ${JSON.stringify({ licht: 'an', dark: false, nacht: 1, ...o })}, MOD = ${JSON.stringify(MODELLE)};
+    const g0 = g, sp0 = SPRITE_PAINT, n0 = night, sink0 = GLOW_SINK, ci = circle, bx = box, out = [], bad = []; let cur = null, lage = '';
+    const fake = new Proxy({}, { get: (t, k) => k === 'getTransform' ? () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) : k === 'stroke' ? () => { if (t.lineCap === 'round') bad.push(cur.join(' ') + ' round'); if (t.strokeStyle === C('#bfe9f8') || t.strokeStyle === C('#dff8ff')) out.push([...cur, 'strich', t.strokeStyle]); } : k in t ? t[k] : () => {},
+      set: (t, k, v) => { if ((k === 'fillStyle' || k === 'strokeStyle') && !/^#[0-9a-f]{6}$/i.test(v) && !/^rgba/.test(v)) bad.push(cur.join(' ') + ' ' + k + '=' + v); if (k === 'globalAlpha' && v < 1) bad.push(cur.join(' ') + ' alpha'); t[k] = v; return true; } });
+    circle = (x, y, r, f) => { out.push([...cur, 'kopf', +x.toFixed(4), Math.sign(y), f, +(r).toFixed(3)]); return ci(x, y, r, f); };
+    box = (cx, cy, a, b, h, wall, roof, rh) => { out.push([...cur, 'laterne', +cx.toFixed(4), Math.sign(cy), C(wall), roof]); return bx(cx, cy, a, b, h, wall, roof, rh); };
+    g = fake; SPRITE_PAINT = !!O.nacht; night = O.nacht ? NIGHT_MAX : 0; GLOW_SINK = [];
+    try {
+      for (const [art, fam] of MOD) for (const n of O.ns || [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+        const hf = brDeckHFn(fam, n), sup = brSupports({ mat: art, fam }, n), S = art === 'stein' ? brStoneGeom(fam, n, sup) : null;
+        for (let i = 0; i < n; i++) for (const L of BK_LAGEN) {
+          cur = [art + '-' + fam, n, ax, i, L]; const k0 = GLOW_SINK.length;
+          const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur.join(' ') + ' t=' + t); return [t, (s > 0 ? 1000 : s < 0 ? -1000 : 0) - h]; };
+          bkPaintLage(L, P, 1, art, n, i - 0.5, i + 0.5, false, { fam, ax, hf, stone: S, gl: () => 0, supports: i ? sup : [], ext: 0, licht: O.licht, dark: O.dark });
+          for (const e of GLOW_SINK.slice(k0)) out.push([...cur, 'schein', +((e.q[0][0] + e.q[2][0]) / 2).toFixed(4), Math.sign((e.q[0][1] + e.q[2][1]) / 2), e.r, e.tint || 'warm']);
+        } }
+    } finally { g = g0; SPRITE_PAINT = sp0; night = n0; GLOW_SINK = sink0; circle = ci; box = bx; }
+    return { out, bad: bad.slice(0, 8) }; })()`);
+  const R = (n, K) => Array.from({ length: n * K + 1 }, (_, k) => +(-0.5 + k / K).toFixed(4));
+  const ORTE = {
+    'holz-fuss': n => R(n, 2), 'stahl-fuss': n => R(n, 2), 'holz-bahn': n => R(n, 2),
+    'stein-fuss': n => n > 1 ? R(n, 1).slice(1, -1) : [0], 'stein-bahn': n => n > 1 ? R(n, 1).slice(1, -1) : [0],
+    'stahl-bahn': n => Array.from({ length: 2 * n + 1 }, (_, k) => +(-0.35 + (n - 0.3) * k / (2 * n)).toFixed(4)),
+    'kristall-fuss': n => Array.from({ length: 4 * n }, (_, j) => +(-0.5 + (j + 0.5) / 4).toFixed(4)), 'kristall-bahn': n => Array.from({ length: 4 * n }, (_, j) => +(-0.5 + (j + 0.5) / 4).toFixed(4)),
+  };
+  const LAGE = { 'kristall-fuss': ['h', 't2'], 'kristall-bahn': ['t1', 't2'] }, RAD = { 'stein-fuss': 18, 'stein-bahn': 18, 'stahl-bahn': 4, 'kristall-fuss': 7, 'kristall-bahn': 7 };
+  it('nachts an: jede Lampe genau einmal je Seite am Ort des Entwurfs, hinten/vorn in ihrer Lage, Schein warm bzw. blau mit Radius', () => {
+    const { out, bad } = lampLog();
+    expect(bad).toEqual([]);
+    for (const [art, fam] of MODELLE) for (const n of [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+      const id = art + '-' + fam, mine = out.filter(e => e[0] === id && e[1] === n && e[2] === ax), [hL, vL] = LAGE[id] || ['d', 'o'];
+      for (const side of [-1, 1]) {
+        const glows = mine.filter(e => e[5] === 'schein' && e[7] === side);
+        const r3 = l => l.map(v => +v.toFixed(3));
+        expect(r3(glows.map(e => e[6]).sort((a, b) => a - b)), id + ' n' + n + ' ax' + ax + ' Seite ' + side).toEqual(r3(ORTE[id](n)));
+        expect([...new Set(glows.map(e => e[4]))], id + ' Lage').toEqual([side < 0 ? hL : vL]);
+        expect([...new Set(glows.map(e => e[8] + ' ' + e[9]))]).toEqual([(RAD[id] || 5) + ' ' + (id.startsWith('kristall') ? 'blue' : 'warm')]);
+        if (!id.startsWith('kristall')) expect(r3(mine.filter(e => (e[5] === 'kopf' || e[5] === 'laterne') && e[7] === side).map(e => e[6]).sort((a, b) => a - b))).toEqual(r3(ORTE[id](n)));
+      }
+    }
+  });
+  it('Köpfe: an gelb, aus und ohne Strom nachts grau, tags Tagfarbe; Kristall-Strich hell bzw. Tagfarbe; nie Schein ohne „an“; nicht gekauft: nichts', () => {
+    const heads = (o, id) => { const r = lampLog({ ns: [3], ...o }); expect(r.bad).toEqual([]); return r.out.filter(e => e[0] === id); };
+    const cols = (o, id) => [...new Set(heads(o, id).filter(e => e[5] !== 'schein').map(e => e[5] === 'strich' ? e[6] : e[8]))].sort();
+    expect(cols({}, 'holz-fuss')).toEqual([game("C('#ffe58a')")]);
+    expect(cols({ licht: 'aus' }, 'holz-fuss')).toEqual([game("C('#9a978c')")]);
+    expect(cols({ dark: true }, 'stahl-bahn')).toEqual([game("C('#9a978c')")]);
+    expect(cols({ nacht: 0 }, 'stahl-fuss')).toEqual([game("C('#eef3f2')")]);
+    expect(cols({ nacht: 0 }, 'stein-fuss')).toEqual([game("C('#fff7d6')")]);
+    expect(cols({}, 'kristall-fuss')).toEqual([game("C('#dff8ff')")]);
+    expect(cols({ licht: 'aus' }, 'kristall-bahn')).toEqual([game("C('#bfe9f8')")]);
+    for (const o of [{ licht: 'aus' }, { dark: true }, { nacht: 0 }]) expect(lampLog({ ns: [3], ...o }).out.filter(e => e[5] === 'schein')).toEqual([]);
+    expect(lampLog({ ns: [3], licht: null }).out).toEqual([]);
+  });
+  it('Gehäuse der Steinlaterne in der Brückenfarbe (ohne Farbe #b8ad97)', () => {
+    expect(game("brPal(BK_STEIN, 'stein', 'fuss', null, null).lamp")).toBe('#b8ad97');
+    expect(game("brPal(BK_STEIN, 'stein', 'fuss', 3, null).lamp")).toBe(game("shade(BRIDGE_COLS[3], -0.15)"));
+  });
+  it('hinten nach dem Deck: der Schein kommt in d nach der Deckfläche (Fuß Holz, Viadukt nach dem Gleis)', () => {
+    const seq = (art, fam, rail) => game(`(() => { const out = [], g0 = g, sp0 = SPRITE_PAINT, n0 = night, gq = glowQuad;
+      g = new Proxy({}, { get: (t, k) => k === 'fill' ? () => out.push('fill ' + t.fillStyle) : k === 'getTransform' ? () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) : k in t ? t[k] : () => {}, set: (t, k, v) => { t[k] = v; return true; } });
+      glowQuad = () => out.push('glow'); SPRITE_PAINT = true; night = NIGHT_MAX;
+      try { const n = 3, hf = brDeckHFn('${fam}', n); bkPaintLage('d', (t, s, h) => [t, s - h], 1, '${art}', n, 0.5, 1.5, false, { fam: '${fam}', hf, stone: '${art}' === 'stein' ? brStoneGeom('${fam}', n, brSupports({ mat: '${art}', fam: '${fam}' }, n)) : null, licht: 'an', railPaint: ${rail ? "() => out.push('gleis')" : 'null'} }); }
+      finally { g = g0; SPRITE_PAINT = sp0; night = n0; glowQuad = gq; } return out; })()`);
+    const a = seq('holz', 'fuss', false);
+    expect(a.indexOf('fill ' + game("C(BK_FUSS.holz.deck)"))).toBeGreaterThanOrEqual(0);
+    expect(a.lastIndexOf('fill ' + game("C(BK_FUSS.holz.deck)"))).toBeLessThan(a.indexOf('glow'));
+    const v = seq('stein', 'bahn', true);
+    expect(v.indexOf('gleis')).toBeGreaterThanOrEqual(0); expect(v.indexOf('gleis')).toBeLessThan(v.indexOf('glow'));
   });
 });

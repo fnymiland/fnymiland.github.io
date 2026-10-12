@@ -264,7 +264,7 @@ function brDeckHMax(fam, n, t0, t1) {
 // Pfeiler, Scheitel gap unter dem Deck, Leibung ≥ cover unter dem Deck – das harte Minimum des Entwurfs gab den „Knick an der Wand“,
 // hier ein glattes (brSmin, höchstens r/4 tiefer). Eine Quelle für Bild, Regeln, Antippen, Schatten (G8). Nie NaN (G9)
 // ---------------------------------------------------------------------------
-const BR_STEIN = { sp: 3, hp: 13, gap: 7.5, pw: 0.09, cover: 3, r: 2, ring: 3.2 };
+const BR_STEIN = { sp: 3, hp: 13, gap: 7.5, pw: 0.09, cover: 3, r: 2, ring: 3.2, par: 6.5 };   // par: Balustrade über dem Deck (Maler, Laternen C7)
 const brSmin = (a, b, r) => { if (!(r > 0)) return Math.min(a, b); const h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / r)); return b + (a - b) * h - r * h * (1 - h); };
 function brStoneGeom(fam, n, piers, S = BR_STEIN) {
   const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), A = -0.5, B = N - 0.5, hf = brDeckHFn(fam, N);
@@ -287,6 +287,21 @@ function brStoneGeom(fam, n, piers, S = BR_STEIN) {
   };
   const pierHit = (t, r = 0) => P.some(k => Math.abs(t - (k - 0.5)) < S.pw + r);
   return { fam, n: N, A, B, hf, S, piers: P, arcs, ri, ts, pierHit, low: (t, g0 = 0) => { const v = ri(t); return v == null ? g0 : v; } };
+}
+// Fachwerk der Bahn-Brücken Metall/Kristall B2 (160c C5): Höhe T über dem Deck, Gurt-Einzug je Ende (Maler, Lampen C7)
+const BR_TRUSS = { T: 11, inset: 0.15 };
+// Lampen je Modell (160c C7, abgenommen: tools/brueckenlicht-entwurf.js; plan-160c/karte-C7-bau.md §1). art/fam wie bkGeom (Maler-Art,
+// Familie). ts: Orte längs (Feldkanten bzw. Fachwerkknoten; null = Streifen je Viertel), s: Querlage (hinten −s, vorn +s), up: Fuß über
+// dem Deck, r: Schein × z, back/front: Lage, an deren Ende die Lampen kommen (hinten nach dem Deck, vorn zuletzt). Licht prüft der Aufrufer
+function brLampSpots(art, fam, n) {
+  const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), A = -0.5, B = N - 0.5, W = BK_W, grid = K => Array.from({ length: N * K + 1 }, (_, k) => A + k / K);
+  if (art === 'stein') return { form: 'laterne', ts: N > 1 ? grid(1).slice(1, -1) : [0], s: W, up: BR_STEIN.par, r: 18, back: 'd', front: 'o' };   // innere Kanten; 1 Feld: Mitte
+  if (art === 'kristall') return { form: 'streifen', ts: null, s: fam === 'fuss' ? W : W + 0.02, up: 0, r: 7, tint: 'blue', back: fam === 'fuss' ? 'h' : 't1', front: 't2' };
+  if (fam === 'bahn' && art === 'stahl') {                                   // Punkte am Obergurt, auf den Fachwerkknoten
+    const a = A + BR_TRUSS.inset, b = B - BR_TRUSS.inset;
+    return { form: 'punkt', ts: Array.from({ length: 2 * N + 1 }, (_, k) => a + (b - a) * k / (2 * N)), s: W + 0.02, up: BR_TRUSS.T + 0.6, day: '#e9eef0', r: 4, back: 'd', front: 'o' };
+  }
+  return { form: 'punkt', ts: grid(2), s: W, up: fam === 'bahn' ? 8.6 : art === 'stahl' ? 7 : 6.6, day: art === 'stahl' ? '#eef3f2' : '#f3e3b0', r: 5, back: 'd', front: 'o' };   // auf jedem 2. Pfosten
 }
 // Lichtraum unter dem Deck (G8: Maler, bkTooTall, bkUnderError): ohne Stein BK_CLEAR; Stein (Bogen und Viadukt): unter dem Bogen über
 // [t − r, t + r] (−1), am Pfeiler −1 (nichts, auch keine Blumen)

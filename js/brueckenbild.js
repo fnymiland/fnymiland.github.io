@@ -9,16 +9,62 @@ const BK_LAGEN = ['h', 'v', 'd', 'o', 'hg', 't1', 't2'];                    // h
 const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB
 // Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
 function brBox(gruppe, c = null) {                                         // c: Feld (bkAt) – oben bis zum Scheitel im Feld (Bogen, 160c C2)
-  const hm = c ? bkHMax(c) : HILL_H, u = gruppe === 'vd' || gruppe === 't1' ? TH / 2 + hm + 8 : TH / 2 + hm + 16;
-  return [TW / 2 + 6, u, TW / 2 + 6, TH / 2 + 6];
+  const hm = c ? bkHMax(c) : HILL_H;
+  let top = gruppe === 'vd' || gruppe === 't1' ? 8 : 16;
+  if (gruppe === 'vd' && c && c.G && c.G.look.licht) {                     // Licht (C7): hintere Lampe an der Feldkante, oben bei −s – Kopf + 1 Reserve
+    const S = brLampSpots(c.G.art, c.G.fam, c.b.n);
+    if (S.back === 'd') top = Math.max(top, S.up + { punkt: 0.85, laterne: 7.2, streifen: 1.4 }[S.form] + (0.5 + S.s) * TH / 2 - TH / 2 + 1);
+  }
+  return [TW / 2 + 6, TH / 2 + hm + top, TW / 2 + 6, TH / 2 + 6];
 }
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
-  if (art === 'stein' && (opts.fam === 'fuss' || opts.fam === 'bahn')) return bkPaintStein(lage, P, z, n, t0, t1, weg, opts);   // Stein mit Pfeilern (160c C3), Viadukt (C5d)
-  if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2)
-  return bkPaintBahn(lage, P, z, BK_BAHN[art] ? art : 'holz', n, t0, t1, weg, opts);   // Bahn: flach (160c C5); auch Rückfall ohne Familie
+  const stein = art === 'stein' && (opts.fam === 'fuss' || opts.fam === 'bahn'), fuss = !stein && opts.fam === 'fuss' && !!BK_FUSS[art];
+  if (stein) bkPaintStein(lage, P, z, n, t0, t1, weg, opts);               // Stein mit Pfeilern (160c C3), Viadukt (C5d)
+  else if (fuss) bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);       // Fußgänger: Bogen (160c C2)
+  else bkPaintBahn(lage, P, z, BK_BAHN[art] ? art : 'holz', n, t0, t1, weg, opts);   // Bahn: flach (160c C5); auch Rückfall ohne Familie
+  if (opts.licht) bkLamps(lage, P, z, stein ? 'stein' : fuss ? art : BK_BAHN[art] ? art : 'holz', stein ? opts.fam : fuss ? 'fuss' : 'bahn', n, t0, t1, opts);   // Licht (C7): zuletzt in seiner Lage
 }
+// ---------------------------------------------------------------------------
+// Brückenlicht (160c C7, plan-160c/karte-C7-bau.md; Orte und Formen aus brLampSpots). Hinten am Ende von 'd' (nach dem Deck: Figuren und
+// Wagen darauf verdecken die Lampe, ihr Schein trifft das Deck), vorn am Ende von 'o'; Kristall: Streifen hinten in 'h' (das Deck deckt den
+// unteren Schein, wie im Entwurf) bzw. B2 in t1, vorn in t2 (Blau hat keine Scheibe – nie nachmalen). Zustand erst zur Malzeit
+// (Nachtbild, Vorwärmen): an = gelb mit Schein; aus bzw. ohne Strom nachts grau (Kristall: Tagfarbe), tags Tagfarbe. Nur Hex (G5)
+// ---------------------------------------------------------------------------
+function bkLamps(lage, P, z, art, fam, n, t0, t1, opts) {
+  const S = brLampSpots(art, fam, n);
+  if (lage !== S.back && lage !== S.front) return;
+  const s = (lage === S.back ? -1 : 1) * S.s, H = opts.h != null ? opts.h : HILL_H, hOf = fam === 'bahn' && art !== 'stein' ? () => H : opts.hf || (() => H);
+  const nt = night > 0.15 && isLive(), on = opts.licht === 'an' && !opts.dark, lit = nt && on, grau = nt && !on;
+  if (S.form === 'streifen') {
+    const K = bkKit(P, z, n, t0, t1, { ...opts, hf: hOf });
+    K.line(s, t => hOf(t) + 0.5, lit ? '#dff8ff' : '#bfe9f8', 0.45);       // erst der Strich, dann der Schein (Bildchen = live)
+    if (on) for (let j = Math.round((t0 + 0.5) * 4); -0.5 + j / 4 < t1 - 1e-9; j++) {
+      const u0 = -0.5 + j / 4, u1 = u0 + 0.25;
+      glowQuad([P(u0, s, hOf(u0)), P(u1, s, hOf(u1)), P(u1, s, hOf(u1) + 1.4), P(u0, s, hOf(u0) + 1.4)], S.r * z, 'blue');
+    }
+    return;
+  }
+  const last = t1 >= n - 0.5 - 1e-9, frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', fam, opts.col, null).lamp : null;
+  for (const t of S.ts) {
+    if (!(t >= t0 - 1e-9 && (t < t1 - 1e-9 || (last && t <= t1 + 1e-9)))) continue;   // halboffen (G3): die Kante gehört dem späteren Feld
+    const p = P(t, s, hOf(t) + S.up);
+    if (S.form === 'punkt') {
+      circle(p[0], p[1], 0.85 * z, C(lit ? '#ffe58a' : grau ? '#9a978c' : S.day));
+      const d = 0.8 * z;
+      if (on) glowQuad([[p[0] - d, p[1] - d], [p[0] + d, p[1] - d], [p[0] + d, p[1] + d], [p[0] - d, p[1] + d]], S.r * z);
+      continue;
+    }
+    const zl = 0.6 * z;                                                      // Minilaterne: Kopf der Gaslaterne × 0,6 auf kurzem Stummel
+    g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] - 4 * zl); g.strokeStyle = C(frame); g.lineWidth = Math.max(0.6, 1.8 * zl); g.lineCap = 'butt'; g.stroke();
+    const lb = box(p[0], p[1] - 4 * zl, 2.6 * zl, 1.4 * zl, 5 * zl, lit ? '#ffe58a' : grau ? '#9a978c' : '#fff7d6', frame, 3 * zl);
+    if (on) glowQuad([lb.L, lb.R, [lb.R[0], lb.R[1] - 5 * zl], [lb.L[0], lb.L[1] - 5 * zl]], S.r * z);
+  }
+}
+// Gruppen eines Felds mit Lampen (Bildchen-Schlüssel |lit, Vorwärmen): nur mit gekauftem Licht (an und aus: nachts gelb bzw. grau)
+const BK_LAGE_GR = { h: 'h', d: 'vd', o: 'o', t1: 't1', t2: 't2' };
+const bkLampGroups = c => !c || !c.G || !c.G.look.licht ? [] : (S => [BK_LAGE_GR[S.back], BK_LAGE_GR[S.front]])(brLampSpots(c.G.art, c.G.fam, c.b.n));
 // ---------------------------------------------------------------------------
 // Bahn-Brücke zwischen Anhöhen (160c C5, plan-160c/karte-C5-bahn.md; abgenommen: tools/brueckenfamilie-entwurf.js 'B-holz', 'B-metall',
 // 'B-kristall'): flach auf HILL_H, Gleis auf dem Deck. Holz: Böcke auf jeder Kante (Kreuz hinten), Geländer; Metall und Kristall (B2):
@@ -48,7 +94,7 @@ function bkPaintBahn(lage, P, z, art, n, t0, t1, weg, opts) {
   const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Böcke auf den Kanten (C1): das spätere Feld
   const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß: Boden 0, Wasser −6,3
   const truss = (s, col, w) => {                                           // Fachwerk: Gurte, Enddiagonalen, Diagonalen und Pfosten (m = 2n)
-    const T = 11, a = A + 0.15, b = B - 0.15, m = 2 * n;
+    const T = BR_TRUSS.T, a = A + BR_TRUSS.inset, b = B - BR_TRUSS.inset, m = 2 * n;
     line(s, H, col, 0.7 * w); line(s, H + T, col, 0.7 * w, a, b);
     seg(A, s, H, a, s, H + T, col, 0.5 * w); seg(B, s, H, b, s, H + T, col, 0.5 * w);
     const j0 = Math.max(0, Math.floor((t0 - a) / (b - a) * m) - 1), j1 = Math.min(m - 1, Math.ceil((t1 - a) / (b - a) * m) + 1);   // nur, was dieses Feld trifft
@@ -83,10 +129,10 @@ function bkPaintBahn(lage, P, z, art, n, t0, t1, weg, opts) {
 }
 // Das ganze Stück: alle Lagen, dazwischen Bewegtes auf dem Deck (opts.after: Leute, Züge oben – vor dem vorderen Geländer)
 function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
-  const glas = art === 'kristall' && opts.fam === 'fuss';                   // Kristall (160c C4): Glas hinten zuerst, Glasband vor dem Bewegten oben, vorderes Glas zuletzt
-  for (const lage of glas ? ['hg', 'h', 'v', 'd', 't1'] : ['h', 'v', 'd']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
+  const glas = art === 'kristall' && opts.fam === 'fuss', tb = glas || (art === 'kristall' && opts.fam === 'bahn' && !!opts.licht);   // Kristall (160c C4): Glas hinten zuerst, Glasband vor dem Bewegten oben, vorderes Glas zuletzt; B2-Licht in t1/t2 (C7)
+  for (const lage of [...(glas ? ['hg'] : []), 'h', 'v', 'd', ...(tb ? ['t1'] : [])]) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
   if (opts.after) opts.after(opts.h != null ? opts.h : HILL_H);
-  for (const lage of glas ? ['o', 't2'] : ['o']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
+  for (const lage of tb ? ['o', 't2'] : ['o']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
 }
 
 // ---------------------------------------------------------------------------
@@ -114,15 +160,18 @@ function bkGroup(x, y, px, py, z, gruppen) {
   const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)
   const live = gruppen.filter(gr => !(SPRITES_ON && !fade && spriteBridge(x, y, px, py, z, gr)));   // weit weg: Bildchen (im GL-Standbild ruhend)
   if (!live.length) return;
-  const f = () => { const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A; try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; } };
+  const f = () => { const a0 = g.globalAlpha, gm = GLOW_MUTE; if (fade) { g.globalAlpha = a0 * SEE_A; GLOW_MUTE = true; }   // blass: Lampen ohne Schein (C7)
+    try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; GLOW_MUTE = gm; } };
   if (!GLPASS) return f();
   const [l, u, r, d] = bkBoxOf(live, bkAt(x, y));
   glLive(px, py, l * z, u * z, r * z, d * z, f);
 }
-// Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch). Ohne Licht im Schlüssel:
-// die Brücken haben noch keins (ein Test hält das fest) – kommt es in C, dann keyOf(lit) + prewarm wie spriteArchBridge (Regel 143)
+// Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch; recalc auch – der Strom ändert
+// sich nur dort, darum steht „dunkel“ nicht im Schlüssel). Gruppen mit Lampen (C7, bkLampGroups) bekommen |lit und werden vor der
+// Dämmerung beleuchtet vorbereitet (wie spriteArchBridge, Regel 143); alle anderen behalten den Schlüssel ohne Licht
 function spriteBridge(x, y, px, py, z, gruppe) {
-  const zs = spriteStep(z), key = `br|${x},${y}|${gruppe}|${FOG ? 1 : 0}`, fog = FOG, [l, u, , d] = brBox(gruppe, bkAt(x, y));
+  const c = bkAt(x, y), lamp = bkLampGroups(c).includes(gruppe), fog = FOG;
+  const zs = spriteStep(z), keyOf = lit => `br|${x},${y}|${gruppe}|${fog ? 1 : 0}` + (lamp ? '|' + lit : ''), key = keyOf(night > 0.15 && isLive() ? 1 : 0), [l, u, , d] = brBox(gruppe, c);
   const make = () => {
     const sp = paintSprite(l * zs, u * zs, d * zs, () => {
       const pf = FOG; FOG = fog;
@@ -132,6 +181,7 @@ function spriteBridge(x, y, px, py, z, gruppe) {
     return sp;
   };
   const e = getSprite(key, zs, make, groundVersion);
+  if (lamp && preLit()) prewarm(keyOf(1), zs, make, groundVersion);      // gleich wird es hell: beleuchtet schon vorbereiten
   if (!e) return false;
   putSprite(e, px, py, z);
   return true;
@@ -170,7 +220,7 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
 // h + Deko UNTER nachmalen, darunter (U), vd nachmalen, auf dem Deck, o + Deko VOR nachmalen, davor (F) – je im Rahmen des Bewegten
 function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   const fade = bkFadeNow(x, y), k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
-  const glas = bkGlasAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr]); } finally { FOG = f; } };   // Kristall: Glas jedes Bild genau einmal
+  const glas = bkTileBAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr]); } finally { FOG = f; } };   // Kristall: Glas (B2: Licht) jedes Bild genau einmal
   const deck = () => { if (!figs) return; FOG = false;
     for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
       const f = () => seeFaded(seeThrough, () => drawMover(m, z, now));   // 👁: auch Leute und Wagen oben blass
@@ -311,14 +361,14 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
 // (ihre Außenseite zeigt immer weg). Fugen, Keilsteine, Ring als deckende Mischfarben (G5, „Haarlinien“ unter 0,6 Bildpunkten)
 // ---------------------------------------------------------------------------
 const BK_STEIN = { face: '#d9d2c3', joint: '#a99f8c', deck: '#e6dcc8', top: '#efe8da', edge: shade('#d9d2c3', -0.25), inner: shade('#d9d2c3', -0.34),
-  fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'aus', hair: true };   // wall: kein Widerlager an der Wand – die Felswand der Anhöhe bleibt sichtbar (Nutzer 12.10.2026)
+  fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'aus', hair: true, lamp: '#b8ad97' };   // lamp: Laternengehäuse (C7, „dieselbe Farbe wie die Brücke“)   // wall: kein Widerlager an der Wand – die Felswand der Anhöhe bleibt sichtbar (Nutzer 12.10.2026)
 function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
   const { A, W, hf, T1, last, sh, ts, stroke, line, band, deckTop, onEdge } = bkKit(P, z, n, t0, t1, opts), L = brPal(BK_STEIN, 'stein', opts.fam, opts.col, null), B = n - 0.5;
   const S = opts.stone || brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), gl = opts.gl || (() => 0), M = z < 0.6 ? 24 : 64;
   const arcTs = (lo, hi) => [lo, ...S.ts(M).filter(t => t > lo + 1e-9 && t < hi - 1e-9), hi];
   const rr = t => Math.min(S.ri(t) + S.S.ring, hf(t) - 0.2);               // Ring über der Leibung, nie über die Deckkante
   const hair = (pts, col, bg, w) => { const f = w * z; stroke(pts, L.hair && f < 0.6 ? mix(bg, col, Math.max(1, Math.round(f / 0.6 * 8)) / 8) : col, w); };
-  const ramp = t => Math.max(0, Math.min(1, Math.min(t - A, B - t) / 0.45)), parH = t => 6.5 * ramp(t);   // Balustrade läuft an den Enden aus (kein Zipfel)
+  const ramp = t => Math.max(0, Math.min(1, Math.min(t - A, B - t) / 0.45)), parH = t => BR_STEIN.par * ramp(t);   // Balustrade läuft an den Enden aus (kein Zipfel)
   const inCell = t => t >= t0 - 1e-9 && (t < t1 - 1e-9 || (last && t <= t1 + 1e-9));
   const balustrade = (s, vorn) => {
     const tone = vorn ? L.top : shade(L.top, -0.14), rail = vorn ? L.top : shade(L.top, -0.1), posts = [];
@@ -391,7 +441,7 @@ function brPal(base, mat, fam, col, plank) {
   if (bc) {
     if (mat === 'holz') Object.assign(L, fam === 'bahn' ? { side: bc, rail: bc, beam: shade(bc, -0.15) } : { side: bc, rail: bc, rib: shade(bc, -0.05) });
     else if (mat === 'stahl') Object.assign(L, fam === 'bahn' ? { back: shade(bc, -0.3), front: shade(bc, 0.2), beam: bc, edge: shade(bc, -0.3) } : { steel: bc, dark: shade(bc, -0.3), light: shade(bc, 0.35) });
-    else if (mat === 'stein') Object.assign(L, { face: bc, top: shade(bc, 0.12), joint: shade(bc, -0.2), edge: shade(bc, -0.25), inner: shade(bc, -0.34) });
+    else if (mat === 'stein') Object.assign(L, { face: bc, top: shade(bc, 0.12), joint: shade(bc, -0.2), edge: shade(bc, -0.25), inner: shade(bc, -0.34), lamp: shade(bc, -0.15) });
     else if (mat === 'kristall') Object.assign(L, fam === 'bahn' ? { back: shade(bc, -0.15), front: bc, beam: mix(bc, '#ffffff', 0.45), edge: shade(bc, -0.2) } : { post: mix(bc, '#ffffff', 0.5), rail: bc });
   }
   if (pc && mat === 'holz') Object.assign(L, { deck: pc, plank: shade(pc, -0.22) });
