@@ -238,8 +238,10 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
   glass('t1');
   deck();
-  const rAll = rBU || figs ? bkMoverRect(B.concat(U, figs || []), z) : null;
-  if (rAll) { rAll[1] -= HILL_H * z; bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front); }
+  const rF = figs ? bkMoverRect(figs, z) : null;                         // oben auf dem Deck: eine Anhöhe höher; darunter/dahinter nur der eigene Rahmen (C7, L6)
+  if (rF) rF[1] -= HILL_H * z;
+  const rAll = rBU && rF ? [Math.min(rBU[0], rF[0]), Math.min(rBU[1], rF[1]), Math.max(rBU[2], rF[2]), Math.max(rBU[3], rF[3])] : rBU || rF;
+  if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front);
   glass('t2');
   draw(F);
 }

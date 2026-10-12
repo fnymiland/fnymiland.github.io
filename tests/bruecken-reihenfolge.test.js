@@ -234,3 +234,18 @@ describe('Brückenlicht im Bild (160c C7)', () => {
     expect(run([], true)).toEqual([]);                                          // blass: kein Loch (L16)
   });
 });
+
+// 160c C7 (L6): das vordere Geländer wird nur für Leute oben auf dem Deck um HILL_H höher nachgemalt – wer darunter oder dahinter geht,
+// bekommt seinen eigenen Rahmen (sonst verlieren Lampen hoch über ihm ihren Schein, solange er vorbeigeht)
+describe('Nachmal-Rahmen (160c C7)', () => {
+  it('Figur darunter: o im Rahmen der Figur, nicht eine Anhöhe höher', () => {
+    scene(0);
+    const r = game(`(() => { const rd = bkRedo, out = []; bkRedo = (x, y, px, py, z, now, rect, gr, ...a) => { out.push([gr.join(), rect.slice()]); return rd(x, y, px, py, z, now, rect, gr, ...a); };
+      const ml = moverLive; moverLive = () => {}; const m = { fur: '#fff', shirt: '#f00', id: 'U', px: 15, py: 12, kind: 0, speed: 0, wait: 99 }; walkers.push(m);
+      try { cam.z = 2.5; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); return [out, bkMoverRect([m], cam.z)]; }
+      finally { bkRedo = rd; moverLive = ml; walkers.length = 0; } })()`);
+    const [calls, own] = r, o = calls.find(([gr]) => gr === 'o');
+    expect(o).toBeTruthy();
+    expect(o[1][1]).toBeCloseTo(own[1], 6);
+  });
+});
