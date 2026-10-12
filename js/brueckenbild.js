@@ -365,7 +365,7 @@ function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
     }
   } else if (lage === 'd') {
     deckTop(L.deck);
-    if (opts.railPaint) { opts.railPaint(hf(t0)); return; }                  // Viadukt: Gleis auf dem Deck, keine Fugen (Entwurf)
+    if (opts.fam === 'bahn') { if (weg && opts.wegPaint) opts.wegPaint(hf); if (opts.railPaint) opts.railPaint(hf(t0)); return; }   // Viadukt: Gleis auf dem Deck, keine Fugen (Entwurf) – je Familie, nicht je Feld
     if (!weg) for (let j = Math.ceil((t0 - A) * 6 - 0.5 - 1e-9); A + (j + 0.5) / 6 < t1 + 1e-9; j++) {   // Fugen je ⅙ Feld, nie auf einer Kante
       const t = A + (j + 0.5) / 6;
       if (t < t0 - 1e-9 || (z < 0.6 && j % 2)) continue;

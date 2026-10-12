@@ -518,3 +518,23 @@ describe('Brücke wählen und ändern (160c C6)', () => {
     for (const [r, v] of Object.entries(back)) if (r !== 'k') expect(v).toBeLessThanOrEqual(paid[r] || 0);
   });
 });
+
+// 160c C5 gegengelesen: zwei Brücken nebeneinander über einem Gleis; Schatten am richtigen Stück; Kristall-Bahn ohne Glas-Leerlauf
+describe('Zug unter Brücken gegengelesen (160c C5)', () => {
+  it('zwei Brücken nebeneinander: Querlage je eigener Brücke (U statt F), Schnitt an beiden Stirnen; Schatten im selben Feld am U-Stück', () => {
+    game("for (let y = 10; y <= 14; y++) for (const x of [10, 11, 12, 13, 17, 18, 19, 20]) state.hills.set(x + ',' + y, { w: 0 }); state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz' }); state.bruecken.set('14,13', { ax: 0, n: 3, art: 'holz' }); groundVersion++; recalc()");
+    const r = game("brCarPiecesUnder({ train: {}, px: 15, py: 12.4, du: 0, dv: 1, len: 0.8 }).map(p => [p.k, p.m.cut, p.m.bkCls || null, !!p.m.shadow])");
+    expect(r.find(p => p[0] === '15,13')[2]).toBe('U');
+    const r2 = game("brCarPiecesUnder({ train: {}, px: 15, py: 12.6, du: 0, dv: 1, len: 0.8 }).map(p => [p.k, p.m.cut, p.m.bkCls || null])");
+    expect(r2.some(p => p[0] === '15,12' && p[2] === 'F')).toBe(true);                       // Schnitt an der Stirn der ersten Brücke (12,4)
+    const sh = game("brCarPiecesUnder({ train: {}, px: 15, py: 12.3, du: 0, dv: -1, len: 1 }).filter(p => p.m.shadow).map(p => [p.k, p.m.bkCls || null])");
+    expect(sh.length).toBe(1); expect(sh[0][1]).not.toBe('F');
+    const one = game("brCarPiecesUnder({ train: {}, px: 15, py: 11.505 - 0.39, du: 0, dv: 1, len: 0.78 })");
+    expect(one.filter(p => p.m.shadow).length).toBe(1);
+  });
+  it('Kristall-Bahnbrücke (B2) ist deckend: keine Glasfelder, kein Leerlauf in tileB', () => {
+    game("(() => { const b = { ax: 0, n: 3, art: 'kristall', gleis: [0, 0, 0] }; b.brp = { ...brPrice({ mat: 'kristall' }, 'anhoehe', 3), k: brSig(b, 'anhoehe') }; state.bruecken.set('14,12', b); groundVersion++; recalc(); })()");
+    expect(game("bkAt(15, 12).G.art")).toBe('kristall');
+    expect(game('brLiveTiles()')).toEqual([]);
+  });
+});

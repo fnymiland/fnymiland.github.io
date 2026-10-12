@@ -52,7 +52,7 @@ function bkGeom(b, art = null, rail = null) {
     art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : mat === 'stein' || BK_BAHN[mat] ? mat : 'holz',   // Stein-Viadukt (C5d)
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
-const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall';            // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB
+const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'fuss';   // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB (B2 ist deckend)
 const brLiveTiles = () => bkOn() ? bkFresh().glas : [];                   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas)
 const bkGround = (c, t) => { const i = Math.max(0, Math.min(c.b.n - 1, Math.round(t))); return terrainAt(c.x0 + c.dx * i, c.y0 + c.dy * i) === 'water' ? -0.7 * DEPTH : 0; };   // Boden unter Feld bei t (Wasser −6,3)
 // Die zwei Felder an Kante k (zwischen Feld k−1 und k)
@@ -103,7 +103,7 @@ function bkFresh() {
     for (let i = 0; i < b.n; i++) cell.set((x0 + dx * i) + ',' + (y0 + dy * i), { ...o, i });
     for (const [ek, side] of [[(x0 - dx) + ',' + (y0 - dy), -1], [(x0 + dx * b.n) + ',' + (y0 + dy * b.n), 1]]) { if (!end.has(ek)) end.set(ek, []); end.get(ek).push({ ...o, side }); }
   }
-  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein'), glas: [...cell].filter(([, c]) => c.G.art === 'kristall').map(([k]) => k) });
+  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein'), glas: [...cell].filter(([, c]) => bkGlasAt(c)).map(([k]) => k) });
 }
 const bkAt = (x, y) => bkOn() ? bkFresh().cell.get(x + ',' + y) || null : null;
 const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : null;   // Anhöhen-Feld, auf dem eine Brücke aufliegt
@@ -483,21 +483,26 @@ function brCarPiecesUnder(m) {
   let c = bkAt(Math.round(m.px), Math.round(m.py));
   for (const sg of [-1, 1]) if (!c) c = bkAt(Math.round(m.px + m.du * la * sg), Math.round(m.py + m.dv * la * sg));
   if (!c) return null;
-  const ax = c.b.ax, cuts = [-la, la], add = a => { if (a > -la + 1e-3 && a < la - 1e-3) cuts.push(a); };
-  const ca = ax ? m.dv : m.du, wa = ax ? m.py : m.px;                     // längs der Brücke: Feldkanten
-  if (Math.abs(ca) > 0.3) for (let h = Math.floor(wa - la) + 0.5; h < wa + la + 1; h++) add((h - wa) / ca);
-  const cs = ax ? m.du : m.dv, ws = ax ? m.px : m.py, r0 = ax ? c.x0 : c.y0;   // quer: hinter, vor der Stirn, vor dem Feld
-  if (Math.abs(cs) > 0.3) for (const h of [r0 - 0.5, r0 + BK_W, r0 + 0.5]) add((h - ws) / cs);
+  const cuts = [-la, la], add = a => { if (a > -la + 1e-3 && a < la - 1e-3) cuts.push(a); }, seen = new Set();
+  for (const a of [0, -la, la]) {                                          // jede Brücke unter Mitte und Enden (auch zwei nebeneinander)
+    const q = bkAt(Math.round(m.px + m.du * a), Math.round(m.py + m.dv * a));
+    if (!q || seen.has(q.k)) continue;
+    seen.add(q.k);
+    const ax = q.b.ax, ca = ax ? m.dv : m.du, wa = ax ? m.py : m.px;      // längs der Brücke: Feldkanten
+    if (Math.abs(ca) > 0.3) for (let h = Math.floor(wa - la) + 0.5; h < wa + la + 1; h++) add((h - wa) / ca);
+    const cs = ax ? m.du : m.dv, ws = ax ? m.px : m.py, r0 = ax ? q.x0 : q.y0;   // quer: hinter, vor der Stirn, vor dem Feld
+    if (Math.abs(cs) > 0.3) for (const h of [r0 - 0.5, r0 + BK_W, r0 + 0.5]) add((h - ws) / cs);
+  }
   cuts.sort((p, q) => p - q);
   const out = [];
   for (let i = 0; i + 1 < cuts.length; i++) {
     const lo = cuts[i], hi = cuts[i + 1], am = (lo + hi) / 2;
     if (hi - lo < 0.01) continue;
-    const wx = m.px + m.du * am, wy = m.py + m.dv * am, x = Math.round(wx), y = Math.round(wy), cb = bkAt(x, y), s = cb ? (ax ? wx - c.x0 : wy - c.y0) : 0;
+    const wx = m.px + m.du * am, wy = m.py + m.dv * am, x = Math.round(wx), y = Math.round(wy), cb = bkAt(x, y), s = cb ? (cb.b.ax ? wx - cb.x0 : wy - cb.y0) : 0;   // Querlage zur eigenen Brücke
     out.push({ k: x + ',' + y, m: { ...m, cut: cuts.length === 2 ? null : [lo, hi], portal: null, ...(cb ? { bkCls: s > BK_W ? 'F' : 'U' } : {}) } });
   }
-  if (out.length > 1) {                                                     // Schatten: das zuerst gezeichnete Stück
-    const d = p => { const [x, y] = keyXY(p.k); return (x + y) * 1e5 + x; };
+  if (out.length) {                                                         // Schatten: das zuerst gezeichnete Stück (im selben Feld U vor F); auch ein einzelnes geschnittenes
+    const d = p => { const [x, y] = keyXY(p.k); return (x + y) * 1e5 + x + (p.m.bkCls === 'F' ? 0.5 : 0); };
     out.reduce((a, p) => d(p) < d(a) ? p : a).m.shadow = true;
   }
   return out;
