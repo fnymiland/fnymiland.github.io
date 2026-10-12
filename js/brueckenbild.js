@@ -8,12 +8,12 @@ const BK_LOOK = {
   holz: { deck: '#c99a68', beam: '#8a5f38', rail: '#a9774a', dark: '#6d4a2c', line: mix('#c99a68', '#5a3c1e', 0.5) },   // Fuge: früher rgba(90,60,30,.5) auf dem Deck
   stahl: { deck: '#cfd3cf', beam: '#5d7d7a', rail: '#7fa09c', dark: '#3e5452', line: mix('#cfd3cf', '#505a5a', 0.25) },  // früher rgba(80,90,90,.25)
 };
-const BK_LAGEN = ['h', 'v', 'd', 'o'];
+const BK_LAGEN = ['h', 'v', 'd', 'o', 'hg', 't1', 't2'];                    // hg/t1/t2: Glas (Kristall, 160c C4) – halbdurchsichtig, genau einmal je Bild
 // Gruppen fürs Zeichnen (160c B2): ruhend in tileA h | (Deko unter dem Deck) | vd | o; nachgemalt je nach Bewegtem
-const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'] };
+const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB
 // Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
 function brBox(gruppe, c = null) {                                         // c: Feld (bkAt) – oben bis zum Scheitel im Feld (Bogen, 160c C2)
-  const hm = c ? bkHMax(c) : HILL_H, u = gruppe === 'vd' ? TH / 2 + hm + 8 : TH / 2 + hm + 16;
+  const hm = c ? bkHMax(c) : HILL_H, u = gruppe === 'vd' || gruppe === 't1' ? TH / 2 + hm + 8 : TH / 2 + hm + 16;
   return [TW / 2 + 6, u, TW / 2 + 6, TH / 2 + 6];
 }
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
@@ -67,9 +67,10 @@ function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
 }
 // Das ganze Stück: alle Lagen, dazwischen Bewegtes auf dem Deck (opts.after: Leute, Züge oben – vor dem vorderen Geländer)
 function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
-  for (const lage of ['h', 'v', 'd']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
+  const glas = art === 'kristall' && opts.fam === 'fuss';                   // Kristall (160c C4): Glas hinten zuerst, Glasband vor dem Bewegten oben, vorderes Glas zuletzt
+  for (const lage of glas ? ['hg', 'h', 'v', 'd', 't1'] : ['h', 'v', 'd']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
   if (opts.after) opts.after(opts.h != null ? opts.h : HILL_H);
-  bkPaintLage('o', P, z, art, n, t0, t1, weg, opts);
+  for (const lage of glas ? ['o', 't2'] : ['o']) bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts);
 }
 
 // ---------------------------------------------------------------------------
@@ -84,6 +85,7 @@ function bkBoxOf(gruppen, c = null) {
 function bkDrawStill(x, y, px, py, z, now, c, under) {
   const k = x + ',' + y, G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
   if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
+  if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg']);                      // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)
   bkGroup(x, y, px, py, z, ['h']);
   if (under) under();
   if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
@@ -151,7 +153,14 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
 // h + Deko UNTER nachmalen, darunter (U), vd nachmalen, auf dem Deck, o + Deko VOR nachmalen, davor (F) – je im Rahmen des Bewegten
 function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   const fade = bkFadeNow(x, y), k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
-  if (fade) { draw(ms); if (figs) draw(figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))); return; }   // blass: nie nachmalen
+  const glas = bkGlasAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr]); } finally { FOG = f; } };   // Kristall: Glas jedes Bild genau einmal
+  const deck = () => { if (!figs) return; FOG = false;
+    for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
+      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, () => drawMover(m, z, now)); }
+      else drawMover(m, z, now);
+      drawnMovers.add(m);
+    } };
+  if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || U.length ? bkMoverRect(B.concat(U), z) : null;
@@ -159,16 +168,11 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under);
   draw(U);
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
-  if (figs) {
-    FOG = false;
-    for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
-      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, () => drawMover(m, z, now)); }
-      else drawMover(m, z, now);
-      drawnMovers.add(m);
-    }
-  }
+  glass('t1');
+  deck();
   const rAll = rBU || figs ? bkMoverRect(B.concat(U, figs || []), z) : null;
   if (rAll) { rAll[1] -= HILL_H * z; bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front); }
+  glass('t2');
   draw(F);
 }
 
@@ -181,7 +185,17 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
 const BK_FUSS = {
   holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' },
   stahl: { steel: '#5d7d7a', light: '#9bb7b3', dark: '#3e5452', grate: '#cfd3cf', quer: mix('#cfd3cf', '#5a6464', 0.35), laengs: mix('#cfd3cf', '#5a6464', 0.25) },   // „Metall“ (Entwurf 'F-metall'; Rost-Linien als Mischfarbe, G5)
+  kristall: { glass: '#afe1f8', aBack: 0.3, aFront: 0.42, band: '#8fcbe6', aBand: 0.78, edge: '#5aa9d6', post: '#d8f2fc', rail: '#8fd3f2', deck: '#e6f6fc', seam: '#c3e7f5',
+    hi: '#f7fdff', z1: '#7fc4e8', z2: '#c9b8f0' },                          // K1 (Entwurf brueckenlicht 'F-kristall'/'F-zacken'): Glas halbdurchsichtig, nur in hg/t1/t2
 };
+// Glasfarbe: Nebel/Umfärben nur auf Hex (C), dann rgba – C('rgba…') wäre ungültig (Falle 15)
+const rgbaKCache = new Map();
+function rgbaK(hex, a) {
+  const h = C(hex), key = h + a;
+  let v = rgbaKCache.get(key);
+  if (!v) { const [r, gg, b] = hexToRgb(h); v = `rgba(${r},${gg},${b},${a})`; rgbaKCache.set(key, v); }
+  return v;
+}
 // Gemeinsame Helfer der Bogen-Maler (Fußgänger Holz/Metall, Stein): Parameterraum je Feld, Längsstriche 'butt', Kanten halboffen
 function bkKit(P, z, n, t0, t1, opts) {
   const A = -0.5, W = BK_W, hf = opts.hf || (() => HILL_H), T1 = t1 + (opts.ext || 0), last = t1 >= n - 0.5 - 1e-9;
@@ -197,7 +211,7 @@ function bkKit(P, z, n, t0, t1, opts) {
   return { A, W, hf, T1, last, lw, sh, ts, stroke, line, band, deckTop, onEdge, vert };
 }
 function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
-  const { A, W, hf, sh, stroke, line, band, deckTop, onEdge, vert } = bkKit(P, z, n, t0, t1, opts), L = BK_FUSS[art];
+  const { A, W, hf, sh, ts, stroke, line, band, deckTop, onEdge, vert } = bkKit(P, z, n, t0, t1, opts), L = BK_FUSS[art];
   const u01 = t => Math.max(0, Math.min(1, (t + 0.5) / n));
   const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Stützen auf den Kanten (C1): das spätere Feld
   const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß der Stütze: Boden 0, Wasser −6,3
@@ -221,6 +235,32 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
       onEdge(4, t => vert(t, W, hf(t), hf(t) + 6, L.rail, 0.55));             // vorderes Geländer
       line(W, t => hf(t) + 6, L.rail, 0.75); line(W, t => hf(t) + 3, L.rail, 0.45);
     }
+  } else if (art === 'kristall') {                                           // K1: Glasgeländer, Glasband unter dem Deck, Zacken (Option); v und o leer
+    const ri = t => hf(t) - 3, T = ts(t1);
+    const bandT = (s, h0Of, h1Of, col) => { const Q = T.slice(); g.beginPath(); [...Q.map(t => P(t, s, h1Of(t))), ...Q.reverse().map(t => P(t, s, h0Of(t)))].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = col; g.fill(); };   // Durchsichtiges nie ins Nachbarfeld (ohne ext)
+    const glassRail = (s, front) => {
+      bandT(s, hf, t => hf(t) + 6, rgbaK(L.glass, front ? L.aFront : L.aBack));
+      onEdge(4, t => vert(t, s, hf(t), hf(t) + 6, L.post, 0.3));
+      line(s, t => hf(t) + 6, front ? L.rail : shade(L.rail, -0.1), 0.65);
+    };
+    if (lage === 'hg') bandT(-W, hf, t => hf(t) + 6, rgbaK(L.glass, L.aBack));                                       // hintere Scheibe (tileA, nie nachgemalt)
+    else if (lage === 'h') { onEdge(4, t => vert(t, -W, hf(t), hf(t) + 6, L.post, 0.3)); line(-W, t => hf(t) + 6, shade(L.rail, -0.1), 0.65); }
+    else if (lage === 'd') {
+      deckTop(L.deck);
+      if (!weg) onEdge(6, t => { if (t > A + 1e-9 && t < n - 0.5 - 1e-9) stroke([P(t, -W, hf(t)), P(t, W, hf(t))], L.seam, 0.25); });
+      if (weg && opts.wegPaint) opts.wegPaint(hf);
+    } else if (lage === 't1') {
+      bandT(W, ri, hf, rgbaK(sh(L.band), L.aBand));                          // Glasband unter dem Deck
+      line(W, hf, sh(L.edge), 0.35); line(W, ri, sh(L.edge), 0.35);          // nur oben und unten (keine Naht an der Kachelkante)
+      if (opts.zacken) for (let k = Math.max(1, Math.round((t0 - A) * 7)); A + (k + 0.5) / 7 < t1; k++) {   // Kristallzacken: Nummer ab dem Anker (Muster unabhängig von der Feldaufteilung)
+        const t = A + (k + 0.5) / 7, len = 3 + 4 * Math.abs(Math.sin(k * 2.3)) * Math.sin(Math.PI * u01(t)), w2 = 0.05, tip = ri(t) - len;
+        if (t < t0 || tip < brClear()) continue;
+        const pts = [P(t - w2, W, ri(t - w2)), P(t, W, tip), P(t + w2, W, ri(t + w2))];
+        poly([pts[0], pts[2], pts[1]], C(sh(k % 2 ? L.z1 : L.z2)));
+        stroke(pts, sh(L.edge), 0.2);
+      }
+      line(W, t => hf(t) - 0.6, L.hi, 0.4);                                  // Kantenglanz
+    } else if (lage === 't2') glassRail(W, true);                            // vordere Scheibe, Pfosten, Handlauf (tileB, jedes Bild)
   } else if (art === 'stahl') {
     const rib = t => hf(t) - 6;                                              // dünner Stahlbogen unter dem Träger
     if (lage === 'h') {

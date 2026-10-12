@@ -682,7 +682,7 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB, onDeck) {
   ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Brücken, leuchtende Wege
   let d0;
   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild; Brücken (160c B2): ruhend darin, Felder mit Leuten oben laufen live
-  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : []]);
+  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : [], brLiveTiles()]);   // Kristall (160c C4): Glas jedes Bild
   let cur = GLS.groundEnd;
   for (const j of list) {
     const c = GLS.tiles[j], p = toScreen(c.x, c.y);

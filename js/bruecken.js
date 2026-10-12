@@ -46,6 +46,8 @@ function bkGeom(b, art = null, rail = null) {
     art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : (BK_LOOK[mat] ? mat : 'holz'),
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
+const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall';            // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB
+const brLiveTiles = () => bkOn() ? bkFresh().glas : [];                   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas)
 const bkGround = (c, t) => { const i = Math.max(0, Math.min(c.b.n - 1, Math.round(t))); return terrainAt(c.x0 + c.dx * i, c.y0 + c.dy * i) === 'water' ? -0.7 * DEPTH : 0; };   // Boden unter Feld bei t (Wasser −6,3)
 // Die zwei Felder an Kante k (zwischen Feld k−1 und k)
 const bkEdgeCells = (x0, y0, ax, k) => ax ? [[x0, y0 + k - 1], [x0, y0 + k]] : [[x0 + k - 1, y0], [x0 + k, y0]];
@@ -95,7 +97,7 @@ function bkFresh() {
     for (let i = 0; i < b.n; i++) cell.set((x0 + dx * i) + ',' + (y0 + dy * i), { ...o, i });
     for (const [ek, side] of [[(x0 - dx) + ',' + (y0 - dy), -1], [(x0 + dx * b.n) + ',' + (y0 + dy * b.n), 1]]) { if (!end.has(ek)) end.set(ek, []); end.get(ek).push({ ...o, side }); }
   }
-  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein') });
+  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein'), glas: [...cell].filter(([, c]) => c.G.art === 'kristall').map(([k]) => k) });
 }
 const bkAt = (x, y) => bkOn() ? bkFresh().cell.get(x + ',' + y) || null : null;
 const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : null;   // Anhöhen-Feld, auf dem eine Brücke aufliegt
@@ -441,7 +443,7 @@ function bkTileArgs(c, px, py, z) {
   const G = c.G || bkGeom(c.b);
   const foot = k => bkEdgeCells(c.x0, c.y0, ax, k).every(([x, y]) => terrainAt(x, y) === 'water') ? -0.7 * DEPTH : 0;   // Stütze im Wasser: bis auf die Wasserfläche
   return { P, art: G.art, n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
-    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t) } };
+    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t), zacken: !!G.look.zacken } };
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {

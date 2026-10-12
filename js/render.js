@@ -2196,7 +2196,7 @@ function render(now) {
       }
       if (bc) {                                                           // Brücke (Block 160; 160c B2): ruhend in tileA – hier nur nachmalen, was Bewegtes zudeckt
         const figs = onDeck && onDeck.get(k);                              // Leute und Wagen oben: zwischen Deck und vorderem Geländer
-        if (late.length || figs) bkDrawMoving(x, y, px, py, z, now, bc, late, figs, drawnMovers);
+        if (late.length || figs || bkGlasAt(bc)) bkDrawMoving(x, y, px, py, z, now, bc, late, figs, drawnMovers);   // Kristall: Glas jedes Bild
       }
 
   };

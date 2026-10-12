@@ -207,3 +207,51 @@ describe('Stein gegengelesen: Pfeiler über Land→Wasser (160c C3)', () => {
     expect(pts.filter(([t]) => t > 1.41 + 1e-6 && t < 1.5 - 1e-9).every(([, h]) => h >= 0)).toBe(true);
   });
 });
+
+// 160c C4: Kristall K1 – Glas (hg/t1/t2) halbdurchsichtig mit den Deckkräften des Entwurfs, nie ins Nachbarfeld; sonst deckend; Zacken ≥ Lichtraum
+describe('Kristallbrücke K1 (160c C4)', () => {
+  const scanK = zacken => game(`(() => {
+    const g0 = g, bad = [], verts = new Map(), zk = []; let cur = '', pts = [], lage = '', T0 = 0, T1 = 0;
+    const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'fill' ? () => {
+        if (/^rgba/.test(o.fillStyle) && pts.some(([x]) => x < T0 * 32 - 1e-6 - 7 * 0.41 || x > T1 * 32 + 7 * 0.41 + 1e-6)) bad.push(cur + ' Glas über die Feldgrenze');
+        if (o.fillStyle === C('${'#7fc4e8'}') || o.fillStyle === C('${'#c9b8f0'}')) zk.push(Math.max(...pts.map(([, y]) => -y)));
+      } : k === 'stroke' ? () => {
+        if (o.lineCap === 'round') bad.push(cur + ' round');
+        if (pts.length === 2 && Math.abs(pts[0][0] - pts[1][0]) < 1e-6) { const key = cur.split(' feld')[0] + ' ' + o.strokeStyle + ' ' + pts[0][0].toFixed(3) + ' ' + Math.min(pts[0][1], pts[1][1]).toFixed(2); verts.set(key, (verts.get(key) || 0) + 1); }
+      } : k in o ? o[k] : () => {},
+      set: (o, k, v) => {
+        if (k === 'fillStyle' || k === 'strokeStyle') { const glas = lage === 'hg' || lage === 't1' || lage === 't2';
+          if (!/^#[0-9a-f]{6}$/i.test(v) && !(glas && k === 'fillStyle' && /^rgba\\(\\d+,\\d+,\\d+,(0\\.3|0\\.42|0\\.78)\\)$/.test(v))) bad.push(cur + ' ' + k + '=' + v); }
+        if (k === 'globalAlpha' && v < 1) bad.push(cur + ' alpha'); o[k] = v; return true; } });
+    g = fake;
+    try {
+      for (let n = 1; n <= 8; n++) for (const ax of [0, 1]) { const hf = brDeckHFn('fuss', n);
+        for (let i = 0; i < n; i++) for (const L of BK_LAGEN) {
+          lage = L; cur = 'n' + n + ' ax' + ax + ' feld ' + i + ' ' + L; T0 = i - 0.5; T1 = i + 0.5;
+          const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 32 - s * 7, -h]; };
+          bkPaintLage(L, P, 1, 'kristall', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax, hf, zacken: ${zacken}, ext: i < n - 1 ? 0.012 : 0 });
+          if ((L === 'v' || L === 'o') && 0) bad.push('leer');
+        } }
+    } finally { g = g0; }
+    return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8), zk];
+  })()`);
+  it('Prisma, Glas nur mit 0,30/0,42/0,78 und nie über die Feldgrenze, sonst deckend; Pfosten genau einmal; mit und ohne Zacken', () => {
+    for (const zk of [false, true]) { const r = scanK(zk); expect(r[0]).toEqual([]); expect(r[1]).toEqual([]); }
+  });
+  it('Zacken: nur mit Option, Spitze nie unter den Lichtraum (brClear), 7 je Feld, im ersten 6', () => {
+    expect(scanK(false)[2]).toEqual([]);
+    const tips = scanK(true)[2];
+    expect(tips.length).toBe([1, 2, 3, 4, 5, 6, 7, 8].reduce((s, n) => s + 7 * n - 1, 0));   // gezählt in Ost-West (Nord-Süd: schattierte Farbe)
+    expect(Math.min(...tips)).toBeGreaterThanOrEqual(game('brClear()') - 1e-9);
+  });
+  it('Folge in bkPaint: hg h v d t1 A o t2 (Holz weiter h v d A o)', () => {
+    const order = game(`(() => { const out = [], f = bkPaintLage; bkPaintLage = (lage, ...a) => { out.push(lage); return f(lage, ...a); };
+      try { bkPaint((t, s, h) => [t, s - h], 1, 'kristall', 3, 0.5, 1.5, false, { fam: 'fuss', hf: brDeckHFn('fuss', 3), after: () => out.push('A') }); } finally { bkPaintLage = f; }
+      return out.join(' '); })()`);
+    expect(order).toBe('hg h v d t1 A o t2');
+  });
+  it('Glas im Nebel: gültiges rgba, anders als ohne Nebel', () => {
+    const r = game("(() => { const f = FOG; try { FOG = false; const a = rgbaK('#afe1f8', 0.3); FOG = true; const b = rgbaK('#afe1f8', 0.3); return [a, b]; } finally { FOG = f; } })()");
+    expect(r[0]).toMatch(/^rgba\(\d+,\d+,\d+,0\.3\)$/); expect(r[1]).toMatch(/^rgba\(\d+,\d+,\d+,0\.3\)$/); expect(r[0]).not.toBe(r[1]);
+  });
+});

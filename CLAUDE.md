@@ -305,6 +305,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     jede Steinbrücke) in `bkTooTall`/`bkUnderError(x, y, G, i)`; `bkPick` trifft Stirn und Pfeiler bis zum Boden. Maler `bkPaintStein` (gemeinsame
     Helfer `bkKit`): Stirn als Band, Laibung/Pfeilerseite nur wo die Sehne steiler als TH ist (keine hintere Stirn; an der Wand kein Widerlager – Nutzer: Felswand sichtbar), Boden je Feld
     `bkGround` (Wasser −6,3), Tunnelschatten in `drawBkShadows`. Wächter-Test „Holz/Metall/Bahn aufrufgleich“: nie einfach neu setzen.
+    **Kristall K1** (160c C4): Glas in eigenen Lagen – `hg` (hintere Scheibe, ruhend in tileA, nie nachgemalt), `t1` (Glasband, Zacken) und `t2`
+    (vordere Scheibe, Pfosten, Handlauf) jedes Bild genau einmal in tileB (`bkDrawMoving`, auch ohne Bewegtes; GL: `brLiveTiles`), nie in `bkRedo`.
+    Glasfarben nur über `rgbaK` (Nebel auf Hex, dann rgba), Glas nie ins Nachbarfeld (ohne ext). Zacken: Nummer ab dem Anker, Spitze ≥ `brClear()`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

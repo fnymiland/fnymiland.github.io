@@ -137,3 +137,25 @@ describe('Brücke gegengelesen (160c B2/C2)', () => {
     expect(key).toEqual(['12,9']);
   });
 });
+
+// 160c C4: Kristall – hinteres Glas ruhend (tileA, nie nachgemalt), Glasband (t1) und vorderes Glas (t2) jedes Bild genau einmal in tileB
+describe('Kristall: Glas genau einmal (160c C4)', () => {
+  const kr = "(b => { b.art = 'kristall'; b.brp = { ...brPrice({ mat: 'kristall' }, 'anhoehe', b.n), k: brSig(b, 'anhoehe') }; })(state.bruecken.get('14,12'));";
+  it('ohne Bewegtes: hg < h < vd < t1 < t2 je Feld genau einmal; mit Figur darunter: vd nachgemalt < t1 < o < t2, kein hg nachgemalt', () => {
+    const log = scene(0, [], kr);
+    for (const k of ['14,12', '15,12', '16,12']) {
+      const L = log.filter(e => e.endsWith(' ' + k)).map(e => e.split(' ')[0]).filter(g => /^(hg|h|vd|o|t1|t2)$/.test(g));
+      expect(L).toEqual(['hg', 'h', 'vd', 'o', 't1', 't2']);
+    }
+    const log2 = scene(0, [{ id: 'U', px: 15, py: 12 }], kr), L = own(log2, 0), i = L.indexOf('fig U');
+    const after = L.slice(i + 1).filter(e => /^(hg|h|vd|o|t1|t2) /.test(e)).map(e => e.split(' ')[0]);
+    expect(after).toEqual(['vd', 't1', 'o', 't2']);
+    expect(L.filter(e => e.startsWith('t1 ')).length).toBe(1); expect(L.filter(e => e.startsWith('t2 ')).length).toBe(1); expect(L.filter(e => e.startsWith('hg ')).length).toBe(1);
+  });
+  it('GL: genau die Kristallfelder laufen jedes Bild (brLiveTiles); Holz nicht', () => {
+    scene(0, [], kr);
+    expect(game('brLiveTiles()').sort()).toEqual(['14,12', '15,12', '16,12']);
+    scene(0);
+    expect(game('brLiveTiles()')).toEqual([]);
+  });
+});
