@@ -2709,7 +2709,7 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
         · [x] V5 t.lauf in tileOut
       - [x] A1 Prüfstand (Brückenwelt: tools/brueckenwelt.js, testsave-bruecken.json, Vorlage tests/vorlagen/alte-bruecken.json, Vorher-Bilder
         tools/brueckenpruefung.js, Leistungs-Grundlinie Welt „bruecken“ ohne Änderung der übrigen Welten) · [x] A2 Leser brLook (js/brueckenfamilie.js) · [x] A3 Speicherformat + Altversions-Wächter · [x] A4 Geld-Schicht (brPrice/brPaid, alte Arten behalten ihren Preis)
-      - [ ] B1 Lagen-Maler · [ ] B2 ruhend in tileA, Nachmalen in tileB
+      - [x] B1 Lagen-Maler (brueckenbild.js, Lagen h/v/d/o, deckend; alt↔neu nur Kantenpixel) · [ ] B2 ruhend in tileA, Nachmalen in tileB
       - [ ] C1 Stützen auf Kanten · [ ] C2 Höhenprofil, Holz/Metall · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle
         · [ ] C6 Fenster/Leiste/Kosten · [ ] C7 Licht (mit Strom) · [ ] C8 bis 8 Felder · [ ] C9 Bauen per Linie · [ ] C10 Schiffe unter Anhöhen-Brücken
       - [ ] D0 Entwurf Wasser-Weg · [ ] D1 Zeichenort · [ ] D2 Modelle · [ ] D3 Fenster/Kosten · [ ] D4 Anhöhe am Brückenende sperren
