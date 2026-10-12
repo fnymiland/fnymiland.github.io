@@ -72,7 +72,7 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
     block(1, '#96d56f');
     drawHillIcon(cx, cy + 3 * z, z, (tile && tile.form) || 0, 0.68, true);
   } else if (type === 'bruecke') {                         // Brücke (Block 160): zwei Anhöhen, dazwischen die Brücke der gewählten Art
-    drawBkIcon(cx, cy + 4 * z, z, BK_ART_IDS[(tile && tile.form) || 0] || bkArtNew());
+    drawBkIcon(cx, cy + 4 * z, z, BK_ART_IDS[(tile && tile.form) || 0] || bkArtNew(), tile && tile.col ? tile.col - 1 : bkLookNew().col);
   } else if (type === 'huegeltreppe') {                    // Treppe in die Anhöhe (Block 157d): Eck Anhöhe mit eingelassener Treppe
     block(1, '#96d56f');
     drawStairIcon(cx, cy, z, (tile && tile.style) || stairStyleNew(), tile ? stairSchmal(tile) : !stairWideNew());
@@ -1658,7 +1658,7 @@ function lookThumb(b, form, col) {
     }
     if (b === 'bruecke') {                                                  // Brücke (Block 160): die Art zwischen zwei Anhöhen
       c.width = 64; c.height = 64; g = c.getContext('2d');
-      try { drawBkIcon(32, 38, 0.95, BK_ART_IDS[form] || 'holz'); } finally { g = prev; }
+      try { drawBkIcon(32, 38, 0.95, BK_ART_IDS[form] || 'holz', col ? col - 1 : null); } finally { g = prev; }   // col 0 = wie das Material (160c C6)
       url = c.toDataURL(); if (!url || !url.startsWith('data:image')) url = '';
       lookThumbs.set(key, url); return url;
     }

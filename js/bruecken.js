@@ -523,7 +523,7 @@ function bkTileArgs(c, px, py, z) {
   const G = c.G || bkGeom(c.b);
   const foot = k => bkEdgeCells(c.x0, c.y0, ax, k).every(([x, y]) => terrainAt(x, y) === 'water') ? -0.7 * DEPTH : 0;   // Stütze im Wasser: bis auf die Wasserfläche
   return { P, art: G.art, n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
-    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t), zacken: !!G.look.zacken } };
+    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t), zacken: !!G.look.zacken, col: G.look.col, plank: G.look.plank } };   // Farbe (C6d)
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {
@@ -588,7 +588,7 @@ function drawBkShadows(want) {
   g.fillStyle = SHADOW_COL; g.fill('nonzero');
 }
 // Bildchen (Menü-Kachel, Stil-Zeile): zwei Anhöhen, dazwischen die Brücke
-function drawBkIcon(cx, cy, z, art) {
+function drawBkIcon(cx, cy, z, art, col = null) {                           // col: Brückenfarbe (brc), null = wie das Material
   const H = HILL_H * 0.75, s = z * 0.33;
   cx -= 16 * s;                                                            // Mitte der Zeichnung (u −1,6 … 2,6) auf cx
   const Pw = (u, v, h) => [cx + (u - v) * TW / 2 * s, cy + (u + v) * TH / 2 * s - h * s];
@@ -598,7 +598,7 @@ function drawBkIcon(cx, cy, z, art) {
     poly([Pw(u0, v0, H), Pw(u1, v0, H), Pw(u1, v1, H), Pw(u0, v1, H)], C('#96d56f'));
   };
   block(-1.6, -0.5, -0.9, 0.9);
-  bkPaint((t, s2, h) => Pw(t, s2, h * 0.75), s, art, 2, -0.5, 1.5, false, { supports: brSupports({ mat: art, fam: 'fuss', stuetzen: 'wenige' }, 2), fam: 'fuss', hf: brDeckHFn('fuss', 2) });   // leer gebaut: mit Bogen
+  bkPaint((t, s2, h) => Pw(t, s2, h * 0.75), s, art, 2, -0.5, 1.5, false, { supports: brSupports({ mat: art, fam: 'fuss', stuetzen: 'wenige' }, 2), fam: 'fuss', hf: brDeckHFn('fuss', 2), col });   // leer gebaut: mit Bogen
   block(1.5, 2.6, -0.9, 0.9);
 }
 

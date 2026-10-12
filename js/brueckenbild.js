@@ -30,7 +30,7 @@ const BK_BAHN = {
   kristall: { back: '#7fc4e8', front: '#8fd3f2', deck: '#d7eef7', beam: '#bfe6f7', edge: '#5aa9d6', hi: '#f7fdff' },
 };
 function bkPaintBahn(lage, P, z, art, n, t0, t1, weg, opts) {
-  const L = BK_BAHN[art], H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, T1 = t1 + (opts.ext || 0), last = t1 >= B - 1e-9;
+  const L = brPal(BK_BAHN[art], art, 'bahn', opts.col, opts.plank), H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, T1 = t1 + (opts.ext || 0), last = t1 >= B - 1e-9;
   const lw = f => Math.max(0.6, f * z), sh = col => opts.ax ? shade(col, LIGHT.side) : col;
   const seg = (ta, sa, ha, tb, sb, hb, col, w) => {                       // Strich, längs auf [t0, t1] beschnitten; senkrecht (ta = tb) halboffen
     let p = 0, q = 1;
@@ -229,7 +229,7 @@ function bkKit(P, z, n, t0, t1, opts) {
   return { A, W, hf, T1, last, lw, sh, ts, stroke, line, band, deckTop, onEdge, vert };
 }
 function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
-  const { A, W, hf, sh, ts, stroke, line, band, deckTop, onEdge, vert } = bkKit(P, z, n, t0, t1, opts), L = BK_FUSS[art];
+  const { A, W, hf, sh, ts, stroke, line, band, deckTop, onEdge, vert } = bkKit(P, z, n, t0, t1, opts), L = brPal(BK_FUSS[art], art, 'fuss', opts.col, opts.plank);
   const u01 = t => Math.max(0, Math.min(1, (t + 0.5) / n));
   const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Stützen auf den Kanten (C1): das spätere Feld
   const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß der Stütze: Boden 0, Wasser −6,3
@@ -313,7 +313,7 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
 const BK_STEIN = { face: '#d9d2c3', joint: '#a99f8c', deck: '#e6dcc8', top: '#efe8da', edge: shade('#d9d2c3', -0.25), inner: shade('#d9d2c3', -0.34),
   fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'aus', hair: true };   // wall: kein Widerlager an der Wand – die Felswand der Anhöhe bleibt sichtbar (Nutzer 12.10.2026)
 function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
-  const { A, W, hf, T1, last, sh, ts, stroke, line, band, deckTop, onEdge } = bkKit(P, z, n, t0, t1, opts), L = BK_STEIN, B = n - 0.5;
+  const { A, W, hf, T1, last, sh, ts, stroke, line, band, deckTop, onEdge } = bkKit(P, z, n, t0, t1, opts), L = brPal(BK_STEIN, 'stein', opts.fam, opts.col, null), B = n - 0.5;
   const S = opts.stone || brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), gl = opts.gl || (() => 0), M = z < 0.6 ? 24 : 64;
   const arcTs = (lo, hi) => [lo, ...S.ts(M).filter(t => t > lo + 1e-9 && t < hi - 1e-9), hi];
   const rr = t => Math.min(S.ri(t) + S.S.ring, hf(t) - 0.2);               // Ring über der Leibung, nie über die Deckkante
@@ -374,3 +374,28 @@ function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
     if (weg && opts.wegPaint) opts.wegPaint(hf);
   } else if (lage === 'o') balustrade(W, true);
 }
+
+// ---------------------------------------------------------------------------
+// Brückenfarbe (160c C6d): Grundfarbe bc = BRIDGE_COLS[brc] färbt je Material das Tragende (Holz: Geländer, Stützen, Träger; Metall: Träger,
+// Bogen, Fachwerk, Geländer; Stein: Stirn, Balustrade; Kristall: Pfosten, Handlauf, Fachwerk – das Glas bleibt), Planken (Holz) PLANK_COLS[brw].
+// Nur Hex über shade/mix (G5, Falle 15). Ohne Wahl: die Palette des Materials unverändert (Bild pixelgleich)
+// ---------------------------------------------------------------------------
+const brPalCache = new Map();
+function brPal(base, mat, fam, col, plank) {
+  if (col == null && plank == null) return base;
+  const key = mat + fam + '|' + col + '|' + plank;
+  let L = brPalCache.get(key);
+  if (L) return L;
+  L = { ...base };
+  const bc = col != null && BRIDGE_COLS[col], pc = plank != null && PLANK_COLS[plank];
+  if (bc) {
+    if (mat === 'holz') Object.assign(L, fam === 'bahn' ? { side: bc, rail: bc, beam: shade(bc, -0.15) } : { side: bc, rail: bc, rib: shade(bc, -0.05) });
+    else if (mat === 'stahl') Object.assign(L, fam === 'bahn' ? { back: shade(bc, -0.3), front: shade(bc, 0.2), beam: bc, edge: shade(bc, -0.3) } : { steel: bc, dark: shade(bc, -0.3), light: shade(bc, 0.35) });
+    else if (mat === 'stein') Object.assign(L, { face: bc, top: shade(bc, 0.12), joint: shade(bc, -0.2), edge: shade(bc, -0.25), inner: shade(bc, -0.34) });
+    else if (mat === 'kristall') Object.assign(L, fam === 'bahn' ? { back: shade(bc, -0.15), front: bc, beam: mix(bc, '#ffffff', 0.45), edge: shade(bc, -0.2) } : { post: mix(bc, '#ffffff', 0.5), rail: bc });
+  }
+  if (pc && mat === 'holz') Object.assign(L, { deck: pc, plank: shade(pc, -0.22) });
+  brPalCache.set(key, L);
+  return L;
+}
+
