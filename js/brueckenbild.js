@@ -252,11 +252,12 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
     } else if (lage === 't1') {
       bandT(W, ri, hf, rgbaK(sh(L.band), L.aBand));                          // Glasband unter dem Deck
       line(W, hf, sh(L.edge), 0.35); line(W, ri, sh(L.edge), 0.35);          // nur oben und unten (keine Naht an der Kachelkante)
-      if (opts.zacken) for (let k = Math.max(1, Math.round((t0 - A) * 7)); A + (k + 0.5) / 7 < t1; k++) {   // Kristallzacken: Nummer ab dem Anker (Muster unabhängig von der Feldaufteilung)
-        const t = A + (k + 0.5) / 7, len = 3 + 4 * Math.abs(Math.sin(k * 2.3)) * Math.sin(Math.PI * u01(t)), w2 = 0.05, tip = ri(t) - len;
+      if (opts.zacken) for (let k = Math.max(0, Math.round((t0 - A) * 7)); A + (k + 0.5) / 7 < t1; k++) {   // Kristallzacken: Nummer ab dem Anker (Muster unabhängig von der Feldaufteilung)
+        const t = A + (k + 0.5) / 7, m = Math.min(k, 7 * n - 1 - k), w2 = 0.05;   // m: gespiegelt – beide Enden gleich (Nutzer 12.10.2026: symmetrisch)
+        const len = 3 + 4 * Math.abs(Math.sin(m * 2.3)) * Math.sin(Math.PI * u01(t)), tip = ri(t) - len;
         if (t < t0 || tip < brClear()) continue;
         const pts = [P(t - w2, W, ri(t - w2)), P(t, W, tip), P(t + w2, W, ri(t + w2))];
-        poly([pts[0], pts[2], pts[1]], C(sh(k % 2 ? L.z1 : L.z2)));
+        poly([pts[0], pts[2], pts[1]], C(sh(m % 2 ? L.z1 : L.z2)));
         stroke(pts, sh(L.edge), 0.2);
       }
       line(W, t => hf(t) - 0.6, L.hi, 0.4);                                  // Kantenglanz

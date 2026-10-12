@@ -238,11 +238,17 @@ describe('Kristallbrücke K1 (160c C4)', () => {
   it('Prisma, Glas nur mit 0,30/0,42/0,78 und nie über die Feldgrenze, sonst deckend; Pfosten genau einmal; mit und ohne Zacken', () => {
     for (const zk of [false, true]) { const r = scanK(zk); expect(r[0]).toEqual([]); expect(r[1]).toEqual([]); }
   });
-  it('Zacken: nur mit Option, Spitze nie unter den Lichtraum (brClear), 7 je Feld, im ersten 6', () => {
+  it('Zacken: nur mit Option, Spitze nie unter den Lichtraum (brClear), 7 je Feld, symmetrisch (beide Enden gleich)', () => {
     expect(scanK(false)[2]).toEqual([]);
     const tips = scanK(true)[2];
-    expect(tips.length).toBe([1, 2, 3, 4, 5, 6, 7, 8].reduce((s, n) => s + 7 * n - 1, 0));   // gezählt in Ost-West (Nord-Süd: schattierte Farbe)
+    expect(tips.length).toBe([1, 2, 3, 4, 5, 6, 7, 8].reduce((s, n) => s + 7 * n, 0) - 2 * 0);   // gezählt in Ost-West (Nord-Süd: schattierte Farbe)
     expect(Math.min(...tips)).toBeGreaterThanOrEqual(game('brClear()') - 1e-9);
+    const sym = game(`(() => { const out = [], g0 = g; let pts = [];
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'fill' ? () => { if (o.fillStyle === C('#7fc4e8') || o.fillStyle === C('#c9b8f0')) { const tip = pts.reduce((a, p) => p[1] < a[1] ? p : a); out.push([tip[0], +tip[1].toFixed(6), o.fillStyle]); } } : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      try { const n = 4, hf = brDeckHFn('fuss', n); for (let i = 0; i < n; i++) bkPaintLage('t1', (t, s, h) => [t, h], 1, 'kristall', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax: 0, hf, zacken: true, ext: 0 }); } finally { g = g0; }
+      return out; })()`);
+    expect(sym.length).toBe(28);
+    for (let j = 0; j < 14; j++) { const a = sym[j], b = sym[27 - j]; expect(a[0] + b[0]).toBeCloseTo(3, 9); expect(a[1]).toBeCloseTo(b[1], 6); expect(a[2]).toBe(b[2]); }   // gespiegelt um die Mitte t = 1,5
   });
   it('Folge in bkPaint: hg h v d t1 A o t2 (Holz weiter h v d A o)', () => {
     const order = game(`(() => { const out = [], f = bkPaintLage; bkPaintLage = (lage, ...a) => { out.push(lage); return f(lage, ...a); };
