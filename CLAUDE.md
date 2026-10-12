@@ -300,6 +300,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Deck, o, davor; `GLOW_MUTE = 'pane'`: nur Scheiben neu stanzen, nie einen zweiten Schein), weit weg Bildchen `br|x,y|gruppe|FOG`. Wer Wege/Gleise
     mehrerer Felder auf einmal prüft (Ziehen, Gruppe), meldet sie in `BK_PLAN_SAME` bzw. `BK_GROUP` – sonst rutschen sie längs durch eine Stütze. Im
     Fußgänger-Maler (`bkPaintFuss`) Längsstriche `lineCap 'butt'`, Dinge auf Kanten halboffen (`onEdge`), nur deckende Farben (Mischfarben).
+    **Stein** (160c C3): Geometrie nur über `bkGeom` (je Brücke in `bkFresh` als `c.G`: Maler-Art, Familie, Pfeiler) und `brStoneGeom`
+    (Bögen zwischen Wand und Pfeilern, Leibung `ri` glatt über `brSmin`, `low`, `pierHit`); Lichtraum `brClear(S, t, r)` (−1 am Pfeiler, gilt für
+    jede Steinbrücke) in `bkTooTall`/`bkUnderError(x, y, G, i)`; `bkPick` trifft Stirn und Pfeiler bis zum Boden. Maler `bkPaintStein` (gemeinsame
+    Helfer `bkKit`): Stirn als Band, Laibung/Pfeilerseite/Widerlager nur wo die Sehne steiler als TH ist (keine hintere Stirn), Boden je Feld
+    `bkGround` (Wasser −6,3), Tunnelschatten in `drawBkShadows`. Wächter-Test „Holz/Metall/Bahn aufrufgleich“: nie einfach neu setzen.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
