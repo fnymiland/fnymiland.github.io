@@ -319,6 +319,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `dark` nie in den Bildchen-Schlüssel (recalc zählt `groundVersion` hoch). Nur Gruppen mit Lampen (`bkLampGroups`) bekommen `|lit` und
     `prewarm`. Blass ohne Schein (`GLOW_MUTE = true` in `bkGroup`). Kaufen/an/aus über `brSet(…, { licht })` (+ `recalc` wegen Strom);
     Strom in `computePower` **nach** den Zügen, je Feld wie eine Laterne – bestehende Welten verlieren nichts.
+    **Brücke per Linie** (160c C9): Weg-/Gleislinie oben von Anhöhe zu Anhöhe → `bkPlanNew` (Lücke über `bkGapAt`, Look aus der Brücken-Leiste
+    `bkLookNew`, Merk-Kennung `bkNewSig` im planInfo-Schlüssel). Geprüft an **gedachten Zellen**, nie mit einer Probe in `state.bruecken`:
+    Prüfzelle leer (sonst „schon da“/0 Taler), Zeichenzelle (Geist, `ghost: true`) mit Weg bzw. Gleis. `bkWegCheck`/`bkRailCheck` nehmen dafür
+    eine Zelle als 3. Parameter. Auftrag `bkBuild` vorn in `order` (volles Geld), Deck danach; ein ↶. Geht sie nicht: Lücke rot, Grund `bkErr`
+    im Schild; still unten bei > `BK_MAX`, Rampe/Treppe, Knick, kein Gegenüber, Brücke schon da. Geist: `PLAN_GHOST` → `bkDrawGhost`
+    (Zwischenleinwand `ghostPaint`, 65 %, ohne Licht), Antippen in der stehenden Vorschau über `bkPick`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

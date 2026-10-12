@@ -720,6 +720,7 @@ describe('Brücke per Linie (160c C9)', () => {
     game("state.techs.add('bahn'); recalc()");
     expect(planX('schiene', { x: 11, y: 12 }, { x: 19, y: 12 })).toMatchObject({ cost: 315, err: null, mat: { holz: 9, metall: 9, bretter: 9 }, bk: [{ mat: 'holz', n: 3 }] });
     run();
+    expect(game("(() => { setTool('schiene'); startPlan('line', { x: 11, y: 10 }, { x: 19, y: 10 }, false); const G = planInfo(plan).bkGhost; plan = null; return [bkRailArms(G.get('14,10')).length, bkRailArms(G.get('16,10')).length]; })()")).toEqual([2, 2]);   // Geist: kein Prellbock an den Enden
     expect(game("[state.bruecken.get('14,12').gleis, bkFam(state.bruecken.get('14,12')), bkSupports(state.bruecken.get('14,12')), bkRailJumps(13, 12)]")).toEqual([[0, 0, 0], 'bahn', [1, 2], [[17, 12]]]);
     nordSued();
     expect(planX('schiene', { x: 24, y: 5 }, { x: 24, y: 13 })).toMatchObject({ bk: [{ mat: 'holz', n: 3 }], bkErr: null });
