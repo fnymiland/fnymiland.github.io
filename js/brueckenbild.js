@@ -19,6 +19,7 @@ function brBox(gruppe, c = null) {                                         // c:
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
+  if (opts.fam === 'fuss' && art === 'stein') return bkPaintStein(lage, P, z, n, t0, t1, weg, opts);   // Stein mit Pfeilern (160c C3)
   if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2); sonst flach (Bahn, Rückfall)
   const L = BK_LOOK[art] || BK_LOOK.holz, H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, lw = f => Math.max(0.6, f * z);
   const T1 = t1 + (opts.ext || 0);                                         // Flächen etwas ins nächste Feld (das deckt es zu): keine Fuge (Windows)
@@ -181,9 +182,10 @@ const BK_FUSS = {
   holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' },
   stahl: { steel: '#5d7d7a', light: '#9bb7b3', dark: '#3e5452', grate: '#cfd3cf', quer: mix('#cfd3cf', '#5a6464', 0.35), laengs: mix('#cfd3cf', '#5a6464', 0.25) },   // „Metall“ (Entwurf 'F-metall'; Rost-Linien als Mischfarbe, G5)
 };
-function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
-  const L = BK_FUSS[art], A = -0.5, W = BK_W, hf = opts.hf || (() => HILL_H), T1 = t1 + (opts.ext || 0), last = t1 >= n - 0.5 - 1e-9;
-  const lw = f => Math.max(0.6, f * z), u01 = t => Math.max(0, Math.min(1, (t + 0.5) / n));
+// Gemeinsame Helfer der Bogen-Maler (Fußgänger Holz/Metall, Stein): Parameterraum je Feld, Längsstriche 'butt', Kanten halboffen
+function bkKit(P, z, n, t0, t1, opts) {
+  const A = -0.5, W = BK_W, hf = opts.hf || (() => HILL_H), T1 = t1 + (opts.ext || 0), last = t1 >= n - 0.5 - 1e-9;
+  const lw = f => Math.max(0.6, f * z);
   const sh = col => opts.ax ? shade(col, LIGHT.side) : col;               // Nord-Süd: die Vorderseite zeigt nach +x (G11)
   const ts = (end, K = z < 0.6 ? 4 : 12) => { const out = [t0]; for (let j = Math.ceil((t0 - A) * K + 1e-9); A + j / K < end - 1e-9; j++) out.push(A + j / K); out.push(end); return out; };
   const stroke = (pts, col, w) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'butt'; g.lineJoin = 'round'; g.stroke(); };
@@ -192,6 +194,11 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
   const deckTop = col => { const T = ts(T1); poly([...T.map(t => P(t, -W, hf(t))), ...T.reverse().map(t => P(t, W, hf(t)))], C(col)); };
   const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
   const vert = (t, s, h0, h1, col, w) => stroke([P(t, s, h0), P(t, s, h1)], col, w);
+  return { A, W, hf, T1, last, lw, sh, ts, stroke, line, band, deckTop, onEdge, vert };
+}
+function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
+  const { A, W, hf, sh, stroke, line, band, deckTop, onEdge, vert } = bkKit(P, z, n, t0, t1, opts), L = BK_FUSS[art];
+  const u01 = t => Math.max(0, Math.min(1, (t + 0.5) / n));
   const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Stützen auf den Kanten (C1): das spätere Feld
   const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß der Stütze: Boden 0, Wasser −6,3
   if (art === 'holz') {
@@ -233,4 +240,71 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
       line(W, t => hf(t) + 6.5, L.light, 0.75); line(W, t => hf(t) + 3.2, L.steel, 0.4);
     }
   }
+}
+
+// ---------------------------------------------------------------------------
+// Stein-Fußgängerbrücke zwischen Anhöhen (160c C3, plan-160c/C3.md; abgenommen: tools/brueckenfamilie-entwurf.js stone(), Entwurf 10 Stufe 3,
+// Balustrade aus tools/brueckenlicht-entwurf.js). Geometrie nur aus opts.stone (brStoneGeom). Stirn als Band (Unterkante = Bögen bzw. Boden
+// am Pfeiler, kein evenodd), Laibung/Pfeilerseite/Widerlager nur, wo sie zur Kamera zeigen (Sehne steiler als TH), keine hintere Stirn
+// (ihre Außenseite zeigt immer weg). Fugen, Keilsteine, Ring als deckende Mischfarben (G5, „Haarlinien“ unter 0,6 Bildpunkten)
+// ---------------------------------------------------------------------------
+const BK_STEIN = { face: '#d9d2c3', joint: '#a99f8c', deck: '#e6dcc8', top: '#efe8da', edge: shade('#d9d2c3', -0.25), inner: shade('#d9d2c3', -0.34),
+  fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'voll', hair: true };
+function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
+  const { A, W, hf, T1, last, sh, ts, stroke, line, band, deckTop, onEdge } = bkKit(P, z, n, t0, t1, opts), L = BK_STEIN, B = n - 0.5;
+  const S = opts.stone || brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), gl = opts.gl || (() => 0), M = z < 0.6 ? 24 : 64;
+  const arcTs = (lo, hi) => [lo, ...S.ts(M).filter(t => t > lo + 1e-9 && t < hi - 1e-9), hi];
+  const rr = t => Math.min(S.ri(t) + S.S.ring, hf(t) - 0.2);               // Ring über der Leibung, nie über die Deckkante
+  const hair = (pts, col, bg, w) => { const f = w * z; stroke(pts, L.hair && f < 0.6 ? mix(bg, col, Math.max(1, Math.round(f / 0.6 * 8)) / 8) : col, w); };
+  const ramp = t => Math.max(0, Math.min(1, Math.min(t - A, B - t) / 0.45)), parH = t => 6.5 * ramp(t);   // Balustrade läuft an den Enden aus (kein Zipfel)
+  const inCell = t => t >= t0 - 1e-9 && (t < t1 - 1e-9 || (last && t <= t1 + 1e-9));
+  const balustrade = (s, vorn) => {
+    const tone = vorn ? L.top : shade(L.top, -0.14), rail = vorn ? L.top : shade(L.top, -0.1), posts = [];
+    onEdge(z < 0.6 ? 4 : 10, t => { if (parH(t) >= 1) posts.push(t); });
+    for (const [col, w] of [[L.joint, 1.61], [tone, 1.21]]) {                // Baluster: ein Pfad je Farbe (Umriss, dann Ton)
+      if (!posts.length) break;
+      g.beginPath(); for (const t of posts) { const a = P(t, s, hf(t)), b = P(t, s, hf(t) + parH(t) - 1.4); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); }
+      g.strokeStyle = C(col); g.lineWidth = Math.max(0.6, w * z); g.lineCap = 'butt'; g.stroke();
+    }
+    const hl = t => hf(t) + Math.max(0, parH(t) - 1.6);
+    band(s, hl, t => hf(t) + parH(t), rail);                                 // Handlauf
+    hair(ts(t1).map(t => P(t, s, hl(t))), L.joint, rail, 0.25);
+    band(s, t => hf(t) - 0.01, t => hf(t) + 0.9 * ramp(t), shade(L.top, vorn ? -0.05 : -0.16));   // Sockel
+    line(s, t => hf(t) + parH(t), shade(L.top, vorn ? 0.06 : -0.04), 0.65);  // Abdeckung
+  };
+  if (lage === 'h') {
+    for (const q of S.arcs) {                                                // Laibung, Pfeilerseite, Widerlager: am Ansatz q.a (Wand bei A: Feld 0; Pfeiler: das spätere Feld)
+      if (!(q.a >= t0 - 1e-9 && q.a < t1 - 1e-9)) continue;
+      const T = arcTs(q.a, Math.min(q.c, t1)), run = [T[0]];
+      for (let j = 1; j < T.length && (S.ri(T[j]) - S.ri(T[j - 1])) / (T[j] - T[j - 1]) > TH; j++) run.push(T[j]);   // nur, solange sie zur Kamera zeigt
+      const lo = q.a === S.A && L.wall === 'band' ? Math.max(gl(q.a), HILL_H - 7) : gl(q.a);
+      poly([P(q.a, W, lo), ...run.map(t => P(t, W, S.ri(t))), ...run.slice().reverse().map(t => P(t, -W, S.ri(t))), P(q.a, -W, lo)], C(L.inner));
+    }
+    balustrade(-W, false);
+  } else if (lage === 'v') {
+    const bottom = [];                                                       // Unterkante der Stirn: Bögen, am Pfeiler der Boden
+    for (const t of arcTs(t0, T1)) {
+      const r = S.ri(t), g0 = gl(t);
+      if (r != null && t < T1 - 1e-9 && S.ri(t + 1e-7) == null) bottom.push([t, r], [t, g0]);
+      else if (r != null && t > t0 + 1e-9 && S.ri(t - 1e-7) == null) bottom.push([t, g0], [t, r]);
+      else bottom.push([t, r == null ? g0 : r]);
+    }
+    poly([...ts(T1).map(t => P(t, W, hf(t))), ...bottom.reverse().map(([t, h]) => P(t, W, h))], C(sh(L.face)));
+    for (const q of S.arcs) {
+      const lo = Math.max(q.a, t0), hi = Math.min(q.c, t1);
+      if (hi <= lo) continue;
+      if (z >= 0.6) for (let j = 1; j <= 9; j++) { const t = q.a + (q.c - q.a) * j / 10; if (inCell(t)) hair([P(t, W, S.ri(t)), P(t, W, rr(t))], sh(L.joint), sh(L.face), 0.3); }   // Keilsteine
+      const T = arcTs(lo, hi);
+      stroke(T.map(t => P(t, W, S.ri(t))), sh(L.edge), 0.5);              // Bogenkante
+      hair(T.map(t => P(t, W, rr(t))), sh(L.joint), sh(L.face), 0.3);     // Ring
+    }
+  } else if (lage === 'd') {
+    deckTop(L.deck);
+    if (!weg) for (let j = Math.ceil((t0 - A) * 6 - 0.5 - 1e-9); A + (j + 0.5) / 6 < t1 + 1e-9; j++) {   // Fugen je ⅙ Feld, nie auf einer Kante
+      const t = A + (j + 0.5) / 6;
+      if (t < t0 - 1e-9 || (z < 0.6 && j % 2)) continue;
+      hair([P(t, -W, hf(t)), P(t, W, hf(t))], L.fuge, L.deck, 0.3);
+    }
+    if (weg && opts.wegPaint) opts.wegPaint(hf);
+  } else if (lage === 'o') balustrade(W, true);
 }

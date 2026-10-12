@@ -418,10 +418,10 @@ function bkTileArgs(c, px, py, z) {
   const P = (t, s, h) => { const du = ax ? s : t - c.i, dv = ax ? t - c.i : s; return [px + (du - dv) * TW / 2 * z, py + (du + dv) * TH / 2 * z - h * z]; };
   const wegPaint = H => bkWegPaint(c, px, py, z, H);
   const railPaint = bkRailAt(c) ? H => drawRailBed(px, py - H * z, z, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, { b: 'schiene', rot: c.b.ax, form: c.b.gleis[c.i] || 0 }, bkRailArms(c)) : null;
-  const fam = bkFam(c.b);
+  const G = c.G || bkGeom(c.b);
   const foot = k => bkEdgeCells(c.x0, c.y0, ax, k).every(([x, y]) => terrainAt(x, y) === 'water') ? -0.7 * DEPTH : 0;   // Stütze im Wasser: bis auf die Wasserfläche
-  return { P, art: bkArtOf(c.b), n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
-    fam, ax, hf: brDeckHFn(fam, c.b.n), foot } };
+  return { P, art: G.art, n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
+    fam: G.fam, ax, hf: G.hf, foot, stone: G.art === 'stein' ? G.stone : null, gl: t => bkGround(c, t) } };
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {
@@ -467,9 +467,21 @@ function drawBkShadows(want) {
     if (!bkCellsOf(k, b).some(c => want(c))) continue;                   // want(Feld, w, h): nur das Feld übergeben
     const ax = b.ax, A = -0.5, B = b.n - 0.5, hf = brDeckHFn(bkFam(b), b.n), K = brPeak(bkFam(b), b.n) ? 12 : 1;
     const pt = (t, s) => { const p = iso(ax ? x0 + s : x0 + t, ax ? y0 + t : y0 + s), h = hf(t); return [p.x + SUN.dx * h, p.y + SUN.dy * h]; };   // je Stelle um die Sonne versetzt (Bogen, 160c C2)
-    const T = Array.from({ length: Math.round(b.n * K) + 1 }, (_, j) => A + j / K);
-    [...T.map(t => pt(t, -BK_W)), ...T.slice().reverse().map(t => pt(t, BK_W))].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
-    g.closePath();
+    const T = Array.from({ length: Math.round(b.n * K) + 1 }, (_, j) => A + j / K), [S0, S1] = ax ? [BK_W, -BK_W] : [-BK_W, BK_W];   // gleicher Drehsinn in beiden Achsen (nonzero)
+    const path = pts => { pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); };
+    path([...T.map(t => pt(t, S0)), ...T.slice().reverse().map(t => pt(t, S1))]);
+    const c0 = bkAt(x0, y0);
+    if (c0 && c0.G && c0.G.art === 'stein') {                               // Steinbogen (160c C3): der Boden darunter liegt im Schatten (Tunnel), nur auf Land
+      const sh = (ax ? SUN.dy / TH - SUN.dx / TW : SUN.dx / TW + SUN.dy / TH) * HILL_H, ta = A + Math.max(0, sh), tb = B + Math.min(0, sh);   // ohne den Streifen im Schatten der Anhöhe
+      const fl = (t, s) => { const p = iso(ax ? x0 + s : x0 + t, ax ? y0 + t : y0 + s); return [p.x, p.y]; };
+      for (let i = 0; i < b.n; i++) {
+        if (terrainAt(x0 + (ax ? 0 : i), y0 + (ax ? i : 0)) === 'water') continue;
+        let j = i; while (j + 1 < b.n && terrainAt(x0 + (ax ? 0 : j + 1), y0 + (ax ? j + 1 : 0)) !== 'water') j++;
+        const lo = Math.max(i - 0.5, ta), hi = Math.min(j + 0.5, tb);
+        if (hi > lo) path([fl(lo, S0), fl(hi, S0), fl(hi, S1), fl(lo, S1)]);
+        i = j;
+      }
+    }
   }
   g.fillStyle = SHADOW_COL; g.fill('nonzero');
 }

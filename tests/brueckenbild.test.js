@@ -120,3 +120,77 @@ describe('Fußgänger-Brücke mit Bogen (160c C2)', () => {
     expect(game("bkH({ ax: 0, n: 4, art: 'holz', gleis: [0, 0, 0, 0] }, 1.5)")).toBe(game('HILL_H'));
   });
 });
+
+const WAECHTER = 2528765785;   // vor dem Umbau gemessen (160c C3b)
+// 160c C3b: Wächter – der Umbau für Stein (gemeinsame Helfer bkKit) zeichnet Holz, Metall und Bahn genau wie vorher
+describe('Wächter: Holz/Metall/Bahn aufrufgleich (160c C3b)', () => {
+  it('Fingerabdruck aller Zeichenaufrufe', () => {
+    const h = game(`(() => {
+      for (let y = 4; y <= 30; y++) for (let x = 4; x <= 30; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); }
+      state.hills.clear(); state.bruecken.clear(); state.edges.clear();
+      for (let y = 10; y <= 14; y++) for (const x of [6, 7, 8, 9, 18, 19, 20, 21]) state.hills.set(x + ',' + y, { w: 0 });
+      for (let x = 6; x <= 14; x++) for (const y of [4, 5, 6, 7, 16, 17, 18, 19]) state.hills.set(x + ',' + y, { w: 0 });
+      groundVersion++; recalc();
+      const g0 = g; let acc = 2166136261 >>> 0;
+      const mix = s => { for (let i = 0; i < s.length; i++) { acc ^= s.charCodeAt(i); acc = Math.imul(acc, 16777619) >>> 0; } };
+      const r = v => typeof v === 'number' ? (Math.round(v * 1e4) / 1e4).toString() : String(v);
+      g = new Proxy({}, { get: (o, k) => k in o ? o[k] : typeof k === 'string' ? (...a) => { mix(k + '(' + a.map(r).join(',') + ')'); } : undefined,
+        set: (o, k, v) => { o[k] = v; mix(k + '=' + r(v)); return true; } });
+      try {
+        for (const art of ['holz', 'stahl']) for (const top of ['', 'weg', 'gleis']) for (const n of [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+          state.bruecken.clear();
+          const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0);
+          if (n <= 8 && (ax ? 8 + n <= 16 : 10 + n <= 18)) { state.bruecken.set(ax ? '10,8' : '10,12', b); groundVersion++; }
+          else continue;
+          for (let i = 0; i < n; i++) for (const z of [0.45, 1, 2.5]) for (const gr of ['h', 'vd', 'o']) { mix('|' + [art, top, n, ax, i, z, gr].join(':')); bkDrawLagen(ax ? 10 : 10 + i, ax ? 8 + i : 12, 0, 0, z, gr); }
+        }
+      } finally { g = g0; }
+      return acc; })()`);
+    expect(h).toBe(WAECHTER);
+  });
+});
+
+// 160c C3: Steinmaler – Prisma, deckend, nie runde Kappen, Kanten genau einmal, Stirn-Unterkante = Bögen bzw. Boden am Pfeiler, Laibung je Ansatz
+describe('Steinbrücke (160c C3)', () => {
+  const scanStein = (opt = '') => game(`(() => {
+    const g0 = g, bad = [], verts = new Map(), polys = []; let cur = '', pts = [];
+    const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'closePath' ? () => { o.closed = true; } : k === 'fill' ? () => { polys.push([cur, o.fillStyle, pts.length]); o.closed = false; } : k === 'stroke' ? () => {
+        if (o.lineCap === 'round') bad.push(cur + ' round'); if (o.closed) bad.push(cur + ' stroke nach closePath');
+        if (pts.length === 2 && Math.abs(pts[0][0] - pts[1][0]) < 1e-6) { const key = cur.split(' feld')[0] + ' ' + o.strokeStyle + ' ' + pts[0][0].toFixed(3) + ' ' + Math.min(pts[0][1], pts[1][1]).toFixed(2); verts.set(key, (verts.get(key) || 0) + 1); }
+      } : k in o ? o[k] : () => {},
+      set: (o, k, v) => { if ((k === 'fillStyle' || k === 'strokeStyle') && !/^#[0-9a-f]{6}$/i.test(v)) bad.push(cur + ' ' + k + '=' + v); if (k === 'globalAlpha' && v < 1) bad.push(cur + ' alpha'); o[k] = v; return true; } });
+    g = fake;
+    try {
+      for (let n = 1; n <= 8; n++) for (const ax of [0, 1]) for (const z of [0.45, 1, 2.5]) for (const wet of [0, 1]) { const hf = brDeckHFn('fuss', n), S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), gl = t => wet && Math.round(t) % 2 ? -6.3 : 0;
+        for (let i = 0; i < n; i++) for (const lage of BK_LAGEN) {
+          cur = 'n' + n + ' ax' + ax + ' z' + z + ' w' + wet + ' feld ' + i + ' ' + lage;
+          const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 32 - s * 7, s * 16 - h]; };
+          bkPaintLage(lage, P, z, 'stein', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax, hf, stone: S, gl, ext: i < n - 1 ? 0.012 : 0 ${opt} });
+        } }
+    } finally { g = g0; }
+    return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8), polys.length];
+  })()`);
+  it('in seinem Feld, deckend, ohne runde Kappen, ohne Umriss, jede Senkrechte genau einmal (n 1–8, beide Achsen, nah/weit, Wasser)', () => {
+    const r = scanStein();
+    expect(r[0]).toEqual([]); expect(r[1]).toEqual([]); expect(r[2]).toBeGreaterThan(0);
+  });
+  it('Stirn: oben das Deck, unten die Bögen, am Pfeiler bis zum Boden; Laibung genau einmal je Bogenansatz im Feld seines Ansatzes', () => {
+    const r = game(`(() => { const g0 = g, polys = []; let pts = [];
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'fill' ? () => polys.push([o.fillStyle, pts.slice()]) : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      const n = 4, hf = brDeckHFn('fuss', n), S = brStoneGeom('fuss', n, [2]), out = { face: [], inner: [] };
+      try { for (let i = 0; i < n; i++) for (const lage of ['h', 'v']) { polys.length = 0;
+        bkPaintLage(lage, (t, s, h) => [t + (s > 0 ? 1000 : s < 0 ? -1000 : 0), h], 1, 'stein', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax: 0, hf, stone: S, gl: () => 0, ext: 0 });   // x: t, vorn +1000
+        for (const [col, p] of polys) { if (col === BK_STEIN.inner) out.inner.push([i, p[0][0] - 1000]); if (col === BK_STEIN.face && lage === 'v') out.face.push([i, p]); } } }
+      finally { g = g0; }
+      const f1 = out.face.find(([i]) => i === 1)[1].map(([x, h]) => [x - 1000, h]);   // Feld 1: Pfeiler bei 1,41…1,5 bis zum Boden
+      return { inner: out.inner, pierFloor: f1.some(([t, h]) => Math.abs(t - 1.41) < 1e-6 && h === 0), top: f1.some(([t, h]) => Math.abs(t - 1) < 1e-9 && Math.abs(h - hf(t)) < 1e-9) ? 1 : 0 }; })()`);
+    expect(r.inner.map(([i, t]) => [i, +t.toFixed(2)])).toEqual([[0, -0.5], [2, 1.59]]);   // Widerlager in Feld 0, Pfeilerseite in Feld 2
+    expect(r.pierFloor).toBe(true); expect(r.top).toBe(1);
+  });
+  it('Weiche: Stein-Fußgänger malt Stein, Bahn-Stein den flachen Rückfall; bkPaint-Folge h v d A o', () => {
+    const order = game(`(() => { const out = [], f = bkPaintLage; bkPaintLage = (lage, ...a) => { out.push(lage); return f(lage, ...a); };
+      try { bkPaint((t, s, h) => [t, s - h], 1, 'stein', 4, 0.5, 1.5, false, { fam: 'fuss', hf: brDeckHFn('fuss', 4), stone: brStoneGeom('fuss', 4, [2]), after: () => out.push('A') }); } finally { bkPaintLage = f; }
+      return out.join(''); })()`);
+    expect(order).toBe('hvdAo');
+  });
+});

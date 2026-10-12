@@ -318,3 +318,22 @@ describe('Bogen gegengelesen (160c C2)', () => {
     expect(foot()).toBeCloseTo(-0.7 * game('DEPTH'), 6);
   });
 });
+
+// 160c C3e: Steinbogen – der Boden darunter liegt im Schatten (Tunnel), ohne den Streifen im Schatten der Anhöhe, nicht über Wasser
+describe('Tunnelschatten (160c C3)', () => {
+  const stein = () => game("(() => { const b = { ax: 0, n: 3, art: 'stein' }; b.brp = { ...brPrice({ mat: 'stein' }, 'anhoehe', 3), k: brSig(b, 'anhoehe') }; state.bruecken.set('14,12', b); groundVersion++; recalc(); })()");
+  const paths = () => game(`(() => { const g0 = g, out = []; let cur = null, fills = 0;
+    g = new Proxy({}, { get: (o, k) => k === 'moveTo' ? (x, y) => { cur = [[x, y]]; out.push(cur); } : k === 'lineTo' ? (x, y) => cur.push([x, y]) : k === 'fill' ? () => { fills++; } : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+    try { drawBkShadows(() => true); } finally { g = g0; } return { n: out.map(p => p.length), fills, rect: out[1] }; })()`);
+  it('ein fill: Deck (2·(12n+1) Punkte) und ein Rechteck auf Höhe 0 ab A + SUN-Versatz; Holz ohne; Wasser ohne', () => {
+    stein();
+    const r = paths();
+    expect(r.fills).toBe(1); expect(r.n).toEqual([2 * (12 * 3 + 1), 4]);
+    const sh = game('(SUN.dx / TW + SUN.dy / TH) * HILL_H'), p = game(`iso(14 - 0.5 + ${sh}, 12 - BK_W)`);
+    expect(r.rect[0][0]).toBeCloseTo(p.x, 6); expect(r.rect[0][1]).toBeCloseTo(p.y, 6);
+    game("for (let x = 14; x <= 16; x++) state.terra.set(x + ',12', 'water'); waterChanged(); groundVersion++; recalc()");
+    expect(paths().n).toEqual([2 * (12 * 3 + 1)]);
+    game("state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz' }); for (let x = 14; x <= 16; x++) state.terra.set(x + ',12', 'grass'); waterChanged(); groundVersion++; recalc()");
+    expect(paths().n).toEqual([2 * (12 * 3 + 1)]);
+  });
+});
