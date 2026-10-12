@@ -668,3 +668,113 @@ describe('Zug unter Brücken gegengelesen (160c C5)', () => {
     expect(game('brLiveTiles()')).toEqual([]);
   });
 });
+
+// 160c C9: Weg oder Schiene oben von Anhöhe zu Anhöhe über eine Lücke gezogen baut die Brücke mit (Material/Farbe aus der Leiste des
+// Brücken-Werkzeugs, Nutzer 12.10.2026: automatisch, ohne Wahl Holz, geht sie nicht: Lücke rot mit Grund) – ein Auftrag, ein ↶
+describe('Brücke per Linie (160c C9)', () => {
+  const planX = (tool, a, b, fixed = false) => game(`(() => { setTool('${tool}'); startPlan('line', ${JSON.stringify(a)}, ${JSON.stringify(b)}, ${fixed});
+    const i = planInfo(plan); return { n: i.n, cost: i.cost, err: i.err, mat: i.mat, bad: i.bad, bkErr: i.bkErr || null, bk: i.bk || null,
+      deck: i.deck ? [...i.deck].sort() : null, text: planText(plan, i) }; })()`);
+  const wallet = () => game('({ money: state.money, ...state.res })');
+  const spent = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] - b[k]]).filter(([, v]) => v));
+  const st = () => game("currentStyle('weg')");
+  const nordSued = () => game("for (const y of [4, 5, 6, 7, 11, 12, 13, 14]) for (let x = 23; x <= 25; x++) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");   // Lücke y 8–10 bei x 23–25
+  it('Weg oben von A nach B: Brücke + Deck + Wege oben, Summe im Schild; auch von B nach A und Nord-Süd', () => {
+    const i = planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 });
+    expect(i).toMatchObject({ n: 9, cost: 225, err: null, mat: { bretter: 9 }, bk: [{ mat: 'holz', n: 3 }], bkErr: null, deck: ['14,12', '15,12', '16,12'] });
+    expect(i.text).toMatch(/Holz: 3 Felder/);
+    expect(run()).toBe(true);
+    expect(game("state.bruecken.get('14,12')")).toEqual({ ax: 0, n: 3, art: 'holz', weg: [st(), st(), st()], brp: { money: 180, bretter: 9, k: 'a:holz' } });
+    expect(game("[state.tiles.has('15,12'), bAt(11, 12), bAt(19, 12), bkWegFull(state.bruecken.get('14,12'))]")).toEqual([false, 'weg', 'weg', true]);
+    expect(planX('weg', { x: 19, y: 11 }, { x: 11, y: 11 })).toMatchObject({ cost: 225, bk: [{ mat: 'holz', n: 3 }] });
+    run();
+    expect(game("[state.bruecken.get('14,11').n, state.bruecken.get('14,11').ax]")).toEqual([3, 0]);
+    nordSued();
+    expect(planX('weg', { x: 24, y: 5 }, { x: 24, y: 13 })).toMatchObject({ cost: 225, bk: [{ mat: 'holz', n: 3 }], deck: ['24,10', '24,8', '24,9'] });
+    run();
+    expect(game("[state.bruecken.get('24,8').ax, state.bruecken.get('24,8').n, bkWegFull(state.bruecken.get('24,8'))]")).toEqual([1, 3, true]);
+  });
+  it('unten begonnen, in der Lücke geendet oder quer: keine Brücke, Weg unten wie heute', () => {
+    expect(planX('weg', { x: 14, y: 12 }, { x: 19, y: 12 }).bk).toBe(null);
+    run();
+    expect(game("[state.bruecken.size, bAt(15, 12)]")).toEqual([0, 'weg']);
+    expect(planX('weg', { x: 12, y: 10 }, { x: 15, y: 10 })).toMatchObject({ bk: null, bkErr: null });
+    expect(planX('weg', { x: 15, y: 6 }, { x: 15, y: 18 })).toMatchObject({ bk: null, bkErr: null });
+  });
+  it('zu wenig Taler oder Bretter: nichts gebaut; ↶ nimmt Brücke, Deck und Wege in einem Schritt zurück', () => {
+    game('state.money = 224');
+    expect(planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 }).err).toMatch(/Zu wenig Taler \(225 nötig\)/);
+    expect(run()).toBe(false);
+    game('state.money = 1e6; state.res.bretter = 8');
+    expect(planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 }).err).toBe(game('matError({ bretter: 9 })'));
+    game('state.res.bretter = 9999; resetUndo()');
+    const w0 = wallet();
+    planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 });
+    expect(game('undoable(runPlan)')).toBe(true);
+    expect(game('[state.bruecken.size, undoStack.length]')).toEqual([1, 1]);
+    game('undo()');
+    expect(game("[state.bruecken.size, bAt(11, 12), bAt(19, 12)]")).toEqual([0, null, null]);
+    expect(spent(w0, wallet())).toEqual({});
+  });
+  it('Schiene: flache Bahnbrücke mit Böcken, Gleis auf dem Deck, verbunden; auch Nord-Süd', () => {
+    game("state.techs.add('bahn'); recalc()");
+    expect(planX('schiene', { x: 11, y: 12 }, { x: 19, y: 12 })).toMatchObject({ cost: 315, err: null, mat: { holz: 9, metall: 9, bretter: 9 }, bk: [{ mat: 'holz', n: 3 }] });
+    run();
+    expect(game("[state.bruecken.get('14,12').gleis, bkFam(state.bruecken.get('14,12')), bkSupports(state.bruecken.get('14,12')), bkRailJumps(13, 12)]")).toEqual([[0, 0, 0], 'bahn', [1, 2], [[17, 12]]]);
+    nordSued();
+    expect(planX('schiene', { x: 24, y: 5 }, { x: 24, y: 13 })).toMatchObject({ bk: [{ mat: 'holz', n: 3 }], bkErr: null });
+    run();
+    expect(game("[state.bruecken.get('24,8').ax, bkRailFull(state.bruecken.get('24,8'))]")).toEqual([1, true]);
+  });
+  it('geht die Brücke nicht: Lücke rot mit Grund im Schild, der Rest wird gebaut (Bahn-Böcke, Material gesperrt, Haus, Wald)', () => {
+    luecke(4); game("state.techs.add('bahn'); state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // Weg unten längs über Kante 2
+    const w = planX('weg', { x: 11, y: 12 }, { x: 20, y: 12 });
+    expect(w).toMatchObject({ bk: [{ mat: 'holz', n: 4 }], bkErr: null });
+    expect(w.cost).toBe(240 + 5 * w.n);
+    const s = planX('schiene', { x: 11, y: 12 }, { x: 20, y: 12 });
+    expect(s.bk).toBe(null); expect(s.bkErr).toMatch(/mehr Stützen/); expect(s.text).toMatch(/mehr Stützen/); expect(s.bad).toBe(4);
+    expect(run()).toBe(true);                                                                     // die Schienen oben werden gebaut
+    expect(game("[state.bruecken.size, bAt(12, 12), bAt(19, 12)]")).toEqual([0, 'schiene', 'schiene']);
+    luecke(3); game("for (const k of ['15,12', '16,12', '11,12', '12,12', '13,12', '17,12', '18,12', '19,12', '20,12']) state.tiles.delete(k); groundVersion++; recalc()");
+    game("state.paintNew.bruecke = { form: 2, col: 4 }; state.restore = {}");
+    const r = planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 });
+    expect(r.bkErr).toMatch(/^Stein: erst mit/); expect(r.bad).toBe(3);
+    game("state.restore = { klippe: 1 }");                                                         // ohne recalc: der Schlüssel kennt die Sperre
+    expect(planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 })).toMatchObject({ cost: 405, mat: { quader: 9, bretter: 9 }, bk: [{ mat: 'stein', n: 3 }], bkErr: null });
+    run();
+    expect(game("state.bruecken.get('14,12')")).toMatchObject({ art: 'stein', brc: 3, brp: { k: 'a:stein' } });
+    game("state.paintNew.bruecke = { form: 1 }; state.techs.delete('bahn'); recalc()");
+    expect(planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 }).bkErr).toMatch(/Metall: erst mit der Eisenbahn/);
+    game("state.paintNew.bruecke = {}; state.tiles.set('15,10', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");
+    expect(planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 }).bkErr).toMatch(/kein Platz für: Haus/);
+    game("state.tiles.delete('15,10'); state.terra.set('15,10', 'forest'); groundVersion++; recalc()");
+    expect(planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 }).bkErr).toMatch(/erst roden/);
+  });
+  it('still unten wie heute: Lücke länger als 8; Brücke liegt schon: nur das Deck', () => {
+    luecke(9);
+    expect(planX('weg', { x: 12, y: 12 }, { x: 24, y: 12 })).toMatchObject({ bk: null, bkErr: null, err: null });
+    run();
+    expect(game("[state.bruecken.size, bAt(18, 12)]")).toEqual([0, 'weg']);
+    luecke(8);
+    expect(planX('weg', { x: 12, y: 11 }, { x: 23, y: 11 })).toMatchObject({ bk: [{ mat: 'holz', n: 8 }], bkErr: null });
+    luecke(3); game("for (let x = 11; x <= 24; x++) for (const y of [11, 12]) state.tiles.delete(x + ',' + y); state.bruecken.clear(); groundVersion++; recalc()");
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    game("state.paintNew.bruecke = { form: 1 }");
+    expect(planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 })).toMatchObject({ bk: null, cost: 45, deck: ['14,12', '15,12', '16,12'] });
+    const b0 = game("JSON.stringify(state.bruecken.get('14,12'))");
+    run();
+    expect(game("[state.bruecken.get('14,12').art, state.bruecken.get('14,12').brp]")).toEqual(JSON.parse(`[${JSON.stringify(JSON.parse(b0).art)}, ${JSON.stringify(JSON.parse(b0).brp)}]`));
+  });
+  it('Vorschau: Geist der Brücke in tileA, ohne Bau; Antippen auf den Geist baut (Touch, stehende Vorschau)', () => {
+    const r = game(`(() => { const out = [], gd = bkDrawGhost; bkDrawGhost = (x, y, ...a) => { out.push(x + ',' + y); return gd(x, y, ...a); };
+      setTool('weg'); startPlan('line', { x: 11, y: 12 }, { x: 19, y: 12 }, false); const gv = groundVersion;
+      try { cam.z = 2; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; render(1e6); } finally { bkDrawGhost = gd; }
+      return [out.sort(), state.bruecken.size, groundVersion === gv]; })()`);
+    expect(r).toEqual([['14,12', '15,12', '16,12'], 0, true]);
+    const t = game(`(() => { setTool('weg'); startPlan('line', { x: 11, y: 12 }, { x: 19, y: 12 }, true); cam.z = 2; const p0 = iso(15, 12); cam.x = p0.x; cam.y = p0.y;
+      const p = toScreen(15, 12), h = HILL_H + brPeak('fuss', 3); return bkPick(p.x, p.y - h * cam.z); })()`);
+    expect(t).toMatchObject({ x: 15, y: 12, deck: true });
+    game('planTap(15, 12, true, true)');
+    expect(game("[state.bruecken.size, plan]")).toEqual([1, null]);
+  });
+});

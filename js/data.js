@@ -206,7 +206,7 @@ const ITEMS = {
   bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform',
     get cost() { return typeof bkLookNew === 'function' && typeof brPrice === 'function' ? brPrice(bkLookNew(), 'anhoehe').money : 60; },   // je Feld, im gewählten Material (160c C6)
     get mat() { if (typeof bkLookNew !== 'function' || typeof brPrice !== 'function') return { bretter: 3 }; const { money, ...m } = brPrice(bkLookNew(), 'anhoehe'); return m; },
-    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 8 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
+    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 8 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber – oder du ziehst gleich den Weg bzw. die Schiene oben von Anhöhe zu Anhöhe, dann kommt die Brücke mit. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js), 160c C9
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -693,8 +693,8 @@ const ITEM_TIPS = {
   fabrik: 'Bringt viele Taler, mit Bergwerken in der Nähe noch mehr. Laut – nicht direkt neben Häuser.',
   hafen: 'Ans Wasser. +8 % auf die Einnahmen der Betriebe (bis zu 3 Häfen zählen), Fischkutter bringen Taler; Schiffe fahren zu Stegen und Häfen auf anderen Inseln; ab Stufe 2 kaufen Frachter dir Waren ab.',
   leuchtturm: 'Das Finale: ein Leuchtturm-Kap (3×3) an der Küste – dann beginnt das Laternenfest.',
-  weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft.',
-  schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke. Über einen Weg entsteht ein Bahnübergang.',
+  weg: 'Wege verbinden Gebäude zu einem Viertel und holen Betriebe weit weg auf volle Kraft. Oben von Anhöhe zu Anhöhe gezogen, kommt eine Brücke mit.',
+  schiene: 'Zieh Schienen zwischen zwei Inseln – über Wasser werden sie zur Brücke, oben von Anhöhe zu Anhöhe ebenso. Über einen Weg entsteht ein Bahnübergang.',
   dach: 'Zieh die Überdachung über Wege, Wiese oder Plätze – auch 2 oder 3 Felder breit. An die Außenecken kommen Stützen gleich mit; weitere stellst du selbst dazu.',
   dachtreppe: 'Stell die Treppe unter Steinarkaden – sie braucht zwei überdachte Felder. Das Dach darüber bekommt eine Öffnung, oben gehen dann Leute spazieren.',
   stuetze: 'Stell Stützen unter deine Überdachung – an Ecken, Seitenmitten oder auf den Punkt zwischen vier Feldern. Wie viele, entscheidest du.',
@@ -782,7 +782,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Oder zieh gleich einen Weg oder eine Schiene oben von Anhöhe zu Anhöhe – die Brücke kommt mit, in Material und Farbe dieser Leiste. Unten darf weiter ein Weg oder eine Schiene durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };

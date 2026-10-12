@@ -98,7 +98,9 @@ function planScan(p) {
   if (ITEMS[p.tool].small) return scanSmall(p);
   if (p.tool === 'bruecke') return scanBruecke(p);                         // Brücke (Block 160, bruecken.js): als Ganzes
   const b = p.tool, states = new Map(), order = [], mat = {}, tmp = [], grow = CLAIM_TOOLS.has(b) || b === 'weg';   // Weg: Brücke wächst vom Ufer aus
-  const deck = b === 'weg' || b === 'schiene' ? bkPlanDeck(p) : null;   // Weg/Schiene über eine Brücke (Block 160, 160b): diese Felder oben aufs Deck
+  let deck = b === 'weg' || b === 'schiene' ? bkPlanDeck(p) : null;     // Weg/Schiene über eine Brücke (Block 160, 160b): diese Felder oben aufs Deck
+  const neu = b === 'weg' || b === 'schiene' ? bkPlanNew(p, b) : [], vcell = new Map();   // neue Brücken unter der Linie (160c C9): ihre Felder aufs Deck
+  for (const N of neu) for (const k of N.cells.keys()) { vcell.set(k, N); if (!N.err) (deck = deck || new Set()).add(k); }
   let cost = 0, firstErr = null, rest = planTiles(p);
   if (b === 'weg') PLANNED = new Set();
   if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
@@ -113,7 +115,9 @@ function planScan(p) {
     for (let round = 0; rest.length; round++) {
       const next = [];
       for (const [x, y] of rest) {
-        const k = x + ',' + y, onDeck = !!deck && deck.has(k), c = quer.get(k) || (onDeck ? (b === 'weg' ? bkWegCheck(x, y) : bkRailCheck(x, y)) : planCheck(b, x, y));
+        const k = x + ',' + y, onDeck = !!deck && deck.has(k), N = vcell.get(k);
+        const c = N ? (N.err ? { err: N.err } : (b === 'weg' ? bkWegCheck : bkRailCheck)(x, y, N.cells.get(k)))   // gedachte Zelle: Brücke kommt erst
+          : quer.get(k) || (onDeck ? (b === 'weg' ? bkWegCheck(x, y) : bkRailCheck(x, y)) : planCheck(b, x, y));
         if (c.err) { next.push([x, y, c.err]); continue; }
         states.set(k, c.same ? 'same' : 'ok');
         if (c.same) continue;
@@ -137,8 +141,11 @@ function planScan(p) {
     const old = ([x, y]) => deck && deck.has(x + ',' + y) ? bkRailAt(bkAt(x, y)) : bAt(x, y) === 'schiene';   // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird (Deck: sein Gleis, nicht das darunter)
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
   }
-  const bad = [...states.values()].filter(s => s === 'bad').length;
-  return { states, order, n: order.length, cost, gain: 0, mat, bad, firstErr, deck };
+  const ok = neu.filter(N => !N.err);                                    // zuerst die Brücken bauen (bezahlt mit vollem Geld), dann das Deck
+  for (const N of ok) { order.unshift([N.sp.x0, N.sp.y0, () => bkBuild(N.sp, N.look)]); cost += N.price.cost; for (const [r, v] of Object.entries(N.price.mat)) mat[r] = (mat[r] || 0) + v; }
+  const bad = [...states.values()].filter(s => s === 'bad').length, bkErr = (neu.find(N => N.err) || {}).err || null;
+  const bkGhost = ok.length ? new Map(ok.flatMap(N => [...N.ghost])) : null;
+  return { states, order, n: order.length - ok.length, cost, gain: 0, mat, bad, firstErr, deck, bk: ok.length ? ok.map(N => ({ mat: N.look.mat, n: N.sp.n })) : null, bkErr, bkGhost };
 }
 // Linie auf den Feldkanten: neu, umfärben (anderer Stil/Art) oder schon so
 function scanEdges(p) {
@@ -285,7 +292,8 @@ function scanDemolish(p) {
 // Ergebnis merken, bis sich etwas ändert (recalc zählt groundVersion hoch); Geld und Material immer frisch
 let planMemo = null;
 function planInfo(p) {
-  const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.erase ? 'e' : '', p.deck ? 'd' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion].join();   // Gleis-Stil (Block 112)
+  const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.erase ? 'e' : '', p.deck ? 'd' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion,
+    (p.tool === 'weg' || p.tool === 'schiene') && hillsOn() ? bkNewSig() : ''].join();   // Gleis-Stil (Block 112); Brücken-Leiste (160c C9)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')
@@ -305,6 +313,8 @@ function planText(p, info) {
     if (info.cost) parts.push('−' + fmt(info.cost));
   } else {
     parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
+    for (const B of info.bk || []) parts.push(`🌉 ${BR_MAT[B.mat].name}: ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // Brücke kommt mit (160c C9)
+    if (info.bkErr) parts.push(`🌉 ${info.bkErr}`);                     // warum die Lücke rot ist
     if (info.cost) parts.push('−' + fmt(info.cost));
   }
   if (matText(info.mat)) parts.push(matText(info.mat));

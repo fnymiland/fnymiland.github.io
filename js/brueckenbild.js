@@ -156,6 +156,14 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
 }
+// Geist einer Brücke, die eine Weg-/Gleislinie mitbaut (160c C9): gedachte Zelle c (bkPlanNew), alle Lagen auf einer Zwischenleinwand, 65 %,
+// ohne Licht; danach die Plan-Rauten auf dem Deck
+function bkDrawGhost(x, y, px, py, z, c) {
+  const A = bkTileArgs(c, px, py, z), [l, u, r, d] = bkBoxOf(['h', 'vd', 'o'], c);
+  ghostPaint(px - l * z, py - u * z, (l + r) * z, (u + d) * z, 0.65, () => bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }));
+  const marks = DECK_MARKS && DECK_MARKS.get(x + ',' + y);
+  if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
+}
 function bkGroup(x, y, px, py, z, gruppen) {
   const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)
   const live = gruppen.filter(gr => !(SPRITES_ON && !fade && spriteBridge(x, y, px, py, z, gr)));   // weit weg: Bildchen (im GL-Standbild ruhend)

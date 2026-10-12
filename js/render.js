@@ -1318,6 +1318,20 @@ function tileSprite(kind, x, y, px, py, z) {
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
 let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
+let PLAN_GHOST = null;                                                   // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle) – Geist in tileA
+// Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
+// sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten
+function ghostPaint(x0, y0, w, h, alpha, fn) {
+  const W = Math.max(1, Math.ceil(w * DPR)), H = Math.max(1, Math.ceil(h * DPR)), c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const cx = c.getContext('2d'), a0 = g.globalAlpha;
+  if (!cx) { freeCanvas(c); g.globalAlpha = a0 * alpha; try { fn(); } finally { g.globalAlpha = a0; } return; }   // kein Speicher: direkt
+  const prev = g;
+  g = cx;
+  try { g.setTransform(DPR, 0, 0, DPR, -x0 * DPR, -y0 * DPR); fn(); } finally { g = prev; }
+  g.globalAlpha = a0 * alpha; g.drawImage(c, x0, y0, W / DPR, H / DPR); g.globalAlpha = a0;
+  freeCanvas(c);
+}
 // Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
 const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
 function hillMark(x, y, f) {
@@ -1369,7 +1383,9 @@ function hillFrame(x0, y0, x1, y1, style) {
 }
 // Vorschau einer Linie bzw. eines Rechtecks: grün = wird gebaut, rot = geht nicht, hell = ist schon so
 function planPreview(z) {
-  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
+  const info = planInfo(plan), ins = 0.44;
+  PLAN_GHOST = info.bkGhost || null;
+  const dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
     const cs = [[-ins, -ins], [ins, -ins], [ins, ins], [-ins, ins]], K = hOf ? 4 : 1;                 // hOf: Höhe auf dem Deck (Bogen, 160c C2) – Seiten unterteilt
     const c = cs.flatMap(([u0, v0], j) => { const [u1, v1] = cs[(j + 1) % 4]; return Array.from({ length: K }, (_, q) => { const u = u0 + (u1 - u0) * q / K, v = v0 + (v1 - v0) * q / K, p = toScreen(x + u, y + v); if (hOf) p.y -= hOf(u, v) * z; return p; }); });
     g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
@@ -1389,7 +1405,7 @@ function planPreview(z) {
     return { ok: !info.err, text: planText(plan, info), p: e };
   }
   for (const [x, y] of planTiles(plan)) {
-    const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && bkAt(x, y);   // Weg aufs Deck einer Brücke (Block 160): Raute oben
+    const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && (bkAt(x, y) || (info.bkGhost && info.bkGhost.get(x + ',' + y)));   // Weg aufs Deck einer Brücke (Block 160; neue: Geist, 160c C9): Raute oben
     const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : null;
     const draw = () => { if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
       else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
@@ -1669,7 +1685,7 @@ function render(now) {
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   const HILLS = !!(state.hills && state.hills.size);                     // Anhöhen (Block 157): sonst alles wie vorher
   HILL_MARKS = HILLS ? new Map() : null;                                 // Vorschau auf Anhöhen-Feldern: erst in tileA, oben (hillMark)
-  DECK_MARKS = bkOn() ? new Map() : null;
+  DECK_MARKS = bkOn() || (plan && (plan.tool === 'weg' || plan.tool === 'schiene')) ? new Map() : null;   // auch für den Brücken-Geist (160c C9)
   hillGap = null;                                                        // Vorschau „Treppe in die Anhöhe“ (hills.js): gesetzt unten im Bauen-Zweig
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
@@ -2116,6 +2132,7 @@ function render(now) {
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
       if (!bkDone) bkDrawStill(x, y, px, py, z, now, bc, null);           // Rückfall (alte Daten: anderes Ding unter dem Deck) – die Brücke fehlt nie
+      else if (!bc && PLAN_GHOST && PLAN_GHOST.has(k)) bkDrawGhost(x, y, px, py, z, PLAN_GHOST.get(k));   // Brücke, die die Linie mitbaut (160c C9)
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
@@ -2216,7 +2233,7 @@ function render(now) {
   }
   FOG = false;
   archWalkers.clear();
-  HILL_MARKS = null; DECK_MARKS = null; hillGap = null;                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
+  HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; hillGap = null;                 // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 

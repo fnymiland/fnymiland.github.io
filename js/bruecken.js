@@ -187,14 +187,21 @@ function bkSpanOf(a, b) {
   let i0 = -1;
   for (let i = 1; i < v.length; i++) if (lv[i - 1] >= 1 && lv[i] < lv[i - 1]) { i0 = i; break; }
   if (i0 < 0) return { err: 'Von der Oberkante einer Anhöhe hinüber zur anderen ziehen' };
+  return bkGapAt(v, i0);
+}
+// Lücke in der Feldfolge v ab dem ersten tieferen Feld i0 (das Feld davor liegt oben): Spanne bis zur nächsten Anhöhe derselben Höhe, gerade
+// (160c C9: auch für Weg- und Gleislinien mit Knick). Spanne mit i1 (Index der Anhöhe gegenüber) bzw. { err, i1 }
+function bkGapAt(v, i0) {
+  const lv = v.map(([x, y]) => hillLevel(x, y)), top = lv[i0 - 1];
   let i1 = i0;
-  while (i1 < v.length && lv[i1] < lv[i0 - 1]) i1++;
-  if (i1 >= v.length) return { err: 'Bis auf die Anhöhe gegenüber ziehen' };
-  if (lv[i1] !== lv[i0 - 1]) return { err: 'Beide Anhöhen müssen gleich hoch sein' };
-  if (lv[i0 - 1] !== 1) return { err: 'Brücken gehen bisher nur zwischen Anhöhen der ersten Ebene' };
-  const gap = v.slice(i0, i1), ax = gap.length > 1 ? (gap[0][1] === gap[1][1] ? 0 : 1) : (v[i0 - 1][1] === v[i0][1] ? 0 : 1);
-  const [x0, y0] = gap.reduce((m, p) => (p[0] + p[1] < m[0] + m[1] ? p : m));
-  return { x0, y0, ax, n: gap.length, gap, ends: [v[i0 - 1], v[i1]] };
+  while (i1 < v.length && lv[i1] < top) i1++;
+  if (i1 >= v.length) return { err: 'Bis auf die Anhöhe gegenüber ziehen', i1 };
+  const run = v.slice(i0 - 1, i1 + 1), ax = run[0][1] === run[1][1] ? 0 : 1;
+  if (run.some(([x, y]) => ax ? x !== run[0][0] : y !== run[0][1])) return { err: 'Nur gerade – von einer Anhöhe hinüber zur anderen', i1 };
+  if (lv[i1] !== top) return { err: 'Beide Anhöhen müssen gleich hoch sein', i1 };
+  if (top !== 1) return { err: 'Brücken gehen bisher nur zwischen Anhöhen der ersten Ebene', i1 };
+  const gap = v.slice(i0, i1), [x0, y0] = gap.reduce((m, p) => (p[0] + p[1] < m[0] + m[1] ? p : m));
+  return { x0, y0, ax, n: gap.length, gap, ends: [v[i0 - 1], v[i1]], i1 };
 }
 // Darf hier eine Brücke in diesem Aussehen hin? look: bkLookNew() (Material, Farbe; 160c C6)
 function bkError(sp, look, noCost) {
@@ -361,9 +368,38 @@ function bkPlanDeck(p) {
   });
   return out.size ? out : null;
 }
+// Neue Brücken unter einer Weg- bzw. Gleislinie (160c C9, plan-160c/karte-C9.md): wo die Linie oben von einer Anhöhe in eine Lücke hinabsteigt
+// und gerade auf die Anhöhe gegenüber (gleich hoch, Ebene 1) führt. Material und Farbe aus der Leiste des Brücken-Werkzeugs (Nutzer 12.10.2026).
+// Geprüft an gedachten Zellen (nie eine Probe in state.bruecken): Prüfzelle leer (sonst „schon da“), Zeichenzelle (Geist) mit Weg bzw. Gleis.
+// Still unten wie heute: kein Gegenüber, Knick, Ebene 2, länger als BK_MAX, Rampe/Treppe hinunter, Brücke schon da. Sonst err = Grund (rot)
+function bkPlanNew(p, tool) {
+  if (!hillsOn() || !available('bruecke')) return [];
+  const [x0, y0, x1, y1] = planBox(p);
+  if (p.kind !== 'line' && x0 !== x1 && y0 !== y1) return [];            // breite Fläche: unten (wie bkPlanDeck)
+  const v = lineTiles(p.a, p.b), out = [];
+  for (let i = 1; i < v.length; i++) {
+    const lp = hillLevel(...v[i - 1]);
+    if (lp < 1 || hillLevel(...v[i]) >= lp) continue;                      // kein Abstieg von oben
+    const sp = bkGapAt(v, i);
+    if (sp.err) continue;
+    i = sp.i1;
+    if (sp.n > BK_MAX || sp.gap.some(([x, y]) => bkAt(x, y) || rampAt(x, y) || stairAt(x, y))) continue;
+    const look = bkLookNew(), k0 = sp.x0 + ',' + sp.y0, b = { ax: sp.ax, n: sp.n, art: look.mat, ...(look.col != null ? { brc: look.col } : {}) };
+    const cell = ([x, y]) => ({ k: k0, b, i: sp.ax ? y - sp.y0 : x - sp.x0, x0: sp.x0, y0: sp.y0, dx: sp.ax ? 0 : 1, dy: sp.ax ? 1 : 0 });
+    const cells = new Map(sp.gap.map(q => [q[0] + ',' + q[1], cell(q)]));
+    let err = bkError(sp, look, true);                                      // Fußgänger-Bogen, wie das Werkzeug
+    if (!err) { const c0 = cells.values().next().value, r = (tool === 'weg' ? bkWegCheck : bkRailCheck)(c0.x0 + c0.dx * c0.i, c0.y0 + c0.dy * c0.i, c0); if (r.err) err = r.err; }   // Trittsteine, Bahn-Böcke, Viadukt
+    const gb = { ...b, ...(tool === 'weg' ? { weg: Array(sp.n).fill(currentStyle('weg')) } : { gleis: Array(sp.n).fill(decoLookNew('schiene').form || 0) }) }, G = bkGeom(gb);
+    const ghost = new Map([...cells].map(([k, c]) => [k, { ...c, b: gb, G }]));
+    out.push({ sp, look, cells, ghost, err, price: bkPrice(look, sp.n) });
+  }
+  return out;
+}
+// Merk-Kennung fürs Planen (planInfo): Material, Farbe, Sperre und Freischaltung der Brücken-Leiste (ändert sich ohne recalc)
+const bkNewSig = () => { const L = bkLookNew(); return [L.mat, L.col, brMatLock(L.mat) ? 1 : 0, available('bruecke') ? 1 : 0].join(':'); };
 const BK_NO_STONES = 'Trittsteine gehen nicht über eine Brücke – einen anderen Belag wählen';
-function bkWegCheck(x, y) {
-  const c = bkAt(x, y), st = currentStyle('weg');
+function bkWegCheck(x, y, c = bkAt(x, y)) {                               // c: auch eine gedachte Zelle (bkPlanNew)
+  const st = currentStyle('weg');
   if (pathLook(styleDef('weg', st).id).stones) return { err: BK_NO_STONES };
   if (bkRailAny(c.b)) return { err: 'Auf dieser Brücke liegt ein Gleis – Weg oder Gleis, nicht beides' };
   if (c.b.weg && c.b.weg[c.i] === st) return { same: true };
@@ -427,8 +463,8 @@ function bkRailJumps(x, y) {                                               // Sc
   return out;
 }
 const BK_BOTH = 'Auf dieser Brücke liegt ein Weg – Weg oder Gleis, nicht beides';
-function bkRailCheck(x, y) {
-  const c = bkAt(x, y), f = decoLookNew('schiene').form || 0;
+function bkRailCheck(x, y, c = bkAt(x, y)) {                              // c: auch eine gedachte Zelle (bkPlanNew)
+  const f = decoLookNew('schiene').form || 0;
   if (!available('schiene')) return { err: `Schiene: ${lockText('schiene').replace('🔒 ', 'erst mit ')}` };
   if (bkWegAny(c.b)) return { err: BK_BOTH };
   if (bkRailAt(c)) return c.b.gleis[c.i] === f ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil umstellen: kostenlos (wie am Boden)
@@ -618,16 +654,19 @@ function drawBkIcon(cx, cy, z, art, col = null) {                           // c
 // Antippen: getroffen ist das Deck, das man sieht – der Punkt HILL_H unter dem Zeiger liegt auf dem Boden unter dem Deck
 // ---------------------------------------------------------------------------
 function bkPick(sx, sy) {
-  if (!bkOn() || (typeof seeThrough !== 'undefined' && seeThrough)) return null;
-  const h0 = bkFresh().stone ? -0.7 * DEPTH - 1 : HILL_H - 3;               // Stein (160c C3): Stirn und Pfeiler reichen bis zum Boden
-  for (let h = HILL_H + bkPeakMax() + 4; h >= h0; h -= 1) {                 // von oben: was zuerst trifft, liegt vorn (Bogen, 160c C2: Höhe je Stelle)
-    const [a, b] = tileFrac(sx, sy + h * cam.z), x = Math.round(a), y = Math.round(b), c = bkAt(x, y);
+  const pg = typeof plan !== 'undefined' && plan && plan.fixed && (plan.tool === 'weg' || plan.tool === 'schiene') ? planInfo(plan).bkGhost : null;   // stehende Vorschau: der Geist (160c C9)
+  if ((!bkOn() && !pg) || (typeof seeThrough !== 'undefined' && seeThrough)) return null;
+  const at = (x, y) => bkAt(x, y) || (pg && pg.get(x + ',' + y)) || null, gs = pg ? [...pg.values()] : [];
+  const h0 = (bkOn() && bkFresh().stone) || gs.some(c => c.G.stone) ? -0.7 * DEPTH - 1 : HILL_H - 3;   // Stein (160c C3): Stirn und Pfeiler reichen bis zum Boden
+  const top = Math.max(bkPeakMax(), ...gs.map(c => brPeak(c.G.fam, c.b.n)));
+  for (let h = HILL_H + top + 4; h >= h0; h -= 1) {                         // von oben: was zuerst trifft, liegt vorn (Bogen, 160c C2: Höhe je Stelle)
+    const [a, b] = tileFrac(sx, sy + h * cam.z), x = Math.round(a), y = Math.round(b), c = at(x, y);
     if (!c) continue;
     const t = bkT(c, a, b), hd = bkH(c.b, t), low = c.G && c.G.art === 'stein' ? c.G.stone.low(t, bkGround(c, t)) : hd - 3;
     if (h > hd + 4 || h < low) continue;
     if (h > hd) {                                                      // Geländer: nur, wenn auf Deckhöhe nicht die Oberseite einer Anhöhe davor liegt
       const [ha, hb] = tileFrac(sx, sy + HILL_H * cam.z), hx = Math.round(ha), hy = Math.round(hb);
-      if (!bkAt(hx, hy) && hillLift(hx, hy) >= HILL_H) continue;
+      if (!at(hx, hy) && hillLift(hx, hy) >= HILL_H) continue;
     }
     const s = c.b.ax ? a - x : b - y;
     if (Math.abs(s) > BK_W + 0.05) continue;

@@ -27,6 +27,16 @@ const twoRamps = () => {
   rails([...col(12, 15, 18), ...col(12, 10, 12), ...col(12, 4, 7)]);
 };
 
+// 160c C9: eine Gleislinie, die oben über die Gleis-Rampe ins Tal und zur nächsten Anhöhe führt, baut keine Brücke (still unten wie heute)
+describe('Rampe hinunter statt Brücke (160c C9)', () => {
+  it('Linie über die Rampe ins Tal und hinüber zur nächsten Anhöhe: keine Brücke, kein Rot', () => {
+    twoRamps();
+    hills(block(10, 1, 16, 3));
+    const r = game("(() => { setTool('schiene'); startPlan('line', { x: 12, y: 11 }, { x: 12, y: 2 }, false); const i = planInfo(plan); const out = [i.bk || null, i.bkErr || null, i.bad]; plan = null; setTool('look'); return out; })()");
+    expect(r).toEqual([null, null, 0]);
+  });
+});
+
 describe('Gleise oben und unten', () => {
   it('Schienen dürfen auf die Anhöhe (nicht auf die Gleis-Rampe); Bahnhöfe oben (Stufe 3), Einfahrten nur unten', () => {
     hills(block(10, 8, 16, 14));
