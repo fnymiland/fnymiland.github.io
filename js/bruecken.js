@@ -12,12 +12,18 @@ const BK_ARTEN = {
   holz: { name: 'Holzsteg', cost: 60, mat: { bretter: 3 }, frei: 2 },             // länger als 2 Felder: Holzböcke am ersten und letzten Feld
   stahl: { name: 'Stahlbrücke', cost: 120, mat: { metall: 3 }, frei: 4, tech: 'bahn' },   // spannt frei, erst mit der Eisenbahn
 };
-const BK_ART_IDS = ['holz', 'stahl'];                                    // = DECO_LOOKS.bruecke.forms
+const BK_ART_IDS = DECO_LOOKS.bruecke.forms.map(f => f.id);               // Formen der Leiste = Materialien (Index = paintNew.bruecke.form, nie umsortieren)
 const BK_MAX = 4, BK_W = 0.4, BK_CLEAR = HILL_H - 6;                    // längste Lücke, halbe Breite des Decks, Platz darunter (Deko-Höhe)
 const BK_READ_MAX = 8;                                                    // so lange Brücken liest parseSave schon (160c: gebaut wird bis 8 erst später)
 const BK_NO_PAINT = new Set(['wald', 'obstwald', 'fels', 'anhoehe']);   // Gelände, das darunter nicht passt (Bäume, Felsen, Anhöhe)
-const bkArtOf = b => BK_ARTEN[b && b.art] ? b.art : 'holz';
+const bkArtOf = b => b && typeof b.art === 'string' && ['holz', 'stahl', 'stein', 'kristall'].includes(b.art) ? b.art : 'holz';   // BK_ARTEN: nur noch eingefrorene v1016-Preise (Geld ohne brp)
 const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';
+// Aussehen einer neuen Brücke (Leiste): Material, Farbe; Rest Standard (Stützen „wenige“, kein Licht, keine Zacken)
+function bkLookNew() {
+  const p = decoLookNew('bruecke');
+  return { at: 'anhoehe', fam: 'fuss', mat: BK_ART_IDS[p.form || 0] || 'holz', col: p.col ? p.col - 1 : null, plank: null, deck: 'muster', licht: null, zacken: false, stuetzen: 'wenige' };
+}
+const bkPrice = (look, n) => brCostMat(brPrice(look, 'anhoehe', n));    // { cost, mat }
 const bkCost = (art, n) => brCostMat(brAdd({ money: 0 }, BR_COST.anhoehe[art] || BR_COST.anhoehe.holz, n));   // Preise: brueckenfamilie.js (160c A4)
 const bkRailAny = b => !!b && !!b.gleis && b.gleis.some(f => f != null);
 const bkWegAny = b => !!b && !!b.weg && b.weg.some(Boolean);
@@ -189,50 +195,53 @@ function bkSpanOf(a, b) {
   const [x0, y0] = gap.reduce((m, p) => (p[0] + p[1] < m[0] + m[1] ? p : m));
   return { x0, y0, ax, n: gap.length, gap, ends: [v[i0 - 1], v[i1]] };
 }
-// Darf hier eine Brücke dieser Art hin?
-function bkError(sp, art, noCost) {
+// Darf hier eine Brücke in diesem Aussehen hin? look: bkLookNew() (Material, Farbe; 160c C6)
+function bkError(sp, look, noCost) {
   if (sp.err) return sp.err;
   if (!available('bruecke')) return `Brücke: ${lockText('bruecke').replace('🔒 ', 'erst mit ')}`;
-  const A = BK_ARTEN[art];
-  if (A.tech && !state.techs.has(A.tech)) return `${A.name}: erst mit der Eisenbahn`;
+  const mat = look && BR_MAT[look.mat] ? look.mat : 'holz', lk = brMatLock(mat);
+  if (lk) return lk;
   for (const [ex, ey] of sp.ends) if (!ownedTile(ex, ey)) return notMine(ex, ey);
   if (sp.n > BK_MAX) return `Höchstens ${BK_MAX} Felder Lücke – sonst braucht die Brücke Pfeiler`;
+  const nb = { ax: sp.ax, n: sp.n, art: mat }, Gn = bkGeom(nb);           // so, wie sie gebaut würde (Stein: Pfeiler und Bögen)
   for (let i = 0; i < sp.gap.length; i++) {
     const [x, y] = sp.gap[i];
     if (!ownedTile(x, y)) return notMine(x, y);
-    if (bkAt(x, y)) return 'Hier ist schon eine Brücke – die Art wechselst du im Fenster (👆)';
-    const e = bkUnderError(x, y);
+    if (bkAt(x, y)) return 'Hier ist schon eine Brücke – das Material wechselst du im Fenster (👆)';
+    const e = bkUnderError(x, y, Gn, i);
     if (e) return e;
   }
   for (const [x, y] of sp.gap) if (bpFronts(x, y).length) return 'Hier sitzt ein Bergportal in der Wand – die Brücke läge vor seiner Öffnung';   // R9, wie bpError
-  const se = bkSupportsError(sp.x0 + ',' + sp.y0, { ax: sp.ax, n: sp.n, art });   // Stützen auf den Kanten (160c C1)
+  const se = bkSupportsError(sp.x0 + ',' + sp.y0, nb);                    // Stützen bzw. Pfeiler auf den Kanten (160c C1)
   if (se) return se;
   if (noCost) return null;
-  const c = bkCost(art, sp.n);
+  const c = bkPrice({ ...look, mat }, sp.n);
   if (state.money < c.cost) return 'Zu wenig Taler';
   return matError(c.mat);
 }
 // Planen (plan.js planScan): die ganze Brücke auf einmal – die Felder der Lücke grün oder rot, der Rest hell
 function scanBruecke(p) {
-  const states = new Map(), order = [], art = bkArtNew(), sp = bkSpanOf(p.a, p.b);
+  const states = new Map(), order = [], look = bkLookNew(), sp = bkSpanOf(p.a, p.b);
   for (const [x, y] of planTiles(p)) states.set(x + ',' + y, 'same');
-  const err = bkError(sp, art, true);
+  const err = bkError(sp, look, true);
   if (sp.gap) for (const [x, y] of sp.gap) states.set(x + ',' + y, err ? 'bad' : 'ok');
   if (err) return { states, order, n: 0, cost: 0, gain: 0, mat: {}, bad: sp.gap ? sp.gap.length : 0, firstErr: err };
-  const c = bkCost(art, sp.n);
-  order.push([sp.x0, sp.y0, () => bkBuild(sp, art)]);
-  return { states, order, n: sp.n, cost: c.cost, gain: 0, mat: c.mat, bad: 0, firstErr: null, art };
+  const c = bkPrice(look, sp.n);
+  order.push([sp.x0, sp.y0, () => bkBuild(sp, look)]);
+  return { states, order, n: sp.n, cost: c.cost, gain: 0, mat: c.mat, bad: 0, firstErr: null, art: look.mat };
 }
-function bkBuild(sp, art) {
-  const err = bkError(sp, art);
+// Bauen im neuen Format (160c C6): Material in art, Farbe in brc (nur Abweichungen), bezahlt in brp samt Kennung k = 'a:<art>'
+function bkBuild(sp, look) {
+  if (typeof look === 'string') look = { ...bkLookNew(), mat: look };      // alte Aufrufe mit der Art
+  const err = bkError(sp, look);
   if (err) { fail(err); return false; }
-  const c = bkCost(art, sp.n);
-  state.money -= c.cost; payMat(c.mat);
-  state.bruecken.set(sp.x0 + ',' + sp.y0, { ax: sp.ax, n: sp.n, art });
+  const c = brPrice(look, 'anhoehe', sp.n), b = { ax: sp.ax, n: sp.n, art: look.mat, ...(look.col != null ? { brc: look.col } : {}) };
+  state.money -= c.money; payMat(brCostMat(c).mat);
+  b.brp = { ...c, k: brSig(b, 'anhoehe') };
+  state.bruecken.set(sp.x0 + ',' + sp.y0, b);
   groundVersion++; sfx('road'); recalc(); save();
   return true;
 }
-// Abreißen: erst der Weg bzw. das Gleis auf dem Deck (wie oben auf der Anhöhe: erst, was oben steht), dann die Brücke – voll zurück
 const bkRailCount = b => (b.gleis || []).filter(f => f != null).length;
 function bkDemolishInfo(x, y) {
   const c = bkAt(x, y);
@@ -241,7 +250,7 @@ function bkDemolishInfo(x, y) {
   if (nw) return { k: c.k, weg: true, refund: nw * ITEMS.weg.cost, label: 'Weg auf der Brücke entfernen' };
   if (ng) return { k: c.k, gleis: true, refund: ng * ITEMS.schiene.cost, mat: Object.fromEntries(Object.entries(ITEMS.schiene.mat || {}).map(([r, v]) => [r, v * ng])), label: 'Gleis auf der Brücke entfernen' };
   const bc = brCostMat(brPaid(c.b, 'anhoehe'));                            // was sie gekostet hat (160c A4)
-  return { k: c.k, refund: bc.cost, mat: bc.mat, label: `${BK_ARTEN[bkArtOf(c.b)].name} abreißen` };
+  return { k: c.k, refund: bc.cost, mat: bc.mat, label: `Brücke aus ${BR_MAT[bkArtOf(c.b)].name} abreißen` };
 }
 function bkDemolishAt(x, y, all = false) {                                // all: Weg/Gleis und Brücke zusammen (Fenster „Abreißen“)
   const c = bkAt(x, y);
@@ -266,21 +275,62 @@ function bkDemolishAt(x, y, all = false) {                                // all
   return true;
 }
 // Art wechseln (Fenster): alte voll zurück, neue bezahlt; Holz mit Böcken braucht unten an den Böcken Platz
-function bkSetArt(k, art) {
-  const b = state.bruecken.get(k);
-  if (!b || bkArtOf(b) === art) return false;
-  const A = BK_ARTEN[art];
-  if (A.tech && !state.techs.has(A.tech)) { fail(`${A.name}: erst mit der Eisenbahn`); return false; }
-  const se = bkSupportsError(k, b, art);                                    // Stützen der neuen Art (160c C1)
-  if (se) { fail(se); return false; }
-  const old = brCostMat(brPaid(b, 'anhoehe')), nu = bkCost(art, b.n), wasNew = brIsNew(b, 'anhoehe');   // alt: was bezahlt wurde (160c A4)
-  if (state.money + old.cost < nu.cost) { fail('Zu wenig Taler'); return false; }
-  for (const [r, n] of Object.entries(nu.mat)) if ((state.res[r] || 0) + (old.mat[r] || 0) < n) { fail(`Zu wenig ${RES[r].name}`); return false; }
-  state.money += old.cost - nu.cost;
-  for (const [r, n] of Object.entries(old.mat)) state.res[r] += n;
-  payMat(nu.mat);
-  b.art = art;
-  if (wasNew) b.brp = { ...brMoney(nu.cost, nu.mat), k: brSig(b, 'anhoehe') };   // neues Format: bezahlt ist jetzt die neue Art
+function bkSetArt(k, art) { return brSet({ at: 'anhoehe', k }, { mat: art }); }   // Hülle (Tests, Werkzeuge): Material wechseln
+// Setzer der Anhöhen-Brücke (160c C6): ch = { mat } | { col } | { plank } | { deck } | { stuetzen } | { zacken: 'kaufen' | 'an' | 'aus' }.
+// Material: das Bezahlte voll zurück, das neue bezahlen (gekaufte Zacken verfallen); Zacken kaufen: Aufpreis je Feld; sonst kostenlos.
+// Geprüft am Zielobjekt: Sperre, neue Stützen/Pfeiler (nur die neuen – alte Stände), Lichtraum unter Stein. brp danach immer mit Kennung
+function brSet(ref, ch) {
+  if (!ref || ref.at !== 'anhoehe') return false;
+  const b = state.bruecken.get(ref.k);
+  if (!b || !ch) return false;
+  const n = b.n, L = brLook(b, 'anhoehe'), nb = JSON.parse(JSON.stringify(b)), paid = brPaid(b, 'anhoehe'), [x0, y0] = keyXY(ref.k);
+  const fuss = L.fam === 'fuss', wegDa = bkWegAny(b);
+  let price = null;                                                        // neu zu bezahlen (Material) bzw. Aufpreis (Zacken)
+  if ('mat' in ch) {
+    if (!BR_MAT[ch.mat] || !Object.prototype.hasOwnProperty.call(BR_MAT, ch.mat) || ch.mat === L.mat) return false;
+    const lk = brMatLock(ch.mat); if (lk) { fail(lk); return false; }
+    nb.art = ch.mat; delete nb.brz; if (ch.mat !== 'holz') { delete nb.bru; delete nb.brw; }
+  } else if ('col' in ch) {
+    const v = ch.col == null ? null : brIdx(ch.col);
+    if (v === L.col || (v != null && v >= BRIDGE_COLS.length)) return false;
+    if (v == null) delete nb.brc; else nb.brc = v;
+  } else if ('plank' in ch) {
+    const v = ch.plank == null ? null : brIdx(ch.plank);
+    if (L.mat !== 'holz' || v === L.plank || (v != null && v >= PLANK_COLS.length)) return false;
+    if (v == null) delete nb.brw; else nb.brw = v;
+  } else if ('deck' in ch) {
+    if (!wegDa || (ch.deck !== 'belag' && ch.deck !== 'muster') || ch.deck === L.deck) return false;
+    if (ch.deck === 'belag') delete nb.brb; else nb.brb = 'muster';        // Standard mit Weg: Belag
+  } else if ('stuetzen' in ch) {
+    if (L.mat !== 'holz' || !fuss || !['keine', 'wenige', 'jede'].includes(ch.stuetzen) || ch.stuetzen === L.stuetzen) return false;
+    if (ch.stuetzen === 'wenige') delete nb.bru; else nb.bru = ch.stuetzen;
+  } else if ('zacken' in ch) {
+    if (L.mat !== 'kristall' || !fuss) return false;
+    const bought = b.brz === 'an' || b.brz === 'aus';
+    if (ch.zacken === 'kaufen') { if (bought) return false; price = brAdd({ money: 0 }, BR_OPT.zacken.feld, n); nb.brz = 'an'; }
+    else if ((ch.zacken === 'an' || ch.zacken === 'aus') && bought && b.brz !== ch.zacken) nb.brz = ch.zacken;
+    else return false;
+  } else return false;
+  const old = bkSupports(b);                                               // neue Stützen bzw. Pfeiler: ist ihre Kante frei?
+  for (const e of bkSupports(nb)) if (!old.includes(e)) { const err = bkEdgeBlocker(...bkEdgeCells(x0, y0, b.ax, e)); if (err) { fail(err); return false; } }
+  if ('mat' in ch) {
+    const Gn = bkGeom(nb);
+    if (Gn.stone) for (const [i, [cx, cy]] of bkCellsOf(ref.k, b).entries()) { const err = bkUnderError(cx, cy, Gn, i); if (err) { fail(err); return false; } }
+    price = brPrice({ ...brLook(nb, 'anhoehe'), zacken: false }, 'anhoehe', n);
+    if (state.money + (paid.money || 0) < price.money) { fail('Zu wenig Taler'); return false; }
+    for (const [r, v] of Object.entries(price)) if (r !== 'money' && (state.res[r] || 0) + (paid[r] || 0) < v) { fail(`Zu wenig ${RES[r].name}`); return false; }
+    state.money += (paid.money || 0) - price.money;
+    for (const [r, v] of Object.entries(paid)) if (r !== 'money') state.res[r] += v;
+    payMat(brCostMat(price).mat);
+    nb.brp = { ...price, k: brSig(nb, 'anhoehe') };
+  } else if (price) {                                                      // Zacken: Aufpreis
+    const c = brCostMat(price);
+    if (state.money < c.cost) { fail('Zu wenig Taler'); return false; }
+    const me = matError(c.mat); if (me) { fail(me); return false; }
+    state.money -= c.cost; payMat(c.mat);
+    nb.brp = { ...brAdd({ ...paid }, price), k: brSig(nb, 'anhoehe') };
+  } else nb.brp = { ...paid, k: brSig(nb, 'anhoehe') };                    // kostenlos: Bezahltes festschreiben (alter Stand: nach der alten Tabelle)
+  state.bruecken.set(ref.k, nb);
   groundVersion++; sfx('road'); save();
   return true;
 }
@@ -599,22 +649,35 @@ function bkPickFront(sx, sy) {
 function openBkInfo(x, y) {
   const c = bkAt(x, y);
   if (!c) { closePanel(); return; }
-  const art = bkArtOf(c.b), A = BK_ARTEN[art], nw = (c.b.weg || []).filter(Boolean).length, ng = bkRailCount(c.b);
-  const cur = bkCost(art, c.b.n);
-  const btn = id => {
-    const B = BK_ARTEN[id], nu = bkCost(id, c.b.n), dm = nu.cost - cur.cost, lock = B.tech && !state.techs.has(B.tech);
-    return `<button class="look look-form${id === art ? ' on' : ''}${lock ? ' locked' : ''}" data-bkart="${id}" aria-label="${B.name}"><img alt="" src="${lookThumb('bruecke', BK_ART_IDS.indexOf(id), 0) || 'data:,'}"><span>${B.name}${id === art ? '' : dm > 0 ? ` · −${fmt(dm)}` : dm < 0 ? ` · +${fmt(-dm)}` : ''}</span></button>`;
+  const b = c.b, L = brLook(b, 'anhoehe'), ref = { at: 'anhoehe', k: c.k }, nw = (b.weg || []).filter(Boolean).length, ng = bkRailCount(b), paid = brPaid(b, 'anhoehe');
+  const fuss = L.fam === 'fuss', diff = d => d > 0 ? ` · −${fmt(d)}` : d < 0 ? ` · +${fmt(-d)}` : '';
+  const matBtn = id => {
+    const nu = brPrice({ ...brLook({ ...b, art: id, brz: undefined }, 'anhoehe'), zacken: false }, 'anhoehe', b.n), lk = brMatLock(id), M = BR_MAT[id];
+    return `<button class="look look-form${id === L.mat ? ' on' : ''}${lk ? ' locked' : ''}" data-bkart="${id}" aria-label="${M.name}"${lk ? ` title="${escHtml(lk)}"` : ''}><img alt="" src="${lookThumb('bruecke', BK_ART_IDS.indexOf(id), L.col == null ? 0 : L.col + 1) || 'data:,'}"><span>${lk ? '🔒 ' : ''}${M.name}${id === L.mat ? '' : diff(nu.money - (paid.money || 0))}</span></button>`;
   };
-  const el = showPanel(`<h3>🌉 ${escHtml(A.name)}</h3>
-    <p class="muted">Brücke zwischen zwei Anhöhen · ${c.b.n} ${c.b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
-    <div class="label">Art</div><div class="looks look-forms">${BK_ART_IDS.map(btn).join('')}</div>
+  const colBtn = (v, name, css) => `<button class="sw${v === L.col ? ' on' : ''}" data-brc="${v == null ? '' : v}" style="background:${css}" title="${escHtml(name)}" aria-label="Farbe ${escHtml(name)}"></button>`;
+  const opt = (key, v, name, on) => `<button class="btn small${on ? ' on' : ''}" data-${key}="${v}">${name}</button>`;
+  const bought = b.brz === 'an' || b.brz === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken.feld, b.n));
+  const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
+    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
+    <div class="label">Material</div><div class="looks look-forms">${BK_ART_IDS.map(matBtn).join('')}</div>
+    <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => colBtn(i, d.name, d.c)).join('')}</div>
+    ${nw ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
+    ${L.mat === 'holz' && fuss ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
+    ${L.mat === 'kristall' && fuss ? `<div class="label">Kristallzacken</div><div class="row">${bought ? opt('brz', 'an', 'An', b.brz === 'an') + opt('brz', 'aus', 'Aus', b.brz === 'aus')
+      : `<button class="btn" data-brz="kaufen">✨ Zacken kaufen −${fmt(zk.cost)}${Object.keys(zk.mat).length ? ' · ' + matText(zk.mat) : ''}</button>`}</div>` : ''}
     <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
     ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`
-      : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(c.b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
+      : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
       : '<p class="muted">Zieh einen Weg oder eine Schiene von der einen Anhöhe über die Brücke zur anderen.</p>'}
-    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt(cur.cost + nw * ITEMS.weg.cost + ng * ITEMS.schiene.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt((paid.money || 0) + nw * ITEMS.weg.cost + ng * ITEMS.schiene.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
     () => bkAt(x, y) ? openBkInfo(x, y) : closePanel());
-  for (const b of el.querySelectorAll('[data-bkart]')) b.onclick = () => { undoable(() => bkSetArt(c.k, b.dataset.bkart)); openBkInfo(x, y); };
+  const set = ch => { undoable(() => brSet(ref, ch)); openBkInfo(x, y); };
+  for (const e of el.querySelectorAll('[data-bkart]')) e.onclick = () => set({ mat: e.dataset.bkart });
+  for (const e of el.querySelectorAll('[data-brc]')) e.onclick = () => set({ col: e.dataset.brc === '' ? null : +e.dataset.brc });
+  for (const e of el.querySelectorAll('[data-brb]')) e.onclick = () => set({ deck: e.dataset.brb });
+  for (const e of el.querySelectorAll('[data-bru]')) e.onclick = () => set({ stuetzen: e.dataset.bru });
+  for (const e of el.querySelectorAll('[data-brz]')) e.onclick = () => set({ zacken: e.dataset.brz });
   if ($('p-bkweg')) $('p-bkweg').onclick = () => { undoable(() => bkDemolishAt(x, y)); openBkInfo(x, y); };
   $('p-del').onclick = () => { closePanel(); undoable(() => bkDemolishAt(x, y, true)); };
   $('p-close').onclick = closePanel;

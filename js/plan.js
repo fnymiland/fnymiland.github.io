@@ -301,7 +301,7 @@ function planText(p, info) {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
     if (info.cleared) parts.push(`${info.cleared} ${info.cleared === 1 ? 'Feld' : 'Felder'} roden/sprengen −${fmt(info.cost)}`);
   } else if (p.tool === 'bruecke') {
-    parts.push(`🌉 ${BK_ARTEN[info.art || bkArtNew()].name}${info.n ? `: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}` : ''}`);   // Block 160
+    parts.push(`🌉 ${BR_MAT[info.art || bkArtNew()].name}${info.n ? `: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}` : ''}`);   // Block 160 (160c C6: Material)
     if (info.cost) parts.push('−' + fmt(info.cost));
   } else {
     parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);

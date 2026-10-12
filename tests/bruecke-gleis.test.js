@@ -115,7 +115,7 @@ describe('Gleis aufs Deck', () => {
     plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     const before = game("JSON.stringify([...state.bruecken])");
     game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize())))); recalc()');
-    expect(game("JSON.stringify([...state.bruecken])")).toBe(before);
+    expect(JSON.parse(game("JSON.stringify([...state.bruecken])"))).toEqual(JSON.parse(before));
     expect(game("T.rail.comp.get('12,12') === T.rail.comp.get('18,12')")).toBe(true);
     const bad = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.bruecken = [['2,2', { ax: 1, n: 2, art: 'holz', gleis: [1, 99] }], ['3,3', { ax: 0, n: 2, weg: ['sand', null], gleis: [0, 0] }]]; const m = parseSave(d).bruecken; return [m.get('2,2'), m.get('3,3')]; })()");
     expect(bad).toEqual([{ ax: 1, n: 2, art: 'holz', gleis: [1, null] }, { ax: 0, n: 2, art: 'holz', weg: ['sand', null] }]);

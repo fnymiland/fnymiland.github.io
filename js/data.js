@@ -203,7 +203,10 @@ const ITEMS = {
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
   anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
-  bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform', cost: 60, mat: { bretter: 3 }, desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holzsteg oder Stahlbrücke (mit der Eisenbahn); danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
+  bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform',
+    get cost() { return typeof bkLookNew === 'function' && typeof brPrice === 'function' ? brPrice(bkLookNew(), 'anhoehe').money : 60; },   // je Feld, im gewählten Material (160c C6)
+    get mat() { if (typeof bkLookNew !== 'function' || typeof brPrice !== 'function') return { bretter: 3 }; const { money, ...m } = brPrice(bkLookNew(), 'anhoehe'); return m; },
+    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -779,7 +782,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Holz oder Stahl wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };
@@ -1153,7 +1156,8 @@ const MARKISE_COLS = [                                                  // Über
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }];
 const DECO_LOOKS = {
   anhoehe: { group: 'Anhöhen', icon: '#8a7f73', cols: null, forms: [{ id: 'fels', name: 'Felswand' }, { id: 'erde', name: 'Erde mit Grasnarbe' }, { id: 'mauer', name: 'Trockenmauer' }] },   // Block 157
-  bruecke: { group: 'Brücken', icon: '#a9774a', cols: null, forms: [{ id: 'holz', name: 'Holzsteg' }, { id: 'stahl', name: 'Stahlbrücke' }] },   // Block 160 (bruecken.js BK_ART_IDS)
+  bruecke: { group: 'Brücken', icon: '#a9774a', cols: [{ id: 'mat', name: 'Wie das Material', c: '#c9b79c' }, ...BRIDGE_COL_DEFS],   // col i ↔ brc i − 1 (160c C6)
+    forms: [{ id: 'holz', name: 'Holz' }, { id: 'stahl', name: 'Metall' }, { id: 'stein', name: 'Stein' }, { id: 'kristall', name: 'Kristall' }] },   // Block 160 (bruecken.js BK_ART_IDS; nie umsortieren)
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132
   blumen: { group: 'Beete', icon: '#ff8fb1', colLabel: 'Boden', cols: BED_SOILS, forms: [{ id: 'feld', name: 'Blumenfeld' }, { id: 'stein', name: 'Steinrand' },

@@ -11,10 +11,19 @@
 // Materialien. deck: Standard des Decks (Stein zeigt den Belag des Wegs, die anderen ihr eigenes Muster)
 const BR_MAT = {
   holz: { name: 'Holz', deck: 'muster' },
-  stahl: { name: 'Metall', deck: 'muster' },
-  stein: { name: 'Stein', deck: 'belag' },
-  kristall: { name: 'Kristall', deck: 'muster' },
+  stahl: { name: 'Metall', deck: 'muster', anhoehe: { tech: 'bahn' } },     // an Anhöhen wie bisher erst mit der Eisenbahn
+  stein: { name: 'Stein', deck: 'belag', lock: { lm: 'klippe:1' } },          // wie Steinmetz (160c C6, vorläufig)
+  kristall: { name: 'Kristall', deck: 'muster', lock: { lm: 'kristall:1' } },  // wie die Kristallmine
 };
+// Material gesperrt? Text oder null (Leiste, Fenster, Bau). Metall an der Anhöhe: wie bisher „erst mit der Eisenbahn“
+function brMatLock(mat, at = 'anhoehe') {
+  const M = BR_MAT[mat];
+  if (!M) return null;
+  const def = { ...(M.lock || {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };
+  if (!Object.keys(def).length || typeof unlockOk !== 'function' || unlockOk(def, 'brmat:' + mat)) return null;
+  if (def.tech === 'bahn') return `${M.name}: erst mit der Eisenbahn`;
+  return `${M.name}: erst mit ${unlockText(def, false)}`;
+}
 const BR_MAT_IDS = ['holz', 'stahl', 'stein', 'kristall'];
 const BR_KEYS = ['brm', 'brc', 'brw', 'brb', 'brl', 'brz', 'bru'];       // Aussehen an Kachel und Bauwerk (dazu brp: bezahlter Preis)
 const BR_ROT_COL = 3, BR_ZIEGEL_COL = 8, BR_ROT_PLANK = 5;                // alte Rote Bogenbrücke / Ziegelbrücke: Farbe so nah wie möglich
@@ -37,7 +46,7 @@ function brSig(o, at) {
   return '';
 }
 const brIsNew = (o, at) => !!o && brPaidOk(o.brp) && o.brp.k === brSig(o, at);   // neues Format, und brp gehört noch zu dieser Art
-const brStamp = (o, at, look) => { o.brp = { ...brPrice(look, at), k: brSig(o, at) }; };   // nach dem Setzen der Altfelder aufrufen
+const brStamp = (o, at, look, n = 1) => { o.brp = { ...brPrice(look, at, n), k: brSig(o, at) }; };   // nach dem Setzen der Altfelder aufrufen; Anhöhe: n = Felder
 const brNoK = p => { const { k, ...c } = p; return c; };
 // Altfelder deuten (Nutzer 11.10.2026: „alte Brücken bekommen die neuen Modelle, Material und Farbe so nah wie möglich“).
 // at: 'wasser' (Wegbrücke übers Wasser) · 'gleis' (Gleisbrücke übers Wasser) · 'uebergang' (Fußgängerbrücke am Bahnübergang) · 'anhoehe'
@@ -62,7 +71,7 @@ function brLegacyLook(o, at) {
   }
   if (at === 'anhoehe') {
     const rail = !!o.gleis && Array.isArray(o.gleis) && o.gleis.some(f => f != null);
-    L.mat = o.art === 'stahl' ? 'stahl' : 'holz';
+    L.mat = BR_MAT[o.art] && Object.prototype.hasOwnProperty.call(BR_MAT, o.art) ? o.art : 'holz';   // Anhöhe: Material steht in art (160c C6)
     if (rail) L.fam = 'bahn';
     else if (Array.isArray(o.weg) && o.weg.some(Boolean)) { L.deck = 'belag'; L.belag = o.weg.find(Boolean); }
     return L;
@@ -72,6 +81,7 @@ function brLegacyLook(o, at) {
 // Aussehen einer Brücke (jeder Träger): neues Format (gültiges brp) aus den br-Feldern, sonst aus den Altfeldern
 function brLook(o, at) {
   const L = brLegacyLook(o, at);
+  if (at === 'anhoehe') return brAnhLook(o, L);
   if (!brIsNew(o, at)) return L;
   const id = at === 'anhoehe' ? o.art : o.brm, mat = BR_MAT[id] ? id : L.mat, same = mat === L.mat;   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
   return { at, fam: L.fam, mat, col: same ? L.col : brIdx(o.brc), plank: mat === 'holz' ? (same ? L.plank : brIdx(o.brw)) : null,   // Rot/Ziegel: Farbe aus der Art
@@ -80,6 +90,15 @@ function brLook(o, at) {
     ...(same && L.kind ? { kind: L.kind } : {}),
     zacken: mat === 'kristall' && L.fam === 'fuss' && o.brz === 'an',
     stuetzen: mat === 'holz' && L.fam === 'fuss' && (o.bru === 'keine' || o.bru === 'jede') ? o.bru : 'wenige' };
+}
+// Anhöhe (160c C6): das Aussehen steht immer in den eigenen Feldern (art, brc, brw, brb, brl, brz, bru) – auch ohne brp. Die live Fassung v1016
+// liest state.bruecken streng und verwirft brp (Schlüssel k), behält aber diese Felder; brp gilt nur fürs Geld
+function brAnhLook(o, L) {
+  o = o && typeof o === 'object' ? o : {};
+  const mat = L.mat, fuss = L.fam === 'fuss';
+  return { ...L, col: brIdx(o.brc), plank: mat === 'holz' ? brIdx(o.brw) : null, deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : L.deck,
+    licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : null, zacken: mat === 'kristall' && fuss && o.brz === 'an',
+    stuetzen: mat === 'holz' && fuss && (o.bru === 'keine' || o.bru === 'jede') ? o.bru : 'wenige' };
 }
 // ---------------------------------------------------------------------------
 // Geld (160c A4): Kosten-Objekt { money, <Rohstoff>: n }. Grundpreis je Feld (Übergang: je Brücke). VORLÄUFIG (Nutzer 11.10.2026: Geld und
@@ -95,8 +114,8 @@ const BR_COST = {
   gleis: { holz: brMoney(BRIDGE.cost, BRIDGE.mat), stein: brMoney(80, { holz: 2, metall: 2, quader: 3 }), stahl: brMoney(100, { holz: 2, metall: 4 }),
     kristall: brMoney(600, { holz: 2, metall: 2, kristall: 4 }) },
   uebergang: { holz: { ...FOOT_STYLES.holz.cost }, stein: { ...FOOT_STYLES.stein.cost }, stahl: { money: 200, bretter: 4, metall: 6 }, kristall: { money: 1500, kristall: 10, metall: 2 } },
-  anhoehe: { holz: brMoney(BK_ARTEN.holz.cost, BK_ARTEN.holz.mat), stahl: brMoney(BK_ARTEN.stahl.cost, BK_ARTEN.stahl.mat), stein: brMoney(120, { quader: 3 }),
-    kristall: brMoney(800, { kristall: 4, metall: 1 }) },
+  anhoehe: { holz: brMoney(BK_ARTEN.holz.cost, BK_ARTEN.holz.mat), stahl: brMoney(BK_ARTEN.stahl.cost, BK_ARTEN.stahl.mat),
+    stein: brMoney(120, { quader: 3, bretter: 3 }), kristall: brMoney(800, { kristall: 4, metall: 1, bretter: 3 }) },   // + 3 Bretter („Gerüst“): v1016 erstattet Stein/Kristall ohne brp wie Holz (60 + 3 Bretter) – nie mehr als bezahlt
 };
 const BR_OPT = { licht: { feld: { money: 20, metall: 1 }, ganz: { money: 60, metall: 2 } }, zacken: { feld: { money: 150, kristall: 2 }, ganz: { money: 400, kristall: 5 } } };
 const brAdd = (a, b, n = 1) => { for (const [r, v] of Object.entries(b || {})) a[r] = (a[r] || 0) + v * n; return a; };

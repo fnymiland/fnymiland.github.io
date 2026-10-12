@@ -29,8 +29,8 @@
  "tunneleinfahrt": 226,
  "bergportal Form 0": 0,
  "bergportal Form 1": 0,
- "ubahn Form 0": 91,
- "ubahn Form 1": 169,
+ "ubahn Form 0": 80,
+ "ubahn Form 1": 158,
  "ubahn Form 2": 51,
  "station": 312,
  "hbf": 1098,
@@ -128,8 +128,12 @@
  "anhoehe Form 0": 0,
  "anhoehe Form 1": 0,
  "anhoehe Form 2": 0,
+ "bruecke Form 0": 0,
+ "bruecke Form 1": 0,
+ "bruecke Form 2": 0,
+ "bruecke Form 3": 0,
  "huegeltreppe": 1,
- "huegelrampe": 1,
+ "huegelrampe": 2,
  "verschieben": 0,
  "abriss": 0,
  "rathaus": 400,
@@ -238,7 +242,5 @@
  "Weg m:reihen:sandstein": 412,
  "Weg m:pflaster:anthrazit": 368,
  "Weg m:fischgross:rose": 368,
- "Weg m:holz:holz": 418,
- "bruecke Form 0": 0,
- "bruecke Form 1": 0
+ "Weg m:holz:holz": 418
 }

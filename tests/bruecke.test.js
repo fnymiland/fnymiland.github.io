@@ -20,7 +20,7 @@ describe('Brücke bauen', () => {
     expect(i).toEqual({ n: 3, cost: 180, err: null, mat: { bretter: 9 } });
     const m0 = game('state.money');
     expect(run()).toBe(true);
-    expect(BR()).toBe(JSON.stringify([['14,12', { ax: 0, n: 3, art: 'holz' }]]));
+    expect(JSON.parse(BR())).toEqual([['14,12', { ax: 0, n: 3, art: 'holz', brp: { money: 180, bretter: 9, k: 'a:holz' } }]]);   // neues Format: bezahlt (160c C6)
     expect(game('state.money')).toBe(m0 - 180);
     expect(game("[!!bkAt(14, 12), !!bkAt(16, 12), !!bkAt(17, 12), bkOnHill(13, 12).length, bkOnHill(17, 12).length, state.tiles.has('15,12')]")).toEqual([true, true, false, 1, 1, false]);
   });
@@ -103,7 +103,7 @@ describe('Abreißen, Art, ↶, Speichern', () => {
     game('undo()'); game('undo()');
     expect([game("state.bruecken.get('14,12').weg.every(Boolean)"), game('state.money')]).toEqual([true, m0]);
     game("openBkInfo(15, 12)");
-    expect(game("document.getElementById('panel').textContent")).toMatch(/Holzsteg/);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Brücke aus Holz/);
     game("document.querySelector('[data-bkart=\"stahl\"]').click()");
     expect(game("state.bruecken.get('14,12').art")).toBe('holz');                                    // ohne Bahn nicht
     game("state.techs.add('bahn'); openBkInfo(15, 12); document.querySelector('[data-bkart=\"stahl\"]').click()");
@@ -121,7 +121,7 @@ describe('Abreißen, Art, ↶, Speichern', () => {
     plan('weg', { x: 13, y: 15 }, { x: 17, y: 15 }); run();
     const before = BR();
     game('adoptState(parseSave(JSON.parse(JSON.stringify(serialize()))))');
-    expect(BR()).toBe(before);
+    expect(JSON.parse(BR())).toEqual(JSON.parse(before));
     const bad = game("(() => { const d = JSON.parse(JSON.stringify(serialize())); d.bruecken = [['1,1', { ax: 0, n: 9 }], ['x', {}], ['2,2', { ax: 1, n: 2, art: 'gold', weg: ['sand', 'nix'] }]]; const m = parseSave(d).bruecken; return [m.size, m.get('2,2')]; })()");
     expect(bad).toEqual([1, { ax: 1, n: 2, art: 'holz', weg: ['sand', null] }]);                   // streng gelesen (fremde Inseln)
   });
@@ -429,5 +429,92 @@ describe('Zug unter der Brücke in Stücken (160c C5c)', () => {
     const f = game(`(() => { const ps = brCarPiecesUnder({ train: {}, px: 15, py: 12.2, du: 0, dv: 1, len: 0.8 }); return ps.filter(p => p.k === '15,12').map(p => [p.m.cut[0], p.m.cut[1], p.m.bkCls]); })()`);
     expect(f).toEqual([[-0.4, expect.closeTo(0.2, 6), 'U'], [expect.closeTo(0.2, 6), expect.closeTo(0.3, 6), 'F']]);   // Schnitt an der Stirn (12 + 0,4)
     expect(game("brCarPiecesUnder({ train: {}, px: 8, py: 8, du: 0, dv: 1, len: 0.8 })")).toBe(null);
+  });
+});
+
+// 160c C6: Leiste (Material, Farbe), Bau im neuen Format, Setzer brSet, Fenster
+describe('Brücke wählen und ändern (160c C6)', () => {
+  const lueckeVier = () => game("for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); } groundVersion++; recalc()");   // Lücke 14–17
+  const wallet = () => game('({ money: state.money, ...state.res })');
+  const spent = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] - b[k]]).filter(([, v]) => v));
+  it('Leiste: Stein in Rot – Vorschau = Abbuchung (mit Gerüst-Brettern), gebaut mit brc und brp; Abriss gibt genau das zurück', () => {
+    lueckeVier();
+    game("state.restore = { ...(state.restore || {}), klippe: 1 }; state.paintNew.bruecke = { form: 2, col: 4 }");   // Stein, Farbe 4 = brc 3 (Rot)
+    const i = plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 });
+    expect(i).toEqual({ n: 4, cost: 480, err: null, mat: { quader: 12, bretter: 12 } });
+    const w0 = wallet(); run();
+    expect(spent(w0, wallet())).toEqual({ money: 480, quader: 12, bretter: 12 });
+    expect(game("state.bruecken.get('14,12')")).toEqual({ ax: 0, n: 4, art: 'stein', brc: 3, brp: { money: 480, quader: 12, bretter: 12, k: 'a:stein' } });
+    expect(() => game("bkDemolishInfo(15, 12); setTool('abriss'); hover = { x: 15, y: 12, deck: true }; render(1e6); setTool('look')")).not.toThrow();   // Abriss-Zeigen mit Stein (B3)
+    const w1 = wallet(); game('bkDemolishAt(15, 12, true)');
+    expect(spent(wallet(), w1)).toEqual({ money: 480, quader: 12, bretter: 12 });
+  });
+  it('Sperren: Stein erst mit der Klippe, Kristall erst mit der Kristallinsel, Metall erst mit der Eisenbahn – mit Grund', () => {
+    game("state.restore = {}; state.techs.delete('bahn'); state.paintNew.bruecke = { form: 2 }");
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/^Stein: erst mit .*Klippe/);
+    game("state.paintNew.bruecke = { form: 3 }"); expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/^Kristall: erst mit/);
+    game("state.paintNew.bruecke = { form: 1 }"); expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Metall: erst mit der Eisenbahn/);
+  });
+  it('Material wechseln: Bezahltes zurück, Neues bezahlt (je Rohstoff), Pfeiler/Stützen der neuen Art geprüft; Farbe kostenlos', () => {
+    lueckeVier(); game("state.restore = { klippe: 1, kristall: 1 }");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();                               // Holz, 4 Felder
+    const ref = "{ at: 'anhoehe', k: '14,12' }", w0 = wallet();
+    expect(game(`brSet(${ref}, { mat: 'stein' })`)).toBe(true);
+    expect(spent(w0, wallet())).toEqual({ money: 480 - 240, quader: 12 });                     // Holz 60 + 3 Bretter je Feld zurück, Stein 120 + 3 Quader + 3 Bretter bezahlt
+    expect(game("[bkSupports(state.bruecken.get('14,12')), state.bruecken.get('14,12').brp.k]")).toEqual([[2], 'a:stein']);
+    const g0 = game('groundVersion');
+    expect(game(`brSet(${ref}, { col: 4 })`)).toBe(true); expect(game('groundVersion')).toBeGreaterThan(g0);
+    expect(game(`brSet(${ref}, { col: null })`)).toBe(true); expect(game("'brc' in state.bruecken.get('14,12')")).toBe(false);
+    expect(spent(w0, wallet())).toEqual({ money: 240, quader: 12 });                          // Farbe kostete nichts
+    game(`brSet(${ref}, { mat: 'holz' })`);
+    game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // Weg längs über Kante 2
+    expect(game(`brSet(${ref}, { mat: 'stein' })`)).toBe(false);                              // Stein hätte dort einen Pfeiler
+    expect(game("state.bruecken.get('14,12').art")).toBe('holz');
+  });
+  it('Stützen nur bei Holz-Fußgänger (keine/wenige/jede), Zacken nur bei Kristall: kaufen kostet je Feld, an/aus kostenlos, verfallen beim Materialwechsel', () => {
+    lueckeVier(); game("state.restore = { kristall: 1 }");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    const ref = "{ at: 'anhoehe', k: '14,12' }";
+    expect(game(`brSet(${ref}, { stuetzen: 'jede' })`)).toBe(true); expect(game("bkSupports(state.bruecken.get('14,12'))")).toEqual([1, 2, 3]);
+    expect(game(`brSet(${ref}, { stuetzen: 'keine' })`)).toBe(true); expect(game("bkSupports(state.bruecken.get('14,12'))")).toEqual([]);
+    expect(game(`brSet(${ref}, { zacken: 'kaufen' })`)).toBe(false);                          // Holz: keine Zacken
+    game(`brSet(${ref}, { mat: 'kristall' })`);
+    const w0 = wallet();
+    expect(game(`brSet(${ref}, { zacken: 'kaufen' })`)).toBe(true);
+    expect(spent(w0, wallet())).toEqual({ money: 4 * 150, kristall: 4 * 2 });
+    const w1 = wallet();
+    expect(game(`[brSet(${ref}, { zacken: 'aus' }), brSet(${ref}, { zacken: 'an' })]`)).toEqual([true, true]);
+    expect(spent(w1, wallet())).toEqual({});
+    expect(game("brLook(state.bruecken.get('14,12'), 'anhoehe').zacken")).toBe(true);
+    const r = game("bkDemolishInfo(15, 12)"); expect(r.refund).toBe(game("state.bruecken.get('14,12').brp.money"));
+    game(`brSet(${ref}, { mat: 'holz' })`); expect(game("'brz' in state.bruecken.get('14,12')")).toBe(false);   // verfallen
+  });
+  it('Fenster: Material, Farbe, Stützen; Deck-Wahl nur mit Weg; ↶ stellt Geld und Brücke wieder her', () => {
+    lueckeVier(); game("state.restore = { klippe: 1 }; resetUndo()");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    game('openBkInfo(15, 12)');
+    expect(game("document.querySelectorAll('[data-bkart]').length")).toBe(4);
+    expect(game("document.querySelectorAll('[data-brc]').length")).toBe(11);
+    expect(game("document.querySelectorAll('[data-bru]').length")).toBe(3);
+    expect(game("document.querySelectorAll('[data-brb]').length")).toBe(0);
+    expect(game("document.querySelector('[data-bkart=\"kristall\"]').classList.contains('locked')")).toBe(true);
+    const before = game("JSON.stringify(state.bruecken.get('14,12'))"), m0 = game('state.money');
+    game("document.querySelector('[data-bkart=\"stein\"]').click()");
+    expect(game("state.bruecken.get('14,12').art")).toBe('stein');
+    expect(game("document.querySelectorAll('[data-bru]').length")).toBe(0);                   // Stein: keine Stützen-Wahl
+    game('undo()');
+    expect([game("JSON.stringify(state.bruecken.get('14,12'))"), game('state.money')]).toEqual([before, m0]);
+    plan('weg', { x: 13, y: 12 }, { x: 18, y: 12 }); run();
+    game('openBkInfo(15, 12)'); expect(game("document.querySelectorAll('[data-brb]').length")).toBe(2);
+    game("closePanel()");
+  });
+  it('alte Fassung (v1016) verwirft brp an Anhöhen-Brücken: das Aussehen bleibt, erstattet wird nie mehr als bezahlt', () => {
+    lueckeVier(); game("state.restore = { klippe: 1 }; state.paintNew.bruecke = { form: 2, col: 4 }");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    const paid = game("state.bruecken.get('14,12').brp");
+    game("delete state.bruecken.get('14,12').brp; groundVersion++");                       // so liest v1016 (k ist kein Rohstoff)
+    expect(game("[brLook(state.bruecken.get('14,12'), 'anhoehe').mat, brLook(state.bruecken.get('14,12'), 'anhoehe').col]")).toEqual(['stein', 3]);
+    const back = game("brPaid(state.bruecken.get('14,12'), 'anhoehe')");
+    for (const [r, v] of Object.entries(back)) if (r !== 'k') expect(v).toBeLessThanOrEqual(paid[r] || 0);
   });
 });
