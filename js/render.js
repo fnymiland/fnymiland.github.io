@@ -788,7 +788,8 @@ function prewarm(key, zs, make, ver = 0) {
   e.used = frameNo;                                                      // bald gebraucht: nicht wegräumen
   if (e.paint && !e.night && !e.crop) withNight(() => nightOf(e));      // Nachtbild erst nach dem Zuschneiden (nächstes Bild)
 }
-const nightPics = [], nightPanes = [], nightSeen = new Set();   // Lichtbilder (Blau) und Scheiben je Bild für drawNight (große Gebäude: je Streifen einmal)
+const nightPics = [], nightPanes = [], nightSeen = new Set()
+let nightSeq = 0;                                              // Kennung je Nachtbild für nightSeen (160c C7, L10)   // Lichtbilder (Blau) und Scheiben je Bild für drawNight (große Gebäude: je Streifen einmal)
 let nightWarm = false;                                         // Löcher aus Nachtbildern: drawNight legt EINE warme Fläche dahinter
 const BLUE_SPOT = 0.5;                                         // blaues Licht (Kristall, Brunnen) bei voller Nacht nur halb so groß
 function nightOf(e) {
@@ -864,7 +865,7 @@ function putNight(e, n, cx, cy, z) {
   const r = z / e.z, at = p => [cx - p.ox * r, cy - p.oy * r, p.c.width / DPR * r, p.c.height / DPR * r];
   if (e.c) g.drawImage(e.c, ...at(e));                                   // das Bildchen wie tagsüber …
   if (n.erase.c) { g.globalCompositeOperation = 'destination-out'; if (night < NIGHT_MAX) g.globalAlpha = night / NIGHT_MAX; g.drawImage(n.erase.c, ...at(n.erase)); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }   // … dann die Löcher, in der Dämmerung schwächer (ohne save/restore: teuer je Bildchen)
-  const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + (n.erase.c ? n.erase.c.width : 0);   // Streifen großer Gebäude: einmal
+  const k = Math.round(cx * 4) + ',' + Math.round(cy * 4) + ',' + (n.id || (n.id = ++nightSeq));   // Streifen großer Gebäude (dasselbe Nachtbild): einmal; verschiedene am selben Punkt (Brücke h/t2) beide
   if (!nightSeen.has(k)) {
     nightSeen.add(k);
     if (n.light.c) nightPics.push([n.light.c, ...at(n.light)]);
@@ -879,8 +880,8 @@ function putSprite(e, cx, cy, z) {
   if (!e.glows.length || (GLOW_MUTE && !SPRITE_PAINT)) {                // ohne Licht (tags alle): nur das Bild (Block 124)
     if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r);
     if (GLOW_MUTE === 'pane' && e.glows.length && night > 0.15 && isLive()) {   // Nachmalen (160c B2): nur die Scheiben wieder stanzen, nie den Schein
-      if (e.mask) { const M = e.mask; g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX); g.drawImage(M.c, x0 + M.x * r, y0 + M.y * r, M.c.width / DPR * r, M.c.height / DPR * r); g.restore(); }
-      else for (const gl of e.glows) if (gl.tint !== 'blue') punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint, 'pane');
+      if (e.mask && !glOnWorld()) { const M = e.mask; g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX); g.drawImage(M.c, x0 + M.x * r, y0 + M.y * r, M.c.width / DPR * r, M.c.height / DPR * r); g.restore(); }
+      else if (e.mask !== false) for (const gl of e.glows) if (gl.tint !== 'blue') punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint, 'pane');   // false: alles verdeckt; GL: die Maske machte in der Zelle kein Loch (160c C7)
     }
     return;
   }

@@ -158,11 +158,11 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
   const [l, u, r, d] = bkBoxOf(gruppen, bkAt(x, y)), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
-    const fog = FOG;
+    const fog = FOG, gm = GLOW_MUTE;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
-    FOG = !ownedTile(x, y); GLOW_MUTE = 'pane';                            // nur Scheiben neu stanzen, nie einen zweiten Schein
+    FOG = !ownedTile(x, y); GLOW_MUTE = gm || 'pane';                      // nur Scheiben neu stanzen, nie einen zweiten Schein (gesperrt bleibt gesperrt)
     try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr))) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
-    finally { GLOW_MUTE = false; FOG = fog; g.restore(); }
+    finally { GLOW_MUTE = gm; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();
 }

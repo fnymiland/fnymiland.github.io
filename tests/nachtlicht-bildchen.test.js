@@ -37,4 +37,34 @@ describe('Nachtlicht der Bildchen (Block 112)', () => {
     expect(game("lightMask({ width: 10, height: 10 }, [], null)")).toBe(null);
     expect(game("lightMask({ width: 10, height: 10 }, [{ q: [[1, 1], [2, 1], [2, 2], [1, 2]], r: 4, tint: 'blue' }], null)")).toBe(null);
   });
+  // 160c C7 (karte-C7-bau.md a1): Nachmalen unter GLOW_MUTE 'pane' stanzt nur Scheiben – nie bei „alles verdeckt“ (mask false), nie blau,
+  // im GL-Bild nie über die Maske (destination-out in der Zelle macht dort kein Loch: Scheiben über glOutQuad)
+  it('putSprite beim Nachmalen (pane): Bild, dann nur Scheiben bzw. Maske – nichts bei verdeckt, blau oder true', () => {
+    game('night = 0.4; glows.length = 0; glowCells.clear()');
+    const E = (mask, tint = null) => `({ c: { width: 20, height: 20, tag: 'bild' }, ox: 0, oy: 0, z: 1, glows: [{ q: ${Q}, r: 18, tint: ${JSON.stringify(tint)} }], mask: ${mask} })`;
+    const put = (e, m = "'pane'") => record(`GLOW_MUTE = ${m}; try { putSprite(${e}, 100, 100, 1); } finally { GLOW_MUTE = false; }`);
+    const MASK = "{ c: { width: 4, height: 4, tag: 'maske' }, x: 10, y: 10 }";
+    expect(put(E('null'))).toEqual(['bild', 'scheibe']);
+    expect(put(E(MASK))).toEqual(['bild', 'maske']);
+    expect(put(E('false'))).toEqual(['bild']);                                 // alles verdeckt: keine Scheibe (wie 'mark' im normalen Weg)
+    expect(put(E('null', 'blue'))).toEqual(['bild']);
+    expect(put(E('null'), 'true')).toEqual(['bild']);
+    expect(game('glows.length')).toBe(0);                                      // nie gemerkt (kein zweiter Schein)
+    const gl = game(`(() => { const out = [], ow = glOnWorld, oq = glOutQuad, sky = GL.sky; glOnWorld = () => true; glOutQuad = () => out.push('gl'); GL.sky = false;
+      g.drawImage = img => out.push(img && img.tag ? img.tag : 'schein');
+      try { GLOW_MUTE = 'pane'; putSprite(${E(MASK)}, 100, 100, 1); } finally { GLOW_MUTE = false; glOnWorld = ow; glOutQuad = oq; GL.sky = sky; delete g.drawImage; } return out; })()`);
+    expect(gl).toEqual(['bild', 'gl']);                                        // GL: Scheibe als Loch nach der Zelle, nicht über die Maske
+    game('night = 0');
+  });
+  // L10: zwei Nachtbilder am selben Punkt mit gleich breitem Löschbild (Brücke: Kristall h und t2 symmetrisch) – beide Lichtbilder zählen;
+  // dasselbe Nachtbild noch einmal (Streifen großer Gebäude) nur einmal
+  it('putNight: verschiedene Nachtbilder am selben Punkt zählen beide, dasselbe nur einmal', () => {
+    game('night = 0.4; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear()');
+    const N = tag => `({ erase: { c: { width: 30, height: 10 }, ox: 0, oy: 0 }, light: { c: { width: 30, height: 10, tag: '${tag}' }, ox: 0, oy: 0 }, panes: [] })`;
+    const tags = game(`(() => { const e = { c: { width: 30, height: 10 }, ox: 0, oy: 0, z: 1 }, a = ${N('h')}, b = ${N('t2')};
+      g.drawImage = () => {}; try { putNight(e, a, 100, 100, 1); putNight(e, b, 100, 100, 1); putNight(e, a, 100, 100, 1); } finally { delete g.drawImage; }
+      return nightPics.map(p => p[0].tag); })()`);
+    expect(tags).toEqual(['h', 't2']);
+    game('night = 0; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false');
+  });
 });
