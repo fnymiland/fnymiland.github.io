@@ -296,7 +296,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (Fußgänger = Bogen, Gleis ⇒ flach; t am Anker über `bkT`) – Maler, Weg (`bkWegPaint`, `paintLook(…, sub)`), Spaziergänger (`hwTopH`,
     am Fußpunkt; `w.up` gilt relativ zum Feld `round(px, py)`), Antippen (`bkPick`), Plan-Rauten, Schilder, Schatten, Rahmen (`brBox(gr, c)`).
     **Zeichnen** (brueckenbild.js): Lagen h/v/d/o; ruhend in tileA (`bkDrawStill`: Deko hinter, h, Bahnübergang, Deko unter, vd+o, Deko vor),
-    tileB malt nur im Rahmen des Bewegten nach (`bkDrawMoving`/`bkRedo`, `GLOW_MUTE`), weit weg Bildchen `br|x,y|gruppe|FOG`. Im
+    tileB malt nur im Rahmen des Bewegten nach (`bkDrawMoving`/`bkRedo`; Folge je Querlage `bkMoverClass` am Fußpunkt: dahinter, h, darunter, vd,
+    Deck, o, davor; `GLOW_MUTE = 'pane'`: nur Scheiben neu stanzen, nie einen zweiten Schein), weit weg Bildchen `br|x,y|gruppe|FOG`. Wer Wege/Gleise
+    mehrerer Felder auf einmal prüft (Ziehen, Gruppe), meldet sie in `BK_PLAN_SAME` bzw. `BK_GROUP` – sonst rutschen sie längs durch eine Stütze. Im
     Fußgänger-Maler (`bkPaintFuss`) Längsstriche `lineCap 'butt'`, Dinge auf Kanten halboffen (`onEdge`), nur deckende Farben (Mischfarben).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
