@@ -148,6 +148,26 @@ describe('Zug über die Brücke', () => {
     expect(game("trainCars().some(c => c.deck)")).toBe(true);
     expect(game('crossingClosed(15, 12)')).toBe(false);
   });
+  it('über 8 Felder (160c C8): die Linie fährt hinüber, Wagen oben auf Höhe der Anhöhen', () => {
+    game("for (let y = 10; y <= 14; y++) { for (let x = 17; x <= 21; x++) state.hills.delete(x + ',' + y); for (let x = 22; x <= 25; x++) state.hills.set(x + ',' + y, { w: 0 }); } groundVersion++; recalc()");
+    game('state.paintNew.bruecke = { form: 0 }'); plan('bruecke', { x: 12, y: 12 }, { x: 23, y: 12 }); expect(run()).toBe(true);
+    expect(game("state.bruecken.get('14,12').n")).toBe(8);
+    plan('schiene', { x: 11, y: 12 }, { x: 24, y: 12 }); run();
+    game("state.tiles.set('11,11', { b: 'station', lvl: 1, rot: 0, train: 'regio' }); state.tiles.set('24,11', { b: 'station', lvl: 1, rot: 0, train: 'regio' })");
+    game("for (let i = 0; i < 6; i++) state.tiles.set('5,' + (16 + 2 * i), { b: 'windrad', lvl: 1 })");
+    game("globalThis.__ra = regionAt; regionAt = (x, y) => x >= 18 ? 'wald' : 'home'; recalc(); syncMovers()");
+    expect(game('[T.rail.lines.length, trains.length]')).toEqual([1, 1]);
+    expect(game('trains[0].route.deck')).toEqual([[2.5, 10.5]]);                            // 11 … 13 | Lücke 14–21 | 22 … 24
+    let over = 0;
+    for (let i = 0; i < 400; i++) {
+      game('stepMovers(0.1)');
+      for (const [x, deck, ha] of game("trainCars().map(c => { trainOnHills(c, Math.round(c.px) + ',' + Math.round(c.py)); return [c.px, !!c.deck, c.hill && c.hill.ha]; })")) {
+        if (x > 13.6 && x < 21.4) { expect(deck).toBe(true); over++; }
+        if (deck) expect(ha).toBe(game('HILL_H'));
+      }
+    }
+    expect(over).toBeGreaterThan(20);
+  });
   it('Stücke je Feld: übers Deck nach dem Deck gezeichnet (vor dem vorderen Geländer), auf der Anhöhe mit ihrem Feld; Zeichnen ohne Fehler, auch Stahl', () => {
     bridge();
     plan('schiene', { x: 11, y: 12 }, { x: 19, y: 12 }); run();

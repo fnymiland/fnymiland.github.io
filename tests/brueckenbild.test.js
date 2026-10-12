@@ -40,7 +40,7 @@ describe('Brückenbild in Lagen (160c B1)', () => {
 // 160c B2a: Gerüst fürs Zeichnen in tileA/tileB – Gruppen h | vd | o, Rahmen, Deko nach Querlage, Lichtsperre, lebendige GL-Felder
 describe('Brückenbild: Gerüst für B2', () => {
   const setup = () => game("for (let y = 4; y <= 26; y++) for (let x = 4; x <= 26; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.hills.clear(); state.bruecken.clear(); for (let y = 10; y <= 14; y++) for (const x of [10, 11, 12, 13, 17, 18, 19, 20]) state.hills.set(x + ',' + y, { w: 0 }); for (let x = 10; x <= 14; x++) for (const y of [4, 5, 6, 7, 11, 12, 13, 14]) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");
-  it('Rahmen: jede Gruppe bleibt in brBox (alle Materialien, n 1–4, Weg/Gleis/leer, beide Achsen, z 0,5/1/2,5, mit und ohne Licht – C7)', () => {
+  it('Rahmen: jede Gruppe bleibt in brBox (alle Materialien, n 1–8, Weg/Gleis/leer, beide Achsen, z 0,5/1/2,5, mit und ohne Licht – C7)', () => {
     setup();
     const bad = game(`(() => {
       const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clipped = 0;   // was nach clip() kommt, ist beschnitten (Muster im Weg)
@@ -48,7 +48,7 @@ describe('Brückenbild: Gerüst für B2', () => {
       const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); } : k === 'save' ? () => st.push(clipped) : k === 'restore' ? () => { clipped = st.pop() || 0; } : k === 'clip' ? () => { clipped = 1; } : k in o ? o[k] : () => {},
         set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
       try {
-        for (const art of ['holz', 'stahl', 'stein', 'kristall']) for (let n = 1; n <= 4; n++) for (const top of ['', 'weg', 'gleis']) for (const ax of [0, 1]) for (const brl of [null, 'an']) {
+        for (const art of ['holz', 'stahl', 'stein', 'kristall']) for (let n = 1; n <= 8; n++) for (const top of ['', 'weg', 'gleis']) for (const ax of [0, 1]) for (const brl of [null, 'an']) {
           state.bruecken.clear();
           const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0); if (brl) b.brl = brl;
           state.bruecken.set(ax ? '12,8' : '14,12', b); groundVersion++;

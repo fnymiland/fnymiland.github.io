@@ -206,7 +206,7 @@ const ITEMS = {
   bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform',
     get cost() { return typeof bkLookNew === 'function' && typeof brPrice === 'function' ? brPrice(bkLookNew(), 'anhoehe').money : 60; },   // je Feld, im gewählten Material (160c C6)
     get mat() { if (typeof bkLookNew !== 'function' || typeof brPrice !== 'function') return { bretter: 3 }; const { money, ...m } = brPrice(bkLookNew(), 'anhoehe'); return m; },
-    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 4 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
+    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 8 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js)
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -782,7 +782,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 4 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Unten darf weiter ein Weg oder eine Schiene durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };

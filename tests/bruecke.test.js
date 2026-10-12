@@ -13,6 +13,8 @@ beforeEach(() => {
 const plan = (tool, a, b) => game(`(() => { setTool('${tool}'); startPlan('line', ${JSON.stringify(a)}, ${JSON.stringify(b)}, false); const i = planInfo(plan); return { n: i.n, cost: i.cost, err: i.err, mat: i.mat }; })()`);
 const run = () => game('runPlan()');
 const BR = () => game("JSON.stringify([...state.bruecken])");
+// Anhöhe B (y 10–14) so setzen, dass die Lücke ab x 14 n Felder lang ist: B bei x 14+n … 17+n (160c C8)
+const luecke = n => game(`for (let y = 10; y <= 14; y++) for (let x = 17; x <= 26; x++) { if (x >= 14 + ${n} && x <= 17 + ${n}) state.hills.set(x + ',' + y, { w: 0 }); else state.hills.delete(x + ',' + y); } groundVersion++; recalc()`);
 
 describe('Brücke bauen', () => {
   it('von Anhöhe zu Anhöhe gezogen (auch von weiter oben): Holz, 3 Felder, je Feld bezahlt; liegt als eigenes Bauwerk über der Lücke', () => {
@@ -27,9 +29,10 @@ describe('Brücke bauen', () => {
   it('was nicht geht: schräg, keine zweite Anhöhe, Lücke zu lang, Haus darunter, Weg am Holzbock, Stahl ohne Bahn', () => {
     expect(plan('bruecke', { x: 12, y: 11 }, { x: 18, y: 13 }).err).toMatch(/Nur gerade/);
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 15, y: 12 }).err).toMatch(/Anhöhe gegenüber/);
-    game("for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.delete('18,' + y); } groundVersion++; recalc()");
-    expect(plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }).err).toMatch(/Höchstens 4/);
-    game("for (let y = 10; y <= 14; y++) for (const x of [17, 18]) state.hills.set(x + ',' + y, { w: 0 }); state.tiles.set('15,12', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");
+    luecke(9);                                                                                       // 160c C8: bis 8 Felder
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 24, y: 12 }).err).toMatch(/Höchstens 8 Felder Lücke$/);
+    luecke(3);
+    game("state.tiles.set('15,12', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/kein Platz für: Haus/);
     game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Stütze der Brücke – der Weg darf nur quer/);   // Holz, 3 Felder: Stützen auf den Kanten (160c C1), der Weg läuft längs hindurch
@@ -433,6 +436,45 @@ describe('Zug unter der Brücke in Stücken (160c C5c)', () => {
 });
 
 // 160c C6: Leiste (Material, Farbe), Bau im neuen Format, Setzer brSet, Fenster
+// 160c C8: bis 8 Felder Lücke (gelesen wurde schon bis 8, A3); 9 nicht
+describe('Bis 8 Felder (160c C8)', () => {
+  it('8 Felder: gebaut und je Feld bezahlt, beide Richtungen; 9 Felder nicht (nichts bezahlt)', () => {
+    luecke(8);
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 23, y: 12 })).toEqual({ n: 8, cost: 480, err: null, mat: { bretter: 24 } });
+    const m0 = game('state.money');
+    expect(run()).toBe(true);
+    expect(JSON.parse(BR())).toEqual([['14,12', { ax: 0, n: 8, art: 'holz', brp: { money: 480, bretter: 24, k: 'a:holz' } }]]);
+    expect(game('state.money')).toBe(m0 - 480);
+    expect(game('[!!bkAt(21, 12), !!bkAt(22, 12), bkOnHill(22, 12).length]')).toEqual([true, false, 1]);
+    game("for (let y = 4; y <= 19; y++) for (const x of [6, 7, 8]) if (y <= 7 || y >= 16) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");
+    expect(plan('bruecke', { x: 7, y: 5 }, { x: 7, y: 17 })).toMatchObject({ n: 8, err: null });
+    run();
+    expect(game("[state.bruecken.get('7,8').ax, state.bruecken.get('7,8').n]")).toEqual([1, 8]);
+    luecke(9); game("state.bruecken.delete('14,12'); groundVersion++; recalc()");
+    const m1 = game('state.money'), n1 = game('state.bruecken.size');
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 24, y: 12 }).err).toMatch(/Höchstens 8 Felder Lücke/);
+    run();
+    expect([game('state.money'), game('state.bruecken.size')]).toEqual([m1, n1]);
+    expect(game('BK_MAX <= BK_READ_MAX')).toBe(true);                                             // nie länger bauen, als jede Fassung liest
+  });
+  it('Spaziergänger über 8 Felder: Scheitel in der Mitte, stetig; Antippen trifft jedes Feld des hohen Bogens', () => {
+    luecke(8);
+    plan('bruecke', { x: 12, y: 12 }, { x: 23, y: 12 }); run();
+    const H = game('HILL_H'), pk = game("brPeak('fuss', 8)"), f = game('FOOT_D');
+    expect(game(`hwTopH(17.5 - ${f}, 12 + ${f}, 1)`)).toBeCloseTo(H + pk, 3);
+    expect(pk).toBeGreaterThan(20);
+    const jump = game(`(() => { let m = 0, p = hwTopH(12, 12, 1); for (let u = 12.02; u <= 24; u += 0.02) { const h = hwTopH(u, 12, 1); m = Math.max(m, Math.abs(h - p)); p = h; } return m; })()`);
+    expect(jump).toBeLessThan(1);
+    const miss = game(`(() => { cam.z = 2; const p0 = iso(17.5, 12); cam.x = p0.x; cam.y = p0.y; const out = [];
+      for (let x = 14; x <= 21; x++) { const c = bkAt(x, 12), p = toScreen(x, 12);
+        for (let du = -0.3; du <= 0.31; du += 0.15) for (const s of [-0.3, 0, 0.3]) {
+          const h = bkH(c.b, c.i + du), sx = p.x + (du - s) * TW / 2 * cam.z, sy = p.y + (du + s) * TH / 2 * cam.z - h * cam.z, r = bkPick(sx, sy);
+          if (!r || r.x !== x || r.y !== 12) out.push([x, du, s, r && r.x]); } }
+      return out; })()`);
+    expect(miss).toEqual([]);
+  });
+});
+
 describe('Brücke wählen und ändern (160c C6)', () => {
   const lueckeVier = () => game("for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); } groundVersion++; recalc()");   // Lücke 14–17
   const wallet = () => game('({ money: state.money, ...state.res })');

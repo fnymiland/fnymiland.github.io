@@ -13,8 +13,8 @@ const BK_ARTEN = {
   stahl: { name: 'Stahlbrücke', cost: 120, mat: { metall: 3 }, frei: 4, tech: 'bahn' },   // spannt frei, erst mit der Eisenbahn
 };
 const BK_ART_IDS = DECO_LOOKS.bruecke.forms.map(f => f.id);               // Formen der Leiste = Materialien (Index = paintNew.bruecke.form, nie umsortieren)
-const BK_MAX = 4, BK_W = 0.4, BK_CLEAR = HILL_H - 6;                    // längste Lücke, halbe Breite des Decks, Platz darunter (Deko-Höhe)
-const BK_READ_MAX = 8;                                                    // so lange Brücken liest parseSave schon (160c: gebaut wird bis 8 erst später)
+const BK_MAX = 8, BK_W = 0.4, BK_CLEAR = HILL_H - 6;                    // längste Lücke (160c C8), halbe Breite des Decks, Platz darunter (Deko-Höhe)
+const BK_READ_MAX = 8;                                                    // so lange Brücken liest parseSave (auch v1016) – BK_MAX nie darüber
 const BK_NO_PAINT = new Set(['wald', 'obstwald', 'fels', 'anhoehe']);   // Gelände, das darunter nicht passt (Bäume, Felsen, Anhöhe)
 const bkArtOf = b => b && typeof b.art === 'string' && ['holz', 'stahl', 'stein', 'kristall'].includes(b.art) ? b.art : 'holz';   // BK_ARTEN: nur noch eingefrorene v1016-Preise (Geld ohne brp)
 const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';
@@ -203,7 +203,7 @@ function bkError(sp, look, noCost) {
   const mat = look && BR_MAT[look.mat] ? look.mat : 'holz', lk = brMatLock(mat);
   if (lk) return lk;
   for (const [ex, ey] of sp.ends) if (!ownedTile(ex, ey)) return notMine(ex, ey);
-  if (sp.n > BK_MAX) return `Höchstens ${BK_MAX} Felder Lücke – sonst braucht die Brücke Pfeiler`;
+  if (sp.n > BK_MAX) return `Höchstens ${BK_MAX} Felder Lücke`;
   const nb = { ax: sp.ax, n: sp.n, art: mat }, Gn = bkGeom(nb);           // so, wie sie gebaut würde (Stein: Pfeiler und Bögen)
   for (let i = 0; i < sp.gap.length; i++) {
     const [x, y] = sp.gap[i];
