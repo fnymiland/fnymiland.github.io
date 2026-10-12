@@ -1680,7 +1680,7 @@ function smallError(b, x, y, slot, opts = {}) {
     const ds = decosAt(k);
     return ds.slice(0, 8).every(Boolean) ? 'Alle Plätze sind belegt' : slot < 4 && ds.slice(0, 4).every(Boolean) ? 'Alle 4 Ecken sind belegt' : slot < 4 ? 'Diese Ecke ist schon belegt' : 'Dieser Platz ist schon belegt';
   }
-  const fm = opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0), tt = tooTallUnderRoof(b, x, y, slot, fm) || bkTooTall(b, x, y, slot, fm);   // zu hoch unters Dach (Block 138), unter die Brücke (160)
+  const fm = opts.form != null ? opts.form : (DECO_LOOKS[baseOf(b)] ? decoLookNew(baseOf(b)).form || 0 : 0), tt = tooTallUnderRoof(b, x, y, slot, fm) || bkTooTall(b, x, y, slot, fm, opts.rot != null ? opts.rot : smallRot(b, slot));   // zu hoch unters Dach (Block 138), unter die Brücke (160; Stein: mit Drehung)
   if (tt) return tt;
   if (opts.move) return !t && terrainAt(x, y) !== 'grass' ? 'Erst roden bzw. sprengen' : null;
   if (opts.noCost) return null;

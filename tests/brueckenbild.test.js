@@ -194,3 +194,16 @@ describe('Steinbrücke (160c C3)', () => {
     expect(order).toBe('hvdAo');
   });
 });
+
+describe('Stein gegengelesen: Pfeiler über Land→Wasser (160c C3)', () => {
+  it('Stirn-Unterkante mit Stufe an der Feldkante, kein Keil über dem Ufer', () => {
+    const pts = game(`(() => { const g0 = g, polys = []; let p = [];
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => p.push([x, y]) : k === 'beginPath' ? () => { p = []; } : k === 'fill' ? () => polys.push([o.fillStyle, p.slice()]) : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      const n = 4, hf = brDeckHFn('fuss', n), S = brStoneGeom('fuss', n, [2]), gl = t => Math.round(t) >= 2 ? -6.3 : 0;
+      try { bkPaintLage('v', (t, s, h) => [t, h], 1, 'stein', n, 0.5, 1.5, false, { fam: 'fuss', ax: 0, hf, stone: S, gl, ext: 0.012 }); } finally { g = g0; }
+      return polys.find(([c]) => c === BK_STEIN.face)[1]; })()`);
+    expect(pts.some(([t, h]) => Math.abs(t - 1.5) < 1e-9 && h === 0)).toBe(true);
+    expect(pts.some(([t, h]) => Math.abs(t - 1.5) < 1e-9 && h === -6.3)).toBe(true);
+    expect(pts.filter(([t]) => t > 1.41 + 1e-6 && t < 1.5 - 1e-9).every(([, h]) => h >= 0)).toBe(true);
+  });
+});

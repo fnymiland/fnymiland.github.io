@@ -369,3 +369,33 @@ describe('Pfeiler und Lichtraum (160c C3)', () => {
     expect(hit(1, 0.4, 12)).toBe(null);                                                    // Öffnung
   });
 });
+
+// 160c C3 gegengelesen: Randfälle der Steinbrücke
+describe('Stein gegengelesen (160c C3)', () => {
+  const stein4 = (rail = false) => game(`(() => { for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); }
+    const b = { ax: 0, n: 4, art: 'stein' ${rail ? ", gleis: [0, 0, 0, 0]" : ''} }; b.brp = { ...brPrice({ mat: 'stein' }, 'anhoehe', 4), k: brSig(b, 'anhoehe') }; state.bruecken.set('14,12', b); groundVersion++; recalc(); })()`);
+  it('Ecke, die eine Linie am Eckpunkt nach innen rückt: geprüft wird auch der Platz ohne Linie (fällt sie weg, stünde die Deko im Pfeiler)', () => {
+    stein4();
+    game("state.edges.set('a15,13', { b: 'zaun', style: 'holz' }); groundVersion++; recalc()");
+    expect(game("slotPos(15, 12, 3, { b: 'blumen' })[0]")).toBeLessThan(0.3);                 // eingerückt
+    expect(game("smallError('blumen', 15, 12, 3)")).toMatch(/Pfeiler/);
+  });
+  it('Gleis von einer Steinbrücke entfernen: nur, wenn darunter alles unter den Bogen passt', () => {
+    stein4(true);
+    const r = game(`(() => { const ue = bkUnderError; bkUnderError = (x, y, G) => G && G.stone && G.fam === 'fuss' && x === 15 ? 'Laterne ist zu hoch für unter die Brücke' : null;
+      try { return [bkDemolishAt(15, 12), bkRailAny(state.bruecken.get('14,12'))]; } finally { bkUnderError = ue; } })()`);
+    expect(r).toEqual([false, true]);
+    expect(game("bkDemolishAt(15, 12)")).toBe(true);
+    expect(game("bkRailAny(state.bruecken.get('14,12'))")).toBe(false);
+  });
+  it('Drehung zählt (gedrehte Bank); eine Linie vor dem Brückenfeld gewinnt beim Antippen', () => {
+    stein4();
+    const args = game(`(() => { const t = bkTooTall; let a = null; bkTooTall = (...x) => { a = x; return null; }; const br = buildRot; buildRot = 1;
+      try { smallError('bank', 15, 12, 0); } finally { bkTooTall = t; buildRot = br; } return a; })()`);
+    expect(args[5]).toBe(1);
+    const r = game(`(() => { const en = edgeNear, bp = bkPick; edgeNear = () => 'a16,13'; bkPick = () => ({ x: 16, y: 12, deck: true });
+      state.edges.set('a16,13', { b: 'zaun', style: 'holz' });
+      try { return bkPickFront(0, 0); } finally { edgeNear = en; bkPick = bp; state.edges.delete('a16,13'); } })()`);
+    expect(r).toBe(null);
+  });
+});

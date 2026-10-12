@@ -155,13 +155,16 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
 // dem Bogen nur so hoch, wie er dort ist – dieselbe Geometrie wie das Bild (brClear über slotPos/decoExt)
 const BK_PIER = 'Hier steht ein Pfeiler der Brücke';
 function bkSlotClearG(G, i, x, y, slot, d) {
-  const [u, v] = slotPos(x, y, slot, d), [ru, rv] = decoExt(d);
-  return brClear(G.stone, i + (G.ax ? v : u), G.ax ? rv : ru);
+  const [u, v] = slotPos(x, y, slot, d), [ru, rv] = decoExt(d), r = G.ax ? rv : ru;
+  // dazu der Platz ohne Einrücken (Linie, Wegkurve): fällt das später weg, rutscht die Deko dorthin – er ist immer der ungünstigste
+  const off = (k, rr) => Math.min(k, 0.5 - rr - 0.02), su = slot & 1 ? 1 : -1, sv = slot & 2 ? 1 : -1;
+  const [u0, v0] = slot === CSLOT ? [0, 0] : slot >= 4 && slot < 8 ? MID_SIDE[slot - 4].map((m, j) => m * off(MID_OFF, j ? rv : ru)) : [su * off(SLOT_OFF, ru), sv * off(SLOT_OFF, rv)];
+  return Math.min(brClear(G.stone, i + (G.ax ? v : u), r), brClear(G.stone, i + (G.ax ? v0 : u0), r));
 }
-function bkTooTall(b, x, y, slot, form = 0) {
+function bkTooTall(b, x, y, slot, form = 0, rot = 0) {                      // rot: wie sie stehen wird (gedrehte Bank ist längs breiter)
   if (!bkOn()) return null;
   const h = decoHeight(b, form), c = slot !== VSLOT && bkAt(x, y);
-  if (c && c.G && c.G.stone) { const cl = bkSlotClearG(c.G, c.i, x, y, slot, { b, form }); return cl < 0 ? BK_PIER : h > cl ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null; }
+  if (c && c.G && c.G.stone) { const cl = bkSlotClearG(c.G, c.i, x, y, slot, { b, form, rot }); return cl < 0 ? BK_PIER : h > cl ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null; }
   if (h <= brClear()) return null;
   const tiles = slot === VSLOT ? [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]] : [[x, y]];
   return tiles.some(([fx, fy]) => bkAt(fx, fy)) ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null;
@@ -244,6 +247,10 @@ function bkDemolishAt(x, y, all = false) {                                // all
   const b = c.b, nw = (b.weg || []).filter(Boolean).length, ng = bkRailCount(b);
   let back = 0;
   if (nw) { back += nw * ITEMS.weg.cost; delete b.weg; }
+  if (ng && !all) {                                                         // bleibt eine Steinbrücke stehen, wird sie ohne Gleis ein Bogen (160c C3): passt, was darunter steht?
+    const Gf = bkGeom(b, null, false);
+    if (Gf.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, b).entries()) { const e = bkUnderError(cx, cy, Gf, i); if (e) { fail('Ohne Gleis wird die Brücke ein Bogen – ' + e); return false; } }
+  }
   if (ng) { back += ng * ITEMS.schiene.cost; for (const [r, n] of Object.entries(ITEMS.schiene.mat || {})) state.res[r] += n * ng; delete b.gleis; }
   if ((!nw && !ng) || all) {
     const bc = brCostMat(brPaid(b, 'anhoehe'));                            // was sie gekostet hat (160c A4)
@@ -548,6 +555,8 @@ function bkFadeNow(x, y) {
 function bkPickFront(sx, sy) {
   const bp = bkPick(sx, sy);
   if (!bp) return null;
+  const ek = typeof edgeNear === 'function' && edgeNear(sx, sy);           // eine Linie vor dem Brückenfeld (Zaun vor dem Steinpfeiler, 160c C3) gewinnt
+  if (ek && state.edges.has(ek) && edgeDepth(ek) > bp.x + bp.y) return null;
   const oh = objectAt(sx, sy);
   return oh && oh.d > bp.x + bp.y + 0.5 ? null : bp;
 }

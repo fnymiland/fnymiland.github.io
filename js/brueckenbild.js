@@ -282,8 +282,10 @@ function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
     }
     balustrade(-W, false);
   } else if (lage === 'v') {
-    const bottom = [];                                                       // Unterkante der Stirn: Bögen, am Pfeiler der Boden
-    for (const t of arcTs(t0, T1)) {
+    const bottom = [], T = arcTs(t0, T1);                                    // Unterkante der Stirn: Bögen, am Pfeiler der Boden
+    if (T1 > t1 + 1e-9 && S.ri(t1) == null && gl(t1 - 1e-7) > gl(t1)) T.splice(T.findIndex(t => t > t1 - 1e-9), 0, t1);   // Pfeiler über Land→Wasser: Stufe an der Feldkante (kein Keil über dem Ufer)
+    for (const t of T) {
+      if (Math.abs(t - t1) < 1e-9 && T1 > t1 + 1e-9 && S.ri(t) == null && gl(t1 - 1e-7) > gl(t1)) { bottom.push([t, gl(t1 - 1e-7)], [t, gl(t1)]); continue; }
       const r = S.ri(t), g0 = gl(t);
       if (r != null && t < T1 - 1e-9 && S.ri(t + 1e-7) == null) bottom.push([t, r], [t, g0]);
       else if (r != null && t > t0 + 1e-9 && S.ri(t - 1e-7) == null) bottom.push([t, g0], [t, r]);

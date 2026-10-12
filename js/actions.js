@@ -480,7 +480,7 @@ function groupErrors(hx, hy) {
       else if (!ot && terrainAt(x, y) === 'water') err = 'Nicht übers Wasser';
       else if (!roofOver(ot)) err = 'Nicht über Gebäude';
       else if (tallUnder(x, y, P.r.form || 0)) err = 'Darunter steht etwas zu Hohes';
-    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true, form: P.d.form || 0 });
+    } else if (it.kind === 'deco') err = smallError(P.d.b, ox + P.dx, oy + P.dy, P.slot, { move: !moving.copy, noCost: true, form: P.d.form || 0, rot: P.d.rot || 0 });
     else {
       const x = ox + P.dx, y = oy + P.dy, b = P.t.b;
       err = P.bad;
