@@ -184,6 +184,7 @@ describe('Stützen auf den Kachelkanten (160c C1)', () => {
     expect(S('holz', 'fuss', 'keine', 4)).toEqual([]); expect(S('holz', 'fuss', 'jede', 4)).toEqual([1, 2, 3]);
     expect(S('holz', 'bahn', 'keine', 4)).toEqual([1, 2, 3]);
     expect([2, 3, 4, 5, 6].map(n => S('stein', 'fuss', 'wenige', n))).toEqual([[], [], [2], [2, 3], [2, 4]]);
+    expect([1, 2, 4].map(n => S('stein', 'bahn', 'wenige', n))).toEqual([[], [1], [1, 2, 3]]);   // Stein-Viadukt (Bahn): Pfeiler an jeder Kante (Variante B)
     expect([S('stahl', 'fuss', 'jede', 4), S('kristall', 'bahn', 'jede', 4)]).toEqual([[], []]);
   });
   it('Weg quer durch die Feldmitte unter dem Holzviadukt (mit Gleis): geht; längs über eine Kante nicht', () => {
@@ -397,5 +398,17 @@ describe('Stein gegengelesen (160c C3)', () => {
       state.edges.set('a16,13', { b: 'zaun', style: 'holz' });
       try { return bkPickFront(0, 0); } finally { edgeNear = en; bkPick = bp; state.edges.delete('a16,13'); } })()`);
     expect(r).toBe(null);
+  });
+});
+
+// 160c C5d: Stein-Viadukt (Variante B) – Gleis aufs Steindeck macht Pfeiler an jeder Kante und flachere Bögen: geprüft wird beides
+describe('Stein-Viadukt (160c C5d)', () => {
+  it('Gleis auf eine Steinbrücke: nur, wenn die neuen Pfeiler frei sind und darunter alles unter die Viadukt-Bögen passt', () => {
+    game("state.techs.add('bahn'); for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); } const b = { ax: 0, n: 4, art: 'stein' }; b.brp = { ...brPrice({ mat: 'stein' }, 'anhoehe', 4), k: brSig(b, 'anhoehe') }; state.bruecken.set('14,12', b); groundVersion++; recalc()");
+    expect(game("bkRailCheck(15, 12).err")).toBeUndefined();
+    game("state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // Weg längs über Kante 1 (beim Bogen ohne Pfeiler)
+    expect(game("bkRailCheck(15, 12).err")).toMatch(/mehr Stützen/);
+    game("state.tiles.delete('14,12'); state.tiles.delete('15,12'); state.decos.set('15,12', [null, null, null, null, null, null, null, null, null, { b: 'kristallaterne' }]); groundVersion++; recalc()");   // 20 hoch in der Feldmitte
+    expect(game("bkRailCheck(15, 12).err")).toMatch(/Viadukt/);
   });
 });

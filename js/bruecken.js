@@ -43,7 +43,7 @@ function bkSupports(b, art = null, rail = null) {
 function bkGeom(b, art = null, rail = null) {
   const look = brLook(b, 'anhoehe'), mat = art || look.mat, fam = (rail != null ? rail : bkRailAny(b)) ? 'bahn' : 'fuss', piers = brSupports({ ...look, mat, fam }, b.n);
   return { ax: b.ax ? 1 : 0, look, mat, fam, piers, hf: brDeckHFn(fam, b.n),
-    art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : (BK_BAHN[mat] ? mat : 'holz'),   // Bahn-Stein bis C5d wie Holz
+    art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : mat === 'stein' || BK_BAHN[mat] ? mat : 'holz',   // Stein-Viadukt (C5d)
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
 const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall';            // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB
@@ -376,9 +376,11 @@ function bkRailCheck(x, y) {
   if (!available('schiene')) return { err: `Schiene: ${lockText('schiene').replace('🔒 ', 'erst mit ')}` };
   if (bkWegAny(c.b)) return { err: BK_BOTH };
   if (bkRailAt(c)) return c.b.gleis[c.i] === f ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil umstellen: kostenlos (wie am Boden)
-  if (!bkRailAny(c.b)) {                                                   // Holzviadukt: Bock an jeder Kante – nur die neuen Stützen zählen (alte Stände)
+  if (!bkRailAny(c.b)) {                                                   // Holz-/Steinviadukt: Bock bzw. Pfeiler an jeder Kante – nur die neuen Stützen zählen (alte Stände)
     const old = bkSupports(c.b);
     for (const e of bkSupports(c.b, null, true)) if (!old.includes(e)) { const se = bkEdgeBlocker(...bkEdgeCells(c.x0, c.y0, c.b.ax, e)); if (se) return { err: 'Mit Gleis braucht die Brücke mehr Stützen. ' + se }; }
+    const Gb = bkGeom(c.b, null, true);                                     // Steinviadukt: flacher, niedrigere Bögen – passt, was darunter steht?
+    if (Gb.stone) for (const [i, [cx, cy]] of bkCellsOf(c.k, c.b).entries()) { const e = bkUnderError(cx, cy, Gb, i); if (e) return { err: 'Mit Gleis wird die Brücke ein Viadukt – ' + e }; }
   }
   return { cost: ITEMS.schiene.cost, mat: { ...(ITEMS.schiene.mat || {}) } };
 }

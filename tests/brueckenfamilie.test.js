@@ -129,17 +129,18 @@ describe('Stein: Bögen (160c C3)', () => {
     const near = game("[6, 7, 8].map(n => { const S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)); return brClear(S, 1, 0.14); })");
     [19.94, 19.63, 19.37].forEach((v, i) => expect(near[i]).toBeCloseTo(v, 1));
     expect(game("brClear(brStoneGeom('fuss', 4, [2]), 1.45, 0.05)")).toBe(-1);
-    expect(game("[brClear(brStoneGeom('bahn', 4, [2]), 1.5, 0), brClear(brStoneGeom('bahn', 4, [2]), 0.5, 0.1)]")).toEqual([-1, 20]);
+    const vb = game("(() => { const S = brStoneGeom('bahn', 4, brSupports({ mat: 'stein', fam: 'bahn' }, 4)); return [S.piers, brClear(S, 1.5, 0), brClear(S, 1, 0.14), S.ri(1)]; })()");   // Viadukt (B)
+    expect(vb[0]).toEqual([1, 2, 3]); expect(vb[1]).toBe(-1); expect(vb[3]).toBeGreaterThan(18); expect(vb[2]).toBeLessThan(20); expect(vb[2]).toBeGreaterThan(15);
     for (const n of ['0', '-1', 'NaN', '99', "'2'", '2.5']) for (const p of ['null', "'x'", '[0, 1.5, NaN, 99, 2, 2]']) for (const t of ['NaN', 'Infinity', '-9', '0.3'])
       expect(game(`(v => v === null || Number.isFinite(v))(brStoneGeom('fuss', ${n}, ${p}).ri(${t}))`)).toBe(true);
     expect(game("(() => { const S = brStoneGeom('bahn', 4, [2]); for (let t = -0.5; t <= 3.5; t += 0.01) { const v = S.ri(t); if (v != null && (!Number.isFinite(v) || v > HILL_H - 3 + 1e-9)) return false; } return true; })()")).toBe(true);
   });
-  it('bkGeom: Stein mit brp zeichnet Stein, ohne brp Holz; mit Gleis Bahn (Maler Holz); Kristall-Fußgänger K1, Kristall-Bahn bis C5 flach', () => {
+  it('bkGeom: Stein mit brp zeichnet Stein, ohne brp Holz; mit Gleis Viadukt; Kristall-Fußgänger K1, Kristall-Bahn B2', () => {
     game("startNew()");
     const G = b => game(`(() => { const b = ${b}; if (b.brp) b.brp.k = brSig(b, 'anhoehe'); const G = bkGeom(b); return { art: G.art, fam: G.fam, mat: G.mat, piers: G.piers, stone: !!G.stone }; })()`);
     expect(G("{ ax: 0, n: 4, art: 'stein', brp: { money: 480, quader: 12 } }")).toEqual({ art: 'stein', fam: 'fuss', mat: 'stein', piers: [2], stone: true });
     expect(G("{ ax: 0, n: 4, art: 'stein' }")).toMatchObject({ art: 'holz', mat: 'holz', piers: [1, 3], stone: false });
-    expect(G("{ ax: 0, n: 4, art: 'stein', gleis: [0, 0, 0, 0], brp: { money: 480, quader: 12 } }")).toEqual({ art: 'holz', fam: 'bahn', mat: 'stein', piers: [2], stone: true });
+    expect(G("{ ax: 0, n: 4, art: 'stein', gleis: [0, 0, 0, 0], brp: { money: 480, quader: 12 } }")).toEqual({ art: 'stein', fam: 'bahn', mat: 'stein', piers: [1, 2, 3], stone: true });   // Viadukt (C5d, B)
     expect(G("{ ax: 0, n: 4, art: 'kristall', brp: { money: 3200, kristall: 16, metall: 4 } }")).toMatchObject({ art: 'kristall', mat: 'kristall', fam: 'fuss' });   // C4: K1
     expect(G("{ ax: 0, n: 4, art: 'kristall', gleis: [0, 0, 0, 0], brp: { money: 3200, kristall: 16, metall: 4 } }")).toMatchObject({ art: 'kristall', fam: 'bahn' });   // C5: Kristall B2 (Fachwerk)
     expect(G("{ ax: 0, n: 3, art: 'stahl' }")).toMatchObject({ art: 'stahl', piers: [] });

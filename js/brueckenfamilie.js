@@ -208,13 +208,14 @@ function brSpanLook(x, y) {
 // Stützen (160c C1): auf den Kachelkanten zwischen den Feldern der Lücke (Kante k zwischen Feld k−1 und k, 1 … n−1), nie an der Wand –
 // so bleibt die Feldmitte darunter frei (ein Weg quer unter der Brücke). Holz-Fußgänger nach bru: keine / wenige / jede; „wenige“ = jede
 // zweite Kante von beiden Enden her (min(k, n−k) ungerade: n 4 → 1, 3 wie Entwurf 3b; n 2 → 1; n 3 → 1, 2). Holz-Bahn: jede Kante (Böcke).
-// Stein: Pfeiler je 2 Felder von außen (n 4 → 2; n 5 → 2, 3). Metall und Kristall spannen frei.
+// Stein: Pfeiler je 2 Felder von außen (n 4 → 2; n 5 → 2, 3); Stein-Viadukt (Bahn, Nutzer 12.10.2026: Variante B) an jeder Kante.
+// Metall und Kristall spannen frei.
 function brSupports(look, n) {
   const out = [];
   if (!look || !(n >= 2)) return out;
   for (let k = 1; k < n; k++) {
     const m = Math.min(k, n - k);
-    if (look.mat === 'holz' ? (look.fam === 'bahn' || look.stuetzen === 'jede' || (look.stuetzen !== 'keine' && m % 2 === 1)) : look.mat === 'stein' ? (k <= n / 2 ? k : n - k) % 2 === 0 : false) out.push(k);
+    if (look.mat === 'holz' ? (look.fam === 'bahn' || look.stuetzen === 'jede' || (look.stuetzen !== 'keine' && m % 2 === 1)) : look.mat === 'stein' ? look.fam === 'bahn' || (k <= n / 2 ? k : n - k) % 2 === 0 : false) out.push(k);
   }
   return out;
 }
@@ -268,12 +269,11 @@ function brStoneGeom(fam, n, piers, S = BR_STEIN) {
   const pierHit = (t, r = 0) => P.some(k => Math.abs(t - (k - 0.5)) < S.pw + r);
   return { fam, n: N, A, B, hf, S, piers: P, arcs, ri, ts, pierHit, low: (t, g0 = 0) => { const v = ri(t); return v == null ? g0 : v; } };
 }
-// Lichtraum unter dem Deck (G8: Maler, bkTooTall, bkUnderError): ohne Stein BK_CLEAR; Stein: unter dem Bogen über [t − r, t + r] (−1),
-// am Pfeiler −1 (nichts, auch keine Blumen). Bahn-Stein bis C5 flach gezeichnet: nur die Pfeiler
+// Lichtraum unter dem Deck (G8: Maler, bkTooTall, bkUnderError): ohne Stein BK_CLEAR; Stein (Bogen und Viadukt): unter dem Bogen über
+// [t − r, t + r] (−1), am Pfeiler −1 (nichts, auch keine Blumen)
 function brClear(S = null, t = 0, r = 0) {
   if (!S) return BK_CLEAR;
   if (!Number.isFinite(t) || S.pierHit(t, r)) return -1;
-  if (S.fam !== 'fuss') return BK_CLEAR;
   const a = S.ri(Math.max(S.A, t - r)), b = S.ri(Math.min(S.B, t + r));    // ri je Bogen konkav → Minimum an den Enden
   return Math.min(BK_CLEAR, Math.min(a == null ? Infinity : a, b == null ? Infinity : b) - 1);
 }

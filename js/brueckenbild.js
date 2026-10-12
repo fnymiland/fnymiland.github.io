@@ -15,7 +15,7 @@ function brBox(gruppe, c = null) {                                         // c:
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
-  if (opts.fam === 'fuss' && art === 'stein') return bkPaintStein(lage, P, z, n, t0, t1, weg, opts);   // Stein mit Pfeilern (160c C3)
+  if (art === 'stein' && (opts.fam === 'fuss' || opts.fam === 'bahn')) return bkPaintStein(lage, P, z, n, t0, t1, weg, opts);   // Stein mit Pfeilern (160c C3), Viadukt (C5d)
   if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2)
   return bkPaintBahn(lage, P, z, BK_BAHN[art] ? art : 'holz', n, t0, t1, weg, opts);   // Bahn: flach (160c C5); auch Rückfall ohne Familie
 }
@@ -364,6 +364,7 @@ function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
     }
   } else if (lage === 'd') {
     deckTop(L.deck);
+    if (opts.railPaint) { opts.railPaint(hf(t0)); return; }                  // Viadukt: Gleis auf dem Deck, keine Fugen (Entwurf)
     if (!weg) for (let j = Math.ceil((t0 - A) * 6 - 0.5 - 1e-9); A + (j + 0.5) / 6 < t1 + 1e-9; j++) {   // Fugen je ⅙ Feld, nie auf einer Kante
       const t = A + (j + 0.5) / 6;
       if (t < t0 - 1e-9 || (z < 0.6 && j % 2)) continue;
