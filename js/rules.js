@@ -2545,7 +2545,7 @@ function waterChanged() { seaCache.clear(); waterVersion++; }
 function nearestWater(x, y) {
   const rx = Math.round(x), ry = Math.round(y);
   for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy) && seaCross(rx + dx, ry + dy) !== 'block') return [rx + dx, ry + dy];   // nicht in einer Brückenkurve starten (Block 112)
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy) && seaCross(rx + dx, ry + dy) !== 'block' && !bkAt(rx + dx, ry + dy)) return [rx + dx, ry + dy];   // nicht in einer Brückenkurve starten (Block 112), nicht unter einer Anhöhen-Brücke (160c C10)
   }
   return null;
 }
@@ -2556,6 +2556,8 @@ const seaBox = (pts, pad) => [Math.floor(Math.min(...pts.map(p => p[0]))) - pad,
 // schräg (sonst fuhren sie bei langen Brücken sichtbar „auf den Schienen“). 'x'/'y': die Brücke läuft entlang x bzw. y;
 // 'block': Kurve, Kreuzung – da passt kein Schiff durch; null: keine Brücke
 function seaCross(x, y) {
+  const c = bkAt(x, y);                                                  // Anhöhen-Brücke (160c C10): ein Feld breit, Stützen/Pfeiler nur auf Kanten längs →
+  if (c) return isWater(x, y) ? (c.b.ax ? 'y' : 'x') : null;           // nur quer; Lichtraum ≥ 17 (Viadukt-Endfeld), Boote bis ≈ 17: keine Sperre
   const t = state.tiles.get(x + ',' + y);
   if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
   const A = t.b === 'weg' ? bridgeArch(x, y) : null;                    // Bogenbrücke (Block 150): nur unter hohen Stellen durch
@@ -2581,6 +2583,7 @@ let seaBridgeSig = '';
 function seaBridgesCheck() {
   let sig = '';
   for (const [k, t] of state.tiles) if ((t.b === 'schiene' || isWegBridge(t)) && isWater(...keyXY(k))) sig += k + seaCross(...keyXY(k)) + ';';   // auch die Richtung (hängt an Gleisen an Land)
+  if (bkOn()) for (const [k, b] of state.bruecken) for (const [x, y] of bkCellsOf(k, b)) if (isWater(x, y)) sig += 'B' + x + ',' + y + seaCross(x, y) + ';';   // Anhöhen-Brücken über Wasser (160c C10)
   if (sig !== seaBridgeSig) { if (seaBridgeSig || sig) seaCache.clear(); seaBridgeSig = sig; }
 }
 // Breitensuche übers Wasser vom Feld s, bis goal(x, y) passt → Felder vom Start bis zum Ziel (oder null)

@@ -1086,11 +1086,11 @@ function natureAt(x, y, part) {
   if (hillAt(x, y) || slopeAt(x, y)) return out;                         // Anhöhe (Block 157): Tiere bleiben unten – oben, auf Rampe und Treppe keine
   if (ter === 'water') {
     // über oder neben Gebautem auf dem Wasser (Brücke, Steg, Hafen) springt nichts – es spränge durch die Brücke (Nutzer, 08.10.2026)
-    const built = [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => { const k = (x + dx) + ',' + (y + dy); return terrainAt(x + dx, y + dy) === 'water' && (state.tiles.has(k) || COVER.has(k)); }));
+    const built = [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => { const k = (x + dx) + ',' + (y + dy); return terrainAt(x + dx, y + dy) === 'water' && (state.tiles.has(k) || COVER.has(k) || !!bkAt(x + dx, y + dy)); }));   // auch Anhöhen-Brücken (160c C10)
     const shore = DIRS.some(([dx, dy]) => terrainAt(x + dx, y + dy) !== 'water');
     if (isSea(x, y)) {
       if (!landWithin(x, y, 3)) return out;
-      if (!night) out.push(['moewe', 0.06]);
+      if (!night && !(bkOn() && [-2, -1, 0, 1, 2].some(dy => [-2, -1, 0, 1, 2].some(dx => bkAt(x + dx, y + dy))))) out.push(['moewe', 0.06]);   // kreist in Deckhöhe: nicht durchs Geländer (160c C10)
       if (built) return out;
       if (shore && !night) out.push(['robbe', 0.035]);
       out.push(['fisch', 0.04]);

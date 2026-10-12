@@ -325,6 +325,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     eine Zelle als 3. Parameter. Auftrag `bkBuild` vorn in `order` (volles Geld), Deck danach; ein ↶. Geht sie nicht: Lücke rot, Grund `bkErr`
     im Schild; still unten bei > `BK_MAX`, Rampe/Treppe, Knick, kein Gegenüber, Brücke schon da. Geist: `PLAN_GHOST` → `bkDrawGhost`
     (Zwischenleinwand `ghostPaint`, 65 %, ohne Licht), Antippen in der stehenden Vorschau über `bkPick`.
+    **Schiffe** (160c C10): `seaCross` kennt `bkAt` – unter einer Anhöhen-Brücke über Wasser nur quer (Stützen/Pfeiler stehen auf Kanten längs),
+    `seaBridgesCheck` zählt ihre Wasserfelder mit (Seewege neu bei Bau/Abriss), `nearestWater` startet nie darunter, `natureAt`: keine Fische/
+    Möwen daneben. Boote vor der Stirn (s > BK_W) zeichnet `bkMoverClass` als F. Hängt die Durchfahrt einmal von Material oder Stützen ab,
+    braucht `brSet` ein `recalc` (Signatur).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

@@ -203,6 +203,7 @@ function spriteBridge(x, y, px, py, z, gruppe) {
 // FOOT_D wie slopeUp; Tiere in der Mitte). Fahrzeuge immer U
 function bkMoverClass(m, c, x, y) {
   if (m.bkCls) return m.bkCls;                                             // Wagenstück unter der Brücke (brCarPiecesUnder)
+  if (m.boat) return (c.b.ax ? m.px - x : m.py - y) > BK_W ? 'F' : 'U';    // Boot vor der Stirn: davor (160c C10); hinten bleibt es darunter
   if (!(m.fur || m.critter) || m.train || m.boat || m.ship || m.cargo || m.fish) return 'U';
   const f = m.fur && !m.critter && !m.sit ? FOOT_D : 0, s = c.b.ax ? m.px + f - x : m.py - f - y;
   return s < -BK_W - 0.05 ? 'B' : s > BK_W ? 'F' : 'U';

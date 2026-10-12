@@ -1318,6 +1318,14 @@ function tileSprite(kind, x, y, px, py, z) {
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
 let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
+// Kachel-Brücken (Block 107), die ein Boot berührt und über die drawBridgeOver nachmalt – nicht, was schon hinter ihm liegt. Anhöhen-Brücken
+// malt bkDrawMoving (160c C10: seaCross kennt sie, darum hier ausgenommen)
+function boatUnder(m) {
+  const under = [];
+  for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
+    if (Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by) && !bkAt(bx, by)) under.push(bx + ',' + by);
+  return under.length ? under : null;
+}
 let PLAN_GHOST = null, PLAN_GHOST_DONE = null;                           // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle); je Bild gemalt
 // Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
 // sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten. Eine Leinwand, die nur wächst (wie hillSpillCv),
@@ -1863,12 +1871,8 @@ function render(now) {
         if (ps) { for (const p of ps) { if (!byTile.has(p.k)) byTile.set(p.k, []); byTile.get(p.k).push(p.m); } continue; }
       }
     }
-    if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
-      const under = [];
-      for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
-        if (Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by)) under.push(bx + ',' + by);   // was der Rumpf berührt – nicht, was schon hinter ihm liegt
-      m.under = under.length ? under : null;
-    }   // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
+    if (m.boat) m.under = boatUnder(m);                                    // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
+    // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (m.pbtrain) {                                                       // Parkbahn-Wagen kurz vor einer Station: erst mit ihr zeichnen –
       const [rx, ry] = keyXY(k);                                           // sie steht immer hinter dem Gleis und läge sonst über ihm (Block 136f)
       for (const [dx, dy] of [[1, 0], [0, 1]]) {
