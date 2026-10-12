@@ -436,6 +436,19 @@ describe('Zug unter der Brücke in Stücken (160c C5c)', () => {
 });
 
 // 160c C6: Leiste (Material, Farbe), Bau im neuen Format, Setzer brSet, Fenster
+// 160c C9a: die Lücke wird je Feld ab dem Anker geprüft, nicht in Zugrichtung – von rechts gezogen war der Platz unter Stein gespiegelt
+describe('Prüfung unter der Brücke unabhängig von der Zugrichtung (160c C9a)', () => {
+  it('Stein 5 Felder (Pfeiler an Kante 1 und 4): Blumen am Pfeiler stören von links wie von rechts gezogen', () => {
+    luecke(5); game("state.restore = { klippe: 1 }; state.paintNew.bruecke = { form: 2 }");
+    const slot = game("(() => { for (let j = 0; j < 4; j++) { const [u] = slotPos(14, 12, j, { b: 'blumen' }); if (u > 0.3) return j; } return -1; })()");
+    expect(slot).toBeGreaterThanOrEqual(0);
+    game(`(() => { const ds = [null, null, null, null]; ds[${slot}] = { b: 'blumen' }; state.decos.set('14,12', ds); groundVersion++; recalc(); })()`);
+    const lr = plan('bruecke', { x: 12, y: 12 }, { x: 20, y: 12 }).err, rl = plan('bruecke', { x: 20, y: 12 }, { x: 12, y: 12 }).err;
+    expect(lr).toMatch(/Pfeiler/);
+    expect(rl).toBe(lr);
+  });
+});
+
 // 160c C8: bis 8 Felder Lücke (gelesen wurde schon bis 8, A3); 9 nicht
 describe('Bis 8 Felder (160c C8)', () => {
   it('8 Felder: gebaut und je Feld bezahlt, beide Richtungen; 9 Felder nicht (nichts bezahlt)', () => {

@@ -205,8 +205,8 @@ function bkError(sp, look, noCost) {
   for (const [ex, ey] of sp.ends) if (!ownedTile(ex, ey)) return notMine(ex, ey);
   if (sp.n > BK_MAX) return `Höchstens ${BK_MAX} Felder Lücke`;
   const nb = { ax: sp.ax, n: sp.n, art: mat }, Gn = bkGeom(nb);           // so, wie sie gebaut würde (Stein: Pfeiler und Bögen)
-  for (let i = 0; i < sp.gap.length; i++) {
-    const [x, y] = sp.gap[i];
+  for (const [x, y] of sp.gap) {
+    const i = sp.ax ? y - sp.y0 : x - sp.x0;                               // Feld ab dem Anker (wie c.i), nicht in Zugrichtung (160c C9a)
     if (!ownedTile(x, y)) return notMine(x, y);
     if (bkAt(x, y)) return 'Hier ist schon eine Brücke – das Material wechselst du im Fenster (👆)';
     const e = bkUnderError(x, y, Gn, i);
