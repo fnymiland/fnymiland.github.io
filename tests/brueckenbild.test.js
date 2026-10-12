@@ -107,8 +107,9 @@ describe('Fußgänger-Brücke mit Bogen (160c C2)', () => {
     } finally { g = g0; }
     return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8)];
   })()`);
-  it('Holz: in seinem Feld, deckend, Längsstriche ohne runde Kappen, jeder senkrechte Strich (Kante) genau einmal', () => {
+  it('Holz und Metall: in seinem Feld, deckend, Längsstriche ohne runde Kappen, jeder senkrechte Strich (Kante) genau einmal', () => {
     expect(scanFuss('holz')).toEqual([[], []]);
+    expect(scanFuss('stahl')).toEqual([[], []]);
   });
   it('das Deck folgt dem Bogen: Scheitel in der Mitte, an den Wänden HILL_H; Gleis legt es flach', () => {
     const hs = game(`(() => { const out = []; const g0 = g; let ys = [];

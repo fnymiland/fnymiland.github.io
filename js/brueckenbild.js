@@ -172,6 +172,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, late, drawnMovers) {
 // ---------------------------------------------------------------------------
 const BK_FUSS = {
   holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' },
+  stahl: { steel: '#5d7d7a', light: '#9bb7b3', dark: '#3e5452', grate: '#cfd3cf', quer: mix('#cfd3cf', '#5a6464', 0.35), laengs: mix('#cfd3cf', '#5a6464', 0.25) },   // „Metall“ (Entwurf 'F-metall'; Rost-Linien als Mischfarbe, G5)
 };
 function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
   const L = BK_FUSS[art], A = -0.5, W = BK_W, hf = opts.hf || (() => HILL_H), T1 = t1 + (opts.ext || 0), last = t1 >= n - 0.5 - 1e-9;
@@ -204,6 +205,24 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
     } else if (lage === 'o') {
       onEdge(4, t => vert(t, W, hf(t), hf(t) + 6, L.rail, 0.55));             // vorderes Geländer
       line(W, t => hf(t) + 6, L.rail, 0.75); line(W, t => hf(t) + 3, L.rail, 0.45);
+    }
+  } else if (art === 'stahl') {
+    const rib = t => hf(t) - 6;                                              // dünner Stahlbogen unter dem Träger
+    if (lage === 'h') {
+      onEdge(4, t => vert(t, -W, hf(t), hf(t) + 6.5, L.dark, 0.4));          // hinteres Geländer
+      line(-W, t => hf(t) + 6.5, L.dark, 0.6); line(-W, t => hf(t) + 3.2, L.dark, 0.35);
+    } else if (lage === 'v') {
+      band(W, t => hf(t) - 2.6, hf, sh(L.steel));                            // Stahlträger
+      line(W, hf, L.dark, 0.25); line(W, t => hf(t) - 2.6, L.dark, 0.25);
+      onEdge(3, (t, k) => { if (k % 3 && hf(t) - 2.6 - rib(t) > 1) vert(t, W, rib(t), hf(t) - 2.6, sh(L.steel), 0.45); });   // Hänger je Drittel, nie auf der Kante
+      line(W, rib, sh(L.steel), 1.1); line(W, t => rib(t) + 0.6, L.light, 0.3);   // Bogen, Glanz
+    } else if (lage === 'd') {
+      deckTop(L.grate);                                                      // Gitterrost
+      if (!weg) { onEdge(10, t => stroke([P(t, -W, hf(t)), P(t, W, hf(t))], L.quer, 0.25)); for (const s of [-0.2, 0, 0.2]) line(s, hf, L.laengs, 0.25); }
+      if (weg && opts.wegPaint) opts.wegPaint(hf);
+    } else if (lage === 'o') {
+      onEdge(4, t => vert(t, W, hf(t), hf(t) + 6.5, L.steel, 0.45));         // vorderes Geländer
+      line(W, t => hf(t) + 6.5, L.light, 0.75); line(W, t => hf(t) + 3.2, L.steel, 0.4);
     }
   }
 }
