@@ -876,7 +876,14 @@ function putNight(e, n, cx, cy, z) {
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
-  if (!e.glows.length || GLOW_MUTE) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
+  if (!e.glows.length || (GLOW_MUTE && !SPRITE_PAINT)) {                // ohne Licht (tags alle): nur das Bild (Block 124)
+    if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r);
+    if (GLOW_MUTE === 'pane' && e.glows.length && night > 0.15 && isLive()) {   // Nachmalen (160c B2): nur die Scheiben wieder stanzen, nie den Schein
+      if (e.mask) { const M = e.mask; g.save(); g.globalCompositeOperation = 'destination-out'; g.globalAlpha = Math.min(1, night / NIGHT_MAX); g.drawImage(M.c, x0 + M.x * r, y0 + M.y * r, M.c.width / DPR * r, M.c.height / DPR * r); g.restore(); }
+      else for (const gl of e.glows) if (gl.tint !== 'blue') punchGlow(gl.q.map(([x, y]) => [x0 + x * r, y0 + y * r]), gl.r * r, gl.tint, 'pane');
+    }
+    return;
+  }
   // volle Nacht: Bildchen + Löschbild (Schritt 4); nicht für halb durchsichtige Vorschau-Geister (das Löschbild würde Löcher stanzen)
   // und nicht für ein Bildchen, dessen scharfer Ersatz schon wartet (dessen Nachtbild entsteht ohnehin)
   if (nightPicOn() && g.globalAlpha === 1) { const n = e.night || (e.next ? null : nightOf(e)); if (n) { putNight(e, n, cx, cy, z); return; } }
@@ -1309,7 +1316,7 @@ function tileSprite(kind, x, y, px, py, z) {
 }
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
-let HILL_MARKS = null;
+let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
 // Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
 const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
 function hillMark(x, y, f) {
@@ -1383,9 +1390,11 @@ function planPreview(z) {
   for (const [x, y] of planTiles(plan)) {
     const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && bkAt(x, y);   // Weg aufs Deck einer Brücke (Block 160): Raute oben
     const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : null;
-    if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
-    else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
-    else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d', hOf);
+    const draw = () => { if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
+      else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
+      else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d', hOf); };
+    if (bc && DECK_MARKS) { const k = x + ',' + y; if (!DECK_MARKS.has(k)) DECK_MARKS.set(k, []); DECK_MARKS.get(k).push(draw); }   // erst nach dem Deck (tileA, bkDrawStill)
+    else draw();
   }
   const [x0, y0, x1, y1] = planBox(plan);
   if (plan.kind === 'rect' && boxOnHill(x0, y0, x1 - x0 + 1, y1 - y0 + 1)) {   // Anhöhe (Block 157): Rahmen je Feld, auf Anhöhen oben
@@ -1659,6 +1668,7 @@ function render(now) {
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   const HILLS = !!(state.hills && state.hills.size);                     // Anhöhen (Block 157): sonst alles wie vorher
   HILL_MARKS = HILLS ? new Map() : null;                                 // Vorschau auf Anhöhen-Feldern: erst in tileA, oben (hillMark)
+  DECK_MARKS = bkOn() ? new Map() : null;
   hillGap = null;                                                        // Vorschau „Treppe in die Anhöhe“ (hills.js): gesetzt unten im Bauen-Zweig
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
@@ -1841,8 +1851,8 @@ function render(now) {
       }
     }
     if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) {      // auf dem Deck: ins Feld unter den Füßen (G6), nur innerhalb derselben Brücke
-      const c0 = bkAt(...keyXY(k)), fx = Math.round(m.px + FOOT_D), fy = Math.round(m.py - FOOT_D), cf = bkAt(fx, fy);
-      deckPut(cf && cf.k === c0.k ? fx + ',' + fy : k, m); continue;
+      const c0 = bkAt(...keyXY(k)), [kx, ky] = keyXY(k), fx = Math.round(m.px + FOOT_D), fy = Math.round(m.py - FOOT_D), cf = bkAt(fx, fy);
+      deckPut(cf && cf.k === c0.k && fx + fy > kx + ky ? fx + ',' + fy : k, m); continue;   // nur ins spätere Feld (Nord-Süd läge der Fuß im früheren)
     }
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
@@ -2137,12 +2147,12 @@ function render(now) {
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
       const ms0 = byTile.get(k), ms = ms0 && hl && hillGapHas(k) ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe/Rampe in die Anhöhe: oben ist dort nichts
-      const bc = bkOn() ? bkAt(x, y) : null, late = [];                   // Brücke (160c B2): Figuren davor erst nach dem Nachmalen
+      const bc = bkOn() ? bkAt(x, y) : null, late = [];                   // Brücke (160c B2): Bewegtes des Felds zeichnet bkDrawMoving (Folge je Querlage)
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
         for (const m of ms) {
-          if (bc && bkMoverClass(m, bc, x, y) === 'F') { late.push(m); continue; }
+          if (bc) { late.push(m); continue; }                               // Brückenfeld: alles Bewegte zeichnet bkDrawMoving in der richtigen Folge
           // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
           const ar = m.fur && archAt(m.px, m.py);
           if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
@@ -2186,7 +2196,7 @@ function render(now) {
       }
       if (bc) {                                                           // Brücke (Block 160; 160c B2): ruhend in tileA – hier nur nachmalen, was Bewegtes zudeckt
         const figs = onDeck && onDeck.get(k);                              // Leute und Wagen oben: zwischen Deck und vorderem Geländer
-        if (ms || figs || late.length) bkDrawMoving(x, y, px, py, z, now, bc, (ms || []).filter(m => !late.includes(m) && drawnMovers.has(m)), figs, late, drawnMovers);
+        if (late.length || figs) bkDrawMoving(x, y, px, py, z, now, bc, late, figs, drawnMovers);
       }
 
   };
@@ -2201,7 +2211,7 @@ function render(now) {
   }
   FOG = false;
   archWalkers.clear();
-  HILL_MARKS = null; hillGap = null;                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
+  HILL_MARKS = null; DECK_MARKS = null; hillGap = null;                                     // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 

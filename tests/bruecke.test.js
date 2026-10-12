@@ -294,3 +294,27 @@ describe('Stützen gegengelesen (160c C1)', () => {
     expect(game("state.edges.has(edgeBetween(14, 12, 15, 12))")).toBe(true);
   });
 });
+
+// 160c C2 gegengelesen: Weg-Muster folgt dem Bogen (Fugen in Stücken), Stützen im Wasser reichen bis auf die Wasserfläche
+describe('Bogen gegengelesen (160c C2)', () => {
+  it('Muster mit gebogenem L: jede Fuge in Stücken ≤ 1/12 Feld; ohne sub wie bisher zwei Punkte', () => {
+    const r = game(`(() => { const g0 = g, segs = []; let cur = null;
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' ? (x, y) => { cur = [[x, y]]; segs.push(cur); } : k === 'lineTo' ? (x, y) => cur && cur.push([x, y]) : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      const L = ([u, v]) => [u, v];
+      try { PAT_SUB = 12; patternDraw(L, 'tiles', 0, 0, 1, '#000000', null, 0, null); const a = segs.splice(0); PAT_SUB = 0; patternDraw(L, 'tiles', 0, 0, 1, '#000000', null, 0, null); return [a, segs]; }
+      finally { g = g0; PAT_SUB = 0; } })()`);
+    const step = s => Math.max(...s.slice(1).map((p, i) => Math.max(Math.abs(p[0] - s[i][0]), Math.abs(p[1] - s[i][1]))));
+    expect(r[0].length).toBeGreaterThan(0);
+    expect(Math.max(...r[0].filter(s => s.length > 1).map(step))).toBeLessThanOrEqual(1 / 12 + 1e-9);
+    expect(r[1].every(s => s.length === 2)).toBe(true);
+  });
+  it('Stütze über Wasser: Fuß auf der Wasserfläche (−0,7·DEPTH), über Land 0', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    const foot = () => game(`(() => { const g0 = g, hs = []; g = new Proxy({}, { get: (o, k) => k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      try { const c = bkAt(15, 12), A = bkTileArgs(c, 0, 0, 1), P = (t, s, h) => { hs.push(h); return [t, h]; }; bkPaintLage('h', P, 1, A.art, A.n, A.t0, A.t1, A.weg, A.opts); } finally { g = g0; }
+      return Math.min(...hs); })()`);
+    expect(foot()).toBe(0);
+    game("for (let x = 14; x <= 16; x++) state.terra.set(x + ',12', 'water'); waterChanged(); groundVersion++; recalc()");
+    expect(foot()).toBeCloseTo(-0.7 * game('DEPTH'), 6);
+  });
+});

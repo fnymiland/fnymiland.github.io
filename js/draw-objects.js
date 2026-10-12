@@ -11,11 +11,16 @@ const isLive = () => g === ctx || SPRITE_PAINT || (GLPASS && g === LA.x);   // S
 // gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
 // Am Ende wird die Nacht nur über das Bild gelegt und die Löcher mit Licht hinterlegt (render.js, „Nacht“).
 // Beim Zeichnen eines Bildchens (render.js, weit weg) werden die Lichter nur gemerkt und beim Einsetzen gestanzt
-let GLOW_SINK = null, GLOW_MUTE = false;    // GLOW_MUTE (160c B2): beim Nachmalen schon gezeichneter Dinge kein zweiter Schein
+// GLOW_MUTE (160c B2): beim Nachmalen schon gezeichneter Dinge kein zweiter Schein; 'pane': nur die Scheibe neu stanzen (sie wurde eben
+// deckend übermalt), nie den Schein (er läge sonst doppelt tief) und nichts merken (PLAN G7/K10). Beim Malen eines Bildchens gilt es nicht
+let GLOW_SINK = null, GLOW_MUTE = false;
 function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
-  if (GLOW_MUTE || !(night > 0.15 && isLive())) return;
+  const mute = GLOW_MUTE && !SPRITE_PAINT;
+  if (mute && (GLOW_MUTE !== 'pane' || tint === 'blue' || GLOW_SINK)) return;
+  if (!(night > 0.15 && isLive())) return;
   const m = g.getTransform(), k = 1 / DPR;
   const q = pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]);
+  if (mute) return punchGlow(q, r, tint, 'pane');
   if (GLOW_SINK) { GLOW_SINK.push({ q, r, tint, snap: tint === 'blue' ? null : glowSnap(q) }); return; }
   punchGlow(q, r, tint);
 }
@@ -352,6 +357,9 @@ function patTileFill(L, kind, x, y, z, col, bg, ext, box) {
   g.beginPath(); [[u0, v0], [u1, v0], [u1, v1], [u0, v1]].map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.fill();
   return true;
 }
+// PAT_SUB (160c C2): paintLook mit gebogenem L (Weg auf dem Bogen) – Striche und Flächen des Musters längs unterteilt, sonst Sehnen
+let PAT_SUB = 0;
+const patSubPts = pts => { if (!PAT_SUB) return pts; const out = []; pts.forEach((a, i) => { const b = pts[(i + 1) % pts.length], n = Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])) * PAT_SUB)); for (let j = 0; j < n; j++) out.push([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); }); return out; };
 function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const R = 0.55, E = R + ext;
   const out = (u, v) => box && (u < box[0] || u > box[1] || v < box[2] || v > box[3]);
@@ -383,7 +391,7 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
     const RB = ['#f7a8b8', '#f9c98a', '#f8e38c', '#a8dcb0', '#9fcdf0', '#c6b2ee'], w = 0.1, n = Math.ceil(2 * E / w) + 1, k0 = Math.round((x + y) / w);   // Streifen u + v = c0, in der Welt x + y + c0
     for (let i = -n; i <= n; i++) {
       const c0 = i * w;
-      poly([[c0 + E, -E], [c0 + w * 0.8 + E, -E], [c0 + w * 0.8 - E, E], [c0 - E, E]].map(L), C(RB[(((i + k0) % RB.length) + RB.length) % RB.length]));
+      poly(patSubPts([[c0 + E, -E], [c0 + w * 0.8 + E, -E], [c0 + w * 0.8 - E, E], [c0 - E, E]]).map(L), C(RB[(((i + k0) % RB.length) + RB.length) % RB.length]));
     }
     return;
   }
@@ -412,7 +420,9 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const hi = patSeam && !ext && !box ? 0.499 : Infinity;
   const line = (a, b) => {
     if ((a[0] > hi && b[0] > hi) || (a[1] > hi && b[1] > hi)) return;
-    const p0 = L(a), p1 = L(b); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]);
+    const p0 = L(a); g.moveTo(p0[0], p0[1]);
+    const n = PAT_SUB ? Math.max(1, Math.ceil(Math.max(Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])) * PAT_SUB)) : 1;   // gebogenes L (Bogenbrücke, 160c C2): Fugen in Stücken
+    for (let j = 1; j <= n; j++) { const p = n === 1 ? L(b) : L([a[0] + (b[0] - a[0]) * j / n, a[1] + (b[1] - a[1]) * j / n]); g.lineTo(p[0], p[1]); }
   };
   if (kind === 'bricks') {
     const [r0, r1] = span(0.1), [c0, c1] = span(0.2);
@@ -581,7 +591,7 @@ function paintLook(L, lk, x, y, z, band, ext, box = null, sub = 0) {   // sub: K
       const u = -0.5 + i * 0.25, v = -0.5 + j * 0.25;
       poly([[u, v], [u + 0.25, v], [u + 0.25, v + 0.25], [u, v + 0.25]].map(L), C(lk.checker));
     }
-  } else { patSeam = true; try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box, lk.fill); } finally { patSeam = false; } }
+  } else { patSeam = true; PAT_SUB = sub; try { pattern(L, lk.pat[0], x, y, z, lk.pat[1] && C(lk.pat[1]), lk.cols, ext, box, lk.fill); } finally { patSeam = false; PAT_SUB = 0; } }
   g.restore();
 }
 // Trittsteine: auf jedem Arm 1/8 und 3/8 vom Mittelpunkt → überall derselbe Abstand, auch über Feldgrenzen.
@@ -2546,7 +2556,7 @@ const treeFruitOf = (x, y, s) => { const h = hash(x, y, 40 + s); return h < 0.4 
 const potOf = (x, y, s) => Math.floor(hash(x, y, 7 + s) * 5);
 const decoVariant = (b, x, y, s) => { b = baseOf(b); return b === 'baum' ? 'f' + treeFruitOf(x, y, s) : b === 'blumentopf' ? 'p' + potOf(x, y, s) : b === 'riesenblume' ? `${x},${y},${s},${state.seed}` : b === 'souvenir' ? 'sv' + svVariant(x, y, s) : ''; };   // Souvenir: Art, Farbe, Flagge, Tier (Block 129)
 function drawSmallOne(b, rot, sx, sy, z, now, x, y, sc, slot = 0, col = 0, form = 0) {
-  if (SPRITES_ON && sc === 1 && g === ctx && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live
+  if (SPRITES_ON && sc === 1 && (g === ctx || (GLOW_MUTE && GLPASS && g === LA.x)) && spriteOk(b) && spriteSmall(b, rot, sx, sy, z, now, x, y, slot, col, form)) return;   // weit weg: Bildchen (render.js); nah Bewegtes live; Nachmalen in der GL-Zelle (160c B2): dasselbe Bildchen
   const s = decoScale(b) * 0.9 * sc;
   const live = () => {
     g.save(); g.translate(sx, sy); g.scale((rot & 1) && MIRROR.has(b) ? -s : s, s);

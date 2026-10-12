@@ -410,8 +410,9 @@ function bkTileArgs(c, px, py, z) {
   const wegPaint = H => bkWegPaint(c, px, py, z, H);
   const railPaint = bkRailAt(c) ? H => drawRailBed(px, py - H * z, z, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, { b: 'schiene', rot: c.b.ax, form: c.b.gleis[c.i] || 0 }, bkRailArms(c)) : null;
   const fam = bkFam(c.b);
+  const foot = k => bkEdgeCells(c.x0, c.y0, ax, k).every(([x, y]) => terrainAt(x, y) === 'water') ? -0.7 * DEPTH : 0;   // Stütze im Wasser: bis auf die Wasserfläche
   return { P, art: bkArtOf(c.b), n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
-    fam, ax, hf: brDeckHFn(fam, c.b.n) } };
+    fam, ax, hf: brDeckHFn(fam, c.b.n), foot } };
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {

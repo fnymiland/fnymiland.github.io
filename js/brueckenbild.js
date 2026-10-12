@@ -44,14 +44,14 @@ function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
     seg(A, s, H + 8, B, s, H + 8, col, w * 1.3); seg(A, s, H + 4, B, s, H + 4, col, w * 0.8);
   };
   // Böcke auf den Kachelkanten (160c C1, opts.supports: Kanten k → t = k − ½); je Kante zeichnet sie das spätere Feld (halboffen, G3)
-  const bocks = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);
+  const bocks = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9), ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;
   if (lage === 'h') {
-    for (const t of bocks) seg(t, -W + 0.06, 0, t, -W + 0.06, H - 3, L.dark, 2.2);   // Holzböcke: hinteres Bein
+    for (const t of bocks) seg(t, -W + 0.06, ft(t), t, -W + 0.06, H - 3, L.dark, 2.2);   // Holzböcke: hinteres Bein
     if (art === 'stahl') sideTruss(-W - 0.02, L.dark, 1.1); else rail(-W, L.dark, 1.2);
   } else if (lage === 'v') {
     for (const t of bocks) {                                               // vorderes Bein und Kreuz (mit Gleis unter jedem Feld)
-      seg(t, W - 0.06, 0, t, W - 0.06, H - 3, L.dark, 2.2);
-      seg(t, -W + 0.06, 2, t, W - 0.06, H - 5, L.dark, 1.1); seg(t, W - 0.06, 2, t, -W + 0.06, H - 5, L.dark, 1.1);
+      seg(t, W - 0.06, ft(t), t, W - 0.06, H - 3, L.dark, 2.2);
+      seg(t, -W + 0.06, ft(t) + 2, t, W - 0.06, H - 5, L.dark, 1.1); seg(t, W - 0.06, ft(t) + 2, t, -W + 0.06, H - 5, L.dark, 1.1);
     }
     quad(A, B, W, W, H - (art === 'holz' ? 3 : 4), H, L.beam);            // Längsträger vorn
   } else if (lage === 'd') {
@@ -88,6 +88,8 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
   bkGroup(x, y, px, py, z, ['vd', 'o']);
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
+  const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
+  if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
 }
 function bkGroup(x, y, px, py, z, gruppen) {
   const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)
@@ -115,11 +117,12 @@ function spriteBridge(x, y, px, py, z, gruppe) {
   putSprite(e, px, py, z);
   return true;
 }
-// Bewegtes auf einem Brückenfeld: 'B' hinter dem Deck, 'U' darunter, 'F' davor (Querlage s, nur Figuren und Tiere; Fahrzeuge immer U)
+// Bewegtes auf einem Brückenfeld: 'B' hinter dem Deck, 'U' darunter, 'F' davor – Querlage s dort, wo gezeichnet wird (Figuren: am Fuß,
+// FOOT_D wie slopeUp; Tiere in der Mitte). Fahrzeuge immer U
 function bkMoverClass(m, c, x, y) {
   if (!(m.fur || m.critter) || m.train || m.boat || m.ship || m.cargo || m.fish) return 'U';
-  const s = c.b.ax ? m.px - x : m.py - y;
-  return s < -BK_W - 0.05 ? 'B' : s > BK_W + 0.1 ? 'F' : 'U';
+  const f = m.fur && !m.critter && !m.sit ? FOOT_D : 0, s = c.b.ax ? m.px + f - x : m.py - f - y;
+  return s < -BK_W - 0.05 ? 'B' : s > BK_W ? 'F' : 'U';
 }
 // Rahmen des Bewegten auf dem Schirm [x0, y0, x1, y1] (wie sein glLive-Rahmen), vereinigt
 function bkMoverRect(ms, z, lift = 0) {
@@ -137,19 +140,23 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
   const k = x + ',' + y, f = () => {
     const fog = FOG;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
-    FOG = !ownedTile(x, y); GLOW_MUTE = true;
+    FOG = !ownedTile(x, y); GLOW_MUTE = 'pane';                            // nur Scheiben neu stanzen, nie einen zweiten Schein
     try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr))) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
     finally { GLOW_MUTE = false; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();
 }
-// tileB eines Brückenfelds: ms = Bewegtes darunter/dahinter (schon gezeichnet), figs = auf dem Deck, late = davor (danach zeichnen)
-function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, late, drawnMovers) {
-  const fade = bkFadeNow(x, y), k = x + ',' + y;
-  const B = fade ? [] : ms.filter(m => bkMoverClass(m, c, x, y) === 'B'), U = fade ? [] : ms.filter(m => bkMoverClass(m, c, x, y) === 'U');
-  const G = !fade && state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
+// tileB eines Brückenfelds: ms = Bewegtes des Felds (nach Tiefe sortiert, noch nicht gezeichnet), figs = auf dem Deck. Folge: dahinter (B),
+// h + Deko UNTER nachmalen, darunter (U), vd nachmalen, auf dem Deck, o + Deko VOR nachmalen, davor (F) – je im Rahmen des Bewegten
+function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
+  const fade = bkFadeNow(x, y), k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
+  if (fade) { draw(ms); if (figs) draw(figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))); return; }   // blass: nie nachmalen
+  const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
+  const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || U.length ? bkMoverRect(B.concat(U), z) : null;
+  draw(B);
   if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under);
+  draw(U);
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
   if (figs) {
     FOG = false;
@@ -159,9 +166,9 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, late, drawnMovers) {
       drawnMovers.add(m);
     }
   }
-  const rAll = !fade && (rBU || figs) ? bkMoverRect(B.concat(U, figs || []), z) : null;
+  const rAll = rBU || figs ? bkMoverRect(B.concat(U, figs || []), z) : null;
   if (rAll) { rAll[1] -= HILL_H * z; bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front); }
-  for (const m of late) { moverLive(m, z, now); drawnMovers.add(m); }
+  draw(F);
 }
 
 // ---------------------------------------------------------------------------
@@ -186,15 +193,16 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
   const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
   const vert = (t, s, h0, h1, col, w) => stroke([P(t, s, h0), P(t, s, h1)], col, w);
   const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Stützen auf den Kanten (C1): das spätere Feld
+  const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß der Stütze: Boden 0, Wasser −6,3
   if (art === 'holz') {
     const rib = t => hf(t) - 7 + 3 * Math.sin(Math.PI * u01(t));          // Bogenträger unter dem Belag
     if (lage === 'h') {
-      for (const t of sup) vert(t, -W + 0.06, 0, hf(t) - 0.5, L.side, 2.2);   // Stütze hinten
+      for (const t of sup) vert(t, -W + 0.06, ft(t), hf(t) - 0.5, L.side, 2.2);   // Stütze hinten
       onEdge(4, t => vert(t, -W, hf(t), hf(t) + 6, L.rail, 0.5));            // hinteres Geländer
       line(-W, t => hf(t) + 6, L.rail, 0.65);
-      for (const t of sup) { const c = shade(L.side, -0.1); stroke([P(t, -W + 0.06, 3), P(t, W - 0.06, rib(t) - 4)], c, 0.45); stroke([P(t, W - 0.06, 3), P(t, -W + 0.06, rib(t) - 4)], c, 0.45); }
+      for (const t of sup) { const c = shade(L.side, -0.1), f = ft(t) + 3; stroke([P(t, -W + 0.06, f), P(t, W - 0.06, rib(t) - 4)], c, 0.45); stroke([P(t, W - 0.06, f), P(t, -W + 0.06, rib(t) - 4)], c, 0.45); }
     } else if (lage === 'v') {
-      for (const t of sup) vert(t, W - 0.06, 0, hf(t) - 0.5, L.side, 2.2);    // Stütze vorn
+      for (const t of sup) vert(t, W - 0.06, ft(t), hf(t) - 0.5, L.side, 2.2);    // Stütze vorn
       band(W, t => hf(t) - 2, hf, sh(shade(L.side, 0.05)));                   // Randbalken
       onEdge(2, t => { if (t > A + 1e-9 && t < n - 0.5 - 1e-9) vert(t, W, rib(t), hf(t) - 2, L.side, 0.5); });   // Hänger je halbes Feld
       band(W, t => rib(t) - 2.2, rib, sh(L.rib));                            // Bogenträger
