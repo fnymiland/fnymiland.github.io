@@ -4,10 +4,6 @@
 // 'h' hinten (L1) · 'v' vorn unten (L3) · 'd' Deck mit Weg/Gleis (L4) · [Bewegtes darauf] · 'o' vorn oben (L6).
 // Alles deckend (G5): halbdurchsichtige Striche sind fertige Mischfarben – so kann eine Lage später nachgemalt werden, ohne dunkler zu werden.
 // ---------------------------------------------------------------------------
-const BK_LOOK = {
-  holz: { deck: '#c99a68', beam: '#8a5f38', rail: '#a9774a', dark: '#6d4a2c', line: mix('#c99a68', '#5a3c1e', 0.5) },   // Fuge: früher rgba(90,60,30,.5) auf dem Deck
-  stahl: { deck: '#cfd3cf', beam: '#5d7d7a', rail: '#7fa09c', dark: '#3e5452', line: mix('#cfd3cf', '#505a5a', 0.25) },  // früher rgba(80,90,90,.25)
-};
 const BK_LAGEN = ['h', 'v', 'd', 'o', 'hg', 't1', 't2'];                    // hg/t1/t2: Glas (Kristall, 160c C4) – halbdurchsichtig, genau einmal je Bild
 // Gruppen fürs Zeichnen (160c B2): ruhend in tileA h | (Deko unter dem Deck) | vd | o; nachgemalt je nach Bewegtem
 const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB
@@ -20,49 +16,69 @@ function brBox(gruppe, c = null) {                                         // c:
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
   if (opts.fam === 'fuss' && art === 'stein') return bkPaintStein(lage, P, z, n, t0, t1, weg, opts);   // Stein mit Pfeilern (160c C3)
-  if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2); sonst flach (Bahn, Rückfall)
-  const L = BK_LOOK[art] || BK_LOOK.holz, H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, lw = f => Math.max(0.6, f * z);
-  const T1 = t1 + (opts.ext || 0);                                         // Flächen etwas ins nächste Feld (das deckt es zu): keine Fuge (Windows)
-  const clip = (ta, tb) => [Math.max(ta, t0), Math.min(tb, T1)];
-  const quad = (ta, tb, s0, s1, h0, h1, col) => { const [a, b] = clip(ta, tb); if (b <= a) return; poly([P(a, s0, h0), P(b, s1, h0), P(b, s1, h1), P(a, s0, h1)], C(col)); };
-  const top = (ta, tb, h, col) => { const [a, b] = clip(ta, tb); if (b <= a) return; poly([P(a, -W, h), P(b, -W, h), P(b, W, h), P(a, W, h)], C(col)); };
-  const seg = (ta, sa, ha, tb, sb, hb, col, w) => {                     // Strich, längs auf [t0, t1] beschnitten
+  if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2)
+  return bkPaintBahn(lage, P, z, BK_BAHN[art] ? art : 'holz', n, t0, t1, weg, opts);   // Bahn: flach (160c C5); auch Rückfall ohne Familie
+}
+// ---------------------------------------------------------------------------
+// Bahn-Brücke zwischen Anhöhen (160c C5, plan-160c/karte-C5-bahn.md; abgenommen: tools/brueckenfamilie-entwurf.js 'B-holz', 'B-metall',
+// 'B-kristall'): flach auf HILL_H, Gleis auf dem Deck. Holz: Böcke auf jeder Kante (Kreuz hinten), Geländer; Metall und Kristall (B2):
+// Fachwerk mit 2n Feldern, spannt frei. Strichbreiten = Entwurf ÷ 2, 'butt', Kanten halboffen, deckend (G5)
+// ---------------------------------------------------------------------------
+const BK_BAHN = {
+  holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', beam: '#8a5f38', rail: '#a9774a' },
+  stahl: { back: '#3e5452', front: '#7fa09c', deck: '#cfd3cf', beam: '#5d7d7a', edge: '#3e5452' },
+  kristall: { back: '#7fc4e8', front: '#8fd3f2', deck: '#d7eef7', beam: '#bfe6f7', edge: '#5aa9d6', hi: '#f7fdff' },
+};
+function bkPaintBahn(lage, P, z, art, n, t0, t1, weg, opts) {
+  const L = BK_BAHN[art], H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, T1 = t1 + (opts.ext || 0), last = t1 >= B - 1e-9;
+  const lw = f => Math.max(0.6, f * z), sh = col => opts.ax ? shade(col, LIGHT.side) : col;
+  const seg = (ta, sa, ha, tb, sb, hb, col, w) => {                       // Strich, längs auf [t0, t1] beschnitten; senkrecht (ta = tb) halboffen
     let p = 0, q = 1;
     if (tb !== ta) { const u0 = (t0 - ta) / (tb - ta), u1 = (t1 - ta) / (tb - ta); p = Math.max(0, Math.min(u0, u1)); q = Math.min(1, Math.max(u0, u1)); }
-    else if (ta < t0 || ta > t1) return;
-    if (q <= p) return;
+    else if (ta < t0 - 1e-9 || (ta >= t1 - 1e-9 && !(last && ta <= t1 + 1e-9))) return;
+    if (q <= p || (tb !== ta && (q - p) * Math.abs(tb - ta) < 1e-7)) return;   // kein Reststück an der Feldkante
     const at = u => P(ta + (tb - ta) * u, sa + (sb - sa) * u, ha + (hb - ha) * u), a = at(p), b = at(q);
-    g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'round'; g.stroke();
+    g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'butt'; g.stroke();
   };
-  const sideTruss = (s, col, w) => {                                       // Fachwerk (Stahl): Gurte, Pfosten, Streben über die ganze Brücke
-    const T = 11, a = A + 0.15, b = B - 0.15, m = Math.max(2, Math.round((b - a) * 2));
-    seg(A, s, H, B, s, H, col, w * 1.4); seg(a, s, H + T, b, s, H + T, col, w * 1.4);
-    seg(A, s, H, a, s, H + T, col, w); seg(B, s, H, b, s, H + T, col, w);
-    for (let j = 0; j < m; j++) { const p = a + (b - a) * j / m, q = a + (b - a) * (j + 1) / m; seg(p, s, H + T, q, s, H, col, w); if (j) seg(p, s, H, p, s, H + T, col, w * 0.8); }
+  const line = (s, h, col, w, ta = A, tb = B) => seg(ta, s, h, tb, s, h, col, w);
+  const band = (s, h0, h1, col) => { const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, s, h1), P(b, s, h1), P(b, s, h0), P(a, s, h0)], C(col)); };
+  const deckTop = col => { const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, -W, H), P(b, -W, H), P(b, W, H), P(a, W, H)], C(col)); };
+  const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
+  const vert = (t, s, h0, h1, col, w) => seg(t, s, h0, t, s, h1, col, w);
+  const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Böcke auf den Kanten (C1): das spätere Feld
+  const ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;          // Fuß: Boden 0, Wasser −6,3
+  const truss = (s, col, w) => {                                           // Fachwerk: Gurte, Enddiagonalen, Diagonalen und Pfosten (m = 2n)
+    const T = 11, a = A + 0.15, b = B - 0.15, m = 2 * n;
+    line(s, H, col, 0.7 * w); line(s, H + T, col, 0.7 * w, a, b);
+    seg(A, s, H, a, s, H + T, col, 0.5 * w); seg(B, s, H, b, s, H + T, col, 0.5 * w);
+    const j0 = Math.max(0, Math.floor((t0 - a) / (b - a) * m) - 1), j1 = Math.min(m - 1, Math.ceil((t1 - a) / (b - a) * m) + 1);   // nur, was dieses Feld trifft
+    for (let j = j0; j <= j1; j++) { const p = a + (b - a) * j / m, q = a + (b - a) * (j + 1) / m; seg(p, s, H + T, q, s, H, col, 0.5 * w); if (j) vert(p, s, H, H + T, col, 0.4 * w); }
   };
-  const rail = (s, col, w) => {                                            // Geländer (Holz): Pfosten je halbes Feld, Handlauf und Mittelholm
-    for (let j = 0; j <= 2 * n; j++) { const t = A + j / 2; seg(t, s, H, t, s, H + 8, L.dark, w); }
-    seg(A, s, H + 8, B, s, H + 8, col, w * 1.3); seg(A, s, H + 4, B, s, H + 4, col, w * 0.8);
-  };
-  // Böcke auf den Kachelkanten (160c C1, opts.supports: Kanten k → t = k − ½); je Kante zeichnet sie das spätere Feld (halboffen, G3)
-  const bocks = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9), ft = t => opts.foot ? opts.foot(Math.round(t + 0.5)) : 0;
-  if (lage === 'h') {
-    for (const t of bocks) seg(t, -W + 0.06, ft(t), t, -W + 0.06, H - 3, L.dark, 2.2);   // Holzböcke: hinteres Bein
-    if (art === 'stahl') sideTruss(-W - 0.02, L.dark, 1.1); else rail(-W, L.dark, 1.2);
-  } else if (lage === 'v') {
-    for (const t of bocks) {                                               // vorderes Bein und Kreuz (mit Gleis unter jedem Feld)
-      seg(t, W - 0.06, ft(t), t, W - 0.06, H - 3, L.dark, 2.2);
-      seg(t, -W + 0.06, ft(t) + 2, t, W - 0.06, H - 5, L.dark, 1.1); seg(t, W - 0.06, ft(t) + 2, t, -W + 0.06, H - 5, L.dark, 1.1);
+  if (art === 'holz') {
+    if (lage === 'h') {
+      for (const t of sup) vert(t, -W + 0.06, ft(t), H - 3, L.side, 2.2);   // Bock hinten
+      onEdge(2, t => vert(t, -W, H, H + 8, L.side, 0.6));                     // hinteres Geländer
+      line(-W, H + 8, L.side, 0.7);
+      for (const t of sup) { seg(t, -W + 0.06, ft(t) + 2, t, W - 0.06, H - 5, L.side, 0.55); seg(t, W - 0.06, ft(t) + 2, t, -W + 0.06, H - 5, L.side, 0.55); }   // Kreuz
+    } else if (lage === 'v') {
+      for (const t of sup) vert(t, W - 0.06, ft(t), H - 3, L.side, 2.2);     // Bock vorn
+      band(W, H - 3, H, sh(L.beam));                                       // Längsträger
+    } else if (lage === 'd') {
+      deckTop(L.deck);
+      if (!weg) onEdge(9, t => seg(t, -W, H, t, W, H, L.plank, 0.3));
+    } else if (lage === 'o') {
+      onEdge(2, t => vert(t, W, H, H + 8, L.rail, 0.7));                     // vorderes Geländer
+      line(W, H + 8, L.rail, 0.9); line(W, H + 4, L.rail, 0.5);
     }
-    quad(A, B, W, W, H - (art === 'holz' ? 3 : 4), H, L.beam);            // Längsträger vorn
-  } else if (lage === 'd') {
-    top(A, B, H, L.deck);
-    const a0 = Math.max(A, t0), b0 = Math.min(B, t1), k = art === 'holz' ? 9 : 6;
-    if (b0 > a0) for (let j = 0, N = Math.ceil((B - A) * k); j <= N; j++) { const t = A + j / k; if (t >= a0 && t <= b0) seg(t, -W, H, t, W, H, L.line, 0.6); }
-    if (weg && opts.wegPaint) opts.wegPaint(H);
+  } else {                                                                   // Metall, Kristall B2: Fachwerk
+    if (lage === 'h') truss(-W - 0.02, L.back, 1.2);
+    else if (lage === 'v') { band(W, H - 4, H, sh(L.beam)); line(W, H, L.edge, 0.3); line(W, H - 4, L.edge, 0.3); }
+    else if (lage === 'd') deckTop(L.deck);
+    else if (lage === 'o') { truss(W + 0.02, L.front, 1.6); if (L.hi) line(W + 0.02, H + 11, L.hi, 0.35, A + 0.15, B - 0.15); }
+  }
+  if (lage === 'd') {
+    if (weg && opts.wegPaint) opts.wegPaint(H);                            // Altdaten mit Weg und Gleis: beides (G9)
     if (opts.railPaint) opts.railPaint(H);                                 // Gleis auf dem Deck (160b)
-  } else if (lage === 'o') {
-    if (art === 'stahl') sideTruss(W + 0.02, L.rail, 1.5); else rail(W, L.rail, 1.4);
   }
 }
 // Das ganze Stück: alle Lagen, dazwischen Bewegtes auf dem Deck (opts.after: Leute, Züge oben – vor dem vorderen Geländer)
@@ -156,8 +172,9 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   const glas = bkGlasAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr]); } finally { FOG = f; } };   // Kristall: Glas jedes Bild genau einmal
   const deck = () => { if (!figs) return; FOG = false;
     for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
-      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, () => drawMover(m, z, now)); }
-      else drawMover(m, z, now);
+      const f = () => seeFaded(seeThrough, () => drawMover(m, z, now));   // 👁: auch Leute und Wagen oben blass
+      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, f); }
+      else f();
       drawnMovers.add(m);
     } };
   if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
@@ -237,7 +254,10 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
     }
   } else if (art === 'kristall') {                                           // K1: Glasgeländer, Glasband unter dem Deck, Zacken (Option); v und o leer
     const ri = t => hf(t) - 3, T = ts(t1);
-    const bandT = (s, h0Of, h1Of, col) => { const Q = T.slice(); g.beginPath(); [...Q.map(t => P(t, s, h1Of(t))), ...Q.reverse().map(t => P(t, s, h0Of(t)))].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = col; g.fill(); };   // Durchsichtiges nie ins Nachbarfeld (ohne ext)
+    const m0 = g.getTransform ? g.getTransform() : null;                    // Glasband: Feldkanten auf ganze Gerätepunkte (sonst eine helle Naht, Falle F5)
+    const snap = (p, t) => m0 && m0.a && (Math.abs(t - t0) < 1e-9 || Math.abs(t - t1) < 1e-9) ? [(Math.round(m0.a * p[0] + m0.e) - m0.e) / m0.a, p[1]] : p;
+    const bandT = (s, h0Of, h1Of, col, sn = false) => { const Q = T.slice(), at = (t, h) => sn ? snap(P(t, s, h), t) : P(t, s, h);
+      g.beginPath(); [...Q.map(t => at(t, h1Of(t))), ...Q.reverse().map(t => at(t, h0Of(t)))].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = col; g.fill(); };   // Durchsichtiges nie ins Nachbarfeld (ohne ext)
     const glassRail = (s, front) => {
       bandT(s, hf, t => hf(t) + 6, rgbaK(L.glass, front ? L.aFront : L.aBack));
       onEdge(4, t => vert(t, s, hf(t), hf(t) + 6, L.post, 0.3));
@@ -250,7 +270,7 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
       if (!weg) onEdge(6, t => { if (t > A + 1e-9 && t < n - 0.5 - 1e-9) stroke([P(t, -W, hf(t)), P(t, W, hf(t))], L.seam, 0.25); });
       if (weg && opts.wegPaint) opts.wegPaint(hf);
     } else if (lage === 't1') {
-      bandT(W, ri, hf, rgbaK(sh(L.band), L.aBand));                          // Glasband unter dem Deck
+      bandT(W, ri, hf, rgbaK(sh(L.band), L.aBand), true);                    // Glasband unter dem Deck (Kanten eingerastet)
       line(W, hf, sh(L.edge), 0.35); line(W, ri, sh(L.edge), 0.35);          // nur oben und unten (keine Naht an der Kachelkante)
       if (opts.zacken) for (let k = Math.max(0, Math.round((t0 - A) * 7)); A + (k + 0.5) / 7 < t1; k++) {   // Kristallzacken: Nummer ab dem Anker (Muster unabhängig von der Feldaufteilung)
         const t = A + (k + 0.5) / 7, m = Math.min(k, 7 * n - 1 - k), w2 = 0.05;   // m: gespiegelt – beide Enden gleich (Nutzer 12.10.2026: symmetrisch)

@@ -141,7 +141,7 @@ describe('Stein: Bögen (160c C3)', () => {
     expect(G("{ ax: 0, n: 4, art: 'stein' }")).toMatchObject({ art: 'holz', mat: 'holz', piers: [1, 3], stone: false });
     expect(G("{ ax: 0, n: 4, art: 'stein', gleis: [0, 0, 0, 0], brp: { money: 480, quader: 12 } }")).toEqual({ art: 'holz', fam: 'bahn', mat: 'stein', piers: [2], stone: true });
     expect(G("{ ax: 0, n: 4, art: 'kristall', brp: { money: 3200, kristall: 16, metall: 4 } }")).toMatchObject({ art: 'kristall', mat: 'kristall', fam: 'fuss' });   // C4: K1
-    expect(G("{ ax: 0, n: 4, art: 'kristall', gleis: [0, 0, 0, 0], brp: { money: 3200, kristall: 16, metall: 4 } }")).toMatchObject({ art: 'holz', fam: 'bahn' });   // Bahn bis C5 flach
+    expect(G("{ ax: 0, n: 4, art: 'kristall', gleis: [0, 0, 0, 0], brp: { money: 3200, kristall: 16, metall: 4 } }")).toMatchObject({ art: 'kristall', fam: 'bahn' });   // C5: Kristall B2 (Fachwerk)
     expect(G("{ ax: 0, n: 3, art: 'stahl' }")).toMatchObject({ art: 'stahl', piers: [] });
   });
 });

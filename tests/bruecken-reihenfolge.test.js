@@ -159,3 +159,14 @@ describe('Kristall: Glas genau einmal (160c C4)', () => {
     expect(game('brLiveTiles()')).toEqual([]);
   });
 });
+
+// 160c C4 gegengelesen: 👁 macht auch Leute und Wagen oben auf dem Deck blass
+describe('Durchsicht auf dem Deck (160c C4)', () => {
+  it('Figur auf dem Deck wird mit 👁 blass gezeichnet', () => {
+    scene(0);
+    const a = game(`(() => { const dm = drawMover; let alpha = null; drawMover = (m, ...r) => { if (m.id === 'oben') alpha = g.globalAlpha; return dm(m, ...r); };
+      hillWalkers.push({ hillw: true, st: 'top', fur: '#fff', shirt: '#f00', kind: 0, px: 15, py: 12, up: 10, wait: 99, lane: 0, id: 'oben' }); setSeeThrough(true);
+      try { render(1e6); } finally { drawMover = dm; hillWalkers.length = 0; setSeeThrough(false); } return alpha; })()`);
+    expect(a).toBeLessThan(1);
+  });
+});

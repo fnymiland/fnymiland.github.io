@@ -121,9 +121,9 @@ describe('Fußgänger-Brücke mit Bogen (160c C2)', () => {
   });
 });
 
-const WAECHTER = 2528765785;   // vor dem Umbau gemessen (160c C3b)
+const WAECHTER = 1946393987;   // Fußgänger Holz/Metall – vor dem Umbau gemessen (160c C3b; ohne Bahn neu gemessen vor C5)
 // 160c C3b: Wächter – der Umbau für Stein (gemeinsame Helfer bkKit) zeichnet Holz, Metall und Bahn genau wie vorher
-describe('Wächter: Holz/Metall/Bahn aufrufgleich (160c C3b)', () => {
+describe('Wächter: Fußgänger Holz/Metall aufrufgleich (160c C3b, C5)', () => {
   it('Fingerabdruck aller Zeichenaufrufe', () => {
     const h = game(`(() => {
       for (let y = 4; y <= 30; y++) for (let x = 4; x <= 30; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); }
@@ -137,7 +137,7 @@ describe('Wächter: Holz/Metall/Bahn aufrufgleich (160c C3b)', () => {
       g = new Proxy({}, { get: (o, k) => k in o ? o[k] : typeof k === 'string' ? (...a) => { mix(k + '(' + a.map(r).join(',') + ')'); } : undefined,
         set: (o, k, v) => { o[k] = v; mix(k + '=' + r(v)); return true; } });
       try {
-        for (const art of ['holz', 'stahl']) for (const top of ['', 'weg', 'gleis']) for (const n of [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+        for (const art of ['holz', 'stahl']) for (const top of ['', 'weg']) for (const n of [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {   // Bahn (Gleis) seit C5 eigener Maler
           state.bruecken.clear();
           const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0);
           if (n <= 8 && (ax ? 8 + n <= 16 : 10 + n <= 18)) { state.bruecken.set(ax ? '10,8' : '10,12', b); groundVersion++; }
@@ -212,9 +212,9 @@ describe('Stein gegengelesen: Pfeiler über Land→Wasser (160c C3)', () => {
 describe('Kristallbrücke K1 (160c C4)', () => {
   const scanK = zacken => game(`(() => {
     const g0 = g, bad = [], verts = new Map(), zk = []; let cur = '', pts = [], lage = '', T0 = 0, T1 = 0;
-    const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'fill' ? () => {
+    const fake = new Proxy({}, { get: (o, k) => k === 'drawn' ? o.n > 0 : k === 'moveTo' || k === 'lineTo' ? (x, y) => { pts.push([x, y]); o.n = (o.n || 0) + 1; } : k === 'beginPath' ? () => { pts = []; } : k === 'fill' ? () => {
         if (/^rgba/.test(o.fillStyle) && pts.some(([x]) => x < T0 * 32 - 1e-6 - 7 * 0.41 || x > T1 * 32 + 7 * 0.41 + 1e-6)) bad.push(cur + ' Glas über die Feldgrenze');
-        if (o.fillStyle === C('${'#7fc4e8'}') || o.fillStyle === C('${'#c9b8f0'}')) zk.push(Math.max(...pts.map(([, y]) => -y)));
+        if (o.fillStyle === C('${'#7fc4e8'}') || o.fillStyle === C('${'#c9b8f0'}')) zk.push(Math.min(...pts.map(([, y]) => -y)));   // Spitze = tiefster Punkt
       } : k === 'stroke' ? () => {
         if (o.lineCap === 'round') bad.push(cur + ' round');
         if (pts.length === 2 && Math.abs(pts[0][0] - pts[1][0]) < 1e-6) { const key = cur.split(' feld')[0] + ' ' + o.strokeStyle + ' ' + pts[0][0].toFixed(3) + ' ' + Math.min(pts[0][1], pts[1][1]).toFixed(2); verts.set(key, (verts.get(key) || 0) + 1); }
@@ -227,10 +227,10 @@ describe('Kristallbrücke K1 (160c C4)', () => {
     try {
       for (let n = 1; n <= 8; n++) for (const ax of [0, 1]) { const hf = brDeckHFn('fuss', n);
         for (let i = 0; i < n; i++) for (const L of BK_LAGEN) {
-          lage = L; cur = 'n' + n + ' ax' + ax + ' feld ' + i + ' ' + L; T0 = i - 0.5; T1 = i + 0.5;
+          lage = L; cur = 'n' + n + ' ax' + ax + ' feld ' + i + ' ' + L; T0 = i - 0.5; T1 = i + 0.5; fake.n = 0;
           const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 32 - s * 7, -h]; };
           bkPaintLage(L, P, 1, 'kristall', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax, hf, zacken: ${zacken}, ext: i < n - 1 ? 0.012 : 0 });
-          if ((L === 'v' || L === 'o') && 0) bad.push('leer');
+          if ((L === 'v' || L === 'o') && fake.drawn) bad.push(cur + ' nicht leer');   // K1: v und o leer
         } }
     } finally { g = g0; }
     return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8), zk];
@@ -259,5 +259,47 @@ describe('Kristallbrücke K1 (160c C4)', () => {
   it('Glas im Nebel: gültiges rgba, anders als ohne Nebel', () => {
     const r = game("(() => { const f = FOG; try { FOG = false; const a = rgbaK('#afe1f8', 0.3); FOG = true; const b = rgbaK('#afe1f8', 0.3); return [a, b]; } finally { FOG = f; } })()");
     expect(r[0]).toMatch(/^rgba\(\d+,\d+,\d+,0\.3\)$/); expect(r[1]).toMatch(/^rgba\(\d+,\d+,\d+,0\.3\)$/); expect(r[0]).not.toBe(r[1]);
+  });
+});
+
+// 160c C5: Bahn-Maler – Holz-Böcke auf jeder Kante (Kreuz hinten), Metall/Kristall B2 Fachwerk mit 2n Feldern; Prisma, deckend, 'butt', Kanten genau einmal
+describe('Bahn-Brücke (160c C5)', () => {
+  const scanBahn = art => game(`(() => {
+    const g0 = g, bad = [], verts = new Map(), log = []; let cur = '', pts = [], lage = '';
+    const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'closePath' ? () => { o.closed = true; } : k === 'fill' ? () => { o.closed = false; } : k === 'stroke' ? () => {
+        if (o.lineCap === 'round') bad.push(cur + ' round'); if (o.closed) bad.push(cur + ' closePath');
+        if (pts.length === 2 && Math.abs(pts[0][0] - pts[1][0]) < 1e-6) { const key = cur.split(' feld')[0] + ' ' + lage + ' ' + o.strokeStyle + ' ' + pts[0][0].toFixed(3) + ' ' + Math.min(pts[0][1], pts[1][1]).toFixed(2); verts.set(key, (verts.get(key) || 0) + 1); log.push([cur, o.strokeStyle, pts[0][0], -Math.min(-pts[0][1], -pts[1][1])]); }
+      } : k in o ? o[k] : () => {},
+      set: (o, k, v) => { if ((k === 'fillStyle' || k === 'strokeStyle') && !/^#[0-9a-f]{6}$/i.test(v)) bad.push(cur + ' ' + k + '=' + v); if (k === 'globalAlpha' && v < 1) bad.push(cur + ' alpha'); o[k] = v; return true; } });
+    g = fake;
+    try {
+      for (let n = 1; n <= 8; n++) for (const ax of [0, 1]) for (const wet of [0, 1]) { const sp = brSupports({ mat: '${art}', fam: 'bahn' }, n);
+        for (let i = 0; i < n; i++) for (const L of BK_LAGEN) {
+          lage = L; cur = 'n' + n + ' ax' + ax + ' w' + wet + ' feld ' + i + ' ' + L;
+          const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 32 - s * 7, s * 16 - h]; };
+          bkPaintLage(L, P, 1, '${art}', n, i - 0.5, i + 0.5, false, { fam: 'bahn', ax, supports: i ? sp : [], foot: () => wet ? -6.3 : 0, ext: i < n - 1 ? 0.012 : 0 });
+        } }
+    } finally { g = g0; }
+    return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8)];
+  })()`);
+  it('Holz, Metall, Kristall B2: in seinem Feld, deckend, ohne runde Kappen und Umriss, jede Senkrechte genau einmal (n 1–8, beide Achsen, Wasser)', () => {
+    for (const art of ['holz', 'stahl', 'kristall']) expect(scanBahn(art)).toEqual([[], []]);
+  });
+  it('Holz: Bock hinten (h) und vorn (v) an jeder inneren Kante bis zum Boden bzw. Wasser, Kreuz nur hinten; Metall: Fachwerk mit 2n − 1 Pfosten je Seite', () => {
+    const r = game(`(() => { const g0 = g, out = []; let pts = [], L = '';
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'stroke' ? () => out.push([L, o.strokeStyle, o.lineWidth, pts.map(p => p.slice())]) : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      const P = (t, s, h) => [t, h], res = {};
+      try {
+        for (const art of ['holz', 'stahl']) { res[art] = {}; for (const lage of ['h', 'v']) { out.length = 0; L = lage;
+          for (let i = 0; i < 4; i++) bkPaintLage(lage, P, 1, art, 4, i - 0.5, i + 0.5, false, { fam: 'bahn', supports: i ? [1, 2, 3] : [], foot: () => -6.3, ext: 0 });
+          res[art][lage] = out.slice(); } }
+      } finally { g = g0; }
+      const bocks = l => l.filter(([, c, w, p]) => c === '#6f5238' && w === 2.2 && p[0][1] === -6.3).map(([, , , p]) => p[0][0]);
+      const kreuz = l => l.filter(([, c, w, p]) => c === '#6f5238' && w === 0.6 && p[0][0] === p[1][0] && p[0][1] !== p[1][1] && Math.abs(p[0][1] + 4.3) < 1e-9).length;
+      const posts = res.stahl.h.filter(([, , , p]) => Math.abs(p[0][0] - p[1][0]) < 1e-9 && Math.abs(p[0][1] - HILL_H) < 1e-9 && Math.abs(p[1][1] - HILL_H - 11) < 1e-9).length;
+      return { bh: bocks(res.holz.h), bv: bocks(res.holz.v), kh: kreuz(res.holz.h), kv: kreuz(res.holz.v), posts }; })()`);
+    expect(r.bh).toEqual([0.5, 1.5, 2.5]); expect(r.bv).toEqual([0.5, 1.5, 2.5]);
+    expect(r.kh).toBe(6); expect(r.kv).toBe(0);
+    expect(r.posts).toBe(2 * 4 - 1);
   });
 });

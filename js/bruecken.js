@@ -43,7 +43,7 @@ function bkSupports(b, art = null, rail = null) {
 function bkGeom(b, art = null, rail = null) {
   const look = brLook(b, 'anhoehe'), mat = art || look.mat, fam = (rail != null ? rail : bkRailAny(b)) ? 'bahn' : 'fuss', piers = brSupports({ ...look, mat, fam }, b.n);
   return { ax: b.ax ? 1 : 0, look, mat, fam, piers, hf: brDeckHFn(fam, b.n),
-    art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : (BK_LOOK[mat] ? mat : 'holz'),
+    art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : (BK_BAHN[mat] ? mat : 'holz'),   // Bahn-Stein bis C5d wie Holz
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
 const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall';            // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB
@@ -426,7 +426,7 @@ function bkCarPieces(m) {
 // ---------------------------------------------------------------------------
 // Zeichnen
 // ---------------------------------------------------------------------------
-// Maler (BK_LOOK, bkPaint): brueckenbild.js (160c B1)
+// Maler (bkPaint, bkPaintLage): brueckenbild.js (160c B1–C5)
 // Ein Feld der Brücke (render.js tileB): px, py = Mitte des Felds unten
 function bkDrawTile(x, y, px, py, z, after) {
   const c = bkAt(x, y);
