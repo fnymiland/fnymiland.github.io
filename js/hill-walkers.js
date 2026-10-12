@@ -173,6 +173,8 @@ function syncHillWalkers() {
 }
 // Lage setzen: h = Höhe über dem Boden (Bildpunkte bei Zoom 1); w.up = Höhe über dem Feld, auf dem die Figur gezeichnet wird
 function hwPut(w, u, v, h) { w.px = u; w.py = v; w.up = h - hillLift(Math.round(u), Math.round(v)); }
+// Höhe oben auf Ebene lv: auf dem Deck einer Brücke deren Bogen (160c C2, brLiftAt am Fußpunkt), sonst die Anhöhe
+const hwTopH = (u, v, lv, sit = false) => (lv === 1 && bkOn() ? brLiftAt(u, v, sit) : null) ?? lv * HILL_H;
 // Stufenhöhe dort, wo die Füße gezeichnet werden: drawWalker setzt Figuren 6 Punkte (Zoom 1) rechts neben ihre Lage, das sind längs der
 // Treppe (dx − dy)·3/32 Feld – mit der Höhe der Lage stünden sie sonst halb vor bzw. in der nächsten Stufe. Oberste Stufe = Oberkante
 const hwFootD = (s, d) => Math.max(-0.5, Math.min(0.5 - 1e-6, d + (s.dx - s.dy) * 3 / 32));
@@ -221,7 +223,7 @@ function hwBenchWalk(w, dt) {
   if (w.go === 'to' && !hwBenchThere(b)) { w.go = 'back'; w.bt = 1 - w.bt; }   // Bank weg: umkehren
   const [p0, p1] = w.go === 'to' ? [sp, [b.u, b.v]] : [[b.u, b.v], sp], L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
   w.bt = Math.min(1, w.bt + (L > 1e-6 ? dt * w.speed / L : 1));
-  hwPut(w, p0[0] + (p1[0] - p0[0]) * w.bt, p0[1] + (p1[1] - p0[1]) * w.bt, w.stair.lv * HILL_H);
+  { const u = p0[0] + (p1[0] - p0[0]) * w.bt, v = p0[1] + (p1[1] - p0[1]) * w.bt; hwPut(w, u, v, hwTopH(u, v, w.stair.lv)); }
   if (w.bt < 1) return;
   if (w.go === 'to') { w.sit = true; w.sat = true; w.wait = 5 + Math.random() * 7; w.go = 'back'; w.bt = 0; }
   else { w.go = null; w.bench = null; w.ta = w.fa; w.tb = w.fb; w.t = 1; }
@@ -272,7 +274,7 @@ function hwStep(w, dt) {
     if (!pool.length) { w.ta = w.fa; w.tb = w.fb; w.wait = 1; }
     else { [w.ta, w.tb] = pool[Math.floor(Math.random() * pool.length)]; if (!out && Math.random() < 0.1) w.wait = 1 + Math.random() * 2; }
   }
-  hwPut(w, (w.fa + (w.ta - w.fa) * w.t) / 3, (w.fb + (w.tb - w.fb) * w.t) / 3, s.lv * HILL_H);
+  { const u = (w.fa + (w.ta - w.fa) * w.t) / 3, v = (w.fb + (w.tb - w.fb) * w.t) / 3; hwPut(w, u, v, hwTopH(u, v, s.lv, w.sit)); }
 }
 // Feld (x, y) abgesenkt (Treppe in die Anhöhe, actions.js build): wer dort oben steht, ist weg (nie in der Luft); wer gerade dorthin
 // geht, kehrt um – der nächste Schritt fragt die Rasterpunkte neu (hwFresh)

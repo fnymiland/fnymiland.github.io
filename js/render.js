@@ -1361,8 +1361,9 @@ function hillFrame(x0, y0, x1, y1, style) {
 }
 // Vorschau einer Linie bzw. eines Rechtecks: grün = wird gebaut, rot = geht nicht, hell = ist schon so
 function planPreview(z) {
-  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
-    const c = [toScreen(x - ins, y - ins), toScreen(x + ins, y - ins), toScreen(x + ins, y + ins), toScreen(x - ins, y + ins)];
+  const info = planInfo(plan), ins = 0.44, dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
+    const cs = [[-ins, -ins], [ins, -ins], [ins, ins], [-ins, ins]], K = hOf ? 4 : 1;                 // hOf: Höhe auf dem Deck (Bogen, 160c C2) – Seiten unterteilt
+    const c = cs.flatMap(([u0, v0], j) => { const [u1, v1] = cs[(j + 1) % 4]; return Array.from({ length: K }, (_, q) => { const u = u0 + (u1 - u0) * q / K, v = v0 + (v1 - v0) * q / K, p = toScreen(x + u, y + v); if (hOf) p.y -= hOf(u, v) * z; return p; }); });
     g.beginPath(); c.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath();
     g.fillStyle = fill; g.fill();
     if (line) { g.strokeStyle = line; g.lineWidth = 1.6 * z; g.stroke(); }
@@ -1380,13 +1381,11 @@ function planPreview(z) {
     return { ok: !info.err, text: planText(plan, info), p: e };
   }
   for (const [x, y] of planTiles(plan)) {
-    const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y);   // Weg aufs Deck einer Brücke (Block 160): Raute oben
-    if (up) { g.save(); g.translate(0, -HILL_H * z); }
-    try {
-      if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55');
-      else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)');
-      else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d');
-    } finally { if (up) g.restore(); }
+    const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && bkAt(x, y);   // Weg aufs Deck einer Brücke (Block 160): Raute oben
+    const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : null;
+    if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
+    else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
+    else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d', hOf);
   }
   const [x0, y0, x1, y1] = planBox(plan);
   if (plan.kind === 'rect' && boxOnHill(x0, y0, x1 - x0 + 1, y1 - y0 + 1)) {   // Anhöhe (Block 157): Rahmen je Feld, auf Anhöhen oben
@@ -1696,8 +1695,8 @@ function render(now) {
       hillMark(hoverVertex.x, hoverVertex.y, () => { g.fillStyle = '#2f9f55'; g.beginPath(); g.arc(q.x, q.y, 4 * z, 0, Math.PI * 2); g.fill(); });   // Eckpunkt = obere Ecke des Felds (Block 157: auf Anhöhen oben)
       preview = { ok: true, text: `${ITEMS[tool].name} · ${styleDef(tool, currentStyle(tool)).name}: Anfang antippen (oder ziehen)`, p: HILLS ? { x: q.x, y: q.y - hillLift(hoverVertex.x, hoverVertex.y) * z } : q };
     } else if (tool === 'abriss' && hover.deck && bkAt(hx, hy)) {        // Deck einer Brücke (Block 160): erst der Weg darauf, dann sie – wie tap
-      const info = bkDemolishInfo(hx, hy), q = toScreen(hx, hy);
-      preview = { ok: true, text: `${info.label}: +${fmt(info.refund)}`, p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
+      const info = bkDemolishInfo(hx, hy), q = toScreen(hx, hy), c = bkAt(hx, hy);
+      preview = { ok: true, text: `${info.label}: +${fmt(info.refund)}`, p: { x: q.x, y: q.y - (bkH(c.b, c.i) + 10) * z } };
     } else if (tool === 'abriss' && hoverEdge && state.edges.has(hoverEdge)) {
       const e = state.edges.get(hoverEdge);
       hillMarkEdge(hoverEdge, '#e5484d', z, 5);                          // auf Anhöhen oben (Block 157)
@@ -1733,10 +1732,10 @@ function render(now) {
       preview = { ok: true, text: `${it.name} entfernen: +${fmt(decoBack(hds[hoverSlot]))}` };
     } else if (tool === 'weg' && hover.deck && bkAt(hx, hy)) {           // Weg aufs Deck einer Brücke (Block 160): oben, kein Geist am Boden
       const c = bkAt(hx, hy), q = toScreen(hx, hy), st = styleDef('weg', currentStyle('weg'));
-      preview = { ok: !bkWegAt(c) || c.b.weg[c.i] !== st.id, text: bkWegAt(c) ? `Weg auf der Brücke: ${styleDef('weg', c.b.weg[c.i]).name}` : `${st.name} über die Brücke: von hier längs übers Deck ziehen`, p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
+      preview = { ok: !bkWegAt(c) || c.b.weg[c.i] !== st.id, text: bkWegAt(c) ? `Weg auf der Brücke: ${styleDef('weg', c.b.weg[c.i]).name}` : `${st.name} über die Brücke: von hier längs übers Deck ziehen`, p: { x: q.x, y: q.y - (bkH(c.b, c.i) + 10) * z } };
     } else if (tool === 'schiene' && hover.deck && bkAt(hx, hy)) {       // Schiene aufs Deck (160b): wie der Weg
       const c = bkAt(hx, hy), q = toScreen(hx, hy), chk = bkRailCheck(hx, hy), F = DECO_LOOKS.schiene.forms;
-      preview = { ok: !chk.err && !chk.same, text: chk.err || (bkRailAt(c) ? `Gleis auf der Brücke: ${F[c.b.gleis[c.i]].name}` : 'Schiene über die Brücke: von hier längs übers Deck ziehen'), p: { x: q.x, y: q.y - (HILL_H + 10) * z } };
+      preview = { ok: !chk.err && !chk.same, text: chk.err || (bkRailAt(c) ? `Gleis auf der Brücke: ${F[c.b.gleis[c.i]].name}` : 'Schiene über die Brücke: von hier längs übers Deck ziehen'), p: { x: q.x, y: q.y - (bkH(c.b, c.i) + 10) * z } };
     } else if (tool === 'weg' && bAt(hx, hy) === 'weg') {
       const cur = styleDef('weg', objAt(hx, hy).style), nx = styleDef('weg', currentStyle('weg'));
       preview = { ok: cur.id !== nx.id, text: cur.id === nx.id ? nx.name : `Umfärben: ${cur.name} → ${nx.name}` };
@@ -1841,7 +1840,10 @@ function render(now) {
         if (st && st.b === 'pb_station' && Math.abs(m.px - rx - dx) <= 1.1 && Math.abs(m.py - ry - dy) <= 1.1) { k = (rx + dx) + ',' + (ry + dy); break; }
       }
     }
-    if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) { deckPut(k, m); continue; }
+    if (onDeck && m.hillw && m.st === 'top' && bkAt(...keyXY(k))) {      // auf dem Deck: ins Feld unter den Füßen (G6), nur innerhalb derselben Brücke
+      const c0 = bkAt(...keyXY(k)), fx = Math.round(m.px + FOOT_D), fy = Math.round(m.py - FOOT_D), cf = bkAt(fx, fy);
+      deckPut(cf && cf.k === c0.k ? fx + ',' + fy : k, m); continue;
+    }
     if (!byTile.has(k)) byTile.set(k, []);
     byTile.get(k).push(m);
   }

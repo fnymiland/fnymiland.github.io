@@ -222,3 +222,34 @@ describe('Stützen auf den Kachelkanten (160c C1)', () => {
     expect(game('state.bruecken.size')).toBe(0);
   });
 });
+
+// 160c C2e: Spaziergänger oben folgen dem Bogen (am Fußpunkt), stetig von der Anhöhe übers Deck; mit Gleis flach
+describe('Figuren auf dem Bogen (160c C2e)', () => {
+  it('Höhe am Scheitel, stetig über Wand und Deck, Gleisbrücke flach', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();                               // Holz, 3 Felder (14–16)
+    const H = game('HILL_H'), pk = game("brPeak('fuss', 3)"), f = game('FOOT_D');
+    expect(game(`hwTopH(15 - ${f}, 12 + ${f}, 1)`)).toBeCloseTo(H + pk, 3);                 // Füße in der Mitte des mittleren Felds = Scheitel
+    expect(game(`hwTopH(15, 12, 1, true)`)).toBeCloseTo(H + pk, 3);                        // sitzend: in der Mitte
+    expect(game('hwTopH(11, 12, 1)')).toBe(H);                                              // auf der Anhöhe
+    const jump = game(`(() => { let m = 0, p = hwTopH(12, 12, 1); for (let u = 12.02; u <= 19; u += 0.02) { const h = hwTopH(u, 12, 1); m = Math.max(m, Math.abs(h - p)); p = h; } return m; })()`);
+    expect(jump).toBeLessThan(1);
+    game("state.bruecken.get('14,12').gleis = [0, 0, 0]; groundVersion++");
+    expect(game(`hwTopH(15 - ${f}, 12 + ${f}, 1)`)).toBe(H);
+  });
+});
+
+// 160c C2f: Antippen trifft das Deck dort, wo es auf dem Bogen gezeichnet ist (Vorschau = Klick); das Scheitelfeld nie das Feld dahinter
+describe('Antippen auf dem Bogen (160c C2f)', () => {
+  it('jeder Deckpunkt (t, s) trifft sein Feld; Gleisbrücke wie bisher flach', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    const miss = game(`(() => { cam.z = 2; const p0 = iso(15, 12); cam.x = p0.x; cam.y = p0.y; const out = [];
+      for (const x of [14, 15, 16]) { const c = bkAt(x, 12), p = toScreen(x, 12);
+        for (let du = -0.3; du <= 0.31; du += 0.15) for (const s of [-0.3, 0, 0.3]) {   // am Feldrand zählt das Geländer des Nachbarfelds davor
+          const h = bkH(c.b, c.i + du), sx = p.x + (du - s) * TW / 2 * cam.z, sy = p.y + (du + s) * TH / 2 * cam.z - h * cam.z, r = bkPick(sx, sy);
+          if (!r || r.x !== x || r.y !== 12) out.push([x, du, s, r && r.x]); } }
+      return out; })()`);
+    expect(miss).toEqual([]);
+    const hdr = game(`(() => { const c = bkAt(15, 12), p = toScreen(15, 12), h = bkH(c.b, 1); return [bkPick(p.x, p.y - (h + 22) * cam.z), bkPick(p.x, p.y - (h + 3) * cam.z)]; })()`);
+    expect(hdr[0]).toBe(null); expect(hdr[1]).toMatchObject({ x: 15, y: 12, deck: true });    // über dem Geländer nicht, knapp darüber noch
+  });
+});

@@ -473,10 +473,12 @@ function drawBkIcon(cx, cy, z, art) {
 // ---------------------------------------------------------------------------
 function bkPick(sx, sy) {
   if (!bkOn() || (typeof seeThrough !== 'undefined' && seeThrough)) return null;
-  for (const h of [HILL_H + 4, HILL_H, HILL_H - 3]) {
+  for (let h = HILL_H + bkPeakMax() + 4; h >= HILL_H - 3; h -= 1) {          // von oben: was zuerst trifft, liegt vorn (Bogen, 160c C2: Höhe je Stelle)
     const [a, b] = tileFrac(sx, sy + h * cam.z), x = Math.round(a), y = Math.round(b), c = bkAt(x, y);
     if (!c) continue;
-    if (h > HILL_H) {                                                      // Geländer: nur, wenn auf Deckhöhe nicht die Oberseite einer Anhöhe davor liegt
+    const hd = bkH(c.b, bkT(c, a, b));
+    if (h > hd + 4 || h < hd - 3) continue;
+    if (h > hd) {                                                      // Geländer: nur, wenn auf Deckhöhe nicht die Oberseite einer Anhöhe davor liegt
       const [ha, hb] = tileFrac(sx, sy + HILL_H * cam.z), hx = Math.round(ha), hy = Math.round(hb);
       if (!bkAt(hx, hy) && hillLift(hx, hy) >= HILL_H) continue;
     }
