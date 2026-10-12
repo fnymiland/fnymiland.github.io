@@ -184,7 +184,7 @@ describe('Steinbrücke (160c C3)', () => {
       finally { g = g0; }
       const f1 = out.face.find(([i]) => i === 1)[1].map(([x, h]) => [x - 1000, h]);   // Feld 1: Pfeiler bei 1,41…1,5 bis zum Boden
       return { inner: out.inner, pierFloor: f1.some(([t, h]) => Math.abs(t - 1.41) < 1e-6 && h === 0), top: f1.some(([t, h]) => Math.abs(t - 1) < 1e-9 && Math.abs(h - hf(t)) < 1e-9) ? 1 : 0 }; })()`);
-    expect(r.inner.map(([i, t]) => [i, +t.toFixed(2)])).toEqual([[0, -0.5], [2, 1.59]]);   // Widerlager in Feld 0, Pfeilerseite in Feld 2
+    expect(r.inner.map(([i, t]) => [i, +t.toFixed(2)])).toEqual([[2, 1.59]]);               // Pfeilerseite in Feld 2; an der Wand kein Widerlager (Felswand sichtbar)
     expect(r.pierFloor).toBe(true); expect(r.top).toBe(1);
   });
   it('Weiche: Stein-Fußgänger malt Stein, Bahn-Stein den flachen Rückfall; bkPaint-Folge h v d A o', () => {

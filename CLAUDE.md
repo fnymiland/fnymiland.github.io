@@ -303,7 +303,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Stein** (160c C3): Geometrie nur über `bkGeom` (je Brücke in `bkFresh` als `c.G`: Maler-Art, Familie, Pfeiler) und `brStoneGeom`
     (Bögen zwischen Wand und Pfeilern, Leibung `ri` glatt über `brSmin`, `low`, `pierHit`); Lichtraum `brClear(S, t, r)` (−1 am Pfeiler, gilt für
     jede Steinbrücke) in `bkTooTall`/`bkUnderError(x, y, G, i)`; `bkPick` trifft Stirn und Pfeiler bis zum Boden. Maler `bkPaintStein` (gemeinsame
-    Helfer `bkKit`): Stirn als Band, Laibung/Pfeilerseite/Widerlager nur wo die Sehne steiler als TH ist (keine hintere Stirn), Boden je Feld
+    Helfer `bkKit`): Stirn als Band, Laibung/Pfeilerseite nur wo die Sehne steiler als TH ist (keine hintere Stirn; an der Wand kein Widerlager – Nutzer: Felswand sichtbar), Boden je Feld
     `bkGround` (Wasser −6,3), Tunnelschatten in `drawBkShadows`. Wächter-Test „Holz/Metall/Bahn aufrufgleich“: nie einfach neu setzen.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere

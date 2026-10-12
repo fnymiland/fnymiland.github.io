@@ -249,7 +249,7 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
 // (ihre Außenseite zeigt immer weg). Fugen, Keilsteine, Ring als deckende Mischfarben (G5, „Haarlinien“ unter 0,6 Bildpunkten)
 // ---------------------------------------------------------------------------
 const BK_STEIN = { face: '#d9d2c3', joint: '#a99f8c', deck: '#e6dcc8', top: '#efe8da', edge: shade('#d9d2c3', -0.25), inner: shade('#d9d2c3', -0.34),
-  fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'voll', hair: true };
+  fuge: mix('#e6dcc8', '#96876e', 0.45), wall: 'aus', hair: true };   // wall: kein Widerlager an der Wand – die Felswand der Anhöhe bleibt sichtbar (Nutzer 12.10.2026)
 function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
   const { A, W, hf, T1, last, sh, ts, stroke, line, band, deckTop, onEdge } = bkKit(P, z, n, t0, t1, opts), L = BK_STEIN, B = n - 0.5;
   const S = opts.stone || brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), gl = opts.gl || (() => 0), M = z < 0.6 ? 24 : 64;
@@ -273,8 +273,9 @@ function bkPaintStein(lage, P, z, n, t0, t1, weg, opts) {
     line(s, t => hf(t) + parH(t), shade(L.top, vorn ? 0.06 : -0.04), 0.65);  // Abdeckung
   };
   if (lage === 'h') {
-    for (const q of S.arcs) {                                                // Laibung, Pfeilerseite, Widerlager: am Ansatz q.a (Wand bei A: Feld 0; Pfeiler: das spätere Feld)
+    for (const q of S.arcs) {                                                // Laibung und Pfeilerseite: am Ansatz q.a (Pfeiler: das spätere Feld); an der Wand nichts (L.wall)
       if (!(q.a >= t0 - 1e-9 && q.a < t1 - 1e-9)) continue;
+      if (q.a === S.A && L.wall === 'aus') continue;
       const T = arcTs(q.a, Math.min(q.c, t1)), run = [T[0]];
       for (let j = 1; j < T.length && (S.ri(T[j]) - S.ri(T[j - 1])) / (T[j] - T[j - 1]) > TH; j++) run.push(T[j]);   // nur, solange sie zur Kamera zeigt
       const lo = q.a === S.A && L.wall === 'band' ? Math.max(gl(q.a), HILL_H - 7) : gl(q.a);
