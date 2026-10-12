@@ -113,6 +113,10 @@ describe('Stein: Bögen (160c C3)', () => {
     expect(g4.A).toBeCloseTo(22.5, 1); expect(g4.B).toBeCloseTo(22.5, 1); expect(g4.a1).toBeCloseTo(13, 6); expect(g4.pier).toBe(null);
     const m6 = game("(() => { const S = brStoneGeom('fuss', 6, [2, 4]); return [0, 1, 2, 3, 4, 5].map(S.ri); })()");
     [27.92, 23.01, 33.33, 33.33, 23.01, 27.92].forEach((v, i) => expect(m6[i]).toBeCloseTo(v, 1));
+    const m7 = game("(() => { const S = brStoneGeom('fuss', 7, brSupports({ mat: 'stein' }, 7)); return [S.piers, S.ri(3)]; })()");   // 2-3-2 (C8)
+    expect(m7[0]).toEqual([2, 5]); expect(m7[1]).toBeCloseTo(40.13, 1);
+    const m8 = game("(() => { const S = brStoneGeom('fuss', 8, brSupports({ mat: 'stein' }, 8)); return [S.piers, [0, 1, 2, 3, 4, 5, 6, 7].map(S.ri)]; })()");
+    expect(m8[0]).toEqual([2, 4, 6]); [27.32, 22.32, 34.89, 34.89, 34.89, 34.89, 22.32, 27.32].forEach((v, i) => expect(m8[1][i]).toBeCloseTo(v, 1));
     // treu: höchstens 0,5 unter der harten Entwurfsformel, gleich wo das Minimum nicht greift; nie über hf − 3; glatt
     const bad = game(`(() => { const out = [];
       for (let n = 1; n <= 8; n++) { const S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)), H = brStoneGeom('fuss', n, S.piers, { ...BR_STEIN, r: 0 });

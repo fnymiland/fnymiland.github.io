@@ -181,7 +181,7 @@ describe('Gegengelesen (Block 160): Regeln dicht, Schatten, Laufwege', () => {
 
 // 160c C1: Stützen und Böcke auf den Kachelkanten zwischen den Feldern der Lücke – die Feldmitte bleibt frei (Weg quer darunter)
 describe('Stützen auf den Kachelkanten (160c C1)', () => {
-  it('Tabelle: Holz-Fußgänger keine/wenige/jede, Holz-Bahn jede Kante, Stein je 2 Felder, Metall und Kristall keine, Wand nie', () => {
+  it('Tabelle: Holz-Fußgänger keine/wenige/jede, Holz-Bahn jede Kante, Stein je 2 Felder (ungerade ab 5: Mitte 3), Metall und Kristall keine, Wand nie', () => {
     const S = (mat, fam, st, n) => game(`brSupports({ mat: '${mat}', fam: '${fam}', stuetzen: '${st}' }, ${n})`);
     expect([1, 2, 3, 4, 5, 6, 7, 8].map(n => S('holz', 'fuss', 'wenige', n))).toEqual([[], [1], [1, 2], [1, 3], [1, 4], [1, 3, 5], [1, 3, 4, 6], [1, 3, 5, 7]]);   // 7: wie C1 (Nutzer 12.10.2026)
     expect(S('holz', 'fuss', 'keine', 4)).toEqual([]); expect(S('holz', 'fuss', 'jede', 4)).toEqual([1, 2, 3]);

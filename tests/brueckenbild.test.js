@@ -317,7 +317,7 @@ describe('Brückenlicht (160c C7)', () => {
     box = (cx, cy, a, b, h, wall, roof, rh) => { out.push([...cur, 'laterne', +cx.toFixed(4), Math.sign(cy), C(wall), roof]); return bx(cx, cy, a, b, h, wall, roof, rh); };
     g = fake; SPRITE_PAINT = !!O.nacht; night = O.nacht ? NIGHT_MAX : 0; GLOW_SINK = [];
     try {
-      for (const [art, fam] of MOD) for (const n of O.ns || [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+      for (const [art, fam] of MOD) for (const n of O.ns || [1, 2, 3, 4, 5, 6, 7, 8]) for (const ax of [0, 1]) {
         const hf = brDeckHFn(fam, n), sup = brSupports({ mat: art, fam }, n), S = art === 'stein' ? brStoneGeom(fam, n, sup) : null;
         for (let i = 0; i < n; i++) for (const L of BK_LAGEN) {
           cur = [art + '-' + fam, n, ax, i, L]; const k0 = GLOW_SINK.length;
@@ -338,7 +338,7 @@ describe('Brückenlicht (160c C7)', () => {
   it('nachts an: jede Lampe genau einmal je Seite am Ort des Entwurfs, hinten/vorn in ihrer Lage, Schein warm bzw. blau mit Radius', () => {
     const { out, bad } = lampLog();
     expect(bad).toEqual([]);
-    for (const [art, fam] of MODELLE) for (const n of [1, 2, 3, 4, 8]) for (const ax of [0, 1]) {
+    for (const [art, fam] of MODELLE) for (const n of [1, 2, 3, 4, 5, 6, 7, 8]) for (const ax of [0, 1]) {
       const id = art + '-' + fam, mine = out.filter(e => e[0] === id && e[1] === n && e[2] === ax), [hL, vL] = LAGE[id] || ['d', 'o'];
       for (const side of [-1, 1]) {
         const glows = mine.filter(e => e[5] === 'schein' && e[7] === side);
