@@ -54,7 +54,7 @@ describe('Brückenbild: Gerüst für B2', () => {
           state.bruecken.set(ax ? '12,8' : '14,12', b); groundVersion++;
           for (let i = 0; i < n; i++) for (const z of [0.5, 1, 2.5]) for (const gr of Object.keys(BK_GRUPPEN)) {
             const x = ax ? 12 : 14 + i, y = ax ? 8 + i : 12;
-            cur = art + ' n' + n + ' ' + top + ' ax' + ax + ' i' + i + ' z' + z + ' ' + gr; box = brBox(gr).map(v => v * z);
+            cur = art + ' n' + n + ' ' + top + ' ax' + ax + ' i' + i + ' z' + z + ' ' + gr; box = brBox(gr, bkAt(x, y)).map(v => v * z);
             g = fake; try { bkDrawLagen(x, y, 0, 0, z, gr); } finally { g = g0; }
           }
         }
@@ -84,5 +84,38 @@ describe('Brückenbild: Gerüst für B2', () => {
   });
   it('glEvTiles: dyn plus die Felder der Listen, sortiert, ohne Doppelte, Unbekanntes fällt weg', () => {
     expect(game("glEvTiles([5, 2], new Map([['1,1', 7], ['2,2', 2], ['3,3', 0]]), [['1,1', '9,9'], ['2,2', '3,3'], []])")).toEqual([0, 2, 5, 7]);
+  });
+});
+
+// 160c C2b: Fußgänger-Maler (Bogen, Holz 3b) – Prisma, deckend, nie runde Kappen, Kanten genau einmal, Stützen nur auf brSupports
+describe('Fußgänger-Brücke mit Bogen (160c C2)', () => {
+  const scanFuss = art => game(`(() => {
+    const g0 = g, bad = [], verts = new Map(); let cur = '', pts = [], fill = 0;
+    const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'beginPath' ? () => { pts = []; } : k === 'stroke' ? () => {
+        if (o.lineCap === 'round') bad.push(cur + ' round');
+        if (pts.length === 2 && Math.abs(pts[0][0] - pts[1][0]) < 1e-6) { const key = cur.split(' feld')[0] + ' ' + o.strokeStyle + ' ' + pts[0][0].toFixed(3) + ' ' + Math.min(pts[0][1], pts[1][1]).toFixed(2); verts.set(key, (verts.get(key) || 0) + 1); }
+      } : k in o ? o[k] : () => {},
+      set: (o, k, v) => { if ((k === 'fillStyle' || k === 'strokeStyle') && !/^#[0-9a-f]{6}$/i.test(v)) bad.push(cur + ' ' + k + '=' + v); if (k === 'globalAlpha' && v < 1) bad.push(cur + ' alpha'); o[k] = v; return true; } });
+    g = fake;
+    try {
+      for (let n = 1; n <= 8; n++) for (const ax of [0, 1]) { const hf = brDeckHFn('fuss', n), sp = brSupports({ mat: '${art}', fam: 'fuss', stuetzen: 'wenige' }, n);
+        for (let i = 0; i < n; i++) for (const lage of BK_LAGEN) {
+          cur = 'n' + n + ' ax' + ax + ' feld ' + i + ' ' + lage;
+          const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 32 - s * 7, s * 16 - h]; };
+          bkPaintLage(lage, P, 1, '${art}', n, i - 0.5, i + 0.5, false, { fam: 'fuss', ax, hf, supports: i ? sp : [], ext: i < n - 1 ? 0.012 : 0 });
+        } }
+    } finally { g = g0; }
+    return [bad.slice(0, 8), [...verts].filter(([, v]) => v > 1).slice(0, 8)];
+  })()`);
+  it('Holz: in seinem Feld, deckend, Längsstriche ohne runde Kappen, jeder senkrechte Strich (Kante) genau einmal', () => {
+    expect(scanFuss('holz')).toEqual([[], []]);
+  });
+  it('das Deck folgt dem Bogen: Scheitel in der Mitte, an den Wänden HILL_H; Gleis legt es flach', () => {
+    const hs = game(`(() => { const out = []; const g0 = g; let ys = [];
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => ys.push([x, y]) : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      try { for (let i = 0; i < 4; i++) { ys = []; bkPaintLage('d', (t, s, h) => [t, h], 1, 'holz', 4, i - 0.5, i + 0.5, false, { fam: 'fuss', hf: brDeckHFn('fuss', 4) }); out.push(Math.max(...ys.map(p => p[1]))); } }
+      finally { g = g0; } return out; })()`);
+    expect(hs[1]).toBeCloseTo(game("HILL_H + brPeak('fuss', 4)"), 0); expect(hs[0]).toBeLessThan(hs[1]);
+    expect(game("bkH({ ax: 0, n: 4, art: 'holz', gleis: [0, 0, 0, 0] }, 1.5)")).toBe(game('HILL_H'));
   });
 });

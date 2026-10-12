@@ -405,7 +405,9 @@ function bkTileArgs(c, px, py, z) {
   const P = (t, s, h) => { const du = ax ? s : t - c.i, dv = ax ? t - c.i : s; return [px + (du - dv) * TW / 2 * z, py + (du + dv) * TH / 2 * z - h * z]; };
   const wegPaint = H => bkWegPaint(c, px, py, z, H);
   const railPaint = bkRailAt(c) ? H => drawRailBed(px, py - H * z, z, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, { b: 'schiene', rot: c.b.ax, form: c.b.gleis[c.i] || 0 }, bkRailArms(c)) : null;
-  return { P, art: bkArtOf(c.b), n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0 } };
+  const fam = bkFam(c.b);
+  return { P, art: bkArtOf(c.b), n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, supports: c.i ? bkSupportsShown(c) : [], ext: c.i < c.b.n - 1 ? 0.012 : 0,
+    fam, ax, hf: brDeckHFn(fam, c.b.n) } };
 }
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe) {
@@ -426,15 +428,16 @@ function bkDecoGroups(x, y, c) {
   return G;
 }
 // Weg auf dem Deck: Band längs, Belag und Muster wie der Weg (Richtung der Brücke)
-function bkWegPaint(c, px, py, z, H) {
-  const st = styleDef('weg', c.b.weg[c.i]), lk = lookFar(pathLook(st.id), z), ax = c.b.ax;
-  const L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - H * z];
+function bkWegPaint(c, px, py, z, H) {                                    // H: Deckhöhe – Zahl oder h(t) (Bogen, 160c C2)
+  const st = styleDef('weg', c.b.weg[c.i]), lk = lookFar(pathLook(st.id), z), ax = c.b.ax, hf = typeof H === 'function' ? H : () => H, bent = typeof H === 'function';
+  const L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - hf(c.i + (ax ? v : u)) * z];
   const e = c.i < c.b.n - 1 && c.b.weg[c.i + 1] ? 0.012 : 0;               // ins nächste Feld mit Weg: keine Fuge
-  const band = w => ax ? [[-w, -0.5], [w, -0.5], [w, 0.5 + e], [-w, 0.5 + e]] : [[-0.5, -w], [0.5 + e, -w], [0.5 + e, w], [-0.5, w]];
+  const K = bent ? 12 : 1, along = Array.from({ length: K + 1 }, (_, j) => j === K ? 0.5 + e : -0.5 + j / K);   // gebogen: längs Stützpunkte (G4)
+  const band = w => ax ? [...along.map(t => [w, t]), ...along.slice().reverse().map(t => [-w, t])] : [...along.map(t => [t, -w]), ...along.slice().reverse().map(t => [t, w])];
   poly(band(Math.min(EDGE_W, BK_W - 0.02)).map(L), C(lk.edge || '#bfa98a'));
   g.save(); g.beginPath(); band(ROAD_W).map(L).forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
   patRot = wegPatRot({ b: 'weg', style: c.b.weg[c.i], lauf: ax });       // Muster längs der Brücke (Block 158)
-  try { paintLook(L, lk, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, z, false, e); } finally { patRot = 0; g.restore(); }   // Belag, Muster, Schachbrett wie am Boden
+  try { paintLook(L, lk, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, z, false, e, null, bent ? 12 : 0); } finally { patRot = 0; g.restore(); }   // Belag, Muster, Schachbrett wie am Boden
 }
 // Schatten im Boden-Bild (render.js drawShadows): das Deck, um die Sonne versetzt
 function drawBkShadows(want) {

@@ -562,8 +562,12 @@ function pathQuads(x, y, hall = true) {
 // (Trichter zu Plätzen gibt es nicht mehr – alle Wege sind Bänder; roadShapes kann sie aber noch)
 const pathFlares = () => [];
 // Belag eines Felds zeichnen (ext: über seine Kante hinaus verlängert – z. B. für große Flächen der Wunderwerke)
-function paintLook(L, lk, x, y, z, band, ext, box = null) {
-  const E = 0.5 + ext, rect = (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], Ep = E + 0.01;
+function paintLook(L, lk, x, y, z, band, ext, box = null, sub = 0) {   // sub: Kanten in so viele Stücke (L gebogen, Bogenbrücke 160c C2) – sonst wie immer
+  const E = 0.5 + ext, Ep = E + 0.01, rect = !sub ? (u0, u1, v0, v1) => [[u0, v0], [u1, v0], [u1, v1], [u0, v1]] : (u0, u1, v0, v1) => {
+    const q = [], m = (a, b, j) => a + (b - a) * j / sub;
+    for (let j = 0; j < sub; j++) q.push([m(u0, u1, j), v0]); for (let j = 0; j < sub; j++) q.push([u1, m(v0, v1, j)]);
+    for (let j = 0; j < sub; j++) q.push([m(u1, u0, j), v1]); for (let j = 0; j < sub; j++) q.push([u0, m(v1, v0, j)]);
+    return q; };
   const patArea = band ? [rect(-Ep, Ep, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -Ep, Ep)] : [rect(-Ep, Ep, -Ep, Ep)];   // Muster etwas über die Kante (wie drawPath)
   const fillArea = band ? [rect(-E, E, -ROAD_W, ROAD_W), rect(-ROAD_W, ROAD_W, -E, E)] : [rect(-E, E, -E, E)];
   if (band) for (const sh of [rect(-E, E, -EDGE_W, EDGE_W), rect(-EDGE_W, EDGE_W, -E, E)]) poly(sh.map(L), C(lk.edge));

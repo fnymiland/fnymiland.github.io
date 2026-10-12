@@ -12,13 +12,14 @@ const BK_LAGEN = ['h', 'v', 'd', 'o'];
 // Gruppen fürs Zeichnen (160c B2): ruhend in tileA h | (Deko unter dem Deck) | vd | o; nachgemalt je nach Bewegtem
 const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'] };
 // Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
-function brBox(gruppe) {
-  const u = gruppe === 'vd' ? TH / 2 + HILL_H + 8 : TH / 2 + HILL_H + 16;
+function brBox(gruppe, c = null) {                                         // c: Feld (bkAt) – oben bis zum Scheitel im Feld (Bogen, 160c C2)
+  const hm = c ? bkHMax(c) : HILL_H, u = gruppe === 'vd' ? TH / 2 + hm + 8 : TH / 2 + hm + 16;
   return [TW / 2 + 6, u, TW / 2 + 6, TH / 2 + 6];
 }
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
+  if (opts.fam === 'fuss' && BK_FUSS[art]) return bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts);   // Fußgänger: Bogen (160c C2); sonst flach (Bahn, Rückfall)
   const L = BK_LOOK[art] || BK_LOOK.holz, H = opts.h != null ? opts.h : HILL_H, A = -0.5, B = n - 0.5, W = BK_W, lw = f => Math.max(0.6, f * z);
   const T1 = t1 + (opts.ext || 0);                                         // Flächen etwas ins nächste Feld (das deckt es zu): keine Fuge (Windows)
   const clip = (ta, tb) => [Math.max(ta, t0), Math.min(tb, T1)];
@@ -74,8 +75,8 @@ function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
 // Zeichenort (160c B2, plan-160c/B2.md): das Ruhende liegt in tileA – Deko HINTER, h, [Bahnübergang], Deko UNTER, vd + o, Deko VOR.
 // tileB malt nur nach, was Bewegtes des Felds zudeckt: im Rahmen des Bewegten, deckend, ohne zweiten Schein (GLOW_MUTE), blass nie.
 // ---------------------------------------------------------------------------
-function bkBoxOf(gruppen) {
-  const B = gruppen.map(brBox);
+function bkBoxOf(gruppen, c = null) {
+  const B = gruppen.map(gr => brBox(gr, c));
   return [0, 1, 2, 3].map(j => Math.max(...B.map(b => b[j])));
 }
 // Ruhend (tileA): eine Zelle je Gruppe; under: was zwischen h und Deko UNTER liegt (Bahnübergang – eigene Zelle, nie verschachtelt)
@@ -94,13 +95,13 @@ function bkGroup(x, y, px, py, z, gruppen) {
   if (!live.length) return;
   const f = () => { const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A; try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; } };
   if (!GLPASS) return f();
-  const [l, u, r, d] = bkBoxOf(live);
+  const [l, u, r, d] = bkBoxOf(live, bkAt(x, y));
   glLive(px, py, l * z, u * z, r * z, d * z, f);
 }
 // Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch). Ohne Licht im Schlüssel:
 // die Brücken haben noch keins (ein Test hält das fest) – kommt es in C, dann keyOf(lit) + prewarm wie spriteArchBridge (Regel 143)
 function spriteBridge(x, y, px, py, z, gruppe) {
-  const zs = spriteStep(z), key = `br|${x},${y}|${gruppe}|${FOG ? 1 : 0}`, fog = FOG, [l, u, , d] = brBox(gruppe);
+  const zs = spriteStep(z), key = `br|${x},${y}|${gruppe}|${FOG ? 1 : 0}`, fog = FOG, [l, u, , d] = brBox(gruppe, bkAt(x, y));
   const make = () => {
     const sp = paintSprite(l * zs, u * zs, d * zs, () => {
       const pf = FOG; FOG = fog;
@@ -131,7 +132,7 @@ function bkMoverRect(ms, z, lift = 0) {
 }
 // Nachmalen (tileB): Gruppen und Deko-Plätze, beschnitten auf rect ∩ Rahmen der Gruppen
 function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
-  const [l, u, r, d] = bkBoxOf(gruppen), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
+  const [l, u, r, d] = bkBoxOf(gruppen, bkAt(x, y)), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
     const fog = FOG;
@@ -161,4 +162,48 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, late, drawnMovers) {
   const rAll = !fade && (rBU || figs) ? bkMoverRect(B.concat(U, figs || []), z) : null;
   if (rAll) { rAll[1] -= HILL_H * z; bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front); }
   for (const m of late) { moverLive(m, z, now); drawnMovers.add(m); }
+}
+
+// ---------------------------------------------------------------------------
+// Fußgänger-Brücke zwischen Anhöhen (160c C2, abgenommen: tools/brueckenfamilie-entwurf.js 'F-holz' = Entwurf 3b): Deck auf dem Bogen
+// opts.hf(t) (brDeckHFn), alles im Parameterraum je Feld (G4: Stützpunkte im Weltraster k/12 und die exakten Feldenden), Längsstriche 'butt'
+// (runde Kappen ragten an der Wand ins Prisma der Anhöhe, G1), Dinge auf Kanten halboffen (G3), Flächen und Striche deckend (G5).
+// Strichbreiten = Entwurf ÷ 2 (der Entwurf rechnet in Gerätepunkten × 0,5). Lagen wie PLAN §2.4
+// ---------------------------------------------------------------------------
+const BK_FUSS = {
+  holz: { side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238', rib: '#7a5a3d' },
+};
+function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
+  const L = BK_FUSS[art], A = -0.5, W = BK_W, hf = opts.hf || (() => HILL_H), T1 = t1 + (opts.ext || 0), last = t1 >= n - 0.5 - 1e-9;
+  const lw = f => Math.max(0.6, f * z), u01 = t => Math.max(0, Math.min(1, (t + 0.5) / n));
+  const sh = col => opts.ax ? shade(col, LIGHT.side) : col;               // Nord-Süd: die Vorderseite zeigt nach +x (G11)
+  const ts = (end, K = z < 0.6 ? 4 : 12) => { const out = [t0]; for (let j = Math.ceil((t0 - A) * K + 1e-9); A + j / K < end - 1e-9; j++) out.push(A + j / K); out.push(end); return out; };
+  const stroke = (pts, col, w) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'butt'; g.lineJoin = 'round'; g.stroke(); };
+  const line = (s, hOf, col, w) => stroke(ts(t1).map(t => P(t, s, hOf(t))), col, w);
+  const band = (s, h0Of, h1Of, col) => { const T = ts(T1); poly([...T.map(t => P(t, s, h1Of(t))), ...T.reverse().map(t => P(t, s, h0Of(t)))], C(col)); };
+  const deckTop = col => { const T = ts(T1); poly([...T.map(t => P(t, -W, hf(t))), ...T.reverse().map(t => P(t, W, hf(t)))], C(col)); };
+  const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
+  const vert = (t, s, h0, h1, col, w) => stroke([P(t, s, h0), P(t, s, h1)], col, w);
+  const sup = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);   // Stützen auf den Kanten (C1): das spätere Feld
+  if (art === 'holz') {
+    const rib = t => hf(t) - 7 + 3 * Math.sin(Math.PI * u01(t));          // Bogenträger unter dem Belag
+    if (lage === 'h') {
+      for (const t of sup) vert(t, -W + 0.06, 0, hf(t) - 0.5, L.side, 2.2);   // Stütze hinten
+      onEdge(4, t => vert(t, -W, hf(t), hf(t) + 6, L.rail, 0.5));            // hinteres Geländer
+      line(-W, t => hf(t) + 6, L.rail, 0.65);
+      for (const t of sup) { const c = shade(L.side, -0.1); stroke([P(t, -W + 0.06, 3), P(t, W - 0.06, rib(t) - 4)], c, 0.45); stroke([P(t, W - 0.06, 3), P(t, -W + 0.06, rib(t) - 4)], c, 0.45); }
+    } else if (lage === 'v') {
+      for (const t of sup) vert(t, W - 0.06, 0, hf(t) - 0.5, L.side, 2.2);    // Stütze vorn
+      band(W, t => hf(t) - 2, hf, sh(shade(L.side, 0.05)));                   // Randbalken
+      onEdge(2, t => { if (t > A + 1e-9 && t < n - 0.5 - 1e-9) vert(t, W, rib(t), hf(t) - 2, L.side, 0.5); });   // Hänger je halbes Feld
+      band(W, t => rib(t) - 2.2, rib, sh(L.rib));                            // Bogenträger
+    } else if (lage === 'd') {
+      deckTop(L.deck);
+      if (!weg) onEdge(9, t => stroke([P(t, -W, hf(t)), P(t, W, hf(t))], L.plank, 0.3));
+      if (weg && opts.wegPaint) opts.wegPaint(hf);
+    } else if (lage === 'o') {
+      onEdge(4, t => vert(t, W, hf(t), hf(t) + 6, L.rail, 0.55));             // vorderes Geländer
+      line(W, t => hf(t) + 6, L.rail, 0.75); line(W, t => hf(t) + 3, L.rail, 0.45);
+    }
+  }
 }
