@@ -238,5 +238,42 @@ function brDeckHMax(fam, n, t0, t1) {
   const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), m = (N - 1) / 2, f = brDeckHFn(fam, N);
   return m >= t0 && m <= t1 ? HILL_H + brPeak(fam, N) : Math.max(f(t0), f(t1));
 }
-// Lichtraum unter dem Deck: in C2 überall BK_CLEAR (die Träger liegen in der Vorderfläche s = +W; Deko darunter steht dahinter)
-function brClear() { return BK_CLEAR; }
+// ---------------------------------------------------------------------------
+// Steinbrücke (160c C3, plan-160c/C3.md): Bögen zwischen Wand und Pfeilern (brSupports, Pfeiler mittig auf der Kante, Breite 2·pw). Je Bogen
+// die Formel des abgenommenen Entwurfs (tools/brueckenfamilie-entwurf.js stone(), Entwurf 10 Stufe 3): Ansatz 23 an der Wand, 13 am
+// Pfeiler, Scheitel gap unter dem Deck, Leibung ≥ cover unter dem Deck – das harte Minimum des Entwurfs gab den „Knick an der Wand“,
+// hier ein glattes (brSmin, höchstens r/4 tiefer). Eine Quelle für Bild, Regeln, Antippen, Schatten (G8). Nie NaN (G9)
+// ---------------------------------------------------------------------------
+const BR_STEIN = { sp: 3, hp: 13, gap: 7.5, pw: 0.09, cover: 3, r: 2, ring: 3.2 };
+const brSmin = (a, b, r) => { if (!(r > 0)) return Math.min(a, b); const h = Math.max(0, Math.min(1, 0.5 + 0.5 * (b - a) / r)); return b + (a - b) * h - r * h * (1 - h); };
+function brStoneGeom(fam, n, piers, S = BR_STEIN) {
+  const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), A = -0.5, B = N - 0.5, hf = brDeckHFn(fam, N);
+  const P = [...new Set(Array.isArray(piers) ? piers.filter(k => Number.isInteger(k) && k > 0 && k < N) : [])].sort((p, q) => p - q);
+  const E = [A, ...P.map(k => k - 0.5), B], m = E.length - 1, arcs = [];
+  for (let j = 0; j < m; j++) {
+    const a = E[j] + (j ? S.pw : 0), c = E[j + 1] - (j < m - 1 ? S.pw : 0), sa = j ? S.hp : HILL_H - S.sp, sc = j < m - 1 ? S.hp : HILL_H - S.sp;
+    arcs.push({ a, c, sa, sc, rise: Math.max(0, hf((a + c) / 2) - S.gap - (sa + sc) / 2) });
+  }
+  const arcAt = t => arcs.find(q => t >= q.a && t <= q.c) || null;
+  const ri = t => {                                                          // Unterkante des Bogens bei t; null = Pfeiler
+    const q = Number.isFinite(t) ? arcAt(t) : null;
+    if (!q) return null;
+    const u = Math.max(0, Math.min(1, (t - q.a) / (q.c - q.a)));
+    return brSmin(q.sa + (q.sc - q.sa) * u + q.rise * Math.sqrt(Math.max(0, Math.sin(Math.PI * u))), hf(t) - S.cover, S.r);
+  };
+  const memo = new Map(), ts = M => {                                        // Stützpunkte je Bogen, an den Ansätzen dicht, Enden exakt (weltfest)
+    if (!memo.has(M)) memo.set(M, arcs.flatMap(q => Array.from({ length: M + 1 }, (_, j) => j === 0 ? q.a : j === M ? q.c : q.a + (q.c - q.a) * (1 - Math.cos(Math.PI * j / M)) / 2)));
+    return memo.get(M);
+  };
+  const pierHit = (t, r = 0) => P.some(k => Math.abs(t - (k - 0.5)) < S.pw + r);
+  return { fam, n: N, A, B, hf, S, piers: P, arcs, ri, ts, pierHit, low: (t, g0 = 0) => { const v = ri(t); return v == null ? g0 : v; } };
+}
+// Lichtraum unter dem Deck (G8: Maler, bkTooTall, bkUnderError): ohne Stein BK_CLEAR; Stein: unter dem Bogen über [t − r, t + r] (−1),
+// am Pfeiler −1 (nichts, auch keine Blumen). Bahn-Stein bis C5 flach gezeichnet: nur die Pfeiler
+function brClear(S = null, t = 0, r = 0) {
+  if (!S) return BK_CLEAR;
+  if (!Number.isFinite(t) || S.pierHit(t, r)) return -1;
+  if (S.fam !== 'fuss') return BK_CLEAR;
+  const a = S.ri(Math.max(S.A, t - r)), b = S.ri(Math.min(S.B, t + r));    // ri je Bogen konkav → Minimum an den Enden
+  return Math.min(BK_CLEAR, Math.min(a == null ? Infinity : a, b == null ? Infinity : b) - 1);
+}

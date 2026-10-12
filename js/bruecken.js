@@ -38,6 +38,15 @@ function bkSupports(b, art = null, rail = null) {
   const L = brLook(b, 'anhoehe');
   return brSupports({ ...L, mat: art || L.mat, fam: (rail != null ? rail : bkRailAny(b)) ? 'bahn' : 'fuss' }, b.n);
 }
+// Aussehen und Geometrie einer Brücke (160c C3): Material, Familie, Pfeiler, Höhe, Maler-Art (Kristall bis C4, Bahn-Stein bis C5 wie Holz),
+// Steinbögen für jede Steinbrücke (Pfeilerregel auch bei Gleis). art/rail wie bkSupports. Gemerkt je Boden-Fassung in bkFresh (c.G)
+function bkGeom(b, art = null, rail = null) {
+  const look = brLook(b, 'anhoehe'), mat = art || look.mat, fam = (rail != null ? rail : bkRailAny(b)) ? 'bahn' : 'fuss', piers = brSupports({ ...look, mat, fam }, b.n);
+  return { ax: b.ax ? 1 : 0, look, mat, fam, piers, hf: brDeckHFn(fam, b.n),
+    art: fam === 'fuss' ? (mat === 'stein' || BK_FUSS[mat] ? mat : 'holz') : (BK_LOOK[mat] ? mat : 'holz'),
+    stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
+}
+const bkGround = (c, t) => { const i = Math.max(0, Math.min(c.b.n - 1, Math.round(t))); return terrainAt(c.x0 + c.dx * i, c.y0 + c.dy * i) === 'water' ? -0.7 * DEPTH : 0; };   // Boden unter Feld bei t (Wasser −6,3)
 // Die zwei Felder an Kante k (zwischen Feld k−1 und k)
 const bkEdgeCells = (x0, y0, ax, k) => ax ? [[x0, y0 + k - 1], [x0, y0 + k]] : [[x0 + k - 1, y0], [x0 + k, y0]];
 // Was eine Stütze auf der Kante zwischen A und B (Nachbarn längs der Brücke) stört: ein Weg oder Gleis, das hinüberführt, eine Linie auf
@@ -82,11 +91,11 @@ function bkFresh() {
   if (bkCache.v === groundVersion && bkCache.st === state && bkCache.size === s.size) return bkCache;
   const cell = new Map(), end = new Map();
   for (const [k, b] of s) {
-    const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0, o = { k, b, x0, y0, dx, dy };
+    const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0, o = { k, b, x0, y0, dx, dy, G: bkGeom(b) };
     for (let i = 0; i < b.n; i++) cell.set((x0 + dx * i) + ',' + (y0 + dy * i), { ...o, i });
     for (const [ek, side] of [[(x0 - dx) + ',' + (y0 - dy), -1], [(x0 + dx * b.n) + ',' + (y0 + dy * b.n), 1]]) { if (!end.has(ek)) end.set(ek, []); end.get(ek).push({ ...o, side }); }
   }
-  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end });
+  return (bkCache = { v: groundVersion, st: state, size: s.size, cell, end, stone: [...cell.values()].some(c => c.G.art === 'stein') });
 }
 const bkAt = (x, y) => bkOn() ? bkFresh().cell.get(x + ',' + y) || null : null;
 const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : null;   // Anhöhen-Feld, auf dem eine Brücke aufliegt
