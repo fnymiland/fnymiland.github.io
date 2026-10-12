@@ -519,6 +519,81 @@ describe('Brücke wählen und ändern (160c C6)', () => {
   });
 });
 
+// 160c C7: Brückenlicht kaufen (je Feld 20 Taler + 1 Metall), an/aus kostenlos, bleibt beim Materialwechsel, Abriss erstattet samt Licht;
+// Strom sofort (recalc); Fenster; alte Fassung v1016 (verwirft brp) erstattet nie mehr als bezahlt
+describe('Brückenlicht kaufen (160c C7)', () => {
+  const lueckeVier = () => game("for (let y = 10; y <= 14; y++) { state.hills.delete('17,' + y); state.hills.set('21,' + y, { w: 0 }); } groundVersion++; recalc()");   // Lücke 14–17
+  const wallet = () => game('({ money: state.money, ...state.res })');
+  const spent = (a, b) => Object.fromEntries(Object.keys(a).map(k => [k, a[k] - b[k]]).filter(([, v]) => v));
+  const ref = "{ at: 'anhoehe', k: '14,12' }";
+  it('kaufen kostet je Feld, an/aus kostenlos, zweimal kaufen nicht; Materialwechsel behält das Licht; Bilanz bis zum Abriss 0; ↶', () => {
+    lueckeVier(); game("state.restore = { klippe: 1 }; resetUndo()");
+    const w0 = wallet();
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();                               // Holz, 4 Felder
+    expect(game(`brSet(${ref}, { licht: 'an' })`)).toBe(false);                               // erst kaufen
+    const w1 = wallet(), g0 = game('groundVersion');
+    expect(game(`undoable(() => brSet(${ref}, { licht: 'kaufen' }))`)).toBe(true);
+    expect(spent(w1, wallet())).toEqual({ money: 80, metall: 4 });
+    expect(game('groundVersion')).toBeGreaterThan(g0);
+    expect(game("state.bruecken.get('14,12')")).toMatchObject({ brl: 'an', brp: { money: 320, bretter: 12, metall: 4, k: 'a:holz' } });
+    game('undo()');
+    expect(game("'brl' in state.bruecken.get('14,12')")).toBe(false); expect(spent(w1, wallet())).toEqual({});
+    game(`brSet(${ref}, { licht: 'kaufen' })`);
+    const w2 = wallet();
+    expect(game(`[brSet(${ref}, { licht: 'aus' }), brSet(${ref}, { licht: 'aus' }), brSet(${ref}, { licht: 'an' }), brSet(${ref}, { licht: 'kaufen' })]`)).toEqual([true, false, true, false]);
+    expect(spent(w2, wallet())).toEqual({});
+    expect(game(`brSet(${ref}, { mat: 'stein' })`)).toBe(true);
+    expect(game("brLook(state.bruecken.get('14,12'), 'anhoehe').licht")).toBe('an');
+    expect(spent(w2, wallet())).toEqual({ money: 240, quader: 12 });                          // Licht hin und zurück: netto 0
+    expect(game("bkDemolishInfo(15, 12).refund")).toBe(game("brPaid(state.bruecken.get('14,12'), 'anhoehe').money"));
+    game('bkDemolishAt(15, 12, true)');
+    expect(spent(w0, wallet())).toEqual({});
+  });
+  it('Strom: ohne Windrad ist das gekaufte Licht sofort dunkel, die Übersicht nennt die Brücke, nicht Laternen; aus = nicht dunkel', () => {
+    lueckeVier(); game("state.restore = { klippe: 3 }");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    game(`brSet(${ref}, { licht: 'kaufen' })`);
+    expect(game("[T.rail.power.city, T.rail.power.dark.has('B14,12'), T.rail.power.use.brlicht]")).toEqual([true, true, 1]);
+    expect(game('bkTileArgs(bkAt(15, 12), 0, 0, 1).opts.dark')).toBe(true);
+    const txt = game('powerStatus().join(" ")');
+    expect(txt).toMatch(/Brückenlicht 1/); expect(txt).toMatch(/1 Brücke bleibt nachts dunkel/); expect(txt).not.toMatch(/Laterne bleibt|Laternen bleiben/);
+    game(`brSet(${ref}, { licht: 'aus' })`);
+    expect(game("[T.rail.power.dark.has('B14,12'), T.rail.power.use.brlicht || 0]")).toEqual([false, 0]);
+  });
+  it('Fenster: Licht kaufen, dann An/Aus; Hinweis ohne Strom; „Abreißen +“ = bezahlt samt Licht', () => {
+    lueckeVier(); game("state.restore = { klippe: 3 }; resetUndo()");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    game('openBkInfo(15, 12)');
+    expect(game("document.querySelectorAll('[data-brl]').length")).toBe(1);
+    game("document.querySelector('[data-brl=\"kaufen\"]').click()");
+    expect(game("state.bruecken.get('14,12').brl")).toBe('an');
+    expect(game("[...document.querySelectorAll('[data-brl]')].map(e => e.dataset.brl)")).toEqual(['an', 'aus']);
+    expect(game("document.getElementById('panel').textContent")).toMatch(/Ohne Strom bleibt das Licht dunkel/);
+    expect(game("document.getElementById('p-del').textContent")).toContain('+' + game("fmt(brPaid(state.bruecken.get('14,12'), 'anhoehe').money)"));
+    game("document.querySelector('[data-brl=\"aus\"]').click()");
+    expect(game("state.bruecken.get('14,12').brl")).toBe('aus');
+    game('undo(); undo()');
+    expect(game("'brl' in state.bruecken.get('14,12')")).toBe(false);
+    game('closePanel()');
+  });
+  it('alte Fassung (v1016) verwirft brp: Licht bleibt sichtbar, an/aus kostenlos, erstattet wird nie mehr als bezahlt', () => {
+    lueckeVier(); game("state.restore = { klippe: 1 }; state.paintNew.bruecke = { form: 2 }");
+    plan('bruecke', { x: 12, y: 12 }, { x: 19, y: 12 }); run();
+    game(`brSet(${ref}, { licht: 'kaufen' })`);
+    const paid = game("state.bruecken.get('14,12').brp");
+    game("delete state.bruecken.get('14,12').brp; groundVersion++");
+    expect(game("brLook(state.bruecken.get('14,12'), 'anhoehe').licht")).toBe('an');
+    const back = game("brPaid(state.bruecken.get('14,12'), 'anhoehe')");
+    for (const [r, v] of Object.entries(back)) if (r !== 'k') expect(v).toBeLessThanOrEqual(paid[r] || 0);
+    const w = wallet();
+    expect(game(`brSet(${ref}, { licht: 'aus' })`)).toBe(true); expect(spent(w, wallet())).toEqual({});
+    expect(game(`brSet(${ref}, { licht: 'kaufen' })`)).toBe(false);                          // schon gekauft
+    game('bkDemolishAt(15, 12, true)');
+    const got = spent(wallet(), w);
+    for (const [r, v] of Object.entries(got)) expect(v).toBeLessThanOrEqual(paid[r] || 0);
+  });
+});
+
 // 160c C5 gegengelesen: zwei Brücken nebeneinander über einem Gleis; Schatten am richtigen Stück; Kristall-Bahn ohne Glas-Leerlauf
 describe('Zug unter Brücken gegengelesen (160c C5)', () => {
   it('zwei Brücken nebeneinander: Querlage je eigener Brücke (U statt F), Schnitt an beiden Stirnen; Schatten im selben Feld am U-Stück', () => {

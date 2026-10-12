@@ -2807,6 +2807,11 @@ function computePower(lines, supply, plants = 0) {
     for (let i = 0; i < l.count; i++) if (take(l.needs ? l.needs[i] : l.need, 'trains')) { l.running++; trains++; }
     l.powered = l.running > 0;
   }
+  if (city && bkOn()) {                                                  // Brückenlicht (160c C7, Nutzer: mit Strom): zuletzt – bestehende Welten verlieren nichts;
+    const bl = [];                                                       // je Feld wie eine Laterne; ein Feld im dunklen Block macht die ganze Brücke dunkel
+    for (const k of [...state.bruecken.keys()].sort()) { const b = state.bruecken.get(k); if (brLook(b, 'anhoehe').licht === 'an') for (let i = 0; i < b.n; i++) bl.push('B' + k); }
+    for (let i = 0; i < bl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) bl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
+  }
   return { supply, demand, left, dark, idle, trains, city, use };
 }
 const lineOf = k => T.rail && T.rail.lines.find(l => l.stations.includes(k));

@@ -131,6 +131,20 @@ describe('Strom für die Stadt', () => {
     expect(() => game("night = 0.8; state.decos.get('3,3'); drawObject('laterne', 100, 100, 1, 1000, 3, 3, 1, { rot: 0, slot: 0 }); night = 0")).not.toThrow();
   });
 
+  // 160c C7 (Nutzer: „mit Strom“): Brückenlicht bekommt Strom zuletzt – nach Laternen, Betrieben und Zügen; je Feld wie eine Laterne
+  it('Brückenlicht bekommt Strom zuletzt, je 10 Felder 1 ⚡; aus zählt nicht; ohne Stadtstrom nie dunkel', () => {
+    lamps(10); game("state.bruecken.set('14,16', { ax: 0, n: 3, art: 'holz', brl: 'an' }); groundVersion++");
+    const P = (s, plants = 1) => game(`(() => { const p = computePower([{ count: 1, need: 4 }], ${s}, ${plants}); return [p.dark.has('B14,16'), [...p.dark].filter(k => k[0] !== 'B').length, p.trains, p.use.brlicht || 0, p.city]; })()`);
+    expect(P(5)).toEqual([true, 0, 1, 1, true]);                           // 1 Laternen + 4 Zug – fürs Brückenlicht nichts übrig
+    expect(P(6)).toEqual([false, 0, 1, 1, true]);
+    expect(P(0)).toEqual([true, 10, 0, 1, true]);
+    game("state.bruecken.get('14,16').brl = 'aus'"); expect(P(5)[3]).toBe(0); expect(P(5)[0]).toBe(false);
+    game("state.bruecken.get('14,16').brl = 'an'"); expect(P(0, 0)).toEqual([false, 0, 0, 0, false]);
+    game("state.bruecken.set('14,18', { ax: 0, n: 4, art: 'stein', brl: 'an' }); state.bruecken.set('14,20', { ax: 0, n: 4, art: 'stahl', brl: 'an' }); groundVersion++");   // 11 Felder: 2 ⚡
+    expect(game("computePower([], 1.5, 1).use.brlicht")).toBe(2);
+    expect(game("(() => { const p = computePower([], 2, 1); return ['B14,16', 'B14,18', 'B14,20'].map(k => p.dark.has(k)); })()")).toEqual([false, false, true]);   // 10 Felder (3 + 4 + 3 der dritten) bekommen Strom: die ganze Brücke mit einem dunklen Feld bleibt dunkel
+  });
+
   it('erst die Stadt, dann die Züge', () => {
     game('state.restore.klippe = 3');
     ring(6, 12);

@@ -2099,10 +2099,13 @@ function powerStatus() {
   if (P.use.work) parts.push(`Werkstätten ${P.use.work}`);
   if (P.use.build) parts.push(`andere Gebäude ${P.use.build}`);
   if (P.use.trains) parts.push(`Züge ${P.use.trains}`);
+  if (P.use.brlicht) parts.push(`Brückenlicht ${P.use.brlicht}`);
   const out = [`<div class="${P.demand > P.supply + 1e-9 ? 'bad' : 'ok'}">⚡ Strom: ${fmtPow(P.supply)} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
-  if (P.dark.size) out.push(`<div class="bad">🌙 ${P.dark.size} ${P.dark.size === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
+  const db = [...P.dark].filter(k => k[0] === 'B').length, dl = P.dark.size - db;   // Brücken ('B' + Anker, 160c C7) eigens
+  if (dl) out.push(`<div class="bad">🌙 ${dl} ${dl === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
+  if (db) out.push(`<div class="bad">🌉 ${db} ${db === 1 ? 'Brücke bleibt' : 'Brücken bleiben'} nachts dunkel</div>`);
   if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);
-  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km</div>`);
+  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km · Brückenlicht je 10 Felder 1 ⚡ (zuletzt)</div>`);
   return out;
 }
 // Anhöhen (157j): liegt die Schiene am Halt auf einer anderen Höhe bzw. ist es die Gleis-Rampe? Dann sagt das Fenster es (sonst null)

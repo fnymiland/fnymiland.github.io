@@ -297,7 +297,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     am Fußpunkt; `w.up` gilt relativ zum Feld `round(px, py)`), Antippen (`bkPick`), Plan-Rauten, Schilder, Schatten, Rahmen (`brBox(gr, c)`).
     **Zeichnen** (brueckenbild.js): Lagen h/v/d/o; ruhend in tileA (`bkDrawStill`: Deko hinter, h, Bahnübergang, Deko unter, vd+o, Deko vor),
     tileB malt nur im Rahmen des Bewegten nach (`bkDrawMoving`/`bkRedo`; Folge je Querlage `bkMoverClass` am Fußpunkt: dahinter, h, darunter, vd,
-    Deck, o, davor; `GLOW_MUTE = 'pane'`: nur Scheiben neu stanzen, nie einen zweiten Schein), weit weg Bildchen `br|x,y|gruppe|FOG`. Wer Wege/Gleise
+    Deck, o, davor; `GLOW_MUTE = 'pane'`: nur Scheiben neu stanzen, nie einen zweiten Schein), weit weg Bildchen `br|x,y|gruppe|FOG` (mit Lampen `…|lit`). Wer Wege/Gleise
     mehrerer Felder auf einmal prüft (Ziehen, Gruppe), meldet sie in `BK_PLAN_SAME` bzw. `BK_GROUP` – sonst rutschen sie längs durch eine Stütze. Im
     Fußgänger-Maler (`bkPaintFuss`) Längsstriche `lineCap 'butt'`, Dinge auf Kanten halboffen (`onEdge`), nur deckende Farben (Mischfarben).
     **Stein** (160c C3): Geometrie nur über `bkGeom` (je Brücke in `bkFresh` als `c.G`: Maler-Art, Familie, Pfeiler) und `brStoneGeom`
@@ -312,6 +312,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Familie; Stein-Viadukt über `bkPaintStein` mit Pfeilern an jeder Kante (Nutzer: Variante B), Lichtraum folgt den Bögen. Gleis auf eine Steinbrücke
     prüft neue Pfeiler und die flacheren Bögen. **Züge unter einer Brücke** in Stücken (`brCarPiecesUnder`: Feldkanten längs, quer bei s = −½/+W/+½;
     Klasse `bkCls` U/F; Schatten nur das hinterste Stück, `car.shadow`).
+    **Licht** (160c C7): Orte und Formen nur aus `brLampSpots(art, fam, n)` (Maler, `brBox`, Bildchen). `bkLamps` malt am Ende der Lage (hinten
+    nach dem Deck, vorn zuletzt; Kristall-Streifen hinten in 'h' bzw. B2 in t1, vorn t2 – Blau hat keine Scheibe, nie nachmalen; B2 mit Licht
+    läuft darum wie K1 in tileB, `bkTileBAt`). an/aus/dunkel erst zur Malzeit (`opts.licht`, `opts.dark` aus `T.rail.power.dark` 'B'+Anker);
+    `dark` nie in den Bildchen-Schlüssel (recalc zählt `groundVersion` hoch). Nur Gruppen mit Lampen (`bkLampGroups`) bekommen `|lit` und
+    `prewarm`. Blass ohne Schein (`GLOW_MUTE = true` in `bkGroup`). Kaufen/an/aus über `brSet(…, { licht })` (+ `recalc` wegen Strom);
+    Strom in `computePower` **nach** den Zügen, je Feld wie eine Laterne – bestehende Welten verlieren nichts.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
