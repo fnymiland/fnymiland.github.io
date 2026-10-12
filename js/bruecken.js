@@ -343,11 +343,34 @@ function bkCarPieces(m) {
 function bkDrawTile(x, y, px, py, z, after) {
   const c = bkAt(x, y);
   if (!c) return;
-  const art = bkArtOf(c.b), ax = c.b.ax;
+  const A = bkTileArgs(c, px, py, z);
+  bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, after: after ? H => after(H) : null });
+}
+// Was der Maler für ein Brückenfeld braucht (160c B2): Abbildung P, Art, Länge, Ausschnitt, Weg/Gleis auf dem Deck
+function bkTileArgs(c, px, py, z) {
+  const ax = c.b.ax;
   const P = (t, s, h) => { const du = ax ? s : t - c.i, dv = ax ? t - c.i : s; return [px + (du - dv) * TW / 2 * z, py + (du + dv) * TH / 2 * z - h * z]; };
   const wegPaint = H => bkWegPaint(c, px, py, z, H);
   const railPaint = bkRailAt(c) ? H => drawRailBed(px, py - H * z, z, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, { b: 'schiene', rot: c.b.ax, form: c.b.gleis[c.i] || 0 }, bkRailArms(c)) : null;
-  bkPaint(P, z, art, c.b.n, c.i - 0.5, c.i + 0.5, bkWegAt(c), { wegPaint, railPaint, rail: bkRailAny(c.b), after: after ? H => after(H) : null, ext: c.i < c.b.n - 1 ? 0.012 : 0 });
+  return { P, art: bkArtOf(c.b), n: c.b.n, t0: c.i - 0.5, t1: c.i + 0.5, weg: bkWegAt(c), opts: { wegPaint, railPaint, rail: bkRailAny(c.b), ext: c.i < c.b.n - 1 ? 0.012 : 0 } };
+}
+// Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
+function bkDrawLagen(x, y, px, py, z, gruppe) {
+  const c = bkAt(x, y);
+  if (!c) return;
+  const A = bkTileArgs(c, px, py, z);
+  for (const lage of BK_GRUPPEN[gruppe] || []) bkPaintLage(lage, A.P, z, A.art, A.n, A.t0, A.t1, A.weg, A.opts);
+}
+// Deko auf einem Brückenfeld nach Querlage s (160c B2, PLAN §2.5): hinter dem Deck, darunter, davor – je in Maler-Reihenfolge (SLOTS_ALL)
+function bkDecoGroups(x, y, c) {
+  const ds = state.decos.get(x + ',' + y), G = { back: [], under: [], front: [] };
+  if (!ds || !c) return G;
+  for (const i of SLOTS_ALL) {
+    if (!ds[i]) continue;
+    const [u, v] = slotPos(x, y, i, ds[i]), s = c.b.ax ? u : v;
+    (s < -BK_W ? G.back : s > BK_W ? G.front : G.under).push(i);
+  }
+  return G;
 }
 // Weg auf dem Deck: Band längs, Belag und Muster wie der Weg (Richtung der Brücke)
 function bkWegPaint(c, px, py, z, H) {

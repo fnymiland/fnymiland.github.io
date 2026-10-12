@@ -36,3 +36,53 @@ describe('Brückenbild in Lagen (160c B1)', () => {
     expect(order).toBe('hvdAo');
   });
 });
+
+// 160c B2a: Gerüst fürs Zeichnen in tileA/tileB – Gruppen h | vd | o, Rahmen, Deko nach Querlage, Lichtsperre, lebendige GL-Felder
+describe('Brückenbild: Gerüst für B2', () => {
+  const setup = () => game("for (let y = 4; y <= 26; y++) for (let x = 4; x <= 26; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.hills.clear(); state.bruecken.clear(); for (let y = 10; y <= 14; y++) for (const x of [10, 11, 12, 13, 17, 18, 19, 20]) state.hills.set(x + ',' + y, { w: 0 }); for (let x = 10; x <= 14; x++) for (const y of [4, 5, 6, 7, 11, 12, 13, 14]) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");
+  it('Rahmen: jede Gruppe bleibt in brBox (Holz/Stahl, n 1–4, Weg/Gleis/leer, beide Achsen, z 0,5/1/2,5)', () => {
+    setup();
+    const bad = game(`(() => {
+      const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clipped = 0;   // was nach clip() kommt, ist beschnitten (Muster im Weg)
+      const chk = (x, y) => { if (clipped) return; const [l, u, r, d] = box, e = lw / 2 + 0.01; if (x < -l - e || x > r + e || y < -u - e || y > d + e) bad.push(cur + ' ' + x.toFixed(1) + ',' + y.toFixed(1)); };
+      const fake = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); } : k === 'save' ? () => st.push(clipped) : k === 'restore' ? () => { clipped = st.pop() || 0; } : k === 'clip' ? () => { clipped = 1; } : k in o ? o[k] : () => {},
+        set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
+      try {
+        for (const art of ['holz', 'stahl']) for (let n = 1; n <= 4; n++) for (const top of ['', 'weg', 'gleis']) for (const ax of [0, 1]) {
+          state.bruecken.clear();
+          const b = { ax, n, art }; if (top === 'weg') b.weg = Array(n).fill('platten'); if (top === 'gleis') b.gleis = Array(n).fill(0);
+          state.bruecken.set(ax ? '12,8' : '14,12', b); groundVersion++;
+          for (let i = 0; i < n; i++) for (const z of [0.5, 1, 2.5]) for (const gr of Object.keys(BK_GRUPPEN)) {
+            const x = ax ? 12 : 14 + i, y = ax ? 8 + i : 12;
+            cur = art + ' n' + n + ' ' + top + ' ax' + ax + ' i' + i + ' z' + z + ' ' + gr; box = brBox(gr).map(v => v * z);
+            g = fake; try { bkDrawLagen(x, y, 0, 0, z, gr); } finally { g = g0; }
+          }
+        }
+      } finally { g = g0; }
+      return bad.slice(0, 10); })()`);
+    expect(bad).toEqual([]);
+  });
+  it('Deko nach Querlage: hinter dem Deck, darunter, davor – beide Achsen, jede Deko genau einmal', () => {
+    setup();
+    game("state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz' }); state.bruecken.set('12,8', { ax: 1, n: 3, art: 'holz' }); groundVersion++");
+    game("for (const k of ['15,12', '12,9']) { const ds = []; for (let i = 0; i < 10; i++) ds[i] = { b: 'blumen' }; state.decos.set(k, ds); }");
+    const G0 = game("bkDecoGroups(15, 12, bkAt(15, 12))"), G1 = game("bkDecoGroups(12, 9, bkAt(12, 9))");
+    for (const G of [G0, G1]) expect([...G.back, ...G.under, ...G.front].sort((a, b) => a - b)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    expect(G0.back).toContain(8); expect(G1.back).toContain(8); expect(G0.under).toContain(9); expect(G1.under).toContain(9);
+    const pos = (x, y, i) => game(`slotPos(${x}, ${y}, ${i}, { b: 'blumen' })`);
+    for (const i of G0.front) expect(pos(15, 12, i)[1]).toBeGreaterThan(0.4);
+    for (const i of G1.front) expect(pos(12, 9, i)[0]).toBeGreaterThan(0.4);
+    for (const i of G0.back) expect(pos(15, 12, i)[1]).toBeLessThan(-0.4);
+  });
+  it('Lichtsperre: unter GLOW_MUTE kein Schein (weder gestanzt noch gemerkt)', () => {
+    const r = game(`(() => { const pg = punchGlow, g0 = g, n0 = night; let hit = 0; punchGlow = () => { hit++; }; g = ctx; night = 1;
+      const sink = GLOW_SINK; GLOW_SINK = null;
+      try { GLOW_MUTE = true; glowQuad([[0, 0], [1, 0], [1, 1], [0, 1]], 3); GLOW_SINK = []; glowQuad([[0, 0], [1, 0], [1, 1], [0, 1]], 3); const muted = [hit, GLOW_SINK.length];
+        GLOW_MUTE = false; GLOW_SINK = null; glowQuad([[0, 0], [1, 0], [1, 1], [0, 1]], 3); return [...muted, hit]; }
+      finally { GLOW_MUTE = false; GLOW_SINK = sink; punchGlow = pg; g = g0; night = n0; } })()`);
+    expect(r).toEqual([0, 0, 1]);
+  });
+  it('glEvTiles: dyn plus die Felder der Listen, sortiert, ohne Doppelte, Unbekanntes fällt weg', () => {
+    expect(game("glEvTiles([5, 2], new Map([['1,1', 7], ['2,2', 2], ['3,3', 0]]), [['1,1', '9,9'], ['2,2', '3,3'], []])")).toEqual([0, 2, 5, 7]);
+  });
+});

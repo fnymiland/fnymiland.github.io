@@ -9,6 +9,13 @@ const BK_LOOK = {
   stahl: { deck: '#cfd3cf', beam: '#5d7d7a', rail: '#7fa09c', dark: '#3e5452', line: mix('#cfd3cf', '#505a5a', 0.25) },  // früher rgba(80,90,90,.25)
 };
 const BK_LAGEN = ['h', 'v', 'd', 'o'];
+// Gruppen fürs Zeichnen (160c B2): ruhend in tileA h | (Deko unter dem Deck) | vd | o; nachgemalt je nach Bewegtem
+const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'] };
+// Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
+function brBox(gruppe) {
+  const u = gruppe === 'vd' ? TH / 2 + HILL_H + 8 : TH / 2 + HILL_H + 16;
+  return [TW / 2 + 6, u, TW / 2 + 6, TH / 2 + 6];
+}
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
 function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {

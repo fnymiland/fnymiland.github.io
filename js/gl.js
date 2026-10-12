@@ -669,17 +669,20 @@ function glRecOverlay(icons, labels) {
   GLS.icons = keepI.map(([x, y, s]) => [x - M, y - M, s]); GLS.labels = keepL;
   for (const ic of icons) { ic[0] -= M; ic[1] -= M; }
 }
+// Lebendige Felder (Indizes ins Standbild, sortiert, ohne Doppelte): dyn plus die Felder der Schlüssel-Listen
+function glEvTiles(dyn, order, keyLists) {
+  const ev = new Set(dyn);
+  for (const keys of keyLists) for (const k of keys) { const j = order.get(k); if (j != null) ev.add(j); }
+  return [...ev].sort((p, q) => p - q);
+}
 // render (play): statt der Feldschleife nur Wellen, lebendige Felder und Bewegtes – in Maler-Reihenfolge zwischen den Standbild-Teilen
 function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
   const ops = GLS.ops; ops.length = 0;
   for (const e of GLS.ents) e.used = frameNo;
   ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Brücken, leuchtende Wege
   let d0;
-  const ev = new Set(GLS.dyn);
-  for (const k of byTile.keys()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }
-  for (const k of roofLiveTiles()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild
-  for (const k of bkLiveTiles()) { const j = GLS.order.get(k); if (j != null) ev.add(j); }   // Brücken (Block 160): wie die Überdachungen
-  const list = [...ev].sort((p, q) => p - q);
+  // Überdachungen und Stützen (Block 138) und Brücken (Block 160): gehören nicht ins Standbild
+  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), bkLiveTiles()]);
   let cur = GLS.groundEnd;
   for (const j of list) {
     const c = GLS.tiles[j], p = toScreen(c.x, c.y);

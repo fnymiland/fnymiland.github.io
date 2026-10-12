@@ -11,9 +11,9 @@ const isLive = () => g === ctx || SPRITE_PAINT || (GLPASS && g === LA.x);   // S
 // gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
 // Am Ende wird die Nacht nur über das Bild gelegt und die Löcher mit Licht hinterlegt (render.js, „Nacht“).
 // Beim Zeichnen eines Bildchens (render.js, weit weg) werden die Lichter nur gemerkt und beim Einsetzen gestanzt
-let GLOW_SINK = null;
+let GLOW_SINK = null, GLOW_MUTE = false;    // GLOW_MUTE (160c B2): beim Nachmalen schon gezeichneter Dinge kein zweiter Schein
 function glowQuad(pts, r, tint) {           // tint 'blue': kühles Kristall-Leuchten statt warmem Lampenlicht
-  if (!(night > 0.15 && isLive())) return;
+  if (GLOW_MUTE || !(night > 0.15 && isLive())) return;
   const m = g.getTransform(), k = 1 / DPR;
   const q = pts.map(([x, y]) => [(m.a * x + m.c * y + m.e) * k, (m.b * x + m.d * y + m.f) * k]);
   if (GLOW_SINK) { GLOW_SINK.push({ q, r, tint, snap: tint === 'blue' ? null : glowSnap(q) }); return; }

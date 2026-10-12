@@ -876,7 +876,7 @@ function putNight(e, n, cx, cy, z) {
 // die Fensterscheiben – vorher stanzte der Schein nach dem Einsetzen gelbe Flecken in die eigenen Wände (Reihenhäuser)
 function putSprite(e, cx, cy, z) {
   const r = z / e.z, x0 = cx - e.ox * r, y0 = cy - e.oy * r;
-  if (!e.glows.length) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
+  if (!e.glows.length || GLOW_MUTE) { if (e.c) g.drawImage(e.c, x0, y0, e.c.width / DPR * r, e.c.height / DPR * r); return; }   // ohne Licht (tags alle): nur das Bild (Block 124)
   // volle Nacht: Bildchen + Löschbild (Schritt 4); nicht für halb durchsichtige Vorschau-Geister (das Löschbild würde Löcher stanzen)
   // und nicht für ein Bildchen, dessen scharfer Ersatz schon wartet (dessen Nachtbild entsteht ohnehin)
   if (nightPicOn() && g.globalAlpha === 1) { const n = e.night || (e.next ? null : nightOf(e)); if (n) { putNight(e, n, cx, cy, z); return; } }
