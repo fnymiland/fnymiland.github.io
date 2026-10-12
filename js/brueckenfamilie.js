@@ -22,7 +22,7 @@ const brIdx = v => (Number.isInteger(v) && v >= 0 && v < 64 ? v : null);  // Far
 // Bezahlter Preis: { money, bretter?, quader?, metall?, kristall?, holz? } – ganze Zahlen ≥ 0, nur bekannte Rohstoffe
 function brPaidOk(p) {
   if (!p || typeof p !== 'object' || Array.isArray(p) || !Number.isInteger(p.money) || p.money < 0) return false;
-  for (const [r, v] of Object.entries(p)) if (r !== 'money' && (!(r in RES) || !Number.isInteger(v) || v < 0)) return false;
+  for (const [r, v] of Object.entries(p)) if (r !== 'money' && (!Object.prototype.hasOwnProperty.call(RES, r) || !Number.isInteger(v) || v < 0)) return false;   // nur eigene Rohstoffe (nie constructor …)
   return true;
 }
 // Altfelder deuten (Nutzer 11.10.2026: „alte Brücken bekommen die neuen Modelle, Material und Farbe so nah wie möglich“).
@@ -118,10 +118,17 @@ function brFallback(at, mat) {
 }
 // Kosten-Objekt ↔ { cost, mat } (costOf, demolishInfo)
 const brCostMat = c => { const { money, ...mat } = c; return { cost: money || 0, mat }; };
-// Aussehen eines neuen Brückenfelds übers Wasser: wie die Brücke daneben (verlängern), sonst nach dem Wegstil bzw. Holz (160c F3: später die Leiste)
+// Aussehen eines neuen Brückenfelds übers Wasser: wie das Brückenfeld daneben (verlängern – derselbe Nachbar in derselben Reihenfolge wie
+// build, das dessen Art und br-Felder übernimmt: Preis und Erstattung aus einer Quelle), sonst nach dem Wegstil bzw. Holz (160c F3: später
+// die Leiste). Beim Planen zählen schon geplante Felder (BR_PLAN_LOOK, planScan) – wie beim Bauen, wo jedes Feld vom vorigen erbt
+let BR_PLAN_LOOK = null;
 function brNewLook(x, y, at) {
   const want = at === 'gleis' ? (t => !!t && t.b === 'schiene' && !!t.bridge) : isWegBridge;
-  for (const [dx, dy] of DIRS) { const nx = x + dx, ny = y + dy; if (want(state.tiles.get(nx + ',' + ny))) return brOnLook(brSpanLook(nx, ny) || brLegacyLook({}, at)); }
+  for (const [dx, dy] of DIRS) {
+    const k = (x + dx) + ',' + (y + dy), t = state.tiles.get(k);
+    if (want(t)) return brOnLook(brLook(t, at));
+    if (BR_PLAN_LOOK && BR_PLAN_LOOK.has(k)) return BR_PLAN_LOOK.get(k);
+  }
   return at === 'gleis' ? brLegacyLook({}, 'gleis') : brLegacyLook({ style: currentStyle('weg') }, 'wasser');
 }
 // Speichern/Laden (state.js): die br-Felder eines Objekts streng prüfen – nur gültige Werte, sonst weglassen (= Standard)

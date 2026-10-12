@@ -540,12 +540,12 @@ function copyClone(it) {
   if (it.kind === 'tile') {
     const t = JSON.parse(JSON.stringify(it.t));
     for (const f of ['animal', 'name', 'more', 'born', 'ships', 'pbz', 'train', 'trainCol', 'trainPlus', 'extra', 'gleis']) delete t[f];   // Bewohner, Fahrzeuge: nicht mit
-    if (t.cross && !t.foot) delete t.footPaid;                           // Schranken: die Brücke von früher ist nicht mitgekauft (160c V3)
+    if (t.cross && !t.foot) { delete t.footPaid; delete t.brp; for (const f of BR_KEYS) delete t[f]; }   // Schranken: die Brücke von früher ist nicht mitgekauft (160c V3)
     const at = t.b === 'weg' && t.bridge ? 'wasser' : t.b === 'schiene' && t.bridge ? 'gleis' : t.cross && t.foot ? 'uebergang' : null;
     if (at) {                                                            // Brücke (160c A4): die Kopie hat bezahlt, was sie kostet – nur Eingeschaltetes,
       const look = brOnLook(brLook(t, at));                               // Aussehen ausdrücklich (brp = neues Format, die Altfelder bleiben als Rückfall)
       t.brm = look.mat; t.brb = look.deck;
-      if (look.licht === 'an') t.brl = 'an'; else delete t.brl;
+      if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else delete t.brl;   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis
       if (look.zacken) t.brz = 'an'; else delete t.brz;
       if (look.stuetzen !== 'wenige') t.bru = look.stuetzen; else delete t.bru;
       if (look.col != null) t.brc = look.col; else delete t.brc;

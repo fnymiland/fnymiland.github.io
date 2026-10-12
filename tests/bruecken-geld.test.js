@@ -77,3 +77,37 @@ describe('Geld der Brücken (160c A4)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('Gegengelesen (160c A4)', () => {
+  it('Verlängern einer Spanne mit zwei Arten (alter Stand/Kopie): Preis und Art vom selben Nachbarn – Bilanz 0', () => {
+    game("for (let x = 30; x <= 34; x++) for (let y = 56; y <= 58; y++) state.terra.set(x + ',' + y, 'water'); waterChanged(); recalc(); setTool('weg'); chosenStyle.weg = 'sand'");
+    game("for (let x = 29; x <= 32; x++) build('weg', x, 57, true); state.tiles.get('30,57').brk = 'rot'; groundVersion++; recalc()");   // Anker rot, Ende Holz
+    const w0 = wallet();
+    expect(game("build('weg', 33, 57, true)")).toBe(true);
+    const paid = diff(wallet(), w0), d = game('demolishInfo(33, 57)');
+    expect({ money: d.refund, ...d.mat }).toEqual(paid);
+  });
+  it('Kopie eines Übergangs, der auf Schranken steht, trägt keinen Brückenpreis (auch nicht aus einer früheren Kopie)', () => {
+    const t1 = game("copyClone({ kind: 'tile', t: state.tiles.get('11,52') }).t");   // Holz-Fußgängerbrücke → Kopie mit brp
+    expect(t1.brp).toBeTruthy();
+    const t2 = game(`copyClone({ kind: 'tile', t: ${JSON.stringify({ ...t1, foot: false })} }).t`);
+    expect([t2.brp, t2.footPaid, t2.brm]).toEqual([undefined, undefined, undefined]);
+  });
+  it('Kopie des alten Kristall-Übergangs: Preis der Kopie (wie startCopy auf dem Klon) = was sie als bezahlt merkt', () => {
+    const r = game("(() => { const c = copyClone({ kind: 'tile', t: state.tiles.get('20,52') }).t, cost = copyTileCost(c); return [cost.money - ITEMS.schiene.cost - ITEMS.weg.cost, c.brp.money, brLook(c, 'uebergang').licht]; })()");
+    expect(r[0]).toBe(r[1]); expect(r[2]).toBe('an');
+  });
+  it('Plan-Vorschau = Abbuchung beim Verlängern eines roten Stegs über mehrere Felder', () => {
+    game("for (let x = 40; x <= 46; x++) for (let y = 55; y <= 57; y++) state.terra.set(x + ',' + y, 'water'); waterChanged(); recalc(); setTool('weg'); chosenStyle.weg = 'sand'; build('weg', 39, 56, true); build('weg', 40, 56, true); build('weg', 41, 56, true); setBridgeKind(40, 56, 'rot')");
+    const i = game("(() => { setTool('weg'); chosenStyle.weg = 'sand'; startPlan('line', { x: 41, y: 56 }, { x: 44, y: 56 }, false); return planInfo(plan); })()");
+    const w0 = wallet();
+    expect(game('runPlan()')).toBe(true);
+    const spent = diff(wallet(), w0);                                       // ausgegeben (w0 − nachher)
+    expect(spent.money).toBe(i.cost);
+    expect(Object.fromEntries(Object.entries(spent).filter(([k]) => k !== 'money'))).toEqual(i.mat);
+  });
+  it('brPaidOk: nur eigene Rohstoffe (keine geerbten Namen wie constructor)', () => {
+    expect(game('brPaidOk({ money: 0, constructor: 1 })')).toBe(false);
+    expect(game('brPaidOk({ money: 0, toString: 1 })')).toBe(false);
+  });
+});

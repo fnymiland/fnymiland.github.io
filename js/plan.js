@@ -101,6 +101,7 @@ function planScan(p) {
   const deck = b === 'weg' || b === 'schiene' ? bkPlanDeck(p) : null;   // Weg/Schiene über eine Brücke (Block 160, 160b): diese Felder oben aufs Deck
   let cost = 0, firstErr = null, rest = planTiles(p);
   if (b === 'weg') PLANNED = new Set();
+  if (b === 'weg' || b === 'schiene') BR_PLAN_LOOK = new Map();          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
   // die Linie bekäme dort zwei getrennte Enden. Ohne Anhöhen nie
   const quer = new Map();
@@ -121,6 +122,7 @@ function planScan(p) {
         cost += c.cost || 0;
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
+        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') BR_PLAN_LOOK.set(k, brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'));
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
       if (!grow || next.length === rest.length) {
@@ -129,7 +131,7 @@ function planScan(p) {
       }
       rest = next;
     }
-  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; }
+  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; }
   if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das
     const old = ([x, y]) => deck && deck.has(x + ',' + y) ? bkRailAt(bkAt(x, y)) : bAt(x, y) === 'schiene';   // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird (Deck: sein Gleis, nicht das darunter)
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
