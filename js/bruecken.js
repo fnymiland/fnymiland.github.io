@@ -397,8 +397,6 @@ function drawBkShadows(want) {
   }
   g.fillStyle = SHADOW_COL; g.fill('nonzero');
 }
-// Felder, deren tileB eine Brücke zeichnet (GL-Standbild, gl.js glPlayTiles: jedes Bild neu)
-function bkLiveTiles() { return bkOn() ? [...bkFresh().cell.keys()] : []; }
 // Bildchen (Menü-Kachel, Stil-Zeile): zwei Anhöhen, dazwischen die Brücke
 function drawBkIcon(cx, cy, z, art) {
   const H = HILL_H * 0.75, s = z * 0.33;

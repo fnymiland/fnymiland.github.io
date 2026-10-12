@@ -68,3 +68,77 @@ function bkPaint(P, z, art, n, t0, t1, weg, opts = {}) {
   if (opts.after) opts.after(opts.h != null ? opts.h : HILL_H);
   bkPaintLage('o', P, z, art, n, t0, t1, weg, opts);
 }
+
+// ---------------------------------------------------------------------------
+// Zeichenort (160c B2, plan-160c/B2.md): das Ruhende liegt in tileA – Deko HINTER, h, [Bahnübergang], Deko UNTER, vd + o, Deko VOR.
+// tileB malt nur nach, was Bewegtes des Felds zudeckt: im Rahmen des Bewegten, deckend, ohne zweiten Schein (GLOW_MUTE), blass nie.
+// ---------------------------------------------------------------------------
+function bkBoxOf(gruppen) {
+  const B = gruppen.map(brBox);
+  return [0, 1, 2, 3].map(j => Math.max(...B.map(b => b[j])));
+}
+// Ruhend (tileA): eine Zelle je Gruppe; under: was zwischen h und Deko UNTER liegt (Bahnübergang – eigene Zelle, nie verschachtelt)
+function bkDrawStill(x, y, px, py, z, now, c, under) {
+  const k = x + ',' + y, G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
+  if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
+  bkGroup(x, y, px, py, z, ['h']);
+  if (under) under();
+  if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
+  bkGroup(x, y, px, py, z, ['vd', 'o']);
+  if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
+}
+function bkGroup(x, y, px, py, z, gruppen) {
+  const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass
+  const f = () => { const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A; try { for (const gr of gruppen) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; } };
+  if (!GLPASS) return f();
+  const [l, u, r, d] = bkBoxOf(gruppen);
+  glLive(px, py, l * z, u * z, r * z, d * z, f);
+}
+// Bewegtes auf einem Brückenfeld: 'B' hinter dem Deck, 'U' darunter, 'F' davor (Querlage s, nur Figuren und Tiere; Fahrzeuge immer U)
+function bkMoverClass(m, c, x, y) {
+  if (!(m.fur || m.critter) || m.train || m.boat || m.ship || m.cargo || m.fish) return 'U';
+  const s = c.b.ax ? m.px - x : m.py - y;
+  return s < -BK_W - 0.05 ? 'B' : s > BK_W + 0.1 ? 'F' : 'U';
+}
+// Rahmen des Bewegten auf dem Schirm [x0, y0, x1, y1] (wie sein glLive-Rahmen), vereinigt
+function bkMoverRect(ms, z, lift = 0) {
+  let R = null;
+  for (const m of ms) {
+    const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z), q = [p.x - l, p.y - lift - u, p.x + r, p.y - lift + d];
+    R = R ? [Math.min(R[0], q[0]), Math.min(R[1], q[1]), Math.max(R[2], q[2]), Math.max(R[3], q[3])] : q;
+  }
+  return R;
+}
+// Nachmalen (tileB): Gruppen und Deko-Plätze, beschnitten auf rect ∩ Rahmen der Gruppen
+function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
+  const [l, u, r, d] = bkBoxOf(gruppen), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
+  if (R[2] <= R[0] || R[3] <= R[1]) return;
+  const k = x + ',' + y, f = () => {
+    const fog = FOG;
+    g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
+    FOG = !ownedTile(x, y); GLOW_MUTE = true;
+    try { for (const gr of gruppen) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
+    finally { GLOW_MUTE = false; FOG = fog; g.restore(); }
+  };
+  if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();
+}
+// tileB eines Brückenfelds: ms = Bewegtes darunter/dahinter (schon gezeichnet), figs = auf dem Deck, late = davor (danach zeichnen)
+function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, late, drawnMovers) {
+  const fade = bkFadeNow(x, y), k = x + ',' + y;
+  const B = fade ? [] : ms.filter(m => bkMoverClass(m, c, x, y) === 'B'), U = fade ? [] : ms.filter(m => bkMoverClass(m, c, x, y) === 'U');
+  const G = !fade && state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
+  const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || U.length ? bkMoverRect(B.concat(U), z) : null;
+  if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under);
+  if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
+  if (figs) {
+    FOG = false;
+    for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
+      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, () => drawMover(m, z, now)); }
+      else drawMover(m, z, now);
+      drawnMovers.add(m);
+    }
+  }
+  const rAll = !fade && (rBU || figs) ? bkMoverRect(B.concat(U, figs || []), z) : null;
+  if (rAll) { rAll[1] -= HILL_H * z; bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front); }
+  for (const m of late) { moverLive(m, z, now); drawnMovers.add(m); }
+}

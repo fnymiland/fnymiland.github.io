@@ -148,14 +148,17 @@ describe('Zug über die Brücke', () => {
     expect(ps.some(p => p[1] && p[0] === '14,12')).toBe(true);
     expect(ps.some(p => !p[1] && p[0] === '13,12' && p[3] === game('HILL_H'))).toBe(true);
     expect(ps.reduce((s, p) => s + p[2], 0)).toBeCloseTo(0.78, 1);                           // die Stücke ergeben den ganzen Wagen
-    // gezeichnet: je Stück einmal, über dem Deck nach seiner Oberseite (im Rückruf des Decks)
-    const drawn = game(`(() => { const f = drawTrainCarBody, bt = bkDrawTile, out = []; let inDeck = false;
-      bkDrawTile = (...a) => { const after = a[5]; return bt(a[0], a[1], a[2], a[3], a[4], after ? H => { inDeck = true; try { after(H); } finally { inDeck = false; } } : null); };
-      drawTrainCarBody = (c, ...r) => { out.push([!!c.cut, inDeck, c.hill && c.hill.ha]); return f(c, ...r); };
-      try { cam.z = 2; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; render(1e6); } finally { drawTrainCarBody = f; bkDrawTile = bt; }
+    // gezeichnet: je Stück einmal; übers Deck nach dem Deck (vd) und vor dem vorderen Geländer (o) seines Felds (160c B2: Deck ruhend in tileA, o nachgemalt)
+    const drawn = game(`(() => { const f = drawTrainCarBody, bl = bkDrawLagen, out = [];
+      bkDrawLagen = (x, y, px, py, z, gr) => { out.push(['L', gr, x + ',' + y]); return bl(x, y, px, py, z, gr); };
+      drawTrainCarBody = (c, ...r) => { out.push(['car', !!c.cut, c.hill && c.hill.ha]); return f(c, ...r); };
+      try { cam.z = 2; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; render(1e6); } finally { drawTrainCarBody = f; bkDrawLagen = bl; }
       return out; })()`);
-    expect(drawn.some(d => d[0] && d[1] && d[2] === game('HILL_H'))).toBe(true);
-    expect(drawn.some(d => d[0] && !d[1])).toBe(true);                                       // das Stück auf der Anhöhe
+    const cars = drawn.map((e, i) => [e, i]).filter(([e]) => e[0] === 'car');
+    const deck = cars.filter(([e, i]) => e[1] && (drawn.slice(i + 1).find(f => f[0] === 'L') || [])[1] === 'o' && drawn.slice(0, i).some(f => f[0] === 'L' && f[1] === 'vd'));
+    expect(deck.length).toBeGreaterThan(0);                                                   // übers Deck: nach dem Deck, vor dem (nachgemalten) vorderen Geländer
+    for (const [, i] of deck) { const t = drawn.slice(i + 1).find(f => f[0] === 'L')[2]; expect(drawn.slice(0, i).some(f => f[0] === 'L' && f[1] === 'vd' && f[2] === t)).toBe(true); }
+    expect(cars.some(([e, i]) => e[1] && !drawn.slice(0, i).some(f => f[0] === 'L'))).toBe(true);   // das Stück auf der Anhöhe (Feld 13,12, vor der Brücke)
     game("trains[0].c = 4"); expect(() => game('render(1e6 + 17)')).not.toThrow();
     game("bkSetArt('14,12', 'stahl')"); expect(() => game('render(1e6 + 34)')).not.toThrow();
   });

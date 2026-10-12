@@ -676,13 +676,13 @@ function glEvTiles(dyn, order, keyLists) {
   return [...ev].sort((p, q) => p - q);
 }
 // render (play): statt der Feldschleife nur Wellen, lebendige Felder und Bewegtes – in Maler-Reihenfolge zwischen den Standbild-Teilen
-function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB) {
+function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB, onDeck) {
   const ops = GLS.ops; ops.length = 0;
   for (const e of GLS.ents) e.used = frameNo;
   ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Brücken, leuchtende Wege
   let d0;
-  // Überdachungen und Stützen (Block 138) und Brücken (Block 160): gehören nicht ins Standbild
-  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), bkLiveTiles()]);
+  // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild; Brücken (160c B2): ruhend darin, Felder mit Leuten oben laufen live
+  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : []]);
   let cur = GLS.groundEnd;
   for (const j of list) {
     const c = GLS.tiles[j], p = toScreen(c.x, c.y);

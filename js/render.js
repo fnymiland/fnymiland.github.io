@@ -1980,6 +1980,8 @@ function render(now) {
       const k = x + ',' + y;
       // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
+      const bc = bkOn() ? bkAt(x, y) : null;                               // Brücke darüber (160c B2): ruhend hier in tileA
+      let bkDone = !bc;
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
       const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
@@ -2058,10 +2060,13 @@ function render(now) {
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
             if (oLift && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
+            if (bc && (t.b === 'weg' || t.b === 'schiene')) { bkDrawStill(x, y, px, py, z, now, bc, t.b === 'weg' ? null : drawIt); bkDone = true; }   // unter einer Brücke: Deko hinter/unter/vor dem Deck
+            else {
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();
             else if (t.bridge && bridgeArch(x, y)) drawArchBridge(x, y, px, py, z, t);   // hoher Bogen: wie ein Gebäude (Block 150)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
+            }
           }
           const s = T.st.get(a);
           if (s && t.b !== 'lm' && !PROBE && needsReach(t.b) && s.how === 'weit') icons.push([c.x, c.y, '🐌']);
@@ -2090,8 +2095,10 @@ function render(now) {
           tileSprite('kristall', x, y, px, py, z);
           glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
         }
-        if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
+        if (bc) { bkDrawStill(x, y, px, py, z, now, bc, null); bkDone = true; }
+        else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
+      if (!bkDone) bkDrawStill(x, y, px, py, z, now, bc, null);           // Rückfall (alte Daten: anderes Ding unter dem Deck) – die Brücke fehlt nie
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
@@ -2128,10 +2135,12 @@ function render(now) {
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
       const ms0 = byTile.get(k), ms = ms0 && hl && hillGapHas(k) ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe/Rampe in die Anhöhe: oben ist dort nichts
+      const bc = bkOn() ? bkAt(x, y) : null, late = [];                   // Brücke (160c B2): Figuren davor erst nach dem Nachmalen
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
         for (const m of ms) {
+          if (bc && bkMoverClass(m, bc, x, y) === 'F') { late.push(m); continue; }
           // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
           const ar = m.fur && archAt(m.px, m.py);
           if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
@@ -2173,23 +2182,14 @@ function render(now) {
         const up = (state.roofs.get(k) && state.roofs.get(k).top) || topGhost || rw ? 100 * z : 0;   // Deko und Leute oben ragen übers Dach hinaus
         if (GLPASS) glLive(px, py, -ROOF_BOX.left * z, -ROOF_BOX.top * z + up, (ROOF_BOX.w + ROOF_BOX.left) * z, (ROOF_BOX.h + ROOF_BOX.top) * z, f); else f();
       }
-      if (bkOn() && bkAt(x, y)) {                                         // Brücke (Block 160, bruecken.js): Deck über dem Bewegten dieses Felds
-        const figs = onDeck && onDeck.get(k);                              // Leute oben: zwischen Deck und vorderem Geländer
-        const fade = bkFadeNow(x, y);                                     // 👁 bzw. darunter bauen: blass
-        const f = () => {
-          const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A;
-          try {
-            bkDrawTile(x, y, px, py, z, figs ? () => {                     // direkt zeichnen: im GL-Bild liegt schon die Zelle der Brücke darum (kein zweites glLive)
-              FOG = false; for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) { drawMover(m, z, now); drawnMovers.add(m); }
-            } : null);
-          } finally { g.globalAlpha = a0; }
-        };
-        if (GLPASS) glLive(px, py, TW * z, (HILL_H + 44) * z + TH * z, TW * z, TH * z + 4, f); else f();
+      if (bc) {                                                           // Brücke (Block 160; 160c B2): ruhend in tileA – hier nur nachmalen, was Bewegtes zudeckt
+        const figs = onDeck && onDeck.get(k);                              // Leute und Wagen oben: zwischen Deck und vorderem Geländer
+        if (ms || figs || late.length) bkDrawMoving(x, y, px, py, z, now, bc, (ms || []).filter(m => !late.includes(m) && drawnMovers.has(m)), figs, late, drawnMovers);
       }
 
   };
   const glc = GL.frame ? GL.cacheMode : null, ml0 = MESS ? performance.now() : 0;
-  if (glc === 'play') glPlayTiles(z, now, byTile, icons, labels, tileA, tileB);
+  if (glc === 'play') glPlayTiles(z, now, byTile, icons, labels, tileA, tileB, onDeck);
   else for (let i = 0; i < visible.length; i += 4) {
     const x = visible[i], y = visible[i + 1], px = visible[i + 2], py = visible[i + 3];
     if (glc === 'rec') glRecTile(i >> 2, x, y, icons.length, labels.length, true);
