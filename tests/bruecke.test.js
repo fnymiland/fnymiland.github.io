@@ -183,10 +183,10 @@ describe('Gegengelesen (Block 160): Regeln dicht, Schatten, Laufwege', () => {
 describe('Stützen auf den Kachelkanten (160c C1)', () => {
   it('Tabelle: Holz-Fußgänger keine/wenige/jede, Holz-Bahn jede Kante, Stein je 2 Felder, Metall und Kristall keine, Wand nie', () => {
     const S = (mat, fam, st, n) => game(`brSupports({ mat: '${mat}', fam: '${fam}', stuetzen: '${st}' }, ${n})`);
-    expect([1, 2, 3, 4, 5, 6, 8].map(n => S('holz', 'fuss', 'wenige', n))).toEqual([[], [1], [1, 2], [1, 3], [1, 4], [1, 3, 5], [1, 3, 5, 7]]);
+    expect([1, 2, 3, 4, 5, 6, 7, 8].map(n => S('holz', 'fuss', 'wenige', n))).toEqual([[], [1], [1, 2], [1, 3], [1, 4], [1, 3, 5], [1, 3, 4, 6], [1, 3, 5, 7]]);   // 7: wie C1 (Nutzer 12.10.2026)
     expect(S('holz', 'fuss', 'keine', 4)).toEqual([]); expect(S('holz', 'fuss', 'jede', 4)).toEqual([1, 2, 3]);
     expect(S('holz', 'bahn', 'keine', 4)).toEqual([1, 2, 3]);
-    expect([2, 3, 4, 5, 6].map(n => S('stein', 'fuss', 'wenige', n))).toEqual([[], [], [2], [2, 3], [2, 4]]);
+    expect([2, 3, 4, 5, 6, 7, 8].map(n => S('stein', 'fuss', 'wenige', n))).toEqual([[], [], [2], [1, 4], [2, 4], [2, 5], [2, 4, 6]]);   // gerade: je 2 von außen; ungerade ab 5: Mitte 3 Felder (C8, Nutzer 12.10.2026: 1-3-1, 2-3-2)
     expect([1, 2, 4].map(n => S('stein', 'bahn', 'wenige', n))).toEqual([[], [1], [1, 2, 3]]);   // Stein-Viadukt (Bahn): Pfeiler an jeder Kante (Variante B)
     expect([S('stahl', 'fuss', 'jede', 4), S('kristall', 'bahn', 'jede', 4)]).toEqual([[], []]);
   });

@@ -123,11 +123,13 @@ describe('Stein: Bögen (160c C3)', () => {
     expect(bad).toEqual([]);
     expect(game(`(() => { const S = brStoneGeom('fuss', 4, [2], { ...BR_STEIN, r: 0 }); let m = 0; for (let t = -0.45; t <= 0.4; t += 5e-5) { const e = 1e-4, l = (S.ri(t) - S.ri(t - e)) / e, r = (S.ri(t + e) - S.ri(t)) / e; m = Math.max(m, Math.abs(l - r)); } return m; })()`)).toBeGreaterThan(5);   // Gegenprobe: hart = Knick an der Wand
   });
-  it('Lichtraum: 20 unter dem Bogen (n 1–5), weniger neben dem äußeren Pfeiler bei n 6–8, −1 am Pfeiler; Bahn-Stein nur Pfeiler; Müll gibt Zahlen', () => {
+  it('Lichtraum: 20 unter dem Bogen (n 1–4), weniger neben dem äußeren Pfeiler bei n 6–8 bzw. im Wandfeld bei n 5 (1-3-1, C8), −1 am Pfeiler; Bahn-Stein nur Pfeiler; Müll gibt Zahlen', () => {
     expect(game('brClear()')).toBe(20); expect(game('brClear(null, 1, 0.1)')).toBe(20);
-    expect(game(`(() => { for (let n = 1; n <= 5; n++) { const S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)); for (let i = 0; i < n; i++) for (const du of [-0.42, 0, 0.42]) { const c = brClear(S, i + du, 0.14); if (c !== -1 && c < 20 - 1e-9) return [n, i + du, c]; } } return true; })()`)).toBe(true);   // die Plätze (Ecken/Seiten ±0,42, Mitte)
+    expect(game(`(() => { for (let n = 1; n <= 4; n++) { const S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)); for (let i = 0; i < n; i++) for (const du of [-0.42, 0, 0.42]) { const c = brClear(S, i + du, 0.14); if (c !== -1 && c < 20 - 1e-9) return [n, i + du, c]; } } return true; })()`)).toBe(true);   // die Plätze (Ecken/Seiten ±0,42, Mitte)
     const near = game("[6, 7, 8].map(n => { const S = brStoneGeom('fuss', n, brSupports({ mat: 'stein' }, n)); return brClear(S, 1, 0.14); })");
     [19.94, 19.63, 19.37].forEach((v, i) => expect(near[i]).toBeCloseTo(v, 1));
+    const n5 = game("(() => { const S = brStoneGeom('fuss', 5, brSupports({ mat: 'stein' }, 5)); return [S.piers, brClear(S, 0, 0.14), brClear(S, 4, 0.14), [1, 2, 3].map(i => brClear(S, i, 0.14))]; })()");   // 1-3-1 (Nutzer 12.10.2026)
+    expect(n5[0]).toEqual([1, 4]); expect(n5[1]).toBeCloseTo(19.88, 1); expect(n5[2]).toBeCloseTo(19.88, 1); expect(n5[3]).toEqual([20, 20, 20]);
     expect(game("brClear(brStoneGeom('fuss', 4, [2]), 1.45, 0.05)")).toBe(-1);
     const vb = game("(() => { const S = brStoneGeom('bahn', 4, brSupports({ mat: 'stein', fam: 'bahn' }, 4)); return [S.piers, brClear(S, 1.5, 0), brClear(S, 1, 0.14), S.ri(1)]; })()");   // Viadukt (B)
     expect(vb[0]).toEqual([1, 2, 3]); expect(vb[1]).toBe(-1); expect(vb[3]).toBeGreaterThan(18); expect(vb[2]).toBeLessThan(20); expect(vb[2]).toBeGreaterThan(15);

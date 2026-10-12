@@ -543,7 +543,7 @@ Bei jedem Schritt steht der Aufwand, den ich empfehle.
 ### C – Anhöhen: Modelle, Optionen, Licht, 8 Felder, Linie
 
 **C1 Stützen und Böcke auf den Kachelkanten** (Hoch)
-- **Ziel:** `brSupports` (Holz-Fußgänger nach `bru`; „wenige“ = Kante k, wenn k oder n−k ungerade, bei n = 4 also 1 und 3 wie Entwurf 3b; Holz-Bahn jede innere Kante; Stein alle 2; Metall/Kristall keine; Wand nie).
+- **Ziel:** `brSupports` (Holz-Fußgänger nach `bru`; „wenige“ = Kante k, wenn min(k, n−k) ungerade, bei n = 4 also 1 und 3 wie Entwurf 3b; Holz-Bahn jede innere Kante; Stein alle 2; Metall/Kristall keine; Wand nie).
 - **Gilt in:** Bild, `bkUnderError`, `bkPlaceError`, `bkRailCheck`, `bkSetArt`, Rückgängig (actions.js:1182), `edgeError` (rules.js:1316), `smallError` (Eckpunkt/Seitenmitte), `setArch` (:1343, Torbögen unter dem Deck, R8), `bpError` ↔ `bkError` (Bergportal am Endfeld, R9). Böcke vorerst in heutiger Optik.
 - **Alte Stände:** Liegt dort schon eine Linie, wird die Stütze nur nicht gezeichnet; Daten werden nie gelöscht.
 - **Tests:**
@@ -589,7 +589,7 @@ Bei jedem Schritt steht der Aufwand, den ich empfehle.
 
 **C8 Bis 8 Felder** (Normal)
 - `BK_MAX = 8`; Texte data.js:206/782 und openBkInfo „1 bis 4“, „Holz oder Stahl“.
-- Stein bei ungerader Länge: Bögen je 2 von außen, die Mitte überspannt 1 Feld (Bild zeigen).
+- Stein bei ungerader Länge ab 5: Mittelbogen über 3 Felder (Nutzer 12.10.2026 nach Bildvarianten: n 5 → 1-3-1, n 7 → 2-3-2; gerade Längen je 2 von außen; Holz „wenige“ und Bogenhöhe bleiben).
 - **Tests:** 8 ja, 9 nein.
 
 **C9 Bauen per Linie über die Lücke** (Hoch)

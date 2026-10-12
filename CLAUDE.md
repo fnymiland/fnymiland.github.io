@@ -290,7 +290,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     vorderen Geländer), auf der Anhöhe mit ihrem Feld. Tests: bruecke, bruecke-gleis; Bilder: tools/bruecke-pruefung.js, tools/bruecke-gleis-pruefung.js.
     **Brückenfamilie** (160c, PLAN-160c.md, plan-160c/): Aussehen jeder Brücke nur über `brLook(o, at)` (Altfelder über `brLegacyLook`; neues
     Format = gültiges `brp` samt Kennung `k = brSig`, gelesen über `brIsNew`, geschrieben über `brStamp`), Geld über `brPrice`/`brPaid`.
-    **Stützen** nur über `brSupports`/`bkSupports` auf Kanten k (zwischen Feld k−1 und k, nie an der Wand); was stört, sagt `bkEdgeBlocker`
+    **Stützen** nur über `brSupports`/`bkSupports` auf Kanten k (zwischen Feld k−1 und k, nie an der Wand; Stein `brSteinPier`: je 2 Felder von außen, ungerade ab 5
+    Mittelbogen 3 Felder; Länge bis `BK_MAX` 8 = Lesegrenze `BK_READ_MAX`, nie darüber); was stört, sagt `bkEdgeBlocker`
     (Weg/Gleis längs hinüber, Linie auf der Kante, Deko an der Seitenmitte) – Weg und Gleis quer durch die Feldmitte bleiben frei; alter Stand
     mit Linie auf der Kante: Stütze nur nicht zeichnen (`bkSupportsShown`), nie Daten löschen. **Höhe des Decks** nur über `bkH`/`brDeckHFn`
     (Fußgänger = Bogen, Gleis ⇒ flach; t am Anker über `bkT`) – Maler, Weg (`bkWegPaint`, `paintLook(…, sub)`), Spaziergänger (`hwTopH`,

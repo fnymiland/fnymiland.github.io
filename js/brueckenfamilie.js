@@ -227,14 +227,16 @@ function brSpanLook(x, y) {
 // Stützen (160c C1): auf den Kachelkanten zwischen den Feldern der Lücke (Kante k zwischen Feld k−1 und k, 1 … n−1), nie an der Wand –
 // so bleibt die Feldmitte darunter frei (ein Weg quer unter der Brücke). Holz-Fußgänger nach bru: keine / wenige / jede; „wenige“ = jede
 // zweite Kante von beiden Enden her (min(k, n−k) ungerade: n 4 → 1, 3 wie Entwurf 3b; n 2 → 1; n 3 → 1, 2). Holz-Bahn: jede Kante (Böcke).
-// Stein: Pfeiler je 2 Felder von außen (n 4 → 2; n 5 → 2, 3); Stein-Viadukt (Bahn, Nutzer 12.10.2026: Variante B) an jeder Kante.
+// Stein: Pfeiler je 2 Felder von außen (n 4 → 2; n 6 → 2, 4); ungerade Länge ab 5: der Mittelbogen überspannt 3 Felder (n 5 → 1, 4 = Bögen
+// 1-3-1; n 7 → 2, 5 = 2-3-2; Nutzer 12.10.2026, C8); Stein-Viadukt (Bahn, Nutzer 12.10.2026: Variante B) an jeder Kante.
 // Metall und Kristall spannen frei.
+const brSteinPier = (k, n) => n % 2 && n >= 5 ? k === (n - 3) / 2 || k === (n + 3) / 2 : (k <= n / 2 ? k : n - k) % 2 === 0;
 function brSupports(look, n) {
   const out = [];
   if (!look || !(n >= 2)) return out;
   for (let k = 1; k < n; k++) {
     const m = Math.min(k, n - k);
-    if (look.mat === 'holz' ? (look.fam === 'bahn' || look.stuetzen === 'jede' || (look.stuetzen !== 'keine' && m % 2 === 1)) : look.mat === 'stein' ? look.fam === 'bahn' || (k <= n / 2 ? k : n - k) % 2 === 0 : false) out.push(k);
+    if (look.mat === 'holz' ? (look.fam === 'bahn' || look.stuetzen === 'jede' || (look.stuetzen !== 'keine' && m % 2 === 1)) : look.mat === 'stein' ? look.fam === 'bahn' || brSteinPier(k, n) : false) out.push(k);
   }
   return out;
 }
