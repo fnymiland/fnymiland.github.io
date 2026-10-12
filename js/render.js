@@ -1318,6 +1318,11 @@ function tileSprite(kind, x, y, px, py, z) {
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
 let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
+// Kachel-Brücke k über einem Boot nachmalen (Block 107; im GL-Bild in einer Zelle)
+function bridgeOverBoat(k, z, now) {
+  if (GLPASS) { const bp = toScreen(...keyXY(k)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(k, z, now)); }
+  else drawBridgeOver(k, z, now);
+}
 // Kachel-Brücken (Block 107), die ein Boot berührt und über die drawBridgeOver nachmalt – nicht, was schon hinter ihm liegt. Anhöhen-Brücken
 // malt bkDrawMoving (160c C10: seaCross kennt sie, darum hier ausgenommen)
 function boatUnder(m) {
@@ -2189,8 +2194,7 @@ function render(now) {
           if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
           moverLive(m, z, now, false, m.critter ? 0 : lift); drawnMovers.add(m);   // Tiere nicht: ihre Höhe (c.h) zählt schon ab dem Boden
           if (m.under) for (const bk of m.under) {                            // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
-            if (GLPASS) { const bp = toScreen(...keyXY(bk)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(bk, z, now)); }
-            else drawBridgeOver(bk, z, now);
+            bridgeOverBoat(bk, z, now);
             const [bx, by] = keyXY(bk);                                       // was schon auf der Brücke fuhr (Zug, Bewohner), wieder obenauf (Block 112)
             for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
               if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);

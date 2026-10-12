@@ -264,6 +264,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front);
   glass('t2');
   draw(F);
+  for (const m of ms) if (m.boat && m.under) for (const bk of m.under) bridgeOverBoat(bk, z, now);   // Wasserbrücken-Kachel davor (160c C10)
 }
 
 // ---------------------------------------------------------------------------

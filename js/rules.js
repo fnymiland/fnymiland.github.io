@@ -2545,7 +2545,7 @@ function waterChanged() { seaCache.clear(); waterVersion++; }
 function nearestWater(x, y) {
   const rx = Math.round(x), ry = Math.round(y);
   for (let r = 0; r <= 3; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
-    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy) && seaCross(rx + dx, ry + dy) !== 'block' && !bkAt(rx + dx, ry + dy)) return [rx + dx, ry + dy];   // nicht in einer Brückenkurve starten (Block 112), nicht unter einer Anhöhen-Brücke (160c C10)
+    if (Math.max(Math.abs(dx), Math.abs(dy)) === r && isWater(rx + dx, ry + dy) && seaCross(rx + dx, ry + dy) !== 'block') return [rx + dx, ry + dy];   // nicht in einer Brückenkurve starten (Block 112); unter einer Anhöhen-Brücke schon – von dort nur quer hinaus (160c C10)
   }
   return null;
 }

@@ -116,11 +116,23 @@ describe('Schiffe unter Anhöhen-Brücken (160c C10)', () => {
     game("state.tiles.set('35,45', { b: 'schiene', lvl: 1, bridge: true }); state.tiles.set('34,45', { b: 'schiene', lvl: 1, bridge: true }); state.tiles.set('36,45', { b: 'schiene', lvl: 1, bridge: true }); recalc()");
     expect(game('boatUnder({ boat: true, px: 35, py: 44.4 })')).toEqual(['35,45']);
   });
-  it('kein Seeweg-Start auf einem Brückenfeld (nearestWater)', () => {
+  it('Anleger auf einem Brückenfeld: der Seeweg verlässt es quer, nie längs unter dem Deck (Gegenlesen C10)', () => {
     riegel();
-    const w = game('nearestWater(45, 40)');
-    expect(w).not.toBe(null);
-    expect(game(`!!bkAt(${w[0]}, ${w[1]})`)).toBe(false);
+    for (const [a, b] of [[[45, 40], [45, 48]], [[45, 48], [45, 40]], [[44.2, 40.1], [46, 33]]]) {
+      const r = game(`(() => { const r = seaPath(${JSON.stringify(a)}, ${JSON.stringify(b)}); if (!r) return null; const out = []; for (let d = 0; d <= r.len; d += 0.02) { const q = routeAt(r, d); out.push([q[0], q[1]]); } return out; })()`);
+      expect(r, JSON.stringify([a, b])).not.toBe(null);
+      const near = r.filter(([x, y]) => Math.abs(y - 40) <= 0.4 && Math.abs(x - Math.round(x)) > 0.35);   // unter dem Deck nie an eine Kante (Stützen bei x,5)
+      expect(near, JSON.stringify([a, b])).toEqual([]);
+    }
+  });
+  it('Boot auf einem Anhöhen-Brückenfeld neben einer Wasserbrücken-Kachel: die Kachel wird über den Rumpf nachgemalt', () => {
+    riegel();
+    game("for (const x of [44, 45, 46]) state.tiles.set(x + ',41', { b: 'schiene', lvl: 1, bridge: true }); recalc()");
+    const r = game(`(() => { const out = [], bo = drawBridgeOver; drawBridgeOver = (k, ...a) => { out.push(k); return bo(k, ...a); };
+      const S0 = shipMovers; shipMovers = () => [{ boat: true, ship: 'motor', px: 45, py: 40.45, du: 0, dv: 1 }];
+      try { cam = state.cam; cam.z = 2; const p = iso(45, 40); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); } finally { drawBridgeOver = bo; shipMovers = S0; }
+      return out; })()`);
+    expect(r).toContain('45,41');
   });
 });
 
