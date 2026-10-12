@@ -283,11 +283,21 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Brücke zwischen Anhöhen** (Block 160, js/bruecken.js): eigenes Bauwerk in `state.bruecken` (Anker → { ax, n, art, weg?, gleis? }), Deck auf
     HILL_H über der Lücke, der Boden darunter bleibt in state.tiles. Nachschlagen nur über `bkAt`/`bkOnHill` (gemerkt je `groundVersion` – wer
     Brücken-Objekte ersetzt, auch ↶, zählt `groundVersion` hoch). Je Brücke **Weg ODER Gleis** (`bkRailAny`/`bkWegAny`; `gleis`-Form 0 = Schotter,
-    also `!= null` prüfen); Holzsteg mit Gleis: Bock unter jedem Feld (`bkBockOf`). Das Deck hat **keine Feldschlüssel**: das Gleisnetz verbindet
+    also `!= null` prüfen); Stützen/Böcke auf den Kachelkanten (160c C1, unten). Das Deck hat **keine Feldschlüssel**: das Gleisnetz verbindet
     die beiden Endfelder direkt (`bkRailJumps`) – wer das Gleisnetz durchläuft (computeRail, railPath, railLoop, railNetworkHill), nimmt die
     Sprünge mit; Strecken merken sich das Stück übers Deck (`railPolyline` → `route.deck`, Richtung per `Math.sign`), Wagen darüber `car.deck`.
     Gezeichnet werden sie in Stücken je Feld (`bkCarPieces`, `car.cut`): übers Deck im Rückruf von `bkDrawTile` (nach der Oberseite, vor dem
     vorderen Geländer), auf der Anhöhe mit ihrem Feld. Tests: bruecke, bruecke-gleis; Bilder: tools/bruecke-pruefung.js, tools/bruecke-gleis-pruefung.js.
+    **Brückenfamilie** (160c, PLAN-160c.md, plan-160c/): Aussehen jeder Brücke nur über `brLook(o, at)` (Altfelder über `brLegacyLook`; neues
+    Format = gültiges `brp` samt Kennung `k = brSig`, gelesen über `brIsNew`, geschrieben über `brStamp`), Geld über `brPrice`/`brPaid`.
+    **Stützen** nur über `brSupports`/`bkSupports` auf Kanten k (zwischen Feld k−1 und k, nie an der Wand); was stört, sagt `bkEdgeBlocker`
+    (Weg/Gleis längs hinüber, Linie auf der Kante, Deko an der Seitenmitte) – Weg und Gleis quer durch die Feldmitte bleiben frei; alter Stand
+    mit Linie auf der Kante: Stütze nur nicht zeichnen (`bkSupportsShown`), nie Daten löschen. **Höhe des Decks** nur über `bkH`/`brDeckHFn`
+    (Fußgänger = Bogen, Gleis ⇒ flach; t am Anker über `bkT`) – Maler, Weg (`bkWegPaint`, `paintLook(…, sub)`), Spaziergänger (`hwTopH`,
+    am Fußpunkt; `w.up` gilt relativ zum Feld `round(px, py)`), Antippen (`bkPick`), Plan-Rauten, Schilder, Schatten, Rahmen (`brBox(gr, c)`).
+    **Zeichnen** (brueckenbild.js): Lagen h/v/d/o; ruhend in tileA (`bkDrawStill`: Deko hinter, h, Bahnübergang, Deko unter, vd+o, Deko vor),
+    tileB malt nur im Rahmen des Bewegten nach (`bkDrawMoving`/`bkRedo`, `GLOW_MUTE`), weit weg Bildchen `br|x,y|gruppe|FOG`. Im
+    Fußgänger-Maler (`bkPaintFuss`) Längsstriche `lineCap 'butt'`, Dinge auf Kanten halboffen (`onEdge`), nur deckende Farben (Mischfarben).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

@@ -109,8 +109,8 @@ function bkUnderError(x, y) {
   }
   for (const [dx, dy] of DIRS) { const e = state.edges.get(edgeBetween(x, y, x + dx, y + dy)); if (e && e.arch) return 'Unter der Brücke ist kein Platz für einen Torbogen'; }   // R8
   const ds = decosAt(x + ',' + y) || [];
-  for (const d of ds) if (d && decoHeight(d.b, d.form) > BK_CLEAR) return `${ITEMS[d.b] ? ITEMS[d.b].name : 'Das'} ist zu hoch für unter die Brücke`;
-  for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && decoHeight(p.b, p.form) > BK_CLEAR) return `${ITEMS[p.b] ? ITEMS[p.b].name : 'Das'} ist zu hoch für unter die Brücke`; }
+  for (const d of ds) if (d && decoHeight(d.b, d.form) > brClear()) return `${ITEMS[d.b] ? ITEMS[d.b].name : 'Das'} ist zu hoch für unter die Brücke`;
+  for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && decoHeight(p.b, p.form) > brClear()) return `${ITEMS[p.b] ? ITEMS[p.b].name : 'Das'} ist zu hoch für unter die Brücke`; }
   return null;
 }
 let BK_PLAN_SAME = null;                                                  // beim Ziehen (planScan): Felder derselben Linie, die der Plan schon baut
@@ -139,7 +139,7 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
 function bkTooTall(b, x, y, slot, form = 0) {
   if (!bkOn()) return null;
   const h = decoHeight(b, form);
-  if (h <= BK_CLEAR) return null;
+  if (h <= brClear()) return null;
   const tiles = slot === VSLOT ? [[x, y], [x - 1, y], [x, y - 1], [x - 1, y - 1]] : [[x, y]];
   return tiles.some(([fx, fy]) => bkAt(fx, fy)) ? `${ITEMS[b] ? ITEMS[b].name : 'Das'} ist zu hoch für unter die Brücke` : null;
 }
@@ -439,16 +439,22 @@ function bkWegPaint(c, px, py, z, H) {                                    // H: 
   patRot = wegPatRot({ b: 'weg', style: c.b.weg[c.i], lauf: ax });       // Muster längs der Brücke (Block 158)
   try { paintLook(L, lk, c.x0 + c.dx * c.i, c.y0 + c.dy * c.i, z, false, e, null, bent ? 12 : 0); } finally { patRot = 0; g.restore(); }   // Belag, Muster, Schachbrett wie am Boden
 }
+// Wegstück der Anhöhe übers Deck (drawHillFlat): 0,06 – an der nahen Anhöhe (Arm nach hinten) einer Bogenbrücke nur 0,012, sonst läge ihr
+// flaches Stück, das nach dem Deck gezeichnet wird, knapp unter dem steigenden Bogen (160c C2)
+function bkFlatOver(x, y, dx, dy) {
+  const c = bkAt(x + dx, y + dy);
+  return c && dx + dy < 0 && bkFam(c.b) === 'fuss' ? 0.012 : 0.06;
+}
 // Schatten im Boden-Bild (render.js drawShadows): das Deck, um die Sonne versetzt
 function drawBkShadows(want) {
-  const dx = SUN.dx * HILL_H, dy = SUN.dy * HILL_H;
   g.beginPath();
   for (const [k, b] of state.bruecken) {
     const [x0, y0] = keyXY(k);
     if (!bkCellsOf(k, b).some(c => want(c))) continue;                   // want(Feld, w, h): nur das Feld übergeben
-    const ax = b.ax, A = -0.5, B = b.n - 0.5;
-    const pt = (t, s) => { const p = iso(ax ? x0 + s : x0 + t, ax ? y0 + t : y0 + s); return [p.x + dx, p.y + dy]; };
-    [pt(A, -BK_W), pt(B, -BK_W), pt(B, BK_W), pt(A, BK_W)].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+    const ax = b.ax, A = -0.5, B = b.n - 0.5, hf = brDeckHFn(bkFam(b), b.n), K = brPeak(bkFam(b), b.n) ? 12 : 1;
+    const pt = (t, s) => { const p = iso(ax ? x0 + s : x0 + t, ax ? y0 + t : y0 + s), h = hf(t); return [p.x + SUN.dx * h, p.y + SUN.dy * h]; };   // je Stelle um die Sonne versetzt (Bogen, 160c C2)
+    const T = Array.from({ length: Math.round(b.n * K) + 1 }, (_, j) => A + j / K);
+    [...T.map(t => pt(t, -BK_W)), ...T.slice().reverse().map(t => pt(t, BK_W))].forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
     g.closePath();
   }
   g.fillStyle = SHADOW_COL; g.fill('nonzero');
@@ -464,7 +470,7 @@ function drawBkIcon(cx, cy, z, art) {
     poly([Pw(u0, v0, H), Pw(u1, v0, H), Pw(u1, v1, H), Pw(u0, v1, H)], C('#96d56f'));
   };
   block(-1.6, -0.5, -0.9, 0.9);
-  bkPaint((t, s2, h) => Pw(t, s2, h * 0.75), s, art, 2, -0.5, 1.5, false, { supports: brSupports({ mat: art, fam: 'fuss', stuetzen: 'wenige' }, 2) });
+  bkPaint((t, s2, h) => Pw(t, s2, h * 0.75), s, art, 2, -0.5, 1.5, false, { supports: brSupports({ mat: art, fam: 'fuss', stuetzen: 'wenige' }, 2), fam: 'fuss', hf: brDeckHFn('fuss', 2) });   // leer gebaut: mit Bogen
   block(1.5, 2.6, -0.9, 0.9);
 }
 

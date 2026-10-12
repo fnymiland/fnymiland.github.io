@@ -253,3 +253,20 @@ describe('Antippen auf dem Bogen (160c C2f)', () => {
     expect(hdr[0]).toBe(null); expect(hdr[1]).toMatchObject({ x: 15, y: 12, deck: true });    // über dem Geländer nicht, knapp darüber noch
   });
 });
+
+// 160c C2g: Schatten folgt dem Bogen, Wegstück der nahen Anhöhe nur knapp aufs Deck, Lichtraum unverändert
+describe('Schatten und Anschluss am Bogen (160c C2g)', () => {
+  it('ein Pfad je Brücke mit 2·(12n+1) Punkten, am Scheitel um SUN·(HILL_H+pk) versetzt; Überlapp 0,012 an der nahen Anhöhe', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    const r = game(`(() => { const g0 = g, pts = []; let fills = 0;
+      g = new Proxy({}, { get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => pts.push([x, y]) : k === 'fill' ? () => { fills++; } : k in o ? o[k] : () => {}, set: (o, k, v) => { o[k] = v; return true; } });
+      try { drawBkShadows(() => true); } finally { g = g0; }
+      const mid = iso(15, 12 - BK_W), top = pts[18];
+      return [pts.length, fills, top[0] - mid.x, top[1] - mid.y]; })()`);
+    expect(r[0]).toBe(2 * (12 * 3 + 1)); expect(r[1]).toBe(1);
+    const h = game("HILL_H + brPeak('fuss', 3)");
+    expect(r[2]).toBeCloseTo(game('SUN.dx') * h, 3); expect(r[3]).toBeCloseTo(game('SUN.dy') * h, 3);
+    expect(game('[bkFlatOver(17, 12, -1, 0), bkFlatOver(13, 12, 1, 0)]')).toEqual([0.012, 0.06]);
+    expect(game('brClear()')).toBe(game('BK_CLEAR'));
+  });
+});

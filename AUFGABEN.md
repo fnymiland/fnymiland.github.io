@@ -2710,7 +2710,7 @@ Abkürzung beim Ziehen übers Wasser bleibt (a); Reihenfolge: 1) zwischen Anhöh
       - [x] A1 Prüfstand (Brückenwelt: tools/brueckenwelt.js, testsave-bruecken.json, Vorlage tests/vorlagen/alte-bruecken.json, Vorher-Bilder
         tools/brueckenpruefung.js, Leistungs-Grundlinie Welt „bruecken“ ohne Änderung der übrigen Welten) · [x] A2 Leser brLook (js/brueckenfamilie.js) · [x] A3 Speicherformat + Altversions-Wächter · [x] A4 Geld-Schicht (brPrice/brPaid, alte Arten behalten ihren Preis)
       - [x] B1 Lagen-Maler (brueckenbild.js, Lagen h/v/d/o, deckend; alt↔neu nur Kantenpixel) · [~] B2 ruhend in tileA, Nachmalen in tileB (B2a Gerüst ✓, B2b Umzug ✓, B2c Bildchen weit weg ✓ – GL-Testwelt: lebendige Felder 60 → 1; B2d Fußkreis an der Feldkante offen)
-      - [x] C1 Stützen auf Kanten („wenige“ = min(k, n−k) ungerade: n 4 → 1, 3; n 3 → 1, 2) · [ ] C2 Höhenprofil, Holz/Metall · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle
+      - [x] C1 Stützen auf Kanten („wenige“ = min(k, n−k) ungerade: n 4 → 1, 3; n 3 → 1, 2) · [x] C2 Höhenprofil, Holz/Metall (Bogen, Figuren, Antippen, Schatten; plan-160c/C2.md) · [ ] C3 Stein mit Pfeilern · [ ] C4 Kristall K1 + Zacken · [ ] C5 Bahn-Modelle
         · [ ] C6 Fenster/Leiste/Kosten · [ ] C7 Licht (mit Strom) · [ ] C8 bis 8 Felder · [ ] C9 Bauen per Linie · [ ] C10 Schiffe unter Anhöhen-Brücken
       - [ ] D0 Entwurf Wasser-Weg · [ ] D1 Zeichenort · [ ] D2 Modelle · [ ] D3 Fenster/Kosten · [ ] D4 Anhöhe am Brückenende sperren
       - [ ] E0 Entwurf Wasser-Gleis · [ ] E1 Zeichenort · [ ] E2 Modelle/Spanne/Fenster
