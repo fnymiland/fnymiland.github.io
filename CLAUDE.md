@@ -308,6 +308,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Kristall K1** (160c C4): Glas in eigenen Lagen – `hg` (hintere Scheibe, ruhend in tileA, nie nachgemalt), `t1` (Glasband, Zacken) und `t2`
     (vordere Scheibe, Pfosten, Handlauf) jedes Bild genau einmal in tileB (`bkDrawMoving`, auch ohne Bewegtes; GL: `brLiveTiles`), nie in `bkRedo`.
     Glasfarben nur über `rgbaK` (Nebel auf Hex, dann rgba), Glas nie ins Nachbarfeld (ohne ext). Zacken: Nummer ab dem Anker, Spitze ≥ `brClear()`.
+    **Bahn** (160c C5): `bkPaintBahn` (Holz: Böcke an jeder Kante, Kreuz hinten; Metall/Kristall B2: Fachwerk 2n Felder) – auch der Rückfall ohne
+    Familie; Stein-Viadukt über `bkPaintStein` mit Pfeilern an jeder Kante (Nutzer: Variante B), Lichtraum folgt den Bögen. Gleis auf eine Steinbrücke
+    prüft neue Pfeiler und die flacheren Bögen. **Züge unter einer Brücke** in Stücken (`brCarPiecesUnder`: Feldkanten längs, quer bei s = −½/+W/+½;
+    Klasse `bkCls` U/F; Schatten nur das hinterste Stück, `car.shadow`).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

@@ -424,6 +424,34 @@ function bkCarPieces(m) {
   }
   return out;
 }
+// Zug unter einer Brücke (160c C5c, B2d): Stücke je Feld – an den Feldkanten längs der Brücke und quer an s = −½, +W, +½ (Brückenzeile).
+// Ein Stück im Brückenfeld liegt darunter ('U', vor dem Nachmalen von vd/o) oder schon davor ('F', danach); sonst mit seinem eigenen Feld.
+// Den Schatten zeichnet nur das hinterste Stück (sonst fehlte er, weil geschnittene Wagen keinen zeichnen)
+function brCarPiecesUnder(m) {
+  if (!bkOn()) return null;
+  const la = m.len / 2;
+  let c = bkAt(Math.round(m.px), Math.round(m.py));
+  for (const sg of [-1, 1]) if (!c) c = bkAt(Math.round(m.px + m.du * la * sg), Math.round(m.py + m.dv * la * sg));
+  if (!c) return null;
+  const ax = c.b.ax, cuts = [-la, la], add = a => { if (a > -la + 1e-3 && a < la - 1e-3) cuts.push(a); };
+  const ca = ax ? m.dv : m.du, wa = ax ? m.py : m.px;                     // längs der Brücke: Feldkanten
+  if (Math.abs(ca) > 0.3) for (let h = Math.floor(wa - la) + 0.5; h < wa + la + 1; h++) add((h - wa) / ca);
+  const cs = ax ? m.du : m.dv, ws = ax ? m.px : m.py, r0 = ax ? c.x0 : c.y0;   // quer: hinter, vor der Stirn, vor dem Feld
+  if (Math.abs(cs) > 0.3) for (const h of [r0 - 0.5, r0 + BK_W, r0 + 0.5]) add((h - ws) / cs);
+  cuts.sort((p, q) => p - q);
+  const out = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const lo = cuts[i], hi = cuts[i + 1], am = (lo + hi) / 2;
+    if (hi - lo < 0.01) continue;
+    const wx = m.px + m.du * am, wy = m.py + m.dv * am, x = Math.round(wx), y = Math.round(wy), cb = bkAt(x, y), s = cb ? (ax ? wx - c.x0 : wy - c.y0) : 0;
+    out.push({ k: x + ',' + y, m: { ...m, cut: cuts.length === 2 ? null : [lo, hi], portal: null, ...(cb ? { bkCls: s > BK_W ? 'F' : 'U' } : {}) } });
+  }
+  if (out.length > 1) {                                                     // Schatten: das zuerst gezeichnete Stück
+    const d = p => { const [x, y] = keyXY(p.k); return (x + y) * 1e5 + x; };
+    out.reduce((a, p) => d(p) < d(a) ? p : a).m.shadow = true;
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Zeichnen

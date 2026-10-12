@@ -1836,6 +1836,10 @@ function render(now) {
       else if (HILLS && !HALL.has(k) && typeof trainOnHills === 'function') k = trainOnHills(m, k);   // Anhöhe/Gleis-Rampe (movers.js): vorderstes Feld unter dem Wagen
       // Hbf oben (157j): Wagen in der Halle malt das Hbf selbst – nach Anhöhe und Boden, vor dem Gebäude (unten liegt der Boden im Boden-Bild)
       if (hallHill && !tc && HALL.has(k) && hillLevel(...keyXY(k)) > 0) { const a = COVER.get(k); if (!hallHill.has(a)) hallHill.set(a, []); hallHill.get(a).push(m); continue; }
+      if (!tc && !m.deck && !m.hill && bkOn()) {                         // unter einer Brücke (160c C5c): Stücke je Feld – Bock, Stirn, Geländer verdecken richtig
+        const ps = brCarPiecesUnder(m);
+        if (ps) { for (const p of ps) { if (!byTile.has(p.k)) byTile.set(p.k, []); byTile.get(p.k).push(p.m); } continue; }
+      }
     }
     if (m.boat) {                                                          // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
       const under = [];

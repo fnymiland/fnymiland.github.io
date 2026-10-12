@@ -774,7 +774,7 @@ function drawTrainCarBody(car, z, now) {
   const [lo, hi] = car.cut || [-la, la], am = (lo + hi) / 2;
   const body = tr.model === 'modern' || tr.model === 'schnell' ? '#f5f5f2' : tr.model === 'tram' ? shade(col, 0.35) : col;
   const [cx, cy] = P(0, 0);
-  if (!car.cut) {                                                       // Schatten; auf Damm/Viadukt nicht an ihrer Wand (rampShadowClip, hills.js)
+  if (!car.cut || car.shadow) {                                         // Schatten (zerlegter Wagen: das Stück mit shadow); auf Damm/Viadukt nicht an ihrer Wand (rampShadowClip, hills.js)
     const sc = !!hl && !!hl.ramp;
     if (sc) { g.save(); rampShadowClip(hl.ramp[0], hl.ramp[1], (u, v, h) => { const p = toScreen(u, v); return [p.x, p.y - (h - hl.base) * z]; }); }
     try { ellipse(cx, cy + 1 * z, (la + 0.1) * TW * 0.5 * z, (la + 0.1) * TH * 0.5 * z, 'rgba(40,50,70,0.2)'); } finally { if (sc) g.restore(); }

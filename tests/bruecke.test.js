@@ -412,3 +412,22 @@ describe('Stein-Viadukt (160c C5d)', () => {
     expect(game("bkRailCheck(15, 12).err")).toMatch(/Viadukt/);
   });
 });
+
+// 160c C5c: Zug quer unter der Brücke – Stücke je Feld, Schnitt an der Stirn (s = +W); darunter 'U', vor der Stirn im Brückenfeld 'F'
+describe('Zug unter der Brücke in Stücken (160c C5c)', () => {
+  it('Stücke ergeben den ganzen Wagen; Klassen nach Querlage; Schatten genau einmal; ohne Brücke null', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();                               // Holz, 3 Felder (14–16, y 12)
+    for (const py of [11.4, 11.8, 12.0, 12.3, 12.6]) {                                         // bei 12,9 liegt der Wagen ganz vor der Brückenzeile
+      const r = game(`(() => { const m = { train: {}, px: 15, py: ${py}, du: 0, dv: 1, len: 0.8 };
+        const ps = brCarPiecesUnder(m); return ps && ps.map(p => ({ k: p.k, cut: p.m.cut, cls: p.m.bkCls || null, sh: !!p.m.shadow })); })()`);
+      expect(r).not.toBe(null);
+      const len = r.reduce((s, p) => s + (p.cut ? p.cut[1] - p.cut[0] : 0.8), 0);
+      expect(len).toBeCloseTo(0.8, 6);
+      for (const p of r) { if (p.k === '15,12') { expect(p.cls).not.toBe(null); } else expect(p.cls).toBe(null); }
+      if (r.length > 1) expect(r.filter(p => p.sh).length).toBe(1);
+    }
+    const f = game(`(() => { const ps = brCarPiecesUnder({ train: {}, px: 15, py: 12.2, du: 0, dv: 1, len: 0.8 }); return ps.filter(p => p.k === '15,12').map(p => [p.m.cut[0], p.m.cut[1], p.m.bkCls]); })()`);
+    expect(f).toEqual([[-0.4, expect.closeTo(0.2, 6), 'U'], [expect.closeTo(0.2, 6), expect.closeTo(0.3, 6), 'F']]);   // Schnitt an der Stirn (12 + 0,4)
+    expect(game("brCarPiecesUnder({ train: {}, px: 8, py: 8, du: 0, dv: 1, len: 0.8 })")).toBe(null);
+  });
+});
