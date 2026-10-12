@@ -42,24 +42,29 @@ describe('Gleis aufs Deck', () => {
     game("state.bruecken.get('14,12').gleis[1] = null; groundVersion++; recalc()");
     expect(game("[T.rail.comp.get('11,12') === T.rail.comp.get('19,12'), bkRailJumps(13, 12).length]")).toEqual([false, 0]);
   });
-  it('Weg oder Gleis, nicht beides; Holzsteg mit Gleis: Bock unter jedem Feld (nichts darunter), Stahl spannt frei', () => {
+  it('Weg oder Gleis, nicht beides; Holzsteg mit Gleis: Bock an jeder Kante (darunter nur quer), Stahl spannt frei', () => {
     bridge();
     game("setTool('weg'); startPlan('line', { x: 14, y: 12, deck: true }, { x: 16, y: 12 }, false); runPlan()");   // Weg nur aufs Deck
     expect(game("bkWegAny(state.bruecken.get('14,12'))")).toBe(true);
     expect(game("bkRailCheck(15, 12).err")).toMatch(/Weg oder Gleis/);
     game("bkDemolishAt(15, 12)");                                                           // Weg runter
-    game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // unten quer ein Weg (Holz, 3 Felder: in der Mitte kein Bock)
-    expect(game("bkRailCheck(15, 12).err")).toMatch(/unter jedem Feld einen Bock/);
-    game("state.tiles.delete('15,12'); groundVersion++; recalc()");
+    game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // unten quer ein Weg: die Böcke stehen auf den Kanten (160c C1)
+    expect(game("bkRailCheck(15, 12).err")).toBeUndefined();
+    game("state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // längs 15–16: über die Kante, an der mit Gleis ein Bock stünde
+    expect(game("bkRailCheck(15, 12).err")).toMatch(/mehr Stützen/);
+    game("state.tiles.delete('15,12'); state.tiles.delete('16,12'); groundVersion++; recalc()");
     plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     expect(game("bkRailAny(state.bruecken.get('14,12'))")).toBe(true);
     expect(game("bkWegCheck(15, 12).err")).toMatch(/Weg oder Gleis/);
-    expect(game("[placeError('weg', 15, 12), placeError('schiene', 15, 12)]").every(e => /Holzbock/.test(e))).toBe(true);
-    expect(game("bkUnderError(15, 12, bkBockOf(state.bruecken.get('14,12'), 1))")).toBe(null);   // frei: geht
+    expect(game("[placeError('weg', 15, 12), placeError('schiene', 15, 12)]")).toEqual([null, null]);   // quer durch die Feldmitte: geht
+    game("state.tiles.set('15,12', { b: 'schiene', lvl: 1 }); groundVersion++; recalc()");
+    expect(game("placeError('schiene', 16, 12)")).toMatch(/Stütze der Brücke/);                   // längs über die Kante: Bock
+    game("state.tiles.delete('15,12'); groundVersion++; recalc()");
+    expect(game("bkUnderError(15, 12)")).toBe(null);
     game("bkSetArt('14,12', 'stahl')");
     expect(game("[placeError('weg', 15, 12), placeError('schiene', 15, 12)]")).toEqual([null, null]);
-    game("build('schiene', 15, 12, true); recalc()");                                         // unten quer ein Gleis
-    expect(game("bkSetArt('14,12', 'holz')")).toBe(false);                                   // Holz käme mit Bock auf das Gleis
+    game("for (const x of [14, 15, 16]) build('schiene', x, 12, true); recalc()");             // unten längs ein Gleis
+    expect(game("bkSetArt('14,12', 'holz')")).toBe(false);                                   // Holz käme mit Böcken auf das Gleis
     expect(game("state.bruecken.get('14,12').art")).toBe('stahl');
     // das Gleis unten bleibt ein eigenes Netz: hängt weder am Deck noch an den Anhöhen
     expect(game("T.rail.comp.get('15,12') !== T.rail.comp.get('13,12')")).toBe(true);
@@ -68,7 +73,8 @@ describe('Gleis aufs Deck', () => {
     bridge();
     plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     game("state.paintNew.schiene = { form: 1 }");
-    expect(plan('schiene', { x: 14, y: 12 }, { x: 16, y: 12 })).toMatchObject({ n: 0 });  // unten angefangen: am Boden – dort stehen die Böcke
+    const pl = game("(() => { setTool('schiene'); startPlan('line', { x: 14, y: 12 }, { x: 16, y: 12 }, false); const i = planInfo(plan); return [i.states.get('15,12'), i.firstErr]; })()");
+    expect(pl[0]).toBe('bad'); expect(pl[1]).toMatch(/Stütze der Brücke/);                      // unten angefangen: am Boden – längs nicht durch die Böcke (Kanten, 160c C1)
     game("setTool('schiene'); startPlan('line', { x: 14, y: 12, deck: true }, { x: 16, y: 12 }, false)");
     expect(game("[plan.deck, planInfo(plan).cost, [...planInfo(plan).deck].sort()]")).toEqual([true, 0, ['14,12', '15,12', '16,12']]);
     run();
@@ -76,7 +82,7 @@ describe('Gleis aufs Deck', () => {
     game("setTool('schiene'); hover = { x: 15, y: 12, deck: true }; previewCache = null");
     expect(() => game('render(1e6)')).not.toThrow();
   });
-  it('Abreißen: erst das Gleis (Taler und Holz/Metall zurück), dann die Brücke; ↶; ↶ bringt das Gleis nicht über einen neuen Weg am Holzbock', () => {
+  it('Abreißen: erst das Gleis (Taler und Holz/Metall zurück), dann die Brücke; ↶; ↶ bringt das Gleis nicht über einen neuen Weg längs durch eine Bockkante', () => {
     bridge();
     plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     const m0 = game('state.money'), h0 = game('state.res.holz'), s = game('ITEMS.schiene.cost');
@@ -87,13 +93,14 @@ describe('Gleis aufs Deck', () => {
     game('undo()');
     expect(game("state.bruecken.get('14,12').gleis")).toEqual([0, 0, 0]);
     game('resetUndo(); undoable(() => bkDemolishAt(15, 12))');
-    game("undoable(() => build('weg', 15, 12, true))");                                     // unten quer ein Weg (ohne Gleis: kein Bock in der Mitte)
-    expect(game('bAt(15, 12)')).toBe('weg');
+    game("(b => { b.bru = 'keine'; b.brp = { money: 180, bretter: 9, k: brSig(b, 'anhoehe') }; groundVersion++; })(state.bruecken.get('14,12'))");   // Holzsteg ohne Stützen (neues Format)
+    game("undoable(() => { build('weg', 15, 12, true); build('weg', 16, 12, true); })");     // unten längs ein Weg (ohne Gleis: keine Stütze)
+    expect(game('[bAt(15, 12), bAt(16, 12)]')).toEqual(['weg', 'weg']);
     game("undoStack.splice(undoStack.length - 1, 1)");                                         // nur den Gleis-Abriss zurücknehmen wollen
     expect(game('undo()')).toBe(false);
     expect(game("!!state.bruecken.get('14,12').gleis")).toBe(false);
     // Rechteck-Abriss: die ganze Brücke samt Gleis, voll zurück
-    game("state.tiles.delete('15,12'); groundVersion++; recalc()");
+    game("state.tiles.delete('15,12'); state.tiles.delete('16,12'); groundVersion++; recalc()");
     plan('schiene', { x: 13, y: 12 }, { x: 17, y: 12 }); run();
     game("plan = { kind: 'rect', tool: 'abriss', a: { x: 14, y: 11 }, b: { x: 16, y: 13 }, fixed: true }");
     expect(game('planInfo(plan).gain')).toBe(180 + 3 * s);

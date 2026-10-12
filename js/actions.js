@@ -1201,10 +1201,10 @@ function undo() {
       if (n === 'bruecken' && b !== undefined) {                         // auch eine stehende: ein Gleis, das zurückkommt, braucht am Holzsteg Böcke (160b)
         const o = JSON.parse(b), art = bkArtOf(o);
         if (!UNDO_MAPS.bruecken().get(k) && (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0))) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
-        const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Böcke zählen
-        if (bkCellsOf(k, o).some(([cx, cy], i) => { const a = COVER.get(cx + ',' + cy), bock = bkBock(art, o.n, i, bkRailAny(o)); if (a && mine.has(a)) return false;
-          if (stand) { const t = objAt(cx, cy); return bock && !!t && (t.b === 'weg' || t.b === 'schiene'); }
-          return bkUnderError(cx, cy, bock); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
+        const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Stützen zählen (160c C1)
+        const neu = stand ? bkSupports(o).filter(e => !bkSupports(UNDO_MAPS.bruecken().get(k)).includes(e)) : bkSupports(o), [ox, oy] = keyXY(k);
+        if ((!stand && bkCellsOf(k, o).some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy); }))
+          || neu.some(e => { const cs = bkEdgeCells(ox, oy, o.ax, e); return !cs.some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return a && mine.has(a); }) && bkEdgeBlocker(...cs); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
       }
     }
   }

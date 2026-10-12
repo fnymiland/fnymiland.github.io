@@ -42,7 +42,8 @@ function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
     for (let j = 0; j <= 2 * n; j++) { const t = A + j / 2; seg(t, s, H, t, s, H + 8, L.dark, w); }
     seg(A, s, H + 8, B, s, H + 8, col, w * 1.3); seg(A, s, H + 4, B, s, H + 4, col, w * 0.8);
   };
-  const bocks = art !== 'holz' ? [] : opts.rail && n >= 2 ? Array.from({ length: n }, (_, i) => i) : n > BK_ARTEN.holz.frei ? [A + 0.55, B - 0.55] : [];
+  // Böcke auf den Kachelkanten (160c C1, opts.supports: Kanten k → t = k − ½); je Kante zeichnet sie das spätere Feld (halboffen, G3)
+  const bocks = (opts.supports || []).map(k => k - 0.5).filter(t => t >= t0 - 1e-9 && t < t1 - 1e-9);
   if (lage === 'h') {
     for (const t of bocks) seg(t, -W + 0.06, 0, t, -W + 0.06, H - 3, L.dark, 2.2);   // Holzböcke: hinteres Bein
     if (art === 'stahl') sideTruss(-W - 0.02, L.dark, 1.1); else rail(-W, L.dark, 1.2);

@@ -18,7 +18,7 @@ const scan = () => game(`(() => {
     for (const art of ['holz', 'stahl']) for (let n = 1; n <= 4; n++) for (const rail of [false, true]) for (let i = 0; i < n; i++) for (const lage of BK_LAGEN) {
       cur = art + ' n' + n + (rail ? ' gleis' : '') + ' feld ' + i + ' ' + lage;
       const P = (t, s, h) => { if (!(t >= i - 0.5 - 0.013 && t <= i + 0.5 + 0.013)) bad.push(cur + ' t=' + t); if (!Number.isFinite(t + s + h)) bad.push(cur + ' NaN'); return [t * 10, s * 10 - h]; };
-      bkPaintLage(lage, P, 2, art, n, i - 0.5, i + 0.5, false, { rail, ext: i < n - 1 ? 0.012 : 0 });
+      bkPaintLage(lage, P, 2, art, n, i - 0.5, i + 0.5, false, { supports: rail ? Array.from({ length: n - 1 }, (_, k) => k + 1) : [], ext: i < n - 1 ? 0.012 : 0 });
     }
   } finally { g = g0; }
   return bad;

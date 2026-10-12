@@ -1836,6 +1836,7 @@ function bpError(x, y, rot, move, noCost) {
   if (archAround(x, y)) return ARCH_HERE;
   const [dx, dy] = STAIR_UP[rot & 3], e = state.edges.get(edgeBetween(x, y, x - dx, y - dy));
   if (e) return `Vor der Wand steht: ${ITEMS[e.b].name} – erst entfernen`;
+  if (bkAt(x - dx, y - dy)) return 'Vor dieser Wand liegt eine Brücke auf – die Öffnung käme unter ihr Ende';   // 160c R9
   const ter = terrainAt(x, y);
   if (ter !== 'grass' && !willClear('bergportal', ter)) return needError(ITEMS.bergportal, ter, {}) || 'Hier geht es nicht';
   if (noCost) return null;

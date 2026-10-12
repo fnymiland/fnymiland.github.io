@@ -1322,6 +1322,7 @@ function edgeError(b, k) {
   const [p, q] = tiles.map(([x, y]) => COVER.get(x + ',' + y));
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
   if (edgeEndPoints(k).some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';   // Eckpunkt-Deko (Block 65)
+  if (bkEdgeSupport(k)) return 'Hier steht eine Stütze der Brücke';                 // 160c C1
   return null;
 }
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
@@ -1345,6 +1346,7 @@ function setArch(k, type) {
   if (!e || !isGate(k)) return false;
   const now = e.arch ? ARCHES[e.arch].cost : 0, want = type ? ARCHES[type].cost : 0;
   if ((e.arch || null) === (type || null)) return false;
+  if (type && edgeTiles(k).some(([x, y]) => bkAt(x, y))) { fail('Unter der Brücke ist kein Platz für einen Torbogen'); return false; }   // 160c R8
   if (state.money < want - now) { fail('Zu wenig Taler'); return false; }
   state.money -= want - now;
   if (type) e.arch = type; else delete e.arch;
@@ -1672,6 +1674,7 @@ function smallError(b, x, y, slot, opts = {}) {
     if (ds && [4, 5, 6, 7].some(i => ds[i])) return 'An den Seiten steht schon etwas – die Mitte ist zu eng';
   }
   if (isSide(slot) && decosAt(k) && decosAt(k)[CSLOT]) return 'In der Mitte steht schon etwas';
+  if (isSide(slot) && bkOn() && bkAt(x, y)) { const [dx, dy] = MID_SIDE[slot - 4]; if (bkEdgeSupport(edgeBetween(x, y, x + dx, y + dy))) return 'Hier steht eine Stütze der Brücke'; }   // 160c C1
   if (isSide(slot) && t && (wegUnder(t) == null || t.b === 'ubahn') && !isCrossing(t)) return 'Auf Gebäudefeldern nur an die Ecken';
   if (decosAt(k) && decosAt(k)[slot]) {
     const ds = decosAt(k);

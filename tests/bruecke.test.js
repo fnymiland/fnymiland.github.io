@@ -32,7 +32,7 @@ describe('Brücke bauen', () => {
     game("for (let y = 10; y <= 14; y++) for (const x of [17, 18]) state.hills.set(x + ',' + y, { w: 0 }); state.tiles.set('15,12', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/kein Platz für: Haus/);
     game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
-    expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Holzbock/);           // Holz, 3 Felder: Böcke am ersten und letzten
+    expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/Stütze der Brücke – der Weg darf nur quer/);   // Holz, 3 Felder: Stützen auf den Kanten (160c C1), der Weg läuft längs hindurch
     game("state.paintNew.bruecke = { form: 1 }");                                                     // Stahl
     expect(plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }).err).toMatch(/erst mit der Eisenbahn/);
     game("state.techs.add('bahn'); recalc()");                                                       // Forschen rechnet neu
@@ -40,11 +40,14 @@ describe('Brücke bauen', () => {
     run();
     expect(game("state.bruecken.get('14,12').art")).toBe('stahl');
   });
-  it('darunter nur Flaches: Weg und Schiene ja (nicht am Holzbock), Haus, Anhöhe, Überdachung, Wald und hohe Deko nein', () => {
+  it('darunter nur Flaches: Weg und Schiene ja (nicht längs durch eine Stütze), Haus, Anhöhe, Überdachung, Wald und hohe Deko nein', () => {
     plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     game("state.techs.add('bahn'); recalc()");
     expect(game("[placeError('weg', 15, 12), placeError('schiene', 15, 12), placeError('strand', 15, 12)]")).toEqual([null, null, null]);
-    expect(game("placeError('weg', 14, 12)")).toMatch(/Holzbock/);
+    game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
+    expect(game("placeError('weg', 14, 12)")).toMatch(/Stütze der Brücke/);                       // längs über die Kante 14|15 (160c C1)
+    expect(game("[placeError('weg', 15, 11), placeError('weg', 15, 13)]")).toEqual([null, null]);  // quer durch die Feldmitte: frei
+    game("state.tiles.delete('15,12'); groundVersion++; recalc()");
     expect(game("placeError('haus', 15, 12)")).toMatch(/nur Platz für Flaches/);
     expect(game("placeError('wald', 15, 12)")).toMatch(/kein Wald/);
     expect(game("hillRaiseError(15, 12, true)")).toMatch(/Unter einer Brücke geht keine Anhöhe/);
@@ -170,5 +173,52 @@ describe('Gegengelesen (Block 160): Regeln dicht, Schatten, Laufwege', () => {
     game("state.tiles.set('15,13', { b: 'weg', lvl: 1, style: 'sand' }); state.decos.set('15,12', [{ b: 'blumen', rot: 0 }, null, null, null]); groundVersion++; recalc()");
     game("plan = { kind: 'rect', tool: 'abriss', a: { x: 15, y: 12 }, b: { x: 15, y: 13 }, fixed: true }");
     expect(game("planInfo(plan).states.get('15,12')")).toBe('ok');
+  });
+});
+
+// 160c C1: Stützen und Böcke auf den Kachelkanten zwischen den Feldern der Lücke – die Feldmitte bleibt frei (Weg quer darunter)
+describe('Stützen auf den Kachelkanten (160c C1)', () => {
+  it('Tabelle: Holz-Fußgänger keine/wenige/jede, Holz-Bahn jede Kante, Stein je 2 Felder, Metall und Kristall keine, Wand nie', () => {
+    const S = (mat, fam, st, n) => game(`brSupports({ mat: '${mat}', fam: '${fam}', stuetzen: '${st}' }, ${n})`);
+    expect([1, 2, 3, 4, 5, 6, 8].map(n => S('holz', 'fuss', 'wenige', n))).toEqual([[], [1], [1, 2], [1, 3], [1, 4], [1, 3, 5], [1, 3, 5, 7]]);
+    expect(S('holz', 'fuss', 'keine', 4)).toEqual([]); expect(S('holz', 'fuss', 'jede', 4)).toEqual([1, 2, 3]);
+    expect(S('holz', 'bahn', 'keine', 4)).toEqual([1, 2, 3]);
+    expect([2, 3, 4, 5, 6].map(n => S('stein', 'fuss', 'wenige', n))).toEqual([[], [], [2], [2, 3], [2, 4]]);
+    expect([S('stahl', 'fuss', 'jede', 4), S('kristall', 'bahn', 'jede', 4)]).toEqual([[], []]);
+  });
+  it('Weg quer durch die Feldmitte unter dem Holzviadukt (mit Gleis): geht; längs über eine Kante nicht', () => {
+    game("state.techs.add('bahn'); recalc()");
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    expect(plan('weg', { x: 15, y: 9 }, { x: 15, y: 15 }).err).toBe(null);                    // quer: ganz durch
+    expect(game("bAt(15, 12)")).toBe(null); run(); expect(game("bAt(15, 12)")).toBe('weg');
+    expect(game("placeError('weg', 16, 12)")).toMatch(/Stütze der Brücke/);
+  });
+  it('Zaun auf der Stützenkante, Torbogen und Deko an der Seitenmitte davor: abgelehnt; Bergportal unter dem Brückenende auch', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();                               // Holz, 3 Felder: Kanten 14|15 und 15|16
+    expect(game("edgeError('zaun', edgeBetween(14, 12, 15, 12))")).toMatch(/Stütze der Brücke/);
+    expect(game("edgeError('zaun', edgeBetween(15, 12, 15, 13))")).toBe(null);                 // an der Seite (quer): frei
+    const side = game("MID_SIDE.findIndex(([dx, dy]) => dx === 1 && dy === 0) + 4");
+    expect(game(`smallError('blumen', 15, 12, ${side})`)).toMatch(/Stütze der Brücke/);
+    expect(game(`smallError('blumen', 15, 12, ${game("MID_SIDE.findIndex(([dx, dy]) => dx === 0 && dy === 1) + 4")})`)).toBe(null);
+    game("state.edges.set(edgeBetween(15, 12, 15, 13), { b: 'zaun', style: 'holz' }); for (const y of [12, 13]) state.tiles.set('15,' + y, { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
+    expect(game("setArch(edgeBetween(15, 12, 15, 13), Object.keys(ARCHES)[0])")).toBe(false);   // Torbogen unter dem Deck (R8)
+    expect(game("bpError(13, 12, bpDirs(13, 12)[0], false, true)")).toMatch(/liegt eine Brücke auf/);   // R9: die Öffnung käme unter das Brückenende
+    expect(game("bpError(13, 11, bpDirs(13, 11)[0], false, true)")).toBe(null);                // daneben: frei
+  });
+  it('alter Stand: eine Linie liegt schon auf der Stützenkante – die Stütze wird nur nicht gezeichnet, nichts geht verloren', () => {
+    game("state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz' }); state.edges.set(edgeBetween(14, 12, 15, 12), { b: 'zaun', style: 'holz' }); groundVersion++; recalc()");
+    expect(game("bkSupports(state.bruecken.get('14,12'))")).toEqual([1, 2]);
+    expect(game("bkSupportsShown(bkAt(15, 12))")).toEqual([2]);
+    expect(game("state.edges.has(edgeBetween(14, 12, 15, 12))")).toBe(true);
+    expect(() => game("for (const x of [14, 15, 16]) bkDrawTile(x, 12, 300, 300, 2)")).not.toThrow();
+  });
+  it('Rückgängig: eine Brücke kommt nicht zurück, wenn inzwischen ein Weg längs über ihre Stützenkante läuft', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
+    game("resetUndo(); undoable(() => bkDemolishAt(15, 12))");
+    expect(game('state.bruecken.size')).toBe(0);
+    game("build('weg', 14, 12, true); build('weg', 15, 12, true); recalc()");
+    expect(game('undo()')).toBe(false);
+    expect(game('state.bruecken.size')).toBe(0);
   });
 });
