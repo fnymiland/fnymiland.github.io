@@ -21,6 +21,18 @@ const bkArtNew = () => BK_ART_IDS[decoLookNew('bruecke').form || 0] || 'holz';
 const bkCost = (art, n) => brCostMat(brAdd({ money: 0 }, BR_COST.anhoehe[art] || BR_COST.anhoehe.holz, n));   // Preise: brueckenfamilie.js (160c A4)
 const bkRailAny = b => !!b && !!b.gleis && b.gleis.some(f => f != null);
 const bkWegAny = b => !!b && !!b.weg && b.weg.some(Boolean);
+// Höhe des Decks (160c C2, brDeckHFn): Familie aus dem Inhalt (Gleis → Bahn, flach), t am Anker (über die Feldgrenze stetig)
+const bkFam = b => bkRailAny(b) ? 'bahn' : 'fuss';
+const bkH = (b, t) => brDeckHFn(bkFam(b), b.n)(t);
+const bkT = (c, u, v) => c.b.ax ? v - c.y0 : u - c.x0;
+const bkHMax = c => brDeckHMax(bkFam(c.b), c.b.n, c.i - 0.5, c.i + 0.5 + 0.012);
+const bkPeakMax = () => bkOn() ? Math.max(0, ...[...state.bruecken.values()].map(b => brPeak(bkFam(b), b.n))) : 0;
+// Höhe einer Figur auf dem Deck (am Fußpunkt wie slopeUp; sitzend in der Mitte) – null: nicht auf einer Brücke
+function brLiftAt(px, py, sit = false) {
+  const f = sit ? 0 : FOOT_D, fu = px + f, fv = py - f;
+  const c = bkAt(Math.round(fu), Math.round(fv)) || bkAt(Math.round(px), Math.round(py));
+  return c ? bkH(c.b, bkT(c, fu, fv)) : null;
+}
 // Stützen einer Brücke (160c C1, brSupports): Kanten k; art/rail: so, wie sie nach einem Wechsel wäre (Art wechseln, Gleis legen)
 function bkSupports(b, art = null, rail = null) {
   const L = brLook(b, 'anhoehe');

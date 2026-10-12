@@ -78,3 +78,27 @@ describe('Neues Format, Müll, Anker', () => {
     expect(game("brSpanLook(5, 52)")).toBe(null);                                             // Schranken: keine Brücke
   });
 });
+
+// 160c C2a: eine Quelle für die Deckhöhe h(t)
+describe('Höhenprofil (160c C2a)', () => {
+  it('Scheitel je Länge, Bahn flach, Wandenden auf HILL_H, Müll gibt Zahlen', () => {
+    const pk = game('[1, 2, 3, 4, 8].map(n => brPeak("fuss", n))');
+    [5, 10.2, 13.01, 15.46, 23.43].forEach((v, i) => expect(pk[i]).toBeCloseTo(v, 1));
+    expect(game('[1, 4, 8].map(n => brPeak("bahn", n))')).toEqual([0, 0, 0]);
+    const H = game('HILL_H');
+    for (const n of [1, 2, 3, 4, 8]) {
+      expect(game(`brDeckHFn('fuss', ${n})(-0.5)`)).toBeCloseTo(H, 6); expect(game(`brDeckHFn('fuss', ${n})(${n} - 0.5)`)).toBeCloseTo(H, 6);
+      expect(game(`brDeckHFn('fuss', ${n})((${n} - 1) / 2)`)).toBeCloseTo(H + game(`brPeak('fuss', ${n})`), 6);
+      expect(game(`(() => { for (let i = 0; i < ${n}; i++) { const m = brDeckHMax('fuss', ${n}, i - 0.5, i + 0.5), f = brDeckHFn('fuss', ${n}); for (let t = i - 0.5; t <= i + 0.5; t += 0.01) if (f(t) > m + 1e-9) return false; } return true; })()`)).toBe(true);
+    }
+    for (const n of ['0', '-1', 'NaN', '99', "'2'"]) for (const t of ['0', 'NaN', 'Infinity', '-Infinity']) expect(Number.isFinite(game(`brDeckHFn('fuss', ${n})(${t})`))).toBe(true);
+  });
+  it('Familie wie brLook; Gleis ⇒ flach (auch Altdaten mit Weg und Gleis); t am Anker stetig', () => {
+    for (const b of ["{ ax: 0, n: 3, art: 'holz' }", "{ ax: 0, n: 3, art: 'holz', weg: ['sand', null, null] }", "{ ax: 1, n: 4, art: 'stahl', gleis: [0, 0, 0, 0] }", "{ ax: 0, n: 2, art: 'holz', weg: ['sand', 'sand'], gleis: [0, null] }"])
+      expect(game(`bkFam(${b})`)).toBe(game(`brLook(${b}, 'anhoehe').fam`));
+    expect(game("(() => { const b = { ax: 0, n: 4, art: 'holz', weg: ['sand', null, null, null], gleis: [null, 0, null, null] }; for (let t = -0.5; t <= 3.5; t += 0.02) if (bkH(b, t) !== HILL_H) return false; return true; })()")).toBe(true);
+    const c = "{ b: { ax: 1, n: 3 }, x0: 5, y0: 8, i: 1 }";
+    expect(game(`bkT(${c}, 5, 9)`)).toBe(1); expect(game(`bkT(${c}, 5.3, 9.5)`)).toBe(1.5);
+    expect(game("bkT({ b: { ax: 0, n: 3 }, x0: 5, y0: 8 }, 7.2, 8)")).toBeCloseTo(2.2, 9);
+  });
+});

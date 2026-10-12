@@ -218,3 +218,25 @@ function brSupports(look, n) {
   }
   return out;
 }
+// ---------------------------------------------------------------------------
+// Höhenprofil (160c C2, PLAN §2.3): EINE Quelle für die Deckhöhe h(t) der Anhöhen-Brücke – Maler, Weg, Figuren, Antippen, Rahmen, Schatten,
+// Schilder (G8). t längs ab der Mitte von Feld 0, die Lücke reicht von A = −½ bis B = n − ½. Fußgänger: Bogen HILL_H + pk·sin(π(t − A)/n),
+// pk = ½·20,4·(n/2)^0,6, bei 1 Feld ein Buckel von 5. Bahn (Gleis) immer flach. Nie NaN (G9): t geklemmt, n begrenzt
+function brPeak(fam, n) {
+  n = Math.round(+n);
+  if (fam !== 'fuss' || !(n >= 1)) return 0;
+  n = Math.min(n, BK_READ_MAX);
+  return n === 1 ? 5 : 0.5 * 20.4 * Math.pow(n / 2, 0.6);
+}
+function brDeckHFn(fam, n) {
+  const pk = brPeak(fam, n), N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX);
+  if (!pk) return () => HILL_H;
+  return t => { const u = Number.isFinite(t) ? Math.max(0, Math.min(1, (t + 0.5) / N)) : 0; return HILL_H + pk * Math.sin(Math.PI * u); };
+}
+// Höchste Deckhöhe im Ausschnitt [t0, t1] (Rahmen, Antippen)
+function brDeckHMax(fam, n, t0, t1) {
+  const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), m = (N - 1) / 2, f = brDeckHFn(fam, N);
+  return m >= t0 && m <= t1 ? HILL_H + brPeak(fam, N) : Math.max(f(t0), f(t1));
+}
+// Lichtraum unter dem Deck: in C2 überall BK_CLEAR (die Träger liegen in der Vorderfläche s = +W; Deko darunter steht dahinter)
+function brClear() { return BK_CLEAR; }
