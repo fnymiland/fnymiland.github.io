@@ -448,6 +448,10 @@ function groupErrors(hx, hy) {
   const planned0 = PLANNED, mine = new Set();
   for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it); if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) mine.add((ox + P.dx) + ',' + (oy + P.dy)); }
   if (mine.size) PLANNED = planned0 ? new Set([...planned0, ...mine]) : mine;
+  // Brücke darüber (160c C1): Wege/Gleise der Gruppe zählen beim Prüfen der Stützen schon als gelegt (sonst längs durch eine Stütze)
+  const grp0 = BK_GROUP;
+  if (bkOn()) { BK_GROUP = { weg: new Set(), schiene: new Set() }; for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it), k = (ox + P.dx) + ',' + (oy + P.dy);
+    if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) BK_GROUP.weg.add(k); if (P.t && P.t.b === 'schiene') BK_GROUP.schiene.add(k); } }
   try {
   for (const it of order) {
     if (it.kind !== 'roof' && !probe.done) {
@@ -458,7 +462,7 @@ function groupErrors(hx, hy) {
     let err = null;
     if (it.kind === 'edge') {
       const k = edgeAtMid(ox + P.mx, oy + P.my);
-      err = state.edges.has(k) ? 'Hier steht schon eine Linie' : edgeError(P.e.b, k);
+      err = state.edges.has(k) ? 'Hier steht schon eine Linie' : (P.e.arch && edgeTiles(k).some(([x, y]) => bkAt(x, y))) ? 'Unter der Brücke ist kein Platz für einen Torbogen' : edgeError(P.e.b, k);   // R8
     } else if (it.kind === 'ground') {
       const x = ox + P.dx, y = oy + P.dy, k = x + ',' + y, ot = state.tiles.get(COVER.get(k) || k);
       if (!ownedTile(x, y)) err = notMine(x, y);
@@ -491,7 +495,7 @@ function groupErrors(hx, hy) {
     errs.set(it, err);
     first = first || err;
   }
-  } finally { for (const k of probe) state.roofs.delete(k); PLANNED = planned0; }
+  } finally { for (const k of probe) state.roofs.delete(k); PLANNED = planned0; BK_GROUP = grp0; }
   return { ox, oy, errs, first };
 }
 function dropGroup(hx, hy) {
@@ -1121,7 +1125,9 @@ const undoStr = v => JSON.stringify(v, (key, val) => key === 'born' || key === '
 function undoSnap() {
   const maps = {};
   for (const [n, get] of Object.entries(UNDO_MAPS)) { const m = new Map(); for (const [k, v] of get()) m.set(k, undoStr(v)); maps[n] = m; }
-  return { money: state.money, res: { ...state.res }, claimed: new Set(state.claimed), maps };
+  // Brücken (160c C1): Stützen, die schon vor dem Schritt nicht standen (alter Stand: Linie/Weg auf der Kante) – das ↶ prüft nur neue
+  const bkHid = bkOn() ? new Map([...state.bruecken].map(([k, b]) => [k, bkSupports(b).filter(e => bkEdgeBlocker(...bkEdgeCells(...keyXY(k), b.ax, e)))])) : null;
+  return { money: state.money, res: { ...state.res }, claimed: new Set(state.claimed), maps, bkHid };
 }
 function undoCommit(s) {
   if (typeof cloudTouched === 'function') cloudTouched();          // Online-Speicher (Block 93): eigene Aktion
@@ -1135,7 +1141,7 @@ function undoCommit(s) {
   for (const r of Object.keys(state.res)) if (state.res[r] !== s.res[r]) dres[r] = state.res[r] - (s.res[r] || 0);
   if (undoCut) { undoCut = false; undoStack.length = 0; if (typeof updateUndoBtn === 'function') updateUndoBtn(); return; }   // z. B. Laternenfest: nicht zurückzukaufen
   if (!changes.length && !claimed.length) return;
-  undoStack.push({ changes, claimed, dm: state.money - s.money, dres });
+  undoStack.push({ changes, claimed, dm: state.money - s.money, dres, ...(s.bkHid && changes.some(c => c[0] === 'bruecken') ? { bkHid: s.bkHid } : {}) });
   if (undoStack.length > UNDO_MAX) undoStack.shift();
   if (typeof updateUndoBtn === 'function') updateUndoBtn();
 }
@@ -1202,7 +1208,8 @@ function undo() {
         const o = JSON.parse(b), art = bkArtOf(o);
         if (!UNDO_MAPS.bruecken().get(k) && (bkEndsOf(k, o).some(([ex, ey]) => lvBack(ex, ey) !== 1) || bkCellsOf(k, o).some(([cx, cy]) => lvBack(cx, cy) !== 0))) { fail('Geht nicht mehr – die Anhöhen der Brücke sind nicht mehr da'); return false; }
         const stand = !!UNDO_MAPS.bruecken().get(k);                       // steht sie schon: darunter ist alles geprüft, nur neue Stützen zählen (160c C1)
-        const neu = stand ? bkSupports(o).filter(e => !bkSupports(UNDO_MAPS.bruecken().get(k)).includes(e)) : bkSupports(o), [ox, oy] = keyXY(k);
+        const hid = (step.bkHid && step.bkHid.get(k)) || [];               // vor dem Schritt schon verdeckt (alter Stand): zählt nicht
+        const neu = (stand ? bkSupports(o).filter(e => !bkSupports(UNDO_MAPS.bruecken().get(k)).includes(e)) : bkSupports(o)).filter(e => !hid.includes(e)), [ox, oy] = keyXY(k);
         if ((!stand && bkCellsOf(k, o).some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return !(a && mine.has(a)) && bkUnderError(cx, cy); }))
           || neu.some(e => { const cs = bkEdgeCells(ox, oy, o.ax, e); return !cs.some(([cx, cy]) => { const a = COVER.get(cx + ',' + cy); return a && mine.has(a); }) && bkEdgeBlocker(...cs); })) { fail('Geht nicht mehr – unter der Brücke steht inzwischen etwas'); return false; }
       }

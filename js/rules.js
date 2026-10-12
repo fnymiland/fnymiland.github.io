@@ -2282,6 +2282,7 @@ function crossError(b, x, y, noCost) {
   if (!t) return 'Hier steht schon etwas';
   if (!available(b)) return `${ITEMS[b].name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (t.bridge) return 'Kein Übergang auf einer Brücke';
+  if (bkOn() && bkAt(x, y)) { const e = bkPlaceError(b, [[x, y]]); if (e) return e; }   // unter einer Brücke (160c C1): nicht längs durch eine Stütze
   const ra = railArms(x, y);
   if (ra.length > 2 || (ra.length === 2 && (ra[0][0] !== -ra[1][0] || ra[0][1] !== -ra[1][1]))) return 'Übergang nur über gerade Schienen';
   if (noCost) return null;

@@ -113,7 +113,7 @@ function bkUnderError(x, y) {
   for (const [vx, vy] of [[x, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]]) { const p = postAt(vx, vy); if (p && decoHeight(p.b, p.form) > brClear()) return `${ITEMS[p.b] ? ITEMS[p.b].name : 'Das'} ist zu hoch für unter die Brücke`; }
   return null;
 }
-let BK_PLAN_SAME = null;                                                  // beim Ziehen (planScan): Felder derselben Linie, die der Plan schon baut
+let BK_PLAN_SAME = null, BK_GROUP = null;                                // Ziehen (planScan) bzw. Gruppe ablegen (groupErrors): Felder, die gleich mitgebaut werden                                                  // beim Ziehen (planScan): Felder derselben Linie, die der Plan schon baut
 // Etwas unter einer Brücke bauen (placeError): nur Weg, Schiene, Tunnel und flaches Gelände; am Holzbock kein Weg, keine Schiene
 function bkPlaceError(b, fp, t = null) {                                   // t: getragenes/kopiertes Ding (✋, ⧉)
   if (!bkOn()) return null;
@@ -130,7 +130,8 @@ function bkPlaceError(b, fp, t = null) {                                   // t:
     if (b === 'weg' || b === 'schiene') for (const e of bkSupports(c.b)) {   // Stütze auf einer Kante dieses Felds (160c C1): nur quer darunter durch
       const [A, B2] = bkEdgeCells(c.x0, c.y0, c.b.ax, e), other = A[0] === x && A[1] === y ? B2 : B2[0] === x && B2[1] === y ? A : null;
       if (!other) continue;
-      if ((BK_PLAN_SAME && BK_PLAN_SAME.has(other[0] + ',' + other[1])) || (b === 'weg' ? bAt(...other) === 'weg' || crossingAt(...other) || wegAt(...other) != null : bAt(...other) === 'schiene')) return `Hier steht eine Stütze der Brücke – ${b === 'weg' ? 'der Weg' : 'das Gleis'} darf nur quer darunter durch`;
+      const ok2 = other[0] + ',' + other[1];
+      if ((BK_PLAN_SAME && BK_PLAN_SAME.has(ok2)) || (BK_GROUP && BK_GROUP[b] && BK_GROUP[b].has(ok2)) || (b === 'weg' ? bAt(...other) === 'weg' || crossingAt(...other) || wegAt(...other) != null : bAt(...other) === 'schiene')) return `Hier steht eine Stütze der Brücke – ${b === 'weg' ? 'der Weg' : 'das Gleis'} darf nur quer darunter durch`;
     }
   }
   return null;
@@ -176,7 +177,7 @@ function bkError(sp, art, noCost) {
     const e = bkUnderError(x, y);
     if (e) return e;
   }
-  for (const [ex, ey] of sp.ends) { const t = objAt(ex, ey); if (t && t.b === 'bergportal') return 'Hier sitzt ein Bergportal in der Wand – die Brücke läge auf seiner Öffnung'; }   // R9
+  for (const [x, y] of sp.gap) if (bpFronts(x, y).length) return 'Hier sitzt ein Bergportal in der Wand – die Brücke läge vor seiner Öffnung';   // R9, wie bpError
   const se = bkSupportsError(sp.x0 + ',' + sp.y0, { ax: sp.ax, n: sp.n, art });   // Stützen auf den Kanten (160c C1)
   if (se) return se;
   if (noCost) return null;
@@ -344,7 +345,10 @@ function bkRailCheck(x, y) {
   if (!available('schiene')) return { err: `Schiene: ${lockText('schiene').replace('🔒 ', 'erst mit ')}` };
   if (bkWegAny(c.b)) return { err: BK_BOTH };
   if (bkRailAt(c)) return c.b.gleis[c.i] === f ? { same: true } : { cost: 0, mat: {} };   // Gleis-Stil umstellen: kostenlos (wie am Boden)
-  if (!bkRailAny(c.b)) { const se = bkSupportsError(c.k, c.b, null, true); if (se) return { err: 'Mit Gleis braucht die Brücke mehr Stützen. ' + se }; }   // Holzviadukt: Bock an jeder Kante
+  if (!bkRailAny(c.b)) {                                                   // Holzviadukt: Bock an jeder Kante – nur die neuen Stützen zählen (alte Stände)
+    const old = bkSupports(c.b);
+    for (const e of bkSupports(c.b, null, true)) if (!old.includes(e)) { const se = bkEdgeBlocker(...bkEdgeCells(c.x0, c.y0, c.b.ax, e)); if (se) return { err: 'Mit Gleis braucht die Brücke mehr Stützen. ' + se }; }
+  }
   return { cost: ITEMS.schiene.cost, mat: { ...(ITEMS.schiene.mat || {}) } };
 }
 function bkLayRail(x, y) {

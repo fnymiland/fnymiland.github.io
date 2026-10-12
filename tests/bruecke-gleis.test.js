@@ -50,8 +50,11 @@ describe('Gleis aufs Deck', () => {
     game("bkDemolishAt(15, 12)");                                                           // Weg runter
     game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // unten quer ein Weg: die Böcke stehen auf den Kanten (160c C1)
     expect(game("bkRailCheck(15, 12).err")).toBeUndefined();
-    game("state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // längs 15–16: über die Kante, an der mit Gleis ein Bock stünde
+    game("state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");   // längs 15–16 (alter Stand: Stütze 2 steht dort schon nicht)
+    expect(game("bkRailCheck(15, 12).err")).toBeUndefined();                                   // nur neue Stützen zählen
+    game("(b => { b.bru = 'keine'; b.brp = { money: 180, bretter: 9, k: brSig(b, 'anhoehe') }; groundVersion++; })(state.bruecken.get('14,12'))");   // ohne Stützen: mit Gleis kämen welche dazu
     expect(game("bkRailCheck(15, 12).err")).toMatch(/mehr Stützen/);
+    game("(b => { delete b.bru; delete b.brp; groundVersion++; })(state.bruecken.get('14,12'))");
     game("state.tiles.delete('15,12'); state.tiles.delete('16,12'); groundVersion++; recalc()");
     plan('schiene', { x: 12, y: 12 }, { x: 18, y: 12 }); run();
     expect(game("bkRailAny(state.bruecken.get('14,12'))")).toBe(true);

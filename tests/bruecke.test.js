@@ -270,3 +270,27 @@ describe('Schatten und Anschluss am Bogen (160c C2g)', () => {
     expect(game('brClear()')).toBe(game('BK_CLEAR'));
   });
 });
+
+// 160c C1 gegengelesen: Lücken in der Stützenregel (Übergang, Gruppe, Bergportal, alte Stände bei ↶ und Gleis)
+describe('Stützen gegengelesen (160c C1)', () => {
+  it('Bahnübergang unter dem Deck: kein Weg längs durch eine Stütze; Gruppe zählt ihre Wege mit', () => {
+    plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run();                               // Holz, 3 Felder: Kanten 14|15, 15|16
+    game("state.techs.add('bahn'); for (const y of [11, 12, 13]) state.tiles.set('15,' + y, { b: 'schiene', lvl: 1 }); state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
+    expect(game("crossError('weg', 15, 12, true)")).toMatch(/Stütze der Brücke/);
+    game("state.tiles.delete('14,12'); groundVersion++; recalc()");
+    expect(game("crossError('weg', 15, 12, true)")).toBe(null);                              // quer allein: geht
+    expect(game("(() => { BK_GROUP = { weg: new Set(['15,12']), schiene: new Set() }; try { return placeError('weg', 16, 12); } finally { BK_GROUP = null; } })()")).toMatch(/Stütze der Brücke/);
+  });
+  it('Bergportal: die Brücke nie vor seine Öffnung (wie bpError)', () => {
+    const e = game(`(() => { const f = bpFronts; bpFronts = (x, y) => x === 15 && y === 12 ? [[15, 11]] : []; try { setTool('bruecke'); startPlan('line', { x: 12, y: 12 }, { x: 18, y: 12 }, false); return planInfo(plan).firstErr; } finally { bpFronts = f; } })()`);
+    expect(e).toMatch(/Bergportal/);
+  });
+  it('alter Stand (Zaun auf der Stützenkante): Art wechseln und ↶ geht, Gleis aufs Deck auch – nur neue Stützen zählen', () => {
+    game("state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz' }); state.edges.set(edgeBetween(14, 12, 15, 12), { b: 'zaun', style: 'holz' }); state.techs.add('bahn'); groundVersion++; recalc(); resetUndo()");
+    expect(game("bkRailCheck(15, 12).err")).toBeUndefined();                                // Holz n 3: Fußgänger [1, 2] = Bahn [1, 2]
+    expect(game("undoable(() => bkSetArt('14,12', 'stahl'))")).toBe(true);
+    expect(game('undo()')).toBe(true);
+    expect(game("state.bruecken.get('14,12').art")).toBe('holz');
+    expect(game("state.edges.has(edgeBetween(14, 12, 15, 12))")).toBe(true);
+  });
+});
