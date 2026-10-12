@@ -88,11 +88,30 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
 }
 function bkGroup(x, y, px, py, z, gruppen) {
-  const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass
-  const f = () => { const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A; try { for (const gr of gruppen) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; } };
+  const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)
+  const live = gruppen.filter(gr => !(SPRITES_ON && !fade && spriteBridge(x, y, px, py, z, gr)));   // weit weg: Bildchen (im GL-Standbild ruhend)
+  if (!live.length) return;
+  const f = () => { const a0 = g.globalAlpha; if (fade) g.globalAlpha = a0 * SEE_A; try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; } };
   if (!GLPASS) return f();
-  const [l, u, r, d] = bkBoxOf(gruppen);
+  const [l, u, r, d] = bkBoxOf(live);
   glLive(px, py, l * z, u * z, r * z, d * z, f);
+}
+// Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch). Ohne Licht im Schlüssel:
+// die Brücken haben noch keins (ein Test hält das fest) – kommt es in C, dann keyOf(lit) + prewarm wie spriteArchBridge (Regel 143)
+function spriteBridge(x, y, px, py, z, gruppe) {
+  const zs = spriteStep(z), key = `br|${x},${y}|${gruppe}|${FOG ? 1 : 0}`, fog = FOG, [l, u, , d] = brBox(gruppe);
+  const make = () => {
+    const sp = paintSprite(l * zs, u * zs, d * zs, () => {
+      const pf = FOG; FOG = fog;
+      try { bkDrawLagen(x, y, 0, 0, zs, gruppe); } finally { FOG = pf; }
+    });
+    if (sp) sp.z = zs;
+    return sp;
+  };
+  const e = getSprite(key, zs, make, groundVersion);
+  if (!e) return false;
+  putSprite(e, px, py, z);
+  return true;
 }
 // Bewegtes auf einem Brückenfeld: 'B' hinter dem Deck, 'U' darunter, 'F' davor (Querlage s, nur Figuren und Tiere; Fahrzeuge immer U)
 function bkMoverClass(m, c, x, y) {
@@ -117,7 +136,7 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
     const fog = FOG;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
     FOG = !ownedTile(x, y); GLOW_MUTE = true;
-    try { for (const gr of gruppen) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
+    try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr))) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
     finally { GLOW_MUTE = false; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();

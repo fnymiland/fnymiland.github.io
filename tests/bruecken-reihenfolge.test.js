@@ -67,3 +67,27 @@ describe('Brücke: ruhend in tileA, nachgemalt in tileB (160c B2)', () => {
     expect(log.filter(e => / 15,12/.test(e) && /^(h|vd|o) /.test(e)).map(e => e.split(' ')[0])).toEqual(['h', 'vd', 'o']);
   });
 });
+
+// 160c B2c: weit weg drei Bildchen je Brückenfeld (h | vd | o) – im GL-Standbild ruhend; tileB schlägt sie beim Nachmalen nur nach
+describe('Brücke weit weg als Bildchen (160c B2c)', () => {
+  const far = () => game("(() => { cam.z = 0.5; lastZoom = 0.5; lastZoomChange = -1e9; const p = iso(15, 12); cam.x = p.x; cam.y = p.y; spriteForce = null; })()");
+  it('je Feld und Gruppe ein Bildchen der aktuellen Fassung, ohne Licht; das nächste Bild malt nichts live und nichts neu', () => {
+    scene(0);
+    far();
+    game('spriteNoBudget = true; render(1e6); spriteNoBudget = false');
+    const keys = game("[...objSprites.entries()].filter(([k]) => k.startsWith('br|')).map(([k, e]) => [k, e.ver === groundVersion, e.glows.length])");
+    for (const x of [14, 15, 16]) for (const gr of ['h', 'vd', 'o']) expect(keys.some(([k]) => k === `br|${x},12|${gr}|0`)).toBe(true);
+    expect(keys.every(([, v, gl]) => v && gl === 0)).toBe(true);
+    const r = game(`(() => { const bl = bkDrawLagen; let live = 0; bkDrawLagen = (...a) => { if (!SPRITE_PAINT) live++; return bl(...a); };
+      const br = () => [...objSprites.entries()].filter(([k]) => k.startsWith('br|')), m0 = br(); walkers.push({ fur: '#fff', shirt: '#f00', id: 'U', px: 15, py: 12, kind: 0, speed: 0.4, wait: 1 });
+      try { render(1e6 + 16); } finally { bkDrawLagen = bl; walkers.length = 0; } const m1 = br(); return [live, m1.length === m0.length && m1.every(([k, e], i) => m0[i][0] === k && m0[i][1] === e) ? 0 : 1]; })()`);
+    expect(r).toEqual([0, 0]);                                                                // auch das Nachmalen unter der Figur nur aus den Bildchen
+  });
+  it('blass (👁) immer live, nie aus dem Bildchen', () => {
+    scene(0); far();
+    game('setSeeThrough(true)');
+    const live = game(`(() => { const bl = bkDrawLagen; let n = 0; bkDrawLagen = (...a) => { if (!SPRITE_PAINT) n++; return bl(...a); };
+      try { spriteNoBudget = true; render(1e6); spriteNoBudget = false; } finally { bkDrawLagen = bl; setSeeThrough(false); } return n; })()`);
+    expect(live).toBeGreaterThanOrEqual(9);
+  });
+});
