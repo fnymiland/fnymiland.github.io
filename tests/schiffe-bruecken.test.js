@@ -123,3 +123,34 @@ describe('Schiffe unter Anhöhen-Brücken (160c C10)', () => {
     expect(game(`!!bkAt(${w[0]}, ${w[1]})`)).toBe(false);
   });
 });
+
+// 160c C10 (Nutzer 12.10.2026: „das Boot fährt hinter dem Pfeiler, es sollte vor dem linken fahren“): Stütze/Pfeiler/Bock an der Anfangskante
+// eines Felds liegt hinter einem Boot unter der Feldmitte – beim Nachmalen von vd über dem Boot wird dieser Streifen ausgespart
+describe('Boot vor der Stütze an der Anfangskante (160c C10)', () => {
+  const szene = (ax) => game(`(() => {
+    for (let y = 30; y <= 50; y++) for (let x = 30; x <= 60; x++) state.terra.set(x + ',' + y, 'water');
+    for (let a = 38; a <= 42; a++) for (let b = 30; b <= 60; b++) { const [x, y] = ${ax} ? [a, b] : [b, a], k = x + ',' + y; state.claimed.add(k); if (b < 44 || b > 46) state.terra.set(k, 'grass'); }
+    for (let a = 38; a <= 42; a++) for (const b of [40, 41, 42, 43, 47, 48, 49, 50]) state.hills.set((${ax} ? a + ',' + b : b + ',' + a), { w: 0 });
+    state.bruecken.set(${ax} ? '40,44' : '44,40', { ax: ${ax}, n: 3, art: 'holz' });
+    terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); groundVersion++; recalc(); })()`);
+  const redo = (ax, s) => game(`(() => { const rd = bkRedo, out = []; bkRedo = (x, y, px, py, z, now, rect, gr, slots, cut) => {
+      const gr0 = g.rect, clips = []; g.rect = function (...r) { clips.push(r); return gr0.apply(this, r); };
+      try { return rd(x, y, px, py, z, now, rect, gr, slots, cut); } finally { g.rect = gr0; out.push([gr.join(), clips[0] ? [clips[0][0], clips[0][1], clips[0][0] + clips[0][2], clips[0][1] + clips[0][3]] : null, px, z, !!cut]); } };
+    const S0 = shipMovers; shipMovers = () => [{ boat: true, ship: 'dampfer', px: ${ax} ? 40 + ${s} : 45, py: ${ax} ? 45 : 40 + ${s}, du: ${ax} ? 1 : 0, dv: ${ax} ? 0 : 1 }];
+    try { cam = state.cam; cam.z = 2; const p = iso(${ax} ? 40 : 45, ${ax} ? 45 : 40); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); }
+    finally { bkRedo = rd; shipMovers = S0; } return out.filter(o => o[0] === 'vd'); })()`);
+  it('Ost-West und Nord-Süd: unter der Mitte die Anfangskante ausgespart, hinter der Brücke nicht', () => {
+    for (const ax of [0, 1]) {
+      szene(ax);
+      const v = redo(ax, 0.2);
+      expect(v.length, 'ax ' + ax).toBe(1);
+      const [, R, px, z] = v[0];
+      if (ax) expect(R[2]).toBeLessThanOrEqual(px + 25.5 * z + 1e-6); else expect(R[0]).toBeGreaterThanOrEqual(px - 25.5 * z - 1e-6);
+      expect(v[0][4]).toBe(true);
+      const b = redo(ax, -0.45)[0];                                                               // hinter der Stütze (s < −0,16): ganz nachmalen
+      expect(b[4]).toBe(false);
+      if (ax) expect(b[1][2]).toBeGreaterThan(b[2] + 25.5 * b[3]); else expect(b[1][0]).toBeLessThan(b[2] - 25.5 * b[3]);
+      game("state.bruecken.clear(); state.hills.clear()");
+    }
+  });
+});

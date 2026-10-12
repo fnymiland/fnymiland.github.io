@@ -218,8 +218,11 @@ function bkMoverRect(ms, z, lift = 0) {
   return R;
 }
 // Nachmalen (tileB): Gruppen und Deko-Plätze, beschnitten auf rect ∩ Rahmen der Gruppen
-function bkRedo(x, y, px, py, z, now, rect, gruppen, slots) {
-  const [l, u, r, d] = bkBoxOf(gruppen, bkAt(x, y)), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
+// cut (160c C10): Streifen der Anfangskante (Stütze, Bock, Pfeilerstirn bei s = W) auslassen – er liegt hinter einem Boot unter der Feldmitte
+const BK_START_CUT = 25.5;                                                 // Feldmitte bis rechts neben die Stütze bzw. Pfeilerstirn der Anfangskante (× z)
+function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false) {
+  const c0 = bkAt(x, y), [l, u, r, d] = bkBoxOf(gruppen, c0), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
+  if (cut && c0) { if (c0.b.ax) R[2] = Math.min(R[2], px + BK_START_CUT * z); else R[0] = Math.max(R[0], px - BK_START_CUT * z); }
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
     const fog = FOG, gm = GLOW_MUTE;
@@ -245,16 +248,19 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
   if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
-  const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || U.length ? bkMoverRect(B.concat(U), z) : null;
+  const boatMid = m => m.boat && (c.b.ax ? m.px - x : m.py - y) > -0.16;   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
+  const Ub = U.filter(boatMid), Ur = U.filter(m => !boatMid(m));
+  const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
   draw(B);
   if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under);
   draw(U);
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
+  if (rUb) bkRedo(x, y, px, py, z, now, rUb, ['vd'], null, true);
   glass('t1');
   deck();
   const rF = figs ? bkMoverRect(figs, z) : null;                         // oben auf dem Deck: eine Anhöhe höher; darunter/dahinter nur der eigene Rahmen (C7, L6)
   if (rF) rF[1] -= HILL_H * z;
-  const rAll = rBU && rF ? [Math.min(rBU[0], rF[0]), Math.min(rBU[1], rF[1]), Math.max(rBU[2], rF[2]), Math.max(rBU[3], rF[3])] : rBU || rF;
+  const rs = [rBU, rUb, rF].filter(Boolean), rAll = rs.length ? rs.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]) : null;   // o: über alles Bewegte
   if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front);
   glass('t2');
   draw(F);
