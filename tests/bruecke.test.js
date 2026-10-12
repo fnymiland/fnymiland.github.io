@@ -722,6 +722,8 @@ describe('Brücke per Linie (160c C9)', () => {
     run();
     expect(game("(() => { setTool('schiene'); startPlan('line', { x: 11, y: 10 }, { x: 19, y: 10 }, false); const G = planInfo(plan).bkGhost; plan = null; return [bkRailArms(G.get('14,10')).length, bkRailArms(G.get('16,10')).length]; })()")).toEqual([2, 2]);   // Geist: kein Prellbock an den Enden
     expect(game("[state.bruecken.get('14,12').gleis, bkFam(state.bruecken.get('14,12')), bkSupports(state.bruecken.get('14,12')), bkRailJumps(13, 12)]")).toEqual([[0, 0, 0], 'bahn', [1, 2], [[17, 12]]]);
+    game("state.tiles.set('13,10', { b: 'haus', lvl: 1 }); groundVersion++; recalc()");             // Endfeld oben rot: dort kein Anschluss im Geist (wie gebaut)
+    expect(game("(() => { setTool('schiene'); startPlan('line', { x: 11, y: 10 }, { x: 19, y: 10 }, false); const G = planInfo(plan).bkGhost; plan = null; return [bkRailArms(G.get('14,10')).length, bkRailArms(G.get('16,10')).length]; })()")).toEqual([1, 2]);
     nordSued();
     expect(planX('schiene', { x: 24, y: 5 }, { x: 24, y: 13 })).toMatchObject({ bk: [{ mat: 'holz', n: 3 }], bkErr: null });
     run();
@@ -750,6 +752,9 @@ describe('Brücke per Linie (160c C9)', () => {
     expect(planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 }).bkErr).toMatch(/kein Platz für: Haus/);
     game("state.tiles.delete('15,10'); state.terra.set('15,10', 'forest'); groundVersion++; recalc()");
     expect(planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 }).bkErr).toMatch(/erst roden/);
+    game("for (const x of [11, 12, 13, 17, 18, 19]) build('weg', x, 10, true); recalc()");          // oben schon alles da: nur die Lücke – Grund trotzdem im Schild
+    const z0 = planX('weg', { x: 11, y: 10 }, { x: 19, y: 10 });
+    expect(z0.n).toBe(0); expect(z0.text).toMatch(/erst roden/);
   });
   it('still unten wie heute: Lücke länger als 8; Brücke liegt schon: nur das Deck', () => {
     luecke(9);
@@ -766,12 +771,12 @@ describe('Brücke per Linie (160c C9)', () => {
     run();
     expect(game("[state.bruecken.get('14,12').art, state.bruecken.get('14,12').brp]")).toEqual(JSON.parse(`[${JSON.stringify(JSON.parse(b0).art)}, ${JSON.stringify(JSON.parse(b0).brp)}]`));
   });
-  it('Vorschau: Geist der Brücke in tileA, ohne Bau; Antippen auf den Geist baut (Touch, stehende Vorschau)', () => {
-    const r = game(`(() => { const out = [], gd = bkDrawGhost; bkDrawGhost = (x, y, ...a) => { out.push(x + ',' + y); return gd(x, y, ...a); };
+  it('Vorschau: Geist der Brücke in einem Stück (einmal je Bild, auch wenn das letzte Feld nicht im Bild liegt: erstes Feld bei x ≈ 1000), ohne Bau; Antippen auf den Geist baut', () => {
+    const r = game(`(() => { const out = [], gd = bkDrawGhost; bkDrawGhost = (c, ...a) => { out.push(c.k + ':' + c.i); return gd(c, ...a); };
       setTool('weg'); startPlan('line', { x: 11, y: 12 }, { x: 19, y: 12 }, false); const gv = groundVersion;
-      try { cam.z = 2; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; render(1e6); } finally { bkDrawGhost = gd; }
-      return [out.sort(), state.bruecken.size, groundVersion === gv]; })()`);
-    expect(r).toEqual([['14,12', '15,12', '16,12'], 0, true]);
+      try { cam.z = 2; const p = iso(15, 12); cam.x = p.x; cam.y = p.y - HILL_H; render(1e6); cam.z = 5; const q = iso(14, 12); cam.x = q.x - 97.6; cam.y = q.y - HILL_H; render(1e6 + 16); } finally { bkDrawGhost = gd; }
+      return [out, state.bruecken.size, groundVersion === gv]; })()`);
+    expect(r).toEqual([['14,12:2', '14,12:2'], 0, true]);
     const t = game(`(() => { setTool('weg'); startPlan('line', { x: 11, y: 12 }, { x: 19, y: 12 }, true); cam.z = 2; const p0 = iso(15, 12); cam.x = p0.x; cam.y = p0.y;
       const p = toScreen(15, 12), h = HILL_H + brPeak('fuss', 3); return bkPick(p.x, p.y - h * cam.z); })()`);
     expect(t).toMatchObject({ x: 15, y: 12, deck: true });

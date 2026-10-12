@@ -390,7 +390,7 @@ function bkPlanNew(p, tool) {
     let err = bkError(sp, look, true);                                      // Fußgänger-Bogen, wie das Werkzeug
     if (!err) { const c0 = cells.values().next().value, r = (tool === 'weg' ? bkWegCheck : bkRailCheck)(c0.x0 + c0.dx * c0.i, c0.y0 + c0.dy * c0.i, c0); if (r.err) err = r.err; }   // Trittsteine, Bahn-Böcke, Viadukt
     const gb = { ...b, ...(tool === 'weg' ? { weg: Array(sp.n).fill(currentStyle('weg')) } : { gleis: Array(sp.n).fill(decoLookNew('schiene').form || 0) }) }, G = bkGeom(gb);
-    const ghost = new Map([...cells].map(([k, c]) => [k, { ...c, b: gb, G, ghost: true }]));   // ghost: die Linie reicht auf beide Anhöhen (Gleis angeschlossen)
+    const ghost = new Map([...cells].map(([k, c]) => [k, { ...c, b: gb, G, ghost: { lo: true, hi: true } }]));   // ghost: Gleisanschluss oben an den Enden (planScan setzt ihn nach dem Prüfen)
     out.push({ sp, look, cells, ghost, err, price: bkPrice(look, sp.n) });
   }
   return out;
@@ -449,7 +449,7 @@ function bkRailArms(c) {                                                   // Ar
   const out = [];
   for (const sg of [-1, 1]) {
     const j = c.i + sg, nx = c.x0 + c.dx * j, ny = c.y0 + c.dy * j;
-    if (j >= 0 && j < c.b.n ? c.b.gleis[j] != null : c.ghost || (railTileAt(nx, ny) && hillLevel(nx, ny) >= 1)) out.push([c.dx * sg, c.dy * sg]);   // Geist (160c C9): die Linie baut oben mit
+    if (j >= 0 && j < c.b.n ? c.b.gleis[j] != null : c.ghost ? c.ghost[sg < 0 ? 'lo' : 'hi'] : railTileAt(nx, ny) && hillLevel(nx, ny) >= 1) out.push([c.dx * sg, c.dy * sg]);   // Geist (160c C9): baut die Linie oben mit?
   }
   return out;
 }

@@ -142,6 +142,12 @@ function planScan(p) {
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
   }
   const ok = neu.filter(N => !N.err);                                    // zuerst die Brücken bauen (bezahlt mit vollem Geld), dann das Deck
+  for (const N of ok) {                                                  // Geist: Gleisanschluss oben nur, wo das Endfeld gebaut wird bzw. schon so ist
+    const [[ax, ay], [bx, by]] = N.sp.ends, on = ([x, y]) => { const st = states.get(x + ',' + y); return st === 'ok' || st === 'same'; };
+    const lo = N.sp.ax ? (ay < by ? [ax, ay] : [bx, by]) : (ax < bx ? [ax, ay] : [bx, by]), hi = lo[0] === ax && lo[1] === ay ? [bx, by] : [ax, ay];
+    const ends = { lo: on(lo), hi: on(hi) };
+    for (const c of N.ghost.values()) c.ghost = ends;
+  }
   for (const N of ok) { order.unshift([N.sp.x0, N.sp.y0, () => bkBuild(N.sp, N.look)]); cost += N.price.cost; for (const [r, v] of Object.entries(N.price.mat)) mat[r] = (mat[r] || 0) + v; }
   const bad = [...states.values()].filter(s => s === 'bad').length, bkErr = (neu.find(N => N.err) || {}).err || null;
   const bkGhost = ok.length ? new Map(ok.flatMap(N => [...N.ghost])) : null;
@@ -319,7 +325,7 @@ function planText(p, info) {
   }
   if (matText(info.mat)) parts.push(matText(info.mat));
   if (info.bad) parts.push(`${info.bad} ${info.bad === 1 ? 'geht' : 'gehen'} nicht`);
-  if (info.err) return info.n ? `${info.err} · ${parts.join(' · ')}` : info.err;
+  if (info.err) return info.n ? `${info.err} · ${parts.join(' · ')}` : info.bkErr && info.bkErr !== info.err ? `${info.err} · 🌉 ${info.bkErr}` : info.err;   // Grund der roten Lücke (160c C9)
   const verb = p.erase ? 'entfernen' : p.tool === 'abriss' ? 'abreißen' : 'bauen';
   parts.push(planTouch ? `${p.kind !== 'rect' ? 'nochmal tippen' : 'hineintippen'}: ${verb}` : `${p.fixed ? 'hineinklicken' : 'Klick'}: ${verb}`);
   return parts.join(' · ');

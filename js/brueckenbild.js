@@ -156,13 +156,18 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
 }
-// Geist einer Brücke, die eine Weg-/Gleislinie mitbaut (160c C9): gedachte Zelle c (bkPlanNew), alle Lagen auf einer Zwischenleinwand, 65 %,
-// ohne Licht; danach die Plan-Rauten auf dem Deck
-function bkDrawGhost(x, y, px, py, z, c) {
-  const A = bkTileArgs(c, px, py, z), [l, u, r, d] = bkBoxOf(['h', 'vd', 'o'], c);
-  ghostPaint(px - l * z, py - u * z, (l + r) * z, (u + d) * z, 0.65, () => bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }));
-  const marks = DECK_MARKS && DECK_MARKS.get(x + ',' + y);
-  if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
+// Geist einer Brücke, die eine Weg-/Gleislinie mitbaut (160c C9): alle Felder der gedachten Brücke (bkPlanNew) in Feldfolge auf EINE
+// Zwischenleinwand (sonst lägen die Feldüberlappungen ext doppelt), 65 %, ohne Licht – gemalt beim letzten Feld (render.js), danach die
+// Plan-Rauten auf dem Deck. Einmal je Bild (PLAN_GHOST_DONE)
+function bkDrawGhost(last, z) {
+  if (PLAN_GHOST_DONE) { if (PLAN_GHOST_DONE.get(last.k) === true) return; PLAN_GHOST_DONE.set(last.k, true); }
+  const cells = [...PLAN_GHOST.values()].filter(c => c.k === last.k).sort((a, b) => a.i - b.i).map(c => {
+    const x = c.x0 + c.dx * c.i, y = c.y0 + c.dy * c.i, p = toScreen(x, y), [l, u, r, d] = bkBoxOf(['h', 'vd', 'o'], c);
+    return { c, x, y, px: p.x, py: p.y, R: [p.x - l * z, p.y - u * z, p.x + r * z, p.y + d * z] };
+  });
+  const R = cells.reduce((m, q) => [Math.min(m[0], q.R[0]), Math.min(m[1], q.R[1]), Math.max(m[2], q.R[2]), Math.max(m[3], q.R[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => { for (const q of cells) { const A = bkTileArgs(q.c, q.px, q.py, z); bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }); } });
+  for (const q of cells) { const marks = DECK_MARKS && DECK_MARKS.get(q.x + ',' + q.y); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
 function bkGroup(x, y, px, py, z, gruppen) {
   const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)

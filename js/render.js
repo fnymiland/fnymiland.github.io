@@ -1318,19 +1318,24 @@ function tileSprite(kind, x, y, px, py, z) {
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
 let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
-let PLAN_GHOST = null;                                                   // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle) – Geist in tileA
+let PLAN_GHOST = null, PLAN_GHOST_DONE = null;                           // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle); je Bild gemalt
 // Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
-// sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten
+// sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten. Eine Leinwand, die nur wächst (wie hillSpillCv),
+// Ecke auf ganze Gerätepunkte (sonst weich und das Glasband rastet falsch ein)
+let ghostCv = null;
 function ghostPaint(x0, y0, w, h, alpha, fn) {
-  const W = Math.max(1, Math.ceil(w * DPR)), H = Math.max(1, Math.ceil(h * DPR)), c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const cx = c.getContext('2d'), a0 = g.globalAlpha;
-  if (!cx) { freeCanvas(c); g.globalAlpha = a0 * alpha; try { fn(); } finally { g.globalAlpha = a0; } return; }   // kein Speicher: direkt
+  const X0 = Math.floor(x0 * DPR) / DPR, Y0 = Math.floor(y0 * DPR) / DPR, W = Math.max(1, Math.ceil((w + x0 - X0) * DPR)), H = Math.max(1, Math.ceil((h + y0 - Y0) * DPR)), a0 = g.globalAlpha;
+  if (!ghostCv || ghostCv.width < W || ghostCv.height < H) {
+    const c = document.createElement('canvas'); c.width = Math.max(W, ghostCv ? ghostCv.width : 0); c.height = Math.max(H, ghostCv ? ghostCv.height : 0);
+    if (ghostCv) freeCanvas(ghostCv);
+    ghostCv = c.getContext('2d') ? c : null;
+  }
+  const cx = ghostCv && ghostCv.getContext('2d');
+  if (!cx) { g.globalAlpha = a0 * alpha; try { fn(); } finally { g.globalAlpha = a0; } return; }   // kein Speicher: direkt
   const prev = g;
   g = cx;
-  try { g.setTransform(DPR, 0, 0, DPR, -x0 * DPR, -y0 * DPR); fn(); } finally { g = prev; }
-  g.globalAlpha = a0 * alpha; g.drawImage(c, x0, y0, W / DPR, H / DPR); g.globalAlpha = a0;
-  freeCanvas(c);
+  try { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(DPR, 0, 0, DPR, -X0 * DPR, -Y0 * DPR); fn(); } finally { g = prev; }
+  g.globalAlpha = a0 * alpha; g.drawImage(ghostCv, 0, 0, W, H, X0, Y0, W / DPR, H / DPR); g.globalAlpha = a0;
 }
 // Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
 const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
@@ -1384,7 +1389,7 @@ function hillFrame(x0, y0, x1, y1, style) {
 // Vorschau einer Linie bzw. eines Rechtecks: grün = wird gebaut, rot = geht nicht, hell = ist schon so
 function planPreview(z) {
   const info = planInfo(plan), ins = 0.44;
-  PLAN_GHOST = info.bkGhost || null;
+  PLAN_GHOST = info.bkGhost || null; PLAN_GHOST_DONE = PLAN_GHOST ? new Map() : null;
   const dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
     const cs = [[-ins, -ins], [ins, -ins], [ins, ins], [-ins, ins]], K = hOf ? 4 : 1;                 // hOf: Höhe auf dem Deck (Bogen, 160c C2) – Seiten unterteilt
     const c = cs.flatMap(([u0, v0], j) => { const [u1, v1] = cs[(j + 1) % 4]; return Array.from({ length: K }, (_, q) => { const u = u0 + (u1 - u0) * q / K, v = v0 + (v1 - v0) * q / K, p = toScreen(x + u, y + v); if (hOf) p.y -= hOf(u, v) * z; return p; }); });
@@ -2132,7 +2137,7 @@ function render(now) {
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
       if (!bkDone) bkDrawStill(x, y, px, py, z, now, bc, null);           // Rückfall (alte Daten: anderes Ding unter dem Deck) – die Brücke fehlt nie
-      else if (!bc && PLAN_GHOST && PLAN_GHOST.has(k)) bkDrawGhost(x, y, px, py, z, PLAN_GHOST.get(k));   // Brücke, die die Linie mitbaut (160c C9)
+      else if (!bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
@@ -2232,8 +2237,9 @@ function render(now) {
     tileB(x, y, px, py);
   }
   FOG = false;
+  if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);   // letztes Feld nicht im Bild: danach
   archWalkers.clear();
-  HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; hillGap = null;                 // Anhöhen-Vorschau nur für dieses Bild (Block 157)
+  HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 
