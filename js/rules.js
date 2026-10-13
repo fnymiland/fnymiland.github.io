@@ -1925,7 +1925,7 @@ function wbGeom(x, y, A, ax) {
   const hf = A ? t => archDeck(A, t + 0.5) : t => { const j = t - vA; return Math.max(0, Math.min(lift, S.landA ? lift * (j + 0.5) / 0.3 : lift, S.landB ? lift * (S.N - 0.5 - j) / 0.3 : lift)); };
   const supports = mat !== 'holz' ? [] : [...brSupports({ ...look, mat: 'holz', fam: 'fuss' }, S.N).map(k => k + vA), ...(oA ? [vA] : []), ...(oB ? [S.N + vA] : [])].filter(k => hf(k - 0.5) >= 2);
   const lastB = oB && S.i0 === S.N - 1;
-  return { look, mat, art: mat, fam: 'fuss', S, oA, oB, vA, n, i, t0: i - 0.5, t1: i + 0.5, first: oA && S.i0 === 0, lastB, latB, latF, depth, lift, hf, supports,
+  return { look, mat, art: mat, fam: 'fuss', anker: brSpanAnchor(bridgeSpan(x, y)).join(','), S, oA, oB, vA, n, i, t0: i - 0.5, t1: i + 0.5, first: oA && S.i0 === 0, lastB, latB, latF, depth, lift, hf, supports,
     endPost: mat === 'holz' && lastB, startPost: supports.includes(i), ext: S.i0 < S.N - 1 ? 0.012 : 0 };
 }
 // Richtung einer Brücke (0: längs u/x, 1: längs v/y): die Achse, an deren Enden Land liegt; sonst die längere Reihe Brückenfelder.
@@ -2864,6 +2864,17 @@ function computePower(lines, supply, plants = 0) {
     const bl = [];                                                       // je Feld wie eine Laterne; ein Feld im dunklen Block macht die ganze Brücke dunkel
     for (const k of [...state.bruecken.keys()].sort()) { const b = state.bruecken.get(k); if (brLook(b, 'anhoehe').licht === 'an') for (let i = 0; i < b.n; i++) bl.push('B' + k); }
     for (let i = 0; i < bl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) bl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
+  }
+  if (city) {                                                            // Wasser-Wegbrücken (160c D3c): je Spanne 'W' + Anker, je Feld wie eine Laterne, nach dem Anhöhen-Licht
+    const wl = [], seen = new Set(), keys = [];
+    for (const [k, t] of state.tiles) if (isWegBridge(t)) keys.push(k);
+    for (const k of keys.sort()) {
+      if (seen.has(k)) continue;
+      const [x, y] = keyXY(k), cs = bridgeSpan(x, y);
+      for (const c of cs) seen.add(c[0] + ',' + c[1]);
+      if (brSpanLook(x, y).licht === 'an') { const a = 'W' + brSpanAnchor(cs).join(','); for (let i = 0; i < cs.length; i++) wl.push(a); }
+    }
+    for (let i = 0; i < wl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) wl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
   }
   return { supply, demand, left, dark, idle, trains, city, use };
 }

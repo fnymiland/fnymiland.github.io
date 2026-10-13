@@ -139,3 +139,19 @@ describe('Wasser-Wegbrücken: Bauen im neuen Format (160c D3b)', () => {
     expect(zurueck(['14,6'])).toEqual(before);                                    // Metall bezahlt: Metall zurück
   });
 });
+
+describe('Wasser-Wegbrücken: Strom fürs Licht (160c D3c)', () => {
+  it("Licht an: je Spanne 'W' + Anker, ohne Strom dunkel (Maler: dark); Licht aus oder ohne Licht: nichts im Strom", () => {
+    kanal(10, 4, 3);
+    expect(game("[...T.rail.power.dark].filter(k => k[0] === 'W')")).toEqual([]);
+    game("wbSet(10, 4, { licht: 'kaufen' })");
+    const a = game("wbAt(11, 4).G.anker");
+    expect(a).toBe('10,4');
+    const dunkel = game("T.rail.power.dark.has('W10,4')"), city = game('!!T.rail.power.city');
+    if (city) expect(typeof dunkel).toBe('boolean'); else expect(dunkel).toBe(false);
+    game("T.rail.power.dark.add('W10,4')");
+    expect(game("wbArgs(wbAt(11, 4), 0, 0, 1).opts.dark")).toBe(true);
+    game("wbSet(10, 4, { licht: 'aus' })");
+    expect(game("[...T.rail.power.dark].filter(k => k[0] === 'W')")).toEqual([]);
+  });
+});

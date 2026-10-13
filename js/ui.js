@@ -2101,7 +2101,7 @@ function powerStatus() {
   if (P.use.trains) parts.push(`Züge ${P.use.trains}`);
   if (P.use.brlicht) parts.push(`Brückenlicht ${P.use.brlicht}`);
   const out = [`<div class="${P.demand > P.supply + 1e-9 ? 'bad' : 'ok'}">⚡ Strom: ${fmtPow(P.supply)} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
-  const db = [...P.dark].filter(k => k[0] === 'B').length, dl = P.dark.size - db;   // Brücken ('B' + Anker, 160c C7) eigens
+  const db = [...P.dark].filter(k => k[0] === 'B' || k[0] === 'W').length, dl = P.dark.size - db;   // Brücken ('B' + Anker, 160c C7; Wasser 'W', D3c) eigens
   if (dl) out.push(`<div class="bad">🌙 ${dl} ${dl === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
   if (db) out.push(`<div class="bad">🌉 ${db} ${db === 1 ? 'Brücke bleibt' : 'Brücken bleiben'} nachts dunkel</div>`);
   if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);

@@ -533,7 +533,7 @@ function wbArgs(c, px, py, z) {
   const P = (tt, s, h) => Pw(tt - tc, sq(s), Math.max(h, WB_WATER));       // nie unter die Wasserfläche
   const H = a => G.hf(tc + a), weg = stein || L.deck === 'belag';
   const opts = { fam: 'fuss', ax, hf: G.hf, foot: () => WB_WATER, gl: () => -1, supports: G.supports, ext: G.ext, col: L.col, plank: L.plank,
-    licht: L.licht || null, dark: false, zacken: !!L.zacken, stone: stein ? BR_STONE_NONE : null, clear: 9, lampMax: G.n,
+    licht: L.licht || null, dark: L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('W' + G.anker), zacken: !!L.zacken, stone: stein ? BR_STONE_NONE : null, clear: 9, lampMax: G.n,
     wegPaint: weg ? () => wbBelag(t, c.x, c.y, z, ax, Pw, H, G.latB, G.latF, !!c.A) : null };
   return { G, t, xy: [c.x, c.y], P, Pw, H, art, weg, opts, face: brPal(BK_STEIN, 'stein', 'fuss', L.col, null).face };
 }
