@@ -436,3 +436,11 @@ Die Dateien, um die es geht:
     Wasser-Wegbrücken) und AUFGABEN nach.
 
 **Neue Reihenfolge:** D2·0 (Werkzeug, Vorher-Bilder, Zähltest gemischter Spannen) → D2a → D2b → D2e → D2c → D2d → D2f → D2g → D2h → D2i → D2j → D2k.
+
+## 7. Gegenlesen nach dem Bau (13.10., 3 Prüfer + Widerleger, nur lesen): keine bestätigten Fehler
+
+Offen, für D3/G1 vorgemerkt:
+- **Kristall über einem Boot unter einem früheren Feld:** `drawBridgeOver` malt t1/t2 nicht nach (Glas fehlt im Bootsrahmen). Erst mit D3 baubar – dann lösen oder bewusst lassen.
+- **Seeweg-Sperre flacher Brücken (Nutzer):** Fähre/Expedition ohne Weg zeigt den alten Hinweis „ist das Wasser zugeschüttet?“ (ui.js:2148, story.js:58). In D3 beim Bau einer flachen Wasserbrücke warnen, wenn sie einen Seeweg kappt, und den Hinweis um „flache Brücke“ ergänzen.
+- **Breite Stege:** Abschluss quer je Reihe nur ±EDGE_W, zwischen den Reihen eine Lücke (wie Entwurf und alter Maler) – Gestaltungswunsch, bei Bedarf.
+- **Stein 2 Felder:** Rückfall „nie ganz absperren“ (Block 150) lässt Boote durch die niedrigen Öffnungen – altes Verhalten, unverändert.
