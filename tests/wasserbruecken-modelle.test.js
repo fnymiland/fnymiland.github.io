@@ -8,13 +8,15 @@ beforeEach(() => {
   game("for (let y = 2; y <= 60; y++) for (let x = 2; x <= 60; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.hills.clear(); if (state.bruecken) state.bruecken.clear()");
 });
 // Kanal längs x bzw. y: Wasser u0 … u0+N−1; steg 1: offen am +Ende, −1: am −Ende (5 Felder Wasser dahinter); ohneWeg: Ufer ohne Wegkachel
-const kanal = (u0, v0, N, { ax = 0, breit = 1, steg = 0, style = 'sand', brk = null, ohneWeg = false } = {}) => game(`(() => {
+const kanal = (u0, v0, N, { ax = 0, breit = 1, steg = 0, style = 'sand', brk = null, ohneWeg = false, look = null } = {}) => game(`(() => {   // look: neues Format (br-Felder + brStamp, wie D3 baut)
   const K = (u, v) => ${ax} ? v + ',' + u : u + ',' + v, wA = ${steg < 0 ? 5 : 0}, wB = ${steg > 0 ? 5 : 0};
   for (let v = ${v0} - 2; v <= ${v0} + ${breit} + 1; v++) for (let u = ${u0} - 3 - wA; u <= ${u0} + ${N} + 2 + wB; u++) state.terra.set(K(u, v), u >= ${u0} - wA && u < ${u0} + ${N} + wB ? 'water' : 'grass');
   for (let r = 0; r < ${breit}; r++) {
     if (!${ohneWeg} && ${steg} >= 0) for (let u = ${u0} - 3; u < ${u0}; u++) state.tiles.set(K(u, ${v0} + r), { b: 'weg', lvl: 1, style: '${style}', lauf: ${ax} });
     if (!${ohneWeg} && ${steg} <= 0) for (let u = ${u0} + ${N}; u <= ${u0} + ${N} + 2; u++) state.tiles.set(K(u, ${v0} + r), { b: 'weg', lvl: 1, style: '${style}', lauf: ${ax} });
-    for (let u = ${u0}; u < ${u0} + ${N}; u++) state.tiles.set(K(u, ${v0} + r), { b: 'weg', lvl: 1, style: '${style}', bridge: true, lauf: ${ax}${brk ? `, brk: '${brk}'` : ''} });
+    for (let u = ${u0}; u < ${u0} + ${N}; u++) { const t = { b: 'weg', lvl: 1, style: '${style}', bridge: true, lauf: ${ax}${brk ? `, brk: '${brk}'` : ''} }; const L = ${JSON.stringify(look)};
+      if (L) { t.brm = L.mat; if (L.licht) t.brl = L.licht; if (L.zacken) t.brz = 'an'; brStamp(t, 'wasser', { ...brLegacyLook(t, 'wasser'), ...L }); }
+      state.tiles.set(K(u, ${v0} + r), t); }
   }
   terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); groundVersion++; recalc(); })()`);
 const G = (x, y, keys) => game(`(c => ${JSON.stringify(keys)}.map(k => c.G[k]))(wbAt(${x}, ${y}))`);
@@ -93,41 +95,42 @@ const rec = js => game(`(() => { const g0 = g, out = [];
     get: (o, k) => k in o ? o[k] : (...a) => { out.push(k + ' ' + a.map(v => typeof v === 'number' ? v.toFixed(3) : typeof v === 'object' ? '' : v).join(',') + ' ' + o.fillStyle + '|' + o.strokeStyle + '|' + o.lineWidth); },
     set: (o, k, v) => { o[k] = v; return true; } });
   try { ${js} } finally { g = g0; } return out; })()`);
-const holzSzene = (style = 'sand') => {                                   // style: sand = Holz, platten = Stein, kopf = Ziegel (→ Stein)
-  const out = [];
-  kanal(6, 4, 1, { style }); out.push([6, 4]);
-  kanal(14, 4, 6, { style }); out.push([14, 4], [16, 4], [19, 4]);
-  kanal(28, 4, 3, { steg: 1, style }); out.push([28, 4], [30, 4]);
-  kanal(44, 4, 3, { steg: -1, style }); out.push([44, 4], [46, 4]);
-  kanal(10, 14, 6, { breit: 3, style }); out.push([12, 14], [12, 15], [12, 16]);
-  kanal(30, 14, 1, style === 'sand' ? { brk: 'rot' } : { style: 'kopf' }); out.push([30, 14]);
-  kanal(40, 24, 6, { ax: 1, style }); out.push([24, 42], [24, 45]);
-  kanal(40, 34, 3, { ax: 1, steg: 1, style }); out.push([34, 40], [34, 42]);
-  kanal(10, 30, 1, { ohneWeg: true, style }); out.push([10, 30]);
-  kanal(20, 52, 9, { style }); out.push([20, 52], [24, 52]);
+const holzSzene = (style = 'sand', look = null) => {                      // style: sand = Holz, platten = Stein, kopf = Ziegel (→ Stein); look: neues Format (Metall, Kristall)
+  const out = [], k = (u0, v0, N, o = {}) => kanal(u0, v0, N, { ...o, ...(look ? { look } : {}) });
+  k(6, 4, 1, { style }); out.push([6, 4]);
+  k(14, 4, 6, { style }); out.push([14, 4], [16, 4], [19, 4]);
+  k(28, 4, 3, { steg: 1, style }); out.push([28, 4], [30, 4]);
+  k(44, 4, 3, { steg: -1, style }); out.push([44, 4], [46, 4]);
+  k(10, 14, 6, { breit: 3, style }); out.push([12, 14], [12, 15], [12, 16]);
+  k(30, 14, 1, style === 'sand' ? { brk: 'rot' } : { style: 'kopf' }); out.push([30, 14]);
+  k(40, 24, 6, { ax: 1, style }); out.push([24, 42], [24, 45]);
+  k(40, 34, 3, { ax: 1, steg: 1, style }); out.push([34, 40], [34, 42]);
+  k(10, 30, 1, { ohneWeg: true, style }); out.push([10, 30]);
+  k(20, 52, 9, { style }); out.push([20, 52], [24, 52]);
   return out;
 };
 describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
-  for (const [style, mat] of [['sand', 'holz'], ['platten', 'stein']]) it(`${mat}: h, vd, o nacheinander = w; alle Felder im neuen Maler (Rot ist Holz, Ziegel ist Stein)`, () => {
-    const felder = holzSzene(style);
+  const MAT = [['sand', 'holz', null], ['platten', 'stein', null], ['sand', 'stahl', { mat: 'stahl', licht: 'an' }], ['sand', 'kristall', { mat: 'kristall', licht: 'an', zacken: true }]];
+  for (const [style, mat, look] of MAT) it(`${mat}: (hg,) h, vd, o nacheinander = w; alle Felder im neuen Maler (Rot ist Holz, Ziegel ist Stein)`, () => {
+    const felder = holzSzene(style, look);
     for (const [x, y] of felder) {
       expect(game(`(c => c.G.mat + WB_NEU.has(c.G.mat))(wbAt(${x}, ${y}))`), x + ',' + y).toBe(mat + 'true');
       for (const z of [0.5, 1, 2.5]) {
         const ganz = rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', wbAt(${x}, ${y}))`);
         expect(ganz.length).toBeGreaterThan(10);
-        expect(rec(`for (const gr of ['h', 'vd', 'o']) bkDrawLagen(${x}, ${y}, 0, 0, ${z}, gr, wbAt(${x}, ${y}))`), x + ',' + y + ' z ' + z).toEqual(ganz);
+        expect(rec(`for (const gr of ${mat === 'kristall' ? "['hg', 'h', 'vd', 'o']" : "['h', 'vd', 'o']"}) bkDrawLagen(${x}, ${y}, 0, 0, ${z}, gr, wbAt(${x}, ${y}))`), x + ',' + y + ' z ' + z).toEqual(ganz);
       }
     }
   });
-  for (const style of ['sand', 'platten']) it(`Rahmen (${style}): jede Gruppe bleibt in brBox(gr, wbAt) – Stützen bis aufs Wasser, Steg-Enden, breit, Nord-Süd, z 0,5/1/2,5`, () => {
-    const felder = holzSzene(style);
+  for (const [style, mat, look] of MAT) it(`Rahmen (${mat}): jede Gruppe bleibt in brBox(gr, wbAt) – Stützen bis aufs Wasser, Steg-Enden, breit, Nord-Süd, Licht, Zacken, z 0,5/1/2,5`, () => {
+    const felder = holzSzene(style, look);
     const bad = game(`(() => { const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clip = 0;
       const chk = (x, y) => { if (clip) return; const [l, u, r, d] = box, e = lw / 2 + 0.01; if (x < -l - e || x > r + e || y < -u - e || y > d + e) bad.push(cur + ' ' + x.toFixed(1) + ',' + y.toFixed(1)); };
       const fake = new Proxy({ getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), createPattern: () => ({ setTransform() {} }) }, {
         get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'fillRect' ? (x, y, w, h) => { chk(x, y); chk(x + w, y + h); } : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); }
           : k === 'save' ? () => st.push(clip) : k === 'restore' ? () => { clip = st.pop() || 0; } : k === 'clip' ? () => { clip = 1; } : k in o ? o[k] : () => {},
         set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
-      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o', 'w']) {
+      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o', 'w', 'hg', 't1', 't2']) {
         const c = wbAt(x, y); cur = x + ',' + y + ' z' + z + ' ' + gr; box = brBox(gr, c).map(v => v * z);
         g = fake; try { bkDrawLagen(x, y, 0, 0, z, gr, c); } finally { g = g0; } } }
       finally { g = g0; } return bad.slice(0, 8); })()`);
@@ -149,4 +152,34 @@ describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
     // Stütze der Anfangskante: bei s = (BK_W − 0,06) gestaucht auf EDGE_W, Strich 2,2 (lw = Breite · z / 2): rechter Rand links vom Schnitt
     expect(game('(0.5 + (BK_W - 0.06) / BK_W * EDGE_W) * TW / 2 - 1.1')).toBeGreaterThan(game('WB_START_CUT'));
   });
+});
+
+// D2g/D2h: Kristall – Glas t1/t2 jedes Bild genau einmal in tileB (auch ohne Bewegtes, GL: brLiveTiles), nie in w; Licht im Bildchen w
+describe('Wasser-Wegbrücken: Kristall und Licht (160c D2g/D2h)', () => {
+  it('Kristall: ohne Bewegtes je Bild genau einmal t1 und t2, hg ruhend im Bildchen w; brLiveTiles kennt das Feld (innere Reihe nicht)', () => {
+    kanal(10, 4, 3, { look: { mat: 'kristall' } }); kanal(10, 12, 6, { breit: 2, look: { mat: 'kristall' } });
+    const log = game(`(() => { const out = [], bl = bkDrawLagen; bkDrawLagen = (x, y, px, py, z, gr, c) => { out.push(gr + ' ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
+      try { cam = state.cam; cam.z = 2; const p = iso(11, 4); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); } finally { bkDrawLagen = bl; spriteForce = null; } return out; })()`);
+    for (const x of [10, 11, 12]) expect(log.filter(e => e.endsWith(' ' + x + ',4')), x).toEqual(['w ' + x + ',4', 't1 ' + x + ',4', 't2 ' + x + ',4']);
+    expect(game("[brLiveTiles().includes('11,4'), brLiveTiles().includes('12,13'), brLiveTiles().includes('12,12')]")).toEqual([true, true, false]);   // vorderste Reihe 13, innere 12
+  });
+  it('Licht: Bildchen w nachts mit |lit (Lampe in vd/o); ohne Licht ohne; Holz 16 Felder mit Lampen auf allen Feldkanten', () => {
+    kanal(10, 4, 3, { look: { mat: 'holz', licht: 'an' } }); kanal(10, 12, 3);
+    const keys = game(`(() => { const o = { na: nightAt, gh: gameHour }; nightAt = () => NIGHT_MAX; gameHour = () => 23;
+      try { cam = state.cam; cam.z = 0.5; lastZoom = 0.5; lastZoomChange = -1e9; const p = iso(11, 8); cam.x = p.x; cam.y = p.y; spriteForce = null; spriteNoBudget = true; render(1e6); spriteNoBudget = false; }
+      finally { nightAt = o.na; gameHour = o.gh; } return [...objSprites.keys()].filter(k => /^wb\|1[012],(4|12)\|w\|/.test(k)).sort(); })()`);
+    expect(keys).toContain('wb|11,4|w|0|1'); expect(keys).toContain('wb|11,12|w|0');
+    expect(keys.some(k => k.startsWith('wb|11,12|w|0|'))).toBe(false);
+    kanal(6, 30, 16, { look: { mat: 'holz', licht: 'an' } });
+    expect(game('(c => brLampSpots(c.G.art, c.G.fam, c.G.n, c.G.n).ts.length)(wbAt(14, 30))')).toBe(17);
+  });
+});
+
+// Wächter (D2g, beim Prüfbild gefunden): die Nachtlicht-Listen fangen jedes Bild leer an – sonst wachsen sie und greifen auf freigegebene Leinwände
+it('Bildanfang: glows, nightPics, nightPanes, nightSeen, nightWarm, WB_GLOW0 zurückgesetzt', () => {
+  const r = game(`(() => { glows.push({ q: [[0, 0], [1, 0], [1, 1], [0, 1]], r: 1 }); nightPics.push(['x']); nightPanes.push(['x']); nightSeen.add('x'); nightWarm = true; WB_GLOW0.set('x', 1);
+    const o = { na: nightAt, gh: gameHour }; nightAt = () => 0; gameHour = () => 12;
+    try { render(1e6); } finally { nightAt = o.na; gameHour = o.gh; }
+    return [nightPics.includes('x') || nightPics.some(p => p[0] === 'x'), nightPanes.some(p => p[0] === 'x'), nightSeen.has('x'), nightWarm, WB_GLOW0.has('x')]; })()`);
+  expect(r).toEqual([false, false, false, false, false]);
 });

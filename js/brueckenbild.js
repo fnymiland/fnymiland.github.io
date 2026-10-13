@@ -172,7 +172,8 @@ function wbRelight(x, y, px, py, z, c) {
   const ax = c.ax, lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s))));
   const sB = lat(-1) ? -0.5 : -c.W, sF = lat(1) ? 0.5 : c.W, AS = c.A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];
   const P = (a, s, h) => { const [u, v] = ax ? [s, a] : [a, s]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
-  const top = AS.map(a => P(a, sB, wegDeckH(c, a))), front = AS.map(a => P(a, sF, wegDeckH(c, a))), band = AS.map(a => P(a, sF, wegDeckH(c, a) - 2.5));
+  const bh = WB_NEU.has(c.G.mat) ? { holz: 2, stahl: 2.6, stein: 2.5, kristall: 0 }[c.G.mat] : 2.5;   // deckendes Randband vorn (Kristall: Glas, nie doppelt)
+  const top = AS.map(a => P(a, sB, wegDeckH(c, a))), front = AS.map(a => P(a, sF, wegDeckH(c, a))), band = AS.map(a => P(a, sF, wegDeckH(c, a) - bh));
   const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = [...top, ...band].map(S);   // Lichter liegen in Bildschirmpunkten
   const X0 = Math.min(...pts.map(p => p[0])), X1 = Math.max(...pts.map(p => p[0])), Y0 = Math.min(...pts.map(p => p[1])), Y1 = Math.max(...pts.map(p => p[1]));
   const hits = [];
@@ -217,7 +218,7 @@ function bkGroup(x, y, px, py, z, gruppen, c = bkAt(x, y)) {              // c: 
 // sich nur dort, darum steht „dunkel“ nicht im Schlüssel). Gruppen mit Lampen (C7, bkLampGroups) bekommen |lit und werden vor der
 // Dämmerung beleuchtet vorbereitet (wie spriteFlat, Regel 143); alle anderen behalten den Schlüssel ohne Licht
 function spriteBridge(x, y, px, py, z, gruppe, c = bkAt(x, y)) {
-  const lamp = bkLampGroups(c).includes(gruppe), fog = FOG;
+  const lg = bkLampGroups(c), lamp = lg.includes(gruppe) || (gruppe === 'w' && lg.some(gr => gr !== 't1' && gr !== 't2')), fog = FOG;   // w (Wasser, 160c D2h): mit, wenn eine seiner Lagen Lampen hat
   const zs = spriteStep(z), keyOf = lit => `${c && c.water ? 'wb' : 'br'}|${x},${y}|${gruppe}|${fog ? 1 : 0}` + (lamp ? '|' + lit : ''), key = keyOf(night > 0.15 && isLive() ? 1 : 0), [l, u, , d] = brBox(gruppe, c);
   const make = () => {
     const sp = paintSprite(l * zs, u * zs, d * zs, () => {

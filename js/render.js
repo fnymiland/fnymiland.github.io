@@ -1646,7 +1646,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = GFX.day === 'tag' ? 0 : nightAt();                             // Spieluhr (Block 101); ⚙️ „immer Tag“: nur das Bild
-  glows.length = 0; glowCells.clear(); WB_GLOW0.clear(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;
+  glows.length = 0; glowCells.clear(); WB_GLOW0.clear(); wbLiveSet(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;   // wbLiveSet: Kristall-Wasserbrücken für tileB (gemerkt)
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
@@ -2183,7 +2183,7 @@ function render(now) {
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
       const ms0 = byTile.get(k), ms = ms0 && hl && hillGapHas(k) ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe/Rampe in die Anhöhe: oben ist dort nichts
-      const bc = (bkOn() ? bkAt(x, y) : null) || (ms ? wbAt(x, y) : null), late = [];   // Brücke (160c B2; Wasser D1e): Bewegtes des Felds zeichnet bkDrawMoving (Folge je Querlage)
+      const bc = (bkOn() ? bkAt(x, y) : null) || (ms || WB_LIVE.set.has(k) ? wbAt(x, y) : null), late = [];   // Brücke (160c B2; Wasser D1e): Bewegtes des Felds zeichnet bkDrawMoving (Folge je Querlage)
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));

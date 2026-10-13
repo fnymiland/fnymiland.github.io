@@ -54,7 +54,17 @@ function bkGeom(b, art = null, rail = null) {
 }
 const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'fuss';   // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB (B2 ist deckend)
 const bkTileBAt = c => bkGlasAt(c) || (!!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'bahn' && !!c.G.look.licht);   // dazu B2 mit Licht (C7): Streifen in t1/t2
-const brLiveTiles = () => bkOn() ? bkFresh().glas : [];                   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas, B2-Licht)
+// Wasserbrücken aus Kristall (160c D2g): Glas t1/t2 jedes Bild in tileB, auch ohne Bewegtes – gemerkt je groundVersion (nicht je Bild neu)
+const WB_LIVE = { v: -1, tiles: null, n: -1, set: new Set(), arr: [] };
+function wbLiveSet() {
+  const L = WB_LIVE;
+  if (L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L;
+  L.v = groundVersion; L.tiles = state.tiles; L.n = state.tiles.size; L.set = new Set();
+  for (const [k, t] of state.tiles) { if (!isWegBridge(t)) continue; const c = wbAt(...keyXY(k)); if (c && WB_NEU.has(c.G.mat) && bkGlasAt(c) && (!c.G.latF || c.G.lastB)) L.set.add(k); }
+  L.arr = [...L.set];
+  return L;
+}
+const brLiveTiles = () => { const a = bkOn() ? bkFresh().glas : [], w = wbLiveSet().arr; return w.length ? a.concat(w) : a; };   // Felder, deren tileB im GL-Bild jedes Bild laufen muss (Glas, B2-Licht)
 const bkGround = (c, t) => { const i = Math.max(0, Math.min(c.b.n - 1, Math.round(t))); return terrainAt(c.x0 + c.dx * i, c.y0 + c.dy * i) === 'water' ? -0.7 * DEPTH : 0; };   // Boden unter Feld bei t (Wasser −6,3)
 // Die zwei Felder an Kante k (zwischen Feld k−1 und k)
 const bkEdgeCells = (x0, y0, ax, k) => ax ? [[x0, y0 + k - 1], [x0, y0 + k]] : [[x0 + k - 1, y0], [x0 + k, y0]];
