@@ -1,3 +1,4 @@
+// Läuft nur bis 160c D1: seit D2 malt wbPaintLage die Wasserbrücken – die drawWegBridge-Attrappe unten greift dort nicht mehr
 // Entwurf (Besprechung 11.10.2026: „Fußgängerbrücken immer als Bogen – zeig mal, wie eine Bogenbrücke über zwei Anhöhen aussieht“): nur Bild,
 // kein Spielcode geändert. Die echten Bogenbrücken (Wegbrücke übers Wasser, Block 150) liegen hier in der Lücke zwischen zwei Anhöhen und werden
 // beim Zeichnen um HILL_H angehoben (Umleitungen nur während der Aufnahme); Holz/Rot bekommen Stützen bis zum Boden, Stein/Ziegel bleiben, wie sie

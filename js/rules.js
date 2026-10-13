@@ -1879,8 +1879,8 @@ function bridgeArch(x, y) {
   if (!C.map.has(k)) C.map.set(k, bridgeArchCalc(x, y));
   return C.map.get(k);
 }
-// Wasser-Wegbrücke als Brückenfeld (160c D1, wie bkAt der Anhöhe): Achse, Bogen, flache Höhe (LIFT der alten Art), Ufer an den Enden.
-// Gemerkt je groundVersion (recalc leert). G: Geometrie der neuen Modelle – erst ab D2
+// Wasser-Wegbrücke als Brückenfeld (160c D1, wie bkAt der Anhöhe): Achse, Bogen, flache Höhe (LIFT des Materials), Ufer an den Enden.
+// Gemerkt je groundVersion (recalc leert). G: Geometrie der neuen Modelle (wbGeom, 160c D2)
 const flatDeckH = (L, lA, lB, a) => Math.max(0, Math.min(L, lB && a > 0.2 ? L * (0.5 - a) / 0.3 : L, lA && a < -0.2 ? L * (a + 0.5) / 0.3 : L));
 const wbCache = { v: -1, tiles: null, map: new Map() };
 function wbAt(x, y) {
@@ -1890,19 +1890,18 @@ function wbAt(x, y) {
   if (C.v !== groundVersion || C.tiles !== state.tiles) { C.v = groundVersion; C.tiles = state.tiles; C.map.clear(); }
   let c = C.map.get(k);
   if (c) return c;
-  const A = bridgeArch(x, y), ax = A ? A.ax : bridgeAxis(x, y, t), lift = (BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz).lift;
+  const A = bridgeArch(x, y), ax = A ? A.ax : bridgeAxis(x, y, t);
   const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
   const G = wbGeom(x, y, A, ax);
-  c = { k, x, y, water: true, A, ax, b: { ax, n: G.n }, W: EDGE_W, lift: WB_NEU.has(G.mat) ? G.lift : lift, landA: !A && land(-1), landB: !A && land(1), G };
+  c = { k, x, y, water: true, A, ax, b: { ax, n: G.n }, W: EDGE_W, lift: G.lift, landA: !A && land(-1), landB: !A && land(1), G };
   c.hm = Math.ceil(A ? archDeck(A, Math.max(A.i0, Math.min(A.i0 + 1, A.N / 2))) : c.lift);
   C.map.set(k, c);
   return c;
 }
 const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.lift, c.landA, c.landB, a);   // a: längs im Feld, −½ … ½
 // Neue Modelle (160c D2, abgenommener Entwurf D0: tools/wasserbruecken-entwurf.js): flache Höhe je Material, Wasserfläche (Stützenfuß), Stützpunkte
-// längs im Bogen. WB_NEU: Materialien, die schon der neue Maler zeichnet (bis zum Aufräumen D2j; leer = alles wie D1)
+// längs im Bogen
 const BR_WATER_LIFT = { holz: 3, stein: 7, stahl: 3, kristall: 3 }, WB_WATER = -0.7 * DEPTH, WB_AS9 = [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5];
-let WB_NEU = new Set(['holz', 'stein', 'stahl', 'kristall']);           // D2c: Holz (samt Rot), D2d: Stein (samt Ziegel), D2f/g: Metall, Kristall
 const wbLandAt = (x, y) => { const n = state.tiles.get(x + ',' + y); return !!n && !isWegBridge(n) && terrainAt(x, y) !== 'water'; };   // Rampe wie wegDeckH
 // Spanne längs ax (wie bridgeArchCalc): offen = dahinter Wasser (Steg; gedachtes Feld), Rampe nur zu einer Wegkachel an Land (karte-D2 §6.9)
 function wbSpan(x, y, ax) {

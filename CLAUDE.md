@@ -331,10 +331,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Möwen daneben. Boote vor der Stirn (s > BK_W) zeichnet `bkMoverClass` als F. Hängt die Durchfahrt einmal von Material oder Stützen ab,
     braucht `brSet` ein `recalc` (Signatur).
     **Wasser-Wegbrücken** (160c D1): dieselben Wege wie oben mit dem Brückenfeld `wbAt(x, y)` (`water: true`, `A` = Bogen, `W` = EDGE_W,
-    `hm`; gemerkt je groundVersion) als letztem Parameter (`bkGroup`, `spriteBridge` → `wb|…`, `bkRedo`, `bkDrawLagen` → `drawWegBridge(…, lagen)`).
+    `hm`, `G` = wbGeom; gemerkt je groundVersion) als letztem Parameter (`bkGroup`, `spriteBridge` → `wb|…`, `bkRedo`, `bkDrawLagen` → `wbPaintLage`).
+    Modelle (D2, abgenommen D0): `wbArgs`/`wbPaintLage` mit den Bausteinen der Anhöhe, quer gestaucht auf EDGE_W (`sq`), nie unter `WB_WATER`;
+    gedachte Felder an offenen Enden nach Gelände, Rampe nur zur Wegkachel; Mauer/Durchfahrt aus dem Aussehen der Spanne (`bridgeArch().wall`);
+    flache Wasserbrücken sperren Boote (`seaCross` 'block'). `drawWegBridge` malt nur noch die Bau-Vorschau (`drawPath`, bis D3).
     Nie im Boden-Durchgang (`liveFlatSet`/`worldGround` lassen sie aus). Ruhend eine Gruppe `w` (= h+v+d+o, ein Bildchen, nichts dazwischen auf
     dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
-    Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: flach h+vd, Bogen vd nachmalen; frühere Felder über
+    Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: Bogen vd nachmalen (mit Stütze an der Anfangskante Schnitt `WB_START_CUT`); frühere Felder über
     dem Boot `boatUnder` (nur schon gezeichnete) → `bridgeOverBoat(k, z, now, m)` im Bootsrahmen, danach Block 112 (`boatOver`).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere

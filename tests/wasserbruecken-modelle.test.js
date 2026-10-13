@@ -59,9 +59,9 @@ describe('Wasser-Wegbrücken: Geometrie G (160c D2a)', () => {
     kanal(10, 20, 1, { brk: 'rot' }); kanal(10, 28, 3, { style: 'kopf' });
     expect(G(10, 20, ['mat'])).toEqual(['holz']); expect(G(11, 28, ['mat'])).toEqual(['stein']);
   });
-  it('Deckhöhe: neues Material (WB_NEU) mit LIFT je Material, sonst die alte (BRIDGE_LOOK); Lampen-Stellen bis 8 unverändert', () => {
+  it('Deckhöhe: LIFT je Material (Rot = Holz 3); Lampen-Stellen bis 8 unverändert', () => {
     kanal(10, 4, 1, { brk: 'rot' });
-    expect(game('(c => c.lift === (WB_NEU.has(c.G.mat) ? c.G.lift : BRIDGE_LOOK.rot.lift))(wbAt(10, 4))')).toBe(true);
+    expect(game('(c => [c.lift, c.G.lift])(wbAt(10, 4))')).toEqual([3, 3]);
     for (const [a, f] of [['holz', 'fuss'], ['stein', 'fuss'], ['stahl', 'fuss'], ['kristall', 'fuss'], ['stahl', 'bahn']]) for (let n = 1; n <= 8; n++)
       expect(game(`JSON.stringify(brLampSpots('${a}', '${f}', ${n}, ${n}))`), a + f + n).toBe(game(`JSON.stringify(brLampSpots('${a}', '${f}', ${n}))`));
     expect(game("brLampSpots('holz', 'fuss', 16, 16).ts.length")).toBe(17);                  // ab 9 Feldern nur auf den Feldkanten (D0 F-h)
@@ -114,7 +114,7 @@ describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
   for (const [style, mat, look] of MAT) it(`${mat}: (hg,) h, vd, o nacheinander = w; alle Felder im neuen Maler (Rot ist Holz, Ziegel ist Stein)`, () => {
     const felder = holzSzene(style, look);
     for (const [x, y] of felder) {
-      expect(game(`(c => c.G.mat + WB_NEU.has(c.G.mat))(wbAt(${x}, ${y}))`), x + ',' + y).toBe(mat + 'true');
+      expect(game(`wbAt(${x}, ${y}).G.mat`), x + ',' + y).toBe(mat);
       for (const z of [0.5, 1, 2.5]) {
         const ganz = rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', wbAt(${x}, ${y}))`);
         expect(ganz.length).toBeGreaterThan(10);

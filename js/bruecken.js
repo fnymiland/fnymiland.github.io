@@ -60,7 +60,7 @@ function wbLiveSet() {
   const L = WB_LIVE;
   if (L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L;
   L.v = groundVersion; L.tiles = state.tiles; L.n = state.tiles.size; L.set = new Set();
-  for (const [k, t] of state.tiles) { if (!isWegBridge(t)) continue; const c = wbAt(...keyXY(k)); if (c && WB_NEU.has(c.G.mat) && bkGlasAt(c) && (!c.G.latF || c.G.lastB)) L.set.add(k); }
+  for (const [k, t] of state.tiles) { if (!isWegBridge(t)) continue; const c = wbAt(...keyXY(k)); if (c && bkGlasAt(c) && (!c.G.latF || c.G.lastB)) L.set.add(k); }
   L.arr = [...L.set];
   return L;
 }
@@ -586,10 +586,9 @@ function bkTileArgs(c, px, py, z) {
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe, c = bkAt(x, y)) {           // c: auch eine Wasser-Wegbrücke (wbAt, 160c D1) – bis D2 mit dem alten Maler
   if (!c) return;
-  if (c.water) {                                                          // Wasser-Wegbrücke: neue Modelle (160c D2) je Material, sonst noch der alte Maler
+  if (c.water) {                                                          // Wasser-Wegbrücke: neue Modelle (160c D2, wbPaintLage)
     const t = state.tiles.get(x + ',' + y);
     if (!isWegBridge(t)) return;
-    if (!c.G || !WB_NEU.has(c.G.mat)) return drawWegBridge(px, py, z, x, y, t, BK_GRUPPEN[gruppe]);
     const A = wbArgs(c, px, py, z);
     for (const l of gruppe === 'w' && A.art === 'kristall' ? ['hg', ...BK_GRUPPEN.w] : BK_GRUPPEN[gruppe] || []) wbPaintLage(l, c, A, z);   // ruhend: hintere Scheibe mit im Bildchen
     return;

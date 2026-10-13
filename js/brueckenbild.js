@@ -172,7 +172,7 @@ function wbRelight(x, y, px, py, z, c) {
   const ax = c.ax, lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s))));
   const sB = lat(-1) ? -0.5 : -c.W, sF = lat(1) ? 0.5 : c.W, AS = c.A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];
   const P = (a, s, h) => { const [u, v] = ax ? [s, a] : [a, s]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
-  const bh = WB_NEU.has(c.G.mat) ? { holz: 2, stahl: 2.6, stein: 2.5, kristall: 0 }[c.G.mat] : 2.5;   // deckendes Randband vorn (Kristall: Glas, nie doppelt)
+  const bh = { holz: 2, stahl: 2.6, stein: 2.5, kristall: 0 }[c.G.mat];   // deckendes Randband vorn (Kristall: Glas, nie doppelt)
   const top = AS.map(a => P(a, sB, wegDeckH(c, a))), front = AS.map(a => P(a, sF, wegDeckH(c, a))), band = AS.map(a => P(a, sF, wegDeckH(c, a) - bh));
   const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = [...top, ...band].map(S);   // Lichter liegen in Bildschirmpunkten
   const X0 = Math.min(...pts.map(p => p[0])), X1 = Math.max(...pts.map(p => p[0])), Y0 = Math.min(...pts.map(p => p[1])), Y1 = Math.max(...pts.map(p => p[1]));
@@ -291,7 +291,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
-  const wcut = c.water && !!c.G && c.G.startPost && WB_NEU.has(c.G.mat);   // Wasser (160c D2): nur mit einer Stütze an der Anfangskante
+  const wcut = c.water && c.G.startPost;                                    // Wasser (160c D2): nur mit einer Stütze an der Anfangskante
   const boatMid = m => (!c.water || wcut) && m.boat && (c.b.ax ? m.px - x : m.py - y) > (c.water ? -0.19 : -0.16);   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
   const Ub = U.filter(boatMid), Ur = U.filter(m => !boatMid(m));
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
