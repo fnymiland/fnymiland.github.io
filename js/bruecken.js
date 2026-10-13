@@ -345,6 +345,7 @@ function wbSet(x, y, ch) {
     else return false;
   } else return false;
   let brps;
+  const sea0 = mat ? seaRoutesNow() : null;                                // Material (Stein = Mauer): Seewege vorher (160c D3g)
   if (mat) {
     const per = brPrice({ ...nl, zacken: false }, 'wasser'), tot = brAdd({ money: 0 }, per, N), back = paid.reduce((s, p) => brAdd(s, p), { money: 0 });
     if (state.money + (back.money || 0) < tot.money) { fail('Zu wenig Taler'); return false; }
@@ -362,6 +363,7 @@ function wbSet(x, y, ch) {
   } else brps = paid.map(p => ({ ...p }));
   for (const [i, t] of ts.entries()) { brWriteLook(t, nl, brk(t), zk, raw); t.brp = { ...brps[i], k: brSig(t, 'wasser') }; }
   groundVersion++; sfx('road'); if (mat || 'licht' in ch) recalc(); save();   // Mauer/Durchfahrt (Seewege), Strom
+  seaRoutesWarn(sea0);
   return true;
 }
 function brSet(ref, ch) {

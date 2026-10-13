@@ -341,7 +341,9 @@ function runPlan() {
   const money0 = state.money;
   let n = 0;
   wegLaufPlan = p.tool === 'weg' ? planLauf(p) : null;                     // Wegrichtung (Block 158)
+  const sea0 = p.tool === 'weg' && info.order.some(([x, y]) => terrainAt(x, y) === 'water') ? seaRoutesNow() : null;   // Brücke übers Wasser: Seewege (160c D3g)
   try { batch(() => { for (const [, , run] of info.order) if (run()) n++; }); } finally { wegLaufPlan = null; }
+  seaRoutesWarn(sea0);
   if (!n) return false;
   if (p.tool === 'dach' && roofAutoPillars(info.order.map(([x, y]) => [x, y]))) { recalc(); save(); }   // Stützen kommen mit (Block 138)
   noteRecent(p.tool);                                                     // zuletzt gebaut (Block 120)

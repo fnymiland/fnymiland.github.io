@@ -507,6 +507,7 @@ function groupErrors(hx, hy) {
 function dropGroup(hx, hy) {
   const { ox, oy, first } = groupErrors(hx, hy);
   if (first) { fail(first); return false; }
+  const sea0 = moving.items.some(it => it.kind === 'tile' && isWegBridge(it.t)) ? seaRoutesNow() : null;   // Brücken ablegen: Seewege (160c D3g)
   if (moving.copy) {                                                     // Kopie (Block 134): erst bezahlen, sonst gar nichts
     if (!canPay(moving.cost)) { fail(state.money < (moving.cost.money || 0) ? `Zu wenig Taler (${fmt(moving.cost.money)} nötig)` : 'Material fehlt noch'); return false; }
     addCost(moving.cost, -1);
@@ -542,6 +543,7 @@ function dropGroup(hx, hy) {
   sfx('build');
   recalc();
   save();
+  seaRoutesWarn(sea0);
   return true;
 }
 // --- Kopieren (Block 134, Wunsch Nutzer): mit ✋ markieren → „⧉ Kopieren“. Gleiche Stufe zum vollen Preis (was ein Neubau samt
@@ -677,6 +679,7 @@ function dropAt(x, y, slot) {
   if (moving.kind === 'group') return dropGroup(x, y);
   const err = moveError(x, y, slot);
   if (err) { fail(err); return; }
+  const sea0 = moving.kind !== 'deco' && isWegBridge(moving.t) ? seaRoutesNow() : null;   // Brücke ablegen: Seewege (160c D3g)
   const rot = moving.kind === 'deco' ? (ROTATABLE.has(movingType()) ? buildRot : 0) : placeRot(movingType(), x, y);
   if (moving.kind === 'deco') {
     const k = x + ',' + y;
@@ -697,6 +700,7 @@ function dropAt(x, y, slot) {
   sfx('build');
   recalc();
   save();
+  seaRoutesWarn(sea0);
 }
 // 🗑️ Wegwerfen (Block 155b, Nutzer: „Abreißen in die Auswahl“): was am Finger hängt, an den alten Platz zurück und dort abreißen –
 // Erstattung und Sperren wie beim Abreißen (Haus mit Arbeitern bleibt stehen). Reihenfolge: Deko oben, Dächer, Deko, Gebäude, Linien

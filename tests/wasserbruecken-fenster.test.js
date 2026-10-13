@@ -208,3 +208,22 @@ describe('Wasser-Wegbrücken: Leiste und Schild beim Ziehen (160c D3f)', () => {
     expect(-diff(w0, wallet()).money).toBe(cost);
   });
 });
+
+describe('Wasser-Wegbrücken: Hinweis, wenn eine Brücke einen Seeweg kappt (160c D3g)', () => {
+  it('seaRoutesWarn meldet, was fehlt (mit ↶-Hinweis); nichts verloren: still', () => {
+    const r = game(`(() => { const out = [], ts = toast; toast = m => out.push(m);
+      try { const f0 = T.ferries; T.ferries = [{ stations: ['1,1', '9,9'], noSea: false }]; const b = seaRoutesNow(); const a = seaRoutesWarn(b);
+        T.ferries = [{ stations: ['1,1', '9,9'], noSea: true }]; const c = seaRoutesWarn(b); T.ferries = f0; return [a, c, out]; } finally { toast = ts; } })()`);
+    expect(r[0]).toBe(false); expect(r[1]).toBe(true);
+    expect(r[2][0]).toMatch(/versperrt den Seeweg.*nur unter Bögen.*↶/);
+  });
+  it('Weg übers Wasser ziehen, Material im Fenster, Brücke ablegen: vorher/nachher verglichen', () => {
+    kanal(10, 4, 3);
+    const calls = game(`(() => { const out = [], w = seaRoutesWarn; seaRoutesWarn = b => { out.push(!!b); return w(b); };
+      try {
+        game_plan: { chosenStyle.weg = 'sand'; setTool('weg'); state.terra.set('10,8', 'water'); state.terra.set('11,8', 'water'); waterChanged(); recalc(); startPlan('line', { x: 8, y: 8 }, { x: 13, y: 8 }, false); runPlan(); setTool('look'); }
+        wbSet(10, 4, { mat: 'stein' }); wbSet(10, 4, { col: 2 });
+      } finally { seaRoutesWarn = w; } return out; })()`);
+    expect(calls).toEqual([true, true, false]);
+  });
+});

@@ -2779,6 +2779,23 @@ function makeOrder(now, rnd = Math.random) {
   return { id: now + ':' + res, kind: 'buy', res, amount, pay: niceRound(amount * TRADE_PRICE[res] * (1.1 + rnd() * 0.3)), until: now + ORDER_TTL };
 }
 const ferriesAt = k => T.ferries.filter(l => l.stations.includes(k));
+// Seewege, die gerade gehen (Fähren, Expedition zur nächsten Insel) – vor und nach einer Brücke vergleichen (160c D3g, Nutzer 13.10.2026: nach dem
+// Bau warnen). Flache Brücken und Mauern sperren Boote; was danach fehlt, meldet seaRoutesWarn mit dem Hinweis auf ↶
+function seaRoutesNow() {
+  const s = new Set();
+  for (const f of (T && T.ferries) || []) if (!f.noSea) s.add('f:' + f.stations.join('|'));
+  const i = typeof nextIsle === 'function' ? nextIsle() : null;
+  if (i && typeof stegs === 'function') for (const k of stegs()) if (expeditionRoute(k, i)) s.add('e:' + k + ':' + i.id);
+  return s;
+}
+function seaRoutesWarn(before) {
+  if (!before) return false;
+  const now = seaRoutesNow(), lost = [...before].filter(k => !now.has(k));
+  if (!lost.length) return false;
+  const f = lost.find(k => k[0] === 'f'), names = f ? f.slice(2).split('|').map(k => typeof landingName === 'function' ? landingName(k) : k) : null;
+  toast(`⚠ Die Brücke versperrt den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'} – Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
+  return true;
+}
 // Verkehr aller Verbindungen (Block 25b): Jede Insel zählt einmal. Pendler: ½ je Einwohner, wenn eine Insel, mit der
 // sie verbunden ist, größer ist (Gleichstand: die Heimatinsel bzw. die frühere zählt als größer). Besucher: ihre
 // Anziehung, höchstens ½ je Einwohner aller Inseln, mit denen sie verbunden ist. Das teilen sich alle Verbindungen, die
