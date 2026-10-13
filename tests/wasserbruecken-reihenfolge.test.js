@@ -99,3 +99,54 @@ describe('Wasser-Wegbrücken weit weg als Bildchen (160c D1b)', () => {
     expect(r).toEqual([0, 0]);
   });
 });
+
+// 160c D1c: Vorschau auf dem Deck – Plan-Rauten und der Einzelfeld-Rahmen (Hover, Abriss) auf Wasserbrücken kommen nach der Brücke
+// (DECK_MARKS, bkDrawStill) und liegen auf der Deckhöhe (wegDeckH); an Land wie vorher sofort und am Boden
+describe('Wasser-Wegbrücken: Vorschau auf dem Deck (160c D1c)', () => {
+  it('Linienplan über die Brücke: Raute jedes Brückenfelds nach dessen w, um wegDeckH angehoben; an Land vorher und am Boden', () => {
+    szene();
+    const r = game(`(() => { const out = [], bl = bkDrawLagen, hm = hillMark;
+      bkDrawLagen = (x, y, px, py, z, gr, c) => { out.push(gr + ' ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
+      hillMark = (x, y, f) => hm(x, y, () => { let first = null; g.moveTo = (a, b) => { if (first == null) first = b; }; try { f(); } finally { delete g.moveTo; } out.push('raute ' + x + ',' + y + ' ' + first.toFixed(3)); });
+      const want = {};
+      try {
+        setTool('weg'); startPlan('line', { x: 11, y: 4 }, { x: 19, y: 4 }, false);
+        cam = state.cam; cam.z = 2; const p = iso(15, 4); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6);
+        for (const x of [13, 14, 15, 16]) { const c = wbAt(x, 4); want[x + ',4'] = (toScreen(x - 0.44, 4 - 0.44).y - (c ? wegDeckH(c, -0.44) : 0) * cam.z).toFixed(3); }
+      } finally { bkDrawLagen = bl; hillMark = hm; plan = null; setTool('look'); spriteForce = null; }
+      return [out, want]; })()`);
+    const [log, want] = r, at = e => log.findIndex(l => l.startsWith(e));
+    for (const k of ['14,4', '15,4', '16,4']) {
+      expect(at('raute ' + k + ' '), k).toBeGreaterThan(at('w ' + k));
+      expect(log[at('raute ' + k + ' ')], k).toBe('raute ' + k + ' ' + want[k]);
+    }
+    expect(+want['15,4']).toBeLessThan(game('toScreen(15 - 0.44, 4 - 0.44).y') - 5);    // wirklich angehoben (Bogen)
+    expect(at('raute 13,4 ')).toBeLessThan(at('w 14,4'));                                // Land: sofort, am Boden
+    expect(log[at('raute 13,4 ')]).toBe('raute 13,4 ' + want['13,4']);
+  });
+  it('Einzelfeld-Rahmen (Abriss) auf einer Wasserbrücke: nach ihrem w, Ecken auf der Deckhöhe, eingerückt (das nächste Feld deckt sonst die Strichhälfte); daneben an Land am Boden', () => {
+    szene();
+    const rahmen = (hx, hy) => game(`(() => { const out = [], bl = bkDrawLagen; let first = null;
+      bkDrawLagen = (x, y, px, py, z, gr, c) => { out.push(gr + ' ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
+      g.beginPath = () => { first = null; }; g.moveTo = (a, b) => { if (first == null) first = b; };
+      g.stroke = () => { if (g.lineWidth === 3 * cam.z && (g.strokeStyle === '#3fbf6f' || g.strokeStyle === '#e5484d')) out.push('rahmen ' + first.toFixed(3)); };
+      let want;
+      try {
+        setTool('abriss'); hover = { x: ${hx}, y: ${hy} };
+        cam = state.cam; cam.z = 2; const p = iso(${hx}, ${hy}); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6);
+        const c = wbAt(${hx}, ${hy}), e = c ? 0.44 : 0.5; want = (toScreen(${hx} - e, ${hy} - e).y - (c ? wegDeckH(c, -e) : 0) * cam.z).toFixed(3);   // auf dem Deck eingerückt
+      } finally { bkDrawLagen = bl; delete g.beginPath; delete g.moveTo; delete g.stroke; hover = null; setTool('look'); spriteForce = null; }
+      return [out, want]; })()`);
+    {
+      const [log, want] = rahmen(15, 4), i = log.findIndex(e => e.startsWith('rahmen'));
+      expect(log.filter(e => e.startsWith('rahmen'))).toEqual(['rahmen ' + want]);
+      expect(i).toBeGreaterThan(log.indexOf('w 15,4'));
+      expect(+want).toBeLessThan(game('toScreen(15 - 0.5, 4 - 0.5).y') - 5);
+    }
+    {
+      const [log, want] = rahmen(13, 4), i = log.findIndex(e => e.startsWith('rahmen'));
+      expect(log.filter(e => e.startsWith('rahmen'))).toEqual(['rahmen ' + want]);
+      expect(i).toBeLessThan(log.indexOf('w 14,4'));                                    // Land: wie vorher sofort
+    }
+  });
+});

@@ -1329,6 +1329,8 @@ function ghostPaint(x0, y0, w, h, alpha, fn) {
 }
 // Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
 const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
+// Vorschau auf dem Deck einer Brücke (160c): erst nach dem Deck zeichnen (bkDrawStill)
+function deckMark(x, y, f) { const k = x + ',' + y; if (!DECK_MARKS.has(k)) DECK_MARKS.set(k, []); DECK_MARKS.get(k).push(f); }
 function hillMark(x, y, f) {
   if (!HILL_MARKS || !hillAt(x, y)) return f();
   const k = x + ',' + y;
@@ -1401,11 +1403,12 @@ function planPreview(z) {
   }
   for (const [x, y] of planTiles(plan)) {
     const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && (bkAt(x, y) || (info.bkGhost && info.bkGhost.get(x + ',' + y)));   // Weg aufs Deck einer Brücke (Block 160; neue: Geist, 160c C9): Raute oben
-    const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : null;
+    const wc = !up && DECK_MARKS && !bkAt(x, y) ? wbAt(x, y) : null;     // Wasserbrücke (160c D1c): Raute auf ihrem Deck
+    const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : wc ? (u, v) => wegDeckH(wc, wc.ax ? v : u) : null;
     const draw = () => { if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
       else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
       else dia(x, y, 'rgba(229,72,77,0.45)', '#e5484d', hOf); };
-    if (bc && DECK_MARKS) { const k = x + ',' + y; if (!DECK_MARKS.has(k)) DECK_MARKS.set(k, []); DECK_MARKS.get(k).push(draw); }   // erst nach dem Deck (tileA, bkDrawStill)
+    if ((bc || wc) && DECK_MARKS) deckMark(x, y, draw);               // erst nach dem Deck (tileA, bkDrawStill)
     else draw();
   }
   const [x0, y0, x1, y1] = planBox(plan);
@@ -1680,10 +1683,17 @@ function render(now) {
   // 3) Vorschau-Rahmen (bei großen Gebäuden die ganze Grundfläche)
   const HILLS = !!(state.hills && state.hills.size);                     // Anhöhen (Block 157): sonst alles wie vorher
   HILL_MARKS = HILLS ? new Map() : null;                                 // Vorschau auf Anhöhen-Feldern: erst in tileA, oben (hillMark)
-  DECK_MARKS = bkOn() || (plan && (plan.tool === 'weg' || plan.tool === 'schiene')) ? new Map() : null;   // auch für den Brücken-Geist (160c C9)
+  DECK_MARKS = bkOn() || plan || tool !== 'look' ? new Map() : null;     // auch für den Brücken-Geist (160c C9) und Wasserbrücken (D1c)
   hillGap = null;                                                        // Vorschau „Treppe in die Anhöhe“ (hills.js): gesetzt unten im Bauen-Zweig
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
+    const wc = w === 1 && h === 1 && DECK_MARKS && !bkAt(ax, ay) ? wbAt(ax, ay) : null;
+    if (wc) {                                                            // Wasserbrücke (160c D1c): Rahmen auf dem Deck, nach ihm gezeichnet – eingerückt wie die
+      const P = (u, v) => { const p = toScreen(ax + u, ay + v); p.y -= wegDeckH(wc, wc.ax ? v : u) * z; return p; };   // Plan-Rauten: das nächste Feld malt sonst über die äußere Strichhälfte
+      const ring = [[-0.44, -0.44], [0.44, -0.44], [0.44, 0.44], [-0.44, 0.44]].flatMap(([u0, v0], j, cs) => { const [u1, v1] = cs[(j + 1) % 4]; return [0, 1, 2, 3].map(q => P(u0 + (u1 - u0) * q / 4, v0 + (v1 - v0) * q / 4)); });
+      deckMark(ax, ay, () => { g.strokeStyle = ok ? '#3fbf6f' : '#e5484d'; g.lineWidth = 3 * z; g.beginPath(); ring.forEach((q, i) => i ? g.lineTo(q.x, q.y) : g.moveTo(q.x, q.y)); g.closePath(); g.stroke(); });
+      return P(0, 0);
+    }
     if (boxOnHill(ax, ay, w, h)) {                                       // Anhöhe: Rahmen je Feld, oben auf der Anhöhe
       const col = ok ? '#3fbf6f' : '#e5484d';
       hillFrame(ax, ay, ax + w - 1, ay + h - 1, () => { g.strokeStyle = col; g.lineWidth = 3 * z; });
