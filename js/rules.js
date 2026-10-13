@@ -1902,7 +1902,7 @@ const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.l
 // Neue Modelle (160c D2, abgenommener Entwurf D0: tools/wasserbruecken-entwurf.js): flache Höhe je Material, Wasserfläche (Stützenfuß), Stützpunkte
 // längs im Bogen. WB_NEU: Materialien, die schon der neue Maler zeichnet (bis zum Aufräumen D2j; leer = alles wie D1)
 const BR_WATER_LIFT = { holz: 3, stein: 7, stahl: 3, kristall: 3 }, WB_WATER = -0.7 * DEPTH, WB_AS9 = [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5];
-let WB_NEU = new Set(['holz']);                                          // D2c: Holz (samt Rot)
+let WB_NEU = new Set(['holz', 'stein']);                                 // D2c: Holz (samt Rot), D2d: Stein (samt Ziegel)
 const wbLandAt = (x, y) => { const n = state.tiles.get(x + ',' + y); return !!n && !isWegBridge(n) && terrainAt(x, y) !== 'water'; };   // Rampe wie wegDeckH
 // Spanne längs ax (wie bridgeArchCalc): offen = dahinter Wasser (Steg; gedachtes Feld), Rampe nur zu einer Wegkachel an Land (karte-D2 §6.9)
 function wbSpan(x, y, ax) {

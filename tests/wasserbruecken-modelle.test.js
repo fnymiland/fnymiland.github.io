@@ -93,24 +93,25 @@ const rec = js => game(`(() => { const g0 = g, out = [];
     get: (o, k) => k in o ? o[k] : (...a) => { out.push(k + ' ' + a.map(v => typeof v === 'number' ? v.toFixed(3) : typeof v === 'object' ? '' : v).join(',') + ' ' + o.fillStyle + '|' + o.strokeStyle + '|' + o.lineWidth); },
     set: (o, k, v) => { o[k] = v; return true; } });
   try { ${js} } finally { g = g0; } return out; })()`);
-const holzSzene = () => {
+const holzSzene = (style = 'sand') => {                                   // style: sand = Holz, platten = Stein, kopf = Ziegel (→ Stein)
   const out = [];
-  kanal(6, 4, 1); out.push([6, 4]);
-  kanal(14, 4, 6); out.push([14, 4], [16, 4], [19, 4]);
-  kanal(28, 4, 3, { steg: 1 }); out.push([28, 4], [30, 4]);
-  kanal(44, 4, 3, { steg: -1 }); out.push([44, 4], [46, 4]);
-  kanal(10, 14, 6, { breit: 3 }); out.push([12, 14], [12, 15], [12, 16]);
-  kanal(30, 14, 1, { brk: 'rot' }); out.push([30, 14]);
-  kanal(40, 24, 6, { ax: 1 }); out.push([24, 42], [24, 45]);
-  kanal(40, 34, 3, { ax: 1, steg: 1 }); out.push([34, 40], [34, 42]);
-  kanal(10, 30, 1, { ohneWeg: true }); out.push([10, 30]);
+  kanal(6, 4, 1, { style }); out.push([6, 4]);
+  kanal(14, 4, 6, { style }); out.push([14, 4], [16, 4], [19, 4]);
+  kanal(28, 4, 3, { steg: 1, style }); out.push([28, 4], [30, 4]);
+  kanal(44, 4, 3, { steg: -1, style }); out.push([44, 4], [46, 4]);
+  kanal(10, 14, 6, { breit: 3, style }); out.push([12, 14], [12, 15], [12, 16]);
+  kanal(30, 14, 1, style === 'sand' ? { brk: 'rot' } : { style: 'kopf' }); out.push([30, 14]);
+  kanal(40, 24, 6, { ax: 1, style }); out.push([24, 42], [24, 45]);
+  kanal(40, 34, 3, { ax: 1, steg: 1, style }); out.push([34, 40], [34, 42]);
+  kanal(10, 30, 1, { ohneWeg: true, style }); out.push([10, 30]);
+  kanal(20, 52, 9, { style }); out.push([20, 52], [24, 52]);
   return out;
 };
 describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
-  it('h, vd, o nacheinander = w; alle Felder Holz im neuen Maler (Rot ist Holz)', () => {
-    const felder = holzSzene();
+  for (const [style, mat] of [['sand', 'holz'], ['platten', 'stein']]) it(`${mat}: h, vd, o nacheinander = w; alle Felder im neuen Maler (Rot ist Holz, Ziegel ist Stein)`, () => {
+    const felder = holzSzene(style);
     for (const [x, y] of felder) {
-      expect(game(`(c => c.G.mat + WB_NEU.has(c.G.mat))(wbAt(${x}, ${y}))`), x + ',' + y).toBe('holztrue');
+      expect(game(`(c => c.G.mat + WB_NEU.has(c.G.mat))(wbAt(${x}, ${y}))`), x + ',' + y).toBe(mat + 'true');
       for (const z of [0.5, 1, 2.5]) {
         const ganz = rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', wbAt(${x}, ${y}))`);
         expect(ganz.length).toBeGreaterThan(10);
@@ -118,8 +119,8 @@ describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
       }
     }
   });
-  it('Rahmen: jede Gruppe bleibt in brBox(gr, wbAt) – Stützen bis aufs Wasser, Steg-Enden, breit, Nord-Süd, z 0,5/1/2,5', () => {
-    const felder = holzSzene();
+  for (const style of ['sand', 'platten']) it(`Rahmen (${style}): jede Gruppe bleibt in brBox(gr, wbAt) – Stützen bis aufs Wasser, Steg-Enden, breit, Nord-Süd, z 0,5/1/2,5`, () => {
+    const felder = holzSzene(style);
     const bad = game(`(() => { const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clip = 0;
       const chk = (x, y) => { if (clip) return; const [l, u, r, d] = box, e = lw / 2 + 0.01; if (x < -l - e || x > r + e || y < -u - e || y > d + e) bad.push(cur + ' ' + x.toFixed(1) + ',' + y.toFixed(1)); };
       const fake = new Proxy({ getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), createPattern: () => ({ setTransform() {} }) }, {
