@@ -3,6 +3,7 @@
 // wie Block 150 (Nutzer F1). Nur Bild: drawWegBridge wird während der Aufnahme je Feld umgeleitet, kein Spielcode geändert.
 // Im Browser (?welt=neu, Bild-Sammler auf 4181):
 // (0, eval)(await (await fetch('tools/wasserbruecken-entwurf.js')).text()); await wasserEntwurf()   → tools/vorschau/wasser-*.png
+// Läuft nur bis acc7d9a: 160c D1 zeichnet Wasserbrücken in Lagen in tileA (BRIDGE_FRONT, Bildchen arch|/flat| entfallen) – die D0-Bilder liegen vor
 (function wasserbrueckenEntwurf() {
   const WATER = -0.7 * DEPTH, AS9 = [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5];
   const LIFT = { holz: 3, stein: 7, stahl: 3, kristall: 3 };                 // flach (1 Feld, Steg); Metall/Kristall wie Holz (F-e)

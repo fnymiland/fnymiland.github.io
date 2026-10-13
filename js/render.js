@@ -90,7 +90,7 @@ function liveFlatSet() {
   const hs = state.hills && state.hills.size;                           // Anhöhe (Stufe 2): Wege oben zeichnet tileA (hillFlat)
   for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) {
     const [x, y] = keyXY(k), t = flatAt(x, y);
-    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t) && !(hs && state.hills.has(k))) set.add(k);
+    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t) && !isWegBridge(t) && !(hs && state.hills.has(k))) set.add(k);   // Wasser-Wegbrücken: ruhend in tileA (160c D1)
   }
   LIVE_FLAT = { v: groundVersion, tiles: state.tiles, n: state.tiles.size, set };
   return set;
@@ -928,29 +928,6 @@ function drawBridgeOver(k, z, now) {
     try { drawPath(p.x, p.y, z, x, y, t); } finally { BRIDGE_FRONT = false; }
   }
 }
-// Bogenbrücke an ihrem Feld in der Objekt-Reihenfolge (Block 150): flach zuerst gezeichnet läge alles dahinter darüber
-function drawArchBridge(x, y, px, py, z, t) {
-  const A = bridgeArch(x, y), f = () => drawPath(px, py, z, x, y, t);
-  if (SPRITES_ON && spriteArchBridge(x, y, px, py, z, t, A)) return;      // weit weg als Bildchen (wie die flachen Brücken)
-  if (GLPASS) glLive(px, py, TW * z, (A.peak + 30) * z, TW * z, (TH + 12) * z, f); else f();
-}
-function spriteArchBridge(x, y, px, py, z, t, A) {
-  const zs = spriteStep(z), keyOf = lit => `arch|${x},${y}|${FOG ? 1 : 0}|${lit}`;
-  const key = keyOf(night > 0.15 && isLive() ? 1 : 0), fog = FOG;
-  const make = () => {
-    const sp = paintSprite(TW * zs, (A.peak + 30) * zs, (TH + 12) * zs, () => {
-      const pf = FOG; FOG = fog;
-      try { drawPath(0, 0, zs, x, y, t); } finally { FOG = pf; }
-    });
-    if (sp) sp.z = zs;
-    return sp;
-  };
-  const e = getSprite(key, zs, make, groundVersion);
-  if (preLit()) prewarm(keyOf(1), zs, make, groundVersion);
-  if (!e) return false;
-  putSprite(e, px, py, z);
-  return true;
-}
 // gnd (Anhöhe, Block 157j): samt flachen Teilen und den Schatten darauf (oben gibt es sie nicht im Boden-Bild); cut: an der Kante zugeschnitten
 // (hillCutOf) – beides je Platz, nie geteilt
 function spriteTile(t, ax, ay, c, z, now, w, h, gnd = false, cut = null) {
@@ -1034,7 +1011,7 @@ function spriteEdges(x, y, px, py, z, now) {
 // Brücken und leuchtende Wege weit weg (Block 144): stecken nicht im Boden-Bild (Schiffe fahren unter Brücken, Kristallwege leuchten
 // nachts) und wurden jedes Bild live gezeichnet – in einer Welt mit 107 solchen Feldern ein Gutteil der Rechenzeit, und das
 // GL-Standbild blieb aus. Jetzt je Feld ein Bildchen (Fassung groundVersion; Form hängt an den Nachbarn); das Brückenstück über
-// einem Schiff zeichnet drawBridgeOver weiter live
+// einem Schiff zeichnet drawBridgeOver weiter live. Wasser-Wegbrücken (160c D1): drei Bildchen je Feld wie die Anhöhen-Brücken (spriteBridge, wb|)
 // hill: Weg oben auf einer Anhöhe (tileA, angehoben; zugeschnitten wie drawHillFlat)
 function spriteFlat(x, y, px, py, z, t, hill = false) {
   const zs = spriteStep(z), keyOf = lit => `${hill ? 'hflat' : 'flat'}|${x},${y}|${FOG ? 1 : 0}|${lit}`;
@@ -1642,7 +1619,7 @@ function worldGround(V, z, now, glPlay) {
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && !isPbTrack(t.b) && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     if (hs && state.hills.has(x + ',' + y)) continue;
-    if (isWegBridge(t) && bridgeArch(x, y)) continue;                   // Bogenbrücken (Block 150): mit den Gebäuden, in Maler-Reihenfolge
+    if (isWegBridge(t)) continue;                                       // Wasser-Wegbrücken (160c D1): ruhend in tileA, in Maler-Reihenfolge (wie die Anhöhen-Brücken)
     FOG = !ownedTile(x, y);
     if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
       if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
@@ -1690,7 +1667,7 @@ function render(now) {
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   const glPlay = GL.frame && GL.cacheMode === 'play';                     // Standbild: Boden, Tiefe kommen gemerkt (Block 144)
   const visRange = worldGround(V, z, now, glPlay);
-  if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, Brücken/leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern
+  if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, Gleisbrücken/leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern
   FOG = false;
   if (!groundCached) {
     g.save();
@@ -2028,7 +2005,9 @@ function render(now) {
       // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
       const bc = bkOn() ? bkAt(x, y) : null;                               // Brücke darüber (160c B2): ruhend hier in tileA
-      let bkDone = !bc;
+      const wc = isWegBridge(state.tiles.get(k)) ? wbAt(x, y) : null, bw = bc || wc;   // Wasser-Wegbrücke (160c D1): ebenso, mit ihrem Brückenfeld
+      const wbUnder = bc && wc ? () => bkGroup(x, y, px, py, z, ['w'], wc) : null;   // alte Daten: unter einem Anhöhen-Deck – nur die Brücke (Deko, Rauten malt das Deck)
+      let bkDone = !bw;
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
       const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
@@ -2107,11 +2086,10 @@ function render(now) {
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
             if (oLift && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
-            if (bc && (t.b === 'weg' || t.b === 'schiene')) { bkDrawStill(x, y, px, py, z, now, bc, t.b === 'weg' ? null : drawIt); bkDone = true; }   // unter einer Brücke: Deko hinter/unter/vor dem Deck
+            if (bw && (t.b === 'weg' || t.b === 'schiene')) { bkDrawStill(x, y, px, py, z, now, bw, t.b !== 'weg' ? drawIt : wbUnder); bkDone = true; }   // Brücke: Deko hinter/unter/vor dem Deck
             else {
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();
-            else if (t.bridge && bridgeArch(x, y)) drawArchBridge(x, y, px, py, z, t);   // hoher Bogen: wie ein Gebäude (Block 150)
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_FRONT);
             }
           }
@@ -2142,10 +2120,10 @@ function render(now) {
           tileSprite('kristall', x, y, px, py, z);
           glowQuad([[px - 3 * z, py - 14 * z], [px + 3 * z, py - 14 * z], [px + 3 * z, py], [px - 3 * z, py]], 22 * z, 'blue');
         }
-        if (bc) { bkDrawStill(x, y, px, py, z, now, bc, null); bkDone = true; }
+        if (bw) { bkDrawStill(x, y, px, py, z, now, bw, wbUnder); bkDone = true; }
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
-      if (!bkDone) bkDrawStill(x, y, px, py, z, now, bc, null);           // Rückfall (alte Daten: anderes Ding unter dem Deck) – die Brücke fehlt nie
+      if (!bkDone) bkDrawStill(x, y, px, py, z, now, bw, wbUnder);        // Rückfall (alte Daten: anderes Ding unter dem Deck, Belegung veraltet) – die Brücke fehlt nie
       else if (!bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)

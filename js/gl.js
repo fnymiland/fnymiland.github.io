@@ -679,7 +679,7 @@ function glEvTiles(dyn, order, keyLists) {
 function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB, onDeck) {
   const ops = GLS.ops; ops.length = 0;
   for (const e of GLS.ents) e.used = frameNo;
-  ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Brücken, leuchtende Wege
+  ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, Gleisbrücken, leuchtende Wege (Wasser-Wegbrücken: ruhend in den Feldern, 160c D1)
   let d0;
   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild; Brücken (160c B2): ruhend darin, Felder mit Leuten oben laufen live
   const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : [], brLiveTiles()]);   // Kristall (160c C4): Glas jedes Bild

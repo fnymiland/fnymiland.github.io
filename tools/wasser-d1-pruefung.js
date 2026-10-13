@@ -36,7 +36,8 @@
   window.wasserD1 = async (name, { W = 420, H = 320, cols = 6, gl = false } = {}) => {
     closeModal(); closePanel(); setTool('look');
     const sm = syncMovers; syncMovers = () => {};                         // ohne Bewegtes: Leute, Tiere, Züge, Schiffe (die haben eigene Szenen)
-    const leer = () => { walkers.length = 0; if (Array.isArray(hillWalkers)) hillWalkers.length = 0; critters.length = 0; if (Array.isArray(trains)) trains.length = 0; };
+    const leer = () => { walkers.length = 0; if (Array.isArray(hillWalkers)) hillWalkers.length = 0; critters.length = 0; if (Array.isArray(trains)) trains.length = 0;
+      if (typeof meFigs !== 'undefined' && Array.isArray(meFigs)) meFigs.length = 0; if (typeof visitorFigs !== 'undefined' && Array.isArray(visitorFigs)) visitorFigs.length = 0; };
     const sh = shipMovers, fb = fishBoats, cs = cargoShip; shipMovers = () => []; fishBoats = () => []; cargoShip = () => null;
     const out = {};
     try {

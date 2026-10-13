@@ -47,6 +47,7 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
       expect(ganz.length, x + ',' + y).toBeGreaterThan(0);
       const lagen = rec(`for (const L of [BK_GRUPPEN.h, BK_GRUPPEN.vd, BK_GRUPPEN.o]) drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, L)`);
       expect(lagen, x + ',' + y + ' z ' + z).toEqual(ganz);
+      expect(rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, BK_GRUPPEN.w)`), 'w ' + x + ',' + y).toEqual(ganz);   // D1b: ruhend alles in einem
       if (game(`!!bridgeArch(${x}, ${y})`)) {
         const vorn = rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, ['v', 'd', 'o'])`);
         expect(vorn, 'vorn ' + x + ',' + y).toEqual(rec(`BRIDGE_FRONT = true; try { drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}); } finally { BRIDGE_FRONT = false; }`));
@@ -89,7 +90,7 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
         get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'fillRect' ? (x, y, w, h) => { chk(x, y); chk(x + w, y + h); } : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); }
           : k === 'save' ? () => st.push(clip) : k === 'restore' ? () => { clip = st.pop() || 0; } : k === 'clip' ? () => { clip = 1; } : k in o ? o[k] : () => {},
         set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
-      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o']) {
+      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o', 'w']) {
         const c = wbAt(x, y); cur = x + ',' + y + ' z' + z + ' ' + gr; box = brBox(gr, c).map(v => v * z);
         g = fake; try { drawWegBridge(0, 0, z, x, y, state.tiles.get(x + ',' + y), BK_GRUPPEN[gr]); } finally { g = g0; } } }
       finally { g = g0; } return bad.slice(0, 8); })()`);

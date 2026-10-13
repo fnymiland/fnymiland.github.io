@@ -39,24 +39,24 @@
   }
   // Umleitungen nur während der Aufnahme
   function patched(fn) {
-    const o = { dwb: drawWegBridge, sab: spriteArchBridge, bac: bridgeArchCalc, baf: bkArmFrom, off: GL.off };
+    const o = { dwb: drawWegBridge, sb: spriteBridge, bac: bridgeArchCalc, baf: bkArmFrom, off: GL.off };
     const P = (x, y, ax, a, b, h, cx, cy, z) => { const [u, v] = ax ? [b, a] : [a, b]; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z]; };
-    drawWegBridge = (cx, cy, z, x, y, t) => {                                // (bkOn gilt: die flache Brücke ist echt)
-      if (!mock.has(x + ',' + y)) return o.dwb(cx, cy, z, x, y, t);
+    drawWegBridge = (cx, cy, z, x, y, t, lagen) => {                         // (bkOn gilt: die flache Brücke ist echt); lagen: 160c D1
+      if (!mock.has(x + ',' + y)) return o.dwb(cx, cy, z, x, y, t, lagen);
       const A = bridgeArch(x, y), kind = bridgeKind(t), ax = A ? A.ax : 0, hw = EDGE_W;
-      if (!BRIDGE_LOOK[kind].wall) {                                         // Holz/Rot: Stützen vom Boden bis unter den Bogen
+      if (!BRIDGE_LOOK[kind].wall && (!lagen || lagen.includes('h'))) {      // Holz/Rot: Stützen vom Boden bis unter den Bogen (einmal, mit der hinteren Lage)
         const col = BRIDGE_LOOK[kind].side, pw = 1.2;
         const as = A && archSpan(A.N) > 1 ? archCenters(A.N).map(c => c - A.i0 - 0.5).filter(a => a >= -0.5 && a < 0.5) : [-0.3, 0.3];
         g.fillStyle = C(col);
         for (const b of [-hw + 0.1, hw - 0.1]) for (const a of as) { const p0 = P(x, y, ax, a, b, 0, cx, cy, z), p1 = P(x, y, ax, a, b, HILL_H + 1, cx, cy, z); g.fillRect(p0[0] - pw * z, p1[1], 2 * pw * z, p0[1] - p1[1]); }
       }
-      return o.dwb(cx, cy - HILL_H * z, z, x, y, t);
+      return o.dwb(cx, cy - HILL_H * z, z, x, y, t, lagen);
     };
-    spriteArchBridge = (x, y, ...r) => mock.has(x + ',' + y) ? false : o.sab(x, y, ...r);
+    spriteBridge = (x, y, ...r) => mock.has(x + ',' + y) ? false : o.sb(x, y, ...r);
     bridgeArchCalc = (x, y) => { const A = o.bac(x, y); if (A && mock.has(x + ',' + y)) { A.peak *= mock.get(x + ',' + y); A.open = archOpenings(A); } return A; };
     bkArmFrom = (x, y, dx, dy) => (mock.has((x + dx) + ',' + (y + dy)) && hillLevel(x, y) >= 1) || o.baf(x, y, dx, dy);
     GL.off = true;
-    try { return fn(); } finally { drawWegBridge = o.dwb; spriteArchBridge = o.sab; bridgeArchCalc = o.bac; bkArmFrom = o.baf; GL.off = o.off; bridgeArchCache.v = -1; resetDrawCaches(); groundVersion++; }
+    try { return fn(); } finally { drawWegBridge = o.dwb; spriteBridge = o.sb; bridgeArchCalc = o.bac; bkArmFrom = o.baf; GL.off = o.off; bridgeArchCache.v = -1; resetDrawCaches(); groundVersion++; }
   }
   function shot(cx, cy, zz, W, H, up = HILL_H) {
     const p = iso(cx, cy); cam.x = p.x; cam.y = p.y - up; cam.z = zz;

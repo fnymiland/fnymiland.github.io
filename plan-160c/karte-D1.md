@@ -122,6 +122,8 @@ if (bw && (t.b === 'weg' || t.b === 'schiene')) { bkDrawStill(x, y, px, py, z, n
 - Kommentare anpassen: gl.js:682, render.js:1693 („Gleisbrücken“).
 - `tools/bogen-anhoehe-entwurf.js:42/55/59`: `sab` durch `spriteBridge` ersetzen, `lagen` an `o.dwb` weiterreichen.
 - `npm run leistung:neu` mit Begründung „Wasserbrücken als 3 Bildchen h|vd|o statt 1 (B2), ohne lit“.
+- **Umgesetzt (13.10.) anders:** Mit drei Bildchen je Feld stiegen die Zeichenbefehle in der Testwelt „neu“ (80 Brückenfelder) um 20–33 %. Ruhend liegt auf dem Wasser nichts zwischen den Lagen (keine Deko, kein `under`). Darum malt `bkDrawStill` dort eine Gruppe `w` (= h+v+d+o, `BK_GRUPPEN.w`), also ein Bildchen `wb|x,y|w`. Die Grenzen bleiben, `leistung:neu` entfällt. Nachgemalt wird in D1e je Lage (h, vd, o); diese Bildchen entstehen erst, wenn etwas vorbeikommt.
+- Bildvergleich gegen `d1-basis-1`: nah und Nacht ändern sich nur in 2 von 17 Bildern. Bei „1 Feld“ liegt das Brückenende jetzt auf dem Uferweg (vorher malte der Weg zackig darüber). Bei „16 Holz“ (Zoom 1,1, schon Bildchen) unterscheiden sich nur Kantenpunkte. Weit weg gibt es überall nur Kantenpunkte (anderer Bildchen-Rahmen), nichts ist abgeschnitten.
 
 **D1c Vorschau auf dem Deck** (Normal)
 ```js

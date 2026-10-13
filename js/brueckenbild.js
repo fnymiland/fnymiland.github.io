@@ -6,12 +6,12 @@
 // ---------------------------------------------------------------------------
 const BK_LAGEN = ['h', 'v', 'd', 'o', 'hg', 't1', 't2'];                    // hg/t1/t2: Glas (Kristall, 160c C4) – halbdurchsichtig, genau einmal je Bild
 // Gruppen fürs Zeichnen (160c B2): ruhend in tileA h | (Deko unter dem Deck) | vd | o; nachgemalt je nach Bewegtem
-const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB
+const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'], w: ['h', 'v', 'd', 'o'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB; w: alles in einem (ruhende Wasserbrücke, 160c D1)
 // Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
 function brBox(gruppe, c = null) {                                         // c: Feld (bkAt) – oben bis zum Scheitel im Feld (Bogen, 160c C2)
   const hm = c ? (c.water ? c.hm : bkHMax(c)) : HILL_H;                  // Wasser-Wegbrücke (160c D1): eigene Höhe
   let top = gruppe === 'vd' || gruppe === 't1' ? 8 : 16;
-  if (gruppe === 'vd' && c && c.G && c.G.look.licht) {                     // Licht (C7): hintere Lampe an der Feldkante, oben bei −s – Kopf + 1 Reserve
+  if ((gruppe === 'vd' || gruppe === 'w') && c && c.G && c.G.look.licht) {   // Licht (C7): hintere Lampe an der Feldkante, oben bei −s – Kopf + 1 Reserve
     const S = brLampSpots(c.G.art, c.G.fam, c.b.n);
     if (S.back === 'd') top = Math.max(top, S.up + { punkt: 0.85, laterne: 7.2, streifen: 1.4 }[S.form] + (0.5 + S.s) * TH / 2 - TH / 2 + 1);
   }
@@ -146,6 +146,8 @@ function bkBoxOf(gruppen, c = null) {
 // Ruhend (tileA): eine Zelle je Gruppe; under: was zwischen h und Deko UNTER liegt (Bahnübergang – eigene Zelle, nie verschachtelt)
 function bkDrawStill(x, y, px, py, z, now, c, under) {
   const k = x + ',' + y, G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
+  if (c.water && !under && !G) bkGroup(x, y, px, py, z, ['w'], c);         // Wasserbrücke (160c D1): nichts zwischen den Lagen – ein Bildchen statt drei (nachgemalt wird je Lage)
+  else {
   if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
   if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg'], c);                   // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)
   bkGroup(x, y, px, py, z, ['h'], c);
@@ -153,6 +155,7 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
   bkGroup(x, y, px, py, z, ['vd', 'o'], c);
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
+  }
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
 }
@@ -181,7 +184,7 @@ function bkGroup(x, y, px, py, z, gruppen, c = bkAt(x, y)) {              // c: 
 }
 // Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch; recalc auch – der Strom ändert
 // sich nur dort, darum steht „dunkel“ nicht im Schlüssel). Gruppen mit Lampen (C7, bkLampGroups) bekommen |lit und werden vor der
-// Dämmerung beleuchtet vorbereitet (wie spriteArchBridge, Regel 143); alle anderen behalten den Schlüssel ohne Licht
+// Dämmerung beleuchtet vorbereitet (wie spriteFlat, Regel 143); alle anderen behalten den Schlüssel ohne Licht
 function spriteBridge(x, y, px, py, z, gruppe, c = bkAt(x, y)) {
   const lamp = bkLampGroups(c).includes(gruppe), fog = FOG;
   const zs = spriteStep(z), keyOf = lit => `${c && c.water ? 'wb' : 'br'}|${x},${y}|${gruppe}|${fog ? 1 : 0}` + (lamp ? '|' + lit : ''), key = keyOf(night > 0.15 && isLive() ? 1 : 0), [l, u, , d] = brBox(gruppe, c);

@@ -34,13 +34,13 @@ describe('WebGL weit weg (Block 144)', () => {
       } return bad; })()`);
     expect(cmp).toEqual([]);
   });
-  it('live gezeichnete Wege weit weg: dieselben Felder wie die Prüfung je Feld (Brücken, leuchtende Beläge)', () => {
-    game("state.tiles.set('3,3', { b: 'weg', lvl: 1, style: 'sand', bridge: true }); groundVersion++");
+  it('live gezeichnete Wege weit weg: dieselben Felder wie die Prüfung je Feld (Gleisbrücken, leuchtende Beläge; Wasser-Wegbrücken nicht, 160c D1)', () => {
+    game("state.tiles.set('3,3', { b: 'weg', lvl: 1, style: 'sand', bridge: true }); state.tiles.set('4,3', { b: 'schiene', lvl: 1, bridge: true }); groundVersion++");
     const r = game(`(() => { const set = liveFlatSet(), brute = new Set();
-      for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) { const [x, y] = keyXY(k), t = flatAt(x, y); if (t && (t.b === 'schiene' || wegUnder(t) != null) && !cachedPath(t)) brute.add(k); }
-      return [set.has('3,3'), set.size === brute.size && [...brute].every(k => set.has(k))]; })()`);
-    expect(r).toEqual([true, true]);
-    game("state.tiles.delete('3,3'); groundVersion++");
+      for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) { const [x, y] = keyXY(k), t = flatAt(x, y); if (t && (t.b === 'schiene' || wegUnder(t) != null) && !cachedPath(t) && !isWegBridge(t)) brute.add(k); }
+      return [set.has('3,3'), set.has('4,3'), set.size === brute.size && [...brute].every(k => set.has(k))]; })()`);
+    expect(r).toEqual([false, true, true]);                                       // Wegbrücke ruhend in tileA, Gleisbrücke bleibt
+    game("state.tiles.delete('3,3'); state.tiles.delete('4,3'); groundVersion++");
     expect(game("liveFlatSet().has('3,3')")).toBe(false);
   });
   it('Haken: drawImage/save/restore/clip nur während des Aufzeichnens, danach wieder die echten', () => {
