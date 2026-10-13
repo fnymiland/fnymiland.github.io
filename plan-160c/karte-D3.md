@@ -436,3 +436,14 @@ Die Dateien, um die es geht:
 
 **Reihenfolge:** D3d (Baustein herauslösen, unsichtbar) → D3·0 (Fenster-Entwurf mit dem echten Baustein, Bilder) → Fragen 2–9 → D3a → D3b →
 D3c → D3e → D3f → D3g → D3h → D3i → D3j.
+
+## 7. Antworten des Nutzers (13.10.2026, Entwurf tools/vorschau/d3-fenster-entwurf.html)
+
+- **Fenster:** passt so (Material, Farbe, Deck, Planken bzw. Belag, Stützen, Zacken, Licht wie an der Anhöhe); **Planken auch an der Anhöhe**.
+- **Sperren übers Wasser:** Holz, Metall, Stein frei; Kristall ab Kristallinsel (🔒 mit Grund).
+- **Farbe beim Materialwechsel** alter Roter/Ziegel: bleibt (wie Anhöhe); „Wie das Material“ setzt zurück.
+- **Zusammenwachsen zweier Spannen:** die kürzere übernimmt kostenlos das Aussehen der längeren; jedes Feld erstattet sein Bezahltes.
+- **Verlängern:** gekauftes Licht und gekaufte Zacken werden im selben Zustand mitgekauft (eine Brücke, ein Aussehen) – Abweichung von PLAN 1.7, so gewollt.
+- **Leiste:** Holz = wie der Wegstil; Metall/Stein/Kristall aus der Leiste setzen das Material fest.
+- **Seeweg-Warnung:** nach dem Bau (auch nach Umstellen im Fenster und Ablegen), mit „↶ macht es rückgängig“.
+- **Kristall über einem Boot unter einem früheren Feld:** lösen (Glas im Bootsrahmen nachmalen, ohne Doppeldeckung), Bild zeigen.
