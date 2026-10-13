@@ -12,7 +12,7 @@ it('Erzeuger baut Brücken, Parkbahn mit 3 Zügen, alle Laternenformen, neue Bä
   const d = game('makeNeuWelt()');
   const r = game(`(() => {
     const tiles = [...state.tiles.values()], decos = [...state.decos.values()].flat().filter(Boolean);
-    const arches = new Set(); for (const [k, t] of state.tiles) if (t.bridge) { const [x, y] = keyXY(k), A = bridgeArch(x, y); if (A) arches.add(A.N + (t.brk || '')); }
+    const arches = new Set(); for (const [k, t] of state.tiles) if (t.bridge) { const [x, y] = keyXY(k), A = bridgeArch(x, y); if (A) arches.add(A.N + bridgeKind(t)); }   // Art ausdrücklich (160c D3: neue Brücken schreiben brk immer)
     return {
       bridges: tiles.filter(t => t.bridge).length, arches: [...arches].sort(),
       trains: PB_RINGS.length ? pbForms(PB_RINGS[0]) : [],
@@ -23,7 +23,7 @@ it('Erzeuger baut Brücken, Parkbahn mit 3 Zügen, alle Laternenformen, neue Bä
     };
   })()`);
   expect(r.bridges).toBeGreaterThan(70);
-  expect(r.arches).toEqual(expect.arrayContaining(['16', '9ziegel', '6holz', '3rot', '2', '12']));
+  expect(r.arches).toEqual(expect.arrayContaining(['16ziegel', '9ziegel', '6holz', '3rot', '2holz', '12holz']));
   expect(r.trains).toEqual([0, 1, 2]);
   expect(r.lampForms).toEqual([0, 1, 2, 3, 4, 5]);
   expect(r.benchForms).toEqual([0, 1, 2, 3, 4, 5, 6]);

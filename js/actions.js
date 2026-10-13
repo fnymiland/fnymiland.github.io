@@ -149,10 +149,16 @@ function build(b, x, y, quiet) {
     if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Gleis-Rampe in die Anhöhe (A, C; hills.js): ihre eingelassenen Felder absenken
     else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
+    const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
-    if (bridge) {                                                     // Brücke verlängern: Aussehen der alten übernehmen (66c; 160c: alle br-Felder, nur Eingeschaltetes)
+    if (wbS) {                                                        // Wasser-Wegbrücke (160c D3): immer im neuen Format, aus dem Aussehen (nie Rohfelder), bezahlt = costOf
+      const nt = state.tiles.get(k);
+      brWriteLook(nt, wbS.look, wbS.brk, wbS.zk, wbS.raw);
+      nt.brp = { ...brPrice(wbS.look, 'wasser'), k: brSig(nt, 'wasser') };
+      wbUnify(x, y);                                                  // zwei Brücken wachsen zusammen: angleichen
+    } else if (bridge) {                                              // Gleisbrücke verlängern: Aussehen der alten übernehmen (66c; 160c: alle br-Felder, nur Eingeschaltetes)
       const want = b === 'weg' ? isWegBridge : (t => !!t && t.b === 'schiene' && !!t.bridge);
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(want), nt = state.tiles.get(k);
       if (nb) {
@@ -524,7 +530,8 @@ function dropGroup(hx, hy) {
     else { if (!state.decos.has(k)) state.decos.set(k, newSlots()); state.decos.get(k)[P.slot] = { ...P.d, born: now }; }
   }
   if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
-  for (const it of moving.items) if (it.kind === 'tile' && it.t.b === 'huegeltreppe') { const P = groupPlaced(it); stairDropped(ox + P.dx, oy + P.dy); }   // Treppen: Ecke oder gerade wie gebaut (hills.js)
+  for (const it of moving.items) if (it.kind === 'tile' && it.t.b === 'huegeltreppe') { const P = groupPlaced(it); stairDropped(ox + P.dx, oy + P.dy); }
+  for (const it of moving.items) if (it.kind === 'tile' && isWegBridge(it.t)) { const P = groupPlaced(it); wbUnify(ox + P.dx, oy + P.dy); }   // Brücken angleichen (160c D3)   // Treppen: Ecke oder gerade wie gebaut (hills.js)
   if (moving.copy) {                                                     // Stempel: dieselbe Kopie gleich noch einmal (frische Dinge)
     moving.items = moving.items.map(copyClone);
     addFloat(hx, hy, '−' + fmt(moving.cost.money || 0), '#d9534a');
@@ -682,6 +689,7 @@ function dropAt(x, y, slot) {
     setUnder(t, x, y, plazaOk(b) ? covered : []);
     state.tiles.set(k, t);
     claimSea(b, x, y, rot, t, t.bridge);
+    if (isWegBridge(t)) wbUnify(x, y);                                  // an eine andere Brücke gelegt: angleichen (160c D3)
     if (b === 'huegeltreppe') stairDropped(x, y);                       // Treppe: Ecke oder gerade wie gebaut (hills.js)
   }
   moving = null;

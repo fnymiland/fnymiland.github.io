@@ -103,3 +103,39 @@ describe('Wasser-Wegbrücken: Setzer wbSet (160c D3a)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+describe('Wasser-Wegbrücken: Bauen im neuen Format (160c D3b)', () => {
+  const bau = (x, y, style = 'sand') => game(`(() => { chosenStyle.weg = '${style}'; setTool('weg'); const ok = build('weg', ${x}, ${y}, true); setTool('look'); return ok; })()`);
+  const fluss = () => game("for (let y = 3; y <= 9; y++) for (let x = 10; x <= 14; x++) state.terra.set(x + ',' + y, 'water'); terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc()");
+  it('neues Feld: neues Format mit ausdrücklicher Art; bezahlt = Preis vorher (costOf) = Erstattung', () => {
+    fluss(); bau(9, 6); 
+    for (const [x, st] of [[10, 'sand'], [11, 'platten']]) {
+      const c = game(`costOf('weg', ${x}, 6)`), w0 = wallet();
+      expect(bau(x, 6, st)).toBe(true);
+      const t = game(`state.tiles.get('${x},6')`);
+      expect([t.bridge, !!t.brp, t.brk, t.brm]).toEqual([true, true, 'holz', 'holz']);   // verlängert: wie die Brücke daneben (Holz), auch auf Platten
+      const paid = diff(wallet(), w0);
+      expect(paid.money).toBe(c.cost);
+      expect(zurueck([x + ',6'])).toEqual(paid);                                       // Brückenfeld: Preis = Brücke (kein Weg dazu)
+    }
+  });
+  it('verlängern: gekauftes Licht (auch aus) kommt mit und wird bezahlt', () => {
+    fluss(); bau(9, 6); bau(10, 6); bau(11, 6);
+    game("wbSet(10, 6, { licht: 'kaufen' }); wbSet(10, 6, { licht: 'aus' })");
+    const w0 = wallet();
+    expect(bau(12, 6)).toBe(true);
+    expect(game("state.tiles.get('12,6').brl")).toBe('aus');
+    expect(diff(wallet(), w0)).toEqual({ money: 30 + 20, bretter: 2, metall: 1 });
+  });
+  it('zwei Brücken wachsen zusammen: die längere gewinnt, die kürzere übernimmt kostenlos; jedes Feld erstattet sein Bezahltes', () => {
+    fluss(); bau(9, 6); bau(10, 6); bau(11, 6); bau(15, 6); bau(14, 6);
+    game("wbSet(14, 6, { mat: 'stahl' })");
+    const before = zurueck(['14,6']);
+    expect(game("[brSpanLook(10, 6).mat, brSpanLook(14, 6).mat]")).toEqual(['holz', 'stahl']);
+    const w0 = wallet();
+    expect(bau(12, 6)).toBe(true); expect(bau(13, 6)).toBe(true);
+    expect(diff(wallet(), w0).money).toBe(2 * 30);                                 // die neuen Felder im Aussehen der längeren (Holz)
+    for (const x of [10, 11, 12, 13, 14]) expect(game(`brLook(state.tiles.get('${x},6'), 'wasser').mat`), x).toBe('holz');
+    expect(zurueck(['14,6'])).toEqual(before);                                    // Metall bezahlt: Metall zurück
+  });
+});
