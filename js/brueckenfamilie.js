@@ -295,15 +295,15 @@ const BR_TRUSS = { T: 11, inset: 0.15 };
 // Lampen je Modell (160c C7, abgenommen: tools/brueckenlicht-entwurf.js; plan-160c/karte-C7-bau.md §1). art/fam wie bkGeom (Maler-Art,
 // Familie). ts: Orte längs (Feldkanten bzw. Fachwerkknoten; null = Streifen je Viertel), s: Querlage (hinten −s, vorn +s), up: Fuß über
 // dem Deck, r: Schein × z, back/front: Lage, an deren Ende die Lampen kommen (hinten nach dem Deck, vorn zuletzt). Licht prüft der Aufrufer
-function brLampSpots(art, fam, n) {
-  const N = Math.min(Math.max(1, Math.round(+n) || 1), BK_READ_MAX), A = -0.5, B = N - 0.5, W = BK_W, grid = K => Array.from({ length: N * K + 1 }, (_, k) => A + k / K);
+function brLampSpots(art, fam, n, max = BK_READ_MAX) {                     // max: Wasser (160c D2) bis zur ganzen Länge – ab 9 Feldern Punkte nur auf den Feldkanten
+  const N = Math.min(Math.max(1, Math.round(+n) || 1), max), A = -0.5, B = N - 0.5, W = BK_W, grid = K => Array.from({ length: N * K + 1 }, (_, k) => A + k / K);
   if (art === 'stein') return { form: 'laterne', ts: N > 1 ? grid(1).slice(1, -1) : [0], s: W, up: BR_STEIN.par, r: 18, back: 'd', front: 'o' };   // innere Kanten; 1 Feld: Mitte
   if (art === 'kristall') return { form: 'streifen', ts: null, s: fam === 'fuss' ? W : W + 0.02, up: 0, r: 7, tint: 'blue', back: fam === 'fuss' ? 'h' : 't1', front: 't2' };
   if (fam === 'bahn' && art === 'stahl') {                                   // Punkte am Obergurt, auf den Fachwerkknoten
     const a = A + BR_TRUSS.inset, b = B - BR_TRUSS.inset;
     return { form: 'punkt', ts: Array.from({ length: 2 * N + 1 }, (_, k) => a + (b - a) * k / (2 * N)), s: W + 0.02, up: BR_TRUSS.T + 0.6, day: '#e9eef0', r: 4, back: 'd', front: 'o' };
   }
-  return { form: 'punkt', ts: grid(2), s: W, up: fam === 'bahn' ? 8.6 : art === 'stahl' ? 7 : 6.6, day: art === 'stahl' ? '#eef3f2' : '#f3e3b0', r: 5, back: 'd', front: 'o' };   // auf jedem 2. Pfosten
+  return { form: 'punkt', ts: grid(N >= 9 ? 1 : 2), s: W, up: fam === 'bahn' ? 8.6 : art === 'stahl' ? 7 : 6.6, day: art === 'stahl' ? '#eef3f2' : '#f3e3b0', r: 5, back: 'd', front: 'o' };   // auf jedem 2. Pfosten
 }
 // Lichtraum unter dem Deck (G8: Maler, bkTooTall, bkUnderError): ohne Stein BK_CLEAR; Stein (Bogen und Viadukt): unter dem Bogen über
 // [t − r, t + r] (−1), am Pfeiler −1 (nichts, auch keine Blumen)

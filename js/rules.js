@@ -826,7 +826,7 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { bridgeArchCache.v = -1; wbCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+function recalc() { bridgeArchCache.v = -1; wbCache.v = -1; if (typeof brSpanCache === 'object') brSpanCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
 // Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
 // zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
 const PEAK_HALF = 1200;
@@ -1892,12 +1892,43 @@ function wbAt(x, y) {
   if (c) return c;
   const A = bridgeArch(x, y), ax = A ? A.ax : bridgeAxis(x, y, t), lift = (BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz).lift;
   const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
-  c = { k, x, y, water: true, A, ax, b: { ax, n: A ? A.N : 1 }, W: EDGE_W, lift, landA: !A && land(-1), landB: !A && land(1), G: null };
-  c.hm = Math.ceil(A ? archDeck(A, Math.max(A.i0, Math.min(A.i0 + 1, A.N / 2))) : lift);
+  const G = wbGeom(x, y, A, ax);
+  c = { k, x, y, water: true, A, ax, b: { ax, n: G.n }, W: EDGE_W, lift: WB_NEU.has(G.mat) ? G.lift : lift, landA: !A && land(-1), landB: !A && land(1), G };
+  c.hm = Math.ceil(A ? archDeck(A, Math.max(A.i0, Math.min(A.i0 + 1, A.N / 2))) : c.lift);
   C.map.set(k, c);
   return c;
 }
 const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.lift, c.landA, c.landB, a);   // a: längs im Feld, −½ … ½
+// Neue Modelle (160c D2, abgenommener Entwurf D0: tools/wasserbruecken-entwurf.js): flache Höhe je Material, Wasserfläche (Stützenfuß), Stützpunkte
+// längs im Bogen. WB_NEU: Materialien, die schon der neue Maler zeichnet (bis zum Aufräumen D2j; leer = alles wie D1)
+const BR_WATER_LIFT = { holz: 3, stein: 7, stahl: 3, kristall: 3 }, WB_WATER = -0.7 * DEPTH, WB_AS9 = [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5];
+let WB_NEU = new Set();
+const wbLandAt = (x, y) => { const n = state.tiles.get(x + ',' + y); return !!n && !isWegBridge(n) && terrainAt(x, y) !== 'water'; };   // Rampe wie wegDeckH
+// Spanne längs ax (wie bridgeArchCalc): offen = dahinter Wasser (Steg; gedachtes Feld), Rampe nur zu einer Wegkachel an Land (karte-D2 §6.9)
+function wbSpan(x, y, ax) {
+  const dx = ax ? 0 : 1, dy = ax ? 1 : 0, at = i => state.tiles.get((x + dx * i) + ',' + (y + dy * i));
+  let i0 = 0, i1 = 0;
+  while (i0 < 60 && isWegBridge(at(-i0 - 1))) i0++;
+  while (i1 < 60 && isWegBridge(at(i1 + 1))) i1++;
+  const ea = [x - dx * (i0 + 1), y - dy * (i0 + 1)], eb = [x + dx * (i1 + 1), y + dy * (i1 + 1)];
+  return { i0, N: i0 + 1 + i1, landA: wbLandAt(...ea), landB: wbLandAt(...eb), openA: terrainAt(...ea) === 'water', openB: terrainAt(...eb) === 'water' };
+}
+// Geometrie des Brückenfelds für den neuen Maler (Entwurf maler()): Aussehen der Spanne (brSpanLook), Maler-Art, gedachte Felder an offenen Enden
+// (vA davor; die Balustrade läuft dort nicht aus), Feld i und Rahmen t0/t1 im Parameterraum (t ab der Mitte des ersten Felds), Höhe hf(t),
+// Holz-Stützen auf Kanten (brSupports, dazu die offenen Enden, nur wo das Deck ≥ 2 hoch ist), breite Reihen (latB/latF/depth)
+function wbGeom(x, y, A, ax) {
+  const look = brSpanLook(x, y) || brLegacyLook(state.tiles.get(x + ',' + y), 'wasser'), mat = BR_WATER_LIFT[look.mat] ? look.mat : 'holz';
+  const lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s)))), latF = lat(1), latB = lat(-1);
+  let depth = 0; while (depth < 8 && lat(-depth - 1)) depth++;
+  const S = A ? { i0: A.i0, N: A.N, landA: true, landB: true } : wbSpan(x, y, ax), oA = !A && !!S.openA, oB = !A && !!S.openB;
+  if (!A) { delete S.openA; delete S.openB; }
+  const vA = oA ? 1 : 0, n = S.N + vA + (oB ? 1 : 0), i = S.i0 + vA, lift = BR_WATER_LIFT[mat];
+  const hf = A ? t => archDeck(A, t + 0.5) : t => { const j = t - vA; return Math.max(0, Math.min(lift, S.landA ? lift * (j + 0.5) / 0.3 : lift, S.landB ? lift * (S.N - 0.5 - j) / 0.3 : lift)); };
+  const supports = mat !== 'holz' ? [] : [...brSupports({ ...look, mat: 'holz', fam: 'fuss' }, S.N).map(k => k + vA), ...(oA ? [vA] : []), ...(oB ? [S.N + vA] : [])].filter(k => hf(k - 0.5) >= 2);
+  const lastB = oB && S.i0 === S.N - 1;
+  return { look, mat, art: mat, fam: 'fuss', S, oA, oB, vA, n, i, t0: i - 0.5, t1: i + 0.5, first: oA && S.i0 === 0, lastB, latB, latF, depth, lift, hf, supports,
+    endPost: mat === 'holz' && lastB, startPost: supports.includes(i), ext: S.i0 < S.N - 1 ? 0.012 : 0 };
+}
 // Richtung einer Brücke (0: längs u/x, 1: längs v/y): die Achse, an deren Enden Land liegt; sonst die längere Reihe Brückenfelder.
 // Breite Brücken (Block 151): quer liegen weitere Brückenfelder – die zählen nicht als Arm (vorher die ersten Nachbarn)
 function bridgeAxis(x, y, t) {

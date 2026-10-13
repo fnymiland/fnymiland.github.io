@@ -33,7 +33,7 @@ function bkPaintLage(lage, P, z, art, n, t0, t1, weg, opts = {}) {
 // (Nachtbild, Vorwärmen): an = gelb mit Schein; aus bzw. ohne Strom nachts grau (Kristall: Tagfarbe), tags Tagfarbe. Nur Hex (G5)
 // ---------------------------------------------------------------------------
 function bkLamps(lage, P, z, art, fam, n, t0, t1, opts) {
-  const S = brLampSpots(art, fam, n);
+  const S = brLampSpots(art, fam, n, opts.lampMax);
   if (lage !== S.back && lage !== S.front) return;
   const s = (lage === S.back ? -1 : 1) * S.s, H = opts.h != null ? opts.h : HILL_H, hOf = fam === 'bahn' && art !== 'stein' ? () => H : opts.hf || (() => H);
   const nt = night > 0.15 && isLive(), on = opts.licht === 'an' && !opts.dark, lit = nt && on, grau = nt && !on;
@@ -390,7 +390,7 @@ function bkPaintFuss(lage, P, z, art, n, t0, t1, weg, opts) {
       if (opts.zacken) for (let k = Math.max(0, Math.round((t0 - A) * 7)); A + (k + 0.5) / 7 < t1; k++) {   // Kristallzacken: Nummer ab dem Anker (Muster unabhängig von der Feldaufteilung)
         const t = A + (k + 0.5) / 7, m = Math.min(k, 7 * n - 1 - k), w2 = 0.05;   // m: gespiegelt – beide Enden gleich (Nutzer 12.10.2026: symmetrisch)
         const len = 3 + 4 * Math.abs(Math.sin(m * 2.3)) * Math.sin(Math.PI * u01(t)), tip = ri(t) - len;
-        if (t < t0 || tip < brClear()) continue;
+        if (t < t0 || tip < (opts.clear != null ? opts.clear : brClear())) continue;   // Wasser (160c D2): eigene Grenze (D0 F-g)
         const pts = [P(t - w2, W, ri(t - w2)), P(t, W, tip), P(t + w2, W, ri(t + w2))];
         poly([pts[0], pts[2], pts[1]], C(sh(m % 2 ? L.z1 : L.z2)));
         stroke(pts, sh(L.edge), 0.2);
