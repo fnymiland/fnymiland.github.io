@@ -27,6 +27,8 @@ describe('Bogenbrücken (Block 150)', () => {
     game("for (let y = 5; y <= 20; y++) for (let x = 10; x <= 40; x++) state.terra.set(x + ',' + y, 'water'); recalc(); chosenStyle.weg = 'sand'; for (let x = 6; x <= 12; x++) build('weg', x, 12); recalc()");
     expect(game("!!state.tiles.get('11,12') && state.tiles.get('11,12').bridge")).toBe(true);
     expect(game('bridgeArch(11, 12)')).toBe(null);
+    expect(game('[seaCross(10, 12), seaCross(11, 12), seaCross(12, 12)]').every(c => c === null || c === 'block')).toBe(true);   // Steg: kein Boot darunter (160c D2)
+    expect(game("seaCross(11, 12)")).toBe('block');
   });
   it('Stein: Bögen wie mit dem Nutzer entschieden – 6: einer, 9: Haupt + 2 Neben, 12: 2 große + 2 kleine, 16: zwei große', () => {
     const n = N => { river(N); return game('bridgeArch(10, 12).open.length'); };
@@ -36,7 +38,7 @@ describe('Bogenbrücken (Block 150)', () => {
     river(9); expect(crossings(9)).toBe('##-#-#-##');
     river(2); expect(crossings(2)).not.toContain('#');
     river(9, 'holz'); expect(crossings(9)).toBe('#-------#');
-    river(1); expect(crossings(1)).toBe('-');
+    river(1); expect(crossings(1)).toBe('#');                                       // flach (1 Feld): zu niedrig – gesperrt (160c D2, Nutzer 13.10.2026)
   });
   it('Bewohner gehen über den Bogen (Höhe), daneben 0', () => {
     river(9);

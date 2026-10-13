@@ -2612,6 +2612,7 @@ function seaCross(x, y) {
   if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
   const A = t.b === 'weg' ? bridgeArch(x, y) : null;                    // Bogenbrücke (Block 150): nur unter hohen Stellen durch
   if (A && !A.pass[A.i0]) return 'block';
+  if (t.b === 'weg' && !A) return 'block';                                // flache Wasserbrücke (1 Feld, Steg): zu niedrig für Boote (160c D2, Nutzer 13.10.2026) – durch nur unter Bögen
   const same = (a, b) => { const n = state.tiles.get(a + ',' + b); return !!n && (t.b === 'schiene' ? n.b === 'schiene' : n.b === 'weg'); };
   const ax = same(x - 1, y) || same(x + 1, y), ay = same(x, y - 1) || same(x, y + 1);
   if (!(ax && ay)) return ay ? 'y' : 'x';
