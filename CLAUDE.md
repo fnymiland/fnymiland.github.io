@@ -334,7 +334,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `hm`, `G` = wbGeom; gemerkt je groundVersion) als letztem Parameter (`bkGroup`, `spriteBridge` → `wb|…`, `bkRedo`, `bkDrawLagen` → `wbPaintLage`).
     Modelle (D2, abgenommen D0): `wbArgs`/`wbPaintLage` mit den Bausteinen der Anhöhe, quer gestaucht auf EDGE_W (`sq`), nie unter `WB_WATER`;
     gedachte Felder an offenen Enden nach Gelände, Rampe nur zur Wegkachel; Mauer/Durchfahrt aus dem Aussehen der Spanne (`bridgeArch().wall`);
-    flache Wasserbrücken sperren Boote (`seaCross` 'block'). `drawWegBridge` malt nur noch die Bau-Vorschau (`drawPath`, bis D3).
+    flache Wasserbrücken sperren Boote (`seaCross` 'block'). Den alten Maler `drawWegBridge`/`BRIDGE_LOOK` gibt es nicht mehr (D3i).
+    **Bauen/Fenster** (D3): Aussehen nur über `brSet({ at: 'wasser', x, y }, änderung)` → `wbSet` (ganze Spanne, Bilanz null, jedes Feld behält
+    sein Bezahltes); Felder immer aus dem Aussehen schreiben (`brWriteLook`, Farben roh – alte Rote/Ziegel fallen ohne brc auf die Art zurück),
+    nie Rohfelder kopieren; `brk` ist immer eine bekannte Art (ältere Fassungen). Neues Feld: Aussehen der längsten Brücke daneben **vor** dem
+    Setzen (`wbNewSpec`, samt gekauftem Licht/Zacken), sonst Leiste (`wbLeisteLook`: Holz = Wegstil). Zusammenwachsen: `wbUnify` (häufigstes
+    Aussehen gewinnt, kostenlos). Licht: Strom `'W' + Anker`. Seeweg gekappt: `seaRoutesNow`/`seaRoutesWarn` vorher/nachher. Geist beim Ziehen
+    und Tragen über gedachte Felder (`wbVirtual` – state.tiles kurz ergänzt, nie recalc dabei).
     Nie im Boden-Durchgang (`liveFlatSet`/`worldGround` lassen sie aus). Ruhend eine Gruppe `w` (= h+v+d+o, ein Bildchen, nichts dazwischen auf
     dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
     Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: Bogen vd nachmalen (mit Stütze an der Anfangskante Schnitt `WB_START_CUT`); frühere Felder über

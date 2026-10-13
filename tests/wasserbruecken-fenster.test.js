@@ -244,3 +244,11 @@ describe('Wasser-Wegbrücken: Geist beim Ziehen (160c D3h)', () => {
     for (const x of [10, 11, 12]) expect(log.filter(e => typeof e === 'string' && e.startsWith('d ' + x + ',6 '))).toEqual(['d ' + x + ',6 stein']);   // Asphalt → Stein
   });
 });
+
+it('Trage-Geist: eine Brückenkachel außerhalb der Karte malt das neue Modell (wbPaintLage), ohne die Karte zu ändern', () => {
+  kanal(10, 4, 3);
+  const r = game(`(() => { const out = [], wp = wbPaintLage, n0 = state.tiles.size; wbPaintLage = (l, c, A, z) => { out.push(l); return wp(l, c, A, z); };
+    try { const t = { ...state.tiles.get('11,4') }; drawObject('weg', 0, 0, 2, 1e6, 11, 4, 1, t); return [out, state.tiles.size === n0]; } finally { wbPaintLage = wp; } })()`);
+  expect(r[0]).toEqual(['hg', 'h', 'v', 'd', 't1', 'o', 't2']);
+  expect(r[1]).toBe(true);
+});

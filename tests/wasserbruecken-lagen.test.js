@@ -39,17 +39,8 @@ const szene = () => {
 void FAELLE;
 
 describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
-  it('h, vd, o nacheinander = das Ganze (w auch) – alle Arten, flach, Bogen, breit, Steg, Nord-Süd, nah und weit; BRIDGE_FRONT gibt es nicht mehr (D1e)', () => {
-    const felder = szene();
-    for (const [x, y] of felder) for (const z of [0.5, 1, 2.5]) {
-      const T = `state.tiles.get('${x},${y}')`;
-      const ganz = rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T})`);
-      expect(ganz.length, x + ',' + y).toBeGreaterThan(0);
-      const lagen = rec(`for (const L of [BK_GRUPPEN.h, BK_GRUPPEN.vd, BK_GRUPPEN.o]) drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, L)`);
-      expect(lagen, x + ',' + y + ' z ' + z).toEqual(ganz);
-      expect(rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, BK_GRUPPEN.w)`), 'w ' + x + ',' + y).toEqual(ganz);   // D1b: ruhend alles in einem
-    }
-    expect(game("typeof BRIDGE_FRONT")).toBe('undefined');                                   // über dem Boot: Lagen v, d, o (drawBridgeOver)
+  it('der alte Maler ist weg (160c D3i): drawWegBridge, BRIDGE_LOOK, BRIDGE_FRONT gibt es nicht mehr', () => {
+    expect(game('[typeof drawWegBridge, typeof BRIDGE_LOOK, typeof BRIDGE_FRONT]')).toEqual(['undefined', 'undefined', 'undefined']);
   });
   it('wbAt: Brückenfeld nur für Wasser-Wegbrücken; Achse, Bogen, Höhe, Ufer; wegDeckH = die Höhe des Malers', () => {
     szene();
@@ -78,20 +69,6 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
     expect(r[2]).toBe(true);
     game('setSeeThrough(true)');
     expect(game("(() => { const a = []; const bl = bkDrawLagen; bkDrawLagen = (...x) => { a.push(g.globalAlpha); return bl(...x); }; try { bkGroup(15, 4, 100, 100, 2, ['vd'], wbAt(15, 4)); } finally { bkDrawLagen = bl; setSeeThrough(false); } return a; })()")).toEqual([1]);
-  });
-  it('Rahmen: jede Lage bleibt in brBox(gr, wbAt) (alle Arten, flach, Bogen, breit, Steg, z 0,5/1/2,5)', () => {
-    const felder = szene();
-    const bad = game(`(() => { const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clip = 0;
-      const chk = (x, y) => { if (clip) return; const [l, u, r, d] = box, e = lw / 2 + 0.01; if (x < -l - e || x > r + e || y < -u - e || y > d + e) bad.push(cur + ' ' + x.toFixed(1) + ',' + y.toFixed(1)); };
-      const fake = new Proxy({ getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), createPattern: () => ({ setTransform() {} }) }, {
-        get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'fillRect' ? (x, y, w, h) => { chk(x, y); chk(x + w, y + h); } : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); }
-          : k === 'save' ? () => st.push(clip) : k === 'restore' ? () => { clip = st.pop() || 0; } : k === 'clip' ? () => { clip = 1; } : k in o ? o[k] : () => {},
-        set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
-      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o', 'w']) {
-        const c = wbAt(x, y); cur = x + ',' + y + ' z' + z + ' ' + gr; box = brBox(gr, c).map(v => v * z);
-        g = fake; try { drawWegBridge(0, 0, z, x, y, state.tiles.get(x + ',' + y), BK_GRUPPEN[gr]); } finally { g = g0; } } }
-      finally { g = g0; } return bad.slice(0, 8); })()`);
-    expect(bad).toEqual([]);
   });
 });
 

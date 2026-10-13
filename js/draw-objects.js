@@ -958,95 +958,7 @@ function lineFill(x, y, arms, w) {
   out.sides = DIRS.some(side);                                    // Linie an einer Seite: Weg gerade bis an sie (sonst bleibt die Kurve rund)
   return out;
 }
-// Wegbrücke (Block 66): gerade über das Wasser, leicht angehoben, an Land-Enden eine kurze Rampe. Art nach Wegstil
-// (bridgeKind): Holzsteg (Pfähle, Planken, Geländer), Steinbogen und Ziegelbrücke (Seitenwand mit Bogen, Brüstung,
-// Belag wie der Weg), rote Bogenbrücke (höher, rote Pfosten und Geländer).
-// Farben der Brücken (BRIDGE_COLS, PLANK_COLS): data.js (160c A3)
-const BRIDGE_LOOK = {
-  holz:   { lift: 3, side: '#6f5238', deck: '#b08a5e', plank: '#8a6440', rail: '#6f5238' },
-  stein:  { lift: 7, side: '#d9d2c3', wall: true, rail: '#cfc6b4' },
-  ziegel: { lift: 7, side: '#b5654a', wall: true, rail: '#c97a5e' },
-  rot:    { lift: 8, side: '#a8392f', deck: '#c79a6a', plank: '#9a7048', rail: '#d9483b' },
-};
-function drawWegBridge(cx, cy, z, x, y, t, lagen = null) {               // lagen (160c D1): Teil von BK_GRUPPEN – h hinten, v vorn unten, d Deck, o vorn oben
-  const A = bridgeArch(x, y), on = l => !lagen || lagen.includes(l);   // Bogenbrücke (Block 150) oder flach wie bisher; über einem Boot nur v, d, o (160c D1e)
-  const ax = A ? A.ax : bridgeAxis(x, y, t);
-  // breite Brücke (Block 151): quer daneben weitere Brückenfelder – Geländer/Wände nur außen, Belag durchgehend
-  const lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s)))), latF = lat(1), latB = lat(-1);
-  let depth = 0; while (depth < 8 && lat(-depth - 1)) depth++;           // Reihen dahinter (Bogenöffnung geht durch alle)
-  const P = (a, b, h = 0) => { const [u, v] = ax ? [b, a] : [a, b]; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z]; };
-  const B0 = BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz, hw = EDGE_W, LIFT = B0.lift;
-  // Farben aus dem Fenster (Block 66b): Bauwerk (Wand/Geländer/Pfähle) und bei Holz die Planken
-  const bc = BRIDGE_COLS[t.brc], pc = PLANK_COLS[t.brw];
-  const B = { ...B0, ...(bc ? (B0.wall ? { side: bc, rail: shade(bc, 0.1) } : { side: shade(bc, -0.15), rail: bc }) : {}), ...(pc ? { deck: pc, plank: shade(pc, -0.22) } : {}) };
-  const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
-  const lA = !A && land(-1), lB = !A && land(1), H = A ? a => archDeck(A, A.i0 + a + 0.5) : a => flatDeckH(LIFT, lA, lB, a);   // wie wegDeckH (rules.js)
-  const AS = A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];   // Bogen: feiner unterteilt
-  const strip = (b0, b1, dh = 0) => AS.slice(0, -1).map((a, i) => [P(a, b0, H(a) + dh), P(AS[i + 1], b0, H(AS[i + 1]) + dh), P(AS[i + 1], b1, H(AS[i + 1]) + dh), P(a, b1, H(a) + dh)]);
-  // Pfähle: flach je Feld zwei; Bogen ab 5 Feldern nur an jedem zweiten Feld (archCenters), wo der Belag hoch genug ist
-  const postAs = A && archSpan(A.N) > 1 ? archCenters(A.N).map(c => c - A.i0 - 0.5).filter(a => a >= -0.5 && a < 0.5) : [-0.3, 0.3];
-  const posts = (b, col) => { for (const a of postAs) { if (A && H(a) < 2) continue; const pw = A ? 1.2 : 1, p0 = P(a, b, -1), p1 = P(a, b, H(a)); g.fillStyle = C(col); g.fillRect(p0[0] - pw * z, p1[1], 2 * pw * z, p0[1] - p1[1] + 1 * z); } };
-  const railing = b => {                                                // Pfosten und Handlauf
-    g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath();
-    AS.forEach((a, i) => { const p = P(a, b, H(a) + 4.5); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
-    for (const a of [-0.4, 0, 0.4]) { const p0 = P(a, b, H(a)), p1 = P(a, b, H(a) + 4.5); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }
-    g.stroke();
-  };
-  const parapet = b => { for (const q of strip(b - 0.03, b + 0.03, 0)) poly(q, C(shade(B.rail, -0.05))); for (const q of strip(b - 0.03, b + 0.03, 2.5)) poly(q, C(B.rail)); };
-  // hinten: Pfähle bzw. Brüstung der fernen Seite; Holz: auch die vorderen Pfähle schon jetzt – der Belag deckt ihr oberes
-  // Ende, sie stehen also unter der Brücke statt davor
-  if (!B.wall) { if (on('h') && !latB) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); } if (on('v') && !latF) posts(hw - 0.1, B.side); } else if (on('h') && !latB) parapet(-hw);
-  // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
-  if (B.wall && latF) { /* Seitenwand nur an der vordersten Reihe */ }
-  else if (B.wall && A) { if (on('h') || on('v')) archWall(A, P, H, AS, B, hw, z, t, !on('h'), depth, on('v')); }   // h: Rückwand/Gewölbe, v: Wand
-  else if (B.wall && on('v')) {
-    for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
-    const wallPts = [...AS.map(a => P(a, hw, -1)), ...[...AS].reverse().map(a => P(a, hw, H(a)))];   // Mauerwerk: Ziegel bzw. Quader
-    g.save(); g.beginPath(); wallPts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
-    pattern(([sa, st]) => P(sa, hw, -1 + (st + 0.5) * 22), bridgeKind(t) === 'ziegel' ? 'bricks' : 'tiles', x, y, z, C(shade(B.side, -0.3)), null);
-    g.restore();
-    const arch = []; for (let k = 0; k <= 12; k++) { const a = -0.3 + 0.6 * k / 12; arch.push(P(a, hw, -1 + (LIFT - 2.5) * Math.sqrt(Math.max(0, 1 - (a / 0.3) ** 2)))); }
-    poly(arch, 'rgba(35,70,95,0.55)');
-  }
-  if (on('d')) {
-  // Belag: Planken (Holz/rot) oder der Weg selbst (Stein/Ziegel)
-  // längs und quer ~1,5 Gerätepunkte ins Nachbarfeld (wie seamPad bei Wegen): weit weg ist jedes Feld ein eigenes Bildchen, dessen Rand
-  // beim Verkleinern halb durchsichtig wird – sonst schimmert das Wasser als helle Linie zwischen den Feldern bzw. Reihen (Nutzer, PC FHD)
-  const tfd = g.getTransform ? g.getTransform() : null, dpd = (tfd ? Math.hypot(tfd.a, tfd.b) : 1) * z, pd = Math.min(0.08, 1.5 / (dpd * TW * 0.56));
-  const b0 = latB ? -0.5 - Math.max(0.01, pd) : -hw, b1 = latF ? 0.5 + Math.max(0.01, pd) : hw;   // Belag bis in die Nachbarreihe (keine Fuge)
-  const ASd = [AS[0] - pd, ...AS.slice(1, -1), AS[AS.length - 1] + pd], Hd = a => H(Math.max(-0.5, Math.min(0.5, a)));
-  const deck = ASd.slice(0, -1).map((a, i) => [P(a, b0, Hd(a)), P(ASd[i + 1], b0, Hd(ASd[i + 1])), P(ASd[i + 1], b1, Hd(ASd[i + 1])), P(a, b1, Hd(a))]);
-  if (B.wall) {                                                         // Belag wie der Weg – mit seinem Muster (Block 66b)
-    const st = styleDef('weg', t.style), lk = lookFar(pathLook(st.id), z) || {}, fill = lk.fill || '#dcc69d';
-    const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return P(a, b, Hd(a)); };
-    const band2 = (w0, w1) => [...ASd.map(a => ax ? [w0, a] : [a, w0]), ...[...ASd].reverse().map(a => ax ? [w1, a] : [a, w1])];
-    const inner = band2(latB ? b0 : -ROAD_W, latF ? b1 : ROAD_W);
-    poly(band2(b0, b1).map(Lh), C(lk.edge || shade(fill, -0.18)));
-    poly(inner.map(Lh), C(fill));
-    if (lk.pat || lk.checker) { g.save(); clipTo([inner], Lh); pattern(Lh, lk.pat ? lk.pat[0] : 'tiles', x, y, z, lk.pat && lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, fill); g.restore(); }
-    if (lk.dash) {                                                     // Asphalt: Mittelstreifen
-      g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.setLineDash([2.5 * z, 3 * z]); g.beginPath();
-      AS.forEach((a, i) => { const q = P(a, 0, H(a)); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
-    }
-  } else {
-    for (const q of deck) poly(q, C(B.deck));
-    g.strokeStyle = C(B.plank); g.lineWidth = 0.7 * z; g.beginPath();
-    for (let a = -0.45; a < 0.5; a += 0.12) { const p0 = P(a, b0, H(a)), p1 = P(a, b1, H(a)); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); }   // bis in die Nachbarreihe (breit, Block 151)
-    g.stroke();
-    if (!latF) for (let i = 0; i < AS.length - 1; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, H(a0) - 1.6), P(a1, hw, H(a1) - 1.6), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, 0.05))); }   // Randbalken vorn
-  }
-  }
-  if (!on('o')) return;
-  // vorn: Brüstung bzw. Geländer
-  if (!latF) { if (B.wall) parapet(hw); else railing(hw - 0.03); }
-  // offenes Ende (z. B. ins Meer): sichtbare Stirnseite zu, Geländer quer
-  const [ex, ey] = ax ? [0, 1] : [1, 0];
-  if (!wegLike(x + ex, y + ey)) {
-    const h = H(0.5);
-    if (B.wall) { poly([P(0.5, -hw, -1), P(0.5, hw, -1), P(0.5, hw, h), P(0.5, -hw, h)], C(shade(B.side, -0.2))); poly([P(0.5, -hw, h), P(0.5, hw, h), P(0.5, hw, h + 2.5), P(0.5, -hw, h + 2.5)], C(B.rail)); }
-    else { g.strokeStyle = C(B.rail); g.lineWidth = 1 * z; g.beginPath(); const p0 = P(0.47, -hw, h + 4.5), p1 = P(0.47, hw, h + 4.5); g.moveTo(...p0); g.lineTo(...p1); g.stroke(); }
-  }
-}
+// Wasser-Wegbrücken malt seit 160c D2/D3 wbPaintLage (brueckenbild.js); hier bleibt die Steinwand der Bögen (archWall, Block 150)
 // Seitenwand einer Bogenbrücke aus Stein/Ziegel (Block 150): echte Öffnungen – dahinter Wasser im Schatten, Gewölbe, die Rückwand
 // mit ihrer Öffnung –, Mauerwerk in fester Steingröße, versetzt (vorher übers Feld gestreckt: Gitter), heller Bogenrand
 function archWall(A, P, H, AS, B, hw, z, t, front, depth = 0, wall = true) {   // wall false (160c D1, Lage h): nur Rückwand und Gewölbe
@@ -1173,7 +1085,7 @@ const padBorder = (sh, d, at = null) => {
   return sh.map(([u, v]) => [u > 0.499 ? u + px : u < -0.499 ? u - mx : u, v > 0.499 ? v + py : v < -0.499 ? v - my : v]);
 };
 function drawPath(cx, cy, z, x, y, t) {
-  if (isWegBridge(t)) { drawWegBridge(cx, cy, z, x, y, t); return; }    // Block 66
+  if (isWegBridge(t)) { wbDrawTile(cx, cy, z, x, y, t); return; }       // Block 66; neues Modell als gedachtes Feld (Tragen mit ✋, 160c D3h)
   patRot = wegPatRot(t);                                                 // Wegrichtung (Block 158)
   try { drawPathTile(cx, cy, z, x, y, t); } finally { patRot = 0; }
 }

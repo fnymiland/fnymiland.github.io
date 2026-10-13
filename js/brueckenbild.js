@@ -641,3 +641,14 @@ function wbDrawGhost(cells, z) {
   });
   for (const q of qs) { const marks = DECK_MARKS && DECK_MARKS.get(q.c.k); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
+// Eine Brückenkachel außerhalb der Karte (Tragen mit ✋, drawObject('weg')): als gedachtes Feld an ihrem Ziel im neuen Modell (160c D3h).
+// Gemerkt je Ziel, Fassung und Kachel (der Geist kommt jedes Bild als neue Kopie)
+const WB_TILE_GHOST = { key: '', c: null };
+function wbDrawTile(cx, cy, z, x, y, t) {
+  const k = x + ',' + y, key = k + '|' + groundVersion + '|' + JSON.stringify(t), G = WB_TILE_GHOST;
+  if (G.key !== key) { G.key = key; G.c = wbVirtual([[k, t]], [k]).get(k) || null; }
+  if (!G.c) return;
+  const A = wbArgs(G.c, cx, cy, z);
+  A.opts = { ...A.opts, licht: null, dark: false };
+  for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, G.c, A, z);
+}
