@@ -67,3 +67,22 @@ describe('Wasser-Wegbrücken: Geometrie G (160c D2a)', () => {
     expect(game("brLampSpots('holz', 'fuss', 16).ts.length")).toBe(17);                      // ohne max: wie bisher auf 8 begrenzt (2·8 + 1)
   });
 });
+
+// D2e: Mauer (und damit Boot-Durchfahrt, Seewege) aus dem Aussehen der Spanne – Maler und Boote aus einer Quelle (PLAN-160c D2)
+describe('Wasser-Wegbrücken: Mauer aus dem Aussehen (160c D2e)', () => {
+  const neu = (keys, mat) => game(`(() => { for (const k of ${JSON.stringify(keys)}) { const t = state.tiles.get(k); t.brm = '${mat}'; brStamp(t, 'wasser', { ...brLegacyLook(t, 'wasser'), mat: '${mat}' }); } })()`);
+  const zellen = (x0, y, N) => Array.from({ length: N }, (_, i) => (x0 + i) + ',' + y);
+  it('neues Format: Metall auf Stein-Belag ohne Mauer, Stein auf Sand mit Mauer; Altfelder wie bisher', () => {
+    kanal(10, 4, 6, { style: 'platten' }); kanal(10, 12, 6); kanal(10, 20, 6, { style: 'kopf' }); kanal(10, 28, 6);
+    expect(game('[bridgeArch(12, 4).wall, bridgeArch(12, 12).wall, bridgeArch(12, 20).wall]')).toEqual([true, false, true]);
+    neu(zellen(10, 4, 6), 'stahl'); neu(zellen(10, 28, 6), 'stein'); game('groundVersion++; recalc()');
+    expect(game('[bridgeArch(12, 4).wall, bridgeArch(12, 28).wall]')).toEqual([false, true]);
+  });
+  it('Seewege: Material ohne groundVersion++ umgestellt, recalc liest das neue Aussehen (brSpanCache) und verwirft die alten Wege', () => {
+    kanal(10, 4, 6);
+    const p0 = game("(() => { brSpanLook(12, 4); bridgeArch(12, 4); seaCache.set('test', 1); return bridgeArch(12, 4).pass.join(''); })()");
+    neu(zellen(10, 4, 6), 'stein'); game('recalc()');
+    expect(game("[bridgeArch(12, 4).wall, seaCache.has('test')]")).toEqual([true, false]);
+    expect(game("bridgeArch(12, 4).pass.join('')")).not.toBe(p0);
+  });
+});

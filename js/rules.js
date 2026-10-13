@@ -1949,7 +1949,7 @@ function bridgeArchCalc(x, y) {
   while (i1 < 60 && isWegBridge(at(i1 + 1))) i1++;
   const N = i0 + 1 + i1, landAt = i => terrainAt(x + dx * i, y + dy * i) !== 'water';   // Ufer (breite Brücke: auch ohne Weg davor)
   if (N < 2 || !landAt(-i0 - 1) || !landAt(i1 + 1)) return null;
-  const A = { ax, i0, N, peak: 20.4 * Math.pow(Math.min(N, 16) / 2, 0.6), wall: bridgeKind(t) === 'stein' || bridgeKind(t) === 'ziegel' };
+  const A = { ax, i0, N, peak: 20.4 * Math.pow(Math.min(N, 16) / 2, 0.6), wall: (brSpanLook(x, y) || brLegacyLook(t, 'wasser')).mat === 'stein' };   // Mauer aus dem Aussehen der Spanne (160c D2e; Altfelder: Stein und Ziegel wie bisher)
   A.open = archOpenings(A);
   A.pass = Array.from({ length: N }, (_, j) => archBoatOk(A, j + 0.5));
   if (!A.pass.some(Boolean)) A.pass = A.pass.map(() => true);           // nirgends hoch genug (kurz, Stein): wie bisher überall durch – nie absperren
