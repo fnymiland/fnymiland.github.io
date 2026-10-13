@@ -826,7 +826,7 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { bridgeArchCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+function recalc() { bridgeArchCache.v = -1; wbCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
 // Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
 // zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
 const PEAK_HALF = 1200;
@@ -1879,6 +1879,25 @@ function bridgeArch(x, y) {
   if (!C.map.has(k)) C.map.set(k, bridgeArchCalc(x, y));
   return C.map.get(k);
 }
+// Wasser-Wegbrücke als Brückenfeld (160c D1, wie bkAt der Anhöhe): Achse, Bogen, flache Höhe (LIFT der alten Art), Ufer an den Enden.
+// Gemerkt je groundVersion (recalc leert). G: Geometrie der neuen Modelle – erst ab D2
+const flatDeckH = (L, lA, lB, a) => Math.max(0, Math.min(L, lB && a > 0.2 ? L * (0.5 - a) / 0.3 : L, lA && a < -0.2 ? L * (a + 0.5) / 0.3 : L));
+const wbCache = { v: -1, tiles: null, map: new Map() };
+function wbAt(x, y) {
+  const k = x + ',' + y, t = state.tiles.get(k);
+  if (!isWegBridge(t)) return null;
+  const C = wbCache;
+  if (C.v !== groundVersion || C.tiles !== state.tiles) { C.v = groundVersion; C.tiles = state.tiles; C.map.clear(); }
+  let c = C.map.get(k);
+  if (c) return c;
+  const A = bridgeArch(x, y), ax = A ? A.ax : bridgeAxis(x, y, t), lift = (BRIDGE_LOOK[bridgeKind(t)] || BRIDGE_LOOK.holz).lift;
+  const land = s => { const [dx, dy] = ax ? [0, s] : [s, 0], n = state.tiles.get((x + dx) + ',' + (y + dy)); return !!n && !isWegBridge(n) && terrainAt(x + dx, y + dy) !== 'water'; };
+  c = { k, x, y, water: true, A, ax, b: { ax, n: A ? A.N : 1 }, W: EDGE_W, lift, landA: !A && land(-1), landB: !A && land(1), G: null };
+  c.hm = Math.ceil(A ? archDeck(A, Math.max(A.i0, Math.min(A.i0 + 1, A.N / 2))) : lift);
+  C.map.set(k, c);
+  return c;
+}
+const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.lift, c.landA, c.landB, a);   // a: längs im Feld, −½ … ½
 // Richtung einer Brücke (0: längs u/x, 1: längs v/y): die Achse, an deren Enden Land liegt; sonst die längere Reihe Brückenfelder.
 // Breite Brücken (Block 151): quer liegen weitere Brückenfelder – die zählen nicht als Arm (vorher die ersten Nachbarn)
 function bridgeAxis(x, y, t) {

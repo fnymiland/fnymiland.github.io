@@ -9,7 +9,7 @@ const BK_LAGEN = ['h', 'v', 'd', 'o', 'hg', 't1', 't2'];                    // h
 const BK_GRUPPEN = { h: ['h'], vd: ['v', 'd'], o: ['o'], hg: ['hg'], t1: ['t1'], t2: ['t2'] };   // hg ruhend in tileA (nie nachgemalt), t1/t2 jedes Bild in tileB
 // Rahmen einer Gruppe um die Feldmitte unten, in Welteinheiten (× z): [links, oben, rechts, unten] – für Bildchen, glLive und Nachmal-Clip
 function brBox(gruppe, c = null) {                                         // c: Feld (bkAt) – oben bis zum Scheitel im Feld (Bogen, 160c C2)
-  const hm = c ? bkHMax(c) : HILL_H;
+  const hm = c ? (c.water ? c.hm : bkHMax(c)) : HILL_H;                  // Wasser-Wegbrücke (160c D1): eigene Höhe
   let top = gruppe === 'vd' || gruppe === 't1' ? 8 : 16;
   if (gruppe === 'vd' && c && c.G && c.G.look.licht) {                     // Licht (C7): hintere Lampe an der Feldkante, oben bei −s – Kopf + 1 Reserve
     const S = brLampSpots(c.G.art, c.G.fam, c.b.n);
@@ -147,11 +147,11 @@ function bkBoxOf(gruppen, c = null) {
 function bkDrawStill(x, y, px, py, z, now, c, under) {
   const k = x + ',' + y, G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
   if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
-  if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg']);                      // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)
-  bkGroup(x, y, px, py, z, ['h']);
+  if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg'], c);                   // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)
+  bkGroup(x, y, px, py, z, ['h'], c);
   if (under) under();
   if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
-  bkGroup(x, y, px, py, z, ['vd', 'o']);
+  bkGroup(x, y, px, py, z, ['vd', 'o'], c);
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
@@ -169,26 +169,26 @@ function bkDrawGhost(last, z) {
   ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => { for (const q of cells) { const A = bkTileArgs(q.c, q.px, q.py, z); bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }); } });
   for (const q of cells) { const marks = DECK_MARKS && DECK_MARKS.get(q.x + ',' + q.y); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
-function bkGroup(x, y, px, py, z, gruppen) {
-  const fade = bkFadeNow(x, y);                                            // 👁 bzw. darunter bauen: blass (immer live)
-  const live = gruppen.filter(gr => !(SPRITES_ON && !fade && spriteBridge(x, y, px, py, z, gr)));   // weit weg: Bildchen (im GL-Standbild ruhend)
+function bkGroup(x, y, px, py, z, gruppen, c = bkAt(x, y)) {              // c: Brückenfeld (Anhöhe bkAt, Wasser wbAt – 160c D1)
+  const fade = !(c && c.water) && bkFadeNow(x, y);                         // 👁 bzw. darunter bauen: blass (immer live); Wasser nie
+  const live = gruppen.filter(gr => !(SPRITES_ON && !fade && spriteBridge(x, y, px, py, z, gr, c)));   // weit weg: Bildchen (im GL-Standbild ruhend)
   if (!live.length) return;
   const f = () => { const a0 = g.globalAlpha, gm = GLOW_MUTE; if (fade) { g.globalAlpha = a0 * SEE_A; GLOW_MUTE = true; }   // blass: Lampen ohne Schein (C7)
-    try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr); } finally { g.globalAlpha = a0; GLOW_MUTE = gm; } };
+    try { for (const gr of live) bkDrawLagen(x, y, px, py, z, gr, c); } finally { g.globalAlpha = a0; GLOW_MUTE = gm; } };
   if (!GLPASS) return f();
-  const [l, u, r, d] = bkBoxOf(live, bkAt(x, y));
+  const [l, u, r, d] = bkBoxOf(live, c);
   glLive(px, py, l * z, u * z, r * z, d * z, f);
 }
 // Bildchen einer Gruppe (160c B2c): je Platz und Gruppe, Fassung groundVersion (jeder Setzer zählt sie hoch; recalc auch – der Strom ändert
 // sich nur dort, darum steht „dunkel“ nicht im Schlüssel). Gruppen mit Lampen (C7, bkLampGroups) bekommen |lit und werden vor der
 // Dämmerung beleuchtet vorbereitet (wie spriteArchBridge, Regel 143); alle anderen behalten den Schlüssel ohne Licht
-function spriteBridge(x, y, px, py, z, gruppe) {
-  const c = bkAt(x, y), lamp = bkLampGroups(c).includes(gruppe), fog = FOG;
-  const zs = spriteStep(z), keyOf = lit => `br|${x},${y}|${gruppe}|${fog ? 1 : 0}` + (lamp ? '|' + lit : ''), key = keyOf(night > 0.15 && isLive() ? 1 : 0), [l, u, , d] = brBox(gruppe, c);
+function spriteBridge(x, y, px, py, z, gruppe, c = bkAt(x, y)) {
+  const lamp = bkLampGroups(c).includes(gruppe), fog = FOG;
+  const zs = spriteStep(z), keyOf = lit => `${c && c.water ? 'wb' : 'br'}|${x},${y}|${gruppe}|${fog ? 1 : 0}` + (lamp ? '|' + lit : ''), key = keyOf(night > 0.15 && isLive() ? 1 : 0), [l, u, , d] = brBox(gruppe, c);
   const make = () => {
     const sp = paintSprite(l * zs, u * zs, d * zs, () => {
       const pf = FOG; FOG = fog;
-      try { bkDrawLagen(x, y, 0, 0, zs, gruppe); } finally { FOG = pf; }
+      try { bkDrawLagen(x, y, 0, 0, zs, gruppe, c); } finally { FOG = pf; }
     });
     if (sp) sp.z = zs;
     return sp;
@@ -220,15 +220,15 @@ function bkMoverRect(ms, z, lift = 0) {
 // Nachmalen (tileB): Gruppen und Deko-Plätze, beschnitten auf rect ∩ Rahmen der Gruppen
 // cut (160c C10): Streifen der Anfangskante (Stütze, Bock, Pfeilerstirn bei s = W) auslassen – er liegt hinter einem Boot unter der Feldmitte
 const BK_START_CUT = 25.5;                                                 // Feldmitte bis rechts neben die Stütze bzw. Pfeilerstirn der Anfangskante (× z)
-function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false) {
-  const c0 = bkAt(x, y), [l, u, r, d] = bkBoxOf(gruppen, c0), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
+function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bkAt(x, y)) {
+  const [l, u, r, d] = bkBoxOf(gruppen, c0), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
   if (cut && c0) { if (c0.b.ax) R[2] = Math.min(R[2], px + BK_START_CUT * z); else R[0] = Math.max(R[0], px - BK_START_CUT * z); }
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
     const fog = FOG, gm = GLOW_MUTE;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
     FOG = !ownedTile(x, y); GLOW_MUTE = gm || 'pane';                      // nur Scheiben neu stanzen, nie einen zweiten Schein (gesperrt bleibt gesperrt)
-    try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr))) bkDrawLagen(x, y, px, py, z, gr); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
+    try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
     finally { GLOW_MUTE = gm; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();

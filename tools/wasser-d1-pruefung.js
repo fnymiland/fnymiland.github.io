@@ -10,12 +10,16 @@
     ['breit 4', 32, 14.5, 1.6], ['Nord-Süd holz', 40, 23, 2.4], ['Nord-Süd stein', 43, 23, 2.4], ['Nord-Süd ziegel', 46, 23, 2.4],
     ['gleis gerade (Kontrolle)', 10, 35, 2],
   ];
-  function shot(x, y, z, W, H, nt, gl = false) {
+  async function shot(x, y, z, W, H, nt, gl = false) {                  // weit weg: erst zuschneiden lassen (Hintergrund), dann aufnehmen – sonst zufällig
     const p = iso(x, y); cam.x = p.x; cam.y = p.y - 10; cam.z = z;
-    const o = { na: nightAt, gh: gameHour, off: GL.off, sf: spriteForce, sync: syncMovers };
-    nightAt = () => nt; gameHour = () => (nt > 0.15 ? 23 : 12); GL.off = !gl; syncMovers = () => {};
-    try { resetDrawCaches(); groundVersion++; spriteNoBudget = true; for (let k = 0; k < 6; k++) render(1e6); spriteNoBudget = false; render(1e6); }
-    finally { nightAt = o.na; gameHour = o.gh; GL.off = o.off; spriteForce = o.sf; syncMovers = o.sync; }
+    const o = { na: nightAt, gh: gameHour, off: GL.off, sf: spriteForce };
+    nightAt = () => nt; gameHour = () => (nt > 0.15 ? 23 : 12); GL.off = !gl;
+    lastFrame = 1e15;                                                     // Spielschleife steht (frame() lässt jedes Bild aus) – nichts bewegt sich beim Warten
+    try {
+      resetDrawCaches(); groundVersion++; spriteNoBudget = true; for (let k = 0; k < 6; k++) render(1e6);
+      for (let k = 0; k < 4; k++) { await new Promise(r => setTimeout(r, 120)); render(1e6); }
+      spriteNoBudget = false; render(1e6);
+    } finally { nightAt = o.na; gameHour = o.gh; GL.off = o.off; spriteForce = o.sf; lastFrame = 0; }
     const c = document.createElement('canvas'); c.width = W; c.height = H; const q = c.getContext('2d');
     q.fillStyle = '#fffaf0'; q.fillRect(0, 0, W, H);
     if (gl && GL.canvas && GL.shown) q.drawImage(GL.canvas, GL.canvas.width / 2 - W / 2, GL.canvas.height / 2 - H / 2, W, H, 0, 0, W, H);
@@ -30,13 +34,20 @@
   }
   // name: Präfix; Blätter: nah Tag, nah Nacht, weit (Bildchen, z × 0,4) Tag
   window.wasserD1 = async (name, { W = 420, H = 320, cols = 6, gl = false } = {}) => {
-    closeModal(); closePanel(); setTool('look'); walkers.length = 0; if (Array.isArray(hillWalkers)) hillWalkers.length = 0; critters.length = 0;
+    closeModal(); closePanel(); setTool('look');
+    const sm = syncMovers; syncMovers = () => {};                         // ohne Bewegtes: Leute, Tiere, Züge, Schiffe (die haben eigene Szenen)
+    const leer = () => { walkers.length = 0; if (Array.isArray(hillWalkers)) hillWalkers.length = 0; critters.length = 0; if (Array.isArray(trains)) trains.length = 0; };
+    const sh = shipMovers, fb = fishBoats, cs = cargoShip; shipMovers = () => []; fishBoats = () => []; cargoShip = () => null;
     const out = {};
-    for (const [teil, nt, zf] of [['nah', 0, 1], ['nacht', NIGHT_MAX, 1], ['weit', 0, 0.4]]) {
-      const shots = VIEWS.map(([l, x, y, z]) => [shot(x, y, z * zf, W, H, nt, gl && zf < 1), l]);
-      out[teil] = await blatt(`d1-${name}-${teil}.png`, shots, cols, W, H);
-    }
+    try {
+      for (const [teil, nt, zf] of [['nah', 0, 1], ['nacht', NIGHT_MAX, 1], ['weit', 0, 0.4]]) {
+        const shots = [];
+        for (const [l, x, y, z] of VIEWS) { leer(); shots.push([await shot(x, y, z * zf, W, H, nt, gl && zf < 1), l]); }
+        out[teil] = await blatt(`d1-${name}-${teil}.png`, shots, cols, W, H);
+      }
+    } finally { syncMovers = sm; shipMovers = sh; fishBoats = fb; cargoShip = cs; }
     return out;
   };
+  window.wasserD1Bg = name => { window.wasserD1Fertig = null; wasserD1(name).then(r => { window.wasserD1Fertig = r; }, e => { window.wasserD1Fertig = 'Fehler ' + e; }); return 'läuft'; };
   return 'ok';
 })();
