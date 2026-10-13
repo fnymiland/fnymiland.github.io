@@ -184,3 +184,27 @@ describe('Wasser-Wegbrücken: Fenster (160c D3e)', () => {
     klick('[data-brw="1"]'); expect(game("brLook(state.bruecken.get('14,22'), 'anhoehe').plank")).toBe(1);
   });
 });
+
+describe('Wasser-Wegbrücken: Leiste und Schild beim Ziehen (160c D3f)', () => {
+  const fluss = () => game("state.design = new Set(DESIGN.map(d => d.id)); for (let y = 3; y <= 9; y++) for (let x = 10; x <= 12; x++) state.terra.set(x + ',' + y, 'water'); terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc()");   // alle Wegstile frei
+  const ziehen = (y, style) => game(`(() => { chosenStyle.weg = '${style}'; setTool('weg'); startPlan('line', { x: 8, y: ${y} }, { x: 14, y: ${y} }, false); const info = planInfo(plan); const txt = planText(plan, info); runPlan(); setTool('look'); return [txt, info.cost]; })()`);
+  const leiste = (mat, col = 0) => game(`state.paintNew.bruecke = { form: BK_ART_IDS.indexOf('${mat}'), col: ${col} }`);
+  it('Leiste mit dem Brücken-Werkzeug: Metall/Stein setzen das Material (und die Farbe), Holz = wie der Wegstil; Kristall gesperrt → Wegstil', () => {
+    fluss(); game("state.techs.add('terraform')");
+    expect(game("available('bruecke')")).toBe(true);
+    leiste('stahl', 3); const [t1] = ziehen(4, 'sand');
+    expect(t1).toMatch(/🌉 Brücke: Metall · 3 Felder/);
+    expect(look(11, 4)).toMatchObject({ mat: 'stahl', col: 2 });
+    leiste('holz'); ziehen(6, 'asphalt');
+    expect(look(11, 6).mat).toBe('stein');                                                // Holz in der Leiste: wie der Wegstil (Asphalt → Stein)
+    leiste('kristall'); ziehen(8, 'sand');
+    expect(look(11, 8).mat).toBe('holz');                                                 // gesperrt: wie der Wegstil
+  });
+  it('ohne das Brücken-Werkzeug: wie der Wegstil; Schild nennt das Material; Preis = gebaut', () => {
+    fluss(); leiste('stahl');
+    const w0 = wallet(), [txt, cost] = ziehen(4, 'sand');
+    expect(txt).toMatch(/🌉 Brücke: Holz · 3 Felder/);
+    expect(look(11, 4).mat).toBe('holz');
+    expect(-diff(w0, wallet()).money).toBe(cost);
+  });
+});

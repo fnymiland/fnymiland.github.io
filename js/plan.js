@@ -102,6 +102,7 @@ function planScan(p) {
   const neu = b === 'weg' || b === 'schiene' ? bkPlanNew(p, b) : [], vcell = new Map();   // neue Brücken unter der Linie (160c C9): ihre Felder aufs Deck
   for (const N of neu) for (const k of N.cells.keys()) { vcell.set(k, N); if (!N.err) (deck = deck || new Set()).add(k); }
   let cost = 0, firstErr = null, rest = planTiles(p);
+  const wbCnt = new Map();                                               // Brücke übers Wasser je Material (Schild, 160c D3f)
   if (b === 'weg') PLANNED = new Set();
   if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
@@ -127,7 +128,7 @@ function planScan(p) {
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
         if (BK_PLAN_SAME) BK_PLAN_SAME.add(k);
-        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') BR_PLAN_LOOK.set(k, brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'));
+        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') { const L = brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'); BR_PLAN_LOOK.set(k, L); if (b === 'weg') wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
       if (!grow || next.length === rest.length) {
@@ -151,7 +152,7 @@ function planScan(p) {
   for (const N of ok) { order.unshift([N.sp.x0, N.sp.y0, () => bkBuild(N.sp, N.look)]); cost += N.price.cost; for (const [r, v] of Object.entries(N.price.mat)) mat[r] = (mat[r] || 0) + v; }
   const bad = [...states.values()].filter(s => s === 'bad').length, bkErr = (neu.find(N => N.err) || {}).err || null;
   const bkGhost = ok.length ? new Map(ok.flatMap(N => [...N.ghost])) : null;
-  return { states, order, n: order.length - ok.length, cost, gain: 0, mat, bad, firstErr, deck, bk: ok.length ? ok.map(N => ({ mat: N.look.mat, n: N.sp.n })) : null, bkErr, bkGhost };
+  return { states, order, n: order.length - ok.length, cost, gain: 0, mat, bad, firstErr, deck, bk: ok.length ? ok.map(N => ({ mat: N.look.mat, n: N.sp.n })) : null, bkErr, bkGhost, wb: [...wbCnt].map(([m, n]) => ({ mat: m, n })) };
 }
 // Linie auf den Feldkanten: neu, umfärben (anderer Stil/Art) oder schon so
 function scanEdges(p) {
@@ -299,7 +300,7 @@ function scanDemolish(p) {
 let planMemo = null;
 function planInfo(p) {
   const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.erase ? 'e' : '', p.deck ? 'd' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion,
-    (p.tool === 'weg' || p.tool === 'schiene') && hillsOn() ? bkNewSig() : ''].join();   // Gleis-Stil (Block 112); Brücken-Leiste (160c C9)
+    (p.tool === 'weg' || p.tool === 'schiene') && hillsOn() ? bkNewSig() : '', p.tool === 'weg' ? wbNewSig() : ''].join();   // Brücke übers Wasser: Leiste (160c D3f)   // Gleis-Stil (Block 112); Brücken-Leiste (160c C9)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')
@@ -320,6 +321,7 @@ function planText(p, info) {
   } else {
     parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
     for (const B of info.bk || []) parts.push(`🌉 ${BR_MAT[B.mat].name}: ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // Brücke kommt mit (160c C9)
+    for (const B of info.wb || []) parts.push(`🌉 Brücke: ${BR_MAT[B.mat].name} · ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // übers Wasser (160c D3f)
     if (info.bkErr) parts.push(`🌉 ${info.bkErr}`);                     // warum die Lücke rot ist
     if (info.cost) parts.push('−' + fmt(info.cost));
   }

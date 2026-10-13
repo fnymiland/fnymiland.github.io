@@ -203,8 +203,18 @@ function brNewLook(x, y, at) {
     if (want(t)) return brOnLook(brLook(t, at));
     if (BR_PLAN_LOOK && BR_PLAN_LOOK.has(k)) return BR_PLAN_LOOK.get(k);
   }
-  return at === 'gleis' ? brLegacyLook({}, 'gleis') : brLegacyLook({ style: currentStyle('weg') }, 'wasser');
+  return at === 'gleis' ? brLegacyLook({}, 'gleis') : wbLeisteLook();
 }
+// Neue Brücke übers Wasser ohne Nachbarn (160c D3f, F3; Nutzer 13.10.2026): Material und Farbe aus der Leiste des Brücken-Werkzeugs – Holz heißt
+// dort „wie der Wegstil“ (Sand → Holz, Pflaster → Stein …); gesperrtes Material oder ohne das Werkzeug: wie der Wegstil
+function wbLeisteLook() {
+  const L = brLegacyLook({ style: currentStyle('weg') }, 'wasser');
+  if (typeof available !== 'function' || !available('bruecke')) return L;
+  const p = decoLookNew('bruecke'), mat = BK_ART_IDS[p.form || 0], col = p.col ? p.col - 1 : null;
+  if (mat && mat !== 'holz' && BR_MAT[mat] && !brMatLock(mat, 'wasser')) { const nl = { ...L, mat, deck: BR_MAT[mat].deck, plank: null, col }; delete nl.kind; return nl; }
+  return col != null ? { ...L, col } : L;
+}
+const wbNewSig = () => typeof available === 'function' && available('bruecke') ? JSON.stringify(decoLookNew('bruecke')) : '';   // Plan-Merke: Leiste
 // Speichern/Laden (state.js): die br-Felder eines Objekts streng prüfen – nur gültige Werte, sonst weglassen (= Standard)
 function brClean(o) {
   const out = {};

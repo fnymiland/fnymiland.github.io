@@ -1792,7 +1792,7 @@ function render(now) {
         else if (tool === 'bruecke') { const lk = brMatLock(bkArtNew()); text = lk ? '🔒 ' + lk : `🌉 Brücke aus ${BR_MAT[bkArtNew()].name}: von hier hinüber zur Anhöhe gegenüber ziehen`; }   // Block 160 (160c C6)
         else if (d.cat === 'land' || d.ground) text = `${d.name}: −${fmt(costOf(tool, hx, hy).cost)}${tool === 'schuett' && seaDepth(hx, hy) > DEEP_FROM ? ' · tiefes Wasser' : ''}`;
         else if (crossCandidate(tool, hx, hy)) text = '🚧 Bahnübergang';
-        else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name;
+        else if (tool === 'weg') text = styleDef('weg', currentStyle('weg')).name + (terrainAt(hx, hy) === 'water' ? ` · 🌉 Brücke: ${BR_MAT[brNewLook(hx, hy, 'wasser').mat].name}: −${fmt(costOf('weg', hx, hy).cost)}` : '');   // 160c D3f
         else if (tool === 'schiene') { const c = costOf(tool, hx, hy); text = `${terrainAt(hx, hy) === 'water' ? 'Brücke' : 'Schiene'}: −${fmt(c.cost)} ${matText(c.mat)}`; }
         else {
           // Die ganze Insel neu rechnen kostet: erst, wenn die Maus kurz auf dem Feld ruht (beim Drüberfahren nur Name/Ort)
