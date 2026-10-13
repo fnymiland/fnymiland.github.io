@@ -713,43 +713,54 @@ function bkPickFront(sx, sy) {
 // ---------------------------------------------------------------------------
 // Fenster (👆)
 // ---------------------------------------------------------------------------
-function openBkInfo(x, y) {
-  const c = bkAt(x, y);
-  if (!c) { closePanel(); return; }
-  const b = c.b, L = brLook(b, 'anhoehe'), ref = { at: 'anhoehe', k: c.k }, nw = (b.weg || []).filter(Boolean).length, ng = bkRailCount(b), paid = brPaid(b, 'anhoehe');
-  const fuss = L.fam === 'fuss', diff = d => d > 0 ? ` · −${fmt(d)}` : d < 0 ? ` · +${fmt(-d)}` : '';
+// Aussehen-Abschnitte im Brückenfenster (160c C6/C7, gemeinsam für Anhöhe und Wasser – D3): Material, Farbe, Deck, Stützen, Zacken, Licht.
+// o: { mats: Material-Ids, matPrice(id) → Unterschied in Talern (null: keiner), deck: Deck-Wahl zeigen, fuss, zk: Zacken-Zustand ('an'|'aus'|null),
+// n: Felder (Preise für Zacken/Licht), dunkel }. wireBrLook verdrahtet die Knöpfe mit set(änderung)
+function brLookHtml(L, o) {
+  const diff = d => d > 0 ? ` · −${fmt(d)}` : d < 0 ? ` · +${fmt(-d)}` : '';
   const matBtn = id => {
-    const nu = brPrice({ ...brLook({ ...b, art: id, brz: undefined }, 'anhoehe'), zacken: false }, 'anhoehe', b.n), lk = brMatLock(id), M = BR_MAT[id];
-    return `<button class="look look-form${id === L.mat ? ' on' : ''}${lk ? ' locked' : ''}" data-bkart="${id}" aria-label="${M.name}"${lk ? ` title="${escHtml(lk)}"` : ''}><img alt="" src="${lookThumb('bruecke', BK_ART_IDS.indexOf(id), L.col == null ? 0 : L.col + 1) || 'data:,'}"><span>${lk ? '🔒 ' : ''}${M.name}${id === L.mat ? '' : diff(nu.money - (paid.money || 0))}</span></button>`;
+    const lk = brMatLock(id, o.at), M = BR_MAT[id];
+    return `<button class="look look-form${id === L.mat ? ' on' : ''}${lk ? ' locked' : ''}" data-bkart="${id}" aria-label="${M.name}"${lk ? ` title="${escHtml(lk)}"` : ''}><img alt="" src="${lookThumb('bruecke', BK_ART_IDS.indexOf(id), L.col == null ? 0 : L.col + 1) || 'data:,'}"><span>${lk ? '🔒 ' : ''}${M.name}${id === L.mat ? '' : diff(o.matPrice(id))}</span></button>`;
   };
   const colBtn = (v, name, css) => `<button class="sw${v === L.col ? ' on' : ''}" data-brc="${v == null ? '' : v}" style="background:${css}" title="${escHtml(name)}" aria-label="Farbe ${escHtml(name)}"></button>`;
   const opt = (key, v, name, on) => `<button class="btn small${on ? ' on' : ''}" data-${key}="${v}">${name}</button>`;
-  const bought = b.brz === 'an' || b.brz === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken.feld, b.n));
-  const lc = brCostMat(brAdd({ money: 0 }, BR_OPT.licht.feld, b.n)), dunkel = L.licht === 'an' && T.rail.power.dark.has('B' + c.k);   // Licht (C7)
-  const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
-    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
-    <div class="label">Material</div><div class="looks look-forms">${BK_ART_IDS.map(matBtn).join('')}</div>
+  const bought = o.zk === 'an' || o.zk === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken.feld, o.n));
+  const lc = brCostMat(brAdd({ money: 0 }, BR_OPT.licht.feld, o.n));
+  return `<div class="label">Material</div><div class="looks look-forms">${o.mats.map(matBtn).join('')}</div>
     <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => colBtn(i, d.name, d.c)).join('')}</div>
-    ${nw ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
-    ${L.mat === 'holz' && fuss ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
-    ${L.mat === 'kristall' && fuss ? `<div class="label">Kristallzacken</div><div class="row">${bought ? opt('brz', 'an', 'An', b.brz === 'an') + opt('brz', 'aus', 'Aus', b.brz === 'aus')
+    ${o.deck ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
+    ${L.mat === 'holz' && o.fuss ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
+    ${L.mat === 'kristall' && o.fuss ? `<div class="label">Kristallzacken</div><div class="row">${bought ? opt('brz', 'an', 'An', o.zk === 'an') + opt('brz', 'aus', 'Aus', o.zk === 'aus')
       : `<button class="btn" data-brz="kaufen">✨ Zacken kaufen −${fmt(zk.cost)}${Object.keys(zk.mat).length ? ' · ' + matText(zk.mat) : ''}</button>`}</div>` : ''}
     <div class="label">Licht</div><div class="row">${L.licht ? opt('brl', 'an', 'An', L.licht === 'an') + opt('brl', 'aus', 'Aus', L.licht === 'aus')
       : `<button class="btn" data-brl="kaufen">💡 Licht kaufen −${fmt(lc.cost)}${Object.keys(lc.mat).length ? ' · ' + matText(lc.mat) : ''}</button>`}</div>
-    ${dunkel ? '<p class="muted">⚡ Ohne Strom bleibt das Licht dunkel – Brückenlicht bekommt Strom zuletzt (nach Laternen, Betrieben und Zügen).</p>' : ''}
-    <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
-    ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`
-      : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
-      : '<p class="muted">Zieh einen Weg oder eine Schiene von der einen Anhöhe über die Brücke zur anderen.</p>'}
-    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt((paid.money || 0) + nw * ITEMS.weg.cost + ng * ITEMS.schiene.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
-    () => bkAt(x, y) ? openBkInfo(x, y) : closePanel());
-  const set = ch => { undoable(() => brSet(ref, ch)); openBkInfo(x, y); };
+    ${o.dunkel ? '<p class="muted">⚡ Ohne Strom bleibt das Licht dunkel – Brückenlicht bekommt Strom zuletzt (nach Laternen, Betrieben und Zügen).</p>' : ''}`;
+}
+function wireBrLook(el, set) {
   for (const e of el.querySelectorAll('[data-bkart]')) e.onclick = () => set({ mat: e.dataset.bkart });
   for (const e of el.querySelectorAll('[data-brc]')) e.onclick = () => set({ col: e.dataset.brc === '' ? null : +e.dataset.brc });
   for (const e of el.querySelectorAll('[data-brb]')) e.onclick = () => set({ deck: e.dataset.brb });
   for (const e of el.querySelectorAll('[data-bru]')) e.onclick = () => set({ stuetzen: e.dataset.bru });
   for (const e of el.querySelectorAll('[data-brz]')) e.onclick = () => set({ zacken: e.dataset.brz });
   for (const e of el.querySelectorAll('[data-brl]')) e.onclick = () => set({ licht: e.dataset.brl });
+}
+function openBkInfo(x, y) {
+  const c = bkAt(x, y);
+  if (!c) { closePanel(); return; }
+  const b = c.b, L = brLook(b, 'anhoehe'), ref = { at: 'anhoehe', k: c.k }, nw = (b.weg || []).filter(Boolean).length, ng = bkRailCount(b), paid = brPaid(b, 'anhoehe');
+  const fuss = L.fam === 'fuss';
+  const matPrice = id => brPrice({ ...brLook({ ...b, art: id, brz: undefined }, 'anhoehe'), zacken: false }, 'anhoehe', b.n).money - (paid.money || 0);
+  const dunkel = L.licht === 'an' && T.rail.power.dark.has('B' + c.k);   // Licht (C7)
+  const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
+    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
+    ${brLookHtml(L, { at: 'anhoehe', mats: BK_ART_IDS, matPrice, deck: !!nw, fuss, zk: b.brz === 'an' || b.brz === 'aus' ? b.brz : null, n: b.n, dunkel })}
+    <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
+    ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`
+      : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
+      : '<p class="muted">Zieh einen Weg oder eine Schiene von der einen Anhöhe über die Brücke zur anderen.</p>'}
+    <div class="row"><button class="btn danger" id="p-del" aria-label="Brücke abreißen">🗑️ Abreißen +${fmt((paid.money || 0) + nw * ITEMS.weg.cost + ng * ITEMS.schiene.cost)}</button><button class="btn ghost" id="p-close">Schließen</button></div>`,
+    () => bkAt(x, y) ? openBkInfo(x, y) : closePanel());
+  wireBrLook(el, ch => { undoable(() => brSet(ref, ch)); openBkInfo(x, y); });
   if ($('p-bkweg')) $('p-bkweg').onclick = () => { undoable(() => bkDemolishAt(x, y)); openBkInfo(x, y); };
   $('p-del').onclick = () => { closePanel(); undoable(() => bkDemolishAt(x, y, true)); };
   $('p-close').onclick = closePanel;
