@@ -55,7 +55,7 @@ function expeditionError(i = nextIsle()) {
   if (!i) return 'Alle Inseln sind entdeckt';
   if (state.expedition) return 'Das Boot ist schon unterwegs';
   if (!stegs().length) return 'Erst einen Steg ans Ufer bauen (🏘️ Stadt → 🚆 Verkehr → Steg)';
-  if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet?';
+  if (!stegs().some(k => expeditionRoute(k, i))) return 'Vom Steg aus gibt es keinen Seeweg dorthin – ist das Wasser zugeschüttet oder versperrt eine flache Brücke den Weg?';
   const miss = isleNeeds(i).filter(c => !c.ok);
   return miss.length ? 'Es fehlt noch: ' + miss.map(c => c.text).join(', ') : null;
 }
