@@ -576,7 +576,14 @@ function bkTileArgs(c, px, py, z) {
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe, c = bkAt(x, y)) {           // c: auch eine Wasser-Wegbrücke (wbAt, 160c D1) – bis D2 mit dem alten Maler
   if (!c) return;
-  if (c.water) { const t = state.tiles.get(x + ',' + y); if (isWegBridge(t)) drawWegBridge(px, py, z, x, y, t, BK_GRUPPEN[gruppe]); return; }
+  if (c.water) {                                                          // Wasser-Wegbrücke: neue Modelle (160c D2) je Material, sonst noch der alte Maler
+    const t = state.tiles.get(x + ',' + y);
+    if (!isWegBridge(t)) return;
+    if (!c.G || !WB_NEU.has(c.G.mat)) return drawWegBridge(px, py, z, x, y, t, BK_GRUPPEN[gruppe]);
+    const A = wbArgs(c, px, py, z);
+    for (const l of gruppe === 'w' && A.art === 'kristall' ? ['hg', ...BK_GRUPPEN.w] : BK_GRUPPEN[gruppe] || []) wbPaintLage(l, c, A, z);   // ruhend: hintere Scheibe mit im Bildchen
+    return;
+  }
   const A = bkTileArgs(c, px, py, z);
   for (const lage of BK_GRUPPEN[gruppe] || []) bkPaintLage(lage, A.P, z, A.art, A.n, A.t0, A.t1, A.weg, A.opts);
 }

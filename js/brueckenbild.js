@@ -257,9 +257,10 @@ function bkMoverRect(ms, z, lift = 0) {
 // Nachmalen (tileB): Gruppen und Deko-Plätze, beschnitten auf rect ∩ Rahmen der Gruppen
 // cut (160c C10): Streifen der Anfangskante (Stütze, Bock, Pfeilerstirn bei s = W) auslassen – er liegt hinter einem Boot unter der Feldmitte
 const BK_START_CUT = 25.5;                                                 // Feldmitte bis rechts neben die Stütze bzw. Pfeilerstirn der Anfangskante (× z)
+const WB_START_CUT = 24.5;                                                 // Wasser (160c D2): Stütze bei s = 0,306 (EDGE_W), rechter Strichrand −24,7
 function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bkAt(x, y)) {
   const [l, u, r, d] = bkBoxOf(gruppen, c0), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
-  if (cut && c0) { if (c0.b.ax) R[2] = Math.min(R[2], px + BK_START_CUT * z); else R[0] = Math.max(R[0], px - BK_START_CUT * z); }
+  if (cut && c0) { const cw = c0.water ? WB_START_CUT : BK_START_CUT; if (c0.b.ax) R[2] = Math.min(R[2], px + cw * z); else R[0] = Math.max(R[0], px - cw * z); }
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
     const fog = FOG, gm = GLOW_MUTE;
@@ -289,7 +290,8 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
-  const boatMid = m => !c.water && m.boat && (c.b.ax ? m.px - x : m.py - y) > -0.16;   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
+  const wcut = c.water && !!c.G && c.G.startPost && WB_NEU.has(c.G.mat);   // Wasser (160c D2): nur mit einer Stütze an der Anfangskante
+  const boatMid = m => (!c.water || wcut) && m.boat && (c.b.ax ? m.px - x : m.py - y) > (c.water ? -0.19 : -0.16);   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
   const Ub = U.filter(boatMid), Ur = U.filter(m => !boatMid(m));
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
   draw(B);
@@ -513,3 +515,94 @@ function brPal(base, mat, fam, col, plank) {
   return L;
 }
 
+
+// ---------------------------------------------------------------------------
+// Wasser-Wegbrücken, neue Modelle (160c D2; abgenommen: Entwurf tools/wasserbruecken-entwurf.js maler(), plan-160c/karte-D0.md, karte-D2.md).
+// Form, Bogenhöhe, Öffnungen und Durchfahrten bleiben aus Block 150 (bridgeArch); gemalt mit den Bausteinen der Anhöhe (bkPaintLage) in der
+// schmalen Wasser-Breite: P staucht quer s (BK_W-Raum der Maler) auf EDGE_W bzw. bis in die Nachbarreihe (breit) und nie unter die Wasserfläche.
+// Holz/Metall flach ohne Bogenträger (wbFlachV), Stein mit archWall (Quader) + Balustrade, offenes Ende: Abschluss quer (wbQuer). Je Lage
+// (BK_GRUPPEN: h | v d | o, Glas hg/t1/t2) – dieselbe Folge wie der Entwurf: hg, h, Abschluss −, Rückwand, v, d, t1, o, t2, Abschluss +
+// ---------------------------------------------------------------------------
+let BR_STONE_NONE = null;                                                  // Stein: nur Balustrade + Deck (die Wand malt archWall)
+function wbArgs(c, px, py, z) {
+  const G = c.G, ax = c.ax, tc = G.i, t = state.tiles.get(c.k), L = G.look, art = G.art, stein = art === 'stein';
+  if (!BR_STONE_NONE) BR_STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
+  const Pw = (a, b, h) => { const [u, v] = ax ? [b, a] : [a, b]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
+  const sq = s => s / BK_W * (s < 0 ? (G.latB ? 0.512 : EDGE_W) : (G.latF ? 0.512 : EDGE_W));
+  const P = (tt, s, h) => Pw(tt - tc, sq(s), Math.max(h, WB_WATER));       // nie unter die Wasserfläche
+  const H = a => G.hf(tc + a), weg = stein || L.deck === 'belag';
+  const opts = { fam: 'fuss', ax, hf: G.hf, foot: () => WB_WATER, gl: () => -1, supports: G.supports, ext: G.ext, col: L.col, plank: L.plank,
+    licht: L.licht || null, dark: false, zacken: !!L.zacken, stone: stein ? BR_STONE_NONE : null, clear: 9, lampMax: G.n,
+    wegPaint: weg ? () => wbBelag(t, c.x, c.y, z, ax, Pw, H, G.latB, G.latF, !!c.A) : null };
+  return { G, t, xy: [c.x, c.y], P, Pw, H, art, weg, opts, face: brPal(BK_STEIN, 'stein', 'fuss', L.col, null).face };
+}
+function wbPaintLage(lage, c, A, z) {
+  const G = A.G, glas = A.art === 'kristall', stein = A.art === 'stein';
+  const L = (l, ex) => bkPaintLage(l, A.P, z, A.art, G.n, G.t0, G.t1, A.weg, ex ? { ...A.opts, ...ex } : A.opts);
+  if (lage === 'hg') { if (glas && !G.latB) L('hg'); }
+  else if (lage === 'h') {
+    if (!G.latB) {
+      L('h');
+      if (G.endPost) { const K = bkKit(A.P, z, G.n, G.t0, G.t1, A.opts), Lp = brPal(BK_FUSS.holz, 'holz', 'fuss', G.look.col, G.look.plank); K.vert(G.t1, -BK_W + 0.06, WB_WATER, G.hf(G.t1) - 0.5, Lp.side, 2.2); }   // Stütze am offenen Ende, hinten
+    }
+    if (G.first) wbQuer(A, z, -0.5, false);                                // −Ende: nur der Abschluss quer, vor dem Deck
+    if (stein && c.A && !G.latF) archWall(c.A, A.Pw, A.H, WB_AS9, { side: A.face }, EDGE_W, z, { ...A.t, brk: 'stein' }, false, G.depth, false);   // Rückwand, Gewölbe
+  } else if (lage === 'v') {
+    if (G.latF) return;
+    if (stein) { if (c.A) archWall(c.A, A.Pw, A.H, WB_AS9, { side: A.face }, EDGE_W, z, { ...A.t, brk: 'stein' }, true, G.depth, true); else wbFlachWand(A, z); }
+    else if (!c.A && (A.art === 'holz' || A.art === 'stahl')) wbFlachV(A, z);
+    else L('v');
+  } else if (lage === 'd') L('d', G.latB ? { licht: null } : null);     // innere Reihen ohne Licht (sonst stünde die Lampe auf der Fuge)
+  else if (lage === 't1') { if (glas && !G.latF) L('t1'); }
+  else if (lage === 'o') { if (!G.latF) L('o'); if (G.lastB && !glas) wbQuer(A, z, 0.5, true); }
+  else if (lage === 't2') { if (glas) { if (!G.latF) L('t2'); if (G.lastB) wbQuer(A, z, 0.5, true); } }
+}
+// flach (1 Feld, Steg) ohne Bogenträger (D0 F-f): Holz Randbalken + Stützen vorn, Metall nur der Träger
+function wbFlachV(A, z) {
+  const G = A.G, K = bkKit(A.P, z, G.n, G.t0, G.t1, A.opts), hf = G.hf, Lp = brPal(A.art === 'holz' ? BK_FUSS.holz : BK_FUSS.stahl, A.art, 'fuss', G.look.col, G.look.plank);
+  if (A.art === 'holz') {
+    for (const k of G.supports) { const tt = k - 0.5; if ((tt >= G.t0 - 1e-9 && tt < G.t1 - 1e-9) || (G.endPost && Math.abs(tt - G.t1) < 1e-9)) K.vert(tt, BK_W - 0.06, WB_WATER, hf(tt) - 0.5, Lp.side, 2.2); }
+    K.band(BK_W, tt => hf(tt) - 2, hf, K.sh(shade(Lp.side, 0.05)));
+  } else { K.band(BK_W, tt => hf(tt) - 2.6, hf, K.sh(Lp.steel)); K.line(BK_W, hf, Lp.dark, 0.25); K.line(BK_W, tt => hf(tt) - 2.6, Lp.dark, 0.25); }
+}
+// Steinwand flach (1 Feld, Steg): Quader, mit der Bogen-Andeutung (wie Block 66, ohne Ziegel)
+function wbFlachWand(A, z) {
+  const { Pw, H, face } = A, AS = [-0.5, -0.2, 0.2, 0.5], hw = EDGE_W;
+  for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([Pw(a0, hw, -1), Pw(a1, hw, -1), Pw(a1, hw, H(a1)), Pw(a0, hw, H(a0))], C(shade(face, -0.12))); }
+  const wallPts = [...AS.map(a => Pw(a, hw, -1)), ...[...AS].reverse().map(a => Pw(a, hw, H(a)))], [tx, ty] = A.xy;
+  g.save(); g.beginPath(); wallPts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();
+  pattern(([sa, st]) => Pw(sa, hw, -1 + (st + 0.5) * 22), 'tiles', tx, ty, z, C(shade(face, -0.3)), null);
+  g.restore();
+  const L = A.G.lift, arch = []; for (let k = 0; k <= 12; k++) { const a = -0.3 + 0.6 * k / 12; arch.push(Pw(a, hw, -1 + (L - 2.5) * Math.sqrt(Math.max(0, 1 - (a / 0.3) ** 2)))); }
+  poly(arch, 'rgba(35,70,95,0.55)');
+}
+// offenes Ende (Steg): Abschluss quer – Stein: Stirn (nur am +Ende sichtbar) + Abdeckung, sonst Handlauf in der Farbe des Geländers
+function wbQuer(A, z, a, sicht) {
+  const { Pw, art, face } = A, hw = EDGE_W, h = A.H(a);
+  if (art === 'stein') {
+    if (sicht) poly([Pw(a, -hw, -1), Pw(a, hw, -1), Pw(a, hw, h), Pw(a, -hw, h)], C(shade(face, -0.2)));
+    poly([Pw(a, -hw, h), Pw(a, hw, h), Pw(a, hw, h + BR_STEIN.par), Pw(a, -hw, h + BR_STEIN.par)], C(shade(face, 0.08)));
+    return;
+  }
+  const Lp = brPal(BK_FUSS[art], art, 'fuss', A.G.look.col, A.G.look.plank), col = art === 'stahl' ? Lp.steel : Lp.rail, dh = art === 'stahl' ? 6.5 : 6;
+  g.strokeStyle = C(col); g.lineWidth = Math.max(0.6, 0.7 * z); g.lineCap = 'butt'; g.beginPath();
+  const p0 = Pw(a - Math.sign(a) * 0.03, -hw, h + dh), p1 = Pw(a - Math.sign(a) * 0.03, hw, h + dh); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke();
+}
+// Belag wie der Weg (Stein, Holz mit Belag): Kante, Füllung, Muster, Asphalt-Mittelstreifen – wie der alte Maler (Block 66b)
+function wbBelag(t, x, y, z, ax, Pw, H, latB, latF, arch) {
+  const AS = arch ? WB_AS9 : [-0.5, -0.2, 0.2, 0.5], hw = EDGE_W;
+  const tfd = g.getTransform ? g.getTransform() : null, dpd = (tfd ? Math.hypot(tfd.a, tfd.b) : 1) * z, pd = Math.min(0.08, 1.5 / (dpd * TW * 0.56));
+  const b0 = latB ? -0.5 - Math.max(0.01, pd) : -hw, b1 = latF ? 0.5 + Math.max(0.01, pd) : hw;
+  const ASd = [AS[0] - pd, ...AS.slice(1, -1), AS[AS.length - 1] + pd], Hd = a => H(Math.max(-0.5, Math.min(0.5, a)));
+  const st = styleDef('weg', t.style), lk = lookFar(pathLook(st.id), z) || {}, fill = lk.fill || '#dcc69d';
+  const Lh = ([u, v]) => { const a = ax ? v : u, b = ax ? u : v; return Pw(a, b, Hd(a)); };
+  const band2 = (w0, w1) => [...ASd.map(a => ax ? [w0, a] : [a, w0]), ...[...ASd].reverse().map(a => ax ? [w1, a] : [a, w1])];
+  const inner = band2(latB ? b0 : -ROAD_W, latF ? b1 : ROAD_W);
+  poly(band2(b0, b1).map(Lh), C(lk.edge || shade(fill, -0.18)));
+  poly(inner.map(Lh), C(fill));
+  if (lk.pat || lk.checker) { g.save(); clipTo([inner], Lh); pattern(Lh, lk.pat ? lk.pat[0] : 'tiles', x, y, z, lk.pat && lk.pat[1] && C(lk.pat[1]), lk.cols, 0, null, fill); g.restore(); }
+  if (lk.dash) {                                                           // Asphalt: Mittelstreifen
+    g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.setLineDash([2.5 * z, 3 * z]); g.beginPath();
+    AS.forEach((a, i) => { const q = Pw(a, 0, H(a)); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
+  }
+}

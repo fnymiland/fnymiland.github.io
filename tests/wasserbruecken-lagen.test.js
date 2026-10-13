@@ -66,18 +66,18 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
     game("groundVersion++");
     expect(game("(c => c.lift)(wbAt(6, 4))")).toBe(3);
   });
-  it('Gruppen-Code der Anhöhe mit dem Wasserfeld: Bildchen wb|x,y|gruppe|FOG ohne Licht, gemalt mit drawWegBridge(…, lagen); blass gilt nicht', () => {
+  it('Gruppen-Code der Anhöhe mit dem Wasserfeld: Bildchen wb|x,y|gruppe|FOG ohne Licht, gemalt über bkDrawLagen mit dem Feld; blass gilt nicht', () => {
     szene();
-    const r = game(`(() => { const dw = drawWegBridge, calls = []; drawWegBridge = (cx, cy, z, x, y, t, L) => { calls.push(x + ',' + y + ':' + (L || []).join('')); return dw(cx, cy, z, x, y, t, L); };
+    const r = game(`(() => { const bl = bkDrawLagen, calls = []; bkDrawLagen = (x, y, px, py, z, gr, c) => { calls.push(x + ',' + y + ':' + gr + (c && c.water ? '' : '!')); return bl(x, y, px, py, z, gr, c); };
       const S = spriteForce; spriteForce = true; spriteNoBudget = true;
       try { cam.z = 0.6; for (const gr of ['h', 'vd', 'o']) spriteBridge(15, 4, 100, 100, 0.6, gr, wbAt(15, 4)); }
-      finally { drawWegBridge = dw; spriteForce = S; spriteNoBudget = false; }
+      finally { bkDrawLagen = bl; spriteForce = S; spriteNoBudget = false; }
       return [calls, [...objSprites.keys()].filter(k => k.startsWith('wb|15,4|')).sort(), [...objSprites.entries()].filter(([k]) => k.startsWith('wb|')).every(([, e]) => e.glows.length === 0)]; })()`);
     expect(r[0]).toEqual(['15,4:h', '15,4:vd', '15,4:o']);
     expect(r[1]).toEqual(['wb|15,4|h|0', 'wb|15,4|o|0', 'wb|15,4|vd|0']);
     expect(r[2]).toBe(true);
     game('setSeeThrough(true)');
-    expect(game("(() => { const a = []; const dw = drawWegBridge; drawWegBridge = (...x) => { a.push(g.globalAlpha); return dw(...x); }; try { bkGroup(15, 4, 100, 100, 2, ['vd'], wbAt(15, 4)); } finally { drawWegBridge = dw; setSeeThrough(false); } return a; })()")).toEqual([1]);
+    expect(game("(() => { const a = []; const bl = bkDrawLagen; bkDrawLagen = (...x) => { a.push(g.globalAlpha); return bl(...x); }; try { bkGroup(15, 4, 100, 100, 2, ['vd'], wbAt(15, 4)); } finally { bkDrawLagen = bl; setSeeThrough(false); } return a; })()")).toEqual([1]);
   });
   it('Rahmen: jede Lage bleibt in brBox(gr, wbAt) (alle Arten, flach, Bogen, breit, Steg, z 0,5/1/2,5)', () => {
     const felder = szene();
@@ -106,7 +106,7 @@ describe('Wasser-Wegbrücken: Höhe der Figuren (160c D1d)', () => {
       expect(r[0], x + ',' + y + ' a ' + a).toBeCloseTo(r[1], 9);
       if (r[2] != null) expect(r[0], 'Bogen ' + x + ',' + y).toBeCloseTo(r[2], 9);
     }
-    expect(game('[wegBridgeLift(6, 13), wegBridgeLift(6, 4), wegBridgeLift(6, 31)]')).toEqual([7, 3, 8]);   // Stein 7, Holz 3, Rot 8 (BRIDGE_LOOK, wie der Maler)
+    expect(game('[wegBridgeLift(6, 13), wegBridgeLift(6, 4), wegBridgeLift(6, 31)]')).toEqual([7, 3, 3]);   // Stein 7, Holz 3, Rot = Holz in Rot 3 (160c D2, D0-Bild „Rot · 1“)
     expect(game('wegBridgeLift(6.45, 13)')).toBeCloseTo(7 * 0.05 / 0.3, 9);                // Rampe zum Ufer
     expect(game('wegBridgeLift(37.45, 4)')).toBe(3);                                        // Steg: offenes Ende bleibt oben
     expect(game('[wegBridgeLift(5, 4), wegBridgeLift(9, 4), wegBridgeLift(30, 30)]')).toEqual([0, 0, 0]);

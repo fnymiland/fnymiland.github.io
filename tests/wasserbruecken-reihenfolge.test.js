@@ -34,12 +34,13 @@ const szene = () => {
 // ein Bild nah (live, ohne Bildchen) mit Spionen: 'A x,y' (Feldrunde: drawEdgesAt), 'gr[w] x,y [fog]' (bkDrawLagen, w: Wasserfeld), 'wb x,y' (Maler)
 const order = (cx, cy, extra = '', z = 2) => game(`(() => {
   ${extra}
-  const log = [], bl = bkDrawLagen, de = drawEdgesAt, dw = drawWegBridge;
+  const log = [], bl = bkDrawLagen, de = drawEdgesAt, dw = drawWegBridge, wa = wbArgs;   // Maler: alt drawWegBridge, neu (160c D2) wbArgs je Gruppe
   drawEdgesAt = (x, y, ...r) => { log.push('A ' + x + ',' + y); return de(x, y, ...r); };
   bkDrawLagen = (x, y, px, py, z, gr, c) => { const cc = c === undefined ? bkAt(x, y) : c; log.push(gr + (cc && cc.water ? 'w' : '') + ' ' + x + ',' + y + (FOG ? ' fog' : '')); return bl(x, y, px, py, z, gr, c); };
   drawWegBridge = (cx, cy, z, x, y, ...r) => { log.push('wb ' + x + ',' + y); return dw(cx, cy, z, x, y, ...r); };
+  wbArgs = (c, ...r) => { log.push('wb ' + c.x + ',' + c.y); return wa(c, ...r); };
   try { cam = state.cam; cam.z = ${z}; const p = iso(${cx}, ${cy}); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
-  finally { bkDrawLagen = bl; drawEdgesAt = de; drawWegBridge = dw; spriteForce = null; }
+  finally { bkDrawLagen = bl; drawEdgesAt = de; drawWegBridge = dw; wbArgs = wa; spriteForce = null; }
   return log;
 })()`);
 const lagenOf = (log, x, y) => log.filter(e => new RegExp(`^(h|vd|o|w)w? ${x},${y}( fog)?$`).test(e)).map(e => e.split(' ')[0]);
@@ -86,8 +87,8 @@ describe('Wasser-Wegbrücken weit weg als Bildchen (160c D1b)', () => {
   it('je Feld ein Bildchen wb|x,y|w der aktuellen Fassung, ohne Licht, kein flat|/arch|; gemalt je einmal; das nächste Bild malt nichts live und nichts neu', () => {
     szene();
     far(20, 8);
-    const made = game(`(() => { const dw = drawWegBridge; let n = 0; drawWegBridge = (...a) => { if (SPRITE_PAINT) n++; return dw(...a); };
-      try { spriteNoBudget = true; render(1e6); spriteNoBudget = false; } finally { drawWegBridge = dw; } return n; })()`);
+    const made = game(`(() => { const dw = drawWegBridge, wa = wbArgs; let n = 0; drawWegBridge = (...a) => { if (SPRITE_PAINT) n++; return dw(...a); }; wbArgs = (...a) => { if (SPRITE_PAINT) n++; return wa(...a); };
+      try { spriteNoBudget = true; render(1e6); spriteNoBudget = false; } finally { drawWegBridge = dw; wbArgs = wa; } return n; })()`);
     const keys = game("[...objSprites.entries()].filter(([k]) => /^(wb|br|flat|arch)\\|/.test(k)).map(([k, e]) => [k, e.ver === groundVersion, e.glows.length])");
     for (const [x, y] of [[6, 4], [14, 4], [15, 4], [16, 4], [26, 5], [36, 4], [37, 4], [6, 13], [15, 13]]) expect(keys.some(([k]) => k === `wb|${x},${y}|w|0`), x + ',' + y).toBe(true);
     expect(keys.filter(([k]) => /^(flat|arch|br)\|/.test(k) || /^wb\|.*\|(h|vd|o)\|/.test(k))).toEqual([]);   // ruhend nur w

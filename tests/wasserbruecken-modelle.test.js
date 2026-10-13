@@ -57,9 +57,9 @@ describe('Wasser-Wegbrücken: Geometrie G (160c D2a)', () => {
     kanal(10, 20, 1, { brk: 'rot' }); kanal(10, 28, 3, { style: 'kopf' });
     expect(G(10, 20, ['mat'])).toEqual(['holz']); expect(G(11, 28, ['mat'])).toEqual(['stein']);
   });
-  it('nichts Sichtbares: alte Deckhöhe bleibt, solange das Material nicht umgestellt ist (WB_NEU leer); Lampen-Stellen bis 8 unverändert', () => {
+  it('Deckhöhe: neues Material (WB_NEU) mit LIFT je Material, sonst die alte (BRIDGE_LOOK); Lampen-Stellen bis 8 unverändert', () => {
     kanal(10, 4, 1, { brk: 'rot' });
-    expect(game('[wbAt(10, 4).lift, WB_NEU.size]')).toEqual([8, 0]);
+    expect(game('(c => c.lift === (WB_NEU.has(c.G.mat) ? c.G.lift : BRIDGE_LOOK.rot.lift))(wbAt(10, 4))')).toBe(true);
     for (const [a, f] of [['holz', 'fuss'], ['stein', 'fuss'], ['stahl', 'fuss'], ['kristall', 'fuss'], ['stahl', 'bahn']]) for (let n = 1; n <= 8; n++)
       expect(game(`JSON.stringify(brLampSpots('${a}', '${f}', ${n}, ${n}))`), a + f + n).toBe(game(`JSON.stringify(brLampSpots('${a}', '${f}', ${n}))`));
     expect(game("brLampSpots('holz', 'fuss', 16, 16).ts.length")).toBe(17);                  // ab 9 Feldern nur auf den Feldkanten (D0 F-h)
@@ -84,5 +84,68 @@ describe('Wasser-Wegbrücken: Mauer aus dem Aussehen (160c D2e)', () => {
     neu(zellen(10, 4, 6), 'stein'); game('recalc()');
     expect(game("[bridgeArch(12, 4).wall, seaCache.has('test')]")).toEqual([true, false]);
     expect(game("bridgeArch(12, 4).pass.join('')")).not.toBe(p0);
+  });
+});
+
+// D2c: Holz (samt Rot) im neuen Maler (wbPaintLage) – Lagen nacheinander = das Ganze, alles im Rahmen brBox, Rot in seiner Farbe, Boot-Schnitt
+const rec = js => game(`(() => { const g0 = g, out = [];
+  g = new Proxy({ getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), createPattern: () => ({ setTransform() {} }) }, {
+    get: (o, k) => k in o ? o[k] : (...a) => { out.push(k + ' ' + a.map(v => typeof v === 'number' ? v.toFixed(3) : typeof v === 'object' ? '' : v).join(',') + ' ' + o.fillStyle + '|' + o.strokeStyle + '|' + o.lineWidth); },
+    set: (o, k, v) => { o[k] = v; return true; } });
+  try { ${js} } finally { g = g0; } return out; })()`);
+const holzSzene = () => {
+  const out = [];
+  kanal(6, 4, 1); out.push([6, 4]);
+  kanal(14, 4, 6); out.push([14, 4], [16, 4], [19, 4]);
+  kanal(28, 4, 3, { steg: 1 }); out.push([28, 4], [30, 4]);
+  kanal(44, 4, 3, { steg: -1 }); out.push([44, 4], [46, 4]);
+  kanal(10, 14, 6, { breit: 3 }); out.push([12, 14], [12, 15], [12, 16]);
+  kanal(30, 14, 1, { brk: 'rot' }); out.push([30, 14]);
+  kanal(40, 24, 6, { ax: 1 }); out.push([24, 42], [24, 45]);
+  kanal(40, 34, 3, { ax: 1, steg: 1 }); out.push([34, 40], [34, 42]);
+  kanal(10, 30, 1, { ohneWeg: true }); out.push([10, 30]);
+  return out;
+};
+describe('Wasser-Wegbrücken: Holz im neuen Maler (160c D2c)', () => {
+  it('h, vd, o nacheinander = w; alle Felder Holz im neuen Maler (Rot ist Holz)', () => {
+    const felder = holzSzene();
+    for (const [x, y] of felder) {
+      expect(game(`(c => c.G.mat + WB_NEU.has(c.G.mat))(wbAt(${x}, ${y}))`), x + ',' + y).toBe('holztrue');
+      for (const z of [0.5, 1, 2.5]) {
+        const ganz = rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', wbAt(${x}, ${y}))`);
+        expect(ganz.length).toBeGreaterThan(10);
+        expect(rec(`for (const gr of ['h', 'vd', 'o']) bkDrawLagen(${x}, ${y}, 0, 0, ${z}, gr, wbAt(${x}, ${y}))`), x + ',' + y + ' z ' + z).toEqual(ganz);
+      }
+    }
+  });
+  it('Rahmen: jede Gruppe bleibt in brBox(gr, wbAt) – Stützen bis aufs Wasser, Steg-Enden, breit, Nord-Süd, z 0,5/1/2,5', () => {
+    const felder = holzSzene();
+    const bad = game(`(() => { const g0 = g, bad = [], st = []; let box = null, lw = 1, cur = '', clip = 0;
+      const chk = (x, y) => { if (clip) return; const [l, u, r, d] = box, e = lw / 2 + 0.01; if (x < -l - e || x > r + e || y < -u - e || y > d + e) bad.push(cur + ' ' + x.toFixed(1) + ',' + y.toFixed(1)); };
+      const fake = new Proxy({ getTransform: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }), createPattern: () => ({ setTransform() {} }) }, {
+        get: (o, k) => k === 'moveTo' || k === 'lineTo' ? (x, y) => chk(x, y) : k === 'fillRect' ? (x, y, w, h) => { chk(x, y); chk(x + w, y + h); } : k === 'arc' ? (x, y, r) => { chk(x - r, y - r); chk(x + r, y + r); }
+          : k === 'save' ? () => st.push(clip) : k === 'restore' ? () => { clip = st.pop() || 0; } : k === 'clip' ? () => { clip = 1; } : k in o ? o[k] : () => {},
+        set: (o, k, v) => { o[k] = v; if (k === 'lineWidth') lw = v; return true; } });
+      try { for (const [x, y] of ${JSON.stringify(felder)}) for (const z of [0.5, 1, 2.5]) for (const gr of ['h', 'vd', 'o', 'w']) {
+        const c = wbAt(x, y); cur = x + ',' + y + ' z' + z + ' ' + gr; box = brBox(gr, c).map(v => v * z);
+        g = fake; try { bkDrawLagen(x, y, 0, 0, z, gr, c); } finally { g = g0; } } }
+      finally { g = g0; } return bad.slice(0, 8); })()`);
+    expect(bad).toEqual([]);
+  });
+  it('Rot: Geländer in Rot (#d9483b), Planken in Rot-Holz; Holz ohne Farbe im Standard', () => {
+    holzSzene();
+    const rot = rec("bkDrawLagen(30, 14, 0, 0, 2, 'w', wbAt(30, 14))").join('\n'), holz = rec("bkDrawLagen(6, 4, 0, 0, 2, 'w', wbAt(6, 4))").join('\n');
+    expect(rot).toContain('#d9483b'); expect(holz).not.toContain('#d9483b');
+  });
+  it('Boot mittig unter einem Feld mit Stütze an der Anfangskante: vd im Bootsrahmen ab der Stütze nachgemalt (Schnitt 24,5 – rechts neben ihrem Strich), ohne Stütze kein Schnitt', () => {
+    holzSzene();
+    const redo = (x, y, s) => game(`(() => { const out = [], br = bkRedo, c = wbAt(${x}, ${y}); bkRedo = (...a) => { out.push([a[8], a[9], a[7].join('')]); };
+      try { bkDrawMoving(${x}, ${y}, 100, 100, 2, 1e6, c, [{ boat: true, ship: 'motor', px: ${x}, py: ${y} + ${s}, du: 0, dv: 1 }], null, new Set()); } finally { bkRedo = br; } return [c.G.startPost, out]; })()`);
+    const [sp1, r1] = redo(15, 4, 0.1), [sp2, r2] = redo(16, 4, 0.1);   // Kanten 1, 3, 5: Feld 15 (i 1) hat die Stütze, 16 (i 2) nicht
+    expect([sp1, sp2]).toEqual([true, false]);
+    expect(r1.some(([, cut, gr]) => cut === true && gr === 'vd')).toBe(true);
+    expect(r2.some(([, cut]) => cut === true)).toBe(false);
+    // Stütze der Anfangskante: bei s = (BK_W − 0,06) gestaucht auf EDGE_W, Strich 2,2 (lw = Breite · z / 2): rechter Rand links vom Schnitt
+    expect(game('(0.5 + (BK_W - 0.06) / BK_W * EDGE_W) * TW / 2 - 1.1')).toBeGreaterThan(game('WB_START_CUT'));
   });
 });
