@@ -1310,6 +1310,15 @@ function boatUnder(m) {
       && (!isWegBridge(state.tiles.get(bx + ',' + by)) || done(bx, by))) under.push(bx + ',' + by);
   return under.length ? under : null;
 }
+// Kristall-Wasserbrücke über einem Boot (160c D3h, Nutzer 13.10.2026: lösen): das Glas t1/t2 eines früheren Felds, unter dem ein Boot fährt, malt
+// nicht sein tileB, sondern das Boot danach (boatOver) – sonst läge das Boot vor der Scheibe. Je Bild: Feld → schon gemalt
+let WB_GLASS_LATE = null;
+function wbGlassAt(k, z) {
+  const [x, y] = keyXY(k), c = wbAt(x, y), p = toScreen(x, y), f = FOG;
+  if (!c) return;
+  FOG = !ownedTile(x, y);
+  try { bkGroup(x, y, p.x, p.y, z, ['t1'], c); bkGroup(x, y, p.x, p.y, z, ['t2'], c); } finally { FOG = f; }
+}
 let PLAN_GHOST = null, PLAN_GHOST_DONE = null;                           // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle); je Bild gemalt
 // Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
 // sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten. Eine Leinwand, die nur wächst (wie hillSpillCv),
@@ -1646,7 +1655,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = GFX.day === 'tag' ? 0 : nightAt();                             // Spieluhr (Block 101); ⚙️ „immer Tag“: nur das Bild
-  glows.length = 0; glowCells.clear(); WB_GLOW0.clear(); wbLiveSet(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;   // wbLiveSet: Kristall-Wasserbrücken für tileB (gemerkt)
+  glows.length = 0; glowCells.clear(); WB_GLOW0.clear(); WB_GLASS_LATE = null; wbLiveSet(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;   // wbLiveSet: Kristall-Wasserbrücken für tileB (gemerkt)
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
@@ -1866,6 +1875,7 @@ function render(now) {
       }
     }
     if (m.boat) m.under = boatUnder(m);                                    // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
+    if (m.boat && m.under) for (const bk of m.under) { const c = wbAt(...keyXY(bk)); if (c && bkGlasAt(c)) (WB_GLASS_LATE = WB_GLASS_LATE || new Map()).set(bk, false); }   // Kristall: Glas erst nach dem Boot (160c D3h)
     // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (m.pbtrain) {                                                       // Parkbahn-Wagen kurz vor einer Station: erst mit ihr zeichnen –
       const [rx, ry] = keyXY(k);                                           // sie steht immer hinter dem Gleis und läge sonst über ihm (Block 136f)
@@ -2173,6 +2183,7 @@ function render(now) {
   const boatOver = m => {
     for (const bk of m.under) {
       bridgeOverBoat(bk, z, now, m);
+      if (WB_GLASS_LATE && WB_GLASS_LATE.get(bk) === false) { WB_GLASS_LATE.set(bk, true); wbGlassAt(bk, z); }   // Kristall-Glas des früheren Felds über dem Boot, genau einmal (160c D3h)
       const [bx, by] = keyXY(bk);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
         if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);
@@ -2242,6 +2253,7 @@ function render(now) {
   FOG = false;
   if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);   // letztes Feld nicht im Bild: danach
   archWalkers.clear();
+  if (WB_GLASS_LATE) for (const [k, done] of WB_GLASS_LATE) if (!done) wbGlassAt(k, z);   // Boot nicht im Bild: das Glas fehlt nie (160c D3h)
   HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();

@@ -183,3 +183,20 @@ it('Bildanfang: glows, nightPics, nightPanes, nightSeen, nightWarm, WB_GLOW0 zur
     return [nightPics.includes('x') || nightPics.some(p => p[0] === 'x'), nightPanes.some(p => p[0] === 'x'), nightSeen.has('x'), nightWarm, WB_GLOW0.has('x')]; })()`);
   expect(r).toEqual([false, false, false, false, false]);
 });
+
+// D3h (Nutzer 13.10.2026: lösen): Kristall-Glas eines früheren Felds über einem Boot – nicht im eigenen tileB, sondern nach dem Boot, genau einmal
+it('Kristall: Boot unter einem früheren Feld – dessen Glas t1/t2 nach dem Boot, je Bild genau einmal', () => {
+  kanal(24, 4, 6, { breit: 2, look: { mat: 'kristall' } });
+  const r = game(`(() => { const out = [], bg = bkGroup, dm = drawMover, S0 = shipMovers;
+    bkGroup = (x, y, px, py, z, grs, c) => { for (const g of grs) if (g === 't1' || g === 't2') out.push(g + ' ' + x + ',' + y); return bg(x, y, px, py, z, grs, c); };
+    drawMover = (m, ...a) => { if (m.boat) out.push('boot'); return dm(m, ...a); };
+    shipMovers = () => [{ boat: true, ship: 'motor', px: 25.6, py: 4.4, du: 0, dv: 1 }];
+    try { cam = state.cam; cam.z = 2; const p = iso(26, 5); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
+    finally { bkGroup = bg; drawMover = dm; shipMovers = S0; spriteForce = null; } return [out, boatUnder({ boat: true, px: 25.6, py: 4.4 })]; })()`);
+  const [log, under] = r;
+  expect(under).toContain('25,5');
+  const iB = log.indexOf('boot');
+  expect(log.filter(e => e === 't1 25,5').length).toBe(1);
+  expect(log.filter(e => e === 't2 25,5').length).toBe(1);
+  expect(log.indexOf('t1 25,5')).toBeGreaterThan(iB);
+});

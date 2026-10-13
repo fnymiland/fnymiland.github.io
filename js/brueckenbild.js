@@ -280,7 +280,8 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   if (c.water) { const on = ms.filter(m => m.fur && !m.critter); if (on.length) { figs = (figs || []).concat(on); ms = ms.filter(m => !on.includes(m)); } }
   const fade = !c.water && bkFadeNow(x, y), up = c.water ? 0 : HILL_H * z, vd = c.water && !c.A ? ['h', 'vd'] : ['vd'];
   const k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
-  const glas = bkTileBAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr], c); } finally { FOG = f; } };   // Kristall: Glas (B2: Licht) jedes Bild genau einmal
+  const glas = bkTileBAt(c) && !(c.water && WB_GLASS_LATE && WB_GLASS_LATE.has(k));   // Wasser: über einem Boot malt das Boot das Glas (160c D3h)
+  const glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr], c); } finally { FOG = f; } };   // Kristall: Glas (B2: Licht) jedes Bild genau einmal
   const deck = () => { if (!figs) return; FOG = false;
     for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
       const f = () => seeFaded(seeThrough, () => drawMover(m, z, now));   // 👁: auch Leute und Wagen oben blass
