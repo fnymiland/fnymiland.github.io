@@ -227,3 +227,20 @@ describe('Wasser-Wegbrücken: Hinweis, wenn eine Brücke einen Seeweg kappt (160
     expect(calls).toEqual([true, true, false]);
   });
 });
+
+describe('Wasser-Wegbrücken: Geist beim Ziehen (160c D3h)', () => {
+  it('Linie übers Wasser: Geist der ganzen Brücke einmal (65 %), mit dem Material der Leiste bzw. des Wegstils; Rauten auf dem Deck; Karte unverändert', () => {
+    game("state.design = new Set(DESIGN.map(d => d.id)); for (let y = 3; y <= 9; y++) for (let x = 10; x <= 12; x++) state.terra.set(x + ',' + y, 'water'); terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc()");
+    const r = game(`(() => { const out = [], gp = ghostPaint, n0 = state.tiles.size;
+      ghostPaint = (x0, y0, w, h, a, fn) => { out.push(['ghost', a]); return gp(x0, y0, w, h, a, fn); };
+      const wp = wbPaintLage; wbPaintLage = (l, c, A, z) => { out.push(l + ' ' + c.k + ' ' + c.G.mat); return wp(l, c, A, z); };
+      try { chosenStyle.weg = 'asphalt'; setTool('weg'); startPlan('line', { x: 8, y: 6 }, { x: 14, y: 6 }, false);
+        cam = state.cam; cam.z = 2; const p = iso(11, 6); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6);
+        return [out, state.tiles.size === n0, planInfo(plan).wbGhost.size]; }
+      finally { ghostPaint = gp; wbPaintLage = wp; plan = null; setTool('look'); spriteForce = null; } })()`);
+    const [log, same, n] = r;
+    expect(same).toBe(true); expect(n).toBe(3);
+    expect(log.filter(e => e[0] === 'ghost')).toEqual([['ghost', 0.65]]);
+    for (const x of [10, 11, 12]) expect(log.filter(e => typeof e === 'string' && e.startsWith('d ' + x + ',6 '))).toEqual(['d ' + x + ',6 stein']);   // Asphalt → Stein
+  });
+});

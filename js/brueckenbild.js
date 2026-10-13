@@ -527,7 +527,7 @@ function brPal(base, mat, fam, col, plank) {
 // ---------------------------------------------------------------------------
 let BR_STONE_NONE = null;                                                  // Stein: nur Balustrade + Deck (die Wand malt archWall)
 function wbArgs(c, px, py, z) {
-  const G = c.G, ax = c.ax, tc = G.i, t = state.tiles.get(c.k), L = G.look, art = G.art, stein = art === 'stein';
+  const G = c.G, ax = c.ax, tc = G.i, t = c.t || state.tiles.get(c.k), L = G.look, art = G.art, stein = art === 'stein';   // c.t: gedachtes Feld (Geist, 160c D3h)
   if (!BR_STONE_NONE) BR_STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
   const Pw = (a, b, h) => { const [u, v] = ax ? [b, a] : [a, b]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
   const sq = s => s / BK_W * (s < 0 ? (G.latB ? 0.512 : EDGE_W) : (G.latF ? 0.512 : EDGE_W));
@@ -607,4 +607,37 @@ function wbBelag(t, x, y, z, ax, Pw, H, latB, latF, arch) {
     g.strokeStyle = C('#f4efe2'); g.lineWidth = 1.2 * z; g.lineCap = 'round'; g.setLineDash([2.5 * z, 3 * z]); g.beginPath();
     AS.forEach((a, i) => { const q = Pw(a, 0, H(a)); i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.stroke(); g.setLineDash([]);
   }
+}
+
+// Gedachte Wasserbrücken-Felder (160c D3h): Geist beim Ziehen übers Wasser und beim Tragen einer Brückenkachel. state.tiles wird kurz um die
+// geplanten Kacheln ergänzt und wbAt daraus gerechnet (die Caches hängen an state.tiles und leeren sich von selbst), danach zurück – nie recalc,
+// seaPath oder speichern währenddessen. extra: [[k, Kachel]], keys: welche Felder. Felder mit t (die gedachte Kachel) für wbArgs
+function wbVirtual(extra, keys) {
+  const real = state.tiles, out = new Map();
+  try {
+    state.tiles = new Map(real);
+    for (const [k, t] of extra) state.tiles.set(k, t);
+    for (const k of keys) { const c = wbAt(...keyXY(k)); if (c) out.set(k, { ...c, t: state.tiles.get(k) }); }
+  } finally { state.tiles = real; }
+  return out;
+}
+// gedachte Brückenkachel im Aussehen look (wie build: brWriteLook, brp gestempelt)
+function wbGhostTile(look, style, lauf) {
+  const t = { b: 'weg', lvl: 1, style, bridge: true, lauf };
+  brWriteLook(t, look, look.kind && WEG_BRIDGE[look.kind] ? look.kind : brFallback('wasser', look.mat).brk, null, null);
+  t.brp = { ...brPrice(look, 'wasser'), k: brSig(t, 'wasser') };
+  return t;
+}
+// Geist ganz zeichnen: alle Felder in Maler-Folge auf EINE Zwischenleinwand (wie bkDrawGhost), 65 %, ohne Licht; danach die Plan-Rauten
+function wbDrawGhost(cells, z) {
+  const qs = [...cells.values()].sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x).map(c => {
+    const p = toScreen(c.x, c.y), [l, u, r, d] = bkBoxOf(['w', 'hg', 't1', 't2'], c);
+    return { c, px: p.x, py: p.y, R: [p.x - l * z, p.y - u * z, p.x + r * z, p.y + d * z] };
+  });
+  if (!qs.length) return;
+  const R = qs.reduce((m, q) => [Math.min(m[0], q.R[0]), Math.min(m[1], q.R[1]), Math.max(m[2], q.R[2]), Math.max(m[3], q.R[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => {
+    for (const q of qs) { const A = wbArgs(q.c, q.px, q.py, z); A.opts = { ...A.opts, licht: null, dark: false }; for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, q.c, A, z); }
+  });
+  for (const q of qs) { const marks = DECK_MARKS && DECK_MARKS.get(q.c.k); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }

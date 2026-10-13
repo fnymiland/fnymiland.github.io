@@ -1319,7 +1319,7 @@ function wbGlassAt(k, z) {
   FOG = !ownedTile(x, y);
   try { bkGroup(x, y, p.x, p.y, z, ['t1'], c); bkGroup(x, y, p.x, p.y, z, ['t2'], c); } finally { FOG = f; }
 }
-let PLAN_GHOST = null, PLAN_GHOST_DONE = null;                           // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle); je Bild gemalt
+let PLAN_GHOST = null, PLAN_GHOST_DONE = null, PLAN_WB_GHOST = null, PLAN_WB_LAST = null;   // PLAN_WB_*: Geist der Brücke übers Wasser (160c D3h)                           // 160c C9: Brücken, die eine Weg-/Gleislinie mitbaut (Feld → gedachte Zelle); je Bild gemalt
 // Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
 // sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten. Eine Leinwand, die nur wächst (wie hillSpillCv),
 // Ecke auf ganze Gerätepunkte (sonst weich und das Glasband rastet falsch ein)
@@ -1393,6 +1393,8 @@ function hillFrame(x0, y0, x1, y1, style) {
 function planPreview(z) {
   const info = planInfo(plan), ins = 0.44;
   PLAN_GHOST = info.bkGhost || null; PLAN_GHOST_DONE = PLAN_GHOST ? new Map() : null;
+  PLAN_WB_GHOST = info.wbGhost && info.wbGhost.size ? info.wbGhost : null;   // Brücke übers Wasser (160c D3h)
+  PLAN_WB_LAST = PLAN_WB_GHOST ? [...PLAN_WB_GHOST.values()].reduce((m, c) => !m || c.x + c.y > m.x + m.y || (c.x + c.y === m.x + m.y && c.x > m.x) ? c : m, null).k : null;
   const dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
     const cs = [[-ins, -ins], [ins, -ins], [ins, ins], [-ins, ins]], K = hOf ? 4 : 1;                 // hOf: Höhe auf dem Deck (Bogen, 160c C2) – Seiten unterteilt
     const c = cs.flatMap(([u0, v0], j) => { const [u1, v1] = cs[(j + 1) % 4]; return Array.from({ length: K }, (_, q) => { const u = u0 + (u1 - u0) * q / K, v = v0 + (v1 - v0) * q / K, p = toScreen(x + u, y + v); if (hOf) p.y -= hOf(u, v) * z; return p; }); });
@@ -1414,7 +1416,7 @@ function planPreview(z) {
   }
   for (const [x, y] of planTiles(plan)) {
     const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && (bkAt(x, y) || (info.bkGhost && info.bkGhost.get(x + ',' + y)));   // Weg aufs Deck einer Brücke (Block 160; neue: Geist, 160c C9): Raute oben
-    const wc = !up && DECK_MARKS && !bkAt(x, y) ? wbAt(x, y) : null;     // Wasserbrücke (160c D1c): Raute auf ihrem Deck
+    const wc = !up && DECK_MARKS && !bkAt(x, y) ? wbAt(x, y) || (PLAN_WB_GHOST && PLAN_WB_GHOST.get(x + ',' + y)) || null : null;   // Wasserbrücke (160c D1c; Geist D3h): Raute auf ihrem Deck
     const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : wc ? (u, v) => wegDeckH(wc, wc.ax ? v : u) : null;
     const draw = () => { if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
       else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
@@ -2147,7 +2149,8 @@ function render(now) {
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
       if (!bkDone) bkDrawStill(x, y, px, py, z, now, bw, wbUnder);        // Rückfall (alte Daten: anderes Ding unter dem Deck, Belegung veraltet) – die Brücke fehlt nie
-      else if (!bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
+      if (PLAN_WB_LAST === k) { wbDrawGhost(PLAN_WB_GHOST, z); PLAN_WB_LAST = null; }   // Geist übers Wasser: ganz beim letzten Feld (160c D3h)
+      if (bkDone && !bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
         const gCol = tool === 'verschieben' ? moving.d.col || 0 : ghostType === 'busch' ? bushColNew('busch').col || 0 : DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)).col || 0 : 0;   // wie es gesetzt wird (Block 69)
@@ -2251,10 +2254,11 @@ function render(now) {
     tileB(x, y, px, py);
   }
   FOG = false;
-  if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);   // letztes Feld nicht im Bild: danach
+  if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);
+  if (PLAN_WB_LAST) wbDrawGhost(PLAN_WB_GHOST, z);                      // letztes Feld nicht im Bild   // letztes Feld nicht im Bild: danach
   archWalkers.clear();
   if (WB_GLASS_LATE) for (const [k, done] of WB_GLASS_LATE) if (!done) wbGlassAt(k, z);   // Boot nicht im Bild: das Glas fehlt nie (160c D3h)
-  HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
+  HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; PLAN_WB_GHOST = null; PLAN_WB_LAST = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();
 

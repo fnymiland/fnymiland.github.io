@@ -102,7 +102,7 @@ function planScan(p) {
   const neu = b === 'weg' || b === 'schiene' ? bkPlanNew(p, b) : [], vcell = new Map();   // neue Brücken unter der Linie (160c C9): ihre Felder aufs Deck
   for (const N of neu) for (const k of N.cells.keys()) { vcell.set(k, N); if (!N.err) (deck = deck || new Set()).add(k); }
   let cost = 0, firstErr = null, rest = planTiles(p);
-  const wbCnt = new Map();                                               // Brücke übers Wasser je Material (Schild, 160c D3f)
+  const wbCnt = new Map(), wbPlan = [];                                  // Brücke übers Wasser je Material (Schild, 160c D3f); geplante Felder (Geist, D3h)
   if (b === 'weg') PLANNED = new Set();
   if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
@@ -128,7 +128,7 @@ function planScan(p) {
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
         if (BK_PLAN_SAME) BK_PLAN_SAME.add(k);
-        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') { const L = brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'); BR_PLAN_LOOK.set(k, L); if (b === 'weg') wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); }
+        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') { const L = brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'); BR_PLAN_LOOK.set(k, L); if (b === 'weg') { wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); } }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
       if (!grow || next.length === rest.length) {
@@ -138,6 +138,8 @@ function planScan(p) {
       rest = next;
     }
   } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; }
+  const ax = p.kind === 'line' && p.a.y === p.b.y ? 0 : 1, st = b === 'weg' ? currentStyle('weg') : null;
+  const wbGhost = wbPlan.length ? wbVirtual(wbPlan.map(([k, L]) => [k, wbGhostTile(L, st, ax)]), wbPlan.map(([k]) => k)) : null;   // Geist der Brücke übers Wasser (160c D3h)
   if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das
     const old = ([x, y]) => deck && deck.has(x + ',' + y) ? bkRailAt(bkAt(x, y)) : bAt(x, y) === 'schiene';   // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird (Deck: sein Gleis, nicht das darunter)
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }
@@ -152,7 +154,7 @@ function planScan(p) {
   for (const N of ok) { order.unshift([N.sp.x0, N.sp.y0, () => bkBuild(N.sp, N.look)]); cost += N.price.cost; for (const [r, v] of Object.entries(N.price.mat)) mat[r] = (mat[r] || 0) + v; }
   const bad = [...states.values()].filter(s => s === 'bad').length, bkErr = (neu.find(N => N.err) || {}).err || null;
   const bkGhost = ok.length ? new Map(ok.flatMap(N => [...N.ghost])) : null;
-  return { states, order, n: order.length - ok.length, cost, gain: 0, mat, bad, firstErr, deck, bk: ok.length ? ok.map(N => ({ mat: N.look.mat, n: N.sp.n })) : null, bkErr, bkGhost, wb: [...wbCnt].map(([m, n]) => ({ mat: m, n })) };
+  return { states, order, n: order.length - ok.length, cost, gain: 0, mat, bad, firstErr, deck, bk: ok.length ? ok.map(N => ({ mat: N.look.mat, n: N.sp.n })) : null, bkErr, bkGhost, wb: [...wbCnt].map(([m, n]) => ({ mat: m, n })), wbGhost };
 }
 // Linie auf den Feldkanten: neu, umfärben (anderer Stil/Art) oder schon so
 function scanEdges(p) {
