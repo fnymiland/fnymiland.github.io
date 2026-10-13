@@ -330,6 +330,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `nearestWater` daneben, sonst geht das erste Stück längs unter dem Deck), `natureAt`: keine Fische/
     Möwen daneben. Boote vor der Stirn (s > BK_W) zeichnet `bkMoverClass` als F. Hängt die Durchfahrt einmal von Material oder Stützen ab,
     braucht `brSet` ein `recalc` (Signatur).
+    **Wasser-Wegbrücken** (160c D1): dieselben Wege wie oben mit dem Brückenfeld `wbAt(x, y)` (`water: true`, `A` = Bogen, `W` = EDGE_W,
+    `hm`; gemerkt je groundVersion) als letztem Parameter (`bkGroup`, `spriteBridge` → `wb|…`, `bkRedo`, `bkDrawLagen` → `drawWegBridge(…, lagen)`).
+    Nie im Boden-Durchgang (`liveFlatSet`/`worldGround` lassen sie aus). Ruhend eine Gruppe `w` (= h+v+d+o, ein Bildchen, nichts dazwischen auf
+    dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
+    Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: flach h+vd, Bogen vd nachmalen; frühere Felder über
+    dem Boot `boatUnder` (nur schon gezeichnete) → `bridgeOverBoat(k, z, now, m)` im Bootsrahmen, danach Block 112 (`boatOver`).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
@@ -614,7 +620,7 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     fragen, ob es billiger geht (Bildchen, `ANIM_ITEMS` nur für das Bewegte, Musterkachel). Vor Pushes mit Grafik-Änderungen den
     Messlauf (☰ → Grafik) im Browser ansehen.
     **Bogenbrücken (Block 150):** Höhe/Bögen/Durchfahrt nur über `bridgeArch(x, y)` (gemerkt je groundVersion, recalc leert;
-    null = flach). Bogenbrücken zeichnet die Objekt-Schleife (`drawArchBridge`), nicht der flache Durchgang.
+    null = flach). Gezeichnet werden alle Wasser-Wegbrücken (Bogen und flach) in der Feldschleife wie die Anhöhen-Brücken (160c D1, Regel 29a5 „Wasser-Wegbrücken“).
     **Brückenrichtung:** nur über `bridgeArmsAxis` (Gleichstand → Richtung eines eindeutigen Brückennachbarn). Neues an Brücken immer in **beiden** Richtungen testen (Ost-West und Nord-Süd), auch breit.
     **Wegmuster weit weg:** nie nur ausblenden – `patCoarse` macht Punkte/Steinchen gröber, `lookFar` mischt den Mittelton in die (deckende) Grundfarbe. Nie halbdurchsichtige Tonschichten über Wege legen (überlappende Feldränder → Linien). Am PC prüfen: `tools/vorschau/melden.js` holt echte Bilder vom PC.
     **Straßenlaternen (Block 132):** `strassenlaterne` in draw-schmuck.js (`drawStreetLamp`), Licht über `glowQuad` (Kopf: `pane`, Boden: `pool` = winzige Lichter mit großem Radius – so läuft es durch live/Bildchen/GL); Ausleger-Richtung nur aus `rot` (Bildchen-Schlüssel kennt den Platz nicht), immer in Feldrichtung (`A(k, h)`), nie waagerecht auf dem Bildschirm. Strom: in `computePower` doppelt gezählt.
