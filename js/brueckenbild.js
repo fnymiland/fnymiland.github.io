@@ -203,13 +203,16 @@ function spriteBridge(x, y, px, py, z, gruppe, c = bkAt(x, y)) {
   return true;
 }
 // Bewegtes auf einem Brückenfeld: 'B' hinter dem Deck, 'U' darunter, 'F' davor – Querlage s dort, wo gezeichnet wird (Figuren: am Fuß,
-// FOOT_D wie slopeUp; Tiere in der Mitte). Fahrzeuge immer U
+// FOOT_D wie slopeUp; Tiere in der Mitte). Fahrzeuge immer U. Wasserbrücke (160c D1e): halbe Breite c.W; Tiere dort fliegen (Fisch, Frosch,
+// Robbe, Eisvogel sperrt movers.js) und sind höher als das Deck – davor
 function bkMoverClass(m, c, x, y) {
   if (m.bkCls) return m.bkCls;                                             // Wagenstück unter der Brücke (brCarPiecesUnder)
-  if (m.boat) return (c.b.ax ? m.px - x : m.py - y) > BK_W ? 'F' : 'U';    // Boot vor der Stirn: davor (160c C10); hinten bleibt es darunter
+  const W = c.W || BK_W;
+  if (m.boat) return (c.b.ax ? m.px - x : m.py - y) > W ? 'F' : 'U';      // Boot vor der Stirn: davor (160c C10); hinten bleibt es darunter
+  if (c.water && m.critter) return 'F';
   if (!(m.fur || m.critter) || m.train || m.boat || m.ship || m.cargo || m.fish) return 'U';
   const f = m.fur && !m.critter && !m.sit ? FOOT_D : 0, s = c.b.ax ? m.px + f - x : m.py - f - y;
-  return s < -BK_W - 0.05 ? 'B' : s > BK_W ? 'F' : 'U';
+  return s < -W - 0.05 ? 'B' : s > W ? 'F' : 'U';
 }
 // Rahmen des Bewegten auf dem Schirm [x0, y0, x1, y1] (wie sein glLive-Rahmen), vereinigt
 function bkMoverRect(ms, z, lift = 0) {
@@ -237,37 +240,41 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bk
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();
 }
 // tileB eines Brückenfelds: ms = Bewegtes des Felds (nach Tiefe sortiert, noch nicht gezeichnet), figs = auf dem Deck. Folge: dahinter (B),
-// h + Deko UNTER nachmalen, darunter (U), vd nachmalen, auf dem Deck, o + Deko VOR nachmalen, davor (F) – je im Rahmen des Bewegten
-function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers) {
-  const fade = bkFadeNow(x, y), k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
-  const glas = bkTileBAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr]); } finally { FOG = f; } };   // Kristall: Glas (B2: Licht) jedes Bild genau einmal
+// h + Deko UNTER nachmalen, darunter (U), vd nachmalen, auf dem Deck, o + Deko VOR nachmalen, davor (F) – je im Rahmen des Bewegten.
+// Wasserbrücke (160c D1e): Leute immer auf dem Deck (ihre Höhe hat drawFigure schon, wegBridgeLift), über dem Boot flach h + vd wie früher
+// die ganze Brücke, nie blass. over(m): Boot unter früheren Brückenfeldern (render.js boatOver, samt Block 112)
+function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = null) {
+  if (c.water) { const on = ms.filter(m => m.fur && !m.critter); if (on.length) { figs = (figs || []).concat(on); ms = ms.filter(m => !on.includes(m)); } }
+  const fade = !c.water && bkFadeNow(x, y), up = c.water ? 0 : HILL_H * z, vd = c.water && !c.A ? ['h', 'vd'] : ['vd'];
+  const k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
+  const glas = bkTileBAt(c), glass = gr => { if (!glas) return; const f = FOG; FOG = !ownedTile(x, y); try { bkGroup(x, y, px, py, z, [gr], c); } finally { FOG = f; } };   // Kristall: Glas (B2: Licht) jedes Bild genau einmal
   const deck = () => { if (!figs) return; FOG = false;
     for (const m of figs.sort((a, b) => (a.px + a.py) - (b.px + b.py))) {
       const f = () => seeFaded(seeThrough, () => drawMover(m, z, now));   // 👁: auch Leute und Wagen oben blass
-      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + HILL_H * z, r, d, f); }
+      if (GLPASS) { const p = toScreen(m.px, m.py), [l, u, r, d] = glMoverBox(m, z); glLive(p.x, p.y, l, u + up, r, d, f); }
       else f();
       drawnMovers.add(m);
     } };
   if (fade) { draw(ms); glass('t1'); deck(); glass('t2'); return; }       // blass: nie nachmalen
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
-  const boatMid = m => m.boat && (c.b.ax ? m.px - x : m.py - y) > -0.16;   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
+  const boatMid = m => !c.water && m.boat && (c.b.ax ? m.px - x : m.py - y) > -0.16;   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
   const Ub = U.filter(boatMid), Ur = U.filter(m => !boatMid(m));
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
   draw(B);
-  if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under);
+  if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under, false, c);
   draw(U);
-  if (rBU) bkRedo(x, y, px, py, z, now, rBU, ['vd']);
-  if (rUb) bkRedo(x, y, px, py, z, now, rUb, ['vd'], null, true);
+  if (rBU) bkRedo(x, y, px, py, z, now, rBU, vd, null, false, c);
+  if (rUb) bkRedo(x, y, px, py, z, now, rUb, vd, null, true, c);
   glass('t1');
   deck();
-  const rF = figs ? bkMoverRect(figs, z) : null;                         // oben auf dem Deck: eine Anhöhe höher; darunter/dahinter nur der eigene Rahmen (C7, L6)
-  if (rF) rF[1] -= HILL_H * z;
+  const rF = figs ? bkMoverRect(figs, z) : null;                         // oben auf dem Deck: eine Anhöhe höher (Wasser: Höhe steckt im Rahmen); darunter/dahinter nur der eigene Rahmen (C7, L6)
+  if (rF) rF[1] -= up;
   const rs = [rBU, rUb, rF].filter(Boolean), rAll = rs.length ? rs.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]) : null;   // o: über alles Bewegte
-  if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front);
+  if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front, false, c);
   glass('t2');
   draw(F);
-  for (const m of ms) if (m.boat && m.under) for (const bk of m.under) bridgeOverBoat(bk, z, now);   // Wasserbrücken-Kachel davor (160c C10)
+  for (const m of ms) if (m.boat && m.under) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Wasserbrücken-Kachel davor (160c C10)
 }
 
 // ---------------------------------------------------------------------------

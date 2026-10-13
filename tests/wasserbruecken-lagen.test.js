@@ -39,7 +39,7 @@ const szene = () => {
 void FAELLE;
 
 describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
-  it('h, vd, o nacheinander = das Ganze; v, d, o = über dem Boot (BRIDGE_FRONT) – alle Arten, flach, Bogen, breit, Steg, Nord-Süd, nah und weit', () => {
+  it('h, vd, o nacheinander = das Ganze (w auch) – alle Arten, flach, Bogen, breit, Steg, Nord-Süd, nah und weit; BRIDGE_FRONT gibt es nicht mehr (D1e)', () => {
     const felder = szene();
     for (const [x, y] of felder) for (const z of [0.5, 1, 2.5]) {
       const T = `state.tiles.get('${x},${y}')`;
@@ -48,11 +48,8 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
       const lagen = rec(`for (const L of [BK_GRUPPEN.h, BK_GRUPPEN.vd, BK_GRUPPEN.o]) drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, L)`);
       expect(lagen, x + ',' + y + ' z ' + z).toEqual(ganz);
       expect(rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, BK_GRUPPEN.w)`), 'w ' + x + ',' + y).toEqual(ganz);   // D1b: ruhend alles in einem
-      if (game(`!!bridgeArch(${x}, ${y})`)) {
-        const vorn = rec(`drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}, ['v', 'd', 'o'])`);
-        expect(vorn, 'vorn ' + x + ',' + y).toEqual(rec(`BRIDGE_FRONT = true; try { drawWegBridge(0, 0, ${z}, ${x}, ${y}, ${T}); } finally { BRIDGE_FRONT = false; }`));
-      }
     }
+    expect(game("typeof BRIDGE_FRONT")).toBe('undefined');                                   // über dem Boot: Lagen v, d, o (drawBridgeOver)
   });
   it('wbAt: Brückenfeld nur für Wasser-Wegbrücken; Achse, Bogen, Höhe, Ufer; wegDeckH = die Höhe des Malers', () => {
     szene();

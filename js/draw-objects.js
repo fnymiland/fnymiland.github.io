@@ -968,9 +968,8 @@ const BRIDGE_LOOK = {
   ziegel: { lift: 7, side: '#b5654a', wall: true, rail: '#c97a5e' },
   rot:    { lift: 8, side: '#a8392f', deck: '#c79a6a', plank: '#9a7048', rail: '#d9483b' },
 };
-let BRIDGE_FRONT = false;                                                // nur das Vordere zeichnen (über einem Boot, Block 150)
 function drawWegBridge(cx, cy, z, x, y, t, lagen = null) {               // lagen (160c D1): Teil von BK_GRUPPEN – h hinten, v vorn unten, d Deck, o vorn oben
-  const A = bridgeArch(x, y), front = BRIDGE_FRONT, on = l => !lagen || lagen.includes(l);   // Bogenbrücke (Block 150) oder flach wie bisher
+  const A = bridgeArch(x, y), on = l => !lagen || lagen.includes(l);   // Bogenbrücke (Block 150) oder flach wie bisher; über einem Boot nur v, d, o (160c D1e)
   const ax = A ? A.ax : bridgeAxis(x, y, t);
   // breite Brücke (Block 151): quer daneben weitere Brückenfelder – Geländer/Wände nur außen, Belag durchgehend
   const lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s)))), latF = lat(1), latB = lat(-1);
@@ -995,11 +994,11 @@ function drawWegBridge(cx, cy, z, x, y, t, lagen = null) {               // lage
   };
   const parapet = b => { for (const q of strip(b - 0.03, b + 0.03, 0)) poly(q, C(shade(B.rail, -0.05))); for (const q of strip(b - 0.03, b + 0.03, 2.5)) poly(q, C(B.rail)); };
   // hinten: Pfähle bzw. Brüstung der fernen Seite; Holz: auch die vorderen Pfähle schon jetzt – der Belag deckt ihr oberes
-  // Ende, sie stehen also unter der Brücke statt davor. Über einem Boot (front) nur das Vordere
-  if (!B.wall) { if (on('h') && !front && !latB) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); } if (on('v') && !latF) posts(hw - 0.1, B.side); } else if (on('h') && !front && !latB) parapet(-hw);
+  // Ende, sie stehen also unter der Brücke statt davor
+  if (!B.wall) { if (on('h') && !latB) { posts(-hw + 0.1, B.side); railing(-hw + 0.03); } if (on('v') && !latF) posts(hw - 0.1, B.side); } else if (on('h') && !latB) parapet(-hw);
   // vorn sichtbare Seitenwand (Stein/Ziegel) mit Bogen über dem Wasser
   if (B.wall && latF) { /* Seitenwand nur an der vordersten Reihe */ }
-  else if (B.wall && A) { if (on('h') || on('v')) archWall(A, P, H, AS, B, hw, z, t, front || !on('h'), depth, on('v')); }   // h: Rückwand/Gewölbe, v: Wand
+  else if (B.wall && A) { if (on('h') || on('v')) archWall(A, P, H, AS, B, hw, z, t, !on('h'), depth, on('v')); }   // h: Rückwand/Gewölbe, v: Wand
   else if (B.wall && on('v')) {
     for (let i = 0; i < 3; i++) { const a0 = AS[i], a1 = AS[i + 1]; poly([P(a0, hw, -1), P(a1, hw, -1), P(a1, hw, H(a1)), P(a0, hw, H(a0))], C(shade(B.side, -0.12))); }
     const wallPts = [...AS.map(a => P(a, hw, -1)), ...[...AS].reverse().map(a => P(a, hw, H(a)))];   // Mauerwerk: Ziegel bzw. Quader
