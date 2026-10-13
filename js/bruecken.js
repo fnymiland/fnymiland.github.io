@@ -297,7 +297,75 @@ function bkSetArt(k, art) { return brSet({ at: 'anhoehe', k }, { mat: art }); } 
 // Setzer der Anhöhen-Brücke (160c C6): ch = { mat } | { col } | { plank } | { deck } | { stuetzen } | { zacken: 'kaufen' | 'an' | 'aus' }.
 // Material: das Bezahlte voll zurück, das neue bezahlen (gekaufte Zacken verfallen); Zacken kaufen: Aufpreis je Feld; sonst kostenlos.
 // Geprüft am Zielobjekt: Sperre, neue Stützen/Pfeiler (nur die neuen – alte Stände), Lichtraum unter Stein. brp danach immer mit Kennung
+// Wasser-Wegbrücke (160c D3): Aussehen der ganzen Spanne (bridgeSpan, breite Reihen mit) umstellen. Bilanz null: Material – jedes Feld gibt
+// sein Bezahltes zurück und kostet den Neupreis; Licht/Zacken – Aufpreis je Feld; sonst kostenlos (das Bezahlte wird festgeschrieben)
+function wbSet(x, y, ch) {
+  const t0 = state.tiles.get(x + ',' + y);
+  if (!isWegBridge(t0) || !ch) return false;
+  const cells = bridgeSpan(x, y), ts = cells.map(([a, b]) => state.tiles.get(a + ',' + b)), N = ts.length;
+  const L = brSpanLook(x, y), A = brSpanAnchor(cells), a = state.tiles.get(A[0] + ',' + A[1]), paid = ts.map(t => brPaid(t, 'wasser'));
+  const own = t => { const k = bridgeKind(t); return WEG_BRIDGE[k] ? k : 'holz'; }, alt = L.kind === 'rot' || L.kind === 'ziegel';
+  const raw = { brc: a.brc, brw: a.brw };                                  // roh vom Anker (alte Rote/Ziegel: ohne brc die Farbe der Art)
+  let nl = { ...L }, brk = own, zk = L.mat === 'kristall' && (a.brz === 'an' || a.brz === 'aus') ? a.brz : null, add = null, mat = false;
+  const toFallback = () => { delete nl.kind; const fb = brFallback('wasser', nl.mat).brk; brk = () => fb; };   // Art folgt dem Material (Rot/Ziegel → Holz/Stein)
+  if ('mat' in ch) {
+    if (!BR_MAT[ch.mat] || !Object.prototype.hasOwnProperty.call(BR_MAT, ch.mat) || ch.mat === L.mat) return false;
+    const lk = brMatLock(ch.mat, 'wasser'); if (lk) { fail(lk); return false; }
+    nl = { ...L, mat: ch.mat, deck: BR_MAT[ch.mat].deck, plank: ch.mat === 'holz' ? L.plank : null, stuetzen: ch.mat === 'holz' ? L.stuetzen : 'wenige', zacken: false };
+    toFallback(); zk = null; mat = true;
+    raw.brc = L.col; raw.brw = ch.mat === 'holz' ? L.plank : null;         // sichtbare Farbe bleibt (Nutzer 13.10.2026: rote Metallbrücke)
+  } else if ('col' in ch) {
+    const v = ch.col == null ? null : brIdx(ch.col);
+    if (v === L.col || (v != null && v >= BRIDGE_COLS.length)) return false;
+    nl.col = v;
+    if (v == null && alt) { toFallback(); nl.plank = L.mat === 'holz' ? null : L.plank; raw.brc = null; raw.brw = null; }   // „Wie das Material“: Rote → Holz in Holzfarbe
+    else raw.brc = v;
+  } else if ('plank' in ch) {
+    const v = ch.plank == null ? null : brIdx(ch.plank);
+    if (L.mat !== 'holz' || v === L.plank || (v != null && v >= PLANK_COLS.length)) return false;
+    nl.plank = v;
+    if (v == null && alt) { toFallback(); raw.brc = L.col; raw.brw = null; } // Rot-Planken zurück: Holz-Art, die Farbe bleibt sichtbar
+    else raw.brw = v;
+  } else if ('deck' in ch) {
+    if (L.mat === 'stein' || (ch.deck !== 'belag' && ch.deck !== 'muster') || ch.deck === L.deck) return false;   // Stein zeigt immer den Belag
+    nl.deck = ch.deck;
+  } else if ('stuetzen' in ch) {
+    if (L.mat !== 'holz' || !['keine', 'wenige', 'jede'].includes(ch.stuetzen) || ch.stuetzen === L.stuetzen) return false;
+    nl.stuetzen = ch.stuetzen;
+  } else if ('zacken' in ch) {
+    if (L.mat !== 'kristall') return false;
+    if (ch.zacken === 'kaufen') { if (zk) return false; add = BR_OPT.zacken.feld; zk = 'an'; }
+    else if ((ch.zacken === 'an' || ch.zacken === 'aus') && zk && zk !== ch.zacken) zk = ch.zacken;
+    else return false;
+    nl.zacken = zk === 'an';
+  } else if ('licht' in ch) {
+    const bought = L.licht === 'an' || L.licht === 'aus';
+    if (ch.licht === 'kaufen') { if (bought) return false; add = BR_OPT.licht.feld; nl.licht = 'an'; }
+    else if ((ch.licht === 'an' || ch.licht === 'aus') && bought && L.licht !== ch.licht) nl.licht = ch.licht;
+    else return false;
+  } else return false;
+  let brps;
+  if (mat) {
+    const per = brPrice({ ...nl, zacken: false }, 'wasser'), tot = brAdd({ money: 0 }, per, N), back = paid.reduce((s, p) => brAdd(s, p), { money: 0 });
+    if (state.money + (back.money || 0) < tot.money) { fail('Zu wenig Taler'); return false; }
+    for (const [r, v] of Object.entries(tot)) if (r !== 'money' && (state.res[r] || 0) + (back[r] || 0) < v) { fail(`Zu wenig ${RES[r].name}`); return false; }
+    state.money += (back.money || 0) - tot.money;
+    for (const [r, v] of Object.entries(back)) if (r !== 'money') state.res[r] = (state.res[r] || 0) + v;
+    payMat(brCostMat(tot).mat);
+    brps = ts.map(() => ({ ...per }));
+  } else if (add) {
+    const c = brCostMat(brAdd({ money: 0 }, add, N));
+    if (state.money < c.cost) { fail('Zu wenig Taler'); return false; }
+    const me = matError(c.mat); if (me) { fail(me); return false; }
+    state.money -= c.cost; payMat(c.mat);
+    brps = paid.map(p => brAdd({ ...p }, add));
+  } else brps = paid.map(p => ({ ...p }));
+  for (const [i, t] of ts.entries()) { brWriteLook(t, nl, brk(t), zk, raw); t.brp = { ...brps[i], k: brSig(t, 'wasser') }; }
+  groundVersion++; sfx('road'); if (mat || 'licht' in ch) recalc(); save();   // Mauer/Durchfahrt (Seewege), Strom
+  return true;
+}
 function brSet(ref, ch) {
+  if (ref && ref.at === 'wasser') return wbSet(ref.x, ref.y, ch);
   if (!ref || ref.at !== 'anhoehe') return false;
   const b = state.bruecken.get(ref.k);
   if (!b || !ch) return false;

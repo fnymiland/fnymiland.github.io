@@ -19,7 +19,7 @@ const BR_MAT = {
 function brMatLock(mat, at = 'anhoehe') {
   const M = BR_MAT[mat];
   if (!M) return null;
-  const def = { ...(M.lock || {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };
+  const def = { ...(M.lock && !(at === 'wasser' && mat === 'stein') ? M.lock : {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };   // übers Wasser ist Stein frei (gab es dort immer, Nutzer 13.10.2026)
   if (!Object.keys(def).length || typeof unlockOk !== 'function' || unlockOk(def, 'brmat:' + mat)) return null;
   if (def.tech === 'bahn') return `${M.name}: erst mit der Eisenbahn`;
   return `${M.name}: erst mit ${unlockText(def, false)}`;
@@ -139,6 +139,18 @@ function brPaid(o, at) {
   if (at === 'uebergang') { const id = footPaidOf(o); return id ? { ...(FOOT_STYLES[id] || FOOT_STYLES.holz).cost } : { money: 0 }; }
   if (at === 'anhoehe') { const n = Number.isInteger(o.n) && o.n > 0 ? o.n : 1; return brAdd({ money: 0 }, BR_COST.anhoehe[BK_ARTEN[o.art] ? o.art : 'holz'], n); }
   return { money: 0 };
+}
+// Felder einer Wasser-Wegbrücke aus ihrem Aussehen schreiben (160c D3: Setzer, Bau, Kopie – nie Rohfelder kopieren). brk: Art für ältere
+// Fassungen (bekannte Art), zk: gekaufte Zacken 'an'|'aus'. raw: Farben, wie sie in brc/brw stehen sollen (alte Rote/Ziegel: ohne brc fällt die
+// Farbe auf die Art zurück – darum roh, nie die Rückfallfarbe hineinschreiben); ohne raw: Farbe und Planken des Aussehens
+function brWriteLook(t, look, brk, zk = null, raw = null) {
+  t.brk = brk; t.brm = look.mat; t.brb = look.deck === 'belag' ? 'belag' : 'muster';
+  const col = raw ? raw.brc : look.col, plank = raw ? raw.brw : look.plank;
+  if (col != null) t.brc = col; else delete t.brc;
+  if (look.mat === 'holz' && plank != null) t.brw = plank; else delete t.brw;
+  if (look.licht === 'an' || look.licht === 'aus') t.brl = look.licht; else delete t.brl;
+  if (look.mat === 'kristall' && (zk === 'an' || zk === 'aus')) t.brz = zk; else delete t.brz;
+  if (look.mat === 'holz' && (look.stuetzen === 'keine' || look.stuetzen === 'jede')) t.bru = look.stuetzen; else delete t.bru;
 }
 // Kopie, Verlängern: nur eingeschaltete Optionen kommen mit (ausgeschaltete gekaufte fallen weg)
 const brOnLook = look => ({ ...look, licht: look.licht === 'an' ? 'an' : null, zacken: !!look.zacken });
