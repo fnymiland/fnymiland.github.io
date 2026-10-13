@@ -155,3 +155,32 @@ describe('Wasser-Wegbrücken: Strom fürs Licht (160c D3c)', () => {
     expect(game("[...T.rail.power.dark].filter(k => k[0] === 'W')")).toEqual([]);
   });
 });
+
+describe('Wasser-Wegbrücken: Fenster (160c D3e)', () => {
+  const klick = sel => game(`document.querySelector('#panel ${sel}').click()`);
+  it('Kopf und Text; Material, Farbe, Planken, Stützen, Licht über die Knöpfe; Ziegel/Rot-Knöpfe gibt es nicht mehr', () => {
+    kanal(10, 4, 3, { steg: true });
+    game('openInfo(11, 4)');
+    expect(game("document.querySelector('#panel h3').textContent")).toMatch(/Brücke aus Holz/);
+    expect(game("document.querySelector('#panel p.muted').textContent")).toMatch(/3 Felder lang.*Flach: Boote kommen nicht darunter durch/);
+    expect(game("document.querySelectorAll('#panel [data-brk]').length")).toBe(0);
+    expect(game("[...document.querySelectorAll('#panel [data-bkart]')].map(e => e.dataset.bkart)")).toEqual(['holz', 'stahl', 'stein', 'kristall']);
+    klick('[data-brw="2"]'); expect(look(11, 4).plank).toBe(2);
+    klick('[data-brc="5"]'); expect(look(11, 4).col).toBe(5);
+    klick('[data-bru="jede"]'); expect(look(11, 4).stuetzen).toBe('jede');
+    klick('[data-brl="kaufen"]'); expect(look(11, 4).licht).toBe('an');
+    klick('[data-bkart="stein"]'); expect(look(11, 4).mat).toBe('stein');
+    expect(game("document.querySelector('#panel h3').textContent")).toMatch(/Brücke aus Stein/);
+    expect(game("!!document.querySelector('#panel [data-brs]') && !document.querySelector('#panel [data-brb]')")).toBe(true);   // Stein: Belag, keine Deck-Wahl
+    expect(game("document.querySelector('#panel [data-bkart=\"kristall\"]').classList.contains('locked')")).toBe(true);
+    game('undo()'); expect(look(11, 4).mat).toBe('holz');                                 // ↶
+  });
+  it('unbekannte Art aus dem Live-Spiegel: Fenster öffnet ohne Fehler; Anhöhe zeigt Planken bei Holz', () => {
+    kanal(10, 4, 2, { alt: { brk: 'gold' } });
+    expect(() => game('openInfo(10, 4)')).not.toThrow();
+    expect(game("document.querySelector('#panel h3').textContent")).toMatch(/Brücke aus Holz/);
+    game("for (let y = 20; y <= 24; y++) for (const x of [10, 11, 12, 13, 17, 18, 19, 20]) state.hills.set(x + ',' + y, { w: 0 }); state.bruecken.set('14,22', { ax: 0, n: 3, art: 'holz' }); groundVersion++; recalc(); openBkInfo(15, 22)");
+    expect(game("document.querySelectorAll('#panel [data-brw]').length")).toBe(7);
+    klick('[data-brw="1"]'); expect(game("brLook(state.bruecken.get('14,22'), 'anhoehe').plank")).toBe(1);
+  });
+});

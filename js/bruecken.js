@@ -797,6 +797,8 @@ function brLookHtml(L, o) {
   return `<div class="label">Material</div><div class="looks look-forms">${o.mats.map(matBtn).join('')}</div>
     <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => colBtn(i, d.name, d.c)).join('')}</div>
     ${o.deck ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
+    ${o.planken ? `<div class="label">Planken</div><div class="swatches"><button class="sw bunt${L.plank == null ? ' on' : ''}" data-brw="" title="Wie das Material" aria-label="Planken wie das Material"></button>${PLANK_COLS.map((c, i) => `<button class="sw${L.plank === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
+    ${o.after || ''}
     ${L.mat === 'holz' && o.fuss ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
     ${L.mat === 'kristall' && o.fuss ? `<div class="label">Kristallzacken</div><div class="row">${bought ? opt('brz', 'an', 'An', o.zk === 'an') + opt('brz', 'aus', 'Aus', o.zk === 'aus')
       : `<button class="btn" data-brz="kaufen">✨ Zacken kaufen −${fmt(zk.cost)}${Object.keys(zk.mat).length ? ' · ' + matText(zk.mat) : ''}</button>`}</div>` : ''}
@@ -804,10 +806,26 @@ function brLookHtml(L, o) {
       : `<button class="btn" data-brl="kaufen">💡 Licht kaufen −${fmt(lc.cost)}${Object.keys(lc.mat).length ? ' · ' + matText(lc.mat) : ''}</button>`}</div>
     ${o.dunkel ? '<p class="muted">⚡ Ohne Strom bleibt das Licht dunkel – Brückenlicht bekommt Strom zuletzt (nach Laternen, Betrieben und Zügen).</p>' : ''}`;
 }
+// Wasser-Wegbrücke (160c D3e, Entwurf abgenommen 13.10.2026): Abschnitte im Fenster (openInfo) – wie an der Anhöhe, Preise für die ganze Brücke,
+// Belag (Weg-Muster der Kacheln) bei Deck „Wie der Weg“; Kopf und Text liefert wbTitle/wbText
+function wbLookHtml(x, y) {
+  const t = state.tiles.get(x + ',' + y), cells = bridgeSpan(x, y), L = brSpanLook(x, y), A = brSpanAnchor(cells), a = state.tiles.get(A[0] + ',' + A[1]) || {};
+  const paid = cells.reduce((s, [cx, cy]) => brAdd(s, brPaid(state.tiles.get(cx + ',' + cy), 'wasser')), { money: 0 });
+  const matPrice = id => { const nl = { ...L, mat: id, zacken: false }; delete nl.kind; return brPrice(nl, 'wasser', cells.length).money - (paid.money || 0); };
+  const c = wbAt(x, y), dunkel = L.licht === 'an' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('W' + c.G.anker);
+  return brLookHtml(L, { at: 'wasser', mats: BK_ART_IDS, matPrice, deck: L.mat !== 'stein', fuss: true, zk: L.mat === 'kristall' && (a.brz === 'an' || a.brz === 'aus') ? a.brz : null,
+    n: cells.length, dunkel, planken: L.mat === 'holz' && L.deck !== 'belag', after: L.deck === 'belag' ? `<div class="label">Belag</div>${wegPickHtml(t.style || 'sand', 'brs', true)}` : '' });
+}
+const wbTitle = (x, y) => `🌉 Brücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
+function wbText(x, y) {
+  const c = wbAt(x, y), cells = bridgeSpan(x, y), us = cells.map(([a, b]) => c.ax ? b : a), N = Math.max(...us) - Math.min(...us) + 1, breit = Math.round(cells.length / N);
+  return `Übers Wasser · ${N} ${N === 1 ? 'Feld' : 'Felder'} lang${breit > 1 ? `, ${breit} breit` : ''} – Bewohner laufen gern hinüber. Material, Farbe und Licht gelten für die ganze Brücke.${c.A ? '' : ' Flach: Boote kommen nicht darunter durch.'}`;
+}
 function wireBrLook(el, set) {
   for (const e of el.querySelectorAll('[data-bkart]')) e.onclick = () => set({ mat: e.dataset.bkart });
   for (const e of el.querySelectorAll('[data-brc]')) e.onclick = () => set({ col: e.dataset.brc === '' ? null : +e.dataset.brc });
   for (const e of el.querySelectorAll('[data-brb]')) e.onclick = () => set({ deck: e.dataset.brb });
+  for (const e of el.querySelectorAll('[data-brw]')) e.onclick = () => set({ plank: e.dataset.brw === '' ? null : +e.dataset.brw });
   for (const e of el.querySelectorAll('[data-bru]')) e.onclick = () => set({ stuetzen: e.dataset.bru });
   for (const e of el.querySelectorAll('[data-brz]')) e.onclick = () => set({ zacken: e.dataset.brz });
   for (const e of el.querySelectorAll('[data-brl]')) e.onclick = () => set({ licht: e.dataset.brl });
@@ -821,7 +839,7 @@ function openBkInfo(x, y) {
   const dunkel = L.licht === 'an' && T.rail.power.dark.has('B' + c.k);   // Licht (C7)
   const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
     <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
-    ${brLookHtml(L, { at: 'anhoehe', mats: BK_ART_IDS, matPrice, deck: !!nw, fuss, zk: b.brz === 'an' || b.brz === 'aus' ? b.brz : null, n: b.n, dunkel })}
+    ${brLookHtml(L, { at: 'anhoehe', mats: BK_ART_IDS, matPrice, deck: !!nw, fuss, zk: b.brz === 'an' || b.brz === 'aus' ? b.brz : null, n: b.n, dunkel, planken: fuss && L.mat === 'holz' && L.deck === 'muster' })}
     <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
     ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`
       : ng ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Gleis entfernen +${fmt(ng * ITEMS.schiene.cost)}</button></div>${bkRailFull(b) ? '' : '<p class="muted">Erst durchgehend, mit Schiene oben an beiden Enden, fahren Züge hinüber.</p>'}`
