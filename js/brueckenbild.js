@@ -156,8 +156,39 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   bkGroup(x, y, px, py, z, ['vd', 'o'], c);
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
   }
+  if (c.water) wbRelight(x, y, px, py, z, c);                              // Nachtlicht früherer Felder wieder aufs Deck
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
+}
+// Nachtlicht früherer Felder auf einer Wasserbrücke (160c D1, Gegenlesen D1b): ihr Schein ist vor der Brücke gestanzt, das Deck deckte das
+// Loch wieder zu (vorher lag die flache Brücke im Boden-Durchgang, also unter allen Lichtern). Live in 2D auf dem Deck noch einmal stanzen –
+// nur Oberseite und vorderes Randband (deckend; über Geländer oder Öffnungen wäre es doppelt), nur der Schein (halo: die Scheibe einer
+// Lampe dahinter bleibt verdeckt), nur Lichter von vor dem Feld (WB_GLOW0, render.js tileA). Wie hillRelight; im GL-Bild/Nachtbild nicht
+const WB_GLOW0 = new Map();                                                // Feld → glows.length vor seinem tileA (je Bild neu)
+let WB_RELIGHT = null;                                                     // Feld, dessen Deck gerade neu gestanzt wird (Tests)
+function wbRelight(x, y, px, py, z, c) {
+  const n0 = WB_GLOW0.get(c.k);
+  if (!n0 || GLPASS || SPRITE_PAINT || !(night > 0.15) || !isLive()) return;
+  const ax = c.ax, lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s))));
+  const sB = lat(-1) ? -0.5 : -c.W, sF = lat(1) ? 0.5 : c.W, AS = c.A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];
+  const P = (a, s, h) => { const [u, v] = ax ? [s, a] : [a, s]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
+  const top = AS.map(a => P(a, sB, wegDeckH(c, a))), front = AS.map(a => P(a, sF, wegDeckH(c, a))), band = AS.map(a => P(a, sF, wegDeckH(c, a) - 2.5));
+  const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = [...top, ...band].map(S);   // Lichter liegen in Bildschirmpunkten
+  const X0 = Math.min(...pts.map(p => p[0])), X1 = Math.max(...pts.map(p => p[0])), Y0 = Math.min(...pts.map(p => p[1])), Y1 = Math.max(...pts.map(p => p[1]));
+  const hits = [];
+  for (let i = 0; i < n0 && i < glows.length; i++) {
+    const L = glows[i], gx = (L.q[0][0] + L.q[2][0]) / 2, gy = (L.q[0][1] + L.q[2][1]) / 2;
+    if (gx + L.r > X0 && gx - L.r < X1 && gy + L.r > Y0 && gy - L.r < Y1) hits.push(L);
+  }
+  if (!hits.length) return;
+  const n1 = glows.length, gc = glowCells, gm = GLOW_MUTE;
+  g.save(); WB_RELIGHT = c.k; glowCells = new Map(); GLOW_MUTE = false;
+  try {
+    g.beginPath();
+    for (const ring of [[...top, ...front.slice().reverse()], [...front, ...band.slice().reverse()]]) { ring.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); }
+    g.clip();
+    for (const L of hits) punchGlow(L.q, L.r, L.tint, 'halo');
+  } finally { g.restore(); WB_RELIGHT = null; glowCells = gc; GLOW_MUTE = gm; glows.length = n1; }   // kein Doppel in der Lichterliste
 }
 // Geist einer Brücke, die eine Weg-/Gleislinie mitbaut (160c C9): alle Felder der gedachten Brücke (bkPlanNew) in Feldfolge auf EINE
 // Zwischenleinwand (sonst lägen die Feldüberlappungen ext doppelt), 65 %, ohne Licht – gemalt beim letzten Feld (render.js), danach die
@@ -234,7 +265,7 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bk
     const fog = FOG, gm = GLOW_MUTE;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
     FOG = !ownedTile(x, y); GLOW_MUTE = gm || 'pane';                      // nur Scheiben neu stanzen, nie einen zweiten Schein (gesperrt bleibt gesperrt)
-    try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); }
+    try { for (const gr of gruppen) if (!(SPRITES_ON && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); if (c0 && c0.water) wbRelight(x, y, px, py, z, c0); }
     finally { GLOW_MUTE = gm; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();

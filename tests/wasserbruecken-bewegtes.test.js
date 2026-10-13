@@ -93,3 +93,38 @@ describe('Wasser-Wegbrücken: Bewegtes (160c D1e)', () => {
     expect(() => game("drawBridgeOver('15,10', 1.5, 1e6); drawBridgeOver('6,4', 1.5, 1e6)")).not.toThrow();
   });
 });
+
+// 160c D1 (Gegenlesen D1b): der Schein von Lichtern früherer Felder (Laterne am Ufer, Kristallweg) lag vor D1b auf der flachen Brücke
+// (Boden-Durchgang). Jetzt malt die Brücke danach – nah auf dem Deck noch einmal stanzen (wbRelight), nur der Schein (halo, nie die Scheibe),
+// nur Lichter von vorher, auch beim Nachmalen über Figuren; in der Lichterliste kein Doppel
+describe('Wasser-Wegbrücken: Nachtlicht früherer Felder (wbRelight)', () => {
+  const nacht = (licht, figs = '[]') => game(`(() => {
+    const LICHT = ${licht};
+    const log = [], pg = punchGlow, bl = bkDrawLagen, na = nightAt, gh = gameHour, sm = syncMovers, de = drawEdgesAt;
+    // Licht auf dem Feld davor (5,4) an seinem echten Bildschirmort (die Test-Zeichenfläche kennt kein translate – eine Laterne läge bei 0,0)
+    drawEdgesAt = (x, y, ...r) => { if (LICHT && x === 5 && y === 4) { const p = toScreen(5.55, 4); punchGlow([[p.x - 2, p.y - 30], [p.x + 2, p.y - 30], [p.x + 2, p.y - 26], [p.x - 2, p.y - 26]], 34 * cam.z, null); } return de(x, y, ...r); };
+    nightAt = () => NIGHT_MAX; gameHour = () => 23; syncMovers = () => {};
+    for (const f of ${figs}) walkers.push({ fur: '#fff', shirt: '#f00', kind: 0, wait: 99, speed: 0.4, ...f });
+    bkDrawLagen = (x, y, px, py, z, gr, c) => { log.push(gr + ' ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
+    punchGlow = (q, r, tint, part) => { log.push('licht ' + (part || '-') + ' ' + (WB_RELIGHT ? 'neu ' + WB_RELIGHT : 'erst')); return pg(q, r, tint, part); };
+    let n = 0;
+    try { cam = state.cam; cam.z = 3; const p = iso(6, 4); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); n = glows.filter(L => Math.abs(L.r - 34 * cam.z) < 1e-9).length; }
+    finally { punchGlow = pg; bkDrawLagen = bl; nightAt = na; gameHour = gh; syncMovers = sm; drawEdgesAt = de; spriteForce = null; walkers.length = 0; }
+    return [log, n]; })()`);
+  it('Laterne vor der Brücke: nach w noch einmal gestanzt (halo), Scheibe nie; ohne Laterne nichts', () => {
+    szene();
+    const [log, n] = nacht(true), iW = log.indexOf('ww 6,4'), re = log.filter(e => e.startsWith('licht') && e.includes('neu'));
+    expect(re.length).toBeGreaterThan(0);
+    expect(log.findIndex(e => e.startsWith('licht') && e.includes('neu'))).toBeGreaterThan(iW);
+    expect(re).toEqual(['licht halo neu 6,4']);
+    expect(n).toBe(1);                                                                    // kein Doppel in der Lichterliste
+    const [log0] = nacht(false);
+    expect(log0.some(e => e.includes('neu'))).toBe(false);
+  });
+  it('Figur auf dem Deck nah an der Laterne: das Nachmalen (o) stanzt im Rahmen ebenfalls neu', () => {
+    szene();
+    const [log] = nacht(true, "[{ id: 'F', px: 6, py: 4 }]"), iO = log.lastIndexOf('o 6,4');
+    expect(iO).toBeGreaterThan(log.indexOf('ww 6,4'));
+    expect(log.slice(iO + 1).some(e => e.startsWith('licht halo neu 6,4'))).toBe(true);
+  });
+});

@@ -1010,7 +1010,7 @@ function spriteEdges(x, y, px, py, z, now) {
 // Brücken und leuchtende Wege weit weg (Block 144): stecken nicht im Boden-Bild (Schiffe fahren unter Brücken, Kristallwege leuchten
 // nachts) und wurden jedes Bild live gezeichnet – in einer Welt mit 107 solchen Feldern ein Gutteil der Rechenzeit, und das
 // GL-Standbild blieb aus. Jetzt je Feld ein Bildchen (Fassung groundVersion; Form hängt an den Nachbarn); das Brückenstück über
-// einem Schiff zeichnet drawBridgeOver weiter live. Wasser-Wegbrücken (160c D1): drei Bildchen je Feld wie die Anhöhen-Brücken (spriteBridge, wb|)
+// einem Schiff zeichnet drawBridgeOver weiter live. Wasser-Wegbrücken (160c D1): ruhend ein Bildchen je Feld (Gruppe w, spriteBridge wb|x,y|w)
 // hill: Weg oben auf einer Anhöhe (tileA, angehoben; zugeschnitten wie drawHillFlat)
 function spriteFlat(x, y, px, py, z, t, hill = false) {
   const zs = spriteStep(z), keyOf = lit => `${hill ? 'hflat' : 'flat'}|${x},${y}|${FOG ? 1 : 0}|${lit}`;
@@ -1646,7 +1646,7 @@ function render(now) {
   ctx.fillStyle = '#6fcbe2';
   ctx.fillRect(0, 0, W, H);
   night = GFX.day === 'tag' ? 0 : nightAt();                             // Spieluhr (Block 101); ⚙️ „immer Tag“: nur das Bild
-  glows.length = 0; glowCells.clear(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;
+  glows.length = 0; glowCells.clear(); WB_GLOW0.clear(); nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); nightWarm = false;
   frameNo++;
   if (z !== lastZoom) { lastZoom = z; lastZoomChange = now; }
   SPRITES_ON = spriteForce != null ? spriteForce : z < Math.min(SPRITE_UNTIL, Math.max(SPRITE_FROM, 2.6 / DPR)) && isLive();
@@ -2020,6 +2020,7 @@ function render(now) {
       const wc = isWegBridge(state.tiles.get(k)) ? wbAt(x, y) : null, bw = bc || wc;   // Wasser-Wegbrücke (160c D1): ebenso, mit ihrem Brückenfeld
       const wbUnder = bc && wc ? () => bkGroup(x, y, px, py, z, ['w'], wc) : null;   // alte Daten: unter einem Anhöhen-Deck – nur die Brücke (Deko, Rauten malt das Deck)
       let bkDone = !bw;
+      if (wc && night > 0.15) WB_GLOW0.set(k, glows.length);              // Lichter davor: auf ihrem Deck neu stanzen (wbRelight)
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
       const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
