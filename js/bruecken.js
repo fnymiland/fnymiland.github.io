@@ -361,7 +361,7 @@ function wbSet(x, y, ch) {
     state.money -= c.cost; payMat(c.mat);
     brps = paid.map(p => brAdd({ ...p }, add));
   } else brps = paid.map(p => ({ ...p }));
-  for (const [i, t] of ts.entries()) { brWriteLook(t, nl, brk(t), zk, raw); t.brp = { ...brps[i], k: brSig(t, 'wasser') }; }
+  for (const [i, t] of ts.entries()) { const k = wbSafeKind(brk(t), t, brps[i]); brWriteLook(t, nl, k, zk, wbRawFor(k, nl, raw)); t.brp = { ...brps[i], k: brSig(t, 'wasser') }; }   // Art nie teurer als bezahlt (v1016)
   groundVersion++; sfx('road'); if (mat || 'licht' in ch) recalc(); save();   // Mauer/Durchfahrt (Seewege), Strom
   seaRoutesWarn(sea0);
   return true;

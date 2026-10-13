@@ -128,3 +128,21 @@ describe('Wasser-Wegbrücken: Nachtlicht früherer Felder (wbRelight)', () => {
     expect(log.slice(iO + 1).some(e => e.startsWith('licht halo neu 6,4'))).toBe(true);
   });
 });
+
+describe('Wasser-Wegbrücken: Kristall-Glas über Booten (Gegenlesen D3)', () => {
+  it('zwei Boote auf verschiedenen Feldern unter demselben früheren Kristallfeld: das Glas erst nach dem letzten Boot, genau einmal', () => {
+    kanal(24, 4, 6, { breit: 3 });
+    game("for (let y = 4; y <= 6; y++) for (let x = 24; x <= 29; x++) { const t = state.tiles.get(x + ',' + y); t.brm = 'kristall'; brStamp(t, 'wasser', { ...brLegacyLook(t, 'wasser'), mat: 'kristall' }); } groundVersion++; recalc()");
+    expect(game('bkGlasAt(wbAt(25, 5))')).toBe(true);
+    for (const [px, py] of [[24.7, 5.6], [25.7, 4.4]]) expect(game(`boatUnder({ boat: true, px: ${px}, py: ${py} })`)).toContain('25,5');   // Boote auf 25,6 und 26,4: beide unter 25,5
+    game("window.__glas = wbGlassAt");
+    try {
+      const log = bild(25.3, 5, { boats: [{ px: 24.7, py: 5.6 }, { px: 25.7, py: 4.4 }], extra: "const gl = wbGlassAt; wbGlassAt = (k, z) => { log.push('glas ' + k); return gl(k, z); };" });
+      const boote = log.map((e, i) => e === 'fig boot' ? i : -1).filter(i => i >= 0), glas = log.map((e, i) => e === 'glas 25,5' ? i : -1).filter(i => i >= 0);
+      expect(boote.length).toBe(2);
+      expect(glas.length).toBe(1);
+      expect(glas[0]).toBeGreaterThan(boote[1]);
+    } finally { game("wbGlassAt = window.__glas"); }
+  });
+});
+

@@ -104,7 +104,8 @@ function planScan(p) {
   let cost = 0, firstErr = null, rest = planTiles(p);
   const wbCnt = new Map(), wbPlan = [];                                  // Brücke übers Wasser je Material (Schild, 160c D3f); geplante Felder (Geist, D3h)
   if (b === 'weg') PLANNED = new Set();
-  if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
+  if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }
+  if (b === 'weg') BR_PLAN_N = new Map();                                // Wasser: Länge der Brücke je geplantem Feld (wbNewSpec, 160c D3)   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
   // die Linie bekäme dort zwei getrennte Enden. Ohne Anhöhen nie
   const quer = new Map();
@@ -128,7 +129,11 @@ function planScan(p) {
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
         if (BK_PLAN_SAME) BK_PLAN_SAME.add(k);
-        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') { const L = brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis'); BR_PLAN_LOOK.set(k, L); if (b === 'weg') { wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); } }
+        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') {
+          const S = b === 'weg' ? wbNewSpec(x, y) : null, L = S ? S.look : brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis');   // wie build: die längste Brücke daneben (geplante zählen mit)
+          BR_PLAN_LOOK.set(k, L);
+          if (b === 'weg') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }
+        }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
       if (!grow || next.length === rest.length) {
@@ -137,7 +142,7 @@ function planScan(p) {
       }
       rest = next;
     }
-  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; }
+  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; BR_PLAN_N = null; }
   const ax = p.kind === 'line' && p.a.y === p.b.y ? 0 : 1, st = b === 'weg' ? currentStyle('weg') : null;
   const wbGhost = wbPlan.length ? wbVirtual(wbPlan.map(([k, L]) => [k, wbGhostTile(L, st, ax)]), wbPlan.map(([k]) => k)) : null;   // Geist der Brücke übers Wasser (160c D3h)
   if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das

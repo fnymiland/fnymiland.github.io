@@ -142,6 +142,16 @@ function brPaid(o, at) {
 }
 // Wasser (160c D3, Nutzer 13.10.2026): ein neues Feld neben einer Brücke bekommt ihr Aussehen samt gekauftem Licht und gekauften Zacken (an/aus) –
 // eine Brücke, ein Aussehen. Liegen mehrere daneben: die längste (sie gewinnt auch beim Zusammenwachsen, wbUnify). Vor dem Setzen des Felds rufen
+// Art (brk) eines Wasser-Brückenfelds für ältere Fassungen (v1016 erstattet nach WEG_BRIDGE[brk] und kennt brp nicht): nie eine Art, deren alter
+// Preis je Rohstoff über dem Bezahlten liegt (Gegenlesen D3). Erst die gewünschte, dann die eigene, dann die billigste passende
+const wbKindFits = (k, paid) => { const B = WEG_BRIDGE[k]; return !!B && Object.entries(brMoney(B.cost, B.mat)).every(([r, v]) => (paid[r] || 0) >= v); };
+function wbSafeKind(want, t, paid) {
+  const own = bridgeKind(t);
+  for (const k of [want, own, 'holz', 'stein', 'ziegel', 'rot']) if (k && wbKindFits(k, paid)) return k;
+  return WEG_BRIDGE[own] ? own : 'holz';
+}
+// Farben eines Felds: ist seine Art rot/ziegel und die des Aussehens, die Rohwerte (ohne brc fällt die Farbe auf die Art zurück); sonst das Sichtbare
+const wbRawFor = (brk, L, raw) => (brk === 'rot' || brk === 'ziegel') && brk === L.kind && raw ? raw : { brc: L.col, brw: L.plank };
 function wbSpanNew(x, y) {
   const cells = bridgeSpan(x, y), L = brSpanLook(x, y), A = brSpanAnchor(cells), a = state.tiles.get(A[0] + ',' + A[1]) || {};
   const zk = L.mat === 'kristall' && (a.brz === 'an' || a.brz === 'aus') ? a.brz : null;
@@ -149,12 +159,22 @@ function wbSpanNew(x, y) {
 }
 function wbNewSpec(x, y) {
   let best = null;
-  for (const [dx, dy] of DIRS) if (isWegBridge(state.tiles.get((x + dx) + ',' + (y + dy)))) { const S = wbSpanNew(x + dx, y + dy); if (!best || S.n > best.n) best = S; }
+  for (const [dx, dy] of DIRS) {
+    const k = (x + dx) + ',' + (y + dy);
+    if (isWegBridge(state.tiles.get(k))) { const S = wbSpanNew(x + dx, y + dy); if (!best || S.n > best.n) best = S; }
+    else if (BR_PLAN_N && BR_PLAN_N.has(k)) {                           // Planen: das geplante Feld daneben mit der Länge, die seine Brücke beim Bauen hat
+      const L = BR_PLAN_LOOK.get(k), n = BR_PLAN_N.get(k);
+      if (!best || n > best.n) best = { look: L, zk: L.zacken ? 'an' : null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk, n };
+    }
+  }
   return best;
 }
+let BR_PLAN_N = null;                                                      // planScan: geplantes Wasserfeld → Länge seiner Brücke (wie beim Bauen)
 // Zwei Brücken wachsen zusammen (bauen von beiden Ufern, ablegen, kopieren – Nutzer 13.10.2026): die Felder mit dem häufigsten Aussehen gewinnen,
 // die anderen übernehmen es kostenlos (jedes Feld erstattet weiter sein Bezahltes). Nach dem Setzen rufen; true, wenn etwas angeglichen wurde
-function wbUnify(x, y) {
+// spec (Bau): das Aussehen der längsten Brücke vor dem Zusammenwachsen (wbNewSpec) – sonst (Ablegen) gewinnt das häufigste Feldaussehen.
+// Die Art jedes Felds nur so, dass ältere Fassungen nie mehr erstatten als bezahlt (wbSafeKind)
+function wbUnify(x, y, spec = null) {
   const cells = bridgeSpan(x, y);
   if (cells.length < 2) return false;
   const ts = cells.map(([a, b]) => state.tiles.get(a + ',' + b)), zkOf = t => t.brz === 'an' || t.brz === 'aus' ? t.brz : '';
@@ -162,11 +182,20 @@ function wbUnify(x, y) {
   const sigs = ts.map(sig), cnt = new Map();
   for (const s of sigs) cnt.set(s, (cnt.get(s) || 0) + 1);
   if (cnt.size < 2) return false;
-  const win = [...cnt].sort((p, q) => q[1] - p[1])[0][0], ref = ts[sigs.indexOf(win)], L = brLook(ref, 'wasser'), zk = L.mat === 'kristall' ? zkOf(ref) || null : null;
-  const brk = L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk, raw = { brc: ref.brc, brw: ref.brw };
-  for (const [i, t] of ts.entries()) if (sigs[i] !== win) { const p = brPaid(t, 'wasser'); brWriteLook(t, { ...L, zacken: !!zk }, brk, zk, raw); t.brp = { ...p, k: brSig(t, 'wasser') }; }
-  groundVersion++;
-  return true;
+  let L, zk, want, raw, win;
+  if (spec) { L = { ...spec.look }; zk = spec.zk; want = spec.brk; raw = spec.raw; win = [L.mat, L.col, L.plank, L.deck, L.licht, zk || '', L.stuetzen].join('|'); }
+  else {
+    win = [...cnt].sort((p, q) => q[1] - p[1])[0][0];
+    const ref = ts[sigs.indexOf(win)];
+    L = brLook(ref, 'wasser'); zk = L.mat === 'kristall' ? zkOf(ref) || null : null; want = L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk; raw = { brc: ref.brc, brw: ref.brw };
+  }
+  let n = 0;
+  for (const [i, t] of ts.entries()) if (sigs[i] !== win) {
+    const p = brPaid(t, 'wasser'), k = wbSafeKind(want, t, p);
+    brWriteLook(t, { ...L, zacken: !!zk }, k, zk, wbRawFor(k, L, raw)); t.brp = { ...p, k: brSig(t, 'wasser') }; n++;
+  }
+  if (n) groundVersion++;
+  return n > 0;
 }
 // Felder einer Wasser-Wegbrücke aus ihrem Aussehen schreiben (160c D3: Setzer, Bau, Kopie – nie Rohfelder kopieren). brk: Art für ältere
 // Fassungen (bekannte Art), zk: gekaufte Zacken 'an'|'aus'. raw: Farben, wie sie in brc/brw stehen sollen (alte Rote/Ziegel: ohne brc fällt die

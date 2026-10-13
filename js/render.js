@@ -1394,7 +1394,7 @@ function planPreview(z) {
   const info = planInfo(plan), ins = 0.44;
   PLAN_GHOST = info.bkGhost || null; PLAN_GHOST_DONE = PLAN_GHOST ? new Map() : null;
   PLAN_WB_GHOST = info.wbGhost && info.wbGhost.size ? info.wbGhost : null;   // Brücke übers Wasser (160c D3h)
-  PLAN_WB_LAST = PLAN_WB_GHOST ? [...PLAN_WB_GHOST.values()].reduce((m, c) => !m || c.x + c.y > m.x + m.y || (c.x + c.y === m.x + m.y && c.x > m.x) ? c : m, null).k : null;
+  PLAN_WB_LAST = PLAN_WB_GHOST ? wbGhostGroups(PLAN_WB_GHOST) : null;   // je Brücke ihr letztes Feld → ihre Felder
   const dia = (x, y, fill, line, hOf = null) => hillMark(x, y, () => {      // etwas eingerückt: jedes Feld einzeln sichtbar
     const cs = [[-ins, -ins], [ins, -ins], [ins, ins], [-ins, ins]], K = hOf ? 4 : 1;                 // hOf: Höhe auf dem Deck (Bogen, 160c C2) – Seiten unterteilt
     const c = cs.flatMap(([u0, v0], j) => { const [u1, v1] = cs[(j + 1) % 4]; return Array.from({ length: K }, (_, q) => { const u = u0 + (u1 - u0) * q / K, v = v0 + (v1 - v0) * q / K, p = toScreen(x + u, y + v); if (hOf) p.y -= hOf(u, v) * z; return p; }); });
@@ -1877,7 +1877,7 @@ function render(now) {
       }
     }
     if (m.boat) m.under = boatUnder(m);                                    // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
-    if (m.boat && m.under) for (const bk of m.under) { const c = wbAt(...keyXY(bk)); if (c && bkGlasAt(c)) (WB_GLASS_LATE = WB_GLASS_LATE || new Map()).set(bk, false); }   // Kristall: Glas erst nach dem Boot (160c D3h)
+    if (m.boat && m.under) for (const bk of m.under) { const c = wbAt(...keyXY(bk)); if (c && bkGlasAt(c)) { WB_GLASS_LATE = WB_GLASS_LATE || new Map(); WB_GLASS_LATE.set(bk, (WB_GLASS_LATE.get(bk) || 0) + 1); } }   // Kristall: Glas erst nach dem letzten Boot darunter (160c D3h)
     // Zug in der Halle: vor den Dächern und Bahnsteigen zeichnen (auch wenn die Hbf-Ecke nicht im Bild ist)
     if (m.pbtrain) {                                                       // Parkbahn-Wagen kurz vor einer Station: erst mit ihr zeichnen –
       const [rx, ry] = keyXY(k);                                           // sie steht immer hinter dem Gleis und läge sonst über ihm (Block 136f)
@@ -2149,7 +2149,7 @@ function render(now) {
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
       if (!bkDone) bkDrawStill(x, y, px, py, z, now, bw, wbUnder);        // Rückfall (alte Daten: anderes Ding unter dem Deck, Belegung veraltet) – die Brücke fehlt nie
-      if (PLAN_WB_LAST === k) { wbDrawGhost(PLAN_WB_GHOST, z); PLAN_WB_LAST = null; }   // Geist übers Wasser: ganz beim letzten Feld (160c D3h)
+      if (PLAN_WB_LAST && PLAN_WB_LAST.has(k)) { wbDrawGhost(PLAN_WB_LAST.get(k), z); PLAN_WB_LAST.delete(k); }   // Geist übers Wasser: je Brücke ganz bei ihrem letzten Feld (160c D3h)
       if (bkDone && !bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
@@ -2186,7 +2186,7 @@ function render(now) {
   const boatOver = m => {
     for (const bk of m.under) {
       bridgeOverBoat(bk, z, now, m);
-      if (WB_GLASS_LATE && WB_GLASS_LATE.get(bk) === false) { WB_GLASS_LATE.set(bk, true); wbGlassAt(bk, z); }   // Kristall-Glas des früheren Felds über dem Boot, genau einmal (160c D3h)
+      if (WB_GLASS_LATE && WB_GLASS_LATE.get(bk) > 0) { const n = WB_GLASS_LATE.get(bk) - 1; WB_GLASS_LATE.set(bk, n); if (!n) wbGlassAt(bk, z); }   // Kristall-Glas des früheren Felds nach dem letzten Boot, genau einmal (160c D3h)
       const [bx, by] = keyXY(bk);
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
         if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) moverLive(o, z, now);
@@ -2255,9 +2255,9 @@ function render(now) {
   }
   FOG = false;
   if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);
-  if (PLAN_WB_LAST) wbDrawGhost(PLAN_WB_GHOST, z);                      // letztes Feld nicht im Bild   // letztes Feld nicht im Bild: danach
+  if (PLAN_WB_LAST) for (const cells of PLAN_WB_LAST.values()) wbDrawGhost(cells, z);   // letztes Feld nicht im Bild   // letztes Feld nicht im Bild: danach
   archWalkers.clear();
-  if (WB_GLASS_LATE) for (const [k, done] of WB_GLASS_LATE) if (!done) wbGlassAt(k, z);   // Boot nicht im Bild: das Glas fehlt nie (160c D3h)
+  if (WB_GLASS_LATE) for (const [k, n] of WB_GLASS_LATE) if (n > 0) wbGlassAt(k, z);   // Boot nicht im Bild: das Glas fehlt nie (160c D3h)
   HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; PLAN_WB_GHOST = null; PLAN_WB_LAST = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken
   if (staleCover) recalc();

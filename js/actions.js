@@ -155,9 +155,9 @@ function build(b, x, y, quiet) {
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
     if (wbS) {                                                        // Wasser-Wegbrücke (160c D3): immer im neuen Format, aus dem Aussehen (nie Rohfelder), bezahlt = costOf
       const nt = state.tiles.get(k);
-      brWriteLook(nt, wbS.look, wbS.brk, wbS.zk, wbS.raw);
+      brWriteLook(nt, wbS.look, wbS.brk, wbS.zk, wbRawFor(wbS.brk, wbS.look, wbS.raw));
       nt.brp = { ...brPrice(wbS.look, 'wasser'), k: brSig(nt, 'wasser') };
-      wbUnify(x, y);                                                  // zwei Brücken wachsen zusammen: angleichen
+      if (wbS.n) wbUnify(x, y, wbS);                                  // zwei Brücken wachsen zusammen: an die längere angleichen
     } else if (bridge) {                                              // Gleisbrücke verlängern: Aussehen der alten übernehmen (66c; 160c: alle br-Felder, nur Eingeschaltetes)
       const want = b === 'weg' ? isWegBridge : (t => !!t && t.b === 'schiene' && !!t.bridge);
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(want), nt = state.tiles.get(k);

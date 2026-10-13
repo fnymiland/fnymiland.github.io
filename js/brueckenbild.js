@@ -624,9 +624,21 @@ function wbVirtual(extra, keys) {
 // gedachte Brückenkachel im Aussehen look (wie build: brWriteLook, brp gestempelt)
 function wbGhostTile(look, style, lauf) {
   const t = { b: 'weg', lvl: 1, style, bridge: true, lauf };
-  brWriteLook(t, look, look.kind && WEG_BRIDGE[look.kind] ? look.kind : brFallback('wasser', look.mat).brk, null, null);
+  brWriteLook(t, look, look.kind && WEG_BRIDGE[look.kind] ? look.kind : brFallback('wasser', look.mat).brk, look.mat === 'kristall' && look.zacken ? 'an' : null, null);   // gekaufte Zacken mit
   t.brp = { ...brPrice(look, 'wasser'), k: brSig(t, 'wasser') };
   return t;
+}
+// Geistfelder je Brücke (zusammenhängend über Nachbarn): letztes Feld in Maler-Folge → Felder dieser Brücke (je eine Leinwand, wie bkDrawGhost)
+function wbGhostGroups(cells) {
+  const out = new Map(), seen = new Set();
+  for (const [k0] of cells) {
+    if (seen.has(k0)) continue;
+    const grp = new Map(), todo = [k0];
+    while (todo.length) { const k = todo.pop(); if (seen.has(k) || !cells.has(k)) continue; seen.add(k); grp.set(k, cells.get(k)); const [x, y] = keyXY(k); for (const [dx, dy] of DIRS) todo.push((x + dx) + ',' + (y + dy)); }
+    const last = [...grp.values()].reduce((m, c) => !m || c.x + c.y > m.x + m.y || (c.x + c.y === m.x + m.y && c.x > m.x) ? c : m, null);
+    out.set(last.k, grp);
+  }
+  return out;
 }
 // Geist ganz zeichnen: alle Felder in Maler-Folge auf EINE Zwischenleinwand (wie bkDrawGhost), 65 %, ohne Licht; danach die Plan-Rauten
 function wbDrawGhost(cells, z) {
@@ -635,10 +647,13 @@ function wbDrawGhost(cells, z) {
     return { c, px: p.x, py: p.y, R: [p.x - l * z, p.y - u * z, p.x + r * z, p.y + d * z] };
   });
   if (!qs.length) return;
-  const R = qs.reduce((m, q) => [Math.min(m[0], q.R[0]), Math.min(m[1], q.R[1]), Math.max(m[2], q.R[2]), Math.max(m[3], q.R[3])], [Infinity, Infinity, -Infinity, -Infinity]);
-  ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => {
+  const R0 = qs.reduce((m, q) => [Math.min(m[0], q.R[0]), Math.min(m[1], q.R[1]), Math.max(m[2], q.R[2]), Math.max(m[3], q.R[3])], [Infinity, Infinity, -Infinity, -Infinity]);
+  const R = [Math.max(R0[0], -8), Math.max(R0[1], -8), Math.min(R0[2], W + 8), Math.min(R0[3], H + 8)];   // nur der sichtbare Teil (lange Brücke, nah: sonst riesige Leinwand)
+  if (R[2] <= R[0] || R[3] <= R[1]) return;
+  const fog = FOG; FOG = false;                                            // geplante Felder werden beim Bauen eigen: nie im Nebel
+  try { ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => {
     for (const q of qs) { const A = wbArgs(q.c, q.px, q.py, z); A.opts = { ...A.opts, licht: null, dark: false }; for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, q.c, A, z); }
-  });
+  }); } finally { FOG = fog; }
   for (const q of qs) { const marks = DECK_MARKS && DECK_MARKS.get(q.c.k); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
 // Eine Brückenkachel außerhalb der Karte (Tragen mit ✋, drawObject('weg')): als gedachtes Feld an ihrem Ziel im neuen Modell (160c D3h).

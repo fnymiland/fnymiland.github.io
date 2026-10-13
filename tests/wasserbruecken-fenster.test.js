@@ -252,3 +252,47 @@ it('Trage-Geist: eine Brückenkachel außerhalb der Karte malt das neue Modell (
   expect(r[0]).toEqual(['hg', 'h', 'v', 'd', 't1', 'o', 't2']);
   expect(r[1]).toBe(true);
 });
+
+// Gegenlesen D3: ältere Fassungen (v1016) erstatten nach WEG_BRIDGE[brk] und kennen brp nicht – nie mehr als bezahlt, je Rohstoff
+describe('Wasser-Wegbrücken: Geld für ältere Fassungen (Gegenlesen D3)', () => {
+  const waechter = () => game(`[...state.tiles].filter(([, t]) => isWegBridge(t)).filter(([, t]) => { const B = WEG_BRIDGE[bridgeKind(t)], p = brPaid(t, 'wasser');
+    return !B || Object.entries(brMoney(B.cost, B.mat)).some(([r, v]) => (p[r] || 0) < v); }).map(([k, t]) => k + ':' + bridgeKind(t))`);
+  const bau = (x, y, style = 'sand') => game(`(() => { state.design = new Set(DESIGN.map(d => d.id)); chosenStyle.weg = '${style}'; setTool('weg'); const ok = build('weg', ${x}, ${y}, true); setTool('look'); return ok; })()`);
+  const fluss = () => game("for (let y = 3; y <= 9; y++) for (let x = 10; x <= 15; x++) state.terra.set(x + ',' + y, 'water'); terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc()");
+  it('Zusammenwachsen: die längere gewinnt das Aussehen; die Art der anderen Felder nie teurer als bezahlt', () => {
+    fluss(); bau(9, 6); bau(10, 6, 'sand'); bau(16, 6, 'asphalt'); bau(15, 6, 'asphalt'); bau(14, 6, 'asphalt'); bau(13, 6, 'asphalt');
+    expect(game("[brSpanLook(10, 6).mat, brSpanLook(14, 6).mat]")).toEqual(['holz', 'stein']);
+    bau(11, 6); bau(12, 6);
+    for (const x of [10, 11, 12, 13, 14, 15]) expect(game(`brLook(state.tiles.get('${x},6'), 'wasser').mat`), x).toBe('stein');   // Stein (3 Felder) war länger als Holz (1)
+    expect(waechter()).toEqual([]);
+    expect(game("bridgeKind(state.tiles.get('10,6'))")).toBe('holz');                    // Holz bezahlt: bleibt Holz-Art (v1016 erstattet Holz)
+  });
+  it('Metall verliert gegen Holz: Art bleibt so, dass v1016 nichts Unbezahltes erstattet', () => {
+    fluss(); bau(9, 6); bau(10, 6); bau(11, 6); bau(12, 6); bau(16, 6); bau(15, 6);
+    game("wbSet(15, 6, { mat: 'stahl' })"); bau(13, 6); bau(14, 6);
+    expect(game("brLook(state.tiles.get('15,6'), 'wasser').mat")).toBe('holz');
+    expect(waechter()).toEqual([]);
+  });
+  it('gemischte Altspanne (Anker rot, Steinfelder): „Wie das Material“ – Art je Feld nie teurer als bezahlt; Aussehen einheitlich', () => {
+    kanal(10, 4, 4);
+    game("state.tiles.get('10,4').brk = 'rot'; for (const x of [11, 12, 13]) state.tiles.get(x + ',4').brk = 'stein'; groundVersion++; recalc()");
+    expect(game('brSpanLook(10, 4).col')).toBe(3);
+    expect(game("wbSet(11, 4, { col: null })")).toBe(true);
+    expect(waechter()).toEqual([]);
+    const looks = game("[10, 11, 12, 13].map(x => JSON.stringify((L => [L.mat, L.col, L.plank])(brLook(state.tiles.get(x + ',4'), 'wasser'))))");
+    expect(new Set(looks).size).toBe(1);
+  });
+  it('Plan übers Wasser zwischen zwei Brücken: Vorschau-Preis = abgebuchter Preis', () => {
+    fluss(); bau(9, 6); bau(10, 6); bau(11, 6, 'asphalt'); bau(16, 6, 'sand'); bau(15, 6, 'sand');
+    const r = game(`(() => { chosenStyle.weg = 'sand'; setTool('weg'); startPlan('line', { x: 11, y: 6 }, { x: 15, y: 6 }, false); const info = planInfo(plan); const m0 = state.money; runPlan(); setTool('look'); return [info.cost, m0 - state.money]; })()`);
+    expect(r[1]).toBe(r[0]);
+    expect(waechter()).toEqual([]);
+  });
+});
+
+describe('Wasser-Wegbrücken: Geist und Glas (Gegenlesen D3)', () => {
+  it('Geist je Brücke: getrennte Spannen → je eine Gruppe mit eigenem letzten Feld; zusammenhängende → eine', () => {
+    const r = game(`(() => { const c = (x, y) => [x + ',' + y, { k: x + ',' + y, x, y }]; const m = new Map([c(5, 5), c(6, 5), c(7, 5), c(20, 9), c(20, 10)]); const g = wbGhostGroups(m); return [...g].map(([k, v]) => [k, [...v.keys()].sort()]); })()`);
+    expect(r).toEqual([['7,5', ['5,5', '6,5', '7,5']], ['20,10', ['20,10', '20,9']]]);
+  });
+});

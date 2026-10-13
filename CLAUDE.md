@@ -338,9 +338,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     **Bauen/Fenster** (D3): Aussehen nur über `brSet({ at: 'wasser', x, y }, änderung)` → `wbSet` (ganze Spanne, Bilanz null, jedes Feld behält
     sein Bezahltes); Felder immer aus dem Aussehen schreiben (`brWriteLook`, Farben roh – alte Rote/Ziegel fallen ohne brc auf die Art zurück),
     nie Rohfelder kopieren; `brk` ist immer eine bekannte Art (ältere Fassungen). Neues Feld: Aussehen der längsten Brücke daneben **vor** dem
-    Setzen (`wbNewSpec`, samt gekauftem Licht/Zacken), sonst Leiste (`wbLeisteLook`: Holz = Wegstil). Zusammenwachsen: `wbUnify` (häufigstes
-    Aussehen gewinnt, kostenlos). Licht: Strom `'W' + Anker`. Seeweg gekappt: `seaRoutesNow`/`seaRoutesWarn` vorher/nachher. Geist beim Ziehen
-    und Tragen über gedachte Felder (`wbVirtual` – state.tiles kurz ergänzt, nie recalc dabei).
+    Setzen (`wbNewSpec`, samt gekauftem Licht/Zacken), sonst Leiste (`wbLeisteLook`: Holz = Wegstil). Zusammenwachsen: `wbUnify(x, y, spec)` (das
+    Aussehen der längeren Brücke gewinnt, kostenlos; ohne spec das häufigste). Die Art `brk` je Feld nie teurer als bezahlt (`wbSafeKind`,
+    Farben dazu `wbRawFor`): ältere Fassungen erstatten nach `brk`, nicht nach `brp`. Plan-Preis = Abbuchung (`BR_PLAN_N`: geplante Nachbarn
+    zählen in `wbNewSpec` mit). Licht: Strom `'W' + Anker`. Seeweg gekappt: `seaRoutesNow`/`seaRoutesWarn` vorher/nachher. Geist beim Ziehen
+    und Tragen über gedachte Felder (`wbVirtual` – state.tiles kurz ergänzt, nie recalc dabei); je Brücke eine Leinwand bei ihrem letzten Feld
+    (`wbGhostGroups`), nur der sichtbare Teil, nie im Nebel. Kristall-Glas über Booten: `WB_GLASS_LATE` zählt die Boote je Feld, das letzte malt.
     Nie im Boden-Durchgang (`liveFlatSet`/`worldGround` lassen sie aus). Ruhend eine Gruppe `w` (= h+v+d+o, ein Bildchen, nichts dazwischen auf
     dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
     Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: Bogen vd nachmalen (mit Stütze an der Anfangskante Schnitt `WB_START_CUT`); frühere Felder über

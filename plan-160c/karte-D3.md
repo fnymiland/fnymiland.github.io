@@ -447,3 +447,15 @@ D3c → D3e → D3f → D3g → D3h → D3i → D3j.
 - **Leiste:** Holz = wie der Wegstil; Metall/Stein/Kristall aus der Leiste setzen das Material fest.
 - **Seeweg-Warnung:** nach dem Bau (auch nach Umstellen im Fenster und Ablegen), mit „↶ macht es rückgängig“.
 - **Kristall über einem Boot unter einem früheren Feld:** lösen (Glas im Bootsrahmen nachmalen, ohne Doppeldeckung), Bild zeigen.
+
+## 8. Gegenlesen nach dem Bau (13.10.2026) – erledigt
+
+- **Geld für ältere Fassungen:** v1016 erstattet nach `brk` (`WEG_BRIDGE`), nicht nach `brp`. `wbUnify`/`wbSet` geben einem Feld nie eine Art,
+  die teurer ist als sein Bezahltes (`wbSafeKind`, `wbRawFor`). Tests: „Geld für ältere Fassungen (Gegenlesen D3)“.
+- **Zusammenwachsen:** nach der längeren Brücke (Antwort §7), nicht nach Mehrheit – `wbUnify(x, y, wbS)` beim Bau.
+- **Plan-Preis = Abbuchung:** geplante Nachbarfelder zählen beim Aussehen mit (`BR_PLAN_N` in `planScan`).
+- **Geist:** Zacken mit (`wbGhostTile`), Leinwand auf den Bildschirm begrenzt, je Brücke eine (`wbGhostGroups`), nie im Nebel.
+- **Kristall-Glas bei zwei Booten auf verschiedenen Feldern:** `WB_GLASS_LATE` zählt, das Glas kommt nach dem letzten Boot.
+- **Bekannte Grenze:** Kopiert jemand eine neue Brücke in v1016 (alte App), behält die Kopie `brp`; die neue Fassung erstattet dort nach
+  `brp` mehr, als die Kopie gekostet hat. Tritt nur auf, wenn alte und neue App denselben Stand bearbeiten – nicht behoben.
+
