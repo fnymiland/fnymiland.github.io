@@ -1950,10 +1950,10 @@ function archBoatOk(A, s) {
   if (A.wall) return A.open.some(o => o.h >= 9 && Math.abs(s - o.c) <= o.r * 0.85);
   return archDeck(A, s) >= 12;
 }
-// Höhe eines Bewohners auf einer Bogenbrücke (Weltpunkt px, py) – 0 daneben
-function wegBridgeLift(px, py) {
-  const rx = Math.round(px), ry = Math.round(py), A = bridgeArch(rx, ry);
-  return A ? archDeck(A, A.i0 + (A.ax ? py - ry : px - rx) + 0.5) : 0;
+// Höhe eines Bewohners auf einer Wasser-Wegbrücke (Weltpunkt px, py) – Bogen und flach auf dem Deck, 0 daneben
+function wegBridgeLift(px, py) {                                       // 160c D1d: auch flach auf dem Deck (vorher 0) – dieselbe Höhe wie der Maler
+  const c = wbAt(Math.round(px), Math.round(py));
+  return c ? wegDeckH(c, c.ax ? py - c.y : px - c.x) : 0;
 }
 let PLANNED = null;                                          // beim Ziehen (planScan): Felder, die der Plan schon baut
 const isBridgeAt = (x, y) => isWegBridge(state.tiles.get(x + ',' + y)) || (!!PLANNED && PLANNED.has(x + ',' + y) && terrainAt(x, y) === 'water');

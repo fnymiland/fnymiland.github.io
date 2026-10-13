@@ -303,7 +303,7 @@ function slopeUp(px, py, f, who = 'fuss') {
 const figUp = w => w.up != null ? w.up : w.seat ? null : slopeUp(w.px, w.py, w.sit ? 0 : FOOT_D);
 // Kopf der Figur auf dem Bildschirm (wie drawWalker)
 function walkerHead(w, z) {
-  const p = toScreen(w.px, w.py), up = ((figUp(w) || 0) + (state.hills && state.hills.size ? hillLift(Math.round(w.px), Math.round(w.py)) : 0)) * z;   // auf dem Dach bzw. der Dachtreppe höher (Block 138d); oben auf einer Anhöhe um ihren Hub (Block 157d, wie render.js tileB), auf Rampe/Treppe ihre Höhe
+  const fu = figUp(w), p = toScreen(w.px, w.py), up = ((fu != null ? fu : w.seat ? 0 : wegBridgeLift(w.px, w.py)) + (state.hills && state.hills.size ? hillLift(Math.round(w.px), Math.round(w.py)) : 0)) * z;   // Wasserbrücke (160c D1d): wie drawFigure   // auf dem Dach bzw. der Dachtreppe höher (Block 138d); oben auf einer Anhöhe um ihren Hub (Block 157d, wie render.js tileB), auf Rampe/Treppe ihre Höhe
   return [p.x + (w.sit ? 0 : 6 * z), p.y - up - (ANIMALS[w.kind] && ANIMALS[w.kind].id === 'giraffe' ? 19 : 13) * z * figScale(w)];
 }
 function drawBubble(z) {

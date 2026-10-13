@@ -97,3 +97,30 @@ describe('Wasser-Wegbrücken in Lagen (160c D1a)', () => {
     expect(bad).toEqual([]);
   });
 });
+
+// 160c D1d: Figuren auf flachen Wasserbrücken stehen auf dem Deck (wegDeckH, LIFT 3/7/8, Rampe zum Ufer) statt am Boden; Bögen wie bisher.
+// Kopf (Antippen, Sprechblase: walkerHead) und GL-Rahmen (glMoverBox) gehen mit
+describe('Wasser-Wegbrücken: Höhe der Figuren (160c D1d)', () => {
+  it('wegBridgeLift = wegDeckH des Felds (flach: Deck, Rampe zum Ufer, Steg offen bis zum Ende; Bogen wie die alte Formel); an Land 0', () => {
+    const felder = szene();
+    for (const [x, y] of felder) for (const a of [-0.45, -0.3, 0, 0.2, 0.45]) {
+      const r = game(`(() => { const c = wbAt(${x}, ${y}), px = ${x} + (c.ax ? 0 : ${a}), py = ${y} + (c.ax ? ${a} : 0), A = c.A;
+        return [wegBridgeLift(px, py), wegDeckH(c, ${a}), A ? archDeck(A, A.i0 + ${a} + 0.5) : null]; })()`);
+      expect(r[0], x + ',' + y + ' a ' + a).toBeCloseTo(r[1], 9);
+      if (r[2] != null) expect(r[0], 'Bogen ' + x + ',' + y).toBeCloseTo(r[2], 9);
+    }
+    expect(game('[wegBridgeLift(6, 13), wegBridgeLift(6, 4), wegBridgeLift(6, 31)]')).toEqual([7, 3, 8]);   // Stein 7, Holz 3, Rot 8 (BRIDGE_LOOK, wie der Maler)
+    expect(game('wegBridgeLift(6.45, 13)')).toBeCloseTo(7 * 0.05 / 0.3, 9);                // Rampe zum Ufer
+    expect(game('wegBridgeLift(37.45, 4)')).toBe(3);                                        // Steg: offenes Ende bleibt oben
+    expect(game('[wegBridgeLift(5, 4), wegBridgeLift(9, 4), wegBridgeLift(30, 30)]')).toEqual([0, 0, 0]);
+  });
+  it('Kopf (walkerHead) und GL-Rahmen (glMoverBox) um die Deckhöhe höher; auf dem Dach/der Treppe (figUp) zählt die nicht', () => {
+    szene();
+    const r = game(`(() => { const w = { px: 6, py: 13, kind: 0, fur: '#fff' }, l = { px: 5, py: 13, kind: 0, fur: '#fff' }, z = 2;
+      return [toScreen(6, 13).y - walkerHead(w, z)[1], toScreen(5, 13).y - walkerHead(l, z)[1], glMoverBox(w, z)[1] - glMoverBox(l, z)[1],
+        toScreen(6, 13).y - walkerHead({ ...w, up: 2 }, z)[1] - (toScreen(5, 13).y - walkerHead({ ...l, up: 2 }, z)[1])]; })()`);
+    expect(r[0] - r[1]).toBeCloseTo(7 * 2, 9);
+    expect(r[2]).toBeCloseTo(7 * 2, 9);
+    expect(r[3]).toBeCloseTo(0, 9);
+  });
+});
