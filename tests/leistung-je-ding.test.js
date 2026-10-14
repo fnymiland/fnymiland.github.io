@@ -38,6 +38,15 @@ describe('Leistungs-Wächter je Ding (Block 149)', () => {
       if (v >= 0) now['Weg ' + s] = v;
     }
     game("for (let y = 5; y <= 7; y++) for (let x = 5; x <= 7; x++) state.tiles.delete(x + ',' + y); recalc()");
+    // Gleisbrücken übers Wasser (160c E1): je Gleis-Stil gerade auf einem Wasserstreifen, dazu Kurve, T, X (Mitte 6,6)
+    const gleis = (feld, form) => game(`(() => { for (let y = 3; y <= 9; y++) for (let x = 3; x <= 9; x++) { state.terra.set(x + ',' + y, x >= 4 && x <= 8 && y >= 4 && y <= 8 ? 'water' : 'grass'); state.tiles.delete(x + ',' + y); }
+      for (const [x, y] of ${JSON.stringify(feld)}) state.tiles.set(x + ',' + y, { b: 'schiene', lvl: 1, form: ${form}, ...(x >= 4 && x <= 8 && y >= 4 && y <= 8 ? { bridge: true } : {}) });
+      terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); groundVersion++; recalc(); })()`);
+    const zeile = (x0, x1, y) => Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y]), spalte = (y0, y1, x) => Array.from({ length: y1 - y0 + 1 }, (_, i) => [x, y0 + i]);
+    const FORMEN = { gerade: zeile(3, 9, 6), kurve: [...zeile(3, 6, 6), ...spalte(3, 5, 6)], t: [...zeile(3, 9, 6), ...spalte(7, 9, 6)], x: [...zeile(3, 9, 6), ...spalte(3, 9, 6)] };
+    for (let f = 0; f < game('DECO_LOOKS.schiene.forms.length'); f++) { gleis(FORMEN.gerade, f); const v = cost(`() => drawRailBed(400, 300, 2, 6, 6, state.tiles.get('6,6'))`); if (v >= 0) now['Gleisbrücke Form ' + f] = v; }
+    for (const s of ['kurve', 't', 'x']) { gleis(FORMEN[s], 0); const v = cost(`() => drawRailBed(400, 300, 2, 6, 6, state.tiles.get('6,6'))`); if (v >= 0) now['Gleisbrücke ' + s] = v; }
+    game("for (let y = 3; y <= 9; y++) for (let x = 3; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } terrainCache.clear(); waterChanged(); recalc()");
     if (NEU) { fs.writeFileSync(FILE, JSON.stringify(now, null, 1) + '\n'); return; }
     const old = JSON.parse(fs.readFileSync(FILE, 'utf8')), bad = [];
     for (const [k, v] of Object.entries(now)) {

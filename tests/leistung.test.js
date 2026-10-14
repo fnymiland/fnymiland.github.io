@@ -12,12 +12,12 @@ const SPIEL = { ops: [1.1, 40], geo: [1.1, 200], live: [1.1, 3] };       // Spie
 const NAME = { ops: 'Zeichenbefehle', geo: 'Linienstücke/Formpunkte', live: 'live gezeichnete Objekte' };
 
 beforeAll(() => loadGame());
-function measure(world, night, z) {
+function measure(world, night, z, at = null) {                       // at: [x, y] Kamera (sonst Mitte aller Felder)
   return game(`(() => {
     const pn = performance.now, na = nightAt, gh = gameHour, rgc = renderGroundChunk, dO = drawObject;
     performance.now = () => 0; nightAt = () => ${night} ? NIGHT_MAX : 0; gameHour = () => ${night} ? 23 : 12;   // Uhr steht: alles fertig malen
     try {
-      const ks = [...state.tiles.keys()].map(keyXY), cx = ks.reduce((a, k) => a + k[0], 0) / ks.length, cy = ks.reduce((a, k) => a + k[1], 0) / ks.length;
+      const ks = [...state.tiles.keys()].map(keyXY), at = ${JSON.stringify(at)}, cx = at ? at[0] : ks.reduce((a, k) => a + k[0], 0) / ks.length, cy = at ? at[1] : ks.reduce((a, k) => a + k[1], 0) / ks.length;
       cam = state.cam; cam.z = ${z}; const p = iso(Math.round(cx), Math.round(cy)); cam.x = p.x; cam.y = p.y; lastZoom = ${z}; lastZoomChange = -1e9;
       let live = 0, ground = 0, quiet = 0, warm = 0;
       renderGroundChunk = (cx, cy, w) => {
@@ -68,6 +68,36 @@ describe('Leistungs-Wächter (Block 149)', () => {
       expect(bad, 'Langsamer als erlaubt. Gewollt? → npm run leistung:neu und in AUFGABEN.md begründen').toEqual([]);
     }, 60000);                                                            // große Welt × 10 Szenen: im vollen Lauf über 5 s
   }
+  // 160c E1: Gleisbrücken übers Wasser in „bruecken“ – feste Szenen mit eigenem Namen (die Schlüssel „bruecken …“ bleiben, dort fährt der echte Zug).
+  // Zug und Boot fest (nur hier gesetzt): Regio über der Feldkante 9,5|35, einer vor der Kurve 22,36, einer auf der Leiter 8–13 × 40/41, Boot quer unter 10,35
+  const GLEIS = [['bruecken-gleis', [10, 38]], ['bruecken-gleis-tx', [32, 37]]];
+  it('Gleisbrücken übers Wasser (160c E1): gerade, Leiter, Kurve, T, X mit Zug und Boot – je Bild höchstens so viel Arbeit wie bisher', () => {
+    global.WG = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'testsave-bruecken.json'), 'utf8'));
+    Object.defineProperty(window, 'devicePixelRatio', { configurable: true, get: () => 2 });
+    game('adoptState(parseSave(WG)); closeModal(); closePanel(); state.tipsOff = true; resize()');
+    game(`(() => { window.__e1 = { tc: trainCars, sm: shipMovers }; const tr = { kind: TRAIN_KIND.regio, col: 0, model: 'regio', route: {} };
+      const car = (px, py, du, dv, i) => ({ train: tr, px, py, du, dv, i, n: 2, len: TRAIN_KIND.regio.len, d: null, mv: 1 });   // d null: ohne Strecke (trainOnHills lässt ihn, wo er ist)
+      const cars = [car(9.6, 35, 1, 0, 0), car(8.76, 35, 1, 0, 1), car(21.4, 36, 1, 0, 0), car(10.5, 40, 1, 0, 0)];
+      trainCars = () => cars.map(c => ({ ...c })); shipMovers = () => [{ boat: true, ship: 'dampfer', px: 10, py: 35, du: 0, dv: 1 }]; })()`);
+    const limits = !NEU && fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE, 'utf8')) : {};
+    const bad = [];
+    try {
+      for (const [name, at] of GLEIS) for (const night of [0, 1]) for (const z of ZOOMS) {
+        const key = `${name} ${night ? 'Nacht' : 'Tag'} Zoom ${z}`, m = measure('bruecken', night, z, at);
+        all[key] = { ops: m.ops, geo: m.geo, live: m.live };
+        if (m.repaint) bad.push(`${key}: ${m.repaint}× neu gemalt im ruhenden Bild (Bildchen/Boden) – Zwischenspeicher wird ständig ungültig`);
+        const L = limits[key];
+        if (NEU) continue;
+        if (!L) { bad.push(`neu: ${key} – noch kein geprüfter Wert (npm run leistung:neu)`); continue; }
+        for (const k of ['ops', 'geo', 'live']) {
+          if (L[k] == null) continue;
+          const max = Math.ceil(L[k] * SPIEL[k][0] + SPIEL[k][1]);
+          if (m[k] > max) bad.push(`${key}: ${m[k]} ${NAME[k]} je Bild – erlaubt ${max} (bisher ${L[k]})`);
+        }
+      }
+    } finally { game('trainCars = window.__e1.tc; shipMovers = window.__e1.sm'); }
+    expect(bad, 'Langsamer als erlaubt. Gewollt? → npm run leistung:neu und in AUFGABEN.md begründen').toEqual([]);
+  }, 120000);
   afterAll(() => {
     if (!NEU) return;
     const old = fs.existsSync(FILE) ? JSON.parse(fs.readFileSync(FILE, 'utf8')) : {};
