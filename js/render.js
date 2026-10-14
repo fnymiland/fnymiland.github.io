@@ -1326,7 +1326,7 @@ function gbBoatOver(m, bk, z, now, byTile, drawnMovers) {
     if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1
       && !(o.gbK && trainTileOrder(...keyXY(o.gbK)) < trainTileOrder(bx, by))) { moverLive(o, z, now); re.push(o); }   // Wagenstück eines früheren Felds (E1c): liegt nicht unter bk
   drawBridgeOver(bk, z, now, bkMoverRect([m, ...re], z), ['o']);
-  for (const o of re) if (o.gbK && o.gbK !== bk) drawBridgeOver(o.gbK, z, now, bkMoverRect([o], z), ['o']);   // sein eigenes vorderes Geländer wieder darüber
+  for (const o of re) if (o.gbK && o.gbK !== bk && isGleisBridge(state.tiles.get(o.gbK))) drawBridgeOver(o.gbK, z, now, bkMoverRect([o], z), ['o']);   // sein eigenes vorderes Geländer wieder darüber (Stück an Land: keins – Gegenlesen E1)
 }
 // Kristall-Wasserbrücke über einem Boot (160c D3h, Nutzer 13.10.2026: lösen): das Glas t1/t2 eines früheren Felds, unter dem ein Boot fährt, malt
 // nicht sein tileB, sondern das Boot danach (boatOver) – sonst läge das Boot vor der Scheibe. Je Bild: Feld → schon gemalt

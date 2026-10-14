@@ -692,4 +692,7 @@ Pläne und Karten:
 - Leistung: Wächter-Szenen bruecken-gleis/-tx +1–3 % bzw. weniger; „bruecken Nacht Zoom 1.2“ 445 → 968 geo = Tageswert (Boden-Vormalen,
   vorher nachts durch prewarm des flat-Bildchens unterdrückt). bauland 433 Felder, ruckeln.js 1280×800 alt/neu: gleich oder schneller.
 - Fragen §5 (beide „so lassen“ empfohlen) dem Nutzer mit dem Bericht gestellt.
+- **Gegenlesen (Workflow, 3 Prüfer + Skeptiker):** behoben – Wagenstück an Land bekam in gbBoatOver das ganze Landgleis übergemalt (alle drei
+  Prüfer). Offen (niedrig, bestätigt): Nachtschein von Lichtern an der eigenen hinteren Kante fehlt auf dem Gleisdeck; Test „Nachtlicht wirft
+  nicht (G null)“ in gleisbruecken-lagen erreicht den Nachtzweig nie (immer grün).
 

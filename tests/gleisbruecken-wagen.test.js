@@ -84,4 +84,15 @@ describe('Gleisbrücken übers Wasser: Wagen in Stücken (160c E1c)', () => {
       return put; })()`);
     expect(r).toEqual(['2,5']);
   });
+  it('Block 112 (gbBoatOver): ein Wagenstück auf dem Landfeld am Ufer bekommt kein Landgleis übergemalt (Gegenlesen E1)', () => {
+    szene();
+    const r = game(`(() => { const out = [], rb = drawRailBed; drawRailBed = (...a) => { if (!a[7]) out.push('ganz ' + a[3] + ',' + a[4]); return rb(...a); };
+      const ps = gbCarPieces(${car(25, 7.6, 0, 1)}), byTile = new Map(), done = new Set();
+      for (const p of ps) { byTile.set(p.k, [p.m]); done.add(p.m); }
+      try { gbBoatOver({ boat: true, ship: 'dampfer', px: 25.6, py: 6.7, du: 0, dv: 1 }, '25,7', 1, 1e6, byTile, done); } finally { drawRailBed = rb; }
+      return [ps.map(p => p.k), out]; })()`);
+    expect(r[0]).toEqual(['25,7', '25,8']);
+    expect(r[1]).toEqual([]);
+  });
 });
+
