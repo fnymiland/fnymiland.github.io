@@ -1,7 +1,7 @@
 // Entwurf Gleisbrücken übers Wasser (160c E0, plan-160c/karte-gleisbruecke-wasser.md): die abgenommenen Bahn-Modelle zwischen Anhöhen (C5:
 // Holz mit Böcken, Metall/Kristall mit Fachwerk, Stein als Viadukt) über Wasser – Deck auf Landhöhe wie heute (Züge nicht angehoben), Fuß auf
 // der Wasserfläche. Gerade Läufe: Modell im Weltraster (Fachwerk in Stücken zu 3 Feldern ab Weltkoordinate 0, Viadukt ein Bogen je Feld).
-// Kurve, T, X (F4): schlichtes Kurvenstück im Material – Deck, Gleis, Geländer nur am Umriss; Variante A ohne Stützen, B mit Pfählen.
+// Kurve, T, X (F4, Nutzer 14.10.: runde Kurvenstücke „sehen scheiße aus“): Eckpodest – eckiges Deck aus den Armen, Geländer/Fachwerk/Brüstung gerade weiter, Pfähle an den Ecken.
 // Doppelgleis: eine breite Brücke, Geländer/Fachwerk nur außen. Nur Bild: drawRailBed wird während der Aufnahme für Brückenfelder umgeleitet.
 // Im Browser (?welt=neu, Bild-Sammler auf 4181):
 // (0, eval)(await (await fetch('tools/gleisbruecken-entwurf.js')).text()); await gleisEntwurf()   → tools/vorschau/gleis-*.png
@@ -9,7 +9,7 @@
   const WATER = -0.7 * DEPTH, H = 0, SEG = 3, W = BK_W;
   const NAME = { holz: 'Holz', stein: 'Stein', stahl: 'Metall', kristall: 'Kristall' }, MATS = ['holz', 'stein', 'stahl', 'kristall'];
   const LOOKS = new Map(), BOATS = [], CARS = [];
-  let NEU = false, PFAEHLE = false, LICHT = false, MODE = 'all', O = null;
+  let NEU = false, LICHT = false, MODE = 'all', O = null;
   const tileAt = (x, y) => state.tiles.get(x + ',' + y);
   const isBr = (x, y) => { const t = tileAt(x, y); return !!t && t.b === 'schiene' && !!t.bridge && LOOKS.has(x + ',' + y); };
   function straightAx(x, y) {                                               // gerade (oder Ende): Achse; Kurve, T, X: null
@@ -27,12 +27,13 @@
     while (i0 < 200 && isStraight(x - dx * (i0 + 1), y - dy * (i0 + 1), ax) && (!cut || seg(u - i0 - 1) === seg(u))) i0++;
     while (i1 < 200 && isStraight(x + dx * (i1 + 1), y + dy * (i1 + 1), ax) && (!cut || seg(u + i1 + 1) === seg(u))) i1++;
     const land = j => terrainAt(x + dx * j, y + dy * j) !== 'water';
-    return { i: i0, n: i0 + 1 + i1, landA: land(-i0 - 1), landB: land(i1 + 1), joinA: cut && isStraight(x - dx * (i0 + 1), y - dy * (i0 + 1), ax), joinB: cut && isStraight(x + dx * (i1 + 1), y + dy * (i1 + 1), ax) };
+    const br = j => isBr(x + dx * j, y + dy * j);                           // Ende an einem Eckpodest (Kurve, T, X): läuft hinein, kein Abschluss
+    return { i: i0, n: i0 + 1 + i1, u0: u - i0, landA: land(-i0 - 1), landB: land(i1 + 1), brA: br(-i0 - 1), brB: br(i1 + 1), joinA: cut && isStraight(x - dx * (i0 + 1), y - dy * (i0 + 1), ax), joinB: cut && isStraight(x + dx * (i1 + 1), y + dy * (i1 + 1), ax) };
   }
   // ---------------------------------------------------------------------------------------------------------------------------------------
   // gerade: Bahn-Modell (Kopie von bkPaintBahn/bkPaintStein mit Deck auf H, Fuß im Wasser, Geländer nur außen)
   function gerade(lage, cx, cy, z, x, y, t, ax, L) {
-    const art = L.mat, cut = art === 'stahl' || art === 'kristall', R = run(x, y, ax, cut), n = R.n, i = R.i, t0 = i - 0.5, t1 = i + 0.5, A = -0.5, B = n - 0.5;
+    const art = L.mat, R = run(x, y, ax, false), n = R.n, i = R.i, t0 = i - 0.5, t1 = i + 0.5, A = -0.5, B = n - 0.5;
     const lat = s => isStraight(x + (ax ? s : 0), y + (ax ? 0 : s), ax), latB = lat(-1), latF = lat(1);
     const P = (tt, s, h) => { const du = ax ? s : tt - i, dv = ax ? tt - i : s; return [cx + (du - dv) * TW / 2 * z, cy + (du + dv) * TH / 2 * z - h * z]; };
     const lw = f => Math.max(0.6, f * z), sh = col => ax ? shade(col, LIGHT.side) : col, last = t1 >= B - 1e-9;
@@ -46,7 +47,7 @@
     };
     const line = (s, h, col, w, ta = A, tb = B) => seg(ta, s, h, tb, s, h, col, w);
     const vert = (tt, s, h0, h1, col, w) => seg(tt, s, h0, tt, s, h1, col, w);
-    const T1 = t1 + (i < n - 1 || R.joinB ? 0.012 : 0);
+    const T1 = t1 + (i < n - 1 || R.brB ? 0.012 : 0);
     const band = (s, h0, h1, col) => { const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, s, h1), P(b, s, h1), P(b, s, h0), P(a, s, h0)], C(col)); };
     const sB = latB ? -0.5 : -W, sF = latF ? 0.5 + 0.012 : W;                // Doppelgleis: ein Deck über die Lücke
     const deckTop = col => { const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, sB, H), P(b, sB, H), P(b, sF, H), P(a, sF, H)], C(col)); };
@@ -74,19 +75,22 @@
       }
       return lamps(lage);
     }
-    // Metall, Kristall: Fachwerk je Stück (SEG Felder im Weltraster), an den Stoßstellen Pfeiler bis aufs Wasser
+    // Metall, Kristall: ein Fachwerk von Ende zu Ende, Felder je Halbfeld im Weltraster (Verlängern verschiebt nichts); Schräge nur am Ufer bzw.
+    // offenen Ende, ins Eckpodest läuft es mit einem Pfosten hinein. Pfeiler bis aufs Wasser alle SEG Felder (Weltraster)
     const truss = (s, col, w) => {
-      const Tt = BR_TRUSS.T, a = A + BR_TRUSS.inset, b = B - BR_TRUSS.inset, m = 2 * n;
+      const Tt = BR_TRUSS.T, endA = !R.brA, endB = !R.brB, a = endA ? A + BR_TRUSS.inset : A, b = endB ? B - BR_TRUSS.inset : B;
       line(s, H, col, 0.7 * w); line(s, H + Tt, col, 0.7 * w, a, b);
-      seg(A, s, H, a, s, H + Tt, col, 0.5 * w); seg(B, s, H, b, s, H + Tt, col, 0.5 * w);
-      for (let j = 0; j < m; j++) { const p = a + (b - a) * j / m, q = a + (b - a) * (j + 1) / m; seg(p, s, H + Tt, q, s, H, col, 0.5 * w); if (j) vert(p, s, H, H + Tt, col, 0.4 * w); }
+      if (endA) seg(A, s, H, a, s, H + Tt, col, 0.5 * w); else vert(A, s, H, H + Tt, col, 0.5 * w);
+      if (endB) seg(B, s, H, b, s, H + Tt, col, 0.5 * w); else vert(B, s, H, H + Tt, col, 0.5 * w);
+      for (let j = 0; j < 2 * n; j++) { const p = A + j / 2, q = p + 0.5, pt = Math.max(p, a); if (pt < q) seg(pt, s, H + Tt, Math.min(q, b), s, H, col, 0.5 * w); if (j) vert(p, s, H, H + Tt, col, 0.4 * w); }
     };
-    const pierTs = [...(R.landA ? [] : [A]), ...(R.landB ? [] : [B])].filter(tt => tt >= t0 - 1e-9 && (tt < t1 - 1e-9 || (last && tt <= t1 + 1e-9)));
+    const pierTs = []; for (let k = 0; k <= n; k++) { if ((k === 0 && R.landA) || (k === n && R.landB)) continue; if ((R.u0 + k) % SEG === 0 || (k === 0 && !R.brA) || (k === n && !R.brB)) pierTs.push(k - 0.5); }
+    for (let j = pierTs.length - 1; j >= 0; j--) if (!(pierTs[j] >= t0 - 1e-9 && (pierTs[j] < t1 - 1e-9 || (last && pierTs[j] <= t1 + 1e-9)))) pierTs.splice(j, 1);
     const pier = s => { for (const tt of pierTs) { vert(tt, s, WATER, H - 4, Lp.beam, 2.4); } };
     if (lage === 'h') { pier(-W + 0.06); if (!latB) truss(-W - 0.02, Lp.back, 1.2); }
     else if (lage === 'v') { pier(W - 0.06); if (!latF) { band(W, H - 4, H, sh(Lp.beam)); line(W, H, Lp.edge, 0.3); line(W, H - 4, Lp.edge, 0.3); } }
     else if (lage === 'd') { deckTop(Lp.deck); deckRest(); }
-    else if (lage === 'o' && !latF) { truss(W + 0.02, Lp.front, 1.6); if (Lp.hi) line(W + 0.02, H + 11, Lp.hi, 0.35, A + 0.15, B - 0.15); }
+    else if (lage === 'o' && !latF) { truss(W + 0.02, Lp.front, 1.6); if (Lp.hi) line(W + 0.02, H + 11, Lp.hi, 0.35, R.brA ? A : A + 0.15, R.brB ? B : B - 0.15); }
     lamps(lage);
     if (art === 'kristall') { if (lage === 'd') lamps('t1'); if (lage === 'o') lamps('t2'); }   // Kristall: Lichtstreifen in eigenen Lagen (C7)
   }
@@ -100,9 +104,9 @@
       const T = tsK(a, c, 24), bot = T.map(tt => { const r = ri(tt); return P(tt, s, r == null ? WATER : r); });
       poly([...T.map(tt => P(tt, s, H)), ...bot.reverse()], C(col));
     };
-    const ramp = tt => Math.max(0, Math.min(1, Math.min(tt - A, B - tt) / 0.45)), parH = tt => S.par * (R.landA || tt > A + 0.5 ? (R.landB || tt < B - 0.5 ? 1 : ramp(tt)) : ramp(tt));
+    const ramp = tt => Math.max(0, Math.min(1, Math.min(tt - A, B - tt) / 0.45)), parH = tt => S.par * ((R.landA || R.brA || tt > A + 0.5) && (R.landB || R.brB || tt < B - 0.5) ? 1 : ramp(tt));
     const balustrade = (s, vorn) => {
-      const tone = vorn ? Lp.top : shade(Lp.top, -0.14), T = tsK(t0, t1 + (i < n - 1 ? 0.012 : 0), 12);
+      const tone = vorn ? Lp.top : shade(Lp.top, -0.14), T = tsK(t0, t1 + (i < n - 1 || R.brB ? 0.012 : 0), 12);
       poly([...T.map(tt => P(tt, s, H + parH(tt))), ...T.slice().reverse().map(tt => P(tt, s, H))], C(shade(tone, -0.05)));
       g.beginPath(); for (let j = 0; j <= 10; j++) { const tt = t0 + (t1 - t0) * (j + 0.5) / 11, p = P(tt, s, H + 0.9), q = P(tt, s, H + parH(tt) - 1.6); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
       g.strokeStyle = C(Lp.joint); g.lineWidth = Math.max(0.6, 0.5 * z); g.lineCap = 'butt'; g.stroke();
@@ -122,55 +126,60 @@
     else if (lage === 'o' && !latF) balustrade(W, true);
   }
   // ---------------------------------------------------------------------------------------------------------------------------------------
-  // Kurve, T, X: Deck in der Gleisform, Geländer nur am Umriss (Stücke in fremden Bändern fallen weg), vorne/hinten nach der Normalen
-  const PAL = art => art === 'stein' ? { deck: BK_STEIN.deck, edge: BK_STEIN.edge, side: BK_STEIN.face, rail: BK_STEIN.top, post: BK_STEIN.joint }
-    : art === 'holz' ? { deck: BK_BAHN.holz.deck, edge: BK_BAHN.holz.plank, side: BK_BAHN.holz.beam, rail: BK_BAHN.holz.rail, post: BK_BAHN.holz.side }
-    : art === 'stahl' ? { deck: BK_BAHN.stahl.deck, edge: BK_BAHN.stahl.edge, side: BK_BAHN.stahl.beam, rail: BK_BAHN.stahl.front, post: BK_BAHN.stahl.back }
-    : { deck: BK_BAHN.kristall.deck, edge: BK_BAHN.kristall.edge, side: BK_BAHN.kristall.beam, rail: BK_BAHN.kristall.front, post: BK_BAHN.kristall.back, hi: BK_BAHN.kristall.hi };
-  function fein(pts, step = 0.04) {
-    const out = [pts[0]];
-    for (let j = 1; j < pts.length; j++) { const [a, b] = [pts[j - 1], pts[j]], m = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step)); for (let q = 1; q <= m; q++) out.push([a[0] + (b[0] - a[0]) * q / m, a[1] + (b[1] - a[1]) * q / m]); }
-    return out;
-  }
-  const distSeg = (p, a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy || 1, u = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)); return Math.hypot(p[0] - a[0] - u * dx, p[1] - a[1] - u * dy); };
-  const distPath = (p, pts) => { let d = 1e9; for (let j = 1; j < pts.length; j++) d = Math.min(d, distSeg(p, pts[j - 1], pts[j])); return d; };
-  function umriss(segs) {                                                    // Stücke [p, q, front] am Rand der Vereinigung
-    const out = [];
-    segs.forEach((sg, si) => {
-      for (const s of [1, -1]) {
-        const side = fein(offsetPath(fein(sg, 0.05), W * s));
-        for (let j = 1; j < side.length; j++) {
-          const p = side[j - 1], q = side[j], m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
-          if (segs.some((o, oi) => oi !== si && distPath(m, o) < W - 0.01)) continue;
-          if (Math.max(Math.abs(m[0]), Math.abs(m[1])) > 0.5 + 1e-6) continue;
-          const d = [q[0] - p[0], q[1] - p[1]], nrm = [-d[1] * s, d[0] * s];   // Normale nach außen
-          out.push([p, q, nrm[0] + nrm[1] > 0, nrm]);
-        }
-      }
-    });
-    return out;
+  // Kurve, T, X: Eckpodest – Deck = Mittelquadrat (±W) und die Arme bis zur Feldkante, Umriss aus geraden Linien (Geländer, Brüstung, Träger
+  // laufen wie an den Geraden weiter und treffen sich in Ecken); Pfähle (Holz, Metall, Kristall) an den Ecken des Quadrats, Stein: Pfeiler bis ins Wasser
+  function podest(arms) {
+    const has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), lines = [];
+    for (const d of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+      const pp = [-d[1], d[0]];
+      if (has(d)) for (const s of [1, -1]) lines.push({ a: [d[0] * W + pp[0] * W * s, d[1] * W + pp[1] * W * s], b: [d[0] * 0.5 + pp[0] * W * s, d[1] * 0.5 + pp[1] * W * s], n: [pp[0] * s, pp[1] * s], arm: d });
+      else lines.push({ a: [d[0] * W - pp[0] * W, d[1] * W - pp[1] * W], b: [d[0] * W + pp[0] * W, d[1] * W + pp[1] * W], n: d });
+    }
+    for (const l of lines) l.front = l.n[0] + l.n[1] > 0;
+    const rects = [[[-W, -W], [W, -W], [W, W], [-W, W]], ...arms.map(([dx, dy]) => dx ? [[dx * W, -W], [dx * 0.5, -W], [dx * 0.5, W], [dx * W, W]] : [[-W, dy * W], [W, dy * W], [W, dy * 0.5], [-W, dy * 0.5]])];
+    return { lines, rects };
   }
   function kurve(lage, cx, cy, z, x, y, t, L) {
-    const art = L.mat, arms = railArms(x, y), segs = railSegments(arms, t), pal = PAL(art);
-    const Lw = ([u, v], h) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z];
-    const U = umriss(segs), lw = f => Math.max(0.6, f * z);
-    const strokeSeg = (p, q, h0, h1, col, w) => { const a = Lw(p, h0), b = Lw(q, h1); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'butt'; g.stroke(); };
+    const art = L.mat, arms = railArms(x, y), Q = podest(arms);
+    const Lw = ([u, v], h) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - h * z], lw = f => Math.max(0.6, f * z);
+    const st = (p, h0, q, h1, col, w) => { const a = Lw(p, h0), b = Lw(q, h1); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.strokeStyle = C(col); g.lineWidth = lw(w); g.lineCap = 'butt'; g.stroke(); };
+    const at = (l, f) => [l.a[0] + (l.b[0] - l.a[0]) * f, l.a[1] + (l.b[1] - l.a[1]) * f];
+    const len = l => Math.hypot(l.b[0] - l.a[0], l.b[1] - l.a[1]);
+    const shF = (col, l) => l.n[0] > 0 ? shade(col, LIGHT.side) : col;      // Seite nach +x etwas dunkler (wie die Geraden Nord-Süd)
+    const P = BK_BAHN[art] ? brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank) : null, Ls = brPal(BK_STEIN, 'stein', 'bahn', L.col, null);
+    const ecken = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [a * (W - 0.06), b * (W - 0.06)]);
+    const posts = (l, step) => { const n = Math.max(1, Math.round(len(l) / step)), out = []; for (let j = 0; j <= n; j++) out.push(at(l, j / n)); return out; };
     const gelaender = front => {
-      const parts = U.filter(e => e[2] === front);
-      if (art === 'stein') { for (const [p, q] of parts) poly([Lw(p, H), Lw(q, H), Lw(q, H + 5), Lw(p, H + 5)], C(front ? pal.rail : shade(pal.rail, -0.14))); for (const [p, q] of parts) strokeSeg(p, q, H + 5, H + 5, shade(pal.rail, 0.06), 0.65); return; }
-      const top = art === 'holz' ? 8 : 7, col = front ? pal.rail : pal.post;
-      let acc = 0; for (const [p, q] of parts) { acc += Math.hypot(q[0] - p[0], q[1] - p[1]); if (acc >= 0.25) { acc = 0; strokeSeg(q, q, H, H + top, col, 0.6); } }
-      for (const [p, q] of parts) { strokeSeg(p, q, H + top, H + top, col, 0.9); if (art === 'holz') strokeSeg(p, q, H + 4, H + 4, col, 0.5); }
-      if (art === 'kristall' && front) for (const [p, q] of parts) strokeSeg(p, q, H + top + 0.6, H + top + 0.6, pal.hi, 0.35);
+      for (const l of Q.lines.filter(q => q.front === front)) {
+        if (art === 'stein') {
+          const c0 = front ? Ls.top : shade(Ls.top, -0.14);
+          poly([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H + BR_STEIN.par), Lw(l.a, H + BR_STEIN.par)], C(shF(shade(c0, -0.05), l)));
+          for (const p of posts(l, 0.09).slice(1, -1)) st(p, H + 0.9, p, H + BR_STEIN.par - 1.6, Ls.joint, 0.5);
+          st(l.a, H + BR_STEIN.par, l.b, H + BR_STEIN.par, shade(Ls.top, front ? 0.06 : -0.04), 0.65);
+        } else if (art === 'holz') {
+          const col = front ? P.rail : P.side;
+          for (const p of posts(l, 0.5)) st(p, H, p, H + 8, col, front ? 0.7 : 0.6);
+          st(l.a, H + 8, l.b, H + 8, col, front ? 0.9 : 0.7); if (front) st(l.a, H + 4, l.b, H + 4, col, 0.5);
+        } else {                                                             // Metall, Kristall: Fachwerk in der Höhe der Geraden, je Halbfeld
+          const col = front ? P.front : P.back, w = front ? 1.6 : 1.2, Tt = BR_TRUSS.T, pts = posts(l, 0.5);
+          st(l.a, H, l.b, H, col, 0.7 * w); st(l.a, H + Tt, l.b, H + Tt, col, 0.7 * w);
+          for (let j = 0; j < pts.length; j++) { st(pts[j], H, pts[j], H + Tt, col, 0.4 * w); if (j) st(pts[j - 1], H + Tt, pts[j], H, col, 0.5 * w); }
+          if (P.hi && front) st(l.a, H + Tt, l.b, H + Tt, P.hi, 0.35);
+        }
+      }
     };
     if (lage === 'h') {
-      if (PFAEHLE) for (const sg of segs) alongPath(sg, 0.5, (p, dir) => { for (const s of [1, -1]) { const q = [p[0] - dir[1] * (W - 0.06) * s, p[1] + dir[0] * (W - 0.06) * s]; if (Math.max(Math.abs(q[0]), Math.abs(q[1])) < 0.5) strokeSeg(q, q, WATER, H - 2, pal.post, 2.2); } });
+      if (art !== 'stein') for (const p of ecken) if (p[0] + p[1] <= 0) st(p, WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
       gelaender(false);
     } else if (lage === 'v') {
-      for (const [p, q, f] of U) if (f) poly([Lw(p, H), Lw(q, H), Lw(q, H - 2.6), Lw(p, H - 2.6)], C(shade(pal.side, 0)));
+      if (art === 'stein') { for (const l of Q.lines) if (l.front && !l.arm) poly([Lw(l.a, H), Lw(l.b, H), Lw(l.b, WATER), Lw(l.a, WATER)], C(shF(Ls.face, l))); }   // Pfeiler unter dem Quadrat
+      else for (const p of ecken) if (p[0] + p[1] > 0) st(p, WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
+      const tief = art === 'stein' ? 2.4 : art === 'holz' ? 3 : 4, col = art === 'stein' ? Ls.face : P.beam;
+      for (const l of Q.lines) if (l.front && (art !== 'stein' || l.arm)) poly([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H - tief), Lw(l.a, H - tief)], C(shF(col, l)));
     } else if (lage === 'd') {
-      for (const shp of roadShapes(arms, t, W)) poly(shp.map(q => Lw(q, H)), C(pal.edge));
-      for (const shp of roadShapes(arms, t, W - 0.03)) poly(shp.map(q => Lw(q, H)), C(pal.deck));
+      const deck = art === 'stein' ? Ls.deck : P.deck;
+      for (const r of Q.rects) poly(r.map(q => Lw(q, H)), C(deck));
+      if (art === 'holz') for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
       O.drb(cx, cy, z, x, y, { ...t, bridge: false });
     } else if (lage === 'o') gelaender(true);
   }
@@ -249,11 +258,9 @@
     fertig();
     const shots = [];
     for (const [[cx, cy], f] of pos) {
-      const kv = f === 'kurve' || f === 't' || f === 'x';
       shots.push([shot(cx, cy, 2.1, Wd, Hd, 0, false, 4), `${FNAME[f]} · heute`]);
-      PFAEHLE = false; shots.push([shot(cx, cy, 2.1, Wd, Hd, 0, true, 4), `${NAME[mat]} · neu${kv ? ' · A ohne Stützen' : ''}`]);
-      if (kv) { PFAEHLE = true; shots.push([shot(cx, cy, 2.1, Wd, Hd, 0, true, 4), `${NAME[mat]} · neu · B mit Pfählen`]); PFAEHLE = false; }
-      else { LICHT = true; shots.push([shot(cx, cy, 2.1, Wd, Hd, NIGHT_MAX, true, 4), `${NAME[mat]} · neu · Nacht, Licht`]); LICHT = false; }
+      shots.push([shot(cx, cy, 2.1, Wd, Hd, 0, true, 4), `${NAME[mat]} · neu`]);
+      LICHT = true; shots.push([shot(cx, cy, 2.1, Wd, Hd, NIGHT_MAX, true, 4), `${NAME[mat]} · neu · Nacht, Licht`]); LICHT = false;
     }
     return blatt(`gleis-${mat}.png`, shots, 3, Wd, Hd);
   }

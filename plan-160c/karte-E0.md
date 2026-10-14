@@ -13,4 +13,7 @@ Werkzeug: `tools/gleisbruecken-entwurf.js` (Bilder `tools/vorschau/gleis-*.png`;
 - **Kurvenstück:** B mit Pfählen (schlichte Pfähle unter dem Deck im Material).
 - **Fachwerk:** Stücke zu 3 Feldern im Weltraster, Pfeiler dazwischen (Verlängern verschiebt nichts).
 - **Alte Gleisbrücken:** werden Holz neu (ein Aussehen für alle).
-- **Gerade Modelle:** „etwas ändern“ – offen, siehe unten.
+- **Gerade Modelle:** „etwas ändern“ – „nicht gleichmäßig, immer Lücken“; **Kurven „sehen scheiße aus bei allen“**.
+  - Überarbeitet: Fachwerk durchgehend von Ende zu Ende, Felder je Halbfeld im Weltraster, Schräge nur am Ufer/offenen Ende, Pfeiler alle
+    3 Felder darunter; Stein-Brüstung läuft nur am offenen Ende aus. Kurve/T/X als **Eckpodest**: eckiges Deck aus Mittelquadrat und Armen,
+    Geländer/Fachwerk/Brüstung gerade weiter bis in die Ecke, Pfähle an den Ecken, Stein ein Pfeiler bis ins Wasser. (Ersetzt Kurvenstück A/B.)
