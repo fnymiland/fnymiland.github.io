@@ -2016,6 +2016,7 @@ function bridgeShapeError(x, y, water) {
     if (!armsWith(x, y).length) return 'Brücken wachsen vom Ufer aus – zieh den Weg vom Land aufs Wasser';
     const ax = bridgeArmsAxis(x, y);
     if (ax < 0) return 'Brücken nur gerade – keine Kurven auf dem Wasser';
+    for (const s of [-1, 1]) { const nx = ax ? x : x + s, ny = ax ? y + s : y; if (terrainAt(nx, ny) !== 'water' && hillAt(nx, ny)) return 'Am Ende einer Brücke übers Wasser muss das Ufer eben sein – hier ist eine Anhöhe'; }   // 160c D4 (wie hillRaiseError)
     // alle Brückenfelder daneben laufen in dieselbe Richtung: parallele Reihen (breit) ja, Abzweig oder Ecke auf dem Wasser nein
     for (const [dx, dy] of DIRS) if (isBridgeAt(x + dx, y + dy) && bridgeArmsAxis(x + dx, y + dy, [x, y]) !== ax) return 'Brücken nur gerade – keine Abzweige auf dem Wasser';
     if (bridgeRunLen(x, y, ax ? [0, 1] : [1, 0]) > BRIDGE_MAX) return `Brücken höchstens ${BRIDGE_MAX} Felder lang`;

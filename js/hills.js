@@ -84,6 +84,13 @@ function archAround(x, y) {
   return false;
 }
 const ARCH_HERE = 'Hier steht eine Fußgängerbrücke – ihr Boden bleibt eben';
+// Ende einer Brücke übers Wasser (160c D4, luecken B3): längs der Achse direkt neben dem ersten/letzten Brückenfeld. Eine Anhöhe dort ließe den
+// Bogen auf Höhe 0 an der Wand enden, und die Brücke verlöre den Anschluss ans Wegenetz. Quer daneben bleibt frei.
+const WB_END_HERE = 'Am Ende einer Brücke übers Wasser muss der Weg eben bleiben';
+function wbEndAt(x, y) {                                                  // → Schlüssel des Brückenfelds daneben oder null
+  for (const [dx, dy] of DIRS) { const c = terrainAt(x + dx, y + dy) === 'water' ? wbAt(x + dx, y + dy) : null; if (c && c.ax === (dx ? 0 : 1)) return c.k; }
+  return null;
+}
 // Ein Feld anheben? (Rechteck aufziehen, plan.js)
 function hillRaiseError(x, y, noCost) {
   if (!available('anhoehe')) return `Anhöhe: ${lockText('anhoehe').replace('🔒 ', 'erst mit ')}`;
@@ -107,6 +114,7 @@ function hillRaiseError(x, y, noCost) {
   if (stairsAround(x, y, true).length) return 'Vor dem Fuß der Treppe muss Platz bleiben';   // Treppe (Block 157d): sonst führte sie in eine Wand
   if (rampsAround(x, y, true).length) return 'Vor dem Fuß der Gleis-Rampe muss Platz bleiben';
   if (archAround(x, y)) return ARCH_HERE;
+  if (wbEndAt(x, y)) return WB_END_HERE;
   if (noCost) return null;
   if (state.money < ITEMS.anhoehe.cost) return 'Zu wenig Taler';
   return matError(ITEMS.anhoehe.mat);

@@ -1201,6 +1201,7 @@ function undo() {
     if (stairsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier steht inzwischen eine Treppe davor'); return false; }   // Fuß frei (wie hillRaiseError)
     if (rampsAround(...keyXY(k), true).some(([sx, sy]) => !mine.has(rampAt(sx, sy).k))) { fail('Geht nicht mehr – hier steht inzwischen eine Gleis-Rampe davor'); return false; }
     if (bpFronts(...keyXY(k)).some(([sx, sy]) => !mine.has(sx + ',' + sy))) { fail('Geht nicht mehr – hier ist inzwischen ein Bergportal davor'); return false; }   // Block 157m
+    { const wk = wbEndAt(...keyXY(k)); if (wk && !mine.has(wk)) { fail('Geht nicht mehr – hier endet inzwischen eine Brücke übers Wasser'); return false; } }   // 160c D4 (wie hillRaiseError)
   }
   // Brücken (Block 160): eine Anhöhe, auf der inzwischen eine Brücke aufliegt, kommt nicht weg; nichts Hohes und keine Anhöhe unter eine
   // stehende Brücke zurück; eine Brücke kommt nur zurück, wenn ihre Anhöhen dann da sind und darunter nichts Hohes steht

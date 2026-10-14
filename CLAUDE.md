@@ -334,7 +334,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `hm`, `G` = wbGeom; gemerkt je groundVersion) als letztem Parameter (`bkGroup`, `spriteBridge` → `wb|…`, `bkRedo`, `bkDrawLagen` → `wbPaintLage`).
     Modelle (D2, abgenommen D0): `wbArgs`/`wbPaintLage` mit den Bausteinen der Anhöhe, quer gestaucht auf EDGE_W (`sq`), nie unter `WB_WATER`;
     gedachte Felder an offenen Enden nach Gelände, Rampe nur zur Wegkachel; Mauer/Durchfahrt aus dem Aussehen der Spanne (`bridgeArch().wall`);
-    flache Wasserbrücken sperren Boote (`seaCross` 'block'). Den alten Maler `drawWegBridge`/`BRIDGE_LOOK` gibt es nicht mehr (D3i).
+    flache Wasserbrücken sperren Boote (`seaCross` 'block'). Am Brückenende längs der Achse nie eine Anhöhe (D4: `wbEndAt` in
+    `hillRaiseError` und im ↶, `bridgeShapeError` für die Gegenrichtung) – sonst endete die Brücke an der Wand, ohne Anschluss. Den alten Maler `drawWegBridge`/`BRIDGE_LOOK` gibt es nicht mehr (D3i).
     **Bauen/Fenster** (D3): Aussehen nur über `brSet({ at: 'wasser', x, y }, änderung)` → `wbSet` (ganze Spanne, Bilanz null, jedes Feld behält
     sein Bezahltes); Felder immer aus dem Aussehen schreiben (`brWriteLook`, Farben roh – alte Rote/Ziegel fallen ohne brc auf die Art zurück),
     nie Rohfelder kopieren; `brk` ist immer eine bekannte Art (ältere Fassungen). Neues Feld: Aussehen der längsten Brücke daneben **vor** dem

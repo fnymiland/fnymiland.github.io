@@ -90,7 +90,7 @@ Dazu sind die Kommentare in state.js:85–87 verrutscht: Bei `brw` steht „Wegb
 - Holz-Bogenträger unter dem Belag und Stein-Pfeilerbögen (Stufe 3: Ansatz am Pfeiler 13, Bogen über zwei Felder) senken den Lichtraum. Er hängt dann von der Stelle ab.
 - Betroffen sind hohe Deko, Züge unten quer (Zughöhe 13) und Linien bzw. Torbögen. Eine Prüfung wie `ARCH_CLEAR` beim Übergang (draw-objects.js:752, 845) gibt es dafür nicht.
 
-### B3. Anhöhe neben dem Ende einer Wasserbrücke (PLAUSIBEL)
+### B3. Anhöhe neben dem Ende einer Wasserbrücke (PLAUSIBEL) – erledigt in 160c D4 (beide Richtungen und ↶)
 - `hillRaiseError` (hills.js:88–112) prüft keine Wasserbrücke am Nachbarfeld. Für Übergänge gibt es dagegen `archAround`.
 - `bridgeArchCalc` (rules.js:1897–1898) zählt jedes Nicht-Wasser als Ufer, unabhängig von `hillLevel`.
 - Folge: Der Bogen endet auf Höhe 0 an der Wand der neuen Anhöhe. `armsWith` verliert den Arm (`wegLink`, rules.js:1939), die Brücke hängt dann nicht mehr am Wegenetz bzw. Viertel.
