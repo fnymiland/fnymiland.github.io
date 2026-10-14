@@ -300,6 +300,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   draw(B);
   if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under, false, c);
   draw(U);
+  if (c.rail) for (const m of U) if (m.boat && m.under) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Gleis (160c E1b, K10): frühere Felder vor dem eigenen h + vd – sonst deckten sie den Zug darauf
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, vd, null, false, c);
   if (rUb) bkRedo(x, y, px, py, z, now, rUb, vd, null, true, c);
   glass('t1');
@@ -310,7 +311,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   if (rAll && !(c.rail && !gbHasO(x, y))) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front, false, c);   // Gleis-Kurve/T/X: kein o (leere Zelle sparen)
   glass('t2');
   draw(F);
-  for (const m of ms) if (m.boat && m.under) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Wasserbrücken-Kachel davor (160c C10)
+  for (const m of ms) if (m.boat && m.under && !(c.rail && cls.get(m) === 'U')) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Wasserbrücken-Kachel davor (160c C10)
 }
 
 // ---------------------------------------------------------------------------

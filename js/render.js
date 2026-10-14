@@ -1316,6 +1316,15 @@ function boatUnder(m) {
   }
   return under.length ? under : null;
 }
+// Gleisbrücke bk über einem Boot m (160c E1b): h + vd im Rahmen des Boots, dann was darauf schon gezeichnet war (Block 112: Wagen, die das
+// Nachgemalte zudeckt), dann o über Boot und Wagen. Feld für Feld; byTile/drawnMovers aus render (eine Funktion, damit Tests sie rufen können)
+function gbBoatOver(m, bk, z, now, byTile, drawnMovers) {
+  const [bx, by] = keyXY(bk), re = [];
+  bridgeOverBoat(bk, z, now, m, ['h', 'vd']);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
+    if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) { moverLive(o, z, now); re.push(o); }
+  drawBridgeOver(bk, z, now, bkMoverRect([m, ...re], z), ['o']);
+}
 // Kristall-Wasserbrücke über einem Boot (160c D3h, Nutzer 13.10.2026: lösen): das Glas t1/t2 eines früheren Felds, unter dem ein Boot fährt, malt
 // nicht sein tileB, sondern das Boot danach (boatOver) – sonst läge das Boot vor der Scheibe. Je Bild: Feld → schon gemalt
 let WB_GLASS_LATE = null;
@@ -2191,6 +2200,7 @@ function render(now) {
   // Boot unter Brückenfeldern (m.under): Fahrbahn über den Rumpf, dann was schon darauf fuhr (Zug, Bewohner) wieder obenauf (Block 112)
   const boatOver = m => {
     for (const bk of m.under) {
+      if (isGleisBridge(state.tiles.get(bk))) { gbBoatOver(m, bk, z, now, byTile, drawnMovers); continue; }   // Gleisbrücke (160c E1b): h+vd, Wagen, o
       bridgeOverBoat(bk, z, now, m);
       if (WB_GLASS_LATE && WB_GLASS_LATE.get(bk) > 0) { const n = WB_GLASS_LATE.get(bk) - 1; WB_GLASS_LATE.set(bk, n); if (!n) wbGlassAt(bk, z); }   // Kristall-Glas des früheren Felds nach dem letzten Boot, genau einmal (160c D3h)
       const [bx, by] = keyXY(bk);

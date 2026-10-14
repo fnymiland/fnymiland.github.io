@@ -77,4 +77,25 @@ describe('Gleisbrücken übers Wasser: Bewegtes (160c E1b)', () => {
     expect(log).toContain('vdg 4,5 fog');
     expect(log).toContain('fig boot');
   });
+  it('Boot unter einem früheren Gleisfeld (Leiter): dessen h + vd, dann der Zug darauf (Block 112), dann o – in einer GL-Zelle je Schritt', () => {
+    szene();
+    expect(game('boatUnder({ boat: true, px: 3.8, py: 24.5 })')).toEqual(['4,24', '3,25']);   // eigenes Feld 4,25 (bkDrawMoving); 3,25: |3 − 3,8| knapp unter 0,8
+    const log = bild(4, 24.5, { cars: [{ px: 4, py: 24, du: 1, dv: 0 }], boats: [{ px: 3.8, py: 24.5 }] }), rest = nach(log, 'fig boot');
+    const iH = rest.indexOf('hg 4,24'), iV = rest.indexOf('vdg 4,24'), iZ = rest.indexOf('fig zug 4,24');
+    expect(iH >= 0 && iH < iV && iV < iZ).toBe(true);
+    expect(rest).toContain('dbo 4,24 h+vd');
+    const tiefe = game(`(() => { let d = 0, max = 0; const gl = glLive, gp = GLPASS; glLive = (px, py, l, u, r, dd, f) => { d++; max = Math.max(max, d); try { f(); } finally { d--; } };
+      GLPASS = true; const byTile = new Map([['4,24', [{ train: { kind: TRAIN_KIND.regio, col: 0, model: 'regio', route: {} }, px: 4, py: 24, du: 1, dv: 0, len: 0.78, i: 0, n: 1, d: null }]]]), done = new Set(byTile.get('4,24'));
+      try { gbBoatOver({ boat: true, ship: 'dampfer', px: 3.8, py: 24.5, du: 0, dv: 1 }, '4,24', 1, 1e6, byTile, done); bridgeOverBoat('4,5', 1, 1e6, { boat: true, ship: 'dampfer', px: 4, py: 5, du: 0, dv: 1 }); }
+      finally { glLive = gl; GLPASS = gp; } return max; })()`);
+    expect(tiefe).toBe(1);                                                                 // nie Zelle in Zelle
+  });
+  it('Leiter, Zug auf beiden Reihen, Boot darunter: das frühere Feld samt Zug zuerst, dann das eigene h + vd, dann der eigene Zug (K10)', () => {
+    szene();
+    const log = bild(4, 24.5, { cars: [{ px: 4, py: 24, du: 1, dv: 0 }, { px: 4, py: 25, du: 1, dv: 0 }], boats: [{ px: 3.8, py: 24.5 }] }), rest = nach(log, 'fig boot');
+    const at = e => rest.indexOf(e), seq = ['hg 4,24', 'vdg 4,24', 'fig zug 4,24', 'hg 4,25', 'vdg 4,25', 'fig zug 4,25'].map(at);
+    expect(seq.every(i => i >= 0), JSON.stringify(rest)).toBe(true);
+    expect([...seq].sort((a, b) => a - b)).toEqual(seq);
+    expect(rest.slice(at('fig zug 4,25')).filter(e => /^(hg|vdg) 4,24/.test(e))).toEqual([]);   // das frühere Feld deckt den eigenen Zug nie
+  });
 });
