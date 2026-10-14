@@ -5,6 +5,7 @@
 // Doppelgleis: eine breite Brücke, Geländer/Fachwerk nur außen. Nur Bild: drawRailBed wird während der Aufnahme für Brückenfelder umgeleitet.
 // Im Browser (?welt=neu, Bild-Sammler auf 4181):
 // (0, eval)(await (await fetch('tools/gleisbruecken-entwurf.js')).text()); await gleisEntwurf()   → tools/vorschau/gleis-*.png
+// Die abgenommenen Bilder (E0) entstanden auf f933b89; ab 160c E1 malt das Spiel Gleisbrücken in Lagen (lagenIn wird durchgereicht).
 (function gleisbrueckenEntwurf() {
   const WATER = -0.7 * DEPTH, H = 0, SEG = 3, W = BK_W;
   const NAME = { holz: 'Holz', stein: 'Stein', stahl: 'Metall', kristall: 'Kristall' }, MATS = ['holz', 'stein', 'stahl', 'kristall'];
@@ -184,10 +185,10 @@
     } else if (lage === 'o') gelaender(true);
   }
   // Ersatz für drawRailBed: Brückenfelder im Raster neu, sonst wie heute
-  function maler(cx, cy, z, x, y, t, armsIn) {
+  function maler(cx, cy, z, x, y, t, armsIn, lagenIn = null) {             // lagenIn (160c E1): das Spiel malt Gleisbrücken in Lagen (bkDrawLagen)
     const L = NEU && t && t.bridge && !armsIn && LOOKS.get(x + ',' + y);
-    if (!L) return O.drb(cx, cy, z, x, y, t, armsIn);
-    const ax = straightAx(x, y), lagen = MODE === 'front' ? ['v', 'd', 'o'] : MODE === 'o' ? ['o'] : ['h', 'v', 'd', 'o'];
+    if (!L) return O.drb(cx, cy, z, x, y, t, armsIn, lagenIn);
+    const ax = straightAx(x, y), lagen = lagenIn || (MODE === 'front' ? ['v', 'd', 'o'] : MODE === 'o' ? ['o'] : ['h', 'v', 'd', 'o']);
     for (const l of lagen) ax == null ? kurve(l, cx, cy, z, x, y, t, L) : gerade(l, cx, cy, z, x, y, t, ax, L);
   }
   // Zug: danach das vordere Geländer der Felder um den Wagen (gleiche Reihe) – der Zug fährt im Fachwerk bzw. hinter dem Geländer

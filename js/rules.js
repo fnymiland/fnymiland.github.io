@@ -826,7 +826,7 @@ let T = { inc: 0, pop: 0, jobs: 0, sci: 0, prod: {}, conv: [], beauty: 0, lm: 0,
   rail: { lines: [], stationNet: new Map(), wind: 0, trains: 0, comp: new Map(),
     power: { supply: 0, demand: 0, left: 0, dark: new Set(), idle: new Set(), trains: 0, city: false, use: { lamps: 0, work: 0, trains: 0 } } },
   traffic: { fare: 0, spend: 0, places: { pop: new Map(), attr: new Map() }, links: [] }, cables: [], ferries: [] };
-function recalc() { bridgeArchCache.v = -1; wbCache.v = -1; if (typeof brSpanCache === 'object') brSpanCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
+function recalc() { bridgeArchCache.v = -1; wbCache.v = -1; gbCache.v = -1; if (typeof brSpanCache === 'object') brSpanCache.v = -1; if (BATCH) return; seaBridgesCheck(); T = totals(); NET = T.net; previewCache = null; groundVersion++; if (!moving) state.incPeak = Math.max(state.incPeak || 0, Math.round(T.inc + (T.salesInc || 0))); }
 // Bestes Einkommen sinkt langsam zum jetzigen (Halbwertszeit PEAK_HALF s), damit Preise nach einem Umbau nicht ewig
 // zu hoch bleiben – aber nicht, solange etwas getragen wird (✋ Wegschieben macht nichts billiger).
 const PEAK_HALF = 1200;
@@ -1899,6 +1899,28 @@ function wbAt(x, y) {
   return c;
 }
 const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.lift, c.landA, c.landB, a);   // a: längs im Feld, −½ … ½
+// Gleisbrücke übers Wasser als Brückenfeld (160c E1, wie wbAt): = Schiene mit !cachedPath (render.js) – was liveFlatSet auslässt, malt tileA.
+// Achse nur für Boote (seaCross; Kurve/T/X 'block': dort fährt keins), Deck auf Landhöhe (wegDeckH 0), G erst in E2 (neue Modelle).
+// Gemerkt je groundVersion, Feldsammlung und -zahl (state.tiles.set ohne recalc, Rückfall-Tests); wirft nie (rohe Felder aus Live/Freunden)
+const isGleisBridge = t => !!t && t.b === 'schiene' && !!t.bridge;
+const gbCache = { v: -1, tiles: null, n: -1, map: new Map(), any: -1 };
+function gbFresh() {
+  const C = gbCache;
+  if (C.v !== groundVersion || C.tiles !== state.tiles || C.n !== state.tiles.size) { C.v = groundVersion; C.tiles = state.tiles; C.n = state.tiles.size; C.map.clear(); C.any = -1; }
+  return C;
+}
+function gbAt(x, y) {
+  const k = x + ',' + y, t = state.tiles.get(k);
+  if (!isGleisBridge(t)) return null;                                      // vor dem Merker: Aufschütten löscht bridge am selben Objekt
+  const C = gbFresh();
+  let c = C.map.get(k);
+  if (c) return c;
+  const ax = seaCross(x, y) === 'y' ? 1 : 0;
+  c = { k, x, y, water: true, rail: true, A: null, ax, b: { ax, n: 1 }, W: 0.3, lift: 0, landA: false, landB: false, hm: 0, G: null };
+  C.map.set(k, c);
+  return c;
+}
+const gbAny = () => { const C = gbFresh(); if (C.any < 0) { C.any = 0; for (const t of state.tiles.values()) if (isGleisBridge(t)) { C.any = 1; break; } } return C.any > 0; };
 // Neue Modelle (160c D2, abgenommener Entwurf D0: tools/wasserbruecken-entwurf.js): flache Höhe je Material, Wasserfläche (Stützenfuß), Stützpunkte
 // längs im Bogen
 const BR_WATER_LIFT = { holz: 3, stein: 7, stahl: 3, kristall: 3 }, WB_WATER = -0.7 * DEPTH, WB_AS9 = [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5];

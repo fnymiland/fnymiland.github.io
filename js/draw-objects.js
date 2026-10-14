@@ -660,8 +660,13 @@ const RAIL_LOOK = {
 const railLookOf = t => RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id] || RAIL_LOOK.schotter;   // auch auf Brücken (Block 109b)
 // Arme (Kurve, Weiche, Prellbock) nur über railArms (rules.js): mit Anhöhen nur zu Nachbarn, mit denen das Gleis zusammenhängt (levelLink
 // 'gleis' – über die Kante endet es am Prellbock), dazu die Gleis-Rampe an Fuß und Oberkante
-function drawRailBed(cx, cy, z, x, y, t, armsIn = null) {             // armsIn: Gleis auf dem Deck einer Brücke (160b, bkRailArms)
-  const arms = armsIn || railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t);
+// lagen (160c E1): Teil von h | v | d | o einer Gleisbrücke übers Wasser (bkDrawLagen) – h hintere Pfähle, v vordere Pfähle, d Deck, Gleis und
+// jedes Geländer außer dem vorderen eines geraden Felds, o dieses vordere Geländer (Kurve/T/X: alles in d bis E2). Ohne lagen der alte Ablauf
+function drawRailBed(cx, cy, z, x, y, t, armsIn = null, lagen = null) {   // armsIn: Gleis auf dem Deck einer Brücke (160b, bkRailArms)
+  const arms = armsIn || railArms(x, y), segs = railSegments(arms, t), lk = railLookOf(t), br = !!(t && t.bridge), on = l => !lagen || lagen.includes(l);
+  const vorn = (dir, s) => s * (dir[0] - dir[1]) > 0;                       // Außennormale s·(−dir_v, dir_u) zeigt nach vorn (n_u + n_v > 0)
+  const dirOf = sg => { const a = sg[0], b = sg[sg.length - 1], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1; return [(b[0] - a[0]) / l, (b[1] - a[1]) / l]; };
+  const one = segs.length === 1 && !roadCurve(arms);                        // gerade, Ende, Einzelfeld: das vordere Geländer allein (o)
   const L = ([u, v]) => [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z];
   const stroke = (paths, col, w) => {
     g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round';
@@ -669,14 +674,19 @@ function drawRailBed(cx, cy, z, x, y, t, armsIn = null) {             // armsIn:
     for (const p of paths) p.forEach((q, i) => { const s = L(q); i ? g.lineTo(s[0], s[1]) : g.moveTo(s[0], s[1]); });
     g.stroke();
   };
-  if (t && t.bridge) {                               // Holzbrücke: Pfähle ins Wasser, Deck, Geländer
+  if (br && (on('h') || on('v'))) {                  // Holzbrücke: Pfähle ins Wasser (h hinten, v vorn)
     g.fillStyle = C('#6f5238');
     alongPath(segs[0], 0.5, (p, dir) => {
       for (const s of [1, -1]) {
+        if (!on(vorn(dir, s) ? 'v' : 'h')) continue;
         const q = L([p[0] - dir[1] * 0.27 * s, p[1] + dir[0] * 0.27 * s]);
         g.fillRect(q[0] - 1.2 * z, q[1] - 1 * z, 2.4 * z, 7 * z);
       }
     });
+  }
+  if (!on('d') && !on('o')) return;
+  if (on('d')) {
+  if (br) {                                          // Deck
     for (const sh of roadShapes(arms, t, 0.3)) poly(sh.map(L), C('#8a6440'));
     for (const sh of roadShapes(arms, t, 0.27)) poly(sh.map(L), C('#b08a5e'));
   }
@@ -721,14 +731,16 @@ function drawRailBed(cx, cy, z, x, y, t, armsIn = null) {             // armsIn:
     g.strokeStyle = C('#ffffff'); g.lineWidth = 1 * z;
     g.beginPath(); g.moveTo(...lerp(a, b, 0.35)); g.lineTo(...lerp(a, b, 0.65)); g.stroke();
   }
-  if (t && t.bridge) {                               // Geländer an den Seiten, wo kein Nachbar-Gleis anschließt
-    g.strokeStyle = C('#6f5238'); g.lineWidth = 0.9 * z;
-    g.beginPath();
-    for (const seg of segs) for (const s of [1, -1]) {
-      const side = offsetPath(seg, 0.29 * s).map(q => { const p = L(q); return [p[0], p[1] - 3 * z]; });
-      side.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]));
+  }
+  if (br) {                                          // Geländer an beiden Seiten jedes Stücks (auch an Abzweigen; das neue Modell in E2)
+    const parts = [];
+    for (const seg of segs) for (const s of [1, -1]) if (on(one && vorn(dirOf(seg), s) ? 'o' : 'd')) parts.push(offsetPath(seg, 0.29 * s));
+    if (parts.length) {
+      g.strokeStyle = C('#6f5238'); g.lineWidth = 0.9 * z; g.lineCap = 'round'; g.lineJoin = 'round';   // allein (o) erbt es nichts von den Schienen
+      g.beginPath();
+      for (const side of parts) side.forEach((q, i) => { const p = L(q); i ? g.lineTo(p[0], p[1] - 3 * z) : g.moveTo(p[0], p[1] - 3 * z); });
+      g.stroke();
     }
-    g.stroke();
   }
 }
 // Grasbüschel und Blumen am Gleis (Block 109): fest nach Feld und Stelle, damit nichts flackert

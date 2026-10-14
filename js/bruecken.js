@@ -656,6 +656,11 @@ function bkTileArgs(c, px, py, z) {
 // Eine Gruppe von Lagen (BK_GRUPPEN: h | vd | o) eines Brückenfelds – ruhend in tileA, nachgemalt in tileB
 function bkDrawLagen(x, y, px, py, z, gruppe, c = bkAt(x, y)) {           // c: auch eine Wasser-Wegbrücke (wbAt, 160c D1) – bis D2 mit dem alten Maler
   if (!c) return;
+  if (c.rail) {                                                           // Gleisbrücke übers Wasser (160c E1): alter Maler in Lagen – E2: neue Modelle über c.G
+    const t = state.tiles.get(x + ',' + y);
+    if (isGleisBridge(t)) drawRailBed(px, py, z, x, y, t, null, gruppe === 'w' ? null : BK_GRUPPEN[gruppe] || []);
+    return;
+  }
   if (c.water) {                                                          // Wasser-Wegbrücke: neue Modelle (160c D2, wbPaintLage)
     const t = state.tiles.get(x + ',' + y);
     if (!isWegBridge(t)) return;
