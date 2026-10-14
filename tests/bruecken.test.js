@@ -112,5 +112,7 @@ describe('Wegbrücken (Block 66)', () => {
     expect(game("cachedPath({ b: 'schiene' })")).toBe(true);
     game('groundVersion++');
     expect(game("[liveFlatSet().has('8,5'), liveFlatSet().has('6,5')]")).toEqual([false, false]);   // 160c D1: auch nicht live im Boden-Durchgang – ruhend in tileA (wb|)
+    game("state.terra.set('8,7', 'water'); state.tiles.set('8,7', { b: 'schiene', lvl: 1, bridge: true }); groundVersion++");
+    expect(game("liveFlatSet().has('8,7')")).toBe(false);                              // 160c E1d: Gleisbrücke ebenso (gb|)
   });
 });

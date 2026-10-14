@@ -90,7 +90,7 @@ function liveFlatSet() {
   const hs = state.hills && state.hills.size;                           // Anhöhe (Stufe 2): Wege oben zeichnet tileA (hillFlat)
   for (const k of new Set([...state.tiles.keys(), ...COVER.keys()])) {
     const [x, y] = keyXY(k), t = flatAt(x, y);
-    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t) && !isWegBridge(t) && !(hs && state.hills.has(k))) set.add(k);   // Wasser-Wegbrücken: ruhend in tileA (160c D1)
+    if (t && (t.b === 'schiene' || isPbTrack(t.b) || wegUnder(t) != null) && !cachedPath(t) && !isWegBridge(t) && !isGleisBridge(t) && !(hs && state.hills.has(k))) set.add(k);   // Wasser-Weg- und Gleisbrücken: ruhend in tileA (160c D1, E1d)
   }
   LIVE_FLAT = { v: groundVersion, tiles: state.tiles, n: state.tiles.size, set };
   return set;
@@ -1011,7 +1011,8 @@ function spriteEdges(x, y, px, py, z, now) {
 // Brücken und leuchtende Wege weit weg (Block 144): stecken nicht im Boden-Bild (Schiffe fahren unter Brücken, Kristallwege leuchten
 // nachts) und wurden jedes Bild live gezeichnet – in einer Welt mit 107 solchen Feldern ein Gutteil der Rechenzeit, und das
 // GL-Standbild blieb aus. Jetzt je Feld ein Bildchen (Fassung groundVersion; Form hängt an den Nachbarn); das Brückenstück über
-// einem Schiff zeichnet drawBridgeOver weiter live. Wasser-Wegbrücken (160c D1): ruhend ein Bildchen je Feld (Gruppe w, spriteBridge wb|x,y|w)
+// einem Schiff zeichnet drawBridgeOver weiter live. Wasser-Weg- und Gleisbrücken (160c D1, E1d): ruhend ein Bildchen je Feld (Gruppe w,
+// spriteBridge wb|x,y|w bzw. gb|x,y|w) – hier nur noch leuchtende Wege
 // hill: Weg oben auf einer Anhöhe (tileA, angehoben; zugeschnitten wie drawHillFlat)
 function spriteFlat(x, y, px, py, z, t, hill = false) {
   const zs = spriteStep(z), keyOf = lit => `${hill ? 'hflat' : 'flat'}|${x},${y}|${FOG ? 1 : 0}|${lit}`;
@@ -1306,13 +1307,13 @@ function bridgeOverBoat(k, z, now, m = null, gruppen = null) {
 // Kachel-Brücken (Block 107), die ein Boot berührt und über die drawBridgeOver nachmalt – nicht, was schon hinter ihm liegt. Anhöhen-Brücken
 // malt bkDrawMoving (160c C10: seaCross kennt sie, darum hier ausgenommen). Wegbrücken (160c D1e) nur Felder, die in der Maler-Folge schon
 // dran waren (visibleTiles: x + y, dann x): das eigene Feld übernimmt bkDrawMoving, spätere malt ihr tileA ohnehin darüber. Gleisbrücken
-// (160c E1b): das eigene Feld übernimmt bkDrawMoving; spätere bleiben, solange die Brücke im Boden-Durchgang liegt (bis E1d)
+// ebenso (160c E1d: ruhend in tileA)
 function boatUnder(m) {
   const under = [], kx = Math.round(m.px), ky = Math.round(m.py), done = (bx, by) => bx + by < kx + ky || (bx + by === kx + ky && bx < kx);
   for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++) {
     if (!(Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by) && !bkAt(bx, by))) continue;
     const tb = state.tiles.get(bx + ',' + by);
-    if ((!isWegBridge(tb) || done(bx, by)) && !(isGleisBridge(tb) && bx === kx && by === ky)) under.push(bx + ',' + by);
+    if (!(isWegBridge(tb) || isGleisBridge(tb)) || done(bx, by)) under.push(bx + ',' + by);
   }
   return under.length ? under : null;
 }
@@ -1433,7 +1434,7 @@ function planPreview(z) {
   }
   for (const [x, y] of planTiles(plan)) {
     const s = info.states.get(x + ',' + y), up = info.deck && info.deck.has(x + ',' + y), bc = up && (bkAt(x, y) || (info.bkGhost && info.bkGhost.get(x + ',' + y)));   // Weg aufs Deck einer Brücke (Block 160; neue: Geist, 160c C9): Raute oben
-    const wc = !up && DECK_MARKS && !bkAt(x, y) ? wbAt(x, y) || (PLAN_WB_GHOST && PLAN_WB_GHOST.get(x + ',' + y)) || null : null;   // Wasserbrücke (160c D1c; Geist D3h): Raute auf ihrem Deck
+    const wc = !up && DECK_MARKS && !bkAt(x, y) ? wbAt(x, y) || gbAt(x, y) || (PLAN_WB_GHOST && PLAN_WB_GHOST.get(x + ',' + y)) || null : null;   // Gleisbrücke (E1d): Höhe 0   // Wasserbrücke (160c D1c; Geist D3h): Raute auf ihrem Deck
     const hOf = up ? (bc ? (u, v) => bkH(bc.b, bc.i + (bc.b.ax ? v : u)) : () => HILL_H) : wc ? (u, v) => wegDeckH(wc, wc.ax ? v : u) : null;
     const draw = () => { if (s === 'ok') dia(x, y, 'rgba(255,255,255,0.55)', info.err ? '#e8913a' : '#2f9f55', hOf);
       else if (s === 'same') dia(x, y, 'rgba(255,255,255,0.25)', null, hOf);
@@ -1652,7 +1653,7 @@ function worldGround(V, z, now, glPlay) {
     const x = visible[i], y = visible[i + 1], t = flatAt(x, y);
     if (!t || (t.b !== 'schiene' && !isPbTrack(t.b) && wegUnder(t) == null) || (groundCached && cachedPath(t))) continue;
     if (hs && state.hills.has(x + ',' + y)) continue;
-    if (isWegBridge(t)) continue;                                       // Wasser-Wegbrücken (160c D1): ruhend in tileA, in Maler-Reihenfolge (wie die Anhöhen-Brücken)
+    if (isWegBridge(t) || isGleisBridge(t)) continue;                   // Wasser-Weg- und Gleisbrücken (160c D1, E1d): ruhend in tileA, in Maler-Reihenfolge (wie die Anhöhen-Brücken)
     FOG = !ownedTile(x, y);
     if (!(SPRITES_ON && spriteFlat(x, y, visible[i + 2], visible[i + 3], z, t))) {   // weit weg als Bildchen (Block 144: Brücken, leuchtende Wege)
       if (GLPASS) { GL.stats.miss++; glLive(visible[i + 2], visible[i + 3], TW * z, (TH + 60) * z, TW * z, (TH + 70) * z, () => drawFlat(visible[i + 2], visible[i + 3], z, x, y, t)); }
@@ -1700,7 +1701,7 @@ function render(now) {
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   const glPlay = GL.frame && GL.cacheMode === 'play';                     // Standbild: Boden, Tiefe kommen gemerkt (Block 144)
   const visRange = worldGround(V, z, now, glPlay);
-  if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, Gleisbrücken/leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern
+  if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern (Gleisbrücken seit 160c E1d in den Feldern)
   FOG = false;
   if (!groundCached) {
     g.save();
@@ -1717,7 +1718,7 @@ function render(now) {
   hillGap = null;                                                        // Vorschau „Treppe in die Anhöhe“ (hills.js): gesetzt unten im Bauen-Zweig
   let preview = null;
   const outline = (ax, ay, w, h, ok) => {
-    const wc = w === 1 && h === 1 && DECK_MARKS && !bkAt(ax, ay) ? wbAt(ax, ay) : null;
+    const wc = w === 1 && h === 1 && DECK_MARKS && !bkAt(ax, ay) ? wbAt(ax, ay) || gbAt(ax, ay) : null;
     if (wc) {                                                            // Wasserbrücke (160c D1c): Rahmen auf dem Deck, nach ihm gezeichnet – eingerückt wie die
       const P = (u, v) => { const p = toScreen(ax + u, ay + v); p.y -= wegDeckH(wc, wc.ax ? v : u) * z; return p; };   // Plan-Rauten: das nächste Feld malt sonst über die äußere Strichhälfte
       const ring = [[-0.44, -0.44], [0.44, -0.44], [0.44, 0.44], [-0.44, 0.44]].flatMap(([u0, v0], j, cs) => { const [u1, v1] = cs[(j + 1) % 4]; return [0, 1, 2, 3].map(q => P(u0 + (u1 - u0) * q / 4, v0 + (v1 - v0) * q / 4)); });
@@ -2051,8 +2052,8 @@ function render(now) {
       // Belegung veraltet (Objekt weg, ohne recalc)? Dann wie ein leeres Feld zeichnen und danach neu rechnen
       const a0 = COVER.get(k), t = a0 && state.tiles.get(a0), a = t ? a0 : null;
       const bc = bkOn() ? bkAt(x, y) : null;                               // Brücke darüber (160c B2): ruhend hier in tileA
-      const wc = isWegBridge(state.tiles.get(k)) ? wbAt(x, y) : null, bw = bc || wc;   // Wasser-Wegbrücke (160c D1): ebenso, mit ihrem Brückenfeld
-      const wbUnder = bc && wc ? () => bkGroup(x, y, px, py, z, ['w'], wc) : null;   // alte Daten: unter einem Anhöhen-Deck – nur die Brücke (Deko, Rauten malt das Deck)
+      const t0 = state.tiles.get(k), wc = isWegBridge(t0) ? wbAt(x, y) : null, gc = !wc && isGleisBridge(t0) ? gbAt(x, y) : null, bw = bc || wc || gc;   // Wasser-Weg- (160c D1) und Gleisbrücke (E1d): ebenso, mit ihrem Brückenfeld
+      const wu = wc || gc, wbUnder = bc && wu ? () => bkGroup(x, y, px, py, z, ['w'], wu) : null;   // alte Daten: unter einem Anhöhen-Deck – nur die Brücke (Deko, Rauten malt das Deck)
       let bkDone = !bw;
       if (wc && night > 0.15) WB_GLOW0.set(k, glows.length);              // Lichter davor: auf ihrem Deck neu stanzen (wbRelight)
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
@@ -2133,7 +2134,10 @@ function render(now) {
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
             if (oLift && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
-            if (bw && (t.b === 'weg' || t.b === 'schiene')) { bkDrawStill(x, y, px, py, z, now, bw, t.b !== 'weg' ? drawIt : wbUnder); bkDone = true; }   // Brücke: Deko hinter/unter/vor dem Deck
+            if (bw && (t.b === 'weg' || t.b === 'schiene')) {                 // Brücke: Deko hinter/unter/vor dem Deck
+              const under = t.b === 'weg' ? wbUnder : bc ? (gc ? () => { wbUnder(); drawIt(); } : drawIt) : null;   // Gleisbrücke allein (E1d): ein Bildchen w (under null)
+              bkDrawStill(x, y, px, py, z, now, bw, under); if (gc && !bc && t.cross) drawIt(); bkDone = true;   // alte Daten mit Übergang: Schranken wie bisher über dem Deck
+            }
             else {
             if (hasD) drawSmall(k, px, py, z, now, x, y, SLOTS_BACK);
             if (t.b !== 'weg') drawIt();

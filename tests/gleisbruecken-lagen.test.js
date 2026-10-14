@@ -123,11 +123,11 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
     expect(game(`(() => { WB_GLOW0.set('4,5', 3); try { wbRelight(4, 5, 0, 0, 1, gbAt(4, 5)); return 'ok'; } finally { WB_GLOW0.clear(); } })()`)).toBe('ok');
     expect(game(`(() => { const d = new Set(); bkDrawMoving(4, 5, 0, 0, 1, 1e6, gbAt(4, 5), [{ boat: true, ship: 'dampfer', px: 4, py: 5, du: 0, dv: 1 }, { critter: true, kind: 'schmetterling', h: 8, px: 4, py: 5 }], null, d); return d.size; })()`)).toBe(2);
   });
-  it('nichts Sichtbares in E1a: weit weg weiter flat|-Bildchen, kein gb|', () => {
+  it('weit weg seit E1d: Bildchen gb|x,y|w statt flat| (in E1a noch flat|)', () => {
     bau('gerade', 0, 0);
     const keys = game(`(() => { const ks = []; const gs = getSprite; getSprite = (k, ...a) => { ks.push(k); return gs(k, ...a); };
       try { cam = state.cam; cam.z = 0.6; const p = iso(4, 5); cam.x = p.x; cam.y = p.y; spriteForce = true; render(1e6); render(1e6); } finally { getSprite = gs; spriteForce = null; } return ks; })()`);
-    expect(keys.some(k => k.startsWith('flat|4,5'))).toBe(true);
-    expect(keys.some(k => k.startsWith('gb|'))).toBe(false);
+    expect(keys.some(k => k.startsWith('flat|4,5'))).toBe(false);
+    expect(keys.some(k => k === 'gb|4,5|w|0')).toBe(true);
   });
 });

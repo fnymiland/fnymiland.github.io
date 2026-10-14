@@ -114,7 +114,7 @@ describe('Schiffe unter Anhöhen-Brücken (160c C10)', () => {
     expect(game(`[bkMoverClass({ boat: true, px: 45, py: 40.45 }, ${c}, 45, 40), bkMoverClass({ boat: true, px: 45, py: 40.2 }, ${c}, 45, 40), bkMoverClass({ boat: true, px: 45, py: 39.55 }, ${c}, 45, 40)]`)).toEqual(['F', 'U', 'U']);
     expect(game('boatUnder({ boat: true, px: 45, py: 39.4 })')).toBe(null);
     game("state.tiles.set('35,45', { b: 'schiene', lvl: 1, bridge: true }); state.tiles.set('34,45', { b: 'schiene', lvl: 1, bridge: true }); state.tiles.set('36,45', { b: 'schiene', lvl: 1, bridge: true }); recalc()");
-    expect(game('boatUnder({ boat: true, px: 35, py: 44.4 })')).toEqual(['35,45']);
+    expect(game('boatUnder({ boat: true, px: 35, py: 44.4 })')).toBe(null);              // 35,45 kommt später – sein tileA malt darüber (160c E1d)
   });
   it('Anleger auf einem Brückenfeld: der Seeweg verlässt es quer, nie längs unter dem Deck (Gegenlesen C10)', () => {
     riegel();
@@ -125,14 +125,18 @@ describe('Schiffe unter Anhöhen-Brücken (160c C10)', () => {
       expect(near, JSON.stringify([a, b])).toEqual([]);
     }
   });
-  it('Boot auf einem Anhöhen-Brückenfeld neben einer Wasserbrücken-Kachel: die Kachel wird über den Rumpf nachgemalt', () => {
+  it('Boot auf einem Anhöhen-Brückenfeld neben einer Gleisbrücke übers Wasser: deren Feld malt danach (tileA, 160c E1d) über den Rumpf', () => {
     riegel();
     game("for (const x of [44, 45, 46]) state.tiles.set(x + ',41', { b: 'schiene', lvl: 1, bridge: true }); recalc()");
-    const r = game(`(() => { const out = [], bo = drawBridgeOver; drawBridgeOver = (k, ...a) => { out.push(k); return bo(k, ...a); };
+    const r = game(`(() => { const out = [], bo = drawBridgeOver, dm = drawMover, bl = bkDrawLagen; drawBridgeOver = (k, ...a) => { out.push('dbo ' + k); return bo(k, ...a); };
+      drawMover = (m, ...a) => { if (m.boat) out.push('boot'); return dm(m, ...a); };
+      bkDrawLagen = (x, y, px, py, z, gr, c) => { if (c && c.rail) out.push(gr + 'g ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
       const S0 = shipMovers; shipMovers = () => [{ boat: true, ship: 'motor', px: 45, py: 40.45, du: 0, dv: 1 }];
-      try { cam = state.cam; cam.z = 2; const p = iso(45, 40); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); } finally { drawBridgeOver = bo; shipMovers = S0; }
+      try { cam = state.cam; cam.z = 2; const p = iso(45, 40); cam.x = p.x; cam.y = p.y - HILL_H; spriteForce = false; render(1e6); } finally { drawBridgeOver = bo; drawMover = dm; bkDrawLagen = bl; shipMovers = S0; }
       return out; })()`);
-    expect(r).toContain('45,41');
+    expect(r.indexOf('wg 45,41')).toBeGreaterThan(r.indexOf('boot'));
+    expect(r.indexOf('boot')).toBeGreaterThan(-1);
+    expect(r).not.toContain('dbo 45,41');
   });
 });
 
