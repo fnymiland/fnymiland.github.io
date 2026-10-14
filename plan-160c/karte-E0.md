@@ -17,3 +17,5 @@ Werkzeug: `tools/gleisbruecken-entwurf.js` (Bilder `tools/vorschau/gleis-*.png`;
   - Überarbeitet: Fachwerk durchgehend von Ende zu Ende, Felder je Halbfeld im Weltraster, Schräge nur am Ufer/offenen Ende, Pfeiler alle
     3 Felder darunter; Stein-Brüstung läuft nur am offenen Ende aus. Kurve/T/X als **Eckpodest**: eckiges Deck aus Mittelquadrat und Armen,
     Geländer/Fachwerk/Brüstung gerade weiter bis in die Ecke, Pfähle an den Ecken, Stein ein Pfeiler bis ins Wasser. (Ersetzt Kurvenstück A/B.)
+
+**Abnahme:** Nutzer 14.10.2026 „passt so, mach weiter“ (überarbeitete Fassung mit Eckpodest).
