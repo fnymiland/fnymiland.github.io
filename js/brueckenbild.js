@@ -299,7 +299,8 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
   draw(B);
   if (rB) bkRedo(x, y, px, py, z, now, rB, ['h'], G && G.under, false, c);
-  draw(U);
+  if (c.rail) { const gc = glowCells; glowCells = new Map(); try { draw(U); } finally { glowCells = gc; } }   // Gleis (160c E1b): Licht unter dem Deck zählt für sich – sonst nähme es dem Scheinwerfer oben die Stärke (Block 84d)
+  else draw(U);
   if (c.rail) for (const m of U) if (m.boat && m.under) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Gleis (160c E1b, K10): frühere Felder vor dem eigenen h + vd – sonst deckten sie den Zug darauf
   if (rBU) bkRedo(x, y, px, py, z, now, rBU, vd, null, false, c);
   if (rUb) bkRedo(x, y, px, py, z, now, rUb, vd, null, true, c);

@@ -98,4 +98,22 @@ describe('Gleisbrücken übers Wasser: Bewegtes (160c E1b)', () => {
     expect([...seq].sort((a, b) => a - b)).toEqual(seq);
     expect(rest.slice(at('fig zug 4,25')).filter(e => /^(hg|vdg) 4,24/.test(e))).toEqual([]);   // das frühere Feld deckt den eigenen Zug nie
   });
+  it('nachts Zug und Boot darunter: das Bootslicht unter dem Deck nimmt dem Zugscheinwerfer nicht die Stärke (eigenes Licht-Raster, Block 84d)', () => {
+    szene();
+    const r = game(`(() => {
+      const out = [], pg = punchGlow, dm = drawMover, na = nightAt, gh = gameHour, sm = syncMovers, S0 = shipMovers, tc = trainCars; let wer = null;
+      const tr = { kind: TRAIN_KIND.regio, col: 0, model: 'regio', route: {} };
+      trainCars = () => [{ train: tr, px: 4.5, py: 5, du: 1, dv: 0, i: 0, n: 1, len: TRAIN_KIND.regio.len, d: null, mv: 1 }];   // wie im Prüfbild: Scheinwerfer und
+      shipMovers = () => [{ boat: true, ship: 'dampfer', px: 5, py: 5, du: 0, dv: 1 }];                                                // Bootslicht in einer 24-px-Zelle syncMovers = () => {}; nightAt = () => NIGHT_MAX; gameHour = () => 23;
+      drawMover = (m, ...a) => { const w0 = wer; wer = m.train ? 'zug' : m.boat ? 'boot' : wer; try { return dm(m, ...a); } finally { wer = w0; } };
+      punchGlow = (q, rr, tint, part) => { if (!part && wer) { const gx = (q[0][0] + q[2][0]) / 2, gy = (q[0][1] + q[2][1]) / 2, cell = (Math.round(gx / 24) + 4096) * 8192 + Math.round(gy / 24) + 4096, seen = glowCells.get(cell);
+        out.push(wer + ' ' + (seen ? seen.size : 0)); } return pg(q, rr, tint, part); };
+      try { cam = state.cam; cam.z = 2; const p = iso(4, 5); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
+      finally { punchGlow = pg; drawMover = dm; nightAt = na; gameHour = gh; syncMovers = sm; shipMovers = S0; trainCars = tc; spriteForce = null; }
+      return out; })()`);
+    const zug = r.filter(e => e.startsWith('zug'));
+    expect(zug.length).toBeGreaterThan(0);
+    expect(zug.every(e => e === 'zug 0'), JSON.stringify(r)).toBe(true);                // jedes Zuglicht als erstes in seiner Zelle (volle Stärke)
+    expect(r.some(e => e.startsWith('boot'))).toBe(true);
+  });
 });
