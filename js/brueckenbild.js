@@ -278,7 +278,7 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bk
 // Wasserbrücke (160c D1e): Leute immer auf dem Deck (ihre Höhe hat drawFigure schon, wegBridgeLift), über dem Boot flach h + vd wie früher
 // die ganze Brücke, nie blass. over(m): Boot unter früheren Brückenfeldern (render.js boatOver, samt Block 112)
 function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = null) {
-  if (c.water) { const on = ms.filter(m => m.fur && !m.critter); if (on.length) { figs = (figs || []).concat(on); ms = ms.filter(m => !on.includes(m)); } }
+  if (c.water) { const on = ms.filter(m => (m.fur && !m.critter) || (c.rail && m.train)); if (on.length) { figs = (figs || []).concat(on); ms = ms.filter(m => !on.includes(m)); } }   // Gleisbrücke (160c E1b): Wagen auf dem Deck
   const fade = !c.water && bkFadeNow(x, y), up = c.water ? 0 : HILL_H * z, vd = c.water && !c.A ? ['h', 'vd'] : ['vd'];
   const k = x + ',' + y, draw = list => { FOG = false; for (const m of list) { moverLive(m, z, now); drawnMovers.add(m); } };
   const glas = bkTileBAt(c) && !(c.water && WB_GLASS_LATE && WB_GLASS_LATE.has(k));   // Wasser: über einem Boot malt das Boot das Glas (160c D3h)
@@ -307,7 +307,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   const rF = figs ? bkMoverRect(figs, z) : null;                         // oben auf dem Deck: eine Anhöhe höher (Wasser: Höhe steckt im Rahmen); darunter/dahinter nur der eigene Rahmen (C7, L6)
   if (rF) rF[1] -= up;
   const rs = [rBU, rUb, rF].filter(Boolean), rAll = rs.length ? rs.reduce((a, b) => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])]) : null;   // o: über alles Bewegte
-  if (rAll) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front, false, c);
+  if (rAll && !(c.rail && !gbHasO(x, y))) bkRedo(x, y, px, py, z, now, rAll, ['o'], G && G.front, false, c);   // Gleis-Kurve/T/X: kein o (leere Zelle sparen)
   glass('t2');
   draw(F);
   for (const m of ms) if (m.boat && m.under) { if (over) over(m); else for (const bk of m.under) bridgeOverBoat(bk, z, now, m); }   // Wasserbrücken-Kachel davor (160c C10)

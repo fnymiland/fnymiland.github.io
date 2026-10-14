@@ -660,6 +660,8 @@ const RAIL_LOOK = {
 const railLookOf = t => RAIL_LOOK[(DECO_LOOKS.schiene.forms[(t && t.form) || 0] || {}).id] || RAIL_LOOK.schotter;   // auch auf Brücken (Block 109b)
 // Arme (Kurve, Weiche, Prellbock) nur über railArms (rules.js): mit Anhöhen nur zu Nachbarn, mit denen das Gleis zusammenhängt (levelLink
 // 'gleis' – über die Kante endet es am Prellbock), dazu die Gleis-Rampe an Fuß und Oberkante
+// Hat ein Gleisbrückenfeld ein eigenes vorderes Geländer (Lage o)? Gerade, Ende, Einzelfeld ja; Kurve, T, X nein (alles in d bis E2, karte-E1 K4)
+function gbHasO(x, y) { const arms = railArms(x, y); return railSegments(arms, state.tiles.get(x + ',' + y)).length === 1 && !roadCurve(arms); }
 // lagen (160c E1): Teil von h | v | d | o einer Gleisbrücke übers Wasser (bkDrawLagen) – h hintere Pfähle, v vordere Pfähle, d Deck, Gleis und
 // jedes Geländer außer dem vorderen eines geraden Felds, o dieses vordere Geländer (Kurve/T/X: alles in d bis E2). Ohne lagen der alte Ablauf
 function drawRailBed(cx, cy, z, x, y, t, armsIn = null, lagen = null) {   // armsIn: Gleis auf dem Deck einer Brücke (160b, bkRailArms)

@@ -67,13 +67,13 @@ describe('Wasser-Wegbrücken: Bewegtes (160c D1e)', () => {
     expect(log.filter(e => e.startsWith('fig'))).toEqual(['fig boot', 'fig F']);
     expect(nach(log, 'fig boot').filter(e => / 6,4/.test(e)).every(e => e.endsWith(' fog'))).toBe(true);
   });
-  it('boatUnder: eigenes Feld nie (bkDrawMoving), spätere nie (ihr tileA malt darüber), frühere schon; Gleisbrücken wie bisher', () => {
+  it('boatUnder: eigenes Feld nie (bkDrawMoving), spätere nie (ihr tileA malt darüber), frühere schon; Gleisbrücken: eigenes Feld nie (160c E1b), spätere bis E1d', () => {
     szene();
     expect(game('boatUnder({ boat: true, px: 15, py: 10.3 })')).toBe(null);
     expect(game('boatUnder({ boat: true, px: 15, py: 9.4 })')).toBe(null);
     expect(game('boatUnder({ boat: true, px: 25.6, py: 4.4 })')).toEqual(['25,5']);
     game("for (const x of [44, 45, 46]) state.tiles.set(x + ',30', { b: 'schiene', lvl: 1, bridge: true }); for (let y = 28; y <= 32; y++) for (let x = 42; x <= 48; x++) state.terra.set(x + ',' + y, 'water'); terrainCache.clear(); waterChanged(); recalc()");
-    expect(game('boatUnder({ boat: true, px: 45, py: 29.6 })')).toEqual(['45,30']);       // Schiene: auch das spätere Feld
+    expect(game('boatUnder({ boat: true, px: 45, py: 29.6 })')).toBe(null);               // Schiene: 45,30 ist das eigene Feld – bkDrawMoving (160c E1b)
   });
   it('Boot auf seinem Brückenfeld unter einem früheren: das frühere im Bootsrahmen nachgemalt, Leute darauf wieder obenauf (Block 112)', () => {
     szene();

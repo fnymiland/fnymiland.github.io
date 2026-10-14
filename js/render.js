@@ -918,14 +918,15 @@ function drawMover(m, z, now) {
 }
 // Brückenstück (Schiene, Wegbrücke) über einem Schiff noch einmal zeichnen (Block 107): Brücken gehören zum Boden und lägen
 // sonst unter allem, was darauf fährt. Wegbrücke (160c D1e): ihre Lagen im Rahmen rect (Boot) – flach alles, Bogen nur das Vordere
-// (durch die Öffnung sieht man das Boot); bkRedo öffnet eigene GL-Zellen
-function drawBridgeOver(k, z, now, rect = null) {
+// (durch die Öffnung sieht man das Boot); bkRedo öffnet eigene GL-Zellen. Gleisbrücke (160c E1b): ihre Lagen, gruppen = nur diese
+function drawBridgeOver(k, z, now, rect = null, gruppen = null) {
   const t = state.tiles.get(k);
   if (!t) return;
-  const [x, y] = keyXY(k), p = toScreen(x, y);
-  if (t.b === 'schiene') return drawRailBed(p.x, p.y, z, x, y, t);
+  const [x, y] = keyXY(k), p = toScreen(x, y), R = rect || [-1e9, -1e9, 1e9, 1e9], gc = gbAt(x, y);
+  if (gc) { const gr = (gruppen || ['h', 'vd', 'o']).filter(l => l !== 'o' || gbHasO(x, y)); if (gr.length) bkRedo(x, y, p.x, p.y, z, now, R, gr, null, false, gc); return; }
+  if (t.b === 'schiene') return drawRailBed(p.x, p.y, z, x, y, t);        // Schiene auf Wasser ohne Kennung (nur Tests): wie bisher
   const c = wbAt(x, y);
-  if (c) bkRedo(x, y, p.x, p.y, z, now, rect || [-1e9, -1e9, 1e9, 1e9], c.A ? ['vd', 'o'] : ['h', 'vd', 'o'], null, false, c);
+  if (c) bkRedo(x, y, p.x, p.y, z, now, R, gruppen || (c.A ? ['vd', 'o'] : ['h', 'vd', 'o']), null, false, c);
 }
 // gnd (Anhöhe, Block 157j): samt flachen Teilen und den Schatten darauf (oben gibt es sie nicht im Boden-Bild); cut: an der Kante zugeschnitten
 // (hillCutOf) – beides je Platz, nie geteilt
@@ -1294,20 +1295,25 @@ function tileSprite(kind, x, y, px, py, z) {
 // Anhöhe (Block 157): Vorschau am Boden (Rahmen, Rauten, Kanten), die auf einem Anhöhen-Feld liegt, erst nach dessen Bildchen zeichnen
 // (tileA, angehoben) – vorher gezeichnet läge sie darunter. Feld → [Zeichnen wie am Boden]; null ohne Anhöhen (dann sofort, wie bisher)
 let HILL_MARKS = null, DECK_MARKS = null;                                // DECK_MARKS (160c): Plan-Rauten auf dem Deck einer Brücke – nach dem Deck (bkDrawStill)
-// Kachel-Brücke k über einem Boot m nachmalen (Block 107; im GL-Bild in einer Zelle). Wegbrücke (160c D1e): nur im Rahmen des Boots
-function bridgeOverBoat(k, z, now, m = null) {
-  if (isWegBridge(state.tiles.get(k))) return drawBridgeOver(k, z, now, m && bkMoverRect([m], z));
+// Kachel-Brücke k über einem Boot m nachmalen (Block 107; im GL-Bild in einer Zelle). Wegbrücke (160c D1e), Gleisbrücke (E1b): nur im Rahmen
+// des Boots, bkRedo öffnet eigene Zellen (nie verschachtelt); gruppen: nur diese Lagen (null = alles über dem Rumpf)
+function bridgeOverBoat(k, z, now, m = null, gruppen = null) {
+  const t = state.tiles.get(k);
+  if (isWegBridge(t) || isGleisBridge(t)) return drawBridgeOver(k, z, now, m && bkMoverRect([m], z), gruppen);
   if (GLPASS) { const bp = toScreen(...keyXY(k)); glLive(bp.x, bp.y, TW * 0.8 * z + 4, 70 * z, TW * 0.8 * z + 4, TH * z + 6, () => drawBridgeOver(k, z, now)); }
   else drawBridgeOver(k, z, now);
 }
 // Kachel-Brücken (Block 107), die ein Boot berührt und über die drawBridgeOver nachmalt – nicht, was schon hinter ihm liegt. Anhöhen-Brücken
 // malt bkDrawMoving (160c C10: seaCross kennt sie, darum hier ausgenommen). Wegbrücken (160c D1e) nur Felder, die in der Maler-Folge schon
-// dran waren (visibleTiles: x + y, dann x): das eigene Feld übernimmt bkDrawMoving, spätere malt ihr tileA ohnehin darüber
+// dran waren (visibleTiles: x + y, dann x): das eigene Feld übernimmt bkDrawMoving, spätere malt ihr tileA ohnehin darüber. Gleisbrücken
+// (160c E1b): das eigene Feld übernimmt bkDrawMoving; spätere bleiben, solange die Brücke im Boden-Durchgang liegt (bis E1d)
 function boatUnder(m) {
   const under = [], kx = Math.round(m.px), ky = Math.round(m.py), done = (bx, by) => bx + by < kx + ky || (bx + by === kx + ky && bx < kx);
-  for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++)
-    if (Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by) && !bkAt(bx, by)
-      && (!isWegBridge(state.tiles.get(bx + ',' + by)) || done(bx, by))) under.push(bx + ',' + by);
+  for (let by = Math.floor(m.py) - 1; by <= Math.ceil(m.py) + 1; by++) for (let bx = Math.floor(m.px) - 1; bx <= Math.ceil(m.px) + 1; bx++) {
+    if (!(Math.abs(bx - m.px) < 0.8 && Math.abs(by - m.py) < 0.8 && bx + by >= m.px + m.py - 0.3 && seaCross(bx, by) && !bkAt(bx, by))) continue;
+    const tb = state.tiles.get(bx + ',' + by);
+    if ((!isWegBridge(tb) || done(bx, by)) && !(isGleisBridge(tb) && bx === kx && by === ky)) under.push(bx + ',' + by);
+  }
   return under.length ? under : null;
 }
 // Kristall-Wasserbrücke über einem Boot (160c D3h, Nutzer 13.10.2026: lösen): das Glas t1/t2 eines früheren Felds, unter dem ein Boot fährt, malt
@@ -2197,7 +2203,7 @@ function render(now) {
       const hl = HILLS && state.hills.get(k), lift = hl ? (hl.h || 1) * HILL_H * z : 0;   // Anhöhe (Block 157): Bewegtes dieses Felds oben angehoben
       py -= lift;
       const ms0 = byTile.get(k), ms = ms0 && hl && hillGapHas(k) ? ms0.filter(m => !(m.hillw && m.st === 'top')) : ms0;   // Vorschau Treppe/Rampe in die Anhöhe: oben ist dort nichts
-      const bc = (bkOn() ? bkAt(x, y) : null) || (ms || WB_LIVE.set.has(k) ? wbAt(x, y) : null), late = [];   // Brücke (160c B2; Wasser D1e): Bewegtes des Felds zeichnet bkDrawMoving (Folge je Querlage)
+      const bc = (bkOn() ? bkAt(x, y) : null) || (ms || WB_LIVE.set.has(k) ? wbAt(x, y) : null) || (ms ? gbAt(x, y) : null), late = [];   // Gleisbrücke (160c E1b)   // Brücke (160c B2; Wasser D1e): Bewegtes des Felds zeichnet bkDrawMoving (Folge je Querlage)
       if (ms) {
         FOG = false;
         ms.sort((a, b) => (a.px + a.py) - (b.px + b.py));
