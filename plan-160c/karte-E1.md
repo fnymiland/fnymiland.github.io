@@ -681,3 +681,15 @@ Pläne und Karten:
 15. **Prüfbilder ohne Nachbarn:** bruecken/og/bauland haben hinter Gleisbrücken nichts Hohes. `tools/gleis-e1-pruefung.js` baut selbst (fester Zufall, vor dem Vorher-Bild auf HEAD): Wald und Haus hinter der geraden Brücke (9,34/10,34), großes Haus links (6,36) für den Schatten, Hecke/Zaun auf den hinteren Kanten von 8,35 und 10,36; dasselbe an Leiter (8,39) und Kurve 22,36.
 16. **Leistungs-Wächter E1·0:** Szenen „bruecken-gleis …“/„bruecken-gleis-tx …“ in einem **eigenen** `it`, Attrappen nur dort (finally zurück); `measure(world, night, z, at, name)` trennt Szenenname und Datei. Bestehende „bruecken …“-Schlüssel dürfen sich nicht ändern (echter Zug bleibt gemessen).
 17. **Leeres `o` an Kurve/T/X/Leiter:** `bkRedo(['o'])` öffnet trotzdem eine GL-Zelle und clip/restore. Hilfsfunktion `gbHasO(x, y)` (= `segs.length === 1 && !roadCurve(arms)`, dieselbe wie in drawRailBed); `bkDrawMoving` überspringt `o` für `c.rail && !gbHasO`. Test: Zug auf 22,36 und auf der Leiter → kein `bkRedo(['o'])`. E2 passt die Hilfsfunktion an.
+
+## 7. Ergebnis (14.10.2026)
+
+- Commits: E1·0 8d099bb, E1a 497d208, E1b 373152c/52dfb83/4a0e5d1, E1c dfce609, E1d d1781dd, E1e 397e420.
+- Prüfbilder (tools/gleis-e1-pruefung.js, Δ 0 zwischen zwei Läufen auf demselben Code): E1a Δ 0; E1b nah nur o über dem Wagenrand und
+  Zugschatten nicht mehr auf dem Geländer – gefunden: Bootslicht unter dem Deck nahm dem Scheinwerfer die Stärke (Block 84d), behoben mit
+  eigenem Licht-Raster; E1c nur Kantenglättung; E1d nah: Boot und Bugwelle richtig unter späteren Feldern, weit nur Kantenpunkte; E1e: Schein
+  auf dem Deck wieder da, Geländer/Pfähle im Schein dunkel (§6 Nr. 13).
+- Leistung: Wächter-Szenen bruecken-gleis/-tx +1–3 % bzw. weniger; „bruecken Nacht Zoom 1.2“ 445 → 968 geo = Tageswert (Boden-Vormalen,
+  vorher nachts durch prewarm des flat-Bildchens unterdrückt). bauland 433 Felder, ruckeln.js 1280×800 alt/neu: gleich oder schneller.
+- Fragen §5 (beide „so lassen“ empfohlen) dem Nutzer mit dem Bericht gestellt.
+

@@ -349,6 +349,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
     Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: Bogen vd nachmalen (mit Stütze an der Anfangskante Schnitt `WB_START_CUT`); frühere Felder über
     dem Boot `boatUnder` (nur schon gezeichnete) → `bridgeOverBoat(k, z, now, m)` im Bootsrahmen, danach Block 112 (`boatOver`).
+    **Gleisbrücken übers Wasser** (160c E1, plan-160c/karte-E1.md): Brückenfeld `gbAt(x, y)` (`rail: true`, Höhe 0, `G` erst ab E2; Merker
+    `gbCache` auch je Feldzahl), ruhend in tileA als Gruppe `w` (Bildchen `gb|x,y|w`), nie im Boden-Durchgang. `drawRailBed(…, lagen)`: h/v
+    Pfähle hinten/vorn, d Deck + Gleis + alle Geländer außer dem vorderen gerader Felder, o dieses (`gbHasO`; Kurve/T/X ohne o bis E2).
+    Nachmalen immer live (kein Bildchen je Lage). Wagen über Feldkanten in Stücken (`gbCarPieces`: Schnitt ≥ 0,01 vor den Enden, sonst gälte
+    die Stirn als Schnitt; schräg ganz ins späteste Feld; Portal: `gbLatestUnder`), Schatten je Stück auf seiner Feldraute. Wagen auf dem
+    Deck vor o; Boote darunter: frühere Felder direkt nach dem Boot (`gbBoatOver`: h+vd, Block 112 ohne Stücke früherer Felder, o), Licht
+    von Booten unter dem Deck in eigenem `glowCells` (sonst nähme es dem Scheinwerfer die Stärke, Block 84d). Nachtschein früherer Lichter:
+    `gbRelight` nur auf der Deckfläche, Lichter über `glowsIn` (Raster der Mitten), beim Nachmalen nur mit vd.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
