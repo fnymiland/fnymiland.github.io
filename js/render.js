@@ -1322,8 +1322,10 @@ function gbBoatOver(m, bk, z, now, byTile, drawnMovers) {
   const [bx, by] = keyXY(bk), re = [];
   bridgeOverBoat(bk, z, now, m, ['h', 'vd']);
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) for (const o of byTile.get((bx + dx) + ',' + (by + dy)) || [])
-    if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1) { moverLive(o, z, now); re.push(o); }
+    if (o !== m && !o.boat && !o.ship && !o.fish && !o.cargo && drawnMovers.has(o) && Math.abs(o.px - bx) < 1 && Math.abs(o.py - by) < 1
+      && !(o.gbK && trainTileOrder(...keyXY(o.gbK)) < trainTileOrder(bx, by))) { moverLive(o, z, now); re.push(o); }   // Wagenstück eines früheren Felds (E1c): liegt nicht unter bk
   drawBridgeOver(bk, z, now, bkMoverRect([m, ...re], z), ['o']);
+  for (const o of re) if (o.gbK && o.gbK !== bk) drawBridgeOver(o.gbK, z, now, bkMoverRect([o], z), ['o']);   // sein eigenes vorderes Geländer wieder darüber
 }
 // Kristall-Wasserbrücke über einem Boot (160c D3h, Nutzer 13.10.2026: lösen): das Glas t1/t2 eines früheren Felds, unter dem ein Boot fährt, malt
 // nicht sein tileB, sondern das Boot danach (boatOver) – sonst läge das Boot vor der Scheibe. Je Bild: Feld → schon gemalt
@@ -1890,6 +1892,11 @@ function render(now) {
         const ps = brCarPiecesUnder(m);
         if (ps) { for (const p of ps) { if (!byTile.has(p.k)) byTile.set(p.k, []); byTile.get(p.k).push(p.m); } continue; }
       }
+      if (!tc && !m.deck && !(m.hill && m.hill.up) && gbAny()) {         // Gleisbrücke übers Wasser (160c E1c): Stücke je Feld – das Deck späterer Felder deckt sonst das Wagenende
+        const ps = gbCarPieces(m);
+        if (ps) { for (const p of ps) { const pk = HALL.has(p.k) ? hallFirst.get(COVER.get(p.k)) || p.k : p.k; if (!byTile.has(pk)) byTile.set(pk, []); byTile.get(pk).push(p.m); } continue; }   // Halle: ihr erstes Feld (wie oben)
+      }
+      if (tc && gbAny()) { const D = gbLatestUnder(m); if (D && trainTileOrder(D[0], D[1]) > trainTileOrder(...keyXY(k))) k = D.join(); }   // Portal (160c E1c): späteres Brückenfeld unter dem Wagen
     }
     if (m.boat) m.under = boatUnder(m);                                    // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)
     if (m.boat && m.under) for (const bk of m.under) { const c = wbAt(...keyXY(bk)); if (c && bkGlasAt(c)) { WB_GLASS_LATE = WB_GLASS_LATE || new Map(); WB_GLASS_LATE.set(bk, (WB_GLASS_LATE.get(bk) || 0) + 1); } }   // Kristall: Glas erst nach dem letzten Boot darunter (160c D3h)

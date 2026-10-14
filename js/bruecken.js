@@ -629,6 +629,34 @@ function brCarPiecesUnder(m) {
   }
   return out;
 }
+// Wagen an einer Gleisbrücke übers Wasser (160c E1c): Stücke je Feld an den Feldkanten längs der Fahrt – sonst malte das Deck eines späteren
+// Felds übers Wagenende. Schnitte mindestens 0,01 vor den Enden (sonst gälte die Stirn als Schnitt: keine Fenster, kein Scheinwerfer, karte-E1
+// §6 Nr. 11). Schräg (Kurve): ganz ins späteste Feld unter Mitte und Ecken (wie trainOnHills). → [{ k, m }] oder null; Stücke tragen gbK
+// (Schatten je Feld, Block 112)
+function gbCarCells(m) {
+  const la = m.len / 2, wb = trainHalfW(m.train || {}), E = 1e-3;
+  return [[0, 0], [-la + E, -wb + E], [la - E, -wb + E], [la - E, wb - E], [-la + E, wb - E]].map(([a, b]) => [Math.round(m.px + m.du * a - m.dv * b), Math.round(m.py + m.dv * a + m.du * b)]);
+}
+function gbLatestUnder(m) {                                                // spätestes Feld unter dem Wagen, wenn eins davon eine Gleisbrücke ist
+  const cs = gbCarCells(m);
+  if (!cs.some(([x, y]) => isGleisBridge(state.tiles.get(x + ',' + y)))) return null;
+  return cs.reduce((p, q) => trainTileOrder(q[0], q[1]) > trainTileOrder(p[0], p[1]) ? q : p);
+}
+function gbCarPieces(m) {
+  const la = m.len / 2;
+  if (Math.abs(m.du) > 1e-3 && Math.abs(m.dv) > 1e-3) { const D = gbLatestUnder(m); return D ? [{ k: D.join(), m }] : null; }
+  if (![0, -la, la].some(a => isGleisBridge(state.tiles.get(Math.round(m.px + m.du * a) + ',' + Math.round(m.py + m.dv * a))))) return null;
+  const alongX = Math.abs(m.du) > 1e-3, ca = alongX ? m.du : m.dv, wc = alongX ? m.px : m.py, cuts = [-la, la];
+  for (let h = Math.floor(wc - la) + 0.5; h < wc + la + 1; h++) { const a = (h - wc) / ca; if (a > -la + 0.01 && a < la - 0.01) cuts.push(a); }
+  if (cuts.length === 2) return null;                                      // ganz in einem Feld
+  cuts.sort((p, q) => p - q);
+  const out = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const lo = cuts[i], hi = cuts[i + 1], am = (lo + hi) / 2, k = Math.round(m.px + m.du * am) + ',' + Math.round(m.py + m.dv * am);
+    out.push({ k, m: { ...m, cut: [lo, hi], portal: null, gbK: k } });
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Zeichnen
