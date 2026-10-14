@@ -118,3 +118,47 @@ describe('Gleisbrücken übers Wasser: Bewegtes (160c E1b)', () => {
     expect(r.some(e => e.startsWith('boot'))).toBe(true);
   });
 });
+
+// 160c E1e: Nachtlicht früherer Felder auf dem Gleisdeck – vor E1d lag die Brücke im Boden-Durchgang unter allen Lichtern; jetzt malt ihr tileA
+// danach und deckt den Schein zu. Nah in 2D auf dem Deck noch einmal stanzen (nur der Schein, halo; nur Lichter von vorher; Pfähle und Geländer
+// bleiben dunkel, karte-E1 §6 Nr. 13); beim Nachmalen nur, wenn vd dabei ist (sonst stanzte o über die Wagen)
+describe('Gleisbrücken übers Wasser: Nachtlicht früherer Felder (160c E1e)', () => {
+  const nacht = (licht, cars = '[]', boats = '[]') => game(`(() => {
+    const LICHT = ${licht};
+    const log = [], pg = punchGlow, bl = bkDrawLagen, na = nightAt, gh = gameHour, sm = syncMovers, de = drawEdgesAt, tc = trainCars, S0 = shipMovers;
+    // Licht auf dem Uferfeld davor (1,5) an seinem echten Bildschirmort (die Test-Zeichenfläche kennt kein translate)
+    drawEdgesAt = (x, y, ...r) => { if (LICHT && x === 1 && y === 5) { const p = toScreen(1.55, 5); punchGlow([[p.x - 2, p.y - 30], [p.x + 2, p.y - 30], [p.x + 2, p.y - 26], [p.x - 2, p.y - 26]], 34 * cam.z, null); } return de(x, y, ...r); };
+    nightAt = () => NIGHT_MAX; gameHour = () => 23; syncMovers = () => {};
+    const tr = { kind: TRAIN_KIND.regio, col: 0, model: 'regio', route: {} };
+    trainCars = () => ${cars}.map((c, i) => ({ train: tr, i, n: 1, len: TRAIN_KIND.regio.len, d: null, mv: 1, ...c }));
+    shipMovers = () => ${boats}.map(b => ({ boat: true, ship: 'dampfer', du: 0, dv: 1, ...b }));
+    bkDrawLagen = (x, y, px, py, z, gr, c) => { log.push(gr + (c && c.rail ? 'g' : '') + ' ' + x + ',' + y); return bl(x, y, px, py, z, gr, c); };
+    punchGlow = (q, r, tint, part) => { log.push('licht ' + (part || '-') + ' ' + (WB_RELIGHT ? 'neu ' + WB_RELIGHT : 'erst')); return pg(q, r, tint, part); };
+    let n = 0;
+    try { cam = state.cam; cam.z = 3; const p = iso(2, 5); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); n = glows.filter(L => Math.abs(L.r - 34 * cam.z) < 1e-9).length; }
+    finally { punchGlow = pg; bkDrawLagen = bl; nightAt = na; gameHour = gh; syncMovers = sm; drawEdgesAt = de; trainCars = tc; shipMovers = S0; spriteForce = null; }
+    return [log, n]; })()`);
+  it('Laterne am Ufer vor dem ersten Feld: nach wg auf dem Deck neu gestanzt (halo, nie pane), kein Doppel; ohne Laterne nichts', () => {
+    szene();
+    const [log, n] = nacht(true), iW = log.indexOf('wg 2,5'), re = log.filter(e => e.startsWith('licht') && e.includes('neu'));
+    expect(iW).toBeGreaterThan(-1);
+    expect(re.length).toBeGreaterThan(0);
+    expect(log.findIndex(e => e.startsWith('licht') && e.includes('neu 2,5'))).toBeGreaterThan(iW);
+    expect(re.every(e => e.startsWith('licht halo neu '))).toBe(true);
+    expect(n).toBe(1);
+    const [log0] = nacht(false);
+    expect(log0.some(e => e.includes('neu'))).toBe(false);
+  });
+  it('Zug auf dem Feld neben der Laterne: o wird nachgemalt, aber nicht neu gestanzt (sonst Schein über dem Wagen); Boot darunter: nach vd neu', () => {
+    szene();
+    let [log] = nacht(true, "[{ px: 2, py: 5, du: 1, dv: 0 }]");
+    const iO = log.lastIndexOf('og 2,5');
+    expect(iO).toBeGreaterThan(log.indexOf('wg 2,5'));
+    expect(log.slice(iO + 1).some(e => e === 'licht halo neu 2,5')).toBe(false);
+    [log] = nacht(true, '[]', "[{ px: 2, py: 5 }]");
+    const iV = log.lastIndexOf('vdg 2,5');
+    expect(iV).toBeGreaterThan(log.indexOf('wg 2,5'));
+    expect(log.slice(iV + 1).some(e => e === 'licht halo neu 2,5')).toBe(true);
+  });
+});
+

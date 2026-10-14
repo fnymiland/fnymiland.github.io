@@ -168,8 +168,8 @@ const WB_GLOW0 = new Map();                                                // Fe
 let WB_RELIGHT = null;                                                     // Feld, dessen Deck gerade neu gestanzt wird (Tests)
 function wbRelight(x, y, px, py, z, c) {
   const n0 = WB_GLOW0.get(c.k);
-  if (c.rail) return;                                                      // Gleisbrücke (160c E1): eigener Zweig in E1e
   if (!n0 || GLPASS || SPRITE_PAINT || !(night > 0.15) || !isLive()) return;
+  if (c.rail) return gbRelight(x, y, px, py, z, c, n0);
   const ax = c.ax, lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s))));
   const sB = lat(-1) ? -0.5 : -c.W, sF = lat(1) ? 0.5 : c.W, AS = c.A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];
   const P = (a, s, h) => { const [u, v] = ax ? [s, a] : [a, s]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
@@ -191,6 +191,47 @@ function wbRelight(x, y, px, py, z, c) {
     g.clip();
     for (const L of hits) punchGlow(L.q, L.r, L.tint, 'halo');
   } finally { g.restore(); WB_RELIGHT = null; glowCells = gc; GLOW_MUTE = gm; glows.length = n1; }   // kein Doppel in der Lichterliste
+}
+// Gleisbrücke übers Wasser (160c E1e): wie wbRelight, nur die Deckfläche (roadShapes 0,3, Höhe 0) – Pfähle und Geländer bleiben im Schein
+// früherer Lichter dunkel (karte-E1 §6 Nr. 13). Lichter über ein Raster ihrer Mitten (glowsIn): sonst Felder × Lichter (bauland nachts, §6 Nr. 14)
+function gbRelight(x, y, px, py, z, c, n0) {
+  const sh = roadShapes(railArms(x, y), state.tiles.get(c.k), 0.3), L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+  const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = sh.flat().map(q => S(L(q)));
+  if (!pts.length) return;
+  const X0 = Math.min(...pts.map(p => p[0])), X1 = Math.max(...pts.map(p => p[0])), Y0 = Math.min(...pts.map(p => p[1])), Y1 = Math.max(...pts.map(p => p[1]));
+  const hits = glowsIn(X0, Y0, X1, Y1, n0);
+  if (!hits.length) return;
+  const n1 = glows.length, gc = glowCells, gm = GLOW_MUTE;
+  g.save(); WB_RELIGHT = c.k; glowCells = new Map(); GLOW_MUTE = false;
+  try {
+    g.beginPath();
+    for (const ring of sh) { ring.forEach((q, i) => { const p = L(q); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); g.closePath(); }
+    g.clip();
+    for (const Lg of hits) punchGlow(Lg.q, Lg.r, Lg.tint, 'halo');
+  } finally { g.restore(); WB_RELIGHT = null; glowCells = gc; GLOW_MUTE = gm; glows.length = n1; }   // kein Doppel in der Lichterliste
+}
+// Lichter (glows) der ersten n0, deren Schein den Rahmen [X0, X1] × [Y0, Y1] (Bildschirmpunkte) trifft – über ein Raster der Lichtmitten (64 px),
+// je Bild neu und nur nachgeführt (glows wächst; was Bildchen und Neu-Stanzen kurz dazulegen, nehmen sie wieder weg)
+const GLOW_GRID = { frame: -1, n: 0, cells: new Map() };
+function glowsIn(X0, Y0, X1, Y1, n0) {
+  const G = GLOW_GRID, C = 64;
+  if (G.frame !== frameNo || G.n > glows.length) { G.frame = frameNo; G.n = 0; G.cells.clear(); }
+  for (; G.n < glows.length; G.n++) {
+    const L = glows[G.n], gx = (L.q[0][0] + L.q[2][0]) / 2, gy = (L.q[0][1] + L.q[2][1]) / 2;
+    for (let cy = Math.floor((gy - L.r) / C); cy <= Math.floor((gy + L.r) / C); cy++) for (let cx = Math.floor((gx - L.r) / C); cx <= Math.floor((gx + L.r) / C); cx++) {
+      const key = cx * 65536 + cy; let a = G.cells.get(key); if (!a) G.cells.set(key, a = []); a.push(G.n);
+    }
+  }
+  const seen = new Set(), out = [];
+  for (let cy = Math.floor(Y0 / C); cy <= Math.floor(Y1 / C); cy++) for (let cx = Math.floor(X0 / C); cx <= Math.floor(X1 / C); cx++) {
+    for (const i of G.cells.get(cx * 65536 + cy) || []) {
+      if (i >= n0 || seen.has(i)) continue;
+      seen.add(i);
+      const L = glows[i], gx = (L.q[0][0] + L.q[2][0]) / 2, gy = (L.q[0][1] + L.q[2][1]) / 2;
+      if (gx + L.r > X0 && gx - L.r < X1 && gy + L.r > Y0 && gy - L.r < Y1) out.push([i, L]);
+    }
+  }
+  return out.sort((a, b) => a[0] - b[0]).map(p => p[1]);                   // in der Reihenfolge der Liste (wie vorher)
 }
 // Geist einer Brücke, die eine Weg-/Gleislinie mitbaut (160c C9): alle Felder der gedachten Brücke (bkPlanNew) in Feldfolge auf EINE
 // Zwischenleinwand (sonst lägen die Feldüberlappungen ext doppelt), 65 %, ohne Licht – gemalt beim letzten Feld (render.js), danach die
@@ -268,7 +309,7 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bk
     const fog = FOG, gm = GLOW_MUTE;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
     FOG = !ownedTile(x, y); GLOW_MUTE = gm || 'pane';                      // nur Scheiben neu stanzen, nie einen zweiten Schein (gesperrt bleibt gesperrt)
-    try { for (const gr of gruppen) if (!(SPRITES_ON && !(c0 && c0.rail) && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); if (c0 && c0.water) wbRelight(x, y, px, py, z, c0); }
+    try { for (const gr of gruppen) if (!(SPRITES_ON && !(c0 && c0.rail) && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); if (c0 && c0.water && !(c0.rail && !gruppen.includes('vd'))) wbRelight(x, y, px, py, z, c0); }   // Gleis: nur mit dem Deck (o allein: kein Schein über die Wagen)
     finally { GLOW_MUTE = gm; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();

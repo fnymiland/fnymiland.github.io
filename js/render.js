@@ -2055,7 +2055,7 @@ function render(now) {
       const t0 = state.tiles.get(k), wc = isWegBridge(t0) ? wbAt(x, y) : null, gc = !wc && isGleisBridge(t0) ? gbAt(x, y) : null, bw = bc || wc || gc;   // Wasser-Weg- (160c D1) und Gleisbrücke (E1d): ebenso, mit ihrem Brückenfeld
       const wu = wc || gc, wbUnder = bc && wu ? () => bkGroup(x, y, px, py, z, ['w'], wu) : null;   // alte Daten: unter einem Anhöhen-Deck – nur die Brücke (Deko, Rauten malt das Deck)
       let bkDone = !bw;
-      if (wc && night > 0.15) WB_GLOW0.set(k, glows.length);              // Lichter davor: auf ihrem Deck neu stanzen (wbRelight)
+      if ((wc || gc) && night > 0.15) WB_GLOW0.set(k, glows.length);     // Lichter davor: auf ihrem Deck neu stanzen (wbRelight; Gleis 160c E1e)
       // Anhöhe (Block 157): erst die Anhöhe (mit dem unveränderten py), dann alles auf dem Feld um lift angehoben. Unter großer Deko zeichnen
       // die Streifen der Deko die ganze Anhöhe darunter (sonst schnitte die Anhöhe eines späteren Felds in einen früheren Streifen)
       const hl = HILLS && state.hills.get(k), gap = hl && hillGapHas(k), lift = hl && !gap ? (hl.h || 1) * HILL_H * z : 0;   // = hillLift(x, y) × z (k schon da)
