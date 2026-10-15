@@ -135,4 +135,16 @@ describe('Fußgängerbrücke am Übergang: Fenster und Geld (160c F1c)', () => {
     const alt = game("copyClone({ kind: 'tile', t: { b: 'schiene', cross: true, foot: true, footPaid: 'kristall', style: 'sand' } }).t");
     expect(game(`brLook(${JSON.stringify(alt)}, 'uebergang')`)).toMatchObject({ licht: 'an', lichtGratis: true });   // alter Kristall: Licht bleibt ohne Aufpreis
   });
+  it('Linien: nicht auf die Kante zwischen Übergang und Wegfeld (dort liegt die Rampe); steht dort schon eine, wird keine Brücke daraus (luecken B9)', () => {
+    const k = game('edgeBetween(9, 8, 9, 9)'), side = game('edgeBetween(9, 8, 10, 8)');
+    expect(game(`edgeError('zaun', '${k}')`)).toBe(null);                   // Schranken: wie bisher
+    game("setCrossing(9, 8, true, 'holz')");
+    expect(game(`edgeError('zaun', '${k}')`)).toBe(game('ARCH_RAMP_EDGE'));
+    expect(game(`edgeError('zaun', '${game('edgeBetween(9, 8, 9, 7)')}')`)).toBe(game('ARCH_RAMP_EDGE'));
+    expect(game(`edgeError('zaun', '${side}')`)).not.toBe(game('ARCH_RAMP_EDGE'));   // längs der Schiene: neben der Brücke
+    game("setCrossing(9, 8, false)");
+    game(`state.edges.set('${k}', { b: 'zaun' })`);
+    expect(game("setCrossing(9, 8, true)")).toBe(false);
+    expect(t().foot).toBeFalsy();
+  });
 });

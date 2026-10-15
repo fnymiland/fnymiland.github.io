@@ -711,6 +711,24 @@ function gbCarPieces(m) {
   }
   return out;
 }
+// Fußgängerbrücke am Übergang (160c F1e, Karte Übergang R7): ein Wagen über der Feldkante des Übergangs in Stücken je Feld, wie die
+// Gleisbrücke – das Heck unter dem Bogen kommt vor die vordere Bogenhälfte, die Spitze davor danach. Übergänge liegen nur auf geraden Gleisen
+const isArchTile = t => !!t && t.b === 'schiene' && !!t.cross && !!t.foot;
+function ubCarPieces(m) {
+  if (Math.abs(m.du) > 1e-3 && Math.abs(m.dv) > 1e-3) return null;
+  const la = m.len / 2;
+  if (![-la, 0, la].some(a => isArchTile(state.tiles.get(Math.round(m.px + m.du * a) + ',' + Math.round(m.py + m.dv * a))))) return null;
+  const alongX = Math.abs(m.du) > 1e-3, ca = alongX ? m.du : m.dv, wc = alongX ? m.px : m.py, cuts = [-la, la];
+  for (let h = Math.floor(wc - la) + 0.5; h < wc + la + 1; h++) { const a = (h - wc) / ca; if (a > -la + 0.01 && a < la - 0.01) cuts.push(a); }
+  if (cuts.length === 2) return null;                                      // ganz in einem Feld
+  cuts.sort((p, q) => p - q);
+  const out = [];
+  for (let i = 0; i + 1 < cuts.length; i++) {
+    const lo = cuts[i], hi = cuts[i + 1], am = (lo + hi) / 2, k = Math.round(m.px + m.du * am) + ',' + Math.round(m.py + m.dv * am);
+    out.push({ k, m: { ...m, cut: [lo, hi], portal: null, gbK: k } });
+  }
+  return out;
+}
 
 // ---------------------------------------------------------------------------
 // Zeichnen

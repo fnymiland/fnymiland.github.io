@@ -1323,7 +1323,19 @@ function edgeError(b, k) {
   if (p && p === q) return 'Nicht mitten durch ein Gebäude';
   if (edgeEndPoints(k).some(([vx, vy]) => postAt(vx, vy))) return 'An der Ecke steht schon etwas';   // Eckpunkt-Deko (Block 65)
   if (bkEdgeSupport(k)) return 'Hier steht eine Stütze der Brücke';                 // 160c C1
+  if (archRampEdge(k)) return ARCH_RAMP_EDGE;                                        // 160c F1e (luecken B9): nicht mitten in die Rampe
   return null;
+}
+// Kante zwischen einem Übergang mit Fußgängerbrücke und seinem Wegfeld (längs des Wegs): dort steigt die Rampe (archH(0,5) ≈ 14)
+const ARCH_RAMP_EDGE = 'Hier liegt die Rampe der Fußgängerbrücke';
+function archRampEdge(k) {
+  const [p, q] = edgeTiles(k);
+  for (const [a, b] of [[p, q], [q, p]]) {
+    if (!isArchTile(state.tiles.get(a[0] + ',' + a[1]))) continue;
+    const { n } = crossingAxes(a[0], a[1]);
+    if (Math.abs(b[0] - a[0]) === n[0] && Math.abs(b[1] - a[1]) === n[1]) return true;
+  }
+  return false;
 }
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
 const edgesAt = (vx, vy) => ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].filter(o => state.edges.has(o));
@@ -2366,7 +2378,11 @@ function crossError(b, x, y, noCost) {
 function setCrossing(x, y, foot, style) {
   const t = state.tiles.get(x + ',' + y);
   if (!isCrossing(t)) return false;
-  if (foot && !t.foot) { const e = bkAt(x, y) ? 'Unter der Brücke ist kein Platz für die Fußgängerbrücke' : archHillError(x, y); if (e) { fail(e); return false; } }   // Anhöhen (hills.js): nie über die Kante; Brücke darüber (Block 160)
+  if (foot && !t.foot) { const e = bkAt(x, y) ? 'Unter der Brücke ist kein Platz für die Fußgängerbrücke' : archHillError(x, y); if (e) { fail(e); return false; } }
+  if (foot && !t.foot) {                                                 // Zaun, Hecke, Tor auf der Kante zum Wegfeld stünde mitten in der Rampe (160c F1e)
+    const { n } = crossingAxes(x, y);
+    if ([-1, 1].some(s => state.edges.has(edgeBetween(x, y, x + s * n[0], y + s * n[1])))) { fail('Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe'); return false; }
+  }   // Anhöhen (hills.js): nie über die Kante; Brücke darüber (Block 160)
   if (foot) {                                                            // 160c F1c: Material (holz/stahl/stein/kristall; altes 'weg' = Holz mit Belag)
     const had = footPaidOf(t), mat = style === 'weg' ? 'holz' : BR_MAT[style] && Object.prototype.hasOwnProperty.call(BR_MAT, style) ? style : null;
     if (!had) {                                                          // neu bauen: im neuen Format (brm + brp, footPaid als Rückfall)

@@ -53,3 +53,32 @@ describe('Bewohner auf der Fußgängerbrücke zwischen Deck und vorderem Geländ
     expect(lagen([[-0.9, 0, 'unten'], [0, 0.9, 'unten'], [-0.9, 0.5, 'oben'], [0.5, 0.9, 'oben']])).toEqual(lagen([[-0.9, 0, 'alles'], [0, 0.9, 'alles']]));
   });
 });
+
+// 160c F1e (Karte Übergang R7): ein Wagen über der Feldkante des Übergangs in Stücken je Feld (wie die Gleisbrücke, gbCarPieces) – sonst malte
+// ein Wagen, dessen Mitte schon auf dem Gleisfeld davor liegt, sein Heck über die vordere Wange; liegt die Mitte unter dem Bogen, deckte die
+// vordere Hälfte die Spitze, die schon davor ist
+const car = (px, py, du, dv) => `({ train: { kind: TRAIN_KIND.regio, col: 0, model: 'regio', route: {} }, px: ${px}, py: ${py}, du: ${du}, dv: ${dv}, i: 0, n: 1, len: TRAIN_KIND.regio.len, d: null, mv: 1 })`;
+describe('Wagen unter der Fußgängerbrücke in Stücken je Feld (160c F1e)', () => {
+  it('über der Kante: zwei Stücke, je Feld eines; ganz in einem Feld oder ohne Brücke: keine', () => {
+    bau(0);
+    expect(game(`ubCarPieces(${car(8.75, 8, 1, 0)}).map(p => [p.k, p.m.cut.map(v => +v.toFixed(2))])`)).toEqual([['8,8', [-0.39, -0.25]], ['9,8', [-0.25, 0.39]]]);
+    expect(game(`ubCarPieces(${car(8, 8, 1, 0)})`)).toBe(null);
+    expect(game(`ubCarPieces(${car(10.6, 8, 1, 0)})`)).toBe(null);
+    bau(1);
+    expect(game(`ubCarPieces(${car(8, 7.4, 0, 1)}).map(p => p.k)`)).toEqual(['8,7', '8,8']);
+  });
+  it('im Bild: das Stück unter dem Bogen vor dessen vorderer Hälfte, das Stück davor danach', () => {
+    bau(0);
+    const log = game(`(() => { const log = [], tc = trainCars, sm = syncMovers, body = drawTrainCarBody, da = drawArch;
+      trainCars = () => [${car(8.75, 8, 1, 0)}]; syncMovers = () => {};
+      drawTrainCarBody = (c, ...a) => { log.push('wagen ' + (c.gbK || '-')); return body(c, ...a); };
+      drawArch = (P, z, b0, b1, L, x, y, d, n, t, teil = 'alles') => { log.push(teil + ' ' + b0 + '..' + b1); return da(P, z, b0, b1, L, x, y, d, n, t, teil); };
+      try { cam = state.cam; cam.z = 2; const p = iso(8, 8); cam.x = p.x; cam.y = p.y - 30; resetDrawCaches(); spriteForce = false; render(1e6); }
+      finally { trainCars = tc; syncMovers = sm; drawTrainCarBody = body; drawArch = da; spriteForce = null; }
+      return log; })()`);
+    const i = e => log.indexOf(e);
+    expect(log.filter(e => e.startsWith('wagen'))).toEqual(['wagen 8,8', 'wagen 9,8']);
+    expect(i('wagen 8,8')).toBeLessThan(i('unten 0..0.9'));
+    expect(i('wagen 9,8')).toBeGreaterThan(i('oben -0.9..0.5'));
+  });
+});

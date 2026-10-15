@@ -1897,6 +1897,10 @@ function render(now) {
         const ps = gbCarPieces(m);
         if (ps) { for (const p of ps) { const pk = HALL.has(p.k) ? hallFirst.get(COVER.get(p.k)) || p.k : p.k; if (!byTile.has(pk)) byTile.set(pk, []); byTile.get(pk).push(p.m); } continue; }   // Halle: ihr erstes Feld (wie oben)
       }
+      if (!tc && !m.deck && !(m.hill && m.hill.up) && archFrontTiles().length) {   // Fußgängerbrücke am Übergang (160c F1e): Stücke je Feld
+        const ps = ubCarPieces(m);
+        if (ps) { for (const p of ps) { if (!byTile.has(p.k)) byTile.set(p.k, []); byTile.get(p.k).push(p.m); } continue; }
+      }
       if (tc && gbAny()) { const D = gbLatestUnder(m); if (D && trainTileOrder(D[0], D[1]) > trainTileOrder(...keyXY(k))) k = D.join(); }   // Portal (160c E1c): späteres Brückenfeld unter dem Wagen
     }
     if (m.boat) m.under = boatUnder(m);                                    // unter einer Brücke: Brückenstück danach noch einmal drüber (Block 107)

@@ -361,6 +361,15 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Maler `gbPaintLage` (Striche je Farbe in einem Pfad – Leistung). Setzer `brSet({ at: 'gleis', x, y })` → `gbSet` für `brRailSpan`
     (kein Rückfallfeld nötig: ältere Fassungen erstatten fest `BRIDGE`, alle neuen Preise liegen je Rohstoff darüber). Neue Brücke ohne
     Nachbarn: Leiste (`gbLeisteLook`), Holz ohne Farbe bleibt im alten Format. Licht: Strom `'G' + Anker`.
+    **Fußgängerbrücke am Übergang** (160c F1, Entwurf F0 `tools/uebergang-entwurf.js`): Form aus Block 148 bleibt (`archH`, Spanne ±0,9, Rampen
+    ab 0,46 massiv, `ARCH_CLEAR`), Maler `ubArch` (brueckenbild.js) mit den Bausteinen der Wegbrücken; Bogen über dem Gleis `ubRi` (über den
+    Wagen ≥ 16). Aussehen nur über `brLook(t, 'uebergang')`; Setzer `brSet({ at: 'uebergang', x, y })` → `ubSet`, Bau über `setCrossing`
+    (neues Format: `footPaid` nur Rückfall holz/stein/kristall – nie ein neuer Wert, Metall = holz + `brm`). `brl: 'nein'` = ohne Licht, wo der
+    Rückfall kristall Licht ohne Aufpreis hieße; der alte Kristall leuchtet ohne Strom, sonst Strom `'U' + Feld`. Zeichnen in Teilen: `unten`
+    hinten jetzt, vorn nach den Zügen (`afterMovers`), `oben` (vorderes Geländer) nach den Bewohnern – bis b 0,5 auf dem Übergangsfeld, den
+    Rest auf dem Wegfeld davor (`archRails`, im GL-Bild live über `archFrontTiles`). Auf Anhöhen zieht `hillPre` die Felder davor vor; Wagen über
+    der Feldkante in Stücken (`ubCarPieces`); keine Linie auf der Rampenkante (`archRampEdge`). Striche gebündelt (`brBatched`: wer `g === ctx`
+    vergleicht, nimmt `gNow()`).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
