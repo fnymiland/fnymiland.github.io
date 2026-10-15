@@ -600,6 +600,7 @@ function collectAlbum() {
     if (t.b === 'weg' || isCrossing(t)) add('weg:' + (t.style || 'sand'));
     if (t.weg != null) add('weg:' + t.weg);                        // Weg unter einem Marktstand
   }
+  if (bkOn()) for (const b of state.bruecken.values()) if (Array.isArray(b.weg)) for (const w of b.weg) if (typeof w === 'string' && w) add('weg:' + w);   // Belag auf dem Deck einer Brücke zwischen Anhöhen (160c G1)
   for (const ds of state.decos.values()) for (const d of ds) if (d) add('b:' + baseOf(d.b));
   for (const [, , d] of roofTopAll()) add('b:' + baseOf(d.b));
   for (const v of state.terra.values()) { if (v === 'park') add('b:parkrasen'); else if (v === 'fz') add('b:fzboden'); }   // Boden zählt auch (Block 84c)

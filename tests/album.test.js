@@ -61,3 +61,23 @@ describe('Album-Belohnungen bleiben', () => {
     expect(game("load().legacy.has('denkmal')")).toBe(true);
   });
 });
+
+describe('Album: Belag auf dem Deck (160c G1)', () => {
+  it('Weg auf einer Brücke zwischen Anhöhen zählt (auch zusammengesetzte Stile, Lücken nie)', () => {
+    game("state.album = new Set(); state.bruecken.set('14,12', { ax: 0, n: 3, art: 'holz', weg: ['konfetti', null, 'm:holz:treibholz'] }); collectAlbum()");
+    expect(game("state.album.has('weg:konfetti')")).toBe(true);
+    expect(game("state.album.has('weg:m:holz:treibholz')")).toBe(true);
+    expect(game("[...state.album].some(k => /^weg:(null|undefined|)$/.test(k))")).toBe(false);
+  });
+  it('eine Seite wird auch über das Deck voll – die Belohnung kommt', () => {
+    game("state.album = new Set(albumKeys(ALBUM.find(p => p.id === 'wege')).filter(k => k !== 'weg:konfetti')); state.legacy = new Set()");
+    expect(game("albumDone('wege')")).toBe(false);
+    game("state.bruecken.set('14,12', { ax: 0, n: 2, art: 'holz', weg: ['konfetti', 'konfetti'] }); collectAlbum()");
+    expect(game("albumDone('wege')")).toBe(true);
+    expect(game("state.legacy.has(ALBUM.find(p => p.id === 'wege').reward)")).toBe(true);
+  });
+  it('übers Wasser und am Übergang zählt der Belag der Kachel (t.style) – egal, ob das Deck ihn zeigt', () => {
+    game("state.album = new Set(); state.tiles.set('30,30', { b: 'weg', lvl: 1, style: 'klinker', bridge: true, brm: 'holz', brb: 'muster' }); state.tiles.set('31,30', { b: 'schiene', lvl: 1, cross: true, style: 'fisch', foot: true, footPaid: 'weg' }); collectAlbum()");
+    expect(game("['weg:klinker', 'weg:fisch'].map(k => state.album.has(k))")).toEqual([true, true]);
+  });
+});
