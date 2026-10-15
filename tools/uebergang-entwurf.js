@@ -205,7 +205,7 @@
     MATS.forEach((mat, i) => { const cx = 8 + (i % 2) * 16, cy = 8 + Math.floor(i / 2) * 16; hill(cx - 1, cy - 1, cx + 6, cy + 6); uebergang(cx, cy, i % 2, ALT[mat] || 'holz', { mat, licht: 'an', zacken: mat === 'kristall' }); pos.push([mat, i % 2, cx, cy]); });
     [['holz', 5], ['stahl', 2]].forEach(([mat, col], i) => { const cx = 8 + i * 16, cy = 40; uebergang(cx, cy, 0, 'holz', { mat, col }); pos.push([mat + '|' + col, 0, cx, cy]); });
     fertig();
-    pos.forEach(([m, ax, cx, cy], i) => leute(cx, cy, ax, i * 2 + 1));
+    pos.forEach(([m, ax, cx, cy], i) => { if (!state.hills.has(cx + ',' + cy)) leute(cx, cy, ax, i * 2 + 1); });   // oben laufen Anhöhen-Bewohner (hillWalkers) – die einfachen stünden falsch
     const shots = [];
     for (const [m, ax, cx, cy] of pos) {
       const [mat, col] = m.split('|'), up = state.hills.has(cx + ',' + cy) ? 12 + HILL_H : 12;

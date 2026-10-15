@@ -882,7 +882,7 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
   if (t.foot) {
     // hintere Hälfte jetzt, vordere erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
     const lk = archLook(t);
-    if (PASS === 'object') {
+    if (PASS === 'object' && !hillLateK) {                             // Nachmalen auf dem späteren Nachbarn (hillLate, 160c F1): ganz, auf seine Raute zugeschnitten
       drawArch(P, z, -ARCH_SPAN, 0, lk, x, y, d, n);
       const m = g.getTransform();
       afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN, lk, x, y, d, n); g.restore(); });

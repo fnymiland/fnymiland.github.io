@@ -2133,7 +2133,7 @@ function render(now) {
           if (t.b === 'lm' && ownedTile(ax, ay)) { FOG = false; labels.push([ax, ay, t.lm]); }
           if (!big) {
             const hasD = state.decos.has(k);                                 // die meisten Felder haben keine Dekos (Block 124)
-            if (oLift && t.b !== 'weg' && t.b !== 'schiene' && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j)
+            if (oLift && t.b !== 'weg' && (t.b !== 'schiene' || (t.cross && t.foot)) && t.b !== 'bergportal') hillPre(ax, ay, 1, 1, x + y, x, drawIt);   // Felder davor vorziehen (157j); Fußgängerbrücke am Übergang: ihre Rampe liegt auf dem Wegfeld davor (160c F1)
             if (bw && (t.b === 'weg' || t.b === 'schiene')) {                 // Brücke: Deko hinter/unter/vor dem Deck
               const under = t.b === 'weg' ? wbUnder : bc ? (gc ? () => { wbUnder(); drawIt(); } : drawIt) : null;   // Gleisbrücke allein (E1d): ein Bildchen w (under null)
               bkDrawStill(x, y, px, py, z, now, bw, under); if (gc && !bc && t.cross) drawIt(); bkDone = true;   // alte Daten mit Übergang: Schranken wie bisher über dem Deck
