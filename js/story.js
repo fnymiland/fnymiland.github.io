@@ -511,14 +511,14 @@ const ACHIEVEMENTS = [
   { id: 'glasvillen', icon: '💎', name: 'Glasvillen', tiers: [1, 10], value: () => tileCount(t => t.b === 'haus' && t.lvl >= 6) },
   { id: 'bahn', icon: '🚆', name: 'Eisenbahn', unit: 'km', tiers: [1, 5, 20, 50], value: () => (tileCount(t => t.b === 'schiene') + bkRailTiles()) * 0.1 },   // auch Gleis auf Brücken (160b)
   { id: 'zuege', icon: '🚉', name: 'Fahrende Züge', tiers: [1, 3, 5], value: () => T.rail.trains },
-  { id: 'bruecken', icon: '🌉', name: 'Brückenfelder', tiers: [10, 50], value: () => tileCount(t => t.bridge) },
+  { id: 'bruecken', icon: '🌉', name: 'Brückenfelder', tiers: [10, 50], value: () => tileCount(t => !!t.bridge || isArchTile(t)) + bkDeckTiles() },   // übers Wasser je Feld, Fußgängerbrücke am Übergang je 1 (ihre Rampen liegen auf Wegfeldern), Deckfelder zwischen Anhöhen (160c G1)
   { id: 'schoen', icon: '🌸', name: 'Schönheit', tiers: [200, 1000, 5000], value: () => T.beauty },
   { id: 'baeume', icon: '🌳', name: 'Bäume gepflanzt', tiers: [25, 100, 500], value: () => decoCount(d => d.b === 'baum') },
   { id: 'deko', icon: '🪴', name: 'Deko aufgestellt', tiers: [50, 250, 1000], value: () => decoCount(() => true) + tileCount(t => ITEMS[t.b].cat === 'deko' && t.b !== 'huegeltreppe' && t.b !== 'huegelrampe') },   // Treppe/Rampe sind keine Deko (Nutzer)
   { id: 'laternen', icon: '🏮', name: 'Laternen', tiers: [3, 10, 22], value: () => lanternCount() },
   { id: 'inseln', icon: '🏝️', name: 'Inseln', tiers: [2, 5, 8], value: () => state.islands.size },
   { id: 'forschung', icon: '💡', name: 'Forschungen', tiers: [5, 15, TECHS.length], value: () => state.techs.size },
-  { id: 'wege', icon: '🛤️', name: 'Wege', unit: 'km', tiers: [1, 5, 20], value: () => tileCount(t => t.b === 'weg') * 0.1 },
+  { id: 'wege', icon: '🛤️', name: 'Wege', unit: 'km', tiers: [1, 5, 20], value: () => (tileCount(t => t.b === 'weg') + bkWegTiles()) * 0.1 },   // auch Weg auf Brücken zwischen Anhöhen (160c G1, wie die Eisenbahn)
   { id: 'land', icon: '🌊', name: 'Land aus dem Meer', unit: 'Felder', tiers: [20, 100, 500],
     value: () => [...state.claimed].filter(k => terrainAt(...keyXY(k)) !== 'water').length },
   { id: 'kunst', icon: '🎨', name: 'Kunstakademie-Stücke', tiers: [5, 20, DESIGN.filter(d => d.price).length], value: () => state.design.size },   // Gratis-Farben kauft man nicht

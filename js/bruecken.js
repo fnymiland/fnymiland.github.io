@@ -574,6 +574,8 @@ function bkArmFrom(x, y, dx, dy) {
 const bkRailAt = c => !!c && !!c.b.gleis && c.b.gleis[c.i] != null;
 const bkRailFull = b => !!b.gleis && b.gleis.length === b.n && b.gleis.every(f => f != null);
 const bkRailTiles = () => (bkOn() ? [...state.bruecken.values()].reduce((s, b) => s + bkRailCount(b), 0) : 0);   // Gleisfelder auf Brücken (Erfolg „Eisenbahn“)
+const bkWegTiles = () => (bkOn() ? [...state.bruecken.values()].reduce((s, b) => s + (Array.isArray(b.weg) ? b.weg.filter(Boolean).length : 0), 0) : 0);   // Wegfelder auf Brücken (Erfolg „Wege“, 160c G1)
+const bkDeckTiles = () => (bkOn() ? [...state.bruecken.values()].reduce((s, b) => s + (Number.isInteger(b.n) && b.n > 0 ? b.n : 0), 0) : 0);   // Deckfelder, leer oder mit Weg/Gleis (Erfolg „Brückenfelder“, 160c G1)
 function bkRailArmFrom(x, y, dx, dy) {                                    // Gleisarm vom Anhöhen-Feld über die Kante aufs Deck (railArmsHill)
   const c = bkAt(x + dx, y + dy);
   if (!c || c.dx !== Math.abs(dx) || c.dy !== Math.abs(dy) || hillLevel(x, y) < 1) return false;

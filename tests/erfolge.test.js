@@ -30,6 +30,23 @@ describe('Erfolge', () => {
     expect(game('state.achieved.bahn')).toBe(1);
   });
 
+  it('Brückenfelder (160c G1): übers Wasser (Weg, Gleis) je Feld, Fußgängerbrücke am Übergang je 1, Deckfelder zwischen Anhöhen – Abriss nimmt keinen Stern', () => {
+    const b0 = game("ACHIEVEMENTS.find(a => a.id === 'bruecken').value()");
+    game("for (let i = 0; i < 3; i++) state.tiles.set((20 + i) + ',30', { b: 'weg', lvl: 1, style: 'sand', bridge: true }); for (let i = 0; i < 2; i++) state.tiles.set((20 + i) + ',32', { b: 'schiene', lvl: 1, bridge: true }); state.tiles.set('20,34', { b: 'schiene', lvl: 1, cross: true, foot: true, footPaid: 'holz' }); state.tiles.set('22,34', { b: 'schiene', lvl: 1, cross: true, footPaid: 'holz' }); state.bruecken.set('14,12', { ax: 0, n: 4, art: 'holz' }); recalc()");
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'bruecken').value()") - b0).toBe(10);   // 3 + 2 + 1 + 4; Schranken (Brücke aus) zählen nicht
+    game('checkAchievements()');
+    expect(game('state.achieved.bruecken')).toBe(1);
+    game("state.bruecken.clear(); state.tiles.delete('20,34'); recalc(); checkAchievements()");
+    expect(game("ACHIEVEMENTS.find(a => a.id === 'bruecken').value()") - b0).toBe(5);
+    expect(game('state.achieved.bruecken')).toBe(1);                       // Sterne sinken nie
+  });
+
+  it('Wege in km (160c G1): auch der Weg auf dem Deck einer Brücke zwischen Anhöhen (wie das Gleis bei der Eisenbahn)', () => {
+    const km = () => game("Math.round(ACHIEVEMENTS.find(a => a.id === 'wege').value() * 10)"), w0 = km();   // in Feldern (× 0,1 km)
+    game("state.bruecken.set('14,12', { ax: 0, n: 4, art: 'holz', weg: ['sand', 'kies', null, 'sand'] }); recalc()");
+    expect(km() - w0).toBe(3);                                             // drei Deckfelder mit Weg, das leere nicht
+  });
+
   it('Sterne bringen Ehrennadeln – und die schalten Pokale frei', () => {
     expect(game("available('pokal_bronze')")).toBe(false);
     game('state.stats.earned = 1e6; state.achieved.laternen = 2; checkAchievements()');
