@@ -188,3 +188,18 @@ describe('Gleisbrücken übers Wasser: Zusammenwachsen – die längere gewinnt 
     expect(game("(p => p.money)(brPaid(state.tiles.get('2,5'), 'gleis'))")).toBe(40);      // bezahlt war Holz – das bleibt die Erstattung
   });
 });
+
+describe('Gleisbrücken übers Wasser: Ablegen an eine andere Brücke (160c E2)', () => {
+  it('eine Metall-Gleisbrücke an eine längere Holzbrücke gelegt: wird Holz (die meisten Felder), behält ihr Bezahltes', () => {
+    game("for (let y = 0; y <= 9; y++) for (let x = 2; x <= 9; x++) state.terra.set(x + ',' + y, 'water'); state.techs.add('bahn'); state.techs.add('terraform'); terrainCache.clear(); waterChanged(); recalc()");
+    game("for (const x of [0, 1, 2, 3, 4]) build('schiene', x, 5, true); for (const x of [0, 1, 2]) build('schiene', x, 8, true)");
+    expect(game("brSet({ at: 'gleis', x: 2, y: 8 }, { mat: 'stahl' })")).toBe(true);
+    const p0 = game("(({ k, ...o }) => o)(brPaid(state.tiles.get('2,8'), 'gleis'))");
+    game("setTool('verschieben'); pickUp(2, 8, -1)");
+    expect(game("moving && moving.t && moving.t.brm")).toBe('stahl');
+    game("dropAt(5, 5, -1); setTool('look')");
+    expect(game("isGleisBridge(state.tiles.get('5,5'))")).toBe(true);
+    expect(game("brLook(state.tiles.get('5,5'), 'gleis').mat")).toBe('holz');
+    expect(game("(({ k, ...o }) => o)(brPaid(state.tiles.get('5,5'), 'gleis'))")).toEqual(p0);
+  });
+});

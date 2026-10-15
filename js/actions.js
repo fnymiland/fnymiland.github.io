@@ -537,7 +537,8 @@ function dropGroup(hx, hy) {
   }
   if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
   for (const it of moving.items) if (it.kind === 'tile' && it.t.b === 'huegeltreppe') { const P = groupPlaced(it); stairDropped(ox + P.dx, oy + P.dy); }
-  for (const it of moving.items) if (it.kind === 'tile' && isWegBridge(it.t)) { const P = groupPlaced(it); wbUnify(ox + P.dx, oy + P.dy); }   // Brücken angleichen (160c D3)   // Treppen: Ecke oder gerade wie gebaut (hills.js)
+  for (const it of moving.items) if (it.kind === 'tile' && isWegBridge(it.t)) { const P = groupPlaced(it); wbUnify(ox + P.dx, oy + P.dy); }   // Brücken angleichen (160c D3)
+  for (const it of moving.items) if (it.kind === 'tile' && isGleisBridge(it.t)) { const P = groupPlaced(it); gbUnify(ox + P.dx, oy + P.dy); }   // Gleisbrücken ebenso (160c E2)   // Treppen: Ecke oder gerade wie gebaut (hills.js)
   if (moving.copy) {                                                     // Stempel: dieselbe Kopie gleich noch einmal (frische Dinge)
     moving.items = moving.items.map(copyClone);
     addFloat(hx, hy, '−' + fmt(moving.cost.money || 0), '#d9534a');
@@ -698,6 +699,7 @@ function dropAt(x, y, slot) {
     state.tiles.set(k, t);
     claimSea(b, x, y, rot, t, t.bridge);
     if (isWegBridge(t)) wbUnify(x, y);                                  // an eine andere Brücke gelegt: angleichen (160c D3)
+    if (isGleisBridge(t)) gbUnify(x, y);                                // Gleisbrücke ebenso (160c E2)
     if (b === 'huegeltreppe') stairDropped(x, y);                       // Treppe: Ecke oder gerade wie gebaut (hills.js)
   }
   moving = null;

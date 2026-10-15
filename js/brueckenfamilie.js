@@ -246,11 +246,20 @@ function gbNewSpec(x, y) {
   return best;
 }
 // Zwei Gleisbrücken wachsen zusammen (Nutzer 15.10.2026: die längere gewinnt): alle Felder der Spanne bekommen das Aussehen look kostenlos,
-// jedes behält sein Bezahltes (ältere Fassungen erstatten ohnehin fest BRIDGE). Nach dem Setzen rufen; true, wenn etwas angeglichen wurde
-function gbUnify(x, y, look) {
-  const sig = L => [L.mat, L.col, L.mat === 'holz' ? L.plank : null, L.licht || null].join('|'), want = sig(look);
+// jedes behält sein Bezahltes (ältere Fassungen erstatten ohnehin fest BRIDGE). Nach dem Setzen rufen; true, wenn etwas angeglichen wurde.
+// Ohne look (Ablegen, Kopie): das Aussehen der meisten Felder gewinnt
+function gbUnify(x, y, look = null) {
+  const sig = L => [L.mat, L.col, L.mat === 'holz' ? L.plank : null, L.licht || null].join('|'), cells = brRailSpan(x, y);
+  if (!look) {
+    if (cells.length < 2) return false;
+    const cnt = new Map(), ref = new Map();
+    for (const [cx, cy] of cells) { const L = brLook(state.tiles.get(cx + ',' + cy), 'gleis'), s = sig(L); cnt.set(s, (cnt.get(s) || 0) + 1); if (!ref.has(s)) ref.set(s, L); }
+    if (cnt.size < 2) return false;
+    look = ref.get([...cnt].sort((p, q) => q[1] - p[1])[0][0]);
+  }
+  const want = sig(look);
   let n = 0;
-  for (const [cx, cy] of brRailSpan(x, y)) {
+  for (const [cx, cy] of cells) {
     const t = state.tiles.get(cx + ',' + cy);
     if (sig(brLook(t, 'gleis')) === want) continue;
     const p = brPaid(t, 'gleis');
