@@ -5,7 +5,9 @@
 let night = 0;
 const glows = [];
 let SPRITE_PAINT = false;                   // render.js malt gerade ein Bildchen fürs Spiel (zählt wie live)
-const isLive = () => g === ctx || SPRITE_PAINT || (GLPASS && g === LA.x);   // Sammelfläche im GL-Bild (Block 144) zählt wie die Hauptleinwand
+let BR_WRAP = null;                                                        // Strich-Bündler der Brücken (160c F1, brBatched): { wrap, real } – g ist dann wrap
+const gNow = () => (BR_WRAP && g === BR_WRAP.wrap ? BR_WRAP.real : g);    // die Leinwand hinter dem Bündler (Vergleiche g === ctx)
+const isLive = () => { const gg = gNow(); return gg === ctx || SPRITE_PAINT || (GLPASS && gg === LA.x); };   // Sammelfläche im GL-Bild (Block 144) zählt wie die Hauptleinwand
 
 // Nachtlicht: stanzt an Ort und Stelle ein Loch ins Bild (Fenster ganz, Lichtschein weich). Was danach davor
 // gezeichnet wird (Laub, das vordere Reihenhaus, Bewohner), füllt das Loch wieder – so scheint nichts durch.
@@ -776,23 +778,11 @@ function crossingAxes(x, y) {
 }
 // Bogenbrücke: flacher Bogen quer über die Gleise, über zwei Felder gespannt (halbe Rampe auf den Wegen links
 // und rechts), in der Mitte hoch über dem Zug. b = Abstand zur Mitte entlang des Wegs in Feldern.
-// So breit wie ein Weg; Design wählbar (Holz, Stein, wie der Weg, Kristall)
+// So breit wie ein Weg; Aussehen wie alle Brücken (160c F1: Material, Farbe, Planken, Deck, Licht, Zacken – brLook 'uebergang')
 // ARCH_W (Block 148): so breit wie der Weg samt Rand – vorher schmaler, und der Weg schaute an den Rampen seitlich hervor
 const ARCH_CLEAR = 16;                                    // Durchfahrtshöhe über dem Gleis (höchster Zug 13 + Luft)
 const ARCH_H = 22, ARCH_W = EDGE_W + 0.01, ARCH_SPAN = 0.9;   // Span 0,9: Rampe setzt vor der Feldmitte auf – sonst ragte ihre Ecke über ein rundes Wegende (Block 148)
 const archH = b => ARCH_H * Math.cos(Math.max(-1, Math.min(1, b / ARCH_SPAN)) * Math.PI / 2);
-const ARCH_LOOK = {
-  holz:     { deck: '#c9a26f', seam: '#b08a5e', side: '#8a6440', rail: '#7a5236', th: 4, kind: 'posts' },
-  stein:    { deck: '#ddd6c8', seam: '#c9c0ae', side: '#b8ad98', rail: '#e7e1d4', th: 7, kind: 'wall' },
-  kristall: { deck: '#e6f6fc', seam: '#c3e7f5', side: '#8fcbe6', rail: '#8fd3f2', th: 3, kind: 'glass' },
-};
-function archLook(t) {
-  const id = footPaidOf(t) || 'holz';
-  if (id !== 'weg') return ARCH_LOOK[id];
-  const st = styleDef('weg', t.style), lk = st.id === 'tritt' ? PATH_LOOK.kopf : pathLook(st.id);
-  const edge = lk.edge || shade(lk.fill, -0.18);
-  return { deck: lk.fill, side: shade(edge, -0.12), rail: shade(edge, -0.25), th: 4, kind: 'posts', path: lk };
-}
 // Steht ein Bewohner auf einer Bogenbrücke? → Feld der Brücke und seine Lage b auf ihr
 function archAt(px, py) {
   const rx = Math.round(px), ry = Math.round(py);
@@ -804,89 +794,19 @@ function archAt(px, py) {
   }
   return null;
 }
-function drawArch(P, z, b0, b1, lk, x, y, d, n) {
-  const bs = [];
-  for (let i = 0; i <= 12; i++) bs.push(b0 + (b1 - b0) * i / 12);
-  const rail = (s, off) => bs.map(b => P(s * ARCH_W, b, archH(b) + off));
-  const line = (pts, col, w) => { g.strokeStyle = C(col); g.lineWidth = w * z; g.lineCap = 'round'; g.lineJoin = 'round'; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); };
-  const posts = (s, h, col, w) => {
-    g.beginPath();
-    for (const b of bs) { const p = P(s * ARCH_W, b, archH(b)), q = P(s * ARCH_W, b, archH(b) + h); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
-    g.strokeStyle = C(col); g.lineWidth = w * z; g.stroke();
-  };
-  const railing = s => {
-    if (lk.kind === 'wall') {                              // Stein: niedrige Brüstung mit heller Abdeckung
-      poly(rail(s, 0).concat(rail(s, 5).reverse()), C(s < 0 ? shade(lk.rail, -0.06) : lk.side));
-      line(rail(s, 5), shade(lk.rail, 0.2), 1.3);
-    } else if (lk.kind === 'glass') {                      // Kristall: Glasscheiben, oben ein leuchtender Handlauf
-      poly(rail(s, 0).concat(rail(s, 7).reverse()), 'rgba(175,225,248,0.38)');
-      posts(s, 7, '#cfeefb', 0.6);
-      line(rail(s, 7), lk.rail, 1.2);
-    } else {
-      line(rail(s, 6), lk.rail, 1.1);
-      posts(s, 6, lk.rail, 0.8);
-    }
-  };
-  // Rampen auf den Wegfeldern massiv bis zum Boden, auf beiden Seiten (Block 148): sonst sah man unter der Rampe – vorn direkt,
-  // hinten durch den offenen Bogen – den Weg am Boden weiterlaufen. Nur über den Gleisen (|b| < ½) bleibt der Bogen offen
-  const RAMP = 0.46;                                       // ab hier massiv: etwas vor der Feldkante, über den Überlapp des Wegs (seamPad) hinweg
-  const rampWalls = s => {
-    for (const sg of [-1, 1]) {
-      const seg = bs.filter(b => sg * b >= RAMP - 1e-6).concat(bs.some(b => Math.abs(b - sg * RAMP) < 1e-6) || !bs.some(b => sg * b >= RAMP) ? [] : [sg * RAMP]).sort((p, q) => p - q);
-      if (seg.length < 2) continue;
-      poly(seg.map(b => P(s * ARCH_W, b, archH(b))).concat(seg.slice().reverse().map(b => P(s * ARCH_W, b, 0))), C(shade(lk.side, s < 0 ? -0.1 : -0.04)));
-    }
-  };
-  rampWalls(-1);
-  // Stirnwand der Rampe zur Gleisseite: sonst sieht man unter dem Bogen in die Rampe hinein (Weg am Boden). Bei |b| = RAMP, also
-  // vor der Feldkante – der Weg des Nachbarfelds ragt ~1 Gerätepunkt über die Kante (seamPad) und schaute sonst darunter hervor
-  for (const sg of [-1, 1]) {
-    const b = sg * RAMP;
-    if (b < Math.min(b0, b1) - 1e-6 || b > Math.max(b0, b1) + 1e-6) continue;
-    const w = ARCH_W + 0.02;                                               // etwas breiter als die Seitenwände: keine helle Naht
-    poly([P(-w, b, 0), P(w, b, 0), P(w, b, archH(b)), P(-w, b, archH(b))], C(shade(lk.side, -0.16)));
-  }
-  railing(-1);                                             // hinteres Geländer
-  const deck = rail(-1, 0).concat(rail(1, 0).reverse());
-  poly(deck, C(lk.deck));
-  if (lk.path) {
-    // Belag wie der Weg: je Abschnitt eine eigene (ebene) Abbildung, damit Muster dem Bogen folgen
-    for (let i = 0; i < 12; i++) {
-      const bA = bs[i], bB = bs[i + 1], hA = archH(bA), hB = archH(bB), k = (hB - hA) / ((bB - bA) || 1);
-      const Ls = ([u, v]) => { const a = u * d[0] + v * d[1], b = u * n[0] + v * n[1]; return P(a, b, hA + (b - bA) * k); };
-      const cs = [[-ARCH_W, bA], [ARCH_W, bA], [ARCH_W, bB], [-ARCH_W, bB]].map(([a, b]) => [a * d[0] + b * n[0], a * d[1] + b * n[1]]);
-      const only = [Math.min(...cs.map(c => c[0])) - 0.1, Math.max(...cs.map(c => c[0])) + 0.1, Math.min(...cs.map(c => c[1])) - 0.1, Math.max(...cs.map(c => c[1])) + 0.1];
-      g.save();
-      g.beginPath(); cs.forEach((c, j) => { const q = Ls(c); j ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
-      paintLook(Ls, lk.path, x, y, z, false, 0.55, only);
-      g.restore();
-    }
-  } else if (lk.kind !== 'glass') {
-    g.strokeStyle = C(lk.seam); g.lineWidth = 0.6 * z; g.beginPath();
-    for (const b of lk.kind === 'wall' ? bs.filter((_, i) => i % 2 === 0) : bs) { const p = P(-ARCH_W, b, archH(b)), q = P(ARCH_W, b, archH(b)); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
-    g.stroke();
-  } else {
-    line(bs.map(b => P(0, b, archH(b))), '#ffffff', 1.4);  // Kristall: heller Glanz in der Mitte
-    glowQuad([P(-ARCH_W, b0, archH(b0)), P(ARCH_W, b0, archH(b0)), P(ARCH_W, b1, archH(b1)), P(-ARCH_W, b1, archH(b1))], 22 * z, 'blue');
-  }
-  // vordere Wange: nie unter den Boden (Block 148c: Zipfel an den Rampenenden) und über dem Gleis nicht tiefer als ARCH_CLEAR –
-  // bei Stein (dick) stand sie sonst vor dem Zug (Block 148d)
-  const cheek = b => { const h = archH(b), lo = Math.max(0, h - lk.th); return Math.abs(b) < 0.38 ? Math.max(lo, Math.min(h - 1.5, ARCH_CLEAR)) : lo; };
-  poly(rail(1, 0).concat(bs.map(b => P(ARCH_W, b, cheek(b))).reverse()), C(lk.side));
-  rampWalls(1);
-  railing(1);
-}
+// Bogen von b0 bis b1 (160c F1: Maler ubArch in brueckenbild.js, Bekleidung je Material). L: Aussehen (brLook 'uebergang'), t: die Kachel (Belag)
+function drawArch(P, z, b0, b1, L, x, y, d, n, t) { ubArch(P, z, b0, b1, L, x, y, d, n, t); }
 function drawCrossing(cx, cy, z, x, y, t, now) {
   const { d, n } = crossingAxes(x, y);
   const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   if (t.foot) {
     // hintere Hälfte jetzt, vordere erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
-    const lk = archLook(t);
+    const L = brLook(t, 'uebergang');
     if (PASS === 'object' && !hillLateK) {                             // Nachmalen auf dem späteren Nachbarn (hillLate, 160c F1): ganz, auf seine Raute zugeschnitten
-      drawArch(P, z, -ARCH_SPAN, 0, lk, x, y, d, n);
+      drawArch(P, z, -ARCH_SPAN, 0, L, x, y, d, n, t);
       const m = g.getTransform();
-      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN, lk, x, y, d, n); g.restore(); });
-    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, lk, x, y, d, n);
+      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN, L, x, y, d, n, t); g.restore(); });
+    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, L, x, y, d, n, t);
     return;
   }
   const key = x + ',' + y, target = crossingClosed(x, y) ? 1 : 0;

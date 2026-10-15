@@ -930,3 +930,165 @@ function gbKurve(lage, c, px, py, z, t) {
   } else if (lage === 'o') gelaender(true);
   flush();
 }
+
+// ---------------------------------------------------------------------------
+// Fußgängerbrücke am Bahnübergang (160c F1, Entwurf F0 abgenommen 15.10.2026: tools/uebergang-entwurf.js). Die Form aus Block 148 bleibt
+// (archH, Spanne ±0,9, Rampen ab |b| 0,46 massiv bis zum Boden, Durchfahrt ARCH_CLEAR über dem Gleis, zwei Hälften: hintere vor, vordere nach
+// den Zügen des Felds). Bekleidung aus den Bausteinen der Wegbrücken (bkPaintLage, Familie 'fuss'): Geländer, Deck, Licht, Farbe, Glas, Zacken.
+// Wände je Material: Holz Bretter mit Bogenträger und Hängern, Metall Blech mit Stahlbogen, Stein ein gemauerter Bogen über dem Gleis,
+// Kristall Glasplatten und Glasband. Bogen über dem Gleis: Ellipse über ±0,46, Scheitel 18 – über den Wagen (|b| ≤ 0,19) nie unter 16,4.
+// Abbildung auf den Parameterraum der Bausteine: t = (b + 0,45) / 0,9, n = 2 (Pfosten, Lampen, Fugen symmetrisch, Scheitel bei t 0,5)
+// ---------------------------------------------------------------------------
+const UB_RAMP = 0.46, UB_RI = 18, ubT = b => (b + 0.45) / 0.9, ubB = t => 0.9 * t - 0.45;
+const ubRi = b => Math.abs(b) >= UB_RAMP ? 0 : UB_RI * Math.sqrt(1 - (b / UB_RAMP) ** 2);   // Unterkante des Bogens über dem Gleis
+let UB_STONE_NONE = null;
+// Striche bündeln (160c F1, Leistung): aufeinanderfolgende Striche gleicher Art (Farbe, Breite, Enden, Strichelung) werden ein Pfad und ein
+// stroke – wie die Striche je Farbe der Gleisbrücke (E2). Der Übergang wird jedes Bild live gemalt, Pfosten und Bretter kamen sonst je einzeln.
+// Gleiches Bild: die Farben sind deckend (Hex), ein gebündelter Strich deckt wie mehrere. Alles andere geht sofort durch; davor wird das
+// Gesammelte gemalt, und wer den Pfad braucht (fill, clip), bekommt ihn nachgereicht. Kein Pfad läuft über save/restore oder einen Transform
+const BR_PATH_OPS = new Set(['moveTo', 'lineTo', 'closePath', 'arc', 'arcTo', 'ellipse', 'rect', 'roundRect', 'bezierCurveTo', 'quadraticCurveTo']);
+const BR_NO_FLUSH = new Set(['getTransform', 'createPattern', 'createLinearGradient', 'createRadialGradient', 'measureText', 'getLineDash']);
+const BR_PEN = ['strokeStyle', 'lineWidth', 'lineCap', 'lineJoin', 'globalAlpha', 'globalCompositeOperation', 'miterLimit'];
+function brBatched(f) {
+  const real = g;
+  let cur = [], sent = false, pend = null;
+  const replay = ops => { for (const [m, a] of ops) real[m](...a); };
+  const dashOf = () => { const d = real.getLineDash && real.getLineDash(); return Array.isArray(d) ? d : []; };
+  const flush = () => {
+    if (!pend) return;
+    const keep = BR_PEN.map(k => real[k]), dash = dashOf();
+    real.beginPath(); replay(pend.ops);
+    BR_PEN.forEach((k, i) => { real[k] = pend.pen[i]; }); if (real.setLineDash) real.setLineDash(pend.dash);
+    real.stroke();
+    BR_PEN.forEach((k, i) => { real[k] = keep[i]; }); if (real.setLineDash) real.setLineDash(dash);
+    pend = null; sent = false;
+  };
+  const stroke = () => {
+    const pen = BR_PEN.map(k => real[k]), dash = dashOf(), key = pen.join('|') + '|' + dash.join(',');
+    if (pend && pend.key === key) pend.ops.push(...cur);
+    else { flush(); pend = { key, pen, dash, ops: cur.slice() }; }
+  };
+  const wrap = new Proxy(real, {
+    get(t, k) {
+      if (BR_PATH_OPS.has(k)) return (...a) => { cur.push([k, a]); if (sent) real[k](...a); };
+      if (k === 'beginPath') return () => { cur = []; sent = false; };
+      if (k === 'stroke') return stroke;
+      const v = real[k];
+      if (typeof v !== 'function') return v;
+      if (BR_NO_FLUSH.has(k)) return v.bind(real);
+      return (...a) => {
+        flush();
+        if ((k === 'fill' || k === 'clip') && !sent) { real.beginPath(); replay(cur); sent = true; }
+        return v.apply(real, a);
+      };
+    },
+    set(t, k, v) { real[k] = v; return true; },
+  });
+  const prev = BR_WRAP; g = wrap; BR_WRAP = { wrap, real };
+  try { return f(); } finally { try { flush(); } finally { g = real; BR_WRAP = prev; } }
+}
+// P(a, b, h): a längs der Schiene (d), b längs des Wegs (n); L: Aussehen (brLook 'uebergang'); t: die Kachel (Belag)
+const ubArch = (...a) => brBatched(() => ubArch0(...a));
+function ubArch0(P, z, b0, b1, L, x, y, d, n, t) {
+  L = L && BR_MAT[L.mat] && Object.prototype.hasOwnProperty.call(BR_MAT, L.mat) ? L : { mat: 'holz', deck: 'muster' };
+  const art = L.mat, weg = L.deck === 'belag', stein = art === 'stein', glas = art === 'kristall', W = ARCH_W;
+  if (!UB_STONE_NONE) UB_STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
+  const lo = Math.min(b0, b1), hi = Math.max(b0, b1), t0 = ubT(lo), t1 = ubT(hi), N = 2;
+  const Pk = (tt, s, h) => P(s / BK_W * W, ubB(tt), h), hf = tt => archH(ubB(tt));
+  const dark = L.licht === 'an' && !L.lichtGratis && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('U' + x + ',' + y);
+  const opts = { fam: 'fuss', ax: d[0] === 1 ? 1 : 0, hf, foot: () => 0, gl: () => 0, supports: [], col: L.col, plank: L.plank, licht: L.licht || null, dark,
+    zacken: !!L.zacken, clear: ARCH_CLEAR, stone: stein ? UB_STONE_NONE : null, wegPaint: weg ? () => ubBelag(P, z, lo, hi, t, x, y, d, n) : null };
+  const lay = l => bkPaintLage(l, Pk, z, art, N, t0, t1, weg, opts);
+  const sh = col => opts.ax ? shade(col, LIGHT.side) : col;
+  const Lp = stein ? brPal(BK_STEIN, 'stein', 'fuss', L.col, null) : brPal(BK_FUSS[art], art, 'fuss', L.col, L.plank);
+  const fein = z >= 0.6, K = z < 0.6 ? 8 : z < 1 ? 14 : z < 2 ? 18 : 24;              // weit weg gröber: weniger Stützpunkte, keine Bretter/Fugen/Hänger (Leistung)
+  const bs = (a, b, k = K) => { const o = [], m = Math.max(2, Math.ceil(Math.abs(b - a) * k)); for (let i = 0; i <= m; i++) o.push(a + (b - a) * i / m); return o; };
+  const th = { holz: 4, stahl: 2.6, kristall: 3, stein: 0 }[art];
+  const cheek = b => { const h = archH(b), l = Math.max(0, h - th); return Math.abs(b) < 0.38 ? Math.max(l, Math.min(h - 1.5, ARCH_CLEAR)) : l; };   // Wange: über dem Gleis nie tiefer als ARCH_CLEAR (148d)
+  const line = (pts, col, w) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.strokeStyle = C(col); g.lineWidth = Math.max(0.6, w * z); g.lineCap = 'butt'; g.lineJoin = 'round'; g.stroke(); };
+  const lines = (segs, col, w) => { if (!segs.length) return; g.beginPath(); for (const [p, q] of segs) { g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); } g.strokeStyle = C(col); g.lineWidth = Math.max(0.5, w * z); g.lineCap = 'butt'; g.stroke(); };
+  const segs = (a, b) => { const out = []; for (const [p, q] of [[-ARCH_SPAN, -UB_RAMP], [-UB_RAMP, UB_RAMP], [UB_RAMP, ARCH_SPAN]]) { const l = Math.max(a, p), h = Math.min(b, q); if (h > l + 1e-9) out.push([l, h, p === -UB_RAMP]); } return out; };
+  const wcol = art === 'holz' ? Lp.side : art === 'stahl' ? Lp.steel : null;
+  // Wand einer Seite (s −1 hinten, von innen gesehen, dunkel; +1 vorn): Rampen massiv bis zum Boden, über dem Gleis Wange bzw. Steinstirn
+  const wand = s => {
+    const a = s * W, dunkel = s < 0;
+    if (stein) {
+      const B = bs(lo, hi), pts = [...B.map(b => P(a, b, archH(b))), ...B.slice().reverse().map(b => P(a, b, ubRi(b)))];
+      poly(pts, C(dunkel ? shade(Lp.face, -0.22) : sh(Lp.face)));
+      if (dunkel || !fein) return;
+      g.save(); g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.clip();
+      const fug = [];                                                        // Quader: Lagerfugen alle 3,2, Stoßfugen versetzt
+      for (let r = 0; r * 3.2 < ARCH_H + 1; r++) {
+        const h = r * 3.2; fug.push([P(a, lo, h), P(a, hi, h)]);
+        for (let k = Math.ceil((lo + ARCH_SPAN) / 0.11) - 1; -ARCH_SPAN + k * 0.11 + (r % 2) * 0.055 < hi; k++) { const b = -ARCH_SPAN + k * 0.11 + (r % 2) * 0.055; if (b >= lo) fug.push([P(a, b, h), P(a, b, h + 3.2)]); }
+      }
+      lines(fug, mix(sh(Lp.face), sh(Lp.joint), 0.55), 0.3); g.restore();
+      const A = bs(Math.max(lo, -UB_RAMP), Math.min(hi, UB_RAMP), K * 2), ring = b => Math.min(ubRi(b) + 2.4, archH(b) - 0.4);
+      if (A[A.length - 1] > A[0]) {
+        lines(A.filter((b, i) => i % 4 === 2 && ubRi(b) > 0.5).map(b => [P(a, b, ubRi(b)), P(a, b, ring(b))]), mix(sh(Lp.face), sh(Lp.joint), 0.7), 0.3);   // Keilsteine
+        line(A.map(b => P(a, b, ring(b))), mix(sh(Lp.face), sh(Lp.joint), 0.7), 0.3);   // Ring
+        line(A.map(b => P(a, b, ubRi(b))), sh(Lp.edge), 0.5);                // Bogenkante
+      }
+      return;
+    }
+    for (const [l, h, mitte] of segs(lo, hi)) {
+      const B = bs(l, h);
+      if (!mitte) {                                                          // Rampe massiv
+        const col = wcol || mix(Lp.band, '#ffffff', 0.45);
+        poly([...B.map(b => P(a, b, archH(b))), ...B.slice().reverse().map(b => P(a, b, 0))], C(dunkel ? shade(col, -0.18) : sh(col)));
+        if (dunkel || !fein) continue;
+        const step = art === 'holz' ? 0.075 : art === 'stahl' ? 0.15 : 0.12, st = [];
+        for (let k = Math.ceil(l / step); k * step < h - 1e-9; k++) { const b = k * step; st.push(glas ? [P(a, b, 0), P(a, b + 0.06 * Math.sign(b || 1), Math.min(archH(b), 6))] : [P(a, b, 0), P(a, b, archH(b))]); }
+        lines(st, art === 'holz' ? sh(shade(Lp.side, -0.16)) : art === 'stahl' ? Lp.dark : sh(Lp.edge), art === 'holz' ? 0.35 : art === 'stahl' ? 0.45 : 0.25);   // Bretter, Steifen, Facetten
+        if (art === 'stahl') line(B.map(b => P(a, b, 0.4)), Lp.dark, 0.5);
+        if (glas) line(B.map(b => P(a, b, archH(b) - 0.6)), Lp.hi, 0.4);
+        else line(B.map(b => P(a, b, archH(b))), art === 'holz' ? shade(Lp.side, 0.08) : Lp.dark, 0.4);
+        continue;
+      }
+      if (glas) continue;                                                    // Kristall: über dem Gleis ist das Glasband (t1) die Wange
+      if (!dunkel) {                                                         // Bogen mit Hängern unter der Wange
+        const hg = [];
+        if (fein) for (let k = Math.ceil((l + UB_RAMP) / 0.1); -UB_RAMP + k * 0.1 < h - 1e-9; k++) { const b = -UB_RAMP + k * 0.1, top = cheek(b); if (top - ubRi(b) > 1) hg.push([P(a, b, ubRi(b)), P(a, b, top)]); }
+        lines(hg, sh(wcol), 0.5);
+        const R = bs(l, h, K * 2);
+        if (art === 'holz') poly([...R.map(b => P(a, b, ubRi(b))), ...R.slice().reverse().map(b => P(a, b, Math.max(0, ubRi(b) - 2.2)))], C(sh(Lp.rib)));
+        else { line(R.map(b => P(a, b, ubRi(b))), sh(Lp.steel), 1.1); line(R.map(b => P(a, b, ubRi(b) + 0.6)), Lp.light, 0.3); }
+      }
+      poly([...B.map(b => P(a, b, archH(b))), ...B.slice().reverse().map(b => P(a, b, cheek(b)))], C(dunkel ? shade(wcol, -0.18) : sh(wcol)));
+      if (!dunkel && art === 'holz') poly([...B.map(b => P(a, b, archH(b))), ...B.slice().reverse().map(b => P(a, b, archH(b) - 2))], C(sh(shade(Lp.side, 0.05))));   // Randbalken
+      if (!dunkel && art === 'stahl') { line(B.map(b => P(a, b, archH(b))), Lp.dark, 0.25); line(B.map(b => P(a, b, cheek(b))), Lp.dark, 0.25); }
+    }
+    if (!glas && s < 0) for (const sg of [-1, 1]) {                          // Stirnwand der Rampe zur Gleisseite (Block 148): sonst sähe man in die Rampe
+      const b = sg * UB_RAMP, w = W + 0.02;
+      if (b >= lo - 1e-6 && b <= hi + 1e-6) poly([P(-w, b, 0), P(w, b, 0), P(w, b, archH(b)), P(-w, b, archH(b))], C(shade(wcol, -0.16)));
+    }
+  };
+  const laibung = () => {                                                    // Stein: Laibung (hintere Hälfte, wo sie zur Kamera zeigt)
+    const A = bs(Math.max(lo, -UB_RAMP), Math.min(hi, 0), K * 2).filter((b, i, arr) => i === 0 || (ubRi(b) - ubRi(arr[i - 1])) / (b - arr[i - 1]) > TH);
+    if (A.length > 1) poly([...A.map(b => P(W, b, ubRi(b))), ...A.slice().reverse().map(b => P(-W, b, ubRi(b)))], C(Lp.inner));
+  };
+  if (glas) lay('hg');
+  if (stein) laibung();
+  wand(-1);
+  lay('h');
+  wand(1);
+  lay('d');
+  if (glas) lay('t1');
+  lay('o');
+  if (glas) lay('t2');
+}
+// Belag wie der Weg (Block 148): je Abschnitt eine eigene ebene Abbildung, damit Muster dem Bogen folgen
+function ubBelag(P, z, b0, b1, t, x, y, d, n) {
+  const st = styleDef('weg', t && t.style), lk = st.id === 'tritt' ? PATH_LOOK.kopf : pathLook(st.id), W = ARCH_W, bs = [];
+  for (let i = 0; i <= 6; i++) bs.push(b0 + (b1 - b0) * i / 6);
+  for (let i = 0; i < 6; i++) {
+    const bA = bs[i], bB = bs[i + 1], hA = archH(bA), hB = archH(bB), k = (hB - hA) / ((bB - bA) || 1);
+    const Ls = ([u, v]) => { const a = u * d[0] + v * d[1], b = u * n[0] + v * n[1]; return P(a, b, hA + (b - bA) * k); };
+    const cs = [[-W, bA], [W, bA], [W, bB], [-W, bB]].map(([a, b]) => [a * d[0] + b * n[0], a * d[1] + b * n[1]]);
+    const only = [Math.min(...cs.map(c => c[0])) - 0.1, Math.max(...cs.map(c => c[0])) + 0.1, Math.min(...cs.map(c => c[1])) - 0.1, Math.max(...cs.map(c => c[1])) + 0.1];
+    g.save(); g.beginPath(); cs.forEach((c, j) => { const q = Ls(c); j ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
+    poly(cs.map(Ls), C(lk.fill));
+    paintLook(Ls, lk, x, y, z, false, 0.55, only);
+    g.restore();
+  }
+}

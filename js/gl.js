@@ -171,7 +171,7 @@ function glDrawImage(img, ...a) {
   glRec(img, sx, sy, sw, sh, m, ctx.globalAlpha, glClip, ctx.imageSmoothingEnabled === false);
 }
 // zeichnet g gerade in die Welt des GL-Bilds (nicht in ein Bildchen, das nebenbei entsteht)?
-function glOnWorld() { return GLPASS && (g === ctx || (!!LA.x && g === LA.x)); }
+function glOnWorld() { const gg = gNow(); return GLPASS && (gg === ctx || (!!LA.x && gg === LA.x)); }
 // Nachtstärke 0 … 1 (alle Löcher sind proportional dazu: punchGlow, Löschbild, Lichtmaske) – im Standbild als Uniform nk
 function nightK() { return Math.min(1, night / NIGHT_MAX); }
 // Loch stanzen (punchGlow im GL-Bild): Bildchen (weicher Schein) bzw. Fensterfläche q (Parallelogramm) in Bildschirmpunkten;

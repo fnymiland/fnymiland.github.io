@@ -22,7 +22,7 @@ describe('Fußgängerbrücke (Block 148)', () => {
   it('Rampen auf den Wegfeldern massiv bis zum Boden: Wand vorn von der Rampe bis Höhe 0', () => {
     const r = game(`(() => { const ys = []; const og = g; const P = (a, b, up = 0) => [a * 10 + b * 10, -up];
       const Px = new Proxy({}, { get: (t, p) => p === 'lineTo' || p === 'moveTo' ? (x, y) => ys.push(y) : (p in t ? t[p] : () => {}), set: (t, p, v) => { t[p] = v; return true; } });
-      g = Px; try { drawArch(P, 1, -ARCH_SPAN, 0, ARCH_LOOK.holz, 0, 0, [1, 0], [0, 1]); } finally { g = og; } return ys.filter(y => y === 0).length; })()`);
+      g = Px; try { drawArch(P, 1, -ARCH_SPAN, 0, brLook({ footPaid: 'holz' }, 'uebergang'), 0, 0, [1, 0], [0, 1], {}); } finally { g = og; } return ys.filter(y => y === 0).length; })()`);
     expect(r).toBeGreaterThan(4);                                                               // viele Punkte am Boden (Wand bis 0)
   });
 });

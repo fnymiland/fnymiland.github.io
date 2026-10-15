@@ -6,6 +6,7 @@
 // Scheitel 18 – über den Wagen (|b| ≤ 0,19) nie unter 16,4 (höchster Zug 13).
 // Nur Bild: drawArch wird während der Aufnahme für die Felder in LOOKS umgeleitet. Abbildung: t = (b + 0,45) / 0,9, n = 2 – Pfosten,
 // Lampen und Fugen liegen damit symmetrisch (t −0,5 … 1,5 ↔ b −0,9 … 0,9, Scheitel bei t 0,5).
+// Seit 160c F1b malt das Spiel selbst so (ubArch) – „heute“ zeigt dann schon das neue Modell; die Bilder von F0 entstanden auf 8805250.
 // Im Browser (?welt=neu, Bild-Sammler auf 4181):
 // (0, eval)(await (await fetch('tools/uebergang-entwurf.js')).text()); await uebergangEntwurf()   → tools/vorschau/uebergang-*.png
 (function uebergangEntwurf() {
@@ -15,9 +16,9 @@
   const RAMP = 0.46, RI = 18, bOf = t => 0.9 * t - 0.45, tOf = b => (b + 0.45) / 0.9;
   const ri = b => Math.abs(b) >= RAMP ? 0 : RI * Math.sqrt(1 - (b / RAMP) ** 2);   // Bogen über dem Gleis
   let STONE_NONE = null;
-  function neu(P, z, b0, b1, lk, x, y, d, n) {
+  function neu(P, z, b0, b1, lk, x, y, d, n, tt) {
     const L = NEU && LOOKS.get(x + ',' + y);
-    if (!L) return O.arch(P, z, b0, b1, lk, x, y, d, n);
+    if (!L) return O.arch(P, z, b0, b1, lk, x, y, d, n, tt);
     const weg = L.mat === 'weg', art = weg ? 'holz' : L.mat, stein = art === 'stein', glas = art === 'kristall', W = ARCH_W;
     if (!STONE_NONE) STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
     const lo = Math.min(b0, b1), hi = Math.max(b0, b1), t0 = tOf(lo), t1 = tOf(hi), N = 2;
@@ -107,20 +108,7 @@
     if (glas) lay('t2');
   }
   // Belag wie der Weg (Block 148): je Abschnitt eine eigene ebene Abbildung, damit Muster dem Bogen folgen
-  function belag(P, z, b0, b1, t, x, y, d, n) {
-    const lk = archLook({ footPaid: 'weg', style: t.style }), W = ARCH_W, bs = [];
-    for (let i = 0; i <= 6; i++) bs.push(b0 + (b1 - b0) * i / 6);
-    for (let i = 0; i < 6; i++) {
-      const bA = bs[i], bB = bs[i + 1], hA = archH(bA), hB = archH(bB), k = (hB - hA) / ((bB - bA) || 1);
-      const Ls = ([u, v]) => { const a = u * d[0] + v * d[1], b = u * n[0] + v * n[1]; return P(a, b, hA + (b - bA) * k); };
-      const cs = [[-W, bA], [W, bA], [W, bB], [-W, bB]].map(([a, b]) => [a * d[0] + b * n[0], a * d[1] + b * n[1]]);
-      const only = [Math.min(...cs.map(c => c[0])) - 0.1, Math.max(...cs.map(c => c[0])) + 0.1, Math.min(...cs.map(c => c[1])) - 0.1, Math.max(...cs.map(c => c[1])) + 0.1];
-      g.save(); g.beginPath(); cs.forEach((c, j) => { const q = Ls(c); j ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1]); }); g.closePath(); g.clip();
-      poly(cs.map(Ls), C(lk.deck));
-      paintLook(Ls, lk.path, x, y, z, false, 0.55, only);
-      g.restore();
-    }
-  }
+  const belag = (...a) => ubBelag(...a);                                  // seit F1b im Spiel (brueckenbild.js)
   // ---------------------------------------------------------------------------------------------------------------------------------------
   const REG = [2, 2, 70, 74];
   function leeren() {

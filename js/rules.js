@@ -2925,6 +2925,14 @@ function computePower(lines, supply, plants = 0) {
       if (brSpanLook(x, y).licht === 'an') { const a = 'G' + brSpanAnchor(cs).join(','); for (let i = 0; i < cs.length; i++) gl.push(a); }
     }
     for (let i = 0; i < gl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) gl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
+    const ul = [];                                                       // Fußgängerbrücken am Übergang (160c F1): je Brücke 'U' + Feld, zwei Laternen;
+    for (const k of [...state.tiles.keys()].sort()) {                    // der alte Kristall-Übergang (Licht ohne Aufpreis) leuchtete schon immer ohne Strom
+      const t = state.tiles.get(k);
+      if (!isCrossing(t) || !t.foot) continue;
+      const L = brLook(t, 'uebergang');
+      if (L.licht === 'an' && !L.lichtGratis) ul.push('U' + k, 'U' + k);
+    }
+    for (let i = 0; i < ul.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) ul.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
   }
   return { supply, demand, left, dark, idle, trains, city, use };
 }

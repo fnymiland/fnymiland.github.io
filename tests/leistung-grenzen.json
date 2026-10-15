@@ -305,12 +305,12 @@
   "live": 8
  },
  "bruecken-gleis Tag Zoom 0.8": {
-  "ops": 583,
+  "ops": 703,
   "geo": 50254,
   "live": 8
  },
  "bruecken-gleis Tag Zoom 1.2": {
-  "ops": 405,
+  "ops": 505,
   "geo": 49052,
   "live": 5
  },
@@ -330,7 +330,7 @@
   "live": 8
  },
  "bruecken-gleis Nacht Zoom 0.8": {
-  "ops": 612,
+  "ops": 726,
   "geo": 50292,
   "live": 8
  },
