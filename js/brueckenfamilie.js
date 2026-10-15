@@ -226,6 +226,7 @@ const brCostMat = c => { const { money, ...mat } = c; return { cost: money || 0,
 let BR_PLAN_LOOK = null;
 function brNewLook(x, y, at) {
   if (at === 'wasser') { const S = wbNewSpec(x, y); if (S) return S.look; }    // 160c D3: die längste Brücke daneben, samt gekauftem Licht und Zacken
+  if (at === 'gleis') { const S = gbNewSpec(x, y); if (S) return brOnLook(S.look); }   // 160c E2 (Nutzer 15.10.2026): die längste Gleisbrücke daneben
   const want = at === 'gleis' ? (t => !!t && t.b === 'schiene' && !!t.bridge) : isWegBridge;
   for (const [dx, dy] of DIRS) {
     const k = (x + dx) + ',' + (y + dy), t = state.tiles.get(k);
@@ -233,6 +234,30 @@ function brNewLook(x, y, at) {
     if (BR_PLAN_LOOK && BR_PLAN_LOOK.has(k)) return BR_PLAN_LOOK.get(k);
   }
   return at === 'gleis' ? gbLeisteLook() : wbLeisteLook();
+}
+// Gleisbrücke daneben mit den meisten Feldern (vor dem Setzen): { look, n } oder null
+function gbNewSpec(x, y) {
+  let best = null;
+  for (const [dx, dy] of DIRS) {
+    if (!isGleisBridge(state.tiles.get((x + dx) + ',' + (y + dy)))) continue;
+    const n = brRailSpan(x + dx, y + dy).length;
+    if (!best || n > best.n) best = { look: brSpanLook(x + dx, y + dy), n };
+  }
+  return best;
+}
+// Zwei Gleisbrücken wachsen zusammen (Nutzer 15.10.2026: die längere gewinnt): alle Felder der Spanne bekommen das Aussehen look kostenlos,
+// jedes behält sein Bezahltes (ältere Fassungen erstatten ohnehin fest BRIDGE). Nach dem Setzen rufen; true, wenn etwas angeglichen wurde
+function gbUnify(x, y, look) {
+  const sig = L => [L.mat, L.col, L.mat === 'holz' ? L.plank : null, L.licht || null].join('|'), want = sig(look);
+  let n = 0;
+  for (const [cx, cy] of brRailSpan(x, y)) {
+    const t = state.tiles.get(cx + ',' + cy);
+    if (sig(brLook(t, 'gleis')) === want) continue;
+    const p = brPaid(t, 'gleis');
+    gbWriteLook(t, look); t.brp = { ...p, k: brSig(t, 'gleis') }; n++;
+  }
+  if (n) groundVersion++;
+  return n > 0;
 }
 // Neue Gleisbrücke übers Wasser ohne Nachbarn (160c E2c, F3): Material und Farbe aus der Leiste des Brücken-Werkzeugs; gesperrtes Material oder
 // ohne das Werkzeug: Holz wie bisher

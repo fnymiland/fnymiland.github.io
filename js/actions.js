@@ -149,7 +149,7 @@ function build(b, x, y, quiet) {
     if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Gleis-Rampe in die Anhöhe (A, C; hills.js): ihre eingelassenen Felder absenken
     else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
-    const gbL = bridge && b === 'schiene' ? brNewLook(x, y, 'gleis') : null;   // 160c E2c: wie costOf (Nachbar, sonst Leiste) – vor dem Setzen
+    const gbS = bridge && b === 'schiene' ? gbNewSpec(x, y) : null, gbL = bridge && b === 'schiene' ? brNewLook(x, y, 'gleis') : null;   // 160c E2c: wie costOf (längste daneben, sonst Leiste) – vor dem Setzen
     const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
@@ -159,6 +159,10 @@ function build(b, x, y, quiet) {
       brWriteLook(nt, wbS.look, wbS.brk, wbS.zk, wbRawFor(wbS.brk, wbS.look, wbS.raw));
       nt.brp = { ...brPrice(wbS.look, 'wasser'), k: brSig(nt, 'wasser') };
       if (wbS.n) wbUnify(x, y, wbS);                                  // zwei Brücken wachsen zusammen: an die längere angleichen
+    } else if (gbL) {                                                 // Gleisbrücke (160c E2): aus dem Aussehen wie costOf; Holz ohne Farbe und Licht im alten Format
+      const nt = state.tiles.get(k);
+      if (gbL.mat !== 'holz' || gbL.col != null || gbL.plank != null || gbL.licht) { gbWriteLook(nt, gbL); nt.brp = { ...brPrice(gbL, 'gleis'), k: brSig(nt, 'gleis') }; }
+      if (gbS) gbUnify(x, y, gbS.look);                               // zwei Brücken wachsen zusammen: an die längere angleichen
     } else if (bridge) {                                              // Gleisbrücke verlängern: Aussehen der alten übernehmen (66c; 160c: alle br-Felder, nur Eingeschaltetes)
       const want = b === 'weg' ? isWegBridge : (t => !!t && t.b === 'schiene' && !!t.bridge);
       const nb = DIRS.map(([dx, dy]) => state.tiles.get((x + dx) + ',' + (y + dy))).find(want), nt = state.tiles.get(k);

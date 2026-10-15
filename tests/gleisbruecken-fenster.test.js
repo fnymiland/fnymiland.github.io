@@ -159,3 +159,32 @@ describe('Gleisbrücken übers Wasser: Geist und Schild beim Ziehen (160c E2)', 
     expect(r.painted).toBeGreaterThanOrEqual(4 * 8);
   });
 });
+
+describe('Gleisbrücken übers Wasser: Zusammenwachsen – die längere gewinnt (Nutzer 15.10.2026)', () => {
+  it('Lücke zwischen Metall (2 Felder) und Holz (5 Felder) schließen: alles Holz, das neue Feld kostet Holz; die Metallfelder behalten ihr Bezahltes', () => {
+    game("for (let y = 0; y <= 9; y++) for (let x = 2; x <= 9; x++) state.terra.set(x + ',' + y, 'water'); state.techs.add('bahn'); state.techs.add('terraform'); terrainCache.clear(); waterChanged(); recalc()");
+    game("for (const x of [0, 1, 2, 3]) build('schiene', x, 5, true); for (const x of [10, 9, 8, 7, 6, 5]) build('schiene', x, 5, true)");
+    expect(game("[brRailSpan(2, 5).length, brRailSpan(6, 5).length]")).toEqual([2, 5]);
+    expect(game("brSet({ at: 'gleis', x: 2, y: 5 }, { mat: 'stahl' })")).toBe(true);
+    const metall = game("brPaid(state.tiles.get('2,5'), 'gleis')");
+    const c = game("costOf('schiene', 4, 5)"), m0 = game('state.money');
+    expect(c).toEqual(game("brCostMat(brPrice({ mat: 'holz' }, 'gleis'))"));
+    expect(game("build('schiene', 4, 5, true)")).toBe(true);
+    expect(game('state.money')).toBe(m0 - c.cost);
+    expect(game("brRailSpan(4, 5).length")).toBe(8);
+    for (const x of [2, 3, 4, 5, 8]) expect(game(`brLook(state.tiles.get('${x},5'), 'gleis').mat`), x).toBe('holz');
+    expect(game("(p => { const { k, ...o } = p; return o; })(brPaid(state.tiles.get('2,5'), 'gleis'))")).toEqual((({ k, ...o }) => o)(metall));   // erstattet weiter Metall
+    expect(game("gbAt(3, 5).G.mat")).toBe('holz');
+  });
+  it('Metall länger: das neue Feld wird Metall und kostet Metall; die Holzfelder werden kostenlos Metall', () => {
+    game("for (let y = 0; y <= 9; y++) for (let x = 2; x <= 9; x++) state.terra.set(x + ',' + y, 'water'); state.techs.add('bahn'); state.techs.add('terraform'); terrainCache.clear(); waterChanged(); recalc()");
+    game("for (const x of [0, 1, 2]) build('schiene', x, 5, true); for (const x of [10, 9, 8, 7, 6, 5, 4]) build('schiene', x, 5, true)");
+    expect(game("brSet({ at: 'gleis', x: 6, y: 5 }, { mat: 'stahl' })")).toBe(true);
+    const c = game("costOf('schiene', 3, 5)"), m0 = game('state.money');
+    expect(c).toEqual(game("brCostMat(brPrice({ mat: 'stahl' }, 'gleis'))"));
+    expect(game("build('schiene', 3, 5, true)")).toBe(true);
+    expect(game('state.money')).toBe(m0 - c.cost);
+    expect(game("brLook(state.tiles.get('2,5'), 'gleis').mat")).toBe('stahl');
+    expect(game("(p => p.money)(brPaid(state.tiles.get('2,5'), 'gleis'))")).toBe(40);      // bezahlt war Holz – das bleibt die Erstattung
+  });
+});
