@@ -57,6 +57,12 @@ describe('Gleisbrücken übers Wasser: ganze Brücke, Material, Geld (160c E2b)'
     expect(game("brSet({ at: 'gleis', x: 4, y: 5 }, { mat: 'stahl' })")).toBe(true);
     expect(game("[brSpanLook(4, 5).plank, brSpanLook(4, 5).licht]")).toEqual([null, 'aus']);   // gekauftes Licht kommt mit (Bezahltes zurück, neu mitbezahlt)
   });
+  it('Sperren übers Wasser: Holz, Metall, Stein frei (Nutzer 15.10.2026), Kristall erst mit der Kristallinsel', () => {
+    expect(game("['holz', 'stahl', 'stein'].map(m => brMatLock(m, 'gleis'))")).toEqual([null, null, null]);
+    bau();
+    expect(game("brSet({ at: 'gleis', x: 4, y: 5 }, { mat: 'stein' })")).toBe(true);
+    expect(game("gbAt(8, 3).G.mat")).toBe('stein');
+  });
   it('gesperrtes Material (Kristall ohne Kristallinsel): nichts ändert sich', () => {
     bau();
     const w0 = wallet();

@@ -19,7 +19,7 @@ const BR_MAT = {
 function brMatLock(mat, at = 'anhoehe') {
   const M = BR_MAT[mat];
   if (!M) return null;
-  const def = { ...(M.lock && !(at === 'wasser' && mat === 'stein') ? M.lock : {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };   // übers Wasser ist Stein frei (gab es dort immer, Nutzer 13.10.2026)
+  const def = { ...(M.lock && !((at === 'wasser' || at === 'gleis') && mat === 'stein') ? M.lock : {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };   // übers Wasser ist Stein frei (Weg: gab es dort immer, Nutzer 13.10.2026; Gleis: ebenso, Nutzer 15.10.2026)
   if (!Object.keys(def).length || typeof unlockOk !== 'function' || unlockOk(def, 'brmat:' + mat)) return null;
   if (def.tech === 'bahn') return `${M.name}: erst mit der Eisenbahn`;
   return `${M.name}: erst mit ${unlockText(def, false)}`;
