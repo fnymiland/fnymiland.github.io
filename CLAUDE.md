@@ -357,6 +357,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Deck vor o; Boote darunter: frühere Felder direkt nach dem Boot (`gbBoatOver`: h+vd, Block 112 ohne Stücke früherer Felder, o), Licht
     von Booten unter dem Deck in eigenem `glowCells` (sonst nähme es dem Scheinwerfer die Stärke, Block 84d). Nachtschein früherer Lichter:
     `gbRelight` nur auf der Deckfläche, Lichter über `glowsIn` (Raster der Mitten), beim Nachmalen nur mit vd.
+    Modelle (E2): `gbAt(x, y).G` (Aussehen der Spanne `brSpanLook`, gerader Lauf `gbRun` je Boden-Fassung gemerkt, `sax` null = Eckpodest),
+    Maler `gbPaintLage` (Striche je Farbe in einem Pfad – Leistung). Setzer `brSet({ at: 'gleis', x, y })` → `gbSet` für `brRailSpan`
+    (kein Rückfallfeld nötig: ältere Fassungen erstatten fest `BRIDGE`, alle neuen Preise liegen je Rohstoff darüber). Neue Brücke ohne
+    Nachbarn: Leiste (`gbLeisteLook`), Holz ohne Farbe bleibt im alten Format. Licht: Strom `'G' + Anker`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
