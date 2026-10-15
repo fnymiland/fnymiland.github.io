@@ -17,7 +17,7 @@ describe('Brücken-Texte (160c G1e)', () => {
     const txt = game("(() => { T.rail.power.dark = new Set(['G2,5', 'U8,8', 'G0a3,4', 'W1,1', 'B4,4', '3,4,0', 'G-2,7']); return powerStatus().join(' '); })()");
     expect(txt).toMatch(/🌉 5 Brücken bleiben nachts dunkel/);
     expect(txt).toMatch(/🌙 2 Laternen bleiben nachts dunkel/);
-    expect(txt).toMatch(/Fußgängerbrücke 2 Felder/);
+    expect(txt).toMatch(/Brückenlicht je Brückenart je angefangene 10 Felder 1 ⚡ \(Fußgängerbrücke = 2 Felder\)/);   // computePower zählt je Art (Gegenlesen G1)
   });
   it('Fenster der Brücke: was darunter geht – Holz mit Stützen nur quer, Stein mit Pfeilern, Metall/Kristall frei', () => {
     const text = () => game("(() => { openBkInfo(15, 12); const t = document.getElementById('panel').textContent; closePanel(); return t; })()");
@@ -31,6 +31,7 @@ describe('Brücken-Texte (160c G1e)', () => {
     expect(text()).toMatch(/an den Pfeilern nichts, Wege und Schienen dort nur quer/);
     expect(game('ITEMS.bruecke.desc')).toMatch(/Niedriges – an Stützen und Pfeilern nur quer/);
     expect(game('ITEM_TIPS.bruecke')).toMatch(/quer durchführen/);
+    expect(game('ITEM_TIPS.bruecke + ITEMS.weg.desc')).toMatch(/Holz.*Wegstil[\s\S]*Holz.*Wegstil/);   // Wegbrücke mit Holz in der Leiste: Material nach dem Wegstil (wbLeisteLook)
     expect(game('ITEMS.bruecke.desc + ITEM_TIPS.bruecke')).not.toMatch(/Flaches/);
   });
   it('Minikarte: eine Brücke zwischen Anhöhen über Wasser ist kein Meer und hat eigene Farbe', () => {

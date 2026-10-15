@@ -812,6 +812,12 @@ describe('Verschieben und Kopieren: die Brücke zwischen Anhöhen bleibt stehen 
     expect(nurGrün[0]).toBe(0);
     expect(nurGrün[1]).toContain('Brücke bleibt stehen');                  // alles darunter zieht mit: kein Rot, aber der Hinweis
   });
+  it('Auswahl-Vorschau: Parkrasen unter der Brücke zieht mit – grün, nicht rot (Gegenlesen G1)', () => {
+    game("state.terra.set('15,12', 'park'); sandCache.clear(); landCache.clear(); groundVersion++; recalc()");
+    const r = game(`(() => { plan = { kind: 'rect', tool: 'verschieben', a: { x: 14, y: 12 }, b: { x: 16, y: 12 }, fixed: true }; const i = planInfo(plan);
+      const out = [i.states.get('14,12'), i.states.get('15,12'), i.states.get('16,12')]; plan = null; return out; })()`);
+    expect(r).toEqual(['bad', 'ok', 'bad']);
+  });
   it('Kopieren: die Brücke zählt als „bleibt draußen“, der Knopf sagt es', () => {
     game("state.tiles.set('14,13', { b: 'weg', lvl: 1, style: 'sand' }); state.decos.set('15,13', [{ b: 'bank', rot: 0 }, null, null, null]); groundVersion++; recalc()");   // ein Weg und eine Bank (nur Wege: Pipette)
     expect(game('copyCollect(14, 12, 16, 13).stays')).toBe(1);

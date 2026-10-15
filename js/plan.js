@@ -216,7 +216,7 @@ function scanSelect(p) {
     const cells = bkCellsOf(bk, br).filter(([cx, cy]) => inside(cx, cy));
     if (!cells.length) continue;
     stay++;
-    for (const [cx, cy] of cells) if (states.get(cx + ',' + cy) !== 'ok') states.set(cx + ',' + cy, 'bad');
+    for (const [cx, cy] of cells) { const ck = cx + ',' + cy, lk = terraLook(cx, cy); if (lk === 'park' || lk === 'fz') states.set(ck, 'ok'); else if (states.get(ck) !== 'ok') states.set(ck, 'bad'); }   // Parkrasen/Freizeitpark-Boden zieht mit (pickUpGroup)
   }
   const bad = [...states.values()].filter(s => s === 'bad').length;
   return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, stay, firstErr: 'Hier ist nichts zum Verschieben' };

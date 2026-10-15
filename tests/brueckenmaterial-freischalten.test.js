@@ -24,7 +24,11 @@ describe('Brückenmaterial freischalten (160c G1)', () => {
     expect(opt(2)[1]).toMatch(/übers Wasser frei/);
     expect(opt(3)[0]).toBe('🔒 Kristall');
     expect(opt(3)[1]).not.toMatch(/übers Wasser frei/);
-    game('state.restore.klippe = 1; refreshLive && 0; updateHud()');
+    const t = game(`(() => { const out = [], t0 = toast; toast = m => out.push(m); try { document.querySelector('[data-lform="3"]').click(); } finally { toast = t0; } return out; })()`);
+    expect(t.join(' ')).toMatch(/🔒 Kristall: erst mit/);                      // antippen sagt, womit (am iPad gibt es keinen Tooltip)
+    expect(game('bkArtNew()')).toBe('kristall');                                // wählbar bleibt es
+    game("state.paintNew.bruecke = { form: 0 }; lookPop = 'form'; renderStyleBar('bruecke')");
+    game('state.restore.klippe = 1; updateHud()');
     game("lookPop = 'form'; renderStyleBar('bruecke')");
     expect(opt(2)).toEqual(['Stein', '']);
     expect(game("document.querySelector('[data-lpop=\"form\"]').getAttribute('aria-label')")).toMatch(/^Material: /);

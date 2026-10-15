@@ -1714,7 +1714,7 @@ function lookChips(b) {
 function wireLookChips(bar, b, t) {
   const set = (k, v) => { state.paintNew[b] = { ...(state.paintNew[b] || {}), [k]: v }; previewCache = null; lookPop = null; sfx('deco'); save(); renderStyleBar(t); };
   for (const x of bar.querySelectorAll('[data-lpop]')) x.onclick = () => { lookPop = lookPop === x.dataset.lpop ? null : x.dataset.lpop; sfx('deco'); renderStyleBar(t); };
-  for (const x of bar.querySelectorAll('[data-lform]')) x.onclick = () => set('form', +x.dataset.lform);
+  for (const x of bar.querySelectorAll('[data-lform]')) x.onclick = () => { const lk = b === 'bruecke' ? brLeisteLock(BK_ART_IDS[+x.dataset.lform]) : null; set('form', +x.dataset.lform); if (lk) toast('🔒 ' + lk); };   // gesperrtes Brückenmaterial: wählbar, antippen sagt womit (am iPad kein Tooltip; Gegenlesen G1)
   for (const x of bar.querySelectorAll('[data-lcol]')) x.onclick = () => set('col', +x.dataset.lcol);
   for (const x of bar.querySelectorAll('[data-lmore]')) x.onclick = () => { lookPop = null; openResearch('design'); artJump(DECO_LOOKS[b].group); };
 }
@@ -2101,7 +2101,7 @@ function powerStatus() {
   if (dl) out.push(`<div class="bad">🌙 ${dl} ${dl === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
   if (db) out.push(`<div class="bad">🌉 ${db} ${db === 1 ? 'Brücke bleibt' : 'Brücken bleiben'} nachts dunkel</div>`);
   if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);
-  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km · Brückenlicht je 10 Felder 1 ⚡, Fußgängerbrücke 2 Felder (zuletzt)</div>`);
+  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km · Brückenlicht je Brückenart je angefangene 10 Felder 1 ⚡ (Fußgängerbrücke = 2 Felder), zuletzt</div>`);
   return out;
 }
 // Anhöhen (157j): liegt die Schiene am Halt auf einer anderen Höhe bzw. ist es die Gleis-Rampe? Dann sagt das Fenster es (sonst null)
