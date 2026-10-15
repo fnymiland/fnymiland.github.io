@@ -914,7 +914,11 @@ function gbKurve(lage, c, px, py, z, t) {
     if (art !== 'stein') for (const p of ecken) if (p[0] + p[1] <= 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
     gelaender(false);
   } else if (lage === 'v') {
-    if (art === 'stein') { for (const l of Q.lines) if (l.front && !l.arm) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, GB_WATER), Lw(l.a, GB_WATER)], shF(Ls.face, l)); }   // Pfeiler unter dem Quadrat
+    if (art === 'stein') {                                                 // Pfeiler unter dem Quadrat: seine vorderen Seiten bis ins Wasser
+      const zu = Q.lines.filter(l => l.front && !l.arm);
+      if (zu.length) for (const l of zu) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, GB_WATER), Lw(l.a, GB_WATER)], shF(Ls.face, l));
+      else for (const [a, b, nn] of [[[-W, W], [W, W], [0, 1]], [[W, -W], [W, W], [1, 0]]]) fill([Lw(a, H - 2.4), Lw(b, H - 2.4), Lw(b, GB_WATER), Lw(a, GB_WATER)], shF(Ls.face, { n: nn }));   // ohne geschlossene Vorderseite (Kurve nach vorn, Kreuzung): Pfeiler unter dem Mittelquadrat
+    }
     else for (const p of ecken) if (p[0] + p[1] > 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
     const tief = art === 'stein' ? 2.4 : art === 'holz' ? 3 : 4, col = art === 'stein' ? Ls.face : P.beam;
     for (const l of Q.lines) if (l.front && (art !== 'stein' || l.arm)) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H - tief), Lw(l.a, H - tief)], shF(col, l));

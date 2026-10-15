@@ -107,6 +107,15 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
       expect(mean(Y(o)), fall + ' o vorn').toBeGreaterThan(mean(Y(back)));
     }
   });
+  it('Stein-Eckpodest ohne geschlossene Vorderseite (Kreuzung, Kurve nach vorn): Pfeiler unter der Mitte bis aufs Wasser (Gegenlesen E2 Nr. 9)', () => {
+    game('state.money = 1e6; for (const r of Object.keys(RES)) state.res[r] = 5000');
+    const tief = (fall, x0) => { bau(fall, x0, 0); const [x, y] = mitte(fall, x0, 0);
+      expect(game(`brSet({ at: 'gleis', x: ${x}, y: ${y} }, { mat: 'stein' })`), fall).toBe(true);
+      const fs = rec(`gbPaintLage('v', gbAt(${x}, ${y}), 0, 0, 1, state.tiles.get('${x},${y}'))`).filter(e => e.startsWith('fill '));
+      return Math.max(...fs.flatMap(e => e.split(' ').slice(2).filter(p => p.includes(',')).map(p => +p.split(',')[1]))); };
+    const zu = tief('kurve', 0);                                         // Kurve West–Nord: vordere Seiten geschlossen, Pfeiler wie bisher
+    expect(tief('x', 14)).toBeCloseTo(zu, 3);                            // Kreuzung: Pfeiler unter dem Mittelquadrat, ebenso tief
+  });
   it('Landschiene und das Gleis auf einer Anhöhen-Brücke bleiben unverändert (ohne bridge: keine Lagen-Teile)', () => {
     bau('gerade', 0, 0);
     const alt = rec(`drawRailBed(0, 0, 2, 0, 5, state.tiles.get('0,5'))`);
