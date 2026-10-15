@@ -120,6 +120,7 @@ const bkAt = (x, y) => bkOn() ? bkFresh().cell.get(x + ',' + y) || null : null;
 const bkOnHill = (x, y) => bkOn() ? bkFresh().end.get(x + ',' + y) || null : null;   // Anhöhen-Feld, auf dem eine Brücke aufliegt
 const bkEndsOf = (k, b) => { const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0; return [[x0 - dx, y0 - dy], [x0 + dx * b.n, y0 + dy * b.n]]; };
 const bkCellsOf = (k, b) => { const [x0, y0] = keyXY(k), dx = b.ax ? 0 : 1, dy = b.ax ? 1 : 0; return Array.from({ length: b.n }, (_, i) => [x0 + dx * i, y0 + dy * i]); };
+const bkStaysIn = inside => (bkOn() ? [...state.bruecken].filter(([k, b]) => bkCellsOf(k, b).some(([x, y]) => inside(x, y))).length : 0);   // Brücken mit Feldern im Rechteck: ziehen beim Verschieben/Kopieren nie mit (160c G1)
 const BK_ON_HILL = 'Hier liegt eine Brücke auf – erst die Brücke abreißen';
 const BK_UNDER_ONLY = 'Unter der Brücke ist nur Platz für Flaches – Wege, Schienen, Gelände und niedrige Deko';
 

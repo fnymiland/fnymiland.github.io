@@ -307,7 +307,7 @@ function pickUp(x, y, slot) {
   toast('Tippe, wohin es soll' + (ROTATABLE.has(movingType()) ? ' – drehen mit ⟳ oder Mausrad' : wegFlipNow() ? ' – Muster drehen mit ⟳ oder R' : ''));
 }
 // Mehrere Dinge auf einmal: alles, was ganz im Rechteck steht (samt Deko, Wegen, Schienen), wird angehoben und
-// zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus und Sehenswürdigkeiten bleiben stehen.
+// zieht mit gleichen Abständen um. Das Gelände bleibt; Rathaus, Sehenswürdigkeiten und Brücken zwischen Anhöhen bleiben stehen.
 function pickUpGroup(x0, y0, x1, y1) {
   if (moving) return false;
   const items = [], seen = new Set();
@@ -330,7 +330,8 @@ function pickUpGroup(x0, y0, x1, y1) {
     const [mx, my] = edgeMid(k);
     if (mx >= x0 - 0.5 && mx <= x1 + 0.5 && my >= y0 - 0.5 && my <= y1 + 0.5) items.push({ kind: 'edge', e, from: k, mx: mx - x0, my: my - y0 });
   }
-  if (!items.length) { toast(stays ? 'Das bleibt stehen (Rathaus, Sehenswürdigkeit oder ragt hinaus)' : 'Hier ist nichts zum Verschieben'); return false; }
+  stays += bkStaysIn(inside);                                            // Brücke zwischen Anhöhen: zieht nie mit, Weg/Gleis darauf auch nicht (160c G1)
+  if (!items.length) { toast(stays ? 'Das bleibt stehen (Rathaus, Sehenswürdigkeit, Brücke zwischen Anhöhen oder ragt hinaus)' : 'Hier ist nichts zum Verschieben'); return false; }
   if (items.length === 1 && (items[0].kind === 'tile' || items[0].kind === 'deco')) {   // ein einzelnes Ding: wie gewohnt (mit Drehen)
     const it = items[0], [x, y] = it.kind === 'tile' ? keyXY(it.from) : keyXY(it.from[0]);
     pickUp(x, y, it.kind === 'deco' ? it.from[1] : 0);
@@ -601,6 +602,7 @@ function copyCollect(x0, y0, x1, y1) {
     const [mx, my] = edgeMid(k);
     if (mx >= x0 - 0.5 && mx <= x1 + 0.5 && my >= y0 - 0.5 && my <= y1 + 0.5) items.push({ kind: 'edge', e, from: k, mx: mx - x0, my: my - y0 });
   }
+  stays += bkStaysIn(inside);                                            // Brücke zwischen Anhöhen: wird nie mitkopiert (160c G1)
   return { items: items.map(copyClone), stays };
 }
 // Was die Kopie kostet: wie ein Neubau (Gebäude samt Ausbauten, Brücken, Dekos, Linien, Rasen)
@@ -652,7 +654,7 @@ function copyPipette(items) {
 function startCopy(x0, y0, x1, y1) {
   if (moving) return false;
   const { items, stays } = copyCollect(x0, y0, x1, y1);
-  if (!items.length) { toast(stays ? 'Das lässt sich nicht kopieren (Rathaus, Sehenswürdigkeit, Wunderwerk – oder ragt hinaus)' : 'Hier ist nichts zum Kopieren'); return false; }
+  if (!items.length) { toast(stays ? 'Das lässt sich nicht kopieren (Rathaus, Sehenswürdigkeit, Wunderwerk, Brücke zwischen Anhöhen – oder ragt hinaus)' : 'Hier ist nichts zum Kopieren'); return false; }
   const pip = copyPipette(items);
   if (pip) {                                                             // Pipette: Werkzeug mit diesem Stil in die Hand
     setTool(pip.tool);

@@ -211,8 +211,15 @@ function scanSelect(p) {
     for (const [fx, fy] of fp) if (inside(fx, fy)) states.set(fx + ',' + fy, ok ? 'ok' : 'bad');
     if (ok) things++;
   }
+  let stay = 0;
+  if (bkOn()) for (const [bk, br] of state.bruecken) {                   // Brücke zwischen Anhöhen: zieht nie mit (pickUpGroup) – rot wie das Rathaus; was darunter mitzieht, bleibt grün (160c G1)
+    const cells = bkCellsOf(bk, br).filter(([cx, cy]) => inside(cx, cy));
+    if (!cells.length) continue;
+    stay++;
+    for (const [cx, cy] of cells) if (states.get(cx + ',' + cy) !== 'ok') states.set(cx + ',' + cy, 'bad');
+  }
   const bad = [...states.values()].filter(s => s === 'bad').length;
-  return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, firstErr: 'Hier ist nichts zum Verschieben' };
+  return { states, order: [], n: things, things, cost: 0, gain: 0, mat: {}, bad, stay, firstErr: 'Hier ist nichts zum Verschieben' };
 }
 // Tunnel entfernen: jedes Tunnelfeld der Linie, voll zurück; unter einer U-Bahn-Station nicht (sie braucht ihn)
 function scanTunnelErase(p) {
@@ -319,7 +326,7 @@ function planInfo(p) {
 }
 function planText(p, info) {
   const d = ITEMS[p.tool], parts = [];
-  if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : ''} · ${p.fixed ? 'unten wählen, was damit passiert' : 'loslassen: auswählen'}`;
+  if (p.tool === 'verschieben') return `Auswahl: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.bad ? ' · Rotes bleibt stehen' : info.stay ? ` · die ${info.stay === 1 ? 'Brücke bleibt' : 'Brücken bleiben'} stehen` : ''} · ${p.fixed ? 'unten wählen, was damit passiert' : 'loslassen: auswählen'}`;
   if (p.erase) parts.push(`Tunnel entfernen: ${info.things} ${info.things === 1 ? 'Feld' : 'Felder'}${info.gain ? ' +' + fmt(info.gain) : ''}`);
   else if (p.tool === 'abriss') {
     if (info.things) parts.push(`Abreißen: ${info.things} ${info.things === 1 ? 'Ding' : 'Dinge'}${info.gain ? ' +' + fmt(info.gain) : ''}`);

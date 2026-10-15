@@ -784,3 +784,42 @@ describe('Brücke per Linie (160c C9)', () => {
     expect(game("[state.bruecken.size, plan]")).toEqual([1, null]);
   });
 });
+
+// 160c G1 (karte-querschnitt.md:174/192): Brücken zwischen Anhöhen ziehen beim Verschieben und Kopieren nie mit – die Hinweise nennen sie
+describe('Verschieben und Kopieren: die Brücke zwischen Anhöhen bleibt stehen (160c G1)', () => {
+  const toasts = js => game(`(() => { const out = [], t0 = toast; toast = m => out.push(m); try { ${js}; } finally { toast = t0; } return out; })()`);
+  beforeEach(() => { plan('bruecke', { x: 12, y: 12 }, { x: 18, y: 12 }); run(); game('plan = null; setTool("look")'); });
+  it('nur die Brücke im Rechteck: „bleibt stehen“ nennt sie, nichts wird angehoben', () => {
+    const t = toasts('pickUpGroup(14, 12, 16, 12)');
+    expect(t.join(' ')).toMatch(/bleibt stehen.*Brücke zwischen Anhöhen/);
+    expect(game('!!moving')).toBe(false);
+  });
+  it('mit Dingen darunter: sie ziehen mit, die Brücke bleibt – „(manches bleibt stehen)“', () => {
+    game("state.tiles.set('14,13', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('15,13', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
+    const t = toasts('pickUpGroup(14, 12, 16, 13)');
+    expect(t.join(' ')).toContain('(manches bleibt stehen)');
+    expect(game("state.bruecken.has('14,12')")).toBe(true);
+    game('cancelMove()');
+  });
+  it('Auswahl-Vorschau: die Brückenfelder rot (was darunter mitzieht bleibt grün), der Text sagt es', () => {
+    game("state.tiles.set('15,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc()");
+    const r = game(`(() => { plan = { kind: 'rect', tool: 'verschieben', a: { x: 14, y: 12 }, b: { x: 16, y: 12 }, fixed: true }; const i = planInfo(plan);
+      const out = [i.states.get('14,12'), i.states.get('15,12'), i.states.get('16,12'), planText(plan, i)]; plan = null; return out; })()`);
+    expect(r.slice(0, 3)).toEqual(['bad', 'ok', 'bad']);
+    expect(r[3]).toContain('bleibt stehen');
+    const nurGrün = game(`(() => { state.tiles.set('14,12', { b: 'weg', lvl: 1, style: 'sand' }); state.tiles.set('16,12', { b: 'weg', lvl: 1, style: 'sand' }); groundVersion++; recalc();
+      plan = { kind: 'rect', tool: 'verschieben', a: { x: 14, y: 12 }, b: { x: 16, y: 12 }, fixed: true }; const i = planInfo(plan), t = planText(plan, i); plan = null; return [i.bad, t]; })()`);
+    expect(nurGrün[0]).toBe(0);
+    expect(nurGrün[1]).toContain('Brücke bleibt stehen');                  // alles darunter zieht mit: kein Rot, aber der Hinweis
+  });
+  it('Kopieren: die Brücke zählt als „bleibt draußen“, der Knopf sagt es', () => {
+    game("state.tiles.set('14,13', { b: 'weg', lvl: 1, style: 'sand' }); state.decos.set('15,13', [{ b: 'bank', rot: 0 }, null, null, null]); groundVersion++; recalc()");   // ein Weg und eine Bank (nur Wege: Pipette)
+    expect(game('copyCollect(14, 12, 16, 13).stays')).toBe(1);
+    const t = toasts('startCopy(14, 12, 16, 13)');
+    expect(t.join(' ')).toContain('(manches bleibt draußen)');
+    game('cancelMove()');
+    game(`plan = { kind: 'rect', tool: 'verschieben', a: { x: 14, y: 12 }, b: { x: 16, y: 13 }, fixed: true }; syncSelBar()`);
+    expect(document.getElementById('sel-copy').title).toContain('Brücken zwischen Anhöhen');
+    game('plan = null; syncSelBar()');
+  });
+});
