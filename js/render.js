@@ -2239,6 +2239,7 @@ function render(now) {
       }
       if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
       if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
+      if (archRails.has(k)) { for (const f of archRails.get(k)) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } archRails.delete(k); }   // vorderes Geländer der Bogenbrücke über den Bewohnern (160c F1d)
       if (state.roofs.size && (state.roofs.has(k) || hasPillarNear(x, y))) {   // Überdachung (Block 138): Stützen, dann Dach über den Figuren des Felds
         const topGhost = preview && preview.top && preview.small && hover && hover.x === x && hover.y === y;   // Deko oben (Block 138b): Geist auf dem Dach
         const rw = onRoof && onRoof.get(k);
@@ -2284,6 +2285,8 @@ function render(now) {
   if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);
   if (PLAN_WB_LAST) for (const cells of PLAN_WB_LAST.values()) wbDrawGhost(cells, z);   // letztes Feld nicht im Bild   // letztes Feld nicht im Bild: danach
   archWalkers.clear();
+  for (const fs of archRails.values()) for (const f of fs) f();         // Feld davor nicht im Bild: das Geländer trotzdem (160c F1d)
+  archRails.clear();
   if (WB_GLASS_LATE) for (const [k, n] of WB_GLASS_LATE) if (n > 0) wbGlassAt(k, z);   // Boot nicht im Bild: das Glas fehlt nie (160c D3h)
   HILL_MARKS = null; DECK_MARKS = null; PLAN_GHOST = null; PLAN_GHOST_DONE = null; PLAN_WB_GHOST = null; PLAN_WB_LAST = null; hillGap = null;   // Anhöhen-Vorschau nur für dieses Bild (Block 157)
   if (glc === 'rec') glRecOverlay(icons, labels);                        // Symbole auf echte Bildschirmpunkte, ruhende merken

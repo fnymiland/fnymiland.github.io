@@ -16,9 +16,9 @@
   const RAMP = 0.46, RI = 18, bOf = t => 0.9 * t - 0.45, tOf = b => (b + 0.45) / 0.9;
   const ri = b => Math.abs(b) >= RAMP ? 0 : RI * Math.sqrt(1 - (b / RAMP) ** 2);   // Bogen über dem Gleis
   let STONE_NONE = null;
-  function neu(P, z, b0, b1, lk, x, y, d, n, tt) {
+  function neu(P, z, b0, b1, lk, x, y, d, n, ...rest) {
     const L = NEU && LOOKS.get(x + ',' + y);
-    if (!L) return O.arch(P, z, b0, b1, lk, x, y, d, n, tt);
+    if (!L) return O.arch(P, z, b0, b1, lk, x, y, d, n, ...rest);    // das Spiel: Kachel und Teil (unten/oben, F1d) weiterreichen
     const weg = L.mat === 'weg', art = weg ? 'holz' : L.mat, stein = art === 'stein', glas = art === 'kristall', W = ARCH_W;
     if (!STONE_NONE) STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
     const lo = Math.min(b0, b1), hi = Math.max(b0, b1), t0 = tOf(lo), t1 = tOf(hi), N = 2;

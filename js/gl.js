@@ -682,7 +682,7 @@ function glPlayTiles(z, now, byTile, icons, labels, tileA, tileB, onDeck) {
   ops.push(['s', 0, GLS.groundEnd]);                                   // Boden, Wellen, Tiefe, leuchtende Wege (Wasser-Weg- und Gleisbrücken: ruhend in den Feldern, 160c D1/E1d)
   let d0;
   // Überdachungen und Stützen (Block 138): gehören nicht ins Standbild; Brücken (160c B2): ruhend darin, Felder mit Leuten oben laufen live
-  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : [], brLiveTiles()]);   // Kristall (160c C4): Glas jedes Bild
+  const list = glEvTiles(GLS.dyn, GLS.order, [byTile.keys(), roofLiveTiles(), onDeck ? onDeck.keys() : [], brLiveTiles(), archFrontTiles()]);   // Wegfeld vor der Fußgängerbrücke (160c F1d): ihr vorderes Geländer   // Kristall (160c C4): Glas jedes Bild
   let cur = GLS.groundEnd;
   for (const j of list) {
     const c = GLS.tiles[j], p = toScreen(c.x, c.y);
@@ -723,7 +723,8 @@ function glBgStep(z, now, tileA, icons, labels, B = GLB) {
   const t0 = performance.now(), miss0 = SPRITE_STATS.miss + SPRITE_STATS.nmiss, ms = B === GLB ? glBgBudget() : GLB_MS;   // vor dem Tausch der Kamera
   GL.bgB = B;
   const keep = { recs: GL.recs, cam, W, H, FOG, g, gc: groundCached, tiles: GLS.tiles, dynWhy: GLS.dynWhy, warm: nightWarm, cells: glowCells, stats: { ...GL.stats },
-    glows: glows.splice(0), pics: nightPics.splice(0), panes: nightPanes.splice(0), seen: [...nightSeen], icons: icons.splice(0), labels: labels.splice(0), am: afterMovers.splice(0) };
+    glows: glows.splice(0), pics: nightPics.splice(0), panes: nightPanes.splice(0), seen: [...nightSeen], icons: icons.splice(0), labels: labels.splice(0), am: afterMovers.splice(0), ar: [...archRails] };
+  archRails.clear();
   GL.recs = B.recs; cam = B.cam; W = B.W0 + 2 * B.M; H = B.H0 + 2 * B.M; GLS.tiles = B.tiles; GLS.dynWhy = B.dynWhy;
   for (const x of B.glows) glows.push(x); for (const x of B.pics) nightPics.push(x); for (const x of B.panes) nightPanes.push(x);
   nightSeen.clear(); for (const k of B.seen) nightSeen.add(k);
@@ -772,13 +773,14 @@ function glBgStep(z, now, tileA, icons, labels, B = GLB) {
     if (B.dry) { glows.length = 0; nightPics.length = 0; nightPanes.length = 0; nightSeen.clear(); icons.length = 0; labels.length = 0; }
     GL.bg = false; GLPASS = false; glHook(false);
     afterMovers.length = 0;                                                 // gehört zu Bewegtem – das läuft beim Abspielen
+    archRails.clear();                                                      // ebenso das vordere Geländer der Bogenbrücke (160c F1d)
     B.glows = glows.splice(0); B.pics = nightPics.splice(0); B.panes = nightPanes.splice(0); B.seen = new Set(nightSeen); B.warm = nightWarm; B.cells = glowCells;
     B.icons = icons.splice(0); B.labels = labels.splice(0);
     GL.recs = keep.recs; cam = keep.cam; W = keep.W; H = keep.H; FOG = keep.FOG; g = keep.g; groundCached = keep.gc; GLS.tiles = keep.tiles; GLS.dynWhy = keep.dynWhy;
     nightWarm = keep.warm; glowCells = keep.cells; Object.assign(GL.stats, keep.stats);
     for (const x of keep.glows) glows.push(x); for (const x of keep.pics) nightPics.push(x); for (const x of keep.panes) nightPanes.push(x);
     nightSeen.clear(); for (const k of keep.seen) nightSeen.add(k);
-    for (const x of keep.icons) icons.push(x); for (const x of keep.labels) labels.push(x); for (const x of keep.am) afterMovers.push(x);
+    for (const x of keep.icons) icons.push(x); for (const x of keep.labels) labels.push(x); for (const x of keep.am) afterMovers.push(x); for (const [k, v] of keep.ar) archRails.set(k, v);
   }
   if (B.bad) B.st = 'idle';
   else if (B.V && B.i >= B.V.visible.length) B.st = 'done';

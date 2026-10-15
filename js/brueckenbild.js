@@ -988,8 +988,10 @@ function brBatched(f) {
   try { return f(); } finally { try { flush(); } finally { g = real; BR_WRAP = prev; } }
 }
 // P(a, b, h): a längs der Schiene (d), b längs des Wegs (n); L: Aussehen (brLook 'uebergang'); t: die Kachel (Belag)
+// teil: 'alles' | 'unten' (Wände, Deck, Glasband – bis vor das vordere Geländer) | 'oben' (vorderes Geländer samt Glas und Lampen vorn, 160c F1d:
+// nach den Figuren auf der Brücke)
 const ubArch = (...a) => brBatched(() => ubArch0(...a));
-function ubArch0(P, z, b0, b1, L, x, y, d, n, t) {
+function ubArch0(P, z, b0, b1, L, x, y, d, n, t, teil = 'alles') {
   L = L && BR_MAT[L.mat] && Object.prototype.hasOwnProperty.call(BR_MAT, L.mat) ? L : { mat: 'holz', deck: 'muster' };
   const art = L.mat, weg = L.deck === 'belag', stein = art === 'stein', glas = art === 'kristall', W = ARCH_W;
   if (!UB_STONE_NONE) UB_STONE_NONE = { arcs: [], S: BR_STEIN, ts: () => [], ri: () => null, pierHit: () => false, low: (tt, g0 = 0) => g0 };
@@ -1067,15 +1069,19 @@ function ubArch0(P, z, b0, b1, L, x, y, d, n, t) {
     const A = bs(Math.max(lo, -UB_RAMP), Math.min(hi, 0), K * 2).filter((b, i, arr) => i === 0 || (ubRi(b) - ubRi(arr[i - 1])) / (b - arr[i - 1]) > TH);
     if (A.length > 1) poly([...A.map(b => P(W, b, ubRi(b))), ...A.slice().reverse().map(b => P(-W, b, ubRi(b)))], C(Lp.inner));
   };
-  if (glas) lay('hg');
-  if (stein) laibung();
-  wand(-1);
-  lay('h');
-  wand(1);
-  lay('d');
-  if (glas) lay('t1');
-  lay('o');
-  if (glas) lay('t2');
+  if (teil !== 'oben') {
+    if (glas) lay('hg');
+    if (stein) laibung();
+    wand(-1);
+    lay('h');
+    wand(1);
+    lay('d');
+    if (glas) lay('t1');
+  }
+  if (teil !== 'unten') {
+    lay('o');
+    if (glas) lay('t2');
+  }
 }
 // Belag wie der Weg (Block 148): je Abschnitt eine eigene ebene Abbildung, damit Muster dem Bogen folgen
 function ubBelag(P, z, b0, b1, t, x, y, d, n) {

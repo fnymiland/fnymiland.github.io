@@ -768,6 +768,17 @@ function railTrim(L, segs, lk, x, y, z) {
   });
 }
 const afterMovers = [], archWalkers = new Map();  // Zeichnungen über den Fahrzeugen ihres Felds (Bogenbrücke), Bewohner darauf
+const archRails = new Map();                       // Feld → vorderes Geländer der Bogenbrücke über ihm, nach den Bewohnern des Felds (160c F1d)
+const archRailAdd = (k, f) => { if (!archRails.has(k)) archRails.set(k, []); archRails.get(k).push(f); };
+// Wegfeld vor jeder Fußgängerbrücke (+n): sein tileB malt dort das vordere Geländer – im GL-Bild läuft es darum jedes Bild (wie Glas, brLiveTiles)
+const ARCH_FRONT = { v: -1, st: null, arr: [] };
+function archFrontTiles() {
+  if (ARCH_FRONT.v === groundVersion && ARCH_FRONT.st === state) return ARCH_FRONT.arr;
+  const arr = [];
+  for (const [k, t] of state.tiles) if (t.b === 'schiene' && t.cross && t.foot) { const [x, y] = keyXY(k), { n } = crossingAxes(x, y); arr.push((x + n[0]) + ',' + (y + n[1])); }
+  Object.assign(ARCH_FRONT, { v: groundVersion, st: state, arr });
+  return arr;
+}
 // Bahnübergang: Schranken (senken sich, wenn ein Zug kommt; nachts blinkt es rot) oder eine Fußgängerbrücke
 const crossAnim = new Map();
 // Richtung eines Übergangs: Schiene entlang d, Weg entlang n (beide als positive Einheitsachse)
@@ -795,17 +806,21 @@ function archAt(px, py) {
   return null;
 }
 // Bogen von b0 bis b1 (160c F1: Maler ubArch in brueckenbild.js, Bekleidung je Material). L: Aussehen (brLook 'uebergang'), t: die Kachel (Belag)
-function drawArch(P, z, b0, b1, L, x, y, d, n, t) { ubArch(P, z, b0, b1, L, x, y, d, n, t); }
+function drawArch(P, z, b0, b1, L, x, y, d, n, t, teil = 'alles') { ubArch(P, z, b0, b1, L, x, y, d, n, t, teil); }
 function drawCrossing(cx, cy, z, x, y, t, now) {
   const { d, n } = crossingAxes(x, y);
   const P = (a, b, up = 0) => { const u = d[0] * a + n[0] * b, v = d[1] * a + n[1] * b; return [cx + (u - v) * TW / 2 * z, cy + (u + v) * TH / 2 * z - up * z]; };
   if (t.foot) {
     // hintere Hälfte jetzt, vordere erst nach den Fahrzeugen dieses Felds (der Zug fährt darunter durch)
+    // Unten (Wände, Deck) hinten jetzt, vorn nach den Fahrzeugen des Felds; das vordere Geländer erst nach den Bewohnern darauf (160c F1d):
+    // bis b 0,5 nach denen des Übergangsfelds (archWalkers), den Rest nach denen des Wegfelds davor (dort laufen sie auf der vorderen Rampe)
     const L = brLook(t, 'uebergang');
-    if (PASS === 'object' && !hillLateK) {                             // Nachmalen auf dem späteren Nachbarn (hillLate, 160c F1): ganz, auf seine Raute zugeschnitten
-      drawArch(P, z, -ARCH_SPAN, 0, L, x, y, d, n, t);
-      const m = g.getTransform();
-      afterMovers.push(() => { g.save(); g.setTransform(m); drawArch(P, z, 0, ARCH_SPAN, L, x, y, d, n, t); g.restore(); });
+    if (PASS === 'object' && !hillLateK && !SPRITE_PAINT) {             // Nachmalen auf dem späteren Nachbarn (hillLate, 160c F1a): ganz, auf seine Raute zugeschnitten
+      drawArch(P, z, -ARCH_SPAN, 0, L, x, y, d, n, t, 'unten');
+      const m = g.getTransform(), at = f => () => { g.save(); g.setTransform(m); try { f(); } finally { g.restore(); } };
+      afterMovers.push(at(() => drawArch(P, z, 0, ARCH_SPAN, L, x, y, d, n, t, 'unten')));
+      archRailAdd(x + ',' + y, at(() => drawArch(P, z, -ARCH_SPAN, 0.5, L, x, y, d, n, t, 'oben')));
+      archRailAdd((x + n[0]) + ',' + (y + n[1]), at(() => drawArch(P, z, 0.5, ARCH_SPAN, L, x, y, d, n, t, 'oben')));
     } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, L, x, y, d, n, t);
     return;
   }
