@@ -85,7 +85,7 @@ const ITEMS = {
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
              desc: 'Verbindet Viertel. Weitere Stile gibt es in der Kunstakademie; als Block gelegt wird daraus ein Platz.' },
   schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
-             desc: 'Für den Zug – das Gleisbett kannst du wählen (Schotter, Rasen …). Über Wasser wird sie zur Brücke (🪙 40 🪵2 🔩2).' },
+             desc: 'Für den Zug – das Gleisbett kannst du wählen (Schotter, Rasen …). Über Wasser wird sie zur Brücke (ab 🪙 40 🪵2 🔩2) – Material, Farbe und Licht im Fenster der Brücke, für neue Brücken in der Leiste des Brücken-Werkzeugs.' },
   // U-Bahn (Block 136, Konzept mit Nutzer 08.10.2026): Tunnel und U-Bahn-Station gehören zum selben Netz wie Schienen
   tunnel:  { cat: 'netz', name: 'Tunnel', cost: 60, mat: { quader: 1, metall: 1 }, needs: 'grass', tech: 'ubahn', paint: true,
              desc: 'Strecke unter der Erde: unter Häusern, Wegen und Parks durch, ohne Abriss – auch unter Wasser (teurer). Mit der Schiene verbindet ihn eine Tunneleinfahrt.' },

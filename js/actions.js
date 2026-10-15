@@ -149,6 +149,7 @@ function build(b, x, y, quiet) {
     if (back && b === 'huegelrampe') rampIntoSink(x, y, rot);              // Gleis-Rampe in die Anhöhe (A, C; hills.js): ihre eingelassenen Felder absenken
     else if (back) { hillTake(x, y); hwLowered(x, y); }                   // Spaziergänger: wer dort oben steht, ist weg; wer hinwollte, kehrt um
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
+    const gbL = bridge && b === 'schiene' ? brNewLook(x, y, 'gleis') : null;   // 160c E2c: wie costOf (Nachbar, sonst Leiste) – vor dem Setzen
     const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
@@ -166,7 +167,7 @@ function build(b, x, y, quiet) {
         if (b === 'weg') { if (bridgeKind(nb) !== bridgeKind(nt)) nt.brk = bridgeKind(nb); else delete nt.brk; }
         const at = b === 'weg' ? 'wasser' : 'gleis';
         if (brIsNew(nb, at)) { if (b === 'weg') nt.brk = bridgeKind(nb); brStamp(nt, at, brOnLook(brLook(nb, at))); }   // neues Format: bezahlt, was costOf abgebucht hat (brNewLook)
-      }
+      } else if (gbL && (gbL.mat !== 'holz' || gbL.col != null)) { gbWriteLook(nt, gbL); nt.brp = { ...brPrice(gbL, 'gleis'), k: brSig(nt, 'gleis') }; }   // Leiste (160c E2c): neues Format; Holz ohne Farbe wie bisher
     }
     if (under.length) setUnder(state.tiles.get(k), x, y, under);
     if (b === 'weg') state.tiles.get(k).lauf = wegLaufNew(x, y);        // Wegrichtung (Block 158): aus der Zugrichtung, sonst wie die Nachbarn

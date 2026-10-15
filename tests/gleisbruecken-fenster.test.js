@@ -80,3 +80,41 @@ describe('Gleisbrücken übers Wasser: ganze Brücke, Material, Geld (160c E2b)'
     expect(game("brSpanLook(8, 3).mat")).toBe('holz');
   });
 });
+
+// 160c E2c (F3): neue Gleisbrücke ohne Nachbarn nimmt das Material aus der Leiste des Brücken-Werkzeugs (Holz = wie bisher, ohne brp);
+// Verlängern übernimmt das Aussehen der Brücke daneben; abgebucht = costOf = Plan-Preis; Abriss erstattet genau das Bezahlte
+describe('Gleisbrücken übers Wasser: Bauen im neuen Format (160c E2c)', () => {
+  const wasser = () => game("for (let y = 0; y <= 9; y++) for (let x = 2; x <= 9; x++) state.terra.set(x + ',' + y, 'water'); state.techs.add('bahn'); state.techs.add('terraform'); terrainCache.clear(); waterChanged(); recalc()");
+  const leiste = mat => game(`state.paintNew.bruecke = { form: BK_ART_IDS.indexOf('${mat}') }`);
+  it('Leiste Metall: erstes Feld Metall, bezahlt = costOf; das nächste übernimmt es; Abriss gibt genau das Bezahlte zurück', () => {
+    wasser(); leiste('stahl');
+    expect(game("build('schiene', 1, 5, true)")).toBe(true);
+    const c = game("costOf('schiene', 2, 5)"), w0 = wallet();
+    expect(c).toEqual(game("brCostMat(brPrice({ mat: 'stahl' }, 'gleis'))"));
+    expect(game("build('schiene', 2, 5, true)")).toBe(true);
+    const d = diff(w0, wallet()), want = { money: -c.cost }; for (const [r, v] of Object.entries(c.mat)) want[r] = -v;
+    expect(d).toEqual(want);
+    expect(game("(t => [t.brm, brIsNew(t, 'gleis'), brSpanLook(2, 5).mat])(state.tiles.get('2,5'))")).toEqual(['stahl', true, 'stahl']);
+    leiste('holz');
+    expect(game("build('schiene', 3, 5, true)")).toBe(true);
+    expect(game("brLook(state.tiles.get('3,5'), 'gleis').mat")).toBe('stahl');            // verlängern: wie die Brücke daneben, nicht die Leiste
+    const w1 = wallet();
+    expect(game("demolish(3, 5)")).not.toBe(false);
+    expect(diff(w1, wallet())).toEqual((p => { const o = {}; for (const [k, v] of Object.entries(p)) if (k !== 'k' && v) o[k] = v; return o; })(game("brPrice({ mat: 'stahl' }, 'gleis')")));
+  });
+  it('Leiste Holz (oder gesperrtes Material): wie bisher – Holz, kein brp, 40 Taler', () => {
+    wasser(); leiste('kristall');
+    expect(game("brMatLock('kristall', 'gleis')")).toMatch(/Kristall/);
+    expect(game("build('schiene', 1, 5, true)")).toBe(true);
+    const m = game('state.money');
+    expect(game("build('schiene', 2, 5, true)")).toBe(true);
+    expect(game('state.money')).toBe(m - 40);
+    expect(game("(t => [t.brm, t.brp])(state.tiles.get('2,5'))")).toEqual([undefined, undefined]);
+  });
+  it('Linie ziehen über Wasser mit Leiste Metall: Plan-Preis = abgebucht', () => {
+    wasser(); leiste('stahl');
+    const r = game(`(() => { setTool('schiene'); startPlan('line', { x: 0, y: 5 }, { x: 11, y: 5 }, false); const info = planInfo(plan); const m0 = state.money; runPlan(); setTool('look'); return [info.cost, m0 - state.money]; })()`);
+    expect(r[1]).toBe(r[0]);
+    expect(game("brSpanLook(5, 5).mat")).toBe('stahl');
+  });
+});

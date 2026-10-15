@@ -232,7 +232,16 @@ function brNewLook(x, y, at) {
     if (want(t)) return brOnLook(brLook(t, at));
     if (BR_PLAN_LOOK && BR_PLAN_LOOK.has(k)) return BR_PLAN_LOOK.get(k);
   }
-  return at === 'gleis' ? brLegacyLook({}, 'gleis') : wbLeisteLook();
+  return at === 'gleis' ? gbLeisteLook() : wbLeisteLook();
+}
+// Neue Gleisbrücke übers Wasser ohne Nachbarn (160c E2c, F3): Material und Farbe aus der Leiste des Brücken-Werkzeugs; gesperrtes Material oder
+// ohne das Werkzeug: Holz wie bisher
+function gbLeisteLook() {
+  const L = brLegacyLook({}, 'gleis');
+  if (typeof available !== 'function' || !available('bruecke')) return L;
+  const p = decoLookNew('bruecke'), mat = BK_ART_IDS[p.form || 0], col = p.col ? p.col - 1 : null;
+  if (mat && mat !== 'holz' && BR_MAT[mat] && !brMatLock(mat, 'gleis')) return { ...L, mat, plank: null, col };
+  return col != null ? { ...L, col } : L;
 }
 // Neue Brücke übers Wasser ohne Nachbarn (160c D3f, F3; Nutzer 13.10.2026): Material und Farbe aus der Leiste des Brücken-Werkzeugs – Holz heißt
 // dort „wie der Wegstil“ (Sand → Holz, Pflaster → Stein …); gesperrtes Material oder ohne das Werkzeug: wie der Wegstil
