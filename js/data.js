@@ -1156,7 +1156,7 @@ const MARKISE_COLS = [                                                  // Über
   { id: 'rosa', name: 'Rosa', c: '#ee8fb4', design: 80 }, { id: 'tuerkis', name: 'Türkis', c: '#3fb0a8', design: 80 }];
 const DECO_LOOKS = {
   anhoehe: { group: 'Anhöhen', icon: '#8a7f73', cols: null, forms: [{ id: 'fels', name: 'Felswand' }, { id: 'erde', name: 'Erde mit Grasnarbe' }, { id: 'mauer', name: 'Trockenmauer' }] },   // Block 157
-  bruecke: { group: 'Brücken', icon: '#a9774a', cols: [{ id: 'mat', name: 'Wie das Material', c: '#c9b79c' }, ...BRIDGE_COL_DEFS],   // col i ↔ brc i − 1 (160c C6)
+  bruecke: { group: 'Brücken', icon: '#a9774a', formLabel: 'Material', cols: [{ id: 'mat', name: 'Wie das Material', c: '#c9b79c' }, ...BRIDGE_COL_DEFS],   // col i ↔ brc i − 1 (160c C6)
     forms: [{ id: 'holz', name: 'Holz' }, { id: 'stahl', name: 'Metall' }, { id: 'stein', name: 'Stein' }, { id: 'kristall', name: 'Kristall' }] },   // Block 160 (bruecken.js BK_ART_IDS; nie umsortieren)
   strassenlaterne: { group: 'Straßenlaternen', icon: '#2f6b4a', cols: LANTERN_COLS, forms: [{ id: 'schinkel', name: 'Mastleuchte' }, { id: 'peitsche', name: 'Peitschenmast' },
     { id: 'kugel', name: 'Kugelleuchte', design: 150 }, { id: 'doppel', name: 'Doppelausleger', design: 150 }, { id: 'hirtenstab', name: 'Bischofsstab', design: 200 }, { id: 'boulevard', name: 'Boulevard', design: 250 }] },   // Block 132

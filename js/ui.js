@@ -634,7 +634,8 @@ function openBuildInfo(id) {
   const cost = [d.cost ? `<span${state.money < d.cost ? ' class="bad"' : ''}>🪙 ${fmt(d.cost)}</span>` : '<span>kostenlos</span>',
     ...Object.entries(d.mat || {}).map(([r, n]) => `<span${state.res[r] < n ? ' class="bad"' : ''} ${helpAttr('res:' + r)}>${RES[r].icon} ${fmt(n)} ${RES[r].name}</span>`)];   // antippen: woher (Block 92)
   const [w, h] = d.small || id === 'abriss' || id === 'verschieben' ? [1, 1] : sizeOf(id, 0);
-  const built = d.small ? 0 : [...state.tiles.values()].filter(t => t.b === id).length;
+  const built = d.small ? 0 : id === 'bruecke' ? (state.bruecken ? state.bruecken.size : 0) : [...state.tiles.values()].filter(t => t.b === id).length;   // Brücken zwischen Anhöhen liegen in state.bruecken (160c G1)
+  const matLock = id === 'bruecke' && !locked ? brLeisteLock(bkArtNew()) : null;   // gewähltes Material noch gesperrt (160c G1)
   const facts = [w * h > 1 ? `📐 ${w}×${h} Felder` : '', d.workers ? `👷 ${d.workers} Mitarbeiter` : '', SHOPS[id] ? `🛒 bedient bis ${fmt(shopCap(id))} Kunden` : '',
     d.beauty && id !== 'weg' ? `🌸 +${d.beauty}` : '', d.ugly ? `🌸 −${d.ugly} neben Häusern` : '',
     CONSUMERS[id] ? `⚡ braucht ${CONSUMERS[id]}` : '', built ? `🏗️ ${built} gebaut` : ''].filter(Boolean);
@@ -642,6 +643,7 @@ function openBuildInfo(id) {
   showPanel(`
     <h3 class="with-fav">${d.name}${d.gift ? '' : `<button class="fav-head${fav ? ' on' : ''}" id="p-fav" aria-pressed="${fav}" aria-label="${fav ? d.name + ': kein Favorit mehr' : d.name + ' als Favorit'}" title="Favorit (⭐ unten links)">${fav ? '★' : '☆'}</button>`}</h3>
     ${locked ? `<div class="status"><div class="bad">🔒 Freischalten: ${unlockText(ud)}</div></div>${go ? `<div class="row"><button class="btn" id="p-unlock">${go.label}</button></div>` : ''}` : ''}
+    ${matLock ? `<div class="status"><div class="bad">🔒 ${escHtml(matLock)}</div></div>` : ''}
     ${fx ? `<p class="big">${fx}</p>` : ''}
     <div class="stats">${cost.join('')}</div>
     ${WONDERS[id] ? `<p class="muted">Das ist nur die Baustelle. Dann ${WONDERS[id].phases.length} Bauabschnitte – zusammen ca. 🪙 ${fmt(wonderTotal(id))} und Material – bei deinem Einkommen etwa ${fmtDuration(wonderTotal(id) / Math.max(1, wonderRate()))}. Mehr Einkommen macht es schneller.</p>` : ''}
@@ -947,8 +949,8 @@ function updateHud() {
   goal.classList.toggle('small', goalSmall ?? PHONE);
   setHtml(goal, goalHtml(), true);
   // Leiste unten: was inzwischen freigeschaltet ist, wird sofort bunt
-  const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('');
-  if (sig !== unlockSig) { if (unlockSig) buildToolbar(); unlockSig = sig; }
+  const sig = Object.keys(ITEMS).map(id => +available(id)).join('') + Object.values(STYLES).flat().map(st => +styleOk(st)).join('') + BR_MAT_IDS.map(m => +!brLeisteLock(m)).join('');   // Brückenmaterial: Schloss in der Leiste (160c G1)
+  if (sig !== unlockSig) { if (unlockSig) { buildToolbar(); if (tool === 'bruecke') renderStyleBar(tool); } unlockSig = sig; }
   watchUnlocks();
   watchTips();
   refreshLive();
@@ -1042,11 +1044,13 @@ function unlockKeys() {
   for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].gift && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
   for (const st of STYLES.weg) if ((st.lm || st.album) && styleOk(st)) out.add('weg:' + st.id);
   for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
+  if (available('bruecke')) for (const m of BR_MAT_IDS) if (BR_MAT_NEU[m] && !brLeisteLock(m)) out.add('brmat:' + m);   // neues Brückenmaterial (160c G1)
   return out;
 }
 function watchUnlocks() {
   const now = unlockKeys();
-  if (unlockSeen) for (const k of now) if (!unlockSeen.has(k) && !pendingUnlocks.includes(k)) pendingUnlocks.push(k);
+  const brNeu = unlockSeen && now.has('bruecke') && !unlockSeen.has('bruecke');   // die Brücke selbst kommt gerade dazu: ihre Materialien nicht eigens (160c G1)
+  if (unlockSeen) for (const k of now) if (!unlockSeen.has(k) && !pendingUnlocks.includes(k) && !(brNeu && k.startsWith('brmat:'))) pendingUnlocks.push(k);
   unlockSeen = now;
   if (pendingUnlocks.length && $('modal').hidden) openUnlocks();
 }
@@ -1055,6 +1059,12 @@ function unlockCard(k) {
     const st = styleDef('weg', k.slice(4));
     return `<div class="unlock-card"><div class="uc-pic"><i class="uc-sw" style="background:${styleSwatch(st)}"></i></div>
       <div class="uc-txt"><b>Neuer Wegstil: ${st.name}</b><p class="tip">💡 Ein Geschenk – beim Weg in der Stil-Leiste auswählen.</p>
+      <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
+  }
+  if (k.startsWith('brmat:')) {                                          // neues Brückenmaterial (160c G1)
+    const m = k.slice(6);
+    return `<div class="unlock-card"><div class="uc-pic" data-thumb="bruecke"></div>
+      <div class="uc-txt"><b>Neues Brückenmaterial: ${BR_MAT[m].name}</b><p class="tip">💡 ${BR_MAT_NEU[m].tip}</p>
       <button class="btn small" data-try="${k}">Ausprobieren</button></div></div>`;
   }
   if (k.startsWith('stufe:')) {
@@ -1175,6 +1185,7 @@ function tryUnlock(k) {
   closeModal();
   let id = k;
   if (k.startsWith('weg:')) { chosenStyle.weg = k.slice(4); id = 'weg'; }
+  if (k.startsWith('brmat:')) { const i = BK_ART_IDS.indexOf(k.slice(6)); if (i >= 0) state.paintNew.bruecke = { ...(state.paintNew.bruecke || {}), form: i }; id = 'bruecke'; }   // gleich in der Leiste gewählt (160c G1)
   const p = menuPlaceOf(id);
   menuTop = p.top; menuSub = p.sub;
   buildToolbar();
@@ -1693,10 +1704,11 @@ function lookChips(b) {
   const lab = L.colLabel || 'Farbe', F = L.forms[form], Cc = L.cols && !(b === 'dach' && F.id !== 'markise') && L.cols[col];   // Dach: Farbe nur für die Markise
   const moreF = L.forms.length - lookFree(b, 'form').length, moreC = L.cols ? L.cols.length - lookFree(b, 'col').length : 0;
   const more = n => n ? `<button class="wopt more" data-lmore="1"><i>🎨</i><small>+${n} in der Kunstakademie</small></button>` : '';
-  const pop = lookPop === 'form' ? `<div class="wpop" role="listbox" aria-label="Form">${lookFree(b, 'form').map(([f, i]) => `<button class="wopt${i === form ? ' on' : ''}" data-lform="${i}" role="option" aria-selected="${i === form}"><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><small>${f.name}</small></button>`).join('')}${more(moreF)}</div>`
+  const lockOf = i => (b === 'bruecke' ? brLeisteLock(BK_ART_IDS[i]) : null), fLab = L.formLabel || 'Form';   // Brücke: gesperrtes Material mit Schloss, wählbar (160c G1, karte-C6-fenster)
+  const pop = lookPop === 'form' ? `<div class="wpop" role="listbox" aria-label="${fLab}">${lookFree(b, 'form').map(([f, i]) => `<button class="wopt${i === form ? ' on' : ''}${lockOf(i) ? ' locked' : ''}" data-lform="${i}" role="option" aria-selected="${i === form}"${lockOf(i) ? ` title="${escHtml(lockOf(i))}"` : ''}><i style="background:#f6efe2 url(${lookThumb(b, i, col)}) center / contain no-repeat"></i><small>${lockOf(i) ? '🔒 ' : ''}${f.name}</small></button>`).join('')}${more(moreF)}</div>`
     : lookPop === 'col' && L.cols ? `<div class="wpop wpop-cols" role="listbox" aria-label="${lab}">${lookFree(b, 'col').map(([c, i]) => `<button class="wopt${i === col ? ' on' : ''}" data-lcol="${i}" role="option" aria-selected="${i === col}"><i style="background:${c.c}"></i><small>${c.name}</small></button>`).join('')}${more(moreC)}</div>` : '';
   return '<span class="style-sep"></span>' + pop
-    + `<button class="style-chip on wsel look-chip${lookPop === 'form' ? ' open' : ''}" data-lpop="form" aria-expanded="${lookPop === 'form'}" aria-label="Form: ${F.name} – ändern"><i style="background:#f6efe2 url(${lookThumb(b, form, col)}) center / contain no-repeat"></i><span>${F.name} ▾</span></button>`
+    + `<button class="style-chip on wsel look-chip${lookPop === 'form' ? ' open' : ''}" data-lpop="form" aria-expanded="${lookPop === 'form'}" aria-label="${fLab}: ${F.name} – ändern"${lockOf(form) ? ` title="${escHtml(lockOf(form))}"` : ''}><i style="background:#f6efe2 url(${lookThumb(b, form, col)}) center / contain no-repeat"></i><span>${lockOf(form) ? '🔒 ' : ''}${F.name} ▾</span></button>`
     + (Cc ? `<button class="style-chip on wsel${lookPop === 'col' ? ' open' : ''}" data-lpop="col" aria-expanded="${lookPop === 'col'}" aria-label="${lab}: ${Cc.name} – ändern"><i style="background:${Cc.c}"></i><span>${Cc.name} ▾</span></button>` : '');
 }
 function wireLookChips(bar, b, t) {

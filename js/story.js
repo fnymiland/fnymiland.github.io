@@ -240,6 +240,7 @@ function lmUnlockNames(type, i) {
   for (const st of STYLES.weg) if (st.lm === key) add(unlockName('weg:' + st.id));
   for (const t of TECHS) if (t.lm === key) add(`Forschung „${t.name}“`);
   for (const h of HOUSE_STAGES) if (h.lm === key) add(h.name);
+  if (typeof BR_MAT === 'object') for (const [id, M] of Object.entries(BR_MAT)) if (M.lock && M.lock.lm === key && BR_MAT_NEU[id]) add(BR_MAT_NEU[id].name);   // Brückenmaterial (160c G1)
   return names;
 }
 function restoreInfo(type) {

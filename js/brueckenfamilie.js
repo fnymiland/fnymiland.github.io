@@ -25,6 +25,19 @@ function brMatLock(mat, at = 'anhoehe') {
   return `${M.name}: erst mit ${unlockText(def, false)}`;
 }
 const BR_MAT_IDS = ['holz', 'stahl', 'stein', 'kristall'];
+// Leiste des Brücken-Werkzeugs (160c G1): gilt zwischen Anhöhen und für neue Brücken übers Wasser – gesperrt, wo es an der Anhöhe gesperrt ist;
+// übers Wasser frei: dazugesagt. null: frei
+function brLeisteLock(mat) {
+  const a = brMatLock(mat, 'anhoehe');
+  if (!a) return null;
+  return brMatLock(mat, 'wasser') ? a : a + ' (übers Wasser frei)';
+}
+// Fenster „Neu freigeschaltet“ und „Schaltet frei“ der Sehenswürdigkeit (160c G1): was das neue Material kann
+const BR_MAT_NEU = {
+  stahl: { name: 'Brücken aus Metall zwischen Anhöhen', tip: 'Zwischen Anhöhen jetzt auch aus Metall – oben in der Leiste des Brücken-Werkzeugs wählen.' },
+  stein: { name: 'Brücken aus Stein zwischen Anhöhen', tip: 'Zwischen Anhöhen jetzt auch aus Stein, mit Pfeilern und Bögen – oben in der Leiste des Brücken-Werkzeugs wählen. Übers Wasser ging Stein schon immer.' },
+  kristall: { name: 'Brücken aus Kristall', tip: 'Brücken aus Kristall – zwischen Anhöhen, übers Wasser, für Gleise und am Bahnübergang. In der Leiste des Brücken-Werkzeugs wählen oder im Fenster einer Brücke umstellen.' },
+};
 const BR_KEYS = ['brm', 'brc', 'brw', 'brb', 'brl', 'brz', 'bru'];       // Aussehen an Kachel und Bauwerk (dazu brp: bezahlter Preis)
 const BR_ROT_COL = 3, BR_ZIEGEL_COL = 8, BR_ROT_PLANK = 5;                // alte Rote Bogenbrücke / Ziegelbrücke: Farbe so nah wie möglich
 const brIdx = v => (Number.isInteger(v) && v >= 0 && v < 64 ? v : null);  // Farbindex: Müll → null (Farbe des Materials)

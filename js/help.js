@@ -39,7 +39,7 @@ function resWhere(r, deep = true) {
   return out;
 }
 function resUses(r) {
-  const b = BUILDABLE().filter(id => ITEMS[id].mat && ITEMS[id].mat[r]).map(id => ITEMS[id].name);
+  const b = BUILDABLE().filter(id => id === 'bruecke' ? Object.values(BR_COST.anhoehe).some(c => c[r]) : ITEMS[id].mat && ITEMS[id].mat[r]).map(id => ITEMS[id].name);   // Brücke: jedes Material (160c G1), nicht nur das gewählte
   const h = HOUSE_STAGES.filter(st => st.mat && st.mat[r]).map(st => `Haus → ${st.name}`);
   const s = Object.keys(SHOPS).filter(id => SHOPS[id].ware === r).map(id => `${ITEMS[id].name} (verkauft)`);
   return [...h, ...b, ...s];
@@ -125,11 +125,13 @@ function helpEntry(key) {
     const makes = d.prod ? Object.keys(d.prod).map(resLink).join(', ') : d.conv ? `${resLink(d.conv.to)} aus ${resLink(d.conv.from)}` : '';
     return { title: d.name, show: [id], short: d.desc,
       text: `<p>${d.desc}</p>${tip && tip !== d.desc ? `<p class="muted">💡 ${tip}</p>` : ''}
-        <p class="muted">${[costText({ money: d.cost, ...(d.mat || {}) }) || 'kostenlos', makes ? 'liefert ' + makes : '', n, path ? 'im Menü: ' + path : '',
+        <p class="muted">${[id === 'bruecke' ? brHelpCost() : costText({ money: d.cost, ...(d.mat || {}) }) || 'kostenlos', makes ? 'liefert ' + makes : '', n, path ? 'im Menü: ' + path : '',
           available(id) ? '' : '🔒 ' + unlockText(d)].filter(Boolean).join(' · ')}</p>` };
   }
   return null;
 }
+// Brücke (160c G1): Preis je Feld in jedem Material (zwischen Anhöhen), gesperrte mit Schloss – nicht nur das gerade gewählte
+const brHelpCost = () => 'je Feld: ' + BK_ART_IDS.map(m => `${BR_MAT[m].name} ${costText({ ...BR_COST.anhoehe[m] })}${brLeisteLock(m) ? ' 🔒' : ''}`).join(' · ');
 // Alle Einträge fürs Nachschlagen, nach Abschnitten
 function helpSections() {
   return [
