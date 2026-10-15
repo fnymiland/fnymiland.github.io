@@ -2367,15 +2367,21 @@ function setCrossing(x, y, foot, style) {
   const t = state.tiles.get(x + ',' + y);
   if (!isCrossing(t)) return false;
   if (foot && !t.foot) { const e = bkAt(x, y) ? 'Unter der Brücke ist kein Platz für die Fußgängerbrücke' : archHillError(x, y); if (e) { fail(e); return false; } }   // Anhöhen (hills.js): nie über die Kante; Brücke darüber (Block 160)
-  if (foot) {
-    const had = footPaidOf(t);
-    style = FOOT_STYLES[style] ? style : had || 'holz';
-    if (had !== style) {
-      const cost = FOOT_STYLES[style].cost, back = had ? brPaid(t, 'uebergang') : {};   // was bezahlt wurde zurück (160c A4: auch Kopien mit brp)
-      addCost(back, 1);
-      if (!canPay(cost)) { addCost(back, -1); fail(state.money < cost.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
+  if (foot) {                                                            // 160c F1c: Material (holz/stahl/stein/kristall; altes 'weg' = Holz mit Belag)
+    const had = footPaidOf(t), mat = style === 'weg' ? 'holz' : BR_MAT[style] && Object.prototype.hasOwnProperty.call(BR_MAT, style) ? style : null;
+    if (!had) {                                                          // neu bauen: im neuen Format (brm + brp, footPaid als Rückfall)
+      const m = mat || 'holz', lk = brMatLock(m, 'uebergang');
+      if (lk) { fail(lk); return false; }
+      const look = { ...brLegacyLook({}, 'uebergang'), mat: m, deck: style === 'weg' ? 'belag' : 'muster' };
+      delete look.kind;
+      const cost = brPrice(look, 'uebergang');
+      if (!canPay(cost)) { fail(state.money < cost.money ? 'Zu wenig Taler' : 'Material fehlt noch'); return false; }
       addCost(cost, -1);
-      t.footPaid = style; delete t.brp; for (const f of BR_KEYS) if (f !== 'brc' && f !== 'brw') delete t[f];   // wieder altes Design
+      for (const f of BR_KEYS) delete t[f];
+      ubWriteLook(t, look, null, true); t.brp = { ...cost, k: brSig(t, 'uebergang') };
+    } else if (mat && mat !== brLook(t, 'uebergang').mat) {                // anderes Material: der Setzer (Bezahltes zurück, neuer Preis)
+      const was = t.foot; t.foot = true;
+      if (!ubSet(x, y, { mat })) { t.foot = was; return false; }
     }
   }
   t.foot = !!foot;

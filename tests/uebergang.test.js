@@ -90,7 +90,9 @@ describe('Bahnübergang', () => {
     }
     game('night = 0');
     game('openInfo(9, 8)');
-    expect(document.querySelectorAll('#panel [data-foot]').length).toBe(4);
+    expect(document.querySelectorAll('#panel [data-bkart]').length).toBe(4);              // 160c F1c: mit Brücke die vier Materialien
+    game("state.tiles.get('9,8').foot = false; delete state.tiles.get('9,8').footPaid; openInfo(9, 8)");
+    expect(document.querySelectorAll('#panel [data-foot]').length).toBe(4);                // ohne: bauen in einem der vier
   });
 
   it('Knöpfe im Fenster: ↶ nimmt Brücke und Design zurück; zuschauen und Besuch schalten nichts um (160c V2)', () => {

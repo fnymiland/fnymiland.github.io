@@ -19,7 +19,7 @@ const BR_MAT = {
 function brMatLock(mat, at = 'anhoehe') {
   const M = BR_MAT[mat];
   if (!M) return null;
-  const def = { ...(M.lock && !((at === 'wasser' || at === 'gleis') && mat === 'stein') ? M.lock : {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };   // übers Wasser ist Stein frei (Weg: gab es dort immer, Nutzer 13.10.2026; Gleis: ebenso, Nutzer 15.10.2026)
+  const def = { ...(M.lock && !((at === 'wasser' || at === 'gleis' || at === 'uebergang') && mat === 'stein') ? M.lock : {}), ...(at === 'anhoehe' && M.anhoehe ? M.anhoehe : {}) };   // übers Wasser ist Stein frei (Weg: gab es dort immer, Nutzer 13.10.2026; Gleis: ebenso, Nutzer 15.10.2026); am Übergang gab es ihn immer (160c F1c)
   if (!Object.keys(def).length || typeof unlockOk !== 'function' || unlockOk(def, 'brmat:' + mat)) return null;
   if (def.tech === 'bahn') return `${M.name}: erst mit der Eisenbahn`;
   return `${M.name}: erst mit ${unlockText(def, false)}`;
@@ -86,7 +86,7 @@ function brLook(o, at) {
   const id = at === 'anhoehe' ? o.art : o.brm, mat = typeof id === 'string' && Object.prototype.hasOwnProperty.call(BR_MAT, id) ? id : L.mat, same = mat === L.mat;   // nie constructor/__proto__ (rohe Kacheln)   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
   return { at, fam: L.fam, mat, col: same ? L.col : brIdx(o.brc), plank: mat === 'holz' ? (same ? L.plank : brIdx(o.brw)) : null,   // Rot/Ziegel: Farbe aus der Art
     deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : same ? L.deck : BR_MAT[mat].deck, belag: L.belag || (typeof o.style === 'string' ? o.style : null),
-    licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : same ? L.licht : null, ...(o.brl == null && same && L.lichtGratis ? { lichtGratis: true } : {}),
+    licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : o.brl === 'nein' ? null : same ? L.licht : null, ...(o.brl == null && same && L.lichtGratis ? { lichtGratis: true } : {}),   // 'nein': ohne Licht, wo der Rückfall Licht hätte (neuer Kristall-Übergang, 160c F1c)
     ...(same && L.kind ? { kind: L.kind } : {}),
     zacken: mat === 'kristall' && L.fam === 'fuss' && o.brz === 'an',
     stuetzen: mat === 'holz' && L.fam === 'fuss' && (o.bru === 'keine' || o.bru === 'jede') ? o.bru : 'wenige' };

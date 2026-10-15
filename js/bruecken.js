@@ -420,6 +420,7 @@ function gbSet(x, y, ch) {
 }
 function brSet(ref, ch) {
   if (ref && ref.at === 'wasser') return wbSet(ref.x, ref.y, ch);
+  if (ref && ref.at === 'uebergang') return ubSet(ref.x, ref.y, ch);
   if (ref && ref.at === 'gleis') return gbSet(ref.x, ref.y, ch);
   if (!ref || ref.at !== 'anhoehe') return false;
   const b = state.bruecken.get(ref.k);
@@ -882,14 +883,15 @@ function brLookHtml(L, o) {
   };
   const colBtn = (v, name, css) => `<button class="sw${v === L.col ? ' on' : ''}" data-brc="${v == null ? '' : v}" style="background:${css}" title="${escHtml(name)}" aria-label="Farbe ${escHtml(name)}"></button>`;
   const opt = (key, v, name, on) => `<button class="btn small${on ? ' on' : ''}" data-${key}="${v}">${name}</button>`;
-  const bought = o.zk === 'an' || o.zk === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken.feld, o.n));
-  const lc = brCostMat(brAdd({ money: 0 }, BR_OPT.licht.feld, o.n));
+  const per = o.opt || 'feld', nn = per === 'ganz' ? 1 : o.n;            // Übergang (160c F1c): Licht und Zacken je Brücke
+  const bought = o.zk === 'an' || o.zk === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken[per], nn));
+  const lc = brCostMat(brAdd({ money: 0 }, BR_OPT.licht[per], nn));
   return `<div class="label">Material</div><div class="looks look-forms">${o.mats.map(matBtn).join('')}</div>
     <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => colBtn(i, d.name, d.c)).join('')}</div>
     ${o.deck ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
     ${o.planken ? `<div class="label">Planken</div><div class="swatches"><button class="sw bunt${L.plank == null ? ' on' : ''}" data-brw="" title="Wie das Material" aria-label="Planken wie das Material"></button>${PLANK_COLS.map((c, i) => `<button class="sw${L.plank === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
     ${o.after || ''}
-    ${L.mat === 'holz' && o.fuss ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
+    ${L.mat === 'holz' && o.fuss && !o.ohneStuetzen ? `<div class="label">Stützen</div><div class="row">${opt('bru', 'keine', 'Keine', L.stuetzen === 'keine')}${opt('bru', 'wenige', 'Wenige', L.stuetzen === 'wenige')}${opt('bru', 'jede', 'An jeder Kante', L.stuetzen === 'jede')}</div>` : ''}
     ${L.mat === 'kristall' && o.fuss ? `<div class="label">Kristallzacken</div><div class="row">${bought ? opt('brz', 'an', 'An', o.zk === 'an') + opt('brz', 'aus', 'Aus', o.zk === 'aus')
       : `<button class="btn" data-brz="kaufen">✨ Zacken kaufen −${fmt(zk.cost)}${Object.keys(zk.mat).length ? ' · ' + matText(zk.mat) : ''}</button>`}</div>` : ''}
     <div class="label">Licht</div><div class="row">${L.licht ? opt('brl', 'an', 'An', L.licht === 'an') + opt('brl', 'aus', 'Aus', L.licht === 'aus')
@@ -913,6 +915,103 @@ function gbLookHtml(x, y) {
   const matPrice = id => brPrice({ ...L, mat: id }, 'gleis', cells.length).money - (paid.money || 0);
   const dunkel = L.licht === 'an' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + brSpanAnchor(cells).join(','));
   return brLookHtml(L, { at: 'gleis', mats: BK_ART_IDS, matPrice, deck: false, fuss: false, zk: null, n: cells.length, dunkel, planken: L.mat === 'holz' });
+}
+// Fußgängerbrücke am Übergang (160c F1c): Fenster – Schranken | Brücke; ohne bezahlte Brücke die vier Materialien mit Preis (data-foot), mit
+// Brücke Material, Farbe, Deck, Planken, Licht, Zacken für die ganze Brücke (Preise je Brücke)
+function ubLookHtml(x, y, t) {
+  const had = footPaidOf(t), base = { ...brLegacyLook({}, 'uebergang') };
+  delete base.kind;
+  let h = `<div class="label">Bahnübergang</div>
+    <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button>${had && !t.foot ? `<button class="look" data-cross="1">🌉 Fußgängerbrücke · bezahlt</button>` : ''}</div>`;
+  if (!had) {
+    const btn = id => { const { money, ...mat } = brPrice({ ...base, mat: id }, 'uebergang'), lk = brMatLock(id, 'uebergang');
+      return `<button class="look${lk ? ' locked' : ''}" data-foot="${id}"${lk ? ` title="${escHtml(lk)}"` : ''}>${lk ? '🔒 ' : ''}${BR_MAT[id].name} · 🪙 ${fmt(money)} ${matText(mat)}</button>`; };
+    h += `<div class="label">🌉 Fußgängerbrücke</div><div class="looks">${BK_ART_IDS.map(btn).join('')}</div>`;
+  }
+  if (!t.foot && archHillError(x, y)) h += `<p class="muted">${archHillError(x, y)}</p>`;
+  if (!t.foot) return h;
+  const L = brLook(t, 'uebergang'), paid = brPaid(t, 'uebergang'), zk = L.mat === 'kristall' && brIsNew(t, 'uebergang') && (t.brz === 'an' || t.brz === 'aus') ? t.brz : null;
+  const matPrice = id => brPrice(ubMatLook(L, id), 'uebergang').money - (paid.money || 0);
+  const dunkel = L.licht === 'an' && !L.lichtGratis && !!T.rail && !!T.rail.power && T.rail.power.dark.has('U' + x + ',' + y);
+  return h + `<div class="label">🌉 Fußgängerbrücke aus ${escHtml(BR_MAT[L.mat].name)}</div>`
+    + brLookHtml(L, { at: 'uebergang', mats: BK_ART_IDS, matPrice, deck: true, fuss: true, ohneStuetzen: true, zk, n: 1, opt: 'ganz', dunkel, planken: L.mat === 'holz' && L.deck !== 'belag' })
+    + `<p class="muted">Anderes Material: die alte Brücke gibt es voll zurück.${L.deck === 'belag' ? ' Der Belag ist der des Wegs (umfärben mit dem Weg).' : ''}</p>`;
+}
+// Aussehen nach einem Materialwechsel (Setzer und Preis im Fenster): altes Design weg, Planken nur Holz, Zacken nicht mit; Licht ohne Aufpreis
+// (alter Kristall) gilt nur für ihn – sonst kommt gekauftes Licht mit
+function ubMatLook(L, mat) {
+  const nl = { ...L, mat, plank: mat === 'holz' ? L.plank : null, zacken: false };
+  delete nl.kind;
+  if (nl.lichtGratis) { delete nl.lichtGratis; nl.licht = null; }
+  return nl;
+}
+// Felder aus dem Aussehen schreiben: footPaid ist der Rückfall älterer Fassungen (holz/stein/kristall, nie ein neuer Wert) – ein altes Design
+// ('weg') bleibt stehen, bis das Material wechselt. Licht ohne Aufpreis (alter Kristall, an): ohne brl, damit es so bleibt
+function ubWriteLook(t, look, zk, matChange) {
+  if (matChange || !footPaidOf(t)) t.footPaid = brFallback('uebergang', look.mat).footPaid;
+  t.brm = look.mat; t.brb = look.deck === 'belag' ? 'belag' : 'muster';
+  if (look.col != null) t.brc = look.col; else delete t.brc;
+  if (look.mat === 'holz' && look.plank != null) t.brw = look.plank; else delete t.brw;
+  if (look.licht === 'an' && look.lichtGratis) delete t.brl;
+  else if (look.licht === 'an' || look.licht === 'aus') t.brl = look.licht;
+  else if (brLegacyLook(t, 'uebergang').licht) t.brl = 'nein';         // der Rückfall (footPaid kristall) hätte Licht – dieser nicht
+  else delete t.brl;
+  if (look.mat === 'kristall' && (zk === 'an' || zk === 'aus')) t.brz = zk; else delete t.brz;
+  delete t.bru;
+}
+// Setzer (brSet 'uebergang'): eine Änderung an der Brücke eines Übergangs mit Brücke. Material: Bezahltes zurück, neuer Preis samt gekauftem
+// Licht; Licht/Zacken kaufen je Brücke, an/aus kostenlos; Farbe, Planken, Deck kostenlos. Alte Stände bekommen dabei brp = ihr Bezahltes
+function ubSet(x, y, ch) {
+  const t = state.tiles.get(x + ',' + y);
+  if (!isCrossing(t) || !t.foot || !ch) return false;
+  const L = brLook(t, 'uebergang'), paid = brPaid(t, 'uebergang');
+  let nl = { ...L }, zk = L.mat === 'kristall' && brIsNew(t, 'uebergang') && (t.brz === 'an' || t.brz === 'aus') ? t.brz : null, add = null, mat = false;
+  if ('mat' in ch) {
+    if (!BR_MAT[ch.mat] || !Object.prototype.hasOwnProperty.call(BR_MAT, ch.mat) || ch.mat === L.mat) return false;
+    const lk = brMatLock(ch.mat, 'uebergang'); if (lk) { fail(lk); return false; }
+    nl = ubMatLook(L, ch.mat); zk = null; mat = true;
+  } else if ('col' in ch) {
+    const v = ch.col == null ? null : brIdx(ch.col);
+    if (v === L.col || (v != null && v >= BRIDGE_COLS.length)) return false;
+    nl.col = v;
+  } else if ('plank' in ch) {
+    const v = ch.plank == null ? null : brIdx(ch.plank);
+    if (L.mat !== 'holz' || v === L.plank || (v != null && v >= PLANK_COLS.length)) return false;
+    nl.plank = v;
+  } else if ('deck' in ch) {
+    if ((ch.deck !== 'belag' && ch.deck !== 'muster') || ch.deck === L.deck) return false;
+    nl.deck = ch.deck;
+  } else if ('licht' in ch) {
+    const bought = L.licht === 'an' || L.licht === 'aus';
+    if (ch.licht === 'kaufen') { if (bought) return false; add = BR_OPT.licht.ganz; nl.licht = 'an'; }
+    else if ((ch.licht === 'an' || ch.licht === 'aus') && bought && L.licht !== ch.licht) { nl.licht = ch.licht; if (ch.licht === 'aus') delete nl.lichtGratis; }
+    else return false;
+  } else if ('zacken' in ch) {
+    if (L.mat !== 'kristall') return false;
+    if (ch.zacken === 'kaufen') { if (zk) return false; add = BR_OPT.zacken.ganz; zk = 'an'; }
+    else if ((ch.zacken === 'an' || ch.zacken === 'aus') && zk && zk !== ch.zacken) zk = ch.zacken;
+    else return false;
+  } else return false;
+  let brp;
+  if (mat) {
+    const tot = brPrice(nl, 'uebergang');
+    if (state.money + (paid.money || 0) < tot.money) { fail('Zu wenig Taler'); return false; }
+    for (const [r, v] of Object.entries(tot)) if (r !== 'money' && (state.res[r] || 0) + (paid[r] || 0) < v) { fail(`Zu wenig ${RES[r].name}`); return false; }
+    state.money += (paid.money || 0) - tot.money;
+    for (const [r, v] of Object.entries(paid)) if (r !== 'money') state.res[r] = (state.res[r] || 0) + v;
+    payMat(brCostMat(tot).mat);
+    brp = { ...tot };
+  } else if (add) {
+    const c = brCostMat(add);
+    if (state.money < c.cost) { fail('Zu wenig Taler'); return false; }
+    const me = matError(c.mat); if (me) { fail(me); return false; }
+    state.money -= c.cost; payMat(c.mat);
+    brp = brAdd({ ...paid }, add);
+  } else brp = { ...paid };
+  ubWriteLook(t, nl, zk, mat);
+  t.brp = { ...brp, k: brSig(t, 'uebergang') };
+  groundVersion++; sfx('deco'); if (mat || 'licht' in ch) recalc(); save();
+  return true;
 }
 const gbTitle = (x, y) => `🌉 Gleisbrücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
 function gbText(x, y) {

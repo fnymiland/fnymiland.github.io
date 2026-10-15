@@ -568,7 +568,7 @@ function copyClone(it) {
       if (at === 'wasser') t.brk = bridgeKind(t);                         // Art fest (nicht mehr aus dem Wegstil): brSig bleibt beim Umstreichen gleich
       if (at === 'uebergang' && !footPaidOf(t)) t.footPaid = brFallback('uebergang', look.mat).footPaid;   // foot ohne footPaid: bezahlt ist jetzt das Design
       t.brm = look.mat; t.brb = look.deck;
-      if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else delete t.brl;   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis
+      if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else if (look.licht === 'an' || !brLegacyLook(t, at).licht) delete t.brl; else t.brl = 'nein';   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis; ohne Licht, wo der Rückfall Licht hätte: 'nein' (160c F1c)
       if (look.zacken) t.brz = 'an'; else delete t.brz;
       if (look.stuetzen !== 'wenige') t.bru = look.stuetzen; else delete t.bru;
       // brc/brw nur, wie sie am Original stehen: Rot/Ziegel-Farben ergeben sich aus der Art (folgen ihr beim Artwechsel wie am Original)

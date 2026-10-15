@@ -1941,16 +1941,7 @@ function openInfo(x, y) {
   }
   const line = t.b === 'station' || t.b === 'ubahn' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
-  const footBtn = ([id, fs]) => {
-    const { money, ...mat } = fs.cost, mine = footPaidOf(t) === id;
-    return `<button class="look${t.foot && mine ? ' on' : ''}" data-foot="${id}">${fs.icon} ${fs.name}${mine ? '' : ` · 🪙 ${money} ${matText(mat)}`}</button>`;
-  };
-  const train = line ? trainChooser(line) : isCrossing(t) ? `<div class="label">Bahnübergang</div>
-    <div class="looks"><button class="look${t.foot ? '' : ' on'}" data-cross="0">🚧 Schranken</button></div>
-    <div class="label">🌉 Fußgängerbrücke</div>
-    <div class="looks">${Object.entries(FOOT_STYLES).map(footBtn).join('')}</div>
-    ${!t.foot && archHillError(x, y) ? `<p class="muted">${archHillError(x, y)}</p>` : ''}
-    ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
+  const train = line ? trainChooser(line) : isCrossing(t) ? ubLookHtml(x, y, t) : '';   // Bahnübergang: Schranken oder Fußgängerbrücke (160c F1c)
   // Märchenschloss (Block 60g/60h): Gestalt im Fenster, in Reitern (Form · Türme · Farben)
   const castle = isWegBridge(t) ? wbLookHtml(x, y)   // Wasser-Wegbrücke (160c D3e): Material, Farbe, Deck, Planken/Belag, Stützen, Zacken, Licht
     : isGleisBridge(t) ? gbLookHtml(x, y)            // Gleisbrücke übers Wasser (160c E2b): Material, Farbe, Planken, Licht
@@ -2066,6 +2057,7 @@ function openInfo(x, y) {
   wireCourt(el, t, () => openInfo(x, y));
   if (isWegBridge(t)) wireBrLook(el, ch => { undoable(() => brSet({ at: 'wasser', x, y }, ch)); openInfo(x, y); });   // 160c D3e: wie an der Anhöhe
   if (isGleisBridge(t)) wireBrLook(el, ch => { undoable(() => brSet({ at: 'gleis', x, y }, ch)); openInfo(x, y); });   // 160c E2b
+  if (isCrossing(t) && t.foot) wireBrLook(el, ch => { undoable(() => brSet({ at: 'uebergang', x, y }, ch)); openInfo(x, y); });   // 160c F1c
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const b of el.querySelectorAll('[data-royal]')) b.onclick = () => undoable(() => { t.cs = { r: +b.dataset.royal }; t.born = performance.now(); sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
