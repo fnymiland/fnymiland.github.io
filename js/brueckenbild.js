@@ -743,7 +743,8 @@ function gbRun(x, y, ax) {
 function gbGeom(x, y, t) {
   const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = BR_MAT[look.mat] ? look.mat : 'holz';
   const sax = gbStraightAx(x, y, t);
-  return { look, art: mat, fam: 'bahn', mat, sax, run: sax == null ? null : gbRun(x, y, sax) };
+  const anker = look.licht ? brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – nur mit gekauftem Licht
+  return { look, art: mat, fam: 'bahn', mat, sax, run: sax == null ? null : gbRun(x, y, sax), anker };
 }
 function gbPaintLage(lage, c, px, py, z, t) {
   if (c.G.sax == null) return gbKurve(lage, c, px, py, z, t);
@@ -774,7 +775,8 @@ function gbGerade(lage, c, px, py, z, t) {
   const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
   const ft = tt => { const k = Math.round(tt + 0.5), d = ax ? [0, 1] : [1, 0], j = k - i, wet = q => terrainAt(x + d[0] * q, y + d[1] * q) === 'water'; return wet(j - 1) && wet(j) ? GB_WATER : 0; };
   const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }); };
-  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark: !!c.G.dark }); };
+  const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);   // ohne Strom dunkel (160c E2d)
+  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark }); };
   if (art === 'stein') { gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh); return lamps(lage, 'stein'); }
   const Lp = brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank);
   if (art === 'holz') {

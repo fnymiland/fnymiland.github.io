@@ -911,7 +911,8 @@ const wbTitle = (x, y) => `🌉 Brücke aus ${escHtml(BR_MAT[brSpanLook(x, y).ma
 function gbLookHtml(x, y) {
   const cells = brRailSpan(x, y), L = brSpanLook(x, y), paid = cells.reduce((s, [cx, cy]) => brAdd(s, brPaid(state.tiles.get(cx + ',' + cy), 'gleis')), { money: 0 });
   const matPrice = id => brPrice({ ...L, mat: id }, 'gleis', cells.length).money - (paid.money || 0);
-  return brLookHtml(L, { at: 'gleis', mats: BK_ART_IDS, matPrice, deck: false, fuss: false, zk: null, n: cells.length, dunkel: false, planken: L.mat === 'holz' });
+  const dunkel = L.licht === 'an' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + brSpanAnchor(cells).join(','));
+  return brLookHtml(L, { at: 'gleis', mats: BK_ART_IDS, matPrice, deck: false, fuss: false, zk: null, n: cells.length, dunkel, planken: L.mat === 'holz' });
 }
 const gbTitle = (x, y) => `🌉 Gleisbrücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
 function gbText(x, y) {

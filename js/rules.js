@@ -2916,6 +2916,15 @@ function computePower(lines, supply, plants = 0) {
       if (brSpanLook(x, y).licht === 'an') { const a = 'W' + brSpanAnchor(cs).join(','); for (let i = 0; i < cs.length; i++) wl.push(a); }
     }
     for (let i = 0; i < wl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) wl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
+    const gl = [], gseen = new Set(), gkeys = [];                        // Gleisbrücken übers Wasser (160c E2d): je Brücke 'G' + Anker, danach
+    for (const [k, t] of state.tiles) if (isGleisBridge(t)) gkeys.push(k);
+    for (const k of gkeys.sort()) {
+      if (gseen.has(k)) continue;
+      const [x, y] = keyXY(k), cs = brRailSpan(x, y);
+      for (const c of cs) gseen.add(c[0] + ',' + c[1]);
+      if (brSpanLook(x, y).licht === 'an') { const a = 'G' + brSpanAnchor(cs).join(','); for (let i = 0; i < cs.length; i++) gl.push(a); }
+    }
+    for (let i = 0; i < gl.length; i += LAMPS_PER_POWER) if (!take(1, 'brlicht')) gl.slice(i, i + LAMPS_PER_POWER).forEach(l => dark.add(l));
   }
   return { supply, demand, left, dark, idle, trains, city, use };
 }

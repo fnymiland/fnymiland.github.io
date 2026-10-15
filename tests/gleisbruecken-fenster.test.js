@@ -118,3 +118,21 @@ describe('Gleisbrücken übers Wasser: Bauen im neuen Format (160c E2c)', () => 
     expect(game("brSpanLook(5, 5).mat")).toBe('stahl');
   });
 });
+
+describe('Gleisbrücken übers Wasser: Strom fürs Licht (160c E2d)', () => {
+  it("Licht an: je Brücke 'G' + Anker im Strom, ohne Strom dunkel (Lampen grau); aus: nichts im Strom", () => {
+    bau();
+    expect(game("[...T.rail.power.dark].filter(k => k[0] === 'G')")).toEqual([]);
+    game("brSet({ at: 'gleis', x: 4, y: 5 }, { licht: 'kaufen' })");
+    expect(game('gbAt(4, 5).G.anker')).toBe('2,5');
+    const city = game('!!T.rail.power.city'), dunkel = game("T.rail.power.dark.has('G2,5')");
+    if (!city) expect(dunkel).toBe(false);
+    const lampen = dark => game(`(() => { const out = [], bl = bkLamps; bkLamps = (...a) => { out.push(a[8].dark); return bl(...a); };
+      ${dark ? "T.rail.power.dark.add('G2,5');" : "T.rail.power.dark.delete('G2,5');"}
+      try { for (const l of ['h', 'v', 'd', 'o']) gbPaintLage(l, gbAt(4, 5), 0, 0, 1, state.tiles.get('4,5')); } finally { bkLamps = bl; } return out; })()`);
+    expect(new Set(lampen(true))).toEqual(new Set([true]));
+    expect(new Set(lampen(false))).toEqual(new Set([false]));
+    game("brSet({ at: 'gleis', x: 4, y: 5 }, { licht: 'aus' })");
+    expect(game("[...T.rail.power.dark].filter(k => k[0] === 'G')")).toEqual([]);
+  });
+});
