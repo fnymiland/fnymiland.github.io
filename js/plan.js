@@ -133,6 +133,7 @@ function planScan(p) {
           const S = b === 'weg' ? wbNewSpec(x, y) : null, L = S ? S.look : brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis');   // wie build: die längste Brücke daneben (geplante zählen mit)
           BR_PLAN_LOOK.set(k, L);
           if (b === 'weg') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }
+          else if (b === 'schiene') { wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }   // Gleisbrücke (160c E2): Schild und Geist
         }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
@@ -144,7 +145,8 @@ function planScan(p) {
     }
   } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; BR_PLAN_N = null; }
   const ax = p.kind === 'line' && p.a.y === p.b.y ? 0 : 1, st = b === 'weg' ? currentStyle('weg') : null;
-  const wbGhost = wbPlan.length ? wbVirtual(wbPlan.map(([k, L]) => [k, wbGhostTile(L, st, ax)]), wbPlan.map(([k]) => k)) : null;   // Geist der Brücke übers Wasser (160c D3h)
+  const wbGhost = !wbPlan.length ? null : b === 'schiene' ? wbVirtual([...order.filter(([x, y]) => !state.tiles.has(x + ',' + y)).map(([x, y]) => [x + ',' + y, { b: 'schiene', lvl: 1 }]), ...wbPlan.map(([k, L]) => [k, gbGhostTile(L)])], wbPlan.map(([k]) => k), 'gleis')   // Gleisbrücke (160c E2): samt geplanter Landgleise (sonst Prellböcke)
+    : wbVirtual(wbPlan.map(([k, L]) => [k, wbGhostTile(L, st, ax)]), wbPlan.map(([k]) => k));   // Geist der Brücke übers Wasser (160c D3h)
   if (b === 'schiene') {                                                 // Gleis-Stil (Block 112): neue Strecke verlängern stellt das
     const old = ([x, y]) => deck && deck.has(x + ',' + y) ? bkRailAt(bkAt(x, y)) : bAt(x, y) === 'schiene';   // Startgleis nicht mit um – umstellen nur, wenn nur Altes gezogen wird (Deck: sein Gleis, nicht das darunter)
     if (order.some(o => !old(o)) && order.some(old)) for (let i = order.length - 1; i >= 0; i--) if (old(order[i])) { states.set(order[i][0] + ',' + order[i][1], 'same'); order.splice(i, 1); }

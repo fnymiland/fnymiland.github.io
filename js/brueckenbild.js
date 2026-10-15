@@ -656,13 +656,13 @@ function wbBelag(t, x, y, z, ax, Pw, H, latB, latF, arch) {
 // Gedachte Wasserbrücken-Felder (160c D3h): Geist beim Ziehen übers Wasser und beim Tragen einer Brückenkachel. state.tiles wird kurz um die
 // geplanten Kacheln ergänzt und wbAt daraus gerechnet (die Caches hängen an state.tiles und leeren sich von selbst), danach zurück – nie recalc,
 // seaPath oder speichern währenddessen. extra: [[k, Kachel]], keys: welche Felder. Felder mit t (die gedachte Kachel) für wbArgs
-function wbVirtual(extra, keys) {
-  const real = state.tiles, out = new Map();
+function wbVirtual(extra, keys, at = 'wasser') {                          // at 'gleis' (160c E2): Gleisbrücken (gbAt samt G, Arme aus den gedachten Feldern)
+  const real = state.tiles, out = new Map(), cov = [];
   try {
     state.tiles = new Map(real);
-    for (const [k, t] of extra) state.tiles.set(k, t);
-    for (const k of keys) { const c = wbAt(...keyXY(k)); if (c) out.set(k, { ...c, t: state.tiles.get(k) }); }
-  } finally { state.tiles = real; }
+    for (const [k, t] of extra) { state.tiles.set(k, t); if (!COVER.has(k)) { COVER.set(k, k); cov.push(k); } }   // Belegung kurz mit (bAt/railArms lesen COVER)
+    for (const k of keys) { const c = (at === 'gleis' ? gbAt : wbAt)(...keyXY(k)); if (c) out.set(k, { ...c, t: state.tiles.get(k) }); }
+  } finally { state.tiles = real; for (const k of cov) COVER.delete(k); }
   return out;
 }
 // gedachte Brückenkachel im Aussehen look (wie build: brWriteLook, brp gestempelt)
@@ -670,6 +670,12 @@ function wbGhostTile(look, style, lauf) {
   const t = { b: 'weg', lvl: 1, style, bridge: true, lauf };
   brWriteLook(t, look, look.kind && WEG_BRIDGE[look.kind] ? look.kind : brFallback('wasser', look.mat).brk, look.mat === 'kristall' && look.zacken ? 'an' : null, null);   // gekaufte Zacken mit
   t.brp = { ...brPrice(look, 'wasser'), k: brSig(t, 'wasser') };
+  return t;
+}
+// gedachte Gleisbrückenkachel im Aussehen look (wie build: Holz ohne Farbe im alten Format, sonst gbWriteLook + brp)
+function gbGhostTile(look) {
+  const t = { b: 'schiene', lvl: 1, bridge: true, ...(DECO_LOOKS.schiene ? decoLookNew('schiene') : {}) };
+  if (look.mat !== 'holz' || look.col != null || look.licht) { gbWriteLook(t, look); t.brp = { ...brPrice(look, 'gleis'), k: brSig(t, 'gleis') }; }
   return t;
 }
 // Geistfelder je Brücke (zusammenhängend über Nachbarn): letztes Feld in Maler-Folge → Felder dieser Brücke (je eine Leinwand, wie bkDrawGhost)
@@ -696,7 +702,10 @@ function wbDrawGhost(cells, z) {
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const fog = FOG; FOG = false;                                            // geplante Felder werden beim Bauen eigen: nie im Nebel
   try { ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => {
-    for (const q of qs) { const A = wbArgs(q.c, q.px, q.py, z); A.opts = { ...A.opts, licht: null, dark: false }; for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, q.c, A, z); }
+    for (const q of qs) {
+      if (q.c.rail) { const c = { ...q.c, G: { ...q.c.G, look: { ...q.c.G.look, licht: null } } }; for (const l of ['h', 'v', 'd', 'o']) gbPaintLage(l, c, q.px, q.py, z, q.c.t); continue; }   // Gleis (160c E2)
+      const A = wbArgs(q.c, q.px, q.py, z); A.opts = { ...A.opts, licht: null, dark: false }; for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, q.c, A, z);
+    }
   }); } finally { FOG = fog; }
   for (const q of qs) { const marks = DECK_MARKS && DECK_MARKS.get(q.c.k); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
@@ -742,9 +751,9 @@ function gbRun(x, y, ax) {
 }
 function gbGeom(x, y, t) {
   const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = BR_MAT[look.mat] ? look.mat : 'holz';
-  const sax = gbStraightAx(x, y, t);
+  const sax = gbStraightAx(x, y, t), arms = railArms(x, y);              // Arme hier gemerkt: auch für gedachte Felder (Geist, wbVirtual)
   const anker = look.licht ? brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – nur mit gekauftem Licht
-  return { look, art: mat, fam: 'bahn', mat, sax, run: sax == null ? null : gbRun(x, y, sax), anker };
+  return { look, art: mat, fam: 'bahn', mat, sax, arms, run: sax == null ? null : gbRun(x, y, sax), anker };
 }
 function gbPaintLage(lage, c, px, py, z, t) {
   if (c.G.sax == null) return gbKurve(lage, c, px, py, z, t);
@@ -774,7 +783,7 @@ function gbGerade(lage, c, px, py, z, t) {
   const deckTop = col => { flush(); const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, -W, H), P(b, -W, H), P(b, W, H), P(a, W, H)], C(col)); };
   const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
   const ft = tt => { const k = Math.round(tt + 0.5), d = ax ? [0, 1] : [1, 0], j = k - i, wet = q => terrainAt(x + d[0] * q, y + d[1] * q) === 'water'; return wet(j - 1) && wet(j) ? GB_WATER : 0; };
-  const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }); };
+  const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }, c.G.arms); };
   const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);   // ohne Strom dunkel (160c E2d)
   const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark }); };
   if (art === 'stein') { gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh); return lamps(lage, 'stein'); }
@@ -858,7 +867,7 @@ function gbPodest(arms) {
   return { lines, rects };
 }
 function gbKurve(lage, c, px, py, z, t) {
-  const { x, y } = c, L = c.G.look, art = c.G.mat, arms = railArms(x, y), Q = gbPodest(arms), W = BK_W, H = 0;
+  const { x, y } = c, L = c.G.look, art = c.G.mat, arms = c.G.arms, Q = gbPodest(arms), W = BK_W, H = 0;
   const Lw = ([u, v], h) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z], lw = f => Math.max(0.6, f * z);
   let pen = null;                                                          // Striche gleicher Farbe/Breite in einem Pfad (wie gbGerade)
   const flush = () => { if (!pen) return; g.strokeStyle = C(pen.col); g.lineWidth = lw(pen.w); g.lineCap = 'butt'; g.stroke(); pen = null; };
@@ -900,7 +909,7 @@ function gbKurve(lage, c, px, py, z, t) {
     const deck = art === 'stein' ? Ls.deck : P.deck;
     for (const r of Q.rects) fill(r.map(q => Lw(q, H)), deck);
     if (art === 'holz') for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
-    flush(); drawRailBed(px, py, z, x, y, { ...t, bridge: false });
+    flush(); drawRailBed(px, py, z, x, y, { ...t, bridge: false }, arms);
   } else if (lage === 'o') gelaender(true);
   flush();
 }

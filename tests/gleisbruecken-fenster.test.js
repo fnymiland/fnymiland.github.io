@@ -142,3 +142,20 @@ describe('Gleisbrücken übers Wasser: Strom fürs Licht (160c E2d)', () => {
     expect(game("[...T.rail.power.dark].filter(k => k[0] === 'G')")).toEqual([]);
   });
 });
+
+describe('Gleisbrücken übers Wasser: Geist und Schild beim Ziehen (160c E2)', () => {
+  it('Linie übers Wasser: Geist je Feld im Material der Leiste (Arme aus den gedachten Feldern), gemalt über den neuen Maler; Schild nennt die Brücke', () => {
+    game("for (let y = 0; y <= 9; y++) for (let x = 2; x <= 9; x++) state.terra.set(x + ',' + y, 'water'); state.techs.add('bahn'); state.techs.add('terraform'); terrainCache.clear(); waterChanged(); recalc()");
+    game("state.paintNew.bruecke = { form: BK_ART_IDS.indexOf('stahl') }");
+    const r = game(`(() => { setTool('schiene'); startPlan('line', { x: 0, y: 5 }, { x: 11, y: 5 }, false); const info = planInfo(plan);
+      const cs = [...info.wbGhost.values()], out = { n: cs.length, rail: cs.every(c => c.rail && c.G && c.G.mat === 'stahl'), arms: cs.find(c => c.x === 5).G.arms.length, text: planText(plan, info) };
+      const gp = gbPaintLage; let n = 0; gbPaintLage = (...a) => { n++; return gp(...a); };
+      try { cam = state.cam; cam.z = 2; const p = iso(5, 5); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); } finally { gbPaintLage = gp; plan = null; setTool('look'); spriteForce = null; }
+      out.painted = n; return out; })()`);
+    expect(r.n).toBe(8);
+    expect(r.rail).toBe(true);
+    expect(r.arms).toBe(2);                                                              // mittendrin: beide Nachbarn sind gedacht
+    expect(r.text).toMatch(/Brücke: Metall · 8 Felder/);
+    expect(r.painted).toBeGreaterThanOrEqual(4 * 8);
+  });
+});
