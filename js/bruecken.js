@@ -366,8 +366,61 @@ function wbSet(x, y, ch) {
   seaRoutesWarn(sea0);
   return true;
 }
+// Gleisbrücke übers Wasser (160c E2b): Material, Farbe, Planken (Holz), Licht für die ganze Brücke (brRailSpan). Geld wie wbSet: Material = je Feld
+// das Bezahlte zurück, neuer Preis samt gekauftem Licht; Licht kaufen = Aufpreis je Feld; sonst kostenlos. Ältere Fassungen kennen nur bridge und
+// erstatten fest BRIDGE – jeder neue Preis liegt je Rohstoff darüber (BR_COST.gleis), es braucht also kein Rückfallfeld
+function gbWriteLook(t, look) {
+  t.brm = look.mat;
+  if (look.col != null) t.brc = look.col; else delete t.brc;
+  if (look.mat === 'holz' && look.plank != null) t.brw = look.plank; else delete t.brw;
+  if (look.licht === 'an' || look.licht === 'aus') t.brl = look.licht; else delete t.brl;
+}
+function gbSet(x, y, ch) {
+  if (!isGleisBridge(state.tiles.get(x + ',' + y)) || !ch) return false;
+  const cells = brRailSpan(x, y), ts = cells.map(([a, b]) => state.tiles.get(a + ',' + b)), N = ts.length;
+  const L = brSpanLook(x, y), paid = ts.map(t => brPaid(t, 'gleis'));
+  let nl = { ...L }, add = null, mat = false;
+  if ('mat' in ch) {
+    if (!BR_MAT[ch.mat] || !Object.prototype.hasOwnProperty.call(BR_MAT, ch.mat) || ch.mat === L.mat) return false;
+    const lk = brMatLock(ch.mat, 'gleis'); if (lk) { fail(lk); return false; }
+    nl = { ...L, mat: ch.mat, deck: 'muster', plank: ch.mat === 'holz' ? L.plank : null }; mat = true;
+  } else if ('col' in ch) {
+    const v = ch.col == null ? null : brIdx(ch.col);
+    if (v === L.col || (v != null && v >= BRIDGE_COLS.length)) return false;
+    nl.col = v;
+  } else if ('plank' in ch) {
+    const v = ch.plank == null ? null : brIdx(ch.plank);
+    if (L.mat !== 'holz' || v === L.plank || (v != null && v >= PLANK_COLS.length)) return false;
+    nl.plank = v;
+  } else if ('licht' in ch) {
+    const bought = L.licht === 'an' || L.licht === 'aus';
+    if (ch.licht === 'kaufen') { if (bought) return false; add = BR_OPT.licht.feld; nl.licht = 'an'; }
+    else if ((ch.licht === 'an' || ch.licht === 'aus') && bought && L.licht !== ch.licht) nl.licht = ch.licht;
+    else return false;
+  } else return false;
+  let brps;
+  if (mat) {
+    const per = brPrice(nl, 'gleis'), tot = brAdd({ money: 0 }, per, N), back = paid.reduce((s, p) => brAdd(s, p), { money: 0 });
+    if (state.money + (back.money || 0) < tot.money) { fail('Zu wenig Taler'); return false; }
+    for (const [r, v] of Object.entries(tot)) if (r !== 'money' && (state.res[r] || 0) + (back[r] || 0) < v) { fail(`Zu wenig ${RES[r].name}`); return false; }
+    state.money += (back.money || 0) - tot.money;
+    for (const [r, v] of Object.entries(back)) if (r !== 'money') state.res[r] = (state.res[r] || 0) + v;
+    payMat(brCostMat(tot).mat);
+    brps = ts.map(() => ({ ...per }));
+  } else if (add) {
+    const c = brCostMat(brAdd({ money: 0 }, add, N));
+    if (state.money < c.cost) { fail('Zu wenig Taler'); return false; }
+    const me = matError(c.mat); if (me) { fail(me); return false; }
+    state.money -= c.cost; payMat(c.mat);
+    brps = paid.map(p => brAdd({ ...p }, add));
+  } else brps = paid.map(p => ({ ...p }));
+  for (const [i, t] of ts.entries()) { gbWriteLook(t, nl); t.brp = { ...brps[i], k: brSig(t, 'gleis') }; }
+  groundVersion++; sfx('road'); if (mat || 'licht' in ch) recalc(); save();
+  return true;
+}
 function brSet(ref, ch) {
   if (ref && ref.at === 'wasser') return wbSet(ref.x, ref.y, ch);
+  if (ref && ref.at === 'gleis') return gbSet(ref.x, ref.y, ch);
   if (!ref || ref.at !== 'anhoehe') return false;
   const b = state.bruecken.get(ref.k);
   if (!b || !ch) return false;
@@ -854,6 +907,17 @@ function wbLookHtml(x, y) {
     n: cells.length, dunkel, planken: L.mat === 'holz' && L.deck !== 'belag', after: L.deck === 'belag' ? `<div class="label">Belag</div>${wegPickHtml(t.style || 'sand', 'brs', true)}` : '' });
 }
 const wbTitle = (x, y) => `🌉 Brücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
+// Gleisbrücke übers Wasser (160c E2b): Abschnitt im Schienenfenster – Material, Farbe, Planken (Holz), Licht; Preise für die ganze Brücke
+function gbLookHtml(x, y) {
+  const cells = brRailSpan(x, y), L = brSpanLook(x, y), paid = cells.reduce((s, [cx, cy]) => brAdd(s, brPaid(state.tiles.get(cx + ',' + cy), 'gleis')), { money: 0 });
+  const matPrice = id => brPrice({ ...L, mat: id }, 'gleis', cells.length).money - (paid.money || 0);
+  return brLookHtml(L, { at: 'gleis', mats: BK_ART_IDS, matPrice, deck: false, fuss: false, zk: null, n: cells.length, dunkel: false, planken: L.mat === 'holz' });
+}
+const gbTitle = (x, y) => `🌉 Gleisbrücke aus ${escHtml(BR_MAT[brSpanLook(x, y).mat].name)}`;
+function gbText(x, y) {
+  const n = brRailSpan(x, y).length;
+  return `Gleis übers Wasser · Brücke aus ${n} ${n === 1 ? 'Feld' : 'Feldern'} – Material, Farbe und Licht gelten für die ganze Brücke. Boote fahren nur quer unter geraden Stücken durch.`;
+}
 function wbText(x, y) {
   const c = wbAt(x, y), cells = bridgeSpan(x, y), us = cells.map(([a, b]) => c.ax ? b : a), N = Math.max(...us) - Math.min(...us) + 1, breit = Math.round(cells.length / N);
   return `Übers Wasser · ${N} ${N === 1 ? 'Feld' : 'Felder'} lang${breit > 1 ? `, ${breit} breit` : ''} – Bewohner laufen gern hinüber. Material, Farbe und Licht gelten für die ganze Brücke.${c.A ? '' : ' Flach: Boote kommen nicht darunter durch.'}`;

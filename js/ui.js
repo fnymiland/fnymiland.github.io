@@ -1953,6 +1953,7 @@ function openInfo(x, y) {
     ${footPaidOf(t) ? '<p class="muted">Anderes Design: die alte Brücke gibt es voll zurück.</p>' : ''}` : '';
   // Märchenschloss (Block 60g/60h): Gestalt im Fenster, in Reitern (Form · Türme · Farben)
   const castle = isWegBridge(t) ? wbLookHtml(x, y)   // Wasser-Wegbrücke (160c D3e): Material, Farbe, Deck, Planken/Belag, Stützen, Zacken, Licht
+    : isGleisBridge(t) ? gbLookHtml(x, y)            // Gleisbrücke übers Wasser (160c E2b): Material, Farbe, Planken, Licht
     : t.b === 'weg' && !isCrossing(t) ? wegFormHtml(t, x, y)
     : t.b === 'fz_schloss' ? castleHtml(t)
     : t.b === 'schloss' && wonderDone(t) ? `<div class="label">Dachform</div><div class="looks">${CS_NAMES.r.map((n, i) => `<button class="look${i === royalRoof(t) ? ' on' : ''}" data-royal="${i}">${n}</button>`).join('')}</div>`   // Wunder-Schloss (Block 60j)
@@ -1962,7 +1963,7 @@ function openInfo(x, y) {
     : t.b === 'huegelrampe' ? rampFormHtml(x, y, t)                                                                              // Gleis-Rampe: Form
     : courtHtml(t, x, y);   // Gartenweg (Block 78), Vorplatz (Block 91)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
-  const title = isWegBridge(t) ? wbTitle(x, y) : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
+  const title = isWegBridge(t) ? wbTitle(x, y) : isGleisBridge(t) ? gbTitle(x, y) : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
     : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
@@ -1970,7 +1971,7 @@ function openInfo(x, y) {
     ${outs.length ? `<p class="big">${outs.join(' · ')}</p>` : ''}
     ${status.length ? `<div class="status">${status.join('')}</div>` : ''}
     ${why.length ? `<div class="stats">${why.map(w => `<span>${w}</span>`).join('')}</div>` : ''}
-    <p class="muted">${isWegBridge(t) ? wbText(x, y) : d.desc}</p>
+    <p class="muted">${isWegBridge(t) ? wbText(x, y) : isGleisBridge(t) ? gbText(x, y) : d.desc}</p>
     ${grow}
     ${wonder}
     ${boat}
@@ -2064,6 +2065,7 @@ function openInfo(x, y) {
   if (el.querySelector('[data-lgrow]')) el.querySelector('[data-lgrow]').onclick = () => undoable(() => { const nk = growLighthouse(x + ',' + y); if (!nk) return; sfx('build'); recalc(); save(); startFireworks(keyXY(nk).map(v => v + 1)); openInfo(...keyXY(nk)); });   // Kap (Block 83)
   wireCourt(el, t, () => openInfo(x, y));
   if (isWegBridge(t)) wireBrLook(el, ch => { undoable(() => brSet({ at: 'wasser', x, y }, ch)); openInfo(x, y); });   // 160c D3e: wie an der Anhöhe
+  if (isGleisBridge(t)) wireBrLook(el, ch => { undoable(() => brSet({ at: 'gleis', x, y }, ch)); openInfo(x, y); });   // 160c E2b
   for (const b of el.querySelectorAll('[data-brs]')) b.onclick = () => undoable(() => { if (setBridgeStyle(x, y, b.dataset.brs)) openInfo(x, y); });   // Belag (66d)
   for (const b of el.querySelectorAll('[data-royal]')) b.onclick = () => undoable(() => { t.cs = { r: +b.dataset.royal }; t.born = performance.now(); sfx('deco'); save(); openInfo(x, y); });
   for (const b of el.querySelectorAll('[data-fl]')) b.onclick = () => undoable(() => { t.fl = Math.max(1, Math.min(6, (t.fl || ITEMS[t.b].fl0) + +b.dataset.fl)); sfx('deco'); recalc(); save(); openInfo(x, y); });   // Stockwerke (Block 60f)
