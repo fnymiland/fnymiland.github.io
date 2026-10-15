@@ -244,3 +244,24 @@ describe('Gleisbrücken übers Wasser: Gegenlesen E2', () => {
     expect(r[1]).toBeGreaterThan(r[0]);
   });
 });
+
+describe('Gleisbrücken übers Wasser: getragene Kachel (160c E2, Gegenlesen Nr. 10)', () => {
+  it('eine Metall-Gleisbrückenkachel außerhalb der Karte (✋) zeichnet der neue Maler im Material', () => {
+    bau();
+    game("brSet({ at: 'gleis', x: 4, y: 5 }, { mat: 'stahl' })");
+    const r = game(`(() => { const t = { ...state.tiles.get('4,5') }, out = []; const gp = gbPaintLage; gbPaintLage = (l, c, ...a) => { out.push(l + ' ' + c.G.mat); return gp(l, c, ...a); };
+      state.terra.set('5,8', 'water'); terrainCache.clear(); waterChanged();
+      try { drawObject('schiene', 0, 0, 1, 1e6, 5, 8, 1, t); } finally { gbPaintLage = gp; } return out; })()`);
+    expect(r).toEqual(['h stahl', 'v stahl', 'd stahl', 'o stahl']);
+  });
+});
+
+describe('Gleisbrücken übers Wasser: Stütze der Anfangskante hinter dem Boot (160c E2, Gegenlesen Nr. 8)', () => {
+  it('Holz: Bock an der Anfangskante → Boot unter der Feldmitte schneidet ihn beim Nachmalen aus; am Ufer-Ende keine Stütze', () => {
+    bau();
+    expect(game('[gbAt(4, 5).G.startPost, gbAt(2, 5).G.startPost, gbAt(8, 5).G.startPost]')).toEqual([true, false, false]);   // 2,5: Ufer davor; 8,5: Eckpodest
+    const cuts = game(`(() => { const out = [], br = bkRedo; bkRedo = (...a) => { out.push(a[7].join('+') + (a[9] ? ' cut' : '')); return br(...a); };
+      try { bkDrawMoving(4, 5, 0, 0, 1, 1e6, gbAt(4, 5), [{ boat: true, ship: 'dampfer', px: 4, py: 5, du: 0, dv: 1 }], null, new Set()); } finally { bkRedo = br; } return out; })()`);
+    expect(cuts).toContain('h+vd cut');
+  });
+});

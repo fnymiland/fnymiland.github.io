@@ -1749,7 +1749,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
     // --- Deko ---
     case 'weg': drawPath(cx, cy, z, x, y, t); break;
     case 'schiene':
-      if (PASS !== 'object') drawRailBed(cx, cy, z, x, y, t);
+      if (PASS !== 'object') { if (isGleisBridge(t) && !gbAt(x, y)) gbDrawTile(cx, cy, z, x, y, t); else drawRailBed(cx, cy, z, x, y, t); }   // getragene Gleisbrücke (✋): neues Modell als gedachtes Feld (160c E2)
       if (t && t.cross) drawCrossing(cx, cy, z, x, y, t, now);
       break;
     case 'tunnel': drawTunnelGhost(cx, cy, z); break;

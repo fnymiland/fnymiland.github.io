@@ -304,7 +304,7 @@ const BK_START_CUT = 25.5;                                                 // Fe
 const WB_START_CUT = 24.5;                                                 // Wasser (160c D2): Stütze bei s = 0,306 (EDGE_W), rechter Strichrand −24,7
 function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bkAt(x, y)) {
   const [l, u, r, d] = bkBoxOf(gruppen, c0), R = [Math.max(rect[0], px - l * z), Math.max(rect[1], py - u * z), Math.min(rect[2], px + r * z), Math.min(rect[3], py + d * z)];
-  if (cut && c0) { const cw = c0.water ? WB_START_CUT : BK_START_CUT; if (c0.b.ax) R[2] = Math.min(R[2], px + cw * z); else R[0] = Math.max(R[0], px - cw * z); }
+  if (cut && c0) { const cw = c0.water && !c0.rail ? WB_START_CUT : BK_START_CUT; if (c0.b.ax) R[2] = Math.min(R[2], px + cw * z); else R[0] = Math.max(R[0], px - cw * z); }   // Gleisbrücke (160c E2): Deck 0,4 wie die Anhöhe
   if (R[2] <= R[0] || R[3] <= R[1]) return;
   const k = x + ',' + y, f = () => {
     const fog = FOG, gm = GLOW_MUTE;
@@ -336,7 +336,7 @@ function bkDrawMoving(x, y, px, py, z, now, c, ms, figs, drawnMovers, over = nul
   const cls = new Map(ms.map(m => [m, bkMoverClass(m, c, x, y)])), B = ms.filter(m => cls.get(m) === 'B'), U = ms.filter(m => cls.get(m) === 'U'), F = ms.filter(m => cls.get(m) === 'F');
   const G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
   const wcut = c.water && !!c.G && c.G.startPost;                                    // Wasser (160c D2): nur mit einer Stütze an der Anfangskante
-  const boatMid = m => (!c.water || wcut) && m.boat && (c.b.ax ? m.px - x : m.py - y) > (c.water ? -0.19 : -0.16);   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
+  const boatMid = m => (!c.water || wcut) && m.boat && (c.b.ax ? m.px - x : m.py - y) > (c.water && !c.rail ? -0.19 : -0.16);   // Boot unter der Feldmitte vor der Stütze der Anfangskante (160c C10)
   const Ub = U.filter(boatMid), Ur = U.filter(m => !boatMid(m));
   const rB = B.length ? bkMoverRect(B, z) : null, rBU = B.length || Ur.length ? bkMoverRect(B.concat(Ur), z) : null, rUb = Ub.length ? bkMoverRect(Ub, z) : null;
   draw(B);
@@ -722,6 +722,15 @@ function wbDrawTile(cx, cy, z, x, y, t) {
   for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, G.c, A, z);
 }
 
+// Getragene Gleisbrückenkachel (✋, 160c E2): wie wbDrawTile – als gedachtes Feld an ihrem Ziel, ohne Licht
+const GB_TILE_GHOST = { key: '', c: null };
+function gbDrawTile(cx, cy, z, x, y, t) {
+  const k = x + ',' + y, key = k + '|' + groundVersion + '|' + JSON.stringify(t), G = GB_TILE_GHOST;
+  if (G.key !== key) { G.key = key; G.c = wbVirtual([[k, t]], [k], 'gleis').get(k) || null; }
+  if (!G.c) return drawRailBed(cx, cy, z, x, y, t);
+  const c = { ...G.c, G: { ...G.c.G, look: { ...G.c.G.look, licht: null } } };
+  for (const l of ['h', 'v', 'd', 'o']) gbPaintLage(l, c, cx, cy, z, t);
+}
 // ---------------------------------------------------------------------------
 // Gleisbrücke übers Wasser (160c E2, abgenommener Entwurf E0: tools/gleisbruecken-entwurf.js, plan-160c/karte-E0.md): Deck auf Landhöhe (Züge
 // nicht angehoben), Fuß auf der Wasserfläche. Gerade Läufe: Holz mit Böcken an jeder Kante, Stein als Viadukt (ein Bogen je Feld), Metall/Kristall
@@ -754,7 +763,10 @@ function gbGeom(x, y, t) {
   const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = Object.prototype.hasOwnProperty.call(BR_MAT, look.mat) ? look.mat : 'holz';
   const sax = gbStraightAx(x, y, t), arms = railArms(x, y);              // Arme hier gemerkt: auch für gedachte Felder (Geist, wbVirtual)
   const anker = look.licht ? brSpanCache.anch.get(x + ',' + y) || brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – gemerkt von brSpanLook
-  return { look, art: mat, fam: 'bahn', mat, sax, arms, run: sax == null ? null : gbRun(x, y, sax), anker };
+  const run = sax == null ? null : gbRun(x, y, sax);
+  // Stütze an der Anfangskante (Bock, Pfeiler, Steinpfeiler): liegt hinter einem Boot unter der Feldmitte (bkDrawMoving schneidet sie aus, wie C10)
+  const startPost = !!run && !(run.i === 0 && run.landA) && (mat === 'holz' || mat === 'stein' || (((run.u0 + run.i) % GB_SEG) + GB_SEG) % GB_SEG === 0 || (run.i === 0 && !run.brA));
+  return { look, art: mat, fam: 'bahn', mat, sax, arms, run, anker, startPost };
 }
 function gbPaintLage(lage, c, px, py, z, t) {
   if (c.G.sax == null) return gbKurve(lage, c, px, py, z, t);
