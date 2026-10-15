@@ -15,7 +15,7 @@ function brBox(gruppe, c = null) {                                         // c:
     const S = brLampSpots(c.G.art, c.G.fam, c.b.n);
     if (S.back === 'd') top = Math.max(top, S.up + { punkt: 0.85, laterne: 7.2, streifen: 1.4 }[S.form] + (0.5 + S.s) * TH / 2 - TH / 2 + 1);
   }
-  return [TW / 2 + 6, TH / 2 + hm + top, TW / 2 + 6, TH / 2 + 6];
+  return [TW / 2 + 6, TH / 2 + hm + top, TW / 2 + 6, TH / 2 + 6 + (c && c.rail ? 4 : 0)];   // Gleisbrücke (160c E2): Pfähle bis aufs Wasser (−6,3) an der Vorderecke
 }
 // Eine Lage eines Brückenstücks: P(t, s, h) bildet längs t (Felder ab der Mitte des ersten Lückenfelds), quer s und Höhe h auf den Schirm ab;
 // gezeichnet wird nur t in [t0, t1] (ein Feld), damit Dinge davor und dahinter richtig darüber bzw. darunter liegen
@@ -710,4 +710,195 @@ function wbDrawTile(cx, cy, z, x, y, t) {
   const A = wbArgs(G.c, cx, cy, z);
   A.opts = { ...A.opts, licht: null, dark: false };
   for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, G.c, A, z);
+}
+
+// ---------------------------------------------------------------------------
+// Gleisbrücke übers Wasser (160c E2, abgenommener Entwurf E0: tools/gleisbruecken-entwurf.js, plan-160c/karte-E0.md): Deck auf Landhöhe (Züge
+// nicht angehoben), Fuß auf der Wasserfläche. Gerade Läufe: Holz mit Böcken an jeder Kante, Stein als Viadukt (ein Bogen je Feld), Metall/Kristall
+// mit einem Fachwerk von Ende zu Ende (Felder je Halbfeld im Weltraster, Pfeiler alle 3 Felder). Kurve, T, X: Eckpodest (eckiges Deck aus den
+// Armen, Geländer/Fachwerk/Brüstung gerade bis in die Ecke, Pfähle an den Ecken bzw. Steinpfeiler). Lagen h | v | d | o wie die Anhöhe
+// ---------------------------------------------------------------------------
+const GB_WATER = -0.7 * DEPTH, GB_SEG = 3;
+function gbStraightAx(x, y, t = state.tiles.get(x + ',' + y)) {            // gerade (oder Ende): Achse; Kurve, T, X: null
+  const a = railArms(x, y);
+  if (a.length === 1) return a[0][0] ? 0 : 1;
+  if (a.length === 2 && a[0][0] === -a[1][0] && a[0][1] === -a[1][1]) return a[0][0] ? 0 : 1;
+  if (!a.length) return ((t && t.rot) || 0) & 1;
+  return null;
+}
+// Gerader Lauf längs ax durch (x, y): Felder i (Index), n, u0 (Weltkoordinate des ersten Felds), Ufer bzw. Eckpodest an den Enden – je Lauf
+// einmal gerechnet und für alle seine Felder gemerkt (gbCache.runs, je Boden-Fassung)
+function gbRun(x, y, ax) {
+  const C = gbFresh(), key = x + ',' + y + ',' + ax;
+  if (C.runs.has(key)) return C.runs.get(key);
+  const dx = ax ? 0 : 1, dy = ax ? 1 : 0, ok = (px, py) => isGleisBridge(state.tiles.get(px + ',' + py)) && gbStraightAx(px, py) === ax;
+  let i0 = 0, i1 = 0;
+  while (i0 < 400 && ok(x - dx * (i0 + 1), y - dy * (i0 + 1))) i0++;
+  while (i1 < 400 && ok(x + dx * (i1 + 1), y + dy * (i1 + 1))) i1++;
+  const n = i0 + 1 + i1, x0 = x - dx * i0, y0 = y - dy * i0, land = j => terrainAt(x0 + dx * j, y0 + dy * j) !== 'water', br = j => isGleisBridge(state.tiles.get((x0 + dx * j) + ',' + (y0 + dy * j)));
+  const base = { n, u0: ax ? y0 : x0, landA: land(-1), landB: land(n), brA: br(-1), brB: br(n) };
+  for (let j = 0; j < n; j++) C.runs.set((x0 + dx * j) + ',' + (y0 + dy * j) + ',' + ax, { ...base, i: j });
+  return C.runs.get(key);
+}
+function gbGeom(x, y, t) {
+  const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = BR_MAT[look.mat] ? look.mat : 'holz';
+  const sax = gbStraightAx(x, y, t);
+  return { look, art: mat, fam: 'bahn', mat, sax, run: sax == null ? null : gbRun(x, y, sax) };
+}
+function gbPaintLage(lage, c, px, py, z, t) {
+  if (c.G.sax == null) return gbKurve(lage, c, px, py, z, t);
+  return gbGerade(lage, c, px, py, z, t);
+}
+function gbGerade(lage, c, px, py, z, t) {
+  const { x, y } = c, ax = c.G.sax, L = c.G.look, art = c.G.mat, R = c.G.run, n = R.n, i = R.i, t0 = i - 0.5, t1 = i + 0.5, A = -0.5, B = n - 0.5, W = BK_W, H = 0;
+  const P = (tt, s, h) => { const du = ax ? s : tt - i, dv = ax ? tt - i : s; return [px + (du - dv) * TW / 2 * z, py + (du + dv) * TH / 2 * z - h * z]; };
+  const lw = f => Math.max(0.6, f * z), sh = col => ax ? shade(col, LIGHT.side) : col, last = t1 >= B - 1e-9;
+  // Striche gleicher Farbe und Breite nacheinander in einem Pfad (Leistung: Fachwerk und Böcke haben viele Einzelstriche); vor jeder Fläche
+  // und am Ende der Lage ausgegeben – die Reihenfolge Strich/Fläche bleibt
+  let pen = null;
+  const flush = () => { if (!pen) return; g.strokeStyle = C(pen.col); g.lineWidth = lw(pen.w); g.lineCap = 'butt'; g.stroke(); pen = null; };
+  const seg = (ta, sa, ha, tb, sb, hb, col, w) => {
+    let p = 0, q = 1;
+    if (tb !== ta) { const u0 = (t0 - ta) / (tb - ta), u1 = (t1 - ta) / (tb - ta); p = Math.max(0, Math.min(u0, u1)); q = Math.min(1, Math.max(u0, u1)); }
+    else if (ta < t0 - 1e-9 || (ta >= t1 - 1e-9 && !(last && ta <= t1 + 1e-9))) return;
+    if (q <= p) return;
+    const at = u => P(ta + (tb - ta) * u, sa + (sb - sa) * u, ha + (hb - ha) * u), a = at(p), b = at(q);
+    if (!pen || pen.col !== col || pen.w !== w) { flush(); pen = { col, w }; g.beginPath(); }
+    g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]);
+  };
+  const line = (s, h, col, w, ta = A, tb = B) => seg(ta, s, h, tb, s, h, col, w);
+  const vert = (tt, s, h0, h1, col, w) => seg(tt, s, h0, tt, s, h1, col, w);
+  const T1 = t1 + (i < n - 1 || R.brB ? 0.012 : 0);
+  const band = (s, h0, h1, col) => { flush(); const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, s, h1), P(b, s, h1), P(b, s, h0), P(a, s, h0)], C(col)); };
+  const deckTop = col => { flush(); const a = Math.max(A, t0), b = Math.min(B, T1); if (b > a) poly([P(a, -W, H), P(b, -W, H), P(b, W, H), P(a, W, H)], C(col)); };
+  const onEdge = (K, fn) => { for (let k = Math.ceil((t0 - A) * K - 1e-9); A + k / K < t1 - 1e-9 || (last && A + k / K <= t1 + 1e-9); k++) fn(A + k / K, k); };
+  const ft = tt => { const k = Math.round(tt + 0.5), d = ax ? [0, 1] : [1, 0], j = k - i, wet = q => terrainAt(x + d[0] * q, y + d[1] * q) === 'water'; return wet(j - 1) && wet(j) ? GB_WATER : 0; };
+  const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }); };
+  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark: !!c.G.dark }); };
+  if (art === 'stein') { gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh); return lamps(lage, 'stein'); }
+  const Lp = brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank);
+  if (art === 'holz') {
+    const supIn = [];
+    for (let k = 0; k <= n; k++) { if ((k === 0 && R.landA) || (k === n && R.landB)) continue; const tt = k - 0.5; if (tt >= t0 - 1e-9 && (tt < t1 - 1e-9 || (last && tt <= t1 + 1e-9))) supIn.push(tt); }
+    if (lage === 'h') {
+      for (const tt of supIn) vert(tt, -W + 0.06, ft(tt), H - 3, Lp.side, 2.2);
+      onEdge(2, tt => vert(tt, -W, H, H + 8, Lp.side, 0.6)); line(-W, H + 8, Lp.side, 0.7);
+      for (const tt of supIn) { seg(tt, -W + 0.06, ft(tt) + 1, tt, W - 0.06, H - 3.5, Lp.side, 0.55); seg(tt, W - 0.06, ft(tt) + 1, tt, -W + 0.06, H - 3.5, Lp.side, 0.55); }
+    } else if (lage === 'v') {
+      for (const tt of supIn) vert(tt, W - 0.06, ft(tt), H - 3, Lp.side, 2.2);
+      band(W, H - 3, H, sh(Lp.beam));
+    } else if (lage === 'd') {
+      deckTop(Lp.deck); onEdge(9, tt => seg(tt, -W, H, tt, W, H, Lp.plank, 0.3)); railPaint();
+    } else if (lage === 'o') {
+      onEdge(2, tt => vert(tt, W, H, H + 8, Lp.rail, 0.7)); line(W, H + 8, Lp.rail, 0.9); line(W, H + 4, Lp.rail, 0.5);
+    }
+    return lamps(lage);
+  }
+  // Metall, Kristall: ein Fachwerk von Ende zu Ende, Felder je Halbfeld im Weltraster; Schräge nur am Ufer bzw. offenen Ende, ins Eckpodest
+  // läuft es mit einem Pfosten. Pfeiler bis aufs Wasser alle GB_SEG Felder (Weltraster) und an offenen Enden
+  const truss = (s, col, w) => {
+    const Tt = BR_TRUSS.T, endA = !R.brA, endB = !R.brB, a = endA ? A + BR_TRUSS.inset : A, b = endB ? B - BR_TRUSS.inset : B;
+    line(s, H, col, 0.7 * w); line(s, H + Tt, col, 0.7 * w, a, b);
+    if (endA) seg(A, s, H, a, s, H + Tt, col, 0.5 * w); else vert(A, s, H, H + Tt, col, 0.5 * w);
+    if (endB) seg(B, s, H, b, s, H + Tt, col, 0.5 * w); else vert(B, s, H, H + Tt, col, 0.5 * w);
+    for (let j = Math.max(0, Math.floor((t0 - A) * 2) - 1); j < Math.min(2 * n, Math.ceil((t1 - A) * 2) + 1); j++) { const p = A + j / 2, q = p + 0.5, pt = Math.max(p, a); if (pt < q) seg(pt, s, H + Tt, Math.min(q, b), s, H, col, 0.5 * w); if (j) vert(p, s, H, H + Tt, col, 0.4 * w); }
+  };
+  const pierTs = [];
+  for (let k = 0; k <= n; k++) {
+    if ((k === 0 && R.landA) || (k === n && R.landB)) continue;
+    const tt = k - 0.5;
+    if (((((R.u0 + k) % GB_SEG) + GB_SEG) % GB_SEG === 0 || (k === 0 && !R.brA) || (k === n && !R.brB)) && tt >= t0 - 1e-9 && (tt < t1 - 1e-9 || (last && tt <= t1 + 1e-9))) pierTs.push(tt);
+  }
+  const pier = s => { for (const tt of pierTs) vert(tt, s, GB_WATER, H - 4, Lp.beam, 2.4); };
+  if (lage === 'h') { pier(-W + 0.06); truss(-W - 0.02, Lp.back, 1.2); }
+  else if (lage === 'v') { pier(W - 0.06); band(W, H - 4, H, sh(Lp.beam)); line(W, H, Lp.edge, 0.3); line(W, H - 4, Lp.edge, 0.3); }
+  else if (lage === 'd') { deckTop(Lp.deck); railPaint(); }
+  else if (lage === 'o') { truss(W + 0.02, Lp.front, 1.6); if (Lp.hi) line(W + 0.02, H + BR_TRUSS.T, Lp.hi, 0.35, R.brA ? A : A + 0.15, R.brB ? B : B - 0.15); }
+  lamps(lage);
+  if (art === 'kristall') { if (lage === 'd') lamps('t1'); if (lage === 'o') lamps('t2'); }   // Kristall: Lichtstreifen in eigenen Lagen (C7)
+}
+// Stein: Viadukt flach – ein Bogen je Feld, Pfeiler auf den Kanten, Balustrade (läuft nur an einem offenen Ende aus)
+function gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh) {
+  const Lp = brPal(BK_STEIN, 'stein', 'bahn', L.col, null), S = BR_STEIN, A = -0.5, B = n - 0.5, pw = 0.11, cover = 1.6, W = BK_W, H = 0;
+  const tsK = (a, b, K = 16) => Array.from({ length: K + 1 }, (_, j) => a + (b - a) * j / K);
+  const ri = tt => { const k = Math.round(tt), a = k - 0.5 + pw, c = k + 0.5 - pw; if (tt < a || tt > c) return null; const u = (tt - a) / (c - a); return Math.min(GB_WATER + 0.2 + (H - cover - GB_WATER) * Math.sqrt(Math.sin(Math.PI * u)), H - cover); };
+  const k = i, a = Math.max(t0, k - 0.5), c = t1;
+  const ramp = tt => Math.max(0, Math.min(1, Math.min(tt - A, B - tt) / 0.45)), parH = tt => S.par * ((R.landA || R.brA || tt > A + 0.5) && (R.landB || R.brB || tt < B - 0.5) ? 1 : ramp(tt));
+  const balustrade = (s, vorn) => {
+    const tone = vorn ? Lp.top : shade(Lp.top, -0.14), T = tsK(t0, t1 + (i < n - 1 || R.brB ? 0.012 : 0), 12);
+    poly([...T.map(tt => P(tt, s, H + parH(tt))), ...T.slice().reverse().map(tt => P(tt, s, H))], C(shade(tone, -0.05)));
+    g.beginPath(); for (let j = 0; j <= 10; j++) { const tt = t0 + (t1 - t0) * (j + 0.5) / 11, p = P(tt, s, H + 0.9), q = P(tt, s, H + parH(tt) - 1.6); g.moveTo(p[0], p[1]); g.lineTo(q[0], q[1]); }
+    g.strokeStyle = C(Lp.joint); g.lineWidth = Math.max(0.6, 0.5 * z); g.lineCap = 'butt'; g.stroke();
+    const hl = T.map(tt => P(tt, s, H + parH(tt))); g.beginPath(); hl.forEach((p, j) => j ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.strokeStyle = C(shade(Lp.top, vorn ? 0.06 : -0.04)); g.lineWidth = Math.max(0.6, 0.65 * z); g.stroke();
+  };
+  if (lage === 'h') {
+    const T = tsK(Math.max(t0, k - 0.5 + pw), Math.min(t1, k + 0.5 - pw), 24).filter(tt => ri(tt) != null);   // Laibung
+    if (T.length > 1) poly([...T.map(tt => P(tt, W, ri(tt))), ...T.slice().reverse().map(tt => P(tt, -W, ri(tt)))], C(Lp.inner));
+    balustrade(-W, false);
+  } else if (lage === 'v') {
+    const T = tsK(a, c, 24), bot = T.map(tt => { const r = ri(tt); return P(tt, W, r == null ? GB_WATER : r); });
+    poly([...T.map(tt => P(tt, W, H)), ...bot.reverse()], C(sh(Lp.face)));
+    const Ta = tsK(k - 0.5 + pw, k + 0.5 - pw, 20); g.beginPath(); Ta.forEach((tt, j) => { const p = P(tt, W, ri(tt)); j ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); });
+    g.strokeStyle = C(sh(Lp.edge)); g.lineWidth = Math.max(0.6, 0.5 * z); g.stroke();
+  } else if (lage === 'd') { deckTop(Lp.deck); railPaint(); }
+  else if (lage === 'o') balustrade(W, true);
+}
+// Eckpodest: Deck = Mittelquadrat (±W) und die Arme bis zur Feldkante; Umriss aus geraden Linien, vorn/hinten nach der Außennormalen
+function gbPodest(arms) {
+  const W = BK_W, has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), lines = [];
+  for (const d of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+    const pp = [-d[1], d[0]];
+    if (has(d)) for (const s of [1, -1]) lines.push({ a: [d[0] * W + pp[0] * W * s, d[1] * W + pp[1] * W * s], b: [d[0] * 0.5 + pp[0] * W * s, d[1] * 0.5 + pp[1] * W * s], n: [pp[0] * s, pp[1] * s], arm: d });
+    else lines.push({ a: [d[0] * W - pp[0] * W, d[1] * W - pp[1] * W], b: [d[0] * W + pp[0] * W, d[1] * W + pp[1] * W], n: d });
+  }
+  for (const l of lines) l.front = l.n[0] + l.n[1] > 0;
+  const rects = [[[-W, -W], [W, -W], [W, W], [-W, W]], ...arms.map(([dx, dy]) => dx ? [[dx * W, -W], [dx * 0.5, -W], [dx * 0.5, W], [dx * W, W]] : [[-W, dy * W], [W, dy * W], [W, dy * 0.5], [-W, dy * 0.5]])];
+  return { lines, rects };
+}
+function gbKurve(lage, c, px, py, z, t) {
+  const { x, y } = c, L = c.G.look, art = c.G.mat, arms = railArms(x, y), Q = gbPodest(arms), W = BK_W, H = 0;
+  const Lw = ([u, v], h) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z], lw = f => Math.max(0.6, f * z);
+  let pen = null;                                                          // Striche gleicher Farbe/Breite in einem Pfad (wie gbGerade)
+  const flush = () => { if (!pen) return; g.strokeStyle = C(pen.col); g.lineWidth = lw(pen.w); g.lineCap = 'butt'; g.stroke(); pen = null; };
+  const st = (p, h0, q, h1, col, w) => { const a = Lw(p, h0), b = Lw(q, h1); if (!pen || pen.col !== col || pen.w !== w) { flush(); pen = { col, w }; g.beginPath(); } g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); };
+  const fill = (pts, col) => { flush(); poly(pts, C(col)); };
+  const at = (l, f) => [l.a[0] + (l.b[0] - l.a[0]) * f, l.a[1] + (l.b[1] - l.a[1]) * f], len = l => Math.hypot(l.b[0] - l.a[0], l.b[1] - l.a[1]);
+  const shF = (col, l) => l.n[0] > 0 ? shade(col, LIGHT.side) : col;      // Seite nach +x etwas dunkler (wie die Geraden Nord-Süd)
+  const P = BK_BAHN[art] ? brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank) : null, Ls = brPal(BK_STEIN, 'stein', 'bahn', L.col, null);
+  const ecken = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [a * (W - 0.06), b * (W - 0.06)]);
+  const posts = (l, step) => { const m = Math.max(1, Math.round(len(l) / step)), out = []; for (let j = 0; j <= m; j++) out.push(at(l, j / m)); return out; };
+  const gelaender = front => {
+    for (const l of Q.lines.filter(q => q.front === front)) {
+      if (art === 'stein') {
+        const c0 = front ? Ls.top : shade(Ls.top, -0.14);
+        fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H + BR_STEIN.par), Lw(l.a, H + BR_STEIN.par)], shF(shade(c0, -0.05), l));
+        for (const p of posts(l, 0.09).slice(1, -1)) st(p, H + 0.9, p, H + BR_STEIN.par - 1.6, Ls.joint, 0.5);
+        st(l.a, H + BR_STEIN.par, l.b, H + BR_STEIN.par, shade(Ls.top, front ? 0.06 : -0.04), 0.65);
+      } else if (art === 'holz') {
+        const col = front ? P.rail : P.side;
+        for (const p of posts(l, 0.5)) st(p, H, p, H + 8, col, front ? 0.7 : 0.6);
+        st(l.a, H + 8, l.b, H + 8, col, front ? 0.9 : 0.7); if (front) st(l.a, H + 4, l.b, H + 4, col, 0.5);
+      } else {                                                               // Metall, Kristall: Fachwerk in der Höhe der Geraden, je Halbfeld
+        const col = front ? P.front : P.back, w = front ? 1.6 : 1.2, Tt = BR_TRUSS.T, pts = posts(l, 0.5);
+        st(l.a, H, l.b, H, col, 0.7 * w); st(l.a, H + Tt, l.b, H + Tt, col, 0.7 * w);
+        for (let j = 0; j < pts.length; j++) { st(pts[j], H, pts[j], H + Tt, col, 0.4 * w); if (j) st(pts[j - 1], H + Tt, pts[j], H, col, 0.5 * w); }
+        if (P.hi && front) st(l.a, H + Tt, l.b, H + Tt, P.hi, 0.35);
+      }
+    }
+  };
+  if (lage === 'h') {
+    if (art !== 'stein') for (const p of ecken) if (p[0] + p[1] <= 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
+    gelaender(false);
+  } else if (lage === 'v') {
+    if (art === 'stein') { for (const l of Q.lines) if (l.front && !l.arm) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, GB_WATER), Lw(l.a, GB_WATER)], shF(Ls.face, l)); }   // Pfeiler unter dem Quadrat
+    else for (const p of ecken) if (p[0] + p[1] > 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
+    const tief = art === 'stein' ? 2.4 : art === 'holz' ? 3 : 4, col = art === 'stein' ? Ls.face : P.beam;
+    for (const l of Q.lines) if (l.front && (art !== 'stein' || l.arm)) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H - tief), Lw(l.a, H - tief)], shF(col, l));
+  } else if (lage === 'd') {
+    const deck = art === 'stein' ? Ls.deck : P.deck;
+    for (const r of Q.rects) fill(r.map(q => Lw(q, H)), deck);
+    if (art === 'holz') for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
+    flush(); drawRailBed(px, py, z, x, y, { ...t, bridge: false });
+  } else if (lage === 'o') gelaender(true);
+  flush();
 }

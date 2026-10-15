@@ -31,7 +31,7 @@ const order = (cx, cy, extra = '', z = 2.4) => game(`(() => {
   const log = [], bl = bkDrawLagen, de = drawEdgesAt, rb = drawRailBed;
   drawEdgesAt = (x, y, ...r) => { log.push('A ' + x + ',' + y); return de(x, y, ...r); };
   bkDrawLagen = (x, y, px, py, z, gr, c) => { const cc = c === undefined ? bkAt(x, y) : c; log.push(gr + (cc && cc.rail ? 'g' : cc && cc.water ? 'w' : '') + ' ' + x + ',' + y + (FOG ? ' fog' : '')); return bl(x, y, px, py, z, gr, c); };
-  drawRailBed = (cx, cy, z, x, y, t, armsIn, lagen) => { if (t && t.bridge && !lagen) log.push('rb ' + x + ',' + y); return rb(cx, cy, z, x, y, t, armsIn, lagen); };
+  drawRailBed = (cx, cy, z, x, y, t, armsIn, lagen) => { if (!lagen && t && t.b === 'schiene' && isGleisBridge(state.tiles.get(x + ',' + y))) log.push('rb ' + x + ',' + y); return rb(cx, cy, z, x, y, t, armsIn, lagen); };
   try { cam = state.cam; cam.z = ${z}; const p = iso(${cx}, ${cy}); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
   finally { bkDrawLagen = bl; drawEdgesAt = de; drawRailBed = rb; spriteForce = null; }
   return log;
@@ -83,7 +83,7 @@ describe('Gleisbrücken übers Wasser weit weg als Bildchen (160c E1d)', () => {
   it('je Feld ein Bildchen gb|x,y|w der aktuellen Fassung, ohne Licht, kein flat|; gemalt je einmal; das nächste Bild malt nichts live und nichts neu', () => {
     szene();
     far(10, 10);
-    const made = game(`(() => { const rb = drawRailBed; let n = 0; drawRailBed = (...a) => { if (SPRITE_PAINT && a[5] && a[5].bridge) n++; return rb(...a); };
+    const made = game(`(() => { const rb = drawRailBed; let n = 0; drawRailBed = (...a) => { if (SPRITE_PAINT && !a[7] && isGleisBridge(state.tiles.get(a[3] + ',' + a[4]))) n++; return rb(...a); };
       try { spriteNoBudget = true; render(1e6); spriteNoBudget = false; } finally { drawRailBed = rb; } return n; })()`);
     const keys = game("[...objSprites.entries()].filter(([k]) => /^(gb|flat)\\|/.test(k)).map(([k, e]) => [k, e.ver === groundVersion, e.glows.length])");
     for (const [x, y] of [[2, 5], [4, 5], [7, 5], [17, 2], [17, 7], [5, 25], [14, 24]]) expect(keys.some(([k]) => k === `gb|${x},${y}|w|0`), x + ',' + y).toBe(true);
@@ -92,7 +92,7 @@ describe('Gleisbrücken übers Wasser weit weg als Bildchen (160c E1d)', () => {
     expect(keys.filter(([k]) => /^gb\|.*\|(h|vd|o)\|/.test(k))).toEqual([]);              // ruhend nur w
     expect(keys.filter(([k]) => k.startsWith('gb|')).every(([, v, gl]) => v && gl === 0)).toBe(true);
     expect(made).toBe(keys.filter(([k]) => k.startsWith('gb|')).length);
-    const r = game(`(() => { const rb = drawRailBed; let live = 0; drawRailBed = (...a) => { if (!SPRITE_PAINT && a[5] && a[5].bridge) live++; return rb(...a); };
+    const r = game(`(() => { const rb = drawRailBed; let live = 0; drawRailBed = (...a) => { if (!SPRITE_PAINT && !a[7] && isGleisBridge(state.tiles.get(a[3] + ',' + a[4]))) live++; return rb(...a); };
       const gb = () => [...objSprites.entries()].filter(([k]) => k.startsWith('gb|')), m0 = gb();
       try { render(1e6 + 16); } finally { drawRailBed = rb; } const m1 = gb(); return [live, m1.length === m0.length && m1.every(([k, e], i) => m0[i][0] === k && m0[i][1] === e) ? 0 : 1]; })()`);
     expect(r).toEqual([0, 0]);

@@ -50,7 +50,7 @@ const sorted = a => [...a].sort();
 describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
   it('gbAt: Brückenfeld nur für Gleisbrücken übers Wasser; Achse wie seaCross, Höhe 0, wirft nie', () => {
     bau('gerade', 0, 0); bau('nordsued', 20, 0); bau('kurve', 40, 0);
-    expect(game('gbAt(4, 5) && [gbAt(4, 5).water, gbAt(4, 5).rail, gbAt(4, 5).ax, gbAt(4, 5).hm, gbAt(4, 5).W, gbAt(4, 5).G, gbAt(4, 5).b.n, gbAt(4, 5).b.ax]')).toEqual([true, true, 0, 0, 0.3, null, 1, 0]);
+    expect(game('gbAt(4, 5) && [gbAt(4, 5).water, gbAt(4, 5).rail, gbAt(4, 5).ax, gbAt(4, 5).hm, gbAt(4, 5).W, gbAt(4, 5).G.mat, gbAt(4, 5).G.sax, gbAt(4, 5).b.n, gbAt(4, 5).b.ax]')).toEqual([true, true, 0, 14, 0.3, 'holz', 0, 6, 0]);   // E2: Modell-Geometrie, Lauf 2–7
     expect(game('gbAt(25, 4).ax')).toBe(1);
     expect(game('[seaCross(45, 5), gbAt(45, 5).ax]')).toEqual(['block', 0]);
     expect(game('[gbAt(0, 5), gbAt(4, 4), wbAt(4, 5)]')).toEqual([null, null, null]);   // Land, Wasser ohne Gleis; keine Wegbrücke
@@ -66,7 +66,7 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
     game("for (const [k, t] of [...state.tiles]) if (t.bridge) state.tiles.delete(k); recalc()");
     expect(game('gbAny()')).toBe(false);
   });
-  it('ohne Lagen (Gruppe w) genau der alte Ablauf; die Lagen nacheinander ergeben dieselben Flächen und Striche', () => {
+  it('alter Maler: ohne Lagen genau der alte Ablauf, die Lagen ergeben dasselbe; neuer Maler (E2): w = die Gruppen h, vd, o nacheinander', () => {
     let x0 = 0;
     const pos = [];
     for (const fall of Object.keys(FAELLE)) { bau(fall, x0, 0); pos.push([fall, ...mitte(fall, x0, 0)]); x0 += 14; }
@@ -75,12 +75,14 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
     for (const [fall, x, y] of pos) for (const z of [0.5, 1, 2.5]) {
       const alt = rec(`drawRailBed(0, 0, ${z}, ${x}, ${y}, state.tiles.get('${x},${y}'))`);
       expect(alt.length, fall).toBeGreaterThan(5);
-      expect(rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', gbAt(${x}, ${y}))`), fall + ' w').toEqual(alt);
       expect(rec(`drawRailBed(0, 0, ${z}, ${x}, ${y}, state.tiles.get('${x},${y}'), null, ['h', 'v', 'd', 'o'])`), fall + ' alle Lagen').toEqual(alt);
       const teile = ['h', 'v', 'd', 'o'].flatMap(l => rec(`drawRailBed(0, 0, ${z}, ${x}, ${y}, state.tiles.get('${x},${y}'), null, ['${l}'])`));
       expect(sorted(teile), fall + ' z ' + z).toEqual(sorted(alt));
+      const w = rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, 'w', gbAt(${x}, ${y}))`);       // E2: neuer Maler – w = h, v, d, o nacheinander
+      expect(w.length, fall + ' w').toBeGreaterThan(5);
       const gr = ['h', 'vd', 'o'].flatMap(gr => rec(`bkDrawLagen(${x}, ${y}, 0, 0, ${z}, '${gr}', gbAt(${x}, ${y}))`));
-      expect(sorted(gr), fall + ' Gruppen').toEqual(sorted(alt));
+      const ohneJoin = a => a.map(e => e.replace(/^(stroke \S+ \S+ \S+) \S+ /, '$1 '));   // lineJoin trägt sich zwischen den Lagen weiter (nur Einzelstriche, ohne Wirkung)
+      expect(ohneJoin(gr), fall + ' Gruppen').toEqual(ohneJoin(w));
     }
   });
   it('Zuordnung: hinten die Pfähle der hinteren Seite, vorn die der vorderen; o nur das vordere Geländer gerader Felder (Kurve/T/X/Leiter: leer)', () => {
@@ -113,7 +115,7 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
   });
   it('Bildchen gb| ohne Licht; Nachmalen immer live; Bewegtes und Nachtlicht werfen nicht (G null)', () => {
     bau('gerade', 0, 0);
-    expect(game('[bkLampGroups(gbAt(4, 5)), brBox("w", gbAt(4, 5))]')).toEqual([[], [38, 32, 38, 22]]);
+    expect(game('[bkLampGroups(gbAt(4, 5)), brBox("w", gbAt(4, 5))]')).toEqual([[], [38, 46, 38, 26]]);   // E2: Fachwerk + Lampen, Pfähle bis aufs Wasser
     const keys = game(`(() => { const ks = []; const gs = getSprite; getSprite = (k, ...a) => { ks.push(k); return null; };
       try { spriteBridge(4, 5, 0, 0, 1, 'w', gbAt(4, 5)); } finally { getSprite = gs; } return ks; })()`);
     expect(keys).toEqual(['gb|4,5|w|0']);

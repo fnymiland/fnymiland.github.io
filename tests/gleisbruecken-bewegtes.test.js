@@ -26,7 +26,7 @@ const bild = (cx, cy, { cars = [], boats = [], crits = [], extra = '' } = {}) =>
   shipMovers = () => ${JSON.stringify(boats)}.map(b => ({ boat: true, ship: 'dampfer', du: 0, dv: 1, ...b })); syncMovers = () => {};
   for (const c of ${JSON.stringify(crits)}) critters.push({ critter: true, kind: 'schmetterling', h: 8, ...c });
   bkDrawLagen = (x, y, px, py, z, gr, c) => { const cc = c === undefined ? bkAt(x, y) : c; log.push(gr + (cc && cc.rail ? 'g' : cc && cc.water ? 'w' : '') + ' ' + x + ',' + y + (FOG ? ' fog' : '')); return bl(x, y, px, py, z, gr, c); };
-  drawRailBed = (cx, cy, z, x, y, t, armsIn, lagen) => { if (t && t.bridge && !lagen) log.push('rb ' + x + ',' + y); return rb(cx, cy, z, x, y, t, armsIn, lagen); };
+  drawRailBed = (cx, cy, z, x, y, t, armsIn, lagen) => { if (!lagen && t && t.b === 'schiene' && isGleisBridge(state.tiles.get(x + ',' + y))) log.push('rb ' + x + ',' + y); return rb(cx, cy, z, x, y, t, armsIn, lagen); };
   drawBridgeOver = (k, ...a) => { log.push('dbo ' + k + ' ' + (a[3] ? a[3].join('+') : '-')); return dbo(k, ...a); };
   drawMover = (m, ...a) => { log.push('fig ' + (m.train ? 'zug ' + Math.round(m.px) + ',' + Math.round(m.py) : m.boat ? 'boot' : m.critter ? 'tier' : '?') + (FOG ? ' fog' : '')); };
   try { cam = state.cam; cam.z = 2; const p = iso(${cx}, ${cy}); cam.x = p.x; cam.y = p.y; spriteForce = false; render(1e6); }
@@ -49,7 +49,7 @@ describe('Gleisbrücken übers Wasser: Bewegtes (160c E1b)', () => {
     expect(game("boatUnder({ boat: true, px: 4, py: 5 })")).toBe(null);
     const log = bild(4, 5, { boats: [{ px: 4, py: 5 }] }), iB = log.indexOf('fig boot');
     expect(iB).toBeGreaterThan(log.indexOf('rb 4,5'));
-    expect(nach(log, 'fig boot').slice(0, 3)).toEqual(['hg 4,5', 'vdg 4,5', 'og 4,5']);
+    expect(nach(log, 'fig boot').filter(e => !e.startsWith('rb')).slice(0, 3)).toEqual(['hg 4,5', 'vdg 4,5', 'og 4,5']);
     expect(log.some(e => e.startsWith('dbo 4,5'))).toBe(false);
   });
   it('Klasse: Boot bis s 0,3 darunter, ab 0,31 davor (beide Achsen); Längsversatz bleibt darunter', () => {

@@ -1903,10 +1903,10 @@ const wegDeckH = (c, a) => c.A ? archDeck(c.A, c.A.i0 + a + 0.5) : flatDeckH(c.l
 // Achse nur für Boote (seaCross; Kurve/T/X 'block': dort fährt keins), Deck auf Landhöhe (wegDeckH 0), G erst in E2 (neue Modelle).
 // Gemerkt je groundVersion, Feldsammlung und -zahl (state.tiles.set ohne recalc, Rückfall-Tests); wirft nie (rohe Felder aus Live/Freunden)
 const isGleisBridge = t => !!t && t.b === 'schiene' && !!t.bridge;
-const gbCache = { v: -1, tiles: null, n: -1, map: new Map(), any: -1 };
+const gbCache = { v: -1, tiles: null, n: -1, map: new Map(), any: -1, runs: new Map() };   // runs: gerade Läufe (gbRun, 160c E2)
 function gbFresh() {
   const C = gbCache;
-  if (C.v !== groundVersion || C.tiles !== state.tiles || C.n !== state.tiles.size) { C.v = groundVersion; C.tiles = state.tiles; C.n = state.tiles.size; C.map.clear(); C.any = -1; }
+  if (C.v !== groundVersion || C.tiles !== state.tiles || C.n !== state.tiles.size) { C.v = groundVersion; C.tiles = state.tiles; C.n = state.tiles.size; C.map.clear(); C.runs.clear(); C.any = -1; }
   return C;
 }
 function gbAt(x, y) {
@@ -1918,6 +1918,7 @@ function gbAt(x, y) {
   const ax = seaCross(x, y) === 'y' ? 1 : 0;
   c = { k, x, y, water: true, rail: true, A: null, ax, b: { ax, n: 1 }, W: 0.3, lift: 0, landA: false, landB: false, hm: 0, G: null };
   C.map.set(k, c);
+  if (typeof gbGeom === 'function') { c.G = gbGeom(x, y, t); c.b.n = c.G.run ? c.G.run.n : 1; c.hm = 14; }   // neue Modelle (160c E2): Fachwerk 11 hoch, Lampen darüber
   return c;
 }
 const gbAny = () => { const C = gbFresh(); if (C.any < 0) { C.any = 0; for (const t of state.tiles.values()) if (isGleisBridge(t)) { C.any = 1; break; } } return C.any > 0; };
