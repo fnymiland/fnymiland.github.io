@@ -53,7 +53,7 @@ function bkGeom(b, art = null, rail = null) {
     stone: mat === 'stein' ? brStoneGeom(fam, b.n, piers) : null };
 }
 const bkGlasAt = c => !!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'fuss';   // Kristall-Fußgänger (160c C4): Glas jedes Bild in tileB (B2 ist deckend)
-const bkTileBAt = c => bkGlasAt(c) || (!!c && !!c.G && c.G.art === 'kristall' && c.G.fam === 'bahn' && !!c.G.look.licht);   // dazu B2 mit Licht (C7): Streifen in t1/t2
+const bkTileBAt = c => bkGlasAt(c) || (!!c && !c.rail && !!c.G && c.G.art === 'kristall' && c.G.fam === 'bahn' && !!c.G.look.licht);   // Gleisbrücke übers Wasser: Streifen ruhend (160c E2)   // dazu B2 mit Licht (C7): Streifen in t1/t2
 // Wasserbrücken aus Kristall (160c D2g): Glas t1/t2 jedes Bild in tileB, auch ohne Bewegtes – gemerkt je groundVersion (nicht je Bild neu)
 const WB_LIVE = { v: -1, tiles: null, n: -1, set: new Set(), arr: [] };
 function wbLiveSet() {

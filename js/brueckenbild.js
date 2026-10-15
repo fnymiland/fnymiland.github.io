@@ -64,7 +64,7 @@ function bkLamps(lage, P, z, art, fam, n, t0, t1, opts) {
 }
 // Gruppen eines Felds mit Lampen (Bildchen-Schlüssel |lit, Vorwärmen): nur mit gekauftem Licht (an und aus: nachts gelb bzw. grau)
 const BK_LAGE_GR = { h: 'h', d: 'vd', o: 'o', t1: 't1', t2: 't2' };
-const bkLampGroups = c => !c || !c.G || !c.G.look.licht ? [] : (S => [BK_LAGE_GR[S.back], BK_LAGE_GR[S.front]])(brLampSpots(c.G.art, c.G.fam, c.b.n));
+const bkLampGroups = c => !c || !c.G || !c.G.look.licht ? [] : (S => [BK_LAGE_GR[S.back], BK_LAGE_GR[S.front]].map(g => c.rail ? ({ t1: 'vd', t2: 'o' }[g] || g) : g))(brLampSpots(c.G.art, c.G.fam, c.b.n));   // Gleisbrücke (160c E2): Kristall-Streifen liegen in d/o
 // ---------------------------------------------------------------------------
 // Bahn-Brücke zwischen Anhöhen (160c C5, plan-160c/karte-C5-bahn.md; abgenommen: tools/brueckenfamilie-entwurf.js 'B-holz', 'B-metall',
 // 'B-kristall'): flach auf HILL_H, Gleis auf dem Deck. Holz: Böcke auf jeder Kante (Kreuz hinten), Geländer; Metall und Kristall (B2):
@@ -195,7 +195,8 @@ function wbRelight(x, y, px, py, z, c) {
 // Gleisbrücke übers Wasser (160c E1e): wie wbRelight, nur die Deckfläche (roadShapes 0,3, Höhe 0) – Pfähle und Geländer bleiben im Schein
 // früherer Lichter dunkel (karte-E1 §6 Nr. 13). Lichter über ein Raster ihrer Mitten (glowsIn): sonst Felder × Lichter (bauland nachts, §6 Nr. 14)
 function gbRelight(x, y, px, py, z, c, n0) {
-  const sh = roadShapes(railArms(x, y), state.tiles.get(c.k), 0.3), L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
+  const W = BK_W, sh = c.G ? (c.G.sax == null ? gbPodest(c.G.arms).rects : [c.G.sax ? [[-W, -0.5], [W, -0.5], [W, 0.5], [-W, 0.5]] : [[-0.5, -W], [0.5, -W], [0.5, W], [-0.5, W]]])   // neues Deck (160c E2)
+    : roadShapes(railArms(x, y), state.tiles.get(c.k), 0.3), L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
   const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = sh.flat().map(q => S(L(q)));
   if (!pts.length) return;
   const X0 = Math.min(...pts.map(p => p[0])), X1 = Math.max(...pts.map(p => p[0])), Y0 = Math.min(...pts.map(p => p[1])), Y1 = Math.max(...pts.map(p => p[1]));
@@ -750,9 +751,9 @@ function gbRun(x, y, ax) {
   return C.runs.get(key);
 }
 function gbGeom(x, y, t) {
-  const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = BR_MAT[look.mat] ? look.mat : 'holz';
+  const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = Object.prototype.hasOwnProperty.call(BR_MAT, look.mat) ? look.mat : 'holz';
   const sax = gbStraightAx(x, y, t), arms = railArms(x, y);              // Arme hier gemerkt: auch für gedachte Felder (Geist, wbVirtual)
-  const anker = look.licht ? brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – nur mit gekauftem Licht
+  const anker = look.licht ? brSpanCache.anch.get(x + ',' + y) || brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – gemerkt von brSpanLook
   return { look, art: mat, fam: 'bahn', mat, sax, arms, run: sax == null ? null : gbRun(x, y, sax), anker };
 }
 function gbPaintLage(lage, c, px, py, z, t) {
@@ -785,7 +786,7 @@ function gbGerade(lage, c, px, py, z, t) {
   const ft = tt => { const k = Math.round(tt + 0.5), d = ax ? [0, 1] : [1, 0], j = k - i, wet = q => terrainAt(x + d[0] * q, y + d[1] * q) === 'water'; return wet(j - 1) && wet(j) ? GB_WATER : 0; };
   const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }, c.G.arms); };
   const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);   // ohne Strom dunkel (160c E2d)
-  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark }); };
+  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark, lampMax: n, col: L.col }); };   // ganze Lauflänge, Laterne in der Brückenfarbe
   if (art === 'stein') { gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh); return lamps(lage, 'stein'); }
   const Lp = brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank);
   if (art === 'holz') {

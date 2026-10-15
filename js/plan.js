@@ -309,7 +309,7 @@ function scanDemolish(p) {
 let planMemo = null;
 function planInfo(p) {
   const key = [p.kind, p.tool, p.keepLand ? 'k' : '', p.erase ? 'e' : '', p.deck ? 'd' : '', p.a.x, p.a.y, p.b.x, p.b.y, p.slot, STYLES[p.tool] ? currentStyle(p.tool) : '', DECO_LOOKS[p.tool] ? JSON.stringify(decoLookNew(p.tool)) : '', groundVersion,
-    (p.tool === 'weg' || p.tool === 'schiene') && hillsOn() ? bkNewSig() : '', p.tool === 'weg' ? wbNewSig() : ''].join();   // Brücke übers Wasser: Leiste (160c D3f)   // Gleis-Stil (Block 112); Brücken-Leiste (160c C9)
+    (p.tool === 'weg' || p.tool === 'schiene') && hillsOn() ? bkNewSig() : '', (p.tool === 'weg' || p.tool === 'schiene') ? wbNewSig() : ''].join();   // Brücke übers Wasser: Leiste (160c D3f)   // Gleis-Stil (Block 112); Brücken-Leiste (160c C9)
   if (!planMemo || planMemo.key !== key) planMemo = { key, ...planScan(p) };
   const m = planMemo;
   const err = !m.n ? m.firstErr || (p.tool === 'abriss' ? 'Hier ist nichts zum Abreißen' : 'Hier ist schon alles fertig')

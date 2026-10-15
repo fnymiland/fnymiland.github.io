@@ -203,3 +203,44 @@ describe('Gleisbrücken übers Wasser: Ablegen an eine andere Brücke (160c E2)'
     expect(game("(({ k, ...o }) => o)(brPaid(state.tiles.get('5,5'), 'gleis'))")).toEqual(p0);
   });
 });
+
+describe('Gleisbrücken übers Wasser: Gegenlesen E2', () => {
+  const lang = () => game(`(() => { for (let y = 0; y <= 9; y++) for (let x = 2; x <= 15; x++) state.terra.set(x + ',' + y, 'water');
+    for (let x = 0; x <= 17; x++) state.tiles.set(x + ',5', { b: 'schiene', lvl: 1, form: 0, ...(x >= 2 && x <= 15 ? { bridge: true } : {}) });
+    terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); groundVersion++; recalc(); })()`);
+  it('rohe Kacheln mit fremdem brm (constructor, __proto__, toString): Holz, nie ein Absturz', () => {
+    lang();
+    for (const bad of ['constructor', '__proto__', 'toString']) {
+      game(`(() => { const t = state.tiles.get('5,5'); t.brm = '${bad}'; t.brp = { money: 0, k: 'g:1' }; groundVersion++; })()`);
+      expect(game("brLook(state.tiles.get('5,5'), 'gleis').mat"), bad).toBe('holz');
+      expect(game("(() => { for (const l of ['h', 'v', 'd', 'o']) gbPaintLage(l, gbAt(5, 5), 0, 0, 1, state.tiles.get('5,5')); return gbAt(5, 5).G.mat; })()"), bad).toBe('holz');
+    }
+  });
+  it('Licht auf langen Läufen (14 Felder): Lampen bis zum letzten Feld, Steinlaterne in der Brückenfarbe', () => {
+    lang();
+    game("brSet({ at: 'gleis', x: 5, y: 5 }, { licht: 'kaufen' })");
+    const spots = game(`(() => { const out = [], bl = bkLamps; bkLamps = (...a) => { out.push([a[7], a[8].lampMax]); return bl(...a); };
+      try { gbPaintLage('o', gbAt(15, 5), 0, 0, 1, state.tiles.get('15,5')); } finally { bkLamps = bl; } return out; })()`);
+    expect(spots.length).toBeGreaterThan(0);
+    expect(spots[0][1]).toBe(14);
+    game("brSet({ at: 'gleis', x: 5, y: 5 }, { mat: 'stein' }); brSet({ at: 'gleis', x: 5, y: 5 }, { col: 5 })");
+    const col = game(`(() => { let c; const bl = bkLamps; bkLamps = (...a) => { c = a[8].col; return bl(...a); }; try { gbPaintLage('o', gbAt(6, 5), 0, 0, 1, state.tiles.get('6,5')); } finally { bkLamps = bl; } return c; })()`);
+    expect(col).toBe(5);
+  });
+  it('Kristall mit Licht: das ruhende Bildchen w trägt |lit (Nachtbild), kein zweites Glas in tileB', () => {
+    lang();
+    game("state.tiles.forEach(t => { if (isGleisBridge(t)) { t.brm = 'kristall'; t.brl = 'an'; t.brp = { ...brPrice({ mat: 'kristall', licht: 'an' }, 'gleis'), k: 'g:1' }; } }); groundVersion++; recalc()");
+    expect(game("bkLampGroups(gbAt(5, 5)).every(g => g === 'vd' || g === 'o' || g === 'h')")).toBe(true);
+    expect(game("bkTileBAt(gbAt(5, 5))")).toBe(false);
+    const keys = game(`(() => { const ks = []; const gs = getSprite; getSprite = (k, ...a) => { ks.push(k); return null; }; try { spriteBridge(5, 5, 0, 0, 1, 'w', gbAt(5, 5)); } finally { getSprite = gs; } return ks; })()`);
+    expect(keys[0]).toMatch(/^gb\|5,5\|w\|0\|[01]$/);
+  });
+  it('Deck halbe Breite 0,4: Boot bis 0,4 darunter; Plan-Merker kennt die Leiste auch für Schienen', () => {
+    lang();
+    expect(game("[gbAt(5, 5).W, bkMoverClass({ boat: true, px: 5, py: 5.35 }, gbAt(5, 5), 5, 5), bkMoverClass({ boat: true, px: 5, py: 5.45 }, gbAt(5, 5), 5, 5)]")).toEqual([0.4, 'U', 'F']);
+    game("state.techs.add('bahn'); state.techs.add('terraform'); state.paintNew.bruecke = { form: 0 }");
+    const r = game(`(() => { setTool('schiene'); startPlan('line', { x: 0, y: 7 }, { x: 17, y: 7 }, false); const a = planInfo(plan).cost;
+      state.paintNew.bruecke = { form: BK_ART_IDS.indexOf('stahl') }; const b = planInfo(plan).cost; plan = null; setTool('look'); return [a, b]; })()`);
+    expect(r[1]).toBeGreaterThan(r[0]);
+  });
+});

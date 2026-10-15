@@ -52,11 +52,11 @@ describe('Gleisbrücken übers Wasser: Bewegtes (160c E1b)', () => {
     expect(nach(log, 'fig boot').filter(e => !e.startsWith('rb')).slice(0, 3)).toEqual(['hg 4,5', 'vdg 4,5', 'og 4,5']);
     expect(log.some(e => e.startsWith('dbo 4,5'))).toBe(false);
   });
-  it('Klasse: Boot bis s 0,3 darunter, ab 0,31 davor (beide Achsen); Längsversatz bleibt darunter', () => {
+  it('Klasse: Boot bis s 0,4 darunter (E2: neues Deck), darüber davor (beide Achsen); Längsversatz bleibt darunter', () => {
     szene(); bau([20, 40, 29, 46], [[25, 38, 25, 48]]);
     const cls = (x, y, px, py) => game(`bkMoverClass({ boat: true, px: ${px}, py: ${py} }, gbAt(${x}, ${y}), ${x}, ${y})`);
-    expect([cls(4, 5, 4, 5.3), cls(4, 5, 4, 5.31), cls(4, 5, 4.35, 5)]).toEqual(['U', 'F', 'U']);
-    expect([cls(25, 43, 25.25, 43), cls(25, 43, 25.31, 43)]).toEqual(['U', 'F']);   // 25,3 − 25 ist in Gleitkomma 0,30000000000000071
+    expect([cls(4, 5, 4, 5.38), cls(4, 5, 4, 5.42), cls(4, 5, 4.35, 5)]).toEqual(['U', 'F', 'U']);   // E2: Deck halbe Breite 0,4
+    expect([cls(25, 43, 25.38, 43), cls(25, 43, 25.42, 43)]).toEqual(['U', 'F']);   // 25,3 − 25 ist in Gleitkomma 0,30000000000000071
   });
   it('Zug und Boot: Boot < h, vd < Zug < o; Boot vor der Stirn (s 0,45) zuletzt', () => {
     szene();

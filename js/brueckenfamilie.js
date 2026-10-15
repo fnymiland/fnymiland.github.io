@@ -83,7 +83,7 @@ function brLook(o, at) {
   const L = brLegacyLook(o, at);
   if (at === 'anhoehe') return brAnhLook(o, L);
   if (!brIsNew(o, at)) return L;
-  const id = at === 'anhoehe' ? o.art : o.brm, mat = BR_MAT[id] ? id : L.mat, same = mat === L.mat;   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
+  const id = at === 'anhoehe' ? o.art : o.brm, mat = typeof id === 'string' && Object.prototype.hasOwnProperty.call(BR_MAT, id) ? id : L.mat, same = mat === L.mat;   // nie constructor/__proto__ (rohe Kacheln)   // fehlt ein Feld: wie bisher (gleiches Material) bzw. Standard
   return { at, fam: L.fam, mat, col: same ? L.col : brIdx(o.brc), plank: mat === 'holz' ? (same ? L.plank : brIdx(o.brw)) : null,   // Rot/Ziegel: Farbe aus der Art
     deck: o.brb === 'belag' || o.brb === 'muster' ? o.brb : same ? L.deck : BR_MAT[mat].deck, belag: L.belag || (typeof o.style === 'string' ? o.style : null),
     licht: o.brl === 'an' || o.brl === 'aus' ? o.brl : same ? L.licht : null, ...(o.brl == null && same && L.lichtGratis ? { lichtGratis: true } : {}),
@@ -316,7 +316,7 @@ function brRailSpan(x, y) {
 // Ein Aussehen je Brücke: das Feld der Spanne, das sie vertritt (Anker) – unter den Feldern im neuen Format (gültiges brp) das vorderste
 // nach Maler-Reihenfolge rückwärts (kleinstes x+y, dann x), sonst das kleinste überhaupt. So zeichnet sich eine von einer älteren
 // App-Version verlängerte Spanne (neues Feld ohne brp) wie die Brücke selbst. Gemerkt je Boden-Fassung
-const brSpanCache = { v: -1, st: null, tiles: null, map: new Map() };
+const brSpanCache = { v: -1, st: null, tiles: null, map: new Map(), anch: new Map() };
 function brSpanAnchor(cells) {
   const rank = ([x, y]) => (x + y) * 1e5 + x;
   let best = null, bestNew = null;
@@ -329,7 +329,7 @@ function brSpanAnchor(cells) {
 }
 function brSpanLook(x, y) {
   const C = brSpanCache, k = x + ',' + y;
-  if (C.v !== groundVersion || C.st !== state || C.tiles !== state.tiles) { C.v = groundVersion; C.st = state; C.tiles = state.tiles; C.map.clear(); }
+  if (C.v !== groundVersion || C.st !== state || C.tiles !== state.tiles) { C.v = groundVersion; C.st = state; C.tiles = state.tiles; C.map.clear(); C.anch.clear(); }
   if (C.map.has(k)) return C.map.get(k);
   const t = state.tiles.get(k);
   let look = null;
@@ -338,8 +338,8 @@ function brSpanLook(x, y) {
     for (const [cx, cy] of cells) C.map.set(cx + ',' + cy, L);
     look = L;
   } else if (t && t.b === 'schiene' && t.bridge) {
-    const cells = brRailSpan(x, y), a = brSpanAnchor(cells), L = brLook(state.tiles.get(a[0] + ',' + a[1]), 'gleis');
-    for (const [cx, cy] of cells) C.map.set(cx + ',' + cy, L);
+    const cells = brRailSpan(x, y), a = brSpanAnchor(cells), L = brLook(state.tiles.get(a[0] + ',' + a[1]), 'gleis'), ak = a.join(',');
+    for (const [cx, cy] of cells) { C.map.set(cx + ',' + cy, L); C.anch.set(cx + ',' + cy, ak); }   // Anker je Feld (Strom 'G', gbGeom)
     look = L;
   } else if (t && t.cross && t.foot) look = brLook(t, 'uebergang');
   else if (typeof bkAt === 'function' && bkAt(x, y)) look = brLook(bkAt(x, y).b, 'anhoehe');

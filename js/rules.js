@@ -1916,7 +1916,7 @@ function gbAt(x, y) {
   let c = C.map.get(k);
   if (c) return c;
   const ax = seaCross(x, y) === 'y' ? 1 : 0;
-  c = { k, x, y, water: true, rail: true, A: null, ax, b: { ax, n: 1 }, W: 0.3, lift: 0, landA: false, landB: false, hm: 0, G: null };
+  c = { k, x, y, water: true, rail: true, A: null, ax, b: { ax, n: 1 }, W: 0.4, lift: 0, landA: false, landB: false, hm: 0, G: null };
   C.map.set(k, c);
   if (typeof gbGeom === 'function') { c.G = gbGeom(x, y, t); c.b.n = c.G.run ? c.G.run.n : 1; c.hm = 14; }   // neue Modelle (160c E2): Fachwerk 11 hoch, Lampen darüber
   return c;

@@ -50,7 +50,7 @@ const sorted = a => [...a].sort();
 describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
   it('gbAt: Brückenfeld nur für Gleisbrücken übers Wasser; Achse wie seaCross, Höhe 0, wirft nie', () => {
     bau('gerade', 0, 0); bau('nordsued', 20, 0); bau('kurve', 40, 0);
-    expect(game('gbAt(4, 5) && [gbAt(4, 5).water, gbAt(4, 5).rail, gbAt(4, 5).ax, gbAt(4, 5).hm, gbAt(4, 5).W, gbAt(4, 5).G.mat, gbAt(4, 5).G.sax, gbAt(4, 5).b.n, gbAt(4, 5).b.ax]')).toEqual([true, true, 0, 14, 0.3, 'holz', 0, 6, 0]);   // E2: Modell-Geometrie, Lauf 2–7
+    expect(game('gbAt(4, 5) && [gbAt(4, 5).water, gbAt(4, 5).rail, gbAt(4, 5).ax, gbAt(4, 5).hm, gbAt(4, 5).W, gbAt(4, 5).G.mat, gbAt(4, 5).G.sax, gbAt(4, 5).b.n, gbAt(4, 5).b.ax]')).toEqual([true, true, 0, 14, 0.4, 'holz', 0, 6, 0]);   // E2: Modell-Geometrie, Lauf 2–7
     expect(game('gbAt(25, 4).ax')).toBe(1);
     expect(game('[seaCross(45, 5), gbAt(45, 5).ax]')).toEqual(['block', 0]);
     expect(game('[gbAt(0, 5), gbAt(4, 4), wbAt(4, 5)]')).toEqual([null, null, null]);   // Land, Wasser ohne Gleis; keine Wegbrücke
