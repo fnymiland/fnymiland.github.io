@@ -83,7 +83,7 @@ const ITEMS = {
              desc: 'Das große Finale: Wenn alle 21 Laternen brennen, bringt der Leuchtturm das Laternenfest zurück.' },
   // --- Wege ---
   weg:     { cat: 'netz', name: 'Weg', cost: 5, needs: 'grass', beauty: 1, paint: true,
-             desc: 'Verbindet Viertel. Weitere Stile gibt es in der Kunstakademie; als Block gelegt wird daraus ein Platz.' },
+             desc: 'Verbindet Viertel. Weitere Stile gibt es in der Kunstakademie; als Block gelegt wird daraus ein Platz. Über Wasser wird er zur Brücke (ab 🪙 30 🪚2) – Material, Farbe und Licht im Fenster der Brücke, für neue Brücken in der Leiste des Brücken-Werkzeugs.' },
   schiene: { cat: 'netz', name: 'Schiene', cost: 15, mat: { holz: 1, metall: 1 }, needs: 'grass', tech: 'bahn', paint: true,
              desc: 'Für den Zug – das Gleisbett kannst du wählen (Schotter, Rasen …). Über Wasser wird sie zur Brücke (ab 🪙 40 🪵2 🔩2) – Material, Farbe und Licht im Fenster der Brücke, für neue Brücken in der Leiste des Brücken-Werkzeugs.' },
   // U-Bahn (Block 136, Konzept mit Nutzer 08.10.2026): Tunnel und U-Bahn-Station gehören zum selben Netz wie Schienen
@@ -206,7 +206,7 @@ const ITEMS = {
   bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform',
     get cost() { return typeof bkLookNew === 'function' && typeof brPrice === 'function' ? brPrice(bkLookNew(), 'anhoehe').money : 60; },   // je Feld, im gewählten Material (160c C6)
     get mat() { if (typeof bkLookNew !== 'function' || typeof brPrice !== 'function') return { bretter: 3 }; const { money, ...m } = brPrice(bkLookNew(), 'anhoehe'); return m; },
-    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 8 Felder Lücke, je Feld bezahlt. Holz, Metall (mit der Eisenbahn), Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber – oder du ziehst gleich den Weg bzw. die Schiene oben von Anhöhe zu Anhöhe, dann kommt die Brücke mit. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.' },   // Block 160 (bruecken.js), 160c C9
+    desc: 'Von einer Anhöhe hinüber zur anderen – 1 bis 8 Felder Lücke, je Feld bezahlt. Holz, Metall, Stein oder Kristall, dazu die Farbe – beides wählst du oben in der Leiste (🔒: noch nicht frei, der Grund steht dabei); danach ziehst du einen Weg oder eine Schiene darüber – oder du ziehst gleich den Weg bzw. die Schiene oben von Anhöhe zu Anhöhe, dann kommt die Brücke mit. Licht, Stützen und Zacken im Fenster der Brücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges – an Stützen und Pfeilern nur quer hindurch.' },   // Block 160 (bruecken.js), 160c C9, G1
   huegeltreppe: { cat: 'deko', name: 'Treppe (Anhöhe)', tech: 'terraform', cost: 120, mat: { stein: 6 }, needs: 'grass', beauty: 0,
     desc: 'Führt auf eine Anhöhe hinauf – in die Wand eingelassen. Unten direkt vor die Wand stellen oder auf den Rand der Anhöhe (das Feld wird abgesenkt), sie dreht sich von selbst. Schmal wie ein Weg oder breit – breite nebeneinander werden eine große Treppe; die Stufen haben Muster und Farbe der Wege. Wege hängen über sie zusammen.' },
   // Gleis-Rampe (Anhöhen, hills.js; Nutzer 10.10.2026: nur für Züge): Form t.form 'a'–'d' (RAMP_FORMS unten, Leiste rampNewForm), Preis je Form –
@@ -782,7 +782,7 @@ const ITEM_TIPS = {
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
   anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
-  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste; danach ziehst du einen Weg oder eine Schiene darüber. Oder zieh gleich einen Weg oder eine Schiene oben von Anhöhe zu Anhöhe – die Brücke kommt mit, in Material und Farbe dieser Leiste. Unten darf weiter ein Weg oder eine Schiene durchführen.',
+  bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste – sie gelten auch für neue Brücken, die beim Ziehen eines Wegs oder einer Schiene übers Wasser entstehen (schließen sie an eine vorhandene an, übernehmen sie deren Aussehen). Danach ziehst du einen Weg oder eine Schiene darüber. Oder zieh gleich einen Weg oder eine Schiene oben von Anhöhe zu Anhöhe – die Brücke kommt mit, in Material und Farbe dieser Leiste. Unten darf weiter ein Weg oder eine Schiene quer durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
 };
@@ -1171,7 +1171,6 @@ const DECO_LOOKS = {
     { id: 'blumen', name: 'Bank mit Blumenkästen', design: 140 }, { id: 'laube', name: 'Laubenbank', design: 180 }] },   // Block 147
   brunnen: { group: 'Brunnen', icon: '#74d0e6', cols: null, forms: [{ id: 'etage', name: 'Etagenbrunnen' }, { id: 'fontaene', name: 'Fontäne' },
     { id: 'fisch', name: 'Fischbrunnen', design: 200 }, { id: 'blumen', name: 'Blumenbrunnen', design: 200 }] },
-  // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Brücken bleiben Holzbrücken
   pb_station: { group: 'Parkeisenbahn', icon: '#e8604f', cols: STATION_COLS, forms: [{ id: 'bimmel', name: 'Bimmelbahn' }, { id: 'tram', name: 'Straßenbahn', short: 'Tram', design: 300 },
     { id: 'mini', name: 'Mini-Zug', design: 250 }] },   // Block 136: die Form ist der Zug
   // Tunneleinfahrt (Block 136): nur noch die Rampe – Backstein und Naturstein (Portal im Hügel) sind weg (Block 157m, parseSave macht sie zur Rampe)
@@ -1181,6 +1180,7 @@ const DECO_LOOKS = {
     { id: 'haeuschen', name: 'Häuschen', design: 200 }] },
   dach: { group: 'Überdachungen', icon: '#8a5a3a', colLabel: 'Markisenfarbe', cols: MARKISE_COLS, forms: [{ id: 'pergola', name: 'Holz-Pergola' },   // Block 138
     { id: 'glas', name: 'Glas-Gang', design: 250 }, { id: 'markise', name: 'Bunte Markise', design: 200 }, { id: 'arkaden', name: 'Steinarkaden', design: 300 }] },
+  // Gleis-Stile (Block 109): das Gleisbett (t.form am Schienenfeld); Gleisbrücken: Material im Schienenfenster bzw. für neue in der Leiste des Brücken-Werkzeugs (160c E2)
   schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
     { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },
 };

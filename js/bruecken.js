@@ -1060,7 +1060,7 @@ function openBkInfo(x, y) {
   const matPrice = id => brPrice({ ...brLook({ ...b, art: id, brz: undefined }, 'anhoehe'), zacken: false }, 'anhoehe', b.n).money - (paid.money || 0);
   const dunkel = L.licht === 'an' && T.rail.power.dark.has('B' + c.k);   // Licht (C7)
   const el = showPanel(`<h3>🌉 ${fuss ? 'Brücke' : 'Bahnbrücke'} aus ${escHtml(BR_MAT[L.mat].name)}</h3>
-    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Flaches.</p>
+    <p class="muted">Zwischen zwei Anhöhen · ${b.n} ${b.n === 1 ? 'Feld' : 'Felder'} Lücke. Darunter bleibt Platz für Wege, Schienen, Wasser und Niedriges${!bkSupports(b).length ? '' : L.mat === 'stein' ? ' – an den Pfeilern nichts, Wege und Schienen dort nur quer' : ' – an den Stützen nur quer darunter durch'}.</p>
     ${brLookHtml(L, { at: 'anhoehe', mats: BK_ART_IDS, matPrice, deck: !!nw, fuss, zk: b.brz === 'an' || b.brz === 'aus' ? b.brz : null, n: b.n, dunkel, planken: fuss && L.mat === 'holz' && L.deck === 'muster' })}
     <div class="label">${ng ? 'Gleis darauf' : 'Weg oder Gleis darauf'}</div>
     ${nw ? `<div class="row"><button class="btn" id="p-bkweg">🗑️ Weg entfernen +${fmt(nw * ITEMS.weg.cost)}</button></div>`

@@ -8,6 +8,7 @@
 
 
 Ich habe nur gelesen: keine Tests, kein npm, kein Browser, keine Datei geändert. Stand ist `a4806ef`, 65 Commits vor `origin/main` `b27986e` (v951).
+> Nachtrag 15.10.2026 (G1): live ist inzwischen v1016 (`origin/main` = `ac7a848`, „Das ist neu: Anhöhen, Brücken und Schnellwahl“) – darin 157–160b und 160c V/A. Ältere Fassungen, die unsere Stände lesen können, sind damit v951 **und** v1016.
 
 Grundlage:
 - CLAUDE.md, AUFGABEN.md Block 160 (Z. 2641–2721) und Block 150/151
@@ -273,7 +274,7 @@ Grundpreis neu = **Erstattung des Rückfalls in v951 + Aufschlag**. Das hält je
 | Cloud-Fingerabdruck | Laden schreibt nichts um, also kein „geändert“ (Test) | `bruecken` bleibt ohne `SIG_KEYS`; alle Setzer laufen über `undoable` |
 | Besuch | speichert nie; Knöpfe gesperrt über `undoable` (`viewOnly`) | dto. |
 | Freund mit v951 sieht meine Insel | Rückfall `brk`/`footPaid`, kein Absturz | sieht keine Anhöhen-Brücken (seit 157) |
-| Eigenes v951-Gerät führt und speichert | `br*`/`brp` gehen verloren; Aussehen und Erstattung fallen auf den Rückfall (≤ bezahlt) | verliert **alle** Anhöhen und Brücken. Beim Push von 157 + 160 alle Geräte neu laden. |
+| Eigenes v951-Gerät führt und speichert | `br*`/`brp` gehen verloren; Aussehen und Erstattung fallen auf den Rückfall (≤ bezahlt) | verliert **alle** Anhöhen und Brücken. Beim Push von 160c alle Geräte neu laden (157/160a/b sind seit v1016 live). |
 | Eigene lokale Zwischenfassung | – | n > Lesegrenze fällt weg, unbekannte `art` wird holz. Nach jedem Schritt die WLAN-Geräte neu laden. |
 
 Eine Spielstand-Version (`v`) wird nicht gebraucht.
@@ -676,7 +677,7 @@ Bei jedem Schritt steht der Aufwand, den ich empfehle.
 - Erfolg „Brückenfelder“ zählt Deckfelder und Fußgängerbrücken mit (story.js:514, sinkt nie).
 - Album: Belag auf dem Deck. `ITEM_TIPS`.
 - Hinweis „bleibt stehen“ zählt Anhöhen-Brücken mit.
-- Alte NEWS-Einträge zu Ziegel und Rot anpassen (ui.js:3299–3303).
+- Alte NEWS-Einträge zu Ziegel und Rot anpassen (Eintrag `2026-10-08-boegen`, heute ui.js um 3333; erledigt in G1e).
 
 **G2 Gesamtprüfung** (Ultracode)
 - 3–4 Prüfer, nur lesen: alte Stände, Geld, Bild, Leistung.
@@ -685,7 +686,7 @@ Bei jedem Schritt steht der Aufwand, den ich empfehle.
 
 **G3 CLAUDE.md, AUFGABEN, „Das ist neu“** (Normal)
 - Regel „Brückenfamilie“: Mischform, `brLook`/`brp`-Kennung, alter Wortschatz, nie `price`, Preis = Rückfall + Aufschlag, Nachmal-Schema.
-- `NEWS_HISTORY` oben (157 + 160 zusammen).
+- `NEWS_HISTORY` oben: ein eigener Eintrag **nur für 160c** (Nachtrag G1, 15.10.2026: 157–160b und 160c V/A sind seit v1016 live, angekündigt im Eintrag `2026-10-11-anhoehen` – der bleibt unverändert, seine id nie ändern).
 - **Push nur auf Zuruf**, danach alle eigenen Geräte neu laden.
 
 ---

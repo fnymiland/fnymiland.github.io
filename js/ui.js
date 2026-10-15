@@ -2097,11 +2097,11 @@ function powerStatus() {
   if (P.use.trains) parts.push(`Züge ${P.use.trains}`);
   if (P.use.brlicht) parts.push(`Brückenlicht ${P.use.brlicht}`);
   const out = [`<div class="${P.demand > P.supply + 1e-9 ? 'bad' : 'ok'}">⚡ Strom: ${fmtPow(P.supply)} erzeugt, ${P.demand} gebraucht${parts.length ? ` (${parts.join(', ')})` : ''}</div>`];
-  const db = [...P.dark].filter(k => k[0] === 'B' || k[0] === 'W').length, dl = P.dark.size - db;   // Brücken ('B' + Anker, 160c C7; Wasser 'W', D3c) eigens
+  const db = [...P.dark].filter(k => /^(?:[BWU]-?\d|G-?\d+,)/.test(k)).length, dl = P.dark.size - db;   // Brücken eigens: 'B' + Anker (160c C7), Wasser 'W' (D3c), Gleis 'G' + Feld (E2d), Übergang 'U' (F1b) – Torlaternen 'G0…'/'G1…' + Kante sind Laternen
   if (dl) out.push(`<div class="bad">🌙 ${dl} ${dl === 1 ? 'Laterne bleibt' : 'Laternen bleiben'} nachts dunkel</div>`);
   if (db) out.push(`<div class="bad">🌉 ${db} ${db === 1 ? 'Brücke bleibt' : 'Brücken bleiben'} nachts dunkel</div>`);
   if (P.idle.size) out.push(`<div class="bad">🏭 ${P.idle.size} ${P.idle.size === 1 ? 'Gebäude läuft' : 'Gebäude laufen'} ohne Strom nur halb</div>`);
-  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km · Brückenlicht je 10 Felder 1 ⚡ (zuletzt)</div>`);
+  out.push(`<div class="muted">Je 10 Laternen 1 ⚡ · Werkstatt, Hafen, Universität 2 ⚡ · Sägewerk, Glashaus 1 ⚡ · Wunderwerke je 100 ⚡, Schloss 300 ⚡ · Zug 1 ⚡ + 1 ⚡ je km · Brückenlicht je 10 Felder 1 ⚡, Fußgängerbrücke 2 Felder (zuletzt)</div>`);
   return out;
 }
 // Anhöhen (157j): liegt die Schiene am Halt auf einer anderen Höhe bzw. ist es die Gleis-Rampe? Dann sagt das Fenster es (sonst null)
@@ -3331,7 +3331,7 @@ const NEWS_HISTORY = [
     '🎨 <b>Dachfarbe:</b> Stationen gibt es in vielen Farben.',
   ] },
   { id: '2026-10-08-boegen', date: '8. Oktober', title: 'Bogenbrücken', items: [
-    '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein und Ziegel mit echten Bogenöffnungen, Holz und Rot auf Pfählen.',
+    '🌉 <b>Brücken übers Wasser sind jetzt Bögen:</b> ab 2 Feldern Länge spannt sich die Brücke im Bogen von Ufer zu Ufer – Stein mit echten Bogenöffnungen, Holz auf Pfählen (die Ziegel- und die Rote Brücke von damals sind heute Stein in Ziegelfarbe bzw. Holz in Rot).',
     '⛵ <b>Boote fahren darunter durch</b> – unter dem hohen Teil bzw. durch die Bögen. Bewohner laufen über den Bogen.',
     '↔️ <b>Breite Brücken:</b> bis zu 4 Wege nebeneinander übers Wasser ziehen – wird eine breite Brücke mit Geländer nur außen. Brücken sind höchstens 16 Felder lang, übers Meer auch von Insel zu Insel.',
   ] },

@@ -336,7 +336,7 @@ function planText(p, info) {
     if (info.cost) parts.push('−' + fmt(info.cost));
   } else {
     parts.push(d.small ? `${d.name} ×${info.n}` : d.edge ? `${d.name}: ${info.n} ${info.n === 1 ? 'Stück' : 'Stücke'}` : `${d.name}: ${info.n} ${info.n === 1 ? 'Feld' : 'Felder'}`);
-    for (const B of info.bk || []) parts.push(`🌉 ${BR_MAT[B.mat].name}: ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // Brücke kommt mit (160c C9)
+    for (const B of info.bk || []) parts.push(`🌉 Brücke: ${BR_MAT[B.mat].name} · ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // Brücke kommt mit (160c C9; G1: Format wie übers Wasser)
     for (const B of info.wb || []) parts.push(`🌉 Brücke: ${BR_MAT[B.mat].name} · ${B.n} ${B.n === 1 ? 'Feld' : 'Felder'}`);   // übers Wasser (160c D3f)
     if (info.bkErr) parts.push(`🌉 ${info.bkErr}`);                     // warum die Lücke rot ist
     if (info.cost) parts.push('−' + fmt(info.cost));

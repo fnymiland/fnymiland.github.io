@@ -682,7 +682,7 @@ describe('Brücke per Linie (160c C9)', () => {
   it('Weg oben von A nach B: Brücke + Deck + Wege oben, Summe im Schild; auch von B nach A und Nord-Süd', () => {
     const i = planX('weg', { x: 11, y: 12 }, { x: 19, y: 12 });
     expect(i).toMatchObject({ n: 9, cost: 225, err: null, mat: { bretter: 9 }, bk: [{ mat: 'holz', n: 3 }], bkErr: null, deck: ['14,12', '15,12', '16,12'] });
-    expect(i.text).toMatch(/Holz: 3 Felder/);
+    expect(i.text).toMatch(/🌉 Brücke: Holz · 3 Felder/);   // 160c G1: ein Format wie übers Wasser
     expect(run()).toBe(true);
     expect(game("state.bruecken.get('14,12')")).toEqual({ ax: 0, n: 3, art: 'holz', weg: [st(), st(), st()], brp: { money: 180, bretter: 9, k: 'a:holz' } });
     expect(game("[state.tiles.has('15,12'), bAt(11, 12), bAt(19, 12), bkWegFull(state.bruecken.get('14,12'))]")).toEqual([false, 'weg', 'weg', true]);

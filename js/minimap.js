@@ -22,6 +22,7 @@ function miniColor(x, y) {
     c = t.b === 'weg' || (t.b === 'schiene' && t.cross) ? '#ecdcb8' : t.b === 'haus' ? '#e07a5f'
       : d.cat === 'netz' ? '#8d8f96' : MINI_CAT[d.cat] !== undefined ? MINI_CAT[d.cat] : '#c9855a';
   }
+  if (!c && bkOn()) { const bc = bkAt(x, y); if (bc) c = bkWegAny(bc.b) ? '#ecdcb8' : bkRailCount(bc.b) ? '#8d8f96' : '#c9b79c'; }   // Brücke zwischen Anhöhen (160c G1, luecken B10)
   if (!c) {
     const ter = terrainAt(x, y), look = terraLook(x, y);
     if (ter === 'water') return MINI_SEA;
@@ -31,13 +32,14 @@ function miniColor(x, y) {
   if (hillAt(x, y)) c = mix(c, '#fff8e2', 0.3);                          // Anhöhe (Block 157): heller, wie in der Sonne
   return ownedTile(x, y) ? c : mix(c, '#eef2ee', 0.45);
 }
+const miniSea = (x, y) => terrainAt(x, y) === 'water' && !state.tiles.has(x + ',' + y) && !COVER.has(x + ',' + y) && !(bkOn() && bkAt(x, y));   // offenes Meer: auch keine Brücke zwischen Anhöhen darüber (160c G1)
 const miniSig = () => [groundVersion, state.tiles.size, state.owned.size, state.claimed.size, state.terra.size, state.hills ? state.hills.size : 0, WORLD.cMin, WORLD.cMax].join('|');
 function miniBounds() { return { lo: WORLD.cMin * CHUNK, hi: (WORLD.cMax + 1) * CHUNK - 1 }; }
 function miniPaint() {
   const { lo, hi } = miniBounds(), land = [];
   let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity;
   for (let y = lo; y <= hi; y++) for (let x = lo; x <= hi; x++) {
-    if (terrainAt(x, y) === 'water' && !state.tiles.has(x + ',' + y) && !COVER.has(x + ',' + y)) continue;   // Meer (Brücken zählen)
+    if (miniSea(x, y)) continue;                                        // Meer (Brücken zählen)
     const u = x - y, v = (x + y) / 2;
     if (u < u0) u0 = u; if (u > u1) u1 = u; if (v < v0) v0 = v; if (v > v1) v1 = v;
     land.push(x, y);

@@ -53,9 +53,9 @@ describe('Brückenmaterial freischalten (160c G1)', () => {
   });
   it('Bau-Info: gewähltes Material gesperrt → Schloss mit Grund; „gebaut“ zählt Brücken zwischen Anhöhen', () => {
     game("state.paintNew.bruecke = { form: 3 }; openBuildInfo('bruecke')");
-    expect($('panel').textContent).toMatch(/🔒 Kristall: erst mit/);
+    expect(game("[...document.querySelectorAll('#panel .status .bad')].map(e => e.textContent).join()")).toMatch(/🔒 Kristall: erst mit/);
     game("state.bruecken.set('14,12', { ax: 0, n: 2, art: 'holz' }); state.paintNew.bruecke = { form: 0 }; openBuildInfo('bruecke')");
-    expect($('panel').textContent).not.toMatch(/🔒/);
+    expect(game("[...document.querySelectorAll('#panel .status .bad')].map(e => e.textContent).join()")).not.toMatch(/🔒/);
     expect($('panel').textContent).toContain('1 gebaut');
     game('state.bruecken.clear(); closePanel()');
   });
