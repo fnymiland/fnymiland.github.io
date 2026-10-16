@@ -129,7 +129,7 @@ function planScan(p) {
         for (const [r, n] of Object.entries(c.mat || {})) mat[r] = (mat[r] || 0) + n;
         if (PLANNED) PLANNED.add(k);
         if (BK_PLAN_SAME) BK_PLAN_SAME.add(k);
-        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') {
+        if (BR_PLAN_LOOK && terrainAt(x, y) === 'water' && !(b === 'weg' ? isWegBridge : isGleisBridge)(state.tiles.get(k))) {   // nur neue Brückenfelder (160c G2: Umfärben ist keine neue Brücke)
           const S = b === 'weg' ? wbNewSpec(x, y) : gbNewSpec(x, y), L = S && b === 'weg' ? S.look : brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis');   // wie build: die längste Brücke daneben (geplante zählen mit)
           BR_PLAN_LOOK.set(k, L);
           if (b === 'weg') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }
@@ -357,9 +357,10 @@ function runPlan() {
   const money0 = state.money;
   let n = 0;
   wegLaufPlan = p.tool === 'weg' ? planLauf(p) : null;                     // Wegrichtung (Block 158)
-  const sea0 = p.tool === 'weg' && info.order.some(([x, y]) => terrainAt(x, y) === 'water') ? seaRoutesNow() : null;   // Brücke übers Wasser: Seewege (160c D3g)
+  const rest = p.tool === 'abriss' || p.tool === 'schuett';              // Brückenfelder abreißen/aufschütten: der Rest kann flach werden (160c G2)
+  const sea0 = (p.tool === 'weg' && info.order.some(([x, y]) => terrainAt(x, y) === 'water')) || (rest && info.order.some(([x, y]) => isWegBridge(state.tiles.get(x + ',' + y)))) ? seaRoutesNow() : null;   // Brücke übers Wasser: Seewege (160c D3g)
   try { batch(() => { for (const [, , run] of info.order) if (run()) n++; }); } finally { wegLaufPlan = null; }
-  seaRoutesWarn(sea0);
+  seaRoutesWarn(sea0, rest);
   if (!n) return false;
   if (p.tool === 'dach' && roofAutoPillars(info.order.map(([x, y]) => [x, y]))) { recalc(); save(); }   // Stützen kommen mit (Block 138)
   noteRecent(p.tool);                                                     // zuletzt gebaut (Block 120)

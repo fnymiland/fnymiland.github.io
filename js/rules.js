@@ -1337,6 +1337,13 @@ function archRampEdge(k) {
   }
   return false;
 }
+// Getragener/kopierter Übergang mit Fußgängerbrücke (160c G2): am Ziel keine Linie auf den Rampenkanten (wie setCrossing). rail(x, y): dort
+// liegt Gleis – in einer Gruppe auch das, was mitkommt (sonst die Richtung wie crossingAxes aus der Karte am Ziel)
+const ARCH_RAMP_LINE = 'Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe';
+function archRampLined(x, y, rail) {
+  const n = !rail ? crossingAxes(x, y).n : rail(x - 1, y) || rail(x + 1, y) || !(rail(x, y - 1) || rail(x, y + 1)) ? [0, 1] : [1, 0];
+  return [-1, 1].some(s => state.edges.has(edgeBetween(x, y, x + s * n[0], y + s * n[1])));
+}
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
 const edgesAt = (vx, vy) => ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].filter(o => state.edges.has(o));
 const freeEnd = (k, vx, vy) => edgesAt(vx, vy).every(o => o === k || (state.hills && state.hills.size > 0 && hillLevel(...edgeTiles(o)[0]) !== hillLevel(...edgeTiles(k)[0])));   // oben/unten an der Kante: nicht verbunden (Block 157)
@@ -2380,8 +2387,7 @@ function setCrossing(x, y, foot, style) {
   if (!isCrossing(t)) return false;
   if (foot && !t.foot) { const e = bkAt(x, y) ? 'Unter der Brücke ist kein Platz für die Fußgängerbrücke' : archHillError(x, y); if (e) { fail(e); return false; } }
   if (foot && !t.foot) {                                                 // Zaun, Hecke, Tor auf der Kante zum Wegfeld stünde mitten in der Rampe (160c F1e)
-    const { n } = crossingAxes(x, y);
-    if ([-1, 1].some(s => state.edges.has(edgeBetween(x, y, x + s * n[0], y + s * n[1])))) { fail('Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe'); return false; }
+    if (archRampLined(x, y)) { fail(ARCH_RAMP_LINE); return false; }
   }   // Anhöhen (hills.js): nie über die Kante; Brücke darüber (Block 160)
   if (foot) {                                                            // 160c F1c: Material (holz/stahl/stein/kristall; altes 'weg' = Holz mit Belag)
     const had = footPaidOf(t), mat = style === 'weg' ? 'holz' : BR_MAT[style] && Object.prototype.hasOwnProperty.call(BR_MAT, style) ? style : null;
@@ -2837,12 +2843,12 @@ function seaRoutesNow() {
   if (i && typeof stegs === 'function') for (const k of stegs()) if (expeditionRoute(k, i)) s.add('e:' + k + ':' + i.id);
   return s;
 }
-function seaRoutesWarn(before) {
+function seaRoutesWarn(before, rest = false) {                         // rest: abgerissen, aufgeschüttet – was von der Brücke bleibt, ist flach (160c G2)
   if (!before) return false;
   const now = seaRoutesNow(), lost = [...before].filter(k => !now.has(k));
   if (!lost.length) return false;
   const f = lost.find(k => k[0] === 'f'), names = f ? f.slice(2).split('|').map(k => typeof landingName === 'function' ? landingName(k) : k) : null;
-  toast(`⚠ Die Brücke versperrt den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'} – Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
+  toast(`⚠ ${rest ? 'Was von der Brücke bleibt, versperrt' : 'Die Brücke versperrt'} den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'} – Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
   return true;
 }
 // Verkehr aller Verbindungen (Block 25b): Jede Insel zählt einmal. Pendler: ½ je Einwohner, wenn eine Insel, mit der
@@ -2994,6 +3000,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
     if (he) return he;
     if (b === 'schiene' && opts.t && isCrossing(opts.t) && opts.t.foot) { const e = archHillError(x, y); if (e) return e; }   // getragene Fußgängerbrücke: nie über die Kante (hills.js)
   }
+  if (b === 'schiene' && opts.t && isArchTile(opts.t) && archRampLined(x, y, opts.rail)) return ARCH_RAMP_LINE;   // getragen/kopiert: nie eine Linie mitten in der Rampe (160c G2)
   if (bkOn()) { const e = bkPlaceError(b, footprint(b, x, y, r, opts.t), opts.t); if (e) return e; }   // unter einer Brücke nur Flaches (Block 160)
   if (state.roofs.size && b !== 'weg' && d.cat !== 'deko' && d.cat !== 'land' && !d.small && footprint(b, x, y, r, opts.t).some(([fx, fy]) => roofAt(fx, fy)))
     return 'Unter einer Überdachung ist kein Platz für Gebäude – erst das Dach abreißen';

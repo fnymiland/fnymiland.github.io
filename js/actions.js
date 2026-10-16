@@ -116,6 +116,7 @@ function build(b, x, y, quiet) {
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
+  const sea0 = BATCH ? null : (b === 'weg' && terrainAt(x, y) === 'water') || (b === 'schuett' && isWegBridge(old)) ? seaRoutesNow() : null;   // Seewege vorher (160c G2): Einzeltipp (Linie und Rechteck: runPlan)
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
@@ -197,6 +198,7 @@ function build(b, x, y, quiet) {
   if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
+  if (sea0) seaRoutesWarn(sea0, b === 'schuett');
   return true;
 }
 
@@ -210,7 +212,7 @@ function demolish(x, y, under = false) {
   let info = demolishInfo(x, y, under);
   if (info.err) { fail(info.err); return; }
   if (info.hill) { lowerHill(...keyXY(info.hill)); return; }            // Anhöhe (Block 157): abtragen – erstattet, zeigt es, rechnet neu
-  const k = x + ',' + y;
+  const k = x + ',' + y, sea0 = !BATCH && info.anchor && isWegBridge(state.tiles.get(info.anchor)) ? seaRoutesNow() : null;   // Brückenfeld weg: der Rest kann flach werden (160c G2; Rechteck: runPlan)
   if (info.roof) {                                                      // Überdachung (Block 138): voll zurück, der Weg bleibt
     const r = state.roofs.get(info.roof), tb = roofTopBack(r);
     roofTopClear(r);                                                    // Deko oben: voll zurück, samt Material (Block 138b)
@@ -242,6 +244,7 @@ function demolish(x, y, under = false) {
   sfx('dig');
   recalc();
   save();
+  if (sea0) seaRoutesWarn(sea0, true);
 }
 
 // Parkrasen an einem Feld entfernen (wird wieder Wiese), Preis zurück
@@ -296,7 +299,7 @@ function pickUp(x, y, slot) {
     if (t.b === 'lm' && lmStage(t.lm) < 1) { fail('Erst restaurieren, dann kann sie umziehen'); return; }
     if (t.b === 'huegeltreppe' && !t.ecke && cornerOn(...keyXY(a))) { fail('Hier hängt eine Ecktreppe dran – erst die Ecktreppe aufnehmen'); return; }
     if (t.b === 'bergportal') { fail('Das Bergportal sitzt in der Wand – abreißen und an der neuen Wand neu bauen'); return; }   // Block 157m
-    moving = { kind: 'tile', t, from: a };
+    moving = { kind: 'tile', t, from: a, ...(isWegBridge(t) ? { sea0: seaRoutesNow() } : {}) };   // Seewege vor dem Aufnehmen (160c G2): der Rest kann flach werden
     state.tiles.delete(a);
     restoreUnder(t, ...keyXY(a));                     // Platz bleibt liegen (cancelMove legt es wieder drauf)
     buildRot = t.rot || 0;
@@ -338,6 +341,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     pickUp(x, y, it.kind === 'deco' ? it.from[1] : 0);
     return true;
   }
+  const sea0 = items.some(it => it.kind === 'tile' && isWegBridge(it.t)) ? seaRoutesNow() : null;   // Seewege vor dem Aufnehmen (160c G2)
   for (const it of items) {
     if (it.kind === 'tile') state.tiles.delete(it.from);
     else if (it.kind === 'ground') state.terra.set(it.from, 'grass');
@@ -346,7 +350,7 @@ function pickUpGroup(x0, y0, x1, y1) {
     else { const [k, slot] = it.from, ds = decosAt(k); ds[slot] = null; if (ds.every(v => !v)) state.decos.delete(k); }
   }
   if (items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
-  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0 };
+  moving = { kind: 'group', items, cx: Math.round((x1 - x0) / 2), cy: Math.round((y1 - y0) / 2), W: x1 - x0 + 1, H: y1 - y0 + 1, r: 0, ...(sea0 ? { sea0 } : {}) };
   $('rot-btn').hidden = false;                                           // die ganze Gruppe dreht sich (Block 117)
   recalc();
   sfx('deco');
@@ -458,8 +462,9 @@ function groupErrors(hx, hy) {
   // kopieren und bewegen“) – danach wieder weg
   const order = [...moving.items].sort((p, q) => (p.kind === 'roof' ? 0 : 1) - (q.kind === 'roof' ? 0 : 1)), probe = [];
   // Wege der Gruppe zählen beim Prüfen schon als gelegt (160c V4): sonst fand das mittlere Feld einer Wegbrücke keinen Arm am Ufer
-  const planned0 = PLANNED, mine = new Set();
-  for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it); if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) mine.add((ox + P.dx) + ',' + (oy + P.dy)); }
+  const planned0 = PLANNED, mine = new Set(), rails = new Set();
+  for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it), k = (ox + P.dx) + ',' + (oy + P.dy); if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) mine.add(k); if (P.t && P.t.b === 'schiene') rails.add(k); }
+  const rail = (x, y) => rails.has(x + ',' + y) || bAt(x, y) === 'schiene';   // Gleisrichtung am Übergang: mit den Schienen, die mitkommen (160c G2)
   if (mine.size) PLANNED = planned0 ? new Set([...planned0, ...mine]) : mine;
   // Brücke darüber (160c C1): Wege/Gleise der Gruppe zählen beim Prüfen der Stützen schon als gelegt (sonst längs durch eine Stütze)
   const grp0 = BK_GROUP;
@@ -503,7 +508,7 @@ function groupErrors(hx, hy) {
         else if (P.t.bridge && !water) err = 'Brücken nur übers Wasser';
         else if (!P.t.bridge && water) err = b === 'schiene' ? 'Übers Wasser braucht die Schiene eine Brücke' : 'Übers Wasser braucht der Weg eine Brücke';
       }
-      err = err || placeError(b, x, y, P.t.rot || 0, { move: !moving.copy, noCost: true, t: P.t });   // Kopie (Block 134): wie ein Neubau
+      err = err || placeError(b, x, y, P.t.rot || 0, { move: !moving.copy, noCost: true, t: P.t, rail });   // Kopie (Block 134): wie ein Neubau
     }
     errs.set(it, err);
     first = first || err;
@@ -514,7 +519,7 @@ function groupErrors(hx, hy) {
 function dropGroup(hx, hy) {
   const { ox, oy, first } = groupErrors(hx, hy);
   if (first) { fail(first); return false; }
-  const sea0 = moving.items.some(it => it.kind === 'tile' && isWegBridge(it.t)) ? seaRoutesNow() : null;   // Brücken ablegen: Seewege (160c D3g)
+  const sea0 = moving.sea0 || (moving.items.some(it => it.kind === 'tile' && isWegBridge(it.t)) ? seaRoutesNow() : null);   // Brücken ablegen: Seewege (160c D3g), getragen: vor dem Aufnehmen (G2)
   if (moving.copy) {                                                     // Kopie (Block 134): erst bezahlen, sonst gar nichts
     if (!canPay(moving.cost)) { fail(state.money < (moving.cost.money || 0) ? `Zu wenig Taler (${fmt(moving.cost.money)} nötig)` : 'Material fehlt noch'); return false; }
     addCost(moving.cost, -1);
@@ -690,7 +695,7 @@ function dropAt(x, y, slot) {
   if (moving.kind === 'group') return dropGroup(x, y);
   const err = moveError(x, y, slot);
   if (err) { fail(err); return; }
-  const sea0 = moving.kind !== 'deco' && isWegBridge(moving.t) ? seaRoutesNow() : null;   // Brücke ablegen: Seewege (160c D3g)
+  const sea0 = moving.sea0 || (moving.kind !== 'deco' && isWegBridge(moving.t) ? seaRoutesNow() : null);   // Brücke ablegen: Seewege (160c D3g), vor dem Aufnehmen (G2)
   const rot = moving.kind === 'deco' ? (ROTATABLE.has(movingType()) ? buildRot : 0) : placeRot(movingType(), x, y);
   if (moving.kind === 'deco') {
     const k = x + ',' + y;
@@ -718,7 +723,7 @@ function dropAt(x, y, slot) {
 // Erstattung und Sperren wie beim Abreißen (Haus mit Arbeitern bleibt stehen). Reihenfolge: Deko oben, Dächer, Deko, Gebäude, Linien
 function discardCarried() {
   if (!moving || moving.copy) return false;
-  const its = carried().slice();
+  const its = carried().slice(), sea0 = moving.sea0 || null;            // Seewege vor dem Aufnehmen = nach dem Zurücklegen (160c G2)
   cancelMove();
   const xy = it => keyXY(Array.isArray(it.from) ? it.from[0] : it.from);
   return undoable(() => {
@@ -733,6 +738,7 @@ function discardCarried() {
       for (const it of its) if (it.kind === 'tile' && state.tiles.get(it.from) === it.t) { demolish(...xy(it), true); if (state.tiles.get(it.from) !== it.t) n++; }
       for (const it of its) if (it.kind === 'edge' && state.edges.get(it.from) === it.e && removeEdge(it.from)) n++;
     });
+    if (sea0) seaRoutesWarn(sea0, true);
     return n > 0;
   });
 }
