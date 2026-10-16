@@ -133,3 +133,19 @@ describe('Übergang mit Fußgängerbrücke tragen/kopieren: nie mit einer Linie 
     game("cancelMove(); setTool('look')");
   });
 });
+
+describe('Deck „Eigenes Muster“ zwischen Anhöhen (Nutzer 16.10.2026: „da ändert sich gar nix“)', () => {
+  it('mit Weg auf dem Deck: „Wie der Weg“ malt den Weg, „Eigenes Muster“ das Deck der Brücke (Planken) ohne Weg', () => {
+    game(`(() => { for (let y = 4; y <= 8; y++) for (const x of [3, 4, 8, 9]) state.hills.set(x + ',' + y, { w: 0 });
+      const b = { ax: 0, n: 3, art: 'holz', weg: ['platten', 'platten', 'platten'] }; b.brp = { ...brPrice({ mat: 'holz' }, 'anhoehe', 3), k: brSig(b, 'anhoehe') };
+      state.bruecken.set('5,6', b); groundVersion++; recalc(); })()`);
+    const male = () => game(`(() => { let n = 0; const wp = bkWegPaint; bkWegPaint = (...a) => { n++; return wp(...a); };
+      try { for (const gr of ['h', 'vd', 'o']) bkDrawLagen(6, 6, 400, 300, 2, gr, bkAt(6, 6)); } finally { bkWegPaint = wp; } return n; })()`);
+    expect(game("brLook(state.bruecken.get('5,6'), 'anhoehe').deck")).toBe('belag');
+    expect(male()).toBeGreaterThan(0);
+    expect(game("brSet({ at: 'anhoehe', k: '5,6' }, { deck: 'muster' })")).toBe(true);
+    expect(male()).toBe(0);
+    expect(game("brSet({ at: 'anhoehe', k: '5,6' }, { deck: 'belag' })")).toBe(true);
+    expect(male()).toBeGreaterThan(0);
+  });
+});
