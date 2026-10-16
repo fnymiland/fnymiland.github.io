@@ -40,7 +40,7 @@ function bkLamps(lage, P, z, art, fam, n, t0, t1, opts) {
   if (S.form === 'streifen') {
     const K = bkKit(P, z, n, t0, t1, { ...opts, hf: hOf });
     K.line(s, t => hOf(t) + 0.5, lit ? '#dff8ff' : '#bfe9f8', 0.45);       // erst der Strich, dann der Schein (Bildchen = live)
-    if (on) for (let j = Math.round((t0 + 0.5) * 4); -0.5 + j / 4 < t1 - 1e-9; j++) {
+    if (on) for (let j = Math.ceil((t0 + 0.5) * 4 - 1e-9); -0.5 + j / 4 < t1 - 1e-9; j++) {   // halboffen: das Viertel gehört dem Stück, in dem es beginnt (Übergang teilt bei b 0,5, 160c G2)
       const u0 = -0.5 + j / 4, u1 = u0 + 0.25;
       glowQuad([P(u0, s, hOf(u0)), P(u1, s, hOf(u1)), P(u1, s, hOf(u1) + 1.4), P(u0, s, hOf(u0) + 1.4)], S.r * z, 'blue');
     }
@@ -146,17 +146,21 @@ function bkBoxOf(gruppen, c = null) {
 // Ruhend (tileA): eine Zelle je Gruppe; under: was zwischen h und Deko UNTER liegt (Bahnübergang – eigene Zelle, nie verschachtelt)
 function bkDrawStill(x, y, px, py, z, now, c, under) {
   const k = x + ',' + y, G = state.decos.has(k) ? bkDecoGroups(x, y, c) : null;
-  if (c.water && !under && !G) bkGroup(x, y, px, py, z, ['w'], c);         // Wasserbrücke (160c D1): nichts zwischen den Lagen – ein Bildchen statt drei (nachgemalt wird je Lage)
+  // Wasser-Wegbrücke nachts mit Lichtern davor (160c G2): den Schein vor dem vorderen Geländer stanzen – es bleibt dunkel wie Deko vor einer
+  // Lampe; so muss ein reines Nachmalen des Geländers (Figur auf dem Deck) nicht noch einmal stanzen (sonst doppelt hell im Rahmen)
+  const hits = c.water && !c.rail ? wbRelightHits(x, y, px, py, z, c) : null, split = !!hits;
+  if (c.water && !under && !G && !split) bkGroup(x, y, px, py, z, ['w'], c);   // Wasserbrücke (160c D1): nichts zwischen den Lagen – ein Bildchen statt drei (nachgemalt wird je Lage)
+  else if (c.water && !under && !G) { bkGroup(x, y, px, py, z, ['h', 'vd'], c); wbRelight(x, y, px, py, z, c, hits); bkGroup(x, y, px, py, z, ['o'], c); }
   else {
   if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
   if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg'], c);                   // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)
   bkGroup(x, y, px, py, z, ['h'], c);
   if (under) under();
   if (G && G.under.length) drawSmall(k, px, py, z, now, x, y, G.under);
-  bkGroup(x, y, px, py, z, ['vd', 'o'], c);
+  if (split) { bkGroup(x, y, px, py, z, ['vd'], c); wbRelight(x, y, px, py, z, c, hits); bkGroup(x, y, px, py, z, ['o'], c); } else bkGroup(x, y, px, py, z, ['vd', 'o'], c);
   if (G && G.front.length) drawSmall(k, px, py, z, now, x, y, G.front);
   }
-  if (c.water) wbRelight(x, y, px, py, z, c);                              // Nachtlicht früherer Felder wieder aufs Deck
+  if (c.water && c.rail) wbRelight(x, y, px, py, z, c);                    // Nachtlicht früherer Felder wieder aufs Deck (Gleis: gbRelight; Wasser-Weg oben vor dem Geländer)
   const marks = DECK_MARKS && DECK_MARKS.get(k);                           // Plan-Rauten auf dem Deck (planPreview): über dem Deck
   if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } }
 }
@@ -166,10 +170,25 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
 // Lampe dahinter bleibt verdeckt), nur Lichter von vor dem Feld (WB_GLOW0, render.js tileA). Wie hillRelight; im GL-Bild/Nachtbild nicht
 const WB_GLOW0 = new Map();                                                // Feld → glows.length vor seinem tileA (je Bild neu)
 let WB_RELIGHT = null;                                                     // Feld, dessen Deck gerade neu gestanzt wird (Tests)
-function wbRelight(x, y, px, py, z, c) {
+function wbRelight(x, y, px, py, z, c, pre = null) {
   const n0 = WB_GLOW0.get(c.k);
   if (!n0 || GLPASS || SPRITE_PAINT || !(night > 0.15) || !isLive()) return;
   if (c.rail) return gbRelight(x, y, px, py, z, c, n0);
+  const H = pre || wbRelightHits(x, y, px, py, z, c, n0);
+  if (!H) return;
+  const { top, front, band, hits } = H;
+  const n1 = glows.length, gc = glowCells, gm = GLOW_MUTE;
+  g.save(); WB_RELIGHT = c.k; glowCells = new Map(); GLOW_MUTE = false;
+  try {
+    g.beginPath();
+    for (const ring of [[...top, ...front.slice().reverse()], [...front, ...band.slice().reverse()]]) { ring.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); }
+    g.clip();
+    for (const L of hits) punchGlow(L.q, L.r, L.tint, 'halo');
+  } finally { g.restore(); WB_RELIGHT = null; glowCells = gc; GLOW_MUTE = gm; glows.length = n1; }   // kein Doppel in der Lichterliste
+}
+// Welche früheren Lichter treffen das Deck einer Wasser-Wegbrücke? null: keins (bzw. nicht live/nachts) – bkDrawStill teilt nur dann (160c G2)
+function wbRelightHits(x, y, px, py, z, c, n0 = WB_GLOW0.get(c.k)) {
+  if (!n0 || c.rail || GLPASS || SPRITE_PAINT || !(night > 0.15) || !isLive()) return null;
   const ax = c.ax, lat = s => isWegBridge(state.tiles.get((x + (ax ? s : 0)) + ',' + (y + (ax ? 0 : s))));
   const sB = lat(-1) ? -0.5 : -c.W, sF = lat(1) ? 0.5 : c.W, AS = c.A ? [-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5] : [-0.5, -0.2, 0.2, 0.5];
   const P = (a, s, h) => { const [u, v] = ax ? [s, a] : [a, s]; return [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z]; };
@@ -182,15 +201,7 @@ function wbRelight(x, y, px, py, z, c) {
     const L = glows[i], gx = (L.q[0][0] + L.q[2][0]) / 2, gy = (L.q[0][1] + L.q[2][1]) / 2;
     if (gx + L.r > X0 && gx - L.r < X1 && gy + L.r > Y0 && gy - L.r < Y1) hits.push(L);
   }
-  if (!hits.length) return;
-  const n1 = glows.length, gc = glowCells, gm = GLOW_MUTE;
-  g.save(); WB_RELIGHT = c.k; glowCells = new Map(); GLOW_MUTE = false;
-  try {
-    g.beginPath();
-    for (const ring of [[...top, ...front.slice().reverse()], [...front, ...band.slice().reverse()]]) { ring.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); }
-    g.clip();
-    for (const L of hits) punchGlow(L.q, L.r, L.tint, 'halo');
-  } finally { g.restore(); WB_RELIGHT = null; glowCells = gc; GLOW_MUTE = gm; glows.length = n1; }   // kein Doppel in der Lichterliste
+  return hits.length ? { top, front, band, hits } : null;
 }
 // Gleisbrücke übers Wasser (160c E1e): wie wbRelight, nur die Deckfläche (roadShapes 0,3, Höhe 0) – Pfähle und Geländer bleiben im Schein
 // früherer Lichter dunkel (karte-E1 §6 Nr. 13). Lichter über ein Raster ihrer Mitten (glowsIn): sonst Felder × Lichter (bauland nachts, §6 Nr. 14)
@@ -310,7 +321,14 @@ function bkRedo(x, y, px, py, z, now, rect, gruppen, slots, cut = false, c0 = bk
     const fog = FOG, gm = GLOW_MUTE;
     g.save(); g.beginPath(); g.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]); g.clip();
     FOG = !ownedTile(x, y); GLOW_MUTE = gm || 'pane';                      // nur Scheiben neu stanzen, nie einen zweiten Schein (gesperrt bleibt gesperrt)
-    try { for (const gr of gruppen) if (!(SPRITES_ON && !(c0 && c0.rail) && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0); if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots); if (c0 && c0.water && !(c0.rail && !gruppen.includes('vd'))) wbRelight(x, y, px, py, z, c0); }   // Gleis: nur mit dem Deck (o allein: kein Schein über die Wagen)
+    try {
+      for (const gr of gruppen) {
+        if (!(SPRITES_ON && !(c0 && c0.rail) && spriteBridge(x, y, px, py, z, gr, c0))) bkDrawLagen(x, y, px, py, z, gr, c0);
+        if (gr === 'vd' && c0 && c0.water && !c0.rail) wbRelight(x, y, px, py, z, c0);   // Wasser-Weg: nach dem Deck, vor dem vorderen Geländer (wie tileA, 160c G2) – o allein stanzt nie
+      }
+      if (slots && slots.length) drawSmall(k, px, py, z, now, x, y, slots);
+      if (c0 && c0.water && c0.rail && gruppen.includes('vd')) wbRelight(x, y, px, py, z, c0);   // Gleis: nur mit dem Deck (o allein: kein Schein über die Wagen)
+    }
     finally { GLOW_MUTE = gm; FOG = fog; g.restore(); }
   };
   if (GLPASS) glLive(px, py, l * z, u * z, r * z, d * z, f); else f();
@@ -910,6 +928,37 @@ function gbKurve(lage, c, px, py, z, t) {
       }
     }
   };
+  // Licht (160c G2): gekauft und mit Strom versorgt wird es je Feld, auch auf dem Podest – an seinen Ecken wie die Geraden (Punkt bzw. Laterne
+  // in der Brückenfarbe), Kristall als Streifen längs des Geländers; hinten in 'd' (nach dem Deck), vorn (und an den Seiten) in 'o'
+  const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);
+  const lampen = front => {
+    flush();
+    if (!L.licht) return;
+    const S = brLampSpots(art, 'bahn', 1), nt = night > 0.15 && isLive(), on = L.licht === 'an' && !dark, lit = nt && on, grau = nt && !on;
+    if (S.form === 'streifen') {
+      for (const l of Q.lines.filter(q => q.front === front)) {
+        st(l.a, H + 0.5, l.b, H + 0.5, lit ? '#dff8ff' : '#bfe9f8', 0.45); flush();
+        const m = Math.max(1, Math.round(len(l) / 0.25));
+        if (on) for (let j = 0; j < m; j++) { const a = at(l, j / m), b = at(l, (j + 1) / m); glowQuad([Lw(a, H), Lw(b, H), Lw(b, H + 1.4), Lw(a, H + 1.4)], S.r * z, 'blue'); }
+      }
+      return;
+    }
+    const frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', 'bahn', L.col, null).lamp : null;
+    for (const q of [[-W, -W], [W, -W], [W, W], [-W, W]]) {
+      if ((q[0] + q[1] > -1e-9) !== front) continue;
+      const p = Lw(q, H + S.up);
+      if (S.form === 'punkt') {
+        circle(p[0], p[1], 0.85 * z, C(lit ? '#ffe58a' : grau ? '#9a978c' : S.day));
+        const d = 0.8 * z;
+        if (on) glowQuad([[p[0] - d, p[1] - d], [p[0] + d, p[1] - d], [p[0] + d, p[1] + d], [p[0] - d, p[1] + d]], S.r * z);
+        continue;
+      }
+      const zl = 0.6 * z;                                                    // Minilaterne wie bkLamps
+      g.beginPath(); g.moveTo(p[0], p[1]); g.lineTo(p[0], p[1] - 4 * zl); g.strokeStyle = C(frame); g.lineWidth = Math.max(0.6, 1.8 * zl); g.lineCap = 'butt'; g.stroke();
+      const lb = box(p[0], p[1] - 4 * zl, 2.6 * zl, 1.4 * zl, 5 * zl, lit ? '#ffe58a' : grau ? '#9a978c' : '#fff7d6', frame, 3 * zl);
+      if (on) glowQuad([lb.L, lb.R, [lb.R[0], lb.R[1] - 5 * zl], [lb.L[0], lb.L[1] - 5 * zl]], S.r * z);
+    }
+  };
   if (lage === 'h') {
     if (art !== 'stein') for (const p of ecken) if (p[0] + p[1] <= 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
     gelaender(false);
@@ -927,7 +976,8 @@ function gbKurve(lage, c, px, py, z, t) {
     for (const r of Q.rects) fill(r.map(q => Lw(q, H)), deck);
     if (art === 'holz') for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
     flush(); drawRailBed(px, py, z, x, y, { ...t, bridge: false }, arms);
-  } else if (lage === 'o') gelaender(true);
+    lampen(false);
+  } else if (lage === 'o') { gelaender(true); lampen(true); }
   flush();
 }
 

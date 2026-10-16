@@ -821,7 +821,7 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
       afterMovers.push(at(() => drawArch(P, z, 0, ARCH_SPAN, L, x, y, d, n, t, 'unten')));
       archRailAdd(x + ',' + y, at(() => drawArch(P, z, -ARCH_SPAN, 0.5, L, x, y, d, n, t, 'oben')));
       archRailAdd((x + n[0]) + ',' + (y + n[1]), at(() => drawArch(P, z, 0.5, ARCH_SPAN, L, x, y, d, n, t, 'oben')));
-    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, L, x, y, d, n, t);
+    } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, L, x, y, d, n, t, hillLateK ? 'unten' : 'alles');   // Nachmalen (hillLate): das vordere Geländer malt das Feld danach selbst (archRails) – sonst Glas und Licht doppelt (160c G2)
     return;
   }
   const key = x + ',' + y, target = crossingClosed(x, y) ? 1 : 0;

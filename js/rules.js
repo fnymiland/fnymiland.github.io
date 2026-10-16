@@ -2400,8 +2400,11 @@ function setCrossing(x, y, foot, style) {
       if (!ubSet(x, y, { mat })) { t.foot = was; return false; }
     }
   }
+  const was = !!t.foot;
   t.foot = !!foot;
-  sfx('deco'); groundVersion++; save();
+  sfx('deco'); groundVersion++;
+  if (was !== t.foot) recalc();                                          // Licht der Brücke braucht Strom ('U', 160c G2)
+  save();
   return true;
 }
 // Bahn: zusammenhängende Schienen sind ein Netz, Bahnhöfe gehören zum Netz direkt neben ihrer Grundfläche.

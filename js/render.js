@@ -2236,13 +2236,13 @@ function render(now) {
           if (bc) { late.push(m); continue; }                               // Brückenfeld: alles Bewegte zeichnet bkDrawMoving in der richtigen Folge
           // Bewohner auf der Bogenbrücke (hintere Rampe und Mitte) erst nach der Brücke zeichnen, sonst verdeckt sie sie
           const ar = m.fur && archAt(m.px, m.py);
-          if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push(m); continue; }
+          if (ar && ar.b <= 0.5) { if (!archWalkers.has(ar.key)) archWalkers.set(ar.key, []); archWalkers.get(ar.key).push([m, lift]); continue; }   // mit dem Hub der Anhöhe (Übergang oben, 160c G2; archHillError: gleiche Ebene)
           moverLive(m, z, now, false, m.critter ? 0 : lift); drawnMovers.add(m);   // Tiere nicht: ihre Höhe (c.h) zählt schon ab dem Boden
           if (m.under) boatOver(m);                                          // Fahrbahn über den Rumpf – das Schiff fährt darunter durch
         }
       }
       if (afterMovers.length) { for (const f of afterMovers) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } afterMovers.length = 0; }
-      if (archWalkers.has(k)) { for (const m of archWalkers.get(k)) moverLive(m, z, now, true); archWalkers.delete(k); }
+      if (archWalkers.has(k)) { for (const [m, l] of archWalkers.get(k)) moverLive(m, z, now, true, l); archWalkers.delete(k); }
       if (archRails.has(k)) { for (const f of archRails.get(k)) { if (GLPASS) glLive(px, py, TW * 1.3 * z, 150 * z, TW * 1.3 * z, 50 * z, f); else f(); } archRails.delete(k); }   // vorderes Geländer der Bogenbrücke über den Bewohnern (160c F1d)
       if (state.roofs.size && (state.roofs.has(k) || hasPillarNear(x, y))) {   // Überdachung (Block 138): Stützen, dann Dach über den Figuren des Felds
         const topGhost = preview && preview.top && preview.small && hover && hover.x === x && hover.y === y;   // Deko oben (Block 138b): Geist auf dem Dach

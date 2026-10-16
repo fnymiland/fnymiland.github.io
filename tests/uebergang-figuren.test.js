@@ -82,3 +82,37 @@ describe('Wagen unter der Fußgängerbrücke in Stücken je Feld (160c F1e)', ()
     expect(i('wagen 9,8')).toBeGreaterThan(i('oben -0.9..0.5'));
   });
 });
+
+// 160c G2 (Gesamtprüfung, plan-160c/g2-funde.md B3-2/3/4, G2V-5)
+describe('Übergang: Gesamtprüfung Bild (160c G2)', () => {
+  it('Figur auf dem Übergang oben auf der Anhöhe: mit dem Hub der Anhöhe gezeichnet (wie neben der Brücke)', () => {
+    game("for (let y = 2; y <= 14; y++) for (let x = 2; x <= 14; x++) state.hills.set(x + ',' + y, { w: 0 }); groundVersion++; recalc()");
+    bau(0);
+    figur(0, 0, 1); figur(0, -0.6, 2);
+    const lifts = game(`(() => { const out = [], ml = moverLive; moverLive = (m, z, now, w, lift = 0) => { if (m.fur) out.push(Math.round(lift / z)); return ml(m, z, now, w, lift); };
+      try { cam = state.cam; cam.z = 2; const p = iso(8, 8); cam.x = p.x; cam.y = p.y - 60; resetDrawCaches(); spriteNoBudget = true; spriteForce = false; render(1e6); }
+      finally { moverLive = ml; spriteNoBudget = false; spriteForce = null; } return out; })()`);
+    expect(lifts.length).toBe(2);
+    expect(lifts.every(l => l === game('HILL_H'))).toBe(true);
+  });
+  it('Kristall-Lichtstreifen: das Geländer in zwei Stücken (b 0,5) stanzt jedes Viertel genau einmal', () => {
+    const r = game(`(() => { const seen = [], gq = glowQuad; glowQuad = (pts) => { seen.push(pts[0].map(v => v.toFixed(2)).join()); };
+      const P = (t, s, h) => [t * 10, s * 10 - h], opts = { licht: 'an', hf: () => 0, lampMax: 2 };
+      try { const b = ubT(0.5); bkLamps('t2', P, 1, 'kristall', 'fuss', 2, -0.5, b, opts); bkLamps('t2', P, 1, 'kristall', 'fuss', 2, b, 1.5, opts); } finally { glowQuad = gq; }
+      return [seen.length, new Set(seen).size]; })()`);
+    expect(r[0]).toBe(r[1]);
+    expect(r[1]).toBe(8);                                                   // 2 Felder × 4 Viertel
+  });
+  it('Nachmalen auf dem späteren Nachbarn (hillLate): nur unten – das vordere Geländer malt dieses Feld danach (archRails)', () => {
+    bau(0, 'kristall');
+    const r = game(`(() => { const out = [], da = drawArch; drawArch = (...a) => { out.push(a[2] + '..' + a[3] + ' ' + (a[10] || 'alles')); };
+      const was = PASS; PASS = 'object'; hillLateK = '8,9';
+      try { drawCrossing(0, 0, 1, 8, 8, state.tiles.get('8,8'), 1e6); } finally { drawArch = da; PASS = was; hillLateK = null; } return out; })()`);
+    expect(r).toEqual(['-0.9..0.9 unten']);
+  });
+  it('Schranken ↔ Brücke rechnet den Strom neu (Licht der Brücke)', () => {
+    bau(0);
+    const n = game(`(() => { let n = 0; const rc = recalc; recalc = (...a) => { n++; return rc(...a); }; try { setCrossing(8, 8, false); setCrossing(8, 8, true); } finally { recalc = rc; } return n; })()`);
+    expect(n).toBeGreaterThanOrEqual(2);
+  });
+});

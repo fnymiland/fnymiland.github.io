@@ -113,19 +113,20 @@ describe('Wasser-Wegbrücken: Nachtlicht früherer Felder (wbRelight)', () => {
     return [log, n]; })()`);
   it('Laterne vor der Brücke: nach w noch einmal gestanzt (halo), Scheibe nie; ohne Laterne nichts', () => {
     szene();
-    const [log, n] = nacht(true), iW = log.indexOf('ww 6,4'), re = log.filter(e => e.startsWith('licht') && e.includes('neu'));
+    const [log, n] = nacht(true), re = log.filter(e => e.startsWith('licht') && e.includes('neu'));
+    expect(log.filter(e => /6,4/.test(e))).toEqual(['h 6,4', 'vd 6,4', 'licht halo neu 6,4', 'o 6,4']);   // 160c G2: nachts mit Licht davor nach dem Deck, vor dem vorderen Geländer
     expect(re.length).toBeGreaterThan(0);
-    expect(log.findIndex(e => e.startsWith('licht') && e.includes('neu'))).toBeGreaterThan(iW);
     expect(re).toEqual(['licht halo neu 6,4']);
     expect(n).toBe(1);                                                                    // kein Doppel in der Lichterliste
     const [log0] = nacht(false);
     expect(log0.some(e => e.includes('neu'))).toBe(false);
   });
-  it('Figur auf dem Deck nah an der Laterne: das Nachmalen (o) stanzt im Rahmen ebenfalls neu', () => {
+  it('Figur auf dem Deck nah an der Laterne: das Nachmalen nur des Geländers (o) stanzt nicht noch einmal (sonst doppelt hell, 160c G2)', () => {
     szene();
     const [log] = nacht(true, "[{ id: 'F', px: 6, py: 4 }]"), iO = log.lastIndexOf('o 6,4');
-    expect(iO).toBeGreaterThan(log.indexOf('ww 6,4'));
-    expect(log.slice(iO + 1).some(e => e.startsWith('licht halo neu 6,4'))).toBe(true);
+    expect(iO).toBeGreaterThan(0);
+    expect(log.slice(iO + 1).some(e => e.startsWith('licht halo neu 6,4'))).toBe(false);
+    expect(log.filter(e => e === 'licht halo neu 6,4').length).toBe(1);                 // nur das Ruhende stanzt – genau einmal
   });
 });
 

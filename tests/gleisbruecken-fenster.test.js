@@ -265,3 +265,19 @@ describe('Gleisbrücken übers Wasser: Stütze der Anfangskante hinter dem Boot 
     expect(cuts).toContain('h+vd cut');
   });
 });
+
+// 160c G2 (Gesamtprüfung B3-5): Licht wird je Feld gekauft und mit Strom versorgt – auch das Eckpodest (Kurve/T/X) leuchtet
+describe('Gleisbrücke: Licht auch auf dem Eckpodest (160c G2)', () => {
+  for (const mat of ['holz', 'stein', 'stahl', 'kristall']) it(mat + ': die Kurve 8,5 hat Lampen (hinten in d, vorn in o)', () => {
+    bau();
+    game("if (!state.legacy) state.legacy = new Set(); state.legacy.add('brmat:kristall')");
+    if (mat !== 'holz') expect(game(`brSet({ at: 'gleis', x: 4, y: 5 }, { mat: '${mat}' })`)).toBe(true);
+    expect(game("brSet({ at: 'gleis', x: 4, y: 5 }, { licht: 'kaufen' })")).toBe(true);
+    expect(game('gbAt(8, 5).G.sax')).toBe(null);                              // Eckpodest
+    const r = game(`(() => { const out = { d: 0, o: 0 }, gq = glowQuad, na = night; let cur = ''; glowQuad = () => { out[cur] = (out[cur] || 0) + 1; }; night = 1;
+      try { for (const l of ['h', 'v', 'd', 'o']) { cur = l; gbPaintLage(l, gbAt(8, 5), 0, 0, 1, state.tiles.get('8,5')); } } finally { glowQuad = gq; night = na; } return out; })()`);
+    expect(r.d, 'hinten').toBeGreaterThan(0);
+    expect(r.o, 'vorn').toBeGreaterThan(0);
+    expect(r.h || 0).toBe(0); expect(r.v || 0).toBe(0);
+  });
+});
