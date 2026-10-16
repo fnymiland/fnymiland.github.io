@@ -927,6 +927,7 @@ function updateHud() {
   setText($('jobs'), `💼 ${fmt(T.jobs)}`);                        // Arbeitsplätze
   $('pop-btn').classList.toggle('warn', T.jobs > T.pop);
   setText($('sci'), fmtMoney(state.science));                    // glatt wie das Geld (vorher „1,2 Mio.“)
+  if (typeof sdHud === 'function') sdHud();                       // ✨ Sternstaub (Block 161)
   setText($('sci-rate'), T.sci > 0 ? '+' + fmtWhole(T.sci * bs) + '/s' + (bs > 1 ? ` ×${fmtMul(bs)}` : '') : '');
   if ($('sci-dot').hidden !== !canResearch()) $('sci-dot').hidden = !canResearch();
   $('hud').classList.toggle('more', Date.now() < hudMoreUntil);
@@ -1012,7 +1013,8 @@ function storeHtml() {
   const traffic = run.length ? `<div class="store-row${full ? ' bad' : ''}"><span>🚆 Fahrgäste</span><b>${fmt(got)}/min</b><small${full ? ' class="minus"' : ''}>${full ? `${fmt(want)} wollen mit` : money >= 0.05 ? '+' + fmtRate(money) + '/s' : ''}</small></div>` : '';
   return `<div class="store-title">📦 Lager</div>${rows.join('') || '<p class="muted">Noch leer – Holzfäller, Steinbruch & Co. füllen es.</p>'}
     ${sold.size ? '<p class="muted store-note">🔒 Vorrat: Läden verkaufen nur, was darüber liegt.</p>' : ''}
-    <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}${traffic}`;
+    <div class="store-row sep"><span>🌸 Schönheit</span><b>${fmt(T.beauty)}</b><small></small></div>${power}${traffic}
+    ${state.sdSeen || state.stardust > 0 ? `<div class="store-row sd-row" data-sd="1" role="button" tabindex="0"><span>✨ Sternstaub</span><b>${fmt(state.stardust || 0)}</b><small>öffnen ›</small></div>` : ''}`;   // ✨ (Block 161): auf dem Handy statt der Pille
 }
 function toggleStore(open = $('store').hidden) {
   const el = $('store');
@@ -1021,7 +1023,7 @@ function toggleStore(open = $('store').hidden) {
 }
 $('store-btn').onclick = e => { e.stopPropagation(); toggleStore(); };
 // Vorrat je Ware umschalten (das Lager wird laufend neu gezeichnet – daher am Rahmen lauschen)
-$('store').addEventListener('click', e => { const b = e.target.closest('[data-keep]'); if (!b) return; cycleKeep(b.dataset.keep); sfx('deco'); setHtml($('store'), storeHtml(), true); });
+$('store').addEventListener('click', e => { if (e.target.closest('[data-sd]')) { toggleStore(false); openStardust(); return; } const b = e.target.closest('[data-keep]'); if (!b) return; cycleKeep(b.dataset.keep); sfx('deco'); setHtml($('store'), storeHtml(), true); });
 document.addEventListener('pointerdown', e => { if (!$('store').hidden && !e.target.closest('#store, #store-btn')) toggleStore(false); });
 // Ausgegebenes Material blitzt kurz am 📦 auf
 let flashTimer = 0;

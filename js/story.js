@@ -209,11 +209,12 @@ function openChest(k) {
     else if (r === 'science') state.science += n;
     else state.res[r] += n;
   }
+  const sd = sdAdd(SD.chest * (i.n || 1), 'chest:' + i.id);              // ✨ Sternstaub (Block 161)
   state.tiles.delete(k);
   recalc();
   const [x, y] = keyXY(k);
   sparkle(x, y); confettiBurst(); sfx('star');
-  toast(`${CHESTS[i.chest].icon} ${CHESTS[i.chest].name}: ${lootText(loot)}!`);
+  toast(`${CHESTS[i.chest].icon} ${CHESTS[i.chest].name}: ${lootText(loot)}${sd ? ` · ✨ ${fmt(sd)} Sternstaub` : ''}!`);
   save();
   return true;
 }
@@ -699,9 +700,10 @@ function collectStarAt(x, y) {
   if (i < 0) return false;
   const [s] = fallenStars.splice(i, 1), got = Math.max(50, Math.round(T.sci * 180));
   state.science += got;
+  const sd = sdStar();                                                   // ✨ Sternstaub (Block 161)
   sparkle(s.x, s.y); sfx('star');
-  addFloat(s.x, s.y, `💡 +${fmt(got)}`, '#f2c14e');
-  toast(`🌠 Sternschnuppe: +${fmt(got)} Ideen`);
+  addFloat(s.x, s.y, `💡 +${fmt(got)} · ✨ +${sd}`, '#f2c14e');
+  toast(`🌠 Sternschnuppe: +${fmt(got)} Ideen · ✨ +${sd} Sternstaub`);
   return true;
 }
 // 🧺 Markttag (Block 39): alle 20 Minuten (echte Uhr, versetzt zum Jahrmarkt) 3 Minuten lang – Läden im Marktviertel
@@ -727,8 +729,9 @@ function startParkFest(now = Date.now()) {
   const st = parkBest();
   if (!st || parkFestWait(now) > 0) return false;
   state.parkFest = { until: now + PARKFEST_LEN, next: now + PARKFEST_EVERY, mul: PARKFEST_MUL[st] };
+  sdAdd(SD.feier);                                                       // ✨ Sternstaub (Block 161)
   sfx('star'); confettiBurst();
-  toast(`🎉 Parkfest! 3 Minuten lang Einnahmen ×${String(PARKFEST_MUL[st]).replace('.', ',')}`);
+  toast(`🎉 Parkfest! 3 Minuten lang Einnahmen ×${String(PARKFEST_MUL[st]).replace('.', ',')} · ✨ +${SD.feier}`);
   save();
   return true;
 }
@@ -750,8 +753,9 @@ function startFzFest(now = Date.now()) {
   state.fzFest = { until: now + FZFEST_LEN, next: now + FZFEST_EVERY, mul: FZFEST_MUL[st] };
   const best = FZPARKS.reduce((a, p) => (!a || p.stage > a.stage ? p : a), null), pts = best.tiles.map(keyXY);
   const mid = [pts.reduce((n, p) => n + p[0], 0) / pts.length, pts.reduce((n, p) => n + p[1], 0) / pts.length];   // Mitte des Parks
+  sdAdd(SD.feier);                                                       // ✨ Sternstaub (Block 161)
   sfx('star'); confettiBurst(); startFireworks(mid, true);
-  toast(`🎆 Parade! 3 Minuten lang Einnahmen ×${String(FZFEST_MUL[st]).replace('.', ',')}`);
+  toast(`🎆 Parade! 3 Minuten lang Einnahmen ×${String(FZFEST_MUL[st]).replace('.', ',')} · ✨ +${SD.feier}`);
   save();
   return true;
 }

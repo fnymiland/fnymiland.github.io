@@ -389,6 +389,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     der Feldkante in Stücken (`ubCarPieces`); keine Linie auf der Rampenkante (`archRampEdge`; getragen/kopiert `archRampLined` am Ziel, Gleisrichtung
     aus den mitkommenden Schienen – `placeError(…, { rail })`). Striche gebündelt (`brBatched`: wer `g === ctx`
     vergleicht, nimmt `gNow()`).
+29c. **✨ Sternstaub** (Block 161, js/sternstaub.js, PLAN-161.md): seltene Zweitwährung nur für Schönes. Gutschriften nur über
+    `sdAdd(n, key)` – einmalige mit Schlüssel in `state.sdGot` (nie doppelt; `sdCheck(true)` zahlt beim Laden still nach). Neue
+    Quellen: Menge in `SD`, Zeile in `SD_SOURCES`. Schatzkammer nur über `sdBuy` (Tageskurs `sdTreasury`, Kalendertag `sdDay`, nur
+    vorwärts); läuft nie über ↶ (sonst kämen die Taler zurück), ruft `cloudTouched`. Anzeige `sdHud` (Pille ab 481 px, sonst Zeile im Lager).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

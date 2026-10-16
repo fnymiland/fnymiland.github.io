@@ -43,6 +43,10 @@ function newState() {
     achieved: {},              // Erfolge: id → erreichte Stufen (⭐)
     album: new Set(),          // Sammelalbum: gesammelte Einträge ('b:haus', 'hs:3', 'wall:2', 'tier:katze' …)
     me: null,                  // eigene Figur (Block 97): { a, fur, shirt, hat, face, body, hand, name, off } – null = noch nie eingestellt
+    stardust: 0,               // ✨ Sternstaub (Block 161, sternstaub.js)
+    sdGot: new Set(),          // einmalige Sternstaub-Gutschriften ('a:<Erfolg>:<Stufe>', 'album:<Seite>', 'fest', 'chest:<Insel>' …)
+    sdSeen: false,             // Sternstaub schon gezeigt (Pille oben, Willkommensfenster)
+    treasury: null,            // Schatzkammer heute: { day: JJJJMMTT, n } (Tageskurs)
     bond: 0,                   // höchste Freundschaftsstufe bei einem Freund (Block 105, schaltet Belohnungen frei, wird nie kleiner)
     souvenirs: [],             // Geschenke von Freunden (Block 129, souvenir.js): [{ id, k, from, n, t, a, c, s, at }]
     partner: null,             // Partnerstadt (Block 105): { uid, name, c, s } – Flagge neben dem Rathaus
@@ -147,7 +151,7 @@ function serialize() {
     game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
       ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
@@ -339,6 +343,9 @@ function parseSave(d) {
     keep: Object.fromEntries(Object.entries(d.keep || {}).filter(([r, n]) => RES[r] && isFinite(n) && n >= 0)),
     incPeak: isFinite(d.incPeak) && d.incPeak > 0 ? d.incPeak : 0,
     stats: { earned: 0, ...(d.stats || {}) }, achieved: { ...(d.achieved || {}) }, album: new Set(d.album || []),
+    stardust: Number.isFinite(+d.stardust) && +d.stardust > 0 ? Math.floor(+d.stardust) : 0,   // ✨ Sternstaub (Block 161)
+    sdGot: new Set(Array.isArray(d.sdGot) ? d.sdGot.filter(k => typeof k === 'string') : []), sdSeen: !!d.sdSeen,
+    treasury: d.treasury && Number.isInteger(+d.treasury.day) && Number.isInteger(+d.treasury.n) ? { day: +d.treasury.day, n: Math.max(0, +d.treasury.n) } : null,
     me: d.me && typeof d.me === 'object' && !Array.isArray(d.me) ? { ...d.me } : null,   // geprüft wird beim Lesen (meLook)
     bond: Number.isInteger(d.bond) ? Math.max(0, Math.min(5, d.bond)) : 0,
     souvenirs: svClean(d.souvenirs),
@@ -460,6 +467,7 @@ function afterLoad() {
   recalc();
   collectAlbum();
   checkAchievements(true);                         // schon Erreichtes still zählen (Regel 30)
+  if (typeof sdCheck === 'function') { const back = sdCheck(true); if (typeof sdWelcome === 'function') sdWelcome(back); }   // ✨ Nachzahlung (Block 161)
   if (moved) setTimeout(() => announceIslands(moved), 900);
   if (grown.length) setTimeout(() => announceWonders(grown), 1200);
   if (hall) setTimeout(() => announceHall(hall), 1600);
