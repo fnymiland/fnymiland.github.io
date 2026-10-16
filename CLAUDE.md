@@ -342,9 +342,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Setzen (`wbNewSpec`, samt gekauftem Licht/Zacken), sonst Leiste (`wbLeisteLook`: Holz = Wegstil). Zusammenwachsen: `wbUnify(x, y, spec)` (das
     Aussehen der längeren Brücke gewinnt, kostenlos; ohne spec das häufigste). Die Art `brk` je Feld nie teurer als bezahlt (`wbSafeKind`,
     Farben dazu `wbRawFor`): ältere Fassungen erstatten nach `brk`, nicht nach `brp`. Plan-Preis = Abbuchung (`BR_PLAN_N`: geplante Nachbarn
-    zählen in `wbNewSpec` mit). Licht: Strom `'W' + Anker`. Seeweg gekappt: `seaRoutesNow`/`seaRoutesWarn` vorher/nachher. Geist beim Ziehen
-    und Tragen über gedachte Felder (`wbVirtual` – state.tiles kurz ergänzt, nie recalc dabei); je Brücke eine Leinwand bei ihrem letzten Feld
-    (`wbGhostGroups`), nur der sichtbare Teil, nie im Nebel. Kristall-Glas über Booten: `WB_GLASS_LATE` zählt die Boote je Feld, das letzte malt.
+    zählen in `wbNewSpec` mit). Licht: Strom `'W' + Anker` (Anker nur mit Licht, gemerkt in `brSpanCache.anch`). Seeweg gekappt: `seaRoutesNow`/`seaRoutesWarn` vorher/nachher –
+    auch wenn Brückenfelder verschwinden (Abriss, Aufschütten, Aufnehmen, 🗑️: der Rest kann flach werden, `seaRoutesWarn(…, true)`); Vorher-Stand
+    beim Aufnehmen in `moving.sea0`; Einzeltipp in `build`/`demolish`, Linie und Rechteck nur in `runPlan` (im Batch nie doppelt, 160c G2). Geist beim Ziehen
+    und Tragen über gedachte Felder (`wbVirtual` – state.tiles kurz ergänzt, nie recalc dabei; die Merker der echten Karte sichert es samt Map-Objekten
+    und setzt sie danach wieder ein); je Brücke eine Leinwand bei ihrem letzten Feld (`wbGhostGroups`), nur der sichtbare Teil, nie im Nebel;
+    stehende Vorschau gemerkt (`ghostPaint(…, ghostKeep(id, src), ghostKeyNow(R))`, frei über `ghostKeepSweep`). Umfärben einer Brücke ist keine
+    neue Brücke (kein Schild, kein Geist). Kristall-Glas über Booten: `WB_GLASS_LATE` zählt die Boote je Feld, das letzte malt.
     Nie im Boden-Durchgang (`liveFlatSet`/`worldGround` lassen sie aus). Ruhend eine Gruppe `w` (= h+v+d+o, ein Bildchen, nichts dazwischen auf
     dem Wasser), nachgemalt je Lage; nie blass. Deckhöhe nur über `wegDeckH(c, a)` (Maler, `wegBridgeLift` für Figuren/Kopf/GL-Rahmen,
     Plan-Rauten/Rahmen über `deckMark`). Leute dort immer auf dem Deck; Boot darunter: Bogen vd nachmalen (mit Stütze an der Anfangskante Schnitt `WB_START_CUT`); frühere Felder über
@@ -360,7 +364,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Modelle (E2): `gbAt(x, y).G` (Aussehen der Spanne `brSpanLook`, gerader Lauf `gbRun` je Boden-Fassung gemerkt, `sax` null = Eckpodest),
     Maler `gbPaintLage` (Striche je Farbe in einem Pfad – Leistung). Setzer `brSet({ at: 'gleis', x, y })` → `gbSet` für `brRailSpan`
     (kein Rückfallfeld nötig: ältere Fassungen erstatten fest `BRIDGE`, alle neuen Preise liegen je Rohstoff darüber). Neue Brücke ohne
-    Nachbarn: Leiste (`gbLeisteLook`), Holz ohne Farbe bleibt im alten Format. Licht: Strom `'G' + Anker`.
+    Nachbarn: Leiste (`gbLeisteLook`), Holz ohne Farbe bleibt im alten Format. Licht: Strom `'G' + Anker`. Gerade gesetzte Gleisfelder vor dem
+    Angleichen in `COVER` eintragen (`build`, `dropAt`, `dropGroup`): `railArms`/`brRailSpan` lesen COVER, recalc kommt erst danach – sonst
+    findet `gbUnify` nur Einzelfelder (160c G2). Gruppe ablegen: je Spanne einmal angleichen.
     **Fußgängerbrücke am Übergang** (160c F1, Entwurf F0 `tools/uebergang-entwurf.js`): Form aus Block 148 bleibt (`archH`, Spanne ±0,9, Rampen
     ab 0,46 massiv, `ARCH_CLEAR`), Maler `ubArch` (brueckenbild.js) mit den Bausteinen der Wegbrücken; Bogen über dem Gleis `ubRi` (über den
     Wagen ≥ 16). Aussehen nur über `brLook(t, 'uebergang')`; Setzer `brSet({ at: 'uebergang', x, y })` → `ubSet`, Bau über `setCrossing`
@@ -368,7 +374,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Rückfall kristall Licht ohne Aufpreis hieße; der alte Kristall leuchtet ohne Strom, sonst Strom `'U' + Feld`. Zeichnen in Teilen: `unten`
     hinten jetzt, vorn nach den Zügen (`afterMovers`), `oben` (vorderes Geländer) nach den Bewohnern – bis b 0,5 auf dem Übergangsfeld, den
     Rest auf dem Wegfeld davor (`archRails`, im GL-Bild live über `archFrontTiles`). Auf Anhöhen zieht `hillPre` die Felder davor vor; Wagen über
-    der Feldkante in Stücken (`ubCarPieces`); keine Linie auf der Rampenkante (`archRampEdge`). Striche gebündelt (`brBatched`: wer `g === ctx`
+    der Feldkante in Stücken (`ubCarPieces`); keine Linie auf der Rampenkante (`archRampEdge`; getragen/kopiert `archRampLined` am Ziel, Gleisrichtung
+    aus den mitkommenden Schienen – `placeError(…, { rail })`). Striche gebündelt (`brBatched`: wer `g === ctx`
     vergleicht, nimmt `gNow()`).
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
@@ -652,7 +659,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     dass nichts mehr Zeichenarbeit macht als bisher. Neues Gebäude/Deko/Belag → Test schlägt fehl, bis der Wert geprüft und mit
     `npm run leistung:neu` aufgenommen ist (in AUFGABEN.md begründen). Grenzen nie „einfach hochsetzen“, um grün zu werden – erst
     fragen, ob es billiger geht (Bildchen, `ANIM_ITEMS` nur für das Bewegte, Musterkachel). Vor Pushes mit Grafik-Änderungen den
-    Messlauf (☰ → Grafik) im Browser ansehen.
+    Messlauf (☰ → Grafik) im Browser ansehen. Brücken je Material und Ort messen mit dem Maler des Spiels (`bkDrawLagen` mit `gbAt`/`wbAt`/`bkAt`,
+    Übergang `drawCrossing`; Schlüssel „Brücke …“, 160c G2) – nie über einen alten Zweig, den das Spiel nicht mehr nimmt. Nur die Je-Ding-Datei
+    neu schreiben: `LEISTUNG_NEU=1 npx vitest run tests/leistung-je-ding.test.js` (leistung:neu schreibt beide), im Diff nur neue Schlüssel.
     **Bogenbrücken (Block 150):** Höhe/Bögen/Durchfahrt nur über `bridgeArch(x, y)` (gemerkt je groundVersion, recalc leert;
     null = flach). Gezeichnet werden alle Wasser-Wegbrücken (Bogen und flach) in der Feldschleife wie die Anhöhen-Brücken (160c D1, Regel 29a5 „Wasser-Wegbrücken“).
     **Brückenrichtung:** nur über `bridgeArmsAxis` (Gleichstand → Richtung eines eindeutigen Brückennachbarn). Neues an Brücken immer in **beiden** Richtungen testen (Ost-West und Nord-Süd), auch breit.

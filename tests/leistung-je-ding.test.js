@@ -46,6 +46,40 @@ describe('Leistungs-Wächter je Ding (Block 149)', () => {
     const FORMEN = { gerade: zeile(3, 9, 6), kurve: [...zeile(3, 6, 6), ...spalte(3, 5, 6)], t: [...zeile(3, 9, 6), ...spalte(7, 9, 6)], x: [...zeile(3, 9, 6), ...spalte(3, 9, 6)] };
     for (let f = 0; f < game('DECO_LOOKS.schiene.forms.length'); f++) { gleis(FORMEN.gerade, f); const v = cost(`() => drawRailBed(400, 300, 2, 6, 6, state.tiles.get('6,6'))`); if (v >= 0) now['Gleisbrücke Form ' + f] = v; }
     for (const s of ['kurve', 't', 'x']) { gleis(FORMEN[s], 0); const v = cost(`() => drawRailBed(400, 300, 2, 6, 6, state.tiles.get('6,6'))`); if (v >= 0) now['Gleisbrücke ' + s] = v; }
+    // Neue Brückenmodelle (160c G2, P2): mit dem Maler des Spiels (bkDrawLagen, Übergang drawCrossing), je Material und Ort, über die Setzer
+    // im neuen Format. Gleis übers Wasser gerade/Kurve/T/X, Wasser-Wegbrücke (samt Glas t1/t2), zwischen Anhöhen, Fußgängerbrücke am Übergang
+    game("state.money = 1e9; for (const r of Object.keys(RES)) state.res[r] = 1e6; state.techs.add('bahn'); state.techs.add('terraform'); state.restore.klippe = 1; state.restore.kristall = 1; if (!state.legacy) state.legacy = new Set(); state.legacy.add('brmat:kristall')");
+    const MATS = ['holz', 'stahl', 'stein', 'kristall'], NAME = { holz: 'Holz', stahl: 'Metall', stein: 'Stein', kristall: 'Kristall' };
+    const lagen = (grs, c) => cost(`() => { for (const gr of ${JSON.stringify(grs)}) bkDrawLagen(6, 6, 400, 300, 2, gr, ${c}); }`);
+    const setze = (ref, m, at) => { if (m !== 'holz') expect(game(`brSet(${ref}, { mat: '${m}' })`), at + ' ' + m).toBe(true); };
+    for (const s of ['gerade', 'kurve', 't', 'x']) for (const m of MATS) {
+      gleis(FORMEN[s], 0); setze("{ at: 'gleis', x: 6, y: 6 }", m, 'gleis ' + s);
+      expect(game("brLook(state.tiles.get('6,6'), 'gleis').mat")).toBe(m);
+      const v = lagen(['h', 'vd', 'o', 't1', 't2'], 'gbAt(6, 6)'); if (v >= 0) now[`Brücke Gleis ${NAME[m]} ${s}`] = v;
+    }
+    for (const m of MATS) {                                               // Wasser-Wegbrücke, 5 Felder, Mitte 6,6
+      game(`(() => { for (let y = 3; y <= 9; y++) for (let x = 2; x <= 10; x++) { state.terra.set(x + ',' + y, x >= 4 && x <= 8 && y >= 4 && y <= 8 ? 'water' : 'grass'); state.tiles.delete(x + ',' + y); }
+        terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc(); chosenStyle.weg = 'sand'; setTool('weg'); for (let x = 3; x <= 9; x++) build('weg', x, 6, true); setTool('look'); recalc(); })()`);
+      setze("{ at: 'wasser', x: 6, y: 6 }", m, 'wasser');
+      expect(game("brSpanLook(6, 6).mat")).toBe(m);
+      const v = lagen(['w', 't1', 't2'], 'wbAt(6, 6)'); if (v >= 0) now[`Brücke Wasser ${NAME[m]}`] = v;
+    }
+    game("for (let y = 2; y <= 10; y++) for (let x = 2; x <= 10; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } terrainCache.clear(); sandCache.clear(); landCache.clear(); waterChanged(); recalc()");
+    for (const m of MATS) {                                               // zwischen Anhöhen: x 3–4 und 8–9, Lücke 5–7 (3 Felder), Mitte 6,6
+      game(`(() => { state.hills.clear(); state.bruecken.clear(); for (let y = 4; y <= 8; y++) for (const x of [3, 4, 8, 9]) state.hills.set(x + ',' + y, { w: 0 });
+        const b = { ax: 0, n: 3, art: 'holz' }; b.brp = { ...brPrice({ mat: 'holz' }, 'anhoehe', 3), k: brSig(b, 'anhoehe') }; state.bruecken.set('5,6', b); groundVersion++; recalc(); })()`);
+      setze("{ at: 'anhoehe', k: '5,6' }", m, 'anhoehe');
+      expect(game("brLook(state.bruecken.get('5,6'), 'anhoehe').mat")).toBe(m);
+      const v = lagen(['hg', 'h', 'vd', 'o', 't1', 't2'], 'bkAt(6, 6)'); if (v >= 0) now[`Brücke Anhöhe ${NAME[m]}`] = v;
+    }
+    game("state.hills.clear(); state.bruecken.clear(); groundVersion++; recalc()");
+    for (const m of MATS) {                                               // Fußgängerbrücke am Übergang: Gleis längs x, Weg längs y, ganz (wie nachgemalt)
+      game("for (let y = 2; y <= 10; y++) for (let x = 2; x <= 10; x++) state.tiles.delete(x + ',' + y); recalc(); setTool('schiene'); for (let x = 3; x <= 9; x++) build('schiene', x, 6, true); chosenStyle.weg = 'sand'; setTool('weg'); for (let y = 4; y <= 8; y++) build('weg', 6, y, true); setTool('look'); recalc()");
+      expect(game(`setCrossing(6, 6, true, '${m}')`), 'uebergang ' + m).toBe(true);
+      expect(game("brLook(state.tiles.get('6,6'), 'uebergang').mat")).toBe(m);
+      const v = cost(`() => drawCrossing(400, 300, 2, 6, 6, state.tiles.get('6,6'), 1e6)`); if (v >= 0) now[`Brücke Übergang ${NAME[m]}`] = v;
+    }
+    game("for (let y = 2; y <= 10; y++) for (let x = 2; x <= 10; x++) state.tiles.delete(x + ',' + y); recalc()");
     game("for (let y = 3; y <= 9; y++) for (let x = 3; x <= 9; x++) { state.terra.set(x + ',' + y, 'grass'); state.tiles.delete(x + ',' + y); } terrainCache.clear(); waterChanged(); recalc()");
     if (NEU) { fs.writeFileSync(FILE, JSON.stringify(now, null, 1) + '\n'); return; }
     const old = JSON.parse(fs.readFileSync(FILE, 'utf8')), bad = [];

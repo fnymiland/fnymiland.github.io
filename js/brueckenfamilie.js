@@ -351,8 +351,8 @@ function brSpanLook(x, y) {
   const t = state.tiles.get(k);
   let look = null;
   if (t && t.b === 'weg' && t.bridge) {
-    const cells = bridgeSpan(x, y), a = brSpanAnchor(cells), L = brLook(state.tiles.get(a[0] + ',' + a[1]), 'wasser');
-    for (const [cx, cy] of cells) C.map.set(cx + ',' + cy, L);
+    const cells = bridgeSpan(x, y), a = brSpanAnchor(cells), L = brLook(state.tiles.get(a[0] + ',' + a[1]), 'wasser'), ak = a.join(',');
+    for (const [cx, cy] of cells) { C.map.set(cx + ',' + cy, L); C.anch.set(cx + ',' + cy, ak); }   // Anker je Feld (Strom 'W', wbGeom; 160c G2)
     look = L;
   } else if (t && t.b === 'schiene' && t.bridge) {
     const cells = brRailSpan(x, y), a = brSpanAnchor(cells), L = brLook(state.tiles.get(a[0] + ',' + a[1]), 'gleis'), ak = a.join(',');

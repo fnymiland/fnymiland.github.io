@@ -1,4 +1,9 @@
-# 160c G2 – Funde der Gesamtprüfung (15.10.2026, nur gelesen, noch NICHT behoben)
+# 160c G2 – Funde der Gesamtprüfung (15.10.2026, nur gelesen)
+
+**Stand 16.10.2026: behoben**, je Fund mit Test – Geld v1123 (tests/g2-geld), Bild v1124, Lücken G2V-1…5 v1125 (tests/g2-luecken; G2V-5 schon in
+v1124), Leistung P1/P2/P3/P4/P6/P7 v1126 (tests/g2-leistung, leistung-je-ding „Brücke …“). Nicht geändert: P5 (erst am iPad messen),
+die als „kein Fehler“ verworfenen Funde. Für G3 anzusagen: B1-4 (Material der Leiste gilt für neue Brücken übers Wasser/Gleis), B1-5 (flache
+Brücken sperren in alten Spielständen Boote). Zusammenfassung in AUFGABEN.md (160c G2).
 Workflow wf_896e1163-1be: 4 Prüfer (alt, geld, bild, leistung) + je ein Gegenprüfer + Lückenprüfer. REAL = Urteil des Gegenprüfers.
 
 ## alt

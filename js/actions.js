@@ -537,6 +537,7 @@ function dropGroup(hx, hy) {
       for (const [fx, fy] of covered) state.tiles.delete(fx + ',' + fy);   // Wege am Ziel: unter die Deko bzw. vom Gebäude ersetzt (Block 58)
       if (covered.length) { if (plazaOk(b)) setUnder(t, x, y, [...covered, ...Object.entries(t.wegs || {}).map(([o, st]) => [x + keyXY(o)[0], y + keyXY(o)[1], st]), ...(t.weg != null ? [[x, y, t.weg]] : [])]); else if (replacesWeg(b)) state.money += covered.length * ITEMS.weg.cost; }
       state.tiles.set(k, t);
+      if (b === 'schiene' && !COVER.has(k)) COVER.set(k, k);           // gleich als Gleis bekannt (railArms über COVER, recalc erst danach): sonst findet gbUnify nur Einzelfelder (160c G2)
       if (moving.copy && isHome(b)) assignResident(t, Math.random, Math.random);   // neue Bewohner in die Kopie
       claimSea(b, x, y, t.rot || 0, t, t.bridge);
     }
@@ -544,8 +545,9 @@ function dropGroup(hx, hy) {
   }
   if (moving.items.some(it => it.kind === 'ground')) { sandCache.clear(); landCache.clear(); }
   for (const it of moving.items) if (it.kind === 'tile' && it.t.b === 'huegeltreppe') { const P = groupPlaced(it); stairDropped(ox + P.dx, oy + P.dy); }
-  for (const it of moving.items) if (it.kind === 'tile' && isWegBridge(it.t)) { const P = groupPlaced(it); wbUnify(ox + P.dx, oy + P.dy); }   // Brücken angleichen (160c D3)
-  for (const it of moving.items) if (it.kind === 'tile' && isGleisBridge(it.t)) { const P = groupPlaced(it); gbUnify(ox + P.dx, oy + P.dy); }   // Gleisbrücken ebenso (160c E2)   // Treppen: Ecke oder gerade wie gebaut (hills.js)
+  const done = new Set(), once = (x, y, span) => { if (done.has(x + ',' + y)) return false; for (const [a, b] of span(x, y)) done.add(a + ',' + b); return true; };   // je Spanne einmal (160c G2): gleiches Ergebnis für jedes ihrer Felder
+  for (const it of moving.items) if (it.kind === 'tile' && isWegBridge(it.t)) { const P = groupPlaced(it), x = ox + P.dx, y = oy + P.dy; if (once(x, y, bridgeSpan)) wbUnify(x, y); }   // Brücken angleichen (160c D3)
+  for (const it of moving.items) if (it.kind === 'tile' && isGleisBridge(it.t)) { const P = groupPlaced(it), x = ox + P.dx, y = oy + P.dy; if (once(x, y, brRailSpan)) gbUnify(x, y); }   // Gleisbrücken ebenso (160c E2)   // Treppen: Ecke oder gerade wie gebaut (hills.js)
   if (moving.copy) {                                                     // Stempel: dieselbe Kopie gleich noch einmal (frische Dinge)
     moving.items = moving.items.map(copyClone);
     addFloat(hx, hy, '−' + fmt(moving.cost.money || 0), '#d9534a');
@@ -707,6 +709,7 @@ function dropAt(x, y, slot) {
     if (replacesWeg(b) && covered.length) state.money += covered.length * ITEMS.weg.cost;   // Gebäude ersetzt den Weg
     setUnder(t, x, y, plazaOk(b) ? covered : []);
     state.tiles.set(k, t);
+    if (b === 'schiene' && !COVER.has(k)) COVER.set(k, k);             // wie dropGroup (160c G2)
     claimSea(b, x, y, rot, t, t.bridge);
     if (isWegBridge(t)) wbUnify(x, y);                                  // an eine andere Brücke gelegt: angleichen (160c D3)
     if (isGleisBridge(t)) gbUnify(x, y);                                // Gleisbrücke ebenso (160c E2)

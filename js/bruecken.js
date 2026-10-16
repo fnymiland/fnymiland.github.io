@@ -60,7 +60,7 @@ function wbLiveSet() {
   const L = WB_LIVE;
   if (L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L;
   L.v = groundVersion; L.tiles = state.tiles; L.n = state.tiles.size; L.set = new Set();
-  for (const [k, t] of state.tiles) { if (!isWegBridge(t)) continue; const c = wbAt(...keyXY(k)); if (c && bkGlasAt(c) && (!c.G.latF || c.G.lastB)) L.set.add(k); }
+  for (const [k, t] of state.tiles) { if (!isWegBridge(t) || brSpanLook(...keyXY(k)).mat !== 'kristall') continue; const c = wbAt(...keyXY(k)); if (c && bkGlasAt(c) && (!c.G.latF || c.G.lastB)) L.set.add(k); }   // nur Kristall rechnet die Geometrie (160c G2)
   L.arr = [...L.set];
   return L;
 }

@@ -255,7 +255,8 @@ function bkDrawGhost(last, z) {
     return { c, x, y, px: p.x, py: p.y, R: [p.x - l * z, p.y - u * z, p.x + r * z, p.y + d * z] };
   });
   const R = cells.reduce((m, q) => [Math.min(m[0], q.R[0]), Math.min(m[1], q.R[1]), Math.max(m[2], q.R[2]), Math.max(m[3], q.R[3])], [Infinity, Infinity, -Infinity, -Infinity]);
-  ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => { for (const q of cells) { const A = bkTileArgs(q.c, q.px, q.py, z); bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }); } });
+  ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => { for (const q of cells) { const A = bkTileArgs(q.c, q.px, q.py, z); bkPaint(A.P, z, A.art, A.n, A.t0, A.t1, A.weg, { ...A.opts, licht: null, dark: false }); } },
+    ghostKeep('b' + last.k, PLAN_GHOST), ghostKeyNow(R));                // stehende Vorschau: gemerkt (160c G2)
   for (const q of cells) { const marks = DECK_MARKS && DECK_MARKS.get(q.x + ',' + q.y); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
 function bkGroup(x, y, px, py, z, gruppen, c = bkAt(x, y)) {              // c: Brückenfeld (Anhöhe bkAt, Wasser wbAt – 160c D1)
@@ -677,11 +678,13 @@ function wbBelag(t, x, y, z, ax, Pw, H, latB, latF, arch) {
 // seaPath oder speichern währenddessen. extra: [[k, Kachel]], keys: welche Felder. Felder mit t (die gedachte Kachel) für wbArgs
 function wbVirtual(extra, keys, at = 'wasser') {                          // at 'gleis' (160c E2): Gleisbrücken (gbAt samt G, Arme aus den gedachten Feldern)
   const real = state.tiles, out = new Map(), cov = [];
+  const saved = [bridgeArchCache, wbCache, gbCache, brSpanCache].map(C => [C, { ...C }]);   // Merker der echten Karte bleiben (160c G2): samt ihrer Map-Objekte zurück
   try {
+    for (const [C] of saved) for (const f of Object.keys(C)) if (C[f] instanceof Map) C[f] = new Map();   // gedachte Felder in frische Maps (die Merker leeren an Ort und Stelle)
     state.tiles = new Map(real);
     for (const [k, t] of extra) { state.tiles.set(k, t); if (!COVER.has(k)) { COVER.set(k, k); cov.push(k); } }   // Belegung kurz mit (bAt/railArms lesen COVER)
     for (const k of keys) { const c = (at === 'gleis' ? gbAt : wbAt)(...keyXY(k)); if (c) out.set(k, { ...c, t: state.tiles.get(k) }); }
-  } finally { state.tiles = real; for (const k of cov) COVER.delete(k); }
+  } finally { state.tiles = real; for (const k of cov) COVER.delete(k); for (const [C, s] of saved) Object.assign(C, s); }
   return out;
 }
 // gedachte Brückenkachel im Aussehen look (wie build: brWriteLook, brp gestempelt)
@@ -710,7 +713,7 @@ function wbGhostGroups(cells) {
   return out;
 }
 // Geist ganz zeichnen: alle Felder in Maler-Folge auf EINE Zwischenleinwand (wie bkDrawGhost), 65 %, ohne Licht; danach die Plan-Rauten
-function wbDrawGhost(cells, z) {
+function wbDrawGhost(cells, z, id = null) {                               // id: letztes Feld – mit ihm gemerkt, solange die Vorschau steht (160c G2)
   const qs = [...cells.values()].sort((a, b) => (a.x + a.y) - (b.x + b.y) || a.x - b.x).map(c => {
     const p = toScreen(c.x, c.y), [l, u, r, d] = bkBoxOf(['w', 'hg', 't1', 't2'], c);
     return { c, px: p.x, py: p.y, R: [p.x - l * z, p.y - u * z, p.x + r * z, p.y + d * z] };
@@ -722,10 +725,11 @@ function wbDrawGhost(cells, z) {
   const fog = FOG; FOG = false;                                            // geplante Felder werden beim Bauen eigen: nie im Nebel
   try { ghostPaint(R[0], R[1], R[2] - R[0], R[3] - R[1], 0.65, () => {
     for (const q of qs) {
+      if (q.R[2] < R[0] || q.R[0] > R[2] || q.R[3] < R[1] || q.R[1] > R[3]) continue;   // ganz außerhalb des Ausschnitts (160c G2)
       if (q.c.rail) { const c = { ...q.c, G: { ...q.c.G, look: { ...q.c.G.look, licht: null } } }; for (const l of ['h', 'v', 'd', 'o']) gbPaintLage(l, c, q.px, q.py, z, q.c.t); continue; }   // Gleis (160c E2)
       const A = wbArgs(q.c, q.px, q.py, z); A.opts = { ...A.opts, licht: null, dark: false }; for (const l of ['hg', 'h', 'v', 'd', 't1', 'o', 't2']) wbPaintLage(l, q.c, A, z);
     }
-  }); } finally { FOG = fog; }
+  }, id == null ? null : ghostKeep('w' + id, PLAN_WB_GHOST), ghostKeyNow(R)); } finally { FOG = fog; }
   for (const q of qs) { const marks = DECK_MARKS && DECK_MARKS.get(q.c.k); if (marks) for (const f of marks) { g.save(); g.lineJoin = 'round'; try { f(); } finally { g.restore(); } } }
 }
 // Eine Brückenkachel außerhalb der Karte (Tragen mit ✋, drawObject('weg')): als gedachtes Feld an ihrem Ziel im neuen Modell (160c D3h).

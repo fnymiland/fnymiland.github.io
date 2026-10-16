@@ -1341,21 +1341,39 @@ let PLAN_GHOST = null, PLAN_GHOST_DONE = null, PLAN_WB_GHOST = null, PLAN_WB_LAS
 // Halb durchsichtig malen, was aus mehreren deckenden Lagen besteht (Brücken-Geist): erst auf eine eigene Leinwand, dann mit alpha einsetzen –
 // sonst schimmerten die Lagen dunkler durcheinander. x0, y0, w, h: Rahmen in Bildschirmpunkten. Eine Leinwand, die nur wächst (wie hillSpillCv),
 // Ecke auf ganze Gerätepunkte (sonst weich und das Glasband rastet falsch ein)
+// keep (160c G2, ghostKeep): eigene Leinwand je Geist; gleicher Schlüssel (stehende Vorschau: Plan, Kamera, Ausschnitt) – nur noch einsetzen
 let ghostCv = null;
-function ghostPaint(x0, y0, w, h, alpha, fn) {
+function ghostPaint(x0, y0, w, h, alpha, fn, keep = null, key = null) {
   const X0 = Math.floor(x0 * DPR) / DPR, Y0 = Math.floor(y0 * DPR) / DPR, W = Math.max(1, Math.ceil((w + x0 - X0) * DPR)), H = Math.max(1, Math.ceil((h + y0 - Y0) * DPR)), a0 = g.globalAlpha;
-  if (!ghostCv || ghostCv.width < W || ghostCv.height < H) {
-    const c = document.createElement('canvas'); c.width = Math.max(W, ghostCv ? ghostCv.width : 0); c.height = Math.max(H, ghostCv ? ghostCv.height : 0);
-    if (ghostCv) freeCanvas(ghostCv);
-    ghostCv = c.getContext('2d') ? c : null;
+  let cv = keep ? keep.cv : ghostCv;
+  if (!cv || cv.width < W || cv.height < H) {
+    const c = document.createElement('canvas'); c.width = Math.max(W, cv ? cv.width : 0); c.height = Math.max(H, cv ? cv.height : 0);
+    if (cv) freeCanvas(cv);
+    cv = c.getContext('2d') ? c : null;
+    if (keep) { keep.cv = cv; keep.key = null; } else ghostCv = cv;
   }
-  const cx = ghostCv && ghostCv.getContext('2d');
+  const cx = cv && cv.getContext('2d');
   if (!cx) { g.globalAlpha = a0 * alpha; try { fn(); } finally { g.globalAlpha = a0; } return; }   // kein Speicher: direkt
-  const prev = g;
-  g = cx;
-  try { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(DPR, 0, 0, DPR, -X0 * DPR, -Y0 * DPR); fn(); } finally { g = prev; }
-  g.globalAlpha = a0 * alpha; g.drawImage(ghostCv, 0, 0, W, H, X0, Y0, W / DPR, H / DPR); g.globalAlpha = a0;
+  if (!keep || key == null || keep.key !== key) {
+    const prev = g;
+    g = cx;
+    try { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, W, H); g.setTransform(DPR, 0, 0, DPR, -X0 * DPR, -Y0 * DPR); fn(); } finally { g = prev; }
+    if (keep) keep.key = key;
+  }
+  g.globalAlpha = a0 * alpha; g.drawImage(cv, 0, 0, W, H, X0, Y0, W / DPR, H / DPR); g.globalAlpha = a0;
 }
+// Gemerkte Geister (160c G2): je Brücke im Plan eine Leinwand, solange derselbe Plan steht (src: sein gemerktes Ergebnis); was ein Bild lang
+// nicht gemalt wurde, gibt seine Leinwand frei (ghostKeepSweep am Bildende)
+const GHOST_KEEP = new Map();
+function ghostKeep(id, src) {
+  let e = GHOST_KEEP.get(id);
+  if (!e) GHOST_KEEP.set(id, e = { cv: null, key: null, src });
+  if (e.src !== src) { e.src = src; e.key = null; }
+  e.used = true;
+  return e;
+}
+function ghostKeepSweep() { for (const [id, e] of GHOST_KEEP) { if (e.used) { e.used = false; continue; } freeCanvas(e.cv); GHOST_KEEP.delete(id); } }
+const ghostKeyNow = R => [R.map(v => Math.round(v * 100)).join(','), cam.x, cam.y, cam.z, DPR, groundVersion].join('|');   // stehende Vorschau: alles gleich (Nacht nicht: der Geist hat kein Licht, isLive ist dort aus)
 // Anhebung (Bildpunkte bei cam.z) des Felds unter einem Weltpunkt – Symbole, Zahlen, Glitzern über Anhöhen; 0 ohne Anhöhen
 const liftAt = (x, y) => state.hills && state.hills.size ? hillLift(Math.round(x), Math.round(y)) * cam.z : 0;
 // Vorschau auf dem Deck einer Brücke (160c): erst nach dem Deck zeichnen (bkDrawStill)
@@ -2179,7 +2197,7 @@ function render(now) {
         else if (state.decos.has(k)) drawSmall(k, px, py, z, now, x, y, SLOTS_ALL);
       }
       if (!bkDone) bkDrawStill(x, y, px, py, z, now, bw, wbUnder);        // Rückfall (alte Daten: anderes Ding unter dem Deck, Belegung veraltet) – die Brücke fehlt nie
-      if (PLAN_WB_LAST && PLAN_WB_LAST.has(k)) { wbDrawGhost(PLAN_WB_LAST.get(k), z); PLAN_WB_LAST.delete(k); }   // Geist übers Wasser: je Brücke ganz bei ihrem letzten Feld (160c D3h)
+      if (PLAN_WB_LAST && PLAN_WB_LAST.has(k)) { wbDrawGhost(PLAN_WB_LAST.get(k), z, k); PLAN_WB_LAST.delete(k); }   // Geist übers Wasser: je Brücke ganz bei ihrem letzten Feld (160c D3h)
       if (bkDone && !bc && PLAN_GHOST && PLAN_GHOST.has(k)) { const gc = PLAN_GHOST.get(k); if (gc.i === gc.b.n - 1) bkDrawGhost(gc, z); else PLAN_GHOST_DONE.set(gc.k, PLAN_GHOST_DONE.get(gc.k) || false); }   // Brücke, die die Linie mitbaut (160c C9): ganz beim letzten Feld
       if (preview && preview.small && !preview.top && hover.x === x && hover.y === y) {
         const gRot = tool === 'verschieben' ? (ROTATABLE.has(ghostType) ? buildRot : 0) : smallRot(ghostType, preview.slot);   // wie abgelegt wird (actions.js)
@@ -2287,7 +2305,8 @@ function render(now) {
   }
   FOG = false;
   if (PLAN_GHOST) for (const [, gc] of PLAN_GHOST) if (gc.i === gc.b.n - 1 && PLAN_GHOST_DONE.get(gc.k) === false) bkDrawGhost(gc, z);
-  if (PLAN_WB_LAST) for (const cells of PLAN_WB_LAST.values()) wbDrawGhost(cells, z);   // letztes Feld nicht im Bild   // letztes Feld nicht im Bild: danach
+  if (PLAN_WB_LAST) for (const [k, cells] of PLAN_WB_LAST) wbDrawGhost(cells, z, k);   // letztes Feld nicht im Bild: danach
+  if (GHOST_KEEP.size) ghostKeepSweep();
   archWalkers.clear();
   for (const fs of archRails.values()) for (const f of fs) f();         // Feld davor nicht im Bild: das Geländer trotzdem (160c F1d)
   archRails.clear();
