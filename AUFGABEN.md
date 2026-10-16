@@ -2728,7 +2728,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Uhr zurück bringt nichts, kein ↶); Pille ✨ oben (ab 481 px), auf dem Handy als Zeile im 📦-Lager; Speichern (serialize/parseSave,
       Live: privat), Test sternstaub.test.js
 - [x] **161b** Tageswunsch: täglich einer (Kalendertag + Spielstand → auf allen Geräten derselbe, nur vorwärts), 12 Arten (Bänke am Wasser, Bäume, Blumen, Büsche, Laternen, Brunnen, Hecke, Zaun, Parkrasen, Weg, Haus Stufe 3, Pavillon), nur Baubares; gezählt ab dem Stand beim Erscheinen; erfüllt → 25 ✨ (einmal je Tag); im ✨-Fenster mit Fortschritt. Namen eindeutig (`tw…`, `state.dayWish`): `WISHES`/`wishHtml`/`wishAt` gibt es schon (Hauswünsche, Freundeswünsche)
-- [ ] 161c Sternenbasar (Entwurf zuerst) + Tagesangebot + Katalog
+- [~] 161c Sternenbasar (Entwurf zuerst) + Tagesangebot + Katalog – 16.10.: drei Entwürfe tools/basar-entwurf.js → tools/vorschau/basar-entwurf.png (A Sternenzelt, B Sternhäuschen, C Kuppelladen), Nutzer wählt am 17.10.
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten
 - [ ] 161e Inselzauber
 - [ ] 161f Prachtbauten (je Entwurf zuerst)
