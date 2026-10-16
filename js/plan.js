@@ -105,7 +105,7 @@ function planScan(p) {
   const wbCnt = new Map(), wbPlan = [];                                  // Brücke übers Wasser je Material (Schild, 160c D3f); geplante Felder (Geist, D3h)
   if (b === 'weg') PLANNED = new Set();
   if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }
-  if (b === 'weg') BR_PLAN_N = new Map();                                // Wasser: Länge der Brücke je geplantem Feld (wbNewSpec, 160c D3)   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
+  if (b === 'weg' || b === 'schiene') BR_PLAN_N = new Map();          // Gleis ebenso (160c G2: Vorschau = Abbuchung zwischen zwei Gleisbrücken)                                // Wasser: Länge der Brücke je geplantem Feld (wbNewSpec, 160c D3)   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
   // die Linie bekäme dort zwei getrennte Enden. Ohne Anhöhen nie
   const quer = new Map();
@@ -130,10 +130,10 @@ function planScan(p) {
         if (PLANNED) PLANNED.add(k);
         if (BK_PLAN_SAME) BK_PLAN_SAME.add(k);
         if (BR_PLAN_LOOK && terrainAt(x, y) === 'water') {
-          const S = b === 'weg' ? wbNewSpec(x, y) : null, L = S ? S.look : brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis');   // wie build: die längste Brücke daneben (geplante zählen mit)
+          const S = b === 'weg' ? wbNewSpec(x, y) : gbNewSpec(x, y), L = S && b === 'weg' ? S.look : brNewLook(x, y, b === 'weg' ? 'wasser' : 'gleis');   // wie build: die längste Brücke daneben (geplante zählen mit)
           BR_PLAN_LOOK.set(k, L);
           if (b === 'weg') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }
-          else if (b === 'schiene') { wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }   // Gleisbrücke (160c E2): Schild und Geist
+          else if (b === 'schiene') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }   // Gleisbrücke (160c E2): Schild und Geist
         }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }

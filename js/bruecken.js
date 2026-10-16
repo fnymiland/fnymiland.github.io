@@ -950,7 +950,7 @@ function ubLookHtml(x, y, t) {
     h += `<div class="label">🌉 Fußgängerbrücke</div><div class="looks">${BK_ART_IDS.map(btn).join('')}</div>`;
   }
   if (!t.foot && archHillError(x, y)) h += `<p class="muted">${archHillError(x, y)}</p>`;
-  if (!t.foot) return h;
+  if (!t.foot || !had) return h;                                       // Brücke ohne bezahltes Design (alte Stände): erst kaufen (160c G2)
   const L = brLook(t, 'uebergang'), paid = brPaid(t, 'uebergang'), zk = L.mat === 'kristall' && brIsNew(t, 'uebergang') && (t.brz === 'an' || t.brz === 'aus') ? t.brz : null;
   const matPrice = id => brPrice(ubMatLook(L, id), 'uebergang').money - (paid.money || 0);
   const dunkel = L.licht === 'an' && !L.lichtGratis && !!T.rail && !!T.rail.power && T.rail.power.dark.has('U' + x + ',' + y);
@@ -985,6 +985,7 @@ function ubWriteLook(t, look, zk, matChange) {
 function ubSet(x, y, ch) {
   const t = state.tiles.get(x + ',' + y);
   if (!isCrossing(t) || !t.foot || !ch) return false;
+  if (!footPaidOf(t) && !('mat' in ch)) { fail('Erst die Fußgängerbrücke kaufen'); return false; }   // nie footPaid ohne Bezahlung (ältere Fassungen erstatten danach, 160c G2)
   const L = brLook(t, 'uebergang'), paid = brPaid(t, 'uebergang');
   let nl = { ...L }, zk = L.mat === 'kristall' && brIsNew(t, 'uebergang') && (t.brz === 'an' || t.brz === 'aus') ? t.brz : null, add = null, mat = false;
   if ('mat' in ch) {

@@ -152,6 +152,7 @@ function build(b, x, y, quiet) {
     const gbS = bridge && b === 'schiene' ? gbNewSpec(x, y) : null, gbL = bridge && b === 'schiene' ? brNewLook(x, y, 'gleis') : null;   // 160c E2c: wie costOf (längste daneben, sonst Leiste) – vor dem Setzen
     const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
+    if (bridge && b === 'schiene' && !COVER.has(k)) COVER.set(k, k);   // gleich als Gleis bekannt (railArms über bAt/COVER): im Zieh-Rutsch (batch, recalc erst danach) findet das Angleichen sonst die gerade gebauten Felder nicht (160c G2)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
     if (wbS) {                                                        // Wasser-Wegbrücke (160c D3): immer im neuen Format, aus dem Aussehen (nie Rohfelder), bezahlt = costOf
@@ -566,7 +567,8 @@ function copyClone(it) {
     const at = t.b === 'weg' && t.bridge ? 'wasser' : t.b === 'schiene' && t.bridge ? 'gleis' : t.cross && t.foot ? 'uebergang' : null;
     if (at) {                                                            // Brücke (160c A4): die Kopie hat bezahlt, was sie kostet – nur Eingeschaltetes,
       const look = brOnLook(brLook(t, at));                               // Aussehen ausdrücklich (brp = neues Format, die Altfelder bleiben als Rückfall)
-      if (at === 'wasser') t.brk = bridgeKind(t);                         // Art fest (nicht mehr aus dem Wegstil): brSig bleibt beim Umstreichen gleich
+      if (at === 'wasser') t.brk = look.kind && brOwn(WEG_BRIDGE, look.kind) ? look.kind : brFallback('wasser', look.mat).brk;   // Art aus dem kopierten Aussehen (nicht die des Originals – nach dem Zusammenwachsen kann sie teurer sein, 160c G2): brSig bleibt beim Umstreichen gleich
+      if (at === 'uebergang' && brIsNew(t, at)) { delete look.kind; t.footPaid = brFallback('uebergang', look.mat).footPaid; }   // neues Format: die Kopie ist ein Neubau zum Neupreis wie setCrossing (sonst kostete ein neuer Kristall-Übergang den alten Designpreis), Rückfall passend (160c G2)
       if (at === 'uebergang' && !footPaidOf(t)) t.footPaid = brFallback('uebergang', look.mat).footPaid;   // foot ohne footPaid: bezahlt ist jetzt das Design
       t.brm = look.mat; t.brb = look.deck;
       if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else if (look.licht === 'an' || !brLegacyLook(t, at).licht) delete t.brl; else t.brl = 'nein';   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis; ohne Licht, wo der Rückfall Licht hätte: 'nein' (160c F1c)
@@ -620,8 +622,9 @@ function copyCost(items) {
 // Ausbaustufen und Aufpreisen: Brücke, Märchenschloss-Gestalt, langer Bahnhof, Gleise im Hauptbahnhof, Looping, Bahnübergang/Fußgängerbrücke
 function copyTileCost(t) {
   const d = ITEMS[t.b], c = { money: 0 }, add = (o, n = 1) => { for (const [r, v] of Object.entries(o || {})) c[r] = (c[r] || 0) + v * n; };
-  if (t.b === 'weg' && t.bridge) add(brPrice(brOnLook(brLook(t, 'wasser')), 'wasser'));        // Brücke (160c A4): im Aussehen, nur Eingeschaltetes
-  else if (t.b === 'schiene' && t.bridge) add(brPrice(brOnLook(brLook(t, 'gleis')), 'gleis'));
+  const brC = at => (brIsNew(t, at) ? brNoK(t.brp) : brPrice(brOnLook(brLook(t, at)), at));   // die Kopie hat gestempelt, was sie kostet (copyClone, 160c G2)
+  if (t.b === 'weg' && t.bridge) add(brC('wasser'));                  // Brücke (160c A4): im Aussehen, nur Eingeschaltetes
+  else if (t.b === 'schiene' && t.bridge) add(brC('gleis'));
   else if (t.b === 'huegelrampe') { const R = rampCost(rampFormOf(t)); add({ money: R.cost, ...R.mat }); }   // Gleis-Rampe: Preis ihrer Form (ITEMS zeigt die der Leiste)
   else if (t.b === 'fz_schloss') add({ money: castlePrice(csOf(t)), ...d.mat });
   else add({ money: d.cost || 0, ...d.mat });
@@ -630,7 +633,7 @@ function copyTileCost(t) {
   if (t.b === 'station' && stationLen(t) === 3) add(STATION_LEN_COST);
   if (t.b === 'hbf') add(GLEIS_COST, Math.max(0, hbfGleise(t) - HBF_MIN));
   if (t.loop) add({ money: ITEMS.fz_looping.cost });
-  if (t.cross) { add({ money: ITEMS.weg.cost }); if (t.foot) add(brPrice(brOnLook(brLook(t, 'uebergang')), 'uebergang')); }
+  if (t.cross) { add({ money: ITEMS.weg.cost }); if (t.foot) add(brC('uebergang')); }
   return c;
 }
 // Pipette: nur Wege, nur Gleise oder nur eine Linienart – jeweils ein Stil. Gibt das Werkzeug zurück (oder null)
