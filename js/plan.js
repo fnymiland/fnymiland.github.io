@@ -105,7 +105,7 @@ function planScan(p) {
   const wbCnt = new Map(), wbPlan = [];                                  // Brücke übers Wasser je Material (Schild, 160c D3f); geplante Felder (Geist, D3h)
   if (b === 'weg') PLANNED = new Set();
   if (b === 'weg' || b === 'schiene') { BR_PLAN_LOOK = new Map(); BK_PLAN_SAME = new Set(); }
-  if (b === 'weg' || b === 'schiene') BR_PLAN_N = new Map();          // Gleis ebenso (160c G2: Vorschau = Abbuchung zwischen zwei Gleisbrücken)                                // Wasser: Länge der Brücke je geplantem Feld (wbNewSpec, 160c D3)   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
+  if (b === 'weg' || b === 'schiene') { BR_PLAN_N = new Map(); BR_PLAN_REAL = new Map(); }          // Gleis ebenso (160c G2: Vorschau = Abbuchung zwischen zwei Gleisbrücken)                                // Wasser: Länge der Brücke je geplantem Feld (wbNewSpec, 160c D3)   // BK_PLAN_SAME: längs unter einer Brücke durch eine Stütze (160c C1)          // Brücke verlängern: geplante Felder erben wie beim Bauen (160c A4)
   // Gleis-Rampe (hills.js) auf der Schienenlinie: nur längs ihrer Achse ist sie schon Gleis – quer verbindet sie nichts (levelLink 'gleis'),
   // die Linie bekäme dort zwei getrennte Enden. Ohne Anhöhen nie
   const quer = new Map();
@@ -134,6 +134,17 @@ function planScan(p) {
           BR_PLAN_LOOK.set(k, L);
           if (b === 'weg') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }
           else if (b === 'schiene') { BR_PLAN_N.set(k, (S ? S.n : 0) + 1); wbCnt.set(L.mat, (wbCnt.get(L.mat) || 0) + 1); wbPlan.push([k, L]); }   // Gleisbrücke (160c E2): Schild und Geist
+          // echte Brücken daneben: beim Bauen gleicht das Feld sie an (wbUnify/gbUnify) – für später geplante Felder schon so (Aussehen L, Länge
+          // der zusammengewachsenen Brücke: das Feld, jede echte Spanne daneben einmal, dazu die geplanten Nachbarn)
+          const isB = b === 'weg' ? isWegBridge : isGleisBridge, spans = [], seenS = new Set();
+          let nn = 1;
+          for (const [dx, dy] of DIRS) {
+            const nx = x + dx, ny = y + dy, nk = nx + ',' + ny;
+            if (seenS.has(nk)) continue;
+            if (isB(state.tiles.get(nk))) { const cs = b === 'weg' ? bridgeSpan(nx, ny) : brRailSpan(nx, ny); for (const [cx, cy] of cs) seenS.add(cx + ',' + cy); const o = BR_PLAN_REAL.get(nk); nn += o ? o.n - 1 : cs.length; spans.push(cs); }   // schon angeglichen: ihre Länge samt dem Feld, das sie angeglichen hat
+            else if (BR_PLAN_N.has(nk) && nk !== k) nn += BR_PLAN_N.get(nk);
+          }
+          if (spans.length) { BR_PLAN_N.set(k, nn); for (const cs of spans) for (const [cx, cy] of cs) BR_PLAN_REAL.set(cx + ',' + cy, { look: L, n: nn }); }
         }
         if ((CLAIM_TOOLS.has(b) || (b === 'weg' && isSea(x, y))) && !ownedTile(x, y)) { state.claimed.add(k); tmp.push(k); }
       }
@@ -143,7 +154,7 @@ function planScan(p) {
       }
       rest = next;
     }
-  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; BR_PLAN_N = null; }
+  } finally { for (const k of tmp) state.claimed.delete(k); PLANNED = null; BR_PLAN_LOOK = null; BK_PLAN_SAME = null; BR_PLAN_N = null; BR_PLAN_REAL = null; }
   const ax = p.kind === 'line' && p.a.y === p.b.y ? 0 : 1, st = b === 'weg' ? currentStyle('weg') : null;
   const wbGhost = !wbPlan.length ? null : b === 'schiene' ? wbVirtual([...order.filter(([x, y]) => !state.tiles.has(x + ',' + y)).map(([x, y]) => [x + ',' + y, { b: 'schiene', lvl: 1 }]), ...wbPlan.map(([k, L]) => [k, gbGhostTile(L)])], wbPlan.map(([k]) => k), 'gleis')   // Gleisbrücke (160c E2): samt geplanter Landgleise (sonst Prellböcke)
     : wbVirtual(wbPlan.map(([k, L]) => [k, wbGhostTile(L, st, ax)]), wbPlan.map(([k]) => k));   // Geist der Brücke übers Wasser (160c D3h)
@@ -357,8 +368,8 @@ function runPlan() {
   const money0 = state.money;
   let n = 0;
   wegLaufPlan = p.tool === 'weg' ? planLauf(p) : null;                     // Wegrichtung (Block 158)
-  const rest = p.tool === 'abriss' || p.tool === 'schuett';              // Brückenfelder abreißen/aufschütten: der Rest kann flach werden (160c G2)
-  const sea0 = (p.tool === 'weg' && info.order.some(([x, y]) => terrainAt(x, y) === 'water')) || (rest && info.order.some(([x, y]) => isWegBridge(state.tiles.get(x + ',' + y)))) ? seaRoutesNow() : null;   // Brücke übers Wasser: Seewege (160c D3g)
+  const rest = p.tool === 'abriss' || p.tool === 'schuett' || p.tool === 'graben';   // Brückenfelder abreißen/aufschütten, Teich am Brückenende: der Rest kann flach werden (160c G2)
+  const sea0 = (p.tool === 'weg' && info.order.some(([x, y]) => terrainAt(x, y) === 'water')) || (rest && info.order.some(([x, y]) => p.tool === 'graben' ? wbBeside(x, y) : isWegBridge(state.tiles.get(x + ',' + y)))) ? seaRoutesNow() : null;   // Brücke übers Wasser: Seewege (160c D3g)
   try { batch(() => { for (const [, , run] of info.order) if (run()) n++; }); } finally { wegLaufPlan = null; }
   seaRoutesWarn(sea0, rest);
   if (!n) return false;

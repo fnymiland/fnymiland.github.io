@@ -116,7 +116,7 @@ function build(b, x, y, quiet) {
   }
   const err = placeError(b, x, y);
   if (err) { if (!quiet || err === 'Zu wenig Taler') fail(err); return false; }
-  const sea0 = BATCH ? null : (b === 'weg' && terrainAt(x, y) === 'water') || (b === 'schuett' && isWegBridge(old)) ? seaRoutesNow() : null;   // Seewege vorher (160c G2): Einzeltipp (Linie und Rechteck: runPlan)
+  const sea0 = BATCH ? null : (b === 'weg' && terrainAt(x, y) === 'water') || (b === 'schuett' && isWegBridge(old)) || (b === 'graben' && wbBeside(x, y)) ? seaRoutesNow() : null;   // Seewege vorher (160c G2): Einzeltipp (Linie und Rechteck: runPlan); Teich am Brückenende macht den Bogen flach
   const d = ITEMS[b], k = x + ',' + y, c = costOf(b, x, y), bridge = (b === 'schiene' || b === 'weg') && terrainAt(x, y) === 'water', rot = placeRot(b, x, y);   // Weg übers Wasser: Brücke (Block 66)
   const covered = d.paint || TERRAFORM[b] || b === 'graben' || b === 'schuett' ? [] : pathsUnder(b, x, y, rot);   // Wege auf dem Bauplatz
   const under = plazaOk(b) ? covered : [], replaced = replacesWeg(b) ? covered : [];   // Deko: Weg bleibt darunter; Gebäude: ersetzt ihn
@@ -198,7 +198,7 @@ function build(b, x, y, quiet) {
   if (b === 'leuchtturm') { if (!state.festival) undoCut = true; festival(); startFireworks([x + 1, y + 1]); }   // das Fest lässt sich nicht zurückkaufen   // Einweihung mit Feuerwerk (Block 83)
   checkStars();
   save();
-  if (sea0) seaRoutesWarn(sea0, b === 'schuett');
+  if (sea0) seaRoutesWarn(sea0, b === 'schuett' || b === 'graben');
   return true;
 }
 
@@ -465,6 +465,8 @@ function groupErrors(hx, hy) {
   const planned0 = PLANNED, mine = new Set(), rails = new Set();
   for (const it of moving.items) if (it.kind === 'tile') { const P = groupPlaced(it), k = (ox + P.dx) + ',' + (oy + P.dy); if (P.t && (P.t.b === 'weg' || isCrossing(P.t))) mine.add(k); if (P.t && P.t.b === 'schiene') rails.add(k); }
   const rail = (x, y) => rails.has(x + ',' + y) || bAt(x, y) === 'schiene';   // Gleisrichtung am Übergang: mit den Schienen, die mitkommen (160c G2)
+  const rampen = new Set();                                              // Rampenkanten der mitkommenden Fußgängerbrücken: dort keine Linie der Gruppe (G2 N8)
+  for (const it of moving.items) if (it.kind === 'tile' && isArchTile(groupPlaced(it).t)) { const P = groupPlaced(it); for (const k of archRampKeys(ox + P.dx, oy + P.dy, rail)) rampen.add(k); }
   if (mine.size) PLANNED = planned0 ? new Set([...planned0, ...mine]) : mine;
   // Brücke darüber (160c C1): Wege/Gleise der Gruppe zählen beim Prüfen der Stützen schon als gelegt (sonst längs durch eine Stütze)
   const grp0 = BK_GROUP;
@@ -480,7 +482,7 @@ function groupErrors(hx, hy) {
     let err = null;
     if (it.kind === 'edge') {
       const k = edgeAtMid(ox + P.mx, oy + P.my);
-      err = state.edges.has(k) ? 'Hier steht schon eine Linie' : (P.e.arch && edgeTiles(k).some(([x, y]) => bkAt(x, y))) ? 'Unter der Brücke ist kein Platz für einen Torbogen' : edgeError(P.e.b, k);   // R8
+      err = state.edges.has(k) ? 'Hier steht schon eine Linie' : rampen.has(k) ? ARCH_RAMP_LINE : (P.e.arch && edgeTiles(k).some(([x, y]) => bkAt(x, y))) ? 'Unter der Brücke ist kein Platz für einen Torbogen' : edgeError(P.e.b, k);   // R8
     } else if (it.kind === 'ground') {
       const x = ox + P.dx, y = oy + P.dy, k = x + ',' + y, ot = state.tiles.get(COVER.get(k) || k);
       if (!ownedTile(x, y)) err = notMine(x, y);
@@ -565,6 +567,9 @@ function dropGroup(hx, hy) {
 // Ausbauten kostet), die Kopie bleibt als Stempel am Finger, neue Bewohner ziehen ein. Einzelstücke bleiben draußen. Nur eine Art
 // Linie in einem Stil (Weg, Gleis, Hecke/Zaun/Mauer): Pipette – das Werkzeug mit genau diesem Stil in die Hand
 const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift;   // Bergportal (157m): nur in die Wand bauen
+// Kopie eines Übergangs in alter Fassung (Designpreis): die Kopie trägt danach brp im neuen Format – der nächste Stempel klont sie wieder und
+// muss gleich bleiben (sonst Neupreis als bezahlt, abgebucht aber der alte, Gegenprüfung G2 N1). Gemerkt nur für die Klone am Finger
+const COPY_ALT = new WeakSet();
 function copyClone(it) {
   const c = { ...it };
   if (it.kind === 'tile') {
@@ -575,7 +580,8 @@ function copyClone(it) {
     if (at) {                                                            // Brücke (160c A4): die Kopie hat bezahlt, was sie kostet – nur Eingeschaltetes,
       const look = brOnLook(brLook(t, at));                               // Aussehen ausdrücklich (brp = neues Format, die Altfelder bleiben als Rückfall)
       if (at === 'wasser') t.brk = look.kind && brOwn(WEG_BRIDGE, look.kind) ? look.kind : brFallback('wasser', look.mat).brk;   // Art aus dem kopierten Aussehen (nicht die des Originals – nach dem Zusammenwachsen kann sie teurer sein, 160c G2): brSig bleibt beim Umstreichen gleich
-      if (at === 'uebergang' && brIsNew(t, at)) { delete look.kind; t.footPaid = brFallback('uebergang', look.mat).footPaid; }   // neues Format: die Kopie ist ein Neubau zum Neupreis wie setCrossing (sonst kostete ein neuer Kristall-Übergang den alten Designpreis), Rückfall passend (160c G2)
+      const alt = at === 'uebergang' && (!brIsNew(t, at) || COPY_ALT.has(it.t));   // alter Designpreis (auch Klon eines solchen Klons)
+      if (at === 'uebergang' && !alt) { delete look.kind; if (look.lichtGratis) { delete look.lichtGratis; look.licht = null; } t.footPaid = brFallback('uebergang', look.mat).footPaid; }   // Neupreis: Licht ohne Aufpreis gibt es dann nicht (wie setCrossing, N2)   // neues Format: die Kopie ist ein Neubau zum Neupreis wie setCrossing (sonst kostete ein neuer Kristall-Übergang den alten Designpreis), Rückfall passend (160c G2)
       if (at === 'uebergang' && !footPaidOf(t)) t.footPaid = brFallback('uebergang', look.mat).footPaid;   // foot ohne footPaid: bezahlt ist jetzt das Design
       t.brm = look.mat; t.brb = look.deck;
       if (look.licht === 'an' && !look.lichtGratis) t.brl = 'an'; else if (look.licht === 'an' || !brLegacyLook(t, at).licht) delete t.brl; else t.brl = 'nein';   // alter Kristall-Übergang: Licht bleibt ohne Aufpreis; ohne Licht, wo der Rückfall Licht hätte: 'nein' (160c F1c)
@@ -583,6 +589,7 @@ function copyClone(it) {
       if (look.stuetzen !== 'wenige') t.bru = look.stuetzen; else delete t.bru;
       // brc/brw nur, wie sie am Original stehen: Rot/Ziegel-Farben ergeben sich aus der Art (folgen ihr beim Artwechsel wie am Original)
       brStamp(t, at, look);
+      if (alt) COPY_ALT.add(t);
     }
     c.t = t;
   } else if (it.kind === 'deco') { const { born, sv, free, ...d } = it.d; c.d = d; }   // free (Parkbaum aus dem Wald): die Kopie ist bezahlt

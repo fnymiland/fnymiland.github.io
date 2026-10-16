@@ -819,8 +819,8 @@ function drawCrossing(cx, cy, z, x, y, t, now) {
       drawArch(P, z, -ARCH_SPAN, 0, L, x, y, d, n, t, 'unten');
       const m = g.getTransform(), at = f => () => { g.save(); g.setTransform(m); try { f(); } finally { g.restore(); } };
       afterMovers.push(at(() => drawArch(P, z, 0, ARCH_SPAN, L, x, y, d, n, t, 'unten')));
-      archRailAdd(x + ',' + y, at(() => drawArch(P, z, -ARCH_SPAN, 0.5, L, x, y, d, n, t, 'oben')));
-      archRailAdd((x + n[0]) + ',' + (y + n[1]), at(() => drawArch(P, z, 0.5, ARCH_SPAN, L, x, y, d, n, t, 'oben')));
+      archRailAdd(x + ',' + y, at(() => drawArch(P, z, -ARCH_SPAN, 0.45, L, x, y, d, n, t, 'oben')));   // Teilung 0,45 = ubT 1: auf dem Viertelraster der Kristallstreifen (G2 N5)
+      archRailAdd((x + n[0]) + ',' + (y + n[1]), at(() => drawArch(P, z, 0.45, ARCH_SPAN, L, x, y, d, n, t, 'oben')));
     } else drawArch(P, z, -ARCH_SPAN, ARCH_SPAN, L, x, y, d, n, t, hillLateK ? 'unten' : 'alles');   // Nachmalen (hillLate): das vordere Geländer malt das Feld danach selbst (archRails) – sonst Glas und Licht doppelt (160c G2)
     return;
   }

@@ -150,7 +150,7 @@ function bkDrawStill(x, y, px, py, z, now, c, under) {
   // Lampe; so muss ein reines Nachmalen des Geländers (Figur auf dem Deck) nicht noch einmal stanzen (sonst doppelt hell im Rahmen)
   const hits = c.water && !c.rail ? wbRelightHits(x, y, px, py, z, c) : null, split = !!hits;
   if (c.water && !under && !G && !split) bkGroup(x, y, px, py, z, ['w'], c);   // Wasserbrücke (160c D1): nichts zwischen den Lagen – ein Bildchen statt drei (nachgemalt wird je Lage)
-  else if (c.water && !under && !G) { bkGroup(x, y, px, py, z, ['h', 'vd'], c); wbRelight(x, y, px, py, z, c, hits); bkGroup(x, y, px, py, z, ['o'], c); }
+  else if (c.water && !under && !G) { if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg'], c); bkGroup(x, y, px, py, z, ['h', 'vd'], c); wbRelight(x, y, px, py, z, c, hits); bkGroup(x, y, px, py, z, ['o'], c); }   // Kristall: hintere Scheibe zuerst (wie im Deko-Zweig; 'w' hätte sie mitgebracht)
   else {
   if (G && G.back.length) drawSmall(k, px, py, z, now, x, y, G.back);
   if (bkGlasAt(c)) bkGroup(x, y, px, py, z, ['hg'], c);                   // Kristall: hintere Glasscheibe (eigener Aufruf: vor den Pfosten, auch wenn ein Bildchen fehlt)

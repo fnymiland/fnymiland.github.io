@@ -178,7 +178,9 @@ function wbNewSpec(x, y) {
   let best = null;
   for (const [dx, dy] of DIRS) {
     const k = (x + dx) + ',' + (y + dy);
-    if (isWegBridge(state.tiles.get(k))) { const S = wbSpanNew(x + dx, y + dy); if (!best || S.n > best.n) best = S; }
+    const o = BR_PLAN_REAL && BR_PLAN_REAL.get(k);
+    if (o && isWegBridge(state.tiles.get(k))) { if (!best || o.n > best.n) best = { look: o.look, zk: o.look.zacken ? 'an' : null, raw: null, brk: o.look.kind && WEG_BRIDGE[o.look.kind] ? o.look.kind : brFallback('wasser', o.look.mat).brk, n: o.n }; }   // Planen: so, wie das Angleichen sie macht
+    else if (isWegBridge(state.tiles.get(k))) { const S = wbSpanNew(x + dx, y + dy); if (!best || S.n > best.n) best = S; }
     else if (BR_PLAN_N && BR_PLAN_N.has(k)) {                           // Planen: das geplante Feld daneben mit der Länge, die seine Brücke beim Bauen hat
       const L = BR_PLAN_LOOK.get(k), n = BR_PLAN_N.get(k);
       if (!best || n > best.n) best = { look: L, zk: L.zacken ? 'an' : null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk, n };
@@ -187,6 +189,7 @@ function wbNewSpec(x, y) {
   return best;
 }
 let BR_PLAN_N = null;                                                      // planScan: geplantes Wasserfeld → Länge seiner Brücke (wie beim Bauen)
+let BR_PLAN_REAL = null;                                                   // planScan: Feld einer echten Brücke, an die ein geplantes Feld wächst → { look, n } nach dem Angleichen (Gegenprüfung G2 N3)
 // Zwei Brücken wachsen zusammen (bauen von beiden Ufern, ablegen, kopieren – Nutzer 13.10.2026): die Felder mit dem häufigsten Aussehen gewinnen,
 // die anderen übernehmen es kostenlos (jedes Feld erstattet weiter sein Bezahltes). Nach dem Setzen rufen; true, wenn etwas angeglichen wurde
 // spec (Bau): das Aussehen der längsten Brücke vor dem Zusammenwachsen (wbNewSpec) – sonst (Ablegen) gewinnt das häufigste Feldaussehen.
@@ -257,7 +260,7 @@ function gbNewSpec(x, y) {
   let best = null;
   for (const [dx, dy] of DIRS) {
     const k = (x + dx) + ',' + (y + dy);
-    if (isGleisBridge(state.tiles.get(k))) { const n = brRailSpan(x + dx, y + dy).length; if (!best || n > best.n) best = { look: brSpanLook(x + dx, y + dy), n }; }
+    if (isGleisBridge(state.tiles.get(k))) { const o = BR_PLAN_REAL && BR_PLAN_REAL.get(k), n = o ? o.n : brRailSpan(x + dx, y + dy).length; if (!best || n > best.n) best = { look: o ? o.look : brSpanLook(x + dx, y + dy), n }; }   // Planen: so, wie das Angleichen sie macht
     else if (BR_PLAN_N && BR_PLAN_N.has(k) && BR_PLAN_LOOK && BR_PLAN_LOOK.has(k)) { const n = BR_PLAN_N.get(k); if (!best || n > best.n) best = { look: BR_PLAN_LOOK.get(k), n }; }   // Planen (160c G2): das geplante Feld mit der Länge seiner Brücke beim Bauen – wie wbNewSpec
   }
   return best;

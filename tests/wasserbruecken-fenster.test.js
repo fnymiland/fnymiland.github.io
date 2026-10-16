@@ -212,7 +212,7 @@ describe('Wasser-Wegbrücken: Leiste und Schild beim Ziehen (160c D3f)', () => {
 describe('Wasser-Wegbrücken: Hinweis, wenn eine Brücke einen Seeweg kappt (160c D3g)', () => {
   it('seaRoutesWarn meldet, was fehlt (mit ↶-Hinweis); nichts verloren: still', () => {
     const r = game(`(() => { const out = [], ts = toast; toast = m => out.push(m);
-      try { const f0 = T.ferries; T.ferries = [{ stations: ['1,1', '9,9'], noSea: false }]; const b = seaRoutesNow(); const a = seaRoutesWarn(b);
+      try { for (const k of ['1,1', '9,9']) state.tiles.set(k, { b: 'bootssteg', lvl: 1 }); const f0 = T.ferries; T.ferries = [{ stations: ['1,1', '9,9'], noSea: false }]; const b = seaRoutesNow(); const a = seaRoutesWarn(b);
         T.ferries = [{ stations: ['1,1', '9,9'], noSea: true }]; const c = seaRoutesWarn(b); T.ferries = f0; return [a, c, out]; } finally { toast = ts; } })()`);
     expect(r[0]).toBe(false); expect(r[1]).toBe(true);
     expect(r[2][0]).toMatch(/versperrt den Seeweg.*nur unter Bögen.*↶/);

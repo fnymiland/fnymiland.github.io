@@ -15,7 +15,8 @@ const enge = () => game(`(() => { for (let y = 3; y <= 9; y++) for (const x of [
   chosenStyle.weg = 'sand'; setTool('weg'); for (const x of [8, 9, 10, 13, 14, 12, 11]) build('weg', x, 6, true); setTool('look'); recalc(); resetUndo(); })()`);
 // Seeweg durch ein Feld (wie eine Fähre darunter): da, solange das Feld nicht sperrt
 const mitSeeweg = (x, y, fn) => game(`(() => { const out = [], ts = toast, sr = seaRoutesNow; toast = m => out.push(m);
-  seaRoutesNow = () => new Set(seaCross(${x}, ${y}) === 'block' ? [] : ['e:1,1:insel']);
+  for (const k of ['0,0', '0,2']) state.tiles.set(k, { b: 'bootssteg', lvl: 1 });   // Enden des Seewegs (sonst zählt er nicht als verloren)
+  seaRoutesNow = () => new Set(seaCross(${x}, ${y}) === 'block' ? [] : ['f:0,0|0,2']);
   try { (${fn})(); } finally { toast = ts; seaRoutesNow = sr; } return out.filter(m => /versperrt den Seeweg/.test(m)); })()`);
 
 describe('Seeweg-Hinweis, wenn vom Rest einer Bogenbrücke flache Stücke bleiben (G2V-1)', () => {

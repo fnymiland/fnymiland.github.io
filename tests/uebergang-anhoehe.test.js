@@ -42,6 +42,6 @@ describe('Fußgängerbrücke am Übergang auf einer Anhöhe (160c F1)', () => {
     bau(0, false);
     const log = order();
     expect(log.filter(e => e.startsWith('oben'))).toEqual([]);
-    expect(log).toEqual(['bogen -0.9..0', 'bogen 0..0.9', 'bogen -0.9..0.5', 'bogen 0.5..0.9']);   // F1d: unten hinten, unten vorn, vorderes Geländer in zwei Stücken
+    expect(log).toEqual(['bogen -0.9..0', 'bogen 0..0.9', 'bogen -0.9..0.45', 'bogen 0.45..0.9']);   // F1d: unten hinten, unten vorn, vorderes Geländer in zwei Stücken
   });
 });

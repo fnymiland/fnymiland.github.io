@@ -32,12 +32,12 @@ describe('Bewohner auf der Fußgängerbrücke zwischen Deck und vorderem Geländ
       bau(ax);
       figur(ax, -0.6, 1); figur(ax, 0.7, 2);                              // hintere Rampe (Feld davor im Bild: früher), vordere Rampe (Wegfeld davor)
       const log = order().filter(e => !e.startsWith('figur') || e.endsWith('-0.60') || e.endsWith('0.70'));
-      expect(log.filter(e => !e.startsWith('figur'))).toEqual(['unten -0.9..0', 'unten 0..0.9', 'oben -0.9..0.5', 'oben 0.5..0.9']);
+      expect(log.filter(e => !e.startsWith('figur'))).toEqual(['unten -0.9..0', 'unten 0..0.9', 'oben -0.9..0.45', 'oben 0.45..0.9']);
       const i = e => log.indexOf(e);
       expect(i('figur -0.60')).toBeGreaterThan(i('unten 0..0.9'));
-      expect(i('oben -0.9..0.5')).toBeGreaterThan(i('figur -0.60'));
+      expect(i('oben -0.9..0.45')).toBeGreaterThan(i('figur -0.60'));
       expect(i('figur 0.70')).toBeGreaterThan(i('unten 0..0.9'));
-      expect(i('oben 0.5..0.9')).toBeGreaterThan(i('figur 0.70'));
+      expect(i('oben 0.45..0.9')).toBeGreaterThan(i('figur 0.70'));
     });
   }
   it('GL-Bild: das Wegfeld vor jeder Fußgängerbrücke läuft live (archFrontTiles); nach dem Bild ist nichts übrig', () => {
@@ -79,7 +79,7 @@ describe('Wagen unter der Fußgängerbrücke in Stücken je Feld (160c F1e)', ()
     const i = e => log.indexOf(e);
     expect(log.filter(e => e.startsWith('wagen'))).toEqual(['wagen 8,8', 'wagen 9,8']);
     expect(i('wagen 8,8')).toBeLessThan(i('unten 0..0.9'));
-    expect(i('wagen 9,8')).toBeGreaterThan(i('oben -0.9..0.5'));
+    expect(i('wagen 9,8')).toBeGreaterThan(i('oben -0.9..0.45'));
   });
 });
 

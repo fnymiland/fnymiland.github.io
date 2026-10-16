@@ -290,6 +290,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     vorderen Geländer), auf der Anhöhe mit ihrem Feld. Tests: bruecke, bruecke-gleis; Bilder: tools/bruecke-pruefung.js, tools/bruecke-gleis-pruefung.js.
     **Brückenfamilie** (160c, PLAN-160c.md, plan-160c/): Aussehen jeder Brücke nur über `brLook(o, at)` (Altfelder über `brLegacyLook`; neues
     Format = gültiges `brp` samt Kennung `k = brSig`, gelesen über `brIsNew`, geschrieben über `brStamp`), Geld über `brPrice`/`brPaid`.
+    **Mischform:** keine Brücke zieht um – Wasser-Weg/-Gleis bleiben Kacheln mit `bridge`, die Fußgängerbrücke ein Schalter am Übergang
+    (`cross`/`foot`/`footPaid`), die Brücke zwischen Anhöhen ein Bauwerk in `state.bruecken`; einheitlich ist nur, was man sieht, wählt, bezahlt.
+    Altfelder behalten ihren **alten Wortschatz** (`brk` nur holz/stein/ziegel/rot, neu geschrieben nur holz/stein; `footPaid` nur
+    true/holz/stein/weg/kristall), Kacheln werden beim Laden nie umgeschrieben. Bezahltes steht in `brp`, **nie in `price`** (das ist der
+    Einkommenspreis der Gebäude). **Preis = Erstattung des Rückfalls in älteren Fassungen (v951/v1016) + Aufschlag** – so erstattet ein altes
+    Gerät nie mehr als bezahlt (Test je Kombination). Die Familie (Bahn flach / Fußgänger Bogen) folgt aus dem Inhalt, nie gespeichert.
+    **Nachmal-Schema:** Ruhendes in tileA (GL-Standbild, weit weg Bildchen), in tileB nur die deckenden vorderen Lagen im Rahmen des Bewegten,
+    Glas genau einmal in tileB.
     **Stützen** nur über `brSupports`/`bkSupports` auf Kanten k (zwischen Feld k−1 und k, nie an der Wand; Stein `brSteinPier`: je 2 Felder von außen, ungerade ab 5
     Mittelbogen 3 Felder; Länge bis `BK_MAX` 8 = Lesegrenze `BK_READ_MAX`, nie darüber); was stört, sagt `bkEdgeBlocker`
     (Weg/Gleis längs hinüber, Linie auf der Kante, Deko an der Seitenmitte) – Weg und Gleis quer durch die Feldmitte bleiben frei; alter Stand
@@ -366,7 +374,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     (kein Rückfallfeld nötig: ältere Fassungen erstatten fest `BRIDGE`, alle neuen Preise liegen je Rohstoff darüber). Neue Brücke ohne
     Nachbarn: Leiste (`gbLeisteLook`), Holz ohne Farbe bleibt im alten Format. Licht: Strom `'G' + Anker`. Gerade gesetzte Gleisfelder vor dem
     Angleichen in `COVER` eintragen (`build`, `dropAt`, `dropGroup`): `railArms`/`brRailSpan` lesen COVER, recalc kommt erst danach – sonst
-    findet `gbUnify` nur Einzelfelder (160c G2). Gruppe ablegen: je Spanne einmal angleichen.
+    findet `gbUnify` nur Einzelfelder (160c G2). Gruppe ablegen: je Spanne einmal angleichen. Planen: echte Spannen, an die ein geplantes
+    Feld wächst, gelten in `BR_PLAN_REAL` schon angeglichen (Vorschau = Abbuchung). **Eckpodest** (Kurve/T/X, Nutzer 16.10.2026): Umriss nur
+    über `gbPodest(arms, voll)` – Ecke = Viertelring um die Feldecke (Deck folgt der Gleiskurve), sonst Innenrundungen und Ränder am Stück;
+    `voll` (Brücke schräg daneben, Doppelgleis): Deck bis in die Ecke. Geländer auf den Zügen (`zuege`), an der Feldkante keine eigenen Pfosten
+    (dort stehen die der Geraden). Prüfbilder: `tools/ecken-pruefung.js` (alle Richtungen, je Material). Wegbrücken übers Wasser bleiben gerade.
     **Fußgängerbrücke am Übergang** (160c F1, Entwurf F0 `tools/uebergang-entwurf.js`): Form aus Block 148 bleibt (`archH`, Spanne ±0,9, Rampen
     ab 0,46 massiv, `ARCH_CLEAR`), Maler `ubArch` (brueckenbild.js) mit den Bausteinen der Wegbrücken; Bogen über dem Gleis `ubRi` (über den
     Wagen ≥ 16). Aussehen nur über `brLook(t, 'uebergang')`; Setzer `brSet({ at: 'uebergang', x, y })` → `ubSet`, Bau über `setCrossing`

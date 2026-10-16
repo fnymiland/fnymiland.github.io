@@ -3276,6 +3276,13 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-16-bruecken', date: '16. Oktober', title: 'Brücken in vier Materialien', items: [
+    '🌉 <b>Jede Brücke in Holz, Metall, Stein oder Kristall:</b> zwischen Anhöhen, übers Wasser (Weg und Gleis) und als Fußgängerbrücke am Bahnübergang. Brücke antippen → Material, Farbe, Planken, Deck, Stützen, Licht und Kristallzacken wählen – je nachdem, was die Brücke kann.',
+    '🧰 <b>Das Brücken-Werkzeug wählt das Material</b> auch für neue Brücken übers Wasser. Wächst eine Brücke an eine längere heran, bekommt sie deren Aussehen.',
+    '⛵ <b>Boote fahren nur unter Bögen durch:</b> flache Brücken (ein Feld, Stege) sind zu niedrig. Versperrt eine Brücke einen Seeweg, sagt das Spiel es gleich – ↶ macht es rückgängig. Tipp: Fähren in alten Spielständen kurz prüfen.',
+    '💡 <b>Brückenlicht braucht Strom</b> aus der Stadt, wie Laternen.',
+    '🔓 <b>Freischalten:</b> Stein zwischen Anhöhen mit der Windigen Klippe, Kristall mit der Kristallhöhle, Metall zwischen Anhöhen mit der Eisenbahn.',
+  ] },
   { id: '2026-10-11-anhoehen', date: '11. Oktober', title: 'Anhöhen, Brücken und Schnellwahl', items: [
     '⛰️ <b>Anhöhen</b> (Gestalten → Anhöhen): Felder eine Ebene höher, mit Wand nach Wahl. Oben gehen Wege, Plätze, Deko und sogar Häuser und Bahnhöfe. <b>Treppen</b> führen hinauf – schmal oder breit, auch um die Ecke (drehen mit R bzw. ⟳).',
     '🚆 <b>Züge auf die Anhöhe:</b> mit der Gleis-Rampe (vier Formen) hinauf, mit dem Bergportal hinein in den Berg.',

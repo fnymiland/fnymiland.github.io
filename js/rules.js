@@ -1340,10 +1340,11 @@ function archRampEdge(k) {
 // Getragener/kopierter Übergang mit Fußgängerbrücke (160c G2): am Ziel keine Linie auf den Rampenkanten (wie setCrossing). rail(x, y): dort
 // liegt Gleis – in einer Gruppe auch das, was mitkommt (sonst die Richtung wie crossingAxes aus der Karte am Ziel)
 const ARCH_RAMP_LINE = 'Erst die Linie zwischen Übergang und Weg abreißen – dort liegt die Rampe';
-function archRampLined(x, y, rail) {
+function archRampKeys(x, y, rail) {                                       // die beiden Rampenkanten am Ziel
   const n = !rail ? crossingAxes(x, y).n : rail(x - 1, y) || rail(x + 1, y) || !(rail(x, y - 1) || rail(x, y + 1)) ? [0, 1] : [1, 0];
-  return [-1, 1].some(s => state.edges.has(edgeBetween(x, y, x + s * n[0], y + s * n[1])));
+  return [-1, 1].map(s => edgeBetween(x, y, x + s * n[0], y + s * n[1]));
 }
+const archRampLined = (x, y, rail) => archRampKeys(x, y, rail).some(k => state.edges.has(k));
 // Freies Ende: an diesem Eckpunkt hängt keine andere Linie (dort kommt ein Endstück hin)
 const edgesAt = (vx, vy) => ['a' + (vx - 1) + ',' + vy, 'a' + vx + ',' + vy, 'b' + vx + ',' + (vy - 1), 'b' + vx + ',' + vy].filter(o => state.edges.has(o));
 const freeEnd = (k, vx, vy) => edgesAt(vx, vy).every(o => o === k || (state.hills && state.hills.size > 0 && hillLevel(...edgeTiles(o)[0]) !== hillLevel(...edgeTiles(k)[0])));   // oben/unten an der Kante: nicht verbunden (Block 157)
@@ -1887,6 +1888,7 @@ const WEG_BRIDGE = {
 const BRIDGE_OF_STYLE = { sand: 'holz', mulch: 'holz', tritt: 'holz', kopf: 'ziegel', klinker: 'ziegel', terrakotta: 'ziegel', fisch: 'ziegel', blueten: 'ziegel' };   // sonst Stein
 const bridgeKind = t => (t && t.brk) || BRIDGE_OF_STYLE[(t && t.style) || 'sand'] || 'stein';
 const isWegBridge = t => !!t && t.b === 'weg' && !!t.bridge;
+const wbBeside = (x, y) => DIRS.some(([dx, dy]) => isWegBridge(state.tiles.get((x + dx) + ',' + (y + dy))));   // Wasser-Wegbrücke daneben (Teich am Brückenende, G2 N7)
 // Bogenbrücken (Block 150, nach Vorschauen mit dem Nutzer entschieden): eine Wegbrücke ab 2 Feldern, die an beiden Enden an Land
 // stößt, wird ein Bogen über die ganze Länge (Mondbrücke) – vorher lagen alle flach, und Boote fuhren „in“ die Brücke. Höhe wächst
 // mit der Länge (ab 16 Feldern nicht mehr). Stein/Ziegel: echte Bogenöffnungen (`archOpenings`), Holz/Rot: Pfähle (ab 5 Feldern nur
@@ -2845,7 +2847,10 @@ function seaRoutesNow() {
 }
 function seaRoutesWarn(before, rest = false) {                         // rest: abgerissen, aufgeschüttet – was von der Brücke bleibt, ist flach (160c G2)
   if (!before) return false;
-  const now = seaRoutesNow(), lost = [...before].filter(k => !now.has(k));
+  // verloren nur, wenn beide Enden noch stehen (Hafen/Steg mit abgerissen oder verschoben: kein Brückenhinweis, Gegenprüfung G2 N6)
+  const steht = k => k[0] === 'f' ? k.slice(2).split('|').every(s => isLanding(state.tiles.get(s)))
+    : (() => { const [, steg, isle] = k.split(':'), t = state.tiles.get(steg), i = typeof nextIsle === 'function' ? nextIsle() : null; return !!t && t.b === 'bootssteg' && !!i && String(i.id) === isle; })();
+  const now = seaRoutesNow(), lost = [...before].filter(k => !now.has(k) && steht(k));
   if (!lost.length) return false;
   const f = lost.find(k => k[0] === 'f'), names = f ? f.slice(2).split('|').map(k => typeof landingName === 'function' ? landingName(k) : k) : null;
   toast(`⚠ ${rest ? 'Was von der Brücke bleibt, versperrt' : 'Die Brücke versperrt'} den Seeweg${names ? ' ' + names.join(' ↔ ') : ' zur Expedition'} – Boote fahren nur unter Bögen durch. ↶ macht es rückgängig.`);
