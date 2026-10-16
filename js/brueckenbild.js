@@ -206,7 +206,7 @@ function wbRelightHits(x, y, px, py, z, c, n0 = WB_GLOW0.get(c.k)) {
 // Gleisbrücke übers Wasser (160c E1e): wie wbRelight, nur die Deckfläche (roadShapes 0,3, Höhe 0) – Pfähle und Geländer bleiben im Schein
 // früherer Lichter dunkel (karte-E1 §6 Nr. 13). Lichter über ein Raster ihrer Mitten (glowsIn): sonst Felder × Lichter (bauland nachts, §6 Nr. 14)
 function gbRelight(x, y, px, py, z, c, n0) {
-  const W = BK_W, sh = c.G ? (c.G.sax == null ? gbPodest(c.G.arms).rects : [c.G.sax ? [[-W, -0.5], [W, -0.5], [W, 0.5], [-W, 0.5]] : [[-0.5, -W], [0.5, -W], [0.5, W], [-0.5, W]]])   // neues Deck (160c E2)
+  const W = BK_W, sh = c.G ? (c.G.sax == null ? gbPodest(c.G.arms, c.G.voll).rects : [c.G.sax ? [[-W, -0.5], [W, -0.5], [W, 0.5], [-W, 0.5]] : [[-0.5, -W], [0.5, -W], [0.5, W], [-0.5, W]]])   // neues Deck (160c E2)
     : roadShapes(railArms(x, y), state.tiles.get(c.k), 0.3), L = ([u, v]) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z];
   const m = g.getTransform(), k = 1 / DPR, S = ([X, Y]) => [(m.a * X + m.c * Y + m.e) * k, (m.b * X + m.d * Y + m.f) * k], pts = sh.flat().map(q => S(L(q)));
   if (!pts.length) return;
@@ -784,11 +784,12 @@ function gbRun(x, y, ax) {
 function gbGeom(x, y, t) {
   const look = (typeof brSpanLook === 'function' && brSpanLook(x, y)) || brLegacyLook({}, 'gleis'), mat = Object.prototype.hasOwnProperty.call(BR_MAT, look.mat) ? look.mat : 'holz';
   const sax = gbStraightAx(x, y, t), arms = railArms(x, y);              // Arme hier gemerkt: auch für gedachte Felder (Geist, wbVirtual)
+  const voll = sax != null ? null : arms.flatMap((a, i) => arms.slice(i + 1).filter(b => a[0] * b[0] + a[1] * b[1] === 0 && isGleisBridge(state.tiles.get((x + a[0] + b[0]) + ',' + (y + a[1] + b[1])))).map(b => [a[0] + b[0], a[1] + b[1]]));   // Ecken zum Brückenfeld schräg daneben (Doppelgleis): Deck bis in die Ecke
   const anker = look.licht ? brSpanCache.anch.get(x + ',' + y) || brSpanAnchor(brRailSpan(x, y)).join(',') : null;   // Strom (160c E2d): 'G' + Anker – gemerkt von brSpanLook
   const run = sax == null ? null : gbRun(x, y, sax);
   // Stütze an der Anfangskante (Bock, Pfeiler, Steinpfeiler): liegt hinter einem Boot unter der Feldmitte (bkDrawMoving schneidet sie aus, wie C10)
   const startPost = !!run && !(run.i === 0 && run.landA) && (mat === 'holz' || mat === 'stein' || (((run.u0 + run.i) % GB_SEG) + GB_SEG) % GB_SEG === 0 || (run.i === 0 && !run.brA));
-  return { look, art: mat, fam: 'bahn', mat, sax, arms, run, anker, startPost };
+  return { look, art: mat, fam: 'bahn', mat, sax, arms, voll, run, anker, startPost };
 }
 function gbPaintLage(lage, c, px, py, z, t) {
   if (c.G.sax == null) return gbKurve(lage, c, px, py, z, t);
@@ -894,11 +895,11 @@ function gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh) {
 // (Gleismitte 0,5 wie drawRailBed). Sonst: je Feldecke zwischen zwei Armen eine kleine Rundung (Radius 0,5 − W, wie innen an der Kurve),
 // Seiten ohne Arm als ein Stück bei ±W. Geländerzüge (zuege) = Umriss ohne die offenen Armenden an der Feldkante, je Seite (vorn/hinten
 // nach der Außennormalen) ein Linienzug
-function gbPodest(arms) {
-  const W = BK_W, r0 = 0.5 - W, has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), rot = d => [-d[1], d[0]];
+function gbPodest(arms, voll = null) {                                    // voll: Ecken [a+b], an denen schräg daneben Brücke liegt – dort Deck bis in die Ecke, kein Geländer
+  const W = BK_W, r0 = 0.5 - W, has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), rot = d => [-d[1], d[0]], isVoll = (a, b) => !!voll && voll.some(e => e[0] === a[0] + b[0] && e[1] === a[1] + b[1]);
   const arc = (C, r, from, to, K) => Array.from({ length: K + 1 }, (_, j) => { const f = j / K, th = Math.PI / 2 * f, c = Math.cos(th), s = Math.sin(th); return [C[0] + r * (from[0] * c + to[0] * s), C[1] + r * (from[1] * c + to[1] * s)]; });
   let ring, rund = false;
-  if (arms.length === 2 && arms[0][0] * arms[1][0] + arms[0][1] * arms[1][1] === 0) {
+  if (arms.length === 2 && arms[0][0] * arms[1][0] + arms[0][1] * arms[1][1] === 0 && !isVoll(arms[0], arms[1])) {
     const [d1, d2] = arms, C = [(d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2], m1 = [-d2[0], -d2[1]], m2 = [-d1[0], -d1[1]];
     ring = [...arc(C, 0.5 + W, m1, m2, 12), ...arc(C, r0, m1, m2, 4).reverse()];
     rund = true;
@@ -906,7 +907,7 @@ function gbPodest(arms) {
     ring = [];
     for (const a of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {                // je Feldecke zwischen Seite a und der nächsten b (im Umlauf)
       const b = rot(a), C = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-      if (has(a) && has(b)) ring.push(...arc(C, r0, [-b[0], -b[1]], [-a[0], -a[1]], 4));
+      if (has(a) && has(b)) { if (isVoll(a, b)) ring.push(C); else ring.push(...arc(C, r0, [-b[0], -b[1]], [-a[0], -a[1]], 4)); }
       else if (has(a)) ring.push([a[0] * 0.5 + b[0] * W, a[1] * 0.5 + b[1] * W]);
       else if (has(b)) ring.push([b[0] * 0.5 + a[0] * W, b[1] * 0.5 + a[1] * W]);
       else ring.push([a[0] * W + b[0] * W, a[1] * W + b[1] * W]);
@@ -937,7 +938,7 @@ function gbPodest(arms) {
 // keine eigenen), Fachwerk-Schrägen nur auf Feldern ab 0,25 Länge (Innenrundung: nur Gurte). Bock bzw. Pfeiler unter der Mitte jedes Zugs;
 // Stein: die vorderen Seiten als Pfeilerwand bis ins Wasser. Licht in der Mitte jedes Zugs (Kristall: Streifen längs)
 function gbKurve(lage, c, px, py, z, t) {
-  const { x, y } = c, L = c.G.look, art = c.G.mat, arms = c.G.arms, Q = gbPodest(arms), W = BK_W, H = 0;
+  const { x, y } = c, L = c.G.look, art = c.G.mat, arms = c.G.arms, Q = gbPodest(arms, c.G.voll), W = BK_W, H = 0;
   const Lw = ([u, v], h) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z], lw = f => Math.max(0.6, f * z);
   let pen = null;                                                          // Striche gleicher Farbe/Breite in einem Pfad (wie gbGerade)
   const flush = () => { if (!pen) return; g.strokeStyle = C(pen.col); g.lineWidth = lw(pen.w); g.lineCap = 'butt'; g.stroke(); pen = null; };
