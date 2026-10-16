@@ -160,7 +160,7 @@ function frame(now) {
   stepMovers(Math.min(dt, 0.1));
   if (now - lastSlow > 700) {
     syncMovers(); checkStars();
-    if (live) { collectAlbum(); checkAchievements(); sdCheck(); if ($('modal').hidden) checkExpedition(); checkOrders(); fairTick(); marktTick(); parkFestTick(); fzFestTick(); }
+    if (live) { collectAlbum(); checkAchievements(); sdCheck(); twTick(); if ($('modal').hidden) checkExpedition(); checkOrders(); fairTick(); marktTick(); parkFestTick(); fzFestTick(); }
     starTick(now); royalFireTick(); lightFireTick(); bubbleTick(now); natureTick(now); showcaseTick(now); lastSlow = now;
   }
   if (BENCH) benchTick(now);

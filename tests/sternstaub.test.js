@@ -94,3 +94,40 @@ describe('Sternstaub im Lager (Handy: oben kein Platz)', () => {
     game('closeModal()');
   });
 });
+
+describe('Tageswunsch (161b)', () => {
+  const land = () => game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); recalc()");
+  it('jeden Tag einer, auf allen Geräten derselbe (Tag + Spielstand), neuer Tag → neuer Wunsch; Uhr zurück: bleibt', () => {
+    land(); game('state.dayWish = null');
+    const a = game('twToday(20261016).id');
+    game('state.dayWish = null');
+    expect(game('twToday(20261016).id')).toBe(a);
+    const w = game('twToday(20261017)');
+    expect(w.day).toBe(20261017);
+    expect(game('twToday(20261015).day')).toBe(20261017);
+  });
+  it('gezählt ab dem Stand beim Erscheinen: 3 Bänke am Wasser → 25 ✨ einmal', () => {
+    land();
+    game("for (let x = 5; x <= 9; x++) state.terra.set(x + ',10', 'water'); waterChanged(); state.decos.set('5,9', [{ b: 'bank', rot: 0 }, null, null, null, null, null, null, null, null].slice(0, SLOTS))");
+    game("state.dayWish = { day: 20261016, id: 'bank', base: TW_BY_ID.bank.count(), done: false, who: 'Mika', icon: '🐰' }; state.stardust = 0; state.sdGot = new Set(); twAt = 0");
+    expect(game('twGot(state.dayWish)')).toBe(0);                          // die schon da war, zählt nicht
+    game("state.decos.set('6,9', [{ b: 'bank', rot: 0 }, { b: 'bank', rot: 0 }, null, null, null, null, null, null, null].slice(0, SLOTS)); state.decos.set('15,15', [{ b: 'bank', rot: 0 }, null, null, null, null, null, null, null, null].slice(0, SLOTS))");
+    game('twTick(Date.now(), 20261016)');
+    expect(game('state.dayWish.done')).toBe(false);                          // 2 am Wasser, die dritte steht nicht am Wasser
+    game("state.decos.get('6,9')[2] = { b: 'bank', rot: 0 }; twAt = 0; twTick(Date.now(), 20261016)");
+    expect(game('[state.dayWish.done, state.stardust]')).toEqual([true, 25]);
+    game("twAt = 0; twTick(Date.now(), 20261016)");
+    expect(game('state.stardust')).toBe(25);
+  });
+  it('nur Baubares: ohne Pavillon-Freischaltung kein Pavillon-Wunsch; im Fenster mit Fortschritt; speichert', () => {
+    land();
+    const ids = new Set(); for (let d = 1; d <= 28; d++) { game('state.dayWish = null'); ids.add(game(`twToday(202611${String(d).padStart(2, '0')}).id`)); }
+    if (!game("available('pavillon')")) expect(ids.has('pavillon')).toBe(false);
+    expect(ids.size).toBeGreaterThan(3);
+    game("state.dayWish = { day: 20261016, id: 'baum', base: 0, done: false, who: 'Bruno', icon: '🐻' }; openStardust()");
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/Bruno hätte gern 6 neue Bäume/);
+    game('closeModal()');
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect(d.dayWish).toMatchObject({ day: 20261016, id: 'baum', who: 'Bruno' });
+  });
+});

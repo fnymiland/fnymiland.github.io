@@ -56,8 +56,76 @@ function sdBuy(count = 1, today = sdDay()) {
   return count;
 }
 
+// --- 💭 Tageswunsch: jeden Tag (echte Uhr) wünscht sich ein Bewohner etwas Kleines; erfüllt → 25 ✨, verpasst → nichts (kein Druck).
+// Gezählt wird ab dem Stand beim Erscheinen (base), damit Vorhandenes nicht schon zählt. Nur Wünsche, die man bauen kann (available).
+// Die Wahl hängt am Kalendertag und am Spielstand (seed): auf jedem Gerät derselbe Wunsch
+const sdNearWater = (x, y) => [[0, 0], ...DIRS].some(([dx, dy]) => terrainAt(x + dx, y + dy) === 'water');
+function sdCount(bs, where = null) {                                       // kleine Deko (Ecken) und Deko-Felder mit Grundmodell aus bs
+  const set = new Set(bs);
+  let n = 0;
+  for (const [k, ds] of state.decos) for (const d of ds) if (d && set.has(baseOf(d.b)) && (!where || where(...keyXY(k)))) n++;
+  for (const [k, t] of state.tiles) if (set.has(baseOf(t.b)) && (!where || where(...keyXY(k)))) n++;
+  return n;
+}
+const TW_LIST = [
+  { id: 'bank', need: 3, items: ['bank'], text: n => `${n} Bänke am Wasser`, count: () => sdCount(['bank'], sdNearWater) },
+  { id: 'baum', need: 6, items: ['baum'], text: n => `${n} neue Bäume`, count: () => sdCount(['baum']) },
+  { id: 'blumen', need: 4, items: ['blumen', 'blumentopf'], text: n => `${n} Blumen – Beet oder Topf`, count: () => sdCount(['blumen', 'blumentopf']) },
+  { id: 'busch', need: 6, items: ['busch'], text: n => `${n} Büsche`, count: () => sdCount(['busch']) },
+  { id: 'laterne', need: 4, items: ['laterne', 'strassenlaterne'], text: n => `${n} Laternen für die Abende`, count: () => sdCount(['laterne', 'strassenlaterne']) },
+  { id: 'brunnen', need: 1, items: ['brunnen'], text: () => 'einen Brunnen zum Plaudern', count: () => sdCount(['brunnen', 'kristallbrunnen']) },
+  { id: 'hecke', need: 6, items: ['hecke'], text: n => `${n} Stück Hecke`, count: () => [...state.edges.values()].filter(e => e.b === 'hecke').length },
+  { id: 'zaun', need: 6, items: ['zaun'], text: n => `${n} Stück Zaun`, count: () => [...state.edges.values()].filter(e => e.b === 'zaun').length },
+  { id: 'park', need: 6, items: ['parkrasen'], text: n => `${n} Felder Parkrasen`, count: () => [...state.terra.values()].filter(v => v === 'park').length },
+  { id: 'weg', need: 10, items: ['weg'], text: n => `${n} Felder neuen Weg`, count: () => [...state.tiles.values()].filter(t => t.b === 'weg').length },
+  { id: 'haus3', need: 1, items: ['haus'], text: () => 'noch ein Haus auf Stufe 3', count: () => [...state.tiles.values()].filter(t => t.b === 'haus' && t.lvl >= 3).length },
+  { id: 'pavillon', need: 1, items: ['pavillon'], text: () => 'einen Pavillon', count: () => sdCount(['pavillon']) },
+];
+const TW_BY_ID = Object.fromEntries(TW_LIST.map(w => [w.id, w]));
+const sdHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+function sdWho(seed) {                                                    // ein Bewohner mit Namen (sonst „Jemand“)
+  const hs = [...state.tiles.values()].filter(t => t.animal && t.name);
+  if (!hs.length) return { name: 'Jemand', icon: '💭' };
+  const t = hs[seed % hs.length], a = ANIMALS.find(q => q.id === t.animal);
+  return { name: t.name, icon: a ? a.icon : '💭' };
+}
+// Der Wunsch von heute (neu am neuen Tag, nur vorwärts); null: noch nichts Passendes baubar
+function twToday(today = sdDay()) {
+  const w = state.dayWish;
+  if (w && TW_BY_ID[w.id] && today <= w.day) return w;
+  const can = TW_LIST.filter(d => d.items.some(b => ITEMS[b] && available(b)));
+  if (!can.length) return null;
+  const h = sdHash(today + ':' + state.seed), d = can[h % can.length], who = sdWho(h >>> 8);
+  state.dayWish = { day: today, id: d.id, base: d.count(), done: false, who: who.name, icon: who.icon };
+  if (state.sdSeen) toast(`💭 Tageswunsch: ${who.icon} ${who.name} hätte gern ${d.text(d.need)} (✨ ${SD.wish})`);
+  return state.dayWish;
+}
+const twGot = w => Math.max(0, TW_BY_ID[w.id].count() - w.base);
+let twAt = 0;
+function twTick(now = Date.now(), today = sdDay()) {                    // aus der Spielschleife, höchstens alle 3 s
+  if (now - twAt < 3000 || (typeof viewOnly === 'function' && viewOnly())) return;
+  twAt = now;
+  const w = twToday(today);
+  if (!w || w.done) return;
+  const d = TW_BY_ID[w.id];
+  if (twGot(w) < d.need) return;
+  w.done = true;
+  sdAdd(SD.wish, 'wish:' + w.day);
+  confettiBurst(); sfx('star');
+  toast(`💭 ${w.icon} ${w.who} freut sich: ${d.text(d.need)} – ✨ +${SD.wish} Sternstaub`);
+  save();
+}
+function twHtml() {
+  const w = state.dayWish && TW_BY_ID[state.dayWish.id] ? state.dayWish : null;
+  if (!w) return '';
+  const d = TW_BY_ID[w.id], got = Math.min(d.need, twGot(w));
+  return `<h4>💭 Tageswunsch</h4><div class="sd-wish${w.done ? ' done' : ''}"><span>${w.icon} <b>${escHtml(w.who)}</b> hätte gern ${d.text(d.need)}.</span>
+    <b>${w.done ? '✓ erfüllt – morgen kommt ein neuer' : `${got}/${d.need} · ✨ ${SD.wish}`}</b></div>`;
+}
+
 // --- Anzeige ---
 const SD_SOURCES = [
+  ['💭', 'Tageswunsch erfüllen', `${SD.wish} ✨ am Tag`],
   ['🏆', 'Erfolg: jede neue Stufe', `${SD.tier} ✨ × Stufe`],
   ['📒', 'Album: jede volle Seite', `${SD.album} ✨`],
   ['🌠', 'Sternschnuppe (Sternwarte)', `${SD.star} ✨, manchmal ${SD.starRare}`],
@@ -70,6 +138,7 @@ function sdHtml(today = sdDay()) {
   return `<h2>✨ Sternstaub</h2>
     <p>Du hast <b class="sd-have">✨ ${fmt(state.stardust || 0)}</b> Sternstaub. Er ist selten – damit schaltest du besondere, schöne Dinge frei
       (bald im Sternenbasar).</p>
+    ${twHtml()}
     <h4>So bekommst du ihn</h4>
     <div class="sd-src">${SD_SOURCES.map(([i, a, b]) => `<div><span>${i} ${a}</span><b>${b}</b></div>`).join('')}</div>
     <h4>🏛️ Schatzkammer</h4>

@@ -2727,7 +2727,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Laden still + Fenster „Sternstaub ist da“ (Testwelt bauland: 1.230 ✨); Schatzkammer Tageskurs 20 Mio × 1,1^n je Tag (1 Mrd ≈ 19 ✨,
       Uhr zurück bringt nichts, kein ↶); Pille ✨ oben (ab 481 px), auf dem Handy als Zeile im 📦-Lager; Speichern (serialize/parseSave,
       Live: privat), Test sternstaub.test.js
-- [ ] 161b Tageswunsch
+- [x] **161b** Tageswunsch: täglich einer (Kalendertag + Spielstand → auf allen Geräten derselbe, nur vorwärts), 12 Arten (Bänke am Wasser, Bäume, Blumen, Büsche, Laternen, Brunnen, Hecke, Zaun, Parkrasen, Weg, Haus Stufe 3, Pavillon), nur Baubares; gezählt ab dem Stand beim Erscheinen; erfüllt → 25 ✨ (einmal je Tag); im ✨-Fenster mit Fortschritt. Namen eindeutig (`tw…`, `state.dayWish`): `WISHES`/`wishHtml`/`wishAt` gibt es schon (Hauswünsche, Freundeswünsche)
 - [ ] 161c Sternenbasar (Entwurf zuerst) + Tagesangebot + Katalog
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten
 - [ ] 161e Inselzauber

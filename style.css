@@ -336,7 +336,9 @@ html, body {
 .pill.sd { cursor: pointer; color: #7a4fc4; }
 #sd-btn[hidden] { display: none; }
 @media (max-width: 480px) { #sd-btn { display: none !important; } }   /* Handy: oben kein Platz – ✨ steht im 📦-Lager */
-.sd-row { cursor: pointer; color: #7a4fc4; }                       /* ✨ Sternstaub (Block 161) */
+.sd-row { cursor: pointer; color: #7a4fc4; }
+.sd-wish { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(122, 79, 196, .08); font-size: 14px; }
+.sd-wish.done { background: rgba(88, 179, 106, .12); }                       /* ✨ Sternstaub (Block 161) */
 .sd-src > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font-size: 14px; }
 .sd-have { color: #7a4fc4; }
 .pill .dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #e8604f; box-shadow: 0 0 0 2px var(--cream); }
