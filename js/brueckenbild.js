@@ -889,18 +889,53 @@ function gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh) {
   } else if (lage === 'd') { deckTop(Lp.deck); railPaint(); }
   else if (lage === 'o') balustrade(W, true);
 }
-// Eckpodest: Deck = Mittelquadrat (±W) und die Arme bis zur Feldkante; Umriss aus geraden Linien, vorn/hinten nach der Außennormalen
+// Eckpodest (Kurve, T, X; Nutzer 16.10.2026: „die Ecken sehen überhaupt nicht gut aus“): ein Umriss (ring) für Deck und Geländer.
+// Ecke (zwei Arme im rechten Winkel): das Deck folgt der Gleiskurve – Viertelring um die Feldecke C zwischen den Armen, Radien 0,5 ∓ W
+// (Gleismitte 0,5 wie drawRailBed). Sonst: je Feldecke zwischen zwei Armen eine kleine Rundung (Radius 0,5 − W, wie innen an der Kurve),
+// Seiten ohne Arm als ein Stück bei ±W. Geländerzüge (zuege) = Umriss ohne die offenen Armenden an der Feldkante, je Seite (vorn/hinten
+// nach der Außennormalen) ein Linienzug
 function gbPodest(arms) {
-  const W = BK_W, has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), lines = [];
-  for (const d of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
-    const pp = [-d[1], d[0]];
-    if (has(d)) for (const s of [1, -1]) lines.push({ a: [d[0] * W + pp[0] * W * s, d[1] * W + pp[1] * W * s], b: [d[0] * 0.5 + pp[0] * W * s, d[1] * 0.5 + pp[1] * W * s], n: [pp[0] * s, pp[1] * s], arm: d });
-    else lines.push({ a: [d[0] * W - pp[0] * W, d[1] * W - pp[1] * W], b: [d[0] * W + pp[0] * W, d[1] * W + pp[1] * W], n: d });
+  const W = BK_W, r0 = 0.5 - W, has = d => arms.some(a => a[0] === d[0] && a[1] === d[1]), rot = d => [-d[1], d[0]];
+  const arc = (C, r, from, to, K) => Array.from({ length: K + 1 }, (_, j) => { const f = j / K, th = Math.PI / 2 * f, c = Math.cos(th), s = Math.sin(th); return [C[0] + r * (from[0] * c + to[0] * s), C[1] + r * (from[1] * c + to[1] * s)]; });
+  let ring, rund = false;
+  if (arms.length === 2 && arms[0][0] * arms[1][0] + arms[0][1] * arms[1][1] === 0) {
+    const [d1, d2] = arms, C = [(d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2], m1 = [-d2[0], -d2[1]], m2 = [-d1[0], -d1[1]];
+    ring = [...arc(C, 0.5 + W, m1, m2, 12), ...arc(C, r0, m1, m2, 4).reverse()];
+    rund = true;
+  } else {
+    ring = [];
+    for (const a of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {                // je Feldecke zwischen Seite a und der nächsten b (im Umlauf)
+      const b = rot(a), C = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      if (has(a) && has(b)) ring.push(...arc(C, r0, [-b[0], -b[1]], [-a[0], -a[1]], 4));
+      else if (has(a)) ring.push([a[0] * 0.5 + b[0] * W, a[1] * 0.5 + b[1] * W]);
+      else if (has(b)) ring.push([b[0] * 0.5 + a[0] * W, b[1] * 0.5 + a[1] * W]);
+      else ring.push([a[0] * W + b[0] * W, a[1] * W + b[1] * W]);
+    }
   }
-  for (const l of lines) l.front = l.n[0] + l.n[1] > 0;
-  const rects = [[[-W, -W], [W, -W], [W, W], [-W, W]], ...arms.map(([dx, dy]) => dx ? [[dx * W, -W], [dx * 0.5, -W], [dx * 0.5, W], [dx * W, W]] : [[-W, dy * W], [W, dy * W], [W, dy * 0.5], [-W, dy * 0.5]])];
-  return { lines, rects };
+  const inside = ([u, v]) => { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > v) !== (yj > v) && u < (xj - xi) * (v - yi) / (yj - yi) + xi) c = !c; } return c; };
+  const offen = (p, q) => (Math.abs(Math.abs(p[0]) - 0.5) < 1e-9 && Math.abs(p[0] - q[0]) < 1e-9) || (Math.abs(Math.abs(p[1]) - 0.5) < 1e-9 && Math.abs(p[1] - q[1]) < 1e-9);   // Armende an der Feldkante
+  const N = ring.length, segs = [];
+  for (let i = 0; i < N; i++) {
+    const p = ring[i], q = ring[(i + 1) % N];
+    if (offen(p, q)) { segs.push(null); continue; }
+    const e = [q[0] - p[0], q[1] - p[1]], l = Math.hypot(e[0], e[1]) || 1, m = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    let n = [e[1] / l, -e[0] / l];
+    if (inside([m[0] + n[0] * 1e-3, m[1] + n[1] * 1e-3])) n = [-n[0], -n[1]];
+    segs.push({ p, q, n, front: n[0] + n[1] > 1e-9 });
+  }
+  const start = Math.max(0, segs.findIndex(s => s === null) + 1), zuege = [];
+  let cur = null;
+  for (let k = 0; k < N; k++) {
+    const s = segs[(start + k) % N];
+    if (!s) { cur = null; continue; }
+    if (!cur || cur.front !== s.front) { cur = { front: s.front, pts: [s.p], ns: [] }; zuege.push(cur); }
+    cur.pts.push(s.q); cur.ns.push(s.n);
+  }
+  return { ring, rects: [ring], zuege, rund, arms };
 }
+// Eckpodest malen: Deck = ring, Geländer/Fachwerk/Balustrade auf den Zügen ohne Knick; an den Feldkanten stehen die Pfosten der Geraden (dort
+// keine eigenen), Fachwerk-Schrägen nur auf Feldern ab 0,25 Länge (Innenrundung: nur Gurte). Bock bzw. Pfeiler unter der Mitte jedes Zugs;
+// Stein: die vorderen Seiten als Pfeilerwand bis ins Wasser. Licht in der Mitte jedes Zugs (Kristall: Streifen längs)
 function gbKurve(lage, c, px, py, z, t) {
   const { x, y } = c, L = c.G.look, art = c.G.mat, arms = c.G.arms, Q = gbPodest(arms), W = BK_W, H = 0;
   const Lw = ([u, v], h) => [px + (u - v) * TW / 2 * z, py + (u + v) * TH / 2 * z - h * z], lw = f => Math.max(0.6, f * z);
@@ -908,49 +943,62 @@ function gbKurve(lage, c, px, py, z, t) {
   const flush = () => { if (!pen) return; g.strokeStyle = C(pen.col); g.lineWidth = lw(pen.w); g.lineCap = 'butt'; g.stroke(); pen = null; };
   const st = (p, h0, q, h1, col, w) => { const a = Lw(p, h0), b = Lw(q, h1); if (!pen || pen.col !== col || pen.w !== w) { flush(); pen = { col, w }; g.beginPath(); } g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); };
   const fill = (pts, col) => { flush(); poly(pts, C(col)); };
-  const at = (l, f) => [l.a[0] + (l.b[0] - l.a[0]) * f, l.a[1] + (l.b[1] - l.a[1]) * f], len = l => Math.hypot(l.b[0] - l.a[0], l.b[1] - l.a[1]);
-  const shF = (col, l) => l.n[0] > 0 ? shade(col, LIGHT.side) : col;      // Seite nach +x etwas dunkler (wie die Geraden Nord-Süd)
+  const shN = (col, n) => n[0] > 0 ? shade(col, LIGHT.side * n[0]) : col;   // Seite nach +x etwas dunkler (wie die Geraden Nord-Süd), am Bogen stufenlos
   const P = BK_BAHN[art] ? brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank) : null, Ls = brPal(BK_STEIN, 'stein', 'bahn', L.col, null);
-  const ecken = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([a, b]) => [a * (W - 0.06), b * (W - 0.06)]);
-  const posts = (l, step) => { const m = Math.max(1, Math.round(len(l) / step)), out = []; for (let j = 0; j <= m; j++) out.push(at(l, j / m)); return out; };
+  const lenOf = pts => { let s = 0; for (let j = 1; j < pts.length; j++) s += Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]); return s; };
+  const atLen = (pts, d) => { for (let j = 1; j < pts.length; j++) { const l = Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]); if (d <= l + 1e-9 || j === pts.length - 1) { const f = l ? Math.min(1, d / l) : 0; return [pts[j - 1][0] + (pts[j][0] - pts[j - 1][0]) * f, pts[j - 1][1] + (pts[j][1] - pts[j - 1][1]) * f]; } d -= l; } return pts[pts.length - 1]; };
+  const nAt = (Z, d) => { let s = 0; for (let j = 1; j < Z.pts.length; j++) { s += Math.hypot(Z.pts[j][0] - Z.pts[j - 1][0], Z.pts[j][1] - Z.pts[j - 1][1]); if (d <= s + 1e-9) return Z.ns[j - 1]; } return Z.ns[Z.ns.length - 1]; };
+  const zug = (pts, h, col, w) => { if (!pen || pen.col !== col || pen.w !== w) { flush(); pen = { col, w }; g.beginPath(); } pts.forEach((q, j) => { const a = Lw(q, h); j ? g.lineTo(a[0], a[1]) : g.moveTo(a[0], a[1]); }); };   // ein Linienzug
+  // Wand unter bzw. über dem Zug: je Helligkeitsstufe (Außennormale, 4 Stufen) eine Fläche – am Bogen fast stufenlos, ohne eine Fläche je Stück
+  const wand = (Z, h0, h1, col) => {
+    let j0 = 0;
+    const stufe = n => Math.round(Math.max(0, n[0]) * 4);
+    for (let j = 1; j <= Z.ns.length; j++) {
+      if (j < Z.ns.length && stufe(Z.ns[j]) === stufe(Z.ns[j0])) continue;
+      const ps = Z.pts.slice(j0, j + 1);
+      fill([...ps.map(q => Lw(q, h0)), ...ps.slice().reverse().map(q => Lw(q, h1))], shN(col, [stufe(Z.ns[j0]) / 4, 0]));
+      j0 = j;
+    }
+  };
   const gelaender = front => {
-    for (const l of Q.lines.filter(q => q.front === front)) {
+    for (const Z of Q.zuege.filter(q => q.front === front)) {
+      const pts = Z.pts, len = lenOf(pts);
       if (art === 'stein') {
-        const c0 = front ? Ls.top : shade(Ls.top, -0.14);
-        fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H + BR_STEIN.par), Lw(l.a, H + BR_STEIN.par)], shF(shade(c0, -0.05), l));
-        for (const p of posts(l, 0.09).slice(1, -1)) st(p, H + 0.9, p, H + BR_STEIN.par - 1.6, Ls.joint, 0.5);
-        st(l.a, H + BR_STEIN.par, l.b, H + BR_STEIN.par, shade(Ls.top, front ? 0.06 : -0.04), 0.65);
+        wand(Z, H, H + BR_STEIN.par, shade(front ? Ls.top : shade(Ls.top, -0.14), -0.05));
+        const m = Math.max(1, Math.round(len / 0.09));
+        for (let j = 1; j < m; j++) { const p = atLen(pts, len * j / m); st(p, H + 0.9, p, H + BR_STEIN.par - 1.6, Ls.joint, 0.5); }
+        zug(pts, H + BR_STEIN.par, shade(Ls.top, front ? 0.06 : -0.04), 0.65);
       } else if (art === 'holz') {
-        const col = front ? P.rail : P.side;
-        for (const p of posts(l, 0.5)) st(p, H, p, H + 8, col, front ? 0.7 : 0.6);
-        st(l.a, H + 8, l.b, H + 8, col, front ? 0.9 : 0.7); if (front) st(l.a, H + 4, l.b, H + 4, col, 0.5);
-      } else {                                                               // Metall, Kristall: Fachwerk in der Höhe der Geraden, je Halbfeld
-        const col = front ? P.front : P.back, w = front ? 1.6 : 1.2, Tt = BR_TRUSS.T, pts = posts(l, 0.5);
-        st(l.a, H, l.b, H, col, 0.7 * w); st(l.a, H + Tt, l.b, H + Tt, col, 0.7 * w);
-        for (let j = 0; j < pts.length; j++) { st(pts[j], H, pts[j], H + Tt, col, 0.4 * w); if (j) st(pts[j - 1], H + Tt, pts[j], H, col, 0.5 * w); }
-        if (P.hi && front) st(l.a, H + Tt, l.b, H + Tt, P.hi, 0.35);
+        const col = front ? P.rail : P.side, m = Math.max(1, Math.round(len / 0.5));
+        for (let j = 1; j < m; j++) { const p = atLen(pts, len * j / m); st(p, H, p, H + 8, col, front ? 0.7 : 0.6); }
+        zug(pts, H + 8, col, front ? 0.9 : 0.7); if (front) zug(pts, H + 4, col, 0.5);
+      } else {                                                               // Metall, Kristall: Fachwerk (Pfosten an den Zug-Enden; an den Feldkanten dieselben wie die der Geraden)
+        const col = front ? P.front : P.back, w = front ? 1.6 : 1.2, Tt = BR_TRUSS.T, m = Math.max(1, Math.round(len / 0.5)), ps = Array.from({ length: m + 1 }, (_, j) => atLen(pts, len * j / m));
+        zug(pts, H, col, 0.7 * w); zug(pts, H + Tt, col, 0.7 * w);
+        for (let j = 0; j <= m; j++) { st(ps[j], H, ps[j], H + Tt, col, 0.4 * w); if (j && len / m >= 0.25) st(ps[j - 1], H + Tt, ps[j], H, col, 0.5 * w); }
+        if (P.hi && front) zug(pts, H + Tt, P.hi, 0.35);
       }
     }
   };
-  // Licht (160c G2): gekauft und mit Strom versorgt wird es je Feld, auch auf dem Podest – an seinen Ecken wie die Geraden (Punkt bzw. Laterne
-  // in der Brückenfarbe), Kristall als Streifen längs des Geländers; hinten in 'd' (nach dem Deck), vorn (und an den Seiten) in 'o'
+  // Licht (160c G2): gekauft und mit Strom versorgt wird es je Feld, auch auf dem Podest – in der Mitte jedes Zugs (Punkt bzw. Laterne in der
+  // Brückenfarbe), Kristall als Streifen längs; hinten in 'd' (nach dem Deck), vorn in 'o'
   const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);
   const lampen = front => {
     flush();
     if (!L.licht) return;
     const S = brLampSpots(art, 'bahn', 1), nt = night > 0.15 && isLive(), on = L.licht === 'an' && !dark, lit = nt && on, grau = nt && !on;
     if (S.form === 'streifen') {
-      for (const l of Q.lines.filter(q => q.front === front)) {
-        st(l.a, H + 0.5, l.b, H + 0.5, lit ? '#dff8ff' : '#bfe9f8', 0.45); flush();
-        const m = Math.max(1, Math.round(len(l) / 0.25));
-        if (on) for (let j = 0; j < m; j++) { const a = at(l, j / m), b = at(l, (j + 1) / m); glowQuad([Lw(a, H), Lw(b, H), Lw(b, H + 1.4), Lw(a, H + 1.4)], S.r * z, 'blue'); }
+      for (const Z of Q.zuege.filter(q => q.front === front)) {
+        zug(Z.pts, H + 0.5, lit ? '#dff8ff' : '#bfe9f8', 0.45); flush();
+        if (on) for (let j = 1; j < Z.pts.length; j++) glowQuad([Lw(Z.pts[j - 1], H), Lw(Z.pts[j], H), Lw(Z.pts[j], H + 1.4), Lw(Z.pts[j - 1], H + 1.4)], S.r * z, 'blue');
       }
       return;
     }
     const frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', 'bahn', L.col, null).lamp : null;
-    for (const q of [[-W, -W], [W, -W], [W, W], [-W, W]]) {
-      if ((q[0] + q[1] > -1e-9) !== front) continue;
-      const p = Lw(q, H + S.up);
+    for (const Z of Q.zuege) {
+      const len = lenOf(Z.pts), n = nAt(Z, len / 2);
+      if ((n[0] + n[1] > 1e-9) !== front) continue;
+      const p = Lw(atLen(Z.pts, len / 2), H + S.up);
       if (S.form === 'punkt') {
         circle(p[0], p[1], 0.85 * z, C(lit ? '#ffe58a' : grau ? '#9a978c' : S.day));
         const d = 0.8 * z;
@@ -963,22 +1011,26 @@ function gbKurve(lage, c, px, py, z, t) {
       if (on) glowQuad([lb.L, lb.R, [lb.R[0], lb.R[1] - 5 * zl], [lb.L[0], lb.L[1] - 5 * zl]], S.r * z);
     }
   };
-  if (lage === 'h') {
-    if (art !== 'stein') for (const p of ecken) if (p[0] + p[1] <= 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
-    gelaender(false);
-  } else if (lage === 'v') {
-    if (art === 'stein') {                                                 // Pfeiler unter dem Quadrat: seine vorderen Seiten bis ins Wasser
-      const zu = Q.lines.filter(l => l.front && !l.arm);
-      if (zu.length) for (const l of zu) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, GB_WATER), Lw(l.a, GB_WATER)], shF(Ls.face, l));
-      else for (const [a, b, nn] of [[[-W, W], [W, W], [0, 1]], [[W, -W], [W, W], [1, 0]]]) fill([Lw(a, H - 2.4), Lw(b, H - 2.4), Lw(b, GB_WATER), Lw(a, GB_WATER)], shF(Ls.face, { n: nn }));   // ohne geschlossene Vorderseite (Kurve nach vorn, Kreuzung): Pfeiler unter dem Mittelquadrat
+  const stuetzen = back => {                                                // Bock bzw. Pfeiler unter der Mitte jedes Zugs, etwas nach innen
+    if (art === 'stein') return;
+    for (const Z of Q.zuege) {
+      const len = lenOf(Z.pts), m = atLen(Z.pts, len / 2), n = nAt(Z, len / 2), p = [m[0] - n[0] * 0.06, m[1] - n[1] * 0.06];
+      if ((p[0] + p[1] <= 0) === back) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
     }
-    else for (const p of ecken) if (p[0] + p[1] > 0) st(p, GB_WATER, p, H - 3, art === 'holz' ? P.side : P.beam, art === 'holz' ? 2.2 : 2.4);
-    const tief = art === 'stein' ? 2.4 : art === 'holz' ? 3 : 4, col = art === 'stein' ? Ls.face : P.beam;
-    for (const l of Q.lines) if (l.front && (art !== 'stein' || l.arm)) fill([Lw(l.a, H), Lw(l.b, H), Lw(l.b, H - tief), Lw(l.a, H - tief)], shF(col, l));
+  };
+  if (lage === 'h') { stuetzen(true); gelaender(false); }
+  else if (lage === 'v') {
+    stuetzen(false);
+    for (const Z of Q.zuege.filter(q => q.front)) {
+      if (art === 'stein') wand(Z, GB_WATER, H, Ls.face);                  // Pfeilerwand bis ins Wasser
+      else wand(Z, H - (art === 'holz' ? 3 : 4), H, P.beam);
+    }
   } else if (lage === 'd') {
-    const deck = art === 'stein' ? Ls.deck : P.deck;
-    for (const r of Q.rects) fill(r.map(q => Lw(q, H)), deck);
-    if (art === 'holz') for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
+    fill(Q.ring.map(q => Lw(q, H)), art === 'stein' ? Ls.deck : P.deck);
+    if (art === 'holz') {
+      if (Q.rund) { const [d1, d2] = arms, Cc = [(d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2]; for (let j = 1; j < 7; j++) { const th = Math.PI / 2 * j / 7, dr = [-d2[0] * Math.cos(th) - d1[0] * Math.sin(th), -d2[1] * Math.cos(th) - d1[1] * Math.sin(th)]; st([Cc[0] + (0.5 - W) * dr[0], Cc[1] + (0.5 - W) * dr[1]], H, [Cc[0] + (0.5 + W) * dr[0], Cc[1] + (0.5 + W) * dr[1]], H, P.plank, 0.3); } }
+      else for (const [dx, dy] of arms) for (let j = 1; j <= 4; j++) { const f = W + (0.5 - W) * j / 4 - 0.012; st(dx ? [dx * f, -W] : [-W, dy * f], H, dx ? [dx * f, W] : [W, dy * f], H, P.plank, 0.3); }
+    }
     flush(); drawRailBed(px, py, z, x, y, { ...t, bridge: false }, arms);
     lampen(false);
   } else if (lage === 'o') { gelaender(true); lampen(true); }

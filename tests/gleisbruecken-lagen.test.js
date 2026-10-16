@@ -112,9 +112,9 @@ describe('Gleisbrücken übers Wasser in Lagen (160c E1a)', () => {
     const tief = (fall, x0) => { bau(fall, x0, 0); const [x, y] = mitte(fall, x0, 0);
       expect(game(`brSet({ at: 'gleis', x: ${x}, y: ${y} }, { mat: 'stein' })`), fall).toBe(true);
       const fs = rec(`gbPaintLage('v', gbAt(${x}, ${y}), 0, 0, 1, state.tiles.get('${x},${y}'))`).filter(e => e.startsWith('fill '));
-      return Math.max(...fs.flatMap(e => e.split(' ').slice(2).filter(p => p.includes(',')).map(p => +p.split(',')[1]))); };
-    const zu = tief('kurve', 0);                                         // Kurve West–Nord: vordere Seiten geschlossen, Pfeiler wie bisher
-    expect(tief('x', 14)).toBeCloseTo(zu, 3);                            // Kreuzung: Pfeiler unter dem Mittelquadrat, ebenso tief
+      const wasser = game(`Math.max(...gbPodest(gbAt(${x}, ${y}).G.arms).zuege.filter(Z => Z.front).flatMap(Z => Z.pts).map(([u, v]) => (u + v) * TH / 2 - GB_WATER))`);   // vorderster Umrisspunkt auf dem Wasser
+      return [Math.max(...fs.flatMap(e => e.split(' ').slice(2).filter(p => p.includes(',')).map(p => +p.split(',')[1]))), wasser]; };
+    for (const [fall, x0] of [['kurve', 0], ['x', 14]]) { const [t, w] = tief(fall, x0); expect(t, fall).toBeCloseTo(w, 3); }   // Kurve (rund, 16.10.2026) und Kreuzung: Pfeilerwand bis aufs Wasser
   });
   it('Landschiene und das Gleis auf einer Anhöhen-Brücke bleiben unverändert (ohne bridge: keine Lagen-Teile)', () => {
     bau('gerade', 0, 0);
