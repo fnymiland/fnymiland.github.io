@@ -49,6 +49,7 @@ function bkLamps(lage, P, z, art, fam, n, t0, t1, opts) {
   const last = t1 >= n - 0.5 - 1e-9, frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', fam, opts.col, null).lamp : null;
   for (const t of S.ts) {
     if (!(t >= t0 - 1e-9 && (t < t1 - 1e-9 || (last && t <= t1 + 1e-9)))) continue;   // halboffen (G3): die Kante gehört dem späteren Feld
+    if (opts.skip && opts.skip.some(u => Math.abs(u - t) < 1e-6)) continue;   // Gleisbrücke: an der Kante zum Eckpodest setzt das Podest die Lampen
     const p = P(t, s, hOf(t) + S.up);
     if (S.form === 'punkt') {
       circle(p[0], p[1], 0.85 * z, C(lit ? '#ffe58a' : grau ? '#9a978c' : S.day));
@@ -821,7 +822,8 @@ function gbGerade(lage, c, px, py, z, t) {
   const ft = tt => { const k = Math.round(tt + 0.5), d = ax ? [0, 1] : [1, 0], j = k - i, wet = q => terrainAt(x + d[0] * q, y + d[1] * q) === 'water'; return wet(j - 1) && wet(j) ? GB_WATER : 0; };
   const railPaint = () => { flush(); drawRailBed(px, py - H * z, z, x, y, { ...t, bridge: false }, c.G.arms); };
   const dark = L.licht === 'an' && typeof T !== 'undefined' && !!T.rail && !!T.rail.power && T.rail.power.dark.has('G' + c.G.anker);   // ohne Strom dunkel (160c E2d)
-  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark, lampMax: n, col: L.col }); };   // ganze Lauflänge, Laterne in der Brückenfarbe
+  const skip = [R.brA ? A : null, R.brB ? B : null].filter(v => v != null);   // Kante zum Eckpodest: dessen Lampen (gleichmäßig über den Bogen, 16.10.2026)
+  const lamps = (lg, a = art) => { flush(); if (!L.licht) return; bkLamps(lg, P, z, a, 'bahn', n, t0, t1, { h: H, hf: () => H, licht: L.licht, dark, lampMax: n, col: L.col, skip }); };   // ganze Lauflänge, Laterne in der Brückenfarbe
   if (art === 'stein') { gbStein(lage, P, z, n, t0, t1, i, R, deckTop, railPaint, L, sh); return lamps(lage, 'stein'); }
   const Lp = brPal(BK_BAHN[art], art, 'bahn', L.col, L.plank);
   if (art === 'holz') {
@@ -924,15 +926,17 @@ function gbPodest(arms, voll = null) {                                    // vol
     if (inside([m[0] + n[0] * 1e-3, m[1] + n[1] * 1e-3])) n = [-n[0], -n[1]];
     segs.push({ p, q, n, front: n[0] + n[1] > 1e-9 });
   }
-  const start = Math.max(0, segs.findIndex(s => s === null) + 1), zuege = [];
-  let cur = null;
+  const start = Math.max(0, segs.findIndex(s => s === null) + 1), zuege = [], ketten = [];
+  let cur = null, kette = null;
   for (let k = 0; k < N; k++) {
     const s = segs[(start + k) % N];
-    if (!s) { cur = null; continue; }
+    if (!s) { cur = null; kette = null; continue; }
     if (!cur || cur.front !== s.front) { cur = { front: s.front, pts: [s.p], ns: [] }; zuege.push(cur); }
     cur.pts.push(s.q); cur.ns.push(s.n);
+    if (!kette) { kette = { pts: [s.p], ns: [] }; ketten.push(kette); }       // ganze Geländerstücke (vorn und hinten zusammen): für die Lampen
+    kette.pts.push(s.q); kette.ns.push(s.n);
   }
-  return { ring, rects: [ring], zuege, rund, arms };
+  return { ring, rects: [ring], zuege, ketten, rund, arms };
 }
 // Eckpodest malen: Deck = ring, Geländer/Fachwerk/Balustrade auf den Zügen ohne Knick; an den Feldkanten stehen die Pfosten der Geraden (dort
 // keine eigenen), Fachwerk-Schrägen nur auf Feldern ab 0,25 Länge (Innenrundung: nur Gurte). Bock bzw. Pfeiler unter der Mitte jedes Zugs;
@@ -995,11 +999,20 @@ function gbKurve(lage, c, px, py, z, t) {
       }
       return;
     }
-    const frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', 'bahn', L.col, null).lamp : null;
-    for (const Z of Q.zuege) {
-      const len = lenOf(Z.pts), n = nAt(Z, len / 2);
+    // je Geländerstück gleichmäßig wie auf den Geraden: Holz alle ≈ 0,5 samt den Enden an der Feldkante (die Geraden lassen sie dort aus),
+    // Metall auf Knoten ≈ 0,5 ohne die Enden (die Geraden haben eingerückte), Stein ≈ 1 ohne die Enden; kurze Innenrundung: Holz eine in der Mitte
+    const frame = S.form === 'laterne' ? brPal(BK_STEIN, 'stein', 'bahn', L.col, null).lamp : null, d0 = art === 'stein' ? 1 : 0.5;
+    const spots = [];
+    for (const K of Q.ketten) {
+      const len = lenOf(K.pts);
+      if (len < d0 * 0.75) { if (art === 'holz') spots.push([K, len / 2]); continue; }
+      const m = Math.max(art === 'stein' ? 2 : 1, Math.round(len / d0));
+      for (let j = art === 'holz' ? 0 : 1; j <= (art === 'holz' ? m : m - 1); j++) spots.push([K, len * j / m]);
+    }
+    for (const [K, at] of spots) {
+      const n = nAt(K, Math.min(Math.max(at, 1e-6), lenOf(K.pts) - 1e-6));
       if ((n[0] + n[1] > 1e-9) !== front) continue;
-      const p = Lw(atLen(Z.pts, len / 2), H + S.up);
+      const p = Lw(atLen(K.pts, at), H + S.up);
       if (S.form === 'punkt') {
         circle(p[0], p[1], 0.85 * z, C(lit ? '#ffe58a' : grau ? '#9a978c' : S.day));
         const d = 0.8 * z;

@@ -276,8 +276,8 @@ describe('Gleisbrücke: Licht auch auf dem Eckpodest (160c G2)', () => {
     expect(game('gbAt(8, 5).G.sax')).toBe(null);                              // Eckpodest
     const r = game(`(() => { const out = { d: 0, o: 0 }, gq = glowQuad, na = night; let cur = ''; glowQuad = () => { out[cur] = (out[cur] || 0) + 1; }; night = 1;
       try { for (const l of ['h', 'v', 'd', 'o']) { cur = l; gbPaintLage(l, gbAt(8, 5), 0, 0, 1, state.tiles.get('8,5')); } } finally { glowQuad = gq; night = na; } return out; })()`);
-    expect(r.d, 'hinten').toBeGreaterThan(0);
-    expect(r.o, 'vorn').toBeGreaterThan(0);
+    expect((r.d || 0) + (r.o || 0), 'Podest leuchtet').toBeGreaterThan(0);   // gleichmäßig über den Bogen (16.10.2026): Stein/Metall nicht an jeder Seite
+    if (mat === 'holz' || mat === 'kristall') { expect(r.d, 'hinten').toBeGreaterThan(0); expect(r.o, 'vorn').toBeGreaterThan(0); }
     expect(r.h || 0).toBe(0); expect(r.v || 0).toBe(0);
   });
 });
