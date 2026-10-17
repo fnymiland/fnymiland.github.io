@@ -219,6 +219,20 @@ const ITEMS = {
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
+  // Sternenbasar-Waren (Block 161c): sdShop – im Basar für ✨ freigeschaltet, dann für Taler gebaut; Bild in SD_ART (sternstaub.js)
+  sd_kirschbaum: { cat: 'deko', name: 'Kirschbaum', sdShop: true, cost: 120, beauty: 5, small: true, desc: 'Ein Baum voller rosa Blüten – ein paar liegen schon im Gras.' },
+  sd_ahorn: { cat: 'deko', name: 'Herbstahorn', sdShop: true, cost: 120, beauty: 5, small: true, desc: 'Leuchtend rot und orange, als wäre immer Herbst.' },
+  sd_weide: { cat: 'deko', name: 'Trauerweide', sdShop: true, cost: 150, beauty: 6, small: true, desc: 'Lange Zweige bis fast zum Boden – schön am Wasser.' },
+  sd_laternenbaum: { cat: 'deko', name: 'Laternenbaum', sdShop: true, cost: 200, beauty: 7, small: true, desc: 'Ein Baum mit bunten Laternen in den Zweigen – leuchtet nachts.' },
+  sd_nachtblumen: { cat: 'deko', name: 'Nachtblumen', sdShop: true, cost: 80, beauty: 4, small: true, desc: 'Blaue Blüten, die nachts sanft leuchten.' },
+  sd_pfau: { cat: 'deko', name: 'Pfau', sdShop: true, cost: 150, beauty: 6, small: true, desc: 'Schlägt stolz sein Rad.' },
+  sd_katze: { cat: 'deko', name: 'Katze auf Kissen', sdShop: true, cost: 60, beauty: 3, small: true, desc: 'Schläft zusammengerollt auf einem lila Kissen.' },
+  sd_lampions: { cat: 'deko', name: 'Lampion-Bogen', sdShop: true, cost: 120, beauty: 5, small: true, desc: 'Bunte Lampions an einer Leine – leuchten nachts.' },
+  sd_sonnenuhr: { cat: 'deko', name: 'Sonnenuhr', sdShop: true, cost: 100, beauty: 4, small: true, desc: 'Zeigt die Zeit mit dem Schatten.' },
+  sd_schaukel: { cat: 'deko', name: 'Schaukel', sdShop: true, cost: 150, beauty: 5, small: true, desc: 'Eine Holzschaukel mit Blümchen am Balken.' },
+  sd_koiteich: { cat: 'deko', name: 'Koi-Teich', sdShop: true, cost: 600, needs: 'grass', beauty: 14, desc: 'Ein runder Teich mit Kois und Seerosen.' },
+  sd_sternbrunnen: { cat: 'deko', name: 'Sternbrunnen', sdShop: true, cost: 1500, mat: { quader: 6 }, needs: 'grass', beauty: 24, desc: 'Ein Brunnen mit goldenem Stern, der nachts leuchtet.' },
+  sd_pagode: { cat: 'deko', name: 'Pagode', sdShop: true, cost: 2000, mat: { bretter: 8 }, needs: 'grass', beauty: 26, desc: 'Drei rote Dächer übereinander, nachts warme Fenster.' },
   sternenbasar: { cat: 'deko', name: 'Sternenbasar', sd: true, once: true, size: [2, 2], cost: 2500, mat: { bretter: 10 }, needs: 'grass', beauty: 20,
     desc: 'Ein Zelt voller Sternstaub-Schätze: jeden Tag neue Angebote und ein Katalog mit besonderen, schönen Dingen. Nur einer je Insel.' },   // Block 161c
   rathaus: { cat: null, name: 'Rathaus', size: [3, 3], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },

@@ -11,10 +11,10 @@ const tools = () => q('#tools .tool').map(b => b.dataset.tool);
 describe('Baumenü', () => {
   it('jedes Ding steht in genau einer Gruppe', () => {
     // Größen stehen nicht einzeln im Menü, ✋ Verschieben und 🧹 Abreißen nur in der Werkzeugleiste
-    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old && !ITEMS[id].gift && !['verschieben', 'abriss'].includes(id))");
+    const ids = game("Object.keys(ITEMS).filter(id => ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].old && !ITEMS[id].gift && !ITEMS[id].sdShop && !['verschieben', 'abriss'].includes(id))");   // Sternenbasar-Waren: nur Gekauftes (eigenes Regal, Block 161c)
     const placed = game('MENU.flatMap(m => m.groups ? m.groups.flatMap(g => g.items) : m.items)');
     for (const id of ids) expect(placed.filter(p => p === id).length, id).toBe(1);
-    expect(placed.every(id => ids.includes(id))).toBe(true);
+    expect(placed.every(id => ids.includes(id) || game(`!!ITEMS['${id}'].sdShop`))).toBe(true);
   });
 
   it('eine Reihe mit vier Bereichen (Einkaufen steckt in Stadt, Nutzer 08.10.2026: Entwurf A); ein Bereich klappt darüber ein Feld mit allem auf, Gruppen als Überschriften (Entwurf B)', () => {

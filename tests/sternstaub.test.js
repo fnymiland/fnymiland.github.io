@@ -153,7 +153,7 @@ describe('Sternenbasar (161c)', () => {
   });
   it('Angebote: gleicher Tag = gleiche, Ungekauftes zuerst; Kaufen kostet Sternstaub, schaltet frei, bleibt gespeichert', () => {
     game(`(() => { for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) ITEMS[id] = { cat: 'deko', name: id, sdShop: true, cost: 10, small: true };
-      SD_SHOP.length = 0; SD_SHOP.push({ id: 'sdtest_a', price: 40 }, { id: 'sdtest_b', price: 60 }, { id: 'sdtest_c', price: 80 }, { id: 'sdtest_d', price: 90 }, { id: 'sdtest_e', price: 300, rare: true }); })()`);
+      globalThis.__shop = SD_SHOP.slice(); SD_SHOP.length = 0; SD_SHOP.push({ id: 'sdtest_a', price: 40 }, { id: 'sdtest_b', price: 60 }, { id: 'sdtest_c', price: 80 }, { id: 'sdtest_d', price: 90 }, { id: 'sdtest_e', price: 300, rare: true }); })()`);
     game('state.sdItems = new Set(); state.stardust = 100');
     const o1 = game('basarOffers(20261017).map(s => s.id)');
     expect(o1.length).toBe(4);
@@ -166,6 +166,23 @@ describe('Sternenbasar (161c)', () => {
     expect(game('basarOffers(20261017).map(s => s.id)').slice(0, 3)).not.toContain('sdtest_a');   // Ungekauftes zuerst
     const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
     expect([...d.sdItems]).toEqual(['sdtest_a']);
-    game("SD_SHOP.length = 0; for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) delete ITEMS[id]");
+    game("SD_SHOP.length = 0; SD_SHOP.push(...globalThis.__shop); for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) delete ITEMS[id]");
+  });
+});
+
+describe('Sternenbasar-Waren (161c)', () => {
+  it('jede Ware: ITEMS mit sdShop, Bild bei Tag/Nacht/weit ohne Fehler, gesperrt bis gekauft, dann baubar; nicht im Album', () => {
+    const ids = game('SD_SHOP.map(s => s.id)');
+    expect(ids.length).toBeGreaterThanOrEqual(13);
+    for (const id of ids) {
+      expect(game(`!!ITEMS['${id}'] && !!ITEMS['${id}'].sdShop && !!SD_ART['${id}']`), id).toBe(true);
+      for (const [zz, n] of [[2, 0], [2, 1], [0.4, 0]]) game(`(() => { const nv = night; night = ${n}; try { drawObject('${id}', 400, 300, ${zz}, 1e6, 5, 5, 1, { b: '${id}', rot: 0, slot: 0 }); } finally { night = nv; } })()`);
+      expect(game(`ALBUM.some(p => albumKeys(p).includes('b:${id}'))`), id).toBe(false);
+    }
+    game("state.sdItems = new Set(); state.stardust = 1000");
+    expect(game("available('sd_kirschbaum')")).toBe(false);
+    expect(game("sdBuyItem('sd_kirschbaum')")).toBe(true);
+    expect(game("available('sd_kirschbaum')")).toBe(true);
+    expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'sternstaub').items")).toEqual(['sd_kirschbaum']);
   });
 });

@@ -1591,6 +1591,7 @@ function drawObjectAs(type, cx, cy, z, now, x, y, lvl, t) {
   const gp = PASS !== 'ground' && t && t.b === type && gardenPath(t, x, y);
   if (gp) drawGardenPath(cx, cy, z, x, y, gp);
   if (BUILDING_ART[type]) { drawBuilding(type, cx, cy, z, now, x, y, lvl, t); return; }
+  if (typeof SD_ART === 'object' && SD_ART[type]) { SD_ART[type](cx, cy, z, now, x, y, t); return; }   // Sternenbasar-Waren (Block 161c, sternstaub.js)
   if (BIG_ART[type] && !(type === 'leuchtturm' && t && t.mini)) { const [w, h] = sizeOf(type, t && t.rot, t); BIG_ART[type](cx, cy, z, now, x, y, lvl, t || {}, w / 2, h / 2); return; }
   if (STANDS[type]) { drawStand(type, cx, cy, z, now, x, y, t); return; }
   const hw = TW / 2 * z, hh = TH / 2 * z;
