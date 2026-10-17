@@ -7,7 +7,7 @@
 // Jede einmalige Gutschrift hat einen Schlüssel in state.sdGot: nie doppelt, und was vor Block 161 erreicht war, zahlt sdCheck(true)
 // beim Laden still nach (Fenster „Sternstaub ist da“)
 // ---------------------------------------------------------------------------
-const SD = { tier: 10, album: 50, fest: 150, chest: 10, star: 2, starRare: 10, starRareP: 0.1, feier: 3, wish: 25 };
+const SD = { tier: 10, album: 50, fest: 150, chest: 10, star: 2, starRare: 10, starRareP: 0.1, feier: 3, wish: 25, backMax: 300 };   // backMax: Nachzahlung höchstens (Nutzer: nicht alles sofort)
 const SD_TREASURY = { first: 20e6, step: 1.1 };
 const sdDay = (d = new Date()) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();   // lokaler Kalendertag JJJJMMTT
 
@@ -30,6 +30,13 @@ function sdCheck(silent = false) {
   if (state.album) for (const p of ALBUM) if (sdAlbumFull(p)) give(SD.album, 'album:' + p.id, `Albumseite „${p.name}“ voll`);
   if (state.festival) give(SD.fest, 'fest', 'das Laternenfest');
   return sum;
+}
+// Beim Laden (afterLoad): Erreichtes still gutschreiben – beim ersten Mal (noch nie Sternstaub gesehen) höchstens SD.backMax, damit der
+// Basar nicht am ersten Tag leer gekauft ist (Nutzer 17.10.2026); die Schlüssel zählen trotzdem als bezahlt
+function sdBackPay() {
+  let back = sdCheck(true);
+  if (!state.sdSeen && back > SD.backMax) { state.stardust -= back - SD.backMax; back = SD.backMax; }
+  return back;
 }
 // Sternschnuppe (story.js collectStarAt): ein wenig Sternstaub, manchmal mehr
 const sdStar = (rnd = Math.random) => sdAdd(rnd() < SD.starRareP ? SD.starRare : SD.star);
@@ -245,12 +252,17 @@ BIG_ART.sternenbasar = (cx, cy, z, now, x, y, lvl, t) => {
 // Waren: { id: ITEMS-Schlüssel, price ✨, rare?: im Tagesangebot das seltene, katalog?: nur im Katalog (immer da) }
 const SD_SHOP = [];
 const sdShopItem = id => SD_SHOP.find(s => s.id === id);
-// Angebote eines Tages: 3 normale + 1 seltenes; gleicher Tag und Spielstand = gleiche Angebote, Ungekauftes zuerst
+// Kalenderwoche ab Montag (Tageszahl seit 1970, der 1.1.1970 war ein Donnerstag) und Tage bis zum Wechsel
+const sdDayNum = day => Math.round(Date.UTC(Math.floor(day / 10000), Math.floor(day / 100) % 100 - 1, day % 100) / 864e5);
+const sdWeek = day => Math.floor((sdDayNum(day) + 3) / 7);
+const sdWeekLeft = day => 7 - ((sdDayNum(day) + 3) % 7);
+// Angebote: jeden Tag 3 normale, dazu das Seltene der Woche (bleibt 7 Tage – man kann darauf sparen, Nutzer 17.10.2026); gleicher
+// Tag/gleiche Woche und Spielstand = gleiche Angebote, Ungekauftes zuerst
 function basarOffers(today = sdDay()) {
-  const pick = (list, n) => list.map(s => ({ s, h: sdHash(today + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
+  const pick = (list, n, key) => list.map(s => ({ s, h: sdHash(key + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
     .sort((p, q) => p.have - q.have || p.h - q.h).slice(0, n).map(p => p.s);
   const pool = SD_SHOP.filter(s => !s.katalog);
-  return [...pick(pool.filter(s => !s.rare), 3), ...pick(pool.filter(s => s.rare), 1)];
+  return [...pick(pool.filter(s => !s.rare), 3, today), ...pick(pool.filter(s => s.rare), 1, 'w' + sdWeek(today))];
 }
 function sdBuyItem(id) {
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return false; }
@@ -276,7 +288,7 @@ let basarTab = 'heute';
 function basarCard(s) {
   const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id);
   return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}">
-    ${s.rare ? '<span class="basar-rare">✦ selten</span>' : ''}
+    ${s.rare ? `<span class="basar-rare">✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'}</span>` : ''}
     <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}</div>
     <b>${escHtml(d.name)}</b>
     ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
@@ -442,11 +454,13 @@ const SD_ART = {
     sdLine('#e9a23b', 1.2, z, [[cx, base], [cx, base - 7 * z]]); circle(cx, base - 7 * z, 1.5 * z, C('#f5c84b'));
   },
 };
+// Preise (Nutzer 17.10.2026: „wirklich ein Spielziel, nicht alles sofort“, Rechnung tools: Sternstaub-Simulation): normal 80–200 ✨,
+// selten 350–450 ✨ – bei 1 Std/Tag nach 30 Tagen ≈ 15 Dinge, alles nach ≈ ½ Jahr
 SD_SHOP.push(
-  { id: 'sd_kirschbaum', price: 70 }, { id: 'sd_ahorn', price: 70 }, { id: 'sd_weide', price: 80 }, { id: 'sd_laternenbaum', price: 100 },
-  { id: 'sd_nachtblumen', price: 90 }, { id: 'sd_pfau', price: 110 }, { id: 'sd_katze', price: 80 }, { id: 'sd_lampions', price: 70 },
-  { id: 'sd_sonnenuhr', price: 50 }, { id: 'sd_schaukel', price: 90 }, { id: 'sd_koiteich', price: 150 },
-  { id: 'sd_sternbrunnen', price: 300, rare: true }, { id: 'sd_pagode', price: 300, rare: true },
+  { id: 'sd_kirschbaum', price: 110 }, { id: 'sd_ahorn', price: 110 }, { id: 'sd_weide', price: 130 }, { id: 'sd_laternenbaum', price: 160 },
+  { id: 'sd_nachtblumen', price: 140 }, { id: 'sd_pfau', price: 170 }, { id: 'sd_katze', price: 90 }, { id: 'sd_lampions', price: 120 },
+  { id: 'sd_sonnenuhr', price: 80 }, { id: 'sd_schaukel', price: 130 }, { id: 'sd_koiteich', price: 200 },
+  { id: 'sd_sternbrunnen', price: 400, rare: true }, { id: 'sd_pagode', price: 450, rare: true },
 );
 // Baumenü (Gestalten → ✨ Sternenbasar): nur Gekauftes; noch nichts gekauft → drei als Vorgeschmack (mit Schloss)
 (() => {

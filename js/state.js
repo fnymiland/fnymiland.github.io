@@ -471,7 +471,7 @@ function afterLoad() {
   recalc();
   collectAlbum();
   checkAchievements(true);                         // schon Erreichtes still zählen (Regel 30)
-  if (typeof sdCheck === 'function') { const back = sdCheck(true); if (typeof sdWelcome === 'function') sdWelcome(back); }   // ✨ Nachzahlung (Block 161)
+  if (typeof sdBackPay === 'function') sdWelcome(sdBackPay());          // ✨ Nachzahlung (Block 161)
   if (moved) setTimeout(() => announceIslands(moved), 900);
   if (grown.length) setTimeout(() => announceWonders(grown), 1200);
   if (hall) setTimeout(() => announceHall(hall), 1600);

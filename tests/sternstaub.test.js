@@ -186,3 +186,27 @@ describe('Sternenbasar-Waren (161c)', () => {
     expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'sternstaub').items")).toEqual(['sd_kirschbaum']);
   });
 });
+
+describe('Seltenheit (Nutzer 17.10.2026: „wirklich ein Spielziel“)', () => {
+  it('Nachzahlung beim ersten Mal höchstens 300 ✨, die Stufen zählen trotzdem als bezahlt', () => {
+    game("state.achieved = {}; for (const a of ACHIEVEMENTS.slice(0, 6)) state.achieved[a.id] = a.tiers.length; state.sdGot = new Set(); state.stardust = 0; state.sdSeen = false");
+    expect(game('sdBackPay()')).toBe(300);
+    expect(game('state.stardust')).toBe(300);
+    expect(game('sdCheck()')).toBe(0);
+  });
+  it('Seltenes der Woche: Montag bis Sonntag dasselbe, nächste Woche ein anderes; normale wechseln täglich', () => {
+    game('state.sdItems = new Set()');
+    const rare = d => game(`basarOffers(${d}).find(s => s.rare).id`), norm = d => game(`basarOffers(${d}).filter(s => !s.rare).map(s => s.id).join()`);
+    const week = [20261019, 20261020, 20261021, 20261022, 20261023, 20261024, 20261025];   // Mo–So
+    expect(new Set(week.map(rare)).size).toBe(1);
+    expect(rare(20261026)).not.toBe(rare(20261019));
+    expect(norm(20261019)).not.toBe(norm(20261020));
+    expect(game('[sdWeekLeft(20261019), sdWeekLeft(20261025)]')).toEqual([7, 1]);
+  });
+  it('Preise: normal 80–200, selten 350–450; mindestens 58 Waren, davon mindestens 10 selten', () => {
+    const shop = game('SD_SHOP.map(s => [s.id, s.price, !!s.rare])');
+    expect(shop.length).toBeGreaterThanOrEqual(58);
+    for (const [id, p, r] of shop) { if (r) { expect(p, id).toBeGreaterThanOrEqual(350); expect(p, id).toBeLessThanOrEqual(450); } else { expect(p, id).toBeGreaterThanOrEqual(80); expect(p, id).toBeLessThanOrEqual(200); } }
+    expect(shop.filter(s => s[2]).length).toBeGreaterThanOrEqual(10);
+  });
+});
