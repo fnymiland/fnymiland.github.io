@@ -219,6 +219,8 @@ const ITEMS = {
   verschieben: { cat: 'land', name: 'Verschieben', cost: 0, desc: 'Etwas antippen, dann das Ziel antippen. Kostenlos, auch Rathaus und restaurierte Sehenswürdigkeiten.' },
   abriss:  { cat: 'land', name: 'Abreißen', cost: 0, desc: 'Gebäude (halber Preis zurück), Wald roden, Fels sprengen.' },
   // --- fest ---
+  sternenbasar: { cat: 'deko', name: 'Sternenbasar', sd: true, once: true, size: [2, 2], cost: 2500, mat: { bretter: 10 }, needs: 'grass', beauty: 20,
+    desc: 'Ein Zelt voller Sternstaub-Schätze: jeden Tag neue Angebote und ein Katalog mit besonderen, schönen Dingen. Nur einer je Insel.' },   // Block 161c
   rathaus: { cat: null, name: 'Rathaus', size: [3, 3], beauty: 5, fixed: true, desc: 'Das Herz deiner Insel. Alle Wege führen hierher.' },
   lm:      { cat: null, name: 'Sehenswürdigkeit', size: [3, 3], fixed: true, desc: '' },
   truhe:   { cat: null, name: 'Truhe', fixed: true, desc: 'Auf einer fernen Insel gefunden – antippen und öffnen.' },
@@ -608,7 +610,7 @@ const MENU = [
     { id: 'bahn', label: '🚆 Bahn', items: ['schiene', 'huegelrampe', 'station', 'hbf'] },
     { id: 'untergrund', label: '🚇 Untergrund', items: ['tunnel', 'tunneleinfahrt', 'bergportal', 'ubahn'] },
     { id: 'wasser', label: '⛴️ Wasser & Seil', items: ['bootssteg', 'hafen', 'seilbahn'] },
-    { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
+    { id: 'einrichtungen', label: '🏛️ Einrichtungen', items: ['sternenbasar', 'schule', 'bibliothek', 'uni', 'kunst', 'post', 'apotheke', 'hotel', 'grandhotel'] },
     { id: 'laeden', label: '🛍️ Läden', items: SHOP_GROUPS.laeden },
     { id: 'markt', label: '🧺 Markt', items: Object.keys(STANDS) },
     { id: 'essen', label: '☕ Essen & Trinken', items: SHOP_GROUPS.essen },
@@ -672,6 +674,7 @@ const FX = {
 };
 // Tipp im „Neu freigeschaltet“-Fenster: wohin damit, wozu ist es gut
 const ITEM_TIPS = {
+  sternenbasar: 'Antippen öffnet den Basar: täglich neue Angebote für Sternstaub ✨.',
   reihenhaus: 'Ins Dorf, Tür zum Weg: drei Häuser auf zwei Feldern. Mit Markt und Schule (in der Nähe oder per Weg/Bahn erreichbar) wachsen sie.',
   baumhaus: 'Mitten in den Wald stellen – die Bäume bleiben. Mit schöner Umgebung und Nachbar-Baumhäusern wird ein Baumhaus-Dorf daraus.',
   hausboot: 'Aufs Wasser direkt am Ufer (auch im Teich). Mit Nachbar-Booten und viel Wasser wächst es.',

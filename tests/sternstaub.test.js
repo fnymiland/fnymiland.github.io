@@ -131,3 +131,41 @@ describe('Tageswunsch (161b)', () => {
     expect(d.dayWish).toMatchObject({ day: 20261016, id: 'baum', who: 'Bruno' });
   });
 });
+
+describe('Sternenbasar (161c)', () => {
+  const land = () => game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); recalc(); state.res.bretter = 99");
+  it('frei mit dem ersten Sternstaub; nur einer je Insel; Antippen öffnet den Basar', () => {
+    land(); game('state.sdSeen = false; state.stardust = 0');
+    expect(game("available('sternenbasar')")).toBe(false);
+    expect(game("lockText('sternenbasar')")).toMatch(/Sternstaub/);
+    game('state.stardust = 5');
+    expect(game("available('sternenbasar')")).toBe(true);
+    expect(game("build('sternenbasar', 5, 5)")).toBe(true);
+    expect(game("placeError('sternenbasar', 10, 10)")).toMatch(/nur einer/);
+    game('openInfo(5, 5)');
+    expect(game("document.getElementById('modal-card').textContent")).toMatch(/Sternenbasar/);
+    game('closeModal()');
+  });
+  it('Zeichnen: Tag, Nacht, weit – ohne Fehler; nicht im Album', () => {
+    land(); game("state.stardust = 5; build('sternenbasar', 5, 5)");
+    for (const [z, n] of [[2, 0], [2, 1], [0.4, 0]]) game(`(() => { const nv = night; night = ${n}; try { drawObject('sternenbasar', 400, 300, ${z}, 1e6, 5, 5, 1, state.tiles.get('5,5')); } finally { night = nv; } })()`);
+    expect(game("ALBUM.some(p => albumKeys(p).includes('b:sternenbasar'))")).toBe(false);
+  });
+  it('Angebote: gleicher Tag = gleiche, Ungekauftes zuerst; Kaufen kostet Sternstaub, schaltet frei, bleibt gespeichert', () => {
+    game(`(() => { for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) ITEMS[id] = { cat: 'deko', name: id, sdShop: true, cost: 10, small: true };
+      SD_SHOP.length = 0; SD_SHOP.push({ id: 'sdtest_a', price: 40 }, { id: 'sdtest_b', price: 60 }, { id: 'sdtest_c', price: 80 }, { id: 'sdtest_d', price: 90 }, { id: 'sdtest_e', price: 300, rare: true }); })()`);
+    game('state.sdItems = new Set(); state.stardust = 100');
+    const o1 = game('basarOffers(20261017).map(s => s.id)');
+    expect(o1.length).toBe(4);
+    expect(o1[3]).toBe('sdtest_e');
+    expect(game('basarOffers(20261017).map(s => s.id)')).toEqual(o1);
+    expect(game("available('sdtest_a')")).toBe(false);
+    expect(game("sdBuyItem('sdtest_a')")).toBe(true);
+    expect(game("[state.stardust, available('sdtest_a')]")).toEqual([60, true]);
+    expect(game("sdBuyItem('sdtest_e')")).toBe(false);                   // zu wenig
+    expect(game('basarOffers(20261017).map(s => s.id)').slice(0, 3)).not.toContain('sdtest_a');   // Ungekauftes zuerst
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect([...d.sdItems]).toEqual(['sdtest_a']);
+    game("SD_SHOP.length = 0; for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) delete ITEMS[id]");
+  });
+});

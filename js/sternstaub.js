@@ -137,7 +137,7 @@ function sdHtml(today = sdDay()) {
   const t = sdTreasury(today), p1 = sdPrice(t.n), p5 = sdPriceOf(5, t.n);
   return `<h2>✨ Sternstaub</h2>
     <p>Du hast <b class="sd-have">✨ ${fmt(state.stardust || 0)}</b> Sternstaub. Er ist selten – damit schaltest du besondere, schöne Dinge frei
-      (bald im Sternenbasar).</p>
+      im ⛺ Sternenbasar (Einrichtungen).</p>
     ${twHtml()}
     <h4>So bekommst du ihn</h4>
     <div class="sd-src">${SD_SOURCES.map(([i, a, b]) => `<div><span>${i} ${a}</span><b>${b}</b></div>`).join('')}</div>
@@ -146,13 +146,14 @@ function sdHtml(today = sdDay()) {
       etwas mehr. Um Mitternacht fängt der Kurs wieder von vorn an.${t.n ? ` Heute schon getauscht: ✨ ${t.n}.` : ''}</p>
     <div class="row"><button class="btn" id="sd-buy1"${state.money < p1 ? ' disabled' : ''}>✨ 1 für 🪙 ${fmt(p1)}</button>
       <button class="btn" id="sd-buy5"${state.money < p5 ? ' disabled' : ''}>✨ 5 für 🪙 ${fmt(p5)}</button></div>
-    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`;
+    <div class="row">${[...state.tiles.values()].some(t => t.b === 'sternenbasar') ? '<button class="btn" id="sd-basar" style="flex:1">⛺ Zum Sternenbasar</button>' : ''}<button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`;
 }
 function openStardust() {
   if (!state.sdSeen) { state.sdSeen = true; save(); }
   openModal(sdHtml());
   const wire = () => {
     for (const [id, n] of [['sd-buy1', 1], ['sd-buy5', 5]]) { const b = $(id); if (b) b.onclick = () => { if (sdBuy(n)) { toast(`✨ +${n} Sternstaub aus der Schatzkammer`); openStardust(); } }; }
+    if ($('sd-basar')) $('sd-basar').onclick = () => openBasar();
     $('m-close').onclick = closeModal;
   };
   wire();
@@ -182,3 +183,121 @@ function sdHud() {
   if (show) setText($('sd'), fmt(state.stardust || 0));
 }
 if (typeof document !== 'undefined' && $('sd-btn')) $('sd-btn').onclick = () => { if (typeof setTool === 'function') setTool('look'); openStardust(); };
+
+// ---------------------------------------------------------------------------
+// ⛺ Sternenbasar (Block 161c, Entwurf A „Sternenzelt“ gewählt 17.10.2026, tools/basar-entwurf.js): rundes Zelt (2×2), nachtblau/creme
+// gestreift, goldene Sterne, Wimpelkranz mit Lichterkette, Mast mit Stern-Wimpel, vorn ein Eingang mit Vorhang und Tresen voller
+// Sternstaub-Gläser. Antippen öffnet den Basar: jeden Tag 4 Angebote (3 normale, 1 seltenes; gleicher Tag = gleiche Angebote,
+// Ungekauftes zuerst), dazu ein fester Katalog. Gekauftes bleibt frei (state.sdItems) und steht im Baumenü (ITEMS[…].sdShop)
+// ---------------------------------------------------------------------------
+const BASAR = { gold: '#f5c84b', goldD: '#c9962a', blue: '#2f3b7a', cream: '#f7efe0', pink: '#e86f8f' };
+const sdStarPts = (x, y, r, rot = -Math.PI / 2) => Array.from({ length: 10 }, (_, i) => { const a = rot + i * Math.PI / 5, rr = i & 1 ? r * 0.45 : r; return [x + Math.cos(a) * rr, y + Math.sin(a) * rr]; });
+function sdStarDraw(p, r, col, edge = null) {
+  const pts = sdStarPts(p[0], p[1], r);
+  poly(pts, C(col));
+  if (edge && r > 1.2) { g.strokeStyle = C(edge); g.lineWidth = Math.max(0.5, r * 0.12); g.lineJoin = 'round'; g.beginPath(); pts.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.stroke(); }
+}
+BIG_ART.sternenbasar = (cx, cy, z, now, x, y, lvl, t) => {
+  const K = kit(cx, cy, z, t.rot), lit = night > 0.15 && isLive(), N = 12, R = 0.78, H = 15, RH = 30, fern = z < 0.6;
+  if (groundPart(() => { K.oval(0, 0, 0.98, 'rgba(60,40,30,0.16)'); K.rect(0.62, -0.22, 0.98, 0.22, C('#e8dcc4')); })) return;   // Schatten, Teppich vor dem Eingang
+  const ring = (r, up) => Array.from({ length: N }, (_, i) => { const th = (i + 0.5) / N * Math.PI * 2; return { a: Math.cos(th) * r, b: Math.sin(th) * r, up }; });
+  const lo = ring(R, 0), eave = ring(R * 1.1, H - 1), apex = K.P(0, 0, H + RH);
+  const segs = lo.map((p, i) => { const q = lo[(i + 1) % N], m = [(p.a + q.a) / 2, (p.b + q.b) / 2]; return { i, p, q, m, d: K.depth(...m), vis: K.facing(...m) > 0 }; });
+  // Wände: nur die sichtbaren, hinten zuerst
+  for (const s of segs.filter(s => s.vis).sort((u, v) => u.d - v.d)) {
+    const col = s.i & 1 ? BASAR.cream : BASAR.blue, P0 = K.P(s.p.a, s.p.b, 0), Q0 = K.P(s.q.a, s.q.b, 0), sh = K.turn(s.m[0], s.m[1])[0] > 0.3 ? LIGHT.side * 0.6 : 0;
+    poly([P0, Q0, [Q0[0], Q0[1] - H * z], [P0[0], P0[1] - H * z]], C(shade(col, sh)));
+  }
+  // Eingang über die beiden vorderen Bahnen (a > 0, ±0,45 rad): warmes Inneres, gerafftes Vorhang-Paar, Tresen mit Sternstaub-Gläsern
+  if (K.facing(1, 0) > 0) {
+    const pt = (th, up) => K.P(Math.cos(th) * R * 1.01, Math.sin(th) * R * 1.01, up), A0 = -0.45, A1 = 0.45, ths = [0, 1, 2, 3, 4].map(k => A0 + (A1 - A0) * k / 4);
+    const arch = th => H * (0.62 + 0.3 * Math.cos((th / A1) * Math.PI / 2));
+    const inner = [...ths.map(th => pt(th, 0)), ...ths.slice().reverse().map(th => pt(th, arch(th)))];
+    poly(inner, lit ? '#ffd27a' : C('#ffe9b8'));
+    if (lit) glowQuad([pt(A0, 0), pt(A1, 0), pt(A1, H * 0.7), pt(A0, H * 0.7)], 26 * z);
+    poly([pt(A0, 0), pt(A0 + 0.16, 0), pt(0, H * 0.92), pt(A0, arch(A0))], C(shade(BASAR.pink, -0.06)));   // Vorhang links, gerafft
+    poly([pt(A1, 0), pt(A1 - 0.16, 0), pt(0, H * 0.92), pt(A1, arch(A1))], C(BASAR.pink));               // Vorhang rechts
+    if (!fern) {
+      const T0 = pt(-0.2, 0), T1 = pt(0.2, 0);
+      poly([T0, T1, [T1[0], T1[1] - 4.5 * z], [T0[0], T0[1] - 4.5 * z]], C('#8a5a3c'));
+      ['#b48cff', '#7fd3ff', '#ffd23f', '#ff8fb1'].forEach((c, k) => { const m = lerp(T0, T1, (k + 0.5) / 4); ellipse(m[0], m[1] - 6 * z, 0.9 * z, 1.4 * z, C(c)); if (lit) circle(m[0], m[1] - 6 * z, 0.5 * z, '#ffffff'); });
+    }
+  }
+  // Dach: Bahnen bis zur Spitze, hinten zuerst; vorn Sterne auf den blauen Bahnen
+  const tri = eave.map((p, i) => { const q = eave[(i + 1) % N], m = [(p.a + q.a) / 2, (p.b + q.b) / 2]; return { i, P: K.P(p.a, p.b, p.up), Q: K.P(q.a, q.b, q.up), m, d: K.depth(...m), vis: K.facing(...m) > 0 }; }).sort((u, v) => u.d - v.d);
+  for (const f of tri) poly([f.P, f.Q, apex], C(shade(f.i & 1 ? BASAR.cream : BASAR.blue, f.vis ? (K.turn(f.m[0], f.m[1])[0] > 0.3 ? -0.1 : -0.02) : 0.08)));
+  if (!fern) for (const f of tri) if (f.vis && !(f.i & 1)) sdStarDraw(lerp(lerp(f.P, f.Q, 0.5), apex, 0.38), 1.5 * z, BASAR.gold, BASAR.goldD);
+  // Wimpelkranz an der Traufe (vorn), nachts als Lichterkette
+  for (const f of tri) if (f.vis) {
+    const m = lerp(f.P, f.Q, 0.5);
+    poly([f.P, f.Q, [m[0], m[1] + 3.2 * z]], C(f.i & 1 ? BASAR.gold : BASAR.pink));
+    if (lit) { circle(m[0], m[1] + 1 * z, 0.7 * z, '#fff3b0'); glowQuad([[m[0] - z, m[1]], [m[0] + z, m[1]], [m[0] + z, m[1] + 2 * z], [m[0] - z, m[1] + 2 * z]], 8 * z); }
+  }
+  // Mast, Wimpel, Stern obendrauf
+  g.strokeStyle = C('#6b4f3a'); g.lineWidth = Math.max(0.6, 0.8 * z); g.lineCap = 'round';
+  g.beginPath(); g.moveTo(apex[0], apex[1]); g.lineTo(apex[0], apex[1] - 9 * z); g.stroke();
+  poly([[apex[0], apex[1] - 9 * z], [apex[0] + 7 * z, apex[1] - 7.5 * z], [apex[0], apex[1] - 6 * z]], C(BASAR.pink));   // still (sonst jedes Bild live)
+  const S = [apex[0], apex[1] - 11.5 * z];
+  sdStarDraw(S, 2.4 * z, lit ? '#ffe680' : BASAR.gold, BASAR.goldD);
+  if (lit) glowQuad([[S[0] - 2 * z, S[1] - 2 * z], [S[0] + 2 * z, S[1] - 2 * z], [S[0] + 2 * z, S[1] + 2 * z], [S[0] - 2 * z, S[1] + 2 * z]], 24 * z);
+};
+
+// Waren: { id: ITEMS-Schlüssel, price ✨, rare?: im Tagesangebot das seltene, katalog?: nur im Katalog (immer da) }
+const SD_SHOP = [];
+const sdShopItem = id => SD_SHOP.find(s => s.id === id);
+// Angebote eines Tages: 3 normale + 1 seltenes; gleicher Tag und Spielstand = gleiche Angebote, Ungekauftes zuerst
+function basarOffers(today = sdDay()) {
+  const pick = (list, n) => list.map(s => ({ s, h: sdHash(today + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
+    .sort((p, q) => p.have - q.have || p.h - q.h).slice(0, n).map(p => p.s);
+  const pool = SD_SHOP.filter(s => !s.katalog);
+  return [...pick(pool.filter(s => !s.rare), 3), ...pick(pool.filter(s => s.rare), 1)];
+}
+function sdBuyItem(id) {
+  if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return false; }
+  const s = sdShopItem(id);
+  if (!s || state.sdItems.has(id)) return false;
+  if ((state.stardust || 0) < s.price) { fail(`Zu wenig Sternstaub (✨ ${fmt(s.price)} nötig)`); return false; }
+  state.stardust -= s.price;
+  state.sdItems.add(id);
+  if (typeof cloudTouched === 'function') cloudTouched();
+  sfx('research'); if (typeof buildToolbar === 'function') buildToolbar(); save();
+  toast(`✨ Freigeschaltet: ${ITEMS[id].name} – jetzt im Baumenü`);
+  return true;
+}
+const sdThumbs = new Map();
+function sdThumb(id) {
+  if (sdThumbs.has(id)) return sdThumbs.get(id);
+  let url = '';
+  try { const c = thumb(id, 1, null, 2); url = c ? c.toDataURL() : ''; if (!url.startsWith('data:image')) url = ''; } catch (e) { url = ''; }
+  sdThumbs.set(id, url);
+  return url;
+}
+let basarTab = 'heute';
+function basarCard(s) {
+  const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id);
+  return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}">
+    ${s.rare ? '<span class="basar-rare">✦ selten</span>' : ''}
+    <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}</div>
+    <b>${escHtml(d.name)}</b>
+    ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
+      : `<button class="btn small" data-sdbuy="${s.id}"${(state.stardust || 0) < s.price ? ' disabled' : ''}>✨ ${fmt(s.price)}</button>`}
+  </div>`;
+}
+function openBasar(tab = basarTab) {
+  basarTab = tab;
+  if (!state.sdSeen) { state.sdSeen = true; save(); }
+  const offers = basarOffers(), kat = SD_SHOP.filter(s => s.katalog);
+  const body = tab === 'katalog'
+    ? (kat.length ? `<div class="basar-grid">${kat.map(basarCard).join('')}</div>` : '<p class="muted">Der Katalog füllt sich bald.</p>')
+    : offers.length ? `<p class="muted">Heute im Angebot – morgen gibt es neue Sachen. Alles kommt irgendwann wieder.</p><div class="basar-grid">${offers.map(basarCard).join('')}</div>`
+      : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
+  openModal(`<h2>⛺ Sternenbasar <span class="sd-have">✨ ${fmt(state.stardust || 0)}</span></h2>
+    <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📖 Katalog</button>
+      <button class="look" data-btab="sd">✨ Sternstaub</button></div>
+    ${body}
+    <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
+  const c = $('modal-card');
+  for (const b of c.querySelectorAll('[data-btab]')) b.onclick = () => { if (b.dataset.btab === 'sd') openStardust(); else openBasar(b.dataset.btab); };
+  for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => { if (sdBuyItem(b.dataset.sdbuy)) openBasar(); };
+  $('m-close').onclick = closeModal;
+}

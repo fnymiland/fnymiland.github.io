@@ -1804,6 +1804,7 @@ function openInfo(x, y) {
   if (t.b === 'rathaus') { openTownHall('overview'); return; }       // Päckchen: Hinweis in der Übersicht (nicht umleiten – sonst ist das Rathaus nie erreichbar)
   if (t.b === 'lm') { openLandmark(x, y); return; }
   if (t.b === 'truhe') { openChestInfo(x, y, t); return; }
+  if (t.b === 'sternenbasar' && typeof openBasar === 'function') { openBasar(); return; }   // Block 161c
   const d = ITEMS[t.b], s = statusOf(x, y) || {};
   const status = [];
   if (needsReach(t.b)) {

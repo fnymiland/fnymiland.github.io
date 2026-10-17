@@ -850,6 +850,8 @@ function unlockOk(def, key) {
   if (def.album && !albumDone(def.album, def.albumN)) return false;    // Album-Belohnung: volle Seite (bzw. albumN Einträge)
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return false;   // Erfindung (für Ideen)
   if (def.bond && (state.bond || 0) < def.bond) return false;           // Freundschaft (Block 105): so viele Herzen bei einem Freund
+  if (def.sd && !(state.sdSeen || state.stardust > 0)) return false;     // Sternenbasar (Block 161c): mit dem ersten Sternstaub
+  if (def.sdShop && !(state.sdItems && state.sdItems.has(key))) return false;   // im Sternenbasar gekauft
   return true;
 }
 // Ort und Stufe zusammen („🌬️ Windige Klippe → Aussichtspunkt“), kurz nur der Ort (Leiste unten)
@@ -868,6 +870,8 @@ function unlockText(def, short) {
   if (def.album && !albumDone(def.album, def.albumN)) return def.albumN ? `📒 ${def.albumN} Tiere in der Natur entdeckt (${albumCount(def.album)}/${def.albumN})` : `📒 volle Album-Seite „${ALBUM.find(p => p.id === def.album).name}“`;
   if (def.invention && !(state.inventions && state.inventions.has(def.invention))) return `💡 Erfindung ${INVENTIONS.find(i => i.id === def.invention).name}`;
   if (def.bond && (state.bond || 0) < def.bond) return `💛 Freundschaft mit ${def.bond} Herzen`;
+  if (def.sd && !(state.sdSeen || state.stardust > 0)) return '✨ dem ersten Sternstaub (z. B. ein Erfolg)';
+  if (def.sdShop && !(state.sdItems && state.sdItems.has(Object.keys(ITEMS).find(k => ITEMS[k] === def)))) return '✨ im Sternenbasar';
   return '';
 }
 // Wege (Block 125): Muster hat, wer es gekauft hat (wegmuster:…), es über Ort/Album bekam oder einen alten Belag mit diesem Muster
@@ -2978,6 +2982,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
   const r = ROTATABLE.has(b) || b === 'huegelrampe' ? rot : 0;                              // Gleis-Rampe (hills.js): Grundfläche [1, len] dreht mit
   if (d.edge) return 'Linien: Anfang und Ende antippen';
   if (d.fixed && !opts.move) return 'Das lässt sich nicht bauen';                           // Rathaus, Sehenswürdigkeit, Truhe (nur verschieben)
+  if (d.once && !opts.move && [...state.tiles.values()].some(t => t.b === b)) return `Es gibt schon einen ${d.name} – nur einer je Insel`;   // Sternenbasar (Block 161c); Kopie zählt als Neubau
   if (d.old) return 'Den gibt es nicht mehr – bau dir einen Park aus Parkrasen und Deko';          // Hecke, Zaun, Mauer liegen auf Kanten, nie auf Feldern
   if (!opts.move && !available(b)) return `${d.name}: ${lockText(b).replace('🔒 ', 'erst mit ')}`;
   if (b === 'anhoehe') {                                                                   // Anhöhe (Block 157): Feld anheben

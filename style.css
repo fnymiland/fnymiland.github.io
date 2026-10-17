@@ -338,7 +338,15 @@ html, body {
 @media (max-width: 480px) { #sd-btn { display: none !important; } }   /* Handy: oben kein Platz – ✨ steht im 📦-Lager */
 .sd-row { cursor: pointer; color: #7a4fc4; }
 .sd-wish { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(122, 79, 196, .08); font-size: 14px; }
-.sd-wish.done { background: rgba(88, 179, 106, .12); }                       /* ✨ Sternstaub (Block 161) */
+.sd-wish.done { background: rgba(88, 179, 106, .12); }
+.basar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 8px 0; }
+.basar-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; background: #fffaf0; border: 2px solid rgba(122, 79, 196, .18); text-align: center; font-size: 14px; }
+.basar-card.rare { border-color: #f5c84b; background: linear-gradient(#fff8e0, #fffaf0); }
+.basar-card.have { opacity: .7; }
+.basar-pic { width: 100%; height: 86px; display: flex; align-items: center; justify-content: center; }
+.basar-pic img { max-width: 100%; max-height: 86px; }
+.basar-rare { position: absolute; top: 6px; right: 8px; font-size: 11px; font-weight: 800; color: #c9962a; }
+.basar-have { font-size: 12px; color: var(--green-d); font-weight: 700; }                       /* ✨ Sternstaub (Block 161) */
 .sd-src > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font-size: 14px; }
 .sd-have { color: #7a4fc4; }
 .pill .dot { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: #e8604f; box-shadow: 0 0 0 2px var(--cream); }

@@ -2728,7 +2728,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Uhr zurück bringt nichts, kein ↶); Pille ✨ oben (ab 481 px), auf dem Handy als Zeile im 📦-Lager; Speichern (serialize/parseSave,
       Live: privat), Test sternstaub.test.js
 - [x] **161b** Tageswunsch: täglich einer (Kalendertag + Spielstand → auf allen Geräten derselbe, nur vorwärts), 12 Arten (Bänke am Wasser, Bäume, Blumen, Büsche, Laternen, Brunnen, Hecke, Zaun, Parkrasen, Weg, Haus Stufe 3, Pavillon), nur Baubares; gezählt ab dem Stand beim Erscheinen; erfüllt → 25 ✨ (einmal je Tag); im ✨-Fenster mit Fortschritt. Namen eindeutig (`tw…`, `state.dayWish`): `WISHES`/`wishHtml`/`wishAt` gibt es schon (Hauswünsche, Freundeswünsche)
-- [~] 161c Sternenbasar (Entwurf zuerst) + Tagesangebot + Katalog – 16.10.: drei Entwürfe tools/basar-entwurf.js → tools/vorschau/basar-entwurf.png (A Sternenzelt, B Sternhäuschen, C Kuppelladen), Nutzer wählt am 17.10.
+- [~] 161c Sternenbasar: Entwurf A „Sternenzelt“ gewählt (17.10.) – Gebäude 2×2 (Einrichtungen, frei mit dem ersten Sternstaub, nur einer je Insel, nicht im Album), Zelt mit Eingang/Vorhang/Tresen, Lichterkette und Stern nachts (Wimpel still: kein Live-Zeichnen), je Ding 233; Basar-Fenster: Heute (3 + 1 seltenes, gleicher Tag = gleich, Ungekauftes zuerst) und Katalog, Kauf für ✨ → `state.sdItems`, Baumenü über `sdShop`. Leistung je Ding neu geschrieben: dabei die runden Gleisecken (Kurve/T/X) neu gesetzt (Stein Kurve 230 → 275, Stein X 340 → 378, sonst gleich oder billiger). Offen: die Waren (Entwürfe zuerst)
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten
 - [ ] 161e Inselzauber
 - [ ] 161f Prachtbauten (je Entwurf zuerst)

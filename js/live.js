@@ -12,7 +12,7 @@
 // ---------------------------------------------------------------------------
 const LIVE_MAPS = ['tiles', 'decos', 'edges', 'terra'];
 const LIVE_ECO = ['money', 'res', 'science', 'stats', 'incPeak', 'stardust', 'treasury'];                       // ändert sich laufend
-const LIVE_PRIV = ['diary', 'diarySeen', 'tutorial', 'tipsSeen', 'tipsOff', 'paintNew', 'keep', 'orders', 'orderNext', 'expedition', 'decree', 'decreeNext', 'achieved', 'bond', 'sdGot', 'sdSeen', 'dayWish'];
+const LIVE_PRIV = ['diary', 'diarySeen', 'tutorial', 'tipsSeen', 'tipsOff', 'paintNew', 'keep', 'orders', 'orderNext', 'expedition', 'decree', 'decreeNext', 'achieved', 'bond', 'sdGot', 'sdSeen', 'dayWish'];   // sdItems ist öffentlich wie design (Besucher sehen gekaufte Dinge)
 const LIVE_PRIV_ALSO = ['partner'];                                           // öffentlich nur gekürzt (liveSplit), privat ganz
 const LIVE_LOCAL = ['cam', 'last', 'muted'];                                             // gehört zum Gerät, nie gespiegelt
 const LIVE_STEP = 1000, LIVE_ECO_EVERY = 2000, LIVE_REST_EVERY = 5000;
