@@ -1782,7 +1782,7 @@ function normalizeSmall() {
     if (free != null) ds[free] = { b: t.b, rot: t.rot || 0 };
   }
 }
-const available = id => ITEMS[id].variantOf ? available(ITEMS[id].variantOf) : ITEMS[id].gift ? !!svPick && svFree(svPick) : unlockOk(ITEMS[id], id);   // Größen: wie das Grundmodell; Souvenir: aus dem Regal gewählt (Block 129)
+const available = id => (typeof sdTry !== 'undefined' && sdTry === id) || (ITEMS[id].variantOf ? available(ITEMS[id].variantOf) : ITEMS[id].gift ? !!svPick && svFree(svPick) : unlockOk(ITEMS[id], id));   // Größen: wie das Grundmodell; Souvenir: aus dem Regal gewählt (Block 129)
 const lockText = (id, short) => {
   const d = ITEMS[id];
   const txt = unlockText(d, short);

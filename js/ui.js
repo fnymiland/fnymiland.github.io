@@ -525,6 +525,7 @@ function syncDropBtn() {
 function setTool(t) {
   if (t !== 'look' && typeof viewOnly === 'function' && viewOnly()) { cloudBlocked(); t = 'look'; }   // zuschauen/Besuch: nichts bauen (Block 94/95)
   if (t !== 'verschieben' && moving) cancelMove();
+  if (typeof sdTry !== 'undefined' && sdTry && t !== sdTry) sdTryClear();   // 👁 Ausprobieren endet mit jedem anderen Werkzeug (Block 161h)
   if (t !== 'tunnel') tunnelErase = false;     // 🗑️ Tunnel entfernen gilt nur, solange der Tunnel in der Hand ist
   if (t !== tool) plan = null;                  // nur beim Wechsel: die Leiste baut sich auch so neu auf (Freischaltung)
   if (t !== tool || t === 'look') rotManual = false;   // selbst gedreht: gilt bis zum Werkzeugwechsel (Block 84b)
@@ -1041,9 +1042,9 @@ function flashStore(mat) {
 let unlockSeen = null;
 const pendingUnlocks = [];
 function resetUnlockWatch() { unlockSeen = null; pendingUnlocks.length = 0; }
-function unlockKeys() {
+function unlockKeys() {                                   // Basar-Waren nicht: Kauf meldet sich selbst, Ausprobieren ist keine Freischaltung (161h)
   const out = new Set();
-  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].gift && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
+  for (const id of Object.keys(ITEMS)) if (ITEMS[id].cat && !ITEMS[id].variantOf && !ITEMS[id].gift && !ITEMS[id].sdShop && id !== 'verschieben' && id !== 'abriss' && available(id)) out.add(id);
   for (const st of STYLES.weg) if ((st.lm || st.album) && styleOk(st)) out.add('weg:' + st.id);
   for (const hs of HOUSE_STAGES) if (hs.lm && unlockOk(hs, 'haus:' + hs.name)) out.add('stufe:' + hs.name);
   if (available('bruecke')) for (const m of BR_MAT_IDS) if (BR_MAT_NEU[m] && !brLeisteLock(m)) out.add('brmat:' + m);   // neues Brückenmaterial (160c G1)

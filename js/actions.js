@@ -934,7 +934,8 @@ function tap(sx, sy, isTouch) {
     if (th) { pickUpRoofTop(th.x, th.y, th.slot); return; }
     if (rp) { if (pickUpRoofs([rp.x + ',' + rp.y])) { hover = { x: rp.x, y: rp.y }; } return; }
   }
-  const topB = tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && roofTopOk(tool) ? tool : null;
+  const trying = typeof sdTry !== 'undefined' && !!sdTry && tool === sdTry;   // 👁 Ausprobieren (Block 161h): nur Vorschau, nie bauen
+  const topB = tool === 'verschieben' ? roofTopCarried() : ITEMS[tool] && !trying && roofTopOk(tool) ? tool : null;
   if (!plan && topB) {                                             // kleine Deko übers Steindach getippt: oben drauf (Block 138b)
     const tp = roofTopAt(sx, sy);
     if (tp) {
@@ -1001,6 +1002,7 @@ function tap(sx, sy, isTouch) {
     else { closePanel(); toast(TERRAIN_NAMES[terrainAt(x, y)]); }
     return;
   }
+  if (trying) { hover = { x, y }; hoverSlot = slot; previewCache = null; return; }   // Ausprobieren: Tippen setzt nur die Vorschau um
   // Verschieben: erstes Tippen nimmt auf (sofort), danach wie Bauen mit Vorschau
   if (tool === 'verschieben' && !moving) { pickUp(x, y, slot); return; }
   const smallTool = tool === 'verschieben' ? moving.kind === 'deco' : ITEMS[tool].small;

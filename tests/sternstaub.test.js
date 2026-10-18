@@ -240,3 +240,94 @@ describe('Katalog (18.10.2026)', () => {
     }
   });
 });
+
+describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
+  const land = () => game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); recalc(); state.res.bretter = 99");
+  const fresh = "state.sdItems = new Set(); state.sdShown = new Set(); state.sdNew = null; state.sdWish = new Set(); state.sdWishNote = 0; state.sdSeen = true; state.stardust = 1000";
+  const card = id => `[...document.querySelectorAll('#modal .basar-card')].find(c => c.querySelector('[data-sdbuy="${id}"]'))`;
+  it('Sternennacht: Mondhase spricht, Seltenes groß oben, Countdown, Sammlung auf jeder Karte', () => {
+    game(fresh); game("openBasar('heute')");
+    const offers = game('basarOffers().map(s => [s.id, !!s.rare])');
+    expect(game("document.getElementById('modal-card').classList.contains('basar-night')")).toBe(true);
+    expect(game("document.querySelector('#modal .basar-say').textContent.length")).toBeGreaterThan(10);
+    expect(game("document.querySelector('#modal .basar-when').textContent")).toMatch(/Neue Ware in \d/);
+    const rare = offers.find(o => o[1])[0];
+    expect(game(`${card(rare)}.classList.contains('feature')`)).toBe(true);
+    for (const [id] of offers) expect(game(`${card(id)}.querySelector('.basar-smlg').textContent`)).toMatch(/\d+\/\d+/);
+    game('closeModal()');
+  });
+  it('Tagesspruch: letzter Tag des Seltenen zuerst, sonst gleicher Tag = gleicher Spruch', () => {
+    game(fresh);
+    const sun = 20261025, mon = 20261019;                                          // Sonntag: noch 1 Tag; Montag: noch 7
+    expect(game(`sdWeekLeft(${sun})`)).toBe(1);
+    expect(game(`sdHareSay(basarOffers(${sun}), ${sun})`)).toMatch(/nur noch heute/);
+    expect(game(`sdHareSay(basarOffers(${mon}), ${mon})`)).toMatch(/Ganz neu diese Woche/);
+    const d = 20261021;
+    expect(game(`sdHareSay(basarOffers(${d}), ${d})`)).toBe(game(`sdHareSay(basarOffers(${d}), ${d})`));
+  });
+  it('NEU: nur am Tag, an dem es zum ersten Mal angeboten wird; gespeichert', () => {
+    game(fresh); game("openBasar('heute'); closeModal()");
+    const ids = game('basarOffers().map(s => s.id)');
+    for (const id of ids) expect(game(`sdIsNew('${id}')`)).toBe(true);
+    game("openBasar('heute')");                                                     // gleicher Tag, nochmal geöffnet: bleibt NEU
+    expect(game("document.querySelectorAll('#modal .basar-new').length")).toBe(ids.length);
+    game('closeModal()');
+    expect(game(`sdIsNew('${ids[0]}', 20991231)`)).toBe(false);
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect(d.sdNew.ids.length).toBe(ids.length);
+  });
+  it('Herzchen: merken/entmerken, Hinweis einmal am Tag, wenn es im Angebot ist; gespeichert, privat', () => {
+    game(fresh);
+    const id = game('basarOffers(20261021)[0].id');
+    game(`sdToggleWish('${id}')`);
+    expect(game(`state.sdWish.has('${id}')`)).toBe(true);
+    game("globalThis.__t = []; globalThis.__toast = toast; toast = m => __t.push(m)");
+    game('sdWishTick(1e13, 20261021)'); game('sdWishTick(2e13, 20261021)');
+    const t = game('__t'); game('toast = __toast');
+    expect(t.filter(m => /Herzchen/.test(m)).length).toBe(1);
+    expect(game('state.sdWishNote')).toBe(20261021);
+    expect([...game('parseSave(JSON.parse(JSON.stringify(serialize())))').sdWish]).toEqual([id]);
+    expect(game("LIVE_PRIV.includes('sdWish') && LIVE_PRIV.includes('sdNew') && LIVE_PRIV.includes('sdWishNote')")).toBe(true);
+    game(`sdToggleWish('${id}')`);
+    expect(game(`state.sdWish.has('${id}')`)).toBe(false);
+  });
+  it('Sammelbuch: alle Waren; gekauft bunt mit Namen, gesehen mit Namen, nie gesehen „???“', () => {
+    game(fresh);
+    const [a, b] = game("SD_SHOP.filter(s => !s.rare && sdSammlung(s.id) === 'Eiszauber').slice(0, 2).map(s => s.id)");
+    game(`state.sdItems.add('${a}'); state.sdShown.add('${b}'); openBasar('buch')`);
+    expect(game("document.querySelectorAll('#modal .book-item').length")).toBe(game('SD_SHOP.length'));
+    const items = game("[...document.querySelectorAll('#modal .book-item')].map(e => [e.classList.contains('have'), e.textContent.trim()])");
+    expect(items.filter(i => i[0]).length).toBe(1);
+    expect(items.map(i => i[1])).toEqual(expect.arrayContaining([game(`ITEMS['${a}'].name`), game(`ITEMS['${b}'].name`)]));
+    expect(items.filter(i => /\?\?\?/.test(i[1])).length).toBe(game('SD_SHOP.filter(s => !state.sdItems.has(s.id) && !state.sdShown.has(s.id)).length'));
+    expect(game("document.querySelector('#modal .book-head').textContent")).toMatch(/\d+\/\d+/);
+    game('closeModal()');
+  });
+  it('Ausprobieren: Vorschau wie beim Bauen, Tippen baut nie; Zurück/anderes Werkzeug beendet; Kaufen stellt es hin', () => {
+    land(); game(fresh);
+    const id = game("SD_SHOP.find(s => !s.rare && ITEMS[s.id].small).id");
+    expect(game(`available('${id}')`)).toBe(false);
+    game(`sdTryStart('${id}')`);
+    expect(game(`[tool, available('${id}'), document.getElementById('sd-try-bar').hidden]`)).toEqual([id, true, false]);
+    expect(game(`placeError('${id}', 5, 5)`)).toBeFalsy();
+    game('const q = toScreen(5, 5); tap(q.x, q.y, true); tap(q.x, q.y, true); tap(q.x, q.y, false)');
+    expect(game("(state.decos.get('5,5') || []).filter(Boolean).length")).toBe(0);  // nie gebaut
+    expect(game('[hover.x, hover.y]')).toEqual([5, 5]);
+    game("setTool('look')");
+    expect(game(`[sdTry, available('${id}'), document.getElementById('sd-try-bar').hidden]`)).toEqual([null, false, true]);
+    game(`sdTryStart('${id}'); hover = { x: 6, y: 6 }; hoverSlot = 0`);
+    const st0 = game('state.stardust');
+    expect(game('sdTryBuy()')).toBe(true);
+    expect(game('state.stardust')).toBe(st0 - game(`sdShopItem('${id}').price`));
+    expect(game(`(state.decos.get('6,6') || []).some(d => d && d.b === '${id}')`)).toBe(true);
+    expect(game(`[sdTry, tool, available('${id}')]`)).toEqual([null, id, true]);
+    game("setTool('look')");
+  });
+  it('Kauf: Glöckchen statt Forschungston', () => {
+    game(fresh);
+    game("globalThis.__s = []; globalThis.__sfx = SFX.bell; SFX.bell = () => __s.push('bell')");
+    game("sdBuyItem(basarOffers()[0].id)");
+    expect(game('__s')).toEqual(['bell']);
+    game('SFX.bell = __sfx');
+  });
+});

@@ -34,6 +34,7 @@ const SFX = {
   error: () => tone(220, 0.16, 'sine', 0.14, 0, 170),
   buy: () => [523, 659, 784].forEach((f, i) => tone(f, 0.18, 'triangle', 0.13, i * 0.07)),
   research: () => [659, 784, 988, 1319].forEach((f, i) => tone(f, 0.16, 'sine', 0.14, i * 0.06)),
+  bell: () => { tone(1568, 0.9, 'sine', 0.12); tone(3136, 0.5, 'sine', 0.035); tone(2349, 0.7, 'sine', 0.04); tone(2093, 1.1, 'sine', 0.11, 0.14); tone(4186, 0.5, 'sine', 0.025, 0.14); },   // Glöckchen (Sternenbasar, Block 161h)
   star: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i === 4 ? 0.5 : 0.2, 'triangle', 0.15, i * 0.1)),
 };
 const sfx = k => { if (BATCH) return; try { SFX[k](); } catch (e) { /* ohne Ton weiter */ } };

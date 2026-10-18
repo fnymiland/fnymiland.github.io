@@ -278,7 +278,7 @@ function sdBuyItem(id, fromKatalog = false) {
   state.stardust -= price;
   state.sdItems.add(id);
   if (typeof cloudTouched === 'function') cloudTouched();
-  sfx('research'); if (typeof buildToolbar === 'function') buildToolbar(); save();
+  sfx('bell'); if (typeof buildToolbar === 'function') buildToolbar(); save();
   toast(`✨ Freigeschaltet: ${ITEMS[id].name} – jetzt im Baumenü`);
   return true;
 }
@@ -290,38 +290,205 @@ function sdThumb(id) {
   sdThumbs.set(id, url);
   return url;
 }
+// --- Basar „mehr special“ (Block 161h, Nutzer 18.10.2026: Entwurf A „Sternennacht“ + alle Extras, Händlerin Mondhase) ---
+// Sammlungen: [Schlüssel (ITEMS[id].sammlung), Zeichen, Kurzname]; die ersten 13 Waren (data.js) sind der „Sternengarten“
+const SD_SAMMLUNGEN = [['Sternengarten', '🌸', 'Sternengarten'], ['Eiszauber', '❄️', 'Eiszauber'], ['Turm & Himmelslaternen', '🏮', 'Turm'],
+  ['Prinzessinnen & Märchen', '👑', 'Märchen'], ['Inselleben', '🍃', 'Inselleben']];
+const sdSammlung = id => (ITEMS[id] && ITEMS[id].sammlung) || 'Sternengarten';
+const sdSmlg = key => SD_SAMMLUNGEN.find(s => s[0] === key) || [key, '✨', key];
+const sdSmlgCount = key => { const all = SD_SHOP.filter(s => sdSammlung(s.id) === key); return [all.filter(s => state.sdItems.has(s.id)).length, all.length]; };
+// NEU: heute zum ersten Mal im Angebot (bleibt den ganzen Tag NEU); Herzchen: gemerkt, Hinweis einmal am Tag, wenn es da ist
+const sdIsNew = (id, today = sdDay()) => !!(state.sdNew && state.sdNew.day === today && state.sdNew.ids.includes(id));
+function sdToggleWish(id) {
+  if (!sdShopItem(id) || state.sdItems.has(id)) return;
+  if (!state.sdWish) state.sdWish = new Set();
+  if (state.sdWish.has(id)) state.sdWish.delete(id); else state.sdWish.add(id);
+  save();
+}
+let sdWishAt = 0;
+function sdWishTick(now = Date.now(), today = sdDay()) {                 // aus der Spielschleife, höchstens alle 3 s
+  if (now - sdWishAt < 3000 || !state.sdWish || !state.sdWish.size || state.sdWishNote === today) return;
+  sdWishAt = now;
+  const hit = basarOffers(today).find(s => state.sdWish.has(s.id) && !state.sdItems.has(s.id));
+  if (!hit) return;
+  state.sdWishNote = today; save();
+  toast(`❤️ Dein Herzchen-Stück ist heute im Sternenbasar: ${ITEMS[hit.id].name}!`);
+}
+// Bis zur neuen Ware (Mitternacht, lokaler Kalendertag wie sdDay)
+function sdUntilNew(now = new Date()) {
+  const t = new Date(now); t.setHours(24, 0, 0, 0);
+  const min = Math.max(1, Math.ceil((t - now) / 60000)), h = Math.floor(min / 60);
+  return h ? `${h} Std ${min % 60} Min` : `${min} Min`;
+}
+// Der Mondhase sagt jeden Tag etwas – erst, was gerade wichtig ist, sonst einen der Tagessprüche (gleicher Tag = gleicher Spruch)
+const SD_HARE_SAYS = [
+  'Willkommen im Sternenbasar! Schau dich ruhig um.', 'Psst … heute Nacht sind besonders viele Sterne gefallen.',
+  'Ich habe die ganze Nacht Sternstaub gefegt. Hatschi!', 'Der Mond ist heute schön rund – gute Zeit für Schönes!',
+  'Meine Laterne hat mir den Weg zu deiner Insel gezeigt.', 'Alles hier ist frisch vom Himmel gefallen.',
+  'Was einmal da war, kommt wieder. Versprochen!', 'Hast du heute schon den Tageswunsch erfüllt? Der bringt Sternstaub.',
+  'Ich sammle Sternschnuppen. Und du?', 'Morgen bringe ich neue Sachen mit. Bis dann!',
+  'Eine Insel ohne Lieblingsstück ist wie ein Himmel ohne Stern.', 'Deine Insel gefällt mir. So gemütlich!',
+  'Schon mein Opa hat auf dem Mond Waren verkauft.', 'Leise, leise – die Sterne schlafen noch.',
+  'Gemütlich hier, oder? Ich hab extra Lichter aufgehängt.', 'Für Sternstaub gibt es nichts Nützliches – nur Schönes. So soll es sein!',
+  'Montags bringe ich immer etwas ganz Seltenes mit.', 'Im Sammelbuch siehst du, was es noch alles gibt.',
+  'Ich hab Möhrenkuchen gebacken. Leider nicht zu verkaufen.', 'Heute glitzert alles ein bisschen mehr.',
+  'Wer viel baut, findet viel Sternstaub.', 'Tipp aufs Herzchen – dann sag ich dir Bescheid, wenn es wieder da ist.',
+  'Mit „Ausprobieren“ siehst du, wie es auf deiner Insel aussieht.', 'Meine Ohren hören jede Sternschnuppe fallen.',
+  'Was ich nicht verkaufe, findest du im Katalog.', 'Heute duftet es nach Sternenstaub und Zimt.',
+  'Weißt du, warum der Mond leuchtet? Weil er sich freut, dich zu sehen.', 'Ich hab gehört, deine Bewohner mögen Blumen.',
+  'Einen schönen Tag dir – und eine sternenklare Nacht!', 'Komm morgen wieder, dann ist alles neu.'];
+function sdHareSay(offers, today = sdDay()) {
+  const rare = offers.find(s => s.rare && !state.sdItems.has(s.id)), left = sdWeekLeft(today), nm = s => ITEMS[s.id].name;
+  if (rare && left === 1) return `Das ${nm(rare)} ist nur noch heute da …`;
+  const wish = offers.find(s => state.sdWish && state.sdWish.has(s.id) && !state.sdItems.has(s.id));
+  if (wish) return `Schau mal, ${nm(wish)} ist da – das hattest du dir doch gemerkt!`;
+  for (const s of offers) {
+    if (state.sdItems.has(s.id)) continue;
+    const key = sdSammlung(s.id), [n, all] = sdSmlgCount(key);
+    if (n > 0 && all - n <= 2) return `Nur noch ${all - n} bis ${sdSmlg(key)[2]} komplett – und ${nm(s)} ist heute da!`;
+  }
+  if (rare && left === 7) return `Ganz neu diese Woche: ${nm(rare)}! Es bleibt sieben Tage.`;
+  const neu = offers.find(s => sdIsNew(s.id, today) && !state.sdItems.has(s.id));
+  if (neu && state.sdShown && state.sdShown.size > offers.length) return `Das hatte ich noch nie dabei: ${nm(neu)}!`;
+  if (SD_SHOP.length && SD_SHOP.every(s => state.sdItems.has(s.id))) return 'Du hast wirklich alles! Ich bin beeindruckt.';
+  return SD_HARE_SAYS[sdHash('hase:' + today + ':' + state.seed) % SD_HARE_SAYS.length];
+}
+// Mondhase (Sage vom Hasen im Mond, Entwurf tools/haendlerin-entwurf.js): auf der Mondsichel, Zipfelmütze, Laterne am Stab
+let sdHareCache = null;
+function sdHareUrl() {
+  if (sdHareCache !== null) return sdHareCache;
+  sdHareCache = '';
+  try {
+    const cv = document.createElement('canvas'); cv.width = 192; cv.height = 208;
+    const x = cv.getContext('2d'); if (!x) return '';
+    x.scale(1.04, 1.04); x.translate(-40, -15);
+    const ell = (cx, cy, rx, ry, col, rot = 0) => { x.fillStyle = col; x.beginPath(); x.ellipse(cx, cy, rx, ry, rot, 0, Math.PI * 2); x.fill(); };
+    const star = (cx, cy, r, col) => { x.fillStyle = col; x.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } x.closePath(); x.fill(); };
+    x.fillStyle = '#ffe6a0'; x.beginPath(); x.arc(110, 150, 62, 0.15 * Math.PI, 0.85 * Math.PI); x.arc(110, 128, 58, 0.82 * Math.PI, 0.18 * Math.PI, true); x.closePath(); x.fill();
+    ell(110, 150, 34, 30, '#f6f1ea');
+    ell(95, 52, 9, 30, '#f6f1ea', -0.15); ell(125, 52, 9, 30, '#f6f1ea', 0.15);
+    ell(95, 54, 4.5, 22, '#f7c2d0', -0.15); ell(125, 54, 4.5, 22, '#f7c2d0', 0.15);
+    ell(110, 100, 30, 27, '#f6f1ea');
+    x.fillStyle = '#4a3d8f'; x.beginPath(); x.moveTo(84, 82); x.quadraticCurveTo(112, 40, 150, 46); x.quadraticCurveTo(128, 64, 136, 82); x.closePath(); x.fill();
+    star(150, 46, 7, '#ffd979'); star(104, 70, 3.5, '#ffd979'); star(122, 66, 3, '#ffd979');
+    for (const d of [-11, 11]) { ell(110 + d, 102, 4, 4.6, '#2b2140'); ell(111.3 + d, 100.5, 1.4, 1.4, '#fff'); ell(110 + d * 1.6, 111, 6, 3.5, 'rgba(255,120,140,.45)'); }
+    ell(110, 108, 3, 2.2, '#e8869c');
+    x.strokeStyle = '#7a3b3b'; x.lineWidth = 2; x.lineCap = 'round'; x.beginPath(); x.arc(110, 111.4, 4, 0.25 * Math.PI, 0.75 * Math.PI); x.stroke();
+    x.strokeStyle = '#8a5a2a'; x.lineWidth = 4; x.beginPath(); x.moveTo(150, 168); x.lineTo(172, 70); x.stroke();
+    x.beginPath(); x.moveTo(172, 70); x.quadraticCurveTo(186, 66, 184, 82); x.stroke();
+    const gr = x.createRadialGradient(184, 98, 0, 184, 98, 30); gr.addColorStop(0, 'rgba(255,210,120,.65)'); gr.addColorStop(1, 'rgba(255,210,120,0)'); x.fillStyle = gr; x.fillRect(154, 68, 60, 60);
+    x.fillStyle = '#ffcf5a'; x.beginPath(); x.roundRect(176, 84, 16, 22, 5); x.fill(); x.fillStyle = '#c98a2a'; x.fillRect(176, 82, 16, 4); x.fillRect(176, 104, 16, 4);
+    ell(142, 160, 10, 7, '#f6f1ea');
+    const url = cv.toDataURL(); sdHareCache = url.startsWith('data:image') ? url : '';
+  } catch (e) { sdHareCache = ''; }
+  return sdHareCache;
+}
 let basarTab = 'heute';
-function basarCard(s, kat = false) {
+const SD_SPARKLES = '<i class="sp s1">✦</i><i class="sp s2">✧</i><i class="sp s3">✦</i><i class="sp s4">✧</i>';
+function basarCard(s, kat = false, feature = false) {
   const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id), price = kat ? sdKatalogPrice(s) : s.price;
-  return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}">
-    <span class="basar-rare">${s.rare ? `✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'}` : ''}</span>
-    <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}</div>
+  const key = sdSammlung(s.id), sm = sdSmlg(key), [n, all] = sdSmlgCount(key), wish = !!(state.sdWish && state.sdWish.has(s.id));
+  return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}${feature ? ' feature' : ''}">
+    ${sdIsNew(s.id) && !have && !kat ? '<span class="basar-new">NEU</span>' : ''}
+    ${have ? '' : `<button class="basar-heart${wish ? ' on' : ''}" data-sdwish="${s.id}" aria-label="${wish ? 'Nicht mehr merken' : 'Merken'}">${wish ? '❤️' : '🤍'}</button>`}
+    ${feature ? `<span class="basar-rare">✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'} ✦</span>` : ''}
+    <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}${s.rare && !have ? SD_SPARKLES : ''}</div>
     <b class="basar-name">${escHtml(d.name)}</b>
+    <span class="basar-smlg">${sm[1]} ${escHtml(sm[2])} ${n}/${all}</span>
     ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
-      : `<button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button>`}
+      : `<div class="basar-buy"><button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button><button class="btn small basar-try" data-sdtry="${s.id}" aria-label="Ausprobieren" title="Ausprobieren">👁${feature ? ' Ausprobieren' : ''}</button></div>`}
   </div>`;
+}
+// 📖 Sammelbuch: alle Waren je Sammlung – gekauft bunt, gesehen als Umriss mit Namen, nie gesehen als Umriss mit „???“
+function basarBook() {
+  return SD_SAMMLUNGEN.map(([key, ic, short]) => {
+    const list = SD_SHOP.filter(s => sdSammlung(s.id) === key);
+    if (!list.length) return '';
+    const [n, all] = sdSmlgCount(key);
+    return `<div class="book-sec"><div class="book-head"><b>${ic} ${escHtml(key)}</b><span>${n}/${all}</span></div>
+      <div class="book-bar"><i style="width:${Math.round(n / all * 100)}%"></i></div>
+      <div class="book-grid">${list.map(s => { const have = state.sdItems.has(s.id), seen = have || (state.sdShown && state.sdShown.has(s.id)), url = sdThumb(s.id);
+        return `<div class="book-item${have ? ' have' : ''}">${url ? `<img src="${url}" alt="">` : ''}<span>${s.rare ? '✦ ' : ''}${seen ? escHtml(ITEMS[s.id].name) : '???'}</span></div>`; }).join('')}</div></div>`;
+  }).join('');
+}
+// 👁 Ausprobieren (Block 161h): die Ware wie zum Bauen in der Hand – die Vorschau zeigt sie überall, Tippen setzt nur die Vorschau um,
+// gebaut wird nie (available/tap kennen sdTry). „Kaufen“ kauft und stellt sie dorthin, wo die Vorschau steht; jedes andere Werkzeug beendet es
+let sdTry = null;
+function sdTryStart(id) {
+  if (!sdShopItem(id) || state.sdItems.has(id)) return;
+  if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return; }
+  closeModal(); setTool('look'); sdTry = id; setTool(id); sdTryBar();
+  toast('👁 Probe: tipp auf deine Insel – gebaut wird nichts');
+}
+function sdTryBar() {
+  const bar = $('sd-try-bar');
+  if (!bar) return;
+  if (!sdTry) { bar.hidden = true; return; }
+  const s = sdShopItem(sdTry), miss = s.price - (state.stardust || 0);
+  bar.innerHTML = `<span class="sd-try-name">👁 ${escHtml(ITEMS[sdTry].name)}</span>
+    <button class="btn" id="sd-try-buy"${miss > 0 ? ' disabled' : ''}>✨ ${fmt(s.price)} kaufen${miss > 0 ? ` (fehlen ${fmt(miss)})` : ''}</button>
+    <button class="btn ghost" id="sd-try-back">Zurück</button>`;
+  bar.hidden = false;
+  $('sd-try-buy').onclick = () => sdTryBuy($('sd-try-buy').getBoundingClientRect());
+  $('sd-try-back').onclick = () => { setTool('look'); openBasar(); };
+}
+function sdTryClear() { sdTry = null; const bar = $('sd-try-bar'); if (bar) bar.hidden = true; }   // aus setTool: anderes Werkzeug
+function sdTryBuy(r = null) {
+  const id = sdTry;
+  if (!id || !sdBuyItem(id)) return false;
+  if (r) sdBurst(r.left + r.width / 2, r.top + r.height / 2);
+  sdTryClear();                                                          // in der Hand bleibt die Ware – jetzt echt
+  if (typeof hover !== 'undefined' && hover && Number.isInteger(hover.x)) {
+    const ok = ITEMS[id].small ? buildSmall(id, hover.x, hover.y, freeSlot(hover.x, hover.y, hoverSlot)) : build(id, hover.x, hover.y);
+    if (ok && typeof noteRecent === 'function') noteRecent(id);
+  } else toast('Jetzt hinstellen: tipp auf den Platz');
+  return true;
+}
+// Kauf: Sternenstaub sprüht vom Knopf (eigene Schicht über dem Fenster – das Fenster wird gleich neu gezeichnet)
+function sdBurst(x, y, n = 22) {
+  if (typeof document === 'undefined' || !document.body || !Element.prototype.animate) return;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) n = 6;
+  const box = document.createElement('div'); box.className = 'sd-burst'; document.body.appendChild(box);
+  for (let i = 0; i < n; i++) {
+    const e = document.createElement('i'), a = i / n * Math.PI * 2 + Math.random() * 0.4, r = 50 + Math.random() * 70;
+    e.textContent = i % 3 ? '✦' : '✧'; e.style.left = x + 'px'; e.style.top = y + 'px'; e.style.fontSize = (10 + Math.random() * 12) + 'px';
+    box.appendChild(e);
+    e.animate([{ transform: 'translate(-50%,-50%) scale(.4)', opacity: 1 }, { transform: `translate(calc(-50% + ${Math.cos(a) * r}px), calc(-50% + ${Math.sin(a) * r - 30}px)) scale(1)`, opacity: 1, offset: 0.6 },
+      { transform: `translate(calc(-50% + ${Math.cos(a) * r * 1.15}px), calc(-50% + ${Math.sin(a) * r + 10}px)) scale(.3)`, opacity: 0 }], { duration: 1100 + Math.random() * 400, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+  }
+  setTimeout(() => box.remove(), 1700);
 }
 function openBasar(tab = basarTab) {
   basarTab = tab;
   if (!state.sdSeen) { state.sdSeen = true; save(); }
-  const offers = basarOffers();
+  const today = sdDay(), offers = basarOffers(today);
   if (!state.sdShown) state.sdShown = new Set();
-  let neu = false; for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); neu = true; }
+  if (!state.sdNew || state.sdNew.day !== today) state.sdNew = { day: today, ids: [] };
+  let neu = false; for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); state.sdNew.ids.push(s.id); neu = true; }
   if (neu) save();
-  const kat = sdKatalog();
+  const kat = sdKatalog(), rare = offers.find(s => s.rare), norm = offers.filter(s => !s.rare);
   const body = tab === 'katalog'
     ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
       + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer – was du im Angebot siehst und nicht kaufst, landet hier.</p>')
-    : offers.length ? `<p class="muted">Heute im Angebot – morgen gibt es neue Sachen. Alles kommt irgendwann wieder.</p><div class="basar-grid">${offers.map(s => basarCard(s)).join('')}</div>`
+    : tab === 'buch' ? `<p class="muted">Alle Waren des Sternenbasars. Was du noch nie gesehen hast, ist ein Geheimnis.</p>${basarBook()}`
+    : offers.length ? `<p class="basar-when">Neue Ware in ${sdUntilNew()}</p>${rare ? basarCard(rare, false, true) : ''}<div class="basar-grid">${norm.map(s => basarCard(s)).join('')}</div>`
       : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
-  openModal(`<h2>⛺ Sternenbasar <span class="sd-have">✨ ${fmt(state.stardust || 0)}</span></h2>
-    <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📖 Katalog</button>
-      <button class="look" data-btab="sd">✨ Sternstaub</button></div>
+  const hare = sdHareUrl();
+  openModal(`<div class="basar-head">${hare ? `<img class="basar-hare" src="${hare}" alt="Mondhase">` : ''}<div class="basar-say">„${escHtml(sdHareSay(offers, today))}“</div></div>
+    <h2 class="basar-title">✦ Sternenbasar ✦ <button class="sd-have" data-btab="sd" aria-label="Sternstaub: ${fmt(state.stardust || 0)} – woher, Schatzkammer">✨ ${fmt(state.stardust || 0)}</button></h2>
+    <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📦 Katalog</button>
+      <button class="look${tab === 'buch' ? ' on' : ''}" data-btab="buch">📖 Sammelbuch</button></div>
     ${body}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   const c = $('modal-card');
+  c.classList.add('basar-night');
   for (const b of c.querySelectorAll('[data-btab]')) b.onclick = () => { if (b.dataset.btab === 'sd') openStardust(); else openBasar(b.dataset.btab); };
-  for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => { if (sdBuyItem(b.dataset.sdbuy, !!b.dataset.kat)) openBasar(); };
+  for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => {
+    const r = b.getBoundingClientRect();
+    if (sdBuyItem(b.dataset.sdbuy, !!b.dataset.kat)) { sdBurst(r.left + r.width / 2, r.top + r.height / 2); openBasar(); }
+  };
+  for (const b of c.querySelectorAll('[data-sdtry]')) b.onclick = () => sdTryStart(b.dataset.sdtry);
+  for (const b of c.querySelectorAll('[data-sdwish]')) b.onclick = () => { sdToggleWish(b.dataset.sdwish); openBasar(); };
   $('m-close').onclick = closeModal;
 }
 

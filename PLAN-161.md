@@ -135,3 +135,14 @@ Preise in Klammern: Zeit bei 72.000/s. Fast alles mit **Stufen**, damit es immer
 1. Turm-Sammlung **aufgefüllt** auf 13 (Leseecke, Kräutergarten, Blumenkranz-Bank, Sonnenblumen, Wandgemälde, Glühwürmchen-Glas, ✦ Sonnenpavillon). Zusammen 65 Waren, 12 selten.
 2. **Katalog** (vom Nutzer mir überlassen): wie bei Animal Crossing – was einmal im Tagesangebot war (`state.sdShown`), lässt sich später für das 1,5-fache nachbestellen (`sdKatalogPrice`, auf 10 gerundet). Seltene nie im Katalog, die bleiben ein Wochenereignis.
 3. **Taler-Sparziele (Abschnitt 3: Prachtbauten, goldene Varianten, Inselzauber, Denkmal) vorerst nicht nötig** – das Problem „zu viele Taler, nichts zum Sparen“ ist über die Schatzkammer (Tageskurs) + Sternenbasar gelöst. 161d–f bleiben als „später“ stehen.
+
+## 9. Basar „mehr special“ (Nutzer 18.10.2026)
+
+Gewählt: **Entwurf A „Sternennacht“** (Nachthimmel, Gold, seltenes Stück groß im Lichtschein, Countdown zur neuen Ware) + **alle** Extras:
+1. Händlerin **Mondhase** (Sage vom Hasen im Mond; Mondsichel, Zipfelmütze mit Sternen, Laterne am Stab; Entwurf tools/haendlerin-entwurf.js) mit Tagesspruch (≈ 30, je nach Lage: letzter Tag des Seltenen, Herzchen-Ware da, Sammlung fast voll …).
+2. Sammlung + Fortschritt auf jeder Karte („❄️ Eiszauber 2/15“).
+3. Herzchen/Wunschliste (privat); ist eine gemerkte Ware im Angebot → einmal am Tag Hinweis.
+4. Ausprobieren: Ware probeweise in die Insel halten → Kaufen / Zurück.
+5. Glitzern am seltenen Stück; Kauf: Sternenstaub fliegt + Glöckchen.
+6. Sammelbuch (Reiter): alle Waren, Gekauftes bunt, Rest grauer Umriss.
++ NEU-Schild für noch nie gesehene Waren.

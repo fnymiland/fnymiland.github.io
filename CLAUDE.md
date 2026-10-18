@@ -393,6 +393,10 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `sdAdd(n, key)` – einmalige mit Schlüssel in `state.sdGot` (nie doppelt; `sdCheck(true)` zahlt beim Laden still nach). Neue
     Quellen: Menge in `SD`, Zeile in `SD_SOURCES`. Schatzkammer nur über `sdBuy` (Tageskurs `sdTreasury`, Kalendertag `sdDay`, nur
     vorwärts); läuft nie über ↶ (sonst kämen die Taler zurück), ruft `cloudTouched`. Anzeige `sdHud` (Pille ab 481 px, sonst Zeile im Lager).
+    Basar (161h): Waren-Karten nur über `basarCard`, Sammlung über `sdSammlung` (fehlt = „Sternengarten“). 👁 Ausprobieren = `sdTry`:
+    `available` sagt ja, `tap` setzt nur die Vorschau um, `setTool` mit anderem Werkzeug beendet es (`sdTryClear`); Kaufen über
+    `sdTryBuy`. Basar-Waren stehen nicht in „Neu freigeschaltet“ (`unlockKeys`), der Kauf meldet sich selbst. Neue private
+    Basar-Felder (`sdNew`, `sdWish`, `sdWishNote`) auch in `LIVE_PRIV`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

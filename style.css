@@ -339,15 +339,69 @@ html, body {
 .sd-row { cursor: pointer; color: #7a4fc4; }
 .sd-wish { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: rgba(122, 79, 196, .08); font-size: 14px; }
 .sd-wish.done { background: rgba(88, 179, 106, .12); }
-.basar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin: 8px 0; }
-.basar-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 8px; border-radius: 14px; background: #fffaf0; border: 2px solid rgba(122, 79, 196, .18); text-align: center; font-size: 14px; }
+.basar-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 8px 0; }
+.basar-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px 8px; border-radius: 14px; background: #fffaf0; border: 2px solid rgba(122, 79, 196, .18); text-align: center; font-size: 13px; }
 .basar-card.rare { border-color: #f5c84b; background: linear-gradient(#fff8e0, #fffaf0); }
 .basar-card.have { opacity: .7; }
 .basar-card > :last-child { margin-top: auto; }                     /* Preis/„gekauft“ immer unten: gleiche Höhe in einer Reihe */
-.basar-pic { width: 100%; height: 86px; display: flex; align-items: center; justify-content: center; }
-.basar-pic img { max-width: 100%; max-height: 86px; }
-.basar-rare { font-size: 11px; font-weight: 800; color: #c9962a; line-height: 1.2; min-height: 2.4em; display: flex; align-items: center; } /* jede Karte hat den Platz: Bild, Name, Preis in einer Reihe gleich hoch */
+.basar-pic { position: relative; width: 100%; height: 70px; display: flex; align-items: center; justify-content: center; }
+.basar-pic img { max-width: 100%; max-height: 70px; }
+.basar-rare { font-size: 11px; font-weight: 800; color: #c9962a; line-height: 1.2; letter-spacing: .5px; }
 .basar-name { min-height: 2.5em; display: flex; align-items: flex-start; justify-content: center; line-height: 1.25; }
+.basar-smlg { font-size: 11px; font-weight: 700; opacity: .7; }
+.basar-new { position: absolute; left: -5px; top: -7px; z-index: 2; padding: 1px 7px; border-radius: 6px; background: #e8457a; color: #fff; font-size: 10px; font-weight: 900; transform: rotate(-8deg); }
+.basar-heart { position: absolute; right: 4px; top: 4px; z-index: 2; border: 0; background: none; padding: 2px; font-size: 15px; line-height: 1; cursor: pointer; }
+/* Sternennacht (Block 161h, Entwurf A): Nachthimmel mit Sternen, Gold, der Mondhase oben */
+.card.basar-night { color: #fff6dc; background-color: #2f2a5e;
+  background-image: radial-gradient(1.5px 1.5px at 22px 34px, #fff 60%, transparent), radial-gradient(1px 1px at 90px 12px, #fff 60%, transparent),
+    radial-gradient(1.5px 1.5px at 140px 80px, rgba(255,255,255,.8) 60%, transparent), radial-gradient(1px 1px at 60px 110px, #fff 60%, transparent),
+    radial-gradient(1px 1px at 170px 140px, rgba(255,255,255,.7) 60%, transparent), linear-gradient(#1d2448, #2f2a5e 60%, #45306b);
+  background-size: 190px 160px, 190px 160px, 190px 160px, 190px 160px, 190px 160px, 100% 100%; box-shadow: 0 6px 0 #1a1636, 0 20px 50px rgba(20, 15, 40, .45); }
+.basar-night p, .basar-night b, .basar-night h2 { color: #fff6dc; }
+.basar-night .muted { color: rgba(255, 246, 220, .72); }
+.basar-head { display: flex; align-items: center; gap: 10px; margin: -6px 0 2px; }
+.basar-hare { width: 66px; height: 72px; flex: none; }
+.basar-say { flex: 1; position: relative; padding: 8px 12px; border-radius: 14px; background: rgba(255, 255, 255, .13); font-size: 13px; font-weight: 700; line-height: 1.35; }
+.basar-say::before { content: ''; position: absolute; left: -7px; top: 50%; margin-top: -7px; border: 7px solid transparent; border-left: 0; border-right-color: rgba(255, 255, 255, .13); }
+.basar-night h2.basar-title { text-align: center; color: #ffd979; font-size: 22px; margin: 2px 0 4px; }
+.basar-title .sd-have { font: inherit; background: none; cursor: pointer; display: inline-block; vertical-align: middle; margin-left: 4px; padding: 1px 10px; border-radius: 99px; border: 1.5px solid #ffd979; color: #ffd979; font-size: 14px; }
+.basar-night .look { background: rgba(255, 255, 255, .1); color: #fff6dc; box-shadow: none; }
+.basar-night .look.on { background: #ffd979; color: #4a3410; box-shadow: 0 2px 0 #c9962a; }
+.basar-when { text-align: center; margin: 2px 0 8px; font-size: 12px !important; color: rgba(255, 246, 220, .75) !important; }
+.basar-night .basar-card { background: rgba(255, 255, 255, .07); border: 1.5px solid rgba(255, 255, 255, .17); }
+.basar-night .basar-card.rare { border-color: #ffd979; background: rgba(255, 217, 121, .08); }
+.basar-night .basar-card.feature { border: 2px solid #ffd979; padding: 10px 10px 12px; margin-bottom: 4px; background: radial-gradient(circle at 50% 42%, rgba(255, 217, 121, .34), rgba(255, 217, 121, .04) 62%); }
+.basar-card.feature .basar-pic { height: 120px; }
+.basar-card.feature .basar-pic img { max-height: 120px; }
+.basar-card.feature .basar-name { min-height: 0; font-size: 17px; }
+.basar-night .basar-rare { color: #ffd979; }
+.basar-night .btn.small { background: rgba(255, 217, 121, .2); color: #ffd979; box-shadow: none; border-radius: 99px; font-weight: 800; }
+.basar-night .basar-card.feature .btn.small { background: #ffd979; color: #4a3410; box-shadow: 0 3px 0 #c9962a; padding: 5px 18px; font-size: 15px; }
+.basar-buy { display: flex; gap: 4px; justify-content: center; align-items: center; }
+.basar-night .btn.small.basar-try { background: rgba(255, 255, 255, .1); color: #fff6dc; padding: 5px 8px; }
+.basar-night .basar-card.feature .btn.small.basar-try { background: rgba(255, 255, 255, .12); color: #fff6dc; box-shadow: none; padding: 5px 12px; font-size: 13px; }
+.basar-night .btn.small:disabled { background: rgba(255, 255, 255, .1); color: rgba(255, 246, 220, .55); box-shadow: none; }
+.basar-night .basar-card.feature .btn.small:disabled { background: rgba(255, 217, 121, .35); color: #4a3410; box-shadow: none; }
+.basar-night .basar-have { color: #9fe0a8; }
+.basar-night .btn.ghost { background: rgba(255, 255, 255, .12); color: #fff6dc; box-shadow: 0 4px 0 rgba(0, 0, 0, .25); }
+/* Glitzern am Seltenen */
+.basar-pic .sp { position: absolute; font-style: normal; color: #ffe9a0; pointer-events: none; animation: sd-twinkle 2.4s ease-in-out infinite; }
+.basar-pic .s1 { left: 18%; top: 8%; font-size: 15px; } .basar-pic .s2 { right: 20%; top: 2%; font-size: 12px; animation-delay: .6s; }
+.basar-pic .s3 { right: 14%; top: 45%; font-size: 11px; animation-delay: 1.2s; } .basar-pic .s4 { left: 12%; top: 55%; font-size: 10px; animation-delay: 1.8s; }
+@keyframes sd-twinkle { 0%, 100% { opacity: .15; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .basar-pic .sp { animation: none; opacity: .8; } }
+.sd-burst { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.sd-burst i { position: absolute; font-style: normal; color: #ffd979; text-shadow: 0 0 6px rgba(255, 217, 121, .8); }
+/* 📖 Sammelbuch */
+.book-sec { margin: 10px 0 14px; }
+.book-head { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; }
+.book-bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .14); margin: 4px 0 8px; overflow: hidden; }
+.book-bar i { display: block; height: 100%; background: #ffd979; border-radius: 3px; }
+.book-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; }
+.book-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 2px; border-radius: 10px; background: rgba(255, 255, 255, .05); font-size: 10px; font-weight: 700; text-align: center; line-height: 1.2; }
+.book-item img { height: 44px; max-width: 100%; filter: brightness(0) invert(1) opacity(.22); }
+.book-item.have img { filter: none; }
+.book-item span { opacity: .6; } .book-item.have span { opacity: 1; }
 .basar-have { font-size: 12px; color: var(--green-d); font-weight: 700; }                       /* ✨ Sternstaub (Block 161) */
 .sd-src > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font-size: 14px; }
 .sd-have { color: #7a4fc4; }
@@ -932,6 +986,16 @@ body.visiting #net-btn { display: none !important; }
   max-width: calc(100vw - 32px);
 }
 #sel-bar[hidden] { display: none; }
+/* 👁 Ausprobieren im Sternenbasar (Block 161h) */
+#sd-try-bar { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--bar, 160px) + 54px); z-index: 30;
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: center; width: max-content; max-width: calc(100vw - 32px);
+  padding: 8px 10px; border-radius: 18px; background: #2f2a5e; color: #fff6dc; box-shadow: 0 4px 0 #1a1636, 0 8px 20px rgba(20, 15, 40, .35); }
+#sd-try-bar[hidden] { display: none; }
+#sd-try-bar .sd-try-name { font-weight: 800; font-size: 14px; padding: 0 4px; }
+#sd-try-bar .btn { flex: none; padding: 7px 14px; font-size: 14px; }
+#sd-try-bar #sd-try-buy { background: #ffd979; color: #4a3410; box-shadow: 0 3px 0 #c9962a; }
+#sd-try-bar #sd-try-buy:disabled { background: rgba(255, 217, 121, .35); box-shadow: none; }
+#sd-try-bar .btn.ghost { background: rgba(255, 255, 255, .14); color: #fff6dc; box-shadow: none; }
 #sel-bar .btn { flex: none; box-shadow: 0 3px 0 var(--shadow), 0 6px 14px rgba(60, 40, 20, .15); }
 
 /* ---------- Bauleiste, Entwurf B (Nutzer, 08.10.2026): eine Reihe; ein Bereich klappt darüber ein Feld mit allem auf ---------- */
