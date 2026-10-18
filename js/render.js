@@ -901,7 +901,7 @@ function putSprite(e, cx, cy, z) {
   }
 }
 // Gebäude (Anker ax, ay) an Bildschirmpunkt c; true = erledigt
-const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
+const CLOCK_SPRITES = new Set(['rathaus', 'hbf', 'uhrturm', 'uhrmacher']);       // Uhren: alle 10 Spielminuten ein neues Bildchen (Block 101)
 // Bewegtes zeichnen – im GL-Bild in eine Zelle der Sammelfläche (Block 144)
 // lift: um so viele Bildpunkte angehoben (Feld auf einer Anhöhe, Block 157) – Zelle im GL-Bild mit, gezeichnet verschoben
 function moverLive(m, z, now, walker = false, lift = 0) {

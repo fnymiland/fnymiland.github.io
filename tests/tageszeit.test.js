@@ -35,6 +35,23 @@ describe('Spieluhr (Block 101)', () => {
     const d = game(`(() => { const c = clockNow(${at(15.5)}); return [c.getHours(), c.getMinutes()]; })()`);
     expect(d).toEqual([15, 30]);
   });
+  it('auch der Uhrmacher zeigt die Spielzeit (vorher die echte Uhr samt Sekunden) und bekommt alle 10 Spielminuten ein neues Bildchen', () => {
+    // Zeichenaufrufe mitschreiben (Zahlen gerundet), um zwei Zeichnungen zu vergleichen
+    const drawAt = (hour, real) => {
+      vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(real);
+      try { return game(`(() => { const out = [], r = v => typeof v === 'number' ? Math.round(v * 1000) / 1000 : typeof v === 'string' ? v : typeof v;
+        const P = new Proxy({}, { get(t, p) { if (p === 'canvas') return { width: 100, height: 100 }; if (p === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }); if (p === 'measureText') return () => ({ width: 10 });
+          if (p === 'createRadialGradient' || p === 'createLinearGradient') return () => ({ addColorStop() {} }); if (p === 'createPattern') return () => ({});
+          return (...a) => { out.push(String(p) + '(' + a.map(r).join(',') + ')'); }; }, set(t, p, v) { out.push(String(p) + '=' + r(v)); return true; } });
+        const gh = gameHour, prev = g; gameHour = () => ${hour}; g = P; PASS = 'object';
+        try { drawObject('uhrmacher', 0, 0, 1, 0, 6, 6, 1, { b: 'uhrmacher', lvl: 1, rot: 0 }); } finally { g = prev; gameHour = gh; PASS = null; }
+        return out.join(';'); })()`); } finally { vi.useRealTimers(); }
+    };
+    const a = drawAt(15.5, new Date(2026, 9, 18, 10, 9, 30));
+    expect(drawAt(15.5, new Date(2026, 9, 18, 17, 42, 13))).toBe(a);                 // echte Uhr egal
+    expect(drawAt(9, new Date(2026, 9, 18, 10, 9, 30))).not.toBe(a);                 // Spielzeit bewegt die Zeiger
+    expect(game("CLOCK_SPRITES.has('uhrmacher')")).toBe(true);
+  });
   it('Sternschnuppen kommen nachts wirklich (vorher nie: Schwelle 0,5 über der dunkelsten Nacht)', () => {
     game(`state.tiles.set('6,6', { b: 'haus', lvl: 1 }); T.wonders = { ...(T.wonders || {}), sternwarte: true }; fallenStars.length = 0;
       globalThis.__n = nightAt; nightAt = () => NIGHT_MAX; globalThis.__r = Math.random; Math.random = () => 0;

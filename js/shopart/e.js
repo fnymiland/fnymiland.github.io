@@ -78,7 +78,7 @@
   ART_SHADOW.boutique = [27, 0.2];
 
   // ------------------------------------------------------------------ Uhrmacher
-  // Turmuhr um (0, 0) mit Radius r (px × z): Messingring, Zifferblatt, zwei Zeiger mit der echten Uhrzeit
+  // Turmuhr um (0, 0) mit Radius r (px × z): Messingring, Zifferblatt, zwei Zeiger mit der Spielzeit (wie alle Uhren, Block 101)
   function towerClock(r, z, date, on) {
     circle(0, 0, (r + 1) * z, C('#c9a24a'));
     circle(0, 0, r * z, on ? '#fff6c8' : C('#fffdf6'));
@@ -104,7 +104,7 @@
     }
   }
   SHOP_ART.uhrmacher = function (K, s, now) {
-    const WALL = '#e4f1ff', SLATE = '#6b7a8f', on = lit(), z = K.z, date = new Date(), H = 17;
+    const WALL = '#e4f1ff', SLATE = '#6b7a8f', on = lit(), z = K.z, date = clockNow(), H = 17;
     const TL = 23.5, TH = 10, TR = 8;                                                       // Türmchen: Fuß im Dach, Höhe, Dach
     const house = () => {
       const B = shopHouse(K, { wall: WALL, roof: SLATE, roofType: 'hip', h: H, roofH: 11 });
