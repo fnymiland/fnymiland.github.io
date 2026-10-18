@@ -264,12 +264,18 @@ function basarOffers(today = sdDay()) {
   const pool = SD_SHOP.filter(s => !s.katalog);
   return [...pick(pool.filter(s => !s.rare), 3, today), ...pick(pool.filter(s => s.rare), 1, 'w' + sdWeek(today))];
 }
-function sdBuyItem(id) {
+// 📖 Katalog (Animal-Crossing-Art, entschieden 18.10.2026): was der Basar schon einmal angeboten hat, gibt es jederzeit nach – zum
+// anderthalbfachen Preis; Seltenes nur in seiner Woche. Gesehen = state.sdShown (beim Öffnen des Basars gemerkt)
+const sdKatalogPrice = s => Math.ceil(s.price * 1.5 / 10) * 10;
+const sdKatalog = () => SD_SHOP.filter(s => !s.rare && state.sdShown && state.sdShown.has(s.id) && !state.sdItems.has(s.id));
+function sdBuyItem(id, fromKatalog = false) {
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return false; }
   const s = sdShopItem(id);
   if (!s || state.sdItems.has(id)) return false;
-  if ((state.stardust || 0) < s.price) { fail(`Zu wenig Sternstaub (✨ ${fmt(s.price)} nötig)`); return false; }
-  state.stardust -= s.price;
+  if (fromKatalog && (s.rare || !state.sdShown || !state.sdShown.has(id))) return false;
+  const price = fromKatalog ? sdKatalogPrice(s) : s.price;
+  if ((state.stardust || 0) < price) { fail(`Zu wenig Sternstaub (✨ ${fmt(price)} nötig)`); return false; }
+  state.stardust -= price;
   state.sdItems.add(id);
   if (typeof cloudTouched === 'function') cloudTouched();
   sfx('research'); if (typeof buildToolbar === 'function') buildToolbar(); save();
@@ -285,22 +291,27 @@ function sdThumb(id) {
   return url;
 }
 let basarTab = 'heute';
-function basarCard(s) {
-  const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id);
+function basarCard(s, kat = false) {
+  const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id), price = kat ? sdKatalogPrice(s) : s.price;
   return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}">
     ${s.rare ? `<span class="basar-rare">✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'}</span>` : ''}
     <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}</div>
     <b>${escHtml(d.name)}</b>
     ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
-      : `<button class="btn small" data-sdbuy="${s.id}"${(state.stardust || 0) < s.price ? ' disabled' : ''}>✨ ${fmt(s.price)}</button>`}
+      : `<button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button>`}
   </div>`;
 }
 function openBasar(tab = basarTab) {
   basarTab = tab;
   if (!state.sdSeen) { state.sdSeen = true; save(); }
-  const offers = basarOffers(), kat = SD_SHOP.filter(s => s.katalog);
+  const offers = basarOffers();
+  if (!state.sdShown) state.sdShown = new Set();
+  let neu = false; for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); neu = true; }
+  if (neu) save();
+  const kat = sdKatalog();
   const body = tab === 'katalog'
-    ? (kat.length ? `<div class="basar-grid">${kat.map(basarCard).join('')}</div>` : '<p class="muted">Der Katalog füllt sich bald.</p>')
+    ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
+      + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer – was du im Angebot siehst und nicht kaufst, landet hier.</p>')
     : offers.length ? `<p class="muted">Heute im Angebot – morgen gibt es neue Sachen. Alles kommt irgendwann wieder.</p><div class="basar-grid">${offers.map(basarCard).join('')}</div>`
       : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
   openModal(`<h2>⛺ Sternenbasar <span class="sd-have">✨ ${fmt(state.stardust || 0)}</span></h2>
@@ -310,7 +321,7 @@ function openBasar(tab = basarTab) {
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
   const c = $('modal-card');
   for (const b of c.querySelectorAll('[data-btab]')) b.onclick = () => { if (b.dataset.btab === 'sd') openStardust(); else openBasar(b.dataset.btab); };
-  for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => { if (sdBuyItem(b.dataset.sdbuy)) openBasar(); };
+  for (const b of c.querySelectorAll('[data-sdbuy]')) b.onclick = () => { if (sdBuyItem(b.dataset.sdbuy, !!b.dataset.kat)) openBasar(); };
   $('m-close').onclick = closeModal;
 }
 

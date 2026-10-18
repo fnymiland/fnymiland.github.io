@@ -129,3 +129,9 @@ Preise in Klammern: Zeit bei 72.000/s. Fast alles mit **Stufen**, damit es immer
 3. Sternstaub-Dinge: **nur Schönes**, keine Spielvorteile.
 4. Tageswunsch: **einer am Tag**, 25 ✨.
 5. Liste so; Preise wie oben (Maßstab 1 h ≈ 260 Mio).
+
+## 8. Entscheidungen (Nutzer 18.10.2026)
+
+1. Turm-Sammlung **aufgefüllt** auf 13 (Leseecke, Kräutergarten, Blumenkranz-Bank, Sonnenblumen, Wandgemälde, Glühwürmchen-Glas, ✦ Sonnenpavillon). Zusammen 65 Waren, 12 selten.
+2. **Katalog** (vom Nutzer mir überlassen): wie bei Animal Crossing – was einmal im Tagesangebot war (`state.sdShown`), lässt sich später für das 1,5-fache nachbestellen (`sdKatalogPrice`, auf 10 gerundet). Seltene nie im Katalog, die bleiben ein Wochenereignis.
+3. **Taler-Sparziele (Abschnitt 3: Prachtbauten, goldene Varianten, Inselzauber, Denkmal) vorerst nicht nötig** – das Problem „zu viele Taler, nichts zum Sparen“ ist über die Schatzkammer (Tageskurs) + Sternenbasar gelöst. 161d–f bleiben als „später“ stehen.

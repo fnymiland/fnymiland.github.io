@@ -205,8 +205,28 @@ describe('Seltenheit (Nutzer 17.10.2026: „wirklich ein Spielziel“)', () => {
   });
   it('Preise: normal 80–200, selten 350–450; mindestens 58 Waren, davon mindestens 10 selten', () => {
     const shop = game('SD_SHOP.map(s => [s.id, s.price, !!s.rare])');
-    expect(shop.length).toBeGreaterThanOrEqual(58);
+    expect(shop.length).toBeGreaterThanOrEqual(65);
     for (const [id, p, r] of shop) { if (r) { expect(p, id).toBeGreaterThanOrEqual(350); expect(p, id).toBeLessThanOrEqual(450); } else { expect(p, id).toBeGreaterThanOrEqual(80); expect(p, id).toBeLessThanOrEqual(200); } }
     expect(shop.filter(s => s[2]).length).toBeGreaterThanOrEqual(10);
+  });
+});
+
+describe('Katalog (18.10.2026)', () => {
+  it('Gesehenes zum anderthalbfachen Preis nachbestellen; Seltenes nie; Ungesehenes nie; gemerkt im Spielstand', () => {
+    game("state.sdItems = new Set(); state.sdShown = new Set(); state.stardust = 1000; state.sdSeen = true; openBasar('heute'); closeModal()");
+    const shown = game('[...state.sdShown]');
+    expect(shown.length).toBe(4);
+    const norm = game("[...state.sdShown].find(id => !sdShopItem(id).rare)"), rare = game("[...state.sdShown].find(id => sdShopItem(id).rare)");
+    expect(game('sdKatalog().map(s => s.id)')).toEqual(expect.arrayContaining([norm]));
+    expect(game('sdKatalog().some(s => s.rare)')).toBe(false);
+    const p = game(`sdKatalogPrice(sdShopItem('${norm}'))`), p0 = game(`sdShopItem('${norm}').price`);
+    expect(p).toBe(Math.ceil(p0 * 1.5 / 10) * 10);
+    expect(game(`sdBuyItem('${rare}', true)`)).toBe(false);
+    const nie = game("SD_SHOP.find(s => !s.rare && !state.sdShown.has(s.id)).id");
+    expect(game(`sdBuyItem('${nie}', true)`)).toBe(false);
+    expect(game(`sdBuyItem('${norm}', true)`)).toBe(true);
+    expect(game('state.stardust')).toBe(1000 - p);
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect([...d.sdShown].length).toBe(4);
   });
 });

@@ -248,6 +248,77 @@ SD_WAREN.EISZAUBER = (() => {
       poly([[cx - 3 * z, cy - 6 * z], [cx + 5 * z, cy - 6 * z], [cx + 5 * z, cy - 5 * z], [cx - 3 * z, cy - 5 * z]], C('#e8d0a8'));
       for (let k = 0; k < 8; k++) { const s = k & 1 ? -1 : 1, y = cy - (8 + k * 2) * z; circle(cx + (1 + s * 3) * z, y, 0.9 * z, C([PINK, '#ffffff', '#ffd23f', LILA][k % 4])); }
     }],
+    // Auffüllung (Nutzer 18.10.2026: „ja“)
+    ['Leseecke', (cx, cy, z) => {
+      const lit = sdLit();
+      sdShadow(cx, cy, 9, z);
+      poly([[cx - 6 * z, cy], [cx + 2 * z, cy], [cx + 2 * z, cy - 6 * z], [cx - 6 * z, cy - 6 * z]], C('#8a62c4'));            // Sessel
+      poly([[cx - 6 * z, cy - 6 * z], [cx + 2 * z, cy - 6 * z], [cx + 2 * z, cy - 7.4 * z], [cx - 6 * z, cy - 7.4 * z]], C('#a986e0'));
+      poly([[cx - 6 * z, cy - 7 * z], [cx - 4 * z, cy - 7 * z], [cx - 4 * z, cy - 15 * z], [cx - 6 * z, cy - 14 * z]], C('#7a54b4'));
+      for (const s of [-1, 1]) ellipse(cx + (s < 0 ? -6.4 : 2.4) * z, cy - 8 * z, 1.4 * z, 2.2 * z, C('#9b74d4'));
+      ellipse(cx - 2 * z, cy - 8 * z, 2.2 * z, 1.4 * z, C('#ffd23f'));                                                // Kissen
+      for (const [k, c] of [[0, '#d9534a'], [1, '#58b3e8'], [2, '#58b36a'], [3, '#e9a23b']]) poly([[cx + 4 * z, cy - k * 1.6 * z], [cx + 9 * z, cy - k * 1.6 * z], [cx + 9 * z, cy - (k + 1) * 1.6 * z + 0.3 * z], [cx + 4 * z, cy - (k + 1) * 1.6 * z + 0.3 * z]], C(c));   // Bücherstapel
+      sdLine('#6b4f3a', 0.8, z, [[cx + 7 * z, cy - 6.4 * z], [cx + 7 * z, cy - 14 * z]]);
+      poly([[cx + 4.6 * z, cy - 13 * z], [cx + 9.4 * z, cy - 13 * z], [cx + 8.4 * z, cy - 17 * z], [cx + 5.6 * z, cy - 17 * z]], lit ? '#ffe39a' : C('#fff0c2'));   // Leselampe
+      if (lit) glowAt(cx + 7 * z, cy - 13 * z, 18 * z, z);
+    }],
+    ['Kräutergarten', (cx, cy, z) => {
+      sdShadow(cx, cy, 10, z);
+      poly([[cx - 10 * z, cy - 2 * z], [cx, cy + 3 * z], [cx + 10 * z, cy - 2 * z], [cx, cy - 7 * z]], C('#6b4f3a'));
+      poly([[cx - 10 * z, cy - 2 * z], [cx, cy + 3 * z], [cx, cy + 5 * z], [cx - 10 * z, cy]], C('#8a5a3c')); poly([[cx + 10 * z, cy - 2 * z], [cx, cy + 3 * z], [cx, cy + 5 * z], [cx + 10 * z, cy]], C('#7a4f30'));
+      for (const [dx, dy, c, r] of [[-6, -2, '#5fa84a', 2.2], [-2, -4, '#7fbf5a', 2], [2, -2, '#4f9e3a', 2.4], [6, -3, '#8fcf6a', 1.8], [0, 0, '#6fb04a', 2], [-3, 1, '#b48cff', 1.2], [4, 0, '#ffffff', 1]])
+        { for (let k = 0; k < 3; k++) circle(cx + (dx + (k - 1) * 0.8) * z, cy + (dy - 1.5 - (k & 1)) * z, r * 0.6 * z, C(c)); }
+      sdLine('#a8794e', 0.6, z, [[cx + 8 * z, cy - 1 * z], [cx + 8 * z, cy - 7 * z]]); poly([[cx + 6 * z, cy - 7 * z], [cx + 10 * z, cy - 7 * z], [cx + 10 * z, cy - 9.4 * z], [cx + 6 * z, cy - 9.4 * z]], C('#f3e2c2'));   // Schildchen
+    }],
+    ['Blumenkranz-Bank', (cx, cy, z) => {
+      sdShadow(cx, cy, 9, z);
+      poly([[cx - 8 * z, cy - 4 * z], [cx + 8 * z, cy - 4 * z], [cx + 8 * z, cy - 5.6 * z], [cx - 8 * z, cy - 5.6 * z]], C('#c69a5e'));
+      for (const dx of [-7, 7]) sdLine('#8a5a3c', 1, z, [[cx + dx * z, cy - 4 * z], [cx + dx * z, cy]]);
+      poly([[cx - 8 * z, cy - 6 * z], [cx + 8 * z, cy - 6 * z], [cx + 8 * z, cy - 12 * z], [cx - 8 * z, cy - 12 * z]], C('#d8b27a'));
+      for (let k = 0; k <= 12; k++) { const x = cx + (-8 + k * 16 / 12) * z, y = cy - (12.6 - Math.sin(k / 12 * Math.PI) * 1.4) * z; circle(x, y, 1.2 * z, C('#6fb04a')); if (k % 2 === 0) rose(x, y - 0.4 * z, 1 * z, [PINK, '#ffffff', LILA, '#ffd23f'][k / 2 % 4]); }
+    }],
+    ['Sonnenblumen', (cx, cy, z) => {
+      sdShadow(cx, cy, 7, z);
+      for (const [dx, h] of [[-4, 16], [0, 20], [4, 14]]) {
+        sdLine('#5f9e3a', 1, z, [[cx + dx * z, cy], [cx + dx * z, cy - h * z]]);
+        ellipse(cx + (dx + 1.6) * z, cy - h * 0.5 * z, 2 * z, 1 * z, C('#6fb04a'));
+        const p = [cx + dx * z, cy - h * z];
+        for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; ellipse(p[0] + Math.cos(a) * 2.6 * z, p[1] + Math.sin(a) * 2.2 * z, 1.2 * z, 1.2 * z, C('#ffd23f')); }
+        circle(p[0], p[1], 1.7 * z, C('#7a4a1e'));
+      }
+    }],
+    ['Wandgemälde', (cx, cy, z) => {
+      sdShadow(cx, cy, 9, z);
+      poly([[cx - 9 * z, cy], [cx + 9 * z, cy], [cx + 9 * z, cy - 14 * z], [cx - 9 * z, cy - 14 * z]], C('#e9dcc6'));
+      poly([[cx - 9.6 * z, cy - 14 * z], [cx + 9.6 * z, cy - 14 * z], [cx + 9.6 * z, cy - 15.6 * z], [cx - 9.6 * z, cy - 15.6 * z]], C('#cdbb9c'));
+      poly([[cx - 8 * z, cy - 1 * z], [cx + 8 * z, cy - 1 * z], [cx + 8 * z, cy - 13 * z], [cx - 8 * z, cy - 13 * z]], C('#bfe0ff'));      // gemalter Himmel
+      circle(cx + 3 * z, cy - 9 * z, 3 * z, C('#ffd23f'));
+      for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2; sdLine('#ffd23f', 0.6, z, [[cx + (3 + Math.cos(a) * 3.8) * z, cy - (9 + Math.sin(a) * 3.8) * z], [cx + (3 + Math.cos(a) * 5) * z, cy - (9 + Math.sin(a) * 5) * z]]); }
+      poly([[cx - 8 * z, cy - 1 * z], [cx - 4 * z, cy - 6 * z], [cx, cy - 3 * z], [cx + 4 * z, cy - 6.5 * z], [cx + 8 * z, cy - 2 * z], [cx + 8 * z, cy - 1 * z]], C('#6fb04a'));
+      for (const [dx, c] of [[-6, PINK], [-3, '#ffffff'], [1, LILA], [5, ROSE]]) circle(cx + dx * z, cy - 2 * z, 0.8 * z, C(c));
+      for (const dx of [-6, -1, 4]) skyLantern(cx + dx * z, cy - 11 * z, 0.7, z, false);
+    }],
+    ['Glühwürmchen-Glas', (cx, cy, z, now) => {
+      const lit = sdLit();
+      sdShadow(cx, cy, 5, z);
+      poly([[cx - 4 * z, cy], [cx + 4 * z, cy], [cx + 3.6 * z, cy - 5 * z], [cx - 3.6 * z, cy - 5 * z]], C('#8a5a3c')); ellipse(cx, cy - 5 * z, 3.6 * z, 1.4 * z, C('#a8794e'));   // Baumstumpf
+      poly([[cx - 2.6 * z, cy - 5.4 * z], [cx + 2.6 * z, cy - 5.4 * z], [cx + 2.8 * z, cy - 12 * z], [cx - 2.8 * z, cy - 12 * z]], lit ? 'rgba(255,248,200,0.55)' : 'rgba(220,240,250,0.65)');
+      poly([[cx - 2 * z, cy - 12 * z], [cx + 2 * z, cy - 12 * z], [cx + 2 * z, cy - 13.4 * z], [cx - 2 * z, cy - 13.4 * z]], C('#c9962a'));
+      for (const [dx, dy] of [[-1, -7], [1, -9], [0, -10.6], [1.4, -6.6], [-1.4, -9.6]]) { circle(cx + dx * z, cy + dy * z, 0.55 * z, lit ? '#fff7a0' : C('#d8e86a')); if (lit) glowAt(cx + dx * z, cy + dy * z, 5 * z, z); }
+    }],
+    ['Sonnenpavillon ✦', (cx, cy, z) => {                                   // ganzes Feld, selten
+      const lit = sdLit();
+      sdShadow(cx, cy, 18, z);
+      ellipse(cx, cy, 16 * z, 7.6 * z, C('#f3ecdf')); ellipse(cx, cy - 1.4 * z, 14 * z, 6.6 * z, C('#fff8ee'));
+      for (let k = 0; k < 6; k++) { const a = Math.PI * 0.05 + k / 5 * Math.PI * 0.9, x = cx + Math.cos(a) * 13 * z, y = cy - 1.4 * z + Math.sin(a) * 6 * z;
+        poly([[x - 0.8 * z, y], [x + 0.8 * z, y], [x + 0.8 * z, y - 15 * z], [x - 0.8 * z, y - 15 * z]], C('#e9d8b4')); sdLine('#6fb04a', 0.8, z, [[x, y - 2 * z], [x, y - 13 * z]], [x + 1.6 * z, y - 7 * z]); }
+      const top = cy - 16 * z;
+      poly([[cx - 16 * z, top + 2 * z], [cx, top + 8 * z], [cx + 16 * z, top + 2 * z], [cx, top - 9 * z]], C('#e9a23b')); poly([[cx, top + 8 * z], [cx + 16 * z, top + 2 * z], [cx, top - 9 * z]], C('#d4892a'));
+      for (let k = 0; k < 5; k++) skyLantern(cx + (-10 + k * 5) * z, top + 6 * z + Math.sin(k / 4 * Math.PI) * 2 * z, 0.9, z, lit);
+      const S = [cx, top - 14 * z];
+      circle(S[0], S[1], 3.4 * z, C(GOLD)); for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; poly([[S[0] + Math.cos(a - 0.12) * 3.6 * z, S[1] + Math.sin(a - 0.12) * 3.6 * z], [S[0] + Math.cos(a) * 6 * z, S[1] + Math.sin(a) * 6 * z], [S[0] + Math.cos(a + 0.12) * 3.6 * z, S[1] + Math.sin(a + 0.12) * 3.6 * z]], C(GOLD)); }
+      if (lit) glowAt(S[0], S[1], 26 * z, z);
+    }, true],
   ];
 
   SD_WAREN.MAERCHEN = [
@@ -508,6 +579,10 @@ const SD_WAREN_META = {
   'Schlittschuh-Teich': { id: 'sd_eisteich', price: 200, rare: false, beauty: 14, cost: 600 },
   'Eispalast-Pavillon ✦': { id: 'sd_eispalast', price: 450, rare: true, beauty: 28, cost: 2500, mat: {'kristall': 4} },
   'Schneeflocken-Brunnen ✦': { id: 'sd_flockenbrunnen', price: 400, rare: true, beauty: 24, cost: 1500, mat: {'quader': 6} },
+  'Leseecke': { id: 'sd_leseecke', price: 140, rare: false, beauty: 5, cost: 150 }, 'Kräutergarten': { id: 'sd_kraeuter', price: 110, rare: false, beauty: 5, cost: 120 },
+  'Blumenkranz-Bank': { id: 'sd_kranzbank', price: 120, rare: false, beauty: 5, cost: 120 }, 'Sonnenblumen': { id: 'sd_sonnenblumen', price: 90, rare: false, beauty: 4, cost: 60 },
+  'Wandgemälde': { id: 'sd_wandbild', price: 100, rare: false, beauty: 5, cost: 100 }, 'Glühwürmchen-Glas': { id: 'sd_gluehglas', price: 130, rare: false, beauty: 5, cost: 120 },
+  'Sonnenpavillon ✦': { id: 'sd_sonnenpavillon', price: 400, rare: true, beauty: 26, cost: 2500, mat: {'bretter': 8} },
   'Turm mit Zopf ✦': { id: 'sd_zopfturm', price: 450, rare: true, beauty: 26, cost: 2500, mat: {'quader': 8} },
   'Himmelslaternen': { id: 'sd_himmelslaternen', price: 150, rare: false, beauty: 6, cost: 150 },
   'Blumenranken-Tor': { id: 'sd_rankentor', price: 130, rare: false, beauty: 6, cost: 150 },

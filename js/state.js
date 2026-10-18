@@ -48,7 +48,8 @@ function newState() {
     sdSeen: false,             // Sternstaub schon gezeigt (Pille oben, Willkommensfenster)
     treasury: null,            // Schatzkammer heute: { day: JJJJMMTT, n } (Tageskurs)
     dayWish: null,             // Tageswunsch (Block 161)
-    sdItems: new Set(),        // im Sternenbasar gekauft (Block 161c): ITEMS-Schlüssel: { day, id, base, done, who, icon }
+    sdItems: new Set(),        // im Sternenbasar gekauft (Block 161c): ITEMS-Schlüssel
+    sdShown: new Set(),        // im Basar schon angeboten (Katalog: Nachbestellen): { day, id, base, done, who, icon }
     bond: 0,                   // höchste Freundschaftsstufe bei einem Freund (Block 105, schaltet Belohnungen frei, wird nie kleiner)
     souvenirs: [],             // Geschenke von Freunden (Block 129, souvenir.js): [{ id, k, from, n, t, a, c, s, at }]
     partner: null,             // Partnerstadt (Block 105): { uid, name, c, s } – Flagge neben dem Rathaus
@@ -153,7 +154,7 @@ function serialize() {
     game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], sdShown: [...(state.sdShown || [])], me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
       ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
@@ -349,6 +350,7 @@ function parseSave(d) {
     sdGot: new Set(Array.isArray(d.sdGot) ? d.sdGot.filter(k => typeof k === 'string') : []), sdSeen: !!d.sdSeen,
     treasury: d.treasury && Number.isInteger(+d.treasury.day) && Number.isInteger(+d.treasury.n) ? { day: +d.treasury.day, n: Math.max(0, +d.treasury.n) } : null,
     sdItems: new Set(Array.isArray(d.sdItems) ? d.sdItems.filter(k => typeof k === 'string' && ITEMS[k] && ITEMS[k].sdShop) : []),
+    sdShown: new Set(Array.isArray(d.sdShown) ? d.sdShown.filter(k => typeof k === 'string' && ITEMS[k] && ITEMS[k].sdShop) : []),
     dayWish: (w => w && Number.isInteger(+w.day) && typeof w.id === 'string' && Number.isFinite(+w.base) ? { day: +w.day, id: w.id, base: +w.base, done: !!w.done, who: String(w.who || 'Jemand').slice(0, 30), icon: String(w.icon || '💭').slice(0, 4) } : null)(d.dayWish),
     me: d.me && typeof d.me === 'object' && !Array.isArray(d.me) ? { ...d.me } : null,   // geprüft wird beim Lesen (meLook)
     bond: Number.isInteger(d.bond) ? Math.max(0, Math.min(5, d.bond)) : 0,
