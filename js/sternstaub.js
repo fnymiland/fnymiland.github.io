@@ -294,9 +294,9 @@ let basarTab = 'heute';
 function basarCard(s, kat = false) {
   const have = state.sdItems.has(s.id), d = ITEMS[s.id], url = sdThumb(s.id), price = kat ? sdKatalogPrice(s) : s.price;
   return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}">
-    ${s.rare ? `<span class="basar-rare">✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'}</span>` : ''}
+    <span class="basar-rare">${s.rare ? `✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'}` : ''}</span>
     <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}</div>
-    <b>${escHtml(d.name)}</b>
+    <b class="basar-name">${escHtml(d.name)}</b>
     ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
       : `<button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button>`}
   </div>`;
