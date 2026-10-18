@@ -312,7 +312,7 @@ function openBasar(tab = basarTab) {
   const body = tab === 'katalog'
     ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
       + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer – was du im Angebot siehst und nicht kaufst, landet hier.</p>')
-    : offers.length ? `<p class="muted">Heute im Angebot – morgen gibt es neue Sachen. Alles kommt irgendwann wieder.</p><div class="basar-grid">${offers.map(basarCard).join('')}</div>`
+    : offers.length ? `<p class="muted">Heute im Angebot – morgen gibt es neue Sachen. Alles kommt irgendwann wieder.</p><div class="basar-grid">${offers.map(s => basarCard(s)).join('')}</div>`
       : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
   openModal(`<h2>⛺ Sternenbasar <span class="sd-have">✨ ${fmt(state.stardust || 0)}</span></h2>
     <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📖 Katalog</button>

@@ -229,4 +229,14 @@ describe('Katalog (18.10.2026)', () => {
     const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
     expect([...d.sdShown].length).toBe(4);
   });
+  it('Reiter „Heute“ zeigt den normalen Preis, nie den Katalogpreis (Fehler 18.10.: map übergab den Index)', () => {
+    game("state.sdItems = new Set(); state.sdShown = new Set(); state.stardust = 1000; state.sdSeen = true; openBasar('heute')");
+    const cards = [...document.querySelectorAll('#modal [data-sdbuy]')].map(b => [b.dataset.sdbuy, b.textContent, b.hasAttribute('data-kat')]);
+    game('closeModal()');
+    expect(cards.length).toBe(4);
+    for (const [id, text, kat] of cards) {
+      expect(kat, id).toBe(false);
+      expect(text, id).toContain(game(`fmt(sdShopItem('${id}').price)`));
+    }
+  });
 });
