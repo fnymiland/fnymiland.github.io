@@ -159,7 +159,11 @@ describe('Schlüssel-Wächter (Block 124)', () => {
   // nicht im Schlüssel steht (Platz, Nachbarn, Eigenschaft), sähe es weit weg falsch aus – bisher in großen Welten verdeckt,
   // weil dort fast alles live gezeichnet wurde
   it('gleicher Schlüssel → gleiche Zeichnung, über Plätze, Nachbarn und Stufen', () => {
-    const bad = game(`(() => {
+    // echte Uhr fest: der Uhrmacher zeigt sie samt Sekunden (new Date()) – sprang sie zwischen zwei Plätzen um eine Sekunde, wichen
+    // die Zeiger ab (unter Last im Gesamtlauf, 16./17.10.2026); die Spieluhr steht schon fest (beforeEach)
+    vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 9, 18, 10, 9, 30));
+    let bad;
+    try { bad = game(`(() => {
       const keyOf = (t, x, y) => { let key; const o = getSprite; getSprite = k => { key = k; return null; }; try { spriteTile(t, x, y, { x: 0, y: 0 }, 0.6, 0, 1, 1); } finally { getSprite = o; } return key; };
       // bekannte Ausnahme: Kiesel/Muster im Gartenweg liegen je Platz anders – weit weg tragen alle das Muster des ersten (nicht zu sehen)
       const dgp = drawGardenPath; drawGardenPath = (cx, cy, z, x, y, gp) => dgp(cx, cy, z, 0, 0, gp);
@@ -178,7 +182,7 @@ describe('Schlüssel-Wächter (Block 124)', () => {
           if (seen.has(k)) { same++; if (seen.get(k)[0] !== d) out.push(b + ' lvl ' + lvl + ' rot ' + rot + ' ' + JSON.stringify(paint) + ': ' + seen.get(k)[1] + ' ≠ ' + x + ',' + y); } else seen.set(k, [d, x + ',' + y]); }
       }
       drawGardenPath = dgp;
-      return { out, same }; })()`);
+      return { out, same }; })()`); } finally { vi.useRealTimers(); }
     expect(bad.out).toEqual([]);
     expect(bad.same).toBeGreaterThan(500);                                          // es wurde wirklich verglichen
   }, 180e3);                                                                        // viele Zeichnungen: auf langsamen Rechnern (und unter Last) lange

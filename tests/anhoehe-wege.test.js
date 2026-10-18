@@ -5,7 +5,11 @@ const { loadGame, game } = require('./helpers/load-game');
 // zu Nachbarn, mit denen das Wegenetz zusammenhängt (levelLink) – nie über die Kante, die Treppe an Fuß und Oberkante, die Gleis-Rampe nie (nur
 // Züge). Ohne Anhöhen wie vorher
 beforeAll(() => loadGame());
+// Spieluhr fest auf Mittag: in der Abenddämmerung (Spielstunde ~19–20, echt alle 24 Minuten für gut eine Minute) entstehen die Bildchen
+// zusätzlich schon beleuchtet (Vorwärmen, Block 143) – dann stand jedes Wegfeld oben doppelt in objSprites (Gesamtlauf 16./17.10.2026)
+afterAll(() => game('if (globalThis.__gh) gameHour = globalThis.__gh'));
 beforeEach(() => {
+  game('if (!globalThis.__gh) globalThis.__gh = gameHour; gameHour = () => 12');
   game('startNew()'); game("closeModal(); closePanel(); state.tutorial = -1; state.tipsOff = true; plan = null; if (moving) cancelMove(); setTool('look'); setSeeThrough(false)");
   game("state.money = 1e6; for (const d of DESIGN) state.design.add(d.id); for (const r of Object.keys(RES)) state.res[r] = 9999");
   game("for (let y = 4; y <= 34; y++) for (let x = 4; x <= 34; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); state.roofs.clear(); state.tunnels.clear(); state.hills.clear(); hillWalkers.length = 0; walkers.length = 0; critters.length = 0; recalc(); resetUndo()");
