@@ -398,6 +398,9 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     `sdTryBuy`. Basar-Waren stehen nicht in „Neu freigeschaltet“ (`unlockKeys`), der Kauf meldet sich selbst. Neue private
     Basar-Felder (`sdNew`, `sdOffers`, `sdWish`, `sdWishNote`) auch in `LIVE_PRIV`. Angebote nur über `basarOffers` – die Auswahl
     des Tages/der Woche bleibt gemerkt (`state.sdOffers`), Gekauftes bleibt bis zum Wechsel stehen, nichts rückt nach.
+    **sternstaub*.js stehen in index.html VOR main.js** (main.js lädt den Spielstand beim Einlesen): sonst kennt parseSave die
+    Sammlungs-Waren nicht und wirft Gekauftes weg (Generalprobe 19.10., tests/sternstaub-laden.test.js). Gilt für jede Datei, die
+    ITEMS ergänzt oder Spielstand-Felder liest.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
