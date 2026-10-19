@@ -180,7 +180,7 @@ describe('Sternenbasar-Waren (161c)', () => {
       for (const [zz, n] of [[2, 0], [2, 1], [0.4, 0]]) game(`(() => { const nv = night; night = ${n}; try { drawObject('${id}', 400, 300, ${zz}, 1e6, 5, 5, 1, { b: '${id}', rot: 0, slot: 0 }); } finally { night = nv; } })()`);
       expect(game(`ALBUM.some(p => albumKeys(p).includes('b:${id}'))`), id).toBe(false);
     }
-    game("state.sdItems = new Set(); state.stardust = 1000");
+    game("state.sdItems = new Set(); state.stardust = 1000; state.sdOffers = { day: sdDay(), week: sdWeek(sdDay()), ids: ['sd_kirschbaum', 'sd_ahorn', 'sd_weide'], rare: 'sd_pagode' }");   // heute im Angebot
     expect(game("available('sd_kirschbaum')")).toBe(false);
     expect(game("sdBuyItem('sd_kirschbaum')")).toBe(true);
     expect(game("available('sd_kirschbaum')")).toBe(true);
@@ -305,8 +305,8 @@ describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
     game('closeModal()');
   });
   it('Ausprobieren: Vorschau wie beim Bauen, Tippen baut nie; Zurück/anderes Werkzeug beendet; Kaufen stellt es hin', () => {
-    land(); game(fresh);
-    const id = game("SD_SHOP.find(s => !s.rare && ITEMS[s.id].small).id");
+    land(); game(fresh); game('for (const r of Object.keys(RES)) if (r !== "money") state.res[r] = 99');   // Rohstoffe für jede Ware
+    const id = game("basarOffers().find(s => !s.rare && ITEMS[s.id].small).id");
     expect(game(`available('${id}')`)).toBe(false);
     game(`sdTryStart('${id}')`);
     expect(game(`[tool, available('${id}'), document.getElementById('sd-try-bar').hidden]`)).toEqual([id, true, false]);
@@ -344,5 +344,53 @@ describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
     game("sdBuyItem(basarOffers()[0].id)");
     expect(game('__s')).toEqual(['bell']);
     game('SFX.bell = __sfx');
+  });
+});
+
+describe('Prüfung vor dem Push (19.10.2026)', () => {
+  const land = () => game("for (let y = 0; y <= 20; y++) for (let x = 0; x <= 20; x++) { const k = x + ',' + y; state.terra.set(k, 'grass'); state.tiles.delete(k); state.decos.delete(k); state.claimed.add(k); } state.edges.clear(); recalc(); state.res.bretter = 99");
+  const fresh = "state.sdItems = new Set(); state.sdShown = new Set(); state.sdNew = null; state.sdOffers = null; state.sdWish = new Set(); state.sdWishNote = 0; state.sdSeen = true; state.stardust = 1000";
+  it('Ausprobieren: auch Ziehen, Rechteck und direkte Bau-Aufrufe bauen nichts', () => {
+    land(); game(fresh);
+    const small = game("basarOffers().find(s => ITEMS[s.id].small).id");
+    game(`sdTryStart('${small}')`);
+    expect(game(`dragKind('${small}')`)).toBe(null);
+    expect(game(`buildSmall('${small}', 3, 3, 0)`)).toBe(false);
+    game(`plan = { kind: 'rect', tool: '${small}', a: { x: 2, y: 2 }, b: { x: 6, y: 6 }, fixed: true, slot: 0 }; try { runPlan(); } catch (e) {} plan = null`);
+    expect(game("[...state.decos.values()].flat().filter(d => d && ITEMS[d.b] && ITEMS[d.b].sdShop).length")).toBe(0);
+    game("setTool('look')");
+    const tile = game("SD_SHOP.find(s => !ITEMS[s.id].small).id");
+    game(`state.sdOffers = null; globalThis.__try = '${tile}'; sdTry = '${tile}'`);
+    expect(game(`build('${tile}', 8, 8, true)`)).toBe(false);
+    game('sdTryClear()');
+  });
+  it('Katalog: Ausprobieren und Kaufen nimmt den Katalogpreis; ohne Katalog nur, was heute im Angebot ist', () => {
+    game(fresh);
+    const id = game('SD_SHOP.find(s => !s.rare && !basarOffers().some(o => o.id === s.id)).id');
+    expect(game(`sdBuyItem('${id}')`)).toBe(false);                                 // nicht im Angebot: nicht zum Normalpreis
+    game(`state.sdShown.add('${id}'); sdTryStart('${id}', true); hover = null`);
+    expect(game("document.getElementById('sd-try-buy').textContent")).toContain(game(`fmt(sdKatalogPrice(sdShopItem('${id}')))`));
+    const st0 = game('state.stardust');
+    expect(game('sdTryBuy()')).toBe(true);
+    expect(st0 - game('state.stardust')).toBe(game(`sdKatalogPrice(sdShopItem('${id}'))`));
+    game("setTool('look')");
+  });
+  it('Sternstaub-Änderungen melden sich bei der Cloud (außer der stillen Nachzahlung beim Laden)', () => {
+    game(fresh);
+    game("globalThis.__ct = 0; globalThis.__ctf = cloudTouched; cloudTouched = () => { __ct++; }");
+    game('sdStar(() => 0.5)'); const a = game('__ct');
+    game("sdToggleWish(basarOffers()[0].id)"); const b = game('__ct');
+    game("openBasar('heute'); closeModal()"); const c = game('__ct');
+    game("state.sdGot = new Set(); state.achieved = { [ACHIEVEMENTS[0].id]: 1 }; sdCheck(true)"); const d = game('__ct');
+    game('cloudTouched = __ctf');
+    expect([a > 0, b > a, c > b, d === c]).toEqual([true, true, true, true]);
+  });
+  it('Zuschauendes Gerät: Basar ändert nichts, Herzchen gesperrt', () => {
+    game(fresh);
+    game("globalThis.__vo = viewOnly; viewOnly = () => true; globalThis.__cb = cloudBlocked; cloudBlocked = () => {}");
+    game("openBasar('heute'); closeModal(); sdToggleWish(basarOffers()[0].id)");
+    const r = game('[state.sdShown.size, state.sdWish.size]');
+    game('viewOnly = __vo; cloudBlocked = __cb');
+    expect(r).toEqual([0, 0]);
   });
 });

@@ -866,6 +866,7 @@ function roofTopFree(x, y, slot) {
   return i == null ? slot : i;
 }
 function buildRoofTop(b, x, y, slot) {
+  if (typeof sdTry !== 'undefined' && sdTry && b === sdTry) return false;   // 👁 Ausprobieren: nur Vorschau, nie bauen (Prüfung 19.10.)
   const err = roofTopError(b, x, y, slot);
   if (err) { fail(err); return false; }
   const r = roofAt(x, y);

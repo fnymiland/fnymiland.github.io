@@ -12,11 +12,12 @@ const SD_TREASURY = { first: 20e6, step: 1.1 };
 const sdDay = (d = new Date()) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();   // lokaler Kalendertag JJJJMMTT
 
 // Gutschrift; key: einmalig (Erfolgsstufe, Albumseite …). Gibt zurück, wie viel dazukam
-function sdAdd(n, key = null) {
+function sdAdd(n, key = null, touch = true) {          // touch: als eigene Änderung für die Cloud zählen (die stille Nachzahlung nicht)
   if (!(n > 0) || !state) return 0;
   if (!state.sdGot) state.sdGot = new Set();
   if (key) { if (state.sdGot.has(key)) return 0; state.sdGot.add(key); }
   state.stardust = (state.stardust || 0) + n;
+  if (touch && typeof cloudTouched === 'function') cloudTouched();
   return n;
 }
 const sdAlbumFull = p => albumKeys(p).every(k => state.album.has(k) || LATE_ALBUM.has(k));   // wie die Album-Belohnung (collectAlbum)
@@ -25,7 +26,7 @@ const sdAlbumFull = p => albumKeys(p).every(k => state.album.has(k) || LATE_ALBU
 function sdCheck(silent = false) {
   if (!state || !state.achieved) return 0;
   let sum = 0;
-  const give = (n, key, why) => { const got = sdAdd(n, key); if (got && !silent) toast(`✨ +${fmt(got)} Sternstaub – ${why}`); sum += got; };
+  const give = (n, key, why) => { const got = sdAdd(n, key, !silent); if (got && !silent) toast(`✨ +${fmt(got)} Sternstaub – ${why}`); sum += got; };
   for (const a of ACHIEVEMENTS) for (let t = 1; t <= (state.achieved[a.id] || 0); t++) give(SD.tier * t, `a:${a.id}:${t}`, `Erfolg „${a.name}“ Stufe ${t}`);
   if (state.album) for (const p of ALBUM) if (sdAlbumFull(p)) give(SD.album, 'album:' + p.id, `Albumseite „${p.name}“ voll`);
   if (state.festival) give(SD.fest, 'fest', 'das Laternenfest');
@@ -279,6 +280,7 @@ function sdBuyItem(id, fromKatalog = false) {
   const s = sdShopItem(id);
   if (!s || state.sdItems.has(id)) return false;
   if (fromKatalog && (s.rare || !state.sdShown || !state.sdShown.has(id))) return false;
+  if (!fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar – schau im Katalog'); return false; }   // Prüfung 19.10.
   const price = fromKatalog ? sdKatalogPrice(s) : s.price;
   if ((state.stardust || 0) < price) { fail(`Zu wenig Sternstaub (✨ ${fmt(price)} nötig)`); return false; }
   state.stardust -= price;
@@ -306,9 +308,11 @@ const sdSmlgCount = key => { const all = SD_SHOP.filter(s => sdSammlung(s.id) ==
 // NEU: heute zum ersten Mal im Angebot (bleibt den ganzen Tag NEU); Herzchen: gemerkt, Hinweis einmal am Tag, wenn es da ist
 const sdIsNew = (id, today = sdDay()) => !!(state.sdNew && state.sdNew.day === today && state.sdNew.ids.includes(id));
 function sdToggleWish(id) {
+  if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return; }
   if (!sdShopItem(id) || state.sdItems.has(id)) return;
   if (!state.sdWish) state.sdWish = new Set();
   if (state.sdWish.has(id)) state.sdWish.delete(id); else state.sdWish.add(id);
+  if (typeof cloudTouched === 'function') cloudTouched();
   save();
 }
 let sdWishAt = 0;
@@ -419,29 +423,29 @@ function basarBook() {
 }
 // 👁 Ausprobieren (Block 161h): die Ware wie zum Bauen in der Hand – die Vorschau zeigt sie überall, Tippen setzt nur die Vorschau um,
 // gebaut wird nie (available/tap kennen sdTry). „Kaufen“ kauft und stellt sie dorthin, wo die Vorschau steht; jedes andere Werkzeug beendet es
-let sdTry = null;
-function sdTryStart(id) {
+let sdTry = null, sdTryKat = false;                                   // sdTryKat: aus dem Katalog (Katalogpreis, Prüfung 19.10.)
+function sdTryStart(id, kat = false) {
   if (!sdShopItem(id) || state.sdItems.has(id)) return;
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return; }
-  closeModal(); setTool('look'); sdTry = id; setTool(id); sdTryBar();
+  closeModal(); setTool('look'); sdTry = id; sdTryKat = !!kat; setTool(id); sdTryBar();
   toast('👁 Probe: tipp auf deine Insel – gebaut wird nichts');
 }
 function sdTryBar() {
   const bar = $('sd-try-bar');
   if (!bar) return;
   if (!sdTry) { bar.hidden = true; return; }
-  const s = sdShopItem(sdTry), miss = s.price - (state.stardust || 0);
+  const s = sdShopItem(sdTry), price = sdTryKat ? sdKatalogPrice(s) : s.price, miss = price - (state.stardust || 0);
   bar.innerHTML = `<span class="sd-try-name">👁 ${escHtml(ITEMS[sdTry].name)}</span>
-    <button class="btn" id="sd-try-buy"${miss > 0 ? ' disabled' : ''}>✨ ${fmt(s.price)} kaufen${miss > 0 ? ` (fehlen ${fmt(miss)})` : ''}</button>
+    <button class="btn" id="sd-try-buy"${miss > 0 ? ' disabled' : ''}>✨ ${fmt(price)} kaufen${miss > 0 ? ` (fehlen ${fmt(miss)})` : ''}</button>
     <button class="btn ghost" id="sd-try-back">Zurück</button>`;
   bar.hidden = false;
   $('sd-try-buy').onclick = () => sdTryBuy($('sd-try-buy').getBoundingClientRect());
-  $('sd-try-back').onclick = () => { setTool('look'); openBasar(); };
+  $('sd-try-back').onclick = () => { const kat = sdTryKat; setTool('look'); openBasar(kat ? 'katalog' : 'heute'); };
 }
-function sdTryClear() { sdTry = null; const bar = $('sd-try-bar'); if (bar) bar.hidden = true; }   // aus setTool: anderes Werkzeug
+function sdTryClear() { sdTry = null; sdTryKat = false; const bar = $('sd-try-bar'); if (bar) bar.hidden = true; }   // aus setTool: anderes Werkzeug
 function sdTryBuy(r = null) {
   const id = sdTry;
-  if (!id || !sdBuyItem(id)) return false;
+  if (!id || !sdBuyItem(id, sdTryKat)) return false;
   if (r) sdBurst(r.left + r.width / 2, r.top + r.height / 2);
   sdTryClear();                                                          // in der Hand bleibt die Ware – jetzt echt
   if (typeof hover !== 'undefined' && hover && Number.isInteger(hover.x)) {
@@ -466,12 +470,13 @@ function sdBurst(x, y, n = 22) {
 }
 function openBasar(tab = basarTab) {
   basarTab = tab;
-  if (!state.sdSeen) { state.sdSeen = true; save(); }
+  const watch = typeof viewOnly === 'function' && viewOnly();            // zuschauendes Gerät: nur ansehen, nichts merken (Prüfung 19.10.)
+  if (!state.sdSeen && !watch) { state.sdSeen = true; save(); }
   const today = sdDay(), offers = basarOffers(today);
   if (!state.sdShown) state.sdShown = new Set();
   if (!state.sdNew || state.sdNew.day !== today) state.sdNew = { day: today, ids: [] };
-  let neu = false; for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); state.sdNew.ids.push(s.id); neu = true; }
-  if (neu) save();
+  let neu = false; if (!watch) for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); state.sdNew.ids.push(s.id); neu = true; }
+  if (neu) { if (typeof cloudTouched === 'function') cloudTouched(); save(); }
   const kat = sdKatalog(), rare = offers.find(s => s.rare), norm = offers.filter(s => !s.rare);
   const body = tab === 'katalog'
     ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
@@ -493,7 +498,7 @@ function openBasar(tab = basarTab) {
     const r = b.getBoundingClientRect();
     if (sdBuyItem(b.dataset.sdbuy, !!b.dataset.kat)) { sdBurst(r.left + r.width / 2, r.top + r.height / 2); openBasar(); }
   };
-  for (const b of c.querySelectorAll('[data-sdtry]')) b.onclick = () => sdTryStart(b.dataset.sdtry);
+  for (const b of c.querySelectorAll('[data-sdtry]')) b.onclick = () => sdTryStart(b.dataset.sdtry, tab === 'katalog');
   for (const b of c.querySelectorAll('[data-sdwish]')) b.onclick = () => { sdToggleWish(b.dataset.sdwish); openBasar(); };
   $('m-close').onclick = closeModal;
 }

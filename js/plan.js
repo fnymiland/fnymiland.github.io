@@ -6,7 +6,7 @@
 // Klick, Klick: Linie. Ziehen: Schiene als Linie, sonst Rechteck. Ohne Ziehen bleibt beim Rechteck alles wie gehabt.
 const LINE_TOOLS = new Set(['weg', 'dach', 'schiene', 'tunnel', 'fz_bahn', 'fz_hoch', 'fz_tief', 'pb_gleis', 'bruecke']);   // Überdachung wie der Weg (Block 138)   // Achterbahn-Schiene und Höhen-Pinsel (Block 60e)
 const RECT_TOOLS = new Set(['weg', 'dach', 'graben', 'schuett', 'wiese', 'parkrasen', 'fzboden', 'strand', 'wald', 'obstwald', 'fels', 'anhoehe']);   // Anhöhe aufziehen (Block 157)
-const dragKind = t => t === 'schiene' || t === 'tunnel' || t === 'bruecke' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' || t === 'pb_gleis' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
+const dragKind = t => typeof sdTry !== 'undefined' && sdTry && t === sdTry ? null : t === 'schiene' || t === 'tunnel' || t === 'bruecke' || t === 'fz_bahn' || t === 'fz_hoch' || t === 'fz_tief' || t === 'pb_gleis' ? 'line' : EDGE_TOOLS.has(t) ? 'edge'
   : RECT_TOOLS.has(t) || t === 'abriss' || (ITEMS[t] && ITEMS[t].small && !ITEMS[t].gift) || (t === 'verschieben' && !moving) ? 'rect' : null;
 const PLAN_MAX = { line: 80, edge: 80, rect: 24 };   // Linie: Felder (Zaun: Kanten) insgesamt, Rechteck: Seitenlänge
 

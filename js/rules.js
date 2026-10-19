@@ -1725,6 +1725,7 @@ const midRot = slot => MID_FACE[slot];
 // zur Seite, außer man hat selbst gedreht (⟳/Mausrad/R) – dann bleibt die eigene Drehung
 const smallRot = (b, slot) => slot >= 4 && slot < 8 && MID_TURN.has(b) && !rotManual ? midRot(slot) : ROTATABLE.has(b) ? buildRot : 0;
 function buildSmall(b, x, y, slot) {
+  if (typeof sdTry !== 'undefined' && sdTry && b === sdTry) return false;   // 👁 Ausprobieren: nur Vorschau, nie bauen (Prüfung 19.10.)
   const err = smallError(b, x, y, slot);
   if (err) { fail(err); return false; }
   const k = x + ',' + y;

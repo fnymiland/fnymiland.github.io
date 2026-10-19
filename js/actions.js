@@ -11,6 +11,7 @@ const floats = [];
 function fail(msg) { toast(msg); sfx('error'); }
 
 function build(b, x, y, quiet) {
+  if (typeof sdTry !== 'undefined' && sdTry && b === sdTry) return false;   // 👁 Ausprobieren: nur Vorschau, nie bauen (Prüfung 19.10.)
   if (b === 'bruecke') { if (!quiet) fail('Brücke: von der Oberkante einer Anhöhe hinüber zur anderen ziehen'); return false; }   // nur als Ganzes (plan.js scanBruecke)
   if (b === 'anhoehe') {                               // Anhöhe (Block 157): Feld anheben bzw. die Wand umstellen (hills.js)
     const err = quiet && !hillAt(x, y) && hillRaiseError(x, y);
