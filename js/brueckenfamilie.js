@@ -246,7 +246,7 @@ const brCostMat = c => { const { money, ...mat } = c; return { cost: money || 0,
 let BR_PLAN_LOOK = null;
 function brNewLook(x, y, at) {
   if (at === 'wasser') { const S = wbNewSpec(x, y); if (S) return S.look; }    // 160c D3: die längste Brücke daneben, samt gekauftem Licht und Zacken
-  if (at === 'gleis') { const S = gbNewSpec(x, y); if (S) return brOnLook(S.look); }   // 160c E2 (Nutzer 15.10.2026): die längste Gleisbrücke daneben
+  if (at === 'gleis') { const S = gbNewSpec(x, y); if (S) return { ...brOnLook(S.look), licht: S.look.licht === 'an' || S.look.licht === 'aus' ? S.look.licht : null }; }   // 160c E2 (Nutzer 15.10.2026): die längste Gleisbrücke daneben; gekauftes, ausgeschaltetes Licht zahlt das neue Feld mit (sonst gab gbUnify es gratis, Prüfung 19.10.)
   const want = at === 'gleis' ? (t => !!t && t.b === 'schiene' && !!t.bridge) : isWegBridge;
   for (const [dx, dy] of DIRS) {
     const k = (x + dx) + ',' + (y + dy), t = state.tiles.get(k);

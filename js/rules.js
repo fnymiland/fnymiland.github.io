@@ -2673,7 +2673,7 @@ function seaCross(x, y) {
   if (!t || !(t.b === 'schiene' || isWegBridge(t)) || !isWater(x, y)) return null;
   const A = t.b === 'weg' ? bridgeArch(x, y) : null;                    // Bogenbrücke (Block 150): nur unter hohen Stellen durch
   if (A && !A.pass[A.i0]) return 'block';
-  if (t.b === 'weg' && !A) return 'block';                                // flache Wasserbrücke (1 Feld, Steg): zu niedrig für Boote (160c D2, Nutzer 13.10.2026) – durch nur unter Bögen
+  if (t.b === 'weg' && !A && !SEA_FLAT_OLD) return 'block';              // flache Wasserbrücke (1 Feld, Steg): zu niedrig für Boote (160c D2, Nutzer 13.10.2026) – durch nur unter Bögen
   const same = (a, b) => { const n = state.tiles.get(a + ',' + b); return !!n && (t.b === 'schiene' ? n.b === 'schiene' : n.b === 'weg'); };
   const ax = same(x - 1, y) || same(x + 1, y), ay = same(x, y - 1) || same(x, y + 1);
   if (!(ax && ay)) return ay ? 'y' : 'x';
@@ -2849,6 +2849,36 @@ function seaRoutesNow() {
   const i = typeof nextIsle === 'function' ? nextIsle() : null;
   if (i && typeof stegs === 'function') for (const k of stegs()) if (expeditionRoute(k, i)) s.add('e:' + k + ':' + i.id);
   return s;
+}
+// Nach dem Update auf 160c (Prüfung vor dem Push 19.10.2026): Flache Wasserbrücken sperren Boote erst seitdem. Einmal je Spielstand
+// (state.seaFlatSeen) vergleichen, welche Seewege nach der alten Regel (flach = quer darunter durch) gingen und jetzt nicht mehr, und das
+// sagen – sonst fielen Fähren und die Expedition still aus. Die Regel selbst bleibt
+let SEA_FLAT_OLD = false;
+function seaFlatLost() {
+  const flat = [...state.tiles].some(([k, t]) => t.b === 'weg' && isWegBridge(t) && (([x, y]) => isWater(x, y) && !bridgeArch(x, y))(keyXY(k)));
+  if (!flat) return [];
+  const now = seaRoutesNow();
+  let old;
+  SEA_FLAT_OLD = true; seaCache.clear();
+  try { recalc(); old = seaRoutesNow(); } finally { SEA_FLAT_OLD = false; seaCache.clear(); recalc(); }
+  return [...old].filter(k => !now.has(k));
+}
+function seaFlatCheck() {
+  if (!state || state.seaFlatSeen || (typeof viewOnly === 'function' && viewOnly())) return [];
+  state.seaFlatSeen = true;
+  const lost = seaFlatLost();
+  if (lost.length) { save(); setTimeout(() => announceSeaFlat(lost), 3600); }
+  return lost;
+}
+function announceSeaFlat(lost) {
+  if (!$('modal').hidden) { setTimeout(() => announceSeaFlat(lost), 1500); return; }   // nach „Das ist neu“ und Co.
+  const name = k => k[0] === 'f' ? '⛴️ ' + k.slice(2).split('|').map(s => typeof landingName === 'function' ? landingName(s) : s).join(' ↔ ') : '🧭 Expedition vom Bootssteg';
+  openModal(`<h2>⛵ Boote und Brücken</h2>
+    <p>Seit diesem Update fahren Boote nur noch <b>unter Brückenbögen</b> durch – flache Brücken und Stege sind zu niedrig. Deshalb kommt gerade nicht mehr durch:</p>
+    <ul>${lost.map(k => `<li>${escHtml(name(k))}</li>`).join('')}</ul>
+    <p class="muted">So geht es wieder: die Brücke über dem Fahrweg zu einem Bogen verlängern (Land an beiden Enden, mindestens 2 Felder Wasser) oder sie abreißen. Im Hafenfenster steht, wo es hängt.</p>
+    <div class="row"><button class="btn" id="m-close" style="flex:1">Verstanden</button></div>`);
+  $('m-close').onclick = closeModal;
 }
 function seaRoutesWarn(before, rest = false) {                         // rest: abgerissen, aufgeschüttet – was von der Brücke bleibt, ist flach (160c G2)
   if (!before) return false;
