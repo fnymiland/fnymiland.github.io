@@ -3280,6 +3280,12 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-19-sternstaub', date: '19. Oktober', title: 'Sternstaub und der Sternenbasar', items: [
+    '✨ <b>Sternstaub:</b> eine neue, seltene Währung nur für Schönes. Es gibt ihn für Erfolge, volle Albumseiten, das Laternenfest, Sternschnuppen und Truhen. Für alles, was du schon geschafft hast, bekommst du eine Nachzahlung.',
+    '💭 <b>Tageswunsch:</b> Jeden Tag wünscht sich jemand etwas für die Insel. Wenn du den Wunsch erfüllst, gibt es 25 ✨.',
+    '🏦 <b>Schatzkammer:</b> Zu viele Taler? Tausche sie gegen Sternstaub. Das erste ✨ des Tages ist am günstigsten.',
+    '⛺ <b>Sternenbasar</b> (unter Einrichtungen): Der Mondhase verkauft jeden Tag drei Dinge und jede Woche ein seltenes Stück, aus fünf Sammlungen mit 65 Waren. Mit 👁 kannst du eine Ware erst ausprobieren, mit ❤️ merken, und im 📖 Sammelbuch siehst du, was noch fehlt.',
+  ] },
   { id: '2026-10-16-bruecken', date: '16. Oktober', title: 'Brücken in vier Materialien', items: [
     '🌉 <b>Jede Brücke in Holz, Metall, Stein oder Kristall:</b> zwischen Anhöhen, übers Wasser (Weg und Gleis) und als Fußgängerbrücke am Bahnübergang. Brücke antippen → Material, Farbe, Planken, Deck, Stützen, Licht und Kristallzacken wählen – je nachdem, was die Brücke kann.',
     '🧰 <b>Das Brücken-Werkzeug wählt das Material</b> auch für neue Brücken übers Wasser. Wächst eine Brücke an eine längere heran, bekommt sie deren Aussehen.',

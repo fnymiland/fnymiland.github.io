@@ -163,7 +163,8 @@ describe('Sternenbasar (161c)', () => {
     expect(game("sdBuyItem('sdtest_a')")).toBe(true);
     expect(game("[state.stardust, available('sdtest_a')]")).toEqual([60, true]);
     expect(game("sdBuyItem('sdtest_e')")).toBe(false);                   // zu wenig
-    expect(game('basarOffers(20261017).map(s => s.id)').slice(0, 3)).not.toContain('sdtest_a');   // Ungekauftes zuerst
+    expect(game('basarOffers(20261017).map(s => s.id)')).toEqual(o1);                     // gekauft: bleibt bis zum Wechsel stehen (161h)
+    expect(game('basarOffers(20261018).map(s => s.id)').slice(0, 3)).not.toContain('sdtest_a');   // neuer Tag: Ungekauftes zuerst
     const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
     expect([...d.sdItems]).toEqual(['sdtest_a']);
     game("SD_SHOP.length = 0; SD_SHOP.push(...globalThis.__shop); for (const id of ['sdtest_a', 'sdtest_b', 'sdtest_c', 'sdtest_d', 'sdtest_e']) delete ITEMS[id]");
@@ -322,6 +323,20 @@ describe('Basar „mehr special“ (161h, Nutzer 18.10.2026)', () => {
     expect(game(`(state.decos.get('6,6') || []).some(d => d && d.b === '${id}')`)).toBe(true);
     expect(game(`[sdTry, tool, available('${id}')]`)).toEqual([null, id, true]);
     game("setTool('look')");
+  });
+  it('Gekauftes bleibt im Laden stehen: Tagesware bis morgen, das Seltene bis Montag (kein Nachrücken)', () => {
+    game(fresh + '; state.sdOffers = null');
+    const mon = 20261019, tue = 20261020, mon2 = 20261026;
+    const o1 = game(`basarOffers(${mon}).map(s => s.id)`), rare = o1[3];
+    game(`sdBuyItem('${o1[0]}'); sdBuyItem('${rare}')`);
+    expect(game(`basarOffers(${mon}).map(s => s.id)`)).toEqual(o1);
+    const o2 = game(`basarOffers(${tue}).map(s => s.id)`);
+    expect(o2[3]).toBe(rare);                                                       // gleiche Woche: das (gekaufte) Seltene bleibt
+    expect(o2.slice(0, 3)).not.toContain(o1[0]);
+    expect(game(`basarOffers(${mon2}).map(s => s.id)`)[3]).not.toBe(rare);           // neue Woche: neues Seltenes
+    const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
+    expect(d.sdOffers.day).toBe(mon2);
+    expect(game("LIVE_PRIV.includes('sdOffers')")).toBe(true);
   });
   it('Kauf: Glöckchen statt Forschungston', () => {
     game(fresh);

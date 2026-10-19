@@ -396,7 +396,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Basar (161h): Waren-Karten nur über `basarCard`, Sammlung über `sdSammlung` (fehlt = „Sternengarten“). 👁 Ausprobieren = `sdTry`:
     `available` sagt ja, `tap` setzt nur die Vorschau um, `setTool` mit anderem Werkzeug beendet es (`sdTryClear`); Kaufen über
     `sdTryBuy`. Basar-Waren stehen nicht in „Neu freigeschaltet“ (`unlockKeys`), der Kauf meldet sich selbst. Neue private
-    Basar-Felder (`sdNew`, `sdWish`, `sdWishNote`) auch in `LIVE_PRIV`.
+    Basar-Felder (`sdNew`, `sdOffers`, `sdWish`, `sdWishNote`) auch in `LIVE_PRIV`. Angebote nur über `basarOffers` – die Auswahl
+    des Tages/der Woche bleibt gemerkt (`state.sdOffers`), Gekauftes bleibt bis zum Wechsel stehen, nichts rückt nach.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

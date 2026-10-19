@@ -257,12 +257,18 @@ const sdDayNum = day => Math.round(Date.UTC(Math.floor(day / 10000), Math.floor(
 const sdWeek = day => Math.floor((sdDayNum(day) + 3) / 7);
 const sdWeekLeft = day => 7 - ((sdDayNum(day) + 3) % 7);
 // Angebote: jeden Tag 3 normale, dazu das Seltene der Woche (bleibt 7 Tage – man kann darauf sparen, Nutzer 17.10.2026); gleicher
-// Tag/gleiche Woche und Spielstand = gleiche Angebote, Ungekauftes zuerst
+// Tag/gleiche Woche und Spielstand = gleiche Angebote, Ungekauftes zuerst. Gekauftes bleibt bis zum Wechsel stehen (Nutzer 19.10.2026,
+// wie Animal Crossing): die Auswahl wird beim ersten Blick des Tages bzw. der Woche gemerkt (state.sdOffers), sonst rückte nach
+// jedem Kauf etwas nach – mehrere Seltene in einer Woche. Nur heute und später wird gemerkt (Uhr zurück: frisch gerechnet)
 function basarOffers(today = sdDay()) {
   const pick = (list, n, key) => list.map(s => ({ s, h: sdHash(key + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
     .sort((p, q) => p.have - q.have || p.h - q.h).slice(0, n).map(p => p.s);
-  const pool = SD_SHOP.filter(s => !s.katalog);
-  return [...pick(pool.filter(s => !s.rare), 3, today), ...pick(pool.filter(s => s.rare), 1, 'w' + sdWeek(today))];
+  const pool = SD_SHOP.filter(s => !s.katalog), wk = sdWeek(today), o = state.sdOffers;
+  const known = ids => ids.length && ids.every(id => sdShopItem(id));
+  const day = o && o.day === today && known(o.ids) ? o.ids.map(sdShopItem) : pick(pool.filter(s => !s.rare), 3, today);
+  const rare = o && o.week === wk && o.rare && sdShopItem(o.rare) ? [sdShopItem(o.rare)] : pick(pool.filter(s => s.rare), 1, 'w' + wk);
+  if (!o || today > o.day) state.sdOffers = { day: today, ids: day.map(s => s.id), week: wk, rare: rare[0] ? rare[0].id : null };
+  return [...day, ...rare];
 }
 // 📖 Katalog (Animal-Crossing-Art, entschieden 18.10.2026): was der Basar schon einmal angeboten hat, gibt es jederzeit nach – zum
 // anderthalbfachen Preis; Seltenes nur in seiner Woche. Gesehen = state.sdShown (beim Öffnen des Basars gemerkt)
