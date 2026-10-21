@@ -420,10 +420,17 @@ function hillRegions() {
 }
 // Treppen, die wirklich hinaufführen (157j): unten erreichbar (Fuß begehbar – breite Treppe auch über die Nachbartreppe) und oben frei. Steht auf
 // dem oberen Feld oder dem Fuß ein Ding (Gebäude, Gleis, Brunnen …), ist die Treppe nur dessen Tür. up: freie obere Felder; door: oberes Feld →
-// Anker, die die Treppe dorthin versperren; tops: alle oberen Felder
+// Anker, die die Treppe dorthin versperren; tops: alle oberen Felder. Ecktreppen (157l, 22.10.2026) zählen als Weg dazwischen: ist ihr Fuß begehbar,
+// erreicht man über sie die Treppen, an denen sie hängen (vorher galt die Anhöhe dann als zugestellt)
 function hillStairUse() {
   const st = hillStairs(), byK = new Map(st.map(s => [s.k, s])), seen = new Set(), todo = [];
   for (const s of st) if (walkable(s.x - s.dx, s.y - s.dy, true)) { seen.add(s.k); todo.push(s); }
+  if (stairFresh().ecken) for (const [k, t] of state.tiles) {
+    if (!isStair(t) || !t.ecke) continue;
+    const [x, y] = keyXY(k), c = { k, x, y };
+    byK.set(k, c);
+    if (cornerAxes(stairRotOf(t)).some(([ex, ey]) => walkable(x - ex, y - ey, true) && levelLink(x, y, x - ex, y - ey, 'fuss'))) { seen.add(k); todo.push(c); }
+  }
   while (todo.length) {
     const s = todo.pop();
     for (const [dx, dy] of DIRS) { const n = byK.get((s.x + dx) + ',' + (s.y + dy)); if (n && !seen.has(n.k) && levelLink(s.x, s.y, n.x, n.y, 'fuss')) { seen.add(n.k); todo.push(n); } }

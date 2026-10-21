@@ -82,3 +82,18 @@ describe('2/3 Treppe: Breite wie die Nachbartreppe, Antippen mit dem Werkzeug ü
     game('stairNewWide = null');
   });
 });
+
+describe('4 Treppe: Fuß nur über eine Ecktreppe erreichbar', () => {
+  it('beide geraden Treppen am Fuß zugestellt, die Ecktreppe dazwischen frei: die Anhöhe ist erreichbar (kein Hinweis „zugestellt“), Bewohner gehen hinauf', () => {
+    hills(block(10, 10, 13, 13));
+    game("stairNewWide = true; build('huegeltreppe', 13, 14); build('huegeltreppe', 14, 13); build('huegeltreppe', 14, 14); stairNewWide = null");
+    expect(game('!!stairAt(14, 14).ecke')).toBe(true);
+    game("state.tiles.set('13,15', { b: 'brunnen', lvl: 1 }); state.tiles.set('15,13', { b: 'brunnen', lvl: 1 }); recalc()");
+    expect(game('[walkable(13, 15, true), walkable(15, 13, true), walkable(15, 14, true)]')).toEqual([false, false, true]);
+    expect(game('walkPath(15, 15, [[12, 12]]) != null')).toBe(true);                     // zu Fuß geht es über die Ecktreppe hinauf
+    expect(game('[hillNoStair(12, 12), hillStairShut(12, 12)]')).toEqual([false, false]);
+    // ohne die Ecktreppe: wirklich zugestellt
+    game("state.tiles.delete('14,14'); groundVersion++; recalc()");
+    expect(game('[hillNoStair(12, 12), hillStairShut(12, 12)]')).toEqual([true, true]);
+  });
+});
