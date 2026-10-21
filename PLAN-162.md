@@ -22,3 +22,13 @@
 - Die anderen sechs in voller Qualität: Triumphbogen, Deine Statue (eigene Figur), Mondtor, Sternendenkmal, Steinkreis, Prachtbrunnen
   (Skizzen in tools/monumente-entwurf.js – Nutzer fand die Skizzen „scheiße“, also alles neu wie Obelisk/Hüterin).
 - Preise genau, Reihenfolge der Monate, Bauabschnitte je Monument (Baustoffe), Baustelle im Spiel (wie Wunderwerke: drawWonder-Phasen).
+
+## Stand 21.10.2026 (Entwürfe, tools/monumente-voll.js FINAL, tools/figuren-studie.js)
+- Obelisk: ohne Löwen, Zeichen zwischen den Fugen in der Fläche – „perfekt“.
+- Triumphbogen: echte Öffnungen (Boden = Untergrund des Spielers), kleine Bögen vorn sind Durchgänge, Schmalseite nur Nische.
+- Deine Statue: passt.
+- Pagode statt Mondtor: Dachform **B (gerade Traufe)** gewählt.
+- Sternendenkmal: passt.
+- Steinkreis: raus.
+- Figur für Hüterin/Brunnen/Siegesfigur: Gestaltung A (klassisch, Freiheitsstatue); ausführliche Fassung war „zu viele Details“ → ruhige Fassung (figA4) zur Wahl.
+- Prachtbrunnen: Richtung Delfine/Königin gut, aber achteckiger Aufbau von vorher besser; Wasserweg, Schichten und Figur glaubhaft machen.
