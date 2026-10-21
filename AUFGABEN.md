@@ -250,7 +250,7 @@ Entschieden: Steg + Expedition (Reihenfolge wie bisher); Hafen mit Fähren, Hand
       zwischen denselben Inseln fährt (Zug, Seilbahn, später Fähre), teilt sich die Fahrgäste nach Plätzen.
 
 ## Block 20 – Berge (später)
-- [ ] Berge als Gelände, nur per Seilbahn erreichbar; oben Berghütte, Aussichtsturm, Gipfelkreuz als Attraktionen.
+- [~] ~~Berge als Gelände, nur per Seilbahn erreichbar; oben Berghütte, Aussichtsturm, Gipfelkreuz als Attraktionen.~~ – verworfen (Nutzer 21.10.2026)
 
 ## Block 21 – Bedingungen und Windturbine (29.09. abends)
 
@@ -2747,3 +2747,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig). Der
       Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Opernhaus, Glaspalast, Thermenpalast, Kathedrale, Luftschiffhafen
 - [ ] 161g restliche Laden-Dinge
+- [ ] 164 **Neue besondere Stücke** (Nutzer 21.10.2026: „klingen geil, auf die Liste“ – nicht als Truhen-Exklusives, Weg offen: Kunstakademie ✦,
+      Basar oder Bauplan): Perlmutt-Dachfarbe (schimmernd), Gold-Fensterläden, Sternen-Wegmuster. Je Stück zuerst Entwurf als Bild.
+- [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
+      Kathedrale, Luftschiffhafen – je Entwurf zuerst).
