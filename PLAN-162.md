@@ -6,8 +6,13 @@
   3 Abschnitten mit Talern + Baustoffen** (z. B. 100 Mio / 300 Mio / 600 Mio – endlich ein Ziel für den Talerberg; ersetzt die
   Sparziele 161d/f). Bauplatz → Rohbau mit Gerüst → fertig (Bild: tools/monumente-entwurf.js PHASEN).
 - Wirkung nur Schönes: viel 🌸, Licht in der Nacht, Bewegung (Fahnen, Flamme, Wasser). Eigene Seite im Sammelbuch.
-- **Qualität wie die Wunderwerke** (Nutzer: „die sollen ja cool sein“): ganze Anlagen 3×3 mit Platz, Pflaster, Beeten, Hecken,
-  Laternen, viele Einzelheiten – gezeichnet mit dem Wunderwerk-Rahmen (`kit`, `kPave`, `kBed`, `lampPost`), Werkzeug tools/monumente-voll.js.
+- **Qualität wie die Wunderwerke** (Nutzer: „die sollen ja cool sein“): viele Einzelheiten – gezeichnet mit dem Wunderwerk-Rahmen
+  (`kit`), Werkzeug tools/monumente-voll.js.
+- **Keine mitgelieferte Deko** (Nutzer 21.10.2026: „das Zeug haben die Spieler doch, das sollen die selbst entscheiden“): nur das
+  Bauwerk mit seinem festen Sockel/Fundament – keine Laternen, Bänke, Beete, Hecken, Bäume, Boote, Wege. Grundfläche so klein wie das
+  Bauwerk (meist 2×2). Wege dürfen durch Tore/Bögen geführt werden (vom Spieler gebaut).
+- **Prüfliste vor jedem Zeigen** (Nutzer: „wieder haufen Fehler“): groß rendern, Symmetrie, keine überlappenden Kanten, nichts schwebt,
+  Maßstab, Licht von links, glaubhafte Formen – erst dann zeigen.
 - **Obelisk der Sonnenbucht:** „okay“ – Einzelheiten unten (Platz/Löwen/Hecken) beim Einbauen nochmal richtig machen.
 - **Koloss = „Hüterin des Hafens“ (Variante B, „jaaa so freiheitsstatue-mäßig!“):** Felseninsel im Wasser, runder Turm mit Fenstern,
   Tür, Goldkranz und Leuchtring; Figur im Bronze-Gewand mit Falten und wehendem Tuch, Laterne hoch (nachts wie ein Leuchtturm),
