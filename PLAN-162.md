@@ -51,4 +51,4 @@
 ## Eingebaut (21.10.2026, v1157)
 - js/monumente.js: Bilder (MON_ART), MONUMENTS, Monatswechsel (monOfMonth, Reihenfolge je Spielstand), Baustelle (monStep), Infofenster.
 - Basar: Reiter 🏛️ Monumente (Wahrzeichen des Monats groß mit Countdown, alle sieben mit Stand), Sammelbuch-Seite „Monumente“.
-- Baumenü: 🌸 Gestalten → 🏛️ Monumente. Rathaus-„Bereit“ kennt die Abschnitte noch nicht (später).
+- Baumenü: 🌸 Gestalten → 🏛️ Monumente (nur Gekauftes). Rathaus „Bereit“: Gruppe 🏛️ Wahrzeichen, einzeln (v1159).

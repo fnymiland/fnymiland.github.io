@@ -1573,7 +1573,8 @@ Blütenpfad, Kristallweg, Regenbogenweg, Goldpflaster – fast alle bunt/verspie
       kürzer (~⅓ Feld, zwei gegenüber treffen sich nicht), Kopf als flache Platte in Auslegerrichtung.
 
 ## Block 133: Monumente (wie in Alexandria)
-- [ ] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen
+- [x] Koloss am Hafen (Schiffe fahren durch) · Riesenstatue der eigenen Figur · Obelisk & Löwen/Sphinxe · Triumphbogen – erledigt mit Block 162
+      (21.10.2026): Obelisk (ohne Löwen), Deine Statue, Triumphbogen; der Koloss wurde zur Sternenleuchte (keine Menschenfiguren)
 
 ## Block 134: Kopieren (✋-Rechteck → „⧉ Kopieren“, Kopie am Finger, drehbar, kostet wie neu)
 - [x] Mit ✋ markieren: Auswahl bleibt stehen, Leiste „↔ Verschieben“ / „⧉ Kopieren · Preis“ / „✕“ (`syncSelBar`, je Bild aus render);
@@ -2737,8 +2738,9 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Schönheit, Menügruppe 🏛️ Monumente, Sammelbuch-Seite. Wimpel des Bogens stehen still (Bildchen statt live). Leistungswerte der 7 neuen
       Bilder per leistung:neu eingetragen (nur neue Einträge, 81–904 – weit unter den Wunderwerken). Tests: tests/monumente.test.js.
       Baumenü nur mit Gekauftem (Nutzer 21.10.: „wie andere Spiele?“ → Animal-Crossing-Art): kein Vorgeschmack mehr, leere Basar-Gruppen weg (v1158).
-      Offen/später: Rathaus-Liste „Bereit“ kennt die Wahrzeichen-Abschnitte noch nicht (nur das 🏗️ über der Baustelle).
+      Rathaus „Bereit“: bezahlbare Abschnitte in eigener Gruppe 🏛️ Wahrzeichen, einzeln (nicht in „Alle ausbauen“), Knopf baut (v1159).
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
 - [ ] 161e Inselzauber – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
-- [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
+- [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig). Der
+      Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Opernhaus, Glaspalast, Thermenpalast, Kathedrale, Luftschiffhafen
 - [ ] 161g restliche Laden-Dinge

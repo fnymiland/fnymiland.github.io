@@ -110,6 +110,20 @@ describe('Baustelle', () => {
     expect(game("state.tiles.get('4,4').phase")).toBe(1);
     game('closePanel()');
   });
+  it('Rathaus „Bereit“: bezahlbarer Abschnitt steht dort (eigene Gruppe, einzeln), Knopf baut ihn; nicht im „Alle ausbauen“', () => {
+    plan('mon_obelisk'); game("build('mon_obelisk', 4, 4)");
+    const e = () => game("readyList().ready.find(e => e.kind === 'mon')");
+    expect(e()).toMatchObject({ x: 4, y: 4, b: 'mon_obelisk', cost: { money: 100e6, quader: 300 } });
+    expect(game("readyGroups(readyList().ready).find(g => g.id === 'mon')")).toMatchObject({ bulk: false });
+    expect(game("upgradeMany(readyList().ready.filter(e => e.kind === 'mon'))")).toBe(0);
+    game("openTownHall('todo')");
+    const i = game("readyList().ready.findIndex(e => e.kind === 'mon')");
+    game(`document.querySelector('[data-up="${i}"]').click()`);
+    expect(game("state.tiles.get('4,4').phase")).toBe(1);
+    game('state.money = 1e6');
+    expect(e()).toBeUndefined();                                             // nicht bezahlbar: nicht „bereit“
+    game('closeModal()');
+  });
   it('Abreißen gibt alles zurück, auch die Abschnitte', () => {
     plan('mon_obelisk'); game("build('mon_obelisk', 4, 4); monStep(4, 4)");
     const info = game('demolishInfo(4, 4)');

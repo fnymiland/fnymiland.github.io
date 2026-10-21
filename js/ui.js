@@ -2887,6 +2887,7 @@ function readyList() {
   const ready = [], almost = [];
   for (const [k, t] of state.tiles) {
     const s = T.st.get(k), [x, y] = keyXY(k);
+    if (monSite(t)) { if (canPay(monCost(t))) ready.push({ x, y, b: t.b, kind: 'mon', cost: monCost(t), text: `🏗️ ${ITEMS[t.b].name}: ${MON_PHASE_NAMES[t.phase]}` }); continue; }   // Wahrzeichen (Block 162)
     if (!s) continue;
     const where = { x, y, b: t.b };
     if (t.b === 'haus' && s.wish && s.wish.next) {
@@ -2907,12 +2908,12 @@ function readyList() {
   }
   return { ready, almost };
 }
-// Bereites nach Art ordnen – wie das Bau-Menü; Wunderwerke und Laternen am Ende und nur einzeln
+// Bereites nach Art ordnen – wie das Bau-Menü; Wunderwerke, Wahrzeichen (Block 162) und Laternen nur einzeln
 function readyGroups(ready) {
   const menu = buildGroups();
-  const groupOf = e => e.kind === 'lm' ? 'lm' : e.kind === 'wonder' ? 'wunder' : isHome(e.b) ? 'wohnen'
+  const groupOf = e => e.kind === 'lm' ? 'lm' : e.kind === 'wonder' ? 'wunder' : e.kind === 'mon' ? 'mon' : isHome(e.b) ? 'wohnen'
     : (menu.find(g => g.items.includes(e.b)) || { id: 'andere' }).id;
-  const defs = [...menu.map(g => ({ id: g.id, label: g.label, bulk: g.id !== 'wunder' })), { id: 'andere', label: '🧩 Sonstiges', bulk: true }, { id: 'lm', label: '🏮 Sehenswürdigkeiten', bulk: false }];
+  const defs = [...menu.map(g => ({ id: g.id, label: g.label, bulk: g.id !== 'wunder' })), { id: 'andere', label: '🧩 Sonstiges', bulk: true }, { id: 'mon', label: '🏛️ Wahrzeichen', bulk: false }, { id: 'lm', label: '🏮 Sehenswürdigkeiten', bulk: false }];
   return defs.map(d => ({ ...d, items: ready.filter(e => groupOf(e) === d.id) })).filter(g => g.items.length);
 }
 const sumCost = list => { const c = {}; for (const e of list) for (const [r, n] of Object.entries(e.cost || {})) c[r] = (c[r] || 0) + n; return c; };
@@ -3020,7 +3021,7 @@ function openTownHall(tab = hallTab) {
       <div class="hall-row${state.festival ? ' done' : ''}"><span>🗼 Leuchtturm ${state.festival ? '🏮' : '<span class="off">🏮</span>'}</span></div>`;
   } else if (tab === 'todo') {
     // Zu tun (Block 98: „Bereit“ + „Wünsche“): Ausbauen direkt von hier (grau, solange Taler oder Material fehlen – wird live grün)
-    const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
+    const upBtn = (e, i) => e.kind ? `<button class="btn small" data-up="${i}" ${canPay(e.cost) ? '' : 'disabled'}>${e.kind === 'lm' ? 'Restaurieren' : e.kind === 'wonder' || e.kind === 'mon' ? 'Bauen' : 'Ausbauen'}${costText(e.cost) ? ' · ' + costText(e.cost) : ''}</button>` : '';
     const row = (e, i, icon, up) => `<div class="hall-row"><span>${icon} ${e.text}</span><span class="hall-btns">${up ? upBtn(e, i) : ''}<button class="btn ghost small" data-jump="${i}">Hin</button></span></div>`;
     // Gruppen wie im Bau-Menü (Wohnen, Geld, Rohstoffe …), je mit „Alle ausbauen“; ganz oben „Alles ausbauen“
     const many = ready.filter(e => e.kind === 'haus' || e.kind === 'stage');
@@ -3029,7 +3030,7 @@ function openTownHall(tab = hallTab) {
     const groups = readyGroups(ready);
     body = `
       ${many.length > 1 ? `<div class="row">${allBtn(many, 'all', '✨ Alles ausbauen')}</div>
-        <p class="muted">Das Günstigste zuerst, so weit Taler und Material reichen. Wunderwerke und Laternen einzeln.</p>` : ''}
+        <p class="muted">Das Günstigste zuerst, so weit Taler und Material reichen. Wunderwerke, Wahrzeichen und Laternen einzeln.</p>` : ''}
       ${ready.length ? groups.map(g => `<div class="label hall-group"><span>${g.label} (${g.items.length})</span>
           ${g.bulk && g.items.length > 1 ? allBtn(g.items, g.id, 'Alle ausbauen') : ''}</div>
           ${g.items.map(e => row(e, ready.indexOf(e), '✨', true)).join('')}`).join('')
@@ -3094,6 +3095,7 @@ function openTownHall(tab = hallTab) {
     const e = all[+b.dataset.up];
     if (e.kind === 'lm') { restoreLandmark(e.type); return; }            // öffnet das Laternen-Fenster
     if (e.kind === 'wonder') { const t = state.tiles.get(e.x + ',' + e.y); if (wonderStep(e.x, e.y, true) && !wonderDone(t)) openTownHall('todo'); return; }
+    if (e.kind === 'mon') { if (monStep(e.x, e.y)) openTownHall('todo'); return; }
     if (e.kind === 'haus' ? houseUpgrade(e.x, e.y, true) : stageUpgrade(e.x, e.y, true)) openTownHall('todo');
   };
   for (const b of card.querySelectorAll('[data-quick-go]')) b.onclick = () => {
