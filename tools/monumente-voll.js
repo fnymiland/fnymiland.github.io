@@ -62,18 +62,20 @@
     for (const [a0, b0, a1, b1] of [[-1.4, -0.06, -0.95, 0.06], [0.95, -0.06, 1.4, 0.06], [-0.06, -1.4, 0.06, -0.95], [-0.06, 0.95, 0.06, 1.4]]) K.rect(a0, b0, a1, b1, C('#e0b35a'));
     const parts = [];
     // Beete und Zypressen in den Ecken, Hecken an den Rändern, Laternen
+    // spiegelgleich zur Blickachse (a ↔ b): Beete in allen Ecken, Zypressen nur links, rechts, hinten (vorn frei), Laternen an den hinteren
+    // Wegen, Hecken mit Abstand zu Beeten und Löwen
     for (const [sa, sb] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      parts.push([sa * 1.12, sb * 1.12, () => kBed(K, sa * 1.12, sb * 1.12, 0.26, (sa + 2) * 3 + sb)]);
-      parts.push([sa * 1.2, sb * 1.2 + 0.01, () => cypress(K, sa * 1.22, sb * 1.22, 1)]);
-      parts.push([sa * 0.72, sb * 0.72, () => lamp(K, sa * 0.74, sb * 0.74)]);
+      parts.push([sa * 1.15, sb * 1.15, () => kBed(K, sa * 1.15, sb * 1.15, 0.22, (sa + 2) * 3 + sb)]);
+      if (!(sa > 0 && sb > 0)) parts.push([sa * 1.16, sb * 1.16 + 0.01, () => cypress(K, sa * 1.16, sb * 1.16, 1)]);
     }
-    for (const [a, b, ha, hb] of [[-1.3, -0.5, 0.07, 0.3], [-1.3, 0.5, 0.07, 0.3], [-0.5, -1.3, 0.3, 0.07], [0.5, -1.3, 0.3, 0.07]]) parts.push([a, b, () => { K.block({ a, b, ha, hb, h: 6, wall: '#4f9a4a', type: 'flat', roof: '#6cbf5f' }); }]);
-    for (const [a, b, ha, hb] of [[1.3, -0.5, 0.07, 0.3], [1.3, 0.5, 0.07, 0.3], [-0.5, 1.3, 0.3, 0.07], [0.5, 1.3, 0.3, 0.07]]) parts.push([a, b, () => { K.block({ a, b, ha, hb, h: 6, wall: '#4f9a4a', type: 'flat', roof: '#6cbf5f' }); for (let i = 0; i < 4; i++) { const p = K.P(a + (ha > hb ? (i - 1.5) * 0.15 : 0), b + (hb > ha ? (i - 1.5) * 0.15 : 0), 6); circle(p[0], p[1] - 0.5 * z, 1.1 * z, C(FLOWER_COLS[i % 5])); } }]);
+    for (const [a, b] of [[-1.15, 0.3], [-1.15, -0.3], [0.3, -1.15], [-0.3, -1.15]]) parts.push([a, b, () => lamp(K, a, b)]);
+    const hedge = (a, b, ha, hb, flowers) => parts.push([a, b, () => { K.block({ a, b, ha, hb, h: 6, wall: '#4f9a4a', type: 'flat', roof: '#6cbf5f' }); if (flowers) for (let i = 0; i < 3; i++) { const p = K.P(a + (ha > hb ? (i - 1) * 0.12 : 0), b + (hb > ha ? (i - 1) * 0.12 : 0), 6); circle(p[0], p[1] - 0.5 * z, 1.1 * z, C(FLOWER_COLS[(i + 1) % 5])); } }]);
+    for (const e of [-1.32, 1.32]) for (const m of [-0.66, 0.66]) { hedge(e, m, 0.06, 0.19, e > 0); hedge(m, e, 0.19, 0.06, e > 0); }
     // Bänke
-    for (const [a, b] of [[-0.95, 0.35], [0.35, -0.95]]) parts.push([a, b, () => { K.block({ a, b, ha: 0.12, hb: 0.05, h: 3, wall: '#8a5a3c', type: 'flat', roof: '#b07a52' }); }]);
+    for (const [a, b] of [[-0.92, 0.42], [0.42, -0.92]]) parts.push([a, b, () => { K.block({ a, b, ha: 0.12, hb: 0.05, h: 3, wall: '#8a5a3c', type: 'flat', roof: '#b07a52' }); }]);
     // Mitte: Stufen, Sockel, Obelisk
     parts.push([0, 0, () => {
-      plinth(K, 0, 0, 0.6, 0.6, 3, 0, '#d8ccb0');
+      plinth(K, 0, 0, 0.56, 0.56, 3, 0, '#d8ccb0');
       plinth(K, 0, 0, 0.48, 0.48, 3, 3, '#e6dcc4');
       plinth(K, 0, 0, 0.36, 0.36, 12, 6, '#8f8577', GOLD);
       for (const n of [[0, 1], [1, 0]]) {                                                                  // Inschrift-Tafeln vorn
@@ -88,7 +90,7 @@
       for (const n of [[0, 1], [1, 0]]) {
         const base = n[0] ? '#d9c8a2' : '#f1e5c8';
         poly(face(n), C(base));
-        poly([FP(n, 0.8, B), FP(n, 1, B), FP(n, 1, T), FP(n, 0.8, T)], C(shade(base, n[0] ? -0.08 : 0.06)));   // Kantenlicht
+        if (!n[0]) poly([FP(n, 0, B), FP(n, 0.14, B), FP(n, 0.14, T), FP(n, 0, T)], C(shade(base, 0.07)));   // Lichtkante links (Sonne von links)
         for (let up = B + 16; up < T - 4; up += 16) L(C(shade(base, -0.12)), 0.35, z, [FP(n, 0, up), FP(n, 1, up)]);   // Steinfugen
         // Zeichenband: Sonne, Mond, Welle, Vogel, Stern – eigene Bildzeichen
         for (let i = 0; i < 7; i++) {
@@ -110,8 +112,8 @@
       if (lit()) for (const n of [[0, 1], [1, 0]]) glowP(FP(n, 0.5, B + 4), 26 * z);                     // Strahler am Fuß
     }]);
     // Löwen vorn am Weg
-    parts.push([0.98, 0.38, () => lion(K, 0.98, 0.36, 1)]);
-    parts.push([0.38, 0.98, () => lion(K, 0.36, 0.98, -1)]);
+    parts.push([1.1, 0.26, () => lion(K, 1.1, 0.26, 1)]);                                             // Löwen am Eingang der vorderen Wege
+    parts.push([0.26, 1.1, () => lion(K, 0.26, 1.1, -1)]);
     K.scene(parts);
   }
 
@@ -367,7 +369,171 @@
     parts.push([2, 2, () => { for (const [dx, dy, s] of [[-50, -150, 1], [-38, -160, 0.8], [48, -120, 0.9]]) { const p = K.P(0, 0); const x = p[0] + dx * z, y = p[1] + dy * z; L(lit() ? '#c8d2ff' : '#ffffff', 0.9 * s, z, [[x - 4 * z * s, y], [x - 1.5 * z * s, y - 2 * z * s], [x, y], [x + 1.5 * z * s, y - 2 * z * s], [x + 4 * z * s, y]]); } }]);
     K.scene(parts);
   }
+  // Platz-Grundlage für viele Monumente: Rand, Belag, Beete in den Ecken, Zypressen links/rechts/hinten, Laternen hinten
+  function plaza(K, look, parts, opts = {}) {
+    const z = K.z;
+    K.rect(-1.47, -1.47, 1.47, 1.47, C('#cbbf9f'));
+    kPave(K, () => kRectPath(K, -1.4, -1.4, 1.4, 1.4), look, 0, 0, 3);
+    if (opts.beds !== false) for (const [sa, sb] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      parts.push([sa * 1.15, sb * 1.15, () => kBed(K, sa * 1.15, sb * 1.15, 0.22, (sa + 2) * 3 + sb)]);
+      if (!(sa > 0 && sb > 0)) parts.push([sa * 1.16, sb * 1.16 + 0.01, () => cypress(K, sa * 1.16, sb * 1.16, 1)]);
+    }
+  }
+  const hedgeAt = (K, parts, a, b, ha, hb, flowers) => parts.push([a, b, () => { const z = K.z; K.block({ a, b, ha, hb, h: 6, wall: '#4f9a4a', type: 'flat', roof: '#6cbf5f' }); if (flowers) for (let i = 0; i < 3; i++) { const p = K.P(a + (ha > hb ? (i - 1) * 0.12 : 0), b + (hb > ha ? (i - 1) * 0.12 : 0), 6); circle(p[0], p[1] - 0.5 * z, 1.1 * z, C(FLOWER_COLS[(i + 1) % 5])); } }]);
+
+  // ---------- 3 · Triumphbogen (3×3): Straße längs a hindurch, drei Bögen, Säulen, Attika, goldenes Viergespann ----------
+  function triumph(K, now = 0) {
+    const z = K.z, ST = '#efe7d6', STD = '#d9cdb4', ha = 0.36, hb = 1.02, H = 78;
+    const parts = [];
+    K.rect(-1.47, -1.47, 1.47, 1.47, C('#9fd27a'));
+    // Straße längs a mit Bordstein, Rasen mit Beeten zu beiden Seiten
+    K.rect(-1.5, -0.42, 1.5, 0.42, C('#b8ad98'));
+    kPave(K, () => kRectPath(K, -1.5, -0.36, 1.5, 0.36), PATH_LOOK.kopf, 0, 0, 3);
+    for (const sb of [-1, 1]) {
+      for (const sa of [-1, 1]) parts.push([sa * 1.0, sb * 1.05, () => kBed(K, sa * 1.0, sb * 1.05, 0.26, (sa + 3) * 2 + sb)]);
+      for (const sa of [-1, 1]) parts.push([sa * 1.15, sb * 0.6, () => lamp(K, sa * 1.15, sb * 0.56)]);
+    }
+    parts.push([0, 0, () => {
+      const F = (b, h) => K.P(ha, b, h), S = (a, h) => K.P(a, hb, h);                           // Vorderseite (a = +ha), Seite (b = +hb)
+      K.block({ a: 0, b: 0, ha: ha + 0.05, hb: hb + 0.05, h: 5, wall: STD, type: 'flat', roof: '#e6dcc4' });   // Sockelband
+      K.block({ a: 0, b: 0, ha, hb, h: H - 5, lift: 5, wall: ST, type: 'flat', roof: '#f6f0e2' });
+      // Öffnungen: großer Bogen in der Mitte, zwei kleine
+      const arch = (b0, b1, hs, col, colIn) => {
+        const bm = (b0 + b1) / 2, rb = (b1 - b0) / 2, rh = rb * 35.8, pts = [F(b0, 5)];
+        for (let i = 0; i <= 16; i++) { const ang = Math.PI - i * Math.PI / 16; pts.push(F(bm + Math.cos(ang) * rb, hs + Math.sin(ang) * rh)); }
+        pts.push(F(b1, 5)); poly(pts, C(col));
+        const q0 = F(b0 + rb * 0.25, 5), q1 = F(b1 - rb * 0.25, 5); poly([q0, q1, [q1[0] - 7 * z, q1[1] - 3.5 * z], [q0[0] - 7 * z, q0[1] - 3.5 * z]], lit() ? '#3a4a6a' : C('#a9cf8a'));   // Durchblick: Licht am anderen Ende
+        // Schlussstein und Bogenkante
+        g.strokeStyle = C('#cdbf9f'); g.lineWidth = 1.4 * z; g.beginPath(); pts.slice(1, -1).forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();
+        const ks = F(bm, hs + rh); poly([[ks[0] - 2.4 * z, ks[1] + 1 * z], [ks[0] + 2.4 * z, ks[1] + 2 * z], [ks[0] + 1.8 * z, ks[1] - 4 * z], [ks[0] - 1.8 * z, ks[1] - 5 * z]], C(GOLD));
+      };
+      arch(-0.3, 0.3, 30, '#5f5646', '#7d7362');
+      arch(-0.84, -0.56, 16, '#5f5646', '#7d7362'); arch(0.56, 0.84, 16, '#5f5646', '#7d7362');
+      // Säulen vor der Wand mit Kapitell und Fuß
+      for (const b of [-0.94, -0.42, 0.42, 0.94]) {
+        const p0 = K.P(ha + 0.04, b, 5), p1 = K.P(ha + 0.04, b, 56);
+        poly([[p0[0] - 2.6 * z, p0[1] + 1.3 * z], [p0[0] + 2.6 * z, p0[1] - 1.3 * z], [p1[0] + 2.6 * z, p1[1] - 1.3 * z], [p1[0] - 2.6 * z, p1[1] + 1.3 * z]], C('#f7f2e6'));
+        L(C(STD), 0.5, z, [[p0[0] + 1 * z, p0[1] - 0.5 * z], [p1[0] + 1 * z, p1[1] - 0.5 * z]]);
+        poly([[p1[0] - 3.6 * z, p1[1] + 1.8 * z], [p1[0] + 3.6 * z, p1[1] - 1.8 * z], [p1[0] + 3.6 * z, p1[1] - 4.6 * z], [p1[0] - 3.6 * z, p1[1] - 1 * z]], C(GOLD_D));
+        poly([[p0[0] - 3.4 * z, p0[1] + 1.7 * z], [p0[0] + 3.4 * z, p0[1] - 1.7 * z], [p0[0] + 3.4 * z, p0[1] - 4.2 * z], [p0[0] - 3.4 * z, p0[1] - 0.9 * z]], C(STD));
+      }
+      // Medaillons über den kleinen Bögen
+      for (const b of [-0.7, 0.7]) { const c = F(b, 44); ellipse(c[0], c[1], 5 * z, 5.4 * z, C(STD)); ellipse(c[0], c[1], 3.8 * z, 4.2 * z, C(GOLD)); star(c[0], c[1], 2.4 * z, C(GOLD_D)); }
+      // Gesims und Attika mit Inschrift
+      poly([F(-hb - 0.04, 58), F(hb + 0.04, 58), F(hb + 0.04, 62), F(-hb - 0.04, 62)], C(STD));
+      poly([F(-0.62, 64), F(0.62, 64), F(0.62, 74), F(-0.62, 74)], C(GOLD));
+      for (let r = 0; r < 2; r++) L(C(GOLD_D), 0.6, z, [F(-0.52, 66.5 + r * 3.5), F(0.52, 66.5 + r * 3.5)]);
+      // Seite: kleiner Querbogen
+      { const bm = 0, pts = [S(-0.16, 5)]; for (let i = 0; i <= 12; i++) { const ang = Math.PI - i * Math.PI / 12; pts.push(S(bm + Math.cos(ang) * 0.16, 18 + Math.sin(ang) * 0.16 * 35.8)); } pts.push(S(0.16, 5)); poly(pts, C('#4f4638')); }
+      poly([S(-ha - 0.04, 58), S(ha + 0.04, 58), S(ha + 0.04, 62), S(-ha - 0.04, 62)], C(shade(STD, LIGHT.side)));
+      K.block({ a: 0, b: 0, ha: ha * 0.92, hb: hb * 0.92, h: 4, lift: H, wall: STD, type: 'flat', roof: '#e6dcc4' });
+      // Viergespann: vier Pferde, Wagen, Lenker mit Kranz – golden
+      const top = K.P(0, 0, H + 4);
+      for (const [dx, k] of [[-14, 0], [-7, 1], [0, 2], [7, 3]]) {
+        const x = top[0] + dx * z, y = top[1] + 4 * z - k * 0.6 * z, gc = k % 2 ? GOLD_D : GOLD;
+        for (const lx of [-3.4, -1.6, 2, 3.6]) L(C(GOLD_D), 1, z, [[x + lx * z, y - 6 * z], [x + lx * z - (lx < 0 ? 1.4 : 0) * z, y]]);   // Beine (vorn steigend)
+        ellipse(x, y - 7.5 * z, 5.2 * z, 3 * z, C(gc));
+        poly([[x - 3.4 * z, y - 9 * z], [x - 5.6 * z, y - 12.5 * z], [x - 3.4 * z, y - 13.6 * z], [x - 1.2 * z, y - 10 * z]], C(gc));   // kurzer, kräftiger Hals
+        poly([[x - 5.6 * z, y - 12.5 * z], [x - 9 * z, y - 11 * z], [x - 8.6 * z, y - 9.6 * z], [x - 4.6 * z, y - 10.6 * z]], C(gc));   // Kopf nach vorn
+        L(C(GOLD_D), 0.6, z, [[x - 4.4 * z, y - 13.4 * z], [x - 4 * z, y - 15 * z]]);                                  // Ohr
+        L(C('#b98b3a'), 0.9, z, [[x - 3.2 * z, y - 13.4 * z], [x - 1 * z, y - 10.4 * z]]); L(C('#b98b3a'), 0.9, z, [[x + 5 * z, y - 8 * z], [x + 7 * z, y - 4 * z]]);   // Mähne, Schweif
+      }
+      const ch = [top[0] + 13 * z, top[1] + 1 * z];
+      poly([[ch[0] - 5 * z, ch[1] - 2 * z], [ch[0] + 5 * z, ch[1] - 2 * z], [ch[0] + 4 * z, ch[1] - 9 * z], [ch[0] - 4 * z, ch[1] - 9 * z]], C(GOLD_D));
+      circle(ch[0] - 4 * z, ch[1] - 1 * z, 3 * z, C(GOLD)); circle(ch[0] - 4 * z, ch[1] - 1 * z, 1 * z, C(GOLD_D));
+      ellipse(ch[0], ch[1] - 13 * z, 3 * z, 5 * z, C(GOLD)); circle(ch[0], ch[1] - 20 * z, 2.4 * z, C(GOLD));
+      L(C(GOLD), 1.1, z, [[ch[0] + 1 * z, ch[1] - 15 * z], [ch[0] + 4 * z, ch[1] - 25 * z]]); g.strokeStyle = C('#6fae5a'); g.lineWidth = 1 * z; g.beginPath(); g.arc(ch[0] + 4.4 * z, ch[1] - 27 * z, 2.6 * z, 0, Math.PI * 2); g.stroke();   // Lorbeerkranz
+      // Fahnen an den Ecken
+      for (const b of [-0.92, 0.92]) { const f = K.P(0, b, H + 4); L(C('#6b4f3a'), 0.8, z, [f, [f[0], f[1] - 22 * z]]); const w = Math.sin(now / 280 + b * 3) * 1.6 * z; poly([[f[0], f[1] - 22 * z], [f[0] + 10 * z, f[1] - 19 * z + w], [f[0], f[1] - 15 * z]], C(b < 0 ? '#e8546f' : '#5b8fd8')); }
+      if (lit()) { glowP(F(0, 20), 40 * z); glowP(F(0, 69), 26 * z); glowP(top, 30 * z); for (const b of [-0.94, 0.94]) glowP(K.P(ha + 0.3, b, 2), 22 * z); }
+    }]);
+    K.scene(parts);
+  }
+
+  // ---------- 4 · Deine Statue (3×3): deine Spielfigur in Gold auf hohem Sockel, Namensschild, Brunnenbecken rund herum ----------
+  function deineStatue(K, now = 0) {
+    const z = K.z, parts = [];
+    plaza(K, PATH_LOOK.platten, parts);
+    K.oval(0, 0, 0.95, C('#d9c69a')); K.oval(0, 0, 0.88, C('#efe4c8'));
+    for (const [a, b] of [[-1.15, 0.3], [-1.15, -0.3], [0.3, -1.15], [-0.3, -1.15]]) parts.push([a, b, () => lamp(K, a, b)]);
+    for (const [a, b] of [[-0.95, 0.5], [0.5, -0.95]]) parts.push([a, b, () => K.block({ a, b, ha: 0.12, hb: 0.05, h: 3, wall: '#8a5a3c', type: 'flat', roof: '#b07a52' })]);
+    parts.push([0, 0, () => {
+      // rundes Wasserbecken mit Rand
+      const c = K.P(0, 0);
+      cyl(c[0], c[1], 44 * z, 22 * z, 4 * z, '#d6c8a8'); ellipse(c[0], c[1] - 4 * z, 40 * z, 20 * z, lit() ? '#4f8fc8' : C('#8fd0ee'));
+      for (const [dx, dy] of [[-18, 4], [16, -6], [4, 10], [-8, -10]]) ellipse(c[0] + dx * z, c[1] - 4 * z + dy * z, 4 * z, 1.2 * z, 'rgba(255,255,255,0.6)');
+      // Sockel: rund, zwei Stufen, Goldband, Namensschild
+      cyl(c[0], c[1] - 4 * z, 18 * z, 9 * z, 6 * z, '#8f8577');
+      cyl(c[0], c[1] - 10 * z, 14 * z, 7 * z, 26 * z, '#e9dfc8');
+      cyl(c[0], c[1] - 34 * z, 15 * z, 7.5 * z, 3 * z, GOLD_D);
+      const pl = [c[0] - 4 * z, c[1] - 22 * z]; poly([[pl[0] - 7 * z, pl[1] + 2 * z], [pl[0] + 7 * z, pl[1] + 3.6 * z], [pl[0] + 7 * z, pl[1] - 4 * z], [pl[0] - 7 * z, pl[1] - 5.6 * z]], C(GOLD));
+      g.fillStyle = C(GOLD_D); g.font = `800 ${3.2 * z}px system-ui`; g.fillText((typeof meLook === 'function' && meLook().name) || 'Bürgermeister·in', pl[0] - 6 * z, pl[1] + 0.4 * z, 12 * z);
+      // Wasserspeier
+      for (const s of [-1, 1]) { g.strokeStyle = lit() ? 'rgba(200,230,255,0.9)' : 'rgba(255,255,255,0.9)'; g.lineWidth = 1 * z; g.beginPath(); g.moveTo(c[0] + s * 13 * z, c[1] - 16 * z); g.quadraticCurveTo(c[0] + s * 26 * z, c[1] - 20 * z, c[0] + s * 30 * z, c[1] - 5 * z); g.stroke(); }
+      // Figur: deine echte Spielfigur, groß gezeichnet und vergoldet
+      const off = document.createElement('canvas'), S = 150; off.width = S * 2; off.height = S * 2; const ox = off.getContext('2d');
+      const prev = g; g = ox;
+      try {
+        const f = (typeof meFigLook === 'function') ? meFigLook() : null;
+        if (f) drawFigure({ ...f, label: null, name: '', full: true, seat: true, sx: S, sy: S * 1.85, wait: 1, sit: false, speed: 0, px: 0, py: 0 }, 9, now);
+      } catch (e) { /* ohne Figur */ } finally { g = prev; }
+      // Vergolden: Farbe weitgehend durch Gold ersetzen, Licht von links, Schatten rechts
+      ox.globalCompositeOperation = 'source-atop'; ox.fillStyle = 'rgba(214,160,48,0.78)'; ox.fillRect(0, 0, S * 2, S * 2);
+      const gr = ox.createLinearGradient(S * 0.6, 0, S * 1.4, 0); gr.addColorStop(0, 'rgba(255,236,160,0.55)'); gr.addColorStop(0.5, 'rgba(255,236,160,0)'); gr.addColorStop(1, 'rgba(110,60,10,0.4)'); ox.fillStyle = gr; ox.fillRect(0, 0, S * 2, S * 2);
+      ox.globalCompositeOperation = 'source-over';
+      // Ausmessen: sichtbare Pixel → auf 64 Einheiten Höhe, Füße genau auf den Sockel
+      const px = ox.getImageData(0, 0, S * 2, S * 2).data; let x0 = 1e9, x1 = -1, y0 = 1e9, y1 = -1;
+      for (let yy = 0; yy < S * 2; yy++) for (let xx = 0; xx < S * 2; xx++) if (px[(yy * S * 2 + xx) * 4 + 3] > 40) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }
+      const foot = [c[0], c[1] - 37 * z];
+      if (x1 > 0) { const hgt = 64 * z, k = hgt / (y1 - y0 + 1), w = (x1 - x0 + 1) * k; ellipse(foot[0], foot[1], w * 0.42, w * 0.16, 'rgba(90,60,20,0.25)'); g.drawImage(off, x0, y0, x1 - x0 + 1, y1 - y0 + 1, foot[0] - w / 2, foot[1] - hgt, w, hgt); }
+      if (lit()) { glowP([foot[0], foot[1] - 30 * z], 46 * z); for (const s of [-1, 1]) glowP([c[0] + s * 30 * z, c[1] - 2 * z], 22 * z, 'blue'); }
+    }]);
+    K.scene(parts);
+  }
+
+  // ---------- 5 · Mondtor (3×3): runde Pforte in weißer Mauer mit Ziegeldach, Teich mit Brücke dahinter, Bambus, Laternen ----------
+  function mondtor(K, now = 0) {
+    const z = K.z, parts = [];
+    K.rect(-1.47, -1.47, 1.47, 1.47, C('#9fd27a'));
+    kPave(K, () => kRectPath(K, -1.5, -0.24, 1.5, 0.24), PATH_LOOK.platten, 0, 0, 3);                   // Weg längs a durch das Tor
+    K.oval(-0.85, -0.85, 0.5, C('#7fb7c8')); K.oval(-0.85, -0.85, 0.44, lit() ? '#3a6a98' : C('#8fd0ee'));   // Teich hinten
+    for (const [a, b, col] of [[-1.0, -0.7, '#ff9e5a'], [-0.7, -1.0, '#ffffff']]) { const p = K.P(a, b); ellipse(p[0], p[1], 2.6 * z, 1.2 * z, C(col)); }   // Koi
+    for (const [a, b] of [[-0.62, -1.05], [-1.05, -0.6]]) { const p = K.P(a, b); ellipse(p[0], p[1], 3.6 * z, 1.6 * z, C('#5fae5a')); circle(p[0] + 1 * z, p[1] - 1 * z, 1.2 * z, C('#ffb3c8')); }   // Seerosen
+    const bamboo = (a, b) => parts.push([a, b, () => { const p = K.P(a, b); for (let i = 0; i < 5; i++) { const x = p[0] + (i - 2) * 2.6 * z, h = (26 + (i * 7) % 12) * z; L(C(i % 2 ? '#5f9e3c' : '#7cbf4f'), 1.1, z, [[x, p[1]], [x + (i - 2) * 0.6 * z, p[1] - h]]); for (let j = 1; j < 4; j++) { const yy = p[1] - h * j / 4; L(C('#4f8a30'), 0.5, z, [[x - 0.8 * z, yy], [x + 0.8 * z, yy]]); ellipse(x + 3 * z, yy - 1 * z, 3 * z, 1 * z, C('#6fb84a')); } } }]);
+    bamboo(-1.15, 0.85); bamboo(0.85, -1.15);
+    for (const [sa, sb] of [[1, 1]]) parts.push([sa * 1.1, sb * 1.1, () => kBed(K, sa * 1.1, sb * 1.1, 0.26, 4)]);
+    // Steinlaternen am Weg, spiegelgleich
+    const stoneLantern = (a, b) => parts.push([a, b, () => { const p = K.P(a, b), x = p[0], y = p[1]; box(x, y, 3 * z, 1.5 * z, 2 * z, '#a8a396', null, 0); poly([[x - 1.2 * z, y - 2 * z], [x + 1.2 * z, y - 2 * z], [x + 1 * z, y - 9 * z], [x - 1 * z, y - 9 * z]], C('#b8b3a6')); box(x, y - 9 * z, 3.4 * z, 1.7 * z, 4.4 * z, '#c9c3b4', null, 0); poly([[x - 1.6 * z, y - 10 * z], [x + 1.6 * z, y - 10 * z], [x + 1.6 * z, y - 12.6 * z], [x - 1.6 * z, y - 12.6 * z]], lit() ? '#ffe08a' : C('#6b6458')); poly([[x - 5 * z, y - 13.4 * z], [x + 5 * z, y - 13.4 * z], [x, y - 18 * z]], C('#8f8a7e')); if (lit()) glowP([x, y - 11 * z], 18 * z); }]);
+    for (const a of [-1.1, 0.75]) for (const sb of [-1, 1]) stoneLantern(a, sb * 0.42);
+    // Mauer längs b durch die Mitte, rundes Tor über dem Weg
+    parts.push([0, 0, () => {
+      const T = 0.07, hb = 1.18, H = 40, W = '#f7f2e8';
+      K.block({ a: 0, b: 0, ha: T, hb, h: H, wall: W, type: 'flat', roof: '#e6dfd0' });
+      const F = (b, h) => K.P(T, b, h);
+      const ring = []; for (let i = 0; i <= 32; i++) { const ang = i / 32 * Math.PI * 2; ring.push(F(Math.cos(ang) * 0.42, 20 + Math.sin(ang) * 0.42 * 35.8 * 0.95)); }
+      poly(ring, lit() ? '#24305a' : C('#a9dc84'));                                                            // Blick hindurch: Garten
+      const far = ring.map(([x, y]) => [x - 6 * z, y - 3 * z]); poly(far, lit() ? '#2c3a66' : C('#b4e392'));
+      g.strokeStyle = C('#c9b88f'); g.lineWidth = 2.6 * z; g.beginPath(); ring.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();
+      g.strokeStyle = C(GOLD_D); g.lineWidth = 0.8 * z; g.beginPath(); ring.forEach(([x, y], i) => i ? g.lineTo(x, y - 0) : g.moveTo(x, y)); g.stroke();
+      // Gitterfenster links und rechts
+      for (const bb of [-0.95, 0.95]) { const c = F(bb, 24), r = 5 * z; poly([[c[0] - r, c[1] + r * 0.5], [c[0] + r, c[1] - r * 0.5], [c[0] + r, c[1] - r * 1.5], [c[0] - r, c[1] - r * 0.5]], lit() ? '#ffd98a' : C('#c9b88f')); for (let j = -1; j <= 1; j++) L(C('#8a6a4a'), 0.5, z, [[c[0] + j * r * 0.6, c[1] + 0.5 * r - j * r * 0.3], [c[0] + j * r * 0.6, c[1] - 1.5 * r - j * r * 0.3 + r]]); if (lit()) glowP([c[0], c[1] - r * 0.5], 14 * z); }
+      // Ziegeldach mit geschwungenen Enden
+      for (let i = 0; i < 18; i++) { const b0 = -hb - 0.08 + i * (2 * hb + 0.16) / 18, b1 = b0 + (2 * hb + 0.16) / 18; poly([K.P(-T - 0.16, b0, H), K.P(-T - 0.16, b1, H), K.P(0, b1, H + 7), K.P(0, b0, H + 7)], C(i % 2 ? '#56647a' : '#62718a')); }
+      for (let i = 0; i < 18; i++) { const b0 = -hb - 0.08 + i * (2 * hb + 0.16) / 18, b1 = b0 + (2 * hb + 0.16) / 18; poly([K.P(T + 0.16, b0, H), K.P(T + 0.16, b1, H), K.P(0, b1, H + 7), K.P(0, b0, H + 7)], C(i % 2 ? '#3d4a5c' : '#4a586c')); }
+      L(C('#2f3a4a'), 1.6, z, [K.P(0, -hb - 0.1, H + 7), K.P(0, hb + 0.1, H + 7)]);
+      for (const s of [-1, 1]) { const e = K.P(0, s * (hb + 0.1), H + 7); g.strokeStyle = C('#2f3a4a'); g.lineWidth = 1.6 * z; g.beginPath(); g.moveTo(...e); g.quadraticCurveTo(e[0] + s * 4 * z, e[1] - 1 * z, e[0] + s * 6 * z, e[1] - 6 * z); g.stroke(); }
+      // Mondsichel und Mondhase oben auf dem First
+      const m = K.P(0, 0, H + 18);
+      g.fillStyle = lit() ? '#fff1a8' : C(GOLD); g.beginPath(); g.arc(m[0], m[1], 7 * z, 0.3 * Math.PI, 1.7 * Math.PI); g.arc(m[0] + 3.2 * z, m[1] - 0.7 * z, 5.6 * z, 1.6 * Math.PI, 0.4 * Math.PI, true); g.fill();
+      ellipse(m[0] - 2 * z, m[1] + 1 * z, 2.2 * z, 2 * z, '#ffffff'); ellipse(m[0] - 2.6 * z, m[1] - 2.4 * z, 0.7 * z, 2 * z, '#ffffff'); ellipse(m[0] - 1.2 * z, m[1] - 2.4 * z, 0.7 * z, 2 * z, '#ffffff');
+      // Lampions an der Mauer
+      for (const bb of [-0.62, 0.62]) { const p = F(bb, H - 3); L(C('#5a4636'), 0.5, z, [p, [p[0], p[1] + 4 * z]]); ellipse(p[0], p[1] + 8 * z, 3 * z, 3.8 * z, lit() ? '#ffb8a8' : C('#e8546f')); poly([[p[0] - 1.6 * z, p[1] + 4 * z], [p[0] + 1.6 * z, p[1] + 4 * z], [p[0] + 1.6 * z, p[1] + 5 * z], [p[0] - 1.6 * z, p[1] + 5 * z]], C(GOLD_D)); if (lit()) glowP([p[0], p[1] + 8 * z], 18 * z); }
+      if (lit()) glowP(m, 34 * z);
+    }]);
+    K.scene(parts);
+  }
   window.VOLL = [['Obelisk der Sonnenbucht', obelisk, 2.1], ['Koloss am Hafen', koloss, 1.62]];
+  window.PAKET1 = [['Obelisk der Sonnenbucht (überarbeitet)', obelisk, 2.1], ['Triumphbogen', triumph, 2.0], ['Deine Statue', deineStatue, 2.1], ['Mondtor', mondtor, 2.0]];
   window.KOLOSS_NEU = [['Koloss A – breitbeinig, kräftig', kolossA, 1.75], ['Koloss B – Hüterin des Hafens', kolossB, 1.9]];
 
   window.monumenteVoll = async (opts = {}) => {
