@@ -2747,8 +2747,12 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig). Der
       Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Opernhaus, Glaspalast, Thermenpalast, Kathedrale, Luftschiffhafen
 - [ ] 161g restliche Laden-Dinge
-- [ ] 164 **Neue besondere Stücke** (Nutzer 21.10.2026: „klingen geil, auf die Liste“ – nicht als Truhen-Exklusives, Weg offen: Kunstakademie ✦,
-      Basar oder Bauplan): Perlmutt-Dachfarbe (schimmernd), Gold-Fensterläden, Sternen-Wegmuster. Je Stück zuerst Entwurf als Bild.
+- [ ] 164 **Neue besondere Stücke** (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
+      - **Perlmutt-Dachfarbe** Variante B (kräftig: Rosa → Flieder → Mint → Himmelblau schräg übers Dach) – ✦ Meisterstück für ✨.
+      - **Glitzerwege**: feine stille Pünktchen + einzelne Funkel, die nacheinander aufblitzen (je eigener Takt 2,5–5 s, sin⁸, weicher Schein) –
+        „omg es ist perfekt genau so“. Drei ✦ Meisterstücke (je ~150 ✨): Silberglitzer, Goldglitzer, Perlglitzer, jeweils auf jeder Wegfarbe.
+        Funkeln nur sichtbar und nah (Zoom ≥ 1), weit weg stilles Bild; nachts etwas stärker.
+      - Fensterläden: verworfen („sieht doof aus“). Große Sterne im Weg: verworfen („eher Glitzer/fein“).
 - [ ] 165 **Forschung mit Schönem** (Nutzer 21.10.2026: „klingt geil“): passende Forschungen schalten zusätzlich ein Stück Aussehen frei, z. B.
       Handel → Markisen-Farben für Läden; Industrie → Backstein-Mauer + Fabrik-Ziegeldach; Seehandel/Schiffbau → Fenster Marineblau, Flagge
       Seeblau; Bahn → Bahnhofsuhr (Stadtschmuck) + Schotter-Wegmuster; Stromnetz → Straßenlaterne „Elektrisch“ (kaltweiß); Sternkunde →
