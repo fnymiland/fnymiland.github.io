@@ -616,7 +616,7 @@ function albumKeys(p) {
     case 'gebaeude': return Object.keys(ITEMS).filter(id => ['bau', 'netz', 'bildung', 'strom'].includes(ITEMS[id].cat) && !isRewardItem(id)).map(id => 'b:' + id);
     case 'deko': return Object.keys(ITEMS).filter(id => ITEMS[id].cat === 'deko' && !isRewardItem(id) && !ITEMS[id].variantOf).map(id => 'b:' + id);
     case 'haeuser': return HOUSE_STAGES.map((_, i) => 'hs:' + (i + 1));
-    case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i));
+    case 'farben': return WALLS.map((_, i) => 'wall:' + i).concat(ROOFS.map((_, i) => 'roof:' + i).filter(k => k !== 'roof:' + ROOF_PEARL));   // ✦ Perlmutt zählt nicht (Block 164)
     case 'wege': return STYLES.weg.filter(st => !st.album).map(st => 'weg:' + st.id);
     case 'bewohner': return ANIMALS.map(a => 'tier:' + a.id);
     case 'natur': return NATURE.map(n => 'natur:' + n.id);

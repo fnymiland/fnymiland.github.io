@@ -3287,6 +3287,10 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-22-glitzer', date: '22. Oktober', title: 'Glitzerwege und Perlmutt', items: [
+    '✨ <b>Glitzerwege:</b> Vier neue Meisterstücke in der Kunstakademie: Silber-, Gold-, Perl- und Regenbogenglitzer, je 150 ✨. Feine Pünktchen liegen im Weg, und wenn du nah heranzoomst, blitzen immer wieder kleine Funkel auf. Den Glitzer gibt es in jeder Wegfarbe.',
+    '🏠 <b>Perlmutt-Dach:</b> Eine schimmernde Dachfarbe in Rosa, Flieder, Mint und Himmelblau. Sie ist ein Meisterstück für 200 ✨.',
+  ] },
   { id: '2026-10-21-belohnungen', date: '21. Oktober', title: 'Baupläne und Meisterstücke', items: [
     '📜 <b>Baupläne:</b> Truhen auf fernen Inseln bringen jetzt meistens ein geschenktes Stück aus der Kunstakademie, zum Beispiel eine Farbe oder ein Muster. Taler gibt es dazu nur noch ein wenig. Auch jeder dritte Erfolgsstern schenkt dir einen Bauplan.',
     '✦ <b>Meisterstücke kosten Sternstaub:</b> Die besonders schönen Stücke der Kunstakademie gibt es jetzt für 100 bis 200 ✨ statt für Taler.',

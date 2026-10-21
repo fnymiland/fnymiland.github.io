@@ -83,6 +83,52 @@ const cachedPath = t => !t.bridge && (t.b === 'schiene' || isPbTrack(t.b) || (we
 // Felder, deren Weg/Schiene NICHT im Boden-Bild steckt (Brücken, leuchtende Beläge) – weit weg wird nur dort live gezeichnet (Block 144).
 // Neu bei anderem groundVersion bzw. anderer Belegung (wie EDGE_FIELDS)
 let LIVE_FLAT = null;
+// ✨ Funkeln der Glitzerwege (Block 164, Nutzer 22.10.2026: „omg es ist perfekt genau so“): je Glitzerfeld ein paar Funkel auf dem Wegband,
+// jeder mit eigenem Takt (2,5–5 s), hell nur einen Augenblick (sin⁸) mit weichem Schein; Regenbogen: jeder in seiner Farbe. Nur nah
+// (Zoom ≥ GLITTER_ZOOM) und nur sichtbare Felder – weiter weg ist der Weg ein stilles Bild wie jeder andere (Leistung). Plätze aus hash():
+// fest je Feld. Nicht auf Anhöhen und Brücken (die zeichnet tileA später, Funkel lägen darunter)
+const GLITTER_ZOOM = 1, GLITTER_N = 3;
+const glitterOn = z => z >= GLITTER_ZOOM - 1e-9;
+const sparkleAmp = (s, t) => Math.pow(Math.max(0, Math.sin(((t / s.T + s.off) % 1) * Math.PI * 2)), 8);
+let GLITTER_SPOTS = null;
+function glitterSpots() {
+  const G = GLITTER_SPOTS;
+  if (G && G.v === groundVersion && G.tiles === state.tiles && G.n === state.tiles.size) return G.map;
+  const map = {}, hs = state.hills && state.hills.size;
+  for (const [k, t] of state.tiles) {
+    if (t.b !== 'weg' || isWegBridge(t) || (hs && state.hills.has(k))) continue;
+    const def = wegComposite(styleDef('weg', t.style).id), M = def && WEG_MUSTER_BY[def.muster];
+    if (!M || M.kind !== 'glitter') continue;
+    const [x, y] = keyXY(k), arms = pathArms(x, y), tone = GLITTER[M.glitter];
+    map[k] = Array.from({ length: GLITTER_N }, (_, j) => {
+      const h = n => hash(x, y, 700 + j * 8 + n), arm = arms.length ? arms[Math.floor(h(0) * arms.length) % arms.length] : null;
+      const [u, v] = arm ? armUV(arm, 0.04 + h(1) * 0.42, (h(2) - 0.5) * ROAD_W * 1.5) : [(h(1) - 0.5) * 0.5, (h(2) - 0.5) * 0.5];
+      return { u, v, T: 2500 + h(3) * 2500, off: h(4), L: 2 + h(5) * 1.2, glow: tone.glow[(j + Math.floor(h(6) * 7)) % tone.glow.length], spark: tone.spark, strong: !!tone.strong };
+    });
+  }
+  GLITTER_SPOTS = { v: groundVersion, tiles: state.tiles, n: state.tiles.size, map };
+  return map;
+}
+function glitterSparks(visible, z, now) {
+  if (!glitterOn(z)) return;
+  const map = glitterSpots();
+  if (!map || !Object.keys(map).length) return;
+  const boost = night > 0.15 ? 1.5 : 1;                                  // nachts etwas stärker
+  for (let i = 0; i < visible.length; i += 4) {
+    const sp = map[visible[i] + ',' + visible[i + 1]];
+    if (!sp) continue;
+    const cx = visible[i + 2], cy = visible[i + 3];
+    for (const s of sp) {
+      const a = sparkleAmp(s, now);
+      if (a < 0.02) continue;
+      const x = cx + (s.u - s.v) * TW / 2 * z, y = cy + (s.u + s.v) * TH / 2 * z, L = s.L * z * (0.55 + 0.45 * a), w = L * 0.16;
+      const gr = g.createRadialGradient(x, y, 0, x, y, L * 1.4);
+      gr.addColorStop(0, `rgba(${s.glow},${Math.min(1, (s.strong ? 0.7 : 0.45) * a * boost)})`); gr.addColorStop(1, `rgba(${s.glow},0)`);
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, L * 1.4, 0, Math.PI * 2); g.fill();
+      poly([[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], `rgba(${s.spark},${a})`);
+    }
+  }
+}
 function liveFlatSet() {
   const L = LIVE_FLAT;
   if (L && L.v === groundVersion && L.tiles === state.tiles && L.n === state.tiles.size) return L.set;
@@ -1720,6 +1766,7 @@ function render(now) {
   // 1) Boden, Wege und Schlagschatten (weiter weg alles aus dem Zwischenspeicher)
   const glPlay = GL.frame && GL.cacheMode === 'play';                     // Standbild: Boden, Tiefe kommen gemerkt (Block 144)
   const visRange = worldGround(V, z, now, glPlay);
+  if (!GL.frame) glitterSparks(visible, z, now);                          // ✨ Glitzerwege funkeln (Block 164), nur nah
   if (GL.frame && GL.cacheMode === 'rec') { GLS.gEnd = GL.recs.length; GLS.gl0 = [glows.length, nightPics.length, nightPanes.length, nightWarm]; }   // Boden, Wellen, Tiefe, leuchtende Wege: Ende (Block 144), nachts mit ihren Lichtern (Gleisbrücken seit 160c E1d in den Feldern)
   FOG = false;
   if (!groundCached) {

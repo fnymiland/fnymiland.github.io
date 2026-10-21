@@ -1058,6 +1058,14 @@ const styleDef = (kind, id) => (kind === 'weg' && wegComposite(id)) || STYLES[ki
 // (den verstehen auch ältere Fassungen des Spiels).
 // kind: Muster in pattern() (null = glatt); fixed: eigene Farben (keine Farbwahl); legacy: alte Beläge mit diesem Muster (wer einen
 // davon hat, hat das Muster); design/lm/album: wie bisher bei Belägen
+// Glitzerfarben (Block 164): Pünktchen, Farbe des Funkels (spark), Schein (glow, RGB); Regenbogen: jeder Funkel in eigener Farbe
+const GLITTER = {
+  silber: { cols: ['#ffffff', '#aeb8cc', '#f4f6fa'], spark: '255,255,255', glow: ['210,225,255'] },
+  gold: { cols: ['#e2b64a', '#fff2b0', '#d9a93a'], spark: '255,248,210', glow: ['255,220,120'] },
+  perl: { cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], spark: '255,255,255', glow: ['255,210,240'] },
+  regen: { cols: ['#ff5f6d', '#ffa94d', '#ffe066', '#69db7c', '#4dabf7', '#9775fa', '#f783ac'], spark: '255,255,255',
+    glow: ['255,95,109', '255,169,77', '255,224,102', '105,219,124', '77,171,247', '151,117,250', '247,131,172'], strong: true },
+};
 const WEG_MUSTER = [
   { id: 'kies', name: 'Kies', kind: 'dots', farbe: 'sand', legacy: ['sand', 'mulch'] },
   { id: 'glatt', name: 'Glatt', kind: null, farbe: 'dunkel' },
@@ -1075,6 +1083,12 @@ const WEG_MUSTER = [
   { id: 'fisch', name: 'Fischgrät', kind: 'herring2', farbe: 'rose', legacy: ['fisch'], design: 350, master: true },
   { id: 'fischgross', name: 'Fischgrät groß', kind: 'herring3', farbe: 'rose', design: 300, master: true },
   { id: 'holz', name: 'Holzbohlen', kind: 'boards', farbe: 'holz', design: 140 },
+  // ✦ Glitzer (Block 164, Nutzer 22.10.2026: „omg es ist perfekt genau so in allen Farben“): feine Pünktchen (GLITTER.cols), nah dran blitzen
+  // einzelne Funkel auf (render.js glitterSparks); je ~150 ✨
+  { id: 'glitzer_silber', name: 'Silberglitzer', kind: 'glitter', glitter: 'silber', farbe: 'hell', design: 575, master: true },
+  { id: 'glitzer_gold', name: 'Goldglitzer', kind: 'glitter', glitter: 'gold', farbe: 'sand', design: 575, master: true },
+  { id: 'glitzer_perl', name: 'Perlglitzer', kind: 'glitter', glitter: 'perl', farbe: 'rose', design: 575, master: true },
+  { id: 'glitzer_regen', name: 'Regenbogenglitzer', kind: 'glitter', glitter: 'regen', farbe: 'hell', design: 575, master: true },
   // eigene Farben (wie bisher)
   { id: 'tritt', name: 'Trittsteine', fixed: 'tritt', legacy: ['tritt'], design: 120 },
   { id: 'konfetti', name: 'Konfetti', fixed: 'konfetti', legacy: ['konfetti'], design: 300 },
@@ -1138,7 +1152,11 @@ const PLANK_COLS = ['#b08a5e', '#8a6440', '#c9b79c', '#a9a9a3', '#f1e7d6', '#c79
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',
                '#ffd1b3', '#c9f0e4', '#ffe066', '#d8c3a5', '#b8d8ff', '#ffc2d9', '#f5f5f5'];
 const ROOFS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1', '#6b7a8f',
-               '#2f9e9e', '#8b5a3c', '#3c4a6b', '#d94f8a', '#7cb342', '#ff8a3d', '#4a4a58'];
+               '#2f9e9e', '#8b5a3c', '#3c4a6b', '#d94f8a', '#7cb342', '#ff8a3d', '#4a4a58', '#ece6f1'];
+// ✦ Perlmutt (Block 164, Nutzer 21.10.2026: Variante B): helle Grundfarbe, K.block legt einen Farbverlauf schräg übers ganze Dach
+// (Rosa → Flieder → Mint → Himmelblau, PEARL_STOPS). Nicht im Album „Farben“, nie als Zufallsfarbe neuer Häuser
+const ROOF_PEARL = 14, PEARL_ALPHA = 0.75;
+const PEARL_STOPS = [[0, '#f4a9c9'], [0.35, '#c8b2ef'], [0.65, '#a9e3cf'], [1, '#a8d4f5']];
 // Kunstakademie: alles zum Aussehen einzeln freischalten (Preis in Talern, dazu Ideen: designIdeas). Die ersten drei Wand- und Dachfarben
 // und der Kiesweg sind von Anfang an da; master = braucht eine gebaute Kunstakademie.
 const FREE_COLORS = 3;
@@ -1209,7 +1227,7 @@ const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f2
 const WIN_FREE = 3, FLAG_FREE = 3;
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
-  ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
+  ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: i === ROOF_PEARL ? 'Perlmutt' : 'Dachfarbe ' + (i + 1), price: i === ROOF_PEARL ? 900 : i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...WIN_COLS.map((col, i) => ({ id: 'win:' + i, group: 'Fensterfarben', col, name: 'Fensterfarbe ' + (i + 1), price: i < WIN_FREE ? 0 : 50 + i * 20 })),
   ...FLAG_COLORS.map((col, i) => ({ id: 'flag:' + i, group: 'Flaggenfarben', col, name: 'Flaggenfarbe ' + (i + 1), price: i < FLAG_FREE ? 0 : 50 + i * 20 })),
   ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),

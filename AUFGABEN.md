@@ -2747,7 +2747,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 161f Prachtbauten (je Entwurf zuerst) – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig). Der
       Triumphbogen daraus ist seit Block 162 ein Wahrzeichen; offen bleiben Opernhaus, Glaspalast, Thermenpalast, Kathedrale, Luftschiffhafen
 - [ ] 161g restliche Laden-Dinge
-- [ ] 164 **Neue besondere Stücke** (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
+- [x] 164 **Neue besondere Stücke** (eingebaut v1162, tests/besondere.test.js; Pünktchen im Spiel feiner als im ersten Einbau, wie die Vorschau) (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
       - **Perlmutt-Dachfarbe** Variante B (kräftig: Rosa → Flieder → Mint → Himmelblau schräg übers Dach) – ✦ Meisterstück für ✨.
       - **Glitzerwege**: feine stille Pünktchen + einzelne Funkel, die nacheinander aufblitzen (je eigener Takt 2,5–5 s, sin⁸, weicher Schein) –
         „omg es ist perfekt genau so“. Vier ✦ Meisterstücke (je ~150 ✨): Silberglitzer, Goldglitzer, Perlglitzer, Regenbogenglitzer (bunte Pünktchen, jeder

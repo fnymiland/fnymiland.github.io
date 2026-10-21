@@ -226,14 +226,14 @@ function clipTo(shapes, L) {
 // box [u0, u1, v0, v1]: nur Punkte darin zeichnen (Übergänge brauchen nur einen Streifen)
 // Weit weg blassen feine Muster aus (Block 125, wie Mipmapping): Je kleiner Punkte und Fugen in Gerätepunkten werden, desto
 // schwächer – sonst werden aus Kiespunkten Streifen und aus Fugen Linien und graues Flimmern. Nah dran unverändert
-const PAT_FADE = { dots: [1.0, 1.0], stones: [2.0, 2.1], confetti: [1.2, 1.3], line: [0.62, 0.66] };   // [ab Größe, voll nach +] in Gerätepunkten: voll ab Zoom ~0,8, ein Drittel bei 0,45
+const PAT_FADE = { dots: [1.0, 1.0], stones: [2.0, 2.1], confetti: [1.2, 1.3], glitter: [0.6, 0.8], line: [0.62, 0.66] };   // [ab Größe, voll nach +] in Gerätepunkten: voll ab Zoom ~0,8, ein Drittel bei 0,45
 // Abstand der Wiederholung je Muster (in Feldern): weit auseinander (große Platten, Schachbrett) flimmert nicht und bleibt auch weit
 // weg zu sehen – sonst waren dort nur noch einfarbige Flächen (Rückmeldung Nutzer); eng (Kies, Pflaster, Holz) blasst aus
-const PAT_STEP = { dots: 0.09, stones: 0.11, confetti: 0.085, tiles: 0.25, big: 0.5, thirds: 1 / 3, setts: 0.125, slabs: 0.25, ashlar: 0.2,
+const PAT_STEP = { dots: 0.09, stones: 0.11, confetti: 0.085, glitter: 0.09, tiles: 0.25, big: 0.5, thirds: 1 / 3, setts: 0.125, slabs: 0.25, ashlar: 0.2,
   boards: 0.1, bricks: 0.1, herring: 0.125, herring2: 0.125, herring3: 1 / 6, checker: 0.25, basket: 0.25, diag: 0.25, stack: 0.25, modular: 0.25, planks: 0.07 };
 function patternFade(kind, z) {
   const t = g.getTransform ? g.getTransform() : null, px = (t ? Math.hypot(t.a, t.b) : 1) * z;   // Gerätepunkte je Einheit von z
-  const size = kind === 'dots' ? 1.3 * px : kind === 'stones' ? 2.6 * px : kind === 'confetti' ? 1.6 * px : 0.8 * px;
+  const size = kind === 'dots' ? 1.3 * px : kind === 'stones' ? 2.6 * px : kind === 'confetti' ? 1.6 * px : kind === 'glitter' ? 0.9 * px : 0.8 * px;
   const [a, b] = PAT_FADE[kind] || PAT_FADE.line;
   const bySize = Math.max(0, Math.min(1, (size - a) / b));
   const gap = (PAT_STEP[kind] || 0.1) * Math.hypot(TW / 2, TH / 2) * px;                           // Abstand in Gerätepunkten
@@ -246,7 +246,7 @@ function patternFade(kind, z) {
 // Weit weg blasst das Muster aus (patternFade) – die Grundfarbe nimmt dann den Mittelton des Musters an, statt dass z. B. der
 // Kristallweg (helle Grundfarbe, blaue Steinchen) weiß wird und auf einer Bogenbrücke wie ein Glasdach aussieht (Nutzer, PC FHD).
 // Deckend gemischt (keine Tonschicht): überlappende Feldränder geben sonst wieder Linien. Gleich für alle Wege und Plätze.
-const PAT_COVER = { dots: 0.35, stones: 0.45, confetti: 0.4 };
+const PAT_COVER = { dots: 0.35, stones: 0.45, confetti: 0.4, glitter: 0.3 };
 const lookFarCache = new Map();
 function lookFar(lk, z) {
   if (!lk || !lk.pat || !lk.fill || lk.pat[0] === 'rainbow' || patNoFade) return lk;
@@ -281,7 +281,7 @@ const PAT_FLOOR = 0.66;
 const patFadeEff = (kind, z) => { const s = patCoarse(kind, z); return s > 1 ? Math.max(PAT_FLOOR, patternFade(kind, z * s)) : patternFade(kind, z); };
 function patCoarse(kind, z) {
   let s = 1;
-  const pts = kind === 'dots' || kind === 'stones' || kind === 'confetti', lines = PAT_LINE_COARSE && !!PAT_TILE[kind];
+  const pts = kind === 'dots' || kind === 'stones' || kind === 'confetti' || kind === 'glitter', lines = PAT_LINE_COARSE && !!PAT_TILE[kind];
   if (PAT_COARSE && (pts || lines) && patternFade(kind, z) < 0.5) s = 2;   // höchstens doppelter Abstand (Nutzer: „nicht riesig“)
   return s;
 }
@@ -299,7 +299,7 @@ function pattern(L, kind, x, y, z, col, cols, ext = 0, box = null, bg = null) {
   return pattern1(L, kind, x, y, z, col, cols, ext, box, bg, z);
 }
 function pattern1(L, kind, x, y, zf, col, cols, ext, box, bg, z) {   // zf: Zoom fürs Ausblenden (gröber = wie näher dran)
-  const S = PAT_SCALE, pts = kind === 'dots' || kind === 'stones' || kind === 'confetti';
+  const S = PAT_SCALE, pts = kind === 'dots' || kind === 'stones' || kind === 'confetti' || kind === 'glitter';
   let f = S > 1 ? Math.max(PAT_FLOOR, patternFade(kind, zf)) : patternFade(kind, zf);
   if (S > 1 && !pts) {                                                   // Linienmuster gröber nur als Kachel (patTileFill) – geht das hier nicht
     const c0 = col, b0 = bg;                                             // (gewölbter Brückenbelag), wie bisher fein und ausgeblendet
@@ -366,11 +366,11 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
   const R = 0.55, E = R + ext;
   const out = (u, v) => box && (u < box[0] || u > box[1] || v < box[2] || v > box[3]);
   const span = step => [-Math.ceil(ext / step - 1e-9), Math.floor((2 * R + ext) / step + 1e-9)];   // Indizes im festen Raster
-  if (kind === 'stones' || kind === 'dots') {
+  if (kind === 'stones' || kind === 'dots' || kind === 'glitter') {   // glitter (Block 164): feiner und dichter als Kies, bunte Pünktchen
     // Raster über die ganze Insel (Block 100): Steine auf der Feldkante zeichnen beide Felder gleich – sonst bleiben an
     // jeder Kante angeschnittene halbe Steine stehen, die auf breiten Wegen wie Striche aussehen
     // je Farbe ein Pfad, ein fill (Block 125c: vorher je Punkt – ~80 Füllungen je Kiesfeld)
-    const sc = PAT_SCALE, rs = Math.sqrt(sc), step = (kind === 'stones' ? 0.11 : 0.09) * sc, M = R + ext, rx = (kind === 'stones' ? 2.6 : 1.3) * z * rs, ry = (kind === 'stones' ? 1.6 : 0.9) * z * rs;   // weit weg: Abstand ×2, Steinchen nur ×1,4 (patCoarse)
+    const sc = PAT_SCALE, rs = Math.sqrt(sc), step = (kind === 'stones' ? 0.11 : kind === 'glitter' ? 0.09 : 0.09) * sc, M = R + ext, rx = (kind === 'stones' ? 2.6 : kind === 'glitter' ? 0.4 : 1.3) * z * rs, ry = (kind === 'stones' ? 1.6 : kind === 'glitter' ? 0.3 : 0.9) * z * rs;   // weit weg: Abstand ×2, Steinchen nur ×1,4 (patCoarse)
     const gi0 = Math.ceil((x - M) / step), gi1 = Math.floor((x + M) / step), gj0 = Math.ceil((y - M) / step), gj1 = Math.floor((y + M) / step);
     const nc = cols ? cols.length : 1;
     for (let k = 0; k < nc; k++) {
@@ -379,7 +379,7 @@ function patternDraw(L, kind, x, y, z, col, cols, ext = 0, box = null) {
         const u = i * step - x, v = j * step - y;
         if (out(u, v)) continue;
         const h = hash(i, j, 333);
-        if (kind === 'dots' && h > 0.45) continue;
+        if ((kind === 'dots' && h > 0.45) || (kind === 'glitter' && h > 0.4)) continue;
         if (cols && Math.floor(h * 97) % nc !== k) continue;
         const q = L([u + (h - 0.5) * 0.04, v + (hash(i, j, 334) - 0.5) * 0.04]);
         g.moveTo(q[0] + rx, q[1]); g.ellipse(q[0], q[1], rx, ry, 0, 0, Math.PI * 2);
@@ -544,7 +544,7 @@ function pathLook(id) {
   let lk = PATH_LOOK.sand;
   if (def) {
     const M = WEG_MUSTER_BY[def.muster], c = WEG_FARBEN_BY[def.farbe].c, dark = shade(c, -0.25), joint = shade(c, M.kind === 'checker' ? -0.09 : -0.14);
-    lk = { edge: dark, fill: c, ...(M.kind ? { pat: [M.kind, joint] } : {}), ...(M.kind === 'dots' ? { cols: [shade(c, -0.16), shade(c, 0.08)] } : {}), ...(M.dash ? { dash: true } : {}) };
+    lk = { edge: dark, fill: c, ...(M.kind ? { pat: [M.kind, joint] } : {}), ...(M.kind === 'dots' ? { cols: [shade(c, -0.16), shade(c, 0.08)] } : {}), ...(M.kind === 'glitter' ? { cols: GLITTER[M.glitter].cols, glitter: M.glitter } : {}), ...(M.dash ? { dash: true } : {}) };
   }
   pathLookCache.set(id, lk);
   return lk;

@@ -187,7 +187,7 @@ function build(b, x, y, quiet) {
     if (b === 'haus') {                                                  // bunt gemischt – außer „neu gebaute bekommen diese Farben“
       const t = state.tiles.get(k), walls = colorsOf('wall'), roofs = colorsOf('roof');
       if (t.wall == null) t.wall = walls[Math.floor(Math.random() * walls.length)][1];
-      if (t.roof == null) t.roof = roofs[Math.floor(Math.random() * roofs.length)][1];
+      if (t.roof == null) { const rs = roofs.filter(([, i]) => i !== ROOF_PEARL); t.roof = rs[Math.floor(Math.random() * rs.length)][1]; }   // Perlmutt nur gewählt (Block 164)
     }
     sfx(d.paint ? 'road' : d.cat === 'deko' ? 'deco' : 'build');
   }

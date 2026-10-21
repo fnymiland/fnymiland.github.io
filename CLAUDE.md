@@ -416,6 +416,11 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Auswahlen zeigen nur Freies plus die gerade gewählte, dazu „🎨 Mehr … freischalten“. 📜 Baupläne (`bpPick`/`bpGive`): Truhe → ein
     gesperrtes Nicht-Meisterstück + ein Viertel der Beute; je 3 neue Erfolgssterne einer (`state.bpStars`, alter Stand: ab jetzt, nichts
     nachreichen). Achtung Name: `flagOk` gibt es schon in friends.js (Freundesflagge).
+29g. **Besondere Stücke** (Block 164): Perlmutt = `ROOFS[ROOF_PEARL]`; K.block legt dann `pearlGrad` über alle Dachflächen (PEARL_STOPS,
+    PEARL_ALPHA) – Dächer, die nicht über K.block entstehen, zeigen nur die helle Grundfarbe. Nicht im Album „Farben“, nie Zufallsfarbe.
+    Glitzerwege: Wegmuster `kind: 'glitter'` (feine Punkte wie Kies, Farben aus GLITTER) und Funkel in render.js (`glitterSparks` nach
+    worldGround, nur `glitterOn(z)` und nicht in GL-Bildern; Plätze `glitterSpots()` je groundVersion aus hash, auf dem Wegband über
+    pathArms/armUV). Kosten ~0,15 ms je Bild bei 40 Feldern. Nicht auf Anhöhen und Wasser-Wegbrücken (tileA malt darüber).
 29e. **🏛️ Monumente** (Block 162, js/monumente.js, PLAN-162.md): Bilder in MON_ART (aus tools/monumente-voll.js übernommen – Änderungen
     zuerst dort zeigen, dann hierher). Wahrzeichen (`monPhases`) sind Baustellen wie die Wunderwerke, aber eigene Logik (monSite/monStep/
     monCost/monPaid), kein Eintrag in WONDERS (der hätte Wirkungen, „gibt es schon“ und das Rathaus). Gerüst gemeinsam über `siteScaffold`
