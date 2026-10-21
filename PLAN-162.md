@@ -32,3 +32,6 @@
 - Steinkreis: raus.
 - Figur für Hüterin/Brunnen/Siegesfigur: Gestaltung A (klassisch, Freiheitsstatue); ausführliche Fassung war „zu viele Details“ → ruhige Fassung (figA4) zur Wahl.
 - Prachtbrunnen: Richtung Delfine/Königin gut, aber achteckiger Aufbau von vorher besser; Wasserweg, Schichten und Figur glaubhaft machen.
+- 21.10. (später): Menschliche Figuren fliegen raus (Nutzer: „gefällt mir einfach nicht“). **Sternenleuchte** ersetzt die Hüterin: Felseninsel,
+  weißer Turm mit Fenstern auf der Rundung, Galerie mit Geländer rundum, sechseckige goldene Laterne mit Sternen im Glas, Stern auf der Stange – „passt“.
+  Brunnen und Triumphbogen bekommen Gold/Tiere statt Figuren.

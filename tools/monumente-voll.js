@@ -940,8 +940,9 @@
     g.fillStyle = C(GOLD); g.beginPath(); g.moveTo(tb[0] - R * 1.1, top - 1.4 * z); g.lineTo(tb[0], top - 20 * z); g.lineTo(tb[0] + R * 1.1, top - 1.4 * z); g.ellipse(tb[0], top - 1.4 * z, R * 1.1, R * 0.55, 0, 0, Math.PI); g.fill();
     g.fillStyle = C(GOLD_D); g.beginPath(); g.moveTo(tb[0], top - 20 * z); g.lineTo(tb[0] + R * 1.1, top - 1.4 * z); g.ellipse(tb[0], top - 1.4 * z, R * 1.1, R * 0.55, 0, 0, Math.PI / 2); g.lineTo(tb[0], top - 1.4 * z); g.fill();
     const m = [tb[0], top - 28 * z];
-    L(C(GOLD_D), 1.1, z, [[m[0], top - 20 * z], [m[0], m[1] + 5 * z]]);
+    L(C(GOLD_D), 1.1, z, [[m[0], top - 19 * z], [m[0], m[1]]]);                                                  // Stange reicht bis in die Sternmitte
     star(m[0], m[1] + 0.4 * z, 6.4 * z, C(GOLD_D)); star(m[0], m[1], 6 * z, lit() ? '#fff1a8' : C(GOLD));
+    circle(m[0], m[1] + 3.4 * z, 1.5 * z, C(GOLD_D));                                                            // Fassung, in der der Stern auf der Stange steckt
     if (lit()) { glowP([tb[0], top + LH / 2], 95 * z); glowP([tb[0], top + LH / 2], 36 * z); }
   }
   window.STERNENLEUCHTE = sternenleuchteF;
