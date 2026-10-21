@@ -149,3 +149,20 @@ describe('9 Gleis-Rampe: Tunneleinfahrt direkt vor dem Fuß', () => {
     expect(game("rampLook(11, 16, rampAt(11, 16)).ef")).toBe(true);
   });
 });
+
+describe('10 Gleis-Rampe A: Zaun an der offenen Seite (ohne Wange)', () => {
+  it('geht nicht (er stünde in ihrer Wand); an der Seite eines Damms B weiter ja', () => {
+    hills(block(10, 10, 13, 13));
+    game("rampNewForm = 'a'; build('huegelrampe', 13, 12); recalc()");
+    expect(game('[rampAt(13, 13) && rampAt(13, 13).i, rampAt(13, 12) && rampAt(13, 12).i, rampAt(13, 12) && rampAt(13, 12).form]')).toEqual([0, 1, 'a']);
+    for (const [x, y] of [[13, 13], [13, 12]]) expect(game(`edgeError('zaun', edgeBetween(${x}, ${y}, 14, ${y}))`)).toMatch(/Seite der Gleis-Rampe/);
+    // Linie gezogen: rot an der Seite
+    const P = "{ kind: 'edge', tool: 'zaun', a: { x: 14, y: 12 }, b: { x: 14, y: 14 } }";
+    expect(game(`planEdges(${P}).sort()`)).toEqual([game('edgeBetween(13, 12, 14, 12)'), game('edgeBetween(13, 13, 14, 13)')].sort());
+    expect(game(`(s => [s.n, s.bad])(planScan(${P}))`)).toEqual([0, 2]);
+    // Damm B vor der Wand: an seine Seiten geht es (wie bisher)
+    game("rampNewForm = 'b'; build('huegelrampe', 11, 14); recalc()");
+    expect(game("edgeError('zaun', edgeBetween(11, 15, 12, 15))")).toBe(null);
+    game("rampNewForm = 'a'");
+  });
+});

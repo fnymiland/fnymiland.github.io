@@ -845,6 +845,8 @@ function stairEdgeError(k) {
     if (!r) continue;
     const [dx, dy] = STAIR_UP[r.rot];
     if (Math.abs(ox - x) === Math.abs(dx) && Math.abs(oy - y) === Math.abs(dy)) return 'Nicht quer vor die Gleis-Rampe – an ihre Seiten geht es';
+    // ganz breite Rampe A (157l, 22.10.2026): an ihrer offenen Seite (ohne Wange) reicht ihre Wand bis an die Feldgrenze – eine Linie stünde darin
+    if (rampWideForm(r.form) && !(ra && rb)) return 'Nicht an die offene Seite der Gleis-Rampe – dort steht ihre Wand';
   }
   return null;
 }
