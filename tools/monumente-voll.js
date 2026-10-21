@@ -216,7 +216,159 @@
     parts.push([2, 2, () => { for (const [dx, dy, s] of [[-40, -150, 1], [-28, -160, 0.8], [38, -120, 0.9]]) { const p = K.P(0, 0); const x = p[0] + dx * z, y = p[1] + dy * z; L(lit() ? '#c8d2ff' : '#ffffff', 0.9 * s, z, [[x - 4 * z * s, y], [x - 1.5 * z * s, y - 2 * z * s], [x, y]]); L(lit() ? '#c8d2ff' : '#ffffff', 0.9 * s, z, [[x, y], [x + 1.5 * z * s, y - 2 * z * s], [x + 4 * z * s, y]]); } }]);
     K.scene(parts);
   }
+  // Gewand mit Falten: Saum unten (Breite wb), Schultern oben (Breite ws), Höhe hh; Mitte x, Fuß y. sway: Wehen zur Seite
+  function robe(x, y, wb, ws, hh, z, col, colD, colL, sway = 0) {
+    const top = y - hh;
+    g.fillStyle = C(col); g.beginPath(); g.moveTo(x - ws, top);
+    g.bezierCurveTo(x - ws * 1.1, top + hh * 0.4, x - wb * 0.95 + sway, y - hh * 0.2, x - wb + sway * 1.4, y);
+    for (let i = 0; i <= 8; i++) { const t = i / 8; g.lineTo(x - wb + 2 * wb * t + sway * 1.4 * (1 - t), y + Math.sin(t * Math.PI * 4) * 1.4 * z); }
+    g.bezierCurveTo(x + wb * 0.9, y - hh * 0.25, x + ws * 1.1, top + hh * 0.4, x + ws, top); g.closePath(); g.fill();
+    g.fillStyle = C(colD); g.beginPath(); g.moveTo(x + ws * 0.15, top);                                       // Schattenseite
+    g.bezierCurveTo(x + ws * 0.2, top + hh * 0.5, x + wb * 0.25, y - hh * 0.2, x + wb * 0.3, y + 1 * z); g.lineTo(x + wb, y);
+    g.bezierCurveTo(x + wb * 0.9, y - hh * 0.25, x + ws * 1.1, top + hh * 0.4, x + ws, top); g.closePath(); g.fill();
+    for (let i = 0; i < 7; i++) {                                                                              // Falten
+      const t = (i + 0.5) / 7, xb = x - wb + 2 * wb * t + sway * 1.4 * (1 - t), xt = x - ws * 0.7 + ws * 1.4 * t;
+      g.strokeStyle = C(i % 2 ? colD : colL); g.lineWidth = (i % 2 ? 1.1 : 0.8) * z; g.beginPath(); g.moveTo(xt, top + hh * 0.25); g.quadraticCurveTo((xt + xb) / 2 + sway * 0.4, y - hh * 0.4, xb, y - 1 * z); g.stroke();
+    }
+  }
+  const limb2 = (a, b, w0, w1, col, colD) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l;
+    poly([[a[0] + nx * w0, a[1] + ny * w0], [b[0] + nx * w1, b[1] + ny * w1], [b[0] - nx * w1, b[1] - ny * w1], [a[0] - nx * w0, a[1] - ny * w0]], C(col));
+    poly([[a[0], a[1]], [b[0], b[1]], [b[0] - nx * w1, b[1] - ny * w1], [a[0] - nx * w0, a[1] - ny * w0]], C(colD)); circle(b[0], b[1], w1, C(col)); };
+  function rays(head, r0, r1, z, n = 9) { for (let j = 0; j < n; j++) { const ang = -Math.PI * (0.06 + j * 0.88 / (n - 1)); poly([[head[0] + Math.cos(ang - 0.09) * r0, head[1] + Math.sin(ang - 0.09) * r0], [head[0] + Math.cos(ang) * r1, head[1] + Math.sin(ang) * r1], [head[0] + Math.cos(ang + 0.09) * r0, head[1] + Math.sin(ang + 0.09) * r0]], lit() ? '#ffe58a' : C(GOLD)); } }
+  function face(head, r, z, BR, BR_D, BR_L, hair) {
+    if (hair) { ellipse(head[0] - 1 * z, head[1] + r * 0.5, r * 1.15, r * 1.25, C(hair)); }
+    circle(head[0], head[1], r, C(BR)); ellipse(head[0] + r * 0.35, head[1] + r * 0.05, r * 0.62, r * 0.9, C(BR_D));
+    ellipse(head[0] - r * 0.3, head[1] - r * 0.2, r * 0.32, r * 0.42, C(BR_L));
+    for (const dx of [-0.42, 0.18]) { ellipse(head[0] + dx * r, head[1] - r * 0.05, r * 0.16, r * 0.1, C('#4a2e16')); }
+    L(C('#7a4a24'), 0.6, z, [[head[0] - 0.05 * r, head[1] + 0.05 * r], [head[0] - 0.12 * r, head[1] + 0.32 * r]]);
+    L(C('#6a3a1c'), 0.6, z, [[head[0] - 0.3 * r, head[1] + 0.5 * r], [head[0] + 0.12 * r, head[1] + 0.52 * r]]);
+  }
+  function lantern(p, z, now) {                                                                                 // große Laterne mit Flamme
+    const [x, y] = p;
+    L(C(GOLD_D), 0.9, z, [[x, y], [x, y - 4 * z]]);
+    poly([[x - 5 * z, y - 4 * z], [x + 5 * z, y - 4 * z], [x + 4 * z, y - 6 * z], [x - 4 * z, y - 6 * z]], C(GOLD_D));
+    poly([[x - 4.2 * z, y - 6 * z], [x + 4.2 * z, y - 6 * z], [x + 3.6 * z, y - 17 * z], [x - 3.6 * z, y - 17 * z]], lit() ? '#fff1a8' : C('#ffe08a'));
+    for (const dx of [-4, 0, 4]) L(C(GOLD_D), 0.8, z, [[x + dx * z, y - 6 * z], [x + dx * 0.86 * z, y - 17 * z]]);
+    const f = Math.sin(now / 140) * 0.8 * z; g.fillStyle = lit() ? '#ffffff' : C('#ff9a3c'); g.beginPath(); g.moveTo(x - 1.8 * z, y - 8 * z); g.quadraticCurveTo(x + f, y - 16 * z, x + 1.8 * z, y - 8 * z); g.fill();
+    poly([[x - 5 * z, y - 17 * z], [x + 5 * z, y - 17 * z], [x, y - 23 * z]], C(GOLD)); circle(x, y - 24 * z, 1.4 * z, C(GOLD));
+    if (lit()) { glowP([x, y - 12 * z], 130 * z); glowP([x, y - 12 * z], 36 * z); }
+  }
+  const BRZ = ['#c4873f', '#8f5c2c', '#e8b06a'];
+  function harbor(K, quayA) {                                                                                  // Wasser mit Wellen
+    const z = K.z;
+    K.rect(-1.5, -1.5, 1.5, 1.5, lit() ? '#2c4f7a' : C('#6fbfe3'));
+    for (let i = 0; i < 14; i++) { const a = -1.3 + (i * 0.37) % 2.6, b = -1.3 + (i * 0.71) % 2.6, p = K.P(a, b), q = K.P(a + 0.16, b + 0.02); L(lit() ? 'rgba(170,210,255,0.5)' : 'rgba(255,255,255,0.65)', 0.8, z, [p, [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2 - 1.2 * z], q]); }
+  }
+  function boat(p, z, col = '#7a4e32', sail = '#fffaf0', flip = 1) {
+    const [x, y] = p;
+    poly([[x - 12 * z * flip, y - 2 * z], [x + 10 * z * flip, y + 4 * z], [x + 7 * z * flip, y + 8 * z], [x - 10 * z * flip, y + 2 * z]], C(col));
+    L(C('#5a3d28'), 0.8, z, [[x, y + 1 * z], [x, y - 22 * z]]); poly([[x + 0.6 * z * flip, y - 21 * z], [x + 9 * z * flip, y - 3 * z], [x + 0.6 * z * flip, y - 2 * z]], C(sail)); poly([[x - 0.8 * z * flip, y - 19 * z], [x - 8 * z * flip, y - 4 * z], [x - 0.8 * z * flip, y - 3 * z]], C(shade(sail, -0.06)));
+    if (lit()) glowP([x, y - 2 * z], 10 * z);
+  }
+  // ---------- Koloss A: breitbeinig über der Einfahrt, kräftig gebaut, Tunika bis zum Knie ----------
+  function kolossA(K, now = 0) {
+    const z = K.z, [BR, BR_D, BR_L] = BRZ;
+    harbor(K);
+    for (const s of [-1, 1]) {
+      const a0 = s < 0 ? -1.5 : 0.75, a1 = s < 0 ? -0.75 : 1.5, edgeA = s < 0 ? a1 : a0;
+      K.block({ a: (a0 + a1) / 2, b: 0, ha: (a1 - a0) / 2, hb: 1.5, h: 7, wall: '#bdb4a2', type: 'flat', roof: '#d9d0bc' });
+      kPave(K, () => kRectPath(K, a0 + 0.04, -1.46, a1 - 0.04, 1.46), PATH_LOOK.kopf, 0, 0, 3);
+      for (let b = -1.5; b <= 1.5; b += 0.25) L(C('#9d9483'), 0.35, z, [K.P(edgeA, b, 0), K.P(edgeA, b, 7)]);
+    }
+    const parts = [];
+    for (const s of [-1, 1]) {
+      const a = s * 1.0;
+      parts.push([a + s * 0.3, -1.2, () => lamp(K, a + s * 0.3, -1.2)]);
+      parts.push([a + s * 0.3, 1.2, () => { const p = K.P(a + s * 0.3, 1.2, 7); lampPost(p[0], p[1], z, 19); }]);
+      parts.push([a, 0, () => { plinth(K, a, 0, 0.36, 0.42, 7, 7, '#cfc6b2'); plinth(K, a, 0, 0.27, 0.32, 16, 14, '#e2d9c4', GOLD_D); const f = K.P(a, 0.321, 22); circle(f[0], f[1], 3 * z, C(GOLD)); }]);
+    }
+    parts.push([0, 0.6, () => boat(K.P(0, 0.62), z)]);
+    parts.push([0, 0.01, () => {
+      const fl = K.P(-1.0, 0, 30), fr = K.P(1.0, 0, 30), hip = K.P(0, 0, 96);
+      // Umhang hinten
+      g.fillStyle = C('#9c3d4a'); g.beginPath(); g.moveTo(hip[0] - 16 * z, hip[1] - 50 * z); g.bezierCurveTo(hip[0] - 34 * z, hip[1] - 20 * z, hip[0] - 34 * z, hip[1] + 10 * z, hip[0] - 26 * z, hip[1] + 22 * z); g.lineTo(hip[0] + 4 * z, hip[1] + 4 * z); g.lineTo(hip[0] + 6 * z, hip[1] - 50 * z); g.fill();
+      for (const [foot, sd] of [[fl, -1], [fr, 1]]) {                                                           // Beine: Wade, Knie, Oberschenkel
+        const knee = [foot[0] * 0.5 + hip[0] * 0.5 + sd * 4 * z, foot[1] * 0.5 + hip[1] * 0.5];
+        limb2(foot, knee, 5 * z, 7 * z, BR, BR_D); limb2(knee, [hip[0] + sd * 9 * z, hip[1] - 2 * z], 7 * z, 10 * z, BR, BR_D);
+        ellipse(mid(foot, knee, 0.45)[0] - sd * 2.4 * z, mid(foot, knee, 0.45)[1], 3 * z, 6 * z, C(BR_L));      // Wade
+        ellipse(foot[0] + sd * 2 * z, foot[1] + 1 * z, 9 * z, 3.6 * z, C(BR_D)); ellipse(foot[0] + sd * 2 * z, foot[1], 8 * z, 3 * z, C(BR));
+        for (let i = 0; i < 3; i++) L(C(GOLD), 1, z, [[foot[0] - 4 * z, foot[1] - (3 + i * 4) * z], [foot[0] + 4 * z, foot[1] - (2 + i * 4) * z]]);
+      }
+      robe(hip[0], hip[1] + 8 * z, 20 * z, 16 * z, 22 * z, z, '#d9c49a', '#b8a070', '#efe2c4', 2 * z);         // Tunika bis zum Knie
+      poly([[hip[0] - 17 * z, hip[1] - 14 * z], [hip[0] + 17 * z, hip[1] - 14 * z], [hip[0] + 16 * z, hip[1] - 10 * z], [hip[0] - 16 * z, hip[1] - 10 * z]], C(GOLD_D));
+      const sh = [hip[0], hip[1] - 50 * z];                                                                   // breiter Oberkörper mit Panzer
+      g.fillStyle = C(BR); g.beginPath(); g.moveTo(hip[0] - 15 * z, hip[1] - 12 * z); g.bezierCurveTo(hip[0] - 18 * z, hip[1] - 30 * z, sh[0] - 26 * z, sh[1] + 6 * z, sh[0] - 22 * z, sh[1]); g.lineTo(sh[0] + 22 * z, sh[1]); g.bezierCurveTo(sh[0] + 26 * z, sh[1] + 6 * z, hip[0] + 18 * z, hip[1] - 30 * z, hip[0] + 15 * z, hip[1] - 12 * z); g.closePath(); g.fill();
+      g.fillStyle = C(BR_D); g.beginPath(); g.moveTo(hip[0] + 2 * z, hip[1] - 12 * z); g.lineTo(sh[0] + 4 * z, sh[1]); g.lineTo(sh[0] + 22 * z, sh[1]); g.bezierCurveTo(sh[0] + 26 * z, sh[1] + 6 * z, hip[0] + 18 * z, hip[1] - 30 * z, hip[0] + 15 * z, hip[1] - 12 * z); g.closePath(); g.fill();
+      ellipse(sh[0] - 8 * z, sh[1] + 13 * z, 7.5 * z, 6 * z, C(BR_L)); ellipse(sh[0] + 8 * z, sh[1] + 13 * z, 7.5 * z, 6 * z, C(BR));
+      for (const k of [0.55, 0.7, 0.85]) L(C(BR_D), 0.6, z, [[hip[0] - 13 * z, sh[1] + k * 38 * z], [hip[0] + 13 * z, sh[1] + k * 38 * z]]);
+      circle(sh[0] - 5 * z, sh[1] + 24 * z, 1.4 * z, C('#6fae9a')); circle(sh[0] + 10 * z, sh[1] + 30 * z, 1.1 * z, C('#6fae9a'));
+      // Schultern, Arme: links Schild, rechts Laterne hoch
+      const shL = [sh[0] - 21 * z, sh[1] + 3 * z], shR = [sh[0] + 21 * z, sh[1] + 3 * z];
+      circle(shL[0], shL[1], 7 * z, C(BR)); circle(shR[0], shR[1], 7 * z, C(BR_D));
+      const elL = [shL[0] - 6 * z, shL[1] + 20 * z]; limb2(shL, elL, 6.4 * z, 5.4 * z, BR, BR_D);
+      const shield = [elL[0] - 8 * z, elL[1] + 10 * z];
+      ellipse(shield[0], shield[1], 12 * z, 14 * z, C(BR_D)); ellipse(shield[0] + 1.2 * z, shield[1], 10.4 * z, 12.6 * z, C(BR)); circle(shield[0] + 1.2 * z, shield[1], 4.6 * z, C(GOLD));
+      for (let j = 0; j < 12; j++) { const ang = j / 12 * Math.PI * 2; L(C(GOLD), 0.8, z, [[shield[0] + 1.2 * z + Math.cos(ang) * 6 * z, shield[1] + Math.sin(ang) * 6 * z], [shield[0] + 1.2 * z + Math.cos(ang) * 9 * z, shield[1] + Math.sin(ang) * 10.4 * z]]); }
+      const elR = [shR[0] + 9 * z, shR[1] - 18 * z], hand = [shR[0] + 8 * z, shR[1] - 40 * z];
+      limb2(shR, elR, 6.4 * z, 5.4 * z, BR, BR_D); limb2(elR, hand, 5.4 * z, 4.6 * z, BR, BR_D);
+      lantern([hand[0], hand[1] - 2 * z], z, now);
+      poly([[sh[0] - 5 * z, sh[1] + 1 * z], [sh[0] + 5 * z, sh[1] + 1 * z], [sh[0] + 4.4 * z, sh[1] - 7 * z], [sh[0] - 4.4 * z, sh[1] - 7 * z]], C(BR_D));
+      const head = [sh[0] + 1 * z, sh[1] - 16 * z];
+      rays(head, 10 * z, 21 * z, z); face(head, 10.5 * z, z, BR, BR_D, BR_L, '#7a4a24');
+      poly([[head[0] - 11 * z, head[1] - 3 * z], [head[0] + 11 * z, head[1] - 3 * z], [head[0] + 10 * z, head[1] - 7.5 * z], [head[0] - 10 * z, head[1] - 7.5 * z]], C(GOLD_D));
+    }]);
+    parts.push([2, 2, () => { for (const [dx, dy, s] of [[-50, -170, 1], [-36, -180, 0.8], [46, -140, 0.9]]) { const p = K.P(0, 0); const x = p[0] + dx * z, y = p[1] + dy * z; L(lit() ? '#c8d2ff' : '#ffffff', 0.9 * s, z, [[x - 4 * z * s, y], [x - 1.5 * z * s, y - 2 * z * s], [x, y], [x + 1.5 * z * s, y - 2 * z * s], [x + 4 * z * s, y]]); } }]);
+    K.scene(parts);
+  }
+  // ---------- Koloss B: Hüterin des Hafens – Gewand, Laterne, auf einem Turm auf der Felseninsel ----------
+  function kolossB(K, now = 0) {
+    const z = K.z, [BR, BR_D, BR_L] = BRZ;
+    harbor(K);
+    // Felseninsel: Schichten aus Fels, Kairing mit Stufen
+    K.oval(0, 0, 0.95, C('#7d7568')); K.oval(-0.04, -0.04, 0.86, C('#9a9284')); K.oval(-0.08, -0.08, 0.7, C('#b3ab9c'));
+    for (const [a, b, r] of [[0.7, 0.3, 0.16], [0.35, 0.72, 0.13], [-0.75, 0.2, 0.12], [0.6, -0.55, 0.12]]) { K.oval(a, b, r, C('#8a8274')); K.oval(a - 0.03, b - 0.03, r * 0.7, C('#a39b8c')); }
+    const parts = [];
+    parts.push([-1.05, 0.85, () => boat(K.P(-1.05, 0.85), z, '#7a4e32', '#fffaf0', 1)]);
+    parts.push([1.05, -0.6, () => boat(K.P(1.05, -0.6), z * 0.8, '#5b6fa8', '#fff3d6', -1)]);
+    parts.push([0, 0, () => {
+      // Turm-Sockel: rund, Fenster, Goldband, Leuchtring
+      const base = K.P(0, 0, 4);
+      cyl(base[0], base[1], 34 * z, 17 * z, 10 * z, '#cfc6b2');
+      cyl(base[0], base[1] - 10 * z, 27 * z, 13.5 * z, 44 * z, '#ede4cf');
+      for (let i = 0; i < 4; i++) { const t = -0.7 + i * 0.45, wx = base[0] + Math.sin(t) * 22 * z, wy = base[1] - 30 * z + Math.cos(t) * 4 * z; poly([[wx - 2.4 * z, wy], [wx + 2.4 * z, wy], [wx + 2.4 * z, wy - 9 * z], [wx, wy - 11.5 * z], [wx - 2.4 * z, wy - 9 * z]], lit() ? '#ffd27a' : C('#5d8fb8')); if (lit()) glowP([wx, wy - 5 * z], 10 * z); }
+      poly([[base[0] - 3.6 * z, base[1] - 10 * z + 13 * z], [base[0] + 3.6 * z, base[1] - 10 * z + 13 * z], [base[0] + 3.6 * z, base[1] - 10 * z + 1 * z], [base[0], base[1] - 10 * z - 3 * z], [base[0] - 3.6 * z, base[1] - 10 * z + 1 * z]], C('#8a5a3c'));   // Tür
+      cyl(base[0], base[1] - 54 * z, 30 * z, 15 * z, 4 * z, GOLD_D);
+      for (let i = 0; i < 14; i++) { const ang = i / 14 * Math.PI * 2; if (Math.sin(ang) < -0.2) continue; const lx = base[0] + Math.cos(ang) * 29 * z, ly = base[1] - 57 * z + Math.sin(ang) * 14.5 * z; circle(lx, ly, 1.3 * z, lit() ? '#fff1a8' : C('#fff3c4')); if (lit() && i % 2) glowP([lx, ly], 9 * z); }
+      // Figur im Gewand
+      const ft = [base[0], base[1] - 58 * z];
+      robe(ft[0], ft[1], 24 * z, 14 * z, 74 * z, z, BR, BR_D, BR_L, -6 * z);
+      g.fillStyle = C(BR_D); g.beginPath(); g.moveTo(ft[0] - 14 * z, ft[1] - 70 * z); g.bezierCurveTo(ft[0] - 30 * z, ft[1] - 40 * z, ft[0] - 30 * z, ft[1] - 14 * z, ft[0] - 34 * z, ft[1] - 2 * z); g.lineTo(ft[0] - 20 * z, ft[1] - 6 * z); g.bezierCurveTo(ft[0] - 20 * z, ft[1] - 30 * z, ft[0] - 16 * z, ft[1] - 50 * z, ft[0] - 10 * z, ft[1] - 66 * z); g.fill();   // Tuch weht
+      poly([[ft[0] - 12 * z, ft[1] - 46 * z], [ft[0] + 12 * z, ft[1] - 46 * z], [ft[0] + 12 * z, ft[1] - 42 * z], [ft[0] - 12 * z, ft[1] - 42 * z]], C(GOLD));   // Gürtel
+      circle(ft[0] - 6 * z, ft[1] - 26 * z, 1.4 * z, C('#6fae9a')); circle(ft[0] + 8 * z, ft[1] - 14 * z, 1.2 * z, C('#6fae9a'));
+      const sh = [ft[0], ft[1] - 74 * z], shL = [sh[0] - 13 * z, sh[1] + 3 * z], shR = [sh[0] + 13 * z, sh[1] + 3 * z];
+      // linker Arm hält eine Tafel mit Stern
+      const elL = [shL[0] - 3 * z, shL[1] + 18 * z]; limb2(shL, elL, 4.6 * z, 4 * z, BR, BR_D);
+      poly([[elL[0] - 9 * z, elL[1] - 6 * z], [elL[0] + 3 * z, elL[1] - 9 * z], [elL[0] + 5 * z, elL[1] + 8 * z], [elL[0] - 7 * z, elL[1] + 11 * z]], C(BR_D));
+      poly([[elL[0] - 8 * z, elL[1] - 5.4 * z], [elL[0] + 2.6 * z, elL[1] - 8 * z], [elL[0] + 4.2 * z, elL[1] + 7 * z], [elL[0] - 6.4 * z, elL[1] + 9.6 * z]], C(BR));
+      star(elL[0] - 1.8 * z, elL[1] + 0.8 * z, 3.4 * z, C(GOLD));
+      // rechter Arm hebt die Laterne
+      const elR = [shR[0] + 7 * z, shR[1] - 16 * z], hand = [shR[0] + 6 * z, shR[1] - 36 * z];
+      limb2(shR, elR, 4.6 * z, 4 * z, BR, BR_D); limb2(elR, hand, 4 * z, 3.4 * z, BR, BR_D);
+      g.fillStyle = C(BR_L); g.beginPath(); g.moveTo(shR[0] - 2 * z, shR[1] + 2 * z); g.quadraticCurveTo(elR[0] + 6 * z, elR[1] + 4 * z, elR[0] + 3 * z, elR[1] - 2 * z); g.lineTo(elR[0] - 3 * z, elR[1]); g.closePath(); g.fill();   // Ärmel
+      lantern([hand[0], hand[1] - 1 * z], z * 1.1, now);
+      poly([[sh[0] - 4 * z, sh[1] + 1 * z], [sh[0] + 4 * z, sh[1] + 1 * z], [sh[0] + 3.4 * z, sh[1] - 6 * z], [sh[0] - 3.4 * z, sh[1] - 6 * z]], C(BR_D));
+      const head = [sh[0], sh[1] - 14 * z];
+      rays(head, 8.6 * z, 18 * z, z, 7);
+      g.fillStyle = C('#8a5a2c'); g.beginPath(); g.ellipse(head[0] - 1.5 * z, head[1] + 4 * z, 9.5 * z, 11 * z, 0, 0, Math.PI * 2); g.fill();   // Haar, lang
+      face(head, 8.4 * z, z, BR, BR_D, BR_L, null);
+      g.fillStyle = C('#8a5a2c'); g.beginPath(); g.arc(head[0], head[1] - 1 * z, 8.8 * z, Math.PI * 1.05, Math.PI * 1.95); g.fill();
+      poly([[head[0] - 9 * z, head[1] - 4 * z], [head[0] + 9 * z, head[1] - 4 * z], [head[0] + 8 * z, head[1] - 7.5 * z], [head[0] - 8 * z, head[1] - 7.5 * z]], C(GOLD_D));
+    }]);
+    parts.push([2, 2, () => { for (const [dx, dy, s] of [[-50, -150, 1], [-38, -160, 0.8], [48, -120, 0.9]]) { const p = K.P(0, 0); const x = p[0] + dx * z, y = p[1] + dy * z; L(lit() ? '#c8d2ff' : '#ffffff', 0.9 * s, z, [[x - 4 * z * s, y], [x - 1.5 * z * s, y - 2 * z * s], [x, y], [x + 1.5 * z * s, y - 2 * z * s], [x + 4 * z * s, y]]); } }]);
+    K.scene(parts);
+  }
   window.VOLL = [['Obelisk der Sonnenbucht', obelisk, 2.1], ['Koloss am Hafen', koloss, 1.62]];
+  window.KOLOSS_NEU = [['Koloss A – breitbeinig, kräftig', kolossA, 1.75], ['Koloss B – Hüterin des Hafens', kolossB, 1.9]];
 
   window.monumenteVoll = async (opts = {}) => {
     const DW = 560, DH = 560, NW = 280, NH = 280, list = opts.list || window.VOLL, shots = [];
