@@ -2750,7 +2750,8 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 164 **Neue besondere Stücke** (Entwürfe tools/besondere-entwurf.js, tools/glitzer-vorschau.html; Entscheidungen 21./22.10.2026):
       - **Perlmutt-Dachfarbe** Variante B (kräftig: Rosa → Flieder → Mint → Himmelblau schräg übers Dach) – ✦ Meisterstück für ✨.
       - **Glitzerwege**: feine stille Pünktchen + einzelne Funkel, die nacheinander aufblitzen (je eigener Takt 2,5–5 s, sin⁸, weicher Schein) –
-        „omg es ist perfekt genau so“. Drei ✦ Meisterstücke (je ~150 ✨): Silberglitzer, Goldglitzer, Perlglitzer, jeweils auf jeder Wegfarbe.
+        „omg es ist perfekt genau so“. Vier ✦ Meisterstücke (je ~150 ✨): Silberglitzer, Goldglitzer, Perlglitzer, Regenbogenglitzer (bunte Pünktchen, jeder
+        Funkel in eigener Farbe mit farbigem Schein; Nutzer 22.10.), jeweils auf jeder Wegfarbe.
         Funkeln nur sichtbar und nah (Zoom ≥ 1), weit weg stilles Bild; nachts etwas stärker.
       - Fensterläden: verworfen („sieht doof aus“). Große Sterne im Weg: verworfen („eher Glitzer/fein“).
 - [ ] 165 **Forschung mit Schönem** (Nutzer 21.10.2026: „klingt geil“): passende Forschungen schalten zusätzlich ein Stück Aussehen frei, z. B.

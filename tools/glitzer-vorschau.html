@@ -16,12 +16,14 @@ p { font-weight: 400; font-size: 13px; opacity: .8; }
 <h3>Silberglitzer auf Hellgrau</h3><canvas id="c0" width="1400" height="760"></canvas>
 <h3>Goldglitzer auf Sand</h3><canvas id="c1" width="1400" height="760"></canvas>
 <h3>Perlglitzer auf Rosé</h3><canvas id="c2" width="1400" height="760"></canvas>
+<h3>Regenbogenglitzer auf Hellgrau</h3><canvas id="c3" width="1400" height="760"></canvas>
 </main>
 <script>
 const V = [
   { ground: '#d6d3cb', cols: ['#ffffff', '#aeb8cc', '#f4f6fa'], spark: 'rgba(255,255,255,', glow: '210,225,255' },
   { ground: '#eadbb2', cols: ['#e2b64a', '#fff2b0', '#d9a93a'], spark: 'rgba(255,248,210,', glow: '255,220,120' },
   { ground: '#ecccc2', cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], spark: 'rgba(255,255,255,', glow: '255,210,240' },
+  { ground: '#dedbd3', cols: ['#ff5f6d', '#ffa94d', '#ffe066', '#69db7c', '#4dabf7', '#9775fa', '#f783ac'], spark: 'rgba(255,255,255,', rainbow: true },   // Regenbogen: jeder Funkel in eigener Farbe
 ];
 const TW = 64, TH = 32, W = 1400, H = 760, z = 8.4, cx = W / 2, cy = H * 0.52;
 const P = (a, b) => [cx + (a - b) * TW / 2 * z, cy + (a + b) * TH / 2 * z];
@@ -35,7 +37,8 @@ const items = V.map((v, i) => {
     g.globalAlpha = 0.55 + rnd() * 0.45; g.fillStyle = v.cols[k % v.cols.length]; g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); g.fill(); }
   g.globalAlpha = 1;
   let s2 = 11 + i * 5; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647), n = 12;
-  const sp = Array.from({ length: n }, (_, k) => ({ p: P(-1.5 + (k + 0.15 + r2() * 0.7) * 3 / n, -0.4 + r2() * 0.8), T: 2500 + r2() * 2500, off: r2(), L: (2.0 + r2() * 1.2) * z }));
+  const RB = ['255,95,109', '255,169,77', '255,224,102', '105,219,124', '77,171,247', '151,117,250', '247,131,172'];
+  const sp = Array.from({ length: n }, (_, k) => ({ p: P(-1.5 + (k + 0.15 + r2() * 0.7) * 3 / n, -0.4 + r2() * 0.8), T: 2500 + r2() * 2500, off: r2(), L: (2.0 + r2() * 1.2) * z, hue: RB[k % RB.length] }));
   return { v, still, sp, ctx: document.getElementById('c' + i).getContext('2d') };
 });
 const t0 = performance.now();
@@ -47,7 +50,8 @@ function frame(now) {
       const a = Math.pow(Math.max(0, Math.sin(((t / s.T + s.off) % 1) * Math.PI * 2)), 8);
       if (a < 0.02) continue;
       const [x, y] = s.p, L = s.L * (0.55 + 0.45 * a), w = L * 0.16;
-      const gr = c.createRadialGradient(x, y, 0, x, y, L * 1.4); gr.addColorStop(0, `rgba(${it.v.glow},${0.45 * a})`); gr.addColorStop(1, `rgba(${it.v.glow},0)`);
+      const gl = it.v.rainbow ? s.hue : it.v.glow;
+      const gr = c.createRadialGradient(x, y, 0, x, y, L * 1.4); gr.addColorStop(0, `rgba(${gl},${(it.v.rainbow ? 0.7 : 0.45) * a})`); gr.addColorStop(1, `rgba(${gl},0)`);
       c.fillStyle = gr; c.beginPath(); c.arc(x, y, L * 1.4, 0, Math.PI * 2); c.fill();
       poly(c, [[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], it.v.spark + a + ')');
     }
