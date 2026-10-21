@@ -35,3 +35,4 @@
 - 21.10. (später): Menschliche Figuren fliegen raus (Nutzer: „gefällt mir einfach nicht“). **Sternenleuchte** ersetzt die Hüterin: Felseninsel,
   weißer Turm mit Fenstern auf der Rundung, Galerie mit Geländer rundum, sechseckige goldene Laterne mit Sternen im Glas, Stern auf der Stange – „passt“.
   Brunnen und Triumphbogen bekommen Gold/Tiere statt Figuren.
+- Triumphbogen-Aufsatz: **Wimpelreihe (B)**. Brunnen: ohne Delfine, Wasser fällt im Bogen über die Schalenränder; Pagode (gerade Dächer) und Sternenleuchte „passt“.
