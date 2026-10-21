@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glitzerweg</title>
+<style>
+:root { --bg: #fffaf0; --fg: #6b4f3a; --cell: #cfe8b8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #2a241f; --fg: #f1e3cf; --cell: #cfe8b8; } }
+:root[data-theme="dark"] { --bg: #2a241f; --fg: #f1e3cf; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 600 15px system-ui, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 12px 16px 24px; }
+h3 { margin: 14px 2px 6px; font-size: 16px; }
+canvas { width: 100%; height: auto; display: block; border-radius: 10px; background: var(--cell); }
+p { font-weight: 400; font-size: 13px; opacity: .8; }
+</style></head>
+<body><main>
+<p>Feine Pünktchen liegen still im Weg, einzelne Funkel blitzen nacheinander kurz auf (jeder mit eigenem Takt von 2,5–5 Sekunden).</p>
+<h3>Silberglitzer auf Hellgrau</h3><canvas id="c0" width="1400" height="760"></canvas>
+<h3>Goldglitzer auf Sand</h3><canvas id="c1" width="1400" height="760"></canvas>
+<h3>Perlglitzer auf Rosé</h3><canvas id="c2" width="1400" height="760"></canvas>
+</main>
+<script>
+const V = [
+  { ground: '#d6d3cb', cols: ['#ffffff', '#aeb8cc', '#f4f6fa'], spark: 'rgba(255,255,255,', glow: '210,225,255' },
+  { ground: '#eadbb2', cols: ['#e2b64a', '#fff2b0', '#d9a93a'], spark: 'rgba(255,248,210,', glow: '255,220,120' },
+  { ground: '#ecccc2', cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], spark: 'rgba(255,255,255,', glow: '255,210,240' },
+];
+const TW = 64, TH = 32, W = 1400, H = 760, z = 8.4, cx = W / 2, cy = H * 0.52;
+const P = (a, b) => [cx + (a - b) * TW / 2 * z, cy + (a + b) * TH / 2 * z];
+const poly = (g, pts, col) => { g.fillStyle = col; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.fill(); };
+const items = V.map((v, i) => {
+  const still = document.createElement('canvas'); still.width = W; still.height = H; const g = still.getContext('2d');
+  poly(g, [P(-1.5, -1), P(1.5, -1), P(1.5, 1), P(-1.5, 1)], '#9fd27a');
+  poly(g, [P(-1.5, -0.5), P(1.5, -0.5), P(1.5, 0.5), P(-1.5, 0.5)], v.ground);
+  let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let k = 0; k < 170; k++) { const p = P(-1.48 + rnd() * 2.96, -0.48 + rnd() * 0.96), r = Math.max(0.7, (0.35 + rnd() * 0.45) * z) * 0.62;
+    g.globalAlpha = 0.55 + rnd() * 0.45; g.fillStyle = v.cols[k % v.cols.length]; g.beginPath(); g.arc(p[0], p[1], r, 0, Math.PI * 2); g.fill(); }
+  g.globalAlpha = 1;
+  let s2 = 11 + i * 5; const r2 = () => ((s2 = (s2 * 16807) % 2147483647) / 2147483647), n = 12;
+  const sp = Array.from({ length: n }, (_, k) => ({ p: P(-1.5 + (k + 0.15 + r2() * 0.7) * 3 / n, -0.4 + r2() * 0.8), T: 2500 + r2() * 2500, off: r2(), L: (2.0 + r2() * 1.2) * z }));
+  return { v, still, sp, ctx: document.getElementById('c' + i).getContext('2d') };
+});
+const t0 = performance.now();
+function frame(now) {
+  const t = now - t0;
+  for (const it of items) {
+    const c = it.ctx; c.clearRect(0, 0, W, H); c.drawImage(it.still, 0, 0);
+    for (const s of it.sp) {
+      const a = Math.pow(Math.max(0, Math.sin(((t / s.T + s.off) % 1) * Math.PI * 2)), 8);
+      if (a < 0.02) continue;
+      const [x, y] = s.p, L = s.L * (0.55 + 0.45 * a), w = L * 0.16;
+      const gr = c.createRadialGradient(x, y, 0, x, y, L * 1.4); gr.addColorStop(0, `rgba(${it.v.glow},${0.45 * a})`); gr.addColorStop(1, `rgba(${it.v.glow},0)`);
+      c.fillStyle = gr; c.beginPath(); c.arc(x, y, L * 1.4, 0, Math.PI * 2); c.fill();
+      poly(c, [[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], it.v.spark + a + ')');
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></body></html>
