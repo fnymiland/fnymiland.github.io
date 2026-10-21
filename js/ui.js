@@ -442,7 +442,7 @@ function renderTools() {
     return;
   }
   const top = MENU.find(m => m.id === menuTop) || MENU[0];
-  const grs = orderedGroups(top);
+  const grs = orderedGroups(top).filter(gr => gr.items.length);            // leere Gruppen (Basar: noch nichts gekauft) gibt es nicht
   if (arrangeMode && top.groups) { renderArrange(box, top, grs); return; }
   const ready = gr => gr.items.some(available);                           // Gruppen ganz ohne Freies ans Ende (Reihenfolge sonst eigene bzw. MENU)
   let first = true;

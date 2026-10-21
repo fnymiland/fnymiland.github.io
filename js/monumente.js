@@ -381,7 +381,8 @@ for (const [id, m] of Object.entries(MONUMENTS)) {
     : `Prachtstück aus dem Sternenbasar ✨ – braucht 2×2 Felder${m.wet ? '' : ' Wiese'}.`;
 }
 SD_SAMMLUNGEN.push(['Monumente', '🏛️', 'Monumente']);
-{ const top = MENU.find(m => m.id === 'gestalten'); if (top) top.groups.push({ id: 'monumente', label: '🏛️ Monumente', items: Object.keys(MONUMENTS) }); }
+// Baumenü: nur Gekauftes (Nutzer 21.10.2026, wie Animal Crossing) – ohne Kauf gibt es die Gruppe nicht; der Basar ist das Schaufenster
+{ const top = MENU.find(m => m.id === 'gestalten'); if (top) top.groups.push({ id: 'monumente', label: '🏛️ Monumente', get items() { return Object.keys(MONUMENTS).filter(id => state && state.sdItems && state.sdItems.has(id)); } }); }
 
 // Wahrzeichen des Monats: gleicher Monat + Spielstand = gleiches Wahrzeichen; die vier wechseln sich ab (verpasste kommen wieder)
 const MON_MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];

@@ -2736,6 +2736,7 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
       Bildhöhe (ITEMS.h → spriteTop), Gerüst aus drawWonder herausgelöst (siteScaffold), Abriss erstattet auch die Abschnitte, Baustellen ohne
       Schönheit, Menügruppe 🏛️ Monumente, Sammelbuch-Seite. Wimpel des Bogens stehen still (Bildchen statt live). Leistungswerte der 7 neuen
       Bilder per leistung:neu eingetragen (nur neue Einträge, 81–904 – weit unter den Wunderwerken). Tests: tests/monumente.test.js.
+      Baumenü nur mit Gekauftem (Nutzer 21.10.: „wie andere Spiele?“ → Animal-Crossing-Art): kein Vorgeschmack mehr, leere Basar-Gruppen weg (v1158).
       Offen/später: Rathaus-Liste „Bereit“ kennt die Wahrzeichen-Abschnitte noch nicht (nur das 🏗️ über der Baustelle).
 - [ ] 161d Denkmal, Ehrentitel, goldene Varianten – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)
 - [ ] 161e Inselzauber – später (18.10.: Taler-Problem über Schatzkammer + Basar gelöst, vorerst nicht nötig)

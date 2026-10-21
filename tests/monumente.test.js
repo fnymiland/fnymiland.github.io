@@ -57,7 +57,7 @@ describe('Wahrzeichen des Monats', () => {
     expect(game(`available('${cur}')`)).toBe(false);
     expect(game(`sdBuyItem('${cur}')`)).toBe(true);
     expect(game(`[state.stardust, available('${cur}')]`)).toEqual([4000, true]);
-    expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'monumente').items")).toEqual(Object.keys(game('MONUMENTS')));
+    expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'monumente').items")).toEqual([cur]);   // nur Gekauftes
     expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'sternstaub').items")).not.toContain(cur);
   });
   it('Reiter Monumente: Wahrzeichen groß mit Countdown, alle sieben mit Stand; gesehen fürs Sammelbuch', () => {
@@ -121,6 +121,25 @@ describe('Baustelle', () => {
     const d = game('parseSave(JSON.parse(JSON.stringify(serialize())))');
     expect([...d.sdItems]).toContain('mon_leuchte');
     expect(d.tiles.get('4,4')).toMatchObject({ b: 'mon_leuchte', phase: 1 });
+  });
+});
+
+describe('Baumenü: nur Gekauftes (Nutzer 21.10.2026: wie Animal Crossing)', () => {
+  const groupIds = () => game(`(() => { menuTop = 'gestalten'; renderTools(); return [...document.querySelectorAll('.sheet-h')].map(h => h.dataset.group); })()`);
+  it('ohne Kauf: keine Gruppen ✨ Sternenbasar und 🏛️ Monumente, kein Vorgeschmack, nichts im Nachschlagebuch', () => {
+    game('state.sdItems = new Set()');
+    const grs = "MENU.find(m => m.id === 'gestalten').groups";
+    expect(game(`${grs}.find(gr => gr.id === 'sternstaub').items`)).toEqual([]);
+    expect(game(`${grs}.find(gr => gr.id === 'monumente').items`)).toEqual([]);
+    expect(groupIds()).not.toContain('sternstaub');
+    expect(groupIds()).not.toContain('monumente');
+    expect(game('BUILDABLE().some(id => ITEMS[id].sdShop)')).toBe(false);
+  });
+  it('nach dem Kauf: Gruppe erscheint mit genau dem Gekauften', () => {
+    game("state.sdItems = new Set(['mon_stern', 'sd_kirschbaum'])");
+    expect(groupIds()).toContain('monumente');
+    expect(groupIds()).toContain('sternstaub');
+    expect(game("MENU.find(m => m.id === 'gestalten').groups.find(gr => gr.id === 'monumente').items")).toEqual(['mon_stern']);
   });
 });
 

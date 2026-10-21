@@ -679,11 +679,11 @@ SD_SHOP.push(
   { id: 'sd_sonnenuhr', price: 80 }, { id: 'sd_schaukel', price: 130 }, { id: 'sd_koiteich', price: 200 },
   { id: 'sd_sternbrunnen', price: 400, rare: true }, { id: 'sd_pagode', price: 450, rare: true },
 );
-// Baumenü (Gestalten → ✨ Sternenbasar): nur Gekauftes; noch nichts gekauft → drei als Vorgeschmack (mit Schloss)
+// Baumenü (Gestalten → ✨ Sternenbasar): nur Gekauftes; ohne Kauf keine Gruppe (Nutzer 21.10.2026: wie Animal Crossing – der Basar ist das Schaufenster)
 (() => {
   const top = MENU.find(m => m.id === 'gestalten');
   if (!top || top.groups.some(gr => gr.id === 'sternstaub')) return;
-  top.groups.push({ id: 'sternstaub', label: '✨ Sternenbasar', get items() { const have = SD_SHOP.map(s => s.id).filter(id => !ITEMS[id].mon && state && state.sdItems && state.sdItems.has(id)); return have.length ? have : SD_SHOP.slice(0, 3).map(s => s.id); } });
+  top.groups.push({ id: 'sternstaub', label: '✨ Sternenbasar', get items() { return SD_SHOP.map(s => s.id).filter(id => !ITEMS[id].mon && state && state.sdItems && state.sdItems.has(id)); } });
 })();
 // Tipps (Bau-Info, „Neu freigeschaltet“): je Ware aus dem Basar
 for (const s of SD_SHOP) if (!ITEM_TIPS[s.id]) ITEM_TIPS[s.id] = ITEMS[s.id].small ? 'Aus dem Sternenbasar ✨ – kleine Deko für eine Ecke, bis zu 4 pro Feld.' : 'Aus dem Sternenbasar ✨ – braucht ein ganzes Feld Wiese.';

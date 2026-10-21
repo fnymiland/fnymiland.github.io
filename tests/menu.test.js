@@ -31,7 +31,7 @@ describe('Baumenü', () => {
     game('setSheet(false); buildToolbar()');
     for (const m of game('MENU.map(m => m.id)')) {
       area(m).onclick();
-      expect(q('#tools .sheet-h').map(h => h.dataset.group).sort(), m).toEqual(game(`MENU.find(x => x.id === '${m}').groups.map(g => g.id)`).sort());   // alle da (Gesperrte ans Ende)
+      expect(q('#tools .sheet-h').map(h => h.dataset.group).sort(), m).toEqual(game(`MENU.find(x => x.id === '${m}').groups.filter(g => g.items.length).map(g => g.id)`).sort());   // alle da (Gesperrte ans Ende); leere Basar-Gruppen nicht (nur Gekauftes)
       expect(q('#tools .tool').every(b => b.querySelector('.nm') && b.querySelector('.nm').textContent === game(`ITEMS['${b.dataset.tool}'].name`)), m).toBe(true);
       area(m).onclick();                                                          // nochmal: zu
       expect(game("document.getElementById('toolbar').classList.contains('open')"), m).toBe(false);
