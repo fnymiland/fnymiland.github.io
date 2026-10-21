@@ -40,3 +40,10 @@
   Obelisk 167, Sternenleuchte 153, Pagode 139, Denkmal 105, Statue 99, Bogen 92, Brunnen 51 (alle 2×2). Gekürzte Türme (~120) gezeigt –
   Nutzer: **„lass es so wie es ursprünglich war, sieht doch gut aus“** → Höhen bleiben. Beim Einbau jedem Monument seine echte Höhe
   mitgeben (wie W.h bei Wunderwerken), sonst schneidet der Sprite-Cache die Spitzen beim Rauszoomen ab.
+
+## Entscheidungen zum Einbau (21.10.2026)
+- **Wahrzeichen** (Pagode, Sternenleuchte, Obelisk, Triumphbogen) = Monument des Monats: Bauplan ~1000 ✨, dann Baustelle in
+  3 Abschnitten: 100 / 300 / 600 Mio Taler + Baustoffe. **Mehrfach baubar**: Bauplan einmal, jede weitere Baustelle neu bezahlen.
+- **Prachtstücke** (Statue, Sternendenkmal, Brunnen) = seltene Basar-Ware für ~500 ✨, sofort fertig.
+- **Sternenleuchte überall** (Wasser oder Land, gleicher Felssockel).
+- Höhen wie entworfen; jedes Monument bekommt seine echte Höhe (Sprite-Cache).
