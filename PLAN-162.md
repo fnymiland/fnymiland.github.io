@@ -36,3 +36,7 @@
   weißer Turm mit Fenstern auf der Rundung, Galerie mit Geländer rundum, sechseckige goldene Laterne mit Sternen im Glas, Stern auf der Stange – „passt“.
   Brunnen und Triumphbogen bekommen Gold/Tiere statt Figuren.
 - Triumphbogen-Aufsatz: **Wimpelreihe (B)**. Brunnen: ohne Delfine, Wasser fällt im Bogen über die Schalenränder; Pagode (gerade Dächer) und Sternenleuchte „passt“.
+- **Maßstab (21.10., nachgemessen):** Höhen bei Zoom 1: Haus 25–52, Sternwarte 88, Leuchtturm 183, Riesenrad 208, Schloss 278;
+  Obelisk 167, Sternenleuchte 153, Pagode 139, Denkmal 105, Statue 99, Bogen 92, Brunnen 51 (alle 2×2). Gekürzte Türme (~120) gezeigt –
+  Nutzer: **„lass es so wie es ursprünglich war, sieht doch gut aus“** → Höhen bleiben. Beim Einbau jedem Monument seine echte Höhe
+  mitgeben (wie W.h bei Wunderwerken), sonst schneidet der Sprite-Cache die Spitzen beim Rauszoomen ab.
