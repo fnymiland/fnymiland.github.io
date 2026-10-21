@@ -82,7 +82,21 @@
         poly(pts, C(col)); if (edge) { g.strokeStyle = C(edge); g.lineWidth = 0.5 * z; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.stroke(); }
         if (nightOn && v.glow) glowQuad([K.P(a - 0.02, b - 0.02), K.P(a + 0.02, b - 0.02), K.P(a + 0.02, b + 0.02), K.P(a - 0.02, b + 0.02)], 10 * z);
       };
-      v.stars(star);
+      if (v.stars) v.stars(star);
+      if (v.glitter) {                                                     // feiner Glitzer: winzige Punkte flach im Boden, ein paar Funkel-Kreuze
+        let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+        const G = v.glitter;
+        for (let i = 0; i < G.n; i++) {
+          const a = -1.48 + rnd() * 2.96, b = -0.48 + rnd() * 0.96, p = K.P(a, b), r = Math.max(0.7, (0.35 + rnd() * 0.45) * z);   // klein wenigstens ein Pixel
+          g.globalAlpha = 0.55 + rnd() * 0.45; circle(p[0], p[1], r * 0.62, G.cols[i % G.cols.length]); g.globalAlpha = 1;
+        }
+        for (let i = 0; i < G.glints; i++) {                               // gleichmäßig über die Länge verteilt (je Abschnitt einer), klein
+          const a = -1.5 + (i + 0.2 + rnd() * 0.6) * 3 / G.glints, b = -0.38 + rnd() * 0.76, p = K.P(a, b), L = Math.max(1.4, (0.9 + rnd() * 0.6) * z);
+          const w = L * 0.16, [x, y] = p;                                    // Funkelstern: vier spitze Strahlen
+          poly([[x - L, y], [x - w, y - w], [x, y - L * 1.15], [x + w, y - w], [x + L, y], [x + w, y + w], [x, y + L * 1.15], [x - w, y + w]], G.glintCol);
+          if (nightOn) glowQuad([[p[0] - 0.4, p[1] + 0.4], [p[0] + 0.4, p[1] + 0.4], [p[0] + 0.4, p[1] - 0.4], [p[0] - 0.4, p[1] - 0.4]], 6 * z);
+        }
+      }
     } finally { g = prev; night = n0; }
     return c;
   }
@@ -98,14 +112,10 @@
     ['C · nur goldener Fensterrahmen', { frame: GOLD_D }],
   ];
   const STARS = [
-    ['A · Nachtblau, ein Goldstern je Feld', { ground: '#3b4a75', joint: '#2f3c62', tile: 1, glow: true,
-      stars: s => { for (const a of [-1, 0, 1]) s(a, 0, 0.22, GOLD, GOLD_D); } }],
-    ['B · sanftes Blau, ein Goldstern je Feld', { ground: '#7f93c4', joint: '#6f83b4', tile: 1, glow: true,
-      stars: s => { for (const a of [-1, 0, 1]) s(a, 0, 0.22, GOLD, GOLD_D); } }],
-    ['C · Sandweg mit kleinen Goldsternen', { ground: '#eadbb2', glow: false,
-      stars: s => { const P = [[-1.25, -0.2], [-0.95, 0.25], [-0.6, -0.1], [-0.25, 0.3], [0.1, -0.28], [0.35, 0.12], [0.7, -0.15], [1.05, 0.22], [1.3, -0.25]]; for (const [a, b] of P) s(a, b, 0.07, GOLD, GOLD_D); } }],
-    ['D · Platten, Sternenmosaik in der Mitte', { ground: '#dedbd3', joint: '#c9c5bb', tile: 0.5, glow: true,
-      stars: s => { s(0, 0, 0.36, '#3b4a75'); s(0, 0, 0.26, GOLD, GOLD_D); for (const a of [-1, 1]) s(a, 0, 0.12, GOLD, GOLD_D); } }],
+    ['A · Hellgrau mit Silberglitzer', { ground: '#d6d3cb', glitter: { n: 420, cols: ['#ffffff', '#9aa6bd', '#f4f6fa', '#7d89a3'], glints: 3, glintCol: 'rgba(255,255,255,0.95)' } }],
+    ['B · Sand mit Goldglitzer', { ground: '#eadbb2', glitter: { n: 420, cols: ['#d9a93a', '#fff2b0', '#c48f22', '#ffe08a'], glints: 3, glintCol: 'rgba(255,250,220,0.95)' } }],
+    ['C · Rosé mit Perlglitzer', { ground: '#ecccc2', glitter: { n: 420, cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], glints: 3, glintCol: 'rgba(255,255,255,0.95)' } }],
+    ['D · gedämpftes Blaugrau mit Sternenstaub', { ground: '#8592b2', glitter: { n: 380, cols: ['#ffffff', '#ffe9a0', '#e3e8f7'], glints: 3, glintCol: 'rgba(255,248,220,0.95)' } }],
   ];
   window.besondereEntwurf = (opts = {}) => {
     document.getElementById('cmp')?.remove();
@@ -118,7 +128,22 @@
     const hz = z * 2 * 2.6, look = opts.look || 1, wall = opts.wall || WALLS[1];   // Haus groß: ~2,6 × so groß wie Weg-Zoom
     if (which === 'alle' || which === 'perlmutt') rows.push(PEARL.map(([l, v]) => [l, () => pearlHouse(cw * 2, ch * 2, cw, ch * 1.62, hz, look, wall, v)]));
     if (which === 'alle' || which === 'laeden') rows.push(SHUT.map(([l, v]) => [l, () => shutterHouse(cw * 2, ch * 2, cw, ch * 1.62, hz, look, wall, '#c9604f', v, nightOn)]));
-    if (which === 'alle' || which === 'sterne') rows.push(STARS.map(([l, v]) => [l, () => starPath(cw * 2, ch * 2, cw, ch * 1.05, z * 2 * 0.62, v, nightOn)]));
+    if (which === 'alle' || which === 'sterne') rows.push(STARS.map(([l, v]) => [l, () => starPath(cw * 2, ch * 2, cw, ch * 1.0, z * 2 * 0.85, v, nightOn)]));
+    if (which === 'alle' || which === 'sterne') rows.push(STARS.map(([l, v]) => [l.slice(0, 1) + ' · im Spiel (Zoom 1)', () => starPath(cw * 2, ch * 2, cw, ch * 1.0, 2, v, nightOn)]));
+    if (which === 'wege') {                                                // 2×2, groß; unten rechts das Feld im Spielmaßstab (Zoom 1)
+      const W2 = (Wv - 36) / 2, H2 = (Hv - 70) / 2;
+      STARS.forEach(([label, v], i) => {
+        const x = 12 + (i % 2) * (W2 + 12), y = 26 + Math.floor(i / 2) * (H2 + 34);
+        ctx.fillStyle = nightOn ? '#1f2846' : '#cfe8b8'; ctx.fillRect(x, y, W2, H2);
+        ctx.drawImage(starPath(W2 * 2, H2 * 2, W2 * 0.92, H2 * 0.95, z * 2, v, nightOn), x, y, W2, H2);
+        const iw = 200, ih = 110; ctx.fillStyle = nightOn ? '#1f2846' : '#cfe8b8'; ctx.fillRect(x + W2 - iw - 6, y + H2 - ih - 6, iw, ih);
+        ctx.strokeStyle = '#8a7560'; ctx.strokeRect(x + W2 - iw - 6, y + H2 - ih - 6, iw, ih);
+        ctx.drawImage(starPath(iw * 2, ih * 2, iw, ih, 2, v, nightOn), x + W2 - iw - 6, y + H2 - ih - 6, iw, ih);
+        ctx.fillStyle = '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(label, x + 4, y - 8);
+        ctx.font = '600 11px system-ui'; ctx.fillText('im Spiel (Zoom 1)', x + W2 - iw - 2, y + H2 - ih - 10);
+      });
+      return 'ok';
+    }
     rows.forEach((row, r) => row.forEach(([label, make], i) => {
       const x = 12 + i * (cw + 14), y = 26 + r * (ch + 34);   // bis zu vier Varianten je Reihe
       ctx.fillStyle = nightOn ? '#1f2846' : '#cfe8b8'; ctx.fillRect(x, y, cw, ch);
