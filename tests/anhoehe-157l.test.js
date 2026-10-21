@@ -29,3 +29,30 @@ describe('1 Bewohner springen beim Losgehen nicht schräg aufs erste Wegfeld (al
     expect(moves.filter(([a, b]) => a && b).length).toBe(0);              // nie in x und y zugleich
   });
 });
+
+describe('2 Treppe: Breite wie die Nachbartreppe', () => {
+  const schmal = (x, y) => game(`stairSchmal(stairAt(${x}, ${y}))`);
+  it('neu neben einer gleich gerichteten Treppe: ohne Wahl in der Leiste so breit wie sie (auch in der Vorschau in die Anhöhe); die Wahl in der Leiste gewinnt', () => {
+    hills(block(10, 10, 17, 13));
+    game("stairNewWide = true; build('huegeltreppe', 11, 14); stairNewWide = null; wegShape.wide = false");
+    expect(schmal(11, 14)).toBe(false);
+    expect(game("build('huegeltreppe', 12, 14)")).toBe(true);           // Wegform schmal – folgt aber der breiten daneben
+    expect([schmal(12, 14), game("'schmal' in state.tiles.get('12,14')"), game('stairRow(11, 14).length')]).toEqual([false, false, 2]);
+    // schmale daneben, Wegform breit: schmal
+    game("stairNewWide = false; build('huegeltreppe', 15, 14); stairNewWide = null; wegShape.wide = true");
+    expect(game("build('huegeltreppe', 16, 14)")).toBe(true);
+    expect(schmal(16, 14)).toBe(true);
+    // ohne Nachbarn wie bisher die Wegform
+    expect(game("build('huegeltreppe', 18, 12)")).toBe(true);
+    expect(schmal(18, 12)).toBe(false);
+    // Vorschau (stairWideFor) und Bau gleich
+    game('wegShape.wide = false');
+    expect(game('stairWideFor(13, 14, 0)')).toBe(true);
+    expect(game("build('huegeltreppe', 13, 14)")).toBe(true);
+    expect(schmal(13, 14)).toBe(false);
+    // Wahl in der Leiste: gewinnt (zwei Durchgänge)
+    game('stairNewWide = false');
+    expect(game('stairWideFor(14, 14, 0)')).toBe(false);
+    game('wegShape.wide = false; stairNewWide = null');
+  });
+});

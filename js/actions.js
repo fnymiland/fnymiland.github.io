@@ -155,7 +155,7 @@ function build(b, x, y, quiet) {
     const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
     state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(d.monPhases ? { phase: 0 } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (bridge && b === 'schiene' && !COVER.has(k)) COVER.set(k, k);   // gleich als Gleis bekannt (railArms über bAt/COVER): im Zieh-Rutsch (batch, recalc erst danach) findet das Angleichen sonst die gerade gebauten Felder nicht (160c G2)
-    if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
+    if (b === 'huegeltreppe') { const nt = state.tiles.get(k); if (ecke || stairWideFor(x, y, rot)) delete nt.schmal; else nt.schmal = true; }   // Ecktreppen sind immer breit; sonst wie die Nachbartreppe (157l)
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
     if (wbS) {                                                        // Wasser-Wegbrücke (160c D3): immer im neuen Format, aus dem Aussehen (nie Rohfelder), bezahlt = costOf
       const nt = state.tiles.get(k);

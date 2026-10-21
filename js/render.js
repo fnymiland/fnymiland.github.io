@@ -1948,7 +1948,7 @@ function render(now) {
         const wn = replacesWeg(tool) ? pathsUnder(tool, hx, hy, rotOf(tool)).length : 0;   // Gebäude auf dem Weg (Block 58)
         if (wn) text += `  🛤️ ersetzt den Weg +${fmt(wn * ITEMS.weg.cost)}`;
       }
-      if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1, schmal: !stairWideNew() };   // Feld ohne Anhöhe, mit Treppe (schmal: Streifen Anhöhe daneben)
+      if (tool === 'huegeltreppe' && hillAt(hx, hy) && !stairError(hx, hy, rotOf(tool))) hillGap = { k: hx + ',' + hy, x: hx, y: hy, rot: rotOf(tool), lv: hillLevel(hx, hy) - 1, schmal: !stairWideFor(hx, hy, rotOf(tool)) };   // Feld ohne Anhöhe, mit Treppe (schmal: Streifen Anhöhe daneben)
       if (tool === 'huegelrampe') hillGap = rampGapFor(hx, hy, rotOf(tool));   // Rampe in die Anhöhe: abgesenkte Felder (hills.js)
       const onWeg = k => plainWeg(k) && (plazaOk(tool) || replacesWeg(tool));   // Wege darf man über- bzw. ersetzen
       const free = footprint(tool, hx, hy, rotOf(tool)).every(([fx, fy]) => (!COVER.has(fx + ',' + fy) || onWeg(fx + ',' + fy)) && (terrainAt(fx, fy) !== 'water' || tool === 'schiene'));
@@ -2305,7 +2305,7 @@ function render(now) {
         const gs = decoScale(ghostType);
         g.scale((rot & 1) && MIRROR.has(ghostType) ? -gs : gs, gs);
         const gt = tool === 'verschieben' ? { ...moving.t, rot } : { rot, style: STYLES[ghostType] ? currentStyle(ghostType) : undefined, ...(ghostType === 'weg' ? { ...wegShapeNew(), lauf: (wegLaufGuess(gx, gy) ^ wegFlip) & 1 } : {}),
-          ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}), ...(ghostType === 'station' && stationNewLen === 3 ? { len: 3 } : {}) };   // wie gebaut wird (Block 84d)
+          ...paintNewOf(ghostType), ...(DECO_LOOKS[baseOf(ghostType)] ? decoLookNew(baseOf(ghostType)) : {}), ...(ghostType === 'fz_schloss' ? { cs: csNew() } : {}), ...(ITEMS[ghostType].fl0 ? { fl: ITEMS[ghostType].fl0 } : {}), ...(ghostType === 'hbf' ? HBF_NEW : {}), ...(ghostType === 'station' && stationNewLen === 3 ? { len: 3 } : {}), ...(tool !== 'verschieben' && ghostType === 'huegeltreppe' ? { schmal: !stairWideFor(gx, gy, rot) } : {}) };   // wie gebaut wird (Block 84d); Treppe so breit wie die daneben (157l)
         drawObject(ghostType, 0, 0, z, now, gx, gy, gt.lvl || 1, gt);
         g.restore();
         g.globalAlpha = 1;

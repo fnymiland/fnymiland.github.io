@@ -511,6 +511,17 @@ const STAIR_NW = EDGE_W;                                                 // halb
 const stairSchmal = t => !!t && t.schmal === true && !t.ecke;
 let stairNewWide = null;                                                 // Leiste: null = wie die Wegform, sonst true (breit) / false (schmal)
 const stairWideNew = () => stairNewWide != null ? !!stairNewWide : !!wegShape.wide;
+// Breite einer neuen Treppe auf (x, y) mit Drehung rot (157l, 22.10.2026): ohne Wahl in der Leiste wie eine gleich gerichtete gerade Treppe
+// daneben (sonst stand neben einer breiten eine schmale, weil die Wegform schmal war; zwei verschieden breite daneben: wie die Wegform), sonst
+// die Leiste bzw. die Wegform. Bau, Vorschau, Geist
+function stairWideFor(x, y, rot) {
+  if (stairNewWide == null) {
+    const [Du, Dv] = STAIR_UP[rot & 3], w = new Set();
+    for (const sg of [1, -1]) { const n = stairAt(x - sg * Dv, y + sg * Du); if (n && !n.ecke && stairRotOf(n) === (rot & 3)) w.add(!stairSchmal(n)); }
+    if (w.size === 1) return [...w][0];
+  }
+  return stairWideNew();
+}
 // schmale Treppe auf (x, y), auch der Geist der Vorschau in die Anhöhe (hillGap)
 const stairSchmalAt = (x, y) => { const t = stairAt(x, y); return t ? stairSchmal(t) : gapStair(x, y) && !!hillGap.schmal; };
 // Seite sg (−1 / +1 quer zur Steigung, S = (−Dv, Du)) der Treppe t auf (x, y): 'h' Anhöhe daneben (breit: ihre Wand ist die Wange; schmal: im
@@ -668,6 +679,7 @@ function stairIntoRefits(x, y, why = false) {
   for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const t = stairAt(x + dx, y + dy); if (t && t !== tmp) saved.push([t, t.rot, t.ecke, x + dx, y + dy]); }
   try {
     tmp.rot = stairRot(x, y);
+    if (stairWideFor(x, y, tmp.rot)) delete tmp.schmal; else tmp.schmal = true;   // 157l: wie die Nachbartreppe
     refitStairs(x, y);
     const all = [[x, y], ...saved.map(([, , , tx, ty]) => [tx, ty])];
     if (all.every(([tx, ty]) => !!stairFit(tx, ty))) return true;
