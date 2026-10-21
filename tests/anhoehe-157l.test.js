@@ -97,3 +97,10 @@ describe('4 Treppe: Fuß nur über eine Ecktreppe erreichbar', () => {
     expect(game('[hillNoStair(12, 12), hillStairShut(12, 12)]')).toEqual([true, true]);
   });
 });
+
+describe('13 Anhöhe im Baumenü nennt Gebäude oben', () => {
+  it('Beschreibung und Tipp erwähnen, dass oben auch Häuser und andere Gebäude gehen', () => {
+    expect(game('ITEMS.anhoehe.desc')).toMatch(/Gebäude/);
+    expect(game('ITEM_TIPS.anhoehe')).toMatch(/Gebäude/);
+  });
+});

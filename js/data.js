@@ -204,7 +204,7 @@ const ITEMS = {
   wald:    { cat: 'land', name: 'Wald pflanzen', tech: 'terraform', cost: 20, paint: true, desc: 'Pflanzt Wald – Gelände für Holzfäller.' },
   obstwald: { cat: 'land', name: 'Obstbäume pflanzen', tech: 'terraform', cost: 30, paint: true, desc: 'Pflanzt einen wilden Obsthain – Gelände für Obstplantagen.' },
   fels:    { cat: 'land', name: 'Felsen setzen', tech: 'terraform', cost: 40, paint: true, desc: 'Setzt Felsen – Gelände für Steinbrüche.' },
-  anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe)
+  anhoehe: { cat: 'land', name: 'Anhöhe', tech: 'terraform', cost: 80, desc: 'Hebt Felder eine Ebene an – mit Felswand, Erde oder Trockenmauer. Oben gehen Häuser und andere Gebäude, Wege, Gleise, Plätze mit Ständen, Bäume, Bänke und Brunnen; hinauf führen die Treppe (zu Fuß) und die Gleis-Rampe (Züge).' },   // Block 157 (Treppe hinauf: 157d, Stufe 2: Wege und Gleise oben, Gleis-Rampe; 157l 22.10.2026: Gebäude oben)
   // Treppe in die Anhöhe (Block 157d, hills.js): unten vor die Wand, dreht sich von selbst hinauf (t.rot nur intern); Stufen im Wegstil (t.style)
   bruecke: { cat: 'land', name: 'Brücke', tech: 'terraform',
     get cost() { return typeof bkLookNew === 'function' && typeof brPrice === 'function' ? brPrice(bkLookNew(), 'anhoehe').money : 60; },   // je Feld, im gewählten Material (160c C6)
@@ -801,7 +801,7 @@ const ITEM_TIPS = {
   wald: 'Terraforming: Pflanz dir Wald, wo du Holzfäller haben willst.',
   obstwald: 'Terraforming: Wilde Obstbäume – dort gedeihen Obstplantagen.',
   fels: 'Terraforming: Felsen für Steinbrüche – oder einfach als Landschaft.',
-  anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben gehen Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',
+  anhoehe: 'Zieh eine Fläche auf – sie wird eine Ebene höher. Oben kannst du auch Häuser und andere Gebäude bauen, dazu Wege, Gleise, Plätze, Bäume, Bänke, Brunnen und Beete; die Wand wählst du oben in der Leiste.',   // 157l (22.10.2026): Gebäude oben
   bruecke: 'Zieh von der Oberkante einer Anhöhe hinüber zur anderen – dazwischen 1 bis 8 Felder Lücke. Material und Farbe wählst du oben in der Leiste – sie gelten auch für neue Brücken, die beim Ziehen eines Wegs oder einer Schiene übers Wasser entstehen (bei Holz richtet sich eine Wegbrücke nach dem Wegstil: Sand, Mulch und Trittsteine Holz, Pflaster Stein; schließen sie an eine vorhandene an, übernehmen sie deren Aussehen). Danach ziehst du einen Weg oder eine Schiene darüber. Oder zieh gleich einen Weg oder eine Schiene oben von Anhöhe zu Anhöhe – die Brücke kommt mit, in Material und Farbe dieser Leiste. Unten darf weiter ein Weg oder eine Schiene quer durchführen.',
   huegeltreppe: 'Stell die Treppe unten direkt vor die Wand einer Anhöhe oder gleich auf ihren Rand – sie dreht sich von selbst hinauf. Schmal wie ein Weg oder breit, Muster und Farbe der Stufen wählst du oben in der Leiste.',
   huegelrampe: 'Die Gleis-Rampe führt die Schiene auf eine Anhöhe. Form wählst du oben in der Leiste: A und C kommen in den Rand der Anhöhe, B und D unten davor – sie dreht sich von selbst hinauf. Dann Schienen an den Fuß und oben weiter legen.',
