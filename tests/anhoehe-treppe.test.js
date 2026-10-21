@@ -28,7 +28,7 @@ describe('Treppe in die Anhöhe (Block 157d)', () => {
     expect(game(`${top}.groups.map(g => g.id).slice(0, 2)`)).toEqual(['land', 'hoehen']);
     expect(game(`${top}.groups.find(g => g.id === 'hoehen').items`)).toEqual(['anhoehe', 'huegeltreppe', 'bruecke']);   // Brücke (Block 160)
     game(`localStorage.setItem('kachelhausen_menuorder', JSON.stringify({ gestalten: ['dach', 'land', 'gruen', 'platz', 'linien', 'besonderes'] }))`);   // vor Block 157d angeordnet
-    expect(game(`orderedGroups(${top}).map(g => g.id)`)).toEqual(['dach', 'land', 'hoehen', 'gruen', 'platz', 'linien', 'besonderes', 'sternstaub']);   // ✨ Sternenbasar (Block 161c)
+    expect(game(`orderedGroups(${top}).map(g => g.id)`)).toEqual(['dach', 'land', 'hoehen', 'gruen', 'platz', 'linien', 'besonderes', 'sternstaub', 'monumente']);   // ✨ Sternenbasar (Block 161c), 🏛️ Monumente (162)
     game("localStorage.removeItem('kachelhausen_menuorder')");
   });
 

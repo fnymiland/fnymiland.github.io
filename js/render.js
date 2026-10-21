@@ -532,6 +532,7 @@ function spriteTop(b, w, h) {
   if (WONDERS[b]) return WONDERS[b].h + 70;              // Baugerüste ragen etwas höher (Block 84d)
   if (b === 'leuchtturm') return 280;                    // Leuchtturm-Kap (Block 83)
   if (b === 'fz_schloss') return 260;
+  if (ITEMS[b] && ITEMS[b].h) return Math.max(ITEMS[b].h + 74, 120);    // Monumente (Block 162): echte Höhe, sonst fehlt die Spitze; Gerüst ragt höher
   return Math.max(w * h >= 9 ? 150 : w * h >= 4 ? 120 : 112, (w + h) * TH / 4 + 70);   // lange Gebäude (Hbf): die Fläche selbst reicht weit hoch
 }
 const SPRITE_PAD = { hafen: [26, 14] };                  // Pier ragt zur Seite bzw. nach vorn (Breite, unten)
@@ -2175,7 +2176,7 @@ function render(now) {
           if (t.b === 'truhe') icons.push([c.x, c.y, '🎁']);
           if (t.b === 'schloss' && decreeReady()) icons.push([c.x, c.y, '👑']);   // Erlass wartet
           if (s && s.grow && s.grow.ready && canPay(s.grow.next.cost)) icons.push([c.x, c.y, '✨']);   // nur, wenn man es auch bezahlen kann
-          if (WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) icons.push([c.x, c.y, '🏗️']);
+          if ((WONDERS[t.b] && !wonderDone(t) && canPay(wonderCost(t))) || (monSite(t) && canPay(monCost(t)))) icons.push([c.x, c.y, '🏗️']);
           if (s && s.wish && s.wish.next) {
             if (s.wish.ready && canPay(houseCost(s.wish.next))) icons.push([c.x, c.y, '✨']);
             else if (s.wish.met === s.wish.total - 1) icons.push([c.x, c.y, '💭']);

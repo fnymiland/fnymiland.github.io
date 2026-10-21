@@ -410,6 +410,14 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     liegen in der Ebene ihrer Wand (über K.P/Flächenpunkte, nie freihändig schräg); nachts leuchtet nur, was eine Lampe ist. Danach schaut
     ein Prüfer-Agent mit derselben Liste auf die großen Bilder; erst dann zeigen. **Große Bauwerke (Monumente) bringen keine Deko mit**
     (keine Laternen, Bänke, Beete, Hecken, Bäume, Boote, Wege) – nur das Bauwerk mit festem Sockel; das Drumherum gestalten die Spieler.
+29e. **🏛️ Monumente** (Block 162, js/monumente.js, PLAN-162.md): Bilder in MON_ART (aus tools/monumente-voll.js übernommen – Änderungen
+    zuerst dort zeigen, dann hierher). Wahrzeichen (`monPhases`) sind Baustellen wie die Wunderwerke, aber eigene Logik (monSite/monStep/
+    monCost/monPaid), kein Eintrag in WONDERS (der hätte Wirkungen, „gibt es schon“ und das Rathaus). Gerüst gemeinsam über `siteScaffold`
+    (draw-wonders.js). **Hohe Dinge brauchen `ITEMS[id].h`** (Höhe über dem Boden bei Zoom 1) – spriteTop schneidet sonst beim Rauszoomen die
+    Spitze ab. Baustellen zählen keine Schönheit (beautyOf, placeStats, beautyAround). `wet: true` = darf auch ins Wasser (Sternenleuchte).
+    Wahrzeichen sind nie im Tagesangebot/Katalog (`mon` in SD_SHOP), nur im Reiter Monumente (monOfMonth); Prachtstücke sind normale
+    Seltene. Ein Kommentar `//` mitten in einer Zeile mit weiteren Einträgen verschluckt sie – drawObject fängt Fehler, darum prüft der Test
+    `typeof MON_ART[…]`.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und

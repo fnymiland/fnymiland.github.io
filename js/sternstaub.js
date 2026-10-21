@@ -276,7 +276,7 @@ const sdWeekLeft = day => 7 - ((sdDayNum(day) + 3) % 7);
 function basarOffers(today = sdDay()) {
   const pick = (list, n, key) => list.map(s => ({ s, h: sdHash(key + ':' + state.seed + ':' + s.id), have: state.sdItems.has(s.id) }))
     .sort((p, q) => p.have - q.have || p.h - q.h).slice(0, n).map(p => p.s);
-  const pool = SD_SHOP.filter(s => !s.katalog), wk = sdWeek(today), o = state.sdOffers;
+  const pool = SD_SHOP.filter(s => !s.katalog && !s.mon), wk = sdWeek(today), o = state.sdOffers;   // mon: Wahrzeichen nur im Reiter Monumente
   const known = ids => ids.length && ids.every(id => sdShopItem(id));
   const day = o && o.day === today && known(o.ids) ? o.ids.map(sdShopItem) : pick(pool.filter(s => !s.rare), 3, today);
   const rare = o && o.week === wk && o.rare && sdShopItem(o.rare) ? [sdShopItem(o.rare)] : pick(pool.filter(s => s.rare), 1, 'w' + wk);
@@ -286,13 +286,14 @@ function basarOffers(today = sdDay()) {
 // 📖 Katalog (Animal-Crossing-Art, entschieden 18.10.2026): was der Basar schon einmal angeboten hat, gibt es jederzeit nach – zum
 // anderthalbfachen Preis; Seltenes nur in seiner Woche. Gesehen = state.sdShown (beim Öffnen des Basars gemerkt)
 const sdKatalogPrice = s => Math.ceil(s.price * 1.5 / 10) * 10;
-const sdKatalog = () => SD_SHOP.filter(s => !s.rare && state.sdShown && state.sdShown.has(s.id) && !state.sdItems.has(s.id));
+const sdKatalog = () => SD_SHOP.filter(s => !s.rare && !s.mon && state.sdShown && state.sdShown.has(s.id) && !state.sdItems.has(s.id));
 function sdBuyItem(id, fromKatalog = false) {
   if (typeof viewOnly === 'function' && viewOnly()) { if (typeof cloudBlocked === 'function') cloudBlocked(); return false; }
   const s = sdShopItem(id);
   if (!s || state.sdItems.has(id)) return false;
-  if (fromKatalog && (s.rare || !state.sdShown || !state.sdShown.has(id))) return false;
-  if (!fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar – schau im Katalog'); return false; }   // Prüfung 19.10.
+  if (fromKatalog && (s.rare || s.mon || !state.sdShown || !state.sdShown.has(id))) return false;
+  if (s.mon && !fromKatalog && monOfMonth() !== id) { fail('Diesen Bauplan gibt es diesen Monat nicht'); return false; }   // Wahrzeichen des Monats (Block 162)
+  if (!s.mon && !fromKatalog && !basarOffers().some(o => o.id === id)) { fail('Das gibt es heute nicht im Basar – schau im Katalog'); return false; }   // Prüfung 19.10.
   const price = fromKatalog ? sdKatalogPrice(s) : s.price;
   if ((state.stardust || 0) < price) { fail(`Zu wenig Sternstaub (✨ ${fmt(price)} nötig)`); return false; }
   state.stardust -= price;
@@ -413,13 +414,26 @@ function basarCard(s, kat = false, feature = false) {
   return `<div class="basar-card${s.rare ? ' rare' : ''}${have ? ' have' : ''}${feature ? ' feature' : ''}">
     ${sdIsNew(s.id) && !have && !kat ? '<span class="basar-new">NEU</span>' : ''}
     ${have ? '' : `<button class="basar-heart${wish ? ' on' : ''}" data-sdwish="${s.id}" aria-label="${wish ? 'Nicht mehr merken' : 'Merken'}">${wish ? '❤️' : '🤍'}</button>`}
-    ${feature ? `<span class="basar-rare">✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'} ✦</span>` : ''}
+    ${feature ? `<span class="basar-rare">${feature === true ? `✦ Seltenes der Woche · noch ${sdWeekLeft(sdDay())} ${sdWeekLeft(sdDay()) === 1 ? 'Tag' : 'Tage'} ✦` : feature}</span>` : ''}
     <div class="basar-pic">${url ? `<img src="${url}" alt="">` : ''}${s.rare && !have ? SD_SPARKLES : ''}</div>
     <b class="basar-name">${escHtml(d.name)}</b>
     <span class="basar-smlg">${sm[1]} ${escHtml(sm[2])} ${n}/${all}</span>
     ${have ? '<span class="basar-have">✓ gekauft – im Baumenü</span>'
       : `<div class="basar-buy"><button class="btn small" data-sdbuy="${s.id}"${kat ? ' data-kat="1"' : ''}${(state.stardust || 0) < price ? ' disabled' : ''}>✨ ${fmt(price)}</button><button class="btn small basar-try" data-sdtry="${s.id}" aria-label="Ausprobieren" title="Ausprobieren">👁${feature ? ' Ausprobieren' : ''}</button></div>`}
   </div>`;
+}
+// 🏛️ Monumente (Block 162): das Wahrzeichen des Monats groß, darunter alle Wahrzeichen und Prachtstücke mit ihrem Stand
+function basarMonuments() {
+  const cur = monOfMonth(), left = monDaysLeft();
+  const row = id => {
+    const have = state.sdItems.has(id), url = sdThumb(id), m = MONUMENTS[id], nx = m.wahr ? monNext(id) : null;
+    const how = have ? (m.wahr ? '✓ Bauplan da' : '✓ gekauft') : !m.wahr ? 'kommt als Seltenes der Woche' : nx && nx.in === 0 ? 'diesen Monat' : nx ? `kommt im ${nx.name}` : '';
+    return `<div class="book-item${have ? ' have' : ''}">${url ? `<img src="${url}" alt="">` : ''}<span>${escHtml(ITEMS[id].name)}</span><small>${how}</small></div>`;
+  };
+  return `<p class="muted">Jeden Monat ein Wahrzeichen: Bauplan kaufen, dann im Baumenü (🌸 Gestalten → 🏛️ Monumente) hinstellen und in drei Abschnitten bauen – so oft du magst.</p>
+    ${basarCard(sdShopItem(cur), false, `🏛️ Wahrzeichen im ${MON_MONTHS[new Date().getMonth()]} · noch ${left} ${left === 1 ? 'Tag' : 'Tage'}`)}
+    <div class="book-sec"><div class="book-head"><b>🏛️ Wahrzeichen</b></div><div class="book-grid mon-list">${MON_WAHR.map(row).join('')}</div></div>
+    <div class="book-sec"><div class="book-head"><b>✦ Prachtstücke</b></div><div class="book-grid mon-list">${Object.keys(MONUMENTS).filter(id => !MONUMENTS[id].wahr).map(row).join('')}</div></div>`;
 }
 // 📖 Sammelbuch: alle Waren je Sammlung – gekauft bunt, gesehen als Umriss mit Namen, nie gesehen als Umriss mit „???“
 function basarBook() {
@@ -452,7 +466,7 @@ function sdTryBar() {
     <button class="btn ghost" id="sd-try-back">Zurück</button>`;
   bar.hidden = false;
   $('sd-try-buy').onclick = () => sdTryBuy($('sd-try-buy').getBoundingClientRect());
-  $('sd-try-back').onclick = () => { const kat = sdTryKat; setTool('look'); openBasar(kat ? 'katalog' : 'heute'); };
+  $('sd-try-back').onclick = () => { const kat = sdTryKat, mon = s.mon; setTool('look'); openBasar(kat ? 'katalog' : mon ? 'monumente' : 'heute'); };
 }
 function sdTryClear() { sdTry = null; sdTryKat = false; const bar = $('sd-try-bar'); if (bar) bar.hidden = true; }   // aus setTool: anderes Werkzeug
 function sdTryBuy(r = null) {
@@ -488,18 +502,20 @@ function openBasar(tab = basarTab) {
   if (!state.sdShown) state.sdShown = new Set();
   if (!state.sdNew || state.sdNew.day !== today) state.sdNew = { day: today, ids: [] };
   let neu = false; if (!watch) for (const s of offers) if (!state.sdShown.has(s.id)) { state.sdShown.add(s.id); state.sdNew.ids.push(s.id); neu = true; }
+  if (!watch && tab === 'monumente' && !state.sdShown.has(monOfMonth())) { state.sdShown.add(monOfMonth()); neu = true; }   // Wahrzeichen des Monats gesehen (Sammelbuch)
   if (neu) { if (typeof cloudTouched === 'function') cloudTouched(); save(); }
   const kat = sdKatalog(), rare = offers.find(s => s.rare), norm = offers.filter(s => !s.rare);
   const body = tab === 'katalog'
     ? `<p class="muted">Alles, was du hier schon gesehen hast, kannst du nachbestellen – für den anderthalbfachen Preis. Seltenes gibt es nur in seiner Woche.</p>`
       + (kat.length ? `<div class="basar-grid">${kat.map(s => basarCard(s, true)).join('')}</div>` : '<p class="muted">Noch leer – was du im Angebot siehst und nicht kaufst, landet hier.</p>')
+    : tab === 'monumente' ? basarMonuments()
     : tab === 'buch' ? `<p class="muted">Alle Waren des Sternenbasars. Was du noch nie gesehen hast, ist ein Geheimnis.</p>${basarBook()}`
     : offers.length ? `<p class="basar-when">Neue Ware in ${sdUntilNew()}</p>${rare ? basarCard(rare, false, true) : ''}<div class="basar-grid">${norm.map(s => basarCard(s)).join('')}</div>`
       : '<p class="muted">Die ersten Waren sind unterwegs – schau bald wieder vorbei!</p>';
   const hare = sdHareUrl();
   openModal(`<div class="basar-head">${hare ? `<img class="basar-hare" src="${hare}" alt="Mondhase">` : ''}<div class="basar-say">„${escHtml(sdHareSay(offers, today))}“</div></div>
     <h2 class="basar-title">✦ Sternenbasar ✦ <button class="sd-have" data-btab="sd" aria-label="Sternstaub: ${fmt(state.stardust || 0)} – woher, Schatzkammer">✨ ${fmt(state.stardust || 0)}</button></h2>
-    <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📦 Katalog</button>
+    <div class="looks hall-tabs"><button class="look${tab === 'heute' ? ' on' : ''}" data-btab="heute">🌟 Heute</button><button class="look${tab === 'katalog' ? ' on' : ''}" data-btab="katalog">📦 Katalog</button><button class="look${tab === 'monumente' ? ' on' : ''}" data-btab="monumente">🏛️ Monumente</button>
       <button class="look${tab === 'buch' ? ' on' : ''}" data-btab="buch">📖 Sammelbuch</button></div>
     ${body}
     <div class="row"><button class="btn ghost" id="m-close" style="flex:1">Schließen</button></div>`);
@@ -667,7 +683,7 @@ SD_SHOP.push(
 (() => {
   const top = MENU.find(m => m.id === 'gestalten');
   if (!top || top.groups.some(gr => gr.id === 'sternstaub')) return;
-  top.groups.push({ id: 'sternstaub', label: '✨ Sternenbasar', get items() { const have = SD_SHOP.map(s => s.id).filter(id => state && state.sdItems && state.sdItems.has(id)); return have.length ? have : SD_SHOP.slice(0, 3).map(s => s.id); } });
+  top.groups.push({ id: 'sternstaub', label: '✨ Sternenbasar', get items() { const have = SD_SHOP.map(s => s.id).filter(id => !ITEMS[id].mon && state && state.sdItems && state.sdItems.has(id)); return have.length ? have : SD_SHOP.slice(0, 3).map(s => s.id); } });
 })();
 // Tipps (Bau-Info, „Neu freigeschaltet“): je Ware aus dem Basar
 for (const s of SD_SHOP) if (!ITEM_TIPS[s.id]) ITEM_TIPS[s.id] = ITEMS[s.id].small ? 'Aus dem Sternenbasar ✨ – kleine Deko für eine Ecke, bis zu 4 pro Feld.' : 'Aus dem Sternenbasar ✨ – braucht ein ganzes Feld Wiese.';

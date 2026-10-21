@@ -389,15 +389,20 @@ function drawWonder(id, cx, cy, z, now, x, y, t, hu, hv) {
   const [ha, hb] = (K.r & 1) ? [hv, hu] : [hu, hv], pier = id === 'seebruecke';
   if (groundPart(() => { if (!pier) K.rect(-ha + 0.05, -hb + 0.05, ha - 0.05, hb - 0.05, C('#d9c7a0')); if (id === 'schloss') schlossGround(K, x, y, p); })) return;
   if (id === 'schloss' && p > 0) WONDER_ART.schloss(K, cx, cy, z, now, x, y, t, hu, hv, p);   // wächst Abschnitt für Abschnitt (Block 60j)
-  else if (p > 0) {
+  siteScaffold(K, cy, z, ha, hb, W.h, p, N, id === 'schloss' ? null : () => WONDER_ART[id](K, cx, cy, z, now, x, y, t, hu, hv), pier);
+}
+// Baustelle (Wunderwerke, Wahrzeichen Block 162): das fertige Bild (art) wächst mit den Abschnitten von unten herauf, Gerüst bis knapp
+// über den Stand, Kiste und Bretter vorn. ha/hb: halbe Fläche in Feldern, h: Höhe des fertigen Bauwerks, p von N Abschnitten fertig
+function siteScaffold(K, cy, z, ha, hb, h, p, N, art, pier = false) {
+  if (art && p > 0) {
     g.save();
-    const cut = cy - (W.h * p / N) * z;
+    const cut = cy - (h * p / N) * z;
     g.beginPath(); g.rect(-1e5, cut, 2e5, 2e5); g.clip();
-    WONDER_ART[id](K, cx, cy, z, now, x, y, t, hu, hv);
+    art();
     g.restore();
   }
   // Gerüst bis knapp über den aktuellen Stand
-  const H = W.h * Math.max(p, 0.6) / N + 6, step = pier ? 0.8 : 0.7;
+  const H = h * Math.max(p, 0.6) / N + 6, step = pier ? 0.8 : 0.7;
   const posts = [];
   for (let a = -ha + 0.15; a <= ha - 0.15 + 1e-6; a += step) posts.push([a, -hb + 0.15], [a, hb - 0.15]);
   for (let b = -hb + 0.15 + step; b < hb - 0.15; b += step) posts.push([-ha + 0.15, b], [ha - 0.15, b]);

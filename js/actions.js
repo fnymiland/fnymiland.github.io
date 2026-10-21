@@ -153,7 +153,7 @@ function build(b, x, y, quiet) {
     const ecke = b === 'huegeltreppe' && stairCornerNew(x, y);        // Ecktreppe (hills.js): zwischen zwei Treppen um die Ecke
     const gbS = bridge && b === 'schiene' ? gbNewSpec(x, y) : null, gbL = bridge && b === 'schiene' ? brNewLook(x, y, 'gleis') : null;   // 160c E2c: wie costOf (längste daneben, sonst Leiste) – vor dem Setzen
     const wbS = bridge && b === 'weg' ? wbNewSpec(x, y) || (L => ({ look: L, zk: null, raw: null, brk: L.kind && WEG_BRIDGE[L.kind] ? L.kind : brFallback('wasser', L.mat).brk }))(brNewLook(x, y, 'wasser')) : null;   // 160c D3: vor dem Setzen (sonst gehört das Feld schon zur Spanne)
-    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
+    state.tiles.set(k, { b, lvl: 1, born: performance.now(), rot, ...paintNewOf(b), ...(ecke ? { ecke: true } : {}), ...(STYLES[b] ? { style: currentStyle(b) } : {}), ...(b === 'weg' && !bridge ? wegShapeNew() : {}), ...(bridge ? { bridge: true } : {}), ...(d.wonder ? { phase: 0, rate: wonderRate() } : {}), ...(d.monPhases ? { phase: 0 } : {}), ...(b === 'hbf' ? HBF_NEW : {}), ...(b === 'station' && stationNewLen === 3 ? { len: 3 } : {}) });   // Hbf: Halle in der Mitte (Block 123)
     if (bridge && b === 'schiene' && !COVER.has(k)) COVER.set(k, k);   // gleich als Gleis bekannt (railArms über bAt/COVER): im Zieh-Rutsch (batch, recalc erst danach) findet das Angleichen sonst die gerade gebauten Felder nicht (160c G2)
     if (ecke) delete state.tiles.get(k).schmal;                      // Ecktreppen sind immer breit
     if (b === 'huegeltreppe') refitStairs(x, y);                     // Treppen ringsum neu ausrichten (Ecken, hills.js)
@@ -567,7 +567,7 @@ function dropGroup(hx, hy) {
 // --- Kopieren (Block 134, Wunsch Nutzer): mit ✋ markieren → „⧉ Kopieren“. Gleiche Stufe zum vollen Preis (was ein Neubau samt
 // Ausbauten kostet), die Kopie bleibt als Stempel am Finger, neue Bewohner ziehen ein. Einzelstücke bleiben draußen. Nur eine Art
 // Linie in einem Stil (Weg, Gleis, Hecke/Zaun/Mauer): Pipette – das Werkzeug mit genau diesem Stil in die Hand
-const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift;   // Bergportal (157m): nur in die Wand bauen
+const noCopy = b => b === 'lm' || b === 'bergportal' || !!ITEMS[b].fixed || !!WONDERS[b] || !!ITEMS[b].gift || !!ITEMS[b].monPhases;   // Wahrzeichen: jedes eine eigene Baustelle   // Bergportal (157m): nur in die Wand bauen
 // Kopie eines Übergangs in alter Fassung (Designpreis): die Kopie trägt danach brp im neuen Format – der nächste Stempel klont sie wieder und
 // muss gleich bleiben (sonst Neupreis als bezahlt, abgebucht aber der alte, Gegenprüfung G2 N1). Gemerkt nur für die Klone am Finger
 const COPY_ALT = new WeakSet();

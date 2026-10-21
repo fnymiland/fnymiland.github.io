@@ -537,6 +537,7 @@ function beautyOf(t, x, y) {
   const nearHome = ((d.beauty && d.cat === 'deko') || d.ugly) && nearHouse(x, y);   // nur fragen, wenn es zählt
   let v = 0;
   if (d.wonder && !wonderDone(t)) return 0;                              // Baustelle
+  if (d.monPhases && monSite(t)) return 0;                               // Wahrzeichen im Bau (Block 162)
   if (d.beauty) v += d.beauty * (nearHome && d.cat === 'deko' ? 1.5 : 1) * (t.b === 'kunst' && hasTech('kunst') ? 1.5 : 1);
   if (d.ugly && nearHome) v -= d.ugly;
   return v;
@@ -2934,7 +2935,7 @@ function placeStats() {
     add(pop, r, popOf(t));
     if (t.b === 'lm' && ownedTile(x, y)) add(attr, r, LM_ATTRACT[lmStage(t.lm)] || 0);
     else if (WONDER_ATTRACT[t.b] && wonderDone(t)) add(attr, r, WONDER_ATTRACT[t.b]);
-    else if (d.cat === 'deko' && d.beauty) add(attr, r, d.beauty / 10);           // Schönes zieht auch ein wenig an
+    else if (d.cat === 'deko' && d.beauty && !monSite(t)) add(attr, r, d.beauty / 10);           // Schönes zieht auch ein wenig an
   }
   for (const [k, ds] of state.decos) { const r = regionAt(...keyXY(k)); for (const d of ds) if (d) add(attr, r, ITEMS[d.b].beauty / 10); }
   for (const [k, , d] of roofTopAll()) add(attr, regionAt(...keyXY(k)), ITEMS[d.b].beauty / 10);
@@ -3123,7 +3124,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
       const k = fx + ',' + fy, raw = terrainAt(fx, fy), ter = !opts.move && willClear(b, raw) ? 'grass' : raw;   // Natur wird weggeräumt
       // Schienen dürfen übers Wasser (Brücke), Wellenkraftwerk ins Meer, Hausboot auf jedes Wasser am Ufer
       const rail = b === 'schiene', sea = d.needs === 'meer' || d.needs === 'boot' || d.needs === 'offshore';
-      const seaOk = sea && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : nearOwnLand(fx, fy));   // auch schräg am Ufer (Ecke an Ecke)
+      const seaOk = (sea || d.wet) && isSea(fx, fy) && (d.needs === 'offshore' ? landWithin(fx, fy, OFFSHORE_REACH) : d.wet ? landWithin(fx, fy, 2) : nearOwnLand(fx, fy));   // auch schräg am Ufer; wet (Sternenleuchte): 2×2 vor der Küste
       if (b === 'weg' && isSea(fx, fy) && !ownedTile(fx, fy)) {                // Wegbrücke ins Meer (Block 66): kurz vor die Küste
         if (!claimable(fx, fy)) return 'Im Meer nur direkt neben deinem Land';
         const bx = bridgeArmsAxis(fx, fy), arm = bx < 0 ? null : bx ? [0, 1] : [1, 0];
@@ -3155,7 +3156,7 @@ function placeError(b, x, y, rot = placeRot(b, x, y), opts = {}) {
         return tiles.length > 1 ? 'Hier ist nicht genug Platz' : 'Hier steht schon etwas';
       }
       if (ter === 'water') {
-        if (rail) continue;
+        if (rail || d.wet) continue;                                       // Sternenleuchte (Block 162): auch ins Wasser
         if (b === 'weg') { const e = bridgeShapeError(fx, fy, true); if (e) return e; continue; }   // Wegbrücke (Block 66)
         return 'Nicht auf dem Wasser';
       }
@@ -3503,7 +3504,7 @@ function beautyAround(x, y, r) {
   const seen = new Set();
   for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
     const k = (x + dx) + ',' + (y + dy), a = COVER.get(k);
-    if (a && !seen.has(a)) { seen.add(a); const b = state.tiles.get(a).b; if (b !== 'haus') sum += ITEMS[b].beauty || 0; }
+    if (a && !seen.has(a)) { seen.add(a); const at = state.tiles.get(a), b = at.b; if (b !== 'haus' && !monSite(at)) sum += ITEMS[b].beauty || 0; }
     const ds = state.decos.get(k);
     if (ds) for (const d of ds) if (d) sum += ITEMS[d.b].beauty || 0;
     for (const ek of ['a' + k, 'b' + k]) { const e = state.edges.get(ek); if (e) sum += ITEMS[e.b].beauty + (e.arch ? ARCHES[e.arch].beauty : 0); }   // Linien
@@ -3623,10 +3624,11 @@ function demolishInfo(x, y, under = false) {                            // under
     }
     const staged = t.b === 'haus' ? HOUSE_STAGES.slice(1, t.lvl).reduce((s, st) => s + (houseCost(st).money || 0), 0)   // Hausausbau (Block 84b)
       : BUILD_STAGES[t.b] ? BUILD_STAGES[t.b].up.slice(0, t.lvl - 1).reduce((s, u) => s + (u.cost.money || 0), 0)
-      : WONDERS[t.b] ? wonderPaid(t).money : t.b === 'hbf' ? (gleisePaid(t) - HBF_MIN) * GLEIS_COST.money   // bezahlte Gleise (Block 137)
+      : WONDERS[t.b] ? wonderPaid(t).money : d.monPhases ? monPaid(t).money : t.b === 'hbf' ? (gleisePaid(t) - HBF_MIN) * GLEIS_COST.money   // bezahlte Gleise (Block 137)
       : t.b === 'station' && stationLenPaid(t) === 3 ? STATION_LEN_COST.money : 0;
-    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost : Math.floor((price + staged) / 2);
+    const price = (t.price != null ? t.price : d.baseCost || d.cost) + (t.loopPrice || 0), half = full ? paid.cost + (d.monPhases ? staged : 0) : Math.floor((price + staged) / 2);   // Wahrzeichen: auch die Abschnitte voll zurück
     const ships = { money: 0 }, mat = full ? { ...(paid.mat || {}) } : {};              // Schiffe des Hafens: voll zurück wie beim Verkaufen
+    if (d.monPhases) for (const [r, n] of Object.entries(monPaid(t))) if (r !== 'money') mat[r] = (mat[r] || 0) + n;
     for (const s of t.ships || []) for (const [r, n] of Object.entries(shipModel(s).buy)) if (r === 'money') ships.money += n; else mat[r] = (mat[r] || 0) + n;
     return { anchor: a, refund: half + ships.money, mat: Object.keys(mat).length ? mat : null, lost: full ? 0 : price + staged - half, full, label: `${t.bridge ? 'Brücke' : d.name} ${full ? 'entfernen' : 'abreißen'}` };
   }

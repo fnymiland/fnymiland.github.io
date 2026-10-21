@@ -402,6 +402,8 @@ html, body {
 .book-item img { height: 44px; max-width: 100%; filter: brightness(0) invert(1) opacity(.22); }
 .book-item.have img { filter: none; }
 .book-item span { opacity: .6; } .book-item.have span { opacity: 1; }
+.mon-list .book-item img { filter: none; } .mon-list .book-item span { opacity: 1; }   /* Monumente (Block 162): alle bunt, darunter der Stand */
+.book-item small { font-size: 9px; font-weight: 600; opacity: .75; }
 .basar-have { font-size: 12px; color: var(--green-d); font-weight: 700; }                       /* ✨ Sternstaub (Block 161) */
 .sd-src > div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(107, 79, 58, .12); font-size: 14px; }
 .sd-have { color: #7a4fc4; }

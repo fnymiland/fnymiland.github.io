@@ -176,7 +176,7 @@ describe('Sternenbasar (161c)', () => {
 
 describe('Sternenbasar-Waren (161c)', () => {
   it('jede Ware: ITEMS mit sdShop, Bild bei Tag/Nacht/weit ohne Fehler, gesperrt bis gekauft, dann baubar; nicht im Album', () => {
-    const ids = game('SD_SHOP.map(s => s.id)');
+    const ids = game('SD_SHOP.filter(s => !ITEMS[s.id].mon).map(s => s.id)');   // Monumente (Block 162): eigene Tests, Bild in BIG_ART
     expect(ids.length).toBeGreaterThanOrEqual(13);
     for (const id of ids) {
       expect(game(`!!ITEMS['${id}'] && !!ITEMS['${id}'].sdShop && !!SD_ART['${id}']`), id).toBe(true);
@@ -208,7 +208,7 @@ describe('Seltenheit (Nutzer 17.10.2026: „wirklich ein Spielziel“)', () => {
     expect(game('[sdWeekLeft(20261019), sdWeekLeft(20261025)]')).toEqual([7, 1]);
   });
   it('Preise: normal 80–200, selten 350–450; mindestens 58 Waren, davon mindestens 10 selten', () => {
-    const shop = game('SD_SHOP.map(s => [s.id, s.price, !!s.rare])');
+    const shop = game('SD_SHOP.filter(s => !ITEMS[s.id].mon).map(s => [s.id, s.price, !!s.rare])');   // Monumente: eigene Preise (monumente.test.js)
     expect(shop.length).toBeGreaterThanOrEqual(65);
     for (const [id, p, r] of shop) { if (r) { expect(p, id).toBeGreaterThanOrEqual(350); expect(p, id).toBeLessThanOrEqual(450); } else { expect(p, id).toBeGreaterThanOrEqual(80); expect(p, id).toBeLessThanOrEqual(200); } }
     expect(shop.filter(s => s[2]).length).toBeGreaterThanOrEqual(10);

@@ -55,8 +55,8 @@ function thumbRaw(type, lvl = 1, tile = null, scale = 1) {
   if (!cx0) return c;                                  // kein Speicher (iPad): leeres Bild statt „Hoppla“ (Block 124)
   if (scale !== 1) cx0.scale(scale, scale);
   const prev = g; g = cx0; FOG = false;
-  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type);
-  const z = type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
+  const tall = ['leuchtturm', 'windrad', 'offshore'].includes(type), big = isBig(type), monH = ITEMS[type] && ITEMS[type].mon ? ITEMS[type].h : 0;   // Monumente: ganz ins Bild
+  const z = monH ? Math.min(0.55, 60 / monH) : type === 'leuchtturm' ? 0.36 : big ? 0.72 : tall ? 0.95 : type === 'pb_station' ? 1 : 1.3, cx = type === 'pb_station' ? 66 : 56, cy = monH ? 66 : type === 'leuchtturm' ? 64 : tall ? 70 : type === 'pb_station' ? 62 : 60, hw = TW / 2 * z, hh = TH / 2 * z, d = DEPTH * z * 0.8;
   const block = (s, top) => {
     poly([[cx - hw * s, cy], [cx, cy + hh * s], [cx, cy + hh * s + d], [cx - hw * s, cy + d]], '#caa26c');
     poly([[cx, cy + hh * s], [cx + hw * s, cy], [cx + hw * s, cy + d], [cx, cy + hh * s + d]], '#b0895a');
@@ -1955,6 +1955,7 @@ function openInfo(x, y) {
       if (t.b === 'schloss') wonder += decreeHtml();
     }
   }
+  wonder += monInfoHtml(t);                                             // Wahrzeichen (Block 162)
   const line = t.b === 'station' || t.b === 'ubahn' ? lineOf(x + ',' + y) : null, hub = t.b === 'hbf' ? hbfHtml(x, y, t) : t.b === 'station' ? stationLenHtml(x, y, t) : '';
   const boat = t.b === 'bootssteg' ? expeditionHtml() : t.b === 'hafen' ? shipsHtml(x + ',' + y, t) + ordersHtml(t) : '';
   const train = line ? trainChooser(line) : isCrossing(t) ? ubLookHtml(x, y, t) : '';   // Bahnübergang: Schranken oder Fußgängerbrücke (160c F1c)
@@ -1971,7 +1972,7 @@ function openInfo(x, y) {
     : courtHtml(t, x, y);   // Gartenweg (Block 78), Vorplatz (Block 91)
   if (t.b === 'fz_schloss' && castleTab !== 'farben') colors = '';
   const title = isWegBridge(t) ? wbTitle(x, y) : isGleisBridge(t) ? gbTitle(x, y) : t.b === 'haus' ? HOUSE_STAGES[t.lvl - 1].name : isCrossing(t) ? 'Bahnübergang'
-    : WONDERS[t.b] && !wonderDone(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
+    : (WONDERS[t.b] && !wonderDone(t)) || monSite(t) ? `${ITEMS[t.b].name} (Baustelle)` : stageName(t);
   const el = showPanel(`
     <h3>${title} ${S ? `<span class="lvl">Stufe ${t.lvl}</span>` : ''}</h3>
     ${house}
@@ -2085,6 +2086,7 @@ function openInfo(x, y) {
   if ($('p-hup')) $('p-hup').onclick = () => { const nk = undoable(() => { const k = hbfUpgrade(x + ',' + y); if (k) { sfx('build'); recalc(); save(); } return k; }); if (nk) openInfo(...keyXY(nk)); else fail(hbfUpgradePlan(x + ',' + y)); };
   for (const b of el.querySelectorAll('[data-hlook]')) b.onclick = () => { t.look = b.dataset.hlook; t.born = performance.now(); sfx('deco'); groundVersion++; save(); openInfo(x, y); };
   if ($('p-wonder')) $('p-wonder').onclick = () => wonderStep(x, y);
+  if ($('p-mon')) $('p-mon').onclick = () => { if (monStep(x, y)) openInfo(x, y); };
   for (const b of document.querySelectorAll('#panel [data-decree-pick]')) b.onclick = () => { chooseDecree(b.dataset.decreePick); openInfo(x, y); };
   for (const b of el.querySelectorAll('[data-cross]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, b.dataset.cross === '1'))) openInfo(x, y); };   // ↶, zuschauen/Besuch gesperrt (160c V2)
   for (const b of el.querySelectorAll('[data-foot]')) b.onclick = () => { if (undoable(() => setCrossing(x, y, true, b.dataset.foot))) openInfo(x, y); };
@@ -3280,6 +3282,12 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-21-monumente', date: '21. Oktober', title: 'Monumente im Sternenbasar', items: [
+    '🏛️ <b>Wahrzeichen des Monats:</b> Im Sternenbasar gibt es jetzt den Reiter „Monumente“. Jeden Monat bietet der Mondhase ein Wahrzeichen an: Große Pagode, Sternenleuchte, Obelisk der Sonnenbucht oder Triumphbogen. Der Bauplan kostet 1000 ✨. Verpasste Wahrzeichen kommen wieder.',
+    '🏗️ <b>Bauen in drei Abschnitten:</b> Stell das Wahrzeichen im Baumenü (🌸 Gestalten → 🏛️ Monumente) als Baustelle hin. Dann baust du es in drei Abschnitten für 100, 300 und 600 Mio. Taler plus Baustoffe. Jedes Wahrzeichen kannst du so oft bauen, wie du magst.',
+    '✦ <b>Prachtstücke:</b> Deine Statue, das Sternendenkmal und der Prachtbrunnen kommen ab und zu als Seltenes der Woche (500 ✨) und sind sofort fertig.',
+    '🌊 Die <b>Sternenleuchte</b> darf auch ins Wasser.',
+  ] },
   { id: '2026-10-19-sternstaub', date: '19. Oktober', title: 'Sternstaub und der Sternenbasar', items: [
     '✨ <b>Sternstaub:</b> eine neue, seltene Währung nur für Schönes. Es gibt ihn für Erfolge, volle Albumseiten, das Laternenfest, Sternschnuppen und Truhen. Für alles, was du schon geschafft hast, bekommst du eine Nachzahlung.',
     '💭 <b>Tageswunsch:</b> Jeden Tag wünscht sich jemand etwas für die Insel. Wenn du den Wunsch erfüllst, gibt es 25 ✨.',
