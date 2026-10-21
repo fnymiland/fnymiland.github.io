@@ -11,7 +11,7 @@ describe('Wegbeläge (Block 125)', () => {
     expect(game(`STYLES.weg.filter(s => !PATH_LOOK[s.id] || !WEG_PRESET[s.id]).map(s => s.id)`)).toEqual([]);
     expect(game(`Object.keys(WEG_PRESET).filter(id => wegStyleOf(...WEG_PRESET[id]) !== id)`)).toEqual([]);   // hin und zurück gleich
     for (const m of ['platten', 'drittel', 'gemischt', 'verband', 'reihen', 'pflaster', 'holz', 'fischgross'])
-      expect(game(`!!DESIGN_BY_ID['wegmuster:${m}'] && designPrice(DESIGN_BY_ID['wegmuster:${m}']) > 0`)).toBe(true);
+      expect(game(`!!DESIGN_BY_ID['wegmuster:${m}'] && designPrice(DESIGN_BY_ID['wegmuster:${m}']) + designStardust(DESIGN_BY_ID['wegmuster:${m}']) > 0`)).toBe(true);   // ✦ kostet ✨ (Block 163)
     expect(game(`wegStyleOf('verband', 'anthrazit')`)).toBe('m:verband:anthrazit');
     expect(game(`pathLook('m:verband:anthrazit').fill`)).toBe('#64676d');
   });

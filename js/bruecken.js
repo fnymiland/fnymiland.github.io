@@ -908,7 +908,8 @@ function brLookHtml(L, o) {
   const bought = o.zk === 'an' || o.zk === 'aus', zk = brCostMat(brAdd({ money: 0 }, BR_OPT.zacken[per], nn));
   const lc = brCostMat(brAdd({ money: 0 }, BR_OPT.licht[per], nn));
   return `<div class="label">Material</div><div class="looks look-forms">${o.mats.map(matBtn).join('')}</div>
-    <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => colBtn(i, d.name, d.c)).join('')}</div>
+    <div class="label">Farbe</div><div class="swatches">${colBtn(null, 'Wie das Material', 'linear-gradient(135deg,#b08a5e,#cfd3cf,#d9d2c3,#afe1f8)')}${BRIDGE_COL_DEFS.map((d, i) => lookOk('bruecke', 'col', i + 1) || i === L.col ? colBtn(i, d.name, d.c) : '').join('')}</div>
+    ${BRIDGE_COL_DEFS.some((d, i) => !lookOk('bruecke', 'col', i + 1)) ? '<div class="looks"><button class="look art-more" data-bkmore="1">🎨 Mehr Brückenfarben freischalten ›</button></div>' : ''}
     ${o.deck ? `<div class="label">Deck</div><div class="row">${opt('brb', 'belag', 'Wie der Weg', L.deck === 'belag')}${opt('brb', 'muster', 'Eigenes Muster', L.deck === 'muster')}</div>` : ''}
     ${o.planken ? `<div class="label">Planken</div><div class="swatches"><button class="sw bunt${L.plank == null ? ' on' : ''}" data-brw="" title="Wie das Material" aria-label="Planken wie das Material"></button>${PLANK_COLS.map((c, i) => `<button class="sw${L.plank === i ? ' on' : ''}" data-brw="${i}" style="background:${c}" aria-label="Plankenfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
     ${o.after || ''}
@@ -1047,6 +1048,7 @@ function wbText(x, y) {
 function wireBrLook(el, set) {
   for (const e of el.querySelectorAll('[data-bkart]')) e.onclick = () => set({ mat: e.dataset.bkart });
   for (const e of el.querySelectorAll('[data-brc]')) e.onclick = () => set({ col: e.dataset.brc === '' ? null : +e.dataset.brc });
+  for (const e of el.querySelectorAll('[data-bkmore]')) e.onclick = () => { openResearch('design'); artJump('Brücken'); };   // Block 163
   for (const e of el.querySelectorAll('[data-brb]')) e.onclick = () => set({ deck: e.dataset.brb });
   for (const e of el.querySelectorAll('[data-brw]')) e.onclick = () => set({ plank: e.dataset.brw === '' ? null : +e.dataset.brw });
   for (const e of el.querySelectorAll('[data-bru]')) e.onclick = () => set({ stuetzen: e.dataset.bru });

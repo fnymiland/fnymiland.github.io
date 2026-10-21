@@ -55,6 +55,7 @@ function newState() {
     sdOffers: null,            // Basar-Auswahl des Tages/der Woche (bleibt nach dem Kauf stehen): { day, ids, week, rare }
     sdWish: new Set(),         // Herzchen im Basar (Block 161h): ITEMS-Schlüssel
     sdWishNote: 0,             // Tag (JJJJMMTT) des letzten Herzchen-Hinweises – höchstens einer am Tag
+    bpStars: 0,                // Block 163: bis zu welcher Sternzahl Erfolgs-Baupläne verschenkt sind (je 3 Sterne einer); null = alter Stand
     bond: 0,                   // höchste Freundschaftsstufe bei einem Freund (Block 105, schaltet Belohnungen frei, wird nie kleiner)
     souvenirs: [],             // Geschenke von Freunden (Block 129, souvenir.js): [{ id, k, from, n, t, a, c, s, at }]
     partner: null,             // Partnerstadt (Block 105): { uid, name, c, s } – Flagge neben dem Rathaus
@@ -159,7 +160,7 @@ function serialize() {
     game: 'fnymiland', v: 13, seed: state.seed, money: state.money, res: state.res, science: state.science,
     restore: state.restore, diary: state.diary, diarySeen: state.diarySeen, tutorial: state.tutorial, legacy: [...state.legacy], festival: state.festival,
     design: [...state.design], paintNew: state.paintNew,
-    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], sdShown: [...(state.sdShown || [])], appVer: APP_VER || 0, sdNew: state.sdNew || null, sdOffers: state.sdOffers || null, seaFlatSeen: !!state.seaFlatSeen, sdWish: [...(state.sdWish || [])], sdWishNote: state.sdWishNote || 0, me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
+    town: state.town, owned: [...state.owned], islands: [...state.islands], claimed: [...state.claimed], tipsSeen: [...state.tipsSeen], tipsOff: state.tipsOff, mastery: state.mastery, inventions: [...state.inventions], vehicles: [...state.vehicles], far: state.far.map(({ far, ...f }) => f), decree: state.decree, decreeNext: state.decreeNext, parkFest: state.parkFest, fzFest: state.fzFest, noBorders: !!state.noBorders, keep: state.keep, incPeak: state.incPeak, orders: state.orders, orderNext: state.orderNext, expedition: state.expedition, stats: state.stats, achieved: state.achieved, album: [...state.album], stardust: state.stardust || 0, sdGot: [...(state.sdGot || [])], sdSeen: !!state.sdSeen, treasury: state.treasury || null, dayWish: state.dayWish || null, sdItems: [...(state.sdItems || [])], sdShown: [...(state.sdShown || [])], appVer: APP_VER || 0, sdNew: state.sdNew || null, sdOffers: state.sdOffers || null, seaFlatSeen: !!state.seaFlatSeen, sdWish: [...(state.sdWish || [])], sdWishNote: state.sdWishNote || 0, bpStars: state.bpStars, me: state.me, bond: state.bond || 0, partner: state.partner, souvenirs: state.souvenirs || [], tiles, terra: [...terraMap], techs: [...state.techs],
     hills: [...(state.hills || [])].map(([k, h]) => [k, { w: h.w || 0, ...(h.h > 1 ? { h: h.h } : {}) }]),   // Anhöhen (Block 157)
     bruecken: [...(state.bruecken || [])].map(([k, b]) => [k, { ax: b.ax ? 1 : 0, n: b.n, art: b.art, ...(b.weg && b.weg.some(Boolean) ? { weg: b.weg.map(w => w || null) } : {}),
       ...(b.gleis && b.gleis.some(f => f != null) ? { gleis: b.gleis.map(f => f == null ? null : f) } : {}), ...brClean({ ...b, brm: null }) }]),   // Brücken (Block 160; Gleis 160b; Brückenfamilie 160c)
@@ -324,7 +325,7 @@ function parseSave(d) {
     // Spielstände von vor den Laternen: Einführung überspringen, Sterne-Freischaltungen behalten
     tutorial: d.tutorial != null ? d.tutorial : -1,
     legacy: new Set(d.legacy || legacyUnlocks(d)),
-    design: new Set(d.design || []),
+    design: new Set(keepUsedColors(d)),
     paintNew: Object.fromEntries(Object.entries(d.paintNew || {}).filter(([b, p]) => ITEMS[b] && (p === false || (p && typeof p === 'object')))
       .map(([b, p]) => [b, p && Object.fromEntries(Object.entries(p).filter(([k, v]) => [...PAINT_KEYS, 'col', 'form'].includes(k) && Number.isInteger(v) && v >= 0))])),   // col/form: Busch & Stadtschmuck
     oldSave: !d.restore,
@@ -362,6 +363,7 @@ function parseSave(d) {
     sdOffers: (o => o && Number.isInteger(+o.day) && Number.isInteger(+o.week) && Array.isArray(o.ids) ? { day: +o.day, week: +o.week, ids: o.ids.filter(k => typeof k === 'string').slice(0, 6), rare: typeof o.rare === 'string' ? o.rare : null } : null)(d.sdOffers),
     sdWish: new Set(Array.isArray(d.sdWish) ? d.sdWish.filter(k => typeof k === 'string' && ITEMS[k] && ITEMS[k].sdShop) : []),
     sdWishNote: Number.isInteger(+d.sdWishNote) ? +d.sdWishNote : 0,
+    bpStars: Number.isInteger(d.bpStars) && d.bpStars >= 0 ? d.bpStars : null,   // fehlt (alter Stand): beim ersten Prüfen auf den jetzigen Stand, nichts nachreichen
     dayWish: (w => w && Number.isInteger(+w.day) && typeof w.id === 'string' && Number.isFinite(+w.base) ? { day: +w.day, id: w.id, base: +w.base, done: !!w.done, who: String(w.who || 'Jemand').slice(0, 30), icon: String(w.icon || '💭').slice(0, 4) } : null)(d.dayWish),
     me: d.me && typeof d.me === 'object' && !Array.isArray(d.me) ? { ...d.me } : null,   // geprüft wird beim Lesen (meLook)
     bond: Number.isInteger(d.bond) ? Math.max(0, Math.min(5, d.bond)) : 0,
@@ -419,6 +421,25 @@ function migrateIslands() {
 }
 
 // Was man in alten Ständen per Stern oder Forschung schon freigeschaltet hatte
+// Block 163 (21.10.2026): Fenster-, Brücken- und Flaggenfarben ab der vierten gibt es in der Kunstakademie. Was ein Spielstand schon
+// verbaut oder gewählt hat, bleibt frei – bei jedem Laden (beliebig oft, setzt nichts sonst): win/brc an Feldern und Brücken, Flagge, „Neu gebaute“
+function keepUsedColors(d) {
+  const out = new Set(d.design || []);
+  const brc = i => { const c = BRIDGE_COL_DEFS[i]; if (c && c.design) out.add('bruecke:col:' + c.id); };
+  const walk = (o, depth) => {
+    if (!o || typeof o !== 'object' || depth > 8) return;
+    if (Array.isArray(o)) { for (const v of o) walk(v, depth + 1); return; }
+    if (Number.isInteger(o.win) && o.win >= WIN_FREE && WIN_COLS[o.win]) out.add('win:' + o.win);
+    if (Number.isInteger(o.brc)) brc(o.brc);
+    for (const v of Object.values(o)) if (v && typeof v === 'object') walk(v, depth + 1);
+  };
+  walk(d.tiles, 0); walk(d.bridges, 0); walk(d.edges, 0);
+  const pb = d.paintNew && d.paintNew.bruecke;
+  if (pb && Number.isInteger(pb.col) && pb.col > 0) brc(pb.col - 1);         // Leiste: col 0 = „Wie das Material“
+  const fi = d.town ? FLAG_COLORS.indexOf(d.town.color) : -1;
+  if (fi >= FLAG_FREE) out.add('flag:' + fi);
+  return [...out];
+}
 function legacyUnlocks(d) {
   if (d.restore) return [];
   const out = [], stars = d.stars || 0, techs = new Set(d.techs || []);

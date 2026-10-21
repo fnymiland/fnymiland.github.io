@@ -166,6 +166,8 @@ describe('Wasser-Wegbrücken: Fenster (160c D3e)', () => {
     expect(game("document.querySelectorAll('#panel [data-brk]').length")).toBe(0);
     expect(game("[...document.querySelectorAll('#panel [data-bkart]')].map(e => e.dataset.bkart)")).toEqual(['holz', 'stahl', 'stein', 'kristall']);
     klick('[data-brw="2"]'); expect(look(11, 4).plank).toBe(2);
+    expect(game("!!document.querySelector('#panel [data-brc=\"5\"]')")).toBe(false);   // Grün: erst in der Kunstakademie (Block 163)
+    game("state.design.add('bruecke:col:gruen'); openInfo(11, 4)");
     klick('[data-brc="5"]'); expect(look(11, 4).col).toBe(5);
     klick('[data-bru="jede"]'); expect(look(11, 4).stuetzen).toBe('jede');
     klick('[data-brl="kaufen"]'); expect(look(11, 4).licht).toBe('an');

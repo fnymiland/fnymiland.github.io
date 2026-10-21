@@ -410,6 +410,12 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     liegen in der Ebene ihrer Wand (über K.P/Flächenpunkte, nie freihändig schräg); nachts leuchtet nur, was eine Lampe ist. Danach schaut
     ein Prüfer-Agent mit derselben Liste auf die großen Bilder; erst dann zeigen. **Große Bauwerke (Monumente) bringen keine Deko mit**
     (keine Laternen, Bänke, Beete, Hecken, Bäume, Boote, Wege) – nur das Bauwerk mit festem Sockel; das Drumherum gestalten die Spieler.
+29f. **Belohnungen und Freischalten** (Block 163, PLAN-163.md): ✦ Meisterstücke kosten nur ✨ (`designStardust`; designPrice/designIdeas
+    sind für sie 0), übrige Kunstakademie-Stücke `DESIGN_SLOW`-mal so lange Einkommen. Fenster-, Brücken- und Flaggenfarben: je 3 frei
+    (`winOk`, `flagColOk`, `lookOk('bruecke','col',i+1)`), Verbautes bleibt frei über `keepUsedColors` beim Laden (beliebig oft).
+    Auswahlen zeigen nur Freies plus die gerade gewählte, dazu „🎨 Mehr … freischalten“. 📜 Baupläne (`bpPick`/`bpGive`): Truhe → ein
+    gesperrtes Nicht-Meisterstück + ein Viertel der Beute; je 3 neue Erfolgssterne einer (`state.bpStars`, alter Stand: ab jetzt, nichts
+    nachreichen). Achtung Name: `flagOk` gibt es schon in friends.js (Freundesflagge).
 29e. **🏛️ Monumente** (Block 162, js/monumente.js, PLAN-162.md): Bilder in MON_ART (aus tools/monumente-voll.js übernommen – Änderungen
     zuerst dort zeigen, dann hierher). Wahrzeichen (`monPhases`) sind Baustellen wie die Wunderwerke, aber eigene Logik (monSite/monStep/
     monCost/monPaid), kein Eintrag in WONDERS (der hätte Wirkungen, „gibt es schon“ und das Rathaus). Gerüst gemeinsam über `siteScaffold`

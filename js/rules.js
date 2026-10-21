@@ -943,23 +943,28 @@ const techCost = t => niceSci(t.cost * TIER_MUL[t.tier] * (1 + 0.1 * [...state.t
 // Kunstakademie-Preis (Block 50): nach dem besten Einkommen, damit es das ganze Spiel über etwas Begehrtes bleibt.
 // Normal etwa DESIGN_MIN Minuten (günstige Stücke weniger, aufwendige mehr: Wurzel aus Grundpreis/150), ✦ Meisterstücke
 // DESIGN_MASTER-mal so viel. Mindestens das 5-Fache des Grundpreises (Meisterstücke das 25-Fache).
-// Stadtschmuck (Formen/Farben von Laterne, Bank, Brunnen, Block 108): nur DESIGN_SCHMUCK Minuten – ist ja nur kleine Deko
-const DESIGN_MIN = 3, DESIGN_SCHMUCK = 1, DESIGN_MASTER = 5, DESIGN_FLOOR = 5;
+// Stadtschmuck (Formen/Farben von Laterne, Bank, Brunnen, Block 108): nur DESIGN_SCHMUCK Minuten – ist ja nur kleine Deko.
+// Block 163 (Nutzer 21.10.2026: „man bekommt zu schnell zu viel“): DESIGN_SLOW-mal so lange – normal ~30, Stadtschmuck ~10 Minuten.
+// ✦ Meisterstücke kosten keine Taler mehr, sondern Sternstaub (designStardust)
+const DESIGN_MIN = 3, DESIGN_SCHMUCK = 1, DESIGN_FLOOR = 5, DESIGN_SLOW = 10;
 function designPrice(d) {
-  if (!d || !d.price) return 0;
-  const m = d.master ? DESIGN_MASTER : 1, minutes = (d.schmuck ? DESIGN_SCHMUCK : DESIGN_MIN) * Math.sqrt(d.price / 150) * m;
-  return niceRound(Math.max(d.price * DESIGN_FLOOR * m, minutes * 60 * wonderRate()));
+  if (!d || !d.price || d.master) return 0;
+  const minutes = (d.schmuck ? DESIGN_SCHMUCK : DESIGN_MIN) * Math.sqrt(d.price / 150) * DESIGN_SLOW;
+  return niceRound(Math.max(d.price * DESIGN_FLOOR, minutes * 60 * wonderRate()));
 }
+// ✦ Meisterstück: 100–200 ✨ nach Grundpreis (Farben 100–110, Glaszaun 100, Wegmuster 110–120, Pavillon 150, Statue 200)
+const designStardust = d => d && d.master && d.price ? Math.round((100 + (d.price - 250) / 6.5) / 10) * 10 : 0;
 // Dazu Ideen (Nutzer, 09.10.2026: „ist doch ein Forschungsinstitut, das Ideen braucht“): fester Preis, je schöner und später
 // desto mehr – Grundpreis × 2 (Stadtschmuck), × 5 (Farben, Wege, Hecken, Zäune, Mauern), × 25 (✦ Meisterstücke). Bei ~10 💡/s
 // also ein bis drei Minuten für ein normales Stück, Meisterstücke eine halbe Stunde und mehr. Die Taler bleiben am Einkommen.
 const DESIGN_IDEEN = { schmuck: 2, normal: 5, master: 25 };
-const designIdeas = d => !d || !d.price ? 0 : niceSci(d.price * (d.master ? DESIGN_IDEEN.master : d.schmuck ? DESIGN_IDEEN.schmuck : DESIGN_IDEEN.normal));
-const designCostText = d => `🪙 ${fmt(designPrice(d))} · 💡 ${fmt(designIdeas(d))}`;
+const designIdeas = d => !d || !d.price || d.master ? 0 : niceSci(d.price * (d.master ? DESIGN_IDEEN.master : d.schmuck ? DESIGN_IDEEN.schmuck : DESIGN_IDEEN.normal));
+const designCostText = d => d && d.master ? `✨ ${fmt(designStardust(d))}` : `🪙 ${fmt(designPrice(d))} · 💡 ${fmt(designIdeas(d))}`;
 // Kunstakademie: kaufen (Taler und Ideen); Meisterstücke brauchen eine Kunstakademie
 function designError(d) {
   if (!d || state.design.has(d.id) || !d.price || (d.muster && wegMusterOk(d.muster))) return 'Schon da';
   if (d.master && !hasBuilt('kunst')) return 'Braucht eine Kunstakademie';
+  if (d.master) return (state.stardust || 0) < designStardust(d) ? 'Zu wenig Sternstaub' : null;
   if (state.money < designPrice(d)) return 'Zu wenig Taler';
   if (state.science < designIdeas(d)) return 'Zu wenig Ideen';
   return null;
@@ -1747,6 +1752,9 @@ const decoBack = d => d.free ? 0 : ITEMS[d.b].cost || 0;
 const bushColOk = i => !!BUSH_COLS[i] && (!BUSH_COLS[i].design || state.design.has('busch:' + BUSH_COLS[i].id) || !!(state.legacy && state.legacy.has('busch:' + BUSH_COLS[i].id)));
 const bushColNew = key => { const p = state.paintNew[key]; return p && p.col && bushColOk(p.col) ? { col: p.col } : {}; };
 // Form und Farbe von Stadtschmuck (Block 106): frei oder in der Kunstakademie gekauft; für neu Gebautes state.paintNew[b] = { form, col }
+// Fenster- und Flaggenfarben (Block 163): frei, gekauft oder schon vorher da
+const winOk = i => !!WIN_COLS[i] && (i < WIN_FREE || state.design.has('win:' + i) || !!(state.legacy && state.legacy.has('win:' + i)));
+const flagColOk = c => { const i = FLAG_COLORS.indexOf(c); return i < FLAG_FREE || state.design.has('flag:' + i) || !!(state.legacy && state.legacy.has('flag:' + i)); };
 function lookOk(b, kind, i) {
   const L = DECO_LOOKS[b], e = L && (kind === 'form' ? L.forms : L.cols || [])[i];
   if (!e) return false;

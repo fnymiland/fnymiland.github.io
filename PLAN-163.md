@@ -19,3 +19,6 @@ ganz frei. Truhen und Erfolge geben nur Zahlen. Nutzer: „Alles davon“ stört
 - 163c Baupläne: Truhe → ein noch gesperrtes Stück (kein Meisterstück) + kleiner Taler-Rest; Erfolg jede 3. Stufe → ein Stück;
   Fenster „Bauplan gefunden“ mit „Ansehen“ (springt in die Kunstakademie); alles frei → wie bisher
 - 163d Tests, „Das ist neu“, Bump
+
+## Eingebaut (21.10.2026, v1160)
+Alle vier Blöcke wie oben; Tests tests/belohnungen.test.js; angepasst: design, belaege, wasserbruecken-fenster.

@@ -1132,7 +1132,7 @@ const BRIDGE_COL_DEFS = [
   { id: 'rot', name: 'Rot', c: '#d9483b' }, { id: 'blau', name: 'Blau', c: '#3f6fb5' }, { id: 'gruen', name: 'Grün', c: '#3f8f5a' },
   { id: 'sandstein', name: 'Sandstein', c: '#d9d2c3' }, { id: 'grau', name: 'Grau', c: '#8c8a85' }, { id: 'ziegel', name: 'Ziegel', c: '#b5654a' },
   { id: 'gelb', name: 'Gelb', c: '#f2c14e' },
-];
+].map((c, i) => i < 3 ? c : { ...c, design: 50 + i * 20 });   // Block 163: drei frei, der Rest in der Kunstakademie (Verbautes bleibt frei, state.js)
 const BRIDGE_COLS = BRIDGE_COL_DEFS.map(c => c.c);                                                                       // Bauwerk
 const PLANK_COLS = ['#b08a5e', '#8a6440', '#c9b79c', '#a9a9a3', '#f1e7d6', '#c79a6a'];   // Holzplanken; [5] = Planken der alten Roten Bogenbrücke (160c)
 const WALLS = ['#fff4dc', '#ffe3e0', '#e4f1ff', '#f0ffe0', '#fdeaff', '#fff0b8', '#e6e0ff',
@@ -1204,9 +1204,14 @@ const DECO_LOOKS = {
   schiene: { group: 'Gleise', icon: '#a79d8c', cols: null, forms: [{ id: 'schotter', name: 'Schotter' }, { id: 'rasen', name: 'Rasengleis' },
     { id: 'wald', name: 'Waldbahn', design: 150 }, { id: 'pflaster', name: 'Pflastergleis', design: 180 }, { id: 'blumen', name: 'Blumengleis', design: 200 }] },
 };
+const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
+// Block 163 (Nutzer 21.10.2026): Fenster- und Flaggenfarben – je drei frei, der Rest in der Kunstakademie (wie Wand- und Dachfarben)
+const WIN_FREE = 3, FLAG_FREE = 3;
 const DESIGN = [
   ...WALLS.map((col, i) => ({ id: 'wall:' + i, group: 'Wandfarben', col, name: 'Wandfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
   ...ROOFS.map((col, i) => ({ id: 'roof:' + i, group: 'Dachfarben', col, name: 'Dachfarbe ' + (i + 1), price: i < FREE_COLORS ? 0 : 50 + i * 20, master: i >= 11 })),
+  ...WIN_COLS.map((col, i) => ({ id: 'win:' + i, group: 'Fensterfarben', col, name: 'Fensterfarbe ' + (i + 1), price: i < WIN_FREE ? 0 : 50 + i * 20 })),
+  ...FLAG_COLORS.map((col, i) => ({ id: 'flag:' + i, group: 'Flaggenfarben', col, name: 'Flaggenfarbe ' + (i + 1), price: i < FLAG_FREE ? 0 : 50 + i * 20 })),
   ...BUSH_COLS.filter(c => c.design).map(c => ({ id: 'busch:' + c.id, group: 'Büsche', col: c.c[0], name: c.name, price: c.design })),
   ...Object.entries(DECO_LOOKS).flatMap(([b, L]) => [...L.forms.map((f, i) => [f, i]).filter(([f]) => f.design).map(([f, i]) => ({ id: `${b}:form:${f.id}`, group: L.group, look: [b, i], name: f.name, price: f.design, schmuck: true })),
     ...(L.cols || []).filter(c => c.design).map(c => ({ id: `${b}:col:${c.id}`, group: L.group, col: c.c, name: `Farbe ${c.name}`, price: c.design, schmuck: true }))]),
@@ -1216,7 +1221,6 @@ const DESIGN = [
   ...['laterne', 'strassenlaterne', 'pavillon', 'statue'].map(b => ({ id: b, group: 'Deko', name: ITEMS[b].name, item: b, price: ITEMS[b].design, master: !!ITEMS[b].master, ...(b === 'laterne' || b === 'strassenlaterne' ? { schmuck: true } : {}) })),
 ];
 const DESIGN_BY_ID = Object.fromEntries(DESIGN.map(d => [d.id, d]));
-const FLAG_COLORS = ['#e8705f', '#5f8fe8', '#58b36a', '#e9a23b', '#b07ad6', '#f28cb1'];
 const FLAG_SYMBOLS = ['🐟', '🌻', '🍎', '⭐', '🐚', '🌙', '🍄', '🐝', '🦊', '⚓'];
 // Souvenirs (Block 129, js/souvenir.js): Arten und strenge Prüfung – die Daten stammen von anderen Spielern (Farbe landet im
 // Bild, Name im Fenster)

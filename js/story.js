@@ -192,6 +192,42 @@ function discoverFar(i) {
   save();
   return true;
 }
+// 📜 Baupläne (Block 163, Nutzer 21.10.2026: „Belohnungen langweilig – nur Zahlen“): Truhen und jeder dritte Erfolgsstern schenken ein noch
+// gesperrtes Stück der Kunstakademie (nie ein ✦ Meisterstück – die gibt es nur für ✨). Ist alles frei, bleibt es wie vorher
+const BP_STARS = 3, BP_CHEST_REST = 4;                               // je 3 Sterne ein Bauplan; Truhe mit Bauplan: ein Viertel der Beute
+function bpPick(rnd = Math.random) {
+  const list = DESIGN.filter(d => d.price && !d.master && !state.design.has(d.id) && !(state.legacy && state.legacy.has(d.id)) && !(d.muster && wegMusterOk(d.muster)));
+  return list.length ? list[Math.floor(rnd() * list.length) % list.length] : null;
+}
+function bpGive(d) {
+  state.design.add(d.id);
+  if (typeof cloudTouched === 'function') cloudTouched();
+  if (typeof buildToolbar === 'function') buildToolbar();
+}
+// Erfolge: neue Sterne über die nächste Dreiergrenze → Bauplan (als Meldung, das Erfolgsband läuft gerade); alter Stand: ab jetzt zählen
+function bpCheckStars(silent) {
+  const s = starCount();
+  if (state.bpStars == null || state.bpStars > s) { state.bpStars = s; return; }
+  while (state.bpStars + BP_STARS <= s) {
+    state.bpStars += BP_STARS;
+    if (silent) continue;
+    const d = bpPick();
+    if (!d) continue;
+    bpGive(d);
+    toast(`📜 Bauplan für deine Erfolge: ${d.name} (${d.group}) – jetzt frei in der Kunstakademie`);
+  }
+}
+// Fenster nach der Truhe: das Stück groß, „Ansehen“ öffnet es in der Kunstakademie
+function bpShow(d, rest) {
+  const url = typeof designThumb === 'function' ? designThumb(d, 2.5) : '';
+  openModal(`<h2>📜 Bauplan gefunden!</h2>
+    <div class="dcard">${url ? `<img src="${url}" alt="">` : `<i style="background:${escHtml(Array.isArray(d.col) ? d.col[0] : d.col || '#eee')}"></i>`}</div>
+    <p><b>${escHtml(d.name)}</b> · ${escHtml(d.group)} – jetzt frei in der Kunstakademie.</p>
+    ${rest ? `<p class="muted">Außerdem in der Truhe: ${rest}</p>` : ''}
+    <div class="row"><button class="btn" id="m-bp-go" style="flex:1">🎨 Ansehen</button><button class="btn ghost" id="m-ok" style="flex:1">Schön!</button></div>`);
+  $('m-bp-go').onclick = () => openDesignCard(d.id);
+  $('m-ok').onclick = closeModal;
+}
 // Was die Truhe bringt: jetzt gerechnet, damit es zum Stand passt (Einkommen, Ideen/s)
 function chestLoot(i) {
   if (i.chest === 'taler') return { money: niceRound(Math.max(1e6 * i.n, (T.inc + (T.salesInc || 0)) * 60 * 5)) };      // 5 Minuten Einkommen (Block 37, vorher 20)
@@ -203,7 +239,8 @@ const lootText = l => Object.entries(l).map(([r, n]) => r === 'money' ? `🪙 ${
 function openChest(k) {
   const t = state.tiles.get(k), i = t && t.b === 'truhe' && ISLE_BY_ID[t.isle || regionAt(...keyXY(k))];
   if (!i) return false;
-  const loot = chestLoot(i);
+  const bp = bpPick(), loot = chestLoot(i);
+  if (bp) for (const r of Object.keys(loot)) loot[r] = niceRound(loot[r] / BP_CHEST_REST);   // mit Bauplan: ein kleiner Rest
   for (const [r, n] of Object.entries(loot)) {
     if (r === 'money') { state.money += n; state.stats.earned += n; }
     else if (r === 'science') state.science += n;
@@ -214,7 +251,8 @@ function openChest(k) {
   recalc();
   const [x, y] = keyXY(k);
   sparkle(x, y); confettiBurst(); sfx('star');
-  toast(`${CHESTS[i.chest].icon} ${CHESTS[i.chest].name}: ${lootText(loot)}${sd ? ` · ✨ ${fmt(sd)} Sternstaub` : ''}!`);
+  if (bp) { bpGive(bp); bpShow(bp, `${lootText(loot)}${sd ? ` · ✨ ${fmt(sd)} Sternstaub` : ''}`); }
+  else toast(`${CHESTS[i.chest].icon} ${CHESTS[i.chest].name}: ${lootText(loot)}${sd ? ` · ✨ ${fmt(sd)} Sternstaub` : ''}!`);
   save();
   return true;
 }
@@ -547,6 +585,7 @@ function checkAchievements(silent = false) {
     state.achieved[a.id] = n;
   }
   const after = rankOf(starCount());
+  bpCheckStars(silent);                                                 // 📜 jeder dritte Stern ein Bauplan (Block 163)
   if (!silent && after !== before) achvQueue.push({ rank: after });
   if (!silent) showNextAchv();
 }

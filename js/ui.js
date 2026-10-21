@@ -1911,9 +1911,9 @@ function openInfo(x, y) {
       <div class="swatches">${bunt('roof')}${colorsOf('roof').map(([c, i]) => `<button class="sw${i === roof ? ' on' : ''}" data-roof="${i}" style="background:${c}" aria-label="${roofName}: Farbe ${i + 1}"></button>`).join('')}</div>` : ''}
       ${ITEMS[t.b].fl0 ? `<div class="label">Stockwerke</div><div class="row"><button class="btn ghost" data-fl="-1" aria-label="Ein Stockwerk weniger">−</button><b class="fl-n">${t.fl || ITEMS[t.b].fl0}</b><button class="btn ghost" data-fl="1" aria-label="Ein Stockwerk mehr">+</button></div>` : ''}
       ${ITEMS[t.b].fl0 || t.b === 'fz_schloss' ? `<div class="label">Fenster</div>
-      <div class="swatches">${WIN_COLS.map((c, i) => `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>`).join('')}</div>` : ''}
+      <div class="swatches">${WIN_COLS.map((c, i) => winOk(i) || i === (t.win || 0) ? `<button class="sw${i === (t.win != null ? t.win : 0) ? ' on' : ''}" data-win="${i}" style="background:${c}" aria-label="Fensterfarbe ${i + 1}"></button>` : '').join('')}</div>` : ''}
       ${paintMoreHtml(t)}
-      ${colorsOf('wall').length + colorsOf('roof').length < 28 ? '<div class="looks"><button class="look art-more" data-openart="1">🎨 Mehr Farben freischalten ›</button></div>' : ''}`;
+      ${colorsOf('wall').length + colorsOf('roof').length < 28 || ((ITEMS[t.b].fl0 || t.b === 'fz_schloss') && WIN_COLS.some((c, i) => !winOk(i))) ? '<div class="looks"><button class="look art-more" data-openart="1">🎨 Mehr Farben freischalten ›</button></div>' : ''}`;
   }
   if (baseOf(t.b) === 'busch') colors += bushColHtml(t.col || 0, 'busch', bushAll().filter(o => o !== t && (o.col || 0) !== (t.col || 0)).length);   // Block 89
   if (t.b === 'pb_station') colors += pbTrainsHtml(x, y);                  // Züge der Strecke (Block 136e)
@@ -2831,7 +2831,7 @@ function openResearch(tab = researchTab) {
           : d.col ? `<i style="background:${d.col}"></i>` : `<span class="emoji">${{ laterne: '🏮', pavillon: '⛩️', statue: '⭐' }[d.item] || '🎨'}</span>`;
         return `<button class="design${have ? ' have' : ''}${err ? ' cant' : ''}" data-design="${d.id}" title="${d.name}">
           ${look}<span class="dn">${d.group === 'Wandfarben' || d.group === 'Dachfarben' ? '' : d.name.replace(/^Farbe /, '')}</span>
-          <small>${have ? '✓' : `${d.master ? '✦ ' : ''}🪙 ${fmt(designPrice(d))}<br>💡 ${fmt(designIdeas(d))}`}</small></button>`;
+          <small>${have ? '✓' : d.master ? `✦ ✨ ${fmt(designStardust(d))}` : `🪙 ${fmt(designPrice(d))}<br>💡 ${fmt(designIdeas(d))}`}</small></button>`;
       }).join('')}${gr === 'Wegmuster' ? giftStyles() : ''}</div>${gr === 'Wegmuster' ? '<p class="muted">Ein Muster gibt es dann in allen Wegfarben – die wählst du beim Bauen.</p>' : ''}`).join('')}`;
   }
   openModal(`
@@ -2863,7 +2863,8 @@ function townEditor(town) {
     <div class="label">Name deines Ortes</div>
     <input class="text-in" id="t-name" maxlength="20" value="${escHtml(town.name)}">
     <div class="label">Flagge</div>
-    <div class="swatches">${FLAG_COLORS.map(c => `<button class="sw${c === town.color ? ' on' : ''}" data-fc="${c}" style="background:${c}" aria-label="Flaggenfarbe"></button>`).join('')}</div>
+    <div class="swatches">${FLAG_COLORS.filter(c => flagColOk(c) || c === town.color).map(c => `<button class="sw${c === town.color ? ' on' : ''}" data-fc="${c}" style="background:${c}" aria-label="Flaggenfarbe"></button>`).join('')}</div>
+    ${FLAG_COLORS.some(c => !flagColOk(c)) ? '<div class="looks"><button class="look art-more" data-flagmore="1">🎨 Mehr Flaggenfarben freischalten ›</button></div>' : ''}
     <div class="swatches">${FLAG_SYMBOLS.map(s => `<button class="sw${s === town.symbol ? ' on' : ''}" data-fs="${s}" aria-label="Symbol ${s}">${s}</button>`).join('')}</div>`;
 }
 function wireTownEditor(root, town, onChange) {
@@ -2871,6 +2872,8 @@ function wireTownEditor(root, town, onChange) {
   for (const b of root.querySelectorAll('[data-fc]')) b.onclick = () => {
     town.color = b.dataset.fc; root.querySelectorAll('[data-fc]').forEach(o => o.classList.toggle('on', o === b)); sfx('deco'); onChange();
   };
+  const fm = root.querySelector('[data-flagmore]');                      // Block 163: weitere Flaggenfarben in der Kunstakademie
+  if (fm) fm.onclick = () => { openResearch('design'); artJump('Flaggenfarben'); };
   for (const b of root.querySelectorAll('[data-fs]')) b.onclick = () => {
     town.symbol = b.dataset.fs; root.querySelectorAll('[data-fs]').forEach(o => o.classList.toggle('on', o === b)); sfx('deco'); onChange();
   };
@@ -3284,6 +3287,12 @@ $('modal-card').addEventListener('click', e => { const b = e.target.closest('[da
 // Versionsgeschichte (Block 99): neuestes Update oben. Wer länger nicht gespielt hat, sieht alle verpassten – das neueste
 // aufgeklappt, die älteren als Überschrift zum Aufklappen. also: frühere ids, die zu diesem Stand gehören.
 const NEWS_HISTORY = [
+  { id: '2026-10-21-belohnungen', date: '21. Oktober', title: 'Baupläne und Meisterstücke', items: [
+    '📜 <b>Baupläne:</b> Truhen auf fernen Inseln bringen jetzt meistens ein geschenktes Stück aus der Kunstakademie, zum Beispiel eine Farbe oder ein Muster. Taler gibt es dazu nur noch ein wenig. Auch jeder dritte Erfolgsstern schenkt dir einen Bauplan.',
+    '✦ <b>Meisterstücke kosten Sternstaub:</b> Die besonders schönen Stücke der Kunstakademie gibt es jetzt für 100 bis 200 ✨ statt für Taler.',
+    '🎨 <b>Die Kunstakademie ist teurer:</b> Die anderen Stücke kosten jetzt etwa eine halbe Stunde Einkommen. So bleibt länger etwas zum Freischalten.',
+    '🪟 <b>Neue Farben zum Freischalten:</b> Für Fenster, Brücken und die Flagge sind je drei Farben frei, die anderen gibt es in der Kunstakademie. Was du schon verbaut hast, bleibt frei.',
+  ] },
   { id: '2026-10-21-monumente', date: '21. Oktober', title: 'Monumente im Sternenbasar', items: [
     '🏛️ <b>Wahrzeichen des Monats:</b> Im Sternenbasar gibt es jetzt den Reiter „Monumente“. Jeden Monat bietet der Mondhase ein Wahrzeichen an: Große Pagode, Sternenleuchte, Obelisk der Sonnenbucht oder Triumphbogen. Der Bauplan kostet 1000 ✨. Verpasste Wahrzeichen kommen wieder.',
     '🏗️ <b>Bauen in drei Abschnitten:</b> Stell das Wahrzeichen im Baumenü (🌸 Gestalten → 🏛️ Monumente) als Baustelle hin. Dann baust du es in drei Abschnitten für 100, 300 und 600 Mio. Taler plus Baustoffe. Jedes Wahrzeichen kannst du so oft bauen, wie du magst.',

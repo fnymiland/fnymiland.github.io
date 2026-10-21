@@ -156,7 +156,7 @@ function sdHtml(today = sdDay()) {
   const t = sdTreasury(today), p1 = sdPrice(t.n), p5 = sdPriceOf(5, t.n);
   return `<h2>✨ Sternstaub</h2>
     <p>Du hast <b class="sd-have">✨ ${fmt(state.stardust || 0)}</b> Sternstaub. Er ist selten – damit schaltest du besondere, schöne Dinge frei
-      im ⛺ Sternenbasar (Einrichtungen).</p>
+      im ⛺ Sternenbasar (Einrichtungen) und die ✦ Meisterstücke der 🎨 Kunstakademie.</p>
     ${twHtml()}
     <h4>So bekommst du ihn</h4>
     <div class="sd-src">${SD_SOURCES.map(([i, a, b]) => `<div><span>${i} ${a}</span><b>${b}</b></div>`).join('')}</div>

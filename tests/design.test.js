@@ -59,7 +59,7 @@ describe('Kunstakademie: Aussehen einzeln freischalten', () => {
 
   it('Meisterstücke brauchen eine Kunstakademie', () => {
     expect(game("designError(DESIGN_BY_ID['wegmuster:fisch'])")).toBe('Braucht eine Kunstakademie');
-    game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc(); state.science = 1e5");
+    game("state.tiles.set('8,8', { b: 'kunst', lvl: 1 }); recalc(); state.science = 1e5; state.stardust = 1000");   // ✦ kostet ✨ (Block 163)
     expect(game("buyDesign('wegmuster:fisch')")).toBe(true);
   });
 
@@ -113,28 +113,27 @@ describe('Überall bauen nach Forschung', () => {
 });
 
 describe('Preise nach Einkommen (Block 50)', () => {
-  it('mindestens 5× so teuer wie früher, Meisterstücke 25×; mit viel Einkommen ein paar Minuten davon', () => {
+  it('mindestens 5× so teuer wie früher; mit viel Einkommen etwa 30 Minuten davon (Block 163: zehnmal so lange); Meisterstücke nur ✨', () => {
     game('state.incPeak = 0; T.inc = 0; T.salesInc = 0');
     expect(game("designPrice(DESIGN_BY_ID['wegmuster:platten'])")).toBeGreaterThanOrEqual(600);   // 120 × 5
-    expect(game("designPrice(DESIGN_BY_ID['statue'])")).toBeGreaterThanOrEqual(22000);    // 900 × 25 (gerundet)
+    expect(game("designPrice(DESIGN_BY_ID['statue'])")).toBe(0);                          // ✦ kostet Sternstaub, keine Taler
     game('state.incPeak = 1000');                                                        // 1000 Taler/s
-    const normal = game("designPrice(DESIGN_BY_ID['laterne'])"), master = game("designPrice(DESIGN_BY_ID['statue'])");
-    expect(normal).toBeGreaterThanOrEqual(60 * 1000 * 0.95);                             // Laterne (Stadtschmuck, Block 108): etwa 1 Minute
-    expect(normal).toBeLessThanOrEqual(60 * 1000 * 1.05);
-    expect(game("designPrice(DESIGN_BY_ID['bank:form:stein'])")).toBeLessThanOrEqual(60 * 1000 * 1.05);
-    expect(game("designPrice(DESIGN_BY_ID['pavillon'])")).toBeGreaterThanOrEqual(3 * 60 * 1000 * 0.95);   // andere Deko: weiter etwa 3 Minuten
-    expect(master / game("designPrice(DESIGN_BY_ID['wall:5'])")).toBeGreaterThan(4);     // Meisterstück deutlich teurer
+    const normal = game("designPrice(DESIGN_BY_ID['laterne'])");
+    expect(normal).toBeGreaterThanOrEqual(10 * 60 * 1000 * 0.95);                        // Laterne (Stadtschmuck): etwa 10 Minuten
+    expect(normal).toBeLessThanOrEqual(10 * 60 * 1000 * 1.05);
+    expect(game("designPrice(DESIGN_BY_ID['bank:form:stein'])")).toBeLessThanOrEqual(10 * 60 * 1000 * 1.05);
+    expect(game("designPrice(DESIGN_BY_ID['wall:5'])")).toBeGreaterThanOrEqual(30 * 60 * 1000 * 0.95);   // Farben, Deko: etwa 30 Minuten
   });
 
   it('kostet auch Ideen – fest, je schöner und später desto mehr (Nutzer, 09.10.2026)', () => {
     const I = id => game(`designIdeas(DESIGN_BY_ID['${id}'])`);
     expect(I('laterne:col:rot')).toBeLessThan(I('wall:5'));                            // Stadtschmuck < Farben/Wege …
     expect(I('wall:5')).toBeLessThan(I('wall:10'));                                   // … spätere Farben teurer …
-    expect(I('wall:10') * 3).toBeLessThan(I('wall:11'));                              // … ✦ Meisterstücke ein Vielfaches
-    expect(game("DESIGN.filter(d => d.price && !(designIdeas(d) > 0)).map(d => d.id)")).toEqual([]);
+    expect(I('wall:11')).toBe(0);                                                     // … ✦ Meisterstücke kosten nur ✨ (Block 163)
+    expect(game("DESIGN.filter(d => d.price && !d.master && !(designIdeas(d) > 0)).map(d => d.id)")).toEqual([]);
     game("state.incPeak = 0");                                                         // Ideen-Preis hängt nicht am Einkommen
     const before = I('wall:5'); game('state.incPeak = 1e9'); expect(I('wall:5')).toBe(before);
-    game("state.money = 1e12; state.science = 10");
+    game("state.money = 1e15; state.science = 10");   // 30 Minuten bei 1 Mrd/s
     expect(game("designError(DESIGN_BY_ID['wall:5'])")).toBe('Zu wenig Ideen');
     expect(game("buyDesign('wall:5')")).toBe(false);
     game(`state.science = ${before} + 7`);

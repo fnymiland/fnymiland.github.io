@@ -893,14 +893,15 @@ function research(id) {
   openResearch();
 }
 
-// Kunstakademie: ein Stück Aussehen (Farbe, Wege-Stil, Deko) mit Talern und Ideen freischalten
+// Kunstakademie: ein Stück Aussehen (Farbe, Wege-Stil, Deko) mit Talern und Ideen freischalten; ✦ Meisterstücke mit ✨ (Block 163)
 function buyDesign(id) {
   const d = DESIGN_BY_ID[id], err = designError(d);
   if (err) { fail(err); return false; }
   state.money -= designPrice(d);
   state.science -= designIdeas(d);
+  if (d.master) { state.stardust -= designStardust(d); if (typeof cloudTouched === 'function') cloudTouched(); }
   state.design.add(id);
-  sfx('research');
+  sfx(d.master ? 'bell' : 'research');
   buildToolbar();
   save();
   toast(`Freigeschaltet: ${d.name}`);

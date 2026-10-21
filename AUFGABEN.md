@@ -63,9 +63,11 @@ Rückmeldungen des Nutzers, in Blöcken abgearbeitet. `[x]` = erledigt (lokal), 
 
 - [ ] **Themen-Inseln:** Jede Sehenswürdigkeit ist Mittelpunkt einer eigenen Insel (Obsthain-Insel voller Obst,
       Erzberg-Insel voller Stein/Erz …). Man baut dort thematisch eigene Dörfer; ein **Zug** verbindet die Dörfer.
-- [ ] **Belohnungen, Freischalten, Forschung überarbeiten:** Man bekommt zu schnell zu viel, es gibt zu wenig zum
+- [x] **Belohnungen, Freischalten, Forschung überarbeiten:** Man bekommt zu schnell zu viel, es gibt zu wenig zum
       Freischalten. Haus- und Dachfarben (und Farben aller Gebäude) sollen freigeschaltet statt geschenkt werden.
       → Block 163 (PLAN-163.md, 21.10.2026): Meisterstücke für ✨, Kunstakademie teurer, Fenster/Brücken/Flaggenfarben sperren, Baupläne aus Truhen und Erfolgen
+      Erledigt v1160 (tests/belohnungen.test.js): 163a ✦ für 100–200 ✨, übrige ×10 Einkommen; 163b je 3 freie Fenster-/Brücken-/Flaggenfarben,
+      Verbautes bleibt frei; 163c Baupläne (Truhe: Stück + ¼ Beute, Fenster „Bauplan gefunden“; je 3 Erfolgssterne ein Stück).
 
 ## Block 7 – Rückmeldung vom 30.09.
 
