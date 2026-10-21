@@ -1,0 +1,131 @@
+// Block 164 (Nutzer 21.10.2026: „klingen geil“): Entwürfe für besondere Stücke – Perlmutt-Dachfarbe, Gold-Fensterläden, Sternen-Wegmuster.
+// Im Browser (Spiel geladen): (0, eval)(await (await fetch('tools/besondere-entwurf.js')).text()); besondereEntwurf()
+// Zeichnet je Stück drei Varianten groß nebeneinander auf eine Leinwand über dem Spiel (id 'cmp').
+(function besondereEntwurfTool() {
+  const GOLD = '#f5c84b', GOLD_D = '#c9962a', GOLD_L = '#ffe9a0';
+  // Haus in eine eigene Leinwand malen (Mitte cx, cy), Rückgabe: Leinwand
+  const houseCanvas = (W, H, cx, cy, z, look, wall, roof, nightOn = false) => {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const prev = g, n0 = night; g = c.getContext('2d'); night = nightOn ? NIGHT_MAX : 0;
+    try { HOUSE_ART[look - 1](kit(cx, cy, z, 0), wall, roof, 0, 3, 7); } finally { g = prev; night = n0; }
+    return c;
+  };
+  // Dachfläche finden: zweimal mit verschiedenen Dachfarben malen, was sich unterscheidet, ist Dach
+  function roofMask(W, H, cx, cy, z, look, wall) {
+    const a = houseCanvas(W, H, cx, cy, z, look, wall, '#ff00ff'), b = houseCanvas(W, H, cx, cy, z, look, wall, '#00ff00');
+    const da = a.getContext('2d').getImageData(0, 0, W, H), db = b.getContext('2d').getImageData(0, 0, W, H);
+    const m = document.createElement('canvas'); m.width = W; m.height = H; const mx = m.getContext('2d'), md = mx.createImageData(W, H);
+    for (let i = 0; i < da.data.length; i += 4) {
+      const diff = Math.abs(da.data[i] - db.data[i]) + Math.abs(da.data[i + 1] - db.data[i + 1]) + Math.abs(da.data[i + 2] - db.data[i + 2]);
+      if (diff > 60 && da.data[i + 3] > 0) { md.data[i] = 255; md.data[i + 1] = 255; md.data[i + 2] = 255; md.data[i + 3] = da.data[i + 3]; }
+    }
+    mx.putImageData(md, 0, 0);
+    return m;
+  }
+  // Perlmutt: Grundfarbe hell, darüber ein Farbverlauf (rosa → flieder → mint → himmelblau) nur auf dem Dach, dazu Glanz
+  function pearlHouse(W, H, cx, cy, z, look, wall, v) {
+    const base = houseCanvas(W, H, cx, cy, z, look, wall, v.base), mask = roofMask(W, H, cx, cy, z, look, wall);
+    const md = mask.getContext('2d').getImageData(0, 0, W, H).data; let x0 = W, x1 = 0, y0 = H, y1 = 0;   // Dach-Umriss
+    for (let yy = 0; yy < H; yy++) for (let xx = 0; xx < W; xx++) if (md[(yy * W + xx) * 4 + 3] > 0) { if (xx < x0) x0 = xx; if (xx > x1) x1 = xx; if (yy < y0) y0 = yy; if (yy > y1) y1 = yy; }
+    const o = document.createElement('canvas'); o.width = W; o.height = H; const ox = o.getContext('2d');
+    ox.drawImage(mask, 0, 0); ox.globalCompositeOperation = 'source-in';
+    const gr = ox.createLinearGradient(x0, y0, x1, y1);                     // schräg über das ganze Dach
+    v.stops.forEach(([p, col]) => gr.addColorStop(p, col));
+    ox.fillStyle = gr; ox.fillRect(0, 0, W, H);
+    if (v.stripes) { ox.globalCompositeOperation = 'source-atop'; ox.strokeStyle = 'rgba(255,255,255,0.85)'; for (const [f, w] of v.stripes) { ox.lineWidth = w * (x1 - x0) / 100; const xa = x0 + (x1 - x0) * f; ox.beginPath(); ox.moveTo(xa - (y1 - y0) * 0.6, y0); ox.lineTo(xa + (y1 - y0) * 0.6, y1); ox.stroke(); } }
+    const out = base.getContext('2d'); out.globalAlpha = v.alpha; out.drawImage(o, 0, 0); out.globalAlpha = 1;
+    return base;
+  }
+  // Fensterläden: houseWins vorübergehend mit Läden links und rechts neben jedem Fenster (in der Wandebene)
+  function shutterHouse(W, H, cx, cy, z, look, wall, roof, v, nightOn = false) {
+    const keep = houseWins;
+    houseWins = (K, B, spots, h0 = 0.35, h1 = 0.72, box = false) => {
+      keep(K, B, spots, h0, h1, box);
+      for (const side of ['right', 'left', 'back']) {
+        const F = B.faces[side];
+        if (!F) continue;
+        for (const [t0, t1] of spots) {
+          const w = (t1 - t0) * 0.42, y0 = F.H * h0, y1 = F.H * h1;
+          if (v.frame) {                                                   // nur goldener Rahmen ums Fenster
+            const p = (t, hh) => { const q = lerp(F.P, F.Q, t); return [q[0], q[1] - hh]; };
+            g.strokeStyle = C(v.frame); g.lineWidth = 1.1 * K.z; g.lineJoin = 'round';
+            g.beginPath(); [p(t0, y0), p(t1, y0), p(t1, y1), p(t0, y1)].forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); g.stroke();
+            continue;
+          }
+          for (const [a, b] of [[t0 - w - 0.01, t0 - 0.01], [t1 + 0.01, t1 + w + 0.01]]) {
+            faceQuad(F.P, F.Q, a, b, y0 - 0.5, y1 + 0.5, C(v.fill));
+            if (v.rim) { const p = (t, hh) => { const q = lerp(F.P, F.Q, t); return [q[0], q[1] - hh]; };
+              g.strokeStyle = C(v.rim); g.lineWidth = 0.7 * K.z; g.beginPath(); [p(a, y0 - 0.5), p(b, y0 - 0.5), p(b, y1 + 0.5), p(a, y1 + 0.5)].forEach((q, i) => i ? g.lineTo(...q) : g.moveTo(...q)); g.closePath(); g.stroke(); }
+            if (v.slats) { const p = (t, hh) => { const q = lerp(F.P, F.Q, t); return [q[0], q[1] - hh]; };   // Lamellen
+              g.strokeStyle = C(v.slats); g.lineWidth = 0.45 * K.z; g.beginPath(); for (let k = 1; k < 5; k++) { const hh = y0 + (y1 - y0) * k / 5; g.moveTo(...p(a + 0.004, hh)); g.lineTo(...p(b - 0.004, hh)); } g.stroke(); }
+          }
+        }
+      }
+    };
+    try { return houseCanvas(W, H, cx, cy, z, look, wall, roof, nightOn); } finally { houseWins = keep; }
+  }
+  // Sternen-Weg: 2×3 Felder Weg, darauf Sterne flach im Boden (Punkte über K.P)
+  function starPath(W, H, cx, cy, z, v, nightOn = false) {
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const prev = g, n0 = night; g = c.getContext('2d'); night = nightOn ? NIGHT_MAX : 0;
+    try {
+      const K = kit(cx, cy, z, 0);
+      K.rect(-1.5, -1, 1.5, 1, C('#9fd27a'));                             // Wiese drumherum
+      K.rect(-1.5, -0.5, 1.5, 0.5, C(v.ground));                          // Weg, eine Bahn breit, drei Felder lang
+      for (let a = -1.5; a < 1.5; a += v.tile || 0.5) for (let b = -0.5; b < 0.5; b += v.tile || 0.5) {   // Fugen
+        if (!v.joint) continue;
+        g.strokeStyle = C(v.joint); g.lineWidth = 0.5 * z; g.beginPath(); const q0 = K.P(a, b), q1 = K.P(a + (v.tile || 0.5), b), q2 = K.P(a + (v.tile || 0.5), b + (v.tile || 0.5));
+        g.moveTo(...q0); g.lineTo(...q1); g.lineTo(...q2); g.stroke();
+      }
+      const star = (a, b, r, col, edge) => {
+        const pts = []; for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.42 : r; pts.push(K.P(a + Math.cos(an) * rr, b + Math.sin(an) * rr)); }
+        poly(pts, C(col)); if (edge) { g.strokeStyle = C(edge); g.lineWidth = 0.5 * z; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.stroke(); }
+        if (nightOn && v.glow) glowQuad([K.P(a - 0.02, b - 0.02), K.P(a + 0.02, b - 0.02), K.P(a + 0.02, b + 0.02), K.P(a - 0.02, b + 0.02)], 10 * z);
+      };
+      v.stars(star);
+    } finally { g = prev; night = n0; }
+    return c;
+  }
+  const PEARL = [
+    ['A · Perlmutt sanft', { base: '#f3eef5', alpha: 0.55, stops: [[0, '#f7c6dc'], [0.35, '#d9c8f2'], [0.65, '#c4ecdf'], [1, '#c7e2f7']] }],
+    ['B · Perlmutt kräftig', { base: '#ece6f1', alpha: 0.75, stops: [[0, '#f4a9c9'], [0.35, '#c8b2ef'], [0.65, '#a9e3cf'], [1, '#a8d4f5']] }],
+    ['C · kräftig, Schattenseite bleibt', { base: '#ece6f1', alpha: 0.55, stops: [[0, '#f4a9c9'], [0.35, '#c8b2ef'], [0.65, '#a9e3cf'], [1, '#a8d4f5']] }],
+    ['D · Perlmutt mit Glanzstreifen', { base: '#f3eef5', alpha: 0.5, stops: [[0, '#f7c6dc'], [0.35, '#d9c8f2'], [0.65, '#c4ecdf'], [1, '#c7e2f7']], stripes: [[0.3, 2.2], [0.38, 0.9], [0.62, 1.6]] }],
+  ];
+  const SHUT = [
+    ['A · Läden ganz in Gold', { fill: GOLD, slats: GOLD_D }],
+    ['B · weiße Läden, Goldrand', { fill: '#fbf7ef', rim: GOLD_D, slats: '#e2dccd' }],
+    ['C · nur goldener Fensterrahmen', { frame: GOLD_D }],
+  ];
+  const STARS = [
+    ['A · Nachtblau, ein Goldstern je Feld', { ground: '#3b4a75', joint: '#2f3c62', tile: 1, glow: true,
+      stars: s => { for (const a of [-1, 0, 1]) s(a, 0, 0.22, GOLD, GOLD_D); } }],
+    ['B · sanftes Blau, ein Goldstern je Feld', { ground: '#7f93c4', joint: '#6f83b4', tile: 1, glow: true,
+      stars: s => { for (const a of [-1, 0, 1]) s(a, 0, 0.22, GOLD, GOLD_D); } }],
+    ['C · Sandweg mit kleinen Goldsternen', { ground: '#eadbb2', glow: false,
+      stars: s => { const P = [[-1.25, -0.2], [-0.95, 0.25], [-0.6, -0.1], [-0.25, 0.3], [0.1, -0.28], [0.35, 0.12], [0.7, -0.15], [1.05, 0.22], [1.3, -0.25]]; for (const [a, b] of P) s(a, b, 0.07, GOLD, GOLD_D); } }],
+    ['D · Platten, Sternenmosaik in der Mitte', { ground: '#dedbd3', joint: '#c9c5bb', tile: 0.5, glow: true,
+      stars: s => { s(0, 0, 0.36, '#3b4a75'); s(0, 0, 0.26, GOLD, GOLD_D); for (const a of [-1, 1]) s(a, 0, 0.12, GOLD, GOLD_D); } }],
+  ];
+  window.besondereEntwurf = (opts = {}) => {
+    document.getElementById('cmp')?.remove();
+    const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
+    Object.assign(cv.style, { position: 'fixed', inset: 0, width: Wv + 'px', height: Hv + 'px', zIndex: 99999, background: '#fffaf0' });
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d'); ctx.scale(2, 2);
+    const z = opts.z || 3, cw = 120 * z, ch = 110 * z, which = opts.which || 'alle', nightOn = !!opts.night;
+    const rows = [];
+    const hz = z * 2 * 2.6, look = opts.look || 1, wall = opts.wall || WALLS[1];   // Haus groß: ~2,6 × so groß wie Weg-Zoom
+    if (which === 'alle' || which === 'perlmutt') rows.push(PEARL.map(([l, v]) => [l, () => pearlHouse(cw * 2, ch * 2, cw, ch * 1.62, hz, look, wall, v)]));
+    if (which === 'alle' || which === 'laeden') rows.push(SHUT.map(([l, v]) => [l, () => shutterHouse(cw * 2, ch * 2, cw, ch * 1.62, hz, look, wall, '#c9604f', v, nightOn)]));
+    if (which === 'alle' || which === 'sterne') rows.push(STARS.map(([l, v]) => [l, () => starPath(cw * 2, ch * 2, cw, ch * 1.05, z * 2 * 0.62, v, nightOn)]));
+    rows.forEach((row, r) => row.forEach(([label, make], i) => {
+      const x = 12 + i * (cw + 14), y = 26 + r * (ch + 34);   // bis zu vier Varianten je Reihe
+      ctx.fillStyle = nightOn ? '#1f2846' : '#cfe8b8'; ctx.fillRect(x, y, cw, ch);
+      ctx.drawImage(make(), x, y, cw, ch);
+      ctx.fillStyle = '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(label, x + 4, y - 8);
+    }));
+    return 'ok';
+  };
+  return 'ok';
+})();
