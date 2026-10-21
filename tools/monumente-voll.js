@@ -776,7 +776,7 @@
   }
 
   // 5 · Pagode: Steinsockel, fünf Stockwerke mit geschwungenen Dächern, Glöckchen an den Ecken, goldene Spitze
-  function pagodeF(K, now = 0) {
+  function pagodeF(K, now = 0, opt = {}) {
     const z = K.z, RED = '#c9443a', ROOF = '#2f5e5a', ROOF_D = '#244a47', TRIM = GOLD;
     plinth(K, 0, 0, 0.82, 0.82, 3, 0, '#bdb4a2'); plinth(K, 0, 0, 0.7, 0.7, 3, 3, '#d6cdb9');
     const tiers = [[0.5, 15], [0.43, 12], [0.37, 11], [0.31, 10], [0.25, 9]];
@@ -793,8 +793,8 @@
       }
       y += h;
       // geschwungenes Dach: Traufe weit draußen, Ecken hochgebogen, oben am nächsten Stockwerk
-      const e = ha + 0.2, top = i < 4 ? tiers[i + 1][0] : 0.06, rh = 9, curve = 7;
-      const edge = (n, t) => { const up = curve * Math.pow(Math.abs(t), 3); return n ? K.P(e, t * e, y + up) : K.P(t * e, e, y + up); };
+      const e = ha + (opt.over ?? 0.2), top = i < 4 ? tiers[i + 1][0] : 0.06, rh = opt.rh ?? 9, curve = opt.curve ?? 7;
+      const edge = (n, t) => { const a = Math.abs(t), up = opt.flick ? curve * Math.pow(Math.max(0, (a - 0.7) / 0.3), 2) : curve * Math.pow(a, 3); return n ? K.P(e, t * e, y + up) : K.P(t * e, e, y + up); };
       for (const n of [0, 1]) {
         const pts = []; for (let k = 0; k <= 12; k++) pts.push(edge(n, -1 + k / 6));
         const t1 = n ? K.P(top, top, y + rh) : K.P(top, top, y + rh), t0 = n ? K.P(top, -top, y + rh) : K.P(-top, top, y + rh);
@@ -891,6 +891,12 @@
     if (lit()) glowP([sh[0], sh[1] - 6 * z], 24 * z);
   }
   window.HUET_V = [['2A · Hüterin – Patina', { c: ['#6fae9a', '#4f8a78', '#9fd3c0'], hair: '#5c9a86' }], ['2B · Hüterin – Gold', { c: ['#e0b04a', '#b8862a', '#ffe08a'], hair: '#c9962a' }], ['2C · Hüterin – Marmor', { c: ['#ece8df', '#c9c2b3', '#ffffff'], hair: '#d6cfc0' }]].map(([l, pal]) => [l, (K, now) => { HUET = pal; hueterin(K, now); }, 2.3, 2, 'wasser']);
+  window.PAGODEN = [
+    ['A · rund geschwungen (bisher)', (K, n) => pagodeF(K, n, {}), 2.5, 2],
+    ['B · gerade Traufe', (K, n) => pagodeF(K, n, { curve: 0, rh: 9 }), 2.5, 2],
+    ['C · gerade, nur die Ecken hoch', (K, n) => pagodeF(K, n, { curve: 6, flick: true, rh: 9 }), 2.5, 2],
+    ['D · flach und weit (japanisch)', (K, n) => pagodeF(K, n, { curve: 4, flick: true, rh: 6, over: 0.28 }), 2.5, 2],
+    ['E · steil, schmal', (K, n) => pagodeF(K, n, { curve: 3, flick: true, rh: 13, over: 0.13 }), 2.5, 2]];
   window.FINAL = [['1 · Obelisk der Sonnenbucht', obeliskF, 2.6, 2], ['2 · Hüterin des Hafens', hueterin, 2.3, 2, 'wasser'], ['3 · Triumphbogen', triumphF, 2.8, 2],
     ['4 · Deine Statue', statueF, 3.0, 2], ['5 · Pagode', pagodeF, 2.5, 2], ['6 · Sternendenkmal', sternF, 2.8, 2], ['7 · Steinkreis', steinkreisF2, 2.9, 2], ['8 · Prachtbrunnen', brunnenF2, 2.9, 2]];
   window.VOLL = [['Obelisk der Sonnenbucht', obelisk, 2.1], ['Koloss am Hafen', koloss, 1.62]];

@@ -101,7 +101,136 @@
     path(() => { g.ellipse(hc[0] + 0.02 * hd, hc[1] + 0.12 * hd, 0.36 * hd, 0.46 * hd, 0, 0, Math.PI * 2); }, '#23332e');   // Schatten in der Kapuze
     crown(hc[0], hc[1] - 0.55 * hd, 0.42 * hd, 5);
   }
+  // A2 · klassisch, ausgearbeitet: alle Maße in Kopflängen (P(u, v): u nach rechts, v nach oben, Fuß = 0)
+  function figA2(x0, y0, hd, Pal = PAT) {
+    const [col, colD, colL] = Pal, P = (u, v) => [x0 + u * hd, y0 - v * hd], W = w => w * hd;
+    const sh = (fn) => shadeShape(fn, x0, hd, Pal);
+    const curve = pts => { g.moveTo(...pts[0]); for (let i = 1; i < pts.length - 1; i++) { const m = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2]; g.quadraticCurveTo(...pts[i], ...m); } g.lineTo(...pts[pts.length - 1]); };
+    // Haar hinten mit Knoten
+    ellipse(...P(0.06, 7.42), W(0.48), W(0.55), col); circle(...P(0.16, 7.0), W(0.18), col);   // Haar hinten, Knoten
+    // Gewand (Chiton): Schultern – Brust – Taille – Hüfte – Knie – Saum
+    const robe = () => { curve([P(-0.92, 6.58), P(-1.02, 6.0), P(-0.72, 5.05), P(-0.9, 4.25), P(-1.1, 2.3), P(-1.26, 0.02)]);
+      for (let i = 0; i <= 12; i++) g.lineTo(...P(-1.26 + 2.56 * i / 12, 0.02 + Math.sin(i * 1.9) * 0.05));
+      const r = [P(1.3, 0.02), P(1.12, 2.3), P(0.92, 4.25), P(0.74, 5.05), P(1.04, 6.0), P(0.94, 6.62)]; for (let i = 1; i < r.length; i++) g.lineTo(...r[i]);
+      g.quadraticCurveTo(...P(0, 6.42), ...P(-0.92, 6.58)); g.closePath(); };
+    sh(robe);
+    g.save(); g.beginPath(); robe(); g.clip();
+    for (let i = 0; i < 9; i++) { const t = (i + 0.5) / 9, xb = -1.2 + 2.45 * t, xt = -0.62 + 1.3 * t; L2(i % 2 ? colD : colL, W(0.05), [P(xt, 4.6), P((xt + xb) / 2 + 0.04 * Math.sin(i), 2.2), P(xb, 0.05)]); }   // senkrechte Falten
+    for (let i = 0; i < 4; i++) L2(colD, W(0.04), [P(-0.4 + i * 0.25, 6.2), P(-0.25 + i * 0.22, 5.55), P(-0.35 + i * 0.25, 5.1)]);   // weiche Falten an der Brust
+    g.restore();
+    ellipse(...P(-0.86, 6.45), W(0.2), W(0.17), colL); ellipse(...P(0.86, 6.48), W(0.2), W(0.17), colD);   // runde Schultern
+    // Überwurf (Stola): von der linken Schulter schräg zur rechten Hüfte, Ende hängt rechts herab
+    const stola = () => { g.moveTo(...P(-0.95, 6.6)); g.lineTo(...P(-0.55, 6.55)); g.quadraticCurveTo(...P(0.4, 5.4), ...P(0.98, 4.7)); g.lineTo(...P(1.05, 4.05)); g.quadraticCurveTo(...P(0.2, 4.6), ...P(-0.98, 6.05)); g.closePath(); };
+    g.fillStyle = colL; g.beginPath(); stola(); g.fill();
+    g.save(); g.beginPath(); stola(); g.clip(); for (let k = 0; k < 4; k++) L2(colD, W(0.04), [P(-0.9 + k * 0.08, 6.45 - k * 0.12), P(0.95 - k * 0.02, 4.55 - k * 0.12)]); g.restore();
+    g.fillStyle = col; g.beginPath(); g.moveTo(...P(0.95, 4.65)); g.quadraticCurveTo(...P(1.22, 3.6), ...P(1.1, 2.6)); g.lineTo(...P(0.92, 2.7)); g.quadraticCurveTo(...P(0.98, 3.7), ...P(0.86, 4.4)); g.closePath(); g.fill();   // hängendes Ende
+    L2(colD, W(0.04), [P(1.02, 4.3), P(1.02, 2.75)]);
+    // Zehen unter dem Saum
+    for (const [u, f] of [[-0.42, 0], [0.32, 1]]) { ellipse(...P(u, 0.03), W(0.22), W(0.09), colD); for (let t = 0; t < 4; t++) circle(...P(u - 0.13 + t * 0.085, 0.02), W(0.045), f ? col : colL); }
+    // Tafel an der Hüfte (Platte mit Kante und Inschrift), Unterarm davor, Finger auf der Tafel
+    const T = [P(-1.5, 5.5), P(-0.9, 5.98), P(-0.3, 3.82), P(-0.9, 3.36)];
+    poly(T.map(([x, y]) => [x + W(0.12), y + W(0.06)]), colD);
+    poly(T, colL); g.strokeStyle = colD; g.lineWidth = W(0.03); g.beginPath(); T.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.stroke();
+    for (let r = 0; r < 4; r++) { const a = [T[0][0] + (T[3][0] - T[0][0]) * (0.22 + r * 0.17), T[0][1] + (T[3][1] - T[0][1]) * (0.22 + r * 0.17)], b = [a[0] + (T[1][0] - T[0][0]) * 0.75, a[1] + (T[1][1] - T[0][1]) * 0.75]; L2(colD, W(0.035), [a, b]); }
+    const shL = P(-0.93, 6.5), elL = P(-1.12, 5.25), wrL = P(-0.72, 4.55);
+    limb(shL, elL, W(0.2), W(0.17), colL, col); limb(elL, wrL, W(0.16), W(0.13), colL, col);
+    ellipse(...P(-0.94, 6.5), W(0.24), W(0.18), colL);                                                          // Ärmelkappe
+    for (let f = 0; f < 4; f++) ellipse(...P(-0.66 + f * 0.07, 4.43 - f * 0.11), W(0.06), W(0.1), f % 2 ? col : colL);   // Finger auf der Tafel
+    // Hals, Kopf, Gesicht (Statue: ruhig, keine gemalten Augen), Haar vorn, Diadem mit Strahlen
+    poly([P(-0.21, 6.5), P(0.21, 6.5), P(0.18, 7.0), P(-0.18, 7.0)], col); poly([P(0.04, 6.5), P(0.21, 6.5), P(0.18, 7.0), P(0.04, 7.0)], colD);
+    const hc = P(0, 7.46);
+    for (let j = 0; j < 7; j++) { const a = -Math.PI * (0.14 + j * 0.72 / 6); poly([[hc[0] + Math.cos(a - 0.09) * W(0.42), hc[1] + Math.sin(a - 0.09) * W(0.42) - W(0.1)], [hc[0] + Math.cos(a) * W(0.95), hc[1] + Math.sin(a) * W(0.95) - W(0.1)], [hc[0] + Math.cos(a + 0.09) * W(0.42), hc[1] + Math.sin(a + 0.09) * W(0.42) - W(0.1)]], GOLD); }
+    ellipse(hc[0], hc[1], W(0.42), W(0.52), colL);
+    g.save(); g.beginPath(); g.ellipse(hc[0], hc[1], W(0.42), W(0.52), 0, 0, Math.PI * 2); g.clip(); g.globalAlpha = 0.45; ellipse(hc[0] + W(0.3), hc[1] + W(0.04), W(0.22), W(0.56), colD); g.globalAlpha = 1; g.restore();
+    ellipse(hc[0] - W(0.16), hc[1] + W(0.1), W(0.1), W(0.11), 'rgba(255,255,255,0.25)');                   // Wange im Licht
+    g.strokeStyle = colD; g.lineWidth = W(0.035); g.lineCap = 'round';
+    g.beginPath(); g.arc(hc[0] - W(0.15), hc[1] - W(0.02), W(0.09), 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();   // Lid, ruhig
+    g.beginPath(); g.arc(hc[0] + W(0.12), hc[1] - W(0.02), W(0.08), 1.1 * Math.PI, 1.9 * Math.PI); g.stroke();
+    poly([P(0.0, 7.5), P(0.07, 7.3), P(-0.02, 7.28)], colD);                                                  // Nase
+    L2(colD, W(0.03), [P(-0.07, 7.16), P(0.06, 7.16)]);                                                       // Mund
+    g.fillStyle = col; g.beginPath(); g.ellipse(hc[0], hc[1] - W(0.3), W(0.44), W(0.22), 0, Math.PI, 0); g.fill();   // Haar über der Stirn (schmal)
+    for (const s of [-1, 1]) { g.fillStyle = s < 0 ? col : colD; g.beginPath(); g.ellipse(hc[0] + s * W(0.38), hc[1] - W(0.02), W(0.08), W(0.22), 0, 0, Math.PI * 2); g.fill(); }   // Wellen über den Ohren
+    L2(colD, W(0.025), [P(-0.3, 7.72), P(-0.1, 7.66), P(0.1, 7.72), P(0.3, 7.66)]);
+    poly([P(-0.43, 7.74), P(0.43, 7.74), P(0.41, 7.86), P(-0.41, 7.86)], GOLD_D);                                  // Diadem
+    // erhobener Arm: Oberarm, Ärmel fällt zur Schulter, nackter Unterarm, Faust mit Fingern und Daumen
+    const shR = P(0.92, 6.55), elR = P(1.18, 7.95), wrR = P(1.24, 9.15);
+    limb(shR, elR, W(0.2), W(0.17), col, colD); limb(elR, wrR, W(0.16), W(0.13), col, colD);
+    g.fillStyle = colD; g.beginPath(); g.moveTo(...P(0.7, 6.45)); g.quadraticCurveTo(...P(1.5, 7.0), ...P(1.36, 7.75)); g.lineTo(...P(1.02, 7.8)); g.quadraticCurveTo(...P(1.02, 7.0), ...P(0.75, 6.75)); g.closePath(); g.fill();   // Ärmel
+    const fist = P(1.25, 9.32); ellipse(fist[0], fist[1], W(0.17), W(0.2), col);
+    for (let f = 0; f < 4; f++) L2(colD, W(0.025), [[fist[0] - W(0.14), fist[1] - W(0.12) + f * W(0.07)], [fist[0] + W(0.06), fist[1] - W(0.12) + f * W(0.07)]]);
+    ellipse(fist[0] - W(0.13), fist[1] + W(0.02), W(0.06), W(0.11), colL);                                    // Daumen
+    lantern(fist[0], fist[1] - W(0.16), hd / 13);
+  }
+  // A3 · klassisch, nach Prüfung neu aufgebaut (21.10.2026): Maße in Kopflängen, Hand ¾ Kopf, Fuß sichtbar, Tafel auf dem Unterarm
+  function figA3(x0, y0, hd, Pal = PAT) {
+    const [col, colD, colL] = Pal, P = (u, v) => [x0 + u * hd, y0 - v * hd], W = w => w * hd;
+    const curve = pts => { g.moveTo(...pts[0]); for (let i = 1; i < pts.length - 1; i++) { const m = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2]; g.quadraticCurveTo(...pts[i], ...m); } g.lineTo(...pts[pts.length - 1]); };
+    const seg = (a, b, w0, w1, c) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l; poly([[a[0] + nx * w0, a[1] + ny * w0], [b[0] + nx * w1, b[1] + ny * w1], [b[0] - nx * w1, b[1] - ny * w1], [a[0] - nx * w0, a[1] - ny * w0]], c); };
+    // Haar hinten (Knoten im Nacken)
+    ellipse(...P(0.04, 7.42), W(0.47), W(0.54), col); circle(...P(0.18, 6.98), W(0.17), colD);
+    // Gewand: runde Schultern, Brust, Gurt, Taille, Hüfte, weiter Saum mit Wellen
+    const robe = () => { curve([P(-0.62, 6.66), P(-0.98, 6.5), P(-1.0, 5.95), P(-0.66, 5.4), P(-0.86, 4.3), P(-1.12, 2.3), P(-1.3, 0.02)]);
+      for (let i = 0; i <= 14; i++) g.lineTo(...P(-1.3 + 2.62 * i / 14, 0.02 + Math.sin(i * 1.6) * 0.08));
+      const r = [P(1.32, 0.02), P(1.14, 2.3), P(0.9, 4.3), P(0.68, 5.4), P(1.02, 5.95), P(1.0, 6.52), P(0.62, 6.68)]; for (let i = 1; i < r.length - 1; i++) { const m = [(r[i][0] + r[i + 1][0]) / 2, (r[i][1] + r[i + 1][1]) / 2]; g.quadraticCurveTo(...r[i], ...m); } g.lineTo(...r[r.length - 1]);
+      g.quadraticCurveTo(...P(0, 6.5), ...P(-0.62, 6.66)); g.closePath(); };
+    shadeShape(robe, x0, hd, Pal);
+    g.save(); g.beginPath(); robe(); g.clip();
+    for (let i = 0; i < 9; i++) { const t = (i + 0.5) / 9, xb = -1.24 + 2.5 * t, xt = -0.6 + 1.25 * t; L2(i % 2 ? colD : colL, W(0.05), [P(xt, 5.3), P((xt + xb) / 2 + 0.05 * Math.sin(i * 2), 2.4), P(xb, 0.08)]); }
+    for (let i = 0; i < 4; i++) L2(colD, W(0.035), [P(-0.45 + i * 0.28, 6.3), P(-0.3 + i * 0.25, 5.85)]);
+    poly([P(-0.72, 5.62), P(0.74, 5.62), P(0.72, 5.5), P(-0.7, 5.5)], colD);                                     // Gurt unter der Brust
+    g.restore();
+    // Fuß: rechter Fuß tritt leicht vor, linker nur angedeutet
+    ellipse(...P(-0.42, 0.04), W(0.2), W(0.07), colD);
+    ellipse(...P(0.36, 0.0), W(0.34), W(0.13), colD); ellipse(...P(0.33, 0.03), W(0.3), W(0.11), col);
+    for (let t = 0; t < 3; t++) L2(colD, W(0.02), [P(0.42 + t * 0.07, 0.06), P(0.45 + t * 0.07, -0.04)]);
+    // linker Arm: Oberarm hängt (hinter der Tafel), Unterarm waagerecht davor, Hand hält die untere Ecke
+    const shL = P(-0.86, 6.42), elL = P(-1.18, 4.85), haL = P(-0.62, 4.62);
+    seg(shL, elL, W(0.19), W(0.15), colL); circle(...elL, W(0.15), colL);
+    // Stola über der linken Schulter, schräg zur rechten Hüfte
+    const stola = () => { g.moveTo(...P(-1.02, 6.4)); g.quadraticCurveTo(...P(-0.85, 6.72), ...P(-0.5, 6.6)); g.quadraticCurveTo(...P(0.4, 5.6), ...P(0.98, 4.75)); g.lineTo(...P(1.04, 4.1)); g.quadraticCurveTo(...P(0.2, 4.65), ...P(-1.0, 6.0)); g.closePath(); };
+    g.fillStyle = colL; g.beginPath(); stola(); g.fill();
+    g.save(); g.beginPath(); stola(); g.clip(); for (let k = 0; k < 4; k++) L2(colD, W(0.035), [P(-0.92 + k * 0.08, 6.45 - k * 0.12), P(0.98 - k * 0.02, 4.6 - k * 0.12)]); g.restore();
+    // hängendes Stola-Ende: breite Bahn mit Falten, unten schräg
+    const end = () => { g.moveTo(...P(0.8, 4.75)); g.quadraticCurveTo(...P(1.12, 3.9), ...P(1.18, 2.7)); g.lineTo(...P(0.88, 2.5)); g.quadraticCurveTo(...P(0.86, 3.6), ...P(0.62, 4.45)); g.closePath(); };
+    g.fillStyle = col; g.beginPath(); end(); g.fill();
+    g.save(); g.beginPath(); end(); g.clip(); for (const u of [0.82, 0.95, 1.06]) L2(colD, W(0.035), [P(u - 0.08, 4.5), P(u + 0.05, 2.6)]); g.restore();
+    // Tafel: steht auf dem Unterarm, oben an der Brust; helle Oberkante links, dunkle Dicke rechts/unten
+    const T = [P(-1.42, 6.05), P(-0.86, 6.16), P(-0.56, 4.64), P(-1.14, 4.52)];
+    poly([T[1], [T[1][0] + W(0.1), T[1][1] + W(0.04)], [T[2][0] + W(0.1), T[2][1] + W(0.04)], T[2]], colD);
+    poly([T[2], [T[2][0] + W(0.1), T[2][1] + W(0.04)], [T[3][0] + W(0.1), T[3][1] + W(0.04)], T[3]], colD);
+    poly(T, colL);
+    for (let r = 0; r < 4; r++) { const t = 0.22 + r * 0.17, a = [T[0][0] + (T[3][0] - T[0][0]) * t + W(0.08), T[0][1] + (T[3][1] - T[0][1]) * t], b = [T[1][0] + (T[2][0] - T[1][0]) * t - W(0.08), T[1][1] + (T[2][1] - T[1][1]) * t]; L2(colD, W(0.03), [a, b]); }
+    seg(elL, haL, W(0.15), W(0.12), colL);                                                                       // Unterarm waagerecht vor der Tafel
+    const hand = P(-0.55, 4.6); ellipse(...hand, W(0.2), W(0.15), colL);
+    for (let f = 0; f < 4; f++) L2(col, W(0.022), [[hand[0] - W(0.1) + f * W(0.06), hand[1] - W(0.12)], [hand[0] - W(0.1) + f * W(0.06), hand[1] + W(0.06)]]);   // Finger um die Ecke
+    // Hals und Kopf: helles Gesicht, Haar beidseitig, ruhige Lider, Diadem mit Strahlen
+    poly([P(-0.2, 6.52), P(0.2, 6.52), P(0.17, 7.0), P(-0.17, 7.0)], col); poly([P(0.04, 6.52), P(0.2, 6.52), P(0.17, 7.0), P(0.04, 7.0)], colD);
+    const hc = P(0, 7.46);
+    for (let j = 0; j < 7; j++) { const a = -Math.PI * (0.14 + j * 0.72 / 6), c = [hc[0], hc[1] - W(0.32)]; poly([[c[0] + Math.cos(a - 0.1) * W(0.3), c[1] + Math.sin(a - 0.1) * W(0.3)], [c[0] + Math.cos(a) * W(0.8), c[1] + Math.sin(a) * W(0.8)], [c[0] + Math.cos(a + 0.1) * W(0.3), c[1] + Math.sin(a + 0.1) * W(0.3)]], GOLD); }
+    ellipse(hc[0], hc[1], W(0.41), W(0.51), colL);
+    g.save(); g.beginPath(); g.ellipse(hc[0], hc[1], W(0.41), W(0.51), 0, 0, Math.PI * 2); g.clip(); g.globalAlpha = 0.4; ellipse(hc[0] + W(0.3), hc[1] + W(0.05), W(0.22), W(0.56), colD); g.globalAlpha = 1; g.restore();
+    for (const s of [-1, 1]) { g.fillStyle = s < 0 ? col : colD; g.beginPath(); g.moveTo(hc[0] + s * W(0.42), hc[1] - W(0.3)); g.quadraticCurveTo(hc[0] + s * W(0.5), hc[1], hc[0] + s * W(0.38), hc[1] + W(0.32)); g.lineTo(hc[0] + s * W(0.3), hc[1] + W(0.2)); g.quadraticCurveTo(hc[0] + s * W(0.36), hc[1] - W(0.05), hc[0] + s * W(0.28), hc[1] - W(0.3)); g.closePath(); g.fill(); }   // Haar beidseitig
+    g.fillStyle = col; g.beginPath(); g.ellipse(hc[0], hc[1] - W(0.32), W(0.42), W(0.2), 0, Math.PI, 0); g.fill();   // Haar oben
+    L2(colD, W(0.028), [P(-0.24, 7.5), P(-0.07, 7.48)]); L2(colD, W(0.028), [P(0.07, 7.48), P(0.22, 7.5)]);   // ruhige Lider
+    L2(colD, W(0.02), [P(-0.25, 7.6), P(-0.07, 7.62)]); L2(colD, W(0.02), [P(0.07, 7.62), P(0.24, 7.6)]);     // Brauen
+    poly([P(0.0, 7.5), P(0.07, 7.3), P(-0.02, 7.29)], colD); L2(colD, W(0.028), [P(-0.08, 7.17), P(0.07, 7.17)]);
+    poly([P(-0.43, 7.74), P(0.43, 7.74), P(0.41, 7.86), P(-0.41, 7.86)], GOLD_D);
+    // erhobener Arm: runde Schulter, gerader Oberarm, Ellbogen, Unterarm verjüngt, große Faust um den Griff, Daumen vorn
+    const shR = P(0.84, 6.56), elR = P(1.12, 8.0), wrR = P(1.2, 9.1);
+    circle(...shR, W(0.22), col);
+    seg(shR, elR, W(0.2), W(0.17), col); circle(...elR, W(0.17), col);
+    g.fillStyle = col; g.beginPath(); g.moveTo(...P(0.66, 6.5)); g.quadraticCurveTo(...P(1.3, 6.75), ...P(1.32, 7.55)); g.lineTo(...P(1.12, 7.62)); g.quadraticCurveTo(...P(1.02, 7.0), ...P(0.64, 6.8)); g.closePath(); g.fill();   // Ärmel liegt auf dem Oberarm, fällt zur Schulter
+    L2(colD, W(0.03), [P(1.0, 6.75), P(1.24, 7.45)]);
+    seg(elR, wrR, W(0.17), W(0.13), col); seg([elR[0] + W(0.04), elR[1]], [wrR[0] + W(0.03), wrR[1]], W(0.06), W(0.05), colD);
+    const fist = P(1.21, 9.32);
+    ellipse(fist[0], fist[1], W(0.21), W(0.25), col);
+    for (let f = 0; f < 4; f++) ellipse(fist[0] - W(0.05), fist[1] - W(0.15) + f * W(0.1), W(0.15), W(0.05), f % 2 ? colD : col);   // vier Finger um den Griff
+    ellipse(fist[0] - W(0.15), fist[1] + W(0.0), W(0.07), W(0.15), colL);                                       // Daumen vorn
+    lantern(fist[0], fist[1] - W(0.22), hd / 12);
+  }
   window.FIGUREN = [['A · klassisch', figA], ['B · gemütlich', figB], ['C · verhüllt', figC]];
+  window.FIG_A2 = figA2;
+  window.figurA2 = async (hd = 46, W = 520, H = 620) => { const c = document.createElement('canvas'); c.width = W; c.height = H; const prev = g; g = c.getContext('2d'); try { g.fillStyle = '#9fd27a'; g.fillRect(0, 0, W, H); cyl(W / 2, H - 34, 130, 36, 18, '#d6cdb9'); figA3(W / 2, H - 48, hd); } finally { g = prev; } window.__fig = c.toDataURL('image/png'); return [W, H]; };
   window.figurenStudie = async () => {
     const W = 380, H = 520, sheet = document.createElement('canvas'); sheet.width = W * 3 + 40; sheet.height = H + 40;
     const sx = sheet.getContext('2d'); sx.fillStyle = '#fffaf0'; sx.fillRect(0, 0, sheet.width, sheet.height);
