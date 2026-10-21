@@ -403,6 +403,13 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     ITEMS ergänzt oder Spielstand-Felder liest.
     Jeder Spielstand trägt `appVer` (= ?v= aus index.html, `APP_VER`); ist ein gelesener Stand neuer, setzt parseSave `newerBlock`:
     kein save, kein Hochladen, Fenster „Neue Version da“ (`showNewer`). Neue Schreibwege in die Cloud/den Speicher prüfen `newerBlock`.
+29d. **Zeichnungen prüfen, bevor der Nutzer sie sieht** (21.10.2026, Nutzer: „wieder haufen Fehler drin“): jeden Entwurf groß (≥ 3×) rendern
+    und abhaken – Symmetrie zur Blickachse; keine überlappenden Kanten (Sockel, Säulen, Hecken, Bögen); nichts schwebt (alles steht auf
+    etwas, Teile sitzen aufeinander); nichts steht im Weg oder verdeckt die Vorderseite; Maßstab zu Laterne/Figur/Haus; Licht von links
+    (linke Flächen hell, rechte dunkel); glaubhafte Formen (Tiere, Figuren, Pferde – lieber weglassen als schief); Muster und Fenster
+    liegen in der Ebene ihrer Wand (über K.P/Flächenpunkte, nie freihändig schräg); nachts leuchtet nur, was eine Lampe ist. Danach schaut
+    ein Prüfer-Agent mit derselben Liste auf die großen Bilder; erst dann zeigen. **Große Bauwerke (Monumente) bringen keine Deko mit**
+    (keine Laternen, Bänke, Beete, Hecken, Bäume, Boote, Wege) – nur das Bauwerk mit festem Sockel; das Drumherum gestalten die Spieler.
 29b. **⚙️ Einstellungen** (js/settings.js, ☰ → Einstellungen): Schnellwahl Schön/Ausgewogen/Schnell (setzt nur Leistung),
     🔊 Ton, 👁️ Anzeige, 🚀 Leistung. Neue Schalter je Gerät in `GFX` (`setGfx`, localStorage `kachelhausen_anzeige`), ältere
     behalten ihre Schlüssel. Alles nur Bild: Einwohner/Tiere aus = unsichtbar, „immer Tag“ = `night` 0 im Bild (Spieluhr und
