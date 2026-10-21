@@ -655,8 +655,29 @@ function refitStairs(x, y, dry = false) {
   else if (n) groundVersion++;
   return n;
 }
-// Treppe auf eine Treppe gesetzt: nur ausrichten (kostenlos) – geht, wenn sich dabei etwas ändert
-const stairRefitError = (x, y) => refitStairs(x, y, true) ? null : 'Hier steht schon eine Treppe, die passt';
+// Treppe mit dem Werkzeug angetippt (157l, 22.10.2026): die gewählte Breite (stairWideNew) für ihre ganze Reihe wie im Fenster (setStairWidth) –
+// { row, wide }, wenn sich etwas ändert, 'ecke', wenn eine Ecktreppe daran hängt und sie schmal würde; Ecktreppen bleiben breit
+function stairWidthTap(x, y) {
+  const t = stairAt(x, y);
+  if (!t || t.ecke) return null;
+  const wide = stairWideNew(), row = stairRow(x, y, true).filter(([sx, sy]) => !stairAt(sx, sy).ecke);
+  if (!row.some(([sx, sy]) => stairSchmal(stairAt(sx, sy)) === wide)) return null;
+  return !wide && row.some(([sx, sy]) => cornerOn(sx, sy)) ? 'ecke' : { row, wide };
+}
+function stairWidthApply(x, y) {
+  const w = stairWidthTap(x, y);
+  if (!w || w === 'ecke') return false;
+  for (const [sx, sy] of w.row) { const s = stairAt(sx, sy); if (w.wide) delete s.schmal; else s.schmal = true; }
+  groundVersion++;
+  return true;
+}
+// Treppe auf eine Treppe gesetzt: ausrichten und die gewählte Breite übernehmen (kostenlos) – geht, wenn sich dabei etwas ändert
+function stairRefitError(x, y) {
+  const w = stairWidthTap(x, y), fit = refitStairs(x, y, true);
+  if (w && w !== 'ecke') return null;
+  if (fit) return null;
+  return w === 'ecke' ? 'Hier hängt eine Ecktreppe dran – um die Ecke geht nur die breite Treppe' : 'Hier steht schon eine Treppe, die passt';
+}
 // Getragen abgelegt (✋, Gruppe, ⧉ Kopie: dropAt/dropGroup) wie gebaut: in der Ecke zwischen zwei breiten Treppen eine Ecktreppe (immer breit),
 // sonst gerade; dann die Treppen ringsum ausrichten. Sonst stand eine Ecktreppe vor gerader Wand bzw. eine gerade (auch schmale) in der Ecke –
 // beide führten ins Leere

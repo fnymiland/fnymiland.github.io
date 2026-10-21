@@ -112,7 +112,7 @@ function build(b, x, y, quiet) {
   if (b === 'huegeltreppe' && state.hills && state.hills.size && stairAt(x, y)) {   // Treppe auf eine Treppe (hills.js): nur ausrichten, kostenlos
     const e = stairRefitError(x, y);
     if (e) { if (!quiet) fail(e); return false; }
-    refitStairs(x, y); sfx('deco'); recalc(); save();
+    stairWidthApply(x, y); refitStairs(x, y); sfx('deco'); recalc(); save();   // 157l: gewählte Breite für die Reihe
     return true;
   }
   const err = placeError(b, x, y);

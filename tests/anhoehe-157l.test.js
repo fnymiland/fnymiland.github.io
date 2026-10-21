@@ -30,7 +30,7 @@ describe('1 Bewohner springen beim Losgehen nicht schräg aufs erste Wegfeld (al
   });
 });
 
-describe('2 Treppe: Breite wie die Nachbartreppe', () => {
+describe('2/3 Treppe: Breite wie die Nachbartreppe, Antippen mit dem Werkzeug übernimmt die gewählte Breite', () => {
   const schmal = (x, y) => game(`stairSchmal(stairAt(${x}, ${y}))`);
   it('neu neben einer gleich gerichteten Treppe: ohne Wahl in der Leiste so breit wie sie (auch in der Vorschau in die Anhöhe); die Wahl in der Leiste gewinnt', () => {
     hills(block(10, 10, 17, 13));
@@ -54,5 +54,31 @@ describe('2 Treppe: Breite wie die Nachbartreppe', () => {
     game('stairNewWide = false');
     expect(game('stairWideFor(14, 14, 0)')).toBe(false);
     game('wegShape.wide = false; stairNewWide = null');
+  });
+
+  it('Treppe mit dem Werkzeug angetippt: übernimmt die gewählte Breite für ihre Reihe (kostenlos, ein ↶-Schritt); gleich breit und passend: Hinweis', () => {
+    hills(block(10, 10, 14, 13));
+    game("stairNewWide = true; for (const x of [11, 12, 13]) build('huegeltreppe', x, 14)");
+    expect(game("placeError('huegeltreppe', 12, 14)")).toBe('Hier steht schon eine Treppe, die passt');
+    game('stairNewWide = false; resetUndo()');
+    const m0 = game('state.money');
+    expect(game("placeError('huegeltreppe', 12, 14)")).toBe(null);
+    expect(game("undoable(() => build('huegeltreppe', 12, 14))")).toBe(true);
+    expect([schmal(11, 14), schmal(12, 14), schmal(13, 14), game('state.money')]).toEqual([true, true, true, m0]);
+    expect(game("placeError('huegeltreppe', 12, 14)")).toBe('Hier steht schon eine Treppe, die passt');
+    expect(game('undo()')).toBe(true);
+    expect([schmal(11, 14), schmal(12, 14), schmal(13, 14)]).toEqual([false, false, false]);
+    game('stairNewWide = null');
+  });
+
+  it('an einer Ecktreppe: schmal geht nicht (Hinweis), die Ecktreppe selbst bleibt breit', () => {
+    hills(block(10, 10, 13, 13));
+    game("stairNewWide = true; build('huegeltreppe', 13, 14); build('huegeltreppe', 14, 13); build('huegeltreppe', 14, 14)");
+    expect(game('!!stairAt(14, 14).ecke')).toBe(true);
+    game('stairNewWide = false');
+    expect(game("placeError('huegeltreppe', 13, 14)")).toMatch(/Ecke/);
+    expect(game("placeError('huegeltreppe', 14, 14)")).toBe('Hier steht schon eine Treppe, die passt');
+    expect([schmal(13, 14), schmal(14, 14)]).toEqual([false, false]);
+    game('stairNewWide = null');
   });
 });
