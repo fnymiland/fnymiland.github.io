@@ -2749,5 +2749,14 @@ mit Sternen, täglich 4 Angebote, nur Schönes, ein Tageswunsch am Tag. Kommt zu
 - [ ] 161g restliche Laden-Dinge
 - [ ] 164 **Neue besondere Stücke** (Nutzer 21.10.2026: „klingen geil, auf die Liste“ – nicht als Truhen-Exklusives, Weg offen: Kunstakademie ✦,
       Basar oder Bauplan): Perlmutt-Dachfarbe (schimmernd), Gold-Fensterläden, Sternen-Wegmuster. Je Stück zuerst Entwurf als Bild.
-- [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
+- [ ] 165 **Forschung mit Schönem** (Nutzer 21.10.2026: „klingt geil“): passende Forschungen schalten zusätzlich ein Stück Aussehen frei, z. B.
+      Handel → Markisen-Farben für Läden; Industrie → Backstein-Mauer + Fabrik-Ziegeldach; Seehandel/Schiffbau → Fenster Marineblau, Flagge
+      Seeblau; Bahn → Bahnhofsuhr (Stadtschmuck) + Schotter-Wegmuster; Stromnetz → Straßenlaterne „Elektrisch“ (kaltweiß); Sternkunde →
+      Sternen-Wegmuster oder nachtblaue Dachfarbe; Kunstschule → ein Meisterstück gratis. Danach frei in der Kunstakademie (wie Baupläne).
+- [ ] 161g ausführlich (Nutzer 21.10.2026: „alles auf die Liste“) – Basar weiter füllen, in Paketen, je Stück Entwurf zuerst:
+      Waren: Storchennest auf Dächern, Musikpavillon, Teehaus, Mondsteinpflaster, Sternenmosaik, Goldkiesel, Rosenpflaster, Laternen in
+      Mondform, Lichterketten über Wegen, neue Feuerwerksfarben (Fest, Parade). Haus-Stile: Fachwerk Pastell, Turmhaus, Dachgarten, Erker mit
+      Blumen. Fester Katalog (große ✨-Ziele): Haustier folgt der Figur, Jahreszeiten-Schalter (Herbstlaub/Schnee/Kirschblüte), Goldbrücke
+      (5. Material), Sternschnuppen-Regen auf Knopfdruck.
+- [ ] Als Nächstes (Nutzer 21.10.2026): zuerst 164 Neue besondere Stücke, dann 157l Anhöhen gemeinsam ansehen, danach 161f Prachtbauten (Opernhaus, Glaspalast, Thermenpalast,
       Kathedrale, Luftschiffhafen – je Entwurf zuerst).
