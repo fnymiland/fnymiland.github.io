@@ -421,6 +421,8 @@ Datei ersetzt das erste still (beim Bau der Rampe überschrieb ihr `rampSink` da
     Glitzerwege: Wegmuster `kind: 'glitter'` (feine Punkte wie Kies, Farben aus GLITTER) und Funkel in render.js (`glitterSparks` nach
     worldGround, nur `glitterOn(z)` und nicht in GL-Bildern; Plätze `glitterSpots()` je groundVersion aus hash, auf dem Wegband über
     pathArms/armUV). Kosten ~0,15 ms je Bild bei 40 Feldern. Nicht auf Anhöhen und Wasser-Wegbrücken (tileA malt darüber).
+    Wandschmuck, der bis zur Wandoberkante reicht (Fachwerk), gehört in `K.block({ wallDeco })` – vor dem Dach, sonst ragt er über die Traufe
+    (Fehler 22.10., auf Perlmutt gut zu sehen).
 29e. **🏛️ Monumente** (Block 162, js/monumente.js, PLAN-162.md): Bilder in MON_ART (aus tools/monumente-voll.js übernommen – Änderungen
     zuerst dort zeigen, dann hierher). Wahrzeichen (`monPhases`) sind Baustellen wie die Wunderwerke, aber eigene Logik (monSite/monStep/
     monCost/monPaid), kein Eintrag in WONDERS (der hätte Wirkungen, „gibt es schon“ und das Rathaus). Gerüst gemeinsam über `siteScaffold`

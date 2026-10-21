@@ -275,8 +275,7 @@ const BUILDING_ART = {
     const hut = s === 1 ? { a: 0.1, b: 0.08, ha: 0.15, hb: 0.15, h: 9, wall: hw, roof: hr, roofH: 8 }
       : { a: 0.08, b: 0.06, ha: 0.17, hb: 0.23, h: s === 3 ? 13 : 11, wall: hw, roof: hr, roofH: 10, ridge: 'b' };
     parts.push([hut.a, hut.b, () => {
-      const B = K.block({ ...hut, entry: true });
-      if (s === 3) timber(B, K.z, '#6b4a2e');
+      const B = K.block({ ...hut, entry: true, ...(s === 3 ? { wallDeco: faces => timber({ faces }, K.z, '#6b4a2e') } : {}) });   // Balken vor dem Dach
       K.door(B, 'front', 0.4, 0.6, 0.66);
       K.sideWins(B, 1, 0.38, 0.72);
       if (s === 3) { const [ax, ay] = K.P(hut.a + hut.ha, hut.b, hut.h + 3); poly([[ax - 3 * K.z, ay], [ax, ay - 3 * K.z], [ax + 3 * K.z, ay]], C('#f4e3c4')); }

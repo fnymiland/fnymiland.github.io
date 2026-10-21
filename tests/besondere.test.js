@@ -28,6 +28,15 @@ describe('Perlmutt-Dach', () => {
   });
 });
 
+describe('Fachwerk (Fehler 22.10.: Balken ragten über die Traufe ins Dach)', () => {
+  it('Fachwerkbalken werden vor dem Dach gezeichnet – der Dachüberstand deckt ihre Enden', () => {
+    const order = game(`(() => { const log = [], kp = poly, kt = timber; poly = (pts, fill) => { if (fill && typeof fill === 'object') log.push('dach'); return kp(pts, fill); }; timber = (...a) => { log.push('balken'); return kt(...a); };
+      try { drawObject('haus', 400, 300, 2, 1e6, 5, 5, 2, { b: 'haus', lvl: 2, roof: ROOF_PEARL, wall: 1, rot: 0 }); } finally { poly = kp; timber = kt; } return log; })()`);
+    expect(order[0]).toBe('balken');
+    expect(order).toContain('dach');
+  });
+});
+
 describe('Glitzerwege', () => {
   it('vier Meisterstücke je 150 ✨, Muster „glitter“ mit eigener Glitzerfarbe, auf jeder Wegfarbe', () => {
     for (const t of GLITZER) {

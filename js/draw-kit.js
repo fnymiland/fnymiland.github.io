@@ -53,7 +53,8 @@ function kit(cx, cy, z, rot) {
 
   // Quader mit Dach. type: 'hip' (Walm), 'gable' (Sattel, ridge 'a' oder 'b'), 'mansard' (Mansard: steil, dann flach),
   // 'barrel' (Tonnendach: halbrund über der langen Seite), 'flat', 'none'
-  K.block = ({ a = 0, b = 0, ha, hb, h, lift = 0, wall, roof = null, roofH = 0, type = 'hip', ridge = null, over = 1.12, entry = false, trim = null, strip = null }) => {
+  // wallDeco(faces): Schmuck auf den Wänden vor dem Dach (Fachwerk) – der Dachüberstand deckt die oberen Enden zu (Block 164)
+  K.block = ({ a = 0, b = 0, ha, hb, h, lift = 0, wall, roof = null, roofH = 0, type = 'hip', ridge = null, over = 1.12, entry = false, trim = null, strip = null, wallDeco = null }) => {
     const W = (sa, sb, up = 0) => P(a + sa * ha, b + sb * hb, lift + up);
     const faces = {};
     for (const [name, f] of Object.entries(FACES)) {
@@ -69,6 +70,7 @@ function kit(cx, cy, z, rot) {
       if (deep) faceQuad(f.P, f.Q, 0, 1, f.H - Math.min(2.6 * z, f.H * 0.22), f.H, C(shade(hex, -0.12)));  // unter dem Dach
     }
     if (trim) for (const f of Object.values(faces)) if (f) faceQuad(f.P, f.Q, 0, 1, f.H - 1.4 * z, f.H, C(trim));
+    if (wallDeco) wallDeco(faces);
     const top = lift + h;
     if (roof && type === 'mansard') {
       const ea = ha * over, eb = hb * over, k = 0.66, m = top + roofH * 0.62, ka = ea * k, kb = eb * k;

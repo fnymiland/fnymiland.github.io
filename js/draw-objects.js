@@ -1248,8 +1248,7 @@ const HOUSE_ART = [
   // 2 Fachwerkhaus mit Blumenkasten
   (K, wall, roof) => {
     kShadow(K, 0.3);
-    const B = K.block({ ha: 0.27, hb: 0.27, h: 17, wall, roof, roofH: 13, over: 1.18, entry: true });
-    timber(B, K.z);
+    const B = K.block({ ha: 0.27, hb: 0.27, h: 17, wall, roof, roofH: 13, over: 1.18, entry: true, wallDeco: faces => timber({ faces }, K.z) });   // Balken vor dem Dach (ragten über die Traufe)
     K.door(B, 'front', 0.4, 0.62, 0.5);
     houseWins(K, B, [[0.28, 0.46]], 0.2, 0.42);
     houseWins(K, B, [[0.58, 0.76]], 0.62, 0.86, true);
