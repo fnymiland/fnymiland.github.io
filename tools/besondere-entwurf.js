@@ -117,6 +117,55 @@
     ['C · Rosé mit Perlglitzer', { ground: '#ecccc2', glitter: { n: 420, cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], glints: 3, glintCol: 'rgba(255,255,255,0.95)' } }],
     ['D · gedämpftes Blaugrau mit Sternenstaub', { ground: '#8592b2', glitter: { n: 380, cols: ['#ffffff', '#ffe9a0', '#e3e8f7'], glints: 3, glintCol: 'rgba(255,248,220,0.95)' } }],
   ];
+  // ✨ Funkeln (Nutzer 22.10.2026: „1, zeig mal“): feine Pünktchen still, dazu blitzen einzelne Funkel kurz auf und vergehen wieder –
+  // jeder Funkel mit eigenem Takt (2,5–5 s), hell nur einen Augenblick (sin⁸). Läuft als Schleife über dem Spiel, stop() beendet
+  const FUNKEL = [
+    ['Silberglitzer auf Hellgrau', { ground: '#d6d3cb', glitter: { n: 170, cols: ['#ffffff', '#aeb8cc', '#f4f6fa'], glints: 0 } }, 'rgba(255,255,255,', '210,225,255'],
+    ['Goldglitzer auf Sand', { ground: '#eadbb2', glitter: { n: 170, cols: ['#e2b64a', '#fff2b0', '#d9a93a'], glints: 0 } }, 'rgba(255,248,210,', '255,220,120'],
+    ['Perlglitzer auf Rosé', { ground: '#ecccc2', glitter: { n: 170, cols: ['#ffffff', '#e79bbd', '#b9a3e6', '#8fd3b9'], glints: 0 } }, 'rgba(255,255,255,', '255,210,240'],
+  ];
+  let funkelRaf = 0;
+  window.besondereFunkeln = (opts = {}) => {
+    cancelAnimationFrame(funkelRaf);
+    document.getElementById('cmp')?.remove();
+    const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
+    Object.assign(cv.style, { position: 'fixed', inset: 0, width: Wv + 'px', height: Hv + 'px', zIndex: 99999, background: '#fffaf0' });
+    document.body.appendChild(cv);
+    const tall = Wv < 600, cols = FUNKEL.length;                          // schmales Fenster: untereinander
+    const cw = tall ? Wv - 24 : (Wv - 12 * (cols + 1)) / cols, chh = tall ? (Hv - 34 * cols - 10) / cols : Hv - 50;
+    const ctx = cv.getContext('2d'), z = opts.z || Math.min(2.6, (cw - 16) / 128, (chh - 10) / 64), n = opts.n || 12;
+    // je Weg: stilles Bild einmal malen, Funkel-Plätze und Takte festlegen
+    const items = FUNKEL.map(([label, v, rgba, glow], i) => {
+      const x = tall ? 12 : 12 + i * (cw + 12), y = tall ? 30 + i * (chh + 34) : 34, cx = cw * 0.5, cy = chh * 0.52;
+      const still = starPath(cw * 2, chh * 2, cx * 2, cy * 2, z * 2, v, false);
+      const K = kit(x + cx, y + cy, z, 0); let seed = 11 + i * 5; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      const sp = Array.from({ length: n }, (_, k) => ({ p: K.P(-1.5 + (k + 0.15 + rnd() * 0.7) * 3 / n, -0.4 + rnd() * 0.8), T: 2500 + rnd() * 2500, off: rnd(), L: (2.0 + rnd() * 1.2) * z }));
+      return { label, x, y, still, sp, rgba, glow };
+    });
+    const t0 = performance.now();
+    const frame = now => {
+      const t = now - t0;
+      ctx.setTransform(2, 0, 0, 2, 0, 0); ctx.fillStyle = '#fffaf0'; ctx.fillRect(0, 0, Wv, Hv);
+      for (const it of items) {
+        ctx.fillStyle = '#cfe8b8'; ctx.fillRect(it.x, it.y, cw, chh); ctx.drawImage(it.still, it.x, it.y, cw, chh);
+        ctx.fillStyle = '#6b4f3a'; ctx.font = '700 15px system-ui'; ctx.fillText(it.label, it.x + 4, it.y - 10);
+        for (const s of it.sp) {
+          const ph = ((t / s.T + s.off) % 1), a = Math.pow(Math.max(0, Math.sin(ph * Math.PI * 2)), 8);
+          if (a < 0.02) continue;
+          const [px, py] = s.p, L = s.L * (0.55 + 0.45 * a), w = L * 0.16;
+          const gr = ctx.createRadialGradient(px, py, 0, px, py, L * 1.4); gr.addColorStop(0, `rgba(${it.glow},${0.45 * a})`); gr.addColorStop(1, `rgba(${it.glow},0)`);
+          ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(px, py, L * 1.4, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = it.rgba + a + ')'; ctx.beginPath();
+          [[px - L, py], [px - w, py - w], [px, py - L * 1.15], [px + w, py - w], [px + L, py], [px + w, py + w], [px, py + L * 1.15], [px - w, py + w]].forEach((q, j) => j ? ctx.lineTo(...q) : ctx.moveTo(...q));
+          ctx.closePath(); ctx.fill();
+        }
+      }
+      funkelRaf = requestAnimationFrame(frame);
+    };
+    funkelRaf = requestAnimationFrame(frame);
+    window.besondereFunkeln.stop = () => { cancelAnimationFrame(funkelRaf); document.getElementById('cmp')?.remove(); };
+    return 'läuft';
+  };
   window.besondereEntwurf = (opts = {}) => {
     document.getElementById('cmp')?.remove();
     const Wv = innerWidth, Hv = innerHeight, cv = document.createElement('canvas'); cv.id = 'cmp'; cv.width = Wv * 2; cv.height = Hv * 2;
