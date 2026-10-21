@@ -61,15 +61,16 @@
         poly(face(n), C(base));
         if (!n[0]) poly([FP(n, 0, B), FP(n, 0.14, B), FP(n, 0.14, T), FP(n, 0, T)], C(shade(base, 0.07)));   // Lichtkante links (Sonne von links)
         for (let up = B + 16; up < T - 4; up += 16) L(C(shade(base, -0.12)), 0.35, z, [FP(n, 0, up), FP(n, 1, up)]);   // Steinfugen
-        // Zeichenband: Sonne, Mond, Welle, Vogel, Stern – eigene Bildzeichen
-        for (let i = 0; i < 7; i++) {
-          const up = B + 10 + i * 17, c = FP(n, 0.5, up), k = 1 - i * 0.05, col = C(i % 2 ? '#b98b3a' : '#c9734f');
-          const kind = (i + (n[0] ? 2 : 0)) % 5;
-          if (kind === 0) { circle(c[0], c[1], 2.2 * z * k, col); for (let j = 0; j < 8; j++) { const ang = j / 8 * Math.PI * 2; L(col, 0.45, z, [[c[0] + Math.cos(ang) * 2.8 * z * k, c[1] + Math.sin(ang) * 2.8 * z * k], [c[0] + Math.cos(ang) * 3.9 * z * k, c[1] + Math.sin(ang) * 3.9 * z * k]]); } }
-          else if (kind === 1) { g.fillStyle = col; g.beginPath(); g.arc(c[0], c[1], 2.8 * z * k, 0.35 * Math.PI, 1.65 * Math.PI); g.arc(c[0] + 1.3 * z * k, c[1], 2.2 * z * k, 1.55 * Math.PI, 0.45 * Math.PI, true); g.fill(); }
-          else if (kind === 2) L(col, 0.7, z, [[c[0] - 3.4 * z * k, c[1]], [c[0] - 1.7 * z * k, c[1] - 1.6 * z * k], [c[0], c[1]], [c[0] + 1.7 * z * k, c[1] - 1.6 * z * k], [c[0] + 3.4 * z * k, c[1]]]);
-          else if (kind === 3) L(col, 0.7, z, [[c[0] - 3.2 * z * k, c[1] - 1.4 * z * k], [c[0], c[1] + 0.8 * z * k], [c[0] + 3.2 * z * k, c[1] - 1.4 * z * k]]);
-          else star(c[0], c[1], 3 * z * k, col);
+        // Bildzeichen mittig zwischen den Fugen, in der Ebene der Fläche (jeder Punkt über FP): Sonne, Mond, Welle, Vogel, Stern
+        for (let i = 0; i < 8; i++) {
+          const up0 = B + 8 + i * 16, s0 = sb + (st - sb) * (up0 - B) / (T - B), col = C(i % 2 ? '#b98b3a' : '#c9734f'), k = 1 - i * 0.04;
+          const M = (u, v) => FP(n, 0.5 + u / (35.8 * 2 * s0), up0 + v);                                         // u: längs der Fläche, v: Höhe (Einheiten)
+          const kind = (i + (n[0] ? 2 : 0)) % 5, ring = (r, m = 16) => Array.from({ length: m }, (_, j) => M(Math.cos(j / m * Math.PI * 2) * r, Math.sin(j / m * Math.PI * 2) * r));
+          if (kind === 0) { poly(ring(2.2 * k), col); for (let j = 0; j < 8; j++) { const ang = j / 8 * Math.PI * 2; L(col, 0.45, z, [M(Math.cos(ang) * 3 * k, Math.sin(ang) * 3 * k), M(Math.cos(ang) * 4.2 * k, Math.sin(ang) * 4.2 * k)]); } }
+          else if (kind === 1) { const o = ring(3 * k, 20), inn = Array.from({ length: 20 }, (_, j) => M(1.4 * k + Math.cos(j / 20 * Math.PI * 2) * 2.4 * k, Math.sin(j / 20 * Math.PI * 2) * 2.4 * k)); g.fillStyle = col; g.beginPath(); o.forEach((p, j) => j ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); inn.forEach((p, j) => j ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.fill('evenodd'); }
+          else if (kind === 2) L(col, 0.7, z, [M(-3.6 * k, 0), M(-1.8 * k, 1.6 * k), M(0, 0), M(1.8 * k, 1.6 * k), M(3.6 * k, 0)]);
+          else if (kind === 3) L(col, 0.7, z, [M(-3.4 * k, 1.4 * k), M(0, -0.8 * k), M(3.4 * k, 1.4 * k)]);
+          else { const pts = []; for (let j = 0; j < 10; j++) { const ang = Math.PI / 2 + j * Math.PI / 5, r = (j % 2 ? 1.3 : 3.2) * k; pts.push(M(Math.cos(ang) * r, Math.sin(ang) * r)); } poly(pts, col); }
         }
       }
       // Goldene Spitze (Pyramidion) mit Lichtkante
@@ -600,20 +601,21 @@
   // 2 · Triumphbogen: drei Bögen zwischen vier Säulen, Gesims rundum, Attika mit Inschrift, goldene Siegesfigur mit Flügeln
   function triumphF(K, now = 0) {
     const z = K.z, ST = '#efe7d6', STD = '#d9cdb4', ha = 0.3, hb = 0.9, H = 58;
-    K.block({ a: 0, b: 0, ha, hb, h: H, wall: ST, type: 'flat', roof: '#f6f0e2' });
-    for (const [b0, b1] of [[-0.9, -0.7], [-0.54, -0.26], [0.26, 0.54], [0.7, 0.9]]) poly([K.P(ha + 0.04, b0, 0), K.P(ha + 0.04, b1, 0), K.P(ha + 0.04, b1, 4), K.P(ha + 0.04, b0, 4)], C(STD));   // Sockel nur unter den Pfeilern
     const F = (b, h) => K.P(ha + 0.001, b, h), Fo = (b, h) => K.P(ha + 0.035, b, h), S = (a, h) => K.P(a, hb + 0.001, h);
-    const dark = lit() ? '#2c3554' : '#5f5646', through = lit() ? '#3d4f7a' : C('#a9cf8a');
-    // Bögen: mittig zwischen den Säulen
+    const dark = lit() ? '#2c3554' : '#5f5646';
     const cols = [-0.82, -0.42, 0.42, 0.82], openings = [[-0.26, 0.26, 26], [-0.74, -0.5, 16], [0.5, 0.74, 16]];
+    // Echte Durchgänge: Innenwand (Sonnenseite) zuerst, dann die Vorderwand mit Löchern – der Boden im Durchgang ist der Untergrund des Spielers
+    for (const [b0, b1, hs] of openings) poly([K.P(ha, b0, 0), K.P(-ha, b0, 0), K.P(-ha, b0, hs + 4), K.P(ha, b0, hs + 4)], C(shade(ST, -0.06)));
+    const holes = openings.map(([b0, b1, hs]) => faceArch(F, b0, b1, hs + 4));
+    g.fillStyle = K.wallCol(ST, [1, 0]); g.beginPath();
+    [F(-hb, 0), F(hb, 0), F(hb, H), F(-hb, H)].forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath();
+    for (const h of holes) { h.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); }
+    g.fill('evenodd');
+    poly([S(ha, 0), S(-ha, 0), S(-ha, H), S(ha, H)], K.wallCol(ST, [0, 1]));                                  // Seite
+    poly(faceArch((a, h) => K.P(a, hb + 0.001, h), -0.14, 0.14, 18), C(dark));                            // Seite: Nische
+    poly([K.P(ha, -hb, H), K.P(ha, hb, H), K.P(-ha, hb, H), K.P(-ha, -hb, H)], C('#f6f0e2'));               // Dach
+    for (const [b0, b1] of [[-0.9, -0.74], [-0.5, -0.26], [0.26, 0.5], [0.74, 0.9]]) poly([K.P(ha + 0.04, b0, 0), K.P(ha + 0.04, b1, 0), K.P(ha + 0.04, b1, 4), K.P(ha + 0.04, b0, 4)], C(STD));   // Sockel nur unter den Pfeilern
     for (const [b0, b1, hs] of openings) {
-      poly(faceArch((b, h) => K.P(ha + 0.001, b, h), b0, b1, hs + 4), C(dark));
-      const hole = faceArch((b, h) => K.P(ha + 0.001, b, h), b0, b1, hs + 4), far = faceArch((b, h) => K.P(-ha, b, h), b0, b1, hs + 4);
-      g.save(); g.beginPath(); hole.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.closePath(); g.clip();
-      poly(far, lit() ? '#2c3a5e' : C('#a9d68a'));                                                      // Ausgang gegenüber: Gras und Licht
-      poly([far[0], far[far.length - 1], hole[hole.length - 1], hole[0]], C(lit() ? '#4a4a58' : '#cfc6b2'));   // Boden im Durchgang
-      const F2 = (b, h) => K.P(-ha, b, h); poly([F(b0, 0), F(b0, hs + 4), F2(b0, hs + 4), F2(b0, 0)], C(lit() ? '#59607a' : '#e6dcc6'));   // Innenwand (Sonnenseite) – zeigt den Durchgang
-      g.restore();
       const ring = faceArch((b, h) => K.P(ha + 0.002, b, h), b0, b1, hs + 4).slice(1, -1);
       g.strokeStyle = C('#cdbf9f'); g.lineWidth = 1.3 * z; g.beginPath(); ring.forEach((p, i) => i ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();
       const top = (b0 + b1) / 2, ks = (b1 - b0) / 2 * 35.8; poly(faceRect((b, h) => K.P(ha + 0.003, b, h), top - 0.03, top + 0.03, hs + 4 + ks - 1, hs + 4 + ks + 4), C(GOLD));   // Schlussstein
@@ -627,8 +629,6 @@
     }
     // Medaillons über den kleinen Bögen (Kreis in der Wandebene)
     for (const b of [-0.62, 0.62]) { poly(faceCircle(F, b, 37, 0.075), C(STD)); poly(faceCircle(F, b, 37, 0.058), C(GOLD)); const c = F(b, 37); star(c[0], c[1], 1.7 * z, C(GOLD_D)); }
-    // Seite: kleiner Querbogen, mittig
-    poly(faceArch((a, h) => K.P(a, hb + 0.001, h), -0.14, 0.14, 18), C(dark));
     // Gesims rundum, Attika mit Inschrift
     K.block({ a: 0, b: 0, ha: ha + 0.03, hb: hb + 0.03, h: 4, lift: 48, wall: STD, type: 'flat', roof: '#e9e0cb' });
     K.block({ a: 0, b: 0, ha: ha - 0.02, hb: hb - 0.02, h: 13, lift: H - 6, wall: ST, type: 'flat', roof: '#f6f0e2' });
@@ -793,8 +793,8 @@
       }
       y += h;
       // geschwungenes Dach: Traufe weit draußen, Ecken hochgebogen, oben am nächsten Stockwerk
-      const e = ha + 0.2, top = i < 4 ? tiers[i + 1][0] : 0.06, rh = 7, curve = 3;
-      const edge = (n, t) => { const tt = (t + 1) / 2, up = curve * Math.pow(2 * tt - 1, 2); return n ? K.P(e, t * e, y + up) : K.P(t * e, e, y + up); };
+      const e = ha + 0.2, top = i < 4 ? tiers[i + 1][0] : 0.06, rh = 9, curve = 7;
+      const edge = (n, t) => { const up = curve * Math.pow(Math.abs(t), 3); return n ? K.P(e, t * e, y + up) : K.P(t * e, e, y + up); };
       for (const n of [0, 1]) {
         const pts = []; for (let k = 0; k <= 12; k++) pts.push(edge(n, -1 + k / 6));
         const t1 = n ? K.P(top, top, y + rh) : K.P(top, top, y + rh), t0 = n ? K.P(top, -top, y + rh) : K.P(-top, top, y + rh);
@@ -802,6 +802,7 @@
         for (let k = 1; k < 6; k++) { const a0 = edge(n, -1 + k / 3), tt = n ? K.P(top, -top + 2 * top * k / 6, y + rh) : K.P(-top + 2 * top * k / 6, top, y + rh); L(C(n ? '#1d3b38' : '#264f4b'), 0.5, z, [a0, tt]); }   // Ziegelreihen
         g.strokeStyle = C(TRIM); g.lineWidth = 1.1 * z; g.beginPath(); pts.forEach((p, k) => k ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();
       }
+      for (const [ca, cb] of [[e, -e], [e, e], [-e, e]]) { const t = [Math.sign(ca) * top, Math.sign(cb) * top]; L(C('#1a3330'), 1.1, z, [K.P(ca, cb, y + curve), K.P(t[0], t[1], y + rh)]); }   // Grate auf den Dachecken
       for (const c of [K.P(e, -e, y + curve), K.P(e, e, y + curve), K.P(-e, e, y + curve)]) { L(C(GOLD_D), 0.5, z, [c, [c[0], c[1] + 3 * z]]); circle(c[0], c[1] + 3.6 * z, 1.1 * z, C(GOLD)); }   // Glöckchen
       y += rh;
     });
