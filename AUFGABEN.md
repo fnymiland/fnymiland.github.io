@@ -2482,6 +2482,9 @@ Statuen …) und Wald/Obst als Boden; Wege und Gebäude oben erst Stufe 2/3.
       Hof); weit weg mit WebGL wird nicht nachgemalt (Überstand unter 1 Punkt); Vorschau von Linien (Zaun-Plan, `hillMarkEdge`) nicht geprüft.
 - [ ] 157k Überdachungen oben (Pergola, Glas, Markise, Arkaden, Stützen, Dachtreppe) – eigener Block nach 157j.
 - [ ] 157l **Offen zu Anhöhen – später gemeinsam ansehen** (Nutzer 11.10.2026: „das gucken wir uns später an“):
+      → Durchgang 22.10.2026 mit Bildern: zugestellte Treppe = Hinweis „passt“, ✋-Gruppe halb oben/halb unten „passt“, Park/Beete/Schönheit
+        über die Kante „passt“; Bewohner-Sprung beim Losgehen: für alle Inseln beheben (Nutzer: „ja für alle“). Zuschnitt Garten/Marktstand: Unterschied
+        kaum sichtbar, Nahaufnahme gezeigt.
       - Entscheidungen der Agenten bestätigen: Garten/Büsche an der Kante gerade abgeschnitten (statt über die Wand); Zuschnitt auch für große Deko
         und Marktstände oben; zugestellte Treppe (Fuß/oberes Feld belegt) = Anhöhe „weit weg“ mit Hinweis; ✋-Gruppe mit 1×1-Gebäuden darf halb oben,
         halb unten landen (jedes ganz auf einer Ebene).
