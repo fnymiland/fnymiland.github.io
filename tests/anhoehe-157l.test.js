@@ -104,3 +104,29 @@ describe('13 Anhöhe im Baumenü nennt Gebäude oben', () => {
     expect(game('ITEM_TIPS.anhoehe')).toMatch(/Gebäude/);
   });
 });
+
+describe('12 Vorschau beim Zaun-Ziehen oben (hillMarkEdge)', () => {
+  // Der Rahmen beim Bauen war oben vorn halb so breit (die Oberseite späterer Nachbarn deckte die äußere Hälfte, 157j). Eine Kante gehört zum
+  // späteren ihrer zwei Felder – ihr Strich kommt nach der Oberseite beider, keine Oberseite eines der beiden Felder kommt danach
+  it('Striche der Kanten (längs x und längs y, mitten auf der Anhöhe und zwischen den vordersten Reihen) liegen nach der Oberseite beider Felder', () => {
+    hills(block(10, 10, 15, 15));
+    game("setTool('zaun')");
+    for (const [a, b] of [[[11, 13], [15, 13]], [[13, 11], [13, 15]], [[10, 15], [16, 15]], [[15, 10], [15, 16]]]) {
+      const res = game(`(() => {
+        const out = [], dh = drawHillTile, em = edgeMark;
+        drawHillTile = (x, y, ...r) => { out.push('h' + x + ',' + y); return dh(x, y, ...r); };
+        edgeMark = (k, ...r) => { out.push('e' + k); return em(k, ...r); };
+        startPlan('edge', { x: ${a[0]}, y: ${a[1]} }, { x: ${b[0]}, y: ${b[1]} }, true);
+        try { cam.z = 3; const p = iso(13, 13); cam.x = p.x; cam.y = p.y; render(1e6); } finally { drawHillTile = dh; edgeMark = em; plan = null; }
+        return { out, edges: planEdges({ a: { x: ${a[0]}, y: ${a[1]} }, b: { x: ${b[0]}, y: ${b[1]} } }).map(k => [k, edgeTiles(k).filter(([x, y]) => hillAt(x, y)).map(([x, y]) => 'h' + x + ',' + y)]) };
+      })()`);
+      expect(res.edges.length).toBeGreaterThan(0);
+      for (const [k, tiles] of res.edges) {
+        const e = res.out.indexOf('e' + k);
+        expect([k, e > -1]).toEqual([k, true]);
+        for (const h of tiles) expect([k, h, res.out.lastIndexOf(h) < e]).toEqual([k, h, true]);
+      }
+    }
+    game("setTool('look')");
+  });
+});
