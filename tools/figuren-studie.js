@@ -162,7 +162,7 @@
     lantern(fist[0], fist[1] - W(0.16), hd / 13);
   }
   // A3 · klassisch, nach Prüfung neu aufgebaut (21.10.2026): Maße in Kopflängen, Hand ¾ Kopf, Fuß sichtbar, Tafel auf dem Unterarm
-  function figA3(x0, y0, hd, Pal = PAT) {
+  function figA3(x0, y0, hd, Pal = PAT, opt = {}) {          // opt.stola: 'glatt' | 'weg' | (Streifen); opt.handGlatt
     const [col, colD, colL] = Pal, P = (u, v) => [x0 + u * hd, y0 - v * hd], W = w => w * hd;
     const curve = pts => { g.moveTo(...pts[0]); for (let i = 1; i < pts.length - 1; i++) { const m = [(pts[i][0] + pts[i + 1][0]) / 2, (pts[i][1] + pts[i + 1][1]) / 2]; g.quadraticCurveTo(...pts[i], ...m); } g.lineTo(...pts[pts.length - 1]); };
     const seg = (a, b, w0, w1, c) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy), nx = -dy / l, ny = dx / l; poly([[a[0] + nx * w0, a[1] + ny * w0], [b[0] + nx * w1, b[1] + ny * w1], [b[0] - nx * w1, b[1] - ny * w1], [a[0] - nx * w0, a[1] - ny * w0]], c); };
@@ -188,12 +188,12 @@
     seg(shL, elL, W(0.19), W(0.15), colL); circle(...elL, W(0.15), colL);
     // Stola über der linken Schulter, schräg zur rechten Hüfte
     const stola = () => { g.moveTo(...P(-1.02, 6.4)); g.quadraticCurveTo(...P(-0.85, 6.72), ...P(-0.5, 6.6)); g.quadraticCurveTo(...P(0.4, 5.6), ...P(0.98, 4.75)); g.lineTo(...P(1.04, 4.1)); g.quadraticCurveTo(...P(0.2, 4.65), ...P(-1.0, 6.0)); g.closePath(); };
-    g.fillStyle = colL; g.beginPath(); stola(); g.fill();
-    g.save(); g.beginPath(); stola(); g.clip(); for (let k = 0; k < 4; k++) L2(colD, W(0.035), [P(-0.92 + k * 0.08, 6.45 - k * 0.12), P(0.98 - k * 0.02, 4.6 - k * 0.12)]); g.restore();
+    if (opt.stola !== 'weg') { g.fillStyle = colL; g.beginPath(); stola(); g.fill(); }
+    if (!opt.stola) { g.save(); g.beginPath(); stola(); g.clip(); for (let k = 0; k < 4; k++) L2(colD, W(0.035), [P(-0.92 + k * 0.08, 6.45 - k * 0.12), P(0.98 - k * 0.02, 4.6 - k * 0.12)]); g.restore(); }
     // hängendes Stola-Ende: breite Bahn mit Falten, unten schräg
     const end = () => { g.moveTo(...P(0.8, 4.75)); g.quadraticCurveTo(...P(1.12, 3.9), ...P(1.18, 2.7)); g.lineTo(...P(0.88, 2.5)); g.quadraticCurveTo(...P(0.86, 3.6), ...P(0.62, 4.45)); g.closePath(); };
-    g.fillStyle = col; g.beginPath(); end(); g.fill();
-    g.save(); g.beginPath(); end(); g.clip(); for (const u of [0.82, 0.95, 1.06]) L2(colD, W(0.035), [P(u - 0.08, 4.5), P(u + 0.05, 2.6)]); g.restore();
+    if (opt.stola !== 'weg') { g.fillStyle = col; g.beginPath(); end(); g.fill(); }
+    if (!opt.stola) { g.save(); g.beginPath(); end(); g.clip(); for (const u of [0.82, 0.95, 1.06]) L2(colD, W(0.035), [P(u - 0.08, 4.5), P(u + 0.05, 2.6)]); g.restore(); }
     // Tafel: steht auf dem Unterarm, oben an der Brust; helle Oberkante links, dunkle Dicke rechts/unten
     const T = [P(-1.42, 6.05), P(-0.86, 6.16), P(-0.56, 4.64), P(-1.14, 4.52)];
     poly([T[1], [T[1][0] + W(0.1), T[1][1] + W(0.04)], [T[2][0] + W(0.1), T[2][1] + W(0.04)], T[2]], colD);
@@ -202,7 +202,7 @@
     for (let r = 0; r < 4; r++) { const t = 0.22 + r * 0.17, a = [T[0][0] + (T[3][0] - T[0][0]) * t + W(0.08), T[0][1] + (T[3][1] - T[0][1]) * t], b = [T[1][0] + (T[2][0] - T[1][0]) * t - W(0.08), T[1][1] + (T[2][1] - T[1][1]) * t]; L2(colD, W(0.03), [a, b]); }
     seg(elL, haL, W(0.15), W(0.12), colL);                                                                       // Unterarm waagerecht vor der Tafel
     const hand = P(-0.55, 4.6); ellipse(...hand, W(0.2), W(0.15), colL);
-    for (let f = 0; f < 4; f++) L2(col, W(0.022), [[hand[0] - W(0.1) + f * W(0.06), hand[1] - W(0.12)], [hand[0] - W(0.1) + f * W(0.06), hand[1] + W(0.06)]]);   // Finger um die Ecke
+    if (!opt.handGlatt) for (let f = 0; f < 4; f++) L2(col, W(0.022), [[hand[0] - W(0.1) + f * W(0.06), hand[1] - W(0.12)], [hand[0] - W(0.1) + f * W(0.06), hand[1] + W(0.06)]]);   // Finger um die Ecke
     // Hals und Kopf: helles Gesicht, Haar beidseitig, ruhige Lider, Diadem mit Strahlen
     poly([P(-0.2, 6.52), P(0.2, 6.52), P(0.17, 7.0), P(-0.17, 7.0)], col); poly([P(0.04, 6.52), P(0.2, 6.52), P(0.17, 7.0), P(0.04, 7.0)], colD);
     const hc = P(0, 7.46);
@@ -224,7 +224,7 @@
     seg(elR, wrR, W(0.17), W(0.13), col); seg([elR[0] + W(0.04), elR[1]], [wrR[0] + W(0.03), wrR[1]], W(0.06), W(0.05), colD);
     const fist = P(1.21, 9.32);
     ellipse(fist[0], fist[1], W(0.21), W(0.25), col);
-    for (let f = 0; f < 4; f++) ellipse(fist[0] - W(0.05), fist[1] - W(0.15) + f * W(0.1), W(0.15), W(0.05), f % 2 ? colD : col);   // vier Finger um den Griff
+    if (!opt.handGlatt) for (let f = 0; f < 4; f++) ellipse(fist[0] - W(0.05), fist[1] - W(0.15) + f * W(0.1), W(0.15), W(0.05), f % 2 ? colD : col);   // vier Finger um den Griff
     ellipse(fist[0] - W(0.15), fist[1] + W(0.0), W(0.07), W(0.15), colL);                                       // Daumen vorn
     lantern(fist[0], fist[1] - W(0.22), hd / 12);
   }
