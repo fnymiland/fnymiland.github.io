@@ -996,7 +996,19 @@
     const bowl = (y, r, deep) => { g.fillStyle = C('#cfc3a5'); g.beginPath(); g.ellipse(cx, y, r, r * 0.42, 0, 0, Math.PI); g.lineTo(cx + r * 0.35, y + deep); g.lineTo(cx - r * 0.35, y + deep); g.closePath(); g.fill();   // Schalenbauch
       g.fillStyle = C('#b8ac8c'); g.beginPath(); g.ellipse(cx, y, r, r * 0.42, 0, 0, Math.PI / 2); g.lineTo(cx + r * 0.35, y + deep); g.lineTo(cx, y + deep); g.closePath(); g.fill();
       ellipse(cx, y, r, r * 0.42, C('#efe7d6')); ellipse(cx, y - 0.6 * z, r * 0.86, r * 0.36, lit() ? '#5fd0e0' : C('#a6e2f0')); };
-    const curtain = (yTop, r, yBot, rb) => { g.strokeStyle = wcol; g.lineWidth = 0.9 * z; for (let k = 0; k <= 10; k++) { const a = Math.PI * (0.05 + k * 0.09), x0 = cx + Math.cos(a) * r, y0 = yTop + Math.sin(a) * r * 0.42, x1 = cx + Math.cos(a) * rb, y1 = yBot + Math.sin(a) * rb * 0.42; g.beginPath(); g.moveTo(x0, y0); g.bezierCurveTo(x0 + (x0 - cx) * 0.35, y0 - 1.5 * z + Math.sin(a) * 1.5 * z, x1 + (x1 - cx) * 0.08, y0 + (y1 - y0) * 0.35, x1, y1); g.stroke(); } };   // Wasser schießt über den Rand nach außen und fällt im Bogen
+    // Überlauf: rundum ein geschlossener, durchscheinender Wasserschleier über die vordere Kante (keine Einzelstrahlen – die gäbe es nur mit Düsen),
+    // leicht nach außen gewölbt, unten ein Schaumrand
+    const curtain = (yTop, r, yBot, rb) => { const N = 24, T = [], M = [], B = [];
+      for (let k = 0; k <= N; k++) { const a = Math.PI * k / N, ca = Math.cos(a), sa = Math.sin(a);
+        T.push([cx + ca * r, yTop + sa * r * 0.42]); M.push([cx + ca * (r + (rb - r) * 0.75), yTop + (yBot - yTop) * 0.3 + sa * (r + (rb - r) * 0.75) * 0.42]); B.push([cx + ca * rb, yBot + sa * rb * 0.42]); }
+      g.beginPath(); g.moveTo(...T[0]); for (const p of T) g.lineTo(...p);
+      g.quadraticCurveTo(...M[N], ...B[N]); for (let k = N; k >= 0; k--) g.lineTo(...B[k]); g.quadraticCurveTo(...M[0], ...T[0]); g.closePath();
+      const gr = g.createLinearGradient(0, yTop, 0, yBot + rb * 0.42); gr.addColorStop(0, lit() ? 'rgba(210,245,255,0.7)' : 'rgba(255,255,255,0.72)'); gr.addColorStop(1, lit() ? 'rgba(150,220,255,0.35)' : 'rgba(220,245,255,0.4)');
+      g.fillStyle = gr; g.fill();
+      g.strokeStyle = lit() ? 'rgba(230,250,255,0.5)' : 'rgba(255,255,255,0.55)'; g.lineWidth = 0.5 * z;
+      for (let k = 2; k < N; k += 3) { g.beginPath(); g.moveTo(...T[k]); g.quadraticCurveTo(...M[k], ...B[k]); g.stroke(); }   // feine Fließspuren
+      g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 1 * z; g.beginPath(); T.forEach((p, k) => k ? g.lineTo(...p) : g.moveTo(...p)); g.stroke();   // heller Wulst am Rand
+      for (let k = 1; k < N; k += 2) ellipse(B[k][0], B[k][1], 1.8 * z, 0.7 * z, 'rgba(255,255,255,0.85)'); };   // Schaum unten
     cyl(cx, c[1], 5 * z, 2.5 * z, 16 * z, '#e6dcc4');
     const y1 = c[1] - 18 * z, r1 = 20 * z;
     bowl(y1, r1, 7 * z);
@@ -1013,9 +1025,9 @@
       g.fillStyle = C(k < nr / 2 ? GOLD : '#e2b23e'); g.beginPath(); g.moveTo(...hinge); g.lineTo(...e0); g.quadraticCurveTo(...bump, ...e1); g.closePath(); g.fill();
       L(C(GOLD_D), 0.45, z, [hinge, e1]); }
     poly([[hinge[0] - 2.6 * z, hinge[1] - 1 * z], [hinge[0] + 2.6 * z, hinge[1] - 1 * z], [hinge[0], hinge[1] + 1.6 * z]], C(GOLD_D));   // Schloss, schlicht
-    g.strokeStyle = wcol; g.lineWidth = 1.1 * z; for (const s2 of [-1, 1]) { g.beginPath(); g.moveTo(sh[0] + s2 * 1 * z, sh[1] + 0.5 * z); g.quadraticCurveTo(sh[0] + s2 * 7 * z, sh[1] - 3 * z, sh[0] + s2 * 8 * z, y2 + 1 * z); g.stroke(); }   // aus der Muschel in die kleine Schale
-    curtain(y2, r2 * 0.98, y1 - 0.5 * z, r2 * 1.45);                                                               // kleine Schale → große Schale
-    curtain(y1, r1 * 0.98, c[1] + 1 * z, r1 * 1.4);                                                               // große Schale → Becken
+    g.strokeStyle = wcol; g.lineWidth = 1.6 * z; g.beginPath(); g.moveTo(sh[0], sh[1] + 1 * z); g.quadraticCurveTo(sh[0] + 1.5 * z, sh[1] + 3 * z, sh[0] + 1 * z, y2 + 1 * z); g.stroke(); ellipse(sh[0] + 1 * z, y2 + 1 * z, 2.2 * z, 0.8 * z, wcol);   // ein Strahl aus der Muschelöffnung in die kleine Schale
+    curtain(y2, r2 * 0.98, y1 - 0.5 * z, r2 * 1.3);                                                               // kleine Schale → große Schale
+    curtain(y1, r1 * 0.98, c[1] + 1 * z, r1 * 1.25);                                                               // große Schale → Becken
     // vordere Beckenwand zuletzt
     for (let i = 0; i < n; i++) if (face(i) > 0) { const m = (i + 1) / n * Math.PI * 2 - Math.PI / n, u = K.turn(Math.cos(m), Math.sin(m))[0] - K.turn(Math.cos(m), Math.sin(m))[1]; poly([pt(i), pt(i + 1), pt(i + 1, R, Hb), pt(i, R, Hb)], C(shade('#e6dcc4', u > 0.3 ? -0.12 : u < -0.3 ? 0.05 : -0.04))); }   // Licht von links: linke Flächen hell, rechte dunkel
     for (let i = 0; i < n; i++) if (face(i) > 0) L(C('#efe7d6'), 1.4, z, [pt(i, R, Hb), pt(i + 1, R, Hb)]);   // nur die vordere Randkante zuletzt
